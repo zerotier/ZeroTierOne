@@ -25,6 +25,10 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+#include "../node/Constants.hpp"
+
+#ifdef __BSD__
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,7 +49,6 @@
 #include <algorithm>
 #include <utility>
 
-#include "../node/Constants.hpp"
 #include "BSDRoutingTable.hpp"
 
 // All I wanted was the bloody rounting table. I didn't expect the Spanish inquisition.
@@ -62,9 +65,9 @@ BSDRoutingTable::~BSDRoutingTable()
 {
 }
 
-std::vector<RoutingTable::Entry> BSDRoutingTable::get(bool includeLinkLocal,bool includeLoopback) const
+std::vector<RoutingTableEntry> BSDRoutingTable::get(bool includeLinkLocal,bool includeLoopback) const
 {
-	std::vector<RoutingTable::Entry> entries;
+	std::vector<RoutingTableEntry> entries;
 	int mib[6];
 	size_t needed;
 
@@ -88,7 +91,7 @@ std::vector<RoutingTable::Entry> BSDRoutingTable::get(bool includeLinkLocal,bool
 					char *saend = next + rtm->rtm_msglen;
 
 					if (((rtm->rtm_flags & RTF_LLINFO) == 0)&&((rtm->rtm_flags & RTF_HOST) == 0)&&((rtm->rtm_flags & RTF_UP) != 0)&&((rtm->rtm_flags & RTF_MULTICAST) == 0)) {
-						RoutingTable::Entry e;
+						RoutingTableEntry e;
 						e.deviceIndex = -9999; // unset
 
 						int which = 0;
@@ -202,14 +205,14 @@ std::vector<RoutingTable::Entry> BSDRoutingTable::get(bool includeLinkLocal,bool
 		}
 	}
 
-	for(std::vector<ZeroTier::RoutingTable::Entry>::iterator e1(entries.begin());e1!=entries.end();++e1) {
+	for(std::vector<ZeroTier::RoutingTableEntry>::iterator e1(entries.begin());e1!=entries.end();++e1) {
 		if ((!e1->device[0])&&(e1->deviceIndex >= 0))
 			if_indextoname(e1->deviceIndex,e1->device);
 	}
-	for(std::vector<ZeroTier::RoutingTable::Entry>::iterator e1(entries.begin());e1!=entries.end();++e1) {
+	for(std::vector<ZeroTier::RoutingTableEntry>::iterator e1(entries.begin());e1!=entries.end();++e1) {
 		if ((!e1->device[0])&&(e1->gateway)) {
 			int bestMetric = 9999999;
-			for(std::vector<ZeroTier::RoutingTable::Entry>::iterator e2(entries.begin());e2!=entries.end();++e2) {
+			for(std::vector<ZeroTier::RoutingTableEntry>::iterator e2(entries.begin());e2!=entries.end();++e2) {
 				if ((e1->gateway.within(e2->destination))&&(e2->metric <= bestMetric)) {
 					bestMetric = e2->metric;
 					Utils::scopy(e1->device,sizeof(e1->device),e2->device);
@@ -223,14 +226,14 @@ std::vector<RoutingTable::Entry> BSDRoutingTable::get(bool includeLinkLocal,bool
 	return entries;
 }
 
-RoutingTable::Entry BSDRoutingTable::set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric)
+RoutingTableEntry BSDRoutingTable::set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric)
 {
 	if ((!gateway)&&((!device)||(!device[0])))
-		return RoutingTable::Entry();
+		return RoutingTableEntry();
 
-	std::vector<RoutingTable::Entry> rtab(get(true,true));
+	std::vector<RoutingTableEntry> rtab(get(true,true));
 
-	for(std::vector<RoutingTable::Entry>::iterator e(rtab.begin());e!=rtab.end();++e) {
+	for(std::vector<RoutingTableEntry>::iterator e(rtab.begin());e!=rtab.end();++e) {
 		if (e->destination == destination) {
 			if (((!device)||(!device[0]))||(!strcmp(device,e->device))) {
 				long p = (long)fork();
@@ -248,7 +251,7 @@ RoutingTable::Entry BSDRoutingTable::set(const InetAddress &destination,const In
 	}
 
 	if (metric < 0)
-		return RoutingTable::Entry();
+		return RoutingTableEntry();
 
 	{
 		char hcstr[64];
@@ -270,8 +273,8 @@ RoutingTable::Entry BSDRoutingTable::set(const InetAddress &destination,const In
 	}
 
 	rtab = get(true,true);
-	std::vector<RoutingTable::Entry>::iterator bestEntry(rtab.end());
-	for(std::vector<RoutingTable::Entry>::iterator e(rtab.begin());e!=rtab.end();++e) {
+	std::vector<RoutingTableEntry>::iterator bestEntry(rtab.end());
+	for(std::vector<RoutingTableEntry>::iterator e(rtab.begin());e!=rtab.end();++e) {
 		if ((e->destination == destination)&&(e->gateway.ipsEqual(gateway))) {
 			if ((device)&&(device[0])) {
 				if (!strcmp(device,e->device)) {
@@ -286,7 +289,7 @@ RoutingTable::Entry BSDRoutingTable::set(const InetAddress &destination,const In
 	if (bestEntry != rtab.end())
 		return *bestEntry;
 
-	return RoutingTable::Entry();
+	return RoutingTableEntry();
 }
 
 } // namespace ZeroTier
@@ -299,8 +302,8 @@ int main(int argc,char **argv)
 	BSDRoutingTable rt;
 
 	printf("<destination> <gateway> <interface> <metric>\n");
-	std::vector<RoutingTable::Entry> ents(rt.get());
-	for(std::vector<RoutingTable::Entry>::iterator e(ents.begin());e!=ents.end();++e)
+	std::vector<RoutingTableEntry> ents(rt.get());
+	for(std::vector<RoutingTableEntry>::iterator e(ents.begin());e!=ents.end();++e)
 		printf("%s\n",e->toString().c_str());
 	printf("\n");
 
@@ -311,7 +314,7 @@ int main(int argc,char **argv)
 
 	printf("<destination> <gateway> <interface> <metric>\n");
 	ents = rt.get();
-	for(std::vector<RoutingTable::Entry>::iterator e(ents.begin());e!=ents.end();++e)
+	for(std::vector<RoutingTableEntry>::iterator e(ents.begin());e!=ents.end();++e)
 		printf("%s\n",e->toString().c_str());
 	printf("\n");
 
@@ -322,10 +325,12 @@ int main(int argc,char **argv)
 
 	printf("<destination> <gateway> <interface> <metric>\n");
 	ents = rt.get();
-	for(std::vector<RoutingTable::Entry>::iterator e(ents.begin());e!=ents.end();++e)
+	for(std::vector<RoutingTableEntry>::iterator e(ents.begin());e!=ents.end();++e)
 		printf("%s\n",e->toString().c_str());
 	printf("\n");
 
 	return 0;
 }
 #endif
+
+#endif // __BSD__

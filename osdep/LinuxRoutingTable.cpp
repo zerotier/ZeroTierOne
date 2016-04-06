@@ -25,6 +25,10 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+#include "../node/Constants.hpp"
+
+#ifdef __LINUX__
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,7 +46,6 @@
 #include <algorithm>
 #include <utility>
 
-#include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
 #include "LinuxRoutingTable.hpp"
 
@@ -58,11 +61,11 @@ LinuxRoutingTable::~LinuxRoutingTable()
 {
 }
 
-std::vector<RoutingTable::Entry> LinuxRoutingTable::get(bool includeLinkLocal,bool includeLoopback) const
+std::vector<RoutingTableEntry> LinuxRoutingTable::get(bool includeLinkLocal,bool includeLoopback) const
 {
 	char buf[131072];
 	char *stmp,*stmp2;
-	std::vector<RoutingTable::Entry> entries;
+	std::vector<RoutingTableEntry> entries;
 
 	{
 		int fd = ::open("/proc/net/route",O_RDONLY);
@@ -102,7 +105,7 @@ std::vector<RoutingTable::Entry> LinuxRoutingTable::get(bool includeLinkLocal,bo
 		}
 
 		if ((iface)&&(destination)) {
-			RoutingTable::Entry e;
+			RoutingTableEntry e;
 			if (destination)
 				e.destination.set(&destination,4,Utils::countBits(mask));
 			e.gateway.set(&gateway,4,0);
@@ -149,7 +152,7 @@ std::vector<RoutingTable::Entry> LinuxRoutingTable::get(bool includeLinkLocal,bo
 
 		if ((device)&&(destination)) {
 			unsigned char tmp[16];
-			RoutingTable::Entry e;
+			RoutingTableEntry e;
 			Utils::unhex(destination,tmp,16);
 			if ((!Utils::isZero(tmp,16))&&(tmp[0] != 0xff))
 				e.destination.set(tmp,16,destPrefixLen);
@@ -167,12 +170,12 @@ std::vector<RoutingTable::Entry> LinuxRoutingTable::get(bool includeLinkLocal,bo
 	return entries;
 }
 
-RoutingTable::Entry LinuxRoutingTable::set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric)
+RoutingTableEntry LinuxRoutingTable::set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric)
 {
 	char metstr[128];
 
 	if ((!gateway)&&((!device)||(!device[0])))
-		return RoutingTable::Entry();
+		return RoutingTableEntry();
 
 	Utils::snprintf(metstr,sizeof(metstr),"%d",metric);
 
@@ -212,9 +215,9 @@ RoutingTable::Entry LinuxRoutingTable::set(const InetAddress &destination,const 
 		}
 	}
 
-	std::vector<RoutingTable::Entry> rtab(get(true,true));
-	std::vector<RoutingTable::Entry>::iterator bestEntry(rtab.end());
-	for(std::vector<RoutingTable::Entry>::iterator e(rtab.begin());e!=rtab.end();++e) {
+	std::vector<RoutingTableEntry> rtab(get(true,true));
+	std::vector<RoutingTableEntry>::iterator bestEntry(rtab.end());
+	for(std::vector<RoutingTableEntry>::iterator e(rtab.begin());e!=rtab.end();++e) {
 		if ((e->destination == destination)&&(e->gateway.ipsEqual(gateway))) {
 			if ((device)&&(device[0])) {
 				if (!strcmp(device,e->device)) {
@@ -229,7 +232,9 @@ RoutingTable::Entry LinuxRoutingTable::set(const InetAddress &destination,const 
 	if (bestEntry != rtab.end())
 		return *bestEntry;
 
-	return RoutingTable::Entry();
+	return RoutingTableEntry();
 }
 
 } // namespace ZeroTier
+
+#endif // __LINUX__

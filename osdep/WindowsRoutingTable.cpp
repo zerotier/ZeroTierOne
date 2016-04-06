@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2015  ZeroTier, Inc.
+ * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,16 +14,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * ZeroTier may be used and distributed under the terms of the GPLv3, which
- * are available at: http://www.gnu.org/licenses/gpl-3.0.html
- *
- * If you would like to embed ZeroTier into a commercial application or
- * redistribute it in a modified binary form, please contact ZeroTier Networks
- * LLC. Start here: http://www.zerotier.com/
  */
+
+#include "../node/Constants.hpp"
+
+#ifdef __WINDOWS__
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,7 +30,6 @@
 
 #include <vector>
 
-#include "../node/Constants.hpp"
 #include "WindowsRoutingTable.hpp"
 
 namespace ZeroTier {
@@ -176,3 +170,5 @@ RoutingTable::Entry WindowsRoutingTable::set(const InetAddress &destination,cons
 }
 
 } // namespace ZeroTier
+
+#endif // __WINDOWS__

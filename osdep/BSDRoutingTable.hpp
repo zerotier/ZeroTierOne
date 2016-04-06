@@ -28,7 +28,13 @@
 #ifndef ZT_BSDROUTINGTABLE_HPP
 #define ZT_BSDROUTINGTABLE_HPP
 
-#include "../node/RoutingTable.hpp"
+#include "../node/Constants.hpp"
+
+#ifdef __BSD__
+
+#include <vector>
+
+#include "RoutingTableEntry.hpp"
 
 namespace ZeroTier {
 
@@ -37,15 +43,18 @@ namespace ZeroTier {
  *
  * Has currently only been tested on OSX/Darwin.
  */
-class BSDRoutingTable : public RoutingTable
+class BSDRoutingTable
 {
 public:
 	BSDRoutingTable();
-	virtual ~BSDRoutingTable();
-	virtual std::vector<RoutingTable::Entry> get(bool includeLinkLocal = false,bool includeLoopback = false) const;
-	virtual RoutingTable::Entry set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric);
+	~BSDRoutingTable();
+
+	std::vector<RoutingTableEntry> get(bool includeLinkLocal,bool includeLoopback) const;
+	RoutingTableEntry set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric);
 };
 
 } // namespace ZeroTier
+
+#endif // __BSD__
 
 #endif

@@ -16,34 +16,47 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ZT_LINUXROUTINGTABLE_HPP
-#define ZT_LINUXROUTINGTABLE_HPP
+#ifndef ZT_ROUTINGTABLEENTRY_HPP
+#define ZT_ROUTINGTABLEENTRY_HPP
 
-#include "../node/Constants.hpp"
-
-#ifdef __LINUX__
-
-#include <vector>
-
-#include "RoutingTableEntry.hpp"
+#include "../node/InetAddress.hpp"
 
 namespace ZeroTier {
 
-/**
- * Routing table interface via /proc/net/route, /proc/net/ipv6_route, and /sbin/route command
- */
-class LinuxRoutingTable
+class RoutingTableEntry
 {
 public:
-	LinuxRoutingTable();
-	~LinuxRoutingTable();
-	
-	std::vector<RoutingTableEntry> get(bool includeLinkLocal = false,bool includeLoopback = false) const;
-	RoutingTableEntry set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric);
+	/**
+	 * Destination IP and netmask bits (CIDR format)
+	 */
+	InetAddress destination;
+
+	/**
+	 * Gateway or null address if direct link-level route, netmask/port part of InetAddress not used
+	 */
+	InetAddress gateway;
+
+	/**
+	 * System device index or ID (not included in comparison operators, may not be set on all platforms)
+	 */
+	int deviceIndex;
+
+	/**
+	 * Metric or hop count -- higher = lower routing priority
+	 */
+	int metric;
+
+	/**
+	 * System device name
+	 */
+	char device[128];
+
+	/**
+	 * @return True if at least one required field is present (object is not null)
+	 */
+	inline operator bool() const { return ((destination)||(gateway)); }
 };
 
 } // namespace ZeroTier
-
-#endif // __LINUX__
 
 #endif
