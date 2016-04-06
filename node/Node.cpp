@@ -493,10 +493,10 @@ int Node::addLocalInterfaceAddress(const struct sockaddr_storage *addr)
 {
 	if (Path::isAddressValidForPath(*(reinterpret_cast<const InetAddress *>(addr)))) {
 		Mutex::Lock _l(_directPaths_m);
-		_directPaths.push_back(*(reinterpret_cast<const InetAddress *>(addr)));
-		std::sort(_directPaths.begin(),_directPaths.end());
-		_directPaths.erase(std::unique(_directPaths.begin(),_directPaths.end()),_directPaths.end());
-		return 1;
+		if (std::find(_directPaths.begin(),_directPaths.end(),*(reinterpret_cast<const InetAddress *>(addr))) == _directPaths.end()) {
+			_directPaths.push_back(*(reinterpret_cast<const InetAddress *>(addr)));
+			return 1;
+		}
 	}
 	return 0;
 }
