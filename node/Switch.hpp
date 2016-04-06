@@ -184,7 +184,7 @@ private:
 
 	/* Returns the matching or oldest entry. Caller must check timestamp and
 	 * packet ID to determine which. */
-	inline RXQueueEntry *_findRXQueueEntry(uint64_t packetId)
+	inline RXQueueEntry *_findRXQueueEntry(uint64_t now,uint64_t packetId)
 	{
 		RXQueueEntry *rq;
 		RXQueueEntry *oldest = &(_rxQueue[ZT_RX_QUEUE_SIZE - 1]);
@@ -193,6 +193,8 @@ private:
 			rq = &(_rxQueue[--i]);
 			if ((rq->packetId == packetId)&&(rq->timestamp))
 				return rq;
+			if ((now - rq->timestamp) >= ZT_RX_QUEUE_EXPIRE)
+				rq->timestamp = 0;
 			if (rq->timestamp < oldest->timestamp)
 				oldest = rq;
 		}
