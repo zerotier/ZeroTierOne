@@ -136,7 +136,7 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #define ZT_TCP_FALLBACK_AFTER 60000
 
 // How often to check for local interface addresses
-#define ZT_LOCAL_INTERFACE_CHECK_INTERVAL 300000
+#define ZT_LOCAL_INTERFACE_CHECK_INTERVAL 60000
 
 namespace ZeroTier {
 
