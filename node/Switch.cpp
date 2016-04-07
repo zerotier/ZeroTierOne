@@ -138,7 +138,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 						// seeing a Packet::Fragment?
 
 						Mutex::Lock _l(_rxQueue_m);
-						RXQueueEntry *const rq = _findRXQueueEntry(fragmentPacketId);
+						RXQueueEntry *const rq = _findRXQueueEntry(now,fragmentPacketId);
 
 						if ((!rq->timestamp)||(rq->packetId != fragmentPacketId)) {
 							// No packet found, so we received a fragment without its head.
@@ -241,7 +241,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 					// Packet is the head of a fragmented packet series
 
 					Mutex::Lock _l(_rxQueue_m);
-					RXQueueEntry *const rq = _findRXQueueEntry(packetId);
+					RXQueueEntry *const rq = _findRXQueueEntry(now,packetId);
 
 					if ((!rq->timestamp)||(rq->packetId != packetId)) {
 						// If we have no other fragments yet, create an entry and save the head

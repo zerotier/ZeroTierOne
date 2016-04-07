@@ -170,6 +170,11 @@
 #define ZT_RX_QUEUE_SIZE 64
 
 /**
+ * RX queue entries older than this do not "exist"
+ */
+#define ZT_RX_QUEUE_EXPIRE 4000
+
+/**
  * Length of secret key in bytes -- 256-bit -- do not change
  */
 #define ZT_PEER_SECRET_KEY_LENGTH 32
