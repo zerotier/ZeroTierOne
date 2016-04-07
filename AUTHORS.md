@@ -9,13 +9,16 @@
  * Network Containers for Linux, iOS, Android<br>
    Joseph Henry / joseph.henry@zerotier.com
 
-## Contributors
+## Third Party Contributors
 
  * A number of fixes and improvements to the new controller, other stuff.<br>
    Kees Bos / https://github.com/keesbos/
 
  * Debugging and testing, OpenWRT support fixes.<br>
    Moritz Warning / moritzwarning@web.de
+
+ * Debian GNU/Linux packaging, manual pages, and license compliance edits.<br>
+   Ben Finney <ben+zerotier@benfinney.id.au>
 
  * Several others made smaller contributions, which GitHub tracks here:<br>
    https://github.com/zerotier/ZeroTierOne/graphs/contributors/
@@ -28,7 +31,7 @@
    * Home page: http://code.google.com/p/lz4/
    * License grant: BSD attribution
 
- * http-parser by Joyent (many authors)
+ * http-parser by Joyent, Inc. (many authors)
 
    * Files: ext/http-parser/*
    * Home page: https://github.com/joyent/http-parser/

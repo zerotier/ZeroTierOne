@@ -17,6 +17,9 @@
 #   clean: removes all built files, objects, other trash
 #
 
+GENERATED_FILES :=
+DOC_DIR = doc
+
 # Automagically pick clang or gcc, with preference for clang
 # This is only done if we have not overridden these with an environment or CLI variable
 ifeq ($(origin CC),default)
@@ -87,7 +90,7 @@ endif
 #LDFLAGS=
 #STRIP=echo
 
-all:	one
+all:	one doc
 
 one:	$(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o $(LDLIBS)
@@ -115,8 +118,7 @@ installer: one FORCE
 	./ext/installfiles/linux/buildinstaller.sh
 
 clean: FORCE
-	rm -rf *.so *.o netcon/*.a node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest zerotier-netcon-service build-* ZeroTierOneInstaller-* *.deb *.rpm .depend netcon/.depend
-	# Remove files from all the funny places we put them for tests
+	rm -rf ${GENERATED_FILES} *.so *.o netcon/*.a node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest zerotier-netcon-service build-* ZeroTierOneInstaller-* *.deb *.rpm .depend netcon/.depend
 	find netcon -type f \( -name '*.o' -o -name '*.so' -o -name '*.1.0' -o -name 'zerotier-one' -o -name 'zerotier-cli' -o -name 'zerotier-netcon-service' \) -delete
 	find netcon/docker-test -name "zerotier-intercept" -type f -delete
 
@@ -128,5 +130,7 @@ official: FORCE
 	make ZT_OFFICIAL_RELEASE=1 clean
 	make -j 4 ZT_OFFICIAL_RELEASE=1 one
 	make ZT_OFFICIAL_RELEASE=1 installer
+
+include ${DOC_DIR}/module.mk
 
 FORCE:
