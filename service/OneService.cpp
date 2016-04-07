@@ -590,7 +590,7 @@ public:
 
 			// We must bind one of IPv4 or IPv6 -- support either failing to support hosts that
 			// have only IPv4 or only IPv6 stacks.
-			if (((_v4TcpControlSocket)||(_v6TcpControlSocket))&&(_trialBind(port))) {
+			if ((_v4TcpControlSocket)||(_v6TcpControlSocket)) {
 				_ports[0] = port;
 				break;
 			} else {
