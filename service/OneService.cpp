@@ -571,33 +571,37 @@ public:
 			if (port == 0) {
 				unsigned int randp = 0;
 				Utils::getSecureRandom(&randp,sizeof(randp));
-				port = 40000 + (randp % 25500);
+				port = 20000 + (randp % 45500);
 			}
 
-			struct sockaddr_in in4;
-			memset(&in4,0,sizeof(in4));
-			in4.sin_family = AF_INET;
-			in4.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001); // right now we just listen for TCP @127.0.0.1
-			in4.sin_port = Utils::hton((uint16_t)port);
-			_v4TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
+			if (_trialBind(port)) {
+				struct sockaddr_in in4;
+				memset(&in4,0,sizeof(in4));
+				in4.sin_family = AF_INET;
+				in4.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001); // right now we just listen for TCP @127.0.0.1
+				in4.sin_port = Utils::hton((uint16_t)port);
+				_v4TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
 
-			struct sockaddr_in6 in6;
-			memset((void *)&in6,0,sizeof(in6));
-			in6.sin6_family = AF_INET6;
-			in6.sin6_port = in4.sin_port;
-			in6.sin6_addr.s6_addr[15] = 1; // IPv6 localhost == ::1
-			_v6TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
+				struct sockaddr_in6 in6;
+				memset((void *)&in6,0,sizeof(in6));
+				in6.sin6_family = AF_INET6;
+				in6.sin6_port = in4.sin_port;
+				in6.sin6_addr.s6_addr[15] = 1; // IPv6 localhost == ::1
+				_v6TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
 
-			// We must bind one of IPv4 or IPv6 -- support either failing to support hosts that
-			// have only IPv4 or only IPv6 stacks.
-			if ((_v4TcpControlSocket)||(_v6TcpControlSocket)) {
-				_ports[0] = port;
-				break;
+				// We must bind one of IPv4 or IPv6 -- support either failing to support hosts that
+				// have only IPv4 or only IPv6 stacks.
+				if ((_v4TcpControlSocket)||(_v6TcpControlSocket)) {
+					_ports[0] = port;
+					break;
+				} else {
+					if (_v4TcpControlSocket)
+						_phy.close(_v4TcpControlSocket,false);
+					if (_v6TcpControlSocket)
+						_phy.close(_v6TcpControlSocket,false);
+					port = 0;
+				}
 			} else {
-				if (_v4TcpControlSocket)
-					_phy.close(_v4TcpControlSocket,false);
-				if (_v6TcpControlSocket)
-					_phy.close(_v6TcpControlSocket,false);
 				port = 0;
 			}
 		}
@@ -675,7 +679,7 @@ public:
 			// private address port number.
 			_ports[1] = 20000 + ((unsigned int)_node->address() % 45500);
 			for(int i=0;;++i) {
-				if (i > 256) {
+				if (i > 1000) {
 					_ports[1] = 0;
 					break;
 				} else if (++_ports[1] >= 65536) {
@@ -689,21 +693,23 @@ public:
 			// If we're running uPnP/NAT-PMP, bind a *third* port for that. We can't
 			// use the other two ports for that because some NATs do really funky
 			// stuff with ports that are explicitly mapped that breaks things.
-			_ports[2] = _ports[1];
-			for(int i=0;;++i) {
-				if (i > 256) {
-					_ports[2] = 0;
-					break;
-				} else if (++_ports[2] >= 65536) {
-					_ports[2] = 20000;
+			if (_ports[1]) {
+				_ports[2] = _ports[1];
+				for(int i=0;;++i) {
+					if (i > 1000) {
+						_ports[2] = 0;
+						break;
+					} else if (++_ports[2] >= 65536) {
+						_ports[2] = 20000;
+					}
+					if (_trialBind(_ports[2]))
+						break;
 				}
-				if (_trialBind(_ports[2]))
-					break;
-			}
-			if (_ports[2]) {
-				char uniqueName[64];
-				Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx",_node->address());
-				_portMapper = new PortMapper(_ports[2],uniqueName);
+				if (_ports[2]) {
+					char uniqueName[64];
+					Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
+					_portMapper = new PortMapper(_ports[2],uniqueName);
+				}
 			}
 #endif
 
