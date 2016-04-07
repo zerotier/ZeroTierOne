@@ -16,9 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ZT_ROUTINGTABLE_HPP
-#define ZT_ROUTINGTABLE_HPP
-
 #include "../node/Constants.hpp"
 
 #ifdef __WINDOWS__
@@ -308,7 +305,7 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 												sin6->sin6_scope_id = interfaceIndex;
 										}
 									}
-									e.destination.set(sa);
+									e.destination = *sa;
 									break;
 								case 1:
 									//printf("RTA_GATEWAY\n");
@@ -318,7 +315,7 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 											break;
 										case AF_INET:
 										case AF_INET6:
-											e.gateway.set(sa);
+											e.gateway = *sa;
 											break;
 									}
 									break;
@@ -371,7 +368,8 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 						if (e.metric < 0)
 							e.metric = 0;
 
-						if (((includeLinkLocal)||(!e.destination.isLinkLocal()))&&((includeLoopback)||((!e.destination.isLoopback())&&(!e.gateway.isLoopback()))))
+						InetAddress::IpScope dscope = e.destination.ipScope();
+						if ( ((includeLinkLocal)||(dscope != InetAddress::IP_SCOPE_LINK_LOCAL)) && ((includeLoopback)||((dscope != InetAddress::IP_SCOPE_LOOPBACK) && (e.gateway.ipScope() != InetAddress::IP_SCOPE_LOOPBACK) )))
 							entries.push_back(e);
 					}
 
@@ -391,7 +389,7 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 		if ((!e1->device[0])&&(e1->gateway)) {
 			int bestMetric = 9999999;
 			for(std::vector<ZeroTier::RoutingTable::Entry>::iterator e2(entries.begin());e2!=entries.end();++e2) {
-				if ((e1->gateway.within(e2->destination))&&(e2->metric <= bestMetric)) {
+				if ((e2->destination.containsAddress(e1->gateway))&&(e2->metric <= bestMetric)) {
 					bestMetric = e2->metric;
 					Utils::scopy(e1->device,sizeof(e1->device),e2->device);
 				}
@@ -608,5 +606,3 @@ RoutingTable::Entry RoutingTable::set(const InetAddress &destination,const InetA
 // ---------------------------------------------------------------------------
 
 } // namespace ZeroTier
-
-#endif

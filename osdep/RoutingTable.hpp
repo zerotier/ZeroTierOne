@@ -67,9 +67,24 @@ public:
 		inline operator bool() const { return ((destination)||(gateway)); }
 	};
 
-	static std::vector<RoutingTableEntry> get(bool includeLinkLocal,bool includeLoopback);
+	/**
+	 * Get routing table
+	 *
+	 * @param includeLinkLocal Include link-local IPs?
+	 * @param includeLoopback Include loopback routes?
+	 */
+	static std::vector<RoutingTable::Entry> get(bool includeLinkLocal,bool includeLoopback);
 
-	static RoutingTableEntry set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric,bool ifscope);
+	/**
+	 * Add or replace a routing table entry
+	 *
+	 * @param destination Route destination
+	 * @param gateway Gateway or null if local
+	 * @param device Device name (if applicable)
+	 * @param metric Route metric (if applicable)
+	 * @param ifscope Interface bound route? If so, device must be set. (only applicable on some OSes)
+	 */
+	static RoutingTable::Entry set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric,bool ifscope);
 };
 
 } // namespace ZeroTier
