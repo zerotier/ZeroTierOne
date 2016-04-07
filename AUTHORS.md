@@ -1,10 +1,13 @@
-## Authors
+## Primary Authors
 
  * ZeroTier protocol design and core network virtualization engine, ZeroTier One service, React web UI, packaging for most platforms, kitchen sink...<br>
    Adam Ierymenko / adam.ierymenko@zerotier.com
 
  * Java JNI Interface to enable Android application development, and Android app itself (code for that is elsewhere)<br>
    Grant Limberg / glimberg@gmail.com
+
+ * Network Containers for Linux, iOS, Android<br>
+   Joseph Henry / joseph.henry@zerotier.com
 
 ## Contributors
 
@@ -25,7 +28,7 @@
    * Home page: http://code.google.com/p/lz4/
    * License grant: BSD attribution
 
- * http-parser by many authors
+ * http-parser by Joyent (many authors)
 
    * Files: ext/http-parser/*
    * Home page: https://github.com/joyent/http-parser/
@@ -64,6 +67,8 @@
 
  * MiniUPNPC by Thomas Bernard
 
-   * Files: ext/libnatpmp/*
+   * Files:
+       ext/libnatpmp/*
+       ext/miniupnpc/*
    * Home page: http://miniupnp.free.fr/
    * License grant: BSD attribution no-endorsement
