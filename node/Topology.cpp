@@ -284,10 +284,9 @@ bool Topology::isUpstream(const Identity &id) const
 		return true;
 	std::vector< SharedPtr<Network> > nws(RR->node->allNetworks());
 	for(std::vector< SharedPtr<Network> >::const_iterator nw(nws.begin());nw!=nws.end();++nw) {
-		SharedPtr<NetworkConfig> nc((*nw)->config2());
-		if (nc) {
-			for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(nc->relays().begin());r!=nc->relays().end();++r) {
-				if (r->first == id.address())
+		if ((*nw)->hasConfig()) {
+			for(unsigned int r=0;r<(*nw)->config().staticDeviceCount();++r) {
+				if ((((*nw)->config().staticDevice(r).flags & ZT_NETWORK_STATIC_DEVICE_IS_RELAY) != 0)&&((*nw)->config().staticDevice(r).address == id.address().toInt()))
 					return true;
 			}
 		}
