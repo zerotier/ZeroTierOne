@@ -146,7 +146,7 @@ public:
 	 * @param conf Configuration in NetworkConfig form
 	 * @return True if configuration was accepted
 	 */
-	bool applyConfiguration(const SharedPtr<NetworkConfig> &conf);
+	bool applyConfiguration(const NetworkConfig &conf);
 
 	/**
 	 * Set or update this network's configuration
@@ -222,56 +222,34 @@ public:
 	}
 
 	/**
-	 * Get current network config or throw exception
+	 * Get current network config
 	 *
-	 * This version never returns null. Instead it throws a runtime error if
-	 * there is no current configuration. Callers should check isUp() first or
-	 * use config2() to get with the potential for null.
+	 * This returns a const reference to the network config in place, which is safe
+	 * to concurrently access but *may* change during access. Normally this isn't a
+	 * problem, but if it is use configCopy().
 	 *
-	 * Since it never returns null, it's safe to config()->whatever() inside
-	 * a try/catch block.
-	 *
-	 * @return Network configuration (never null)
-	 * @throws std::runtime_error Network configuration unavailable
+	 * @return Network configuration (may be a null config if we don't have one yet)
 	 */
-	inline SharedPtr<NetworkConfig> config() const
+	inline const NetworkConfig &config() const { return _config };
+
+	/**
+	 * @return A thread-safe copy of our NetworkConfig instead of a const reference
+	 */
+	inline NetworkConfig configCopy() const
 	{
 		Mutex::Lock _l(_lock);
-		if (_config)
-			return _config;
-		throw std::runtime_error("no configuration");
+		return config;
 	}
 
 	/**
-	 * Get current network config or return NULL
-	 *
-	 * @return Network configuration -- may be NULL
+	 * @return True if this network has a valid config
 	 */
-	inline SharedPtr<NetworkConfig> config2() const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		return _config;
-	}
+	inline bool hasConfig() const { return (_config); }
 
 	/**
 	 * @return Ethernet MAC address for this network's local interface
 	 */
 	inline const MAC &mac() const throw() { return _mac; }
-
-	/**
-	 * Shortcut for config()->permitsBridging(), returns false if no config
-	 *
-	 * @param peer Peer address to check
-	 * @return True if peer can bridge other Ethernet nodes into this network or network is in permissive bridging mode
-	 */
-	inline bool permitsBridging(const Address &peer) const
-	{
-		Mutex::Lock _l(_lock);
-		if (_config)
-			return _config->permitsBridging(peer);
-		return false;
-	}
 
 	/**
 	 * Find the node on this network that has this MAC behind it (if any)
@@ -355,7 +333,7 @@ private:
 	Hashtable< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
 	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
 
-	SharedPtr<NetworkConfig> _config; // Most recent network configuration, which is an immutable value-object
+	NetworkConfig _config;
 	volatile uint64_t _lastConfigUpdate;
 
 	volatile bool _destroyed;

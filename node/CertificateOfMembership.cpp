@@ -16,8 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <algorithm>
-
 #include "CertificateOfMembership.hpp"
 
 namespace ZeroTier {
@@ -26,17 +24,24 @@ void CertificateOfMembership::setQualifier(uint64_t id,uint64_t value,uint64_t m
 {
 	_signedBy.zero();
 
-	for(std::vector<_Qualifier>::iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
-		if (q->id == id) {
-			q->value = value;
-			q->maxDelta = maxDelta;
+	for(unsigned int i=0;i<_qualifierCount;++i) {
+		if (_qualifiers[i].id == id) {
+			_qualifiers[i].value = value;
+			_qualifiers[i].maxDelta = maxDelta;
 			return;
 		}
 	}
 
-	_qualifiers.push_back(_Qualifier(id,value,maxDelta));
-	std::sort(_qualifiers.begin(),_qualifiers.end());
+	if (_qualifierCount < ZT_NETWORK_COM_MAX_QUALIFIERS) {
+		_qualifiers[_qualifierCount].id = id;
+		_qualifiers[_qualifierCount].value = value;
+		_qualifiers[_qualifierCount].maxDelta = maxDelta;
+		++_qualifierCount;
+		std::sort(&(_qualifiers[0]),&(_qualifiers[_qualifierCount]));
+	}
 }
+
+#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 
 std::string CertificateOfMembership::toString() const
 {
@@ -44,13 +49,13 @@ std::string CertificateOfMembership::toString() const
 
 	s.append("1:"); // COM_UINT64_ED25519
 
-	uint64_t *buf = new uint64_t[_qualifiers.size() * 3];
+	uint64_t *const buf = new uint64_t[_qualifierCount * 3];
 	try {
 		unsigned int ptr = 0;
-		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
-			buf[ptr++] = Utils::hton(q->id);
-			buf[ptr++] = Utils::hton(q->value);
-			buf[ptr++] = Utils::hton(q->maxDelta);
+		for(unsigned int i=0;i<_qualifierCount;++i) {
+			buf[ptr++] = Utils::hton(_qualifiers[i].id);
+			buf[ptr++] = Utils::hton(_qualifiers[i].value);
+			buf[ptr++] = Utils::hton(_qualifiers[i].maxDelta);
 		}
 		s.append(Utils::hex(buf,ptr * sizeof(uint64_t)));
 		delete [] buf;
@@ -73,7 +78,7 @@ std::string CertificateOfMembership::toString() const
 
 void CertificateOfMembership::fromString(const char *s)
 {
-	_qualifiers.clear();
+	_qualifierCount = 0;
 	_signedBy.zero();
 	memset(_signature.data,0,_signature.size());
 
@@ -91,16 +96,20 @@ void CertificateOfMembership::fromString(const char *s)
 	while ((s[colonAt])&&(s[colonAt] != ':')) ++colonAt;
 
 	if (colonAt) {
-		unsigned int buflen = colonAt / 2;
-		char *buf = new char[buflen];
+		const unsigned int buflen = colonAt / 2;
+		char *const buf = new char[buflen];
 		unsigned int bufactual = Utils::unhex(s,colonAt,buf,buflen);
 		char *bufptr = buf;
 		try {
 			while (bufactual >= 24) {
-				_qualifiers.push_back(_Qualifier());
-				_qualifiers.back().id = Utils::ntoh(*((uint64_t *)bufptr)); bufptr += 8;
-				_qualifiers.back().value = Utils::ntoh(*((uint64_t *)bufptr)); bufptr += 8;
-				_qualifiers.back().maxDelta = Utils::ntoh(*((uint64_t *)bufptr)); bufptr += 8;
+				if (_qualifierCount < ZT_NETWORK_COM_MAX_QUALIFIERS) {
+					_qualifiers[_qualifierCount].id = Utils::ntoh(*((uint64_t *)bufptr)); bufptr += 8;
+					_qualifiers[_qualifierCount].value = Utils::ntoh(*((uint64_t *)bufptr)); bufptr += 8;
+					_qualifiers[_qualifierCount].maxDelta = Utils::ntoh(*((uint64_t *)bufptr)); bufptr += 8;
+					++_qualifierCount;
+				} else {
+					bufptr += 24;
+				}
 				bufactual -= 24;
 			}
 		} catch ( ... ) {}
@@ -121,29 +130,32 @@ void CertificateOfMembership::fromString(const char *s)
 				s += colonAt + 1;
 				colonAt = 0;
 				while ((s[colonAt])&&(s[colonAt] != ':')) ++colonAt;
-
 				if (colonAt) {
 					if (Utils::unhex(s,colonAt,_signature.data,(unsigned int)_signature.size()) != _signature.size())
 						_signedBy.zero();
-				} else _signedBy.zero();
-			} else _signedBy.zero();
+				} else {
+					_signedBy.zero();
+				}
+			} else {
+				_signedBy.zero();
+			}
 		}
 	}
 
-	std::sort(_qualifiers.begin(),_qualifiers.end());
-	_qualifiers.erase(std::unique(_qualifiers.begin(),_qualifiers.end()),_qualifiers.end());
+	std::sort(&(_qualifiers[0]),&(_qualifiers[_qualifierCount]));
 }
 
-bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) const
-	throw()
-{
-	unsigned long myidx = 0;
-	unsigned long otheridx = 0;
+#endif // ZT_SUPPORT_OLD_STYLE_NETCONF
 
-	while (myidx < _qualifiers.size()) {
+bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) const
+{
+	unsigned int myidx = 0;
+	unsigned int otheridx = 0;
+
+	while (myidx < _qualifierCount) {
 		// Fail if we're at the end of other, since this means the field is
 		// missing.
-		if (otheridx >= other._qualifiers.size())
+		if (otheridx >= other._qualifierCount)
 			return false;
 
 		// Seek to corresponding tuple in other, ignoring tuples that
@@ -151,7 +163,7 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) c
 		// missing. This works because tuples are sorted by ID.
 		while (other._qualifiers[otheridx].id != _qualifiers[myidx].id) {
 			++otheridx;
-			if (otheridx >= other._qualifiers.size())
+			if (otheridx >= other._qualifierCount)
 				return false;
 		}
 
@@ -170,12 +182,12 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) c
 
 bool CertificateOfMembership::sign(const Identity &with)
 {
-	uint64_t *buf = new uint64_t[_qualifiers.size() * 3];
+	uint64_t *const buf = new uint64_t[_qualifierCount * 3];
 	unsigned int ptr = 0;
-	for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
-		buf[ptr++] = Utils::hton(q->id);
-		buf[ptr++] = Utils::hton(q->value);
-		buf[ptr++] = Utils::hton(q->maxDelta);
+	for(unsigned int i=0;i<_qualifierCount;++i) {
+		buf[ptr++] = Utils::hton(_qualifiers[i].id);
+		buf[ptr++] = Utils::hton(_qualifiers[i].value);
+		buf[ptr++] = Utils::hton(_qualifiers[i].maxDelta);
 	}
 
 	try {
@@ -197,12 +209,12 @@ bool CertificateOfMembership::verify(const Identity &id) const
 	if (id.address() != _signedBy)
 		return false;
 
-	uint64_t *buf = new uint64_t[_qualifiers.size() * 3];
+	uint64_t *const buf = new uint64_t[_qualifierCount * 3];
 	unsigned int ptr = 0;
-	for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
-		buf[ptr++] = Utils::hton(q->id);
-		buf[ptr++] = Utils::hton(q->value);
-		buf[ptr++] = Utils::hton(q->maxDelta);
+	for(unsigned int i=0;i<_qualifierCount;++i) {
+		buf[ptr++] = Utils::hton(_qualifiers[i].id);
+		buf[ptr++] = Utils::hton(_qualifiers[i].value);
+		buf[ptr++] = Utils::hton(_qualifiers[i].maxDelta);
 	}
 
 	bool valid = false;

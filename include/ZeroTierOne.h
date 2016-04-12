@@ -79,12 +79,37 @@ extern "C" {
 /**
  * Maximum length of network short name
  */
-#define ZT_MAX_NETWORK_SHORT_NAME_LENGTH 255
+#define ZT_MAX_NETWORK_SHORT_NAME_LENGTH 127
+
+/**
+ * Maximum number of local routes on a network
+ */
+#define ZT_MAX_NETWORK_LOCAL_ROUTES 64
 
 /**
  * Maximum number of statically assigned IP addresses per network endpoint using ZT address management (not DHCP)
  */
-#define ZT_MAX_ZT_ASSIGNED_ADDRESSES 16
+#define ZT_MAX_ZT_ASSIGNED_ADDRESSES 64
+
+/**
+ * Maximum number of default routes / gateways on a network (ZT managed)
+ */
+#define ZT_MAX_NETWORK_GATEWAYS 8
+
+/**
+ * Maximum number of active bridges on a network
+ */
+#define ZT_MAX_NETWORK_ACTIVE_BRIDGES 256
+
+/**
+ * Maximum number of static devices on a network
+ */
+#define ZT_MAX_NETWORK_STATIC_DEVICES 64
+
+/**
+ * Maximum number of rules per network (can be increased)
+ */
+#define ZT_MAX_NETWORK_RULES 64
 
 /**
  * Maximum number of multicast group subscriptions per network
@@ -133,6 +158,11 @@ extern "C" {
  * Maximum allowed cluster message length in bytes
  */
 #define ZT_CLUSTER_MAX_MESSAGE_LENGTH (1500 - 48)
+
+/**
+ * This device is a network preferred relay
+ */
+#define ZT_NETWORK_STATIC_DEVICE_IS_RELAY 0x0001
 
 /**
  * A null/empty sockaddr (all zero) to signify an unspecified socket address
@@ -358,6 +388,30 @@ enum ZT_VirtualNetworkStatus
 };
 
 /**
+ * A network-scope defined static device entry
+ *
+ * Statically defined devices can have pre-specified endpoint addresses
+ * and can serve as things like network-specific relays.
+ */
+typedef struct
+{
+	/**
+	 * ZeroTier address (least significant 40 bits, other bits ignored)
+	 */
+	uint64_t address;
+
+	/**
+	 * Physical address or zero ss_family if unspecified (two entries to support both V4 and V6)
+	 */
+	struct sockaddr_storage physical[2];
+
+	/**
+	 * Flags indicating roles (if any) and restrictions
+	 */
+	unsigned int flags;
+} ZT_VirtualNetworkStaticDevice;
+
+/**
  * Virtual network type codes
  */
 enum ZT_VirtualNetworkType
@@ -372,6 +426,109 @@ enum ZT_VirtualNetworkType
 	 */
 	ZT_NETWORK_TYPE_PUBLIC = 1
 };
+
+/**
+ * An action in a network rule
+ */
+enum ZT_VirtualNetworkRuleAction
+{
+	ZT_NETWORK_RULE_ACTION_DROP = 0,
+	ZT_NETWORK_RULE_ACTION_ACCEPT = 1
+};
+
+/**
+ * Network flow rule
+ *
+ * Currently only etherType is supported! Other flags will have no effect
+ * until the rules engine is fully implemented.
+ */
+typedef struct
+{
+	/**
+	 * Rule sort order
+	 */
+	int ruleNo;
+
+	/**
+	 * Source ZeroTier address ("port" on the global virtual switch) (0 == wildcard)
+	 */
+	uint64_t sourcePort;
+
+	/**
+	 * Destination ZeroTier address ("port" on the global virtual switch) (0 == wildcard)
+	 */
+	uint64_t destPort;
+
+	/**
+	 * VLAN ID (-1 == wildcard)
+	 */
+	int vlanId;
+
+	/**
+	 * VLAN PCP (-1 == wildcard)
+	 */
+	int vlanPcp;
+
+	/**
+	 * Ethernet type (-1 == wildcard)
+	 */
+	int etherType;
+
+	/**
+	 * Source MAC address (least significant 48 bits, host byte order) (0 == wildcard)
+	 */
+	uint64_t macSource;
+
+	/** 
+	 * Destination MAC address (least significant 48 bits, host byte order) (0 == wildcard)
+	 */
+	uint64_t macDest;
+
+	/**
+	 * Source IP address (ss_family == 0 for wildcard)
+	 */
+	struct sockaddr_storage ipSource;
+
+	/**
+	 * Destination IP address (ss_family == 0 for wildcard)
+	 */
+	struct sockaddr_storage ipDest;
+
+	/**
+	 * IP type of service (-1 == wildcard)
+	 */
+	int ipTos;
+
+	/**
+	 * IP protocol (-1 == wildcard)
+	 */
+	int ipProtocol;
+
+	/**
+	 * IP source port (-1 == wildcard)
+	 */
+	int ipSourcePort;
+
+	/**
+	 * IP destination port (-1 == wildcard)
+	 */
+	int ipDestPort;
+
+	/**
+	 * Flags to match if set
+	 */
+	unsigned long flags;
+
+	/**
+	 * Flags to match if NOT set
+	 */
+	unsigned long invFlags;
+
+	/** 
+	 * Action if rule matches
+	 */
+	enum ZT_VirtualNetworkRuleAction action;
+} ZT_VirtualNetworkRule;
 
 /**
  * An Ethernet multicast group

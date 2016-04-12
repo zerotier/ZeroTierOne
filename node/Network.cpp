@@ -148,12 +148,12 @@ bool Network::tryAnnounceMulticastGroupsTo(const SharedPtr<Peer> &peer)
 	return false;
 }
 
-bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
+bool Network::applyConfiguration(const NetworkConfig &conf)
 {
 	if (_destroyed) // sanity check
 		return false;
 	try {
-		if ((conf->networkId() == _id)&&(conf->issuedTo() == RR->identity.address())) {
+		if ((conf.networkId() == _id)&&(conf.issuedTo() == RR->identity.address())) {
 			ZT_VirtualNetworkConfig ctmp;
 			bool portInitialized;
 			{
@@ -181,10 +181,11 @@ bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
 int Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 {
 	try {
-		const SharedPtr<NetworkConfig> newConfig(new NetworkConfig(conf)); // throws if invalid
+		NetworkConfig newConfig;
+		newConfig.fromDictionary(conf); // throws if invalid
 		{
 			Mutex::Lock _l(_lock);
-			if ((_config)&&(*_config == *newConfig))
+			if (_config == newConfig)
 				return 1; // OK config, but duplicate of what we already have
 		}
 		if (applyConfiguration(newConfig)) {
@@ -208,7 +209,6 @@ void Network::requestConfiguration()
 
 	if (controller() == RR->identity.address()) {
 		if (RR->localNetworkController) {
-			SharedPtr<NetworkConfig> nconf(config2());
 			Dictionary newconf;
 			switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,Dictionary(),newconf)) {
 				case NetworkController::NETCONF_QUERY_OK:
@@ -242,12 +242,9 @@ void Network::requestConfiguration()
 	outp.append((uint64_t)_id);
 	outp.append((uint16_t)mds.length());
 	outp.append((const void *)mds.data(),(unsigned int)mds.length());
-	{
-		Mutex::Lock _l(_lock);
-		if (_config)
-			outp.append((uint64_t)_config->revision());
-		else outp.append((uint64_t)0);
-	}
+	if (_config)
+		outp.append((uint64_t)_config.revision());
+	else outp.append((uint64_t)0);
 	RR->sw->send(outp,true,0);
 }
 
@@ -357,17 +354,17 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	ec->nwid = _id;
 	ec->mac = _mac.toInt();
 	if (_config)
-		Utils::scopy(ec->name,sizeof(ec->name),_config->name().c_str());
+		Utils::scopy(ec->name,sizeof(ec->name),_config.name().c_str());
 	else ec->name[0] = (char)0;
 	ec->status = _status();
-	ec->type = (_config) ? (_config->isPrivate() ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC) : ZT_NETWORK_TYPE_PRIVATE;
+	ec->type = (_config) ? (_config.isPrivate() ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC) : ZT_NETWORK_TYPE_PRIVATE;
 	ec->mtu = ZT_IF_MTU;
 	ec->dhcp = 0;
-	ec->bridge = (_config) ? ((_config->allowPassiveBridging() || (std::find(_config->activeBridges().begin(),_config->activeBridges().end(),RR->identity.address()) != _config->activeBridges().end())) ? 1 : 0) : 0;
-	ec->broadcastEnabled = (_config) ? (_config->enableBroadcast() ? 1 : 0) : 0;
+	ec->bridge = (_config) ? (_config.allowPassiveBridging() || (std::find(_config.activeBridges().begin(),_config.activeBridges().end(),RR->identity.address()) != _config.activeBridges().end())) ? 1 : 0) : 0;
+	ec->broadcastEnabled = (_config) ? (_config.enableBroadcast() ? 1 : 0) : 0;
 	ec->portError = _portError;
 	ec->enabled = (_enabled) ? 1 : 0;
-	ec->netconfRevision = (_config) ? (unsigned long)_config->revision() : 0;
+	ec->netconfRevision = (_config) ? (unsigned long)_config.revision() : 0;
 
 	ec->multicastSubscriptionCount = std::min((unsigned int)_myMulticastGroups.size(),(unsigned int)ZT_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS);
 	for(unsigned int i=0;i<ec->multicastSubscriptionCount;++i) {
@@ -376,10 +373,10 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	}
 
 	if (_config) {
-		ec->assignedAddressCount = (unsigned int)_config->staticIps().size();
+		ec->assignedAddressCount = (unsigned int)_config.staticIps().size();
 		for(unsigned long i=0;i<ZT_MAX_ZT_ASSIGNED_ADDRESSES;++i) {
-			if (i < _config->staticIps().size())
-				memcpy(&(ec->assignedAddresses[i]),&(_config->staticIps()[i]),sizeof(struct sockaddr_storage));
+			if (i < _config.staticIps().size())
+				memcpy(&(ec->assignedAddresses[i]),&(_config.staticIps()[i]),sizeof(struct sockaddr_storage));
 		}
 	} else ec->assignedAddressCount = 0;
 }
@@ -390,9 +387,9 @@ bool Network::_isAllowed(const SharedPtr<Peer> &peer) const
 	try {
 		if (!_config)
 			return false;
-		if (_config->isPublic())
+		if (_config.isPublic())
 			return true;
-		return ((_config->com())&&(peer->networkMembershipCertificatesAgree(_id,_config->com())));
+		return ((_config.com())&&(peer->networkMembershipCertificatesAgree(_id,_config.com())));
 	} catch (std::exception &exc) {
 		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer->address().toString().c_str(),exc.what());
 	} catch ( ... ) {
@@ -445,9 +442,9 @@ void Network::_announceMulticastGroupsTo(const Address &peerAddress,const std::v
 
 	// We push COMs ahead of MULTICAST_LIKE since they're used for access control -- a COM is a public
 	// credential so "over-sharing" isn't really an issue (and we only do so with roots).
-	if ((_config)&&(_config->com())&&(!_config->isPublic())) {
+	if ((_config)&&(_config.com())&&(!_config.isPublic())) {
 		Packet outp(peerAddress,RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
-		_config->com().serialize(outp);
+		_config.com().serialize(outp);
 		RR->sw->send(outp,true,0);
 	}
 
@@ -479,7 +476,7 @@ std::vector<MulticastGroup> Network::_allMulticastGroups() const
 	mgs.reserve(_myMulticastGroups.size() + _multicastGroupsBehindMe.size() + 1);
 	mgs.insert(mgs.end(),_myMulticastGroups.begin(),_myMulticastGroups.end());
 	_multicastGroupsBehindMe.appendKeys(mgs);
-	if ((_config)&&(_config->enableBroadcast()))
+	if ((_config)&&(_config.enableBroadcast()))
 		mgs.push_back(Network::BROADCAST);
 	std::sort(mgs.begin(),mgs.end());
 	mgs.erase(std::unique(mgs.begin(),mgs.end()),mgs.end());

@@ -20,6 +20,8 @@
 #define ZT_NETWORKCONFIG_HPP
 
 #include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include <map>
 #include <vector>
@@ -27,16 +29,19 @@
 #include <stdexcept>
 #include <algorithm>
 
+#include "../include/ZeroTierOne.h"
+
 #include "Constants.hpp"
 #include "Dictionary.hpp"
+#include "Buffer.hpp"
 #include "InetAddress.hpp"
-#include "AtomicCounter.hpp"
-#include "SharedPtr.hpp"
 #include "MulticastGroup.hpp"
 #include "Address.hpp"
 #include "CertificateOfMembership.hpp"
 
 namespace ZeroTier {
+
+#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 
 // Fields for meta-data sent with network config requests
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION "majv"
@@ -83,15 +88,16 @@ namespace ZeroTier {
 // IP/metric[,IP/metric,...]
 #define ZT_NETWORKCONFIG_DICT_KEY_GATEWAYS "gw"
 
+#endif // ZT_SUPPORT_OLD_STYLE_NETCONF
+
 /**
  * Network configuration received from network controller nodes
  *
- * This is an immutable value object created from a dictionary received from controller.
+ * This is a memcpy()'able structure and is safe (in a crash sense) to modify
+ * without locks.
  */
 class NetworkConfig
 {
-	friend class SharedPtr<NetworkConfig>;
-
 public:
 	/**
 	 * Create an instance of a NetworkConfig for the test network ID
@@ -102,32 +108,45 @@ public:
 	 * @param self This node's ZT address
 	 * @return Configuration for test network ID
 	 */
-	static SharedPtr<NetworkConfig> createTestNetworkConfig(const Address &self);
+	static NetworkConfig createTestNetworkConfig(const Address &self);
 
-	/**
-	 * @param d Dictionary containing configuration
-	 * @throws std::invalid_argument Invalid configuration
-	 */
-	NetworkConfig(const Dictionary &d) { _fromDictionary(d); }
+	NetworkConfig()
+	{
+		memset(this,0,sizeof(NetworkConfig));
+	}
+
+	NetworkConfig(const NetworkConfig &nc)
+	{
+		memcpy(this,&nc,sizeof(NetworkConfig));
+	}
+
+	inline NetworkConfig &operator=(const NetworkConfig &nc)
+	{
+		memcpy(this,&nc,sizeof(NetworkConfig));
+		return *this;
+	}
 
 	/**
 	 * @param etherType Ethernet frame type to check
 	 * @return True if allowed on this network
 	 */
 	inline bool permitsEtherType(unsigned int etherType) const
-		throw()
 	{
-		if ((etherType <= 0)||(etherType > 0xffff)) // sanity checks
-			return false;
-		if ((_etWhitelist[0] & 1)) // presence of 0 means allow all
-			return true;
-		return ((_etWhitelist[etherType >> 3] & (1 << (etherType & 7))) != 0);
+		for(unsigned int i=0;i<_ruleCount;++i) {
+			if ((_rules[i].etherType < 0)||((unsigned int)_rules[i].etherType == etherType))
+				return (_rules[i].action == ZT_NETWORK_RULE_ACTION_ACCEPT);
+		}
+		return false;
 	}
 
+#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 	/**
-	 * @return Allowed ethernet types or a vector containing only 0 if "all"
+	 * Parse an old-style dictionary and fill in structure
+	 *
+	 * @throws std::invalid_argument Invalid dictionary
 	 */
-	std::vector<unsigned int> allowedEtherTypes() const;
+	void fromDictionary(const Dictionary &d);
+#endif
 
 	inline uint64_t networkId() const throw() { return _nwid; }
 	inline uint64_t timestamp() const throw() { return _timestamp; }
@@ -135,16 +154,44 @@ public:
 	inline const Address &issuedTo() const throw() { return _issuedTo; }
 	inline unsigned int multicastLimit() const throw() { return _multicastLimit; }
 	inline bool allowPassiveBridging() const throw() { return _allowPassiveBridging; }
-	inline bool isPublic() const throw() { return (!_private); }
-	inline bool isPrivate() const throw() { return _private; }
-	inline const std::string &name() const throw() { return _name; }
-	inline const std::vector<InetAddress> &localRoutes() const throw() { return _localRoutes; }
-	inline const std::vector<InetAddress> &staticIps() const throw() { return _staticIps; }
-	inline const std::vector<InetAddress> &gateways() const throw() { return _gateways; }
-	inline const std::vector<Address> &activeBridges() const throw() { return _activeBridges; }
-	inline const std::vector< std::pair<Address,InetAddress> > &relays() const throw() { return _relays; }
-	inline const CertificateOfMembership &com() const throw() { return _com; }
 	inline bool enableBroadcast() const throw() { return _enableBroadcast; }
+	inline ZT_VirtualNetworkType type() const throw() { return _type; }
+	inline bool isPublic() const throw() { return (_type == ZT_NETWORK_TYPE_PUBLIC); }
+	inline bool isPrivate() const throw() { return (_type == ZT_NETWORK_TYPE_PRIVATE); }
+	inline const char *name() const throw() { return _name; }
+	inline const CertificateOfMembership &com() const throw() { return _com; }
+
+	inline std::vector<InetAddress> localRoutes() const
+	{
+		std::vector<InetAddress> r;
+		for(unsigned int i=0;i<_localRouteCount;++i)
+			r.push_back(_localRoutes[i]);
+		return r;
+	}
+
+	inline std::vector<InetAddress> staticIps() const
+	{
+		std::vector<InetAddress> r;
+		for(unsigned int i=0;i<_staticIpCount;++i)
+			r.push_back(_staticIps[i]);
+		return r;
+	}
+
+	inline std::vector<InetAddress> gateways() const
+	{
+		std::vector<InetAddress> r;
+		for(unsigned int i=0;i<_gatewayCount;++i)
+			r.push_back(_gateways[i]);
+		return r;
+	}
+
+	inline std::vector<Address> activeBridges() const
+	{
+		std::vector<Address> r;
+		for(unsigned int i=0;i<_activeBridgeCount;++i)
+			r.push_back(_activeBridges[i]);
+		return r;
+	}
 
 	/**
 	 * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
@@ -152,36 +199,47 @@ public:
 	 */
 	inline bool permitsBridging(const Address &fromPeer) const
 	{
-		return ( (_allowPassiveBridging) || (std::find(_activeBridges.begin(),_activeBridges.end(),fromPeer) != _activeBridges.end()) );
+		if (_allowPassiveBridging)
+			return true;
+		for(unsigned int i=0;i<_activeBridgeCount;++i) {
+			if (_activeBridges[i] == fromPeer)
+				return true;
+		}
+		return false;
 	}
 
-	bool operator==(const NetworkConfig &nc) const;
+	inline operator bool() const throw() { return (_nwid != 0); }
+
+	inline bool operator==(const NetworkConfig &nc) const { return (memcmp(this,&nc,sizeof(NetworkConfig)) == 0); }
 	inline bool operator!=(const NetworkConfig &nc) const { return (!(*this == nc)); }
 
-private:
-	NetworkConfig() {}
-	~NetworkConfig() {}
-
-	void _fromDictionary(const Dictionary &d);
-
+protected: // protected so that a subclass can fill this out in network controller code
 	uint64_t _nwid;
 	uint64_t _timestamp;
 	uint64_t _revision;
-	unsigned char _etWhitelist[65536 / 8];
 	Address _issuedTo;
 	unsigned int _multicastLimit;
 	bool _allowPassiveBridging;
-	bool _private;
 	bool _enableBroadcast;
-	std::string _name;
-	std::vector<InetAddress> _localRoutes;
-	std::vector<InetAddress> _staticIps;
-	std::vector<InetAddress> _gateways;
-	std::vector<Address> _activeBridges;
-	std::vector< std::pair<Address,InetAddress> > _relays;
-	CertificateOfMembership _com;
+	ZT_VirtualNetworkType _type;
 
-	AtomicCounter __refCount;
+	char _name[ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1];
+
+	Address _activeBridges[ZT_MAX_NETWORK_ACTIVE_BRIDGES];
+	InetAddress _localRoutes[ZT_MAX_NETWORK_LOCAL_ROUTES];
+	InetAddress _staticIps[ZT_MAX_ZT_ASSIGNED_ADDRESSES];
+	InetAddress _gateways[ZT_MAX_NETWORK_GATEWAYS];
+	ZT_VirtualNetworkStaticDevice _static[ZT_MAX_NETWORK_STATIC_DEVICES];
+	ZT_VirtualNetworkRule _rules[ZT_MAX_NETWORK_RULES];
+
+	unsigned int _activeBridgeCount;
+	unsigned int _localRouteCount;
+	unsigned int _staticIpCount;
+	unsigned int _gatewayCount;
+	unsigned int _staticCount;
+	unsigned int _ruleCount;
+
+	CertificateOfMembership _com;
 };
 
 } // namespace ZeroTier

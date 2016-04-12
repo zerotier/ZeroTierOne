@@ -354,6 +354,11 @@
 #define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 4
 
 /**
+ * Enable support for old Dictionary based network configs
+ */
+#define ZT_SUPPORT_OLD_STYLE_NETCONF 1
+
+/**
  * A test pseudo-network-ID that can be joined
  *
  * Joining this network ID will result in a network with no IP addressing
