@@ -193,6 +193,16 @@ public:
 		return r;
 	}
 
+	inline std::vector<ZT_VirtualNetworkStaticDevice> relays() const
+	{
+		std::vector<ZT_VirtualNetworkStaticDevice> r;
+		for(unsigned int i=0;i<_staticCount;++i) {
+			if ((_static[i].flags & ZT_NETWORK_STATIC_DEVICE_IS_RELAY) != 0)
+				r.push_back(_static[i]);
+		}
+		return r;
+	}
+
 	/**
 	 * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
 	 * @return True if this network allows bridging

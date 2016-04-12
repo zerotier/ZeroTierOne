@@ -173,7 +173,7 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 class _PingPeersThatNeedPing
 {
 public:
-	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now,const std::vector< std::pair<Address,InetAddress> > &relays) :
+	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now,const std::vector<ZT_VirtualNetworkStaticDevice> &relays) :
 		lastReceiveFromUpstream(0),
 		RR(renv),
 		_now(now),
@@ -217,12 +217,14 @@ public:
 
 			// Check for network preferred relays, also considered 'upstream' and thus always
 			// pinged to keep links up. If they have stable addresses we will try them there.
-			for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(_relays.begin());r!=_relays.end();++r) {
-				if (r->first == p->address()) {
-					if (r->second.ss_family == AF_INET)
-						stableEndpoint4 = r->second;
-					else if (r->second.ss_family == AF_INET6)
-						stableEndpoint6 = r->second;
+			for(std::vector<ZT_VirtualNetworkStaticDevice>::const_iterator r(_relays.begin());r!=_relays.end();++r) {
+				if (r->address == p->address().toInt()) {
+					for(unsigned int i=0;i<2;++i) {
+						if (r->physical[i].ss_family == AF_INET)
+							stableEndpoint4 = r->physical[i];
+						else if (r->physical[i].ss_family == AF_INET6)
+							stableEndpoint6 = r->physical[i];
+					}
 					upstream = true;
 					break;
 				}
@@ -269,7 +271,7 @@ public:
 private:
 	const RuntimeEnvironment *RR;
 	uint64_t _now;
-	const std::vector< std::pair<Address,InetAddress> > &_relays;
+	const std::vector<ZT_VirtualNetworkStaticDevice> &_relays;
 	World _world;
 };
 
@@ -285,16 +287,18 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 			_lastPingCheck = now;
 
 			// Get relays and networks that need config without leaving the mutex locked
-			std::vector< std::pair<Address,InetAddress> > networkRelays;
+			std::vector< ZT_VirtualNetworkStaticDevice > networkRelays;
 			std::vector< SharedPtr<Network> > needConfig;
 			{
 				Mutex::Lock _l(_networks_m);
 				for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
-					SharedPtr<NetworkConfig> nc(n->second->config2());
-					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!nc))
+					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!n->second->hasConfig())) {
 						needConfig.push_back(n->second);
-					if (nc)
-						networkRelays.insert(networkRelays.end(),nc->relays().begin(),nc->relays().end());
+					}
+					if (n->second->hasConfig()) {
+						std::vector<ZT_VirtualNetworkStaticDevice> r(n->second->config().relays());
+						networkRelays.insert(networkRelays.end(),r.begin(),r.end());
+					}
 				}
 			}
 
@@ -676,9 +680,9 @@ bool Node::shouldUsePathForZeroTierTraffic(const InetAddress &localAddress,const
 	{
 		Mutex::Lock _l(_networks_m);
 		for(std::vector< std::pair< uint64_t, SharedPtr<Network> > >::const_iterator i=_networks.begin();i!=_networks.end();++i) {
-			SharedPtr<NetworkConfig> nc(i->second->config2());
-			if (nc) {
-				for(std::vector<InetAddress>::const_iterator a(nc->staticIps().begin());a!=nc->staticIps().end();++a) {
+			if (i->second->hasConfig()) {
+				std::vector<InetAddress> sips(i->second->config().staticIps());
+				for(std::vector<InetAddress>::const_iterator a(sips.begin());a!=sips.end();++a) {
 					if (a->containsAddress(remoteAddress)) {
 						return false;
 					}
