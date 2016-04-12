@@ -790,32 +790,34 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 				return false; // we probably just left this network, let its packets die
 		}
 
-		Path *viaPath = peer->getBestPath(now);
 		SharedPtr<Peer> relay;
+
+		// Check for a network preferred relay
+		Path *viaPath = peer->getBestPath(now);
 		if ((!viaPath)&&(network)) {
-			// See if this network has a preferred relay (if packet has an associated network)
-			unsigned int bestq = ~((unsigned int)0);
+			unsigned int bestq = ~((unsigned int)0); // max unsigned int since quality is lower==better
 			for(unsigned int ri=0;ri<network->config().staticDeviceCount();++ri) {
 				const ZT_VirtualNetworkStaticDevice &r = network->config().staticDevice(ri);
 				if ((r.address != peer->address().toInt())&&((r.flags & ZT_NETWORK_STATIC_DEVICE_IS_RELAY) != 0)) {
 					SharedPtr<Peer> rp(RR->topology->getPeer(Address(r.address)));
 					if (rp) {
 						const unsigned int q = rp->relayQuality(now);
-						if (q < bestq) { // SUBTILE: < == don't use these if they are nil quality (unsigned int max), instead use a root
+						if (q < bestq) {
 							bestq = q;
 							rp.swap(relay);
 						}
 					}
 				}
 			}
-
-			// Otherwise relay off a root server
-			if (!relay)
-				relay = RR->topology->getBestRoot();
-
-			if (!(relay)||(!(viaPath = relay->getBestPath(now))))
-				return false; // no paths, no root servers?, no relays? :P~~~
 		}
+
+		// Otherwise relay off a root server
+		if (!relay)
+			relay = RR->topology->getBestRoot();
+
+		// No relay or relay has no active paths == :P~~~~
+		if ( (!(relay)) || (!(viaPath = relay->getBestPath(now))) )
+			return false;
 
 		if ((network)&&(relay)&&(network->isAllowed(peer))) {
 			// Push hints for direct connectivity to this peer if we are relaying
