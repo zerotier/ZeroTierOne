@@ -46,7 +46,7 @@
 /**
  * Maximum number of qualifiers in a COM
  */
-#define ZT_NETWORK_COM_MAX_QUALIFIERS 32
+#define ZT_NETWORK_COM_MAX_QUALIFIERS 16
 
 namespace ZeroTier {
 

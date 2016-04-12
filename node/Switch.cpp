@@ -307,8 +307,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 
 void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 {
-	SharedPtr<NetworkConfig> nconf(network->config2());
-	if (!nconf)
+	if (!network->hasConfig())
 		return;
 
 	// Sanity check -- bridge loop? OS problem?
@@ -316,7 +315,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		return;
 
 	// Check to make sure this protocol is allowed on this network
-	if (!nconf->permitsEtherType(etherType)) {
+	if (!network->config().permitsEtherType(etherType)) {
 		TRACE("%.16llx: ignored tap: %s -> %s: ethertype %s not allowed on network %.16llx",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),(unsigned long long)network->id());
 		return;
 	}
@@ -324,7 +323,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	// Check if this packet is from someone other than the tap -- i.e. bridged in
 	bool fromBridged = false;
 	if (from != network->mac()) {
-		if (!network->permitsBridging(RR->identity.address())) {
+		if (!network->config().permitsBridging(RR->identity.address())) {
 			TRACE("%.16llx: %s -> %s %s not forwarded, bridging disabled or this peer not a bridge",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 			return;
 		}
@@ -347,7 +346,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				 * the 32-bit ADI field. In practice this uses our multicast pub/sub
 				 * system to implement a kind of extended/distributed ARP table. */
 				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(((const unsigned char *)data) + 24,4,0));
-			} else if (!nconf->enableBroadcast()) {
+			} else if (!network->config().enableBroadcast()) {
 				// Don't transmit broadcasts if this network doesn't want them
 				TRACE("%.16llx: dropped broadcast since ff:ff:ff:ff:ff:ff is not enabled",network->id());
 				return;
@@ -363,7 +362,8 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			 * themselves, they can look these addresses up with NDP and it will
 			 * work just fine. */
 			if ((reinterpret_cast<const uint8_t *>(data)[6] == 0x3a)&&(reinterpret_cast<const uint8_t *>(data)[40] == 0x87)) { // ICMPv6 neighbor solicitation
-				for(std::vector<InetAddress>::const_iterator sip(nconf->staticIps().begin()),sipend(nconf->staticIps().end());sip!=sipend;++sip) {
+				std::vector<InetAddress> sips(network->config().staticIps());
+				for(std::vector<InetAddress>::const_iterator sip(sips.begin());sip!=sips.end();++sip) {
 					if ((sip->ss_family == AF_INET6)&&(Utils::ntoh((uint16_t)reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_port) == 88)) {
 						const uint8_t *my6 = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_addr.s6_addr);
 						if ((my6[0] == 0xfd)&&(my6[9] == 0x99)&&(my6[10] == 0x93)) { // ZT-RFC4193 == fd__:____:____:____:__99:93__:____:____ / 88
@@ -426,11 +426,11 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		//TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),len);
 
 		RR->mc->send(
-			((!nconf->isPublic())&&(nconf->com())) ? &(nconf->com()) : (const CertificateOfMembership *)0,
-			nconf->multicastLimit(),
+			((!network->config().isPublic())&&(network->config().com())) ? &(network->config().com()) : (const CertificateOfMembership *)0,
+			network->config().multicastLimit(),
 			RR->node->now(),
 			network->id(),
-			nconf->activeBridges(),
+			network->config().activeBridges(),
 			mg,
 			(fromBridged) ? from : MAC(),
 			etherType,
@@ -445,13 +445,13 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		Address toZT(to.toAddress(network->id())); // since in-network MACs are derived from addresses and network IDs, we can reverse this
 		SharedPtr<Peer> toPeer(RR->topology->getPeer(toZT));
-		const bool includeCom = ( (nconf->isPrivate()) && (nconf->com()) && ((!toPeer)||(toPeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true))) );
+		const bool includeCom = ( (network->config().isPrivate()) && (network->config().com()) && ((!toPeer)||(toPeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true))) );
 		if ((fromBridged)||(includeCom)) {
 			Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
 			if (includeCom) {
 				outp.append((unsigned char)0x01); // 0x01 -- COM included
-				nconf->com().serialize(outp);
+				network->config().com().serialize(outp);
 			} else {
 				outp.append((unsigned char)0x00);
 			}
@@ -483,25 +483,26 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		/* Create an array of up to ZT_MAX_BRIDGE_SPAM recipients for this bridged frame. */
 		bridges[0] = network->findBridgeTo(to);
-		if ((bridges[0])&&(bridges[0] != RR->identity.address())&&(network->permitsBridging(bridges[0]))) {
+		std::vector<Address> activeBridges(network->config().activeBridges());
+		if ((bridges[0])&&(bridges[0] != RR->identity.address())&&(network->config().permitsBridging(bridges[0]))) {
 			/* We have a known bridge route for this MAC, send it there. */
 			++numBridges;
-		} else if (!nconf->activeBridges().empty()) {
+		} else if (!activeBridges.empty()) {
 			/* If there is no known route, spam to up to ZT_MAX_BRIDGE_SPAM active
 			 * bridges. If someone responds, we'll learn the route. */
-			std::vector<Address>::const_iterator ab(nconf->activeBridges().begin());
-			if (nconf->activeBridges().size() <= ZT_MAX_BRIDGE_SPAM) {
+			std::vector<Address>::const_iterator ab(activeBridges.begin());
+			if (activeBridges.size() <= ZT_MAX_BRIDGE_SPAM) {
 				// If there are <= ZT_MAX_BRIDGE_SPAM active bridges, spam them all
-				while (ab != nconf->activeBridges().end()) {
+				while (ab != activeBridges.end()) {
 					bridges[numBridges++] = *ab;
 					++ab;
 				}
 			} else {
 				// Otherwise pick a random set of them
 				while (numBridges < ZT_MAX_BRIDGE_SPAM) {
-					if (ab == nconf->activeBridges().end())
-						ab = nconf->activeBridges().begin();
-					if (((unsigned long)RR->node->prng() % (unsigned long)nconf->activeBridges().size()) == 0) {
+					if (ab == activeBridges.end())
+						ab = activeBridges.begin();
+					if (((unsigned long)RR->node->prng() % (unsigned long)activeBridges.size()) == 0) {
 						bridges[numBridges++] = *ab;
 						++ab;
 					} else ++ab;
@@ -513,9 +514,9 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			SharedPtr<Peer> bridgePeer(RR->topology->getPeer(bridges[b]));
 			Packet outp(bridges[b],RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
-			if ( (nconf->isPrivate()) && (nconf->com()) && ((!bridgePeer)||(bridgePeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true))) ) {
+			if ( (network->config().isPrivate()) && (network->config().com()) && ((!bridgePeer)||(bridgePeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true))) ) {
 				outp.append((unsigned char)0x01); // 0x01 -- COM included
-				nconf->com().serialize(outp);
+				network->config().com().serialize(outp);
 			} else {
 				outp.append((unsigned char)0);
 			}
@@ -783,31 +784,26 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 		const uint64_t now = RR->node->now();
 
 		SharedPtr<Network> network;
-		SharedPtr<NetworkConfig> nconf;
 		if (nwid) {
 			network = RR->node->network(nwid);
-			if (!network)
+			if ((!network)||(!network->hasConfig()))
 				return false; // we probably just left this network, let its packets die
-			nconf = network->config2();
-			if (!nconf)
-				return false; // sanity check: unconfigured network? why are we trying to talk to it?
 		}
 
 		Path *viaPath = peer->getBestPath(now);
 		SharedPtr<Peer> relay;
-		if (!viaPath) {
+		if ((!viaPath)&&(network)) {
 			// See if this network has a preferred relay (if packet has an associated network)
-			if (nconf) {
-				unsigned int bestq = ~((unsigned int)0);
-				for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(nconf->relays().begin());r!=nconf->relays().end();++r) {
-					if (r->first != peer->address()) {
-						SharedPtr<Peer> rp(RR->topology->getPeer(r->first));
-						if (rp) {
-							const unsigned int q = rp->relayQuality(now);
-							if (q < bestq) { // SUBTILE: < == don't use these if they are nil quality (unsigned int max), instead use a root
-								bestq = q;
-								rp.swap(relay);
-							}
+			unsigned int bestq = ~((unsigned int)0);
+			for(unsigned int ri=0;ri<network->config().staticDeviceCount();++ri) {
+				const ZT_VirtualNetworkStaticDevice &r = network->config().staticDevice(ri);
+				if ((r.address != peer->address().toInt())&&((r.flags & ZT_NETWORK_STATIC_DEVICE_IS_RELAY) != 0)) {
+					SharedPtr<Peer> rp(RR->topology->getPeer(Address(r.address)));
+					if (rp) {
+						const unsigned int q = rp->relayQuality(now);
+						if (q < bestq) { // SUBTILE: < == don't use these if they are nil quality (unsigned int max), instead use a root
+							bestq = q;
+							rp.swap(relay);
 						}
 					}
 				}

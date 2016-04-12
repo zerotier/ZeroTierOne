@@ -203,6 +203,9 @@ public:
 		return r;
 	}
 
+	const ZT_VirtualNetworkStaticDevice &staticDevice(unsigned int i) const { return _static[i]; }
+	unsigned int staticDeviceCount() const { return _staticCount; }
+
 	/**
 	 * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
 	 * @return True if this network allows bridging
