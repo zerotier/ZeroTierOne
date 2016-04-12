@@ -36,6 +36,7 @@
 #include "node/Packet.hpp"
 #include "node/Salsa20.hpp"
 #include "node/MAC.hpp"
+#include "node/NetworkConfig.hpp"
 #include "node/Peer.hpp"
 #include "node/Dictionary.hpp"
 #include "node/SHA512.hpp"
@@ -1084,6 +1085,7 @@ int main(int argc,char **argv)
 	*/
 
 	std::cout << "[info] sizeof(void *) == " << sizeof(void *) << std::endl;
+	std::cout << "[info] sizeof(NetworkConfig) == " << sizeof(ZeroTier::NetworkConfig) << std::endl;
 
 	srand((unsigned int)time(0));
 

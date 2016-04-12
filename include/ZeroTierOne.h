@@ -84,12 +84,12 @@ extern "C" {
 /**
  * Maximum number of local routes on a network
  */
-#define ZT_MAX_NETWORK_LOCAL_ROUTES 64
+#define ZT_MAX_NETWORK_LOCAL_ROUTES 32
 
 /**
  * Maximum number of statically assigned IP addresses per network endpoint using ZT address management (not DHCP)
  */
-#define ZT_MAX_ZT_ASSIGNED_ADDRESSES 64
+#define ZT_MAX_ZT_ASSIGNED_ADDRESSES 32
 
 /**
  * Maximum number of default routes / gateways on a network (ZT managed)
@@ -104,7 +104,7 @@ extern "C" {
 /**
  * Maximum number of static devices on a network
  */
-#define ZT_MAX_NETWORK_STATIC_DEVICES 64
+#define ZT_MAX_NETWORK_STATIC_DEVICES 32
 
 /**
  * Maximum number of rules per network (can be increased)
