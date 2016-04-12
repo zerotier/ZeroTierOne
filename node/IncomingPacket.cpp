@@ -148,10 +148,9 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				 * from the remote that agrees. */
 				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if (network) {
-					SharedPtr<NetworkConfig> nconf(network->config2());
-					if (nconf) {
+					if ((network->hasConfig())&&(network->config().com())) {
 						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
-						nconf->com().serialize(outp);
+						network->config().com().serialize(outp);
 						outp.armor(peer->key(),true);
 						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 					}
@@ -533,7 +532,7 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				}
 
 				const unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
-				if (!network->config()->permitsEtherType(etherType)) {
+				if (!network->config().permitsEtherType(etherType)) {
 					TRACE("dropped FRAME from %s(%s): ethertype %.4x not allowed on %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned int)etherType,(unsigned long long)network->id());
 					return true;
 				}
@@ -577,7 +576,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				// of the certificate, if there was one...
 
 				const unsigned int etherType = at<uint16_t>(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_ETHERTYPE);
-				if (!network->config()->permitsEtherType(etherType)) {
+				if (!network->config().permitsEtherType(etherType)) {
 					TRACE("dropped EXT_FRAME from %s(%s): ethertype %.4x not allowed on network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned int)etherType,(unsigned long long)network->id());
 					return true;
 				}
@@ -596,14 +595,14 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				}
 
 				if (from != MAC(peer->address(),network->id())) {
-					if (network->permitsBridging(peer->address())) {
+					if (network->config().permitsBridging(peer->address())) {
 						network->learnBridgeRoute(from,peer->address());
 					} else {
 						TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
 						return true;
 					}
 				} else if (to != network->mac()) {
-					if (!network->permitsBridging(RR->identity.address())) {
+					if (!network->config().permitsBridging(RR->identity.address())) {
 						TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: I cannot bridge to %.16llx or bridging disabled on network",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
 						return true;
 					}
@@ -871,7 +870,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				}
 
 				if (from != MAC(peer->address(),network->id())) {
-					if (network->permitsBridging(peer->address())) {
+					if (network->config().permitsBridging(peer->address())) {
 						network->learnBridgeRoute(from,peer->address());
 					} else {
 						TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
@@ -1028,13 +1027,13 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 		vlf += previousHopCredentialLength;
 
 		// Check credentials (signature already verified)
-		SharedPtr<NetworkConfig> originatorCredentialNetworkConfig;
+		NetworkConfig originatorCredentialNetworkConfig;
 		if (originatorCredentialNetworkId) {
 			if (Network::controllerFor(originatorCredentialNetworkId) == originatorAddress) {
 				SharedPtr<Network> nw(RR->node->network(originatorCredentialNetworkId));
-				if (nw) {
-					originatorCredentialNetworkConfig = nw->config2();
-					if ( (originatorCredentialNetworkConfig) && ( (originatorCredentialNetworkConfig->isPublic()) || (peer->address() == originatorAddress) || ((originatorCredentialNetworkConfig->com())&&(previousHopCom)&&(originatorCredentialNetworkConfig->com().agreesWith(previousHopCom))) ) ) {
+				if ((nw)&&(nw->hasConfig())) {
+					originatorCredentialNetworkConfig = nw->config();
+					if ( ( (originatorCredentialNetworkConfig.isPublic()) || (peer->address() == originatorAddress) || ((originatorCredentialNetworkConfig.com())&&(previousHopCom)&&(originatorCredentialNetworkConfig.com().agreesWith(previousHopCom))) ) ) {
 						TRACE("CIRCUIT_TEST %.16llx received from hop %s(%s) and originator %s with valid network ID credential %.16llx (verified from originator and next hop)",testId,source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
 					} else {
 						TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID %.16llx as credential, and previous hop %s did not supply a valid COM",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId,peer->address().toString().c_str());
@@ -1109,9 +1108,9 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 			outp.append(field(ZT_PACKET_IDX_PAYLOAD,lengthOfSignedPortionAndSignature),lengthOfSignedPortionAndSignature);
 			const unsigned int previousHopCredentialPos = outp.size();
 			outp.append((uint16_t)0); // no previous hop credentials: default
-			if ((originatorCredentialNetworkConfig)&&(!originatorCredentialNetworkConfig->isPublic())&&(originatorCredentialNetworkConfig->com())) {
+			if ((originatorCredentialNetworkConfig)&&(!originatorCredentialNetworkConfig.isPublic())&&(originatorCredentialNetworkConfig.com())) {
 				outp.append((uint8_t)0x01); // COM
-				originatorCredentialNetworkConfig->com().serialize(outp);
+				originatorCredentialNetworkConfig.com().serialize(outp);
 				outp.setAt<uint16_t>(previousHopCredentialPos,(uint16_t)(outp.size() - (previousHopCredentialPos + 2)));
 			}
 			if (remainingHopsPtr < size())
