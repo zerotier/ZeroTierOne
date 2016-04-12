@@ -354,13 +354,14 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	ec->nwid = _id;
 	ec->mac = _mac.toInt();
 	if (_config)
-		Utils::scopy(ec->name,sizeof(ec->name),_config.name().c_str());
+		Utils::scopy(ec->name,sizeof(ec->name),_config.name());
 	else ec->name[0] = (char)0;
 	ec->status = _status();
 	ec->type = (_config) ? (_config.isPrivate() ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC) : ZT_NETWORK_TYPE_PRIVATE;
 	ec->mtu = ZT_IF_MTU;
 	ec->dhcp = 0;
-	ec->bridge = (_config) ? (_config.allowPassiveBridging() || (std::find(_config.activeBridges().begin(),_config.activeBridges().end(),RR->identity.address()) != _config.activeBridges().end())) ? 1 : 0) : 0;
+	std::vector<Address> ab(_config.activeBridges());
+	ec->bridge = ((_config.allowPassiveBridging())||(std::find(ab.begin(),ab.end(),RR->identity.address()) != ab.end())) ? 1 : 0;
 	ec->broadcastEnabled = (_config) ? (_config.enableBroadcast() ? 1 : 0) : 0;
 	ec->portError = _portError;
 	ec->enabled = (_enabled) ? 1 : 0;
@@ -372,13 +373,14 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 		ec->multicastSubscriptions[i].adi = _myMulticastGroups[i].adi();
 	}
 
-	if (_config) {
-		ec->assignedAddressCount = (unsigned int)_config.staticIps().size();
-		for(unsigned long i=0;i<ZT_MAX_ZT_ASSIGNED_ADDRESSES;++i) {
-			if (i < _config.staticIps().size())
-				memcpy(&(ec->assignedAddresses[i]),&(_config.staticIps()[i]),sizeof(struct sockaddr_storage));
-		}
-	} else ec->assignedAddressCount = 0;
+	std::vector<InetAddress> sips(_config.staticIps());
+	ec->assignedAddressCount = 0;
+	for(unsigned long i=0;i<ZT_MAX_ZT_ASSIGNED_ADDRESSES;++i) {
+		if (i < sips.size()) {
+			memcpy(&(ec->assignedAddresses[i]),&(sips[i]),sizeof(struct sockaddr_storage));
+			++ec->assignedAddressCount;
+		} else memset(&(ec->assignedAddresses[i]),0,sizeof(struct sockaddr_storage));
+	}
 }
 
 bool Network::_isAllowed(const SharedPtr<Peer> &peer) const

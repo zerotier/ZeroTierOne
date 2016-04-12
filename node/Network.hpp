@@ -230,7 +230,7 @@ public:
 	 *
 	 * @return Network configuration (may be a null config if we don't have one yet)
 	 */
-	inline const NetworkConfig &config() const { return _config };
+	inline const NetworkConfig &config() const { return _config; }
 
 	/**
 	 * @return A thread-safe copy of our NetworkConfig instead of a const reference
@@ -238,7 +238,7 @@ public:
 	inline NetworkConfig configCopy() const
 	{
 		Mutex::Lock _l(_lock);
-		return config;
+		return _config;
 	}
 
 	/**
