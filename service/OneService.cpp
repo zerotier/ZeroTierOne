@@ -520,7 +520,6 @@ public:
 	// Cluster management instance if enabled
 #ifdef ZT_ENABLE_CLUSTER
 	PhySocket *_clusterMessageSocket;
-	ClusterGeoIpService *_clusterGeoIpService;
 	ClusterDefinition *_clusterDefinition;
 	unsigned int _clusterMemberId;
 #endif
@@ -553,7 +552,6 @@ public:
 #endif
 #ifdef ZT_ENABLE_CLUSTER
 		,_clusterMessageSocket((PhySocket *)0)
-		,_clusterGeoIpService((ClusterGeoIpService *)0)
 		,_clusterDefinition((ClusterDefinition *)0)
 		,_clusterMemberId(0)
 #endif
@@ -633,7 +631,6 @@ public:
 		delete _controller;
 #endif
 #ifdef ZT_ENABLE_CLUSTER
-		delete _clusterGeoIpService;
 		delete _clusterDefinition;
 #endif
 	}
@@ -750,33 +747,18 @@ public:
 						return _termReason;
 					}
 
-					if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S + "cluster-geo.exe").c_str()))
-						_clusterGeoIpService = new ClusterGeoIpService((_homePath + ZT_PATH_SEPARATOR_S + "cluster-geo.exe").c_str());
-
 					const ClusterDefinition::MemberDefinition &me = (*_clusterDefinition)[_clusterMemberId];
 					InetAddress endpoints[255];
 					unsigned int numEndpoints = 0;
 					for(std::vector<InetAddress>::const_iterator i(me.zeroTierEndpoints.begin());i!=me.zeroTierEndpoints.end();++i)
 						endpoints[numEndpoints++] = *i;
 
-					if (_node->clusterInit(
-						_clusterMemberId,
-						reinterpret_cast<const struct sockaddr_storage *>(endpoints),
-						numEndpoints,
-						me.x,
-						me.y,
-						me.z,
-						&SclusterSendFunction,
-						this,
-						(_clusterGeoIpService) ? &SclusterGeoIpFunction : 0,
-						this) == ZT_RESULT_OK) {
-
+					if (_node->clusterInit(_clusterMemberId,reinterpret_cast<const struct sockaddr_storage *>(endpoints),numEndpoints,me.x,me.y,me.z,&SclusterSendFunction,this,_clusterDefinition->geo().available() ? &SclusterGeoIpFunction : 0,this) == ZT_RESULT_OK) {
 						std::vector<ClusterDefinition::MemberDefinition> members(_clusterDefinition->members());
 						for(std::vector<ClusterDefinition::MemberDefinition>::iterator m(members.begin());m!=members.end();++m) {
 							if (m->id != _clusterMemberId)
 								_node->clusterAddMember(m->id);
 						}
-
 					}
 				} else {
 					delete _clusterDefinition;
@@ -1611,7 +1593,7 @@ static void SclusterSendFunction(void *uptr,unsigned int toMemberId,const void *
 static int SclusterGeoIpFunction(void *uptr,const struct sockaddr_storage *addr,int *x,int *y,int *z)
 {
 	OneServiceImpl *const impl = reinterpret_cast<OneServiceImpl *>(uptr);
-	return (int)(impl->_clusterGeoIpService->locate(*(reinterpret_cast<const InetAddress *>(addr)),*x,*y,*z));
+	return (int)(impl->_clusterDefinition->geo().locate(*(reinterpret_cast<const InetAddress *>(addr)),*x,*y,*z));
 }
 #endif
 

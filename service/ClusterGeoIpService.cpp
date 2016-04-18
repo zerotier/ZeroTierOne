@@ -25,7 +25,6 @@
 #include "ClusterGeoIpService.hpp"
 
 #include "../node/Utils.hpp"
-#include "../node/InetAddress.hpp"
 #include "../osdep/OSUtils.hpp"
 
 #define ZT_CLUSTERGEOIPSERVICE_FILE_MODIFICATION_CHECK_EVERY 10000
@@ -69,12 +68,13 @@ bool ClusterGeoIpService::locate(const InetAddress &ip,int &x,int &y,int &z)
 		std::vector<_V4E>::const_iterator i(std::upper_bound(_v4db.begin(),_v4db.end(),key));
 		while (i != _v4db.begin()) {
 			--i;
-			if ((key->start >= i->start)&&(key->start <= i->end)) {
+			if ((key.start >= i->start)&&(key.start <= i->end)) {
 				x = i->x;
 				y = i->y;
 				z = i->z;
+				//printf("%s : %f,%f %d,%d,%d\n",ip.toIpString().c_str(),i->lat,i->lon,x,y,z);
 				return true;
-			} else if ((key->start > i->start)&&(key->start > i->end))
+			} else if ((key.start > i->start)&&(key.start > i->end))
 				break;
 		}
 	} else if ((ip.ss_family == AF_INET6)&&(_v6db.size() > 0)) {
@@ -83,12 +83,13 @@ bool ClusterGeoIpService::locate(const InetAddress &ip,int &x,int &y,int &z)
 		std::vector<_V6E>::const_iterator i(std::upper_bound(_v6db.begin(),_v6db.end(),key));
 		while (i != _v6db.begin()) {
 			--i;
-			const int s_vs_s = memcmp(key->start,i->start,16);
-			const int s_vs_e = memcmp(key->start,i->end,16);
+			const int s_vs_s = memcmp(key.start,i->start,16);
+			const int s_vs_e = memcmp(key.start,i->end,16);
 			if ((s_vs_s >= 0)&&(s_vs_e <= 0)) {
 				x = i->x;
 				y = i->y;
 				z = i->z;
+				//printf("%s : %f,%f %d,%d,%d\n",ip.toIpString().c_str(),i->lat,i->lon,x,y,z);
 				return true;
 			} else if ((s_vs_s > 0)&&(s_vs_e > 0))
 				break;
@@ -98,7 +99,7 @@ bool ClusterGeoIpService::locate(const InetAddress &ip,int &x,int &y,int &z)
 	return false;
 }
 
-static void _parseLine(const char *line,std::vector<_V4E> &v4db,std::vector<_V6E> &v6db,int ipStartColumn,int ipEndColumn,int latitudeColumn,int longitudeColumn)
+void ClusterGeoIpService::_parseLine(const char *line,std::vector<_V4E> &v4db,std::vector<_V6E> &v6db,int ipStartColumn,int ipEndColumn,int latitudeColumn,int longitudeColumn)
 {
 	std::vector<std::string> ls(Utils::split(line,",\t","\\","\"'"));
 	if ( ((ipStartColumn >= 0)&&(ipStartColumn < (int)ls.size()))&&
@@ -114,24 +115,30 @@ static void _parseLine(const char *line,std::vector<_V4E> &v4db,std::vector<_V6E
 			const double latRadians = lat * 0.01745329251994; // PI / 180
 			const double lonRadians = lon * 0.01745329251994; // PI / 180
 			const double cosLat = cos(latRadians);
-			const int x = (int)round((-6371.0) * cosLat * Math.cos(lonRadians)); // 6371 == Earth's approximate radius in kilometers
+			const int x = (int)round((-6371.0) * cosLat * cos(lonRadians)); // 6371 == Earth's approximate radius in kilometers
 			const int y = (int)round(6371.0 * sin(latRadians));
-			const int z = (int)round(6371.0 * cosLat * Math.sin(lonRadians));
+			const int z = (int)round(6371.0 * cosLat * sin(lonRadians));
 
 			if (ipStart.ss_family == AF_INET) {
 				v4db.push_back(_V4E());
 				v4db.back().start = Utils::ntoh((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&ipStart)->sin_addr.s_addr));
 				v4db.back().end = Utils::ntoh((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&ipEnd)->sin_addr.s_addr));
+				//v4db.back().lat = (float)lat;
+				//v4db.back().lon = (float)lon;
 				v4db.back().x = x;
 				v4db.back().y = y;
 				v4db.back().z = z;
+				//printf("%s - %s : %d,%d,%d\n",ipStart.toIpString().c_str(),ipEnd.toIpString().c_str(),x,y,z);
 			} else if (ipStart.ss_family == AF_INET6) {
 				v6db.push_back(_V6E());
 				memcpy(v6db.back().start,reinterpret_cast<const struct sockaddr_in6 *>(&ipStart)->sin6_addr.s6_addr,16);
 				memcpy(v6db.back().end,reinterpret_cast<const struct sockaddr_in6 *>(&ipEnd)->sin6_addr.s6_addr,16);
+				//v6db.back().lat = (float)lat;
+				//v6db.back().lon = (float)lon;
 				v6db.back().x = x;
 				v6db.back().y = y;
 				v6db.back().z = z;
+				//printf("%s - %s : %d,%d,%d\n",ipStart.toIpString().c_str(),ipEnd.toIpString().c_str(),x,y,z);
 			}
 		}
 	}
@@ -147,6 +154,8 @@ long ClusterGeoIpService::_load(const char *pathToCsv,int ipStartColumn,int ipEn
 
 	std::vector<_V4E> v4db;
 	std::vector<_V6E> v6db;
+	v4db.reserve(16777216);
+	v6db.reserve(16777216);
 
 	char buf[4096];
 	char linebuf[1024];
@@ -199,3 +208,28 @@ long ClusterGeoIpService::_load(const char *pathToCsv,int ipStartColumn,int ipEn
 } // namespace ZeroTier
 
 #endif // ZT_ENABLE_CLUSTER
+
+/*
+int main(int argc,char **argv)
+{
+	char buf[1024];
+
+	ZeroTier::ClusterGeoIpService gip;
+	printf("loading...\n");
+	gip.load("/Users/api/Code/ZeroTier/Infrastructure/root-servers/zerotier-one/cluster-geoip.csv",0,1,5,6);
+	printf("... done!\n"); fflush(stdout);
+
+	while (gets(buf)) { // unsafe, testing only
+		ZeroTier::InetAddress addr(buf,0);
+		printf("looking up: %s\n",addr.toString().c_str()); fflush(stdout);
+		int x = 0,y = 0,z = 0;
+		if (gip.locate(addr,x,y,z)) {
+			//printf("%s: %d,%d,%d\n",addr.toString().c_str(),x,y,z); fflush(stdout);
+		} else {
+			printf("%s: not found!\n",addr.toString().c_str()); fflush(stdout);
+		}
+	}
+
+	return 0;
+}
+*/

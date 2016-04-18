@@ -32,11 +32,13 @@
 
 #include "../node/Constants.hpp"
 #include "../node/Mutex.hpp"
+#include "../node/NonCopyable.hpp"
+#include "../node/InetAddress.hpp"
 
 namespace ZeroTier {
 
 /**
- * Loads a DBIP CSV into memory for fast lookup, reloading as needed
+ * Loads a GeoIP CSV into memory for fast lookup, reloading as needed
  *
  * This was designed around the CSV from https://db-ip.com but can be used
  * with any similar GeoIP CSV database that is presented in the form of an
@@ -45,7 +47,7 @@ namespace ZeroTier {
  * It loads the whole database into memory, which can be kind of large. If
  * the CSV file changes, the changes are loaded automatically.
  */
-class ClusterGeoIpService
+class ClusterGeoIpService : NonCopyable
 {
 public:
 	ClusterGeoIpService();
@@ -85,7 +87,37 @@ public:
 	 */
 	bool locate(const InetAddress &ip,int &x,int &y,int &z);
 
+	/**
+	 * @return True if IP database/service is available for queries (otherwise locate() will always be false)
+	 */
+	inline bool available() const
+	{
+		Mutex::Lock _l(_lock);
+		return ((_v4db.size() + _v6db.size()) > 0);
+	}
+
 private:
+	struct _V4E
+	{
+		uint32_t start;
+		uint32_t end;
+		//float lat,lon;
+		int x,y,z;
+
+		inline bool operator<(const _V4E &e) const { return (start < e.start); }
+	};
+
+	struct _V6E
+	{
+		uint8_t start[16];
+		uint8_t end[16];
+		//float lat,lon;
+		int x,y,z;
+
+		inline bool operator<(const _V6E &e) const { return (memcmp(start,e.start,16) < 0); }
+	};
+
+	static void _parseLine(const char *line,std::vector<_V4E> &v4db,std::vector<_V6E> &v6db,int ipStartColumn,int ipEndColumn,int latitudeColumn,int longitudeColumn);
 	long _load(const char *pathToCsv,int ipStartColumn,int ipEndColumn,int latitudeColumn,int longitudeColumn);
 
 	std::string _pathToCsv;
@@ -97,24 +129,6 @@ private:
 	uint64_t _lastFileCheckTime;
 	uint64_t _csvModificationTime;
 	int64_t _csvFileSize;
-
-	struct _V4E
-	{
-		uint32_t start;
-		uint32_t end;
-		int x,y,z;
-
-		inline bool operator<(const _V4E &e) const { return (start < e.start); }
-	};
-
-	struct _V6E
-	{
-		uint8_t start[16];
-		uint8_t end[16];
-		int x,y,z;
-
-		inline bool operator<(const _V6E &e) const { return (memcmp(start,e.start,16) < 0); }
-	};
 
 	std::vector<_V4E> _v4db;
 	std::vector<_V6E> _v6db;
