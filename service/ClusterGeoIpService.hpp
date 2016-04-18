@@ -101,8 +101,8 @@ private:
 	{
 		uint32_t start;
 		uint32_t end;
-		//float lat,lon;
-		int x,y,z;
+		float lat,lon;
+		int16_t x,y,z;
 
 		inline bool operator<(const _V4E &e) const { return (start < e.start); }
 	};
@@ -111,8 +111,8 @@ private:
 	{
 		uint8_t start[16];
 		uint8_t end[16];
-		//float lat,lon;
-		int x,y,z;
+		float lat,lon;
+		int16_t x,y,z;
 
 		inline bool operator<(const _V6E &e) const { return (memcmp(start,e.start,16) < 0); }
 	};

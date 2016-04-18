@@ -123,8 +123,8 @@ void ClusterGeoIpService::_parseLine(const char *line,std::vector<_V4E> &v4db,st
 				v4db.push_back(_V4E());
 				v4db.back().start = Utils::ntoh((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&ipStart)->sin_addr.s_addr));
 				v4db.back().end = Utils::ntoh((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&ipEnd)->sin_addr.s_addr));
-				//v4db.back().lat = (float)lat;
-				//v4db.back().lon = (float)lon;
+				v4db.back().lat = (float)lat;
+				v4db.back().lon = (float)lon;
 				v4db.back().x = x;
 				v4db.back().y = y;
 				v4db.back().z = z;
@@ -133,8 +133,8 @@ void ClusterGeoIpService::_parseLine(const char *line,std::vector<_V4E> &v4db,st
 				v6db.push_back(_V6E());
 				memcpy(v6db.back().start,reinterpret_cast<const struct sockaddr_in6 *>(&ipStart)->sin6_addr.s6_addr,16);
 				memcpy(v6db.back().end,reinterpret_cast<const struct sockaddr_in6 *>(&ipEnd)->sin6_addr.s6_addr,16);
-				//v6db.back().lat = (float)lat;
-				//v6db.back().lon = (float)lon;
+				v6db.back().lat = (float)lat;
+				v6db.back().lon = (float)lon;
 				v6db.back().x = x;
 				v6db.back().y = y;
 				v6db.back().z = z;
