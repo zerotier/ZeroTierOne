@@ -81,7 +81,7 @@ void Peer::received(
 				// For newer peers we can send a more idiomatic verb: PUSH_DIRECT_PATHS.
 				Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
 				outp.append((uint16_t)1); // count == 1
-				outp.append((uint8_t)0); // no flags
+				outp.append((uint8_t)ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT); // flags: cluster redirect
 				outp.append((uint16_t)0); // no extensions
 				if (redirectTo.ss_family == AF_INET) {
 					outp.append((uint8_t)4);

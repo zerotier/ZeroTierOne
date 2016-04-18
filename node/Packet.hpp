@@ -176,6 +176,16 @@
  */
 #define ZT_PROTO_SALSA20_ROUNDS 12
 
+/**
+ * PUSH_DIRECT_PATHS flag: forget path
+ */
+#define ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH 0x01
+
+/**
+ * PUSH_DIRECT_PATHS flag: cluster redirect
+ */
+#define ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT 0x02
+
 // Field indexes in packet header
 #define ZT_PACKET_IDX_IV 0
 #define ZT_PACKET_IDX_DEST 8
@@ -819,7 +829,7 @@ public:
 		 *   <[...] paths>
 		 *
 		 * Path record format:
-		 *   <[1] flags>
+		 *   <[1] 8-bit path flags>
 		 *   <[2] length of extended path characteristics or 0 for none>
 		 *   <[...] extended path characteristics>
 		 *   <[1] address type>
@@ -827,10 +837,8 @@ public:
 		 *   <[...] address>
 		 *
 		 * Path record flags:
-		 *   0x01 - Forget this path if it is currently known
-		 *   0x02 - (Unused)
-		 *   0x04 - Disable encryption (trust: privacy)
-		 *   0x08 - Disable encryption and authentication (trust: ultimate)
+		 *   0x01 - Forget this path if currently known (not implemented yet)
+		 *   0x02 - Cluster redirect -- use this in preference to others
 		 *
 		 * The receiver may, upon receiving a push, attempt to establish a
 		 * direct link to one or more of the indicated addresses. It is the
