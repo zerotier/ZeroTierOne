@@ -9,11 +9,12 @@
 #
 # Targets
 #   one: zerotier-one and symlinks (cli and idtool)
+#   doc: builds manpages, requires rst2man somewhere in PATH
 #   all: builds 'one'
 #   selftest: zerotier-selftest
 #   debug: builds 'one' and 'selftest' with tracing and debug flags
-#   installer: ZeroTierOneInstaller-... and packages (if possible)
-#   official: builds 'one' and 'installer'
+#   installer: builds installers and packages (RPM/DEB/etc.) if possible
+#   official: cleans and then builds 'one', 'installer', and 'doc'
 #   clean: removes all built files, objects, other trash
 #
 
@@ -37,7 +38,6 @@ LDLIBS?=
 
 include objects.mk
 
-# "make official" is a shortcut for this
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	DEFS+=-DZT_OFFICIAL_RELEASE
 	ZT_USE_MINIUPNPC=1
@@ -48,19 +48,16 @@ ifeq ($(ZT_USE_MINIUPNPC),1)
 	OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o osdep/PortMapper.o
 endif
 
-# Build with ZT_ENABLE_NETWORK_CONTROLLER=1 to build with the Sqlite network controller
 ifeq ($(ZT_ENABLE_NETWORK_CONTROLLER),1)
 	DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER
 	LDLIBS+=-L/usr/local/lib -lsqlite3
 	OBJS+=controller/SqliteNetworkController.o
 endif
 
-# Build with ZT_ENABLE_CLUSTER=1 to build with cluster support
 ifeq ($(ZT_ENABLE_CLUSTER),1)
 	DEFS+=-DZT_ENABLE_CLUSTER
 endif
 
-# "make debug" is a shortcut for this
 ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE
 	CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
@@ -90,7 +87,7 @@ endif
 #LDFLAGS=
 #STRIP=echo
 
-all:	one doc
+all:	one
 
 one:	$(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o $(LDLIBS)
@@ -130,7 +127,9 @@ official: FORCE
 	make ZT_OFFICIAL_RELEASE=1 clean
 	make -j 4 ZT_OFFICIAL_RELEASE=1 one
 	make ZT_OFFICIAL_RELEASE=1 installer
+	make ZT_OFFICIAL_RELEASE=1 doc
 
+# Includes 'doc' target
 include ${DOC_DIR}/module.mk
 
 FORCE:
