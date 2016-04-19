@@ -71,7 +71,6 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
 			}
 
 			const Packet::Verb v = verb();
-			//if (RR->topology->isRoot(peer->identity())) printf("<< %s from %s(%s)\n",Packet::verbString(v),sourceAddress.toString().c_str(),_remoteAddress.toString().c_str());
 			//TRACE("<< %s from %s(%s)",Packet::verbString(v),sourceAddress.toString().c_str(),_remoteAddress.toString().c_str());
 			switch(v) {
 				//case Packet::VERB_NOP:
@@ -350,7 +349,6 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 		const uint64_t inRePacketId = at<uint64_t>(ZT_PROTO_VERB_OK_IDX_IN_RE_PACKET_ID);
 
 		//TRACE("%s(%s): OK(%s)",source().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
-		//if (RR->topology->isRoot(peer->identity())) printf("%s(%s): OK(%s)\n",source().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
 
 		switch(inReVerb) {
 
