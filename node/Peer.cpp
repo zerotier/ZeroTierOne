@@ -144,14 +144,17 @@ void Peer::received(
 				if (np < ZT_MAX_PEER_NETWORK_PATHS) {
 					slot = &(_paths[np++]);
 				} else {
-					uint64_t slotLRmin = 0xffffffffffffffffULL;
+					uint64_t slotWorstScore = 0xffffffffffffffffULL;
 					for(unsigned int p=0;p<ZT_MAX_PEER_NETWORK_PATHS;++p) {
 						if (!_paths[p].active(now)) {
 							slot = &(_paths[p]);
 							break;
-						} else if (_paths[p].lastReceived() <= slotLRmin) {
-							slotLRmin = _paths[p].lastReceived();
-							slot = &(_paths[p]);
+						} else {
+							const uint64_t score = _paths[p].score();
+							if (score <= slotWorstScore) {
+								slotWorstScore = score;
+								slot = &(_paths[p]);
+							}
 						}
 					}
 				}

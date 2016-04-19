@@ -128,6 +128,36 @@ public:
 	inline Path *getBestPath(uint64_t now) { return _getBestPath(now); }
 
 	/**
+	 * @param now Current time
+	 * @param addr Remote address
+	 * @return True if we have an active path to this destination
+	 */
+	inline bool hasActivePathTo(uint64_t now,const InetAddress &addr) const
+	{
+		for(unsigned int p=0;p<_numPaths;++p) {
+			if ((_paths[p].active(now))&&(_paths[p].address() == addr))
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Set all paths in the same ss_family that are not this one to cluster suboptimal
+	 *
+	 * Addresses in other families are not affected.
+	 *
+	 * @param addr Address to make exclusive
+	 */
+	inline void setClusterOptimalPathForAddressFamily(const InetAddress &addr)
+	{
+		for(unsigned int p=0;p<_numPaths;++p) {
+			if (_paths[p].address().ss_family == addr.ss_family) {
+				_paths[p].setClusterSuboptimal(_paths[p].address() != addr);
+			}
+		}
+	}
+
+	/**
 	 * Send via best path
 	 *
 	 * @param data Packet data
@@ -281,20 +311,6 @@ public:
 		return false;
 	}
 #endif
-
-	/**
-	 * @param now Current time
-	 * @param addr Remote address
-	 * @return True if peer currently has an active direct path to addr
-	 */
-	inline bool hasActivePathTo(uint64_t now,const InetAddress &addr) const
-	{
-		for(unsigned int p=0;p<_numPaths;++p) {
-			if ((_paths[p].active(now))&&(_paths[p].address() == addr))
-				return true;
-		}
-		return false;
-	}
 
 	/**
 	 * Reset paths within a given scope

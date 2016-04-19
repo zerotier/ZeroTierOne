@@ -31,12 +31,20 @@
 /**
  * Flag indicating that this path is suboptimal
  *
- * This is used in cluster mode to indicate that the peer has been directed
- * to a better path. This path can continue to be used but shouldn't be kept
- * or advertised to other cluster members. Not used if clustering is not
- * built and enabled.
+ * Clusters set this flag on remote paths if GeoIP or other routing decisions
+ * indicate that a peer should be handed off to another cluster member.
  */
 #define ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL 0x0001
+
+/**
+ * Flag indicating that this path is optimal
+ *
+ * Peers set this flag on paths that are pushed by a cluster and indicated as
+ * optimal. A second flag is needed since we want to prioritize cluster optimal
+ * paths and de-prioritize sub-optimal paths and for new paths we don't know
+ * which one they are. So we want a trinary state: optimal, suboptimal, unknown.
+ */
+#define ZT_PATH_FLAG_CLUSTER_OPTIMAL 0x0002
 
 /**
  * Maximum return value of preferenceRank()
@@ -177,16 +185,38 @@ public:
 	inline InetAddress::IpScope ipScope() const throw() { return _ipScope; }
 
 	/**
+	 * @param f Valuve of ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL and inverse of ZT_PATH_FLAG_CLUSTER_OPTIMAL (both are changed)
+	 */
+	inline void setClusterSuboptimal(bool f)
+	{
+		if (f) {
+			_flags = (_flags | ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL) & ~ZT_PATH_FLAG_CLUSTER_OPTIMAL;
+		} else {
+			_flags = (_flags | ZT_PATH_FLAG_CLUSTER_OPTIMAL) & ~ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL;
+		}
+	}
+
+	/**
+	 * @return True if ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL is set
+	 */
+	inline bool isClusterSuboptimal() const { return ((_flags & ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL) != 0); }
+
+	/**
+	 * @return True if ZT_PATH_FLAG_CLUSTER_OPTIMAL is set
+	 */
+	inline bool isClusterOptimal() const { return ((_flags & ZT_PATH_FLAG_CLUSTER_OPTIMAL) != 0); }
+
+	/**
 	 * @return Preference rank, higher == better (will be less than 255)
 	 */
 	inline unsigned int preferenceRank() const throw()
 	{
-		// First, since the scope enum values in InetAddress.hpp are in order of
-		// use preference rank, we take that. Then we multiple by two, yielding
-		// a sequence like 0, 2, 4, 6, etc. Then if it's IPv6 we add one. This
-		// makes IPv6 addresses of a given scope outrank IPv4 addresses of the
-		// same scope -- e.g. 1 outranks 0. This makes us prefer IPv6, but not
-		// if the address scope/class is of a fundamentally lower rank.
+		/* First, since the scope enum values in InetAddress.hpp are in order of
+		 * use preference rank, we take that. Then we multiple by two, yielding
+		 * a sequence like 0, 2, 4, 6, etc. Then if it's IPv6 we add one. This
+		 * makes IPv6 addresses of a given scope outrank IPv4 addresses of the
+		 * same scope -- e.g. 1 outranks 0. This makes us prefer IPv6, but not
+		 * if the address scope/class is of a fundamentally lower rank. */
 		return ( ((unsigned int)_ipScope << 1) | (unsigned int)(_addr.ss_family == AF_INET6) );
 	}
 
@@ -199,8 +229,13 @@ public:
 		 * received something) scaled/corrected by the preference rank within the
 		 * ping keepalive window. That way higher ranking paths are preferred but
 		 * not to the point of overriding timeouts and choosing potentially dead
-		 * paths. */
-		return (_lastReceived + (preferenceRank() * (ZT_PEER_DIRECT_PING_DELAY / ZT_PATH_MAX_PREFERENCE_RANK)));
+		 * paths. Finally we increase the score for known to be cluster optimal
+		 * paths and decrease it for paths known to be suboptimal. */
+		uint64_t score = _lastReceived + ZT_PEER_DIRECT_PING_DELAY; // make sure it's never less than ZT_PEER_DIRECT_PING_DELAY to prevent integer underflow
+		score += preferenceRank() * (ZT_PEER_DIRECT_PING_DELAY / ZT_PATH_MAX_PREFERENCE_RANK);
+		score += (uint64_t)(_flags & ZT_PATH_FLAG_CLUSTER_OPTIMAL) * (ZT_PEER_DIRECT_PING_DELAY / 2); // /2 because CLUSTER_OPTIMAL is flag 0x0002
+		score -= (uint64_t)(_flags & ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL) * ZT_PEER_DIRECT_PING_DELAY;
+		return score;
 	}
 
 	/**
@@ -258,18 +293,6 @@ public:
 		}
 		return false;
 	}
-
-#ifdef ZT_ENABLE_CLUSTER
-	/**
-	 * @param f New value of ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL
-	 */
-	inline void setClusterSuboptimal(bool f) { _flags = ((f) ? (_flags | ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL) : (_flags & (~ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL))); }
-
-	/**
-	 * @return True if ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL is set
-	 */
-	inline bool isClusterSuboptimal() const { return ((_flags & ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL) != 0); }
-#endif
 
 	/**
 	 * @return Current path probation count (for dead path detect)

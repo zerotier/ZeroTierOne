@@ -22,7 +22,7 @@ namespace ZeroTier {
 
 const unsigned char Packet::ZERO_KEY[32] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
-#ifdef ZT_TRACE
+//#ifdef ZT_TRACE
 
 const char *Packet::verbString(Verb v)
 	throw()
@@ -68,7 +68,7 @@ const char *Packet::errorString(ErrorCode e)
 	return "(unknown)";
 }
 
-#endif // ZT_TRACE
+//#endif // ZT_TRACE
 
 void Packet::armor(const void *key,bool encryptPayload)
 {

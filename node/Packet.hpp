@@ -1052,12 +1052,12 @@ public:
 		ERROR_UNWANTED_MULTICAST = 8
 	};
 
-#ifdef ZT_TRACE
+//#ifdef ZT_TRACE
 	static const char *verbString(Verb v)
 		throw();
 	static const char *errorString(ErrorCode e)
 		throw();
-#endif
+//#endif
 
 	template<unsigned int C2>
 	Packet(const Buffer<C2> &b) :
