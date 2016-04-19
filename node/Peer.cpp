@@ -76,7 +76,7 @@ void Peer::received(
 		// Note: findBetterEndpoint() is first since we still want to check
 		// for a better endpoint even if we don't actually send a redirect.
 		InetAddress redirectTo;
-		if ( (RR->cluster->findBetterEndpoint(redirectTo,_id.address(),remoteAddr,false)) && (verb != Packet::VERB_OK)&&(verb != Packet::VERB_ERROR)&&(verb != Packet::VERB_RENDEZVOUS)&&(verb != Packet::VERB_PUSH_DIRECT_PATHS) ) {
+		if ( (verb != Packet::VERB_OK) && (verb != Packet::VERB_ERROR) && (verb != Packet::VERB_RENDEZVOUS) && (verb != Packet::VERB_PUSH_DIRECT_PATHS) && (RR->cluster->findBetterEndpoint(redirectTo,_id.address(),remoteAddr,false)) ) {
 			if (_vProto >= 5) {
 				// For newer peers we can send a more idiomatic verb: PUSH_DIRECT_PATHS.
 				Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
@@ -243,7 +243,7 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 	return false;
 }
 
-bool Peer::pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAddress,uint64_t now,bool force)
+bool Peer::pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAddress,uint64_t now,bool force,bool includePrivatePaths)
 {
 #ifdef ZT_ENABLE_CLUSTER
 	// Cluster mode disables normal PUSH_DIRECT_PATHS in favor of cluster-based peer redirection
@@ -257,38 +257,45 @@ bool Peer::pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAdd
 		else _lastDirectPathPushSent = now;
 	}
 
+	std::vector<InetAddress> pathsToPush;
+
 	std::vector<InetAddress> dps(RR->node->directPaths());
+	for(std::vector<InetAddress>::const_iterator i(dps.begin());i!=dps.end();++i) {
+		if ((includePrivatePaths)||(i->ipScope() == InetAddress::IP_SCOPE_GLOBAL))
+			pathsToPush.push_back(*i);
+	}
+
 	std::vector<InetAddress> sym(RR->sa->getSymmetricNatPredictions());
 	for(unsigned long i=0,added=0;i<sym.size();++i) {
 		InetAddress tmp(sym[(unsigned long)RR->node->prng() % sym.size()]);
-		if (std::find(dps.begin(),dps.end(),tmp) == dps.end()) {
-			dps.push_back(tmp);
+		if (std::find(pathsToPush.begin(),pathsToPush.end(),tmp) == pathsToPush.end()) {
+			pathsToPush.push_back(tmp);
 			if (++added >= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY)
 				break;
 		}
 	}
-	if (dps.empty())
+	if (pathsToPush.empty())
 		return false;
 
 #ifdef ZT_TRACE
 	{
 		std::string ps;
-		for(std::vector<InetAddress>::const_iterator p(dps.begin());p!=dps.end();++p) {
+		for(std::vector<InetAddress>::const_iterator p(pathsToPush.begin());p!=pathsToPush.end();++p) {
 			if (ps.length() > 0)
 				ps.push_back(',');
 			ps.append(p->toString());
 		}
-		TRACE("pushing %u direct paths to %s: %s",(unsigned int)dps.size(),_id.address().toString().c_str(),ps.c_str());
+		TRACE("pushing %u direct paths to %s: %s",(unsigned int)pathsToPush.size(),_id.address().toString().c_str(),ps.c_str());
 	}
 #endif
 
-	std::vector<InetAddress>::const_iterator p(dps.begin());
-	while (p != dps.end()) {
+	std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
+	while (p != pathsToPush.end()) {
 		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
 		outp.addSize(2); // leave room for count
 
 		unsigned int count = 0;
-		while ((p != dps.end())&&((outp.size() + 24) < 1200)) {
+		while ((p != pathsToPush.end())&&((outp.size() + 24) < 1200)) {
 			uint8_t addressType = 4;
 			switch(p->ss_family) {
 				case AF_INET:
@@ -475,11 +482,8 @@ void Peer::clean(uint64_t now)
 	}
 }
 
-bool Peer::_checkPath(Path &p,const uint64_t now)
+void Peer::_doDeadPathDetection(Path &p,const uint64_t now)
 {
-	if (!p.active(now))
-		return false;
-
 	/* Dead path detection: if we have sent something to this peer and have not
 	 * yet received a reply, double check this path. The majority of outbound
 	 * packets including Ethernet frames do generate some kind of reply either
@@ -499,6 +503,7 @@ bool Peer::_checkPath(Path &p,const uint64_t now)
 	     (p.lastSend() > p.lastReceived()) &&
 			 ((p.lastSend() - p.lastReceived()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) &&
 			 ((now - p.lastPing()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) &&
+			 (!p.isClusterSuboptimal()) &&
 			 (!RR->topology->amRoot())
 		 ) {
 		TRACE("%s(%s) does not seem to be answering in a timely manner, checking if dead (probation == %u)",_id.address().toString().c_str(),p.address().toString().c_str(),p.probation());
@@ -516,8 +521,6 @@ bool Peer::_checkPath(Path &p,const uint64_t now)
 
 		p.increaseProbation();
 	}
-
-	return true;
 }
 
 Path *Peer::_getBestPath(const uint64_t now)
@@ -526,11 +529,13 @@ Path *Peer::_getBestPath(const uint64_t now)
 	uint64_t bestPathScore = 0;
 	for(unsigned int i=0;i<_numPaths;++i) {
 		const uint64_t score = _paths[i].score();
-		if ((score >= bestPathScore)&&(_checkPath(_paths[i],now))) {
+		if ((score >= bestPathScore)&&(_paths[i].active(now))) {
 			bestPathScore = score;
 			bestPath = &(_paths[i]);
 		}
 	}
+	if (bestPath)
+		_doDeadPathDetection(*bestPath,now);
 	return bestPath;
 }
 
@@ -540,11 +545,13 @@ Path *Peer::_getBestPath(const uint64_t now,int inetAddressFamily)
 	uint64_t bestPathScore = 0;
 	for(unsigned int i=0;i<_numPaths;++i) {
 		const uint64_t score = _paths[i].score();
-		if (((int)_paths[i].address().ss_family == inetAddressFamily)&&(score >= bestPathScore)&&(_checkPath(_paths[i],now))) {
+		if (((int)_paths[i].address().ss_family == inetAddressFamily)&&(score >= bestPathScore)&&(_paths[i].active(now))) {
 			bestPathScore = score;
 			bestPath = &(_paths[i]);
 		}
 	}
+	if (bestPath)
+		_doDeadPathDetection(*bestPath,now);
 	return bestPath;
 }
 

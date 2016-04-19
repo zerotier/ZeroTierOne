@@ -229,7 +229,6 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 								return;
 							}
 #endif
-
 							relayTo = RR->topology->getBestRoot(&source,1,true);
 							if (relayTo)
 								relayTo->send(packet.data(),packet.size(),now);
@@ -681,7 +680,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 		Mutex::Lock _l(_contactQueue_m);
 		for(std::list<ContactQueueEntry>::iterator qi(_contactQueue.begin());qi!=_contactQueue.end();) {
 			if (now >= qi->fireAtTime) {
-				if (!qi->peer->pushDirectPaths(qi->localAddr,qi->inaddr,now,true))
+				if (!qi->peer->pushDirectPaths(qi->localAddr,qi->inaddr,now,true,false))
 					qi->peer->sendHELLO(qi->localAddr,qi->inaddr,now);
 				_contactQueue.erase(qi++);
 				continue;
@@ -790,38 +789,38 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 				return false; // we probably just left this network, let its packets die
 		}
 
+		Path *viaPath = peer->getBestPath(now);
 		SharedPtr<Peer> relay;
 
-		// Check for a network preferred relay
-		Path *viaPath = peer->getBestPath(now);
-		if ((!viaPath)&&(network)) {
-			unsigned int bestq = ~((unsigned int)0); // max unsigned int since quality is lower==better
-			for(unsigned int ri=0;ri<network->config().staticDeviceCount();++ri) {
-				const ZT_VirtualNetworkStaticDevice &r = network->config().staticDevice(ri);
-				if ((r.address != peer->address().toInt())&&((r.flags & ZT_NETWORK_STATIC_DEVICE_IS_RELAY) != 0)) {
-					SharedPtr<Peer> rp(RR->topology->getPeer(Address(r.address)));
-					if (rp) {
-						const unsigned int q = rp->relayQuality(now);
-						if (q < bestq) {
-							bestq = q;
-							rp.swap(relay);
+		if (!viaPath) {
+			if (network) {
+				unsigned int bestq = ~((unsigned int)0); // max unsigned int since quality is lower==better
+				for(unsigned int ri=0;ri<network->config().staticDeviceCount();++ri) {
+					const ZT_VirtualNetworkStaticDevice &r = network->config().staticDevice(ri);
+					if ((r.address != peer->address().toInt())&&((r.flags & ZT_NETWORK_STATIC_DEVICE_IS_RELAY) != 0)) {
+						SharedPtr<Peer> rp(RR->topology->getPeer(Address(r.address)));
+						if (rp) {
+							const unsigned int q = rp->relayQuality(now);
+							if (q < bestq) {
+								bestq = q;
+								rp.swap(relay);
+							}
 						}
 					}
 				}
 			}
+
+			if (!relay)
+				relay = RR->topology->getBestRoot();
+
+			if ( (!relay) || (!(viaPath = relay->getBestPath(now))) )
+				return false;
 		}
+		// viaPath will not be null if we make it here
 
-		// Otherwise relay off a root server
-		if (!relay)
-			relay = RR->topology->getBestRoot();
-
-		// No relay or relay has no active paths == :P~~~~
-		if ( (!(relay)) || (!(viaPath = relay->getBestPath(now))) )
-			return false;
-
-		if ((network)&&(relay)&&(network->isAllowed(peer))) {
-			// Push hints for direct connectivity to this peer if we are relaying
-			peer->pushDirectPaths(viaPath->localAddress(),viaPath->address(),now,false);
+		// Push possible direct paths to us if we are relaying
+		if (relay) {
+			peer->pushDirectPaths(viaPath->localAddress(),viaPath->address(),now,false,( (network)&&(network->isAllowed(peer)) ));
 			viaPath->sent(now);
 		}
 

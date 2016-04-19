@@ -28,6 +28,9 @@
 #include "Constants.hpp"
 #include "InetAddress.hpp"
 
+// Note: if you change these flags check the logic below. Some of it depends
+// on these bits being what they are.
+
 /**
  * Flag indicating that this path is suboptimal
  *
@@ -133,9 +136,8 @@ public:
 	 * @return True if this path appears active
 	 */
 	inline bool active(uint64_t now) const
-		throw()
 	{
-		return (((now - _lastReceived) < ZT_PATH_ACTIVITY_TIMEOUT)&&(_probation < ZT_PEER_DEAD_PATH_DETECTION_MAX_PROBATION));
+		return ( ((now - _lastReceived) < ZT_PATH_ACTIVITY_TIMEOUT) && (_probation < ZT_PEER_DEAD_PATH_DETECTION_MAX_PROBATION) );
 	}
 
 	/**
@@ -221,20 +223,27 @@ public:
 	}
 
 	/**
-	 * @return This path's overall score (higher == better)
+	 * @return This path's overall quality score (higher is better)
 	 */
 	inline uint64_t score() const throw()
 	{
-		/* We compute the score based on the "freshness" of the path (when we last
-		 * received something) scaled/corrected by the preference rank within the
-		 * ping keepalive window. That way higher ranking paths are preferred but
-		 * not to the point of overriding timeouts and choosing potentially dead
-		 * paths. Finally we increase the score for known to be cluster optimal
-		 * paths and decrease it for paths known to be suboptimal. */
-		uint64_t score = _lastReceived + ZT_PEER_DIRECT_PING_DELAY; // make sure it's never less than ZT_PEER_DIRECT_PING_DELAY to prevent integer underflow
+		// This is a little bit convoluted because we try to be branch-free, using multiplication instead of branches for boolean flags
+
+		// Start with the last time this path was active, and add a fudge factor to prevent integer underflow if _lastReceived is 0
+		uint64_t score = _lastReceived + (ZT_PEER_DIRECT_PING_DELAY * (ZT_PEER_DEAD_PATH_DETECTION_MAX_PROBATION + 1));
+
+		// Increase score based on path preference rank, which is based on IP scope and address family
 		score += preferenceRank() * (ZT_PEER_DIRECT_PING_DELAY / ZT_PATH_MAX_PREFERENCE_RANK);
+
+		// Increase score if this is known to be an optimal path to a cluster
 		score += (uint64_t)(_flags & ZT_PATH_FLAG_CLUSTER_OPTIMAL) * (ZT_PEER_DIRECT_PING_DELAY / 2); // /2 because CLUSTER_OPTIMAL is flag 0x0002
+
+		// Decrease score if this is known to be a sub-optimal path to a cluster
 		score -= (uint64_t)(_flags & ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL) * ZT_PEER_DIRECT_PING_DELAY;
+
+		// Penalize for missed ECHO tests in dead path detection
+		score -= (uint64_t)((ZT_PEER_DIRECT_PING_DELAY / 2) * _probation);
+
 		return score;
 	}
 

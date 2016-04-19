@@ -191,7 +191,7 @@ public:
 
 		// If this is a world root, pick (if possible) both an IPv4 and an IPv6 stable endpoint to use if link isn't currently alive.
 		for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
-			if (r->identity.address() == p->address()) {
+			if (r->identity == p->identity()) {
 				upstream = true;
 				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)r->stableEndpoints.size();++k) {
 					const InetAddress &addr = r->stableEndpoints[ptr++ % r->stableEndpoints.size()];

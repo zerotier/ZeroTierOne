@@ -277,7 +277,7 @@
 /**
  * No answer timeout to trigger dead path detection
  */
-#define ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT 2500
+#define ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT 2000
 
 /**
  * Probation threshold after which a path becomes dead

@@ -710,7 +710,7 @@ bool Cluster::findBetterEndpoint(InetAddress &redirectTo,const Address &peerAddr
 		// Pick based on location if it can be determined
 		int px = 0,py = 0,pz = 0;
 		if (_addressToLocationFunction(_addressToLocationFunctionArg,reinterpret_cast<const struct sockaddr_storage *>(&peerPhysicalAddress),&px,&py,&pz) == 0) {
-			TRACE("no geolocation data for %s (geo-lookup is lazy/async so it may work next time)",peerPhysicalAddress.toIpString().c_str());
+			TRACE("no geolocation data for %s",peerPhysicalAddress.toIpString().c_str());
 			return false;
 		}
 

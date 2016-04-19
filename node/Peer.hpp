@@ -204,9 +204,10 @@ public:
 	 * @param toAddress Remote address to send push to (usually from path)
 	 * @param now Current time
 	 * @param force If true, push regardless of rate limit
+	 * @param includePrivatePaths If true, include local interface address paths (should only be done to peers with a trust relationship)
 	 * @return True if something was actually sent
 	 */
-	bool pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAddress,uint64_t now,bool force);
+	bool pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAddress,uint64_t now,bool force,bool includePrivatePaths);
 
 	/**
 	 * @return All known direct paths to this peer (active or inactive)
@@ -560,7 +561,7 @@ public:
 	}
 
 private:
-	bool _checkPath(Path &p,const uint64_t now);
+	void _doDeadPathDetection(Path &p,const uint64_t now);
 	Path *_getBestPath(const uint64_t now);
 	Path *_getBestPath(const uint64_t now,int inetAddressFamily);
 

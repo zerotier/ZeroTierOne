@@ -48,8 +48,6 @@ public:
 		char name[256];
 		InetAddress clusterEndpoint;
 		std::vector<InetAddress> zeroTierEndpoints;
-
-		//inline operator<(const MemberDefinition &md) const { return (id < md.id); } // sort order
 	};
 
 	/**
