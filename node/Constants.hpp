@@ -286,6 +286,9 @@
 
 /**
  * Delay between requests for updated network autoconf information
+ *
+ * Don't lengthen this as it affects things like QoS / uptime monitoring
+ * via ZeroTier Central. This is the heartbeat, basically.
  */
 #define ZT_NETWORK_AUTOCONF_DELAY 60000
 

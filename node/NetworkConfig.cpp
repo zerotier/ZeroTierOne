@@ -56,16 +56,10 @@ NetworkConfig NetworkConfig::createTestNetworkConfig(const Address &self)
 	nc._type = ZT_NETWORK_TYPE_PUBLIC;
 	nc._enableBroadcast = true;
 
-	nc._rules[nc._ruleCount].ruleNo = 0;
-	nc._rules[nc._ruleCount].vlanId = -1;
-	nc._rules[nc._ruleCount].vlanPcp = -1;
-	nc._rules[nc._ruleCount].etherType = -1;
-	nc._rules[nc._ruleCount].ipTos = -1;
-	nc._rules[nc._ruleCount].ipProtocol = -1;
-	nc._rules[nc._ruleCount].ipSourcePort = -1;
-	nc._rules[nc._ruleCount].ipDestPort = -1;
-	nc._rules[nc._ruleCount].action = ZT_NETWORK_RULE_ACTION_ACCEPT;
-	++nc._ruleCount;
+	nc._rules[nc._ruleCount].ruleNo = 1;
+	nc._rules[nc._ruleCount].matches = (uint8_t)ZT_NETWORK_RULE_MATCHES_ALL;
+	nc._rules[nc._ruleCount].action = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
+	nc._ruleCount = 1;
 
 	Utils::snprintf(nc._name,sizeof(nc._name),"ZT_TEST_NETWORK");
 
@@ -213,14 +207,9 @@ void NetworkConfig::fromDictionary(const Dictionary &d)
 		if (_ruleCount < ZT_MAX_NETWORK_RULES) {
 			memset(&(_rules[_ruleCount]),0,sizeof(ZT_VirtualNetworkRule));
 			_rules[_ruleCount].ruleNo = rno; rno += 10;
-			_rules[_ruleCount].vlanId = -1;
-			_rules[_ruleCount].vlanPcp = -1;
-			_rules[_ruleCount].etherType = (et2 == 0) ? -1 : (int)et2;
-			_rules[_ruleCount].ipTos = -1;
-			_rules[_ruleCount].ipProtocol = -1;
-			_rules[_ruleCount].ipSourcePort = -1;
-			_rules[_ruleCount].ipDestPort = -1;
-			_rules[_ruleCount].action = ZT_NETWORK_RULE_ACTION_ACCEPT;
+			_rules[_ruleCount].matches = (uint8_t)((et2 == 0) ? ZT_NETWORK_RULE_MATCHES_ALL : ZT_NETWORK_RULE_MATCHES_ETHERTYPE);
+			_rules[_ruleCount].action = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
+			_rules[_ruleCount].datum.etherType = (uint16_t)et2;
 			++_ruleCount;
 		}
 	}

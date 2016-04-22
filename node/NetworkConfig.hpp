@@ -133,8 +133,12 @@ public:
 	inline bool permitsEtherType(unsigned int etherType) const
 	{
 		for(unsigned int i=0;i<_ruleCount;++i) {
-			if ((_rules[i].etherType < 0)||((unsigned int)_rules[i].etherType == etherType))
-				return (_rules[i].action == ZT_NETWORK_RULE_ACTION_ACCEPT);
+			if ((ZT_VirtualNetworkRuleMatches)_rules[i].matches == ZT_NETWORK_RULE_MATCHES_ETHERTYPE) {
+				if (_rules[i].datum.etherType == etherType)
+					return ((ZT_VirtualNetworkRuleAction)_rules[i].action == ZT_NETWORK_RULE_ACTION_ACCEPT);
+			} else if ((ZT_VirtualNetworkRuleMatches)_rules[i].matches == ZT_NETWORK_RULE_MATCHES_ALL) {
+				return ((ZT_VirtualNetworkRuleAction)_rules[i].action == ZT_NETWORK_RULE_ACTION_ACCEPT);
+			}
 		}
 		return false;
 	}

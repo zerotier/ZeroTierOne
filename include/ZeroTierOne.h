@@ -107,9 +107,9 @@ extern "C" {
 #define ZT_MAX_NETWORK_STATIC_DEVICES 32
 
 /**
- * Maximum number of rules per network (can be increased)
+ * Maximum number of rule table entries per network (can be increased)
  */
-#define ZT_MAX_NETWORK_RULES 64
+#define ZT_MAX_NETWORK_RULES 256
 
 /**
  * Maximum number of multicast group subscriptions per network
@@ -432,102 +432,235 @@ enum ZT_VirtualNetworkType
  */
 enum ZT_VirtualNetworkRuleAction
 {
+	/**
+	 * Drop frame
+	 */
 	ZT_NETWORK_RULE_ACTION_DROP = 0,
-	ZT_NETWORK_RULE_ACTION_ACCEPT = 1
+
+	/**
+	 * Accept and pass frame
+	 */
+	ZT_NETWORK_RULE_ACTION_ACCEPT = 1,
+
+	/**
+	 * Forward a copy of this frame to an observer (in datum.zt[1])
+	 */
+	ZT_NETWORK_RULE_ACTION_TEE = 2,
+
+	/**
+	 * Redirect frame to ZeroTier device in datum.zt[1] regardless of Ethernet addressing or anything else
+	 */
+	ZT_NETWORK_RULE_ACTION_REDIRECT = 3
+};
+
+/**
+ * Datum type (variant) that a rule matches
+ */
+enum ZT_VirtualNetworkRuleMatches
+{
+	/**
+	 * Matches all packets (no criteria)
+	 */
+	ZT_NETWORK_RULE_MATCHES_ALL = 0,
+
+	/**
+	 * Source ZeroTier address -- analogous to an Ethernet port ID on a switch
+	 */
+	ZT_NETWORK_RULE_MATCHES_SOURCE_ZEROTIER_ADDRESS = 1,
+
+	/**
+	 * Destination ZeroTier address -- analogous to an Ethernet port ID on a switch
+	 */
+	ZT_NETWORK_RULE_MATCHES_DEST_ZEROTIER_ADDRESS = 2,
+
+	/**
+	 * Ethernet VLAN ID
+	 */
+	ZT_NETWORK_RULE_MATCHES_VLAN_ID = 3,
+
+	/** 
+	 * Ethernet VLAN PCP
+	 */
+	ZT_NETWORK_RULE_MATCHES_VLAN_PCP = 4,
+
+	/**
+	 * Ethernet VLAN DEI
+	 */
+	ZT_NETWORK_RULE_MATCHES_VLAN_DEI = 5,
+
+	/**
+	 * Ethernet frame type
+	 */
+	ZT_NETWORK_RULE_MATCHES_ETHERTYPE = 6,
+
+	/**
+	 * Source Ethernet MAC address
+	 */
+	ZT_NETWORK_RULE_MATCHES_MAC_SOURCE = 7,
+
+	/**
+	 * Destination Ethernet MAC address
+	 */
+	ZT_NETWORK_RULE_MATCHES_MAC_DEST = 8,
+
+	/**
+	 * Source IPv4 address
+	 */
+	ZT_NETWORK_RULE_MATCHES_IPV4_SOURCE = 9,
+
+	/**
+	 * Destination IPv4 address
+	 */
+	ZT_NETWORK_RULE_MATCHES_IPV4_DEST = 10,
+
+	/**
+	 * Source IPv6 address
+	 */
+	ZT_NETWORK_RULE_MATCHES_IPV6_SOURCE = 11,
+
+	/**
+	 * Destination IPv6 address
+	 */
+	ZT_NETWORK_RULE_MATCHES_IPV6_DEST = 12,
+
+	/**
+	 * IP TOS (type of service)
+	 */
+	ZT_NETWORK_RULE_MATCHES_IP_TOS = 13,
+
+	/**
+	 * IP protocol
+	 */
+	ZT_NETWORK_RULE_MATCHES_IP_PROTOCOL = 14,
+
+	/**
+	 * IP source port range (start-end, inclusive)
+	 */
+	ZT_NETWORK_RULE_MATCHES_IP_SOURCE_PORT_RANGE = 15,
+
+	/**
+	 * IP destination port range (start-end, inclusive)
+	 */
+	ZT_NETWORK_RULE_MATCHES_IP_DEST_PORT_RANGE = 16,
+
+	/**
+	 * Packet characteristic flags
+	 */
+	ZT_NETWORK_RULE_MATCHES_FLAGS = 17,
+
+	/**
+	 * Frame size range (start-end, inclusive)
+	 */
+	ZT_NETWORK_RULE_MATCHES_FRAME_SIZE_RANGE = 18
 };
 
 /**
  * Network flow rule
  *
- * Currently only etherType is supported! Other flags will have no effect
- * until the rules engine is fully implemented.
+ * NOTE: Currently (1.1.x) only etherType is supported! Other things will
+ * have no effect until the rules engine is fully implemented.
+ *
+ * Multiple entries in the table can have the same ruleNo. This indicates
+ * a row with multiple matching criteria.
+ *
+ * This gives the table a much more space-efficient compressed representation,
+ * allowing far more rules to be efficiently sent in small netconf structures.
  */
 typedef struct
 {
 	/**
-	 * Rule sort order
+	 * Rule number and sort order
+	 *
+	 * Multiple entries in the table can have the same ruleNo. This causes them
+	 * to be matched as an AND together, e.g. both IP source and IP source port.
 	 */
-	int ruleNo;
+	uint16_t ruleNo;
 
 	/**
-	 * Source ZeroTier address ("port" on the global virtual switch) (0 == wildcard)
+	 * Field that this rules table entry matches (enum ZT_VirtualNetworkRuleMatches)
 	 */
-	uint64_t sourcePort;
-
-	/**
-	 * Destination ZeroTier address ("port" on the global virtual switch) (0 == wildcard)
-	 */
-	uint64_t destPort;
-
-	/**
-	 * VLAN ID (-1 == wildcard)
-	 */
-	int vlanId;
-
-	/**
-	 * VLAN PCP (-1 == wildcard)
-	 */
-	int vlanPcp;
-
-	/**
-	 * Ethernet type (-1 == wildcard)
-	 */
-	int etherType;
-
-	/**
-	 * Source MAC address (least significant 48 bits, host byte order) (0 == wildcard)
-	 */
-	uint64_t macSource;
+	uint8_t matches;
 
 	/** 
-	 * Destination MAC address (least significant 48 bits, host byte order) (0 == wildcard)
+	 * Action if rule matches (enum ZT_VirtualNetworkRuleAction)
 	 */
-	uint64_t macDest;
+	uint8_t action;
 
 	/**
-	 * Source IP address (ss_family == 0 for wildcard)
+	 * Union containing the datum for this rule
+	 *
+	 * The rule entry functions like a variant type, with the field of datum
+	 * that is relevant/valid determined by the 'matches' enum.
 	 */
-	struct sockaddr_storage ipSource;
+	union {
+		/**
+		 * IPv6 address in big-endian / network byte order
+		 */
+		uint8_t ipv6[16];
 
-	/**
-	 * Destination IP address (ss_family == 0 for wildcard)
-	 */
-	struct sockaddr_storage ipDest;
+		/**
+		 * Flags (128 possible)
+		 */
+		uint8_t flags[16];
 
-	/**
-	 * IP type of service (-1 == wildcard)
-	 */
-	int ipTos;
+		/**
+		 * IPv4 address in big-endian / network byte order
+		 */
+		uint32_t ipv4;
 
-	/**
-	 * IP protocol (-1 == wildcard)
-	 */
-	int ipProtocol;
+		/**
+		 * IP port range -- start-end inclusive -- host byte order
+		 */
+		uint16_t port[2];
 
-	/**
-	 * IP source port (-1 == wildcard)
-	 */
-	int ipSourcePort;
+		/**
+		 * Two possible 40-bit ZeroTier addresses in host byte order (least significant 40 bits of uint64_t)
+		 *
+		 * The first of these ([0]) is used in most cases e.g. matching ZT source
+		 * address. The second is used as the observer for the TEE action.
+		 */
+		uint64_t zt[2];
 
-	/**
-	 * IP destination port (-1 == wildcard)
-	 */
-	int ipDestPort;
+		/**
+		 * 48-bit Ethernet MAC address in big-endian order
+		 */
+		uint8_t mac[6];
 
-	/**
-	 * Flags to match if set
-	 */
-	unsigned long flags;
+		/**
+		 * VLAN ID in host byte order
+		 */
+		uint16_t vlanId;
 
-	/**
-	 * Flags to match if NOT set
-	 */
-	unsigned long invFlags;
+		/**
+		 * VLAN PCP (least significant 3 bits)
+		 */
+		uint8_t vlanPcp;
 
-	/** 
-	 * Action if rule matches
-	 */
-	enum ZT_VirtualNetworkRuleAction action;
+		/**
+		 * VLAN DEI (single bit / boolean)
+		 */
+		uint8_t vlanDei;
+
+		/**
+		 * Ethernet type in host byte order
+		 */
+		uint16_t etherType;
+
+		/**
+		 * IP protocol
+		 */
+		uint8_t ipProtocol;
+
+		/**
+		 * IP type of service
+		 */
+		uint8_t ipTos;
+
+		/**
+		 * Ethernet packet size in host byte order (start-end, inclusive)
+		 */
+		uint16_t frameSize[2];
+	} datum;
 } ZT_VirtualNetworkRule;
 
 /**
