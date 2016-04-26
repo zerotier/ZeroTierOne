@@ -65,7 +65,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 		try {
 			std::string conf(RR->node->dataStoreGet(confn));
 			if (conf.length()) {
-				setConfiguration(Dictionary(conf),false);
+				this->setConfiguration((const void *)conf.data(),(unsigned int)conf.length(),false);
 				_lastConfigUpdate = 0; // we still want to re-request a new config from the network
 				gotConf = true;
 			}
@@ -178,26 +178,40 @@ bool Network::applyConfiguration(const NetworkConfig &conf)
 	return false;
 }
 
-int Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
+int Network::setConfiguration(const void *confBytes,unsigned int confLen,bool saveToDisk)
 {
 	try {
+		if (!confLen)
+			return 0;
+
 		NetworkConfig newConfig;
-		newConfig.fromDictionary(conf); // throws if invalid
+		if (reinterpret_cast<const uint8_t *>(confBytes)[0] == ZT_NETWORKCONFIG_V2_MARKER_BYTE) {
+			// TODO: deserialize new binary format netconf
+			return 0;
+		} else {
+#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
+			newConfig.fromDictionary(reinterpret_cast<const char *>(confBytes),confLen); // throws if invalid
+#else
+			return 0;
+#endif
+		}
+
 		{
 			Mutex::Lock _l(_lock);
 			if (_config == newConfig)
 				return 1; // OK config, but duplicate of what we already have
 		}
+
 		if (applyConfiguration(newConfig)) {
 			if (saveToDisk) {
 				char n[128];
 				Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
-				RR->node->dataStorePut(n,conf.toString(),true);
+				RR->node->dataStorePut(n,confBytes,confLen,true);
 			}
 			return 2; // OK and configuration has changed
 		}
 	} catch ( ... ) {
-		TRACE("ignored invalid configuration for network %.16llx (dictionary decode failed)",(unsigned long long)_id);
+		TRACE("ignored invalid configuration for network %.16llx",(unsigned long long)_id);
 	}
 	return 0;
 }
@@ -211,9 +225,10 @@ void Network::requestConfiguration()
 		if (RR->localNetworkController) {
 			Dictionary newconf;
 			switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,Dictionary(),newconf)) {
-				case NetworkController::NETCONF_QUERY_OK:
-					this->setConfiguration(newconf,true);
-					return;
+				case NetworkController::NETCONF_QUERY_OK: {
+					std::string tmp(newconf.toString());
+					this->setConfiguration((const void *)tmp.data(),(unsigned int)tmp.length(),true);
+				}	return;
 				case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND:
 					this->setNotFound();
 					return;

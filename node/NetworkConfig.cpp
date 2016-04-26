@@ -80,8 +80,10 @@ NetworkConfig NetworkConfig::createTestNetworkConfig(const Address &self)
 
 #ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 
-void NetworkConfig::fromDictionary(const Dictionary &d)
+void NetworkConfig::fromDictionary(const char *ds,unsigned int dslen)
 {
+	Dictionary d(ds,dslen);
+
 	static const std::string zero("0");
 	static const std::string one("1");
 

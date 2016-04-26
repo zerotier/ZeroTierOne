@@ -39,6 +39,13 @@
 #include "Address.hpp"
 #include "CertificateOfMembership.hpp"
 
+/**
+ * First byte of V2 binary-serialized network configs
+ *
+ * This will never begin a Dictionary, so it serves to distinguish.
+ */
+#define ZT_NETWORKCONFIG_V2_MARKER_BYTE 0x00
+
 namespace ZeroTier {
 
 #ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
@@ -147,24 +154,76 @@ public:
 	/**
 	 * Parse an old-style dictionary and fill in structure
 	 *
+	 * @param ds String-serialized dictionary
+	 * @param dslen Length of dictionary in bytes
 	 * @throws std::invalid_argument Invalid dictionary
 	 */
-	void fromDictionary(const Dictionary &d);
+	void fromDictionary(const char *ds,unsigned int dslen);
 #endif
 
+	/**
+	 * @return Network ID that this config applies to
+	 */
 	inline uint64_t networkId() const throw() { return _nwid; }
+
+	/**
+	 * @return Timestamp of this config (controller-side)
+	 */
 	inline uint64_t timestamp() const throw() { return _timestamp; }
+
+	/**
+	 * @return Config revision number
+	 */
 	inline uint64_t revision() const throw() { return _revision; }
+
+	/**
+	 * @return ZeroTier address of device to which this config was issued
+	 */
 	inline const Address &issuedTo() const throw() { return _issuedTo; }
+
+	/**
+	 * @return Maximum number of multicast recipients or 0 to disable multicast
+	 */
 	inline unsigned int multicastLimit() const throw() { return _multicastLimit; }
+
+	/**
+	 * @return True if passive bridging is allowed (experimental)
+	 */
 	inline bool allowPassiveBridging() const throw() { return _allowPassiveBridging; }
+
+	/**
+	 * @return True if broadcast (ff:ff:ff:ff:ff:ff) address should work on this network
+	 */
 	inline bool enableBroadcast() const throw() { return _enableBroadcast; }
+
+	/**
+	 * @return Type of network (currently public or private)
+	 */
 	inline ZT_VirtualNetworkType type() const throw() { return _type; }
+
+	/**
+	 * @return Network type is public (no access control)
+	 */
 	inline bool isPublic() const throw() { return (_type == ZT_NETWORK_TYPE_PUBLIC); }
+
+	/**
+	 * @return Network type is private (certificate access control)
+	 */
 	inline bool isPrivate() const throw() { return (_type == ZT_NETWORK_TYPE_PRIVATE); }
+
+	/**
+	 * @return Short network name
+	 */
 	inline const char *name() const throw() { return _name; }
+
+	/**
+	 * @return Network certificate of membership or NULL COM object if none (public network)
+	 */
 	inline const CertificateOfMembership &com() const throw() { return _com; }
 
+	/**
+	 * @return Network/netmask routes that are considered local to this virtual LAN interface
+	 */
 	inline std::vector<InetAddress> localRoutes() const
 	{
 		std::vector<InetAddress> r;
@@ -173,6 +232,9 @@ public:
 		return r;
 	}
 
+	/**
+	 * @return ZeroTier-managed static IPs assigned to this device on this network
+	 */
 	inline std::vector<InetAddress> staticIps() const
 	{
 		std::vector<InetAddress> r;
@@ -181,6 +243,9 @@ public:
 		return r;
 	}
 
+	/**
+	 * @return ZeroTier-managed default gateways (for full tunnel) available on this network
+	 */
 	inline std::vector<InetAddress> gateways() const
 	{
 		std::vector<InetAddress> r;
@@ -189,6 +254,9 @@ public:
 		return r;
 	}
 
+	/**
+	 * @return ZeroTier addresses of devices on this network designated as active bridges
+	 */
 	inline std::vector<Address> activeBridges() const
 	{
 		std::vector<Address> r;
@@ -197,6 +265,9 @@ public:
 		return r;
 	}
 
+	/**
+	 * @return Network-preferred relays for this network (if none, only roots will be used)
+	 */
 	inline std::vector<ZT_VirtualNetworkStaticDevice> relays() const
 	{
 		std::vector<ZT_VirtualNetworkStaticDevice> r;
@@ -207,7 +278,14 @@ public:
 		return r;
 	}
 
+	/**
+	 * @return Static device at index [i] (warning: no bounds checking! see staticDeviceCount() for count)
+	 */
 	const ZT_VirtualNetworkStaticDevice &staticDevice(unsigned int i) const { return _static[i]; }
+
+	/**
+	 * @return Number of static devices defined in this network config
+	 */
 	unsigned int staticDeviceCount() const { return _staticCount; }
 
 	/**
@@ -225,6 +303,9 @@ public:
 		return false;
 	}
 
+	/**
+	 * @return True if this network config is non-NULL
+	 */
 	inline operator bool() const throw() { return (_nwid != 0); }
 
 	inline bool operator==(const NetworkConfig &nc) const { return (memcmp(this,&nc,sizeof(NetworkConfig)) == 0); }
