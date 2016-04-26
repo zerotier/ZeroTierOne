@@ -46,6 +46,16 @@
  */
 #define ZT_NETWORKCONFIG_V2_MARKER_BYTE 0x00
 
+/**
+ * Flag: allow passive bridging (experimental)
+ */
+#define ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING 0x0001
+
+/**
+ * Flag: enable broadcast
+ */
+#define ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST 0x0002
+
 namespace ZeroTier {
 
 #ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
@@ -189,12 +199,12 @@ public:
 	/**
 	 * @return True if passive bridging is allowed (experimental)
 	 */
-	inline bool allowPassiveBridging() const throw() { return _allowPassiveBridging; }
+	inline bool allowPassiveBridging() const throw() { return ((_flags & ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING) != 0); }
 
 	/**
 	 * @return True if broadcast (ff:ff:ff:ff:ff:ff) address should work on this network
 	 */
-	inline bool enableBroadcast() const throw() { return _enableBroadcast; }
+	inline bool enableBroadcast() const throw() { return ((_flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
 
 	/**
 	 * @return Type of network (currently public or private)
@@ -294,7 +304,7 @@ public:
 	 */
 	inline bool permitsBridging(const Address &fromPeer) const
 	{
-		if (_allowPassiveBridging)
+		if ((_flags & ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING) != 0)
 			return true;
 		for(unsigned int i=0;i<_activeBridgeCount;++i) {
 			if (_activeBridges[i] == fromPeer)
@@ -317,8 +327,7 @@ protected: // protected so that a subclass can fill this out in network controll
 	uint64_t _revision;
 	Address _issuedTo;
 	unsigned int _multicastLimit;
-	bool _allowPassiveBridging;
-	bool _enableBroadcast;
+	unsigned int _flags;
 	ZT_VirtualNetworkType _type;
 
 	char _name[ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1];

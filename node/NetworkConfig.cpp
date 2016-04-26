@@ -52,9 +52,8 @@ NetworkConfig NetworkConfig::createTestNetworkConfig(const Address &self)
 	nc._revision = 1;
 	nc._issuedTo = self;
 	nc._multicastLimit = ZT_MULTICAST_DEFAULT_LIMIT;
-	nc._allowPassiveBridging = false;
+	nc._flags = ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
 	nc._type = ZT_NETWORK_TYPE_PUBLIC;
-	nc._enableBroadcast = true;
 
 	nc._rules[nc._ruleCount].ruleNo = 1;
 	nc._rules[nc._ruleCount].matches = (uint8_t)ZT_NETWORK_RULE_MATCHES_ALL;
@@ -82,10 +81,10 @@ NetworkConfig NetworkConfig::createTestNetworkConfig(const Address &self)
 
 void NetworkConfig::fromDictionary(const char *ds,unsigned int dslen)
 {
-	Dictionary d(ds,dslen);
-
 	static const std::string zero("0");
 	static const std::string one("1");
+
+	Dictionary d(ds,dslen);
 
 	memset(this,0,sizeof(NetworkConfig));
 
@@ -102,8 +101,9 @@ void NetworkConfig::fromDictionary(const char *ds,unsigned int dslen)
 	_multicastLimit = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,zero).c_str());
 	if (_multicastLimit == 0) _multicastLimit = ZT_MULTICAST_DEFAULT_LIMIT;
 
-	_allowPassiveBridging = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING,zero).c_str()) != 0);
-	_enableBroadcast = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST,one).c_str()) != 0);
+	_flags |= ((Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING,zero).c_str()) != 0) ? ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING : 0);
+	_flags |= ((Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST,one).c_str()) != 0) ? ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST : 0);
+
 	_type = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE,one).c_str()) != 0) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
 
 	std::string nametmp(d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME,""));
