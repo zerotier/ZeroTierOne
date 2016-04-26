@@ -16,6 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
+
 #include "Dictionary.hpp"
 #include "C25519.hpp"
 #include "Identity.hpp"
@@ -238,3 +240,5 @@ void Dictionary::_appendEsc(const char *data,unsigned int len,std::string &to)
 }
 
 } // namespace ZeroTier
+
+#endif // ZT_SUPPORT_OLD_STYLE_NETCONF

@@ -25,19 +25,22 @@
 
 #include <map>
 #include <vector>
-#include <string>
 #include <stdexcept>
 #include <algorithm>
 
 #include "../include/ZeroTierOne.h"
 
 #include "Constants.hpp"
-#include "Dictionary.hpp"
 #include "Buffer.hpp"
 #include "InetAddress.hpp"
 #include "MulticastGroup.hpp"
 #include "Address.hpp"
 #include "CertificateOfMembership.hpp"
+
+#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
+#include "Dictionary.hpp"
+#include <string>
+#endif
 
 /**
  * First byte of V2 binary-serialized network configs

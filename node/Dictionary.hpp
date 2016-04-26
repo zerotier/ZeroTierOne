@@ -19,6 +19,10 @@
 #ifndef ZT_DICTIONARY_HPP
 #define ZT_DICTIONARY_HPP
 
+#include "Constants.hpp"
+
+#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
+
 #include <stdint.h>
 
 #include <string>
@@ -26,7 +30,6 @@
 #include <stdexcept>
 #include <algorithm>
 
-#include "Constants.hpp"
 #include "Utils.hpp"
 
 // Three fields are added/updated by sign()
@@ -271,5 +274,7 @@ private:
 };
 
 } // namespace ZeroTier
+
+#endif // ZT_SUPPORT_OLD_STYLE_NETCONF
 
 #endif
