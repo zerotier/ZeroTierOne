@@ -186,8 +186,8 @@ int Network::setConfiguration(const void *confBytes,unsigned int confLen,bool sa
 
 		NetworkConfig newConfig;
 		if (reinterpret_cast<const uint8_t *>(confBytes)[0] == ZT_NETWORKCONFIG_V2_MARKER_BYTE) {
-			// TODO: deserialize new binary format netconf
-			return 0;
+			Buffer<8194> tmp(confBytes,confLen);
+			newConfig.deserialize(tmp,0);
 		} else {
 #ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 			newConfig.fromDictionary(reinterpret_cast<const char *>(confBytes),confLen); // throws if invalid

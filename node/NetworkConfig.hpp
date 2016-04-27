@@ -529,6 +529,8 @@ public:
 			}
 		}
 
+		_com.serialize(b);
+
 		b.append((uint16_t)0); // extended bytes, currently 0 since unused
 	}
 
@@ -540,7 +542,7 @@ public:
 		unsigned int p = startAt;
 
 		if (b[p++] != ZT_NETWORKCONFIG_V2_MARKER_BYTE)
-			throw std::invalid_argument("use fromDictionary() for old style netconf deserialization");
+			throw std::invalid_argument("unrecognized format");
 		if (b.template at<uint16_t>(p) != 0)
 			throw std::invalid_argument("unrecognized version");
 		p += 2;
@@ -659,6 +661,8 @@ public:
 			}
 			p += rlen;
 		}
+
+		p += _com.deserialize(b,p);
 
 		p += b.template at<uint16_t>(p) + 2;
 
