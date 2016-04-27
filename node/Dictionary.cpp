@@ -16,9 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "Dictionary.hpp"
+
 #ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 
-#include "Dictionary.hpp"
 #include "C25519.hpp"
 #include "Identity.hpp"
 #include "Utils.hpp"
