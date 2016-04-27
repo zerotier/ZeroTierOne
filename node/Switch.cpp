@@ -795,10 +795,11 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 		if (!viaPath) {
 			if (network) {
 				unsigned int bestq = ~((unsigned int)0); // max unsigned int since quality is lower==better
-				for(unsigned int ri=0;ri<network->config().staticDeviceCount();++ri) {
-					const ZT_VirtualNetworkStaticDevice &r = network->config().staticDevice(ri);
-					if ((r.address != peer->address().toInt())&&((r.flags & ZT_NETWORK_STATIC_DEVICE_IS_RELAY) != 0)) {
-						SharedPtr<Peer> rp(RR->topology->getPeer(Address(r.address)));
+				unsigned int ptr = 0;
+				for(;;) {
+					const Address raddr(network->config().nextRelay(ptr));
+					if (raddr) {
+						SharedPtr<Peer> rp(RR->topology->getPeer(raddr));
 						if (rp) {
 							const unsigned int q = rp->relayQuality(now);
 							if (q < bestq) {
@@ -806,7 +807,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 								rp.swap(relay);
 							}
 						}
-					}
+					} else break;
 				}
 			}
 

@@ -84,12 +84,12 @@ extern "C" {
 /**
  * Maximum number of local routes on a network
  */
-#define ZT_MAX_NETWORK_LOCAL_ROUTES 32
+#define ZT_MAX_NETWORK_LOCAL_ROUTES 16
 
 /**
  * Maximum number of statically assigned IP addresses per network endpoint using ZT address management (not DHCP)
  */
-#define ZT_MAX_ZT_ASSIGNED_ADDRESSES 32
+#define ZT_MAX_ZT_ASSIGNED_ADDRESSES 16
 
 /**
  * Maximum number of default routes / gateways on a network (ZT managed)
@@ -97,14 +97,14 @@ extern "C" {
 #define ZT_MAX_NETWORK_GATEWAYS 8
 
 /**
- * Maximum number of active bridges on a network
+ * Maximum number of "specialists" on a network -- bridges, relays, etc.
  */
-#define ZT_MAX_NETWORK_ACTIVE_BRIDGES 256
+#define ZT_MAX_NETWORK_SPECIALISTS 256
 
 /**
- * Maximum number of static devices on a network
+ * Maximum number of static physical to ZeroTier address mappings (typically relays, etc.)
  */
-#define ZT_MAX_NETWORK_STATIC_DEVICES 32
+#define ZT_MAX_NETWORK_STATIC_PHYSICAL_ADDRESSES 16
 
 /**
  * Maximum number of rule table entries per network (can be increased)
@@ -393,30 +393,6 @@ enum ZT_VirtualNetworkStatus
 };
 
 /**
- * A network-scope defined static device entry
- *
- * Statically defined devices can have pre-specified endpoint addresses
- * and can serve as things like network-specific relays.
- */
-typedef struct
-{
-	/**
-	 * ZeroTier address (least significant 40 bits, other bits ignored)
-	 */
-	uint64_t address;
-
-	/**
-	 * Physical address or zero ss_family if unspecified (two entries to support both V4 and V6)
-	 */
-	struct sockaddr_storage physical[2];
-
-	/**
-	 * Flags indicating roles (if any) and restrictions
-	 */
-	unsigned int flags;
-} ZT_VirtualNetworkStaticDevice;
-
-/**
  * Virtual network type codes
  */
 enum ZT_VirtualNetworkType
@@ -433,9 +409,13 @@ enum ZT_VirtualNetworkType
 };
 
 /**
- * An action in a network rule
+ * The type of a virtual network rules table entry
+ *
+ * These must range from 0 to 127 (0x7f).
+ *
+ * Each rule is composed of one or more MATCHes followed by an ACTION.
  */
-enum ZT_VirtualNetworkRuleAction
+enum ZT_VirtualNetworkRuleType
 {
 	/**
 	 * Drop frame
@@ -455,108 +435,97 @@ enum ZT_VirtualNetworkRuleAction
 	/**
 	 * Redirect frame to ZeroTier device in datum.zt[1] regardless of Ethernet addressing or anything else
 	 */
-	ZT_NETWORK_RULE_ACTION_REDIRECT = 3
-};
-
-/**
- * Datum type (variant) that a rule matches
- */
-enum ZT_VirtualNetworkRuleMatches
-{
-	/**
-	 * Matches all packets (no criteria)
-	 */
-	ZT_NETWORK_RULE_MATCHES_ALL = 0,
+	ZT_NETWORK_RULE_ACTION_REDIRECT = 3,
 
 	/**
 	 * Source ZeroTier address -- analogous to an Ethernet port ID on a switch
 	 */
-	ZT_NETWORK_RULE_MATCHES_SOURCE_ZEROTIER_ADDRESS = 1,
+	ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS = 32,
 
 	/**
 	 * Destination ZeroTier address -- analogous to an Ethernet port ID on a switch
 	 */
-	ZT_NETWORK_RULE_MATCHES_DEST_ZEROTIER_ADDRESS = 2,
+	ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS = 33,
 
 	/**
 	 * Ethernet VLAN ID
 	 */
-	ZT_NETWORK_RULE_MATCHES_VLAN_ID = 3,
+	ZT_NETWORK_RULE_MATCH_VLAN_ID = 34,
 
 	/** 
 	 * Ethernet VLAN PCP
 	 */
-	ZT_NETWORK_RULE_MATCHES_VLAN_PCP = 4,
+	ZT_NETWORK_RULE_MATCH_VLAN_PCP = 35,
 
 	/**
 	 * Ethernet VLAN DEI
 	 */
-	ZT_NETWORK_RULE_MATCHES_VLAN_DEI = 5,
+	ZT_NETWORK_RULE_MATCH_VLAN_DEI = 36,
 
 	/**
 	 * Ethernet frame type
 	 */
-	ZT_NETWORK_RULE_MATCHES_ETHERTYPE = 6,
+	ZT_NETWORK_RULE_MATCH_ETHERTYPE = 37,
 
 	/**
 	 * Source Ethernet MAC address
 	 */
-	ZT_NETWORK_RULE_MATCHES_MAC_SOURCE = 7,
+	ZT_NETWORK_RULE_MATCH_MAC_SOURCE = 38,
 
 	/**
 	 * Destination Ethernet MAC address
 	 */
-	ZT_NETWORK_RULE_MATCHES_MAC_DEST = 8,
+	ZT_NETWORK_RULE_MATCH_MAC_DEST = 39,
 
 	/**
 	 * Source IPv4 address
 	 */
-	ZT_NETWORK_RULE_MATCHES_IPV4_SOURCE = 9,
+	ZT_NETWORK_RULE_MATCH_IPV4_SOURCE = 40,
 
 	/**
 	 * Destination IPv4 address
 	 */
-	ZT_NETWORK_RULE_MATCHES_IPV4_DEST = 10,
+	ZT_NETWORK_RULE_MATCH_IPV4_DEST = 41,
 
 	/**
 	 * Source IPv6 address
 	 */
-	ZT_NETWORK_RULE_MATCHES_IPV6_SOURCE = 11,
+	ZT_NETWORK_RULE_MATCH_IPV6_SOURCE = 42,
 
 	/**
 	 * Destination IPv6 address
 	 */
-	ZT_NETWORK_RULE_MATCHES_IPV6_DEST = 12,
+	ZT_NETWORK_RULE_MATCH_IPV6_DEST = 43,
 
 	/**
 	 * IP TOS (type of service)
 	 */
-	ZT_NETWORK_RULE_MATCHES_IP_TOS = 13,
+	ZT_NETWORK_RULE_MATCH_IP_TOS = 44,
 
 	/**
 	 * IP protocol
 	 */
-	ZT_NETWORK_RULE_MATCHES_IP_PROTOCOL = 14,
+	ZT_NETWORK_RULE_MATCH_IP_PROTOCOL = 45,
 
 	/**
 	 * IP source port range (start-end, inclusive)
 	 */
-	ZT_NETWORK_RULE_MATCHES_IP_SOURCE_PORT_RANGE = 15,
+	ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE = 46,
 
 	/**
 	 * IP destination port range (start-end, inclusive)
 	 */
-	ZT_NETWORK_RULE_MATCHES_IP_DEST_PORT_RANGE = 16,
+	ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE = 47,
 
 	/**
-	 * Packet characteristic flags
+	 * Packet boolean characteristics
 	 */
-	ZT_NETWORK_RULE_MATCHES_FLAGS = 17,
+	ZT_NETWORK_RULE_MATCH_CHARACTERISTICS = 48,
 
 	/**
 	 * Frame size range (start-end, inclusive)
 	 */
-	ZT_NETWORK_RULE_MATCHES_FRAME_SIZE_RANGE = 18
+	ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE = 49
 };
 
 /**
@@ -565,53 +534,48 @@ enum ZT_VirtualNetworkRuleMatches
  * NOTE: Currently (1.1.x) only etherType is supported! Other things will
  * have no effect until the rules engine is fully implemented.
  *
- * Multiple entries in the table can have the same ruleNo. This indicates
- * a row with multiple matching criteria.
- *
- * This gives the table a much more space-efficient compressed representation,
- * allowing far more rules to be efficiently sent in small netconf structures.
+ * Rules are stored in a table in which one or more match entries is followed
+ * by an action. If more than one match precedes an action
  */
 typedef struct
 {
-	/**
-	 * Rule number and sort order
-	 *
-	 * Multiple entries in the table can have the same ruleNo. This causes them
-	 * to be matched as an AND together, e.g. both IP source and IP source port.
-	 */
-	uint16_t ruleNo;
-
-	/**
-	 * Field that this rules table entry matches (enum ZT_VirtualNetworkRuleMatches)
-	 */
-	uint8_t matches;
-
 	/** 
-	 * Action if rule matches (enum ZT_VirtualNetworkRuleAction)
+	 * Least significant 7 bits: ZT_VirtualNetworkRuleType, most significant 1 bit is NOT bit
+	 *
+	 * If the NOT bit is set, then matches will be interpreted as "does not
+	 * match." The NOT bit has no effect on actions.
+	 *
+	 * Use "& 0x7f" to get the enum and "& 0x80" to get the NOT flag.
+	 *
+	 * This is essentially a variant selector determining which field of 'v' is
+	 * used and its meaning.
 	 */
-	uint8_t action;
+	uint8_t t;
 
 	/**
-	 * Union containing the datum for this rule
-	 *
-	 * The rule entry functions like a variant type, with the field of datum
-	 * that is relevant/valid determined by the 'matches' enum.
+	 * Union containing the value of this rule -- which field is used depends on 't'
 	 */
 	union {
 		/**
-		 * IPv6 address in big-endian / network byte order
+		 * IPv6 address in big-endian / network byte order and netmask bits
 		 */
-		uint8_t ipv6[16];
-
-		/**
-		 * Flags (128 possible)
-		 */
-		uint8_t flags[16];
+		struct {
+			uint8_t ip[16];
+			uint8_t mask;
+		} ipv6;
 
 		/**
 		 * IPv4 address in big-endian / network byte order
 		 */
-		uint32_t ipv4;
+		struct {
+			uint32_t ip;
+			uint8_t mask;
+		} ipv4;
+
+		/**
+		 * Packet characteristic flags being matched
+		 */
+		uint64_t characteristics;
 
 		/**
 		 * IP port range -- start-end inclusive -- host byte order
@@ -619,12 +583,9 @@ typedef struct
 		uint16_t port[2];
 
 		/**
-		 * Two possible 40-bit ZeroTier addresses in host byte order (least significant 40 bits of uint64_t)
-		 *
-		 * The first of these ([0]) is used in most cases e.g. matching ZT source
-		 * address. The second is used as the observer for the TEE action.
+		 * 40-bit ZeroTier address (in least significant bits, host byte order)
 		 */
-		uint64_t zt[2];
+		uint64_t zt;
 
 		/**
 		 * 48-bit Ethernet MAC address in big-endian order
@@ -665,7 +626,7 @@ typedef struct
 		 * Ethernet packet size in host byte order (start-end, inclusive)
 		 */
 		uint16_t frameSize[2];
-	} datum;
+	} v;
 } ZT_VirtualNetworkRule;
 
 /**

@@ -216,6 +216,13 @@ public:
 	 */
 	inline unsigned char operator[](unsigned int i) const throw() { return (unsigned char)((_a >> (32 - (i * 8))) & 0xff); }
 
+	inline bool operator==(const uint64_t &a) const throw() { return (_a == (a & 0xffffffffffULL)); }
+	inline bool operator!=(const uint64_t &a) const throw() { return (_a != (a & 0xffffffffffULL)); }
+	inline bool operator>(const uint64_t &a) const throw() { return (_a > (a & 0xffffffffffULL)); }
+	inline bool operator<(const uint64_t &a) const throw() { return (_a < (a & 0xffffffffffULL)); }
+	inline bool operator>=(const uint64_t &a) const throw() { return (_a >= (a & 0xffffffffffULL)); }
+	inline bool operator<=(const uint64_t &a) const throw() { return (_a <= (a & 0xffffffffffULL)); }
+
 	inline bool operator==(const Address &a) const throw() { return (_a == a._a); }
 	inline bool operator!=(const Address &a) const throw() { return (_a != a._a); }
 	inline bool operator>(const Address &a) const throw() { return (_a > a._a); }

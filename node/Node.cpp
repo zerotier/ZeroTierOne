@@ -173,7 +173,7 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 class _PingPeersThatNeedPing
 {
 public:
-	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now,const std::vector<ZT_VirtualNetworkStaticDevice> &relays) :
+	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now,const std::vector<NetworkConfig::Relay> &relays) :
 		lastReceiveFromUpstream(0),
 		RR(renv),
 		_now(now),
@@ -217,14 +217,10 @@ public:
 
 			// Check for network preferred relays, also considered 'upstream' and thus always
 			// pinged to keep links up. If they have stable addresses we will try them there.
-			for(std::vector<ZT_VirtualNetworkStaticDevice>::const_iterator r(_relays.begin());r!=_relays.end();++r) {
-				if (r->address == p->address().toInt()) {
-					for(unsigned int i=0;i<2;++i) {
-						if (r->physical[i].ss_family == AF_INET)
-							stableEndpoint4 = r->physical[i];
-						else if (r->physical[i].ss_family == AF_INET6)
-							stableEndpoint6 = r->physical[i];
-					}
+			for(std::vector<NetworkConfig::Relay>::const_iterator r(_relays.begin());r!=_relays.end();++r) {
+				if (r->address == p->address()) {
+					stableEndpoint4 = r->phy4;
+					stableEndpoint6 = r->phy6;
 					upstream = true;
 					break;
 				}
@@ -271,7 +267,7 @@ public:
 private:
 	const RuntimeEnvironment *RR;
 	uint64_t _now;
-	const std::vector<ZT_VirtualNetworkStaticDevice> &_relays;
+	const std::vector<NetworkConfig::Relay> &_relays;
 	World _world;
 };
 
@@ -287,7 +283,7 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 			_lastPingCheck = now;
 
 			// Get relays and networks that need config without leaving the mutex locked
-			std::vector< ZT_VirtualNetworkStaticDevice > networkRelays;
+			std::vector< NetworkConfig::Relay > networkRelays;
 			std::vector< SharedPtr<Network> > needConfig;
 			{
 				Mutex::Lock _l(_networks_m);
@@ -296,7 +292,7 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 						needConfig.push_back(n->second);
 					}
 					if (n->second->hasConfig()) {
-						std::vector<ZT_VirtualNetworkStaticDevice> r(n->second->config().relays());
+						std::vector<NetworkConfig::Relay> r(n->second->config().relays());
 						networkRelays.insert(networkRelays.end(),r.begin(),r.end());
 					}
 				}

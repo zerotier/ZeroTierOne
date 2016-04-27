@@ -23,60 +23,6 @@
 
 namespace ZeroTier {
 
-namespace {
-
-struct ZT_VirtualNetworkStaticDevice_SortByAddress
-{
-	inline bool operator()(const ZT_VirtualNetworkStaticDevice &a,const ZT_VirtualNetworkStaticDevice &b)
-	{
-		return (a.address < b.address);
-	}
-};
-
-struct ZT_VirtualNetworkRule_SortByRuleNo
-{
-	inline bool operator()(const ZT_VirtualNetworkRule &a,const ZT_VirtualNetworkRule &b)
-	{
-		return (a.ruleNo < b.ruleNo);
-	}
-};
-
-} // anonymous namespace
-
-NetworkConfig NetworkConfig::createTestNetworkConfig(const Address &self)
-{
-	NetworkConfig nc;
-
-	nc._nwid = ZT_TEST_NETWORK_ID;
-	nc._timestamp = 1;
-	nc._revision = 1;
-	nc._issuedTo = self;
-	nc._multicastLimit = ZT_MULTICAST_DEFAULT_LIMIT;
-	nc._flags = ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
-	nc._type = ZT_NETWORK_TYPE_PUBLIC;
-
-	nc._rules[nc._ruleCount].ruleNo = 1;
-	nc._rules[nc._ruleCount].matches = (uint8_t)ZT_NETWORK_RULE_MATCHES_ALL;
-	nc._rules[nc._ruleCount].action = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
-	nc._ruleCount = 1;
-
-	Utils::snprintf(nc._name,sizeof(nc._name),"ZT_TEST_NETWORK");
-
-	// Make up a V4 IP from 'self' in the 10.0.0.0/8 range -- no
-	// guarantee of uniqueness but collisions are unlikely.
-	uint32_t ip = (uint32_t)((self.toInt() & 0x00ffffff) | 0x0a000000); // 10.x.x.x
-	if ((ip & 0x000000ff) == 0x000000ff) ip ^= 0x00000001; // but not ending in .255
-	if ((ip & 0x000000ff) == 0x00000000) ip ^= 0x00000001; // or .0
-	nc._staticIps[0] = InetAddress(Utils::hton(ip),8);
-
-	// Assign an RFC4193-compliant IPv6 address -- will never collide
-	nc._staticIps[1] = InetAddress::makeIpv6rfc4193(ZT_TEST_NETWORK_ID,self.toInt());
-
-	nc._staticIpCount = 2;
-
-	return nc;
-}
-
 #ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 
 void NetworkConfig::fromDictionary(const char *ds,unsigned int dslen)
@@ -116,12 +62,19 @@ void NetworkConfig::fromDictionary(const char *ds,unsigned int dslen)
 		if (a->length() == ZT_ADDRESS_LENGTH_HEX) { // ignore empty or garbage fields
 			Address tmp(*a);
 			if (!tmp.isReserved()) {
-				if ((_activeBridgeCount < ZT_MAX_NETWORK_ACTIVE_BRIDGES)&&(std::find(&(_activeBridges[0]),&(_activeBridges[_activeBridgeCount]),tmp) == &(_activeBridges[_activeBridgeCount])))
-					_activeBridges[_activeBridgeCount++] = tmp;
+				uint64_t specialist = tmp.toInt();
+				for(unsigned int i=0;i<_specialistCount;++i) {
+					if ((_specialists[i] & 0xffffffffffULL) == specialist) {
+						_specialists[i] |= ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE;
+						specialist = 0;
+						break;
+					}
+				}
+				if ((specialist)&&(_specialistCount < ZT_MAX_NETWORK_SPECIALISTS))
+					_specialists[_specialistCount++] = specialist | ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE;
 			}
 		}
 	}
-	std::sort(&(_activeBridges[0]),&(_activeBridges[_activeBridgeCount]));
 
 	std::string ipAddrs(d.get(ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC,std::string()));
 	{
@@ -169,49 +122,55 @@ void NetworkConfig::fromDictionary(const char *ds,unsigned int dslen)
 	std::vector<std::string> relaysSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_RELAYS,"").c_str(),",","",""));
 	for(std::vector<std::string>::const_iterator r(relaysSplit.begin());r!=relaysSplit.end();++r) {
 		if (r->length() >= ZT_ADDRESS_LENGTH_HEX) {
-			Address addr(r->substr(0,ZT_ADDRESS_LENGTH_HEX).c_str());
-			InetAddress phys[2];
-			unsigned int physCount = 0;
+			Address zt(r->substr(0,ZT_ADDRESS_LENGTH_HEX).c_str());
+			InetAddress phy[2];
+			unsigned int phyCount = 0;
 			const std::size_t semi(r->find(';'));
 			if ((semi > ZT_ADDRESS_LENGTH_HEX)&&(semi < (r->length() - 2))) {
 				std::vector<std::string> phySplit(Utils::split(r->substr(semi+1).c_str(),",","",""));
-				for(std::vector<std::string>::const_iterator p(phySplit.begin());((p!=phySplit.end())&&(physCount < 2));++p) {
-					phys[physCount] = InetAddress(*p);
-					if (phys[physCount])
-						++physCount;
-					else phys[physCount].zero();
+				for(std::vector<std::string>::const_iterator p(phySplit.begin());((p!=phySplit.end())&&(phyCount < 2));++p) {
+					phy[phyCount] = InetAddress(*p);
+					if (phy[phyCount])
+						++phyCount;
+					else phy[phyCount].zero();
 				}
 			}
 
-			unsigned int p = _staticCount;
-			for(unsigned int i=0;i<_staticCount;++i) {
-				if (_static[p].address == addr.toInt()) {
-					p = i;
+			uint64_t specialist = zt.toInt();
+			for(unsigned int i=0;i<_specialistCount;++i) {
+				if ((_specialists[i] & 0xffffffffffULL) == specialist) {
+					_specialists[i] |= ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY;
+					specialist = 0;
 					break;
 				}
 			}
-			if ((p == _staticCount)&&(_staticCount < ZT_MAX_NETWORK_STATIC_DEVICES))
+
+			if ((specialist)&&(_specialistCount < ZT_MAX_NETWORK_SPECIALISTS))
+				_specialists[_specialistCount++] = specialist | ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY;
+
+			if ((phy[0])&&(_staticCount < ZT_MAX_NETWORK_STATIC_PHYSICAL_ADDRESSES)) {
+				_static[_staticCount].zt = zt;
+				_static[_staticCount].phy = phy[0];
 				++_staticCount;
-			if (p < ZT_MAX_NETWORK_STATIC_DEVICES) {
-				_static[p].address = Address(r->c_str());
-				for(unsigned int i=0;i<physCount;++i)
-					_static[p].physical[i] = phys[i];
-				_static[p].flags |= ZT_NETWORK_STATIC_DEVICE_IS_RELAY;
+			}
+			if ((phy[1])&&(_staticCount < ZT_MAX_NETWORK_STATIC_PHYSICAL_ADDRESSES)) {
+				_static[_staticCount].zt = zt;
+				_static[_staticCount].phy = phy[0];
+				++_staticCount;
 			}
 		}
 	}
-	std::sort(&(_static[0]),&(_static[_staticCount]),ZT_VirtualNetworkStaticDevice_SortByAddress());
 
 	std::vector<std::string> ets(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES,"").c_str(),",","",""));
-	int rno = 0;
 	for(std::vector<std::string>::const_iterator et(ets.begin());et!=ets.end();++et) {
 		unsigned int et2 = Utils::hexStrToUInt(et->c_str()) & 0xffff;
-		if (_ruleCount < ZT_MAX_NETWORK_RULES) {
-			memset(&(_rules[_ruleCount]),0,sizeof(ZT_VirtualNetworkRule));
-			_rules[_ruleCount].ruleNo = rno; rno += 10;
-			_rules[_ruleCount].matches = (uint8_t)((et2 == 0) ? ZT_NETWORK_RULE_MATCHES_ALL : ZT_NETWORK_RULE_MATCHES_ETHERTYPE);
-			_rules[_ruleCount].action = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
-			_rules[_ruleCount].datum.etherType = (uint16_t)et2;
+		if ((_ruleCount + 1) < ZT_MAX_NETWORK_RULES) {
+			if (et2) {
+				_rules[_ruleCount].t = ZT_NETWORK_RULE_MATCH_ETHERTYPE;
+				_rules[_ruleCount].v.etherType = (uint16_t)et2;
+				++_ruleCount;
+			}
+			_rules[_ruleCount].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
 			++_ruleCount;
 		}
 	}
