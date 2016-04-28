@@ -160,16 +160,6 @@ extern "C" {
 #define ZT_CLUSTER_MAX_MESSAGE_LENGTH (1500 - 48)
 
 /**
- * This device is a network preferred relay
- */
-#define ZT_NETWORK_STATIC_DEVICE_IS_RELAY 0x0001
-
-/**
- * This device is a network "anchor," meaning it is used for things like multicast GATHER
- */
-#define ZT_NETWORK_STATIC_DEVICE_IS_ANCHOR 0x0002
-
-/**
  * A null/empty sockaddr (all zero) to signify an unspecified socket address
  */
 extern const struct sockaddr_storage ZT_SOCKADDR_NULL;
