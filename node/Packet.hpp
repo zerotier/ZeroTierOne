@@ -329,10 +329,10 @@ namespace ZeroTier {
  *   <[8] 64-bit random packet ID and crypto initialization vector>
  *   <[5] destination ZT address>
  *   <[5] source ZT address>
- *   <[1] flags/cipher (top 5 bits) and ZT hop count (last 3 bits)>
+ *   <[1] flags/cipher/hops>
  *   <[8] 64-bit MAC>
  *   [... -- begin encryption envelope -- ...]
- *   <[1] encrypted flags (top 3 bits) and verb (last 5 bits)>
+ *   <[1] encrypted flags (MS 3 bits) and verb (LS 5 bits)>
  *   [... verb-specific payload ...]
  *
  * Packets smaller than 28 bytes are invalid and silently discarded.
@@ -345,12 +345,6 @@ namespace ZeroTier {
  * transit without invalidating the MAC. All other bits in the packet are
  * immutable. This is because intermediate nodes can increment the hop
  * count up to 7 (protocol max).
- *
- * A hop count of 7 also indicates that receiving peers should not attempt
- * to learn direct paths from this packet. (Right now direct paths are only
- * learned from direct packets anyway.)
- *
- * http://tonyarcieri.com/all-the-crypto-code-youve-ever-written-is-probably-broken
  *
  * For unencrypted packets, MAC is computed on plaintext. Only HELLO is ever
  * sent in the clear, as it's the "here is my public key" message.
