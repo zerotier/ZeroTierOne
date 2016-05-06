@@ -353,7 +353,7 @@ SqliteNetworkController::~SqliteNetworkController()
 	}
 }
 
-NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary &metaData,Dictionary &netconf)
+NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const NetworkConfigRequestMetaData &metaData,Buffer<8194> &netconf)
 {
 	Mutex::Lock _l(_lock);
 	return _doNetworkConfigRequest(fromAddr,signingId,identity,nwid,metaData,netconf);
@@ -1647,25 +1647,24 @@ unsigned int SqliteNetworkController::_doCPGet(
 	return 404;
 }
 
-NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary &metaData,Dictionary &netconf)
+NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const NetworkConfigRequestMetaData &metaData,Buffer<8194> &netconf)
 {
 	// Assumes _lock is locked
 
-	// Decode some stuff from metaData
-	const unsigned int clientMajorVersion = (unsigned int)metaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0);
-	const unsigned int clientMinorVersion = (unsigned int)metaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0);
-	const unsigned int clientRevision = (unsigned int)metaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0);
-	const bool clientIs104 = (Utils::compareVersion(clientMajorVersion,clientMinorVersion,clientRevision,1,0,4) >= 0);
+	const bool clientIs104 = (Utils::compareVersion(metaData.majorVersion,metaData.minorVersion,metaData.revision,1,0,4) >= 0);
 
 	// Note: we can't reuse prepared statements that return const char * pointers without
 	// making our own copy in e.g. a std::string first.
 
+	Dictionary legacy;
+	NetworkConfig nc;
+
 	if ((!signingId)||(!signingId.hasPrivate())) {
-		netconf["error"] = "signing identity invalid or lacks private key";
+		//netconf["error"] = "signing identity invalid or lacks private key";
 		return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
 	if (signingId.address().toInt() != (nwid >> 24)) {
-		netconf["error"] = "signing identity address does not match most significant 40 bits of network ID";
+		//netconf["error"] = "signing identity address does not match most significant 40 bits of network ID";
 		return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
 

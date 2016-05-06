@@ -99,7 +99,7 @@ extern "C" {
 /**
  * Maximum number of static physical to ZeroTier address mappings (typically relays, etc.)
  */
-#define ZT_MAX_NETWORK_STATIC_PHYSICAL_ADDRESSES 16
+#define ZT_MAX_NETWORK_PINNED 16
 
 /**
  * Maximum number of rule table entries per network (can be increased)

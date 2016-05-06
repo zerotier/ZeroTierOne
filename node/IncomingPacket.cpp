@@ -146,13 +146,11 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				 * who asks. We won't communicate unless we also get a certificate
 				 * from the remote that agrees. */
 				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
-				if (network) {
-					if ((network->hasConfig())&&(network->config().com())) {
-						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
-						network->config().com().serialize(outp);
-						outp.armor(peer->key(),true);
-						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
-					}
+				if ((network)&&(network->hasConfig())&&(network->config().com)) {
+					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
+					network->config().com.serialize(outp);
+					outp.armor(peer->key(),true);
+					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 				}
 			}	break;
 
@@ -679,8 +677,24 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 {
 	try {
 		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
+
 		const unsigned int metaDataLength = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
-		const Dictionary metaData((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength),metaDataLength);
+		const uint8_t *metaDataBytes = (const uint8_t *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength);
+
+		NetworkConfigRequestMetaData metaData(false);
+		try {
+			Buffer<8194> md(metaDataBytes,metaDataLength);
+			metaData.deserialize(md,0);
+		} catch ( ... ) { // will throw if new-style meta-data is missing or invalid
+			metaData.clear();
+#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
+			const Dictionary oldStyleMetaData((const char *)metaDataBytes,metaDataLength);
+			metaData.majorVersion = (unsigned int)oldStyleMetaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0);
+			metaData.minorVersion = (unsigned int)oldStyleMetaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0);
+			metaData.revision = (unsigned int)oldStyleMetaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0);
+#endif
+		}
+
 		//const uint64_t haveRevision = ((ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength + 8) <= size()) ? at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength) : 0ULL;
 
 		const unsigned int h = hops();
@@ -688,27 +702,22 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 		peer->received(_localAddress,_remoteAddress,h,pid,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP);
 
 		if (RR->localNetworkController) {
-			Dictionary netconf;
+			Buffer<8194> netconf;
 			switch(RR->localNetworkController->doNetworkConfigRequest((h > 0) ? InetAddress() : _remoteAddress,RR->identity,peer->identity(),nwid,metaData,netconf)) {
 
 				case NetworkController::NETCONF_QUERY_OK: {
-					const std::string netconfStr(netconf.toString());
-					if (netconfStr.length() > 0xffff) { // sanity check since field ix 16-bit
+					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
+					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+					outp.append(pid);
+					outp.append(nwid);
+					outp.append((uint16_t)netconf.size());
+					outp.append(netconf.data(),(unsigned int)netconf.size());
+					outp.compress();
+					outp.armor(peer->key(),true);
+					if (outp.size() > ZT_PROTO_MAX_PACKET_LENGTH) { // sanity check
 						TRACE("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
 					} else {
-						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
-						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-						outp.append(pid);
-						outp.append(nwid);
-						outp.append((uint16_t)netconfStr.length());
-						outp.append(netconfStr.data(),(unsigned int)netconfStr.length());
-						outp.compress();
-						outp.armor(peer->key(),true);
-						if (outp.size() > ZT_PROTO_MAX_PACKET_LENGTH) { // sanity check
-							TRACE("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
-						} else {
-							RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
-						}
+						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 					}
 				}	break;
 
@@ -1047,7 +1056,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 				SharedPtr<Network> nw(RR->node->network(originatorCredentialNetworkId));
 				if ((nw)&&(nw->hasConfig())) {
 					originatorCredentialNetworkConfig = nw->config();
-					if ( ( (originatorCredentialNetworkConfig.isPublic()) || (peer->address() == originatorAddress) || ((originatorCredentialNetworkConfig.com())&&(previousHopCom)&&(originatorCredentialNetworkConfig.com().agreesWith(previousHopCom))) ) ) {
+					if ( ( (originatorCredentialNetworkConfig.isPublic()) || (peer->address() == originatorAddress) || ((originatorCredentialNetworkConfig.com)&&(previousHopCom)&&(originatorCredentialNetworkConfig.com.agreesWith(previousHopCom))) ) ) {
 						TRACE("CIRCUIT_TEST %.16llx received from hop %s(%s) and originator %s with valid network ID credential %.16llx (verified from originator and next hop)",testId,source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
 					} else {
 						TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID %.16llx as credential, and previous hop %s did not supply a valid COM",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId,peer->address().toString().c_str());
@@ -1122,9 +1131,9 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 			outp.append(field(ZT_PACKET_IDX_PAYLOAD,lengthOfSignedPortionAndSignature),lengthOfSignedPortionAndSignature);
 			const unsigned int previousHopCredentialPos = outp.size();
 			outp.append((uint16_t)0); // no previous hop credentials: default
-			if ((originatorCredentialNetworkConfig)&&(!originatorCredentialNetworkConfig.isPublic())&&(originatorCredentialNetworkConfig.com())) {
+			if ((originatorCredentialNetworkConfig)&&(!originatorCredentialNetworkConfig.isPublic())&&(originatorCredentialNetworkConfig.com)) {
 				outp.append((uint8_t)0x01); // COM
-				originatorCredentialNetworkConfig.com().serialize(outp);
+				originatorCredentialNetworkConfig.com.serialize(outp);
 				outp.setAt<uint16_t>(previousHopCredentialPos,(uint16_t)(outp.size() - (previousHopCredentialPos + 2)));
 			}
 			if (remainingHopsPtr < size())

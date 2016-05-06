@@ -153,7 +153,7 @@ bool Network::applyConfiguration(const NetworkConfig &conf)
 	if (_destroyed) // sanity check
 		return false;
 	try {
-		if ((conf.networkId() == _id)&&(conf.issuedTo() == RR->identity.address())) {
+		if ((conf.networkId == _id)&&(conf.issuedTo == RR->identity.address())) {
 			ZT_VirtualNetworkConfig ctmp;
 			bool portInitialized;
 			{
@@ -234,12 +234,11 @@ void Network::requestConfiguration()
 
 	if (controller() == RR->identity.address()) {
 		if (RR->localNetworkController) {
-			Dictionary newconf;
-			switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,Dictionary(),newconf)) {
-				case NetworkController::NETCONF_QUERY_OK: {
-					std::string tmp(newconf.toString());
-					this->setConfiguration((const void *)tmp.data(),(unsigned int)tmp.length(),true);
-				}	return;
+			Buffer<8194> tmp;
+			switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,NetworkConfigRequestMetaData(),tmp)) {
+				case NetworkController::NETCONF_QUERY_OK:
+					this->setConfiguration(tmp.data(),tmp.size(),true);
+					return;
 				case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND:
 					this->setNotFound();
 					return;
@@ -269,7 +268,7 @@ void Network::requestConfiguration()
 	outp.append((uint16_t)mds.length());
 	outp.append((const void *)mds.data(),(unsigned int)mds.length());
 	if (_config)
-		outp.append((uint64_t)_config.revision());
+		outp.append((uint64_t)_config.revision);
 	else outp.append((uint64_t)0);
 	RR->sw->send(outp,true,0);
 }
@@ -380,7 +379,7 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	ec->nwid = _id;
 	ec->mac = _mac.toInt();
 	if (_config)
-		Utils::scopy(ec->name,sizeof(ec->name),_config.name());
+		Utils::scopy(ec->name,sizeof(ec->name),_config.name);
 	else ec->name[0] = (char)0;
 	ec->status = _status();
 	ec->type = (_config) ? (_config.isPrivate() ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC) : ZT_NETWORK_TYPE_PRIVATE;
@@ -391,7 +390,7 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	ec->broadcastEnabled = (_config) ? (_config.enableBroadcast() ? 1 : 0) : 0;
 	ec->portError = _portError;
 	ec->enabled = (_enabled) ? 1 : 0;
-	ec->netconfRevision = (_config) ? (unsigned long)_config.revision() : 0;
+	ec->netconfRevision = (_config) ? (unsigned long)_config.revision : 0;
 
 	ec->multicastSubscriptionCount = std::min((unsigned int)_myMulticastGroups.size(),(unsigned int)ZT_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS);
 	for(unsigned int i=0;i<ec->multicastSubscriptionCount;++i) {
@@ -399,13 +398,14 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 		ec->multicastSubscriptions[i].adi = _myMulticastGroups[i].adi();
 	}
 
-	std::vector<InetAddress> sips(_config.staticIps());
 	ec->assignedAddressCount = 0;
-	for(unsigned long i=0;i<ZT_MAX_ZT_ASSIGNED_ADDRESSES;++i) {
-		if (i < sips.size()) {
-			memcpy(&(ec->assignedAddresses[i]),&(sips[i]),sizeof(struct sockaddr_storage));
+	for(unsigned int i=0;i<ZT_MAX_ZT_ASSIGNED_ADDRESSES;++i) {
+		if (i < _config.staticIpCount) {
+			memcpy(&(ec->assignedAddresses[i]),&(_config.staticIps[i]),sizeof(struct sockaddr_storage));
 			++ec->assignedAddressCount;
-		} else memset(&(ec->assignedAddresses[i]),0,sizeof(struct sockaddr_storage));
+		} else {
+			memset(&(ec->assignedAddresses[i]),0,sizeof(struct sockaddr_storage));
+		}
 	}
 }
 
@@ -417,7 +417,7 @@ bool Network::_isAllowed(const SharedPtr<Peer> &peer) const
 			return false;
 		if (_config.isPublic())
 			return true;
-		return ((_config.com())&&(peer->networkMembershipCertificatesAgree(_id,_config.com())));
+		return ((_config.com)&&(peer->networkMembershipCertificatesAgree(_id,_config.com)));
 	} catch (std::exception &exc) {
 		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer->address().toString().c_str(),exc.what());
 	} catch ( ... ) {
@@ -469,9 +469,9 @@ void Network::_announceMulticastGroupsTo(const SharedPtr<Peer> &peer,const std::
 
 	// We push COMs ahead of MULTICAST_LIKE since they're used for access control -- a COM is a public
 	// credential so "over-sharing" isn't really an issue (and we only do so with roots).
-	if ((_config)&&(_config.com())&&(!_config.isPublic())&&(peer->needsOurNetworkMembershipCertificate(_id,RR->node->now(),true))) {
+	if ((_config)&&(_config.com)&&(!_config.isPublic())&&(peer->needsOurNetworkMembershipCertificate(_id,RR->node->now(),true))) {
 		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
-		_config.com().serialize(outp);
+		_config.com.serialize(outp);
 		RR->sw->send(outp,true,0);
 	}
 

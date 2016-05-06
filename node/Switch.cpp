@@ -361,8 +361,8 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			 * themselves, they can look these addresses up with NDP and it will
 			 * work just fine. */
 			if ((reinterpret_cast<const uint8_t *>(data)[6] == 0x3a)&&(reinterpret_cast<const uint8_t *>(data)[40] == 0x87)) { // ICMPv6 neighbor solicitation
-				std::vector<InetAddress> sips(network->config().staticIps());
-				for(std::vector<InetAddress>::const_iterator sip(sips.begin());sip!=sips.end();++sip) {
+				for(unsigned int sipk=0;sipk<network->config().staticIpCount;++sipk) {
+					const InetAddress *sip = &(network->config().staticIps[sipk]);
 					if ((sip->ss_family == AF_INET6)&&(Utils::ntoh((uint16_t)reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_port) == 88)) {
 						const uint8_t *my6 = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_addr.s6_addr);
 						if ((my6[0] == 0xfd)&&(my6[9] == 0x99)&&(my6[10] == 0x93)) { // ZT-RFC4193 == fd__:____:____:____:__99:93__:____:____ / 88
@@ -425,8 +425,8 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		//TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),len);
 
 		RR->mc->send(
-			((!network->config().isPublic())&&(network->config().com())) ? &(network->config().com()) : (const CertificateOfMembership *)0,
-			network->config().multicastLimit(),
+			((!network->config().isPublic())&&(network->config().com)) ? &(network->config().com) : (const CertificateOfMembership *)0,
+			network->config().multicastLimit,
 			RR->node->now(),
 			network->id(),
 			network->config().activeBridges(),
@@ -444,13 +444,13 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		Address toZT(to.toAddress(network->id())); // since in-network MACs are derived from addresses and network IDs, we can reverse this
 		SharedPtr<Peer> toPeer(RR->topology->getPeer(toZT));
-		const bool includeCom = ( (network->config().isPrivate()) && (network->config().com()) && ((!toPeer)||(toPeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true))) );
+		const bool includeCom = ( (network->config().isPrivate()) && (network->config().com) && ((!toPeer)||(toPeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true))) );
 		if ((fromBridged)||(includeCom)) {
 			Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
 			if (includeCom) {
 				outp.append((unsigned char)0x01); // 0x01 -- COM included
-				network->config().com().serialize(outp);
+				network->config().com.serialize(outp);
 			} else {
 				outp.append((unsigned char)0x00);
 			}
@@ -513,9 +513,9 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			SharedPtr<Peer> bridgePeer(RR->topology->getPeer(bridges[b]));
 			Packet outp(bridges[b],RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
-			if ( (network->config().isPrivate()) && (network->config().com()) && ((!bridgePeer)||(bridgePeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true))) ) {
+			if ( (network->config().isPrivate()) && (network->config().com) && ((!bridgePeer)||(bridgePeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true))) ) {
 				outp.append((unsigned char)0x01); // 0x01 -- COM included
-				network->config().com().serialize(outp);
+				network->config().com.serialize(outp);
 			} else {
 				outp.append((unsigned char)0);
 			}

@@ -238,8 +238,8 @@ void Multicaster::send(
 					const CertificateOfMembership *com = (CertificateOfMembership *)0;
 					{
 						SharedPtr<Network> nw(RR->node->network(nwid));
-						if ((nw)&&(nw->hasConfig())&&(nw->config().com())&&(nw->config().isPrivate())&&(p->needsOurNetworkMembershipCertificate(nwid,now,true)))
-							com = &(nw->config().com());
+						if ((nw)&&(nw->hasConfig())&&(nw->config().com)&&(nw->config().isPrivate())&&(p->needsOurNetworkMembershipCertificate(nwid,now,true)))
+							com = &(nw->config().com);
 					}
 
 					Packet outp(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_GATHER);

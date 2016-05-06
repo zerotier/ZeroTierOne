@@ -128,6 +128,8 @@ class NetworkConfig
 public:
 	/**
 	 * Network preferred relay with optional physical endpoint addresses
+	 *
+	 * This is used by the convenience relays() method.
 	 */
 	struct Relay
 	{
@@ -148,30 +150,30 @@ public:
 	{
 		NetworkConfig nc;
 
-		nc._nwid = ZT_TEST_NETWORK_ID;
-		nc._timestamp = 1;
-		nc._revision = 1;
-		nc._issuedTo = self;
-		nc._multicastLimit = ZT_MULTICAST_DEFAULT_LIMIT;
-		nc._flags = ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
-		nc._type = ZT_NETWORK_TYPE_PUBLIC;
+		nc.networkId = ZT_TEST_NETWORK_ID;
+		nc.timestamp = 1;
+		nc.revision = 1;
+		nc.issuedTo = self;
+		nc.multicastLimit = ZT_MULTICAST_DEFAULT_LIMIT;
+		nc.flags = ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
+		nc.type = ZT_NETWORK_TYPE_PUBLIC;
 
-		nc._rules[nc._ruleCount].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
-		nc._ruleCount = 1;
+		nc.rules[0].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
+		nc.ruleCount = 1;
 
-		Utils::snprintf(nc._name,sizeof(nc._name),"ZT_TEST_NETWORK");
+		Utils::snprintf(nc.name,sizeof(nc.name),"ZT_TEST_NETWORK");
 
 		// Make up a V4 IP from 'self' in the 10.0.0.0/8 range -- no
 		// guarantee of uniqueness but collisions are unlikely.
 		uint32_t ip = (uint32_t)((self.toInt() & 0x00ffffff) | 0x0a000000); // 10.x.x.x
 		if ((ip & 0x000000ff) == 0x000000ff) ip ^= 0x00000001; // but not ending in .255
 		if ((ip & 0x000000ff) == 0x00000000) ip ^= 0x00000001; // or .0
-		nc._staticIps[0] = InetAddress(Utils::hton(ip),8);
+		nc.staticIps[0] = InetAddress(Utils::hton(ip),8);
 
 		// Assign an RFC4193-compliant IPv6 address -- will never collide
-		nc._staticIps[1] = InetAddress::makeIpv6rfc4193(ZT_TEST_NETWORK_ID,self.toInt());
+		nc.staticIps[1] = InetAddress::makeIpv6rfc4193(ZT_TEST_NETWORK_ID,self.toInt());
 
-		nc._staticIpCount = 2;
+		nc.staticIpCount = 2;
 
 		return nc;
 	}
@@ -199,10 +201,10 @@ public:
 	inline bool permitsEtherType(unsigned int etherType) const
 	{
 		unsigned int et = 0;
-		for(unsigned int i=0;i<_ruleCount;++i) {
-			ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(_rules[i].t & 0x7f);
+		for(unsigned int i=0;i<ruleCount;++i) {
+			ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rules[i].t & 0x7f);
 			if (rt == ZT_NETWORK_RULE_MATCH_ETHERTYPE) {
-				et = _rules[i].v.etherType;
+				et = rules[i].v.etherType;
 			} else if (rt == ZT_NETWORK_RULE_ACTION_ACCEPT) {
 				if ((!et)||(et == etherType))
 					return true;
@@ -213,75 +215,24 @@ public:
 	}
 
 	/**
-	 * @return Network ID that this config applies to
-	 */
-	inline uint64_t networkId() const throw() { return _nwid; }
-
-	/**
-	 * @return Timestamp of this config (controller-side)
-	 */
-	inline uint64_t timestamp() const throw() { return _timestamp; }
-
-	/**
-	 * @return Config revision number
-	 */
-	inline uint64_t revision() const throw() { return _revision; }
-
-	/**
-	 * @return ZeroTier address of device to which this config was issued
-	 */
-	inline const Address &issuedTo() const throw() { return _issuedTo; }
-
-	/**
-	 * @return Maximum number of multicast recipients or 0 to disable multicast
-	 */
-	inline unsigned int multicastLimit() const throw() { return _multicastLimit; }
-
-	/**
 	 * @return True if passive bridging is allowed (experimental)
 	 */
-	inline bool allowPassiveBridging() const throw() { return ((_flags & ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING) != 0); }
+	inline bool allowPassiveBridging() const throw() { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING) != 0); }
 
 	/**
 	 * @return True if broadcast (ff:ff:ff:ff:ff:ff) address should work on this network
 	 */
-	inline bool enableBroadcast() const throw() { return ((_flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
-
-	/**
-	 * @return Type of network (currently public or private)
-	 */
-	inline ZT_VirtualNetworkType type() const throw() { return _type; }
+	inline bool enableBroadcast() const throw() { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
 
 	/**
 	 * @return Network type is public (no access control)
 	 */
-	inline bool isPublic() const throw() { return (_type == ZT_NETWORK_TYPE_PUBLIC); }
+	inline bool isPublic() const throw() { return (this->type == ZT_NETWORK_TYPE_PUBLIC); }
 
 	/**
 	 * @return Network type is private (certificate access control)
 	 */
-	inline bool isPrivate() const throw() { return (_type == ZT_NETWORK_TYPE_PRIVATE); }
-
-	/**
-	 * @return Short network name
-	 */
-	inline const char *name() const throw() { return _name; }
-
-	/**
-	 * @return Network certificate of membership or NULL COM object if none (public network)
-	 */
-	inline const CertificateOfMembership &com() const throw() { return _com; }
-
-	/**
-	 * @return ZeroTier-managed static IPs assigned to this device on this network
-	 */
-	inline std::vector<InetAddress> staticIps() const
-	{
-		std::vector<InetAddress> r;
-		for(unsigned int i=0;i<_staticIpCount;++i)
-			r.push_back(_staticIps[i]);
-		return r;
-	}
+	inline bool isPrivate() const throw() { return (this->type == ZT_NETWORK_TYPE_PRIVATE); }
 
 	/**
 	 * @return ZeroTier addresses of devices on this network designated as active bridges
@@ -289,9 +240,9 @@ public:
 	inline std::vector<Address> activeBridges() const
 	{
 		std::vector<Address> r;
-		for(unsigned int i=0;i<_specialistCount;++i) {
-			if ((_specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)
-				r.push_back(Address(_specialists[i]));
+		for(unsigned int i=0;i<specialistCount;++i) {
+			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)
+				r.push_back(Address(specialists[i]));
 		}
 		return r;
 	}
@@ -302,26 +253,26 @@ public:
 	inline std::vector<Address> anchors() const
 	{
 		std::vector<Address> r;
-		for(unsigned int i=0;i<_specialistCount;++i) {
-			if ((_specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR) != 0)
-				r.push_back(Address(_specialists[i]));
+		for(unsigned int i=0;i<specialistCount;++i) {
+			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR) != 0)
+				r.push_back(Address(specialists[i]));
 		}
 		return r;
 	}
 
 	/**
-	 * Look up a static physical address for a given ZeroTier address
+	 * Get pinned physical address for a given ZeroTier address, if any
 	 *
 	 * @param zt ZeroTier address
 	 * @param af Address family (e.g. AF_INET) or 0 for the first we find of any type
 	 * @return Physical address, if any
 	 */
-	inline InetAddress staticPhysicalAddress(const Address &zt,unsigned int af) const
+	inline InetAddress findPinnedAddress(const Address &zt,unsigned int af) const
 	{
-		for(unsigned int i=0;i<_staticCount;++i) {
-			if (_static[i].zt == zt) {
-				if ((af == 0)||((unsigned int)_static[i].phy.ss_family == af))
-					return _static[i].phy;
+		for(unsigned int i=0;i<pinnedCount;++i) {
+			if (pinned[i].zt == zt) {
+				if ((af == 0)||((unsigned int)pinned[i].phy.ss_family == af))
+					return pinned[i].phy;
 			}
 		}
 		return InetAddress();
@@ -335,12 +286,12 @@ public:
 	inline std::vector<Relay> relays() const
 	{
 		std::vector<Relay> r;
-		for(unsigned int i=0;i<_specialistCount;++i) {
-			if ((_specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY) != 0) {
+		for(unsigned int i=0;i<specialistCount;++i) {
+			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY) != 0) {
 				r.push_back(Relay());
-				r.back().address = _specialists[i];
-				r.back().phy4 = staticPhysicalAddress(r.back().address,AF_INET);
-				r.back().phy6 = staticPhysicalAddress(r.back().address,AF_INET6);
+				r.back().address = specialists[i];
+				r.back().phy4 = findPinnedAddress(r.back().address,AF_INET);
+				r.back().phy6 = findPinnedAddress(r.back().address,AF_INET6);
 			}
 		}
 		return r;
@@ -352,10 +303,10 @@ public:
 	 */
 	inline bool permitsBridging(const Address &fromPeer) const
 	{
-		if ((_flags & ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING) != 0)
+		if ((flags & ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING) != 0)
 			return true;
-		for(unsigned int i=0;i<_specialistCount;++i) {
-			if ((fromPeer == _specialists[i])&&((_specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
+		for(unsigned int i=0;i<specialistCount;++i) {
+			if ((fromPeer == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
 				return true;
 		}
 		return false;
@@ -369,9 +320,9 @@ public:
 	 */
 	Address nextRelay(unsigned int &ptr) const
 	{
-		while (ptr < _specialistCount) {
-			if ((_specialists[ptr] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY) != 0) {
-				return Address(_specialists[ptr]);
+		while (ptr < specialistCount) {
+			if ((specialists[ptr] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY) != 0) {
+				return Address(specialists[ptr]);
 			}
 			++ptr;
 		}
@@ -384,8 +335,8 @@ public:
 	 */
 	bool isRelay(const Address &zt) const
 	{
-		for(unsigned int i=0;i<_specialistCount;++i) {
-			if ((zt == _specialists[i])&&((_specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY) != 0))
+		for(unsigned int i=0;i<specialistCount;++i) {
+			if ((zt == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY) != 0))
 				return true;
 		}
 		return false;
@@ -394,7 +345,7 @@ public:
 	/**
 	 * @return True if this network config is non-NULL
 	 */
-	inline operator bool() const throw() { return (_nwid != 0); }
+	inline operator bool() const throw() { return (networkId != 0); }
 
 	inline bool operator==(const NetworkConfig &nc) const { return (memcmp(this,&nc,sizeof(NetworkConfig)) == 0); }
 	inline bool operator!=(const NetworkConfig &nc) const { return (!(*this == nc)); }
@@ -404,43 +355,43 @@ public:
 	{
 		b.append((uint16_t)1); // version
 
-		b.append((uint64_t)_nwid);
-		b.append((uint64_t)_timestamp);
-		b.append((uint64_t)_revision);
-		_issuedTo.appendTo(b);
-		b.append((uint32_t)_multicastLimit);
-		b.append((uint32_t)_flags);
-		b.append((uint8_t)_type);
+		b.append((uint64_t)networkId);
+		b.append((uint64_t)timestamp);
+		b.append((uint64_t)revision);
+		issuedTo.appendTo(b);
+		b.append((uint32_t)multicastLimit);
+		b.append((uint32_t)flags);
+		b.append((uint8_t)type);
 
-		unsigned int nl = (unsigned int)strlen(_name);
+		unsigned int nl = (unsigned int)strlen(name);
 		if (nl > 255) nl = 255; // sanity check
 		b.append((uint8_t)nl);
-		b.append((const void *)_name,nl);
+		b.append((const void *)name,nl);
 
-		b.append((uint16_t)_specialistCount);
-		for(unsigned int i=0;i<_specialistCount;++i)
-			b.append((uint64_t)_specialists[i]);
+		b.append((uint16_t)specialistCount);
+		for(unsigned int i=0;i<specialistCount;++i)
+			b.append((uint64_t)specialists[i]);
 
-		b.append((uint16_t)_routeCount);
-		for(unsigned int i=0;i<_routeCount;++i) {
-			reinterpret_cast<const InetAddress *>(&(_routes[i].target))->serialize(b);
-			reinterpret_cast<const InetAddress *>(&(_routes[i].via))->serialize(b);
+		b.append((uint16_t)routeCount);
+		for(unsigned int i=0;i<routeCount;++i) {
+			reinterpret_cast<const InetAddress *>(&(routes[i].target))->serialize(b);
+			reinterpret_cast<const InetAddress *>(&(routes[i].via))->serialize(b);
 		}
 
-		b.append((uint16_t)_staticIpCount);
-		for(unsigned int i=0;i<_staticIpCount;++i)
-			_staticIps[i].serialize(b);
+		b.append((uint16_t)staticIpCount);
+		for(unsigned int i=0;i<staticIpCount;++i)
+			staticIps[i].serialize(b);
 
-		b.append((uint16_t)_staticCount);
-		for(unsigned int i=0;i<_staticCount;++i) {
-			_static[i].zt.appendTo(b);
-			_static[i].phy.serialize(b);
+		b.append((uint16_t)pinnedCount);
+		for(unsigned int i=0;i<pinnedCount;++i) {
+			pinned[i].zt.appendTo(b);
+			pinned[i].phy.serialize(b);
 		}
 
-		b.append((uint16_t)_ruleCount);
-		for(unsigned int i=0;i<_ruleCount;++i) {
-			b.append((uint8_t)_rules[i].t);
-			switch((ZT_VirtualNetworkRuleType)(_rules[i].t & 0x7f)) {
+		b.append((uint16_t)ruleCount);
+		for(unsigned int i=0;i<ruleCount;++i) {
+			b.append((uint8_t)rules[i].t);
+			switch((ZT_VirtualNetworkRuleType)(rules[i].t & 0x7f)) {
 				//case ZT_NETWORK_RULE_ACTION_DROP:
 				//case ZT_NETWORK_RULE_ACTION_ACCEPT:
 				default:
@@ -451,68 +402,68 @@ public:
 				case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 				case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS:
 					b.append((uint8_t)5);
-					Address(_rules[i].v.zt).appendTo(b);
+					Address(rules[i].v.zt).appendTo(b);
 					break;
 				case ZT_NETWORK_RULE_MATCH_VLAN_ID:
 					b.append((uint8_t)2);
-					b.append((uint16_t)_rules[i].v.vlanId);
+					b.append((uint16_t)rules[i].v.vlanId);
 					break;
 				case ZT_NETWORK_RULE_MATCH_VLAN_PCP:
 					b.append((uint8_t)1);
-					b.append((uint8_t)_rules[i].v.vlanPcp);
+					b.append((uint8_t)rules[i].v.vlanPcp);
 					break;
 				case ZT_NETWORK_RULE_MATCH_VLAN_DEI:
 					b.append((uint8_t)1);
-					b.append((uint8_t)_rules[i].v.vlanDei);
+					b.append((uint8_t)rules[i].v.vlanDei);
 					break;
 				case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
 					b.append((uint8_t)2);
-					b.append((uint16_t)_rules[i].v.etherType);
+					b.append((uint16_t)rules[i].v.etherType);
 					break;
 				case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_MAC_DEST:
 					b.append((uint8_t)6);
-					b.append(_rules[i].v.mac,6);
+					b.append(rules[i].v.mac,6);
 					break;
 				case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
 					b.append((uint8_t)5);
-					b.append(&(_rules[i].v.ipv4.ip),4);
-					b.append((uint8_t)_rules[i].v.ipv4.mask);
+					b.append(&(rules[i].v.ipv4.ip),4);
+					b.append((uint8_t)rules[i].v.ipv4.mask);
 					break;
 				case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
 					b.append((uint8_t)17);
-					b.append(_rules[i].v.ipv6.ip,16);
-					b.append((uint8_t)_rules[i].v.ipv6.mask);
+					b.append(rules[i].v.ipv6.ip,16);
+					b.append((uint8_t)rules[i].v.ipv6.mask);
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_TOS:
 					b.append((uint8_t)1);
-					b.append((uint8_t)_rules[i].v.ipTos);
+					b.append((uint8_t)rules[i].v.ipTos);
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
 					b.append((uint8_t)1);
-					b.append((uint8_t)_rules[i].v.ipProtocol);
+					b.append((uint8_t)rules[i].v.ipProtocol);
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
 				case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE:
 					b.append((uint8_t)4);
-					b.append((uint16_t)_rules[i].v.port[0]);
-					b.append((uint16_t)_rules[i].v.port[1]);
+					b.append((uint16_t)rules[i].v.port[0]);
+					b.append((uint16_t)rules[i].v.port[1]);
 					break;
 				case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
 					b.append((uint8_t)8);
-					b.append((uint64_t)_rules[i].v.characteristics);
+					b.append((uint64_t)rules[i].v.characteristics);
 					break;
 				case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
 					b.append((uint8_t)4);
-					b.append((uint16_t)_rules[i].v.frameSize[0]);
-					b.append((uint16_t)_rules[i].v.frameSize[1]);
+					b.append((uint16_t)rules[i].v.frameSize[0]);
+					b.append((uint16_t)rules[i].v.frameSize[1]);
 					break;
 			}
 		}
 
-		_com.serialize(b);
+		this->com.serialize(b);
 
 		b.append((uint16_t)0); // extended bytes, currently 0 since unused
 	}
@@ -528,56 +479,56 @@ public:
 			throw std::invalid_argument("unrecognized version");
 		p += 2;
 
-		_nwid = b.template at<uint64_t>(p); p += 8;
-		_timestamp = b.template at<uint64_t>(p); p += 8;
-		_revision = b.template at<uint64_t>(p); p += 8;
-		_issuedTo.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-		_multicastLimit = (unsigned int)b.template at<uint32_t>(p); p += 4;
-		_flags = (unsigned int)b.template at<uint32_t>(p); p += 4;
-		_type = (ZT_VirtualNetworkType)b[p++];
+		networkId = b.template at<uint64_t>(p); p += 8;
+		timestamp = b.template at<uint64_t>(p); p += 8;
+		revision = b.template at<uint64_t>(p); p += 8;
+		issuedTo.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
+		multicastLimit = (unsigned int)b.template at<uint32_t>(p); p += 4;
+		flags = (unsigned int)b.template at<uint32_t>(p); p += 4;
+		type = (ZT_VirtualNetworkType)b[p++];
 
 		unsigned int nl = (unsigned int)b[p++];
-		memcpy(_name,b.field(p,nl),std::max(nl,(unsigned int)ZT_MAX_NETWORK_SHORT_NAME_LENGTH));
+		memcpy(this->name,b.field(p,nl),std::max(nl,(unsigned int)ZT_MAX_NETWORK_SHORT_NAME_LENGTH));
 		p += nl;
 		// _name will always be null terminated since field size is ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1
 
-		_specialistCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
-		if (_specialistCount > ZT_MAX_NETWORK_SPECIALISTS)
+		specialistCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
+		if (specialistCount > ZT_MAX_NETWORK_SPECIALISTS)
 			throw std::invalid_argument("overflow (specialists)");
-		for(unsigned int i=0;i<_specialistCount;++i) {
-			_specialists[i] = b.template at<uint64_t>(p); p += 8;
+		for(unsigned int i=0;i<specialistCount;++i) {
+			specialists[i] = b.template at<uint64_t>(p); p += 8;
 		}
 
-		_routeCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
-		if (_routeCount > ZT_MAX_NETWORK_ROUTES)
+		routeCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
+		if (routeCount > ZT_MAX_NETWORK_ROUTES)
 			throw std::invalid_argument("overflow (routes)");
-		for(unsigned int i=0;i<_routeCount;++i) {
-			p += reinterpret_cast<InetAddress *>(&(_routes[i].target))->deserialize(b,p);
-			p += reinterpret_cast<InetAddress *>(&(_routes[i].via))->deserialize(b,p);
+		for(unsigned int i=0;i<routeCount;++i) {
+			p += reinterpret_cast<InetAddress *>(&(routes[i].target))->deserialize(b,p);
+			p += reinterpret_cast<InetAddress *>(&(routes[i].via))->deserialize(b,p);
 		}
 
-		_staticIpCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
-		if (_staticIpCount > ZT_MAX_ZT_ASSIGNED_ADDRESSES)
+		staticIpCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
+		if (staticIpCount > ZT_MAX_ZT_ASSIGNED_ADDRESSES)
 			throw std::invalid_argument("overflow (static IPs)");
-		for(unsigned int i=0;i<_staticIpCount;++i) {
-			p += _staticIps[i].deserialize(b,p);
+		for(unsigned int i=0;i<staticIpCount;++i) {
+			p += staticIps[i].deserialize(b,p);
 		}
 
-		_staticCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
-		if (_staticCount > ZT_MAX_NETWORK_STATIC_PHYSICAL_ADDRESSES)
+		pinnedCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
+		if (pinnedCount > ZT_MAX_NETWORK_PINNED)
 			throw std::invalid_argument("overflow (static addresses)");
-		for(unsigned int i=0;i<_staticCount;++i) {
-			_static[i].zt.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-			p += _static[i].phy.deserialize(b,p);
+		for(unsigned int i=0;i<pinnedCount;++i) {
+			pinned[i].zt.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
+			p += pinned[i].phy.deserialize(b,p);
 		}
 
-		_ruleCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
-		if (_ruleCount > ZT_MAX_NETWORK_RULES)
+		ruleCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
+		if (ruleCount > ZT_MAX_NETWORK_RULES)
 			throw std::invalid_argument("overflow (rules)");
-		for(unsigned int i=0;i<_ruleCount;++i) {
-			_rules[i].t = (uint8_t)b[p++];
+		for(unsigned int i=0;i<ruleCount;++i) {
+			rules[i].t = (uint8_t)b[p++];
 			unsigned int rlen = (unsigned int)b[p++];
-			switch((ZT_VirtualNetworkRuleType)(_rules[i].t & 0x7f)) {
+			switch((ZT_VirtualNetworkRuleType)(rules[i].t & 0x7f)) {
 				//case ZT_NETWORK_RULE_ACTION_DROP:
 				//case ZT_NETWORK_RULE_ACTION_ACCEPT:
 				default:
@@ -588,57 +539,57 @@ public:
 				case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS: {
 					Address tmp;
 					tmp.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-					_rules[i].v.zt = tmp.toInt();
+					rules[i].v.zt = tmp.toInt();
 				}	break;
 				case ZT_NETWORK_RULE_MATCH_VLAN_ID:
-					_rules[i].v.vlanId = b.template at<uint16_t>(p);
+					rules[i].v.vlanId = b.template at<uint16_t>(p);
 					break;
 				case ZT_NETWORK_RULE_MATCH_VLAN_PCP:
-					_rules[i].v.vlanPcp = (uint8_t)b[p];
+					rules[i].v.vlanPcp = (uint8_t)b[p];
 					break;
 				case ZT_NETWORK_RULE_MATCH_VLAN_DEI:
-					_rules[i].v.vlanDei = (uint8_t)b[p];
+					rules[i].v.vlanDei = (uint8_t)b[p];
 					break;
 				case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
-					_rules[i].v.etherType = b.template at<uint16_t>(p);
+					rules[i].v.etherType = b.template at<uint16_t>(p);
 					break;
 				case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_MAC_DEST:
-					memcpy(_rules[i].v.mac,b.field(p,6),6);
+					memcpy(rules[i].v.mac,b.field(p,6),6);
 					break;
 				case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
-					memcpy(&(_rules[i].v.ipv4.ip),b.field(p,4),4);
-					_rules[i].v.ipv4.mask = (uint8_t)b[p+4];
+					memcpy(&(rules[i].v.ipv4.ip),b.field(p,4),4);
+					rules[i].v.ipv4.mask = (uint8_t)b[p+4];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
-					memcpy(_rules[i].v.ipv6.ip,b.field(p,16),16);
-					_rules[i].v.ipv6.mask = (uint8_t)b[p+16];
+					memcpy(rules[i].v.ipv6.ip,b.field(p,16),16);
+					rules[i].v.ipv6.mask = (uint8_t)b[p+16];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_TOS:
-					_rules[i].v.ipTos = (uint8_t)b[p];
+					rules[i].v.ipTos = (uint8_t)b[p];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
-					_rules[i].v.ipProtocol = (uint8_t)b[p];
+					rules[i].v.ipProtocol = (uint8_t)b[p];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
 				case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE:
-					_rules[i].v.port[0] = b.template at<uint16_t>(p);
-					_rules[i].v.port[1] = b.template at<uint16_t>(p+2);
+					rules[i].v.port[0] = b.template at<uint16_t>(p);
+					rules[i].v.port[1] = b.template at<uint16_t>(p+2);
 					break;
 				case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
-					_rules[i].v.characteristics = b.template at<uint64_t>(p);
+					rules[i].v.characteristics = b.template at<uint64_t>(p);
 					break;
 				case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
-					_rules[i].v.frameSize[0] = b.template at<uint16_t>(p);
-					_rules[i].v.frameSize[1] = b.template at<uint16_t>(p+2);
+					rules[i].v.frameSize[0] = b.template at<uint16_t>(p);
+					rules[i].v.frameSize[1] = b.template at<uint16_t>(p+2);
 					break;
 			}
 			p += rlen;
 		}
 
-		p += _com.deserialize(b,p);
+		p += this->com.deserialize(b,p);
 
 		p += b.template at<uint16_t>(p) + 2;
 
@@ -649,40 +600,109 @@ public:
 	void fromDictionary(const char *ds,unsigned int dslen);
 #endif
 
-protected: // protected so that a subclass can fill this out in network controller code
-	uint64_t _nwid;
-	uint64_t _timestamp;
-	uint64_t _revision;
-	Address _issuedTo;
-	unsigned int _multicastLimit;
-	unsigned int _flags;
-	ZT_VirtualNetworkType _type;
+	/**
+	 * Network ID that this configuration applies to
+	 */
+	uint64_t networkId;
 
-	char _name[ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1];
+	/**
+	 * Controller-side time of config generation/issue
+	 */
+	uint64_t timestamp;
 
-	// Special ZeroTier addresses -- most significant 40 bits are address, least 24 are specialist type flags
-	uint64_t _specialists[ZT_MAX_NETWORK_SPECIALISTS];
+	/**
+	 * Controller-side revision counter for this configuration
+	 */
+	uint64_t revision;
 
-	// ZeroTier-managed IPs and routing table entries and stuff
-	ZT_VirtualNetworkRoute _routes[ZT_MAX_NETWORK_ROUTES];
-	InetAddress _staticIps[ZT_MAX_ZT_ASSIGNED_ADDRESSES];
+	/**
+	 * Address of device to which this config is issued
+	 */
+	Address issuedTo;
 
-	// ZeroTier to physical static mappings
+	/**
+	 * Maximum number of recipients per multicast (not including active bridges)
+	 */
+	unsigned int multicastLimit;
+
+	/**
+	 * Flags (32-bit)
+	 */
+	unsigned int flags;
+
+	/**
+	 * Number of specialists
+	 */
+	unsigned int specialistCount;
+
+	/**
+	 * Number of routes
+	 */
+	unsigned int routeCount;
+
+	/**
+	 * Number of ZT-managed static IP assignments
+	 */
+	unsigned int staticIpCount;
+
+	/**
+	 * Number of pinned devices (devices with physical address hints)
+	 */
+	unsigned int pinnedCount;
+
+	/**
+	 * Number of rule table entries
+	 */
+	unsigned int ruleCount;
+
+	/**
+	 * Specialist devices
+	 *
+	 * For each entry the least significant 40 bits are the device's ZeroTier
+	 * address and the most significant 24 bits are flags indicating its role.
+	 */
+	uint64_t specialists[ZT_MAX_NETWORK_SPECIALISTS];
+
+	/**
+	 * Statically defined "pushed" routes (including default gateways)
+	 */
+	ZT_VirtualNetworkRoute routes[ZT_MAX_NETWORK_ROUTES];
+
+	/**
+	 * Static IP assignments
+	 */
+	InetAddress staticIps[ZT_MAX_ZT_ASSIGNED_ADDRESSES];
+
+	/**
+	 * Pinned devices with physical address hints
+	 *
+	 * These can be used to specify a physical address where a given device
+	 * can be reached. It's usually used with network relays (specialists).
+	 */
 	struct {
 		Address zt;
 		InetAddress phy;
-	} _static[ZT_MAX_NETWORK_STATIC_PHYSICAL_ADDRESSES];
+	} pinned[ZT_MAX_NETWORK_PINNED];
 
-	// Network rules (only Ethernet type filtering is currently supported)
-	ZT_VirtualNetworkRule _rules[ZT_MAX_NETWORK_RULES];
+	/**
+	 * Rules table
+	 */
+	ZT_VirtualNetworkRule rules[ZT_MAX_NETWORK_RULES];
 
-	unsigned int _specialistCount;
-	unsigned int _routeCount;
-	unsigned int _staticIpCount;
-	unsigned int _staticCount;
-	unsigned int _ruleCount;
+	/**
+	 * Network type (currently just public or private)
+	 */
+	ZT_VirtualNetworkType type;
 
-	CertificateOfMembership _com;
+	/**
+	 * Network short name or empty string if not defined
+	 */
+	char name[ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1];
+
+	/**
+	 * Certficiate of membership (for private networks)
+	 */
+	CertificateOfMembership com;
 };
 
 } // namespace ZeroTier

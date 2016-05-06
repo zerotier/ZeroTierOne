@@ -62,8 +62,8 @@ public:
 		const Identity &signingId,
 		const Identity &identity,
 		uint64_t nwid,
-		const Dictionary &metaData,
-		Dictionary &netconf);
+		const NetworkConfigRequestMetaData &metaData,
+		Buffer<8194> &netconf);
 
 	unsigned int handleControlPlaneHttpGET(
 		const std::vector<std::string> &path,
@@ -111,8 +111,8 @@ private:
 		const Identity &signingId,
 		const Identity &identity,
 		uint64_t nwid,
-		const Dictionary &metaData,
-		Dictionary &netconf);
+		const NetworkConfigRequestMetaData &metaData,
+		Buffer<8194> &netconf);
 
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
 

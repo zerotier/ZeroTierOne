@@ -677,11 +677,9 @@ bool Node::shouldUsePathForZeroTierTraffic(const InetAddress &localAddress,const
 		Mutex::Lock _l(_networks_m);
 		for(std::vector< std::pair< uint64_t, SharedPtr<Network> > >::const_iterator i=_networks.begin();i!=_networks.end();++i) {
 			if (i->second->hasConfig()) {
-				std::vector<InetAddress> sips(i->second->config().staticIps());
-				for(std::vector<InetAddress>::const_iterator a(sips.begin());a!=sips.end();++a) {
-					if (a->containsAddress(remoteAddress)) {
+				for(unsigned int k=0;k<i->second->config().staticIpCount;++k) {
+					if (i->second->config().staticIps[k].containsAddress(remoteAddress))
 						return false;
-					}
 				}
 			}
 		}

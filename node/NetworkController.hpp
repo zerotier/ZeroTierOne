@@ -23,9 +23,10 @@
 
 #include "Constants.hpp"
 #include "InetAddress.hpp"
-#include "Dictionary.hpp"
 #include "Address.hpp"
 #include "Identity.hpp"
+#include "NetworkConfigRequestMetaData.hpp"
+#include "Buffer.hpp"
 
 namespace ZeroTier {
 
@@ -65,8 +66,8 @@ public:
 	 * @param signingId Identity that should be used to sign results -- must include private key
 	 * @param identity Originating peer ZeroTier identity
 	 * @param nwid 64-bit network ID
-	 * @param metaData Meta-data bundled with request (empty if none)
-	 * @param result Dictionary to receive resulting signed netconf on success
+	 * @param metaData Meta-data bundled with request (if any)
+	 * @param result Buffer to receive serialized network configuration data (any existing data in buffer is preserved)
 	 * @return Returns NETCONF_QUERY_OK if result dictionary is valid, or an error code on error
 	 */
 	virtual NetworkController::ResultCode doNetworkConfigRequest(
@@ -74,8 +75,8 @@ public:
 		const Identity &signingId,
 		const Identity &identity,
 		uint64_t nwid,
-		const Dictionary &metaData,
-		Dictionary &result) = 0;
+		const NetworkConfigRequestMetaData &metaData,
+		Buffer<8194> &result) = 0;
 };
 
 } // namespace ZeroTier

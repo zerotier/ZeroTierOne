@@ -29,11 +29,6 @@
 
 #include "../version.h"
 
-#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
-#include <string>
-#include "Dictionary.hpp"
-#endif
-
 namespace ZeroTier {
 
 /**
@@ -42,7 +37,20 @@ namespace ZeroTier {
 class NetworkConfigRequestMetaData
 {
 public:
-	NetworkConfigRequestMetaData()
+	NetworkConfigRequestMetaData() :
+		buildId(0),
+		flags(0),
+		vendor(ZT_VENDOR_ZEROTIER),
+		platform(ZT_PLATFORM_UNSPECIFIED),
+		architecture(ZT_ARCHITECTURE_UNSPECIFIED),
+		majorVersion(ZEROTIER_ONE_VERSION_MAJOR),
+		minorVersion(ZEROTIER_ONE_VERSION_MINOR),
+		revision(ZEROTIER_ONE_VERSION_REVISION)
+	{
+		memset(auth,0,sizeof(auth));
+	}
+
+	NetworkConfigRequestMetaData(bool foo)
 	{
 		memset(this,0,sizeof(NetworkConfigRequestMetaData));
 	}
@@ -67,7 +75,7 @@ public:
 		b.append((uint16_t)minorVersion);
 		b.append((uint16_t)revision);
 
-		unsigned int tl = (unsigned int)strlen(_auth);
+		unsigned int tl = (unsigned int)strlen(auth);
 		if (tl > 255) tl = 255; // sanity check
 		b.append((uint8_t)tl);
 		b.append((const void *)auth,tl);
@@ -106,6 +114,11 @@ public:
 		p += b.template at<uint16_t>(p) + 2;
 
 		return (p - startAt);
+	}
+
+	inline void clear()
+	{
+		memset(this,0,sizeof(NetworkConfigRequestMetaData));
 	}
 
 	/**
