@@ -563,6 +563,8 @@ public:
 		if (_staticCount > ZT_MAX_NETWORK_STATIC_PHYSICAL_ADDRESSES)
 			throw std::invalid_argument("overflow (static addresses)");
 		for(unsigned int i=0;i<_staticCount;++i) {
+			_static[i].zt.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
+			p += _static[i].phy.deserialize(b,p);
 		}
 
 		_ruleCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
