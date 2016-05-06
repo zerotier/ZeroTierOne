@@ -53,6 +53,7 @@ protected:
 	unsigned int _revision;
 	unsigned int _buildNo;
 	unsigned int _flags;
+	char _passcode[ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1];
 };
 
 } // namespace ZeroTier

@@ -82,19 +82,14 @@ extern "C" {
 #define ZT_MAX_NETWORK_SHORT_NAME_LENGTH 127
 
 /**
- * Maximum number of local routes on a network
+ * Maximum number of pushed routes on a network
  */
-#define ZT_MAX_NETWORK_LOCAL_ROUTES 16
+#define ZT_MAX_NETWORK_ROUTES 32
 
 /**
  * Maximum number of statically assigned IP addresses per network endpoint using ZT address management (not DHCP)
  */
 #define ZT_MAX_ZT_ASSIGNED_ADDRESSES 16
-
-/**
- * Maximum number of default routes / gateways on a network (ZT managed)
- */
-#define ZT_MAX_NETWORK_GATEWAYS 8
 
 /**
  * Maximum number of "specialists" on a network -- bridges, relays, etc.
@@ -618,6 +613,22 @@ typedef struct
 		uint16_t frameSize[2];
 	} v;
 } ZT_VirtualNetworkRule;
+
+/**
+ * A route to be pushed on a virtual network
+ */
+typedef struct
+{
+	/**
+	 * Target network / netmask bits (in port field) or NULL or 0.0.0.0/0 for default
+	 */
+	struct sockaddr_storage target;
+
+	/**
+	 * Gateway IP address (port ignored) or NULL (family == 0) for LAN-local (no gateway)
+	 */
+	struct sockaddr_storage via;
+} ZT_VirtualNetworkRoute;
 
 /**
  * An Ethernet multicast group

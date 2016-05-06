@@ -100,17 +100,14 @@ void NetworkConfig::fromDictionary(const char *ds,unsigned int dslen)
 			default: // ignore unrecognized address types or junk/empty fields
 				continue;
 		}
-		if (addr.isNetwork()) {
-			if ((_localRouteCount < ZT_MAX_NETWORK_LOCAL_ROUTES)&&(std::find(&(_localRoutes[0]),&(_localRoutes[_localRouteCount]),addr) == &(_localRoutes[_localRouteCount])))
-				_localRoutes[_localRouteCount++] = addr;
-		} else {
+		if (!addr.isNetwork()) {
 			if ((_staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)&&(std::find(&(_staticIps[0]),&(_staticIps[_staticIpCount]),addr) == &(_staticIps[_staticIpCount])))
 				_staticIps[_staticIpCount++] = addr;
 		}
 	}
-	std::sort(&(_localRoutes[0]),&(_localRoutes[_localRouteCount]));
 	std::sort(&(_staticIps[0]),&(_staticIps[_staticIpCount]));
 
+	/* Old versions don't support gateways anyway, so ignore this in old netconfs
 	std::vector<std::string> gatewaysSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_GATEWAYS,"").c_str(),",","",""));
 	for(std::vector<std::string>::const_iterator gwstr(gatewaysSplit.begin());gwstr!=gatewaysSplit.end();++gwstr) {
 		InetAddress gw(*gwstr);
@@ -118,6 +115,7 @@ void NetworkConfig::fromDictionary(const char *ds,unsigned int dslen)
 			_gateways[_gatewayCount++] = gw;
 	}
 	std::sort(&(_gateways[0]),&(_gateways[_gatewayCount]));
+	*/
 
 	std::vector<std::string> relaysSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_RELAYS,"").c_str(),",","",""));
 	for(std::vector<std::string>::const_iterator r(relaysSplit.begin());r!=relaysSplit.end();++r) {

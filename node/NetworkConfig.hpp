@@ -279,17 +279,6 @@ public:
 	inline const CertificateOfMembership &com() const throw() { return _com; }
 
 	/**
-	 * @return Network/netmask routes that are considered local to this virtual LAN interface
-	 */
-	inline std::vector<InetAddress> localRoutes() const
-	{
-		std::vector<InetAddress> r;
-		for(unsigned int i=0;i<_localRouteCount;++i)
-			r.push_back(_localRoutes[i]);
-		return r;
-	}
-
-	/**
 	 * @return ZeroTier-managed static IPs assigned to this device on this network
 	 */
 	inline std::vector<InetAddress> staticIps() const
@@ -297,17 +286,6 @@ public:
 		std::vector<InetAddress> r;
 		for(unsigned int i=0;i<_staticIpCount;++i)
 			r.push_back(_staticIps[i]);
-		return r;
-	}
-
-	/**
-	 * @return ZeroTier-managed default gateways (for full tunnel) available on this network
-	 */
-	inline std::vector<InetAddress> gateways() const
-	{
-		std::vector<InetAddress> r;
-		for(unsigned int i=0;i<_gatewayCount;++i)
-			r.push_back(_gateways[i]);
 		return r;
 	}
 
@@ -436,17 +414,15 @@ public:
 		for(unsigned int i=0;i<_specialistCount;++i)
 			b.append((uint64_t)_specialists[i]);
 
-		b.append((uint16_t)_localRouteCount);
-		for(unsigned int i=0;i<_localRouteCount;++i)
-			_localRoutes[i].serialize(b);
+		b.append((uint16_t)_routeCount);
+		for(unsigned int i=0;i<_routeCount;++i) {
+			reinterpret_cast<const InetAddress *>(&(_routes[i].target))->serialize(b);
+			reinterpret_cast<const InetAddress *>(&(_routes[i].via))->serialize(b);
+		}
 
 		b.append((uint16_t)_staticIpCount);
 		for(unsigned int i=0;i<_staticIpCount;++i)
 			_staticIps[i].serialize(b);
-
-		b.append((uint16_t)_gatewayCount);
-		for(unsigned int i=0;i<_gatewayCount;++i)
-			_gateways[i].serialize(b);
 
 		b.append((uint16_t)_staticCount);
 		for(unsigned int i=0;i<_staticCount;++i) {
@@ -568,11 +544,12 @@ public:
 			_specialists[i] = b.template at<uint64_t>(p); p += 8;
 		}
 
-		_localRouteCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
-		if (_localRouteCount > ZT_MAX_NETWORK_LOCAL_ROUTES)
-			throw std::invalid_argument("overflow (local routes)");
-		for(unsigned int i=0;i<_localRouteCount;++i) {
-			p += _localRoutes[i].deserialize(b,p);
+		_routeCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
+		if (_routeCount > ZT_MAX_NETWORK_ROUTES)
+			throw std::invalid_argument("overflow (routes)");
+		for(unsigned int i=0;i<_routeCount;++i) {
+			p += reinterpret_cast<InetAddress *>(&(_routes[i].target))->deserialize(b,p);
+			p += reinterpret_cast<InetAddress *>(&(_routes[i].via))->deserialize(b,p);
 		}
 
 		_staticIpCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
@@ -580,13 +557,6 @@ public:
 			throw std::invalid_argument("overflow (static IPs)");
 		for(unsigned int i=0;i<_staticIpCount;++i) {
 			p += _staticIps[i].deserialize(b,p);
-		}
-
-		_gatewayCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
-		if (_gatewayCount > ZT_MAX_NETWORK_GATEWAYS)
-			throw std::invalid_argument("overflow (gateways)");
-		for(unsigned int i=0;i<_gatewayCount;++i) {
-			p += _gateways[i].deserialize(b,p);
 		}
 
 		_staticCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
@@ -688,9 +658,8 @@ protected: // protected so that a subclass can fill this out in network controll
 	uint64_t _specialists[ZT_MAX_NETWORK_SPECIALISTS];
 
 	// ZeroTier-managed IPs and routing table entries and stuff
-	InetAddress _localRoutes[ZT_MAX_NETWORK_LOCAL_ROUTES];
+	ZT_VirtualNetworkRoute _routes[ZT_MAX_NETWORK_ROUTES];
 	InetAddress _staticIps[ZT_MAX_ZT_ASSIGNED_ADDRESSES];
-	InetAddress _gateways[ZT_MAX_NETWORK_GATEWAYS];
 
 	// ZeroTier to physical static mappings
 	struct {
@@ -702,9 +671,8 @@ protected: // protected so that a subclass can fill this out in network controll
 	ZT_VirtualNetworkRule _rules[ZT_MAX_NETWORK_RULES];
 
 	unsigned int _specialistCount;
-	unsigned int _localRouteCount;
+	unsigned int _routeCount;
 	unsigned int _staticIpCount;
-	unsigned int _gatewayCount;
 	unsigned int _staticCount;
 	unsigned int _ruleCount;
 
