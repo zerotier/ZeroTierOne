@@ -403,12 +403,12 @@ enum ZT_VirtualNetworkRuleType
 	ZT_NETWORK_RULE_ACTION_ACCEPT = 1,
 
 	/**
-	 * Forward a copy of this frame to an observer (in datum.zt[1])
+	 * Forward a copy of this frame to an observer
 	 */
 	ZT_NETWORK_RULE_ACTION_TEE = 2,
 
 	/**
-	 * Redirect frame to ZeroTier device in datum.zt[1] regardless of Ethernet addressing or anything else
+	 * Explicitly redirect this frame to another device (ignored if this is the target device)
 	 */
 	ZT_NETWORK_RULE_ACTION_REDIRECT = 3,
 
@@ -493,7 +493,7 @@ enum ZT_VirtualNetworkRuleType
 	ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE = 47,
 
 	/**
-	 * Packet boolean characteristics
+	 * Packet characteristics (set of flags)
 	 */
 	ZT_NETWORK_RULE_MATCH_CHARACTERISTICS = 48,
 
@@ -510,7 +510,12 @@ enum ZT_VirtualNetworkRuleType
  * have no effect until the rules engine is fully implemented.
  *
  * Rules are stored in a table in which one or more match entries is followed
- * by an action. If more than one match precedes an action
+ * by an action. If more than one match precedes an action, the rule is
+ * the AND of all matches. An action with no match is always taken since it
+ * matches anything. If nothing matches, the default action is DROP.
+ *
+ * This is designed to be a more memory-efficient way of storing rules than
+ * a wide table, yet still fast and simple to access in code.
  */
 typedef struct
 {
@@ -522,8 +527,8 @@ typedef struct
 	 *
 	 * Use "& 0x7f" to get the enum and "& 0x80" to get the NOT flag.
 	 *
-	 * This is essentially a variant selector determining which field of 'v' is
-	 * used and its meaning.
+	 * The union 'v' is a variant type, and this selects which field in 'v' is
+	 * actually used and valid.
 	 */
 	uint8_t t;
 
