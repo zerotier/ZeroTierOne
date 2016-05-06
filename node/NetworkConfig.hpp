@@ -25,6 +25,7 @@
 
 #include <vector>
 #include <stdexcept>
+#include <algorithm>
 
 #include "../include/ZeroTierOne.h"
 
@@ -39,13 +40,6 @@
 #include "Dictionary.hpp"
 #include <string>
 #endif
-
-/**
- * First byte of V2 binary-serialized network configs
- *
- * This will never begin a Dictionary, so it serves to distinguish.
- */
-#define ZT_NETWORKCONFIG_V2_MARKER_BYTE 0x00
 
 /**
  * Flag: allow passive bridging (experimental)
@@ -68,9 +62,9 @@
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE 0x0000020000000000ULL
 
 /**
- * This device is allowed to send packets from any Ethernet MAC, including ZeroTier-reserved ones
+ * An anchor is a device that is willing to be one and has been online/stable for a long time on this network
  */
-#define ZT_NETWORKCONFIG_SPECIALIST_TYPE_IMPOSTOR 0x0000040000000000ULL
+#define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR 0x0000040000000000ULL
 
 namespace ZeroTier {
 
@@ -303,6 +297,19 @@ public:
 	}
 
 	/**
+	 * @return ZeroTier addresses of "anchor" devices on this network
+	 */
+	inline std::vector<Address> anchors() const
+	{
+		std::vector<Address> r;
+		for(unsigned int i=0;i<_specialistCount;++i) {
+			if ((_specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR) != 0)
+				r.push_back(Address(_specialists[i]));
+		}
+		return r;
+	}
+
+	/**
 	 * Look up a static physical address for a given ZeroTier address
 	 *
 	 * @param zt ZeroTier address
@@ -321,6 +328,8 @@ public:
 	}
 
 	/**
+	 * This gets network preferred relays with their static physical address if one is defined
+	 *
 	 * @return Network-preferred relays for this network (if none, only roots will be used)
 	 */
 	inline std::vector<Relay> relays() const
@@ -393,9 +402,7 @@ public:
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b) const
 	{
-		b.append((uint8_t)ZT_NETWORKCONFIG_V2_MARKER_BYTE);
-
-		b.append((uint16_t)0); // version
+		b.append((uint16_t)1); // version
 
 		b.append((uint64_t)_nwid);
 		b.append((uint64_t)_timestamp);
@@ -517,9 +524,7 @@ public:
 
 		unsigned int p = startAt;
 
-		if (b[p++] != ZT_NETWORKCONFIG_V2_MARKER_BYTE)
-			throw std::invalid_argument("unrecognized format");
-		if (b.template at<uint16_t>(p) != 0)
+		if (b.template at<uint16_t>(p) != 1)
 			throw std::invalid_argument("unrecognized version");
 		p += 2;
 
@@ -532,9 +537,8 @@ public:
 		_type = (ZT_VirtualNetworkType)b[p++];
 
 		unsigned int nl = (unsigned int)b[p++];
-		if (nl > ZT_MAX_NETWORK_SHORT_NAME_LENGTH)
-			nl = ZT_MAX_NETWORK_SHORT_NAME_LENGTH;
-		memcpy(_name,b.field(p,nl),nl);
+		memcpy(_name,b.field(p,nl),std::max(nl,(unsigned int)ZT_MAX_NETWORK_SHORT_NAME_LENGTH));
+		p += nl;
 		// _name will always be null terminated since field size is ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1
 
 		_specialistCount = (unsigned int)b.template at<uint16_t>(p); p += 2;

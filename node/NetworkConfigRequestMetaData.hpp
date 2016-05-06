@@ -25,6 +25,9 @@
 
 #include "Constants.hpp"
 #include "NetworkConfig.hpp"
+#include "Buffer.hpp"
+
+#include "../version.h"
 
 #ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 #include <string>
@@ -33,27 +36,122 @@
 
 namespace ZeroTier {
 
+/**
+ * Network configuration request meta data
+ */
 class NetworkConfigRequestMetaData
 {
 public:
-	NetworkConfigRequestMetaData() :
-		_vendor(0),
-		_majorVersion(0),
-		_minorVersion(0),
-		_revision(0),
-		_buildNo(0),
-		_flags(0)
+	NetworkConfigRequestMetaData()
 	{
+		memset(this,0,sizeof(NetworkConfigRequestMetaData));
 	}
 
-protected:
-	unsigned int _vendor;
-	unsigned int _majorVersion;
-	unsigned int _minorVersion;
-	unsigned int _revision;
-	unsigned int _buildNo;
-	unsigned int _flags;
-	char _passcode[ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1];
+	template<unsigned int C>
+	inline void serialize(Buffer<C> &b) const
+	{
+		// Unlike network config we always send the old fields. Newer network
+		// controllers will detect the presence of the new serialized data by
+		// detecting extra data after the terminating NULL. But always sending
+		// these maintains backward compatibility with old controllers.
+		b.appendCString("majv="ZEROTIER_ONE_VERSION_MAJOR_S"\nminv="ZEROTIER_ONE_VERSION_MINOR_S"\nrevv="ZEROTIER_ONE_VERSION_REVISION_S"\n");
+
+		b.append((uint16_t)1); // version
+
+		b.append((uint64_t)buildId);
+		b.append((uint64_t)flags);
+		b.append((uint16_t)vendor);
+		b.append((uint16_t)platform);
+		b.append((uint16_t)architecture);
+		b.append((uint16_t)majorVersion);
+		b.append((uint16_t)minorVersion);
+		b.append((uint16_t)revision);
+
+		unsigned int tl = (unsigned int)strlen(_auth);
+		if (tl > 255) tl = 255; // sanity check
+		b.append((uint8_t)tl);
+		b.append((const void *)auth,tl);
+
+		b.append((uint16_t)0); // extended bytes, currently 0 since unused
+	}
+
+	template<unsigned int C>
+	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	{
+		memset(this,0,sizeof(NetworkConfigRequestMetaData));
+
+		unsigned int p = startAt;
+
+		// Seek past old style meta-data
+		while (b[p]) ++p;
+
+		if (b.template at<uint16_t>(p) != 1)
+			throw std::invalid_argument("unrecognized version");
+		p += 2;
+
+		buildId = b.template at<uint64_t>(p); p += 8;
+		flags = b.template at<uint64_t>(p); p += 8;
+		vendor = (ZT_Vendor)b.template at<uint16_t>(p); p += 2;
+		platform = (ZT_Platform)b.template at<uint16_t>(p); p += 2;
+		architecture = (ZT_Architecture)b.template at<uint16_t>(p); p += 2;
+		majorVersion = b.template at<uint16_t>(p); p += 2;
+		minorVersion = b.template at<uint16_t>(p); p += 2;
+		revision = b.template at<uint16_t>(p); p += 2;
+
+		unsigned int tl = (unsigned int)b[p++];
+		memcpy(auth,b.field(p,tl),std::max(tl,(unsigned int)ZT_MAX_NETWORK_SHORT_NAME_LENGTH));
+		// auth[] is ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1 and so will always end up null-terminated since we zeroed the structure
+		p += tl;
+
+		p += b.template at<uint16_t>(p) + 2;
+
+		return (p - startAt);
+	}
+
+	/**
+	 * Build ID (currently unused, must be 0)
+	 */
+	uint64_t buildId;
+
+	/**
+	 * Flags (currently unused, must be 0)
+	 */
+	uint64_t flags;
+
+	/**
+	 * ZeroTier vendor or 0 for unspecified
+	 */
+	ZT_Vendor vendor;
+
+	/**
+	 * ZeroTier platform or 0 for unspecified
+	 */
+	ZT_Platform platform;
+
+	/**
+	 * ZeroTier architecture or 0 for unspecified
+	 */
+	ZT_Architecture architecture;
+
+	/**
+	 * ZeroTier software major version
+	 */
+	unsigned int majorVersion;
+
+	/**
+	 * ZeroTier software minor version
+	 */
+	unsigned int minorVersion;
+
+	/**
+	 * ZeroTier software revision
+	 */
+	unsigned int revision;
+
+	/**
+	 * Authentication data (e.g. bearer=<token>)
+	 */
+	char auth[ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1];
 };
 
 } // namespace ZeroTier

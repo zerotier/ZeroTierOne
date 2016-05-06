@@ -181,12 +181,23 @@ bool Network::applyConfiguration(const NetworkConfig &conf)
 int Network::setConfiguration(const void *confBytes,unsigned int confLen,bool saveToDisk)
 {
 	try {
-		if (!confLen)
+		if (confLen <= 1)
 			return 0;
 
 		NetworkConfig newConfig;
-		if (reinterpret_cast<const uint8_t *>(confBytes)[0] == ZT_NETWORKCONFIG_V2_MARKER_BYTE) {
-			Buffer<8194> tmp(confBytes,confLen);
+
+		// Find the length of any string-serialized old-style Dictionary,
+		// including its terminating NULL (if any). If this is before
+		// the end of the config, that tells us there is a new-style
+		// binary config which is preferred.
+		unsigned int dictLen = 0;
+		while (dictLen < confLen) {
+			if (!(reinterpret_cast<const uint8_t *>(confBytes)[dictLen++]))
+				break;
+		}
+
+		if (dictLen < (confLen - 2)) {
+			Buffer<8194> tmp(reinterpret_cast<const uint8_t *>(confBytes) + dictLen,confLen - dictLen);
 			newConfig.deserialize(tmp,0);
 		} else {
 #ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
@@ -422,15 +433,15 @@ public:
 		_now(renv->node->now()),
 		_controller(nw->controller()),
 		_network(nw),
+		_anchors(nw->config().anchors()),
 		_rootAddresses(renv->topology->rootAddresses())
 	{}
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		if (
-		    (_network->_isAllowed(p)) ||
-		    (p->address() == _controller) ||
-		    (std::find(_rootAddresses.begin(),_rootAddresses.end(),p->address()) != _rootAddresses.end())
-		   ) {
+		if ( (_network->_isAllowed(p)) || // FIXME: this causes multicast LIKEs for public networks to get spammed
+		     (p->address() == _controller) ||
+		     (std::find(_rootAddresses.begin(),_rootAddresses.end(),p->address()) != _rootAddresses.end()) ||
+				 (std::find(_anchors.begin(),_anchors.end(),p->address()) != _anchors.end()) ) {
 			peers.push_back(p);
 		}
 	}
@@ -439,14 +450,15 @@ private:
 	const uint64_t _now;
 	const Address _controller;
 	Network *const _network;
+	const std::vector<Address> _anchors;
 	const std::vector<Address> _rootAddresses;
 };
 void Network::_announceMulticastGroups()
 {
 	// Assumes _lock is locked
+	std::vector<MulticastGroup> allMulticastGroups(_allMulticastGroups());
 	_MulticastAnnounceAll gpfunc(RR,this);
 	RR->topology->eachPeer<_MulticastAnnounceAll &>(gpfunc);
-	std::vector<MulticastGroup> allMulticastGroups(_allMulticastGroups());
 	for(std::vector< SharedPtr<Peer> >::const_iterator i(gpfunc.peers.begin());i!=gpfunc.peers.end();++i)
 		_announceMulticastGroupsTo(*i,allMulticastGroups);
 }

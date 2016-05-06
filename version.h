@@ -23,15 +23,18 @@
  * Major version
  */
 #define ZEROTIER_ONE_VERSION_MAJOR 1
+#define ZEROTIER_ONE_VERSION_MAJOR_S "1"
 
 /**
  * Minor version
  */
 #define ZEROTIER_ONE_VERSION_MINOR 1
+#define ZEROTIER_ONE_VERSION_MINOR_S "1"
 
 /**
  * Revision
  */
 #define ZEROTIER_ONE_VERSION_REVISION 5
+#define ZEROTIER_ONE_VERSION_REVISION_S "5"
 
 #endif
