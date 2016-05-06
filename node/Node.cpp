@@ -1023,16 +1023,11 @@ void ZT_Node_backgroundThreadMain(ZT_Node *node)
 	} catch ( ... ) {}
 }
 
-void ZT_version(int *major,int *minor,int *revision,unsigned long *featureFlags)
+void ZT_version(int *major,int *minor,int *revision)
 {
 	if (major) *major = ZEROTIER_ONE_VERSION_MAJOR;
 	if (minor) *minor = ZEROTIER_ONE_VERSION_MINOR;
 	if (revision) *revision = ZEROTIER_ONE_VERSION_REVISION;
-	if (featureFlags) {
-		*featureFlags = (
-			ZT_FEATURE_FLAG_THREAD_SAFE
-		);
-	}
 }
 
 } // extern "C"

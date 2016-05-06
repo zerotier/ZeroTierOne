@@ -117,16 +117,6 @@ extern "C" {
 #define ZT_MAX_PEER_NETWORK_PATHS 4
 
 /**
- * Feature flag: ZeroTier One was built to be thread-safe -- concurrent processXXX() calls are okay
- */
-#define ZT_FEATURE_FLAG_THREAD_SAFE 0x00000001
-
-/**
- * Feature flag: FIPS compliant build (not available yet, but reserved for future use if we ever do this)
- */
-#define ZT_FEATURE_FLAG_FIPS 0x00000002
-
-/**
  * Maximum number of hops in a ZeroTier circuit test
  *
  * This is more or less the max that can be fit in a given packet (with
@@ -1833,9 +1823,8 @@ void ZT_Node_backgroundThreadMain(ZT_Node *node);
  * @param major Result: major version
  * @param minor Result: minor version
  * @param revision Result: revision
- * @param featureFlags: Result: feature flag bitmap
  */
-void ZT_version(int *major,int *minor,int *revision,unsigned long *featureFlags);
+void ZT_version(int *major,int *minor,int *revision);
 
 #ifdef __cplusplus
 }
