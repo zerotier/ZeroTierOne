@@ -500,7 +500,12 @@ enum ZT_VirtualNetworkRuleType
 	/**
 	 * Frame size range (start-end, inclusive)
 	 */
-	ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE = 49
+	ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE = 49,
+
+	/**
+	 * Match a range of relative TCP sequence numbers (e.g. approx first N bytes of stream)
+	 */
+	ZT_NETWORK_RULE_MATCH_TCP_RELATIVE_SEQUENCE_NUMBER_RANGE = 50
 };
 
 /**
@@ -561,6 +566,11 @@ typedef struct
 		 * IP port range -- start-end inclusive -- host byte order
 		 */
 		uint16_t port[2];
+
+		/**
+		 * TCP relative sequence number range -- start-end inclusive -- host byte order
+		 */
+		uint32_t tcpseq[2];
 
 		/**
 		 * 40-bit ZeroTier address (in least significant bits, host byte order)
