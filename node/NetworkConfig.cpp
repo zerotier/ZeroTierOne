@@ -168,8 +168,7 @@ void NetworkConfig::fromDictionary(const char *ds,unsigned int dslen)
 				rules[ruleCount].v.etherType = (uint16_t)et2;
 				++ruleCount;
 			}
-			rules[ruleCount].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
-			++ruleCount;
+			rules[ruleCount++].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
 		}
 	}
 
