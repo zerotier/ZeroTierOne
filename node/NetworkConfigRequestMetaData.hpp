@@ -26,8 +26,16 @@
 #include "Constants.hpp"
 #include "NetworkConfig.hpp"
 #include "Buffer.hpp"
+#include "Packet.hpp"
 
 #include "../version.h"
+
+/**
+ * Maximum length of the auth field (including terminating NULL, since it's a C-style string)
+ *
+ * Actual max length not including NULL is this minus one.
+ */
+#define ZT_NETWORK_CONFIG_REQUEST_METADATA_MAX_AUTH_LENGTH 2048
 
 namespace ZeroTier {
 
@@ -37,20 +45,33 @@ namespace ZeroTier {
 class NetworkConfigRequestMetaData
 {
 public:
-	NetworkConfigRequestMetaData() :
-		buildId(0),
-		flags(0),
-		vendor(ZT_VENDOR_ZEROTIER),
-		platform(ZT_PLATFORM_UNSPECIFIED),
-		architecture(ZT_ARCHITECTURE_UNSPECIFIED),
-		majorVersion(ZEROTIER_ONE_VERSION_MAJOR),
-		minorVersion(ZEROTIER_ONE_VERSION_MINOR),
-		revision(ZEROTIER_ONE_VERSION_REVISION)
+	/**
+	 * Construct an empty meta-data object with zero/null values
+	 */
+	NetworkConfigRequestMetaData()
 	{
-		memset(auth,0,sizeof(auth));
+		memset(this,0,sizeof(NetworkConfigRequestMetaData));
 	}
 
-	NetworkConfigRequestMetaData(bool foo)
+	/**
+	 * Initialize with defaults from this node's config and version
+	 */
+	inline void initWithDefaults()
+	{
+		memset(this,0,sizeof(NetworkConfigRequestMetaData));
+		vendor = ZT_VENDOR_ZEROTIER;
+		platform = ZT_PLATFORM_UNSPECIFIED;
+		architecture = ZT_ARCHITECTURE_UNSPECIFIED;
+		majorVersion = ZEROTIER_ONE_VERSION_MAJOR;
+		minorVersion = ZEROTIER_ONE_VERSION_MINOR;
+		revision = ZEROTIER_ONE_VERSION_REVISION;
+		protocolVersion = ZT_PROTO_VERSION;
+	}
+
+	/**
+	 * Zero/null everything
+	 */
+	inline void clear()
 	{
 		memset(this,0,sizeof(NetworkConfigRequestMetaData));
 	}
@@ -58,13 +79,15 @@ public:
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b) const
 	{
-		// Unlike network config we always send the old fields. Newer network
-		// controllers will detect the presence of the new serialized data by
-		// detecting extra data after the terminating NULL. But always sending
-		// these maintains backward compatibility with old controllers.
-		b.appendCString("majv="ZEROTIER_ONE_VERSION_MAJOR_S"\nminv="ZEROTIER_ONE_VERSION_MINOR_S"\nrevv="ZEROTIER_ONE_VERSION_REVISION_S"\n");
+		/* Unlike network config we always send the old fields. Newer network
+		 * controllers will detect the presence of the new serialized data by
+		 * detecting extra data after the terminating NULL. But always sending
+		 * these maintains backward compatibility with old controllers. This
+		 * appends a terminating NULL which seperates the old legacy meta-data
+		 * from the new packed binary format that we send after. */
+		b.appendCString("majv="ZEROTIER_ONE_VERSION_MAJOR_S_HEX"\nminv="ZEROTIER_ONE_VERSION_MINOR_S_HEX"\nrevv="ZEROTIER_ONE_VERSION_REVISION_S_HEX"\n");
 
-		b.append((uint16_t)1); // version
+		b.append((uint16_t)1); // serialization version
 
 		b.append((uint64_t)buildId);
 		b.append((uint64_t)flags);
@@ -74,10 +97,10 @@ public:
 		b.append((uint16_t)majorVersion);
 		b.append((uint16_t)minorVersion);
 		b.append((uint16_t)revision);
+		b.append((uint16_t)protocolVersion);
 
-		unsigned int tl = (unsigned int)strlen(auth);
-		if (tl > 255) tl = 255; // sanity check
-		b.append((uint8_t)tl);
+		const unsigned int tl = strlen(auth);
+		b.append((uint16_t)tl);
 		b.append((const void *)auth,tl);
 
 		b.append((uint16_t)0); // extended bytes, currently 0 since unused
@@ -105,10 +128,10 @@ public:
 		majorVersion = b.template at<uint16_t>(p); p += 2;
 		minorVersion = b.template at<uint16_t>(p); p += 2;
 		revision = b.template at<uint16_t>(p); p += 2;
+		protocolVersion = b.template at<uint16_t>(p); p += 2;
 
-		unsigned int tl = (unsigned int)b[p++];
-		memcpy(auth,b.field(p,tl),std::max(tl,(unsigned int)ZT_MAX_NETWORK_SHORT_NAME_LENGTH));
-		// auth[] is ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1 and so will always end up null-terminated since we zeroed the structure
+		const unsigned int tl = b.template at<uint16_t>(p); p += 2;
+		memcpy(auth,b.field(p,tl),std::max(tl,(unsigned int)(ZT_NETWORK_CONFIG_REQUEST_METADATA_MAX_AUTH_LENGTH - 1)));
 		p += tl;
 
 		p += b.template at<uint16_t>(p) + 2;
@@ -116,10 +139,10 @@ public:
 		return (p - startAt);
 	}
 
-	inline void clear()
-	{
-		memset(this,0,sizeof(NetworkConfigRequestMetaData));
-	}
+	/**
+	 * Authentication data (e.g. bearer=<token>) as a C-style string (always null terminated)
+	 */
+	char auth[ZT_NETWORK_CONFIG_REQUEST_METADATA_MAX_AUTH_LENGTH];
 
 	/**
 	 * Build ID (currently unused, must be 0)
@@ -162,9 +185,9 @@ public:
 	unsigned int revision;
 
 	/**
-	 * Authentication data (e.g. bearer=<token>)
+	 * ZeroTier protocol version
 	 */
-	char auth[ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1];
+	unsigned int protocolVersion;
 };
 
 } // namespace ZeroTier

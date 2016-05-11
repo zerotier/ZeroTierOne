@@ -681,12 +681,18 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 		const unsigned int metaDataLength = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
 		const uint8_t *metaDataBytes = (const uint8_t *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength);
 
-		NetworkConfigRequestMetaData metaData(false);
-		try {
-			Buffer<8194> md(metaDataBytes,metaDataLength);
-			metaData.deserialize(md,0);
-		} catch ( ... ) { // will throw if new-style meta-data is missing or invalid
-			metaData.clear();
+		NetworkConfigRequestMetaData metaData;
+		bool haveNewStyleMetaData = false;
+		for(unsigned int i=0;i<metaDataLength;++i) {
+			if ((metaDataBytes[i] == 0)&&(i < (metaDataLength - 2))) {
+				haveNewStyleMetaData = true;
+				break;
+			}
+		}
+		if (haveNewStyleMetaData) {
+			Buffer<4096> md(metaDataBytes,metaDataLength);
+			metaData.deserialize(md,0); // the meta-data deserializer automatically skips old-style meta-data
+		} else {
 #ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 			const Dictionary oldStyleMetaData((const char *)metaDataBytes,metaDataLength);
 			metaData.majorVersion = (unsigned int)oldStyleMetaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0);

@@ -460,6 +460,11 @@ public:
 					b.append((uint16_t)rules[i].v.frameSize[0]);
 					b.append((uint16_t)rules[i].v.frameSize[1]);
 					break;
+				case ZT_NETWORK_RULE_MATCH_TCP_RELATIVE_SEQUENCE_NUMBER_RANGE:
+					b.append((uint8_t)8);
+					b.append((uint32_t)rules[i].v.tcpseq[0]);
+					b.append((uint32_t)rules[i].v.tcpseq[1]);
+					break;
 			}
 		}
 
@@ -584,6 +589,10 @@ public:
 				case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
 					rules[i].v.frameSize[0] = b.template at<uint16_t>(p);
 					rules[i].v.frameSize[1] = b.template at<uint16_t>(p+2);
+					break;
+				case ZT_NETWORK_RULE_MATCH_TCP_RELATIVE_SEQUENCE_NUMBER_RANGE:
+					rules[i].v.tcpseq[0] = b.template at<uint32_t>(p);
+					rules[i].v.tcpseq[1] = b.template at<uint32_t>(p + 4);
 					break;
 			}
 			p += rlen;

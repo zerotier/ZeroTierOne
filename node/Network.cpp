@@ -256,20 +256,16 @@ void Network::requestConfiguration()
 
 	TRACE("requesting netconf for network %.16llx from controller %s",(unsigned long long)_id,controller().toString().c_str());
 
-	// TODO: in the future we will include things like join tokens here, etc.
-	Dictionary metaData;
-	metaData.setHex(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,ZEROTIER_ONE_VERSION_MAJOR);
-	metaData.setHex(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,ZEROTIER_ONE_VERSION_MINOR);
-	metaData.setHex(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,ZEROTIER_ONE_VERSION_REVISION);
-	std::string mds(metaData.toString());
+	NetworkConfigRequestMetaData metaData;
+	metaData.initWithDefaults();
+	Buffer<4096> mds;
+	metaData.serialize(mds); // this always includes legacy fields to support old controllers
 
 	Packet outp(controller(),RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
 	outp.append((uint64_t)_id);
-	outp.append((uint16_t)mds.length());
-	outp.append((const void *)mds.data(),(unsigned int)mds.length());
-	if (_config)
-		outp.append((uint64_t)_config.revision);
-	else outp.append((uint64_t)0);
+	outp.append((uint16_t)mds.size());
+	outp.append(mds.data(),mds.size());
+	outp.append((_config) ? (uint64_t)_config.revision : (uint64_t)0);
 	RR->sw->send(outp,true,0);
 }
 
