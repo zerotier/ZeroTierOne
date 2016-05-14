@@ -85,7 +85,7 @@ public:
 		 * these maintains backward compatibility with old controllers. This
 		 * appends a terminating NULL which seperates the old legacy meta-data
 		 * from the new packed binary format that we send after. */
-		b.appendCString("majv="ZEROTIER_ONE_VERSION_MAJOR_S_HEX"\nminv="ZEROTIER_ONE_VERSION_MINOR_S_HEX"\nrevv="ZEROTIER_ONE_VERSION_REVISION_S_HEX"\n");
+		b.appendCString("majv=" ZEROTIER_ONE_VERSION_MAJOR_S_HEX "\nminv=" ZEROTIER_ONE_VERSION_MINOR_S_HEX "\nrevv=" ZEROTIER_ONE_VERSION_REVISION_S_HEX "\n");
 
 		b.append((uint16_t)1); // serialization version
 
