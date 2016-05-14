@@ -10,6 +10,10 @@
 		93326BDC1CE7C816005CA2AC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93326BDB1CE7C816005CA2AC /* AppDelegate.swift */; };
 		93326BDE1CE7C816005CA2AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 93326BDD1CE7C816005CA2AC /* Assets.xcassets */; };
 		93326BE11CE7C816005CA2AC /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 93326BDF1CE7C816005CA2AC /* MainMenu.xib */; };
+		93326BEA1CE7D9B9005CA2AC /* JoinNetworkViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93326BE81CE7D9B9005CA2AC /* JoinNetworkViewController.swift */; };
+		93326BEB1CE7D9B9005CA2AC /* JoinNetworkViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 93326BE91CE7D9B9005CA2AC /* JoinNetworkViewController.xib */; };
+		93326BEE1CE7DA30005CA2AC /* ShowNetworksViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93326BEC1CE7DA30005CA2AC /* ShowNetworksViewController.swift */; };
+		93326BEF1CE7DA30005CA2AC /* ShowNetworksViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 93326BED1CE7DA30005CA2AC /* ShowNetworksViewController.xib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -18,6 +22,10 @@
 		93326BDD1CE7C816005CA2AC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		93326BE01CE7C816005CA2AC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		93326BE21CE7C816005CA2AC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		93326BE81CE7D9B9005CA2AC /* JoinNetworkViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JoinNetworkViewController.swift; sourceTree = "<group>"; };
+		93326BE91CE7D9B9005CA2AC /* JoinNetworkViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = JoinNetworkViewController.xib; sourceTree = "<group>"; };
+		93326BEC1CE7DA30005CA2AC /* ShowNetworksViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShowNetworksViewController.swift; sourceTree = "<group>"; };
+		93326BED1CE7DA30005CA2AC /* ShowNetworksViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = ShowNetworksViewController.xib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -51,9 +59,13 @@
 			isa = PBXGroup;
 			children = (
 				93326BDB1CE7C816005CA2AC /* AppDelegate.swift */,
+				93326BE81CE7D9B9005CA2AC /* JoinNetworkViewController.swift */,
+				93326BEC1CE7DA30005CA2AC /* ShowNetworksViewController.swift */,
 				93326BDD1CE7C816005CA2AC /* Assets.xcassets */,
 				93326BDF1CE7C816005CA2AC /* MainMenu.xib */,
 				93326BE21CE7C816005CA2AC /* Info.plist */,
+				93326BE91CE7D9B9005CA2AC /* JoinNetworkViewController.xib */,
+				93326BED1CE7DA30005CA2AC /* ShowNetworksViewController.xib */,
 			);
 			path = "ZeroTier One";
 			sourceTree = "<group>";
@@ -116,6 +128,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				93326BEF1CE7DA30005CA2AC /* ShowNetworksViewController.xib in Resources */,
+				93326BEB1CE7D9B9005CA2AC /* JoinNetworkViewController.xib in Resources */,
 				93326BDE1CE7C816005CA2AC /* Assets.xcassets in Resources */,
 				93326BE11CE7C816005CA2AC /* MainMenu.xib in Resources */,
 			);
@@ -129,6 +143,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				93326BDC1CE7C816005CA2AC /* AppDelegate.swift in Sources */,
+				93326BEA1CE7D9B9005CA2AC /* JoinNetworkViewController.swift in Sources */,
+				93326BEE1CE7DA30005CA2AC /* ShowNetworksViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
