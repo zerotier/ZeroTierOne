@@ -721,7 +721,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 					outp.compress();
 					outp.armor(peer->key(),true);
 					if (outp.size() > ZT_PROTO_MAX_PACKET_LENGTH) { // sanity check
-						TRACE("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
+						//TRACE("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
 					} else {
 						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 					}
@@ -748,7 +748,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 				} break;
 
 				case NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR:
-					TRACE("NETWORK_CONFIG_REQUEST failed: internal error: %s",netconf.get("error","(unknown)").c_str());
+					// TRACE("NETWORK_CONFIG_REQUEST failed: internal error: %s",netconf.get("error","(unknown)").c_str());
 					break;
 
 				case NetworkController::NETCONF_QUERY_IGNORE:
