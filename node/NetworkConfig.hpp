@@ -353,8 +353,6 @@ public:
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b) const
 	{
-		printf("!!! sending\n");
-
 		b.append((uint16_t)1); // version
 
 		b.append((uint64_t)networkId);
@@ -473,16 +471,12 @@ public:
 		this->com.serialize(b);
 
 		b.append((uint16_t)0); // extended bytes, currently 0 since unused
-
-		dump();
 	}
 
 	template<unsigned int C>
 	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
 	{
 		memset(this,0,sizeof(NetworkConfig));
-
-		printf("!!! deserializing\n");
 
 		unsigned int p = startAt;
 
@@ -608,7 +602,6 @@ public:
 
 		p += b.template at<uint16_t>(p) + 2;
 
-		dump();
 		return (p - startAt);
 	}
 
@@ -616,6 +609,7 @@ public:
 	void fromDictionary(const char *ds,unsigned int dslen);
 #endif
 
+	/*
 	inline void dump() const
 	{
 		printf("networkId==%.16llx\n",networkId);
@@ -644,6 +638,7 @@ public:
 		printf("name==%s\n",name);
 		printf("com==%s\n",com.toString().c_str());
 	}
+	*/
 
 	/**
 	 * Network ID that this configuration applies to
