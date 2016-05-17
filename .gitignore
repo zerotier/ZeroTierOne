@@ -1,0 +1,105 @@
+#####
+# OS X temporary files that should never be committed
+#
+# c.f. http://www.westwind.com/reference/os-x/invisibles.html
+
+.DS_Store
+
+# c.f. http://www.westwind.com/reference/os-x/invisibles.html
+
+.Trashes
+
+# c.f. http://www.westwind.com/reference/os-x/invisibles.html
+
+*.swp
+
+#
+# *.lock - this is used and abused by many editors for many different things.
+#    For the main ones I use (e.g. Eclipse), it should be excluded 
+#    from source-control, but YMMV.
+#   (lock files are usually local-only file-synchronization on the local FS that should NOT go in git)
+# c.f. the "OPTIONAL" section at bottom though, for tool-specific variations!
+#
+# In particular, if you're using CocoaPods, you'll want to comment-out this line:
+*.lock
+
+
+#
+# profile - REMOVED temporarily (on double-checking, I can't find it in OS X docs?)
+#profile
+
+
+####
+# Xcode temporary files that should never be committed
+# 
+# NB: NIB/XIB files still exist even on Storyboard projects, so we want this...
+
+*~.nib
+
+
+####
+# Xcode build files -
+#
+# NB: slash on the end, so we only remove the FOLDER, not any files that were badly named "DerivedData"
+
+DerivedData/
+
+# NB: slash on the end, so we only remove the FOLDER, not any files that were badly named "build"
+
+build/
+
+
+#####
+# Xcode private settings (window sizes, bookmarks, breakpoints, custom executables, smart groups)
+#
+# This is complicated:
+#
+# SOMETIMES you need to put this file in version control.
+# Apple designed it poorly - if you use "custom executables", they are
+#  saved in this file.
+# 99% of projects do NOT use those, so they do NOT want to version control this file.
+#  ..but if you're in the 1%, comment out the line "*.pbxuser"
+
+# .pbxuser: http://lists.apple.com/archives/xcode-users/2004/Jan/msg00193.html
+
+*.pbxuser
+
+# .mode1v3: http://lists.apple.com/archives/xcode-users/2007/Oct/msg00465.html
+
+*.mode1v3
+
+# .mode2v3: http://lists.apple.com/archives/xcode-users/2007/Oct/msg00465.html
+
+*.mode2v3
+
+# .perspectivev3: http://stackoverflow.com/questions/5223297/xcode-projects-what-is-a-perspectivev3-file
+
+*.perspectivev3
+
+#    NB: also, whitelist the default ones, some projects need to use these
+!default.pbxuser
+!default.mode1v3
+!default.mode2v3
+!default.perspectivev3
+
+
+####
+# Xcode 4 - semi-personal settings
+#
+# Apple Shared data that Apple put in the wrong folder
+# c.f. http://stackoverflow.com/a/19260712/153422
+#     FROM ANSWER: Apple says "don't ignore it"
+#     FROM COMMENTS: Apple is wrong; Apple code is too buggy to trust; there are no known negative side-effects to ignoring Apple's unofficial advice and instead doing the thing that actively fixes bugs in Xcode
+# Up to you, but ... current advice: ignore it.
+*.xccheckout
+
+#
+#
+# OPTION 1: ---------------------------------
+#     throw away ALL personal settings (including custom schemes!
+#     - unless they are "shared")
+# As per build/ and DerivedData/, this ought to have a trailing slash
+#
+# NB: this is exclusive with OPTION 2 below
+xcuserdata/
+
