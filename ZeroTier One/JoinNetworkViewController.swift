@@ -22,22 +22,54 @@ extension String {
     }
 }
 
-class JoinNetworkViewController: NSViewController, NSComboBoxDelegate {
+let joinedNetworksKey = "com.zerotier.one.joined-networks"
+
+
+class JoinNetworkViewController: NSViewController, NSComboBoxDelegate, NSComboBoxDataSource {
 
     @IBOutlet var network: NSComboBox!
     @IBOutlet var joinButton: NSButton!
 
+    var values: [String] = [String]()
+
     override func viewDidLoad() {
         super.viewDidLoad()
         network.setDelegate(self)
+        network.dataSource = self
+    }
+
+    override func viewWillAppear() {
+        let defaults = NSUserDefaults.standardUserDefaults()
+
+        let vals = defaults.stringArrayForKey(joinedNetworksKey)
+
+        if let v = vals {
+            values = v
+        }
+    }
+
+    override func viewDidDisappear() {
+        let defaults = NSUserDefaults.standardUserDefaults()
+
+        defaults.setObject(values, forKey: joinedNetworksKey)
     }
 
     @IBAction func onJoinClicked(sender: AnyObject?) {
-        let networkId = UInt64(network.stringValue, radix: 16)
+        let networkString = network.stringValue
+        let networkId = UInt64(networkString, radix: 16)
 
         // TODO: Execute join network call
 
         network.stringValue = ""
+
+
+        if !values.contains(networkString) {
+            values.insert(networkString, atIndex: 0)
+
+            while values.count > 20 {
+                values.removeLast()
+            }
+        }
     }
 
 
@@ -81,4 +113,39 @@ class JoinNetworkViewController: NSViewController, NSComboBoxDelegate {
         cb.stringValue = outValue
     }
     // end NSComboBoxDelegate Methods
+
+
+    // NSComboBoxDataSource methods
+
+    func numberOfItemsInComboBox(aComboBox: NSComboBox) -> Int {
+        return values.count
+    }
+
+    func comboBox(aComboBox: NSComboBox, objectValueForItemAtIndex index: Int) -> AnyObject {
+        return values[index]
+    }
+
+    func comboBox(aComboBox: NSComboBox, indexOfItemWithStringValue string: String) -> Int {
+
+        var counter = 0
+        for val in values {
+            if val == string {
+                return counter
+            }
+            counter += 1
+        }
+        return NSNotFound
+    }
+
+    func comboBox(aComboBox: NSComboBox, completedString string: String) -> String? {
+        for val in values {
+            if val.hasPrefix(string) {
+                return val
+            }
+        }
+
+        return nil
+    }
+
+    // end NSComboBoxDataSorce methods
 }
