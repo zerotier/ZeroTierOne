@@ -207,6 +207,9 @@ int Network::setConfiguration(const void *confBytes,unsigned int confLen,bool sa
 #endif
 		}
 
+		if (!newConfig)
+			return 0;
+
 		{
 			Mutex::Lock _l(_lock);
 			if (_config == newConfig)

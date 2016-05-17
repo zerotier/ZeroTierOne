@@ -353,6 +353,8 @@ public:
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b) const
 	{
+		printf("!!! sending\n");
+
 		b.append((uint16_t)1); // version
 
 		b.append((uint64_t)networkId);
@@ -471,12 +473,16 @@ public:
 		this->com.serialize(b);
 
 		b.append((uint16_t)0); // extended bytes, currently 0 since unused
+
+		dump();
 	}
 
 	template<unsigned int C>
 	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
 	{
 		memset(this,0,sizeof(NetworkConfig));
+
+		printf("!!! deserializing\n");
 
 		unsigned int p = startAt;
 
@@ -493,7 +499,7 @@ public:
 		type = (ZT_VirtualNetworkType)b[p++];
 
 		unsigned int nl = (unsigned int)b[p++];
-		memcpy(this->name,b.field(p,nl),std::max(nl,(unsigned int)ZT_MAX_NETWORK_SHORT_NAME_LENGTH));
+		memcpy(this->name,b.field(p,nl),std::min(nl,(unsigned int)ZT_MAX_NETWORK_SHORT_NAME_LENGTH));
 		p += nl;
 		// _name will always be null terminated since field size is ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1
 
@@ -602,12 +608,42 @@ public:
 
 		p += b.template at<uint16_t>(p) + 2;
 
+		dump();
 		return (p - startAt);
 	}
 
 #ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 	void fromDictionary(const char *ds,unsigned int dslen);
 #endif
+
+	inline void dump() const
+	{
+		printf("networkId==%.16llx\n",networkId);
+		printf("timestamp==%llu\n",timestamp);
+		printf("revision==%llu\n",revision);
+		printf("issuedTo==%.10llx\n",issuedTo.toInt());
+		printf("multicastLimit==%u\n",multicastLimit);
+		printf("flags=%.8lx\n",(unsigned long)flags);
+		printf("specialistCount==%u\n",specialistCount);
+		for(unsigned int i=0;i<specialistCount;++i)
+			printf("  specialists[%u]==%.16llx\n",i,specialists[i]);
+		printf("routeCount==%u\n",routeCount);
+		for(unsigned int i=0;i<routeCount;++i) {
+			printf("  routes[i].target==%s\n",reinterpret_cast<const struct sockaddr_storage *>(&(routes[i].target))->toString().c_str());
+			printf("  routes[i].via==%s\n",reinterpret_cast<const struct sockaddr_storage *>(&(routes[i].via))->toString().c_str());
+		}
+		printf("staticIpCount==%u\n",staticIpCount);
+		for(unsigned int i=0;i<staticIpCount;++i)
+			printf("  staticIps[i]==%s\n",staticIps[i].toString().c_str());
+		printf("pinnedCount==%u\n",pinnedCount);
+		for(unsigned int i=0;i<pinnedCount;++i) {
+			printf("  pinned[i].zt==%s\n",pinned[i].zt->toString().c_str());
+			printf("  pinned[i].phy==%s\n",pinned[i].zt->toString().c_str());
+		}
+		printf("ruleCount==%u\n",ruleCount);
+		printf("name==%s\n",name);
+		printf("com==%s\n",com.toString().c_str());
+	}
 
 	/**
 	 * Network ID that this configuration applies to

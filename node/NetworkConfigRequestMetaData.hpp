@@ -115,6 +115,7 @@ public:
 
 		// Seek past old style meta-data
 		while (b[p]) ++p;
+		++p;
 
 		if (b.template at<uint16_t>(p) != 1)
 			throw std::invalid_argument("unrecognized version");
