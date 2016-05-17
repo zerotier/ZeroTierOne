@@ -39,6 +39,8 @@ class JoinNetworkViewController: NSViewController, NSComboBoxDelegate, NSComboBo
     }
 
     override func viewWillAppear() {
+        super.viewWillAppear()
+
         let defaults = NSUserDefaults.standardUserDefaults()
 
         let vals = defaults.stringArrayForKey(joinedNetworksKey)
@@ -49,6 +51,8 @@ class JoinNetworkViewController: NSViewController, NSComboBoxDelegate, NSComboBo
     }
 
     override func viewDidDisappear() {
+        super.viewWillDisappear()
+        
         let defaults = NSUserDefaults.standardUserDefaults()
 
         defaults.setObject(values, forKey: joinedNetworksKey)
