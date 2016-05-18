@@ -12,7 +12,7 @@ class ServiceCom: NSObject {
     static let baseURL = "http://localhost:9993"
     static var key: NSString? = "ddeb3b1e6996b6b4f2d12d10"
 
-    static func getNetworkList() {
+    static func getNetworkList(completionHandler: ([Network]) -> Void) {
 
         let urlString = baseURL + "/network?auth=\(ServiceCom.key!)"
 
@@ -27,11 +27,16 @@ class ServiceCom: NSObject {
 
                 if status == 200 {
                     do {
-                        let json = try NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions())
-                        print("\(json)")
+                        let json = try NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions()) as! [[String: AnyObject]]
+
+                        var networks = [Network]()
+                        for jobj in json {
+                            networks.append(Network(jsonData: jobj))
+                        }
+
+                        completionHandler(networks)
                     }
                     catch  {
-                        print("JSON Error: \(error)")
                     }
                 }
             }
