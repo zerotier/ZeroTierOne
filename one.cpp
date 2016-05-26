@@ -571,7 +571,7 @@ static void idtoolPrintHelp(FILE *out,const char *pn)
 		COPYRIGHT_NOTICE ZT_EOL_S
 		LICENSE_GRANT ZT_EOL_S);
 	fprintf(out,"Usage: %s <command> [<args>]"ZT_EOL_S""ZT_EOL_S"Commands:"ZT_EOL_S,pn);
-	fprintf(out,"  generate [<identity.secret>] [<identity.public>]"ZT_EOL_S);
+	fprintf(out,"  generate [<identity.secret>] [<identity.public>] [<vanity>]"ZT_EOL_S);
 	fprintf(out,"  validate <identity.secret/public>"ZT_EOL_S);
 	fprintf(out,"  getpublic <identity.secret>"ZT_EOL_S);
 	fprintf(out,"  sign <identity.secret> <file>"ZT_EOL_S);
@@ -607,8 +607,28 @@ static int idtool(int argc,char **argv)
 	}
 
 	if (!strcmp(argv[1],"generate")) {
+		uint64_t vanity = 0;
+		int vanityBits = 0;
+		if (argc >= 5) {
+			vanity = Utils::hexStrToU64(argv[4]) & 0xffffffffffULL;
+			vanityBits = 4 * strlen(argv[4]);
+			if (vanityBits > 40)
+				vanityBits = 40;
+		}
+
 		Identity id;
-		id.generate();
+		for(;;) {
+			id.generate();
+			if ((id.address().toInt() >> (40 - vanityBits)) == vanity) {
+				if (vanityBits > 0) {
+					fprintf(stderr,"vanity address: found %.10llx !\n",(unsigned long long)id.address().toInt());
+				}
+				break;
+			} else {
+				fprintf(stderr,"vanity address: tried %.10llx looking for first %d bits of %.10llx\n",(unsigned long long)id.address().toInt(),vanityBits,(unsigned long long)(vanity << (40 - vanityBits)));
+			}
+		}
+
 		std::string idser = id.toString(true);
 		if (argc >= 3) {
 			if (!OSUtils::writeFile(argv[2],idser)) {
