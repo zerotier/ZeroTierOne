@@ -49,6 +49,23 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
             cell.networkIdField.stringValue = String(network.nwid, radix: 16)
             cell.networkNameField.stringValue = network.name
 
+            cell.statusField.stringValue = network.status.description
+            cell.typeField.stringValue = network.type.description
+            cell.macField.stringValue = network.mac
+            cell.mtuField.stringValue = String(network.mtu)
+            cell.broadcastField.stringValue = network.broadcastEnabled ? "ENABLED" : "DISABLED"
+            cell.bridgingField.stringValue = network.bridge ? "ENABLED" : "DISABLED"
+            cell.deviceField.stringValue = network.portDeviceName
+
+
+            cell.addressesField.stringValue = ""
+
+            for nw in network.assignedAddresses {
+                cell.addressesField.stringValue += nw
+                cell.addressesField.stringValue += "\n"
+            }
+
+
             return cell
         }
 

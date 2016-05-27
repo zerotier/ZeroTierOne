@@ -13,6 +13,15 @@ class NetworkInfoCell: NSTableCellView {
     @IBOutlet var networkIdField: NSTextField!
     @IBOutlet var networkNameField: NSTextField!
 
+    @IBOutlet var statusField: NSTextField!
+    @IBOutlet var typeField: NSTextField!
+    @IBOutlet var macField: NSTextField!
+    @IBOutlet var mtuField: NSTextField!
+    @IBOutlet var broadcastField: NSTextField!
+    @IBOutlet var bridgingField: NSTextField!
+    @IBOutlet var deviceField: NSTextField!
+    @IBOutlet var addressesField: NSTextField!
+
     override func drawRect(dirtyRect: NSRect) {
         super.drawRect(dirtyRect)
 
