@@ -39,9 +39,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             nibName: "JoinNetworkViewController", bundle: nil)
         joinNetworkPopover.behavior = .Transient
 
+        joinNetworkPopover.appearance = NSAppearance(named: NSAppearanceNameAqua)
+
         networkListPopover.contentViewController = ShowNetworksViewController(
             nibName: "ShowNetworksViewController", bundle: nil)
         networkListPopover.behavior = .Transient
+
+        networkListPopover.appearance = NSAppearance(named: NSAppearanceNameAqua)
     }
 
     func applicationWillTerminate(aNotification: NSNotification) {
