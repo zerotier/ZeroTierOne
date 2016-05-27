@@ -40,4 +40,20 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
     }
 
     // end NSTableViewDataSource
+
+    // NSTableViewDelegate
+
+    func tableView(tableView: NSTableView, viewForTableColumn tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        if let cell = tableView.makeViewWithIdentifier("NetworkInfoCell", owner: nil) as? NetworkInfoCell {
+            let network = networkList[row]
+            cell.networkIdField.stringValue = String(network.nwid, radix: 16)
+            cell.networkNameField.stringValue = network.name
+
+            return cell
+        }
+
+        return nil
+    }
+
+    // end NSTableViewDelegate
 }

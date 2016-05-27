@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		9330F1351CEAB4C400687EC8 /* ServiceCom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F1341CEAB4C400687EC8 /* ServiceCom.swift */; };
 		9330F1371CEBF87200687EC8 /* Network.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F1361CEBF87200687EC8 /* Network.swift */; };
+		9330F13B1CF534E500687EC8 /* NetworkInfoCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F13A1CF534E500687EC8 /* NetworkInfoCell.swift */; };
 		93326BDC1CE7C816005CA2AC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93326BDB1CE7C816005CA2AC /* AppDelegate.swift */; };
 		93326BDE1CE7C816005CA2AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 93326BDD1CE7C816005CA2AC /* Assets.xcassets */; };
 		93326BE11CE7C816005CA2AC /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 93326BDF1CE7C816005CA2AC /* MainMenu.xib */; };
@@ -21,6 +22,7 @@
 /* Begin PBXFileReference section */
 		9330F1341CEAB4C400687EC8 /* ServiceCom.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ServiceCom.swift; sourceTree = "<group>"; };
 		9330F1361CEBF87200687EC8 /* Network.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Network.swift; sourceTree = "<group>"; };
+		9330F13A1CF534E500687EC8 /* NetworkInfoCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkInfoCell.swift; sourceTree = "<group>"; };
 		93326BD81CE7C816005CA2AC /* ZeroTier One.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ZeroTier One.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		93326BDB1CE7C816005CA2AC /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		93326BDD1CE7C816005CA2AC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -65,6 +67,7 @@
 				93326BDB1CE7C816005CA2AC /* AppDelegate.swift */,
 				93326BE81CE7D9B9005CA2AC /* JoinNetworkViewController.swift */,
 				9330F1361CEBF87200687EC8 /* Network.swift */,
+				9330F13A1CF534E500687EC8 /* NetworkInfoCell.swift */,
 				93326BEC1CE7DA30005CA2AC /* ShowNetworksViewController.swift */,
 				9330F1341CEAB4C400687EC8 /* ServiceCom.swift */,
 				93326BDD1CE7C816005CA2AC /* Assets.xcassets */,
@@ -150,6 +153,7 @@
 			files = (
 				9330F1371CEBF87200687EC8 /* Network.swift in Sources */,
 				93326BDC1CE7C816005CA2AC /* AppDelegate.swift in Sources */,
+				9330F13B1CF534E500687EC8 /* NetworkInfoCell.swift in Sources */,
 				93326BEA1CE7D9B9005CA2AC /* JoinNetworkViewController.swift in Sources */,
 				93326BEE1CE7DA30005CA2AC /* ShowNetworksViewController.swift in Sources */,
 				9330F1351CEAB4C400687EC8 /* ServiceCom.swift in Sources */,
