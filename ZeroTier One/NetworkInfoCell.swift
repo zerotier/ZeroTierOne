@@ -22,6 +22,10 @@ class NetworkInfoCell: NSTableCellView {
     @IBOutlet var deviceField: NSTextField!
     @IBOutlet var addressesField: NSTextField!
 
+    override func awakeFromNib() {
+        super.awakeFromNib()
+        
+    }
     override func drawRect(dirtyRect: NSRect) {
         super.drawRect(dirtyRect)
 
