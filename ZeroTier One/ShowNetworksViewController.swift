@@ -20,6 +20,7 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
 
         tableView.setDelegate(self)
         tableView.setDataSource(self)
+        tableView.backgroundColor = NSColor.clearColor()
     }
 
     override func viewWillAppear() {
