@@ -10,11 +10,56 @@ import Cocoa
 
 class ServiceCom: NSObject {
     static let baseURL = "http://localhost:9993"
-    static var key: NSString? = "ddeb3b1e6996b6b4f2d12d10"
+
+    private static func getKey() -> String {
+        struct Holder {
+            static var key: String? = nil
+        }
+
+        if Holder.key == nil {
+            do {
+                // Check the user's ZeroTier application support directory.  If
+                // authtoken.secret exists, use it.
+
+                var appSupportDir = try NSFileManager.defaultManager().URLForDirectory(.ApplicationSupportDirectory, inDomain: .UserDomainMask, appropriateForURL: nil, create: false)
+                NSLog("\(appSupportDir)")
+
+
+                appSupportDir = appSupportDir.URLByAppendingPathComponent("ZeroTier")
+                NSLog("\(appSupportDir)")
+
+                appSupportDir = appSupportDir.URLByAppendingPathComponent("One")
+                NSLog("\(appSupportDir)")
+
+                let authtokenURL = appSupportDir.URLByAppendingPathComponent("authtoken.secret")
+
+                NSLog("\(authtokenURL)")
+
+                if NSFileManager.defaultManager().fileExistsAtPath(authtokenURL.path!) {
+                    Holder.key = try String(contentsOfURL: authtokenURL)
+                }
+                else {
+                    // TODO: Elevate priviledge to copy /Library/Application Support/ZeroTier/One/authtoken.secret to the user's local AppSupport directory
+                }
+            }
+            catch {
+                NSLog("Error getting app support dir: \(error)")
+                Holder.key = nil
+            }
+
+        }
+
+        if let k = Holder.key {
+            return k
+        }
+        else {
+            return ""
+        }
+    }
 
     static func getNetworkList(completionHandler: ([Network]) -> Void) {
 
-        let urlString = baseURL + "/network?auth=\(ServiceCom.key!)"
+        let urlString = baseURL + "/network?auth=\(ServiceCom.getKey())"
 
         let url = NSURL(string: urlString)
 
@@ -50,7 +95,7 @@ class ServiceCom: NSObject {
 
 
     static func joinNetwork(network: String) {
-        let urlString = baseURL + "/network/\(network)?auth=\(ServiceCom.key!)"
+        let urlString = baseURL + "/network/\(network)?auth=\(ServiceCom.getKey())"
         let url = NSURL(string: urlString)
 
         if let u = url {
@@ -75,7 +120,7 @@ class ServiceCom: NSObject {
     }
 
     static func leaveNetwork(network: String) {
-        let urlString = baseURL + "/network/\(network)?auth=\(ServiceCom.key!)"
+        let urlString = baseURL + "/network/\(network)?auth=\(ServiceCom.getKey())"
         let url = NSURL(string: urlString)
 
         if let u = url {
