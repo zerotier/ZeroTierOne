@@ -22,18 +22,9 @@ class ServiceCom: NSObject {
                 // authtoken.secret exists, use it.
 
                 var appSupportDir = try NSFileManager.defaultManager().URLForDirectory(.ApplicationSupportDirectory, inDomain: .UserDomainMask, appropriateForURL: nil, create: false)
-                NSLog("\(appSupportDir)")
-
-
                 appSupportDir = appSupportDir.URLByAppendingPathComponent("ZeroTier")
-                NSLog("\(appSupportDir)")
-
                 appSupportDir = appSupportDir.URLByAppendingPathComponent("One")
-                NSLog("\(appSupportDir)")
-
                 let authtokenURL = appSupportDir.URLByAppendingPathComponent("authtoken.secret")
-
-                NSLog("\(authtokenURL)")
 
                 if NSFileManager.defaultManager().fileExistsAtPath(authtokenURL.path!) {
                     Holder.key = try String(contentsOfURL: authtokenURL)
