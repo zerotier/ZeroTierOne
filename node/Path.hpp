@@ -252,7 +252,7 @@ public:
 	 */
 	inline bool reliable() const throw()
 	{
-		if (_addr.ss_family == AF_INET)
+		if ((_addr.ss_family == AF_INET)||(_addr.ss_family == AF_INET6))
 			return ((_ipScope != InetAddress::IP_SCOPE_GLOBAL)&&(_ipScope != InetAddress::IP_SCOPE_PSEUDOPRIVATE));
 		return true;
 	}
