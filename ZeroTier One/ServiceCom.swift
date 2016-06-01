@@ -30,7 +30,36 @@ class ServiceCom: NSObject {
                     Holder.key = try String(contentsOfURL: authtokenURL)
                 }
                 else {
-                    // TODO: Elevate priviledge to copy /Library/Application Support/ZeroTier/One/authtoken.secret to the user's local AppSupport directory
+                    try NSFileManager.defaultManager().createDirectoryAtURL(appSupportDir, withIntermediateDirectories: true, attributes: nil)
+
+                    var authRef: AuthorizationRef = nil
+                    var status = AuthorizationCreate(nil, nil, .Defaults, &authRef)
+
+                    if status != errAuthorizationSuccess {
+                        NSLog("Authorization Failed! \(status)")
+                        return ""
+                    }
+
+                    var authItem = AuthorizationItem(name: kAuthorizationRightExecute, valueLength: 0, value: nil, flags: 0)
+                    var authRights = AuthorizationRights(count: 1, items: &authItem)
+                    let authFlags: AuthorizationFlags = [.Defaults, .InteractionAllowed, .PreAuthorize, .ExtendRights]
+
+                    status = AuthorizationCopyRights(authRef, &authRights, nil, authFlags, nil)
+
+                    if status != errAuthorizationSuccess {
+                        NSLog("Authorization Failed! \(status)")
+                        return ""
+                    }
+
+                    let localKey = getAdminAuthToken(authRef)
+                    AuthorizationFree(authRef, .DestroyRights)
+
+                    if localKey != nil && localKey.lengthOfBytesUsingEncoding(NSUTF8StringEncoding) > 0 {
+                        NSLog("\(localKey)")
+                        Holder.key = localKey
+
+                        try localKey.writeToURL(authtokenURL, atomically: true, encoding: NSUTF8StringEncoding)
+                    }
                 }
             }
             catch {

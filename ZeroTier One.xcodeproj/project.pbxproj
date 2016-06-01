@@ -17,6 +17,7 @@
 		93326BEB1CE7D9B9005CA2AC /* JoinNetworkViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 93326BE91CE7D9B9005CA2AC /* JoinNetworkViewController.xib */; };
 		93326BEE1CE7DA30005CA2AC /* ShowNetworksViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93326BEC1CE7DA30005CA2AC /* ShowNetworksViewController.swift */; };
 		93326BEF1CE7DA30005CA2AC /* ShowNetworksViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 93326BED1CE7DA30005CA2AC /* ShowNetworksViewController.xib */; };
+		93DAFE4B1CFE53CA00547CC4 /* AuthtokenCopy.m in Sources */ = {isa = PBXBuildFile; fileRef = 93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +33,9 @@
 		93326BE91CE7D9B9005CA2AC /* JoinNetworkViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = JoinNetworkViewController.xib; sourceTree = "<group>"; };
 		93326BEC1CE7DA30005CA2AC /* ShowNetworksViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShowNetworksViewController.swift; sourceTree = "<group>"; };
 		93326BED1CE7DA30005CA2AC /* ShowNetworksViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = ShowNetworksViewController.xib; sourceTree = "<group>"; };
+		93DAFE491CFE53C900547CC4 /* ZeroTier One-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZeroTier One-Bridging-Header.h"; sourceTree = "<group>"; };
+		93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AuthtokenCopy.m; sourceTree = "<group>"; };
+		93DAFE4C1CFE53DA00547CC4 /* AuthtokenCopy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AuthtokenCopy.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +79,9 @@
 				93326BE21CE7C816005CA2AC /* Info.plist */,
 				93326BE91CE7D9B9005CA2AC /* JoinNetworkViewController.xib */,
 				93326BED1CE7DA30005CA2AC /* ShowNetworksViewController.xib */,
+				93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */,
+				93DAFE4C1CFE53DA00547CC4 /* AuthtokenCopy.h */,
+				93DAFE491CFE53C900547CC4 /* ZeroTier One-Bridging-Header.h */,
 			);
 			path = "ZeroTier One";
 			sourceTree = "<group>";
@@ -153,6 +160,7 @@
 			files = (
 				9330F1371CEBF87200687EC8 /* Network.swift in Sources */,
 				93326BDC1CE7C816005CA2AC /* AppDelegate.swift in Sources */,
+				93DAFE4B1CFE53CA00547CC4 /* AuthtokenCopy.m in Sources */,
 				9330F13B1CF534E500687EC8 /* NetworkInfoCell.swift in Sources */,
 				93326BEA1CE7D9B9005CA2AC /* JoinNetworkViewController.swift in Sources */,
 				93326BEE1CE7DA30005CA2AC /* ShowNetworksViewController.swift in Sources */,
@@ -260,11 +268,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				INFOPLIST_FILE = "ZeroTier One/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.zerotier.ZeroTier-One";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "ZeroTier One/ZeroTier One-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
@@ -272,11 +283,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				INFOPLIST_FILE = "ZeroTier One/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.zerotier.ZeroTier-One";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "ZeroTier One/ZeroTier One-Bridging-Header.h";
 			};
 			name = Release;
 		};
