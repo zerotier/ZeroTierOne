@@ -15,6 +15,7 @@ fi
 rm -f *.1 *.8
 
 node_modules/marked-man/bin/marked-man zerotier-cli.1.md >zerotier-cli.1
+node_modules/marked-man/bin/marked-man zerotier-idtool.1.md >zerotier-idtool.1
 node_modules/marked-man/bin/marked-man zerotier-one.8.md >zerotier-one.8
 
 exit 0
