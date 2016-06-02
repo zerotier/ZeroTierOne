@@ -79,5 +79,3 @@ java/build_win32/
 windows/WinUI/obj/
 windows/WinUI/bin/
 windows/ZeroTierOne/Debug/
-/doc/*.1
-/doc/*.8
