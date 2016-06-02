@@ -61,7 +61,7 @@ List VL1 peers:
 
 ## COPYRIGHT
 
-(c)2011-2016 ZeroTier, Inc.
+(c)2011-2016 ZeroTier, Inc. -- https://www.zerotier.com/ -- https://github.com/zerotier
 
 ## SEE ALSO
 
