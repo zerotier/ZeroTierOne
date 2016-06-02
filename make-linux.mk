@@ -137,9 +137,6 @@ selftest:	$(OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LDLIBS)
 	$(STRIP) zerotier-selftest
 
-#installer: one FORCE
-#	./ext/installfiles/linux/buildinstaller.sh
-
 clean: FORCE
 	rm -rf *.so *.o netcon/*.a node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest zerotier-netcon-service build-* ZeroTierOneInstaller-* *.deb *.rpm .depend netcon/.depend doc/node_modules
 	find netcon -type f \( -name '*.o' -o -name '*.so' -o -name '*.1.0' -o -name 'zerotier-one' -o -name 'zerotier-cli' -o -name 'zerotier-netcon-service' \) -delete
@@ -148,11 +145,5 @@ clean: FORCE
 debug:	FORCE
 	make ZT_DEBUG=1 one
 	make ZT_DEBUG=1 selftest
-
-#official: FORCE
-#	make ZT_OFFICIAL_RELEASE=1 clean
-#	make -j 4 ZT_OFFICIAL_RELEASE=1 one
-#	make ZT_OFFICIAL_RELEASE=1 installer
-#	make ZT_OFFICIAL_RELEASE=1 doc
 
 FORCE:
