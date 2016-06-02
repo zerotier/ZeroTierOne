@@ -38,6 +38,19 @@ LDLIBS?=
 
 include objects.mk
 
+# On Linux we auto-detect the presence of some libraries
+ifeq ($(wildcard /usr/include/lz4.h),)
+	OBJS+=ext/lz4/lz4.o
+else
+	LDLIBS+=-llz4
+endif
+ifeq ($(wildcard /usr/include/http_parser.h),)
+	OBJS+=ext/http-parser/http_parser.o
+else
+	LDLIBS+=-lhttp_parser
+endif
+OBJS+=ext/json-parser/json.o
+
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	DEFS+=-DZT_OFFICIAL_RELEASE
 	ZT_USE_MINIUPNPC=1

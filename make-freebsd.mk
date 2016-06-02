@@ -6,7 +6,7 @@ DEFS=
 LIBS=
 
 include objects.mk
-OBJS+=osdep/BSDEthernetTap.o
+OBJS+=osdep/BSDEthernetTap.o ext/lz4/lz4.o ext/json-parser/json.o ext/http-parser/http_parser.o
 
 # "make official" is a shortcut for this
 ifeq ($(ZT_OFFICIAL_RELEASE),1)

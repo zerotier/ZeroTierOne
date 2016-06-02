@@ -1,7 +1,4 @@
 OBJS=\
-	ext/lz4/lz4.o \
-	ext/json-parser/json.o \
-	ext/http-parser/http_parser.o \
 	node/C25519.o \
 	node/CertificateOfMembership.o \
 	node/Cluster.o \
