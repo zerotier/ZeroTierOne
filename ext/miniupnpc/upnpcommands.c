@@ -1,5 +1,6 @@
 #define _CRT_SECURE_NO_WARNINGS
-/* $Id: upnpcommands.c,v 1.46 2015/07/15 12:19:00 nanard Exp $ */
+
+/* $Id: upnpcommands.c,v 1.47 2016/03/07 12:26:48 nanard Exp $ */
 /* Project : miniupnp
  * Author : Thomas Bernard
  * Copyright (c) 2005-2015 Thomas Bernard
@@ -617,14 +618,14 @@ UPNP_GetGenericPortMappingEntry(const char * controlURL,
 		protocol[3] = '\0';
 	}
 	p = GetValueFromNameValueList(&pdata, "NewInternalClient");
-	if(p && intClient)
+	if(p)
 	{
 		strncpy(intClient, p, 16);
 		intClient[15] = '\0';
 		r = 0;
 	}
 	p = GetValueFromNameValueList(&pdata, "NewInternalPort");
-	if(p && intPort)
+	if(p)
 	{
 		strncpy(intPort, p, 6);
 		intPort[5] = '\0';

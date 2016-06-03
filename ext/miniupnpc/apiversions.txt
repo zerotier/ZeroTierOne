@@ -1,6 +1,11 @@
-$Id: apiversions.txt,v 1.8 2015/10/08 16:15:47 nanard Exp $
+$Id: apiversions.txt,v 1.9 2016/01/24 17:24:36 nanard Exp $
 
 Differences in API between miniUPnPc versions
+
+API version 16
+  added "status_code" argument to getHTTPResponse(), miniwget() and miniwget_getaddr()
+  updated macro :
+    #define MINIUPNPC_API_VERSION 16
 
 API version 15
   changed "sameport" argument of upnpDiscover() upnpDiscoverAll() upnpDiscoverDevice()
