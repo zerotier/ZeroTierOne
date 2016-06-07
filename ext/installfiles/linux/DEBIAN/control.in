@@ -4,6 +4,7 @@ Maintainer: ZeroTier, Inc. <contact@zerotier.com>
 Priority: optional
 Version: __VERSION__
 Installed-Size: 1024
+Section: net
 Homepage: https://github.com/zerotier/ZeroTierOne
 Description: ZeroTier One network virtualization service
  ZeroTier One is a fast, secure, and easy to use peer to peer network
