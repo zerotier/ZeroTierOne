@@ -359,8 +359,8 @@ public:
 		b.append((uint64_t)timestamp);
 		b.append((uint64_t)revision);
 		issuedTo.appendTo(b);
+		b.append((uint64_t)flags);
 		b.append((uint32_t)multicastLimit);
-		b.append((uint32_t)flags);
 		b.append((uint8_t)type);
 
 		unsigned int nl = (unsigned int)strlen(name);
@@ -488,8 +488,8 @@ public:
 		timestamp = b.template at<uint64_t>(p); p += 8;
 		revision = b.template at<uint64_t>(p); p += 8;
 		issuedTo.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
+		flags = b.template at<uint64_t>(p); p += 4;
 		multicastLimit = (unsigned int)b.template at<uint32_t>(p); p += 4;
-		flags = (unsigned int)b.template at<uint32_t>(p); p += 4;
 		type = (ZT_VirtualNetworkType)b[p++];
 
 		unsigned int nl = (unsigned int)b[p++];
@@ -661,14 +661,14 @@ public:
 	Address issuedTo;
 
 	/**
+	 * Flags (64-bit)
+	 */
+	uint64_t flags;
+
+	/**
 	 * Maximum number of recipients per multicast (not including active bridges)
 	 */
 	unsigned int multicastLimit;
-
-	/**
-	 * Flags (32-bit)
-	 */
-	unsigned int flags;
 
 	/**
 	 * Number of specialists
