@@ -488,7 +488,7 @@ public:
 		timestamp = b.template at<uint64_t>(p); p += 8;
 		revision = b.template at<uint64_t>(p); p += 8;
 		issuedTo.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-		flags = b.template at<uint64_t>(p); p += 4;
+		flags = b.template at<uint64_t>(p); p += 8;
 		multicastLimit = (unsigned int)b.template at<uint32_t>(p); p += 4;
 		type = (ZT_VirtualNetworkType)b[p++];
 
