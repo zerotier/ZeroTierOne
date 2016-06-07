@@ -2130,15 +2130,14 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 		}
 	}
 
-	if (!legacy.sign(signingId,now)) {
-		return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
-	}
-
 	// Append legacy network config data for older devices
 	if (metaData.protocolVersion < 6) {
+		if (!legacy.sign(signingId,now))
+			return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 		std::string legacyStr(legacy.toString());
 		netconf.append((const void *)legacyStr.data(),(unsigned int)legacyStr.length());
 	}
+
 	netconf.append((uint8_t)0);
 
 	// Append new format data for newer devices
