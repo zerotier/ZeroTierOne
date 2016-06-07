@@ -2134,12 +2134,17 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 		return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
 
-	// First append the legacy dictionary and a terminating NULL, then serialize the new-format one.
-	// Newer clients will use the new-format dictionary and older ones will use the old one.
-	std::string legacyStr(legacy.toString());
-	netconf.append((const void *)legacyStr.data(),(unsigned int)legacyStr.length());
+	// Append legacy network config data for older devices
+	if (metaData.protocolVersion < 6) {
+		std::string legacyStr(legacy.toString());
+		netconf.append((const void *)legacyStr.data(),(unsigned int)legacyStr.length());
+	}
 	netconf.append((uint8_t)0);
-	nc.serialize(netconf);
+
+	// Append new format data for newer devices
+	if (metaData.protocolVersion >= 6) {
+		nc.serialize(netconf);
+	}
 
 	return NetworkController::NETCONF_QUERY_OK;
 }
