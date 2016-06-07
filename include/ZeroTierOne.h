@@ -362,7 +362,7 @@ enum ZT_VirtualNetworkStatus
 	ZT_NETWORK_STATUS_PORT_ERROR = 4,
 
 	/**
-	 * ZeroTier One version too old
+	 * ZeroTier core version too old
 	 */
 	ZT_NETWORK_STATUS_CLIENT_TOO_OLD = 5
 };
@@ -727,7 +727,13 @@ enum ZT_Architecture {
 	ZT_ARCHITECTURE_MIPS32 = 5,
 	ZT_ARCHITECTURE_MIPS64 = 6,
 	ZT_ARCHITECTURE_POWER32 = 7,
-	ZT_ARCHITECTURE_POWER64 = 8
+	ZT_ARCHITECTURE_POWER64 = 8,
+	ZT_ARCHITECTURE_OPENRISC32 = 9,
+	ZT_ARCHITECTURE_OPENRISC64 = 10,
+	ZT_ARCHITECTURE_SPARC32 = 11,
+	ZT_ARCHITECTURE_SPARC64 = 12,
+	ZT_ARCHITECTURE_DOTNET_CLR = 13,
+	ZT_ARCHITECTURE_JAVA_JVM = 14
 };
 
 /**
@@ -830,6 +836,16 @@ typedef struct
 	 * virtual network's configuration master.
 	 */
 	struct sockaddr_storage assignedAddresses[ZT_MAX_ZT_ASSIGNED_ADDRESSES];
+
+	/**
+	 * Number of ZT-pushed routes
+	 */
+	unsigned int routeCount;
+
+	/**
+	 * Routes (excluding those implied by assigned addresses and their masks)
+	 */
+	ZT_VirtualNetworkRoute routes[ZT_MAX_NETWORK_ROUTES];
 } ZT_VirtualNetworkConfig;
 
 /**

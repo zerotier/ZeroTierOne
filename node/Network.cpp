@@ -406,6 +406,16 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 			memset(&(ec->assignedAddresses[i]),0,sizeof(struct sockaddr_storage));
 		}
 	}
+
+	ec->routeCount = 0;
+	for(unsigned int i=0;i<ZT_MAX_NETWORK_ROUTES;++i) {
+		if (i < _config.routeCount) {
+			memcpy(&(ec->routes[i]),&(_config.routes[i]),sizeof(ZT_VirtualNetworkRoute));
+			++ec->routeCount;
+		} else {
+			memset(&(ec->routes[i]),0,sizeof(ZT_VirtualNetworkRoute));
+		}
+	}
 }
 
 bool Network::_isAllowed(const SharedPtr<Peer> &peer) const
