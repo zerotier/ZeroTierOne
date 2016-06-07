@@ -48,13 +48,16 @@
  *   + New crypto completely changes key agreement cipher
  * 4 - 0.6.0 ... 1.0.6
  *   + New identity format based on hashcash design
- * 5 - 1.1.0 ... CURRENT
+ * 5 - 1.1.0 ... 1.1.5
  *   + Supports circuit test, proof of work, and echo
  *   + Supports in-band world (root server definition) updates
  *   + Clustering! (Though this will work with protocol v4 clients.)
  *   + Otherwise backward compatible with protocol v4
+ * 6 - 1.1.5 ... CURRENT
+ *   + Deprecate old dictionary-based network config format
+ *   + Introduce new binary serialized network config and meta-data
  */
-#define ZT_PROTO_VERSION 5
+#define ZT_PROTO_VERSION 6
 
 /**
  * Minimum supported protocol version
@@ -95,7 +98,7 @@
 /**
  * DEPRECATED payload encrypted flag, will be removed for re-use soon.
  *
- * This has been replaced by the two-bit cipher suite selection field where
+ * This has been replaced by the three-bit cipher suite selection field where
  * a value of 0 indicates unencrypted (but authenticated) messages.
  */
 #define ZT_PROTO_FLAG_ENCRYPTED 0x80
