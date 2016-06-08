@@ -1,5 +1,8 @@
 # Main binaries created in *nix builds
-/zerotier-*
+/zerotier-one
+/zerotier-idtool
+/zerotier-cli
+/zerotier-selftest
 
 # OS-created garbage files from various platforms
 .DS_Store
@@ -64,11 +67,6 @@ debian/zerotier-one
 debian/zerotier-one*.debhelper
 debian/*.log
 debian/zerotier-one.substvars
-
-# MacGap wrapper build files
-/ext/mac-ui-macgap1-wrapper/src/MacGap.xcodeproj/project.xcworkspace/xcuserdata/*
-/ext/mac-ui-macgap1-wrapper/src/MacGap.xcodeproj/xcuserdata/*
-/ext/mac-ui-macgap1-wrapper/src/build
 
 # Java/Android/JNI build droppings
 java/obj/
