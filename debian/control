@@ -3,7 +3,7 @@ Maintainer: Adam Ierymenko <adam.ierymenko@zerotier.com>
 Section: net
 Priority: optional
 Standards-Version: 3.9.6
-Build-Depends: debhelper (>= 9), nodejs (>= 0.10.0), libhttp-parser-dev (>= 2.1), liblz4-dev, npm (>= 1.4.0), libnatpmp-dev, dh-systemd
+Build-Depends: debhelper (>= 9), nodejs (>= 0.10.0), libhttp-parser-dev (>= 2.1), liblz4-dev, npm (>= 1.4.0), libnatpmp-dev, dh-systemd, ruby-ronn
 Vcs-Git: git://github.com/zerotier/ZeroTierOne
 Vcs-Browser: https://github.com/zerotier/ZeroTierOne
 Homepage: https://www.zerotier.com/
