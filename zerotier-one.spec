@@ -11,13 +11,22 @@ BuildRequires:  http-parser-devel
 BuildRequires:  lz4-devel
 BuildRequires:  libnatpmp-devel
 BuildRequires:  systemd
+%if 0%{?fedora} >= 21
+BuildRequires:  json-parser-devel
+%endif
 
 Requires:       http-parser
 Requires:       lz4
 Requires:       libnatpmp
 Requires:       systemd
+%if 0%{?fedora} >= 21
+BuildRequires:  json-parser
+%endif
 
 Provides:       bundled(miniupnpc) = 2.0
+%if 0%{?rhel}
+Provides:       bundled(json-parser) = 1.1.0
+%endif
 
 %description
 ZeroTier is a software defined networking layer for Earth.
