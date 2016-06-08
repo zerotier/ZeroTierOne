@@ -252,7 +252,7 @@ public:
 #if defined(_WIN32) || defined(_WIN64)
 		::send(_whackSendSocket,(const char *)this,1,0);
 #else
-		(void)::write(_whackSendSocket,(PhySocket *)this,1);
+		(void)(::write(_whackSendSocket,(PhySocket *)this,1));
 #endif
 	}
 
@@ -871,7 +871,7 @@ public:
 #if defined(_WIN32) || defined(_WIN64)
 			::recv(_whackReceiveSocket,tmp,16,0);
 #else
-			(void)::read(_whackReceiveSocket,tmp,16);
+			(void)(::read(_whackReceiveSocket,tmp,16));
 #endif
 		}
 

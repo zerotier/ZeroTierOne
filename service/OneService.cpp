@@ -416,6 +416,8 @@ static int ShttpOnValue(http_parser *parser,const char *ptr,size_t length);
 static int ShttpOnHeadersComplete(http_parser *parser);
 static int ShttpOnBody(http_parser *parser,const char *ptr,size_t length);
 static int ShttpOnMessageComplete(http_parser *parser);
+
+#if (HTTP_PARSER_VERSION_MAJOR >= 2) && (HTTP_PARSER_VERSION_MINOR >= 1)
 static const struct http_parser_settings HTTP_PARSER_SETTINGS = {
 	ShttpOnMessageBegin,
 	ShttpOnUrl,
@@ -426,6 +428,17 @@ static const struct http_parser_settings HTTP_PARSER_SETTINGS = {
 	ShttpOnBody,
 	ShttpOnMessageComplete
 };
+#else
+static const struct http_parser_settings HTTP_PARSER_SETTINGS = {
+	ShttpOnMessageBegin,
+	ShttpOnUrl,
+	ShttpOnHeaderField,
+	ShttpOnValue,
+	ShttpOnHeadersComplete,
+	ShttpOnBody,
+	ShttpOnMessageComplete
+};
+#endif
 
 struct TcpConnection
 {
