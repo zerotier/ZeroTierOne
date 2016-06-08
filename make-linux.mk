@@ -32,6 +32,7 @@ endif
 INCLUDES?=
 DEFS?=
 LDLIBS?=
+DESTDIR?=
 
 include objects.mk
 
@@ -145,5 +146,34 @@ clean: FORCE
 debug:	FORCE
 	make ZT_DEBUG=1 one
 	make ZT_DEBUG=1 selftest
+
+install:	FORCE
+	mkdir -p $(DESTDIR)/usr/sbin
+	rm -f $(DESTDIR)/usr/sbin/zerotier-one
+	cp -f zerotier-one $(DESTDIR)/usr/sbin/zerotier-one
+	mkdir -p $(DESTDIR)/usr/bin
+	rm -f $(DESTDIR)/usr/bin/zerotier-cli
+	rm -f $(DESTDIR)/usr/bin/zerotier-idtool
+	ln -s $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/usr/bin/zerotier-cli
+	ln -s $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/usr/bin/zerotier-idtool
+	mkdir -p $(DESTDIR)/var/lib/zerotier-one
+	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-one
+	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-cli
+	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-idtool
+	ln -s $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/var/lib/zerotier-one/zerotier-one
+	ln -s $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/var/lib/zerotier-one/zerotier-cli
+	ln -s $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/var/lib/zerotier-one/zerotier-idtool
+
+uninstall:	FORCE
+	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-one
+	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-cli
+	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-idtool
+	rm -f $(DESTDIR)/usr/bin/zerotier-cli
+	rm -f $(DESTDIR)/usr/bin/zerotier-idtool
+	rm -f $(DESTDIR)/usr/sbin/zerotier-one
+	rm -rf $(DESTDIR)/var/lib/zerotier-one/iddb.d
+	rm -rf $(DESTDIR)/var/lib/zerotier-one/updates.d
+	rm -rf $(DESTDIR)/var/lib/zerotier-one/networks.d
+	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-one.port
 
 FORCE:
