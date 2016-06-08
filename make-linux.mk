@@ -41,6 +41,7 @@ ifeq ($(wildcard /usr/include/lz4.h),)
 	OBJS+=ext/lz4/lz4.o
 else
 	LDLIBS+=-llz4
+	DEFS+=-DZT_USE_SYSTEM_LZ4
 endif
 ifeq ($(wildcard /usr/include/http_parser.h),)
 	OBJS+=ext/http-parser/http_parser.o
