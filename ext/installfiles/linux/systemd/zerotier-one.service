@@ -3,7 +3,7 @@ Description=ZeroTier One
 After=network.target
 
 [Service]
-ExecStart=/var/lib/zerotier-one/zerotier-one
+ExecStart=/usr/sbin/zerotier-one
 Restart=always
 KillMode=process
 

@@ -30,7 +30,11 @@
 #include "../version.h"
 #include "../include/ZeroTierOne.h"
 
+#ifdef ZT_USE_SYSTEM_HTTP_PARSER
+#include <http_parser.h>
+#else
 #include "../ext/http-parser/http_parser.h"
+#endif
 
 #include "../node/Constants.hpp"
 #include "../node/Mutex.hpp"
@@ -402,7 +406,11 @@ static void StapFrameHandler(void *uptr,uint64_t nwid,const MAC &from,const MAC 
 
 static int ShttpOnMessageBegin(http_parser *parser);
 static int ShttpOnUrl(http_parser *parser,const char *ptr,size_t length);
+#if (HTTP_PARSER_VERSION_MAJOR >= 2) && (HTTP_PARSER_VERSION_MINOR >= 2)
 static int ShttpOnStatus(http_parser *parser,const char *ptr,size_t length);
+#else
+static int ShttpOnStatus(http_parser *parser);
+#endif
 static int ShttpOnHeaderField(http_parser *parser,const char *ptr,size_t length);
 static int ShttpOnValue(http_parser *parser,const char *ptr,size_t length);
 static int ShttpOnHeadersComplete(http_parser *parser);
@@ -1621,13 +1629,19 @@ static int ShttpOnUrl(http_parser *parser,const char *ptr,size_t length)
 	tc->url.append(ptr,length);
 	return 0;
 }
+#if (HTTP_PARSER_VERSION_MAJOR >= 2) && (HTTP_PARSER_VERSION_MINOR >= 2)
 static int ShttpOnStatus(http_parser *parser,const char *ptr,size_t length)
+#else
+static int ShttpOnStatus(http_parser *parser)
+#endif
 {
+	/*
 	TcpConnection *tc = reinterpret_cast<TcpConnection *>(parser->data);
 	tc->messageSize += (unsigned long)length;
 	if (tc->messageSize > ZT_MAX_HTTP_MESSAGE_SIZE)
 		return -1;
 	tc->status.append(ptr,length);
+	*/
 	return 0;
 }
 static int ShttpOnHeaderField(http_parser *parser,const char *ptr,size_t length)

@@ -22,7 +22,11 @@
 #include "../version.h"
 #include "../include/ZeroTierOne.h"
 
+#ifdef ZT_USE_SYSTEM_HTTP_PARSER
+#include <http_parser.h>
+#else
 #include "../ext/http-parser/http_parser.h"
+#endif
 
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 #include "../controller/SqliteNetworkController.hpp"

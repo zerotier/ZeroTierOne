@@ -46,6 +46,7 @@ ifeq ($(wildcard /usr/include/http_parser.h),)
 	OBJS+=ext/http-parser/http_parser.o
 else
 	LDLIBS+=-lhttp_parser
+	DEFS+=-DZT_USE_SYSTEM_HTTP_PARSER
 endif
 ifeq ($(wildcard /usr/include/json-parser/json.h),)
 	OBJS+=ext/json-parser/json.o
@@ -177,6 +178,9 @@ install:	FORCE
 	rm -f $(DESTDIR)/usr/share/man/man1/zerotier-cli.1.gz
 	cat doc/zerotier-cli.1 | gzip -9 >$(DESTDIR)/usr/share/man/man1/zerotier-cli.1.gz
 	cat doc/zerotier-idtool.1 | gzip -9 >$(DESTDIR)/usr/share/man/man1/zerotier-idtool.1.gz
+	mkdir -p $(DESTDIR)/usr/lib/systemd/system
+	rm -f $(DESTDIR)/usr/lib/systemd/system/zerotier-one.service
+	cp -f ext/installfiles/linux/systemd/zerotier-one.service $(DESTDIR)/usr/lib/systemd/system
 
 uninstall:	FORCE
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-one
@@ -192,6 +196,7 @@ uninstall:	FORCE
 	rm -f $(DESTDIR)/usr/share/man/man8/zerotier-one.8.gz
 	rm -f $(DESTDIR)/usr/share/man/man1/zerotier-idtool.1.gz
 	rm -f $(DESTDIR)/usr/share/man/man1/zerotier-cli.1.gz
+	rm -f $(DESTDIR)/usr/lib/systemd/system/zerotier-one.service
 
 debian:	distclean
 	debuild -I -i -us -uc
