@@ -201,4 +201,7 @@ uninstall:	FORCE
 debian:	distclean
 	debuild -I -i -us -uc
 
+redhat:	distclean
+	rpmbuild -ba zerotier-one.spec
+
 FORCE:
