@@ -10,7 +10,8 @@ Homepage: https://www.zerotier.com/
 
 Package: zerotier-one
 Architecture: any
-Depends: libhttp-parser2.1, liblz4-1, libnatpmp1
+Depends:  ${shlibs:Depends}, libhttp-parser2.1, liblz4-1, libnatpmp1
+Homepage: https://www.zerotier.com/
 Description: ZeroTier network virtualization service
  ZeroTier One lets you join ZeroTier virtual networks and
  have them appear as tun/tap ports on your system. See

@@ -1,3 +1,10 @@
 #!/usr/bin/make -f
+
+CFLAGS=-O3 -fstack-protector-strong
+CXXFLAGS=-O3 -fstack-protector-strong
+
 %:
 	dh $@
+
+override_dh_auto_build:
+	make ZT_USE_MINIUPNPC=1 -j 2

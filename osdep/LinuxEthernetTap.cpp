@@ -172,7 +172,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 	// Set close-on-exec so that devices cannot persist if we fork/exec for update
 	::fcntl(_fd,F_SETFD,fcntl(_fd,F_GETFD) | FD_CLOEXEC);
 
-	::pipe(_shutdownSignalPipe);
+	(void)::pipe(_shutdownSignalPipe);
 
 	devmap[nwids] = _dev;
 	OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),devmap.toString());
@@ -182,7 +182,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 LinuxEthernetTap::~LinuxEthernetTap()
 {
-	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
+	(void)::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
 	Thread::join(_thread);
 	::close(_fd);
 	::close(_shutdownSignalPipe[0]);
@@ -307,7 +307,7 @@ void LinuxEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,
 		*((uint16_t *)(putBuf + 12)) = htons((uint16_t)etherType);
 		memcpy(putBuf + 14,data,len);
 		len += 14;
-		::write(_fd,putBuf,len);
+		(void)::write(_fd,putBuf,len);
 	}
 }
 

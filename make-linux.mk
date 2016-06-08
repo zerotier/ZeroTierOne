@@ -30,7 +30,7 @@ endif
 #UNAME_M=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
 
 INCLUDES?=
-DEFS?=
+DEFS?=-D_FORTIFY_SOURCE=2
 LDLIBS?=
 DESTDIR?=
 
@@ -89,17 +89,17 @@ ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE
 	CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
 	CXXFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
-	LDFLAGS=-ldl
+	LDFLAGS=
 	STRIP?=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
-	CFLAGS?=-O3 -fstack-protector
+	CFLAGS?=-O3 -fstack-protector-strong
 	CFLAGS+=-Wall -fPIE -fvisibility=hidden -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	CXXFLAGS?=-O3 -fstack-protector
+	CXXFLAGS?=-O3 -fstack-protector-strong
 	CXXFLAGS+=-Wall -Wreorder -fPIE -fvisibility=hidden -fno-rtti -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	LDFLAGS=-ldl -pie -Wl,-z,relro,-z,now
+	LDFLAGS=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
 	STRIP+=--strip-all
 endif
@@ -142,7 +142,7 @@ manpages:	FORCE
 	cd doc ; ./build.sh
 
 clean: FORCE
-	rm -rf *.so *.o netcon/*.a node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest zerotier-netcon-service build-* ZeroTierOneInstaller-* *.deb *.rpm .depend netcon/.depend doc/*.1 doc/*.2 doc/*.8
+	rm -rf *.so *.o netcon/*.a node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest zerotier-netcon-service build-* ZeroTierOneInstaller-* *.deb *.rpm .depend netcon/.depend doc/*.1 doc/*.2 doc/*.8 debian/zerotier-one* debian/files
 	find netcon -type f \( -name '*.o' -o -name '*.so' -o -name '*.1.0' -o -name 'zerotier-one' -o -name 'zerotier-cli' -o -name 'zerotier-netcon-service' \) -delete
 	find netcon/docker-test -name "zerotier-intercept" -type f -delete
 
@@ -192,5 +192,8 @@ uninstall:	FORCE
 	rm -f $(DESTDIR)/usr/share/man/man8/zerotier-one.8.gz
 	rm -f $(DESTDIR)/usr/share/man/man1/zerotier-idtool.1.gz
 	rm -f $(DESTDIR)/usr/share/man/man1/zerotier-cli.1.gz
+
+debian:	distclean
+	debuild -I -i -us -uc
 
 FORCE:
