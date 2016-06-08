@@ -30,8 +30,11 @@ like conventional VPNs or VLANs. It can run on native systems, VMs, or
 containers (Docker, OpenVZ, etc.).
 
 %prep
-rsync -a %{getenv:PWD}/* %{_builddir}
-make clean
+rm -rf *
+ln -s %{getenv:PWD} %{name}-%{version}
+tar --exclude=%{name}-%{version}/.git --exclude=%{name}-%{version}/%{name}-%{version} -czf %{_sourcedir}/%{name}-%{version}.tar.gz %{name}-%{version}/*
+rm -f %{name}-%{version}
+cp -a %{getenv:PWD}/* .
 
 %build
 make ZT_USE_MINIUPNPC=1 %{?_smp_mflags}
@@ -45,9 +48,21 @@ cp debian/zerotier-one.service $RPM_BUILD_ROOT%{_unitdir}/%{name}.service
 
 %files
 %{_sbindir}/*
+%{_bindir}/*
+%{_mandir}/*
+%{_localstatedir}/*
 %{_unitdir}/%{name}.service
 %doc AUTHORS.md README.md
 %license LICENSE.GPL-3
+
+%post
+%systemd_post apache-httpd.service
+
+%preun
+%systemd_preun apache-httpd.service
+
+%postun
+%systemd_postun_with_restart apache-httpd.service
 
 %changelog
 * Wed Jun 08 2016 François Kooman <fkooman@tuxed.net> - 1.1.5-0.3

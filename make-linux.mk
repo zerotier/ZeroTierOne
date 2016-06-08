@@ -165,15 +165,15 @@ install:	FORCE
 	mkdir -p $(DESTDIR)/usr/bin
 	rm -f $(DESTDIR)/usr/bin/zerotier-cli
 	rm -f $(DESTDIR)/usr/bin/zerotier-idtool
-	ln -s $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/usr/bin/zerotier-cli
-	ln -s $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/usr/bin/zerotier-idtool
+	ln -rs $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/usr/bin/zerotier-cli
+	ln -rs $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/usr/bin/zerotier-idtool
 	mkdir -p $(DESTDIR)/var/lib/zerotier-one
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-one
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-cli
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-idtool
-	ln -s $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/var/lib/zerotier-one/zerotier-one
-	ln -s $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/var/lib/zerotier-one/zerotier-cli
-	ln -s $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/var/lib/zerotier-one/zerotier-idtool
+	ln -rs $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/var/lib/zerotier-one/zerotier-one
+	ln -rs $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/var/lib/zerotier-one/zerotier-cli
+	ln -rs $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/var/lib/zerotier-one/zerotier-idtool
 	mkdir -p $(DESTDIR)/usr/share/man/man8
 	rm -f $(DESTDIR)/usr/share/man/man8/zerotier-one.8.gz
 	cat doc/zerotier-one.8 | gzip -9 >$(DESTDIR)/usr/share/man/man8/zerotier-one.8.gz
