@@ -169,6 +169,14 @@ install:	FORCE
 	ln -s $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/var/lib/zerotier-one/zerotier-one
 	ln -s $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/var/lib/zerotier-one/zerotier-cli
 	ln -s $(DESTDIR)/usr/sbin/zerotier-one $(DESTDIR)/var/lib/zerotier-one/zerotier-idtool
+	mkdir -p $(DESTDIR)/usr/share/man/man8
+	rm -f $(DESTDIR)/usr/share/man/man8/zerotier-one.8.gz
+	cat doc/zerotier-one.8 | gzip -9 >$(DESTDIR)/usr/share/man/man8/zerotier-one.8.gz
+	mkdir -p $(DESTDIR)/usr/share/man/man1
+	rm -f $(DESTDIR)/usr/share/man/man1/zerotier-idtool.1.gz
+	rm -f $(DESTDIR)/usr/share/man/man1/zerotier-cli.1.gz
+	cat doc/zerotier-cli.1 | gzip -9 >$(DESTDIR)/usr/share/man/man1/zerotier-cli.1.gz
+	cat doc/zerotier-idtool.1 | gzip -9 >$(DESTDIR)/usr/share/man/man1/zerotier-idtool.1.gz
 
 uninstall:	FORCE
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-one
@@ -181,5 +189,8 @@ uninstall:	FORCE
 	rm -rf $(DESTDIR)/var/lib/zerotier-one/updates.d
 	rm -rf $(DESTDIR)/var/lib/zerotier-one/networks.d
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-one.port
+	rm -f $(DESTDIR)/usr/share/man/man8/zerotier-one.8.gz
+	rm -f $(DESTDIR)/usr/share/man/man1/zerotier-idtool.1.gz
+	rm -f $(DESTDIR)/usr/share/man/man1/zerotier-cli.1.gz
 
 FORCE:
