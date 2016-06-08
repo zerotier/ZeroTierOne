@@ -47,9 +47,9 @@ Join "Earth," ZeroTier's big public party line network:
 
     $ sudo zerotier-cli join 8056c2e21c000001
     $ sudo zerotier-cli listnetworks
-    ... wait until you get an Earth IP ...
+    ( wait until you get an Earth IP )
     $ ping earth.zerotier.net
-    ... you should now be able to ping our Earth test IP ...
+    ( you should now be able to ping our Earth test IP )
 
 Leave "Earth":
 
