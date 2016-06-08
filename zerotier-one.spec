@@ -17,6 +17,8 @@ Requires:       lz4
 Requires:       libnatpmp
 Requires:       systemd
 
+Provides:       bundled(miniupnpc) = 2.0
+
 %description
 ZeroTier is a software defined networking layer for Earth.
 
