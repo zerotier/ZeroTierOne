@@ -43,7 +43,12 @@
 
 #include "../ext/miniupnpc/miniupnpc.h"
 #include "../ext/miniupnpc/upnpcommands.h"
+
+#ifdef ZT_USE_SYSTEM_LIBNATPMP
+#include <natpmp.h>
+#else
 #include "../ext/libnatpmp/natpmp.h"
+#endif
 
 namespace ZeroTier {
 

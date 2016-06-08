@@ -52,7 +52,11 @@
 #include "version.h"
 #include "include/ZeroTierOne.h"
 
+#ifdef ZT_USE_SYSTEM_JSON_PARSER
+#include <json-parser/json.h>
+#else
 #include "ext/json-parser/json.h"
+#endif
 
 #include "node/Identity.hpp"
 #include "node/CertificateOfMembership.hpp"

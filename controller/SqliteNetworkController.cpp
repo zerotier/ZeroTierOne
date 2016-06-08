@@ -41,7 +41,11 @@
 #include "../include/ZeroTierOne.h"
 #include "../node/Constants.hpp"
 
+#ifdef ZT_USE_SYSTEM_JSON_PARSER
+#include <json-parser/json.h>
+#else
 #include "../ext/json-parser/json.h"
+#endif
 
 #include "SqliteNetworkController.hpp"
 
