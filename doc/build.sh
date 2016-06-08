@@ -14,8 +14,13 @@ fi
 
 rm -f *.1 *.8
 
-node_modules/marked-man/bin/marked-man zerotier-cli.1.md >zerotier-cli.1
-node_modules/marked-man/bin/marked-man zerotier-idtool.1.md >zerotier-idtool.1
-node_modules/marked-man/bin/marked-man zerotier-one.8.md >zerotier-one.8
+NODE=/usr/bin/node
+if [ -e /usr/bin/nodejs ]; then
+	NODE=/usr/bin/nodejs
+fi
+
+$NODE node_modules/marked-man/bin/marked-man zerotier-cli.1.md >zerotier-cli.1
+$NODE node_modules/marked-man/bin/marked-man zerotier-idtool.1.md >zerotier-idtool.1
+$NODE node_modules/marked-man/bin/marked-man zerotier-one.8.md >zerotier-one.8
 
 exit 0
