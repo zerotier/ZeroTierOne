@@ -60,7 +60,10 @@ doc/*.8
 .depend
 node_modules
 debian/files
-debian/zerotier-one*
+debian/zerotier-one
+debian/zerotier-one*.debhelper
+debian/*.log
+debian/zerotier-one.substvars
 
 # MacGap wrapper build files
 /ext/mac-ui-macgap1-wrapper/src/MacGap.xcodeproj/project.xcworkspace/xcuserdata/*

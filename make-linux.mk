@@ -147,7 +147,7 @@ manpages:	FORCE
 	cd doc ; ./build.sh
 
 clean: FORCE
-	rm -rf *.so *.o netcon/*.a node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest zerotier-netcon-service build-* ZeroTierOneInstaller-* *.deb *.rpm .depend netcon/.depend doc/*.1 doc/*.2 doc/*.8 debian/zerotier-one* debian/files
+	rm -rf *.so *.o netcon/*.a node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest zerotier-netcon-service build-* ZeroTierOneInstaller-* *.deb *.rpm .depend netcon/.depend doc/*.1 doc/*.2 doc/*.8 debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one
 	find netcon -type f \( -name '*.o' -o -name '*.so' -o -name '*.1.0' -o -name 'zerotier-one' -o -name 'zerotier-cli' -o -name 'zerotier-netcon-service' \) -delete
 	find netcon/docker-test -name "zerotier-intercept" -type f -delete
 
@@ -182,9 +182,6 @@ install:	FORCE
 	rm -f $(DESTDIR)/usr/share/man/man1/zerotier-cli.1.gz
 	cat doc/zerotier-cli.1 | gzip -9 >$(DESTDIR)/usr/share/man/man1/zerotier-cli.1.gz
 	cat doc/zerotier-idtool.1 | gzip -9 >$(DESTDIR)/usr/share/man/man1/zerotier-idtool.1.gz
-	mkdir -p $(DESTDIR)/usr/lib/systemd/system
-	rm -f $(DESTDIR)/usr/lib/systemd/system/zerotier-one.service
-	cp -f ext/installfiles/linux/systemd/zerotier-one.service $(DESTDIR)/usr/lib/systemd/system
 
 uninstall:	FORCE
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-one
@@ -200,7 +197,6 @@ uninstall:	FORCE
 	rm -f $(DESTDIR)/usr/share/man/man8/zerotier-one.8.gz
 	rm -f $(DESTDIR)/usr/share/man/man1/zerotier-idtool.1.gz
 	rm -f $(DESTDIR)/usr/share/man/man1/zerotier-cli.1.gz
-	rm -f $(DESTDIR)/usr/lib/systemd/system/zerotier-one.service
 
 debian:	distclean
 	debuild -I -i -us -uc
