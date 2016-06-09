@@ -92,12 +92,14 @@ public:
 		throw();
 
 private:
+	/* deprecated
 	enum IpAssignmentType {
 		// IP assignment is a static IP address
 		ZT_IP_ASSIGNMENT_TYPE_ADDRESS = 0,
 		// IP assignment is a network -- a route via this interface, not an address
 		ZT_IP_ASSIGNMENT_TYPE_NETWORK = 1
 	};
+	*/
 
 	unsigned int _doCPGet(
 		const std::vector<std::string> &path,
@@ -176,9 +178,6 @@ private:
 	sqlite3_stmt *_sDeleteMember;
 	sqlite3_stmt *_sDeleteAllNetworkMembers;
 	sqlite3_stmt *_sDeleteNetwork;
-	sqlite3_stmt *_sGetGateways;
-	sqlite3_stmt *_sDeleteGateways;
-	sqlite3_stmt *_sCreateGateway;
 	sqlite3_stmt *_sIncrementMemberRevisionCounter;
 	sqlite3_stmt *_sGetConfig;
 	sqlite3_stmt *_sSetConfig;
