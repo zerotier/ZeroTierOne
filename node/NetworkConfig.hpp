@@ -376,6 +376,8 @@ public:
 		for(unsigned int i=0;i<routeCount;++i) {
 			reinterpret_cast<const InetAddress *>(&(routes[i].target))->serialize(b);
 			reinterpret_cast<const InetAddress *>(&(routes[i].via))->serialize(b);
+			b.append((uint16_t)routes[i].flags);
+			b.append((uint16_t)routes[i].metric);
 		}
 
 		b.append((uint16_t)staticIpCount);
@@ -510,6 +512,8 @@ public:
 		for(unsigned int i=0;i<routeCount;++i) {
 			p += reinterpret_cast<InetAddress *>(&(routes[i].target))->deserialize(b,p);
 			p += reinterpret_cast<InetAddress *>(&(routes[i].via))->deserialize(b,p);
+			routes[i].flags = b.template at<uint16_t>(p); p += 2;
+			routes[i].metric = b.template at<uint16_t>(p); p += 2;
 		}
 
 		staticIpCount = (unsigned int)b.template at<uint16_t>(p); p += 2;
