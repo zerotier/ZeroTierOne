@@ -111,6 +111,9 @@ official: FORCE
 clean:
 	rm -rf netcon/*.so *.dSYM build-* *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli ZeroTierOneInstaller-* mkworld doc/node_modules
 
+distclean:	clean
+	rm -rf doc/node_modules
+
 # For those building from source -- installs signed binary tap driver in system ZT home
 install-mac-tap: FORCE
 	mkdir -p /Library/Application\ Support/ZeroTier/One
