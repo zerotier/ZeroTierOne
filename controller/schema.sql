@@ -88,7 +88,7 @@ CREATE INDEX Member_networkId_memberRevision ON Member(networkId, memberRevision
 CREATE TABLE Route (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
   target blob(16) NOT NULL,
-  via blob(16) NOT NULL,
+  via blob(16),
   targetNetmaskBits integer NOT NULL,
   ipVersion integer NOT NULL,
   flags integer NOT NULL,

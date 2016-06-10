@@ -152,11 +152,9 @@ private:
 	sqlite3_stmt *_sGetActiveBridges;
 	sqlite3_stmt *_sGetIpAssignmentsForNode;
 	sqlite3_stmt *_sGetIpAssignmentPools;
-	sqlite3_stmt *_sGetLocalRoutes;
 	sqlite3_stmt *_sCheckIfIpIsAllocated;
 	sqlite3_stmt *_sAllocateIp;
 	sqlite3_stmt *_sDeleteIpAllocations;
-	sqlite3_stmt *_sDeleteLocalRoutes;
 	sqlite3_stmt *_sGetRelays;
 	sqlite3_stmt *_sListNetworks;
 	sqlite3_stmt *_sListNetworkMembers;

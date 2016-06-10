@@ -89,8 +89,8 @@
 "CREATE TABLE Route (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
 "  target blob(16) NOT NULL,\n"\
+"  via blob(16),\n"\
 "  targetNetmaskBits integer NOT NULL,\n"\
-"  via blob(16) NOT NULL,\n"\
 "  ipVersion integer NOT NULL,\n"\
 "  flags integer NOT NULL,\n"\
 "  metric integer NOT NULL\n"\
