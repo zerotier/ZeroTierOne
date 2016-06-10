@@ -66,8 +66,8 @@
 // Stored in database as schemaVersion key in Config.
 // If not present, database is assumed to be empty and at the current schema version
 // and this key/value is added automatically.
-#define ZT_NETCONF_SQLITE_SCHEMA_VERSION 2
-#define ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR "2"
+#define ZT_NETCONF_SQLITE_SCHEMA_VERSION 3
+#define ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR "3"
 
 // API version reported via JSON control plane
 #define ZT_NETCONF_CONTROLLER_API_VERSION 1
@@ -159,7 +159,9 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 		if (schemaVersion == -1234) {
 			sqlite3_close(_db);
 			throw std::runtime_error("SqliteNetworkController schemaVersion not found in Config table (init failure?)");
-		} else if (schemaVersion == 1) {
+		}
+
+		if (schemaVersion < 2) {
 			// Create NodeHistory table to upgrade from version 1 to version 2
 			if (sqlite3_exec(_db,
 					"CREATE TABLE NodeHistory (\n"
@@ -174,19 +176,46 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 					"  networkRequestMetaData VARCHAR(1024),\n"
 					"  fromAddress VARCHAR(128)\n"
 					");\n"
-					"\n"
 					"CREATE INDEX NodeHistory_nodeId ON NodeHistory (nodeId);\n"
 					"CREATE INDEX NodeHistory_networkId ON NodeHistory (networkId);\n"
 					"CREATE INDEX NodeHistory_requestTime ON NodeHistory (requestTime);\n"
-					"\n"
 					"UPDATE \"Config\" SET \"v\" = 2 WHERE \"k\" = 'schemaVersion';\n"
 				,0,0,0) != SQLITE_OK) {
 				char err[1024];
 				Utils::snprintf(err,sizeof(err),"SqliteNetworkController cannot upgrade the database to version 2: %s",sqlite3_errmsg(_db));
 				sqlite3_close(_db);
 				throw std::runtime_error(err);
+			} else {
+				schemaVersion = 2;
 			}
-		} else if (schemaVersion != ZT_NETCONF_SQLITE_SCHEMA_VERSION) {
+		}
+
+		if (schemaVersion < 3) {
+			// Create Route table to upgrade from version 2 to version 3, also drop obsolete Gateway table (which was never actually used)
+			if (sqlite3_exec(_db,
+					"DROP TABLE Gateway;\n"
+					"CREATE TABLE Route (\n"
+					"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"
+					"  target blob(16) NOT NULL,\n"
+					"  via blob(16) NOT NULL,\n"
+					"  targetNetmaskBits integer NOT NULL,\n"
+					"  ipVersion integer NOT NULL,\n"
+					"  flags integer NOT NULL,\n"
+					"  metric integer NOT NULL\n"
+					");\n"
+					"CREATE INDEX Route_networkId ON Route (networkId);\n"
+					"UPDATE \"Config\" SET \"v\" = 3 WHERE \"k\" = 'schemaVersion';\n"
+				,0,0,0) != SQLITE_OK) {
+				char err[1024];
+				Utils::snprintf(err,sizeof(err),"SqliteNetworkController cannot upgrade the database to version 2: %s",sqlite3_errmsg(_db));
+				sqlite3_close(_db);
+				throw std::runtime_error(err);
+			} else {
+				schemaVersion = 3;
+			}
+		}
+
+		if (schemaVersion != ZT_NETCONF_SQLITE_SCHEMA_VERSION) {
 			sqlite3_close(_db);
 			throw std::runtime_error("SqliteNetworkController database schema version mismatch");
 		}
@@ -259,6 +288,11 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			||(sqlite3_prepare_v2(_db,"UPDATE Member SET activeBridge = ?,memberRevision = (SELECT memberRevisionCounter FROM Network WHERE id = ?) WHERE rowid = ?",-1,&_sUpdateMemberActiveBridge,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sDeleteMember,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ?",-1,&_sDeleteAllNetworkMembers,(const char **)0) != SQLITE_OK)
+
+			/* Route */
+			||(sqlite3_prepare_v2(_db,"INSERT INTO Route (networkId,target,via,targetNetmaskBits,ipVersion,flags,metric) VALUES (?,?,?,?,?,?,?)",-1,&_sCreateRoute,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT target,via,targetNetmaskBits,ipVersion,flags,metric FROM \"Route\" WHERE networkId = ?",-1,&_sGetRoutes,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"DELETE FROM \"Route\" WHERE networkId = ?",-1,&_sDeleteRoutes,(const char **)0) != SQLITE_OK)
 
 			/* Config */
 			||(sqlite3_prepare_v2(_db,"SELECT \"v\" FROM \"Config\" WHERE \"k\" = ?",-1,&_sGetConfig,(const char **)0) != SQLITE_OK)
@@ -343,6 +377,9 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sDeleteMember);
 		sqlite3_finalize(_sDeleteAllNetworkMembers);
 		sqlite3_finalize(_sDeleteNetwork);
+		sqlite3_finalize(_sCreateRoute);
+		sqlite3_finalize(_sGetRoutes);
+		sqlite3_finalize(_sDeleteRoute);
 		sqlite3_finalize(_sIncrementMemberRevisionCounter);
 		sqlite3_finalize(_sGetConfig);
 		sqlite3_finalize(_sSetConfig);

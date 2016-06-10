@@ -51,15 +51,6 @@ CREATE INDEX NodeHistory_nodeId ON NodeHistory (nodeId);
 CREATE INDEX NodeHistory_networkId ON NodeHistory (networkId);
 CREATE INDEX NodeHistory_requestTime ON NodeHistory (requestTime);
 
-CREATE TABLE Gateway (
-  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
-  ip blob(16) NOT NULL,
-  ipVersion integer NOT NULL DEFAULT(4),
-  metric integer NOT NULL DEFAULT(0)
-);
-
-CREATE UNIQUE INDEX Gateway_networkId_ip ON Gateway (networkId, ip);
-
 CREATE TABLE IpAssignment (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
   nodeId char(10) REFERENCES Node(id) ON DELETE CASCADE,
@@ -93,6 +84,18 @@ CREATE TABLE Member (
 
 CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);
 CREATE INDEX Member_networkId_memberRevision ON Member(networkId, memberRevision);
+
+CREATE TABLE Route (
+  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
+  target blob(16) NOT NULL,
+  via blob(16) NOT NULL,
+  targetNetmaskBits integer NOT NULL,
+  ipVersion integer NOT NULL,
+  flags integer NOT NULL,
+  metric integer NOT NULL
+);
+
+CREATE INDEX Route_networkId ON Route (networkId);
 
 CREATE TABLE Relay (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,

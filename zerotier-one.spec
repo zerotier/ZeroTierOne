@@ -67,13 +67,13 @@ cp debian/zerotier-one.service $RPM_BUILD_ROOT%{_unitdir}/%{name}.service
 %license LICENSE.GPL-3
 
 %post
-%systemd_post apache-httpd.service
+%systemd_post zerotier-one.service
 
 %preun
-%systemd_preun apache-httpd.service
+%systemd_preun zerotier-one.service
 
 %postun
-%systemd_postun_with_restart apache-httpd.service
+%systemd_postun_with_restart zerotier-one.service
 
 %changelog
 * Wed Jun 08 2016 François Kooman <fkooman@tuxed.net> - 1.1.5-0.3

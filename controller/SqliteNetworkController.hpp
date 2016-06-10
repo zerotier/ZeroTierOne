@@ -178,6 +178,9 @@ private:
 	sqlite3_stmt *_sDeleteMember;
 	sqlite3_stmt *_sDeleteAllNetworkMembers;
 	sqlite3_stmt *_sDeleteNetwork;
+	sqlite3_stmt *_sCreateRoute;
+	sqlite3_stmt *_sGetRoutes;
+	sqlite3_stmt *_sDeleteRoutes;
 	sqlite3_stmt *_sIncrementMemberRevisionCounter;
 	sqlite3_stmt *_sGetConfig;
 	sqlite3_stmt *_sSetConfig;

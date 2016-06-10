@@ -9,13 +9,14 @@
 #
 # Targets
 #   one: zerotier-one and symlinks (cli and idtool)
-#   doc: builds manpages, requires rst2man somewhere in PATH
-#   all: builds 'one'
+#   manpages: builds manpages, requires 'ronn' or nodeJS (will use either)
+#   all: builds 'one' and 'manpages'
 #   selftest: zerotier-selftest
 #   debug: builds 'one' and 'selftest' with tracing and debug flags
-#   installer: builds installers and packages (RPM/DEB/etc.) if possible
-#   official: cleans and then builds 'one', 'installer', and 'doc'
 #   clean: removes all built files, objects, other trash
+#   distclean: removes a few other things that might be present
+#   debian: build DEB packages; deb dev tools must be present
+#   redhat: build RPM packages; rpm dev tools must be present
 #
 
 # Automagically pick clang or gcc, with preference for clang
@@ -36,7 +37,8 @@ DESTDIR?=
 
 include objects.mk
 
-# On Linux we auto-detect the presence of some libraries
+# On Linux we auto-detect the presence of some libraries and if present we
+# link against the system version. This works with our package build images.
 ifeq ($(wildcard /usr/include/lz4.h),)
 	OBJS+=ext/lz4/lz4.o
 else
@@ -56,21 +58,23 @@ else
 	DEFS+=-DZT_USE_SYSTEM_JSON_PARSER
 endif
 
-ifeq ($(ZT_OFFICIAL_RELEASE),1)
-	DEFS+=-DZT_OFFICIAL_RELEASE
-	ZT_USE_MINIUPNPC=1
-endif
-
 ifeq ($(ZT_USE_MINIUPNPC),1)
-	DEFS+=-DZT_USE_MINIUPNPC -DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING=\"Linux\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
 	OBJS+=osdep/PortMapper.o
 
-	# We always use ext/miniupnpc because versions that ship with various Linux distributions are too old
+	DEFS+=-DZT_USE_MINIUPNPC -DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING=\"Linux\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
+
+	# Right now auto-detect and use of system miniupnpc is disabled since the
+	# versions that ship with various Linux distributions are pretty much all
+	# ancient or broken.
+
 	#ifeq ($(wildcard /usr/include/miniupnpc/miniupnpc.h),)
 		OBJS+=ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o
 	#else
 	#	LDLIBS+=-lminiupnpc
 	#endif
+
+	# libnatpmp on the other hand is safe to auto-detect and use -- the two
+	# libraries are by the same author but are separate.
 
 	ifeq ($(wildcard /usr/include/natpmp.h),)
 		OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o
@@ -127,6 +131,7 @@ one:	$(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
 
+# This is going away -- netcon is becoming the ZeroTier SDK and is going into a separate repo
 netcon: $(OBJS)
 	rm -f *.o
 	# Need to selectively rebuild one.cpp and OneService.cpp with ZT_SERVICE_NETCON and ZT_ONE_NO_ROOT_CHECK defined, and also NetconEthernetTap
@@ -146,6 +151,8 @@ selftest:	$(OBJS) selftest.o
 manpages:	FORCE
 	cd doc ; ./build.sh
 
+doc:	manpages
+
 clean: FORCE
 	rm -rf *.so *.o netcon/*.a node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest zerotier-netcon-service build-* ZeroTierOneInstaller-* *.deb *.rpm .depend netcon/.depend doc/*.1 doc/*.2 doc/*.8 debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one
 	find netcon -type f \( -name '*.o' -o -name '*.so' -o -name '*.1.0' -o -name 'zerotier-one' -o -name 'zerotier-cli' -o -name 'zerotier-netcon-service' \) -delete
@@ -154,9 +161,15 @@ clean: FORCE
 distclean:	clean
 	rm -rf doc/node_modules
 
+realclean:	distclean
+
 debug:	FORCE
 	make ZT_DEBUG=1 one
 	make ZT_DEBUG=1 selftest
+
+# Note: keep the symlinks in /var/lib/zerotier-one to the binaries since these
+# provide backward compatibility with old releases where the binaries actually
+# lived here. Folks got scripts.
 
 install:	FORCE
 	mkdir -p $(DESTDIR)/usr/sbin
@@ -183,6 +196,9 @@ install:	FORCE
 	cat doc/zerotier-cli.1 | gzip -9 >$(DESTDIR)/usr/share/man/man1/zerotier-cli.1.gz
 	cat doc/zerotier-idtool.1 | gzip -9 >$(DESTDIR)/usr/share/man/man1/zerotier-idtool.1.gz
 
+# Uninstall preserves identity.public and identity.secret since the user might
+# want to save these. These are your ZeroTier address.
+
 uninstall:	FORCE
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-one
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-cli
@@ -197,6 +213,8 @@ uninstall:	FORCE
 	rm -f $(DESTDIR)/usr/share/man/man8/zerotier-one.8.gz
 	rm -f $(DESTDIR)/usr/share/man/man1/zerotier-idtool.1.gz
 	rm -f $(DESTDIR)/usr/share/man/man1/zerotier-cli.1.gz
+
+# These are just for convenience for building Linux packages
 
 debian:	distclean
 	debuild -I -i -us -uc
