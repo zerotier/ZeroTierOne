@@ -34,6 +34,10 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
         }
     }
 
+    func deleteNetworkFromList(nwid: String) {
+        
+    }
+
     // NSTableViewDataSource
 
     func numberOfRowsInTableView(tableView: NSTableView) -> Int {
@@ -47,6 +51,7 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
     func tableView(tableView: NSTableView, viewForTableColumn tableColumn: NSTableColumn?, row: Int) -> NSView? {
         if let cell = tableView.makeViewWithIdentifier("NetworkInfoCell", owner: nil) as? NetworkInfoCell {
             let network = networkList[row]
+            cell.parent = self
             cell.networkIdField.stringValue = String(network.nwid, radix: 16)
             cell.networkNameField.stringValue = network.name
 
