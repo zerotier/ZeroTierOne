@@ -115,14 +115,14 @@ static void _ipToBlob(const InetAddress &a,char *ipBlob,int &ipVersion) /* blob[
 {
 	switch(a.ss_family) {
 		case AF_INET:
-			if ((a.netmaskBits() > 0)&&(a.netmaskBits() <= 32)) {
+			if ((a.netmaskBits() >= 0)&&(a.netmaskBits() <= 32)) {
 				memset(ipBlob,0,12);
 				memcpy(ipBlob + 12,a.rawIpData(),4);
 				ipVersion = 4;
 			}
 			break;
 		case AF_INET6:
-			if ((a.netmaskBits() > 0)&&(a.netmaskBits() <= 128)) {
+			if ((a.netmaskBits() >= 0)&&(a.netmaskBits() <= 128)) {
 				memcpy(ipBlob,a.rawIpData(),16);
 				ipVersion = 6;
 			}
@@ -788,10 +788,10 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 													r_target = InetAddress(std::string(r->u.object.values[rk].value->u.string.ptr));
 												else if ((!strcmp(r->u.object.values[rk].name,"via"))&&(r->u.object.values[rk].value->type == json_string))
 													r_via = InetAddress(std::string(r->u.object.values[rk].value->u.string.ptr),0);
-												else if ((!strcmp(r->u.object.values[rk].name,"flags"))&&(r->u.object.values[rk].value->type == json_string))
-													r_flags = (int)(Utils::strToUInt(r->u.object.values[rk].value->u.string.ptr) & 0xffff);
-												else if ((!strcmp(r->u.object.values[rk].name,"metric"))&&(r->u.object.values[rk].value->type == json_string))
-													r_metric = (int)(Utils::strToUInt(r->u.object.values[rk].value->u.string.ptr) & 0xffff);
+												else if ((!strcmp(r->u.object.values[rk].name,"flags"))&&(r->u.object.values[rk].value->type == json_integer))
+													r_flags = (int)(r->u.object.values[rk].value->u.integer & 0xffff);
+												else if ((!strcmp(r->u.object.values[rk].name,"metric"))&&(r->u.object.values[rk].value->type == json_integer))
+													r_metric = (int)(r->u.object.values[rk].value->u.integer & 0xffff);
 											}
 											if ((r_target)&&((!r_via)||(r_via.ss_family == r_target.ss_family))) {
 												int r_ipVersion = 0;
