@@ -60,7 +60,6 @@ class JoinNetworkViewController: NSViewController, NSComboBoxDelegate, NSComboBo
 
     @IBAction func onJoinClicked(sender: AnyObject?) {
         let networkString = network.stringValue
-        let networkId = UInt64(networkString, radix: 16)
 
         ServiceCom.joinNetwork(networkString)
 
