@@ -134,7 +134,6 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetw
 		"%s\t\"broadcastEnabled\": %s,\n"
 		"%s\t\"portError\": %d,\n"
 		"%s\t\"netconfRevision\": %lu,\n"
-		"%s\t\"multicastSubscriptions\": %s,\n"
 		"%s\t\"assignedAddresses\": %s,\n"
 		"%s\t\"portDeviceName\": \"%s\"\n"
 		"%s}",
@@ -150,7 +149,6 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetw
 		prefix,(nc->broadcastEnabled == 0) ? "false" : "true",
 		prefix,nc->portError,
 		prefix,nc->netconfRevision,
-		prefix,_jsonEnumerate(nc->multicastSubscriptions,nc->multicastSubscriptionCount).c_str(),
 		prefix,_jsonEnumerate(nc->assignedAddresses,nc->assignedAddressCount).c_str(),
 		prefix,_jsonEscape(portDeviceName).c_str(),
 		prefix);

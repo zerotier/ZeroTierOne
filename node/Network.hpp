@@ -281,16 +281,6 @@ public:
 	void learnBridgedMulticastGroup(const MulticastGroup &mg,uint64_t now);
 
 	/**
-	 * @return True if traffic on this network's tap is enabled
-	 */
-	inline bool enabled() const throw() { return _enabled; }
-
-	/**
-	 * @param enabled Should traffic be allowed on this network?
-	 */
-	void setEnabled(bool enabled);
-
-	/**
 	 * Destroy this network
 	 *
 	 * This causes the network to disable itself, destroy its tap device, and on
@@ -323,7 +313,6 @@ private:
 	void *_uPtr;
 	uint64_t _id;
 	MAC _mac; // local MAC address
-	volatile bool _enabled;
 	volatile bool _portInitialized;
 
 	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to (according to tap)

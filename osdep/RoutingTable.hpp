@@ -42,14 +42,14 @@ public:
 		InetAddress gateway;
 
 		/**
-		 * System device index or ID (not included in comparison operators, may not be set on all platforms)
-		 */
-		int deviceIndex;
-
-		/**
 		 * Metric or hop count -- higher = lower routing priority
 		 */
 		int metric;
+
+		/**
+		 * Device index -- not used on all platforms
+		 */
+		int deviceIndex;
 
 		/**
 		 * Interface scoped route? (always false if not meaningful on this OS)

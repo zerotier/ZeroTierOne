@@ -804,31 +804,14 @@ typedef struct
 	int broadcastEnabled;
 
 	/**
-	 * If the network is in PORT_ERROR state, this is the error most recently returned by the port config callback
+	 * If the network is in PORT_ERROR state, this is the (negative) error code most recently reported
 	 */
 	int portError;
 
 	/**
-	 * Is this network enabled? If not, all frames to/from are dropped.
-	 */
-	int enabled;
-
-	/**
-	 * Network config revision as reported by netconf master
-	 *
-	 * If this is zero, it means we're still waiting for our netconf.
+	 * Revision number as reported by controller or 0 if still waiting for config
 	 */
 	unsigned long netconfRevision;
-
-	/**
-	 * Number of multicast group subscriptions
-	 */
-	unsigned int multicastSubscriptionCount;
-
-	/**
-	 * Multicast group subscriptions
-	 */
-	ZT_MulticastGroup multicastSubscriptions[ZT_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS];
 
 	/**
 	 * Number of assigned addresses

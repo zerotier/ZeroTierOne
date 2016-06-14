@@ -485,7 +485,7 @@ public:
 	Node *_node;
 
 	/*
-	 * To properly handle NAT/gateway craziness we use three local UDP ports:
+	 * To attempt to handle NAT/gateway craziness we use three local UDP ports:
 	 *
 	 * [0] is the normal/default port, usually 9993
 	 * [1] is a port dervied from our ZeroTier address
@@ -519,10 +519,17 @@ public:
 	// Deadline for the next background task service function
 	volatile uint64_t _nextBackgroundTaskDeadline;
 
-	// Tap devices by network ID
-	std::map< uint64_t,EthernetTap * > _taps;
-	std::map< uint64_t,std::vector<InetAddress> > _tapAssignedIps; // ZeroTier assigned IPs, not user or dhcp assigned
-	Mutex _taps_m;
+	// Configured networks
+	struct NetworkState
+	{
+		NetworkState() : tap((EthernetTap *)0),managedIps(),managedRoutes() {}
+
+		EthernetTap *tap;
+		std::vector<InetAddress> managedIps;
+		std::vector<InetAddress> managedRoutes; // by 'target'
+	};
+	std::map<uint64_t,NetworkState> _nets;
+	Mutex _nets_m;
 
 	// Active TCP/IP connections
 	std::set< TcpConnection * > _tcpConnections; // no mutex for this since it's done in the main loop thread only
@@ -872,14 +879,16 @@ public:
 
 				if ((now - lastTapMulticastGroupCheck) >= ZT_TAP_CHECK_MULTICAST_INTERVAL) {
 					lastTapMulticastGroupCheck = now;
-					Mutex::Lock _l(_taps_m);
-					for(std::map< uint64_t,EthernetTap *>::const_iterator t(_taps.begin());t!=_taps.end();++t) {
-						std::vector<MulticastGroup> added,removed;
-						t->second->scanMulticastGroups(added,removed);
-						for(std::vector<MulticastGroup>::iterator m(added.begin());m!=added.end();++m)
-							_node->multicastSubscribe(t->first,m->mac().toInt(),m->adi());
-						for(std::vector<MulticastGroup>::iterator m(removed.begin());m!=removed.end();++m)
-							_node->multicastUnsubscribe(t->first,m->mac().toInt(),m->adi());
+					Mutex::Lock _l(_nets_m);
+					for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
+						if (n->second.tap) {
+							std::vector<MulticastGroup> added,removed;
+							n->second.tap->scanMulticastGroups(added,removed);
+							for(std::vector<MulticastGroup>::iterator m(added.begin());m!=added.end();++m)
+								_node->multicastSubscribe(n->first,m->mac().toInt(),m->adi());
+							for(std::vector<MulticastGroup>::iterator m(removed.begin());m!=removed.end();++m)
+								_node->multicastUnsubscribe(n->first,m->mac().toInt(),m->adi());
+						}
 					}
 				}
 
@@ -921,10 +930,10 @@ public:
 		} catch ( ... ) {}
 
 		{
-			Mutex::Lock _l(_taps_m);
-			for(std::map< uint64_t,EthernetTap * >::iterator t(_taps.begin());t!=_taps.end();++t)
-				delete t->second;
-			_taps.clear();
+			Mutex::Lock _l(_nets_m);
+			for(std::map<uint64_t,NetworkState>::iterator n(_nets.begin());n!=_nets.end();++n)
+				delete n->second.tap;
+			_nets.clear();
 		}
 
 		delete _controlPlane;
@@ -949,11 +958,11 @@ public:
 
 	virtual std::string portDeviceName(uint64_t nwid) const
 	{
-		Mutex::Lock _l(_taps_m);
-		std::map< uint64_t,EthernetTap * >::const_iterator t(_taps.find(nwid));
-		if (t != _taps.end())
-			return t->second->deviceName();
-		return std::string();
+		Mutex::Lock _l(_nets_m);
+		std::map<uint64_t,NetworkState>::const_iterator n(_nets.find(nwid));
+		if ((n != _nets.end())&&(n->second.tap))
+			return n->second.tap->deviceName();
+		else return std::string();
 	}
 
 	virtual bool tcpFallbackActive() const
@@ -1203,15 +1212,17 @@ public:
 
 	inline int nodeVirtualNetworkConfigFunction(uint64_t nwid,void **nuptr,enum ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nwc)
 	{
-		Mutex::Lock _l(_taps_m);
-		std::map< uint64_t,EthernetTap * >::iterator t(_taps.find(nwid));
+		Mutex::Lock _l(_nets_m);
+		NetworkState &n = _nets[nwid];
+
 		switch(op) {
+
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP:
-				if (t == _taps.end()) {
+				if (!n.tap) {
 					try {
-						char friendlyName[1024];
+						char friendlyName[128];
 						Utils::snprintf(friendlyName,sizeof(friendlyName),"ZeroTier One [%.16llx]",nwid);
-						t = _taps.insert(std::pair< uint64_t,EthernetTap *>(nwid,new EthernetTap(
+						n.tap = new EthernetTap(
 							_homePath.c_str(),
 							MAC(nwc->mac),
 							nwc->mtu,
@@ -1219,8 +1230,8 @@ public:
 							nwid,
 							friendlyName,
 							StapFrameHandler,
-							(void *)this))).first;
-						*nuptr = (void *)t->second;
+							(void *)this);
+						*nuptr = (void *)&n;
 					} catch (std::exception &exc) {
 #ifdef __WINDOWS__
 						FILE *tapFailLog = fopen((_homePath + ZT_PATH_SEPARATOR_S"port_error_log.txt").c_str(),"a");
@@ -1231,53 +1242,59 @@ public:
 #else
 						fprintf(stderr,"ERROR: unable to configure virtual network port: %s"ZT_EOL_S,exc.what());
 #endif
+						_nets.erase(nwid);
 						return -999;
 					} catch ( ... ) {
 						return -999; // tap init failed
 					}
 				}
-				// fall through...
-			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
-				if (t != _taps.end()) {
-					t->second->setEnabled(nwc->enabled != 0);
+				// After setting up tap, fall through to CONFIG_UPDATE since we also want to do this...
 
-					std::vector<InetAddress> &assignedIps = _tapAssignedIps[nwid];
-					std::vector<InetAddress> newAssignedIps;
+			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
+				if (n.tap) { // sanity check
+					std::vector<InetAddress> newManagedIps;
 					for(unsigned int i=0;i<nwc->assignedAddressCount;++i)
-						newAssignedIps.push_back(InetAddress(nwc->assignedAddresses[i]));
-					std::sort(newAssignedIps.begin(),newAssignedIps.end());
-					newAssignedIps.erase(std::unique(newAssignedIps.begin(),newAssignedIps.end()),newAssignedIps.end());
-					for(std::vector<InetAddress>::iterator ip(newAssignedIps.begin());ip!=newAssignedIps.end();++ip) {
-						if (!std::binary_search(assignedIps.begin(),assignedIps.end(),*ip))
-							if (!t->second->addIp(*ip))
+						newManagedIps.push_back(*(reinterpret_cast<const InetAddress *>(&(nwc->assignedAddresses[i]))));
+					std::sort(newManagedIps.begin(),newManagedIps.end());
+					newManagedIps.erase(std::unique(newManagedIps.begin(),newManagedIps.end()),newManagedIps.end());
+
+					for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
+						if (!std::binary_search(n.managedIps.begin(),n.managedIps.end(),*ip))
+							if (!n.tap->addIp(*ip))
 								fprintf(stderr,"ERROR: unable to add ip address %s"ZT_EOL_S, ip->toString().c_str());
 					}
-					for(std::vector<InetAddress>::iterator ip(assignedIps.begin());ip!=assignedIps.end();++ip) {
-						if (!std::binary_search(newAssignedIps.begin(),newAssignedIps.end(),*ip))
-							if (!t->second->removeIp(*ip))
+
+					for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
+						if (!std::binary_search(newManagedIps.begin(),newManagedIps.end(),*ip))
+							if (!n.tap->removeIp(*ip))
 								fprintf(stderr,"ERROR: unable to remove ip address %s"ZT_EOL_S, ip->toString().c_str());
 					}
-					assignedIps.swap(newAssignedIps);
+
+					n.managedIps.swap(newManagedIps); // faster than assign -- just swap pointers and let the old one die
 				} else {
+					_nets.erase(nwid);
 					return -999; // tap init failed
 				}
 				break;
+
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN:
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY:
-				if (t != _taps.end()) {
+				if (n.tap) { // sanity check
 #ifdef __WINDOWS__
-					std::string winInstanceId(t->second->instanceId());
+					std::string winInstanceId(n.tap->instanceId());
 #endif
 					*nuptr = (void *)0;
-					delete t->second;
-					_taps.erase(t);
-					_tapAssignedIps.erase(nwid);
+					delete n.tap;
+					_nets.erase(nwid);
 #ifdef __WINDOWS__
 					if ((op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY)&&(winInstanceId.length() > 0))
 						WindowsEthernetTap::deletePersistentTapDevice(winInstanceId.c_str());
 #endif
+				} else {
+					_nets.erase(nwid);
 				}
 				break;
+
 		}
 		return 0;
 	}
@@ -1437,18 +1454,18 @@ public:
 
 	inline void nodeVirtualNetworkFrameFunction(uint64_t nwid,void **nuptr,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
-		EthernetTap *tap = reinterpret_cast<EthernetTap *>(*nuptr);
-		if (!tap)
+		NetworkState *n = reinterpret_cast<NetworkState *>(*nuptr);
+		if ((!n)||(!n->tap))
 			return;
-		tap->put(MAC(sourceMac),MAC(destMac),etherType,data,len);
+		n->tap->put(MAC(sourceMac),MAC(destMac),etherType,data,len);
 	}
 
 	inline int nodePathCheckFunction(const struct sockaddr_storage *localAddr,const struct sockaddr_storage *remoteAddr)
 	{
-		Mutex::Lock _l(_taps_m);
-		for(std::map< uint64_t,EthernetTap * >::const_iterator t(_taps.begin());t!=_taps.end();++t) {
-			if (t->second) {
-				std::vector<InetAddress> ips(t->second->ips());
+		Mutex::Lock _l(_nets_m);
+		for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
+			if (n->second.tap) {
+				std::vector<InetAddress> ips(n->second.tap->ips());
 				for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
 					if (i->containsAddress(*(reinterpret_cast<const InetAddress *>(remoteAddr)))) {
 						return 0;
@@ -1456,6 +1473,7 @@ public:
 				}
 			}
 		}
+		// TODO: also check routing table for L3 routes via ZeroTier managed devices
 		return 1;
 	}
 
@@ -1521,10 +1539,10 @@ public:
 		if (isBlacklistedLocalInterfaceForZeroTierTraffic(ifname))
 			return false;
 
-		Mutex::Lock _l(_taps_m);
-		for(std::map< uint64_t,EthernetTap * >::const_iterator t(_taps.begin());t!=_taps.end();++t) {
-			if (t->second) {
-				std::vector<InetAddress> ips(t->second->ips());
+		Mutex::Lock _l(_nets_m);
+		for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
+			if (n->second.tap) {
+				std::vector<InetAddress> ips(n->second.tap->ips());
 				for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
 					if (i->ipsEqual(ifaddr))
 						return false;

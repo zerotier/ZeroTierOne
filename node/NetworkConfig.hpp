@@ -628,7 +628,7 @@ public:
 		printf("routeCount==%u\n",routeCount);
 		for(unsigned int i=0;i<routeCount;++i) {
 			printf("  routes[i].target==%s\n",reinterpret_cast<const struct sockaddr_storage *>(&(routes[i].target))->toString().c_str());
-			printf("  routes[i].via==%s\n",reinterpret_cast<const struct sockaddr_storage *>(&(routes[i].via))->toString().c_str());
+			printf("  routes[i].via==%s\n",reinterpret_cast<const struct sockaddr_storage *>(&(routes[i].via))->toIpString().c_str());
 		}
 		printf("staticIpCount==%u\n",staticIpCount);
 		for(unsigned int i=0;i<staticIpCount;++i)

@@ -41,7 +41,6 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 	_uPtr(uptr),
 	_id(nwid),
 	_mac(renv->identity.address(),nwid),
-	_enabled(true),
 	_portInitialized(false),
 	_lastConfigUpdate(0),
 	_destroyed(false),
@@ -337,21 +336,9 @@ void Network::learnBridgedMulticastGroup(const MulticastGroup &mg,uint64_t now)
 		_announceMulticastGroups();
 }
 
-void Network::setEnabled(bool enabled)
-{
-	Mutex::Lock _l(_lock);
-	if (_enabled != enabled) {
-		_enabled = enabled;
-		ZT_VirtualNetworkConfig ctmp;
-		_externalConfig(&ctmp);
-		_portError = RR->node->configureVirtualNetworkPort(_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE,&ctmp);
-	}
-}
-
 void Network::destroy()
 {
 	Mutex::Lock _l(_lock);
-	_enabled = false;
 	_destroyed = true;
 }
 
@@ -388,14 +375,7 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	ec->bridge = ((_config.allowPassiveBridging())||(std::find(ab.begin(),ab.end(),RR->identity.address()) != ab.end())) ? 1 : 0;
 	ec->broadcastEnabled = (_config) ? (_config.enableBroadcast() ? 1 : 0) : 0;
 	ec->portError = _portError;
-	ec->enabled = (_enabled) ? 1 : 0;
 	ec->netconfRevision = (_config) ? (unsigned long)_config.revision : 0;
-
-	ec->multicastSubscriptionCount = std::min((unsigned int)_myMulticastGroups.size(),(unsigned int)ZT_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS);
-	for(unsigned int i=0;i<ec->multicastSubscriptionCount;++i) {
-		ec->multicastSubscriptions[i].mac = _myMulticastGroups[i].mac().toInt();
-		ec->multicastSubscriptions[i].adi = _myMulticastGroups[i].adi();
-	}
 
 	ec->assignedAddressCount = 0;
 	for(unsigned int i=0;i<ZT_MAX_ZT_ASSIGNED_ADDRESSES;++i) {
