@@ -23,19 +23,92 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
         tableView.backgroundColor = NSColor.clearColor()
     }
 
+    private func  dataFile() -> String {
+        var appSupport = NSFileManager.defaultManager().URLsForDirectory(.ApplicationSupportDirectory, inDomains: .UserDomainMask)[0]
+        appSupport = appSupport.URLByAppendingPathComponent("ZeroTier").URLByAppendingPathComponent("One").URLByAppendingPathComponent("networks.dat")
+        return appSupport.path!
+    }
+
+
+    private func findNetworkWithID(id: UInt64) -> Int {
+
+        for (index, element) in networkList.enumerate() {
+
+            if element.nwid == id {
+                return index
+            }
+        }
+
+        return NSNotFound
+    }
+
     override func viewWillAppear() {
         super.viewWillAppear()
 
-        ServiceCom.getNetworkList() { (networkList) -> Void in
-            NSOperationQueue.mainQueue().addOperationWithBlock() { () -> Void in
-                self.networkList = networkList
-                self.tableView.reloadData()
+        let filePath = dataFile()
+
+        if NSFileManager.defaultManager().fileExistsAtPath(filePath) {
+            networkList = NSKeyedUnarchiver.unarchiveObjectWithFile(filePath) as! [Network]
+
+            ServiceCom.getNetworkList() { (networkList) -> Void in
+
+                for nw in networkList {
+                    let index = self.findNetworkWithID(nw.nwid)
+
+                    if index != NSNotFound {
+                        self.networkList[index] = nw
+                    }
+                    else {
+                        self.networkList.append(nw)
+                    }
+                }
+
+                NSOperationQueue.mainQueue().addOperationWithBlock() { () -> Void in
+                    self.networkList.sortInPlace({ (left, right) -> Bool in
+                        if left.nwid < right.nwid {
+                            return true
+                        }
+
+                        return false
+                    })
+                    self.tableView.reloadData()
+                }
+            }
+        }
+        else {
+            ServiceCom.getNetworkList() { (networkList) -> Void in
+                NSOperationQueue.mainQueue().addOperationWithBlock() { () -> Void in
+                    self.networkList.sortInPlace({ (left, right) -> Bool in
+                        if left.nwid < right.nwid {
+                            return true
+                        }
+
+                        return false
+                    })
+                    
+                    self.networkList = networkList
+                    self.tableView.reloadData()
+                }
             }
         }
     }
 
+    override func viewWillDisappear() {
+        super.viewWillDisappear()
+
+        let filePath = dataFile()
+        NSKeyedArchiver.archiveRootObject(self.networkList, toFile: filePath)
+    }
+
     func deleteNetworkFromList(nwid: String) {
-        
+        if let nwid = UInt64(nwid, radix: 16) {
+            let index = findNetworkWithID(nwid)
+
+            if index != NSNotFound {
+                networkList.removeAtIndex(index)
+                tableView.reloadData()
+            }
+        }
     }
 
     // NSTableViewDataSource
@@ -71,6 +144,12 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
                 cell.addressesField.stringValue += "\n"
             }
 
+            if network.connected {
+                cell.connectedCheckbox.state = NSOnState
+            }
+            else {
+                cell.connectedCheckbox.state = NSOffState
+            }
 
             return cell
         }

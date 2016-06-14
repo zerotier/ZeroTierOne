@@ -8,7 +8,7 @@
 
 import Cocoa
 
-enum NetworkStatus : CustomStringConvertible {
+enum NetworkStatus : Int, CustomStringConvertible {
     case REQUESTING_CONFIGURATION
     case OK
     case ACCESS_DENIED
@@ -28,7 +28,7 @@ enum NetworkStatus : CustomStringConvertible {
     }
 }
 
-enum NetworkType: CustomStringConvertible {
+enum NetworkType: Int, CustomStringConvertible {
     case PUBLIC
     case PRIVATE
 
@@ -40,7 +40,25 @@ enum NetworkType: CustomStringConvertible {
     }
 }
 
-class Network: NSObject {
+
+struct PropertyKeys {
+    static let addressesKey = "addresses"
+    static let bridgeKey = "bridge"
+    static let broadcastKey = "broadcast"
+    static let dhcpKey = "dhcp"
+    static let macKey = "mac"
+    static let mtuKey = "mtu"
+    static let multicastKey = "multicast"
+    static let nameKey = "name"
+    static let netconfKey = "netconf"
+    static let nwidKey = "nwid"
+    static let portNameKey = "port"
+    static let portErrorKey = "portError"
+    static let statusKey = "status"
+    static let typeKey = "type"
+}
+
+class Network: NSObject, NSCoding  {
     var assignedAddresses: [String] = [String]()
     var bridge: Bool = false
     var broadcastEnabled: Bool = false
@@ -55,6 +73,7 @@ class Network: NSObject {
     var portError: Int = 0
     var status: NetworkStatus = .REQUESTING_CONFIGURATION
     var type: NetworkType = .PRIVATE
+    var connected: Bool = false // NOT PERSISTED.  Set to true if loaded via JSON
 
     init(jsonData: [String: AnyObject]) {
         super.init()
@@ -108,5 +127,42 @@ class Network: NSObject {
         default:
             break
         }
+
+        // if it's being initialized via JSON, it's connected
+        connected = true
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        self.assignedAddresses = aDecoder.decodeObjectForKey(PropertyKeys.addressesKey) as! [String]
+        self.bridge = aDecoder.decodeBoolForKey(PropertyKeys.bridgeKey)
+        self.broadcastEnabled = aDecoder.decodeBoolForKey(PropertyKeys.broadcastKey)
+        self.dhcp = aDecoder.decodeBoolForKey(PropertyKeys.dhcpKey)
+        self.mac = aDecoder.decodeObjectForKey(PropertyKeys.macKey) as! String
+        self.mtu = aDecoder.decodeIntegerForKey(PropertyKeys.mtuKey)
+        self.multicastSubscriptions = aDecoder.decodeObjectForKey(PropertyKeys.multicastKey) as! [String]
+        self.name = aDecoder.decodeObjectForKey(PropertyKeys.nameKey) as! String
+        self.netconfRevision = aDecoder.decodeIntegerForKey(PropertyKeys.netconfKey)
+        self.nwid = (aDecoder.decodeObjectForKey(PropertyKeys.nwidKey) as! NSNumber).unsignedLongLongValue
+        self.portDeviceName = aDecoder.decodeObjectForKey(PropertyKeys.portNameKey) as! String
+        self.portError = aDecoder.decodeIntegerForKey(PropertyKeys.portErrorKey)
+        self.status = NetworkStatus(rawValue: aDecoder.decodeIntegerForKey(PropertyKeys.statusKey))!
+        self.type = NetworkType(rawValue: aDecoder.decodeIntegerForKey(PropertyKeys.typeKey))!
+    }
+
+    func encodeWithCoder(aCoder: NSCoder) {
+        aCoder.encodeObject(self.assignedAddresses, forKey: PropertyKeys.addressesKey)
+        aCoder.encodeBool(self.bridge, forKey: PropertyKeys.bridgeKey)
+        aCoder.encodeBool(self.broadcastEnabled, forKey: PropertyKeys.broadcastKey)
+        aCoder.encodeBool(self.dhcp, forKey: PropertyKeys.dhcpKey)
+        aCoder.encodeObject(self.mac, forKey: PropertyKeys.macKey)
+        aCoder.encodeInteger(self.mtu, forKey: PropertyKeys.mtuKey)
+        aCoder.encodeObject(self.multicastSubscriptions, forKey: PropertyKeys.multicastKey)
+        aCoder.encodeObject(self.name, forKey: PropertyKeys.nameKey)
+        aCoder.encodeInteger(self.netconfRevision, forKey: PropertyKeys.netconfKey)
+        aCoder.encodeObject(NSNumber(unsignedLongLong: self.nwid), forKey: PropertyKeys.nwidKey)
+        aCoder.encodeObject(self.portDeviceName, forKey: PropertyKeys.portNameKey)
+        aCoder.encodeInteger(self.portError, forKey: PropertyKeys.portErrorKey)
+        aCoder.encodeInteger(self.status.rawValue, forKey: PropertyKeys.statusKey)
+        aCoder.encodeInteger(self.type.rawValue, forKey: PropertyKeys.typeKey)
     }
 }
