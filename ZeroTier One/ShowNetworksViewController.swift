@@ -14,6 +14,9 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
 
     var networkList: [Network] = [Network]()
 
+
+    var timer: NSTimer? = nil
+
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do view setup here.
@@ -45,10 +48,36 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
     override func viewWillAppear() {
         super.viewWillAppear()
 
+        updateNetworkInfo()
+
+        self.timer = NSTimer.scheduledTimerWithTimeInterval(1.0, target: self, selector: #selector(updateNetworkInfo), userInfo: nil, repeats: true)
+    }
+
+    override func viewWillDisappear() {
+        super.viewWillDisappear()
+
+        self.timer?.invalidate()
+
         let filePath = dataFile()
+        NSKeyedArchiver.archiveRootObject(self.networkList, toFile: filePath)
+    }
+
+    func deleteNetworkFromList(nwid: String) {
+        if let nwid = UInt64(nwid, radix: 16) {
+            let index = findNetworkWithID(nwid)
+
+            if index != NSNotFound {
+                networkList.removeAtIndex(index)
+                tableView.reloadData()
+            }
+        }
+    }
+
+    func updateNetworkInfo() {
+        let filePath = self.dataFile()
 
         if NSFileManager.defaultManager().fileExistsAtPath(filePath) {
-            networkList = NSKeyedUnarchiver.unarchiveObjectWithFile(filePath) as! [Network]
+            self.networkList = NSKeyedUnarchiver.unarchiveObjectWithFile(filePath) as! [Network]
 
             ServiceCom.getNetworkList() { (networkList) -> Void in
 
@@ -85,28 +114,10 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
 
                         return false
                     })
-                    
+
                     self.networkList = networkList
                     self.tableView.reloadData()
                 }
-            }
-        }
-    }
-
-    override func viewWillDisappear() {
-        super.viewWillDisappear()
-
-        let filePath = dataFile()
-        NSKeyedArchiver.archiveRootObject(self.networkList, toFile: filePath)
-    }
-
-    func deleteNetworkFromList(nwid: String) {
-        if let nwid = UInt64(nwid, radix: 16) {
-            let index = findNetworkWithID(nwid)
-
-            if index != NSNotFound {
-                networkList.removeAtIndex(index)
-                tableView.reloadData()
             }
         }
     }
