@@ -263,11 +263,15 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 
 #endif // __WINDOWS__ --------------------------------------------------------
 
+#ifndef ZT_ROUTING_SUPPORT_FOUND
+#error ManagedRoute.cpp has no support for managing routes on this platform! You'll need to check and see if one of the existing ones will work and make sure proper defines are set, or write one. Please do a Github pull request if you do this for a new OS!
+#endif
+
 } // anonymous namespace
 
 bool ManagedRoute::sync()
 {
-	if (this->target.isDefaultRoute()) {
+	if (_target.isDefaultRoute()) {
 		/* In ZeroTier we use a forked-route trick to override the default
 		 * with a more specific one while leaving the original system route
 		 * intact. We also create a shadow more specific route to the
@@ -276,52 +280,68 @@ bool ManagedRoute::sync()
 		 * done *slightly* differently on different platforms. */
 
 		InetAddress leftt,rightt;
-		_forkTarget(this->target,leftt,rightt);
+		_forkTarget(_target,leftt,rightt);
 
 #ifdef __BSD__ // ------------------------------------------------------------
 
-		InetAddress systemVia;
-		char systemDevice[128];
+		// Get system default route information
+		InetAddress newSystemVia;
+		char newSystemDevice[128];
+		newSystemDevice[0] = (char)0;
 		int systemMetric = 9999999;
-		systemDevice[0] = (char)0;
-
-		std::vector<_RTE> rtes(_getRTEs(this->target,false));
+		std::vector<_RTE> rtes(_getRTEs(_target,false));
 		for(std::vector<_RTE>::iterator r(rtes.begin());r!=rtes.end();++r) {
 			if (r->via) {
-				if ((!systemVia)||(r->metric < systemMetric)) {
-					systemVia = r->via;
-					Utils::scopy(systemDevice,sizeof(systemDevice),r->device);
+				if ((!newSystemVia)||(r->metric < systemMetric)) {
+					newSystemVia = r->via;
+					Utils::scopy(_systemDevice,sizeof(_systemDevice),r->device);
 					systemMetric = r->metric;
 				}
 			}
 		}
-
-		if (!systemDevice[0]) {
-			rtes = _getRTEs(systemVia,true);
+		if (!newSystemDevice[0]) {
+			rtes = _getRTEs(newSystemVia,true);
 			for(std::vector<_RTE>::iterator r(rtes.begin());r!=rtes.end();++r) {
-				if (r->device[0])
-					Utils::scopy(systemDevice,sizeof(systemDevice),r->device);
+				if (r->device[0]) {
+					Utils::scopy(newSystemDevice,sizeof(newSystemDevice),r->device);
+					break;
+				}
 			}
 		}
-
-		if ((!systemVia)||(!systemDevice[0]))
+		if ((!newSystemVia)||(!newSystemDevice[0]))
 			return false;
 
-		_routeCmd("add",leftt,systemVia,systemDevice,(const char *)0);
-		_routeCmd("change",leftt,systemVia,systemDevice,(const char *)0);
-		_routeCmd("add",rightt,systemVia,systemDevice,(const char *)0);
-		_routeCmd("change",rightt,systemVia,systemDevice,(const char *)0);
+		// If system default route has changed or hasn't been shadowed yet, update shadow
+		if ((_systemVia != newSystemVia)||(!strcmp(_systemDevice,newSystemDevice))) {
+			if ((_systemVia)&&(_systemDevice[0])) {
+				_routeCmd("delete",leftt,_systemVia,_systemDevice,(const char *)0);
+				_routeCmd("delete",rightt,_systemVia,_systemDevice,(const char *)0);
+			}
 
-		if (this->via) {
-			_routeCmd("add",leftt,this->via,(const char *)0,(const char *)0);
-			_routeCmd("change",leftt,this->via,(const char *)0,(const char *)0);
-			_routeCmd("add",rightt,this->via,(const char *)0,(const char *)0);
-			_routeCmd("change",rightt,this->via,(const char *)0,(const char *)0);
-		} else if ((this->device)&&(this->device[0])) {
-			_routeCmd("add",leftt,this->via,(const char *)0,this->device);
-			_routeCmd("change",leftt,this->via,(const char *)0,this->device);
-			_routeCmd("add",rightt,this->via,(const char *)0,this->device);
-			_routeCmd("change",rightt,this->via,(const char *)0,this->device);
+			_systemVia = newSystemVia;
+			Utils::scopy(_systemDevice,sizeof(_systemDevice),newSystemDevice);
+
+			_routeCmd("add",leftt,_systemVia,_systemDevice,(const char *)0);
+			_routeCmd("change",leftt,_systemVia,_systemDevice,(const char *)0);
+			_routeCmd("add",rightt,_systemVia,_systemDevice,(const char *)0);
+			_routeCmd("change",rightt,_systemVia,_systemDevice,(const char *)0);
+		}
+
+		// Apply overriding routes
+		if (!_applied) {
+			if (_via) {
+				_routeCmd("add",leftt,_via,(const char *)0,(const char *)0);
+				_routeCmd("change",leftt,_via,(const char *)0,(const char *)0);
+				_routeCmd("add",rightt,_via,(const char *)0,(const char *)0);
+				_routeCmd("change",rightt,_via,(const char *)0,(const char *)0);
+			} else if (_device[0]) {
+				_routeCmd("add",leftt,_via,(const char *)0,_device);
+				_routeCmd("change",leftt,_via,(const char *)0,_device);
+				_routeCmd("add",rightt,_via,(const char *)0,_device);
+				_routeCmd("change",rightt,_via,(const char *)0,_device);
+			}
+
+			_applied = true;
 		}
 
 #endif // __BSD__ ------------------------------------------------------------
@@ -357,59 +377,32 @@ bool ManagedRoute::sync()
 
 void ManagedRoute::remove()
 {
-	if (!this->applied)
-		return;
+	if (_applied) {
+		if (_target.isDefaultRoute()) {
+			/* In ZeroTier we use a forked-route trick to override the default
+			* with a more specific one while leaving the original system route
+			* intact. We also create a shadow more specific route to the
+			* original gateway that is device-bound so that ZeroTier's device
+			* bound ports go via the physical Internet link. This has to be
+			* done *slightly* differently on different platforms. */
 
-	if (this->target.isDefaultRoute()) {
-		/* In ZeroTier we use a forked-route trick to override the default
-		 * with a more specific one while leaving the original system route
-		 * intact. We also create a shadow more specific route to the
-		 * original gateway that is device-bound so that ZeroTier's device
-		 * bound ports go via the physical Internet link. This has to be
-		 * done *slightly* differently on different platforms. */
-
-		InetAddress leftt,rightt;
-		_forkTarget(this->target,leftt,rightt);
+			InetAddress leftt,rightt;
+			_forkTarget(_target,leftt,rightt);
 
 #ifdef __BSD__ // ------------------------------------------------------------
 
-		InetAddress systemVia;
-		char systemDevice[128];
-		int systemMetric = 9999999;
-		systemDevice[0] = (char)0;
-
-		std::vector<_RTE> rtes(_getRTEs(this->target,false));
-		for(std::vector<_RTE>::iterator r(rtes.begin());r!=rtes.end();++r) {
-			if (r->via) {
-				if ((!systemVia)||(r->metric < systemMetric)) {
-					systemVia = r->via;
-					Utils::scopy(systemDevice,sizeof(systemDevice),r->device);
-					systemMetric = r->metric;
-				}
+			if ((_systemVia)&&(_systemDevice[0])) {
+				_routeCmd("delete",leftt,_systemVia,_systemDevice,(const char *)0);
+				_routeCmd("delete",rightt,_systemVia,_systemDevice,(const char *)0);
 			}
-		}
 
-		if (!systemDevice[0]) {
-			rtes = _getRTEs(systemVia,true);
-			for(std::vector<_RTE>::iterator r(rtes.begin());r!=rtes.end();++r) {
-				if (r->device[0])
-					Utils::scopy(systemDevice,sizeof(systemDevice),r->device);
+			if (_via) {
+				_routeCmd("delete",leftt,_via,(const char *)0,(const char *)0);
+				_routeCmd("delete",rightt,_via,(const char *)0,(const char *)0);
+			} else if (_device[0]) {
+				_routeCmd("delete",leftt,_via,(const char *)0,_device);
+				_routeCmd("delete",rightt,_via,(const char *)0,_device);
 			}
-		}
-
-		if ((!systemVia)||(!systemDevice[0]))
-			return false;
-
-		_routeCmd("delete",leftt,systemVia,systemDevice,(const char *)0);
-		_routeCmd("delete",rightt,systemVia,systemDevice,(const char *)0);
-
-		if (this->via) {
-			_routeCmd("delete",leftt,this->via,(const char *)0,(const char *)0);
-			_routeCmd("delete",rightt,this->via,(const char *)0,(const char *)0);
-		} else if ((this->device)&&(this->device[0])) {
-			_routeCmd("delete",leftt,this->via,(const char *)0,this->device);
-			_routeCmd("delete",rightt,this->via,(const char *)0,this->device);
-		}
 
 #endif // __BSD__ ------------------------------------------------------------
 
@@ -421,9 +414,9 @@ void ManagedRoute::remove()
 
 #endif // __WINDOWS__ --------------------------------------------------------
 
-	} else {
+		} else {
 
-		// TODO
+			// TODO
 
 #ifdef __BSD__ // ------------------------------------------------------------
 
@@ -437,14 +430,18 @@ void ManagedRoute::remove()
 
 #endif // __WINDOWS__ --------------------------------------------------------
 
+		}
 	}
+
+	_target.zero();
+	_via.zero();
+	_systemVia.zero();
+	_device[0] = (char)0;
+	_systemDevice[0] = (char)0;
+	_applied = false;
 }
 
 } // namespace ZeroTier
-
-#ifndef ZT_ROUTING_SUPPORT_FOUND
-#error ManagedRoute.cpp has no support for managing routes on this platform! You'll need to check and see if one of the existing ones will work and make sure proper defines are set, or write one. Please do a Github pull request if you do this for a new OS!
-#endif
 
 /*
 int main(int argc,char **argv)

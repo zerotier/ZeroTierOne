@@ -245,18 +245,18 @@ struct InetAddress : public sockaddr_storage
 	/**
 	 * @return True if this network/netmask route describes a default route (e.g. 0.0.0.0/0)
 	 */
-	inline bool isDefaultRoute()
+	inline bool isDefaultRoute() const
 	{
 		switch(ss_family) {
 			case AF_INET:
-				return ( (reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr == 0) && (reinterpret_cast<struct sockaddr_in *>(this)->sin_port == 0) );
+				return ( (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == 0) && (reinterpret_cast<const struct sockaddr_in *>(this)->sin_port == 0) );
 			case AF_INET6:
-				const uint8_t *ipb = reinterpret_cast<const uint8_t *>(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+				const uint8_t *ipb = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
 				for(int i=0;i<16;++i) {
 					if (ipb[i])
 						return false;
 				}
-				return (reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_port == 0);
+				return (reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port == 0);
 		}
 		return false;
 	}

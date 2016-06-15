@@ -59,28 +59,6 @@ static std::string _jsonEscape(const char *s)
 }
 static std::string _jsonEscape(const std::string &s) { return _jsonEscape(s.c_str()); }
 
-static std::string _jsonEnumerate(const ZT_MulticastGroup *mg,unsigned int count)
-{
-	std::string buf;
-	char tmp[128];
-	buf.push_back('[');
-	for(unsigned int i=0;i<count;++i) {
-		if (i > 0)
-			buf.push_back(',');
-		Utils::snprintf(tmp,sizeof(tmp),"\"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x\\/%.8lx\"",
-			(unsigned int)((mg[i].mac >> 40) & 0xff),
-			(unsigned int)((mg[i].mac >> 32) & 0xff),
-			(unsigned int)((mg[i].mac >> 24) & 0xff),
-			(unsigned int)((mg[i].mac >> 16) & 0xff),
-			(unsigned int)((mg[i].mac >> 8) & 0xff),
-			(unsigned int)(mg[i].mac & 0xff),
-			(unsigned long)(mg[i].adi));
-		buf.append(tmp);
-	}
-	buf.push_back(']');
-	return buf;
-}
-
 static std::string _jsonEnumerate(const struct sockaddr_storage *ss,unsigned int count)
 {
 	std::string buf;

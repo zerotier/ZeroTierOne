@@ -26,6 +26,7 @@
 #include <set>
 #include <vector>
 #include <algorithm>
+#include <list>
 
 #include "../version.h"
 #include "../include/ZeroTierOne.h"
@@ -51,7 +52,7 @@
 #include "../osdep/BackgroundResolver.hpp"
 #include "../osdep/PortMapper.hpp"
 #include "../osdep/Binder.hpp"
-#include "../osdep/RoutingTable.hpp"
+#include "../osdep/ManagedRoute.hpp"
 
 #include "OneService.hpp"
 #include "ControlPlane.hpp"
@@ -527,7 +528,7 @@ public:
 
 		EthernetTap *tap;
 		std::vector<InetAddress> managedIps;
-		std::vector< std::pair<InetAddress,InetAddress> > managedRoutes; // target/via (flags and metric not currently used)
+		std::list<ManagedRoute> managedRoutes;
 		bool allowManaged; // allow managed addresses and routes
 		bool allowGlobal; // allow global (non-private) IP routes?
 		bool allowDefault; // allow default route?
@@ -1257,17 +1258,18 @@ public:
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
 				if (n.tap) { // sanity check
 					if (n.allowManaged) {
+
 						{ // configure managed IP addresses
 							std::vector<InetAddress> newManagedIps;
 							for(unsigned int i=0;i<nwc->assignedAddressCount;++i) {
 								const InetAddress *ii = reinterpret_cast<const InetAddress *>(&(nwc->assignedAddresses[i]));
 								switch(ii->ipScope()) {
-									case IP_SCOPE_NONE:
-									case IP_SCOPE_MULTICAST:
-									case IP_SCOPE_LOOPBACK:
-									case IP_SCOPE_LINK_LOCAL:
+									case InetAddress::IP_SCOPE_NONE:
+									case InetAddress::IP_SCOPE_MULTICAST:
+									case InetAddress::IP_SCOPE_LOOPBACK:
+									case InetAddress::IP_SCOPE_LINK_LOCAL:
 										break; // ignore these -- they shouldn't appear here
-									case IP_SCOPE_GLOBAL:
+									case InetAddress::IP_SCOPE_GLOBAL:
 										if (!n.allowGlobal)
 											continue; // skip global IP ranges if we haven't given this network permission to assign them
 										// else fall through for PSEUDOPRIVATE, SHARED, PRIVATE
@@ -1294,46 +1296,76 @@ public:
 
 							n.managedIps.swap(newManagedIps);
 						}
+
 						{ // configure managed routes
-							std::vector< std::pair<InetAddress,InetAddress> > newManagedRoutes;
+							const std::string tapdev(n.tap->deviceName());
+
+							for(std::list<ManagedRoute>::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();) {
+								bool haveRoute = false;
+								for(unsigned int i=0;i<nwc->routeCount;++i) {
+									const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(nwc->routes[i].target));
+									const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(nwc->routes[i].via));
+									if (mr->target() == *target) {
+										if ((via->ss_family == target->ss_family)&&(mr->via() == *via)) {
+											haveRoute = true;
+											break;
+										} else if (tapdev == mr->device()) {
+											haveRoute = true;
+											break;
+										}
+									}
+								}
+								if (haveRoute) {
+									++mr;
+								} else {
+									n.managedRoutes.erase(mr++); // also removes route via RAII behavior
+								}
+							}
+
 							for(unsigned int i=0;i<nwc->routeCount;++i) {
-								const InetAddress *target = reinterpret_cast<const InetAddress *>(&(nwc->routes[i].target));
-								const InetAddress *via = reinterpret_cast<const InetAddress *>(&(nwc->routes[i].via));
+								const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(nwc->routes[i].target));
+								const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(nwc->routes[i].via));
+
+								bool haveRoute = false;
+								for(std::list<ManagedRoute>::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();++mr) {
+									if (mr->target() == *target) {
+										if ((via->ss_family == target->ss_family)&&(mr->via() == *via)) {
+											haveRoute = true;
+											break;
+										} else if (tapdev == mr->device()) {
+											haveRoute = true;
+											break;
+										}
+									}
+								}
+								if (haveRoute)
+									continue;
+
+								n.managedRoutes.push_back(ManagedRoute());
+
 								if ((target->isDefaultRoute())&&(n.allowDefault)) {
-									newManagedRoutes.push_back(std::pair<InetAddress,InetAddress>(*target,*via));
+									if (!n.managedRoutes.back().set(*target,*via,tapdev.c_str()))
+										n.managedRoutes.pop_back();
 								} else {
 									switch(target->ipScope()) {
-										case IP_SCOPE_NONE:
-										case IP_SCOPE_MULTICAST:
-										case IP_SCOPE_LOOPBACK:
-										case IP_SCOPE_LINK_LOCAL:
+										case InetAddress::IP_SCOPE_NONE:
+										case InetAddress::IP_SCOPE_MULTICAST:
+										case InetAddress::IP_SCOPE_LOOPBACK:
+										case InetAddress::IP_SCOPE_LINK_LOCAL:
 											break;
-										case IP_SCOPE_GLOBAL:
+										case InetAddress::IP_SCOPE_GLOBAL:
 											if (!n.allowGlobal)
 												continue; // skip global IP ranges if we haven't given this network permission to assign them
 											// else fall through for PSEUDOPRIVATE, SHARED, PRIVATE
 										default:
-											newManagedRoutes.push_back(std::pair<InetAddress,InetAddress>(*target,*via));
+											if (!n.managedRoutes.back().set(*target,*via,tapdev.c_str()))
+												n.managedRoutes.pop_back();
 											break;
 									}
 								}
 							}
-							std::sort(newManagedRoutes.begin(),newManagedRoutes.end());
-							newManagedRoutes.erase(std::unique(newManagedRoutes.begin(),newManagedRoutes.end()),newManagedRoutes.end());
-
-							for(std::vector< std::pair<InetAddress,InetAddress> >::iterator mr(newManagedRoutes.begin()),mr!=newManagedRoutes.end();++mr) {
-								if (std::find(n.managedRoutes.begin(),n.managedRoutes.end(),*mr) == n.managedRoutes.end()) {
-									printf("ADDING ROUTE: %s -> %s\n",mr->first.toString().c_str(),mr->second.toString().c_str());
-								}
-							}
-							for(std::vector< std::pair<InetAddress,InetAddress> >::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();++mr) {
-								if (std::find(newManagedRoutes.begin(),newManagedRoutes.end(),*mr) != newManagedRoutes.end()) {
-									printf("REMOVING ROUTE: %s -> %s\n",mr->first.toString().c_str(),mr->second.toString().c_str());
-								}
-							}
-
-							n.managedRoutes.swap(newManagedRoutes);
 						}
+
 					}
 				} else {
 					_nets.erase(nwid);

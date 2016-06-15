@@ -18,12 +18,11 @@ namespace ZeroTier {
 class ManagedRoute
 {
 public:
-	ManagedRoute() :
-		target(),
-		via(),
-		applied(false)
+	ManagedRoute()
 	{
-		device[0] = (char)0;
+		_device[0] = (char)0;
+		_systemDevice[0] = (char)0;
+		_applied = false;
 	}
 
 	~ManagedRoute()
@@ -31,7 +30,24 @@ public:
 		this->remove();
 	}
 
+	ManagedRoute(const ManagedRoute &r)
+	{
+		*this = r;
+	}
+
+	inline ManagedRoute &operator=(const ManagedRoute &r)
+	{
+		if ((!_applied)&&(!r._applied)) {
+			memcpy(this,&r,sizeof(ManagedRoute)); // InetAddress is memcpy'able
+		} else {
+			throw std::runtime_error("Applied ManagedRoute is non-copyable!");
+		}
+		return *this;
+	}
+
 	/**
+	 * Initialize object and set route
+	 *
 	 * @param target Route target (e.g. 0.0.0.0/0 for default)
 	 * @param via Route next L3 hop or NULL InetAddress if local
 	 * @param device Device name/ID if 'via' is null and route is local, otherwise ignored
@@ -39,13 +55,12 @@ public:
 	 */
 	inline bool set(const InetAddress &target,const InetAddress &via,const char *device)
 	{
-		if ((!via)&&((!device)||(!device[0])))
+		if ((!_via)&&(!_device[0]))
 			return false;
 		this->remove();
-		this->target = target;
-		this->via = via;
-		this->applied = true;
-		Utils::scopy(this->device,sizeof(this->device),device);
+		_target = target;
+		_via = via;
+		Utils::scopy(_device,sizeof(_device),device);
 		return this->sync();
 	}
 
@@ -60,34 +75,26 @@ public:
 	bool sync();
 
 	/**
-	 * Remove and clear this ManagedRoute (also done automatically on destruct)
+	 * Remove and clear this ManagedRoute
 	 *
-	 * This does nothing if this ManagedRoute is not set or has already been removed.
+	 * This does nothing if this ManagedRoute is not set or has already been
+	 * removed. If this is not explicitly called it is called automatically on
+	 * destruct.
 	 */
 	void remove();
 
+	inline const InetAddress &target() const { return _target; }
+	inline const InetAddress &via() const { return _via; }
+	inline const char *device() const { return _device; }
+
 private:
-	/*
-	static inline bool _viaCompare(const InetAddress &v1,const InetAddress &v2)
-	{
-		if (v1) {
-			if (v2)
-				return v1.ipsEqual(v2);
-			else return false;
-		} else if (v2)
-			return false;
-		else return true;
-	}
-	*/
 
-	// non-copyable
-	ManagedRoute(const ManagedRoute &mr) {}
-	inline ManagedRoute &operator=(const ManagedRoute &mr) { return *this; }
-
-	InetAddress target;
-	InetAddress via;
-	bool applied;
-	char device[128];
+	InetAddress _target;
+	InetAddress _via;
+	InetAddress _systemVia; // for route overrides
+	char _device[128];
+	char _systemDevice[128]; // for route overrides
+	bool _applied;
 };
 
 } // namespace ZeroTier
