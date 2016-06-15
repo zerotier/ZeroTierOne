@@ -65,7 +65,6 @@ class Network: NSObject, NSCoding  {
     var dhcp: Bool = false
     var mac: String = ""
     var mtu: Int = 0
-    var multicastSubscriptions: [String] = [String]()
     var name: String = ""
     var netconfRevision: Int = 232
     var nwid: UInt64 = 0
@@ -78,54 +77,80 @@ class Network: NSObject, NSCoding  {
     init(jsonData: [String: AnyObject]) {
         super.init()
 
-        let aa = jsonData["assignedAddresses"] as! [String]
-        for a in aa {
-            assignedAddresses.append(a)
+        if let aa = jsonData["assignedAddresses"] as? [String] {
+            for a in aa {
+                assignedAddresses.append(a)
+            }
         }
 
-        bridge = (jsonData["bridge"] as! NSNumber).boolValue
-        broadcastEnabled = (jsonData["broadcastEnabled"] as! NSNumber).boolValue
-        dhcp = (jsonData["dhcp"] as! NSNumber).boolValue
-        mac = jsonData["mac"] as! String
-        mtu = (jsonData["mtu"] as! NSNumber).integerValue
-
-        let multSubs = jsonData["multicastSubscriptions"] as! [String]
-        for ms in multSubs {
-            multicastSubscriptions.append(ms)
+        if let b = jsonData["bridge"] as? NSNumber {
+            bridge = b.boolValue
         }
 
-        name = jsonData["name"] as! String
-        netconfRevision = (jsonData["netconfRevision"] as! NSNumber).integerValue
-        nwid = UInt64((jsonData["nwid"] as! String), radix: 16)!
-        portDeviceName = jsonData["portDeviceName"] as! String
-        portError = (jsonData["portError"] as! NSNumber).integerValue
-
-        let statusStr = jsonData["status"] as! String
-        switch statusStr {
-        case "REQUESTING_CONFIGURATION":
-            status = .REQUESTING_CONFIGURATION
-        case "OK":
-            status = .OK
-        case "ACCESS_DENIED":
-            status = .ACCESS_DENIED
-        case "NOT_FOUND":
-            status = .NOT_FOUND
-        case "PORT_ERROR":
-            status = .PORT_ERROR
-        case "CLIENT_TOO_OLD":
-            status = .CLIENT_TOO_OLD
-        default:
-            break
+        if let b = jsonData["broadcastEnabled"] as? NSNumber {
+            broadcastEnabled = b.boolValue
         }
 
-        let typeStr = jsonData["type"] as! String
-        switch typeStr {
-        case "PRIVATE":
-            type = .PRIVATE
-        case "PUBLIC":
-            type = .PUBLIC
-        default:
-            break
+        if let d = jsonData["dhcp"] as? NSNumber {
+            dhcp = d.boolValue
+        }
+
+        if let m = jsonData["mac"] as? String {
+            mac = m
+        }
+
+        if let m = jsonData["mtu"] as? NSNumber {
+            mtu = m.integerValue
+        }
+
+        if let n = jsonData["name"] as? String {
+            name = n
+        }
+
+        if let n = jsonData["netconfRevision"] as? NSNumber {
+            netconfRevision = n.integerValue
+        }
+
+        if let n = UInt64((jsonData["nwid"] as! String), radix: 16) {
+            nwid = n
+        }
+
+        if let p = jsonData["portDeviceName"] as? String {
+            portDeviceName = p
+        }
+
+        if let p = jsonData["portError"] as? NSNumber {
+            portError = p.integerValue
+        }
+
+        if let statusStr = jsonData["status"] as? String {
+            switch statusStr {
+            case "REQUESTING_CONFIGURATION":
+                status = .REQUESTING_CONFIGURATION
+            case "OK":
+                status = .OK
+            case "ACCESS_DENIED":
+                status = .ACCESS_DENIED
+            case "NOT_FOUND":
+                status = .NOT_FOUND
+            case "PORT_ERROR":
+                status = .PORT_ERROR
+            case "CLIENT_TOO_OLD":
+                status = .CLIENT_TOO_OLD
+            default:
+                break
+            }
+        }
+
+        if let typeStr = jsonData["type"] as? String {
+            switch typeStr {
+            case "PRIVATE":
+                type = .PRIVATE
+            case "PUBLIC":
+                type = .PUBLIC
+            default:
+                break
+            }
         }
 
         // if it's being initialized via JSON, it's connected
@@ -133,20 +158,57 @@ class Network: NSObject, NSCoding  {
     }
 
     required init?(coder aDecoder: NSCoder) {
-        self.assignedAddresses = aDecoder.decodeObjectForKey(PropertyKeys.addressesKey) as! [String]
-        self.bridge = aDecoder.decodeBoolForKey(PropertyKeys.bridgeKey)
-        self.broadcastEnabled = aDecoder.decodeBoolForKey(PropertyKeys.broadcastKey)
-        self.dhcp = aDecoder.decodeBoolForKey(PropertyKeys.dhcpKey)
-        self.mac = aDecoder.decodeObjectForKey(PropertyKeys.macKey) as! String
-        self.mtu = aDecoder.decodeIntegerForKey(PropertyKeys.mtuKey)
-        self.multicastSubscriptions = aDecoder.decodeObjectForKey(PropertyKeys.multicastKey) as! [String]
-        self.name = aDecoder.decodeObjectForKey(PropertyKeys.nameKey) as! String
-        self.netconfRevision = aDecoder.decodeIntegerForKey(PropertyKeys.netconfKey)
-        self.nwid = (aDecoder.decodeObjectForKey(PropertyKeys.nwidKey) as! NSNumber).unsignedLongLongValue
-        self.portDeviceName = aDecoder.decodeObjectForKey(PropertyKeys.portNameKey) as! String
-        self.portError = aDecoder.decodeIntegerForKey(PropertyKeys.portErrorKey)
-        self.status = NetworkStatus(rawValue: aDecoder.decodeIntegerForKey(PropertyKeys.statusKey))!
-        self.type = NetworkType(rawValue: aDecoder.decodeIntegerForKey(PropertyKeys.typeKey))!
+        if aDecoder.containsValueForKey(PropertyKeys.addressesKey) {
+            self.assignedAddresses = aDecoder.decodeObjectForKey(PropertyKeys.addressesKey) as! [String]
+        }
+
+        if aDecoder.containsValueForKey(PropertyKeys.bridgeKey) {
+            self.bridge = aDecoder.decodeBoolForKey(PropertyKeys.bridgeKey)
+        }
+
+        if aDecoder.containsValueForKey(PropertyKeys.broadcastKey) {
+            self.broadcastEnabled = aDecoder.decodeBoolForKey(PropertyKeys.broadcastKey)
+        }
+
+        if aDecoder.containsValueForKey(PropertyKeys.dhcpKey) {
+            self.dhcp = aDecoder.decodeBoolForKey(PropertyKeys.dhcpKey)
+        }
+
+        if aDecoder.containsValueForKey(PropertyKeys.macKey) {
+            self.mac = aDecoder.decodeObjectForKey(PropertyKeys.macKey) as! String
+        }
+
+        if aDecoder.containsValueForKey(PropertyKeys.mtuKey) {
+            self.mtu = aDecoder.decodeIntegerForKey(PropertyKeys.mtuKey)
+        }
+
+        if aDecoder.containsValueForKey(PropertyKeys.nameKey) {
+            self.name = aDecoder.decodeObjectForKey(PropertyKeys.nameKey) as! String
+        }
+
+        if aDecoder.containsValueForKey(PropertyKeys.netconfKey) {
+            self.netconfRevision = aDecoder.decodeIntegerForKey(PropertyKeys.netconfKey)
+        }
+
+        if aDecoder.containsValueForKey(PropertyKeys.nwidKey) {
+            self.nwid = (aDecoder.decodeObjectForKey(PropertyKeys.nwidKey) as! NSNumber).unsignedLongLongValue
+        }
+
+        if aDecoder.containsValueForKey(PropertyKeys.portNameKey) {
+            self.portDeviceName = aDecoder.decodeObjectForKey(PropertyKeys.portNameKey) as! String
+        }
+
+        if aDecoder.containsValueForKey(PropertyKeys.portErrorKey) {
+            self.portError = aDecoder.decodeIntegerForKey(PropertyKeys.portErrorKey)
+        }
+
+        if aDecoder.containsValueForKey(PropertyKeys.statusKey) {
+            self.status = NetworkStatus(rawValue: aDecoder.decodeIntegerForKey(PropertyKeys.statusKey))!
+        }
+
+        if aDecoder.containsValueForKey(PropertyKeys.typeKey) {
+            self.type = NetworkType(rawValue: aDecoder.decodeIntegerForKey(PropertyKeys.typeKey))!
+        }
     }
 
     func encodeWithCoder(aCoder: NSCoder) {
@@ -156,7 +218,6 @@ class Network: NSObject, NSCoding  {
         aCoder.encodeBool(self.dhcp, forKey: PropertyKeys.dhcpKey)
         aCoder.encodeObject(self.mac, forKey: PropertyKeys.macKey)
         aCoder.encodeInteger(self.mtu, forKey: PropertyKeys.mtuKey)
-        aCoder.encodeObject(self.multicastSubscriptions, forKey: PropertyKeys.multicastKey)
         aCoder.encodeObject(self.name, forKey: PropertyKeys.nameKey)
         aCoder.encodeInteger(self.netconfRevision, forKey: PropertyKeys.netconfKey)
         aCoder.encodeObject(NSNumber(unsignedLongLong: self.nwid), forKey: PropertyKeys.nwidKey)
