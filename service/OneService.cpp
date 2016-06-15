@@ -51,6 +51,7 @@
 #include "../osdep/BackgroundResolver.hpp"
 #include "../osdep/PortMapper.hpp"
 #include "../osdep/Binder.hpp"
+#include "../osdep/RoutingTable.hpp"
 
 #include "OneService.hpp"
 #include "ControlPlane.hpp"
@@ -522,11 +523,14 @@ public:
 	// Configured networks
 	struct NetworkState
 	{
-		NetworkState() : tap((EthernetTap *)0),managedIps(),managedRoutes() {}
+		NetworkState() : tap((EthernetTap *)0),managedIps(),managedRoutes(),allowManaged(true),allowGlobal(true),allowDefault(true) {}
 
 		EthernetTap *tap;
 		std::vector<InetAddress> managedIps;
-		std::vector<InetAddress> managedRoutes; // by 'target'
+		std::vector< std::pair<InetAddress,InetAddress> > managedRoutes; // target/via (flags and metric not currently used)
+		bool allowManaged; // allow managed addresses and routes
+		bool allowGlobal; // allow global (non-private) IP routes?
+		bool allowDefault; // allow default route?
 	};
 	std::map<uint64_t,NetworkState> _nets;
 	Mutex _nets_m;
@@ -1252,25 +1256,85 @@ public:
 
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
 				if (n.tap) { // sanity check
-					std::vector<InetAddress> newManagedIps;
-					for(unsigned int i=0;i<nwc->assignedAddressCount;++i)
-						newManagedIps.push_back(*(reinterpret_cast<const InetAddress *>(&(nwc->assignedAddresses[i]))));
-					std::sort(newManagedIps.begin(),newManagedIps.end());
-					newManagedIps.erase(std::unique(newManagedIps.begin(),newManagedIps.end()),newManagedIps.end());
+					if (n.allowManaged) {
+						{ // configure managed IP addresses
+							std::vector<InetAddress> newManagedIps;
+							for(unsigned int i=0;i<nwc->assignedAddressCount;++i) {
+								const InetAddress *ii = reinterpret_cast<const InetAddress *>(&(nwc->assignedAddresses[i]));
+								switch(ii->ipScope()) {
+									case IP_SCOPE_NONE:
+									case IP_SCOPE_MULTICAST:
+									case IP_SCOPE_LOOPBACK:
+									case IP_SCOPE_LINK_LOCAL:
+										break; // ignore these -- they shouldn't appear here
+									case IP_SCOPE_GLOBAL:
+										if (!n.allowGlobal)
+											continue; // skip global IP ranges if we haven't given this network permission to assign them
+										// else fall through for PSEUDOPRIVATE, SHARED, PRIVATE
+									default:
+										newManagedIps.push_back(*ii);
+										break;
+								}
+							}
+							std::sort(newManagedIps.begin(),newManagedIps.end());
+							newManagedIps.erase(std::unique(newManagedIps.begin(),newManagedIps.end()),newManagedIps.end());
 
-					for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
-						if (!std::binary_search(n.managedIps.begin(),n.managedIps.end(),*ip))
-							if (!n.tap->addIp(*ip))
-								fprintf(stderr,"ERROR: unable to add ip address %s"ZT_EOL_S, ip->toString().c_str());
+							for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
+								if (std::find(n.managedIps.begin(),n.managedIps.end(),*ip) == n.managedIps.end()) {
+									if (!n.tap->addIp(*ip))
+										fprintf(stderr,"ERROR: unable to add ip address %s"ZT_EOL_S, ip->toString().c_str());
+								}
+							}
+							for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
+								if (std::find(newManagedIps.begin(),newManagedIps.end(),*ip) == newManagedIps.end()) {
+									if (!n.tap->removeIp(*ip))
+										fprintf(stderr,"ERROR: unable to remove ip address %s"ZT_EOL_S, ip->toString().c_str());
+								}
+							}
+
+							n.managedIps.swap(newManagedIps);
+						}
+						{ // configure managed routes
+							std::vector< std::pair<InetAddress,InetAddress> > newManagedRoutes;
+							for(unsigned int i=0;i<nwc->routeCount;++i) {
+								const InetAddress *target = reinterpret_cast<const InetAddress *>(&(nwc->routes[i].target));
+								const InetAddress *via = reinterpret_cast<const InetAddress *>(&(nwc->routes[i].via));
+								if ((target->isDefaultRoute())&&(n.allowDefault)) {
+									newManagedRoutes.push_back(std::pair<InetAddress,InetAddress>(*target,*via));
+								} else {
+									switch(target->ipScope()) {
+										case IP_SCOPE_NONE:
+										case IP_SCOPE_MULTICAST:
+										case IP_SCOPE_LOOPBACK:
+										case IP_SCOPE_LINK_LOCAL:
+											break;
+										case IP_SCOPE_GLOBAL:
+											if (!n.allowGlobal)
+												continue; // skip global IP ranges if we haven't given this network permission to assign them
+											// else fall through for PSEUDOPRIVATE, SHARED, PRIVATE
+										default:
+											newManagedRoutes.push_back(std::pair<InetAddress,InetAddress>(*target,*via));
+											break;
+									}
+								}
+							}
+							std::sort(newManagedRoutes.begin(),newManagedRoutes.end());
+							newManagedRoutes.erase(std::unique(newManagedRoutes.begin(),newManagedRoutes.end()),newManagedRoutes.end());
+
+							for(std::vector< std::pair<InetAddress,InetAddress> >::iterator mr(newManagedRoutes.begin()),mr!=newManagedRoutes.end();++mr) {
+								if (std::find(n.managedRoutes.begin(),n.managedRoutes.end(),*mr) == n.managedRoutes.end()) {
+									printf("ADDING ROUTE: %s -> %s\n",mr->first.toString().c_str(),mr->second.toString().c_str());
+								}
+							}
+							for(std::vector< std::pair<InetAddress,InetAddress> >::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();++mr) {
+								if (std::find(newManagedRoutes.begin(),newManagedRoutes.end(),*mr) != newManagedRoutes.end()) {
+									printf("REMOVING ROUTE: %s -> %s\n",mr->first.toString().c_str(),mr->second.toString().c_str());
+								}
+							}
+
+							n.managedRoutes.swap(newManagedRoutes);
+						}
 					}
-
-					for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
-						if (!std::binary_search(newManagedIps.begin(),newManagedIps.end(),*ip))
-							if (!n.tap->removeIp(*ip))
-								fprintf(stderr,"ERROR: unable to remove ip address %s"ZT_EOL_S, ip->toString().c_str());
-					}
-
-					n.managedIps.swap(newManagedIps); // faster than assign -- just swap pointers and let the old one die
 				} else {
 					_nets.erase(nwid);
 					return -999; // tap init failed

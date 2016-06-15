@@ -86,8 +86,8 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 		}
 
 		char *iface = (char *)0;
-		uint32_t destination = 0;
-		uint32_t gateway = 0;
+		uint32_t target = 0;
+		uint32_t via = 0;
 		int metric = 0;
 		uint32_t mask = 0;
 
@@ -95,23 +95,23 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 		for(char *f=Utils::stok(line,"\t \r\n",&stmp2);(f);f=Utils::stok((char *)0,"\t \r\n",&stmp2)) {
 			switch(fno) {
 				case 0: iface = f; break;
-				case 1: destination = (uint32_t)Utils::hexStrToULong(f); break;
-				case 2: gateway = (uint32_t)Utils::hexStrToULong(f); break;
+				case 1: target = (uint32_t)Utils::hexStrToULong(f); break;
+				case 2: via = (uint32_t)Utils::hexStrToULong(f); break;
 				case 6: metric = (int)Utils::strToInt(f); break;
 				case 7: mask = (uint32_t)Utils::hexStrToULong(f); break;
 			}
 			++fno;
 		}
 
-		if ((iface)&&(destination)) {
+		if ((iface)&&(target)) {
 			RoutingTable::Entry e;
-			if (destination)
-				e.destination.set(&destination,4,Utils::countBits(mask));
-			e.gateway.set(&gateway,4,0);
+			if (target)
+				e.target.set(&target,4,Utils::countBits(mask));
+			e.via.set(&via,4,0);
 			e.deviceIndex = 0; // not used on Linux
 			e.metric = metric;
 			Utils::scopy(e.device,sizeof(e.device),iface);
-			if ((e.destination)&&((includeLinkLocal)||(!e.destination.isLinkLocal()))&&((includeLoopback)||((!e.destination.isLoopback())&&(!e.gateway.isLoopback())&&(strcmp(iface,"lo")))))
+			if ((e.target)&&((includeLinkLocal)||(!e.target.isLinkLocal()))&&((includeLoopback)||((!e.target.isLoopback())&&(!e.via.isLoopback())&&(strcmp(iface,"lo")))))
 				entries.push_back(e);
 		}
 
@@ -131,36 +131,36 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 	}
 
 	for(char *line=Utils::stok(buf,"\r\n",&stmp);(line);line=Utils::stok((char *)0,"\r\n",&stmp)) {
-		char *destination = (char *)0;
+		char *target = (char *)0;
 		unsigned int destPrefixLen = 0;
-		char *gateway = (char *)0; // next hop in ipv6 terminology
+		char *via = (char *)0; // next hop in ipv6 terminology
 		int metric = 0;
 		char *device = (char *)0;
 
 		int fno = 0;
 		for(char *f=Utils::stok(line,"\t \r\n",&stmp2);(f);f=Utils::stok((char *)0,"\t \r\n",&stmp2)) {
 			switch(fno) {
-				case 0: destination = f; break;
+				case 0: target = f; break;
 				case 1: destPrefixLen = (unsigned int)Utils::hexStrToULong(f); break;
-				case 4: gateway = f; break;
+				case 4: via = f; break;
 				case 5: metric = (int)Utils::hexStrToLong(f); break;
 				case 9: device = f; break;
 			}
 			++fno;
 		}
 
-		if ((device)&&(destination)) {
+		if ((device)&&(target)) {
 			unsigned char tmp[16];
 			RoutingTable::Entry e;
-			Utils::unhex(destination,tmp,16);
+			Utils::unhex(target,tmp,16);
 			if ((!Utils::isZero(tmp,16))&&(tmp[0] != 0xff))
-				e.destination.set(tmp,16,destPrefixLen);
-			Utils::unhex(gateway,tmp,16);
-			e.gateway.set(tmp,16,0);
+				e.target.set(tmp,16,destPrefixLen);
+			Utils::unhex(via,tmp,16);
+			e.via.set(tmp,16,0);
 			e.deviceIndex = 0; // not used on Linux
 			e.metric = metric;
 			Utils::scopy(e.device,sizeof(e.device),device);
-			if ((e.destination)&&((includeLinkLocal)||(!e.destination.isLinkLocal()))&&((includeLoopback)||((!e.destination.isLoopback())&&(!e.gateway.isLoopback())&&(strcmp(device,"lo")))))
+			if ((e.target)&&((includeLinkLocal)||(!e.target.isLinkLocal()))&&((includeLoopback)||((!e.target.isLoopback())&&(!e.via.isLoopback())&&(strcmp(device,"lo")))))
 				entries.push_back(e);
 		}
 	}
@@ -169,11 +169,11 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 	return entries;
 }
 
-RoutingTable::Entry RoutingTable::set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric,bool ifscope)
+RoutingTable::Entry RoutingTable::set(const InetAddress &target,const InetAddress &via,const char *device,int metric,bool ifscope)
 {
 	char metstr[128];
 
-	if ((!gateway)&&((!device)||(!device[0])))
+	if ((!via)&&((!device)||(!device[0])))
 		return RoutingTable::Entry();
 
 	Utils::snprintf(metstr,sizeof(metstr),"%d",metric);
@@ -181,14 +181,14 @@ RoutingTable::Entry RoutingTable::set(const InetAddress &destination,const InetA
 	if (metric < 0) {
 		long pid = (long)vfork();
 		if (pid == 0) {
-			if (gateway) {
+			if (via) {
 				if ((device)&&(device[0])) {
-					::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","del",destination.toString().c_str(),"via",gateway.toIpString().c_str(),"dev",device,(const char *)0);
+					::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","del",target.toString().c_str(),"via",via.toIpString().c_str(),"dev",device,(const char *)0);
 				} else {
-					::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","del",destination.toString().c_str(),"via",gateway.toIpString().c_str(),(const char *)0);
+					::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","del",target.toString().c_str(),"via",via.toIpString().c_str(),(const char *)0);
 				}
 			} else {
-				::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","del",destination.toString().c_str(),"dev",device,(const char *)0);
+				::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","del",target.toString().c_str(),"dev",device,(const char *)0);
 			}
 			::_exit(-1);
 		} else if (pid > 0) {
@@ -198,14 +198,14 @@ RoutingTable::Entry RoutingTable::set(const InetAddress &destination,const InetA
 	} else {
 		long pid = (long)vfork();
 		if (pid == 0) {
-			if (gateway) {
+			if (via) {
 				if ((device)&&(device[0])) {
-					::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","replace",destination.toString().c_str(),"metric",metstr,"via",gateway.toIpString().c_str(),"dev",device,(const char *)0);
+					::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","replace",target.toString().c_str(),"metric",metstr,"via",via.toIpString().c_str(),"dev",device,(const char *)0);
 				} else {
-					::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","replace",destination.toString().c_str(),"metric",metstr,"via",gateway.toIpString().c_str(),(const char *)0);
+					::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","replace",target.toString().c_str(),"metric",metstr,"via",via.toIpString().c_str(),(const char *)0);
 				}
 			} else {
-				::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","replace",destination.toString().c_str(),"metric",metstr,"dev",device,(const char *)0);
+				::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","replace",target.toString().c_str(),"metric",metstr,"dev",device,(const char *)0);
 			}
 			::_exit(-1);
 		} else if (pid > 0) {
@@ -217,7 +217,7 @@ RoutingTable::Entry RoutingTable::set(const InetAddress &destination,const InetA
 	std::vector<RoutingTable::Entry> rtab(get(true,true));
 	std::vector<RoutingTable::Entry>::iterator bestEntry(rtab.end());
 	for(std::vector<RoutingTable::Entry>::iterator e(rtab.begin());e!=rtab.end();++e) {
-		if ((e->destination == destination)&&(e->gateway.ipsEqual(gateway))) {
+		if ((e->target == target)&&(e->via.ipsEqual(via))) {
 			if ((device)&&(device[0])) {
 				if (!strcmp(device,e->device)) {
 					if (metric == e->metric)
@@ -305,7 +305,7 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 												sin6->sin6_scope_id = interfaceIndex;
 										}
 									}
-									e.destination = *sa;
+									e.target = *sa;
 									break;
 								case 1:
 									//printf("RTA_GATEWAY\n");
@@ -315,12 +315,12 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 											break;
 										case AF_INET:
 										case AF_INET6:
-											e.gateway = *sa;
+											e.via = *sa;
 											break;
 									}
 									break;
 								case 2: {
-									if (e.destination.isV6()) {
+									if (e.target.isV6()) {
 										salen = sizeof(struct sockaddr_in6); // Confess!
 										unsigned int bits = 0;
 										for(int i=0;i<16;++i) {
@@ -338,10 +338,10 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 											}
 											*/
 										}
-										e.destination.setPort(bits);
+										e.target.setPort(bits);
 									} else {
 										salen = sizeof(struct sockaddr_in); // Confess!
-										e.destination.setPort((unsigned int)Utils::countBits((uint32_t)((const struct sockaddr_in *)sa)->sin_addr.s_addr));
+										e.target.setPort((unsigned int)Utils::countBits((uint32_t)((const struct sockaddr_in *)sa)->sin_addr.s_addr));
 									}
 									//printf("RTA_NETMASK\n");
 								}	break;
@@ -368,8 +368,8 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 						if (e.metric < 0)
 							e.metric = 0;
 
-						InetAddress::IpScope dscope = e.destination.ipScope();
-						if ( ((includeLinkLocal)||(dscope != InetAddress::IP_SCOPE_LINK_LOCAL)) && ((includeLoopback)||((dscope != InetAddress::IP_SCOPE_LOOPBACK) && (e.gateway.ipScope() != InetAddress::IP_SCOPE_LOOPBACK) )))
+						InetAddress::IpScope dscope = e.target.ipScope();
+						if ( ((includeLinkLocal)||(dscope != InetAddress::IP_SCOPE_LINK_LOCAL)) && ((includeLoopback)||((dscope != InetAddress::IP_SCOPE_LOOPBACK) && (e.via.ipScope() != InetAddress::IP_SCOPE_LOOPBACK) )))
 							entries.push_back(e);
 					}
 
@@ -386,10 +386,10 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 			if_indextoname(e1->deviceIndex,e1->device);
 	}
 	for(std::vector<ZeroTier::RoutingTable::Entry>::iterator e1(entries.begin());e1!=entries.end();++e1) {
-		if ((!e1->device[0])&&(e1->gateway)) {
+		if ((!e1->device[0])&&(e1->via)) {
 			int bestMetric = 9999999;
 			for(std::vector<ZeroTier::RoutingTable::Entry>::iterator e2(entries.begin());e2!=entries.end();++e2) {
-				if ((e2->destination.containsAddress(e1->gateway))&&(e2->metric <= bestMetric)) {
+				if ((e2->target.containsAddress(e1->via))&&(e2->metric <= bestMetric)) {
 					bestMetric = e2->metric;
 					Utils::scopy(e1->device,sizeof(e1->device),e2->device);
 				}
@@ -402,15 +402,15 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 	return entries;
 }
 
-RoutingTable::Entry RoutingTable::set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric,bool ifscope)
+RoutingTable::Entry RoutingTable::set(const InetAddress &target,const InetAddress &via,const char *device,int metric,bool ifscope)
 {
-	if ((!gateway)&&((!device)||(!device[0])))
+	if ((!via)&&((!device)||(!device[0])))
 		return RoutingTable::Entry();
 
 	std::vector<RoutingTable::Entry> rtab(get(true,true));
 
 	for(std::vector<RoutingTable::Entry>::iterator e(rtab.begin());e!=rtab.end();++e) {
-		if (e->destination == destination) {
+		if (e->target == target) {
 			if (((!device)||(!device[0]))||(!strcmp(device,e->device))) {
 				long p = (long)fork();
 				if (p > 0) {
@@ -419,7 +419,7 @@ RoutingTable::Entry RoutingTable::set(const InetAddress &destination,const InetA
 				} else if (p == 0) {
 					::close(STDOUT_FILENO);
 					::close(STDERR_FILENO);
-					::execl(ZT_BSD_ROUTE_CMD,ZT_BSD_ROUTE_CMD,"delete",(destination.isV6() ? "-inet6" : "-inet"),destination.toString().c_str(),(const char *)0);
+					::execl(ZT_BSD_ROUTE_CMD,ZT_BSD_ROUTE_CMD,"delete",(target.isV6() ? "-inet6" : "-inet"),target.toString().c_str(),(const char *)0);
 					::_exit(-1);
 				}
 			}
@@ -439,10 +439,10 @@ RoutingTable::Entry RoutingTable::set(const InetAddress &destination,const InetA
 		} else if (p == 0) {
 			::close(STDOUT_FILENO);
 			::close(STDERR_FILENO);
-			if (gateway) {
-				::execl(ZT_BSD_ROUTE_CMD,ZT_BSD_ROUTE_CMD,"add",(destination.isV6() ? "-inet6" : "-inet"),destination.toString().c_str(),gateway.toIpString().c_str(),"-hopcount",hcstr,(const char *)0);
+			if (via) {
+				::execl(ZT_BSD_ROUTE_CMD,ZT_BSD_ROUTE_CMD,"add",(target.isV6() ? "-inet6" : "-inet"),target.toString().c_str(),via.toIpString().c_str(),"-hopcount",hcstr,(const char *)0);
 			} else if ((device)&&(device[0])) {
-				::execl(ZT_BSD_ROUTE_CMD,ZT_BSD_ROUTE_CMD,"add",(destination.isV6() ? "-inet6" : "-inet"),destination.toString().c_str(),"-interface",device,"-hopcount",hcstr,(const char *)0);
+				::execl(ZT_BSD_ROUTE_CMD,ZT_BSD_ROUTE_CMD,"add",(target.isV6() ? "-inet6" : "-inet"),target.toString().c_str(),"-interface",device,"-hopcount",hcstr,(const char *)0);
 			}
 			::_exit(-1);
 		}
@@ -451,7 +451,7 @@ RoutingTable::Entry RoutingTable::set(const InetAddress &destination,const InetA
 	rtab = get(true,true);
 	std::vector<RoutingTable::Entry>::iterator bestEntry(rtab.end());
 	for(std::vector<RoutingTable::Entry>::iterator e(rtab.begin());e!=rtab.end();++e) {
-		if ((e->destination == destination)&&(e->gateway.ipsEqual(gateway))) {
+		if ((e->target == target)&&(e->via.ipsEqual(via))) {
 			if ((device)&&(device[0])) {
 				if (!strcmp(device,e->device)) {
 					if (metric == e->metric)
@@ -502,24 +502,24 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 		RoutingTable::Entry e;
 		switch(rtbl->Table[r].DestinationPrefix.Prefix.si_family) {
 			case AF_INET:
-				e.destination.set(&(rtbl->Table[r].DestinationPrefix.Prefix.Ipv4.sin_addr.S_un.S_addr),4,rtbl->Table[r].DestinationPrefix.PrefixLength);
+				e.target.set(&(rtbl->Table[r].DestinationPrefix.Prefix.Ipv4.sin_addr.S_un.S_addr),4,rtbl->Table[r].DestinationPrefix.PrefixLength);
 				break;
 			case AF_INET6:
-				e.destination.set(rtbl->Table[r].DestinationPrefix.Prefix.Ipv6.sin6_addr.u.Byte,16,rtbl->Table[r].DestinationPrefix.PrefixLength);
+				e.target.set(rtbl->Table[r].DestinationPrefix.Prefix.Ipv6.sin6_addr.u.Byte,16,rtbl->Table[r].DestinationPrefix.PrefixLength);
 				break;
 		}
 		switch(rtbl->Table[r].NextHop.si_family) {
 			case AF_INET:
-				e.gateway.set(&(rtbl->Table[r].NextHop.Ipv4.sin_addr.S_un.S_addr),4,0);
+				e.via.set(&(rtbl->Table[r].NextHop.Ipv4.sin_addr.S_un.S_addr),4,0);
 				break;
 			case AF_INET6:
-				e.gateway.set(rtbl->Table[r].NextHop.Ipv6.sin6_addr.u.Byte,16,0);
+				e.via.set(rtbl->Table[r].NextHop.Ipv6.sin6_addr.u.Byte,16,0);
 				break;
 		}
 		e.deviceIndex = (int)rtbl->Table[r].InterfaceIndex;
 		e.metric = (int)rtbl->Table[r].Metric;
 		ConvertInterfaceLuidToNameA(&(rtbl->Table[r].InterfaceLuid),e.device,sizeof(e.device));
-		if ((e.destination)&&((includeLinkLocal)||(!e.destination.isLinkLocal()))&&((includeLoopback)||((!e.destination.isLoopback())&&(!e.gateway.isLoopback()))))
+		if ((e.target)&&((includeLinkLocal)||(!e.target.isLinkLocal()))&&((includeLoopback)||((!e.target.isLoopback())&&(!e.via.isLoopback()))))
 			entries.push_back(e);
 	}
 
@@ -528,7 +528,7 @@ std::vector<RoutingTable::Entry> RoutingTable::get(bool includeLinkLocal,bool in
 	return entries;
 }
 
-RoutingTable::Entry RoutingTable::set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric,bool ifscope)
+RoutingTable::Entry RoutingTable::set(const InetAddress &target,const InetAddress &via,const char *device,int metric,bool ifscope)
 {
 	NET_LUID luid;
 	luid.Value = 0;
@@ -552,9 +552,9 @@ RoutingTable::Entry RoutingTable::set(const InetAddress &destination,const InetA
 					rdest.set(rtbl->Table[r].DestinationPrefix.Prefix.Ipv6.sin6_addr.u.Byte,16,rtbl->Table[r].DestinationPrefix.PrefixLength);
 					break;
 			}
-			if (rdest == destination) {
+			if (rdest == target) {
 				if (metric >= 0) {
-					_copyInetAddressToSockaddrInet(gateway,rtbl->Table[r].NextHop);
+					_copyInetAddressToSockaddrInet(via,rtbl->Table[r].NextHop);
 					rtbl->Table[r].Metric = metric;
 					SetIpForwardEntry2(&(rtbl->Table[r]));
 					needCreate = false;
@@ -572,9 +572,9 @@ RoutingTable::Entry RoutingTable::set(const InetAddress &destination,const InetA
 		MIB_IPFORWARD_ROW2 nr;
 		InitializeIpForwardEntry(&nr);
 		nr.InterfaceLuid.Value = luid.Value;
-		_copyInetAddressToSockaddrInet(destination,nr.DestinationPrefix.Prefix);
-		nr.DestinationPrefix.PrefixLength = destination.netmaskBits();
-		_copyInetAddressToSockaddrInet(gateway,nr.NextHop);
+		_copyInetAddressToSockaddrInet(target,nr.DestinationPrefix.Prefix);
+		nr.DestinationPrefix.PrefixLength = target.netmaskBits();
+		_copyInetAddressToSockaddrInet(via,nr.NextHop);
 		nr.Metric = metric;
 		nr.Protocol = MIB_IPPROTO_NETMGMT;
 		DWORD result = CreateIpForwardEntry2(&nr);
@@ -585,7 +585,7 @@ RoutingTable::Entry RoutingTable::set(const InetAddress &destination,const InetA
 	std::vector<RoutingTable::Entry> rtab(get(true,true));
 	std::vector<RoutingTable::Entry>::iterator bestEntry(rtab.end());
 	for(std::vector<RoutingTable::Entry>::iterator e(rtab.begin());e!=rtab.end();++e) {
-		if ((e->destination == destination)&&(e->gateway.ipsEqual(gateway))) {
+		if ((e->target == target)&&(e->via.ipsEqual(via))) {
 			if ((device)&&(device[0])) {
 				if (!strcmp(device,e->device)) {
 					if (metric == e->metric)

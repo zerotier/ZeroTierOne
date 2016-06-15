@@ -225,18 +225,24 @@ public:
 	}
 
 	/**
-	 * Perform a safe C string copy
+	 * Perform a safe C string copy, ALWAYS null-terminating the result
 	 *
-	 * @param dest Destination buffer
-	 * @param len Length of buffer
-	 * @param src Source string
+	 * This will never ever EVER result in dest[] not being null-terminated
+	 * regardless of any input parameter (other than len==0 which is invalid).
+	 *
+	 * @param dest Destination buffer (must not be NULL)
+	 * @param len Length of dest[] (if zero, false is returned and nothing happens)
+	 * @param src Source string (if NULL, dest will receive a zero-length string and true is returned)
 	 * @return True on success, false on overflow (buffer will still be 0-terminated)
 	 */
 	static inline bool scopy(char *dest,unsigned int len,const char *src)
-		throw()
 	{
 		if (!len)
 			return false; // sanity check
+		if (!src) {
+			*dest = (char)0;
+			return true;
+		}
 		char *end = dest + len;
 		while ((*dest++ = *src++)) {
 			if (dest == end) {

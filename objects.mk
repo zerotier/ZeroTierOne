@@ -23,6 +23,7 @@ OBJS=\
 	node/Topology.o \
 	node/Utils.o \
 	osdep/BackgroundResolver.o \
+	osdep/ManagedRoute.o \
 	osdep/Http.o \
 	osdep/OSUtils.o \
 	service/ClusterGeoIpService.o \

@@ -34,12 +34,12 @@ public:
 		/**
 		 * Destination IP and netmask bits (CIDR format)
 		 */
-		InetAddress destination;
+		InetAddress target;
 
 		/**
 		 * Gateway or null address if direct link-level route, netmask/port part of InetAddress not used
 		 */
-		InetAddress gateway;
+		InetAddress via;
 
 		/**
 		 * Metric or hop count -- higher = lower routing priority
