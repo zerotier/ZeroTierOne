@@ -764,21 +764,22 @@ static int testOther()
 	}
 	std::cout << "PASS" << std::endl;
 
-	std::cout << "[other] Testing Dictionary... "; std::cout.flush();
+	std::cout << "[other] Testing/fuzzing Dictionary... "; std::cout.flush();
 	for(int k=0;k<1000;++k) {
-		Dictionary td;
-		char key[128][16];
-		char value[128][128];
-		for(unsigned int q=0;q<128;++q) {
+		Dictionary test;
+		char key[32][16];
+		char value[32][128];
+		for(unsigned int q=0;q<32;++q) {
 			Utils::snprintf(key[q],16,"%.8lx",(unsigned long)rand());
 			int r = rand() % 128;
 			for(int x=0;x<r;++x)
 				value[q][x] = ("0123456789\0\t\r\n= ")[rand() % 16];
 			value[q][r] = (char)0;
-			test.set(key[q],value[q]);
+			test.add(key[q],value[q],r);
 		}
 		for(unsigned int q=0;q<1024;++q) {
-			int r = rand() % 128;
+			//int r = rand() % 128;
+			int r = 31;
 			char tmp[128];
 			if (test.get(key[r],tmp,sizeof(tmp)) >= 0) {
 				if (strcmp(value[r],tmp)) {
@@ -786,21 +787,33 @@ static int testOther()
 					return -1;
 				}
 			} else {
-				std::cout << "FAILED (can't find key)!" << std::endl;
+				std::cout << "FAILED (can't find key '" << key[r] << "')!" << std::endl;
+				return -1;
+			}
+		}
+		for(unsigned int q=0;q<31;++q) {
+			char tmp[128];
+			test.erase(key[q]);
+			if (test.get(key[q],tmp,sizeof(tmp)) >= 0) {
+				std::cout << "FAILED (key should have been erased)!" << std::endl;
+				return -1;
+			}
+			if (test.get(key[q+1],tmp,sizeof(tmp)) < 0) {
+				std::cout << "FAILED (key should NOT have been erased)!" << std::endl;
 				return -1;
 			}
 		}
 	}
 	int foo = 0;
 	volatile int *volatile bar = &foo; // force compiler not to optimize out test.get() below
-	for(int k=0;k<100000;++k) {
-		int r = rand() % 16384;
-		unsigned char tmp[16384];
+	for(int k=0;k<100;++k) {
+		int r = rand() % ZT_DICTIONARY_MAX_SIZE;
+		unsigned char tmp[ZT_DICTIONARY_MAX_SIZE];
 		for(int q=0;q<r;++q)
 			tmp[q] = (unsigned char)((rand() % 254) + 1);
 		tmp[r] = 0;
-		Dictionary test(tmp);
-		for(unsigned int q=0;q<1024;++q) {
+		Dictionary test((const char *)tmp);
+		for(unsigned int q=0;q<100;++q) {
 			char tmp[16];
 			Utils::snprintf(tmp,16,"%.8lx",(unsigned long)rand());
 			char value[128];
@@ -1013,6 +1026,7 @@ static int testResolver()
 	return 0;
 }
 
+/*
 static int testHttp()
 {
 	std::map<std::string,std::string> requestHeaders,responseHeaders;
@@ -1055,6 +1069,7 @@ static int testHttp()
 
 	return 0;
 }
+*/
 
 #ifdef __WINDOWS__
 int _tmain(int argc, _TCHAR* argv[])

@@ -27,7 +27,7 @@
 #include <stdint.h>
 
 // Can be increased if it's ever needed, but not too much.
-#define ZT_DICTIONARY_MAX_SIZE 16384
+#define ZT_DICTIONARY_MAX_SIZE 8194
 
 namespace ZeroTier {
 
@@ -279,6 +279,15 @@ public:
 		for(unsigned int i=0;i<ZT_DICTIONARY_MAX_SIZE;++i) {
 			if (!_d[i]) {
 				unsigned int j = i;
+
+				if (j > 0) {
+					_d[j++] = '\n';
+					if (j == ZT_DICTIONARY_MAX_SIZE) {
+						_d[i] = (char)0;
+						return false;
+					}
+				}
+
 				const char *p = key;
 				while (*p) {
 					_d[j++] = *(p++);
@@ -287,9 +296,16 @@ public:
 						return false;
 					}
 				}
+
+				_d[j++] = '=';
+				if (j == ZT_DICTIONARY_MAX_SIZE) {
+					_d[i] = (char)0;
+					return false;
+				}
+
 				p = value;
 				int k = 0;
-				while ((*p)&&((vlen < 0)||(k < vlen))) {
+				while ( ((*p)&&(vlen < 0)) || (k < vlen) ) {
 					switch(*p) {
 						case 0:
 						case '\r':
@@ -326,7 +342,9 @@ public:
 					++p;
 					++k;
 				}
-				_d[j++] = (char)0;
+
+				_d[j] = (char)0;
+
 				return true;
 			}
 		}
