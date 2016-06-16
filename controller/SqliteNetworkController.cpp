@@ -53,7 +53,7 @@
 #include "../node/Utils.hpp"
 #include "../node/CertificateOfMembership.hpp"
 #include "../node/NetworkConfig.hpp"
-#include "../node/NetworkConfigRequestMetaData.hpp"
+#include "../node/Dictionary.hpp"
 #include "../node/InetAddress.hpp"
 #include "../node/MAC.hpp"
 #include "../node/Address.hpp"
@@ -115,17 +115,13 @@ static void _ipToBlob(const InetAddress &a,char *ipBlob,int &ipVersion) /* blob[
 {
 	switch(a.ss_family) {
 		case AF_INET:
-			if ((a.netmaskBits() >= 0)&&(a.netmaskBits() <= 32)) {
-				memset(ipBlob,0,12);
-				memcpy(ipBlob + 12,a.rawIpData(),4);
-				ipVersion = 4;
-			}
+			memset(ipBlob,0,12);
+			memcpy(ipBlob + 12,a.rawIpData(),4);
+			ipVersion = 4;
 			break;
 		case AF_INET6:
-			if ((a.netmaskBits() >= 0)&&(a.netmaskBits() <= 128)) {
-				memcpy(ipBlob,a.rawIpData(),16);
-				ipVersion = 6;
-			}
+			memcpy(ipBlob,a.rawIpData(),16);
+			ipVersion = 6;
 			break;
 	}
 }
@@ -406,10 +402,10 @@ SqliteNetworkController::~SqliteNetworkController()
 	}
 }
 
-NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const NetworkConfigRequestMetaData &metaData,Buffer<8194> &netconf)
+NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary &metaData,NetworkConfig &nc)
 {
 	Mutex::Lock _l(_lock);
-	return _doNetworkConfigRequest(fromAddr,signingId,identity,nwid,metaData,netconf);
+	return _doNetworkConfigRequest(fromAddr,signingId,identity,nwid,metaData,nc);
 }
 
 unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
@@ -1580,7 +1576,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 	return 404;
 }
 
-NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const NetworkConfigRequestMetaData &metaData,Buffer<8194> &netconf)
+NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary &metaData,NetworkConfig &nc)
 {
 	// Assumes _lock is locked
 
@@ -1705,10 +1701,10 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 		sqlite3_bind_int64(_sAddNodeHistoryEntry,3,nextVC);
 		sqlite3_bind_int(_sAddNodeHistoryEntry,4,(member.authorized ? 1 : 0));
 		sqlite3_bind_int64(_sAddNodeHistoryEntry,5,(long long)now);
-		sqlite3_bind_int(_sAddNodeHistoryEntry,6,(int)metaData.majorVersion);
-		sqlite3_bind_int(_sAddNodeHistoryEntry,7,(int)metaData.minorVersion);
-		sqlite3_bind_int(_sAddNodeHistoryEntry,8,(int)metaData.revision);
-		sqlite3_bind_text(_sAddNodeHistoryEntry,9,"",-1,SQLITE_STATIC);
+		sqlite3_bind_int(_sAddNodeHistoryEntry,6,(int)metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0));
+		sqlite3_bind_int(_sAddNodeHistoryEntry,7,(int)metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0));
+		sqlite3_bind_int(_sAddNodeHistoryEntry,8,(int)metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0));
+		sqlite3_bind_text(_sAddNodeHistoryEntry,9,metaData.data(),-1,SQLITE_STATIC);
 		if (fastr.length() > 0)
 			sqlite3_bind_text(_sAddNodeHistoryEntry,10,fastr.c_str(),-1,SQLITE_STATIC);
 		else sqlite3_bind_null(_sAddNodeHistoryEntry,10);
@@ -1731,9 +1727,6 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 
 	// Create network configuration -- we create both legacy and new types and send both for backward compatibility
 
-	Dictionary legacy;
-	NetworkConfig nc;
-
 	// New network config structure
 	nc.networkId = Utils::hexStrToU64(network.id);
 	nc.type = network.isPrivate ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
@@ -1744,7 +1737,7 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 	if (network.allowPassiveBridging) nc.flags |= ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING;
 	memcpy(nc.name,network.name,std::min((unsigned int)ZT_MAX_NETWORK_SHORT_NAME_LENGTH,(unsigned int)strlen(network.name)));
 
-	// Legacy dictionary -- will go away eventually
+	/*
 	char tss[24],rs[24];
 	Utils::snprintf(tss,sizeof(tss),"%.16llx",(unsigned long long)now);
 	Utils::snprintf(rs,sizeof(rs),"%.16llx",(unsigned long long)network.revision);
@@ -1756,6 +1749,7 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 	legacy[ZT_NETWORKCONFIG_DICT_KEY_NAME] = (network.name) ? network.name : "";
 	legacy[ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST] = network.enableBroadcast ? "1" : "0";
 	legacy[ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING] = network.allowPassiveBridging ? "1" : "0";
+	*/
 
 	{	// TODO: right now only etherTypes are supported in rules
 		std::vector<int> allowedEtherTypes;
@@ -1784,6 +1778,7 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 			nc.rules[k++].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
 		}
 
+		/*
 		std::string allowedEtherTypesCsv;
 		for(std::vector<int>::const_iterator i(allowedEtherTypes.begin());i!=allowedEtherTypes.end();++i) {
 			if (allowedEtherTypesCsv.length())
@@ -1793,46 +1788,49 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 			allowedEtherTypesCsv.append(tmp);
 		}
 		legacy[ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES] = allowedEtherTypesCsv;
+		*/
 	}
 
 	nc.multicastLimit = network.multicastLimit;
+	/*
 	if (network.multicastLimit > 0) {
 		char ml[16];
 		Utils::snprintf(ml,sizeof(ml),"%lx",(unsigned long)network.multicastLimit);
 		legacy[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT] = ml;
 	}
+	*/
 
 	bool amActiveBridge = false;
 	{
-		std::string activeBridges;
+		//std::string activeBridges;
 		sqlite3_reset(_sGetActiveBridges);
 		sqlite3_bind_text(_sGetActiveBridges,1,network.id,16,SQLITE_STATIC);
 		while (sqlite3_step(_sGetActiveBridges) == SQLITE_ROW) {
 			const char *ab = (const char *)sqlite3_column_text(_sGetActiveBridges,0);
 			if ((ab)&&(strlen(ab) == 10)) {
 				const uint64_t ab2 = Utils::hexStrToU64(ab);
-				if ((ab2)&&(nc.specialistCount < ZT_MAX_NETWORK_SPECIALISTS)) {
-					nc.specialists[nc.specialistCount++] = ab2 | ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE;
-				}
+				nc.addSpecialist(Address(ab2),ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
 
+				/*
 				if (activeBridges.length())
 					activeBridges.push_back(',');
 				activeBridges.append(ab);
+				*/
 
 				if (!strcmp(member.nodeId,ab))
 					amActiveBridge = true;
 			}
-			if (activeBridges.length() > 1024) // sanity check -- you can't have too many active bridges at the moment
-				break;
 		}
+		/*
 		if (activeBridges.length())
 			legacy[ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES] = activeBridges;
+		*/
 	}
 
 	// Do not send relays to 1.1.0 since it had a serious bug in using them
 	// 1.1.0 will still work, it'll just fall back to roots instead of using network preferred relays
-	if (!((metaData.majorVersion == 1)&&(metaData.minorVersion == 1)&&(metaData.revision == 0))) {
-		std::string relays;
+	if (!((metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0) == 1)&&(metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0) == 1)&&(metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0) == 0))) {
+		//std::string relays;
 		sqlite3_reset(_sGetRelays);
 		sqlite3_bind_text(_sGetRelays,1,network.id,16,SQLITE_STATIC);
 		while (sqlite3_step(_sGetRelays) == SQLITE_ROW) {
@@ -1842,18 +1840,8 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 				Address node(n);
 				InetAddress addr(a);
 				if (node) {
-					bool sf = false;
-					for(unsigned int k=0;k<nc.specialistCount;++k) {
-						if ((nc.specialists[k] & 0xffffffffffULL) == node.toInt()) {
-							nc.specialists[k] |= ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY;
-							sf = true;
-							break;
-						}
-					}
-					if ((!sf)&&(nc.specialistCount < ZT_MAX_NETWORK_SPECIALISTS)) {
-						nc.specialists[nc.specialistCount++] = node.toInt() | ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY;
-					}
-
+					nc.addSpecialist(node,ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY);
+					/*
 					if (relays.length())
 						relays.push_back(',');
 					relays.append(node.toString());
@@ -1861,11 +1849,14 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 						relays.push_back(';');
 						relays.append(addr.toString());
 					}
+					*/
 				}
 			}
 		}
+		/*
 		if (relays.length())
 			legacy[ZT_NETWORKCONFIG_DICT_KEY_RELAYS] = relays;
+		*/
 	}
 
 	sqlite3_reset(_sGetRoutes);
@@ -1900,8 +1891,15 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 		++nc.routeCount;
 	}
 
+	if ((network.v6AssignMode)&&(!strcmp(network.v6AssignMode,"rfc4193"))) {
+		InetAddress rfc4193Addr(InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt()));
+		//legacy[ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC] = rfc4193Addr.toString();
+		if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)
+			nc.staticIps[nc.staticIpCount++] = rfc4193Addr;
+	}
+
 	if ((network.v4AssignMode)&&(!strcmp(network.v4AssignMode,"zt"))) {
-		std::string v4s;
+		//std::string v4s;
 		bool haveStaticIpAssignment = false;
 
 		sqlite3_reset(_sGetIpAssignmentsForNode);
@@ -1924,9 +1922,11 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 				InetAddress tmp2(ips);
 				if (tmp2)
 					nc.staticIps[nc.staticIpCount++] = tmp2;
+				/*
 				if (v4s.length())
 					v4s.push_back(',');
 				v4s.append(ips);
+				*/
 			}
 		}
 
@@ -1999,9 +1999,11 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 										nc.staticIps[nc.staticIpCount++] = tmp2;
 								}
 
+								/*
 								if (v4s.length())
 									v4s.push_back(',');
 								v4s.append(ips);
+								*/
 
 								haveStaticIpAssignment = true;
 								break;
@@ -2012,40 +2014,20 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 			}
 		}
 
+		/*
 		if (v4s.length())
 			legacy[ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC] = v4s;
-	}
-
-	if ((network.v6AssignMode)&&(!strcmp(network.v6AssignMode,"rfc4193"))) {
-		InetAddress rfc4193Addr(InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt()));
-		legacy[ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC] = rfc4193Addr.toString();
-		if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)
-			nc.staticIps[nc.staticIpCount++] = rfc4193Addr;
+		*/
 	}
 
 	if (network.isPrivate) {
 		CertificateOfMembership com(now,ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA,nwid,identity.address());
 		if (com.sign(signingId)) {
-			legacy[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = com.toString();
+			//legacy[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = com.toString();
 			nc.com = com;
 		} else {
 			return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 		}
-	}
-
-	// Append legacy network config data for older devices
-	if (metaData.protocolVersion < 6) {
-		if (!legacy.sign(signingId,now))
-			return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
-		std::string legacyStr(legacy.toString());
-		netconf.append((const void *)legacyStr.data(),(unsigned int)legacyStr.length());
-	}
-
-	netconf.append((uint8_t)0);
-
-	// Append new format data for newer devices
-	if (metaData.protocolVersion >= 6) {
-		nc.serialize(netconf);
 	}
 
 	return NetworkController::NETCONF_QUERY_OK;
