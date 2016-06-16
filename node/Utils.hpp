@@ -49,7 +49,6 @@ public:
 	 * @return True if strings are equal
 	 */
 	static inline bool secureEq(const void *a,const void *b,unsigned int len)
-		throw()
 	{
 		uint8_t diff = 0;
 		for(unsigned int i=0;i<len;++i)
@@ -235,23 +234,7 @@ public:
 	 * @param src Source string (if NULL, dest will receive a zero-length string and true is returned)
 	 * @return True on success, false on overflow (buffer will still be 0-terminated)
 	 */
-	static inline bool scopy(char *dest,unsigned int len,const char *src)
-	{
-		if (!len)
-			return false; // sanity check
-		if (!src) {
-			*dest = (char)0;
-			return true;
-		}
-		char *end = dest + len;
-		while ((*dest++ = *src++)) {
-			if (dest == end) {
-				*(--dest) = (char)0;
-				return false;
-			}
-		}
-		return true;
-	}
+	static bool scopy(char *dest,unsigned int len,const char *src);
 
 	/**
 	 * Variant of snprintf that is portable and throws an exception
@@ -275,7 +258,6 @@ public:
 	 * @return Number of bits set in this integer (0-32)
 	 */
 	static inline uint32_t countBits(uint32_t v)
-		throw()
 	{
 		v = v - ((v >> 1) & (uint32_t)0x55555555);
 		v = (v & (uint32_t)0x33333333) + ((v >> 2) & (uint32_t)0x33333333);
@@ -290,7 +272,6 @@ public:
 	 * @return True if memory is all zero
 	 */
 	static inline bool isZero(const void *p,unsigned int len)
-		throw()
 	{
 		for(unsigned int i=0;i<len;++i) {
 			if (((const unsigned char *)p)[i])

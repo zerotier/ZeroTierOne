@@ -262,6 +262,24 @@ std::vector<std::string> Utils::split(const char *s,const char *const sep,const 
 	return fields;
 }
 
+bool Utils::scopy(char *dest,unsigned int len,const char *src)
+{
+	if (!len)
+		return false; // sanity check
+	if (!src) {
+		*dest = (char)0;
+		return true;
+	}
+	char *end = dest + len;
+	while ((*dest++ = *src++)) {
+		if (dest == end) {
+			*(--dest) = (char)0;
+			return false;
+		}
+	}
+	return true;
+}
+
 unsigned int Utils::snprintf(char *buf,unsigned int len,const char *fmt,...)
 	throw(std::length_error)
 {

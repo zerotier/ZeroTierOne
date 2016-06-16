@@ -412,6 +412,8 @@ enum ZT_VirtualNetworkRuleType
 	 */
 	ZT_NETWORK_RULE_ACTION_REDIRECT = 3,
 
+	// <32 == actions
+
 	/**
 	 * Source ZeroTier address -- analogous to an Ethernet port ID on a switch
 	 */

@@ -23,158 +23,460 @@
 
 namespace ZeroTier {
 
-#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
-
-void NetworkConfig::fromDictionary(const char *ds,unsigned int dslen)
+bool NetworkConfig::toDictionary(Dictionary &d,bool includeLegacy) const
 {
-	static const std::string zero("0");
-	static const std::string one("1");
+	Buffer<ZT_DICTIONARY_MAX_SIZE> tmp;
 
-	Dictionary d(ds,dslen);
+	d.clear();
 
-	memset(this,0,sizeof(NetworkConfig));
+	// Try to put the more human-readable fields first
 
-	// NOTE: d.get(name) throws if not found, d.get(name,default) returns default
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID,this->networkId)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,this->timestamp)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REVISION,this->revision)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,this->issuedTo)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,this->flags)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,(uint64_t)this->multicastLimit)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint64_t)this->type)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name)) return false;
 
-	networkId = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID,"0").c_str());
-	if (!networkId)
-		throw std::invalid_argument("configuration contains zero network ID");
+#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
+	if (includeLegacy) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING_OLD,this->allowPassiveBridging())) return false;
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST_OLD,this->enableBroadcast())) return false;
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE_OLD,this->isPrivate())) return false;
 
-	timestamp = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,"0").c_str());
-	revision = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_REVISION,"1").c_str()); // older controllers don't send this, so default to 1
-	issuedTo = Address(d.get(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,"0"));
-
-	multicastLimit = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,zero).c_str());
-	if (multicastLimit == 0) multicastLimit = ZT_MULTICAST_DEFAULT_LIMIT;
-
-	flags |= ((Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING,zero).c_str()) != 0) ? ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING : 0);
-	flags |= ((Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST,one).c_str()) != 0) ? ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST : 0);
-
-	this->type = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE,one).c_str()) != 0) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
-
-	std::string nametmp(d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME,""));
-	for(unsigned long i=0;((i<ZT_MAX_NETWORK_SHORT_NAME_LENGTH)&&(i<nametmp.length()));++i)
-		name[i] = (char)nametmp[i];
-	// we zeroed the entire structure above and _name is ZT_MAX_NETWORK_SHORT_NAME_LENGTH+1, so it will always null-terminate
-
-	std::vector<std::string> activeBridgesSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES,"").c_str(),",","",""));
-	for(std::vector<std::string>::const_iterator a(activeBridgesSplit.begin());a!=activeBridgesSplit.end();++a) {
-		if (a->length() == ZT_ADDRESS_LENGTH_HEX) { // ignore empty or garbage fields
-			Address tmp(*a);
-			if (!tmp.isReserved()) {
-				uint64_t specialist = tmp.toInt();
-				for(unsigned int i=0;i<specialistCount;++i) {
-					if ((specialists[i] & 0xffffffffffULL) == specialist) {
-						specialists[i] |= ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE;
-						specialist = 0;
-						break;
-					}
-				}
-				if ((specialist)&&(specialistCount < ZT_MAX_NETWORK_SPECIALISTS))
-					specialists[specialistCount++] = specialist | ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE;
+		std::string v4s;
+		for(unsigned int i=0;i<staticIpCount;++i) {
+			if (this->staticIps[i].ss_family == AF_INET) {
+				if (v4s.length() > 0)
+					v4s.push_back(',');
+				v4s.append(this->staticIps[i].toString());
 			}
 		}
-	}
+		if (v4s.length() > 0) {
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC_OLD,v4s.c_str())) return false;
+		}
+		std::string v6s;
+		for(unsigned int i=0;i<staticIpCount;++i) {
+			if (this->staticIps[i].ss_family == AF_INET6) {
+				if (v6s.length() > 0)
+					v6s.push_back(',');
+				v6s.append(this->staticIps[i].toString());
+			}
+		}
+		if (v6s.length() > 0) {
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC_OLD,v6s.c_str())) return false;
+		}
 
-	std::string ipAddrs(d.get(ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC,std::string()));
-	{
-		std::string v6s(d.get(ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC,std::string()));
-		if (v6s.length()) {
-			if (ipAddrs.length())
-				ipAddrs.push_back(',');
-			ipAddrs.append(v6s);
+		std::string ets;
+		unsigned int et = 0;
+		ZT_VirtualNetworkRuleType lastrt = ZT_NETWORK_RULE_ACTION_ACCEPT;
+		for(unsigned int i=0;i<ruleCount;++i) {
+			ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rules[i].t & 0x7f);
+			if (rt == ZT_NETWORK_RULE_MATCH_ETHERTYPE) {
+				et = rules[i].v.etherType;
+			} else if (rt == ZT_NETWORK_RULE_ACTION_ACCEPT) {
+				if (((int)lastrt < 32)||(lastrt == ZT_NETWORK_RULE_MATCH_ETHERTYPE)) {
+					if (ets.length() > 0)
+						ets.push_back(',');
+					char tmp[16];
+					Utils::snprintf(tmp,sizeof(tmp),"%x",et);
+					ets.append(tmp);
+				}
+				et = 0;
+			}
+			lastrt = rt;
+		}
+		if (ets.length() > 0) {
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES_OLD,ets.c_str())) return false;
+		}
+
+		if (this->com) {
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP_OLD,this->com.toString().c_str())) return false;
+		}
+
+		std::string ab;
+		for(unsigned int i=0;i<this->specialistCount;++i) {
+			if ((this->specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0) {
+				if (ab.length() > 0)
+					ab.push_back(',');
+				ab.append(Address(this->specialists[i]).toString().c_str());
+			}
+		}
+		if (ab.length() > 0) {
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES_OLD,ab.c_str())) return false;
+		}
+
+		std::vector<Relay> rvec(this->relays());
+		std::string rl;
+		for(std::vector<Relay>::const_iterator i(rvec.begin());i!=rvec.end();++i) {
+			if (rl.length() > 0)
+				rl.push_back(',');
+			rl.append(i->address.toString());
+			if (i->phy4) {
+				rl.push_back(';');
+				rl.append(i->phy4.toString());
+			} else if (i->phy6) {
+				rl.push_back(';');
+				rl.append(i->phy6.toString());
+			}
+		}
+		if (rl.length() > 0) {
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_RELAYS_OLD,rl.c_str())) return false;
 		}
 	}
-	std::vector<std::string> ipAddrsSplit(Utils::split(ipAddrs.c_str(),",","",""));
-	for(std::vector<std::string>::const_iterator ipstr(ipAddrsSplit.begin());ipstr!=ipAddrsSplit.end();++ipstr) {
-		InetAddress addr(*ipstr);
-		switch(addr.ss_family) {
-			case AF_INET:
-				if ((!addr.netmaskBits())||(addr.netmaskBits() > 32))
-					continue;
+#endif // ZT_SUPPORT_OLD_STYLE_NETCONF
+
+	// Then add binary blobs
+
+	if (this->com) {
+		tmp.clear();
+		this->com.serialize(tmp);
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_COM,tmp)) return false;
+	}
+
+	tmp.clear();
+	for(unsigned int i=0;i<this->specialistCount;++i) {
+		tmp.append((uint64_t)this->specialists[i]);
+	}
+	if (tmp.size()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_SPECIALISTS,tmp)) return false;
+	}
+
+	tmp.clear();
+	for(unsigned int i=0;i<this->routeCount;++i) {
+		reinterpret_cast<const InetAddress *>(&(this->routes[i].target))->serialize(tmp);
+		reinterpret_cast<const InetAddress *>(&(this->routes[i].via))->serialize(tmp);
+		tmp.append((uint16_t)this->routes[i].flags);
+		tmp.append((uint16_t)this->routes[i].metric);
+	}
+	if (tmp.size()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ROUTES,tmp)) return false;
+	}
+
+	tmp.clear();
+	for(unsigned int i=0;i<this->staticIpCount;++i) {
+		this->staticIps[i].serialize(tmp);
+	}
+	if (tmp.size()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS,tmp)) return false;
+	}
+
+	tmp.clear();
+	for(unsigned int i=0;i<this->pinnedCount;++i) {
+		this->pinned[i].zt.appendTo(tmp);
+		this->pinned[i].phy.serialize(tmp);
+	}
+	if (tmp.size()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_PINNED,tmp)) return false;
+	}
+
+	tmp.clear();
+	for(unsigned int i=0;i<this->ruleCount;++i) {
+		tmp.append((uint8_t)rules[i].t);
+		switch((ZT_VirtualNetworkRuleType)(rules[i].t & 0x7f)) {
+			//case ZT_NETWORK_RULE_ACTION_DROP:
+			//case ZT_NETWORK_RULE_ACTION_ACCEPT:
+			default:
+				tmp.append((uint8_t)0);
 				break;
-			case AF_INET6:
-				if ((!addr.netmaskBits())||(addr.netmaskBits() > 128))
-					continue;
+			case ZT_NETWORK_RULE_ACTION_TEE:
+			case ZT_NETWORK_RULE_ACTION_REDIRECT:
+			case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
+			case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS:
+				tmp.append((uint8_t)5);
+				Address(rules[i].v.zt).appendTo(tmp);
 				break;
-			default: // ignore unrecognized address types or junk/empty fields
-				continue;
-		}
-		if (!addr.isNetwork()) {
-			if ((staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)&&(std::find(&(staticIps[0]),&(staticIps[staticIpCount]),addr) == &(staticIps[staticIpCount])))
-				staticIps[staticIpCount++] = addr;
-		}
-	}
-	std::sort(&(staticIps[0]),&(staticIps[staticIpCount]));
-
-	/* Old versions don't support gateways anyway, so ignore this in old netconfs
-	std::vector<std::string> gatewaysSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_GATEWAYS,"").c_str(),",","",""));
-	for(std::vector<std::string>::const_iterator gwstr(gatewaysSplit.begin());gwstr!=gatewaysSplit.end();++gwstr) {
-		InetAddress gw(*gwstr);
-		if ((gw)&&(_gatewayCount < ZT_MAX_NETWORK_GATEWAYS)&&(std::find(&(_gateways[0]),&(_gateways[_gatewayCount]),gw) == &(_gateways[_gatewayCount])))
-			_gateways[_gatewayCount++] = gw;
-	}
-	std::sort(&(_gateways[0]),&(_gateways[_gatewayCount]));
-	*/
-
-	std::vector<std::string> relaysSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_RELAYS,"").c_str(),",","",""));
-	for(std::vector<std::string>::const_iterator r(relaysSplit.begin());r!=relaysSplit.end();++r) {
-		if (r->length() >= ZT_ADDRESS_LENGTH_HEX) {
-			Address zt(r->substr(0,ZT_ADDRESS_LENGTH_HEX).c_str());
-			InetAddress phy[2];
-			unsigned int phyCount = 0;
-			const std::size_t semi(r->find(';'));
-			if ((semi > ZT_ADDRESS_LENGTH_HEX)&&(semi < (r->length() - 2))) {
-				std::vector<std::string> phySplit(Utils::split(r->substr(semi+1).c_str(),",","",""));
-				for(std::vector<std::string>::const_iterator p(phySplit.begin());((p!=phySplit.end())&&(phyCount < 2));++p) {
-					phy[phyCount] = InetAddress(*p);
-					if (phy[phyCount])
-						++phyCount;
-					else phy[phyCount].zero();
-				}
-			}
-
-			uint64_t specialist = zt.toInt();
-			for(unsigned int i=0;i<specialistCount;++i) {
-				if ((specialists[i] & 0xffffffffffULL) == specialist) {
-					specialists[i] |= ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY;
-					specialist = 0;
-					break;
-				}
-			}
-
-			if ((specialist)&&(specialistCount < ZT_MAX_NETWORK_SPECIALISTS))
-				specialists[specialistCount++] = specialist | ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY;
-
-			if ((phy[0])&&(pinnedCount < ZT_MAX_NETWORK_PINNED)) {
-				pinned[pinnedCount].zt = zt;
-				pinned[pinnedCount].phy = phy[0];
-				++pinnedCount;
-			}
-			if ((phy[1])&&(pinnedCount < ZT_MAX_NETWORK_PINNED)) {
-				pinned[pinnedCount].zt = zt;
-				pinned[pinnedCount].phy = phy[0];
-				++pinnedCount;
-			}
-		}
-	}
-
-	std::vector<std::string> ets(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES,"").c_str(),",","",""));
-	for(std::vector<std::string>::const_iterator et(ets.begin());et!=ets.end();++et) {
-		unsigned int et2 = Utils::hexStrToUInt(et->c_str()) & 0xffff;
-		if ((ruleCount + 1) < ZT_MAX_NETWORK_RULES) {
-			if (et2) {
-				rules[ruleCount].t = ZT_NETWORK_RULE_MATCH_ETHERTYPE;
-				rules[ruleCount].v.etherType = (uint16_t)et2;
-				++ruleCount;
-			}
-			rules[ruleCount++].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
+			case ZT_NETWORK_RULE_MATCH_VLAN_ID:
+				tmp.append((uint8_t)2);
+				tmp.append((uint16_t)rules[i].v.vlanId);
+				break;
+			case ZT_NETWORK_RULE_MATCH_VLAN_PCP:
+				tmp.append((uint8_t)1);
+				tmp.append((uint8_t)rules[i].v.vlanPcp);
+				break;
+			case ZT_NETWORK_RULE_MATCH_VLAN_DEI:
+				tmp.append((uint8_t)1);
+				tmp.append((uint8_t)rules[i].v.vlanDei);
+				break;
+			case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
+				tmp.append((uint8_t)2);
+				tmp.append((uint16_t)rules[i].v.etherType);
+				break;
+			case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
+			case ZT_NETWORK_RULE_MATCH_MAC_DEST:
+				tmp.append((uint8_t)6);
+				tmp.append(rules[i].v.mac,6);
+				break;
+			case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
+			case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
+				tmp.append((uint8_t)5);
+				tmp.append(&(rules[i].v.ipv4.ip),4);
+				tmp.append((uint8_t)rules[i].v.ipv4.mask);
+				break;
+			case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
+			case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
+				tmp.append((uint8_t)17);
+				tmp.append(rules[i].v.ipv6.ip,16);
+				tmp.append((uint8_t)rules[i].v.ipv6.mask);
+				break;
+			case ZT_NETWORK_RULE_MATCH_IP_TOS:
+				tmp.append((uint8_t)1);
+				tmp.append((uint8_t)rules[i].v.ipTos);
+				break;
+			case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
+				tmp.append((uint8_t)1);
+				tmp.append((uint8_t)rules[i].v.ipProtocol);
+				break;
+			case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
+			case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE:
+				tmp.append((uint8_t)4);
+				tmp.append((uint16_t)rules[i].v.port[0]);
+				tmp.append((uint16_t)rules[i].v.port[1]);
+				break;
+			case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
+				tmp.append((uint8_t)8);
+				tmp.append((uint64_t)rules[i].v.characteristics);
+				break;
+			case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
+				tmp.append((uint8_t)4);
+				tmp.append((uint16_t)rules[i].v.frameSize[0]);
+				tmp.append((uint16_t)rules[i].v.frameSize[1]);
+				break;
+			case ZT_NETWORK_RULE_MATCH_TCP_RELATIVE_SEQUENCE_NUMBER_RANGE:
+				tmp.append((uint8_t)8);
+				tmp.append((uint32_t)rules[i].v.tcpseq[0]);
+				tmp.append((uint32_t)rules[i].v.tcpseq[1]);
+				break;
 		}
 	}
+	if (tmp.size()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_RULES,tmp)) return false;
+	}
 
-	this->com.fromString(d.get(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP,std::string()));
+	return true;
 }
 
-#endif // ZT_SUPPORT_OLD_STYLE_NETCONF
+bool NetworkConfig::fromDictionary(const Dictionary &d)
+{
+	try {
+		Buffer<ZT_DICTIONARY_MAX_SIZE> tmp;
+		char tmp2[ZT_DICTIONARY_MAX_SIZE];
+
+		memset(this,0,sizeof(NetworkConfig));
+
+		const uint64_t ver = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_VERSION,0);
+
+		// Fields that are always present, new or old
+		this->networkId = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID,0);
+		if (this->networkId)
+			return false;
+		this->timestamp = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,0);
+		this->revision = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_REVISION,0);
+		this->issuedTo = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,0);
+		if (!this->issuedTo)
+			return false;
+		this->multicastLimit = (unsigned int)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,0);
+		d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name,sizeof(this->name));
+
+		if (ver < ZT_NETWORKCONFIG_VERSION) {
+	#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
+			// Decode legacy fields if version is old
+			if (d.getB(ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING_OLD))
+				this->flags |= ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING;
+			if (d.getB(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST_OLD))
+				this->flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
+			this->type = (d.getB(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE_OLD,true)) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
+
+			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC_OLD,tmp2,sizeof(tmp2)) > 0) {
+				char *saveptr = (char *)0;
+				for(char *f=Utils::stok(tmp2,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
+					if (this->staticIpCount >= ZT_MAX_ZT_ASSIGNED_ADDRESSES) break;
+					this->staticIps[this->staticIpCount++] = InetAddress(f);
+				}
+			}
+			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC_OLD,tmp2,sizeof(tmp2)) > 0) {
+				char *saveptr = (char *)0;
+				for(char *f=Utils::stok(tmp2,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
+					if (this->staticIpCount >= ZT_MAX_ZT_ASSIGNED_ADDRESSES) break;
+					this->staticIps[this->staticIpCount++] = InetAddress(f);
+				}
+			}
+
+			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP_OLD,tmp2,sizeof(tmp2)) > 0) {
+				this->com.fromString(tmp2);
+			}
+
+			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES_OLD,tmp2,sizeof(tmp2)) > 0) {
+				char *saveptr = (char *)0;
+				for(char *f=Utils::stok(tmp2,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
+					unsigned int et = Utils::hexStrToUInt(f) & 0xffff;
+					if ((this->ruleCount + 2) > ZT_MAX_NETWORK_RULES) break;
+					if (et > 0) {
+						this->rules[this->ruleCount].t = (uint8_t)ZT_NETWORK_RULE_MATCH_ETHERTYPE;
+						this->rules[this->ruleCount].v.etherType = (uint16_t)et;
+						++this->ruleCount;
+					}
+					this->rules[this->ruleCount++].t = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
+				}
+			} else {
+				this->rules[0].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
+				this->ruleCount = 1;
+			}
+
+			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES_OLD,tmp2,sizeof(tmp2)) > 0) {
+				char *saveptr = (char *)0;
+				for(char *f=Utils::stok(tmp2,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
+					this->addSpecialist(Address(f),ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
+				}
+			}
+
+			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_RELAYS_OLD,tmp2,sizeof(tmp2)) > 0) {
+				char *saveptr = (char *)0;
+				for(char *f=Utils::stok(tmp2,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
+					char tmp3[256];
+					Utils::scopy(tmp3,sizeof(tmp3),f);
+
+					InetAddress phy;
+					char *semi = tmp3;
+					while (*semi) {
+						if (*semi == ';') {
+							*semi = (char)0;
+							++semi;
+							phy = InetAddress(semi);
+						} else ++semi;
+					}
+					Address zt(tmp3);
+
+					this->addSpecialist(zt,ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY);
+					if ((phy)&&(this->pinnedCount < ZT_MAX_NETWORK_PINNED)) {
+						this->pinned[this->pinnedCount].zt = zt;
+						this->pinned[this->pinnedCount].phy = phy;
+						++this->pinnedCount;
+					}
+				}
+			}
+	#else
+			return false;
+	#endif // ZT_SUPPORT_OLD_STYLE_NETCONF
+		} else {
+			// Otherwise we can use the new fields
+			this->flags = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,0);
+			this->type = (ZT_VirtualNetworkType)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint64_t)ZT_NETWORK_TYPE_PRIVATE);
+
+			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_COM,tmp)) {
+				this->com.deserialize(tmp,0);
+			}
+
+			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_SPECIALISTS,tmp)) {
+				unsigned int p = 0;
+				while (((p + 8) <= tmp.size())&&(specialistCount < ZT_MAX_NETWORK_SPECIALISTS)) {
+					this->specialists[this->specialistCount++] = tmp.at<uint64_t>(p);
+					p += 8;
+				}
+			}
+
+			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_ROUTES,tmp)) {
+				unsigned int p = 0;
+				while ((p < tmp.size())&&(routeCount < ZT_MAX_NETWORK_ROUTES)) {
+					p += reinterpret_cast<InetAddress *>(&(this->routes[this->routeCount].target))->deserialize(tmp,p);
+					p += reinterpret_cast<InetAddress *>(&(this->routes[this->routeCount].via))->deserialize(tmp,p);
+					this->routes[this->routeCount].flags = tmp.at<uint16_t>(p); p += 2;
+					this->routes[this->routeCount].metric = tmp.at<uint16_t>(p); p += 2;
+					++this->routeCount;
+				}
+			}
+
+			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS,tmp)) {
+				unsigned int p = 0;
+				while ((p < tmp.size())&&(staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
+					p += this->staticIps[this->staticIpCount++].deserialize(tmp,p);
+				}
+			}
+
+			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_PINNED,tmp)) {
+				unsigned int p = 0;
+				while ((p < tmp.size())&&(pinnedCount < ZT_MAX_NETWORK_PINNED)) {
+					this->pinned[this->pinnedCount].zt.setTo(tmp.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
+					p += this->pinned[this->pinnedCount].phy.deserialize(tmp,p);
+					++this->pinnedCount;
+				}
+			}
+
+			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_RULES,tmp)) {
+				unsigned int p = 0;
+				while ((p < tmp.size())&&(ruleCount < ZT_MAX_NETWORK_RULES)) {
+					rules[ruleCount].t = (uint8_t)tmp[p++];
+					unsigned int fieldLen = (unsigned int)tmp[p++];
+					switch((ZT_VirtualNetworkRuleType)(rules[ruleCount].t & 0x7f)) {
+						default:
+							break;
+						case ZT_NETWORK_RULE_ACTION_TEE:
+						case ZT_NETWORK_RULE_ACTION_REDIRECT:
+						case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
+						case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS:
+							rules[ruleCount].v.zt = Address(tmp.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH).toInt();
+							break;
+						case ZT_NETWORK_RULE_MATCH_VLAN_ID:
+							rules[ruleCount].v.vlanId = tmp.at<uint16_t>(p);
+							break;
+						case ZT_NETWORK_RULE_MATCH_VLAN_PCP:
+							rules[ruleCount].v.vlanPcp = (uint8_t)tmp[p];
+							break;
+						case ZT_NETWORK_RULE_MATCH_VLAN_DEI:
+							rules[ruleCount].v.vlanDei = (uint8_t)tmp[p];
+							break;
+						case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
+							rules[ruleCount].v.etherType = tmp.at<uint16_t>(p);
+							break;
+						case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
+						case ZT_NETWORK_RULE_MATCH_MAC_DEST:
+							memcpy(rules[ruleCount].v.mac,tmp.field(p,6),6);
+							break;
+						case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
+						case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
+							memcpy(&(rules[ruleCount].v.ipv4.ip),tmp.field(p,4),4);
+							rules[ruleCount].v.ipv4.mask = (uint8_t)tmp[p + 4];
+							break;
+						case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
+						case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
+							memcpy(rules[ruleCount].v.ipv6.ip,tmp.field(p,16),16);
+							rules[ruleCount].v.ipv6.mask = (uint8_t)tmp[p + 16];
+							break;
+						case ZT_NETWORK_RULE_MATCH_IP_TOS:
+							rules[ruleCount].v.ipTos = (uint8_t)tmp[p];
+							break;
+						case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
+							rules[ruleCount].v.ipProtocol = (uint8_t)tmp[p];
+							break;
+						case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
+						case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE:
+							rules[ruleCount].v.port[0] = tmp.at<uint16_t>(p);
+							rules[ruleCount].v.port[1] = tmp.at<uint16_t>(p + 2);
+							break;
+						case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
+							rules[ruleCount].v.characteristics = tmp.at<uint64_t>(p);
+							break;
+						case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
+							rules[ruleCount].v.frameSize[0] = tmp.at<uint16_t>(p);
+							rules[ruleCount].v.frameSize[0] = tmp.at<uint16_t>(p + 2);
+							break;
+						case ZT_NETWORK_RULE_MATCH_TCP_RELATIVE_SEQUENCE_NUMBER_RANGE:
+							rules[ruleCount].v.tcpseq[0] = tmp.at<uint32_t>(p);
+							rules[ruleCount].v.tcpseq[1] = tmp.at<uint32_t>(p + 4);
+							break;
+					}
+					p += fieldLen;
+					++ruleCount;
+				}
+			}
+		}
+		return true;
+	} catch ( ... ) {
+		return false;
+	}
+}
 
 } // namespace ZeroTier

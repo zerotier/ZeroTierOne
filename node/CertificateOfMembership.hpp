@@ -295,7 +295,6 @@ public:
 	 * @param s String to deserialize
 	 */
 	void fromString(const char *s);
-	inline void fromString(const std::string &s) { fromString(s.c_str()); }
 #endif // ZT_SUPPORT_OLD_STYLE_NETCONF
 
 	/**

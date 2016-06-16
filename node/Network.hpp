@@ -151,12 +151,11 @@ public:
 	/**
 	 * Set or update this network's configuration
 	 *
-	 * @param confBytes Network configuration in old-style Dictionary or new-style serialized format
-	 * @param confLen Length of network configuration in bytes
+	 * @param nconf Network configuration
 	 * @param saveToDisk IF true (default), write config to disk
 	 * @return 0 -- rejected, 1 -- accepted but not new, 2 -- accepted new config
 	 */
-	int setConfiguration(const void *confBytes,unsigned int confLen,bool saveToDisk);
+	int setConfiguration(const NetworkConfig &nconf,bool saveToDisk);
 
 	/**
 	 * Set netconf failure to 'access denied' -- called in IncomingPacket when controller reports this

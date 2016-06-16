@@ -64,9 +64,13 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 		try {
 			std::string conf(RR->node->dataStoreGet(confn));
 			if (conf.length()) {
-				this->setConfiguration((const void *)conf.data(),(unsigned int)conf.length(),false);
-				_lastConfigUpdate = 0; // we still want to re-request a new config from the network
-				gotConf = true;
+				Dictionary dconf(conf.c_str());
+				NetworkConfig nconf;
+				if (nconf.fromDictionary(dconf)) {
+					this->setConfiguration(nconf,false);
+					_lastConfigUpdate = 0; // we still want to re-request a new config from the network
+					gotConf = true;
+				}
 			}
 		} catch ( ... ) {} // ignore invalids, we'll re-request
 
@@ -177,49 +181,21 @@ bool Network::applyConfiguration(const NetworkConfig &conf)
 	return false;
 }
 
-int Network::setConfiguration(const void *confBytes,unsigned int confLen,bool saveToDisk)
+int Network::setConfiguration(const NetworkConfig &nconf,bool saveToDisk)
 {
 	try {
-		if (confLen <= 1)
-			return 0;
-
-		NetworkConfig newConfig;
-
-		// Find the length of any string-serialized old-style Dictionary,
-		// including its terminating NULL (if any). If this is before
-		// the end of the config, that tells us there is a new-style
-		// binary config which is preferred.
-		unsigned int dictLen = 0;
-		while (dictLen < confLen) {
-			if (!(reinterpret_cast<const uint8_t *>(confBytes)[dictLen++]))
-				break;
-		}
-
-		if (dictLen < (confLen - 2)) {
-			Buffer<8194> tmp(reinterpret_cast<const uint8_t *>(confBytes) + dictLen,confLen - dictLen);
-			newConfig.deserialize(tmp,0);
-		} else {
-#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
-			newConfig.fromDictionary(reinterpret_cast<const char *>(confBytes),confLen); // throws if invalid
-#else
-			return 0;
-#endif
-		}
-
-		if (!newConfig)
-			return 0;
-
 		{
 			Mutex::Lock _l(_lock);
-			if (_config == newConfig)
+			if (_config == nconf)
 				return 1; // OK config, but duplicate of what we already have
 		}
-
-		if (applyConfiguration(newConfig)) {
+		if (applyConfiguration(nconf)) {
 			if (saveToDisk) {
-				char n[128];
+				char n[64];
 				Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
-				RR->node->dataStorePut(n,confBytes,confLen,true);
+				Dictionary d;
+				if (nconf.toDictionary(d,false))
+					RR->node->dataStorePut(n,(const void *)d.data(),d.sizeBytes(),true);
 			}
 			return 2; // OK and configuration has changed
 		}
@@ -234,12 +210,19 @@ void Network::requestConfiguration()
 	if (_id == ZT_TEST_NETWORK_ID) // pseudo-network-ID, uses locally generated static config
 		return;
 
+	Dictionary rmd;
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION,(uint64_t)ZT_PROTO_VERSION);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,(uint64_t)ZEROTIER_ONE_VERSION_MAJOR);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,(uint64_t)ZEROTIER_ONE_VERSION_MINOR);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,(uint64_t)ZEROTIER_ONE_VERSION_REVISION);
+
 	if (controller() == RR->identity.address()) {
 		if (RR->localNetworkController) {
-			Buffer<8194> tmp;
-			switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,NetworkConfigRequestMetaData(),tmp)) {
+			NetworkConfig nconf;
+			switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,rmd,nconf)) {
 				case NetworkController::NETCONF_QUERY_OK:
-					this->setConfiguration(tmp.data(),tmp.size(),true);
+					this->setConfiguration(nconf,true);
 					return;
 				case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND:
 					this->setNotFound();
@@ -258,16 +241,13 @@ void Network::requestConfiguration()
 
 	TRACE("requesting netconf for network %.16llx from controller %s",(unsigned long long)_id,controller().toString().c_str());
 
-	NetworkConfigRequestMetaData metaData;
-	metaData.initWithDefaults();
-	Buffer<4096> mds;
-	metaData.serialize(mds); // this always includes legacy fields to support old controllers
-
 	Packet outp(controller(),RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
 	outp.append((uint64_t)_id);
-	outp.append((uint16_t)mds.size());
-	outp.append(mds.data(),mds.size());
+	const unsigned int rmdSize = rmd.sizeBytes();
+	outp.append((uint16_t)rmdSize);
+	outp.append((const void *)rmd.data(),rmdSize);
 	outp.append((_config) ? (uint64_t)_config.revision : (uint64_t)0);
+	outp.compress();
 	RR->sw->send(outp,true,0);
 }
 

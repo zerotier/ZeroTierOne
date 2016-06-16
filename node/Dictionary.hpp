@@ -21,11 +21,12 @@
 
 #include "Constants.hpp"
 #include "Utils.hpp"
+#include "Buffer.hpp"
+#include "Address.hpp"
 
 #include <stdint.h>
 
-#include <string>
-
+// Can be increased if it's ever needed, but not too much.
 #define ZT_DICTIONARY_MAX_SIZE 16384
 
 namespace ZeroTier {
@@ -45,7 +46,8 @@ namespace ZeroTier {
  * Keys cannot contain binary data, CR/LF, nulls, or the equals (=) sign.
  * Adding such a key will result in an invalid entry (but isn't dangerous).
  *
- * There is code to test and fuzz this in selftest.cpp.
+ * There is code to test and fuzz this in selftest.cpp. Fuzzing a blob of
+ * pointer tricks like this is important after any modifications.
  */
 class Dictionary
 {
@@ -60,9 +62,32 @@ public:
 		Utils::scopy(_d,sizeof(_d),s);
 	}
 
-	inline void load(const char *s)
+	Dictionary(const char *s,unsigned int len)
 	{
-		Utils::scopy(_d,sizeof(_d),s);
+		memcpy(_d,s,(len > ZT_DICTIONARY_MAX_SIZE) ? (unsigned int)ZT_DICTIONARY_MAX_SIZE : len);
+		_d[ZT_DICTIONARY_MAX_SIZE-1] = (char)0;
+	}
+
+	Dictionary(const Dictionary &d)
+	{
+		Utils::scopy(_d,sizeof(_d),d._d);
+	}
+
+	inline Dictionary &operator=(const Dictionary &d)
+	{
+		Utils::scopy(_d,sizeof(_d),d._d);
+		return *this;
+	}
+
+	/**
+	 * Load a dictionary from a C-string
+	 *
+	 * @param s Dictionary in string form
+	 * @return False if 's' was longer than ZT_DICTIONARY_MAX_SIZE
+	 */
+	inline bool load(const char *s)
+	{
+		return Utils::scopy(_d,sizeof(_d),s);
 	}
 
 	/**
@@ -103,9 +128,7 @@ public:
 	inline int get(const char *key,char *dest,unsigned int destlen) const
 	{
 		const char *p = _d;
-		const char *const eof = p + ZT_DICTIONARY_MAX_SIZE;
 		const char *k,*s;
-		unsigned int dptr = 0;
 		bool esc;
 		int j;
 
@@ -185,34 +208,48 @@ public:
 	}
 
 	/**
+	 * Get the contents of a key into a buffer
+	 *
+	 * @param key Key to get
+	 * @param dest Destination buffer
+	 * @return True if key was found (if false, dest will be empty)
+	 */
+	template<unsigned int C>
+	inline bool get(const char *key,Buffer<C> &dest) const
+	{
+		const int r = this->get(key,const_cast<char *>(reinterpret_cast<const char *>(dest.data())),C);
+		if (r >= 0) {
+			dest.setSize((unsigned int)r);
+			return true;
+		} else {
+			dest.clear();
+			return false;
+		}
+	}
+
+	/**
+	 * Get a boolean value
+	 *
 	 * @param key Key to look up
-	 * @param dfl Default value if not found in dictionary (a key with an empty value is considered not found)
+	 * @param dfl Default value if not found in dictionary
 	 * @return Boolean value of key or 'dfl' if not found
 	 */
-	bool getBoolean(const char *key,bool dfl = false) const
+	bool getB(const char *key,bool dfl = false) const
 	{
-		char tmp[128];
-		if (this->get(key,tmp,sizeof(tmp)) >= 1) {
-			switch(tmp[0]) {
-				case '1':
-				case 't':
-				case 'T':
-				case 'y':
-				case 'Y':
-					return true;
-				default:
-					return false;
-			}
-		}
+		char tmp[4];
+		if (this->get(key,tmp,sizeof(tmp)) >= 0)
+			return ((*tmp == '1')||(*tmp == 't')||(*tmp == 'T'));
 		return dfl;
 	}
 
 	/**
+	 * Get an unsigned int64 stored as hex in the dictionary
+	 *
 	 * @param key Key to look up
 	 * @param dfl Default value or 0 if unspecified
 	 * @return Decoded hex UInt value or 'dfl' if not found
 	 */
-	inline uint64_t getHexUInt(const char *key,uint64_t dfl = 0) const
+	inline uint64_t getUI(const char *key,uint64_t dfl = 0) const
 	{
 		char tmp[128];
 		if (this->get(key,tmp,sizeof(tmp)) >= 1)
@@ -226,6 +263,8 @@ public:
 	 * If the key is already present this will append another, but the first
 	 * will always be returned by get(). There is no erase(). This is designed
 	 * to be generated and shipped, not as an editable data structure.
+	 *
+	 * Use the vlen parameter to add binary values. Nulls will be escaped.
 	 *
 	 * @param key Key -- nulls, CR/LF, and equals (=) are illegal characters
 	 * @param value Value to set
@@ -249,20 +288,22 @@ public:
 				int k = 0;
 				while ((*p)&&((vlen < 0)||(k < vlen))) {
 					switch(*p) {
+						case 0:
 						case '\r':
 						case '\n':
-						case '\0':
 						case '\t':
+						case '\\':
 							_d[j++] = '\\';
 							if (j == ZT_DICTIONARY_MAX_SIZE) {
 								_d[i] = (char)0;
 								return false;
 							}
 							switch(*p) {
+								case 0: _d[j++] = '0'; break;
 								case '\r': _d[j++] = 'r'; break;
 								case '\n': _d[j++] = 'n'; break;
-								case '\0': _d[j++] = '0'; break;
 								case '\t': _d[j++] = 't'; break;
+								case '\\': _d[j++] = '\\'; break;
 							}
 							if (j == ZT_DICTIONARY_MAX_SIZE) {
 								_d[i] = (char)0;
@@ -290,19 +331,38 @@ public:
 	/**
 	 * Add a boolean as a '1' or a '0'
 	 */
-	inline void add(const char *key,bool value)
+	inline bool add(const char *key,bool value)
 	{
-		this->add(key,(value) ? "1" : "0",1);
+		return this->add(key,(value) ? "1" : "0",1);
 	}
 
 	/** 
 	 * Add a 64-bit integer (unsigned) as a hex value
 	 */
-	inline void add(const char *key,uint64_t value)
+	inline bool add(const char *key,uint64_t value)
 	{
-		char tmp[128];
+		char tmp[32];
 		Utils::snprintf(tmp,sizeof(tmp),"%llx",(unsigned long long)value);
-		this->add(key,tmp,-1);
+		return this->add(key,tmp,-1);
+	}
+
+	/** 
+	 * Add a 64-bit integer (unsigned) as a hex value
+	 */
+	inline bool add(const char *key,const Address &a)
+	{
+		char tmp[32];
+		Utils::snprintf(tmp,sizeof(tmp),"%.10llx",(unsigned long long)a.toInt());
+		return this->add(key,tmp,-1);
+	}
+
+	/**
+	 * Add a binary buffer
+	 */
+	template<unsigned int C>
+	inline bool add(const char *key,const Buffer<C> &value)
+	{
+		return this->add(key,(const char *)value.data(),(int)value.size());
 	}
 
 	/**

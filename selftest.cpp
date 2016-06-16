@@ -766,23 +766,45 @@ static int testOther()
 
 	std::cout << "[other] Testing Dictionary... "; std::cout.flush();
 	for(int k=0;k<1000;++k) {
-		Dictionary a,b;
-		int nk = rand() % 32;
-		for(int q=0;q<nk;++q) {
-			std::string k,v;
-			int kl = (rand() % 512);
-			int vl = (rand() % 512);
-			for(int i=0;i<kl;++i)
-				k.push_back((char)rand());
-			for(int i=0;i<vl;++i)
-				v.push_back((char)rand());
-			a[k] = v;
+		Dictionary td;
+		char key[128][16];
+		char value[128][128];
+		for(unsigned int q=0;q<128;++q) {
+			Utils::snprintf(key[q],16,"%.8lx",(unsigned long)rand());
+			int r = rand() % 128;
+			for(int x=0;x<r;++x)
+				value[q][x] = ("0123456789\0\t\r\n= ")[rand() % 16];
+			value[q][r] = (char)0;
+			test.set(key[q],value[q]);
 		}
-		std::string aser = a.toString();
-		b.fromString(aser);
-		if (a != b) {
-			std::cout << "FAIL!" << std::endl;
-			return -1;
+		for(unsigned int q=0;q<1024;++q) {
+			int r = rand() % 128;
+			char tmp[128];
+			if (test.get(key[r],tmp,sizeof(tmp)) >= 0) {
+				if (strcmp(value[r],tmp)) {
+					std::cout << "FAILED (invalid value)!" << std::endl;
+					return -1;
+				}
+			} else {
+				std::cout << "FAILED (can't find key)!" << std::endl;
+				return -1;
+			}
+		}
+	}
+	int foo = 0;
+	volatile int *volatile bar = &foo; // force compiler not to optimize out test.get() below
+	for(int k=0;k<100000;++k) {
+		int r = rand() % 16384;
+		unsigned char tmp[16384];
+		for(int q=0;q<r;++q)
+			tmp[q] = (unsigned char)((rand() % 254) + 1);
+		tmp[r] = 0;
+		Dictionary test(tmp);
+		for(unsigned int q=0;q<1024;++q) {
+			char tmp[16];
+			Utils::snprintf(tmp,16,"%.8lx",(unsigned long)rand());
+			char value[128];
+			*bar = test.get(tmp,value,sizeof(value));
 		}
 	}
 	std::cout << "PASS" << std::endl;

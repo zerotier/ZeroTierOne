@@ -403,8 +403,12 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				if ((nw)&&(nw->controller() == peer->address())) {
 					const unsigned int nclen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN);
 					if (nclen) {
-						nw->setConfiguration(field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT,nclen),nclen,true);
-						TRACE("got network configuration for network %.16llx from %s",(unsigned long long)nw->id(),source().toString().c_str());
+						Dictionary dconf((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT,nclen),nclen);
+						NetworkConfig nconf;
+						if (nconf.fromDictionary(dconf)) {
+							nw->setConfiguration(nconf,true);
+							TRACE("got network configuration for network %.16llx from %s",(unsigned long long)nw->id(),source().toString().c_str());
+						}
 					}
 				}
 			}	break;
@@ -679,27 +683,8 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
 
 		const unsigned int metaDataLength = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
-		const uint8_t *metaDataBytes = (const uint8_t *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength);
-
-		NetworkConfigRequestMetaData metaData;
-		bool haveNewStyleMetaData = false;
-		for(unsigned int i=0;i<metaDataLength;++i) {
-			if ((metaDataBytes[i] == 0)&&(i < (metaDataLength - 2))) {
-				haveNewStyleMetaData = true;
-				break;
-			}
-		}
-		if (haveNewStyleMetaData) {
-			Buffer<4096> md(metaDataBytes,metaDataLength);
-			metaData.deserialize(md,0); // the meta-data deserializer automatically skips old-style meta-data
-		} else {
-#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
-			const Dictionary oldStyleMetaData((const char *)metaDataBytes,metaDataLength);
-			metaData.majorVersion = (unsigned int)oldStyleMetaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0);
-			metaData.minorVersion = (unsigned int)oldStyleMetaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0);
-			metaData.revision = (unsigned int)oldStyleMetaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0);
-#endif
-		}
+		const char *metaDataBytes = (const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength);
+		const Dictionary metaData(metaDataBytes,metaDataLength);
 
 		//const uint64_t haveRevision = ((ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength + 8) <= size()) ? at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength) : 0ULL;
 
@@ -708,22 +693,21 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 		peer->received(_localAddress,_remoteAddress,h,pid,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP);
 
 		if (RR->localNetworkController) {
-			Buffer<8194> netconf;
+			NetworkConfig netconf;
 			switch(RR->localNetworkController->doNetworkConfigRequest((h > 0) ? InetAddress() : _remoteAddress,RR->identity,peer->identity(),nwid,metaData,netconf)) {
 
 				case NetworkController::NETCONF_QUERY_OK: {
-					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
-					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-					outp.append(pid);
-					outp.append(nwid);
-					outp.append((uint16_t)netconf.size());
-					outp.append(netconf.data(),(unsigned int)netconf.size());
-					outp.compress();
-					outp.armor(peer->key(),true);
-					if (outp.size() > ZT_PROTO_MAX_PACKET_LENGTH) { // sanity check
-						//TRACE("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
-					} else {
-						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+					Dictionary dconf;
+					if (netconf.toDictionary(dconf,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6)) {
+						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
+						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+						outp.append(pid);
+						outp.append(nwid);
+						const unsigned int dlen = dconf.sizeBytes();
+						outp.append((uint16_t)dlen);
+						outp.append((const void *)dconf.data(),dlen);
+						outp.compress();
+						RR->sw->send(outp,true,0);
 					}
 				}	break;
 
