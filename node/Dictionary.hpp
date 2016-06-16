@@ -128,86 +128,64 @@ public:
 	inline int get(const char *key,char *dest,unsigned int destlen) const
 	{
 		const char *p = _d;
-		const char *k,*s;
+		const char *k;
 		bool esc;
 		int j;
 
-		for(;;) {
-			s = p;
-			for(;;) {
-				if ((*p == '\r')||(*p == '\n')||(*p == '=')||(!*p)) {
-					k = key;
-					while ((*k)&&(s != p)) {
-						if (*(k++) != *(s++))
-							break;
-					}
-					if (*k) {
+		if (!destlen) // sanity check
+			return -1;
+
+		while (*p) {
+			k = key;
+			while (*k) {
+				if (*p != *k)
+					break;
+				++k;
+				++p;
+			}
+
+			if ((!*k)&&(*p == '=')) {
+				j = 0;
+				esc = false;
+				++p;
+				while ((*p)&&(*p != '\r')&&(*p != '\n')) {
+					if (esc) {
 						esc = false;
-						for(;;) {
-							if (!*p) {
-								dest[0] = (char)0;
-								return -1;
-							} else if (esc) {
-								esc = false;
-							} else if (*p == '\\') {
-								esc = true;
-							} else if ((*p == '\r')||(*p == '\n')) {
-								++p;
-								break;
-							}
-							++p;
+						switch(*p) {
+							case 'r': dest[j++] = '\r'; break;
+							case 'n': dest[j++] = '\n'; break;
+							case '0': dest[j++] = (char)0; break;
+							case 'e': dest[j++] = '='; break;
+							default: dest[j++] = *p; break;
 						}
-						break;
+						if (j == (int)destlen) {
+							dest[j-1] = (char)0;
+							return j-1;
+						}
+					} else if (*p == '\\') {
+						esc = true;
 					} else {
-						if (*p == '=') ++p;
-						esc = false;
-						j = 0;
-						for(;;) {
-							if (esc) {
-								esc = false;
-								if (j >= destlen) {
-									dest[destlen-1] = (char)0;
-									return (int)(destlen-1);
-								}
-								switch(*p) {
-									case 'r':
-										dest[j++] = '\r';
-										break;
-									case 'n':
-										dest[j++] = '\n';
-										break;
-									case 't':
-										dest[j++] = '\t';
-										break;
-									case '0':
-										dest[j++] = (char)0;
-										break;
-									case 'e':
-										dest[j++] = '=';
-										break;
-									default:
-										dest[j++] = *p;
-								}
-							} else if (*p == '\\') {
-								esc = true;
-							} else if ((*p == '\r')||(*p == '\n')||(!*p)) {
-								dest[j] = (char)0;
-								return j;
-							} else {
-								if (j >= destlen) {
-									dest[destlen-1] = (char)0;
-									return (int)(destlen-1);
-								}
-								dest[j++] = *p;
-							}
-							++p;
+						dest[j++] = *p;
+						if (j == (int)destlen) {
+							dest[j-1] = (char)0;
+							return j-1;
 						}
 					}
-				} else {
 					++p;
 				}
+				dest[j] = (char)0;
+				return j;
+			} else {
+				while ((*p)&&(*p != '\r')&&(*p != '\n'))
+					++p;
+				if (*p)
+					++p;
+				else break;
 			}
 		}
+
+		dest[0] = (char)0;
+		return -1;
 	}
 
 	/**
@@ -310,7 +288,6 @@ public:
 						case 0:
 						case '\r':
 						case '\n':
-						case '\t':
 						case '\\':
 						case '=':
 							_d[j++] = '\\';
@@ -322,7 +299,6 @@ public:
 								case 0: _d[j++] = '0'; break;
 								case '\r': _d[j++] = 'r'; break;
 								case '\n': _d[j++] = 'n'; break;
-								case '\t': _d[j++] = 't'; break;
 								case '\\': _d[j++] = '\\'; break;
 								case '=': _d[j++] = 'e'; break;
 							}

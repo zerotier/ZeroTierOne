@@ -394,8 +394,8 @@ public:
 			printf("  specialists[%u]==%.16llx\n",i,specialists[i]);
 		printf("routeCount==%u\n",routeCount);
 		for(unsigned int i=0;i<routeCount;++i) {
-			printf("  routes[i].target==%s\n",reinterpret_cast<const struct sockaddr_storage *>(&(routes[i].target))->toString().c_str());
-			printf("  routes[i].via==%s\n",reinterpret_cast<const struct sockaddr_storage *>(&(routes[i].via))->toIpString().c_str());
+			printf("  routes[i].target==%s\n",reinterpret_cast<const InetAddress *>(&(routes[i].target))->toString().c_str());
+			printf("  routes[i].via==%s\n",reinterpret_cast<const InetAddress *>(&(routes[i].via))->toIpString().c_str());
 			printf("  routes[i].flags==%.4x\n",(unsigned int)routes[i].flags);
 			printf("  routes[i].metric==%u\n",(unsigned int)routes[i].metric);
 		}
@@ -404,8 +404,8 @@ public:
 			printf("  staticIps[i]==%s\n",staticIps[i].toString().c_str());
 		printf("pinnedCount==%u\n",pinnedCount);
 		for(unsigned int i=0;i<pinnedCount;++i) {
-			printf("  pinned[i].zt==%s\n",pinned[i].zt->toString().c_str());
-			printf("  pinned[i].phy==%s\n",pinned[i].zt->toString().c_str());
+			printf("  pinned[i].zt==%s\n",pinned[i].zt.toString().c_str());
+			printf("  pinned[i].phy==%s\n",pinned[i].phy.toString().c_str());
 		}
 		printf("ruleCount==%u\n",ruleCount);
 		printf("name==%s\n",name);

@@ -267,11 +267,9 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 
 		memset(this,0,sizeof(NetworkConfig));
 
-		const uint64_t ver = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_VERSION,0);
-
 		// Fields that are always present, new or old
 		this->networkId = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID,0);
-		if (this->networkId)
+		if (!this->networkId)
 			return false;
 		this->timestamp = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,0);
 		this->revision = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_REVISION,0);
@@ -281,7 +279,7 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 		this->multicastLimit = (unsigned int)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,0);
 		d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name,sizeof(this->name));
 
-		if (ver < ZT_NETWORKCONFIG_VERSION) {
+		if (d.getUI(ZT_NETWORKCONFIG_DICT_KEY_VERSION,0) < 6) {
 	#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 			// Decode legacy fields if version is old
 			if (d.getB(ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING_OLD))
@@ -294,14 +292,18 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 				char *saveptr = (char *)0;
 				for(char *f=Utils::stok(tmp2,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
 					if (this->staticIpCount >= ZT_MAX_ZT_ASSIGNED_ADDRESSES) break;
-					this->staticIps[this->staticIpCount++] = InetAddress(f);
+					InetAddress ip(f);
+					if (!ip.isNetwork())
+						this->staticIps[this->staticIpCount++] = ip;
 				}
 			}
 			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC_OLD,tmp2,sizeof(tmp2)) > 0) {
 				char *saveptr = (char *)0;
 				for(char *f=Utils::stok(tmp2,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
 					if (this->staticIpCount >= ZT_MAX_ZT_ASSIGNED_ADDRESSES) break;
-					this->staticIps[this->staticIpCount++] = InetAddress(f);
+					InetAddress ip(f);
+					if (!ip.isNetwork())
+						this->staticIps[this->staticIpCount++] = ip;
 				}
 			}
 
@@ -473,6 +475,13 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 				}
 			}
 		}
+
+		/*
+		printf("~~~\n%s\n~~~\n",d.data());
+		dump();
+		printf("~~~\n");
+		*/
+
 		return true;
 	} catch ( ... ) {
 		return false;
