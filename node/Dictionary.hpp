@@ -182,6 +182,9 @@ public:
 									case '0':
 										dest[j++] = (char)0;
 										break;
+									case 'e':
+										dest[j++] = '=';
+										break;
 									default:
 										dest[j++] = *p;
 								}
@@ -261,8 +264,8 @@ public:
 	 * Add a new key=value pair
 	 *
 	 * If the key is already present this will append another, but the first
-	 * will always be returned by get(). There is no erase(). This is designed
-	 * to be generated and shipped, not as an editable data structure.
+	 * will always be returned by get(). This is not checked. If you want to
+	 * ensure a key is not present use erase() first.
 	 *
 	 * Use the vlen parameter to add binary values. Nulls will be escaped.
 	 *
@@ -293,6 +296,7 @@ public:
 						case '\n':
 						case '\t':
 						case '\\':
+						case '=':
 							_d[j++] = '\\';
 							if (j == ZT_DICTIONARY_MAX_SIZE) {
 								_d[i] = (char)0;
@@ -304,6 +308,7 @@ public:
 								case '\n': _d[j++] = 'n'; break;
 								case '\t': _d[j++] = 't'; break;
 								case '\\': _d[j++] = '\\'; break;
+								case '=': _d[j++] = 'e'; break;
 							}
 							if (j == ZT_DICTIONARY_MAX_SIZE) {
 								_d[i] = (char)0;
@@ -373,6 +378,46 @@ public:
 	{
 		char tmp[2];
 		return (this->get(key,tmp,2) >= 0);
+	}
+
+	/**
+	 * Erase a key from this dictionary
+	 *
+	 * Use this before add() to ensure that a key is replaced if it might
+	 * already be present.
+	 *
+	 * @param key Key to erase
+	 * @return True if key was found and erased
+	 */
+	inline bool erase(const char *key)
+	{
+		char d2[ZT_DICTIONARY_MAX_SIZE];
+		char *saveptr = (char *)0;
+		unsigned int d2ptr = 0;
+		bool found = false;
+		for(char *f=Utils::stok(_d,"\r\n",&saveptr);(f);f=Utils::stok((char *)0,"\r\n",&saveptr)) {
+			if (*f) {
+				const char *p = f;
+				const char *k = key;
+				while ((*k)&&(*p)) {
+					if (*k != *p)
+						break;
+					++k;
+					++p;
+				}
+				if (*k) {
+					p = f;
+					while (*p)
+						d2[d2ptr++] = *(p++);
+					d2[d2ptr++] = '\n';
+				} else {
+					found = true;
+				}
+			}
+		}
+		d2[d2ptr++] = (char)0;
+		memcpy(_d,d2,d2ptr);
+		return found;
 	}
 
 	/**

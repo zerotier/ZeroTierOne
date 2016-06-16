@@ -356,10 +356,10 @@ OSXEthernetTap::OSXEthernetTap(
 	std::string devmapbuf;
 	Dictionary devmap;
 	if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),devmapbuf)) {
-		devmap.fromString(devmapbuf);
-		std::string desiredDevice(devmap.get(nwids,""));
-		if (desiredDevice.length() > 2) {
-			Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",desiredDevice.c_str());
+		devmap.load(devmapbuf.c_str());
+		char desiredDevice[128];
+		if (devmap.get(nwids,desiredDevice,sizeof(desiredDevice)) > 0) {
+			Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",desiredDevice);
 			if (stat(devpath,&stattmp) == 0) {
 				_fd = ::open(devpath,O_RDWR);
 				if (_fd > 0) {
@@ -420,8 +420,9 @@ OSXEthernetTap::OSXEthernetTap(
 
 	++globalTapsRunning;
 
-	devmap[nwids] = _dev;
-	OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),devmap.toString());
+	devmap.erase(nwids);
+	devmap.add(nwids,_dev.c_str());
+	OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),(const void *)devmap.data(),devmap.sizeBytes());
 
 	_thread = Thread::start(this);
 }
