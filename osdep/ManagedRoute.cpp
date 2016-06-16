@@ -41,7 +41,9 @@
 #include <arpa/inet.h>
 #include <net/route.h>
 #include <net/if.h>
+#ifdef __BSD__
 #include <net/if_dl.h>
+#endif
 #include <ifaddrs.h>
 #endif
 
@@ -264,7 +266,7 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 #endif // __WINDOWS__ --------------------------------------------------------
 
 #ifndef ZT_ROUTING_SUPPORT_FOUND
-#error ManagedRoute.cpp has no support for managing routes on this platform! You'll need to check and see if one of the existing ones will work and make sure proper defines are set, or write one. Please do a Github pull request if you do this for a new OS!
+#error "ManagedRoute.cpp has no support for managing routes on this platform! You'll need to check and see if one of the existing ones will work and make sure proper defines are set, or write one. Please do a Github pull request if you do this for a new OS."
 #endif
 
 } // anonymous namespace

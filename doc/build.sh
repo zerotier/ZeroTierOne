@@ -13,6 +13,11 @@ if [ -e /usr/bin/ronn ]; then
 	/usr/bin/ronn -r zerotier-idtool.1.md
 	/usr/bin/ronn -r zerotier-one.8.md
 else
+	if [ ! -f /usr/bin/node -a ! -f /usr/bin/nodejs ]; then
+		echo 'Unable to build man pages: no /usr/bin/ronn or /usr/bin/node / nodejs!'
+		exit 0
+	fi
+
 	if [ ! -f node_modules/marked-man/bin/marked-man ]; then
 		echo 'Installing MarkDown to ROFF converter...'
 		npm install marked-man
