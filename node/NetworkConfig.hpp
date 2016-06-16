@@ -432,7 +432,7 @@ public:
 				return true;
 			}
 		}
-		if (specialistCount >= ZT_MAX_NETWORK_SPECIALISTS) {
+		if (specialistCount < ZT_MAX_NETWORK_SPECIALISTS) {
 			specialists[specialistCount++] = f | aint;
 			return true;
 		}
