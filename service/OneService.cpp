@@ -1327,6 +1327,18 @@ public:
 								const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(nwc->routes[i].via));
 
 								bool haveRoute = false;
+
+								// We don't need to bother applying local routes to local managed IPs since these are implied by setting the IP
+								for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
+									if ((target->netmaskBits() == ip->netmaskBits())&&(target->containsAddress(*ip))) {
+										haveRoute = true;
+										break;
+									}
+								}
+
+								if (haveRoute)
+									continue;
+
 								for(std::list<ManagedRoute>::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();++mr) {
 									if (mr->target() == *target) {
 										if ((via->ss_family == target->ss_family)&&(mr->via() == *via)) {
@@ -1338,11 +1350,11 @@ public:
 										}
 									}
 								}
+
 								if (haveRoute)
 									continue;
 
 								n.managedRoutes.push_back(ManagedRoute());
-
 								if ((target->isDefaultRoute())&&(n.allowDefault)) {
 									if (!n.managedRoutes.back().set(*target,*via,tapdev.c_str()))
 										n.managedRoutes.pop_back();

@@ -234,8 +234,8 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 		int exitcode = -1;
 		::waitpid(p,&exitcode,0);
 	} else if (p == 0) {
-		//::close(STDOUT_FILENO);
-		//::close(STDERR_FILENO);
+		::close(STDOUT_FILENO);
+		::close(STDERR_FILENO);
 		if (via) {
 			if ((ifscope)&&(ifscope[0])) {
 				::execl(ZT_BSD_ROUTE_CMD,ZT_BSD_ROUTE_CMD,op,"-ifscope",ifscope,((target.ss_family == AF_INET6) ? "-inet6" : "-inet"),target.toString().c_str(),via.toIpString().c_str(),(const char *)0);

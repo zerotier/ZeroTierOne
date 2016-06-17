@@ -57,7 +57,7 @@ public:
 	 */
 	inline bool set(const InetAddress &target,const InetAddress &via,const char *device)
 	{
-		if ((!_via)&&(!_device[0]))
+		if ((!via)&&(!device[0]))
 			return false;
 		this->remove();
 		_target = target;
