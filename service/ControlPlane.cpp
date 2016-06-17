@@ -73,6 +73,28 @@ static std::string _jsonEnumerate(const struct sockaddr_storage *ss,unsigned int
 	buf.push_back(']');
 	return buf;
 }
+static std::string _jsonEnumerate(const ZT_VirtualNetworkRoute *routes,unsigned int count)
+{
+	std::string buf;
+	buf.push_back('[');
+	for(unsigned int i=0;i<count;++i) {
+		if (i > 0)
+			buf.push_back(',');
+		buf.append("{\"target\":\"");
+		buf.append(_jsonEscape(reinterpret_cast<const InetAddress *>(&(routes[i].target))->toString()));
+		buf.append("\",\"via\":");
+		if (routes[i].via.ss_family == routes[i].target.ss_family) {
+			buf.push_back('"');
+			buf.append(_jsonEscape(reinterpret_cast<const InetAddress *>(&(routes[i].via))->toIpString()));
+			buf.append("\",");
+		} else buf.append("null,");
+		char tmp[1024];
+		Utils::snprintf(tmp,sizeof(tmp),"\"flags\":%u,\"metric\":%u}",(unsigned int)routes[i].flags,(unsigned int)routes[i].metric);
+		buf.append(tmp);
+	}
+	buf.push_back(']');
+	return buf;
+}
 
 static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetworkConfig *nc,const std::string &portDeviceName)
 {
@@ -113,6 +135,7 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetw
 		"%s\t\"portError\": %d,\n"
 		"%s\t\"netconfRevision\": %lu,\n"
 		"%s\t\"assignedAddresses\": %s,\n"
+		"%s\t\"routes\": %s,\n"
 		"%s\t\"portDeviceName\": \"%s\"\n"
 		"%s}",
 		prefix,
@@ -128,6 +151,7 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetw
 		prefix,nc->portError,
 		prefix,nc->netconfRevision,
 		prefix,_jsonEnumerate(nc->assignedAddresses,nc->assignedAddressCount).c_str(),
+		prefix,_jsonEnumerate(nc->routes,nc->routeCount).c_str(),
 		prefix,_jsonEscape(portDeviceName).c_str(),
 		prefix);
 	buf.append(json);
