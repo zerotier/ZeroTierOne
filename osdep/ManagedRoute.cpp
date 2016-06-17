@@ -273,20 +273,25 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 
 bool ManagedRoute::sync()
 {
-	if (_target.isDefaultRoute()) {
-		/* In ZeroTier we use a forked-route trick to override the default
-		 * with a more specific one while leaving the original system route
-		 * intact. We also create a shadow more specific route to the
-		 * original gateway that is device-bound so that ZeroTier's device
-		 * bound ports go via the physical Internet link. This has to be
-		 * done *slightly* differently on different platforms. */
+	if ((_target.isDefaultRoute())||((_target.ss_family == AF_INET)&&(_target.netmaskBits() < 32))) {
+		/* In ZeroTier we create two more specific routes for every one route. We
+		 * do this for default routes and IPv4 routes other than /32s. If there
+		 * is a pre-existing system route that this route will override, we create
+		 * two more specific interface-bound shadow routes for it.
+		 *
+		 * This means that ZeroTier can *itself* continue communicating over
+		 * whatever physical routes might be present while simultaneously
+		 * overriding them for general system traffic. This is mostly for
+		 * "full tunnel" VPN modes of operation, but might be useful for
+		 * virtualizing physical networks in a hybrid design as well. */
 
+		// Generate two more specific routes than target with one extra bit
 		InetAddress leftt,rightt;
 		_forkTarget(_target,leftt,rightt);
 
 #ifdef __BSD__ // ------------------------------------------------------------
 
-		// Get system default route information
+		// Find lowest metric system route that this route should override (if any)
 		InetAddress newSystemVia;
 		char newSystemDevice[128];
 		newSystemDevice[0] = (char)0;
@@ -296,12 +301,12 @@ bool ManagedRoute::sync()
 			if (r->via) {
 				if ((!newSystemVia)||(r->metric < systemMetric)) {
 					newSystemVia = r->via;
-					Utils::scopy(_systemDevice,sizeof(_systemDevice),r->device);
+					Utils::scopy(newSystemDevice,sizeof(newSystemDevice),r->device);
 					systemMetric = r->metric;
 				}
 			}
 		}
-		if (!newSystemDevice[0]) {
+		if ((newSystemVia)&&(!newSystemDevice[0])) {
 			rtes = _getRTEs(newSystemVia,true);
 			for(std::vector<_RTE>::iterator r(rtes.begin());r!=rtes.end();++r) {
 				if (r->device[0]) {
@@ -310,10 +315,10 @@ bool ManagedRoute::sync()
 				}
 			}
 		}
-		if ((!newSystemVia)||(!newSystemDevice[0]))
-			return false;
 
-		// If system default route has changed or hasn't been shadowed yet, update shadow
+		// Shadow system route if it exists, also delete any obsolete shadows
+		// and replace them with the new state. sync() is called periodically to
+		// allow us to do that if underlying connectivity changes.
 		if ((_systemVia != newSystemVia)||(!strcmp(_systemDevice,newSystemDevice))) {
 			if ((_systemVia)&&(_systemDevice[0])) {
 				_routeCmd("delete",leftt,_systemVia,_systemDevice,(const char *)0);
@@ -323,13 +328,15 @@ bool ManagedRoute::sync()
 			_systemVia = newSystemVia;
 			Utils::scopy(_systemDevice,sizeof(_systemDevice),newSystemDevice);
 
-			_routeCmd("add",leftt,_systemVia,_systemDevice,(const char *)0);
-			_routeCmd("change",leftt,_systemVia,_systemDevice,(const char *)0);
-			_routeCmd("add",rightt,_systemVia,_systemDevice,(const char *)0);
-			_routeCmd("change",rightt,_systemVia,_systemDevice,(const char *)0);
+			if ((_systemVia)&&(_systemDevice[0])) {
+				_routeCmd("add",leftt,_systemVia,_systemDevice,(const char *)0);
+				_routeCmd("change",leftt,_systemVia,_systemDevice,(const char *)0);
+				_routeCmd("add",rightt,_systemVia,_systemDevice,(const char *)0);
+				_routeCmd("change",rightt,_systemVia,_systemDevice,(const char *)0);
+			}
 		}
 
-		// Apply overriding routes
+		// Apply overriding non-device-scoped routes
 		if (!_applied) {
 			if (_via) {
 				_routeCmd("add",leftt,_via,(const char *)0,(const char *)0);
@@ -357,10 +364,21 @@ bool ManagedRoute::sync()
 #endif // __WINDOWS__ --------------------------------------------------------
 
 	} else {
-
-		// TODO
+		/* For non-default routes, IPv4 /32, and IPv6 non-default routes, we just
+		 * add the route itself. */
 
 #ifdef __BSD__ // ------------------------------------------------------------
+
+		if (!_applied) {
+			if (_via) {
+				_routeCmd("add",_target,_via,(const char *)0,(const char *)0);
+				_routeCmd("change",_target,_via,(const char *)0,(const char *)0);
+			} else if (_device[0]) {
+				_routeCmd("add",_target,_via,(const char *)0,_device);
+				_routeCmd("change",_target,_via,(const char *)0,_device);
+			}
+			_applied = true;
+		}
 
 #endif // __BSD__ ------------------------------------------------------------
 
@@ -418,9 +436,13 @@ void ManagedRoute::remove()
 
 		} else {
 
-			// TODO
-
 #ifdef __BSD__ // ------------------------------------------------------------
+
+		if (_via) {
+			_routeCmd("delete",_target,_via,(const char *)0,(const char *)0);
+		} else if (_device[0]) {
+			_routeCmd("delete",_target,_via,(const char *)0,_device);
+		}
 
 #endif // __BSD__ ------------------------------------------------------------
 
@@ -444,12 +466,3 @@ void ManagedRoute::remove()
 }
 
 } // namespace ZeroTier
-
-/*
-int main(int argc,char **argv)
-{
-	ZeroTier::ManagedRoute t;
-	t.set(ZeroTier::InetAddress("0.0.0.0/0"),ZeroTier::InetAddress("10.6.6.112"),"zt2");
-	sleep(10000);
-}
-*/

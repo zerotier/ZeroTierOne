@@ -527,6 +527,7 @@ public:
 		NetworkState() : tap((EthernetTap *)0),managedIps(),managedRoutes(),allowManaged(true),allowGlobal(true),allowDefault(true) {}
 
 		EthernetTap *tap;
+		ZT_VirtualNetworkConfig config; // memcpy() of raw config from core
 		std::vector<InetAddress> managedIps;
 		std::list<ManagedRoute> managedRoutes;
 		bool allowManaged; // allow managed addresses and routes
@@ -851,12 +852,19 @@ public:
 					restarted = true;
 				}
 
-				// Refresh bindings in case device's interfaces have changed
+				// Refresh bindings in case device's interfaces have changed, and also sync routes to update any shadow routes (e.g. shadow default)
 				if (((now - lastBindRefresh) >= ZT_BINDER_REFRESH_PERIOD)||(restarted)) {
 					lastBindRefresh = now;
 					for(int i=0;i<3;++i) {
 						if (_ports[i]) {
 							_bindings[i].refresh(_phy,_ports[i],*this);
+						}
+					}
+					{
+						Mutex::Lock _l(_nets_m);
+						for(std::map<uint64_t,NetworkState>::iterator n(_nets.begin());n!=_nets.end();++n) {
+							if (n->second.tap)
+								syncManagedStuff(n->second,false,true);
 						}
 					}
 				}
@@ -984,6 +992,118 @@ public:
 	}
 
 	// Begin private implementation methods
+
+	// Checks if a managed IP or route target is allowed
+	bool checkIfManagedIsAllowed(const NetworkState &n,const InetAddress &addr)
+	{
+		if (!n.allowManaged)
+			return false;
+		if (addr.isDefaultRoute())
+			return n.allowDefault;
+		switch(addr.ipScope()) {
+			case InetAddress::IP_SCOPE_NONE:
+			case InetAddress::IP_SCOPE_MULTICAST:
+			case InetAddress::IP_SCOPE_LOOPBACK:
+			case InetAddress::IP_SCOPE_LINK_LOCAL:
+				return false;
+			case InetAddress::IP_SCOPE_GLOBAL:
+				return n.allowGlobal;
+			default:
+				return true;
+		}
+	}
+
+	// Apply or update managed IPs for a configured network (be sure n.tap exists)
+	void syncManagedStuff(NetworkState &n,bool syncIps,bool syncRoutes)
+	{
+		if (syncIps) {
+			std::vector<InetAddress> newManagedIps;
+			newManagedIps.reserve(n.config.assignedAddressCount);
+			for(unsigned int i=0;i<n.config.assignedAddressCount;++i) {
+				const InetAddress *ii = reinterpret_cast<const InetAddress *>(&(n.config.assignedAddresses[i]));
+				if (checkIfManagedIsAllowed(n,*ii))
+					newManagedIps.push_back(*ii);
+			}
+			std::sort(newManagedIps.begin(),newManagedIps.end());
+			newManagedIps.erase(std::unique(newManagedIps.begin(),newManagedIps.end()),newManagedIps.end());
+
+			for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
+				if (std::find(n.managedIps.begin(),n.managedIps.end(),*ip) == n.managedIps.end()) {
+					if (!n.tap->addIp(*ip))
+						fprintf(stderr,"ERROR: unable to add ip address %s"ZT_EOL_S, ip->toString().c_str());
+				}
+			}
+			for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
+				if (std::find(newManagedIps.begin(),newManagedIps.end(),*ip) == newManagedIps.end()) {
+					if (!n.tap->removeIp(*ip))
+						fprintf(stderr,"ERROR: unable to remove ip address %s"ZT_EOL_S, ip->toString().c_str());
+				}
+			}
+
+			n.managedIps.swap(newManagedIps);
+		}
+
+		if (syncRoutes) {
+			const std::string tapdev(n.tap->deviceName());
+
+			// Nuke applied routes that are no longer in n.config.routes[] and/or are not allowed
+			for(std::list<ManagedRoute>::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();) {
+				bool haveRoute = false;
+				if (checkIfManagedIsAllowed(n,mr->target())) {
+					for(unsigned int i=0;i<n.config.routeCount;++i) {
+						const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
+						const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
+						if ( (mr->target() == *target) && ( ((via->ss_family == target->ss_family)&&(mr->via() == *via)) || (tapdev == mr->device()) ) ) {
+							haveRoute = true;
+							break;
+						}
+					}
+				}
+				if (haveRoute) {
+					++mr;
+				} else {
+					n.managedRoutes.erase(mr++);
+				}
+			}
+
+			// Apply routes in n.config.routes[] that we haven't applied yet, and sync those we have in case shadow routes need to change
+			for(unsigned int i=0;i<n.config.routeCount;++i) {
+				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
+				const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
+
+				if (!checkIfManagedIsAllowed(n,*target))
+					continue;
+
+				bool haveRoute = false;
+
+				// Ignore routes implied by local managed IPs since adding the IP adds the route
+				for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
+					if ((target->netmaskBits() == ip->netmaskBits())&&(target->containsAddress(*ip))) {
+						haveRoute = true;
+						break;
+					}
+				}
+				if (haveRoute)
+					continue;
+
+				// If we've already applied this route, just sync it and continue
+				for(std::list<ManagedRoute>::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();++mr) {
+					if ( (mr->target() == *target) && ( ((via->ss_family == target->ss_family)&&(mr->via() == *via)) || (tapdev == mr->device()) ) ) {
+						haveRoute = true;
+						mr->sync();
+						break;
+					}
+				}
+				if (haveRoute)
+					continue;
+
+				// Add and apply new routes
+				n.managedRoutes.push_back(ManagedRoute());
+				if (!n.managedRoutes.back().set(*target,*via,tapdev.c_str()))
+					n.managedRoutes.pop_back();
+			}
+		}
+	}
 
 	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
 	{
@@ -1256,129 +1376,9 @@ public:
 				// After setting up tap, fall through to CONFIG_UPDATE since we also want to do this...
 
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
+				memcpy(&(n.config),nwc,sizeof(ZT_VirtualNetworkConfig));
 				if (n.tap) { // sanity check
-					if (n.allowManaged) {
-
-						{ // configure managed IP addresses
-							std::vector<InetAddress> newManagedIps;
-							for(unsigned int i=0;i<nwc->assignedAddressCount;++i) {
-								const InetAddress *ii = reinterpret_cast<const InetAddress *>(&(nwc->assignedAddresses[i]));
-								switch(ii->ipScope()) {
-									case InetAddress::IP_SCOPE_NONE:
-									case InetAddress::IP_SCOPE_MULTICAST:
-									case InetAddress::IP_SCOPE_LOOPBACK:
-									case InetAddress::IP_SCOPE_LINK_LOCAL:
-										break; // ignore these -- they shouldn't appear here
-									case InetAddress::IP_SCOPE_GLOBAL:
-										if (!n.allowGlobal)
-											continue; // skip global IP ranges if we haven't given this network permission to assign them
-										// else fall through for PSEUDOPRIVATE, SHARED, PRIVATE
-									default:
-										newManagedIps.push_back(*ii);
-										break;
-								}
-							}
-							std::sort(newManagedIps.begin(),newManagedIps.end());
-							newManagedIps.erase(std::unique(newManagedIps.begin(),newManagedIps.end()),newManagedIps.end());
-
-							for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
-								if (std::find(n.managedIps.begin(),n.managedIps.end(),*ip) == n.managedIps.end()) {
-									if (!n.tap->addIp(*ip))
-										fprintf(stderr,"ERROR: unable to add ip address %s"ZT_EOL_S, ip->toString().c_str());
-								}
-							}
-							for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
-								if (std::find(newManagedIps.begin(),newManagedIps.end(),*ip) == newManagedIps.end()) {
-									if (!n.tap->removeIp(*ip))
-										fprintf(stderr,"ERROR: unable to remove ip address %s"ZT_EOL_S, ip->toString().c_str());
-								}
-							}
-
-							n.managedIps.swap(newManagedIps);
-						}
-
-						{ // configure managed routes
-							const std::string tapdev(n.tap->deviceName());
-
-							for(std::list<ManagedRoute>::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();) {
-								bool haveRoute = false;
-								for(unsigned int i=0;i<nwc->routeCount;++i) {
-									const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(nwc->routes[i].target));
-									const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(nwc->routes[i].via));
-									if (mr->target() == *target) {
-										if ((via->ss_family == target->ss_family)&&(mr->via() == *via)) {
-											haveRoute = true;
-											break;
-										} else if (tapdev == mr->device()) {
-											haveRoute = true;
-											break;
-										}
-									}
-								}
-								if (haveRoute) {
-									++mr;
-								} else {
-									n.managedRoutes.erase(mr++); // also removes route via RAII behavior
-								}
-							}
-
-							for(unsigned int i=0;i<nwc->routeCount;++i) {
-								const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(nwc->routes[i].target));
-								const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(nwc->routes[i].via));
-
-								bool haveRoute = false;
-
-								// We don't need to bother applying local routes to local managed IPs since these are implied by setting the IP
-								for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
-									if ((target->netmaskBits() == ip->netmaskBits())&&(target->containsAddress(*ip))) {
-										haveRoute = true;
-										break;
-									}
-								}
-
-								if (haveRoute)
-									continue;
-
-								for(std::list<ManagedRoute>::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();++mr) {
-									if (mr->target() == *target) {
-										if ((via->ss_family == target->ss_family)&&(mr->via() == *via)) {
-											haveRoute = true;
-											break;
-										} else if (tapdev == mr->device()) {
-											haveRoute = true;
-											break;
-										}
-									}
-								}
-
-								if (haveRoute)
-									continue;
-
-								n.managedRoutes.push_back(ManagedRoute());
-								if ((target->isDefaultRoute())&&(n.allowDefault)) {
-									if (!n.managedRoutes.back().set(*target,*via,tapdev.c_str()))
-										n.managedRoutes.pop_back();
-								} else {
-									switch(target->ipScope()) {
-										case InetAddress::IP_SCOPE_NONE:
-										case InetAddress::IP_SCOPE_MULTICAST:
-										case InetAddress::IP_SCOPE_LOOPBACK:
-										case InetAddress::IP_SCOPE_LINK_LOCAL:
-											break;
-										case InetAddress::IP_SCOPE_GLOBAL:
-											if (!n.allowGlobal)
-												continue; // skip global IP ranges if we haven't given this network permission to assign them
-											// else fall through for PSEUDOPRIVATE, SHARED, PRIVATE
-										default:
-											if (!n.managedRoutes.back().set(*target,*via,tapdev.c_str()))
-												n.managedRoutes.pop_back();
-											break;
-									}
-								}
-							}
-						}
-
-					}
+					syncManagedStuff(n,true,true);
 				} else {
 					_nets.erase(nwid);
 					return -999; // tap init failed
