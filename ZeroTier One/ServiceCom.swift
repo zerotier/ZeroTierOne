@@ -87,6 +87,11 @@ class ServiceCom: NSObject {
             let request = NSMutableURLRequest(URL: u)
             let session = NSURLSession.sharedSession()
             let task = session.dataTaskWithRequest(request) { (data, response, error) in
+                if error != nil{
+                    NSLog("\(error)")
+                    return
+                }
+
                 let httpResponse = response as! NSHTTPURLResponse
                 let status = httpResponse.statusCode
 

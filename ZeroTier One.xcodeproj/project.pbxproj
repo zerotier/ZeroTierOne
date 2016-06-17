@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		932D472D1D138B0C004BCFE2 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932D472C1D138B0C004BCFE2 /* NetworkMonitor.swift */; };
 		9330F1351CEAB4C400687EC8 /* ServiceCom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F1341CEAB4C400687EC8 /* ServiceCom.swift */; };
 		9330F1371CEBF87200687EC8 /* Network.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F1361CEBF87200687EC8 /* Network.swift */; };
 		9330F13B1CF534E500687EC8 /* NetworkInfoCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F13A1CF534E500687EC8 /* NetworkInfoCell.swift */; };
@@ -21,6 +22,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		932D472C1D138B0C004BCFE2 /* NetworkMonitor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		9330F1341CEAB4C400687EC8 /* ServiceCom.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ServiceCom.swift; sourceTree = "<group>"; };
 		9330F1361CEBF87200687EC8 /* Network.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Network.swift; sourceTree = "<group>"; };
 		9330F13A1CF534E500687EC8 /* NetworkInfoCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkInfoCell.swift; sourceTree = "<group>"; };
@@ -82,6 +84,7 @@
 				93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */,
 				93DAFE4C1CFE53DA00547CC4 /* AuthtokenCopy.h */,
 				93DAFE491CFE53C900547CC4 /* ZeroTier One-Bridging-Header.h */,
+				932D472C1D138B0C004BCFE2 /* NetworkMonitor.swift */,
 			);
 			path = "ZeroTier One";
 			sourceTree = "<group>";
@@ -159,6 +162,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9330F1371CEBF87200687EC8 /* Network.swift in Sources */,
+				932D472D1D138B0C004BCFE2 /* NetworkMonitor.swift in Sources */,
 				93326BDC1CE7C816005CA2AC /* AppDelegate.swift in Sources */,
 				93DAFE4B1CFE53CA00547CC4 /* AuthtokenCopy.m in Sources */,
 				9330F13B1CF534E500687EC8 /* NetworkInfoCell.swift in Sources */,

@@ -21,8 +21,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     var transientMonitor: AnyObject? = nil
 
-    func applicationDidFinishLaunching(aNotification: NSNotification) {
+    let monitor = NetworkMonitor()
 
+    func applicationDidFinishLaunching(aNotification: NSNotification) {
+        let nc = NSNotificationCenter.defaultCenter()
+        nc.addObserver(self, selector: #selector(onNetworkListUpdated(_:)), name: networkUpdateKey, object: nil)
 
         statusItem.image = NSImage(named: "MenuBarIconMac")
 
@@ -50,6 +53,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(aNotification: NSNotification) {
         // Insert code here to tear down your application
+        let nc = NSNotificationCenter.defaultCenter()
+        nc.removeObserver(self)
     }
 
 
@@ -88,6 +93,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func quit() {
         NSApp.performSelector(#selector(NSApp.terminate(_:)), withObject: nil, afterDelay: 0.0)
+    }
+
+    func onNetworkListUpdated(note: NSNotification) {
+        let netList = note.userInfo!["networks"] as! [Network]
+        (networkListPopover.contentViewController as! ShowNetworksViewController).setNetworks(netList)
     }
 }
 
