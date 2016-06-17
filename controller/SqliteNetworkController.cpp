@@ -1769,13 +1769,15 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 		std::sort(allowedEtherTypes.begin(),allowedEtherTypes.end());
 		allowedEtherTypes.erase(std::unique(allowedEtherTypes.begin(),allowedEtherTypes.end()),allowedEtherTypes.end());
 
-		for(long i=0,k=0;((i<(long)allowedEtherTypes.size())&&(k<ZT_MAX_NETWORK_RULES));++i) {
+		for(long i=0;i<(long)allowedEtherTypes.size();++i) {
+			if ((nc.ruleCount + 2) > ZT_MAX_NETWORK_RULES)
+				break;
 			if (allowedEtherTypes[i] > 0) {
-				nc.rules[k].t = ZT_NETWORK_RULE_MATCH_ETHERTYPE;
-				nc.rules[k].v.etherType = (uint16_t)allowedEtherTypes[i];
-				++k;
+				nc.rules[nc.ruleCount].t = ZT_NETWORK_RULE_MATCH_ETHERTYPE;
+				nc.rules[nc.ruleCount].v.etherType = (uint16_t)allowedEtherTypes[i];
+				++nc.ruleCount;
 			}
-			nc.rules[k++].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
+			nc.rules[nc.ruleCount++].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
 		}
 
 		/*

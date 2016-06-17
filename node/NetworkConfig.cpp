@@ -476,11 +476,9 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 			}
 		}
 
-		/*
-		printf("~~~\n%s\n~~~\n",d.data());
-		dump();
-		printf("~~~\n");
-		*/
+		//printf("~~~\n%s\n~~~\n",d.data());
+		//dump();
+		//printf("~~~\n");
 
 		return true;
 	} catch ( ... ) {

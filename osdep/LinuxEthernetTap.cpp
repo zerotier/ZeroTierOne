@@ -97,10 +97,10 @@ LinuxEthernetTap::LinuxEthernetTap(
 	std::string devmapbuf;
 	Dictionary devmap;
 	if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),devmapbuf)) {
-		devmap.fromString(devmapbuf);
-		std::string desiredDevice(devmap.get(nwids,""));
-		if (desiredDevice.length() > 2) {
-			Utils::scopy(ifr.ifr_name,sizeof(ifr.ifr_name),desiredDevice.c_str());
+		devmap.load(devmapbuf.c_str());
+		char desiredDevice[128];
+		if (devmap.get(nwids,desiredDevice,sizeof(desiredDevice)) > 0) {
+			Utils::scopy(ifr.ifr_name,sizeof(ifr.ifr_name),desiredDevice);
 			Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
 			recalledDevice = (stat(procpath,&sbuf) != 0);
 		}
@@ -174,8 +174,9 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 	(void)::pipe(_shutdownSignalPipe);
 
-	devmap[nwids] = _dev;
-	OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),devmap.toString());
+	devmap.erase(nwids);
+	devmap.add(nwids,_dev.c_str());
+	OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),(const void *)devmap.data(),devmap.sizeBytes());
 
 	_thread = Thread::start(this);
 }

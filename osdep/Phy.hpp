@@ -871,7 +871,7 @@ public:
 #if defined(_WIN32) || defined(_WIN64)
 			::recv(_whackReceiveSocket,tmp,16,0);
 #else
-			(void)(::read(_whackReceiveSocket,tmp,16));
+			::read(_whackReceiveSocket,tmp,16);
 #endif
 		}
 

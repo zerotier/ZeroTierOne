@@ -32,6 +32,7 @@ public:
 
 	ManagedRoute(const ManagedRoute &r)
 	{
+		_applied = false;
 		*this = r;
 	}
 
@@ -40,7 +41,8 @@ public:
 		if ((!_applied)&&(!r._applied)) {
 			memcpy(this,&r,sizeof(ManagedRoute)); // InetAddress is memcpy'able
 		} else {
-			throw std::runtime_error("Applied ManagedRoute is non-copyable!");
+			fprintf(stderr,"Applied ManagedRoute isn't copyable!\n");
+			abort();
 		}
 		return *this;
 	}

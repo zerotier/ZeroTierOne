@@ -107,7 +107,7 @@ else
 	CFLAGS?=-O3 -fstack-protector-strong
 	CFLAGS+=-Wall -fPIE -fvisibility=hidden -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	CXXFLAGS?=-O3 -fstack-protector-strong
-	CXXFLAGS+=-Wall -Wreorder -fPIE -fvisibility=hidden -fno-rtti -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	CXXFLAGS+=-Wall -Wno-unused-result -Wreorder -fPIE -fvisibility=hidden -fno-rtti -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
 	STRIP+=--strip-all
