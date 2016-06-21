@@ -223,7 +223,7 @@ public:
 	template<unsigned int BC>
 	inline bool get(const char *key,Buffer<BC> &dest) const
 	{
-		const int r = this->get(key,const_cast<char *>(reinterpret_cast<const char *>(dest.data())),C);
+		const int r = this->get(key,const_cast<char *>(reinterpret_cast<const char *>(dest.data())),BC);
 		if (r >= 0) {
 			dest.setSize((unsigned int)r);
 			return true;
