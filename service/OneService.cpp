@@ -1051,7 +1051,12 @@ public:
 		}
 
 		if (syncRoutes) {
-			const std::string tapdev(n.tap->deviceName());
+			char tapdev[64];
+#ifdef __WINDOWS__
+			Utils::snprintf(tapdev,sizeof(tapdev),"%.16llx",(unsigned long long)n.tap->luid().Value);
+#else
+			Utils::scopy(tapdev,sizeof(tapdev),n.tap->deviceName().c_str());
+#endif
 
 			// Nuke applied routes that are no longer in n.config.routes[] and/or are not allowed
 			for(std::list<ManagedRoute>::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();) {
@@ -1106,7 +1111,7 @@ public:
 
 				// Add and apply new routes
 				n.managedRoutes.push_back(ManagedRoute());
-				if (!n.managedRoutes.back().set(*target,*via,tapdev.c_str()))
+				if (!n.managedRoutes.back().set(*target,*via,tapdev))
 					n.managedRoutes.pop_back();
 			}
 		}

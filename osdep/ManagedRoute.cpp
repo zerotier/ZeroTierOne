@@ -284,6 +284,59 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 #ifdef __WINDOWS__ // --------------------------------------------------------
 #define ZT_ROUTING_SUPPORT_FOUND 1
 
+static bool _winRoute(bool del,const NET_LUID &interfaceLuid,const NET_IFINDEX &interfaceIndex,const InetAddress &target,const InetAddress &via)
+{
+	MIB_IPFORWARD_ROW2 rtrow;
+	InitializeIpForwardEntry(&rtrow);
+	rtrow.InterfaceLuid.Value = interfaceLuid.Value;
+	rtrow.InterfaceIndex = interfaceIndex;
+	if (target.ss_family == AF_INET) {
+		rtrow.DestinationPrefix.Prefix.si_family = AF_INET;
+		rtrow.DestinationPrefix.Prefix.Ipv4.sin_family = AF_INET;
+		rtrow.DestinationPrefix.Prefix.Ipv4.sin_addr.S_un.S_addr = reinterpret_cast<const struct sockaddr_in *>(&target)->sin_addr.S_un.S_addr;
+		if (via.ss_family == AF_INET) {
+			rtrow.NextHop.si_family = AF_INET;
+			rtrow.NextHop.Ipv4.sin_family = AF_INET;
+			rtrow.NextHop.Ipv4.sin_addr.S_un.S_addr = reinterpret_cast<const struct sockaddr_in *>(&via)->sin_addr.S_un.S_addr;
+		}
+	} else if (target.ss_family == AF_INET6) {
+		rtrow.DestinationPrefix.Prefix.si_family = AF_INET6;
+		rtrow.DestinationPrefix.Prefix.Ipv6.sin6_family = AF_INET6;
+		memcpy(rtrow.DestinationPrefix.Prefix.Ipv6.sin6_addr.u.Byte,reinterpret_cast<const struct sockaddr_in6 *>(&target)->sin6_addr.u.Byte,16);
+		if (via.ss_family == AF_INET6) {
+			rtrow.NextHop.si_family = AF_INET6;
+			rtrow.NextHop.Ipv6.sin6_family = AF_INET6;
+			memcpy(rtrow.NextHop.Ipv6.sin6_addr.u.Byte,reinterpret_cast<const struct sockaddr_in6 *>(&via)->sin6_addr.u.Byte,16);
+		}
+	} else {
+		return false;
+	}
+	rtrow.DestinationPrefix.PrefixLength = target.netmaskBits();
+	rtrow.SitePrefixLength = rtrow.DestinationPrefix.PrefixLength;
+	rtrow.ValidLifetime = 0xffffffff;
+	rtrow.PreferredLifetime = 0xffffffff;
+	rtrow.Metric = -1;
+	rtrow.Protocol = MIB_IPPROTO_NETMGMT;
+	rtrow.Loopback = FALSE;
+	rtrow.AutoconfigureAddress = FALSE;
+	rtrow.Publish = FALSE;
+	rtrow.Immortal = FALSE;
+	rtrow.Age = 0;
+	rtrow.Origin = NlroManual;
+	if (del) {
+		return (DeleteIpForwardEntry2(&rtrow) == NO_ERROR);
+	} else {
+		NTSTATUS r = CreateIpForwardEntry2(&rtrow);
+		if (r == NO_ERROR) {
+			return true;
+		} else if (r == ERROR_OBJECT_ALREADY_EXISTS) {
+			return (SetIpForwardEntry2(&rtrow) == NO_ERROR);
+		} else {
+			return false;
+		}
+	}
+}
+
 #endif // __WINDOWS__ --------------------------------------------------------
 
 #ifndef ZT_ROUTING_SUPPORT_FOUND
@@ -305,6 +358,14 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 
 bool ManagedRoute::sync()
 {
+#ifdef __WINDOWS__
+	NET_LUID interfaceLuid;
+	interfaceLuid.Value = (ULONG64)Utils::hexStrToU64(_device); // on Windows we use the hex LUID as the "interface name" for ManagedRoute
+	NET_IFINDEX interfaceIndex = -1;
+	if (ConvertInterfaceLuidToIndex(&interfaceLuid,&interfaceIndex) != NO_ERROR)
+		return false;
+#endif
+
 	if ((_target.isDefaultRoute())||((_target.ss_family == AF_INET)&&(_target.netmaskBits() < 32))) {
 		/* In ZeroTier we create two more specific routes for every one route. We
 		 * do this for default routes and IPv4 routes other than /32s. If there
@@ -399,6 +460,12 @@ bool ManagedRoute::sync()
 
 #ifdef __WINDOWS__ // --------------------------------------------------------
 
+		if (!_applied) {
+			_winRoute(false,interfaceLuid,interfaceIndex,leftt,_via);
+			_winRoute(false,interfaceLuid,interfaceIndex,rightt,_via);
+			_applied = true;
+		}
+
 #endif // __WINDOWS__ --------------------------------------------------------
 
 	} else {
@@ -420,9 +487,19 @@ bool ManagedRoute::sync()
 
 #ifdef __LINUX__ // ----------------------------------------------------------
 
+		if (!_applied) {
+			_routeCmd("replace",_target,_via,(_via) ? _device : (const char *)0);
+			_applied = true;
+		}
+
 #endif // __LINUX__ ----------------------------------------------------------
 
 #ifdef __WINDOWS__ // --------------------------------------------------------
+
+		if (!_applied) {
+			_winRoute(false,interfaceLuid,interfaceIndex,_target,_via);
+			_applied = true;
+		}
 
 #endif // __WINDOWS__ --------------------------------------------------------
 
@@ -433,6 +510,14 @@ bool ManagedRoute::sync()
 
 void ManagedRoute::remove()
 {
+#ifdef __WINDOWS__
+	NET_LUID interfaceLuid;
+	interfaceLuid.Value = (ULONG64)Utils::hexStrToU64(_device); // on Windows we use the hex LUID as the "interface name" for ManagedRoute
+	NET_IFINDEX interfaceIndex = -1;
+	if (ConvertInterfaceLuidToIndex(&interfaceLuid,&interfaceIndex) != NO_ERROR)
+		return;
+#endif
+
 	if (_applied) {
 		if ((_target.isDefaultRoute())||((_target.ss_family == AF_INET)&&(_target.netmaskBits() < 32))) {
 			InetAddress leftt,rightt;
@@ -463,6 +548,9 @@ void ManagedRoute::remove()
 
 #ifdef __WINDOWS__ // --------------------------------------------------------
 
+			_winRoute(true,interfaceLuid,interfaceIndex,leftt,_via);
+			_winRoute(true,interfaceLuid,interfaceIndex,rightt,_via);
+
 #endif // __WINDOWS__ --------------------------------------------------------
 
 		} else {
@@ -484,6 +572,8 @@ void ManagedRoute::remove()
 #endif // __LINUX__ ----------------------------------------------------------
 
 #ifdef __WINDOWS__ // --------------------------------------------------------
+
+			_winRoute(true,interfaceLuid,interfaceIndex,_target,_via);
 
 #endif // __WINDOWS__ --------------------------------------------------------
 
