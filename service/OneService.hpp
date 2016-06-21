@@ -161,6 +161,15 @@ public:
 	virtual bool getNetworkSettings(const uint64_t nwid,NetworkSettings &settings) const = 0;
 
 	/**
+	 * Set local settings for a network
+	 *
+	 * @param nwid Network ID
+	 * @param settings New network local settings
+	 * @return True if network was found and setting modified
+	 */
+	virtual bool setNetworkSettings(const uint64_t nwid,const NetworkSettings &settings) = 0;
+
+	/**
 	 * @return True if service is still running
 	 */
 	inline bool isRunning() const { return (this->reasonForTermination() == ONE_STILL_RUNNING); }

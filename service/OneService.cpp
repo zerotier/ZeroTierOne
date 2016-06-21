@@ -534,7 +534,7 @@ public:
 		NetworkState() :
 			tap((EthernetTap *)0)
 		{
-			// Default network permission settings: allow management of IPs and routes but only for private and "pseudo-private" IP spaces
+			// Real defaults are in network 'up' code in network event handler
 			settings.allowManaged = true;
 			settings.allowGlobal = false;
 			settings.allowDefault = false;
@@ -1013,6 +1013,31 @@ public:
 		return true;
 	}
 
+	virtual bool setNetworkSettings(const uint64_t nwid,const NetworkSettings &settings)
+	{
+		Mutex::Lock _l(_nets_m);
+
+		std::map<uint64_t,NetworkState>::iterator n(_nets.find(nwid));
+		if (n == _nets.end())
+			return false;
+		memcpy(&(n->second.settings),&settings,sizeof(NetworkSettings));
+
+		char nlcpath[256];
+		Utils::snprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
+		FILE *out = fopen(nlcpath,"w");
+		if (out) {
+			fprintf(out,"allowManaged=%d\n",(int)n->second.settings.allowManaged);
+			fprintf(out,"allowGlobal=%d\n",(int)n->second.settings.allowGlobal);
+			fprintf(out,"allowDefault=%d\n",(int)n->second.settings.allowDefault);
+			fclose(out);
+		}
+
+		if (n->second.tap)
+			syncManagedStuff(n->second,true,true);
+
+		return true;
+	}
+
 	// Begin private implementation methods
 
 	// Checks if a managed IP or route target is allowed
@@ -1038,6 +1063,7 @@ public:
 	// Apply or update managed IPs for a configured network (be sure n.tap exists)
 	void syncManagedStuff(NetworkState &n,bool syncIps,bool syncRoutes)
 	{
+		// assumes _nets_m is locked
 		if (syncIps) {
 			std::vector<InetAddress> newManagedIps;
 			newManagedIps.reserve(n.config.assignedAddressCount);
@@ -1384,6 +1410,17 @@ public:
 							StapFrameHandler,
 							(void *)this);
 						*nuptr = (void *)&n;
+
+						char nlcpath[256];
+						Utils::snprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
+						std::string nlcbuf;
+						if (OSUtils::readFile(nlcpath,nlcbuf)) {
+							Dictionary<4096> nc;
+							nc.load(nlcbuf.c_str());
+							n.settings.allowManaged = nc.getB("allowManaged",true);
+							n.settings.allowGlobal = nc.getB("allowGlobal",false);
+							n.settings.allowDefault = nc.getB("allowDefault",false);
+						}
 					} catch (std::exception &exc) {
 #ifdef __WINDOWS__
 						FILE *tapFailLog = fopen((_homePath + ZT_PATH_SEPARATOR_S"port_error_log.txt").c_str(),"a");
@@ -1425,6 +1462,11 @@ public:
 					if ((op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY)&&(winInstanceId.length() > 0))
 						WindowsEthernetTap::deletePersistentTapDevice(winInstanceId.c_str());
 #endif
+					if (op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY) {
+						char nlcpath[256];
+						Utils::snprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
+						OSUtils::rm(nlcpath);
+					}
 				} else {
 					_nets.erase(nwid);
 				}

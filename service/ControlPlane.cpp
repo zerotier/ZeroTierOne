@@ -28,6 +28,12 @@
 #include "../ext/http-parser/http_parser.h"
 #endif
 
+#ifdef ZT_USE_SYSTEM_JSON_PARSER
+#include <json-parser/json.h>
+#else
+#include "../ext/json-parser/json.h"
+#endif
+
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 #include "../controller/SqliteNetworkController.hpp"
 #endif
@@ -96,7 +102,7 @@ static std::string _jsonEnumerate(const ZT_VirtualNetworkRoute *routes,unsigned 
 	return buf;
 }
 
-static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetworkConfig *nc,const std::string &portDeviceName)
+static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetworkConfig *nc,const std::string &portDeviceName,const OneService::NetworkSettings &localSettings)
 {
 	char json[4096];
 	char prefix[32];
@@ -136,7 +142,10 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetw
 		"%s\t\"netconfRevision\": %lu,\n"
 		"%s\t\"assignedAddresses\": %s,\n"
 		"%s\t\"routes\": %s,\n"
-		"%s\t\"portDeviceName\": \"%s\"\n"
+		"%s\t\"portDeviceName\": \"%s\",\n"
+		"%s\t\"allowManaged\": %s,\n"
+		"%s\t\"allowGlobal\": %s,\n"
+		"%s\t\"allowDefault\": %s\n"
 		"%s}",
 		prefix,
 		prefix,nc->nwid,
@@ -153,6 +162,9 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetw
 		prefix,_jsonEnumerate(nc->assignedAddresses,nc->assignedAddressCount).c_str(),
 		prefix,_jsonEnumerate(nc->routes,nc->routeCount).c_str(),
 		prefix,_jsonEscape(portDeviceName).c_str(),
+		prefix,(localSettings.allowManaged) ? "true" : "false",
+		prefix,(localSettings.allowGlobal) ? "true" : "false",
+		prefix,(localSettings.allowDefault) ? "true" : "false",
 		prefix);
 	buf.append(json);
 }
@@ -424,7 +436,9 @@ unsigned int ControlPlane::handleRequest(
 						for(unsigned long i=0;i<nws->networkCount;++i) {
 							if (i > 0)
 								responseBody.append(",");
-							_jsonAppend(1,responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
+							OneService::NetworkSettings localSettings;
+							_svc->getNetworkSettings(nws->networks[i].nwid,localSettings);
+							_jsonAppend(1,responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid),localSettings);
 						}
 						responseBody.append("\n]\n");
 						scode = 200;
@@ -434,7 +448,9 @@ unsigned int ControlPlane::handleRequest(
 						for(unsigned long i=0;i<nws->networkCount;++i) {
 							if (nws->networks[i].nwid == wantnw) {
 								responseContentType = "application/json";
-								_jsonAppend(0,responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
+								OneService::NetworkSettings localSettings;
+								_svc->getNetworkSettings(nws->networks[i].nwid,localSettings);
+								_jsonAppend(0,responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid),localSettings);
 								responseBody.push_back('\n');
 								scode = 200;
 								break;
@@ -506,8 +522,32 @@ unsigned int ControlPlane::handleRequest(
 					if (nws) {
 						for(unsigned long i=0;i<nws->networkCount;++i) {
 							if (nws->networks[i].nwid == wantnw) {
+								OneService::NetworkSettings localSettings;
+								_svc->getNetworkSettings(nws->networks[i].nwid,localSettings);
+
+								json_value *j = json_parse(body.c_str(),body.length());
+								if (j) {
+									if (j->type == json_object) {
+										for(unsigned int k=0;k<j->u.object.length;++k) {
+											if (!strcmp(j->u.object.values[k].name,"allowManaged")) {
+												if (j->u.object.values[k].value->type == json_boolean)
+													localSettings.allowManaged = (j->u.object.values[k].value->u.boolean != 0);
+											} else if (!strcmp(j->u.object.values[k].name,"allowGlobal")) {
+												if (j->u.object.values[k].value->type == json_boolean)
+													localSettings.allowGlobal = (j->u.object.values[k].value->u.boolean != 0);
+											} else if (!strcmp(j->u.object.values[k].name,"allowDefault")) {
+												if (j->u.object.values[k].value->type == json_boolean)
+													localSettings.allowDefault = (j->u.object.values[k].value->u.boolean != 0);
+											}
+										}
+									}
+									json_value_free(j);
+								}
+
+								_svc->setNetworkSettings(nws->networks[i].nwid,localSettings);
+
 								responseContentType = "application/json";
-								_jsonAppend(0,responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
+								_jsonAppend(0,responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid),localSettings);
 								responseBody.push_back('\n');
 								scode = 200;
 								break;
