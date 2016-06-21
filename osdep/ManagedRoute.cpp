@@ -55,6 +55,7 @@
 
 #define ZT_BSD_ROUTE_CMD "/sbin/route"
 #define ZT_LINUX_IP_COMMAND "/sbin/ip"
+#define ZT_LINUX_IP_COMMAND_2 "/usr/sbin/ip"
 
 namespace ZeroTier {
 
@@ -258,6 +259,26 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 #ifdef __LINUX__ // ----------------------------------------------------------
 #define ZT_ROUTING_SUPPORT_FOUND 1
 
+static void _routeCmd(const char *op,const InetAddress &target,const InetAddress &via,const char *localInterface)
+{
+	long p = (long)fork();
+	if (p > 0) {
+		int exitcode = -1;
+		::waitpid(p,&exitcode,0);
+	} else if (p == 0) {
+		::close(STDOUT_FILENO);
+		::close(STDERR_FILENO);
+		if (via) {
+			::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString().c_str(),"via",via.toIpString().c_str(),(const char *)0);
+			::execl(ZT_LINUX_IP_COMMAND_2,ZT_LINUX_IP_COMMAND_2,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString().c_str(),"via",via.toIpString().c_str(),(const char *)0);
+		} else if ((localInterface)&&(localInterface[0])) {
+			::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString().c_str(),"dev",localInterface,(const char *)0);
+			::execl(ZT_LINUX_IP_COMMAND_2,ZT_LINUX_IP_COMMAND_2,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString().c_str(),"dev",localInterface,(const char *)0);
+		}
+		::_exit(-1);
+	}
+}
+
 #endif // __LINUX__ ----------------------------------------------------------
 
 #ifdef __WINDOWS__ // --------------------------------------------------------
@@ -270,6 +291,17 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 #endif
 
 } // anonymous namespace
+
+/* Linux NOTE: for default route override, some Linux distributions will
+ * require a change to the rp_filter parameter.
+ *
+ * sudo sysctl net.ipv4.conf.all.rp_filter=2
+ *
+ * Add to /etc/sysctl.conf or /etc/sysctl.d/... to make permanent.
+ *
+ * This is true of CentOS/RHEL 6+ and possibly others. This is because
+ * Linux default route override implies asymmetric routes, which then
+ * trigger Linux's "martian packet" filter. */
 
 bool ManagedRoute::sync()
 {
@@ -357,6 +389,12 @@ bool ManagedRoute::sync()
 
 #ifdef __LINUX__ // ----------------------------------------------------------
 
+		if (!_applied) {
+			_routeCmd("replace",leftt,_via,(_via) ? _device : (const char *)0);
+			_routeCmd("replace",rightt,_via,(_via) ? _device : (const char *)0);
+			_applied = true;
+		}
+
 #endif // __LINUX__ ----------------------------------------------------------
 
 #ifdef __WINDOWS__ // --------------------------------------------------------
@@ -364,8 +402,6 @@ bool ManagedRoute::sync()
 #endif // __WINDOWS__ --------------------------------------------------------
 
 	} else {
-		/* For non-default routes, IPv4 /32, and IPv6 non-default routes, we just
-		 * add the route itself. */
 
 #ifdef __BSD__ // ------------------------------------------------------------
 
@@ -398,14 +434,7 @@ bool ManagedRoute::sync()
 void ManagedRoute::remove()
 {
 	if (_applied) {
-		if (_target.isDefaultRoute()) {
-			/* In ZeroTier we use a forked-route trick to override the default
-			* with a more specific one while leaving the original system route
-			* intact. We also create a shadow more specific route to the
-			* original gateway that is device-bound so that ZeroTier's device
-			* bound ports go via the physical Internet link. This has to be
-			* done *slightly* differently on different platforms. */
-
+		if ((_target.isDefaultRoute())||((_target.ss_family == AF_INET)&&(_target.netmaskBits() < 32))) {
 			InetAddress leftt,rightt;
 			_forkTarget(_target,leftt,rightt);
 
@@ -415,7 +444,6 @@ void ManagedRoute::remove()
 				_routeCmd("delete",leftt,_systemVia,_systemDevice,(const char *)0);
 				_routeCmd("delete",rightt,_systemVia,_systemDevice,(const char *)0);
 			}
-
 			if (_via) {
 				_routeCmd("delete",leftt,_via,(const char *)0,(const char *)0);
 				_routeCmd("delete",rightt,_via,(const char *)0,(const char *)0);
@@ -427,6 +455,9 @@ void ManagedRoute::remove()
 #endif // __BSD__ ------------------------------------------------------------
 
 #ifdef __LINUX__ // ----------------------------------------------------------
+
+			_routeCmd("del",leftt,_via,(_via) ? _device : (const char *)0);
+			_routeCmd("del",rightt,_via,(_via) ? _device : (const char *)0);
 
 #endif // __LINUX__ ----------------------------------------------------------
 
@@ -447,6 +478,8 @@ void ManagedRoute::remove()
 #endif // __BSD__ ------------------------------------------------------------
 
 #ifdef __LINUX__ // ----------------------------------------------------------
+
+			_routeCmd("del",_target,_via,(_via) ? _device : (const char *)0);
 
 #endif // __LINUX__ ----------------------------------------------------------
 

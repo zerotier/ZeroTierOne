@@ -38,12 +38,17 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <ifaddrs.h>
+#ifdef __LINUX__
+#include <sys/ioctl.h>
+#include <net/if.h>
+#endif
 #endif
 
 #include <string>
 #include <vector>
 #include <algorithm>
 #include <utility>
+#include <map>
 
 #include "../node/NonCopyable.hpp"
 #include "../node/InetAddress.hpp"
@@ -124,14 +129,9 @@ public:
 	template<typename PHY_HANDLER_TYPE,typename INTERFACE_CHECKER>
 	void refresh(Phy<PHY_HANDLER_TYPE> &phy,unsigned int port,INTERFACE_CHECKER &ifChecker)
 	{
-		std::vector<InetAddress> localIfAddrs;
-		std::vector<_Binding> newBindings;
-		std::vector<std::string>::const_iterator si;
-		std::vector<InetAddress>::const_iterator ii;
-		typename std::vector<_Binding>::const_iterator bi;
+		std::map<InetAddress,std::string> localIfAddrs;
 		PhySocket *udps;
 		//PhySocket *tcps;
-		InetAddress ip;
 		Mutex::Lock _l(_lock);
 
 #ifdef __WINDOWS__
@@ -149,11 +149,10 @@ public:
 							default: break;
 							case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
 							case InetAddress::IP_SCOPE_GLOBAL:
-							//case InetAddress::IP_SCOPE_LINK_LOCAL:
 							case InetAddress::IP_SCOPE_SHARED:
 							case InetAddress::IP_SCOPE_PRIVATE:
 								ip.setPort(port);
-								localIfAddrs.push_back(ip);
+								localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string()));
 								break;
 						}
 					}
@@ -171,17 +170,16 @@ public:
 			ifa = ifatbl;
 			while (ifa) {
 				if ((ifa->ifa_name)&&(ifa->ifa_addr)) {
-					ip = *(ifa->ifa_addr);
+					InetAddress ip = *(ifa->ifa_addr);
 					if (ifChecker.shouldBindInterface(ifa->ifa_name,ip)) {
 						switch(ip.ipScope()) {
 							default: break;
 							case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
 							case InetAddress::IP_SCOPE_GLOBAL:
-							//case InetAddress::IP_SCOPE_LINK_LOCAL:
 							case InetAddress::IP_SCOPE_SHARED:
 							case InetAddress::IP_SCOPE_PRIVATE:
 								ip.setPort(port);
-								localIfAddrs.push_back(ip);
+								localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string(ifa->ifa_name)));
 								break;
 						}
 					}
@@ -194,50 +192,58 @@ public:
 #endif
 
 		// Default to binding to wildcard if we can't enumerate addresses
-		if (localIfAddrs.size() == 0) {
-			localIfAddrs.push_back(InetAddress((uint32_t)0,port));
-			localIfAddrs.push_back(InetAddress((const void *)"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,port));
+		if (localIfAddrs.empty()) {
+			localIfAddrs.insert(std::pair<InetAddress,std::string>(InetAddress((uint32_t)0,port),std::string()));
+			localIfAddrs.insert(std::pair<InetAddress,std::string>(InetAddress((const void *)"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,port),std::string()));
 		}
 
 		// Close any old bindings to anything that doesn't exist anymore
-		for(bi=_bindings.begin();bi!=_bindings.end();++bi) {
-			if (std::find(localIfAddrs.begin(),localIfAddrs.end(),bi->address) == localIfAddrs.end()) {
+		for(typename std::vector<_Binding>::const_iterator bi(_bindings.begin());bi!=_bindings.end();++bi) {
+			if (localIfAddrs.find(bi->address) == localIfAddrs.end()) {
 				phy.close(bi->udpSock,false);
 				phy.close(bi->tcpListenSock,false);
 			}
 		}
 
-		for(ii=localIfAddrs.begin();ii!=localIfAddrs.end();++ii) {
-			// Copy over bindings that still are valid
-			for(bi=_bindings.begin();bi!=_bindings.end();++bi) {
-				if (bi->address == *ii) {
+		std::vector<_Binding> newBindings;
+		for(std::map<InetAddress,std::string>::const_iterator ii(localIfAddrs.begin());ii!=localIfAddrs.end();++ii) {
+			typename std::vector<_Binding>::const_iterator bi(_bindings.begin());
+			while (bi != _bindings.end()) {
+				if (bi->address == ii->first) {
 					newBindings.push_back(*bi);
 					break;
 				}
+				++bi;
 			}
 
-			// Add new bindings
 			if (bi == _bindings.end()) {
-				udps = phy.udpBind(reinterpret_cast<const struct sockaddr *>(&(*ii)),(void *)0,ZT_UDP_DESIRED_BUF_SIZE);
+				udps = phy.udpBind(reinterpret_cast<const struct sockaddr *>(&(ii->first)),(void *)0,ZT_UDP_DESIRED_BUF_SIZE);
 				if (udps) {
 					//tcps = phy.tcpListen(reinterpret_cast<const struct sockaddr *>(&ii),(void *)0);
 					//if (tcps) {
+#ifdef __LINUX__
+						// Bind Linux sockets to their device so routes tha we manage do not override physical routes (wish all platforms had this!)
+						if (ii->second.length() > 0) {
+							int fd = (int)Phy<PHY_HANDLER_TYPE>::getDescriptor(udps);
+							char tmp[256];
+							Utils::scopy(tmp,sizeof(tmp),ii->second.c_str());
+							if (fd >= 0) {
+								if (setsockopt(fd,SOL_SOCKET,SO_BINDTODEVICE,tmp,strlen(tmp)) != 0) {
+									fprintf(stderr,"WARNING: unable to set SO_BINDTODEVICE to bind %s to %s\n",ii->first.toIpString().c_str(),ii->second.c_str());
+								}
+							}
+						}
+#endif // __LINUX__
 						newBindings.push_back(_Binding());
 						newBindings.back().udpSock = udps;
 						//newBindings.back().tcpListenSock = tcps;
-						newBindings.back().address = *ii;
+						newBindings.back().address = ii->first;
 					//} else {
 					//	phy.close(udps,false);
 					//}
 				}
 			}
 		}
-
-		/*
-		for(bi=newBindings.begin();bi!=newBindings.end();++bi) {
-			printf("Binder: bound to %s\n",bi->address.toString().c_str());
-		}
-		*/
 
 		// Swapping pointers and then letting the old one fall out of scope is faster than copying again
 		_bindings.swap(newBindings);
