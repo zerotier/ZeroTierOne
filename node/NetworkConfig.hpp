@@ -64,6 +64,9 @@
 
 namespace ZeroTier {
 
+// Maximum size of a network config dictionary (can be increased)
+#define ZT_NETWORKCONFIG_DICT_CAPACITY 8194
+
 // Network config version
 #define ZT_NETWORKCONFIG_VERSION 6
 
@@ -234,7 +237,7 @@ public:
 	 * @param includeLegacy If true, include legacy fields for old node versions
 	 * @return True if dictionary was successfully created, false if e.g. overflow
 	 */
-	bool toDictionary(Dictionary &d,bool includeLegacy) const;
+	bool toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,bool includeLegacy) const;
 
 	/**
 	 * Read this network config from a dictionary
@@ -242,7 +245,7 @@ public:
 	 * @param d Dictionary
 	 * @return True if dictionary was valid and network config successfully initialized
 	 */
-	bool fromDictionary(const Dictionary &d);
+	bool fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d);
 
 	/**
 	 * @return True if passive bridging is allowed (experimental)

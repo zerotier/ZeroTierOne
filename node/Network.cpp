@@ -64,7 +64,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 		try {
 			std::string conf(RR->node->dataStoreGet(confn));
 			if (conf.length()) {
-				Dictionary dconf(conf.c_str());
+				Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> dconf(conf.c_str());
 				NetworkConfig nconf;
 				if (nconf.fromDictionary(dconf)) {
 					this->setConfiguration(nconf,false);
@@ -193,7 +193,7 @@ int Network::setConfiguration(const NetworkConfig &nconf,bool saveToDisk)
 			if (saveToDisk) {
 				char n[64];
 				Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
-				Dictionary d;
+				Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> d;
 				if (nconf.toDictionary(d,false))
 					RR->node->dataStorePut(n,(const void *)d.data(),d.sizeBytes(),true);
 			}
@@ -210,7 +210,7 @@ void Network::requestConfiguration()
 	if (_id == ZT_TEST_NETWORK_ID) // pseudo-network-ID, uses locally generated static config
 		return;
 
-	Dictionary rmd;
+	Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> rmd;
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION,(uint64_t)ZT_PROTO_VERSION);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,(uint64_t)ZEROTIER_ONE_VERSION_MAJOR);

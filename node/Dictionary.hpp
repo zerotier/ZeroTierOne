@@ -26,9 +26,6 @@
 
 #include <stdint.h>
 
-// Can be increased if it's ever needed, but not too much.
-#define ZT_DICTIONARY_MAX_SIZE 8194
-
 namespace ZeroTier {
 
 /**
@@ -48,7 +45,10 @@ namespace ZeroTier {
  *
  * There is code to test and fuzz this in selftest.cpp. Fuzzing a blob of
  * pointer tricks like this is important after any modifications.
+ *
+ * @tparam C Dictionary max capacity in bytes
  */
+template<unsigned int C>
 class Dictionary
 {
 public:
@@ -64,8 +64,8 @@ public:
 
 	Dictionary(const char *s,unsigned int len)
 	{
-		memcpy(_d,s,(len > ZT_DICTIONARY_MAX_SIZE) ? (unsigned int)ZT_DICTIONARY_MAX_SIZE : len);
-		_d[ZT_DICTIONARY_MAX_SIZE-1] = (char)0;
+		memcpy(_d,s,(len > C) ? (unsigned int)C : len);
+		_d[C-1] = (char)0;
 	}
 
 	Dictionary(const Dictionary &d)
@@ -83,7 +83,7 @@ public:
 	 * Load a dictionary from a C-string
 	 *
 	 * @param s Dictionary in string form
-	 * @return False if 's' was longer than ZT_DICTIONARY_MAX_SIZE
+	 * @return False if 's' was longer than our capacity
 	 */
 	inline bool load(const char *s)
 	{
@@ -103,11 +103,11 @@ public:
 	 */
 	inline unsigned int sizeBytes() const
 	{
-		for(unsigned int i=0;i<ZT_DICTIONARY_MAX_SIZE;++i) {
+		for(unsigned int i=0;i<C;++i) {
 			if (!_d[i])
 				return i;
 		}
-		return ZT_DICTIONARY_MAX_SIZE;
+		return C;
 	}
 
 	/**
@@ -194,9 +194,10 @@ public:
 	 * @param key Key to get
 	 * @param dest Destination buffer
 	 * @return True if key was found (if false, dest will be empty)
+	 * @tparam BC Buffer capacity (usually inferred)
 	 */
-	template<unsigned int C>
-	inline bool get(const char *key,Buffer<C> &dest) const
+	template<unsigned int BC>
+	inline bool get(const char *key,Buffer<BC> &dest) const
 	{
 		const int r = this->get(key,const_cast<char *>(reinterpret_cast<const char *>(dest.data())),C);
 		if (r >= 0) {
@@ -254,13 +255,13 @@ public:
 	 */
 	inline bool add(const char *key,const char *value,int vlen = -1)
 	{
-		for(unsigned int i=0;i<ZT_DICTIONARY_MAX_SIZE;++i) {
+		for(unsigned int i=0;i<C;++i) {
 			if (!_d[i]) {
 				unsigned int j = i;
 
 				if (j > 0) {
 					_d[j++] = '\n';
-					if (j == ZT_DICTIONARY_MAX_SIZE) {
+					if (j == C) {
 						_d[i] = (char)0;
 						return false;
 					}
@@ -269,14 +270,14 @@ public:
 				const char *p = key;
 				while (*p) {
 					_d[j++] = *(p++);
-					if (j == ZT_DICTIONARY_MAX_SIZE) {
+					if (j == C) {
 						_d[i] = (char)0;
 						return false;
 					}
 				}
 
 				_d[j++] = '=';
-				if (j == ZT_DICTIONARY_MAX_SIZE) {
+				if (j == C) {
 					_d[i] = (char)0;
 					return false;
 				}
@@ -291,7 +292,7 @@ public:
 						case '\\':
 						case '=':
 							_d[j++] = '\\';
-							if (j == ZT_DICTIONARY_MAX_SIZE) {
+							if (j == C) {
 								_d[i] = (char)0;
 								return false;
 							}
@@ -302,14 +303,14 @@ public:
 								case '\\': _d[j++] = '\\'; break;
 								case '=': _d[j++] = 'e'; break;
 							}
-							if (j == ZT_DICTIONARY_MAX_SIZE) {
+							if (j == C) {
 								_d[i] = (char)0;
 								return false;
 							}
 							break;
 						default:
 							_d[j++] = *p;
-							if (j == ZT_DICTIONARY_MAX_SIZE) {
+							if (j == C) {
 								_d[i] = (char)0;
 								return false;
 							}
@@ -356,10 +357,12 @@ public:
 	}
 
 	/**
-	 * Add a binary buffer
+	 * Add a binary buffer's contents as a value
+	 *
+	 * @tparam BC Buffer capacity (usually inferred)
 	 */
-	template<unsigned int C>
-	inline bool add(const char *key,const Buffer<C> &value)
+	template<unsigned int BC>
+	inline bool add(const char *key,const Buffer<BC> &value)
 	{
 		return this->add(key,(const char *)value.data(),(int)value.size());
 	}
@@ -385,7 +388,7 @@ public:
 	 */
 	inline bool erase(const char *key)
 	{
-		char d2[ZT_DICTIONARY_MAX_SIZE];
+		char d2[C];
 		char *saveptr = (char *)0;
 		unsigned int d2ptr = 0;
 		bool found = false;
@@ -419,8 +422,13 @@ public:
 	 */
 	inline const char *data() const { return _d; }
 
+	/**
+	 * @return Value of C template parameter
+	 */
+	inline unsigned int capacity() const { return C; }
+
 private:
-	char _d[ZT_DICTIONARY_MAX_SIZE];
+	char _d[C];
 };
 
 } // namespace ZeroTier

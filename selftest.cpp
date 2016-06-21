@@ -766,7 +766,7 @@ static int testOther()
 
 	std::cout << "[other] Testing/fuzzing Dictionary... "; std::cout.flush();
 	for(int k=0;k<1000;++k) {
-		Dictionary test;
+		Dictionary<8194> test;
 		char key[32][16];
 		char value[32][128];
 		for(unsigned int q=0;q<32;++q) {
@@ -807,12 +807,12 @@ static int testOther()
 	int foo = 0;
 	volatile int *volatile bar = &foo; // force compiler not to optimize out test.get() below
 	for(int k=0;k<100;++k) {
-		int r = rand() % ZT_DICTIONARY_MAX_SIZE;
-		unsigned char tmp[ZT_DICTIONARY_MAX_SIZE];
+		int r = rand() % 8194;
+		unsigned char tmp[8194];
 		for(int q=0;q<r;++q)
 			tmp[q] = (unsigned char)((rand() % 254) + 1);
 		tmp[r] = 0;
-		Dictionary test((const char *)tmp);
+		Dictionary<8194> test((const char *)tmp);
 		for(unsigned int q=0;q<100;++q) {
 			char tmp[16];
 			Utils::snprintf(tmp,16,"%.8lx",(unsigned long)rand());

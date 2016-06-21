@@ -22,12 +22,12 @@
 #include <stdint.h>
 
 #include "Constants.hpp"
+#include "Dictionary.hpp"
+#include "NetworkConfig.hpp"
 
 namespace ZeroTier {
 
 class RuntimeEnvironment;
-class NetworkConfig;
-class Dictionary;
 class Identity;
 class Address;
 struct InetAddress;
@@ -75,7 +75,7 @@ public:
 		const Identity &signingId,
 		const Identity &identity,
 		uint64_t nwid,
-		const Dictionary &metaData,
+		const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &metaData,
 		NetworkConfig &nc) = 0;
 };
 

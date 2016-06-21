@@ -23,9 +23,9 @@
 
 namespace ZeroTier {
 
-bool NetworkConfig::toDictionary(Dictionary &d,bool includeLegacy) const
+bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,bool includeLegacy) const
 {
-	Buffer<ZT_DICTIONARY_MAX_SIZE> tmp;
+	Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY> tmp;
 
 	d.clear();
 
@@ -259,11 +259,11 @@ bool NetworkConfig::toDictionary(Dictionary &d,bool includeLegacy) const
 	return true;
 }
 
-bool NetworkConfig::fromDictionary(const Dictionary &d)
+bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d)
 {
 	try {
-		Buffer<ZT_DICTIONARY_MAX_SIZE> tmp;
-		char tmp2[ZT_DICTIONARY_MAX_SIZE];
+		Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY> tmp;
+		char tmp2[ZT_NETWORKCONFIG_DICT_CAPACITY];
 
 		memset(this,0,sizeof(NetworkConfig));
 

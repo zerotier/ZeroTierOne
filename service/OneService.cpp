@@ -1571,6 +1571,7 @@ public:
 	inline int nodePathCheckFunction(const struct sockaddr_storage *localAddr,const struct sockaddr_storage *remoteAddr)
 	{
 		Mutex::Lock _l(_nets_m);
+	
 		for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
 			if (n->second.tap) {
 				std::vector<InetAddress> ips(n->second.tap->ips());
@@ -1581,7 +1582,13 @@ public:
 				}
 			}
 		}
-		// TODO: also check routing table for L3 routes via ZeroTier managed devices
+	
+		/* Note: I do not think we need to scan for overlap with managed routes
+		 * because of the "route forking" and interface binding that we do. This
+		 * ensures (we hope) that ZeroTier traffic will still take the physical
+		 * path even if its managed routes override this for other traffic. Will
+		 * revisit if we see problems with this. */
+
 		return 1;
 	}
 

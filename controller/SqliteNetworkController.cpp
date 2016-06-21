@@ -402,7 +402,7 @@ SqliteNetworkController::~SqliteNetworkController()
 	}
 }
 
-NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary &metaData,NetworkConfig &nc)
+NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &metaData,NetworkConfig &nc)
 {
 	Mutex::Lock _l(_lock);
 	return _doNetworkConfigRequest(fromAddr,signingId,identity,nwid,metaData,nc);
@@ -1576,7 +1576,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 	return 404;
 }
 
-NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary &metaData,NetworkConfig &nc)
+NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &metaData,NetworkConfig &nc)
 {
 	// Assumes _lock is locked
 

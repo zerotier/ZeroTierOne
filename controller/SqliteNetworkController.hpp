@@ -62,7 +62,7 @@ public:
 		const Identity &signingId,
 		const Identity &identity,
 		uint64_t nwid,
-		const Dictionary &metaData,
+		const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &metaData,
 		NetworkConfig &nc);
 
 	unsigned int handleControlPlaneHttpGET(
@@ -113,7 +113,7 @@ private:
 		const Identity &signingId,
 		const Identity &identity,
 		uint64_t nwid,
-		const Dictionary &metaData,
+		const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &metaData,
 		NetworkConfig &nc);
 
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);

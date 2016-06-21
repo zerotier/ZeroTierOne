@@ -354,7 +354,7 @@ OSXEthernetTap::OSXEthernetTap(
 	// Try to reopen the last device we had, if we had one and it's still unused.
 	bool recalledDevice = false;
 	std::string devmapbuf;
-	Dictionary devmap;
+	Dictionary<8194> devmap;
 	if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),devmapbuf)) {
 		devmap.load(devmapbuf.c_str());
 		char desiredDevice[128];
