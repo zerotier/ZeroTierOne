@@ -817,6 +817,7 @@ static int testOther()
 			char tmp[128];
 			for(unsigned int x=0;x<128;++x)
 				tmp[x] = (char)(rand() & 0xff);
+			tmp[127] = (char)0;
 			char value[8194];
 			*bar += test.get(tmp,value,sizeof(value));
 		}
