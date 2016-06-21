@@ -806,21 +806,22 @@ static int testOther()
 	}
 	int foo = 0;
 	volatile int *volatile bar = &foo; // force compiler not to optimize out test.get() below
-	for(int k=0;k<100;++k) {
+	for(int k=0;k<200;++k) {
 		int r = rand() % 8194;
 		unsigned char tmp[8194];
 		for(int q=0;q<r;++q)
-			tmp[q] = (unsigned char)((rand() % 254) + 1);
-		tmp[r] = 0;
+			tmp[q] = (unsigned char)((rand() % 254) + 1); // don't put nulls since those will always just terminate scan
+		tmp[r] = (r % 32) ? (char)(rand() & 0xff) : (char)0; // every 32nd iteration don't terminate the string maybe...
 		Dictionary<8194> test((const char *)tmp);
 		for(unsigned int q=0;q<100;++q) {
-			char tmp[16];
-			Utils::snprintf(tmp,16,"%.8lx",(unsigned long)rand());
-			char value[128];
-			*bar = test.get(tmp,value,sizeof(value));
+			char tmp[128];
+			for(unsigned int x=0;x<128;++x)
+				tmp[x] = (char)(rand() & 0xff);
+			char value[8194];
+			*bar += test.get(tmp,value,sizeof(value));
 		}
 	}
-	std::cout << "PASS" << std::endl;
+	std::cout << "PASS (junk value to prevent optimization-out of test: " << foo << ")" << std::endl;
 
 	return 0;
 }

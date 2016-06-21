@@ -29,22 +29,24 @@
 namespace ZeroTier {
 
 /**
- * A small key=value store
+ * A small (in code and data) packed key=value store
  *
- * This stores data in the form of a blob of max size ZT_DICTIONARY_MAX_SIZE.
- * It's *technically* human-readable to be backward compatible with old format
- * netconfs, but it can store binary data and doing this will negatively impact
- * its human-readability.
+ * This stores data in the form of a compact blob that is sort of human
+ * readable (depending on whether you put binary data in it) and is backward
+ * compatible with older versions. Binary data is escaped such that the
+ * serialized form of a Dictionary is always a valid null-terminated C string.
  *
- * In any case nulls are always escaped, making the serialized form of this
- * object a valid null-terminated C-string. Appending it to a buffer appends
- * it as such.
+ * Keys are restricted: no binary data, no CR/LF, and no equals (=). If a key
+ * contains these characters it may not be retrievable. This is not checked.
  *
- * Keys cannot contain binary data, CR/LF, nulls, or the equals (=) sign.
- * Adding such a key will result in an invalid entry (but isn't dangerous).
+ * Lookup is via linear search and will be slow with a lot of keys. It's
+ * designed for small things.
  *
  * There is code to test and fuzz this in selftest.cpp. Fuzzing a blob of
  * pointer tricks like this is important after any modifications.
+ *
+ * This is used for network configurations and for saving some things on disk
+ * in the ZeroTier One service code.
  *
  * @tparam C Dictionary max capacity in bytes
  */
@@ -107,7 +109,7 @@ public:
 			if (!_d[i])
 				return i;
 		}
-		return C;
+		return C-1;
 	}
 
 	/**
@@ -115,10 +117,11 @@ public:
 	 *
 	 * Note that to get binary values, dest[] should be at least one more than
 	 * the maximum size of the value being retrieved. That's because even if
-	 * the data is binary a terminating 0 is appended to dest[].
+	 * the data is binary a terminating 0 is still appended to dest[] after it.
 	 *
 	 * If the key is not found, dest[0] is set to 0 to make dest[] an empty
-	 * C string in that case. The dest[] array will *never* be unterminated.
+	 * C string in that case. The dest[] array will *never* be unterminated
+	 * after this call.
 	 *
 	 * @param key Key to look up
 	 * @param dest Destination buffer
