@@ -41,8 +41,13 @@
 #endif
 #endif
 
+#ifdef ZT_USE_SYSTEM_MINIUPNPC
+#include <miniupnpc/miniupnpc.h>
+#include <miniupnpc/upnpcommands.h>
+#else
 #include "../ext/miniupnpc/miniupnpc.h"
 #include "../ext/miniupnpc/upnpcommands.h"
+#endif
 
 #ifdef ZT_USE_SYSTEM_LIBNATPMP
 #include <natpmp.h>
