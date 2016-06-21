@@ -123,6 +123,12 @@ public:
 	 * C string in that case. The dest[] array will *never* be unterminated
 	 * after this call.
 	 *
+	 * Security note: if 'key' is ever directly based on anything that is not
+	 * a hard-code or internally-generated name, it must be checked to ensure
+	 * that the buffer is NULL-terminated since key[] does not take a secondary
+	 * size parameter. In NetworkConfig all keys are hard-coded strings so this
+	 * isn't a problem in the core.
+	 *
 	 * @param key Key to look up
 	 * @param dest Destination buffer
 	 * @param destlen Size of destination buffer
@@ -131,6 +137,7 @@ public:
 	inline int get(const char *key,char *dest,unsigned int destlen) const
 	{
 		const char *p = _d;
+		const char *const eof = p + C;
 		const char *k;
 		bool esc;
 		int j;
@@ -140,11 +147,14 @@ public:
 
 		while (*p) {
 			k = key;
-			while (*k) {
+			while ((*k)&&(*p)) {
 				if (*p != *k)
 					break;
 				++k;
-				++p;
+				if (++p == eof) {
+					dest[0] = (char)0;
+					return -1;
+				}
 			}
 
 			if ((!*k)&&(*p == '=')) {
@@ -174,15 +184,26 @@ public:
 							return j-1;
 						}
 					}
-					++p;
+					if (++p == eof) {
+						dest[0] = (char)0;
+						return -1;
+					}
 				}
 				dest[j] = (char)0;
 				return j;
 			} else {
-				while ((*p)&&(*p != '\r')&&(*p != '\n'))
-					++p;
-				if (*p)
-					++p;
+				while ((*p)&&(*p != '\r')&&(*p != '\n')) {
+					if (++p == eof) {
+						dest[0] = (char)0;
+						return -1;
+					}
+				}
+				if (*p) {
+					if (++p == eof) {
+						dest[0] = (char)0;
+						return -1;
+					}
+				}
 				else break;
 			}
 		}
