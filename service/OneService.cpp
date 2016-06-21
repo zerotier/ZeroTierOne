@@ -531,15 +531,20 @@ public:
 	// Configured networks
 	struct NetworkState
 	{
-		NetworkState() : tap((EthernetTap *)0),managedIps(),managedRoutes(),allowManaged(true),allowGlobal(true),allowDefault(true) {}
+		NetworkState() :
+			tap((EthernetTap *)0)
+		{
+			// Default network permission settings: allow management of IPs and routes but only for private and "pseudo-private" IP spaces
+			settings.allowManaged = true;
+			settings.allowGlobal = false;
+			settings.allowDefault = false;
+		}
 
 		EthernetTap *tap;
 		ZT_VirtualNetworkConfig config; // memcpy() of raw config from core
 		std::vector<InetAddress> managedIps;
 		std::list<ManagedRoute> managedRoutes;
-		bool allowManaged; // allow managed addresses and routes
-		bool allowGlobal; // allow global (non-private) IP routes?
-		bool allowDefault; // allow default route?
+		NetworkSettings settings;
 	};
 	std::map<uint64_t,NetworkState> _nets;
 	Mutex _nets_m;
@@ -998,15 +1003,25 @@ public:
 		_phy.whack();
 	}
 
+	virtual bool getNetworkSettings(const uint64_t nwid,NetworkSettings &settings) const
+	{
+		Mutex::Lock _l(_nets_m);
+		std::map<uint64_t,NetworkState>::const_iterator n(_nets.find(nwid));
+		if (n == _nets.end())
+			return false;
+		memcpy(&settings,&(n->second.settings),sizeof(NetworkSettings));
+		return true;
+	}
+
 	// Begin private implementation methods
 
 	// Checks if a managed IP or route target is allowed
 	bool checkIfManagedIsAllowed(const NetworkState &n,const InetAddress &addr)
 	{
-		if (!n.allowManaged)
+		if (!n.settings.allowManaged)
 			return false;
 		if (addr.isDefaultRoute())
-			return n.allowDefault;
+			return n.settings.allowDefault;
 		switch(addr.ipScope()) {
 			case InetAddress::IP_SCOPE_NONE:
 			case InetAddress::IP_SCOPE_MULTICAST:
@@ -1014,7 +1029,7 @@ public:
 			case InetAddress::IP_SCOPE_LINK_LOCAL:
 				return false;
 			case InetAddress::IP_SCOPE_GLOBAL:
-				return n.allowGlobal;
+				return n.settings.allowGlobal;
 			default:
 				return true;
 		}

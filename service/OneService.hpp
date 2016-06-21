@@ -68,6 +68,27 @@ public:
 	};
 
 	/**
+	 * Local settings for each network
+	 */
+	struct NetworkSettings
+	{
+		/**
+		 * Allow this network to configure IP addresses and routes?
+		 */
+		bool allowManaged;
+
+		/**
+		 * Allow configuration of IPs and routes within global (Internet) IP space?
+		 */
+		bool allowGlobal;
+
+		/**
+		 * Allow overriding of system default routes for "full tunnel" operation?
+		 */
+		bool allowDefault;
+	};
+
+	/**
 	 * @return Platform default home path or empty string if this platform doesn't have one
 	 */
 	static std::string platformDefaultHomePath();
@@ -129,6 +150,15 @@ public:
 	 * Terminate background service (can be called from other threads)
 	 */
 	virtual void terminate() = 0;
+
+	/**
+	 * Get local settings for a network
+	 *
+	 * @param nwid Network ID
+	 * @param settings Buffer to fill with local network settings
+	 * @return True if network was found and settings is filled
+	 */
+	virtual bool getNetworkSettings(const uint64_t nwid,NetworkSettings &settings) const = 0;
 
 	/**
 	 * @return True if service is still running

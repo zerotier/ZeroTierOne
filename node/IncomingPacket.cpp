@@ -1192,8 +1192,20 @@ bool IncomingPacket::_doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const S
 bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		// Right now this is only allowed from root servers -- may be allowed from controllers and relays later.
-		if (RR->topology->isRoot(peer->identity())) {
+		// If this were allowed from anyone, it would itself be a DOS vector. Right
+		// now we only allow it from roots and controllers of networks you have joined.
+		bool allowed = RR->topology->isRoot(peer->identity());
+		if (!allowed) {
+			std::vector< SharedPtr<Network> > allNetworks(RR->node->allNetworks());
+			for(std::vector< SharedPtr<Network> >::const_iterator n(allNetworks.begin());n!=allNetworks.end();++n) {
+				if (peer->address() == (*n)->controller()) {
+					allowed = true;
+					break;
+				}
+			}
+		}
+
+		if (allowed) {
 			const uint64_t pid = packetId();
 			const unsigned int difficulty = (*this)[ZT_PACKET_IDX_PAYLOAD + 1];
 			const unsigned int challengeLength = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 2);
