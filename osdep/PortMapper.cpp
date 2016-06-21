@@ -49,7 +49,7 @@
 #include "../ext/miniupnpc/upnpcommands.h"
 #endif
 
-#ifdef ZT_USE_SYSTEM_LIBNATPMP
+#ifdef ZT_USE_SYSTEM_NATPMP
 #include <natpmp.h>
 #else
 #include "../ext/libnatpmp/natpmp.h"
