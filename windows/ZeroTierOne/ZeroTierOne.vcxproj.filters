@@ -114,9 +114,6 @@
     <ClCompile Include="..\..\node\CertificateOfMembership.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\node\Dictionary.cpp">
-      <Filter>Source Files\node</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\node\Identity.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
@@ -251,6 +248,9 @@
     </ClCompile>
     <ClCompile Include="..\..\ext\libnatpmp\wingettimeofday.c">
       <Filter>Source Files\ext\libnatpmp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\osdep\ManagedRoute.cpp">
+      <Filter>Source Files\osdep</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -535,6 +535,12 @@
     </ClInclude>
     <ClInclude Include="..\..\ext\libnatpmp\wingettimeofday.h">
       <Filter>Header Files\ext\libnatpmp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\osdep\Binder.hpp">
+      <Filter>Header Files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\osdep\ManagedRoute.hpp">
+      <Filter>Header Files\osdep</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

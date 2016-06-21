@@ -201,27 +201,33 @@ public:
 				 *
 				 * file=<filename>
 				 * signedBy=<signing identity>
-				 * ed25519=<ed25519 ECC signature of archive>
+				 * ed25519=<ed25519 ECC signature of archive in hex>
 				 * vMajor=<major version>
 				 * vMinor=<minor version>
 				 * vRevision=<revision> */
-				Dictionary nfo(body);
+				Dictionary<4096> nfo(body.c_str());
+				char tmp[2048];
 
-				unsigned int vMajor = Utils::strToUInt(nfo.get("vMajor","0").c_str());
-				unsigned int vMinor = Utils::strToUInt(nfo.get("vMinor","0").c_str());
-				unsigned int vRevision = Utils::strToUInt(nfo.get("vRevision","0").c_str());
+				if (nfo.get("vMajor",tmp,sizeof(tmp)) <= 0) return;
+				const unsigned int vMajor = Utils::strToUInt(tmp);
+				if (nfo.get("vMinor",tmp,sizeof(tmp)) <= 0) return;
+				const unsigned int vMinor = Utils::strToUInt(tmp);
+				if (nfo.get("vRevision",tmp,sizeof(tmp)) <= 0) return;
+				const unsigned int vRevision = Utils::strToUInt(tmp);
 				if (Utils::compareVersion(vMajor,vMinor,vRevision,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION) <= 0) {
 					//fprintf(stderr,"UPDATE %u.%u.%u is not newer than our version\n",vMajor,vMinor,vRevision);
 					return;
 				}
 
+				if (nfo.get("signedBy",tmp,sizeof(tmp)) <= 0) return;
 				Identity signedBy;
-				if ((!signedBy.fromString(nfo.get("signedBy","")))||(!isValidSigningIdentity(signedBy))) {
+				if ((!signedBy.fromString(tmp))||(!isValidSigningIdentity(signedBy))) {
 					//fprintf(stderr,"UPDATE invalid signedBy or not authorized signing identity.\n");
 					return;
 				}
 
-				std::string filePath(nfo.get("file",""));
+				if (nfo.get("file",tmp,sizeof(tmp)) <= 0) return;
+				std::string filePath(tmp);
 				if ((!filePath.length())||(filePath.find("..") != std::string::npos))
 					return;
 				filePath = httpPath + filePath;
@@ -232,7 +238,8 @@ public:
 					return;
 				}
 
-				std::string ed25519(Utils::unhex(nfo.get("ed25519","")));
+				if (nfo.get("ed25519",tmp,sizeof(tmp)) <= 0) return;
+				std::string ed25519(Utils::unhex(tmp));
 				if ((ed25519.length() == 0)||(!signedBy.verify(fileData.data(),(unsigned int)fileData.length(),ed25519.data(),(unsigned int)ed25519.length()))) {
 					//fprintf(stderr,"UPDATE %s failed signature check!\n",filePath.c_str());
 					return;
