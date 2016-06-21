@@ -507,7 +507,17 @@ enum ZT_VirtualNetworkRuleType
 	/**
 	 * Match a range of relative TCP sequence numbers (e.g. approx first N bytes of stream)
 	 */
-	ZT_NETWORK_RULE_MATCH_TCP_RELATIVE_SEQUENCE_NUMBER_RANGE = 50
+	ZT_NETWORK_RULE_MATCH_TCP_RELATIVE_SEQUENCE_NUMBER_RANGE = 50,
+
+	/**
+	 * Match a certificate of network membership field from the ZT origin's COM: greater than or equal to
+	 */
+	ZT_NETWORK_RULE_MATCH_COM_FIELD_GE = 51,
+
+	/**
+	 * Match a certificate of network membership field from the ZT origin's COM: less than or equal to
+	 */
+	ZT_NETWORK_RULE_MATCH_COM_FIELD_LE = 52
 };
 
 /**
@@ -618,6 +628,11 @@ typedef struct
 		 * Ethernet packet size in host byte order (start-end, inclusive)
 		 */
 		uint16_t frameSize[2];
+
+		/**
+		 * COM ID and value for ZT_NETWORK_RULE_MATCH_COM_FIELD_GE and ZT_NETWORK_RULE_MATCH_COM_FIELD_LE
+		 */
+		uint64_t comIV[2];
 	} v;
 } ZT_VirtualNetworkRule;
 
