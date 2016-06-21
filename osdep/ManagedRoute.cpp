@@ -346,9 +346,10 @@ static bool _winRoute(bool del,const NET_LUID &interfaceLuid,const NET_IFINDEX &
 } // anonymous namespace
 
 /* Linux NOTE: for default route override, some Linux distributions will
- * require a change to the rp_filter parameter.
+ * require a change to the rp_filter parameter. A value of '1' will prevent
+ * default route override from working properly.
  *
- * sudo sysctl net.ipv4.conf.all.rp_filter=2
+ * sudo sysctl -w net.ipv4.conf.all.rp_filter=2
  *
  * Add to /etc/sysctl.conf or /etc/sysctl.d/... to make permanent.
  *

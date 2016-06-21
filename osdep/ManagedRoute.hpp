@@ -50,6 +50,9 @@ public:
 	/**
 	 * Initialize object and set route
 	 *
+	 * Note: on Windows, use the interface NET_LUID in hexadecimal as the
+	 * "device name."
+	 *
 	 * @param target Route target (e.g. 0.0.0.0/0 for default)
 	 * @param via Route next L3 hop or NULL InetAddress if local
 	 * @param device Device name/ID if 'via' is null and route is local, otherwise ignored
