@@ -23,20 +23,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     let monitor = NetworkMonitor()
 
+    var networks = [Network]()
+
     func applicationDidFinishLaunching(aNotification: NSNotification) {
         let nc = NSNotificationCenter.defaultCenter()
         nc.addObserver(self, selector: #selector(onNetworkListUpdated(_:)), name: networkUpdateKey, object: nil)
 
         statusItem.image = NSImage(named: "MenuBarIconMac")
 
-        let menu = NSMenu()
-
-        menu.addItem(NSMenuItem(title: "Show Networks", action: #selector(AppDelegate.showNetworks), keyEquivalent: "n"))
-        menu.addItem(NSMenuItem(title: "Join Network", action: #selector(AppDelegate.joinNetwork), keyEquivalent: "j"))
-        menu.addItem(NSMenuItem.separatorItem())
-        menu.addItem(NSMenuItem(title: "Quit ZeroTier One", action: #selector(AppDelegate.quit), keyEquivalent: "q"))
-
-        statusItem.menu = menu
+        buildMenu()
 
         joinNetworkPopover.contentViewController = JoinNetworkViewController(
             nibName: "JoinNetworkViewController", bundle: nil)
@@ -98,6 +93,60 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func onNetworkListUpdated(note: NSNotification) {
         let netList = note.userInfo!["networks"] as! [Network]
         (networkListPopover.contentViewController as! ShowNetworksViewController).setNetworks(netList)
+
+        self.networks = netList
+
+        buildMenu()
+    }
+
+    func buildMenu() {
+        let menu = NSMenu()
+
+        menu.addItem(NSMenuItem(title: "Show Networks", action: #selector(AppDelegate.showNetworks), keyEquivalent: "n"))
+        menu.addItem(NSMenuItem(title: "Join Network", action: #selector(AppDelegate.joinNetwork), keyEquivalent: "j"))
+        menu.addItem(NSMenuItem.separatorItem())
+
+        if networks.count > 0 {
+            for net in networks {
+                let id = String(net.nwid, radix: 16)
+                let networkName = "\(id) (\(net.name))"
+
+                let item = NSMenuItem(title: networkName, action: #selector(AppDelegate.toggleNetwork(_:)), keyEquivalent: "")
+
+                if net.connected {
+                    item.state = NSOnState
+                }
+                else {
+                    item.state = NSOffState
+                }
+
+                item.representedObject = net
+
+                menu.addItem(item)
+            }
+
+            menu.addItem(NSMenuItem.separatorItem())
+        }
+
+        menu.addItem(NSMenuItem(title: "Quit ZeroTier One", action: #selector(AppDelegate.quit), keyEquivalent: "q"))
+
+        statusItem.menu = menu
+
+    }
+
+    func toggleNetwork(sender: NSMenuItem) {
+        NSLog("\(sender.title)")
+
+        let network = sender.representedObject as! Network
+
+        let id = String(network.nwid, radix: 16)
+
+        if network.connected {
+            ServiceCom.leaveNetwork(id)
+        }
+        else {
+            ServiceCom.joinNetwork(id)
+        }
     }
 }
 
