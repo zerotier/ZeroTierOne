@@ -109,7 +109,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if networks.count > 0 {
             for net in networks {
                 let id = String(net.nwid, radix: 16)
-                let networkName = "\(id) (\(net.name))"
+                var networkName = ""
+                if net.name.isEmpty {
+                    networkName = "\(id)"
+                }
+                else {
+                    networkName = "\(id) (\(net.name))"
+                }
 
                 let item = NSMenuItem(title: networkName, action: #selector(AppDelegate.toggleNetwork(_:)), keyEquivalent: "")
 

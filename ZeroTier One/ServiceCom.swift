@@ -133,10 +133,10 @@ class ServiceCom: NSObject {
                 let status = httpResponse.statusCode
 
                 if status == 200 {
-                    print("join ok")
+                    NSLog("join ok")
                 }
                 else {
-                    print("join error: \(status)")
+                    NSLog("join error: \(status)")
                 }
             }
 
@@ -158,10 +158,10 @@ class ServiceCom: NSObject {
                 let status = httpResponse.statusCode
 
                 if status == 200 {
-                    print("leave ok")
+                    NSLog("leave ok")
                 }
                 else {
-                    print("leave error: \(status)")
+                    NSLog("leave error: \(status)")
                 }
             }
 
