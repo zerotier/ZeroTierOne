@@ -72,7 +72,7 @@ static void dumpHelp()
 	std::cout << std::endl;
 	std::cout << "Options:" << std::endl;
 	std::cout << "  -v                                  - Verbose JSON output" << std::endl;
-	std::cout << "  "
+	std::cout << "  -X                                  - Do not check SSL certs (CAUTION!)" << std::endl;
 	std::cout << std::endl;
 	std::cout << "CLI Configuration Commands:" << std::endl;
 	std::cout << "  cli-set <setting> <value>           - Set a CLI config option" << std::endl;
@@ -129,7 +129,6 @@ int main(int argc,char **argv)
 	std::string command;
 	std::vector<std::string> args;
 	std::map<char,std::string> opts;
-	char nextIsOptValue = 0;
 	for(int i=1;i<argc;++i) {
 		if ((i == 1)&&(argv[i][0] == '@')) {
 			atname = argv[i];
@@ -144,7 +143,7 @@ int main(int argc,char **argv)
 				} else if (argv[i][2]) {
 					opts[argv[i][1]] = argv[i] + 2;
 				} else {
-					nextIsOptValue = argv[i][1];
+					opts[argv[i][1]] = "";
 				}
 			} else {
 				command = argv[i];
