@@ -351,21 +351,25 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				return;
 			}
 		} else if ((etherType == ZT_ETHERTYPE_IPV6)&&(len >= (40 + 8 + 16))) {
-			// IPv6 NDP emulation for certain very special types of IPv6 addresses
+			// IPv6 NDP emulation for certain very special patterns of private IPv6 addresses -- if enabled
 			if ((network->config().ndpEmulation())&&(reinterpret_cast<const uint8_t *>(data)[6] == 0x3a)&&(reinterpret_cast<const uint8_t *>(data)[40] == 0x87)) { // ICMPv6 neighbor solicitation
 				Address v6EmbeddedAddress;
 				const uint8_t *const pkt6 = reinterpret_cast<const uint8_t *>(data) + 40 + 8;
 				const uint8_t *my6 = (const uint8_t *)0;
 
-				// ZT-rfc4193 address: fdNN:NNNN:NNNN:NNNN:NN99:93DD:DDDD:DDDD / 88
-				// ZT-v6host address:  fdNN:NNNN:NNDD:DDDD:DDDD:####:####:#### / 40 (/80 usable per-host)
+				// ZT-rfc4193 address: fdNN:NNNN:NNNN:NNNN:NN99:93DD:DDDD:DDDD / 88 (one /128 per actual host)
 
+				// ZT-6plane address:  fcXX:XXXX:XXDD:DDDD:DDDD:####:####:#### / 40 (one /80 per actual host)
+				// (XX - lower 32 bits of network ID XORed with higher 32 bits)
+
+				// For these to work, we must have a ZT-managed address assigned in one of the
+				// above formats, and the query must match its prefix.
 				for(unsigned int sipk=0;sipk<network->config().staticIpCount;++sipk) {
-					const InetAddress *sip = &(network->config().staticIps[sipk]);
-					const unsigned int sipNetmaskBits = Utils::ntoh((uint16_t)reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_port);
-					if ((sip->ss_family == AF_INET6)&&(sipNetmaskBits == 88)) {
+					const InetAddress *const sip = &(network->config().staticIps[sipk]);
+					if (sip->ss_family == AF_INET6) {
 						my6 = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_addr.s6_addr);
-						if ((my6[0] == 0xfd)&&(my6[9] == 0x99)&&(my6[10] == 0x93)) {
+						const unsigned int sipNetmaskBits = Utils::ntoh((uint16_t)reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_port);
+						if ((sipNetmaskBits == 88)&&(my6[0] == 0xfd)&&(my6[9] == 0x99)&&(my6[10] == 0x93)) {
 							unsigned int ptr = 0;
 							while (ptr != 11) {
 								if (pkt6[ptr] != my6[ptr])
@@ -376,25 +380,23 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 								v6EmbeddedAddress.setTo(pkt6 + ptr,5);
 								break;
 							}
-						}
-					} else if ((sip->ss_family == AF_INET6)&&(sipNetmaskBits == 40)) {
-						my6 = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_addr.s6_addr);
-						const uint64_t nwid = network->id();
-						const uint32_t nwid32 = (uint32_t)(nwid & 0xffffffff) ^ (uint32_t)((nwid >> 32) & 0xffffffff);
-						if ( (my6[0] == 0xfd) &&
-						     (my6[1] == (uint8_t)((nwid32 >> 24) & 0xff)) &&
-								 (my6[2] == (uint8_t)((nwid32 >> 16) & 0xff)) &&
-								 (my6[3] == (uint8_t)((nwid32 >> 8) & 0xff)) &&
-								 (my6[4] == (uint8_t)(nwid32 & 0xff)) ) {
-							unsigned int ptr = 0;
-							while (ptr != 5) {
-								if (pkt6[ptr] != my6[ptr])
+						} else if (sipNetmaskBits == 40) {
+							const uint32_t nwid32 = (uint32_t)((network->id() ^ (network->id() >> 32)) & 0xffffffff);
+							if ((my6[0] == 0xfc) &&
+									(my6[1] == (uint8_t)((nwid32 >> 24) & 0xff)) &&
+									(my6[2] == (uint8_t)((nwid32 >> 16) & 0xff)) &&
+									(my6[3] == (uint8_t)((nwid32 >> 8) & 0xff)) &&
+									(my6[4] == (uint8_t)(nwid32 & 0xff))) {
+								unsigned int ptr = 0;
+								while (ptr != 5) {
+									if (pkt6[ptr] != my6[ptr])
+										break;
+									++ptr;
+								}
+								if (ptr == 5) {
+									v6EmbeddedAddress.setTo(pkt6 + ptr,5);
 									break;
-								++ptr;
-							}
-							if (ptr == 5) {
-								v6EmbeddedAddress.setTo(pkt6 + ptr,5);
-								break;
+								}
 							}
 						}
 					}
@@ -431,9 +433,9 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 					adv[43] = checksum & 0xff;
 
 					RR->node->putFrame(network->id(),network->userPtr(),peerMac,from,ZT_ETHERTYPE_IPV6,0,adv,72);
-					return; // stop processing: we have handled this frame with a spoofed local reply so no need to send it anywhere
-				}
-			}
+					return; // NDP emulation done. We have forged a "fake" reply, so no need to send actual NDP query.
+				} // else no NDP emulation
+			} // else no NDP emulation
 		}
 
 		/* Learn multicast groups for bridged-in hosts.
