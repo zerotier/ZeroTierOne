@@ -11,6 +11,8 @@
 		932D472F1D1CD499004BCFE2 /* ZeroTierIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 932D472E1D1CD499004BCFE2 /* ZeroTierIcon.icns */; };
 		932D47321D1CD861004BCFE2 /* PreferencesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932D47301D1CD861004BCFE2 /* PreferencesViewController.swift */; };
 		932D47331D1CD861004BCFE2 /* PreferencesViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */; };
+		932D47361D1CDC9B004BCFE2 /* AboutViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932D47341D1CDC9B004BCFE2 /* AboutViewController.swift */; };
+		932D47371D1CDC9B004BCFE2 /* AboutViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */; };
 		9330F1351CEAB4C400687EC8 /* ServiceCom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F1341CEAB4C400687EC8 /* ServiceCom.swift */; };
 		9330F1371CEBF87200687EC8 /* Network.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F1361CEBF87200687EC8 /* Network.swift */; };
 		9330F13B1CF534E500687EC8 /* NetworkInfoCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F13A1CF534E500687EC8 /* NetworkInfoCell.swift */; };
@@ -29,6 +31,8 @@
 		932D472E1D1CD499004BCFE2 /* ZeroTierIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = ZeroTierIcon.icns; sourceTree = "<group>"; };
 		932D47301D1CD861004BCFE2 /* PreferencesViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PreferencesViewController.swift; sourceTree = "<group>"; };
 		932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PreferencesViewController.xib; sourceTree = "<group>"; };
+		932D47341D1CDC9B004BCFE2 /* AboutViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AboutViewController.swift; sourceTree = "<group>"; };
+		932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = AboutViewController.xib; sourceTree = "<group>"; };
 		9330F1341CEAB4C400687EC8 /* ServiceCom.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ServiceCom.swift; sourceTree = "<group>"; };
 		9330F1361CEBF87200687EC8 /* Network.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Network.swift; sourceTree = "<group>"; };
 		9330F13A1CF534E500687EC8 /* NetworkInfoCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkInfoCell.swift; sourceTree = "<group>"; };
@@ -94,6 +98,8 @@
 				932D472C1D138B0C004BCFE2 /* NetworkMonitor.swift */,
 				932D47301D1CD861004BCFE2 /* PreferencesViewController.swift */,
 				932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */,
+				932D47341D1CDC9B004BCFE2 /* AboutViewController.swift */,
+				932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */,
 			);
 			path = "ZeroTier One";
 			sourceTree = "<group>";
@@ -157,6 +163,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				93326BEF1CE7DA30005CA2AC /* ShowNetworksViewController.xib in Resources */,
+				932D47371D1CDC9B004BCFE2 /* AboutViewController.xib in Resources */,
 				93326BEB1CE7D9B9005CA2AC /* JoinNetworkViewController.xib in Resources */,
 				93326BDE1CE7C816005CA2AC /* Assets.xcassets in Resources */,
 				93326BE11CE7C816005CA2AC /* MainMenu.xib in Resources */,
@@ -180,6 +187,7 @@
 				9330F13B1CF534E500687EC8 /* NetworkInfoCell.swift in Sources */,
 				93326BEA1CE7D9B9005CA2AC /* JoinNetworkViewController.swift in Sources */,
 				93326BEE1CE7DA30005CA2AC /* ShowNetworksViewController.swift in Sources */,
+				932D47361D1CDC9B004BCFE2 /* AboutViewController.swift in Sources */,
 				9330F1351CEAB4C400687EC8 /* ServiceCom.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

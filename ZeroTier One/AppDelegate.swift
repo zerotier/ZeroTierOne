@@ -19,6 +19,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let networkListPopover = NSPopover()
     let joinNetworkPopover = NSPopover()
     let preferencesPopover = NSPopover()
+    let aboutPopover = NSPopover()
 
     var transientMonitor: AnyObject? = nil
 
@@ -51,6 +52,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         preferencesPopover.behavior = .Transient
 
         preferencesPopover.appearance = NSAppearance(named: NSAppearanceNameAqua)
+
+        aboutPopover.contentViewController = AboutViewController(
+            nibName: "AboutViewController", bundle: nil)
+        aboutPopover.behavior = .Transient
+
+        aboutPopover.appearance = NSAppearance(named: NSAppearanceNameAqua)
+
     }
 
     func applicationWillTerminate(aNotification: NSNotification) {
@@ -109,6 +117,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func showAbout() {
+        if let button = statusItem.button {
+            aboutPopover.showRelativeToRect(button.bounds, ofView: button, preferredEdge: .MinY)
+
+            if transientMonitor == nil {
+                transientMonitor = NSEvent.addGlobalMonitorForEventsMatchingMask(
+                    [.LeftMouseDownMask, .RightMouseDownMask, .OtherMouseDownMask]) { (event: NSEvent) -> Void in
+
+                        NSEvent.removeMonitor(self.transientMonitor!)
+                        self.transientMonitor = nil
+                        self.aboutPopover.close()
+                }
+            }
+        }
+    }
+
     func quit() {
         NSApp.performSelector(#selector(NSApp.terminate(_:)), withObject: nil, afterDelay: 0.0)
     }
@@ -157,6 +181,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(NSMenuItem.separatorItem())
         }
 
+        menu.addItem(NSMenuItem(title: "About ZeroTier One...", action: #selector(AppDelegate.showAbout), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Preferences...", action: #selector(AppDelegate.showPreferences), keyEquivalent: ","))
 
         menu.addItem(NSMenuItem.separatorItem())
