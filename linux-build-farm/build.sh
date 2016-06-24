@@ -20,6 +20,8 @@ cd linux-build-farm
 for distro in $*; do
 	cd $distro
 
+	rm -f *.deb
+
 	cd x64
 	mv ../../zt1-src.tar.gz .
 	docker build -t zt1-build-${distro}-x64 .
