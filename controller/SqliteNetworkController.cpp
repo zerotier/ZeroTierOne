@@ -734,11 +734,6 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 									if (sqlite3_prepare_v2(_db,"UPDATE Network SET allowPassiveBridging = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
 										sqlite3_bind_int(stmt,1,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
 								}
-							} else if (!strcmp(j->u.object.values[k].name,"flags")) {
-								if (j->u.object.values[k].value->type == json_integer) {
-									if (sqlite3_prepare_v2(_db,"UPDATE Network SET \"flags\" = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
-										sqlite3_bind_int(stmt,1,(int)((unsigned int)j->u.object.values[k].value->u.integer & 0xfffffff));
-								}
 							} else if (!strcmp(j->u.object.values[k].name,"v4AssignMode")) {
 								if ((j->u.object.values[k].value->type == json_string)&&(!strcmp(j->u.object.values[k].value->u.string.ptr,"zt"))) {
 									if (sqlite3_prepare_v2(_db,"UPDATE Network SET \"flags\" = (\"flags\" | ?) WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
@@ -1396,7 +1391,6 @@ unsigned int SqliteNetworkController::_doCPGet(
 						"\t\"private\": %s,\n"
 						"\t\"enableBroadcast\": %s,\n"
 						"\t\"allowPassiveBridging\": %s,\n"
-						"\t\"flags\": %u,\n"
 						"\t\"v4AssignMode\": \"%s\",\n"
 						"\t\"v6AssignMode\": \"%s\",\n"
 						"\t\"multicastLimit\": %d,\n"
@@ -1412,7 +1406,6 @@ unsigned int SqliteNetworkController::_doCPGet(
 						(sqlite3_column_int(_sGetNetworkById,1) > 0) ? "true" : "false",
 						(sqlite3_column_int(_sGetNetworkById,2) > 0) ? "true" : "false",
 						(sqlite3_column_int(_sGetNetworkById,3) > 0) ? "true" : "false",
-						fl,
 						(((fl & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4) != 0) ? "zt" : "none"),
 						v6modes.c_str(),
 						sqlite3_column_int(_sGetNetworkById,5),
@@ -1877,9 +1870,11 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 
 	if (((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_RFC4193) != 0)&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
 		nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt());
+		nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
 	}
 	if (((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_6PLANE) != 0)&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
 		nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv66plane(nwid,identity.address().toInt());
+		nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
 	}
 
 	if ((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4) != 0) {
