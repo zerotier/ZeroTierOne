@@ -18,6 +18,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     let networkListPopover = NSPopover()
     let joinNetworkPopover = NSPopover()
+    let preferencesPopover = NSPopover()
 
     var transientMonitor: AnyObject? = nil
 
@@ -44,6 +45,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         networkListPopover.behavior = .Transient
 
         networkListPopover.appearance = NSAppearance(named: NSAppearanceNameAqua)
+
+        preferencesPopover.contentViewController = PreferencesViewController(
+            nibName: "PreferencesViewController", bundle: nil)
+        preferencesPopover.behavior = .Transient
+
+        preferencesPopover.appearance = NSAppearance(named: NSAppearanceNameAqua)
     }
 
     func applicationWillTerminate(aNotification: NSNotification) {
@@ -81,6 +88,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         self.transientMonitor = nil
                         self.joinNetworkPopover.close()
 
+                }
+            }
+        }
+    }
+
+    func showPreferences() {
+        if let button = statusItem.button {
+            preferencesPopover.showRelativeToRect(button.bounds, ofView: button, preferredEdge: .MinY)
+
+            if transientMonitor == nil {
+                transientMonitor = NSEvent.addGlobalMonitorForEventsMatchingMask(
+                    [.LeftMouseDownMask, .RightMouseDownMask, .OtherMouseDownMask]) { (event: NSEvent) -> Void in
+
+                        NSEvent.removeMonitor(self.transientMonitor!)
+                        self.transientMonitor = nil
+                        self.preferencesPopover.close()
                 }
             }
         }
@@ -133,6 +156,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             menu.addItem(NSMenuItem.separatorItem())
         }
+
+        menu.addItem(NSMenuItem(title: "Preferences...", action: #selector(AppDelegate.showPreferences), keyEquivalent: ","))
+
+        menu.addItem(NSMenuItem.separatorItem())
 
         menu.addItem(NSMenuItem(title: "Quit ZeroTier One", action: #selector(AppDelegate.quit), keyEquivalent: "q"))
 

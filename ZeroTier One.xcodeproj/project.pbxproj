@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		932D472D1D138B0C004BCFE2 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932D472C1D138B0C004BCFE2 /* NetworkMonitor.swift */; };
 		932D472F1D1CD499004BCFE2 /* ZeroTierIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 932D472E1D1CD499004BCFE2 /* ZeroTierIcon.icns */; };
+		932D47321D1CD861004BCFE2 /* PreferencesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932D47301D1CD861004BCFE2 /* PreferencesViewController.swift */; };
+		932D47331D1CD861004BCFE2 /* PreferencesViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */; };
 		9330F1351CEAB4C400687EC8 /* ServiceCom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F1341CEAB4C400687EC8 /* ServiceCom.swift */; };
 		9330F1371CEBF87200687EC8 /* Network.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F1361CEBF87200687EC8 /* Network.swift */; };
 		9330F13B1CF534E500687EC8 /* NetworkInfoCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F13A1CF534E500687EC8 /* NetworkInfoCell.swift */; };
@@ -25,6 +27,8 @@
 /* Begin PBXFileReference section */
 		932D472C1D138B0C004BCFE2 /* NetworkMonitor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		932D472E1D1CD499004BCFE2 /* ZeroTierIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = ZeroTierIcon.icns; sourceTree = "<group>"; };
+		932D47301D1CD861004BCFE2 /* PreferencesViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PreferencesViewController.swift; sourceTree = "<group>"; };
+		932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PreferencesViewController.xib; sourceTree = "<group>"; };
 		9330F1341CEAB4C400687EC8 /* ServiceCom.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ServiceCom.swift; sourceTree = "<group>"; };
 		9330F1361CEBF87200687EC8 /* Network.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Network.swift; sourceTree = "<group>"; };
 		9330F13A1CF534E500687EC8 /* NetworkInfoCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkInfoCell.swift; sourceTree = "<group>"; };
@@ -88,6 +92,8 @@
 				93DAFE4C1CFE53DA00547CC4 /* AuthtokenCopy.h */,
 				93DAFE491CFE53C900547CC4 /* ZeroTier One-Bridging-Header.h */,
 				932D472C1D138B0C004BCFE2 /* NetworkMonitor.swift */,
+				932D47301D1CD861004BCFE2 /* PreferencesViewController.swift */,
+				932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */,
 			);
 			path = "ZeroTier One";
 			sourceTree = "<group>";
@@ -155,6 +161,7 @@
 				93326BDE1CE7C816005CA2AC /* Assets.xcassets in Resources */,
 				93326BE11CE7C816005CA2AC /* MainMenu.xib in Resources */,
 				932D472F1D1CD499004BCFE2 /* ZeroTierIcon.icns in Resources */,
+				932D47331D1CD861004BCFE2 /* PreferencesViewController.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -167,6 +174,7 @@
 			files = (
 				9330F1371CEBF87200687EC8 /* Network.swift in Sources */,
 				932D472D1D138B0C004BCFE2 /* NetworkMonitor.swift in Sources */,
+				932D47321D1CD861004BCFE2 /* PreferencesViewController.swift in Sources */,
 				93326BDC1CE7C816005CA2AC /* AppDelegate.swift in Sources */,
 				93DAFE4B1CFE53CA00547CC4 /* AuthtokenCopy.m in Sources */,
 				9330F13B1CF534E500687EC8 /* NetworkInfoCell.swift in Sources */,
