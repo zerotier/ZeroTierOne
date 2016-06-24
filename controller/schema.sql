@@ -78,6 +78,7 @@ CREATE TABLE Member (
   authorized integer NOT NULL DEFAULT(0),
   activeBridge integer NOT NULL DEFAULT(0),
   memberRevision integer NOT NULL DEFAULT(0),
+  flags integer NOT NULL DEFAULT(0),
   PRIMARY KEY (networkId, nodeId)
 );
 

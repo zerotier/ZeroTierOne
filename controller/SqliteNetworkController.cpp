@@ -84,6 +84,14 @@
 // Nodes are considered active if they've queried in less than this long
 #define ZT_NETCONF_NODE_ACTIVE_THRESHOLD ((ZT_NETWORK_AUTOCONF_DELAY * 2) + 5000)
 
+// Flags for Network 'flags' field in table
+#define ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4 1
+#define ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_RFC4193 2
+#define ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_6PLANE 4
+
+// Flags with all V6 managed mode flags flipped off -- for masking in update operation and in string form for SQL building
+#define ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_MASK_S "268435449"
+
 namespace ZeroTier {
 
 namespace {
@@ -136,8 +144,7 @@ struct MemberRecord {
 struct NetworkRecord {
 	char id[24];
 	const char *name;
-	const char *v4AssignMode;
-	const char *v6AssignMode;
+	int flags;
 	bool isPrivate;
 	bool enableBroadcast;
 	bool allowPassiveBridging;
@@ -208,7 +215,8 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 
 		if (schemaVersion < 3) {
 			// Create Route table to upgrade from version 2 to version 3 and migrate old
-			// data. Also delete obsolete Gateway table that was never actually used.
+			// data. Also delete obsolete Gateway table that was never actually used, and
+			// migrate Network flags to a bitwise flags field instead of ASCII cruft.
 			if (sqlite3_exec(_db,
 					"DROP TABLE Gateway;\n"
 					"CREATE TABLE Route (\n"
@@ -222,6 +230,11 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 					");\n"
 					"CREATE INDEX Route_networkId ON Route (networkId);\n"
 					"INSERT INTO Route SELECT DISTINCT networkId,\"ip\" AS \"target\",NULL AS \"via\",ipNetmaskBits AS targetNetmaskBits,ipVersion,0 AS \"flags\",0 AS \"metric\" FROM IpAssignment WHERE nodeId IS NULL AND \"type\" = 1;\n"
+					"ALTER TABLE Network ADD COLUMN \"flags\" integer NOT NULL DEFAULT(0);\n"
+					"UPDATE Network SET \"flags\" = (\"flags\" | 1) WHERE v4AssignMode = 'zt';\n"
+					"UPDATE Network SET \"flags\" = (\"flags\" | 2) WHERE v6AssignMode = 'rfc4193';\n"
+					"UPDATE Network SET \"flags\" = (\"flags\" | 4) WHERE v6AssignMode = '6plane';\n"
+					"ALTER TABLE Member ADD COLUMN \"flags\" integer NOT NULL DEFAULT(0);\n"
 					"DELETE FROM IpAssignment WHERE nodeId IS NULL AND \"type\" = 1;\n"
 					"UPDATE \"Config\" SET \"v\" = 3 WHERE \"k\" = 'schemaVersion';\n"
 				,0,0,0) != SQLITE_OK) {
@@ -252,7 +265,7 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 	if (
 
 			/* Network */
-			  (sqlite3_prepare_v2(_db,"SELECT name,private,enableBroadcast,allowPassiveBridging,v4AssignMode,v6AssignMode,multicastLimit,creationTime,revision,memberRevisionCounter,(SELECT COUNT(1) FROM Member WHERE Member.networkId = Network.id AND Member.authorized > 0) FROM Network WHERE id = ?",-1,&_sGetNetworkById,(const char **)0) != SQLITE_OK)
+			  (sqlite3_prepare_v2(_db,"SELECT name,private,enableBroadcast,allowPassiveBridging,\"flags\",multicastLimit,creationTime,revision,memberRevisionCounter,(SELECT COUNT(1) FROM Member WHERE Member.networkId = Network.id AND Member.authorized > 0) FROM Network WHERE id = ?",-1,&_sGetNetworkById,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT revision FROM Network WHERE id = ?",-1,&_sGetNetworkRevision,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Network SET revision = ? WHERE id = ?",-1,&_sSetNetworkRevision,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Network (id,name,creationTime,revision) VALUES (?,?,?,1)",-1,&_sCreateNetwork,(const char **)0) != SQLITE_OK)
@@ -721,16 +734,32 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 									if (sqlite3_prepare_v2(_db,"UPDATE Network SET allowPassiveBridging = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
 										sqlite3_bind_int(stmt,1,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
 								}
+							} else if (!strcmp(j->u.object.values[k].name,"flags")) {
+								if (j->u.object.values[k].value->type == json_integer) {
+									if (sqlite3_prepare_v2(_db,"UPDATE Network SET \"flags\" = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+										sqlite3_bind_int(stmt,1,(int)((unsigned int)j->u.object.values[k].value->u.integer & 0xfffffff));
+								}
 							} else if (!strcmp(j->u.object.values[k].name,"v4AssignMode")) {
-								if (j->u.object.values[k].value->type == json_string) {
-									if (sqlite3_prepare_v2(_db,"UPDATE Network SET v4AssignMode = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
-										sqlite3_bind_text(stmt,1,j->u.object.values[k].value->u.string.ptr,-1,SQLITE_STATIC);
+								if ((j->u.object.values[k].value->type == json_string)&&(!strcmp(j->u.object.values[k].value->u.string.ptr,"zt"))) {
+									if (sqlite3_prepare_v2(_db,"UPDATE Network SET \"flags\" = (\"flags\" | ?) WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+										sqlite3_bind_int(stmt,1,(int)ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4);
+								} else {
+									if (sqlite3_prepare_v2(_db,"UPDATE Network SET \"flags\" = (\"flags\" & ?) WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+										sqlite3_bind_int(stmt,1,(int)(ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4 ^ 0xfffffff));
 								}
 							} else if (!strcmp(j->u.object.values[k].name,"v6AssignMode")) {
+								int fl = 0;
 								if (j->u.object.values[k].value->type == json_string) {
-									if (sqlite3_prepare_v2(_db,"UPDATE Network SET v6AssignMode = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
-										sqlite3_bind_text(stmt,1,j->u.object.values[k].value->u.string.ptr,-1,SQLITE_STATIC);
+									char *saveptr = (char *)0;
+									for(char *f=Utils::stok(j->u.object.values[k].value->u.string.ptr,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
+										if (!strcmp(f,"rfc4193"))
+											fl |= ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_RFC4193;
+										else if (!strcmp(f,"6plane"))
+											fl |= ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_6PLANE;
+									}
 								}
+								if (sqlite3_prepare_v2(_db,"UPDATE Network SET \"flags\" = ((\"flags\" & " ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_MASK_S ") | ?) WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+									sqlite3_bind_int(stmt,1,fl);
 							} else if (!strcmp(j->u.object.values[k].name,"multicastLimit")) {
 								if (j->u.object.values[k].value->type == json_integer) {
 									if (sqlite3_prepare_v2(_db,"UPDATE Network SET multicastLimit = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
@@ -1346,6 +1375,18 @@ unsigned int SqliteNetworkController::_doCPGet(
 				sqlite3_reset(_sGetNetworkById);
 				sqlite3_bind_text(_sGetNetworkById,1,nwids,16,SQLITE_STATIC);
 				if (sqlite3_step(_sGetNetworkById) == SQLITE_ROW) {
+					unsigned int fl = (unsigned int)sqlite3_column_int(_sGetNetworkById,4);
+					std::string v6modes;
+					if ((fl & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_RFC4193) != 0)
+						v6modes.append("rfc4193");
+					if ((fl & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_6PLANE) != 0) {
+						if (v6modes.length() > 0)
+							v6modes.push_back(',');
+						v6modes.append("6plane");
+					}
+					if (v6modes.length() == 0)
+						v6modes = "none";
+
 					Utils::snprintf(json,sizeof(json),
 						"{\n"
 						"\t\"nwid\": \"%s\",\n"
@@ -1355,6 +1396,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 						"\t\"private\": %s,\n"
 						"\t\"enableBroadcast\": %s,\n"
 						"\t\"allowPassiveBridging\": %s,\n"
+						"\t\"flags\": %u,\n"
 						"\t\"v4AssignMode\": \"%s\",\n"
 						"\t\"v6AssignMode\": \"%s\",\n"
 						"\t\"multicastLimit\": %d,\n"
@@ -1370,13 +1412,14 @@ unsigned int SqliteNetworkController::_doCPGet(
 						(sqlite3_column_int(_sGetNetworkById,1) > 0) ? "true" : "false",
 						(sqlite3_column_int(_sGetNetworkById,2) > 0) ? "true" : "false",
 						(sqlite3_column_int(_sGetNetworkById,3) > 0) ? "true" : "false",
-						_jsonEscape((const char *)sqlite3_column_text(_sGetNetworkById,4)).c_str(),
-						_jsonEscape((const char *)sqlite3_column_text(_sGetNetworkById,5)).c_str(),
-						sqlite3_column_int(_sGetNetworkById,6),
+						fl,
+						(((fl & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4) != 0) ? "zt" : "none"),
+						v6modes.c_str(),
+						sqlite3_column_int(_sGetNetworkById,5),
+						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,6),
 						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,7),
 						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,8),
-						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,9),
-						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,10));
+						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,9));
 					responseBody = json;
 
 					sqlite3_reset(_sGetRelays);
@@ -1637,12 +1680,11 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 		network.isPrivate = (sqlite3_column_int(_sGetNetworkById,1) > 0);
 		network.enableBroadcast = (sqlite3_column_int(_sGetNetworkById,2) > 0);
 		network.allowPassiveBridging = (sqlite3_column_int(_sGetNetworkById,3) > 0);
-		network.v4AssignMode = (const char *)sqlite3_column_text(_sGetNetworkById,4);
-		network.v6AssignMode = (const char *)sqlite3_column_text(_sGetNetworkById,5);
-		network.multicastLimit = sqlite3_column_int(_sGetNetworkById,6);
-		network.creationTime = (uint64_t)sqlite3_column_int64(_sGetNetworkById,7);
-		network.revision = (uint64_t)sqlite3_column_int64(_sGetNetworkById,8);
-		network.memberRevisionCounter = (uint64_t)sqlite3_column_int64(_sGetNetworkById,9);
+		network.flags = sqlite3_column_int(_sGetNetworkById,4);
+		network.multicastLimit = sqlite3_column_int(_sGetNetworkById,5);
+		network.creationTime = (uint64_t)sqlite3_column_int64(_sGetNetworkById,6);
+		network.revision = (uint64_t)sqlite3_column_int64(_sGetNetworkById,7);
+		network.memberRevisionCounter = (uint64_t)sqlite3_column_int64(_sGetNetworkById,8);
 	} else {
 		return NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND;
 	}
@@ -1737,20 +1779,6 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 	if (network.allowPassiveBridging) nc.flags |= ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING;
 	memcpy(nc.name,network.name,std::min((unsigned int)ZT_MAX_NETWORK_SHORT_NAME_LENGTH,(unsigned int)strlen(network.name)));
 
-	/*
-	char tss[24],rs[24];
-	Utils::snprintf(tss,sizeof(tss),"%.16llx",(unsigned long long)now);
-	Utils::snprintf(rs,sizeof(rs),"%.16llx",(unsigned long long)network.revision);
-	legacy[ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP] = tss;
-	legacy[ZT_NETWORKCONFIG_DICT_KEY_REVISION] = rs;
-	legacy[ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID] = network.id;
-	legacy[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO] = member.nodeId;
-	legacy[ZT_NETWORKCONFIG_DICT_KEY_PRIVATE] = network.isPrivate ? "1" : "0";
-	legacy[ZT_NETWORKCONFIG_DICT_KEY_NAME] = (network.name) ? network.name : "";
-	legacy[ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST] = network.enableBroadcast ? "1" : "0";
-	legacy[ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING] = network.allowPassiveBridging ? "1" : "0";
-	*/
-
 	{	// TODO: right now only etherTypes are supported in rules
 		std::vector<int> allowedEtherTypes;
 		sqlite3_reset(_sGetEtherTypesFromRuleTable);
@@ -1779,32 +1807,12 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 			}
 			nc.rules[nc.ruleCount++].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
 		}
-
-		/*
-		std::string allowedEtherTypesCsv;
-		for(std::vector<int>::const_iterator i(allowedEtherTypes.begin());i!=allowedEtherTypes.end();++i) {
-			if (allowedEtherTypesCsv.length())
-				allowedEtherTypesCsv.push_back(',');
-			char tmp[16];
-			Utils::snprintf(tmp,sizeof(tmp),"%.4x",(unsigned int)*i);
-			allowedEtherTypesCsv.append(tmp);
-		}
-		legacy[ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES] = allowedEtherTypesCsv;
-		*/
 	}
 
 	nc.multicastLimit = network.multicastLimit;
-	/*
-	if (network.multicastLimit > 0) {
-		char ml[16];
-		Utils::snprintf(ml,sizeof(ml),"%lx",(unsigned long)network.multicastLimit);
-		legacy[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT] = ml;
-	}
-	*/
 
 	bool amActiveBridge = false;
 	{
-		//std::string activeBridges;
 		sqlite3_reset(_sGetActiveBridges);
 		sqlite3_bind_text(_sGetActiveBridges,1,network.id,16,SQLITE_STATIC);
 		while (sqlite3_step(_sGetActiveBridges) == SQLITE_ROW) {
@@ -1812,27 +1820,15 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 			if ((ab)&&(strlen(ab) == 10)) {
 				const uint64_t ab2 = Utils::hexStrToU64(ab);
 				nc.addSpecialist(Address(ab2),ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
-
-				/*
-				if (activeBridges.length())
-					activeBridges.push_back(',');
-				activeBridges.append(ab);
-				*/
-
 				if (!strcmp(member.nodeId,ab))
 					amActiveBridge = true;
 			}
 		}
-		/*
-		if (activeBridges.length())
-			legacy[ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES] = activeBridges;
-		*/
 	}
 
 	// Do not send relays to 1.1.0 since it had a serious bug in using them
 	// 1.1.0 will still work, it'll just fall back to roots instead of using network preferred relays
 	if (!((metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0) == 1)&&(metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0) == 1)&&(metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0) == 0))) {
-		//std::string relays;
 		sqlite3_reset(_sGetRelays);
 		sqlite3_bind_text(_sGetRelays,1,network.id,16,SQLITE_STATIC);
 		while (sqlite3_step(_sGetRelays) == SQLITE_ROW) {
@@ -1841,24 +1837,10 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 			if ((n)&&(a)) {
 				Address node(n);
 				InetAddress addr(a);
-				if (node) {
+				if (node)
 					nc.addSpecialist(node,ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY);
-					/*
-					if (relays.length())
-						relays.push_back(',');
-					relays.append(node.toString());
-					if (addr) {
-						relays.push_back(';');
-						relays.append(addr.toString());
-					}
-					*/
-				}
 			}
 		}
-		/*
-		if (relays.length())
-			legacy[ZT_NETWORKCONFIG_DICT_KEY_RELAYS] = relays;
-		*/
 	}
 
 	sqlite3_reset(_sGetRoutes);
@@ -1893,15 +1875,14 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 		++nc.routeCount;
 	}
 
-	if ((network.v6AssignMode)&&(!strcmp(network.v6AssignMode,"rfc4193"))) {
-		InetAddress rfc4193Addr(InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt()));
-		//legacy[ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC] = rfc4193Addr.toString();
-		if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)
-			nc.staticIps[nc.staticIpCount++] = rfc4193Addr;
+	if (((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_RFC4193) != 0)&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
+		nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt());
+	}
+	if (((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_6PLANE) != 0)&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
+		nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv66plane(nwid,identity.address().toInt());
 	}
 
-	if ((network.v4AssignMode)&&(!strcmp(network.v4AssignMode,"zt"))) {
-		//std::string v4s;
+	if ((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4) != 0) {
 		bool haveStaticIpAssignment = false;
 
 		sqlite3_reset(_sGetIpAssignmentsForNode);
@@ -1915,25 +1896,19 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 			int ipNetmaskBits = sqlite3_column_int(_sGetIpAssignmentsForNode,2);
 			if ((ipNetmaskBits <= 0)||(ipNetmaskBits > 32))
 				continue;
-
-			char ips[32];
-			Utils::snprintf(ips,sizeof(ips),"%d.%d.%d.%d/%d",(int)ip[12],(int)ip[13],(int)ip[14],(int)ip[15],ipNetmaskBits);
-
 			if (sqlite3_column_int(_sGetIpAssignmentsForNode,0) == 0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/) {
+				if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
+					struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc.staticIps[nc.staticIpCount++]));
+					v4ip->sin_family = AF_INET;
+					v4ip->sin_port = Utils::hton((uint16_t)ipNetmaskBits);
+					memcpy(&(v4ip->sin_addr.s_addr),ip + 12,4);
+				}
 				haveStaticIpAssignment = true;
-				InetAddress tmp2(ips);
-				if (tmp2)
-					nc.staticIps[nc.staticIpCount++] = tmp2;
-				/*
-				if (v4s.length())
-					v4s.push_back(',');
-				v4s.append(ips);
-				*/
 			}
 		}
 
 		if ((!haveStaticIpAssignment)&&(!amActiveBridge)) {
-			// Attempt to auto-assign an IPv4 address from an available routed pool
+			// Attempt to auto-assign an IPv4 address from an available routed pool if there is one
 			sqlite3_reset(_sGetIpAssignmentPools);
 			sqlite3_bind_text(_sGetIpAssignmentPools,1,network.id,16,SQLITE_STATIC);
 			sqlite3_bind_int(_sGetIpAssignmentPools,2,4); // 4 == IPv4
@@ -1974,9 +1949,8 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 
 					// If it's routed, then try to claim and assign it and if successful end loop
 					if (routedNetmaskBits > 0) {
-						uint32_t ipBlob[4];
+						uint32_t ipBlob[4]; // actually a 16-byte blob, we put IPv4s in the last 4 bytes
 						ipBlob[0] = 0; ipBlob[1] = 0; ipBlob[2] = 0; ipBlob[3] = Utils::hton(ip);
-
 						sqlite3_reset(_sCheckIfIpIsAllocated);
 						sqlite3_bind_text(_sCheckIfIpIsAllocated,1,network.id,16,SQLITE_STATIC);
 						sqlite3_bind_blob(_sCheckIfIpIsAllocated,2,(const void *)ipBlob,16,SQLITE_STATIC);
@@ -1992,21 +1966,12 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 							sqlite3_bind_int(_sAllocateIp,5,routedNetmaskBits); // IP netmask bits from matching route
 							sqlite3_bind_int(_sAllocateIp,6,4); // 4 == IPv4
 							if (sqlite3_step(_sAllocateIp) == SQLITE_DONE) {
-								char ips[32];
-								Utils::snprintf(ips,sizeof(ips),"%d.%d.%d.%d/%d",(int)((ip >> 24) & 0xff),(int)((ip >> 16) & 0xff),(int)((ip >> 8) & 0xff),(int)(ip & 0xff),routedNetmaskBits);
-
 								if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
-									InetAddress tmp2(ips);
-									if (tmp2)
-										nc.staticIps[nc.staticIpCount++] = tmp2;
+									struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc.staticIps[nc.staticIpCount++]));
+									v4ip->sin_family = AF_INET;
+									v4ip->sin_port = Utils::hton((uint16_t)routedNetmaskBits);
+									v4ip->sin_addr.s_addr = Utils::hton(ip);
 								}
-
-								/*
-								if (v4s.length())
-									v4s.push_back(',');
-								v4s.append(ips);
-								*/
-
 								haveStaticIpAssignment = true;
 								break;
 							}
@@ -2015,17 +1980,11 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 				}
 			}
 		}
-
-		/*
-		if (v4s.length())
-			legacy[ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC] = v4s;
-		*/
 	}
 
 	if (network.isPrivate) {
 		CertificateOfMembership com(now,ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA,nwid,identity.address());
 		if (com.sign(signingId)) {
-			//legacy[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = com.toString();
 			nc.com = com;
 		} else {
 			return NETCONF_QUERY_INTERNAL_SERVER_ERROR;

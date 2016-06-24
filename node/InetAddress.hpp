@@ -471,8 +471,7 @@ struct InetAddress : public sockaddr_storage
 	 * @param mac MAC address seed
 	 * @return IPv6 link-local address
 	 */
-	static InetAddress makeIpv6LinkLocal(const MAC &mac)
-		throw();
+	static InetAddress makeIpv6LinkLocal(const MAC &mac);
 
 	/**
 	 * Compute private IPv6 unicast address from network ID and ZeroTier address
@@ -515,8 +514,12 @@ struct InetAddress : public sockaddr_storage
 	 * @param zeroTierAddress 40-bit device address (in least significant 40 bits, highest 24 bits ignored)
 	 * @return IPv6 private unicast address with /88 netmask
 	 */
-	static InetAddress makeIpv6rfc4193(uint64_t nwid,uint64_t zeroTierAddress)
-		throw();
+	static InetAddress makeIpv6rfc4193(uint64_t nwid,uint64_t zeroTierAddress);
+
+	/**
+	 * Compute a private IPv6 "6plane" unicast address from network ID and ZeroTier address
+	 */
+	static InetAddress makeIpv66plane(uint64_t nwid,uint64_t zeroTierAddress);
 };
 
 } // namespace ZeroTier
