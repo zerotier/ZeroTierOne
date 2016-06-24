@@ -17,6 +17,9 @@ cd ..
 git archive --format=tar.gz --prefix=ZeroTierOne/ -o linux-build-farm/zt1-src.tar.gz HEAD
 cd linux-build-farm
 
+# Note that --privileged is used so we can bind mount VM shares when building in a VM.
+# It has no other impact or purpose, but probably doesn't matter here in any case.
+
 for distro in $*; do
 	cd $distro
 
