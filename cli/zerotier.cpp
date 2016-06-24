@@ -159,9 +159,9 @@ static size_t _curlStringAppendCallback(void *contents,size_t size,size_t nmemb,
 
 static std::tuple<int,std::string> GET(const CLIState &state,const std::map<std::string,std::string> &headers,const std::string &url)
 {
-	int status = -1;
 	std::string body;
 	char errbuf[CURL_ERROR_SIZE];
+	char urlbuf[4096];
 
 	CURL *curl = curl_easy_init();
 	if (!curl) {
@@ -174,6 +174,20 @@ static std::tuple<int,std::string> GET(const CLIState &state,const std::map<std:
 	curl_easy_setopt(curl,CURLOPT_USERAGENT,"ZeroTier-CLI");
 	curl_easy_setopt(curl,CURLOPT_SSL_VERIFYPEER,(state.opts.count(ZT_CLI_FLAG_UNSAFE_SSL) > 0) ? 0L : 1L);
 	curl_easy_setopt(curl,CURLOPT_ERRORBUFFER,errbuf);
+	curl_easy_setopt(curl,CURLOPT_FOLLOWLOCATION,0L);
+
+	Utils::scopy(urlbuf,sizeof(urlbuf),url.c_str());
+	curl_easy_setopt(curl,CURLOPT_URL,urlbuf);
+
+	struct curl_slist *hdrs = (struct curl_slist *)0;
+	for(std::map<std::string,std::string>::const_iterator i(headers.begin());i!=headers.end();++i) {
+		std::string htmp(i->first);
+		htmp.append(": ");
+		htmp.append(i->second);
+		hdrs = curl_slist_append(hdrs,htmp.c_str());
+	}
+	if (hdrs)
+		curl_easy_setopt(curl,CURLOPT_HTTPHEADER,hdrs);
 
 	memset(errbuf,0,sizeof(errbuf));
 	CURLcode res = curl_easy_perform(curl);
@@ -182,9 +196,13 @@ static std::tuple<int,std::string> GET(const CLIState &state,const std::map<std:
 	if (res != CURLE_OK)
 		return std::make_tuple(-1,std::string(errbuf));
 
-	curl_easy_cleanup(curl);
+	int rc = (int)curl_easy_getinfo(curl,CURLINFO_RESPONSE_CODE);
 
-	return std::make_tuple(0,body);
+	curl_easy_cleanup(curl);
+	if (hdrs)
+		curl_slist_free_all(hdrs);
+
+	return std::make_tuple(rc,body);
 }
 
 } // anonymous namespace
