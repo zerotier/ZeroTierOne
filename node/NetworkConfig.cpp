@@ -292,6 +292,7 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 				this->flags |= ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING;
 			if (d.getB(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST_OLD))
 				this->flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
+			this->flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION; // always enable for old-style netconf
 			this->type = (d.getB(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE_OLD,true)) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
 
 			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC_OLD,tmp2,sizeof(tmp2)) > 0) {

@@ -48,6 +48,11 @@
 #define ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST 0x0000000000000002ULL
 
 /**
+ * Flag: enable IPv6 NDP emulation for certain V6 address patterns
+ */
+#define ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION 0x0000000000000004ULL
+
+/**
  * Device is a network preferred relay
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY 0x0000010000000000ULL
@@ -256,6 +261,11 @@ public:
 	 * @return True if broadcast (ff:ff:ff:ff:ff:ff) address should work on this network
 	 */
 	inline bool enableBroadcast() const throw() { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
+
+	/**
+	 * @return True if IPv6 NDP emulation should be allowed for certain "magic" IPv6 address patterns
+	 */
+	inline bool ndpEmulation() const throw() { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
 
 	/**
 	 * @return Network type is public (no access control)

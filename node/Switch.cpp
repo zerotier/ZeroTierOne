@@ -351,66 +351,87 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				return;
 			}
 		} else if ((etherType == ZT_ETHERTYPE_IPV6)&&(len >= (40 + 8 + 16))) {
-			/* IPv6 NDP emulation on ZeroTier-RFC4193 addressed networks! This allows
-			 * for multicast-free operation in IPv6 networks, which both improves
-			 * performance and is friendlier to mobile and (especially) IoT devices.
-			 * In the future there may be a no-multicast build option for embedded
-			 * and IoT use and this will be the preferred addressing mode. Note that
-			 * it plays nice with our L2 emulation philosophy and even with bridging.
-			 * While "real" devices behind the bridge can't have ZT-RFC4193 addresses
-			 * themselves, they can look these addresses up with NDP and it will
-			 * work just fine. */
-			if ((reinterpret_cast<const uint8_t *>(data)[6] == 0x3a)&&(reinterpret_cast<const uint8_t *>(data)[40] == 0x87)) { // ICMPv6 neighbor solicitation
+			// IPv6 NDP emulation for certain very special types of IPv6 addresses
+			if ((network->config().ndpEmulation())&&(reinterpret_cast<const uint8_t *>(data)[6] == 0x3a)&&(reinterpret_cast<const uint8_t *>(data)[40] == 0x87)) { // ICMPv6 neighbor solicitation
+				Address v6EmbeddedAddress;
+				const uint8_t *const pkt6 = reinterpret_cast<const uint8_t *>(data) + 40 + 8;
+				const uint8_t *my6 = (const uint8_t *)0;
+
+				// ZT-rfc4193 address: fdNN:NNNN:NNNN:NNNN:NN99:93DD:DDDD:DDDD / 88
+				// ZT-v6host address:  fdNN:NNNN:NNDD:DDDD:DDDD:####:####:#### / 40 (/80 usable per-host)
+
 				for(unsigned int sipk=0;sipk<network->config().staticIpCount;++sipk) {
 					const InetAddress *sip = &(network->config().staticIps[sipk]);
-					if ((sip->ss_family == AF_INET6)&&(Utils::ntoh((uint16_t)reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_port) == 88)) {
-						const uint8_t *my6 = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_addr.s6_addr);
-						if ((my6[0] == 0xfd)&&(my6[9] == 0x99)&&(my6[10] == 0x93)) { // ZT-RFC4193 == fd__:____:____:____:__99:93__:____:____ / 88
-							const uint8_t *pkt6 = reinterpret_cast<const uint8_t *>(data) + 40 + 8;
+					const unsigned int sipNetmaskBits = Utils::ntoh((uint16_t)reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_port);
+					if ((sip->ss_family == AF_INET6)&&(sipNetmaskBits == 88)) {
+						my6 = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_addr.s6_addr);
+						if ((my6[0] == 0xfd)&&(my6[9] == 0x99)&&(my6[10] == 0x93)) {
 							unsigned int ptr = 0;
 							while (ptr != 11) {
 								if (pkt6[ptr] != my6[ptr])
 									break;
 								++ptr;
 							}
-							if (ptr == 11) { // /88 matches an assigned address on this network
-								const Address atPeer(pkt6 + ptr,5);
-								if (atPeer != RR->identity.address()) {
-									const MAC atPeerMac(atPeer,network->id());
-									TRACE("ZT-RFC4193 NDP emulation: %.16llx: forging response for %s/%s",network->id(),atPeer.toString().c_str(),atPeerMac.toString().c_str());
-
-									uint8_t adv[72];
-									adv[0] = 0x60; adv[1] = 0x00; adv[2] = 0x00; adv[3] = 0x00;
-									adv[4] = 0x00; adv[5] = 0x20;
-									adv[6] = 0x3a; adv[7] = 0xff;
-									for(int i=0;i<16;++i) adv[8 + i] = pkt6[i];
-									for(int i=0;i<16;++i) adv[24 + i] = my6[i];
-									adv[40] = 0x88; adv[41] = 0x00;
-									adv[42] = 0x00; adv[43] = 0x00; // future home of checksum
-									adv[44] = 0x60; adv[45] = 0x00; adv[46] = 0x00; adv[47] = 0x00;
-									for(int i=0;i<16;++i) adv[48 + i] = pkt6[i];
-									adv[64] = 0x02; adv[65] = 0x01;
-									adv[66] = atPeerMac[0]; adv[67] = atPeerMac[1]; adv[68] = atPeerMac[2]; adv[69] = atPeerMac[3]; adv[70] = atPeerMac[4]; adv[71] = atPeerMac[5];
-
-									uint16_t pseudo_[36];
-									uint8_t *const pseudo = reinterpret_cast<uint8_t *>(pseudo_);
-									for(int i=0;i<32;++i) pseudo[i] = adv[8 + i];
-									pseudo[32] = 0x00; pseudo[33] = 0x00; pseudo[34] = 0x00; pseudo[35] = 0x20;
-									pseudo[36] = 0x00; pseudo[37] = 0x00; pseudo[38] = 0x00; pseudo[39] = 0x3a;
-									for(int i=0;i<32;++i) pseudo[40 + i] = adv[40 + i];
-									uint32_t checksum = 0;
-									for(int i=0;i<36;++i) checksum += Utils::hton(pseudo_[i]);
-									while ((checksum >> 16)) checksum = (checksum & 0xffff) + (checksum >> 16);
-									checksum = ~checksum;
-									adv[42] = (checksum >> 8) & 0xff;
-									adv[43] = checksum & 0xff;
-
-									RR->node->putFrame(network->id(),network->userPtr(),atPeerMac,from,ZT_ETHERTYPE_IPV6,0,adv,72);
-									return; // stop processing: we have handled this frame with a spoofed local reply so no need to send it anywhere
-								}
+							if (ptr == 11) {
+								v6EmbeddedAddress.setTo(pkt6 + ptr,5);
+								break;
+							}
+						}
+					} else if ((sip->ss_family == AF_INET6)&&(sipNetmaskBits == 40)) {
+						my6 = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_addr.s6_addr);
+						const uint64_t nwid = network->id();
+						const uint32_t nwid32 = (uint32_t)(nwid & 0xffffffff) ^ (uint32_t)((nwid >> 32) & 0xffffffff);
+						if ( (my6[0] == 0xfd) &&
+						     (my6[1] == (uint8_t)((nwid32 >> 24) & 0xff)) &&
+								 (my6[2] == (uint8_t)((nwid32 >> 16) & 0xff)) &&
+								 (my6[3] == (uint8_t)((nwid32 >> 8) & 0xff)) &&
+								 (my6[4] == (uint8_t)(nwid32 & 0xff)) ) {
+							unsigned int ptr = 0;
+							while (ptr != 5) {
+								if (pkt6[ptr] != my6[ptr])
+									break;
+								++ptr;
+							}
+							if (ptr == 5) {
+								v6EmbeddedAddress.setTo(pkt6 + ptr,5);
+								break;
 							}
 						}
 					}
+				}
+
+				if ((v6EmbeddedAddress)&&(v6EmbeddedAddress != RR->identity.address())) {
+					const MAC peerMac(v6EmbeddedAddress,network->id());
+					TRACE("IPv6 NDP emulation: %.16llx: forging response for %s/%s",network->id(),v6EmbeddedAddress.toString().c_str(),peerMac.toString().c_str());
+
+					uint8_t adv[72];
+					adv[0] = 0x60; adv[1] = 0x00; adv[2] = 0x00; adv[3] = 0x00;
+					adv[4] = 0x00; adv[5] = 0x20;
+					adv[6] = 0x3a; adv[7] = 0xff;
+					for(int i=0;i<16;++i) adv[8 + i] = pkt6[i];
+					for(int i=0;i<16;++i) adv[24 + i] = my6[i];
+					adv[40] = 0x88; adv[41] = 0x00;
+					adv[42] = 0x00; adv[43] = 0x00; // future home of checksum
+					adv[44] = 0x60; adv[45] = 0x00; adv[46] = 0x00; adv[47] = 0x00;
+					for(int i=0;i<16;++i) adv[48 + i] = pkt6[i];
+					adv[64] = 0x02; adv[65] = 0x01;
+					adv[66] = peerMac[0]; adv[67] = peerMac[1]; adv[68] = peerMac[2]; adv[69] = peerMac[3]; adv[70] = peerMac[4]; adv[71] = peerMac[5];
+
+					uint16_t pseudo_[36];
+					uint8_t *const pseudo = reinterpret_cast<uint8_t *>(pseudo_);
+					for(int i=0;i<32;++i) pseudo[i] = adv[8 + i];
+					pseudo[32] = 0x00; pseudo[33] = 0x00; pseudo[34] = 0x00; pseudo[35] = 0x20;
+					pseudo[36] = 0x00; pseudo[37] = 0x00; pseudo[38] = 0x00; pseudo[39] = 0x3a;
+					for(int i=0;i<32;++i) pseudo[40 + i] = adv[40 + i];
+					uint32_t checksum = 0;
+					for(int i=0;i<36;++i) checksum += Utils::hton(pseudo_[i]);
+					while ((checksum >> 16)) checksum = (checksum & 0xffff) + (checksum >> 16);
+					checksum = ~checksum;
+					adv[42] = (checksum >> 8) & 0xff;
+					adv[43] = checksum & 0xff;
+
+					RR->node->putFrame(network->id(),network->userPtr(),peerMac,from,ZT_ETHERTYPE_IPV6,0,adv,72);
+					return; // stop processing: we have handled this frame with a spoofed local reply so no need to send it anywhere
 				}
 			}
 		}
