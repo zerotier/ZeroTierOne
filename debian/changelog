@@ -1,3 +1,11 @@
+zerotier-one (1.1.6) unstable; urgency=medium
+
+  * First Debian release on ZeroTier, Inc. private apt repository.
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Fri, 24 Jun 2016 10:00:00 -0700
+
 zerotier-one (1.1.5) UNRELEASED; urgency=medium
 
   * Development package -- first clean Debian packaging test.
