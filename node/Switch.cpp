@@ -357,9 +357,9 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				const uint8_t *const pkt6 = reinterpret_cast<const uint8_t *>(data) + 40 + 8;
 				const uint8_t *my6 = (const uint8_t *)0;
 
-				// ZT-rfc4193 address: fdNN:NNNN:NNNN:NNNN:NN99:93DD:DDDD:DDDD / 88 (one /128 per actual host)
+				// ZT-RFC4193 address: fdNN:NNNN:NNNN:NNNN:NN99:93DD:DDDD:DDDD / 88 (one /128 per actual host)
 
-				// ZT-6plane address:  fcXX:XXXX:XXDD:DDDD:DDDD:####:####:#### / 40 (one /80 per actual host)
+				// ZT-6PLANE address:  fcXX:XXXX:XXDD:DDDD:DDDD:####:####:#### / 40 (one /80 per actual host)
 				// (XX - lower 32 bits of network ID XORed with higher 32 bits)
 
 				// For these to work, we must have a ZT-managed address assigned in one of the
@@ -369,31 +369,27 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 					if (sip->ss_family == AF_INET6) {
 						my6 = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_addr.s6_addr);
 						const unsigned int sipNetmaskBits = Utils::ntoh((uint16_t)reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_port);
-						if ((sipNetmaskBits == 88)&&(my6[0] == 0xfd)&&(my6[9] == 0x99)&&(my6[10] == 0x93)) {
+						if ((sipNetmaskBits == 88)&&(my6[0] == 0xfd)&&(my6[9] == 0x99)&&(my6[10] == 0x93)) { // ZT-RFC4193 /88 ???
 							unsigned int ptr = 0;
 							while (ptr != 11) {
 								if (pkt6[ptr] != my6[ptr])
 									break;
 								++ptr;
 							}
-							if (ptr == 11) {
+							if (ptr == 11) { // prefix match!
 								v6EmbeddedAddress.setTo(pkt6 + ptr,5);
 								break;
 							}
-						} else if (sipNetmaskBits == 40) {
+						} else if (sipNetmaskBits == 40) { // ZT-6PLANE /40 ???
 							const uint32_t nwid32 = (uint32_t)((network->id() ^ (network->id() >> 32)) & 0xffffffff);
-							if ((my6[0] == 0xfc) &&
-									(my6[1] == (uint8_t)((nwid32 >> 24) & 0xff)) &&
-									(my6[2] == (uint8_t)((nwid32 >> 16) & 0xff)) &&
-									(my6[3] == (uint8_t)((nwid32 >> 8) & 0xff)) &&
-									(my6[4] == (uint8_t)(nwid32 & 0xff))) {
+							if ( (my6[0] == 0xfc) && (my6[1] == (uint8_t)((nwid32 >> 24) & 0xff)) && (my6[2] == (uint8_t)((nwid32 >> 16) & 0xff)) && (my6[3] == (uint8_t)((nwid32 >> 8) & 0xff)) && (my6[4] == (uint8_t)(nwid32 & 0xff))) {
 								unsigned int ptr = 0;
 								while (ptr != 5) {
 									if (pkt6[ptr] != my6[ptr])
 										break;
 									++ptr;
 								}
-								if (ptr == 5) {
+								if (ptr == 5) { // prefix match!
 									v6EmbeddedAddress.setTo(pkt6 + ptr,5);
 									break;
 								}

@@ -9,12 +9,11 @@ CREATE TABLE Network (
   private integer NOT NULL DEFAULT(1),
   enableBroadcast integer NOT NULL DEFAULT(1),
   allowPassiveBridging integer NOT NULL DEFAULT(0),
-  v4AssignMode varchar(8) NOT NULL DEFAULT('none'),
-  v6AssignMode varchar(8) NOT NULL DEFAULT('none'),
   multicastLimit integer NOT NULL DEFAULT(32),
   creationTime integer NOT NULL DEFAULT(0),
   revision integer NOT NULL DEFAULT(1),
-  memberRevisionCounter integer NOT NULL DEFAULT(1)
+  memberRevisionCounter integer NOT NULL DEFAULT(1),
+  flags integer NOT NULL DEFAULT(0)
 );
 
 CREATE TABLE AuthToken (

@@ -10,12 +10,11 @@
 "  private integer NOT NULL DEFAULT(1),\n"\
 "  enableBroadcast integer NOT NULL DEFAULT(1),\n"\
 "  allowPassiveBridging integer NOT NULL DEFAULT(0),\n"\
-"  v4AssignMode varchar(8) NOT NULL DEFAULT('none'),\n"\
-"  v6AssignMode varchar(8) NOT NULL DEFAULT('none'),\n"\
 "  multicastLimit integer NOT NULL DEFAULT(32),\n"\
 "  creationTime integer NOT NULL DEFAULT(0),\n"\
 "  revision integer NOT NULL DEFAULT(1),\n"\
-"  memberRevisionCounter integer NOT NULL DEFAULT(1)\n"\
+"  memberRevisionCounter integer NOT NULL DEFAULT(1),\n"\
+"  flags integer NOT NULL DEFAULT(0)\n"\
 ");\n"\
 "\n"\
 "CREATE TABLE AuthToken (\n"\
