@@ -102,7 +102,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func buildMenu() {
         let menu = NSMenu()
 
-        menu.addItem(NSMenuItem(title: "Show Networks", action: #selector(AppDelegate.showNetworks), keyEquivalent: "n"))
+        menu.addItem(NSMenuItem(title: "Network Details", action: #selector(AppDelegate.showNetworks), keyEquivalent: "n"))
         menu.addItem(NSMenuItem(title: "Join Network", action: #selector(AppDelegate.joinNetwork), keyEquivalent: "j"))
         menu.addItem(NSMenuItem.separatorItem())
 
