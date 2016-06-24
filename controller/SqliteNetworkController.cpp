@@ -159,6 +159,7 @@ struct NetworkRecord {
 SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,const char *circuitTestPath) :
 	_node(node),
 	_backupThreadRun(true),
+	_backupNeeded(true),
 	_dbPath(dbPath),
 	_circuitTestPath(circuitTestPath),
 	_db((sqlite3 *)0)
@@ -444,6 +445,8 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 	if (path.empty())
 		return 404;
 	Mutex::Lock _l(_lock);
+
+	_backupNeeded = true;
 
 	if (path[0] == "network") {
 
@@ -1042,6 +1045,8 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpDELETE(
 		return 404;
 	Mutex::Lock _l(_lock);
 
+	_backupNeeded = true;
+
 	if (path[0] == "network") {
 
 		if ((path.size() >= 2)&&(path[1].length() == 16)) {
@@ -1126,7 +1131,7 @@ void SqliteNetworkController::threadMain()
 			}
 		}
 
-		if ((OSUtils::now() - lastBackupTime) >= ZT_NETCONF_BACKUP_PERIOD) {
+		if (((OSUtils::now() - lastBackupTime) >= ZT_NETCONF_BACKUP_PERIOD)&&(_backupNeeded)) {
 			lastBackupTime = OSUtils::now();
 
 			char backupPath[4096],backupPath2[4096];
@@ -1169,6 +1174,8 @@ void SqliteNetworkController::threadMain()
 
 			OSUtils::rm(backupPath2);
 			::rename(backupPath,backupPath2);
+
+			_backupNeeded = false;
 		}
 
 		Thread::sleep(250);
@@ -1633,6 +1640,8 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 			return NetworkController::NETCONF_QUERY_IGNORE;
 		lrt = now;
 	}
+
+	_backupNeeded = true;
 
 	NetworkRecord network;
 	memset(&network,0,sizeof(network));

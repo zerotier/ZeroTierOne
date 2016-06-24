@@ -121,6 +121,7 @@ private:
 	Node *_node;
 	Thread _backupThread;
 	volatile bool _backupThreadRun;
+	volatile bool _backupNeeded;
 	std::string _dbPath;
 	std::string _circuitTestPath;
 	std::string _instanceId;
