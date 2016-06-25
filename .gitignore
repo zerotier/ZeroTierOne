@@ -37,6 +37,7 @@ Thumbs.db
 /examples/docker/test-*.env
 /world/mkworld
 /world/*.c25519
+zt1-src.tar.gz
 
 # Miscellaneous temporaries, build files, etc.
 *.log
