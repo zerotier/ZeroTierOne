@@ -1,0 +1,138 @@
+#!/bin/bash
+#
+# zerotier-one		Start the ZeroTier One network virtualization service
+#
+# chkconfig: 2345 55 25
+# description: ZeroTier One allows systems to join and participate in \
+#              ZeroTier virtual networks. See https://www.zerotier.com/
+#
+# processname: zerotier-one
+# config: /var/lib/zerotier-one/identity.public
+# config: /var/lib/zerotier-one/identity.secret
+# config: /var/lib/zerotier-one/local.conf
+# config: /var/lib/zerotier-one/authtoken.secret
+# pidfile: /var/lib/zerotier-one/zerotier-one.pid
+
+### BEGIN INIT INFO
+# Provides: zerotier-one
+# Required-Start: $local_fs $network $syslog
+# Required-Stop: $local_fs $syslog
+# Should-Start: $syslog
+# Should-Stop: $network $syslog
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Start the ZeroTier One network virtualization service
+# Description:       ZeroTier One allows systems to join and participate in
+#		     ZeroTier virtual networks. See https://www.zerotier.com/
+### END INIT INFO
+
+# source function library
+. /etc/rc.d/init.d/functions
+
+# pull in sysconfig settings
+[ -f /etc/sysconfig/zerotier-one ] && . /etc/sysconfig/zerotier-one
+
+RETVAL=0
+prog="zerotier-one"
+lockfile=/var/lock/subsys/$prog
+ZT="/usr/sbin/zerotier-one"
+PID_FILE=/var/lib/zerotier-one/zerotier-one.pid
+
+runlevel=$(set -- $(runlevel); eval "echo \$$#" )
+
+start()
+{
+	[ -x $ZT ] || exit 5
+	echo -n $"Starting $prog: "
+	$ZT $ZT_OPTIONS -d && success || failure
+	RETVAL=$?
+	[ $RETVAL -eq 0 ] && touch $lockfile
+	echo
+	return $RETVAL
+}
+
+stop()
+{
+	echo -n $"Stopping $prog: "
+	killproc -p $PID_FILE $ZT
+	RETVAL=$?
+	if [ "x$runlevel" = x0 -o "x$runlevel" = x6 ] ; then
+	    trap '' TERM
+	    killall $prog 2>/dev/null
+	    trap TERM
+	fi
+	[ $RETVAL -eq 0 ] && rm -f $lockfile
+	echo
+}
+
+reload()
+{
+	stop
+	start
+}
+
+restart() {
+	stop
+	start
+}
+
+force_reload() {
+	restart
+}
+
+rh_status() {
+	status -p $PID_FILE zerotier-one
+}
+
+rh_status_q() {
+	rh_status >/dev/null 2>&1
+}
+
+case "$1" in
+	start)
+		rh_status_q && exit 0
+		start
+		;;
+	stop)
+		if ! rh_status_q; then
+			rm -f $lockfile
+			exit 0
+		fi
+		stop
+		;;
+	restart)
+		restart
+		;;
+	reload)
+		rh_status_q || exit 7
+		reload
+		;;
+	force-reload)
+		force_reload
+		;;
+	condrestart|try-restart)
+		rh_status_q || exit 0
+		if [ -f $lockfile ] ; then
+			do_restart_sanity_check
+			if [ $RETVAL -eq 0 ] ; then
+				stop
+				# avoid race
+				sleep 3
+				start
+			else
+				RETVAL=6
+			fi
+		fi
+		;;
+	status)
+		rh_status
+		RETVAL=$?
+		if [ $RETVAL -eq 3 -a -f $lockfile ] ; then
+			RETVAL=2
+		fi
+		;;
+	*)
+		echo $"Usage: $0 {start|stop|restart|reload|force-reload|condrestart|try-restart|status}"
+		RETVAL=2
+esac
+exit $RETVAL
