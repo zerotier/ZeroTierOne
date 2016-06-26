@@ -119,29 +119,44 @@ class ServiceCom: NSObject {
     }
 
 
-    static func joinNetwork(network: String) {
+    static func joinNetwork(network: String, allowManaged: Bool = true, allowGlobal: Bool = false, allowDefault: Bool = false) {
         let urlString = baseURL + "/network/\(network)?auth=\(ServiceCom.getKey())"
         let url = NSURL(string: urlString)
 
-        if let u = url {
-            let request = NSMutableURLRequest(URL: u)
-            request.HTTPMethod = "POST"
+        var jsonDict = [String: AnyObject]()
+        jsonDict["allowManaged"] = NSNumber(bool: allowManaged)
+        jsonDict["allowGlobal"] = NSNumber(bool: allowGlobal)
+        jsonDict["allowDefault"] = NSNumber(bool: allowDefault)
 
-            let session = NSURLSession.sharedSession()
-            let task = session.dataTaskWithRequest(request) { (data, response, error) in
-                let httpResponse = response as! NSHTTPURLResponse
-                let status = httpResponse.statusCode
+        do {
+            let json = try NSJSONSerialization.dataWithJSONObject(jsonDict, options: NSJSONWritingOptions())
 
-                if status == 200 {
-                    NSLog("join ok")
+            if let u = url {
+                let request = NSMutableURLRequest(URL: u)
+                request.HTTPMethod = "POST"
+                request.HTTPBody = json
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+                let session = NSURLSession.sharedSession()
+                let task = session.dataTaskWithRequest(request) { (data, response, error) in
+                    let httpResponse = response as! NSHTTPURLResponse
+                    let status = httpResponse.statusCode
+
+                    if status == 200 {
+                        NSLog("join ok")
+                    }
+                    else {
+                        NSLog("join error: \(status)")
+                    }
                 }
-                else {
-                    NSLog("join error: \(status)")
-                }
+
+                task.resume()
             }
-
-            task.resume()
         }
+        catch {
+            NSLog("\(error)")
+        }
+
     }
 
     static func leaveNetwork(network: String) {

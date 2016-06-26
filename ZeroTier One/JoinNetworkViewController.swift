@@ -30,6 +30,10 @@ class JoinNetworkViewController: NSViewController, NSComboBoxDelegate, NSComboBo
     @IBOutlet var network: NSComboBox!
     @IBOutlet var joinButton: NSButton!
 
+    @IBOutlet var allowManagedCheckBox: NSButton!
+    @IBOutlet var allowGlobalCheckBox: NSButton!
+    @IBOutlet var allowDefaultCheckBox:NSButton!
+
     var values: [String] = [String]()
 
     override func viewDidLoad() {
@@ -61,8 +65,10 @@ class JoinNetworkViewController: NSViewController, NSComboBoxDelegate, NSComboBo
     @IBAction func onJoinClicked(sender: AnyObject?) {
         let networkString = network.stringValue
 
-        ServiceCom.joinNetwork(networkString)
-
+        ServiceCom.joinNetwork(networkString,
+                               allowManaged: allowManagedCheckBox.state == NSOnState,
+                               allowGlobal: allowGlobalCheckBox.state == NSOnState,
+                               allowDefault: allowDefaultCheckBox.state == NSOnState)
         network.stringValue = ""
 
 
