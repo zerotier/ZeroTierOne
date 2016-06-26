@@ -56,6 +56,9 @@ struct PropertyKeys {
     static let portErrorKey = "portError"
     static let statusKey = "status"
     static let typeKey = "type"
+    static let allowManagedKey = "allowManaged"
+    static let allowGlobalKey = "allowGlobal"
+    static let allowDefaultKey = "allowDefault"
 }
 
 class Network: NSObject, NSCoding  {
@@ -72,6 +75,9 @@ class Network: NSObject, NSCoding  {
     var portError: Int = 0
     var status: NetworkStatus = .REQUESTING_CONFIGURATION
     var type: NetworkType = .PRIVATE
+    var allowManaged: Bool = true
+    var allowGlobal: Bool = false
+    var allowDefault: Bool = false
     var connected: Bool = false // NOT PERSISTED.  Set to true if loaded via JSON
 
     init(jsonData: [String: AnyObject]) {
@@ -121,6 +127,18 @@ class Network: NSObject, NSCoding  {
 
         if let p = jsonData["portError"] as? NSNumber {
             portError = p.integerValue
+        }
+
+        if let a = jsonData["allowManaged"] as? NSNumber {
+            allowManaged = a.boolValue
+        }
+
+        if let a = jsonData["allowGlobal"] as? NSNumber {
+            allowGlobal = a.boolValue
+        }
+
+        if let a = jsonData["allowDefault"] as? NSNumber {
+            allowDefault = a.boolValue
         }
 
         if let statusStr = jsonData["status"] as? String {
@@ -209,6 +227,18 @@ class Network: NSObject, NSCoding  {
         if aDecoder.containsValueForKey(PropertyKeys.typeKey) {
             self.type = NetworkType(rawValue: aDecoder.decodeIntegerForKey(PropertyKeys.typeKey))!
         }
+
+        if aDecoder.containsValueForKey(PropertyKeys.allowManagedKey) {
+            self.allowManaged = aDecoder.decodeBoolForKey(PropertyKeys.allowManagedKey)
+        }
+
+        if aDecoder.containsValueForKey(PropertyKeys.allowGlobalKey) {
+            self.allowGlobal = aDecoder.decodeBoolForKey(PropertyKeys.allowGlobalKey)
+        }
+
+        if aDecoder.containsValueForKey(PropertyKeys.allowDefaultKey) {
+            self.allowDefault = aDecoder.decodeBoolForKey(PropertyKeys.allowDefaultKey)
+        }
     }
 
     func encodeWithCoder(aCoder: NSCoder) {
@@ -225,5 +255,8 @@ class Network: NSObject, NSCoding  {
         aCoder.encodeInteger(self.portError, forKey: PropertyKeys.portErrorKey)
         aCoder.encodeInteger(self.status.rawValue, forKey: PropertyKeys.statusKey)
         aCoder.encodeInteger(self.type.rawValue, forKey: PropertyKeys.typeKey)
+        aCoder.encodeBool(self.allowManaged, forKey: PropertyKeys.allowManagedKey)
+        aCoder.encodeBool(self.allowGlobal, forKey: PropertyKeys.allowGlobalKey)
+        aCoder.encodeBool(self.allowDefault, forKey: PropertyKeys.allowDefaultKey)
     }
 }
