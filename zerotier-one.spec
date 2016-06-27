@@ -11,7 +11,7 @@ BuildRequires:  http-parser-devel
 BuildRequires:  lz4-devel
 BuildRequires:  libnatpmp-devel
 
-%if 0%{rhel} > 7
+%if 0%{?rhel} > 7
 BuildRequires:  libnatpmp-devel
 BuildRequires:  systemd
 %endif
@@ -26,11 +26,11 @@ Requires:       lz4
 Requires:       libnatpmp
 Requires:       iproute
 
-%if 0%{rhel} >= 7
+%if 0%{?rhel} >= 7
 Requires:       systemd
 %endif
 
-%if 0%{rhel} <= 6
+%if 0%{?rhel} <= 6
 Requires:       chkconfig
 %endif
 
@@ -64,21 +64,20 @@ rm -f %{name}-%{version}
 cp -a %{getenv:PWD}/* .
 
 %build
-make ZT_USE_MINIUPNPC=1 %{?_smp_mflags}
+make CFLAGS="`echo %{optflags} | sed s/stack-protector-strong/stack-protector/`" CXXFLAGS="`echo %{optflags} | sed s/stack-protector-strong/stack-protector/`" ZT_USE_MINIUPNPC=1 %{?_smp_mflags} one manpages selftest
 
 %install
 rm -rf $RPM_BUILD_ROOT
 make install DESTDIR=$RPM_BUILD_ROOT
-
-%if 0%{rhel} >= 7
+%if 0%{?rhel} >= 7
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
 cp debian/zerotier-one.service $RPM_BUILD_ROOT%{_unitdir}/%{name}.service
 %endif
-%if 0%{fedora} >= 21
+%if 0%{?fedora} >= 21
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
 cp debian/zerotier-one.service $RPM_BUILD_ROOT%{_unitdir}/%{name}.service
 %endif
-%if 0%{rhel} <= 6
+%if 0%{?rhel} <= 6
 cp ext/installfiles/linux/zerotier-one.init.rhel6 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
 chmod 0755 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
 %endif
@@ -88,26 +87,26 @@ chmod 0755 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
 %{_bindir}/*
 %{_mandir}/*
 %{_localstatedir}/*
-%if 0%{rhel} >= 7
+%if 0%{?rhel} >= 7
 %{_unitdir}/%{name}.service
 %endif
-%if 0%{fedora} >= 21
+%if 0%{?fedora} >= 21
 %{_unitdir}/%{name}.service
 %endif
-%if 0%{rhel} <= 6
+%if 0%{?rhel} <= 6
 /etc/init.d/zerotier-one
 %endif
 %doc AUTHORS.md README.md
 %license LICENSE.GPL-3
 
 %post
-%if 0%{rhel} >= 7
+%if 0%{?rhel} >= 7
 %systemd_post zerotier-one.service
 %endif
-%if 0%{fedora} >= 21
+%if 0%{?fedora} >= 21
 %systemd_post zerotier-one.service
 %endif
-%if 0%{rhel} <= 6
+%if 0%{?rhel} <= 6
 case "$1" in
   1)
     chkconfig --add zerotier-one
@@ -120,13 +119,13 @@ esac
 %endif
 
 %preun
-%if 0%{rhel} >= 7
+%if 0%{?rhel} >= 7
 %systemd_preun zerotier-one.service
 %endif
-%if 0%{fedora} >= 21
+%if 0%{?fedora} >= 21
 %systemd_preun zerotier-one.service
 %endif
-%if 0%{rhel} <= 6
+%if 0%{?rhel} <= 6
 case "$1" in
   0)
     service zerotier-one stop
@@ -140,10 +139,10 @@ esac
 %endif
 
 %postun
-%if 0%{rhel} >= 7
+%if 0%{?rhel} >= 7
 %systemd_postun_with_restart zerotier-one.service
 %endif
-%if 0%{fedora} >= 21
+%if 0%{?fedora} >= 21
 %systemd_postun_with_restart zerotier-one.service
 %endif
 

@@ -94,10 +94,14 @@ ifeq ($(ZT_ENABLE_CLUSTER),1)
 	DEFS+=-DZT_ENABLE_CLUSTER
 endif
 
+ifeq ($(ZT_TRACE),1)
+	DEFS+=-DZT_TRACE
+endif
+
 ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE
-	CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
-	CXXFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
+	override CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
+	override CXXFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
 	LDFLAGS=
 	STRIP?=echo
 	# The following line enables optimization for the crypto code, since
@@ -105,16 +109,12 @@ ifeq ($(ZT_DEBUG),1)
 ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
 	CFLAGS?=-O3 -fstack-protector-strong
-	CFLAGS+=-Wall -fPIE -fvisibility=hidden -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	override CFLAGS+=-Wall -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	CXXFLAGS?=-O3 -fstack-protector-strong
-	CXXFLAGS+=-Wall -Wno-unused-result -Wreorder -fPIE -fvisibility=hidden -fno-rtti -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	override CXXFLAGS+=-Wall -Wno-unused-result -Wreorder -fPIE -fno-rtti -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
 	STRIP+=--strip-all
-endif
-
-ifeq ($(ZT_TRACE),1)
-	DEFS+=-DZT_TRACE
 endif
 
 # Uncomment for gprof profile build
