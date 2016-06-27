@@ -24,6 +24,7 @@ BuildRequires:  json-parser-devel
 Requires:       http-parser
 Requires:       lz4
 Requires:       libnatpmp
+Requires:       iproute
 
 %if 0%{rhel} >= 7
 Requires:       systemd
