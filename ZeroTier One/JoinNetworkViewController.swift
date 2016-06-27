@@ -45,6 +45,10 @@ class JoinNetworkViewController: NSViewController, NSComboBoxDelegate, NSComboBo
     override func viewWillAppear() {
         super.viewWillAppear()
 
+        allowManagedCheckBox.state = NSOnState
+        allowGlobalCheckBox.state = NSOffState
+        allowDefaultCheckBox.state = NSOffState
+
         let defaults = NSUserDefaults.standardUserDefaults()
 
         let vals = defaults.stringArrayForKey(joinedNetworksKey)

@@ -263,7 +263,7 @@ class Network: NSObject, NSCoding  {
 
 func defaultRouteExists(netList: [Network]) -> Bool {
     for net in netList {
-        if net.allowDefault {
+        if net.allowDefault && net.connected {
             return true
         }
     }

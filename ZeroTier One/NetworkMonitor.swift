@@ -70,33 +70,48 @@ class NetworkMonitor: NSObject {
         var networks = self.savedNetworks
 
         for nw in receivedNetworks {
-            let index = findNetworkWithID(nw.nwid)
+            let index = findSavedNetworkWithID(nw.nwid)
 
             if index != NSNotFound {
                 networks[index] = nw
             }
-            networks.sortInPlace({ (left, right) -> Bool in
-                if left.nwid < right.nwid {
-                    return true
-                }
-
-                return false
-            })
-
-            objc_sync_enter(allNetworks)
-            allNetworks = networks
-            objc_sync_exit(allNetworks)
-
-            saveNetworks()
-
-            let nc = NSNotificationCenter.defaultCenter()
-
-            nc.postNotificationName(networkUpdateKey, object: nil, userInfo: ["networks": networks])
+            else {
+                networks.append(nw)
+            }
         }
+
+        networks.sortInPlace({ (left, right) -> Bool in
+            if left.nwid < right.nwid {
+                return true
+            }
+
+            return false
+        })
+
+        objc_sync_enter(allNetworks)
+        allNetworks = networks
+        objc_sync_exit(allNetworks)
+
+        saveNetworks()
+
+        let nc = NSNotificationCenter.defaultCenter()
+
+        nc.postNotificationName(networkUpdateKey, object: nil, userInfo: ["networks": networks])
     }
 
     private func findNetworkWithID(nwid: UInt64) -> Int {
         for (index, element) in allNetworks.enumerate() {
+
+            if element.nwid == nwid {
+                return index
+            }
+        }
+
+        return NSNotFound
+    }
+
+    private func findSavedNetworkWithID(nwid: UInt64) -> Int {
+        for (index, element) in savedNetworks.enumerate() {
 
             if element.nwid == nwid {
                 return index

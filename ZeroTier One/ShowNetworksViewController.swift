@@ -76,6 +76,21 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
             cell.bridgingField.stringValue = network.bridge ? "ENABLED" : "DISABLED"
             cell.deviceField.stringValue = network.portDeviceName
 
+            if network.connected {
+                cell.connectedCheckbox.state = NSOnState
+
+                cell.allowDefault.enabled = true
+                cell.allowGlobal.enabled = true
+                cell.allowManaged.enabled = true
+            }
+            else {
+                cell.connectedCheckbox.state = NSOffState
+
+                cell.allowDefault.enabled = false
+                cell.allowGlobal.enabled = false
+                cell.allowManaged.enabled = false
+            }
+            
 
             if network.allowDefault {
                 cell.allowDefault.state = NSOnState
@@ -101,20 +116,7 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
                 cell.addressesField.stringValue += "\n"
             }
 
-            if network.connected {
-                cell.connectedCheckbox.state = NSOnState
 
-                cell.allowDefault.enabled = true
-                cell.allowGlobal.enabled = true
-                cell.allowManaged.enabled = true
-            }
-            else {
-                cell.connectedCheckbox.state = NSOffState
-
-                cell.allowDefault.enabled = false
-                cell.allowGlobal.enabled = false
-                cell.allowManaged.enabled = false
-            }
 
             return cell
         }

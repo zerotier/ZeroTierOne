@@ -164,6 +164,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     networkName = "\(id) (\(net.name))"
                 }
 
+                if net.allowDefault && net.connected {
+                    networkName += " [default]"
+                }
                 let item = NSMenuItem(title: networkName, action: #selector(AppDelegate.toggleNetwork(_:)), keyEquivalent: "")
 
                 if net.connected {

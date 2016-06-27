@@ -62,7 +62,7 @@
                 </button>
                 <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="rz3-0a-oNA">
                     <rect key="frame" x="238" y="59" width="141" height="18"/>
-                    <buttonCell key="cell" type="check" title="Allow Default Route" alternateTitle="Allow override of default route ‘full tunnel'" bezelStyle="regularSquare" imagePosition="left" inset="2" id="Lkd-XI-Kcu">
+                    <buttonCell key="cell" type="check" title="Allow Default Route" bezelStyle="regularSquare" imagePosition="left" inset="2" id="Lkd-XI-Kcu">
                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                         <font key="font" metaFont="system"/>
                     </buttonCell>
