@@ -161,11 +161,10 @@ install:	FORCE
 	mkdir -p $(DESTDIR)/usr/sbin
 	rm -f $(DESTDIR)/usr/sbin/zerotier-one
 	cp -f zerotier-one $(DESTDIR)/usr/sbin/zerotier-one
-	mkdir -p $(DESTDIR)/usr/bin
-	rm -f $(DESTDIR)/usr/bin/zerotier-cli
-	rm -f $(DESTDIR)/usr/bin/zerotier-idtool
-	ln -s ../sbin/zerotier-one $(DESTDIR)/usr/bin/zerotier-cli
-	ln -s ../sbin/zerotier-one $(DESTDIR)/usr/bin/zerotier-idtool
+	rm -f $(DESTDIR)/usr/sbin/zerotier-cli
+	rm -f $(DESTDIR)/usr/sbin/zerotier-idtool
+	ln -s zerotier-one $(DESTDIR)/usr/sbin/zerotier-cli
+	ln -s zerotier-one $(DESTDIR)/usr/sbin/zerotier-idtool
 	mkdir -p $(DESTDIR)/var/lib/zerotier-one
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-one
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-cli
@@ -189,8 +188,8 @@ uninstall:	FORCE
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-one
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-cli
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-idtool
-	rm -f $(DESTDIR)/usr/bin/zerotier-cli
-	rm -f $(DESTDIR)/usr/bin/zerotier-idtool
+	rm -f $(DESTDIR)/usr/sbin/zerotier-cli
+	rm -f $(DESTDIR)/usr/sbin/zerotier-idtool
 	rm -f $(DESTDIR)/usr/sbin/zerotier-one
 	rm -rf $(DESTDIR)/var/lib/zerotier-one/iddb.d
 	rm -rf $(DESTDIR)/var/lib/zerotier-one/updates.d
