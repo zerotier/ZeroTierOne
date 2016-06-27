@@ -82,6 +82,7 @@ mkdir -p $RPM_BUILD_ROOT%{_unitdir}
 cp debian/zerotier-one.service $RPM_BUILD_ROOT%{_unitdir}/%{name}.service
 %endif
 %if 0%{?rhel} <= 6
+mkdir -p $RPM_BUILD_ROOT/etc/init.d
 cp ext/installfiles/linux/zerotier-one.init.rhel6 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
 chmod 0755 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
 %endif
