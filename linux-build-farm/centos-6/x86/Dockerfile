@@ -8,4 +8,6 @@ RUN yum install -y clang
 RUN yum install -y gcc-c++
 RUN yum install -y tar
 
+RUN yum install -y nodejs npm
+
 ADD zt1-src.tar.gz /

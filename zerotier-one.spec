@@ -89,7 +89,6 @@ chmod 0755 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
 
 %files
 %{_sbindir}/*
-%{_bindir}/*
 %{_mandir}/*
 %{_localstatedir}/*
 %if 0%{?rhel} >= 7
@@ -101,8 +100,6 @@ chmod 0755 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
 %if 0%{?rhel} <= 6
 /etc/init.d/zerotier-one
 %endif
-%doc AUTHORS.md README.md
-%license LICENSE.GPL-3
 
 %post
 %if 0%{?rhel} >= 7
