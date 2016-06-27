@@ -77,6 +77,23 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
             cell.deviceField.stringValue = network.portDeviceName
 
 
+            if network.allowDefault {
+                cell.allowDefault.state = NSOnState
+            }
+            else {
+                cell.allowDefault.state = NSOffState
+
+                if defaultRouteExists(networkList) {
+                    cell.allowDefault.enabled = false
+                }
+                else {
+                    cell.allowDefault.enabled = true
+                }
+            }
+
+            cell.allowGlobal.state = (network.allowGlobal ? NSOnState : NSOffState)
+            cell.allowManaged.state = (network.allowManaged ? NSOnState : NSOffState)
+
             cell.addressesField.stringValue = ""
 
             for nw in network.assignedAddresses {

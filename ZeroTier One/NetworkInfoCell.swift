@@ -24,6 +24,10 @@ class NetworkInfoCell: NSTableCellView {
     @IBOutlet var deviceField: NSTextField!
     @IBOutlet var addressesField: NSTextField!
 
+    @IBOutlet var allowManaged: NSButton!
+    @IBOutlet var allowGlobal: NSButton!
+    @IBOutlet var allowDefault: NSButton!
+
     @IBOutlet var connectedCheckbox: NSButton!
     @IBOutlet var deleteButton: NSButton!
 

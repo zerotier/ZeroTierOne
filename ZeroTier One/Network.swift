@@ -260,3 +260,13 @@ class Network: NSObject, NSCoding  {
         aCoder.encodeBool(self.allowDefault, forKey: PropertyKeys.allowDefaultKey)
     }
 }
+
+func defaultRouteExists(netList: [Network]) -> Bool {
+    for net in netList {
+        if net.allowDefault {
+            return true
+        }
+    }
+
+    return false
+}
