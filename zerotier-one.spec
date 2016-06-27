@@ -64,7 +64,11 @@ rm -f %{name}-%{version}
 cp -a %{getenv:PWD}/* .
 
 %build
+%if 0%{?rhel} <= 7
 make CFLAGS="`echo %{optflags} | sed s/stack-protector-strong/stack-protector/`" CXXFLAGS="`echo %{optflags} | sed s/stack-protector-strong/stack-protector/`" ZT_USE_MINIUPNPC=1 %{?_smp_mflags} one manpages selftest
+%else
+make CFLAGS="%{optflags}" CXXFLAGS="%{optflags}" ZT_USE_MINIUPNPC=1 %{?_smp_mflags} one manpages selftest
+%endif
 
 %install
 rm -rf $RPM_BUILD_ROOT

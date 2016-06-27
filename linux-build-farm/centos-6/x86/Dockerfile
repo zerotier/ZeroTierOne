@@ -17,7 +17,7 @@ RUN yum install -y gcc-c++
 
 ADD zt1-src.tar.gz /
 
-RUN mv /ZeroTierOne/make-linux.mk /ZeroTierOne/make-linux.mk.old
-RUN echo 'CFLAGS=-O3 -fstack-protector' >/ZeroTierOne/make-linux.mk
-RUN echo 'CXXFLAGS=-O3 -fstack-protector' >>/ZeroTierOne/make-linux.mk
-RUN cat /ZeroTierOne/make-linux.mk.old >>/ZeroTierOne/make-linux.mk
+#RUN mv /ZeroTierOne/make-linux.mk /ZeroTierOne/make-linux.mk.old
+#RUN echo 'CFLAGS=-O3 -fstack-protector' >/ZeroTierOne/make-linux.mk
+#RUN echo 'CXXFLAGS=-O3 -fstack-protector' >>/ZeroTierOne/make-linux.mk
+#RUN cat /ZeroTierOne/make-linux.mk.old >>/ZeroTierOne/make-linux.mk
