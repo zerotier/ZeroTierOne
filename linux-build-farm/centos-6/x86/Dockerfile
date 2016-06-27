@@ -7,4 +7,7 @@ RUN yum install -y make development-tools rpmdevtools clang gcc-c++ tar
 
 RUN yum install -y nodejs npm
 
+# Stop use of http-parser-devel which is installed by nodejs/npm
+RUN rm -f /usr/include/http_parser.h
+
 ADD zt1-src.tar.gz /
