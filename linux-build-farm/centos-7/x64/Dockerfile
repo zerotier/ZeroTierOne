@@ -7,4 +7,7 @@ RUN yum install -y make development-tools rpmdevtools http-parser-devel lz4-deve
 
 RUN yum install -y clang gcc-c++
 
+RUN yum install -y ruby ruby-devel
+RUN gem install ronn
+
 ADD zt1-src.tar.gz /

@@ -14,4 +14,7 @@
 FROM zerotier/zt1-build-centos-7-x86-base
 MAINTAINER Adam Ierymenko <adam.ierymenko@zerotier.com>
 
+RUN yum install -y ruby ruby-devel
+RUN gem install ronn
+
 ADD zt1-src.tar.gz /

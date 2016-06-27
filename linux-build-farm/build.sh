@@ -31,7 +31,7 @@ for distro in $*; do
 	mv zt1-src.tar.gz ../..
 	cd ..
 
-#	docker run --rm -v `pwd`:/artifacts --privileged -it zt1-build-${distro}-x64 /bin/bash -c 'cd /ZeroTierOne ; make `[ -f /etc/debian_version ] && echo debian || echo redhat` ; cd .. ; cp *.deb /artifacts ; ls -l /artifacts'
+#	docker run --rm -v `pwd`:/artifacts --privileged -it zt1-build-${distro}-x64 /bin/bash -c 'cd /ZeroTierOne ; make debian ; cd .. ; cp *.deb /artifacts ; ls -l /artifacts'
 
 	cd x86
 	mv ../../zt1-src.tar.gz .
@@ -39,7 +39,7 @@ for distro in $*; do
 	mv zt1-src.tar.gz ../..
 	cd ..
 
-#	docker run --rm -v `pwd`:/artifacts --privileged -it zt1-build-${distro}-x86 /bin/bash -c 'cd /ZeroTierOne ; make `[ -f /etc/debian_version ] && echo debian || echo redhat` ; cd .. ; cp *.deb /artifacts ; ls -l /artifacts'
+#	docker run --rm -v `pwd`:/artifacts --privileged -it zt1-build-${distro}-x86 /bin/bash -c 'cd /ZeroTierOne ; make debian ; cd .. ; cp *.deb /artifacts ; ls -l /artifacts'
 
 	cd ..
 done

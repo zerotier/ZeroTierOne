@@ -8,10 +8,10 @@ fi
 
 rm -f *.1 *.2 *.8
 
-if [ -e /usr/bin/ronn ]; then
-	/usr/bin/ronn -r zerotier-cli.1.md
-	/usr/bin/ronn -r zerotier-idtool.1.md
-	/usr/bin/ronn -r zerotier-one.8.md
+if [ -e /usr/bin/ronn -o -e /usr/local/bin/ronn ]; then
+	ronn -r zerotier-cli.1.md
+	ronn -r zerotier-idtool.1.md
+	ronn -r zerotier-one.8.md
 else
 	if [ ! -f /usr/bin/node -a ! -f /usr/bin/nodejs ]; then
 		echo 'Unable to build man pages: no /usr/bin/ronn or /usr/bin/node / nodejs!'
