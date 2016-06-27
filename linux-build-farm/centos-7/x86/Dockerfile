@@ -17,4 +17,6 @@ MAINTAINER Adam Ierymenko <adam.ierymenko@zerotier.com>
 RUN yum install -y ruby ruby-devel
 RUN gem install ronn
 
+RUN rpm --erase http-parser-devel lz4-devel libnatpmp-devel
+
 ADD zt1-src.tar.gz /
