@@ -41,7 +41,7 @@ for distro in $subdirs; do
 
 	rm -f *.deb *.rpm
 
-	if [ -e "`echo $distro | grep -F debian`" -a -e "`echo $distro | grep -F ubuntu`" ]; then
+	if [ ! -n "`echo $distro | grep -F debian`" -a ! -n "`echo $distro | grep -F ubuntu`" ]; then
 		docker run --rm -v `pwd`:/artifacts --privileged -it zt1-build-${distro}-x64 /bin/bash -c 'cd /ZeroTierOne ; make redhat ; cd .. ; cp `find /root/rpmbuild -type f -name *.rpm` /artifacts ; ls -l /artifacts'
 		docker run --rm -v `pwd`:/artifacts --privileged -it zt1-build-${distro}-x86 /bin/bash -c 'cd /ZeroTierOne ; make redhat ; cd .. ; cp `find /root/rpmbuild -type f -name *.rpm` /artifacts ; ls -l /artifacts'
 	else
