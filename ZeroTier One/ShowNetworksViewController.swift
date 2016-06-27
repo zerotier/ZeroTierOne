@@ -103,9 +103,17 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
 
             if network.connected {
                 cell.connectedCheckbox.state = NSOnState
+
+                cell.allowDefault.enabled = true
+                cell.allowGlobal.enabled = true
+                cell.allowManaged.enabled = true
             }
             else {
                 cell.connectedCheckbox.state = NSOffState
+
+                cell.allowDefault.enabled = false
+                cell.allowGlobal.enabled = false
+                cell.allowManaged.enabled = false
             }
 
             return cell

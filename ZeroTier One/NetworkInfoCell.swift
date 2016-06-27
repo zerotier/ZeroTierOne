@@ -42,14 +42,10 @@ class NetworkInfoCell: NSTableCellView {
     }
 
     @IBAction func onConnectCheckStateChanged(sender: NSButton) {
-        NSLog("Checked State Changed")
-
         if(sender.state == NSOnState) {
-            NSLog("Checked")
             joinNetwork(networkIdField.stringValue)
         }
         else {
-            NSLog("Unchecked")
             leaveNetwork(networkIdField.stringValue)
         }
     }
@@ -60,10 +56,17 @@ class NetworkInfoCell: NSTableCellView {
     }
 
     func joinNetwork(nwid: String) {
-        ServiceCom.joinNetwork(nwid)
+        ServiceCom.joinNetwork(nwid,
+                               allowManaged: allowManaged.state == NSOnState,
+                               allowGlobal: allowGlobal.state == NSOnState,
+                               allowDefault: !defaultRouteExists(parent.networkList) && (allowDefault.state == NSOnState))
     }
 
     func leaveNetwork(nwid: String) {
         ServiceCom.leaveNetwork(nwid)
+    }
+
+    @IBAction func onAllowStatusChanged(sender: NSButton) {
+        joinNetwork(networkIdField.stringValue)
     }
 }

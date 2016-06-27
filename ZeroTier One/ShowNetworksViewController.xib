@@ -168,6 +168,9 @@
                                                             <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                                             <font key="font" metaFont="system"/>
                                                         </buttonCell>
+                                                        <connections>
+                                                            <action selector="onAllowStatusChanged:" target="rmb-il-W5I" id="FW8-5N-vt1"/>
+                                                        </connections>
                                                     </button>
                                                     <button misplaced="YES" translatesAutoresizingMaskIntoConstraints="NO" id="8CS-6g-NFI">
                                                         <rect key="frame" x="504" y="122" width="22" height="18"/>
@@ -175,6 +178,9 @@
                                                             <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                                             <font key="font" metaFont="system"/>
                                                         </buttonCell>
+                                                        <connections>
+                                                            <action selector="onAllowStatusChanged:" target="rmb-il-W5I" id="ahh-N8-nhW"/>
+                                                        </connections>
                                                     </button>
                                                     <button misplaced="YES" translatesAutoresizingMaskIntoConstraints="NO" id="URn-qw-7jG">
                                                         <rect key="frame" x="504" y="146" width="22" height="18"/>
@@ -182,6 +188,9 @@
                                                             <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                                             <font key="font" metaFont="system"/>
                                                         </buttonCell>
+                                                        <connections>
+                                                            <action selector="onAllowStatusChanged:" target="rmb-il-W5I" id="XGy-pE-Dzf"/>
+                                                        </connections>
                                                     </button>
                                                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" misplaced="YES" translatesAutoresizingMaskIntoConstraints="NO" id="jdz-W3-UwS">
                                                         <rect key="frame" x="19" y="147" width="79" height="17"/>
