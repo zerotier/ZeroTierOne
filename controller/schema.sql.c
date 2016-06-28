@@ -34,23 +34,6 @@
 "  identity varchar(4096) NOT NULL\n"\
 ");\n"\
 "\n"\
-"CREATE TABLE NodeHistory (\n"\
-"  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"\
-"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
-"  networkVisitCounter INTEGER NOT NULL DEFAULT(0),\n"\
-"  networkRequestAuthorized INTEGER NOT NULL DEFAULT(0),\n"\
-"  requestTime INTEGER NOT NULL DEFAULT(0),\n"\
-"  clientMajorVersion INTEGER NOT NULL DEFAULT(0),\n"\
-"  clientMinorVersion INTEGER NOT NULL DEFAULT(0),\n"\
-"  clientRevision INTEGER NOT NULL DEFAULT(0),\n"\
-"  networkRequestMetaData VARCHAR(1024),\n"\
-"  fromAddress VARCHAR(128)\n"\
-");\n"\
-"\n"\
-"CREATE INDEX NodeHistory_nodeId ON NodeHistory (nodeId);\n"\
-"CREATE INDEX NodeHistory_networkId ON NodeHistory (networkId);\n"\
-"CREATE INDEX NodeHistory_requestTime ON NodeHistory (requestTime);\n"\
-"\n"\
 "CREATE TABLE IpAssignment (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
 "  nodeId char(10) REFERENCES Node(id) ON DELETE CASCADE,\n"\
@@ -80,12 +63,17 @@
 "  activeBridge integer NOT NULL DEFAULT(0),\n"\
 "  memberRevision integer NOT NULL DEFAULT(0),\n"\
 "  flags integer NOT NULL DEFAULT(0),\n"\
+"  lastRequestTime integer NOT NULL DEFAULT(0),\n"\
+"  lastPowDifficulty integer NOT NULL DEFAULT(0),\n"\
+"  lastPowTime integer NOT NULL DEFAULT(0),\n"\
+"  recentHistory blob,\n"\
 "  PRIMARY KEY (networkId, nodeId)\n"\
 ");\n"\
 "\n"\
 "CREATE INDEX Member_networkId_nodeId ON Member(networkId,nodeId);\n"\
 "CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);\n"\
 "CREATE INDEX Member_networkId_memberRevision ON Member(networkId, memberRevision);\n"\
+"CREATE INDEX Member_networkId_lastRequestTime ON Member(networkId, lastRequestTime);\n"\
 "\n"\
 "CREATE TABLE Route (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\

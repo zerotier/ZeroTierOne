@@ -137,11 +137,6 @@ private:
 	sqlite3_stmt *_sCreateMember;
 	sqlite3_stmt *_sGetNodeIdentity;
 	sqlite3_stmt *_sCreateOrReplaceNode;
-	sqlite3_stmt *_sGetMaxNodeHistoryNetworkVisitCounter;
-	sqlite3_stmt *_sAddNodeHistoryEntry;
-	sqlite3_stmt *_sDeleteOldNodeHistoryEntries;
-	sqlite3_stmt *_sGetActiveNodesOnNetwork;
-	sqlite3_stmt *_sGetNodeHistory;
 	sqlite3_stmt *_sGetEtherTypesFromRuleTable;
 	sqlite3_stmt *_sGetActiveBridges;
 	sqlite3_stmt *_sGetIpAssignmentsForNode;
@@ -167,8 +162,10 @@ private:
 	sqlite3_stmt *_sCreateIpAssignmentPool;
 	sqlite3_stmt *_sUpdateMemberAuthorized;
 	sqlite3_stmt *_sUpdateMemberActiveBridge;
+	sqlite3_stmt *_sUpdateMemberHistory;
 	sqlite3_stmt *_sDeleteMember;
 	sqlite3_stmt *_sDeleteAllNetworkMembers;
+	sqlite3_stmt *_sGetActiveNodesOnNetwork;
 	sqlite3_stmt *_sDeleteNetwork;
 	sqlite3_stmt *_sCreateRoute;
 	sqlite3_stmt *_sGetRoutes;
