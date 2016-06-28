@@ -13,6 +13,7 @@
 		932D47331D1CD861004BCFE2 /* PreferencesViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */; };
 		932D47361D1CDC9B004BCFE2 /* AboutViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932D47341D1CDC9B004BCFE2 /* AboutViewController.swift */; };
 		932D47371D1CDC9B004BCFE2 /* AboutViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */; };
+		932D473A1D220D63004BCFE2 /* LaunchAtLoginController.m in Sources */ = {isa = PBXBuildFile; fileRef = 932D47391D220D63004BCFE2 /* LaunchAtLoginController.m */; };
 		9330F1351CEAB4C400687EC8 /* ServiceCom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F1341CEAB4C400687EC8 /* ServiceCom.swift */; };
 		9330F1371CEBF87200687EC8 /* Network.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F1361CEBF87200687EC8 /* Network.swift */; };
 		9330F13B1CF534E500687EC8 /* NetworkInfoCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F13A1CF534E500687EC8 /* NetworkInfoCell.swift */; };
@@ -33,6 +34,8 @@
 		932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PreferencesViewController.xib; sourceTree = "<group>"; };
 		932D47341D1CDC9B004BCFE2 /* AboutViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AboutViewController.swift; sourceTree = "<group>"; };
 		932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = AboutViewController.xib; sourceTree = "<group>"; };
+		932D47381D220D63004BCFE2 /* LaunchAtLoginController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LaunchAtLoginController.h; sourceTree = "<group>"; };
+		932D47391D220D63004BCFE2 /* LaunchAtLoginController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LaunchAtLoginController.m; sourceTree = "<group>"; };
 		9330F1341CEAB4C400687EC8 /* ServiceCom.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ServiceCom.swift; sourceTree = "<group>"; };
 		9330F1361CEBF87200687EC8 /* Network.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Network.swift; sourceTree = "<group>"; };
 		9330F13A1CF534E500687EC8 /* NetworkInfoCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkInfoCell.swift; sourceTree = "<group>"; };
@@ -100,6 +103,8 @@
 				932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */,
 				932D47341D1CDC9B004BCFE2 /* AboutViewController.swift */,
 				932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */,
+				932D47381D220D63004BCFE2 /* LaunchAtLoginController.h */,
+				932D47391D220D63004BCFE2 /* LaunchAtLoginController.m */,
 			);
 			path = "ZeroTier One";
 			sourceTree = "<group>";
@@ -182,6 +187,7 @@
 				9330F1371CEBF87200687EC8 /* Network.swift in Sources */,
 				932D472D1D138B0C004BCFE2 /* NetworkMonitor.swift in Sources */,
 				932D47321D1CD861004BCFE2 /* PreferencesViewController.swift in Sources */,
+				932D473A1D220D63004BCFE2 /* LaunchAtLoginController.m in Sources */,
 				93326BDC1CE7C816005CA2AC /* AppDelegate.swift in Sources */,
 				93DAFE4B1CFE53CA00547CC4 /* AuthtokenCopy.m in Sources */,
 				9330F13B1CF534E500687EC8 /* NetworkInfoCell.swift in Sources */,

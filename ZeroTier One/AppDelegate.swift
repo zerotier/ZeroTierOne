@@ -28,6 +28,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var networks = [Network]()
 
     func applicationDidFinishLaunching(aNotification: NSNotification) {
+
+        let defaults = NSUserDefaults.standardUserDefaults()
+        let defaultsDict = ["firstRun": true]
+        defaults.registerDefaults(defaultsDict)
+
+
+        if defaults.boolForKey("firstRun") {
+            defaults.setBool(false, forKey: "firstRun")
+            defaults.synchronize()
+
+            let loginController = LaunchAtLoginController()
+
+            let bundle = NSBundle.mainBundle()
+            let bundleURL = bundle.bundleURL
+
+            loginController.setLaunchAtLogin(true, forURL: bundleURL)
+        }
+
+
+
+
         let nc = NSNotificationCenter.defaultCenter()
         nc.addObserver(self, selector: #selector(onNetworkListUpdated(_:)), name: networkUpdateKey, object: nil)
 
