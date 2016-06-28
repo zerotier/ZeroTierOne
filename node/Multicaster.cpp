@@ -228,7 +228,9 @@ void Multicaster::send(
 				gs.lastExplicitGather = now;
 				SharedPtr<Peer> explicitGatherPeers[2];
 				explicitGatherPeers[0] = RR->topology->getBestRoot();
-				explicitGatherPeers[1] = RR->topology->getPeer(Network::controllerFor(nwid));
+				const Address nwidc(Network::controllerFor(nwid));
+				if (nwidc != RR->identity.address())
+					explicitGatherPeers[1] = RR->topology->getPeer(nwidc);
 				for(unsigned int k=0;k<2;++k) {
 					const SharedPtr<Peer> &p = explicitGatherPeers[k];
 					if (!p)
