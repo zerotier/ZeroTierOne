@@ -61,13 +61,16 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
 
 		SharedPtr<Peer> peer(RR->topology->getPeer(sourceAddress));
 		if (peer) {
-			if (!dearmor(peer->key())) {
-				TRACE("dropped packet from %s(%s), MAC authentication failed (size: %u)",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),size());
-				return true;
-			}
-			if (!uncompress()) {
-				TRACE("dropped packet from %s(%s), compressed data invalid",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
-				return true;
+			if (!_authenticated) {
+				if (!dearmor(peer->key())) {
+					TRACE("dropped packet from %s(%s), MAC authentication failed (size: %u)",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),size());
+					return true;
+				}
+				if (!uncompress()) {
+					TRACE("dropped packet from %s(%s), compressed data invalid",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+					return true;
+				}
+				_authenticated = true;
 			}
 
 			const Packet::Verb v = verb();
@@ -88,7 +91,13 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
 				case Packet::VERB_ECHO:                           return _doECHO(RR,peer);
 				case Packet::VERB_MULTICAST_LIKE:                 return _doMULTICAST_LIKE(RR,peer);
 				case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return _doNETWORK_MEMBERSHIP_CERTIFICATE(RR,peer);
-				case Packet::VERB_NETWORK_CONFIG_REQUEST:         return _doNETWORK_CONFIG_REQUEST(RR,peer);
+				case Packet::VERB_NETWORK_CONFIG_REQUEST:
+					if ((RR->dpEnabled > 0)&&(!deferred)) {
+						RR->dp->enqueue(this);
+						return true;
+					} else {
+						return _doNETWORK_CONFIG_REQUEST(RR,peer);
+					}
 				case Packet::VERB_NETWORK_CONFIG_REFRESH:         return _doNETWORK_CONFIG_REFRESH(RR,peer);
 				case Packet::VERB_MULTICAST_GATHER:               return _doMULTICAST_GATHER(RR,peer);
 				case Packet::VERB_MULTICAST_FRAME:                return _doMULTICAST_FRAME(RR,peer);
