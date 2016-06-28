@@ -418,8 +418,380 @@ SqliteNetworkController::~SqliteNetworkController()
 
 NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &metaData,NetworkConfig &nc)
 {
-	Mutex::Lock _l(_lock);
-	return _doNetworkConfigRequest(fromAddr,signingId,identity,nwid,metaData,nc);
+	if (((!signingId)||(!signingId.hasPrivate()))||(signingId.address().toInt() != (nwid >> 24))) {
+		return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+	}
+
+	const uint64_t now = OSUtils::now();
+
+	NetworkRecord network;
+	memset(&network,0,sizeof(network));
+	Utils::snprintf(network.id,sizeof(network.id),"%.16llx",(unsigned long long)nwid);
+
+	MemberRecord member;
+	memset(&member,0,sizeof(member));
+	Utils::snprintf(member.nodeId,sizeof(member.nodeId),"%.10llx",(unsigned long long)identity.address().toInt());
+
+	{ // begin lock
+		Mutex::Lock _l(_lock);
+
+		// Check rate limit circuit breaker to prevent flooding
+		{
+			uint64_t &lrt = _lastRequestTime[std::pair<uint64_t,uint64_t>(identity.address().toInt(),nwid)];
+			if ((now - lrt) <= ZT_NETCONF_MIN_REQUEST_PERIOD)
+				return NetworkController::NETCONF_QUERY_IGNORE;
+			lrt = now;
+		}
+
+		_backupNeeded = true;
+
+		// Create Node record or do full identity check if we already have one
+
+		sqlite3_reset(_sGetNodeIdentity);
+		sqlite3_bind_text(_sGetNodeIdentity,1,member.nodeId,10,SQLITE_STATIC);
+		if (sqlite3_step(_sGetNodeIdentity) == SQLITE_ROW) {
+			try {
+				Identity alreadyKnownIdentity((const char *)sqlite3_column_text(_sGetNodeIdentity,0));
+				if (alreadyKnownIdentity != identity)
+					return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
+			} catch ( ... ) { // identity stored in database is not valid or is NULL
+				return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
+			}
+		} else {
+			std::string idstr(identity.toString(false));
+			sqlite3_reset(_sCreateOrReplaceNode);
+			sqlite3_bind_text(_sCreateOrReplaceNode,1,member.nodeId,10,SQLITE_STATIC);
+			sqlite3_bind_text(_sCreateOrReplaceNode,2,idstr.c_str(),-1,SQLITE_STATIC);
+			if (sqlite3_step(_sCreateOrReplaceNode) != SQLITE_DONE) {
+				return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+			}
+		}
+
+		// Fetch Network record
+
+		sqlite3_reset(_sGetNetworkById);
+		sqlite3_bind_text(_sGetNetworkById,1,network.id,16,SQLITE_STATIC);
+		if (sqlite3_step(_sGetNetworkById) == SQLITE_ROW) {
+			network.name = (const char *)sqlite3_column_text(_sGetNetworkById,0);
+			network.isPrivate = (sqlite3_column_int(_sGetNetworkById,1) > 0);
+			network.enableBroadcast = (sqlite3_column_int(_sGetNetworkById,2) > 0);
+			network.allowPassiveBridging = (sqlite3_column_int(_sGetNetworkById,3) > 0);
+			network.flags = sqlite3_column_int(_sGetNetworkById,4);
+			network.multicastLimit = sqlite3_column_int(_sGetNetworkById,5);
+			network.creationTime = (uint64_t)sqlite3_column_int64(_sGetNetworkById,6);
+			network.revision = (uint64_t)sqlite3_column_int64(_sGetNetworkById,7);
+			network.memberRevisionCounter = (uint64_t)sqlite3_column_int64(_sGetNetworkById,8);
+		} else {
+			return NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND;
+		}
+
+		// Fetch Member record
+
+		bool foundMember = false;
+		sqlite3_reset(_sGetMember);
+		sqlite3_bind_text(_sGetMember,1,network.id,16,SQLITE_STATIC);
+		sqlite3_bind_text(_sGetMember,2,member.nodeId,10,SQLITE_STATIC);
+		if (sqlite3_step(_sGetMember) == SQLITE_ROW) {
+			foundMember = true;
+			member.rowid = (int64_t)sqlite3_column_int64(_sGetMember,0);
+			member.authorized = (sqlite3_column_int(_sGetMember,1) > 0);
+			member.activeBridge = (sqlite3_column_int(_sGetMember,2) > 0);
+		}
+
+		// Create Member record for unknown nodes, auto-authorizing if network is public
+
+		if (!foundMember) {
+			member.authorized = (network.isPrivate ? false : true);
+			member.activeBridge = false;
+			sqlite3_reset(_sCreateMember);
+			sqlite3_bind_text(_sCreateMember,1,network.id,16,SQLITE_STATIC);
+			sqlite3_bind_text(_sCreateMember,2,member.nodeId,10,SQLITE_STATIC);
+			sqlite3_bind_int(_sCreateMember,3,(member.authorized ? 1 : 0));
+			sqlite3_bind_text(_sCreateMember,4,network.id,16,SQLITE_STATIC);
+			if (sqlite3_step(_sCreateMember) != SQLITE_DONE) {
+				return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+			}
+			member.rowid = (int64_t)sqlite3_last_insert_rowid(_db);
+
+			sqlite3_reset(_sIncrementMemberRevisionCounter);
+			sqlite3_bind_text(_sIncrementMemberRevisionCounter,1,network.id,16,SQLITE_STATIC);
+			sqlite3_step(_sIncrementMemberRevisionCounter);
+		}
+
+		// Update NodeHistory with new log entry and delete expired entries
+
+		{
+			int64_t nextVC = 1;
+			sqlite3_reset(_sGetMaxNodeHistoryNetworkVisitCounter);
+			sqlite3_bind_text(_sGetMaxNodeHistoryNetworkVisitCounter,1,network.id,16,SQLITE_STATIC);
+			sqlite3_bind_text(_sGetMaxNodeHistoryNetworkVisitCounter,2,member.nodeId,10,SQLITE_STATIC);
+			if (sqlite3_step(_sGetMaxNodeHistoryNetworkVisitCounter) == SQLITE_ROW) {
+				nextVC = (int64_t)sqlite3_column_int64(_sGetMaxNodeHistoryNetworkVisitCounter,0) + 1;
+			}
+
+			std::string fastr;
+			if (fromAddr)
+				fastr = fromAddr.toString();
+
+			sqlite3_reset(_sAddNodeHistoryEntry);
+			sqlite3_bind_text(_sAddNodeHistoryEntry,1,member.nodeId,10,SQLITE_STATIC);
+			sqlite3_bind_text(_sAddNodeHistoryEntry,2,network.id,16,SQLITE_STATIC);
+			sqlite3_bind_int64(_sAddNodeHistoryEntry,3,nextVC);
+			sqlite3_bind_int(_sAddNodeHistoryEntry,4,(member.authorized ? 1 : 0));
+			sqlite3_bind_int64(_sAddNodeHistoryEntry,5,(long long)now);
+			sqlite3_bind_int(_sAddNodeHistoryEntry,6,(int)metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0));
+			sqlite3_bind_int(_sAddNodeHistoryEntry,7,(int)metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0));
+			sqlite3_bind_int(_sAddNodeHistoryEntry,8,(int)metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0));
+			sqlite3_bind_text(_sAddNodeHistoryEntry,9,metaData.data(),-1,SQLITE_STATIC);
+			if (fastr.length() > 0)
+				sqlite3_bind_text(_sAddNodeHistoryEntry,10,fastr.c_str(),-1,SQLITE_STATIC);
+			else sqlite3_bind_null(_sAddNodeHistoryEntry,10);
+			sqlite3_step(_sAddNodeHistoryEntry);
+
+			nextVC -= ZT_NETCONF_NODE_HISTORY_LENGTH;
+			if (nextVC >= 0) {
+				sqlite3_reset(_sDeleteOldNodeHistoryEntries);
+				sqlite3_bind_text(_sDeleteOldNodeHistoryEntries,1,network.id,16,SQLITE_STATIC);
+				sqlite3_bind_text(_sDeleteOldNodeHistoryEntries,2,member.nodeId,10,SQLITE_STATIC);
+				sqlite3_bind_int64(_sDeleteOldNodeHistoryEntries,3,nextVC);
+				sqlite3_step(_sDeleteOldNodeHistoryEntries);
+			}
+		}
+
+		// Check member authorization
+
+		if (!member.authorized)
+			return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
+
+		// Create network configuration -- we create both legacy and new types and send both for backward compatibility
+
+		// New network config structure
+		nc.networkId = Utils::hexStrToU64(network.id);
+		nc.type = network.isPrivate ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
+		nc.timestamp = now;
+		nc.revision = network.revision;
+		nc.issuedTo = member.nodeId;
+		if (network.enableBroadcast) nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
+		if (network.allowPassiveBridging) nc.flags |= ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING;
+		memcpy(nc.name,network.name,std::min((unsigned int)ZT_MAX_NETWORK_SHORT_NAME_LENGTH,(unsigned int)strlen(network.name)));
+
+		{	// TODO: right now only etherTypes are supported in rules
+			std::vector<int> allowedEtherTypes;
+			sqlite3_reset(_sGetEtherTypesFromRuleTable);
+			sqlite3_bind_text(_sGetEtherTypesFromRuleTable,1,network.id,16,SQLITE_STATIC);
+			while (sqlite3_step(_sGetEtherTypesFromRuleTable) == SQLITE_ROW) {
+				if (sqlite3_column_type(_sGetEtherTypesFromRuleTable,0) == SQLITE_NULL) {
+					allowedEtherTypes.clear();
+					allowedEtherTypes.push_back(0); // NULL 'allow' matches ANY
+					break;
+				} else {
+					int et = sqlite3_column_int(_sGetEtherTypesFromRuleTable,0);
+					if ((et >= 0)&&(et <= 0xffff))
+						allowedEtherTypes.push_back(et);
+				}
+			}
+			std::sort(allowedEtherTypes.begin(),allowedEtherTypes.end());
+			allowedEtherTypes.erase(std::unique(allowedEtherTypes.begin(),allowedEtherTypes.end()),allowedEtherTypes.end());
+
+			for(long i=0;i<(long)allowedEtherTypes.size();++i) {
+				if ((nc.ruleCount + 2) > ZT_MAX_NETWORK_RULES)
+					break;
+				if (allowedEtherTypes[i] > 0) {
+					nc.rules[nc.ruleCount].t = ZT_NETWORK_RULE_MATCH_ETHERTYPE;
+					nc.rules[nc.ruleCount].v.etherType = (uint16_t)allowedEtherTypes[i];
+					++nc.ruleCount;
+				}
+				nc.rules[nc.ruleCount++].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
+			}
+		}
+
+		nc.multicastLimit = network.multicastLimit;
+
+		bool amActiveBridge = false;
+		{
+			sqlite3_reset(_sGetActiveBridges);
+			sqlite3_bind_text(_sGetActiveBridges,1,network.id,16,SQLITE_STATIC);
+			while (sqlite3_step(_sGetActiveBridges) == SQLITE_ROW) {
+				const char *ab = (const char *)sqlite3_column_text(_sGetActiveBridges,0);
+				if ((ab)&&(strlen(ab) == 10)) {
+					const uint64_t ab2 = Utils::hexStrToU64(ab);
+					nc.addSpecialist(Address(ab2),ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
+					if (!strcmp(member.nodeId,ab))
+						amActiveBridge = true;
+				}
+			}
+		}
+
+		// Do not send relays to 1.1.0 since it had a serious bug in using them
+		// 1.1.0 will still work, it'll just fall back to roots instead of using network preferred relays
+		if (!((metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0) == 1)&&(metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0) == 1)&&(metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0) == 0))) {
+			sqlite3_reset(_sGetRelays);
+			sqlite3_bind_text(_sGetRelays,1,network.id,16,SQLITE_STATIC);
+			while (sqlite3_step(_sGetRelays) == SQLITE_ROW) {
+				const char *n = (const char *)sqlite3_column_text(_sGetRelays,0);
+				const char *a = (const char *)sqlite3_column_text(_sGetRelays,1);
+				if ((n)&&(a)) {
+					Address node(n);
+					InetAddress addr(a);
+					if (node)
+						nc.addSpecialist(node,ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY);
+				}
+			}
+		}
+
+		sqlite3_reset(_sGetRoutes);
+		sqlite3_bind_text(_sGetRoutes,1,network.id,16,SQLITE_STATIC);
+		while ((sqlite3_step(_sGetRoutes) == SQLITE_ROW)&&(nc.routeCount < ZT_MAX_NETWORK_ROUTES)) {
+			ZT_VirtualNetworkRoute *r = &(nc.routes[nc.routeCount]);
+			memset(r,0,sizeof(ZT_VirtualNetworkRoute));
+			switch(sqlite3_column_int(_sGetRoutes,3)) { // ipVersion
+				case 4:
+					*(reinterpret_cast<InetAddress *>(&(r->target))) = InetAddress((const void *)((const char *)sqlite3_column_blob(_sGetRoutes,0) + 12),4,(unsigned int)sqlite3_column_int(_sGetRoutes,2));
+					break;
+				case 6:
+					*(reinterpret_cast<InetAddress *>(&(r->target))) = InetAddress((const void *)sqlite3_column_blob(_sGetRoutes,0),16,(unsigned int)sqlite3_column_int(_sGetRoutes,2));
+					break;
+				default:
+					continue;
+			}
+			if (sqlite3_column_type(_sGetRoutes,1) != SQLITE_NULL) {
+				switch(sqlite3_column_int(_sGetRoutes,3)) { // ipVersion
+					case 4:
+						*(reinterpret_cast<InetAddress *>(&(r->via))) = InetAddress((const void *)((const char *)sqlite3_column_blob(_sGetRoutes,1) + 12),4,0);
+						break;
+					case 6:
+						*(reinterpret_cast<InetAddress *>(&(r->via))) = InetAddress((const void *)sqlite3_column_blob(_sGetRoutes,1),16,0);
+						break;
+					default:
+						continue;
+				}
+			}
+			r->flags = (uint16_t)sqlite3_column_int(_sGetRoutes,4);
+			r->metric = (uint16_t)sqlite3_column_int(_sGetRoutes,5);
+			++nc.routeCount;
+		}
+
+		if (((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_RFC4193) != 0)&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
+			nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt());
+			nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
+		}
+		if (((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_6PLANE) != 0)&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
+			nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv66plane(nwid,identity.address().toInt());
+			nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
+		}
+
+		if ((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4) != 0) {
+			bool haveStaticIpAssignment = false;
+
+			sqlite3_reset(_sGetIpAssignmentsForNode);
+			sqlite3_bind_text(_sGetIpAssignmentsForNode,1,network.id,16,SQLITE_STATIC);
+			sqlite3_bind_text(_sGetIpAssignmentsForNode,2,member.nodeId,10,SQLITE_STATIC);
+			sqlite3_bind_int(_sGetIpAssignmentsForNode,3,4); // 4 == IPv4
+			while (sqlite3_step(_sGetIpAssignmentsForNode) == SQLITE_ROW) {
+				const unsigned char *const ip = (const unsigned char *)sqlite3_column_blob(_sGetIpAssignmentsForNode,1);
+				if ((!ip)||(sqlite3_column_bytes(_sGetIpAssignmentsForNode,1) != 16))
+					continue;
+				int ipNetmaskBits = sqlite3_column_int(_sGetIpAssignmentsForNode,2);
+				if ((ipNetmaskBits <= 0)||(ipNetmaskBits > 32))
+					continue;
+				if (sqlite3_column_int(_sGetIpAssignmentsForNode,0) == 0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/) {
+					if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
+						struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc.staticIps[nc.staticIpCount++]));
+						v4ip->sin_family = AF_INET;
+						v4ip->sin_port = Utils::hton((uint16_t)ipNetmaskBits);
+						memcpy(&(v4ip->sin_addr.s_addr),ip + 12,4);
+					}
+					haveStaticIpAssignment = true;
+				}
+			}
+
+			if ((!haveStaticIpAssignment)&&(!amActiveBridge)) {
+				// Attempt to auto-assign an IPv4 address from an available routed pool if there is one
+				sqlite3_reset(_sGetIpAssignmentPools);
+				sqlite3_bind_text(_sGetIpAssignmentPools,1,network.id,16,SQLITE_STATIC);
+				sqlite3_bind_int(_sGetIpAssignmentPools,2,4); // 4 == IPv4
+
+				while (sqlite3_step(_sGetIpAssignmentPools) == SQLITE_ROW) {
+					const unsigned char *ipRangeStartB = reinterpret_cast<const unsigned char *>(sqlite3_column_blob(_sGetIpAssignmentPools,0));
+					const unsigned char *ipRangeEndB = reinterpret_cast<const unsigned char *>(sqlite3_column_blob(_sGetIpAssignmentPools,1));
+					if ((!ipRangeStartB)||(!ipRangeEndB)||(sqlite3_column_bytes(_sGetIpAssignmentPools,0) != 16)||(sqlite3_column_bytes(_sGetIpAssignmentPools,1) != 16))
+						continue;
+
+					uint32_t ipRangeStart = Utils::ntoh(*(reinterpret_cast<const uint32_t *>(ipRangeStartB + 12)));
+					uint32_t ipRangeEnd = Utils::ntoh(*(reinterpret_cast<const uint32_t *>(ipRangeEndB + 12)));
+					if ((ipRangeEnd <= ipRangeStart)||(ipRangeStart == 0))
+						continue;
+					uint32_t ipRangeLen = ipRangeEnd - ipRangeStart;
+
+					// Start with the LSB of the member's address
+					uint32_t ipTrialCounter = (uint32_t)(identity.address().toInt() & 0xffffffff);
+
+					for(uint32_t k=ipRangeStart,l=0;(k<=ipRangeEnd)&&(l < 1000000);++k,++l) {
+						uint32_t ip = (ipRangeLen > 0) ? (ipRangeStart + (ipTrialCounter % ipRangeLen)) : ipRangeStart;
+						++ipTrialCounter;
+						if ((ip & 0x000000ff) == 0x000000ff)
+							continue; // don't allow addresses that end in .255
+
+						// Check if this IPv4 IP is within a local-to-Ethernet routed network
+						int routedNetmaskBits = 0;
+						for(unsigned int rk=0;rk<nc.routeCount;++rk) {
+							if ((!nc.routes[rk].via.ss_family)&&(nc.routes[rk].target.ss_family == AF_INET)) {
+								uint32_t targetIp = Utils::ntoh((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc.routes[rk].target))->sin_addr.s_addr));
+								int targetBits = Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc.routes[rk].target))->sin_port));
+								if ((ip & (0xffffffff << (32 - targetBits))) == targetIp) {
+									routedNetmaskBits = targetBits;
+									break;
+								}
+							}
+						}
+
+						// If it's routed, then try to claim and assign it and if successful end loop
+						if (routedNetmaskBits > 0) {
+							uint32_t ipBlob[4]; // actually a 16-byte blob, we put IPv4s in the last 4 bytes
+							ipBlob[0] = 0; ipBlob[1] = 0; ipBlob[2] = 0; ipBlob[3] = Utils::hton(ip);
+							sqlite3_reset(_sCheckIfIpIsAllocated);
+							sqlite3_bind_text(_sCheckIfIpIsAllocated,1,network.id,16,SQLITE_STATIC);
+							sqlite3_bind_blob(_sCheckIfIpIsAllocated,2,(const void *)ipBlob,16,SQLITE_STATIC);
+							sqlite3_bind_int(_sCheckIfIpIsAllocated,3,4); // 4 == IPv4
+							sqlite3_bind_int(_sCheckIfIpIsAllocated,4,(int)0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/);
+							if (sqlite3_step(_sCheckIfIpIsAllocated) != SQLITE_ROW) {
+								// No rows returned, so the IP is available
+								sqlite3_reset(_sAllocateIp);
+								sqlite3_bind_text(_sAllocateIp,1,network.id,16,SQLITE_STATIC);
+								sqlite3_bind_text(_sAllocateIp,2,member.nodeId,10,SQLITE_STATIC);
+								sqlite3_bind_int(_sAllocateIp,3,(int)0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/);
+								sqlite3_bind_blob(_sAllocateIp,4,(const void *)ipBlob,16,SQLITE_STATIC);
+								sqlite3_bind_int(_sAllocateIp,5,routedNetmaskBits); // IP netmask bits from matching route
+								sqlite3_bind_int(_sAllocateIp,6,4); // 4 == IPv4
+								if (sqlite3_step(_sAllocateIp) == SQLITE_DONE) {
+									if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
+										struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc.staticIps[nc.staticIpCount++]));
+										v4ip->sin_family = AF_INET;
+										v4ip->sin_port = Utils::hton((uint16_t)routedNetmaskBits);
+										v4ip->sin_addr.s_addr = Utils::hton(ip);
+									}
+									haveStaticIpAssignment = true;
+									break;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	} // end lock
+
+	// Perform signing outside lock to enable concurrency
+	if (network.isPrivate) {
+		CertificateOfMembership com(now,ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA,nwid,identity.address());
+		if (com.sign(signingId)) {
+			nc.com = com;
+		} else {
+			return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+		}
+	}
+
+	return NetworkController::NETCONF_QUERY_OK;
 }
 
 unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
@@ -1617,385 +1989,6 @@ unsigned int SqliteNetworkController::_doCPGet(
 	}
 
 	return 404;
-}
-
-NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &metaData,NetworkConfig &nc)
-{
-	// Assumes _lock is locked
-
-	if (((!signingId)||(!signingId.hasPrivate()))||(signingId.address().toInt() != (nwid >> 24))) {
-		return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
-	}
-
-	// Note: we can't reuse prepared statements that return const char * pointers without
-	// making our own copy in e.g. a std::string first.
-
-	//const bool clientIs104 = (Utils::compareVersion(metaData.majorVersion,metaData.minorVersion,metaData.revision,1,0,4) >= 0);
-	const uint64_t now = OSUtils::now();
-
-	// Check rate limit circuit breaker to prevent flooding
-	{
-		uint64_t &lrt = _lastRequestTime[std::pair<uint64_t,uint64_t>(identity.address().toInt(),nwid)];
-		if ((now - lrt) <= ZT_NETCONF_MIN_REQUEST_PERIOD)
-			return NetworkController::NETCONF_QUERY_IGNORE;
-		lrt = now;
-	}
-
-	_backupNeeded = true;
-
-	NetworkRecord network;
-	memset(&network,0,sizeof(network));
-	Utils::snprintf(network.id,sizeof(network.id),"%.16llx",(unsigned long long)nwid);
-
-	MemberRecord member;
-	memset(&member,0,sizeof(member));
-	Utils::snprintf(member.nodeId,sizeof(member.nodeId),"%.10llx",(unsigned long long)identity.address().toInt());
-
-	// Create Node record or do full identity check if we already have one
-
-	sqlite3_reset(_sGetNodeIdentity);
-	sqlite3_bind_text(_sGetNodeIdentity,1,member.nodeId,10,SQLITE_STATIC);
-	if (sqlite3_step(_sGetNodeIdentity) == SQLITE_ROW) {
-		try {
-			Identity alreadyKnownIdentity((const char *)sqlite3_column_text(_sGetNodeIdentity,0));
-			if (alreadyKnownIdentity != identity)
-				return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
-		} catch ( ... ) { // identity stored in database is not valid or is NULL
-			return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
-		}
-	} else {
-		std::string idstr(identity.toString(false));
-		sqlite3_reset(_sCreateOrReplaceNode);
-		sqlite3_bind_text(_sCreateOrReplaceNode,1,member.nodeId,10,SQLITE_STATIC);
-		sqlite3_bind_text(_sCreateOrReplaceNode,2,idstr.c_str(),-1,SQLITE_STATIC);
-		if (sqlite3_step(_sCreateOrReplaceNode) != SQLITE_DONE) {
-			return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
-		}
-	}
-
-	// Fetch Network record
-
-	sqlite3_reset(_sGetNetworkById);
-	sqlite3_bind_text(_sGetNetworkById,1,network.id,16,SQLITE_STATIC);
-	if (sqlite3_step(_sGetNetworkById) == SQLITE_ROW) {
-		network.name = (const char *)sqlite3_column_text(_sGetNetworkById,0);
-		network.isPrivate = (sqlite3_column_int(_sGetNetworkById,1) > 0);
-		network.enableBroadcast = (sqlite3_column_int(_sGetNetworkById,2) > 0);
-		network.allowPassiveBridging = (sqlite3_column_int(_sGetNetworkById,3) > 0);
-		network.flags = sqlite3_column_int(_sGetNetworkById,4);
-		network.multicastLimit = sqlite3_column_int(_sGetNetworkById,5);
-		network.creationTime = (uint64_t)sqlite3_column_int64(_sGetNetworkById,6);
-		network.revision = (uint64_t)sqlite3_column_int64(_sGetNetworkById,7);
-		network.memberRevisionCounter = (uint64_t)sqlite3_column_int64(_sGetNetworkById,8);
-	} else {
-		return NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND;
-	}
-
-	// Fetch Member record
-
-	bool foundMember = false;
-	sqlite3_reset(_sGetMember);
-	sqlite3_bind_text(_sGetMember,1,network.id,16,SQLITE_STATIC);
-	sqlite3_bind_text(_sGetMember,2,member.nodeId,10,SQLITE_STATIC);
-	if (sqlite3_step(_sGetMember) == SQLITE_ROW) {
-		foundMember = true;
-		member.rowid = (int64_t)sqlite3_column_int64(_sGetMember,0);
-		member.authorized = (sqlite3_column_int(_sGetMember,1) > 0);
-		member.activeBridge = (sqlite3_column_int(_sGetMember,2) > 0);
-	}
-
-	// Create Member record for unknown nodes, auto-authorizing if network is public
-
-	if (!foundMember) {
-		member.authorized = (network.isPrivate ? false : true);
-		member.activeBridge = false;
-		sqlite3_reset(_sCreateMember);
-		sqlite3_bind_text(_sCreateMember,1,network.id,16,SQLITE_STATIC);
-		sqlite3_bind_text(_sCreateMember,2,member.nodeId,10,SQLITE_STATIC);
-		sqlite3_bind_int(_sCreateMember,3,(member.authorized ? 1 : 0));
-		sqlite3_bind_text(_sCreateMember,4,network.id,16,SQLITE_STATIC);
-		if (sqlite3_step(_sCreateMember) != SQLITE_DONE) {
-			return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
-		}
-		member.rowid = (int64_t)sqlite3_last_insert_rowid(_db);
-
-		sqlite3_reset(_sIncrementMemberRevisionCounter);
-		sqlite3_bind_text(_sIncrementMemberRevisionCounter,1,network.id,16,SQLITE_STATIC);
-		sqlite3_step(_sIncrementMemberRevisionCounter);
-	}
-
-	// Update NodeHistory with new log entry and delete expired entries
-
-	{
-		int64_t nextVC = 1;
-		sqlite3_reset(_sGetMaxNodeHistoryNetworkVisitCounter);
-		sqlite3_bind_text(_sGetMaxNodeHistoryNetworkVisitCounter,1,network.id,16,SQLITE_STATIC);
-		sqlite3_bind_text(_sGetMaxNodeHistoryNetworkVisitCounter,2,member.nodeId,10,SQLITE_STATIC);
-		if (sqlite3_step(_sGetMaxNodeHistoryNetworkVisitCounter) == SQLITE_ROW) {
-			nextVC = (int64_t)sqlite3_column_int64(_sGetMaxNodeHistoryNetworkVisitCounter,0) + 1;
-		}
-
-		std::string fastr;
-		if (fromAddr)
-			fastr = fromAddr.toString();
-
-		sqlite3_reset(_sAddNodeHistoryEntry);
-		sqlite3_bind_text(_sAddNodeHistoryEntry,1,member.nodeId,10,SQLITE_STATIC);
-		sqlite3_bind_text(_sAddNodeHistoryEntry,2,network.id,16,SQLITE_STATIC);
-		sqlite3_bind_int64(_sAddNodeHistoryEntry,3,nextVC);
-		sqlite3_bind_int(_sAddNodeHistoryEntry,4,(member.authorized ? 1 : 0));
-		sqlite3_bind_int64(_sAddNodeHistoryEntry,5,(long long)now);
-		sqlite3_bind_int(_sAddNodeHistoryEntry,6,(int)metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0));
-		sqlite3_bind_int(_sAddNodeHistoryEntry,7,(int)metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0));
-		sqlite3_bind_int(_sAddNodeHistoryEntry,8,(int)metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0));
-		sqlite3_bind_text(_sAddNodeHistoryEntry,9,metaData.data(),-1,SQLITE_STATIC);
-		if (fastr.length() > 0)
-			sqlite3_bind_text(_sAddNodeHistoryEntry,10,fastr.c_str(),-1,SQLITE_STATIC);
-		else sqlite3_bind_null(_sAddNodeHistoryEntry,10);
-		sqlite3_step(_sAddNodeHistoryEntry);
-
-		nextVC -= ZT_NETCONF_NODE_HISTORY_LENGTH;
-		if (nextVC >= 0) {
-			sqlite3_reset(_sDeleteOldNodeHistoryEntries);
-			sqlite3_bind_text(_sDeleteOldNodeHistoryEntries,1,network.id,16,SQLITE_STATIC);
-			sqlite3_bind_text(_sDeleteOldNodeHistoryEntries,2,member.nodeId,10,SQLITE_STATIC);
-			sqlite3_bind_int64(_sDeleteOldNodeHistoryEntries,3,nextVC);
-			sqlite3_step(_sDeleteOldNodeHistoryEntries);
-		}
-	}
-
-	// Check member authorization
-
-	if (!member.authorized)
-		return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
-
-	// Create network configuration -- we create both legacy and new types and send both for backward compatibility
-
-	// New network config structure
-	nc.networkId = Utils::hexStrToU64(network.id);
-	nc.type = network.isPrivate ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
-	nc.timestamp = now;
-	nc.revision = network.revision;
-	nc.issuedTo = member.nodeId;
-	if (network.enableBroadcast) nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
-	if (network.allowPassiveBridging) nc.flags |= ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING;
-	memcpy(nc.name,network.name,std::min((unsigned int)ZT_MAX_NETWORK_SHORT_NAME_LENGTH,(unsigned int)strlen(network.name)));
-
-	{	// TODO: right now only etherTypes are supported in rules
-		std::vector<int> allowedEtherTypes;
-		sqlite3_reset(_sGetEtherTypesFromRuleTable);
-		sqlite3_bind_text(_sGetEtherTypesFromRuleTable,1,network.id,16,SQLITE_STATIC);
-		while (sqlite3_step(_sGetEtherTypesFromRuleTable) == SQLITE_ROW) {
-			if (sqlite3_column_type(_sGetEtherTypesFromRuleTable,0) == SQLITE_NULL) {
-				allowedEtherTypes.clear();
-				allowedEtherTypes.push_back(0); // NULL 'allow' matches ANY
-				break;
-			} else {
-				int et = sqlite3_column_int(_sGetEtherTypesFromRuleTable,0);
-				if ((et >= 0)&&(et <= 0xffff))
-					allowedEtherTypes.push_back(et);
-			}
-		}
-		std::sort(allowedEtherTypes.begin(),allowedEtherTypes.end());
-		allowedEtherTypes.erase(std::unique(allowedEtherTypes.begin(),allowedEtherTypes.end()),allowedEtherTypes.end());
-
-		for(long i=0;i<(long)allowedEtherTypes.size();++i) {
-			if ((nc.ruleCount + 2) > ZT_MAX_NETWORK_RULES)
-				break;
-			if (allowedEtherTypes[i] > 0) {
-				nc.rules[nc.ruleCount].t = ZT_NETWORK_RULE_MATCH_ETHERTYPE;
-				nc.rules[nc.ruleCount].v.etherType = (uint16_t)allowedEtherTypes[i];
-				++nc.ruleCount;
-			}
-			nc.rules[nc.ruleCount++].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
-		}
-	}
-
-	nc.multicastLimit = network.multicastLimit;
-
-	bool amActiveBridge = false;
-	{
-		sqlite3_reset(_sGetActiveBridges);
-		sqlite3_bind_text(_sGetActiveBridges,1,network.id,16,SQLITE_STATIC);
-		while (sqlite3_step(_sGetActiveBridges) == SQLITE_ROW) {
-			const char *ab = (const char *)sqlite3_column_text(_sGetActiveBridges,0);
-			if ((ab)&&(strlen(ab) == 10)) {
-				const uint64_t ab2 = Utils::hexStrToU64(ab);
-				nc.addSpecialist(Address(ab2),ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
-				if (!strcmp(member.nodeId,ab))
-					amActiveBridge = true;
-			}
-		}
-	}
-
-	// Do not send relays to 1.1.0 since it had a serious bug in using them
-	// 1.1.0 will still work, it'll just fall back to roots instead of using network preferred relays
-	if (!((metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0) == 1)&&(metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0) == 1)&&(metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0) == 0))) {
-		sqlite3_reset(_sGetRelays);
-		sqlite3_bind_text(_sGetRelays,1,network.id,16,SQLITE_STATIC);
-		while (sqlite3_step(_sGetRelays) == SQLITE_ROW) {
-			const char *n = (const char *)sqlite3_column_text(_sGetRelays,0);
-			const char *a = (const char *)sqlite3_column_text(_sGetRelays,1);
-			if ((n)&&(a)) {
-				Address node(n);
-				InetAddress addr(a);
-				if (node)
-					nc.addSpecialist(node,ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY);
-			}
-		}
-	}
-
-	sqlite3_reset(_sGetRoutes);
-	sqlite3_bind_text(_sGetRoutes,1,network.id,16,SQLITE_STATIC);
-	while ((sqlite3_step(_sGetRoutes) == SQLITE_ROW)&&(nc.routeCount < ZT_MAX_NETWORK_ROUTES)) {
-		ZT_VirtualNetworkRoute *r = &(nc.routes[nc.routeCount]);
-		memset(r,0,sizeof(ZT_VirtualNetworkRoute));
-		switch(sqlite3_column_int(_sGetRoutes,3)) { // ipVersion
-			case 4:
-				*(reinterpret_cast<InetAddress *>(&(r->target))) = InetAddress((const void *)((const char *)sqlite3_column_blob(_sGetRoutes,0) + 12),4,(unsigned int)sqlite3_column_int(_sGetRoutes,2));
-				break;
-			case 6:
-				*(reinterpret_cast<InetAddress *>(&(r->target))) = InetAddress((const void *)sqlite3_column_blob(_sGetRoutes,0),16,(unsigned int)sqlite3_column_int(_sGetRoutes,2));
-				break;
-			default:
-				continue;
-		}
-		if (sqlite3_column_type(_sGetRoutes,1) != SQLITE_NULL) {
-			switch(sqlite3_column_int(_sGetRoutes,3)) { // ipVersion
-				case 4:
-					*(reinterpret_cast<InetAddress *>(&(r->via))) = InetAddress((const void *)((const char *)sqlite3_column_blob(_sGetRoutes,1) + 12),4,0);
-					break;
-				case 6:
-					*(reinterpret_cast<InetAddress *>(&(r->via))) = InetAddress((const void *)sqlite3_column_blob(_sGetRoutes,1),16,0);
-					break;
-				default:
-					continue;
-			}
-		}
-		r->flags = (uint16_t)sqlite3_column_int(_sGetRoutes,4);
-		r->metric = (uint16_t)sqlite3_column_int(_sGetRoutes,5);
-		++nc.routeCount;
-	}
-
-	if (((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_RFC4193) != 0)&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
-		nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt());
-		nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
-	}
-	if (((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_6PLANE) != 0)&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
-		nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv66plane(nwid,identity.address().toInt());
-		nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
-	}
-
-	if ((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4) != 0) {
-		bool haveStaticIpAssignment = false;
-
-		sqlite3_reset(_sGetIpAssignmentsForNode);
-		sqlite3_bind_text(_sGetIpAssignmentsForNode,1,network.id,16,SQLITE_STATIC);
-		sqlite3_bind_text(_sGetIpAssignmentsForNode,2,member.nodeId,10,SQLITE_STATIC);
-		sqlite3_bind_int(_sGetIpAssignmentsForNode,3,4); // 4 == IPv4
-		while (sqlite3_step(_sGetIpAssignmentsForNode) == SQLITE_ROW) {
-			const unsigned char *const ip = (const unsigned char *)sqlite3_column_blob(_sGetIpAssignmentsForNode,1);
-			if ((!ip)||(sqlite3_column_bytes(_sGetIpAssignmentsForNode,1) != 16))
-				continue;
-			int ipNetmaskBits = sqlite3_column_int(_sGetIpAssignmentsForNode,2);
-			if ((ipNetmaskBits <= 0)||(ipNetmaskBits > 32))
-				continue;
-			if (sqlite3_column_int(_sGetIpAssignmentsForNode,0) == 0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/) {
-				if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
-					struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc.staticIps[nc.staticIpCount++]));
-					v4ip->sin_family = AF_INET;
-					v4ip->sin_port = Utils::hton((uint16_t)ipNetmaskBits);
-					memcpy(&(v4ip->sin_addr.s_addr),ip + 12,4);
-				}
-				haveStaticIpAssignment = true;
-			}
-		}
-
-		if ((!haveStaticIpAssignment)&&(!amActiveBridge)) {
-			// Attempt to auto-assign an IPv4 address from an available routed pool if there is one
-			sqlite3_reset(_sGetIpAssignmentPools);
-			sqlite3_bind_text(_sGetIpAssignmentPools,1,network.id,16,SQLITE_STATIC);
-			sqlite3_bind_int(_sGetIpAssignmentPools,2,4); // 4 == IPv4
-
-			while (sqlite3_step(_sGetIpAssignmentPools) == SQLITE_ROW) {
-				const unsigned char *ipRangeStartB = reinterpret_cast<const unsigned char *>(sqlite3_column_blob(_sGetIpAssignmentPools,0));
-				const unsigned char *ipRangeEndB = reinterpret_cast<const unsigned char *>(sqlite3_column_blob(_sGetIpAssignmentPools,1));
-				if ((!ipRangeStartB)||(!ipRangeEndB)||(sqlite3_column_bytes(_sGetIpAssignmentPools,0) != 16)||(sqlite3_column_bytes(_sGetIpAssignmentPools,1) != 16))
-					continue;
-
-				uint32_t ipRangeStart = Utils::ntoh(*(reinterpret_cast<const uint32_t *>(ipRangeStartB + 12)));
-				uint32_t ipRangeEnd = Utils::ntoh(*(reinterpret_cast<const uint32_t *>(ipRangeEndB + 12)));
-				if ((ipRangeEnd <= ipRangeStart)||(ipRangeStart == 0))
-					continue;
-				uint32_t ipRangeLen = ipRangeEnd - ipRangeStart;
-
-				// Start with the LSB of the member's address
-				uint32_t ipTrialCounter = (uint32_t)(identity.address().toInt() & 0xffffffff);
-
-				for(uint32_t k=ipRangeStart,l=0;(k<=ipRangeEnd)&&(l < 1000000);++k,++l) {
-					uint32_t ip = (ipRangeLen > 0) ? (ipRangeStart + (ipTrialCounter % ipRangeLen)) : ipRangeStart;
-					++ipTrialCounter;
-					if ((ip & 0x000000ff) == 0x000000ff)
-						continue; // don't allow addresses that end in .255
-
-					// Check if this IPv4 IP is within a local-to-Ethernet routed network
-					int routedNetmaskBits = 0;
-					for(unsigned int rk=0;rk<nc.routeCount;++rk) {
-						if ((!nc.routes[rk].via.ss_family)&&(nc.routes[rk].target.ss_family == AF_INET)) {
-							uint32_t targetIp = Utils::ntoh((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc.routes[rk].target))->sin_addr.s_addr));
-							int targetBits = Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc.routes[rk].target))->sin_port));
-							if ((ip & (0xffffffff << (32 - targetBits))) == targetIp) {
-								routedNetmaskBits = targetBits;
-								break;
-							}
-						}
-					}
-
-					// If it's routed, then try to claim and assign it and if successful end loop
-					if (routedNetmaskBits > 0) {
-						uint32_t ipBlob[4]; // actually a 16-byte blob, we put IPv4s in the last 4 bytes
-						ipBlob[0] = 0; ipBlob[1] = 0; ipBlob[2] = 0; ipBlob[3] = Utils::hton(ip);
-						sqlite3_reset(_sCheckIfIpIsAllocated);
-						sqlite3_bind_text(_sCheckIfIpIsAllocated,1,network.id,16,SQLITE_STATIC);
-						sqlite3_bind_blob(_sCheckIfIpIsAllocated,2,(const void *)ipBlob,16,SQLITE_STATIC);
-						sqlite3_bind_int(_sCheckIfIpIsAllocated,3,4); // 4 == IPv4
-						sqlite3_bind_int(_sCheckIfIpIsAllocated,4,(int)0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/);
-						if (sqlite3_step(_sCheckIfIpIsAllocated) != SQLITE_ROW) {
-							// No rows returned, so the IP is available
-							sqlite3_reset(_sAllocateIp);
-							sqlite3_bind_text(_sAllocateIp,1,network.id,16,SQLITE_STATIC);
-							sqlite3_bind_text(_sAllocateIp,2,member.nodeId,10,SQLITE_STATIC);
-							sqlite3_bind_int(_sAllocateIp,3,(int)0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/);
-							sqlite3_bind_blob(_sAllocateIp,4,(const void *)ipBlob,16,SQLITE_STATIC);
-							sqlite3_bind_int(_sAllocateIp,5,routedNetmaskBits); // IP netmask bits from matching route
-							sqlite3_bind_int(_sAllocateIp,6,4); // 4 == IPv4
-							if (sqlite3_step(_sAllocateIp) == SQLITE_DONE) {
-								if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
-									struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc.staticIps[nc.staticIpCount++]));
-									v4ip->sin_family = AF_INET;
-									v4ip->sin_port = Utils::hton((uint16_t)routedNetmaskBits);
-									v4ip->sin_addr.s_addr = Utils::hton(ip);
-								}
-								haveStaticIpAssignment = true;
-								break;
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if (network.isPrivate) {
-		CertificateOfMembership com(now,ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA,nwid,identity.address());
-		if (com.sign(signingId)) {
-			nc.com = com;
-		} else {
-			return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
-		}
-	}
-
-	return NetworkController::NETCONF_QUERY_OK;
 }
 
 void SqliteNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report)
