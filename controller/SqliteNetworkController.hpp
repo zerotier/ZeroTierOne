@@ -108,13 +108,6 @@ private:
 		const std::string &body,
 		std::string &responseBody,
 		std::string &responseContentType);
-	NetworkController::ResultCode _doNetworkConfigRequest(
-		const InetAddress &fromAddr,
-		const Identity &signingId,
-		const Identity &identity,
-		uint64_t nwid,
-		const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &metaData,
-		NetworkConfig &nc);
 
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
 
