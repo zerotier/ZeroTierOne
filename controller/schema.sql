@@ -33,23 +33,6 @@ CREATE TABLE Node (
   identity varchar(4096) NOT NULL
 );
 
-CREATE TABLE NodeHistory (
-  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
-  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
-  networkVisitCounter INTEGER NOT NULL DEFAULT(0),
-  networkRequestAuthorized INTEGER NOT NULL DEFAULT(0),
-  requestTime INTEGER NOT NULL DEFAULT(0),
-  clientMajorVersion INTEGER NOT NULL DEFAULT(0),
-  clientMinorVersion INTEGER NOT NULL DEFAULT(0),
-  clientRevision INTEGER NOT NULL DEFAULT(0),
-  networkRequestMetaData VARCHAR(1024),
-  fromAddress VARCHAR(128)
-);
-
-CREATE INDEX NodeHistory_nodeId ON NodeHistory (nodeId);
-CREATE INDEX NodeHistory_networkId ON NodeHistory (networkId);
-CREATE INDEX NodeHistory_requestTime ON NodeHistory (requestTime);
-
 CREATE TABLE IpAssignment (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
   nodeId char(10) REFERENCES Node(id) ON DELETE CASCADE,
@@ -79,12 +62,17 @@ CREATE TABLE Member (
   activeBridge integer NOT NULL DEFAULT(0),
   memberRevision integer NOT NULL DEFAULT(0),
   flags integer NOT NULL DEFAULT(0),
+  lastRequestTime integer NOT NULL DEFAULT(0),
+  lastPowDifficulty integer NOT NULL DEFAULT(0),
+  lastPowTime integer NOT NULL DEFAULT(0),
+  recentHistory blob,
   PRIMARY KEY (networkId, nodeId)
 );
 
 CREATE INDEX Member_networkId_nodeId ON Member(networkId,nodeId);
 CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);
 CREATE INDEX Member_networkId_memberRevision ON Member(networkId, memberRevision);
+CREATE INDEX Member_networkId_lastRequestTime ON Member(networkId, lastRequestTime);
 
 CREATE TABLE Route (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,

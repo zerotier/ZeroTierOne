@@ -66,20 +66,20 @@
 // Stored in database as schemaVersion key in Config.
 // If not present, database is assumed to be empty and at the current schema version
 // and this key/value is added automatically.
-#define ZT_NETCONF_SQLITE_SCHEMA_VERSION 3
-#define ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR "3"
+#define ZT_NETCONF_SQLITE_SCHEMA_VERSION 4
+#define ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR "4"
 
 // API version reported via JSON control plane
 #define ZT_NETCONF_CONTROLLER_API_VERSION 1
+
+// Number of requests to remember in member history
+#define ZT_NETCONF_DB_MEMBER_HISTORY_LENGTH 8
 
 // Min duration between requests for an address/nwid combo to prevent floods
 #define ZT_NETCONF_MIN_REQUEST_PERIOD 1000
 
 // Delay between backups in milliseconds
 #define ZT_NETCONF_BACKUP_PERIOD 300000
-
-// Number of NodeHistory entries to maintain per node and network (can be changed)
-#define ZT_NETCONF_NODE_HISTORY_LENGTH 64
 
 // Nodes are considered active if they've queried in less than this long
 #define ZT_NETCONF_NODE_ACTIVE_THRESHOLD ((ZT_NETWORK_AUTOCONF_DELAY * 2) + 5000)
@@ -134,14 +134,44 @@ static void _ipToBlob(const InetAddress &a,char *ipBlob,int &ipVersion) /* blob[
 	}
 }
 
-struct MemberRecord {
+// Member.recentHistory is stored in a BLOB as an array of strings containing JSON objects.
+// This is kind of hacky but efficient and quick to parse and send to the client.
+class MemberRecentHistory : public std::list<std::string>
+{
+public:
+	inline std::string toBlob() const
+	{
+		std::string b;
+		for(const_iterator i(begin());i!=end();++i) {
+			b.append(*i);
+			b.push_back((char)0);
+		}
+		return b;
+	}
+
+	inline void fromBlob(const char *blob,unsigned int len)
+	{
+		for(unsigned int i=0,k=0;i<len;++i) {
+			if (!blob[i]) {
+				push_back(std::string(blob + k,i - k));
+				k = i + 1;
+			}
+		}
+	}
+};
+
+struct MemberRecord
+{
 	int64_t rowid;
 	char nodeId[16];
 	bool authorized;
 	bool activeBridge;
+	uint64_t lastRequestTime;
+	MemberRecentHistory recentHistory;
 };
 
-struct NetworkRecord {
+struct NetworkRecord
+{
 	char id[24];
 	const char *name;
 	int flags;
@@ -248,6 +278,28 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			}
 		}
 
+		if (schemaVersion < 4) {
+			// Turns out this was overkill and a huge performance drag. Will be revisiting this
+			// more later but for now a brief snapshot of recent history stored in Member is fine.
+			// Also prepare for implementation of proof of work requests.
+			if (sqlite3_exec(_db,
+					"DROP TABLE NodeHistory;\n"
+					"ALTER TABLE Member ADD COLUMN lastRequestTime integer NOT NULL DEFAULT(0);\n"
+					"ALTER TABLE Member ADD COLUMN lastPowDifficulty integer NOT NULL DEFAULT(0);\n"
+					"ALTER TABLE Member ADD COLUMN lastPowTime integer NOT NULL DEFAULT(0);\n"
+					"ALTER TABLE Member ADD COLUMN recentHistory blob;\n"
+					"CREATE INDEX Member_networkId_lastRequestTime ON Member(networkId, lastRequestTime);\n"
+					"UPDATE \"Config\" SET \"v\" = 4 WHERE \"k\" = 'schemaVersion';\n"
+				,0,0,0) != SQLITE_OK) {
+				char err[1024];
+				Utils::snprintf(err,sizeof(err),"SqliteNetworkController cannot upgrade the database to version 3: %s",sqlite3_errmsg(_db));
+				sqlite3_close(_db);
+				throw std::runtime_error(err);
+			} else {
+				schemaVersion = 4;
+			}
+		}
+
 		if (schemaVersion != ZT_NETCONF_SQLITE_SCHEMA_VERSION) {
 			sqlite3_close(_db);
 			throw std::runtime_error("SqliteNetworkController database schema version mismatch");
@@ -278,13 +330,6 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			||(sqlite3_prepare_v2(_db,"SELECT identity FROM Node WHERE id = ?",-1,&_sGetNodeIdentity,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT OR REPLACE INTO Node (id,identity) VALUES (?,?)",-1,&_sCreateOrReplaceNode,(const char **)0) != SQLITE_OK)
 
-			/* NodeHistory */
-			||(sqlite3_prepare_v2(_db,"SELECT IFNULL(MAX(networkVisitCounter),0) FROM NodeHistory WHERE networkId = ? AND nodeId = ?",-1,&_sGetMaxNodeHistoryNetworkVisitCounter,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO NodeHistory (nodeId,networkId,networkVisitCounter,networkRequestAuthorized,requestTime,clientMajorVersion,clientMinorVersion,clientRevision,networkRequestMetaData,fromAddress) VALUES (?,?,?,?,?,?,?,?,?,?)",-1,&_sAddNodeHistoryEntry,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"DELETE FROM NodeHistory WHERE networkId = ? AND nodeId = ? AND networkVisitCounter <= ?",-1,&_sDeleteOldNodeHistoryEntries,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT nodeId,requestTime,clientMajorVersion,clientMinorVersion,clientRevision,fromAddress,networkRequestAuthorized FROM NodeHistory WHERE networkId = ? AND requestTime IN (SELECT MAX(requestTime) FROM NodeHistory WHERE networkId = ? AND requestTime >= ? GROUP BY nodeId) ORDER BY nodeId ASC,requestTime DESC",-1,&_sGetActiveNodesOnNetwork,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT networkVisitCounter,networkRequestAuthorized,requestTime,clientMajorVersion,clientMinorVersion,clientRevision,networkRequestMetaData,fromAddress FROM NodeHistory WHERE networkId = ? AND nodeId = ? ORDER BY requestTime DESC",-1,&_sGetNodeHistory,(const char **)0) != SQLITE_OK)
-
 			/* Rule */
 			||(sqlite3_prepare_v2(_db,"SELECT etherType FROM Rule WHERE networkId = ? AND \"action\" = 'accept'",-1,&_sGetEtherTypesFromRuleTable,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Rule (networkId,ruleNo,nodeId,sourcePort,destPort,vlanId,vlanPcP,etherType,macSource,macDest,ipSource,ipDest,ipTos,ipProtocol,ipSourcePort,ipDestPort,flags,invFlags,\"action\") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",-1,&_sCreateRule,(const char **)0) != SQLITE_OK)
@@ -310,15 +355,17 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Relay (\"networkId\",\"address\",\"phyAddress\") VALUES (?,?,?)",-1,&_sCreateRelay,(const char **)0) != SQLITE_OK)
 
 			/* Member */
-			||(sqlite3_prepare_v2(_db,"SELECT rowid,authorized,activeBridge FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sGetMember,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT m.authorized,m.activeBridge,m.memberRevision,n.identity FROM Member AS m LEFT OUTER JOIN Node AS n ON n.id = m.nodeId WHERE m.networkId = ? AND m.nodeId = ?",-1,&_sGetMember2,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT rowid,authorized,activeBridge,memberRevision,\"flags\",lastRequestTime,recentHistory FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sGetMember,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT m.authorized,m.activeBridge,m.memberRevision,n.identity,m.flags,m.lastRequestTime,m.recentHistory FROM Member AS m LEFT OUTER JOIN Node AS n ON n.id = m.nodeId WHERE m.networkId = ? AND m.nodeId = ?",-1,&_sGetMember2,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Member (networkId,nodeId,authorized,activeBridge,memberRevision) VALUES (?,?,?,0,(SELECT memberRevisionCounter FROM Network WHERE id = ?))",-1,&_sCreateMember,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT nodeId FROM Member WHERE networkId = ? AND activeBridge > 0 AND authorized > 0",-1,&_sGetActiveBridges,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT m.nodeId,m.memberRevision FROM Member AS m WHERE m.networkId = ? ORDER BY m.nodeId ASC",-1,&_sListNetworkMembers,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Member SET authorized = ?,memberRevision = (SELECT memberRevisionCounter FROM Network WHERE id = ?) WHERE rowid = ?",-1,&_sUpdateMemberAuthorized,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Member SET activeBridge = ?,memberRevision = (SELECT memberRevisionCounter FROM Network WHERE id = ?) WHERE rowid = ?",-1,&_sUpdateMemberActiveBridge,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"UPDATE Member SET lastRequestTime = ? AND recentHistory = ? WHERE rowid = ?",-1,&_sUpdateMemberHistory,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sDeleteMember,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ?",-1,&_sDeleteAllNetworkMembers,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT nodeId,recentHistory FROM Member WHERE networkId = ? AND lastRequestTime >= ?",-1,&_sGetActiveNodesOnNetwork,(const char **)0) != SQLITE_OK)
 
 			/* Route */
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Route (networkId,target,via,targetNetmaskBits,ipVersion,flags,metric) VALUES (?,?,?,?,?,?,?)",-1,&_sCreateRoute,(const char **)0) != SQLITE_OK)
@@ -373,11 +420,6 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sCreateMember);
 		sqlite3_finalize(_sGetNodeIdentity);
 		sqlite3_finalize(_sCreateOrReplaceNode);
-		sqlite3_finalize(_sGetMaxNodeHistoryNetworkVisitCounter);
-		sqlite3_finalize(_sAddNodeHistoryEntry);
-		sqlite3_finalize(_sDeleteOldNodeHistoryEntries);
-		sqlite3_finalize(_sGetActiveNodesOnNetwork);
-		sqlite3_finalize(_sGetNodeHistory);
 		sqlite3_finalize(_sGetEtherTypesFromRuleTable);
 		sqlite3_finalize(_sGetActiveBridges);
 		sqlite3_finalize(_sGetIpAssignmentsForNode);
@@ -403,8 +445,10 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sCreateIpAssignmentPool);
 		sqlite3_finalize(_sUpdateMemberAuthorized);
 		sqlite3_finalize(_sUpdateMemberActiveBridge);
+		sqlite3_finalize(_sUpdateMemberHistory);
 		sqlite3_finalize(_sDeleteMember);
 		sqlite3_finalize(_sDeleteAllNetworkMembers);
+		sqlite3_finalize(_sGetActiveNodesOnNetwork);
 		sqlite3_finalize(_sDeleteNetwork);
 		sqlite3_finalize(_sCreateRoute);
 		sqlite3_finalize(_sGetRoutes);
@@ -496,6 +540,10 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			member.rowid = (int64_t)sqlite3_column_int64(_sGetMember,0);
 			member.authorized = (sqlite3_column_int(_sGetMember,1) > 0);
 			member.activeBridge = (sqlite3_column_int(_sGetMember,2) > 0);
+			member.lastRequestTime = (uint64_t)sqlite3_column_int64(_sGetMember,5);
+			const char *rhblob = (const char *)sqlite3_column_blob(_sGetMember,6);
+			if (rhblob)
+				member.recentHistory.fromBlob(rhblob,sqlite3_column_bytes(_sGetMember,6));
 		}
 
 		// Create Member record for unknown nodes, auto-authorizing if network is public
@@ -518,48 +566,42 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			sqlite3_step(_sIncrementMemberRevisionCounter);
 		}
 
-		// Update NodeHistory with new log entry and delete expired entries
-
+		// Update Member.history
 		{
-			int64_t nextVC = 1;
-			sqlite3_reset(_sGetMaxNodeHistoryNetworkVisitCounter);
-			sqlite3_bind_text(_sGetMaxNodeHistoryNetworkVisitCounter,1,network.id,16,SQLITE_STATIC);
-			sqlite3_bind_text(_sGetMaxNodeHistoryNetworkVisitCounter,2,member.nodeId,10,SQLITE_STATIC);
-			if (sqlite3_step(_sGetMaxNodeHistoryNetworkVisitCounter) == SQLITE_ROW) {
-				nextVC = (int64_t)sqlite3_column_int64(_sGetMaxNodeHistoryNetworkVisitCounter,0) + 1;
-			}
-
 			std::string fastr;
-			if (fromAddr)
-				fastr = fromAddr.toString();
-
-			sqlite3_reset(_sAddNodeHistoryEntry);
-			sqlite3_bind_text(_sAddNodeHistoryEntry,1,member.nodeId,10,SQLITE_STATIC);
-			sqlite3_bind_text(_sAddNodeHistoryEntry,2,network.id,16,SQLITE_STATIC);
-			sqlite3_bind_int64(_sAddNodeHistoryEntry,3,nextVC);
-			sqlite3_bind_int(_sAddNodeHistoryEntry,4,(member.authorized ? 1 : 0));
-			sqlite3_bind_int64(_sAddNodeHistoryEntry,5,(long long)now);
-			sqlite3_bind_int(_sAddNodeHistoryEntry,6,(int)metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0));
-			sqlite3_bind_int(_sAddNodeHistoryEntry,7,(int)metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0));
-			sqlite3_bind_int(_sAddNodeHistoryEntry,8,(int)metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0));
-			sqlite3_bind_text(_sAddNodeHistoryEntry,9,metaData.data(),-1,SQLITE_STATIC);
-			if (fastr.length() > 0)
-				sqlite3_bind_text(_sAddNodeHistoryEntry,10,fastr.c_str(),-1,SQLITE_STATIC);
-			else sqlite3_bind_null(_sAddNodeHistoryEntry,10);
-			sqlite3_step(_sAddNodeHistoryEntry);
-
-			nextVC -= ZT_NETCONF_NODE_HISTORY_LENGTH;
-			if (nextVC >= 0) {
-				sqlite3_reset(_sDeleteOldNodeHistoryEntries);
-				sqlite3_bind_text(_sDeleteOldNodeHistoryEntries,1,network.id,16,SQLITE_STATIC);
-				sqlite3_bind_text(_sDeleteOldNodeHistoryEntries,2,member.nodeId,10,SQLITE_STATIC);
-				sqlite3_bind_int64(_sDeleteOldNodeHistoryEntries,3,nextVC);
-				sqlite3_step(_sDeleteOldNodeHistoryEntries);
+			if (fromAddr) {
+				fastr.push_back('"');
+				fastr.append(_jsonEscape(fromAddr.toString()));
+				fastr.push_back('"');
 			}
+			char mh[4096];
+			Utils::snprintf(mh,sizeof(mh),
+				"{"
+				"\"ts\":%llu,"
+				"\"authorized\":%s,"
+				"\"clientMajorVersion\":%u,"
+				"\"clientMinorVersion\":%u,"
+				"\"clientRevision\":%u,"
+				"\"fromAddr\":%s"
+				"}",
+				(unsigned long long)now,
+				(member.authorized) ? "true" : "false",
+				metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0),
+				metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0),
+				metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0),
+				(fastr.length() > 0) ? fastr.c_str() : "null");
+			member.recentHistory.push_front(std::string(mh));
+			while (member.recentHistory.size() > ZT_NETCONF_DB_MEMBER_HISTORY_LENGTH)
+				member.recentHistory.pop_back();
+			std::string rhblob(member.recentHistory.toBlob());
+			sqlite3_reset(_sUpdateMemberHistory);
+			sqlite3_bind_int64(_sUpdateMemberHistory,1,(int64_t)now);
+			sqlite3_bind_blob(_sUpdateMemberHistory,2,(const void *)rhblob.data(),rhblob.length(),SQLITE_STATIC);
+			sqlite3_bind_int64(_sUpdateMemberHistory,3,member.rowid);
+			sqlite3_step(_sUpdateMemberHistory);
 		}
 
-		// Check member authorization
-
+		// Don't proceed if member is not authorized
 		if (!member.authorized)
 			return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
 
@@ -1633,29 +1675,17 @@ unsigned int SqliteNetworkController::_doCPGet(
 
 							responseBody.append("],\n\t\"recentLog\": [");
 
-							sqlite3_reset(_sGetNodeHistory);
-							sqlite3_bind_text(_sGetNodeHistory,1,nwids,16,SQLITE_STATIC);
-							sqlite3_bind_text(_sGetNodeHistory,2,addrs,10,SQLITE_STATIC);
-							bool firstHistory = true;
-							while (sqlite3_step(_sGetNodeHistory) == SQLITE_ROW) {
-								responseBody.append(firstHistory ? "{" : ",{");
-								responseBody.append("\"ts\":");
-								responseBody.append((const char *)sqlite3_column_text(_sGetNodeHistory,2));
-								responseBody.append((sqlite3_column_int(_sGetNodeHistory,1) == 0) ? ",\"authorized\":false,\"clientMajorVersion\":" : ",\"authorized\":true,\"clientMajorVersion\":");
-								responseBody.append((const char *)sqlite3_column_text(_sGetNodeHistory,3));
-								responseBody.append(",\"clientMinorVersion\":");
-								responseBody.append((const char *)sqlite3_column_text(_sGetNodeHistory,4));
-								responseBody.append(",\"clientRevision\":");
-								responseBody.append((const char *)sqlite3_column_text(_sGetNodeHistory,5));
-								responseBody.append(",\"fromAddr\":");
-								const char *fa = (const char *)sqlite3_column_text(_sGetNodeHistory,7);
-								if (fa) {
-									responseBody.push_back('"');
-									responseBody.append(_jsonEscape(fa));
-									responseBody.append("\"}");
-								} else responseBody.append("null}");
-								firstHistory = false;
+							const void *histb = sqlite3_column_blob(_sGetMember2,6);
+							if (histb) {
+								MemberRecentHistory rh;
+								rh.fromBlob((const char *)histb,sqlite3_column_bytes(_sGetMember2,6));
+								for(MemberRecentHistory::const_iterator i(rh.begin());i!=rh.end();++i) {
+									if (i != rh.begin())
+										responseBody.push_back(',');
+									responseBody.append(*i);
+								}
 							}
+
 							responseBody.append("]\n}\n");
 
 							responseContentType = "application/json";
@@ -1686,40 +1716,26 @@ unsigned int SqliteNetworkController::_doCPGet(
 
 					sqlite3_reset(_sGetActiveNodesOnNetwork);
 					sqlite3_bind_text(_sGetActiveNodesOnNetwork,1,nwids,16,SQLITE_STATIC);
-					sqlite3_bind_text(_sGetActiveNodesOnNetwork,2,nwids,16,SQLITE_STATIC);
-					sqlite3_bind_int64(_sGetActiveNodesOnNetwork,3,(int64_t)(OSUtils::now() - ZT_NETCONF_NODE_ACTIVE_THRESHOLD));
+					sqlite3_bind_int64(_sGetActiveNodesOnNetwork,2,(int64_t)(OSUtils::now() - ZT_NETCONF_NODE_ACTIVE_THRESHOLD));
 
 					responseBody.push_back('{');
-					bool firstMember = true;
-					uint64_t lastNodeId = 0;
+					bool firstActiveMember = true;
 					while (sqlite3_step(_sGetActiveNodesOnNetwork) == SQLITE_ROW) {
 						const char *nodeId = (const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,0);
-						if (nodeId) {
-							const uint64_t nodeIdInt = Utils::hexStrToU64(nodeId);
-							if (nodeIdInt == lastNodeId) // technically that SQL query could (rarely) generate a duplicate for a given nodeId, in which case we want the first
-								continue;
-							lastNodeId = nodeIdInt;
-
-							responseBody.append(firstMember ? "\"" : ",\"");
-							firstMember = false;
-							responseBody.append(nodeId);
-							responseBody.append("\":{");
-							responseBody.append("\"ts\":");
-							responseBody.append((const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,1));
-							responseBody.append((sqlite3_column_int(_sGetActiveNodesOnNetwork,6) > 0) ? ",\"authorized\":true" : ",\"authorized\":false");
-							responseBody.append(",\"clientMajorVersion\":");
-							responseBody.append((const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,2));
-							responseBody.append(",\"clientMinorVersion\":");
-							responseBody.append((const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,3));
-							responseBody.append(",\"clientRevision\":");
-							responseBody.append((const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,4));
-							const char *fromAddr = (const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,5);
-							if ((fromAddr)&&(fromAddr[0])) {
-								responseBody.append(",\"fromAddr\":\"");
-								responseBody.append(_jsonEscape(fromAddr));
-								responseBody.append("\"}");
-							} else {
-								responseBody.append(",\"fromAddr\":null}");
+						const char *rhblob = (const char *)sqlite3_column_blob(_sGetActiveNodesOnNetwork,1);
+						if ((nodeId)&&(rhblob)) {
+							MemberRecentHistory rh;
+							rh.fromBlob(rhblob,sqlite3_column_bytes(_sGetActiveNodesOnNetwork,1));
+							if (rh.size() > 0) {
+								if (firstActiveMember) {
+									firstActiveMember = false;
+								} else {
+									responseBody.push_back(',');
+								}
+								responseBody.push_back('"');
+								responseBody.append(nodeId);
+								responseBody.append("\":");
+								responseBody.append(rh.front());
 							}
 						}
 					}
