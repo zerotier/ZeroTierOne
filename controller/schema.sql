@@ -82,6 +82,7 @@ CREATE TABLE Member (
   PRIMARY KEY (networkId, nodeId)
 );
 
+CREATE INDEX Member_networkId_nodeId ON Member(networkId,nodeId);
 CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);
 CREATE INDEX Member_networkId_memberRevision ON Member(networkId, memberRevision);
 

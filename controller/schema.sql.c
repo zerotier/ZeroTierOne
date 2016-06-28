@@ -79,9 +79,11 @@
 "  authorized integer NOT NULL DEFAULT(0),\n"\
 "  activeBridge integer NOT NULL DEFAULT(0),\n"\
 "  memberRevision integer NOT NULL DEFAULT(0),\n"\
+"  flags integer NOT NULL DEFAULT(0),\n"\
 "  PRIMARY KEY (networkId, nodeId)\n"\
 ");\n"\
 "\n"\
+"CREATE INDEX Member_networkId_nodeId ON Member(networkId,nodeId);\n"\
 "CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);\n"\
 "CREATE INDEX Member_networkId_memberRevision ON Member(networkId, memberRevision);\n"\
 "\n"\
