@@ -62,7 +62,15 @@ class NetworkMonitor: NSObject {
             if index != NSNotFound {
                 allNetworks.removeAtIndex(index)
             }
+
+            let index2 = findSavedNetworkWithID(nwid)
+
+            if index2 != NSNotFound {
+                savedNetworks.removeAtIndex(index2)
+            }
         }
+
+        saveNetworks()
     }
 
     // Only to be called by updateNetworkInfo()

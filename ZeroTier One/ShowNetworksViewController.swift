@@ -42,7 +42,7 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
     }
 
     func deleteNetworkFromList(nwid: String) {
-
+        netMonitor.deleteSavedNetwork(nwid)
     }
 
 

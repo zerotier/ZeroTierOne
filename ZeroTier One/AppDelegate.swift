@@ -41,8 +41,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         joinNetworkPopover.appearance = NSAppearance(named: NSAppearanceNameAqua)
 
-        networkListPopover.contentViewController = ShowNetworksViewController(
+        let showNetworksView = ShowNetworksViewController(
             nibName: "ShowNetworksViewController", bundle: nil)
+        showNetworksView?.netMonitor = monitor
+
+        networkListPopover.contentViewController = showNetworksView
         networkListPopover.behavior = .Transient
 
         networkListPopover.appearance = NSAppearance(named: NSAppearanceNameAqua)
