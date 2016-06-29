@@ -58,8 +58,7 @@ public:
 		Packet(),
 		_receiveTime(0),
 		_localAddress(),
-		_remoteAddress(),
-		_authenticated(false)
+		_remoteAddress()
 	{
 	}
 
@@ -83,8 +82,7 @@ public:
 		Packet(data,len),
 		_receiveTime(now),
 		_localAddress(localAddress),
-		_remoteAddress(remoteAddress),
-		_authenticated(false)
+		_remoteAddress(remoteAddress)
 	{
 	}
 
@@ -190,7 +188,6 @@ private:
 	uint64_t _receiveTime;
 	InetAddress _localAddress;
 	InetAddress _remoteAddress;
-	bool _authenticated;
 };
 
 } // namespace ZeroTier
