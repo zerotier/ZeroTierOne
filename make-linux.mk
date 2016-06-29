@@ -61,21 +61,19 @@ endif
 ifeq ($(ZT_USE_MINIUPNPC),1)
 	OBJS+=osdep/PortMapper.o
 
-	DEFS+=-DZT_USE_MINIUPNPC -DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING=\"Linux\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
+	DEFS+=-DZT_USE_MINIUPNPC
 
-	# Right now auto-detect and use of system miniupnpc is disabled since the
-	# versions that ship with various Linux distributions are pretty much all
-	# ancient or broken.
-
-	#ifeq ($(wildcard /usr/include/miniupnpc/miniupnpc.h),)
+	# Auto-detect libminiupnpc at least v2.0
+	MINIUPNPC_IS_NEW_ENOUGH=$(shell grep -sqr '.*define.*MINIUPNPC_VERSION.*"2.."' /usr/include/miniupnpc/miniupnpc.h && echo 1)
+	ifeq ($(MINIUPNPC_IS_NEW_ENOUGH),1)
+		DEFS+=-DZT_USE_SYSTEM_MINIUPNPC
+		LDLIBS+=-lminiupnpc
+	else
+		DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING=\"Linux\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
 		OBJS+=ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o
-	#else
-	#	LDLIBS+=-lminiupnpc
-	#endif
+	endif
 
-	# libnatpmp on the other hand is safe to auto-detect and use -- the two
-	# libraries are by the same author but are separate.
-
+	# Auto-detect libnatpmp
 	ifeq ($(wildcard /usr/include/natpmp.h),)
 		OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o
 	else
