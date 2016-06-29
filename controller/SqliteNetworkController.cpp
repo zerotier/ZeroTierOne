@@ -168,6 +168,15 @@ struct MemberRecord
 	bool activeBridge;
 	uint64_t lastRequestTime;
 	MemberRecentHistory recentHistory;
+
+	MemberRecord() :
+		rowid(0),
+		authorized(false),
+		activeBridge(false),
+		lastRequestTime(0)
+	{
+		nodeId[0] = (char)0;
+	}
 };
 
 struct NetworkRecord
@@ -182,6 +191,20 @@ struct NetworkRecord
 	uint64_t creationTime;
 	uint64_t revision;
 	uint64_t memberRevisionCounter;
+
+	NetworkRecord() :
+		name((const char *)0),
+		flags(0),
+		isPrivate(true),
+		enableBroadcast(false),
+		allowPassiveBridging(false),
+		multicastLimit(0),
+		creationTime(0),
+		revision(0),
+		memberRevisionCounter(0)
+	{
+		id[0] = (char)0;
+	}
 };
 
 } // anonymous namespace
@@ -469,11 +492,9 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 	const uint64_t now = OSUtils::now();
 
 	NetworkRecord network;
-	memset(&network,0,sizeof(network));
 	Utils::snprintf(network.id,sizeof(network.id),"%.16llx",(unsigned long long)nwid);
 
 	MemberRecord member;
-	memset(&member,0,sizeof(member));
 	Utils::snprintf(member.nodeId,sizeof(member.nodeId),"%.10llx",(unsigned long long)identity.address().toInt());
 
 	{ // begin lock
@@ -567,41 +588,38 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		}
 
 		// Update Member.history
+
 		{
-			std::string fastr;
-			if (fromAddr) {
-				fastr.push_back('"');
-				fastr.append(_jsonEscape(fromAddr.toString()));
-				fastr.push_back('"');
-			}
-			char mh[4096];
+			char mh[1024];
 			Utils::snprintf(mh,sizeof(mh),
-				"{"
-				"\"ts\":%llu,"
-				"\"authorized\":%s,"
-				"\"clientMajorVersion\":%u,"
-				"\"clientMinorVersion\":%u,"
-				"\"clientRevision\":%u,"
-				"\"fromAddr\":%s"
-				"}",
+				"{\"ts\":%llu,\"authorized\":%s,\"clientMajorVersion\":%u,\"clientMinorVersion\":%u,\"clientRevision\":%u,\"fromAddr\":",
 				(unsigned long long)now,
-				(member.authorized) ? "true" : "false",
+				((member.authorized) ? "true" : "false"),
 				metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0),
 				metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0),
-				metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0),
-				(fastr.length() > 0) ? fastr.c_str() : "null");
+				metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0));
 			member.recentHistory.push_front(std::string(mh));
+			if (fromAddr) {
+				member.recentHistory.front().push_back('"');
+				member.recentHistory.front().append(_jsonEscape(fromAddr.toString()));
+				member.recentHistory.front().append("\"}");
+			} else {
+				member.recentHistory.front().append("null}");
+			}
 			while (member.recentHistory.size() > ZT_NETCONF_DB_MEMBER_HISTORY_LENGTH)
 				member.recentHistory.pop_back();
 			std::string rhblob(member.recentHistory.toBlob());
 			sqlite3_reset(_sUpdateMemberHistory);
-			sqlite3_bind_int64(_sUpdateMemberHistory,1,(int64_t)now);
-			sqlite3_bind_blob(_sUpdateMemberHistory,2,(const void *)rhblob.data(),rhblob.length(),SQLITE_STATIC);
+			sqlite3_bind_int64(_sUpdateMemberHistory,1,(sqlite3_int64)now);
+			sqlite3_bind_blob(_sUpdateMemberHistory,2,(const void *)rhblob.data(),(int)rhblob.length(),SQLITE_STATIC);
 			sqlite3_bind_int64(_sUpdateMemberHistory,3,member.rowid);
-			sqlite3_step(_sUpdateMemberHistory);
+			if (sqlite3_step(_sUpdateMemberHistory) != SQLITE_DONE) {
+				printf("!!! %s\n",sqlite3_errmsg(_db));
+			}
 		}
 
-		// Don't proceed if member is not authorized
+		// Don't proceed if member is not authorized! ---------------------------
+
 		if (!member.authorized)
 			return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
 
