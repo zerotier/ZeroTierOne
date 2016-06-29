@@ -66,8 +66,10 @@ public:
 
 	Dictionary(const char *s,unsigned int len)
 	{
-		memcpy(_d,s,(len > C) ? (unsigned int)C : len);
-		_d[C-1] = (char)0;
+		if (len > C)
+			len = C;
+		memcpy(_d,s,len);
+		_d[len-1] = (char)0;
 	}
 
 	Dictionary(const Dictionary &d)
@@ -161,7 +163,7 @@ public:
 				j = 0;
 				esc = false;
 				++p;
-				while ((*p)&&(*p != '\r')&&(*p != '\n')) {
+				while ((*p != 0)&&(*p != '\r')&&(*p != '\n')) {
 					if (esc) {
 						esc = false;
 						switch(*p) {
@@ -308,7 +310,7 @@ public:
 
 				p = value;
 				int k = 0;
-				while ( ((*p)&&(vlen < 0)) || (k < vlen) ) {
+				while ( ((vlen < 0)&&(*p)) || (k < vlen) ) {
 					switch(*p) {
 						case 0:
 						case '\r':
