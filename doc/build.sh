@@ -9,24 +9,29 @@ fi
 rm -f *.1 *.2 *.8
 
 if [ -e /usr/bin/ronn -o -e /usr/local/bin/ronn ]; then
+	# Use 'ronn' which is available as a package on many distros including Debian
 	ronn -r zerotier-cli.1.md
 	ronn -r zerotier-idtool.1.md
 	ronn -r zerotier-one.8.md
 else
-	if [ ! -f /usr/bin/node -a ! -f /usr/bin/nodejs ]; then
-		echo 'Unable to build man pages: no /usr/bin/ronn or /usr/bin/node / nodejs!'
-		exit 0
+	# Use 'marked-man' from npm
+	NODE=/usr/bin/node
+	if [ ! -e $NODE ]; then
+		if [ -e /usr/bin/nodejs ]; then
+			NODE=/usr/bin/nodejs
+		elif [ -e /usr/local/bin/node ]; then
+			NODE=/usr/local/bin/node
+		elif [ -e /usr/local/bin/nodejs ]; then
+			NODE=/usr/local/bin/nodejs
+		else
+			echo 'Unable to find ronn or node/npm -- cannot build man pages!'
+			exit 1
+		fi
 	fi
 
 	if [ ! -f node_modules/marked-man/bin/marked-man ]; then
-		echo 'Installing MarkDown to ROFF converter...'
+		echo 'Installing npm package "marked-man" -- MarkDown to ROFF converter...'
 		npm install marked-man
-		echo
-	fi
-
-	NODE=/usr/bin/node
-	if [ -e /usr/bin/nodejs ]; then
-		NODE=/usr/bin/nodejs
 	fi
 
 	$NODE node_modules/marked-man/bin/marked-man zerotier-cli.1.md >zerotier-cli.1
