@@ -86,6 +86,8 @@ static OneService *volatile zt1Service = (OneService *)0;
 /* zerotier-cli personality                                                 */
 /****************************************************************************/
 
+// This is getting deprecated soon in favor of the stuff in cli/
+
 static void cliPrintHelp(const char *pn,FILE *out)
 {
 	fprintf(out,
@@ -97,19 +99,19 @@ static void cliPrintHelp(const char *pn,FILE *out)
 		LICENSE_GRANT ZT_EOL_S);
 	fprintf(out,"Usage: %s [-switches] <command/path> [<args>]"ZT_EOL_S""ZT_EOL_S,pn);
 	fprintf(out,"Available switches:"ZT_EOL_S);
-	fprintf(out,"  -h                 - Display this help"ZT_EOL_S);
-	fprintf(out,"  -v                 - Show version"ZT_EOL_S);
-	fprintf(out,"  -j                 - Display full raw JSON output"ZT_EOL_S);
-	fprintf(out,"  -D<path>           - ZeroTier home path for parameter auto-detect"ZT_EOL_S);
-	fprintf(out,"  -p<port>           - HTTP port (default: auto)"ZT_EOL_S);
-	fprintf(out,"  -T<token>          - Authentication token (default: auto)"ZT_EOL_S);
-	//fprintf(out,"  -H<ip>             - HTTP server bind address (default: 127.0.0.1)"ZT_EOL_S);
+	fprintf(out,"  -h                      - Display this help"ZT_EOL_S);
+	fprintf(out,"  -v                      - Show version"ZT_EOL_S);
+	fprintf(out,"  -j                      - Display full raw JSON output"ZT_EOL_S);
+	fprintf(out,"  -D<path>                - ZeroTier home path for parameter auto-detect"ZT_EOL_S);
+	fprintf(out,"  -p<port>                - HTTP port (default: auto)"ZT_EOL_S);
+	fprintf(out,"  -T<token>               - Authentication token (default: auto)"ZT_EOL_S);
 	fprintf(out,ZT_EOL_S"Available commands:"ZT_EOL_S);
-	fprintf(out,"  info               - Display status info"ZT_EOL_S);
-	fprintf(out,"  listpeers          - List all peers"ZT_EOL_S);
-	fprintf(out,"  listnetworks       - List all networks"ZT_EOL_S);
-	fprintf(out,"  join <network>     - Join a network"ZT_EOL_S);
-	fprintf(out,"  leave <network>    - Leave a network"ZT_EOL_S);
+	fprintf(out,"  info                    - Display status info"ZT_EOL_S);
+	fprintf(out,"  listpeers               - List all peers"ZT_EOL_S);
+	fprintf(out,"  listnetworks            - List all networks"ZT_EOL_S);
+	fprintf(out,"  join <network>          - Join a network"ZT_EOL_S);
+	fprintf(out,"  leave <network>         - Leave a network"ZT_EOL_S);
+	fprintf(out,"  set <network> <setting> - Set a network setting"ZT_EOL_S);
 }
 
 static std::string cliFixJsonCRs(const std::string &s)
@@ -130,10 +132,7 @@ static int cli(int argc,char **argv)
 #endif
 {
 	unsigned int port = 0;
-	std::string homeDir;
-	std::string command;
-	std::string arg1;
-	std::string authToken;
+	std::string homeDir,command,arg1,arg2,authToken;
 	std::string ip("127.0.0.1");
 	bool json = false;
 	for(int i=1;i<argc;++i) {
@@ -205,7 +204,9 @@ static int cli(int argc,char **argv)
 					return 0;
 			}
 		} else {
-			if (command.length())
+			if (arg1.length())
+				arg2 = argv[i];
+			else if (command.length())
 				arg1 = argv[i];
 			else command = argv[i];
 		}
@@ -552,6 +553,44 @@ static int cli(int argc,char **argv)
 		} else {
 			printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
+		}
+	} else if (command == "set") {
+		if (arg1.length() != 16) {
+			cliPrintHelp(argv[0],stderr);
+			return 2;
+		}
+		std::size_t eqidx = arg2.find('=');
+		if (eqidx != std::string::npos) {
+			if ((arg2.substr(0,eqidx) == "allowManaged")||(arg2.substr(0,eqidx) == "allowGlobal")||(arg2.substr(0,eqidx) == "allowDefault")) {
+				char jsons[1024];
+				Utils::snprintf(jsons,sizeof(jsons),"{\"%s\":%s}",
+					arg2.substr(0,eqidx).c_str(),
+					(((arg2.substr(eqidx,2) == "=t")||(arg2.substr(eqidx,2) == "=1")) ? "true" : "false"));
+				char cl[128];
+				Utils::snprintf(cl,sizeof(cl),"%u",(unsigned int)strlen(jsons));
+				requestHeaders["Content-Type"] = "application/json";
+				requestHeaders["Content-Length"] = cl;
+				unsigned int scode = Http::POST(
+					1024 * 1024 * 16,
+					60000,
+					(const struct sockaddr *)&addr,
+					(std::string("/network/") + arg1).c_str(),
+					requestHeaders,
+					jsons,
+					strlen(jsons),
+					responseHeaders,
+					responseBody);
+				if (scode == 200) {
+					printf("%s",cliFixJsonCRs(responseBody).c_str());
+					return 0;
+				} else {
+					printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+					return 1;
+				}
+			}
+		} else {
+			cliPrintHelp(argv[0],stderr);
+			return 2;
 		}
 	} else {
 		cliPrintHelp(argv[0],stderr);
