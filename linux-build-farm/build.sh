@@ -27,28 +27,40 @@ for distro in $subdirs; do
 
 	cd $distro
 
-	cd x64
-	mv ../../zt1-src.tar.gz .
-	docker build -t zt1-build-${distro}-x64 .
-	mv zt1-src.tar.gz ../..
-	cd ..
+	if [ -d x64 ]; then
+		cd x64
+		mv ../../zt1-src.tar.gz .
+		docker build -t zt1-build-${distro}-x64 .
+		mv zt1-src.tar.gz ../..
+		cd ..
+	fi
 
-	cd x86
-	mv ../../zt1-src.tar.gz .
-	docker build -t zt1-build-${distro}-x86 .
-	mv zt1-src.tar.gz ../..
-	cd ..
+	if [ -d x86 ]; then
+		cd x86
+		mv ../../zt1-src.tar.gz .
+		docker build -t zt1-build-${distro}-x86 .
+		mv zt1-src.tar.gz ../..
+		cd ..
+	fi
 
 	rm -f *.deb *.rpm
 
 #	exit 0
 
 	if [ ! -n "`echo $distro | grep -F debian`" -a ! -n "`echo $distro | grep -F ubuntu`" ]; then
-		docker run --rm -v `pwd`:/artifacts --privileged -it zt1-build-${distro}-x64 /bin/bash -c 'cd /ZeroTierOne ; make redhat ; cd .. ; cp `find /root/rpmbuild -type f -name *.rpm` /artifacts ; ls -l /artifacts'
-		docker run --rm -v `pwd`:/artifacts --privileged -it zt1-build-${distro}-x86 /bin/bash -c 'cd /ZeroTierOne ; make redhat ; cd .. ; cp `find /root/rpmbuild -type f -name *.rpm` /artifacts ; ls -l /artifacts'
+		if [ -d x64 ]; then
+			docker run --rm -v `pwd`:/artifacts --privileged -it zt1-build-${distro}-x64 /bin/bash -c 'cd /ZeroTierOne ; make redhat ; cd .. ; cp `find /root/rpmbuild -type f -name *.rpm` /artifacts ; ls -l /artifacts'
+		fi
+		if [ -d x86 ]; then
+			docker run --rm -v `pwd`:/artifacts --privileged -it zt1-build-${distro}-x86 /bin/bash -c 'cd /ZeroTierOne ; make redhat ; cd .. ; cp `find /root/rpmbuild -type f -name *.rpm` /artifacts ; ls -l /artifacts'
+		fi
 	else
-		docker run --rm -v `pwd`:/artifacts --privileged -it zt1-build-${distro}-x64 /bin/bash -c 'cd /ZeroTierOne ; make debian ; cd .. ; cp *.deb /artifacts ; ls -l /artifacts'
-		docker run --rm -v `pwd`:/artifacts --privileged -it zt1-build-${distro}-x86 /bin/bash -c 'cd /ZeroTierOne ; make debian ; cd .. ; cp *.deb /artifacts ; ls -l /artifacts'
+		if [ -d x64 ]; then
+			docker run --rm -v `pwd`:/artifacts --privileged -it zt1-build-${distro}-x64 /bin/bash -c 'cd /ZeroTierOne ; make debian ; cd .. ; cp *.deb /artifacts ; ls -l /artifacts'
+		fi
+		if [ -d x86 ]; then
+			docker run --rm -v `pwd`:/artifacts --privileged -it zt1-build-${distro}-x86 /bin/bash -c 'cd /ZeroTierOne ; make debian ; cd .. ; cp *.deb /artifacts ; ls -l /artifacts'
+		fi
 	fi
 
 	cd ..
