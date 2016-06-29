@@ -95,8 +95,8 @@ mac-dist-pkg: FORCE
 # For ZeroTier, Inc. to build official signed packages
 official: FORCE
 	make clean
-	make -j 4 one
-	make mac-dist-pkg
+	make ZT_OFFICIAL_RELEASE=1 -j 4 one
+	make ZT_OFFICIAL_RELEASE=1 mac-dist-pkg
 
 clean:
 	rm -rf *.dSYM build-* *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier ZeroTierOneInstaller-* mkworld doc/node_modules
