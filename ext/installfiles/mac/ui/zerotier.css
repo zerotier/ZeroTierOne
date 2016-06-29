@@ -1,0 +1,199 @@
+/* Dark blue-grey: #234447
+ * Light blue-grey: #91a2a3
+ * Light yellow: #ffffcc
+ * Orange: #ffb354 */
+
+html,body {
+	font-family: "Helvetica Neue","Lucida Sans Unicode",sans-serif;
+	font-size: 12pt;
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+
+.zeroTierAddress {
+	font-family: monospace;
+}
+
+.zeroTierNode {
+	width: 100%;
+	height: 100%;
+	padding: 0;
+	margin: 0;
+	display: table;
+}
+
+.zeroTierNode > .middle {
+	width: 100%;
+	height: 100%;
+	padding: 0;
+	margin: 0;
+	overflow: hidden;
+	display: table-row;
+}
+.zeroTierNode > .middle > .middleCell {
+	width: 100%;
+	height: 100%;
+	display: table-cell;
+	border-bottom: 1px solid #cfcfcf;
+}
+.zeroTierNode > .middle > .middleCell > .middleScroll {
+	display: block;
+	width: 100%;
+	height: 100%;
+	padding: 0;
+	margin: 0;
+	overflow: scroll;
+	overflow-x: hidden;
+	overflow-y: scroll;
+	background: #dddddd;
+}
+.zeroTierNode > .middle > .middleCell > .middleScroll > .networks {
+	display: block;
+	width: 100%;
+	padding: 0 0 0.25rem 0;
+	margin: 0;
+	border: 0;
+	text-align: left;
+	border-collapse: collapse;
+}
+.zeroTierNode > .middle > .middleCell > .middleScroll > .networks > .network {
+	display: block;
+	border-top: 0.12rem solid #dddddd;
+	border-bottom: 0.12rem solid #dddddd;
+	padding: 0.25rem;
+	background: #ffffff;
+}
+
+.zeroTierNode > .bottom {
+	font-size: 12pt;
+	width: 100%;
+	overflow: hidden;
+	display: table-row;
+	color: #000000;
+	background: #dfdfdf;
+}
+.zeroTierNode > .bottom > .left {
+	text-align: left;
+	white-space: nowrap;
+	float: left;
+	padding: 0 0 0 0.5rem;
+	font-size: 12pt;
+	height: 100%;
+}
+.zeroTierNode > .bottom > .left > .statusLine {
+	font-family: monospace;
+	white-space: nowrap;
+	font-size: 11pt;
+	height: 100%;
+}
+.zeroTierNode > .bottom > .right {
+	text-align: right;
+	height: 100%;
+	white-space: nowrap;
+	float: right;
+	font-size: 12pt;
+	background: #ffffff;
+}
+.zeroTierNode > .bottom > .right form {
+	height: 100%;
+}
+.zeroTierNode > .bottom > .right input {
+	font-family: monospace;
+	font-size: 12pt;
+	background: #ffffff;
+	color: #000000;
+	outline: none;
+	outline-style: none;
+	box-shadow: 0;
+	border: 0;
+	margin: 0;
+	padding: 0 0.25rem 0 0.25rem;
+	display: inline;
+	height: 100%;
+}
+.zeroTierNode > .bottom > .right button {
+	display: inline-block;
+	font-size: 12pt;
+	background: #ffb354;
+	border: 1px solid #ffb354;
+	color: #000000;
+	margin: 0;
+	padding: 0.05rem 0.75rem 0.05rem 0.75rem;
+	outline: none;
+	outline-style: none;
+	height: 100%;
+}
+.zeroTierNode > .bottom > .right button:hover {
+	cursor: pointer;
+	outline: none;
+	outline-style: none;
+	border: 1px solid #000000;
+}
+
+.zeroTierNetwork {
+	padding: 0;
+	margin: 0;
+	display: inline-block;
+	text-align: right;
+	width: 100%;
+	position: relative;
+}
+.zeroTierNetwork .networkInfo {
+	padding: 0 0 0.25rem 0;
+	text-align: left;
+	font-size: 12pt;
+}
+.zeroTierNetwork .networkInfo .networkId {
+	font-size: 11pt;
+	font-family: monospace;
+	color: #000000;
+}
+.zeroTierNetwork .networkInfo .networkName {
+	padding: 0 0 0 1rem;
+	float: right;
+	font-size: 12pt;
+}
+.zeroTierNetwork .networkProps {
+	width: 100%;
+	display: table;
+	padding: 0;
+	margin: 0 auto 0 auto;
+	border-top: 1px solid #999999;
+	border-bottom: 1px solid #999999;
+}
+.zeroTierNetwork .networkProps > .row {
+	display: table-row;
+}
+.zeroTierNetwork .networkProps > .row > .name {
+	display: table-cell;
+	font-size: 10pt;
+	padding: 0.1rem 0.5rem 0.1rem 0.5rem;
+}
+.zeroTierNetwork .networkProps > .row > .value {
+	font-size: 10pt;
+	display: table-cell;
+	padding: 0.1rem 0.5rem 0.1rem 0.5rem;
+	background: #eeeeee;
+}
+.zeroTierNetwork .ipList {
+}
+.zeroTierNetwork .ipAddress {
+	font-family: monospace;
+	font-size: 10pt;
+}
+.zeroTierNetwork .leaveNetworkButton {
+	padding: 0.25rem 0.5rem 0.25rem 0.5rem;
+	margin: 0.25rem 0 0 0;
+	font-size: 9pt;
+	background: #ffffff;
+	outline: none;
+	background: #ffb354;
+	border: 1px solid #ffb354;
+	cursor: pointer;
+}
+.zeroTierNetwork .leaveNetworkButton:hover {
+	border: 1px solid #000000;
+}
