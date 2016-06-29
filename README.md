@@ -1,11 +1,13 @@
-ZeroTier One - A Planetary Ethernet Switch
+ZeroTier - A Planetary Ethernet Switch
 ======
 
-ZeroTier is a software-based managed Ethernet switch for planet Earth. It erases the LAN/WAN distinction and makes VPNs, tunnels, proxies, and other kludges arising from the inflexible nature of physical networks obsolete. Just create networks and add things to them and forget about wiring. Addresses are authenticated and everything is encrypted end-to-end and traffic takes the most direct (peer to peer) path it can find, including skipping the Internet and using local LANs if possible.
+ZeroTier is a software-based managed Ethernet switch for planet Earth.
 
-ZeroTier One provides ZeroTier network connectivity to devices running Windows, Mac, Linux, iOS, Android, and FreeBSD, and makes joining virtual networks as easy as joining IRC or Slack channels.
+It erases the LAN/WAN distinction and makes VPNs, tunnels, proxies, and other kludges arising from the inflexible nature of physical networks obsolete. Everything is encrypted end-to-end and traffic takes the most direct (peer to peer) path available.
 
-Visit [ZeroTier's site](https://www.zerotier.com/) for more information and [pre-built binary packages](https://www.zerotier.com/download.shtml). Apps for Android and iOS are available for free in the Google Plan and Apple app stores.
+This repository contains ZeroTier One, a service that provides ZeroTier network connectivity to devices running Windows, Mac, Linux, iOS, Android, and FreeBSD and makes joining virtual networks as easy as joining IRC or Slack channels. It also contains the OS-independent core ZeroTier protocol implementation in [node/](node/).
+
+Visit [ZeroTier's site](https://www.zerotier.com/) for more information and [pre-built binary packages](https://www.zerotier.com/download.shtml). Apps for Android and iOS are available for free in the Google Play and Apple app stores.
 
 ### Getting Started
 
@@ -34,12 +36,12 @@ To create networks of your own you'll need a network controller. You can use [ou
 For Mac, Linux, and BSD, just type "make" (or "gmake" on BSD). You won't need much installed; here are the requirements for various platforms:
 
  * **Mac**: Xcode command line tools. It should build on OSX 10.7 or newer.
- * **Linux**: gcc/g++ (4.9 or newer recommended) or clang/clang++ (3.4 or newer recommended) Makefile will use clang by default if available. The Linux build will auto-detect the presence of development headers for *json-parser*, *http-parser*, *li8bnatpmp*, and *libminiupnpc* and will link against the system libraries for these if they are present and recent enough. Otherwise the bundled versions in *ext/* will be used. Type `make install` to install the binaries and other files on the system, but this will not create init.d or systemd links.
+ * **Linux**: gcc/g++ (4.9 or newer recommended) or clang/clang++ (3.4 or newer recommended) Makefile will use clang by default if available. The Linux build will auto-detect the presence of development headers for *json-parser*, *http-parser*, *li8bnatpmp*, and *libminiupnpc* and will link against the system libraries for these if they are present and recent enough. Otherwise the bundled versions in [ext/](ext/) will be used. Type `make install` to install the binaries and other files on the system, though this will not create init.d or systemd links.
  * **FreeBSD**: C++ compiler (G++ usually) and GNU make (gmake).
 
 Each supported platform has its own *make-XXX.mk* file that contains the actual make rules for the platform. The right .mk file is included by the main Makefile based on the GNU make *OSTYPE* variable. Take a look at the .mk file for your platform for other targets, debug build rules, etc.
 
-Typing "make selftest" will build a *zerotier-selftest* binary which unit tests various internals and reports on a few aspects of the build environment. It's a good idea to try this on novel platforms or architectures.
+Typing `make selftest` will build a *zerotier-selftest* binary which unit tests various internals and reports on a few aspects of the build environment. It's a good idea to try this on novel platforms or architectures.
 
 Windows, of course, is special. We build for Windows with Microsoft Visual Studio 2012 on Windows 7. A solution file is located in the *windows/* subfolder. Newer versions of Visual Studio (and Windows) may work but haven't been tested. Older versions almost certainly will not, since they lack things like *stdint.h* and certain STL features. MinGW or other ports of gcc/clang to Windows should also work but haven't been tested.
 
@@ -59,18 +61,16 @@ The service is controlled via the JSON API, which by default is available at 127
 
 Here's where home folders live (by default) on each OS:
 
- * Linux: /var/lib/zerotier-one
- * BSD: /var/db/zerotier-one
- * Mac: /Library/Application Support/ZeroTier/One
- * Windows: \\ProgramData\\ZeroTier\\One (That's for Windows 7. The base 'shared app data' folder might be different on different Windows versions.)
+ * **Linux**: `/var/lib/zerotier-one`
+ * **FreeBSD**: `/var/db/zerotier-one`
+ * **Mac**: `/Library/Application Support/ZeroTier/One`
+ * **Windows**: `\\ProgramData\\ZeroTier\\One` (That's for Windows 7. The base 'shared app data' folder might be different on different Windows versions.)
 
 Running ZeroTier One on a Mac is the same, but OSX requires a kernel extension. We ship a signed binary build of the ZeroTier tap device driver, which can be installed on Mac with:
 
     sudo make install-mac-tap
 
 This will create the home folder for Mac, place *tap.kext* there, and set its modes correctly to enable ZeroTier One to manage it with *kextload* and *kextunload*.
-
-We recommend using our binary packages on Windows, since there are several prerequisites such as a tap driver that must be installed on the system *and* in the home folder.
 
 ### Troubleshooting
 
@@ -82,7 +82,7 @@ The Mac firewall can be found under "Security" in System Preferences. Linux has 
 
     sudo ufw allow 9993/udp
 
-On CentOS check */etc/sysconfig/iptables* for IPTables rules. For other distributions consult your distribution's documentation. You'll also have to check the UIs or documentation for commercial third party firewall applications like Little Snitch (Mac), McAfee Firewall Enterprise (Windows), etc. if you are running any of those. Some corporate environments might have centrally managed firewall software, so you might also have to contact IT.
+On CentOS check `/etc/sysconfig/iptables` for IPTables rules. For other distributions consult your distribution's documentation. You'll also have to check the UIs or documentation for commercial third party firewall applications like Little Snitch (Mac), McAfee Firewall Enterprise (Windows), etc. if you are running any of those. Some corporate environments might have centrally managed firewall software, so you might also have to contact IT.
 
 ZeroTier One peers will automatically locate each other and communicate directly over a local wired LAN *if UDP port 9993 inbound is open*. If that port is filtered, they won't be able to see each others' LAN announcement packets. If you're experiencing poor performance between devices on the same physical network, check their firewall settings. Without LAN auto-location peers must attempt "loopback" NAT traversal, which sometimes fails and in any case requires that every packet traverse your external router twice.
 
