@@ -92,6 +92,9 @@
 // Flags with all V6 managed mode flags flipped off -- for masking in update operation and in string form for SQL building
 #define ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_MASK_S "268435449"
 
+// Uncomment to trace Sqlite for debugging
+//#define ZT_NETCONF_SQLITE_TRACE 1
+
 namespace ZeroTier {
 
 namespace {
@@ -162,7 +165,7 @@ public:
 
 struct MemberRecord
 {
-	int64_t rowid;
+	sqlite3_int64 rowid;
 	char nodeId[16];
 	bool authorized;
 	bool activeBridge;
@@ -206,6 +209,13 @@ struct NetworkRecord
 		id[0] = (char)0;
 	}
 };
+
+#ifdef ZT_NETCONF_SQLITE_TRACE
+static void sqliteTraceFunc(void *ptr,const char *s)
+{
+	fprintf(stderr,"SQLITE: %s\n",s);
+}
+#endif
 
 } // anonymous namespace
 
@@ -385,7 +395,7 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			||(sqlite3_prepare_v2(_db,"SELECT m.nodeId,m.memberRevision FROM Member AS m WHERE m.networkId = ? ORDER BY m.nodeId ASC",-1,&_sListNetworkMembers,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Member SET authorized = ?,memberRevision = (SELECT memberRevisionCounter FROM Network WHERE id = ?) WHERE rowid = ?",-1,&_sUpdateMemberAuthorized,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Member SET activeBridge = ?,memberRevision = (SELECT memberRevisionCounter FROM Network WHERE id = ?) WHERE rowid = ?",-1,&_sUpdateMemberActiveBridge,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"UPDATE Member SET lastRequestTime = ? AND recentHistory = ? WHERE rowid = ?",-1,&_sUpdateMemberHistory,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"UPDATE Member SET \"lastRequestTime\" = ?, \"recentHistory\" = ? WHERE rowid = ?",-1,&_sUpdateMemberHistory,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sDeleteMember,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ?",-1,&_sDeleteAllNetworkMembers,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT nodeId,recentHistory FROM Member WHERE networkId = ? AND lastRequestTime >= ?",-1,&_sGetActiveNodesOnNetwork,(const char **)0) != SQLITE_OK)
@@ -427,6 +437,10 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			throw std::runtime_error("SqliteNetworkController unable to read instanceId (it's NULL)");
 		_instanceId = iid;
 	}
+
+#ifdef ZT_NETCONF_SQLITE_TRACE
+	sqlite3_trace(_db,sqliteTraceFunc,(void *)0);
+#endif
 
 	_backupThread = Thread::start(this);
 }
@@ -550,26 +564,20 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			return NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND;
 		}
 
-		// Fetch Member record
+		// Fetch or create Member record
 
-		bool foundMember = false;
 		sqlite3_reset(_sGetMember);
 		sqlite3_bind_text(_sGetMember,1,network.id,16,SQLITE_STATIC);
 		sqlite3_bind_text(_sGetMember,2,member.nodeId,10,SQLITE_STATIC);
 		if (sqlite3_step(_sGetMember) == SQLITE_ROW) {
-			foundMember = true;
-			member.rowid = (int64_t)sqlite3_column_int64(_sGetMember,0);
+			member.rowid = sqlite3_column_int64(_sGetMember,0);
 			member.authorized = (sqlite3_column_int(_sGetMember,1) > 0);
 			member.activeBridge = (sqlite3_column_int(_sGetMember,2) > 0);
 			member.lastRequestTime = (uint64_t)sqlite3_column_int64(_sGetMember,5);
 			const char *rhblob = (const char *)sqlite3_column_blob(_sGetMember,6);
 			if (rhblob)
-				member.recentHistory.fromBlob(rhblob,sqlite3_column_bytes(_sGetMember,6));
-		}
-
-		// Create Member record for unknown nodes, auto-authorizing if network is public
-
-		if (!foundMember) {
+				member.recentHistory.fromBlob(rhblob,(unsigned int)sqlite3_column_bytes(_sGetMember,6));
+		} else {
 			member.authorized = (network.isPrivate ? false : true);
 			member.activeBridge = false;
 			sqlite3_reset(_sCreateMember);
@@ -580,7 +588,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			if (sqlite3_step(_sCreateMember) != SQLITE_DONE) {
 				return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 			}
-			member.rowid = (int64_t)sqlite3_last_insert_rowid(_db);
+			member.rowid = sqlite3_last_insert_rowid(_db);
 
 			sqlite3_reset(_sIncrementMemberRevisionCounter);
 			sqlite3_bind_text(_sIncrementMemberRevisionCounter,1,network.id,16,SQLITE_STATIC);
@@ -606,10 +614,13 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			} else {
 				member.recentHistory.front().append("null}");
 			}
+
 			while (member.recentHistory.size() > ZT_NETCONF_DB_MEMBER_HISTORY_LENGTH)
 				member.recentHistory.pop_back();
 			std::string rhblob(member.recentHistory.toBlob());
+
 			sqlite3_reset(_sUpdateMemberHistory);
+			sqlite3_clear_bindings(_sUpdateMemberHistory);
 			sqlite3_bind_int64(_sUpdateMemberHistory,1,(sqlite3_int64)now);
 			sqlite3_bind_blob(_sUpdateMemberHistory,2,(const void *)rhblob.data(),(int)rhblob.length(),SQLITE_STATIC);
 			sqlite3_bind_int64(_sUpdateMemberHistory,3,member.rowid);
