@@ -64,7 +64,7 @@ Here's where home folders live (by default) on each OS:
  * **Linux**: `/var/lib/zerotier-one`
  * **FreeBSD**: `/var/db/zerotier-one`
  * **Mac**: `/Library/Application Support/ZeroTier/One`
- * **Windows**: `\\ProgramData\\ZeroTier\\One` (That's for Windows 7. The base 'shared app data' folder might be different on different Windows versions.)
+ * **Windows**: `\ProgramData\ZeroTier\One` (That's for Windows 7. The base 'shared app data' folder might be different on different Windows versions.)
 
 Running ZeroTier One on a Mac is the same, but OSX requires a kernel extension. We ship a signed binary build of the ZeroTier tap device driver, which can be installed on Mac with:
 
