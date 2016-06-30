@@ -624,9 +624,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			sqlite3_bind_int64(_sUpdateMemberHistory,1,(sqlite3_int64)now);
 			sqlite3_bind_blob(_sUpdateMemberHistory,2,(const void *)rhblob.data(),(int)rhblob.length(),SQLITE_STATIC);
 			sqlite3_bind_int64(_sUpdateMemberHistory,3,member.rowid);
-			if (sqlite3_step(_sUpdateMemberHistory) != SQLITE_DONE) {
-				printf("!!! %s\n",sqlite3_errmsg(_db));
-			}
+			sqlite3_step(_sUpdateMemberHistory);
 		}
 
 		// Don't proceed if member is not authorized! ---------------------------
