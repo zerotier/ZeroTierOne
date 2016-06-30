@@ -11,4 +11,6 @@
 FROM zerotier/zt1-build-fedora-22-x86-base
 MAINTAINER Adam Ierymenko <adam.ierymenko@zerotier.com>
 
+RUN echo 'i686-redhat-linux' >/etc/rpm/platform
+
 ADD zt1-src.tar.gz /
