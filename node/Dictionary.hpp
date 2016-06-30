@@ -66,10 +66,10 @@ public:
 
 	Dictionary(const char *s,unsigned int len)
 	{
-		if (len > C)
-			len = C;
+		if (len > (C-1))
+			len = C-1;
 		memcpy(_d,s,len);
-		_d[len-1] = (char)0;
+		_d[len] = (char)0;
 	}
 
 	Dictionary(const Dictionary &d)
