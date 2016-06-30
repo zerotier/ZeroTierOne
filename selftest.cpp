@@ -975,42 +975,6 @@ static int testPhy()
 	return 0;
 }
 
-static int testSqliteNetworkController()
-{
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-
-	OSUtils::rm("./selftest_network_controller.db");
-
-	try {
-		std::cout << "[network-controller] Generating signing identity..." << std::endl;
-		Identity signingId;
-		signingId.generate();
-
-		{
-			std::cout << "[network-controller] Creating database..." << std::endl;
-			SqliteNetworkController controller("./selftest_network_controller.db");
-			std::cout << "[network-controller] Closing database..." << std::endl;
-		}
-
-		{
-			std::cout << "[network-controller] Re-opening database..." << std::endl;
-			SqliteNetworkController controller("./selftest_network_controller.db");
-			std::cout << "[network-controller] Closing database..." << std::endl;
-		}
-	} catch (std::runtime_error &exc) {
-		std::cout << "FAIL! (unexpected exception: " << exc.what() << ")" << std::endl;
-		return -1;
-	} catch ( ... ) {
-		std::cout << "FAIL! (unexpected exception: ...)" << std::endl;
-		return -1;
-	}
-
-	OSUtils::rm("./selftest_network_controller.db");
-
-#endif // ZT_ENABLE_NETWORK_CONTROLLER
-	return 0;
-}
-
 static int testResolver()
 {
 	std::cout << "[resolver] Testing BackgroundResolver..."; std::cout.flush();
@@ -1129,7 +1093,6 @@ int main(int argc,char **argv)
 	srand((unsigned int)time(0));
 
 	///*
-	r |= testSqliteNetworkController();
 	r |= testOther();
 	r |= testCrypto();
 	r |= testPacket();
