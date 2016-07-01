@@ -60,8 +60,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             nibName: "JoinNetworkViewController", bundle: nil)
         joinNetworkPopover.behavior = .Transient
 
-        joinNetworkPopover.appearance = NSAppearance(named: NSAppearanceNameAqua)
-
         let showNetworksView = ShowNetworksViewController(
             nibName: "ShowNetworksViewController", bundle: nil)
         showNetworksView?.netMonitor = monitor
@@ -69,20 +67,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         networkListPopover.contentViewController = showNetworksView
         networkListPopover.behavior = .Transient
 
-        networkListPopover.appearance = NSAppearance(named: NSAppearanceNameAqua)
-
         preferencesPopover.contentViewController = PreferencesViewController(
             nibName: "PreferencesViewController", bundle: nil)
         preferencesPopover.behavior = .Transient
 
-        preferencesPopover.appearance = NSAppearance(named: NSAppearanceNameAqua)
-
         aboutPopover.contentViewController = AboutViewController(
             nibName: "AboutViewController", bundle: nil)
         aboutPopover.behavior = .Transient
-
-        aboutPopover.appearance = NSAppearance(named: NSAppearanceNameAqua)
-
     }
 
     func applicationWillTerminate(aNotification: NSNotification) {
