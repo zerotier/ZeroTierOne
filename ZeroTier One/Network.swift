@@ -177,7 +177,11 @@ class Network: NSObject, NSCoding  {
 
     required init?(coder aDecoder: NSCoder) {
         if aDecoder.containsValueForKey(PropertyKeys.addressesKey) {
-            self.assignedAddresses = aDecoder.decodeObjectForKey(PropertyKeys.addressesKey) as! [String]
+            let addrs = aDecoder.decodeObjectForKey(PropertyKeys.addressesKey) as! [String]
+
+            for a in addrs {
+                self.assignedAddresses.append(a)
+            }
         }
 
         if aDecoder.containsValueForKey(PropertyKeys.bridgeKey) {
@@ -193,7 +197,8 @@ class Network: NSObject, NSCoding  {
         }
 
         if aDecoder.containsValueForKey(PropertyKeys.macKey) {
-            self.mac = aDecoder.decodeObjectForKey(PropertyKeys.macKey) as! String
+            let mac = aDecoder.decodeObjectForKey(PropertyKeys.macKey) as! String
+            self.mac = mac
         }
 
         if aDecoder.containsValueForKey(PropertyKeys.mtuKey) {
@@ -201,7 +206,9 @@ class Network: NSObject, NSCoding  {
         }
 
         if aDecoder.containsValueForKey(PropertyKeys.nameKey) {
-            self.name = aDecoder.decodeObjectForKey(PropertyKeys.nameKey) as! String
+            let name = aDecoder.decodeObjectForKey(PropertyKeys.nameKey) as! String
+
+            self.name = name
         }
 
         if aDecoder.containsValueForKey(PropertyKeys.netconfKey) {

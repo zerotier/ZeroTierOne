@@ -69,7 +69,7 @@ void sharedFileListDidChange(LSSharedFileListRef inList, void *context)
     if (wantedURL == NULL || fileList == NULL)
         return NULL;
 
-    NSArray *listSnapshot = (__bridge NSArray*)LSSharedFileListCopySnapshot(fileList, NULL);
+    NSArray *listSnapshot = (__bridge_transfer NSArray*)LSSharedFileListCopySnapshot(fileList, NULL);
     for (id itemObject in listSnapshot) {
         LSSharedFileListItemRef item = (__bridge LSSharedFileListItemRef) itemObject;
         UInt32 resolutionFlags = kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes;

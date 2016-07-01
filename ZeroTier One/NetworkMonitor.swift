@@ -42,8 +42,13 @@ class NetworkMonitor: NSObject {
         let filePath = dataFile()
 
         if NSFileManager.defaultManager().fileExistsAtPath(filePath) {
-            self.savedNetworks = NSKeyedUnarchiver.unarchiveObjectWithFile(filePath) as! [Network]
+            let networks = NSKeyedUnarchiver.unarchiveObjectWithFile(filePath) as! [Network]
 
+            self.savedNetworks.removeAll()
+
+            for n in networks {
+                self.savedNetworks.append(n)
+            }
         }
 
         ServiceCom.getNetworkList() { (networkList) -> Void in

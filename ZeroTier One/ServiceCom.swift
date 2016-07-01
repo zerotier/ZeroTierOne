@@ -161,9 +161,8 @@ class ServiceCom: NSObject {
 
     static func leaveNetwork(network: String) {
         let urlString = baseURL + "/network/\(network)?auth=\(ServiceCom.getKey())"
-        let url = NSURL(string: urlString)
 
-        if let u = url {
+        if let u = NSURL(string: urlString) {
             let request = NSMutableURLRequest(URL: u)
             request.HTTPMethod = "DELETE"
 

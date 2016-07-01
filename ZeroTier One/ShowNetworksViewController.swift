@@ -112,8 +112,7 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
             cell.addressesField.stringValue = ""
 
             for nw in network.assignedAddresses {
-                cell.addressesField.stringValue += nw
-                cell.addressesField.stringValue += "\n"
+                cell.addressesField.stringValue += "\(nw)\n"
             }
 
 
