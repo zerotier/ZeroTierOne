@@ -27,7 +27,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     var networks = [Network]()
 
+    var status: NodeStatus? = nil
+
+    var pasteboard = NSPasteboard.generalPasteboard()
+
     func applicationDidFinishLaunching(aNotification: NSNotification) {
+        pasteboard.declareTypes([NSPasteboardTypeString], owner: nil)
 
         let defaults = NSUserDefaults.standardUserDefaults()
         let defaultsDict = ["firstRun": true]
@@ -47,10 +52,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
 
-
-
         let nc = NSNotificationCenter.defaultCenter()
         nc.addObserver(self, selector: #selector(onNetworkListUpdated(_:)), name: networkUpdateKey, object: nil)
+        nc.addObserver(self, selector: #selector(onNodeStatusUpdated(_:)), name: statusUpdateKey, object: nil)
 
         statusItem.image = NSImage(named: "MenuBarIconMac")
 
@@ -161,8 +165,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         buildMenu()
     }
 
+    func onNodeStatusUpdated(note: NSNotification) {
+        let status = note.userInfo!["status"] as! NodeStatus
+        self.status = status
+
+        buildMenu()
+    }
+
     func buildMenu() {
         let menu = NSMenu()
+
+        if let s = self.status {
+            menu.addItem(NSMenuItem(title: "Node ID: \(s.address)", action: #selector(AppDelegate.copyNodeID), keyEquivalent: ""))
+            menu.addItem(NSMenuItem.separatorItem())
+        }
 
         menu.addItem(NSMenuItem(title: "Network Details...", action: #selector(AppDelegate.showNetworks), keyEquivalent: "n"))
         menu.addItem(NSMenuItem(title: "Join Network...", action: #selector(AppDelegate.joinNetwork), keyEquivalent: "j"))
@@ -222,6 +238,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         else {
             ServiceCom.joinNetwork(id)
+        }
+    }
+
+    func copyNodeID() {
+        if let s = self.status {
+            pasteboard.setString(s.address, forType: NSPasteboardTypeString)
         }
     }
 }

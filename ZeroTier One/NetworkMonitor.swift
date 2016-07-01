@@ -9,6 +9,7 @@
 import Cocoa
 
 let networkUpdateKey = "com.zerotier.one.network-list"
+let statusUpdateKey = "com.zerotier.one.status"
 
 class NetworkMonitor: NSObject {
 
@@ -56,6 +57,14 @@ class NetworkMonitor: NSObject {
 
             NSOperationQueue.mainQueue().addOperationWithBlock() { () -> Void in
                 self.internal_updateNetworkInfo()
+            }
+        }
+
+        ServiceCom.getNodeStatus() { nodeStatus -> Void in
+            NSOperationQueue.mainQueue().addOperationWithBlock() { () -> Void in
+                let nc = NSNotificationCenter.defaultCenter()
+
+                nc.postNotificationName(statusUpdateKey, object: nil, userInfo: ["status": nodeStatus])
             }
         }
     }

@@ -118,6 +118,40 @@ class ServiceCom: NSObject {
         }
     }
 
+    static func getNodeStatus(completionHandler: (NodeStatus -> Void)) {
+        let urlString = baseURL + "/status?auth=\(ServiceCom.getKey())"
+
+        if let u = NSURL(string: urlString) {
+            let request = NSMutableURLRequest(URL: u)
+            let session = NSURLSession.sharedSession()
+            let task = session.dataTaskWithRequest(request) { (data, response, error) in
+                if error != nil{
+                    NSLog("\(error)")
+                    return
+                }
+
+                let httpResponse = response as! NSHTTPURLResponse
+                let status = httpResponse.statusCode
+
+                if status == 200 {
+                    do {
+                        let json = try NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions()) as! [String: AnyObject]
+
+                        let status = NodeStatus(jsonData: json)
+
+                        completionHandler(status)
+                    }
+                    catch  {
+                    }
+                }
+            }
+            
+            task.resume()
+        }
+        else {
+            NSLog("bad URL")
+        }
+    }
 
     static func joinNetwork(network: String, allowManaged: Bool = true, allowGlobal: Bool = false, allowDefault: Bool = false) {
         let urlString = baseURL + "/network/\(network)?auth=\(ServiceCom.getKey())"
