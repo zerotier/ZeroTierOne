@@ -79,7 +79,21 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
             if network.connected {
                 cell.connectedCheckbox.state = NSOnState
 
-                cell.allowDefault.enabled = true
+                if network.allowDefault {
+                    cell.allowDefault.enabled = true
+                    cell.allowDefault.state = NSOnState
+                }
+                else {
+                    cell.allowDefault.state = NSOffState
+
+                    if defaultRouteExists(networkList) {
+                        cell.allowDefault.enabled = false
+                    }
+                    else {
+                        cell.allowDefault.enabled = true
+                    }
+                }
+
                 cell.allowGlobal.enabled = true
                 cell.allowManaged.enabled = true
             }
@@ -91,21 +105,6 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
                 cell.allowManaged.enabled = false
             }
             
-
-            if network.allowDefault {
-                cell.allowDefault.state = NSOnState
-            }
-            else {
-                cell.allowDefault.state = NSOffState
-
-                if defaultRouteExists(networkList) {
-                    cell.allowDefault.enabled = false
-                }
-                else {
-                    cell.allowDefault.enabled = true
-                }
-            }
-
             cell.allowGlobal.state = (network.allowGlobal ? NSOnState : NSOffState)
             cell.allowManaged.state = (network.allowManaged ? NSOnState : NSOffState)
 
