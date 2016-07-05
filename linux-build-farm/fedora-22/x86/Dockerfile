@@ -13,4 +13,6 @@ MAINTAINER Adam Ierymenko <adam.ierymenko@zerotier.com>
 
 RUN echo 'i686-redhat-linux' >/etc/rpm/platform
 
+RUN rpm --erase http-parser-devel
+
 ADD zt1-src.tar.gz /
