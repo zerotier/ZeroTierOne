@@ -254,7 +254,7 @@ bool LinuxEthernetTap::removeIp(const InetAddress &ip)
 	if (!ip)
 		return true;
 	std::vector<InetAddress> allIps(ips());
-	if (!std::binary_search(allIps.begin(),allIps.end(),ip)) {
+	if (std::find(allIps.begin(),allIps.end(),ip) != allIps.end()) {
 		if (___removeIp(_dev,ip))
 			return true;
 	}
@@ -294,7 +294,7 @@ std::vector<InetAddress> LinuxEthernetTap::ips() const
 		freeifaddrs(ifa);
 
 	std::sort(r.begin(),r.end());
-	std::unique(r.begin(),r.end());
+	r.erase(std::unique(r.begin(),r.end()),r.end());
 
 	return r;
 }
@@ -356,7 +356,7 @@ void LinuxEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,st
 		newGroups.push_back(MulticastGroup::deriveMulticastGroupForAddressResolution(*ip));
 
 	std::sort(newGroups.begin(),newGroups.end());
-	std::unique(newGroups.begin(),newGroups.end());
+	newGroups.erase(std::unique(newGroups.begin(),newGroups.end()),newGroups.end());
 
 	for(std::vector<MulticastGroup>::iterator m(newGroups.begin());m!=newGroups.end();++m) {
 		if (!std::binary_search(_multicastGroups.begin(),_multicastGroups.end(),*m))
