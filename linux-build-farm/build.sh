@@ -45,7 +45,7 @@ for distro in $subdirs; do
 
 	rm -f *.deb *.rpm
 
-	exit 0
+#	exit 0
 
 	if [ ! -n "`echo $distro | grep -F debian`" -a ! -n "`echo $distro | grep -F ubuntu`" ]; then
 		if [ -d x64 ]; then
