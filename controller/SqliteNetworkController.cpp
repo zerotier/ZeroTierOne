@@ -85,9 +85,10 @@
 #define ZT_NETCONF_NODE_ACTIVE_THRESHOLD ((ZT_NETWORK_AUTOCONF_DELAY * 2) + 5000)
 
 // Flags for Network 'flags' field in table
-#define ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4 1
+#define ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4_AUTO_ASSIGN 1
 #define ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_RFC4193 2
 #define ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_6PLANE 4
+#define ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_AUTO_ASSIGN 8
 
 // Flags with all V6 managed mode flags flipped off -- for masking in update operation and in string form for SQL building
 #define ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_MASK_S "268435449"
@@ -376,8 +377,7 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			||(sqlite3_prepare_v2(_db,"DELETE FROM IpAssignmentPool WHERE networkId = ?",-1,&_sDeleteIpAssignmentPoolsForNetwork,(const char **)0) != SQLITE_OK)
 
 			/* IpAssignment */
-			||(sqlite3_prepare_v2(_db,"SELECT \"type\",ip,ipNetmaskBits FROM IpAssignment WHERE networkId = ? AND (nodeId = ? OR nodeId IS NULL) AND ipVersion = ?",-1,&_sGetIpAssignmentsForNode,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT ip,ipNetmaskBits,ipVersion FROM IpAssignment WHERE networkId = ? AND nodeId = ? AND \"type\" = ? ORDER BY ip ASC",-1,&_sGetIpAssignmentsForNode2,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT ip,ipNetmaskBits,ipVersion FROM IpAssignment WHERE networkId = ? AND nodeId = ? AND \"type\" = 0 ORDER BY ip ASC",-1,&_sGetIpAssignmentsForNode,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT 1 FROM IpAssignment WHERE networkId = ? AND ip = ? AND ipVersion = ? AND \"type\" = ?",-1,&_sCheckIfIpIsAllocated,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO IpAssignment (networkId,nodeId,\"type\",ip,ipNetmaskBits,ipVersion) VALUES (?,?,?,?,?,?)",-1,&_sAllocateIp,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM IpAssignment WHERE networkId = ? AND nodeId = ? AND \"type\" = ?",-1,&_sDeleteIpAllocations,(const char **)0) != SQLITE_OK)
@@ -474,7 +474,6 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sCreateNetwork);
 		sqlite3_finalize(_sGetNetworkRevision);
 		sqlite3_finalize(_sSetNetworkRevision);
-		sqlite3_finalize(_sGetIpAssignmentsForNode2);
 		sqlite3_finalize(_sDeleteRelaysForNetwork);
 		sqlite3_finalize(_sCreateRelay);
 		sqlite3_finalize(_sDeleteIpAssignmentPoolsForNetwork);
@@ -740,6 +739,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			++nc.routeCount;
 		}
 
+		// Assign special IPv6 addresses if these are enabled
 		if (((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_RFC4193) != 0)&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
 			nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt());
 			nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
@@ -749,99 +749,180 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
 		}
 
-		if ((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4) != 0) {
-			bool haveStaticIpAssignment = false;
-
-			sqlite3_reset(_sGetIpAssignmentsForNode);
-			sqlite3_bind_text(_sGetIpAssignmentsForNode,1,network.id,16,SQLITE_STATIC);
-			sqlite3_bind_text(_sGetIpAssignmentsForNode,2,member.nodeId,10,SQLITE_STATIC);
-			sqlite3_bind_int(_sGetIpAssignmentsForNode,3,4); // 4 == IPv4
-			while (sqlite3_step(_sGetIpAssignmentsForNode) == SQLITE_ROW) {
-				const unsigned char *const ip = (const unsigned char *)sqlite3_column_blob(_sGetIpAssignmentsForNode,1);
-				if ((!ip)||(sqlite3_column_bytes(_sGetIpAssignmentsForNode,1) != 16))
-					continue;
-				int ipNetmaskBits = sqlite3_column_int(_sGetIpAssignmentsForNode,2);
-				if ((ipNetmaskBits <= 0)||(ipNetmaskBits > 32))
-					continue;
-				if (sqlite3_column_int(_sGetIpAssignmentsForNode,0) == 0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/) {
-					if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
-						struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc.staticIps[nc.staticIpCount++]));
-						v4ip->sin_family = AF_INET;
-						v4ip->sin_port = Utils::hton((uint16_t)ipNetmaskBits);
-						memcpy(&(v4ip->sin_addr.s_addr),ip + 12,4);
-					}
-					haveStaticIpAssignment = true;
+		// Get managed addresses that are assigned to this member
+		bool haveManagedIpv4AutoAssignment = false;
+		bool haveManagedIpv6AutoAssignment = false; // "special" NDP-emulated address types do not count
+		sqlite3_reset(_sGetIpAssignmentsForNode);
+		sqlite3_bind_text(_sGetIpAssignmentsForNode,1,network.id,16,SQLITE_STATIC);
+		sqlite3_bind_text(_sGetIpAssignmentsForNode,2,member.nodeId,10,SQLITE_STATIC);
+		while (sqlite3_step(_sGetIpAssignmentsForNode) == SQLITE_ROW) {
+			const unsigned char *const ip = (const unsigned char *)sqlite3_column_blob(_sGetIpAssignmentsForNode,0);
+			if ((!ip)||(sqlite3_column_bytes(_sGetIpAssignmentsForNode,0) != 16))
+				continue;
+			const int ipNetmaskBits = sqlite3_column_int(_sGetIpAssignmentsForNode,1);
+			const int ipVersion = sqlite3_column_int(_sGetIpAssignmentsForNode,2);
+			if ((ipVersion == 4)&&(ipNetmaskBits >= 0)&&(ipNetmaskBits <= 32)) {
+				if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
+					struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc.staticIps[nc.staticIpCount++]));
+					v4ip->sin_family = AF_INET;
+					v4ip->sin_port = Utils::hton((uint16_t)ipNetmaskBits);
+					memcpy(&(v4ip->sin_addr.s_addr),ip + 12,4);
 				}
+				haveManagedIpv4AutoAssignment = true;
+			} else if ((ipVersion == 6)&&(ipNetmaskBits >= 0)&&(ipNetmaskBits <= 128)) {
+				if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
+					struct sockaddr_in6 *const v6ip = reinterpret_cast<struct sockaddr_in6 *>(&(nc.staticIps[nc.staticIpCount++]));
+					v6ip->sin6_family = AF_INET6;
+					v6ip->sin6_port = Utils::hton((uint16_t)ipNetmaskBits);
+					memcpy(v6ip->sin6_addr.s6_addr,ip,16);
+				}
+				haveManagedIpv6AutoAssignment = true;
 			}
+		}
 
-			if ((!haveStaticIpAssignment)&&(!amActiveBridge)) {
-				// Attempt to auto-assign an IPv4 address from an available routed pool if there is one
-				sqlite3_reset(_sGetIpAssignmentPools);
-				sqlite3_bind_text(_sGetIpAssignmentPools,1,network.id,16,SQLITE_STATIC);
-				sqlite3_bind_int(_sGetIpAssignmentPools,2,4); // 4 == IPv4
+		// Auto-assign IPv6 address if auto-assignment is enabled and it's needed
+		if ( ((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_AUTO_ASSIGN) != 0) && (!haveManagedIpv6AutoAssignment) && (!amActiveBridge) ) {
+			sqlite3_reset(_sGetIpAssignmentPools);
+			sqlite3_bind_text(_sGetIpAssignmentPools,1,network.id,16,SQLITE_STATIC);
+			sqlite3_bind_int(_sGetIpAssignmentPools,2,6); // 6 == IPv6
+			while (sqlite3_step(_sGetIpAssignmentPools) == SQLITE_ROW) {
+				const uint8_t *const ipRangeStartB = reinterpret_cast<const unsigned char *>(sqlite3_column_blob(_sGetIpAssignmentPools,0));
+				const uint8_t *const ipRangeEndB = reinterpret_cast<const unsigned char *>(sqlite3_column_blob(_sGetIpAssignmentPools,1));
+				if ((!ipRangeStartB)||(!ipRangeEndB)||(sqlite3_column_bytes(_sGetIpAssignmentPools,0) != 16)||(sqlite3_column_bytes(_sGetIpAssignmentPools,1) != 16))
+					continue;
 
-				while (sqlite3_step(_sGetIpAssignmentPools) == SQLITE_ROW) {
-					const unsigned char *ipRangeStartB = reinterpret_cast<const unsigned char *>(sqlite3_column_blob(_sGetIpAssignmentPools,0));
-					const unsigned char *ipRangeEndB = reinterpret_cast<const unsigned char *>(sqlite3_column_blob(_sGetIpAssignmentPools,1));
-					if ((!ipRangeStartB)||(!ipRangeEndB)||(sqlite3_column_bytes(_sGetIpAssignmentPools,0) != 16)||(sqlite3_column_bytes(_sGetIpAssignmentPools,1) != 16))
-						continue;
+				uint64_t s[2],e[2],x[2],xx[2];
+				memcpy(s,ipRangeStartB,16);
+				memcpy(e,ipRangeEndB,16);
+				s[0] = Utils::ntoh(s[0]);
+				s[1] = Utils::ntoh(s[1]);
+				e[0] = Utils::ntoh(e[0]);
+				e[1] = Utils::ntoh(e[1]);
+				x[0] = s[0];
+				x[1] = s[1];
 
-					uint32_t ipRangeStart = Utils::ntoh(*(reinterpret_cast<const uint32_t *>(ipRangeStartB + 12)));
-					uint32_t ipRangeEnd = Utils::ntoh(*(reinterpret_cast<const uint32_t *>(ipRangeEndB + 12)));
-					if ((ipRangeEnd <= ipRangeStart)||(ipRangeStart == 0))
-						continue;
-					uint32_t ipRangeLen = ipRangeEnd - ipRangeStart;
+				for(unsigned int trialCount=0;trialCount<1000;++trialCount) {
+					if ((trialCount == 0)&&(e[1] > s[1])&&((e[1] - s[1]) >= 0xffffffffffULL)) {
+						// First see if we can just cram a ZeroTier ID into the higher 64 bits. If so do that.
+						xx[0] = Utils::hton(x[0]);
+						xx[1] = Utils::hton(x[1] + identity.address().toInt());
+					} else {
+						if (x[1] == 0xffffffffffffffffULL) {
+							if (x[0] == 0xffffffffffffffffULL)
+								break;
+							++x[0];
+							x[1] = 0;
+						} else {
+							++x[1];
+						}
+						if ((x[0] >= e[0])&&(x[1] >= e[1]))
+							break;
+						xx[0] = Utils::hton(x[0]);
+						xx[1] = Utils::hton(x[1]);
+					}
 
-					// Start with the LSB of the member's address
-					uint32_t ipTrialCounter = (uint32_t)(identity.address().toInt() & 0xffffffff);
+					InetAddress ip6((const void *)xx,16,0);
 
-					for(uint32_t k=ipRangeStart,l=0;(k<=ipRangeEnd)&&(l < 1000000);++k,++l) {
-						uint32_t ip = (ipRangeLen > 0) ? (ipRangeStart + (ipTrialCounter % ipRangeLen)) : ipRangeStart;
-						++ipTrialCounter;
-						if ((ip & 0x000000ff) == 0x000000ff)
-							continue; // don't allow addresses that end in .255
+					// Check if this IP is within a local-to-Ethernet routed network
+					int routedNetmaskBits = 0;
+					for(unsigned int rk=0;rk<nc.routeCount;++rk) {
+						if ( (!nc.routes[rk].via.ss_family) && (nc.routes[rk].target.ss_family == AF_INET6) && (reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->containsAddress(ip6)) )
+							routedNetmaskBits = reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->netmaskBits();
+					}
 
-						// Check if this IPv4 IP is within a local-to-Ethernet routed network
-						int routedNetmaskBits = 0;
-						for(unsigned int rk=0;rk<nc.routeCount;++rk) {
-							if ((!nc.routes[rk].via.ss_family)&&(nc.routes[rk].target.ss_family == AF_INET)) {
-								uint32_t targetIp = Utils::ntoh((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc.routes[rk].target))->sin_addr.s_addr));
-								int targetBits = Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc.routes[rk].target))->sin_port));
-								if ((ip & (0xffffffff << (32 - targetBits))) == targetIp) {
-									routedNetmaskBits = targetBits;
-									break;
-								}
+					// If it's routed, then try to claim and assign it and if successful end loop
+					if (routedNetmaskBits > 0) {
+						sqlite3_reset(_sCheckIfIpIsAllocated);
+						sqlite3_bind_text(_sCheckIfIpIsAllocated,1,network.id,16,SQLITE_STATIC);
+						sqlite3_bind_blob(_sCheckIfIpIsAllocated,2,(const void *)ip6.rawIpData(),16,SQLITE_STATIC);
+						sqlite3_bind_int(_sCheckIfIpIsAllocated,3,6); // 6 == IPv6
+						sqlite3_bind_int(_sCheckIfIpIsAllocated,4,(int)0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/);
+						if (sqlite3_step(_sCheckIfIpIsAllocated) != SQLITE_ROW) {
+							// No rows returned, so the IP is available
+							sqlite3_reset(_sAllocateIp);
+							sqlite3_bind_text(_sAllocateIp,1,network.id,16,SQLITE_STATIC);
+							sqlite3_bind_text(_sAllocateIp,2,member.nodeId,10,SQLITE_STATIC);
+							sqlite3_bind_int(_sAllocateIp,3,(int)0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/);
+							sqlite3_bind_blob(_sAllocateIp,4,(const void *)ip6.rawIpData(),16,SQLITE_STATIC);
+							sqlite3_bind_int(_sAllocateIp,5,routedNetmaskBits); // IP netmask bits from matching route
+							sqlite3_bind_int(_sAllocateIp,6,6); // 6 == IPv6
+							if (sqlite3_step(_sAllocateIp) == SQLITE_DONE) {
+								ip6.setPort(routedNetmaskBits);
+								if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)
+									nc.staticIps[nc.staticIpCount++] = ip6;
+								break;
 							}
 						}
+					}
+				}
+			}
+		}
 
-						// If it's routed, then try to claim and assign it and if successful end loop
-						if (routedNetmaskBits > 0) {
-							uint32_t ipBlob[4]; // actually a 16-byte blob, we put IPv4s in the last 4 bytes
-							ipBlob[0] = 0; ipBlob[1] = 0; ipBlob[2] = 0; ipBlob[3] = Utils::hton(ip);
-							sqlite3_reset(_sCheckIfIpIsAllocated);
-							sqlite3_bind_text(_sCheckIfIpIsAllocated,1,network.id,16,SQLITE_STATIC);
-							sqlite3_bind_blob(_sCheckIfIpIsAllocated,2,(const void *)ipBlob,16,SQLITE_STATIC);
-							sqlite3_bind_int(_sCheckIfIpIsAllocated,3,4); // 4 == IPv4
-							sqlite3_bind_int(_sCheckIfIpIsAllocated,4,(int)0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/);
-							if (sqlite3_step(_sCheckIfIpIsAllocated) != SQLITE_ROW) {
-								// No rows returned, so the IP is available
-								sqlite3_reset(_sAllocateIp);
-								sqlite3_bind_text(_sAllocateIp,1,network.id,16,SQLITE_STATIC);
-								sqlite3_bind_text(_sAllocateIp,2,member.nodeId,10,SQLITE_STATIC);
-								sqlite3_bind_int(_sAllocateIp,3,(int)0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/);
-								sqlite3_bind_blob(_sAllocateIp,4,(const void *)ipBlob,16,SQLITE_STATIC);
-								sqlite3_bind_int(_sAllocateIp,5,routedNetmaskBits); // IP netmask bits from matching route
-								sqlite3_bind_int(_sAllocateIp,6,4); // 4 == IPv4
-								if (sqlite3_step(_sAllocateIp) == SQLITE_DONE) {
-									if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
-										struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc.staticIps[nc.staticIpCount++]));
-										v4ip->sin_family = AF_INET;
-										v4ip->sin_port = Utils::hton((uint16_t)routedNetmaskBits);
-										v4ip->sin_addr.s_addr = Utils::hton(ip);
-									}
-									haveStaticIpAssignment = true;
-									break;
+		// Auto-assign IPv4 address if auto-assignment is enabled and it's needed
+		if ( ((network.flags & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4_AUTO_ASSIGN) != 0) && (!haveManagedIpv4AutoAssignment) && (!amActiveBridge) ) {
+			sqlite3_reset(_sGetIpAssignmentPools);
+			sqlite3_bind_text(_sGetIpAssignmentPools,1,network.id,16,SQLITE_STATIC);
+			sqlite3_bind_int(_sGetIpAssignmentPools,2,4); // 4 == IPv4
+			while (sqlite3_step(_sGetIpAssignmentPools) == SQLITE_ROW) {
+				const unsigned char *ipRangeStartB = reinterpret_cast<const unsigned char *>(sqlite3_column_blob(_sGetIpAssignmentPools,0));
+				const unsigned char *ipRangeEndB = reinterpret_cast<const unsigned char *>(sqlite3_column_blob(_sGetIpAssignmentPools,1));
+				if ((!ipRangeStartB)||(!ipRangeEndB)||(sqlite3_column_bytes(_sGetIpAssignmentPools,0) != 16)||(sqlite3_column_bytes(_sGetIpAssignmentPools,1) != 16))
+					continue;
+
+				uint32_t ipRangeStart = Utils::ntoh(*(reinterpret_cast<const uint32_t *>(ipRangeStartB + 12)));
+				uint32_t ipRangeEnd = Utils::ntoh(*(reinterpret_cast<const uint32_t *>(ipRangeEndB + 12)));
+				if ((ipRangeEnd <= ipRangeStart)||(ipRangeStart == 0))
+					continue;
+				uint32_t ipRangeLen = ipRangeEnd - ipRangeStart;
+
+				// Start with the LSB of the member's address
+				uint32_t ipTrialCounter = (uint32_t)(identity.address().toInt() & 0xffffffff);
+
+				for(uint32_t k=ipRangeStart,trialCount=0;(k<=ipRangeEnd)&&(trialCount < 1000);++k,++trialCount) {
+					uint32_t ip = (ipRangeLen > 0) ? (ipRangeStart + (ipTrialCounter % ipRangeLen)) : ipRangeStart;
+					++ipTrialCounter;
+					if ((ip & 0x000000ff) == 0x000000ff)
+						continue; // don't allow addresses that end in .255
+
+					// Check if this IP is within a local-to-Ethernet routed network
+					int routedNetmaskBits = 0;
+					for(unsigned int rk=0;rk<nc.routeCount;++rk) {
+						if ((!nc.routes[rk].via.ss_family)&&(nc.routes[rk].target.ss_family == AF_INET)) {
+							uint32_t targetIp = Utils::ntoh((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc.routes[rk].target))->sin_addr.s_addr));
+							int targetBits = Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc.routes[rk].target))->sin_port));
+							if ((ip & (0xffffffff << (32 - targetBits))) == targetIp) {
+								routedNetmaskBits = targetBits;
+								break;
+							}
+						}
+					}
+
+					// If it's routed, then try to claim and assign it and if successful end loop
+					if (routedNetmaskBits > 0) {
+						uint32_t ipBlob[4]; // actually a 16-byte blob, we put IPv4s in the last 4 bytes
+						ipBlob[0] = 0; ipBlob[1] = 0; ipBlob[2] = 0; ipBlob[3] = Utils::hton(ip);
+						sqlite3_reset(_sCheckIfIpIsAllocated);
+						sqlite3_bind_text(_sCheckIfIpIsAllocated,1,network.id,16,SQLITE_STATIC);
+						sqlite3_bind_blob(_sCheckIfIpIsAllocated,2,(const void *)ipBlob,16,SQLITE_STATIC);
+						sqlite3_bind_int(_sCheckIfIpIsAllocated,3,4); // 4 == IPv4
+						sqlite3_bind_int(_sCheckIfIpIsAllocated,4,(int)0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/);
+						if (sqlite3_step(_sCheckIfIpIsAllocated) != SQLITE_ROW) {
+							// No rows returned, so the IP is available
+							sqlite3_reset(_sAllocateIp);
+							sqlite3_bind_text(_sAllocateIp,1,network.id,16,SQLITE_STATIC);
+							sqlite3_bind_text(_sAllocateIp,2,member.nodeId,10,SQLITE_STATIC);
+							sqlite3_bind_int(_sAllocateIp,3,(int)0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/);
+							sqlite3_bind_blob(_sAllocateIp,4,(const void *)ipBlob,16,SQLITE_STATIC);
+							sqlite3_bind_int(_sAllocateIp,5,routedNetmaskBits); // IP netmask bits from matching route
+							sqlite3_bind_int(_sAllocateIp,6,4); // 4 == IPv4
+							if (sqlite3_step(_sAllocateIp) == SQLITE_DONE) {
+								if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
+									struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc.staticIps[nc.staticIpCount++]));
+									v4ip->sin_family = AF_INET;
+									v4ip->sin_port = Utils::hton((uint16_t)routedNetmaskBits);
+									v4ip->sin_addr.s_addr = Utils::hton(ip);
 								}
+								break;
 							}
 						}
 					}
@@ -1181,10 +1262,10 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 							} else if (!strcmp(j->u.object.values[k].name,"v4AssignMode")) {
 								if ((j->u.object.values[k].value->type == json_string)&&(!strcmp(j->u.object.values[k].value->u.string.ptr,"zt"))) {
 									if (sqlite3_prepare_v2(_db,"UPDATE Network SET \"flags\" = (\"flags\" | ?) WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
-										sqlite3_bind_int(stmt,1,(int)ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4);
+										sqlite3_bind_int(stmt,1,(int)ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4_AUTO_ASSIGN);
 								} else {
 									if (sqlite3_prepare_v2(_db,"UPDATE Network SET \"flags\" = (\"flags\" & ?) WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
-										sqlite3_bind_int(stmt,1,(int)(ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4 ^ 0xfffffff));
+										sqlite3_bind_int(stmt,1,(int)(ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4_AUTO_ASSIGN ^ 0xfffffff));
 								}
 							} else if (!strcmp(j->u.object.values[k].name,"v6AssignMode")) {
 								int fl = 0;
@@ -1195,6 +1276,8 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 											fl |= ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_RFC4193;
 										else if (!strcmp(f,"6plane"))
 											fl |= ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_6PLANE;
+										else if (!strcmp(f,"zt"))
+											fl |= ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_AUTO_ASSIGN;
 									}
 								}
 								if (sqlite3_prepare_v2(_db,"UPDATE Network SET \"flags\" = ((\"flags\" & " ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_MASK_S ") | ?) WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
@@ -1680,19 +1763,18 @@ unsigned int SqliteNetworkController::_doCPGet(
 								_jsonEscape(memberIdStr).c_str());
 							responseBody = json;
 
-							sqlite3_reset(_sGetIpAssignmentsForNode2);
-							sqlite3_bind_text(_sGetIpAssignmentsForNode2,1,nwids,16,SQLITE_STATIC);
-							sqlite3_bind_text(_sGetIpAssignmentsForNode2,2,addrs,10,SQLITE_STATIC);
-							sqlite3_bind_int(_sGetIpAssignmentsForNode2,3,(int)0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/);
+							sqlite3_reset(_sGetIpAssignmentsForNode);
+							sqlite3_bind_text(_sGetIpAssignmentsForNode,1,nwids,16,SQLITE_STATIC);
+							sqlite3_bind_text(_sGetIpAssignmentsForNode,2,addrs,10,SQLITE_STATIC);
 							bool firstIp = true;
-							while (sqlite3_step(_sGetIpAssignmentsForNode2) == SQLITE_ROW) {
-								int ipversion = sqlite3_column_int(_sGetIpAssignmentsForNode2,2);
+							while (sqlite3_step(_sGetIpAssignmentsForNode) == SQLITE_ROW) {
+								int ipversion = sqlite3_column_int(_sGetIpAssignmentsForNode,2);
 								char ipBlob[16];
-								memcpy(ipBlob,(const void *)sqlite3_column_blob(_sGetIpAssignmentsForNode2,0),16);
+								memcpy(ipBlob,(const void *)sqlite3_column_blob(_sGetIpAssignmentsForNode,0),16);
 								InetAddress ip(
 									(const void *)(ipversion == 6 ? ipBlob : &ipBlob[12]),
 									(ipversion == 6 ? 16 : 4),
-									(unsigned int)sqlite3_column_int(_sGetIpAssignmentsForNode2,1)
+									(unsigned int)sqlite3_column_int(_sGetIpAssignmentsForNode,1)
 								);
 								responseBody.append(firstIp ? "\"" : ",\"");
 								responseBody.append(_jsonEscape(ip.toString()));
@@ -1801,8 +1883,11 @@ unsigned int SqliteNetworkController::_doCPGet(
 							v6modes.push_back(',');
 						v6modes.append("6plane");
 					}
-					if (v6modes.length() == 0)
-						v6modes = "none";
+					if ((fl & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_AUTO_ASSIGN) != 0) {
+						if (v6modes.length() > 0)
+							v6modes.push_back(',');
+						v6modes.append("zt");
+					}
 
 					Utils::snprintf(json,sizeof(json),
 						"{\n"
@@ -1828,7 +1913,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 						(sqlite3_column_int(_sGetNetworkById,1) > 0) ? "true" : "false",
 						(sqlite3_column_int(_sGetNetworkById,2) > 0) ? "true" : "false",
 						(sqlite3_column_int(_sGetNetworkById,3) > 0) ? "true" : "false",
-						(((fl & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4) != 0) ? "zt" : "none"),
+						(((fl & ZT_DB_NETWORK_FLAG_ZT_MANAGED_V4_AUTO_ASSIGN) != 0) ? "zt" : ""),
 						v6modes.c_str(),
 						sqlite3_column_int(_sGetNetworkById,5),
 						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,6),
