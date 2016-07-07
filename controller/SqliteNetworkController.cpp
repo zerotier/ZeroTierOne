@@ -756,27 +756,37 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		sqlite3_bind_text(_sGetIpAssignmentsForNode,1,network.id,16,SQLITE_STATIC);
 		sqlite3_bind_text(_sGetIpAssignmentsForNode,2,member.nodeId,10,SQLITE_STATIC);
 		while (sqlite3_step(_sGetIpAssignmentsForNode) == SQLITE_ROW) {
-			const unsigned char *const ip = (const unsigned char *)sqlite3_column_blob(_sGetIpAssignmentsForNode,0);
-			if ((!ip)||(sqlite3_column_bytes(_sGetIpAssignmentsForNode,0) != 16))
+			const unsigned char *const ipbytes = (const unsigned char *)sqlite3_column_blob(_sGetIpAssignmentsForNode,0);
+			if ((!ipbytes)||(sqlite3_column_bytes(_sGetIpAssignmentsForNode,0) != 16))
 				continue;
-			const int ipNetmaskBits = sqlite3_column_int(_sGetIpAssignmentsForNode,1);
+			//const int ipNetmaskBits = sqlite3_column_int(_sGetIpAssignmentsForNode,1);
 			const int ipVersion = sqlite3_column_int(_sGetIpAssignmentsForNode,2);
-			if ((ipVersion == 4)&&(ipNetmaskBits >= 0)&&(ipNetmaskBits <= 32)) {
+
+			InetAddress ip;
+			if (ipVersion == 4)
+				ip = InetAddress(ipbytes + 12,4,0);
+			else if (ipVersion == 6)
+				ip = InetAddress(ipbytes,16,0);
+			else continue;
+
+			// IP assignments are only pushed if there is a corresponding local route. We also now get the netmask bits from
+			// this route, ignoring the netmask bits field of the assigned IP itself. Using that was worthless and a source
+			// of user error / poor UX.
+			int routedNetmaskBits = 0;
+			for(unsigned int rk=0;rk<nc.routeCount;++rk) {
+				if ( (!nc.routes[rk].via.ss_family) && (reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->containsAddress(ip)) )
+					routedNetmaskBits = reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->netmaskBits();
+			}
+
+			if (routedNetmaskBits > 0) {
 				if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
-					struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc.staticIps[nc.staticIpCount++]));
-					v4ip->sin_family = AF_INET;
-					v4ip->sin_port = Utils::hton((uint16_t)ipNetmaskBits);
-					memcpy(&(v4ip->sin_addr.s_addr),ip + 12,4);
+					ip.setPort(routedNetmaskBits);
+					nc.staticIps[nc.staticIpCount++] = ip;
 				}
-				haveManagedIpv4AutoAssignment = true;
-			} else if ((ipVersion == 6)&&(ipNetmaskBits >= 0)&&(ipNetmaskBits <= 128)) {
-				if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
-					struct sockaddr_in6 *const v6ip = reinterpret_cast<struct sockaddr_in6 *>(&(nc.staticIps[nc.staticIpCount++]));
-					v6ip->sin6_family = AF_INET6;
-					v6ip->sin6_port = Utils::hton((uint16_t)ipNetmaskBits);
-					memcpy(v6ip->sin6_addr.s6_addr,ip,16);
-				}
-				haveManagedIpv6AutoAssignment = true;
+				if (ipVersion == 4)
+					haveManagedIpv4AutoAssignment = true;
+				else if (ipVersion == 6)
+					haveManagedIpv6AutoAssignment = true;
 			}
 		}
 
@@ -1076,7 +1086,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 													sqlite3_bind_text(_sAllocateIp,2,addrs,10,SQLITE_STATIC);
 													sqlite3_bind_int(_sAllocateIp,3,(int)0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/);
 													sqlite3_bind_blob(_sAllocateIp,4,(const void *)ipBlob,16,SQLITE_STATIC);
-													sqlite3_bind_int(_sAllocateIp,5,(int)a.netmaskBits());
+													sqlite3_bind_int(_sAllocateIp,5,(int)a.netmaskBits()); // NOTE: this field is now ignored but set it anyway
 													sqlite3_bind_int(_sAllocateIp,6,ipVersion);
 													if (sqlite3_step(_sAllocateIp) != SQLITE_DONE)
 														return 500;
@@ -1775,7 +1785,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 									(unsigned int)sqlite3_column_int(_sGetIpAssignmentsForNode,1)
 								);
 								responseBody.append(firstIp ? "\"" : ",\"");
-								responseBody.append(_jsonEscape(ip.toString()));
+								responseBody.append(_jsonEscape(ip.toIpString()));
 								responseBody.push_back('"');
 								firstIp = false;
 							}
