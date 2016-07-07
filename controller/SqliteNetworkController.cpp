@@ -351,7 +351,7 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 	if (
 
 			/* Network */
-			  (sqlite3_prepare_v2(_db,"SELECT name,private,enableBroadcast,allowPassiveBridging,\"flags\",multicastLimit,creationTime,revision,memberRevisionCounter FROM Network WHERE id = ?",-1,&_sGetNetworkById,(const char **)0) != SQLITE_OK)
+			  (sqlite3_prepare_v2(_db,"SELECT name,private,enableBroadcast,allowPassiveBridging,\"flags\",multicastLimit,creationTime,revision,memberRevisionCounter,(SELECT COUNT(1) FROM Member WHERE Member.networkId = Network.id AND Member.authorized > 0) FROM Network WHERE id = ?",-1,&_sGetNetworkById,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT revision FROM Network WHERE id = ?",-1,&_sGetNetworkRevision,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Network SET revision = ? WHERE id = ?",-1,&_sSetNetworkRevision,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Network (id,name,creationTime,revision) VALUES (?,?,?,1)",-1,&_sCreateNetwork,(const char **)0) != SQLITE_OK)
@@ -1834,7 +1834,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,6),
 						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,7),
 						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,8),
-						(unsigned long long)0); // TODO: authorized member count, but more efficiently
+						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,9));
 					responseBody = json;
 
 					sqlite3_reset(_sGetRelays);
