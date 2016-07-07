@@ -807,18 +807,16 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 						xx[0] = Utils::hton(x[0]);
 						xx[1] = Utils::hton(x[1] + identity.address().toInt());
 					} else {
-						if (x[1] == 0xffffffffffffffffULL) {
-							if (x[0] == 0xffffffffffffffffULL)
-								break;
-							++x[0];
-							x[1] = 0;
-						} else {
-							++x[1];
-						}
-						if ((x[0] >= e[0])&&(x[1] >= e[1]))
-							break;
-						xx[0] = Utils::hton(x[0]);
-						xx[1] = Utils::hton(x[1]);
+						// Otherwise pick random addresses -- this technically doesn't explore the whole range if the lower 64 bit range is >= 1 but that won't matter since that would be huge anyway
+						Utils::getSecureRandom((void *)xx,16);
+						if ((e[0] > s[0]))
+							xx[0] %= (e[0] - s[0]);
+						else xx[0] = 0;
+						if ((e[1] > s[1]))
+							xx[1] %= (e[1] - s[1]);
+						else xx[1] = 0;
+						xx[0] = Utils::hton(x[0] + xx[0]);
+						xx[1] = Utils::hton(x[1] + xx[1]);
 					}
 
 					InetAddress ip6((const void *)xx,16,0);
