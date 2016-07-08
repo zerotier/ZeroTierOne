@@ -1234,11 +1234,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_version(
     int major = 0;
     int minor = 0;
     int revision = 0;
-    unsigned long featureFlags = 0;
 
-    ZT_version(&major, &minor, &revision, &featureFlags);
+    ZT_version(&major, &minor, &revision);
 
-    return newVersion(env, major, minor, revision, featureFlags);
+    return newVersion(env, major, minor, revision);
 }
 
 /*

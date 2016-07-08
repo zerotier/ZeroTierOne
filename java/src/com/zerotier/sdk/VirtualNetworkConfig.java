@@ -49,7 +49,6 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
     private int portError;
     private boolean enabled;
     private long netconfRevision;
-    private MulticastGroup[] multicastSubscriptions;
     private InetSocketAddress[] assignedAddresses;
 
     private VirtualNetworkConfig() {
@@ -168,26 +167,12 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
     }
 
     /**
-     * Is this network enabled? If not, all frames to/from are dropped.
-     */
-    public final boolean isEnabled() {
-        return enabled;
-    }
-
-    /**
      * Network config revision as reported by netconf master
      *
      * <p>If this is zero, it means we're still waiting for our netconf.</p>
      */
     public final long netconfRevision() {
         return netconfRevision;
-    }
-
-    /**
-     * Multicast group subscriptions
-     */
-    public final MulticastGroup[] multicastSubscriptions() {
-        return multicastSubscriptions;
     }
 
     /**
