@@ -54,7 +54,7 @@ The details of actually implementing this kind of HA fail-over on Linux or other
 
 ### Network Controller API
 
-The controller API is hosted via the same JSON API endpoint that ZeroTier One uses for local control (usually at 127.0.0.1 port 9993). All controller options are rounded under the */controller* base path.
+The controller API is hosted via the same JSON API endpoint that ZeroTier One uses for local control (usually at 127.0.0.1 port 9993). All controller options are routed under the `/controller` base path.
 
 The controller microservice does not implement any fine-grained access control (authentication is via authtoken.secret just like the regular JSON API) or other complex mangement features. It just takes network and network member configurations and reponds to controller queries. We have an enterprise product called [ZeroTier Central](https://my.zerotier.com/) that we host as a service (and that companies can license to self-host) that does this.
 
