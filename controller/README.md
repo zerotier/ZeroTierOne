@@ -42,7 +42,7 @@ ZeroTier network controllers can easily be run in Docker or other container syst
 
 ### Implementing High Availability Fail-Over
 
-ZeroTier network controllers are not single points of failure for networks-- in the sense that if a controller goes down *existing* members of a network can continue to communicate. But new members (or those that have been offline for a while) can't join, existing members can't be de-authorized, and other changes to the network's configuration can't be made. This means that short "glitches" in controller availability are not a major issue.
+ZeroTier network controllers are not single points of failure for networks-- in the sense that if a controller goes down *existing* members of a network can continue to communicate. But new members (or those that have been offline for a while) can't join, existing members can't be de-authorized, and other changes to the network's configuration can't be made. This means that short "glitches" in controller availability are not a major problem but long periods of unavailability can be.
 
 Because controllers are just regular ZeroTier nodes and controller queries are in-band, controllers can trivially be moved without worrying about changes to underlying physical IPs. This makes high-availability fail-over very easy to implement.
 
