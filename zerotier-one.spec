@@ -1,5 +1,5 @@
 Name:           zerotier-one
-Version:        1.1.6
+Version:        1.1.8
 Release:        0.1%{?dist}
 Summary:        ZeroTier One network virtualization service
 
@@ -149,6 +149,9 @@ esac
 %endif
 
 %changelog
+* Fri Jul 08 2016 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.1.8-0.1
+- see https://github.com/zerotier/ZeroTierOne for release notes
+
 * Sat Jun 25 2016 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.1.6-0.1
 - now builds on CentOS 6 as well as newer distros, and some cleanup
 

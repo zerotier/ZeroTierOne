@@ -1,3 +1,9 @@
+zerotier-one (1.1.8) unstable; urgency=low
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Fri, 08 Jul 2016 01:56:00 -0700
+
 zerotier-one (1.1.6) unstable; urgency=medium
 
   * First Debian release on ZeroTier, Inc. private apt repository.
