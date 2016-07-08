@@ -70,7 +70,7 @@
 #define ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR "4"
 
 // API version reported via JSON control plane
-#define ZT_NETCONF_CONTROLLER_API_VERSION 1
+#define ZT_NETCONF_CONTROLLER_API_VERSION 2
 
 // Number of requests to remember in member history
 #define ZT_NETCONF_DB_MEMBER_HISTORY_LENGTH 8
