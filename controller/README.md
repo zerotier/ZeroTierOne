@@ -213,6 +213,20 @@ For your own networks you'll probably want to change `private` to `true` unless 
 
 #### `/controller/network/<network ID>/member`
 
+ * Purpose: Get a set of all members on this network
+ * Methods: GET
+ * Returns: { object }
+
+This returns a JSON object containing all member IDs as keys and their `memberRevisionCounter` values as values.
+
+#### `/controller/network/<network ID>/active`
+
+ * Purpose: Get a set of all active members on this network
+ * Methods: GET
+ * Returns: { object }
+
+This returns an object containing all currently online members and the most recent `recentLog` entries for their last request.
+
 #### `/controller/network/<network ID>/member/<address>`
 
  * Purpose: Create, authorize, or remove a network member
@@ -229,5 +243,19 @@ For your own networks you'll probably want to change `private` to `true` unless 
 | identity              | string        | Member's public ZeroTier identity (if known)      | no       |
 | ipAssignments         | array[string] | Managed IP address assignments                    | YES      |
 | memberRevision        | integer       | Member revision counter                           | no       |
+| recentLog             | array[object] | Recent member activity log; see below             | no       |
 
 Note that managed IP assignments are only used if they fall within a managed route. Otherwise they are ignored.
+
+**Recent log object format:**
+
+| Field                 | Type          | Description                                       |
+| --------------------- | ------------- | ------------------------------------------------- |
+| ts                    | integer       | Time of request, ms since epoch                   |
+| authorized            | boolean       | Was member authorized?                            |
+| clientMajorVersion    | integer       | Client major version or -1 if unknown             |
+| clientMinorVersion    | integer       | Client minor version or -1 if unknown             |
+| clientRevision        | integer       | Client revision or -1 if unknown                  |
+| fromAddr              | string        | Physical address if known                         |
+
+The controller can only know a member's `fromAddr` if it's able to establish a direct path to it. Members behind very restrictive firewalls may not have this information since the controller will be receiving the member's requests by way of a relay. ZeroTier does not back-trace IP paths as packets are relayed since this would add a lot of protocol overhead.
