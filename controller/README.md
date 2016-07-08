@@ -46,7 +46,7 @@ ZeroTier network controllers are not single points of failure for networks-- in 
 
 Because controllers are just regular ZeroTier nodes and controller queries are in-band, controllers can trivially be moved without worrying about changes to underlying physical IPs. This makes high-availability fail-over very easy to implement.
 
-Just set up two cloud hosts, preferably in different data centers (e.g. two different AWS regions or Digital Ocean SF and NYC). Now create a *cron* or other job that frequently mirrors *controller.db.backup* from the active controller to the hot spare.
+Just set up two cloud hosts, preferably in different data centers (e.g. two different AWS regions or Digital Ocean SF and NYC). Now set up the hot spare controller to constantly mirror `controller.db.backup` from its active sibling.
 
 If the active controller goes down, rename `controller.db.backup` to `controller.db` on the hot spare and start the ZeroTier One service there. The spare will take over and has now become the active controller. If the original active node comes back, it should take on the role of spare and should not start its service. Instead it should start mirroring the active controller's backup and wait until it is needed.
 
