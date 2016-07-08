@@ -40,7 +40,7 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp);
 
 jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &config);
 
-jobject newVersion(JNIEnv *env, int major, int minor, int rev, long featureFlags);
+jobject newVersion(JNIEnv *env, int major, int minor, int rev);
 
 #ifdef __cplusplus
 }

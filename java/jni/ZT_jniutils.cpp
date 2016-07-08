@@ -363,51 +363,6 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
     return inetSocketAddressObject;
 }
 
-jobject newMulticastGroup(JNIEnv *env, const ZT_MulticastGroup &mc)
-{
-    jclass multicastGroupClass = NULL;
-    jmethodID multicastGroup_constructor = NULL;
-
-    jfieldID macField = NULL;
-    jfieldID adiField = NULL;
-
-    multicastGroupClass = lookup.findClass("com/zerotier/sdk/MulticastGroup");
-    if(env->ExceptionCheck() || multicastGroupClass == NULL)
-    {
-        return NULL;
-    }
-
-    multicastGroup_constructor = lookup.findMethod(
-        multicastGroupClass, "<init>", "()V");
-    if(env->ExceptionCheck() || multicastGroup_constructor == NULL)
-    {
-        return NULL;
-    }
-
-    jobject multicastGroupObj = env->NewObject(multicastGroupClass, multicastGroup_constructor);
-    if(env->ExceptionCheck() || multicastGroupObj == NULL)
-    {
-        return NULL;
-    }
-
-    macField = lookup.findField(multicastGroupClass, "mac", "J");
-    if(env->ExceptionCheck() || macField == NULL)
-    {
-        return NULL;
-    }
-
-    adiField = lookup.findField(multicastGroupClass, "adi", "J");
-    if(env->ExceptionCheck() || adiField == NULL)
-    {
-        return NULL;
-    }
-
-    env->SetLongField(multicastGroupObj, macField, mc.mac);
-    env->SetLongField(multicastGroupObj, adiField, mc.adi);
-
-    return multicastGroupObj;
-}
-
 jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
 {
     LOGV("newPeerPhysicalPath Called");
@@ -652,9 +607,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
     jfieldID bridgeField = NULL;
     jfieldID broadcastEnabledField = NULL;
     jfieldID portErrorField = NULL;
-    jfieldID enabledField = NULL;
     jfieldID netconfRevisionField = NULL;
-    jfieldID multicastSubscriptionsField = NULL;
     jfieldID assignedAddressesField = NULL;
 
     vnetConfigClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkConfig");
@@ -749,24 +702,10 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
         return NULL;
     }
 
-    enabledField = lookup.findField(vnetConfigClass, "enabled", "Z");
-    if(env->ExceptionCheck() || enabledField == NULL)
-    {
-        LOGE("Error getting enabled field");
-        return NULL;
-    }
-
     netconfRevisionField = lookup.findField(vnetConfigClass, "netconfRevision", "J");
     if(env->ExceptionCheck() || netconfRevisionField == NULL)
     {
         LOGE("Error getting netconfRevision field");
-        return NULL;
-    }
-
-    multicastSubscriptionsField = lookup.findField(vnetConfigClass, "multicastSubscriptions", "[Lcom/zerotier/sdk/MulticastGroup;");
-    if(env->ExceptionCheck() || multicastSubscriptionsField == NULL)
-    {
-        LOGE("Error getting multicastSubscriptions field");
         return NULL;
     }
 
@@ -804,33 +743,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
     env->SetBooleanField(vnetConfigObj, dhcpField, vnetConfig.dhcp);
     env->SetBooleanField(vnetConfigObj, bridgeField, vnetConfig.bridge);
     env->SetBooleanField(vnetConfigObj, broadcastEnabledField, vnetConfig.broadcastEnabled);
-    env->SetBooleanField(vnetConfigObj, enabledField, vnetConfig.enabled);
     env->SetIntField(vnetConfigObj, portErrorField, vnetConfig.portError);
-
-    jclass multicastGroupClass = lookup.findClass("com/zerotier/sdk/MulticastGroup");
-    if(env->ExceptionCheck() || multicastGroupClass == NULL) 
-    {
-        LOGE("Error finding MulticastGroup class");
-        return NULL;
-    }
-
-    jobjectArray mcastSubsArrayObj = env->NewObjectArray(
-        vnetConfig.multicastSubscriptionCount, multicastGroupClass, NULL);
-    if(env->ExceptionCheck() || mcastSubsArrayObj == NULL) {
-        LOGE("Error creating MulticastGroup[] array");
-        return NULL;
-    }
-
-    for(unsigned int i = 0; i < vnetConfig.multicastSubscriptionCount; ++i)
-    {
-        jobject mcastObj = newMulticastGroup(env, vnetConfig.multicastSubscriptions[i]);
-        env->SetObjectArrayElement(mcastSubsArrayObj, i, mcastObj);
-        if(env->ExceptionCheck())
-        {
-            LOGE("Error assigning MulticastGroup to array");
-        }
-    }
-    env->SetObjectField(vnetConfigObj, multicastSubscriptionsField, mcastSubsArrayObj);
 
     jclass inetSocketAddressClass = lookup.findClass("java/net/InetSocketAddress");
     if(env->ExceptionCheck() || inetSocketAddressClass == NULL)
@@ -863,7 +776,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
     return vnetConfigObj;
 }
 
-jobject newVersion(JNIEnv *env, int major, int minor, int rev, long featureFlags)
+jobject newVersion(JNIEnv *env, int major, int minor, int rev)
 {
    // create a com.zerotier.sdk.Version object
     jclass versionClass = NULL;
@@ -892,7 +805,6 @@ jobject newVersion(JNIEnv *env, int major, int minor, int rev, long featureFlags
     jfieldID majorField = NULL;
     jfieldID minorField = NULL;
     jfieldID revisionField = NULL;
-    jfieldID featureFlagsField = NULL;
 
     majorField = lookup.findField(versionClass, "major", "I");
     if(env->ExceptionCheck() || majorField == NULL)
@@ -912,16 +824,9 @@ jobject newVersion(JNIEnv *env, int major, int minor, int rev, long featureFlags
         return NULL;
     }
 
-    featureFlagsField = lookup.findField(versionClass, "featureFlags", "J");
-    if(env->ExceptionCheck() || featureFlagsField == NULL)
-    {
-        return NULL;
-    }
-
     env->SetIntField(versionObj, majorField, (jint)major);
     env->SetIntField(versionObj, minorField, (jint)minor);
     env->SetIntField(versionObj, revisionField, (jint)rev);
-    env->SetLongField(versionObj, featureFlagsField, (jlong)featureFlags); 
 
     return versionObj;
 }
