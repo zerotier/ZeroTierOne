@@ -91,7 +91,7 @@
 #define ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_AUTO_ASSIGN 8
 
 // Flags with all V6 managed mode flags flipped off -- for masking in update operation and in string form for SQL building
-#define ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_MASK_S "268435449"
+#define ZT_DB_NETWORK_FLAG_ZT_MANAGED_V6_MASK_S "268435441"
 
 // Uncomment to trace Sqlite for debugging
 //#define ZT_NETCONF_SQLITE_TRACE 1
