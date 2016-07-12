@@ -7,4 +7,6 @@ RUN apt-get install -y build-essential debhelper libhttp-parser-dev liblz4-dev l
 RUN ln -sf /usr/bin/clang++-3.6 /usr/bin/clang++
 RUN ln -sf /usr/bin/clang-3.6 /usr/bin/clang
 
+RUN dpkg --purge libhttp-parser-dev
+
 ADD zt1-src.tar.gz /
