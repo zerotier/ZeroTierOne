@@ -447,6 +447,7 @@ ZT_PeerList *Node::peers() const
 			p->paths[p->pathCount].lastReceive = path->lastReceived();
 			p->paths[p->pathCount].active = path->active(_now) ? 1 : 0;
 			p->paths[p->pathCount].preferred = ((bestPath)&&(*path == *bestPath)) ? 1 : 0;
+			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust(path->address());
 			++p->pathCount;
 		}
 	}

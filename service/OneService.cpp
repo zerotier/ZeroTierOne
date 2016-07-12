@@ -759,6 +759,38 @@ public:
 			for(int i=0;i<3;++i)
 				_portsBE[i] = Utils::hton((uint16_t)_ports[i]);
 
+			{
+				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S + "trustpaths").c_str(),"r");
+				uint64_t ids[ZT_MAX_TRUSTED_PATHS];
+				InetAddress addresses[ZT_MAX_TRUSTED_PATHS];
+				if (trustpaths) {
+					char buf[1024];
+					unsigned int count = 0;
+					while ((fgets(buf,sizeof(buf),trustpaths))&&(count < ZT_MAX_TRUSTED_PATHS)) {
+						int fno = 0;
+						char *saveptr = (char *)0;
+						uint64_t trustedPathId = 0;
+						InetAddress trustedPathNetwork;
+						for(char *f=Utils::stok(buf,"=\r\n \t",&saveptr);(f);f=Utils::stok((char *)0,"=\r\n \t",&saveptr)) {
+							if (fno == 0) {
+								trustedPathId = Utils::hexStrToU64(f);
+							} else if (fno == 1) {
+								trustedPathNetwork = InetAddress(f);
+							} else break;
+							++fno;
+						}
+						if ( (trustedPathId != 0) && ((trustedPathNetwork.ss_family == AF_INET)||(trustedPathNetwork.ss_family == AF_INET6)) && (trustedPathNetwork.ipScope() != InetAddress::IP_SCOPE_GLOBAL) && (trustedPathNetwork.netmaskBits() > 0) ) {
+							ids[count] = trustedPathId;
+							addresses[count] = trustedPathNetwork;
+							++count;
+						}
+					}
+					fclose(trustpaths);
+					if (count)
+						_node->setTrustedPaths(reinterpret_cast<const struct sockaddr_storage *>(addresses),ids,count);
+				}
+			}
+
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 			_controller = new SqliteNetworkController(_node,(_homePath + ZT_PATH_SEPARATOR_S + ZT_CONTROLLER_DB_PATH).c_str(),(_homePath + ZT_PATH_SEPARATOR_S + "circuitTestResults.d").c_str());
 			_node->setNetconfMaster((void *)_controller);

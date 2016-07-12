@@ -893,6 +893,11 @@ typedef struct
 	uint64_t lastReceive;
 
 	/**
+	 * Is this a trusted path? If so this will be its nonzero ID.
+	 */
+	uint64_t trustedPathId;
+
+	/**
 	 * Is path active?
 	 */
 	int active;
