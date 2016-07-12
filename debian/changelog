@@ -1,3 +1,9 @@
+zerotier-one (1.1.12) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 12 Jul 2016 03:02:22 -0700
+
 zerotier-one (1.1.10) unstable; urgency=medium
 
   * See https://github.com/zerotier/ZeroTierOne for release notes.
