@@ -760,7 +760,7 @@ public:
 				_portsBE[i] = Utils::hton((uint16_t)_ports[i]);
 
 			{
-				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S + "trustpaths").c_str(),"r");
+				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S + "trustedpaths").c_str(),"r");
 				uint64_t ids[ZT_MAX_TRUSTED_PATHS];
 				InetAddress addresses[ZT_MAX_TRUSTED_PATHS];
 				if (trustpaths) {
