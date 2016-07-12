@@ -1092,6 +1092,16 @@ public:
 		}
 	}
 
+	// Match only an IP from a vector of IPs -- used in syncManagedStuff()
+	bool matchIpOnly(const std::vector<InetAddress> &ips,const InetAddress &ip) const
+	{
+		for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
+			if (i->ipsEqual(ip))
+				return true;
+		}
+		return false;
+	}
+
 	// Apply or update managed IPs for a configured network (be sure n.tap exists)
 	void syncManagedStuff(NetworkState &n,bool syncIps,bool syncRoutes)
 	{
@@ -1136,7 +1146,7 @@ public:
 			// Nuke applied routes that are no longer in n.config.routes[] and/or are not allowed
 			for(std::list<ManagedRoute>::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();) {
 				bool haveRoute = false;
-				if ( (checkIfManagedIsAllowed(n,mr->target())) && ((!mr->via())||(std::find(myIps.begin(),myIps.end(),mr->via()) == myIps.end())) ) {
+				if ( (checkIfManagedIsAllowed(n,mr->target())) && ((mr->via().ss_family != mr->target().ss_family)||(!matchIpOnly(myIps,mr->via()))) ) {
 					for(unsigned int i=0;i<n.config.routeCount;++i) {
 						const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
 						const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
@@ -1158,7 +1168,7 @@ public:
 				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
 				const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
 
-				if ( (!checkIfManagedIsAllowed(n,*target)) || ((via->ss_family == target->ss_family)&&(std::find(myIps.begin(),myIps.end(),*via) != myIps.end())) )
+				if ( (!checkIfManagedIsAllowed(n,*target)) || ((via->ss_family == target->ss_family)&&(matchIpOnly(myIps,*via))) )
 					continue;
 
 				bool haveRoute = false;
