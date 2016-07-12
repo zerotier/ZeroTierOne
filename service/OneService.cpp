@@ -1041,13 +1041,13 @@ public:
 	// Begin private implementation methods
 
 	// Checks if a managed IP or route target is allowed
-	bool checkIfManagedIsAllowed(const NetworkState &n,const InetAddress &addr)
+	bool checkIfManagedIsAllowed(const NetworkState &n,const InetAddress &target)
 	{
 		if (!n.settings.allowManaged)
 			return false;
-		if (addr.isDefaultRoute())
+		if (target.isDefaultRoute())
 			return n.settings.allowDefault;
-		switch(addr.ipScope()) {
+		switch(target.ipScope()) {
 			case InetAddress::IP_SCOPE_NONE:
 			case InetAddress::IP_SCOPE_MULTICAST:
 			case InetAddress::IP_SCOPE_LOOPBACK:
@@ -1099,10 +1099,12 @@ public:
 			Utils::scopy(tapdev,sizeof(tapdev),n.tap->deviceName().c_str());
 #endif
 
+			std::vector<InetAddress> myIps(n.tap->ips());
+
 			// Nuke applied routes that are no longer in n.config.routes[] and/or are not allowed
 			for(std::list<ManagedRoute>::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();) {
 				bool haveRoute = false;
-				if (checkIfManagedIsAllowed(n,mr->target())) {
+				if ( (checkIfManagedIsAllowed(n,mr->target())) && ((!mr->via())||(std::find(myIps.begin(),myIps.end(),mr->via()) == myIps.end())) ) {
 					for(unsigned int i=0;i<n.config.routeCount;++i) {
 						const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
 						const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
@@ -1124,7 +1126,7 @@ public:
 				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
 				const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
 
-				if (!checkIfManagedIsAllowed(n,*target))
+				if ( (!checkIfManagedIsAllowed(n,*target)) || ((via->ss_family == target->ss_family)&&(std::find(myIps.begin(),myIps.end(),*via) != myIps.end())) )
 					continue;
 
 				bool haveRoute = false;
