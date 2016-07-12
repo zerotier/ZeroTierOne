@@ -117,6 +117,11 @@ extern "C" {
 #define ZT_MAX_PEER_NETWORK_PATHS 4
 
 /**
+ * Maximum number of trusted physical network paths
+ */
+#define ZT_MAX_TRUSTED_PATHS 16
+
+/**
  * Maximum number of hops in a ZeroTier circuit test
  *
  * This is more or less the max that can be fit in a given packet (with
@@ -1836,6 +1841,29 @@ void ZT_Node_clusterHandleIncomingMessage(ZT_Node *node,const void *msg,unsigned
  * @param cs Cluster status structure to fill with data
  */
 void ZT_Node_clusterStatus(ZT_Node *node,ZT_ClusterStatus *cs);
+
+/**
+ * Set trusted paths
+ *
+ * A trusted path is a physical network (network/bits) over which both
+ * encryption and authentication can be skipped to improve performance.
+ * Each trusted path must have a non-zero unique ID that is the same across
+ * all participating nodes.
+ *
+ * We don't recommend using trusted paths at all unless you really *need*
+ * near-bare-metal performance. Even on a LAN authentication and encryption
+ * are never a bad thing, and anything that introduces an "escape hatch"
+ * for encryption should be treated with the utmost care.
+ *
+ * Calling with NULL pointers for networks and ids and a count of zero clears
+ * all trusted paths.
+ *
+ * @param node Node instance
+ * @param networks Array of [count] networks
+ * @param ids Array of [count] corresponding non-zero path IDs (zero path IDs are ignored)
+ * @param count Number of trusted paths-- values greater than ZT_MAX_TRUSTED_PATHS are clipped
+ */
+void ZT_Node_setTrustedPaths(ZT_Node *node,const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count);
 
 /**
  * Do things in the background until Node dies

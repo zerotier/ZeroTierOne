@@ -849,7 +849,12 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 		unsigned int chunkSize = std::min(tmp.size(),(unsigned int)ZT_UDP_DEFAULT_PAYLOAD_MTU);
 		tmp.setFragmented(chunkSize < tmp.size());
 
-		tmp.armor(peer->key(),encrypt);
+		const uint64_t trustedPathId = RR->topology->getOutboundPathTrust(viaPath->address());
+		if (trustedPathId) {
+			tmp.setTrusted(trustedPathId);
+		} else {
+			tmp.armor(peer->key(),encrypt);
+		}
 
 		if (viaPath->send(RR,tmp.data(),chunkSize,now)) {
 			if (chunkSize < tmp.size()) {

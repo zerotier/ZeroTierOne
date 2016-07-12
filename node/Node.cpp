@@ -745,6 +745,11 @@ void Node::postCircuitTestReport(const ZT_CircuitTestReport *report)
 		(reinterpret_cast<void (*)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *)>((*i)->_internalPtr))(reinterpret_cast<ZT_Node *>(this),*i,report);
 }
 
+void Node::setTrustedPaths(const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count)
+{
+	RR->topology->setTrustedPaths(reinterpret_cast<const InetAddress *>(networks),ids,count);
+}
+
 } // namespace ZeroTier
 
 /****************************************************************************/
@@ -1011,6 +1016,13 @@ void ZT_Node_clusterStatus(ZT_Node *node,ZT_ClusterStatus *cs)
 {
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->clusterStatus(cs);
+	} catch ( ... ) {}
+}
+
+void ZT_Node_setTrustedPaths(ZT_Node *node,const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count)
+{
+	try {
+		reinterpret_cast<ZeroTier::Node *>(node)->setTrustedPaths(networks,ids,count);
 	} catch ( ... ) {}
 }
 
