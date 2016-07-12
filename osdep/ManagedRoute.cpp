@@ -415,7 +415,7 @@ bool ManagedRoute::sync()
 		// Shadow system route if it exists, also delete any obsolete shadows
 		// and replace them with the new state. sync() is called periodically to
 		// allow us to do that if underlying connectivity changes.
-		if ( ((_systemVia != newSystemVia)||(!strcmp(_systemDevice,newSystemDevice))) && (strcmp(_device,newSystemDevice)) ) {
+		if ( ((_systemVia != newSystemVia)||(strcmp(_systemDevice,newSystemDevice))) && (strcmp(_device,newSystemDevice)) ) {
 			if ((_systemVia)&&(_systemDevice[0])) {
 				_routeCmd("delete",leftt,_systemVia,_systemDevice,(const char *)0);
 				_routeCmd("delete",rightt,_systemVia,_systemDevice,(const char *)0);
