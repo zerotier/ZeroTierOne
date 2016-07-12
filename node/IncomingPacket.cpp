@@ -54,7 +54,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
 			// packets are dropped on the floor.
 			if (RR->topology->shouldInboundPathBeTrusted(_remoteAddress,trustedPathId())) {
 				trusted = true;
-				printf("TRUSTED PATH packet from %s(%s), trusted path ID %llx\n",sourceAddress.toString().c_str(),_remoteAddress.toString().c_str(),trustedPathId());
+				TRACE("TRUSTED PATH packet approved from %s(%s), trusted path ID %llx",sourceAddress.toString().c_str(),_remoteAddress.toString().c_str(),trustedPathId());
 			} else {
 				TRACE("dropped packet from %s(%s), cipher set to trusted path mode but path %llx@%s is not trusted!",sourceAddress.toString().c_str(),_remoteAddress.toString().c_str(),trustedPathId(),_remoteAddress.toString().c_str());
 				return true;
