@@ -54,8 +54,8 @@ public:
 	 * "device name."
 	 *
 	 * @param target Route target (e.g. 0.0.0.0/0 for default)
-	 * @param via Route next L3 hop or NULL InetAddress if local
-	 * @param device Device name/ID if 'via' is null and route is local, otherwise ignored
+	 * @param via Route next L3 hop or NULL InetAddress if local in which case it will be routed via device
+	 * @param device Name or hex LUID of ZeroTier device (e.g. zt#)
 	 * @return True if route was successfully set
 	 */
 	inline bool set(const InetAddress &target,const InetAddress &via,const char *device)
