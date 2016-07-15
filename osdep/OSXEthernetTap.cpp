@@ -474,7 +474,7 @@ bool OSXEthernetTap::addIp(const InetAddress &ip)
 
 	long cpid = (long)vfork();
 	if (cpid == 0) {
-		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),ip.isV4() ? "inet" : "inet6",ip.toString().c_str(),"alias",(const char *)0);
+		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toString().c_str(),"alias",(const char *)0);
 		::_exit(-1);
 	} else if (cpid > 0) {
 		int exitcode = -1;
@@ -494,7 +494,7 @@ bool OSXEthernetTap::removeIp(const InetAddress &ip)
 		if (*i == ip) {
 			long cpid = (long)vfork();
 			if (cpid == 0) {
-				execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"inet",ip.toIpString().c_str(),"-alias",(const char *)0);
+				execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toIpString().c_str(),"-alias",(const char *)0);
 				_exit(-1);
 			} else if (cpid > 0) {
 				int exitcode = -1;

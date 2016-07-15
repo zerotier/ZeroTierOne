@@ -42,9 +42,24 @@ namespace ZeroTier {
 
 bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
 {
-	const Address sourceAddress(source());
 	try {
-		if ((cipher() == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)&&(verb() == Packet::VERB_HELLO)) {
+		const Address sourceAddress(source());
+
+		// Check for trusted paths or unencrypted HELLOs (HELLO is the only packet sent in the clear)
+		const unsigned int c = cipher();
+		bool trusted = false;
+		if (c == ZT_PROTO_CIPHER_SUITE__NO_CRYPTO_TRUSTED_PATH) {
+			// If this is marked as a packet via a trusted path, check source address and path ID.
+			// Obviously if no trusted paths are configured this always returns false and such
+			// packets are dropped on the floor.
+			if (RR->topology->shouldInboundPathBeTrusted(_remoteAddress,trustedPathId())) {
+				trusted = true;
+				TRACE("TRUSTED PATH packet approved from %s(%s), trusted path ID %llx",sourceAddress.toString().c_str(),_remoteAddress.toString().c_str(),trustedPathId());
+			} else {
+				TRACE("dropped packet from %s(%s), cipher set to trusted path mode but path %llx@%s is not trusted!",sourceAddress.toString().c_str(),_remoteAddress.toString().c_str(),trustedPathId(),_remoteAddress.toString().c_str());
+				return true;
+			}
+		} else if ((c == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)&&(verb() == Packet::VERB_HELLO)) {
 			// Unencrypted HELLOs require some potentially expensive verification, so
 			// do this in the background if background processing is enabled.
 			if ((RR->dpEnabled > 0)&&(!deferred)) {
@@ -61,12 +76,15 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
 
 		SharedPtr<Peer> peer(RR->topology->getPeer(sourceAddress));
 		if (peer) {
-			if (!dearmor(peer->key())) {
-				TRACE("dropped packet from %s(%s), MAC authentication failed (size: %u)",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),size());
-				return true;
+			if (!trusted) {
+				if (!dearmor(peer->key())) {
+					TRACE("dropped packet from %s(%s), MAC authentication failed (size: %u)",sourceAddress.toString().c_str(),_remoteAddress.toString().c_str(),size());
+					return true;
+				}
 			}
+
 			if (!uncompress()) {
-				TRACE("dropped packet from %s(%s), compressed data invalid",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+				TRACE("dropped packet from %s(%s), compressed data invalid",sourceAddress.toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			}
 

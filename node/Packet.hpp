@@ -57,11 +57,13 @@
  *   + Supports in-band world (root server definition) updates
  *   + Clustering! (Though this will work with protocol v4 clients.)
  *   + Otherwise backward compatible with protocol v4
- * 6 - 1.1.5 ... CURRENT
+ * 6 - 1.1.5 ... 1.1.10
  *   + Deprecate old dictionary-based network config format
  *   + Introduce new binary serialized network config and meta-data
+ * 7 - 1.1.10 -- CURRENT
+ *   + Introduce trusted paths for local SDN use
  */
-#define ZT_PROTO_VERSION 6
+#define ZT_PROTO_VERSION 7
 
 /**
  * Minimum supported protocol version
@@ -100,10 +102,21 @@
 #define ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 1
 
 /**
- * DEPRECATED payload encrypted flag, will be removed for re-use soon.
+ * Cipher suite: NONE
  *
- * This has been replaced by the three-bit cipher suite selection field where
- * a value of 0 indicates unencrypted (but authenticated) messages.
+ * This differs from POLY1305/NONE in that *no* crypto is done, not even
+ * authentication. This is for trusted local LAN interconnects for internal
+ * SDN use within a data center.
+ *
+ * For this mode the MAC field becomes a trusted path ID and must match the
+ * configured ID of a trusted path or the packet is discarded.
+ */
+#define ZT_PROTO_CIPHER_SUITE__NO_CRYPTO_TRUSTED_PATH 2
+
+/**
+ * DEPRECATED payload encrypted flag, may be re-used in the future.
+ *
+ * This has been replaced by the three-bit cipher suite selection field.
  */
 #define ZT_PROTO_FLAG_ENCRYPTED 0x80
 
@@ -337,7 +350,7 @@ namespace ZeroTier {
  *   <[5] destination ZT address>
  *   <[5] source ZT address>
  *   <[1] flags/cipher/hops>
- *   <[8] 64-bit MAC>
+ *   <[8] 64-bit MAC (or trusted path ID in trusted path mode)>
  *   [... -- begin encryption envelope -- ...]
  *   <[1] encrypted flags (MS 3 bits) and verb (LS 5 bits)>
  *   [... verb-specific payload ...]
@@ -1218,7 +1231,6 @@ public:
 	 */
 	inline unsigned int cipher() const
 	{
-		// Note: this uses the new cipher spec field, which is incompatible with <1.0.0 peers
 		return (((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x38) >> 3);
 	}
 
@@ -1229,10 +1241,28 @@ public:
 	{
 		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
 		b = (b & 0xc7) | (unsigned char)((c << 3) & 0x38); // bits: FFCCCHHH
-		// DEPRECATED "encrypted" flag -- used by pre-1.0.3 peers
+		// Set DEPRECATED "encrypted" flag -- used by pre-1.0.3 peers
 		if (c == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
 			b |= ZT_PROTO_FLAG_ENCRYPTED;
 		else b &= (~ZT_PROTO_FLAG_ENCRYPTED);
+	}
+
+	/**
+	 * Get the trusted path ID for this packet (only meaningful if cipher is trusted path)
+	 *
+	 * @return Trusted path ID (from MAC field)
+	 */
+	inline uint64_t trustedPathId() const { return at<uint64_t>(ZT_PACKET_IDX_MAC); }
+
+	/**
+	 * Set this packet's trusted path ID and set the cipher spec to trusted path
+	 *
+	 * @param tpid Trusted path ID
+	 */
+	inline void setTrusted(const uint64_t tpid)
+	{
+		setCipher(ZT_PROTO_CIPHER_SUITE__NO_CRYPTO_TRUSTED_PATH);
+		setAt(ZT_PACKET_IDX_MAC,tpid);
 	}
 
 	/**
@@ -1277,6 +1307,10 @@ public:
 
 	/**
 	 * Verify and (if encrypted) decrypt packet
+	 *
+	 * This does not handle trusted path mode packets and will return false
+	 * for these. These are handled in IncomingPacket if the sending physical
+	 * address and MAC field match a trusted path.
 	 *
 	 * @param key 32-byte key
 	 * @return False if packet is invalid or failed MAC authenticity check

@@ -14,5 +14,6 @@ MAINTAINER Adam Ierymenko <adam.ierymenko@zerotier.com>
 RUN echo 'i686-redhat-linux' >/etc/rpm/platform
 
 RUN rpm --erase http-parser-devel
+RUN yum install -y rubygem-ronn ruby
 
 ADD zt1-src.tar.gz /

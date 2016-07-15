@@ -759,6 +759,38 @@ public:
 			for(int i=0;i<3;++i)
 				_portsBE[i] = Utils::hton((uint16_t)_ports[i]);
 
+			{
+				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S + "trustedpaths").c_str(),"r");
+				uint64_t ids[ZT_MAX_TRUSTED_PATHS];
+				InetAddress addresses[ZT_MAX_TRUSTED_PATHS];
+				if (trustpaths) {
+					char buf[1024];
+					unsigned int count = 0;
+					while ((fgets(buf,sizeof(buf),trustpaths))&&(count < ZT_MAX_TRUSTED_PATHS)) {
+						int fno = 0;
+						char *saveptr = (char *)0;
+						uint64_t trustedPathId = 0;
+						InetAddress trustedPathNetwork;
+						for(char *f=Utils::stok(buf,"=\r\n \t",&saveptr);(f);f=Utils::stok((char *)0,"=\r\n \t",&saveptr)) {
+							if (fno == 0) {
+								trustedPathId = Utils::hexStrToU64(f);
+							} else if (fno == 1) {
+								trustedPathNetwork = InetAddress(f);
+							} else break;
+							++fno;
+						}
+						if ( (trustedPathId != 0) && ((trustedPathNetwork.ss_family == AF_INET)||(trustedPathNetwork.ss_family == AF_INET6)) && (trustedPathNetwork.ipScope() != InetAddress::IP_SCOPE_GLOBAL) && (trustedPathNetwork.netmaskBits() > 0) ) {
+							ids[count] = trustedPathId;
+							addresses[count] = trustedPathNetwork;
+							++count;
+						}
+					}
+					fclose(trustpaths);
+					if (count)
+						_node->setTrustedPaths(reinterpret_cast<const struct sockaddr_storage *>(addresses),ids,count);
+				}
+			}
+
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 			_controller = new SqliteNetworkController(_node,(_homePath + ZT_PATH_SEPARATOR_S + ZT_CONTROLLER_DB_PATH).c_str(),(_homePath + ZT_PATH_SEPARATOR_S + "circuitTestResults.d").c_str());
 			_node->setNetconfMaster((void *)_controller);
@@ -1041,13 +1073,13 @@ public:
 	// Begin private implementation methods
 
 	// Checks if a managed IP or route target is allowed
-	bool checkIfManagedIsAllowed(const NetworkState &n,const InetAddress &addr)
+	bool checkIfManagedIsAllowed(const NetworkState &n,const InetAddress &target)
 	{
 		if (!n.settings.allowManaged)
 			return false;
-		if (addr.isDefaultRoute())
+		if (target.isDefaultRoute())
 			return n.settings.allowDefault;
-		switch(addr.ipScope()) {
+		switch(target.ipScope()) {
 			case InetAddress::IP_SCOPE_NONE:
 			case InetAddress::IP_SCOPE_MULTICAST:
 			case InetAddress::IP_SCOPE_LOOPBACK:
@@ -1058,6 +1090,16 @@ public:
 			default:
 				return true;
 		}
+	}
+
+	// Match only an IP from a vector of IPs -- used in syncManagedStuff()
+	bool matchIpOnly(const std::vector<InetAddress> &ips,const InetAddress &ip) const
+	{
+		for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
+			if (i->ipsEqual(ip))
+				return true;
+		}
+		return false;
 	}
 
 	// Apply or update managed IPs for a configured network (be sure n.tap exists)
@@ -1075,16 +1117,16 @@ public:
 			std::sort(newManagedIps.begin(),newManagedIps.end());
 			newManagedIps.erase(std::unique(newManagedIps.begin(),newManagedIps.end()),newManagedIps.end());
 
-			for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
-				if (std::find(n.managedIps.begin(),n.managedIps.end(),*ip) == n.managedIps.end()) {
-					if (!n.tap->addIp(*ip))
-						fprintf(stderr,"ERROR: unable to add ip address %s"ZT_EOL_S, ip->toString().c_str());
-				}
-			}
 			for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
 				if (std::find(newManagedIps.begin(),newManagedIps.end(),*ip) == newManagedIps.end()) {
 					if (!n.tap->removeIp(*ip))
 						fprintf(stderr,"ERROR: unable to remove ip address %s"ZT_EOL_S, ip->toString().c_str());
+				}
+			}
+			for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
+				if (std::find(n.managedIps.begin(),n.managedIps.end(),*ip) == n.managedIps.end()) {
+					if (!n.tap->addIp(*ip))
+						fprintf(stderr,"ERROR: unable to add ip address %s"ZT_EOL_S, ip->toString().c_str());
 				}
 			}
 
@@ -1099,10 +1141,12 @@ public:
 			Utils::scopy(tapdev,sizeof(tapdev),n.tap->deviceName().c_str());
 #endif
 
+			std::vector<InetAddress> myIps(n.tap->ips());
+
 			// Nuke applied routes that are no longer in n.config.routes[] and/or are not allowed
 			for(std::list<ManagedRoute>::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();) {
 				bool haveRoute = false;
-				if (checkIfManagedIsAllowed(n,mr->target())) {
+				if ( (checkIfManagedIsAllowed(n,mr->target())) && ((mr->via().ss_family != mr->target().ss_family)||(!matchIpOnly(myIps,mr->via()))) ) {
 					for(unsigned int i=0;i<n.config.routeCount;++i) {
 						const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
 						const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
@@ -1124,7 +1168,7 @@ public:
 				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
 				const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
 
-				if (!checkIfManagedIsAllowed(n,*target))
+				if ( (!checkIfManagedIsAllowed(n,*target)) || ((via->ss_family == target->ss_family)&&(matchIpOnly(myIps,*via))) )
 					continue;
 
 				bool haveRoute = false;

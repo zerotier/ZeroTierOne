@@ -1,3 +1,22 @@
+zerotier-one (1.1.12) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 12 Jul 2016 03:02:22 -0700
+
+zerotier-one (1.1.10) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+  * ZeroTier Debian packages no longer depend on http-parser since its ABI is too unstable.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 12 Jul 2016 12:29:00 -0700
+
+zerotier-one (1.1.8) unstable; urgency=low
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Fri, 08 Jul 2016 01:56:00 -0700
+
 zerotier-one (1.1.6) unstable; urgency=medium
 
   * First Debian release on ZeroTier, Inc. private apt repository.
