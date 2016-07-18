@@ -365,9 +365,10 @@ public:
 	{
 		while (ptr < specialistCount) {
 			if ((specialists[ptr] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY) != 0) {
-				return Address(specialists[ptr]);
+				return Address(specialists[ptr++]);
+			} else {
+				++ptr;
 			}
-			++ptr;
 		}
 		return Address();
 	}
