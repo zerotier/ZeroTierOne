@@ -7,12 +7,22 @@
 //
 
 import Cocoa
+import WebKit
 
 class AboutViewController: NSViewController {
+
+
+    @IBOutlet var webView: WebView!
 
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do view setup here.
+        let bundle = NSBundle.mainBundle()
+        let path = bundle.URLForResource("about", withExtension: "html")
+
+        if let url = path {
+            webView.mainFrame.loadRequest(NSURLRequest(URL: url))
+        }
     }
     
 }
