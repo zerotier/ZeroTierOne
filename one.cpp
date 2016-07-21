@@ -97,21 +97,21 @@ static void cliPrintHelp(const char *pn,FILE *out)
 	fprintf(out,
 		COPYRIGHT_NOTICE ZT_EOL_S
 		LICENSE_GRANT ZT_EOL_S);
-	fprintf(out,"Usage: %s [-switches] <command/path> [<args>]"ZT_EOL_S""ZT_EOL_S,pn);
-	fprintf(out,"Available switches:"ZT_EOL_S);
-	fprintf(out,"  -h                      - Display this help"ZT_EOL_S);
-	fprintf(out,"  -v                      - Show version"ZT_EOL_S);
-	fprintf(out,"  -j                      - Display full raw JSON output"ZT_EOL_S);
-	fprintf(out,"  -D<path>                - ZeroTier home path for parameter auto-detect"ZT_EOL_S);
-	fprintf(out,"  -p<port>                - HTTP port (default: auto)"ZT_EOL_S);
-	fprintf(out,"  -T<token>               - Authentication token (default: auto)"ZT_EOL_S);
-	fprintf(out,ZT_EOL_S"Available commands:"ZT_EOL_S);
-	fprintf(out,"  info                    - Display status info"ZT_EOL_S);
-	fprintf(out,"  listpeers               - List all peers"ZT_EOL_S);
-	fprintf(out,"  listnetworks            - List all networks"ZT_EOL_S);
-	fprintf(out,"  join <network>          - Join a network"ZT_EOL_S);
-	fprintf(out,"  leave <network>         - Leave a network"ZT_EOL_S);
-	fprintf(out,"  set <network> <setting> - Set a network setting"ZT_EOL_S);
+	fprintf(out,"Usage: %s [-switches] <command/path> [<args>]" ZT_EOL_S"" ZT_EOL_S,pn);
+	fprintf(out,"Available switches:" ZT_EOL_S);
+	fprintf(out,"  -h                      - Display this help" ZT_EOL_S);
+	fprintf(out,"  -v                      - Show version" ZT_EOL_S);
+	fprintf(out,"  -j                      - Display full raw JSON output" ZT_EOL_S);
+	fprintf(out,"  -D<path>                - ZeroTier home path for parameter auto-detect" ZT_EOL_S);
+	fprintf(out,"  -p<port>                - HTTP port (default: auto)" ZT_EOL_S);
+	fprintf(out,"  -T<token>               - Authentication token (default: auto)" ZT_EOL_S);
+	fprintf(out,ZT_EOL_S"Available commands:" ZT_EOL_S);
+	fprintf(out,"  info                    - Display status info" ZT_EOL_S);
+	fprintf(out,"  listpeers               - List all peers" ZT_EOL_S);
+	fprintf(out,"  listnetworks            - List all networks" ZT_EOL_S);
+	fprintf(out,"  join <network>          - Join a network" ZT_EOL_S);
+	fprintf(out,"  leave <network>         - Leave a network" ZT_EOL_S);
+	fprintf(out,"  set <network> <setting> - Set a network setting" ZT_EOL_S);
 }
 
 static std::string cliFixJsonCRs(const std::string &s)
@@ -194,7 +194,7 @@ static int cli(int argc,char **argv)
 						cliPrintHelp(argv[0],stdout);
 						return 1;
 					}
-					printf("%d.%d.%d"ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
+					printf("%d.%d.%d" ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
 					return 0;
 
 				case 'h':
@@ -216,7 +216,7 @@ static int cli(int argc,char **argv)
 
 	if ((!port)||(!authToken.length())) {
 		if (!homeDir.length()) {
-			fprintf(stderr,"%s: missing port or authentication token and no home directory specified to auto-detect"ZT_EOL_S,argv[0]);
+			fprintf(stderr,"%s: missing port or authentication token and no home directory specified to auto-detect" ZT_EOL_S,argv[0]);
 			return 2;
 		}
 
@@ -225,7 +225,7 @@ static int cli(int argc,char **argv)
 			OSUtils::readFile((homeDir + ZT_PATH_SEPARATOR_S + "zerotier-one.port").c_str(),portStr);
 			port = Utils::strToUInt(portStr.c_str());
 			if ((port == 0)||(port > 0xffff)) {
-				fprintf(stderr,"%s: missing port and zerotier-one.port not found in %s"ZT_EOL_S,argv[0],homeDir.c_str());
+				fprintf(stderr,"%s: missing port and zerotier-one.port not found in %s" ZT_EOL_S,argv[0],homeDir.c_str());
 				return 2;
 			}
 		}
@@ -247,7 +247,7 @@ static int cli(int argc,char **argv)
 			}
 #endif
 			if (!authToken.length()) {
-				fprintf(stderr,"%s: missing authentication token and authtoken.secret not found (or readable) in %s"ZT_EOL_S,argv[0],homeDir.c_str());
+				fprintf(stderr,"%s: missing authentication token and authtoken.secret not found (or readable) in %s" ZT_EOL_S,argv[0],homeDir.c_str());
 				return 2;
 			}
 		}
@@ -279,7 +279,7 @@ static int cli(int argc,char **argv)
 			printf("%s",cliFixJsonCRs(responseBody).c_str());
 			return 0;
 		} else {
-			printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
 		}
 	} else if ((command == "info")||(command == "status")) {
@@ -312,7 +312,7 @@ static int cli(int argc,char **argv)
 								online = (j->u.object.values[k].value->u.boolean != 0);
 						}
 						if ((address)&&(version)) {
-							printf("200 info %s %s %s"ZT_EOL_S,address,(online ? "ONLINE" : "OFFLINE"),version);
+							printf("200 info %s %s %s" ZT_EOL_S,address,(online ? "ONLINE" : "OFFLINE"),version);
 							good = true;
 						}
 					}
@@ -321,12 +321,12 @@ static int cli(int argc,char **argv)
 				if (good) {
 					return 0;
 				} else {
-					printf("%u %s invalid JSON response"ZT_EOL_S,scode,command.c_str());
+					printf("%u %s invalid JSON response" ZT_EOL_S,scode,command.c_str());
 					return 1;
 				}
 			}
 		} else {
-			printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
 		}
 	} else if (command == "listpeers") {
@@ -343,7 +343,7 @@ static int cli(int argc,char **argv)
 				printf("%s",cliFixJsonCRs(responseBody).c_str());
 				return 0;
 			} else {
-				printf("200 listpeers <ztaddr> <paths> <latency> <version> <role>"ZT_EOL_S);
+				printf("200 listpeers <ztaddr> <paths> <latency> <version> <role>" ZT_EOL_S);
 				json_value *j = json_parse(responseBody.c_str(),responseBody.length());
 				if (j) {
 					if (j->type == json_array) {
@@ -417,7 +417,7 @@ static int cli(int argc,char **argv)
 										verstr[0] = '-';
 										verstr[1] = (char)0;
 									}
-									printf("200 listpeers %s %s %lld %s %s"ZT_EOL_S,address,(paths.length()) ? paths.c_str() : "-",(long long)latency,verstr,role);
+									printf("200 listpeers %s %s %lld %s %s" ZT_EOL_S,address,(paths.length()) ? paths.c_str() : "-",(long long)latency,verstr,role);
 								}
 							}
 						}
@@ -427,7 +427,7 @@ static int cli(int argc,char **argv)
 				return 0;
 			}
 		} else {
-			printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
 		}
 	} else if (command == "listnetworks") {
@@ -444,7 +444,7 @@ static int cli(int argc,char **argv)
 				printf("%s",cliFixJsonCRs(responseBody).c_str());
 				return 0;
 			} else {
-				printf("200 listnetworks <nwid> <name> <mac> <status> <type> <dev> <ZT assigned ips>"ZT_EOL_S);
+				printf("200 listnetworks <nwid> <name> <mac> <status> <type> <dev> <ZT assigned ips>" ZT_EOL_S);
 				json_value *j = json_parse(responseBody.c_str(),responseBody.length());
 				if (j) {
 					if (j->type == json_array) {
@@ -483,7 +483,7 @@ static int cli(int argc,char **argv)
 									}
 								}
 								if ((nwid)&&(mac)&&(status)&&(type)) {
-									printf("200 listnetworks %s %s %s %s %s %s %s"ZT_EOL_S,
+									printf("200 listnetworks %s %s %s %s %s %s %s" ZT_EOL_S,
 										nwid,
 										(((name)&&(name[0])) ? name : "-"),
 										mac,
@@ -499,7 +499,7 @@ static int cli(int argc,char **argv)
 				}
 			}
 		} else {
-			printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
 		}
 	} else if (command == "join") {
@@ -523,11 +523,11 @@ static int cli(int argc,char **argv)
 			if (json) {
 				printf("%s",cliFixJsonCRs(responseBody).c_str());
 			} else {
-				printf("200 join OK"ZT_EOL_S);
+				printf("200 join OK" ZT_EOL_S);
 			}
 			return 0;
 		} else {
-			printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
 		}
 	} else if (command == "leave") {
@@ -547,11 +547,11 @@ static int cli(int argc,char **argv)
 			if (json) {
 				printf("%s",cliFixJsonCRs(responseBody).c_str());
 			} else {
-				printf("200 leave OK"ZT_EOL_S);
+				printf("200 leave OK" ZT_EOL_S);
 			}
 			return 0;
 		} else {
-			printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
 		}
 	} else if (command == "set") {
@@ -584,7 +584,7 @@ static int cli(int argc,char **argv)
 					printf("%s",cliFixJsonCRs(responseBody).c_str());
 					return 0;
 				} else {
-					printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+					printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 					return 1;
 				}
 			}
@@ -613,13 +613,13 @@ static void idtoolPrintHelp(FILE *out,const char *pn)
 	fprintf(out,
 		COPYRIGHT_NOTICE ZT_EOL_S
 		LICENSE_GRANT ZT_EOL_S);
-	fprintf(out,"Usage: %s <command> [<args>]"ZT_EOL_S""ZT_EOL_S"Commands:"ZT_EOL_S,pn);
-	fprintf(out,"  generate [<identity.secret>] [<identity.public>] [<vanity>]"ZT_EOL_S);
-	fprintf(out,"  validate <identity.secret/public>"ZT_EOL_S);
-	fprintf(out,"  getpublic <identity.secret>"ZT_EOL_S);
-	fprintf(out,"  sign <identity.secret> <file>"ZT_EOL_S);
-	fprintf(out,"  verify <identity.secret/public> <file> <signature>"ZT_EOL_S);
-	fprintf(out,"  mkcom <identity.secret> [<id,value,maxDelta> ...] (hexadecimal integers)"ZT_EOL_S);
+	fprintf(out,"Usage: %s <command> [<args>]" ZT_EOL_S"" ZT_EOL_S"Commands:" ZT_EOL_S,pn);
+	fprintf(out,"  generate [<identity.secret>] [<identity.public>] [<vanity>]" ZT_EOL_S);
+	fprintf(out,"  validate <identity.secret/public>" ZT_EOL_S);
+	fprintf(out,"  getpublic <identity.secret>" ZT_EOL_S);
+	fprintf(out,"  sign <identity.secret> <file>" ZT_EOL_S);
+	fprintf(out,"  verify <identity.secret/public> <file> <signature>" ZT_EOL_S);
+	fprintf(out,"  mkcom <identity.secret> [<id,value,maxDelta> ...] (hexadecimal integers)" ZT_EOL_S);
 }
 
 static Identity getIdFromArg(char *arg)
@@ -675,15 +675,15 @@ static int idtool(int argc,char **argv)
 		std::string idser = id.toString(true);
 		if (argc >= 3) {
 			if (!OSUtils::writeFile(argv[2],idser)) {
-				fprintf(stderr,"Error writing to %s"ZT_EOL_S,argv[2]);
+				fprintf(stderr,"Error writing to %s" ZT_EOL_S,argv[2]);
 				return 1;
-			} else printf("%s written"ZT_EOL_S,argv[2]);
+			} else printf("%s written" ZT_EOL_S,argv[2]);
 			if (argc >= 4) {
 				idser = id.toString(false);
 				if (!OSUtils::writeFile(argv[3],idser)) {
-					fprintf(stderr,"Error writing to %s"ZT_EOL_S,argv[3]);
+					fprintf(stderr,"Error writing to %s" ZT_EOL_S,argv[3]);
 					return 1;
-				} else printf("%s written"ZT_EOL_S,argv[3]);
+				} else printf("%s written" ZT_EOL_S,argv[3]);
 			}
 		} else printf("%s",idser.c_str());
 	} else if (!strcmp(argv[1],"validate")) {
@@ -694,14 +694,14 @@ static int idtool(int argc,char **argv)
 
 		Identity id = getIdFromArg(argv[2]);
 		if (!id) {
-			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
+			fprintf(stderr,"Identity argument invalid or file unreadable: %s" ZT_EOL_S,argv[2]);
 			return 1;
 		}
 
 		if (!id.locallyValidate()) {
-			fprintf(stderr,"%s FAILED validation."ZT_EOL_S,argv[2]);
+			fprintf(stderr,"%s FAILED validation." ZT_EOL_S,argv[2]);
 			return 1;
-		} else printf("%s is a valid identity"ZT_EOL_S,argv[2]);
+		} else printf("%s is a valid identity" ZT_EOL_S,argv[2]);
 	} else if (!strcmp(argv[1],"getpublic")) {
 		if (argc < 3) {
 			idtoolPrintHelp(stdout,argv[0]);
@@ -710,7 +710,7 @@ static int idtool(int argc,char **argv)
 
 		Identity id = getIdFromArg(argv[2]);
 		if (!id) {
-			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
+			fprintf(stderr,"Identity argument invalid or file unreadable: %s" ZT_EOL_S,argv[2]);
 			return 1;
 		}
 
@@ -723,18 +723,18 @@ static int idtool(int argc,char **argv)
 
 		Identity id = getIdFromArg(argv[2]);
 		if (!id) {
-			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
+			fprintf(stderr,"Identity argument invalid or file unreadable: %s" ZT_EOL_S,argv[2]);
 			return 1;
 		}
 
 		if (!id.hasPrivate()) {
-			fprintf(stderr,"%s does not contain a private key (must use private to sign)"ZT_EOL_S,argv[2]);
+			fprintf(stderr,"%s does not contain a private key (must use private to sign)" ZT_EOL_S,argv[2]);
 			return 1;
 		}
 
 		std::string inf;
 		if (!OSUtils::readFile(argv[3],inf)) {
-			fprintf(stderr,"%s is not readable"ZT_EOL_S,argv[3]);
+			fprintf(stderr,"%s is not readable" ZT_EOL_S,argv[3]);
 			return 1;
 		}
 		C25519::Signature signature = id.sign(inf.data(),(unsigned int)inf.length());
@@ -747,21 +747,21 @@ static int idtool(int argc,char **argv)
 
 		Identity id = getIdFromArg(argv[2]);
 		if (!id) {
-			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
+			fprintf(stderr,"Identity argument invalid or file unreadable: %s" ZT_EOL_S,argv[2]);
 			return 1;
 		}
 
 		std::string inf;
 		if (!OSUtils::readFile(argv[3],inf)) {
-			fprintf(stderr,"%s is not readable"ZT_EOL_S,argv[3]);
+			fprintf(stderr,"%s is not readable" ZT_EOL_S,argv[3]);
 			return 1;
 		}
 
 		std::string signature(Utils::unhex(argv[4]));
 		if ((signature.length() > ZT_ADDRESS_LENGTH)&&(id.verify(inf.data(),(unsigned int)inf.length(),signature.data(),(unsigned int)signature.length()))) {
-			printf("%s signature valid"ZT_EOL_S,argv[3]);
+			printf("%s signature valid" ZT_EOL_S,argv[3]);
 		} else {
-			fprintf(stderr,"%s signature check FAILED"ZT_EOL_S,argv[3]);
+			fprintf(stderr,"%s signature check FAILED" ZT_EOL_S,argv[3]);
 			return 1;
 		}
 	} else if (!strcmp(argv[1],"mkcom")) {
@@ -772,7 +772,7 @@ static int idtool(int argc,char **argv)
 
 		Identity id = getIdFromArg(argv[2]);
 		if ((!id)||(!id.hasPrivate())) {
-			fprintf(stderr,"Identity argument invalid, does not include private key, or file unreadable: %s"ZT_EOL_S,argv[2]);
+			fprintf(stderr,"Identity argument invalid, does not include private key, or file unreadable: %s" ZT_EOL_S,argv[2]);
 			return 1;
 		}
 
@@ -787,7 +787,7 @@ static int idtool(int argc,char **argv)
 			}
 		}
 		if (!com.sign(id)) {
-			fprintf(stderr,"Signature of certificate of membership failed."ZT_EOL_S);
+			fprintf(stderr,"Signature of certificate of membership failed." ZT_EOL_S);
 			return 1;
 		}
 
@@ -981,27 +981,27 @@ static void printHelp(const char *cn,FILE *out)
 		LICENSE_GRANT ZT_EOL_S);
 	std::string updateUrl(OneService::autoUpdateUrl());
 	if (updateUrl.length())
-		fprintf(out,"Automatic updates enabled:"ZT_EOL_S"  %s"ZT_EOL_S"  (all updates are securely authenticated by 256-bit ECDSA signature)"ZT_EOL_S""ZT_EOL_S,updateUrl.c_str());
-	fprintf(out,"Usage: %s [-switches] [home directory]"ZT_EOL_S""ZT_EOL_S,cn);
-	fprintf(out,"Available switches:"ZT_EOL_S);
-	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
-	fprintf(out,"  -v                - Show version"ZT_EOL_S);
-	fprintf(out,"  -U                - Run as unprivileged user (skip privilege check)"ZT_EOL_S);
-	fprintf(out,"  -p<port>          - Port for UDP and TCP/HTTP (default: 9993, 0 for random)"ZT_EOL_S);
+		fprintf(out,"Automatic updates enabled:" ZT_EOL_S"  %s" ZT_EOL_S"  (all updates are securely authenticated by 256-bit ECDSA signature)" ZT_EOL_S"" ZT_EOL_S,updateUrl.c_str());
+	fprintf(out,"Usage: %s [-switches] [home directory]" ZT_EOL_S"" ZT_EOL_S,cn);
+	fprintf(out,"Available switches:" ZT_EOL_S);
+	fprintf(out,"  -h                - Display this help" ZT_EOL_S);
+	fprintf(out,"  -v                - Show version" ZT_EOL_S);
+	fprintf(out,"  -U                - Run as unprivileged user (skip privilege check)" ZT_EOL_S);
+	fprintf(out,"  -p<port>          - Port for UDP and TCP/HTTP (default: 9993, 0 for random)" ZT_EOL_S);
 
 #ifdef __UNIX_LIKE__
-	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
+	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)" ZT_EOL_S);
 #endif // __UNIX_LIKE__
 
 #ifdef __WINDOWS__
-	fprintf(out,"  -C                - Run from command line instead of as service (Windows)"ZT_EOL_S);
-	fprintf(out,"  -I                - Install Windows service (Windows)"ZT_EOL_S);
-	fprintf(out,"  -R                - Uninstall Windows service (Windows)"ZT_EOL_S);
-	fprintf(out,"  -D                - Remove all instances of Windows tap device (Windows)"ZT_EOL_S);
+	fprintf(out,"  -C                - Run from command line instead of as service (Windows)" ZT_EOL_S);
+	fprintf(out,"  -I                - Install Windows service (Windows)" ZT_EOL_S);
+	fprintf(out,"  -R                - Uninstall Windows service (Windows)" ZT_EOL_S);
+	fprintf(out,"  -D                - Remove all instances of Windows tap device (Windows)" ZT_EOL_S);
 #endif // __WINDOWS__
 
-	fprintf(out,"  -i                - Generate and manage identities (zerotier-idtool)"ZT_EOL_S);
-	fprintf(out,"  -q                - Query API (zerotier-cli)"ZT_EOL_S);
+	fprintf(out,"  -i                - Generate and manage identities (zerotier-idtool)" ZT_EOL_S);
+	fprintf(out,"  -q                - Query API (zerotier-cli)" ZT_EOL_S);
 }
 
 #ifdef __WINDOWS__
@@ -1079,7 +1079,7 @@ int main(int argc,char **argv)
 					break;
 
 				case 'v': // Display version
-					printf("%d.%d.%d"ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
+					printf("%d.%d.%d" ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
 					return 0;
 
 				case 'i': // Invoke idtool personality
@@ -1101,12 +1101,12 @@ int main(int argc,char **argv)
 
 				case 'I': { // Install this binary as a Windows service
 						if (IsCurrentUserLocalAdministrator() != TRUE) {
-							fprintf(stderr,"%s: must be run as a local administrator."ZT_EOL_S,argv[0]);
+							fprintf(stderr,"%s: must be run as a local administrator." ZT_EOL_S,argv[0]);
 							return 1;
 						}
 						std::string ret(InstallService(ZT_SERVICE_NAME,ZT_SERVICE_DISPLAY_NAME,ZT_SERVICE_START_TYPE,ZT_SERVICE_DEPENDENCIES,ZT_SERVICE_ACCOUNT,ZT_SERVICE_PASSWORD));
 						if (ret.length()) {
-							fprintf(stderr,"%s: unable to install service: %s"ZT_EOL_S,argv[0],ret.c_str());
+							fprintf(stderr,"%s: unable to install service: %s" ZT_EOL_S,argv[0],ret.c_str());
 							return 3;
 						}
 						return 0;
@@ -1114,12 +1114,12 @@ int main(int argc,char **argv)
 
 				case 'R': { // Uninstall this binary as Windows service
 						if (IsCurrentUserLocalAdministrator() != TRUE) {
-							fprintf(stderr,"%s: must be run as a local administrator."ZT_EOL_S,argv[0]);
+							fprintf(stderr,"%s: must be run as a local administrator." ZT_EOL_S,argv[0]);
 							return 1;
 						}
 						std::string ret(UninstallService(ZT_SERVICE_NAME));
 						if (ret.length()) {
-							fprintf(stderr,"%s: unable to uninstall service: %s"ZT_EOL_S,argv[0],ret.c_str());
+							fprintf(stderr,"%s: unable to uninstall service: %s" ZT_EOL_S,argv[0],ret.c_str());
 							return 3;
 						}
 						return 0;
@@ -1128,7 +1128,7 @@ int main(int argc,char **argv)
 				case 'D': {
 						std::string err = WindowsEthernetTap::destroyAllPersistentTapDevices();
 						if (err.length() > 0) {
-							fprintf(stderr,"%s: unable to uninstall one or more persistent tap devices: %s"ZT_EOL_S,argv[0],err.c_str());
+							fprintf(stderr,"%s: unable to uninstall one or more persistent tap devices: %s" ZT_EOL_S,argv[0],err.c_str());
 							return 3;
 						}
 						return 0;
@@ -1154,7 +1154,7 @@ int main(int argc,char **argv)
 	if (!homeDir.length())
 		homeDir = OneService::platformDefaultHomePath();
 	if (!homeDir.length()) {
-		fprintf(stderr,"%s: no home path specified and no platform default available"ZT_EOL_S,argv[0]);
+		fprintf(stderr,"%s: no home path specified and no platform default available" ZT_EOL_S,argv[0]);
 		return 1;
 	} else {
 		std::vector<std::string> hpsp(Utils::split(homeDir.c_str(),ZT_PATH_SEPARATOR_S,"",""));
@@ -1175,14 +1175,14 @@ int main(int argc,char **argv)
 #ifdef __UNIX_LIKE__
 #ifndef ZT_ONE_NO_ROOT_CHECK
 	if ((!skipRootCheck)&&(getuid() != 0)) {
-		fprintf(stderr,"%s: must be run as root (uid 0)"ZT_EOL_S,argv[0]);
+		fprintf(stderr,"%s: must be run as root (uid 0)" ZT_EOL_S,argv[0]);
 		return 1;
 	}
 #endif // !ZT_ONE_NO_ROOT_CHECK
 	if (runAsDaemon) {
 		long p = (long)fork();
 		if (p < 0) {
-			fprintf(stderr,"%s: could not fork"ZT_EOL_S,argv[0]);
+			fprintf(stderr,"%s: could not fork" ZT_EOL_S,argv[0]);
 			return 1;
 		} else if (p > 0)
 			return 0; // forked
@@ -1199,7 +1199,7 @@ int main(int argc,char **argv)
 		// Running in "interactive" mode (mostly for debugging)
 		if (IsCurrentUserLocalAdministrator() != TRUE) {
 			if (!skipRootCheck) {
-				fprintf(stderr,"%s: must be run as a local administrator."ZT_EOL_S,argv[0]);
+				fprintf(stderr,"%s: must be run as a local administrator." ZT_EOL_S,argv[0]);
 				return 1;
 			}
 		} else {
@@ -1214,7 +1214,7 @@ int main(int argc,char **argv)
 		if (CServiceBase::Run(zt1Service) == TRUE) {
 			return 0;
 		} else {
-			fprintf(stderr,"%s: unable to start service (try -h for help)"ZT_EOL_S,argv[0]);
+			fprintf(stderr,"%s: unable to start service (try -h for help)" ZT_EOL_S,argv[0]);
 			return 1;
 		}
 	}
@@ -1241,7 +1241,7 @@ int main(int argc,char **argv)
 			case OneService::ONE_NORMAL_TERMINATION:
 				break;
 			case OneService::ONE_UNRECOVERABLE_ERROR:
-				fprintf(stderr,"%s: fatal error: %s"ZT_EOL_S,argv[0],zt1Service->fatalErrorMessage().c_str());
+				fprintf(stderr,"%s: fatal error: %s" ZT_EOL_S,argv[0],zt1Service->fatalErrorMessage().c_str());
 				returnValue = 1;
 				break;
 			case OneService::ONE_IDENTITY_COLLISION: {
