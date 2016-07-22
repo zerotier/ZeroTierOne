@@ -42,9 +42,9 @@ namespace ZeroTier {
 
 bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
 {
-	try {
-		const Address sourceAddress(source());
+	const Address sourceAddress(source());
 
+	try {
 		// Check for trusted paths or unencrypted HELLOs (HELLO is the only packet sent in the clear)
 		const unsigned int c = cipher();
 		bool trusted = false;

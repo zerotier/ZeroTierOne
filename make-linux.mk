@@ -98,8 +98,8 @@ endif
 
 ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE
-	override CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
-	override CXXFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
+	override CFLAGS+=-Wall -g -O -pthread $(INCLUDES) $(DEFS)
+	override CXXFLAGS+=-Wall -g -O -pthread $(INCLUDES) $(DEFS)
 	LDFLAGS=
 	STRIP?=echo
 	# The following line enables optimization for the crypto code, since

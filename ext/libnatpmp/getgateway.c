@@ -96,7 +96,6 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef USE_SYSCTL_NET_ROUTE
 #include <stdlib.h>
-#include <sys/sysctl.h>
 #include <sys/socket.h>
 #include <net/route.h>
 #endif
