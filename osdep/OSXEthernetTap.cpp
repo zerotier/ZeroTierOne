@@ -43,6 +43,7 @@
 #include <net/if_arp.h>
 #include <net/if_dl.h>
 #include <net/if_media.h>
+#include <sys/sysctl.h>
 #include <netinet6/in6_var.h>
 #include <netinet/in_var.h>
 #include <netinet/icmp6.h>

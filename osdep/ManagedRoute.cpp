@@ -42,6 +42,7 @@
 #include <net/if.h>
 #ifdef __BSD__
 #include <net/if_dl.h>
+#include <sys/sysctl.h>
 #endif
 #include <ifaddrs.h>
 #endif
