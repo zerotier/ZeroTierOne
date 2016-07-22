@@ -44,6 +44,7 @@ static const unsigned char ZT_DEFAULT_WORLD[ZT_DEFAULT_WORLD_LENGTH] = {0x01,0x0
 
 Topology::Topology(const RuntimeEnvironment *renv) :
 	RR(renv),
+	_trustedPathCount(0),
 	_amRoot(false)
 {
 	std::string alls(RR->node->dataStoreGet("peers.save"));
