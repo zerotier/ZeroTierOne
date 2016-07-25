@@ -245,17 +245,6 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 				tmp.append((uint16_t)rules[i].v.frameSize[0]);
 				tmp.append((uint16_t)rules[i].v.frameSize[1]);
 				break;
-			case ZT_NETWORK_RULE_MATCH_TCP_RELATIVE_SEQUENCE_NUMBER_RANGE:
-				tmp.append((uint8_t)8);
-				tmp.append((uint32_t)rules[i].v.tcpseq[0]);
-				tmp.append((uint32_t)rules[i].v.tcpseq[1]);
-				break;
-			case ZT_NETWORK_RULE_MATCH_COM_FIELD_GE:
-			case ZT_NETWORK_RULE_MATCH_COM_FIELD_LE:
-				tmp.append((uint8_t)16);
-				tmp.append((uint64_t)rules[i].v.comIV[0]);
-				tmp.append((uint64_t)rules[i].v.comIV[1]);
-				break;
 		}
 	}
 	if (tmp.size()) {
@@ -471,15 +460,6 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 						case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
 							rules[ruleCount].v.frameSize[0] = tmp.at<uint16_t>(p);
 							rules[ruleCount].v.frameSize[0] = tmp.at<uint16_t>(p + 2);
-							break;
-						case ZT_NETWORK_RULE_MATCH_TCP_RELATIVE_SEQUENCE_NUMBER_RANGE:
-							rules[ruleCount].v.tcpseq[0] = tmp.at<uint32_t>(p);
-							rules[ruleCount].v.tcpseq[1] = tmp.at<uint32_t>(p + 4);
-							break;
-						case ZT_NETWORK_RULE_MATCH_COM_FIELD_GE:
-						case ZT_NETWORK_RULE_MATCH_COM_FIELD_LE:
-							rules[ruleCount].v.comIV[0] = tmp.at<uint64_t>(p);
-							rules[ruleCount].v.comIV[1] = tmp.at<uint64_t>(p + 8);
 							break;
 					}
 					p += fieldLen;

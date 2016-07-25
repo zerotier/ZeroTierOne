@@ -507,22 +507,7 @@ enum ZT_VirtualNetworkRuleType
 	/**
 	 * Frame size range (start-end, inclusive)
 	 */
-	ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE = 49,
-
-	/**
-	 * Match a range of relative TCP sequence numbers (e.g. approx first N bytes of stream)
-	 */
-	ZT_NETWORK_RULE_MATCH_TCP_RELATIVE_SEQUENCE_NUMBER_RANGE = 50,
-
-	/**
-	 * Match a certificate of network membership field from the ZT origin's COM: greater than or equal to
-	 */
-	ZT_NETWORK_RULE_MATCH_COM_FIELD_GE = 51,
-
-	/**
-	 * Match a certificate of network membership field from the ZT origin's COM: less than or equal to
-	 */
-	ZT_NETWORK_RULE_MATCH_COM_FIELD_LE = 52
+	ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE = 49
 };
 
 /**
@@ -585,11 +570,6 @@ typedef struct
 		uint16_t port[2];
 
 		/**
-		 * TCP relative sequence number range -- start-end inclusive -- host byte order
-		 */
-		uint32_t tcpseq[2];
-
-		/**
 		 * 40-bit ZeroTier address (in least significant bits, host byte order)
 		 */
 		uint64_t zt;
@@ -625,7 +605,7 @@ typedef struct
 		uint8_t ipProtocol;
 
 		/**
-		 * IP type of service
+		 * IP type of service a.k.a. DSCP field
 		 */
 		uint8_t ipTos;
 
@@ -633,11 +613,6 @@ typedef struct
 		 * Ethernet packet size in host byte order (start-end, inclusive)
 		 */
 		uint16_t frameSize[2];
-
-		/**
-		 * COM ID and value for ZT_NETWORK_RULE_MATCH_COM_FIELD_GE and ZT_NETWORK_RULE_MATCH_COM_FIELD_LE
-		 */
-		uint64_t comIV[2];
 	} v;
 } ZT_VirtualNetworkRule;
 
