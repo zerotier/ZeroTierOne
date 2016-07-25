@@ -216,26 +216,6 @@ public:
 	}
 
 	/**
-	 * @param etherType Ethernet frame type to check
-	 * @return True if allowed on this network
-	 */
-	inline bool permitsEtherType(unsigned int etherType) const
-	{
-		unsigned int et = 0;
-		for(unsigned int i=0;i<ruleCount;++i) {
-			ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rules[i].t & 0x7f);
-			if (rt == ZT_NETWORK_RULE_MATCH_ETHERTYPE) {
-				et = rules[i].v.etherType;
-			} else if (rt == ZT_NETWORK_RULE_ACTION_ACCEPT) {
-				if ((!et)||(et == etherType))
-					return true;
-				et = 0;
-			}
-		}
-		return false;
-	}
-
-	/**
 	 * Write this network config to a dictionary for transport
 	 *
 	 * @param d Dictionary

@@ -39,9 +39,11 @@ public:
 	/**
 	 * Apply a list of rules to a packet
 	 *
-	 * This returns the matching TARGET rule entry if there is a match or NULL
-	 * if no match is found.
+	 * This returns whether or not the packet should be accepted and may also
+	 * take other actions for e.g. the TEE and REDIRECT targets.
 	 *
+	 * @param RR ZeroTier runtime environment (context)
+	 * @param nwid ZeroTier network ID
 	 * @param ztSource Source ZeroTier address
 	 * @param ztDest Destination ZeroTier address
 	 * @param macSource Ethernet layer source address
@@ -52,10 +54,10 @@ public:
 	 * @param vlanId 16-bit VLAN ID
 	 * @param rules Pointer to array of rules
 	 * @param ruleCount Number of rules
-	 * @return Pointer to rules[] to matching TARGET, or NULL if no match
 	 */
-	static const ZT_VirtualNetworkRule *run(
+	static bool run(
 		const RuntimeEnvironment *RR,
+		const uint64_t nwid,
 		const Address &ztSource,
 		const Address &ztDest,
 		const MAC &macSource,

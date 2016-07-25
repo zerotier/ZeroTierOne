@@ -35,6 +35,7 @@
 #include "Peer.hpp"
 #include "SelfAwareness.hpp"
 #include "Packet.hpp"
+#include "Filter.hpp"
 #include "Cluster.hpp"
 
 namespace ZeroTier {
@@ -313,12 +314,6 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	if (to == network->mac())
 		return;
 
-	// Check to make sure this protocol is allowed on this network
-	if (!network->config().permitsEtherType(etherType)) {
-		TRACE("%.16llx: ignored tap: %s -> %s: ethertype %s not allowed on network %.16llx",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),(unsigned long long)network->id());
-		return;
-	}
-
 	// Check if this packet is from someone other than the tap -- i.e. bridged in
 	bool fromBridged = false;
 	if (from != network->mac()) {
@@ -443,6 +438,24 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		//TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),len);
 
+		if (!Filter::run(
+			RR,
+			network->id(),
+			RR->identity.address(),
+			Address(), // 0 destination ZT address for multicasts since this is unknown at time of send
+			from,
+			to,
+			(const uint8_t *)data,
+			len,
+			etherType,
+			vlanId,
+			network->config().rules,
+			network->config().ruleCount))
+		{
+			TRACE("%.16llx: %s -> %s %s packet not sent: Filter::run() == false (multicast)",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+			return;
+		}
+
 		RR->mc->send(
 			((!network->config().isPublic())&&(network->config().com)) ? &(network->config().com) : (const CertificateOfMembership *)0,
 			network->config().multicastLimit,
@@ -463,6 +476,25 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		Address toZT(to.toAddress(network->id())); // since in-network MACs are derived from addresses and network IDs, we can reverse this
 		SharedPtr<Peer> toPeer(RR->topology->getPeer(toZT));
+
+		if (!Filter::run(
+			RR,
+			network->id(),
+			RR->identity.address(),
+			toZT,
+			from,
+			to,
+			(const uint8_t *)data,
+			len,
+			etherType,
+			vlanId,
+			network->config().rules,
+			network->config().ruleCount))
+		{
+			TRACE("%.16llx: %s -> %s %s packet not sent: Filter::run() == false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+			return;
+		}
+
 		const bool includeCom = ( (network->config().isPrivate()) && (network->config().com) && ((!toPeer)||(toPeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true))) );
 		if ((fromBridged)||(includeCom)) {
 			Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);

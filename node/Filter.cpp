@@ -24,6 +24,9 @@
 #include "MAC.hpp"
 #include "InetAddress.hpp"
 #include "Filter.hpp"
+#include "Packet.hpp"
+#include "Switch.hpp"
+#include "Topology.hpp"
 
 // Returns true if packet appears valid; pos and proto will be set
 static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsigned int &pos,unsigned int &proto)
@@ -56,8 +59,9 @@ static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsig
 
 namespace ZeroTier {
 
-const ZT_VirtualNetworkRule *Filter::run(
+bool Filter::run(
 	const RuntimeEnvironment *RR,
+	const uint64_t nwid,
 	const Address &ztSource,
 	const Address &ztDest,
 	const MAC &macSource,
@@ -69,21 +73,49 @@ const ZT_VirtualNetworkRule *Filter::run(
 	const ZT_VirtualNetworkRule *rules,
 	const unsigned int ruleCount)
 {
+	// For each set of rules we start by assuming that they match (since no constraints
+	// yields a 'match all' rule).
 	uint8_t thisSetMatches = 1;
+
 	for(unsigned int rn=0;rn<ruleCount;++rn) {
 		const ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rules[rn].t & 0x7f);
 		uint8_t thisRuleMatches = 0;
 
 		switch(rt) {
+			// Actions end a set of ANDed rules
 			case ZT_NETWORK_RULE_ACTION_DROP:
 			case ZT_NETWORK_RULE_ACTION_ACCEPT:
 			case ZT_NETWORK_RULE_ACTION_TEE:
 			case ZT_NETWORK_RULE_ACTION_REDIRECT:
-				if (thisSetMatches)
-					return &(rules[rn]);
-				thisSetMatches = 1;
+				if (thisSetMatches) {
+					// This set did match, so perform action!
+					if (rt == ZT_NETWORK_RULE_ACTION_DROP) {
+						// DROP means do nothing at all.
+						return false;
+					} else {
+						if ((rt == ZT_NETWORK_RULE_ACTION_TEE)||(rt == ZT_NETWORK_RULE_ACTION_REDIRECT)) {
+							// Tee and redirect both want this frame copied to somewhere else.
+							Packet outp(Address(rules[rn].v.zt),RR->identity.address(),Packet::VERB_EXT_FRAME);
+							outp.append(nwid);
+							outp.append((unsigned char)0x00); // TODO: should maybe include COM if needed
+							macDest.appendTo(outp);
+							macSource.appendTo(outp);
+							outp.append((uint16_t)etherType);
+							outp.append(frameData,frameLen);
+							outp.compress();
+							RR->sw->send(outp,true,nwid);
+						}
+						// For REDIRECT we will want to DROP at this node. For TEE we ACCEPT at this node but
+						// also forward it along as we just did.
+						return (rt != ZT_NETWORK_RULE_ACTION_REDIRECT);
+					}
+				} else {
+					// Otherwise start a new set, assuming that it will match
+					thisSetMatches = 1;
+				}
 				break;
 
+			// A rule can consist of one or more MATCH criterion
 			case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 				thisRuleMatches = (uint8_t)(rules[rn].v.zt == ztSource.toInt());
 				break;
@@ -206,24 +238,18 @@ const ZT_VirtualNetworkRule *Filter::run(
 				}
 				break;
 			case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
-				/*
-				if (etherType == ZT_ETHERTYPE_IPV4) {
-				} else if (etherType == ZT_ETHERTYPE_IPV6) {
-				} else {
-					thisRuleMatches = 0;
-				}
-				*/
+				// TODO: not supported yet
 				break;
 			case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
 				thisRuleMatches = (uint8_t)((frameLen >= (unsigned int)rules[rn].v.frameSize[0])&&(frameLen <= (unsigned int)rules[rn].v.frameSize[1]));
 				break;
 		}
 
-		// thisSetMatches remains true if the current rule matches... or does NOT match if not bit (0x80) is 1
-		thisSetMatches &= (thisRuleMatches ^ ((rules[rn].t >> 8) & 1));
+		// thisSetMatches remains true if the current rule matched... or does NOT match if not bit (0x80) is 1
+		thisSetMatches &= (thisRuleMatches ^ ((rules[rn].t & 0x80) >> 7));
 	}
 
-	return (const ZT_VirtualNetworkRule *)0; // no matches
+	return false; // no matches, no rules, default action is therefore DROP
 }
 
 } // namespace ZeroTier

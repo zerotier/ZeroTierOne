@@ -37,6 +37,7 @@
 #include "Cluster.hpp"
 #include "Node.hpp"
 #include "DeferredPackets.hpp"
+#include "Filter.hpp"
 
 namespace ZeroTier {
 
@@ -550,13 +551,27 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				}
 
 				const unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
-				if (!network->config().permitsEtherType(etherType)) {
-					TRACE("dropped FRAME from %s(%s): ethertype %.4x not allowed on %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned int)etherType,(unsigned long long)network->id());
-					return true;
+				const MAC sourceMac(peer->address(),network->id());
+				const unsigned int frameLen = size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
+				const uint8_t *const frameData = reinterpret_cast<const uint8_t *>(data()) + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
+				if (Filter::run(
+					RR,
+					network->id(),
+					peer->address(),
+					RR->identity.address(),
+					sourceMac,
+					network->mac(),
+					frameData,
+					frameLen,
+					etherType,
+					0,
+					network->config().rules,
+					network->config().ruleCount))
+				{
+					RR->node->putFrame(network->id(),network->userPtr(),sourceMac,network->mac(),etherType,0,(const void *)frameData,frameLen);
+				} else {
+					TRACE("dropped FRAME from %s(%s): Filter::run() == false (will still log packet as received)",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned int)etherType,(unsigned long long)network->id());
 				}
-
-				const unsigned int payloadLen = size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
-				RR->node->putFrame(network->id(),network->userPtr(),MAC(peer->address(),network->id()),network->mac(),etherType,0,field(ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,payloadLen),payloadLen);
 			}
 
 			peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP);
@@ -594,10 +609,6 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				// of the certificate, if there was one...
 
 				const unsigned int etherType = at<uint16_t>(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_ETHERTYPE);
-				if (!network->config().permitsEtherType(etherType)) {
-					TRACE("dropped EXT_FRAME from %s(%s): ethertype %.4x not allowed on network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned int)etherType,(unsigned long long)network->id());
-					return true;
-				}
 
 				const MAC to(field(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_TO,ZT_PROTO_VERB_EXT_FRAME_LEN_TO),ZT_PROTO_VERB_EXT_FRAME_LEN_TO);
 				const MAC from(field(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_FROM,ZT_PROTO_VERB_EXT_FRAME_LEN_FROM),ZT_PROTO_VERB_EXT_FRAME_LEN_FROM);
@@ -626,8 +637,26 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 					}
 				}
 
-				const unsigned int payloadLen = size() - (comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD);
-				RR->node->putFrame(network->id(),network->userPtr(),from,to,etherType,0,field(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD,payloadLen),payloadLen);
+				const unsigned int frameLen = size() - (comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD);
+				const uint8_t *const frameData = (const uint8_t *)field(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD,frameLen);
+				if (Filter::run(
+					RR,
+					network->id(),
+					peer->address(),
+					RR->identity.address(),
+					from,
+					to,
+					frameData,
+					frameLen,
+					etherType,
+					0,
+					network->config().rules,
+					network->config().ruleCount))
+				{
+					RR->node->putFrame(network->id(),network->userPtr(),from,to,etherType,0,(const void *)frameData,frameLen);
+				} else {
+					TRACE("dropped EXT_FRAME from %s(%s): Filter::run() == false (will still log packet as received)",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned int)etherType,(unsigned long long)network->id());
+				}
 			}
 
 			peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP);
@@ -870,11 +899,11 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 
 			const MulticastGroup to(MAC(field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC,6),6),at<uint32_t>(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI));
 			const unsigned int etherType = at<uint16_t>(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
-			const unsigned int payloadLen = size() - (offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME);
+			const unsigned int frameLen = size() - (offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME);
 
-			//TRACE("<<MC FRAME %.16llx/%s from %s@%s flags %.2x length %u",nwid,to.toString().c_str(),from.toString().c_str(),peer->address().toString().c_str(),flags,payloadLen);
+			//TRACE("<<MC FRAME %.16llx/%s from %s@%s flags %.2x length %u",nwid,to.toString().c_str(),from.toString().c_str(),peer->address().toString().c_str(),flags,frameLen);
 
-			if ((payloadLen > 0)&&(payloadLen <= ZT_IF_MTU)) {
+			if ((frameLen > 0)&&(frameLen <= ZT_IF_MTU)) {
 				if (!to.mac().isMulticast()) {
 					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: destination is unicast, must use FRAME or EXT_FRAME",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
 					return true;
@@ -893,7 +922,27 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 					}
 				}
 
-				RR->node->putFrame(network->id(),network->userPtr(),from,to.mac(),etherType,0,field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,payloadLen),payloadLen);
+				const uint8_t *const frameData = (const uint8_t *)field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,frameLen);
+				if (Filter::run(
+					RR,
+					network->id(),
+					peer->address(),
+					RR->identity.address(),
+					from,
+					to.mac(),
+					frameData,
+					frameLen,
+					etherType,
+					0,
+					network->config().rules,
+					network->config().ruleCount))
+				{
+					RR->node->putFrame(network->id(),network->userPtr(),from,to.mac(),etherType,0,(const void *)frameData,frameLen);
+				} else {
+					TRACE("dropped MULTICAST_FRAME from %s(%s): Filter::run() == false (will still do implicit gather)",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned int)etherType,(unsigned long long)network->id());
+					// Note: we continue here since we still do implicit gather in this case... we just do not putFrame() if it
+					// fails the filter check.
+				}
 			}
 
 			if (gatherLimit) {
