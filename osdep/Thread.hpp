@@ -125,6 +125,10 @@ public:
 		throw()
 	{
 		memset(&_tid,0,sizeof(_tid));
+		pthread_attr_init(&_tattr);
+#ifdef __LINUX__
+		pthread_attr_setstacksize(&_tattr,8388608); // for MUSL libc and others, has no effect in normal glibc environments
+#endif
 		_started = false;
 	}
 
@@ -157,7 +161,7 @@ public:
 	{
 		Thread t;
 		t._started = true;
-		if (pthread_create(&t._tid,(const pthread_attr_t *)0,&___zt_threadMain<C>,instance))
+		if (pthread_create(&t._tid,&t._tattr,&___zt_threadMain<C>,instance))
 			throw std::runtime_error("pthread_create() failed, unable to create thread");
 		return t;
 	}
@@ -184,6 +188,7 @@ public:
 
 private:
 	pthread_t _tid;
+	pthread_attr_t _tattr;
 	volatile bool _started;
 };
 
