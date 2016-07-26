@@ -27,6 +27,7 @@
 #include "Packet.hpp"
 #include "Switch.hpp"
 #include "Topology.hpp"
+#include "Node.hpp"
 
 // Returns true if packet appears valid; pos and proto will be set
 static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsigned int &pos,unsigned int &proto)
@@ -89,10 +90,7 @@ bool Filter::run(
 			case ZT_NETWORK_RULE_ACTION_REDIRECT:
 				if (thisSetMatches) {
 					// This set did match, so perform action!
-					if (rt == ZT_NETWORK_RULE_ACTION_DROP) {
-						// DROP means do nothing at all.
-						return false;
-					} else {
+					if (rt != ZT_NETWORK_RULE_ACTION_DROP) {
 						if ((rt == ZT_NETWORK_RULE_ACTION_TEE)||(rt == ZT_NETWORK_RULE_ACTION_REDIRECT)) {
 							// Tee and redirect both want this frame copied to somewhere else.
 							Packet outp(Address(rules[rn].v.zt),RR->identity.address(),Packet::VERB_EXT_FRAME);
@@ -109,11 +107,13 @@ bool Filter::run(
 						// also forward it along as we just did.
 						return (rt != ZT_NETWORK_RULE_ACTION_REDIRECT);
 					}
+					return false;
 				} else {
 					// Otherwise start a new set, assuming that it will match
+					//TRACE("[%u] %u previous set did not match, starting next",rn,(unsigned int)rt);
 					thisSetMatches = 1;
 				}
-				break;
+				continue;
 
 			// A rule can consist of one or more MATCH criterion
 			case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
@@ -247,6 +247,8 @@ bool Filter::run(
 
 		// thisSetMatches remains true if the current rule matched... or does NOT match if not bit (0x80) is 1
 		thisSetMatches &= (thisRuleMatches ^ ((rules[rn].t & 0x80) >> 7));
+
+		//TRACE("[%u] %u result==%u set==%u",rn,(unsigned int)rt,(unsigned int)thisRuleMatches,(unsigned int)thisSetMatches);
 	}
 
 	return false; // no matches, no rules, default action is therefore DROP
