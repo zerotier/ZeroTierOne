@@ -108,7 +108,6 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
 				case Packet::VERB_MULTICAST_LIKE:                 return _doMULTICAST_LIKE(RR,peer);
 				case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return _doNETWORK_MEMBERSHIP_CERTIFICATE(RR,peer);
 				case Packet::VERB_NETWORK_CONFIG_REQUEST:         return _doNETWORK_CONFIG_REQUEST(RR,peer);
-				case Packet::VERB_NETWORK_CONFIG_REFRESH:         return _doNETWORK_CONFIG_REFRESH(RR,peer);
 				case Packet::VERB_MULTICAST_GATHER:               return _doMULTICAST_GATHER(RR,peer);
 				case Packet::VERB_MULTICAST_FRAME:                return _doMULTICAST_FRAME(RR,peer);
 				case Packet::VERB_PUSH_DIRECT_PATHS:              return _doPUSH_DIRECT_PATHS(RR,peer);
@@ -162,8 +161,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 
 			case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE: {
 				/* Note: certificates are public so it's safe to push them to anyone
-				 * who asks. We won't communicate unless we also get a certificate
-				 * from the remote that agrees. */
+				 * who asks. */
 				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if ((network)&&(network->hasConfig())&&(network->config().com)) {
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
@@ -805,24 +803,6 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 	return true;
 }
 
-bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
-{
-	try {
-		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
-		while ((ptr + 8) <= size()) {
-			uint64_t nwid = at<uint64_t>(ptr);
-			SharedPtr<Network> nw(RR->node->network(nwid));
-			if ((nw)&&(peer->address() == nw->controller()))
-				nw->requestConfiguration();
-			ptr += 8;
-		}
-		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP);
-	} catch ( ... ) {
-		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
-	}
-	return true;
-}
-
 bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
@@ -1317,6 +1297,16 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 	} catch ( ... ) {
 		TRACE("dropped REQUEST_PROOF_OF_WORK from %s(%s): unexpected exception",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 	}
+	return true;
+}
+
+bool IncomingPacket::_doREQUEST_OBJECT(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+{
+	return true;
+}
+
+bool IncomingPacket::_doOBJECT_UPDATED(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+{
 	return true;
 }
 

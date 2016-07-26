@@ -715,52 +715,22 @@ public:
 		VERB_NETWORK_MEMBERSHIP_CERTIFICATE = 10,
 
 		/**
-		 * Network configuration request:
-		 *   <[8] 64-bit network ID>
-		 *   <[2] 16-bit length of request meta-data dictionary>
-		 *   <[...] string-serialized request meta-data>
-		 *  [<[8] 64-bit revision of netconf we currently have>]
+		 * DEPRECATED but still supported, interpreted as an object request:
 		 *
-		 * This message requests network configuration from a node capable of
-		 * providing it. If the optional revision is included, a response is
-		 * only generated if there is a newer network configuration available.
+		 * /controller/network/<network ID>/member/<requester address>
+		 *
+		 * When received in this manner the response is sent via the old
+		 * OK(NETWORK_CONFIG_REQUEST) instead of OK(REQUEST_OBJECT).
 		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit length of network configuration dictionary>
 		 *   <[...] network configuration dictionary>
 		 *
-		 * OK returns a Dictionary (string serialized) containing the network's
-		 * configuration and IP address assignment information for the querying
-		 * node. It also contains a membership certificate that the querying
-		 * node can push to other peers to demonstrate its right to speak on
-		 * a given network.
-		 *
-		 * When a new network configuration is received, another config request
-		 * should be sent with the new netconf's revision. This confirms receipt
-		 * and also causes any subsequent changes to rapidly propagate as this
-		 * cycle will repeat until there are no changes. This is optional but
-		 * recommended behavior.
-		 *
 		 * ERROR response payload:
 		 *   <[8] 64-bit network ID>
-		 *
-		 * UNSUPPORTED_OPERATION is returned if this service is not supported,
-		 * and OBJ_NOT_FOUND if the queried network ID was not found.
 		 */
 		VERB_NETWORK_CONFIG_REQUEST = 11,
-
-		/**
-		 * Network configuration refresh request:
-		 *   <[...] array of 64-bit network IDs>
-		 *
-		 * This can be sent by the network controller to inform a node that it
-		 * should now make a NETWORK_CONFIG_REQUEST.
-		 *
-		 * It does not generate an OK or ERROR message, and is treated only as
-		 * a hint to refresh now.
-		 */
-		VERB_NETWORK_CONFIG_REFRESH = 12,
 
 		/**
 		 * Request endpoints for multicast distribution:
@@ -1030,7 +1000,63 @@ public:
 		 *
 		 * ERROR has no payload.
 		 */
-		VERB_REQUEST_PROOF_OF_WORK = 19
+		VERB_REQUEST_PROOF_OF_WORK = 19,
+
+		/**
+		 * Request an object or a chunk of an object with optional meta-data:
+		 *   <[8] 64-bit chunk offset>
+		 *   <[2] 16-bit chunk length or 0 for any / sender-preferred>
+		 *   <[2] 16-bit object path length in bytes>
+		 *   <[...] object path>
+		 *   <[2] 16-bit length of request meta-data dictionary>
+		 *   <[...] request meta-data dictionary>
+		 *
+		 * This is used to request an object. Objects can be things like network
+		 * configs, software updates, etc. This provides an in-band way to
+		 * distribute such things and obsoletes the network config specific
+		 * messages. (They are still supported for backward compatibility.)
+		 *
+		 * The use of path and request/response meta-data makes the semantics of
+		 * this analogous to HTTP POST, and it could therefore be mapped to
+		 * HTTP POST requests to permit plugins that leverage the ZT protocol
+		 * to do out-of-band things like special authentication, etc.
+		 *
+		 * Large objects can be transferred via repeated calls with higher and
+		 * higher chunk offsets and then SHA-512 verified on receipt, but this is
+		 * not efficient. It should not be used heavily as an alternative to
+		 * TCP. It's a bit more like X-Modem and other old-school SEND/ACK
+		 * protocols. It is potentially a good idea for software updates since
+		 * it means that ZT can update itself even on networks with no "vanilla"
+		 * Internet access.
+		 *
+		 * OK and ERROR responses are optional but recommended. ERROR responses
+		 * can include OBJECT_NOT_FOUND.
+		 *
+		 * OK response payload:
+		 *   <[16] first 16 bytes of SHA-512 of complete object>
+		 *   <[8] 64-bit total object size>
+		 *   <[8] 64-bit chunk offset>
+		 *   <[2] 16-bit length of chunk payload>
+		 *   <[...] chunk payload>
+		 */
+		VERB_REQUEST_OBJECT = 20,
+
+		/**
+		 * Notification of a remote object update:
+		 *   <[8] 64-bit total object size or 0 if unspecified here>
+		 *   <[16] first 16 bytes of SHA-512 of object (if size specified)>
+		 *   <[2] 16-bit length of object path>
+		 *   <[...] object path>
+		 *   <[2] 16-bit length of meta-data dictionary>
+		 *   <[...] meta-data dictionary>
+		 *
+		 * This can be sent to notify another peer that an object has updated and
+		 * should be re-requested. The receiving peer is not required to do anything
+		 * or send anything in response to this. If the first size field is zero, the
+		 * SHA-512 hash is also unspecified and should be zero. This means that the
+		 * object was updated but must be re-requested.
+		 */
+		VERB_OBJECT_UPDATED = 21
 	};
 
 	/**
