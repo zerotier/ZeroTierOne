@@ -38,8 +38,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let defaultsDict = ["firstRun": true]
         defaults.registerDefaults(defaultsDict)
 
+        let firstRun = defaults.boolForKey("firstRun")
 
-        if defaults.boolForKey("firstRun") {
+        if firstRun {
             defaults.setBool(false, forKey: "firstRun")
             defaults.synchronize()
 
@@ -78,6 +79,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         aboutPopover.contentViewController = AboutViewController(
             nibName: "AboutViewController", bundle: nil)
         aboutPopover.behavior = .Transient
+
+        if firstRun {
+            NSOperationQueue.mainQueue().addOperationWithBlock() {
+                self.showAbout()
+            }
+        }
     }
 
     func applicationWillTerminate(aNotification: NSNotification) {
