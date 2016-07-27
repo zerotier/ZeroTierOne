@@ -9,7 +9,7 @@
 import Cocoa
 
 @NSApplicationMain
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @IBOutlet weak var window: NSWindow!
 
@@ -85,6 +85,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.showAbout()
             }
         }
+
+        monitor.updateNetworkInfo()
     }
 
     func applicationWillTerminate(aNotification: NSNotification) {
@@ -181,6 +183,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func buildMenu() {
         let menu = NSMenu()
+        menu.delegate = self
 
         if let s = self.status {
             menu.addItem(NSMenuItem(title: "Node ID: \(s.address)", action: #selector(AppDelegate.copyNodeID), keyEquivalent: ""))
@@ -230,7 +233,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Quit ZeroTier One", action: #selector(AppDelegate.quit), keyEquivalent: "q"))
 
         statusItem.menu = menu
-
     }
 
     func toggleNetwork(sender: NSMenuItem) {
@@ -252,6 +254,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let s = self.status {
             pasteboard.setString(s.address, forType: NSPasteboardTypeString)
         }
+    }
+
+    func menuWillOpen(menu: NSMenu) {
+        monitor.start()
+    }
+
+    func menuDidClose(menu: NSMenu) {
+        monitor.stop()
     }
 }
 

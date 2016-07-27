@@ -21,7 +21,14 @@ class NetworkMonitor: NSObject {
 
     override init() {
         super.init()
+    }
 
+    deinit {
+        timer?.invalidate()
+    }
+
+    func start() {
+        NSLog("ZeroTier monitor started")
         timer = NSTimer.scheduledTimerWithTimeInterval(1.0,
                                                        target: self,
                                                        selector: #selector(updateNetworkInfo),
@@ -29,8 +36,11 @@ class NetworkMonitor: NSObject {
                                                        repeats: true)
     }
 
-    deinit {
+
+    func stop() {
+        NSLog("ZeroTier monitor stopped")
         timer?.invalidate()
+        timer = nil
     }
 
     private func  dataFile() -> String {
