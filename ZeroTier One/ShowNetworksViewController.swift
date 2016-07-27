@@ -15,6 +15,8 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
     var networkList: [Network] = [Network]()
     var netMonitor: NetworkMonitor!
 
+    var visible = false
+
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do view setup here.
@@ -32,6 +34,7 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
 
     override func viewWillAppear() {
         super.viewWillAppear()
+        visible = true
     }
 
     override func viewWillDisappear() {
@@ -39,6 +42,7 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
 
         let filePath = dataFile()
         NSKeyedArchiver.archiveRootObject(self.networkList, toFile: filePath)
+        visible = false
     }
 
     func deleteNetworkFromList(nwid: String) {
@@ -48,7 +52,11 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
 
     func setNetworks(list: [Network]) {
         networkList = list
-        tableView?.reloadData()
+        if visible {
+            tableView?.reloadData()
+        }
+
+        NSLog("Visible? \(visible)")
     }
 
     // NSTableViewDataSource
