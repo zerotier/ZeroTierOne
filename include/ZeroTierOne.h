@@ -391,12 +391,15 @@ enum ZT_VirtualNetworkType
 /**
  * The type of a virtual network rules table entry
  *
- * These must range from 0 to 127 (0x7f).
+ * These must range from 0 to 127 (0x7f) because the most significant bit
+ * is reserved as a NOT flag.
  *
  * Each rule is composed of one or more MATCHes followed by an ACTION.
  */
 enum ZT_VirtualNetworkRuleType
 {
+	// 0 to 31 reserved for actions
+
 	/**
 	 * Drop frame
 	 */
@@ -408,16 +411,16 @@ enum ZT_VirtualNetworkRuleType
 	ZT_NETWORK_RULE_ACTION_ACCEPT = 1,
 
 	/**
-	 * Forward a copy of this frame to an observer
+	 * Forward a copy of this frame to an observer (by ZT address)
 	 */
 	ZT_NETWORK_RULE_ACTION_TEE = 2,
 
 	/**
-	 * Explicitly redirect this frame to another device (ignored if this is the target device)
+	 * Drop and redirect this frame to another node (by ZT address)
 	 */
 	ZT_NETWORK_RULE_ACTION_REDIRECT = 3,
 
-	// <32 == actions
+	// 32 to 127 reserved for match criteria
 
 	/**
 	 * Source ZeroTier address -- analogous to an Ethernet port ID on a switch

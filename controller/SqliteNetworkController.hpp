@@ -137,7 +137,6 @@ private:
 	sqlite3_stmt *_sCreateMember;
 	sqlite3_stmt *_sGetNodeIdentity;
 	sqlite3_stmt *_sCreateOrReplaceNode;
-	sqlite3_stmt *_sGetEtherTypesFromRuleTable;
 	sqlite3_stmt *_sGetActiveBridges;
 	sqlite3_stmt *_sGetIpAssignmentsForNode;
 	sqlite3_stmt *_sGetIpAssignmentPools;

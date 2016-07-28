@@ -44,9 +44,9 @@
 #define ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA (ZT_NETWORK_AUTOCONF_DELAY * 5)
 
 /**
- * Maximum number of qualifiers in a COM
+ * Maximum number of qualifiers allowed in a COM (absolute max: 65535)
  */
-#define ZT_NETWORK_COM_MAX_QUALIFIERS 16
+#define ZT_NETWORK_COM_MAX_QUALIFIERS 256
 
 namespace ZeroTier {
 
@@ -87,14 +87,15 @@ public:
 	 */
 	enum Type
 	{
-		COM_UINT64_ED25519 = 1 // tuples of unsigned 64's signed with Ed25519
+		// tuples of unsigned 64's signed with Ed25519
+		COM_UINT64_ED25519 = 1
 	};
 
 	/**
 	 * Reserved qualifier IDs
 	 *
-	 * IDs below 65536 should be considered reserved for future global
-	 * assignment here.
+	 * IDs below 1024 are reserved for use as standard IDs. Others are available
+	 * for user-defined use.
 	 *
 	 * Addition of new required fields requires that code in hasRequiredFields
 	 * be updated as well.
@@ -126,12 +127,11 @@ public:
 	};
 
 	/**
-	 * Create an empty certificate
+	 * Create an empty certificate of membership
 	 */
-	CertificateOfMembership() :
-		_qualifierCount(0)
+	CertificateOfMembership()
 	{
-		memset(_signature.data,0,_signature.size());
+		memset(this,0,sizeof(CertificateOfMembership));
 	}
 
 	CertificateOfMembership(const CertificateOfMembership &c)
@@ -168,22 +168,6 @@ public:
 		return *this;
 	}
 
-#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
-	/**
-	 * Create from string-serialized data
-	 *
-	 * @param s String-serialized COM
-	 */
-	CertificateOfMembership(const char *s) { fromString(s); }
-
-	/**
-	 * Create from string-serialized data
-	 *
-	 * @param s String-serialized COM
-	 */
-	CertificateOfMembership(const std::string &s) { fromString(s.c_str()); }
-#endif // ZT_SUPPORT_OLD_STYLE_NETCONF
-
 	/**
 	 * Create from binary-serialized COM in buffer
 	 *
@@ -200,24 +184,6 @@ public:
 	 * @return True if there's something here
 	 */
 	inline operator bool() const throw() { return (_qualifierCount != 0); }
-
-	/**
-	 * Check for presence of all required fields common to all networks
-	 *
-	 * @return True if all required fields are present
-	 */
-	inline bool hasRequiredFields() const
-	{
-		if (_qualifierCount < 3)
-			return false;
-		if (_qualifiers[0].id != COM_RESERVED_ID_REVISION)
-			return false;
-		if (_qualifiers[1].id != COM_RESERVED_ID_NETWORK_ID)
-			return false;
-		if (_qualifiers[2].id != COM_RESERVED_ID_ISSUED_TO)
-			return false;
-		return true;
-	}
 
 	/**
 	 * @return Maximum delta for mandatory revision field or 0 if field missing
@@ -278,6 +244,21 @@ public:
 	 */
 	void setQualifier(uint64_t id,uint64_t value,uint64_t maxDelta);
 	inline void setQualifier(ReservedId id,uint64_t value,uint64_t maxDelta) { setQualifier((uint64_t)id,value,maxDelta); }
+
+	/**
+	 * Get the value of a qualifier field
+	 *
+	 * @param id Qualifier ID
+	 * @return Value or 0 if not found
+	 */
+	inline uint64_t getQualifierValue(uint64_t id)
+	{
+		for(unsigned int i=0;i<_qualifierCount;++i) {
+			if (_qualifiers[i].id == id)
+				return _qualifiers[i].value;
+		}
+		return 0;
+	}
 
 #ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 	/**

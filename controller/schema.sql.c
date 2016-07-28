@@ -97,25 +97,16 @@
 "\n"\
 "CREATE TABLE Rule (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
+"  policyId varchar(32),\n"\
 "  ruleNo integer NOT NULL,\n"\
-"  nodeId char(10) REFERENCES Node(id),\n"\
-"  sourcePort char(10),\n"\
-"  destPort char(10),\n"\
-"  vlanId integer,\n"\
-"  vlanPcp integer,\n"\
-"  etherType integer,\n"\
-"  macSource char(12),\n"\
-"  macDest char(12),\n"\
-"  ipSource varchar(64),\n"\
-"  ipDest varchar(64),\n"\
-"  ipTos integer,\n"\
-"  ipProtocol integer,\n"\
-"  ipSourcePort integer,\n"\
-"  ipDestPort integer,\n"\
-"  flags integer,\n"\
-"  invFlags integer,\n"\
-"  \"action\" varchar(4096) NOT NULL DEFAULT('accept')\n"\
+"  ruleType integer NOT NULL DEFAULT(0),\n"\
+"  \"addr\" blob(16),\n"\
+"  \"int1\" integer,\n"\
+"  \"int2\" integer,\n"\
+"  \"int3\" integer,\n"\
+"  \"int4\" integer\n"\
 ");\n"\
 "\n"\
-"CREATE UNIQUE INDEX Rule_networkId_ruleNo ON Rule (networkId, ruleNo);\n"\
+"CREATE INDEX Rule_networkId_ruleNo ON Rule (networkId, ruleNo);\n"\
+"CREATE INDEX Rule_networkId_policyId ON Rule (networkId, policyId);\n"\
 ""

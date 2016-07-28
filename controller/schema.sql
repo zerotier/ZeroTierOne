@@ -96,24 +96,15 @@ CREATE UNIQUE INDEX Relay_networkId_address ON Relay (networkId,address);
 
 CREATE TABLE Rule (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
+  policyId varchar(32),
   ruleNo integer NOT NULL,
-  nodeId char(10) REFERENCES Node(id),
-  sourcePort char(10),
-  destPort char(10),
-  vlanId integer,
-  vlanPcp integer,
-  etherType integer,
-  macSource char(12),
-  macDest char(12),
-  ipSource varchar(64),
-  ipDest varchar(64),
-  ipTos integer,
-  ipProtocol integer,
-  ipSourcePort integer,
-  ipDestPort integer,
-  flags integer,
-  invFlags integer,
-  "action" varchar(4096) NOT NULL DEFAULT('accept')
+  ruleType integer NOT NULL DEFAULT(0),
+  "addr" blob(16),
+  "int1" integer,
+  "int2" integer,
+  "int3" integer,
+  "int4" integer
 );
 
-CREATE UNIQUE INDEX Rule_networkId_ruleNo ON Rule (networkId, ruleNo);
+CREATE INDEX Rule_networkId_ruleNo ON Rule (networkId, ruleNo);
+CREATE INDEX Rule_networkId_policyId ON Rule (networkId, policyId);

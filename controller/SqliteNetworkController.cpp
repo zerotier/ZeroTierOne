@@ -66,8 +66,8 @@
 // Stored in database as schemaVersion key in Config.
 // If not present, database is assumed to be empty and at the current schema version
 // and this key/value is added automatically.
-#define ZT_NETCONF_SQLITE_SCHEMA_VERSION 4
-#define ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR "4"
+#define ZT_NETCONF_SQLITE_SCHEMA_VERSION 5
+#define ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR "5"
 
 // API version reported via JSON control plane
 #define ZT_NETCONF_CONTROLLER_API_VERSION 2
@@ -334,6 +334,38 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			}
 		}
 
+		if (schemaVersion < 5) {
+			// Upgrade old rough draft Rule table to new release format
+			if (sqlite3_exec(_db,
+					"DROP INDEX Rule_networkId_ruleNo;\n"
+					"ALTER TABLE \"Rule\" RENAME TO RuleOld;\n"
+					"CREATE TABLE Rule (\n"
+					"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"
+					"  policyId varchar(32),\n"
+					"  ruleNo integer NOT NULL,\n"
+					"  ruleType integer NOT NULL DEFAULT(0),\n"
+					"  \"addr\" blob(16),\n"
+					"  \"int1\" integer,\n"
+					"  \"int2\" integer,\n"
+					"  \"int3\" integer,\n"
+					"  \"int4\" integer\n"
+					");\n"
+					"INSERT INTO \"Rule\" SELECT networkId,(ruleNo*2) AS ruleNo,37 AS \"ruleType\",etherType AS \"int1\" FROM RuleOld WHERE RuleOld.etherType IS NOT NULL AND RuleOld.etherType > 0;\n"
+					"INSERT INTO \"Rule\" SELECT networkId,((ruleNo*2)+1) AS ruleNo,1 AS \"ruleType\" FROM RuleOld;\n"
+					"DROP TABLE RuleOld;\n"
+					"CREATE INDEX Rule_networkId_ruleNo ON Rule (networkId, ruleNo);\n"
+					"CREATE INDEX Rule_networkId_policyId ON Rule (networkId, policyId);\n"
+					"UPDATE \"Config\" SET \"v\" = 5 WHERE \"k\" = 'schemaVersion';\n"
+				,0,0,0) != SQLITE_OK) {
+				char err[1024];
+				Utils::snprintf(err,sizeof(err),"SqliteNetworkController cannot upgrade the database to version 3: %s",sqlite3_errmsg(_db));
+				sqlite3_close(_db);
+				throw std::runtime_error(err);
+			} else {
+				schemaVersion = 5;
+			}
+		}
+
 		if (schemaVersion != ZT_NETCONF_SQLITE_SCHEMA_VERSION) {
 			sqlite3_close(_db);
 			throw std::runtime_error("SqliteNetworkController database schema version mismatch");
@@ -365,8 +397,7 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			||(sqlite3_prepare_v2(_db,"INSERT OR REPLACE INTO Node (id,identity) VALUES (?,?)",-1,&_sCreateOrReplaceNode,(const char **)0) != SQLITE_OK)
 
 			/* Rule */
-			||(sqlite3_prepare_v2(_db,"SELECT etherType FROM Rule WHERE networkId = ? AND \"action\" = 'accept'",-1,&_sGetEtherTypesFromRuleTable,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO Rule (networkId,ruleNo,nodeId,sourcePort,destPort,vlanId,vlanPcP,etherType,macSource,macDest,ipSource,ipDest,ipTos,ipProtocol,ipSourcePort,ipDestPort,flags,invFlags,\"action\") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",-1,&_sCreateRule,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT INTO Rule (networkId,ruleNo,nodeId,ztSource,ztDest,vlanId,vlanPcp,vlanDei,) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",-1,&_sCreateRule,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT ruleNo,nodeId,sourcePort,destPort,vlanId,vlanPcp,etherType,macSource,macDest,ipSource,ipDest,ipTos,ipProtocol,ipSourcePort,ipDestPort,\"flags\",invFlags,\"action\" FROM Rule WHERE networkId = ? ORDER BY ruleNo ASC",-1,&_sListRules,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Rule WHERE networkId = ?",-1,&_sDeleteRulesForNetwork,(const char **)0) != SQLITE_OK)
 
@@ -457,7 +488,6 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sCreateMember);
 		sqlite3_finalize(_sGetNodeIdentity);
 		sqlite3_finalize(_sCreateOrReplaceNode);
-		sqlite3_finalize(_sGetEtherTypesFromRuleTable);
 		sqlite3_finalize(_sGetActiveBridges);
 		sqlite3_finalize(_sGetIpAssignmentsForNode);
 		sqlite3_finalize(_sGetIpAssignmentPools);
