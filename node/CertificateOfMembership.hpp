@@ -80,18 +80,6 @@ class CertificateOfMembership
 {
 public:
 	/**
-	 * Certificate type codes, used in serialization
-	 *
-	 * Only one so far, and only one hopefully there shall be for quite some
-	 * time.
-	 */
-	enum Type
-	{
-		// tuples of unsigned 64's signed with Ed25519
-		COM_UINT64_ED25519 = 1
-	};
-
-	/**
 	 * Reserved qualifier IDs
 	 *
 	 * IDs below 1024 are reserved for use as standard IDs. Others are available
@@ -245,21 +233,6 @@ public:
 	void setQualifier(uint64_t id,uint64_t value,uint64_t maxDelta);
 	inline void setQualifier(ReservedId id,uint64_t value,uint64_t maxDelta) { setQualifier((uint64_t)id,value,maxDelta); }
 
-	/**
-	 * Get the value of a qualifier field
-	 *
-	 * @param id Qualifier ID
-	 * @return Value or 0 if not found
-	 */
-	inline uint64_t getQualifierValue(uint64_t id)
-	{
-		for(unsigned int i=0;i<_qualifierCount;++i) {
-			if (_qualifiers[i].id == id)
-				return _qualifiers[i].value;
-		}
-		return 0;
-	}
-
 #ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 	/**
 	 * @return String-serialized representation of this certificate
@@ -322,7 +295,7 @@ public:
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b) const
 	{
-		b.append((unsigned char)COM_UINT64_ED25519);
+		b.append((uint8_t)1);
 		b.append((uint16_t)_qualifierCount);
 		for(unsigned int i=0;i<_qualifierCount;++i) {
 			b.append(_qualifiers[i].id);
@@ -342,8 +315,8 @@ public:
 		_qualifierCount = 0;
 		_signedBy.zero();
 
-		if (b[p++] != COM_UINT64_ED25519)
-			throw std::invalid_argument("invalid type");
+		if (b[p++] != 1)
+			throw std::invalid_argument("invalid field type");
 
 		unsigned int numq = b.template at<uint16_t>(p); p += sizeof(uint16_t);
 		uint64_t lastId = 0;

@@ -565,7 +565,7 @@ typedef struct
 		/**
 		 * Packet characteristic flags being matched
 		 */
-		uint64_t characteristics;
+		uint64_t characteristics[2];
 
 		/**
 		 * IP port range -- start-end inclusive -- host byte order

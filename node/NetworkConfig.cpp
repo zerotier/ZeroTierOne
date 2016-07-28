@@ -237,8 +237,9 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 				tmp.append((uint16_t)rules[i].v.port[1]);
 				break;
 			case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
-				tmp.append((uint8_t)8);
-				tmp.append((uint64_t)rules[i].v.characteristics);
+				tmp.append((uint8_t)16);
+				tmp.append((uint64_t)rules[i].v.characteristics[0]);
+				tmp.append((uint64_t)rules[i].v.characteristics[1]);
 				break;
 			case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
 				tmp.append((uint8_t)4);
@@ -455,7 +456,8 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 							rules[ruleCount].v.port[1] = tmp.at<uint16_t>(p + 2);
 							break;
 						case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
-							rules[ruleCount].v.characteristics = tmp.at<uint64_t>(p);
+							rules[ruleCount].v.characteristics[0] = tmp.at<uint64_t>(p);
+							rules[ruleCount].v.characteristics[1] = tmp.at<uint64_t>(p + 8);
 							break;
 						case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
 							rules[ruleCount].v.frameSize[0] = tmp.at<uint16_t>(p);
