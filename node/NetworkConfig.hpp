@@ -53,11 +53,6 @@
 #define ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION 0x0000000000000004ULL
 
 /**
- * Device is a network preferred relay
- */
-#define ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY 0x0000010000000000ULL
-
-/**
  * Device is an active bridge
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE 0x0000020000000000ULL
@@ -110,8 +105,6 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_ROUTES "RT"
 // static IPs (binary blob)
 #define ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS "I"
-// pinned address physical route mappings (binary blob)
-#define ZT_NETWORKCONFIG_DICT_KEY_PINNED "P"
 // rules (binary blob)
 #define ZT_NETWORKCONFIG_DICT_KEY_RULES "R"
 
@@ -147,17 +140,6 @@ namespace ZeroTier {
 class NetworkConfig
 {
 public:
-	/**
-	 * Network preferred relay with optional physical endpoint addresses
-	 *
-	 * This is used by the convenience relays() method.
-	 */
-	struct Relay
-	{
-		Address address;
-		InetAddress phy4,phy6;
-	};
-
 	/**
 	 * Create an instance of a NetworkConfig for the test network ID
 	 *
@@ -284,43 +266,6 @@ public:
 	}
 
 	/**
-	 * Get pinned physical address for a given ZeroTier address, if any
-	 *
-	 * @param zt ZeroTier address
-	 * @param af Address family (e.g. AF_INET) or 0 for the first we find of any type
-	 * @return Physical address, if any
-	 */
-	inline InetAddress findPinnedAddress(const Address &zt,unsigned int af) const
-	{
-		for(unsigned int i=0;i<pinnedCount;++i) {
-			if (pinned[i].zt == zt) {
-				if ((af == 0)||((unsigned int)pinned[i].phy.ss_family == af))
-					return pinned[i].phy;
-			}
-		}
-		return InetAddress();
-	}
-
-	/**
-	 * This gets network preferred relays with their static physical address if one is defined
-	 *
-	 * @return Network-preferred relays for this network (if none, only roots will be used)
-	 */
-	inline std::vector<Relay> relays() const
-	{
-		std::vector<Relay> r;
-		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY) != 0) {
-				r.push_back(Relay());
-				r.back().address = specialists[i];
-				r.back().phy4 = findPinnedAddress(r.back().address,AF_INET);
-				r.back().phy6 = findPinnedAddress(r.back().address,AF_INET6);
-			}
-		}
-		return r;
-	}
-
-	/**
 	 * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
 	 * @return True if this network allows bridging
 	 */
@@ -330,37 +275,6 @@ public:
 			return true;
 		for(unsigned int i=0;i<specialistCount;++i) {
 			if ((fromPeer == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
-				return true;
-		}
-		return false;
-	}
-
-	/**
-	 * Iterate through relays efficiently
-	 *
-	 * @param ptr Value-result parameter -- start by initializing with zero, then call until return is null
-	 * @return Address of relay or NULL if no more
-	 */
-	Address nextRelay(unsigned int &ptr) const
-	{
-		while (ptr < specialistCount) {
-			if ((specialists[ptr] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY) != 0) {
-				return Address(specialists[ptr++]);
-			} else {
-				++ptr;
-			}
-		}
-		return Address();
-	}
-
-	/**
-	 * @param zt ZeroTier address
-	 * @return True if this address is a relay
-	 */
-	bool isRelay(const Address &zt) const
-	{
-		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((zt == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY) != 0))
 				return true;
 		}
 		return false;
@@ -396,11 +310,6 @@ public:
 		printf("staticIpCount==%u\n",staticIpCount);
 		for(unsigned int i=0;i<staticIpCount;++i)
 			printf("  staticIps[i]==%s\n",staticIps[i].toString().c_str());
-		printf("pinnedCount==%u\n",pinnedCount);
-		for(unsigned int i=0;i<pinnedCount;++i) {
-			printf("  pinned[i].zt==%s\n",pinned[i].zt.toString().c_str());
-			printf("  pinned[i].phy==%s\n",pinned[i].phy.toString().c_str());
-		}
 		printf("ruleCount==%u\n",ruleCount);
 		printf("name==%s\n",name);
 		printf("com==%s\n",com.toString().c_str());
@@ -505,17 +414,6 @@ public:
 	 * Static IP assignments
 	 */
 	InetAddress staticIps[ZT_MAX_ZT_ASSIGNED_ADDRESSES];
-
-	/**
-	 * Pinned devices with physical address hints
-	 *
-	 * These can be used to specify a physical address where a given device
-	 * can be reached. It's usually used with network relays (specialists).
-	 */
-	struct {
-		Address zt;
-		InetAddress phy;
-	} pinned[ZT_MAX_NETWORK_PINNED];
 
 	/**
 	 * Rules table

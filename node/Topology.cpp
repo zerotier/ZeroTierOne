@@ -281,15 +281,7 @@ SharedPtr<Peer> Topology::getBestRoot(const Address *avoid,unsigned int avoidCou
 
 bool Topology::isUpstream(const Identity &id) const
 {
-	if (isRoot(id))
-		return true;
-	std::vector< SharedPtr<Network> > nws(RR->node->allNetworks());
-	for(std::vector< SharedPtr<Network> >::const_iterator nw(nws.begin());nw!=nws.end();++nw) {
-		if ((*nw)->config().isRelay(id.address())) {
-			return true;
-		}
-	}
-	return false;
+	return isRoot(id);
 }
 
 bool Topology::worldUpdateIfValid(const World &newWorld)

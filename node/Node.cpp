@@ -173,11 +173,10 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 class _PingPeersThatNeedPing
 {
 public:
-	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now,const std::vector<NetworkConfig::Relay> &relays) :
+	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) :
 		lastReceiveFromUpstream(0),
 		RR(renv),
 		_now(now),
-		_relays(relays),
 		_world(RR->topology->world())
 	{
 	}
@@ -214,17 +213,6 @@ public:
 			// flapping in Cluster mode.
 			if (RR->topology->amRoot())
 				return;
-
-			// Check for network preferred relays, also considered 'upstream' and thus always
-			// pinged to keep links up. If they have stable addresses we will try them there.
-			for(std::vector<NetworkConfig::Relay>::const_iterator r(_relays.begin());r!=_relays.end();++r) {
-				if (r->address == p->address()) {
-					stableEndpoint4 = r->phy4;
-					stableEndpoint6 = r->phy6;
-					upstream = true;
-					break;
-				}
-			}
 		}
 
 		if (upstream) {
@@ -267,7 +255,6 @@ public:
 private:
 	const RuntimeEnvironment *RR;
 	uint64_t _now;
-	const std::vector<NetworkConfig::Relay> &_relays;
 	World _world;
 };
 
@@ -283,17 +270,12 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 			_lastPingCheck = now;
 
 			// Get relays and networks that need config without leaving the mutex locked
-			std::vector< NetworkConfig::Relay > networkRelays;
 			std::vector< SharedPtr<Network> > needConfig;
 			{
 				Mutex::Lock _l(_networks_m);
 				for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
 					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!n->second->hasConfig())) {
 						needConfig.push_back(n->second);
-					}
-					if (n->second->hasConfig()) {
-						std::vector<NetworkConfig::Relay> r(n->second->config().relays());
-						networkRelays.insert(networkRelays.end(),r.begin(),r.end());
 					}
 				}
 			}
@@ -303,7 +285,7 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 				(*n)->requestConfiguration();
 
 			// Do pings and keepalives
-			_PingPeersThatNeedPing pfunc(RR,now,networkRelays);
+			_PingPeersThatNeedPing pfunc(RR,now);
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
 
 			// Update online status, post status change as event

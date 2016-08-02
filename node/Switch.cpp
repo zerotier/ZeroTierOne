@@ -844,33 +844,11 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 		SharedPtr<Peer> relay;
 
 		if (!viaPath) {
-			if (network) {
-				unsigned int bestq = ~((unsigned int)0); // max unsigned int since quality is lower==better
-				unsigned int ptr = 0;
-				for(;;) {
-					const Address raddr(network->config().nextRelay(ptr));
-					if (raddr) {
-						SharedPtr<Peer> rp(RR->topology->getPeer(raddr));
-						if (rp) {
-							const unsigned int q = rp->relayQuality(now);
-							if (q < bestq) {
-								bestq = q;
-								rp.swap(relay);
-							}
-						}
-					} else break;
-				}
-			}
-
-			if (!relay)
-				relay = RR->topology->getBestRoot();
-
+			relay = RR->topology->getBestRoot();
 			if ( (!relay) || (!(viaPath = relay->getBestPath(now))) )
 				return false;
 		}
-		// viaPath will not be null if we make it here
 
-		// Push possible direct paths to us if we are relaying
 		if (relay) {
 			peer->pushDirectPaths(viaPath->localAddress(),viaPath->address(),now,false,( (network)&&(network->isAllowed(peer)) ));
 			viaPath->sent(now);

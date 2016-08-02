@@ -108,24 +108,6 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 		if (ab.length() > 0) {
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES_OLD,ab.c_str())) return false;
 		}
-
-		std::vector<Relay> rvec(this->relays());
-		std::string rl;
-		for(std::vector<Relay>::const_iterator i(rvec.begin());i!=rvec.end();++i) {
-			if (rl.length() > 0)
-				rl.push_back(',');
-			rl.append(i->address.toString());
-			if (i->phy4) {
-				rl.push_back(';');
-				rl.append(i->phy4.toString());
-			} else if (i->phy6) {
-				rl.push_back(';');
-				rl.append(i->phy6.toString());
-			}
-		}
-		if (rl.length() > 0) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_RELAYS_OLD,rl.c_str())) return false;
-		}
 	}
 #endif // ZT_SUPPORT_OLD_STYLE_NETCONF
 
@@ -162,15 +144,6 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 	}
 	if (tmp.size()) {
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS,tmp)) return false;
-	}
-
-	tmp.clear();
-	for(unsigned int i=0;i<this->pinnedCount;++i) {
-		this->pinned[i].zt.appendTo(tmp);
-		this->pinned[i].phy.serialize(tmp);
-	}
-	if (tmp.size()) {
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_PINNED,tmp)) return false;
 	}
 
 	tmp.clear();
@@ -331,32 +304,6 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 					this->addSpecialist(Address(f),ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
 				}
 			}
-
-			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_RELAYS_OLD,tmp2,sizeof(tmp2)) > 0) {
-				char *saveptr = (char *)0;
-				for(char *f=Utils::stok(tmp2,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
-					char tmp3[256];
-					Utils::scopy(tmp3,sizeof(tmp3),f);
-
-					InetAddress phy;
-					char *semi = tmp3;
-					while (*semi) {
-						if (*semi == ';') {
-							*semi = (char)0;
-							++semi;
-							phy = InetAddress(semi);
-						} else ++semi;
-					}
-					Address zt(tmp3);
-
-					this->addSpecialist(zt,ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY);
-					if ((phy)&&(this->pinnedCount < ZT_MAX_NETWORK_PINNED)) {
-						this->pinned[this->pinnedCount].zt = zt;
-						this->pinned[this->pinnedCount].phy = phy;
-						++this->pinnedCount;
-					}
-				}
-			}
 	#else
 			return false;
 	#endif // ZT_SUPPORT_OLD_STYLE_NETCONF
@@ -392,15 +339,6 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 				unsigned int p = 0;
 				while ((p < tmp.size())&&(staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
 					p += this->staticIps[this->staticIpCount++].deserialize(tmp,p);
-				}
-			}
-
-			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_PINNED,tmp)) {
-				unsigned int p = 0;
-				while ((p < tmp.size())&&(pinnedCount < ZT_MAX_NETWORK_PINNED)) {
-					this->pinned[this->pinnedCount].zt.setTo(tmp.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-					p += this->pinned[this->pinnedCount].phy.deserialize(tmp,p);
-					++this->pinnedCount;
 				}
 			}
 
