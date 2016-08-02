@@ -133,7 +133,7 @@ std::string Identity::toString(bool includePrivate) const
 	std::string r;
 
 	r.append(_address.toString());
-	r.append(":0:"); // 0 == IDENTITY_TYPE_C25519
+	r.append(":0:"); // 0 == ZT_OBJECT_TYPE_IDENTITY
 	r.append(Utils::hex(_publicKey.data,(unsigned int)_publicKey.size()));
 	if ((_privateKey)&&(includePrivate)) {
 		r.push_back(':');

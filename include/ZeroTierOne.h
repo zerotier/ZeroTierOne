@@ -102,14 +102,14 @@ extern "C" {
 #define ZT_MAX_NETWORK_PINNED 16
 
 /**
- * Maximum number of rule table entries per network (can be increased)
- */
-#define ZT_MAX_NETWORK_RULES 256
-
-/**
  * Maximum number of multicast group subscriptions per network
  */
 #define ZT_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS 4096
+
+/**
+ * Maximum number of base (non-capability) network rules
+ */
+#define ZT_MAX_NETWORK_RULES 256
 
 /**
  * Maximum number of direct network paths to a given peer
@@ -120,6 +120,21 @@ extern "C" {
  * Maximum number of trusted physical network paths
  */
 #define ZT_MAX_TRUSTED_PATHS 16
+
+/**
+ * Maximum number of rules per capability
+ */
+#define ZT_MAX_CAPABILITY_RULES 64
+
+/**
+ * Maximum length of a capbility's short descriptive name
+ */
+#define ZT_MAX_CAPABILITY_NAME_LENGTH 63
+
+/**
+ * Global maximum length for capability chain of custody (including initial issue)
+ */
+#define ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH 7
 
 /**
  * Maximum number of hops in a ZeroTier circuit test
@@ -516,9 +531,6 @@ enum ZT_VirtualNetworkRuleType
 /**
  * Network flow rule
  *
- * NOTE: Currently (1.1.x) only etherType is supported! Other things will
- * have no effect until the rules engine is fully implemented.
- *
  * Rules are stored in a table in which one or more match entries is followed
  * by an action. If more than one match precedes an action, the rule is
  * the AND of all matches. An action with no match is always taken since it
@@ -618,6 +630,25 @@ typedef struct
 		uint16_t frameSize[2];
 	} v;
 } ZT_VirtualNetworkRule;
+
+typedef struct
+{
+	/**
+	 * 128-bit ID (GUID) of this capability
+	 */
+	uint64_t id[2];
+
+	/**
+	 * Expiration time (measured vs. network config timestamp issued by controller)
+	 */
+	uint64_t expiration;
+
+
+	struct {
+		uint64_t from;
+		uint64_t to;
+	} custody[ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH];
+} ZT_VirtualNetworkCapability;
 
 /**
  * A route to be pushed on a virtual network

@@ -316,7 +316,7 @@ public:
 		_signedBy.zero();
 
 		if (b[p++] != 1)
-			throw std::invalid_argument("invalid field type");
+			throw std::invalid_argument("invalid object");
 
 		unsigned int numq = b.template at<uint16_t>(p); p += sizeof(uint16_t);
 		uint64_t lastId = 0;

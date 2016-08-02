@@ -164,9 +164,9 @@ public:
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,bool forSign = false) const
 	{
-		if (forSign)
-			b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
-		b.append((uint8_t)0x01); // version -- only one valid value for now
+		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+
+		b.append((uint8_t)0x01);
 		b.append((uint64_t)_id);
 		b.append((uint64_t)_ts);
 		b.append(_updateSigningKey.data,ZT_C25519_PUBLIC_KEY_LEN);
@@ -179,8 +179,8 @@ public:
 			for(std::vector<InetAddress>::const_iterator ep(r->stableEndpoints.begin());ep!=r->stableEndpoints.end();++ep)
 				ep->serialize(b);
 		}
-		if (forSign)
-			b.append((uint64_t)0xf7f7f7f7f7f7f7f7ULL);
+
+		if (forSign) b.append((uint64_t)0xf7f7f7f7f7f7f7f7ULL);
 	}
 
 	template<unsigned int C>
@@ -191,7 +191,7 @@ public:
 		_roots.clear();
 
 		if (b[p++] != 0x01)
-			throw std::invalid_argument("invalid World serialized version");
+			throw std::invalid_argument("invalid object type");
 
 		_id = b.template at<uint64_t>(p); p += 8;
 		_ts = b.template at<uint64_t>(p); p += 8;

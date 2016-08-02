@@ -690,13 +690,9 @@ public:
 		 * controllers and root servers. In the current network, root servers
 		 * will provide the service of final multicast cache.
 		 *
-		 * It is recommended that NETWORK_MEMBERSHIP_CERTIFICATE pushes be sent
-		 * along with MULTICAST_LIKE when pushing LIKEs to peers that do not
-		 * share a network membership (such as root servers), since this can be
-		 * used to authenticate GATHER requests and limit responses to peers
-		 * authorized to talk on a network. (Should be an optional field here,
-		 * but saving one or two packets every five minutes is not worth an
-		 * ugly hack or protocol rev.)
+		 * If sending LIKEs to root servers for backward compatibility reasons,
+		 * VERB_NETWORK_MEMBERSHIP_CERTIFICATE must be sent as well ahead of
+		 * time so that roots can authenticate GATHER requests.
 		 *
 		 * OK/ERROR are not generated.
 		 */
@@ -720,7 +716,9 @@ public:
 		 * /controller/network/<network ID>/member/<requester address>
 		 *
 		 * When received in this manner the response is sent via the old
-		 * OK(NETWORK_CONFIG_REQUEST) instead of OK(REQUEST_OBJECT).
+		 * OK(NETWORK_CONFIG_REQUEST) instead of OK(REQUEST_OBJECT). If the
+		 * response is too large, a dictionary is sent with the single key
+		 * OVF set to 1. In this case REQUEST_OBJECT must be used.
 		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
