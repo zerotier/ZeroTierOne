@@ -243,6 +243,11 @@ bool Filter::run(
 			case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
 				thisRuleMatches = (uint8_t)((frameLen >= (unsigned int)rules[rn].v.frameSize[0])&&(frameLen <= (unsigned int)rules[rn].v.frameSize[1]));
 				break;
+			case ZT_NETWORK_RULE_MATCH_TAG_VALUE_RANGE:
+				break;
+			case ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ALL:
+			case ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ANY:
+				break;
 		}
 
 		// thisSetMatches remains true if the current rule matched... or does NOT match if not bit (0x80) is 1

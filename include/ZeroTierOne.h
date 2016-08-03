@@ -525,7 +525,22 @@ enum ZT_VirtualNetworkRuleType
 	/**
 	 * Frame size range (start-end, inclusive)
 	 */
-	ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE = 49
+	ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE = 49,
+
+	/**
+	 * Match a range of tag values (equality match if start==end)
+	 */
+	ZT_NETWORK_RULE_MATCH_TAG_VALUE_RANGE = 50,
+
+	/**
+	 * Match if all bits are set in a tag value
+	 */
+	ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ALL = 51,
+
+	/**
+	 * Match if any bit from a mask is set in a tag value
+	 */
+	ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ANY = 52
 };
 
 /**
@@ -628,6 +643,14 @@ typedef struct
 		 * Ethernet packet size in host byte order (start-end, inclusive)
 		 */
 		uint16_t frameSize[2];
+
+		/**
+		 * For matching tag values
+		 */
+		struct {
+			uint32_t id;
+			uint32_t value[2]; // only [0] is used for BITS_ALL or BITS_ANY, [0]-[1] for range
+		} tag;
 	} v;
 } ZT_VirtualNetworkRule;
 
