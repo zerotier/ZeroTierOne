@@ -50,6 +50,7 @@ class NetworkMonitor: NSObject {
     }
 
     func updateNetworkInfo() {
+        //NSLog("updateNetworkInfo")
         let filePath = dataFile()
 
         if NSFileManager.defaultManager().fileExistsAtPath(filePath) {
@@ -62,7 +63,7 @@ class NetworkMonitor: NSObject {
             }
         }
 
-        ServiceCom.getNetworkList() { (networkList) -> Void in
+        ServiceCom.sharedInstance.getNetworkList() { (networkList) -> Void in
             self.receivedNetworks = networkList
 
             NSOperationQueue.mainQueue().addOperationWithBlock() { () -> Void in
@@ -70,7 +71,7 @@ class NetworkMonitor: NSObject {
             }
         }
 
-        ServiceCom.getNodeStatus() { nodeStatus -> Void in
+        ServiceCom.sharedInstance.getNodeStatus() { nodeStatus -> Void in
             NSOperationQueue.mainQueue().addOperationWithBlock() { () -> Void in
                 let nc = NSNotificationCenter.defaultCenter()
 

@@ -87,6 +87,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         monitor.updateNetworkInfo()
+        monitor.start()
     }
 
     func applicationWillTerminate(aNotification: NSNotification) {
@@ -243,10 +244,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let id = String(network.nwid, radix: 16)
 
         if network.connected {
-            ServiceCom.leaveNetwork(id)
+            ServiceCom.sharedInstance.leaveNetwork(id)
         }
         else {
-            ServiceCom.joinNetwork(id)
+            ServiceCom.sharedInstance.joinNetwork(id)
         }
     }
 
@@ -257,11 +258,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func menuWillOpen(menu: NSMenu) {
-        monitor.start()
+        //monitor.updateNetworkInfo()
     }
 
     func menuDidClose(menu: NSMenu) {
-        monitor.stop()
     }
 }
 

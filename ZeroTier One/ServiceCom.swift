@@ -9,9 +9,17 @@
 import Cocoa
 
 class ServiceCom: NSObject {
-    static let baseURL = "http://localhost:9993"
+    static let sharedInstance = ServiceCom()
 
-    private static func getKey() -> String {
+    let baseURL = "http://localhost:9993"
+    let session = NSURLSession(configuration: NSURLSessionConfiguration.ephemeralSessionConfiguration())
+
+    private override init() {
+        super.init()
+    }
+
+
+    private func getKey() -> String {
         struct Holder {
             static var key: String? = nil
         }
@@ -77,16 +85,14 @@ class ServiceCom: NSObject {
         }
     }
 
-    static func getNetworkList(completionHandler: ([Network]) -> Void) {
+    func getNetworkList(completionHandler: ([Network]) -> Void) {
 
-        let urlString = baseURL + "/network?auth=\(ServiceCom.getKey())"
+        let urlString = baseURL + "/network?auth=\(getKey())"
 
         let url = NSURL(string: urlString)
 
         if let u = url {
-            let request = NSMutableURLRequest(URL: u)
-            let session = NSURLSession.sharedSession()
-            let task = session.dataTaskWithRequest(request) { (data, response, error) in
+            let task = session.dataTaskWithURL(u) { (data, response, error) in
                 if error != nil{
                     NSLog("\(error)")
                     return
@@ -118,13 +124,11 @@ class ServiceCom: NSObject {
         }
     }
 
-    static func getNodeStatus(completionHandler: (NodeStatus -> Void)) {
-        let urlString = baseURL + "/status?auth=\(ServiceCom.getKey())"
+    func getNodeStatus(completionHandler: (NodeStatus -> Void)) {
+        let urlString = baseURL + "/status?auth=\(getKey())"
 
         if let u = NSURL(string: urlString) {
-            let request = NSMutableURLRequest(URL: u)
-            let session = NSURLSession.sharedSession()
-            let task = session.dataTaskWithRequest(request) { (data, response, error) in
+            let task = session.dataTaskWithURL(u) { (data, response, error) in
                 if error != nil{
                     NSLog("\(error)")
                     return
@@ -153,8 +157,8 @@ class ServiceCom: NSObject {
         }
     }
 
-    static func joinNetwork(network: String, allowManaged: Bool = true, allowGlobal: Bool = false, allowDefault: Bool = false) {
-        let urlString = baseURL + "/network/\(network)?auth=\(ServiceCom.getKey())"
+    func joinNetwork(network: String, allowManaged: Bool = true, allowGlobal: Bool = false, allowDefault: Bool = false) {
+        let urlString = baseURL + "/network/\(network)?auth=\(getKey())"
         let url = NSURL(string: urlString)
 
         var jsonDict = [String: AnyObject]()
@@ -171,7 +175,6 @@ class ServiceCom: NSObject {
                 request.HTTPBody = json
                 request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-                let session = NSURLSession.sharedSession()
                 let task = session.dataTaskWithRequest(request) { (data, response, error) in
                     let httpResponse = response as! NSHTTPURLResponse
                     let status = httpResponse.statusCode
@@ -193,14 +196,13 @@ class ServiceCom: NSObject {
 
     }
 
-    static func leaveNetwork(network: String) {
-        let urlString = baseURL + "/network/\(network)?auth=\(ServiceCom.getKey())"
+    func leaveNetwork(network: String) {
+        let urlString = baseURL + "/network/\(network)?auth=\(getKey())"
 
         if let u = NSURL(string: urlString) {
             let request = NSMutableURLRequest(URL: u)
             request.HTTPMethod = "DELETE"
 
-            let session = NSURLSession.sharedSession()
             let task = session.dataTaskWithRequest(request) { (data, response, error) in
                 let httpResponse = response as! NSHTTPURLResponse
                 let status = httpResponse.statusCode
