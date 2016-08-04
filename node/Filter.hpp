@@ -27,12 +27,11 @@
 #include "../include/ZeroTierOne.h"
 #include "Address.hpp"
 #include "MAC.hpp"
-#include "Tag.hpp"
 
 namespace ZeroTier {
 
 /**
- * Network packet filter for rules engine
+ * A simple network packet filter with VL1, L2, and basic L3 rule support (and tags!)
  */
 class Filter
 {
@@ -55,8 +54,9 @@ public:
 	 * @param vlanId 16-bit VLAN ID
 	 * @param rules Pointer to array of rules
 	 * @param ruleCount Number of rules
-	 * @param tags Tags associated with this node on this network
-	 * @param tagCount Number of tags
+	 * @param tagKeys Tag keys for tags that may be relevant
+	 * @param tagValues Tag values for tags that may be relevant
+	 * @param tagCount Size of tagKeys[] and tagValues[]
 	 * @param sendCopyOfPacketTo Result parameter: if non-NULL send a copy of this packet to another node
 	 * @return True if packet should be accepted for send or receive
 	 */
@@ -73,7 +73,8 @@ public:
 		const unsigned int vlanId,
 		const ZT_VirtualNetworkRule *rules,
 		const unsigned int ruleCount,
-		const Tag *tags,
+		const uint32_t *tagKeys,
+		const uint32_t *tagValues,
 		const unsigned int tagCount,
 		Address &sendCopyOfPacketTo);
 };

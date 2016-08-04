@@ -66,7 +66,8 @@ bool Filter::run(
 	const unsigned int vlanId,
 	const ZT_VirtualNetworkRule *rules,
 	const unsigned int ruleCount,
-	const Tag *tags,
+	const uint32_t *tagKeys,
+	const uint32_t *tagValues,
 	const unsigned int tagCount,
 	Address &sendCopyOfPacketTo)
 {
@@ -248,13 +249,13 @@ bool Filter::run(
 			case ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ALL:
 			case ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ANY:
 				for(unsigned int i=0;i<tagCount;++i) { // sequential scan is probably fastest since this is going to be <64 entries (usually only one or two)
-					if (tags[i].id() == rules[rn].v.tag.id) {
+					if (tagKeys[i] == rules[rn].v.tag.id) {
 						if (rt == ZT_NETWORK_RULE_MATCH_TAG_VALUE_RANGE) {
-							thisRuleMatches = (uint8_t)((tags[i].value() >= rules[rn].v.tag.value[0])&&(tags[i].value() <= rules[rn].v.tag.value[1]));
+							thisRuleMatches = (uint8_t)((tagValues[i] >= rules[rn].v.tag.value[0])&&(tagValues[i] <= rules[rn].v.tag.value[1]));
 						} else if (rt == ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ALL) {
-							thisRuleMatches = (uint8_t)((tags[i].value() & rules[rn].v.tag.value[0]) == rules[rn].v.tag.value[0]);
+							thisRuleMatches = (uint8_t)((tagValues[i] & rules[rn].v.tag.value[0]) == rules[rn].v.tag.value[0]);
 						} else if (rt == ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ANY) {
-							thisRuleMatches = (uint8_t)((tags[i].value() & rules[rn].v.tag.value[0]) != 0);
+							thisRuleMatches = (uint8_t)((tagValues[i] & rules[rn].v.tag.value[0]) != 0);
 						}
 						break;
 					}

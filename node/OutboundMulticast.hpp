@@ -56,7 +56,6 @@ public:
 	 * @param RR Runtime environment
 	 * @param timestamp Creation time
 	 * @param nwid Network ID
-	 * @param com Certificate of membership or NULL if none available
 	 * @param limit Multicast limit for desired number of packets to send
 	 * @param gatherLimit Number to lazily/implicitly gather with this frame or 0 for none
 	 * @param src Source MAC address of frame or NULL to imply compute from sender ZT address
@@ -70,7 +69,6 @@ public:
 		const RuntimeEnvironment *RR,
 		uint64_t timestamp,
 		uint64_t nwid,
-		const CertificateOfMembership *com,
 		unsigned int limit,
 		unsigned int gatherLimit,
 		const MAC &src,
@@ -127,17 +125,17 @@ public:
 		if (std::find(_alreadySentTo.begin(),_alreadySentTo.end(),toAddr) == _alreadySentTo.end()) {
 			sendAndLog(RR,toAddr);
 			return true;
-		} else return false;
+		} else {
+			return false;
+		}
 	}
 
 private:
 	uint64_t _timestamp;
 	uint64_t _nwid;
 	unsigned int _limit;
-	Packet _packetNoCom;
-	Packet _packetWithCom;
+	Packet _packet;
 	std::vector<Address> _alreadySentTo;
-	bool _haveCom;
 };
 
 } // namespace ZeroTier
