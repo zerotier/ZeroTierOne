@@ -21,19 +21,29 @@
 #include "Identity.hpp"
 #include "Topology.hpp"
 #include "Switch.hpp"
+#include "Network.hpp"
 
 namespace ZeroTier {
 
 int Capability::verify(const RuntimeEnvironment *RR) const
 {
 	try {
+		if ((_maxCustodyChainLength < 1)||(_maxCustodyChainLength > ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))
+			return -1;
+
 		Buffer<(sizeof(Capability) * 2)> tmp;
 		this->serialize(tmp,true);
-		for(unsigned int c=0;c<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH;++c) {
-			if (!_custody[c].to)
-				return ((c == 0) ? -1 : 0);
-			if (!_custody[c].from)
-				return -1;
+		for(unsigned int c=0;c<_maxCustodyChainLength;++c) {
+			if (c == 0) {
+				if ((!_custody[c].to)||(!_custody[c].from)||(_custody[c].from != Network::controllerFor(_nwid)))
+					return -1; // the first entry must be present and from the network's controller
+			} else {
+				if (!_custody[c].to)
+					return 0; // all previous entries were valid, so we are valid
+				else if ((!_custody[c].from)||(_custody[c].from != _custody[c-1].to))
+					return -1; // otherwise if we have another entry it must be from the previous holder in the chain
+			}
+
 			const Identity id(RR->topology->getIdentity(_custody[c].from));
 			if (id) {
 				if (!id.verify(tmp.data(),tmp.size(),_custody[c].signature))
@@ -44,9 +54,8 @@ int Capability::verify(const RuntimeEnvironment *RR) const
 			}
 		}
 		return 0;
-	} catch ( ... ) {
-		return -1;
-	}
+	} catch ( ... ) {}
+	return -1;
 }
 
 } // namespace ZeroTier

@@ -21,12 +21,13 @@
 #include "Identity.hpp"
 #include "Topology.hpp"
 #include "Switch.hpp"
+#include "Network.hpp"
 
 namespace ZeroTier {
 
 int Tag::verify(const RuntimeEnvironment *RR) const
 {
-	if (!_signedBy)
+	if ((!_signedBy)||(_signedBy != Network::controllerFor(_nwid)))
 		return -1;
 	const Identity id(RR->topology->getIdentity(_signedBy));
 	if (!id) {

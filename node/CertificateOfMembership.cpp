@@ -20,6 +20,7 @@
 #include "RuntimeEnvironment.hpp"
 #include "Topology.hpp"
 #include "Switch.hpp"
+#include "Network.hpp"
 
 namespace ZeroTier {
 
@@ -208,7 +209,7 @@ bool CertificateOfMembership::sign(const Identity &with)
 
 int CertificateOfMembership::verify(const RuntimeEnvironment *RR) const
 {
-	if ((!_signedBy)||(_qualifierCount > ZT_NETWORK_COM_MAX_QUALIFIERS))
+	if ((!_signedBy)||(_signedBy != Network::controllerFor(networkId()))||(_qualifierCount > ZT_NETWORK_COM_MAX_QUALIFIERS))
 		return -1;
 
 	const Identity id(RR->topology->getIdentity(_signedBy));

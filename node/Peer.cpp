@@ -371,80 +371,6 @@ void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) 
 	}
 }
 
-bool Peer::networkMembershipCertificatesAgree(uint64_t nwid,const CertificateOfMembership &com) const
-{
-	Mutex::Lock _l(_networkComs_m);
-	const _NetworkCom *ourCom = _networkComs.get(nwid);
-	if (ourCom)
-		return ourCom->com.agreesWith(com);
-	return false;
-}
-
-bool Peer::validateAndSetNetworkMembershipCertificate(uint64_t nwid,const CertificateOfMembership &com)
-{
-	// Sanity checks
-	if ((!com)||(com.issuedTo() != _id.address()))
-		return false;
-
-	// Return true if we already have this *exact* COM
-	{
-		Mutex::Lock _l(_networkComs_m);
-		_NetworkCom *ourCom = _networkComs.get(nwid);
-		if ((ourCom)&&(ourCom->com == com))
-			return true;
-	}
-
-	// Check signature, log and return if cert is invalid
-	if (com.signedBy() != Network::controllerFor(nwid)) {
-		TRACE("rejected network membership certificate for %.16llx signed by %s: signer not a controller of this network",(unsigned long long)nwid,com.signedBy().toString().c_str());
-		return false; // invalid signer
-	}
-
-	if (com.signedBy() == RR->identity.address()) {
-
-		// We are the controller: RR->identity.address() == controller() == cert.signedBy()
-		// So, verify that we signed th cert ourself
-		if (!com.verify(RR->identity)) {
-			TRACE("rejected network membership certificate for %.16llx self signed by %s: signature check failed",(unsigned long long)nwid,com.signedBy().toString().c_str());
-			return false; // invalid signature
-		}
-
-	} else {
-
-		SharedPtr<Peer> signer(RR->topology->getPeer(com.signedBy()));
-
-		if (!signer) {
-			// This would be rather odd, since this is our controller... could happen
-			// if we get packets before we've gotten config.
-			RR->sw->requestWhois(com.signedBy());
-			return false; // signer unknown
-		}
-
-		if (!com.verify(signer->identity())) {
-			TRACE("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)nwid,com.signedBy().toString().c_str());
-			return false; // invalid signature
-		}
-	}
-
-	// If we made it past all those checks, add or update cert in our cert info store
-	{
-		Mutex::Lock _l(_networkComs_m);
-		_networkComs.set(nwid,_NetworkCom(RR->node->now(),com));
-	}
-
-	return true;
-}
-
-bool Peer::needsOurNetworkMembershipCertificate(uint64_t nwid,uint64_t now,bool updateLastPushedTime)
-{
-	Mutex::Lock _l(_networkComs_m);
-	uint64_t &lastPushed = _lastPushedComs[nwid];
-	const uint64_t tmp = lastPushed;
-	if (updateLastPushedTime)
-		lastPushed = now;
-	return ((now - tmp) >= (ZT_NETWORK_AUTOCONF_DELAY / 3));
-}
-
 void Peer::clean(uint64_t now)
 {
 	{
@@ -460,24 +386,13 @@ void Peer::clean(uint64_t now)
 	}
 
 	{
-		Mutex::Lock _l(_networkComs_m);
-		{
-			uint64_t *k = (uint64_t *)0;
-			_NetworkCom *v = (_NetworkCom *)0;
-			Hashtable< uint64_t,_NetworkCom >::Iterator i(_networkComs);
-			while (i.next(k,v)) {
-				if ( (!RR->node->belongsToNetwork(*k)) && ((now - v->ts) >= ZT_PEER_NETWORK_COM_EXPIRATION) )
-					_networkComs.erase(*k);
-			}
-		}
-		{
-			uint64_t *k = (uint64_t *)0;
-			uint64_t *v = (uint64_t *)0;
-			Hashtable< uint64_t,uint64_t >::Iterator i(_lastPushedComs);
-			while (i.next(k,v)) {
-				if ((now - *v) > (ZT_NETWORK_AUTOCONF_DELAY * 2))
-					_lastPushedComs.erase(*k);
-			}
+		Mutex::Lock _l(_memberships_m);
+		uint64_t *nwid = (uint64_t *)0;
+		Membership *m = (Membership *)0;
+		Hashtable<uint64_t,Membership>::Iterator i(_memberships);
+		while (i.next(nwid,m)) {
+			if ((now - m->clean(now)) > ZT_MEMBERSHIP_EXPIRATION_TIME)
+				_memberships.erase(*nwid);
 		}
 	}
 }

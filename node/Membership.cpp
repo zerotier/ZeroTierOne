@@ -80,8 +80,8 @@ bool Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint
 		}
 	} catch ( ... ) {
 		TRACE("unable to send credentials due to unexpected exception");
-		return false;
 	}
+	return false;
 }
 
 int Membership::addCredential(const RuntimeEnvironment *RR,const uint64_t now,const CertificateOfMembership &com)
