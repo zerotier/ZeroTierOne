@@ -98,7 +98,21 @@ public:
 	 * @param tagCount Number of tag IDs
 	 * @return True if we pushed something
 	 */
-	bool sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Peer &peer,const NetworkConfig &nconf,const uint32_t *capIds,const unsigned int capCount,const uint32_t *tagIds,const unsigned int tagCount) const;
+	bool sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Peer &peer,const NetworkConfig &nconf,const uint32_t *capIds,const unsigned int capCount,const uint32_t *tagIds,const unsigned int tagCount);
+
+	/**
+	 * Send COM if needed
+	 *
+	 * @param RR Runtime environment
+	 * @param now Current time
+	 * @param peer Peer that "owns" this membership
+	 * @param nconf Network configuration
+	 * @return True if we pushed something
+	 */
+	inline bool sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Peer &peer,const NetworkConfig &nconf)
+	{
+		return sendCredentialsIfNeeded(RR,now,peer,nconf,(const uint32_t *)0,0,(const uint32_t *)0,0);
+	}
 
 	/**
 	 * @param nconf Network configuration
@@ -127,61 +141,21 @@ public:
 	 *
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
-	inline int addCredential(const RuntimeEnvironment *RR,const uint64_t now,const CertificateOfMembership &com)
-	{
-		if (com.issuedTo() != RR->identity.address())
-			return -1;
-		if (_com == com)
-			return 0;
-		const int vr = com.verify(RR);
-		if (vr == 0)
-			_com = com;
-		return vr;
-	}
+	int addCredential(const RuntimeEnvironment *RR,const uint64_t now,const CertificateOfMembership &com);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 *
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
-	inline int addCredential(const RuntimeEnvironment *RR,const uint64_t now,const Tag &tag)
-	{
-		if (tag.issuedTo() != RR->identity.address())
-			return -1;
-		TState *t = _tags.get(tag.networkId());
-		if ((t)&&(t->lastReceived != 0)&&(t->tag == tag))
-			return 0;
-		const int vr = tag.verify(RR);
-		if (vr == 0) {
-			if (!t)
-				t = &(_tags[tag.networkId()]);
-			t->lastReceived = now;
-			t->tag = tag;
-		}
-		return vr;
-	}
+	int addCredential(const RuntimeEnvironment *RR,const uint64_t now,const Tag &tag);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 *
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
-	inline int addCredential(const RuntimeEnvironment *RR,const uint64_t now,const Capability &cap)
-	{
-		if (!cap.wasIssuedTo(RR->identity.address()))
-			return -1;
-		CState *c = _caps.get(cap.networkId());
-		if ((c)&&(c->lastReceived != 0)&&(c->cap == cap))
-			return 0;
-		const int vr = cap.verify(RR);
-		if (vr == 0) {
-			if (!c)
-				c = &(_caps[cap.networkId()]);
-			c->lastReceived = now;
-			c->cap = cap;
-		}
-		return vr;
-	}
+	int addCredential(const RuntimeEnvironment *RR,const uint64_t now,const Capability &cap);
 
 	/**
 	 * Clean up old or stale entries

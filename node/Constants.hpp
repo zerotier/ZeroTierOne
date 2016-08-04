@@ -310,13 +310,6 @@
 #define ZT_NAT_T_TACTICAL_ESCALATION_DELAY 1000
 
 /**
- * How long (max) to remember network certificates of membership?
- *
- * This only applies to networks we don't belong to.
- */
-#define ZT_PEER_NETWORK_COM_EXPIRATION 3600000
-
-/**
  * Sanity limit on maximum bridge routes
  *
  * If the number of bridge routes exceeds this, we cull routes from the
@@ -330,7 +323,7 @@
 /**
  * If there is no known route, spam to up to this many active bridges
  */
-#define ZT_MAX_BRIDGE_SPAM 16
+#define ZT_MAX_BRIDGE_SPAM 32
 
 /**
  * Interval between direct path pushes in milliseconds
@@ -357,7 +350,7 @@
 #define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 4
 
 /**
- * Enable support for old Dictionary based network configs
+ * Enable support for older network configurations from older (pre-1.1.6) controllers
  */
 #define ZT_SUPPORT_OLD_STYLE_NETCONF 1
 

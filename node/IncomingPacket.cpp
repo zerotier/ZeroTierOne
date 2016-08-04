@@ -709,7 +709,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 			p += com.deserialize(*this,p);
 			LockingPtr<Membership> m = peer->membership(com.networkId(),true);
 			if (!m) return true; // sanity check
-			m->addCredential(RR,now,com);
+			if (m->addCredential(RR,now,com) == 1) return false; // wait for WHOIS
 		}
 		++p; // skip trailing 0 after COMs if present
 
@@ -719,14 +719,15 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 				p += cap.deserialize(*this,p);
 				LockingPtr<Membership> m = peer->membership(cap.networkId(),true);
 				if (!m) return true; // sanity check
-				m->addCredential(RR,now,cap);
+				if (m->addCredential(RR,now,cap) == 1) return false; // wait for WHOIS
 			}
+
 			const unsigned int numTags = at<uint16_t>(p); p += 2;
 			for(unsigned int i=0;i<numTags;++i) {
 				p += tag.deserialize(*this,p);
 				LockingPtr<Membership> m = peer->membership(tag.networkId(),true);
 				if (!m) return true; // sanity check
-				m->addCredential(RR,now,tag);
+				if (m->addCredential(RR,now,tag) == 1) return false; // wait for WHOIS
 			}
 		}
 

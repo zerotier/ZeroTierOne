@@ -318,6 +318,24 @@ public:
 		return false;
 	}
 
+	const Capability *capability(const uint32_t id) const
+	{
+		for(unsigned int i=0;i<capabilityCount;++i) {
+			if (capabilities[i].id() == id)
+				return &(capabilities[i]);
+		}
+		return (Capability *)0;
+	}
+
+	const Tag *tag(const uint32_t id) const
+	{
+		for(unsigned int i=0;i<tagCount;++i) {
+			if (tags[i].id() == id)
+				return &(tags[i]);
+		}
+		return (Tag *)0;
+	}
+
 	/*
 	inline void dump() const
 	{

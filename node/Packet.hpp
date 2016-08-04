@@ -704,7 +704,7 @@ public:
 		 * Network membership credential push:
 		 *   <[...] serialized certificate of membership>
 		 *   [<[...] additional certificates of membership>]
-		 *   <[1] null byte for backward compatibility (see below)>
+		 *   <[1] 0x00, null byte marking end of COM array>
 		 *   <[2] 16-bit number of capabilities>
 		 *   <[...] one or more serialized Capability>
 		 *   <[2] 16-bit number of tags>
@@ -712,13 +712,6 @@ public:
 		 *
 		 * This is sent in response to ERROR_NEED_MEMBERSHIP_CERTIFICATE and may
 		 * be pushed at any other time to keep exchanged certificates up to date.
-		 *
-		 * Protocol versions prior to 8 do not support capabilities or tags and
-		 * just expect an array of COMs. Adding a single NULL byte after the COM
-		 * array causes these older versions to harmlessly abort parsing and
-		 * ignore the newer fields. The new version checks for this null byte to
-		 * indicate the end of the COM array, since all serialized COMs begin with
-		 * non-zero bytes (see CertificateOfMembership).
 		 *
 		 * OK/ERROR are not generated.
 		 */
