@@ -3,7 +3,6 @@ OBJS=\
 	node/Capability.o \
 	node/CertificateOfMembership.o \
 	node/Cluster.o \
-	node/DeferredPackets.o \
 	node/Filter.o \
 	node/Identity.o \
 	node/IncomingPacket.o \

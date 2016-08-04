@@ -165,7 +165,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 								for(unsigned int f=1;f<totalFragments;++f)
 									rq->frag0.append(rq->frags[f - 1].payload(),rq->frags[f - 1].payloadLength());
 
-								if (rq->frag0.tryDecode(RR,false)) {
+								if (rq->frag0.tryDecode(RR)) {
 									rq->timestamp = 0; // packet decoded, free entry
 								} else {
 									rq->complete = true; // set complete flag but leave entry since it probably needs WHOIS or something
@@ -264,7 +264,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 							for(unsigned int f=1;f<rq->totalFragments;++f)
 								rq->frag0.append(rq->frags[f - 1].payload(),rq->frags[f - 1].payloadLength());
 
-							if (rq->frag0.tryDecode(RR,false)) {
+							if (rq->frag0.tryDecode(RR)) {
 								rq->timestamp = 0; // packet decoded, free entry
 							} else {
 								rq->complete = true; // set complete flag but leave entry since it probably needs WHOIS or something
@@ -277,7 +277,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 				} else {
 					// Packet is unfragmented, so just process it
 					IncomingPacket packet(data,len,localAddr,fromAddr,now);
-					if (!packet.tryDecode(RR,false)) {
+					if (!packet.tryDecode(RR)) {
 						Mutex::Lock _l(_rxQueue_m);
 						RXQueueEntry *rq = &(_rxQueue[ZT_RX_QUEUE_SIZE - 1]);
 						unsigned long i = ZT_RX_QUEUE_SIZE - 1;
@@ -705,7 +705,7 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 		while (i) {
 			RXQueueEntry *rq = &(_rxQueue[--i]);
 			if ((rq->timestamp)&&(rq->complete)) {
-				if (rq->frag0.tryDecode(RR,false))
+				if (rq->frag0.tryDecode(RR))
 					rq->timestamp = 0;
 			}
 		}

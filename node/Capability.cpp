@@ -28,9 +28,11 @@ namespace ZeroTier {
 int Capability::verify(const RuntimeEnvironment *RR) const
 {
 	try {
+		// There must be at least one entry, and sanity check for bad chain max length
 		if ((_maxCustodyChainLength < 1)||(_maxCustodyChainLength > ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))
 			return -1;
 
+		// Validate all entries in chain of custody
 		Buffer<(sizeof(Capability) * 2)> tmp;
 		this->serialize(tmp,true);
 		for(unsigned int c=0;c<_maxCustodyChainLength;++c) {
@@ -53,6 +55,8 @@ int Capability::verify(const RuntimeEnvironment *RR) const
 				return 1;
 			}
 		}
+
+		// We reached max custody chain length and everything was valid
 		return 0;
 	} catch ( ... ) {}
 	return -1;

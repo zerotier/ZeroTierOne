@@ -37,7 +37,6 @@
 #include "Identity.hpp"
 #include "SelfAwareness.hpp"
 #include "Cluster.hpp"
-#include "DeferredPackets.hpp"
 
 const struct sockaddr_storage ZT_SOCKADDR_NULL = {0};
 
@@ -108,9 +107,7 @@ Node::Node(
 		RR->mc = new Multicaster(RR);
 		RR->topology = new Topology(RR);
 		RR->sa = new SelfAwareness(RR);
-		RR->dp = new DeferredPackets(RR);
 	} catch ( ... ) {
-		delete RR->dp;
 		delete RR->sa;
 		delete RR->topology;
 		delete RR->mc;
@@ -127,8 +124,6 @@ Node::~Node()
 
 	_networks.clear(); // ensure that networks are destroyed before shutdow
 
-	RR->dpEnabled = 0;
-	delete RR->dp;
 	delete RR->sa;
 	delete RR->topology;
 	delete RR->mc;
@@ -621,18 +616,6 @@ void Node::clusterStatus(ZT_ClusterStatus *cs)
 	memset(cs,0,sizeof(ZT_ClusterStatus));
 }
 
-void Node::backgroundThreadMain()
-{
-	++RR->dpEnabled;
-	for(;;) {
-		try {
-			if (RR->dp->process() < 0)
-				break;
-		} catch ( ... ) {} // sanity check -- should not throw
-	}
-	--RR->dpEnabled;
-}
-
 /****************************************************************************/
 /* Node methods used only within node/                                      */
 /****************************************************************************/
@@ -1006,13 +989,6 @@ void ZT_Node_setTrustedPaths(ZT_Node *node,const struct sockaddr_storage *networ
 {
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->setTrustedPaths(networks,ids,count);
-	} catch ( ... ) {}
-}
-
-void ZT_Node_backgroundThreadMain(ZT_Node *node)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->backgroundThreadMain();
 	} catch ( ... ) {}
 }
 

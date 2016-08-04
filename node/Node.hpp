@@ -117,17 +117,8 @@ public:
 	void clusterRemoveMember(unsigned int memberId);
 	void clusterHandleIncomingMessage(const void *msg,unsigned int len);
 	void clusterStatus(ZT_ClusterStatus *cs);
-	void backgroundThreadMain();
 
 	// Internal functions ------------------------------------------------------
-
-	/**
-	 * Convenience threadMain() for easy background thread launch
-	 *
-	 * This allows background threads to be launched with Thread::start
-	 * that will run against this node.
-	 */
-	inline void threadMain() throw() { this->backgroundThreadMain(); }
 
 	/**
 	 * @return Time as of last call to run()

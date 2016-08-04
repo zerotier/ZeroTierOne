@@ -1903,27 +1903,6 @@ void ZT_Node_clusterStatus(ZT_Node *node,ZT_ClusterStatus *cs);
 void ZT_Node_setTrustedPaths(ZT_Node *node,const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count);
 
 /**
- * Do things in the background until Node dies
- *
- * This function can be called from one or more background threads to process
- * certain tasks in the background to improve foreground performance. It will
- * not return until the Node is shut down. If threading is not enabled in
- * this build it will return immediately and will do nothing.
- *
- * This is completely optional. If this is never called, all processing is
- * done in the foreground in the various processXXXX() methods.
- *
- * This does NOT replace or eliminate the need to call the normal
- * processBackgroundTasks() function in your main loop. This mechanism is
- * used to offload the processing of expensive mssages onto background
- * handler threads to prevent foreground performance degradation under
- * high load.
- *
- * @param node Node instance
- */
-void ZT_Node_backgroundThreadMain(ZT_Node *node);
-
-/**
  * Get ZeroTier One version
  *
  * @param major Result: major version

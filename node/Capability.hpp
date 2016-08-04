@@ -115,6 +115,23 @@ public:
 	inline uint64_t expiration() const { return _expiration; }
 
 	/**
+	 * Check to see if a given address is a 'to' address in the custody chain
+	 *
+	 * This does not actually do certificate checking. That must be done with verify().
+	 *
+	 * @param a Address to check
+	 * @return True if address is present
+	 */
+	inline bool wasIssuedTo(const Address &a) const
+	{
+		for(unsigned int i=0;i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH;++i) {
+			if (_custody[i].to == a)
+				return true;
+		}
+		return false;
+	}
+
+	/**
 	 * Sign this capability and add signature to its chain of custody
 	 *
 	 * If this returns false, this object should be considered to be
@@ -132,10 +149,10 @@ public:
 		try {
 			for(unsigned int i=0;((i<_maxCustodyChainLength)&&(i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH));++i) {
 				if (!(_custody[i].to)) {
-					_custody[i].to = to;
-					_custody[i].from = from.address();
 					Buffer<(sizeof(Capability) * 2)> tmp;
 					this->serialize(tmp,true);
+					_custody[i].to = to;
+					_custody[i].from = from.address();
 					_custody[i].signature = from.sign(tmp.data(),tmp.size());
 					return true;
 				}
@@ -255,22 +272,21 @@ public:
 		b.append(_id);
 		b.append(_nwid);
 		b.append(_expiration);
-
 		serializeRules(b,_rules,_ruleCount);
-
 		b.append((uint8_t)_maxCustodyChainLength);
-		for(unsigned int i=0;;++i) {
-			if ((i < _maxCustodyChainLength)&&(i < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH)&&(_custody[i].to)) {
-				_custody[i].to.appendTo(b);
-				_custody[i].from.appendTo(b);
-				if (!forSign) {
+
+		if (!forSign) {
+			for(unsigned int i=0;;++i) {
+				if ((i < _maxCustodyChainLength)&&(i < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH)&&(_custody[i].to)) {
+					_custody[i].to.appendTo(b);
+					_custody[i].from.appendTo(b);
 					b.append((uint8_t)1); // 1 == Ed25519 signature
 					b.append((uint16_t)ZT_C25519_SIGNATURE_LEN); // length of signature
 					b.append(_custody[i].signature.data,ZT_C25519_SIGNATURE_LEN);
+				} else {
+					b.append((unsigned char)0,ZT_ADDRESS_LENGTH); // zero 'to' terminates chain
+					break;
 				}
-			} else {
-				b.append((unsigned char)0,ZT_ADDRESS_LENGTH); // zero 'to' terminates chain
-				break;
 			}
 		}
 
@@ -369,10 +385,9 @@ public:
 		_id = b.template at<uint32_t>(p); p += 4;
 		_nwid = b.template at<uint64_t>(p); p += 8;
 		_expiration = b.template at<uint64_t>(p); p += 8;
-
 		deserializeRules(b,p,_rules,_ruleCount,ZT_MAX_CAPABILITY_RULES);
-
 		_maxCustodyChainLength = (unsigned int)b[p++];
+
 		if ((_maxCustodyChainLength < 1)||(_maxCustodyChainLength > ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))
 			throw std::runtime_error("invalid max custody chain length");
 		for(unsigned int i;;++i) {
@@ -391,25 +406,6 @@ public:
 			throw std::runtime_error("extended field overflow");
 
 		return (p - startAt);
-	}
-
-	/**
-	 * Check to see if a given address is a 'to' address in the custody chain
-	 *
-	 * This does not actually do certificate checking. That must be done with verify().
-	 *
-	 * @param a Address to check
-	 * @return True if address is present
-	 */
-	inline bool wasIssuedTo(const Address &a) const
-	{
-		for(unsigned int i=0;i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH;++i) {
-			if (!_custody[i].to)
-				break;
-			else if (_custody[i].to == a)
-				return true;
-		}
-		return false;
 	}
 
 	// Provides natural sort order by ID

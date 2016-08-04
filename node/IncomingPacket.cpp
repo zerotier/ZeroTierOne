@@ -36,7 +36,6 @@
 #include "World.hpp"
 #include "Cluster.hpp"
 #include "Node.hpp"
-#include "DeferredPackets.hpp"
 #include "Filter.hpp"
 #include "CertificateOfMembership.hpp"
 #include "Capability.hpp"
@@ -44,7 +43,7 @@
 
 namespace ZeroTier {
 
-bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
+bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 {
 	const Address sourceAddress(source());
 
@@ -64,18 +63,11 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
 				return true;
 			}
 		} else if ((c == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)&&(verb() == Packet::VERB_HELLO)) {
-			// Unencrypted HELLOs require some potentially expensive verification, so
-			// do this in the background if background processing is enabled.
-			if ((RR->dpEnabled > 0)&&(!deferred)) {
-				RR->dp->enqueue(this);
-				return true; // 'handled' via deferring to background thread(s)
-			} else {
-				// A null pointer for peer to _doHELLO() tells it to run its own
-				// special internal authentication logic. This is done for unencrypted
-				// HELLOs to learn new identities, etc.
-				SharedPtr<Peer> tmp;
-				return _doHELLO(RR,tmp);
-			}
+			// A null pointer for peer to _doHELLO() tells it to run its own
+			// special internal authentication logic. This is done for unencrypted
+			// HELLOs to learn new identities, etc.
+			SharedPtr<Peer> tmp;
+			return _doHELLO(RR,tmp);
 		}
 
 		SharedPtr<Peer> peer(RR->topology->getPeer(sourceAddress));

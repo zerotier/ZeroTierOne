@@ -118,21 +118,12 @@ public:
 	 * about whether the packet was valid. A rejection is 'complete.'
 	 *
 	 * Once true is returned, this must not be called again. The packet's state
-	 * may no longer be valid. The only exception is deferred decoding. In this
-	 * case true is returned to indicate to the normal decode path that it is
-	 * finished with the packet. The packet will have added itself to the
-	 * deferred queue and will expect tryDecode() to be called one more time
-	 * with deferred set to true.
-	 *
-	 * Deferred decoding is performed by DeferredPackets.cpp and should not be
-	 * done elsewhere. Under deferred decoding packets only get one shot and
-	 * so the return value of tryDecode() is ignored.
+	 * may no longer be valid.
 	 *
 	 * @param RR Runtime environment
-	 * @param deferred If true, this is a deferred decode and the return is ignored
 	 * @return True if decoding and processing is complete, false if caller should try again
 	 */
-	bool tryDecode(const RuntimeEnvironment *RR,bool deferred);
+	bool tryDecode(const RuntimeEnvironment *RR);
 
 	/**
 	 * @return Time of packet receipt / start of decode
