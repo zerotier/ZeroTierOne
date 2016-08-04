@@ -239,9 +239,10 @@ bool Filter::run(
 					thisRuleMatches = 0;
 				}
 				break;
-			case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
-				// TODO: not supported yet
-				break;
+			case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS: {
+				uint64_t cf = (receiving) ? ZT_RULE_PACKET_CHARACTERISTICS_0_INBOUND : 0ULL;
+				thisRuleMatches = (uint8_t)((cf & rules[rn].v.characteristics[0]) == rules[rn].v.characteristics[1]);
+			}	break;
 			case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
 				thisRuleMatches = (uint8_t)((frameLen >= (unsigned int)rules[rn].v.frameSize[0])&&(frameLen <= (unsigned int)rules[rn].v.frameSize[1]));
 				break;

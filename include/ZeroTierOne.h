@@ -165,6 +165,11 @@ extern "C" {
 #define ZT_CLUSTER_MAX_MESSAGE_LENGTH (1500 - 48)
 
 /**
+ * Packet characteristics flag: packet direction, 1 for incoming 0 for outgoing
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_0_INBOUND 0x0000000000000001ULL
+
+/**
  * A null/empty sockaddr (all zero) to signify an unspecified socket address
  */
 extern const struct sockaddr_storage ZT_SOCKADDR_NULL;
