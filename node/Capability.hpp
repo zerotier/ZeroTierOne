@@ -130,11 +130,11 @@ public:
 	inline bool sign(const Identity &from,const Address &to)
 	{
 		try {
-			Buffer<(sizeof(Capability) * 2)> tmp;
 			for(unsigned int i=0;((i<_maxCustodyChainLength)&&(i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH));++i) {
 				if (!(_custody[i].to)) {
 					_custody[i].to = to;
 					_custody[i].from = from.address();
+					Buffer<(sizeof(Capability) * 2)> tmp;
 					this->serialize(tmp,true);
 					_custody[i].signature = from.sign(tmp.data(),tmp.size());
 					return true;
@@ -145,22 +145,12 @@ public:
 	}
 
 	/**
-	 * Verify this capability's chain of custody
-	 *
-	 * This returns a tri-state result. A return value of zero indicates that
-	 * the chain of custody is valid and all signatures are okay. A positive
-	 * return value means at least one WHOIS was issued for a missing signing
-	 * identity and we should retry later. A negative return value means that
-	 * this chain or one of its signature is BAD and this capability should
-	 * be discarded.
-	 *
-	 * Note that the entire chain is checked regardless of verifyInChain.
+	 * Verify this capability's chain of custody and signatures
 	 *
 	 * @param RR Runtime environment to provide for peer lookup, etc.
-	 * @param verifyInChain Also check to ensure that this capability was at some point properly issued to this peer (if non-null)
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or chain
 	 */
-	int verify(const RuntimeEnvironment *RR,const Address &verifyInChain) const;
+	int verify(const RuntimeEnvironment *RR) const;
 
 	template<unsigned int C>
 	static inline void serializeRules(Buffer<C> &b,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
@@ -403,8 +393,30 @@ public:
 		return (p - startAt);
 	}
 
+	/**
+	 * Check to see if a given address is a 'to' address in the custody chain
+	 *
+	 * This does not actually do certificate checking. That must be done with verify().
+	 *
+	 * @param a Address to check
+	 * @return True if address is present
+	 */
+	inline bool wasIssuedTo(const Address &a) const
+	{
+		for(unsigned int i=0;i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH;++i) {
+			if (!_custody[i].to)
+				break;
+			else if (_custody[i].to == a)
+				return true;
+		}
+		return false;
+	}
+
 	// Provides natural sort order by ID
 	inline bool operator<(const Capability &c) const { return (_id < c._id); }
+
+	inline bool operator==(const Capability &c) const { return (memcmp(this,&c,sizeof(Capability)) == 0); }
+	inline bool operator!=(const Capability &c) const { return (memcmp(this,&c,sizeof(Capability)) != 0); }
 
 private:
 	uint64_t _nwid;

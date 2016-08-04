@@ -169,7 +169,9 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 
 Identity Topology::getIdentity(const Address &zta)
 {
-	{
+	if (zta == RR->identity.address()) {
+		return RR->identity;
+	} else {
 		Mutex::Lock _l(_lock);
 		const SharedPtr<Peer> *const ap = _peers.get(zta);
 		if (ap)

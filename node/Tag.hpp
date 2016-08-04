@@ -76,7 +76,6 @@ public:
 	{
 	}
 
-
 	inline uint64_t networkId() const { return _nwid; }
 	inline uint64_t expiration() const { return _expiration; }
 	inline uint32_t id() const { return _id; }
@@ -106,9 +105,9 @@ public:
 	 * Check this tag's signature
 	 *
 	 * @param RR Runtime environment to allow identity lookup for signedBy
-	 * @return True if signature is present and valid
+	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or tag
 	 */
-	bool verify(const RuntimeEnvironment *RR);
+	int verify(const RuntimeEnvironment *RR) const;
 
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,const bool forSign = false) const
@@ -155,6 +154,12 @@ public:
 
 		return (p - startAt);
 	}
+
+	// Provides natural sort order by ID
+	inline bool operator<(const Tag &t) const { return (_id < t._id); }
+
+	inline bool operator==(const Tag &t) const { return (memcmp(this,&t,sizeof(Tag)) == 0); }
+	inline bool operator!=(const Tag &t) const { return (memcmp(this,&t,sizeof(Tag)) != 0); }
 
 private:
 	uint64_t _nwid;

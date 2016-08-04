@@ -1,5 +1,6 @@
 OBJS=\
 	node/C25519.o \
+	node/Capability.o \
 	node/CertificateOfMembership.o \
 	node/Cluster.o \
 	node/DeferredPackets.o \
@@ -7,6 +8,7 @@ OBJS=\
 	node/Identity.o \
 	node/IncomingPacket.o \
 	node/InetAddress.o \
+	node/Membership.o \
 	node/Multicaster.o \
 	node/Network.o \
 	node/NetworkConfig.o \
@@ -20,6 +22,7 @@ OBJS=\
 	node/SelfAwareness.o \
 	node/SHA512.o \
 	node/Switch.o \
+	node/Tag.o \
 	node/Topology.o \
 	node/Utils.o \
 	osdep/BackgroundResolver.o \

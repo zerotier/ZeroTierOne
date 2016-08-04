@@ -32,9 +32,16 @@
 #include "Hashtable.hpp"
 #include "NetworkConfig.hpp"
 
+// Expiration time for capability and tag cache
+#define ZT_MEMBERSHIP_STATE_EXPIRATION_TIME (ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA * 4)
+
+// Expiration time for Memberships (used in Peer::clean())
+#define ZT_MEMBERSHIP_EXPIRATION_TIME (ZT_MEMBERSHIP_STATE_EXPIRATION_TIME * 4)
+
 namespace ZeroTier {
 
 class Peer;
+class RuntimeEnvironment;
 
 /**
  * Information related to a peer's participation on a network
@@ -81,15 +88,17 @@ public:
 	 * This checks last pushed times for our COM and for other credentials and
 	 * sends VERB_NETWORK_CREDENTIALS if the recipient might need them.
 	 *
+	 * @param RR Runtime environment
+	 * @param now Current time
 	 * @param peer Peer that "owns" this membership
 	 * @param nconf Network configuration
-	 * @param now Current time
 	 * @param capIds Capability IDs that this peer might need
 	 * @param capCount Number of capability IDs
 	 * @param tagIds Tag IDs that this peer might need
 	 * @param tagCount Number of tag IDs
+	 * @return True if we pushed something
 	 */
-	void sendCredentialsIfNeeded(const Peer &peer,const NetworkConfig &nconf,const uint64_t now,const uint32_t *capIds,const unsigned int capCount,const uint32_t *tagIds,const unsigned int tagCount) const;
+	bool sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Peer &peer,const NetworkConfig &nconf,const uint32_t *capIds,const unsigned int capCount,const uint32_t *tagIds,const unsigned int tagCount) const;
 
 	/**
 	 * @param nconf Network configuration
@@ -114,25 +123,98 @@ public:
 	}
 
 	/**
-	 * Clean up old or stale entries
+	 * Validate and add a credential if signature is okay and it's otherwise good
+	 *
+	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
-	inline void clean(const uint64_t now)
+	inline int addCredential(const RuntimeEnvironment *RR,const uint64_t now,const CertificateOfMembership &com)
 	{
+		if (com.issuedTo() != RR->identity.address())
+			return -1;
+		if (_com == com)
+			return 0;
+		const int vr = com.verify(RR);
+		if (vr == 0)
+			_com = com;
+		return vr;
+	}
+
+	/**
+	 * Validate and add a credential if signature is okay and it's otherwise good
+	 *
+	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
+	 */
+	inline int addCredential(const RuntimeEnvironment *RR,const uint64_t now,const Tag &tag)
+	{
+		if (tag.issuedTo() != RR->identity.address())
+			return -1;
+		TState *t = _tags.get(tag.networkId());
+		if ((t)&&(t->lastReceived != 0)&&(t->tag == tag))
+			return 0;
+		const int vr = tag.verify(RR);
+		if (vr == 0) {
+			if (!t)
+				t = &(_tags[tag.networkId()]);
+			t->lastReceived = now;
+			t->tag = tag;
+		}
+		return vr;
+	}
+
+	/**
+	 * Validate and add a credential if signature is okay and it's otherwise good
+	 *
+	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
+	 */
+	inline int addCredential(const RuntimeEnvironment *RR,const uint64_t now,const Capability &cap)
+	{
+		if (!cap.wasIssuedTo(RR->identity.address()))
+			return -1;
+		CState *c = _caps.get(cap.networkId());
+		if ((c)&&(c->lastReceived != 0)&&(c->cap == cap))
+			return 0;
+		const int vr = cap.verify(RR);
+		if (vr == 0) {
+			if (!c)
+				c = &(_caps[cap.networkId()]);
+			c->lastReceived = now;
+			c->cap = cap;
+		}
+		return vr;
+	}
+
+	/**
+	 * Clean up old or stale entries
+	 *
+	 * @return Time of most recent activity in this Membership
+	 */
+	inline uint64_t clean(const uint64_t now)
+	{
+		uint64_t lastAct = _lastPushedCom;
+
 		uint32_t *i = (uint32_t *)0;
 		CState *cs = (CState *)0;
 		Hashtable<uint32_t,CState>::Iterator csi(_caps);
 		while (csi.next(i,cs)) {
-			if ((now - std::max(cs->lastPushed,cs->lastReceived)) > (ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA * 3))
+			const uint64_t la = std::max(cs->lastPushed,cs->lastReceived);
+			if ((now - la) > ZT_MEMBERSHIP_STATE_EXPIRATION_TIME)
 				_caps.erase(*i);
+			else if (la > lastAct)
+				lastAct = la;
 		}
 
 		i = (uint32_t *)0;
 		TState *ts = (TState *)0;
 		Hashtable<uint32_t,TState>::Iterator tsi(_tags);
 		while (tsi.next(i,ts)) {
-			if ((now - std::max(ts->lastPushed,ts->lastReceived)) > (ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA * 3))
+			const uint64_t la = std::max(ts->lastPushed,ts->lastReceived);
+			if ((now - la) > ZT_MEMBERSHIP_STATE_EXPIRATION_TIME)
 				_tags.erase(*i);
+			else if (la > lastAct)
+				lastAct = la;
 		}
+
+		return lastAct;
 	}
 
 private:

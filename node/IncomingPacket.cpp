@@ -443,11 +443,11 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 
 				unsigned int offset = 0;
 
-				if ((flags & 0x01) != 0) {
-					// OK(MULTICAST_FRAME) includes certificate of membership update
+				if ((flags & 0x01) != 0) { // deprecated but still used by older peers
 					CertificateOfMembership com;
 					offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS);
-					peer->validateAndSetNetworkMembershipCertificate(nwid,com);
+					LockingPtr<Membership> m = peer->membership(com.networkId(),true);
+					if (m) m->addCredential(RR,RR->node->now(),com);
 				}
 
 				if ((flags & 0x02) != 0) {
@@ -583,10 +583,11 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				const unsigned int flags = (*this)[ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS];
 
 				unsigned int comLen = 0;
-				if ((flags & 0x01) != 0) {
+				if ((flags & 0x01) != 0) { // deprecated but still used by old peers
 					CertificateOfMembership com;
 					comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
-					peer->validateAndSetNetworkMembershipCertificate(network->id(),com);
+					LockingPtr<Membership> m = peer->membership(com.networkId(),true);
+					if (m) m->addCredential(RR,RR->node->now(),com);
 				}
 
 				if (!network->isAllowed(peer)) {
@@ -698,6 +699,7 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
+		const uint64_t now = RR->node->now();
 		CertificateOfMembership com;
 		Capability cap;
 		Tag tag;
@@ -705,7 +707,9 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 		unsigned int p = ZT_PACKET_IDX_PAYLOAD;
 		while ((p < size())&&((*this)[p])) {
 			p += com.deserialize(*this,p);
-			peer->validateAndSetNetworkMembershipCertificate(com.networkId(),com);
+			LockingPtr<Membership> m = peer->membership(com.networkId(),true);
+			if (!m) return true; // sanity check
+			m->addCredential(RR,now,com);
 		}
 		++p; // skip trailing 0 after COMs if present
 
@@ -713,10 +717,16 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 			const unsigned int numCapabilities = at<uint16_t>(p); p += 2;
 			for(unsigned int i=0;i<numCapabilities;++i) {
 				p += cap.deserialize(*this,p);
+				LockingPtr<Membership> m = peer->membership(cap.networkId(),true);
+				if (!m) return true; // sanity check
+				m->addCredential(RR,now,cap);
 			}
 			const unsigned int numTags = at<uint16_t>(p); p += 2;
 			for(unsigned int i=0;i<numTags;++i) {
 				p += tag.deserialize(*this,p);
+				LockingPtr<Membership> m = peer->membership(tag.networkId(),true);
+				if (!m) return true; // sanity check
+				m->addCredential(RR,now,tag);
 			}
 		}
 
@@ -854,10 +864,11 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 			// Offset -- size of optional fields added to position of later fields
 			unsigned int offset = 0;
 
-			if ((flags & 0x01) != 0) {
+			if ((flags & 0x01) != 0) { // deprecated but still used by older peers
 				CertificateOfMembership com;
 				offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
-				peer->validateAndSetNetworkMembershipCertificate(nwid,com);
+				LockingPtr<Membership> m = peer->membership(com.networkId(),true);
+				if (m) m->addCredential(RR,RR->node->now(),com);
 			}
 
 			// Check membership after we've read any included COM, since

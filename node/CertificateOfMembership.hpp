@@ -46,9 +46,11 @@
 /**
  * Maximum number of qualifiers allowed in a COM (absolute max: 65535)
  */
-#define ZT_NETWORK_COM_MAX_QUALIFIERS 256
+#define ZT_NETWORK_COM_MAX_QUALIFIERS 8
 
 namespace ZeroTier {
+
+class RuntimeEnvironment;
 
 /**
  * Certificate of network membership
@@ -275,12 +277,12 @@ public:
 	bool sign(const Identity &with);
 
 	/**
-	 * Verify certificate against an identity
+	 * Verify this COM and its signature
 	 *
-	 * @param id Identity to verify against
-	 * @return True if certificate is signed by this identity and verification was successful
+	 * @param RR Runtime environment for looking up peers
+	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
-	bool verify(const Identity &id) const;
+	int verify(const RuntimeEnvironment *RR) const;
 
 	/**
 	 * @return True if signed
