@@ -172,7 +172,7 @@ private:
 	bool _doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doECHO(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doMULTICAST_LIKE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
+	bool _doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doMULTICAST_GATHER(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doMULTICAST_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
@@ -180,11 +180,6 @@ private:
 	bool _doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doREQUEST_OBJECT(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doOBJECT_UPDATED(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-
-	// Send an ERROR_NEED_MEMBERSHIP_CERTIFICATE to a peer indicating that an updated cert is needed to communicate
-	void _sendErrorNeedCertificate(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,uint64_t nwid);
 
 	uint64_t _receiveTime;
 	InetAddress _localAddress;

@@ -110,6 +110,11 @@ public:
 	inline uint64_t networkId() const { return _nwid; }
 
 	/**
+	 * @return Expiration time relative to network config timestamp
+	 */
+	inline uint64_t expiration() const { return _expiration; }
+
+	/**
 	 * Sign this capability and add signature to its chain of custody
 	 *
 	 * If this returns false, this object should be considered to be

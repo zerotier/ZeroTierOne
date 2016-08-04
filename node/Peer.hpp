@@ -31,7 +31,6 @@
 #include "../include/ZeroTierOne.h"
 
 #include "RuntimeEnvironment.hpp"
-#include "CertificateOfMembership.hpp"
 #include "Path.hpp"
 #include "Address.hpp"
 #include "Utils.hpp"
@@ -43,10 +42,6 @@
 #include "Hashtable.hpp"
 #include "Mutex.hpp"
 #include "NonCopyable.hpp"
-
-// Very rough computed estimate: (8 + 256 + 80 + (16 * 64) + (128 * 256) + (128 * 16))
-// 1048576 provides tons of headroom -- overflow would just cause peer not to be persisted
-#define ZT_PEER_SUGGESTED_SERIALIZATION_BUFFER_SIZE 1048576
 
 namespace ZeroTier {
 
@@ -363,31 +358,6 @@ public:
 	void getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const;
 
 	/**
-	 * Check network COM agreement with this peer
-	 *
-	 * @param nwid Network ID
-	 * @param com Another certificate of membership
-	 * @return True if supplied COM agrees with ours, false if not or if we don't have one
-	 */
-	bool networkMembershipCertificatesAgree(uint64_t nwid,const CertificateOfMembership &com) const;
-
-	/**
-	 * Check the validity of the COM and add/update if valid and new
-	 *
-	 * @param nwid Network ID
-	 * @param com Externally supplied COM
-	 */
-	bool validateAndSetNetworkMembershipCertificate(uint64_t nwid,const CertificateOfMembership &com);
-
-	/**
-	 * @param nwid Network ID
-	 * @param now Current time
-	 * @param updateLastPushedTime If true, go ahead and update the last pushed time regardless of return value
-	 * @return Whether or not this peer needs another COM push from us
-	 */
-	bool needsOurNetworkMembershipCertificate(uint64_t nwid,uint64_t now,bool updateLastPushedTime);
-
-	/**
 	 * Perform periodic cleaning operations
 	 *
 	 * @param now Current time
@@ -434,138 +404,12 @@ public:
 		else return std::pair<InetAddress,InetAddress>();
 	}
 
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b) const
-	{
-		Mutex::Lock _l(_networkComs_m);
-
-		const unsigned int recSizePos = b.size();
-		b.addSize(4); // space for uint32_t field length
-
-		b.append((uint16_t)1); // version of serialized Peer data
-
-		_id.serialize(b,false);
-
-		b.append((uint64_t)_lastUsed);
-		b.append((uint64_t)_lastReceive);
-		b.append((uint64_t)_lastUnicastFrame);
-		b.append((uint64_t)_lastMulticastFrame);
-		b.append((uint64_t)_lastAnnouncedTo);
-		b.append((uint64_t)_lastDirectPathPushSent);
-		b.append((uint64_t)_lastDirectPathPushReceive);
-		b.append((uint64_t)_lastPathSort);
-		b.append((uint16_t)_vProto);
-		b.append((uint16_t)_vMajor);
-		b.append((uint16_t)_vMinor);
-		b.append((uint16_t)_vRevision);
-		b.append((uint32_t)_latency);
-		b.append((uint16_t)_directPathPushCutoffCount);
-
-		b.append((uint16_t)_numPaths);
-		for(unsigned int i=0;i<_numPaths;++i)
-			_paths[i].serialize(b);
-
-		b.append((uint32_t)_networkComs.size());
-		{
-			uint64_t *k = (uint64_t *)0;
-			_NetworkCom *v = (_NetworkCom *)0;
-			Hashtable<uint64_t,_NetworkCom>::Iterator i(const_cast<Peer *>(this)->_networkComs);
-			while (i.next(k,v)) {
-				b.append((uint64_t)*k);
-				b.append((uint64_t)v->ts);
-				v->com.serialize(b);
-			}
-		}
-
-		b.append((uint32_t)_lastPushedComs.size());
-		{
-			uint64_t *k = (uint64_t *)0;
-			uint64_t *v = (uint64_t *)0;
-			Hashtable<uint64_t,uint64_t>::Iterator i(const_cast<Peer *>(this)->_lastPushedComs);
-			while (i.next(k,v)) {
-				b.append((uint64_t)*k);
-				b.append((uint64_t)*v);
-			}
-		}
-
-		b.template setAt<uint32_t>(recSizePos,(uint32_t)(b.size() - (recSizePos + 4))); // set size
-	}
-
-	/**
-	 * Create a new Peer from a serialized instance
-	 *
-	 * @param renv Runtime environment
-	 * @param myIdentity This node's identity
-	 * @param b Buffer containing serialized Peer data
-	 * @param p Pointer to current position in buffer, will be updated in place as buffer is read (value/result)
-	 * @return New instance of Peer or NULL if serialized data was corrupt or otherwise invalid (may also throw an exception via Buffer)
-	 */
-	template<unsigned int C>
-	static inline SharedPtr<Peer> deserializeNew(const RuntimeEnvironment *renv,const Identity &myIdentity,const Buffer<C> &b,unsigned int &p)
-	{
-		const unsigned int recSize = b.template at<uint32_t>(p); p += 4;
-		if ((p + recSize) > b.size())
-			return SharedPtr<Peer>(); // size invalid
-		if (b.template at<uint16_t>(p) != 1)
-			return SharedPtr<Peer>(); // version mismatch
-		p += 2;
-
-		Identity npid;
-		p += npid.deserialize(b,p);
-		if (!npid)
-			return SharedPtr<Peer>();
-
-		SharedPtr<Peer> np(new Peer(renv,myIdentity,npid));
-
-		np->_lastUsed = b.template at<uint64_t>(p); p += 8;
-		np->_lastReceive = b.template at<uint64_t>(p); p += 8;
-		np->_lastUnicastFrame = b.template at<uint64_t>(p); p += 8;
-		np->_lastMulticastFrame = b.template at<uint64_t>(p); p += 8;
-		np->_lastAnnouncedTo = b.template at<uint64_t>(p); p += 8;
-		np->_lastDirectPathPushSent = b.template at<uint64_t>(p); p += 8;
-		np->_lastDirectPathPushReceive = b.template at<uint64_t>(p); p += 8;
-		np->_lastPathSort = b.template at<uint64_t>(p); p += 8;
-		np->_vProto = b.template at<uint16_t>(p); p += 2;
-		np->_vMajor = b.template at<uint16_t>(p); p += 2;
-		np->_vMinor = b.template at<uint16_t>(p); p += 2;
-		np->_vRevision = b.template at<uint16_t>(p); p += 2;
-		np->_latency = b.template at<uint32_t>(p); p += 4;
-		np->_directPathPushCutoffCount = b.template at<uint16_t>(p); p += 2;
-
-		const unsigned int numPaths = b.template at<uint16_t>(p); p += 2;
-		for(unsigned int i=0;i<numPaths;++i) {
-			if (i < ZT_MAX_PEER_NETWORK_PATHS) {
-				p += np->_paths[np->_numPaths++].deserialize(b,p);
-			} else {
-				// Skip any paths beyond max, but still read stream
-				Path foo;
-				p += foo.deserialize(b,p);
-			}
-		}
-
-		const unsigned int numNetworkComs = b.template at<uint32_t>(p); p += 4;
-		for(unsigned int i=0;i<numNetworkComs;++i) {
-			_NetworkCom &c = np->_networkComs[b.template at<uint64_t>(p)]; p += 8;
-			c.ts = b.template at<uint64_t>(p); p += 8;
-			p += c.com.deserialize(b,p);
-		}
-
-		const unsigned int numLastPushed = b.template at<uint32_t>(p); p += 4;
-		for(unsigned int i=0;i<numLastPushed;++i) {
-			const uint64_t nwid = b.template at<uint64_t>(p); p += 8;
-			const uint64_t ts = b.template at<uint64_t>(p); p += 8;
-			np->_lastPushedComs.set(nwid,ts);
-		}
-
-		return np;
-	}
-
 private:
 	void _doDeadPathDetection(Path &p,const uint64_t now);
 	Path *_getBestPath(const uint64_t now);
 	Path *_getBestPath(const uint64_t now,int inetAddressFamily);
 
-	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH]; // computed with key agreement, not serialized
+	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 
 	const RuntimeEnvironment *RR;
 	uint64_t _lastUsed;
@@ -585,17 +429,6 @@ private:
 	unsigned int _numPaths;
 	unsigned int _latency;
 	unsigned int _directPathPushCutoffCount;
-
-	struct _NetworkCom
-	{
-		_NetworkCom() {}
-		_NetworkCom(uint64_t t,const CertificateOfMembership &c) : ts(t),com(c) {}
-		uint64_t ts;
-		CertificateOfMembership com;
-	};
-	Hashtable<uint64_t,_NetworkCom> _networkComs;
-	Hashtable<uint64_t,uint64_t> _lastPushedComs;
-	Mutex _networkComs_m;
 
 	AtomicCounter __refCount;
 };

@@ -21,14 +21,15 @@
 
 #include <stdint.h>
 
+#include <vector>
+
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"
+#include "Address.hpp"
+#include "MAC.hpp"
+#include "Tag.hpp"
 
 namespace ZeroTier {
-
-class Address;
-class RuntimeEnvironment;
-class MAC;
 
 /**
  * Network packet filter for rules engine
@@ -42,8 +43,8 @@ public:
 	 * This returns whether or not the packet should be accepted and may also
 	 * take other actions for e.g. the TEE and REDIRECT targets.
 	 *
-	 * @param RR ZeroTier runtime environment (context)
 	 * @param nwid ZeroTier network ID
+	 * @param receiving True if on receiving side, false on sending side
 	 * @param ztSource Source ZeroTier address
 	 * @param ztDest Destination ZeroTier address
 	 * @param macSource Ethernet layer source address
@@ -54,10 +55,14 @@ public:
 	 * @param vlanId 16-bit VLAN ID
 	 * @param rules Pointer to array of rules
 	 * @param ruleCount Number of rules
+	 * @param tags Tags associated with this node on this network
+	 * @param tagCount Number of tags
+	 * @param sendCopyOfPacketTo Result parameter: if non-NULL send a copy of this packet to another node
+	 * @return True if packet should be accepted for send or receive
 	 */
 	static bool run(
-		const RuntimeEnvironment *RR,
 		const uint64_t nwid,
+		const bool receiving,
 		const Address &ztSource,
 		const Address &ztDest,
 		const MAC &macSource,
@@ -67,7 +72,10 @@ public:
 		const unsigned int etherType,
 		const unsigned int vlanId,
 		const ZT_VirtualNetworkRule *rules,
-		const unsigned int ruleCount);
+		const unsigned int ruleCount,
+		const Tag *tags,
+		const unsigned int tagCount,
+		Address &sendCopyOfPacketTo);
 };
 
 } // namespace ZeroTier

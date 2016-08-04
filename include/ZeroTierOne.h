@@ -97,11 +97,6 @@ extern "C" {
 #define ZT_MAX_NETWORK_SPECIALISTS 256
 
 /**
- * Maximum number of static physical to ZeroTier address mappings (typically relays, etc.)
- */
-#define ZT_MAX_NETWORK_PINNED 16
-
-/**
  * Maximum number of multicast group subscriptions per network
  */
 #define ZT_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS 4096
@@ -110,6 +105,16 @@ extern "C" {
  * Maximum number of base (non-capability) network rules
  */
 #define ZT_MAX_NETWORK_RULES 256
+
+/**
+ * Maximum number of per-node capabilities per network
+ */
+#define ZT_MAX_NETWORK_CAPABILITIES 64
+
+/**
+ * Maximum number of per-node tags per network
+ */
+#define ZT_MAX_NETWORK_TAGS 16
 
 /**
  * Maximum number of direct network paths to a given peer
@@ -125,11 +130,6 @@ extern "C" {
  * Maximum number of rules per capability
  */
 #define ZT_MAX_CAPABILITY_RULES 64
-
-/**
- * Maximum length of a capbility's short descriptive name
- */
-#define ZT_MAX_CAPABILITY_NAME_LENGTH 63
 
 /**
  * Global maximum length for capability chain of custody (including initial issue)

@@ -35,6 +35,8 @@
 #include "MulticastGroup.hpp"
 #include "Address.hpp"
 #include "CertificateOfMembership.hpp"
+#include "Capability.hpp"
+#include "Tag.hpp"
 #include "Dictionary.hpp"
 
 /**
@@ -76,6 +78,8 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION "majv"
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION "minv"
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION "revv"
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_RULES "Mr"
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_CAPABILITY_RULES "Mcr"
 
 // These dictionary keys are short so they don't take up much room.
 
@@ -288,6 +292,32 @@ public:
 	inline bool operator==(const NetworkConfig &nc) const { return (memcmp(this,&nc,sizeof(NetworkConfig)) == 0); }
 	inline bool operator!=(const NetworkConfig &nc) const { return (!(*this == nc)); }
 
+	/**
+	 * Add a specialist or mask flags if already present
+	 *
+	 * This masks the existing flags if the specialist is already here or adds
+	 * it otherwise.
+	 *
+	 * @param a Address of specialist
+	 * @param f Flags (OR of specialist role/type flags)
+	 * @return True if successfully masked or added
+	 */
+	inline bool addSpecialist(const Address &a,const uint64_t f)
+	{
+		const uint64_t aint = a.toInt();
+		for(unsigned int i=0;i<specialistCount;++i) {
+			if ((specialists[i] & 0xffffffffffULL) == aint) {
+				specialists[i] |= f;
+				return true;
+			}
+		}
+		if (specialistCount < ZT_MAX_NETWORK_SPECIALISTS) {
+			specialists[specialistCount++] = f | aint;
+			return true;
+		}
+		return false;
+	}
+
 	/*
 	inline void dump() const
 	{
@@ -315,32 +345,6 @@ public:
 		printf("com==%s\n",com.toString().c_str());
 	}
 	*/
-
-	/**
-	 * Add a specialist or mask flags if already present
-	 *
-	 * This masks the existing flags if the specialist is already here or adds
-	 * it otherwise.
-	 *
-	 * @param a Address of specialist
-	 * @param f Flags (OR of specialist role/type flags)
-	 * @return True if successfully masked or added
-	 */
-	inline bool addSpecialist(const Address &a,const uint64_t f)
-	{
-		const uint64_t aint = a.toInt();
-		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & 0xffffffffffULL) == aint) {
-				specialists[i] |= f;
-				return true;
-			}
-		}
-		if (specialistCount < ZT_MAX_NETWORK_SPECIALISTS) {
-			specialists[specialistCount++] = f | aint;
-			return true;
-		}
-		return false;
-	}
 
 	/**
 	 * Network ID that this configuration applies to
@@ -398,6 +402,16 @@ public:
 	unsigned int ruleCount;
 
 	/**
+	 * Number of capabilities
+	 */
+	unsigned int capabilityCount;
+
+	/**
+	 * Number of tags
+	 */
+	unsigned int tagCount;
+
+	/**
 	 * Specialist devices
 	 *
 	 * For each entry the least significant 40 bits are the device's ZeroTier
@@ -416,9 +430,19 @@ public:
 	InetAddress staticIps[ZT_MAX_ZT_ASSIGNED_ADDRESSES];
 
 	/**
-	 * Rules table
+	 * Base network rules
 	 */
 	ZT_VirtualNetworkRule rules[ZT_MAX_NETWORK_RULES];
+
+	/**
+	 * Capabilities for this node on this network
+	 */
+	Capability capabilities[ZT_MAX_NETWORK_CAPABILITIES];
+
+	/**
+	 * Tags for this node on this network
+	 */
+	Tag tags[ZT_MAX_NETWORK_TAGS];
 
 	/**
 	 * Network type (currently just public or private)

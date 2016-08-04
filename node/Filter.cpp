@@ -19,15 +19,8 @@
 #include <stdint.h>
 
 #include "Constants.hpp"
-#include "RuntimeEnvironment.hpp"
-#include "Address.hpp"
-#include "MAC.hpp"
-#include "InetAddress.hpp"
 #include "Filter.hpp"
-#include "Packet.hpp"
-#include "Switch.hpp"
-#include "Topology.hpp"
-#include "Node.hpp"
+#include "InetAddress.hpp"
 
 // Returns true if packet appears valid; pos and proto will be set
 static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsigned int &pos,unsigned int &proto)
@@ -61,8 +54,8 @@ static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsig
 namespace ZeroTier {
 
 bool Filter::run(
-	const RuntimeEnvironment *RR,
 	const uint64_t nwid,
+	const bool receiving,
 	const Address &ztSource,
 	const Address &ztDest,
 	const MAC &macSource,
@@ -72,8 +65,13 @@ bool Filter::run(
 	const unsigned int etherType,
 	const unsigned int vlanId,
 	const ZT_VirtualNetworkRule *rules,
-	const unsigned int ruleCount)
+	const unsigned int ruleCount,
+	const Tag *tags,
+	const unsigned int tagCount,
+	Address &sendCopyOfPacketTo)
 {
+	sendCopyOfPacketTo.zero();
+
 	// For each set of rules we start by assuming that they match (since no constraints
 	// yields a 'match all' rule).
 	uint8_t thisSetMatches = 1;
@@ -92,6 +90,8 @@ bool Filter::run(
 					// This set did match, so perform action!
 					if (rt != ZT_NETWORK_RULE_ACTION_DROP) {
 						if ((rt == ZT_NETWORK_RULE_ACTION_TEE)||(rt == ZT_NETWORK_RULE_ACTION_REDIRECT)) {
+							sendCopyOfPacketTo = rules[rn].v.zt;
+							/*
 							// Tee and redirect both want this frame copied to somewhere else.
 							Packet outp(Address(rules[rn].v.zt),RR->identity.address(),Packet::VERB_EXT_FRAME);
 							outp.append(nwid);
@@ -102,6 +102,7 @@ bool Filter::run(
 							outp.append(frameData,frameLen);
 							outp.compress();
 							RR->sw->send(outp,true,nwid);
+							*/
 						}
 						// For REDIRECT we will want to DROP at this node. For TEE we ACCEPT at this node but
 						// also forward it along as we just did.
@@ -244,9 +245,20 @@ bool Filter::run(
 				thisRuleMatches = (uint8_t)((frameLen >= (unsigned int)rules[rn].v.frameSize[0])&&(frameLen <= (unsigned int)rules[rn].v.frameSize[1]));
 				break;
 			case ZT_NETWORK_RULE_MATCH_TAG_VALUE_RANGE:
-				break;
 			case ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ALL:
 			case ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ANY:
+				for(unsigned int i=0;i<tagCount;++i) { // sequential scan is probably fastest since this is going to be <64 entries (usually only one or two)
+					if (tags[i].id() == rules[rn].v.tag.id) {
+						if (rt == ZT_NETWORK_RULE_MATCH_TAG_VALUE_RANGE) {
+							thisRuleMatches = (uint8_t)((tags[i].value() >= rules[rn].v.tag.value[0])&&(tags[i].value() <= rules[rn].v.tag.value[1]));
+						} else if (rt == ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ALL) {
+							thisRuleMatches = (uint8_t)((tags[i].value() & rules[rn].v.tag.value[0]) == rules[rn].v.tag.value[0]);
+						} else if (rt == ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ANY) {
+							thisRuleMatches = (uint8_t)((tags[i].value() & rules[rn].v.tag.value[0]) != 0);
+						}
+						break;
+					}
+				}
 				break;
 		}
 

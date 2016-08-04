@@ -38,6 +38,9 @@
 #include "Node.hpp"
 #include "DeferredPackets.hpp"
 #include "Filter.hpp"
+#include "CertificateOfMembership.hpp"
+#include "Capability.hpp"
+#include "Tag.hpp"
 
 namespace ZeroTier {
 
@@ -106,7 +109,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
 				case Packet::VERB_EXT_FRAME:                      return _doEXT_FRAME(RR,peer);
 				case Packet::VERB_ECHO:                           return _doECHO(RR,peer);
 				case Packet::VERB_MULTICAST_LIKE:                 return _doMULTICAST_LIKE(RR,peer);
-				case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return _doNETWORK_MEMBERSHIP_CERTIFICATE(RR,peer);
+				case Packet::VERB_NETWORK_CREDENTIALS:            return _doNETWORK_CREDENTIALS(RR,peer);
 				case Packet::VERB_NETWORK_CONFIG_REQUEST:         return _doNETWORK_CONFIG_REQUEST(RR,peer);
 				case Packet::VERB_MULTICAST_GATHER:               return _doMULTICAST_GATHER(RR,peer);
 				case Packet::VERB_MULTICAST_FRAME:                return _doMULTICAST_FRAME(RR,peer);
@@ -155,21 +158,9 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				break;
 
 			case Packet::ERROR_IDENTITY_COLLISION:
-				if (RR->topology->isRoot(peer->identity()))
+				if (RR->topology->isUpstream(peer->identity()))
 					RR->node->postEvent(ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION);
 				break;
-
-			case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE: {
-				/* Note: certificates are public so it's safe to push them to anyone
-				 * who asks. */
-				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
-				if ((network)&&(network->hasConfig())&&(network->config().com)) {
-					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
-					network->config().com.serialize(outp);
-					outp.armor(peer->key(),true);
-					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
-				}
-			}	break;
 
 			case Packet::ERROR_NETWORK_ACCESS_DENIED_: {
 				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
@@ -218,9 +209,13 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer
 		uint64_t worldTimestamp = 0;
 		{
 			unsigned int ptr = ZT_PROTO_VERB_HELLO_IDX_IDENTITY + id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
-			if (ptr < size()) // ZeroTier One < 1.0.3 did not include physical destination address info
+
+			// Get external surface address if present (was not in old versions)
+			if (ptr < size())
 				ptr += externalSurfaceAddress.deserialize(*this,ptr);
-			if ((ptr + 16) <= size()) { // older versions also did not include World IDs or timestamps
+
+			// Get world ID and world timestamp if present (was not in old versions)
+			if ((ptr + 16) <= size()) {
 				worldId = at<uint64_t>(ptr); ptr += 8;
 				worldTimestamp = at<uint64_t>(ptr);
 			}
@@ -295,7 +290,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer
 		}
 
 		if (externalSurfaceAddress)
-			RR->sa->iam(id.address(),_localAddress,_remoteAddress,externalSurfaceAddress,RR->topology->isRoot(id),RR->node->now());
+			RR->sa->iam(id.address(),_localAddress,_remoteAddress,externalSurfaceAddress,RR->topology->isUpstream(id),RR->node->now());
 
 		Packet outp(id.address(),RR->identity.address(),Packet::VERB_OK);
 		outp.append((unsigned char)Packet::VERB_HELLO);
@@ -379,13 +374,15 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 					return true;
 				}
 
-				const bool trusted = RR->topology->isRoot(peer->identity());
-
 				InetAddress externalSurfaceAddress;
 				unsigned int ptr = ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2;
-				if (ptr < size()) // ZeroTier One < 1.0.3 did not include this field
+
+				// Get reported external surface address if present (was not on old versions)
+				if (ptr < size())
 					ptr += externalSurfaceAddress.deserialize(*this,ptr);
-				if ((trusted)&&((ptr + 2) <= size())) { // older versions also did not include this field, and right now we only use if from a root
+
+				// Handle world updates from root servers if present (was not on old versions)
+				if (((ptr + 2) <= size())&&(RR->topology->isRoot(peer->identity()))) {
 					World worldUpdate;
 					const unsigned int worldLen = at<uint16_t>(ptr); ptr += 2;
 					if (worldLen > 0) {
@@ -401,17 +398,13 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
 
 				if (externalSurfaceAddress)
-					RR->sa->iam(peer->address(),_localAddress,_remoteAddress,externalSurfaceAddress,trusted,RR->node->now());
+					RR->sa->iam(peer->address(),_localAddress,_remoteAddress,externalSurfaceAddress,RR->topology->isUpstream(peer->identity()),RR->node->now());
 			}	break;
 
 			case Packet::VERB_WHOIS: {
-				if (RR->topology->isRoot(peer->identity())) {
+				if (RR->topology->isUpstream(peer->identity())) {
 					const Identity id(*this,ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY);
-					// Right now we can skip this since OK(WHOIS) is only accepted from
-					// roots. In the future it should be done if we query less trusted
-					// sources.
-					//if (id.locallyValidate())
-						RR->sw->doAnythingWaitingForPeer(RR->topology->addPeer(SharedPtr<Peer>(new Peer(RR,RR->identity,id))));
+					RR->sw->doAnythingWaitingForPeer(RR->topology->addPeer(SharedPtr<Peer>(new Peer(RR,RR->identity,id))));
 				}
 			} break;
 
@@ -544,7 +537,6 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 			if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD) {
 				if (!network->isAllowed(peer)) {
 					TRACE("dropped FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)network->id());
-					_sendErrorNeedCertificate(RR,peer,network->id());
 					return true;
 				}
 
@@ -599,7 +591,6 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 
 				if (!network->isAllowed(peer)) {
 					TRACE("dropped EXT_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),network->id());
-					_sendErrorNeedCertificate(RR,peer,network->id());
 					return true;
 				}
 
@@ -704,20 +695,34 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 	return true;
 }
 
-bool IncomingPacket::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
 		CertificateOfMembership com;
+		Capability cap;
+		Tag tag;
 
-		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
-		while (ptr < size()) {
-			ptr += com.deserialize(*this,ptr);
+		unsigned int p = ZT_PACKET_IDX_PAYLOAD;
+		while ((p < size())&&((*this)[p])) {
+			p += com.deserialize(*this,p);
 			peer->validateAndSetNetworkMembershipCertificate(com.networkId(),com);
 		}
+		++p; // skip trailing 0 after COMs if present
 
-		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE,0,Packet::VERB_NOP);
+		if (p < size()) { // check if new capabilities and tags fields are present
+			const unsigned int numCapabilities = at<uint16_t>(p); p += 2;
+			for(unsigned int i=0;i<numCapabilities;++i) {
+				p += cap.deserialize(*this,p);
+			}
+			const unsigned int numTags = at<uint16_t>(p); p += 2;
+			for(unsigned int i=0;i<numTags;++i) {
+				p += tag.deserialize(*this,p);
+			}
+		}
+
+		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CREDENTIALS,0,Packet::VERB_NOP);
 	} catch ( ... ) {
-		TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped NETWORK_CREDENTIALS from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
@@ -859,7 +864,6 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 			// that cert might be what we needed.
 			if (!network->isAllowed(peer)) {
 				TRACE("dropped MULTICAST_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)network->id());
-				_sendErrorNeedCertificate(RR,peer,network->id());
 				return true;
 			}
 
@@ -1069,22 +1073,8 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 		// into the one we send along to next hops.
 		const unsigned int lengthOfSignedPortionAndSignature = 29 + vlf;
 
-		// Get previous hop's credential, if any
-		const unsigned int previousHopCredentialLength = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 29 + vlf);
-		CertificateOfMembership previousHopCom;
-		if (previousHopCredentialLength >= 1) {
-			switch((*this)[ZT_PACKET_IDX_PAYLOAD + 31 + vlf]) {
-				case 0x01: { // network certificate of membership for previous hop
-					const unsigned int phcl = previousHopCom.deserialize(*this,ZT_PACKET_IDX_PAYLOAD + 32 + vlf);
-					if (phcl != (previousHopCredentialLength - 1)) {
-						TRACE("dropped CIRCUIT_TEST from %s(%s): previous hop COM invalid (%u != %u)",source().toString().c_str(),_remoteAddress.toString().c_str(),phcl,(previousHopCredentialLength - 1));
-						return true;
-					}
-				}	break;
-				default: break;
-			}
-		}
-		vlf += previousHopCredentialLength;
+		// Add length of second "additional fields" section.
+		vlf += at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 29 + vlf);
 
 		// Check credentials (signature already verified)
 		NetworkConfig originatorCredentialNetworkConfig;
@@ -1166,13 +1156,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 		if (breadth > 0) {
 			Packet outp(Address(),RR->identity.address(),Packet::VERB_CIRCUIT_TEST);
 			outp.append(field(ZT_PACKET_IDX_PAYLOAD,lengthOfSignedPortionAndSignature),lengthOfSignedPortionAndSignature);
-			const unsigned int previousHopCredentialPos = outp.size();
-			outp.append((uint16_t)0); // no previous hop credentials: default
-			if ((originatorCredentialNetworkConfig)&&(!originatorCredentialNetworkConfig.isPublic())&&(originatorCredentialNetworkConfig.com)) {
-				outp.append((uint8_t)0x01); // COM
-				originatorCredentialNetworkConfig.com.serialize(outp);
-				outp.setAt<uint16_t>(previousHopCredentialPos,(uint16_t)(outp.size() - (previousHopCredentialPos + 2)));
-			}
+			outp.append((uint16_t)0); // no additional fields
 			if (remainingHopsPtr < size())
 				outp.append(field(remainingHopsPtr,size() - remainingHopsPtr),size() - remainingHopsPtr);
 
@@ -1241,7 +1225,7 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 	try {
 		// If this were allowed from anyone, it would itself be a DOS vector. Right
 		// now we only allow it from roots and controllers of networks you have joined.
-		bool allowed = RR->topology->isRoot(peer->identity());
+		bool allowed = RR->topology->isUpstream(peer->identity());
 		if (!allowed) {
 			std::vector< SharedPtr<Network> > allNetworks(RR->node->allNetworks());
 			for(std::vector< SharedPtr<Network> >::const_iterator n(allNetworks.begin());n!=allNetworks.end();++n) {
@@ -1297,16 +1281,6 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 	} catch ( ... ) {
 		TRACE("dropped REQUEST_PROOF_OF_WORK from %s(%s): unexpected exception",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 	}
-	return true;
-}
-
-bool IncomingPacket::_doREQUEST_OBJECT(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
-{
-	return true;
-}
-
-bool IncomingPacket::_doOBJECT_UPDATED(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
-{
 	return true;
 }
 
@@ -1386,17 +1360,6 @@ bool IncomingPacket::testSalsa2012Sha512ProofOfWorkResult(unsigned int difficult
 	}
 
 	return true;
-}
-
-void IncomingPacket::_sendErrorNeedCertificate(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,uint64_t nwid)
-{
-	Packet outp(source(),RR->identity.address(),Packet::VERB_ERROR);
-	outp.append((unsigned char)verb());
-	outp.append(packetId());
-	outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
-	outp.append(nwid);
-	outp.armor(peer->key(),true);
-	RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 }
 
 } // namespace ZeroTier

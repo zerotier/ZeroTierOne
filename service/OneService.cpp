@@ -705,6 +705,9 @@ public:
 			}
 			authToken = _trimString(authToken);
 
+			// Clean up any legacy files if present
+			OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S + "peers.save").c_str());
+
 			_node = new Node(
 				OSUtils::now(),
 				this,

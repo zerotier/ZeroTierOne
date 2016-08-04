@@ -51,19 +51,23 @@
  *   + Yet another multicast redesign
  *   + New crypto completely changes key agreement cipher
  * 4 - 0.6.0 ... 1.0.6
- *   + New identity format based on hashcash design
+ *   + BREAKING CHANGE: New identity format based on hashcash design
  * 5 - 1.1.0 ... 1.1.5
  *   + Supports circuit test, proof of work, and echo
  *   + Supports in-band world (root server definition) updates
  *   + Clustering! (Though this will work with protocol v4 clients.)
  *   + Otherwise backward compatible with protocol v4
  * 6 - 1.1.5 ... 1.1.10
- *   + Deprecate old dictionary-based network config format
- *   + Introduce new binary serialized network config and meta-data
- * 7 - 1.1.10 -- CURRENT
+ *   + Network configuration format revisions including binary values
+ * 7 - 1.1.10 -- 1.2.0
  *   + Introduce trusted paths for local SDN use
+ * 8 - 1.2.0  -- CURRENT
+ *   + Multipart network configurations for large network configs
+ *   + Tags and Capabilities
+ *   + Inline push of CertificateOfMembership deprecated
+ *   + Certificates of representation for federation and mesh
  */
-#define ZT_PROTO_VERSION 7
+#define ZT_PROTO_VERSION 8
 
 /**
  * Minimum supported protocol version
@@ -523,7 +527,7 @@ public:
 		/**
 		 * No operation (ignored, no reply)
 		 */
-		VERB_NOP = 0,
+		VERB_NOP = 0x00,
 
 		/**
 		 * Announcement of a node's existence:
@@ -566,7 +570,7 @@ public:
 		 *
 		 * ERROR has no payload.
 		 */
-		VERB_HELLO = 1,
+		VERB_HELLO = 0x01,
 
 		/**
 		 * Error response:
@@ -575,7 +579,7 @@ public:
 		 *   <[1] error code>
 		 *   <[...] error-dependent payload>
 		 */
-		VERB_ERROR = 2,
+		VERB_ERROR = 0x02,
 
 		/**
 		 * Success response:
@@ -583,7 +587,7 @@ public:
 		 *   <[8] in-re packet ID>
 		 *   <[...] request-specific payload>
 		 */
-		VERB_OK = 3,
+		VERB_OK = 0x03,
 
 		/**
 		 * Query an identity by address:
@@ -598,7 +602,7 @@ public:
 		 * If the address is not found, no response is generated. WHOIS requests
 		 * will time out much like ARP requests and similar do in L2.
 		 */
-		VERB_WHOIS = 4,
+		VERB_WHOIS = 0x04,
 
 		/**
 		 * Meet another node at a given protocol address:
@@ -626,7 +630,7 @@ public:
 		 *
 		 * No OK or ERROR is generated.
 		 */
-		VERB_RENDEZVOUS = 5,
+		VERB_RENDEZVOUS = 0x05,
 
 		/**
 		 * ZT-to-ZT unicast ethernet frame (shortened EXT_FRAME):
@@ -642,31 +646,29 @@ public:
 		 * ERROR may be generated if a membership certificate is needed for a
 		 * closed network. Payload will be network ID.
 		 */
-		VERB_FRAME = 6,
+		VERB_FRAME = 0x06,
 
 		/**
 		 * Full Ethernet frame with MAC addressing and optional fields:
 		 *   <[8] 64-bit network ID>
 		 *   <[1] flags>
-		 *  [<[...] certificate of network membership>]
+		 *  [<[...] certificate of network membership (DEPRECATED)>]
 		 *   <[6] destination MAC or all zero for destination node>
 		 *   <[6] source MAC or all zero for node of origin>
 		 *   <[2] 16-bit ethertype>
 		 *   <[...] ethernet payload>
 		 *
 		 * Flags:
-		 *   0x01 - Certificate of network membership is attached
+		 *   0x01 - Certificate of network membership attached (DEPRECATED)
 		 *
 		 * An extended frame carries full MAC addressing, making them a
 		 * superset of VERB_FRAME. They're used for bridging or when we
 		 * want to attach a certificate since FRAME does not support that.
 		 *
-		 * Multicast frames may not be sent as EXT_FRAME.
-		 *
 		 * ERROR may be generated if a membership certificate is needed for a
 		 * closed network. Payload will be network ID.
 		 */
-		VERB_EXT_FRAME = 7,
+		VERB_EXT_FRAME = 0x07,
 
 		/**
 		 * ECHO request (a.k.a. ping):
@@ -676,7 +678,7 @@ public:
 		 * is generated. Response to ECHO requests is optional and ECHO may be
 		 * ignored if a node detects a possible flood.
 		 */
-		VERB_ECHO = 8,
+		VERB_ECHO = 0x08,
 
 		/**
 		 * Announce interest in multicast group(s):
@@ -690,45 +692,76 @@ public:
 		 * controllers and root servers. In the current network, root servers
 		 * will provide the service of final multicast cache.
 		 *
-		 * If sending LIKEs to root servers for backward compatibility reasons,
-		 * VERB_NETWORK_MEMBERSHIP_CERTIFICATE must be sent as well ahead of
-		 * time so that roots can authenticate GATHER requests.
+		 * VERB_NETWORK_CREDENTIALS should be pushed along with this, especially
+		 * if using upstream (e.g. root) nodes as multicast databases. This allows
+		 * GATHERs to be authenticated.
 		 *
 		 * OK/ERROR are not generated.
 		 */
-		VERB_MULTICAST_LIKE = 9,
+		VERB_MULTICAST_LIKE = 0x09,
 
 		/**
-		 * Network member certificate replication/push:
+		 * Network membership credential push:
 		 *   <[...] serialized certificate of membership>
-		 *   [ ... additional certificates may follow ...]
+		 *   [<[...] additional certificates of membership>]
+		 *   <[1] null byte for backward compatibility (see below)>
+		 *   <[2] 16-bit number of capabilities>
+		 *   <[...] one or more serialized Capability>
+		 *   <[2] 16-bit number of tags>
+		 *   <[...] one or more serialized Tags>
 		 *
 		 * This is sent in response to ERROR_NEED_MEMBERSHIP_CERTIFICATE and may
 		 * be pushed at any other time to keep exchanged certificates up to date.
 		 *
+		 * Protocol versions prior to 8 do not support capabilities or tags and
+		 * just expect an array of COMs. Adding a single NULL byte after the COM
+		 * array causes these older versions to harmlessly abort parsing and
+		 * ignore the newer fields. The new version checks for this null byte to
+		 * indicate the end of the COM array, since all serialized COMs begin with
+		 * non-zero bytes (see CertificateOfMembership).
+		 *
 		 * OK/ERROR are not generated.
 		 */
-		VERB_NETWORK_MEMBERSHIP_CERTIFICATE = 10,
+		VERB_NETWORK_CREDENTIALS = 0x0a,
 
 		/**
-		 * DEPRECATED but still supported, interpreted as an object request:
+		 * Network configuration request:
+		 *   <[8] 64-bit network ID>
+		 *   <[2] 16-bit length of request meta-data dictionary>
+		 *   <[...] string-serialized request meta-data>
+		 *  [<[8] 64-bit timestamp of netconf we currently have>]
 		 *
-		 * /controller/network/<network ID>/member/<requester address>
-		 *
-		 * When received in this manner the response is sent via the old
-		 * OK(NETWORK_CONFIG_REQUEST) instead of OK(REQUEST_OBJECT). If the
-		 * response is too large, a dictionary is sent with the single key
-		 * OVF set to 1. In this case REQUEST_OBJECT must be used.
+		 * This message requests network configuration from a node capable of
+		 * providing it. If the optional revision is included, a response is
+		 * only generated if there is a newer network configuration available.
 		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
-		 *   <[2] 16-bit length of network configuration dictionary>
-		 *   <[...] network configuration dictionary>
+		 *   <[2] 16-bit length of network configuration dictionary field>
+		 *   <[...] network configuration dictionary (or fragment)>
+		 *   [<[4] 32-bit total length of assembled dictionary>]
+		 *   [<[4] 32-bit index of fragment in this reply>]
+		 *
+		 * Fields after the dictionary are extensions to support multipart
+		 * sending of large network configs. If they are not present the
+		 * sent config must be assumed to be whole.
 		 *
 		 * ERROR response payload:
 		 *   <[8] 64-bit network ID>
 		 */
-		VERB_NETWORK_CONFIG_REQUEST = 11,
+		VERB_NETWORK_CONFIG_REQUEST = 0x0b,
+
+		/**
+		 * Network configuration refresh request:
+		 *   <[...] array of 64-bit network IDs>
+		 *
+		 * This can be sent by the network controller to inform a node that it
+		 * should now make a NETWORK_CONFIG_REQUEST.
+		 *
+		 * It does not generate an OK or ERROR message, and is treated only as
+		 * a hint to refresh now.
+		 */
+		VERB_NETWORK_CONFIG_REFRESH = 0x0c,
 
 		/**
 		 * Request endpoints for multicast distribution:
@@ -737,10 +770,10 @@ public:
 		 *   <[6] MAC address of multicast group being queried>
 		 *   <[4] 32-bit ADI for multicast group being queried>
 		 *   <[4] 32-bit requested max number of multicast peers>
-		 *  [<[...] network certificate of membership>]
+		 *  [<[...] network certificate of membership (DEPRECATED)>]
 		 *
 		 * Flags:
-		 *   0x01 - Network certificate of membership is attached
+		 *   0x01 - COM is attached (DEPRECATED)
 		 *
 		 * This message asks a peer for additional known endpoints that have
 		 * LIKEd a given multicast group. It's sent when the sender wishes
@@ -749,6 +782,9 @@ public:
 		 *
 		 * More than one OK response can occur if the response is broken up across
 		 * multiple packets or if querying a clustered node.
+		 *
+		 * Send VERB_NETWORK_CREDENTIALS prior to GATHERing if doing so from
+		 * upstream nodes like root servers that are not involved in our network.
 		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
@@ -761,13 +797,13 @@ public:
 		 *
 		 * ERROR is not generated; queries that return no response are dropped.
 		 */
-		VERB_MULTICAST_GATHER = 13,
+		VERB_MULTICAST_GATHER = 0x0d,
 
 		/**
 		 * Multicast frame:
 		 *   <[8] 64-bit network ID>
 		 *   <[1] flags>
-		 *  [<[...] network certificate of membership>]
+		 *  [<[...] network certificate of membership (DEPRECATED)>]
 		 *  [<[4] 32-bit implicit gather limit>]
 		 *  [<[6] source MAC>]
 		 *   <[6] destination MAC (multicast address)>
@@ -776,7 +812,7 @@ public:
 		 *   <[...] ethernet payload>
 		 *
 		 * Flags:
-		 *   0x01 - Network certificate of membership is attached
+		 *   0x01 - Network certificate of membership attached (DEPRECATED)
 		 *   0x02 - Implicit gather limit field is present
 		 *   0x04 - Source MAC is specified -- otherwise it's computed from sender
 		 *
@@ -791,11 +827,11 @@ public:
 		 *   <[6] MAC address of multicast group>
 		 *   <[4] 32-bit ADI for multicast group>
 		 *   <[1] flags>
-		 *  [<[...] network certficate of membership>]
+		 *  [<[...] network certficate of membership (DEPRECATED)>]
 		 *  [<[...] implicit gather results if flag 0x01 is set>]
 		 *
 		 * OK flags (same bits as request flags):
-		 *   0x01 - OK includes certificate of network membership
+		 *   0x01 - OK includes certificate of network membership (DEPRECATED)
 		 *   0x02 - OK includes implicit gather results
 		 *
 		 * ERROR response payload:
@@ -803,7 +839,9 @@ public:
 		 *   <[6] multicast group MAC>
 		 *   <[4] 32-bit multicast group ADI>
 		 */
-		VERB_MULTICAST_FRAME = 14,
+		VERB_MULTICAST_FRAME = 0x0e,
+
+		// 0x0f is reserved for an old deprecated message
 
 		/**
 		 * Push of potential endpoints for direct communication:
@@ -839,7 +877,7 @@ public:
 		 *
 		 * OK and ERROR are not generated.
 		 */
-		VERB_PUSH_DIRECT_PATHS = 16,
+		VERB_PUSH_DIRECT_PATHS = 0x10,
 
 		/**
 		 * Source-routed circuit test message:
@@ -855,9 +893,8 @@ public:
 		 *   [ ... end of signed portion of request ... ]
 		 *   <[2] 16-bit length of signature of request>
 		 *   <[...] signature of request by originator>
-		 *   <[2] 16-bit previous hop credential length (including type)>
-		 *   [[1] previous hop credential type]
-		 *   [[...] previous hop credential]
+		 *   <[2] 16-bit length of additional fields>
+		 *   [[...] additional fields]
 		 *   <[...] next hop(s) in path>
 		 *
 		 * Flags:
@@ -866,9 +903,6 @@ public:
 		 *
 		 * Originator credential types:
 		 *   0x01 - 64-bit network ID for which originator is controller
-		 *
-		 * Previous hop credential types:
-		 *   0x01 - Certificate of network membership
 		 *
 		 * Path record format:
 		 *   <[1] 8-bit flags (unused, must be zero)>
@@ -918,7 +952,7 @@ public:
 		 *   <[8] 64-bit timestamp (echoed from original>
 		 *   <[8] 64-bit test ID (echoed from original)>
 		 */
-		VERB_CIRCUIT_TEST = 17,
+		VERB_CIRCUIT_TEST = 0x11,
 
 		/**
 		 * Circuit test hop report:
@@ -955,7 +989,7 @@ public:
 		 * If a test report is received and no circuit test was sent, it should be
 		 * ignored. This message generates no OK or ERROR response.
 		 */
-		VERB_CIRCUIT_TEST_REPORT = 18,
+		VERB_CIRCUIT_TEST_REPORT = 0x12,
 
 		/**
 		 * Request proof of work:
@@ -998,63 +1032,7 @@ public:
 		 *
 		 * ERROR has no payload.
 		 */
-		VERB_REQUEST_PROOF_OF_WORK = 19,
-
-		/**
-		 * Request an object or a chunk of an object with optional meta-data:
-		 *   <[8] 64-bit chunk offset>
-		 *   <[2] 16-bit chunk length or 0 for any / sender-preferred>
-		 *   <[2] 16-bit object path length in bytes>
-		 *   <[...] object path>
-		 *   <[2] 16-bit length of request meta-data dictionary>
-		 *   <[...] request meta-data dictionary>
-		 *
-		 * This is used to request an object. Objects can be things like network
-		 * configs, software updates, etc. This provides an in-band way to
-		 * distribute such things and obsoletes the network config specific
-		 * messages. (They are still supported for backward compatibility.)
-		 *
-		 * The use of path and request/response meta-data makes the semantics of
-		 * this analogous to HTTP POST, and it could therefore be mapped to
-		 * HTTP POST requests to permit plugins that leverage the ZT protocol
-		 * to do out-of-band things like special authentication, etc.
-		 *
-		 * Large objects can be transferred via repeated calls with higher and
-		 * higher chunk offsets and then SHA-512 verified on receipt, but this is
-		 * not efficient. It should not be used heavily as an alternative to
-		 * TCP. It's a bit more like X-Modem and other old-school SEND/ACK
-		 * protocols. It is potentially a good idea for software updates since
-		 * it means that ZT can update itself even on networks with no "vanilla"
-		 * Internet access.
-		 *
-		 * OK and ERROR responses are optional but recommended. ERROR responses
-		 * can include OBJECT_NOT_FOUND.
-		 *
-		 * OK response payload:
-		 *   <[16] first 16 bytes of SHA-512 of complete object>
-		 *   <[8] 64-bit total object size>
-		 *   <[8] 64-bit chunk offset>
-		 *   <[2] 16-bit length of chunk payload>
-		 *   <[...] chunk payload>
-		 */
-		VERB_REQUEST_OBJECT = 20,
-
-		/**
-		 * Notification of a remote object update:
-		 *   <[8] 64-bit total object size or 0 if unspecified here>
-		 *   <[16] first 16 bytes of SHA-512 of object (if size specified)>
-		 *   <[2] 16-bit length of object path>
-		 *   <[...] object path>
-		 *   <[2] 16-bit length of meta-data dictionary>
-		 *   <[...] meta-data dictionary>
-		 *
-		 * This can be sent to notify another peer that an object has updated and
-		 * should be re-requested. The receiving peer is not required to do anything
-		 * or send anything in response to this. If the first size field is zero, the
-		 * SHA-512 hash is also unspecified and should be zero. This means that the
-		 * object was updated but must be re-requested.
-		 */
-		VERB_OBJECT_UPDATED = 21
+		VERB_REQUEST_PROOF_OF_WORK = 0x13
 	};
 
 	/**
@@ -1063,31 +1041,28 @@ public:
 	enum ErrorCode
 	{
 		/* No error, not actually used in transit */
-		ERROR_NONE = 0,
+		ERROR_NONE = 0x00,
 
 		/* Invalid request */
-		ERROR_INVALID_REQUEST = 1,
+		ERROR_INVALID_REQUEST = 0x01,
 
 		/* Bad/unsupported protocol version */
-		ERROR_BAD_PROTOCOL_VERSION = 2,
+		ERROR_BAD_PROTOCOL_VERSION = 0x02,
 
 		/* Unknown object queried */
-		ERROR_OBJ_NOT_FOUND = 3,
+		ERROR_OBJ_NOT_FOUND = 0x03,
 
 		/* HELLO pushed an identity whose address is already claimed */
-		ERROR_IDENTITY_COLLISION = 4,
+		ERROR_IDENTITY_COLLISION = 0x04,
 
 		/* Verb or use case not supported/enabled by this node */
-		ERROR_UNSUPPORTED_OPERATION = 5,
-
-		/* Message to private network rejected -- no unexpired certificate on file */
-		ERROR_NEED_MEMBERSHIP_CERTIFICATE = 6,
+		ERROR_UNSUPPORTED_OPERATION = 0x05,
 
 		/* Tried to join network, but you're not a member */
-		ERROR_NETWORK_ACCESS_DENIED_ = 7, /* extra _ to avoid Windows name conflict */
+		ERROR_NETWORK_ACCESS_DENIED_ = 0x07, /* extra _ at end to avoid Windows name conflict */
 
 		/* Multicasts to this group are not wanted */
-		ERROR_UNWANTED_MULTICAST = 8
+		ERROR_UNWANTED_MULTICAST = 0x08
 	};
 
 //#ifdef ZT_TRACE
