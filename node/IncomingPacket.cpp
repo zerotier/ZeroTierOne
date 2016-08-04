@@ -465,12 +465,13 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 {
 	try {
 		if (payloadLength() == ZT_ADDRESS_LENGTH) {
-			Identity queried(RR->topology->getIdentity(Address(payload(),ZT_ADDRESS_LENGTH)));
-			if (queried) {
+			const Address addr(payload(),ZT_ADDRESS_LENGTH);
+			const Identity id(RR->topology->getIdentity(addr));
+			if (id) {
 				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 				outp.append((unsigned char)Packet::VERB_WHOIS);
 				outp.append(packetId());
-				queried.serialize(outp,false);
+				id.serialize(outp,false);
 				outp.armor(peer->key(),true);
 				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 			} else {
@@ -478,6 +479,10 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				if (RR->cluster)
 					RR->cluster->sendDistributedQuery(*this);
 #endif
+				if (!RR->topology->amRoot()) {
+					RR->sw->requestWhois(addr);
+					return false; // packet parse will be attempted again if we get a reply from upstream
+				}
 			}
 		} else {
 			TRACE("dropped WHOIS from %s(%s): missing or invalid address",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -492,7 +497,7 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		if (RR->topology->isUpstream(peer->identity())) {
+		if (RR->topology->isUpstream(peer->identity())) { // only upstream peers can tell us to rendezvous, otherwise this opens a potential amplification attack vector
 			const Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 			const SharedPtr<Peer> withPeer(RR->topology->getPeer(with));
 			if (withPeer) {
@@ -501,7 +506,7 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<
 				if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
 					peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP);
 
-					InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
+					const InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
 					TRACE("RENDEZVOUS from %s says %s might be at %s, starting NAT-t",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
 					if (RR->node->shouldUsePathForZeroTierTraffic(_localAddress,atAddr))
 						RR->sw->rendezvous(withPeer,_localAddress,atAddr);

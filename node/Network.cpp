@@ -50,10 +50,6 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 {
 	char confn[128],mcdbn[128];
 	Utils::snprintf(confn,sizeof(confn),"networks.d/%.16llx.conf",_id);
-	Utils::snprintf(mcdbn,sizeof(mcdbn),"networks.d/%.16llx.mcerts",_id);
-
-	// These files are no longer used, so clean them.
-	RR->node->dataStoreDelete(mcdbn);
 
 	if (_id == ZT_TEST_NETWORK_ID) {
 		applyConfiguration(NetworkConfig::createTestNetworkConfig(RR->identity.address()));
@@ -144,7 +140,7 @@ bool Network::tryAnnounceMulticastGroupsTo(const SharedPtr<Peer> &peer)
 	if (
 	    (_isAllowed(peer)) ||
 	    (peer->address() == this->controller()) ||
-	    (RR->topology->isRoot(peer->identity()))
+	    (RR->topology->isUpstream(peer->identity()))
 	   ) {
 		_announceMulticastGroupsTo(peer,_allMulticastGroups());
 		return true;
