@@ -446,7 +446,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				if ((flags & 0x01) != 0) { // deprecated but still used by older peers
 					CertificateOfMembership com;
 					offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS);
-					LockingPtr<Membership> m = peer->membership(com.networkId(),true);
+					LockingPtr<Membership> m(peer->membership(com.networkId(),true));
 					if (m) m->addCredential(RR,RR->node->now(),com);
 				}
 
@@ -586,7 +586,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				if ((flags & 0x01) != 0) { // deprecated but still used by old peers
 					CertificateOfMembership com;
 					comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
-					LockingPtr<Membership> m = peer->membership(com.networkId(),true);
+					LockingPtr<Membership> m(peer->membership(com.networkId(),true));
 					if (m) m->addCredential(RR,RR->node->now(),com);
 				}
 
@@ -707,7 +707,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 		unsigned int p = ZT_PACKET_IDX_PAYLOAD;
 		while ((p < size())&&((*this)[p])) {
 			p += com.deserialize(*this,p);
-			LockingPtr<Membership> m = peer->membership(com.networkId(),true);
+			LockingPtr<Membership> m(peer->membership(com.networkId(),true));
 			if (!m) return true; // sanity check
 			if (m->addCredential(RR,now,com) == 1) return false; // wait for WHOIS
 		}
@@ -717,7 +717,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 			const unsigned int numCapabilities = at<uint16_t>(p); p += 2;
 			for(unsigned int i=0;i<numCapabilities;++i) {
 				p += cap.deserialize(*this,p);
-				LockingPtr<Membership> m = peer->membership(cap.networkId(),true);
+				LockingPtr<Membership> m(peer->membership(cap.networkId(),true));
 				if (!m) return true; // sanity check
 				if (m->addCredential(RR,now,cap) == 1) return false; // wait for WHOIS
 			}
@@ -725,7 +725,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 			const unsigned int numTags = at<uint16_t>(p); p += 2;
 			for(unsigned int i=0;i<numTags;++i) {
 				p += tag.deserialize(*this,p);
-				LockingPtr<Membership> m = peer->membership(tag.networkId(),true);
+				LockingPtr<Membership> m(peer->membership(tag.networkId(),true));
 				if (!m) return true; // sanity check
 				if (m->addCredential(RR,now,tag) == 1) return false; // wait for WHOIS
 			}
@@ -868,7 +868,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 			if ((flags & 0x01) != 0) { // deprecated but still used by older peers
 				CertificateOfMembership com;
 				offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
-				LockingPtr<Membership> m = peer->membership(com.networkId(),true);
+				LockingPtr<Membership> m(peer->membership(com.networkId(),true));
 				if (m) m->addCredential(RR,RR->node->now(),com);
 			}
 

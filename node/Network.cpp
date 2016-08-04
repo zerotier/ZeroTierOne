@@ -29,6 +29,7 @@
 #include "Buffer.hpp"
 #include "NetworkController.hpp"
 #include "Node.hpp"
+#include "Peer.hpp"
 
 #include "../version.h"
 
@@ -384,17 +385,20 @@ bool Network::_isAllowed(const SharedPtr<Peer> &peer) const
 {
 	// Assumes _lock is locked
 	try {
-		if (!_config)
-			return false;
-		if (_config.isPublic())
-			return true;
-		return ((_config.com)&&(peer->networkMembershipCertificatesAgree(_id,_config.com)));
-	} catch (std::exception &exc) {
-		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer->address().toString().c_str(),exc.what());
+		if (_config) {
+			if (_config.isPublic()) {
+				return true;
+			} else {
+				LockingPtr<Membership> m(peer->membership(_id,false));
+				if (m) {
+					return _config.com.agreesWith(m->com());
+				}
+			}
+		}
 	} catch ( ... ) {
-		TRACE("isAllowed() check failed for peer %s: unexpected exception: unknown exception",peer->address().toString().c_str());
+		TRACE("isAllowed() check failed for peer %s: unexpected exception: unexpected exception",peer->address().toString().c_str());
 	}
-	return false; // default position on any failure
+	return false;
 }
 
 class _MulticastAnnounceAll
@@ -405,13 +409,13 @@ public:
 		_controller(nw->controller()),
 		_network(nw),
 		_anchors(nw->config().anchors()),
-		_rootAddresses(renv->topology->rootAddresses())
+		_upstreamAddresses(renv->topology->upstreamAddresses())
 	{}
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		if ( (_network->_isAllowed(p)) || // FIXME: this causes multicast LIKEs for public networks to get spammed
+		if ( (_network->_isAllowed(p)) || // FIXME: this causes multicast LIKEs for public networks to get spammed, which isn't terrible but is a bit stupid
 		     (p->address() == _controller) ||
-		     (std::find(_rootAddresses.begin(),_rootAddresses.end(),p->address()) != _rootAddresses.end()) ||
+		     (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),p->address()) != _upstreamAddresses.end()) ||
 				 (std::find(_anchors.begin(),_anchors.end(),p->address()) != _anchors.end()) ) {
 			peers.push_back(p);
 		}
@@ -422,7 +426,7 @@ private:
 	const Address _controller;
 	Network *const _network;
 	const std::vector<Address> _anchors;
-	const std::vector<Address> _rootAddresses;
+	const std::vector<Address> _upstreamAddresses;
 };
 void Network::_announceMulticastGroups()
 {
@@ -438,31 +442,30 @@ void Network::_announceMulticastGroupsTo(const SharedPtr<Peer> &peer,const std::
 {
 	// Assumes _lock is locked
 
-	// We push COMs ahead of MULTICAST_LIKE since they're used for access control -- a COM is a public
-	// credential so "over-sharing" isn't really an issue (and we only do so with roots).
-	if ((_config)&&(_config.com)&&(!_config.isPublic())&&(peer->needsOurNetworkMembershipCertificate(_id,RR->node->now(),true))) {
-		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
-		_config.com.serialize(outp);
-		RR->sw->send(outp,true,0);
+	// Anyone we announce multicast groups to will need our COM to authenticate GATHER requests.
+	{
+		LockingPtr<Membership> m(peer->membership(_id,false));
+		if (m) m->sendCredentialsIfNeeded(RR,RR->node->now(),*peer,_config);
 	}
 
-	{
-		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+	Packet outp(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
-		for(std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {
-			if ((outp.size() + 18) >= ZT_UDP_DEFAULT_PAYLOAD_MTU) {
-				RR->sw->send(outp,true,0);
-				outp.reset(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
-			}
-
-			// network ID, MAC, ADI
-			outp.append((uint64_t)_id);
-			mg->mac().appendTo(outp);
-			outp.append((uint32_t)mg->adi());
+	for(std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {
+		if ((outp.size() + 24) >= ZT_PROTO_MAX_PACKET_LENGTH) {
+			outp.compress();
+			RR->sw->send(outp,true,0);
+			outp.reset(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 		}
 
-		if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH)
-			RR->sw->send(outp,true,0);
+		// network ID, MAC, ADI
+		outp.append((uint64_t)_id);
+		mg->mac().appendTo(outp);
+		outp.append((uint32_t)mg->adi());
+	}
+
+	if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
+		outp.compress();
+		RR->sw->send(outp,true,0);
 	}
 }
 

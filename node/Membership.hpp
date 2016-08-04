@@ -115,6 +115,11 @@ public:
 	}
 
 	/**
+	 * @return This peer's COM if they have sent one
+	 */
+	inline const CertificateOfMembership &com() const { return _com; }
+
+	/**
 	 * @param nconf Network configuration
 	 * @param id Tag ID
 	 * @return Pointer to tag or NULL if not found

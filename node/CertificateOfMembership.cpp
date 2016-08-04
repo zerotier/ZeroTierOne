@@ -155,6 +155,9 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) c
 	unsigned int myidx = 0;
 	unsigned int otheridx = 0;
 
+	if ((_qualifierCount == 0)||(other._qualifierCount == 0))
+		return false;
+
 	while (myidx < _qualifierCount) {
 		// Fail if we're at the end of other, since this means the field is
 		// missing.

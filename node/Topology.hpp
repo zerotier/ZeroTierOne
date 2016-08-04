@@ -154,6 +154,14 @@ public:
 	}
 
 	/**
+	 * @return Vector of active upstream addresses (including roots)
+	 */
+	inline std::vector<Address> upstreamAddresses() const
+	{
+		return rootAddresses();
+	}
+
+	/**
 	 * @return Current World (copy)
 	 */
 	inline World world() const
