@@ -78,6 +78,62 @@ public:
 	~Network();
 
 	/**
+	 * Apply filters to an outgoing packet
+	 *
+	 * This applies filters from our network config and, if that doesn't match,
+	 * our capabilities in ascending order of capability ID. If there is a match
+	 * certain actions may be taken such as pushing credentials to ztDest and
+	 * sending a copy of the packet to a TEE or REDIRECT target.
+	 *
+	 * @param ztSource Source ZeroTier address
+	 * @param ztDest Destination ZeroTier address
+	 * @param macSource Ethernet layer source address
+	 * @param macDest Ethernet layer destination address
+	 * @param frameData Ethernet frame data
+	 * @param frameLen Ethernet frame payload length
+	 * @param etherType 16-bit ethernet type ID
+	 * @param vlanId 16-bit VLAN ID
+	 * @return True if packet should be sent to destination peer
+	 */
+	bool filterOutgoingPacket(
+		const Address &ztSource,
+		const Address &ztDest,
+		const MAC &macSource,
+		const MAC &macDest,
+		const uint8_t *frameData,
+		const unsigned int frameLen,
+		const unsigned int etherType,
+		const unsigned int vlanId);
+
+	/**
+	 * Apply filters to an incoming packet
+	 *
+	 * This applies filters from our network config and, if that doesn't match,
+	 * the peer's capabilities in ascending order of capability ID. If there is
+	 * a match certain actions may be taken such as sending a copy of the packet
+	 * to a TEE or REDIRECT target.
+	 *
+	 * @param ztSource Source Peer (to save an extra lookup)
+	 * @param ztDest Destination ZeroTier address
+	 * @param macSource Ethernet layer source address
+	 * @param macDest Ethernet layer destination address
+	 * @param frameData Ethernet frame data
+	 * @param frameLen Ethernet frame payload length
+	 * @param etherType 16-bit ethernet type ID
+	 * @param vlanId 16-bit VLAN ID
+	 * @return True if packet should be accepted locally
+	 */
+	bool filterIncomingPacket(
+		const SharedPtr<Peer> &ztSource,
+		const Address &ztDest,
+		const MAC &macSource,
+		const MAC &macDest,
+		const uint8_t *frameData,
+		const unsigned int frameLen,
+		const unsigned int etherType,
+		const unsigned int vlanId);
+
+	/**
 	 * @return Network ID
 	 */
 	inline uint64_t id() const throw() { return _id; }

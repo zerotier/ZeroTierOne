@@ -133,9 +133,14 @@ public:
 private:
 	uint64_t _timestamp;
 	uint64_t _nwid;
+	MAC _macSrc;
+	MAC _macDest;
 	unsigned int _limit;
+	unsigned int _frameLen;
+	unsigned int _etherType;
 	Packet _packet;
 	std::vector<Address> _alreadySentTo;
+	uint8_t _frameData[ZT_MAX_MTU];
 };
 
 } // namespace ZeroTier

@@ -41,7 +41,13 @@ void OutboundMulticast::init(
 {
 	_timestamp = timestamp;
 	_nwid = nwid;
+	if (src)
+		_macSrc = src;
+	else _macSrc.fromAddress(RR->identity.address(),nwid);
+	_macDest = dest.mac();
 	_limit = limit;
+	_frameLen = (len < ZT_MAX_MTU) ? len : ZT_MAX_MTU;
+	_etherType = etherType;
 
 	uint8_t flags = 0;
 	if (gatherLimit) flags |= 0x02;
@@ -68,23 +74,21 @@ void OutboundMulticast::init(
 	dest.mac().appendTo(_packet);
 	_packet.append((uint32_t)dest.adi());
 	_packet.append((uint16_t)etherType);
-	_packet.append(payload,len);
+	_packet.append(payload,_frameLen);
 	_packet.compress();
+
+	memcpy(_frameData,payload,_frameLen);
 }
 
 void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,const Address &toAddr)
 {
-	// TODO: apply Filter
-
-	SharedPtr<Peer> peer(RR->topology->getPeer(toAddr));
-	if (peer) {
-		// TODO: push creds if needed
+	const SharedPtr<Network> nw(RR->node->network(_nwid));
+	if ((nw)&&(nw->filterOutgoingPacket(RR->identity.address(),toAddr,_macSrc,_macDest,_frameData,_frameLen,_etherType,0))) {
+		//TRACE(">>MC %.16llx -> %s",(unsigned long long)this,toAddr.toString().c_str());
+		_packet.newInitializationVector();
+		_packet.setDestination(toAddr);
+		RR->sw->send(_packet,true,_nwid);
 	}
-
-	//TRACE(">>MC %.16llx -> %s",(unsigned long long)this,toAddr.toString().c_str());
-	_packet.newInitializationVector();
-	_packet.setDestination(toAddr);
-	RR->sw->send(_packet,true,_nwid);
 }
 
 } // namespace ZeroTier

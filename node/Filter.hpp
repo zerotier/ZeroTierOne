@@ -21,8 +21,6 @@
 
 #include <stdint.h>
 
-#include <vector>
-
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"
 #include "Address.hpp"
