@@ -24,7 +24,7 @@
 #include "Packet.hpp"
 #include "Node.hpp"
 
-#define ZT_CREDENTIAL_PUSH_EVERY (ZT_NETWORK_AUTOCONF_DELAY / 2)
+#define ZT_CREDENTIAL_PUSH_EVERY (ZT_NETWORK_AUTOCONF_DELAY / 4)
 
 namespace ZeroTier {
 

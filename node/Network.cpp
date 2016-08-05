@@ -482,6 +482,44 @@ bool Network::filterIncomingPacket(
 	const unsigned int etherType,
 	const unsigned int vlanId)
 {
+	uint32_t remoteTagIds[ZT_MAX_NETWORK_TAGS];
+	uint32_t remoteTagValues[ZT_MAX_NETWORK_TAGS];
+	const Tag *relevantLocalTags[ZT_MAX_NETWORK_TAGS];
+	unsigned int relevantLocalTagCount = 0;
+
+	Mutex::Lock _l(_lock);
+
+	Membership &m = _memberships[ztDest];
+	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
+
+	if (_doZtFilter(
+		RR,
+		_id,
+		true,
+		sourcePeer->address(),
+		ztDest,
+		macSource,
+		macDest,
+		frameData,
+		frameLen,
+		etherType,
+		vlanId,
+		_config.rules,
+		_config.ruleCount,
+		_config.tags,
+		_config.tagCount,
+		remoteTagIds,
+		remoteTagValues,
+		remoteTagCount,
+		relevantLocalTags,
+		relevantLocalTagCount
+	)) {
+		return true;
+	}
+
+
+
+	return false;
 }
 
 bool Network::subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const
