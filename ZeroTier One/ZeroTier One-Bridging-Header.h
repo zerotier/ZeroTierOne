@@ -4,3 +4,4 @@
 
 #import "AuthtokenCopy.h"
 #import "LaunchAtLoginController.h"
+#import "NodeStatus.h"

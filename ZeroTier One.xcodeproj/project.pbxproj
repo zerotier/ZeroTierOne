@@ -14,7 +14,6 @@
 		932D47361D1CDC9B004BCFE2 /* AboutViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932D47341D1CDC9B004BCFE2 /* AboutViewController.swift */; };
 		932D47371D1CDC9B004BCFE2 /* AboutViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */; };
 		932D473A1D220D63004BCFE2 /* LaunchAtLoginController.m in Sources */ = {isa = PBXBuildFile; fileRef = 932D47391D220D63004BCFE2 /* LaunchAtLoginController.m */; };
-		932D473C1D261ED4004BCFE2 /* NodeStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932D473B1D261ED4004BCFE2 /* NodeStatus.swift */; };
 		9330F1351CEAB4C400687EC8 /* ServiceCom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F1341CEAB4C400687EC8 /* ServiceCom.swift */; };
 		9330F1371CEBF87200687EC8 /* Network.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F1361CEBF87200687EC8 /* Network.swift */; };
 		9330F13B1CF534E500687EC8 /* NetworkInfoCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F13A1CF534E500687EC8 /* NetworkInfoCell.swift */; };
@@ -25,6 +24,7 @@
 		93326BEB1CE7D9B9005CA2AC /* JoinNetworkViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 93326BE91CE7D9B9005CA2AC /* JoinNetworkViewController.xib */; };
 		93326BEE1CE7DA30005CA2AC /* ShowNetworksViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93326BEC1CE7DA30005CA2AC /* ShowNetworksViewController.swift */; };
 		93326BEF1CE7DA30005CA2AC /* ShowNetworksViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 93326BED1CE7DA30005CA2AC /* ShowNetworksViewController.xib */; };
+		93D1675F1D54191C00330C99 /* NodeStatus.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D1675E1D54191C00330C99 /* NodeStatus.m */; };
 		93DAFB271D3F0BEE004D5417 /* about.html in Resources */ = {isa = PBXBuildFile; fileRef = 93DAFB261D3F0BEE004D5417 /* about.html */; };
 		93DAFE4B1CFE53CA00547CC4 /* AuthtokenCopy.m in Sources */ = {isa = PBXBuildFile; fileRef = 93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */; };
 /* End PBXBuildFile section */
@@ -38,7 +38,6 @@
 		932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = AboutViewController.xib; sourceTree = "<group>"; };
 		932D47381D220D63004BCFE2 /* LaunchAtLoginController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LaunchAtLoginController.h; sourceTree = "<group>"; };
 		932D47391D220D63004BCFE2 /* LaunchAtLoginController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LaunchAtLoginController.m; sourceTree = "<group>"; };
-		932D473B1D261ED4004BCFE2 /* NodeStatus.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NodeStatus.swift; sourceTree = "<group>"; };
 		9330F1341CEAB4C400687EC8 /* ServiceCom.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ServiceCom.swift; sourceTree = "<group>"; };
 		9330F1361CEBF87200687EC8 /* Network.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Network.swift; sourceTree = "<group>"; };
 		9330F13A1CF534E500687EC8 /* NetworkInfoCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkInfoCell.swift; sourceTree = "<group>"; };
@@ -51,6 +50,8 @@
 		93326BE91CE7D9B9005CA2AC /* JoinNetworkViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = JoinNetworkViewController.xib; sourceTree = "<group>"; };
 		93326BEC1CE7DA30005CA2AC /* ShowNetworksViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShowNetworksViewController.swift; sourceTree = "<group>"; };
 		93326BED1CE7DA30005CA2AC /* ShowNetworksViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = ShowNetworksViewController.xib; sourceTree = "<group>"; };
+		93D1675D1D54191C00330C99 /* NodeStatus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NodeStatus.h; sourceTree = "<group>"; };
+		93D1675E1D54191C00330C99 /* NodeStatus.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NodeStatus.m; sourceTree = "<group>"; };
 		93DAFB261D3F0BEE004D5417 /* about.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = about.html; sourceTree = "<group>"; };
 		93DAFE491CFE53C900547CC4 /* ZeroTier One-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZeroTier One-Bridging-Header.h"; sourceTree = "<group>"; };
 		93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AuthtokenCopy.m; sourceTree = "<group>"; };
@@ -109,8 +110,9 @@
 				932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */,
 				932D47381D220D63004BCFE2 /* LaunchAtLoginController.h */,
 				932D47391D220D63004BCFE2 /* LaunchAtLoginController.m */,
-				932D473B1D261ED4004BCFE2 /* NodeStatus.swift */,
 				93DAFB261D3F0BEE004D5417 /* about.html */,
+				93D1675D1D54191C00330C99 /* NodeStatus.h */,
+				93D1675E1D54191C00330C99 /* NodeStatus.m */,
 			);
 			path = "ZeroTier One";
 			sourceTree = "<group>";
@@ -196,11 +198,11 @@
 				932D47321D1CD861004BCFE2 /* PreferencesViewController.swift in Sources */,
 				932D473A1D220D63004BCFE2 /* LaunchAtLoginController.m in Sources */,
 				93326BDC1CE7C816005CA2AC /* AppDelegate.swift in Sources */,
-				932D473C1D261ED4004BCFE2 /* NodeStatus.swift in Sources */,
 				93DAFE4B1CFE53CA00547CC4 /* AuthtokenCopy.m in Sources */,
 				9330F13B1CF534E500687EC8 /* NetworkInfoCell.swift in Sources */,
 				93326BEA1CE7D9B9005CA2AC /* JoinNetworkViewController.swift in Sources */,
 				93326BEE1CE7DA30005CA2AC /* ShowNetworksViewController.swift in Sources */,
+				93D1675F1D54191C00330C99 /* NodeStatus.m in Sources */,
 				932D47361D1CDC9B004BCFE2 /* AboutViewController.swift in Sources */,
 				9330F1351CEAB4C400687EC8 /* ServiceCom.swift in Sources */,
 			);
