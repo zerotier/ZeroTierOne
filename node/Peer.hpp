@@ -40,10 +40,8 @@
 #include "SharedPtr.hpp"
 #include "AtomicCounter.hpp"
 #include "Hashtable.hpp"
-#include "Membership.hpp"
 #include "Mutex.hpp"
 #include "NonCopyable.hpp"
-#include "LockingPtr.hpp"
 
 namespace ZeroTier {
 
@@ -387,34 +385,6 @@ public:
 	}
 
 	/**
-	 * Get the membership record for this network, possibly creating if missing
-	 *
-	 * @param networkId Network ID
-	 * @param createIfMissing If true, create a Membership record if there isn't one
-	 * @return Single-scope locking pointer (see LockingPtr.hpp) to Membership or NULL if not found and createIfMissing is false
-	 */
-	inline LockingPtr<Membership> membership(const uint64_t networkId,bool createIfMissing)
-	{
-		_memberships_m.lock();
-		try {
-			if (createIfMissing) {
-				return LockingPtr<Membership>(&(_memberships[networkId]),&_memberships_m);
-			} else {
-				Membership *m = _memberships.get(networkId);
-				if (m) {
-					return LockingPtr<Membership>(m,&_memberships_m);
-				} else {
-					_memberships_m.unlock();
-					return LockingPtr<Membership>();
-				}
-			}
-		} catch ( ... ) {
-			_memberships_m.unlock();
-			throw;
-		}
-	}
-
-	/**
 	 * Find a common set of addresses by which two peers can link, if any
 	 *
 	 * @param a Peer A
@@ -459,9 +429,6 @@ private:
 	unsigned int _numPaths;
 	unsigned int _latency;
 	unsigned int _directPathPushCutoffCount;
-
-	Hashtable<uint64_t,Membership> _memberships;
-	Mutex _memberships_m;
 
 	AtomicCounter __refCount;
 };

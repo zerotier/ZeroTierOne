@@ -39,19 +39,22 @@ void OutboundMulticast::init(
 	const void *payload,
 	unsigned int len)
 {
+	uint8_t flags = 0;
+
 	_timestamp = timestamp;
 	_nwid = nwid;
-	if (src)
+	if (src) {
 		_macSrc = src;
-	else _macSrc.fromAddress(RR->identity.address(),nwid);
+		flags |= 0x04;
+	} else {
+		_macSrc.fromAddress(RR->identity.address(),nwid);
+	}
 	_macDest = dest.mac();
 	_limit = limit;
 	_frameLen = (len < ZT_MAX_MTU) ? len : ZT_MAX_MTU;
 	_etherType = etherType;
 
-	uint8_t flags = 0;
 	if (gatherLimit) flags |= 0x02;
-	if (src) flags |= 0x04;
 
 	/*
 	TRACE(">>MC %.16llx INIT %.16llx/%s limit %u gatherLimit %u from %s to %s length %u",

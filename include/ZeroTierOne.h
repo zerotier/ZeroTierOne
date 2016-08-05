@@ -165,9 +165,69 @@ extern "C" {
 #define ZT_CLUSTER_MAX_MESSAGE_LENGTH (1500 - 48)
 
 /**
- * Packet characteristics flag: packet direction, 1 for incoming 0 for outgoing
+ * Packet characteristics flag: packet direction, 1 if inbound 0 if outbound
  */
-#define ZT_RULE_PACKET_CHARACTERISTICS_0_INBOUND 0x0000000000000001ULL
+#define ZT_RULE_PACKET_CHARACTERISTICS_INBOUND 0x8000000000000000ULL
+
+/**
+ * Packet characteristics flag: TCP left-most reserved bit
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_TCP_RESERVED_0 0x0000000000000800ULL
+
+/**
+ * Packet characteristics flag: TCP middle reserved bit
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_TCP_RESERVED_1 0x0000000000000400ULL
+
+/**
+ * Packet characteristics flag: TCP right-most reserved bit
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_TCP_RESERVED_2 0x0000000000000200ULL
+
+/**
+ * Packet characteristics flag: TCP NS flag
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_TCP_NS 0x0000000000000100ULL
+
+/**
+ * Packet characteristics flag: TCP CWR flag
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_TCP_CWR 0x0000000000000080ULL
+
+/**
+ * Packet characteristics flag: TCP ECE flag
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_TCP_ECE 0x0000000000000040ULL
+
+/**
+ * Packet characteristics flag: TCP URG flag
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_TCP_URG 0x0000000000000020ULL
+
+/**
+ * Packet characteristics flag: TCP ACK flag
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_TCP_ACK 0x0000000000000010ULL
+
+/**
+ * Packet characteristics flag: TCP PSH flag
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_TCP_PSH 0x0000000000000008ULL
+
+/**
+ * Packet characteristics flag: TCP RST flag
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_TCP_RST 0x0000000000000004ULL
+
+/**
+ * Packet characteristics flag: TCP SYN flag
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_TCP_SYN 0x0000000000000002ULL
+
+/**
+ * Packet characteristics flag: TCP FIN flag
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_TCP_FIN 0x0000000000000001ULL
 
 /**
  * A null/empty sockaddr (all zero) to signify an unspecified socket address
@@ -533,19 +593,24 @@ enum ZT_VirtualNetworkRuleType
 	ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE = 49,
 
 	/**
-	 * Match a range of tag values (equality match if start==end)
+	 * Match if local and remote tags differ by no more than value, use 0 to check for equality
 	 */
-	ZT_NETWORK_RULE_MATCH_TAG_VALUE_RANGE = 50,
+	ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS = 50,
 
 	/**
-	 * Match if all bits are set in a tag value
+	 * Match if local and remote tags ANDed together equal value.
 	 */
-	ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ALL = 51,
+	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND = 51,
 
 	/**
-	 * Match if any bit from a mask is set in a tag value
+	 * Match if local and remote tags ANDed together equal value.
 	 */
-	ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ANY = 52
+	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR = 52,
+
+	/**
+	 * Match if local and remote tags XORed together equal value.
+	 */
+	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR = 53
 };
 
 /**
@@ -650,11 +715,11 @@ typedef struct
 		uint16_t frameSize[2];
 
 		/**
-		 * For matching tag values
+		 * For tag-related rules
 		 */
 		struct {
 			uint32_t id;
-			uint32_t value[2]; // only [0] is used for BITS_ALL or BITS_ANY, [0]-[1] for range
+			uint32_t value;
 		} tag;
 	} v;
 } ZT_VirtualNetworkRule;

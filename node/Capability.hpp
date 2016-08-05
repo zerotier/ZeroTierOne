@@ -52,13 +52,13 @@ class RuntimeEnvironment;
  * On the receiving side the receiver does the following for each packet:
  *
  * (1) Evaluates the capabilities of the sender (that the sender has
- *     presented) to determine if the sender was allowed to send this.
+ *     presented) to determine if it should received this packet.
  * (2) Evaluates its own capabilities to determine if it should receive
- *     and process this packet.
+ *     this packet.
  * (3) If both check out, it receives the packet.
  *
  * Note that rules in capabilities can do other things as well such as TEE
- * or REDIRECT packets. See Filter and ZT_VirtualNetworkRule.
+ * or REDIRECT packets. See filter code and ZT_VirtualNetworkRule.
  */
 class Capability
 {
@@ -248,17 +248,13 @@ public:
 					b.append((uint16_t)rules[i].v.frameSize[0]);
 					b.append((uint16_t)rules[i].v.frameSize[1]);
 					break;
-				case ZT_NETWORK_RULE_MATCH_TAG_VALUE_RANGE:
-					b.append((uint8_t)12);
-					b.append((uint32_t)rules[i].v.tag.id);
-					b.append((uint32_t)rules[i].v.tag.value[0]);
-					b.append((uint32_t)rules[i].v.tag.value[1]);
-					break;
-				case ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ALL:
-				case ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ANY:
+				case ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS:
+				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
+				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
+				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR:
 					b.append((uint8_t)8);
 					b.append((uint32_t)rules[i].v.tag.id);
-					b.append((uint32_t)rules[i].v.tag.value[0]);
+					b.append((uint32_t)rules[i].v.tag.value);
 					break;
 			}
 		}
@@ -360,15 +356,12 @@ public:
 					rules[i].v.frameSize[0] = b.template at<uint16_t>(p);
 					rules[i].v.frameSize[0] = b.template at<uint16_t>(p + 2);
 					break;
-				case ZT_NETWORK_RULE_MATCH_TAG_VALUE_RANGE:
+				case ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS:
+				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
+				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
+				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR:
 					rules[i].v.tag.id = b.template at<uint32_t>(p);
-					rules[i].v.tag.value[0] = b.template at<uint32_t>(p + 4);
-					rules[i].v.tag.value[1] = b.template at<uint32_t>(p + 8);
-					break;
-				case ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ALL:
-				case ZT_NETWORK_RULE_MATCH_TAG_VALUE_BITS_ANY:
-					rules[i].v.tag.id = b.template at<uint32_t>(p);
-					rules[i].v.tag.value[0] = b.template at<uint32_t>(p + 4);
+					rules[i].v.tag.value = b.template at<uint32_t>(p + 4);
 					break;
 			}
 			p += fieldLen;

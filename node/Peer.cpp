@@ -373,28 +373,15 @@ void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) 
 
 void Peer::clean(uint64_t now)
 {
-	{
-		unsigned int np = _numPaths;
-		unsigned int x = 0;
-		unsigned int y = 0;
-		while (x < np) {
-			if (_paths[x].active(now))
-				_paths[y++] = _paths[x];
-			++x;
-		}
-		_numPaths = y;
+	unsigned int np = _numPaths;
+	unsigned int x = 0;
+	unsigned int y = 0;
+	while (x < np) {
+		if (_paths[x].active(now))
+			_paths[y++] = _paths[x];
+		++x;
 	}
-
-	{
-		Mutex::Lock _l(_memberships_m);
-		uint64_t *nwid = (uint64_t *)0;
-		Membership *m = (Membership *)0;
-		Hashtable<uint64_t,Membership>::Iterator i(_memberships);
-		while (i.next(nwid,m)) {
-			if ((now - m->clean(now)) > ZT_MEMBERSHIP_EXPIRATION_TIME)
-				_memberships.erase(*nwid);
-		}
-	}
+	_numPaths = y;
 }
 
 void Peer::_doDeadPathDetection(Path &p,const uint64_t now)

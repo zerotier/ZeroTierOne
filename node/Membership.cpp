@@ -28,49 +28,44 @@
 
 namespace ZeroTier {
 
-bool Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Peer &peer,const NetworkConfig &nconf,const uint32_t *capIds,const unsigned int capCount,const uint32_t *tagIds,const unsigned int tagCount)
+bool Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const CertificateOfMembership &com,const Capability *cap,const Tag **tags,const unsigned int tagCount)
 {
 	try {
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH> capsAndTags;
 
-		capsAndTags.addSize(2);
 		unsigned int appendedCaps = 0;
-		for(unsigned int i=0;i<capCount;++i) {
-			CState *cs = _caps.get(capIds[i]);
+		if (cap) {
+			capsAndTags.addSize(2);
+			CState *const cs = _caps.get(cap->id());
 			if ((now - cs->lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) {
-				if ((capsAndTags.size() + sizeof(Capability)) > (ZT_PROTO_MAX_PACKET_LENGTH - sizeof(CertificateOfMembership)))
-					break;
-				const Capability *c = nconf.capability(capIds[i]);
-				if (c) {
-					c->serialize(capsAndTags);
-					++appendedCaps;
-					cs->lastPushed = now;
-				}
+				cap->serialize(capsAndTags);
+				cs->lastPushed = now;
+				++appendedCaps;
 			}
+			capsAndTags.setAt<uint16_t>(0,(uint16_t)appendedCaps);
+		} else {
+			capsAndTags.append((uint16_t)0);
 		}
-		capsAndTags.setAt<uint16_t>(0,(uint16_t)appendedCaps);
 
+		unsigned int appendedTags = 0;
 		const unsigned int tagCountPos = capsAndTags.size();
 		capsAndTags.addSize(2);
-		unsigned int appendedTags = 0;
 		for(unsigned int i=0;i<tagCount;++i) {
-			TState *ts = _tags.get(tagIds[i]);
+			TState *const ts = _tags.get(tags[i]->id());
 			if ((now - ts->lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) {
 				if ((capsAndTags.size() + sizeof(Tag)) > (ZT_PROTO_MAX_PACKET_LENGTH - sizeof(CertificateOfMembership)))
 					break;
-				const Tag *t = nconf.tag(tagIds[i]);
-				if (t) {
-					t->serialize(capsAndTags);
-					++appendedTags;
-					ts->lastPushed = now;
-				}
+				tags[i]->serialize(capsAndTags);
+				ts->lastPushed = now;
+				++appendedTags;
 			}
 		}
 		capsAndTags.setAt<uint16_t>(tagCountPos,(uint16_t)appendedTags);
 
-		if (((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY)||(appendedCaps)||(appendedTags)) {
-			Packet outp(peer.address(),RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
-			nconf.com.serialize(outp);
+		if ( ((com)&&((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY)) || (appendedCaps) || (appendedTags) ) {
+			Packet outp(peerAddress,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
+			if (com)
+				com.serialize(outp);
 			outp.append((uint8_t)0x00);
 			outp.append(capsAndTags.data(),capsAndTags.size());
 			outp.compress();

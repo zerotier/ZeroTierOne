@@ -40,6 +40,7 @@
 #include "MAC.hpp"
 #include "Dictionary.hpp"
 #include "Multicaster.hpp"
+#include "Membership.hpp"
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
 
@@ -113,7 +114,7 @@ public:
 	 * a match certain actions may be taken such as sending a copy of the packet
 	 * to a TEE or REDIRECT target.
 	 *
-	 * @param ztSource Source Peer (to save an extra lookup)
+	 * @param sourcePeer Source Peer
 	 * @param ztDest Destination ZeroTier address
 	 * @param macSource Ethernet layer source address
 	 * @param macDest Ethernet layer destination address
@@ -124,7 +125,7 @@ public:
 	 * @return True if packet should be accepted locally
 	 */
 	bool filterIncomingPacket(
-		const SharedPtr<Peer> &ztSource,
+		const SharedPtr<Peer> &sourcePeer,
 		const Address &ztDest,
 		const MAC &macSource,
 		const MAC &macDest,
@@ -386,6 +387,8 @@ private:
 		NETCONF_FAILURE_INIT_FAILED
 	} _netconfFailure;
 	volatile int _portError; // return value from port config callback
+
+	Hashtable<Address,Membership> _memberships;
 
 	Mutex _lock;
 

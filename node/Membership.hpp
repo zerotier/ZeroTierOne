@@ -40,7 +40,6 @@
 
 namespace ZeroTier {
 
-class Peer;
 class RuntimeEnvironment;
 
 /**
@@ -54,18 +53,18 @@ private:
 	struct TState
 	{
 		TState() : lastPushed(0),lastReceived(0) {}
-		// Last time we pushed this tag to this peer
+		// Last time we pushed our tag to this peer (our tag with the same ID)
 		uint64_t lastPushed;
 		// Last time we received this tag from this peer
 		uint64_t lastReceived;
-		// Tag from peer
+		// Tag from peer (remote tag)
 		Tag tag;
 	};
 
 	struct CState
 	{
 		CState() : lastPushed(0),lastReceived(0) {}
-		// Last time we pushed this capability to this peer
+		// Last time we pushed our capability to this peer (our capability with this ID)
 		uint64_t lastPushed;
 		// Last time we received this capability from this peer
 		uint64_t lastReceived;
@@ -90,29 +89,14 @@ public:
 	 *
 	 * @param RR Runtime environment
 	 * @param now Current time
-	 * @param peer Peer that "owns" this membership
-	 * @param nconf Network configuration
-	 * @param capIds Capability IDs that this peer might need
-	 * @param capCount Number of capability IDs
-	 * @param tagIds Tag IDs that this peer might need
+	 * @param peerAddress Address of member peer
+	 * @param com Network certificate of membership (if any)
+	 * @param cap Capability to send or 0 if none
+	 * @param tags Tags that this peer might need
 	 * @param tagCount Number of tag IDs
 	 * @return True if we pushed something
 	 */
-	bool sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Peer &peer,const NetworkConfig &nconf,const uint32_t *capIds,const unsigned int capCount,const uint32_t *tagIds,const unsigned int tagCount);
-
-	/**
-	 * Send COM if needed
-	 *
-	 * @param RR Runtime environment
-	 * @param now Current time
-	 * @param peer Peer that "owns" this membership
-	 * @param nconf Network configuration
-	 * @return True if we pushed something
-	 */
-	inline bool sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Peer &peer,const NetworkConfig &nconf)
-	{
-		return sendCredentialsIfNeeded(RR,now,peer,nconf,(const uint32_t *)0,0,(const uint32_t *)0,0);
-	}
+	bool sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const CertificateOfMembership &com,const Capability *cap,const Tag **tags,const unsigned int tagCount);
 
 	/**
 	 * @return This peer's COM if they have sent one
@@ -128,6 +112,30 @@ public:
 	{
 		const TState *t = _tags.get(id);
 		return ((t) ? (((t->lastReceived != 0)&&(t->tag.expiration() < nconf.timestamp)) ? &(t->tag) : (const Tag *)0) : (const Tag *)0);
+	}
+
+	/**
+	 * @param nconf Network configuration
+	 * @param ids Array to store IDs into
+	 * @param values Array to store values into
+	 * @param maxTags Capacity of ids[] and values[]
+	 * @return Number of tags added to arrays
+	 */
+	inline unsigned int getAllTags(const NetworkConfig &nconf,uint32_t *ids,uint32_t *values,unsigned int maxTags) const
+	{
+		unsigned int n = 0;
+		uint32_t *id = (uint32_t *)0;
+		TState *ts = (TState *)0;
+		Hashtable<uint32_t,TState>::Iterator i(const_cast<Membership *>(this)->_tags);
+		while (i.next(id,ts)) {
+			if ((ts->lastReceived)&&(ts->tag.expiration() < nconf.timestamp)) {
+				if (n >= maxTags)
+					return n;
+				ids[n] = *id;
+				values[n] = ts->tag.value();
+			}
+		}
+		return n;
 	}
 
 	/**

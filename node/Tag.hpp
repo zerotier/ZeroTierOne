@@ -79,7 +79,7 @@ public:
 	inline uint64_t networkId() const { return _nwid; }
 	inline uint64_t expiration() const { return _expiration; }
 	inline uint32_t id() const { return _id; }
-	inline uint32_t value() const { return _value; }
+	inline const uint32_t &value() const { return _value; }
 	inline const Address &issuedTo() const { return _issuedTo; }
 	inline const Address &signedBy() const { return _signedBy; }
 
