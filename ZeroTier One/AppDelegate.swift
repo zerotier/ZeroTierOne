@@ -38,19 +38,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let defaultsDict = ["firstRun": true]
         defaults.registerDefaults(defaultsDict)
 
-        let firstRun = defaults.boolForKey("firstRun")
 
-        if firstRun {
-            defaults.setBool(false, forKey: "firstRun")
-            defaults.synchronize()
-
-            let loginController = LaunchAtLoginController()
-
-            let bundle = NSBundle.mainBundle()
-            let bundleURL = bundle.bundleURL
-
-            loginController.setLaunchAtLogin(true, forURL: bundleURL)
-        }
 
 
         let nc = NSNotificationCenter.defaultCenter()
@@ -72,13 +60,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         networkListPopover.contentViewController = showNetworksView
         networkListPopover.behavior = .Transient
 
-        preferencesPopover.contentViewController = PreferencesViewController(
-            nibName: "PreferencesViewController", bundle: nil)
+        let prefsView = PreferencesViewController(nibName: "PreferencesViewController", bundle: nil)
+        preferencesPopover.contentViewController = prefsView
         preferencesPopover.behavior = .Transient
 
         aboutPopover.contentViewController = AboutViewController(
             nibName: "AboutViewController", bundle: nil)
         aboutPopover.behavior = .Transient
+
+        let firstRun = defaults.boolForKey("firstRun")
+
+        if firstRun {
+            defaults.setBool(false, forKey: "firstRun")
+            defaults.synchronize()
+
+            prefsView?.setLaunchAtLoginEnabled(true)
+        }
 
         if firstRun {
             NSOperationQueue.mainQueue().addOperationWithBlock() {
