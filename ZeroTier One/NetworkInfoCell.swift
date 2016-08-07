@@ -56,14 +56,14 @@ class NetworkInfoCell: NSTableCellView {
     }
 
     func joinNetwork(nwid: String) {
-        ServiceCom.sharedInstance.joinNetwork(nwid,
+        ServiceCom.sharedInstance().joinNetwork(nwid,
                                               allowManaged: allowManaged.state == NSOnState,
                                               allowGlobal: allowGlobal.state == NSOnState,
                                               allowDefault: !Network.defaultRouteExists(parent.networkList) && (allowDefault.state == NSOnState))
     }
 
     func leaveNetwork(nwid: String) {
-        ServiceCom.sharedInstance.leaveNetwork(nwid)
+        ServiceCom.sharedInstance().leaveNetwork(nwid)
     }
 
     @IBAction func onAllowStatusChanged(sender: NSButton) {

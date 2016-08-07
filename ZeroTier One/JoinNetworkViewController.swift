@@ -69,7 +69,7 @@ class JoinNetworkViewController: NSViewController, NSComboBoxDelegate, NSComboBo
     @IBAction func onJoinClicked(sender: AnyObject?) {
         let networkString = network.stringValue
 
-        ServiceCom.sharedInstance.joinNetwork(networkString,
+        ServiceCom.sharedInstance().joinNetwork(networkString,
                                               allowManaged: allowManagedCheckBox.state == NSOnState,
                                               allowGlobal: allowGlobalCheckBox.state == NSOnState,
                                               allowDefault: allowDefaultCheckBox.state == NSOnState)

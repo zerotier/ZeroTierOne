@@ -63,7 +63,7 @@ class NetworkMonitor: NSObject {
             }
         }
 
-        ServiceCom.sharedInstance.getNetworkList() { (networkList) -> Void in
+        ServiceCom.sharedInstance().getNetworklist() { (networkList) -> Void in
             self.receivedNetworks = networkList
 
             NSOperationQueue.mainQueue().addOperationWithBlock() { () -> Void in
@@ -71,7 +71,7 @@ class NetworkMonitor: NSObject {
             }
         }
 
-        ServiceCom.sharedInstance.getNodeStatus() { nodeStatus -> Void in
+        ServiceCom.sharedInstance().getNodeStatus() { nodeStatus -> Void in
             NSOperationQueue.mainQueue().addOperationWithBlock() { () -> Void in
                 let nc = NSNotificationCenter.defaultCenter()
 

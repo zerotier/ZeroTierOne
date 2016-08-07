@@ -244,10 +244,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let id = String(network.nwid, radix: 16)
 
         if network.connected {
-            ServiceCom.sharedInstance.leaveNetwork(id)
+            ServiceCom.sharedInstance().leaveNetwork(id)
         }
         else {
-            ServiceCom.sharedInstance.joinNetwork(id)
+            ServiceCom.sharedInstance().joinNetwork(id, allowManaged: true, allowGlobal: false, allowDefault: false)
         }
     }
 
