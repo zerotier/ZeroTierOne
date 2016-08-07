@@ -59,7 +59,7 @@ class NetworkInfoCell: NSTableCellView {
         ServiceCom.sharedInstance.joinNetwork(nwid,
                                               allowManaged: allowManaged.state == NSOnState,
                                               allowGlobal: allowGlobal.state == NSOnState,
-                                              allowDefault: !defaultRouteExists(parent.networkList) && (allowDefault.state == NSOnState))
+                                              allowDefault: !Network.defaultRouteExists(parent.networkList) && (allowDefault.state == NSOnState))
     }
 
     func leaveNetwork(nwid: String) {

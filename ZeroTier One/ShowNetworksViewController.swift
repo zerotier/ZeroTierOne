@@ -74,8 +74,8 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
             cell.networkIdField.stringValue = String(network.nwid, radix: 16)
             cell.networkNameField.stringValue = network.name
 
-            cell.statusField.stringValue = network.status.description
-            cell.typeField.stringValue = network.type.description
+            cell.statusField.stringValue = network.statusString()
+            cell.typeField.stringValue = network.typeString()
             cell.macField.stringValue = network.mac
             cell.mtuField.stringValue = String(network.mtu)
             cell.broadcastField.stringValue = network.broadcastEnabled ? "ENABLED" : "DISABLED"
@@ -92,7 +92,7 @@ class ShowNetworksViewController: NSViewController, NSTableViewDelegate, NSTable
                 else {
                     cell.allowDefault.state = NSOffState
 
-                    if defaultRouteExists(networkList) {
+                    if Network.defaultRouteExists(networkList) {
                         cell.allowDefault.enabled = false
                     }
                     else {
