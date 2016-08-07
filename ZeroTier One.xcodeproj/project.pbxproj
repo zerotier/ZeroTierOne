@@ -11,7 +11,6 @@
 		932D472F1D1CD499004BCFE2 /* ZeroTierIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 932D472E1D1CD499004BCFE2 /* ZeroTierIcon.icns */; };
 		932D47321D1CD861004BCFE2 /* PreferencesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932D47301D1CD861004BCFE2 /* PreferencesViewController.swift */; };
 		932D47331D1CD861004BCFE2 /* PreferencesViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */; };
-		932D47361D1CDC9B004BCFE2 /* AboutViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932D47341D1CDC9B004BCFE2 /* AboutViewController.swift */; };
 		932D47371D1CDC9B004BCFE2 /* AboutViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */; };
 		932D473A1D220D63004BCFE2 /* LaunchAtLoginController.m in Sources */ = {isa = PBXBuildFile; fileRef = 932D47391D220D63004BCFE2 /* LaunchAtLoginController.m */; };
 		9330F13B1CF534E500687EC8 /* NetworkInfoCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9330F13A1CF534E500687EC8 /* NetworkInfoCell.swift */; };
@@ -25,6 +24,7 @@
 		93D1675F1D54191C00330C99 /* NodeStatus.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D1675E1D54191C00330C99 /* NodeStatus.m */; };
 		93D167621D541BC200330C99 /* ServiceCom.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D167611D541BC200330C99 /* ServiceCom.m */; };
 		93D167661D54308200330C99 /* Network.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D167651D54308200330C99 /* Network.m */; };
+		93D167691D57E7EA00330C99 /* AboutViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D167681D57E7EA00330C99 /* AboutViewController.m */; };
 		93DAFB271D3F0BEE004D5417 /* about.html in Resources */ = {isa = PBXBuildFile; fileRef = 93DAFB261D3F0BEE004D5417 /* about.html */; };
 		93DAFE4B1CFE53CA00547CC4 /* AuthtokenCopy.m in Sources */ = {isa = PBXBuildFile; fileRef = 93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */; };
 /* End PBXBuildFile section */
@@ -34,7 +34,6 @@
 		932D472E1D1CD499004BCFE2 /* ZeroTierIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = ZeroTierIcon.icns; sourceTree = "<group>"; };
 		932D47301D1CD861004BCFE2 /* PreferencesViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PreferencesViewController.swift; sourceTree = "<group>"; };
 		932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PreferencesViewController.xib; sourceTree = "<group>"; };
-		932D47341D1CDC9B004BCFE2 /* AboutViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AboutViewController.swift; sourceTree = "<group>"; };
 		932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = AboutViewController.xib; sourceTree = "<group>"; };
 		932D47381D220D63004BCFE2 /* LaunchAtLoginController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LaunchAtLoginController.h; sourceTree = "<group>"; };
 		932D47391D220D63004BCFE2 /* LaunchAtLoginController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LaunchAtLoginController.m; sourceTree = "<group>"; };
@@ -54,6 +53,8 @@
 		93D167611D541BC200330C99 /* ServiceCom.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ServiceCom.m; sourceTree = "<group>"; };
 		93D167641D54308200330C99 /* Network.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Network.h; sourceTree = "<group>"; };
 		93D167651D54308200330C99 /* Network.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Network.m; sourceTree = "<group>"; };
+		93D167671D57E7EA00330C99 /* AboutViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AboutViewController.h; sourceTree = "<group>"; };
+		93D167681D57E7EA00330C99 /* AboutViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AboutViewController.m; sourceTree = "<group>"; };
 		93DAFB261D3F0BEE004D5417 /* about.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = about.html; sourceTree = "<group>"; };
 		93DAFE491CFE53C900547CC4 /* ZeroTier One-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZeroTier One-Bridging-Header.h"; sourceTree = "<group>"; };
 		93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AuthtokenCopy.m; sourceTree = "<group>"; };
@@ -106,7 +107,6 @@
 				932D472C1D138B0C004BCFE2 /* NetworkMonitor.swift */,
 				932D47301D1CD861004BCFE2 /* PreferencesViewController.swift */,
 				932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */,
-				932D47341D1CDC9B004BCFE2 /* AboutViewController.swift */,
 				932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */,
 				932D47381D220D63004BCFE2 /* LaunchAtLoginController.h */,
 				932D47391D220D63004BCFE2 /* LaunchAtLoginController.m */,
@@ -117,6 +117,8 @@
 				93D167611D541BC200330C99 /* ServiceCom.m */,
 				93D167641D54308200330C99 /* Network.h */,
 				93D167651D54308200330C99 /* Network.m */,
+				93D167671D57E7EA00330C99 /* AboutViewController.h */,
+				93D167681D57E7EA00330C99 /* AboutViewController.m */,
 			);
 			path = "ZeroTier One";
 			sourceTree = "<group>";
@@ -207,7 +209,7 @@
 				93326BEA1CE7D9B9005CA2AC /* JoinNetworkViewController.swift in Sources */,
 				93326BEE1CE7DA30005CA2AC /* ShowNetworksViewController.swift in Sources */,
 				93D1675F1D54191C00330C99 /* NodeStatus.m in Sources */,
-				932D47361D1CDC9B004BCFE2 /* AboutViewController.swift in Sources */,
+				93D167691D57E7EA00330C99 /* AboutViewController.m in Sources */,
 				93D167661D54308200330C99 /* Network.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

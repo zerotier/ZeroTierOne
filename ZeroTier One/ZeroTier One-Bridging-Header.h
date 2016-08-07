@@ -7,3 +7,4 @@
 #import "NodeStatus.h"
 #import "Network.h"
 #import "ServiceCom.h"
+#import "AboutViewController.h"
