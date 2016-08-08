@@ -13,7 +13,6 @@
 		93326BDC1CE7C816005CA2AC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93326BDB1CE7C816005CA2AC /* AppDelegate.swift */; };
 		93326BDE1CE7C816005CA2AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 93326BDD1CE7C816005CA2AC /* Assets.xcassets */; };
 		93326BE11CE7C816005CA2AC /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 93326BDF1CE7C816005CA2AC /* MainMenu.xib */; };
-		93326BEA1CE7D9B9005CA2AC /* JoinNetworkViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93326BE81CE7D9B9005CA2AC /* JoinNetworkViewController.swift */; };
 		93326BEB1CE7D9B9005CA2AC /* JoinNetworkViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 93326BE91CE7D9B9005CA2AC /* JoinNetworkViewController.xib */; };
 		93326BEF1CE7DA30005CA2AC /* ShowNetworksViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 93326BED1CE7DA30005CA2AC /* ShowNetworksViewController.xib */; };
 		93D1675F1D54191C00330C99 /* NodeStatus.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D1675E1D54191C00330C99 /* NodeStatus.m */; };
@@ -24,6 +23,7 @@
 		93D167701D57FD3800330C99 /* NetworkMonitor.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D1676F1D57FD3800330C99 /* NetworkMonitor.m */; };
 		93D167731D58093C00330C99 /* NetworkInfoCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D167721D58093C00330C99 /* NetworkInfoCell.m */; };
 		93D167761D580C3500330C99 /* ShowNetworksViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D167751D580C3500330C99 /* ShowNetworksViewController.m */; };
+		93D167791D5815E600330C99 /* JoinNetworkViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D167781D5815E600330C99 /* JoinNetworkViewController.m */; };
 		93DAFB271D3F0BEE004D5417 /* about.html in Resources */ = {isa = PBXBuildFile; fileRef = 93DAFB261D3F0BEE004D5417 /* about.html */; };
 		93DAFE4B1CFE53CA00547CC4 /* AuthtokenCopy.m in Sources */ = {isa = PBXBuildFile; fileRef = 93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */; };
 /* End PBXBuildFile section */
@@ -37,7 +37,6 @@
 		93326BDD1CE7C816005CA2AC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		93326BE01CE7C816005CA2AC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		93326BE21CE7C816005CA2AC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		93326BE81CE7D9B9005CA2AC /* JoinNetworkViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JoinNetworkViewController.swift; sourceTree = "<group>"; };
 		93326BE91CE7D9B9005CA2AC /* JoinNetworkViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = JoinNetworkViewController.xib; sourceTree = "<group>"; };
 		93326BED1CE7DA30005CA2AC /* ShowNetworksViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = ShowNetworksViewController.xib; sourceTree = "<group>"; };
 		93D1675D1D54191C00330C99 /* NodeStatus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NodeStatus.h; sourceTree = "<group>"; };
@@ -56,6 +55,8 @@
 		93D167721D58093C00330C99 /* NetworkInfoCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NetworkInfoCell.m; sourceTree = "<group>"; };
 		93D167741D580C3500330C99 /* ShowNetworksViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ShowNetworksViewController.h; sourceTree = "<group>"; };
 		93D167751D580C3500330C99 /* ShowNetworksViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ShowNetworksViewController.m; sourceTree = "<group>"; };
+		93D167771D5815E600330C99 /* JoinNetworkViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JoinNetworkViewController.h; sourceTree = "<group>"; };
+		93D167781D5815E600330C99 /* JoinNetworkViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = JoinNetworkViewController.m; sourceTree = "<group>"; };
 		93DAFB261D3F0BEE004D5417 /* about.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = about.html; sourceTree = "<group>"; };
 		93DAFE491CFE53C900547CC4 /* ZeroTier One-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZeroTier One-Bridging-Header.h"; sourceTree = "<group>"; };
 		93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AuthtokenCopy.m; sourceTree = "<group>"; };
@@ -94,8 +95,6 @@
 			children = (
 				932D472E1D1CD499004BCFE2 /* ZeroTierIcon.icns */,
 				93326BDB1CE7C816005CA2AC /* AppDelegate.swift */,
-				93326BE81CE7D9B9005CA2AC /* JoinNetworkViewController.swift */,
-				93326BE91CE7D9B9005CA2AC /* JoinNetworkViewController.xib */,
 				93326BDD1CE7C816005CA2AC /* Assets.xcassets */,
 				93326BDF1CE7C816005CA2AC /* MainMenu.xib */,
 				93326BE21CE7C816005CA2AC /* Info.plist */,
@@ -122,6 +121,9 @@
 				93D167741D580C3500330C99 /* ShowNetworksViewController.h */,
 				93D167751D580C3500330C99 /* ShowNetworksViewController.m */,
 				93326BED1CE7DA30005CA2AC /* ShowNetworksViewController.xib */,
+				93D167771D5815E600330C99 /* JoinNetworkViewController.h */,
+				93D167781D5815E600330C99 /* JoinNetworkViewController.m */,
+				93326BE91CE7D9B9005CA2AC /* JoinNetworkViewController.xib */,
 			);
 			path = "ZeroTier One";
 			sourceTree = "<group>";
@@ -207,12 +209,12 @@
 				93326BDC1CE7C816005CA2AC /* AppDelegate.swift in Sources */,
 				93DAFE4B1CFE53CA00547CC4 /* AuthtokenCopy.m in Sources */,
 				93D167701D57FD3800330C99 /* NetworkMonitor.m in Sources */,
-				93326BEA1CE7D9B9005CA2AC /* JoinNetworkViewController.swift in Sources */,
 				93D1675F1D54191C00330C99 /* NodeStatus.m in Sources */,
 				93D167691D57E7EA00330C99 /* AboutViewController.m in Sources */,
 				93D1676D1D57EB8400330C99 /* PreferencesViewController.m in Sources */,
 				93D167731D58093C00330C99 /* NetworkInfoCell.m in Sources */,
 				93D167661D54308200330C99 /* Network.m in Sources */,
+				93D167791D5815E600330C99 /* JoinNetworkViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
