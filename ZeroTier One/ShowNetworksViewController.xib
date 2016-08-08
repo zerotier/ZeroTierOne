@@ -43,7 +43,7 @@
                                         </textFieldCell>
                                         <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                         <prototypeCellViews>
-                                            <tableCellView identifier="NetworkInfoCell" focusRingType="none" id="rmb-il-W5I" customClass="NetworkInfoCell" customModule="ZeroTier_One" customModuleProvider="target">
+                                            <tableCellView identifier="NetworkInfoCell" focusRingType="none" id="rmb-il-W5I" customClass="NetworkInfoCell">
                                                 <rect key="frame" x="1" y="1" width="527" height="367"/>
                                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                 <subviews>

@@ -42,8 +42,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
 
         let nc = NSNotificationCenter.defaultCenter()
-        nc.addObserver(self, selector: #selector(onNetworkListUpdated(_:)), name: networkUpdateKey, object: nil)
-        nc.addObserver(self, selector: #selector(onNodeStatusUpdated(_:)), name: statusUpdateKey, object: nil)
+        nc.addObserver(self, selector: #selector(onNetworkListUpdated(_:)), name: NetworkUpdateKey, object: nil)
+        nc.addObserver(self, selector: #selector(onNodeStatusUpdated(_:)), name: StatusUpdateKey, object: nil)
 
         statusItem.image = NSImage(named: "MenuBarIconMac")
 

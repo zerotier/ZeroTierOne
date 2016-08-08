@@ -9,3 +9,5 @@
 #import "AboutViewController.h"
 #import "PreferencesViewController.h"
 #import "NetworkMonitor.h"
+#import "NetworkInfoCell.h"
+#import "ShowNetworksViewController.h"
