@@ -66,7 +66,8 @@ static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsig
 	return false; // overflow == invalid
 }
 
-static bool _doZtFilter(
+// 0 == no match, -1 == match/drop, 1 == match/accept
+static int _doZtFilter(
 	const RuntimeEnvironment *RR,
 	const uint64_t nwid,
 	const bool inbound,
@@ -99,18 +100,21 @@ static bool _doZtFilter(
 		switch(rt) {
 			// Actions -------------------------------------------------------------
 
+			// An action is performed if thisSetMatches is true, and if not
+			// (or if the action is non-terminating) we start a new set of rules.
+
 			case ZT_NETWORK_RULE_ACTION_DROP:
 				if (thisSetMatches) {
-					return false;
+					return -1; // match, drop packet
 				} else {
-					thisSetMatches = 1; // continue parsing next set of rules
+					thisSetMatches = 1; // no match, evaluate next set
 				}
 				break;
 			case ZT_NETWORK_RULE_ACTION_ACCEPT:
 				if (thisSetMatches) {
-					return true;
+					return 1; // match, accept packet
 				} else {
-					thisSetMatches = 1; // continue parsing next set of rules
+					thisSetMatches = 1; // no match, evaluate next set
 				}
 				break;
 			case ZT_NETWORK_RULE_ACTION_TEE:
@@ -126,13 +130,15 @@ static bool _doZtFilter(
 				RR->sw->send(outp,true,nwid);
 
 				if (rt == ZT_NETWORK_RULE_ACTION_REDIRECT) {
-					return false;
+					return -1; // match, drop packet (we redirected it)
 				} else {
-					thisSetMatches = 1; // TEE does not terminate parsing
+					thisSetMatches = 1; // TEE does not terminate evaluation
 				}
 			}	break;
 
 			// Rules ---------------------------------------------------------------
+
+			// thisSetMatches is the binary AND of the result of all rules in a set
 
 			case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 				thisRuleMatches = (uint8_t)(rules[rn].v.zt == ztSource.toInt());
@@ -320,13 +326,13 @@ static bool _doZtFilter(
 			}	break;
 		}
 
-		// thisSetMatches remains true if the current rule matched... or does NOT match if not bit (0x80) is 1
+		// thisSetMatches remains true if the current rule matched (or did NOT match if NOT bit is set)
 		thisSetMatches &= (thisRuleMatches ^ ((rules[rn].t & 0x80) >> 7));
 
 		//TRACE("[%u] %u result==%u set==%u",rn,(unsigned int)rt,(unsigned int)thisRuleMatches,(unsigned int)thisSetMatches);
 	}
 
-	return false;
+	return 0;
 }
 
 const ZeroTier::MulticastGroup Network::BROADCAST(ZeroTier::MAC(0xffffffffffffULL),0);
@@ -414,58 +420,22 @@ bool Network::filterOutgoingPacket(
 	Membership &m = _memberships[ztDest];
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
-	if (_doZtFilter(
-		RR,
-		_id,
-		false,
-		ztSource,
-		ztDest,
-		macSource,
-		macDest,
-		frameData,
-		frameLen,
-		etherType,
-		vlanId,
-		_config.rules,
-		_config.ruleCount,
-		_config.tags,
-		_config.tagCount,
-		remoteTagIds,
-		remoteTagValues,
-		remoteTagCount,
-		relevantLocalTags,
-		relevantLocalTagCount
-	)) {
-		m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config.com,(const Capability *)0,relevantLocalTags,relevantLocalTagCount);
-		return true;
+	switch(_doZtFilter(RR,_id,false,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
+		case -1:
+			return false;
+		case 1:
+			m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config.com,(const Capability *)0,relevantLocalTags,relevantLocalTagCount);
+			return true;
 	}
 
 	for(unsigned int c=0;c<_config.capabilityCount;++c) {
 		relevantLocalTagCount = 0;
-		if (_doZtFilter(
-			RR,
-			_id,
-			false,
-			ztSource,
-			ztDest,
-			macSource,
-			macDest,
-			frameData,
-			frameLen,
-			etherType,
-			vlanId,
-			_config.capabilities[c].rules(),
-			_config.capabilities[c].ruleCount(),
-			_config.tags,
-			_config.tagCount,
-			remoteTagIds,
-			remoteTagValues,
-			remoteTagCount,
-			relevantLocalTags,
-			relevantLocalTagCount
-		)) {
-			m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config.com,&(_config.capabilities[c]),relevantLocalTags,relevantLocalTagCount);
-			return true;
+		switch (_doZtFilter(RR,_id,false,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.capabilities[c].rules(),_config.capabilities[c].ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
+			case -1:
+				return false;
+			case 1:
+				m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config.com,&(_config.capabilities[c]),relevantLocalTags,relevantLocalTagCount);
+				return true;
 		}
 	}
 
@@ -492,32 +462,24 @@ bool Network::filterIncomingPacket(
 	Membership &m = _memberships[ztDest];
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
-	if (_doZtFilter(
-		RR,
-		_id,
-		true,
-		sourcePeer->address(),
-		ztDest,
-		macSource,
-		macDest,
-		frameData,
-		frameLen,
-		etherType,
-		vlanId,
-		_config.rules,
-		_config.ruleCount,
-		_config.tags,
-		_config.tagCount,
-		remoteTagIds,
-		remoteTagValues,
-		remoteTagCount,
-		relevantLocalTags,
-		relevantLocalTagCount
-	)) {
-		return true;
+	switch (_doZtFilter(RR,_id,true,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
+		case -1:
+			return false;
+		case 1:
+			return true;
 	}
 
-
+	Membership::CapabilityIterator mci(m);
+	const Capability *c;
+	while ((c = mci.next())) {
+		relevantLocalTagCount = 0;
+		switch(_doZtFilter(RR,_id,false,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
+			case -1:
+				return false;
+			case 1:
+				return true;
+		}
+	}
 
 	return false;
 }
@@ -817,10 +779,9 @@ bool Network::_isAllowed(const SharedPtr<Peer> &peer) const
 			if (_config.isPublic()) {
 				return true;
 			} else {
-				LockingPtr<Membership> m(peer->membership(_id,false));
-				if (m) {
+				const Membership *m = _memberships.get(peer->address());
+				if (m)
 					return _config.com.agreesWith(m->com());
-				}
 			}
 		}
 	} catch ( ... ) {
@@ -866,14 +827,15 @@ void Network::_announceMulticastGroups()
 		_announceMulticastGroupsTo(*i,allMulticastGroups);
 }
 
-void Network::_announceMulticastGroupsTo(const SharedPtr<Peer> &peer,const std::vector<MulticastGroup> &allMulticastGroups) const
+void Network::_announceMulticastGroupsTo(const SharedPtr<Peer> &peer,const std::vector<MulticastGroup> &allMulticastGroups)
 {
 	// Assumes _lock is locked
 
 	// Anyone we announce multicast groups to will need our COM to authenticate GATHER requests.
 	{
-		LockingPtr<Membership> m(peer->membership(_id,false));
-		if (m) m->sendCredentialsIfNeeded(RR,RR->node->now(),*peer,_config);
+		Membership *m = _memberships.get(peer->address());
+		if (m)
+			m->sendCredentialsIfNeeded(RR,RR->node->now(),peer->address(),_config.com,(const Capability *)0,(const Tag **)0,0);
 	}
 
 	Packet outp(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);

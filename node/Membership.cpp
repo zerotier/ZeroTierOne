@@ -36,10 +36,10 @@ bool Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint
 		unsigned int appendedCaps = 0;
 		if (cap) {
 			capsAndTags.addSize(2);
-			CState *const cs = _caps.get(cap->id());
-			if ((now - cs->lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) {
+			std::map<uint32_t,CState>::iterator cs(_caps.find(cap->id()));
+			if ((cs != _caps.end())&&((now - cs->second.lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY)) {
 				cap->serialize(capsAndTags);
-				cs->lastPushed = now;
+				cs->second.lastPushed = now;
 				++appendedCaps;
 			}
 			capsAndTags.setAt<uint16_t>(0,(uint16_t)appendedCaps);
@@ -95,13 +95,13 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const uint64_t now,co
 {
 	if (tag.issuedTo() != RR->identity.address())
 		return -1;
-	TState *t = _tags.get(tag.networkId());
+	TState *t = _tags.get(tag.id());
 	if ((t)&&(t->lastReceived != 0)&&(t->tag == tag))
 		return 0;
 	const int vr = tag.verify(RR);
 	if (vr == 0) {
 		if (!t)
-			t = &(_tags[tag.networkId()]);
+			t = &(_tags[tag.id()]);
 		t->lastReceived = now;
 		t->tag = tag;
 	}
@@ -112,15 +112,19 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const uint64_t now,co
 {
 	if (!cap.wasIssuedTo(RR->identity.address()))
 		return -1;
-	CState *c = _caps.get(cap.networkId());
-	if ((c)&&(c->lastReceived != 0)&&(c->cap == cap))
+	std::map<uint32_t,CState>::iterator c(_caps.find(cap.id()));
+	if ((c != _caps.end())&&(c->second.lastReceived != 0)&&(c->second.cap == cap))
 		return 0;
 	const int vr = cap.verify(RR);
 	if (vr == 0) {
-		if (!c)
-			c = &(_caps[cap.networkId()]);
-		c->lastReceived = now;
-		c->cap = cap;
+		if (c == _caps.end()) {
+			CState &c2 = _caps[cap.id()];
+			c2.lastReceived = now;
+			c2.cap = cap;
+		} else {
+			c->second.lastReceived = now;
+			c->second.cap = cap;
+		}
 	}
 	return vr;
 }

@@ -21,8 +21,7 @@
 
 #include <stdint.h>
 
-#include <utility>
-#include <algorithm>
+#include <map>
 
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"
@@ -43,40 +42,67 @@ namespace ZeroTier {
 class RuntimeEnvironment;
 
 /**
- * Information related to a peer's participation on a network
- *
- * This structure is not thread-safe and must be locked during use.
+ * A container for certificates of membership and other credentials for peer participation on networks
  */
 class Membership
 {
 private:
+	// Tags and related state
 	struct TState
 	{
 		TState() : lastPushed(0),lastReceived(0) {}
-		// Last time we pushed our tag to this peer (our tag with the same ID)
+		// Last time we pushed OUR tag to this peer (with this ID)
 		uint64_t lastPushed;
-		// Last time we received this tag from this peer
+		// Last time we received THEIR tag (with this ID)
 		uint64_t lastReceived;
-		// Tag from peer (remote tag)
+		// THEIR tag
 		Tag tag;
 	};
 
+	// Credentials and related state
 	struct CState
 	{
 		CState() : lastPushed(0),lastReceived(0) {}
-		// Last time we pushed our capability to this peer (our capability with this ID)
+		// Last time we pushed OUR capability to this peer (with this ID)
 		uint64_t lastPushed;
-		// Last time we received this capability from this peer
+		// Last time we received THEIR capability (with this ID)
 		uint64_t lastReceived;
-		// Capability from peer
+		// THEIR capability
 		Capability cap;
 	};
 
 public:
+	/**
+	 * A wrapper to iterate through capabilities in ascending order of capability ID
+	 */
+	class CapabilityIterator
+	{
+	public:
+		CapabilityIterator(const Membership &m) :
+			_i(m._caps.begin()),
+			_e(m._caps.end())
+		{
+		}
+
+		inline const Capability *next()
+		{
+			while (_i != _e) {
+				if (_i->second.lastReceived)
+					return &((_i++)->second.cap);
+				else ++_i;
+			}
+			return (const Capability *)0;
+		}
+
+	private:
+		std::map<uint32_t,CState>::const_iterator _i,_e;
+	};
+	friend class CapabilityIterator;
+
 	Membership() :
 		_lastPushedCom(0),
 		_com(),
-		_caps(8),
+		_caps(),
 		_tags(8)
 	{
 	}
@@ -90,7 +116,7 @@ public:
 	 * @param RR Runtime environment
 	 * @param now Current time
 	 * @param peerAddress Address of member peer
-	 * @param com Network certificate of membership (if any)
+	 * @param com My network certificate of membership (if any) (not the one here, but ours -- in NetworkConfig)
 	 * @param cap Capability to send or 0 if none
 	 * @param tags Tags that this peer might need
 	 * @param tagCount Number of tag IDs
@@ -145,8 +171,8 @@ public:
 	 */
 	inline const Capability *getCapability(const NetworkConfig &nconf,const uint32_t id) const
 	{
-		const CState *c = _caps.get(id);
-		return ((c) ? (((c->lastReceived != 0)&&(c->cap.expiration() < nconf.timestamp)) ? &(c->cap) : (const Capability *)0) : (const Capability *)0);
+		std::map<uint32_t,CState>::const_iterator c(_caps.find(id));
+		return ((c != _caps.end()) ? (((c->second.lastReceived != 0)&&(c->second.cap.expiration() < nconf.timestamp)) ? &(c->second.cap) : (const Capability *)0) : (const Capability *)0);
 	}
 
 	/**
@@ -179,18 +205,18 @@ public:
 	{
 		uint64_t lastAct = _lastPushedCom;
 
-		uint32_t *i = (uint32_t *)0;
-		CState *cs = (CState *)0;
-		Hashtable<uint32_t,CState>::Iterator csi(_caps);
-		while (csi.next(i,cs)) {
-			const uint64_t la = std::max(cs->lastPushed,cs->lastReceived);
-			if ((now - la) > ZT_MEMBERSHIP_STATE_EXPIRATION_TIME)
-				_caps.erase(*i);
-			else if (la > lastAct)
-				lastAct = la;
+		for(std::map<uint32_t,CState>::iterator i(_caps.begin());i!=_caps.end();) {
+			const uint64_t la = std::max(i->second.lastPushed,i->second.lastReceived);
+			if ((now - la) > ZT_MEMBERSHIP_STATE_EXPIRATION_TIME) {
+				_caps.erase(i++);
+			} else {
+				++i;
+				if (la > lastAct)
+					lastAct = la;
+			}
 		}
 
-		i = (uint32_t *)0;
+		uint32_t *i = (uint32_t *)0;
 		TState *ts = (TState *)0;
 		Hashtable<uint32_t,TState>::Iterator tsi(_tags);
 		while (tsi.next(i,ts)) {
@@ -211,8 +237,8 @@ private:
 	// COM from this peer
 	CertificateOfMembership _com;
 
-	// Capability-related state
-	Hashtable<uint32_t,CState> _caps;
+	// Capability-related state (we need an ordered container here, hence std::map)
+	std::map<uint32_t,CState> _caps;
 
 	// Tag-related state
 	Hashtable<uint32_t,TState> _tags;
