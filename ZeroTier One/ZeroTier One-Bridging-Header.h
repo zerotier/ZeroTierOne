@@ -8,3 +8,4 @@
 #import "ServiceCom.h"
 #import "AboutViewController.h"
 #import "PreferencesViewController.h"
+#import "NetworkMonitor.h"

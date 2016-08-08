@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		932D472D1D138B0C004BCFE2 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932D472C1D138B0C004BCFE2 /* NetworkMonitor.swift */; };
 		932D472F1D1CD499004BCFE2 /* ZeroTierIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 932D472E1D1CD499004BCFE2 /* ZeroTierIcon.icns */; };
 		932D47331D1CD861004BCFE2 /* PreferencesViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */; };
 		932D47371D1CDC9B004BCFE2 /* AboutViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */; };
@@ -24,12 +23,12 @@
 		93D167661D54308200330C99 /* Network.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D167651D54308200330C99 /* Network.m */; };
 		93D167691D57E7EA00330C99 /* AboutViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D167681D57E7EA00330C99 /* AboutViewController.m */; };
 		93D1676D1D57EB8400330C99 /* PreferencesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D1676C1D57EB8400330C99 /* PreferencesViewController.m */; };
+		93D167701D57FD3800330C99 /* NetworkMonitor.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D1676F1D57FD3800330C99 /* NetworkMonitor.m */; };
 		93DAFB271D3F0BEE004D5417 /* about.html in Resources */ = {isa = PBXBuildFile; fileRef = 93DAFB261D3F0BEE004D5417 /* about.html */; };
 		93DAFE4B1CFE53CA00547CC4 /* AuthtokenCopy.m in Sources */ = {isa = PBXBuildFile; fileRef = 93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		932D472C1D138B0C004BCFE2 /* NetworkMonitor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		932D472E1D1CD499004BCFE2 /* ZeroTierIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = ZeroTierIcon.icns; sourceTree = "<group>"; };
 		932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PreferencesViewController.xib; sourceTree = "<group>"; };
 		932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = AboutViewController.xib; sourceTree = "<group>"; };
@@ -53,6 +52,8 @@
 		93D167681D57E7EA00330C99 /* AboutViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AboutViewController.m; sourceTree = "<group>"; };
 		93D1676B1D57EB8400330C99 /* PreferencesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PreferencesViewController.h; sourceTree = "<group>"; };
 		93D1676C1D57EB8400330C99 /* PreferencesViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PreferencesViewController.m; sourceTree = "<group>"; };
+		93D1676E1D57FD3800330C99 /* NetworkMonitor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetworkMonitor.h; sourceTree = "<group>"; };
+		93D1676F1D57FD3800330C99 /* NetworkMonitor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NetworkMonitor.m; sourceTree = "<group>"; };
 		93DAFB261D3F0BEE004D5417 /* about.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = about.html; sourceTree = "<group>"; };
 		93DAFE491CFE53C900547CC4 /* ZeroTier One-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZeroTier One-Bridging-Header.h"; sourceTree = "<group>"; };
 		93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AuthtokenCopy.m; sourceTree = "<group>"; };
@@ -92,19 +93,18 @@
 				932D472E1D1CD499004BCFE2 /* ZeroTierIcon.icns */,
 				93326BDB1CE7C816005CA2AC /* AppDelegate.swift */,
 				93326BE81CE7D9B9005CA2AC /* JoinNetworkViewController.swift */,
+				93326BE91CE7D9B9005CA2AC /* JoinNetworkViewController.xib */,
 				9330F13A1CF534E500687EC8 /* NetworkInfoCell.swift */,
 				93326BEC1CE7DA30005CA2AC /* ShowNetworksViewController.swift */,
+				93326BED1CE7DA30005CA2AC /* ShowNetworksViewController.xib */,
 				93326BDD1CE7C816005CA2AC /* Assets.xcassets */,
 				93326BDF1CE7C816005CA2AC /* MainMenu.xib */,
 				93326BE21CE7C816005CA2AC /* Info.plist */,
-				93326BE91CE7D9B9005CA2AC /* JoinNetworkViewController.xib */,
-				93326BED1CE7DA30005CA2AC /* ShowNetworksViewController.xib */,
 				93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */,
 				93DAFE4C1CFE53DA00547CC4 /* AuthtokenCopy.h */,
 				93DAFE491CFE53C900547CC4 /* ZeroTier One-Bridging-Header.h */,
-				932D472C1D138B0C004BCFE2 /* NetworkMonitor.swift */,
-				932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */,
-				932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */,
+				93D1676E1D57FD3800330C99 /* NetworkMonitor.h */,
+				93D1676F1D57FD3800330C99 /* NetworkMonitor.m */,
 				93DAFB261D3F0BEE004D5417 /* about.html */,
 				93D1675D1D54191C00330C99 /* NodeStatus.h */,
 				93D1675E1D54191C00330C99 /* NodeStatus.m */,
@@ -114,8 +114,10 @@
 				93D167651D54308200330C99 /* Network.m */,
 				93D167671D57E7EA00330C99 /* AboutViewController.h */,
 				93D167681D57E7EA00330C99 /* AboutViewController.m */,
+				932D47351D1CDC9B004BCFE2 /* AboutViewController.xib */,
 				93D1676B1D57EB8400330C99 /* PreferencesViewController.h */,
 				93D1676C1D57EB8400330C99 /* PreferencesViewController.m */,
+				932D47311D1CD861004BCFE2 /* PreferencesViewController.xib */,
 			);
 			path = "ZeroTier One";
 			sourceTree = "<group>";
@@ -197,10 +199,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				93D167621D541BC200330C99 /* ServiceCom.m in Sources */,
-				932D472D1D138B0C004BCFE2 /* NetworkMonitor.swift in Sources */,
 				93326BDC1CE7C816005CA2AC /* AppDelegate.swift in Sources */,
 				93DAFE4B1CFE53CA00547CC4 /* AuthtokenCopy.m in Sources */,
 				9330F13B1CF534E500687EC8 /* NetworkInfoCell.swift in Sources */,
+				93D167701D57FD3800330C99 /* NetworkMonitor.m in Sources */,
 				93326BEA1CE7D9B9005CA2AC /* JoinNetworkViewController.swift in Sources */,
 				93326BEE1CE7DA30005CA2AC /* ShowNetworksViewController.swift in Sources */,
 				93D1675F1D54191C00330C99 /* NodeStatus.m in Sources */,

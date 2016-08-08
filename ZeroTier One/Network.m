@@ -155,7 +155,7 @@ NSString *NetworkAllowDefaultKey = @"allowDefault";
         }
 
         if([aDecoder containsValueForKey:NetworkMtuKey]) {
-            _mtu = [aDecoder decodeIntegerForKey:NetworkMtuKey];
+            _mtu = (int)[aDecoder decodeIntegerForKey:NetworkMtuKey];
         }
 
         if([aDecoder containsValueForKey:NetworkNameKey]) {
@@ -163,7 +163,7 @@ NSString *NetworkAllowDefaultKey = @"allowDefault";
         }
 
         if([aDecoder containsValueForKey:NetworkNetconfKey]) {
-            _netconfRevision = [aDecoder decodeIntegerForKey:NetworkNetconfKey];
+            _netconfRevision = (int)[aDecoder decodeIntegerForKey:NetworkNetconfKey];
         }
 
         if([aDecoder containsValueForKey:NetworkNwidKey]) {
@@ -175,15 +175,15 @@ NSString *NetworkAllowDefaultKey = @"allowDefault";
         }
 
         if([aDecoder containsValueForKey:NetworkPortErrorKey]) {
-            _portError = [aDecoder decodeIntegerForKey:NetworkPortErrorKey];
+            _portError = (int)[aDecoder decodeIntegerForKey:NetworkPortErrorKey];
         }
 
         if([aDecoder containsValueForKey:NetworkStatusKey]) {
-            _status = [aDecoder decodeIntegerForKey:NetworkStatusKey];
+            _status = (enum NetworkStatus)[aDecoder decodeIntegerForKey:NetworkStatusKey];
         }
 
         if([aDecoder containsValueForKey:NetworkTypeKey]) {
-            _type = [aDecoder decodeIntegerForKey:NetworkTypeKey];
+            _type = (enum NetworkType)[aDecoder decodeIntegerForKey:NetworkTypeKey];
         }
 
         if([aDecoder containsValueForKey:NetworkAllowManagedKey]) {
