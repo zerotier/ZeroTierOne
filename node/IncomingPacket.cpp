@@ -437,8 +437,11 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				if ((flags & 0x01) != 0) { // deprecated but still used by older peers
 					CertificateOfMembership com;
 					offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS);
-					LockingPtr<Membership> m(peer->membership(com.networkId(),true));
-					if (m) m->addCredential(RR,RR->node->now(),com);
+					if (com) {
+						SharedPtr<Network> network(RR->node->network(com.networkId()));
+						if (network)
+							network->addCredential(com);
+					}
 				}
 
 				if ((flags & 0x02) != 0) {
@@ -567,8 +570,8 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				if ((flags & 0x01) != 0) { // deprecated but still used by old peers
 					CertificateOfMembership com;
 					comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
-					LockingPtr<Membership> m(peer->membership(com.networkId(),true));
-					if (m) m->addCredential(RR,RR->node->now(),com);
+					if (com)
+						network->addCredential(com);
 				}
 
 				if (!network->isAllowed(peer)) {
@@ -661,7 +664,6 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		const uint64_t now = RR->node->now();
 		CertificateOfMembership com;
 		Capability cap;
 		Tag tag;
@@ -669,9 +671,13 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 		unsigned int p = ZT_PACKET_IDX_PAYLOAD;
 		while ((p < size())&&((*this)[p])) {
 			p += com.deserialize(*this,p);
-			LockingPtr<Membership> m(peer->membership(com.networkId(),true));
-			if (!m) return true; // sanity check
-			if (m->addCredential(RR,now,com) == 1) return false; // wait for WHOIS
+			if (com) {
+				SharedPtr<Network> network(RR->node->network(com.networkId()));
+				if (network) {
+					if (network->addCredential(com) == 1)
+						return false; // wait for WHOIS
+				}
+			}
 		}
 		++p; // skip trailing 0 after COMs if present
 
@@ -679,17 +685,21 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 			const unsigned int numCapabilities = at<uint16_t>(p); p += 2;
 			for(unsigned int i=0;i<numCapabilities;++i) {
 				p += cap.deserialize(*this,p);
-				LockingPtr<Membership> m(peer->membership(cap.networkId(),true));
-				if (!m) return true; // sanity check
-				if (m->addCredential(RR,now,cap) == 1) return false; // wait for WHOIS
+				SharedPtr<Network> network(RR->node->network(cap.networkId()));
+				if (network) {
+					if (network->addCredential(cap) == 1)
+						return false; // wait for WHOIS
+				}
 			}
 
 			const unsigned int numTags = at<uint16_t>(p); p += 2;
 			for(unsigned int i=0;i<numTags;++i) {
 				p += tag.deserialize(*this,p);
-				LockingPtr<Membership> m(peer->membership(tag.networkId(),true));
-				if (!m) return true; // sanity check
-				if (m->addCredential(RR,now,tag) == 1) return false; // wait for WHOIS
+				SharedPtr<Network> network(RR->node->network(tag.networkId()));
+				if (network) {
+					if (network->addCredential(tag) == 1)
+						return false; // wait for WHOIS
+				}
 			}
 		}
 
@@ -830,8 +840,8 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 			if ((flags & 0x01) != 0) { // deprecated but still used by older peers
 				CertificateOfMembership com;
 				offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
-				LockingPtr<Membership> m(peer->membership(com.networkId(),true));
-				if (m) m->addCredential(RR,RR->node->now(),com);
+				if (com)
+					network->addCredential(com);
 			}
 
 			// Check membership after we've read any included COM, since
@@ -1037,17 +1047,8 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 		NetworkConfig originatorCredentialNetworkConfig;
 		if (originatorCredentialNetworkId) {
 			if (Network::controllerFor(originatorCredentialNetworkId) == originatorAddress) {
-				SharedPtr<Network> nw(RR->node->network(originatorCredentialNetworkId));
-				if ((nw)&&(nw->hasConfig())) {
-					originatorCredentialNetworkConfig = nw->config();
-					if ( ( (originatorCredentialNetworkConfig.isPublic()) || (peer->address() == originatorAddress) || ((originatorCredentialNetworkConfig.com)&&(previousHopCom)&&(originatorCredentialNetworkConfig.com.agreesWith(previousHopCom))) ) ) {
-						TRACE("CIRCUIT_TEST %.16llx received from hop %s(%s) and originator %s with valid network ID credential %.16llx (verified from originator and next hop)",testId,source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
-					} else {
-						TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID %.16llx as credential, and previous hop %s did not supply a valid COM",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId,peer->address().toString().c_str());
-						return true;
-					}
-				} else {
-					TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID %.16llx as credential, and we are not a member",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
+				if (!RR->node->network(originatorCredentialNetworkId)) {
+					TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID %.16llx as credential, and we are not a member of that network",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
 					return true;
 				}
 			} else {

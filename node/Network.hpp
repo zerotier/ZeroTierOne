@@ -337,6 +337,42 @@ public:
 	void learnBridgedMulticastGroup(const MulticastGroup &mg,uint64_t now);
 
 	/**
+	 * @param com Certificate of membership
+	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
+	 */
+	inline int addCredential(const CertificateOfMembership &com)
+	{
+		if (com.networkId() != _id)
+			return -1;
+		Mutex::Lock _l(_lock);
+		return _memberships[com.issuedTo()].addCredential(RR,com);
+	}
+
+	/**
+	 * @param cap Capability
+	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
+	 */
+	inline int addCredential(const Capability &cap)
+	{
+		if (cap.networkId() != _id)
+			return -1;
+		Mutex::Lock _l(_lock);
+		return _memberships[cap.issuedTo()].addCredential(RR,cap);
+	}
+
+	/**
+	 * @param cap Tag
+	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
+	 */
+	inline int addCredential(const Tag &tag)
+	{
+		if (tag.networkId() != _id)
+			return -1;
+		Mutex::Lock _l(_lock);
+		return _memberships[tag.issuedTo()].addCredential(RR,tag);
+	}
+
+	/**
 	 * Destroy this network
 	 *
 	 * This causes the network to disable itself, destroy its tap device, and on

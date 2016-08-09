@@ -22,7 +22,7 @@ namespace ZeroTier {
 
 const unsigned char Packet::ZERO_KEY[32] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
-//#ifdef ZT_TRACE
+#ifdef ZT_TRACE
 
 const char *Packet::verbString(Verb v)
 	throw()
@@ -60,14 +60,13 @@ const char *Packet::errorString(ErrorCode e)
 		case ERROR_OBJ_NOT_FOUND: return "OBJECT_NOT_FOUND";
 		case ERROR_IDENTITY_COLLISION: return "IDENTITY_COLLISION";
 		case ERROR_UNSUPPORTED_OPERATION: return "UNSUPPORTED_OPERATION";
-		case ERROR_NEED_MEMBERSHIP_CERTIFICATE: return "NEED_MEMBERSHIP_CERTIFICATE";
 		case ERROR_NETWORK_ACCESS_DENIED_: return "NETWORK_ACCESS_DENIED";
 		case ERROR_UNWANTED_MULTICAST: return "UNWANTED_MULTICAST";
 	}
 	return "(unknown)";
 }
 
-//#endif // ZT_TRACE
+#endif // ZT_TRACE
 
 void Packet::armor(const void *key,bool encryptPayload)
 {

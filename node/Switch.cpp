@@ -35,7 +35,6 @@
 #include "Peer.hpp"
 #include "SelfAwareness.hpp"
 #include "Packet.hpp"
-#include "Filter.hpp"
 #include "Cluster.hpp"
 
 namespace ZeroTier {
@@ -438,26 +437,12 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		//TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),len);
 
-		if (!Filter::run(
-			RR,
-			network->id(),
-			RR->identity.address(),
-			Address(), // 0 destination ZT address for multicasts since this is unknown at time of send
-			from,
-			to,
-			(const uint8_t *)data,
-			len,
-			etherType,
-			vlanId,
-			network->config().rules,
-			network->config().ruleCount))
-		{
-			TRACE("%.16llx: %s -> %s %s packet not sent: Filter::run() == false (multicast)",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+		if (!network->filterOutgoingPacket(RR->identity.address(),Address(),from,to,(const uint8_t *)data,len,etherType,vlanId)) {
+			TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 			return;
 		}
 
 		RR->mc->send(
-			((!network->config().isPublic())&&(network->config().com)) ? &(network->config().com) : (const CertificateOfMembership *)0,
 			network->config().multicastLimit,
 			RR->node->now(),
 			network->id(),
@@ -477,34 +462,15 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		Address toZT(to.toAddress(network->id())); // since in-network MACs are derived from addresses and network IDs, we can reverse this
 		SharedPtr<Peer> toPeer(RR->topology->getPeer(toZT));
 
-		if (!Filter::run(
-			RR,
-			network->id(),
-			RR->identity.address(),
-			toZT,
-			from,
-			to,
-			(const uint8_t *)data,
-			len,
-			etherType,
-			vlanId,
-			network->config().rules,
-			network->config().ruleCount))
-		{
-			TRACE("%.16llx: %s -> %s %s packet not sent: Filter::run() == false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+		if (!network->filterOutgoingPacket(RR->identity.address(),toZT,from,to,(const uint8_t *)data,len,etherType,vlanId)) {
+			TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 			return;
 		}
 
-		const bool includeCom = ( (network->config().isPrivate()) && (network->config().com) && ((!toPeer)||(toPeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true))) );
-		if ((fromBridged)||(includeCom)) {
+		if (fromBridged) {
 			Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
-			if (includeCom) {
-				outp.append((unsigned char)0x01); // 0x01 -- COM included
-				network->config().com.serialize(outp);
-			} else {
-				outp.append((unsigned char)0x00);
-			}
+			outp.append((unsigned char)0x00);
 			to.appendTo(outp);
 			from.appendTo(outp);
 			outp.append((uint16_t)etherType);
@@ -564,12 +530,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			SharedPtr<Peer> bridgePeer(RR->topology->getPeer(bridges[b]));
 			Packet outp(bridges[b],RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
-			if ( (network->config().isPrivate()) && (network->config().com) && ((!bridgePeer)||(bridgePeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true))) ) {
-				outp.append((unsigned char)0x01); // 0x01 -- COM included
-				network->config().com.serialize(outp);
-			} else {
-				outp.append((unsigned char)0);
-			}
+			outp.append((uint8_t)0x00);
 			to.appendTo(outp);
 			from.appendTo(outp);
 			outp.append((uint16_t)etherType);

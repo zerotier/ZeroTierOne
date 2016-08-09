@@ -79,19 +79,19 @@ bool Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint
 	return false;
 }
 
-int Membership::addCredential(const RuntimeEnvironment *RR,const uint64_t now,const CertificateOfMembership &com)
+int Membership::addCredential(const RuntimeEnvironment *RR,const CertificateOfMembership &com)
 {
 	if (com.issuedTo() != RR->identity.address())
 		return -1;
 	if (_com == com)
 		return 0;
 	const int vr = com.verify(RR);
-	if (vr == 0)
+	if ((vr == 0)&&(com.revision() > _com.revision()))
 		_com = com;
 	return vr;
 }
 
-int Membership::addCredential(const RuntimeEnvironment *RR,const uint64_t now,const Tag &tag)
+int Membership::addCredential(const RuntimeEnvironment *RR,const Tag &tag)
 {
 	if (tag.issuedTo() != RR->identity.address())
 		return -1;
@@ -102,15 +102,17 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const uint64_t now,co
 	if (vr == 0) {
 		if (!t)
 			t = &(_tags[tag.id()]);
-		t->lastReceived = now;
-		t->tag = tag;
+		if (t->tag.timestamp() <= tag.timestamp()) {
+			t->lastReceived = RR->node->now();
+			t->tag = tag;
+		}
 	}
 	return vr;
 }
 
-int Membership::addCredential(const RuntimeEnvironment *RR,const uint64_t now,const Capability &cap)
+int Membership::addCredential(const RuntimeEnvironment *RR,const Capability &cap)
 {
-	if (!cap.wasIssuedTo(RR->identity.address()))
+	if (cap.issuedTo() != RR->identity.address())
 		return -1;
 	std::map<uint32_t,CState>::iterator c(_caps.find(cap.id()));
 	if ((c != _caps.end())&&(c->second.lastReceived != 0)&&(c->second.cap == cap))
@@ -119,10 +121,10 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const uint64_t now,co
 	if (vr == 0) {
 		if (c == _caps.end()) {
 			CState &c2 = _caps[cap.id()];
-			c2.lastReceived = now;
+			c2.lastReceived = RR->node->now();
 			c2.cap = cap;
-		} else {
-			c->second.lastReceived = now;
+		} else if (c->second.cap.timestamp() <= cap.timestamp()) {
+			c->second.lastReceived = RR->node->now();
 			c->second.cap = cap;
 		}
 	}

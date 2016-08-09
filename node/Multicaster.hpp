@@ -150,7 +150,6 @@ public:
 	/**
 	 * Send a multicast
 	 *
-	 * @param com Certificate of membership to include or NULL for none
 	 * @param limit Multicast limit
 	 * @param now Current time
 	 * @param nwid Network ID
@@ -162,7 +161,6 @@ public:
 	 * @param len Length of packet data
 	 */
 	void send(
-		const CertificateOfMembership *com,
 		unsigned int limit,
 		uint64_t now,
 		uint64_t nwid,

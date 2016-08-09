@@ -348,7 +348,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 	_netconfFailure(NETCONF_FAILURE_NONE),
 	_portError(0)
 {
-	char confn[128],mcdbn[128];
+	char confn[128];
 	Utils::snprintf(confn,sizeof(confn),"networks.d/%.16llx.conf",_id);
 
 	if (_id == ZT_TEST_NETWORK_ID) {

@@ -152,7 +152,6 @@ std::vector<Address> Multicaster::getMembers(uint64_t nwid,const MulticastGroup 
 }
 
 void Multicaster::send(
-	const CertificateOfMembership *com,
 	unsigned int limit,
 	uint64_t now,
 	uint64_t nwid,
@@ -194,7 +193,6 @@ void Multicaster::send(
 				RR,
 				now,
 				nwid,
-				com,
 				limit,
 				1, // we'll still gather a little from peers to keep multicast list fresh
 				src,
@@ -236,22 +234,12 @@ void Multicaster::send(
 					if (!p)
 						continue;
 					//TRACE(">>MC upstream GATHER up to %u for group %.16llx/%s",gatherLimit,nwid,mg.toString().c_str());
-
-					const CertificateOfMembership *com = (CertificateOfMembership *)0;
-					{
-						SharedPtr<Network> nw(RR->node->network(nwid));
-						if ((nw)&&(nw->hasConfig())&&(nw->config().com)&&(nw->config().isPrivate())&&(p->needsOurNetworkMembershipCertificate(nwid,now,true)))
-							com = &(nw->config().com);
-					}
-
 					Packet outp(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_GATHER);
 					outp.append(nwid);
-					outp.append((uint8_t)(com ? 0x01 : 0x00));
+					outp.append((uint8_t)0x00);
 					mg.mac().appendTo(outp);
 					outp.append((uint32_t)mg.adi());
 					outp.append((uint32_t)gatherLimit);
-					if (com)
-						com->serialize(outp);
 					RR->sw->send(outp,true,0);
 				}
 				gatherLimit = 0;
@@ -264,7 +252,6 @@ void Multicaster::send(
 				RR,
 				now,
 				nwid,
-				com,
 				limit,
 				gatherLimit,
 				src,

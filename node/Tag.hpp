@@ -61,13 +61,15 @@ public:
 
 	/**
 	 * @param nwid Network ID
+	 * @param ts Timestamp
 	 * @param expiration Tag expiration relative to network config timestamp
 	 * @param issuedTo Address to which this tag was issued
 	 * @param id Tag ID
 	 * @param value Tag value
 	 */
-	Tag(const uint64_t nwid,const uint64_t expiration,const Address &issuedTo,const uint32_t id,const uint32_t value) :
+	Tag(const uint64_t nwid,const uint64_t ts,const uint64_t expiration,const Address &issuedTo,const uint32_t id,const uint32_t value) :
 		_nwid(nwid),
+		_ts(ts),
 		_expiration(expiration),
 		_id(id),
 		_value(value),
@@ -78,6 +80,7 @@ public:
 
 	inline uint64_t networkId() const { return _nwid; }
 	inline uint64_t expiration() const { return _expiration; }
+	inline uint64_t timestamp() const { return _ts; }
 	inline uint32_t id() const { return _id; }
 	inline const uint32_t &value() const { return _value; }
 	inline const Address &issuedTo() const { return _issuedTo; }
@@ -115,6 +118,7 @@ public:
 		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
 
 		b.append(_nwid);
+		b.append(_ts);
 		b.append(_expiration);
 		b.append(_id);
 		b.append(_value);
@@ -136,6 +140,7 @@ public:
 		unsigned int p = startAt;
 
 		_nwid = b.template at<uint64_t>(p); p += 8;
+		_ts = b.template at<uint64_t>(p); p += 8;
 		_expiration = b.template at<uint64_t>(p); p += 8;
 		_id = b.template at<uint32_t>(p); p += 4;
 		_value = b.template at<uint32_t>(p); p += 4;
@@ -163,6 +168,7 @@ public:
 
 private:
 	uint64_t _nwid;
+	uint64_t _ts;
 	uint64_t _expiration;
 	uint32_t _id;
 	uint32_t _value;

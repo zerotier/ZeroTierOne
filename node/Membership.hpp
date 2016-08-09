@@ -180,21 +180,21 @@ public:
 	 *
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
-	int addCredential(const RuntimeEnvironment *RR,const uint64_t now,const CertificateOfMembership &com);
+	int addCredential(const RuntimeEnvironment *RR,const CertificateOfMembership &com);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 *
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
-	int addCredential(const RuntimeEnvironment *RR,const uint64_t now,const Tag &tag);
+	int addCredential(const RuntimeEnvironment *RR,const Tag &tag);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 *
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
-	int addCredential(const RuntimeEnvironment *RR,const uint64_t now,const Capability &cap);
+	int addCredential(const RuntimeEnvironment *RR,const Capability &cap);
 
 	/**
 	 * Clean up old or stale entries

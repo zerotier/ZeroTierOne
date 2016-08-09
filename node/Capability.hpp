@@ -71,16 +71,18 @@ public:
 	/**
 	 * @param id Capability ID
 	 * @param nwid Network ID
+	 * @param ts Timestamp (at controller)
 	 * @param expiration Expiration relative to network config timestamp
 	 * @param name Capability short name (max strlen == ZT_MAX_CAPABILITY_NAME_LENGTH, overflow ignored)
 	 * @param mccl Maximum custody chain length (1 to create non-transferrable capability)
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	Capability(uint32_t id,uint64_t nwid,uint64_t expiration,const char *name,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
+	Capability(uint32_t id,uint64_t nwid,uint64_t ts,uint64_t expiration,const char *name,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
 	{
 		memset(this,0,sizeof(Capability));
 		_nwid = nwid;
+		_ts = ts;
 		_expiration = expiration;
 		_id = id;
 		_maxCustodyChainLength = (mccl > 0) ? ((mccl < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) ? mccl : (unsigned int)ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) : 1;
@@ -115,20 +117,22 @@ public:
 	inline uint64_t expiration() const { return _expiration; }
 
 	/**
-	 * Check to see if a given address is a 'to' address in the custody chain
-	 *
-	 * This does not actually do certificate checking. That must be done with verify().
-	 *
-	 * @param a Address to check
-	 * @return True if address is present
+	 * @return Timestamp
 	 */
-	inline bool wasIssuedTo(const Address &a) const
+	inline uint64_t timestamp() const { return _ts; }
+
+	/**
+	 * @return Last 'to' address in chain of custody
+	 */
+	inline Address issuedTo() const
 	{
+		Address i2;
 		for(unsigned int i=0;i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH;++i) {
-			if (_custody[i].to == a)
-				return true;
+			if (!_custody[i].to)
+				return i2;
+			else i2 = _custody[i].to;
 		}
-		return false;
+		return i2;
 	}
 
 	/**
@@ -265,9 +269,10 @@ public:
 	{
 		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
 
-		b.append(_id);
 		b.append(_nwid);
+		b.append(_ts);
 		b.append(_expiration);
+		b.append(_id);
 		serializeRules(b,_rules,_ruleCount);
 		b.append((uint8_t)_maxCustodyChainLength);
 
@@ -375,15 +380,16 @@ public:
 
 		unsigned int p = startAt;
 
-		_id = b.template at<uint32_t>(p); p += 4;
 		_nwid = b.template at<uint64_t>(p); p += 8;
+		_ts = b.template at<uint64_t>(p); p += 8;
 		_expiration = b.template at<uint64_t>(p); p += 8;
+		_id = b.template at<uint32_t>(p); p += 4;
 		deserializeRules(b,p,_rules,_ruleCount,ZT_MAX_CAPABILITY_RULES);
 		_maxCustodyChainLength = (unsigned int)b[p++];
 
 		if ((_maxCustodyChainLength < 1)||(_maxCustodyChainLength > ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))
 			throw std::runtime_error("invalid max custody chain length");
-		for(unsigned int i;;++i) {
+		for(unsigned int i=0;;++i) {
 			const Address to(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
 			if (!to)
 				break;
@@ -409,6 +415,7 @@ public:
 
 private:
 	uint64_t _nwid;
+	uint64_t _ts;
 	uint64_t _expiration;
 	uint32_t _id;
 

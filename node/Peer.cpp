@@ -53,9 +53,7 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_id(peerIdentity),
 	_numPaths(0),
 	_latency(0),
-	_directPathPushCutoffCount(0),
-	_networkComs(4),
-	_lastPushedComs(4)
+	_directPathPushCutoffCount(0)
 {
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))
 		throw std::runtime_error("new peer identity key agreement failed");
