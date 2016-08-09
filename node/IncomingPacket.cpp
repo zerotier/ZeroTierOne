@@ -102,6 +102,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 				case Packet::VERB_MULTICAST_LIKE:                 return _doMULTICAST_LIKE(RR,peer);
 				case Packet::VERB_NETWORK_CREDENTIALS:            return _doNETWORK_CREDENTIALS(RR,peer);
 				case Packet::VERB_NETWORK_CONFIG_REQUEST:         return _doNETWORK_CONFIG_REQUEST(RR,peer);
+				case Packet::VERB_NETWORK_CONFIG_REFRESH:         return _doNETWORK_CONFIG_REFRESH(RR,peer);
 				case Packet::VERB_MULTICAST_GATHER:               return _doMULTICAST_GATHER(RR,peer);
 				case Packet::VERB_MULTICAST_FRAME:                return _doMULTICAST_FRAME(RR,peer);
 				case Packet::VERB_PUSH_DIRECT_PATHS:              return _doPUSH_DIRECT_PATHS(RR,peer);
@@ -724,67 +725,70 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 		peer->received(_localAddress,_remoteAddress,h,requestPacketId,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP);
 
 		if (RR->localNetworkController) {
-			NetworkConfig netconf;
-			switch(RR->localNetworkController->doNetworkConfigRequest((h > 0) ? InetAddress() : _remoteAddress,RR->identity,peer->identity(),nwid,metaData,netconf)) {
+			NetworkConfig *netconf = new NetworkConfig();
+			try {
+				switch(RR->localNetworkController->doNetworkConfigRequest((h > 0) ? InetAddress() : _remoteAddress,RR->identity,peer->identity(),nwid,metaData,*netconf)) {
 
-				case NetworkController::NETCONF_QUERY_OK: {
-					Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
-					try {
-						if (netconf.toDictionary(*dconf,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6)) {
-							const unsigned int totalSize = dconf->sizeBytes();
-							unsigned int chunkPtr = 0;
-							while (chunkPtr < totalSize) {
-								const unsigned int chunkLen = std::min(totalSize - chunkPtr,(unsigned int)(ZT_PROTO_MAX_PACKET_LENGTH - (ZT_PROTO_MIN_PACKET_LENGTH + 32)));
-								Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
-								outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-								outp.append(requestPacketId);
-								outp.append(nwid);
-								outp.append((uint16_t)chunkLen);
-								outp.append((const void *)(dconf->data() + chunkPtr),chunkLen);
-								outp.append((uint32_t)totalSize);
-								outp.append((uint32_t)chunkPtr);
-								outp.compress();
-								RR->sw->send(outp,true,0);
-								chunkPtr += chunkLen;
+					case NetworkController::NETCONF_QUERY_OK: {
+						Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+						try {
+							if (netconf->toDictionary(*dconf,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6)) {
+								const unsigned int totalSize = dconf->sizeBytes();
+								unsigned int chunkIndex = 0;
+								while (chunkIndex < totalSize) {
+									const unsigned int chunkLen = std::min(totalSize - chunkIndex,(unsigned int)(ZT_PROTO_MAX_PACKET_LENGTH - (ZT_PROTO_MIN_PACKET_LENGTH + 32)));
+									Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
+									outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+									outp.append(requestPacketId);
+									outp.append(nwid);
+									outp.append((uint16_t)chunkLen);
+									outp.append((const void *)(dconf->data() + chunkIndex),chunkLen);
+									outp.append((uint32_t)totalSize);
+									outp.append((uint32_t)chunkIndex);
+									outp.compress();
+									RR->sw->send(outp,true,0);
+									chunkIndex += chunkLen;
+								}
 							}
+							delete dconf;
+						} catch ( ... ) {
+							delete dconf;
+							throw;
 						}
-						delete dconf;
-					} catch ( ... ) {
-						delete dconf;
-						throw;
-					}
-				}	break;
+					}	break;
 
-				case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND: {
-					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
-					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-					outp.append(requestPacketId);
-					outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
-					outp.append(nwid);
-					outp.armor(peer->key(),true);
-					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
-				}	break;
+					case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND: {
+						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
+						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+						outp.append(requestPacketId);
+						outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
+						outp.append(nwid);
+						outp.armor(peer->key(),true);
+						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+					}	break;
 
-				case NetworkController::NETCONF_QUERY_ACCESS_DENIED: {
-					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
-					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-					outp.append(requestPacketId);
-					outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
-					outp.append(nwid);
-					outp.armor(peer->key(),true);
-					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
-				} break;
+					case NetworkController::NETCONF_QUERY_ACCESS_DENIED: {
+						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
+						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+						outp.append(requestPacketId);
+						outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
+						outp.append(nwid);
+						outp.armor(peer->key(),true);
+						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+					} break;
 
-				case NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR:
-					break;
-
-				case NetworkController::NETCONF_QUERY_IGNORE:
-					break;
-
-				default:
-					TRACE("NETWORK_CONFIG_REQUEST failed: invalid return value from NetworkController::doNetworkConfigRequest()");
-					break;
-
+					case NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR:
+						break;
+					case NetworkController::NETCONF_QUERY_IGNORE:
+						break;
+					default:
+						TRACE("NETWORK_CONFIG_REQUEST failed: invalid return value from NetworkController::doNetworkConfigRequest()");
+						break;
+				}
+				delete netconf;
+			} catch ( ... ) {
+				delete netconf;
+				throw;
 			}
 		} else {
 			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
@@ -797,6 +801,24 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 		}
 	} catch ( ... ) {
 		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+	}
+	return true;
+}
+
+bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+{
+	try {
+		unsigned int p = ZT_PACKET_IDX_PAYLOAD;
+		while ((p + 8) <= size()) {
+			const uint64_t nwid = at<uint64_t>(p); p += 8;
+			if (Network::controllerFor(nwid) == peer->address()) {
+				SharedPtr<Network> network(RR->node->network(nwid));
+				if (network)
+					network->requestConfiguration();
+			}
+		}
+	} catch ( ... ) {
+		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
