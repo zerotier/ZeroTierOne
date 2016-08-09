@@ -117,11 +117,14 @@ public:
 	{
 		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
 
+		// These are the same between Tag and Capability
 		b.append(_nwid);
 		b.append(_ts);
 		b.append(_expiration);
 		b.append(_id);
+
 		b.append(_value);
+
 		_issuedTo.appendTo(b);
 		_signedBy.appendTo(b);
 		if (!forSign) {
@@ -129,6 +132,7 @@ public:
 			b.append((uint16_t)ZT_C25519_SIGNATURE_LEN); // length of signature
 			b.append(_signature.data,ZT_C25519_SIGNATURE_LEN);
 		}
+
 		b.append((uint16_t)0); // length of additional fields, currently 0
 
 		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
@@ -139,11 +143,14 @@ public:
 	{
 		unsigned int p = startAt;
 
+		// These are the same between Tag and Capability
 		_nwid = b.template at<uint64_t>(p); p += 8;
 		_ts = b.template at<uint64_t>(p); p += 8;
 		_expiration = b.template at<uint64_t>(p); p += 8;
 		_id = b.template at<uint32_t>(p); p += 4;
+
 		_value = b.template at<uint32_t>(p); p += 4;
+
 		_issuedTo.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
 		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
 		if (b[p++] != 1)

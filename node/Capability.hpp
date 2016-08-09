@@ -265,40 +265,6 @@ public:
 	}
 
 	template<unsigned int C>
-	inline void serialize(Buffer<C> &b,const bool forSign = false) const
-	{
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
-
-		b.append(_nwid);
-		b.append(_ts);
-		b.append(_expiration);
-		b.append(_id);
-		serializeRules(b,_rules,_ruleCount);
-		b.append((uint8_t)_maxCustodyChainLength);
-
-		if (!forSign) {
-			for(unsigned int i=0;;++i) {
-				if ((i < _maxCustodyChainLength)&&(i < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH)&&(_custody[i].to)) {
-					_custody[i].to.appendTo(b);
-					_custody[i].from.appendTo(b);
-					b.append((uint8_t)1); // 1 == Ed25519 signature
-					b.append((uint16_t)ZT_C25519_SIGNATURE_LEN); // length of signature
-					b.append(_custody[i].signature.data,ZT_C25519_SIGNATURE_LEN);
-				} else {
-					b.append((unsigned char)0,ZT_ADDRESS_LENGTH); // zero 'to' terminates chain
-					break;
-				}
-			}
-		}
-
-		// This is the size of any additional fields. If it is nonzero,
-		// the last 2 bytes of the next field will be another size field.
-		b.append((uint16_t)0);
-
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
-	}
-
-	template<unsigned int C>
 	static inline void deserializeRules(const Buffer<C> &b,unsigned int &p,ZT_VirtualNetworkRule *rules,unsigned int &ruleCount,const unsigned int maxRuleCount)
 	{
 		ruleCount = b.template at<uint16_t>(p); p += 2;
@@ -374,21 +340,59 @@ public:
 	}
 
 	template<unsigned int C>
+	inline void serialize(Buffer<C> &b,const bool forSign = false) const
+	{
+		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+
+		// These are the same between Tag and Capability
+		b.append(_nwid);
+		b.append(_ts);
+		b.append(_expiration);
+		b.append(_id);
+
+		serializeRules(b,_rules,_ruleCount);
+		b.append((uint8_t)_maxCustodyChainLength);
+
+		if (!forSign) {
+			for(unsigned int i=0;;++i) {
+				if ((i < _maxCustodyChainLength)&&(i < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH)&&(_custody[i].to)) {
+					_custody[i].to.appendTo(b);
+					_custody[i].from.appendTo(b);
+					b.append((uint8_t)1); // 1 == Ed25519 signature
+					b.append((uint16_t)ZT_C25519_SIGNATURE_LEN); // length of signature
+					b.append(_custody[i].signature.data,ZT_C25519_SIGNATURE_LEN);
+				} else {
+					b.append((unsigned char)0,ZT_ADDRESS_LENGTH); // zero 'to' terminates chain
+					break;
+				}
+			}
+		}
+
+		// This is the size of any additional fields, currently 0.
+		b.append((uint16_t)0);
+
+		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+	}
+
+	template<unsigned int C>
 	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
 	{
 		memset(this,0,sizeof(Capability));
 
 		unsigned int p = startAt;
 
+		// These are the same between Tag and Capability
 		_nwid = b.template at<uint64_t>(p); p += 8;
 		_ts = b.template at<uint64_t>(p); p += 8;
 		_expiration = b.template at<uint64_t>(p); p += 8;
 		_id = b.template at<uint32_t>(p); p += 4;
-		deserializeRules(b,p,_rules,_ruleCount,ZT_MAX_CAPABILITY_RULES);
-		_maxCustodyChainLength = (unsigned int)b[p++];
 
+		deserializeRules(b,p,_rules,_ruleCount,ZT_MAX_CAPABILITY_RULES);
+
+		_maxCustodyChainLength = (unsigned int)b[p++];
 		if ((_maxCustodyChainLength < 1)||(_maxCustodyChainLength > ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))
 			throw std::runtime_error("invalid max custody chain length");
+
 		for(unsigned int i=0;;++i) {
 			const Address to(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
 			if (!to)

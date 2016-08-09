@@ -75,7 +75,7 @@ public:
 		const Identity &signingId,
 		const Identity &identity,
 		uint64_t nwid,
-		const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &metaData,
+		const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData,
 		NetworkConfig &nc) = 0;
 };
 

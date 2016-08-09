@@ -66,22 +66,42 @@
 
 namespace ZeroTier {
 
-// Maximum size of a network config dictionary (can be increased)
-#define ZT_NETWORKCONFIG_DICT_CAPACITY 8194
+// Dictionary capacity needed for max size network config
+#define ZT_NETWORKCONFIG_DICT_CAPACITY (4096 + (sizeof(ZT_VirtualNetworkRule) * ZT_MAX_NETWORK_RULES) + (sizeof(Capability) * ZT_MAX_NETWORK_CAPABILITIES) + (sizeof(Tag) * ZT_MAX_NETWORK_TAGS))
+
+// Dictionary capacity needed for max size network meta-data
+#define ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY 1024
 
 // Network config version
 #define ZT_NETWORKCONFIG_VERSION 6
 
 // Fields for meta-data sent with network config requests
+
+// Network config version
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION "v"
+
+// Protocol version (see Packet.hpp)
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION "pv"
+
+// Software major, minor, revision
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION "majv"
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION "minv"
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION "revv"
-#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_RULES "Mr"
-#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_CAPABILITY_RULES "Mcr"
+
+// Maximum number of rules per network this node can accept
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_RULES "mr"
+
+// Maximum number of capabilities this node can accept
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_CAPABILITIES "mc"
+
+// Maximum number of rules per capability this node can accept
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_CAPABILITY_RULES "mcr"
+
+// Maximum number of tags this node can accept
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_TAGS "mt"
 
 // These dictionary keys are short so they don't take up much room.
+// By convention we use upper case for binary blobs, but it doesn't really matter.
 
 // network config version
 #define ZT_NETWORKCONFIG_DICT_KEY_VERSION "v"
@@ -111,6 +131,10 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS "I"
 // rules (binary blob)
 #define ZT_NETWORKCONFIG_DICT_KEY_RULES "R"
+// capabilities (binary blobs)
+#define ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES "CAP"
+// tags (binary blobs)
+#define ZT_NETWORKCONFIG_DICT_KEY_TAGS "TAG"
 
 // Legacy fields -- these are obsoleted but are included when older clients query
 
@@ -453,12 +477,12 @@ public:
 	ZT_VirtualNetworkRule rules[ZT_MAX_NETWORK_RULES];
 
 	/**
-	 * Capabilities for this node on this network
+	 * Capabilities for this node on this network, in ascending order of capability ID
 	 */
 	Capability capabilities[ZT_MAX_NETWORK_CAPABILITIES];
 
 	/**
-	 * Tags for this node on this network
+	 * Tags for this node on this network, in ascending order of tag ID
 	 */
 	Tag tags[ZT_MAX_NETWORK_TAGS];
 

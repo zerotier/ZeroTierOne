@@ -358,18 +358,21 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 		RR->node->dataStorePut(confn,"\n",1,false);
 	} else {
 		bool gotConf = false;
+		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+		NetworkConfig *nconf = new NetworkConfig();
 		try {
 			std::string conf(RR->node->dataStoreGet(confn));
 			if (conf.length()) {
-				Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> dconf(conf.c_str());
-				NetworkConfig nconf;
-				if (nconf.fromDictionary(dconf)) {
-					this->setConfiguration(nconf,false);
+				dconf->load(conf.c_str());
+				if (nconf->fromDictionary(*dconf)) {
+					this->setConfiguration(*nconf,false);
 					_lastConfigUpdate = 0; // we still want to re-request a new config from the network
 					gotConf = true;
 				}
 			}
 		} catch ( ... ) {} // ignore invalids, we'll re-request
+		delete nconf;
+		delete dconf;
 
 		if (!gotConf) {
 			// Save a one-byte CR to persist membership while we request a real netconf
@@ -591,14 +594,16 @@ void Network::requestConfiguration()
 	if (_id == ZT_TEST_NETWORK_ID) // pseudo-network-ID, uses locally generated static config
 		return;
 
-	Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> rmd;
+	Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> rmd;
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION,(uint64_t)ZT_PROTO_VERSION);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,(uint64_t)ZEROTIER_ONE_VERSION_MAJOR);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,(uint64_t)ZEROTIER_ONE_VERSION_MINOR);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,(uint64_t)ZEROTIER_ONE_VERSION_REVISION);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_RULES,(uint64_t)ZT_MAX_NETWORK_RULES);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_CAPABILITIES,(uint64_t)ZT_MAX_NETWORK_CAPABILITIES);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_CAPABILITY_RULES,(uint64_t)ZT_MAX_CAPABILITY_RULES);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_TAGS,(uint64_t)ZT_MAX_NETWORK_TAGS);
 
 	if (controller() == RR->identity.address()) {
 		if (RR->localNetworkController) {
