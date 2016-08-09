@@ -343,6 +343,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 	_id(nwid),
 	_mac(renv->identity.address(),nwid),
 	_portInitialized(false),
+	_inboundConfigPacketId(0),
 	_lastConfigUpdate(0),
 	_destroyed(false),
 	_netconfFailure(NETCONF_FAILURE_NONE),
@@ -364,7 +365,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 			std::string conf(RR->node->dataStoreGet(confn));
 			if (conf.length()) {
 				dconf->load(conf.c_str());
-				if (nconf->fromDictionary(*dconf)) {
+				if (nconf->fromDictionary(Identity(),*dconf)) {
 					this->setConfiguration(*nconf,false);
 					_lastConfigUpdate = 0; // we still want to re-request a new config from the network
 					gotConf = true;
@@ -589,6 +590,47 @@ int Network::setConfiguration(const NetworkConfig &nconf,bool saveToDisk)
 	return 0;
 }
 
+void Network::handleInboundConfigChunk(const uint64_t inRePacketId,const void *data,unsigned int chunkSize,unsigned int chunkIndex,unsigned int totalSize)
+{
+	std::string newConfig;
+	if ((_inboundConfigPacketId == inRePacketId)&&(totalSize < ZT_NETWORKCONFIG_DICT_CAPACITY)&&((chunkIndex + chunkSize) < totalSize)) {
+		Mutex::Lock _l(_lock);
+		TRACE("got %u bytes at position %u of network config request %.16llx, total expected length %u",chunkSize,chunkIndex,inRePacketId,totalSize);
+		_inboundConfigChunks[chunkIndex].append((const char *)data,chunkSize);
+		unsigned int totalWeHave = 0;
+		for(std::map<unsigned int,std::string>::iterator c(_inboundConfigChunks.begin());c!=_inboundConfigChunks.end();++c)
+			totalWeHave += (unsigned int)c->second.length();
+		if (totalWeHave == totalSize) {
+			TRACE("have all chunks for network config request %.16llx, assembling...",inRePacketId);
+			for(std::map<unsigned int,std::string>::iterator c(_inboundConfigChunks.begin());c!=_inboundConfigChunks.end();++c)
+				newConfig.append(c->second);
+			_inboundConfigPacketId = 0;
+			_inboundConfigChunks.clear();
+		} else if (totalWeHave > totalSize) {
+			_inboundConfigPacketId = 0;
+			_inboundConfigChunks.clear();
+		}
+	}
+
+	if (newConfig.length() > 0) {
+		if (newConfig.length() < ZT_NETWORKCONFIG_DICT_CAPACITY) {
+			Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dict = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>(newConfig.c_str());
+			try {
+				Identity controllerId(RR->topology->getIdentity(this->controller()));
+				if (controllerId) {
+					NetworkConfig nc;
+					if (nc.fromDictionary(controllerId,*dict))
+						this->setConfiguration(nc,true);
+				}
+				delete dict;
+			} catch ( ... ) {
+				delete dict;
+				throw;
+			}
+		}
+	}
+}
+
 void Network::requestConfiguration()
 {
 	if (_id == ZT_TEST_NETWORK_ID) // pseudo-network-ID, uses locally generated static config
@@ -637,6 +679,10 @@ void Network::requestConfiguration()
 	outp.append((_config) ? (uint64_t)_config.revision : (uint64_t)0);
 	outp.compress();
 	RR->sw->send(outp,true,0);
+
+	// Expect replies with this in-re packet ID
+	_inboundConfigPacketId = outp.packetId();
+	_inboundConfigChunks.clear();
 }
 
 void Network::clean()

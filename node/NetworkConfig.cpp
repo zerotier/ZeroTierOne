@@ -178,8 +178,18 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 	return true;
 }
 
-bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d)
+bool NetworkConfig::fromDictionary(const Identity &controllerId,Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d)
 {
+	if ((d.contains(ZT_NETWORKCONFIG_DICT_KEY_SIGNATURE))&&(controllerId)) {
+		// FIXME: right now signature are optional since network configs are only
+		// accepted directly from the controller and the protocol already guarantees
+		// the sender. In the future these might be made non-optional once old
+		// controllers that do not sign are gone and if we ever support peer caching
+		// of network configs.
+		if (!d.unwrapAndVerify(ZT_NETWORKCONFIG_DICT_KEY_SIGNATURE,controllerId.publicKey()))
+			return false;
+	}
+
 	Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY> *tmp = new Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY>();
 
 	try {

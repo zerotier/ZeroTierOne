@@ -215,6 +215,21 @@ public:
 	int setConfiguration(const NetworkConfig &nconf,bool saveToDisk);
 
 	/**
+	 * Handle an inbound network config chunk
+	 *
+	 * Only chunks whose inRePacketId matches the packet ID of the last request
+	 * are handled. If this chunk completes the config, it is decoded and
+	 * setConfiguration() is called.
+	 *
+	 * @param inRePacketId In-re packet ID from OK(NETWORK_CONFIG_REQUEST)
+	 * @param data Chunk data
+	 * @param chunkSize Size of data[]
+	 * @param chunkIndex Index of chunk in full config
+	 * @param totalSize Total size of network config
+	 */
+	void handleInboundConfigChunk(const uint64_t inRePacketId,const void *data,unsigned int chunkSize,unsigned int chunkIndex,unsigned int totalSize);
+
+	/**
 	 * Set netconf failure to 'access denied' -- called in IncomingPacket when controller reports this
 	 */
 	inline void setAccessDenied()
@@ -410,6 +425,9 @@ private:
 	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to (according to tap)
 	Hashtable< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
 	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
+
+	uint64_t _inboundConfigPacketId;
+	std::map<unsigned int,std::string> _inboundConfigChunks;
 
 	NetworkConfig _config;
 	volatile uint64_t _lastConfigUpdate;

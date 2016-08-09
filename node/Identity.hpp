@@ -283,6 +283,11 @@ public:
 	inline bool fromString(const std::string &str) { return fromString(str.c_str()); }
 
 	/**
+	 * @return C25519 public key
+	 */
+	inline const C25519::Public &publicKey() const { return _publicKey; }
+
+	/**
 	 * @return True if this identity contains something
 	 */
 	inline operator bool() const throw() { return (_address); }

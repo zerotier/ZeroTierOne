@@ -402,15 +402,15 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 			case Packet::VERB_NETWORK_CONFIG_REQUEST: {
 				const SharedPtr<Network> nw(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID)));
 				if ((nw)&&(nw->controller() == peer->address())) {
-					const unsigned int nclen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN);
-					if (nclen) {
-						Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> dconf((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT,nclen),nclen);
-						NetworkConfig nconf;
-						if (nconf.fromDictionary(dconf)) {
-							nw->setConfiguration(nconf,true);
-							TRACE("got network configuration for network %.16llx from %s",(unsigned long long)nw->id(),source().toString().c_str());
-						}
+					const unsigned int chunkLen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN);
+					const void *chunkData = field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT,chunkLen);
+					unsigned int chunkIndex = 0;
+					unsigned int totalSize = chunkLen;
+					if ((ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT + chunkLen) < size()) {
+						totalSize = at<uint32_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT + chunkLen);
+						chunkIndex = at<uint32_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT + chunkLen + 4);
 					}
+					nw->handleInboundConfigChunk(inRePacketId,chunkData,chunkLen,chunkIndex,totalSize);
 				}
 			}	break;
 
