@@ -23,6 +23,7 @@
 #include "Utils.hpp"
 #include "Buffer.hpp"
 #include "Address.hpp"
+#include "C25519.hpp"
 
 #include <stdint.h>
 
@@ -441,6 +442,39 @@ public:
 		d2[d2ptr++] = (char)0;
 		memcpy(_d,d2,d2ptr);
 		return found;
+	}
+
+	/**
+	 * Sign this Dictionary, replacing any previous signature
+	 *
+	 * @param sigKey Key to use for signature in dictionary
+	 * @param kp Key pair to sign with
+	 */
+	inline void wrapWithSignature(const char *sigKey,const C25519::Pair &kp)
+	{
+		this->erase(sigKey);
+		C25519::Signature sig(C25519::sign(kp,this->data(),this->sizeBytes()));
+		this->add(sigKey,sig.data,ZT_C25519_SIGNATURE_LEN);
+	}
+
+	/**
+	 * Verify signature (and erase signature key)
+	 *
+	 * This erases this Dictionary's signature key (if present) and verifies
+	 * the signature. The key is erased to render the Dictionary into the
+	 * original unsigned form it was signed in for verification purposes.
+	 *
+	 * @param sigKey Key to use for signature in dictionary
+	 * @param pk Public key to check against
+	 * @return True if signature was present and valid
+	 */
+	inline bool unwrapAndVerify(const char *sigKey,const C25519::Public &pk)
+	{
+		char sig[ZT_C25519_SIGNATURE_LEN+1];
+		if (this->get(sigKey,sig,sizeof(sig)) != ZT_C25519_SIGNATURE_LEN)
+			return false;
+		this->erase(sigKey);
+		return C25519::verify(pk,this->data(),this->sizeBytes(),sig);
 	}
 
 	/**

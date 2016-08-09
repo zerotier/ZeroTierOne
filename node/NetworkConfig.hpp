@@ -135,6 +135,8 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES "CAP"
 // tags (binary blobs)
 #define ZT_NETWORKCONFIG_DICT_KEY_TAGS "TAG"
+// curve25519 signature
+#define ZT_NETWORKCONFIG_DICT_KEY_SIGNATURE "C25519"
 
 // Legacy fields -- these are obsoleted but are included when older clients query
 

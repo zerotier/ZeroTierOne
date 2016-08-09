@@ -719,35 +719,46 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 		const char *metaDataBytes = (const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength);
 		const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> metaData(metaDataBytes,metaDataLength);
 
-		//const uint64_t haveRevision = ((ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength + 8) <= size()) ? at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength) : 0ULL;
-
 		const unsigned int h = hops();
-		const uint64_t pid = packetId();
-		peer->received(_localAddress,_remoteAddress,h,pid,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP);
+		const uint64_t requestPacketId = packetId();
+		peer->received(_localAddress,_remoteAddress,h,requestPacketId,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP);
 
 		if (RR->localNetworkController) {
 			NetworkConfig netconf;
 			switch(RR->localNetworkController->doNetworkConfigRequest((h > 0) ? InetAddress() : _remoteAddress,RR->identity,peer->identity(),nwid,metaData,netconf)) {
 
 				case NetworkController::NETCONF_QUERY_OK: {
-					Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> dconf;
-					if (netconf.toDictionary(dconf,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6)) {
-						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
-						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-						outp.append(pid);
-						outp.append(nwid);
-						const unsigned int dlen = dconf.sizeBytes();
-						outp.append((uint16_t)dlen);
-						outp.append((const void *)dconf.data(),dlen);
-						outp.compress();
-						RR->sw->send(outp,true,0);
+					Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+					try {
+						if (netconf.toDictionary(*dconf,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6)) {
+							const unsigned int totalSize = dconf->sizeBytes();
+							unsigned int chunkPtr = 0;
+							while (chunkPtr < totalSize) {
+								const unsigned int chunkLen = std::min(totalSize - chunkPtr,(unsigned int)(ZT_PROTO_MAX_PACKET_LENGTH - (ZT_PROTO_MIN_PACKET_LENGTH + 32)));
+								Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
+								outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+								outp.append(requestPacketId);
+								outp.append(nwid);
+								outp.append((uint16_t)chunkLen);
+								outp.append((const void *)(dconf->data() + chunkPtr),chunkLen);
+								outp.append((uint32_t)totalSize);
+								outp.append((uint32_t)chunkPtr);
+								outp.compress();
+								RR->sw->send(outp,true,0);
+								chunkPtr += chunkLen;
+							}
+						}
+						delete dconf;
+					} catch ( ... ) {
+						delete dconf;
+						throw;
 					}
 				}	break;
 
 				case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND: {
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-					outp.append(pid);
+					outp.append(requestPacketId);
 					outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
 					outp.append(nwid);
 					outp.armor(peer->key(),true);
@@ -757,7 +768,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 				case NetworkController::NETCONF_QUERY_ACCESS_DENIED: {
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-					outp.append(pid);
+					outp.append(requestPacketId);
 					outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
 					outp.append(nwid);
 					outp.armor(peer->key(),true);
@@ -765,7 +776,6 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 				} break;
 
 				case NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR:
-					// TRACE("NETWORK_CONFIG_REQUEST failed: internal error: %s",netconf.get("error","(unknown)").c_str());
 					break;
 
 				case NetworkController::NETCONF_QUERY_IGNORE:
@@ -779,7 +789,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 		} else {
 			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 			outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-			outp.append(pid);
+			outp.append(requestPacketId);
 			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
 			outp.append(nwid);
 			outp.armor(peer->key(),true);

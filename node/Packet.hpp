@@ -724,7 +724,7 @@ public:
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit length of request meta-data dictionary>
 		 *   <[...] string-serialized request meta-data>
-		 *  [<[8] 64-bit timestamp of netconf we currently have>]
+		 *   <[8] 64-bit timestamp of netconf we currently have>
 		 *
 		 * This message requests network configuration from a node capable of
 		 * providing it. If the optional revision is included, a response is
@@ -732,14 +732,10 @@ public:
 		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
-		 *   <[2] 16-bit length of network configuration dictionary field>
-		 *   <[...] network configuration dictionary (or fragment)>
-		 *   [<[4] 32-bit total length of assembled dictionary>]
-		 *   [<[4] 32-bit index of fragment in this reply>]
-		 *
-		 * Fields after the dictionary are extensions to support multipart
-		 * sending of large network configs. If they are not present the
-		 * sent config must be assumed to be whole.
+		 *   <[2] 16-bit length of network configuration dictionary chunk>
+		 *   <[...] network configuration dictionary (may be incomplete)>
+		 *   <[4] 32-bit total length of assembled dictionary>
+		 *   <[4] 32-bit index of chunk in this reply>
 		 *
 		 * ERROR response payload:
 		 *   <[8] 64-bit network ID>
