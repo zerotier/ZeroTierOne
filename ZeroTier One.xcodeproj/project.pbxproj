@@ -25,6 +25,7 @@
 		93D167791D5815E600330C99 /* JoinNetworkViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D167781D5815E600330C99 /* JoinNetworkViewController.m */; };
 		93D1677C1D58228A00330C99 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D1677B1D58228A00330C99 /* AppDelegate.m */; };
 		93D1679B1D58300F00330C99 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 93D1679A1D58300F00330C99 /* main.m */; };
+		93D1679D1D595F0000330C99 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 93D1679C1D595F0000330C99 /* WebKit.framework */; };
 		93DAFB271D3F0BEE004D5417 /* about.html in Resources */ = {isa = PBXBuildFile; fileRef = 93DAFB261D3F0BEE004D5417 /* about.html */; };
 		93DAFE4B1CFE53CA00547CC4 /* AuthtokenCopy.m in Sources */ = {isa = PBXBuildFile; fileRef = 93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */; };
 /* End PBXBuildFile section */
@@ -60,6 +61,7 @@
 		93D1677A1D58228A00330C99 /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		93D1677B1D58228A00330C99 /* AppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		93D1679A1D58300F00330C99 /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		93D1679C1D595F0000330C99 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		93DAFB261D3F0BEE004D5417 /* about.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = about.html; sourceTree = "<group>"; };
 		93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AuthtokenCopy.m; sourceTree = "<group>"; };
 		93DAFE4C1CFE53DA00547CC4 /* AuthtokenCopy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AuthtokenCopy.h; sourceTree = "<group>"; };
@@ -70,6 +72,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				93D1679D1D595F0000330C99 /* WebKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,6 +82,7 @@
 		93326BCF1CE7C816005CA2AC = {
 			isa = PBXGroup;
 			children = (
+				93D1679C1D595F0000330C99 /* WebKit.framework */,
 				93326BDA1CE7C816005CA2AC /* ZeroTier One */,
 				93326BD91CE7C816005CA2AC /* Products */,
 			);
