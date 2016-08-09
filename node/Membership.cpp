@@ -69,7 +69,7 @@ bool Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint
 			outp.append((uint8_t)0x00);
 			outp.append(capsAndTags.data(),capsAndTags.size());
 			outp.compress();
-			RR->sw->send(outp,true,0);
+			RR->sw->send(outp,true);
 			_lastPushedCom = now;
 			return true;
 		}

@@ -92,15 +92,10 @@ public:
 	 * Needless to say, the packet's source must be this node. Otherwise it
 	 * won't be encrypted right. (This is not used for relaying.)
 	 *
-	 * The network ID should only be specified for frames and other actual
-	 * network traffic. Other traffic such as controller requests and regular
-	 * protocol messages should specify zero.
-	 *
 	 * @param packet Packet to send
 	 * @param encrypt Encrypt packet payload? (always true except for HELLO)
-	 * @param nwid Related network ID or 0 if message is not in-network traffic
 	 */
-	void send(const Packet &packet,bool encrypt,uint64_t nwid);
+	void send(const Packet &packet,bool encrypt);
 
 	/**
 	 * Send RENDEZVOUS to two peers to permit them to directly connect
@@ -112,15 +107,6 @@ public:
 	 * @param p2 Second of pair
 	 */
 	bool unite(const Address &p1,const Address &p2);
-
-	/**
-	 * Attempt NAT traversal to peer at a given physical address
-	 *
-	 * @param peer Peer to contact
-	 * @param localAddr Local interface address
-	 * @param atAddr Address of peer
-	 */
-	void rendezvous(const SharedPtr<Peer> &peer,const InetAddress &localAddr,const InetAddress &atAddr);
 
 	/**
 	 * Request WHOIS on a given address
@@ -151,7 +137,7 @@ public:
 
 private:
 	Address _sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
-	bool _trySend(const Packet &packet,bool encrypt,uint64_t nwid);
+	bool _trySend(const Packet &packet,bool encrypt);
 
 	const RuntimeEnvironment *const RR;
 	uint64_t _lastBeaconResponse;
@@ -205,16 +191,14 @@ private:
 	struct TXQueueEntry
 	{
 		TXQueueEntry() {}
-		TXQueueEntry(Address d,uint64_t ct,const Packet &p,bool enc,uint64_t nw) :
+		TXQueueEntry(Address d,uint64_t ct,const Packet &p,bool enc) :
 			dest(d),
 			creationTime(ct),
-			nwid(nw),
 			packet(p),
 			encrypt(enc) {}
 
 		Address dest;
 		uint64_t creationTime;
-		uint64_t nwid;
 		Packet packet; // unencrypted/unMAC'd packet -- this is done at send time
 		bool encrypt;
 	};
@@ -241,26 +225,6 @@ private:
 	};
 	Hashtable< _LastUniteKey,uint64_t > _lastUniteAttempt; // key is always sorted in ascending order, for set-like behavior
 	Mutex _lastUniteAttempt_m;
-
-	// Active attempts to contact remote peers, including state of multi-phase NAT traversal
-	struct ContactQueueEntry
-	{
-		ContactQueueEntry() {}
-		ContactQueueEntry(const SharedPtr<Peer> &p,uint64_t ft,const InetAddress &laddr,const InetAddress &a) :
-			peer(p),
-			fireAtTime(ft),
-			inaddr(a),
-			localAddr(laddr),
-			strategyIteration(0) {}
-
-		SharedPtr<Peer> peer;
-		uint64_t fireAtTime;
-		InetAddress inaddr;
-		InetAddress localAddr;
-		unsigned int strategyIteration;
-	};
-	std::list<ContactQueueEntry> _contactQueue;
-	Mutex _contactQueue_m;
 };
 
 } // namespace ZeroTier

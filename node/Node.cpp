@@ -237,7 +237,7 @@ public:
 				// way whatsoever. This will e.g. find network preferred relays that lack
 				// stable endpoints by using root servers.
 				Packet outp(p->address(),RR->identity.address(),Packet::VERB_NOP);
-				RR->sw->send(outp,true,0);
+				RR->sw->send(outp,true);
 			}
 
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
@@ -520,7 +520,7 @@ ZT_ResultCode Node::circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)
 			for(unsigned int a=0;a<test->hops[0].breadth;++a) {
 				outp.newInitializationVector();
 				outp.setDestination(Address(test->hops[0].addresses[a]));
-				RR->sw->send(outp,true,0);
+				RR->sw->send(outp,true);
 			}
 		} catch ( ... ) {
 			return ZT_RESULT_FATAL_ERROR_INTERNAL; // probably indicates FIFO too big for packet

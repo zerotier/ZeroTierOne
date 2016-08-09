@@ -199,10 +199,9 @@ public:
 	 * @param toAddress Remote address to send push to (usually from path)
 	 * @param now Current time
 	 * @param force If true, push regardless of rate limit
-	 * @param includePrivatePaths If true, include local interface address paths (should only be done to peers with a trust relationship)
 	 * @return True if something was actually sent
 	 */
-	bool pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAddress,uint64_t now,bool force,bool includePrivatePaths);
+	bool pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAddress,uint64_t now,bool force);
 
 	/**
 	 * @return All known direct paths to this peer (active or inactive)

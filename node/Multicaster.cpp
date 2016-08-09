@@ -240,7 +240,7 @@ void Multicaster::send(
 					mg.mac().appendTo(outp);
 					outp.append((uint32_t)mg.adi());
 					outp.append((uint32_t)gatherLimit);
-					RR->sw->send(outp,true,0);
+					RR->sw->send(outp,true);
 				}
 				gatherLimit = 0;
 			}

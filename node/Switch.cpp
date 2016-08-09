@@ -476,14 +476,14 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.append((uint16_t)etherType);
 			outp.append(data,len);
 			outp.compress();
-			send(outp,true,network->id());
+			send(outp,true);
 		} else {
 			Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
 			outp.append(network->id());
 			outp.append((uint16_t)etherType);
 			outp.append(data,len);
 			outp.compress();
-			send(outp,true,network->id());
+			send(outp,true);
 		}
 
 		//TRACE("%.16llx: UNICAST: %s -> %s etherType==%s(%.4x) vlanId==%u len==%u fromBridged==%d includeCom==%d",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),etherType,vlanId,len,(int)fromBridged,(int)includeCom);
@@ -536,23 +536,21 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.append((uint16_t)etherType);
 			outp.append(data,len);
 			outp.compress();
-			send(outp,true,network->id());
+			send(outp,true);
 		}
 	}
 }
 
-void Switch::send(const Packet &packet,bool encrypt,uint64_t nwid)
+void Switch::send(const Packet &packet,bool encrypt)
 {
 	if (packet.destination() == RR->identity.address()) {
 		TRACE("BUG: caught attempt to send() to self, ignored");
 		return;
 	}
 
-	//TRACE(">> %s to %s (%u bytes, encrypt==%d, nwid==%.16llx)",Packet::verbString(packet.verb()),packet.destination().toString().c_str(),packet.size(),(int)encrypt,nwid);
-
-	if (!_trySend(packet,encrypt,nwid)) {
+	if (!_trySend(packet,encrypt)) {
 		Mutex::Lock _l(_txQueue_m);
-		_txQueue.push_back(TXQueueEntry(packet.destination(),RR->node->now(),packet,encrypt,nwid));
+		_txQueue.push_back(TXQueueEntry(packet.destination(),RR->node->now(),packet,encrypt));
 	}
 }
 
@@ -625,17 +623,6 @@ bool Switch::unite(const Address &p1,const Address &p2)
 	return true;
 }
 
-void Switch::rendezvous(const SharedPtr<Peer> &peer,const InetAddress &localAddr,const InetAddress &atAddr)
-{
-	TRACE("sending NAT-t message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
-	const uint64_t now = RR->node->now();
-	peer->sendHELLO(localAddr,atAddr,now,2); // first attempt: send low-TTL packet to 'open' local NAT
-	{
-		Mutex::Lock _l(_contactQueue_m);
-		_contactQueue.push_back(ContactQueueEntry(peer,now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY,localAddr,atAddr));
-	}
-}
-
 void Switch::requestWhois(const Address &addr)
 {
 	bool inserted = false;
@@ -676,7 +663,7 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 		Mutex::Lock _l(_txQueue_m);
 		for(std::list< TXQueueEntry >::iterator txi(_txQueue.begin());txi!=_txQueue.end();) {
 			if (txi->dest == peer->address()) {
-				if (_trySend(txi->packet,txi->encrypt,txi->nwid))
+				if (_trySend(txi->packet,txi->encrypt))
 					_txQueue.erase(txi++);
 				else ++txi;
 			} else ++txi;
@@ -687,42 +674,6 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 unsigned long Switch::doTimerTasks(uint64_t now)
 {
 	unsigned long nextDelay = 0xffffffff; // ceiling delay, caller will cap to minimum
-
-	{	// Iterate through NAT traversal strategies for entries in contact queue
-		Mutex::Lock _l(_contactQueue_m);
-		for(std::list<ContactQueueEntry>::iterator qi(_contactQueue.begin());qi!=_contactQueue.end();) {
-			if (now >= qi->fireAtTime) {
-				if (!qi->peer->pushDirectPaths(qi->localAddr,qi->inaddr,now,true,false))
-					qi->peer->sendHELLO(qi->localAddr,qi->inaddr,now);
-				_contactQueue.erase(qi++);
-				continue;
-				/* Old symmetric NAT buster code, obsoleted by port prediction alg in SelfAwareness but left around for now in case we revert
-				if (qi->strategyIteration == 0) {
-					// First strategy: send packet directly to destination
-					qi->peer->sendHELLO(qi->localAddr,qi->inaddr,now);
-				} else if (qi->strategyIteration <= 3) {
-					// Strategies 1-3: try escalating ports for symmetric NATs that remap sequentially
-					InetAddress tmpaddr(qi->inaddr);
-					int p = (int)qi->inaddr.port() + qi->strategyIteration;
-					if (p > 65535)
-						p -= 64511;
-					tmpaddr.setPort((unsigned int)p);
-					qi->peer->sendHELLO(qi->localAddr,tmpaddr,now);
-				} else {
-					// All strategies tried, expire entry
-					_contactQueue.erase(qi++);
-					continue;
-				}
-				++qi->strategyIteration;
-				qi->fireAtTime = now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY;
-				nextDelay = std::min(nextDelay,(unsigned long)ZT_NAT_T_TACTICAL_ESCALATION_DELAY);
-				*/
-			} else {
-				nextDelay = std::min(nextDelay,(unsigned long)(qi->fireAtTime - now));
-			}
-			++qi; // if qi was erased, loop will have continued before here
-		}
-	}
 
 	{	// Retry outstanding WHOIS requests
 		Mutex::Lock _l(_outstandingWhoisRequests_m);
@@ -751,7 +702,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 	{	// Time out TX queue packets that never got WHOIS lookups or other info.
 		Mutex::Lock _l(_txQueue_m);
 		for(std::list< TXQueueEntry >::iterator txi(_txQueue.begin());txi!=_txQueue.end();) {
-			if (_trySend(txi->packet,txi->encrypt,txi->nwid))
+			if (_trySend(txi->packet,txi->encrypt))
 				_txQueue.erase(txi++);
 			else if ((now - txi->creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
 				TRACE("TX %s -> %s timed out",txi->packet.source().toString().c_str(),txi->packet.destination().toString().c_str());
@@ -787,19 +738,12 @@ Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlread
 	return Address();
 }
 
-bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
+bool Switch::_trySend(const Packet &packet,bool encrypt)
 {
 	SharedPtr<Peer> peer(RR->topology->getPeer(packet.destination()));
 
 	if (peer) {
 		const uint64_t now = RR->node->now();
-
-		SharedPtr<Network> network;
-		if (nwid) {
-			network = RR->node->network(nwid);
-			if ((!network)||(!network->hasConfig()))
-				return false; // we probably just left this network, let its packets die
-		}
 
 		Path *viaPath = peer->getBestPath(now);
 		SharedPtr<Peer> relay;
@@ -811,7 +755,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 		}
 
 		if (relay) {
-			peer->pushDirectPaths(viaPath->localAddress(),viaPath->address(),now,false,( (network)&&(network->isAllowed(peer)) ));
+			peer->pushDirectPaths(viaPath->localAddress(),viaPath->address(),now,false);
 			viaPath->sent(now);
 		}
 

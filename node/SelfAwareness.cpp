@@ -106,7 +106,7 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &receivedOnLoc
 		for(std::vector< SharedPtr<Peer> >::const_iterator p(rset.peersReset.begin());p!=rset.peersReset.end();++p) {
 			if ((*p)->activelyTransferringFrames(now)) {
 				Packet outp((*p)->address(),RR->identity.address(),Packet::VERB_NOP);
-				RR->sw->send(outp,true,0);
+				RR->sw->send(outp,true);
 			}
 		}
 	} else {

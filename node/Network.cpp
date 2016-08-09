@@ -127,7 +127,7 @@ static int _doZtFilter(
 				outp.append((uint16_t)etherType);
 				outp.append(frameData,frameLen);
 				outp.compress();
-				RR->sw->send(outp,true,nwid);
+				RR->sw->send(outp,true);
 
 				if (rt == ZT_NETWORK_RULE_ACTION_REDIRECT) {
 					return -1; // match, drop packet (we redirected it)
@@ -678,7 +678,7 @@ void Network::requestConfiguration()
 	outp.append((const void *)rmd.data(),rmdSize);
 	outp.append((_config) ? (uint64_t)_config.revision : (uint64_t)0);
 	outp.compress();
-	RR->sw->send(outp,true,0);
+	RR->sw->send(outp,true);
 
 	// Expect replies with this in-re packet ID
 	_inboundConfigPacketId = outp.packetId();
@@ -894,7 +894,7 @@ void Network::_announceMulticastGroupsTo(const SharedPtr<Peer> &peer,const std::
 	for(std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {
 		if ((outp.size() + 24) >= ZT_PROTO_MAX_PACKET_LENGTH) {
 			outp.compress();
-			RR->sw->send(outp,true,0);
+			RR->sw->send(outp,true);
 			outp.reset(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 		}
 
@@ -906,7 +906,7 @@ void Network::_announceMulticastGroupsTo(const SharedPtr<Peer> &peer,const std::
 
 	if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
 		outp.compress();
-		RR->sw->send(outp,true,0);
+		RR->sw->send(outp,true);
 	}
 }
 

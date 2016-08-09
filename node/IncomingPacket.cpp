@@ -510,9 +510,13 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<
 					peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP);
 
 					const InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
-					TRACE("RENDEZVOUS from %s says %s might be at %s, starting NAT-t",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
-					if (RR->node->shouldUsePathForZeroTierTraffic(_localAddress,atAddr))
-						RR->sw->rendezvous(withPeer,_localAddress,atAddr);
+					TRACE("RENDEZVOUS from %s says %s might be at %s, attempting to contact",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
+					if (RR->node->shouldUsePathForZeroTierTraffic(_localAddress,atAddr)) {
+						const uint64_t now = RR->node->now();
+						peer->sendHELLO(_localAddress,atAddr,now,2); // send low-TTL packet to 'open' local NAT(s)
+						if (!peer->pushDirectPaths(_localAddress,atAddr,now,true))
+							peer->sendHELLO(_localAddress,atAddr,now);
+					}
 				} else {
 					TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 				}
@@ -746,7 +750,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 									outp.append((uint32_t)totalSize);
 									outp.append((uint32_t)chunkIndex);
 									outp.compress();
-									RR->sw->send(outp,true,0);
+									RR->sw->send(outp,true);
 									chunkIndex += chunkLen;
 								}
 							}
@@ -1139,7 +1143,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 				nextHop[h].appendTo(outp);
 				nextHopBestPathAddress[h].serialize(outp); // appends 0 if null InetAddress
 			}
-			RR->sw->send(outp,true,0);
+			RR->sw->send(outp,true);
 		}
 
 		// If there are next hops, forward the test along through the graph
@@ -1154,7 +1158,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 				if (RR->identity.address() != nextHop[h]) { // next hops that loop back to the current hop are not valid
 					outp.newInitializationVector();
 					outp.setDestination(nextHop[h]);
-					RR->sw->send(outp,true,originatorCredentialNetworkId);
+					RR->sw->send(outp,true);
 				}
 			}
 		}

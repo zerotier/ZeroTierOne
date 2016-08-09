@@ -241,7 +241,7 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 	return false;
 }
 
-bool Peer::pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAddress,uint64_t now,bool force,bool includePrivatePaths)
+bool Peer::pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAddress,uint64_t now,bool force)
 {
 #ifdef ZT_ENABLE_CLUSTER
 	// Cluster mode disables normal PUSH_DIRECT_PATHS in favor of cluster-based peer redirection
@@ -258,10 +258,8 @@ bool Peer::pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAdd
 	std::vector<InetAddress> pathsToPush;
 
 	std::vector<InetAddress> dps(RR->node->directPaths());
-	for(std::vector<InetAddress>::const_iterator i(dps.begin());i!=dps.end();++i) {
-		if ((includePrivatePaths)||(i->ipScope() == InetAddress::IP_SCOPE_GLOBAL))
-			pathsToPush.push_back(*i);
-	}
+	for(std::vector<InetAddress>::const_iterator i(dps.begin());i!=dps.end();++i)
+		pathsToPush.push_back(*i);
 
 	std::vector<InetAddress> sym(RR->sa->getSymmetricNatPredictions());
 	for(unsigned long i=0,added=0;i<sym.size();++i) {
