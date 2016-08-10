@@ -176,7 +176,6 @@ public:
 	template<unsigned int C>
 	static inline void serializeRules(Buffer<C> &b,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
 	{
-		b.append((uint16_t)ruleCount);
 		for(unsigned int i=0;i<ruleCount;++i) {
 			// Each rule consists of its 8-bit type followed by the size of that type's
 			// field followed by field data. The inclusion of the size will allow non-supported
@@ -267,75 +266,73 @@ public:
 	template<unsigned int C>
 	static inline void deserializeRules(const Buffer<C> &b,unsigned int &p,ZT_VirtualNetworkRule *rules,unsigned int &ruleCount,const unsigned int maxRuleCount)
 	{
-		ruleCount = b.template at<uint16_t>(p); p += 2;
-		if (ruleCount > maxRuleCount)
-			throw std::runtime_error("rule count overflow");
-		for(unsigned int i=0;i<ruleCount;++i) {
-			rules[i].t = (uint8_t)b[p++];
+		while ((ruleCount < maxRuleCount)&&(p < b.size())) {
+			rules[ruleCount].t = (uint8_t)b[p++];
 			const unsigned int fieldLen = (unsigned int)b[p++];
-			switch((ZT_VirtualNetworkRuleType)(rules[i].t & 0x7f)) {
+			switch((ZT_VirtualNetworkRuleType)(rules[ruleCount].t & 0x7f)) {
 				default:
 					break;
 				case ZT_NETWORK_RULE_ACTION_TEE:
 				case ZT_NETWORK_RULE_ACTION_REDIRECT:
 				case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 				case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS:
-					rules[i].v.zt = Address(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH).toInt();
+					rules[ruleCount].v.zt = Address(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH).toInt();
 					break;
 				case ZT_NETWORK_RULE_MATCH_VLAN_ID:
-					rules[i].v.vlanId = b.template at<uint16_t>(p);
+					rules[ruleCount].v.vlanId = b.template at<uint16_t>(p);
 					break;
 				case ZT_NETWORK_RULE_MATCH_VLAN_PCP:
-					rules[i].v.vlanPcp = (uint8_t)b[p];
+					rules[ruleCount].v.vlanPcp = (uint8_t)b[p];
 					break;
 				case ZT_NETWORK_RULE_MATCH_VLAN_DEI:
-					rules[i].v.vlanDei = (uint8_t)b[p];
+					rules[ruleCount].v.vlanDei = (uint8_t)b[p];
 					break;
 				case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
-					rules[i].v.etherType = b.template at<uint16_t>(p);
+					rules[ruleCount].v.etherType = b.template at<uint16_t>(p);
 					break;
 				case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_MAC_DEST:
-					memcpy(rules[i].v.mac,b.field(p,6),6);
+					memcpy(rules[ruleCount].v.mac,b.field(p,6),6);
 					break;
 				case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
-					memcpy(&(rules[i].v.ipv4.ip),b.field(p,4),4);
-					rules[i].v.ipv4.mask = (uint8_t)b[p + 4];
+					memcpy(&(rules[ruleCount].v.ipv4.ip),b.field(p,4),4);
+					rules[ruleCount].v.ipv4.mask = (uint8_t)b[p + 4];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
-					memcpy(rules[i].v.ipv6.ip,b.field(p,16),16);
-					rules[i].v.ipv6.mask = (uint8_t)b[p + 16];
+					memcpy(rules[ruleCount].v.ipv6.ip,b.field(p,16),16);
+					rules[ruleCount].v.ipv6.mask = (uint8_t)b[p + 16];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_TOS:
-					rules[i].v.ipTos = (uint8_t)b[p];
+					rules[ruleCount].v.ipTos = (uint8_t)b[p];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
-					rules[i].v.ipProtocol = (uint8_t)b[p];
+					rules[ruleCount].v.ipProtocol = (uint8_t)b[p];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
 				case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE:
-					rules[i].v.port[0] = b.template at<uint16_t>(p);
-					rules[i].v.port[1] = b.template at<uint16_t>(p + 2);
+					rules[ruleCount].v.port[0] = b.template at<uint16_t>(p);
+					rules[ruleCount].v.port[1] = b.template at<uint16_t>(p + 2);
 					break;
 				case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
-					rules[i].v.characteristics[0] = b.template at<uint64_t>(p);
-					rules[i].v.characteristics[1] = b.template at<uint64_t>(p + 8);
+					rules[ruleCount].v.characteristics[0] = b.template at<uint64_t>(p);
+					rules[ruleCount].v.characteristics[1] = b.template at<uint64_t>(p + 8);
 					break;
 				case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
-					rules[i].v.frameSize[0] = b.template at<uint16_t>(p);
-					rules[i].v.frameSize[0] = b.template at<uint16_t>(p + 2);
+					rules[ruleCount].v.frameSize[0] = b.template at<uint16_t>(p);
+					rules[ruleCount].v.frameSize[0] = b.template at<uint16_t>(p + 2);
 					break;
 				case ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR:
-					rules[i].v.tag.id = b.template at<uint32_t>(p);
-					rules[i].v.tag.value = b.template at<uint32_t>(p + 4);
+					rules[ruleCount].v.tag.id = b.template at<uint32_t>(p);
+					rules[ruleCount].v.tag.value = b.template at<uint32_t>(p + 4);
 					break;
 			}
 			p += fieldLen;
+			++ruleCount;
 		}
 	}
 
@@ -350,6 +347,7 @@ public:
 		b.append(_expiration);
 		b.append(_id);
 
+		b.append((uint16_t)_ruleCount);
 		serializeRules(b,_rules,_ruleCount);
 		b.append((uint8_t)_maxCustodyChainLength);
 
@@ -387,7 +385,10 @@ public:
 		_expiration = b.template at<uint64_t>(p); p += 8;
 		_id = b.template at<uint32_t>(p); p += 4;
 
-		deserializeRules(b,p,_rules,_ruleCount,ZT_MAX_CAPABILITY_RULES);
+		const unsigned int rc = b.template at<uint16_t>(p); p += 2;
+		if (rc > ZT_MAX_CAPABILITY_RULES)
+			throw std::runtime_error("rule overflow");
+		deserializeRules(b,p,_rules,_ruleCount,rc);
 
 		_maxCustodyChainLength = (unsigned int)b[p++];
 		if ((_maxCustodyChainLength < 1)||(_maxCustodyChainLength > ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))

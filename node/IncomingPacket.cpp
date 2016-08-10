@@ -84,7 +84,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 			}
 
 			const Packet::Verb v = verb();
-			TRACE("<< %s from %s(%s)",Packet::verbString(v),sourceAddress.toString().c_str(),_remoteAddress.toString().c_str());
+			//TRACE("<< %s from %s(%s)",Packet::verbString(v),sourceAddress.toString().c_str(),_remoteAddress.toString().c_str());
 			switch(v) {
 				//case Packet::VERB_NOP:
 				default: // ignore unknown verbs, but if they pass auth check they are "received"
@@ -401,8 +401,9 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 			} break;
 
 			case Packet::VERB_NETWORK_CONFIG_REQUEST: {
-				const SharedPtr<Network> nw(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID)));
-				if ((nw)&&(nw->controller() == peer->address())) {
+				const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID);
+				const SharedPtr<Network> network(RR->node->network(nwid));
+				if ((network)&&(network->controller() == peer->address())) {
 					const unsigned int chunkLen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN);
 					const void *chunkData = field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT,chunkLen);
 					unsigned int chunkIndex = 0;
@@ -411,7 +412,8 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 						totalSize = at<uint32_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT + chunkLen);
 						chunkIndex = at<uint32_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT + chunkLen + 4);
 					}
-					nw->handleInboundConfigChunk(inRePacketId,chunkData,chunkLen,chunkIndex,totalSize);
+					TRACE("%s(%s): OK(NETWORK_CONFIG_REQUEST) chunkLen==%u chunkIndex==%u totalSize==%u",source().toString().c_str(),_remoteAddress.toString().c_str(),chunkLen,chunkIndex,totalSize);
+					network->handleInboundConfigChunk(inRePacketId,chunkData,chunkLen,chunkIndex,totalSize);
 				}
 			}	break;
 
@@ -500,33 +502,32 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		if (RR->topology->isUpstream(peer->identity())) { // only upstream peers can tell us to rendezvous, otherwise this opens a potential amplification attack vector
-			const Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-			const SharedPtr<Peer> withPeer(RR->topology->getPeer(with));
-			if (withPeer) {
-				const unsigned int port = at<uint16_t>(ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT);
-				const unsigned int addrlen = (*this)[ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN];
-				if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
-					peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP);
-
-					const InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
-					TRACE("RENDEZVOUS from %s says %s might be at %s, attempting to contact",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
-					if (RR->node->shouldUsePathForZeroTierTraffic(_localAddress,atAddr)) {
-						const uint64_t now = RR->node->now();
-						peer->sendHELLO(_localAddress,atAddr,now,2); // send low-TTL packet to 'open' local NAT(s)
-						if (!peer->pushDirectPaths(_localAddress,atAddr,now,true))
-							peer->sendHELLO(_localAddress,atAddr,now);
-					}
+		const Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+		const SharedPtr<Peer> withPeer(RR->topology->getPeer(with));
+		if (withPeer) {
+			const unsigned int port = at<uint16_t>(ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT);
+			const unsigned int addrlen = (*this)[ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN];
+			if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
+				const InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
+				if (!RR->topology->isUpstream(peer->identity())) {
+					TRACE("RENDEZVOUS from %s says %s might be at %s, ignoring since peer is not upstream",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
+				} else if (RR->node->shouldUsePathForZeroTierTraffic(_localAddress,atAddr)) {
+					const uint64_t now = RR->node->now();
+					peer->sendHELLO(_localAddress,atAddr,now,2); // send low-TTL packet to 'open' local NAT(s)
+					if (!peer->pushDirectPaths(_localAddress,atAddr,now,true))
+						peer->sendHELLO(_localAddress,atAddr,now);
+					TRACE("RENDEZVOUS from %s says %s might be at %s, sent verification attempt",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
 				} else {
-					TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+					TRACE("RENDEZVOUS from %s says %s might be at %s, ignoring since path is not suitable",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
 				}
 			} else {
-				RR->sw->requestWhois(with);
-				TRACE("ignored RENDEZVOUS from %s(%s) to meet unknown peer %s",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),with.toString().c_str());
+				TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 			}
 		} else {
-			TRACE("ignored RENDEZVOUS from %s(%s): not a root server or a network relay",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+			TRACE("ignored RENDEZVOUS from %s(%s) to meet unknown peer %s",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),with.toString().c_str());
 		}
+
+		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP);
 	} catch ( ... ) {
 		TRACE("dropped RENDEZVOUS from %s(%s): unexpected exception",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 	}

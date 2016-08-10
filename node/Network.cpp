@@ -593,13 +593,15 @@ int Network::setConfiguration(const NetworkConfig &nconf,bool saveToDisk)
 void Network::handleInboundConfigChunk(const uint64_t inRePacketId,const void *data,unsigned int chunkSize,unsigned int chunkIndex,unsigned int totalSize)
 {
 	std::string newConfig;
-	if ((_inboundConfigPacketId == inRePacketId)&&(totalSize < ZT_NETWORKCONFIG_DICT_CAPACITY)&&((chunkIndex + chunkSize) < totalSize)) {
+	if ((_inboundConfigPacketId == inRePacketId)&&(totalSize < ZT_NETWORKCONFIG_DICT_CAPACITY)&&((chunkIndex + chunkSize) <= totalSize)) {
 		Mutex::Lock _l(_lock);
-		TRACE("got %u bytes at position %u of network config request %.16llx, total expected length %u",chunkSize,chunkIndex,inRePacketId,totalSize);
+
 		_inboundConfigChunks[chunkIndex].append((const char *)data,chunkSize);
+
 		unsigned int totalWeHave = 0;
 		for(std::map<unsigned int,std::string>::iterator c(_inboundConfigChunks.begin());c!=_inboundConfigChunks.end();++c)
 			totalWeHave += (unsigned int)c->second.length();
+
 		if (totalWeHave == totalSize) {
 			TRACE("have all chunks for network config request %.16llx, assembling...",inRePacketId);
 			for(std::map<unsigned int,std::string>::iterator c(_inboundConfigChunks.begin());c!=_inboundConfigChunks.end();++c)
@@ -610,23 +612,29 @@ void Network::handleInboundConfigChunk(const uint64_t inRePacketId,const void *d
 			_inboundConfigPacketId = 0;
 			_inboundConfigChunks.clear();
 		}
+	} else {
+		return;
 	}
 
-	if (newConfig.length() > 0) {
-		if (newConfig.length() < ZT_NETWORKCONFIG_DICT_CAPACITY) {
-			Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dict = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>(newConfig.c_str());
-			try {
-				Identity controllerId(RR->topology->getIdentity(this->controller()));
-				if (controllerId) {
-					NetworkConfig nc;
-					if (nc.fromDictionary(controllerId,*dict))
-						this->setConfiguration(nc,true);
+	if ((newConfig.length() > 0)&&(newConfig.length() < ZT_NETWORKCONFIG_DICT_CAPACITY)) {
+		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dict = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>(newConfig.c_str());
+		NetworkConfig *nc = new NetworkConfig();
+		try {
+			Identity controllerId(RR->topology->getIdentity(this->controller()));
+			if (controllerId) {
+				if (nc->fromDictionary(controllerId,*dict)) {
+					this->setConfiguration(*nc,true);
+				} else {
+					TRACE("error parsing new config with length %u: deserialization of NetworkConfig failed (certificate error?)",(unsigned int)newConfig.length());
 				}
-				delete dict;
-			} catch ( ... ) {
-				delete dict;
-				throw;
 			}
+			delete nc;
+			delete dict;
+		} catch ( ... ) {
+			TRACE("error parsing new config with length %u: unexpected exception",(unsigned int)newConfig.length());
+			delete nc;
+			delete dict;
+			throw;
 		}
 	}
 }
