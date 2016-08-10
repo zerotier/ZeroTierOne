@@ -79,9 +79,10 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &receivedOnLoc
 
 	if ( (trusted) && ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
 		// Changes to external surface reported by trusted peers causes path reset in this scope
+		TRACE("physical address %s for scope %u as seen from %s(%s) differs from %s, resetting paths in scope",myPhysicalAddress.toString().c_str(),(unsigned int)scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str(),entry.mySurface.toString().c_str());
 		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;
-		TRACE("physical address %s for scope %u as seen from %s(%s) differs from %s, resetting paths in scope",myPhysicalAddress.toString().c_str(),(unsigned int)scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str(),entry.mySurface.toString().c_str());
+		entry.trusted = trusted;
 
 		// Erase all entries in this scope that were not reported from this remote address to prevent 'thrashing'
 		// due to multiple reports of endpoint change.
@@ -113,6 +114,7 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &receivedOnLoc
 		// Otherwise just update DB to use to determine external surface info
 		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;
+		entry.trusted = trusted;
 	}
 }
 
@@ -148,22 +150,50 @@ std::vector<InetAddress> SelfAwareness::getSymmetricNatPredictions()
 	bool symmetric = false;
 	{
 		Mutex::Lock _l(_phy_m);
+
 		Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
 		PhySurfaceKey *k = (PhySurfaceKey *)0;
 		PhySurfaceEntry *e = (PhySurfaceEntry *)0;
+		InetAddress lastTrustedSurface;
 		while (i.next(k,e)) {
 			if ((e->mySurface.ss_family == AF_INET)&&(e->mySurface.ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
 				std::set<InetAddress> &s = surfaces[k->receivedOnLocalAddress];
-				s.insert(e->mySurface);
+
+				/* MINOR SECURITY FIX:
+				 *
+				 * If the surface was not reported by a trusted (upstream) peer, we do
+				 * not use its report of our surface IP for symmetric NAT prediction.
+				 * Otherwise a peer could poison our external surface cache and then
+				 * use this to coax us into suggesting their IP as an endpoint. This
+				 * in turn could allow them to relay traffic for us. They could not
+				 * decrypt or otherwise mess with it, but they could DOS us or record
+				 * meta-data without anything appearing amiss.
+				 *
+				 * So for surfaces reported by untrusted peers we use the IP reported
+				 * by a trusted peer and then just use the port.
+				 *
+				 * As far as we know this has never been exploited. We discovered it
+				 * because certain weird configurations, such as load balancers and
+				 * gateways that do not preserve IP information, can coax a node into
+				 * reporting back false surface information. */
+				if (e->trusted) {
+					s.insert(e->mySurface);
+					lastTrustedSurface = e->mySurface;
+				} else if (lastTrustedSurface) {
+					InetAddress tmp(lastTrustedSurface);
+					tmp.setPort(e->mySurface.port());
+					s.insert(tmp);
+				}
+
 				symmetric = symmetric||(s.size() > 1);
 			}
 		}
 	}
 
-	// If we appear to be symmetrically NATed, generate and return extrapolations
-	// of those surfaces. Since PUSH_DIRECT_PATHS is sent multiple times, we
-	// probabilistically generate extrapolations of anywhere from +1 to +5 to
-	// increase the odds that it will work "eventually".
+	/* If we appear to be symmetrically NATed, generate and return extrapolations
+	 * of those surfaces. Since PUSH_DIRECT_PATHS is sent multiple times, we
+	 * probabilistically generate extrapolations of anywhere from +1 to +5 to
+	 * increase the odds that it will work "eventually". */
 	if (symmetric) {
 		std::vector<InetAddress> r;
 		for(std::map< InetAddress,std::set<InetAddress> >::iterator si(surfaces.begin());si!=surfaces.end();++si) {

@@ -724,6 +724,7 @@ public:
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit length of request meta-data dictionary>
 		 *   <[...] string-serialized request meta-data>
+		 *   <[8] 64-bit revision of netconf we currently have>
 		 *   <[8] 64-bit timestamp of netconf we currently have>
 		 *
 		 * This message requests network configuration from a node capable of

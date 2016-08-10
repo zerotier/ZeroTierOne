@@ -82,9 +82,10 @@ private:
 	{
 		InetAddress mySurface;
 		uint64_t ts;
+		bool trusted;
 
-		PhySurfaceEntry() : mySurface(),ts(0) {}
-		PhySurfaceEntry(const InetAddress &a,const uint64_t t) : mySurface(a),ts(t) {}
+		PhySurfaceEntry() : mySurface(),ts(0),trusted(false) {}
+		PhySurfaceEntry(const InetAddress &a,const uint64_t t) : mySurface(a),ts(t),trusted(false) {}
 	};
 
 	const RuntimeEnvironment *RR;

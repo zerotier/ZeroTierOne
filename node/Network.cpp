@@ -676,7 +676,12 @@ void Network::requestConfiguration()
 	const unsigned int rmdSize = rmd.sizeBytes();
 	outp.append((uint16_t)rmdSize);
 	outp.append((const void *)rmd.data(),rmdSize);
-	outp.append((_config) ? (uint64_t)_config.revision : (uint64_t)0);
+	if (_config) {
+		outp.append((uint64_t)_config.revision);
+		outp.append((uint64_t)_config.timestamp);
+	} else {
+		outp.append((unsigned char)0,16);
+	}
 	outp.compress();
 	RR->sw->send(outp,true);
 
