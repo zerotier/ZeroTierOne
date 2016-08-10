@@ -44,7 +44,19 @@
                name:StatusUpdateKey
              object:nil];
 
-    self.statusItem.image = [NSImage imageNamed:@"MenuBarIconMac"];
+    NSString *osxMode = [defaults stringForKey:@"AppleInterfaceStyle"];
+
+    if(osxMode != nil && [osxMode isEqualToString:@"Dark"]) {
+        self.statusItem.image = [NSImage imageNamed:@"MenuBarIconMacWhite"];
+    }
+    else {
+        self.statusItem.image = [NSImage imageNamed:@"MenuBarIconMac"];
+    }
+
+    [[NSDistributedNotificationCenter defaultCenter] addObserver:self
+                                                        selector:@selector(darkModeChanged:)
+                                                            name:@"AppleInterfaceThemeChangedNotification"
+                                                          object:nil];
 
     [self buildMenu];
 
@@ -82,6 +94,9 @@
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [[NSDistributedNotificationCenter defaultCenter] removeObserver:self
+                                                               name:@"AppleInterfaceThemeChangedNotification"
+                                                             object:nil];
 }
 
 - (void)showNetworks {
@@ -275,6 +290,17 @@
 
 - (void)menuDidClose:(NSMenu*)menu {
 
+}
+
+- (void)darkModeChanged:(NSNotification*)note {
+    NSString *osxMode = [[NSUserDefaults standardUserDefaults] stringForKey:@"AppleInterfaceStyle"];
+
+    if(osxMode != nil && [osxMode isEqualToString:@"Dark"]) {
+        self.statusItem.image = [NSImage imageNamed:@"MenuBarIconMacWhite"];
+    }
+    else {
+        self.statusItem.image = [NSImage imageNamed:@"MenuBarIconMac"];
+    }
 }
 
 @end
