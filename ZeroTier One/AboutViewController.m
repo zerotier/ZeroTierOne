@@ -17,6 +17,12 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
 
+    [self.webView setWantsLayer:YES];
+    self.webView.layer.borderWidth = 1.0f;
+    [self.webView.layer setCornerRadius:1.0f];
+    self.webView.layer.masksToBounds = YES;
+    [self.webView.layer setBorderColor:[[NSColor darkGrayColor] CGColor]];
+
     NSBundle *bundle = [NSBundle mainBundle];
     NSURL *path = [bundle URLForResource:@"about" withExtension:@"html"];
     if(path) {
