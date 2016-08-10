@@ -28,9 +28,6 @@
     self.monitor = [[NetworkMonitor alloc] init];
     self.networks = [NSMutableArray<Network*> array];
     self.status = nil;
-    self.pasteboard = [NSPasteboard generalPasteboard];
-
-    [self.pasteboard declareTypes:[NSArray arrayWithObject:NSPasteboardTypeString] owner:nil];
 
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSDictionary *defaultsDict = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:@"firstRun"];
@@ -266,7 +263,9 @@
 
 - (void)copyNodeID {
     if(self.status != nil) {
-        [self.pasteboard setString:self.status.address forType:NSPasteboardTypeString];
+        NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
+        [pasteboard declareTypes:[NSArray arrayWithObject:NSPasteboardTypeString] owner:nil];
+        [pasteboard setString:self.status.address forType:NSPasteboardTypeString];
     }
 }
 

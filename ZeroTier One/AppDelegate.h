@@ -31,8 +31,6 @@
 
 @property (nonatomic) NodeStatus *status;
 
-@property (nonatomic) NSPasteboard *pasteboard;
-
 - (void)buildMenu;
 
 - (void)onNetworkListUpdated:(NSNotification*)note;
