@@ -356,13 +356,31 @@ struct InetAddress : public sockaddr_storage
 	 * @return pointer to raw address bytes or NULL if not available
 	 */
 	inline const void *rawIpData() const
-		throw()
 	{
 		switch(ss_family) {
 			case AF_INET: return (const void *)&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr);
 			case AF_INET6: return (const void *)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
 			default: return 0;
 		}
+	}
+
+	/**
+	 * @return InetAddress containing only the IP portion of this address and a zero port, or NULL if not IPv4 or IPv6
+	 */
+	inline InetAddress ipOnly() const
+	{
+		InetAddress r;
+		switch(ss_family) {
+			case AF_INET:
+				r.ss_family = AF_INET;
+				reinterpret_cast<struct sockaddr_in *>(&r)->sin_addr.s_addr = reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr;
+				break;
+			case AF_INET6:
+				r.ss_family = AF_INET6;
+				memcpy(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,16);
+				break;
+		}
+		return r;
 	}
 
 	/**

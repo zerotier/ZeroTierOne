@@ -80,6 +80,7 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &receivedOnLoc
 	if ( (trusted) && ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
 		// Changes to external surface reported by trusted peers causes path reset in this scope
 		TRACE("physical address %s for scope %u as seen from %s(%s) differs from %s, resetting paths in scope",myPhysicalAddress.toString().c_str(),(unsigned int)scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str(),entry.mySurface.toString().c_str());
+
 		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;
 		entry.trusted = trusted;
@@ -135,77 +136,70 @@ std::vector<InetAddress> SelfAwareness::getSymmetricNatPredictions()
 	/* This is based on ideas and strategies found here:
 	 * https://tools.ietf.org/html/draft-takeda-symmetric-nat-traversal-00
 	 *
-	 * In short: a great many symmetric NATs allocate ports sequentially.
-	 * This is common on enterprise and carrier grade NATs as well as consumer
-	 * devices. This code generates a list of "you might try this" addresses by
-	 * extrapolating likely port assignments from currently known external
-	 * global IPv4 surfaces. These can then be included in a PUSH_DIRECT_PATHS
-	 * message to another peer, causing it to possibly try these addresses and
-	 * bust our local symmetric NAT. It works often enough to be worth the
-	 * extra bit of code and does no harm in cases where it fails. */
+	 * For each IP address reported by a trusted (upstream) peer, we find
+	 * the external port most recently reported by ANY peer for that IP.
+	 *
+	 * We only do any of this for global IPv4 addresses since private IPs
+	 * and IPv6 are not going to have symmetric NAT.
+	 *
+	 * SECURITY NOTE:
+	 *
+	 * We never use IPs reported by non-trusted peers, since this could lead
+	 * to a minor vulnerability whereby a peer could poison our cache with
+	 * bad external surface reports via OK(HELLO) and then possibly coax us
+	 * into suggesting their IP to other peers via PUSH_DIRECT_PATHS. This
+	 * in turn could allow them to MITM flows.
+	 *
+	 * Since flows are encrypted and authenticated they could not actually
+	 * read or modify traffic, but they could gather meta-data for forensics
+	 * purpsoes or use this as a DOS attack vector. */
 
-	// Gather unique surfaces indexed by local received-on address and flag
-	// us as behind a symmetric NAT if there is more than one.
-	std::map< InetAddress,std::set<InetAddress> > surfaces;
+	std::map< uint32_t,std::pair<uint64_t,unsigned int> > maxPortByIp;
+	InetAddress theOneTrueSurface;
 	bool symmetric = false;
 	{
 		Mutex::Lock _l(_phy_m);
 
-		Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
-		PhySurfaceKey *k = (PhySurfaceKey *)0;
-		PhySurfaceEntry *e = (PhySurfaceEntry *)0;
-		InetAddress lastTrustedSurface;
-		while (i.next(k,e)) {
-			if ((e->mySurface.ss_family == AF_INET)&&(e->mySurface.ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
-				std::set<InetAddress> &s = surfaces[k->receivedOnLocalAddress];
-
-				/* MINOR SECURITY FIX:
-				 *
-				 * If the surface was not reported by a trusted (upstream) peer, we do
-				 * not use its report of our surface IP for symmetric NAT prediction.
-				 * Otherwise a peer could poison our external surface cache and then
-				 * use this to coax us into suggesting their IP as an endpoint. This
-				 * in turn could allow them to relay traffic for us. They could not
-				 * decrypt or otherwise mess with it, but they could DOS us or record
-				 * meta-data without anything appearing amiss.
-				 *
-				 * So for surfaces reported by untrusted peers we use the IP reported
-				 * by a trusted peer and then just use the port.
-				 *
-				 * As far as we know this has never been exploited. We discovered it
-				 * because certain weird configurations, such as load balancers and
-				 * gateways that do not preserve IP information, can coax a node into
-				 * reporting back false surface information. */
-				if (e->trusted) {
-					s.insert(e->mySurface);
-					lastTrustedSurface = e->mySurface;
-				} else if (lastTrustedSurface) {
-					InetAddress tmp(lastTrustedSurface);
-					tmp.setPort(e->mySurface.port());
-					s.insert(tmp);
+		{	// First get IPs from only trusted peers, and perform basic NAT type characterization
+			Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
+			PhySurfaceKey *k = (PhySurfaceKey *)0;
+			PhySurfaceEntry *e = (PhySurfaceEntry *)0;
+			while (i.next(k,e)) {
+				if ((e->trusted)&&(e->mySurface.ss_family == AF_INET)&&(e->mySurface.ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
+					if (!theOneTrueSurface)
+						theOneTrueSurface = e->mySurface;
+					else if (theOneTrueSurface != e->mySurface)
+						symmetric = true;
+					maxPortByIp[reinterpret_cast<const struct sockaddr_in *>(&(e->mySurface))->sin_addr.s_addr] = std::pair<uint64_t,unsigned int>(e->ts,e->mySurface.port());
 				}
+			}
+		}
 
-				symmetric = symmetric||(s.size() > 1);
+		{	// Then find max port per IP from a trusted peer
+			Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
+			PhySurfaceKey *k = (PhySurfaceKey *)0;
+			PhySurfaceEntry *e = (PhySurfaceEntry *)0;
+			while (i.next(k,e)) {
+				if ((e->mySurface.ss_family == AF_INET)&&(e->mySurface.ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
+					std::map< uint32_t,std::pair<uint64_t,unsigned int> >::iterator mp(maxPortByIp.find(reinterpret_cast<const struct sockaddr_in *>(&(e->mySurface))->sin_addr.s_addr));
+					if ((mp != maxPortByIp.end())&&(mp->second.first < e->ts)) {
+						mp->second.first = e->ts;
+						mp->second.second = e->mySurface.port();
+					}
+				}
 			}
 		}
 	}
 
-	/* If we appear to be symmetrically NATed, generate and return extrapolations
-	 * of those surfaces. Since PUSH_DIRECT_PATHS is sent multiple times, we
-	 * probabilistically generate extrapolations of anywhere from +1 to +5 to
-	 * increase the odds that it will work "eventually". */
 	if (symmetric) {
 		std::vector<InetAddress> r;
-		for(std::map< InetAddress,std::set<InetAddress> >::iterator si(surfaces.begin());si!=surfaces.end();++si) {
-			for(std::set<InetAddress>::iterator i(si->second.begin());i!=si->second.end();++i) {
-				InetAddress ipp(*i);
-				unsigned int p = ipp.port() + 1 + ((unsigned int)RR->node->prng() & 3);
-				if (p >= 65535)
-					p -= 64510; // NATs seldom use ports <=1024 so wrap to 1025
-				ipp.setPort(p);
-				if ((si->second.count(ipp) == 0)&&(std::find(r.begin(),r.end(),ipp) == r.end())) {
-					r.push_back(ipp);
-				}
+		for(unsigned int k=1;k<=3;++k) {
+			for(std::map< uint32_t,std::pair<uint64_t,unsigned int> >::iterator i(maxPortByIp.begin());i!=maxPortByIp.end();++i) {
+				unsigned int p = i->second.second + k;
+				if (p > 65535) p -= 64511;
+				InetAddress pred(&(i->first),4,p);
+				if (std::find(r.begin(),r.end(),pred) == r.end())
+					r.push_back(pred);
 			}
 		}
 		return r;
