@@ -1,10 +1,10 @@
-![JSON for Modern C++](https://raw.githubusercontent.com/nlohmann/json/master/doc/json.gif)
+[![JSON for Modern C++](https://raw.githubusercontent.com/nlohmann/json/master/doc/json.gif)](https://github.com/nlohmann/json/releases)
 
 [![Build Status](https://travis-ci.org/nlohmann/json.svg?branch=master)](https://travis-ci.org/nlohmann/json)
 [![Build Status](https://ci.appveyor.com/api/projects/status/1acb366xfyg3qybk?svg=true)](https://ci.appveyor.com/project/nlohmann/json)
 [![Coverage Status](https://img.shields.io/coveralls/nlohmann/json.svg)](https://coveralls.io/r/nlohmann/json)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/5550/badge.svg)](https://scan.coverity.com/projects/nlohmann-json)
-[![Try online](https://img.shields.io/badge/try-online-blue.svg)](http://melpon.org/wandbox/permlink/wuiuqYiYqRTdI3rG)
+[![Try online](https://img.shields.io/badge/try-online-blue.svg)](http://melpon.org/wandbox/permlink/p5o4znPnGHJpDVqN)
 [![Documentation](https://img.shields.io/badge/docs-doxygen-blue.svg)](http://nlohmann.github.io/json)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/nlohmann/json/master/LICENSE.MIT)
 [![Github Releases](https://img.shields.io/github/release/nlohmann/json.svg)](https://github.com/nlohmann/json/releases)
@@ -24,7 +24,7 @@ Other aspects were not so important to us:
 
 - **Memory efficiency**. Each JSON object has an overhead of one pointer (the maximal size of a union) and one enumeration element (1 byte). The default generalization uses the following C++ data types: `std::string` for strings, `int64_t`, `uint64_t` or `double` for numbers, `std::map` for objects, `std::vector` for arrays, and `bool` for Booleans. However, you can template the generalized class `basic_json` to your needs.
 
-- **Speed**. We currently implement the parser as naive [recursive descent parser](http://en.wikipedia.org/wiki/Recursive_descent_parser) with hand coded string handling. It is fast enough, but a [LALR-parser](http://en.wikipedia.org/wiki/LALR_parser) with a decent regular expression processor should be even faster (but would consist of more files which makes the integration harder).
+- **Speed**. We currently implement the parser as naive [recursive descent parser](http://en.wikipedia.org/wiki/Recursive_descent_parser) with hand coded string handling. It is fast enough, but a [LALR-parser](http://en.wikipedia.org/wiki/LALR_parser) may be even faster (but would consist of more files which makes the integration harder).
 
 See the [contribution guidelines](https://github.com/nlohmann/json/blob/master/.github/CONTRIBUTING.md#please-dont) for more information.
 
@@ -291,7 +291,7 @@ json j_umset(c_umset); // both entries for "one" are used
 // maybe ["one", "two", "one", "four"]
 ```
 
-Likewise, any associative key-value containers (`std::map`, `std::multimap`, `std::unordered_map`, `std::unordered_multimap`) whose keys are can construct an `std::string` and whose values can be used to construct JSON types (see examples above) can be used to to create a JSON object. Note that in case of multimaps only one key is used in the JSON object and the value depends on the internal order of the STL container.
+Likewise, any associative key-value containers (`std::map`, `std::multimap`, `std::unordered_map`, `std::unordered_multimap`) whose keys can construct an `std::string` and whose values can be used to construct JSON types (see examples above) can be used to to create a JSON object. Note that in case of multimaps only one key is used in the JSON object and the value depends on the internal order of the STL container.
 
 ```cpp
 std::map<std::string, int> c_map { {"one", 1}, {"two", 2}, {"three", 3} };
@@ -323,7 +323,7 @@ json j_original = R"({
 })"_json;
 
 // access members with a JSON pointer (RFC 6901)
-j_original["/baz/2"_json_pointer];
+j_original["/baz/1"_json_pointer];
 // "two"
 
 // a JSON patch (RFC 6902)
@@ -344,8 +344,8 @@ json j_result = j_original.patch(j_patch);
 json::diff(j_result, j_original);
 // [
 //   { "op":" replace", "path": "/baz", "value": ["one", "two", "three"] },
-//   { "op":"remove","path":"/hello" },
-//   { "op":"add","path":"/foo","value":"bar" }
+//   { "op": "remove","path": "/hello" },
+//   { "op": "add", "path": "/foo", "value": "bar" }
 // ]
 ```
 
@@ -390,7 +390,7 @@ Though it's 2016 already, the support for C++11 is still a bit sparse. Currently
 
 - GCC 4.9 - 6.0 (and possibly later)
 - Clang 3.4 - 3.9 (and possibly later)
-- Microsoft Visual C++ 2015 / 14.0 (and possibly later)
+- Microsoft Visual C++ 2015 / Build Tools 14.0.25123.0 (and possibly later)
 
 I would be happy to learn about other compilers/versions.
 
@@ -483,6 +483,9 @@ I deeply appreciate the help of the following people.
 - [Róbert Márki](https://github.com/robertmrk) added a fix to use move iterators and improved the integration via CMake.
 - [Chris Kitching](https://github.com/ChrisKitching) cleaned up the CMake files.
 - [Tom Needham](https://github.com/06needhamt) fixed a subtle bug with MSVC 2015 which was also proposed by [Michael K.](https://github.com/Epidal).
+- [Mário Feroldi](https://github.com/thelostt) fixed a small typo.
+- [duncanwerner](https://github.com/duncanwerner) found a really embarrassing performance regression in the 2.0.0 release.
+- [Damien](https://github.com/dtoma) fixed one of the last conversion warnings.
 
 Thanks a lot for helping out!
 
@@ -502,7 +505,7 @@ $ make
 $ ./json_unit "*"
 
 ===============================================================================
-All tests passed (5568721 assertions in 32 test cases)
+All tests passed (8905012 assertions in 32 test cases)
 ```
 
 For more information, have a look at the file [.travis.yml](https://github.com/nlohmann/json/blob/master/.travis.yml).
