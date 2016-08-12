@@ -28,7 +28,7 @@
 #include "../node/Identity.hpp"
 #include "../version.h"
 #include "../osdep/OSUtils.hpp"
-#include "../ext/json/json.hpp"
+#include "../ext/offbase/json/json.hpp"
 
 #ifdef __WINDOWS__
 #include <WinSock2.h>
