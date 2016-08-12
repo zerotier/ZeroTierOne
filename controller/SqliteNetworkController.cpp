@@ -819,15 +819,16 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 		return 404;
 	Mutex::Lock _l(_lock);
 
-	_backupNeeded = true;
-
 	if (path[0] == "network") {
+		json &networks = _db["network"];
+		if (!networks.is_object()) networks = json::object();
 
 		if ((path.size() >= 2)&&(path[1].length() == 16)) {
 			uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
 			char nwids[24];
 			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
 
+			/*
 			int64_t revision = 0;
 			sqlite3_reset(_sGetNetworkRevision);
 			sqlite3_bind_text(_sGetNetworkRevision,1,nwids,16,SQLITE_STATIC);
@@ -836,17 +837,23 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 				networkExists = true;
 				revision = sqlite3_column_int64(_sGetNetworkRevision,0);
 			}
+			*/
 
 			if (path.size() >= 3) {
-
-				if (!networkExists)
-					return 404;
+				auto network = networks.get<const json::object_t *>(nwids);
+				if (!network) return 404;
 
 				if ((path.size() == 4)&&(path[2] == "member")&&(path[3].length() == 10)) {
+					json &members = (*network)["member"];
+					if (!members.is_object()) members = json::object();
+
 					uint64_t address = Utils::hexStrToU64(path[3].c_str());
 					char addrs[24];
 					Utils::snprintf(addrs,sizeof(addrs),"%.10llx",address);
+					json &member = members[addrs];
+					if (!member.is_object()) member = json::object();
 
+					/*
 					int64_t addToNetworkRevision = 0;
 
 					int64_t memberRowId = 0;
@@ -913,7 +920,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 										sqlite3_reset(_sDeleteIpAllocations);
 										sqlite3_bind_text(_sDeleteIpAllocations,1,nwids,16,SQLITE_STATIC);
 										sqlite3_bind_text(_sDeleteIpAllocations,2,addrs,10,SQLITE_STATIC);
-										sqlite3_bind_int(_sDeleteIpAllocations,3,(int)0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/);
+										sqlite3_bind_int(_sDeleteIpAllocations,3,(int)0);
 										if (sqlite3_step(_sDeleteIpAllocations) != SQLITE_DONE)
 											return 500;
 										for(unsigned int kk=0;kk<j->u.object.values[k].value->u.array.length;++kk) {
@@ -927,7 +934,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 													sqlite3_reset(_sAllocateIp);
 													sqlite3_bind_text(_sAllocateIp,1,nwids,16,SQLITE_STATIC);
 													sqlite3_bind_text(_sAllocateIp,2,addrs,10,SQLITE_STATIC);
-													sqlite3_bind_int(_sAllocateIp,3,(int)0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/);
+													sqlite3_bind_int(_sAllocateIp,3,(int)0);
 													sqlite3_bind_blob(_sAllocateIp,4,(const void *)ipBlob,16,SQLITE_STATIC);
 													sqlite3_bind_int(_sAllocateIp,5,(int)a.netmaskBits()); // NOTE: this field is now ignored but set it anyway
 													sqlite3_bind_int(_sAllocateIp,6,ipVersion);
@@ -980,6 +987,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 						sqlite3_bind_text(_sSetNetworkRevision,2,nwids,16,SQLITE_STATIC);
 						sqlite3_step(_sSetNetworkRevision);
 					}
+					*/
 
 					return _doCPGet(path,urlArgs,headers,body,responseBody,responseContentType);
 				} else if ((path.size() == 3)&&(path[2] == "test")) {
@@ -990,6 +998,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					test->credentialNetworkId = nwid;
 					test->ptr = (void *)this;
 
+					/*
 					json_value *j = json_parse(body.c_str(),body.length());
 					if (j) {
 						if (j->type == json_object) {
@@ -1018,6 +1027,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 						}
 						json_value_free(j);
 					}
+					*/
 
 					if (!test->hopCount) {
 						::free((void *)test);
@@ -1036,7 +1046,6 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					Utils::snprintf(json,sizeof(json),"{\"testId\":\"%.16llx\"}",test->testId);
 					responseBody = json;
 					responseContentType = "application/json";
-
 					return 200;
 				} // else 404
 
@@ -1420,59 +1429,38 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpDELETE(
 		return 404;
 	Mutex::Lock _l(_lock);
 
-	_backupNeeded = true;
-
 	if (path[0] == "network") {
+		auto networks = _db.get<const json::object_t *>("network");
+		if (!networks) return 404;
 
 		if ((path.size() >= 2)&&(path[1].length() == 16)) {
-			uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
+			const uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
 			char nwids[24];
 			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
-
-			sqlite3_reset(_sGetNetworkById);
-			sqlite3_bind_text(_sGetNetworkById,1,nwids,16,SQLITE_STATIC);
-			if (sqlite3_step(_sGetNetworkById) != SQLITE_ROW)
-				return 404;
+			auto network = _db.get<const json::object_t *>(nwids);
+			if (!network) return 404;
 
 			if (path.size() >= 3) {
-
 				if ((path.size() == 4)&&(path[2] == "member")&&(path[3].length() == 10)) {
-					uint64_t address = Utils::hexStrToU64(path[3].c_str());
+					auto members = network->get<const json::object_t *>("member");
+					if (!members) return 404;
+
+					const uint64_t address = Utils::hexStrToU64(path[3].c_str());
 					char addrs[24];
 					Utils::snprintf(addrs,sizeof(addrs),"%.10llx",address);
+					auto member = members->get<const json::object_t *>(addrs);
+					if (!member) return 404;
 
-					sqlite3_reset(_sGetMember);
-					sqlite3_bind_text(_sGetMember,1,nwids,16,SQLITE_STATIC);
-					sqlite3_bind_text(_sGetMember,2,addrs,10,SQLITE_STATIC);
-					if (sqlite3_step(_sGetMember) != SQLITE_ROW)
-						return 404;
-
-					sqlite3_reset(_sDeleteIpAllocations);
-					sqlite3_bind_text(_sDeleteIpAllocations,1,nwids,16,SQLITE_STATIC);
-					sqlite3_bind_text(_sDeleteIpAllocations,2,addrs,10,SQLITE_STATIC);
-					sqlite3_bind_int(_sDeleteIpAllocations,3,(int)0 /*ZT_IP_ASSIGNMENT_TYPE_ADDRESS*/);
-					if (sqlite3_step(_sDeleteIpAllocations) == SQLITE_DONE) {
-						sqlite3_reset(_sDeleteMember);
-						sqlite3_bind_text(_sDeleteMember,1,nwids,16,SQLITE_STATIC);
-						sqlite3_bind_text(_sDeleteMember,2,addrs,10,SQLITE_STATIC);
-						if (sqlite3_step(_sDeleteMember) != SQLITE_DONE)
-							return 500;
-					} else return 500;
-
+					members->erase(addrs);
+					responseBody = member->dump(2);
+					responseContentType = "application/json";
 					return 200;
 				}
-
 			} else {
-
-				sqlite3_reset(_sDeleteNetwork);
-				sqlite3_bind_text(_sDeleteNetwork,1,nwids,16,SQLITE_STATIC);
-				if (sqlite3_step(_sDeleteNetwork) == SQLITE_DONE) {
-					sqlite3_reset(_sDeleteAllNetworkMembers);
-					sqlite3_bind_text(_sDeleteAllNetworkMembers,1,nwids,16,SQLITE_STATIC);
-					sqlite3_step(_sDeleteAllNetworkMembers);
-					return 200;
-				} else return 500;
-
+				networks->erase(nwids);
+				responseBody = network->dump(2);
+				responseContentType = "application/json";
+				return 200;
 			}
 		} // else 404
 
@@ -1484,18 +1472,20 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpDELETE(
 void SqliteNetworkController::threadMain()
 	throw()
 {
-	bool run = true;
-	while(run) {
-		Thread::sleep(250);
-		try {
-			std::vector<std::string> errors;
-			Mutex::Lock _l(_lock);
-			run = _dbCommitThreadRun;
-			if (!_db.commit(&errors)) {
+	uint64_t lastCommit = OSUtils::now();
+	while(_dbCommitThreadRun) {
+		Thread::sleep(200);
+		if ((OSUtils::now() - lastCommit) > 2000) {
+			lastCommit = OSUtils::now();
+			try {
+				std::vector<std::string> errors;
+				Mutex::Lock _l(_lock);
+				if (!_db.commit(&errors)) {
+					// TODO: handle anything really bad
+				}
+			} catch ( ... ) {
 				// TODO: handle anything really bad
 			}
-		} catch ( ... ) {
-			// TODO: handle anything really bad
 		}
 	}
 }
