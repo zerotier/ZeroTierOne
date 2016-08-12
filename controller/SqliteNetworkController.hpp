@@ -30,22 +30,17 @@
 
 #include <stdint.h>
 
-#include <sqlite3.h>
-
 #include <string>
 #include <map>
 #include <vector>
 
 #include "../node/Constants.hpp"
+
 #include "../node/NetworkController.hpp"
 #include "../node/Mutex.hpp"
 #include "../osdep/Thread.hpp"
 
-// Number of in-memory last log entries to maintain per user
-#define ZT_SQLITENETWORKCONTROLLER_IN_MEMORY_LOG_SIZE 32
-
-// How long do circuit tests last before they're forgotten?
-#define ZT_SQLITENETWORKCONTROLLER_CIRCUIT_TEST_TIMEOUT 60000
+#include "../ext/offbase/offbase.hpp"
 
 namespace ZeroTier {
 
@@ -54,7 +49,7 @@ class Node;
 class SqliteNetworkController : public NetworkController
 {
 public:
-	SqliteNetworkController(Node *node,const char *dbPath,const char *circuitTestPath);
+	SqliteNetworkController(Node *node,const char *dbPath);
 	virtual ~SqliteNetworkController();
 
 	virtual NetworkController::ResultCode doNetworkConfigRequest(
@@ -62,7 +57,7 @@ public:
 		const Identity &signingId,
 		const Identity &identity,
 		uint64_t nwid,
-		const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &metaData,
+		const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData,
 		NetworkConfig &nc);
 
 	unsigned int handleControlPlaneHttpGET(
@@ -92,15 +87,6 @@ public:
 		throw();
 
 private:
-	/* deprecated
-	enum IpAssignmentType {
-		// IP assignment is a static IP address
-		ZT_IP_ASSIGNMENT_TYPE_ADDRESS = 0,
-		// IP assignment is a network -- a route via this interface, not an address
-		ZT_IP_ASSIGNMENT_TYPE_NETWORK = 1
-	};
-	*/
-
 	unsigned int _doCPGet(
 		const std::vector<std::string> &path,
 		const std::map<std::string,std::string> &urlArgs,
@@ -111,13 +97,11 @@ private:
 
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
 
-	Node *_node;
-	Thread _backupThread;
-	volatile bool _backupThreadRun;
-	volatile bool _backupNeeded;
-	std::string _dbPath;
-	std::string _circuitTestPath;
+	Node *const _node;
 	std::string _instanceId;
+	offbase _db;
+	Thread _dbCommitThread;
+	volatile bool _dbCommitThreadRun;
 
 	// Circuit tests outstanding
 	struct _CircuitTestEntry
@@ -129,48 +113,6 @@ private:
 
 	// Last request time by address, for rate limitation
 	std::map< std::pair<uint64_t,uint64_t>,uint64_t > _lastRequestTime;
-
-	sqlite3 *_db;
-
-	sqlite3_stmt *_sGetNetworkById;
-	sqlite3_stmt *_sGetMember;
-	sqlite3_stmt *_sCreateMember;
-	sqlite3_stmt *_sGetNodeIdentity;
-	sqlite3_stmt *_sCreateOrReplaceNode;
-	sqlite3_stmt *_sGetActiveBridges;
-	sqlite3_stmt *_sGetIpAssignmentsForNode;
-	sqlite3_stmt *_sGetIpAssignmentPools;
-	sqlite3_stmt *_sCheckIfIpIsAllocated;
-	sqlite3_stmt *_sAllocateIp;
-	sqlite3_stmt *_sDeleteIpAllocations;
-	sqlite3_stmt *_sGetRelays;
-	sqlite3_stmt *_sListNetworks;
-	sqlite3_stmt *_sListNetworkMembers;
-	sqlite3_stmt *_sGetMember2;
-	sqlite3_stmt *_sGetIpAssignmentPools2;
-	sqlite3_stmt *_sListRules;
-	sqlite3_stmt *_sCreateRule;
-	sqlite3_stmt *_sCreateNetwork;
-	sqlite3_stmt *_sGetNetworkRevision;
-	sqlite3_stmt *_sSetNetworkRevision;
-	sqlite3_stmt *_sDeleteRelaysForNetwork;
-	sqlite3_stmt *_sCreateRelay;
-	sqlite3_stmt *_sDeleteIpAssignmentPoolsForNetwork;
-	sqlite3_stmt *_sDeleteRulesForNetwork;
-	sqlite3_stmt *_sCreateIpAssignmentPool;
-	sqlite3_stmt *_sUpdateMemberAuthorized;
-	sqlite3_stmt *_sUpdateMemberActiveBridge;
-	sqlite3_stmt *_sUpdateMemberHistory;
-	sqlite3_stmt *_sDeleteMember;
-	sqlite3_stmt *_sDeleteAllNetworkMembers;
-	sqlite3_stmt *_sGetActiveNodesOnNetwork;
-	sqlite3_stmt *_sDeleteNetwork;
-	sqlite3_stmt *_sCreateRoute;
-	sqlite3_stmt *_sGetRoutes;
-	sqlite3_stmt *_sDeleteRoutes;
-	sqlite3_stmt *_sIncrementMemberRevisionCounter;
-	sqlite3_stmt *_sGetConfig;
-	sqlite3_stmt *_sSetConfig;
 
 	Mutex _lock;
 };

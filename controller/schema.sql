@@ -86,17 +86,9 @@ CREATE TABLE Route (
 
 CREATE INDEX Route_networkId ON Route (networkId);
 
-CREATE TABLE Relay (
-  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
-  address char(10) NOT NULL,
-  phyAddress varchar(64) NOT NULL
-);
-
-CREATE UNIQUE INDEX Relay_networkId_address ON Relay (networkId,address);
-
 CREATE TABLE Rule (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
-  policyId varchar(32),
+  capId integer,
   ruleNo integer NOT NULL,
   ruleType integer NOT NULL DEFAULT(0),
   "addr" blob(16),
@@ -106,5 +98,15 @@ CREATE TABLE Rule (
   "int4" integer
 );
 
-CREATE INDEX Rule_networkId_ruleNo ON Rule (networkId, ruleNo);
-CREATE INDEX Rule_networkId_policyId ON Rule (networkId, policyId);
+CREATE INDEX Rule_networkId_capId ON Rule (networkId,capId);
+
+CREATE TABLE MemberTC (
+  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
+  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
+  tagId integer,
+  tagValue integer,
+  capId integer,
+  capMaxCustodyChainLength integer NOT NULL DEFAULT(1)
+);
+
+CREATE INDEX MemberTC_networkId_nodeId ON MemberTC (networkId,nodeId);
