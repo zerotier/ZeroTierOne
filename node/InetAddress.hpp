@@ -301,6 +301,19 @@ struct InetAddress : public sockaddr_storage
 	inline unsigned int netmaskBits() const throw() { return port(); }
 
 	/**
+	 * @return True if netmask bits is valid for the address type
+	 */
+	inline bool netmaskBitsValid() const
+	{
+		const unsigned int n = port();
+		switch(ss_family) {
+			case AF_INET: return (n <= 32);
+			case AF_INET6: return (n <= 128);
+		}
+		return false;
+	}
+
+	/**
 	 * Alias for port()
 	 *
 	 * This just aliases port() because for gateways we use this field to

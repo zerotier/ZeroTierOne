@@ -81,6 +81,271 @@ using json = nlohmann::json;
 
 namespace ZeroTier {
 
+struct json::object _renderRule(ZT_VirtualNetworkRule &rule)
+{
+	char tmp[128];
+	json::object r;
+	r["not"] = ((rule.t & 0x80) != 0);
+	switch((rule.t) & 0x7f) {
+		case ZT_NETWORK_RULE_ACTION_DROP:
+			r["type"] = "ACTION_DROP";
+			break;
+		case ZT_NETWORK_RULE_ACTION_ACCEPT:
+			r["type"] = "ACTION_ACCEPT";
+			break;
+		case ZT_NETWORK_RULE_ACTION_TEE:
+			r["type"] = "ACTION_TEE";
+			r["zt"] = Address(rule.v.zt).toString();
+			break;
+		case ZT_NETWORK_RULE_ACTION_REDIRECT:
+			r["type"] = "ACTION_REDIRECT";
+			r["zt"] = Address(rule.v.zt).toString();
+			break;
+		case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
+			r["type"] = "MATCH_SOURCE_ZEROTIER_ADDRESS";
+			r["zt"] = Address(rule.v.zt).toString();
+			break;
+		case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS:
+			r["type"] = "MATCH_DEST_ZEROTIER_ADDRESS";
+			r["zt"] = Address(rule.v.zt).toString();
+			break;
+		case ZT_NETWORK_RULE_MATCH_VLAN_ID:
+			r["type"] = "MATCH_VLAN_ID";
+			r["vlanId"] = (uint64_t)rule.v.vlanId;
+			break;
+		case ZT_NETWORK_RULE_MATCH_VLAN_PCP:
+			r["type"] = "MATCH_VLAN_PCP";
+			r["vlanPcp"] = (uint64_t)rule.v.vlanPcp;
+			break;
+		case ZT_NETWORK_RULE_MATCH_VLAN_DEI:
+			r["type"] = "MATCH_VLAN_DEI";
+			r["vlanDei"] = (uint64_t)rule.v.vlanDei;
+			break;
+		case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
+			r["type"] = "MATCH_ETHERTYPE";
+			r["etherType"] = (uint64_t)rule.v.etherType;
+			break;
+		case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
+			r["type"] = "MATCH_MAC_SOURCE";
+			Utils::snprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)rule.v.mac[0],(unsigned int)rule.v.mac[1],(unsigned int)rule.v.mac[2],(unsigned int)rule.v.mac[3],(unsigned int)rule.v.mac[4],(unsigned int)rule.v.mac[5]);
+			r["mac"] = tmp;
+			break;
+		case ZT_NETWORK_RULE_MATCH_MAC_DEST:
+			r["type"] = "MATCH_MAC_DEST";
+			Utils::snprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)rule.v.mac[0],(unsigned int)rule.v.mac[1],(unsigned int)rule.v.mac[2],(unsigned int)rule.v.mac[3],(unsigned int)rule.v.mac[4],(unsigned int)rule.v.mac[5]);
+			r["mac"] = tmp;
+			break;
+		case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
+			r["type"] = "MATCH_IPV4_SOURCE";
+			r["ip"] = InetAddress(&(rule.v.ipv4.ip),4,(unsigned int)rule.v.ipv4.mask).toString();
+			break;
+		case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
+			r["type"] = "MATCH_IPV4_DEST";
+			r["ip"] = InetAddress(&(rule.v.ipv4.ip),4,(unsigned int)rule.v.ipv4.mask).toString();
+			break;
+		case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
+			r["type"] = "MATCH_IPV6_SOURCE";
+			r["ip"] = InetAddress(rule.v.ipv6.ip,16,(unsigned int)rule.v.ipv6.mask).toString();
+			break;
+		case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
+			r["type"] = "MATCH_IPV6_DEST";
+			r["ip"] = InetAddress(rule.v.ipv6.ip,16,(unsigned int)rule.v.ipv6.mask).toString();
+			break;
+		case ZT_NETWORK_RULE_MATCH_IP_TOS:
+			r["type"] = "MATCH_IP_TOS";
+			r["ipTos"] = (uint64_t)rule.v.ipTos;
+			break;
+		case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
+			r["type"] = "MATCH_IP_PROTOCOL";
+			r["ipProtocol"] = (uint64_t)rule.v.ipProtocol;
+			break;
+		case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
+			r["type"] = "MATCH_IP_SOURCE_PORT_RANGE";
+			r["start"] = (uint64_t)rule.v.port[0];
+			r["end"] = (uint64_t)rule.v.port[1];
+			break;
+		case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE:
+			r["type"] = "MATCH_IP_DEST_PORT_RANGE";
+			r["start"] = (uint64_t)rule.v.port[0];
+			r["end"] = (uint64_t)rule.v.port[1];
+			break;
+		case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
+			r["type"] = "MATCH_CHARACTERISTICS";
+			Utils::snprintf(tmp,sizeof(tmp),"%.16llx",rule.v.characteristics[0]);
+			r["mask"] = tmp;
+			Utils::snprintf(tmp,sizeof(tmp),"%.16llx",rule.v.characteristics[1]);
+			r["value"] = tmp;
+			break;
+		case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
+			r["type"] = "MATCH_FRAME_SIZE_RANGE";
+			r["start"] = (uint64_t)rule.v.frameSize[0];
+			r["end"] = (uint64_t)rule.v.frameSize[1];
+			break;
+		case ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS:
+			r["type"] = "MATCH_TAGS_SAMENESS";
+			r["id"] = (uint64_t)rule.v.tag.id;
+			r["value"] = (uint64_t)rule.v.tag.value;
+			break;
+		case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
+			r["type"] = "MATCH_TAGS_BITWISE_AND";
+			r["id"] = (uint64_t)rule.v.tag.id;
+			r["value"] = (uint64_t)rule.v.tag.value;
+			break;
+		case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
+			r["type"] = "MATCH_TAGS_BITWISE_OR";
+			r["id"] = (uint64_t)rule.v.tag.id;
+			r["value"] = (uint64_t)rule.v.tag.value;
+			break;
+		case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR:
+			r["type"] = "MATCH_TAGS_BITWISE_XOR";
+			r["id"] = (uint64_t)rule.v.tag.id;
+			r["value"] = (uint64_t)rule.v.tag.value;
+			break;
+	}
+	return r;
+}
+
+struct bool _parseRule(const json::object &r,ZT_VirtualNetworkRule &rule)
+{
+	std::string t = r["type"];
+	memset(&rule,0,sizeof(ZT_VirtualNetworkRule));
+	if (r.value("not",false))
+		rule.t = 0x80;
+	else rule.t = 0x00;
+	if (t == "ACTION_DROP") {
+		rule.t |= ZT_NETWORK_RULE_ACTION_DROP;
+		return true;
+	} else if (t == "ACTION_ACCEPT") {
+		rule.t |= ZT_NETWORK_RULE_ACTION_ACCEPT;
+		return true;
+	} else if (t == "ACTION_TEE") {
+		rule.t |= ZT_NETWORK_RULE_ACTION_TEE;
+		rule.v.zt = Utils::hexStrToU64(r.value("zt","0")) & 0xffffffffffULL;
+		return true;
+	} else if (t == "ACTION_REDIRECT") {
+		rule.t |= ZT_NETWORK_RULE_ACTION_REDIRECT;
+		rule.v.zt = Utils::hexStrToU64(r.value("zt","0")) & 0xffffffffffULL;
+		return true;
+	} else if (t == "MATCH_SOURCE_ZEROTIER_ADDRESS") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS;
+		rule.v.zt = Utils::hexStrToU64(r.value("zt","0")) & 0xffffffffffULL;
+		return true;
+	} else if (t == "MATCH_DEST_ZEROTIER_ADDRESS") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS;
+		rule.v.zt = Utils::hexStrToU64(r.value("zt","0")) & 0xffffffffffULL;
+		return true;
+	} else if (t == "MATCH_VLAN_ID") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_VLAN_ID;
+		rule.v.vlanId = (uint16_t)(r.value("vlanId",0ULL) & 0xffffULL);
+		return true;
+	} else if (t == "MATCH_VLAN_PCP") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_VLAN_PCP;
+		rule.v.vlanPcp = (uint8_t)(r.value("vlanPcp",0ULL) & 0xffULL);
+		return true;
+	} else if (t == "MATCH_VLAN_DEI") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_VLAN_DEI;
+		rule.v.vlanDei = (uint8_t)(r.value("vlanDei",0ULL) & 0xffULL);
+		return true;
+	} else if (t == "MATCH_ETHERTYPE") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_ETHERTYPE;
+		rule.v.etherType = (uint16_t)(r.value("etherType",0ULL) & 0xffffULL);
+		return true;
+	} else if (t == "MATCH_MAC_SOURCE") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_MAC_SOURCE;
+		const std::string mac(r.value("mac","0"));
+		Utils::unhex(mac.c_str(),(unsigned int)mac.length(),rule.v.mac,6);
+		return true;
+	} else if (t == "MATCH_MAC_DEST") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_MAC_DEST;
+		const std::string mac(r.value("mac","0"));
+		Utils::unhex(mac.c_str(),(unsigned int)mac.length(),rule.v.mac,6);
+		return true;
+	} else if (t == "MATCH_IPV4_SOURCE") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_IPV4_SOURCE;
+		InetAddress ip(r.value("ip","0.0.0.0"));
+		rule.v.ipv4.ip = reinterpret_cast<struct sockaddr_in *>(&ip)->sin_addr.s_addr;
+		rule.v.ipv4.mask = Utils::ntoh(reinterpret_cast<struct sockaddr_in *>(&ip)->sin_port) & 0xff;
+		if (rule.v.ipv4.mask > 32) rule.v.ipv4.mask = 32;
+		return true;
+	} else if (t == "MATCH_IPV4_DEST") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_IPV4_DEST;
+		InetAddress ip(r.value("ip","0.0.0.0"));
+		rule.v.ipv4.ip = reinterpret_cast<struct sockaddr_in *>(&ip)->sin_addr.s_addr;
+		rule.v.ipv4.mask = Utils::ntoh(reinterpret_cast<struct sockaddr_in *>(&ip)->sin_port) & 0xff;
+		if (rule.v.ipv4.mask > 32) rule.v.ipv4.mask = 32;
+		return true;
+	} else if (t == "MATCH_IPV6_SOURCE") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_IPV6_SOURCE;
+		InetAddress ip(r.value("ip","::0"));
+		memcpy(rule.v.ipv6.ip,reinterpret_cast<struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
+		rule.v.ipv6.mask = Utils::ntoh(reinterpret_cast<struct sockaddr_in6 *>(&ip)->sin6_port) & 0xff;
+		if (rule.v.ipv6.mask > 128) rule.v.ipv6.mask = 128;
+		return true;
+	} else if (t == "MATCH_IPV6_DEST") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_IPV6_DEST;
+		InetAddress ip(r.value("ip","::0"));
+		memcpy(rule.v.ipv6.ip,reinterpret_cast<struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
+		rule.v.ipv6.mask = Utils::ntoh(reinterpret_cast<struct sockaddr_in6 *>(&ip)->sin6_port) & 0xff;
+		if (rule.v.ipv6.mask > 128) rule.v.ipv6.mask = 128;
+		return true;
+	} else if (t == "MATCH_IP_TOS") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_IP_TOS;
+		rule.v.ipTos = (uint8_t)(r.value("ipTos",0ULL) & 0xffULL);
+		return true;
+	} else if (t == "MATCH_IP_PROTOCOL") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_IP_PROTOCOL;
+		rule.v.ipProtocol = (uint8_t)(r.value("ipProtocol",0ULL) & 0xffULL);
+		return true;
+	} else if (t == "MATCH_IP_SOURCE_PORT_RANGE") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE;
+		rule.v.port[0] = (uint16_t)(r.value("start",0ULL) & 0xffffULL);
+		rule.v.port[1] = (uint16_t)(r.value("end",0ULL) & 0xffffULL);
+		return true;
+	} else if (t == "MATCH_IP_DEST_PORT_RANGE") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE;
+		rule.v.port[0] = (uint16_t)(r.value("start",0ULL) & 0xffffULL);
+		rule.v.port[1] = (uint16_t)(r.value("end",0ULL) & 0xffffULL);
+		return true;
+	} else if (t == "MATCH_CHARACTERISTICS") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_CHARACTERISTICS;
+		if (r.count("mask")) {
+			auto mask = r["mask"];
+			rule.v.characteristics[0] = (mask.is_integer() ? (uint64_t)mask : Utils::hexStrToU64(mask));
+		}
+		if (r.count("value")) {
+			auto value = r["value"];
+			rule.v.characteristics[1] = (value.is_integer() ? (uint64_t)value : Utils::hexStrToU64(value));
+		}
+		return true;
+	} else if (t == "MATCH_FRAME_SIZE_RANGE") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE;
+		rule.v.frameSize[0] = (uint16_t)(Utils::hexStrToU64(r.value("start","0")) & 0xffffULL);
+		rule.v.frameSize[1] = (uint16_t)(Utils::hexStrToU64(r.value("end","0")) & 0xffffULL);
+		return true;
+	} else if (t == "MATCH_TAGS_SAMENESS") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS;
+		rule.v.tag.id = (uint32_t)(Utils::hexStrToU64(r.value("id","0")) & 0xffffffffULL);
+		rule.v.tag.value = (uint32_t)(Utils::hexStrToU64(r.value("value","0")) & 0xffffffffULL);
+		return true;
+	} else if (t == "MATCH_TAGS_BITWISE_AND") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND;
+		rule.v.tag.id = (uint32_t)(Utils::hexStrToU64(r.value("id","0")) & 0xffffffffULL);
+		rule.v.tag.value = (uint32_t)(Utils::hexStrToU64(r.value("value","0")) & 0xffffffffULL);
+		return true;
+	} else if (t == "MATCH_TAGS_BITWISE_OR") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR;
+		rule.v.tag.id = (uint32_t)(Utils::hexStrToU64(r.value("id","0")) & 0xffffffffULL);
+		rule.v.tag.value = (uint32_t)(Utils::hexStrToU64(r.value("value","0")) & 0xffffffffULL);
+		return true;
+	} else if (t == "MATCH_TAGS_BITWISE_XOR") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR;
+		rule.v.tag.id = (uint32_t)(Utils::hexStrToU64(r.value("id","0")) & 0xffffffffULL);
+		rule.v.tag.value = (uint32_t)(Utils::hexStrToU64(r.value("value","0")) & 0xffffffffULL);
+		return true;
+	}
+	return false;
+}
+
 SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,const char *circuitTestPath) :
 	_node(node),
 	_db(dbPath),
@@ -1050,49 +1315,157 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 				} // else 404
 
 			} else {
-				std::vector<std::string> path_copy(path);
+				// POST to network ID
 
-				if (!networkExists) {
-					if (path[1].substr(10) == "______") {
-						// A special POST /network/##########______ feature lets users create a network
-						// with an arbitrary unused network number at this controller.
-						nwid = 0;
-
-						uint64_t nwidPrefix = (Utils::hexStrToU64(path[1].substr(0,10).c_str()) << 24) & 0xffffffffff000000ULL;
-						uint64_t nwidPostfix = 0;
-						Utils::getSecureRandom(&nwidPostfix,sizeof(nwidPostfix));
-						uint64_t nwidOriginalPostfix = nwidPostfix;
-						do {
-							uint64_t tryNwid = nwidPrefix | (nwidPostfix & 0xffffffULL);
-							if (!nwidPostfix)
-								tryNwid |= 1;
-							Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)tryNwid);
-
-							sqlite3_reset(_sGetNetworkRevision);
-							sqlite3_bind_text(_sGetNetworkRevision,1,nwids,16,SQLITE_STATIC);
-							if (sqlite3_step(_sGetNetworkRevision) != SQLITE_ROW) {
-								nwid = tryNwid;
-								break;
-							}
-
-							++nwidPostfix;
-						} while (nwidPostfix != nwidOriginalPostfix);
-
-						// 503 means we have no more free IDs for this prefix. You shouldn't host anywhere
-						// near 16 million networks on the same controller, so shouldn't happen.
-						if (!nwid)
-							return 503;
-					}
-
-					sqlite3_reset(_sCreateNetwork);
-					sqlite3_bind_text(_sCreateNetwork,1,nwids,16,SQLITE_STATIC);
-					sqlite3_bind_text(_sCreateNetwork,2,"",0,SQLITE_STATIC);
-					sqlite3_bind_int64(_sCreateNetwork,3,(long long)OSUtils::now());
-					if (sqlite3_step(_sCreateNetwork) != SQLITE_DONE)
-						return 500;
-					path_copy[1].assign(nwids);
+				json::object b;
+				try {
+					b = json::parse(body);
+				} catch ( ... ) {
+					return 403;
 				}
 
+				// Magic ID ending with ______ picks a random unused network ID
+				if (path[1].substr(10) == "______") {
+					nwid = 0;
+					uint64_t nwidPrefix = (Utils::hexStrToU64(path[1].substr(0,10).c_str()) << 24) & 0xffffffffff000000ULL;
+					uint64_t nwidPostfix = 0;
+					for(unsigned long k=0;k<100000;++k) { // sanity limit on trials
+						Utils::getSecureRandom(&nwidPostfix,sizeof(nwidPostfix));
+						uint64_t tryNwid = nwidPrefix | (nwidPostfix & 0xffffffULL);
+						if ((tryNwid & 0xffffffULL) == 0ULL) tryNwid |= 1ULL;
+						Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)tryNwid);
+						if (!networks.get<const json::object_t *>(nwids)) {
+							nwid = tryNwid;
+							break;
+						}
+					}
+					if (!nwid)
+						return 503;
+				}
+
+				json::object &network = networks[nwids];
+				if (!network.is_object()) network = json::object();
+
+				try {
+					if (b.count("name")) network["name"] = b.get<std::string>("name");
+					if (b.count("private")) network["private"] = b.get<bool>("private");
+					if (b.count("enableBroadcast")) network["enableBroadcast"] = b.get<bool>("enableBroadcast");
+					if (b.count("allowPassiveBridging")) network["allowPassiveBridging"] = b.get<bool>("allowPassiveBridging");
+					if (b.count("multicastLimit")) network["multicastLimit"] = b.get<uint64_t>("multicastLimit");
+
+					if (b.count("v4AssignMode")) {
+						auto nv4m = network["v4AssignMode"];
+						if (!nv4m.is_object()) nv6m = json::object();
+						if (b["v4AssignMode"].is_string()) { // backward compatibility
+							nv4m["zt"] = (b.get<std::string>("v4AssignMode") == "zt");
+						} else if (b["v4AssignMode"].is_object()) {
+							auto v4m = b["v4AssignMode"];
+							if (v4m.count("zt")) nv4m["zt"] = v4m.get<bool>("zt");
+						}
+						if (!nv4m.count("zt")) nv4m["zt"] = false;
+					}
+
+					if (b.count("v6AssignMode")) {
+						auto nv6m = network["v6AssignMode"];
+						if (!nv6m.is_object()) nv6m = json::object();
+						if (b["v6AssignMode"].is_string()) { // backward compatibility
+							std::vector<std::string> v6m(Utils::split(b.get<std::string>("v6AssignMode").c_str(),",","",""));
+							std::sort(v6m.begin(),v6m.end());
+							v6m.erase(std::unique(v6m.begin(),v6m.end()),v6m.end());
+							for(std::vector<std::string>::iterator i(v6m.begin());i!=v6m.end();++i) {
+								if (*i == "rfc4193")
+									nv6m["rfc4193"] = true;
+								else if (*i == "zt")
+									nv6m["zt"] = true;
+								else if (*i == "6plane")
+									nv6m["6plane"] = true;
+							}
+						} else if (b["v6AssignMode"].is_object()) {
+							auto v6m = b["v6AssignMode"];
+							if (v6m.count("rfc4193")) nv6m["rfc4193"] = v6m.get<bool>("rfc4193");
+							if (v6m.count("zt")) nv6m["rfc4193"] = v6m.get<bool>("zt");
+							if (v6m.count("6plane")) nv6m["rfc4193"] = v6m.get<bool>("6plane");
+						}
+						if (!nv6m.count("rfc4193")) nv6m["rfc4193"] = false;
+						if (!nv6m.count("zt")) nv6m["zt"] = false;
+						if (!nv6m.count("6plane")) nv6m["6plane"] = false;
+					}
+
+					if (b.count("routes")) {
+						auto rts = b["routes"];
+						if (rts.is_array()) {
+							for(unsigned long i=0;i<rts.size();++i) {
+								auto rt = rts[i];
+								if ((rt.is_object())&&(rt.count("target"))&&(rt.count("via"))) {
+									InetAddress t(rt.get<std::string>("target"));
+									InetAddress v(rt.get<std::string>("via"));
+									if ( ((t.ss_family == AF_INET)||(t.ss_family == AF_INET6)) && (t.ss_family == v.ss_family) && (t.netmaskBitsValid()) ) {
+										auto nrts = network["routes"];
+										if (!nrts.is_array()) nrts = json::array();
+										json::object tmp;
+										tmp["target"] = target.toString();
+										tmp["via"] = target.toIpString();
+										nrts.push_back(tmp);
+									}
+								}
+							}
+						}
+					}
+
+					if (b.count("ipAssignmentPools")) {
+						auto ipp = b["ipAssignmentPools"];
+						if (ipp.is_array()) {
+							for(unsigned long i=0;i<ipp.size();++i) {
+								auto ip = ipp[i];
+								if ((ip.is_object())&&(ip.count("ipRangeStart"))&&(ip.count("ipRangeEnd"))) {
+									InetAddress f(ip.get<std::string>("ipRangeStart"));
+									InetAddress t(ip.get<std::string>("ipRangeEnd"));
+									if ( ((f.ss_family == AF_INET)||(f.ss_family == AF_INET6)) && (f.ss_family == t.ss_family) ) {
+										auto nipp = network["ipAssignmentPools"];
+										if (!nipp.is_array()) nipp = json::array();
+										json::object tmp;
+										tmp["ipRangeStart"] = f.toIpString();
+										tmp["ipRangeEnd"] = t.toIpString();
+										nipp.push_back(tmp);
+									}
+								}
+							}
+						}
+					}
+
+					if (b.count("rules")) {
+						auto rules = b["rules"];
+						if (rules.is_array()) {
+							for(unsigned long i=0;i<rules.size();++i) {
+								auto rule = rules[i];
+								if (rule.is_object()) {
+								}
+							}
+						}
+					}
+				} catch ( ... ) {
+					// TODO: report?
+				}
+
+				if (!network.count("private")) network["private"] = true;
+				if (!network.count("creationTime")) network["creationTime"] = OSUtils::now();
+				if (!network.count("name")) network["name"] = "";
+				if (!network.count("multicastLimit")) network["multicastLimit"] = (uint64_t)32;
+				if (!network.count("revision")) network["revision"] = (uint64_t)0;
+				if (!network.count("memberRevisionCounter")) network["memberRevisionCounter"] = (uint64_t)0;
+				if (!network.count("memberLastModified")) network["memberLastModified"] = (uint64_t)0;
+				if (!network.count("v4AssignMode")) network["v4AssignMode"] = "{\"zt\":false}"_json;
+				if (!network.count("v6AssignMode")) network["v6AssignMode"] = "{\"rfc4193\":false,\"zt\":false,\"6plane\":false}"_json;
+
+				if (!network.count("rules")) {
+				}
+
+				network["lastModified"] = OSUtils::now();
+				network["revision"] = network.get<uint64_t>("revision") + 1ULL;
+
+				return _doCPGet(path_copy,urlArgs,headers,body,responseBody,responseContentType);
+
+				/*
 				json_value *j = json_parse(body.c_str(),body.length());
 				if (j) {
 					if (j->type == json_object) {
@@ -1409,6 +1782,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 
 				return _doCPGet(path_copy,urlArgs,headers,body,responseBody,responseContentType);
 			}
+			*/
 
 		} // else 404
 
