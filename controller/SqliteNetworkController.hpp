@@ -24,12 +24,14 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <set>
 
 #include "../node/Constants.hpp"
 
 #include "../node/NetworkController.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/Utils.hpp"
+#include "../node/InetAddress.hpp"
 
 #include "../osdep/OSUtils.hpp"
 
@@ -76,14 +78,6 @@ public:
 		std::string &responseContentType);
 
 private:
-	unsigned int _doCPGet(
-		const std::vector<std::string> &path,
-		const std::map<std::string,std::string> &urlArgs,
-		const std::map<std::string,std::string> &headers,
-		const std::string &body,
-		std::string &responseBody,
-		std::string &responseContentType);
-
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
 
 	inline nlohmann::json _readJson(const std::string &path)
@@ -132,6 +126,28 @@ private:
 	inline std::string _memberJP(const uint64_t nwid,const Address &member,bool create)
 	{
 		return (_memberBP(nwid,member,create) + ZT_PATH_SEPARATOR + "config.json");
+	}
+
+	inline std::set<InetAddress> _getAlreadyAllocatedIps(const uint64_t nwid)
+	{
+		std::set<InetAddress> ips;
+		std::string bp(_networkBP(nwid,false) + ZT_PATH_SEPARATOR_S + "member");
+		std::vector<std::string> members(OSUtils::listSubdirectories(bp.c_str()));
+		for(std::vector<std::string>::iterator m(members.begin());m!=members.end();++m) {
+			if (m->length() == ZT_ADDRESS_LENGTH_HEX) {
+				nlohmann::json mj = _readJson(bp + ZT_PATH_SEPARATOR_S + *m + ZT_PATH_SEPARATOR_S + "config.json");
+				auto ipAssignments = mj["ipAssignments"];
+				if (ipAssignments.is_array()) {
+					for(unsigned long i=0;i<ipAssignments.size();++i) {
+						std::string ipstr = ipAssignments[i];
+						InetAddress ip(ipstr);
+						if (ip)
+							ips.insert(ip);
+					}
+				}
+			}
+		}
+		return ips;
 	}
 
 	// These are const after construction
