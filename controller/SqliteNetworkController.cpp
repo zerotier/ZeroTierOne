@@ -644,7 +644,6 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 
 	// Update member log
 	{
-		json recentLog = json::array();
 		json rlEntry = json::object();
 		rlEntry["ts"] = now;
 		rlEntry["authorized"] = member["authorized"];
@@ -654,8 +653,9 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		rlEntry["clientProtocolVersion"] = metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION,0);
 		if (fromAddr)
 			rlEntry["fromAddr"] = fromAddr.toString();
+		json recentLog = json::array();
 		recentLog.push_back(rlEntry);
-		json oldLog = member["recentLog"];
+		auto oldLog = member["recentLog"];
 		if (oldLog.is_array()) {
 			for(unsigned long i=0;i<oldLog.size();++i) {
 				recentLog.push_back(oldLog[i]);
