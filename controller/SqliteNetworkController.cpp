@@ -53,14 +53,7 @@
 #include "../node/MAC.hpp"
 #include "../node/Address.hpp"
 
-// offbase includes and builds upon nlohmann::json
 using json = nlohmann::json;
-
-// Stored in database as schemaVersion key in Config.
-// If not present, database is assumed to be empty and at the current schema version
-// and this key/value is added automatically.
-//#define ZT_NETCONF_SQLITE_SCHEMA_VERSION 5
-//#define ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR "5"
 
 // API version reported via JSON control plane
 #define ZT_NETCONF_CONTROLLER_API_VERSION 3
