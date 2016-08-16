@@ -113,7 +113,7 @@ void InetAddress::set(const std::string &ip,unsigned int port)
 		sin6->sin6_port = Utils::hton((uint16_t)port);
 		if (inet_pton(AF_INET6,ip.c_str(),(void *)&(sin6->sin6_addr.s6_addr)) <= 0)
 			memset(this,0,sizeof(InetAddress));
-	} else {
+	} else if (ip.find('.') != std::string::npos) {
 		struct sockaddr_in *sin = reinterpret_cast<struct sockaddr_in *>(this);
 		ss_family = AF_INET;
 		sin->sin_port = Utils::hton((uint16_t)port);

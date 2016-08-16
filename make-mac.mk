@@ -65,7 +65,7 @@ else
 	STRIP=strip
 endif
 
-CXXFLAGS=$(CFLAGS) -fno-rtti
+CXXFLAGS=$(CFLAGS) -fno-rtti -mmacosx-version-min=10.7 -std=c++11 -stdlib=libc++ 
 
 all: one
 
@@ -78,7 +78,7 @@ one:	$(OBJS) service/OneService.o one.o
 	$(CODESIGN) -vvv zerotier-one
 
 cli:	FORCE
-	$(CXX) -Os -mmacosx-version-min=10.7 -std=c++11 -stdlib=libc++ -o zerotier cli/zerotier.cpp osdep/OSUtils.cpp node/InetAddress.cpp node/Utils.cpp node/Salsa20.cpp node/Identity.cpp node/SHA512.cpp node/C25519.cpp -lcurl
+	$(CXX) $(CXXFLAGS) -o zerotier cli/zerotier.cpp osdep/OSUtils.cpp node/InetAddress.cpp node/Utils.cpp node/Salsa20.cpp node/Identity.cpp node/SHA512.cpp node/C25519.cpp -lcurl
 	$(STRIP) zerotier
 
 selftest: $(OBJS) selftest.o

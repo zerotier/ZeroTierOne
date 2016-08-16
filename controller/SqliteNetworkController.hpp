@@ -14,15 +14,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * ZeroTier may be used and distributed under the terms of the GPLv3, which
- * are available at: http://www.gnu.org/licenses/gpl-3.0.html
- *
- * If you would like to embed ZeroTier into a commercial application or
- * redistribute it in a modified binary form, please contact ZeroTier Networks
- * LLC. Start here: http://www.zerotier.com/
  */
 
 #ifndef ZT_SQLITENETWORKCONTROLLER_HPP
@@ -38,9 +29,11 @@
 
 #include "../node/NetworkController.hpp"
 #include "../node/Mutex.hpp"
-#include "../osdep/Thread.hpp"
+#include "../node/Utils.hpp"
 
-#include "../ext/offbase/offbase.hpp"
+#include "../osdep/OSUtils.hpp"
+
+#include "../ext/json/json.hpp"
 
 namespace ZeroTier {
 
@@ -82,10 +75,6 @@ public:
 		std::string &responseBody,
 		std::string &responseContentType);
 
-	// threadMain() for backup thread -- do not call directly
-	void threadMain()
-		throw();
-
 private:
 	unsigned int _doCPGet(
 		const std::vector<std::string> &path,
@@ -97,11 +86,57 @@ private:
 
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
 
+	inline nlohmann::json _readJson(const std::string &path)
+	{
+		std::string buf;
+		if (OSUtils::readFile(path.c_str(),buf)) {
+			try {
+				return nlohmann::json::parse(buf);
+			} catch ( ... ) {}
+		}
+		return nlohmann::json::object();
+	}
+
+	inline bool _writeJson(const std::string &path,const nlohmann::json &obj)
+	{
+		std::string buf(obj.dump(2));
+		return OSUtils::writeFile(path.c_str(),buf);
+	}
+
+	inline std::string _networkBP(const uint64_t nwid,bool create)
+	{
+		char tmp[64];
+		Utils::snprintf(tmp,sizeof(tmp),"%.16llx",nwid);
+		std::string p(_path + ZT_PATH_SEPARATOR_S + "network");
+		if (create) OSUtils::mkdir(p.c_str());
+		p.push_back(ZT_PATH_SEPARATOR);
+		p.append(tmp);
+		if (create) OSUtils::mkdir(p.c_str());
+		return p;
+	}
+	inline std::string _networkJP(const uint64_t nwid,bool create)
+	{
+		return (_networkBP(nwid,create) + ZT_PATH_SEPARATOR + "config.json");
+	}
+	inline std::string _memberBP(const uint64_t nwid,const Address &member,bool create)
+	{
+		std::string p(_networkBP(nwid,create));
+		p.push_back(ZT_PATH_SEPARATOR);
+		p.append("member");
+		if (create) OSUtils::mkdir(p.c_str());
+		p.push_back(ZT_PATH_SEPARATOR);
+		p.append(member.toString());
+		if (create) OSUtils::mkdir(p.c_str());
+		return p;
+	}
+	inline std::string _memberJP(const uint64_t nwid,const Address &member,bool create)
+	{
+		return (_memberBP(nwid,member,create) + ZT_PATH_SEPARATOR + "config.json");
+	}
+
+	// These are const after construction
 	Node *const _node;
-	std::string _instanceId;
-	offbase _db;
-	Thread _dbCommitThread;
-	volatile bool _dbCommitThreadRun;
+	std::string _path;
 
 	// Circuit tests outstanding
 	struct _CircuitTestEntry
@@ -110,11 +145,11 @@ private:
 		std::string jsonResults;
 	};
 	std::map< uint64_t,_CircuitTestEntry > _circuitTests;
+	Mutex _circuitTests_m;
 
 	// Last request time by address, for rate limitation
 	std::map< std::pair<uint64_t,uint64_t>,uint64_t > _lastRequestTime;
-
-	Mutex _lock;
+	Mutex _lastRequestTime_m;
 };
 
 } // namespace ZeroTier
