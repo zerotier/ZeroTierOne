@@ -1119,13 +1119,13 @@ public:
 			for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
 				if (std::find(newManagedIps.begin(),newManagedIps.end(),*ip) == newManagedIps.end()) {
 					if (!n.tap->removeIp(*ip))
-						fprintf(stderr,"ERROR: unable to remove ip address %s"ZT_EOL_S, ip->toString().c_str());
+						fprintf(stderr,"ERROR: unable to remove ip address %s" ZT_EOL_S, ip->toString().c_str());
 				}
 			}
 			for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
 				if (std::find(n.managedIps.begin(),n.managedIps.end(),*ip) == n.managedIps.end()) {
 					if (!n.tap->addIp(*ip))
-						fprintf(stderr,"ERROR: unable to add ip address %s"ZT_EOL_S, ip->toString().c_str());
+						fprintf(stderr,"ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString().c_str());
 				}
 			}
 
@@ -1468,11 +1468,11 @@ public:
 #ifdef __WINDOWS__
 						FILE *tapFailLog = fopen((_homePath + ZT_PATH_SEPARATOR_S"port_error_log.txt").c_str(),"a");
 						if (tapFailLog) {
-							fprintf(tapFailLog,"%.16llx: %s"ZT_EOL_S,(unsigned long long)nwid,exc.what());
+							fprintf(tapFailLog,"%.16llx: %s" ZT_EOL_S,(unsigned long long)nwid,exc.what());
 							fclose(tapFailLog);
 						}
 #else
-						fprintf(stderr,"ERROR: unable to configure virtual network port: %s"ZT_EOL_S,exc.what());
+						fprintf(stderr,"ERROR: unable to configure virtual network port: %s" ZT_EOL_S,exc.what());
 #endif
 						_nets.erase(nwid);
 						return -999;
@@ -1531,7 +1531,7 @@ public:
 
 			case ZT_EVENT_TRACE: {
 				if (metaData) {
-					::fprintf(stderr,"%s"ZT_EOL_S,(const char *)metaData);
+					::fprintf(stderr,"%s" ZT_EOL_S,(const char *)metaData);
 					::fflush(stderr);
 				}
 			}	break;

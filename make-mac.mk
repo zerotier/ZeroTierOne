@@ -65,7 +65,7 @@ else
 	STRIP=strip
 endif
 
-CXXFLAGS=$(CFLAGS) -fno-rtti -mmacosx-version-min=10.7 -std=c++11 -stdlib=libc++ 
+CXXFLAGS=$(CFLAGS) -mmacosx-version-min=10.7 -std=c++11 -stdlib=libc++ 
 
 all: one
 
