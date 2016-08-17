@@ -101,6 +101,9 @@ namespace ZeroTier {
 // Maximum number of tags this node can accept
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_TAGS "mt"
 
+// Network join authorization token (if any)
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH_TOKEN "atok"
+
 // These dictionary keys are short so they don't take up much room.
 // By convention we use upper case for binary blobs, but it doesn't really matter.
 

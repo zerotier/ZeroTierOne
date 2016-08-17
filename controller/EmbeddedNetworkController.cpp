@@ -658,10 +658,38 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 
 	// Stop if network is private and member is not authorized
 	if ( (network.value("private",true)) && (!member.value("authorized",false)) ) {
-		_writeJson(memberJP,member);
-		return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
+		bool authenticatedViaToken = false;
+		char atok[256];
+		if (metaData.get(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH_TOKEN,atok,sizeof(atok)) > 0) {
+			atok[255] = (char)0; // not necessary but YDIFLO
+			if (strlen(atok) > 0) { // extra sanity check
+				auto authTokens = network["authTokens"];
+				if (authTokens.is_array()) {
+					for(unsigned long i=0;i<authTokens.size();++i) {
+						auto at = authTokens[i];
+						if (at.is_object()) {
+							const uint64_t expires = at.value("expires",0ULL);
+							std::string tok = at.value("token","");
+							if ( ((expires == 0ULL)||(expires > now)) && (tok.length() > 0) && (tok == atok) ) {
+								authenticatedViaToken = true;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if (!authenticatedViaToken) {
+			_writeJson(memberJP,member);
+			return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
+		}
 	}
 	// Else compose and send network config
+
+	// If we made it here for some reason other than authorized being true, such as this
+	// being a public network or via a bearer token, then we set this in the member config.
+	member["authorized"] = true;
 
 	nc.networkId = nwid;
 	nc.type = network.value("private",true) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
@@ -1308,6 +1336,26 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 							network["rules"] = nrules;
 						}
 					}
+
+					if (b.count("authTokens")) {
+						auto authTokens = b["authTokens"];
+						if (authTokens.is_array()) {
+							json nat = json::array();
+							for(unsigned long i=0;i<authTokens.size();++i) {
+								auto token = authTokens[i];
+								if (token.is_object()) {
+									std::string tstr = token["token"];
+									if (tstr.length() > 0) {
+										json t = json::object();
+										t["token"] = tstr;
+										t["expires"] = token.value("expires",0ULL);
+										nat.push_back(t);
+									}
+								}
+							}
+							network["authTokens"] = nat;
+						}
+					}
 				} catch ( ... ) {
 					return 400;
 				}
@@ -1319,6 +1367,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 				if (!network.count("v4AssignMode")) network["v4AssignMode"] = "{\"zt\":false}"_json;
 				if (!network.count("v6AssignMode")) network["v6AssignMode"] = "{\"rfc4193\":false,\"zt\":false,\"6plane\":false}"_json;
 				if (!network.count("activeBridges")) network["activeBridges"] = json::array();
+				if (!network.count("authTokens")) network["authTokens"] = json::array();
 
 				if (!network.count("rules")) {
 					// If unspecified, rules are set to allow anything and behave like a flat L2 segment
