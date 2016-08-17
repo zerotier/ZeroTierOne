@@ -50,7 +50,7 @@ using json = nlohmann::json;
 #define ZT_NETCONF_CONTROLLER_API_VERSION 3
 
 // Number of requests to remember in member history
-#define ZT_NETCONF_DB_MEMBER_HISTORY_LENGTH 8
+#define ZT_NETCONF_DB_MEMBER_HISTORY_LENGTH 64
 
 // Min duration between requests for an address/nwid combo to prevent floods
 #define ZT_NETCONF_MIN_REQUEST_PERIOD 1000
@@ -632,17 +632,52 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	member["nwid"] = network["id"];
 	member["memberRevision"] = member.value("memberRevision",0ULL) + 1;
 
-	// Update member log
+	// Determine whether and how member is authorized
+	const char *authorizedBy = (const char *)0;
+	if (!network.value("private",true)) {
+		authorizedBy = "networkIsPublic";
+	} else if (member.value("authorized",false)) {
+		authorizedBy = "memberIsAuthorized";
+	} else {
+		char atok[256];
+		if (metaData.get(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH_TOKEN,atok,sizeof(atok)) > 0) {
+			atok[255] = (char)0; // not necessary but YDIFLO
+			if (strlen(atok) > 0) { // extra sanity check
+				auto authTokens = network["authTokens"];
+				if (authTokens.is_array()) {
+					for(unsigned long i=0;i<authTokens.size();++i) {
+						auto at = authTokens[i];
+						if (at.is_object()) {
+							const uint64_t expires = at.value("expires",0ULL);
+							std::string tok = at.value("token","");
+							if ( ((expires == 0ULL)||(expires > now)) && (tok.length() > 0) && (tok == atok) ) {
+								authorizedBy = "token";
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Remember authorization state for public networks and token auth
+	if (authorizedBy)
+		member["authorized"] = true;
+
+	// Log this request
 	{
 		json rlEntry = json::object();
 		rlEntry["ts"] = now;
-		rlEntry["authorized"] = member["authorized"];
+		rlEntry["authorized"] = (authorizedBy) ? true : false;
+		rlEntry["authorizedBy"] = (authorizedBy) ? authorizedBy : "";
 		rlEntry["clientMajorVersion"] = metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0);
 		rlEntry["clientMinorVersion"] = metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0);
 		rlEntry["clientRevision"] = metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0);
 		rlEntry["clientProtocolVersion"] = metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION,0);
 		if (fromAddr)
 			rlEntry["fromAddr"] = fromAddr.toString();
+
 		json recentLog = json::array();
 		recentLog.push_back(rlEntry);
 		auto oldLog = member["recentLog"];
@@ -656,40 +691,13 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		member["recentLog"] = recentLog;
 	}
 
-	// Stop if network is private and member is not authorized
-	if ( (network.value("private",true)) && (!member.value("authorized",false)) ) {
-		bool authenticatedViaToken = false;
-		char atok[256];
-		if (metaData.get(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH_TOKEN,atok,sizeof(atok)) > 0) {
-			atok[255] = (char)0; // not necessary but YDIFLO
-			if (strlen(atok) > 0) { // extra sanity check
-				auto authTokens = network["authTokens"];
-				if (authTokens.is_array()) {
-					for(unsigned long i=0;i<authTokens.size();++i) {
-						auto at = authTokens[i];
-						if (at.is_object()) {
-							const uint64_t expires = at.value("expires",0ULL);
-							std::string tok = at.value("token","");
-							if ( ((expires == 0ULL)||(expires > now)) && (tok.length() > 0) && (tok == atok) ) {
-								authenticatedViaToken = true;
-								break;
-							}
-						}
-					}
-				}
-			}
-		}
-
-		if (!authenticatedViaToken) {
-			_writeJson(memberJP,member);
-			return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
-		}
+	// If they are not authorized, STOP!
+	if (!authorizedBy) {
+		_writeJson(memberJP,member);
+		return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
 	}
-	// Else compose and send network config
 
-	// If we made it here for some reason other than authorized being true, such as this
-	// being a public network or via a bearer token, then we set this in the member config.
-	member["authorized"] = true;
+	// If we made it this far, they are authorized.
 
 	nc.networkId = nwid;
 	nc.type = network.value("private",true) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
