@@ -53,10 +53,6 @@
 #include "osdep/PortMapper.hpp"
 #include "osdep/Thread.hpp"
 
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-#include "controller/SqliteNetworkController.hpp"
-#endif // ZT_ENABLE_NETWORK_CONTROLLER
-
 #ifdef __WINDOWS__
 #include <tchar.h>
 #endif

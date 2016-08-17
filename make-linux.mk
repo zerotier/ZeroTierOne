@@ -82,12 +82,6 @@ ifeq ($(ZT_USE_MINIUPNPC),1)
 	endif
 endif
 
-ifeq ($(ZT_ENABLE_NETWORK_CONTROLLER),1)
-	DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER
-	LDLIBS+=-L/usr/local/lib -lsqlite3
-	OBJS+=controller/SqliteNetworkController.o
-endif
-
 ifeq ($(ZT_ENABLE_CLUSTER),1)
 	DEFS+=-DZT_ENABLE_CLUSTER
 endif

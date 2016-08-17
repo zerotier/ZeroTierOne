@@ -1,4 +1,5 @@
 OBJS=\
+	controller/EmbeddedNetworkController.o \
 	node/C25519.o \
 	node/Capability.o \
 	node/CertificateOfMembership.o \

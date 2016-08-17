@@ -69,11 +69,7 @@
  */
 //#define ZT_BREAK_UDP
 
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-#include "../controller/SqliteNetworkController.hpp"
-#else
-class SqliteNetworkController;
-#endif // ZT_ENABLE_NETWORK_CONTROLLER
+#include "../controller/EmbeddedNetworkController.hpp"
 
 #ifdef __WINDOWS__
 #include <WinSock2.h>
@@ -129,7 +125,7 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #define ZT_TAP_CHECK_MULTICAST_INTERVAL 5000
 
 // Path under ZT1 home for controller database if controller is enabled
-#define ZT_CONTROLLER_DB_PATH "controller.db"
+#define ZT_CONTROLLER_DB_PATH "controller.d"
 
 // TCP fallback relay host -- geo-distributed using Amazon Route53 geo-aware DNS
 #define ZT_TCP_FALLBACK_RELAY "tcp-fallback.zerotier.com"
@@ -487,9 +483,7 @@ public:
 
 	const std::string _homePath;
 	BackgroundResolver _tcpFallbackResolver;
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-	SqliteNetworkController *_controller;
-#endif
+	EmbeddedNetworkController *_controller;
 	Phy<OneServiceImpl *> _phy;
 	Node *_node;
 
@@ -579,9 +573,7 @@ public:
 	OneServiceImpl(const char *hp,unsigned int port) :
 		_homePath((hp) ? hp : ".")
 		,_tcpFallbackResolver(ZT_TCP_FALLBACK_RELAY)
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-		,_controller((SqliteNetworkController *)0)
-#endif
+		,_controller((EmbeddedNetworkController *)0)
 		,_phy(this,false,true)
 		,_node((Node *)0)
 		,_controlPlane((ControlPlane *)0)
@@ -673,9 +665,7 @@ public:
 #ifdef ZT_USE_MINIUPNPC
 		delete _portMapper;
 #endif
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
 		delete _controller;
-#endif
 #ifdef ZT_ENABLE_CLUSTER
 		delete _clusterDefinition;
 #endif
@@ -794,10 +784,8 @@ public:
 				}
 			}
 
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-			_controller = new SqliteNetworkController(_node,(_homePath + ZT_PATH_SEPARATOR_S + ZT_CONTROLLER_DB_PATH).c_str(),(_homePath + ZT_PATH_SEPARATOR_S + "circuitTestResults.d").c_str());
+			_controller = new EmbeddedNetworkController(_node,(_homePath + ZT_PATH_SEPARATOR_S + ZT_CONTROLLER_DB_PATH).c_str());
 			_node->setNetconfMaster((void *)_controller);
-#endif
 
 #ifdef ZT_ENABLE_CLUSTER
 			if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S + "cluster").c_str())) {
@@ -850,10 +838,7 @@ public:
 
 			_controlPlane = new ControlPlane(this,_node,(_homePath + ZT_PATH_SEPARATOR_S + "ui").c_str());
 			_controlPlane->addAuthToken(authToken.c_str());
-
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
 			_controlPlane->setController(_controller);
-#endif
 
 			{	// Remember networks from previous session
 				std::vector<std::string> networksDotD(OSUtils::listDirectory((_homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str()));

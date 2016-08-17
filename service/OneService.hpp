@@ -25,18 +25,6 @@ namespace ZeroTier {
 
 /**
  * Local service for ZeroTier One as system VPN/NFV provider
- *
- * If built with ZT_ENABLE_NETWORK_CONTROLLER defined, this includes and
- * runs controller/SqliteNetworkController with a database called
- * controller.db in the specified home directory.
- *
- * If built with ZT_AUTO_UPDATE, an official ZeroTier update URL is
- * periodically checked and updates are automatically downloaded, verified
- * against a built-in list of update signing keys, and installed. This is
- * only supported for certain platforms.
- *
- * If built with ZT_ENABLE_CLUSTER, a 'cluster' file is checked and if
- * present is read to determine the identity of other cluster members.
  */
 class OneService
 {

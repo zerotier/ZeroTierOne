@@ -45,12 +45,6 @@ ifeq ($(ZT_USE_MINIUPNPC),1)
 	OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o osdep/PortMapper.o
 endif
 
-ifeq ($(ZT_ENABLE_NETWORK_CONTROLLER),1)
-	DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER
-	LIBS+=-L/usr/local/lib -lsqlite3
-	OBJS+=controller/SqliteNetworkController.o
-endif
-
 # Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE

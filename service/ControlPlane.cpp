@@ -34,9 +34,7 @@
 #include "../ext/json-parser/json.h"
 #endif
 
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-#include "../controller/SqliteNetworkController.hpp"
-#endif
+#include "../controller/EmbeddedNetworkController.hpp"
 
 #include "../node/InetAddress.hpp"
 #include "../node/Node.hpp"
@@ -254,9 +252,7 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_Peer *peer)
 ControlPlane::ControlPlane(OneService *svc,Node *n,const char *uiStaticPath) :
 	_svc(svc),
 	_node(n),
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-	_controller((SqliteNetworkController *)0),
-#endif
+	_controller((EmbeddedNetworkController *)0),
 	_uiStaticPath((uiStaticPath) ? uiStaticPath : "")
 {
 }
@@ -499,13 +495,9 @@ unsigned int ControlPlane::handleRequest(
 				responseContentType = "text/plain";
 				scode = 200;
 			} else {
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
 				if (_controller)
 					scode = _controller->handleControlPlaneHttpGET(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;
-#else
-				scode = 404;
-#endif
 			}
 
 		} else scode = 401; // isAuth == false
@@ -559,13 +551,9 @@ unsigned int ControlPlane::handleRequest(
 					} else scode = 500;
 				}
 			} else {
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
 				if (_controller)
 					scode = _controller->handleControlPlaneHttpPOST(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;
-#else
-				scode = 404;
-#endif
 			}
 
 		} else scode = 401; // isAuth == false
@@ -594,13 +582,9 @@ unsigned int ControlPlane::handleRequest(
 					_node->freeQueryResult((void *)nws);
 				} else scode = 500;
 			} else {
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
 				if (_controller)
 					scode = _controller->handleControlPlaneHttpDELETE(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;
-#else
-				scode = 404;
-#endif
 			}
 
 		} else {

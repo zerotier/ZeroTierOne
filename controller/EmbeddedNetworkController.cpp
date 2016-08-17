@@ -33,7 +33,7 @@
 #include "../include/ZeroTierOne.h"
 #include "../node/Constants.hpp"
 
-#include "SqliteNetworkController.hpp"
+#include "EmbeddedNetworkController.hpp"
 
 #include "../node/Node.hpp"
 #include "../node/Utils.hpp"
@@ -337,7 +337,7 @@ static bool _parseRule(const json &r,ZT_VirtualNetworkRule &rule)
 	return false;
 }
 
-SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath) :
+EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPath) :
 	_node(node),
 	_path(dbPath)
 {
@@ -585,11 +585,11 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath) 
 	*/
 }
 
-SqliteNetworkController::~SqliteNetworkController()
+EmbeddedNetworkController::~EmbeddedNetworkController()
 {
 }
 
-NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData,NetworkConfig &nc)
+NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData,NetworkConfig &nc)
 {
 	if (((!signingId)||(!signingId.hasPrivate()))||(signingId.address().toInt() != (nwid >> 24))) {
 		return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
@@ -898,7 +898,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 	return NetworkController::NETCONF_QUERY_OK;
 }
 
-unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
+unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 	const std::vector<std::string> &path,
 	const std::map<std::string,std::string> &urlArgs,
 	const std::map<std::string,std::string> &headers,
@@ -1040,7 +1040,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 	return 404;
 }
 
-unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
+unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 	const std::vector<std::string> &path,
 	const std::map<std::string,std::string> &urlArgs,
 	const std::map<std::string,std::string> &headers,
@@ -1155,7 +1155,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					te.test = test;
 					te.jsonResults = "";
 
-					_node->circuitTestBegin(test,&(SqliteNetworkController::_circuitTestCallback));
+					_node->circuitTestBegin(test,&(EmbeddedNetworkController::_circuitTestCallback));
 
 					char json[1024];
 					Utils::snprintf(json,sizeof(json),"{\"testId\":\"%.16llx\"}",test->testId);
@@ -1348,7 +1348,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 	return 404;
 }
 
-unsigned int SqliteNetworkController::handleControlPlaneHttpDELETE(
+unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 	const std::vector<std::string> &path,
 	const std::map<std::string,std::string> &urlArgs,
 	const std::map<std::string,std::string> &headers,
@@ -1394,10 +1394,10 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpDELETE(
 	return 404;
 }
 
-void SqliteNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report)
+void EmbeddedNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report)
 {
 	char tmp[65535];
-	SqliteNetworkController *const self = reinterpret_cast<SqliteNetworkController *>(test->ptr);
+	EmbeddedNetworkController *const self = reinterpret_cast<EmbeddedNetworkController *>(test->ptr);
 
 	if (!test)
 		return;

@@ -41,11 +41,11 @@ namespace ZeroTier {
 
 class Node;
 
-class SqliteNetworkController : public NetworkController
+class EmbeddedNetworkController : public NetworkController
 {
 public:
-	SqliteNetworkController(Node *node,const char *dbPath);
-	virtual ~SqliteNetworkController();
+	EmbeddedNetworkController(Node *node,const char *dbPath);
+	virtual ~EmbeddedNetworkController();
 
 	virtual NetworkController::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
