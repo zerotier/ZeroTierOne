@@ -501,19 +501,6 @@ static int testCertificate()
 		return -1;
 	}
 
-	std::cout << "[certificate] Testing string serialization... ";
-	CertificateOfMembership copyA(cA.toString());
-	CertificateOfMembership copyB(cB.toString());
-	if (copyA != cA) {
-		std::cout << "FAIL" << std::endl;
-		return -1;
-	}
-	if (copyB != cB) {
-		std::cout << "FAIL" << std::endl;
-		return -1;
-	}
-	std::cout << "PASS" << std::endl;
-
 	std::cout << "[certificate] Generating two certificates that should not agree...";
 	cA = CertificateOfMembership(10000,100,1,idA.address());
 	cB = CertificateOfMembership(10101,100,1,idB.address());

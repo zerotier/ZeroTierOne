@@ -93,17 +93,17 @@ endif
 ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE
 	override CFLAGS+=-Wall -g -O -pthread $(INCLUDES) $(DEFS)
-	override CXXFLAGS+=-Wall -g -O -pthread $(INCLUDES) $(DEFS)
+	override CXXFLAGS+=-Wall -g -O -std=c++11 -pthread $(INCLUDES) $(DEFS)
 	LDFLAGS=
 	STRIP?=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
-	CFLAGS?=-O3 -fstack-protector-strong
+	CFLAGS?=-O3 -fstack-protector
 	override CFLAGS+=-Wall -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	CXXFLAGS?=-O3 -fstack-protector-strong
-	override CXXFLAGS+=-Wall -Wno-unused-result -Wreorder -fPIE -fno-rtti -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	CXXFLAGS?=-O3 -fstack-protector
+	override CXXFLAGS+=-Wall -Wno-unused-result -Wreorder -fPIE -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
 	STRIP+=--strip-all
