@@ -14,15 +14,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * ZeroTier may be used and distributed under the terms of the GPLv3, which
- * are available at: http://www.gnu.org/licenses/gpl-3.0.html
- *
- * If you would like to embed ZeroTier into a commercial application or
- * redistribute it in a modified binary form, please contact ZeroTier Networks
- * LLC. Start here: http://www.zerotier.com/
  */
 
 #include <stdint.h>
@@ -639,7 +630,6 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 	member["id"] = identity.address().toString();
 	member["address"] = member["id"];
 	member["nwid"] = network["id"];
-	member["lastModified"] = now;
 	member["memberRevision"] = member.value("memberRevision",0ULL) + 1;
 
 	// Update member log
@@ -666,14 +656,12 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		member["recentLog"] = recentLog;
 	}
 
-	if (!member.value("authorized",false)) {
-		if (network.value("private",true)) {
-			_writeJson(memberJP,member);
-			return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
-		} else {
-			member["authorized"] = true; // auto-authorize on public networks
-		}
+	// Stop if network is private and member is not authorized
+	if ( (network.value("private",true)) && (!member.value("authorized",false)) ) {
+		_writeJson(memberJP,member);
+		return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
 	}
+	// Else compose and send network config
 
 	nc.networkId = nwid;
 	nc.type = network.value("private",true) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
@@ -1094,6 +1082,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					try {
 						if (b.count("authorized")) member["authorized"] = b.value("authorized",false);
 						if ((b.count("identity"))&&(!member.count("identity"))) member["identity"] = b.value("identity",""); // allow identity to be populated only if not already known
+
 						if (b.count("ipAssignments")) {
 							auto ipa = b["ipAssignments"];
 							if (ipa.is_array()) {
@@ -1119,8 +1108,8 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					member["id"] = addrs;
 					member["address"] = addrs; // legacy
 					member["nwid"] = nwids;
-					member["lastModified"] = OSUtils::now();
 					member["memberRevision"] = member.value("memberRevision",0ULL) + 1;
+					member["objtype"] = "member";
 
 					_writeJson(_memberJP(nwid,Address(address),true).c_str(),member);
 
@@ -1144,12 +1133,12 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 							auto hops2 = hops[i];
 							if (hops2.is_array()) {
 								for(unsigned long j=0;j<hops2.size();++j) {
-									std::string hop = hops2[j];
-									test->hops[test->hopCount].addresses[test->hops[test->hopCount].breadth++] = Utils::hexStrToU64(hop.c_str()) & 0xffffffffffULL;
+									std::string s = hops2[j];
+									test->hops[test->hopCount].addresses[test->hops[test->hopCount].breadth++] = Utils::hexStrToU64(s.c_str()) & 0xffffffffffULL;
 								}
 							} else if (hops2.is_string()) {
-								std::string hop = hops2;
-								test->hops[test->hopCount].addresses[test->hops[test->hopCount].breadth++] = Utils::hexStrToU64(hop.c_str()) & 0xffffffffffULL;
+								std::string s = hops2;
+								test->hops[test->hopCount].addresses[test->hops[test->hopCount].breadth++] = Utils::hexStrToU64(s.c_str()) & 0xffffffffffULL;
 							}
 						}
 					}
@@ -1303,11 +1292,20 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					if (b.count("rules")) {
 						auto rules = b["rules"];
 						if (rules.is_array()) {
+							json nrules = json::array();
 							for(unsigned long i=0;i<rules.size();++i) {
-								auto rule = rules[i];
+								json rule = rules[i];
 								if (rule.is_object()) {
+									ZT_VirtualNetworkRule ztr;
+									if (_parseRule(rule,ztr)) {
+										rule = _renderRule(ztr);
+										if ((rule.is_object())&&(rule.count("type"))) {
+											nrules.push_back(rule);
+										}
+									}
 								}
 							}
+							network["rules"] = nrules;
 						}
 					}
 				} catch ( ... ) {
@@ -1323,12 +1321,17 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 				if (!network.count("activeBridges")) network["activeBridges"] = json::array();
 
 				if (!network.count("rules")) {
+					// If unspecified, rules are set to allow anything and behave like a flat L2 segment
+					network["rules"] = {
+						{ "not",false },
+						{ "type","ACTION_ACCEPT" }
+					};
 				}
 
 				network["id"] = nwids;
 				network["nwid"] = nwids; // legacy
-				network["lastModified"] = OSUtils::now();
 				network["revision"] = network.value("revision",0ULL) + 1ULL;
+				network["objtype"] = "network";
 
 				_writeJson(_networkJP(nwid,true),network);
 
