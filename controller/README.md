@@ -1,56 +1,23 @@
 Network Controller Microservice
 ======
 
-ZeroTier's 16-digit network IDs are really just a concatenation of the 10-digit ZeroTier address of a network controller followed by a 6-digit (24-bit) network number on that controller. Fans of software defined networking will recognize this as a variation of the familiar [separation of data plane and control plane](http://sdntutorials.com/difference-between-control-plane-and-data-plane/) SDN design pattern.
+ZeroTier's 16-digit network IDs are really just a concatenation of the 10-digit ZeroTier address of a network controller followed by a 6-digit (24-bit) network number on that controller. Fans of software defined networking will recognize this as a spin on the familiar [separation of data plane and control plane](http://sdntutorials.com/difference-between-control-plane-and-data-plane/) SDN design pattern.
 
-This code implements the *node/NetworkController.hpp* interface and provides a SQLite3-backed network controller microservice. Including it in the build allows ZeroTier One to act as a controller and create/manage networks.
+This code implements the *node/NetworkController.hpp* interface to provide an embedded microservice configurable via the same local HTTP control plane as ZeroTier One iteself. It is built by default in ZeroTier One in desktop and server builds. This is the same code we use to run [my.zerotier.com](https://my.zerotier.com/), which is a web UI and API that runs in front of a pool of controllers.
 
-This is the same code we use to run [my.zerotier.com](https://my.zerotier.com/), which is a web UI and API that runs in front of a pool of controllers.
+Data is stored in JSON format under `controller.d` in the ZeroTier working directory. It can be copied, tar'd, placed in `git`, or edited in place, though we do not recommend doing the latter while the controller is running. Also take care if editing in place that you do not save corrupted JSON since the controller may then lose data when it attempts to load, modify, and save.
 
-### Building
+### Scalability and Reliability
 
-On Linux, Mac, or BSD you can create a controller-enabled build with:
+Controllers can in theory host up to 2^24 networks and serve many millions of devices (or more), but we recommend spreading large numbers of networks across many controllers for load balancing and fault tolerance reasons.
 
-    make ZT_ENABLE_NETWORK_CONTROLLER=1
+Since this implementation uses a JSON store in the filesystem we recommend running it on SSD-backed hosts. Slow disks will become a speed bottleneck under heavy load. For really huge and busy controllers you could consider linking `controller.d/` to a folder under `/dev/shm` (Linux RAM disk) and then setting up an out-of-band periodic snapshot cron job or background process to persist the data and a script to populate `/dev/shm` on boot before the controller starts. This is beyond the scope of this guide but is not particularly hard.
 
-You will need the development headers and libraries for SQLite3 installed.
-
-### Running
-
-After building and installing (`make install`) a controller-enabled build of ZeroTier One, start it and try:
-
-    sudo zerotier-cli /controller
-
-You should see something like:
-
-    {
-        "controller": true,
-        "apiVersion": 2,
-        "clock": 1468002975497,
-        "instanceId": "8ab354604debe1da27ee627c9ef94a48"
-    }
-
-When started, a controller-enabled build of ZeroTier One will automatically create and initialize a `controller.db` file in its home folder. This is where all the controller's data and persistent state lives. If you're upgrading an old controller it will upgrade its database schema automatically on first launch. Make a backup of the old controller's database first since you can't go backward.
-
-Controllers periodically make backups of their database as `controller.db.backup`. This is done so that this file can be more easily copied/rsync'ed to other systems without worrying about corruption. SQLite3 supports multiple processes accessing the same database file, so `sqlite3 /path/to/controller.db .dump` also works but can be slow on a busy controller.
-
-Controllers can in theory host up to 2^24 networks and serve many millions of devices (or more), but we recommend running multiple controllers for a lot of networks to spread load and be more fault tolerant.
+Since ZeroTier nodes are mobile and do not need static IPs, implementing high availability fail-over for controllers is easy. Just replicate their working directories from master to backup and have something automatically fire up the backup if the master goes down. Many modern orchestration tools have built-in support for this. It would also be possible in theory to run controllers on a replicated or distributed filesystem, but we haven't tested this yet.
 
 ### Dockerizing Controllers
 
 ZeroTier network controllers can easily be run in Docker or other container systems. Since containers do not need to actually join networks, extra privilege options like "--device=/dev/net/tun --privileged" are not needed. You'll just need to map the local JSON API port of the running controller and allow it to access the Internet (over UDP/9993 at a minimum) so things can reach and query it.
-
-### Implementing High Availability Fail-Over
-
-ZeroTier network controllers are not single points of failure for networks-- in the sense that if a controller goes down *existing* members of a network can continue to communicate. But new members (or those that have been offline for a while) can't join, existing members can't be de-authorized, and other changes to the network's configuration can't be made. This means that short "glitches" in controller availability are not a major problem but long periods of unavailability can be.
-
-Because controllers are just regular ZeroTier nodes and controller queries are in-band, controllers can trivially be moved without worrying about changes to underlying physical IPs. This makes high-availability fail-over very easy to implement.
-
-Just set up two cloud hosts, preferably in different data centers (e.g. two different AWS regions or Digital Ocean SF and NYC). Now set up the hot spare controller to constantly mirror `controller.db.backup` from its active sibling.
-
-If the active controller goes down, rename `controller.db.backup` to `controller.db` on the hot spare and start the ZeroTier One service there. The spare will take over and has now become the active controller. If the original active node comes back, it should take on the role of spare and should not start its service. Instead it should start mirroring the active controller's backup and wait until it is needed.
-
-The details of actually implementing this kind of HA fail-over on Linux or other OSes are beyond the scope of these docs and there are many ways to do it. Docker orchestration tools like Kubernetes can also be used to accomplish this if you've dockerized your controller.
 
 ### Network Controller API
 
@@ -58,9 +25,9 @@ The controller API is hosted via the same JSON API endpoint that ZeroTier One us
 
 The controller microservice does not implement any fine-grained access control (authentication is via authtoken.secret just like the regular JSON API) or other complex mangement features. It just takes network and network member configurations and reponds to controller queries. We have an enterprise product called [ZeroTier Central](https://my.zerotier.com/) that we host as a service (and that companies can license to self-host) that does this.
 
-All working network IDs on a controller must begin with the controller's ZeroTier address. The API will *allow* "foreign" networks to be added but the controller will have no way of doing anything with them.
+All working network IDs on a controller must begin with the controller's ZeroTier address. The API will *allow* "foreign" networks to be added but the controller will have no way of doing anything with them since nobody will know to query it. (In the future we might support secondaries, which would make this relevant.)
 
-Also note that the API is *very* sensitive about types. Integers must be integers and strings strings, etc. Incorrectly typed and unrecognized fields are just ignored.
+The JSON API is *very* sensitive about types. Integers must be integers and strings strings, etc. Incorrectly typed and unrecognized fields may result in ignored fields or a 400 (bad request) error.
 
 #### `/controller`
 
@@ -71,11 +38,8 @@ Also note that the API is *very* sensitive about types. Integers must be integer
 | Field              | Type        | Description                                       | Writable |
 | ------------------ | ----------- | ------------------------------------------------- | -------- |
 | controller         | boolean     | Always 'true'                                     | no       |
-| apiVersion         | integer     | Controller API version, currently 2               | no       |
+| apiVersion         | integer     | Controller API version, currently 3               | no       |
 | clock              | integer     | Current clock on controller, ms since epoch       | no       |
-| instanceId         | string      | A random ID generated on first controller DB init | no       |
-
-The instance ID can be used to check whether a controller's database has been reset or otherwise switched.
 
 #### `/controller/network`
 
@@ -97,52 +61,51 @@ When POSTing new networks take care that their IDs are not in use, otherwise you
 
 | Field                 | Type          | Description                                       | Writable |
 | --------------------- | ------------- | ------------------------------------------------- | -------- |
-| nwid                  | string        | 16-digit network ID                               | no       |
-| controllerInstanceId  | string        | Controller database instance ID                   | no       |
+| id                    | string        | 16-digit network ID                               | no       |
+| nwid                  | string        | 16-digit network ID (old, but still around)       | no       |
 | clock                 | integer       | Current clock, ms since epoch                     | no       |
 | name                  | string        | A short name for this network                     | YES      |
 | private               | boolean       | Is access control enabled?                        | YES      |
 | enableBroadcast       | boolean       | Ethernet ff:ff:ff:ff:ff:ff allowed?               | YES      |
+| activeBridges         | array[string] | Array of ZeroTier addresses of active bridges     | YES      |
 | allowPassiveBridging  | boolean       | Allow any member to bridge (very experimental)    | YES      |
-| v4AssignMode          | string        | If 'zt', auto-assign IPv4 from pool(s)            | YES      |
-| v6AssignMode          | string        | IPv6 address auto-assign modes; see below         | YES      |
+| v4AssignMode          | object        | IPv4 management and assign options (see below)    | YES      |
+| v6AssignMode          | object        | IPv6 management and assign options (see below)    | YES      |
 | multicastLimit        | integer       | Maximum recipients for a multicast packet         | YES      |
 | creationTime          | integer       | Time network was first created                    | no       |
 | revision              | integer       | Network config revision counter                   | no       |
 | memberRevisionCounter | integer       | Network member revision counter                   | no       |
 | authorizedMemberCount | integer       | Number of authorized members (for private nets)   | no       |
-| relays                | array[object] | Alternative relays; see below                     | YES      |
 | routes                | array[object] | Managed IPv4 and IPv6 routes; see below           | YES      |
 | ipAssignmentPools     | array[object] | IP auto-assign ranges; see below                  | YES      |
 | rules                 | array[object] | Traffic rules; see below                          | YES      |
 
-(The `ipLocalRoutes` field appeared in older versions but is no longer present. Routes will now show up in `routes`.)
+Recent changes:
 
-Two important things to know about networks:
+ * The `ipLocalRoutes` field appeared in older versions but is no longer present. Routes will now show up in `routes`.
+ * The `relays` field is gone since network preferred relays are gone. This capability is replaced by VL1 level federation ("federated roots").
+ * Active bridges are now set at the network level, not in individual member configs.
 
- - Networks without rules won't carry any traffic. See below for an example with rules to permit IPv4 and IPv6.
- - Managed IP address assignments and IP assignment pools that do not fall within a route configured in `routes` are ignored and won't be used or sent to members.
- - The default for `private` is `true` and this is probably what you want. Turning `private` off means *anyone* can join your network with only its 16-digit network ID. It's also impossible to de-authorize a member as these networks don't issue or enforce certificates. Such "party line" networks are used for decentralized app backplanes, gaming, and testing but are not common in ordinary use.
+Other important points:
 
-**IPv6 Auto-Assign Modes:**
+ * Networks without rules won't carry any traffic. If you don't specify any on network creation an "accept anything" rule set will automatically be added.
+ * Managed IP address assignments and IP assignment pools that do not fall within a route configured in `routes` are ignored and won't be used or sent to members.
+ * The default for `private` is `true` and this is probably what you want. Turning `private` off means *anyone* can join your network with only its 16-digit network ID. It's also impossible to de-authorize a member as these networks don't issue or enforce certificates. Such "party line" networks are used for decentralized app backplanes, gaming, and testing but are otherwise not common.
 
-This field is (for legacy reasons) a comma-delimited list of strings. These can be `rfc4193`, `6plane`, and `zt`. RFC4193 and 6PLANE are special addressing modes that deterministically assign IPv6 addresses based on the network ID and the ZeroTier address of each member. The `zt` mode enables IPv6 auto-assignment from arbitrary IPv6 IP ranges configured in `ipAssignmentPools`.
+**Auto-Assign Modes:**
 
-**Relay object format:**
+Auto assign modes (`v4AssignMode` and `v6AssignMode`) contain objects that map assignment modes to booleans.
 
-Relay objects define network-specific preferred relay nodes. Traffic to peers on this network will preferentially use these relays if they are available, and otherwise will fall back to the global rootserver infrastructure.
+For IPv4 the only valid setting is `zt` which, if true, causes IPv4 addresses to be auto-assigned from `ipAssignmentPools` to members that do not have an IPv4 assignment. Note that active bridges are exempt and will not get auto-assigned IPs since this can interfere with bridging. (You can still manually assign one if you want.)
 
-| Field                 | Type          | Description                                       | Writable |
-| --------------------- | ------------- | ------------------------------------------------- | -------- |
-| address               | string        | 10-digit ZeroTier address of relay                | YES      |
-| phyAddress            | string        | Optional IP/port suggestion for finding relay     | YES      |
+IPv6 includes this option and two others: `6plane` and `rfc4193`. These assign private IPv6 addresses to each member based on a deterministic assignment scheme that allows members to emulate IPv6 NDP to skip multicast for better performance and scalability. The `rfc4193` mode gives every member a /128 on a /88 network, while `6plane` gives every member a /80 within a /40 network but uses NDP emulation to route *all* IPs under that /80 to its owner. The `6plane` mode is great for use cases like Docker since it allows every member to assign IPv6 addresses within its /80 that just work instantly and globally across the network.
 
 **IP assignment pool object format:**
 
-| Field                 | Type          | Description                                       | Writable |
-| --------------------- | ------------- | ------------------------------------------------- | -------- |
-| ipRangeStart          | string        | Starting IP address in range                      | YES      |
-| ipRangeEnd            | string        | Ending IP address in range (inclusive)            | YES      |
+| Field                 | Type          | Description                                       |
+| --------------------- | ------------- | ------------------------------------------------- |
+| ipRangeStart          | string        | Starting IP address in range                      |
+| ipRangeEnd            | string        | Ending IP address in range (inclusive)            |
 
 Pools are only used if auto-assignment is on for the given address type (IPv4 or IPv6) and if the entire range falls within a managed route.
 
@@ -159,57 +122,65 @@ That defines a range within network `fd00:feed:feed:beef::/64` that contains up 
 
 **Rule object format:**
 
-Rules are matched in order of ruleNo. If no rules match, the default action is `drop`. To allow all traffic, create a single rule with all *null* fields and an action of `accept`.
+Each rule is actually a sequence of zero or more `MATCH_` entries in the rule array followed by an `ACTION_` entry that describes what to do if all the preceding entries match. An `ACTION_` without any preceding `MATCH_` entries is always taken, so setting a single `ACTION_ACCEPT` rule yields a network that allows all traffic. If no rules are present the default action is `ACTION_DROP`.
 
-In the future there will be many, many more types of rules. As of today only filtering by Ethernet packet type is supported.
+Rules are evaluated in the order in which they appear in the array. There is currently a limit of 256 entries per network. Capabilities should be used if a larger and more complex rule set is needed since they allow rules to be grouped by purpose and only shipped to members that need them.
 
-| Field                 | Type          | Description                                       | Writable |
-| --------------------- | ------------- | ------------------------------------------------- | -------- |
-| ruleNo                | integer       | Rule sorting key                                  | YES      |
-| etherType             | integer       | Ethernet frame type (e.g. 34525 for IPv6)         | YES      |
-| action                | string        | Currently either `allow` or `drop`                | YES      |
+Each rule table entry has two common fields.
 
-**An Example: The Configuration for Earth**
+| Field                 | Type          | Description                                       |
+| --------------------- | ------------- | ------------------------------------------------- |
+| type                  | string        | Entry type (all caps, case sensitive)             |
+| not                   | boolean       | If true, MATCHes match if they don't match        |
 
-Here is an example of a correctly configured ZeroTier network with IPv4 auto-assigned addresses from 28.0.0.0/7 (a "de-facto private" space) and RFC4193 IPv6 addressing. Users might recognize this as *Earth*, our public "global LAN party" that's used for demos and testing and occasionally gaming.
+The following fields may or may not be present depending on rule type:
 
-For your own networks you'll probably want to change `private` to `true` unless you like company. These rules on the other hand probably are what you want. These allow IPv4, IPv4 ARP, and IPv6 Ethernet frames. To allow only IPv4 omit the one for Ethernet type 34525 (IPv6).
+| Field                 | Type          | Description                                       |
+| --------------------- | ------------- | ------------------------------------------------- |
+| zt                    | string        | 10-digit hex ZeroTier address                     |
+| etherType             | integer       | Ethernet frame type                               |
+| mac                   | string        | Hex MAC address (with or without :'s)             |
+| ip                    | string        | IPv4 or IPv6 address                              |
+| ipTos                 | integer       | IP type of service                                |
+| ipProtocol            | integer       | IP protocol (e.g. TCP)                            |
+| start                 | integer       | Start of an integer range (e.g. port range)       |
+| end                   | integer       | End of an integer range (inclusive)               |
+| id                    | integer       | Tag ID                                            |
+| value                 | integer       | Tag value or comparison value                     |
+| mask                  | integer       | Bit mask (for characteristics flags)              |
 
-    {
-        "nwid": "8056c2e21c000001",
-        "controllerInstanceId": "8ab354604debe1da27ee627c9ef94a48",
-        "clock": 1468004857100,
-        "name": "earth.zerotier.net",
-        "private": false,
-        "enableBroadcast": false,
-        "allowPassiveBridging": false,
-        "v4AssignMode": "zt",
-        "v6AssignMode": "rfc4193",
-        "multicastLimit": 64,
-        "creationTime": 1442292573165,
-        "revision": 234,
-        "memberRevisionCounter": 3326,
-        "authorizedMemberCount": 2873,
-        "relays": [],
-        "routes": [
-            {"target":"28.0.0.0/7","via":null,"flags":0,"metric":0}],
-        "ipAssignmentPools": [
-            {"ipRangeStart":"28.0.0.1","ipRangeEnd":"29.255.255.254"}],
-        "rules": [
-        {
-            "ruleNo": 20,
-            "etherType": 2048,
-            "action": "accept"
-        },{
-            "ruleNo": 21,
-            "etherType": 2054,
-            "action": "accept"
-        },{
-            "ruleNo": 30,
-            "etherType": 34525,
-            "action": "accept"
-        }]
-    }
+The entry types and their additional fields are:
+
+| Entry type                      | Description                                                       | Fields         |
+| ------------------------------- | ----------------------------------------------------------------- | -------------- |
+| `ACTION_DROP`                   | Drop any packets matching this rule                               | (none)         |
+| `ACTION_ACCEPT`                 | Accept any packets matching this rule                             | (none)         |
+| `ACTION_TEE`                    | Send a copy of this packet to a node (rule parsing continues)     | `zt`           |
+| `ACTION_REDIRECT`               | Redirect this packet to another node                              | `zt`           |
+| `MATCH_SOURCE_ZEROTIER_ADDRESS` | Match VL1 ZeroTier address of packet sender.                      | `zt`           |
+| `MATCH_DEST_ZEROTIER_ADDRESS`   | Match VL1 ZeroTier address of recipient                           | `zt`           |
+| `MATCH_ETHERTYPE`               | Match Ethernet frame type                                         | `etherType`    |
+| `MATCH_MAC_SOURCE`              | Match source Ethernet MAC address                                 | `mac`          |
+| `MATCH_MAC_DEST`                | Match destination Ethernet MAC address                            | `mac`          |
+| `MATCH_IPV4_SOURCE`             | Match source IPv4 address                                         | `ip`           |
+| `MATCH_IPV4_DEST`               | Match destination IPv4 address                                    | `ip`           |
+| `MATCH_IPV6_SOURCE`             | Match source IPv6 address                                         | `ip`           |
+| `MATCH_IPV6_DEST`               | Match destination IPv6 address                                    | `ip`           |
+| `MATCH_IP_TOS`                  | Match IP TOS field                                                | `ipTos`        |
+| `MATCH_IP_PROTOCOL`             | Match IP protocol field                                           | `ipProtocol`   |
+| `MATCH_IP_SOURCE_PORT_RANGE`    | Match a source IP port range                                      | `start`,`end`  |
+| `MATCH_IP_DEST_PORT_RANGE`      | Match a destination IP port range                                 | `start`,`end`  |
+| `MATCH_CHARACTERISTICS`         | Match on characteristics flags                                    | `mask`,`value` |
+| `MATCH_FRAME_SIZE_RANGE`        | Match a range of Ethernet frame sizes                             | `start`,`end`  |
+| `MATCH_TAGS_SAMENESS`           | Match if both sides' tags differ by no more than value            | `id`,`value`   |
+| `MATCH_TAGS_BITWISE_AND`        | Match if both sides' tags AND to value                            | `id`,`value`   |
+| `MATCH_TAGS_BITWISE_OR`         | Match if both sides' tags OR to value                             | `id`,`value`   |
+| `MATCH_TAGS_BITWISE_XOR`        | Match if both sides` tags XOR to value                            | `id`,`value`   |
+
+Notes:
+
+ * `MATCH_DEST_ZEROTIER_ADDRESS` does not work for multicast packets since these have many and varying destinations and can take circuitous routes. Use MAC rules instead.
+ * IPv4 and IPv6 rules do not match for frames that are not IPv4 or IPv6 respectively.
 
 #### `/controller/network/<network ID>/member`
 
@@ -235,9 +206,10 @@ This returns an object containing all currently online members and the most rece
 
 | Field                 | Type          | Description                                       | Writable |
 | --------------------- | ------------- | ------------------------------------------------- | -------- |
+| id                    | string        | Member's 10-digit ZeroTier address                | no       |
+| address               | string        | Member's 10-digit ZeroTier address                | no       |
 | nwid                  | string        | 16-digit network ID                               | no       |
 | clock                 | integer       | Current clock, ms since epoch                     | no       |
-| address               | string        | Member's 10-digit ZeroTier address                | no       |
 | authorized            | boolean       | Is member authorized? (for private networks)      | YES      |
 | activeBridge          | boolean       | Member is able to bridge to other Ethernet nets   | YES      |
 | identity              | string        | Member's public ZeroTier identity (if known)      | no       |

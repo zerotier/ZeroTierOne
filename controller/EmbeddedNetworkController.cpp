@@ -280,12 +280,12 @@ static bool _parseRule(const json &r,ZT_VirtualNetworkRule &rule)
 	} else if (t == "MATCH_IP_SOURCE_PORT_RANGE") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE;
 		rule.v.port[0] = (uint16_t)(r.value("start",0ULL) & 0xffffULL);
-		rule.v.port[1] = (uint16_t)(r.value("end",0ULL) & 0xffffULL);
+		rule.v.port[1] = (uint16_t)(r.value("end",(uint64_t)rule.v.port[0]) & 0xffffULL);
 		return true;
 	} else if (t == "MATCH_IP_DEST_PORT_RANGE") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE;
 		rule.v.port[0] = (uint16_t)(r.value("start",0ULL) & 0xffffULL);
-		rule.v.port[1] = (uint16_t)(r.value("end",0ULL) & 0xffffULL);
+		rule.v.port[1] = (uint16_t)(r.value("end",(uint64_t)rule.v.port[0]) & 0xffffULL);
 		return true;
 	} else if (t == "MATCH_CHARACTERISTICS") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_CHARACTERISTICS;
@@ -310,28 +310,28 @@ static bool _parseRule(const json &r,ZT_VirtualNetworkRule &rule)
 		return true;
 	} else if (t == "MATCH_FRAME_SIZE_RANGE") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE;
-		rule.v.frameSize[0] = (uint16_t)(Utils::hexStrToU64(r.value("start","0").c_str()) & 0xffffULL);
-		rule.v.frameSize[1] = (uint16_t)(Utils::hexStrToU64(r.value("end","0").c_str()) & 0xffffULL);
+		rule.v.frameSize[0] = (uint16_t)(r.value("start",0ULL) & 0xffffULL);
+		rule.v.frameSize[1] = (uint16_t)(r.value("end",(uint64_t)rule.v.frameSize[0]) & 0xffffULL);
 		return true;
 	} else if (t == "MATCH_TAGS_SAMENESS") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS;
-		rule.v.tag.id = (uint32_t)(Utils::hexStrToU64(r.value("id","0").c_str()) & 0xffffffffULL);
-		rule.v.tag.value = (uint32_t)(Utils::hexStrToU64(r.value("value","0").c_str()) & 0xffffffffULL);
+		rule.v.tag.id = (uint32_t)(r.value("id",0ULL) & 0xffffffffULL);
+		rule.v.tag.value = (uint32_t)(r.value("value",0ULL) & 0xffffffffULL);
 		return true;
 	} else if (t == "MATCH_TAGS_BITWISE_AND") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND;
-		rule.v.tag.id = (uint32_t)(Utils::hexStrToU64(r.value("id","0").c_str()) & 0xffffffffULL);
-		rule.v.tag.value = (uint32_t)(Utils::hexStrToU64(r.value("value","0").c_str()) & 0xffffffffULL);
+		rule.v.tag.id = (uint32_t)(r.value("id",0ULL) & 0xffffffffULL);
+		rule.v.tag.value = (uint32_t)(r.value("value",0ULL) & 0xffffffffULL);
 		return true;
 	} else if (t == "MATCH_TAGS_BITWISE_OR") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR;
-		rule.v.tag.id = (uint32_t)(Utils::hexStrToU64(r.value("id","0").c_str()) & 0xffffffffULL);
-		rule.v.tag.value = (uint32_t)(Utils::hexStrToU64(r.value("value","0").c_str()) & 0xffffffffULL);
+		rule.v.tag.id = (uint32_t)(r.value("id",0ULL) & 0xffffffffULL);
+		rule.v.tag.value = (uint32_t)(r.value("value",0ULL) & 0xffffffffULL);
 		return true;
 	} else if (t == "MATCH_TAGS_BITWISE_XOR") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR;
-		rule.v.tag.id = (uint32_t)(Utils::hexStrToU64(r.value("id","0").c_str()) & 0xffffffffULL);
-		rule.v.tag.value = (uint32_t)(Utils::hexStrToU64(r.value("value","0").c_str()) & 0xffffffffULL);
+		rule.v.tag.id = (uint32_t)(r.value("id",0ULL) & 0xffffffffULL);
+		rule.v.tag.value = (uint32_t)(r.value("value",0ULL) & 0xffffffffULL);
 		return true;
 	}
 	return false;
