@@ -1705,7 +1705,11 @@ public:
 			if (_controlPlane)
 				scode = _controlPlane->handleRequest(tc->from,tc->parser.method,tc->url,tc->headers,tc->body,data,contentType);
 			else scode = 500;
+		} catch (std::exception &exc) {
+			fprintf(stderr,"WARNING: unexpected exception processing control HTTP request: %s" ZT_EOL_S,exc.what());
+			scode = 500;
 		} catch ( ... ) {
+			fprintf(stderr,"WARNING: unexpected exception processing control HTTP request: unknown exceptino" ZT_EOL_S);
 			scode = 500;
 		}
 

@@ -804,8 +804,12 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 			outp.armor(peer->key(),true);
 			RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 		}
+	} catch (std::exception &exc) {
+		fprintf(stderr,"WARNING: network config request failed with exception: %s" ZT_EOL_S,exc.what());
+		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
-		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		fprintf(stderr,"WARNING: network config request failed with exception: unknown exception" ZT_EOL_S);
+		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unknown exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
