@@ -1,7 +1,7 @@
 Kubernetes + ZeroTier
 ====
 
-A self-authorizing Kubernetes deployment on a ZeroTier private network.
+A self-authorizing Kubernetes cluster deployment over a private ZeroTier network.
 
 This is a quick tutorial for setting up a Kubernetes deployment which can self-authorize each new replica onto your private ZeroTier network with no additional configuration needed when you scale. The Kubernetes-specific instructions and content is based on the [hellonode](http://kubernetes.io/docs/hellonode/) tutorial. All of the files discussed below can be found [here]();
 
@@ -107,4 +107,4 @@ zerotier-cli net-auth $(NWID) $(DEVID)
 
 ## Verify
 
-Now, after a minute or so you can use `zerotier-cli net-members <nwid>` to show all of your VM instances on your ZeroTier deployment network. If you haven't [configured your local CLI](), you can simply log into [my.zerotier.com](https://my.zerotier.com), go to *Networks -> nwid*.
+Now, after a minute or so you can use `zerotier-cli net-members <nwid>` to show all of your VM instances on your ZeroTier deployment network. If you haven't [configured your local CLI](https://github.com/zerotier/ZeroTierOne/tree/dev/cli), you can simply log into [my.zerotier.com](https://my.zerotier.com), go to *Networks -> nwid* to check that your VMs are indeed members of your private network.
