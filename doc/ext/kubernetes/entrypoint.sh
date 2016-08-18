@@ -15,7 +15,7 @@ dev=$(cat /var/lib/zerotier-one/identity.public| cut -d ':' -f 1)
 echo '*** Joining'
 ./zerotier-cli join "$nwid".conf
 AUTHTOKEN=$(cat /var/lib/zerotier-one/authtoken.secret)
-sed "s|\local_service_auth_token|${AUTHTOKEN}|" .zerotierCliSettings > /root/.zerotierCliSettings
+sed "s|\local_service_auth_token_replaced_automatically|${AUTHTOKEN}|" .zerotierCliSettings > /root/.zerotierCliSettings
 echo '*** Authorizing'
 ./zerotier-cli net-auth @my.zerotier.com "$nwid" "$dev"
 node server.js
