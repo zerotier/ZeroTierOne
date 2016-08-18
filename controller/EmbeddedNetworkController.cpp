@@ -386,247 +386,7 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPa
 	_path(dbPath)
 {
 	OSUtils::mkdir(dbPath);
-	/*
-	if (sqlite3_open_v2(dbPath,&_db,SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,(const char *)0) != SQLITE_OK)
-		throw std::runtime_error("SqliteNetworkController cannot open database file");
-	sqlite3_busy_timeout(_db,10000);
-
-	sqlite3_exec(_db,"PRAGMA synchronous = OFF",0,0,0);
-	sqlite3_exec(_db,"PRAGMA journal_mode = MEMORY",0,0,0);
-
-	sqlite3_stmt *s = (sqlite3_stmt *)0;
-	if ((sqlite3_prepare_v2(_db,"SELECT v FROM Config WHERE k = 'schemaVersion';",-1,&s,(const char **)0) == SQLITE_OK)&&(s)) {
-		int schemaVersion = -1234;
-		if (sqlite3_step(s) == SQLITE_ROW) {
-			schemaVersion = sqlite3_column_int(s,0);
-		}
-
-		sqlite3_finalize(s);
-
-		if (schemaVersion == -1234) {
-			sqlite3_close(_db);
-			throw std::runtime_error("SqliteNetworkController schemaVersion not found in Config table (init failure?)");
-		}
-
-		if (schemaVersion < 2) {
-			// Create NodeHistory table to upgrade from version 1 to version 2
-			if (sqlite3_exec(_db,
-					"CREATE TABLE NodeHistory (\n"
-					"  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"
-					"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"
-					"  networkVisitCounter INTEGER NOT NULL DEFAULT(0),\n"
-					"  networkRequestAuthorized INTEGER NOT NULL DEFAULT(0),\n"
-					"  requestTime INTEGER NOT NULL DEFAULT(0),\n"
-					"  clientMajorVersion INTEGER NOT NULL DEFAULT(0),\n"
-					"  clientMinorVersion INTEGER NOT NULL DEFAULT(0),\n"
-					"  clientRevision INTEGER NOT NULL DEFAULT(0),\n"
-					"  networkRequestMetaData VARCHAR(1024),\n"
-					"  fromAddress VARCHAR(128)\n"
-					");\n"
-					"CREATE INDEX NodeHistory_nodeId ON NodeHistory (nodeId);\n"
-					"CREATE INDEX NodeHistory_networkId ON NodeHistory (networkId);\n"
-					"CREATE INDEX NodeHistory_requestTime ON NodeHistory (requestTime);\n"
-					"UPDATE \"Config\" SET \"v\" = 2 WHERE \"k\" = 'schemaVersion';\n"
-				,0,0,0) != SQLITE_OK) {
-				char err[1024];
-				Utils::snprintf(err,sizeof(err),"SqliteNetworkController cannot upgrade the database to version 2: %s",sqlite3_errmsg(_db));
-				sqlite3_close(_db);
-				throw std::runtime_error(err);
-			} else {
-				schemaVersion = 2;
-			}
-		}
-
-		if (schemaVersion < 3) {
-			// Create Route table to upgrade from version 2 to version 3 and migrate old
-			// data. Also delete obsolete Gateway table that was never actually used, and
-			// migrate Network flags to a bitwise flags field instead of ASCII cruft.
-			if (sqlite3_exec(_db,
-					"DROP TABLE Gateway;\n"
-					"CREATE TABLE Route (\n"
-					"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"
-					"  target blob(16) NOT NULL,\n"
-					"  via blob(16),\n"
-					"  targetNetmaskBits integer NOT NULL,\n"
-					"  ipVersion integer NOT NULL,\n"
-					"  flags integer NOT NULL,\n"
-					"  metric integer NOT NULL\n"
-					");\n"
-					"CREATE INDEX Route_networkId ON Route (networkId);\n"
-					"INSERT INTO Route SELECT DISTINCT networkId,\"ip\" AS \"target\",NULL AS \"via\",ipNetmaskBits AS targetNetmaskBits,ipVersion,0 AS \"flags\",0 AS \"metric\" FROM IpAssignment WHERE nodeId IS NULL AND \"type\" = 1;\n"
-					"ALTER TABLE Network ADD COLUMN \"flags\" integer NOT NULL DEFAULT(0);\n"
-					"UPDATE Network SET \"flags\" = (\"flags\" | 1) WHERE v4AssignMode = 'zt';\n"
-					"UPDATE Network SET \"flags\" = (\"flags\" | 2) WHERE v6AssignMode = 'rfc4193';\n"
-					"UPDATE Network SET \"flags\" = (\"flags\" | 4) WHERE v6AssignMode = '6plane';\n"
-					"ALTER TABLE Member ADD COLUMN \"flags\" integer NOT NULL DEFAULT(0);\n"
-					"DELETE FROM IpAssignment WHERE nodeId IS NULL AND \"type\" = 1;\n"
-					"UPDATE \"Config\" SET \"v\" = 3 WHERE \"k\" = 'schemaVersion';\n"
-				,0,0,0) != SQLITE_OK) {
-				char err[1024];
-				Utils::snprintf(err,sizeof(err),"SqliteNetworkController cannot upgrade the database to version 3: %s",sqlite3_errmsg(_db));
-				sqlite3_close(_db);
-				throw std::runtime_error(err);
-			} else {
-				schemaVersion = 3;
-			}
-		}
-
-		if (schemaVersion < 4) {
-			// Turns out this was overkill and a huge performance drag. Will be revisiting this
-			// more later but for now a brief snapshot of recent history stored in Member is fine.
-			// Also prepare for implementation of proof of work requests.
-			if (sqlite3_exec(_db,
-					"DROP TABLE NodeHistory;\n"
-					"ALTER TABLE Member ADD COLUMN lastRequestTime integer NOT NULL DEFAULT(0);\n"
-					"ALTER TABLE Member ADD COLUMN lastPowDifficulty integer NOT NULL DEFAULT(0);\n"
-					"ALTER TABLE Member ADD COLUMN lastPowTime integer NOT NULL DEFAULT(0);\n"
-					"ALTER TABLE Member ADD COLUMN recentHistory blob;\n"
-					"CREATE INDEX Member_networkId_lastRequestTime ON Member(networkId, lastRequestTime);\n"
-					"UPDATE \"Config\" SET \"v\" = 4 WHERE \"k\" = 'schemaVersion';\n"
-				,0,0,0) != SQLITE_OK) {
-				char err[1024];
-				Utils::snprintf(err,sizeof(err),"SqliteNetworkController cannot upgrade the database to version 3: %s",sqlite3_errmsg(_db));
-				sqlite3_close(_db);
-				throw std::runtime_error(err);
-			} else {
-				schemaVersion = 4;
-			}
-		}
-
-		if (schemaVersion < 5) {
-			// Upgrade old rough draft Rule table to new release format
-			if (sqlite3_exec(_db,
-					"DROP TABLE Relay;\n"
-					"DROP INDEX Rule_networkId_ruleNo;\n"
-					"ALTER TABLE \"Rule\" RENAME TO RuleOld;\n"
-					"CREATE TABLE Rule (\n"
-					"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"
-					"  capId integer,\n"
-					"  ruleNo integer NOT NULL,\n"
-					"  ruleType integer NOT NULL DEFAULT(0),\n"
-					"  \"addr\" blob(16),\n"
-					"  \"int1\" integer,\n"
-					"  \"int2\" integer,\n"
-					"  \"int3\" integer,\n"
-					"  \"int4\" integer\n"
-					");\n"
-					"INSERT INTO \"Rule\" SELECT networkId,(ruleNo*2) AS ruleNo,37 AS \"ruleType\",etherType AS \"int1\" FROM RuleOld WHERE RuleOld.etherType IS NOT NULL AND RuleOld.etherType > 0;\n"
-					"INSERT INTO \"Rule\" SELECT networkId,((ruleNo*2)+1) AS ruleNo,1 AS \"ruleType\" FROM RuleOld;\n"
-					"DROP TABLE RuleOld;\n"
-					"CREATE INDEX Rule_networkId_capId ON Rule (networkId,capId);\n"
-					"CREATE TABLE MemberTC (\n"
-					"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"
-					"  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"
-					"  tagId integer,\n"
-					"  tagValue integer,\n"
-					"  capId integer,\n"
-					"  capMaxCustodyChainLength integer NOT NULL DEFAULT(1)\n"
-					");\n"
-					"CREATE INDEX MemberTC_networkId_nodeId ON MemberTC (networkId,nodeId);\n"
-					"UPDATE \"Config\" SET \"v\" = 5 WHERE \"k\" = 'schemaVersion';\n"
-				,0,0,0) != SQLITE_OK) {
-				char err[1024];
-				Utils::snprintf(err,sizeof(err),"SqliteNetworkController cannot upgrade the database to version 3: %s",sqlite3_errmsg(_db));
-				sqlite3_close(_db);
-				throw std::runtime_error(err);
-			} else {
-				schemaVersion = 5;
-			}
-		}
-
-		if (schemaVersion != ZT_NETCONF_SQLITE_SCHEMA_VERSION) {
-			sqlite3_close(_db);
-			throw std::runtime_error("SqliteNetworkController database schema version mismatch");
-		}
-	} else {
-		// Prepare statement will fail if Config table doesn't exist, which means our DB
-		// needs to be initialized.
-		if (sqlite3_exec(_db,ZT_NETCONF_SCHEMA_SQL"INSERT INTO Config (k,v) VALUES ('schemaVersion',"ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR");",0,0,0) != SQLITE_OK) {
-			char err[1024];
-			Utils::snprintf(err,sizeof(err),"SqliteNetworkController cannot initialize database and/or insert schemaVersion into Config table: %s",sqlite3_errmsg(_db));
-			sqlite3_close(_db);
-			throw std::runtime_error(err);
-		}
-	}
-
-	if (
-
-			  (sqlite3_prepare_v2(_db,"SELECT name,private,enableBroadcast,allowPassiveBridging,\"flags\",multicastLimit,creationTime,revision,memberRevisionCounter,(SELECT COUNT(1) FROM Member WHERE Member.networkId = Network.id AND Member.authorized > 0) FROM Network WHERE id = ?",-1,&_sGetNetworkById,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT revision FROM Network WHERE id = ?",-1,&_sGetNetworkRevision,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"UPDATE Network SET revision = ? WHERE id = ?",-1,&_sSetNetworkRevision,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO Network (id,name,creationTime,revision) VALUES (?,?,?,1)",-1,&_sCreateNetwork,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"DELETE FROM Network WHERE id = ?",-1,&_sDeleteNetwork,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT id FROM Network ORDER BY id ASC",-1,&_sListNetworks,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"UPDATE Network SET memberRevisionCounter = (memberRevisionCounter + 1) WHERE id = ?",-1,&_sIncrementMemberRevisionCounter,(const char **)0) != SQLITE_OK)
-
-			||(sqlite3_prepare_v2(_db,"SELECT identity FROM Node WHERE id = ?",-1,&_sGetNodeIdentity,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT OR REPLACE INTO Node (id,identity) VALUES (?,?)",-1,&_sCreateOrReplaceNode,(const char **)0) != SQLITE_OK)
-
-			||(sqlite3_prepare_v2(_db,"INSERT INTO Rule (networkId,ruleNo,nodeId,ztSource,ztDest,vlanId,vlanPcp,vlanDei,) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",-1,&_sCreateRule,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT ruleNo,nodeId,sourcePort,destPort,vlanId,vlanPcp,etherType,macSource,macDest,ipSource,ipDest,ipTos,ipProtocol,ipSourcePort,ipDestPort,\"flags\",invFlags,\"action\" FROM Rule WHERE networkId = ? ORDER BY ruleNo ASC",-1,&_sListRules,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"DELETE FROM Rule WHERE networkId = ?",-1,&_sDeleteRulesForNetwork,(const char **)0) != SQLITE_OK)
-
-			||(sqlite3_prepare_v2(_db,"SELECT ipRangeStart,ipRangeEnd FROM IpAssignmentPool WHERE networkId = ? AND ipVersion = ?",-1,&_sGetIpAssignmentPools,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT ipRangeStart,ipRangeEnd,ipVersion FROM IpAssignmentPool WHERE networkId = ? ORDER BY ipRangeStart ASC",-1,&_sGetIpAssignmentPools2,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO IpAssignmentPool (networkId,ipRangeStart,ipRangeEnd,ipVersion) VALUES (?,?,?,?)",-1,&_sCreateIpAssignmentPool,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"DELETE FROM IpAssignmentPool WHERE networkId = ?",-1,&_sDeleteIpAssignmentPoolsForNetwork,(const char **)0) != SQLITE_OK)
-
-			||(sqlite3_prepare_v2(_db,"SELECT ip,ipNetmaskBits,ipVersion FROM IpAssignment WHERE networkId = ? AND nodeId = ? AND \"type\" = 0 ORDER BY ip ASC",-1,&_sGetIpAssignmentsForNode,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT 1 FROM IpAssignment WHERE networkId = ? AND ip = ? AND ipVersion = ? AND \"type\" = ?",-1,&_sCheckIfIpIsAllocated,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO IpAssignment (networkId,nodeId,\"type\",ip,ipNetmaskBits,ipVersion) VALUES (?,?,?,?,?,?)",-1,&_sAllocateIp,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"DELETE FROM IpAssignment WHERE networkId = ? AND nodeId = ? AND \"type\" = ?",-1,&_sDeleteIpAllocations,(const char **)0) != SQLITE_OK)
-
-			||(sqlite3_prepare_v2(_db,"SELECT rowid,authorized,activeBridge,memberRevision,\"flags\",lastRequestTime,recentHistory FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sGetMember,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT m.authorized,m.activeBridge,m.memberRevision,n.identity,m.flags,m.lastRequestTime,m.recentHistory FROM Member AS m LEFT OUTER JOIN Node AS n ON n.id = m.nodeId WHERE m.networkId = ? AND m.nodeId = ?",-1,&_sGetMember2,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO Member (networkId,nodeId,authorized,activeBridge,memberRevision) VALUES (?,?,?,0,(SELECT memberRevisionCounter FROM Network WHERE id = ?))",-1,&_sCreateMember,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT nodeId FROM Member WHERE networkId = ? AND activeBridge > 0 AND authorized > 0",-1,&_sGetActiveBridges,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT m.nodeId,m.memberRevision FROM Member AS m WHERE m.networkId = ? ORDER BY m.nodeId ASC",-1,&_sListNetworkMembers,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"UPDATE Member SET authorized = ?,memberRevision = (SELECT memberRevisionCounter FROM Network WHERE id = ?) WHERE rowid = ?",-1,&_sUpdateMemberAuthorized,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"UPDATE Member SET activeBridge = ?,memberRevision = (SELECT memberRevisionCounter FROM Network WHERE id = ?) WHERE rowid = ?",-1,&_sUpdateMemberActiveBridge,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"UPDATE Member SET \"lastRequestTime\" = ?, \"recentHistory\" = ? WHERE rowid = ?",-1,&_sUpdateMemberHistory,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sDeleteMember,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ?",-1,&_sDeleteAllNetworkMembers,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT nodeId,recentHistory FROM Member WHERE networkId = ? AND lastRequestTime >= ?",-1,&_sGetActiveNodesOnNetwork,(const char **)0) != SQLITE_OK)
-
-			||(sqlite3_prepare_v2(_db,"INSERT INTO Route (networkId,target,via,targetNetmaskBits,ipVersion,flags,metric) VALUES (?,?,?,?,?,?,?)",-1,&_sCreateRoute,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT DISTINCT target,via,targetNetmaskBits,ipVersion,flags,metric FROM \"Route\" WHERE networkId = ? ORDER BY ipVersion,target,via",-1,&_sGetRoutes,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"DELETE FROM \"Route\" WHERE networkId = ?",-1,&_sDeleteRoutes,(const char **)0) != SQLITE_OK)
-
-			||(sqlite3_prepare_v2(_db,"SELECT \"v\" FROM \"Config\" WHERE \"k\" = ?",-1,&_sGetConfig,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT OR REPLACE INTO \"Config\" (\"k\",\"v\") VALUES (?,?)",-1,&_sSetConfig,(const char **)0) != SQLITE_OK)
-
-		 ) {
-		std::string err(std::string("SqliteNetworkController unable to initialize one or more prepared statements: ") + sqlite3_errmsg(_db));
-		sqlite3_close(_db);
-		throw std::runtime_error(err);
-	}
-
-	sqlite3_reset(_sGetConfig);
-	sqlite3_bind_text(_sGetConfig,1,"instanceId",10,SQLITE_STATIC);
-	if (sqlite3_step(_sGetConfig) != SQLITE_ROW) {
-		unsigned char sr[32];
-		Utils::getSecureRandom(sr,32);
-		for(unsigned int i=0;i<32;++i)
-			_instanceId.push_back("0123456789abcdef"[(unsigned int)sr[i] & 0xf]);
-
-		sqlite3_reset(_sSetConfig);
-		sqlite3_bind_text(_sSetConfig,1,"instanceId",10,SQLITE_STATIC);
-		sqlite3_bind_text(_sSetConfig,2,_instanceId.c_str(),-1,SQLITE_STATIC);
-		if (sqlite3_step(_sSetConfig) != SQLITE_DONE)
-			throw std::runtime_error("SqliteNetworkController unable to read or initialize instanceId");
-	} else {
-		const char *iid = reinterpret_cast<const char *>(sqlite3_column_text(_sGetConfig,0));
-		if (!iid)
-			throw std::runtime_error("SqliteNetworkController unable to read instanceId (it's NULL)");
-		_instanceId = iid;
-	}
-
-#ifdef ZT_NETCONF_SQLITE_TRACE
-	sqlite3_trace(_db,sqliteTraceFunc,(void *)0);
-#endif
-
-	_backupThread = Thread::start(this);
-	*/
+	OSUtils::lockDownFile(dbPath,true); // networks might contain auth tokens, etc., so restrict directory permissions
 }
 
 EmbeddedNetworkController::~EmbeddedNetworkController()
@@ -653,12 +413,16 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	json network(_readJson(_networkJP(nwid,false)));
 	if (!network.size())
 		return NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND;
-	const std::string memberJP(_memberJP(nwid,identity.address(),false));
+
+	const std::string memberJP(_memberJP(nwid,identity.address(),true));
 	json member(_readJson(memberJP));
 
 	{
 		std::string haveIdStr(_jS(member["identity"],""));
 		if (haveIdStr.length() > 0) {
+			// If we already know this member's identity perform a full compare. This prevents
+			// a "collision" from being able to auth onto our network in place of an already
+			// known member.
 			try {
 				if (Identity(haveIdStr.c_str()) != identity)
 					return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
@@ -666,6 +430,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 				return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
 			}
 		} else {
+			// If we do not yet know this member's identity, learn it.
 			member["identity"] = identity.toString(false);
 		}
 	}
@@ -685,13 +450,17 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	const char *authorizedBy = (const char *)0;
 	if (!_jB(network["private"],true)) {
 		authorizedBy = "networkIsPublic";
+		// If member already has an authorized field, leave it alone. That way its state is
+		// preserved if the user toggles the network back to private. Otherwise set it to
+		// true by default for new members of public nets.
+		if (!member.count("authorized")) member["authorized"] = true;
 	} else if (_jB(member["authorized"],false)) {
 		authorizedBy = "memberIsAuthorized";
 	} else {
 		char atok[256];
 		if (metaData.get(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH_TOKEN,atok,sizeof(atok)) > 0) {
 			atok[255] = (char)0; // not necessary but YDIFLO
-			if (strlen(atok) > 0) { // extra sanity check
+			if (strlen(atok) > 0) { // extra sanity check since we never want to compare a null token on either side
 				auto authTokens = network["authTokens"];
 				if (authTokens.is_array()) {
 					for(unsigned long i=0;i<authTokens.size();++i) {
@@ -701,6 +470,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 							std::string tok = _jS(at["token"],"");
 							if ( ((expires == 0ULL)||(expires > now)) && (tok.length() > 0) && (tok == atok) ) {
 								authorizedBy = "token";
+								member["authorized"] = true; // tokens actually change member authorization state
 								break;
 							}
 						}
@@ -709,10 +479,6 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 			}
 		}
 	}
-
-	// Remember authorization state for public networks and token auth
-	if (authorizedBy)
-		member["authorized"] = true;
 
 	// Log this request
 	{
@@ -748,6 +514,9 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 
 	// If we made it this far, they are authorized.
 
+	_NetworkMemberInfo nmi;
+	_getNetworkMemberInfo(now,nwid,nmi);
+
 	nc.networkId = nwid;
 	nc.type = _jB(network["private"],true) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
 	nc.timestamp = now;
@@ -758,38 +527,14 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	Utils::scopy(nc.name,sizeof(nc.name),_jS(network["name"],"").c_str());
 	nc.multicastLimit = (unsigned int)_jI(network["multicastLimit"],32ULL);
 
-	bool amActiveBridge = false;
-	{
-		json ab = network["activeBridges"];
-		if (ab.is_array()) {
-			for(unsigned long i=0;i<ab.size();++i) {
-				std::string a = ab[i];
-				if (a.length() == ZT_ADDRESS_LENGTH_HEX) {
-					const uint64_t ab2 = Utils::hexStrToU64(a.c_str());
-					nc.addSpecialist(Address(ab2),ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
-					if (identity.address().toInt() == ab2)
-						amActiveBridge = true;
-				}
-			}
-		}
-	}
+	for(std::set<Address>::const_iterator ab(nmi.activeBridges.begin());ab!=nmi.activeBridges.end();++ab)
+		nc.addSpecialist(*ab,ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
 
 	auto v4AssignMode = network["v4AssignMode"];
 	auto v6AssignMode = network["v6AssignMode"];
 	auto ipAssignmentPools = network["ipAssignmentPools"];
 	auto routes = network["routes"];
 	auto rules = network["rules"];
-
-	if (v6AssignMode.is_object()) {
-		if ((_jB(v6AssignMode["rfc4193"],false))&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
-			nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt());
-			nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
-		}
-		if ((_jB(v6AssignMode["6plane"],false))&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
-			nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv66plane(nwid,identity.address().toInt());
-			nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
-		}
-	}
 
 	if (rules.is_array()) {
 		for(unsigned long i=0;i<rules.size();++i) {
@@ -814,6 +559,17 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 				*(reinterpret_cast<InetAddress *>(&(r->via))) = v;
 				++nc.routeCount;
 			}
+		}
+	}
+
+	if (v6AssignMode.is_object()) {
+		if ((_jB(v6AssignMode["rfc4193"],false))&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
+			nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt());
+			nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
+		}
+		if ((_jB(v6AssignMode["6plane"],false))&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
+			nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv66plane(nwid,identity.address().toInt());
+			nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
 		}
 	}
 
@@ -849,11 +605,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		ipAssignments = json::array();
 	}
 
-	std::set<InetAddress> allocatedIps;
-	bool allocatedIpsLoaded = false;
-
-	if ( (ipAssignmentPools.is_array()) && ((v6AssignMode.is_object())&&(_jB(v6AssignMode["zt"],false))) && (!haveManagedIpv6AutoAssignment) && (!amActiveBridge) ) {
-		if (!allocatedIpsLoaded) allocatedIps = _getAlreadyAllocatedIps(nwid);
+	if ( (ipAssignmentPools.is_array()) && ((v6AssignMode.is_object())&&(_jB(v6AssignMode["zt"],false))) && (!haveManagedIpv6AutoAssignment) && (!_jB(member["activeBridge"],false)) ) {
 		for(unsigned long p=0;((p<ipAssignmentPools.size())&&(!haveManagedIpv6AutoAssignment));++p) {
 			auto pool = ipAssignmentPools[p];
 			if (pool.is_object()) {
@@ -898,7 +650,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 						}
 
 						// If it's routed, then try to claim and assign it and if successful end loop
-						if ((routedNetmaskBits > 0)&&(!allocatedIps.count(ip6))) {
+						if ((routedNetmaskBits > 0)&&(!nmi.allocatedIps.count(ip6))) {
 							ipAssignments.push_back(ip6.toIpString());
 							member["ipAssignments"] = ipAssignments;
 							ip6.setPort((unsigned int)routedNetmaskBits);
@@ -913,8 +665,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		}
 	}
 
-	if ( (ipAssignmentPools.is_array()) && ((v4AssignMode.is_object())&&(_jB(v4AssignMode["zt"],false))) && (!haveManagedIpv4AutoAssignment) && (!amActiveBridge) ) {
-		if (!allocatedIpsLoaded) allocatedIps = _getAlreadyAllocatedIps(nwid);
+	if ( (ipAssignmentPools.is_array()) && ((v4AssignMode.is_object())&&(_jB(v4AssignMode["zt"],false))) && (!haveManagedIpv4AutoAssignment) && (!_jB(member["activeBridge"],false)) ) {
 		for(unsigned long p=0;((p<ipAssignmentPools.size())&&(!haveManagedIpv4AutoAssignment));++p) {
 			auto pool = ipAssignmentPools[p];
 			if (pool.is_object()) {
@@ -952,7 +703,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 						InetAddress ip4(Utils::hton(ip),0);
 
 						// If it's routed, then try to claim and assign it and if successful end loop
-						if ((routedNetmaskBits > 0)&&(!allocatedIps.count(ip4))) {
+						if ((routedNetmaskBits > 0)&&(!nmi.allocatedIps.count(ip4))) {
 							ipAssignments.push_back(ip4.toIpString());
 							member["ipAssignments"] = ipAssignments;
 							if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
@@ -1016,7 +767,9 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 						char addrs[24];
 						Utils::snprintf(addrs,sizeof(addrs),"%.10llx",address);
 
+						// Add non-persisted fields
 						member["clock"] = OSUtils::now();
+
 						responseBody = member.dump(2);
 						responseContentType = "application/json";
 
@@ -1090,9 +843,11 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 
 			} else {
 
-				nlohmann::json o(network);
-				o["clock"] = OSUtils::now();
-				responseBody = o.dump(2);
+				const uint64_t now = OSUtils::now();
+				_NetworkMemberInfo nmi;
+				_getNetworkMemberInfo(now,nwid,nmi);
+				_addNetworkNonPersistedFields(network,now,nmi);
+				responseBody = network.dump(2);
 				responseContentType = "application/json";
 				return 200;
 
@@ -1146,6 +901,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 	} catch ( ... ) {
 		return 400;
 	}
+	const uint64_t now = OSUtils::now();
 
 	if (path[0] == "network") {
 
@@ -1168,6 +924,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 					try {
 						if (b.count("authorized")) member["authorized"] = _jB(b["authorized"],false);
+						if (b.count("activeBridge")) member["activeBridge"] = _jB(b["activeBridge"],false);
 						if ((b.count("identity"))&&(!member.count("identity"))) member["identity"] = _jS(b["identity"],""); // allow identity to be populated only if not already known
 
 						if (b.count("ipAssignments")) {
@@ -1191,12 +948,13 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					if (!member.count("authorized")) member["authorized"] = false;
 					if (!member.count("ipAssignments")) member["ipAssignments"] = json::array();
 					if (!member.count("recentLog")) member["recentLog"] = json::array();
+					if (!member.count("activeBridge")) member["activeBridge"] = false;
 
 					member["id"] = addrs;
 					member["address"] = addrs; // legacy
 					member["nwid"] = nwids;
 					member["objtype"] = "member";
-					member["lastModified"] = OSUtils::now();
+					member["lastModified"] = now;
 					{
 						auto revj = member["revision"];
 						const uint64_t rev = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
@@ -1205,7 +963,9 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 					_writeJson(_memberJP(nwid,Address(address),true).c_str(),member);
 
+					// Add non-persisted fields
 					member["clock"] = member["lastModified"];
+
 					responseBody = member.dump(2);
 					responseContentType = "application/json";
 					return 200;
@@ -1287,19 +1047,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					if (b.count("enableBroadcast")) network["enableBroadcast"] = _jB(b["enableBroadcast"],false);
 					if (b.count("allowPassiveBridging")) network["allowPassiveBridging"] = _jB(b["allowPassiveBridging"],false);
 					if (b.count("multicastLimit")) network["multicastLimit"] = _jI(b["multicastLimit"],32ULL);
-
-					if (b.count("activeBridges")) {
-						auto ab = b["activeBridges"];
-						if (ab.is_array()) {
-							json ab2 = json::array();
-							for(unsigned long i=0;i<ab.size();++i) {
-								std::string a = ab[i];
-								if (a.length() == ZT_ADDRESS_LENGTH_HEX)
-									ab2.push_back(a);
-							}
-							network["activeBridges"] = ab2;
-						}
-					}
 
 					if (b.count("v4AssignMode")) {
 						auto nv4m = network["v4AssignMode"];
@@ -1446,10 +1193,14 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 				auto rev = network["revision"];
 				network["revision"] = (rev.is_number() ? ((uint64_t)rev + 1ULL) : 1ULL);
 				network["objtype"] = "network";
+				network["lastModified"] = now;
 
 				_writeJson(_networkJP(nwid,true),network);
 
-				network["clock"] = OSUtils::now();
+				_NetworkMemberInfo nmi;
+				_getNetworkMemberInfo(now,nwid,nmi);
+				_addNetworkNonPersistedFields(network,now,nmi);
+
 				responseBody = network.dump(2);
 				responseContentType = "application/json";
 				return 200;
@@ -1497,6 +1248,10 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 				}
 			} else {
 				OSUtils::rmDashRf(_networkBP(nwid,false).c_str());
+				{
+					Mutex::Lock _l(_networkMemberCache_m);
+					_networkMemberCache.erase(nwid);
+				}
 				responseBody = network.dump(2);
 				responseContentType = "application/json";
 				return 200;
@@ -1571,6 +1326,55 @@ void EmbeddedNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTes
 		reinterpret_cast<const InetAddress *>(&(report->receivedFromRemoteAddress))->toString().c_str());
 
 	cte->second.jsonResults.append(tmp);
+}
+
+void EmbeddedNetworkController::_getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi)
+{
+	Mutex::Lock _mcl(_networkMemberCache_m);
+
+	auto memberCacheEntry = _networkMemberCache[nwid];
+	if ((now - memberCacheEntry.second) >= ZT_NETCONF_NETWORK_MEMBER_CACHE_EXPIRE) {
+		const std::string bp(_networkBP(nwid,false) + ZT_PATH_SEPARATOR_S + "member");
+		std::vector<std::string> members(OSUtils::listSubdirectories(bp.c_str()));
+		for(std::vector<std::string>::iterator m(members.begin());m!=members.end();++m) {
+			if (m->length() == ZT_ADDRESS_LENGTH_HEX) {
+				nlohmann::json mj(_readJson(bp + ZT_PATH_SEPARATOR_S + *m + ZT_PATH_SEPARATOR_S + "config.json"));
+				if ((mj.is_object())&&(mj.size() > 0)) {
+					memberCacheEntry.first[Address(*m)] = mj;
+				}
+			}
+		}
+		memberCacheEntry.second = now;
+	}
+
+	nmi.totalMemberCount = memberCacheEntry.first.size();
+	for(std::map< Address,nlohmann::json >::const_iterator nm(memberCacheEntry.first.begin());nm!=memberCacheEntry.first.end();++nm) {
+		if (_jB(nm->second["authorized"],false)) {
+			++nmi.authorizedMemberCount;
+
+			auto mlog = nm->second["recentLog"];
+			if ((mlog.is_array())&&(mlog.size() > 0)) {
+				auto mlog1 = mlog[0];
+				if (mlog1.is_object()) {
+					if ((now - _jI(mlog1["ts"],0ULL)) < ZT_NETCONF_NODE_ACTIVE_THRESHOLD)
+						++nmi.activeMemberCount;
+				}
+			}
+
+			if (_jB(nm->second["activeBridge"],false)) {
+				nmi.activeBridges.insert(nm->first);
+			}
+
+			auto mips = nm->second["ipAssignments"];
+			if (mips.is_array()) {
+				for(unsigned long i=0;i<mips.size();++i) {
+					InetAddress mip(_jS(mips[i],""));
+					if ((mip.ss_family == AF_INET)||(mip.ss_family == AF_INET6))
+						nmi.allocatedIps.insert(mip);
+				}
+			}
+		}
+	}
 }
 
 } // namespace ZeroTier
