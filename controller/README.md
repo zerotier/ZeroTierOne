@@ -11,8 +11,6 @@ Data is stored in JSON format under `controller.d` in the ZeroTier working direc
 
 Controllers can in theory host up to 2^24 networks and serve many millions of devices (or more), but we recommend spreading large numbers of networks across many controllers for load balancing and fault tolerance reasons.
 
-Since this implementation uses a JSON store in the filesystem we recommend running it on SSD-backed hosts. Slow disks will become a speed bottleneck under heavy load. For really huge and busy controllers you could consider linking `controller.d/` to a folder under `/dev/shm` (Linux RAM disk) and then setting up an out-of-band periodic snapshot cron job or background process to persist the data and a script to populate `/dev/shm` on boot before the controller starts. This is beyond the scope of this guide but is not particularly hard.
-
 Since ZeroTier nodes are mobile and do not need static IPs, implementing high availability fail-over for controllers is easy. Just replicate their working directories from master to backup and have something automatically fire up the backup if the master goes down. Many modern orchestration tools have built-in support for this. It would also be possible in theory to run controllers on a replicated or distributed filesystem, but we haven't tested this yet.
 
 ### Dockerizing Controllers
@@ -67,15 +65,15 @@ When POSTing new networks take care that their IDs are not in use, otherwise you
 | name                  | string        | A short name for this network                     | YES      |
 | private               | boolean       | Is access control enabled?                        | YES      |
 | enableBroadcast       | boolean       | Ethernet ff:ff:ff:ff:ff:ff allowed?               | YES      |
-| activeBridges         | array[string] | Array of ZeroTier addresses of active bridges     | YES      |
 | allowPassiveBridging  | boolean       | Allow any member to bridge (very experimental)    | YES      |
 | v4AssignMode          | object        | IPv4 management and assign options (see below)    | YES      |
 | v6AssignMode          | object        | IPv6 management and assign options (see below)    | YES      |
 | multicastLimit        | integer       | Maximum recipients for a multicast packet         | YES      |
 | creationTime          | integer       | Time network was first created                    | no       |
 | revision              | integer       | Network config revision counter                   | no       |
-| memberRevisionCounter | integer       | Network member revision counter                   | no       |
 | authorizedMemberCount | integer       | Number of authorized members (for private nets)   | no       |
+| activeMemberCount     | integer       | Number of members that appear to be online        | no       |
+| totalMemberCount      | integer       | Total known members of this network               | no       |
 | routes                | array[object] | Managed IPv4 and IPv6 routes; see below           | YES      |
 | ipAssignmentPools     | array[object] | IP auto-assign ranges; see below                  | YES      |
 | rules                 | array[object] | Traffic rules; see below                          | YES      |
@@ -84,7 +82,6 @@ Recent changes:
 
  * The `ipLocalRoutes` field appeared in older versions but is no longer present. Routes will now show up in `routes`.
  * The `relays` field is gone since network preferred relays are gone. This capability is replaced by VL1 level federation ("federated roots").
- * Active bridges are now set at the network level, not in individual member configs.
 
 Other important points:
 

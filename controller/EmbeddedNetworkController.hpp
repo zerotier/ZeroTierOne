@@ -37,6 +37,9 @@
 
 #include "../ext/json/json.hpp"
 
+// Expiration time for network member cache entries in ms
+#define ZT_NETCONF_NETWORK_MEMBER_CACHE_EXPIRE 30000
+
 namespace ZeroTier {
 
 class Node;
@@ -80,6 +83,7 @@ public:
 private:
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
 
+	// JSON blob I/O
 	inline nlohmann::json _readJson(const std::string &path)
 	{
 		std::string buf;
@@ -90,20 +94,19 @@ private:
 		}
 		return nlohmann::json::object();
 	}
-
 	inline bool _writeJson(const std::string &path,const nlohmann::json &obj)
 	{
-		std::string buf(obj.dump(2));
-		return OSUtils::writeFile(path.c_str(),buf);
+		return OSUtils::writeFile(path.c_str(),obj.dump(2));
 	}
 
+	// Network base path and network JSON path
 	inline std::string _networkBP(const uint64_t nwid,bool create)
 	{
 		char tmp[64];
-		Utils::snprintf(tmp,sizeof(tmp),"%.16llx",nwid);
 		std::string p(_path + ZT_PATH_SEPARATOR_S + "network");
 		if (create) OSUtils::mkdir(p.c_str());
 		p.push_back(ZT_PATH_SEPARATOR);
+		Utils::snprintf(tmp,sizeof(tmp),"%.16llx",nwid);
 		p.append(tmp);
 		if (create) OSUtils::mkdir(p.c_str());
 		return p;
@@ -112,6 +115,8 @@ private:
 	{
 		return (_networkBP(nwid,create) + ZT_PATH_SEPARATOR + "config.json");
 	}
+
+	// Member base path and member JSON path
 	inline std::string _memberBP(const uint64_t nwid,const Address &member,bool create)
 	{
 		std::string p(_networkBP(nwid,create));
@@ -128,26 +133,61 @@ private:
 		return (_memberBP(nwid,member,create) + ZT_PATH_SEPARATOR + "config.json");
 	}
 
-	inline std::set<InetAddress> _getAlreadyAllocatedIps(const uint64_t nwid)
+	// We cache the members of networks in memory to avoid having to scan the filesystem so much
+	std::map< uint64_t,std::pair< std::map< Address,nlohmann::json >,uint64_t > > _networkMemberCache;
+	Mutex _networkMemberCache_m;
+
+	// Gathers a bunch of statistics about members of a network, IP assignments, etc. that we need in various places
+	// This does lock _networkMemberCache_m
+	struct _NetworkMemberInfo
 	{
-		std::set<InetAddress> ips;
-		std::string bp(_networkBP(nwid,false) + ZT_PATH_SEPARATOR_S + "member");
-		std::vector<std::string> members(OSUtils::listSubdirectories(bp.c_str()));
-		for(std::vector<std::string>::iterator m(members.begin());m!=members.end();++m) {
-			if (m->length() == ZT_ADDRESS_LENGTH_HEX) {
-				nlohmann::json mj = _readJson(bp + ZT_PATH_SEPARATOR_S + *m + ZT_PATH_SEPARATOR_S + "config.json");
-				auto ipAssignments = mj["ipAssignments"];
-				if (ipAssignments.is_array()) {
-					for(unsigned long i=0;i<ipAssignments.size();++i) {
-						std::string ipstr = ipAssignments[i];
-						InetAddress ip(ipstr);
-						if (ip)
-							ips.insert(ip);
-					}
-				}
-			}
+		_NetworkMemberInfo() : authorizedMemberCount(0),activeMemberCount(0),totalMemberCount(0) {}
+		std::set<Address> activeBridges;
+		std::set<InetAddress> allocatedIps;
+		unsigned long authorizedMemberCount;
+		unsigned long activeMemberCount;
+		unsigned long totalMemberCount;
+	};
+	void _getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi);
+
+	// These init objects with default and static/informational fields
+	inline void _initMember(nlohmann::json &member)
+	{
+		if (!member.count("authorized")) member["authorized"] = false;
+		if (!member.count("ipAssignments")) member["ipAssignments"] = nlohmann::json::array();
+		if (!member.count("recentLog")) member["recentLog"] = nlohmann::json::array();
+		if (!member.count("activeBridge")) member["activeBridge"] = false;
+		if (!member.count("tags")) member["tags"] = nlohmann::json::array();
+		if (!member.count("capabilities")) member["capabilities"] = nlohmann::json::array();
+		if (!member.count("creationTime")) member["creationTime"] = OSUtils::now();
+		member["objtype"] = "member";
+	}
+	inline void _initNetwork(nlohmann::json &network)
+	{
+		if (!network.count("private")) network["private"] = true;
+		if (!network.count("creationTime")) network["creationTime"] = OSUtils::now();
+		if (!network.count("name")) network["name"] = "";
+		if (!network.count("multicastLimit")) network["multicastLimit"] = (uint64_t)32;
+		if (!network.count("v4AssignMode")) network["v4AssignMode"] = {{"zt",false}};
+		if (!network.count("v6AssignMode")) network["v6AssignMode"] = {{"rfc4193",false},{"zt",false},{"6plane",false}};
+		if (!network.count("activeBridges")) network["activeBridges"] = nlohmann::json::array();
+		if (!network.count("authTokens")) network["authTokens"] = nlohmann::json::array();
+		if (!network.count("capabilities")) network["capabilities"] = nlohmann::json::array();
+		if (!network.count("rules")) {
+			// If unspecified, rules are set to allow anything and behave like a flat L2 segment
+			network["rules"] = {
+				{ "not",false },
+				{ "type","ACTION_ACCEPT" }
+			};
 		}
-		return ips;
+		network["objtype"] = "network";
+	}
+	inline void _addNetworkNonPersistedFields(nlohmann::json &network,uint64_t now,const _NetworkMemberInfo &nmi)
+	{
+		network["clock"] = now;
+		network["authorizedMemberCount"] = nmi.authorizedMemberCount;
+		network["activeMemberCount"] = nmi.activeMemberCount;
+		network["totalMemberCount"] = nmi.totalMemberCount;
 	}
 
 	// These are const after construction
