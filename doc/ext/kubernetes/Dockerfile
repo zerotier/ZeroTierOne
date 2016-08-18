@@ -6,7 +6,7 @@ RUN mkdir -p /var/lib/zerotier-one/networks.d
 ADD *.conf /var/lib/zerotier-one/networks.d/
 ADD zerotier /
 ADD zerotier-cli /
-ADD .zerotierCliSettings <settings path>?>
+ADD .zerotierCliSettings /root/
 
 # Install App
 ADD server.js /
