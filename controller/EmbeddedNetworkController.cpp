@@ -60,6 +60,7 @@ using json = nlohmann::json;
 
 namespace ZeroTier {
 
+// Get JSON values as unsigned integers, strings, or booleans, doing type conversion if possible
 static uint64_t _jI(const json &jv,const uint64_t dfl)
 {
 	if (jv.is_number()) {
@@ -97,7 +98,9 @@ static std::string _jS(const json &jv,const char *dfl)
 	if (jv.is_string()) {
 		return jv;
 	} else if (jv.is_number()) {
-		return jv;
+		char tmp[64];
+		Utils::snprintf(tmp,sizeof(tmp),"%llu",(uint64_t)jv);
+		return tmp;
 	} else if (jv.is_boolean()) {
 		return ((bool)jv ? std::string("1") : std::string("0"));
 	}
@@ -603,6 +606,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		}
 	} else {
 		ipAssignments = json::array();
+		member["ipAssignments"] = ipAssignments;
 	}
 
 	if ( (ipAssignmentPools.is_array()) && ((v6AssignMode.is_object())&&(_jB(v6AssignMode["zt"],false))) && (!haveManagedIpv6AutoAssignment) && (!_jB(member["activeBridge"],false)) ) {
@@ -785,10 +789,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 									responseBody.append((responseBody.length() == 1) ? "\"" : ",\"");
 									responseBody.append(*i);
 									responseBody.append("\":");
-									auto rev = member["revision"];
-									if (rev.is_number())
-										responseBody.append(rev);
-									else responseBody.push_back('0');
+									responseBody.append(_jS(member["revision"],"0"));
 								}
 							}
 						}
