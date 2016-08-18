@@ -13,9 +13,9 @@ echo '*** Up and running at' $virtip4 ' on network: ' $nwid
 echo '*** Self-Authorizing to deployment network'
 nwconf=$(ls *.conf)
 nwid="${nwconf%.*}"
-AUTHTOKEN="(cat /var/lib/zerotier-one/authtoken.secret)"
 
-grep -rl 'local_service_auth_token' ./ | xargs sed -i 's/local_service_auth_token/' $AUTHTOKEN '/g'
+AUTHTOKEN=$(cat /var/lib/zerotier-one/authtoken.secret)
+sed "s|\local_service_auth_token|${AUTHTOKEN}|" .zerotierCliSettings > /root/.zerotierCliSettings
 
 ./zerotier-cli join $(nwid).conf
 ./zerotier-cli net-auth $(nwid) $(dev)
