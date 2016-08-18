@@ -150,6 +150,38 @@ private:
 	};
 	void _getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi);
 
+	// These init objects with default and static/informational fields
+	inline void _initMember(nlohmann::json &member)
+	{
+		if (!member.count("authorized")) member["authorized"] = false;
+		if (!member.count("ipAssignments")) member["ipAssignments"] = nlohmann::json::array();
+		if (!member.count("recentLog")) member["recentLog"] = nlohmann::json::array();
+		if (!member.count("activeBridge")) member["activeBridge"] = false;
+		if (!member.count("tags")) member["tags"] = nlohmann::json::array();
+		if (!member.count("capabilities")) member["capabilities"] = nlohmann::json::array();
+		if (!member.count("creationTime")) member["creationTime"] = OSUtils::now();
+		member["objtype"] = "member";
+	}
+	inline void _initNetwork(nlohmann::json &network)
+	{
+		if (!network.count("private")) network["private"] = true;
+		if (!network.count("creationTime")) network["creationTime"] = OSUtils::now();
+		if (!network.count("name")) network["name"] = "";
+		if (!network.count("multicastLimit")) network["multicastLimit"] = (uint64_t)32;
+		if (!network.count("v4AssignMode")) network["v4AssignMode"] = {{"zt",false}};
+		if (!network.count("v6AssignMode")) network["v6AssignMode"] = {{"rfc4193",false},{"zt",false},{"6plane",false}};
+		if (!network.count("activeBridges")) network["activeBridges"] = nlohmann::json::array();
+		if (!network.count("authTokens")) network["authTokens"] = nlohmann::json::array();
+		if (!network.count("capabilities")) network["capabilities"] = nlohmann::json::array();
+		if (!network.count("rules")) {
+			// If unspecified, rules are set to allow anything and behave like a flat L2 segment
+			network["rules"] = {
+				{ "not",false },
+				{ "type","ACTION_ACCEPT" }
+			};
+		}
+		network["objtype"] = "network";
+	}
 	inline void _addNetworkNonPersistedFields(nlohmann::json &network,uint64_t now,const _NetworkMemberInfo &nmi)
 	{
 		network["clock"] = now;

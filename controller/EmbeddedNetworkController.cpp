@@ -438,6 +438,8 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		}
 	}
 
+	_initMember(member);
+
 	// Make sure these are always present no matter what, and increment member revision since we will always at least log something
 	member["id"] = identity.address().toString();
 	member["address"] = member["id"];
@@ -606,7 +608,6 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		}
 	} else {
 		ipAssignments = json::array();
-		member["ipAssignments"] = ipAssignments;
 	}
 
 	if ( (ipAssignmentPools.is_array()) && ((v6AssignMode.is_object())&&(_jB(v6AssignMode["zt"],false))) && (!haveManagedIpv6AutoAssignment) && (!_jB(member["activeBridge"],false)) ) {
@@ -922,6 +923,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					Utils::snprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)address);
 
 					json member(_readJson(_memberJP(nwid,Address(address),true)));
+					_initMember(member);
 
 					try {
 						if (b.count("authorized")) member["authorized"] = _jB(b["authorized"],false);
@@ -942,19 +944,46 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 								member["ipAssignments"] = mipa;
 							}
 						}
+
+						if (b.count("tags")) {
+							auto tags = b["tags"];
+							if (tags.is_array()) {
+								std::map<uint64_t,uint64_t> mtags;
+								for(unsigned long i=0;i<tags.size();++i) {
+									auto tag = tags[i];
+									if ((tag.is_array())&&(tag.size() == 2))
+										mtags[_jI(tag[0],0ULL) & 0xffffffffULL] = _jI(tag[1],0ULL) & 0xffffffffULL;
+								}
+								json mtagsa = json::array();
+								for(std::map<uint64_t,uint64_t>::iterator t(mtags.begin());t!=mtags.end();++t) {
+									json ta = json::array();
+									ta.push_back(t->first);
+									ta.push_back(t->second);
+									mtagsa.push_back(ta);
+								}
+								member["tags"] = mtagsa;
+							}
+						}
+
+						if (b.count("capabilities")) {
+							auto capabilities = b["capabilities"];
+							if (capabilities.is_array()) {
+								json mcaps = json::array();
+								for(unsigned long i=0;i<capabilities.size();++i) {
+									mcaps.push_back(_jI(capabilities[i],0ULL));
+								}
+								std::sort(mcaps.begin(),mcaps.end());
+								mcaps.erase(std::unique(mcaps.begin(),mcaps.end()),mcaps.end());
+								member["capabilities"] = mcaps;
+							}
+						}
 					} catch ( ... ) {
 						return 400;
 					}
 
-					if (!member.count("authorized")) member["authorized"] = false;
-					if (!member.count("ipAssignments")) member["ipAssignments"] = json::array();
-					if (!member.count("recentLog")) member["recentLog"] = json::array();
-					if (!member.count("activeBridge")) member["activeBridge"] = false;
-
 					member["id"] = addrs;
 					member["address"] = addrs; // legacy
 					member["nwid"] = nwids;
-					member["objtype"] = "member";
 					member["lastModified"] = now;
 					{
 						auto revj = member["revision"];
@@ -1041,6 +1070,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 				}
 
 				json network(_readJson(_networkJP(nwid,true)));
+				_initNetwork(network);
 
 				try {
 					if (b.count("name")) network["name"] = _jS(b["name"],"");
@@ -1168,32 +1198,54 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 							network["authTokens"] = nat;
 						}
 					}
+
+					if (b.count("capabilities")) {
+						auto capabilities = b["capabilities"];
+						if (capabilities.is_array()) {
+							std::map< uint64_t,json > ncaps;
+							for(unsigned long i=0;i<capabilities.size();++i) {
+								auto cap = capabilities[i];
+								if (cap.is_object()) {
+									json ncap = json::object();
+									const uint64_t capId = _jI(cap["id"],0ULL);
+									ncap["id"] = capId;
+
+									auto rules = cap["rules"];
+									json nrules = json::array();
+									if (rules.is_array()) {
+										for(unsigned long i=0;i<rules.size();++i) {
+											json rule = rules[i];
+											if (rule.is_object()) {
+												ZT_VirtualNetworkRule ztr;
+												if (_parseRule(rule,ztr)) {
+													rule = _renderRule(ztr);
+													if ((rule.is_object())&&(rule.count("type"))) {
+														nrules.push_back(rule);
+													}
+												}
+											}
+										}
+									}
+									ncap["rules"] = nrules;
+
+									ncaps[capId] = ncap;
+								}
+							}
+
+							json ncapsa = json::array();
+							for(std::map< uint64_t,json >::iterator c(ncaps.begin());c!=ncaps.end();++c)
+								ncapsa.push_back(c->second);
+							network["capabilities"] = ncapsa;
+						}
+					}
 				} catch ( ... ) {
 					return 400;
-				}
-
-				if (!network.count("private")) network["private"] = true;
-				if (!network.count("creationTime")) network["creationTime"] = OSUtils::now();
-				if (!network.count("name")) network["name"] = "";
-				if (!network.count("multicastLimit")) network["multicastLimit"] = (uint64_t)32;
-				if (!network.count("v4AssignMode")) network["v4AssignMode"] = {{"zt",false}};
-				if (!network.count("v6AssignMode")) network["v6AssignMode"] = {{"rfc4193",false},{"zt",false},{"6plane",false}};
-				if (!network.count("activeBridges")) network["activeBridges"] = json::array();
-				if (!network.count("authTokens")) network["authTokens"] = json::array();
-
-				if (!network.count("rules")) {
-					// If unspecified, rules are set to allow anything and behave like a flat L2 segment
-					network["rules"] = {
-						{ "not",false },
-						{ "type","ACTION_ACCEPT" }
-					};
 				}
 
 				network["id"] = nwids;
 				network["nwid"] = nwids; // legacy
 				auto rev = network["revision"];
 				network["revision"] = (rev.is_number() ? ((uint64_t)rev + 1ULL) : 1ULL);
-				network["objtype"] = "network";
 				network["lastModified"] = now;
 
 				_writeJson(_networkJP(nwid,true),network);
