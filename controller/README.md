@@ -5,7 +5,7 @@ ZeroTier's 16-digit network IDs are really just a concatenation of the 10-digit 
 
 This code implements the *node/NetworkController.hpp* interface to provide an embedded microservice configurable via the same local HTTP control plane as ZeroTier One iteself. It is built by default in ZeroTier One in desktop and server builds. This is the same code we use to run [my.zerotier.com](https://my.zerotier.com/), which is a web UI and API that runs in front of a pool of controllers.
 
-Data is stored in JSON format under `controller.d` in the ZeroTier working directory. It can be copied, tar'd, placed in `git`, or edited in place, though we do not recommend doing the latter while the controller is running. Also take care if editing in place that you do not save corrupted JSON since the controller may then lose data when it attempts to load, modify, and save.
+Data is stored in JSON format under `controller.d` in the ZeroTier working directory. It can be copied, tar'd, placed in `git`, etc. Technically the JSON files under `controller.d` can also be edited in place, but we do not recommend doing this under a running controller since data loss or corruption might result. Also take care to keep JSON values of the correct types or data loss may also result.
 
 ### Scalability and Reliability
 
