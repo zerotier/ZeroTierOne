@@ -5,7 +5,7 @@
   "defaultOne": "@local",
   "things": {
     "local": {
-      "auth": "XXXXXXXXXXXXXXXXXXXXXXXX",
+      "auth": "local_service_auth_token_replaced_automatically",
       "type": "one",
       "url": "http://127.0.0.1:9993/"
     },
