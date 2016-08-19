@@ -50,7 +50,7 @@ using json = nlohmann::json;
 #define ZT_NETCONF_CONTROLLER_API_VERSION 3
 
 // Number of requests to remember in member history
-#define ZT_NETCONF_DB_MEMBER_HISTORY_LENGTH 64
+#define ZT_NETCONF_DB_MEMBER_HISTORY_LENGTH 16
 
 // Min duration between requests for an address/nwid combo to prevent floods
 #define ZT_NETCONF_MIN_REQUEST_PERIOD 1000
@@ -540,6 +540,9 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	auto ipAssignmentPools = network["ipAssignmentPools"];
 	auto routes = network["routes"];
 	auto rules = network["rules"];
+	auto capabilities = network["capabilities"];
+	auto memberCapabilities = member["capabilities"];
+	auto memberTags = member["tags"];
 
 	if (rules.is_array()) {
 		for(unsigned long i=0;i<rules.size();++i) {
@@ -549,6 +552,25 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 			if (_parseRule(rule,nc.rules[nc.ruleCount]))
 				++nc.ruleCount;
 		}
+	}
+
+	if ((memberCapabilities.is_array())&&(memberCapabilities.size() > 0)&&(capabilities.is_array())) {
+		std::map< uint64_t,json > capsById;
+		for(unsigned long i=0;i<capabilities.size();++i) {
+			auto cap = capabilities[i];
+			if (cap.is_object())
+				capsById[_jI(cap["id"],0ULL)] = cap;
+		}
+
+		for(unsigned long i=0;i<memberCapabilities.size();++i) {
+			const uint64_t capId = _jI(memberCapabilities[i],0ULL);
+			json &cap = capsById[capId];
+			if ((cap.is_object())&&(cap.size() > 0)) {
+			}
+		}
+	}
+
+	if (memberTags.is_array()) {
 	}
 
 	if (routes.is_array()) {
