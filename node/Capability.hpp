@@ -73,12 +73,11 @@ public:
 	 * @param nwid Network ID
 	 * @param ts Timestamp (at controller)
 	 * @param expiration Expiration relative to network config timestamp
-	 * @param name Capability short name (max strlen == ZT_MAX_CAPABILITY_NAME_LENGTH, overflow ignored)
 	 * @param mccl Maximum custody chain length (1 to create non-transferrable capability)
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	Capability(uint32_t id,uint64_t nwid,uint64_t ts,uint64_t expiration,const char *name,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
+	Capability(uint32_t id,uint64_t nwid,uint64_t ts,uint64_t expiration,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
 	{
 		memset(this,0,sizeof(Capability));
 		_nwid = nwid;
