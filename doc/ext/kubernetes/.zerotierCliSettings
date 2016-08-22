@@ -13,6 +13,6 @@
       "auth": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
       "type": "central",
       "url": "https://my.zerotier.com/"
-    },
+    }
   }
 }
