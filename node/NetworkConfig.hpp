@@ -65,6 +65,11 @@
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR 0x0000040000000000ULL
 
+/**
+ * Device can send CIRCUIT_TESTs for this network
+ */
+#define ZT_NETWORKCONFIG_SPECIALIST_TYPE_CIRCUIT_TESTER 0x0000080000000000ULL
+
 namespace ZeroTier {
 
 // Dictionary capacity needed for max size network config
@@ -268,6 +273,21 @@ public:
 			return true;
 		for(unsigned int i=0;i<specialistCount;++i) {
 			if ((fromPeer == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * @param byPeer Address to check
+	 * @return True if this peer is allowed to do circuit tests on this network (controller is always true)
+	 */
+	inline bool circuitTestingAllowed(const Address &byPeer) const
+	{
+		if (byPeer.toInt() == ((networkId >> 24) & 0xffffffffffULL))
+			return true;
+		for(unsigned int i=0;i<specialistCount;++i) {
+			if ((byPeer == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_CIRCUIT_TESTER) != 0))
 				return true;
 		}
 		return false;

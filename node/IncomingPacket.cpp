@@ -469,29 +469,40 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		if (payloadLength() == ZT_ADDRESS_LENGTH) {
-			const Address addr(payload(),ZT_ADDRESS_LENGTH);
+		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
+		outp.append((unsigned char)Packet::VERB_WHOIS);
+		outp.append(packetId());
+
+		unsigned int count = 0;
+		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
+		while ((ptr + ZT_ADDRESS_LENGTH) <= size()) {
+			const Address addr(field(ptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+			ptr += ZT_ADDRESS_LENGTH;
+
 			const Identity id(RR->topology->getIdentity(addr));
 			if (id) {
-				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
-				outp.append((unsigned char)Packet::VERB_WHOIS);
-				outp.append(packetId());
 				id.serialize(outp,false);
-				outp.armor(peer->key(),true);
-				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+				++count;
 			} else {
+				// If I am not the root and don't know this identity, ask upstream. Downstream
+				// peer may re-request in the future and if so we will be able to provide it.
+				if (!RR->topology->amRoot())
+					RR->sw->requestWhois(addr);
+
 #ifdef ZT_ENABLE_CLUSTER
+				// Distribute WHOIS queries across a cluster if we do not know the ID.
+				// This may result in duplicate OKs to the querying peer, which is fine.
 				if (RR->cluster)
 					RR->cluster->sendDistributedQuery(*this);
 #endif
-				if (!RR->topology->amRoot()) {
-					RR->sw->requestWhois(addr);
-					return false; // packet parse will be attempted again if we get a reply from upstream
-				}
 			}
-		} else {
-			TRACE("dropped WHOIS from %s(%s): missing or invalid address",source().toString().c_str(),_remoteAddress.toString().c_str());
 		}
+
+		if (count > 0) {
+			outp.armor(peer->key(),true);
+			RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+		}
+
 		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_WHOIS,0,Packet::VERB_NOP);
 	} catch ( ... ) {
 		TRACE("dropped WHOIS from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -836,10 +847,25 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 {
 	try {
 		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_NETWORK_ID);
+		const unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_GATHER_IDX_FLAGS];
 		const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI));
 		const unsigned int gatherLimit = at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT);
 
 		//TRACE("<<MC %s(%s) GATHER up to %u in %.16llx/%s",source().toString().c_str(),_remoteAddress.toString().c_str(),gatherLimit,nwid,mg.toString().c_str());
+
+		if ((flags & 0x01) != 0) {
+			try {
+				CertificateOfMembership com;
+				com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_GATHER_IDX_COM);
+				if (com) {
+					SharedPtr<Network> network(RR->node->network(nwid));
+					if (network)
+						network->addCredential(com);
+				}
+			} catch ( ... ) {
+				TRACE("MULTICAST_GATHER from %s(%s): discarded invalid COM",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+			}
+		}
 
 		if (gatherLimit) {
 			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
@@ -854,6 +880,7 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 			}
 
+			// If we are a member of a cluster, distribute this GATHER across it
 #ifdef ZT_ENABLE_CLUSTER
 			if ((RR->cluster)&&(gatheredLocally < gatherLimit))
 				RR->cluster->sendDistributedQuery(*this);
@@ -862,7 +889,7 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 
 		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_GATHER,0,Packet::VERB_NOP);
 	} catch ( ... ) {
-		TRACE("dropped MULTICAST_GATHER from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped MULTICAST_GATHER from %s(%s): unexpected exception",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
@@ -878,7 +905,8 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 			// Offset -- size of optional fields added to position of later fields
 			unsigned int offset = 0;
 
-			if ((flags & 0x01) != 0) { // deprecated but still used by older peers
+			if ((flags & 0x01) != 0) {
+				// This is deprecated but may still be sent by old peers
 				CertificateOfMembership com;
 				offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
 				if (com)
@@ -1053,7 +1081,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 		// Tracks total length of variable length fields, initialized to originator credential length below
 		unsigned int vlf;
 
-		// Originator credentials
+		// Originator credentials -- right now only a network ID for which the originator is controller or is authorized by controller is allowed
 		const unsigned int originatorCredentialLength = vlf = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 23);
 		uint64_t originatorCredentialNetworkId = 0;
 		if (originatorCredentialLength >= 1) {
@@ -1085,15 +1113,10 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 		vlf += at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 29 + vlf);
 
 		// Check credentials (signature already verified)
-		NetworkConfig originatorCredentialNetworkConfig;
 		if (originatorCredentialNetworkId) {
-			if (Network::controllerFor(originatorCredentialNetworkId) == originatorAddress) {
-				if (!RR->node->network(originatorCredentialNetworkId)) {
-					TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID %.16llx as credential, and we are not a member of that network",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
-					return true;
-				}
-			} else {
-				TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID as credential, is not controller for %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
+			SharedPtr<Network> network(RR->node->network(originatorCredentialNetworkId));
+			if ((!network)||(!network->config().circuitTestingAllowed(originatorAddress))) {
+				TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID %.16llx as credential, and we don't belong to that network or originator is not allowed'",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
 				return true;
 			}
 		} else {

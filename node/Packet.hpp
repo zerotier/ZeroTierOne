@@ -307,6 +307,7 @@
 #define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_FLAGS + 1)
 #define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC + 6)
 #define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI + 4)
+#define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_COM (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT + 4)
 
 // Note: COM, GATHER_LIMIT, and SOURCE_MAC are optional, and so are specified without size
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
@@ -538,7 +539,7 @@ public:
 		 *   <[8] timestamp (ms since epoch)>
 		 *   <[...] binary serialized identity (see Identity)>
 		 *   <[1] destination address type>
-		 *   [<[...] destination address>]
+		 *   [<[...] destination address to which packet was sent>]
 		 *   <[8] 64-bit world ID of current world>
 		 *   <[8] 64-bit timestamp of current world>
 		 *
@@ -592,20 +593,24 @@ public:
 		/**
 		 * Query an identity by address:
 		 *   <[5] address to look up>
+		 *   [<[...] additional addresses to look up>
 		 *
 		 * OK response payload:
 		 *   <[...] binary serialized identity>
+		 *  [<[...] additional binary serialized identities>]
 		 *
 		 * If querying a cluster, duplicate OK responses may occasionally occur.
-		 * These should be discarded.
+		 * These must be tolerated, which is easy since they'll have info you
+		 * already have.
 		 *
-		 * If the address is not found, no response is generated. WHOIS requests
-		 * will time out much like ARP requests and similar do in L2.
+		 * If the address is not found, no response is generated. The semantics
+		 * of WHOIS is similar to ARP and NDP in that persistent retrying can
+		 * be performed.
 		 */
 		VERB_WHOIS = 0x04,
 
 		/**
-		 * Meet another node at a given protocol address:
+		 * Relay-mediated NAT traversal or firewall punching initiation:
 		 *   <[1] flags (unused, currently 0)>
 		 *   <[5] ZeroTier address of peer that might be found at this address>
 		 *   <[2] 16-bit protocol address port>
@@ -618,15 +623,6 @@ public:
 		 * each where it might find the other on the network.
 		 *
 		 * Upon receipt a peer sends HELLO to establish a direct link.
-		 *
-		 * Nodes should implement rate control, limiting the rate at which they
-		 * respond to these packets to prevent their use in DDOS attacks. Nodes
-		 * may also ignore these messages if a peer is not known or is not being
-		 * actively communicated with.
-		 *
-		 * Unfortunately the physical address format in this message pre-dates
-		 * InetAddress's serialization format. :( ZeroTier is four years old and
-		 * yes we've accumulated a tiny bit of cruft here and there.
 		 *
 		 * No OK or ERROR is generated.
 		 */
@@ -652,7 +648,6 @@ public:
 		 * Full Ethernet frame with MAC addressing and optional fields:
 		 *   <[8] 64-bit network ID>
 		 *   <[1] flags>
-		 *  [<[...] certificate of network membership (DEPRECATED)>]
 		 *   <[6] destination MAC or all zero for destination node>
 		 *   <[6] source MAC or all zero for node of origin>
 		 *   <[2] 16-bit ethertype>
@@ -715,6 +710,9 @@ public:
 		 * This is sent in response to ERROR_NEED_MEMBERSHIP_CERTIFICATE and may
 		 * be pushed at any other time to keep exchanged certificates up to date.
 		 *
+		 * COMs and other credentials need not be for the same network, since each
+		 * includes its own network ID and signature.
+		 *
 		 * OK/ERROR are not generated.
 		 */
 		VERB_NETWORK_CREDENTIALS = 0x0a,
@@ -762,10 +760,10 @@ public:
 		 *   <[6] MAC address of multicast group being queried>
 		 *   <[4] 32-bit ADI for multicast group being queried>
 		 *   <[4] 32-bit requested max number of multicast peers>
-		 *  [<[...] network certificate of membership (DEPRECATED)>]
+		 *   [<[...] network certificate of membership>]
 		 *
 		 * Flags:
-		 *   0x01 - COM is attached (DEPRECATED)
+		 *   0x01 - COM is attached
 		 *
 		 * This message asks a peer for additional known endpoints that have
 		 * LIKEd a given multicast group. It's sent when the sender wishes
@@ -775,8 +773,8 @@ public:
 		 * More than one OK response can occur if the response is broken up across
 		 * multiple packets or if querying a clustered node.
 		 *
-		 * Send VERB_NETWORK_CREDENTIALS prior to GATHERing if doing so from
-		 * upstream nodes like root servers that are not involved in our network.
+		 * The COM should be included so that upstream nodes that are not
+		 * members of our network can validate our request.
 		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
@@ -795,7 +793,6 @@ public:
 		 * Multicast frame:
 		 *   <[8] 64-bit network ID>
 		 *   <[1] flags>
-		 *  [<[...] network certificate of membership (DEPRECATED)>]
 		 *  [<[4] 32-bit implicit gather limit>]
 		 *  [<[6] source MAC>]
 		 *   <[6] destination MAC (multicast address)>
@@ -890,7 +887,7 @@ public:
 		 *   <[...] next hop(s) in path>
 		 *
 		 * Flags:
-		 *   0x01 - Report back to originator at middle hops
+		 *   0x01 - Report back to originator at all hops
 		 *   0x02 - Report back to originator at last hop
 		 *
 		 * Originator credential types:
@@ -948,21 +945,21 @@ public:
 
 		/**
 		 * Circuit test hop report:
-		 *   <[8] 64-bit timestamp (from original test)>
-		 *   <[8] 64-bit test ID (from original test)>
+		 *   <[8] 64-bit timestamp (echoed from original test)>
+		 *   <[8] 64-bit test ID (echoed from original test)>
 		 *   <[8] 64-bit reserved field (set to 0, currently unused)>
 		 *   <[1] 8-bit vendor ID (set to 0, currently unused)>
 		 *   <[1] 8-bit reporter protocol version>
-		 *   <[1] 8-bit reporter major version>
-		 *   <[1] 8-bit reporter minor version>
-		 *   <[2] 16-bit reporter revision>
-		 *   <[2] 16-bit reporter OS/platform>
-		 *   <[2] 16-bit reporter architecture>
+		 *   <[1] 8-bit reporter software major version>
+		 *   <[1] 8-bit reporter software minor version>
+		 *   <[2] 16-bit reporter software revision>
+		 *   <[2] 16-bit reporter OS/platform or 0 if not specified>
+		 *   <[2] 16-bit reporter architecture or 0 if not specified>
 		 *   <[2] 16-bit error code (set to 0, currently unused)>
 		 *   <[8] 64-bit report flags (set to 0, currently unused)>
-		 *   <[8] 64-bit source packet ID>
-		 *   <[5] upstream ZeroTier address from which test was received>
-		 *   <[1] 8-bit source packet hop count (ZeroTier hop count)>
+		 *   <[8] 64-bit packet ID of received CIRCUIT_TEST packet>
+		 *   <[5] upstream ZeroTier address from which CIRCUIT_TEST was received>
+		 *   <[1] 8-bit packet hop count of received CIRCUIT_TEST>
 		 *   <[...] local wire address on which packet was received>
 		 *   <[...] remote wire address from which packet was received>
 		 *   <[2] 16-bit length of additional fields>

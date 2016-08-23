@@ -224,25 +224,37 @@ void Multicaster::send(
 
 			if ((gs.members.empty())||((now - gs.lastExplicitGather) >= ZT_MULTICAST_EXPLICIT_GATHER_DELAY)) {
 				gs.lastExplicitGather = now;
-				SharedPtr<Peer> explicitGatherPeers[2];
-				explicitGatherPeers[0] = RR->topology->getBestRoot();
-				const Address nwidc(Network::controllerFor(nwid));
-				if (nwidc != RR->identity.address())
-					explicitGatherPeers[1] = RR->topology->getPeer(nwidc);
-				for(unsigned int k=0;k<2;++k) {
-					const SharedPtr<Peer> &p = explicitGatherPeers[k];
-					if (!p)
-						continue;
-					//TRACE(">>MC upstream GATHER up to %u for group %.16llx/%s",gatherLimit,nwid,mg.toString().c_str());
-					Packet outp(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_GATHER);
+
+				Address explicitGatherPeers[16];
+				unsigned int numExplicitGatherPeers = 0;
+				SharedPtr<Peer> bestRoot(RR->topology->getBestRoot());
+				if (bestRoot)
+					explicitGatherPeers[numExplicitGatherPeers++] = bestRoot->address();
+				explicitGatherPeers[numExplicitGatherPeers++] = Network::controllerFor(nwid);
+				SharedPtr<Network> network(RR->node->network(nwid));
+				if (network) {
+					std::vector<Address> anchors(network->config().anchors());
+					for(std::vector<Address>::const_iterator a(anchors.begin());a!=anchors.end();++a) {
+						if (*a != RR->identity.address()) {
+							explicitGatherPeers[numExplicitGatherPeers++] = *a;
+							if (numExplicitGatherPeers == 16)
+								break;
+						}
+					}
+				}
+
+				for(unsigned int k=0;k<numExplicitGatherPeers;++k) {
+					const CertificateOfMembership *com = (network) ? (((network->config())&&(network->config().isPrivate())) ? &(network->config().com) : (const CertificateOfMembership *)0) : (const CertificateOfMembership *)0;
+					Packet outp(explicitGatherPeers[k],RR->identity.address(),Packet::VERB_MULTICAST_GATHER);
 					outp.append(nwid);
-					outp.append((uint8_t)0x00);
+					outp.append((uint8_t)((com) ? 0x01 : 0x00));
 					mg.mac().appendTo(outp);
 					outp.append((uint32_t)mg.adi());
 					outp.append((uint32_t)gatherLimit);
+					if (com)
+						com->serialize(outp);
 					RR->sw->send(outp,true);
 				}
-				gatherLimit = 0;
 			}
 
 			gs.txQueue.push_back(OutboundMulticast());
