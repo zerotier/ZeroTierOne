@@ -206,11 +206,10 @@ public:
 	/**
 	 * Read this network config from a dictionary
 	 *
-	 * @param controllerId Controller identity for verification of any signature or NULL identity to skip
 	 * @param d Dictionary (non-const since it might be modified during parse, should not be used after call)
 	 * @return True if dictionary was valid and network config successfully initialized
 	 */
-	bool fromDictionary(const Identity &controllerId,Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d);
+	bool fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d);
 
 	/**
 	 * @return True if passive bridging is allowed (experimental)

@@ -416,7 +416,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 		std::string conf(RR->node->dataStoreGet(confn));
 		if (conf.length()) {
 			dconf->load(conf.c_str());
-			if (nconf->fromDictionary(Identity(),*dconf)) {
+			if (nconf->fromDictionary(*dconf)) {
 				this->setConfiguration(*nconf,false);
 				_lastConfigUpdate = 0; // we still want to re-request a new config from the network
 				gotConf = true;
@@ -672,7 +672,7 @@ void Network::handleInboundConfigChunk(const uint64_t inRePacketId,const void *d
 		try {
 			Identity controllerId(RR->topology->getIdentity(this->controller()));
 			if (controllerId) {
-				if (nc->fromDictionary(controllerId,*dict)) {
+				if (nc->fromDictionary(*dict)) {
 					this->setConfiguration(*nc,true);
 				} else {
 					TRACE("error parsing new config with length %u: deserialization of NetworkConfig failed (certificate error?)",(unsigned int)newConfig.length());
