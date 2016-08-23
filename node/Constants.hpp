@@ -355,19 +355,6 @@
 #define ZT_SUPPORT_OLD_STYLE_NETCONF 1
 
 /**
- * A test pseudo-network-ID that can be joined
- *
- * Joining this network ID will result in a network with no IP addressing
- * and default parameters. No network configuration master will be consulted
- * and instead a static config will be used. This is used in built-in testnet
- * scenarios and can also be used for external testing.
- *
- * This is an impossible real network ID since 0xff is a reserved address
- * prefix.
- */
-#define ZT_TEST_NETWORK_ID 0xffffffffffffffffULL
-
-/**
  * Desired buffer size for UDP sockets (used in service and osdep but defined here)
  */
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__))

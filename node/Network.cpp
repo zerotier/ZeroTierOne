@@ -409,33 +409,26 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 	char confn[128];
 	Utils::snprintf(confn,sizeof(confn),"networks.d/%.16llx.conf",_id);
 
-	if (_id == ZT_TEST_NETWORK_ID) {
-		applyConfiguration(NetworkConfig::createTestNetworkConfig(RR->identity.address()));
-
-		// Save a one-byte CR to persist membership in the test network
-		RR->node->dataStorePut(confn,"\n",1,false);
-	} else {
-		bool gotConf = false;
-		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
-		NetworkConfig *nconf = new NetworkConfig();
-		try {
-			std::string conf(RR->node->dataStoreGet(confn));
-			if (conf.length()) {
-				dconf->load(conf.c_str());
-				if (nconf->fromDictionary(Identity(),*dconf)) {
-					this->setConfiguration(*nconf,false);
-					_lastConfigUpdate = 0; // we still want to re-request a new config from the network
-					gotConf = true;
-				}
+	bool gotConf = false;
+	Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+	NetworkConfig *nconf = new NetworkConfig();
+	try {
+		std::string conf(RR->node->dataStoreGet(confn));
+		if (conf.length()) {
+			dconf->load(conf.c_str());
+			if (nconf->fromDictionary(Identity(),*dconf)) {
+				this->setConfiguration(*nconf,false);
+				_lastConfigUpdate = 0; // we still want to re-request a new config from the network
+				gotConf = true;
 			}
-		} catch ( ... ) {} // ignore invalids, we'll re-request
-		delete nconf;
-		delete dconf;
-
-		if (!gotConf) {
-			// Save a one-byte CR to persist membership while we request a real netconf
-			RR->node->dataStorePut(confn,"\n",1,false);
 		}
+	} catch ( ... ) {} // ignore invalids, we'll re-request
+	delete nconf;
+	delete dconf;
+
+	if (!gotConf) {
+		// Save a one-byte CR to persist membership while we request a real netconf
+		RR->node->dataStorePut(confn,"\n",1,false);
 	}
 
 	if (!_portInitialized) {
@@ -698,9 +691,6 @@ void Network::handleInboundConfigChunk(const uint64_t inRePacketId,const void *d
 
 void Network::requestConfiguration()
 {
-	if (_id == ZT_TEST_NETWORK_ID) // pseudo-network-ID, uses locally generated static config
-		return;
-
 	Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> rmd;
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION,(uint64_t)ZT_PROTO_VERSION);
@@ -711,6 +701,7 @@ void Network::requestConfiguration()
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_CAPABILITIES,(uint64_t)ZT_MAX_NETWORK_CAPABILITIES);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_CAPABILITY_RULES,(uint64_t)ZT_MAX_CAPABILITY_RULES);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_TAGS,(uint64_t)ZT_MAX_NETWORK_TAGS);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS,(uint64_t)0);
 
 	if (controller() == RR->identity.address()) {
 		if (RR->localNetworkController) {

@@ -61,7 +61,7 @@
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE 0x0000020000000000ULL
 
 /**
- * An anchor is a device that is willing to be one and has been online/stable for a long time on this network
+ * Anchors are stable devices on this network that can cache multicast info, etc.
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR 0x0000040000000000ULL
 
@@ -74,35 +74,30 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY 1024
 
 // Network config version
-#define ZT_NETWORKCONFIG_VERSION 6
+#define ZT_NETWORKCONFIG_VERSION 7
 
 // Fields for meta-data sent with network config requests
 
 // Network config version
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION "v"
-
 // Protocol version (see Packet.hpp)
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION "pv"
-
 // Software major, minor, revision
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION "majv"
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION "minv"
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION "revv"
-
 // Maximum number of rules per network this node can accept
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_RULES "mr"
-
 // Maximum number of capabilities this node can accept
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_CAPABILITIES "mc"
-
 // Maximum number of rules per capability this node can accept
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_CAPABILITY_RULES "mcr"
-
 // Maximum number of tags this node can accept
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_TAGS "mt"
-
 // Network join authorization token (if any)
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH_TOKEN "atok"
+// Network configuration meta-data flags
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS "f"
 
 // These dictionary keys are short so they don't take up much room.
 // By convention we use upper case for binary blobs, but it doesn't really matter.
@@ -167,6 +162,8 @@ namespace ZeroTier {
 // node;IP/port[,node;IP/port]
 #define ZT_NETWORKCONFIG_DICT_KEY_RELAYS_OLD "rl"
 
+// End legacy fields
+
 /**
  * Network configuration received from network controller nodes
  *
@@ -176,47 +173,6 @@ namespace ZeroTier {
 class NetworkConfig
 {
 public:
-	/**
-	 * Create an instance of a NetworkConfig for the test network ID
-	 *
-	 * The test network ID is defined as ZT_TEST_NETWORK_ID. This is a
-	 * "fake" network with no real controller and default options.
-	 *
-	 * @param self This node's ZT address
-	 * @return Configuration for test network ID
-	 */
-	static inline NetworkConfig createTestNetworkConfig(const Address &self)
-	{
-		NetworkConfig nc;
-
-		nc.networkId = ZT_TEST_NETWORK_ID;
-		nc.timestamp = 1;
-		nc.revision = 1;
-		nc.issuedTo = self;
-		nc.multicastLimit = ZT_MULTICAST_DEFAULT_LIMIT;
-		nc.flags = ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
-		nc.type = ZT_NETWORK_TYPE_PUBLIC;
-
-		nc.rules[0].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
-		nc.ruleCount = 1;
-
-		Utils::snprintf(nc.name,sizeof(nc.name),"ZT_TEST_NETWORK");
-
-		// Make up a V4 IP from 'self' in the 10.0.0.0/8 range -- no
-		// guarantee of uniqueness but collisions are unlikely.
-		uint32_t ip = (uint32_t)((self.toInt() & 0x00ffffff) | 0x0a000000); // 10.x.x.x
-		if ((ip & 0x000000ff) == 0x000000ff) ip ^= 0x00000001; // but not ending in .255
-		if ((ip & 0x000000ff) == 0x00000000) ip ^= 0x00000001; // or .0
-		nc.staticIps[0] = InetAddress(Utils::hton(ip),8);
-
-		// Assign an RFC4193-compliant IPv6 address -- will never collide
-		nc.staticIps[1] = InetAddress::makeIpv6rfc4193(ZT_TEST_NETWORK_ID,self.toInt());
-
-		nc.staticIpCount = 2;
-
-		return nc;
-	}
-
 	NetworkConfig()
 	{
 		memset(this,0,sizeof(NetworkConfig));
