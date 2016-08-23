@@ -454,7 +454,7 @@ public:
 	{
 		this->erase(sigKey);
 		C25519::Signature sig(C25519::sign(kp,this->data(),this->sizeBytes()));
-		this->add(sigKey,sig.data,ZT_C25519_SIGNATURE_LEN);
+		this->add(sigKey,reinterpret_cast<const char *>(sig.data),ZT_C25519_SIGNATURE_LEN);
 	}
 
 	/**

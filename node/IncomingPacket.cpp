@@ -749,6 +749,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 						Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
 						try {
 							if (netconf->toDictionary(*dconf,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6)) {
+								dconf->wrapWithSignature(ZT_NETWORKCONFIG_DICT_KEY_SIGNATURE,RR->identity.privateKeyPair());
 								const unsigned int totalSize = dconf->sizeBytes();
 								unsigned int chunkIndex = 0;
 								while (chunkIndex < totalSize) {

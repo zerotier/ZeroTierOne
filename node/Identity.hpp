@@ -288,6 +288,19 @@ public:
 	inline const C25519::Public &publicKey() const { return _publicKey; }
 
 	/**
+	 * @return C25519 key pair (only returns valid pair if private key is present in this Identity object)
+	 */
+	inline const C25519::Pair privateKeyPair() const
+	{
+		C25519::Pair pair;
+		pair.pub = _publicKey;
+		if (_privateKey)
+			pair.priv = *_privateKey;
+		else memset(pair.priv.data,0,ZT_C25519_PRIVATE_KEY_LEN);
+		return pair;
+	}
+
+	/**
 	 * @return True if this identity contains something
 	 */
 	inline operator bool() const throw() { return (_address); }
