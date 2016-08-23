@@ -141,12 +141,13 @@ private:
 	// This does lock _networkMemberCache_m
 	struct _NetworkMemberInfo
 	{
-		_NetworkMemberInfo() : authorizedMemberCount(0),activeMemberCount(0),totalMemberCount(0) {}
+		_NetworkMemberInfo() : authorizedMemberCount(0),activeMemberCount(0),totalMemberCount(0),mostRecentDeauthTime(0) {}
 		std::set<Address> activeBridges;
 		std::set<InetAddress> allocatedIps;
 		unsigned long authorizedMemberCount;
 		unsigned long activeMemberCount;
 		unsigned long totalMemberCount;
+		uint64_t mostRecentDeauthTime;
 	};
 	void _getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi);
 
@@ -154,7 +155,10 @@ private:
 	inline void _initMember(nlohmann::json &member)
 	{
 		if (!member.count("authorized")) member["authorized"] = false;
-		if (!member.count("ipAssignments")) member["ipAssignments"] = nlohmann::json::array();
+		if (!member.count("lastAuthorizedTime")) member["lastAuthorizedTime"] = 0ULL;
+		if (!member.count("lastAuthorizedBy")) member["lastAuthorizedBy"] = "";
+		if (!member.count("lastDeauthorizedTime")) member["lastDeauthorizedTime"] = 0ULL;
+ 		if (!member.count("ipAssignments")) member["ipAssignments"] = nlohmann::json::array();
 		if (!member.count("recentLog")) member["recentLog"] = nlohmann::json::array();
 		if (!member.count("activeBridge")) member["activeBridge"] = false;
 		if (!member.count("tags")) member["tags"] = nlohmann::json::array();

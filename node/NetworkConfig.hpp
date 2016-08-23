@@ -41,6 +41,22 @@
 #include "Identity.hpp"
 
 /**
+ * Default maximum credential TTL and maxDelta for COM timestamps
+ *
+ * The current value is two hours, providing ample time for a controller to
+ * experience fail-over, etc.
+ */
+#define ZT_NETWORKCONFIG_DEFAULT_MAX_CREDENTIAL_TTL 7200000ULL
+
+/**
+ * Default minimum credential TTL and maxDelta for COM timestamps
+ *
+ * This is just slightly over three minutes and provides three retries for
+ * all currently online members to refresh.
+ */
+#define ZT_NETWORKCONFIG_DEFAULT_MIN_CREDENTIAL_TTL 185000ULL
+
+/**
  * Flag: allow passive bridging (experimental)
  */
 #define ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING 0x0000000000000001ULL

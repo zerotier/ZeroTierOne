@@ -34,11 +34,6 @@
 #include "Utils.hpp"
 
 /**
- * Default window of time for certificate agreement
- */
-#define ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA (ZT_NETWORK_AUTOCONF_DELAY * 5)
-
-/**
  * Maximum number of qualifiers allowed in a COM (absolute max: 65535)
  */
 #define ZT_NETWORK_COM_MAX_QUALIFIERS 8

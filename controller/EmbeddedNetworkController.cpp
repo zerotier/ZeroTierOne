@@ -413,7 +413,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		lrt = now;
 	}
 
-	json network(_readJson(_networkJP(nwid,false)));
+	const json network(_readJson(_networkJP(nwid,false)));
 	if (!network.size())
 		return NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND;
 
@@ -458,7 +458,11 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		// If member already has an authorized field, leave it alone. That way its state is
 		// preserved if the user toggles the network back to private. Otherwise set it to
 		// true by default for new members of public nets.
-		if (!member.count("authorized")) member["authorized"] = true;
+		if (!member.count("authorized")) {
+			member["authorized"] = true;
+			member["lastAuthorizedTime"] = now;
+			member["lastAuthorizedBy"] = authorizedBy;
+		}
 	} else if (_jB(member["authorized"],false)) {
 		authorizedBy = "memberIsAuthorized";
 	} else {
@@ -476,6 +480,8 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 							if ( ((expires == 0ULL)||(expires > now)) && (tok.length() > 0) && (tok == atok) ) {
 								authorizedBy = "token";
 								member["authorized"] = true; // tokens actually change member authorization state
+								member["lastAuthorizedTime"] = now;
+								member["lastAuthorizedBy"] = authorizedBy;
 								break;
 							}
 						}
@@ -517,14 +523,28 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
 	}
 
+	// -------------------------------------------------------------------------
 	// If we made it this far, they are authorized.
+	// -------------------------------------------------------------------------
 
 	_NetworkMemberInfo nmi;
 	_getNetworkMemberInfo(now,nwid,nmi);
 
+	// Compute credential TTL. This is the "moving window" for COM agreement and
+	// the global TTL for Capability and Tag objects. (The same value is used
+	// for both.) This is computed by reference to the last time we deauthorized
+	// a member, since within the time period since this event any temporal
+	// differences are not particularly relevant.
+	uint64_t credentialTtl = ZT_NETWORKCONFIG_DEFAULT_MIN_CREDENTIAL_TTL;
+	if (now > nmi.mostRecentDeauthTime)
+		credentialTtl += (now - nmi.mostRecentDeauthTime);
+	if (credentialTtl > ZT_NETWORKCONFIG_DEFAULT_MAX_CREDENTIAL_TTL)
+		credentialTtl = ZT_NETWORKCONFIG_DEFAULT_MAX_CREDENTIAL_TTL;
+
 	nc.networkId = nwid;
 	nc.type = _jB(network["private"],true) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
 	nc.timestamp = now;
+	nc.credentialTimeToLive = credentialTtl;
 	nc.revision = _jI(network["revision"],0ULL);
 	nc.issuedTo = identity.address();
 	if (_jB(network["enableBroadcast"],true)) nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
@@ -777,7 +797,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	}
 
 	if (_jB(network["private"],true)) {
-		CertificateOfMembership com(now,ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA,nwid,identity.address());
+		CertificateOfMembership com(now,credentialTtl,nwid,identity.address());
 		if (com.sign(signingId)) {
 			nc.com = com;
 		} else {
@@ -976,9 +996,23 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					_initMember(member);
 
 					try {
-						if (b.count("authorized")) member["authorized"] = _jB(b["authorized"],false);
 						if (b.count("activeBridge")) member["activeBridge"] = _jB(b["activeBridge"],false);
 						if ((b.count("identity"))&&(!member.count("identity"))) member["identity"] = _jS(b["identity"],""); // allow identity to be populated only if not already known
+
+						if (b.count("authorized")) {
+							const bool newAuth = _jB(b["authorized"],false);
+							const bool oldAuth = _jB(member["authorized"],false);
+							if (newAuth != oldAuth) {
+								if (newAuth) {
+									member["authorized"] = true;
+									member["lastAuthorizedTime"] = now;
+									member["lastAuthorizedBy"] = "user";
+								} else {
+									member["authorized"] = false;
+									member["lastDeauthorizedTime"] = now;
+								}
+							}
+						}
 
 						if (b.count("ipAssignments")) {
 							auto ipa = b["ipAssignments"];
@@ -1476,6 +1510,8 @@ void EmbeddedNetworkController::_getNetworkMemberInfo(uint64_t now,uint64_t nwid
 						nmi.allocatedIps.insert(mip);
 				}
 			}
+		} else {
+			nmi.mostRecentDeauthTime = std::max(nmi.mostRecentDeauthTime,_jI(nm->second["lastDeauthorizedTime"],0ULL));
 		}
 	}
 }
