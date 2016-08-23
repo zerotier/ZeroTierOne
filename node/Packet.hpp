@@ -1030,7 +1030,18 @@ public:
 		 *
 		 * ERROR has no payload.
 		 */
-		VERB_REQUEST_PROOF_OF_WORK = 0x13
+		VERB_REQUEST_PROOF_OF_WORK = 0x13,
+
+		/**
+		 * A message with arbitrary user-definable content:
+		 *   <[8] 64-bit arbitrary message type ID>
+		 *  [<[...] message payload>]
+		 *
+		 * This can be used to send arbitrary messages over VL1. It generates no
+		 * OK or ERROR and has no special semantics outside of whatever the user
+		 * (via the ZeroTier core API) chooses to give it.
+		 */
+		VERB_USER_MESSAGE = 0x14
 	};
 
 	/**
