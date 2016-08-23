@@ -1068,16 +1068,13 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					member["address"] = addrs; // legacy
 					member["nwid"] = nwids;
 					member["lastModified"] = now;
-					{
-						auto revj = member["revision"];
-						const uint64_t rev = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-						member["revision"] = rev;
-					}
+					auto revj = member["revision"];
+					member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 
 					_writeJson(_memberJP(nwid,Address(address),true).c_str(),member);
 
 					// Add non-persisted fields
-					member["clock"] = member["lastModified"];
+					member["clock"] = now;
 
 					responseBody = member.dump(2);
 					responseContentType = "application/json";
