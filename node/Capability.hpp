@@ -72,17 +72,15 @@ public:
 	 * @param id Capability ID
 	 * @param nwid Network ID
 	 * @param ts Timestamp (at controller)
-	 * @param expiration Expiration relative to network config timestamp
 	 * @param mccl Maximum custody chain length (1 to create non-transferrable capability)
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	Capability(uint32_t id,uint64_t nwid,uint64_t ts,uint64_t expiration,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
+	Capability(uint32_t id,uint64_t nwid,uint64_t ts,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
 	{
 		memset(this,0,sizeof(Capability));
 		_nwid = nwid;
 		_ts = ts;
-		_expiration = expiration;
 		_id = id;
 		_maxCustodyChainLength = (mccl > 0) ? ((mccl < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) ? mccl : (unsigned int)ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) : 1;
 		_ruleCount = (ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES;
@@ -109,11 +107,6 @@ public:
 	 * @return Network ID for which this capability was issued
 	 */
 	inline uint64_t networkId() const { return _nwid; }
-
-	/**
-	 * @return Expiration time relative to network config timestamp
-	 */
-	inline uint64_t expiration() const { return _expiration; }
 
 	/**
 	 * @return Timestamp
@@ -343,7 +336,6 @@ public:
 		// These are the same between Tag and Capability
 		b.append(_nwid);
 		b.append(_ts);
-		b.append(_expiration);
 		b.append(_id);
 
 		b.append((uint16_t)_ruleCount);
@@ -381,7 +373,6 @@ public:
 		// These are the same between Tag and Capability
 		_nwid = b.template at<uint64_t>(p); p += 8;
 		_ts = b.template at<uint64_t>(p); p += 8;
-		_expiration = b.template at<uint64_t>(p); p += 8;
 		_id = b.template at<uint32_t>(p); p += 4;
 
 		const unsigned int rc = b.template at<uint16_t>(p); p += 2;
@@ -420,7 +411,6 @@ public:
 private:
 	uint64_t _nwid;
 	uint64_t _ts;
-	uint64_t _expiration;
 	uint32_t _id;
 
 	unsigned int _maxCustodyChainLength;

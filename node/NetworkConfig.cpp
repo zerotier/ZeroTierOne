@@ -37,6 +37,7 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION)) return false;
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID,this->networkId)) return false;
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,this->timestamp)) return false;
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TTL,this->credentialTimeToLive)) return false;
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REVISION,this->revision)) return false;
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,this->issuedTo)) return false;
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,this->flags)) return false;
@@ -202,6 +203,7 @@ bool NetworkConfig::fromDictionary(const Identity &controllerId,Dictionary<ZT_NE
 			return false;
 		}
 		this->timestamp = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,0);
+		this->credentialTimeToLive = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TTL,0);
 		this->revision = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_REVISION,0);
 		this->issuedTo = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,0);
 		if (!this->issuedTo) {

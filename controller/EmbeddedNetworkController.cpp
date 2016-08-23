@@ -576,7 +576,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 							++caprc;
 					}
 				}
-				nc.capabilities[nc.capabilityCount] = Capability((uint32_t)capId,nwid,now,now + ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA,1,capr,caprc);
+				nc.capabilities[nc.capabilityCount] = Capability((uint32_t)capId,nwid,now,1,capr,caprc);
 				if (nc.capabilities[nc.capabilityCount].sign(signingId,identity.address()))
 					++nc.capabilityCount;
 				if (nc.capabilityCount >= ZT_MAX_NETWORK_CAPABILITIES)
@@ -595,7 +595,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		for(std::map< uint32_t,uint32_t >::const_iterator t(tagsById.begin());t!=tagsById.end();++t) {
 			if (nc.tagCount >= ZT_MAX_NETWORK_TAGS)
 				break;
-			nc.tags[nc.tagCount] = Tag(nwid,now,now + ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA,identity.address(),t->first,t->second);
+			nc.tags[nc.tagCount] = Tag(nwid,now,identity.address(),t->first,t->second);
 			if (nc.tags[nc.tagCount].sign(signingId))
 				++nc.tagCount;
 		}

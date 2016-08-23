@@ -86,7 +86,7 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const CertificateOfMe
 	if (_com == com)
 		return 0;
 	const int vr = com.verify(RR);
-	if ((vr == 0)&&(com.revision() > _com.revision()))
+	if ((vr == 0)&&(com.timestamp().first > _com.timestamp().first))
 		_com = com;
 	return vr;
 }

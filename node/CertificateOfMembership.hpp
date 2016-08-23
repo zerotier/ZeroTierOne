@@ -35,11 +35,6 @@
 
 /**
  * Default window of time for certificate agreement
- *
- * Right now we use time for 'revision' so this is the maximum time divergence
- * between two certs for them to agree. It comes out to five minutes, which
- * gives a lot of margin for error if the controller hiccups or its clock
- * drifts but causes de-authorized peers to fall off fast enough.
  */
 #define ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA (ZT_NETWORK_AUTOCONF_DELAY * 5)
 
@@ -93,25 +88,17 @@ public:
 	enum ReservedId
 	{
 		/**
-		 * Revision number of certificate
-		 *
-		 * Certificates may differ in revision number by a designated max
-		 * delta. Differences wider than this cause certificates not to agree.
+		 * Timestamp of certificate
 		 */
-		COM_RESERVED_ID_REVISION = 0,
+		COM_RESERVED_ID_TIMESTAMP = 0,
 
 		/**
 		 * Network ID for which certificate was issued
-		 *
-		 * maxDelta here is zero, since this must match.
 		 */
 		COM_RESERVED_ID_NETWORK_ID = 1,
 
 		/**
 		 * ZeroTier address to whom certificate was issued
-		 *
-		 * maxDelta will be 0xffffffffffffffff here since it's permitted to differ
-		 * from peers obviously.
 		 */
 		COM_RESERVED_ID_ISSUED_TO = 2
 	};
@@ -132,16 +119,16 @@ public:
 	/**
 	 * Create from required fields common to all networks
 	 *
-	 * @param revision Revision number of certificate
+	 * @param timestamp Timestamp of certificate
 	 * @param timestampMaxDelta Maximum variation between timestamps on this net
 	 * @param nwid Network ID
 	 * @param issuedTo Certificate recipient
 	 */
-	CertificateOfMembership(uint64_t revision,uint64_t revisionMaxDelta,uint64_t nwid,const Address &issuedTo)
+	CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Address &issuedTo)
 	{
-		_qualifiers[0].id = COM_RESERVED_ID_REVISION;
-		_qualifiers[0].value = revision;
-		_qualifiers[0].maxDelta = revisionMaxDelta;
+		_qualifiers[0].id = COM_RESERVED_ID_TIMESTAMP;
+		_qualifiers[0].value = timestamp;
+		_qualifiers[0].maxDelta = timestampMaxDelta;
 		_qualifiers[1].id = COM_RESERVED_ID_NETWORK_ID;
 		_qualifiers[1].value = nwid;
 		_qualifiers[1].maxDelta = 0;
@@ -176,27 +163,15 @@ public:
 	inline operator bool() const throw() { return (_qualifierCount != 0); }
 
 	/**
-	 * @return Maximum delta for mandatory revision field or 0 if field missing
+	 * @return Timestamp for this cert and maximum delta for timestamp
 	 */
-	inline uint64_t revisionMaxDelta() const
+	inline std::pair<uint64_t,uint64_t> timestamp() const
 	{
 		for(unsigned int i=0;i<_qualifierCount;++i) {
-			if (_qualifiers[i].id == COM_RESERVED_ID_REVISION)
-				return _qualifiers[i].maxDelta;
+			if (_qualifiers[i].id == COM_RESERVED_ID_TIMESTAMP)
+				return std::pair<uint64_t,uint64_t>(_qualifiers[i].value,_qualifiers[i].maxDelta);
 		}
-		return 0ULL;
-	}
-
-	/**
-	 * @return Revision number for this cert
-	 */
-	inline uint64_t revision() const
-	{
-		for(unsigned int i=0;i<_qualifierCount;++i) {
-			if (_qualifiers[i].id == COM_RESERVED_ID_REVISION)
-				return _qualifiers[i].value;
-		}
-		return 0ULL;
+		return std::pair<uint64_t,uint64_t>(0ULL,0ULL);
 	}
 
 	/**

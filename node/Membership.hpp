@@ -84,10 +84,10 @@ public:
 		{
 		}
 
-		inline const Capability *next()
+		inline const Capability *next(const NetworkConfig &nconf)
 		{
 			while (_i != _e) {
-				if (_i->second.lastReceived)
+				if ((_i->second.lastReceived)&&(nconf.isCredentialTimestampValid(_i->second.cap)))
 					return &((_i++)->second.cap);
 				else ++_i;
 			}
@@ -137,7 +137,7 @@ public:
 	inline const Tag *getTag(const NetworkConfig &nconf,const uint32_t id) const
 	{
 		const TState *t = _tags.get(id);
-		return ((t) ? (((t->lastReceived != 0)&&(t->tag.expiration() < nconf.timestamp)) ? &(t->tag) : (const Tag *)0) : (const Tag *)0);
+		return ((t) ? (((t->lastReceived != 0)&&(nconf.isCredentialTimestampValid(t->tag))) ? &(t->tag) : (const Tag *)0) : (const Tag *)0);
 	}
 
 	/**
@@ -154,7 +154,7 @@ public:
 		TState *ts = (TState *)0;
 		Hashtable<uint32_t,TState>::Iterator i(const_cast<Membership *>(this)->_tags);
 		while (i.next(id,ts)) {
-			if ((ts->lastReceived)&&(ts->tag.expiration() < nconf.timestamp)) {
+			if ((ts->lastReceived)&&(nconf.isCredentialTimestampValid(ts->tag))) {
 				if (n >= maxTags)
 					return n;
 				ids[n] = *id;
@@ -172,7 +172,7 @@ public:
 	inline const Capability *getCapability(const NetworkConfig &nconf,const uint32_t id) const
 	{
 		std::map<uint32_t,CState>::const_iterator c(_caps.find(id));
-		return ((c != _caps.end()) ? (((c->second.lastReceived != 0)&&(c->second.cap.expiration() < nconf.timestamp)) ? &(c->second.cap) : (const Capability *)0) : (const Capability *)0);
+		return ((c != _caps.end()) ? (((c->second.lastReceived != 0)&&(nconf.isCredentialTimestampValid(c->second.cap))) ? &(c->second.cap) : (const Capability *)0) : (const Capability *)0);
 	}
 
 	/**

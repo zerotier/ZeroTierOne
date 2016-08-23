@@ -125,6 +125,8 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_TYPE "t"
 // text
 #define ZT_NETWORKCONFIG_DICT_KEY_NAME "n"
+// credential time to live in ms
+#define ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TTL "cttl"
 // binary serialized certificate of membership
 #define ZT_NETWORKCONFIG_DICT_KEY_COM "C"
 // specialists (binary array of uint64_t)
@@ -367,11 +369,24 @@ public:
 		return (Tag *)0;
 	}
 
+	/**
+	 * Check whether a capability or tag is expired
+	 *
+	 * @param cred Credential to check -- must have timestamp() accessor method
+	 * @return True if credential is NOT expired
+	 */
+	template<typename C>
+	inline bool isCredentialTimestampValid(const C &cred) const
+	{
+		return ( (cred.timestamp() >= timestamp) || ((timestamp - cred.timestamp()) <= credentialTimeToLive) );
+	}
+
 	/*
 	inline void dump() const
 	{
 		printf("networkId==%.16llx\n",networkId);
 		printf("timestamp==%llu\n",timestamp);
+		printf("credentialTimeToLive==%llu\n",credentialTimeToLive);
 		printf("revision==%llu\n",revision);
 		printf("issuedTo==%.10llx\n",issuedTo.toInt());
 		printf("multicastLimit==%u\n",multicastLimit);
@@ -404,6 +419,11 @@ public:
 	 * Controller-side time of config generation/issue
 	 */
 	uint64_t timestamp;
+
+	/**
+	 * TTL for capabilities and tags
+	 */
+	uint64_t credentialTimeToLive;
 
 	/**
 	 * Controller-side revision counter for this configuration

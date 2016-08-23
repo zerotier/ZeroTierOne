@@ -102,7 +102,7 @@ static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsig
 // 0 == no match, -1 == match/drop, 1 == match/accept
 static int _doZtFilter(
 	const RuntimeEnvironment *RR,
-	const uint64_t nwid,
+	const NetworkConfig &nconf,
 	const bool inbound,
 	const Address &ztSource,
 	const Address &ztDest,
@@ -155,7 +155,7 @@ static int _doZtFilter(
 			case ZT_NETWORK_RULE_ACTION_TEE:
 			case ZT_NETWORK_RULE_ACTION_REDIRECT: {
 				Packet outp(Address(rules[rn].v.zt),RR->identity.address(),Packet::VERB_EXT_FRAME);
-				outp.append(nwid);
+				outp.append(nconf.networkId);
 				outp.append((uint8_t)((rt == ZT_NETWORK_RULE_ACTION_REDIRECT) ? 0x04 : 0x02));
 				macDest.appendTo(outp);
 				macSource.appendTo(outp);
@@ -481,7 +481,7 @@ bool Network::filterOutgoingPacket(
 	Membership &m = _memberships[ztDest];
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
-	switch(_doZtFilter(RR,_id,false,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
+	switch(_doZtFilter(RR,_config,false,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
 		case -1:
 			return false;
 		case 1:
@@ -491,7 +491,7 @@ bool Network::filterOutgoingPacket(
 
 	for(unsigned int c=0;c<_config.capabilityCount;++c) {
 		relevantLocalTagCount = 0;
-		switch (_doZtFilter(RR,_id,false,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.capabilities[c].rules(),_config.capabilities[c].ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
+		switch (_doZtFilter(RR,_config,false,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.capabilities[c].rules(),_config.capabilities[c].ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
 			case -1:
 				return false;
 			case 1:
@@ -523,7 +523,7 @@ bool Network::filterIncomingPacket(
 	Membership &m = _memberships[ztDest];
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
-	switch (_doZtFilter(RR,_id,true,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
+	switch (_doZtFilter(RR,_config,true,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
 		case -1:
 			return false;
 		case 1:
@@ -532,9 +532,9 @@ bool Network::filterIncomingPacket(
 
 	Membership::CapabilityIterator mci(m);
 	const Capability *c;
-	while ((c = mci.next())) {
+	while ((c = mci.next(_config))) {
 		relevantLocalTagCount = 0;
-		switch(_doZtFilter(RR,_id,false,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
+		switch(_doZtFilter(RR,_config,false,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
 			case -1:
 				return false;
 			case 1:
