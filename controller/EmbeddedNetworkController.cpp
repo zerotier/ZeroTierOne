@@ -419,6 +419,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 
 	const std::string memberJP(_memberJP(nwid,identity.address(),true));
 	json member(_readJson(memberJP));
+	_initMember(member);
 
 	{
 		std::string haveIdStr(_jS(member["identity"],""));
@@ -438,18 +439,10 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		}
 	}
 
-	_initMember(member);
-
-	// Make sure these are always present no matter what, and increment member revision since we will always at least log something
+	// These are always the same, but make sure they are set
 	member["id"] = identity.address().toString();
 	member["address"] = member["id"];
 	member["nwid"] = network["id"];
-	member["lastModified"] = now;
-	{
-		auto revj = member["revision"];
-		const uint64_t rev = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-		member["revision"] = rev;
-	}
 
 	// Determine whether and how member is authorized
 	const char *authorizedBy = (const char *)0;
@@ -462,6 +455,9 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 			member["authorized"] = true;
 			member["lastAuthorizedTime"] = now;
 			member["lastAuthorizedBy"] = authorizedBy;
+			member["lastModified"] = now;
+			auto revj = member["revision"];
+			member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 		}
 	} else if (_jB(member["authorized"],false)) {
 		authorizedBy = "memberIsAuthorized";
@@ -482,6 +478,9 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 								member["authorized"] = true; // tokens actually change member authorization state
 								member["lastAuthorizedTime"] = now;
 								member["lastAuthorizedBy"] = authorizedBy;
+								member["lastModified"] = now;
+								auto revj = member["revision"];
+								member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 								break;
 							}
 						}
@@ -555,14 +554,14 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	for(std::set<Address>::const_iterator ab(nmi.activeBridges.begin());ab!=nmi.activeBridges.end();++ab)
 		nc.addSpecialist(*ab,ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
 
-	auto v4AssignMode = network["v4AssignMode"];
-	auto v6AssignMode = network["v6AssignMode"];
-	auto ipAssignmentPools = network["ipAssignmentPools"];
-	auto routes = network["routes"];
-	auto rules = network["rules"];
-	auto capabilities = network["capabilities"];
-	auto memberCapabilities = member["capabilities"];
-	auto memberTags = member["tags"];
+	const json &v4AssignMode = network["v4AssignMode"];
+	const json &v6AssignMode = network["v6AssignMode"];
+	const json &ipAssignmentPools = network["ipAssignmentPools"];
+	const json &routes = network["routes"];
+	const json &rules = network["rules"];
+	const json &capabilities = network["capabilities"];
+	const json &memberCapabilities = member["capabilities"];
+	const json &memberTags = member["tags"];
 
 	if (rules.is_array()) {
 		for(unsigned long i=0;i<rules.size();++i) {
@@ -574,20 +573,20 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	}
 
 	if ((memberCapabilities.is_array())&&(memberCapabilities.size() > 0)&&(capabilities.is_array())) {
-		std::map< uint64_t,json > capsById;
+		std::map< uint64_t,const json * > capsById;
 		for(unsigned long i=0;i<capabilities.size();++i) {
-			auto cap = capabilities[i];
+			const json &cap = capabilities[i];
 			if (cap.is_object())
-				capsById[_jI(cap["id"],0ULL) & 0xffffffffULL] = cap;
+				capsById[_jI(cap["id"],0ULL) & 0xffffffffULL] = &cap;
 		}
 
 		for(unsigned long i=0;i<memberCapabilities.size();++i) {
 			const uint64_t capId = _jI(memberCapabilities[i],0ULL) & 0xffffffffULL;
-			json &cap = capsById[capId];
-			if ((cap.is_object())&&(cap.size() > 0)) {
+			const json *cap = capsById[capId];
+			if ((cap->is_object())&&(cap->size() > 0)) {
 				ZT_VirtualNetworkRule capr[ZT_MAX_CAPABILITY_RULES];
 				unsigned int caprc = 0;
-				auto caprj = cap["rules"];
+				auto caprj = (*cap)["rules"];
 				if ((caprj.is_array())&&(caprj.size() > 0)) {
 					for(unsigned long j=0;j<caprj.size();++j) {
 						if (caprc >= ZT_MAX_CAPABILITY_RULES)
