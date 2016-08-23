@@ -829,13 +829,22 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		unsigned int p = ZT_PACKET_IDX_PAYLOAD;
-		while ((p + 8) <= size()) {
-			const uint64_t nwid = at<uint64_t>(p); p += 8;
-			if (Network::controllerFor(nwid) == peer->address()) {
-				SharedPtr<Network> network(RR->node->network(nwid));
-				if (network)
-					network->requestConfiguration();
+		const uint64_t nwid = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);
+
+		if (Network::controllerFor(nwid) == peer->address()) {
+			SharedPtr<Network> network(RR->node->network(nwid));
+			if (network) {
+				network->requestConfiguration();
+			} else {
+				TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): not a member of %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),nwid);
+				return true;
+			}
+
+			const unsigned int blacklistCount = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 8);
+			unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 10;
+			for(unsigned int i=0;i<blacklistCount;++i) {
+				network->blacklistBefore(Address(field(ptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH),at<uint64_t>(ptr + 5));
+				ptr += 13;
 			}
 		}
 	} catch ( ... ) {

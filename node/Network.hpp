@@ -388,6 +388,17 @@ public:
 	}
 
 	/**
+	 * Blacklist COM, tags, and capabilities before this time
+	 *
+	 * @param ts Blacklist cutoff
+	 */
+	inline void blacklistBefore(const Address &peerAddress,const uint64_t ts)
+	{
+		Mutex::Lock _l(_lock);
+		_memberships[peerAddress].blacklistBefore(ts);
+	}
+
+	/**
 	 * Destroy this network
 	 *
 	 * This causes the network to disable itself, destroy its tap device, and on

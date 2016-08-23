@@ -742,14 +742,23 @@ public:
 		VERB_NETWORK_CONFIG_REQUEST = 0x0b,
 
 		/**
-		 * Network configuration refresh request:
-		 *   <[...] array of 64-bit network IDs>
+		 * Network configuration update push:
+		 *   <[8] network ID to refresh>
+		 *   <[2] 16-bit number of address/timestamp pairs to blacklist>
+		 *  [<[5] ZeroTier address of peer being revoked>]
+		 *  [<[8] blacklist credentials older than this timestamp>]
+		 *  [<[...] additional address/timestamp pairs>]
 		 *
-		 * This can be sent by the network controller to inform a node that it
-		 * should now make a NETWORK_CONFIG_REQUEST.
+		 * This can be sent by a network controller to both request that a network
+		 * config be updated and push instantaneous revocations of specific peers
+		 * or peer credentials.
 		 *
-		 * It does not generate an OK or ERROR message, and is treated only as
-		 * a hint to refresh now.
+		 * Specific revocations can be pushed to blacklist a specific peer's
+		 * credentials (COM, tags, and capabilities) if older than a specified
+		 * timestamp. This can be used to accomplish expedited revocation of
+		 * a peer's access to things on a network or to the network itself among
+		 * those other peers that can currently reach the controller. This is not
+		 * the only mechanism for revocation of course, but it's the fastest.
 		 */
 		VERB_NETWORK_CONFIG_REFRESH = 0x0c,
 

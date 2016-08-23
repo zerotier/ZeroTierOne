@@ -888,16 +888,12 @@ bool Network::_isAllowed(const SharedPtr<Peer> &peer) const
 	// Assumes _lock is locked
 	try {
 		if (_config) {
-			if (_config.isPublic()) {
-				return true;
-			} else {
-				const Membership *m = _memberships.get(peer->address());
-				if (m)
-					return _config.com.agreesWith(m->com());
-			}
+			const Membership *const m = _memberships.get(peer->address());
+			if (m)
+				return m->isAllowedOnNetwork(_config);
 		}
 	} catch ( ... ) {
-		TRACE("isAllowed() check failed for peer %s: unexpected exception: unexpected exception",peer->address().toString().c_str());
+		TRACE("isAllowed() check failed for peer %s: unexpected exception",peer->address().toString().c_str());
 	}
 	return false;
 }

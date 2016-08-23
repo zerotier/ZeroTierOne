@@ -360,18 +360,6 @@ public:
 		return (Tag *)0;
 	}
 
-	/**
-	 * Check whether a capability or tag is expired
-	 *
-	 * @param cred Credential to check -- must have timestamp() accessor method
-	 * @return True if credential is NOT expired
-	 */
-	template<typename C>
-	inline bool isCredentialTimestampValid(const C &cred) const
-	{
-		return ( (cred.timestamp() >= timestamp) || ((timestamp - cred.timestamp()) <= credentialTimeToLive) );
-	}
-
 	/*
 	inline void dump() const
 	{

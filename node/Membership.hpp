@@ -42,7 +42,10 @@ namespace ZeroTier {
 class RuntimeEnvironment;
 
 /**
- * A container for certificates of membership and other credentials for peer participation on networks
+ * A container for certificates of membership and other network credentials
+ *
+ * This is kind of analogous to a join table between Peer and Network. It is
+ * presently held by the Network object for each participating Peer.
  */
 class Membership
 {
@@ -73,12 +76,13 @@ private:
 
 public:
 	/**
-	 * A wrapper to iterate through capabilities in ascending order of capability ID
+	 * A wrapper to iterate through member capabilities in ascending order of capability ID and return only valid ones
 	 */
 	class CapabilityIterator
 	{
 	public:
 		CapabilityIterator(const Membership &m) :
+			_m(m),
 			_i(m._caps.begin()),
 			_e(m._caps.end())
 		{
@@ -87,7 +91,7 @@ public:
 		inline const Capability *next(const NetworkConfig &nconf)
 		{
 			while (_i != _e) {
-				if ((_i->second.lastReceived)&&(nconf.isCredentialTimestampValid(_i->second.cap)))
+				if ((_i->second.lastReceived)&&(_m.isCredentialTimestampValid(nconf,_i->second.cap)))
 					return &((_i++)->second.cap);
 				else ++_i;
 			}
@@ -95,12 +99,14 @@ public:
 		}
 
 	private:
+		const Membership &_m;
 		std::map<uint32_t,CState>::const_iterator _i,_e;
 	};
 	friend class CapabilityIterator;
 
 	Membership() :
 		_lastPushedCom(0),
+		_blacklistBefore(0),
 		_com(),
 		_caps(),
 		_tags(8)
@@ -125,9 +131,30 @@ public:
 	bool sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const CertificateOfMembership &com,const Capability *cap,const Tag **tags,const unsigned int tagCount);
 
 	/**
-	 * @return This peer's COM if they have sent one
+	 * @param nconf Our network config
+	 * @return True if this peer is allowed on this network at all
 	 */
-	inline const CertificateOfMembership &com() const { return _com; }
+	inline bool isAllowedOnNetwork(const NetworkConfig &nconf) const
+	{
+		if (nconf.isPublic())
+			return true;
+		if ((_blacklistBefore)&&(_com.timestamp().first <= _blacklistBefore))
+			return false;
+		return nconf.com.agreesWith(_com);
+	}
+
+	/**
+	 * Check whether a capability or tag is expired
+	 *
+	 * @param cred Credential to check -- must have timestamp() accessor method
+	 * @return True if credential is NOT expired
+	 */
+	template<typename C>
+	inline bool isCredentialTimestampValid(const NetworkConfig &nconf,const C &cred) const
+	{
+		const uint64_t ts = cred.timestamp();
+		return ( ( (ts >= nconf.timestamp) || ((nconf.timestamp - ts) <= nconf.credentialTimeToLive) ) && (ts > _blacklistBefore) );
+	}
 
 	/**
 	 * @param nconf Network configuration
@@ -137,7 +164,7 @@ public:
 	inline const Tag *getTag(const NetworkConfig &nconf,const uint32_t id) const
 	{
 		const TState *t = _tags.get(id);
-		return ((t) ? (((t->lastReceived != 0)&&(nconf.isCredentialTimestampValid(t->tag))) ? &(t->tag) : (const Tag *)0) : (const Tag *)0);
+		return ((t) ? (((t->lastReceived != 0)&&(isCredentialTimestampValid(nconf,t->tag))) ? &(t->tag) : (const Tag *)0) : (const Tag *)0);
 	}
 
 	/**
@@ -154,7 +181,7 @@ public:
 		TState *ts = (TState *)0;
 		Hashtable<uint32_t,TState>::Iterator i(const_cast<Membership *>(this)->_tags);
 		while (i.next(id,ts)) {
-			if ((ts->lastReceived)&&(nconf.isCredentialTimestampValid(ts->tag))) {
+			if ((ts->lastReceived)&&(isCredentialTimestampValid(nconf,ts->tag))) {
 				if (n >= maxTags)
 					return n;
 				ids[n] = *id;
@@ -172,7 +199,7 @@ public:
 	inline const Capability *getCapability(const NetworkConfig &nconf,const uint32_t id) const
 	{
 		std::map<uint32_t,CState>::const_iterator c(_caps.find(id));
-		return ((c != _caps.end()) ? (((c->second.lastReceived != 0)&&(nconf.isCredentialTimestampValid(c->second.cap))) ? &(c->second.cap) : (const Capability *)0) : (const Capability *)0);
+		return ((c != _caps.end()) ? (((c->second.lastReceived != 0)&&(isCredentialTimestampValid(nconf,c->second.cap))) ? &(c->second.cap) : (const Capability *)0) : (const Capability *)0);
 	}
 
 	/**
@@ -195,6 +222,16 @@ public:
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
 	int addCredential(const RuntimeEnvironment *RR,const Capability &cap);
+
+	/**
+	 * Blacklist COM, tags, and capabilities before this time
+	 *
+	 * @param ts Blacklist cutoff
+	 */
+	inline void blacklistBefore(const uint64_t ts)
+	{
+		_blacklistBefore = ts;
+	}
 
 	/**
 	 * Clean up old or stale entries
@@ -233,6 +270,9 @@ public:
 private:
 	// Last time we pushed our COM to this peer
 	uint64_t _lastPushedCom;
+
+	// Time before which to blacklist credentials from this peer
+	uint64_t _blacklistBefore;
 
 	// COM from this peer
 	CertificateOfMembership _com;
