@@ -102,6 +102,7 @@ public:
 	void setNetconfMaster(void *networkControllerInstance);
 	ZT_ResultCode circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *));
 	void circuitTestEnd(ZT_CircuitTest *test);
+	void pushNetworkRefresh(uint64_t dest,uint64_t nwid,const uint64_t *blacklistAddresses,const uint64_t *blacklistBeforeTimestamps,unsigned int blacklistCount);
 	ZT_ResultCode clusterInit(
 		unsigned int myId,
 		const struct sockaddr_storage *zeroTierPhysicalEndpoints,

@@ -402,6 +402,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 	_portInitialized(false),
 	_inboundConfigPacketId(0),
 	_lastConfigUpdate(0),
+	_lastRequestedConfiguration(0),
 	_destroyed(false),
 	_netconfFailure(NETCONF_FAILURE_NONE),
 	_portError(0)
@@ -691,6 +692,12 @@ void Network::handleInboundConfigChunk(const uint64_t inRePacketId,const void *d
 
 void Network::requestConfiguration()
 {
+	// Sanity limit: do not request more often than once per second
+	const uint64_t now = RR->node->now();
+	if ((now - _lastRequestedConfiguration) < 1000ULL)
+		return;
+	_lastRequestedConfiguration = RR->node->now();
+
 	Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> rmd;
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION,(uint64_t)ZT_PROTO_VERSION);

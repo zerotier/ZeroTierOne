@@ -249,6 +249,10 @@ public:
 
 	/**
 	 * Causes this network to request an updated configuration from its master node now
+	 *
+	 * There is a circuit breaker here to prevent this from being done more often
+	 * than once per second. This is to prevent things like NETWORK_CONFIG_REFRESH
+	 * from causing multiple requests.
 	 */
 	void requestConfiguration();
 
@@ -442,6 +446,7 @@ private:
 
 	NetworkConfig _config;
 	volatile uint64_t _lastConfigUpdate;
+	volatile uint64_t _lastRequestedConfiguration;
 
 	volatile bool _destroyed;
 

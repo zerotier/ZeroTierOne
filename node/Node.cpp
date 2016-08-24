@@ -548,6 +548,31 @@ void Node::circuitTestEnd(ZT_CircuitTest *test)
 	}
 }
 
+void Node::pushNetworkRefresh(uint64_t dest,uint64_t nwid,const uint64_t *blacklistAddresses,const uint64_t *blacklistBeforeTimestamps,unsigned int blacklistCount)
+{
+	Packet outp(Address(dest),RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REFRESH);
+	outp.append(nwid);
+	outp.addSize(2);
+	unsigned int c = 0;
+	for(unsigned int i=0;i<blacklistCount;++i) {
+		if ((outp.size() + 13) >= ZT_PROTO_MAX_PACKET_LENGTH) {
+			outp.setAt<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 8,(uint16_t)c);
+			RR->sw->send(outp,true);
+			outp = Packet(Address(dest),RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REFRESH);
+			outp.append(nwid);
+			outp.addSize(2);
+			c = 0;
+		}
+		Address(blacklistAddresses[i]).appendTo(outp);
+		outp.append(blacklistBeforeTimestamps[i]);
+		++c;
+	}
+	if (c > 0) {
+		outp.setAt<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 8,(uint16_t)c);
+		RR->sw->send(outp,true);
+	}
+}
+
 ZT_ResultCode Node::clusterInit(
 	unsigned int myId,
 	const struct sockaddr_storage *zeroTierPhysicalEndpoints,
@@ -932,6 +957,13 @@ void ZT_Node_circuitTestEnd(ZT_Node *node,ZT_CircuitTest *test)
 {
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->circuitTestEnd(test);
+	} catch ( ... ) {}
+}
+
+void ZT_Node_pushNetworkRefresh(ZT_Node *node,uint64_t dest,uint64_t nwid,const uint64_t *blacklistAddresses,const uint64_t *blacklistBeforeTimestamps,unsigned int blacklistCount)
+{
+	try {
+		reinterpret_cast<ZeroTier::Node *>(node)->pushNetworkRefresh(dest,nwid,blacklistAddresses,blacklistBeforeTimestamps,blacklistCount);
 	} catch ( ... ) {}
 }
 

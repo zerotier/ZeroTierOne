@@ -1081,6 +1081,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 					_writeJson(_memberJP(nwid,Address(address),true).c_str(),member);
 
+					_node->pushNetworkRefresh(address,nwid,(const uint64_t *)0,(const uint64_t *)0,0);
+
 					// Add non-persisted fields
 					member["clock"] = now;
 
