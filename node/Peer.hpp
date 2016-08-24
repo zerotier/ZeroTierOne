@@ -104,6 +104,7 @@ public:
 	 * @param verb Packet verb
 	 * @param inRePacketId Packet ID in reply to (default: none)
 	 * @param inReVerb Verb in reply to (for OK/ERROR, default: VERB_NOP)
+	 * @param trustEstablished If true, some form of non-trivial trust (like allowed in network) has been established
 	 */
 	void received(
 		const InetAddress &localAddr,
@@ -111,8 +112,9 @@ public:
 		unsigned int hops,
 		uint64_t packetId,
 		Packet::Verb verb,
-		uint64_t inRePacketId = 0,
-		Packet::Verb inReVerb = Packet::VERB_NOP);
+		uint64_t inRePacketId,
+		Packet::Verb inReVerb,
+		const bool trustEstablished);
 
 	/**
 	 * Get the current best direct path to this peer
@@ -191,17 +193,6 @@ public:
 	 * @return True if at least one direct path seems alive
 	 */
 	bool doPingAndKeepalive(uint64_t now,int inetAddressFamily);
-
-	/**
-	 * Push direct paths back to self if we haven't done so in the configured timeout
-	 *
-	 * @param localAddr Local address
-	 * @param toAddress Remote address to send push to (usually from path)
-	 * @param now Current time
-	 * @param force If true, push regardless of rate limit
-	 * @return True if something was actually sent
-	 */
-	bool pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAddress,uint64_t now,bool force);
 
 	/**
 	 * @return All known direct paths to this peer (active or inactive)
@@ -407,6 +398,7 @@ private:
 	void _doDeadPathDetection(Path &p,const uint64_t now);
 	Path *_getBestPath(const uint64_t now);
 	Path *_getBestPath(const uint64_t now,int inetAddressFamily);
+	bool _pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAddress,uint64_t now);
 
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 

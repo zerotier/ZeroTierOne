@@ -761,11 +761,6 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 				return false;
 		}
 
-		if (relay) {
-			peer->pushDirectPaths(viaPath->localAddress(),viaPath->address(),now,false);
-			viaPath->sent(now);
-		}
-
 		Packet tmp(packet);
 
 		unsigned int chunkSize = std::min(tmp.size(),(unsigned int)ZT_UDP_DEFAULT_PAYLOAD_MTU);
