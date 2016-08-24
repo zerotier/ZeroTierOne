@@ -468,6 +468,11 @@ enum ZT_VirtualNetworkType
 	ZT_NETWORK_TYPE_PUBLIC = 1
 };
 
+/*
+ - TEE : should use a field to indicate how many bytes of each packet max are TEE'd
+ - Controller : web hooks for auth, optional required re-auth? or auth for a period of time? auto-expiring auth?
+*/
+
 /**
  * The type of a virtual network rules table entry
  *
@@ -721,6 +726,15 @@ typedef struct
 			uint32_t id;
 			uint32_t value;
 		} tag;
+
+		/**
+		 * Destinations for TEE and REDIRECT
+		 */
+		struct {
+			uint64_t address;
+			uint32_t flags;
+			uint16_t length;
+		} fwd;
 	} v;
 } ZT_VirtualNetworkRule;
 

@@ -11,7 +11,7 @@ LIBS=
 ARCH_FLAGS=-arch x86_64
 
 include objects.mk
-OBJS+=osdep/OSXEthernetTap.o ext/lz4/lz4.o ext/json-parser/json.o ext/http-parser/http_parser.o
+OBJS+=osdep/OSXEthernetTap.o ext/lz4/lz4.o ext/http-parser/http_parser.o
 
 # Disable codesign since open source users will not have ZeroTier's certs
 CODESIGN=echo

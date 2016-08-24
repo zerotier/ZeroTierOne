@@ -181,6 +181,11 @@ public:
 					break;
 				case ZT_NETWORK_RULE_ACTION_TEE:
 				case ZT_NETWORK_RULE_ACTION_REDIRECT:
+					b.append((uint8_t)14);
+					b.append((uint64_t)rules[i].v.fwd.address);
+					b.append((uint32_t)rules[i].v.fwd.flags);
+					b.append((uint16_t)rules[i].v.fwd.length);
+					break;
 				case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 				case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS:
 					b.append((uint8_t)5);
@@ -266,6 +271,10 @@ public:
 					break;
 				case ZT_NETWORK_RULE_ACTION_TEE:
 				case ZT_NETWORK_RULE_ACTION_REDIRECT:
+					rules[ruleCount].v.fwd.address = b.template at<uint64_t>(p);
+					rules[ruleCount].v.fwd.flags = b.template at<uint32_t>(p + 8);
+					rules[ruleCount].v.fwd.length = b.template at<uint16_t>(p + 12);
+					break;
 				case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 				case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS:
 					rules[ruleCount].v.zt = Address(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH).toInt();

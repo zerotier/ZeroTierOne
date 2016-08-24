@@ -121,11 +121,15 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 			break;
 		case ZT_NETWORK_RULE_ACTION_TEE:
 			r["type"] = "ACTION_TEE";
-			r["zt"] = Address(rule.v.zt).toString();
+			r["address"] = Address(rule.v.fwd.address).toString();
+			r["flags"] = (uint64_t)rule.v.fwd.flags;
+			r["length"] = (uint64_t)rule.v.fwd.length;
 			break;
 		case ZT_NETWORK_RULE_ACTION_REDIRECT:
 			r["type"] = "ACTION_REDIRECT";
-			r["zt"] = Address(rule.v.zt).toString();
+			r["address"] = Address(rule.v.fwd.address).toString();
+			r["flags"] = (uint64_t)rule.v.fwd.flags;
+			r["length"] = (uint64_t)rule.v.fwd.length;
 			break;
 		case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 			r["type"] = "MATCH_SOURCE_ZEROTIER_ADDRESS";
@@ -235,7 +239,7 @@ static bool _parseRule(const json &r,ZT_VirtualNetworkRule &rule)
 {
 	if (r.is_object())
 		return false;
-	std::string t = r["type"];
+	const std::string t(_jS(r["type"],""));
 	memset(&rule,0,sizeof(ZT_VirtualNetworkRule));
 	if (_jB(r["not"],false))
 		rule.t = 0x80;
@@ -248,11 +252,15 @@ static bool _parseRule(const json &r,ZT_VirtualNetworkRule &rule)
 		return true;
 	} else if (t == "ACTION_TEE") {
 		rule.t |= ZT_NETWORK_RULE_ACTION_TEE;
-		rule.v.zt = Utils::hexStrToU64(_jS(r["zt"],"0").c_str()) & 0xffffffffffULL;
+		rule.v.fwd.address = Utils::hexStrToU64(_jS(r["address"],"0").c_str()) & 0xffffffffffULL;
+		rule.v.fwd.flags = (uint32_t)(_jI(r["flags"],0ULL) & 0xffffffffULL);
+		rule.v.fwd.length = (uint16_t)(_jI(r["length"],0ULL) & 0xffffULL);
 		return true;
 	} else if (t == "ACTION_REDIRECT") {
 		rule.t |= ZT_NETWORK_RULE_ACTION_REDIRECT;
-		rule.v.zt = Utils::hexStrToU64(_jS(r["zt"],"0").c_str()) & 0xffffffffffULL;
+		rule.v.fwd.address = Utils::hexStrToU64(_jS(r["zt"],"0").c_str()) & 0xffffffffffULL;
+		rule.v.fwd.flags = (uint32_t)(_jI(r["flags"],0ULL) & 0xffffffffULL);
+		rule.v.fwd.length = (uint16_t)(_jI(r["length"],0ULL) & 0xffffULL);
 		return true;
 	} else if (t == "MATCH_SOURCE_ZEROTIER_ADDRESS") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS;

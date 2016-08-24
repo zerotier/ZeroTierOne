@@ -154,13 +154,13 @@ static int _doZtFilter(
 				break;
 			case ZT_NETWORK_RULE_ACTION_TEE:
 			case ZT_NETWORK_RULE_ACTION_REDIRECT: {
-				Packet outp(Address(rules[rn].v.zt),RR->identity.address(),Packet::VERB_EXT_FRAME);
+				Packet outp(Address(rules[rn].v.fwd.address),RR->identity.address(),Packet::VERB_EXT_FRAME);
 				outp.append(nconf.networkId);
-				outp.append((uint8_t)((rt == ZT_NETWORK_RULE_ACTION_REDIRECT) ? 0x04 : 0x02));
+				outp.append((uint8_t)( ((rt == ZT_NETWORK_RULE_ACTION_REDIRECT) ? 0x04 : 0x02) | (inbound ? 0x08 : 0x00) ));
 				macDest.appendTo(outp);
 				macSource.appendTo(outp);
 				outp.append((uint16_t)etherType);
-				outp.append(frameData,frameLen);
+				outp.append(frameData,(rules[rn].v.fwd.length != 0) ? ((frameLen < (unsigned int)rules[rn].v.fwd.length) ? frameLen : (unsigned int)rules[rn].v.fwd.length) : frameLen);
 				outp.compress();
 				RR->sw->send(outp,true);
 

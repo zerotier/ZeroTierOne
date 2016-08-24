@@ -48,15 +48,11 @@
 
 #include <string>
 #include <stdexcept>
+#include <iostream>
+#include <sstream>
 
 #include "version.h"
 #include "include/ZeroTierOne.h"
-
-#ifdef ZT_USE_SYSTEM_JSON_PARSER
-#include <json-parser/json.h>
-#else
-#include "ext/json-parser/json.h"
-#endif
 
 #include "node/Identity.hpp"
 #include "node/CertificateOfMembership.hpp"
@@ -67,6 +63,8 @@
 #include "osdep/Http.hpp"
 
 #include "service/OneService.hpp"
+
+#include "ext/json/json.hpp"
 
 #define ZT_PID_PATH "zerotier-one.pid"
 
@@ -283,221 +281,135 @@ static int cli(int argc,char **argv)
 			return 1;
 		}
 	} else if ((command == "info")||(command == "status")) {
-		unsigned int scode = Http::GET(
-			1024 * 1024 * 16,
-			60000,
-			(const struct sockaddr *)&addr,
-			"/status",
-			requestHeaders,
-			responseHeaders,
-			responseBody);
+		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/status",requestHeaders,responseHeaders,responseBody);
+
+		nlohmann::json j;
+		try {
+			j = nlohmann::json::parse(responseBody);
+		} catch (std::exception &exc) {
+			printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
+			return 1;
+		} catch ( ... ) {
+			printf("%u %s invalid JSON response (unknown exception)" ZT_EOL_S,scode,command.c_str());
+			return 1;
+		}
+
 		if (scode == 200) {
+			std::ostringstream out;
 			if (json) {
-				printf("%s",cliFixJsonCRs(responseBody).c_str());
-				return 0;
+				out << j.dump(2) << ZT_EOL_S;
 			} else {
-				json_value *j = json_parse(responseBody.c_str(),responseBody.length());
-				bool good = false;
-				if (j) {
-					if (j->type == json_object) {
-						const char *address = (const char *)0;
-						bool online = false;
-						const char *version = (const char *)0;
-						for(unsigned int k=0;k<j->u.object.length;++k) {
-							if ((!strcmp(j->u.object.values[k].name,"address"))&&(j->u.object.values[k].value->type == json_string))
-								address = j->u.object.values[k].value->u.string.ptr;
-							else if ((!strcmp(j->u.object.values[k].name,"version"))&&(j->u.object.values[k].value->type == json_string))
-								version = j->u.object.values[k].value->u.string.ptr;
-							else if ((!strcmp(j->u.object.values[k].name,"online"))&&(j->u.object.values[k].value->type == json_boolean))
-								online = (j->u.object.values[k].value->u.boolean != 0);
-						}
-						if ((address)&&(version)) {
-							printf("200 info %s %s %s" ZT_EOL_S,address,(online ? "ONLINE" : "OFFLINE"),version);
-							good = true;
-						}
-					}
-					json_value_free(j);
-				}
-				if (good) {
-					return 0;
-				} else {
-					printf("%u %s invalid JSON response" ZT_EOL_S,scode,command.c_str());
-					return 1;
-				}
+				if (j.is_object())
+					out << "200 info " << j["address"].get<std::string>() << " " << j["version"].get<std::string>() << " " << ((j["tcpFallbackActive"]) ? "TUNNELED" : ((j["online"]) ? "ONLINE" : "OFFLINE")) << ZT_EOL_S;
 			}
+			printf("%s",out.str().c_str());
+			return 0;
 		} else {
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
 		}
 	} else if (command == "listpeers") {
-		unsigned int scode = Http::GET(
-			1024 * 1024 * 16,
-			60000,
-			(const struct sockaddr *)&addr,
-			"/peer",
-			requestHeaders,
-			responseHeaders,
-			responseBody);
+		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/peer",requestHeaders,responseHeaders,responseBody);
+
+		nlohmann::json j;
+		try {
+			j = nlohmann::json::parse(responseBody);
+		} catch (std::exception &exc) {
+			printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
+			return 1;
+		} catch ( ... ) {
+			printf("%u %s invalid JSON response (unknown exception)" ZT_EOL_S,scode,command.c_str());
+			return 1;
+		}
+
 		if (scode == 200) {
+			std::ostringstream out;
 			if (json) {
-				printf("%s",cliFixJsonCRs(responseBody).c_str());
-				return 0;
+				out << j.dump(2) << ZT_EOL_S;
 			} else {
-				printf("200 listpeers <ztaddr> <paths> <latency> <version> <role>" ZT_EOL_S);
-				json_value *j = json_parse(responseBody.c_str(),responseBody.length());
-				if (j) {
-					if (j->type == json_array) {
-						for(unsigned int p=0;p<j->u.array.length;++p) {
-							json_value *jp = j->u.array.values[p];
-							if (jp->type == json_object) {
-								const char *address = (const char *)0;
-								std::string paths;
-								int64_t latency = 0;
-								int64_t versionMajor = -1,versionMinor = -1,versionRev = -1;
-								const char *role = (const char *)0;
-								for(unsigned int k=0;k<jp->u.object.length;++k) {
-									if ((!strcmp(jp->u.object.values[k].name,"address"))&&(jp->u.object.values[k].value->type == json_string))
-										address = jp->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jp->u.object.values[k].name,"versionMajor"))&&(jp->u.object.values[k].value->type == json_integer))
-										versionMajor = jp->u.object.values[k].value->u.integer;
-									else if ((!strcmp(jp->u.object.values[k].name,"versionMinor"))&&(jp->u.object.values[k].value->type == json_integer))
-										versionMinor = jp->u.object.values[k].value->u.integer;
-									else if ((!strcmp(jp->u.object.values[k].name,"versionRev"))&&(jp->u.object.values[k].value->type == json_integer))
-										versionRev = jp->u.object.values[k].value->u.integer;
-									else if ((!strcmp(jp->u.object.values[k].name,"role"))&&(jp->u.object.values[k].value->type == json_string))
-										role = jp->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jp->u.object.values[k].name,"latency"))&&(jp->u.object.values[k].value->type == json_integer))
-										latency = jp->u.object.values[k].value->u.integer;
-									else if ((!strcmp(jp->u.object.values[k].name,"paths"))&&(jp->u.object.values[k].value->type == json_array)) {
-										for(unsigned int pp=0;pp<jp->u.object.values[k].value->u.array.length;++pp) {
-											json_value *jpath = jp->u.object.values[k].value->u.array.values[pp];
-											if (jpath->type == json_object) {
-												const char *paddr = (const char *)0;
-												int64_t lastSend = 0;
-												int64_t lastReceive = 0;
-												bool preferred = false;
-												bool active = false;
-												for(unsigned int kk=0;kk<jpath->u.object.length;++kk) {
-													if ((!strcmp(jpath->u.object.values[kk].name,"address"))&&(jpath->u.object.values[kk].value->type == json_string))
-														paddr = jpath->u.object.values[kk].value->u.string.ptr;
-													else if ((!strcmp(jpath->u.object.values[kk].name,"lastSend"))&&(jpath->u.object.values[kk].value->type == json_integer))
-														lastSend = jpath->u.object.values[kk].value->u.integer;
-													else if ((!strcmp(jpath->u.object.values[kk].name,"lastReceive"))&&(jpath->u.object.values[kk].value->type == json_integer))
-														lastReceive = jpath->u.object.values[kk].value->u.integer;
-													else if ((!strcmp(jpath->u.object.values[kk].name,"preferred"))&&(jpath->u.object.values[kk].value->type == json_boolean))
-														preferred = (jpath->u.object.values[kk].value->u.boolean != 0);
-													else if ((!strcmp(jpath->u.object.values[kk].name,"active"))&&(jpath->u.object.values[kk].value->type == json_boolean))
-														active = (jpath->u.object.values[kk].value->u.boolean != 0);
-												}
-												if ((paddr)&&(active)) {
-													int64_t now = (int64_t)OSUtils::now();
-													if (lastSend > 0)
-														lastSend = now - lastSend;
-													if (lastReceive > 0)
-														lastReceive = now - lastReceive;
-													char pathtmp[256];
-													Utils::snprintf(pathtmp,sizeof(pathtmp),"%s;%lld;%lld;%s",
-														paddr,
-														lastSend,
-														lastReceive,
-														(preferred ? "preferred" : "active"));
-													if (paths.length())
-														paths.push_back(',');
-													paths.append(pathtmp);
-												}
-											}
-										}
-									}
-								}
-								if ((address)&&(role)) {
-									char verstr[64];
-									if ((versionMajor >= 0)&&(versionMinor >= 0)&&(versionRev >= 0))
-										Utils::snprintf(verstr,sizeof(verstr),"%lld.%lld.%lld",versionMajor,versionMinor,versionRev);
-									else {
-										verstr[0] = '-';
-										verstr[1] = (char)0;
-									}
-									printf("200 listpeers %s %s %lld %s %s" ZT_EOL_S,address,(paths.length()) ? paths.c_str() : "-",(long long)latency,verstr,role);
+				out << "200 listpeers <ztaddr> <path> <latency> <version> <role>" << ZT_EOL_S;
+				if (j.is_array()) {
+					for(unsigned long k=0;k<j.size();++k) {
+						auto p = j[k];
+						std::string bestPath;
+						auto paths = p["paths"];
+						if (paths.is_array()) {
+							for(unsigned long i=0;i<paths.size();++i) {
+								auto path = paths[i];
+								if (path["preferred"]) {
+									char tmp[256];
+									std::string addr = path["address"];
+									const uint64_t now = OSUtils::now();
+									Utils::snprintf(tmp,sizeof(tmp),"%s;%llu;%llu",addr.c_str(),now - (uint64_t)path["lastSend"],now - (uint64_t)path["lastReceive"]);
+									bestPath = tmp;
+									break;
 								}
 							}
 						}
+						if (bestPath.length() == 0) bestPath = "-";
+						char ver[128];
+						int64_t vmaj = p["versionMajor"];
+						int64_t vmin = p["versionMinor"];
+						int64_t vrev = p["versionRev"];
+						if (vmaj >= 0) {
+							Utils::snprintf(ver,sizeof(ver),"%lld.%lld.%lld",vmaj,vmin,vrev);
+						} else {
+							ver[0] = '-';
+							ver[1] = (char)0;
+						}
+						out << "200 listpeers " << p["address"].get<std::string>() << " " << bestPath << " " << p["latency"] << " " << ver << " " << p["role"].get<std::string>() << ZT_EOL_S;
 					}
-					json_value_free(j);
 				}
-				return 0;
 			}
+			printf("%s",out.str().c_str());
+			return 0;
 		} else {
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
 		}
 	} else if (command == "listnetworks") {
-		unsigned int scode = Http::GET(
-			1024 * 1024 * 16,
-			60000,
-			(const struct sockaddr *)&addr,
-			"/network",
-			requestHeaders,
-			responseHeaders,
-			responseBody);
+		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/network",requestHeaders,responseHeaders,responseBody);
+
+		nlohmann::json j;
+		try {
+			j = nlohmann::json::parse(responseBody);
+		} catch (std::exception &exc) {
+			printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
+			return 1;
+		} catch ( ... ) {
+			printf("%u %s invalid JSON response (unknown exception)" ZT_EOL_S,scode,command.c_str());
+			return 1;
+		}
+
 		if (scode == 200) {
+			std::ostringstream out;
 			if (json) {
-				printf("%s",cliFixJsonCRs(responseBody).c_str());
-				return 0;
+				out << j.dump(2) << ZT_EOL_S;
 			} else {
-				printf("200 listnetworks <nwid> <name> <mac> <status> <type> <dev> <ZT assigned ips>" ZT_EOL_S);
-				json_value *j = json_parse(responseBody.c_str(),responseBody.length());
-				if (j) {
-					if (j->type == json_array) {
-						for(unsigned int p=0;p<j->u.array.length;++p) {
-							json_value *jn = j->u.array.values[p];
-							if (jn->type == json_object) {
-								const char *nwid = (const char *)0;
-								const char *name = "";
-								const char *mac = (const char *)0;
-								const char *status = (const char *)0;
-								const char *type = (const char *)0;
-								const char *portDeviceName = "";
-								std::string ips;
-								for(unsigned int k=0;k<jn->u.object.length;++k) {
-									if ((!strcmp(jn->u.object.values[k].name,"nwid"))&&(jn->u.object.values[k].value->type == json_string))
-										nwid = jn->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jn->u.object.values[k].name,"name"))&&(jn->u.object.values[k].value->type == json_string))
-										name = jn->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jn->u.object.values[k].name,"mac"))&&(jn->u.object.values[k].value->type == json_string))
-										mac = jn->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jn->u.object.values[k].name,"status"))&&(jn->u.object.values[k].value->type == json_string))
-										status = jn->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jn->u.object.values[k].name,"type"))&&(jn->u.object.values[k].value->type == json_string))
-										type = jn->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jn->u.object.values[k].name,"portDeviceName"))&&(jn->u.object.values[k].value->type == json_string))
-										portDeviceName = jn->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jn->u.object.values[k].name,"assignedAddresses"))&&(jn->u.object.values[k].value->type == json_array)) {
-										for(unsigned int a=0;a<jn->u.object.values[k].value->u.array.length;++a) {
-											json_value *aa = jn->u.object.values[k].value->u.array.values[a];
-											if (aa->type == json_string) {
-												if (ips.length())
-													ips.push_back(',');
-												ips.append(aa->u.string.ptr);
-											}
-										}
+				out << "200 listnetworks <nwid> <name> <mac> <status> <type> <dev> <ZT assigned ips>" << ZT_EOL_S;
+				if (j.is_array()) {
+					for(unsigned long i=0;i<j.size();++i) {
+						auto n = j[i];
+						if (n.is_object()) {
+							std::string aa;
+							auto assignedAddresses = n["assignedAddresses"];
+							if (assignedAddresses.is_array()) {
+								for(unsigned long j=0;j<assignedAddresses.size();++j) {
+									auto addr = assignedAddresses[j];
+									if (addr.is_string()) {
+										if (aa.length() > 0) aa.push_back(',');
+										aa.append(addr);
 									}
 								}
-								if ((nwid)&&(mac)&&(status)&&(type)) {
-									printf("200 listnetworks %s %s %s %s %s %s %s" ZT_EOL_S,
-										nwid,
-										(((name)&&(name[0])) ? name : "-"),
-										mac,
-										status,
-										type,
-										(((portDeviceName)&&(portDeviceName[0])) ? portDeviceName : "-"),
-										((ips.length() > 0) ? ips.c_str() : "-"));
-								}
 							}
+							if (aa.length() == 0) aa = "-";
+							out << "200 listnetworks " << n["nwid"].get<std::string>() << " " << n["name"].get<std::string>() << " " << n["mac"].get<std::string>() << " " << n["status"].get<std::string>() << " " << n["type"].get<std::string>() << " " << n["portDeviceName"].get<std::string>() << " " << aa << ZT_EOL_S;
 						}
 					}
-					json_value_free(j);
 				}
 			}
+			printf("%s",out.str().c_str());
+			return 0;
 		} else {
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;

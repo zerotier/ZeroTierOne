@@ -28,11 +28,7 @@
 #include "../ext/http-parser/http_parser.h"
 #endif
 
-#ifdef ZT_USE_SYSTEM_JSON_PARSER
-#include <json-parser/json.h>
-#else
-#include "../ext/json-parser/json.h"
-#endif
+#include "../ext/json/json.hpp"
 
 #include "../controller/EmbeddedNetworkController.hpp"
 
@@ -519,23 +515,18 @@ unsigned int ControlPlane::handleRequest(
 								OneService::NetworkSettings localSettings;
 								_svc->getNetworkSettings(nws->networks[i].nwid,localSettings);
 
-								json_value *j = json_parse(body.c_str(),body.length());
-								if (j) {
-									if (j->type == json_object) {
-										for(unsigned int k=0;k<j->u.object.length;++k) {
-											if (!strcmp(j->u.object.values[k].name,"allowManaged")) {
-												if (j->u.object.values[k].value->type == json_boolean)
-													localSettings.allowManaged = (j->u.object.values[k].value->u.boolean != 0);
-											} else if (!strcmp(j->u.object.values[k].name,"allowGlobal")) {
-												if (j->u.object.values[k].value->type == json_boolean)
-													localSettings.allowGlobal = (j->u.object.values[k].value->u.boolean != 0);
-											} else if (!strcmp(j->u.object.values[k].name,"allowDefault")) {
-												if (j->u.object.values[k].value->type == json_boolean)
-													localSettings.allowDefault = (j->u.object.values[k].value->u.boolean != 0);
-											}
-										}
+								try {
+									nlohmann::json j(nlohmann::json::parse(body));
+									if (j.is_object()) {
+										auto allowManaged = j["allowManaged"];
+										if (allowManaged.is_boolean()) localSettings.allowManaged = (bool)allowManaged;
+										auto allowGlobal = j["allowGlobal"];
+										if (allowGlobal.is_boolean()) localSettings.allowGlobal = (bool)allowGlobal;
+										auto allowDefault = j["allowDefault"];
+										if (allowDefault.is_boolean()) localSettings.allowDefault = (bool)allowDefault;
 									}
-									json_value_free(j);
+								} catch ( ... ) {
+									// discard invalid JSON
 								}
 
 								_svc->setNetworkSettings(nws->networks[i].nwid,localSettings);

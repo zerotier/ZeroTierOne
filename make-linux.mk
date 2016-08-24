@@ -51,12 +51,6 @@ else
 	LDLIBS+=-lhttp_parser
 	DEFS+=-DZT_USE_SYSTEM_HTTP_PARSER
 endif
-ifeq ($(wildcard /usr/include/json-parser/json.h),)
-	OBJS+=ext/json-parser/json.o
-else
-	LDLIBS+=-ljsonparser
-	DEFS+=-DZT_USE_SYSTEM_JSON_PARSER
-endif
 
 ifeq ($(ZT_USE_MINIUPNPC),1)
 	OBJS+=osdep/PortMapper.o

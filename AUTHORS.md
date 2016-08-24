@@ -39,11 +39,11 @@ These are included in ext/ for platforms that do not have them available in comm
    * Home page: https://github.com/joyent/http-parser/
    * License grant: MIT/Expat
 
- * json-parser by James McLaughlin
+ * C++11 json (nlohmann/json) by Niels Lohmann
 
-   * Files: ext/json-parser/*
-   * Home page: https://github.com/udp/json-parser/
-   * License grant: BSD attribution
+   * Files: ext/json/*
+   * Home page: https://github.com/nlohmann/json
+   * License grant: MIT
 
  * TunTapOSX by Mattias Nissler
 
