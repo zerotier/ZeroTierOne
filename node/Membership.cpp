@@ -81,28 +81,39 @@ bool Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint
 
 int Membership::addCredential(const RuntimeEnvironment *RR,const CertificateOfMembership &com)
 {
-	TRACE("addCredential(COM) for %.16llx signed by %s issued to %s",com.networkId(),com.signedBy().toString().c_str(),com.issuedTo().toString().c_str());
-	if (_com == com)
+	if (_com == com) {
+		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx ACCEPTED (redundant)",com.issuedTo().toString().c_str(),com.networkId());
 		return 0;
+	}
 	const int vr = com.verify(RR);
-	if ((vr == 0)&&(com.timestamp().first > _com.timestamp().first))
-		_com = com;
+	if (vr == 0) {
+		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx ACCEPTED (new)",com.issuedTo().toString().c_str(),com.networkId());
+		if (com.timestamp().first > _com.timestamp().first)
+			_com = com;
+	} else {
+		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx REJECTED (%d)",com.issuedTo().toString().c_str(),com.networkId(),vr);
+	}
 	return vr;
 }
 
 int Membership::addCredential(const RuntimeEnvironment *RR,const Tag &tag)
 {
 	TState *t = _tags.get(tag.id());
-	if ((t)&&(t->lastReceived != 0)&&(t->tag == tag))
+	if ((t)&&(t->lastReceived != 0)&&(t->tag == tag)) {
+		TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (redundant)",tag.issuedTo().toString().c_str(),tag.networkId());
 		return 0;
+	}
 	const int vr = tag.verify(RR);
 	if (vr == 0) {
+		TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (new)",tag.issuedTo().toString().c_str(),tag.networkId());
 		if (!t)
 			t = &(_tags[tag.id()]);
 		if (t->tag.timestamp() <= tag.timestamp()) {
 			t->lastReceived = RR->node->now();
 			t->tag = tag;
 		}
+	} else {
+		TRACE("addCredential(Tag) for %s on %.16llx REJECTED (%d)",tag.issuedTo().toString().c_str(),tag.networkId(),vr);
 	}
 	return vr;
 }
@@ -110,10 +121,13 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const Tag &tag)
 int Membership::addCredential(const RuntimeEnvironment *RR,const Capability &cap)
 {
 	std::map<uint32_t,CState>::iterator c(_caps.find(cap.id()));
-	if ((c != _caps.end())&&(c->second.lastReceived != 0)&&(c->second.cap == cap))
+	if ((c != _caps.end())&&(c->second.lastReceived != 0)&&(c->second.cap == cap)) {
+		TRACE("addCredential(Capability) for %s on %.16llx ACCEPTED (redundant)",cap.issuedTo().toString().c_str(),cap.networkId());
 		return 0;
+	}
 	const int vr = cap.verify(RR);
 	if (vr == 0) {
+		TRACE("addCredential(Capability) for %s on %.16llx ACCEPTED (new)",cap.issuedTo().toString().c_str(),cap.networkId());
 		if (c == _caps.end()) {
 			CState &c2 = _caps[cap.id()];
 			c2.lastReceived = RR->node->now();
@@ -122,6 +136,8 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const Capability &cap
 			c->second.lastReceived = RR->node->now();
 			c->second.cap = cap;
 		}
+	} else {
+		TRACE("addCredential(Capability) for %s on %.16llx REJECTED (%d)",cap.issuedTo().toString().c_str(),cap.networkId(),vr);
 	}
 	return vr;
 }
