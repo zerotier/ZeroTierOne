@@ -102,6 +102,7 @@ static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsig
 // 0 == no match, -1 == match/drop, 1 == match/accept
 static int _doZtFilter(
 	const RuntimeEnvironment *RR,
+	const bool noRedirect,
 	const NetworkConfig &nconf,
 	const bool inbound,
 	const Address &ztSource,
@@ -154,15 +155,17 @@ static int _doZtFilter(
 				break;
 			case ZT_NETWORK_RULE_ACTION_TEE:
 			case ZT_NETWORK_RULE_ACTION_REDIRECT: {
-				Packet outp(Address(rules[rn].v.fwd.address),RR->identity.address(),Packet::VERB_EXT_FRAME);
-				outp.append(nconf.networkId);
-				outp.append((uint8_t)( ((rt == ZT_NETWORK_RULE_ACTION_REDIRECT) ? 0x04 : 0x02) | (inbound ? 0x08 : 0x00) ));
-				macDest.appendTo(outp);
-				macSource.appendTo(outp);
-				outp.append((uint16_t)etherType);
-				outp.append(frameData,(rules[rn].v.fwd.length != 0) ? ((frameLen < (unsigned int)rules[rn].v.fwd.length) ? frameLen : (unsigned int)rules[rn].v.fwd.length) : frameLen);
-				outp.compress();
-				RR->sw->send(outp,true);
+				if (!noRedirect) {
+					Packet outp(Address(rules[rn].v.fwd.address),RR->identity.address(),Packet::VERB_EXT_FRAME);
+					outp.append(nconf.networkId);
+					outp.append((uint8_t)( ((rt == ZT_NETWORK_RULE_ACTION_REDIRECT) ? 0x04 : 0x02) | (inbound ? 0x08 : 0x00) ));
+					macDest.appendTo(outp);
+					macSource.appendTo(outp);
+					outp.append((uint16_t)etherType);
+					outp.append(frameData,(rules[rn].v.fwd.length != 0) ? ((frameLen < (unsigned int)rules[rn].v.fwd.length) ? frameLen : (unsigned int)rules[rn].v.fwd.length) : frameLen);
+					outp.compress();
+					RR->sw->send(outp,true);
+				}
 
 				if (rt == ZT_NETWORK_RULE_ACTION_REDIRECT) {
 					return -1; // match, drop packet (we redirected it)
@@ -318,6 +321,8 @@ static int _doZtFilter(
 				break;
 			case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS: {
 				uint64_t cf = (inbound) ? ZT_RULE_PACKET_CHARACTERISTICS_INBOUND : 0ULL;
+				if (macDest.isMulticast()) cf |= ZT_RULE_PACKET_CHARACTERISTICS_MULTICAST;
+				if (macDest.isBroadcast()) cf |= ZT_RULE_PACKET_CHARACTERISTICS_BROADCAST;
 				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)&&(frameData[9] == 0x06)) {
 					const unsigned int headerLen = 4 * (frameData[0] & 0xf);
 					cf |= (uint64_t)frameData[headerLen + 13];
@@ -456,6 +461,7 @@ Network::~Network()
 }
 
 bool Network::filterOutgoingPacket(
+	const bool noRedirect,
 	const Address &ztSource,
 	const Address &ztDest,
 	const MAC &macSource,
@@ -475,21 +481,23 @@ bool Network::filterOutgoingPacket(
 	Membership &m = _memberships[ztDest];
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
-	switch(_doZtFilter(RR,_config,false,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
+	switch(_doZtFilter(RR,noRedirect,_config,false,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
 		case -1:
 			return false;
 		case 1:
-			m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config.com,(const Capability *)0,relevantLocalTags,relevantLocalTagCount);
+			if (ztDest)
+				m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config.com,(const Capability *)0,relevantLocalTags,relevantLocalTagCount);
 			return true;
 	}
 
 	for(unsigned int c=0;c<_config.capabilityCount;++c) {
 		relevantLocalTagCount = 0;
-		switch (_doZtFilter(RR,_config,false,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.capabilities[c].rules(),_config.capabilities[c].ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
+		switch (_doZtFilter(RR,noRedirect,_config,false,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.capabilities[c].rules(),_config.capabilities[c].ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
 			case -1:
 				return false;
 			case 1:
-				m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config.com,&(_config.capabilities[c]),relevantLocalTags,relevantLocalTagCount);
+				if (ztDest)
+					m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config.com,&(_config.capabilities[c]),relevantLocalTags,relevantLocalTagCount);
 				return true;
 		}
 	}
@@ -517,7 +525,7 @@ bool Network::filterIncomingPacket(
 	Membership &m = _memberships[ztDest];
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
-	switch (_doZtFilter(RR,_config,true,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
+	switch (_doZtFilter(RR,false,_config,true,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
 		case -1:
 			return false;
 		case 1:
@@ -528,7 +536,7 @@ bool Network::filterIncomingPacket(
 	const Capability *c;
 	while ((c = mci.next(_config))) {
 		relevantLocalTagCount = 0;
-		switch(_doZtFilter(RR,_config,false,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
+		switch(_doZtFilter(RR,false,_config,false,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,relevantLocalTags,relevantLocalTagCount)) {
 			case -1:
 				return false;
 			case 1:
@@ -698,6 +706,8 @@ void Network::requestConfiguration()
 		return;
 	_lastRequestedConfiguration = RR->node->now();
 
+	const Address ctrl(controller());
+
 	Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> rmd;
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION,(uint64_t)ZT_PROTO_VERSION);
@@ -710,7 +720,7 @@ void Network::requestConfiguration()
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_TAGS,(uint64_t)ZT_MAX_NETWORK_TAGS);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS,(uint64_t)0);
 
-	if (controller() == RR->identity.address()) {
+	if (ctrl == RR->identity.address()) {
 		if (RR->localNetworkController) {
 			NetworkConfig nconf;
 			switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,rmd,nconf)) {
@@ -732,9 +742,9 @@ void Network::requestConfiguration()
 		}
 	}
 
-	TRACE("requesting netconf for network %.16llx from controller %s",(unsigned long long)_id,controller().toString().c_str());
+	TRACE("requesting netconf for network %.16llx from controller %s",(unsigned long long)_id,ctrl.toString().c_str());
 
-	Packet outp(controller(),RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
+	Packet outp(ctrl,RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
 	outp.append((uint64_t)_id);
 	const unsigned int rmdSize = rmd.sizeBytes();
 	outp.append((uint16_t)rmdSize);

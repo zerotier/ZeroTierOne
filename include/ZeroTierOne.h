@@ -170,6 +170,16 @@ extern "C" {
 #define ZT_RULE_PACKET_CHARACTERISTICS_INBOUND 0x8000000000000000ULL
 
 /**
+ * Packet characteristics flag: multicast or broadcast destination MAC
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_MULTICAST 0x4000000000000000ULL
+
+/**
+ * Packet characteristics flag: broadcast destination MAC
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_BROADCAST 0x2000000000000000ULL
+
+/**
  * Packet characteristics flag: TCP left-most reserved bit
  */
 #define ZT_RULE_PACKET_CHARACTERISTICS_TCP_RESERVED_0 0x0000000000000800ULL

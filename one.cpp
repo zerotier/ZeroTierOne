@@ -403,7 +403,9 @@ static int cli(int argc,char **argv)
 								}
 							}
 							if (aa.length() == 0) aa = "-";
-							out << "200 listnetworks " << n["nwid"].get<std::string>() << " " << n["name"].get<std::string>() << " " << n["mac"].get<std::string>() << " " << n["status"].get<std::string>() << " " << n["type"].get<std::string>() << " " << n["portDeviceName"].get<std::string>() << " " << aa << ZT_EOL_S;
+							std::string name = n["name"];
+							if (name.length() == 0) name = "-";
+							out << "200 listnetworks " << n["nwid"].get<std::string>() << " " << name << " " << n["mac"].get<std::string>() << " " << n["status"].get<std::string>() << " " << n["type"].get<std::string>() << " " << n["portDeviceName"].get<std::string>() << " " << aa << ZT_EOL_S;
 						}
 					}
 				}

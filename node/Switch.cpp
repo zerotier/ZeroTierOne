@@ -437,7 +437,11 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		//TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),len);
 
-		if (!network->filterOutgoingPacket(RR->identity.address(),Address(),from,to,(const uint8_t *)data,len,etherType,vlanId)) {
+		// We filter with a NULL destination ZeroTier address first. Filtrations
+		// for each ZT destination are also done in OutboundMulticast, but these
+		// set noRedirect to true. This prevents multiple TEEs and REDIRECTs for
+		// multicast packets.
+		if (!network->filterOutgoingPacket(false,RR->identity.address(),Address(),from,to,(const uint8_t *)data,len,etherType,vlanId)) {
 			TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 			return;
 		}
@@ -452,17 +456,13 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			etherType,
 			data,
 			len);
-
-		return;
-	}
-
-	if (to[0] == MAC::firstOctetForNetwork(network->id())) {
+	} else if (to[0] == MAC::firstOctetForNetwork(network->id())) {
 		// Destination is another ZeroTier peer on the same network
 
 		Address toZT(to.toAddress(network->id())); // since in-network MACs are derived from addresses and network IDs, we can reverse this
 		SharedPtr<Peer> toPeer(RR->topology->getPeer(toZT));
 
-		if (!network->filterOutgoingPacket(RR->identity.address(),toZT,from,to,(const uint8_t *)data,len,etherType,vlanId)) {
+		if (!network->filterOutgoingPacket(false,RR->identity.address(),toZT,from,to,(const uint8_t *)data,len,etherType,vlanId)) {
 			TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 			return;
 		}
@@ -487,12 +487,16 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		}
 
 		//TRACE("%.16llx: UNICAST: %s -> %s etherType==%s(%.4x) vlanId==%u len==%u fromBridged==%d includeCom==%d",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),etherType,vlanId,len,(int)fromBridged,(int)includeCom);
-
-		return;
-	}
-
-	{
+	} else {
 		// Destination is bridged behind a remote peer
+
+		// We filter with a NULL destination ZeroTier address first. Filtrations
+		// for each ZT destination are also done below. This is the same rationale
+		// and design as for multicast.
+		if (!network->filterOutgoingPacket(false,RR->identity.address(),Address(),from,to,(const uint8_t *)data,len,etherType,vlanId)) {
+			TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+			return;
+		}
 
 		Address bridges[ZT_MAX_BRIDGE_SPAM];
 		unsigned int numBridges = 0;
@@ -527,16 +531,19 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		}
 
 		for(unsigned int b=0;b<numBridges;++b) {
-			SharedPtr<Peer> bridgePeer(RR->topology->getPeer(bridges[b]));
-			Packet outp(bridges[b],RR->identity.address(),Packet::VERB_EXT_FRAME);
-			outp.append(network->id());
-			outp.append((uint8_t)0x00);
-			to.appendTo(outp);
-			from.appendTo(outp);
-			outp.append((uint16_t)etherType);
-			outp.append(data,len);
-			outp.compress();
-			send(outp,true);
+			if (network->filterOutgoingPacket(true,RR->identity.address(),bridges[b],from,to,(const uint8_t *)data,len,etherType,vlanId)) {
+				Packet outp(bridges[b],RR->identity.address(),Packet::VERB_EXT_FRAME);
+				outp.append(network->id());
+				outp.append((uint8_t)0x00);
+				to.appendTo(outp);
+				from.appendTo(outp);
+				outp.append((uint16_t)etherType);
+				outp.append(data,len);
+				outp.compress();
+				send(outp,true);
+			} else {
+				TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+			}
 		}
 	}
 }

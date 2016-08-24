@@ -86,7 +86,7 @@ void OutboundMulticast::init(
 void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,const Address &toAddr)
 {
 	const SharedPtr<Network> nw(RR->node->network(_nwid));
-	if ((nw)&&(nw->filterOutgoingPacket(RR->identity.address(),toAddr,_macSrc,_macDest,_frameData,_frameLen,_etherType,0))) {
+	if ((nw)&&(nw->filterOutgoingPacket(true,RR->identity.address(),toAddr,_macSrc,_macDest,_frameData,_frameLen,_etherType,0))) {
 		//TRACE(">>MC %.16llx -> %s",(unsigned long long)this,toAddr.toString().c_str());
 		_packet.newInitializationVector();
 		_packet.setDestination(toAddr);

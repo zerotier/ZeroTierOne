@@ -81,8 +81,7 @@ bool Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint
 
 int Membership::addCredential(const RuntimeEnvironment *RR,const CertificateOfMembership &com)
 {
-	if (com.issuedTo() != RR->identity.address())
-		return -1;
+	TRACE("addCredential(COM) for %.16llx signed by %s issued to %s",com.networkId(),com.signedBy().toString().c_str(),com.issuedTo().toString().c_str());
 	if (_com == com)
 		return 0;
 	const int vr = com.verify(RR);
@@ -93,8 +92,6 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const CertificateOfMe
 
 int Membership::addCredential(const RuntimeEnvironment *RR,const Tag &tag)
 {
-	if (tag.issuedTo() != RR->identity.address())
-		return -1;
 	TState *t = _tags.get(tag.id());
 	if ((t)&&(t->lastReceived != 0)&&(t->tag == tag))
 		return 0;
@@ -112,8 +109,6 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const Tag &tag)
 
 int Membership::addCredential(const RuntimeEnvironment *RR,const Capability &cap)
 {
-	if (cap.issuedTo() != RR->identity.address())
-		return -1;
 	std::map<uint32_t,CState>::iterator c(_caps.find(cap.id()));
 	if ((c != _caps.end())&&(c->second.lastReceived != 0)&&(c->second.cap == cap))
 		return 0;

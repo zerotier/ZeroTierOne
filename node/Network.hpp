@@ -86,6 +86,7 @@ public:
 	 * certain actions may be taken such as pushing credentials to ztDest and
 	 * sending a copy of the packet to a TEE or REDIRECT target.
 	 *
+	 * @param noRedirect If true, do not TEE or REDIRECT -- this is set for secondary filtrations done in multicast and bridge send paths
 	 * @param ztSource Source ZeroTier address
 	 * @param ztDest Destination ZeroTier address
 	 * @param macSource Ethernet layer source address
@@ -97,6 +98,7 @@ public:
 	 * @return True if packet should be sent to destination peer
 	 */
 	bool filterOutgoingPacket(
+		const bool noRedirect,
 		const Address &ztSource,
 		const Address &ztDest,
 		const MAC &macSource,
