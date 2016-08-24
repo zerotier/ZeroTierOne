@@ -15,7 +15,6 @@ BuildRequires:  systemd
 BuildRequires:  lz4-devel
 BuildRequires:  libnatpmp-devel
 BuildRequires:  systemd
-BuildRequires:  json-parser-devel
 %endif
 
 Requires:       iproute
@@ -32,14 +31,12 @@ Requires:       chkconfig
 Requires:       lz4
 Requires:       libnatpmp
 Requires:       systemd
-Requires:       json-parser
 %endif
 
 Provides:       bundled(http-parser) = 2.7.0
 Provides:       bundled(miniupnpc) = 2.0
 
 %if 0%{?rhel} >= 6
-Provides:       bundled(json-parser) = 1.1.0
 Provides:       bundled(lz4) = 1.7.1
 Provides:       bundled(libnatpmp) = 20131126
 %endif
