@@ -153,6 +153,8 @@ private:
 		if (!member.count("capabilities")) member["capabilities"] = nlohmann::json::array();
 		if (!member.count("creationTime")) member["creationTime"] = OSUtils::now();
 		if (!member.count("noAutoAssignIps")) member["noAutoAssignIps"] = false;
+		if (!member.count("revision")) member["revision"] = 0ULL;
+		if (!member.count("enableBroadcast")) member["enableBroadcast"] = true;
 		member["objtype"] = "member";
 	}
 	inline void _initNetwork(nlohmann::json &network)

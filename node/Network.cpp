@@ -38,6 +38,36 @@
 // Uncomment to enable ZT_NETWORK_RULE_ACTION_DEBUG_LOG rule output to STDOUT
 #define ZT_RULES_ENGINE_DEBUGGING 1
 
+/*
+{
+	"name": "filter_log_test",
+	"private": true,
+	"v4AssignMode": {
+		"zt": true
+	},
+	"v6AssignMode": {
+		"rfc4193": true,
+		"zt": false,
+		"6plane": false
+	},
+	"routes": [
+		{ "target": "10.140.140.0/24", "via": null }
+	],
+	"ipAssignmentPools": [
+		{ "ipRangeStart": "10.140.140.2", "ipRangeEnd": "10.140.140.254" }
+	],
+	"rules": [
+		{ "type": "MATCH_ETHERTYPE", "etherType": 0x0800 },
+		{ "type": "ACTION_DEBUG_LOG" },
+
+		{ "type": "MATCH_ETHERTYPE", "etherType": 0x0800, "not": true },
+		{ "type": "ACTION_DEBUG_LOG" },
+
+		{ "type": "ACTION_ACCEPT" }
+	]
+}
+*/
+
 namespace ZeroTier {
 
 #ifdef ZT_RULES_ENGINE_DEBUGGING
