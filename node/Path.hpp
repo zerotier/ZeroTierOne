@@ -248,16 +248,6 @@ public:
 	}
 
 	/**
-	 * @return True if path is considered reliable (no NAT keepalives etc. are needed)
-	 */
-	inline bool reliable() const throw()
-	{
-		if ((_addr.ss_family == AF_INET)||(_addr.ss_family == AF_INET6))
-			return ((_ipScope != InetAddress::IP_SCOPE_GLOBAL)&&(_ipScope != InetAddress::IP_SCOPE_PSEUDOPRIVATE));
-		return true;
-	}
-
-	/**
 	 * @return True if address is non-NULL
 	 */
 	inline operator bool() const throw() { return (_addr); }
@@ -312,38 +302,6 @@ public:
 	 * Increase this path's probation violation count (for dead path detect)
 	 */
 	inline void increaseProbation() { ++_probation; }
-
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b) const
-	{
-		b.append((uint8_t)2); // version
-		b.append((uint64_t)_lastSend);
-		b.append((uint64_t)_lastPing);
-		b.append((uint64_t)_lastKeepalive);
-		b.append((uint64_t)_lastReceived);
-		_addr.serialize(b);
-		_localAddress.serialize(b);
-		b.append((uint16_t)_flags);
-		b.append((uint16_t)_probation);
-	}
-
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-	{
-		unsigned int p = startAt;
-		if (b[p++] != 2)
-			throw std::invalid_argument("invalid serialized Path");
-		_lastSend = b.template at<uint64_t>(p); p += 8;
-		_lastPing = b.template at<uint64_t>(p); p += 8;
-		_lastKeepalive = b.template at<uint64_t>(p); p += 8;
-		_lastReceived = b.template at<uint64_t>(p); p += 8;
-		p += _addr.deserialize(b,p);
-		p += _localAddress.deserialize(b,p);
-		_flags = b.template at<uint16_t>(p); p += 2;
-		_probation = b.template at<uint16_t>(p); p += 2;
-		_ipScope = _addr.ipScope();
-		return (p - startAt);
-	}
 
 	inline bool operator==(const Path &p) const { return ((p._addr == _addr)&&(p._localAddress == _localAddress)); }
 	inline bool operator!=(const Path &p) const { return ((p._addr != _addr)||(p._localAddress != _localAddress)); }
