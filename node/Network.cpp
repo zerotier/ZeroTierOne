@@ -35,9 +35,13 @@
 #include "Node.hpp"
 #include "Peer.hpp"
 
+// Uncomment to enable ZT_NETWORK_RULE_ACTION_DEBUG_LOG rule output to STDOUT
+#define ZT_RULES_ENGINE_DEBUGGING 1
+
 namespace ZeroTier {
 
-#ifdef ZT_TRACE
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+#define FILTER_TRACE(f,...) { Utils::snprintf(dpbuf,sizeof(dpbuf),f,##__VA_ARGS__); dlog.push_back(std::string(dpbuf)); }
 static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
 {
 	switch(rt) {
@@ -45,6 +49,7 @@ static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
 		case ZT_NETWORK_RULE_ACTION_ACCEPT: return "ACTION_ACCEPT";
 		case ZT_NETWORK_RULE_ACTION_TEE: return "ACTION_TEE";
 		case ZT_NETWORK_RULE_ACTION_REDIRECT: return "ACTION_REDIRECT";
+		case ZT_NETWORK_RULE_ACTION_DEBUG_LOG: return "ACTION_DEBUG_LOG";
 		case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS: return "MATCH_SOURCE_ZEROTIER_ADDRESS";
 		case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS: return "MATCH_DEST_ZEROTIER_ADDRESS";
 		case ZT_NETWORK_RULE_MATCH_VLAN_ID: return "MATCH_VLAN_ID";
@@ -65,7 +70,9 @@ static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
 		default: return "BAD_RULE_TYPE";
 	}
 }
-#endif // ZT_TRACE
+#else
+#define FILTER_TRACE(f,...) {}
+#endif // ZT_RULES_ENGINE_DEBUGGING
 
 // Returns true if packet appears valid; pos and proto will be set
 static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsigned int &pos,unsigned int &proto)
@@ -96,9 +103,6 @@ static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsig
 	return false; // overflow == invalid
 }
 
-//#define FILTER_TRACE TRACE
-#define FILTER_TRACE(f,...) {}
-
 // 0 == no match, -1 == match/drop, 1 == match/accept
 static int _doZtFilter(
 	const RuntimeEnvironment *RR,
@@ -126,6 +130,11 @@ static int _doZtFilter(
 	// For each set of rules we start by assuming that they match (since no constraints
 	// yields a 'match all' rule).
 	uint8_t thisSetMatches = 1;
+
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+	std::vector<std::string> dlog;
+	char dpbuf[1024];
+#endif
 
 	for(unsigned int rn=0;rn<ruleCount;++rn) {
 		const ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rules[rn].t & 0x7f);
@@ -174,47 +183,78 @@ static int _doZtFilter(
 					thisSetMatches = 1; // TEE does not terminate evaluation
 				}
 			}	break;
+			case ZT_NETWORK_RULE_ACTION_DEBUG_LOG:
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+				if (thisSetMatches) {
+					printf("[FILTER] MATCH %s->%s %.2x:%.2x:%.2x:%.2x:%.2x:%.2x->%.2x:%.2x:%.2x:%.2x:%.2x:%.2x inbound=%d noRedirect=%d frameLen=%u etherType=%u" ZT_EOL_S,
+						ztSource.toString().c_str(),
+						ztDest.toString().c_str(),
+						(unsigned int)macSource[0],
+						(unsigned int)macSource[1],
+						(unsigned int)macSource[2],
+						(unsigned int)macSource[3],
+						(unsigned int)macSource[4],
+						(unsigned int)macSource[5],
+						(unsigned int)macDest[0],
+						(unsigned int)macDest[1],
+						(unsigned int)macDest[2],
+						(unsigned int)macDest[3],
+						(unsigned int)macDest[4],
+						(unsigned int)macDest[5],
+						(int)inbound,
+						(int)noRedirect,
+						frameLen,
+						etherType
+					);
+					for(std::vector<std::string>::iterator m(dlog.begin());m!=dlog.end();++m)
+						printf("         %s" ZT_EOL_S,m->c_str());
+					dlog.clear();
+				}
+#endif // ZT_RULES_ENGINE_DEBUGGING
+				thisRuleMatches = 1;
+				thisSetMatches = 1; // DEBUG_LOG does not terminate evaluation
+				break;
 
 			// Rules ---------------------------------------------------------------
 
 			// thisSetMatches is the binary AND of the result of all rules in a set
 
 			case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
-				FILTER_TRACE("FILTER[%u] %s param0=%.10llx",rn,_rtn(rt),rules[rn].v.zt);
+				FILTER_TRACE("%u %s param0=%.10llx",rn,_rtn(rt),rules[rn].v.zt);
 				thisRuleMatches = (uint8_t)(rules[rn].v.zt == ztSource.toInt());
 				break;
 			case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS:
-				FILTER_TRACE("FILTER[%u] %s param0=%.10llx",rn,_rtn(rt),rules[rn].v.zt);
+				FILTER_TRACE("%u %s param0=%.10llx",rn,_rtn(rt),rules[rn].v.zt);
 				thisRuleMatches = (uint8_t)(rules[rn].v.zt == ztDest.toInt());
 				break;
 			case ZT_NETWORK_RULE_MATCH_VLAN_ID:
-				FILTER_TRACE("FILTER[%u] %s param0=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.vlanId);
+				FILTER_TRACE("%u %s param0=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.vlanId);
 				thisRuleMatches = (uint8_t)(rules[rn].v.vlanId == (uint16_t)vlanId);
 				break;
 			case ZT_NETWORK_RULE_MATCH_VLAN_PCP:
 				// NOT SUPPORTED YET
-				FILTER_TRACE("FILTER[%u] %s param0=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.vlanPcp);
+				FILTER_TRACE("%u %s param0=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.vlanPcp);
 				thisRuleMatches = (uint8_t)(rules[rn].v.vlanPcp == 0);
 				break;
 			case ZT_NETWORK_RULE_MATCH_VLAN_DEI:
 				// NOT SUPPORTED YET
-				FILTER_TRACE("FILTER[%u] %s param0=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.vlanDei);
+				FILTER_TRACE("%u %s param0=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.vlanDei);
 				thisRuleMatches = (uint8_t)(rules[rn].v.vlanDei == 0);
 				break;
 			case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
-				FILTER_TRACE("FILTER[%u] %s param0=%u etherType=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.etherType,etherType);
+				FILTER_TRACE("%u %s param0=%u etherType=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.etherType,etherType);
 				thisRuleMatches = (uint8_t)(rules[rn].v.etherType == (uint16_t)etherType);
 				break;
 			case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
-				FILTER_TRACE("FILTER[%u] %s param0=%.12llx",rn,_rtn(rt),rules[rn].v.mac);
+				FILTER_TRACE("%u %s param0=%.12llx",rn,_rtn(rt),rules[rn].v.mac);
 				thisRuleMatches = (uint8_t)(MAC(rules[rn].v.mac,6) == macSource);
 				break;
 			case ZT_NETWORK_RULE_MATCH_MAC_DEST:
-				FILTER_TRACE("FILTER[%u] %s param0=%.12llx",rn,_rtn(rt),rules[rn].v.mac);
+				FILTER_TRACE("%u %s param0=%.12llx",rn,_rtn(rt),rules[rn].v.mac);
 				thisRuleMatches = (uint8_t)(MAC(rules[rn].v.mac,6) == macDest);
 				break;
 			case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
-				FILTER_TRACE("FILTER[%u] %s param0=%s",rn,_rtn(rt),InetAddress((const void *)&(rules[rn].v.ipv4.ip),4,rules[rn].v.ipv4.mask).toString().c_str());
+				FILTER_TRACE("%u %s param0=%s",rn,_rtn(rt),InetAddress((const void *)&(rules[rn].v.ipv4.ip),4,rules[rn].v.ipv4.mask).toString().c_str());
 				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
 					thisRuleMatches = (uint8_t)(InetAddress((const void *)&(rules[rn].v.ipv4.ip),4,rules[rn].v.ipv4.mask).containsAddress(InetAddress((const void *)(frameData + 12),4,0)));
 				} else {
@@ -222,7 +262,7 @@ static int _doZtFilter(
 				}
 				break;
 			case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
-				FILTER_TRACE("FILTER[%u] %s param0=%s",rn,_rtn(rt),InetAddress((const void *)&(rules[rn].v.ipv4.ip),4,rules[rn].v.ipv4.mask).toString().c_str());
+				FILTER_TRACE("%u %s param0=%s",rn,_rtn(rt),InetAddress((const void *)&(rules[rn].v.ipv4.ip),4,rules[rn].v.ipv4.mask).toString().c_str());
 				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
 					thisRuleMatches = (uint8_t)(InetAddress((const void *)&(rules[rn].v.ipv4.ip),4,rules[rn].v.ipv4.mask).containsAddress(InetAddress((const void *)(frameData + 16),4,0)));
 				} else {
@@ -230,7 +270,7 @@ static int _doZtFilter(
 				}
 				break;
 			case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
-				FILTER_TRACE("FILTER[%u] %s param0=%s",rn,_rtn(rt),InetAddress((const void *)rules[rn].v.ipv6.ip,16,rules[rn].v.ipv6.mask).toString().c_str());
+				FILTER_TRACE("%u %s param0=%s",rn,_rtn(rt),InetAddress((const void *)rules[rn].v.ipv6.ip,16,rules[rn].v.ipv6.mask).toString().c_str());
 				if ((etherType == ZT_ETHERTYPE_IPV6)&&(frameLen >= 40)) {
 					thisRuleMatches = (uint8_t)(InetAddress((const void *)rules[rn].v.ipv6.ip,16,rules[rn].v.ipv6.mask).containsAddress(InetAddress((const void *)(frameData + 8),16,0)));
 				} else {
@@ -238,7 +278,7 @@ static int _doZtFilter(
 				}
 				break;
 			case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
-				FILTER_TRACE("FILTER[%u] %s param0=%s",rn,_rtn(rt),InetAddress((const void *)rules[rn].v.ipv6.ip,16,rules[rn].v.ipv6.mask).toString().c_str());
+				FILTER_TRACE("%u %s param0=%s",rn,_rtn(rt),InetAddress((const void *)rules[rn].v.ipv6.ip,16,rules[rn].v.ipv6.mask).toString().c_str());
 				if ((etherType == ZT_ETHERTYPE_IPV6)&&(frameLen >= 40)) {
 					thisRuleMatches = (uint8_t)(InetAddress((const void *)rules[rn].v.ipv6.ip,16,rules[rn].v.ipv6.mask).containsAddress(InetAddress((const void *)(frameData + 24),16,0)));
 				} else {
@@ -246,7 +286,7 @@ static int _doZtFilter(
 				}
 				break;
 			case ZT_NETWORK_RULE_MATCH_IP_TOS:
-				FILTER_TRACE("FILTER[%u] %s param0=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.ipTos);
+				FILTER_TRACE("%u %s param0=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.ipTos);
 				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
 					thisRuleMatches = (uint8_t)(rules[rn].v.ipTos == ((frameData[1] & 0xfc) >> 2));
 				} else if ((etherType == ZT_ETHERTYPE_IPV6)&&(frameLen >= 40)) {
@@ -257,7 +297,7 @@ static int _doZtFilter(
 				}
 				break;
 			case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
-				FILTER_TRACE("FILTER[%u] %s param0=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.ipProtocol);
+				FILTER_TRACE("%u %s param0=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.ipProtocol);
 				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
 					thisRuleMatches = (uint8_t)(rules[rn].v.ipProtocol == frameData[9]);
 				} else if (etherType == ZT_ETHERTYPE_IPV6) {
@@ -289,7 +329,7 @@ static int _doZtFilter(
 							}
 							break;
 					}
-					FILTER_TRACE("FILTER[%u] %s param0=%u param1=%u port==%u proto==%u etherType=%u (IPv4)",rn,_rtn(rt),(unsigned int)rules[rn].v.port[0],(unsigned int)rules[rn].v.port[1],p,(unsigned int)frameData[9],etherType);
+					FILTER_TRACE("%u %s param0=%u param1=%u port==%u proto==%u etherType=%u (IPv4)",rn,_rtn(rt),(unsigned int)rules[rn].v.port[0],(unsigned int)rules[rn].v.port[1],p,(unsigned int)frameData[9],etherType);
 					thisRuleMatches = (p > 0) ? (uint8_t)((p >= (int)rules[rn].v.port[0])&&(p <= (int)rules[rn].v.port[1])) : (uint8_t)0;
 				} else if (etherType == ZT_ETHERTYPE_IPV6) {
 					unsigned int pos = 0,proto = 0;
@@ -308,14 +348,14 @@ static int _doZtFilter(
 								}
 								break;
 						}
-						FILTER_TRACE("FILTER[%u] %s param0=%u param1=%u port==%u proto=%u etherType=%u (IPv6)",rn,_rtn(rt),(unsigned int)rules[rn].v.port[0],(unsigned int)rules[rn].v.port[1],p,proto,etherType);
+						FILTER_TRACE("%u %s param0=%u param1=%u port==%u proto=%u etherType=%u (IPv6)",rn,_rtn(rt),(unsigned int)rules[rn].v.port[0],(unsigned int)rules[rn].v.port[1],p,proto,etherType);
 						thisRuleMatches = (p > 0) ? (uint8_t)((p >= (int)rules[rn].v.port[0])&&(p <= (int)rules[rn].v.port[1])) : (uint8_t)0;
 					} else {
-						FILTER_TRACE("FILTER[%u] %s param0=%u param1=%u port=0 proto=0 etherType=%u (IPv6 parse failed)",rn,_rtn(rt),(unsigned int)rules[rn].v.port[0],(unsigned int)rules[rn].v.port[1],etherType);
+						FILTER_TRACE("%u %s param0=%u param1=%u port=0 proto=0 etherType=%u (IPv6 parse failed)",rn,_rtn(rt),(unsigned int)rules[rn].v.port[0],(unsigned int)rules[rn].v.port[1],etherType);
 						thisRuleMatches = 0;
 					}
 				} else {
-					FILTER_TRACE("FILTER[%u] %s param0=%u param1=%u port=0 proto=0 etherType=%u (not IPv4 or IPv6)",rn,_rtn(rt),(unsigned int)rules[rn].v.port[0],(unsigned int)rules[rn].v.port[1],etherType);
+					FILTER_TRACE("%u %s param0=%u param1=%u port=0 proto=0 etherType=%u (not IPv4 or IPv6)",rn,_rtn(rt),(unsigned int)rules[rn].v.port[0],(unsigned int)rules[rn].v.port[1],etherType);
 					thisRuleMatches = 0;
 				}
 				break;
@@ -336,18 +376,18 @@ static int _doZtFilter(
 						}
 					}
 				}
-				FILTER_TRACE("FILTER[%u] %s param0=%.16llx param1=%.16llx actual=%.16llx",rn,_rtn(rt),rules[rn].v.characteristics[0],rules[rn].v.characteristics[1],cf);
+				FILTER_TRACE("%u %s param0=%.16llx param1=%.16llx actual=%.16llx",rn,_rtn(rt),rules[rn].v.characteristics[0],rules[rn].v.characteristics[1],cf);
 				thisRuleMatches = (uint8_t)((cf & rules[rn].v.characteristics[0]) == rules[rn].v.characteristics[1]);
 			}	break;
 			case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
-				FILTER_TRACE("FILTER[%u] %s param0=%u param1=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.frameSize[0],(unsigned int)rules[rn].v.frameSize[1]);
+				FILTER_TRACE("%u %s param0=%u param1=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.frameSize[0],(unsigned int)rules[rn].v.frameSize[1]);
 				thisRuleMatches = (uint8_t)((frameLen >= (unsigned int)rules[rn].v.frameSize[0])&&(frameLen <= (unsigned int)rules[rn].v.frameSize[1]));
 				break;
 			case ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS:
 			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
 			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
 			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR: {
-				FILTER_TRACE("FILTER[%u] %s param0=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.tag.value);
+				FILTER_TRACE("%u %s param0=%u",rn,_rtn(rt),(unsigned int)rules[rn].v.tag.value);
 				const Tag *lt = (const Tag *)0;
 				for(unsigned int i=0;i<localTagCount;++i) {
 					if (rules[rn].v.tag.id == localTags[i].id()) {
@@ -391,7 +431,7 @@ static int _doZtFilter(
 		// thisSetMatches remains true if the current rule matched (or did NOT match if NOT bit is set)
 		thisSetMatches &= (thisRuleMatches ^ ((rules[rn].t & 0x80) >> 7));
 
-		FILTER_TRACE("FILTER[%u] %s/%u thisRuleMatches==%u thisSetMatches==%u",rn,_rtn(rt),(unsigned int)rt,(unsigned int)thisRuleMatches,(unsigned int)thisSetMatches);
+		FILTER_TRACE("%u %s/%u thisRuleMatches==%u thisSetMatches==%u",rn,_rtn(rt),(unsigned int)rt,(unsigned int)thisRuleMatches,(unsigned int)thisSetMatches);
 	}
 
 	return 0;

@@ -176,6 +176,7 @@ public:
 			switch((ZT_VirtualNetworkRuleType)(rules[i].t & 0x7f)) {
 				//case ZT_NETWORK_RULE_ACTION_DROP:
 				//case ZT_NETWORK_RULE_ACTION_ACCEPT:
+				//case ZT_NETWORK_RULE_ACTION_DEBUG_LOG:
 				default:
 					b.append((uint8_t)0);
 					break;

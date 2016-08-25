@@ -147,6 +147,9 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 			r["flags"] = (uint64_t)rule.v.fwd.flags;
 			r["length"] = (uint64_t)rule.v.fwd.length;
 			break;
+		case ZT_NETWORK_RULE_ACTION_DEBUG_LOG:
+			r["type"] = "ACTION_DEBUG_LOG";
+			break;
 		case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 			r["type"] = "MATCH_SOURCE_ZEROTIER_ADDRESS";
 			r["zt"] = Address(rule.v.zt).toString();
@@ -277,6 +280,9 @@ static bool _parseRule(const json &r,ZT_VirtualNetworkRule &rule)
 		rule.v.fwd.address = Utils::hexStrToU64(_jS(r["zt"],"0").c_str()) & 0xffffffffffULL;
 		rule.v.fwd.flags = (uint32_t)(_jI(r["flags"],0ULL) & 0xffffffffULL);
 		rule.v.fwd.length = (uint16_t)(_jI(r["length"],0ULL) & 0xffffULL);
+		return true;
+	} else if (t == "ACTION_DEBUG_LOG") {
+		rule.t |= ZT_NETWORK_RULE_ACTION_DEBUG_LOG;
 		return true;
 	} else if (t == "MATCH_SOURCE_ZEROTIER_ADDRESS") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS;

@@ -515,6 +515,11 @@ enum ZT_VirtualNetworkRuleType
 	 */
 	ZT_NETWORK_RULE_ACTION_REDIRECT = 3,
 
+	/**
+	 * Log if match and if rule debugging is enabled in the build, otherwise does nothing (for developers)
+	 */
+	ZT_NETWORK_RULE_ACTION_DEBUG_LOG = 4,
+
 	// 32 to 127 reserved for match criteria
 
 	/**
