@@ -25,20 +25,20 @@
 #include <map>
 #include <vector>
 #include <set>
+#include <list>
 
 #include "../node/Constants.hpp"
 
 #include "../node/NetworkController.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/Utils.hpp"
+#include "../node/Address.hpp"
 #include "../node/InetAddress.hpp"
 
 #include "../osdep/OSUtils.hpp"
+#include "../osdep/Thread.hpp"
 
 #include "../ext/json/json.hpp"
-
-// Expiration time for network member cache entries in ms
-#define ZT_NETCONF_NETWORK_MEMBER_CACHE_EXPIRE 30000
 
 namespace ZeroTier {
 
@@ -49,6 +49,10 @@ class EmbeddedNetworkController : public NetworkController
 public:
 	EmbeddedNetworkController(Node *node,const char *dbPath);
 	virtual ~EmbeddedNetworkController();
+
+	// Thread main method -- do not call directly
+	void threadMain()
+		throw();
 
 	virtual NetworkController::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
@@ -82,22 +86,6 @@ public:
 
 private:
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
-
-	// JSON blob I/O
-	inline nlohmann::json _readJson(const std::string &path)
-	{
-		std::string buf;
-		if (OSUtils::readFile(path.c_str(),buf)) {
-			try {
-				return nlohmann::json::parse(buf);
-			} catch ( ... ) {}
-		}
-		return nlohmann::json::object();
-	}
-	inline bool _writeJson(const std::string &path,const nlohmann::json &obj)
-	{
-		return OSUtils::writeFile(path.c_str(),obj.dump(2));
-	}
 
 	// Network base path and network JSON path
 	inline std::string _networkBP(const uint64_t nwid,bool create)
@@ -133,8 +121,8 @@ private:
 		return (_memberBP(nwid,member,create) + ZT_PATH_SEPARATOR + "config.json");
 	}
 
-	// We cache the members of networks in memory to avoid having to scan the filesystem so much
-	std::map< uint64_t,std::pair< std::map< Address,nlohmann::json >,uint64_t > > _networkMemberCache;
+	// In-memory cache of network members
+	std::map< uint64_t,std::map< Address,nlohmann::json > > _networkMemberCache;
 	Mutex _networkMemberCache_m;
 
 	// Gathers a bunch of statistics about members of a network, IP assignments, etc. that we need in various places
@@ -211,6 +199,21 @@ private:
 	// Last request time by address, for rate limitation
 	std::map< std::pair<uint64_t,uint64_t>,uint64_t > _lastRequestTime;
 	Mutex _lastRequestTime_m;
+
+	// Queue of network member refreshes to be pushed
+	struct _Refresh
+	{
+		Address dest;
+		uint64_t nwid;
+		uint64_t blacklistAddresses[64];
+		uint64_t blacklistThresholds[64];
+		unsigned int numBlacklistEntries;
+	};
+	std::list< _Refresh > _refreshQueue;
+	Mutex _refreshQueue_m;
+
+	Thread _daemon;
+	volatile bool _daemonRun;
 };
 
 } // namespace ZeroTier

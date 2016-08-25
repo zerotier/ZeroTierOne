@@ -60,6 +60,22 @@ using json = nlohmann::json;
 
 namespace ZeroTier {
 
+// JSON blob I/O
+static json _readJson(const std::string &path)
+{
+	std::string buf;
+	if (OSUtils::readFile(path.c_str(),buf)) {
+		try {
+			return json::parse(buf);
+		} catch ( ... ) {}
+	}
+	return json::object();
+}
+static bool _writeJson(const std::string &path,const json &obj)
+{
+	return OSUtils::writeFile(path.c_str(),obj.dump(2));
+}
+
 // Get JSON values as unsigned integers, strings, or booleans, doing type conversion if possible
 static uint64_t _jI(const json &jv,const uint64_t dfl)
 {
@@ -394,14 +410,65 @@ static bool _parseRule(const json &r,ZT_VirtualNetworkRule &rule)
 
 EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPath) :
 	_node(node),
-	_path(dbPath)
+	_path(dbPath),
+	_daemonRun(true)
 {
 	OSUtils::mkdir(dbPath);
 	OSUtils::lockDownFile(dbPath,true); // networks might contain auth tokens, etc., so restrict directory permissions
+	_daemon = Thread::start(this);
 }
 
 EmbeddedNetworkController::~EmbeddedNetworkController()
 {
+}
+
+void EmbeddedNetworkController::threadMain()
+	throw()
+{
+	uint64_t lastUpdatedNetworkMemberCache = 0;
+	while (_daemonRun) {
+		// Every 60 seconds we rescan the filesystem for network members and rebuild our cache
+		if ((OSUtils::now() - lastUpdatedNetworkMemberCache) >= 60000) {
+			const std::vector<std::string> networks(OSUtils::listSubdirectories((_path + ZT_PATH_SEPARATOR_S + "network").c_str()));
+			for(auto n=networks.begin();n!=networks.end();++n) {
+				if (n->length() == 16) {
+					const std::vector<std::string> members(OSUtils::listSubdirectories((*n + ZT_PATH_SEPARATOR_S + "member").c_str()));
+					std::map<Address,nlohmann::json> newCache;
+					for(auto m=members.begin();m!=members.end();++m) {
+						if (m->length() == ZT_ADDRESS_LENGTH_HEX) {
+							const Address maddr(*m);
+							try {
+								const json mj(_readJson((_path + ZT_PATH_SEPARATOR_S + "network" + ZT_PATH_SEPARATOR_S + *n + ZT_PATH_SEPARATOR_S + "member" + ZT_PATH_SEPARATOR_S + *m + ZT_PATH_SEPARATOR_S + "config.json")));
+								if ((mj.is_object())&&(mj.size() > 0)) {
+									newCache[maddr] = mj;
+								}
+							} catch ( ... ) {}
+						}
+					}
+					{
+						Mutex::Lock _l(_networkMemberCache_m);
+						_networkMemberCache[Utils::hexStrToU64(n->c_str())] = newCache;
+					}
+				}
+			}
+			lastUpdatedNetworkMemberCache = OSUtils::now();
+		}
+
+		{	// Every 25ms we push up to 50 network refreshes, which amounts to a max of about 300-500kb/sec
+			unsigned int count = 0;
+			Mutex::Lock _l(_refreshQueue_m);
+			while (_refreshQueue.size() > 0) {
+				_Refresh &r = _refreshQueue.front();
+				if (_node)
+					_node->pushNetworkRefresh(r.dest,r.nwid,r.blacklistAddresses,r.blacklistThresholds,r.numBlacklistEntries);
+				_refreshQueue.pop_front();
+				if (++count >= 50)
+					break;
+			}
+		}
+
+		Thread::sleep(25);
+	}
 }
 
 NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData,NetworkConfig &nc)
@@ -1082,8 +1149,19 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 					_writeJson(_memberJP(nwid,Address(address),true).c_str(),member);
 
-					if (_node)
-						_node->pushNetworkRefresh(address,nwid,(const uint64_t *)0,(const uint64_t *)0,0);
+					{
+						Mutex::Lock _l(_networkMemberCache_m);
+						_networkMemberCache[nwid][Address(address)] = member;
+					}
+
+					{
+						Mutex::Lock _l(_refreshQueue_m);
+						_refreshQueue.push_back(_Refresh());
+						_Refresh &r = _refreshQueue.back();
+						r.dest = Address(address);
+						r.nwid = nwid;
+						r.numBlacklistEntries = 0;
+					}
 
 					// Add non-persisted fields
 					member["clock"] = now;
@@ -1478,24 +1556,9 @@ void EmbeddedNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTes
 void EmbeddedNetworkController::_getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi)
 {
 	Mutex::Lock _mcl(_networkMemberCache_m);
-
 	auto memberCacheEntry = _networkMemberCache[nwid];
-	if ((now - memberCacheEntry.second) >= ZT_NETCONF_NETWORK_MEMBER_CACHE_EXPIRE) {
-		const std::string bp(_networkBP(nwid,false) + ZT_PATH_SEPARATOR_S + "member");
-		std::vector<std::string> members(OSUtils::listSubdirectories(bp.c_str()));
-		for(std::vector<std::string>::iterator m(members.begin());m!=members.end();++m) {
-			if (m->length() == ZT_ADDRESS_LENGTH_HEX) {
-				nlohmann::json mj(_readJson(bp + ZT_PATH_SEPARATOR_S + *m + ZT_PATH_SEPARATOR_S + "config.json"));
-				if ((mj.is_object())&&(mj.size() > 0)) {
-					memberCacheEntry.first[Address(*m)] = mj;
-				}
-			}
-		}
-		memberCacheEntry.second = now;
-	}
-
-	nmi.totalMemberCount = memberCacheEntry.first.size();
-	for(std::map< Address,nlohmann::json >::const_iterator nm(memberCacheEntry.first.begin());nm!=memberCacheEntry.first.end();++nm) {
+	nmi.totalMemberCount = memberCacheEntry.size();
+	for(std::map< Address,nlohmann::json >::const_iterator nm(memberCacheEntry.begin());nm!=memberCacheEntry.end();++nm) {
 		if (_jB(nm->second["authorized"],false)) {
 			++nmi.authorizedMemberCount;
 
