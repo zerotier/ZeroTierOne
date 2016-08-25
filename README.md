@@ -33,19 +33,22 @@ To create networks of your own you'll need a network controller. You can use [ou
 
 ### Building from Source
 
-For Mac, Linux, and BSD, just type "make" (or "gmake" on BSD). You won't need much installed; here are the requirements for various platforms:
+For Mac, Linux, and BSD, just type `make` (or `gmake` on BSD). Platform requirements are:
 
- * **Mac**: Xcode command line tools. It should build on OSX 10.7 or newer.
- * **Linux**: gcc/g++ (4.9 or newer recommended) or clang/clang++ (3.4 or newer recommended) Makefile will use clang by default if available. The Linux build will auto-detect the presence of development headers for *json-parser*, *http-parser*, *li8bnatpmp*, and *libminiupnpc* and will link against the system libraries for these if they are present and recent enough. Otherwise the bundled versions in [ext/](ext/) will be used. Type `make install` to install the binaries and other files on the system, though this will not create init.d or systemd links.
- * **FreeBSD**: C++ compiler (G++ usually) and GNU make (gmake).
+ - **Mac**: Xcode command line tools for OSX 10.7 or newer.
+ - **Linux**: GCC/G++ 4.9 or newer or CLANG 3.4 or newer, and GNU make and standard shell tools of course.
+   - The Linux make file will auto-detect and prefer CLANG if present since in our experience it does a better job optimizing C++ code. You can specify CC= and CXX= on the make command line to override this behavior.
+   - Several distributions including CentOS 7 ship with G++ 4.8 which has broken C++11 support. If you are running CentOS 7 type `sudo yum install clang` to install CLANG 3.4, which will work fine. There is no C++11 in the ZeroTier core but we have started using it in the service and network controller code.
+   - If any of the following have development headers on the system they are auto-detected and the build will link against system versions: `http-parser`, `lz4`, `libnatpmp`, and `miniupnpc`. If these are missing (or too old) the versions in `ext/` are used and are statically linked into the binary. Please be aware of this since if you build with these present the resulting binary will require them on other systems too.
+ - **FreeBSD**: GCC/G++ 4.9 or newer and `gmake` since our make files use GNU extensions.
 
 Each supported platform has its own *make-XXX.mk* file that contains the actual make rules for the platform. The right .mk file is included by the main Makefile based on the GNU make *OSTYPE* variable. Take a look at the .mk file for your platform for other targets, debug build rules, etc.
 
 Typing `make selftest` will build a *zerotier-selftest* binary which unit tests various internals and reports on a few aspects of the build environment. It's a good idea to try this on novel platforms or architectures.
 
-Windows, of course, is special. We build for Windows with Microsoft Visual Studio 2012 on Windows 7. A solution file is located in the *windows/* subfolder. Newer versions of Visual Studio (and Windows) may work but haven't been tested. Older versions almost certainly will not, since they lack things like *stdint.h* and certain STL features. MinGW or other ports of gcc/clang to Windows should also work but haven't been tested.
+Windows, of course, is special. A Visual Studio solution file is located in the *windows/* subfolder. We have not tried MinGW or CLANG for Windows but these may work, though you will have issues building the Windows GUI with them.
 
-32 and 64 bit X86 and ARM (e.g. Raspberry Pi, Android) are officially supported. Community members have built for MIPS and Sparc without issues.
+Mac and Windows require tun/tap virtual network port drivers. We include pre-built signed binaries for these in `ext/bin`, so you should not need to build these yourself. Linux, FreeBSD, and others can use built-in kernel support for tun/tap network devices.
 
 ### Running
 

@@ -1082,7 +1082,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 					_writeJson(_memberJP(nwid,Address(address),true).c_str(),member);
 
-					_node->pushNetworkRefresh(address,nwid,(const uint64_t *)0,(const uint64_t *)0,0);
+					if (_node)
+						_node->pushNetworkRefresh(address,nwid,(const uint64_t *)0,(const uint64_t *)0,0);
 
 					// Add non-persisted fields
 					member["clock"] = now;
@@ -1128,7 +1129,9 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					te.test = test;
 					te.jsonResults = "";
 
-					_node->circuitTestBegin(test,&(EmbeddedNetworkController::_circuitTestCallback));
+					if (_node)
+						_node->circuitTestBegin(test,&(EmbeddedNetworkController::_circuitTestCallback));
+					else return 500;
 
 					char json[1024];
 					Utils::snprintf(json,sizeof(json),"{\"testId\":\"%.16llx\"}",test->testId);
