@@ -739,7 +739,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 
 		const unsigned int hopCount = hops();
 		const uint64_t requestPacketId = packetId();
-		peer->received(_localAddress,_remoteAddress,hopCount,requestPacketId,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,false);
+		bool netconfOk = false;
 
 		if (RR->localNetworkController) {
 			NetworkConfig *netconf = new NetworkConfig();
@@ -747,6 +747,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 				switch(RR->localNetworkController->doNetworkConfigRequest((hopCount > 0) ? InetAddress() : _remoteAddress,RR->identity,peer->identity(),nwid,metaData,*netconf)) {
 
 					case NetworkController::NETCONF_QUERY_OK: {
+						netconfOk = true;
 						Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
 						try {
 							if (netconf->toDictionary(*dconf,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6)) {
@@ -817,6 +818,8 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 			outp.armor(peer->key(),true);
 			RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 		}
+
+		peer->received(_localAddress,_remoteAddress,hopCount,requestPacketId,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,netconfOk);
 	} catch (std::exception &exc) {
 		fprintf(stderr,"WARNING: network config request failed with exception: %s" ZT_EOL_S,exc.what());
 		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
