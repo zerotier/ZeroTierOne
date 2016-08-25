@@ -687,7 +687,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		ipAssignments = json::array();
 	}
 
-	if ( (ipAssignmentPools.is_array()) && ((v6AssignMode.is_object())&&(_jB(v6AssignMode["zt"],false))) && (!haveManagedIpv6AutoAssignment) && (!_jB(member["activeBridge"],false)) ) {
+	if ( (ipAssignmentPools.is_array()) && ((v6AssignMode.is_object())&&(_jB(v6AssignMode["zt"],false))) && (!haveManagedIpv6AutoAssignment) && (!_jB(member["noAutoAssignIps"],false)) ) {
 		for(unsigned long p=0;((p<ipAssignmentPools.size())&&(!haveManagedIpv6AutoAssignment));++p) {
 			auto pool = ipAssignmentPools[p];
 			if (pool.is_object()) {
@@ -747,7 +747,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		}
 	}
 
-	if ( (ipAssignmentPools.is_array()) && ((v4AssignMode.is_object())&&(_jB(v4AssignMode["zt"],false))) && (!haveManagedIpv4AutoAssignment) && (!_jB(member["activeBridge"],false)) ) {
+	if ( (ipAssignmentPools.is_array()) && ((v4AssignMode.is_object())&&(_jB(v4AssignMode["zt"],false))) && (!haveManagedIpv4AutoAssignment) && (!_jB(member["noAutoAssignIps"],false)) ) {
 		for(unsigned long p=0;((p<ipAssignmentPools.size())&&(!haveManagedIpv4AutoAssignment));++p) {
 			auto pool = ipAssignmentPools[p];
 			if (pool.is_object()) {
@@ -1004,6 +1004,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 					try {
 						if (b.count("activeBridge")) member["activeBridge"] = _jB(b["activeBridge"],false);
+						if (b.count("noAutoAssignIps")) member["noAutoAssignIps"] = _jB(b["noAutoAssignIps"],false);
 						if ((b.count("identity"))&&(!member.count("identity"))) member["identity"] = _jS(b["identity"],""); // allow identity to be populated only if not already known
 
 						if (b.count("authorized")) {

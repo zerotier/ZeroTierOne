@@ -164,6 +164,7 @@ private:
 		if (!member.count("tags")) member["tags"] = nlohmann::json::array();
 		if (!member.count("capabilities")) member["capabilities"] = nlohmann::json::array();
 		if (!member.count("creationTime")) member["creationTime"] = OSUtils::now();
+		if (!member.count("noAutoAssignIps")) member["noAutoAssignIps"] = false;
 		member["objtype"] = "member";
 	}
 	inline void _initNetwork(nlohmann::json &network)
