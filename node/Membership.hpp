@@ -46,6 +46,8 @@ class RuntimeEnvironment;
  *
  * This is kind of analogous to a join table between Peer and Network. It is
  * presently held by the Network object for each participating Peer.
+ *
+ * This is not thread safe. It must be locked externally.
  */
 class Membership
 {

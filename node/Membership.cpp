@@ -106,8 +106,24 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const Tag &tag)
 	const int vr = tag.verify(RR);
 	if (vr == 0) {
 		TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (new)",tag.issuedTo().toString().c_str(),tag.networkId());
-		if (!t)
+		if (!t) {
+			while (_tags.size() >= ZT_MAX_NETWORK_TAGS) {
+				uint32_t oldest = 0;
+				uint64_t oldestLastReceived = 0xffffffffffffffffULL;
+				uint32_t *i = (uint32_t *)0;
+				TState *ts = (TState *)0;
+				Hashtable<uint32_t,TState>::Iterator tsi(_tags);
+				while (tsi.next(i,ts)) {
+					if (ts->lastReceived < oldestLastReceived) {
+						oldestLastReceived = ts->lastReceived;
+						oldest = *i;
+					}
+				}
+				if (oldestLastReceived != 0xffffffffffffffffULL)
+					_tags.erase(oldest);
+			}
 			t = &(_tags[tag.id()]);
+		}
 		if (t->tag.timestamp() <= tag.timestamp()) {
 			t->lastReceived = RR->node->now();
 			t->tag = tag;
@@ -129,6 +145,18 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const Capability &cap
 	if (vr == 0) {
 		TRACE("addCredential(Capability) for %s on %.16llx ACCEPTED (new)",cap.issuedTo().toString().c_str(),cap.networkId());
 		if (c == _caps.end()) {
+			while (_caps.size() >= ZT_MAX_NETWORK_CAPABILITIES) {
+				std::map<uint32_t,CState>::iterator oldest;
+				uint64_t oldestLastReceived = 0xffffffffffffffffULL;
+				for(std::map<uint32_t,CState>::iterator i(_caps.begin());i!=_caps.end();++i) {
+					if (i->second.lastReceived < oldestLastReceived) {
+						oldestLastReceived = i->second.lastReceived;
+						oldest = i;
+					}
+				}
+				if (oldestLastReceived != 0xffffffffffffffffULL)
+					_caps.erase(oldest);
+			}
 			CState &c2 = _caps[cap.id()];
 			c2.lastReceived = RR->node->now();
 			c2.cap = cap;
