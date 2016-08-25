@@ -841,6 +841,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,cons
 				network->requestConfiguration();
 			} else {
 				TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): not a member of %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),nwid);
+				peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP,false);
 				return true;
 			}
 
@@ -851,6 +852,8 @@ bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,cons
 				ptr += 13;
 			}
 		}
+
+		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
