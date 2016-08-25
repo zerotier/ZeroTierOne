@@ -607,7 +607,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 
 		json recentLog = json::array();
 		recentLog.push_back(rlEntry);
-		auto oldLog = member["recentLog"];
+		json &oldLog = member["recentLog"];
 		if (oldLog.is_array()) {
 			for(unsigned long i=0;i<oldLog.size();++i) {
 				recentLog.push_back(oldLog[i]);
