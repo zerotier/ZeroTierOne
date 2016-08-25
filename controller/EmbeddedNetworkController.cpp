@@ -1606,18 +1606,20 @@ void EmbeddedNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTes
 void EmbeddedNetworkController::_getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi)
 {
 	Mutex::Lock _mcl(_networkMemberCache_m);
-	auto memberCacheEntry = _networkMemberCache[nwid];
+	std::map< Address,nlohmann::json > &memberCacheEntry = _networkMemberCache[nwid];
 	nmi.totalMemberCount = memberCacheEntry.size();
-	for(std::map< Address,nlohmann::json >::const_iterator nm(memberCacheEntry.begin());nm!=memberCacheEntry.end();++nm) {
+	for(std::map< Address,nlohmann::json >::iterator nm(memberCacheEntry.begin());nm!=memberCacheEntry.end();++nm) {
 		if (_jB(nm->second["authorized"],false)) {
 			++nmi.authorizedMemberCount;
 
-			auto mlog = nm->second["recentLog"];
-			if ((mlog.is_array())&&(mlog.size() > 0)) {
-				auto mlog1 = mlog[0];
-				if (mlog1.is_object()) {
-					if ((now - _jI(mlog1["ts"],0ULL)) < ZT_NETCONF_NODE_ACTIVE_THRESHOLD)
-						++nmi.activeMemberCount;
+			if (nm->second.count("recentLog")) {
+				json &mlog = nm->second["recentLog"];
+				if ((mlog.is_array())&&(mlog.size() > 0)) {
+					json &mlog1 = mlog[0];
+					if (mlog1.is_object()) {
+						if ((now - _jI(mlog1["ts"],0ULL)) < ZT_NETCONF_NODE_ACTIVE_THRESHOLD)
+							++nmi.activeMemberCount;
+					}
 				}
 			}
 
@@ -1625,12 +1627,14 @@ void EmbeddedNetworkController::_getNetworkMemberInfo(uint64_t now,uint64_t nwid
 				nmi.activeBridges.insert(nm->first);
 			}
 
-			auto mips = nm->second["ipAssignments"];
-			if (mips.is_array()) {
-				for(unsigned long i=0;i<mips.size();++i) {
-					InetAddress mip(_jS(mips[i],""));
-					if ((mip.ss_family == AF_INET)||(mip.ss_family == AF_INET6))
-						nmi.allocatedIps.insert(mip);
+			if (nm->second.count("ipAssignments")) {
+				json &mips = nm->second["ipAssignments"];
+				if (mips.is_array()) {
+					for(unsigned long i=0;i<mips.size();++i) {
+						InetAddress mip(_jS(mips[i],""));
+						if ((mip.ss_family == AF_INET)||(mip.ss_family == AF_INET6))
+							nmi.allocatedIps.insert(mip);
+					}
 				}
 			}
 		} else {
