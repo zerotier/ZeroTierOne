@@ -1086,6 +1086,12 @@ int main(int argc,char **argv)
 		}
 	}
 
+	// This can be removed once the new controller code has been around for many versions
+	if (OSUtils::fileExists((homeDir + ZT_PATH_SEPARATOR_S + "controller.db").c_str(),true)) {
+		fprintf(stderr,"%s: FATAL: an old controller.db exists in %s -- see instructions in controller/README.md for how to migrate!" ZT_EOL_S,argv[0],homeDir.c_str());
+		return 1;
+	}
+
 #ifdef __UNIX_LIKE__
 #ifndef ZT_ONE_NO_ROOT_CHECK
 	if ((!skipRootCheck)&&(getuid() != 0)) {

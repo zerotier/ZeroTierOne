@@ -107,6 +107,8 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION "majv"
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION "minv"
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION "revv"
+// Rules engine revision
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV "revr"
 // Maximum number of rules per network this node can accept
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_RULES "mr"
 // Maximum number of capabilities this node can accept

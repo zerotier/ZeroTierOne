@@ -102,6 +102,11 @@ extern "C" {
 #define ZT_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS 4096
 
 /**
+ * Rules engine revision ID, which specifies rules engine capabilities
+ */
+#define ZT_RULES_ENGINE_REVISION 1
+
+/**
  * Maximum number of base (non-capability) network rules
  */
 #define ZT_MAX_NETWORK_RULES 1024
@@ -114,7 +119,7 @@ extern "C" {
 /**
  * Maximum number of per-member tags per network
  */
-#define ZT_MAX_NETWORK_TAGS 16
+#define ZT_MAX_NETWORK_TAGS 128
 
 /**
  * Maximum number of direct network paths to a given peer

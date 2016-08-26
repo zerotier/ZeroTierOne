@@ -38,36 +38,6 @@
 // Uncomment to enable ZT_NETWORK_RULE_ACTION_DEBUG_LOG rule output to STDOUT
 #define ZT_RULES_ENGINE_DEBUGGING 1
 
-/*
-{
-	"name": "filter_log_test",
-	"private": true,
-	"v4AssignMode": {
-		"zt": true
-	},
-	"v6AssignMode": {
-		"rfc4193": true,
-		"zt": false,
-		"6plane": false
-	},
-	"routes": [
-		{ "target": "10.140.140.0/24", "via": null }
-	],
-	"ipAssignmentPools": [
-		{ "ipRangeStart": "10.140.140.2", "ipRangeEnd": "10.140.140.254" }
-	],
-	"rules": [
-		{ "type": "MATCH_ETHERTYPE", "etherType": 0x0800 },
-		{ "type": "ACTION_DEBUG_LOG" },
-
-		{ "type": "MATCH_ETHERTYPE", "etherType": 0x0800, "not": true },
-		{ "type": "ACTION_DEBUG_LOG" },
-
-		{ "type": "ACTION_ACCEPT" }
-	]
-}
-*/
-
 namespace ZeroTier {
 
 #ifdef ZT_RULES_ENGINE_DEBUGGING
@@ -162,7 +132,7 @@ static int _doZtFilter(
 #ifdef ZT_RULES_ENGINE_DEBUGGING
 	std::vector<std::string> dlog;
 	char dpbuf[1024];
-#endif
+#endif // ZT_RULES_ENGINE_DEBUGGING
 
 	for(unsigned int rn=0;rn<ruleCount;++rn) {
 		const ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rules[rn].t & 0x7f);
@@ -172,6 +142,9 @@ static int _doZtFilter(
 				if (thisSetMatches) {
 					return -1; // match, drop packet
 				} else {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+					dlog.clear();
+#endif // ZT_RULES_ENGINE_DEBUGGING
 					thisSetMatches = 1; // no match, evaluate next set
 				}
 				continue;
@@ -179,6 +152,9 @@ static int _doZtFilter(
 				if (thisSetMatches) {
 					return 1; // match, accept packet
 				} else {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+					dlog.clear();
+#endif // ZT_RULES_ENGINE_DEBUGGING
 					thisSetMatches = 1; // no match, evaluate next set
 				}
 				continue;
@@ -199,13 +175,19 @@ static int _doZtFilter(
 				if (rt == ZT_NETWORK_RULE_ACTION_REDIRECT) {
 					return -1; // match, drop packet (we redirected it)
 				} else {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+					dlog.clear();
+#endif // ZT_RULES_ENGINE_DEBUGGING
 					thisSetMatches = 1; // TEE does not terminate evaluation
 				}
 			}	continue;
 			case ZT_NETWORK_RULE_ACTION_DEBUG_LOG:
 #ifdef ZT_RULES_ENGINE_DEBUGGING
 				if (thisSetMatches) {
-					printf("[FILTER] MATCH %s->%s %.2x:%.2x:%.2x:%.2x:%.2x:%.2x->%.2x:%.2x:%.2x:%.2x:%.2x:%.2x inbound=%d noRedirect=%d frameLen=%u etherType=%u" ZT_EOL_S,
+					printf(" _ " ZT_EOL_S);
+					for(std::vector<std::string>::iterator m(dlog.begin());m!=dlog.end();++m)
+						printf(" | %s" ZT_EOL_S,m->c_str());
+					printf(" + MATCH %s->%s %.2x:%.2x:%.2x:%.2x:%.2x:%.2x->%.2x:%.2x:%.2x:%.2x:%.2x:%.2x inbound=%d noRedirect=%d frameLen=%u etherType=%u" ZT_EOL_S,
 						ztSource.toString().c_str(),
 						ztDest.toString().c_str(),
 						(unsigned int)macSource[0],
@@ -225,10 +207,8 @@ static int _doZtFilter(
 						frameLen,
 						etherType
 					);
-					for(std::vector<std::string>::iterator m(dlog.begin());m!=dlog.end();++m)
-						printf("         %s" ZT_EOL_S,m->c_str());
-					dlog.clear();
 				}
+				dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
 				thisSetMatches = 1; // DEBUG_LOG does not terminate evaluation
 				continue;
@@ -793,6 +773,7 @@ void Network::requestConfiguration()
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_CAPABILITY_RULES,(uint64_t)ZT_MAX_CAPABILITY_RULES);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_TAGS,(uint64_t)ZT_MAX_NETWORK_TAGS);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS,(uint64_t)0);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,(uint64_t)ZT_RULES_ENGINE_REVISION);
 
 	if (ctrl == RR->identity.address()) {
 		if (RR->localNetworkController) {

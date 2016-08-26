@@ -1,15 +1,33 @@
 Network Controller Microservice
 ======
 
-ZeroTier's 16-digit network IDs are really just a concatenation of the 10-digit ZeroTier address of a network controller followed by a 6-digit (24-bit) network number on that controller. Fans of software defined networking will recognize this as a spin on the familiar [separation of data plane and control plane](http://sdntutorials.com/difference-between-control-plane-and-data-plane/) SDN design pattern.
+Every ZeroTier virtual network has a *network controller*. This is our reference implementation and is the same one we use to power our own hosted services at [my.zerotier.com](https://my.zerotier.com/). Network controllers act as configuration servers and certificate authorities for the members of networks. Controllers are located on the network by simply parsing out the first 10 digits of a network's 16-digit network ID: these are the address of the controller.
 
-This code implements the *node/NetworkController.hpp* interface to provide an embedded microservice configurable via the same local HTTP control plane as ZeroTier One iteself. It is built by default in ZeroTier One in desktop and server builds. This is the same code we use to run [my.zerotier.com](https://my.zerotier.com/), which is a web UI and API that runs in front of a pool of controllers.
+As of ZeroTier One version 1.2.0 this code is included in normal builds for desktop, laptop, and server (Linux, etc.) targets, allowing any device to create virtual networks without having to be rebuilt from source with special flags to enable this feature. While this does offer a convenient way to create ad-hoc networks or experiment, we recommend running a dedicated controller somewhere secure and stable for any "serious" use case.
 
-Data is stored in JSON format under `controller.d` in the ZeroTier working directory. It can be copied, tar'd, placed in `git`, etc. The files under `controller.d` should not be modified in place while the controller is running or data loss may result, but they can be safely backed up or copied.
+Controller data is stored in JSON format under `controller.d` in the ZeroTier working directory. It can be copied, rsync'd, placed in `git`, etc. The files under `controller.d` should not be modified in place while the controller is running or data loss may result, and if they are edited directly take care not to save corrupt JSON since that can also lead to data loss when the controller is restarted. Going through the API is strongly preferred to directly modifying these files.
+
+### Upgrading from Older Versions
+
+Older versions of this code used a SQLite database instead of in-filesystem JSON. A migration utility called `migrate-sqlite` is included here and *must* be used to migrate this data to the new format. If the controller is started with an old `controller.db` in its working directory it will terminate after printing an error to *stderr*. This is done to prevent "surprises" for those running DIY controllers using the old code.
+
+The migration tool is written in nodeJS and can be used like this:
+
+    cd migrate-sqlite
+    npm install
+    node migrate-sqlite.js <path to ZeroTier working directory>
+
+You may need to `sudo node ...` if the ZeroTier working directory is owned by root.
+
+This code will dump the contents of any `controller.db` in the ZeroTier working directory and recreate its data in the form of JSON objects under `controller.d`. The old `controller.db` will then be renamed to `controller.db.migrated` and the controller will start normally.
+
+After migrating make sure that the contents of `controller.d` are owned and writable by the user that will be running the ZeroTier controller process! (Usually this is root but controllers that don't also join networks are sometimes run as unprivileged users.)
+
+If you don't have nodeJS on the machine running ZeroTier it is perfectly fine to just copy `controller.db` to a directory on another machine and run the migration tool there. After running your migration the contents of `controller.d` can be tar'd up and copied back over to the controller. Just remember to rename or remove `controller.db` on the controller machine afterwords so the controller will start.
 
 ### Scalability and Reliability
 
-Controllers can in theory host up to 2^24 networks and serve many millions of devices (or more), but we recommend spreading large numbers of networks across many controllers for load balancing and fault tolerance reasons.
+Controllers can in theory host up to 2^24 networks and serve many millions of devices (or more), but we recommend spreading large numbers of networks across many controllers for load balancing and fault tolerance reasons. Since the controller uses the filesystem as its data store we recommend fast filesystems and fast SSD drives for heavily loaded controllers.
 
 Since ZeroTier nodes are mobile and do not need static IPs, implementing high availability fail-over for controllers is easy. Just replicate their working directories from master to backup and have something automatically fire up the backup if the master goes down. Many modern orchestration tools have built-in support for this. It would also be possible in theory to run controllers on a replicated or distributed filesystem, but we haven't tested this yet.
 
@@ -154,6 +172,7 @@ The entry types and their additional fields are:
 | `ACTION_ACCEPT`                 | Accept any packets matching this rule                             | (none)         |
 | `ACTION_TEE`                    | Send a copy of this packet to a node (rule parsing continues)     | `zt`           |
 | `ACTION_REDIRECT`               | Redirect this packet to another node                              | `zt`           |
+| `ACTION_DEBUG_LOG`              | Output debug info on match (if built with rules engine debug)     | (none)         |
 | `MATCH_SOURCE_ZEROTIER_ADDRESS` | Match VL1 ZeroTier address of packet sender.                      | `zt`           |
 | `MATCH_DEST_ZEROTIER_ADDRESS`   | Match VL1 ZeroTier address of recipient                           | `zt`           |
 | `MATCH_ETHERTYPE`               | Match Ethernet frame type                                         | `etherType`    |
@@ -174,10 +193,12 @@ The entry types and their additional fields are:
 | `MATCH_TAGS_BITWISE_OR`         | Match if both sides' tags OR to value                             | `id`,`value`   |
 | `MATCH_TAGS_BITWISE_XOR`        | Match if both sides` tags XOR to value                            | `id`,`value`   |
 
-Notes:
+Important notes about rules engine behavior:
 
- * `MATCH_DEST_ZEROTIER_ADDRESS` does not work for multicast packets since these have many and varying destinations and can take circuitous routes. Use MAC rules instead.
- * IPv4 and IPv6 rules do not match for frames that are not IPv4 or IPv6 respectively.
+ * IPv4 and IPv6 IP address rules do not match for frames that are not IPv4 or IPv6 respectively.
+ * `ACTION_DEBUG_LOG` is a no-op on nodes not built with `ZT_RULES_ENGINE_DEBUGGING` enabled (see Network.cpp). If that is enabled nodes will dump a trace of rule evaluation results to *stdout* when this action is encountered but will otherwise keep evaluating rules. This is used for basic "smoke testing" of the rules engine.
+ * Multicast packets and packets destined for bridged devices treated a little differently. They are matched more than once. They are matched at the point of send with a NULL ZeroTier destination address, meaning that `MATCH_DEST_ZEROTIER_ADDRESS` is useless. That's because the true VL1 destination is not yet known. Then they are matched again for each true VL1 destination. On these later subsequent matches TEE actions are ignored and REDIRECT rules are interpreted as DROPs. This prevents multiple TEE or REDIRECT packets from being sent to third party devices.
+ * Rules in capabilities are always matched as if the current device is the sender (inbound == false). A capability specifies sender side rules that can be enforced on both sides.
 
 #### `/controller/network/<network ID>/member`
 
@@ -228,6 +249,7 @@ Note that managed IP assignments are only used if they fall within a managed rou
 | clientMajorVersion    | integer       | Client major version or -1 if unknown             |
 | clientMinorVersion    | integer       | Client minor version or -1 if unknown             |
 | clientRevision        | integer       | Client revision or -1 if unknown                  |
+| clientProtocolVersion | integer       | ZeroTier protocol version reported by client      |
 | fromAddr              | string        | Physical address if known                         |
 
 The controller can only know a member's `fromAddr` if it's able to establish a direct path to it. Members behind very restrictive firewalls may not have this information since the controller will be receiving the member's requests by way of a relay. ZeroTier does not back-trace IP paths as packets are relayed since this would add a lot of protocol overhead.
