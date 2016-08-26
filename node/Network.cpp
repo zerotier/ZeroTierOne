@@ -173,7 +173,7 @@ static int _doZtFilter(
 #ifdef ZT_RULES_ENGINE_DEBUGGING
 					dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
-					thisSetMatches = 1; // TEE does not terminate evaluation
+					thisSetMatches = 1;
 				} else {
 					if (!noRedirect) {
 						Packet outp(fwdAddr,RR->identity.address(),Packet::VERB_EXT_FRAME);
