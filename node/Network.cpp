@@ -166,25 +166,35 @@ static int _doZtFilter(
 			case ZT_NETWORK_RULE_ACTION_TEE:
 			case ZT_NETWORK_RULE_ACTION_REDIRECT: {
 				const Address fwdAddr(rules[rn].v.fwd.address);
-				if ((!noRedirect)&&(fwdAddr != RR->identity.address())) {
-					Packet outp(fwdAddr,RR->identity.address(),Packet::VERB_EXT_FRAME);
-					outp.append(nconf.networkId);
-					outp.append((uint8_t)( ((rt == ZT_NETWORK_RULE_ACTION_REDIRECT) ? 0x04 : 0x02) | (inbound ? 0x08 : 0x00) ));
-					macDest.appendTo(outp);
-					macSource.appendTo(outp);
-					outp.append((uint16_t)etherType);
-					outp.append(frameData,(rules[rn].v.fwd.length != 0) ? ((frameLen < (unsigned int)rules[rn].v.fwd.length) ? frameLen : (unsigned int)rules[rn].v.fwd.length) : frameLen);
-					outp.compress();
-					RR->sw->send(outp,true);
-				}
-
-				if (rt == ZT_NETWORK_RULE_ACTION_REDIRECT) {
-					return -1; // match, drop packet (we redirected it)
-				} else {
+				if (fwdAddr == RR->identity.address()) {
+					// If we are the TEE or REDIRECT destination, don't TEE or REDIRECT
+					// to self. We should also accept here instead of interpreting
+					// REDIRECT as DROP since we are the destination.
 #ifdef ZT_RULES_ENGINE_DEBUGGING
 					dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
 					thisSetMatches = 1; // TEE does not terminate evaluation
+				} else {
+					if (!noRedirect) {
+						Packet outp(fwdAddr,RR->identity.address(),Packet::VERB_EXT_FRAME);
+						outp.append(nconf.networkId);
+						outp.append((uint8_t)( ((rt == ZT_NETWORK_RULE_ACTION_REDIRECT) ? 0x04 : 0x02) | (inbound ? 0x08 : 0x00) ));
+						macDest.appendTo(outp);
+						macSource.appendTo(outp);
+						outp.append((uint16_t)etherType);
+						outp.append(frameData,(rules[rn].v.fwd.length != 0) ? ((frameLen < (unsigned int)rules[rn].v.fwd.length) ? frameLen : (unsigned int)rules[rn].v.fwd.length) : frameLen);
+						outp.compress();
+						RR->sw->send(outp,true);
+					}
+
+					if (rt == ZT_NETWORK_RULE_ACTION_REDIRECT) {
+						return -1; // match, drop packet (we redirected it)
+					} else {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+						dlog.clear();
+#endif // ZT_RULES_ENGINE_DEBUGGING
+						thisSetMatches = 1; // TEE does not terminate evaluation
+					}
 				}
 			}	continue;
 			case ZT_NETWORK_RULE_ACTION_DEBUG_LOG:
