@@ -127,9 +127,8 @@ public:
 	 * @param peerAddress Address of member peer
 	 * @param nconf My network config
 	 * @param cap Capability to send or 0 if none
-	 * @return True if we pushed something
 	 */
-	bool sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,const Capability *cap);
+	void sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,const Capability *cap);
 
 	/**
 	 * @param nconf Our network config

@@ -28,61 +28,65 @@
 
 namespace ZeroTier {
 
-bool Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,const Capability *cap)
+void Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,const Capability *cap)
 {
 	if ((now - _lastPushAttempt) < 1000ULL)
-		return false;
+		return;
 	_lastPushAttempt = now;
 
 	try {
-		Buffer<ZT_PROTO_MAX_PACKET_LENGTH> capsAndTags;
+		bool unfinished;
+		do {
+			unfinished = false;
+			Buffer<ZT_PROTO_MAX_PACKET_LENGTH> capsAndTags;
 
-		unsigned int appendedCaps = 0;
-		if (cap) {
+			unsigned int appendedCaps = 0;
+			if (cap) {
+				capsAndTags.addSize(2);
+				std::map<uint32_t,CState>::iterator cs(_caps.find(cap->id()));
+				if ((cs != _caps.end())&&((now - cs->second.lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY)) {
+					cap->serialize(capsAndTags);
+					cs->second.lastPushed = now;
+					++appendedCaps;
+				}
+				capsAndTags.setAt<uint16_t>(0,(uint16_t)appendedCaps);
+			} else {
+				capsAndTags.append((uint16_t)0);
+			}
+
+			unsigned int appendedTags = 0;
+			const unsigned int tagCountPos = capsAndTags.size();
 			capsAndTags.addSize(2);
-			std::map<uint32_t,CState>::iterator cs(_caps.find(cap->id()));
-			if ((cs != _caps.end())&&((now - cs->second.lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY)) {
-				cap->serialize(capsAndTags);
-				cs->second.lastPushed = now;
-				++appendedCaps;
+			for(unsigned int i=0;i<nconf.tagCount;++i) {
+				TState *const ts = _tags.get(nconf.tags[i].id());
+				if ((now - ts->lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) {
+					if ((capsAndTags.size() + sizeof(Tag)) >= (ZT_PROTO_MAX_PACKET_LENGTH - sizeof(CertificateOfMembership))) {
+						unfinished = true;
+						break;
+					}
+					nconf.tags[i].serialize(capsAndTags);
+					ts->lastPushed = now;
+					++appendedTags;
+				}
 			}
-			capsAndTags.setAt<uint16_t>(0,(uint16_t)appendedCaps);
-		} else {
-			capsAndTags.append((uint16_t)0);
-		}
+			capsAndTags.setAt<uint16_t>(tagCountPos,(uint16_t)appendedTags);
 
-		unsigned int appendedTags = 0;
-		const unsigned int tagCountPos = capsAndTags.size();
-		capsAndTags.addSize(2);
-		for(unsigned int i=0;i<nconf.tagCount;++i) {
-			TState *const ts = _tags.get(nconf.tags[i].id());
-			if ((now - ts->lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) {
-				if ((capsAndTags.size() + sizeof(Tag)) > (ZT_PROTO_MAX_PACKET_LENGTH - sizeof(CertificateOfMembership)))
-					break;
-				nconf.tags[i].serialize(capsAndTags);
-				ts->lastPushed = now;
-				++appendedTags;
+			const bool needCom = ((nconf.isPrivate())&&(nconf.com)&&((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY));
+			if ( (needCom) || (appendedCaps) || (appendedTags) ) {
+				Packet outp(peerAddress,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
+				if (needCom) {
+					nconf.com.serialize(outp);
+					_lastPushedCom = now;
+				}
+				outp.append((uint8_t)0x00);
+				outp.append(capsAndTags.data(),capsAndTags.size());
+				outp.compress();
+				RR->sw->send(outp,true);
 			}
-		}
-		capsAndTags.setAt<uint16_t>(tagCountPos,(uint16_t)appendedTags);
-
-		const bool needCom = ((nconf.isPrivate())&&(nconf.com)&&((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY));
-		if ( (needCom) || (appendedCaps) || (appendedTags) ) {
-			Packet outp(peerAddress,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
-			if (needCom) {
-				nconf.com.serialize(outp);
-				_lastPushedCom = now;
-			}
-			outp.append((uint8_t)0x00);
-			outp.append(capsAndTags.data(),capsAndTags.size());
-			outp.compress();
-			RR->sw->send(outp,true);
-			return true;
-		}
+		} while (unfinished); // if there are many tags, etc., we can send more than one
 	} catch ( ... ) {
 		TRACE("unable to send credentials due to unexpected exception");
 	}
-	return false;
 }
 
 int Membership::addCredential(const RuntimeEnvironment *RR,const CertificateOfMembership &com)
