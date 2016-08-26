@@ -1330,8 +1330,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						} else if (b["v6AssignMode"].is_object()) {
 							json &v6m = b["v6AssignMode"];
 							if (v6m.count("rfc4193")) nv6m["rfc4193"] = _jB(v6m["rfc4193"],false);
-							if (v6m.count("zt")) nv6m["rfc4193"] = _jB(v6m["zt"],false);
-							if (v6m.count("6plane")) nv6m["rfc4193"] = _jB(v6m["6plane"],false);
+							if (v6m.count("zt")) nv6m["zt"] = _jB(v6m["zt"],false);
+							if (v6m.count("6plane")) nv6m["6plane"] = _jB(v6m["6plane"],false);
 						}
 						if (!nv6m.count("rfc4193")) nv6m["rfc4193"] = false;
 						if (!nv6m.count("zt")) nv6m["zt"] = false;
