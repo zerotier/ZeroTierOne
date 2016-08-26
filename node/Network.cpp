@@ -165,8 +165,9 @@ static int _doZtFilter(
 				continue;
 			case ZT_NETWORK_RULE_ACTION_TEE:
 			case ZT_NETWORK_RULE_ACTION_REDIRECT: {
-				if (!noRedirect) {
-					Packet outp(Address(rules[rn].v.fwd.address),RR->identity.address(),Packet::VERB_EXT_FRAME);
+				const Address fwdAddr(rules[rn].v.fwd.address);
+				if ((!noRedirect)&&(fwdAddr != RR->identity.address())) {
+					Packet outp(fwdAddr,RR->identity.address(),Packet::VERB_EXT_FRAME);
 					outp.append(nconf.networkId);
 					outp.append((uint8_t)( ((rt == ZT_NETWORK_RULE_ACTION_REDIRECT) ? 0x04 : 0x02) | (inbound ? 0x08 : 0x00) ));
 					macDest.appendTo(outp);
