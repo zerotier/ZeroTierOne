@@ -107,14 +107,14 @@ extern "C" {
 #define ZT_MAX_NETWORK_RULES 1024
 
 /**
- * Maximum number of per-node capabilities per network
+ * Maximum number of per-member capabilities per network
  */
 #define ZT_MAX_NETWORK_CAPABILITIES 128
 
 /**
- * Maximum number of per-node tags per network
+ * Maximum number of per-member tags per network
  */
-#define ZT_MAX_NETWORK_TAGS 128
+#define ZT_MAX_NETWORK_TAGS 16
 
 /**
  * Maximum number of direct network paths to a given peer

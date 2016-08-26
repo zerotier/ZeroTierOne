@@ -50,7 +50,7 @@ using json = nlohmann::json;
 #define ZT_NETCONF_CONTROLLER_API_VERSION 3
 
 // Number of requests to remember in member history
-#define ZT_NETCONF_DB_MEMBER_HISTORY_LENGTH 16
+#define ZT_NETCONF_DB_MEMBER_HISTORY_LENGTH 32
 
 // Min duration between requests for an address/nwid combo to prevent floods
 #define ZT_NETCONF_MIN_REQUEST_PERIOD 1000

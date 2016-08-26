@@ -107,6 +107,7 @@ public:
 	friend class CapabilityIterator;
 
 	Membership() :
+		_lastPushAttempt(0),
 		_lastPushedCom(0),
 		_blacklistBefore(0),
 		_com(),
@@ -124,13 +125,11 @@ public:
 	 * @param RR Runtime environment
 	 * @param now Current time
 	 * @param peerAddress Address of member peer
-	 * @param com My network certificate of membership (if any) (not the one here, but ours -- in NetworkConfig)
+	 * @param nconf My network config
 	 * @param cap Capability to send or 0 if none
-	 * @param tags Tags that this peer might need
-	 * @param tagCount Number of tag IDs
 	 * @return True if we pushed something
 	 */
-	bool sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const CertificateOfMembership &com,const Capability *cap,const Tag **tags,const unsigned int tagCount);
+	bool sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,const Capability *cap);
 
 	/**
 	 * @param nconf Our network config
@@ -270,6 +269,9 @@ public:
 	}
 
 private:
+	// Last time we checked if credential push was needed
+	uint64_t _lastPushAttempt;
+
 	// Last time we pushed our COM to this peer
 	uint64_t _lastPushedCom;
 

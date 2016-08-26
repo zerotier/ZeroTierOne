@@ -28,8 +28,12 @@
 
 namespace ZeroTier {
 
-bool Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const CertificateOfMembership &com,const Capability *cap,const Tag **tags,const unsigned int tagCount)
+bool Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,const Capability *cap)
 {
+	if ((now - _lastPushAttempt) < 1000ULL)
+		return false;
+	_lastPushAttempt = now;
+
 	try {
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH> capsAndTags;
 
@@ -50,27 +54,29 @@ bool Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint
 		unsigned int appendedTags = 0;
 		const unsigned int tagCountPos = capsAndTags.size();
 		capsAndTags.addSize(2);
-		for(unsigned int i=0;i<tagCount;++i) {
-			TState *const ts = _tags.get(tags[i]->id());
+		for(unsigned int i=0;i<nconf.tagCount;++i) {
+			TState *const ts = _tags.get(nconf.tags[i].id());
 			if ((now - ts->lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) {
 				if ((capsAndTags.size() + sizeof(Tag)) > (ZT_PROTO_MAX_PACKET_LENGTH - sizeof(CertificateOfMembership)))
 					break;
-				tags[i]->serialize(capsAndTags);
+				nconf.tags[i].serialize(capsAndTags);
 				ts->lastPushed = now;
 				++appendedTags;
 			}
 		}
 		capsAndTags.setAt<uint16_t>(tagCountPos,(uint16_t)appendedTags);
 
-		if ( ((com)&&((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY)) || (appendedCaps) || (appendedTags) ) {
+		const bool needCom = ((nconf.isPrivate())&&(nconf.com)&&((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY));
+		if ( (needCom) || (appendedCaps) || (appendedTags) ) {
 			Packet outp(peerAddress,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
-			if (com)
-				com.serialize(outp);
+			if (needCom) {
+				nconf.com.serialize(outp);
+				_lastPushedCom = now;
+			}
 			outp.append((uint8_t)0x00);
 			outp.append(capsAndTags.data(),capsAndTags.size());
 			outp.compress();
 			RR->sw->send(outp,true);
-			_lastPushedCom = now;
 			return true;
 		}
 	} catch ( ... ) {
@@ -88,8 +94,9 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const CertificateOfMe
 	const int vr = com.verify(RR);
 	if (vr == 0) {
 		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx ACCEPTED (new)",com.issuedTo().toString().c_str(),com.networkId());
-		if (com.timestamp().first > _com.timestamp().first)
+		if (com.timestamp().first > _com.timestamp().first) {
 			_com = com;
+		}
 	} else {
 		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx REJECTED (%d)",com.issuedTo().toString().c_str(),com.networkId(),vr);
 	}
