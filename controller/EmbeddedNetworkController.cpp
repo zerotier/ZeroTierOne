@@ -1319,6 +1319,9 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 							std::vector<std::string> v6m(Utils::split(_jS(b["v6AssignMode"],"").c_str(),",","",""));
 							std::sort(v6m.begin(),v6m.end());
 							v6m.erase(std::unique(v6m.begin(),v6m.end()),v6m.end());
+							nv6m["rfc4193"] = false;
+							nv6m["zt"] = false;
+							nv6m["6plane"] = false;
 							for(std::vector<std::string>::iterator i(v6m.begin());i!=v6m.end();++i) {
 								if (*i == "rfc4193")
 									nv6m["rfc4193"] = true;
