@@ -183,31 +183,30 @@ static int _doZtFilter(
 			}	continue;
 			case ZT_NETWORK_RULE_ACTION_DEBUG_LOG:
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-				if (thisSetMatches) {
-					printf(" _ " ZT_EOL_S);
-					for(std::vector<std::string>::iterator m(dlog.begin());m!=dlog.end();++m)
-						printf(" | %s" ZT_EOL_S,m->c_str());
-					printf(" + MATCH %s->%s %.2x:%.2x:%.2x:%.2x:%.2x:%.2x->%.2x:%.2x:%.2x:%.2x:%.2x:%.2x inbound=%d noRedirect=%d frameLen=%u etherType=%u" ZT_EOL_S,
-						ztSource.toString().c_str(),
-						ztDest.toString().c_str(),
-						(unsigned int)macSource[0],
-						(unsigned int)macSource[1],
-						(unsigned int)macSource[2],
-						(unsigned int)macSource[3],
-						(unsigned int)macSource[4],
-						(unsigned int)macSource[5],
-						(unsigned int)macDest[0],
-						(unsigned int)macDest[1],
-						(unsigned int)macDest[2],
-						(unsigned int)macDest[3],
-						(unsigned int)macDest[4],
-						(unsigned int)macDest[5],
-						(int)inbound,
-						(int)noRedirect,
-						frameLen,
-						etherType
-					);
-				}
+				printf(" _ " ZT_EOL_S);
+				for(std::vector<std::string>::iterator m(dlog.begin());m!=dlog.end();++m)
+					printf(" | %s" ZT_EOL_S,m->c_str());
+				printf(" + %c %s->%s %.2x:%.2x:%.2x:%.2x:%.2x:%.2x->%.2x:%.2x:%.2x:%.2x:%.2x:%.2x inbound=%d noRedirect=%d frameLen=%u etherType=%u" ZT_EOL_S,
+					((thisSetMatches) ? 'Y' : 'n'),
+					ztSource.toString().c_str(),
+					ztDest.toString().c_str(),
+					(unsigned int)macSource[0],
+					(unsigned int)macSource[1],
+					(unsigned int)macSource[2],
+					(unsigned int)macSource[3],
+					(unsigned int)macSource[4],
+					(unsigned int)macSource[5],
+					(unsigned int)macDest[0],
+					(unsigned int)macDest[1],
+					(unsigned int)macDest[2],
+					(unsigned int)macDest[3],
+					(unsigned int)macDest[4],
+					(unsigned int)macDest[5],
+					(int)inbound,
+					(int)noRedirect,
+					frameLen,
+					etherType
+				);
 				dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
 				thisSetMatches = 1; // DEBUG_LOG does not terminate evaluation
