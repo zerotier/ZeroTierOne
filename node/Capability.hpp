@@ -323,7 +323,7 @@ public:
 					break;
 				case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
 					rules[ruleCount].v.frameSize[0] = b.template at<uint16_t>(p);
-					rules[ruleCount].v.frameSize[0] = b.template at<uint16_t>(p + 2);
+					rules[ruleCount].v.frameSize[1] = b.template at<uint16_t>(p + 2);
 					break;
 				case ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
