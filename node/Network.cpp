@@ -77,7 +77,9 @@ static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
 }
 static const void _dumpFilterTrace(const char *ruleName,uint8_t thisSetMatches,bool noRedirect,bool inbound,const Address &ztSource,const Address &ztDest,const MAC &macSource,const MAC &macDest,const std::vector<std::string> &dlog,unsigned int frameLen,unsigned int etherType,const char *msg)
 {
-	printf("!! %c %s inbound=%d noRedirect=%d frameLen=%u etherType=%u" ZT_EOL_S,
+	static volatile unsigned long cnt = 0;
+	printf("%.6lu %c %s inbound=%d noRedirect=%d frameLen=%u etherType=%u" ZT_EOL_S,
+		cnt,
 		((thisSetMatches) ? 'Y' : '.'),
 		ruleName,
 		(int)inbound,
@@ -86,8 +88,8 @@ static const void _dumpFilterTrace(const char *ruleName,uint8_t thisSetMatches,b
 		etherType
 	);
 	for(std::vector<std::string>::const_iterator m(dlog.begin());m!=dlog.end();++m)
-		printf(" | %s" ZT_EOL_S,m->c_str());
-	printf(" + %c %s->%s %.2x:%.2x:%.2x:%.2x:%.2x:%.2x->%.2x:%.2x:%.2x:%.2x:%.2x:%.2x" ZT_EOL_S,
+		printf("       | %s" ZT_EOL_S,m->c_str());
+	printf("       + %c %s->%s %.2x:%.2x:%.2x:%.2x:%.2x:%.2x->%.2x:%.2x:%.2x:%.2x:%.2x:%.2x" ZT_EOL_S,
 		((thisSetMatches) ? 'Y' : '.'),
 		ztSource.toString().c_str(),
 		ztDest.toString().c_str(),
@@ -105,7 +107,7 @@ static const void _dumpFilterTrace(const char *ruleName,uint8_t thisSetMatches,b
 		(unsigned int)macDest[5]
 	);
 	if (msg)
-		printf(" + (%s)" ZT_EOL_S,msg);
+		printf("       + (%s)" ZT_EOL_S,msg);
 }
 #else
 #define FILTER_TRACE(f,...) {}
@@ -140,7 +142,7 @@ static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsig
 	return false; // overflow == invalid
 }
 
-// 0 == no match, -1 == match/drop, 1 == match/accept
+// 0 == no match, -1 == match/drop, 1 == match/accept, 2 == match/accept even if bridged
 static int _doZtFilter(
 	const RuntimeEnvironment *RR,
 	const bool noRedirect,
@@ -212,9 +214,8 @@ static int _doZtFilter(
 					// REDIRECT as DROP since we are the destination.
 #ifdef ZT_RULES_ENGINE_DEBUGGING
 					_dumpFilterTrace(_rtn(rt),thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"ignored since we are the destination");
-					dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
-					thisSetMatches = 1;
+					return 2; // we should "super-accept" this packet since we are the TEE or REDIRECT destination
 				} else {
 					if (!noRedirect) {
 						Packet outp(fwdAddr,RR->identity.address(),Packet::VERB_EXT_FRAME);
@@ -580,6 +581,7 @@ bool Network::filterOutgoingPacket(
 				m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config,(const Capability *)0);
 			return false;
 		case 1:
+		case 2:
 			if (ztDest)
 				m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config,(const Capability *)0);
 			return true;
@@ -592,6 +594,7 @@ bool Network::filterOutgoingPacket(
 					m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config,(const Capability *)0);
 				return false;
 			case 1:
+			case 2:
 				if (ztDest)
 					m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config,&(_config.capabilities[c]));
 				return true;
@@ -601,7 +604,7 @@ bool Network::filterOutgoingPacket(
 	return false;
 }
 
-bool Network::filterIncomingPacket(
+int Network::filterIncomingPacket(
 	const SharedPtr<Peer> &sourcePeer,
 	const Address &ztDest,
 	const MAC &macSource,
@@ -620,24 +623,22 @@ bool Network::filterIncomingPacket(
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
 	switch (_doZtFilter(RR,false,_config,true,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount)) {
-		case -1:
-			return false;
-		case 1:
-			return true;
+		case -1: return 0;
+		case 1: return 1;
+		case 2: return 2;
 	}
 
 	Membership::CapabilityIterator mci(m);
 	const Capability *c;
 	while ((c = mci.next(_config))) {
 		switch(_doZtFilter(RR,false,_config,false,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount)) {
-			case -1:
-				return false;
-			case 1:
-				return true;
+			case -1: return 0;
+			case 1: return 1;
+			case 2: return 2;
 		}
 	}
 
-	return false;
+	return 0;
 }
 
 bool Network::subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const

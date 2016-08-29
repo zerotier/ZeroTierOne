@@ -124,9 +124,9 @@ public:
 	 * @param frameLen Ethernet frame payload length
 	 * @param etherType 16-bit ethernet type ID
 	 * @param vlanId 16-bit VLAN ID
-	 * @return True if packet should be accepted locally
+	 * @return 0 == drop, 1 == accept, 2 == accept even if bridged
 	 */
-	bool filterIncomingPacket(
+	int filterIncomingPacket(
 		const SharedPtr<Peer> &sourcePeer,
 		const Address &ztDest,
 		const MAC &macSource,
