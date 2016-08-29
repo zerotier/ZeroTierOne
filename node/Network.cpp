@@ -107,7 +107,7 @@ static const void _dumpFilterTrace(const char *ruleName,uint8_t thisSetMatches,b
 		(unsigned int)macDest[5]
 	);
 	if (msg)
-		printf("       + (%s)" ZT_EOL_S,msg);
+		printf("     + (%s)" ZT_EOL_S,msg);
 }
 #else
 #define FILTER_TRACE(f,...) {}
