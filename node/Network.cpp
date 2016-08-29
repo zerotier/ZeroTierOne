@@ -75,6 +75,38 @@ static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
 		default: return "BAD_RULE_TYPE";
 	}
 }
+static const void _dumpFilterTrace(const char *ruleName,uint8_t thisSetMatches,bool noRedirect,bool inbound,const Address &ztSource,const Address &ztDest,const MAC &macSource,const MAC &macDest,const std::vector<std::string> &dlog,unsigned int frameLen,unsigned int etherType,const char *msg)
+{
+	printf("!! %c %s inbound=%d noRedirect=%d frameLen=%u etherType=%u" ZT_EOL_S,
+		((thisSetMatches) ? 'Y' : '.'),
+		ruleName,
+		(int)inbound,
+		(int)noRedirect,
+		frameLen,
+		etherType
+	);
+	for(std::vector<std::string>::const_iterator m(dlog.begin());m!=dlog.end();++m)
+		printf(" | %s" ZT_EOL_S,m->c_str());
+	printf(" + %c %s->%s %.2x:%.2x:%.2x:%.2x:%.2x:%.2x->%.2x:%.2x:%.2x:%.2x:%.2x:%.2x" ZT_EOL_S,
+		((thisSetMatches) ? 'Y' : '.'),
+		ztSource.toString().c_str(),
+		ztDest.toString().c_str(),
+		(unsigned int)macSource[0],
+		(unsigned int)macSource[1],
+		(unsigned int)macSource[2],
+		(unsigned int)macSource[3],
+		(unsigned int)macSource[4],
+		(unsigned int)macSource[5],
+		(unsigned int)macDest[0],
+		(unsigned int)macDest[1],
+		(unsigned int)macDest[2],
+		(unsigned int)macDest[3],
+		(unsigned int)macDest[4],
+		(unsigned int)macDest[5]
+	);
+	if (msg)
+		printf(" + (%s)" ZT_EOL_S,msg);
+}
 #else
 #define FILTER_TRACE(f,...) {}
 #endif // ZT_RULES_ENGINE_DEBUGGING
@@ -145,9 +177,13 @@ static int _doZtFilter(
 		switch(rt) {
 			case ZT_NETWORK_RULE_ACTION_DROP:
 				if (thisSetMatches) {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+					_dumpFilterTrace("ACTION_DROP",thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+#endif // ZT_RULES_ENGINE_DEBUGGING
 					return -1; // match, drop packet
 				} else {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
+					_dumpFilterTrace("ACTION_DROP",thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 					dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
 					thisSetMatches = 1; // no match, evaluate next set
@@ -155,9 +191,13 @@ static int _doZtFilter(
 				continue;
 			case ZT_NETWORK_RULE_ACTION_ACCEPT:
 				if (thisSetMatches) {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+					_dumpFilterTrace("ACTION_ACCEPT",thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+#endif // ZT_RULES_ENGINE_DEBUGGING
 					return 1; // match, accept packet
 				} else {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
+					_dumpFilterTrace("ACTION_ACCEPT",thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 					dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
 					thisSetMatches = 1; // no match, evaluate next set
@@ -171,6 +211,7 @@ static int _doZtFilter(
 					// to self. We should also accept here instead of interpreting
 					// REDIRECT as DROP since we are the destination.
 #ifdef ZT_RULES_ENGINE_DEBUGGING
+					_dumpFilterTrace(_rtn(rt),thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"ignored since we are the destination");
 					dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
 					thisSetMatches = 1;
@@ -188,41 +229,22 @@ static int _doZtFilter(
 					}
 
 					if (rt == ZT_NETWORK_RULE_ACTION_REDIRECT) {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+						_dumpFilterTrace("ACTION_REDIRECT",thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(noRedirect) ? "second-pass match, not actually redirecting" : (const char *)0);
+#endif // ZT_RULES_ENGINE_DEBUGGING
 						return -1; // match, drop packet (we redirected it)
 					} else {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
+						_dumpFilterTrace("ACTION_TEE",thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(noRedirect) ? "second-pass match, not actually teeing" : (const char *)0);
 						dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
 						thisSetMatches = 1; // TEE does not terminate evaluation
 					}
 				}
 			}	continue;
-			case ZT_NETWORK_RULE_ACTION_DEBUG_LOG:
+			case ZT_NETWORK_RULE_ACTION_DEBUG_LOG: // a no-op target specifically for debugging purposes
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-				printf(" _ " ZT_EOL_S);
-				for(std::vector<std::string>::iterator m(dlog.begin());m!=dlog.end();++m)
-					printf(" | %s" ZT_EOL_S,m->c_str());
-				printf(" + %c %s->%s %.2x:%.2x:%.2x:%.2x:%.2x:%.2x->%.2x:%.2x:%.2x:%.2x:%.2x:%.2x inbound=%d noRedirect=%d frameLen=%u etherType=%u" ZT_EOL_S,
-					((thisSetMatches) ? 'Y' : 'n'),
-					ztSource.toString().c_str(),
-					ztDest.toString().c_str(),
-					(unsigned int)macSource[0],
-					(unsigned int)macSource[1],
-					(unsigned int)macSource[2],
-					(unsigned int)macSource[3],
-					(unsigned int)macSource[4],
-					(unsigned int)macSource[5],
-					(unsigned int)macDest[0],
-					(unsigned int)macDest[1],
-					(unsigned int)macDest[2],
-					(unsigned int)macDest[3],
-					(unsigned int)macDest[4],
-					(unsigned int)macDest[5],
-					(int)inbound,
-					(int)noRedirect,
-					frameLen,
-					etherType
-				);
+				_dumpFilterTrace("ACTION_DEBUG_LOG",thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 				dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
 				thisSetMatches = 1; // DEBUG_LOG does not terminate evaluation
@@ -458,7 +480,9 @@ static int _doZtFilter(
 				}
 			}	break;
 
-			default: continue;
+			default: // rules we don't know do not match -- this means upgrading may be necessary before shipping new rules on a network or old clients might get blocked
+				thisRuleMatches = 0;
+				break;
 		}
 
 		// thisSetMatches remains true if the current rule matched (or did NOT match if NOT bit is set)
