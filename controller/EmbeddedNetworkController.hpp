@@ -165,7 +165,6 @@ private:
 		if (!network.count("multicastLimit")) network["multicastLimit"] = (uint64_t)32;
 		if (!network.count("v4AssignMode")) network["v4AssignMode"] = {{"zt",false}};
 		if (!network.count("v6AssignMode")) network["v6AssignMode"] = {{"rfc4193",false},{"zt",false},{"6plane",false}};
-		if (!network.count("activeBridges")) network["activeBridges"] = nlohmann::json::array();
 		if (!network.count("authTokens")) network["authTokens"] = nlohmann::json::array();
 		if (!network.count("capabilities")) network["capabilities"] = nlohmann::json::array();
 		if (!network.count("rules")) {
