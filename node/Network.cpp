@@ -79,7 +79,7 @@ static const void _dumpFilterTrace(const char *ruleName,uint8_t thisSetMatches,b
 {
 	static volatile unsigned long cnt = 0;
 	printf("%.6lu %c %s inbound=%d noRedirect=%d frameLen=%u etherType=%u" ZT_EOL_S,
-		cnt,
+		cnt++,
 		((thisSetMatches) ? 'Y' : '.'),
 		ruleName,
 		(int)inbound,
@@ -88,8 +88,8 @@ static const void _dumpFilterTrace(const char *ruleName,uint8_t thisSetMatches,b
 		etherType
 	);
 	for(std::vector<std::string>::const_iterator m(dlog.begin());m!=dlog.end();++m)
-		printf("       | %s" ZT_EOL_S,m->c_str());
-	printf("       + %c %s->%s %.2x:%.2x:%.2x:%.2x:%.2x:%.2x->%.2x:%.2x:%.2x:%.2x:%.2x:%.2x" ZT_EOL_S,
+		printf("     | %s" ZT_EOL_S,m->c_str());
+	printf("     + %c %s->%s %.2x:%.2x:%.2x:%.2x:%.2x:%.2x->%.2x:%.2x:%.2x:%.2x:%.2x:%.2x" ZT_EOL_S,
 		((thisSetMatches) ? 'Y' : '.'),
 		ztSource.toString().c_str(),
 		ztDest.toString().c_str(),
@@ -213,7 +213,7 @@ static int _doZtFilter(
 					// to self. We should also accept here instead of interpreting
 					// REDIRECT as DROP since we are the destination.
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-					_dumpFilterTrace(_rtn(rt),thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"ignored since we are the destination");
+					_dumpFilterTrace(_rtn(rt),thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"TEE/REDIRECT resulted in 'super-accept' since we are destination");
 #endif // ZT_RULES_ENGINE_DEBUGGING
 					return 2; // we should "super-accept" this packet since we are the TEE or REDIRECT destination
 				} else {
