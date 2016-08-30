@@ -137,14 +137,14 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 		case ZT_NETWORK_RULE_ACTION_TEE:
 			r["type"] = "ACTION_TEE";
 			r["address"] = Address(rule.v.fwd.address).toString();
-			r["flags"] = (uint64_t)rule.v.fwd.flags;
-			r["length"] = (uint64_t)rule.v.fwd.length;
+			r["flags"] = (unsigned int)rule.v.fwd.flags;
+			r["length"] = (unsigned int)rule.v.fwd.length;
 			break;
 		case ZT_NETWORK_RULE_ACTION_REDIRECT:
 			r["type"] = "ACTION_REDIRECT";
 			r["address"] = Address(rule.v.fwd.address).toString();
-			r["flags"] = (uint64_t)rule.v.fwd.flags;
-			r["length"] = (uint64_t)rule.v.fwd.length;
+			r["flags"] = (unsigned int)rule.v.fwd.flags;
+			r["length"] = (unsigned int)rule.v.fwd.length;
 			break;
 		case ZT_NETWORK_RULE_ACTION_DEBUG_LOG:
 			r["type"] = "ACTION_DEBUG_LOG";
@@ -162,22 +162,22 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 		case ZT_NETWORK_RULE_MATCH_VLAN_ID:
 			r["type"] = "MATCH_VLAN_ID";
 			r["not"] = ((rule.t & 0x80) != 0);
-			r["vlanId"] = (uint64_t)rule.v.vlanId;
+			r["vlanId"] = (unsigned int)rule.v.vlanId;
 			break;
 		case ZT_NETWORK_RULE_MATCH_VLAN_PCP:
 			r["type"] = "MATCH_VLAN_PCP";
 			r["not"] = ((rule.t & 0x80) != 0);
-			r["vlanPcp"] = (uint64_t)rule.v.vlanPcp;
+			r["vlanPcp"] = (unsigned int)rule.v.vlanPcp;
 			break;
 		case ZT_NETWORK_RULE_MATCH_VLAN_DEI:
 			r["type"] = "MATCH_VLAN_DEI";
 			r["not"] = ((rule.t & 0x80) != 0);
-			r["vlanDei"] = (uint64_t)rule.v.vlanDei;
+			r["vlanDei"] = (unsigned int)rule.v.vlanDei;
 			break;
 		case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
 			r["type"] = "MATCH_ETHERTYPE";
 			r["not"] = ((rule.t & 0x80) != 0);
-			r["etherType"] = (uint64_t)rule.v.etherType;
+			r["etherType"] = (unsigned int)rule.v.etherType;
 			break;
 		case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
 			r["type"] = "MATCH_MAC_SOURCE";
@@ -214,24 +214,24 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 		case ZT_NETWORK_RULE_MATCH_IP_TOS:
 			r["type"] = "MATCH_IP_TOS";
 			r["not"] = ((rule.t & 0x80) != 0);
-			r["ipTos"] = (uint64_t)rule.v.ipTos;
+			r["ipTos"] = (unsigned int)rule.v.ipTos;
 			break;
 		case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
 			r["type"] = "MATCH_IP_PROTOCOL";
 			r["not"] = ((rule.t & 0x80) != 0);
-			r["ipProtocol"] = (uint64_t)rule.v.ipProtocol;
+			r["ipProtocol"] = (unsigned int)rule.v.ipProtocol;
 			break;
 		case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
 			r["type"] = "MATCH_IP_SOURCE_PORT_RANGE";
 			r["not"] = ((rule.t & 0x80) != 0);
-			r["start"] = (uint64_t)rule.v.port[0];
-			r["end"] = (uint64_t)rule.v.port[1];
+			r["start"] = (unsigned int)rule.v.port[0];
+			r["end"] = (unsigned int)rule.v.port[1];
 			break;
 		case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE:
 			r["type"] = "MATCH_IP_DEST_PORT_RANGE";
 			r["not"] = ((rule.t & 0x80) != 0);
-			r["start"] = (uint64_t)rule.v.port[0];
-			r["end"] = (uint64_t)rule.v.port[1];
+			r["start"] = (unsigned int)rule.v.port[0];
+			r["end"] = (unsigned int)rule.v.port[1];
 			break;
 		case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
 			r["type"] = "MATCH_CHARACTERISTICS";
@@ -244,32 +244,32 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 		case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
 			r["type"] = "MATCH_FRAME_SIZE_RANGE";
 			r["not"] = ((rule.t & 0x80) != 0);
-			r["start"] = (uint64_t)rule.v.frameSize[0];
-			r["end"] = (uint64_t)rule.v.frameSize[1];
+			r["start"] = (unsigned int)rule.v.frameSize[0];
+			r["end"] = (unsigned int)rule.v.frameSize[1];
 			break;
 		case ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS:
 			r["type"] = "MATCH_TAGS_SAMENESS";
 			r["not"] = ((rule.t & 0x80) != 0);
-			r["id"] = (uint64_t)rule.v.tag.id;
-			r["value"] = (uint64_t)rule.v.tag.value;
+			r["id"] = rule.v.tag.id;
+			r["value"] = rule.v.tag.value;
 			break;
 		case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
 			r["type"] = "MATCH_TAGS_BITWISE_AND";
 			r["not"] = ((rule.t & 0x80) != 0);
-			r["id"] = (uint64_t)rule.v.tag.id;
-			r["value"] = (uint64_t)rule.v.tag.value;
+			r["id"] = rule.v.tag.id;
+			r["value"] = rule.v.tag.value;
 			break;
 		case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
 			r["type"] = "MATCH_TAGS_BITWISE_OR";
 			r["not"] = ((rule.t & 0x80) != 0);
-			r["id"] = (uint64_t)rule.v.tag.id;
-			r["value"] = (uint64_t)rule.v.tag.value;
+			r["id"] = rule.v.tag.id;
+			r["value"] = rule.v.tag.value;
 			break;
 		case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR:
 			r["type"] = "MATCH_TAGS_BITWISE_XOR";
 			r["not"] = ((rule.t & 0x80) != 0);
-			r["id"] = (uint64_t)rule.v.tag.id;
-			r["value"] = (uint64_t)rule.v.tag.value;
+			r["id"] = rule.v.tag.id;
+			r["value"] = rule.v.tag.value;
 			break;
 	}
 	return r;
