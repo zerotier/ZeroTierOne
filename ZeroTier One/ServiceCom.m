@@ -39,7 +39,7 @@
     return self;
 }
 
-- (NSString*)key
+- (NSString*)key:(NSError* __autoreleasing *)err
 {
     static NSString *k = nil;
 
@@ -63,10 +63,20 @@
             if (error) {
                 NSLog(@"Error: %@", error);
                 k = nil;
+                *err = error;
                 return @"";
             }
         }
         else {
+            NSURL *sysAppSupportDir = [[NSFileManager defaultManager] URLForDirectory:NSApplicationSupportDirectory inDomain:NSSystemDomainMask appropriateForURL:nil create:false error:nil];
+
+            sysAppSupportDir = [[sysAppSupportDir URLByAppendingPathComponent:@"ZeroTier"] URLByAppendingPathComponent:@"One"];
+            NSURL *sysAuthtokenURL = [sysAppSupportDir URLByAppendingPathComponent:@"authtoken.secret"];
+
+            if(![[NSFileManager defaultManager] fileExistsAtPath:[sysAuthtokenURL path]]) {
+
+            }
+
             [[NSFileManager defaultManager] createDirectoryAtURL:appSupportDir
                                      withIntermediateDirectories:YES
                                                       attributes:nil
@@ -74,6 +84,7 @@
 
             if (error) {
                 NSLog(@"Error: %@", error);
+                *err = error;
                 k = nil;
                 return @"";
             }
@@ -83,6 +94,12 @@
 
             if (status != errAuthorizationSuccess) {
                 NSLog(@"Authorization Failed! %d", status);
+
+                NSDictionary *userInfo = @{
+                                           NSLocalizedDescriptionKey: NSLocalizedString(@"Couldn't create AuthorizationRef", nil),
+                                           };
+                *err = [NSError errorWithDomain:@"com.zerotier.one" code:-1 userInfo:userInfo];
+
                 return @"";
             }
 
@@ -104,6 +121,10 @@
 
             if (status != errAuthorizationSuccess) {
                 NSLog(@"Authorization Failed! %d", status);
+                NSDictionary *userInfo = @{
+                                           NSLocalizedDescriptionKey: NSLocalizedString(@"Couldn't copy authorization rights", nil),
+                                           };
+                *err = [NSError errorWithDomain:@"com.zerotier.one" code:-1 userInfo:userInfo];
                 return @"";
             }
 
@@ -120,21 +141,32 @@
 
                 if (error) {
                     NSLog(@"Error writing token to disk: %@", error);
+                    *err = error;
                 }
             }
         }
     }
 
     if (k == nil) {
+        NSDictionary *userInfo = @{
+                                   NSLocalizedDescriptionKey: NSLocalizedString(@"Unknown error finding authorization key", nil),
+                                   };
+        *err = [NSError errorWithDomain:@"com.zerotier.one" code:-1 userInfo:userInfo];
+
         return @"";
     }
 
     return k;
 }
 
-- (void)getNetworklist:(void (^)(NSArray*))completionHandler
+- (void)getNetworklist:(void (^)(NSArray<Network *> *))completionHandler error:(NSError *__autoreleasing*)error
 {
-    NSString *urlString = [[baseURL stringByAppendingString:@"/network?auth="] stringByAppendingString:[self key]];
+    NSString* key = [self key:error];
+    if(*error) {
+        return;
+    }
+
+    NSString *urlString = [[baseURL stringByAppendingString:@"/network?auth="] stringByAppendingString:key];
 
     NSURL *url = [NSURL URLWithString:urlString];
     NSURLSessionDataTask *task =
@@ -171,31 +203,36 @@
     [task resume];
 }
 
-- (void)getNodeStatus:(void (^)(NodeStatus*))completionHandler
+- (void)getNodeStatus:(void (^)(NodeStatus*))completionHandler error:(NSError*__autoreleasing*)error
 {
-    NSString *urlString = [[baseURL stringByAppendingString:@"/status?auth="] stringByAppendingString:[self key]];
+    NSString *key = [self key:error];
+    if(*error) {
+        return;
+    }
+
+    NSString *urlString = [[baseURL stringByAppendingString:@"/status?auth="] stringByAppendingString:key];
 
     NSURL *url = [NSURL URLWithString:urlString];
     NSURLSessionDataTask *task =
     [session dataTaskWithURL:url
-           completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+           completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable err) {
 
-               if(error) {
-                   NSLog(@"Error: %@", error);
+               if(err) {
+                   NSLog(@"Error: %@", err);
                    return;
                }
 
                NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse*)response;
                NSInteger status = [httpResponse statusCode];
 
-               NSError *err;
+               NSError *err2;
                if(status == 200) {
                    NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data
                                                                         options:0
-                                                                          error:&err];
+                                                                          error:&err2];
 
-                   if(err) {
-                       NSLog(@"Error fetching node status: %@", err);
+                   if(err2) {
+                       NSLog(@"Error fetching node status: %@", err2);
                        return;
                    }
 
@@ -207,10 +244,17 @@
     [task resume];
 }
 
-- (void)joinNetwork:(NSString*)networkId allowManaged:(BOOL)allowManaged allowGlobal:(BOOL)allowGlobal allowDefault:(BOOL)allowDefault
+- (void)joinNetwork:(NSString*)networkId allowManaged:(BOOL)allowManaged allowGlobal:(BOOL)allowGlobal allowDefault:(BOOL)allowDefault error:(NSError *__autoreleasing*)error
 {
+    NSString *key = [self key:error];
+    if(*error) {
+        return;
+    }
 
-    NSString *urlString = [[[[baseURL stringByAppendingString:@"/network/"] stringByAppendingString:networkId] stringByAppendingString:@"?auth="] stringByAppendingString:[self key]];
+    NSString *urlString = [[[[baseURL stringByAppendingString:@"/network/"]
+                             stringByAppendingString:networkId]
+                            stringByAppendingString:@"?auth="]
+                           stringByAppendingString:key];
 
     NSURL *url = [NSURL URLWithString:urlString];
 
@@ -227,6 +271,7 @@
 
     if(err) {
         NSLog(@"Error creating json data: %@", err);
+        *error = err;
         return;
     }
 
@@ -236,9 +281,9 @@
     [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
 
     NSURLSessionDataTask *task =
-    [session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+    [session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable err) {
         if(error) {
-            NSLog(@"Error posting join request: %@", error);
+            NSLog(@"Error posting join request: %@", err);
         }
 
         NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse*)response;
@@ -254,9 +299,17 @@
     [task resume];
 }
 
-- (void)leaveNetwork:(NSString*)networkId
+- (void)leaveNetwork:(NSString*)networkId error:(NSError*__autoreleasing*)error
 {
-    NSString *urlString = [[[[baseURL stringByAppendingString:@"/network/"] stringByAppendingString:networkId] stringByAppendingString:@"?auth="] stringByAppendingString:[self key]];
+    NSString *key = [self key:error];
+    if(*error) {
+        return;
+    }
+
+    NSString *urlString = [[[[baseURL stringByAppendingString:@"/network/"]
+                             stringByAppendingString:networkId]
+                            stringByAppendingString:@"?auth="]
+                           stringByAppendingString:key];
 
     NSURL *url = [NSURL URLWithString:urlString];
 
@@ -264,9 +317,9 @@
     request.HTTPMethod = @"DELETE";
 
     NSURLSessionDataTask *task =
-    [session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-        if(error) {
-            NSLog(@"Error posting delete request: %@", error);
+    [session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable err) {
+        if(err) {
+            NSLog(@"Error posting delete request: %@", err);
             return;
         }
 

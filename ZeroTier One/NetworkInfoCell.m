@@ -42,15 +42,26 @@
 
 - (void)joinNetwork:(NSString*)nwid
 {
+    NSError *error = nil;
     [[ServiceCom sharedInstance] joinNetwork:nwid
                                 allowManaged:(self.allowManaged.state == NSOnState)
                                  allowGlobal:(self.allowGlobal.state  == NSOnState)
-                                allowDefault:![Network defaultRouteExists:_parent.networkList] && (self.allowDefault.state == NSOnState)];
+                                allowDefault:![Network defaultRouteExists:_parent.networkList] && (self.allowDefault.state == NSOnState)
+                                       error:&error];
+
+    if (error) {
+        // TODO: Display error message
+    }
 }
 
 - (void)leaveNetwork:(NSString*)nwid
 {
-    [[ServiceCom sharedInstance] leaveNetwork:nwid];
+    NSError *error = nil;
+    [[ServiceCom sharedInstance] leaveNetwork:nwid error:&error];
+
+    if (error) {
+        // TODO: Display error message
+    }
 }
 
 @end

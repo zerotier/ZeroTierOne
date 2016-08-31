@@ -74,13 +74,21 @@ NSString * const StatusUpdateKey = @"com.zerotier.one.status";
         }
     }
 
+    NSError *error = nil;
+
     [[ServiceCom sharedInstance] getNetworklist:^(NSArray<Network *> *networkList) {
         _receivedNetworks = networkList;
 
         [[NSOperationQueue mainQueue] addOperationWithBlock:^{
             [self internal_updateNetworkInfo];
-        }];
-    }];
+        } ];
+    } error:&error];
+
+    if(error) {
+        // TODO: Display error message
+
+        [self stop];
+    }
 
     [[ServiceCom sharedInstance] getNodeStatus:^(NodeStatus *status) {
         NSDictionary *userInfo = [NSDictionary dictionaryWithObject:status forKey:@"status"];
@@ -90,7 +98,13 @@ NSString * const StatusUpdateKey = @"com.zerotier.one.status";
                                                                 object:nil
                                                               userInfo:userInfo];
         }];
-    }];
+    } error:&error];
+
+    if (error) {
+        // TODO: Display error message
+
+        [self stop];
+    }
 }
 
 - (void)deleteSavedNetwork:(NSString*)networkId

@@ -266,13 +266,24 @@
     NSString *nwid = [NSString stringWithFormat:@"%10llx", network.nwid];
 
     if(network.connected) {
-        [[ServiceCom sharedInstance] leaveNetwork:nwid];
+        NSError *error = nil;
+
+        [[ServiceCom sharedInstance] leaveNetwork:nwid error:&error];
+
+        if (error) {
+            // TODO: Display error message
+
+        }
     }
     else {
+        NSError *error = nil;
         [[ServiceCom sharedInstance] joinNetwork:nwid
                                     allowManaged:network.allowManaged
                                      allowGlobal:network.allowGlobal
-                                    allowDefault:(network.allowDefault && ![Network defaultRouteExists:self.networks])];
+                                    allowDefault:(network.allowDefault && ![Network defaultRouteExists:self.networks])
+                                           error:&error];
+
+        // TODO: Display error message
     }
 }
 

@@ -72,10 +72,17 @@ NSString * const JoinedNetworksKey = @"com.zerotier.one.joined-networks";
 - (IBAction)onJoinClicked:(id)sender {
     NSString *networkId = self.network.stringValue;
 
+    NSError *error = nil;
     [[ServiceCom sharedInstance] joinNetwork:networkId
                                 allowManaged:(self.allowManagedCheckBox.state == NSOnState)
                                  allowGlobal:(self.allowGlobalCheckBox.state == NSOnState)
-                                allowDefault:(self.allowDefaultCheckBox.state == NSOnState)];
+                                allowDefault:(self.allowDefaultCheckBox.state == NSOnState)
+                                       error:&error];
+
+    if(error) {
+        // TODO: display error message
+        return;
+    }
 
     self.network.stringValue = @"";
 

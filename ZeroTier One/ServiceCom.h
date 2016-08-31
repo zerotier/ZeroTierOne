@@ -20,9 +20,9 @@
 
 - (id)init;
 
-- (void)getNetworklist:(void (^)(NSArray<Network*>*))completionHandler;
-- (void)getNodeStatus:(void (^)(NodeStatus*))completionHandler;
-- (void)joinNetwork:(NSString*)networkId allowManaged:(BOOL)allowManaged allowGlobal:(BOOL)allowGlobal allowDefault:(BOOL)allowDefault;
-- (void)leaveNetwork:(NSString*)networkId;
+- (void)getNetworklist:(void (^)(NSArray<Network*>*))completionHandler error:(NSError* __autoreleasing *)error;
+- (void)getNodeStatus:(void (^)(NodeStatus*))completionHandler error:(NSError*__autoreleasing*)error;
+- (void)joinNetwork:(NSString*)networkId allowManaged:(BOOL)allowManaged allowGlobal:(BOOL)allowGlobal allowDefault:(BOOL)allowDefault error:(NSError*__autoreleasing*)error;
+- (void)leaveNetwork:(NSString*)networkId error:(NSError*__autoreleasing*)error;
 
 @end
