@@ -76,15 +76,14 @@ static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
 		default: return "BAD_RULE_TYPE";
 	}
 }
-static const void _dumpFilterTrace(const char *ruleName,uint8_t thisSetMatches,bool noRedirect,bool inbound,const Address &ztSource,const Address &ztDest,const MAC &macSource,const MAC &macDest,const std::vector<std::string> &dlog,unsigned int frameLen,unsigned int etherType,const char *msg)
+static const void _dumpFilterTrace(const char *ruleName,uint8_t thisSetMatches,bool inbound,const Address &ztSource,const Address &ztDest,const MAC &macSource,const MAC &macDest,const std::vector<std::string> &dlog,unsigned int frameLen,unsigned int etherType,const char *msg)
 {
 	static volatile unsigned long cnt = 0;
-	printf("%.6lu %c %s inbound=%d noRedirect=%d frameLen=%u etherType=%u" ZT_EOL_S,
+	printf("%.6lu %c %s %s frameLen=%u etherType=%u" ZT_EOL_S,
 		cnt++,
 		((thisSetMatches) ? 'Y' : '.'),
 		ruleName,
-		(int)inbound,
-		(int)noRedirect,
+		((inbound) ? "INBOUND" : "OUTBOUND"),
 		frameLen,
 		etherType
 	);
@@ -143,14 +142,20 @@ static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsig
 	return false; // overflow == invalid
 }
 
-// 0 == no match, -1 == match/drop, 1 == match/accept, 2 == match/accept even if bridged
-static int _doZtFilter(
+enum _doZtFilterResult
+{
+	DOZTFILTER_NO_MATCH = 0,
+	DOZTFILTER_DROP = 1,
+	DOZTFILTER_REDIRECT = 2,
+	DOZTFILTER_ACCEPT = 3,
+	DOZTFILTER_SUPER_ACCEPT = 4
+};
+static _doZtFilterResult _doZtFilter(
 	const RuntimeEnvironment *RR,
-	const bool noRedirect,
 	const NetworkConfig &nconf,
 	const bool inbound,
 	const Address &ztSource,
-	const Address &ztDest,
+	Address &ztDest, // MUTABLE
 	const MAC &macSource,
 	const MAC &macDest,
 	const uint8_t *const frameData,
@@ -163,7 +168,9 @@ static int _doZtFilter(
 	const unsigned int localTagCount,
 	const uint32_t *const remoteTagIds,
 	const uint32_t *const remoteTagValues,
-	const unsigned int remoteTagCount)
+	const unsigned int remoteTagCount,
+	Address &cc, // MUTABLE
+	unsigned int &ccLength) // MUTABLE
 {
 	// For each set of rules we start by assuming that they match (since no constraints
 	// yields a 'match all' rule).
@@ -181,75 +188,83 @@ static int _doZtFilter(
 			case ZT_NETWORK_RULE_ACTION_DROP:
 				if (thisSetMatches) {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-					_dumpFilterTrace("ACTION_DROP",thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+					_dumpFilterTrace("ACTION_DROP",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 #endif // ZT_RULES_ENGINE_DEBUGGING
-					return -1; // match, drop packet
+					return DOZTFILTER_DROP;
 				} else {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-					_dumpFilterTrace("ACTION_DROP",thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+					_dumpFilterTrace("ACTION_DROP",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 					dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
-					thisSetMatches = 1; // no match, evaluate next set
+					thisSetMatches = 1;
 				}
 				continue;
+
 			case ZT_NETWORK_RULE_ACTION_ACCEPT:
 				if (thisSetMatches) {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-					_dumpFilterTrace("ACTION_ACCEPT",thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+					_dumpFilterTrace("ACTION_ACCEPT",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 #endif // ZT_RULES_ENGINE_DEBUGGING
-					return 1; // match, accept packet
+					return DOZTFILTER_ACCEPT; // match, accept packet
 				} else {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-					_dumpFilterTrace("ACTION_ACCEPT",thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+					_dumpFilterTrace("ACTION_ACCEPT",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 					dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
-					thisSetMatches = 1; // no match, evaluate next set
+					thisSetMatches = 1;
 				}
 				continue;
+
 			case ZT_NETWORK_RULE_ACTION_TEE:
 			case ZT_NETWORK_RULE_ACTION_REDIRECT: {
 				const Address fwdAddr(rules[rn].v.fwd.address);
-				if (fwdAddr == RR->identity.address()) {
-					// If we are the TEE or REDIRECT destination, don't TEE or REDIRECT
-					// to self. We should also accept here instead of interpreting
-					// REDIRECT as DROP since we are the destination.
+				if (fwdAddr == ztSource) {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-					_dumpFilterTrace(_rtn(rt),thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"TEE/REDIRECT resulted in 'super-accept' since we are destination");
+					_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"TEE/REDIRECT ignored since source is target");
 #endif // ZT_RULES_ENGINE_DEBUGGING
-					return 2; // we should "super-accept" this packet since we are the TEE or REDIRECT destination
-				} else {
-					if (!noRedirect) {
-						Packet outp(fwdAddr,RR->identity.address(),Packet::VERB_EXT_FRAME);
-						outp.append(nconf.networkId);
-						outp.append((uint8_t)( ((rt == ZT_NETWORK_RULE_ACTION_REDIRECT) ? 0x04 : 0x02) | (inbound ? 0x08 : 0x00) ));
-						macDest.appendTo(outp);
-						macSource.appendTo(outp);
-						outp.append((uint16_t)etherType);
-						outp.append(frameData,(rules[rn].v.fwd.length != 0) ? ((frameLen < (unsigned int)rules[rn].v.fwd.length) ? frameLen : (unsigned int)rules[rn].v.fwd.length) : frameLen);
-						outp.compress();
-						RR->sw->send(outp,true);
-					}
-
-					if (rt == ZT_NETWORK_RULE_ACTION_REDIRECT) {
+					thisSetMatches = 1;
+				} else if (fwdAddr == RR->identity.address()) {
+					if (inbound) {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-						_dumpFilterTrace("ACTION_REDIRECT",thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(noRedirect) ? "second-pass match, not actually redirecting" : (const char *)0);
+						_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"TEE/REDIRECT interpreted as super-accept since we are target");
 #endif // ZT_RULES_ENGINE_DEBUGGING
-						return -1; // match, drop packet (we redirected it)
+						return DOZTFILTER_SUPER_ACCEPT;
 					} else {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-						_dumpFilterTrace("ACTION_TEE",thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(noRedirect) ? "second-pass match, not actually teeing" : (const char *)0);
+						_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"TEE/REDIRECT ignored on outbound since we are target");
+#endif // ZT_RULES_ENGINE_DEBUGGING
+						thisSetMatches = 1;
+					}
+				} else if (fwdAddr == ztDest) {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+					_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"TEE/REDIRECT ignored since destination is target");
+#endif // ZT_RULES_ENGINE_DEBUGGING
+					thisSetMatches = 1;
+				} else {
+					if (rt == ZT_NETWORK_RULE_ACTION_REDIRECT) {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+						_dumpFilterTrace("ACTION_REDIRECT",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+#endif // ZT_RULES_ENGINE_DEBUGGING
+						ztDest = fwdAddr;
+						return DOZTFILTER_REDIRECT;
+					} else {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+						_dumpFilterTrace("ACTION_TEE",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 						dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
-						thisSetMatches = 1; // TEE does not terminate evaluation
+						cc = fwdAddr;
+						ccLength = (rules[rn].v.fwd.length != 0) ? ((frameLen < (unsigned int)rules[rn].v.fwd.length) ? frameLen : (unsigned int)rules[rn].v.fwd.length) : frameLen;
+						thisSetMatches = 1;
 					}
 				}
 			}	continue;
+
 			case ZT_NETWORK_RULE_ACTION_DEBUG_LOG: // a no-op target specifically for debugging purposes
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-				_dumpFilterTrace("ACTION_DEBUG_LOG",thisSetMatches,noRedirect,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+				_dumpFilterTrace("ACTION_DEBUG_LOG",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 				dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
-				thisSetMatches = 1; // DEBUG_LOG does not terminate evaluation
+				thisSetMatches = 1;
 				continue;
 
 			default: break;
@@ -547,7 +562,7 @@ static int _doZtFilter(
 		thisSetMatches &= (thisRuleMatches ^ ((rules[rn].t >> 7) & 1));
 	}
 
-	return 0;
+	return DOZTFILTER_NO_MATCH;
 }
 
 const ZeroTier::MulticastGroup Network::BROADCAST(ZeroTier::MAC(0xffffffffffffULL),0);
@@ -614,7 +629,7 @@ Network::~Network()
 }
 
 bool Network::filterOutgoingPacket(
-	const bool noRedirect,
+	const bool noTee,
 	const Address &ztSource,
 	const Address &ztDest,
 	const MAC &macSource,
@@ -626,39 +641,94 @@ bool Network::filterOutgoingPacket(
 {
 	uint32_t remoteTagIds[ZT_MAX_NETWORK_TAGS];
 	uint32_t remoteTagValues[ZT_MAX_NETWORK_TAGS];
+	Address ztDest2(ztDest);
+	Address cc;
+	unsigned int ccLength = 0;
+	bool mainRuleTableMatch = false;
+	bool accept = false;
 
 	Mutex::Lock _l(_lock);
 
 	Membership &m = _memberships[ztDest];
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
-	switch(_doZtFilter(RR,noRedirect,_config,false,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount)) {
-		case -1:
-			if (ztDest)
-				m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config,(const Capability *)0);
+	switch(_doZtFilter(RR,_config,false,ztSource,ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc,ccLength)) {
+		case DOZTFILTER_NO_MATCH:
+			break;
+		case DOZTFILTER_DROP:
 			return false;
-		case 1:
-		case 2:
-			if (ztDest)
-				m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config,(const Capability *)0);
-			return true;
+		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztDest2 will have been changed in _doZtFilter()
+		case DOZTFILTER_ACCEPT:
+		case DOZTFILTER_SUPER_ACCEPT: // no difference in behavior on outbound side
+			mainRuleTableMatch = true;
+			accept = true;
+			break;
 	}
 
-	for(unsigned int c=0;c<_config.capabilityCount;++c) {
-		switch (_doZtFilter(RR,noRedirect,_config,false,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.capabilities[c].rules(),_config.capabilities[c].ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount)) {
-			case -1:
-				if (ztDest)
-					m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config,(const Capability *)0);
-				return false;
-			case 1:
-			case 2:
-				if (ztDest)
-					m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config,&(_config.capabilities[c]));
-				return true;
+	const Capability *relevantCap = (const Capability *)0;
+	if (!mainRuleTableMatch) {
+		for(unsigned int c=0;c<_config.capabilityCount;++c) {
+			ztDest2 = ztDest; // sanity check
+			Address cc2;
+			unsigned int ccLength2 = 0;
+			switch (_doZtFilter(RR,_config,false,ztSource,ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.capabilities[c].rules(),_config.capabilities[c].ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc2,ccLength2)) {
+				case DOZTFILTER_NO_MATCH:
+				case DOZTFILTER_DROP: // explicit DROP in a capability just terminates its evaluation and is an anti-pattern
+					break;
+				case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztDest2 will have been changed in _doZtFilter()
+				case DOZTFILTER_ACCEPT:
+				case DOZTFILTER_SUPER_ACCEPT: // no difference in behavior on outbound side
+					if ((!noTee)&&(cc2)) {
+						Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
+						outp.append(_id);
+						outp.append((uint8_t)0x02); // TEE/REDIRECT from outbound side: 0x02
+						macDest.appendTo(outp);
+						macSource.appendTo(outp);
+						outp.append((uint16_t)etherType);
+						outp.append(frameData,ccLength2);
+						outp.compress();
+						RR->sw->send(outp,true);
+					}
+					relevantCap = &(_config.capabilities[c]);
+					accept = true;
+					break;
+			}
+			if (accept)
+				break;
 		}
 	}
 
-	return false;
+	if (accept) {
+		if (ztDest2)
+			m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest2,_config,relevantCap);
+
+		if ((!noTee)&&(cc)) {
+			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
+			outp.append(_id);
+			outp.append((uint8_t)0x02); // TEE/REDIRECT from outbound side: 0x02
+			macDest.appendTo(outp);
+			macSource.appendTo(outp);
+			outp.append((uint16_t)etherType);
+			outp.append(frameData,ccLength);
+			outp.compress();
+			RR->sw->send(outp,true);
+		}
+
+		if (ztDest != ztDest2) {
+			Packet outp(ztDest2,RR->identity.address(),Packet::VERB_EXT_FRAME);
+			outp.append(_id);
+			outp.append((uint8_t)0x02); // TEE/REDIRECT from outbound side: 0x02
+			macDest.appendTo(outp);
+			macSource.appendTo(outp);
+			outp.append((uint16_t)etherType);
+			outp.append(frameData,frameLen);
+			outp.compress();
+			RR->sw->send(outp,true);
+			return false; // DROP locally, since we redirected
+		}
+	}
+
+	return accept;
 }
 
 int Network::filterIncomingPacket(
@@ -673,29 +743,97 @@ int Network::filterIncomingPacket(
 {
 	uint32_t remoteTagIds[ZT_MAX_NETWORK_TAGS];
 	uint32_t remoteTagValues[ZT_MAX_NETWORK_TAGS];
+	Address ztDest2(ztDest);
+	Address cc;
+	unsigned int ccLength = 0;
+	bool mainRuleTableMatch = false;
+	int accept = 0;
 
 	Mutex::Lock _l(_lock);
 
 	Membership &m = _memberships[ztDest];
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
-	switch (_doZtFilter(RR,false,_config,true,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount)) {
-		case -1: return 0; // DROP
-		case 1: return 1; // ACCEPT
-		case 2: return 2; // super-ACCEPT
+	switch (_doZtFilter(RR,_config,true,sourcePeer->address(),ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc,ccLength)) {
+		case DOZTFILTER_NO_MATCH:
+			break;
+		case DOZTFILTER_DROP:
+			return 0; // DROP
+		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztDest2 will have been changed in _doZtFilter()
+		case DOZTFILTER_ACCEPT:
+			mainRuleTableMatch = true;
+			accept = 1; // ACCEPT
+			break;
+		case DOZTFILTER_SUPER_ACCEPT:
+			mainRuleTableMatch = true;
+			accept = 2; // super-ACCEPT
+			break;
 	}
 
-	Membership::CapabilityIterator mci(m);
-	const Capability *c;
-	while ((c = mci.next(_config))) {
-		switch(_doZtFilter(RR,false,_config,true,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount)) {
-			case -1: return 0; // DROP
-			case 1: return 1; // ACCEPT
-			case 2: return 2; // super-ACCEPT
+	if (!mainRuleTableMatch) {
+		Membership::CapabilityIterator mci(m);
+		const Capability *c;
+		while ((c = mci.next(_config))) {
+			ztDest2 = ztDest; // sanity check
+			Address cc2;
+			unsigned int ccLength2 = 0;
+			switch(_doZtFilter(RR,_config,true,sourcePeer->address(),ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc2,ccLength2)) {
+				case DOZTFILTER_NO_MATCH:
+				case DOZTFILTER_DROP: // explicit DROP in a capability just terminates its evaluation and is an anti-pattern
+					break;
+				case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztDest will have been changed in _doZtFilter()
+				case DOZTFILTER_ACCEPT:
+					accept = 1; // ACCEPT
+					break;
+				case DOZTFILTER_SUPER_ACCEPT:
+					accept = 2; // super-ACCEPT
+					break;
+			}
+			if (accept) {
+				if (cc2) {
+					Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
+					outp.append(_id);
+					outp.append((uint8_t)0x06); // TEE/REDIRECT from inbound side: 0x06
+					macDest.appendTo(outp);
+					macSource.appendTo(outp);
+					outp.append((uint16_t)etherType);
+					outp.append(frameData,ccLength2);
+					outp.compress();
+					RR->sw->send(outp,true);
+				}
+				break;
+			}
 		}
 	}
 
-	return 0; // DROP
+	if (accept) {
+		if (cc) {
+			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
+			outp.append(_id);
+			outp.append((uint8_t)0x06); // TEE/REDIRECT from inbound side: 0x06
+			macDest.appendTo(outp);
+			macSource.appendTo(outp);
+			outp.append((uint16_t)etherType);
+			outp.append(frameData,ccLength);
+			outp.compress();
+			RR->sw->send(outp,true);
+		}
+
+		if (ztDest != ztDest2) {
+			Packet outp(ztDest2,RR->identity.address(),Packet::VERB_EXT_FRAME);
+			outp.append(_id);
+			outp.append((uint8_t)0x06); // TEE/REDIRECT from inbound side: 0x06
+			macDest.appendTo(outp);
+			macSource.appendTo(outp);
+			outp.append((uint16_t)etherType);
+			outp.append(frameData,frameLen);
+			outp.compress();
+			RR->sw->send(outp,true);
+			return 0; // DROP locally, since we redirected
+		}
+	}
+
+	return accept;
 }
 
 bool Network::subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const

@@ -144,7 +144,6 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 			r["type"] = "ACTION_REDIRECT";
 			r["address"] = Address(rule.v.fwd.address).toString();
 			r["flags"] = (unsigned int)rule.v.fwd.flags;
-			r["length"] = (unsigned int)rule.v.fwd.length;
 			break;
 		case ZT_NETWORK_RULE_ACTION_DEBUG_LOG:
 			r["type"] = "ACTION_DEBUG_LOG";
@@ -308,7 +307,6 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 		rule.t |= ZT_NETWORK_RULE_ACTION_REDIRECT;
 		rule.v.fwd.address = Utils::hexStrToU64(_jS(r["zt"],"0").c_str()) & 0xffffffffffULL;
 		rule.v.fwd.flags = (uint32_t)(_jI(r["flags"],0ULL) & 0xffffffffULL);
-		rule.v.fwd.length = (uint16_t)(_jI(r["length"],0ULL) & 0xffffULL);
 		return true;
 	} else if (t == "ACTION_DEBUG_LOG") {
 		rule.t |= ZT_NETWORK_RULE_ACTION_DEBUG_LOG;

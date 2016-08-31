@@ -655,9 +655,8 @@ public:
 		 *
 		 * Flags:
 		 *   0x01 - Certificate of network membership attached (DEPRECATED)
-		 *   0x02 - Packet is a TEE'd packet
-		 *   0x04 - Packet is a REDIRECT'ed packet
-		 *   0x08 - TEE/REDIRECT'ed packet is on inbound side of connection
+		 *   0x02 - This is a TEE'd or REDIRECT'ed packet
+		 *   0x04 - TEE/REDIRECT'ed packet is from inbound side
 		 *
 		 * An extended frame carries full MAC addressing, making them a
 		 * superset of VERB_FRAME. They're used for bridging or when we

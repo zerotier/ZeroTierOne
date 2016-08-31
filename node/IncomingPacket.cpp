@@ -560,7 +560,7 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 					const MAC sourceMac(peer->address(),network->id());
 					const unsigned int frameLen = size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
 					const uint8_t *const frameData = reinterpret_cast<const uint8_t *>(data()) + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
-					if (network->filterIncomingPacket(peer,RR->identity.address(),sourceMac,network->mac(),frameData,frameLen,etherType,0))
+					if (network->filterIncomingPacket(peer,RR->identity.address(),sourceMac,network->mac(),frameData,frameLen,etherType,0) > 0)
 						RR->node->putFrame(network->id(),network->userPtr(),sourceMac,network->mac(),etherType,0,(const void *)frameData,frameLen);
 					peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP,true);
 				}
@@ -625,7 +625,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 								return true;
 							}
 						}
-						// fall through -- 2 means accept regardless of bridging state
+						// fall through -- 2 means accept regardless of bridging checks or other restrictions
 					case 2:
 						RR->node->putFrame(network->id(),network->userPtr(),from,to,etherType,0,(const void *)frameData,frameLen);
 						break;
@@ -981,7 +981,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				}
 
 				const uint8_t *const frameData = (const uint8_t *)field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,frameLen);
-				if (network->filterIncomingPacket(peer,RR->identity.address(),from,to.mac(),frameData,frameLen,etherType,0)) {
+				if (network->filterIncomingPacket(peer,RR->identity.address(),from,to.mac(),frameData,frameLen,etherType,0) > 0) {
 					RR->node->putFrame(network->id(),network->userPtr(),from,to.mac(),etherType,0,(const void *)frameData,frameLen);
 				}
 			}

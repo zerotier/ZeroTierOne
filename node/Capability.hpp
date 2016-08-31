@@ -178,7 +178,7 @@ public:
 					b.append((uint8_t)14);
 					b.append((uint64_t)rules[i].v.fwd.address);
 					b.append((uint32_t)rules[i].v.fwd.flags);
-					b.append((uint16_t)rules[i].v.fwd.length);
+					b.append((uint16_t)rules[i].v.fwd.length); // unused for redirect
 					break;
 				case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 				case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS:

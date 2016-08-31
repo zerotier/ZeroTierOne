@@ -437,10 +437,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		//TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),len);
 
-		// We filter with a NULL destination ZeroTier address first. Filtrations
-		// for each ZT destination are also done in OutboundMulticast, but these
-		// set noRedirect to true. This prevents multiple TEEs and REDIRECTs for
-		// multicast packets.
+		// First pass sets noTee to false, but noTee is set to true in OutboundMulticast to prevent duplicates.
 		if (!network->filterOutgoingPacket(false,RR->identity.address(),Address(),from,to,(const uint8_t *)data,len,etherType,vlanId)) {
 			TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 			return;
