@@ -64,6 +64,7 @@ static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
 		case ZT_NETWORK_RULE_MATCH_IPV6_DEST: return "MATCH_IPV6_DEST";
 		case ZT_NETWORK_RULE_MATCH_IP_TOS: return "MATCH_IP_TOS";
 		case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL: return "MATCH_IP_PROTOCOL";
+		case ZT_NETWORK_RULE_MATCH_ICMP: return "MATCH_ICMP";
 		case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE: return "MATCH_IP_SOURCE_PORT_RANGE";
 		case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE: return "MATCH_IP_DEST_PORT_RANGE";
 		case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS: return "MATCH_CHARACTERISTICS";
@@ -361,6 +362,57 @@ static int _doZtFilter(
 					thisRuleMatches = 0;
 					FILTER_TRACE("%u %s %c [frame not IP] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
 				}
+				break;
+			case ZT_NETWORK_RULE_MATCH_ICMP:
+				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
+					if (frameData[9] == 0x01) {
+						const unsigned int ihl = (frameData[0] & 0xf) * 32;
+						if (frameLen >= (ihl + 2)) {
+							if (rules[rn].v.icmp.type == frameData[ihl]) {
+								if ((rules[rn].v.icmp.flags & 0x01) != 0) {
+									thisRuleMatches = (uint8_t)(frameData[ihl+1] == rules[rn].v.icmp.code);
+								} else {
+									thisRuleMatches = 1;
+								}
+							} else {
+								thisRuleMatches = 0;
+							}
+							FILTER_TRACE("%u %s %c (IPv4) icmp-type:%d==%d icmp-code:%d==%d -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(int)frameData[ihl],(int)rules[rn].v.icmp.type,(int)frameData[ihl+1],(((rules[rn].v.icmp.flags & 0x01) != 0) ? (int)rules[rn].v.icmp.code : -1),(unsigned int)thisRuleMatches);
+						} else {
+							thisRuleMatches = 0;
+							FILTER_TRACE("%u %s %c [IPv4 frame invalid] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+						}
+					} else {
+						thisRuleMatches = 0;
+						FILTER_TRACE("%u %s %c [frame not ICMP] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+					}
+				} else if (etherType == ZT_ETHERTYPE_IPV6) {
+					unsigned int pos = 0,proto = 0;
+					if (_ipv6GetPayload(frameData,frameLen,pos,proto)) {
+						if ((proto == 0x3a)&&(frameLen >= (pos+2))) {
+							if (rules[rn].v.icmp.type == frameData[pos]) {
+								if ((rules[rn].v.icmp.flags & 0x01) != 0) {
+									thisRuleMatches = (uint8_t)(frameData[pos+1] == rules[rn].v.icmp.code);
+								} else {
+									thisRuleMatches = 1;
+								}
+							} else {
+								thisRuleMatches = 0;
+							}
+							FILTER_TRACE("%u %s %c (IPv4) icmp-type:%d==%d icmp-code:%d==%d -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(int)frameData[pos],(int)rules[rn].v.icmp.type,(int)frameData[pos+1],(((rules[rn].v.icmp.flags & 0x01) != 0) ? (int)rules[rn].v.icmp.code : -1),(unsigned int)thisRuleMatches);
+						} else {
+							thisRuleMatches = 0;
+							FILTER_TRACE("%u %s %c [frame not ICMPv6] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+						}
+					} else {
+						thisRuleMatches = 0;
+						FILTER_TRACE("%u %s %c [invalid IPv6] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+					}
+				} else {
+					thisRuleMatches = 0;
+					FILTER_TRACE("%u %s %c [frame not IP] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+				}
+				break;
 				break;
 			case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
 			case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE:

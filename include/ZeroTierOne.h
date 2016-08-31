@@ -598,44 +598,49 @@ enum ZT_VirtualNetworkRuleType
 	ZT_NETWORK_RULE_MATCH_IP_PROTOCOL = 45,
 
 	/**
+	 * ICMP type and possibly code (does not match if not ICMP)
+	 */
+	ZT_NETWORK_RULE_MATCH_ICMP = 46,
+
+	/**
 	 * IP source port range (start-end, inclusive)
 	 */
-	ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE = 46,
+	ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE = 47,
 
 	/**
 	 * IP destination port range (start-end, inclusive)
 	 */
-	ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE = 47,
+	ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE = 48,
 
 	/**
 	 * Packet characteristics (set of flags)
 	 */
-	ZT_NETWORK_RULE_MATCH_CHARACTERISTICS = 48,
+	ZT_NETWORK_RULE_MATCH_CHARACTERISTICS = 49,
 
 	/**
 	 * Frame size range (start-end, inclusive)
 	 */
-	ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE = 49,
+	ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE = 50,
 
 	/**
 	 * Match if local and remote tags differ by no more than value, use 0 to check for equality
 	 */
-	ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS = 50,
+	ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS = 51,
 
 	/**
 	 * Match if local and remote tags ANDed together equal value.
 	 */
-	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND = 51,
+	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND = 52,
 
 	/**
 	 * Match if local and remote tags ANDed together equal value.
 	 */
-	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR = 52,
+	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR = 53,
 
 	/**
 	 * Match if local and remote tags XORed together equal value.
 	 */
-	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR = 53
+	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR = 54
 };
 
 /**
@@ -738,6 +743,15 @@ typedef struct
 		 * Ethernet packet size in host byte order (start-end, inclusive)
 		 */
 		uint16_t frameSize[2];
+
+		/**
+		 * ICMP type and code
+		 */
+		struct {
+			uint8_t type; // ICMP type, always matched
+			uint8_t code; // ICMP code if matched
+			uint8_t flags; // flag 0x01 means also match code, otherwise only match type
+		} icmp;
 
 		/**
 		 * For tag-related rules

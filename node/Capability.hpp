@@ -233,6 +233,12 @@ public:
 					b.append((uint8_t)1);
 					b.append((uint8_t)rules[i].v.ipProtocol);
 					break;
+				case ZT_NETWORK_RULE_MATCH_ICMP:
+					b.append((uint8_t)3);
+					b.append((uint8_t)rules[i].v.icmp.type);
+					b.append((uint8_t)rules[i].v.icmp.code);
+					b.append((uint8_t)rules[i].v.icmp.flags);
+					break;
 				case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
 				case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE:
 					b.append((uint8_t)4);
@@ -311,6 +317,11 @@ public:
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
 					rules[ruleCount].v.ipProtocol = (uint8_t)b[p];
+					break;
+				case ZT_NETWORK_RULE_MATCH_ICMP:
+					rules[ruleCount].v.icmp.type = (uint8_t)b[p];
+					rules[ruleCount].v.icmp.code = (uint8_t)b[p+1];
+					rules[ruleCount].v.icmp.flags = (uint8_t)b[p+2];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
 				case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE:

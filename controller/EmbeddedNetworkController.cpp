@@ -221,6 +221,14 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 			r["not"] = ((rule.t & 0x80) != 0);
 			r["ipProtocol"] = (unsigned int)rule.v.ipProtocol;
 			break;
+		case ZT_NETWORK_RULE_MATCH_ICMP:
+			r["type"] = "MATCH_ICMP";
+			r["not"] = ((rule.t & 0x80) != 0);
+			r["type"] = (unsigned int)rule.v.icmp.type;
+			if ((rule.v.icmp.flags & 0x01) != 0)
+				r["code"] = (unsigned int)rule.v.icmp.code;
+			else r["code"] = json();
+			break;
 		case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
 			r["type"] = "MATCH_IP_SOURCE_PORT_RANGE";
 			r["not"] = ((rule.t & 0x80) != 0);
@@ -374,6 +382,18 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 	} else if (t == "MATCH_IP_PROTOCOL") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_IP_PROTOCOL;
 		rule.v.ipProtocol = (uint8_t)(_jI(r["ipProtocol"],0ULL) & 0xffULL);
+		return true;
+	} else if (t == "MATCH_ICMP") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_ICMP;
+		rule.v.icmp.type = (uint8_t)(_jI(r["type"],0ULL) & 0xffULL);
+		json &code = r["code"];
+		if (code.is_null()) {
+			rule.v.icmp.code = 0;
+			rule.v.icmp.flags = 0x00;
+		} else {
+			rule.v.icmp.code = (uint8_t)(_jI(code,0ULL) & 0xffULL);
+			rule.v.icmp.flags = 0x01;
+		}
 		return true;
 	} else if (t == "MATCH_IP_SOURCE_PORT_RANGE") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE;
