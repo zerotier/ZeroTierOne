@@ -455,7 +455,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 									Mutex::Lock _l2(_members[fromMemberId].lock);
 									_send(fromMemberId,CLUSTER_MESSAGE_PROXY_SEND,rendezvousForRemote.data(),rendezvousForRemote.size());
 								}
-								RR->sw->send(rendezvousForLocal,true,0);
+								RR->sw->send(rendezvousForLocal,true);
 							}
 						}
 					}	break;
@@ -466,7 +466,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						const unsigned int len = dmsg.at<uint16_t>(ptr); ptr += 2;
 						Packet outp(rcpt,RR->identity.address(),verb);
 						outp.append(dmsg.field(ptr,len),len); ptr += len;
-						RR->sw->send(outp,true,0);
+						RR->sw->send(outp,true);
 						//TRACE("[%u] proxy send %s to %s length %u",(unsigned int)fromMemberId,Packet::verbString(verb),rcpt.toString().c_str(),len);
 					}	break;
 				}
@@ -719,7 +719,9 @@ bool Cluster::findBetterEndpoint(InetAddress &redirectTo,const Address &peerAddr
 		std::vector<InetAddress> best;
 		const double currentDistance = _dist3d(_x,_y,_z,px,py,pz);
 		double bestDistance = (offload ? 2147483648.0 : currentDistance);
+#ifdef ZT_TRACE
 		unsigned int bestMember = _id;
+#endif
 		{
 			Mutex::Lock _l(_memberIds_m);
 			for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
@@ -731,7 +733,9 @@ bool Cluster::findBetterEndpoint(InetAddress &redirectTo,const Address &peerAddr
 					const double mdist = _dist3d(m.x,m.y,m.z,px,py,pz);
 					if (mdist < bestDistance) {
 						bestDistance = mdist;
+#ifdef ZT_TRACE
 						bestMember = *mid;
+#endif
 						best = m.zeroTierPhysicalEndpoints;
 					}
 				}
