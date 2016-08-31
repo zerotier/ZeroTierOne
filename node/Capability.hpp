@@ -38,9 +38,6 @@ class RuntimeEnvironment;
 /**
  * A set of grouped and signed network flow rules
  *
- * The use of capabilities implements capability-based security on ZeroTIer
- * virtual networks for efficient and manageable network micro-segmentation.
- *
  * On the sending side the sender does the following for each packet:
  *
  * (1) Evaluates its capabilities in ascending order of ID to determine
@@ -49,16 +46,12 @@ class RuntimeEnvironment;
  *     receving peer ("presents" it).
  * (3) The sender then sends the packet.
  *
- * On the receiving side the receiver does the following for each packet:
+ * On the receiving side the receiver evaluates the capabilities presented
+ * by the sender. If any valid un-expired capability allows this packet it
+ * is accepted.
  *
- * (1) Evaluates the capabilities of the sender (that the sender has
- *     presented) to determine if it should received this packet.
- * (2) Evaluates its own capabilities to determine if it should receive
- *     this packet.
- * (3) If both check out, it receives the packet.
- *
- * Note that rules in capabilities can do other things as well such as TEE
- * or REDIRECT packets. See filter code and ZT_VirtualNetworkRule.
+ * Note that this is after evaluation of network scope rules and only if
+ * network scope rules do not deliver an explicit match.
  */
 class Capability
 {
@@ -255,7 +248,7 @@ public:
 					b.append((uint16_t)rules[i].v.frameSize[0]);
 					b.append((uint16_t)rules[i].v.frameSize[1]);
 					break;
-				case ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS:
+				case ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR:
@@ -336,7 +329,7 @@ public:
 					rules[ruleCount].v.frameSize[0] = b.template at<uint16_t>(p);
 					rules[ruleCount].v.frameSize[1] = b.template at<uint16_t>(p + 2);
 					break;
-				case ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS:
+				case ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR:

@@ -255,8 +255,8 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 			r["start"] = (unsigned int)rule.v.frameSize[0];
 			r["end"] = (unsigned int)rule.v.frameSize[1];
 			break;
-		case ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS:
-			r["type"] = "MATCH_TAGS_SAMENESS";
+		case ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE:
+			r["type"] = "MATCH_TAGS_DIFFERENCE";
 			r["not"] = ((rule.t & 0x80) != 0);
 			r["id"] = rule.v.tag.id;
 			r["value"] = rule.v.tag.value;
@@ -431,8 +431,8 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 		rule.v.frameSize[0] = (uint16_t)(_jI(r["start"],0ULL) & 0xffffULL);
 		rule.v.frameSize[1] = (uint16_t)(_jI(r["end"],(uint64_t)rule.v.frameSize[0]) & 0xffffULL);
 		return true;
-	} else if (t == "MATCH_TAGS_SAMENESS") {
-		rule.t |= ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS;
+	} else if (t == "MATCH_TAGS_DIFFERENCE") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE;
 		rule.v.tag.id = (uint32_t)(_jI(r["id"],0ULL) & 0xffffffffULL);
 		rule.v.tag.value = (uint32_t)(_jI(r["value"],0ULL) & 0xffffffffULL);
 		return true;

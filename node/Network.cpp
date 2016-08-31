@@ -69,7 +69,7 @@ static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
 		case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE: return "MATCH_IP_DEST_PORT_RANGE";
 		case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS: return "MATCH_CHARACTERISTICS";
 		case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE: return "MATCH_FRAME_SIZE_RANGE";
-		case ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS: return "MATCH_TAGS_SAMENESS";
+		case ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE: return "MATCH_TAGS_DIFFERENCE";
 		case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND: return "MATCH_TAGS_BITWISE_AND";
 		case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR: return "MATCH_TAGS_BITWISE_OR";
 		case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR: return "MATCH_TAGS_BITWISE_XOR";
@@ -487,7 +487,7 @@ static int _doZtFilter(
 				thisRuleMatches = (uint8_t)((frameLen >= (unsigned int)rules[rn].v.frameSize[0])&&(frameLen <= (unsigned int)rules[rn].v.frameSize[1]));
 				FILTER_TRACE("%u %s %c %u in %u-%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),frameLen,(unsigned int)rules[rn].v.frameSize[0],(unsigned int)rules[rn].v.frameSize[1],(unsigned int)thisRuleMatches);
 				break;
-			case ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS:
+			case ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE:
 			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
 			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
 			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR: {
@@ -510,13 +510,18 @@ static int _doZtFilter(
 						}
 					}
 					if (!rtv) {
-						thisRuleMatches = 0;
-						FILTER_TRACE("%u %s %c remote tag %u not found -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
+						if (inbound) {
+							thisRuleMatches = 0;
+							FILTER_TRACE("%u %s %c remote tag %u not found -> 0 (inbound side is strict)",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
+						} else {
+							thisRuleMatches = 1;
+							FILTER_TRACE("%u %s %c remote tag %u not found -> 1 (outbound side is not strict)",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
+						}
 					} else {
-						if (rt == ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS) {
-							const uint32_t sameness = (lt->value() > *rtv) ? (lt->value() - *rtv) : (*rtv - lt->value());
-							thisRuleMatches = (uint8_t)(sameness <= rules[rn].v.tag.value);
-							FILTER_TRACE("%u %s %c TAG %u local:%u remote:%u sameness:%u <= %u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,lt->value(),*rtv,sameness,(unsigned int)rules[rn].v.tag.value,thisRuleMatches);
+						if (rt == ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE) {
+							const uint32_t diff = (lt->value() > *rtv) ? (lt->value() - *rtv) : (*rtv - lt->value());
+							thisRuleMatches = (uint8_t)(diff <= rules[rn].v.tag.value);
+							FILTER_TRACE("%u %s %c TAG %u local:%u remote:%u difference:%u<=%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,lt->value(),*rtv,diff,(unsigned int)rules[rn].v.tag.value,thisRuleMatches);
 						} else if (rt == ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND) {
 							thisRuleMatches = (uint8_t)((lt->value() & *rtv) == rules[rn].v.tag.value);
 							FILTER_TRACE("%u %s %c TAG %u local:%.8x & remote:%.8x == %.8x -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,lt->value(),*rtv,(unsigned int)rules[rn].v.tag.value,(unsigned int)thisRuleMatches);
@@ -675,22 +680,22 @@ int Network::filterIncomingPacket(
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
 	switch (_doZtFilter(RR,false,_config,true,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount)) {
-		case -1: return 0;
-		case 1: return 1;
-		case 2: return 2;
+		case -1: return 0; // DROP
+		case 1: return 1; // ACCEPT
+		case 2: return 2; // super-ACCEPT
 	}
 
 	Membership::CapabilityIterator mci(m);
 	const Capability *c;
 	while ((c = mci.next(_config))) {
-		switch(_doZtFilter(RR,false,_config,false,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount)) {
-			case -1: return 0;
-			case 1: return 1;
-			case 2: return 2;
+		switch(_doZtFilter(RR,false,_config,true,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount)) {
+			case -1: return 0; // DROP
+			case 1: return 1; // ACCEPT
+			case 2: return 2; // super-ACCEPT
 		}
 	}
 
-	return 0;
+	return 0; // DROP
 }
 
 bool Network::subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const

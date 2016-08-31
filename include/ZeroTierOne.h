@@ -625,7 +625,7 @@ enum ZT_VirtualNetworkRuleType
 	/**
 	 * Match if local and remote tags differ by no more than value, use 0 to check for equality
 	 */
-	ZT_NETWORK_RULE_MATCH_TAGS_SAMENESS = 51,
+	ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE = 51,
 
 	/**
 	 * Match if local and remote tags ANDed together equal value.
