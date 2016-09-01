@@ -94,7 +94,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 				}
 			}
 
-		} else if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) { // min length check is important!
+		} else if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) { // SECURITY: min length check is important since we do some C-style stuff below!
 			if (reinterpret_cast<const uint8_t *>(data)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR) {
 				// Handle fragment ----------------------------------------------------
 
