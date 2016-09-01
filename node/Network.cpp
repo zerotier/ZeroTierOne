@@ -40,6 +40,8 @@
 
 namespace ZeroTier {
 
+namespace {
+
 #ifdef ZT_RULES_ENGINE_DEBUGGING
 #define FILTER_TRACE(f,...) { Utils::snprintf(dpbuf,sizeof(dpbuf),f,##__VA_ARGS__); dlog.push_back(std::string(dpbuf)); }
 static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
@@ -144,11 +146,11 @@ static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsig
 
 enum _doZtFilterResult
 {
-	DOZTFILTER_NO_MATCH = 0,
-	DOZTFILTER_DROP = 1,
-	DOZTFILTER_REDIRECT = 2,
-	DOZTFILTER_ACCEPT = 3,
-	DOZTFILTER_SUPER_ACCEPT = 4
+	DOZTFILTER_NO_MATCH,
+	DOZTFILTER_DROP,
+	DOZTFILTER_REDIRECT,
+	DOZTFILTER_ACCEPT,
+	DOZTFILTER_SUPER_ACCEPT
 };
 static _doZtFilterResult _doZtFilter(
 	const RuntimeEnvironment *RR,
@@ -566,6 +568,8 @@ static _doZtFilterResult _doZtFilter(
 
 	return DOZTFILTER_NO_MATCH;
 }
+
+} // anonymous namespace
 
 const ZeroTier::MulticastGroup Network::BROADCAST(ZeroTier::MAC(0xffffffffffffULL),0);
 
