@@ -124,7 +124,7 @@ public:
 	 *
 	 * @param RR Runtime environment
 	 * @param now Current time
-	 * @param peerAddress Address of member peer
+	 * @param peerAddress Address of member peer (the one that this Membership describes)
 	 * @param nconf My network config
 	 * @param cap Capability to send or 0 if none
 	 */

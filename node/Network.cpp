@@ -663,10 +663,16 @@ bool Network::filterOutgoingPacket(
 					case DOZTFILTER_NO_MATCH:
 					case DOZTFILTER_DROP: // explicit DROP in a capability just terminates its evaluation and is an anti-pattern
 						break;
+
 					case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztDest2 will have been changed in _doZtFilter()
 					case DOZTFILTER_ACCEPT:
 					case DOZTFILTER_SUPER_ACCEPT: // no difference in behavior on outbound side
+						relevantCap = &(_config.capabilities[c]);
+						accept = true;
+
 						if ((!noTee)&&(cc2)) {
+							_memberships[cc2].sendCredentialsIfNeeded(RR,RR->node->now(),cc2,_config,relevantCap);
+
 							Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 							outp.append(_id);
 							outp.append((uint8_t)0x02); // TEE/REDIRECT from outbound side: 0x02
@@ -677,8 +683,7 @@ bool Network::filterOutgoingPacket(
 							outp.compress();
 							RR->sw->send(outp,true);
 						}
-						relevantCap = &(_config.capabilities[c]);
-						accept = true;
+
 						break;
 				}
 				if (accept)
@@ -697,10 +702,9 @@ bool Network::filterOutgoingPacket(
 	}
 
 	if (accept) {
-		if (ztDest2)
-			m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest2,_config,relevantCap);
-
 		if ((!noTee)&&(cc)) {
+			_memberships[cc].sendCredentialsIfNeeded(RR,RR->node->now(),cc,_config,relevantCap);
+
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
 			outp.append((uint8_t)0x02); // TEE/REDIRECT from outbound side: 0x02
@@ -712,7 +716,9 @@ bool Network::filterOutgoingPacket(
 			RR->sw->send(outp,true);
 		}
 
-		if (ztDest != ztDest2) {
+		if ((ztDest != ztDest2)&&(ztDest2)) {
+			_memberships[ztDest2].sendCredentialsIfNeeded(RR,RR->node->now(),ztDest2,_config,relevantCap);
+
 			Packet outp(ztDest2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
 			outp.append((uint8_t)0x02); // TEE/REDIRECT from outbound side: 0x02
@@ -722,7 +728,10 @@ bool Network::filterOutgoingPacket(
 			outp.append(frameData,frameLen);
 			outp.compress();
 			RR->sw->send(outp,true);
+
 			return false; // DROP locally, since we redirected
+		} else if (ztDest) {
+			m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config,relevantCap);
 		}
 	}
 
@@ -772,8 +781,11 @@ int Network::filterIncomingPacket(
 						accept = 2; // super-ACCEPT
 						break;
 				}
+
 				if (accept) {
 					if (cc2) {
+						_memberships[cc2].sendCredentialsIfNeeded(RR,RR->node->now(),cc2,_config,(const Capability *)0);
+
 						Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 						outp.append(_id);
 						outp.append((uint8_t)0x06); // TEE/REDIRECT from inbound side: 0x06
@@ -803,6 +815,8 @@ int Network::filterIncomingPacket(
 
 	if (accept) {
 		if (cc) {
+			_memberships[cc].sendCredentialsIfNeeded(RR,RR->node->now(),cc,_config,(const Capability *)0);
+
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
 			outp.append((uint8_t)0x06); // TEE/REDIRECT from inbound side: 0x06
@@ -814,7 +828,9 @@ int Network::filterIncomingPacket(
 			RR->sw->send(outp,true);
 		}
 
-		if (ztDest != ztDest2) {
+		if ((ztDest != ztDest2)&&(ztDest2)) {
+			_memberships[ztDest2].sendCredentialsIfNeeded(RR,RR->node->now(),ztDest2,_config,(const Capability *)0);
+
 			Packet outp(ztDest2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
 			outp.append((uint8_t)0x06); // TEE/REDIRECT from inbound side: 0x06
@@ -824,6 +840,7 @@ int Network::filterIncomingPacket(
 			outp.append(frameData,frameLen);
 			outp.compress();
 			RR->sw->send(outp,true);
+
 			return 0; // DROP locally, since we redirected
 		}
 	}
