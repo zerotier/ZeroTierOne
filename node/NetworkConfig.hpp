@@ -72,6 +72,11 @@
 #define ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION 0x0000000000000004ULL
 
 /**
+ * Flag: result of unrecognized MATCH entries in a rules table: match if set, no-match if clear
+ */
+#define ZT_NETWORKCONFIG_FLAG_RULES_RESULT_OF_UNSUPPORTED_MATCH 0x0000000000000008ULL
+
+/**
  * Device is an active bridge
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE 0x0000020000000000ULL

@@ -483,18 +483,14 @@ enum ZT_VirtualNetworkType
 	ZT_NETWORK_TYPE_PUBLIC = 1
 };
 
-/*
- - TEE : should use a field to indicate how many bytes of each packet max are TEE'd
- - Controller : web hooks for auth, optional required re-auth? or auth for a period of time? auto-expiring auth?
-*/
-
 /**
  * The type of a virtual network rules table entry
  *
  * These must range from 0 to 127 (0x7f) because the most significant bit
  * is reserved as a NOT flag.
  *
- * Each rule is composed of one or more MATCHes followed by an ACTION.
+ * Each rule is composed of zero or more MATCHes followed by an ACTION.
+ * An ACTION with no MATCHes is always taken.
  */
 enum ZT_VirtualNetworkRuleType
 {
@@ -524,6 +520,11 @@ enum ZT_VirtualNetworkRuleType
 	 * Log if match and if rule debugging is enabled in the build, otherwise does nothing (for developers)
 	 */
 	ZT_NETWORK_RULE_ACTION_DEBUG_LOG = 4,
+
+	/**
+	 * Maximum ID for an ACTION, anything higher is a MATCH
+	 */
+	ZT_NETWORK_RULE_ACTION__MAX_ID = 31,
 
 	// 32 to 127 reserved for match criteria
 
@@ -640,7 +641,12 @@ enum ZT_VirtualNetworkRuleType
 	/**
 	 * Match if local and remote tags XORed together equal value.
 	 */
-	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR = 54
+	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR = 54,
+
+	/**
+	 * Maximum ID allowed for a MATCH entry in the rules table
+	 */
+	ZT_NETWORK_RULE_MATCH__MAX_ID = 127
 };
 
 /**

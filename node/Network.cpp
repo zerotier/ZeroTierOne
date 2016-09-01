@@ -35,7 +35,7 @@
 #include "Node.hpp"
 #include "Peer.hpp"
 
-// Uncomment to enable ZT_NETWORK_RULE_ACTION_DEBUG_LOG rule output to STDOUT
+// Uncomment to make the rules engine dump trace info to stdout
 #define ZT_RULES_ENGINE_DEBUGGING 1
 
 namespace ZeroTier {
@@ -73,7 +73,7 @@ static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
 		case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND: return "MATCH_TAGS_BITWISE_AND";
 		case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR: return "MATCH_TAGS_BITWISE_OR";
 		case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR: return "MATCH_TAGS_BITWISE_XOR";
-		default: return "BAD_RULE_TYPE";
+		default: return "???";
 	}
 }
 static const void _dumpFilterTrace(const char *ruleName,uint8_t thisSetMatches,bool inbound,const Address &ztSource,const Address &ztDest,const MAC &macSource,const MAC &macDest,const std::vector<std::string> &dlog,unsigned int frameLen,unsigned int etherType,const char *msg)
@@ -172,110 +172,110 @@ static _doZtFilterResult _doZtFilter(
 	Address &cc, // MUTABLE
 	unsigned int &ccLength) // MUTABLE
 {
-	// For each set of rules we start by assuming that they match (since no constraints
-	// yields a 'match all' rule).
-	uint8_t thisSetMatches = 1;
-
 #ifdef ZT_RULES_ENGINE_DEBUGGING
+	char dpbuf[1024]; // used by FILTER_TRACE macro
 	std::vector<std::string> dlog;
-	char dpbuf[1024];
 #endif // ZT_RULES_ENGINE_DEBUGGING
+
+	// The default match state for each set of entries starts as 'true' since an
+	// ACTION with no MATCH entries preceding it is always taken.
+	uint8_t thisSetMatches = 1;
 
 	for(unsigned int rn=0;rn<ruleCount;++rn) {
 		const ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rules[rn].t & 0x7f);
 
-		switch(rt) {
-			case ZT_NETWORK_RULE_ACTION_DROP:
-				if (thisSetMatches) {
+		// First check if this is an ACTION
+		if ((unsigned int)rt <= (unsigned int)ZT_NETWORK_RULE_ACTION__MAX_ID) {
+			if (thisSetMatches) {
+				switch(rt) {
+					case ZT_NETWORK_RULE_ACTION_DROP:
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-					_dumpFilterTrace("ACTION_DROP",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+						_dumpFilterTrace("ACTION_DROP",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 #endif // ZT_RULES_ENGINE_DEBUGGING
-					return DOZTFILTER_DROP;
-				} else {
-#ifdef ZT_RULES_ENGINE_DEBUGGING
-					_dumpFilterTrace("ACTION_DROP",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
-					dlog.clear();
-#endif // ZT_RULES_ENGINE_DEBUGGING
-					thisSetMatches = 1;
-				}
-				continue;
+						return DOZTFILTER_DROP;
 
-			case ZT_NETWORK_RULE_ACTION_ACCEPT:
-				if (thisSetMatches) {
+					case ZT_NETWORK_RULE_ACTION_ACCEPT:
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-					_dumpFilterTrace("ACTION_ACCEPT",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+						_dumpFilterTrace("ACTION_ACCEPT",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 #endif // ZT_RULES_ENGINE_DEBUGGING
-					return DOZTFILTER_ACCEPT; // match, accept packet
-				} else {
-#ifdef ZT_RULES_ENGINE_DEBUGGING
-					_dumpFilterTrace("ACTION_ACCEPT",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
-					dlog.clear();
-#endif // ZT_RULES_ENGINE_DEBUGGING
-					thisSetMatches = 1;
-				}
-				continue;
+						return DOZTFILTER_ACCEPT; // match, accept packet
 
-			case ZT_NETWORK_RULE_ACTION_TEE:
-			case ZT_NETWORK_RULE_ACTION_REDIRECT: {
-				const Address fwdAddr(rules[rn].v.fwd.address);
-				if (fwdAddr == ztSource) {
+					// These are initially handled together since preliminary logic is common
+					case ZT_NETWORK_RULE_ACTION_TEE:
+					case ZT_NETWORK_RULE_ACTION_REDIRECT:	{
+						const Address fwdAddr(rules[rn].v.fwd.address);
+						if (fwdAddr == ztSource) {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-					_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"TEE/REDIRECT ignored since source is target");
+							_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"skipped as no-op since source is target");
+							dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
-					thisSetMatches = 1;
-				} else if (fwdAddr == RR->identity.address()) {
-					if (inbound) {
+						} else if (fwdAddr == RR->identity.address()) {
+							if (inbound) {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-						_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"TEE/REDIRECT interpreted as super-accept since we are target");
+								_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"interpreted as super-ACCEPT on inbound since we are target");
 #endif // ZT_RULES_ENGINE_DEBUGGING
-						return DOZTFILTER_SUPER_ACCEPT;
-					} else {
+								return DOZTFILTER_SUPER_ACCEPT;
+							} else {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-						_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"TEE/REDIRECT ignored on outbound since we are target");
+								_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"skipped as no-op on outbound since we are target");
+								dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
-						thisSetMatches = 1;
-					}
-				} else if (fwdAddr == ztDest) {
+							}
+						} else if (fwdAddr == ztDest) {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-					_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"TEE/REDIRECT ignored since destination is target");
+							_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"skipped as no-op because destination is already target");
+							dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
-					thisSetMatches = 1;
-				} else {
-					if (rt == ZT_NETWORK_RULE_ACTION_REDIRECT) {
+						} else {
+							if (rt == ZT_NETWORK_RULE_ACTION_REDIRECT) {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-						_dumpFilterTrace("ACTION_REDIRECT",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+								_dumpFilterTrace("ACTION_REDIRECT",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 #endif // ZT_RULES_ENGINE_DEBUGGING
-						ztDest = fwdAddr;
-						return DOZTFILTER_REDIRECT;
-					} else {
+								ztDest = fwdAddr;
+								return DOZTFILTER_REDIRECT;
+							} else {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-						_dumpFilterTrace("ACTION_TEE",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+								_dumpFilterTrace("ACTION_TEE",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+								dlog.clear();
+#endif // ZT_RULES_ENGINE_DEBUGGING
+								cc = fwdAddr;
+								ccLength = (rules[rn].v.fwd.length != 0) ? ((frameLen < (unsigned int)rules[rn].v.fwd.length) ? frameLen : (unsigned int)rules[rn].v.fwd.length) : frameLen;
+							}
+						}
+					}	continue;
+
+					// This is a no-op that exists for use with rules engine tracing and isn't for use in production
+					case ZT_NETWORK_RULE_ACTION_DEBUG_LOG: // a no-op target specifically for debugging purposes
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+						_dumpFilterTrace("ACTION_DEBUG_LOG",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 						dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
-						cc = fwdAddr;
-						ccLength = (rules[rn].v.fwd.length != 0) ? ((frameLen < (unsigned int)rules[rn].v.fwd.length) ? frameLen : (unsigned int)rules[rn].v.fwd.length) : frameLen;
-						thisSetMatches = 1;
-					}
-				}
-			}	continue;
+						continue;
 
-			case ZT_NETWORK_RULE_ACTION_DEBUG_LOG: // a no-op target specifically for debugging purposes
+					// Unrecognized ACTIONs are ignored as no-ops
+					default:
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-				_dumpFilterTrace("ACTION_DEBUG_LOG",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+						_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+						dlog.clear();
+#endif // ZT_RULES_ENGINE_DEBUGGING
+						continue;
+				}
+			} else {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+				_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 				dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
-				thisSetMatches = 1;
+				thisSetMatches = 1; // reset to default true for next batch of entries
 				continue;
-
-			default: break;
+			}
 		}
 
-		// No need to evaluate MATCH entries beyond where thisSetMatches is no longer still true
+		// Circuit breaker: skip further MATCH entries up to next ACTION if match state is false
 		if (!thisSetMatches)
 			continue;
 
+		// If this was not an ACTION evaluate next MATCH and update thisSetMatches with (AND [result])
 		uint8_t thisRuleMatches = 0;
-
 		switch(rt) {
 			case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 				thisRuleMatches = (uint8_t)(rules[rn].v.zt == ztSource.toInt());
@@ -553,12 +553,14 @@ static _doZtFilterResult _doZtFilter(
 				}
 			}	break;
 
-			default: // rules we don't know do not match -- this means upgrading may be necessary before shipping new rules on a network or old clients might get blocked
-				thisRuleMatches = 0;
+			// The result of an unsupported MATCH is configurable at the network
+			// level via a flag.
+			default:
+				thisRuleMatches = (uint8_t)((nconf.flags & ZT_NETWORKCONFIG_FLAG_RULES_RESULT_OF_UNSUPPORTED_MATCH) != 0);
 				break;
 		}
 
-		// thisSetMatches remains true if the current rule matched (or did NOT match if NOT bit is set)
+		// State of equals state AND result of last MATCH (possibly NOTed depending on bit 0x80)
 		thisSetMatches &= (thisRuleMatches ^ ((rules[rn].t >> 7) & 1));
 	}
 
