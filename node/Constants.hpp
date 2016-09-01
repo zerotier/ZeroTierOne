@@ -270,11 +270,6 @@
 #define ZT_PEER_ACTIVITY_TIMEOUT 500000
 
 /**
- * Timeout for path activity
- */
-#define ZT_PATH_ACTIVITY_TIMEOUT ZT_PEER_ACTIVITY_TIMEOUT
-
-/**
  * No answer timeout to trigger dead path detection
  */
 #define ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT 2000

@@ -22,7 +22,7 @@
 #include <stdexcept>
 
 #include "Packet.hpp"
-#include "InetAddress.hpp"
+#include "Path.hpp"
 #include "Utils.hpp"
 #include "MulticastGroup.hpp"
 #include "Peer.hpp"
@@ -56,16 +56,8 @@ class IncomingPacket : public Packet
 public:
 	IncomingPacket() :
 		Packet(),
-		_receiveTime(0),
-		_localAddress(),
-		_remoteAddress()
+		_receiveTime(0)
 	{
-	}
-
-	IncomingPacket(const IncomingPacket &p)
-	{
-		// All fields including InetAddress are memcpy'able
-		memcpy(this,&p,sizeof(IncomingPacket));
 	}
 
 	/**
@@ -73,24 +65,15 @@ public:
 	 *
 	 * @param data Packet data
 	 * @param len Packet length
-	 * @param localAddress Local interface address
-	 * @param remoteAddress Address from which packet came
+	 * @param path Path over which packet arrived
 	 * @param now Current time
 	 * @throws std::out_of_range Range error processing packet
 	 */
-	IncomingPacket(const void *data,unsigned int len,const InetAddress &localAddress,const InetAddress &remoteAddress,uint64_t now) :
+	IncomingPacket(const void *data,unsigned int len,const SharedPtr<Path> &path,uint64_t now) :
 		Packet(data,len),
 		_receiveTime(now),
-		_localAddress(localAddress),
-		_remoteAddress(remoteAddress)
+		_path(path)
 	{
-	}
-
-	inline IncomingPacket &operator=(const IncomingPacket &p)
-	{
-		// All fields including InetAddress are memcpy'able
-		memcpy(this,&p,sizeof(IncomingPacket));
-		return *this;
 	}
 
 	/**
@@ -98,17 +81,15 @@ public:
 	 *
 	 * @param data Packet data
 	 * @param len Packet length
-	 * @param localAddress Local interface address
-	 * @param remoteAddress Address from which packet came
+	 * @param path Path over which packet arrived
 	 * @param now Current time
 	 * @throws std::out_of_range Range error processing packet
 	 */
-	inline void init(const void *data,unsigned int len,const InetAddress &localAddress,const InetAddress &remoteAddress,uint64_t now)
+	inline void init(const void *data,unsigned int len,const SharedPtr<Path> &path,uint64_t now)
 	{
 		copyFrom(data,len);
 		_receiveTime = now;
-		_localAddress = localAddress;
-		_remoteAddress = remoteAddress;
+		_path = path;
 	}
 
 	/**
@@ -174,8 +155,7 @@ private:
 	bool _doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 
 	uint64_t _receiveTime;
-	InetAddress _localAddress;
-	InetAddress _remoteAddress;
+	SharedPtr<Path> _path;
 };
 
 } // namespace ZeroTier

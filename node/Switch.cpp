@@ -73,6 +73,9 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 	try {
 		const uint64_t now = RR->node->now();
 
+		SharedPtr<Path> path(RR->topology->getPath(localAddr,fromAddr));
+		path->received(now);
+
 		if (len == 13) {
 			/* LEGACY: before VERB_PUSH_DIRECT_PATHS, peers used broadcast
 			 * announcements on the LAN to solve the 'same network problem.' We
@@ -90,7 +93,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 					_lastBeaconResponse = now;
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
 					outp.armor(peer->key(),true);
-					RR->node->putPacket(localAddr,fromAddr,outp.data(),outp.size());
+					path->send(RR,outp.data(),outp.size(),now);
 				}
 			}
 
@@ -259,7 +262,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 							// We have all fragments -- assemble and process full Packet
 							//TRACE("packet %.16llx is complete, assembling and processing...",pid);
 
-							rq->frag0.init(data,len,localAddr,fromAddr,now);
+							rq->frag0.init(data,len,path,now);
 							for(unsigned int f=1;f<rq->totalFragments;++f)
 								rq->frag0.append(rq->frags[f - 1].payload(),rq->frags[f - 1].payloadLength());
 
@@ -270,12 +273,12 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 							}
 						} else {
 							// Still waiting on more fragments, but keep the head
-							rq->frag0.init(data,len,localAddr,fromAddr,now);
+							rq->frag0.init(data,len,path,now);
 						}
 					} // else this is a duplicate head, ignore
 				} else {
 					// Packet is unfragmented, so just process it
-					IncomingPacket packet(data,len,localAddr,fromAddr,now);
+					IncomingPacket packet(data,len,path,now);
 					if (!packet.tryDecode(RR)) {
 						Mutex::Lock _l(_rxQueue_m);
 						RXQueueEntry *rq = &(_rxQueue[ZT_RX_QUEUE_SIZE - 1]);

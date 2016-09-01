@@ -33,6 +33,7 @@
 #include "Address.hpp"
 #include "Identity.hpp"
 #include "Peer.hpp"
+#include "Path.hpp"
 #include "Mutex.hpp"
 #include "InetAddress.hpp"
 #include "Hashtable.hpp"
@@ -87,6 +88,22 @@ public:
 		if (ap)
 			return *ap;
 		return SharedPtr<Peer>();
+	}
+
+	/**
+	 * Get a Path object for a given local and remote physical address, creating if needed
+	 *
+	 * @param l Local address or NULL for 'any' or 'wildcard'
+	 * @param r Remote address
+	 * @return Pointer to canonicalized Path object
+	 */
+	inline SharedPtr<Path> getPath(const InetAddress &l,const InetAddress &r)
+	{
+		Mutex::Lock _l(_lock);
+		SharedPtr<Path> &p = _paths[Path::HashKey(l,r)];
+		if (!p)
+			p.setToUnsafe(new Path(l,r));
+		return p;
 	}
 
 	/**
@@ -319,8 +336,12 @@ private:
 	uint64_t _trustedPathIds[ZT_MAX_TRUSTED_PATHS];
 	InetAddress _trustedPathNetworks[ZT_MAX_TRUSTED_PATHS];
 	unsigned int _trustedPathCount;
+
 	World _world;
+
 	Hashtable< Address,SharedPtr<Peer> > _peers;
+	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
+
 	std::vector< Address > _rootAddresses;
 	std::vector< SharedPtr<Peer> > _rootPeers;
 	bool _amRoot;
