@@ -643,8 +643,8 @@ bool Network::filterOutgoingPacket(
 	uint32_t remoteTagValues[ZT_MAX_NETWORK_TAGS];
 	Address ztDest2(ztDest);
 	Address cc;
+	const Capability *relevantCap = (const Capability *)0;
 	unsigned int ccLength = 0;
-	bool mainRuleTableMatch = false;
 	bool accept = false;
 
 	Mutex::Lock _l(_lock);
@@ -653,49 +653,47 @@ bool Network::filterOutgoingPacket(
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
 	switch(_doZtFilter(RR,_config,false,ztSource,ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc,ccLength)) {
+
 		case DOZTFILTER_NO_MATCH:
+			for(unsigned int c=0;c<_config.capabilityCount;++c) {
+				ztDest2 = ztDest; // sanity check
+				Address cc2;
+				unsigned int ccLength2 = 0;
+				switch (_doZtFilter(RR,_config,false,ztSource,ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.capabilities[c].rules(),_config.capabilities[c].ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc2,ccLength2)) {
+					case DOZTFILTER_NO_MATCH:
+					case DOZTFILTER_DROP: // explicit DROP in a capability just terminates its evaluation and is an anti-pattern
+						break;
+					case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztDest2 will have been changed in _doZtFilter()
+					case DOZTFILTER_ACCEPT:
+					case DOZTFILTER_SUPER_ACCEPT: // no difference in behavior on outbound side
+						if ((!noTee)&&(cc2)) {
+							Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
+							outp.append(_id);
+							outp.append((uint8_t)0x02); // TEE/REDIRECT from outbound side: 0x02
+							macDest.appendTo(outp);
+							macSource.appendTo(outp);
+							outp.append((uint16_t)etherType);
+							outp.append(frameData,ccLength2);
+							outp.compress();
+							RR->sw->send(outp,true);
+						}
+						relevantCap = &(_config.capabilities[c]);
+						accept = true;
+						break;
+				}
+				if (accept)
+					break;
+			}
 			break;
+
 		case DOZTFILTER_DROP:
 			return false;
+
 		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztDest2 will have been changed in _doZtFilter()
 		case DOZTFILTER_ACCEPT:
 		case DOZTFILTER_SUPER_ACCEPT: // no difference in behavior on outbound side
-			mainRuleTableMatch = true;
 			accept = true;
 			break;
-	}
-
-	const Capability *relevantCap = (const Capability *)0;
-	if (!mainRuleTableMatch) {
-		for(unsigned int c=0;c<_config.capabilityCount;++c) {
-			ztDest2 = ztDest; // sanity check
-			Address cc2;
-			unsigned int ccLength2 = 0;
-			switch (_doZtFilter(RR,_config,false,ztSource,ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.capabilities[c].rules(),_config.capabilities[c].ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc2,ccLength2)) {
-				case DOZTFILTER_NO_MATCH:
-				case DOZTFILTER_DROP: // explicit DROP in a capability just terminates its evaluation and is an anti-pattern
-					break;
-				case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztDest2 will have been changed in _doZtFilter()
-				case DOZTFILTER_ACCEPT:
-				case DOZTFILTER_SUPER_ACCEPT: // no difference in behavior on outbound side
-					if ((!noTee)&&(cc2)) {
-						Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
-						outp.append(_id);
-						outp.append((uint8_t)0x02); // TEE/REDIRECT from outbound side: 0x02
-						macDest.appendTo(outp);
-						macSource.appendTo(outp);
-						outp.append((uint16_t)etherType);
-						outp.append(frameData,ccLength2);
-						outp.compress();
-						RR->sw->send(outp,true);
-					}
-					relevantCap = &(_config.capabilities[c]);
-					accept = true;
-					break;
-			}
-			if (accept)
-				break;
-		}
 	}
 
 	if (accept) {
@@ -746,7 +744,6 @@ int Network::filterIncomingPacket(
 	Address ztDest2(ztDest);
 	Address cc;
 	unsigned int ccLength = 0;
-	bool mainRuleTableMatch = false;
 	int accept = 0;
 
 	Mutex::Lock _l(_lock);
@@ -755,55 +752,53 @@ int Network::filterIncomingPacket(
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
 	switch (_doZtFilter(RR,_config,true,sourcePeer->address(),ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc,ccLength)) {
-		case DOZTFILTER_NO_MATCH:
-			break;
+
+		case DOZTFILTER_NO_MATCH: {
+			Membership::CapabilityIterator mci(m);
+			const Capability *c;
+			while ((c = mci.next(_config))) {
+				ztDest2 = ztDest; // sanity check
+				Address cc2;
+				unsigned int ccLength2 = 0;
+				switch(_doZtFilter(RR,_config,true,sourcePeer->address(),ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc2,ccLength2)) {
+					case DOZTFILTER_NO_MATCH:
+					case DOZTFILTER_DROP: // explicit DROP in a capability just terminates its evaluation and is an anti-pattern
+						break;
+					case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztDest will have been changed in _doZtFilter()
+					case DOZTFILTER_ACCEPT:
+						accept = 1; // ACCEPT
+						break;
+					case DOZTFILTER_SUPER_ACCEPT:
+						accept = 2; // super-ACCEPT
+						break;
+				}
+				if (accept) {
+					if (cc2) {
+						Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
+						outp.append(_id);
+						outp.append((uint8_t)0x06); // TEE/REDIRECT from inbound side: 0x06
+						macDest.appendTo(outp);
+						macSource.appendTo(outp);
+						outp.append((uint16_t)etherType);
+						outp.append(frameData,ccLength2);
+						outp.compress();
+						RR->sw->send(outp,true);
+					}
+					break;
+				}
+			}
+		}	break;
+
 		case DOZTFILTER_DROP:
 			return 0; // DROP
+
 		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztDest2 will have been changed in _doZtFilter()
 		case DOZTFILTER_ACCEPT:
-			mainRuleTableMatch = true;
 			accept = 1; // ACCEPT
 			break;
 		case DOZTFILTER_SUPER_ACCEPT:
-			mainRuleTableMatch = true;
 			accept = 2; // super-ACCEPT
 			break;
-	}
-
-	if (!mainRuleTableMatch) {
-		Membership::CapabilityIterator mci(m);
-		const Capability *c;
-		while ((c = mci.next(_config))) {
-			ztDest2 = ztDest; // sanity check
-			Address cc2;
-			unsigned int ccLength2 = 0;
-			switch(_doZtFilter(RR,_config,true,sourcePeer->address(),ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc2,ccLength2)) {
-				case DOZTFILTER_NO_MATCH:
-				case DOZTFILTER_DROP: // explicit DROP in a capability just terminates its evaluation and is an anti-pattern
-					break;
-				case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztDest will have been changed in _doZtFilter()
-				case DOZTFILTER_ACCEPT:
-					accept = 1; // ACCEPT
-					break;
-				case DOZTFILTER_SUPER_ACCEPT:
-					accept = 2; // super-ACCEPT
-					break;
-			}
-			if (accept) {
-				if (cc2) {
-					Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
-					outp.append(_id);
-					outp.append((uint8_t)0x06); // TEE/REDIRECT from inbound side: 0x06
-					macDest.appendTo(outp);
-					macSource.appendTo(outp);
-					outp.append((uint16_t)etherType);
-					outp.append(frameData,ccLength2);
-					outp.compress();
-					RR->sw->send(outp,true);
-				}
-				break;
-			}
-		}
 	}
 
 	if (accept) {
