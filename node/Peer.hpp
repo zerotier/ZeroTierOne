@@ -162,7 +162,7 @@ public:
 	 *
 	 * @param now Current time
 	 * @param inetAddressFamily Keep this address family alive, or 0 to simply pick current best ignoring family
-	 * @return True if at least one direct path seems alive
+	 * @return True if we have at least one direct path
 	 */
 	bool doPingAndKeepalive(uint64_t now,int inetAddressFamily);
 

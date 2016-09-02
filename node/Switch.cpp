@@ -754,7 +754,15 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 		const uint64_t now = RR->node->now();
 
 		SharedPtr<Path> viaPath(peer->getBestPath(now));
-		if ( (!viaPath) || ((!viaPath->alive(now))&&(!RR->topology->isRoot(peer->identity()))) ) {
+		if ( (viaPath) && (!viaPath->alive(now)) && (!RR->topology->isRoot(peer->identity())) ) {
+			if ((now - viaPath->lastOut()) > 5000) {
+				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ECHO);
+				outp.armor(peer->key(),true);
+				viaPath->send(RR,outp.data(),outp.size(),now);
+			}
+			viaPath.zero();
+		}
+		if (!viaPath) {
 			SharedPtr<Peer> relay(RR->topology->getBestRoot());
 			if ( (!relay) || (!(viaPath = relay->getBestPath(now))) )
 				return false;
