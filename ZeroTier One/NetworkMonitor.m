@@ -11,6 +11,9 @@
 #import "ServiceCom.h"
 #import "NodeStatus.h"
 
+@import AppKit;
+
+
 NSString * const NetworkUpdateKey = @"com.zerotier.one.network-list";
 NSString * const StatusUpdateKey = @"com.zerotier.one.status";
 
@@ -85,9 +88,22 @@ NSString * const StatusUpdateKey = @"com.zerotier.one.status";
     } error:&error];
 
     if(error) {
-        // TODO: Display error message
-
         [self stop];
+
+        NSAlert *alert = [NSAlert alertWithError:error];
+        alert.alertStyle = NSCriticalAlertStyle;
+        [alert addButtonWithTitle:@"Quit"];
+        [alert addButtonWithTitle:@"Retry"];
+
+        NSModalResponse res = [alert runModal];
+
+        if(res == NSAlertFirstButtonReturn) {
+            [NSApp performSelector:@selector(terminate:) withObject:nil afterDelay:0.0];
+        }
+        else if(res == NSAlertSecondButtonReturn) {
+            [self start];
+            return;
+        }
     }
 
     [[ServiceCom sharedInstance] getNodeStatus:^(NodeStatus *status) {
@@ -101,9 +117,22 @@ NSString * const StatusUpdateKey = @"com.zerotier.one.status";
     } error:&error];
 
     if (error) {
-        // TODO: Display error message
-
         [self stop];
+
+        NSAlert *alert = [NSAlert alertWithError:error];
+        alert.alertStyle = NSCriticalAlertStyle;
+        [alert addButtonWithTitle:@"Quit"];
+        [alert addButtonWithTitle:@"Retry"];
+
+        NSModalResponse res = [alert runModal];
+
+        if(res == NSAlertFirstButtonReturn) {
+            [NSApp performSelector:@selector(terminate:) withObject:nil afterDelay:0.0];
+        }
+        else if(res == NSAlertSecondButtonReturn) {
+            [self start];
+            return;
+        }
     }
 }
 

@@ -15,6 +15,7 @@
 {
     NSString *baseURL;
     NSURLSession *session;
+    BOOL _isQuitting;
 }
 + (ServiceCom*)sharedInstance;
 

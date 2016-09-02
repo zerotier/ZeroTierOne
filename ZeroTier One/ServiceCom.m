@@ -10,6 +10,7 @@
 #import "AuthtokenCopy.h"
 #import "Network.h"
 #import "NodeStatus.h"
+@import AppKit;
 
 @interface ServiceCom (Private)
 
@@ -34,6 +35,7 @@
     if(self) {
         baseURL = @"http://localhost:9993";
         session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration ephemeralSessionConfiguration]];
+        _isQuitting = NO;
     }
 
     return self;
@@ -171,24 +173,62 @@
     NSURL *url = [NSURL URLWithString:urlString];
     NSURLSessionDataTask *task =
     [session dataTaskWithURL:url
-           completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+           completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable err) {
 
-               if (error) {
-                   NSLog(@"Error: %@", error);
+               if (err) {
+                   [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+                       NSAlert *alert = [NSAlert alertWithError:err];
+                       alert.alertStyle = NSCriticalAlertStyle;
+                       [alert addButtonWithTitle:@"Quit"];
+                       [alert addButtonWithTitle:@"Retry"];
+
+                       NSModalResponse res;
+                       if (!_isQuitting) {
+                           res = [alert runModal];
+                       }
+                       else {
+                           return;
+                       }
+
+                       if(res == NSAlertFirstButtonReturn) {
+                           [NSApp performSelector:@selector(terminate:) withObject:nil afterDelay:0.0];
+                           _isQuitting = YES;
+                       }
+                   }];
                    return;
                }
 
                NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse*)response;
                NSInteger status = [httpResponse statusCode];
 
-               NSError *err;
+               NSError *err2;
 
                if (status == 200) {
                    NSArray *json = [NSJSONSerialization JSONObjectWithData:data
                                                                    options:0
-                                                                     error:&err];
+                                                                     error:&err2];
                    if (err) {
-                       NSLog(@"Error fetching network list: %@", err);
+                       NSLog(@"Error fetching network list: %@", err2);
+
+                       [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+                           NSAlert *alert = [NSAlert alertWithError:err2];
+                           alert.alertStyle = NSCriticalAlertStyle;
+                           [alert addButtonWithTitle:@"Quit"];
+                           [alert addButtonWithTitle:@"Retry"];
+
+                           NSModalResponse res;
+                           if (!_isQuitting) {
+                               res = [alert runModal];
+                           }
+                           else {
+                               return;
+                           }
+
+                           if(res == NSAlertFirstButtonReturn) {
+                               _isQuitting = YES;
+                               [NSApp performSelector:@selector(terminate:) withObject:nil afterDelay:0.0];
+                           }
+                       }];
                        return;
                    }
 
@@ -218,7 +258,25 @@
            completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable err) {
 
                if(err) {
-                   NSLog(@"Error: %@", err);
+                   [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+                       NSAlert *alert = [NSAlert alertWithError:err];
+                       alert.alertStyle = NSCriticalAlertStyle;
+                       [alert addButtonWithTitle:@"Quit"];
+                       [alert addButtonWithTitle:@"Retry"];
+
+                       NSModalResponse res;
+                       if (!_isQuitting) {
+                           res = [alert runModal];
+                       }
+                       else {
+                           return;
+                       }
+
+                       if(res == NSAlertFirstButtonReturn) {
+                           [NSApp performSelector:@selector(terminate:) withObject:nil afterDelay:0.0];
+                           _isQuitting = YES;
+                       }
+                   }];
                    return;
                }
 
@@ -233,6 +291,25 @@
 
                    if(err2) {
                        NSLog(@"Error fetching node status: %@", err2);
+                       [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+                           NSAlert *alert = [NSAlert alertWithError:err2];
+                           alert.alertStyle = NSCriticalAlertStyle;
+                           [alert addButtonWithTitle:@"Quit"];
+                           [alert addButtonWithTitle:@"Retry"];
+
+                           NSModalResponse res;
+                           if (!_isQuitting) {
+                               res = [alert runModal];
+                           }
+                           else {
+                               return;
+                           }
+
+                           if(res == NSAlertFirstButtonReturn) {
+                               [NSApp performSelector:@selector(terminate:) withObject:nil afterDelay:0.0];
+                               _isQuitting = YES;
+                           }
+                       }];
                        return;
                    }
 
@@ -282,8 +359,27 @@
 
     NSURLSessionDataTask *task =
     [session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable err) {
-        if(error) {
+        if(err) {
             NSLog(@"Error posting join request: %@", err);
+            [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+                NSAlert *alert = [NSAlert alertWithError:err];
+                alert.alertStyle = NSCriticalAlertStyle;
+                [alert addButtonWithTitle:@"Quit"];
+                [alert addButtonWithTitle:@"Retry"];
+
+                NSModalResponse res;
+                if (!_isQuitting) {
+                    res = [alert runModal];
+                }
+                else {
+                    return;
+                }
+
+                if(res == NSAlertFirstButtonReturn) {
+                    [NSApp performSelector:@selector(terminate:) withObject:nil afterDelay:0.0];
+                    _isQuitting = YES;
+                }
+            }];
         }
 
         NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse*)response;
@@ -320,6 +416,25 @@
     [session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable err) {
         if(err) {
             NSLog(@"Error posting delete request: %@", err);
+            [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+                NSAlert *alert = [NSAlert alertWithError:err];
+                alert.alertStyle = NSCriticalAlertStyle;
+                [alert addButtonWithTitle:@"Quit"];
+                [alert addButtonWithTitle:@"Retry"];
+
+                NSModalResponse res;
+                if (!_isQuitting) {
+                    res = [alert runModal];
+                }
+                else {
+                    return;
+                }
+
+                if(res == NSAlertFirstButtonReturn) {
+                    [NSApp performSelector:@selector(terminate:) withObject:nil afterDelay:0.0];
+                    _isQuitting = YES;
+                }
+            }];
             return;
         }
 

@@ -50,7 +50,11 @@
                                        error:&error];
 
     if (error) {
-        // TODO: Display error message
+        NSAlert *alert = [NSAlert alertWithError:error];
+        alert.alertStyle = NSCriticalAlertStyle;
+        [alert addButtonWithTitle:@"Ok"];
+
+        [alert runModal];
     }
 }
 
@@ -60,7 +64,11 @@
     [[ServiceCom sharedInstance] leaveNetwork:nwid error:&error];
 
     if (error) {
-        // TODO: Display error message
+        NSAlert *alert = [NSAlert alertWithError:error];
+        alert.alertStyle = NSCriticalAlertStyle;
+        [alert addButtonWithTitle:@"Ok"];
+
+        [alert runModal];
     }
 }
 

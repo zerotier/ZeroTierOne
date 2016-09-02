@@ -80,7 +80,11 @@ NSString * const JoinedNetworksKey = @"com.zerotier.one.joined-networks";
                                        error:&error];
 
     if(error) {
-        // TODO: display error message
+        NSAlert *alert = [NSAlert alertWithError:error];
+        alert.alertStyle = NSCriticalAlertStyle;
+        [alert addButtonWithTitle:@"Ok"];
+
+        [alert runModal];
         return;
     }
 

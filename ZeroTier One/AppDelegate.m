@@ -271,8 +271,11 @@
         [[ServiceCom sharedInstance] leaveNetwork:nwid error:&error];
 
         if (error) {
-            // TODO: Display error message
+            NSAlert *alert = [NSAlert alertWithError:error];
+            alert.alertStyle = NSCriticalAlertStyle;
+            [alert addButtonWithTitle:@"Ok"];
 
+            [alert runModal];
         }
     }
     else {
@@ -283,7 +286,13 @@
                                     allowDefault:(network.allowDefault && ![Network defaultRouteExists:self.networks])
                                            error:&error];
 
-        // TODO: Display error message
+        if (error) {
+            NSAlert *alert = [NSAlert alertWithError:error];
+            alert.alertStyle = NSCriticalAlertStyle;
+            [alert addButtonWithTitle:@"Ok"];
+
+            [alert runModal];
+        }
     }
 }
 
