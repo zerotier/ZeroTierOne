@@ -156,9 +156,10 @@ void Peer::received(
 				_paths[slot].lastReceive = now;
 #ifdef ZT_ENABLE_CLUSTER
 				_paths[slot].clusterSuboptimal = suboptimalPath;
-
 				if (RR->cluster)
 					RR->cluster->broadcastHavePeer(_id);
+#else
+				_paths[slot].clusterSuboptimal = false;
 #endif
 			} else {
 
@@ -196,36 +197,21 @@ bool Peer::hasActivePathTo(uint64_t now,const InetAddress &addr) const
 	return false;
 }
 
-void Peer::makeExclusive(const InetAddress &addr)
+void Peer::setClusterOptimal(const InetAddress &addr)
 {
 	Mutex::Lock _l(_paths_m);
 
-	bool have = false;
+	int have = -1;
 	for(unsigned int p=0;p<_numPaths;++p) {
 		if (_paths[p].path->address() == addr) {
-			have = true;
+			have = (int)p;
 			break;
 		}
 	}
 
-	if (have) {
-		unsigned int np = _numPaths;
-		unsigned int x = 0;
-		unsigned int y = 0;
-		while (x < np) {
-			if ((_paths[x].path->address().ss_family != addr.ss_family)||(_paths[x].path->address() == addr)) {
-				if (y != x) {
-					_paths[y].path = _paths[x].path;
-					_paths[y].lastReceive = _paths[x].lastReceive;
-	#ifdef ZT_ENABLE_CLUSTER
-					_paths[y].clusterSuboptimal = _paths[x].clusterSuboptimal;
-	#endif
-				}
-				++y;
-			}
-			++x;
-		}
-		_numPaths = y;
+	if (have >= 0) {
+		for(unsigned int p=0;p<_numPaths;++p)
+			_paths[p].clusterSuboptimal = (p != have);
 	}
 }
 
@@ -237,7 +223,7 @@ bool Peer::sendDirect(const void *data,unsigned int len,uint64_t now,bool forceE
 	uint64_t best = 0ULL;
 	for(unsigned int p=0;p<_numPaths;++p) {
 		if (_paths[p].path->alive(now)||(forceEvenIfDead)) {
-			const uint64_t s = _paths[p].path->score();
+			const uint64_t s = _pathScore(p);
 			if (s >= best) {
 				best = s;
 				bestp = (int)p;
@@ -259,7 +245,7 @@ SharedPtr<Path> Peer::getBestPath(uint64_t now)
 	int bestp = -1;
 	uint64_t best = 0ULL;
 	for(unsigned int p=0;p<_numPaths;++p) {
-		const uint64_t s = _paths[p].path->score();
+		const uint64_t s = _pathScore(p);
 		if (s >= best) {
 			best = s;
 			bestp = (int)p;
@@ -296,7 +282,7 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 	int bestp = -1;
 	uint64_t best = 0ULL;
 	for(unsigned int p=0;p<_numPaths;++p) {
-		const uint64_t s = _paths[p].path->score();
+		const uint64_t s = _pathScore(p);
 		if (s >= best) {
 			best = s;
 			bestp = (int)p;
@@ -361,13 +347,13 @@ void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) 
 	uint64_t best4 = 0ULL,best6 = 0ULL;
 	for(unsigned int p=0;p<_numPaths;++p) {
 		if (_paths[p].path->address().ss_family == AF_INET) {
-			const uint64_t s = _paths[p].path->score();
+			const uint64_t s = _pathScore(p);
 			if (s >= best4) {
 				best4 = s;
 				bestp4 = (int)p;
 			}
 		} else if (_paths[p].path->address().ss_family == AF_INET6) {
-			const uint64_t s = _paths[p].path->score();
+			const uint64_t s = _pathScore(p);
 			if (s >= best6) {
 				best6 = s;
 				bestp6 = (int)p;

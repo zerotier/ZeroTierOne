@@ -1042,7 +1042,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 
 					bool redundant = false;
 					if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0) {
-						peer->makeExclusive(a);
+						peer->setClusterOptimal(a);
 					} else {
 						redundant = peer->hasActivePathTo(now,a);
 					}
@@ -1061,7 +1061,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 
 					bool redundant = false;
 					if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0) {
-						peer->makeExclusive(a);
+						peer->setClusterOptimal(a);
 					} else {
 						redundant = peer->hasActivePathTo(now,a);
 					}

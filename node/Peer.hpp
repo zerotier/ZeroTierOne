@@ -121,11 +121,11 @@ public:
 	bool hasActivePathTo(uint64_t now,const InetAddress &addr) const;
 
 	/**
-	 * If we have a confirmed path to this address, forget all others within the same address family
+	 * If we have a confirmed path to this address, mark others as cluster suboptimal
 	 *
 	 * @param addr Address to make exclusive
 	 */
-	void makeExclusive(const InetAddress &addr);
+	void setClusterOptimal(const InetAddress &addr);
 
 	/**
 	 * Send via best direct path
@@ -363,6 +363,11 @@ public:
 private:
 	bool _pushDirectPaths(const SharedPtr<Path> &path,uint64_t now);
 
+	inline uint64_t _pathScore(const unsigned int p) const
+	{
+		return ( (_paths[p].path->lastIn() + (_paths[p].path->preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK))) - ((ZT_PEER_PING_PERIOD * 10) * (uint64_t)_paths[p].clusterSuboptimal) );
+	}
+
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 
 	const RuntimeEnvironment *RR;
@@ -381,9 +386,7 @@ private:
 	struct {
 		SharedPtr<Path> path;
 		uint64_t lastReceive;
-#ifdef ZT_ENABLE_CLUSTER
 		bool clusterSuboptimal;
-#endif
 	} _paths[ZT_MAX_PEER_NETWORK_PATHS];
 	Mutex _paths_m;
 	unsigned int _numPaths;

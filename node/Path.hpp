@@ -166,14 +166,6 @@ public:
 	}
 
 	/**
-	 * @return This path's overall quality score (higher is better)
-	 */
-	inline uint64_t score() const
-	{
-		return (_lastIn + (preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK)));
-	}
-
-	/**
 	 * Check whether this address is valid for a ZeroTier path
 	 *
 	 * This checks the address type and scope against address types and scopes
