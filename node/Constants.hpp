@@ -244,17 +244,17 @@
  * This is also how often pings will be retried to upstream peers (relays, roots)
  * constantly until something is heard.
  */
-#define ZT_PING_CHECK_INVERVAL 8000
+#define ZT_PING_CHECK_INVERVAL 9000
 
 /**
  * How frequently to send heartbeats over in-use paths
  */
-#define ZT_PATH_HEARTBEAT_PERIOD 18000
+#define ZT_PATH_HEARTBEAT_PERIOD 15000
 
 /**
  * Paths are considered inactive if they have not received traffic in this long
  */
-#define ZT_PATH_ALIVE_TIMEOUT ((ZT_PATH_HEARTBEAT_PERIOD * 2) + 2000)
+#define ZT_PATH_ALIVE_TIMEOUT 35000
 
 /**
  * Delay between full-fledge pings of directly connected peers

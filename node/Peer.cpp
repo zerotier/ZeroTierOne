@@ -27,8 +27,6 @@
 #include "Cluster.hpp"
 #include "Packet.hpp"
 
-#define ZT_PEER_PATH_SORT_INTERVAL 5000
-
 namespace ZeroTier {
 
 // Used to send varying values for NAT keepalive
