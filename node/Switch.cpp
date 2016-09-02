@@ -75,7 +75,6 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 
 		SharedPtr<Path> path(RR->topology->getPath(localAddr,fromAddr));
 		path->received(now);
-		printf("<< %s %u\n",fromAddr.toString().c_str(),len);
 
 		if (len == 13) {
 			/* LEGACY: before VERB_PUSH_DIRECT_PATHS, peers used broadcast
