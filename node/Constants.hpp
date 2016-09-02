@@ -239,45 +239,37 @@
 #define ZT_MULTICAST_TRANSMIT_TIMEOUT 5000
 
 /**
- * Default maximum number of peers to address with a single multicast (if unspecified in network config)
- */
-#define ZT_MULTICAST_DEFAULT_LIMIT 32
-
-/**
- * How frequently to send a zero-byte UDP keepalive packet
- *
- * There are NATs with timeouts as short as 20 seconds, so this turns out
- * to be needed.
- */
-#define ZT_NAT_KEEPALIVE_DELAY 19000
-
-/**
  * Delay between scans of the topology active peer DB for peers that need ping
  *
  * This is also how often pings will be retried to upstream peers (relays, roots)
  * constantly until something is heard.
  */
-#define ZT_PING_CHECK_INVERVAL 9500
+#define ZT_PING_CHECK_INVERVAL 8000
 
 /**
- * Delay between ordinary case pings of direct links
+ * How frequently to send heartbeats over in-use paths
  */
-#define ZT_PEER_DIRECT_PING_DELAY 60000
+#define ZT_PATH_HEARTBEAT_PERIOD 18000
+
+/**
+ * Paths are considered inactive if they have not received traffic in this long
+ */
+#define ZT_PATH_ALIVE_TIMEOUT ((ZT_PATH_HEARTBEAT_PERIOD * 2) + 2000)
+
+/**
+ * Delay between full-fledge pings of directly connected peers
+ */
+#define ZT_PEER_PING_PERIOD 60000
+
+/**
+ * Peers forget paths that have not spoken in this long
+ */
+#define ZT_PEER_PATH_EXPIRATION ((ZT_PEER_PING_PERIOD * 3) + 3000)
 
 /**
  * Timeout for overall peer activity (measured from last receive)
  */
 #define ZT_PEER_ACTIVITY_TIMEOUT 500000
-
-/**
- * No answer timeout to trigger dead path detection
- */
-#define ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT 2000
-
-/**
- * Probation threshold after which a path becomes dead
- */
-#define ZT_PEER_DEAD_PATH_DETECTION_MAX_PROBATION 3
 
 /**
  * Delay between requests for updated network autoconf information

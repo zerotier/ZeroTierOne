@@ -105,8 +105,7 @@ public:
 		_lastIn(0),
 		_addr(),
 		_localAddress(),
-		_ipScope(InetAddress::IP_SCOPE_NONE),
-		_clusterSuboptimal(false)
+		_ipScope(InetAddress::IP_SCOPE_NONE)
 	{
 	}
 
@@ -115,26 +114,9 @@ public:
 		_lastIn(0),
 		_addr(addr),
 		_localAddress(localAddress),
-		_ipScope(addr.ipScope()),
-		_clusterSuboptimal(false)
+		_ipScope(addr.ipScope())
 	{
 	}
-
-	inline Path &operator=(const Path &p)
-	{
-		if (this != &p)
-			memcpy(this,&p,sizeof(Path));
-		return *this;
-	}
-
-	/**
-	 * Called when a packet is sent to this remote path
-	 *
-	 * This is called automatically by Path::send().
-	 *
-	 * @param t Time of send
-	 */
-	inline void sent(const uint64_t t) { _lastOut = t; }
 
 	/**
 	 * Called when a packet is received from this remote path, regardless of content
@@ -157,37 +139,22 @@ public:
 	/**
 	 * @return Address of local side of this path or NULL if unspecified
 	 */
-	inline const InetAddress &localAddress() const throw() { return _localAddress; }
+	inline const InetAddress &localAddress() const { return _localAddress; }
 
 	/**
 	 * @return Physical address
 	 */
-	inline const InetAddress &address() const throw() { return _addr; }
+	inline const InetAddress &address() const { return _addr; }
 
 	/**
 	 * @return IP scope -- faster shortcut for address().ipScope()
 	 */
-	inline InetAddress::IpScope ipScope() const throw() { return _ipScope; }
-
-	/**
-	 * @param f Is this path cluster-suboptimal?
-	 */
-	inline void setClusterSuboptimal(const bool f) { _clusterSuboptimal = f; }
-
-	/**
-	 * @return True if cluster-suboptimal (for someone)
-	 */
-	inline bool isClusterSuboptimal() const { return _clusterSuboptimal; }
-
-	/**
-	 * @return True if cluster-optimal (for someone) (the default)
-	 */
-	inline bool isClusterOptimal() const { return (!(_clusterSuboptimal)); }
+	inline InetAddress::IpScope ipScope() const { return _ipScope; }
 
 	/**
 	 * @return Preference rank, higher == better (will be less than 255)
 	 */
-	inline unsigned int preferenceRank() const throw()
+	inline unsigned int preferenceRank() const
 	{
 		/* First, since the scope enum values in InetAddress.hpp are in order of
 		 * use preference rank, we take that. Then we multiple by two, yielding
@@ -201,20 +168,9 @@ public:
 	/**
 	 * @return This path's overall quality score (higher is better)
 	 */
-	inline uint64_t score() const throw()
+	inline uint64_t score() const
 	{
-		// This is a little bit convoluted because we try to be branch-free, using multiplication instead of branches for boolean flags
-
-		// Start with the last time this path was active, and add a fudge factor to prevent integer underflow if _lastReceived is 0
-		uint64_t score = _lastIn + (ZT_PEER_DIRECT_PING_DELAY * (ZT_PEER_DEAD_PATH_DETECTION_MAX_PROBATION + 1));
-
-		// Increase score based on path preference rank, which is based on IP scope and address family
-		score += preferenceRank() * (ZT_PEER_DIRECT_PING_DELAY / ZT_PATH_MAX_PREFERENCE_RANK);
-
-		// Decrease score if this is known to be a sub-optimal path to a cluster
-		score -= ((uint64_t)_clusterSuboptimal) * ZT_PEER_DIRECT_PING_DELAY;
-
-		return score;
+		return (_lastIn + (preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK)));
 	}
 
 	/**
@@ -227,7 +183,6 @@ public:
 	 * @return True if address is good for ZeroTier path use
 	 */
 	static inline bool isAddressValidForPath(const InetAddress &a)
-		throw()
 	{
 		if ((a.ss_family == AF_INET)||(a.ss_family == AF_INET6)) {
 			switch(a.ipScope()) {
@@ -258,6 +213,26 @@ public:
 		return false;
 	}
 
+	/**
+	 * @return True if path appears alive
+	 */
+	inline bool alive(const uint64_t now) const { return ((now - _lastIn) <= ZT_PATH_ALIVE_TIMEOUT); }
+
+	/**
+	 * @return True if this path needs a heartbeat
+	 */
+	inline bool needsHeartbeat(const uint64_t now) const { return ((now - _lastOut) > ZT_PATH_HEARTBEAT_PERIOD); }
+
+	/**
+	 * @return Last time we sent something
+	 */
+	inline uint64_t lastOut() const { return _lastOut; }
+
+	/**
+	 * @return Last time we received anything
+	 */
+	inline uint64_t lastIn() const { return _lastIn; }
+
 private:
 	uint64_t _lastOut;
 	uint64_t _lastIn;
@@ -265,7 +240,6 @@ private:
 	InetAddress _localAddress;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often
 	AtomicCounter __refCount;
-	bool _clusterSuboptimal;
 };
 
 } // namespace ZeroTier

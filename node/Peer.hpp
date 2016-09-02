@@ -96,9 +96,7 @@ public:
 	 * This is called by the decode pipe when a packet is proven to be authentic
 	 * and appears to be valid.
 	 *
-	 * @param RR Runtime environment
-	 * @param localAddr Local address
-	 * @param remoteAddr Internet address of sender
+	 * @param path Path over which packet was received
 	 * @param hops ZeroTier (not IP) hops
 	 * @param packetId Packet ID
 	 * @param verb Packet verb
@@ -107,8 +105,7 @@ public:
 	 * @param trustEstablished If true, some form of non-trivial trust (like allowed in network) has been established
 	 */
 	void received(
-		const InetAddress &localAddr,
-		const InetAddress &remoteAddr,
+		const SharedPtr<Path> &path,
 		unsigned int hops,
 		uint64_t packetId,
 		Packet::Verb verb,
@@ -117,42 +114,18 @@ public:
 		const bool trustEstablished);
 
 	/**
-	 * Get the current best direct path to this peer
-	 *
-	 * @param now Current time
-	 * @return Best path or NULL if there are no active direct paths
-	 */
-	inline Path *getBestPath(uint64_t now) { return _getBestPath(now); }
-
-	/**
 	 * @param now Current time
 	 * @param addr Remote address
 	 * @return True if we have an active path to this destination
 	 */
-	inline bool hasActivePathTo(uint64_t now,const InetAddress &addr) const
-	{
-		for(unsigned int p=0;p<_numPaths;++p) {
-			if ((_paths[p].active(now))&&(_paths[p].address() == addr))
-				return true;
-		}
-		return false;
-	}
+	bool hasActivePathTo(uint64_t now,const InetAddress &addr) const;
 
 	/**
-	 * Set all paths in the same ss_family that are not this one to cluster suboptimal
-	 *
-	 * Addresses in other families are not affected.
+	 * If we have a confirmed path to this address, forget all others within the same address family
 	 *
 	 * @param addr Address to make exclusive
 	 */
-	inline void setClusterOptimalPathForAddressFamily(const InetAddress &addr)
-	{
-		for(unsigned int p=0;p<_numPaths;++p) {
-			if (_paths[p].address().ss_family == addr.ss_family) {
-				_paths[p].setClusterSuboptimal(_paths[p].address() != addr);
-			}
-		}
-	}
+	void makeExclusive(const InetAddress &addr);
 
 	/**
 	 * Send via best path
@@ -160,30 +133,30 @@ public:
 	 * @param data Packet data
 	 * @param len Packet length
 	 * @param now Current time
-	 * @return Path used on success or NULL on failure
+	 * @param forceEvenIfDead If true, send even if the path is not 'alive'
+	 * @return True if we actually sent something
 	 */
-	inline Path *send(const void *data,unsigned int len,uint64_t now)
-	{
-		Path *const bestPath = getBestPath(now);
-		if (bestPath) {
-			if (bestPath->send(RR,data,len,now))
-				return bestPath;
-		}
-		return (Path *)0;
-	}
+	bool send(const void *data,unsigned int len,uint64_t now,bool forceEvenIfDead);
+
+	/**
+	 * Get the best current direct path
+	 *
+	 * @param now Current time
+	 * @param forceEvenIfDead If true, pick even if path is not alive
+	 * @return Best current path or NULL if none
+	 */
+	SharedPtr<Path> getBestPath(uint64_t now,bool forceEvenIfDead);
 
 	/**
 	 * Send a HELLO to this peer at a specified physical address
 	 *
-	 * This does not update any statistics. It's used to send initial HELLOs
-	 * for NAT traversal and path verification.
+	 * No statistics or sent times are updated here.
 	 *
 	 * @param localAddr Local address
 	 * @param atAddress Destination address
 	 * @param now Current time
-	 * @param ttl Desired IP TTL (default: 0 to leave alone)
 	 */
-	void sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int ttl = 0);
+	void sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now);
 
 	/**
 	 * Send pings or keepalives depending on configured timeouts
@@ -195,13 +168,48 @@ public:
 	bool doPingAndKeepalive(uint64_t now,int inetAddressFamily);
 
 	/**
+	 * @param now Current time
+	 * @return True if this peer has at least one active direct path
+	 */
+	bool hasActiveDirectPath(uint64_t now) const;
+
+	/**
+	 * Reset paths within a given scope
+	 *
+	 * @param scope IP scope of paths to reset
+	 * @param now Current time
+	 * @return True if at least one path was forgotten
+	 */
+	bool resetWithinScope(InetAddress::IpScope scope,uint64_t now);
+
+	/**
+	 * Get most recently active path addresses for IPv4 and/or IPv6
+	 *
+	 * Note that v4 and v6 are not modified if they are not found, so
+	 * initialize these to a NULL address to be able to check.
+	 *
+	 * @param now Current time
+	 * @param v4 Result parameter to receive active IPv4 address, if any
+	 * @param v6 Result parameter to receive active IPv6 address, if any
+	 */
+	void getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const;
+
+	/**
+	 * Perform periodic cleaning operations
+	 *
+	 * @param now Current time
+	 */
+	void clean(uint64_t now);
+
+	/**
 	 * @return All known direct paths to this peer (active or inactive)
 	 */
-	inline std::vector<Path> paths() const
+	inline std::vector< SharedPtr<Path> > paths() const
 	{
-		std::vector<Path> pp;
+		std::vector< SharedPtr<Path> > pp;
+		Mutex::Lock _l(_paths_m);
 		for(unsigned int p=0,np=_numPaths;p<np;++p)
-			pp.push_back(_paths[p]);
+			pp.push_back(_paths[p].path);
 		return pp;
 	}
 
@@ -254,7 +262,7 @@ public:
 		unsigned int l = _latency;
 		if (!l)
 			l = 0xffff;
-		return (l * (((unsigned int)tsr / (ZT_PEER_DIRECT_PING_DELAY + 1000)) + 1));
+		return (l * (((unsigned int)tsr / (ZT_PEER_PING_PERIOD + 1000)) + 1));
 	}
 
 	/**
@@ -270,19 +278,6 @@ public:
 		else _latency = std::min(l,(unsigned int)65535);
 	}
 
-	/**
-	 * @param now Current time
-	 * @return True if this peer has at least one active direct path
-	 */
-	inline bool hasActiveDirectPath(uint64_t now) const
-	{
-		for(unsigned int p=0;p<_numPaths;++p) {
-			if (_paths[p].active(now))
-				return true;
-		}
-		return false;
-	}
-
 #ifdef ZT_ENABLE_CLUSTER
 	/**
 	 * @param now Current time
@@ -291,21 +286,12 @@ public:
 	inline bool hasClusterOptimalPath(uint64_t now) const
 	{
 		for(unsigned int p=0,np=_numPaths;p<np;++p) {
-			if ((_paths[p].active(now))&&(!_paths[p].isClusterSuboptimal()))
+			if ( (_paths[p].path->alive(now)) && (!_paths[p].clusterSuboptimal) )
 				return true;
 		}
 		return false;
 	}
 #endif
-
-	/**
-	 * Reset paths within a given scope
-	 *
-	 * @param scope IP scope of paths to reset
-	 * @param now Current time
-	 * @return True if at least one path was forgotten
-	 */
-	bool resetWithinScope(InetAddress::IpScope scope,uint64_t now);
 
 	/**
 	 * @return 256-bit secret symmetric encryption key
@@ -334,25 +320,6 @@ public:
 	inline unsigned int remoteVersionRevision() const throw() { return _vRevision; }
 
 	inline bool remoteVersionKnown() const throw() { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
-
-	/**
-	 * Get most recently active path addresses for IPv4 and/or IPv6
-	 *
-	 * Note that v4 and v6 are not modified if they are not found, so
-	 * initialize these to a NULL address to be able to check.
-	 *
-	 * @param now Current time
-	 * @param v4 Result parameter to receive active IPv4 address, if any
-	 * @param v6 Result parameter to receive active IPv6 address, if any
-	 */
-	void getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const;
-
-	/**
-	 * Perform periodic cleaning operations
-	 *
-	 * @param now Current time
-	 */
-	void clean(uint64_t now);
 
 	/**
 	 * Update direct path push stats and return true if we should respond
@@ -395,10 +362,7 @@ public:
 	}
 
 private:
-	void _doDeadPathDetection(Path &p,const uint64_t now);
-	Path *_getBestPath(const uint64_t now);
-	Path *_getBestPath(const uint64_t now,int inetAddressFamily);
-	bool _pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAddress,uint64_t now);
+	bool _pushDirectPaths(const SharedPtr<Path> &path,uint64_t now);
 
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 
@@ -410,13 +374,19 @@ private:
 	uint64_t _lastAnnouncedTo;
 	uint64_t _lastDirectPathPushSent;
 	uint64_t _lastDirectPathPushReceive;
-	uint64_t _lastPathSort;
 	uint16_t _vProto;
 	uint16_t _vMajor;
 	uint16_t _vMinor;
 	uint16_t _vRevision;
 	Identity _id;
-	Path _paths[ZT_MAX_PEER_NETWORK_PATHS];
+	struct {
+		SharedPtr<Path> path;
+		uint64_t lastReceive;
+#ifdef ZT_ENABLE_CLUSTER
+		bool clusterSuboptimal;
+#endif
+	} _paths[ZT_MAX_PEER_NETWORK_PATHS];
+	Mutex _paths_m;
 	unsigned int _numPaths;
 	unsigned int _latency;
 	unsigned int _directPathPushCutoffCount;
