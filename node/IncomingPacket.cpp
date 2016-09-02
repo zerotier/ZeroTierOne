@@ -1163,8 +1163,8 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 				remainingHopsPtr += ZT_ADDRESS_LENGTH;
 				SharedPtr<Peer> nhp(RR->topology->getPeer(nextHop[h]));
 				if (nhp) {
-					SharedPtr<Path> nhbp(nhp->getBestPath(now,false));
-					if (nhbp)
+					SharedPtr<Path> nhbp(nhp->getBestPath(now));
+					if ((nhbp)&&(nhbp->alive(now)))
 						nextHopBestPathAddress[h] = nhbp->address();
 				}
 			}

@@ -75,6 +75,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 
 		SharedPtr<Path> path(RR->topology->getPath(localAddr,fromAddr));
 		path->received(now);
+		printf("<< %s %u\n",fromAddr.toString().c_str(),len);
 
 		if (len == 13) {
 			/* LEGACY: before VERB_PUSH_DIRECT_PATHS, peers used broadcast
@@ -112,7 +113,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 						// Note: we don't bother initiating NAT-t for fragments, since heads will set that off.
 						// It wouldn't hurt anything, just redundant and unnecessary.
 						SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
-						if ((!relayTo)||(!relayTo->send(fragment.data(),fragment.size(),now,true))) {
+						if ((!relayTo)||(!relayTo->sendDirect(fragment.data(),fragment.size(),now,false))) {
 #ifdef ZT_ENABLE_CLUSTER
 							if (RR->cluster) {
 								RR->cluster->sendViaCluster(Address(),destination,fragment.data(),fragment.size(),false);
@@ -123,7 +124,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 							// Don't know peer or no direct path -- so relay via root server
 							relayTo = RR->topology->getBestRoot();
 							if (relayTo)
-								relayTo->send(fragment.data(),fragment.size(),now,true);
+								relayTo->sendDirect(fragment.data(),fragment.size(),now,true);
 						}
 					} else {
 						TRACE("dropped relay [fragment](%s) -> %s, max hops exceeded",fromAddr.toString().c_str(),destination.toString().c_str());
@@ -210,7 +211,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 						packet.incrementHops();
 
 						SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
-						if ((relayTo)&&((relayTo->send(packet.data(),packet.size(),now,true)))) {
+						if ((relayTo)&&((relayTo->sendDirect(packet.data(),packet.size(),now,false)))) {
 							Mutex::Lock _l(_lastUniteAttempt_m);
 							uint64_t &luts = _lastUniteAttempt[_LastUniteKey(source,destination)];
 							if ((now - luts) >= ZT_MIN_UNITE_INTERVAL) {
@@ -234,7 +235,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 #endif
 							relayTo = RR->topology->getBestRoot(&source,1,true);
 							if (relayTo)
-								relayTo->send(packet.data(),packet.size(),now,true);
+								relayTo->sendDirect(packet.data(),packet.size(),now,true);
 						}
 					} else {
 						TRACE("dropped relay %s(%s) -> %s, max hops exceeded",packet.source().toString().c_str(),fromAddr.toString().c_str(),destination.toString().c_str());
@@ -607,7 +608,7 @@ bool Switch::unite(const Address &p1,const Address &p2)
 				outp.append(cg.first.rawIpData(),4);
 			}
 			outp.armor(p1p->key(),true);
-			p1p->send(outp.data(),outp.size(),now,true);
+			p1p->sendDirect(outp.data(),outp.size(),now,true);
 		} else {
 			// Tell p2 where to find p1.
 			Packet outp(p2,RR->identity.address(),Packet::VERB_RENDEZVOUS);
@@ -622,7 +623,7 @@ bool Switch::unite(const Address &p1,const Address &p2)
 				outp.append(cg.second.rawIpData(),4);
 			}
 			outp.armor(p2p->key(),true);
-			p2p->send(outp.data(),outp.size(),now,true);
+			p2p->sendDirect(outp.data(),outp.size(),now,true);
 		}
 		++alt; // counts up and also flips LSB
 	}
@@ -739,7 +740,7 @@ Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlread
 		Packet outp(root->address(),RR->identity.address(),Packet::VERB_WHOIS);
 		addr.appendTo(outp);
 		outp.armor(root->key(),true);
-		if (root->send(outp.data(),outp.size(),RR->node->now(),true))
+		if (root->sendDirect(outp.data(),outp.size(),RR->node->now(),true))
 			return root->address();
 	}
 	return Address();
@@ -752,10 +753,10 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 	if (peer) {
 		const uint64_t now = RR->node->now();
 
-		SharedPtr<Path> viaPath(peer->getBestPath(now,false));
-		if (!viaPath) {
+		SharedPtr<Path> viaPath(peer->getBestPath(now));
+		if ( (!viaPath) || ((!viaPath->alive(now))&&(!RR->topology->isRoot(peer->identity()))) ) {
 			SharedPtr<Peer> relay(RR->topology->getBestRoot());
-			if ( (!relay) || (!(viaPath = relay->getBestPath(now,true))) )
+			if ( (!relay) || (!(viaPath = relay->getBestPath(now))) )
 				return false;
 		}
 

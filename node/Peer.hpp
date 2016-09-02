@@ -128,7 +128,7 @@ public:
 	void makeExclusive(const InetAddress &addr);
 
 	/**
-	 * Send via best path
+	 * Send via best direct path
 	 *
 	 * @param data Packet data
 	 * @param len Packet length
@@ -136,16 +136,15 @@ public:
 	 * @param forceEvenIfDead If true, send even if the path is not 'alive'
 	 * @return True if we actually sent something
 	 */
-	bool send(const void *data,unsigned int len,uint64_t now,bool forceEvenIfDead);
+	bool sendDirect(const void *data,unsigned int len,uint64_t now,bool forceEvenIfDead);
 
 	/**
 	 * Get the best current direct path
 	 *
 	 * @param now Current time
-	 * @param forceEvenIfDead If true, pick even if path is not alive
 	 * @return Best current path or NULL if none
 	 */
-	SharedPtr<Path> getBestPath(uint64_t now,bool forceEvenIfDead);
+	SharedPtr<Path> getBestPath(uint64_t now);
 
 	/**
 	 * Send a HELLO to this peer at a specified physical address

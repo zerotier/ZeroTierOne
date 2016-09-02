@@ -229,7 +229,7 @@ void Peer::makeExclusive(const InetAddress &addr)
 	}
 }
 
-bool Peer::send(const void *data,unsigned int len,uint64_t now,bool forceEvenIfDead)
+bool Peer::sendDirect(const void *data,unsigned int len,uint64_t now,bool forceEvenIfDead)
 {
 	Mutex::Lock _l(_paths_m);
 
@@ -252,19 +252,17 @@ bool Peer::send(const void *data,unsigned int len,uint64_t now,bool forceEvenIfD
 	}
 }
 
-SharedPtr<Path> Peer::getBestPath(uint64_t now,bool forceEvenIfDead)
+SharedPtr<Path> Peer::getBestPath(uint64_t now)
 {
 	Mutex::Lock _l(_paths_m);
 
 	int bestp = -1;
 	uint64_t best = 0ULL;
 	for(unsigned int p=0;p<_numPaths;++p) {
-		if (_paths[p].path->alive(now)||(forceEvenIfDead)) {
-			const uint64_t s = _paths[p].path->score();
-			if (s >= best) {
-				best = s;
-				bestp = (int)p;
-			}
+		const uint64_t s = _paths[p].path->score();
+		if (s >= best) {
+			best = s;
+			bestp = (int)p;
 		}
 	}
 
@@ -293,18 +291,29 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 
 bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 {
-	bool somethingAlive = false;
 	Mutex::Lock _l(_paths_m);
+
+	int bestp = -1;
+	uint64_t best = 0ULL;
 	for(unsigned int p=0;p<_numPaths;++p) {
-		if ((now - _paths[p].lastReceive) >= ZT_PEER_PING_PERIOD) {
-			sendHELLO(_paths[p].path->localAddress(),_paths[p].path->address(),now);
-		} else if (_paths[p].path->needsHeartbeat(now)) {
-			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
-			_paths[p].path->send(RR,&_natKeepaliveBuf,sizeof(_natKeepaliveBuf),now);
+		const uint64_t s = _paths[p].path->score();
+		if (s >= best) {
+			best = s;
+			bestp = (int)p;
 		}
-		somethingAlive |= _paths[p].path->alive(now);
 	}
-	return somethingAlive;
+
+	if (bestp >= 0) {
+		if ((now - _paths[bestp].lastReceive) >= ZT_PEER_PING_PERIOD) {
+			sendHELLO(_paths[bestp].path->localAddress(),_paths[bestp].path->address(),now);
+		} else if (_paths[bestp].path->needsHeartbeat(now)) {
+			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
+			_paths[bestp].path->send(RR,&_natKeepaliveBuf,sizeof(_natKeepaliveBuf),now);
+		}
+		return true;
+	} else {
+		return false;
+	}
 }
 
 bool Peer::hasActiveDirectPath(uint64_t now) const

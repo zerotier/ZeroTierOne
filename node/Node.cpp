@@ -416,7 +416,7 @@ ZT_PeerList *Node::peers() const
 		p->role = RR->topology->isRoot(pi->second->identity()) ? ZT_PEER_ROLE_ROOT : ZT_PEER_ROLE_LEAF;
 
 		std::vector< SharedPtr<Path> > paths(pi->second->paths());
-		SharedPtr<Path> bestp(pi->second->getBestPath(_now,true));
+		SharedPtr<Path> bestp(pi->second->getBestPath(_now));
 		p->pathCount = 0;
 		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
 			memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
