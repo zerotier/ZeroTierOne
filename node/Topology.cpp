@@ -251,14 +251,25 @@ bool Topology::worldUpdateIfValid(const World &newWorld)
 void Topology::clean(uint64_t now)
 {
 	Mutex::Lock _l(_lock);
-	Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
-	Address *a = (Address *)0;
-	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
-	while (i.next(a,p)) {
-		if (((now - (*p)->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(std::find(_rootAddresses.begin(),_rootAddresses.end(),*a) == _rootAddresses.end())) {
-			_peers.erase(*a);
-		} else {
-			(*p)->clean(now);
+	{
+		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
+		Address *a = (Address *)0;
+		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+		while (i.next(a,p)) {
+			if (((now - (*p)->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(std::find(_rootAddresses.begin(),_rootAddresses.end(),*a) == _rootAddresses.end())) {
+				_peers.erase(*a);
+			} else {
+				(*p)->clean(now);
+			}
+		}
+	}
+	{
+		Hashtable< Path::HashKey,SharedPtr<Path> >::Iterator i(_paths);
+		Path::HashKey *k = (Path::HashKey *)0;
+		SharedPtr<Path> *p = (SharedPtr<Path> *)0;
+		while (i.next(k,p)) {
+			if (p->reclaimIfWeak())
+				_paths.erase(*k);
 		}
 	}
 }
