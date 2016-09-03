@@ -183,14 +183,14 @@ static std::string _jsonEnumerate(unsigned int depth,const ZT_PeerPhysicalPath *
 			"%s\t\"address\": \"%s\",\n"
 			"%s\t\"lastSend\": %llu,\n"
 			"%s\t\"lastReceive\": %llu,\n"
-			"%s\t\"active\": %s,\n"
+			"%s\t\"active\": true,\n"
 			"%s\t\"preferred\": %s,\n"
 			"%s\t\"trustedPathId\": %llu\n"
 			"%s}",
 			prefix,_jsonEscape(reinterpret_cast<const InetAddress *>(&(pp[i].address))->toString()).c_str(),
 			prefix,pp[i].lastSend,
 			prefix,pp[i].lastReceive,
-			prefix,(pp[i].active == 0) ? "false" : "true",
+			prefix,
 			prefix,(pp[i].preferred == 0) ? "false" : "true",
 			prefix,pp[i].trustedPathId,
 			prefix);

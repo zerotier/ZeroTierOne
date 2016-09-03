@@ -1054,11 +1054,6 @@ typedef struct
 	uint64_t trustedPathId;
 
 	/**
-	 * Is path active?
-	 */
-	int active;
-
-	/**
 	 * Is path preferred?
 	 */
 	int preferred;

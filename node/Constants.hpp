@@ -264,7 +264,7 @@
 /**
  * Peers forget paths that have not spoken in this long
  */
-#define ZT_PEER_PATH_EXPIRATION ((ZT_PEER_PING_PERIOD * 3) + 3000)
+#define ZT_PEER_PATH_EXPIRATION ((ZT_PEER_PING_PERIOD * 4) + 3000)
 
 /**
  * Timeout for overall peer activity (measured from last receive)
