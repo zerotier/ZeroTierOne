@@ -50,6 +50,7 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
     private boolean enabled;
     private long netconfRevision;
     private InetSocketAddress[] assignedAddresses;
+    private VirtualNetworkRoute[] routes;
 
     private VirtualNetworkConfig() {
 
@@ -60,11 +61,22 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
         if(assignedAddresses.length == cfg.assignedAddresses.length) {
             for(int i = 0; i < assignedAddresses.length; ++i) {
                 if(!assignedAddresses[i].equals(cfg.assignedAddresses[i])) {
-                    return false;
+                    aaEqual = false;
                 }
             }
         } else {
             aaEqual = false;
+        }
+
+        boolean routesEqual = true;
+        if(routes.length == cfg.routes.length) {
+            for (int i = 0; i < routes.length; ++i) {
+                if (!routes[i].equals(cfg.routes[i])) {
+                    routesEqual = false;
+                }
+            }
+        } else {
+            routesEqual = false;
         }
 
         return nwid == cfg.nwid &&
@@ -78,7 +90,7 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
                broadcastEnabled == cfg.broadcastEnabled &&
                portError == cfg.portError &&
                enabled == cfg.enabled &&
-               aaEqual;
+               aaEqual && routesEqual;
     }
 
     public int compareTo(VirtualNetworkConfig cfg) {
@@ -188,4 +200,11 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
     public final InetSocketAddress[] assignedAddresses() {
         return assignedAddresses;
     }
+
+    /**
+     * ZeroTier-assigned routes (in {@link com.zerotier.sdk.VirtualNetworkRoute} objects)
+     *
+     * @return
+     */
+    public final VirtualNetworkRoute[] routes() { return routes; }
 }

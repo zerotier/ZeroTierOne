@@ -609,6 +609,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
     jfieldID portErrorField = NULL;
     jfieldID netconfRevisionField = NULL;
     jfieldID assignedAddressesField = NULL;
+    jfieldID routesField = NULL;
 
     vnetConfigClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkConfig");
     if(vnetConfigClass == NULL)
@@ -716,6 +717,13 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
         return NULL;
     }
 
+    routesField = lookup.findField(vnetConfigClass, "routes", "[Lcom/zerotier/sdk/VirtualNetworkRoute");
+    if(env->ExceptionCheck() || routesField == NULL)
+    {
+        LOGE("Error getting routes field");
+        return NULL;
+    }
+
     env->SetLongField(vnetConfigObj, nwidField, vnetConfig.nwid);
     env->SetLongField(vnetConfigObj, macField, vnetConfig.mac);
     jstring nameStr = env->NewStringUTF(vnetConfig.name);
@@ -772,6 +780,34 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
     }
 
     env->SetObjectField(vnetConfigObj, assignedAddressesField, assignedAddrArrayObj);
+
+    jclass virtualNetworkRouteClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkRoute");
+    if(env->ExceptionCheck() || virtualNetworkRouteClass == NULL)
+    {
+        LOGE("Error finding VirtualNetworkRoute class");
+        return NULL;
+    }
+
+    jobjectArray routesArrayObj = env->NewObjectArray(
+        vnetConfig.routeCount, virtualNetworkRouteClass, NULL);
+    if(env->ExceptionCheck() || routesArrayObj == NULL)
+    {
+        LOGE("Error creating VirtualNetworkRoute[] array");
+        return NULL;
+    }
+
+    for(unsigned int i = 0; i < vnetConfig.routeCount; ++i)
+    {
+        jobject routeObj = newVirtualNetworkRoute(env, vnetConfig.routes[i]);
+        env->SetObjectArrayElement(routesArrayObj, i, routeObj);
+        if(env->ExceptionCheck())
+        {
+            LOGE("Error assigning VirtualNetworkRoute to array");
+            return NULL;
+        }
+    }
+
+    env->SetObjectField(vnetConfigObj, routesField, routesArrayObj);
 
     return vnetConfigObj;
 }
@@ -831,6 +867,72 @@ jobject newVersion(JNIEnv *env, int major, int minor, int rev)
     return versionObj;
 }
 
+jobject newVirtualNetworkRoute(JNIEnv *env, const ZT_VirtualNetworkRoute &route)
+{
+    jclass virtualNetworkRouteClass = NULL;
+    jmethodID routeConstructor = NULL;
+
+    virtualNetworkRouteClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkRoute");
+    if(env->ExceptionCheck() || virtualNetworkRouteClass == NULL)
+    {
+        return NULL;
+    }
+
+    routeConstructor = lookup.findMethod(virtualNetworkRouteClass, "<init>", "()V");
+    if(env->ExceptionCheck() || routeConstructor == NULL)
+    {
+        return NULL;
+    }
+
+    jobject routeObj = env->NewObject(virtualNetworkRouteClass, routeConstructor);
+    if(env->ExceptionCheck() || routeObj == NULL)
+    {
+        return NULL;
+    }
+
+    jfieldID targetField = NULL;
+    jfieldID viaField = NULL;
+    jfieldID flagsField = NULL;
+    jfieldID metricField = NULL;
+
+    targetField = lookup.findField(virtualNetworkRouteClass, "target",
+        "Ljava/net/InetSocketAddress");
+    if(env->ExceptionCheck() || targetField == NULL)
+    {
+        return NULL;
+    }
+
+    viaField = lookup.findField(virtualNetworkRouteClass, "via",
+        "Ljava/net/InetSocketAddress");
+    if(env->ExceptionCheck() || targetField == NULL)
+    {
+        return NULL;
+    }
+
+    flagsField = lookup.findField(virtualNetworkRouteClass, "flags", "I");
+    if(env->ExceptionCheck() || flagsField == NULL)
+    {
+        return NULL;
+    }
+
+    metricField = lookup.findField(virtualNetworkRouteClass, "metric", "I");
+    if(env->ExceptionCheck() || metricField == NULL)
+    {
+        return NULL;
+    }
+
+    jobject targetObj = newInetSocketAddress(env, route.target);
+    jobject viaObj = newInetSocketAddress(env, route.via);
+
+    env->SetObjectField(routeObj, targetField, targetObj);
+    env->SetObjectField(routeObj, viaField, viaObj);
+    env->SetIntField(routeObj, flagsField, (jint)route.flags);
+    env->SetIntField(routeObj, metricField, (jint)route.metric);
+
+    return routeObj;
+}
+
 #ifdef __cplusplus
 }
 #endif
+

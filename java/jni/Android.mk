@@ -11,14 +11,14 @@ LOCAL_LDLIBS := -llog
 # ZeroTierOne SDK source files
 LOCAL_SRC_FILES := \
 	$(ZT1)/ext/lz4/lz4.c \
-	$(ZT1)/ext/json-parser/json.c \
 	$(ZT1)/ext/http-parser/http_parser.c \
 	$(ZT1)/node/C25519.cpp \
+	$(ZT1)/node/Capability.cpp \
 	$(ZT1)/node/CertificateOfMembership.cpp \
-	$(ZT1)/node/DeferredPackets.cpp \
 	$(ZT1)/node/Identity.cpp \
 	$(ZT1)/node/IncomingPacket.cpp \
 	$(ZT1)/node/InetAddress.cpp \
+	$(ZT1)/node/Membership.cpp \
 	$(ZT1)/node/Multicaster.cpp \
 	$(ZT1)/node/Network.cpp \
 	$(ZT1)/node/NetworkConfig.cpp \
@@ -32,6 +32,7 @@ LOCAL_SRC_FILES := \
 	$(ZT1)/node/SelfAwareness.cpp \
 	$(ZT1)/node/SHA512.cpp \
 	$(ZT1)/node/Switch.cpp \
+	$(ZT1)/node/Tag.cpp \
 	$(ZT1)/node/Topology.cpp \
 	$(ZT1)/node/Utils.cpp \
 	$(ZT1)/osdep/Http.cpp \
