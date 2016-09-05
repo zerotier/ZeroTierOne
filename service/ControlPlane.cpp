@@ -165,7 +165,7 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetw
 
 static std::string _jsonEnumerate(unsigned int depth,const ZT_PeerPhysicalPath *pp,unsigned int count)
 {
-	char json[1024];
+	char json[2048];
 	char prefix[32];
 
 	if (depth >= sizeof(prefix)) // sanity check -- shouldn't be possible
@@ -201,7 +201,7 @@ static std::string _jsonEnumerate(unsigned int depth,const ZT_PeerPhysicalPath *
 
 static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_Peer *peer)
 {
-	char json[1024];
+	char json[2048];
 	char prefix[32];
 
 	if (depth >= sizeof(prefix)) // sanity check -- shouldn't be possible

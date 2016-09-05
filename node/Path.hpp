@@ -152,16 +152,10 @@ public:
 	inline InetAddress::IpScope ipScope() const { return _ipScope; }
 
 	/**
-	 * @return Preference rank, higher == better (will be less than 255)
+	 * @return Preference rank, higher == better
 	 */
 	inline unsigned int preferenceRank() const
 	{
-		/* First, since the scope enum values in InetAddress.hpp are in order of
-		 * use preference rank, we take that. Then we multiple by two, yielding
-		 * a sequence like 0, 2, 4, 6, etc. Then if it's IPv6 we add one. This
-		 * makes IPv6 addresses of a given scope outrank IPv4 addresses of the
-		 * same scope -- e.g. 1 outranks 0. This makes us prefer IPv6, but not
-		 * if the address scope/class is of a fundamentally lower rank. */
 		return ( ((unsigned int)_ipScope << 1) | (unsigned int)(_addr.ss_family == AF_INET6) );
 	}
 
@@ -213,7 +207,7 @@ public:
 	/**
 	 * @return True if this path needs a heartbeat
 	 */
-	inline bool needsHeartbeat(const uint64_t now) const { return ((now - _lastOut) > ZT_PATH_HEARTBEAT_PERIOD); }
+	inline bool needsHeartbeat(const uint64_t now) const { return ((now - _lastOut) >= ZT_PATH_HEARTBEAT_PERIOD); }
 
 	/**
 	 * @return Last time we sent something

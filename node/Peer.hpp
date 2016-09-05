@@ -164,7 +164,7 @@ public:
 	 *
 	 * @param now Current time
 	 * @param inetAddressFamily Keep this address family alive, or -1 for any
-	 * @return True if we have at least one direct path
+	 * @return True if we have at least one direct path of the given family (or any if family is -1)
 	 */
 	bool doPingAndKeepalive(uint64_t now,int inetAddressFamily);
 
@@ -367,7 +367,7 @@ private:
 
 	inline uint64_t _pathScore(const unsigned int p) const
 	{
-		return ( _paths[p].path->lastIn() +
+		return ( _paths[p].lastReceive +
 		         (uint64_t)(_paths[p].path->preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK)) +
 						 (uint64_t)(_paths[p].clusterWeights * ZT_PEER_PING_PERIOD) );
 	}

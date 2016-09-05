@@ -134,24 +134,38 @@ void Peer::received(
 			}
 		}
 
-		if ((!pathIsConfirmed)&&(RR->node->shouldUsePathForZeroTierTraffic(path->localAddress(),path->address()))) {
+		if ( (!pathIsConfirmed) && (RR->node->shouldUsePathForZeroTierTraffic(path->localAddress(),path->address())) ) {
 			if (verb == Packet::VERB_OK) {
 				Mutex::Lock _l(_paths_m);
 
-				unsigned int slot = 0;
+				unsigned int slot;
 				if (_numPaths < ZT_MAX_PEER_NETWORK_PATHS) {
 					slot = _numPaths++;
 				} else {
+					// First try to replace the worst within the same address family, if possible
+					int worstSlot = -1;
 					uint64_t worstScore = 0xffffffffffffffffULL;
-					unsigned int worstPath = ZT_MAX_PEER_NETWORK_PATHS-1;
 					for(unsigned int p=0;p<_numPaths;++p) {
-						const uint64_t s = _pathScore(p);
-						if (s < worstScore) {
-							worstScore = s;
-							worstPath = p;
+						if (_paths[p].path->address().ss_family == path->address().ss_family) {
+							const uint64_t s = _pathScore(p);
+							if (s < worstScore) {
+								worstScore = s;
+								worstSlot = (int)p;
+							}
 						}
 					}
-					slot = worstPath;
+					if (worstSlot >= 0) {
+						slot = (unsigned int)worstSlot;
+					} else {
+						slot = ZT_MAX_PEER_NETWORK_PATHS - 1;
+						for(unsigned int p=0;p<_numPaths;++p) {
+							const uint64_t s = _pathScore(p);
+							if (s < worstScore) {
+								worstScore = s;
+								slot = p;
+							}
+						}
+					}
 				}
 
 				_paths[slot].lastReceive = now;
@@ -164,20 +178,21 @@ void Peer::received(
 				_paths[slot].clusterWeights = 1;
 #endif
 			} else {
-
-				TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
+				TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),path->address().toString().c_str());
 
 				if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
+					// Newer than 1.1.0 can use ECHO, which is smaller
 					Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
 					outp.armor(_key,true);
 					path->send(RR,outp.data(),outp.size(),now);
 				} else {
+					// For backward compatibility we send HELLO to ancient nodes
 					sendHELLO(path->localAddress(),path->address(),now);
 				}
-
 			}
 		}
 	} else if (trustEstablished) {
+		// Send PUSH_DIRECT_PATHS if hops>0 (relayed) and we have a trust relationship (common network membership)
 		_pushDirectPaths(path,now);
 	}
 
@@ -286,7 +301,7 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 	int bestp = -1;
 	uint64_t best = 0ULL;
 	for(unsigned int p=0;p<_numPaths;++p) {
-		if ((inetAddressFamily < 0)||(_paths[p].path->address().ss_family == inetAddressFamily)) {
+		if ((inetAddressFamily < 0)||((int)_paths[p].path->address().ss_family == inetAddressFamily)) {
 			const uint64_t s = _pathScore(p);
 			if (s >= best) {
 				best = s;
