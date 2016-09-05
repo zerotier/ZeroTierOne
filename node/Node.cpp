@@ -243,7 +243,7 @@ public:
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
 		} else if (p->activelyTransferringFrames(_now)) {
 			// Normal nodes get their preferred link kept alive if the node has generated frame traffic recently
-			p->doPingAndKeepalive(_now,0);
+			p->doPingAndKeepalive(_now,-1);
 		}
 	}
 
@@ -422,7 +422,6 @@ ZT_PeerList *Node::peers() const
 			memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
 			p->paths[p->pathCount].lastSend = (*path)->lastOut();
 			p->paths[p->pathCount].lastReceive = (*path)->lastIn();
-			p->paths[p->pathCount].active = (*path)->alive(_now) ? 1 : 0;
 			p->paths[p->pathCount].preferred = (*path == bestp) ? 1 : 0;
 			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
 			++p->pathCount;

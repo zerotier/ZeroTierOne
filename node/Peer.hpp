@@ -121,7 +121,9 @@ public:
 	bool hasActivePathTo(uint64_t now,const InetAddress &addr) const;
 
 	/**
-	 * If we have a confirmed path to this address, mark others as cluster suboptimal
+	 * Set which known path for an address family is optimal
+	 *
+	 * This only modifies paths within the same address family
 	 *
 	 * @param addr Address to make exclusive
 	 */
@@ -161,8 +163,8 @@ public:
 	 * Send pings or keepalives depending on configured timeouts
 	 *
 	 * @param now Current time
-	 * @param inetAddressFamily Keep this address family alive, or 0 to simply pick current best ignoring family
-	 * @return True if we have at least one direct path
+	 * @param inetAddressFamily Keep this address family alive, or -1 for any
+	 * @return True if we have at least one direct path of the given family (or any if family is -1)
 	 */
 	bool doPingAndKeepalive(uint64_t now,int inetAddressFamily);
 
@@ -285,7 +287,7 @@ public:
 	inline bool hasClusterOptimalPath(uint64_t now) const
 	{
 		for(unsigned int p=0,np=_numPaths;p<np;++p) {
-			if ( (_paths[p].path->alive(now)) && (!_paths[p].clusterSuboptimal) )
+			if ( (_paths[p].path->alive(now)) && ((_paths[p].clusterWeights & 1) != 0) )
 				return true;
 		}
 		return false;
@@ -365,7 +367,9 @@ private:
 
 	inline uint64_t _pathScore(const unsigned int p) const
 	{
-		return ( (_paths[p].path->lastIn() + (_paths[p].path->preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK))) - ((ZT_PEER_PING_PERIOD * 10) * (uint64_t)_paths[p].clusterSuboptimal) );
+		return ( _paths[p].lastReceive +
+		         (uint64_t)(_paths[p].path->preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK)) +
+						 (uint64_t)(_paths[p].clusterWeights * ZT_PEER_PING_PERIOD) );
 	}
 
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
@@ -384,9 +388,9 @@ private:
 	uint16_t _vRevision;
 	Identity _id;
 	struct {
-		SharedPtr<Path> path;
 		uint64_t lastReceive;
-		bool clusterSuboptimal;
+		SharedPtr<Path> path;
+		unsigned int clusterWeights;
 	} _paths[ZT_MAX_PEER_NETWORK_PATHS];
 	Mutex _paths_m;
 	unsigned int _numPaths;

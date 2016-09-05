@@ -330,12 +330,12 @@ static int cli(int argc,char **argv)
 				out << "200 listpeers <ztaddr> <path> <latency> <version> <role>" << ZT_EOL_S;
 				if (j.is_array()) {
 					for(unsigned long k=0;k<j.size();++k) {
-						auto p = j[k];
+						auto &p = j[k];
 						std::string bestPath;
 						auto paths = p["paths"];
 						if (paths.is_array()) {
 							for(unsigned long i=0;i<paths.size();++i) {
-								auto path = paths[i];
+								auto &path = paths[i];
 								if (path["preferred"]) {
 									char tmp[256];
 									std::string addr = path["address"];
@@ -389,13 +389,13 @@ static int cli(int argc,char **argv)
 				out << "200 listnetworks <nwid> <name> <mac> <status> <type> <dev> <ZT assigned ips>" << ZT_EOL_S;
 				if (j.is_array()) {
 					for(unsigned long i=0;i<j.size();++i) {
-						auto n = j[i];
+						auto &n = j[i];
 						if (n.is_object()) {
 							std::string aa;
-							auto assignedAddresses = n["assignedAddresses"];
+							auto &assignedAddresses = n["assignedAddresses"];
 							if (assignedAddresses.is_array()) {
 								for(unsigned long j=0;j<assignedAddresses.size();++j) {
-									auto addr = assignedAddresses[j];
+									auto &addr = assignedAddresses[j];
 									if (addr.is_string()) {
 										if (aa.length() > 0) aa.push_back(',');
 										aa.append(addr);

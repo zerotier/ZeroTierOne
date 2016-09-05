@@ -292,6 +292,7 @@ unsigned int Utils::snprintf(char *buf,unsigned int len,const char *fmt,...)
 	if ((n >= (int)len)||(n < 0)) {
 		if (len)
 			buf[len - 1] = (char)0;
+		abort();
 		throw std::length_error("buf[] overflow in Utils::snprintf");
 	}
 
