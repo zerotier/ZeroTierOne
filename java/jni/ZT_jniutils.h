@@ -42,6 +42,8 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &config);
 
 jobject newVersion(JNIEnv *env, int major, int minor, int rev);
 
+jobject newVirtualNetworkRoute(JNIEnv *env, const ZT_VirtualNetworkRoute &route);
+
 #ifdef __cplusplus
 }
 #endif
