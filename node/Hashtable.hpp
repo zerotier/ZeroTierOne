@@ -362,7 +362,7 @@ private:
 	template<typename O>
 	static inline unsigned long _hc(const O &obj)
 	{
-		return obj.hashCode();
+		return (unsigned long)obj.hashCode();
 	}
 	static inline unsigned long _hc(const uint64_t i)
 	{

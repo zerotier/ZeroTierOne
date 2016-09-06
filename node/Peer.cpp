@@ -33,7 +33,6 @@ namespace ZeroTier {
 static uint32_t _natKeepaliveBuf = 0;
 
 Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
-	RR(renv),
 	_lastUsed(0),
 	_lastReceive(0),
 	_lastUnicastFrame(0),
@@ -41,6 +40,8 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastAnnouncedTo(0),
 	_lastDirectPathPushSent(0),
 	_lastDirectPathPushReceive(0),
+	RR(renv),
+	_remoteClusterOptimal4(0),
 	_vProto(0),
 	_vMajor(0),
 	_vMinor(0),
@@ -50,6 +51,7 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_latency(0),
 	_directPathPushCutoffCount(0)
 {
+	memset(_remoteClusterOptimal6,0,sizeof(_remoteClusterOptimal6));
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))
 		throw std::runtime_error("new peer identity key agreement failed");
 }
@@ -126,7 +128,7 @@ void Peer::received(
 					_paths[p].lastReceive = now;
 					_paths[p].path = path; // local address may have changed!
 #ifdef ZT_ENABLE_CLUSTER
-					_paths[p].clusterWeights = (unsigned int)(!suboptimalPath);
+					_paths[p].localClusterSuboptimal = suboptimalPath;
 #endif
 					pathIsConfirmed = true;
 					break;
@@ -173,11 +175,9 @@ void Peer::received(
 				_paths[slot].lastReceive = now;
 				_paths[slot].path = path;
 #ifdef ZT_ENABLE_CLUSTER
-				_paths[slot].clusterWeights = (unsigned int)(!suboptimalPath);
+				_paths[p].localClusterSuboptimal = suboptimalPath;
 				if (RR->cluster)
 					RR->cluster->broadcastHavePeer(_id);
-#else
-				_paths[slot].clusterWeights = 1;
 #endif
 			} else {
 				TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),path->address().toString().c_str());
@@ -214,26 +214,6 @@ bool Peer::hasActivePathTo(uint64_t now,const InetAddress &addr) const
 			return true; 
 	}
 	return false;
-}
-
-void Peer::setClusterOptimal(const InetAddress &addr)
-{
-	Mutex::Lock _l(_paths_m);
-
-	int opt = -1;
-	for(unsigned int p=0;p<_numPaths;++p) {
-		if (_paths[p].path->address() == addr) {
-			opt = (int)p;
-			break;
-		}
-	}
-
-	if (opt >= 0) { // only change anything if we have the optimal path
-		for(unsigned int p=0;p<_numPaths;++p) {
-			if (_paths[p].path->address().ss_family == addr.ss_family)
-				_paths[p].clusterWeights = ((int)p == opt) ? 2 : 0;
-		}
-	}
 }
 
 bool Peer::sendDirect(const void *data,unsigned int len,uint64_t now,bool forceEvenIfDead)
@@ -350,7 +330,9 @@ bool Peer::resetWithinScope(InetAddress::IpScope scope,uint64_t now)
 			if (x != y) {
 				_paths[y].lastReceive = _paths[x].lastReceive;
 				_paths[y].path = _paths[x].path;
-				_paths[y].clusterWeights = _paths[x].clusterWeights;
+#ifdef ZT_ENABLE_CLUSTER
+				_paths[y].localClusterSuboptimal = _paths[x].localClusterSuboptimal;
+#endif
 			}
 			++y;
 		}
@@ -399,7 +381,9 @@ void Peer::clean(uint64_t now)
 			if (y != x) {
 				_paths[y].lastReceive = _paths[x].lastReceive;
 				_paths[y].path = _paths[x].path;
-				_paths[y].clusterWeights = _paths[x].clusterWeights;
+#ifdef ZT_ENABLE_CLUSTER
+				_paths[y].localClusterSuboptimal = _paths[x].localClusterSuboptimal;
+#endif
 			}
 			++y;
 		}

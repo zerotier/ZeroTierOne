@@ -123,11 +123,16 @@ public:
 	/**
 	 * Set which known path for an address family is optimal
 	 *
-	 * This only modifies paths within the same address family
-	 *
 	 * @param addr Address to make exclusive
 	 */
-	void setClusterOptimal(const InetAddress &addr);
+	inline void setClusterOptimal(const InetAddress &addr)
+	{
+		if (addr.ss_family == AF_INET) {
+			_remoteClusterOptimal4 = (uint32_t)reinterpret_cast<const struct sockaddr_in *>(&addr)->sin_addr.s_addr;
+		} else if (addr.ss_family == AF_INET6) {
+			memcpy(_remoteClusterOptimal6,reinterpret_cast<const struct sockaddr_in6 *>(&addr)->sin6_addr.s6_addr,16);
+		}
+	}
 
 	/**
 	 * Send via best direct path
@@ -367,14 +372,30 @@ private:
 
 	inline uint64_t _pathScore(const unsigned int p) const
 	{
-		return ( _paths[p].lastReceive +
-		         (uint64_t)(_paths[p].path->preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK)) +
-						 (uint64_t)(_paths[p].clusterWeights * ZT_PEER_PING_PERIOD) );
+		uint64_t s = ZT_PEER_PING_PERIOD;
+		if (_paths[p].path->address().ss_family == AF_INET) {
+			s += _paths[p].lastReceive + (uint64_t)(_paths[p].path->preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK)) + (uint64_t)(ZT_PEER_PING_PERIOD * (unsigned long)(reinterpret_cast<const struct sockaddr_in *>(&(_paths[p].path->address()))->sin_addr.s_addr == _remoteClusterOptimal4));
+		} else if (_paths[p].path->address().ss_family == AF_INET6) {
+			uint64_t clusterWeight = ZT_PEER_PING_PERIOD;
+			const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&(_paths[p].path->address()))->sin6_addr.s6_addr);
+			for(long i=0;i<16;++i) {
+				if (a[i] != _remoteClusterOptimal6[i]) {
+					clusterWeight = 0;
+					break;
+				}
+			}
+			s += _paths[p].lastReceive + (uint64_t)(_paths[p].path->preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK)) + clusterWeight;
+		} else {
+			s += _paths[p].lastReceive + (uint64_t)(_paths[p].path->preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK));
+		}
+#ifdef ZT_ENABLE_CLUSTER
+		s -= ZT_PEER_PING_PERIOD * (uint64_t)_paths[p].localClusterSuboptimal;
+#endif
+		return s;
 	}
 
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
-
-	const RuntimeEnvironment *RR;
+	uint8_t _remoteClusterOptimal6[16];
 	uint64_t _lastUsed;
 	uint64_t _lastReceive; // direct or indirect
 	uint64_t _lastUnicastFrame;
@@ -382,6 +403,8 @@ private:
 	uint64_t _lastAnnouncedTo;
 	uint64_t _lastDirectPathPushSent;
 	uint64_t _lastDirectPathPushReceive;
+	const RuntimeEnvironment *RR;
+	uint32_t _remoteClusterOptimal4;
 	uint16_t _vProto;
 	uint16_t _vMajor;
 	uint16_t _vMinor;
@@ -390,7 +413,9 @@ private:
 	struct {
 		uint64_t lastReceive;
 		SharedPtr<Path> path;
-		unsigned int clusterWeights;
+#ifdef ZT_ENABLE_CLUSTER
+		bool localClusterSuboptimal;
+#endif
 	} _paths[ZT_MAX_PEER_NETWORK_PATHS];
 	Mutex _paths_m;
 	unsigned int _numPaths;
