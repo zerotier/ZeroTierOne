@@ -289,10 +289,10 @@ public:
 	 * @param now Current time
 	 * @return True if this peer has at least one active direct path that is not cluster-suboptimal
 	 */
-	inline bool hasClusterOptimalPath(uint64_t now) const
+	inline bool hasLocalClusterOptimalPath(uint64_t now) const
 	{
 		for(unsigned int p=0,np=_numPaths;p<np;++p) {
-			if ( (_paths[p].path->alive(now)) && ((_paths[p].clusterWeights & 1) != 0) )
+			if ( (_paths[p].path->alive(now)) && (!_paths[p].localClusterSuboptimal) )
 				return true;
 		}
 		return false;

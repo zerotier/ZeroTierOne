@@ -361,7 +361,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 					case CLUSTER_MESSAGE_WANT_PEER: {
 						const Address zeroTierAddress(dmsg.field(ptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); ptr += ZT_ADDRESS_LENGTH;
 						SharedPtr<Peer> peer(RR->topology->getPeerNoCache(zeroTierAddress));
-						if ( (peer) && (peer->hasClusterOptimalPath(RR->node->now())) ) {
+						if ( (peer) && (peer->hasLocalClusterOptimalPath(RR->node->now())) ) {
 							Buffer<1024> buf;
 							peer->identity().serialize(buf);
 							Mutex::Lock _l2(_members[fromMemberId].lock);

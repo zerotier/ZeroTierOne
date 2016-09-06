@@ -175,7 +175,7 @@ void Peer::received(
 				_paths[slot].lastReceive = now;
 				_paths[slot].path = path;
 #ifdef ZT_ENABLE_CLUSTER
-				_paths[p].localClusterSuboptimal = suboptimalPath;
+				_paths[slot].localClusterSuboptimal = suboptimalPath;
 				if (RR->cluster)
 					RR->cluster->broadcastHavePeer(_id);
 #endif
