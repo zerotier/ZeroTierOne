@@ -283,7 +283,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer
 			// VALID -- if we made it here, packet passed identity and authenticity checks!
 		}
 
-		if (externalSurfaceAddress)
+		if ((externalSurfaceAddress)&&(hops() == 0))
 			RR->sa->iam(id.address(),_path->localAddress(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(id),RR->node->now());
 
 		Packet outp(id.address(),RR->identity.address(),Packet::VERB_OK);
@@ -391,7 +391,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				peer->addDirectLatencyMeasurment(latency);
 				peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
 
-				if (externalSurfaceAddress)
+				if ((externalSurfaceAddress)&&(hops() == 0))
 					RR->sa->iam(peer->address(),_path->localAddress(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(peer->identity()),RR->node->now());
 			}	break;
 
@@ -516,8 +516,8 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<
 {
 	try {
 		const Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-		const SharedPtr<Peer> withPeer(RR->topology->getPeer(with));
-		if (withPeer) {
+		const SharedPtr<Peer> rendezvousWith(RR->topology->getPeer(with));
+		if (rendezvousWith) {
 			const unsigned int port = at<uint16_t>(ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT);
 			const unsigned int addrlen = (*this)[ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN];
 			if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
@@ -525,8 +525,8 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<
 				if (!RR->topology->isUpstream(peer->identity())) {
 					TRACE("RENDEZVOUS from %s says %s might be at %s, ignoring since peer is not upstream",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
 				} else if (RR->node->shouldUsePathForZeroTierTraffic(_path->localAddress(),atAddr)) {
-					RR->node->putPacket(_path->localAddress(),atAddr,"NATSUX",6,2); // send low-TTL packet to 'open' local NAT(s)
-					peer->sendHELLO(_path->localAddress(),atAddr,RR->node->now());
+					RR->node->putPacket(_path->localAddress(),atAddr,"ABRE",4,2); // send low-TTL junk packet to 'open' local NAT(s) and stateful firewalls
+					rendezvousWith->sendHELLO(_path->localAddress(),atAddr,RR->node->now());
 					TRACE("RENDEZVOUS from %s says %s might be at %s, sent verification attempt",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
 				} else {
 					TRACE("RENDEZVOUS from %s says %s might be at %s, ignoring since path is not suitable",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());

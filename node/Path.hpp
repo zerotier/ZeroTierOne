@@ -29,6 +29,7 @@
 #include "InetAddress.hpp"
 #include "SharedPtr.hpp"
 #include "AtomicCounter.hpp"
+#include "NonCopyable.hpp"
 
 /**
  * Maximum return value of preferenceRank()
@@ -42,7 +43,7 @@ class RuntimeEnvironment;
 /**
  * A path across the physical network
  */
-class Path
+class Path : NonCopyable
 {
 	friend class SharedPtr<Path>;
 

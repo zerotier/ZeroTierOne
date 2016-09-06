@@ -339,7 +339,9 @@ bool Peer::resetWithinScope(InetAddress::IpScope scope,uint64_t now)
 		++x;
 	}
 	_numPaths = y;
-	return (y < np);
+	while (y < ZT_MAX_PEER_NETWORK_PATHS)
+		_paths[y++].path.zero(); // let go of unused SmartPtr<>'s
+	return (_numPaths < np);
 }
 
 void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
@@ -390,6 +392,8 @@ void Peer::clean(uint64_t now)
 		++x;
 	}
 	_numPaths = y;
+	while (y < ZT_MAX_PEER_NETWORK_PATHS)
+		_paths[y++].path.zero(); // let go of unused SmartPtr<>'s
 }
 
 bool Peer::_pushDirectPaths(const SharedPtr<Path> &path,uint64_t now)
