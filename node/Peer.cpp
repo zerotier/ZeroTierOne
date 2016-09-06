@@ -138,6 +138,7 @@ void Peer::received(
 			if (verb == Packet::VERB_OK) {
 				Mutex::Lock _l(_paths_m);
 
+				// Since this is a new path, figure out where to put it (possibly replacing an old/dead one)
 				unsigned int slot;
 				if (_numPaths < ZT_MAX_PEER_NETWORK_PATHS) {
 					slot = _numPaths++;
@@ -157,6 +158,7 @@ void Peer::received(
 					if (worstSlot >= 0) {
 						slot = (unsigned int)worstSlot;
 					} else {
+						// If we can't find one with the same family, replace the worst of any family
 						slot = ZT_MAX_PEER_NETWORK_PATHS - 1;
 						for(unsigned int p=0;p<_numPaths;++p) {
 							const uint64_t s = _pathScore(p);
