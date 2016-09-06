@@ -29,7 +29,7 @@ package com.zerotier.sdk;
 
 import java.net.InetSocketAddress;
 
-public class VirtualNetworkRoute
+public final class VirtualNetworkRoute
 {
 	private VirtualNetworkRoute() {}
 

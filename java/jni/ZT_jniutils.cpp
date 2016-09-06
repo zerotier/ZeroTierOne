@@ -710,14 +710,16 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
         return NULL;
     }
 
-    assignedAddressesField = lookup.findField(vnetConfigClass, "assignedAddresses", "[Ljava/net/InetSocketAddress;");
+    assignedAddressesField = lookup.findField(vnetConfigClass, "assignedAddresses", 
+        "[Ljava/net/InetSocketAddress;");
     if(env->ExceptionCheck() || assignedAddressesField == NULL)
     {
         LOGE("Error getting assignedAddresses field");
         return NULL;
     }
 
-    routesField = lookup.findField(vnetConfigClass, "routes", "[Lcom/zerotier/sdk/VirtualNetworkRoute");
+    routesField = lookup.findField(vnetConfigClass, "routes", 
+        "[Lcom/zerotier/sdk/VirtualNetworkRoute;");
     if(env->ExceptionCheck() || routesField == NULL)
     {
         LOGE("Error getting routes field");
