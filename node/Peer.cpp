@@ -303,7 +303,7 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 	}
 
 	if (bestp >= 0) {
-		if ((now - _paths[best].lastReceive) >= ZT_PEER_PING_PERIOD) {
+		if ((now - _paths[bestp].lastReceive) >= ZT_PEER_PING_PERIOD) {
 			sendHELLO(_paths[bestp].path->localAddress(),_paths[bestp].path->address(),now);
 		} else if (_paths[bestp].path->needsHeartbeat(now)) {
 			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
