@@ -41,12 +41,12 @@
 #include "Identity.hpp"
 
 /**
- * Default maximum credential TTL and maxDelta for COM timestamps
+ * Default maximum time delta for COMs, tags, and capabilities
  *
  * The current value is two hours, providing ample time for a controller to
  * experience fail-over, etc.
  */
-#define ZT_NETWORKCONFIG_DEFAULT_MAX_CREDENTIAL_TTL 7200000ULL
+#define ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA 7200000ULL
 
 /**
  * Default minimum credential TTL and maxDelta for COM timestamps
@@ -54,7 +54,7 @@
  * This is just slightly over three minutes and provides three retries for
  * all currently online members to refresh.
  */
-#define ZT_NETWORKCONFIG_DEFAULT_MIN_CREDENTIAL_TTL 185000ULL
+#define ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA 185000ULL
 
 /**
  * Flag: allow passive bridging (experimental)
@@ -148,8 +148,8 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_TYPE "t"
 // text
 #define ZT_NETWORKCONFIG_DICT_KEY_NAME "n"
-// credential time to live in ms
-#define ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TTL "cttl"
+// credential time max delta in ms
+#define ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA "ctmd"
 // binary serialized certificate of membership
 #define ZT_NETWORKCONFIG_DICT_KEY_COM "C"
 // specialists (binary array of uint64_t)
@@ -372,7 +372,7 @@ public:
 	{
 		printf("networkId==%.16llx\n",networkId);
 		printf("timestamp==%llu\n",timestamp);
-		printf("credentialTimeToLive==%llu\n",credentialTimeToLive);
+		printf("credentialTimeMaxDelta==%llu\n",credentialTimeMaxDelta);
 		printf("revision==%llu\n",revision);
 		printf("issuedTo==%.10llx\n",issuedTo.toInt());
 		printf("multicastLimit==%u\n",multicastLimit);
@@ -407,9 +407,9 @@ public:
 	uint64_t timestamp;
 
 	/**
-	 * TTL for capabilities and tags
+	 * Max difference between timestamp and tag/capability timestamp
 	 */
-	uint64_t credentialTimeToLive;
+	uint64_t credentialTimeMaxDelta;
 
 	/**
 	 * Controller-side revision counter for this configuration

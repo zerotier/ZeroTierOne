@@ -144,7 +144,7 @@ public:
 	}
 
 	/**
-	 * Check whether a capability or tag is expired
+	 * Check whether a capability or tag is within its max delta from the timestamp of our network config and newer than any blacklist cutoff time
 	 *
 	 * @param cred Credential to check -- must have timestamp() accessor method
 	 * @return True if credential is NOT expired
@@ -153,7 +153,8 @@ public:
 	inline bool isCredentialTimestampValid(const NetworkConfig &nconf,const C &cred) const
 	{
 		const uint64_t ts = cred.timestamp();
-		return ( ( (ts >= nconf.timestamp) || ((nconf.timestamp - ts) <= nconf.credentialTimeToLive) ) && (ts > _blacklistBefore) );
+		const uint64_t delta = (ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts);
+		return ((delta <= nconf.credentialTimeMaxDelta)&&(ts > _blacklistBefore));
 	}
 
 	/**
