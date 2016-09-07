@@ -45,7 +45,6 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastReceive(0),
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
-	_lastAnnouncedTo(0),
 	_lastDirectPathPushSent(0),
 	_lastDirectPathPushReceive(0),
 	RR(renv),
@@ -66,12 +65,13 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 
 void Peer::received(
 	const SharedPtr<Path> &path,
-	unsigned int hops,
-	uint64_t packetId,
-	Packet::Verb verb,
-	uint64_t inRePacketId,
-	Packet::Verb inReVerb,
-	const bool trustEstablished)
+	const unsigned int hops,
+	const uint64_t packetId,
+	const Packet::Verb verb,
+	const uint64_t inRePacketId,
+	const Packet::Verb inReVerb,
+	const bool trustEstablished,
+	const SharedPtr<Network> &network)
 {
 	const uint64_t now = RR->node->now();
 
@@ -196,13 +196,6 @@ void Peer::received(
 	} else if (trustEstablished) {
 		// Send PUSH_DIRECT_PATHS if hops>0 (relayed) and we have a trust relationship (common network membership)
 		_pushDirectPaths(path,now);
-	}
-
-	if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
-		_lastAnnouncedTo = now;
-		const std::vector< SharedPtr<Network> > networks(RR->node->allNetworks());
-		for(std::vector< SharedPtr<Network> >::const_iterator n(networks.begin());n!=networks.end();++n)
-			(*n)->tryAnnounceMulticastGroupsTo(SharedPtr<Peer>(this));
 	}
 }
 

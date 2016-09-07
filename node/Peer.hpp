@@ -45,6 +45,8 @@
 
 namespace ZeroTier {
 
+class Network;
+
 /**
  * Peer on P2P Network (virtual layer 1)
  */
@@ -103,15 +105,17 @@ public:
 	 * @param inRePacketId Packet ID in reply to (default: none)
 	 * @param inReVerb Verb in reply to (for OK/ERROR, default: VERB_NOP)
 	 * @param trustEstablished If true, some form of non-trivial trust (like allowed in network) has been established
+	 * @param network Network to which this packet pertains or NULL if none
 	 */
 	void received(
 		const SharedPtr<Path> &path,
-		unsigned int hops,
-		uint64_t packetId,
-		Packet::Verb verb,
-		uint64_t inRePacketId,
-		Packet::Verb inReVerb,
-		const bool trustEstablished);
+		const unsigned int hops,
+		const uint64_t packetId,
+		const Packet::Verb verb,
+		const uint64_t inRePacketId,
+		const Packet::Verb inReVerb,
+		const bool trustEstablished,
+		const SharedPtr<Network> &network);
 
 	/**
 	 * @param now Current time
@@ -407,13 +411,12 @@ private:
 		return s;
 	}
 
-	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
+	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
 	uint8_t _remoteClusterOptimal6[16];
 	uint64_t _lastUsed;
 	uint64_t _lastReceive; // direct or indirect
 	uint64_t _lastUnicastFrame;
 	uint64_t _lastMulticastFrame;
-	uint64_t _lastAnnouncedTo;
 	uint64_t _lastDirectPathPushSent;
 	uint64_t _lastDirectPathPushReceive;
 	const RuntimeEnvironment *RR;

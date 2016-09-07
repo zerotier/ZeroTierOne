@@ -180,14 +180,14 @@
 #define ZT_PEER_SECRET_KEY_LENGTH 32
 
 /**
+ * Minimum delay between timer task checks to prevent thrashing
+ */
+#define ZT_CORE_TIMER_TASK_GRANULARITY 500
+
+/**
  * How often Topology::clean() and Network::clean() and similar are called, in ms
  */
 #define ZT_HOUSEKEEPING_PERIOD 120000
-
-/**
- * Overriding granularity for timer tasks to prevent CPU-intensive thrashing on every packet
- */
-#define ZT_CORE_TIMER_TASK_GRANULARITY 500
 
 /**
  * How long to remember peer records in RAM if they haven't been used
@@ -227,6 +227,11 @@
 #define ZT_MULTICAST_LIKE_EXPIRE 600000
 
 /**
+ * Period for multicast LIKE announcements
+ */
+#define ZT_MULTICAST_ANNOUNCE_PERIOD 120000
+
+/**
  * Delay between explicit MULTICAST_GATHER requests for a given multicast channel
  */
 #define ZT_MULTICAST_EXPLICIT_GATHER_DELAY (ZT_MULTICAST_LIKE_EXPIRE / 10)
@@ -239,12 +244,9 @@
 #define ZT_MULTICAST_TRANSMIT_TIMEOUT 5000
 
 /**
- * Delay between scans of the topology active peer DB for peers that need ping
- *
- * This is also how often pings will be retried to upstream peers (relays, roots)
- * constantly until something is heard.
+ * Delay between checks of peer pings, etc., and also related housekeeping tasks
  */
-#define ZT_PING_CHECK_INVERVAL 10000
+#define ZT_PING_CHECK_INVERVAL 5000
 
 /**
  * How frequently to send heartbeats over in-use paths
@@ -297,14 +299,6 @@
  * to attempt NAT-t and gives each the other's corresponding IP:port pair.
  */
 #define ZT_MIN_UNITE_INTERVAL 30000
-
-/**
- * Delay between initial direct NAT-t packet and more aggressive techniques
- *
- * This may also be a delay before sending the first packet if we determine
- * that we should wait for the remote to initiate rendezvous first.
- */
-#define ZT_NAT_T_TACTICAL_ESCALATION_DELAY 1000
 
 /**
  * Sanity limit on maximum bridge routes

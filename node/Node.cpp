@@ -261,13 +261,11 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 			{
 				Mutex::Lock _l(_networks_m);
 				for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
-					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!n->second->hasConfig())) {
+					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!n->second->hasConfig()))
 						needConfig.push_back(n->second);
-					}
+					n->second->announceMulticastGroups();
 				}
 			}
-
-			// Request updated configuration for networks that need it
 			for(std::vector< SharedPtr<Network> >::const_iterator n(needConfig.begin());n!=needConfig.end();++n)
 				(*n)->requestConfiguration();
 
