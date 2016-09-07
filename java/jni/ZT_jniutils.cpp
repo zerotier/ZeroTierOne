@@ -371,7 +371,6 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
     jfieldID addressField = NULL;
     jfieldID lastSendField = NULL;
     jfieldID lastReceiveField = NULL;
-    jfieldID activeField = NULL;
     jfieldID preferredField = NULL;
 
     jmethodID ppp_constructor = NULL;
@@ -401,13 +400,6 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
     if(env->ExceptionCheck() || lastReceiveField == NULL)
     {
         LOGE("Error finding lastReceive field");
-        return NULL;
-    }
-
-    activeField = lookup.findField(pppClass, "active", "Z");
-    if(env->ExceptionCheck() || activeField == NULL)
-    {
-        LOGE("Error finding active field");
         return NULL;
     }
 
@@ -441,7 +433,6 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
     env->SetObjectField(pppObject, addressField, addressObject);
     env->SetLongField(pppObject, lastSendField, ppp.lastSend);
     env->SetLongField(pppObject, lastReceiveField, ppp.lastReceive);
-    env->SetBooleanField(pppObject, activeField, ppp.active);
     env->SetBooleanField(pppObject, preferredField, ppp.preferred);
 
     if(env->ExceptionCheck()) {

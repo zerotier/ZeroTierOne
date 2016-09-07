@@ -37,7 +37,6 @@ public final class PeerPhysicalPath {
     private long lastSend;
     private long lastReceive;
     private boolean fixed;
-    private boolean active;
     private boolean preferred;
 
     private PeerPhysicalPath() {}
@@ -68,13 +67,6 @@ public final class PeerPhysicalPath {
      */
     public final boolean isFixed() {
         return fixed;
-    }
-
-    /**
-     * Is path active?
-     */
-    public final boolean isActive() {
-        return active;
     }
 
     /**
