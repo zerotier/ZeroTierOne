@@ -526,7 +526,7 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<
 					TRACE("RENDEZVOUS from %s says %s might be at %s, ignoring since peer is not upstream",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
 				} else if (RR->node->shouldUsePathForZeroTierTraffic(_path->localAddress(),atAddr)) {
 					RR->node->putPacket(_path->localAddress(),atAddr,"ABRE",4,2); // send low-TTL junk packet to 'open' local NAT(s) and stateful firewalls
-					rendezvousWith->sendHELLO(_path->localAddress(),atAddr,RR->node->now());
+					rendezvousWith->attemptToContactAt(_path->localAddress(),atAddr,RR->node->now());
 					TRACE("RENDEZVOUS from %s says %s might be at %s, sent verification attempt",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
 				} else {
 					TRACE("RENDEZVOUS from %s says %s might be at %s, ignoring since path is not suitable",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
@@ -1050,7 +1050,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 					if ( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && (!redundant) && (RR->node->shouldUsePathForZeroTierTraffic(_path->localAddress(),a)) ) {
 						if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-							peer->sendHELLO(InetAddress(),a,now);
+							peer->attemptToContactAt(InetAddress(),a,now);
 						} else {
 							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
@@ -1069,7 +1069,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 					if ( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && (!redundant) && (RR->node->shouldUsePathForZeroTierTraffic(_path->localAddress(),a)) ) {
 						if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-							peer->sendHELLO(InetAddress(),a,now);
+							peer->attemptToContactAt(InetAddress(),a,now);
 						} else {
 							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}

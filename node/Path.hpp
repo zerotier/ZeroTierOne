@@ -138,6 +138,13 @@ public:
 	bool send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now);
 
 	/**
+	 * Manually update last sent time
+	 *
+	 * @param t Time of send
+	 */
+	inline void sent(const uint64_t t) { _lastOut = t; }
+
+	/**
 	 * @return Address of local side of this path or NULL if unspecified
 	 */
 	inline const InetAddress &localAddress() const { return _localAddress; }

@@ -166,6 +166,17 @@ public:
 	void sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now);
 
 	/**
+	 * Send ECHO (or HELLO for older peers) to this peer at the given address
+	 *
+	 * No statistics or sent times are updated here.
+	 *
+	 * @param localAddr Local address
+	 * @param atAddress Destination address
+	 * @param now Current time
+	 */
+	void attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now);
+
+	/**
 	 * Send pings or keepalives depending on configured timeouts
 	 *
 	 * @param now Current time

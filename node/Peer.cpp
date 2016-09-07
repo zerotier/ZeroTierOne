@@ -189,16 +189,8 @@ void Peer::received(
 #endif
 			} else {
 				TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),path->address().toString().c_str());
-
-				if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
-					// Newer than 1.1.0 can use ECHO, which is smaller
-					Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
-					outp.armor(_key,true);
-					path->send(RR,outp.data(),outp.size(),now);
-				} else {
-					// For backward compatibility we send HELLO to ancient nodes
-					sendHELLO(path->localAddress(),path->address(),now);
-				}
+				attemptToContactAt(path->localAddress(),path->address(),now);
+				path->sent(now);
 			}
 		}
 	} else if (trustEstablished) {
@@ -254,7 +246,7 @@ SharedPtr<Path> Peer::getBestPath(uint64_t now,bool includeExpired)
 	int bestp = -1;
 	uint64_t best = 0ULL;
 	for(unsigned int p=0;p<_numPaths;++p) {
-		if ( ((now - _paths[p].lastReceive) < ZT_PEER_PATH_EXPIRATION) || (includeExpired) ) {
+		if ( ((now - _paths[p].lastReceive) <= ZT_PEER_PATH_EXPIRATION) || (includeExpired) ) {
 			const uint64_t s = _pathScore(p,now);
 			if (s >= best) {
 				best = s;
@@ -286,6 +278,17 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
 }
 
+void Peer::attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now)
+{
+	if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
+		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
+		outp.armor(_key,true);
+		RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
+	} else {
+		sendHELLO(localAddr,atAddress,now);
+	}
+}
+
 bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 {
 	Mutex::Lock _l(_paths_m);
@@ -304,7 +307,8 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 
 	if (bestp >= 0) {
 		if ((now - _paths[bestp].lastReceive) >= ZT_PEER_PING_PERIOD) {
-			sendHELLO(_paths[bestp].path->localAddress(),_paths[bestp].path->address(),now);
+			attemptToContactAt(_paths[bestp].path->localAddress(),_paths[bestp].path->address(),now);
+			_paths[bestp].path->sent(now);
 		} else if (_paths[bestp].path->needsHeartbeat(now)) {
 			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
 			_paths[bestp].path->send(RR,&_natKeepaliveBuf,sizeof(_natKeepaliveBuf),now);
@@ -331,7 +335,8 @@ bool Peer::resetWithinScope(InetAddress::IpScope scope,int inetAddressFamily,uin
 	bool resetSomething = false;
 	for(unsigned int p=0;p<_numPaths;++p) {
 		if ( (_paths[p].path->address().ss_family == inetAddressFamily) && (_paths[p].path->address().ipScope() == scope) ) {
-			sendHELLO(_paths[p].path->localAddress(),_paths[p].path->address(),now);
+			attemptToContactAt(_paths[p].path->localAddress(),_paths[p].path->address(),now);
+			_paths[p].path->sent(now);
 			_paths[p].lastReceive >>= 2; // de-prioritize heavily vs. other paths, will get reset if we get OK(HELLO) or other traffic
 			resetSomething = true;
 		}
