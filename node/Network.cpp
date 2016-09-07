@@ -1237,6 +1237,13 @@ void Network::_announceMulticastGroups(const MulticastGroup *const onlyThis)
 			}
 			_announceMulticastGroupsTo(*a,groups);
 		}
+
+		// Announce to controller, which does not need our COM since it obviously
+		// knows if we are a member. Of course if we already did or are going to
+		// below then we can skip it here.
+		const Address c(controller());
+		if ( (std::find(upstreams.begin(),upstreams.end(),c) == upstreams.end()) && (!_memberships.contains(c)) )
+			_announceMulticastGroupsTo(c,groups);
 	}
 
 	// Make sure that all "network anchors" have Membership records so we will
