@@ -89,11 +89,10 @@ void Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint
 	}
 }
 
-int Membership::addCredential(const RuntimeEnvironment *RR,const Network *network,const CertificateOfMembership &com)
+int Membership::addCredential(const RuntimeEnvironment *RR,const CertificateOfMembership &com)
 {
 	if (_com == com) {
 		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx ACCEPTED (redundant)",com.issuedTo().toString().c_str(),com.networkId());
-		sendCredentialsIfNeeded(RR,RR->node->now(),com.issuedTo(),network->config(),(const Capability *)0);
 		return 0;
 	}
 
@@ -104,7 +103,6 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const Network *networ
 		if (com.timestamp().first > _com.timestamp().first) {
 			_com = com;
 		}
-		sendCredentialsIfNeeded(RR,RR->node->now(),com.issuedTo(),network->config(),(const Capability *)0);
 	} else {
 		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx REJECTED (%d)",com.issuedTo().toString().c_str(),com.networkId(),vr);
 	}

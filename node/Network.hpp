@@ -353,7 +353,7 @@ public:
 		if (com.networkId() != _id)
 			return -1;
 		Mutex::Lock _l(_lock);
-		return _memberships[com.issuedTo()].addCredential(RR,this,com);
+		return _membership(com.issuedTo()).addCredential(RR,com);
 	}
 
 	/**
@@ -365,7 +365,7 @@ public:
 		if (cap.networkId() != _id)
 			return -1;
 		Mutex::Lock _l(_lock);
-		return _memberships[cap.issuedTo()].addCredential(RR,cap);
+		return _membership(cap.issuedTo()).addCredential(RR,cap);
 	}
 
 	/**
@@ -377,7 +377,7 @@ public:
 		if (tag.networkId() != _id)
 			return -1;
 		Mutex::Lock _l(_lock);
-		return _memberships[tag.issuedTo()].addCredential(RR,tag);
+		return _membership(tag.issuedTo()).addCredential(RR,tag);
 	}
 
 	/**
@@ -388,7 +388,7 @@ public:
 	inline void blacklistBefore(const Address &peerAddress,const uint64_t ts)
 	{
 		Mutex::Lock _l(_lock);
-		_memberships[peerAddress].blacklistBefore(ts);
+		_membership(peerAddress).blacklistBefore(ts);
 	}
 
 	/**
@@ -412,6 +412,7 @@ private:
 	void _announceMulticastGroups(const MulticastGroup *const onlyThis);
 	void _announceMulticastGroupsTo(const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups);
 	std::vector<MulticastGroup> _allMulticastGroups() const;
+	Membership &_membership(const Address &a); // also lazily sends COM and MULTICAST_LIKE(s) if this is a new member
 
 	const RuntimeEnvironment *RR;
 	void *_uPtr;

@@ -678,7 +678,7 @@ bool Network::filterOutgoingPacket(
 						accept = true;
 
 						if ((!noTee)&&(cc2)) {
-							_memberships[cc2].sendCredentialsIfNeeded(RR,RR->node->now(),cc2,_config,relevantCap);
+							_membership(cc2).sendCredentialsIfNeeded(RR,RR->node->now(),cc2,_config,relevantCap);
 
 							Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 							outp.append(_id);
@@ -710,7 +710,7 @@ bool Network::filterOutgoingPacket(
 
 	if (accept) {
 		if ((!noTee)&&(cc)) {
-			_memberships[cc].sendCredentialsIfNeeded(RR,RR->node->now(),cc,_config,relevantCap);
+			_membership(cc).sendCredentialsIfNeeded(RR,RR->node->now(),cc,_config,relevantCap);
 
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
@@ -724,7 +724,7 @@ bool Network::filterOutgoingPacket(
 		}
 
 		if ((ztDest != ztDest2)&&(ztDest2)) {
-			_memberships[ztDest2].sendCredentialsIfNeeded(RR,RR->node->now(),ztDest2,_config,relevantCap);
+			_membership(ztDest2).sendCredentialsIfNeeded(RR,RR->node->now(),ztDest2,_config,relevantCap);
 
 			Packet outp(ztDest2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
@@ -764,7 +764,7 @@ int Network::filterIncomingPacket(
 
 	Mutex::Lock _l(_lock);
 
-	Membership &m = _memberships[ztDest];
+	Membership &m = _membership(ztDest);
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
 	switch (_doZtFilter(RR,_config,true,sourcePeer->address(),ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc,ccLength)) {
@@ -791,7 +791,7 @@ int Network::filterIncomingPacket(
 
 				if (accept) {
 					if (cc2) {
-						_memberships[cc2].sendCredentialsIfNeeded(RR,RR->node->now(),cc2,_config,(const Capability *)0);
+						_membership(cc2).sendCredentialsIfNeeded(RR,RR->node->now(),cc2,_config,(const Capability *)0);
 
 						Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 						outp.append(_id);
@@ -822,7 +822,7 @@ int Network::filterIncomingPacket(
 
 	if (accept) {
 		if (cc) {
-			_memberships[cc].sendCredentialsIfNeeded(RR,RR->node->now(),cc,_config,(const Capability *)0);
+			_membership(cc).sendCredentialsIfNeeded(RR,RR->node->now(),cc,_config,(const Capability *)0);
 
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
@@ -836,7 +836,7 @@ int Network::filterIncomingPacket(
 		}
 
 		if ((ztDest != ztDest2)&&(ztDest2)) {
-			_memberships[ztDest2].sendCredentialsIfNeeded(RR,RR->node->now(),ztDest2,_config,(const Capability *)0);
+			_membership(ztDest2).sendCredentialsIfNeeded(RR,RR->node->now(),ztDest2,_config,(const Capability *)0);
 
 			Packet outp(ztDest2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
@@ -1247,7 +1247,8 @@ void Network::_announceMulticastGroups(const MulticastGroup *const onlyThis)
 	}
 
 	// Make sure that all "network anchors" have Membership records so we will
-	// push multicasts to them.
+	// push multicasts to them. Note that _membership() also does this but in a
+	// piecemeal on-demand fashion.
 	const std::vector<Address> anchors(_config.anchors());
 	for(std::vector<Address>::const_iterator a(anchors.begin());a!=anchors.end();++a)
 		_memberships[*a];
@@ -1304,6 +1305,20 @@ std::vector<MulticastGroup> Network::_allMulticastGroups() const
 	std::sort(mgs.begin(),mgs.end());
 	mgs.erase(std::unique(mgs.begin(),mgs.end()),mgs.end());
 	return mgs;
+}
+
+Membership &Network::_membership(const Address &a)
+{
+	// assumes _lock is locked
+	const unsigned long ms = _memberships.size();
+	Membership &m = _memberships[a];
+	if (ms != _memberships.size()) {
+		const uint64_t now = RR->node->now();
+		m.sendCredentialsIfNeeded(RR,now,a,_config,(const Capability *)0);
+		_announceMulticastGroupsTo(a,_allMulticastGroups());
+		m.likingMulticasts(now);
+	}
+	return m;
 }
 
 } // namespace ZeroTier

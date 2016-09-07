@@ -218,11 +218,10 @@ public:
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 *
 	 * @param RR Runtime environment
-	 * @param network Network that owns this Membership
 	 * @param com Certificate of membership
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
-	int addCredential(const RuntimeEnvironment *RR,const Network *network,const CertificateOfMembership &com);
+	int addCredential(const RuntimeEnvironment *RR,const CertificateOfMembership &com);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
