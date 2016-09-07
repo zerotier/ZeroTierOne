@@ -45,8 +45,6 @@
 
 namespace ZeroTier {
 
-class Network;
-
 /**
  * Peer on P2P Network (virtual layer 1)
  */
@@ -105,7 +103,6 @@ public:
 	 * @param inRePacketId Packet ID in reply to (default: none)
 	 * @param inReVerb Verb in reply to (for OK/ERROR, default: VERB_NOP)
 	 * @param trustEstablished If true, some form of non-trivial trust (like allowed in network) has been established
-	 * @param network Network to which this packet pertains or NULL if none
 	 */
 	void received(
 		const SharedPtr<Path> &path,
@@ -114,8 +111,7 @@ public:
 		const Packet::Verb verb,
 		const uint64_t inRePacketId,
 		const Packet::Verb inReVerb,
-		const bool trustEstablished,
-		const SharedPtr<Network> &network);
+		const bool trustEstablished);
 
 	/**
 	 * @param now Current time

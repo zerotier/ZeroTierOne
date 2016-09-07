@@ -70,8 +70,7 @@ void Peer::received(
 	const Packet::Verb verb,
 	const uint64_t inRePacketId,
 	const Packet::Verb inReVerb,
-	const bool trustEstablished,
-	const SharedPtr<Network> &network)
+	const bool trustEstablished)
 {
 	const uint64_t now = RR->node->now();
 
