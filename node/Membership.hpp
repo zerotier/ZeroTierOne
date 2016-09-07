@@ -32,10 +32,10 @@
 #include "NetworkConfig.hpp"
 
 // Expiration time for capability and tag cache
-#define ZT_MEMBERSHIP_STATE_EXPIRATION_TIME 600000
+#define ZT_MEMBERSHIP_STATE_EXPIRATION_TIME ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA
 
-// Expiration time for Memberships (used in Peer::clean())
-#define ZT_MEMBERSHIP_EXPIRATION_TIME (ZT_MEMBERSHIP_STATE_EXPIRATION_TIME * 2)
+// Expiration time for Memberships (used in Network::clean())
+#define ZT_MEMBERSHIP_EXPIRATION_TIME ZT_PEER_IN_MEMORY_EXPIRATION
 
 namespace ZeroTier {
 
