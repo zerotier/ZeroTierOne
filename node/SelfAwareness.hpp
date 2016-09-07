@@ -36,7 +36,6 @@ class SelfAwareness
 {
 public:
 	SelfAwareness(const RuntimeEnvironment *renv);
-	~SelfAwareness();
 
 	/**
 	 * Called when a trusted remote peer informs us of our external network address

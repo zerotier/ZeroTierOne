@@ -1054,6 +1054,11 @@ typedef struct
 	uint64_t trustedPathId;
 
 	/**
+	 * Is path expired?
+	 */
+	int expired;
+
+	/**
 	 * Is path preferred?
 	 */
 	int preferred;

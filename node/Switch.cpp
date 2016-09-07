@@ -747,14 +747,20 @@ Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlread
 
 bool Switch::_trySend(const Packet &packet,bool encrypt)
 {
-	SharedPtr<Peer> peer(RR->topology->getPeer(packet.destination()));
-
+	const SharedPtr<Peer> peer(RR->topology->getPeer(packet.destination()));
 	if (peer) {
 		const uint64_t now = RR->node->now();
 
-		SharedPtr<Path> viaPath(peer->getBestPath(now));
+		// First get the best path, and if it's dead (and this is not a root)
+		// we attempt to re-activate that path but this packet will flow
+		// upstream. If the path comes back alive, it will be used in the future.
+		// For roots we don't do the alive check since roots are not required
+		// to send heartbeats "down" and because we have to at least try to
+		// go somewhere.
+
+		SharedPtr<Path> viaPath(peer->getBestPath(now,false));
 		if ( (viaPath) && (!viaPath->alive(now)) && (!RR->topology->isRoot(peer->identity())) ) {
-			if ((now - viaPath->lastOut()) > 5000) {
+			if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) >> 2,(uint64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL)) {
 				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ECHO);
 				outp.armor(peer->key(),true);
 				viaPath->send(RR,outp.data(),outp.size(),now);
@@ -763,8 +769,10 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 		}
 		if (!viaPath) {
 			SharedPtr<Peer> relay(RR->topology->getBestRoot());
-			if ( (!relay) || (!(viaPath = relay->getBestPath(now))) )
-				return false;
+			if ( (!relay) || (!(viaPath = relay->getBestPath(now,false))) ) {
+				if (!(viaPath = peer->getBestPath(now,true)))
+					return false;
+			}
 		}
 
 		Packet tmp(packet);
@@ -787,7 +795,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 				unsigned int fragsRemaining = (remaining / (ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));
 				if ((fragsRemaining * (ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH)) < remaining)
 					++fragsRemaining;
-				unsigned int totalFragments = fragsRemaining + 1;
+				const unsigned int totalFragments = fragsRemaining + 1;
 
 				for(unsigned int fno=1;fno<totalFragments;++fno) {
 					chunkSize = std::min(remaining,(unsigned int)(ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));

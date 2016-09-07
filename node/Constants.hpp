@@ -244,17 +244,22 @@
  * This is also how often pings will be retried to upstream peers (relays, roots)
  * constantly until something is heard.
  */
-#define ZT_PING_CHECK_INVERVAL 9000
+#define ZT_PING_CHECK_INVERVAL 10000
 
 /**
  * How frequently to send heartbeats over in-use paths
  */
-#define ZT_PATH_HEARTBEAT_PERIOD 15000
+#define ZT_PATH_HEARTBEAT_PERIOD 10000
 
 /**
  * Paths are considered inactive if they have not received traffic in this long
  */
-#define ZT_PATH_ALIVE_TIMEOUT 35000
+#define ZT_PATH_ALIVE_TIMEOUT 25000
+
+/**
+ * Minimum time between attempts to check dead paths to see if they can be re-awakened
+ */
+#define ZT_PATH_MIN_REACTIVATE_INTERVAL 2500
 
 /**
  * Delay between full-fledge pings of directly connected peers
@@ -262,9 +267,14 @@
 #define ZT_PEER_PING_PERIOD 60000
 
 /**
- * Peers forget paths that have not spoken in this long
+ * Paths are considered expired if they have not produced a real packet in this long
  */
 #define ZT_PEER_PATH_EXPIRATION ((ZT_PEER_PING_PERIOD * 4) + 3000)
+
+/**
+ * How often to retry expired paths that we're still remembering
+ */
+#define ZT_PEER_EXPIRED_PATH_TRIAL_PERIOD (ZT_PEER_PING_PERIOD * 10)
 
 /**
  * Timeout for overall peer activity (measured from last receive)
