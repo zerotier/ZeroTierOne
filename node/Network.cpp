@@ -656,8 +656,12 @@ bool Network::filterOutgoingPacket(
 
 	Mutex::Lock _l(_lock);
 
-	Membership &m = _memberships[ztDest];
-	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
+	Membership *m = (Membership *)0;
+	unsigned int remoteTagCount = 0;
+	if (ztDest) {
+		m = &(_memberships[ztDest]);
+		remoteTagCount = m->getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
+	}
 
 	switch(_doZtFilter(RR,_config,false,ztSource,ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc,ccLength)) {
 
@@ -737,8 +741,8 @@ bool Network::filterOutgoingPacket(
 			RR->sw->send(outp,true);
 
 			return false; // DROP locally, since we redirected
-		} else if (ztDest) {
-			m.sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config,relevantCap);
+		} else if (m) {
+			m->sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config,relevantCap);
 		}
 	}
 
@@ -764,7 +768,7 @@ int Network::filterIncomingPacket(
 
 	Mutex::Lock _l(_lock);
 
-	Membership &m = _membership(ztDest);
+	Membership &m = _membership(sourcePeer->address());
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
 	switch (_doZtFilter(RR,_config,true,sourcePeer->address(),ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc,ccLength)) {
