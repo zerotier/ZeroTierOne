@@ -9,6 +9,7 @@
 
 #include <stdexcept>
 #include <vector>
+#include <set>
 
 namespace ZeroTier {
 
@@ -22,7 +23,6 @@ public:
 	{
 		_device[0] = (char)0;
 		_systemDevice[0] = (char)0;
-		_applied = false;
 	}
 
 	~ManagedRoute()
@@ -32,15 +32,20 @@ public:
 
 	ManagedRoute(const ManagedRoute &r)
 	{
-		_applied = false;
 		*this = r;
 	}
 
 	inline ManagedRoute &operator=(const ManagedRoute &r)
 	{
-		if ((!_applied)&&(!r._applied)) {
-			memcpy(this,&r,sizeof(ManagedRoute)); // InetAddress is memcpy'able
+		if (_applied.size() == 0) {
+			_target = r._target;
+			_via = r._via;
+			_systemVia = r._systemVia;
+			_applied = r._applied;
+			Utils::scopy(_device,sizeof(_device),r._device);
+			Utils::scopy(_systemDevice,sizeof(_systemDevice),r._systemDevice);
 		} else {
+			// Sanity check -- this is an 'assert' to detect a bug
 			fprintf(stderr,"Applied ManagedRoute isn't copyable!\n");
 			abort();
 		}
@@ -65,6 +70,10 @@ public:
 		this->remove();
 		_target = target;
 		_via = via;
+		if (via.ss_family == AF_INET)
+			_via.setPort(32);
+		else if (via.ss_family == AF_INET6)
+			_via.setPort(128);
 		Utils::scopy(_device,sizeof(_device),device);
 		return this->sync();
 	}
@@ -93,13 +102,12 @@ public:
 	inline const char *device() const { return _device; }
 
 private:
-
 	InetAddress _target;
 	InetAddress _via;
 	InetAddress _systemVia; // for route overrides
+	std::set<InetAddress> _applied; // routes currently applied
 	char _device[128];
 	char _systemDevice[128]; // for route overrides
-	bool _applied;
 };
 
 } // namespace ZeroTier
