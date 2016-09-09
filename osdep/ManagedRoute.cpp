@@ -470,7 +470,7 @@ bool ManagedRoute::sync()
 
 #ifdef __LINUX__ // ----------------------------------------------------------
 
-	if (needBifurcation) {
+	//if (needBifurcation) {
 		if (!_applied.count(leftt)) {
 			_applied.insert(leftt);
 			_routeCmd("replace",leftt,_via,(_via) ? (const char *)0 : _device);
@@ -479,11 +479,11 @@ bool ManagedRoute::sync()
 			_applied.insert(rightt);
 			_routeCmd("replace",rightt,_via,(_via) ? (const char *)0 : _device);
 		}
-		if (_applied.count(_target)) {
+		/*if (_applied.count(_target)) {
 			_applied.erase(_target);
 			_routeCmd("del",_target,_via,(_via) ? (const char *)0 : _device);
-		}
-	} else {
+		}*/
+	/*} else {
 		if (_applied.count(leftt)) {
 			_applied.erase(leftt);
 			_routeCmd("del",leftt,_via,(_via) ? (const char *)0 : _device);
@@ -496,7 +496,7 @@ bool ManagedRoute::sync()
 			_applied.insert(_target);
 			_routeCmd("replace",_target,_via,(_via) ? (const char *)0 : _device);
 		}
-	}
+	}*/
 
 #endif // __LINUX__ ----------------------------------------------------------
 
