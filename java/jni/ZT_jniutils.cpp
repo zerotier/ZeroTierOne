@@ -889,14 +889,14 @@ jobject newVirtualNetworkRoute(JNIEnv *env, const ZT_VirtualNetworkRoute &route)
     jfieldID metricField = NULL;
 
     targetField = lookup.findField(virtualNetworkRouteClass, "target",
-        "Ljava/net/InetSocketAddress");
+        "Ljava/net/InetSocketAddress;");
     if(env->ExceptionCheck() || targetField == NULL)
     {
         return NULL;
     }
 
     viaField = lookup.findField(virtualNetworkRouteClass, "via",
-        "Ljava/net/InetSocketAddress");
+        "Ljava/net/InetSocketAddress;");
     if(env->ExceptionCheck() || targetField == NULL)
     {
         return NULL;
