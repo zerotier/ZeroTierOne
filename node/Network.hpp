@@ -48,7 +48,6 @@ namespace ZeroTier {
 
 class RuntimeEnvironment;
 class Peer;
-class _MulticastAnnounceAll;
 
 /**
  * A virtual LAN
@@ -56,7 +55,6 @@ class _MulticastAnnounceAll;
 class Network : NonCopyable
 {
 	friend class SharedPtr<Network>;
-	friend class _MulticastAnnounceAll; // internal function object
 
 public:
 	/**
@@ -250,14 +248,14 @@ public:
 	void requestConfiguration();
 
 	/**
+	 * Membership check gate for incoming packets related to this network
+	 *
 	 * @param peer Peer to check
+	 * @param verb Packet verb
+	 * @param packetId Packet ID
 	 * @return True if peer is allowed to communicate on this network
 	 */
-	inline bool isAllowed(const SharedPtr<Peer> &peer) const
-	{
-		Mutex::Lock _l(_lock);
-		return _isAllowed(peer);
-	}
+	bool gate(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uint64_t packetId);
 
 	/**
 	 * Perform cleanup and possibly save state
@@ -265,12 +263,12 @@ public:
 	void clean();
 
 	/**
-	 * Announce multicast groups to all members, anchors, etc.
+	 * Push state to members such as multicast group memberships and latest COM (if needed)
 	 */
-	inline void announceMulticastGroups()
+	inline void pushStateToMembers()
 	{
 		Mutex::Lock _l(_lock);
-		_announceMulticastGroups((const MulticastGroup *)0);
+		_pushStateToMembers((const MulticastGroup *)0);
 	}
 
 	/**
@@ -408,11 +406,11 @@ public:
 private:
 	ZT_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
-	bool _isAllowed(const SharedPtr<Peer> &peer) const;
-	void _announceMulticastGroups(const MulticastGroup *const onlyThis);
+	bool _gate(const SharedPtr<Peer> &peer);
+	void _pushStateToMembers(const MulticastGroup *const newMulticastGroup);
 	void _announceMulticastGroupsTo(const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups);
 	std::vector<MulticastGroup> _allMulticastGroups() const;
-	Membership &_membership(const Address &a); // also lazily sends COM and MULTICAST_LIKE(s) if this is a new member
+	Membership &_membership(const Address &a);
 
 	const RuntimeEnvironment *RR;
 	void *_uPtr;

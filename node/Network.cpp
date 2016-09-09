@@ -877,7 +877,7 @@ void Network::multicastSubscribe(const MulticastGroup &mg)
 			return;
 		_myMulticastGroups.push_back(mg);
 		std::sort(_myMulticastGroups.begin(),_myMulticastGroups.end());
-		_announceMulticastGroups(&mg);
+		_pushStateToMembers(&mg);
 	}
 }
 
@@ -1062,6 +1062,36 @@ void Network::requestConfiguration()
 	_inboundConfigChunks.clear();
 }
 
+bool Network::gate(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uint64_t packetId)
+{
+	Mutex::Lock _l(_lock);
+	try {
+		if (_config) {
+			Membership &m = _membership(peer->address());
+			const bool allow = m.isAllowedOnNetwork(_config);
+			if (allow) {
+				const uint64_t now = RR->node->now();
+				m.sendCredentialsIfNeeded(RR,now,peer->address(),_config,(const Capability *)0);
+				if (m.shouldLikeMulticasts(now)) {
+					_announceMulticastGroupsTo(peer->address(),_allMulticastGroups());
+					m.likingMulticasts(now);
+				}
+			} else if (m.recentlyAllowedOnNetwork(_config)) {
+				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
+				outp.append((uint8_t)verb);
+				outp.append(packetId);
+				outp.append((uint8_t)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
+				outp.append(_id);
+				RR->sw->send(outp,true);
+			}
+			return allow;
+		}
+	} catch ( ... ) {
+		TRACE("gate() check failed for peer %s: unexpected exception",peer->address().toString().c_str());
+	}
+	return false;
+}
+
 void Network::clean()
 {
 	const uint64_t now = RR->node->now();
@@ -1135,7 +1165,7 @@ void Network::learnBridgedMulticastGroup(const MulticastGroup &mg,uint64_t now)
 	const unsigned long tmp = (unsigned long)_multicastGroupsBehindMe.size();
 	_multicastGroupsBehindMe.set(mg,now);
 	if (tmp != _multicastGroupsBehindMe.size())
-		_announceMulticastGroups(&mg);
+		_pushStateToMembers(&mg);
 }
 
 void Network::destroy()
@@ -1200,33 +1230,18 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	}
 }
 
-bool Network::_isAllowed(const SharedPtr<Peer> &peer) const
-{
-	// Assumes _lock is locked
-	try {
-		if (_config) {
-			const Membership *const m = _memberships.get(peer->address());
-			if (m)
-				return m->isAllowedOnNetwork(_config);
-		}
-	} catch ( ... ) {
-		TRACE("isAllowed() check failed for peer %s: unexpected exception",peer->address().toString().c_str());
-	}
-	return false;
-}
-
-void Network::_announceMulticastGroups(const MulticastGroup *const onlyThis)
+void Network::_pushStateToMembers(const MulticastGroup *const newMulticastGroup)
 {
 	// Assumes _lock is locked
 	const uint64_t now = RR->node->now();
 
 	std::vector<MulticastGroup> groups;
-	if (onlyThis)
-		groups.push_back(*onlyThis);
+	if (newMulticastGroup)
+		groups.push_back(*newMulticastGroup);
 	else groups = _allMulticastGroups();
 
-	if ((onlyThis)||((now - _lastAnnouncedMulticastGroupsUpstream) >= ZT_MULTICAST_ANNOUNCE_PERIOD)) {
-		if (!onlyThis)
+	if ((newMulticastGroup)||((now - _lastAnnouncedMulticastGroupsUpstream) >= ZT_MULTICAST_ANNOUNCE_PERIOD)) {
+		if (!newMulticastGroup)
 			_lastAnnouncedMulticastGroupsUpstream = now;
 
 		// Announce multicast groups to upstream peers (roots, etc.) and also send
@@ -1255,7 +1270,7 @@ void Network::_announceMulticastGroups(const MulticastGroup *const onlyThis)
 	// piecemeal on-demand fashion.
 	const std::vector<Address> anchors(_config.anchors());
 	for(std::vector<Address>::const_iterator a(anchors.begin());a!=anchors.end();++a)
-		_memberships[*a];
+		_membership(*a);
 
 	// Send MULTICAST_LIKE(s) to all members of this network
 	{
@@ -1263,11 +1278,13 @@ void Network::_announceMulticastGroups(const MulticastGroup *const onlyThis)
 		Membership *m = (Membership *)0;
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
-			if ((onlyThis)||(m->shouldLikeMulticasts(now))) {
-				if (!onlyThis)
-					m->likingMulticasts(now);
+			if ( (m->recentlyAllowedOnNetwork(_config)) || (std::find(anchors.begin(),anchors.end(),*a) != anchors.end()) ) {
 				m->sendCredentialsIfNeeded(RR,RR->node->now(),*a,_config,(const Capability *)0);
-				_announceMulticastGroupsTo(*a,groups);
+				if ( ((newMulticastGroup)||(m->shouldLikeMulticasts(now))) && (m->isAllowedOnNetwork(_config)) ) {
+					if (!newMulticastGroup)
+						m->likingMulticasts(now);
+					_announceMulticastGroupsTo(*a,groups);
+				}
 			}
 		}
 	}
@@ -1314,15 +1331,7 @@ std::vector<MulticastGroup> Network::_allMulticastGroups() const
 Membership &Network::_membership(const Address &a)
 {
 	// assumes _lock is locked
-	const unsigned long ms = _memberships.size();
-	Membership &m = _memberships[a];
-	if (ms != _memberships.size()) {
-		const uint64_t now = RR->node->now();
-		m.sendCredentialsIfNeeded(RR,now,a,_config,(const Capability *)0);
-		_announceMulticastGroupsTo(a,_allMulticastGroups());
-		m.likingMulticasts(now);
-	}
-	return m;
+	return _memberships[a];
 }
 
 } // namespace ZeroTier

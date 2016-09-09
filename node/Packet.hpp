@@ -1067,6 +1067,9 @@ public:
 		/* Verb or use case not supported/enabled by this node */
 		ERROR_UNSUPPORTED_OPERATION = 0x05,
 
+		/* Network membership certificate update needed */
+		ERROR_NEED_MEMBERSHIP_CERTIFICATE = 0x06,
+
 		/* Tried to join network, but you're not a member */
 		ERROR_NETWORK_ACCESS_DENIED_ = 0x07, /* extra _ at end to avoid Windows name conflict */
 
