@@ -106,11 +106,11 @@ public:
 	 */
 	void received(
 		const SharedPtr<Path> &path,
-		unsigned int hops,
-		uint64_t packetId,
-		Packet::Verb verb,
-		uint64_t inRePacketId,
-		Packet::Verb inReVerb,
+		const unsigned int hops,
+		const uint64_t packetId,
+		const Packet::Verb verb,
+		const uint64_t inRePacketId,
+		const Packet::Verb inReVerb,
 		const bool trustEstablished);
 
 	/**
@@ -149,9 +149,10 @@ public:
 	 * Get the best current direct path
 	 *
 	 * @param now Current time
+	 * @param includeDead If true, include even expired paths
 	 * @return Best current path or NULL if none
 	 */
-	SharedPtr<Path> getBestPath(uint64_t now);
+	SharedPtr<Path> getBestPath(uint64_t now,bool includeExpired);
 
 	/**
 	 * Send a HELLO to this peer at a specified physical address
@@ -165,6 +166,17 @@ public:
 	void sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now);
 
 	/**
+	 * Send ECHO (or HELLO for older peers) to this peer at the given address
+	 *
+	 * No statistics or sent times are updated here.
+	 *
+	 * @param localAddr Local address
+	 * @param atAddress Destination address
+	 * @param now Current time
+	 */
+	void attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now);
+
+	/**
 	 * Send pings or keepalives depending on configured timeouts
 	 *
 	 * @param now Current time
@@ -175,18 +187,22 @@ public:
 
 	/**
 	 * @param now Current time
-	 * @return True if this peer has at least one active direct path
+	 * @return True if this peer has at least one active and alive direct path
 	 */
 	bool hasActiveDirectPath(uint64_t now) const;
 
 	/**
-	 * Reset paths within a given scope
+	 * Reset paths within a given IP scope and address family
 	 *
-	 * @param scope IP scope of paths to reset
+	 * Resetting a path involves sending a HELLO to it and then de-prioritizing
+	 * it vs. other paths.
+	 *
+	 * @param scope IP scope
+	 * @param inetAddressFamily Family e.g. AF_INET
 	 * @param now Current time
-	 * @return True if at least one path was forgotten
+	 * @return True if we forgot at least one path
 	 */
-	bool resetWithinScope(InetAddress::IpScope scope,uint64_t now);
+	bool resetWithinScope(InetAddress::IpScope scope,int inetAddressFamily,uint64_t now);
 
 	/**
 	 * Get most recently active path addresses for IPv4 and/or IPv6
@@ -201,21 +217,15 @@ public:
 	void getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const;
 
 	/**
-	 * Perform periodic cleaning operations
-	 *
 	 * @param now Current time
+	 * @return All known direct paths to this peer and whether they are expired (true == expired)
 	 */
-	void clean(uint64_t now);
-
-	/**
-	 * @return All known direct paths to this peer (active or inactive)
-	 */
-	inline std::vector< SharedPtr<Path> > paths() const
+	inline std::vector< std::pair< SharedPtr<Path>,bool > > paths(const uint64_t now) const
 	{
-		std::vector< SharedPtr<Path> > pp;
+		std::vector< std::pair< SharedPtr<Path>,bool > > pp;
 		Mutex::Lock _l(_paths_m);
 		for(unsigned int p=0,np=_numPaths;p<np;++p)
-			pp.push_back(_paths[p].path);
+			pp.push_back(std::pair< SharedPtr<Path>,bool >(_paths[p].path,(now - _paths[p].lastReceive) > ZT_PEER_PATH_EXPIRATION));
 		return pp;
 	}
 
@@ -370,11 +380,12 @@ public:
 private:
 	bool _pushDirectPaths(const SharedPtr<Path> &path,uint64_t now);
 
-	inline uint64_t _pathScore(const unsigned int p) const
+	inline uint64_t _pathScore(const unsigned int p,const uint64_t now) const
 	{
-		uint64_t s = ZT_PEER_PING_PERIOD;
+		uint64_t s = ZT_PEER_PING_PERIOD + _paths[p].lastReceive + (uint64_t)(_paths[p].path->preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK));
+
 		if (_paths[p].path->address().ss_family == AF_INET) {
-			s += _paths[p].lastReceive + (uint64_t)(_paths[p].path->preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK)) + (uint64_t)(ZT_PEER_PING_PERIOD * (unsigned long)(reinterpret_cast<const struct sockaddr_in *>(&(_paths[p].path->address()))->sin_addr.s_addr == _remoteClusterOptimal4));
+			s +=  (uint64_t)(ZT_PEER_PING_PERIOD * (unsigned long)(reinterpret_cast<const struct sockaddr_in *>(&(_paths[p].path->address()))->sin_addr.s_addr == _remoteClusterOptimal4));
 		} else if (_paths[p].path->address().ss_family == AF_INET6) {
 			uint64_t clusterWeight = ZT_PEER_PING_PERIOD;
 			const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&(_paths[p].path->address()))->sin6_addr.s6_addr);
@@ -384,23 +395,24 @@ private:
 					break;
 				}
 			}
-			s += _paths[p].lastReceive + (uint64_t)(_paths[p].path->preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK)) + clusterWeight;
-		} else {
-			s += _paths[p].lastReceive + (uint64_t)(_paths[p].path->preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK));
+			s += clusterWeight;
 		}
+
+		s += (ZT_PEER_PING_PERIOD / 2) * (uint64_t)_paths[p].path->alive(now);
+
 #ifdef ZT_ENABLE_CLUSTER
 		s -= ZT_PEER_PING_PERIOD * (uint64_t)_paths[p].localClusterSuboptimal;
 #endif
+
 		return s;
 	}
 
-	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
+	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
 	uint8_t _remoteClusterOptimal6[16];
 	uint64_t _lastUsed;
 	uint64_t _lastReceive; // direct or indirect
 	uint64_t _lastUnicastFrame;
 	uint64_t _lastMulticastFrame;
-	uint64_t _lastAnnouncedTo;
 	uint64_t _lastDirectPathPushSent;
 	uint64_t _lastDirectPathPushReceive;
 	const RuntimeEnvironment *RR;

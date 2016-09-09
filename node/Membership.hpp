@@ -31,15 +31,10 @@
 #include "Hashtable.hpp"
 #include "NetworkConfig.hpp"
 
-// Expiration time for capability and tag cache
-#define ZT_MEMBERSHIP_STATE_EXPIRATION_TIME 600000
-
-// Expiration time for Memberships (used in Peer::clean())
-#define ZT_MEMBERSHIP_EXPIRATION_TIME (ZT_MEMBERSHIP_STATE_EXPIRATION_TIME * 2)
-
 namespace ZeroTier {
 
 class RuntimeEnvironment;
+class Network;
 
 /**
  * A container for certificates of membership and other network credentials
@@ -107,6 +102,7 @@ public:
 	friend class CapabilityIterator;
 
 	Membership() :
+		_lastUpdatedMulticast(0),
 		_lastPushAttempt(0),
 		_lastPushedCom(0),
 		_blacklistBefore(0),
@@ -131,6 +127,21 @@ public:
 	void sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,const Capability *cap);
 
 	/**
+	 * Check whether we should push MULTICAST_LIKEs to this peer
+	 *
+	 * @param now Current time
+	 * @return True if we should update multicasts
+	 */
+	inline bool shouldLikeMulticasts(const uint64_t now) const { return ((now - _lastUpdatedMulticast) >= ZT_MULTICAST_ANNOUNCE_PERIOD); }
+
+	/**
+	 * Set time we last updated multicasts for this peer
+	 *
+	 * @param now Current time
+	 */
+	inline void likingMulticasts(const uint64_t now) { _lastUpdatedMulticast = now; }
+
+	/**
 	 * @param nconf Our network config
 	 * @return True if this peer is allowed on this network at all
 	 */
@@ -144,7 +155,7 @@ public:
 	}
 
 	/**
-	 * Check whether a capability or tag is expired
+	 * Check whether a capability or tag is within its max delta from the timestamp of our network config and newer than any blacklist cutoff time
 	 *
 	 * @param cred Credential to check -- must have timestamp() accessor method
 	 * @return True if credential is NOT expired
@@ -153,7 +164,8 @@ public:
 	inline bool isCredentialTimestampValid(const NetworkConfig &nconf,const C &cred) const
 	{
 		const uint64_t ts = cred.timestamp();
-		return ( ( (ts >= nconf.timestamp) || ((nconf.timestamp - ts) <= nconf.credentialTimeToLive) ) && (ts > _blacklistBefore) );
+		const uint64_t delta = (ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts);
+		return ((delta <= nconf.credentialTimeMaxDelta)&&(ts > _blacklistBefore));
 	}
 
 	/**
@@ -205,6 +217,8 @@ public:
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 *
+	 * @param RR Runtime environment
+	 * @param com Certificate of membership
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
 	int addCredential(const RuntimeEnvironment *RR,const CertificateOfMembership &com);
@@ -236,20 +250,15 @@ public:
 	/**
 	 * Clean up old or stale entries
 	 *
-	 * @return Time of most recent activity in this Membership
+	 * @param nconf Network config
 	 */
-	inline uint64_t clean(const uint64_t now)
+	inline void clean(const NetworkConfig &nconf)
 	{
-		uint64_t lastAct = _lastPushedCom;
-
 		for(std::map<uint32_t,CState>::iterator i(_caps.begin());i!=_caps.end();) {
-			const uint64_t la = std::max(i->second.lastPushed,i->second.lastReceived);
-			if ((now - la) > ZT_MEMBERSHIP_STATE_EXPIRATION_TIME) {
+			if (!isCredentialTimestampValid(nconf,i->second.cap)) {
 				_caps.erase(i++);
 			} else {
 				++i;
-				if (la > lastAct)
-					lastAct = la;
 			}
 		}
 
@@ -257,17 +266,15 @@ public:
 		TState *ts = (TState *)0;
 		Hashtable<uint32_t,TState>::Iterator tsi(_tags);
 		while (tsi.next(i,ts)) {
-			const uint64_t la = std::max(ts->lastPushed,ts->lastReceived);
-			if ((now - la) > ZT_MEMBERSHIP_STATE_EXPIRATION_TIME)
+			if (!isCredentialTimestampValid(nconf,ts->tag))
 				_tags.erase(*i);
-			else if (la > lastAct)
-				lastAct = la;
 		}
-
-		return lastAct;
 	}
 
 private:
+	// Last time we pushed MULTICAST_LIKE(s)
+	uint64_t _lastUpdatedMulticast;
+
 	// Last time we checked if credential push was needed
 	uint64_t _lastPushAttempt;
 

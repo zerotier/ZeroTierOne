@@ -88,7 +88,7 @@ ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE
 	override CFLAGS+=-Wall -g -O -pthread $(INCLUDES) $(DEFS)
 	override CXXFLAGS+=-Wall -g -O -std=c++11 -pthread $(INCLUDES) $(DEFS)
-	LDFLAGS=
+	override LDFLAGS+=
 	STRIP?=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
@@ -98,7 +98,7 @@ else
 	override CFLAGS+=-Wall -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	CXXFLAGS?=-O3 -fstack-protector
 	override CXXFLAGS+=-Wall -Wno-unused-result -Wreorder -fPIE -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	LDFLAGS=-pie -Wl,-z,relro,-z,now
+	override LDFLAGS+=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
 	STRIP+=--strip-all
 endif

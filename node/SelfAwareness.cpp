@@ -33,37 +33,31 @@
 #include "Switch.hpp"
 
 // Entry timeout -- make it fairly long since this is just to prevent stale buildup
-#define ZT_SELFAWARENESS_ENTRY_TIMEOUT 3600000
+#define ZT_SELFAWARENESS_ENTRY_TIMEOUT 600000
 
 namespace ZeroTier {
 
 class _ResetWithinScope
 {
 public:
-	_ResetWithinScope(uint64_t now,InetAddress::IpScope scope) :
+	_ResetWithinScope(uint64_t now,int inetAddressFamily,InetAddress::IpScope scope) :
 		_now(now),
+		_family(inetAddressFamily),
 		_scope(scope) {}
 
-	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
-	{
-		if (p->resetWithinScope(_scope,_now))
-			peersReset.push_back(p);
-	}
+	inline void operator()(Topology &t,const SharedPtr<Peer> &p) { if (p->resetWithinScope(_scope,_family,_now)) peersReset.push_back(p); }
 
 	std::vector< SharedPtr<Peer> > peersReset;
 
 private:
 	uint64_t _now;
+	int _family;
 	InetAddress::IpScope _scope;
 };
 
 SelfAwareness::SelfAwareness(const RuntimeEnvironment *renv) :
 	RR(renv),
-	_phy(32)
-{
-}
-
-SelfAwareness::~SelfAwareness()
+	_phy(128)
 {
 }
 
@@ -98,8 +92,8 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &receivedOnLoc
 			}
 		}
 
-		// Reset all paths within this scope
-		_ResetWithinScope rset(now,(InetAddress::IpScope)scope);
+		// Reset all paths within this scope and address family
+		_ResetWithinScope rset(now,myPhysicalAddress.ss_family,(InetAddress::IpScope)scope);
 		RR->topology->eachPeer<_ResetWithinScope &>(rset);
 
 		// Send a NOP to all peers for whom we forgot a path. This will cause direct

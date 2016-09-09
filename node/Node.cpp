@@ -202,14 +202,6 @@ public:
 			}
 		}
 
-		if (!upstream) {
-			// If I am a root server, only ping other root servers -- roots don't ping "down"
-			// since that would just be a waste of bandwidth and could potentially cause route
-			// flapping in Cluster mode.
-			if (RR->topology->amRoot())
-				return;
-		}
-
 		if (upstream) {
 			// "Upstream" devices are roots and relays and get special treatment -- they stay alive
 			// forever and we try to keep (if available) both IPv4 and IPv6 channels open to them.
@@ -269,13 +261,11 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 			{
 				Mutex::Lock _l(_networks_m);
 				for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
-					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!n->second->hasConfig())) {
+					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!n->second->hasConfig()))
 						needConfig.push_back(n->second);
-					}
+					n->second->announceMulticastGroups();
 				}
 			}
-
-			// Request updated configuration for networks that need it
 			for(std::vector< SharedPtr<Network> >::const_iterator n(needConfig.begin());n!=needConfig.end();++n)
 				(*n)->requestConfiguration();
 
@@ -415,15 +405,16 @@ ZT_PeerList *Node::peers() const
 		p->latency = pi->second->latency();
 		p->role = RR->topology->isRoot(pi->second->identity()) ? ZT_PEER_ROLE_ROOT : ZT_PEER_ROLE_LEAF;
 
-		std::vector< SharedPtr<Path> > paths(pi->second->paths());
-		SharedPtr<Path> bestp(pi->second->getBestPath(_now));
+		std::vector< std::pair< SharedPtr<Path>,bool > > paths(pi->second->paths(_now));
+		SharedPtr<Path> bestp(pi->second->getBestPath(_now,false));
 		p->pathCount = 0;
-		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
-			memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
-			p->paths[p->pathCount].lastSend = (*path)->lastOut();
-			p->paths[p->pathCount].lastReceive = (*path)->lastIn();
-			p->paths[p->pathCount].preferred = (*path == bestp) ? 1 : 0;
-			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
+		for(std::vector< std::pair< SharedPtr<Path>,bool > >::iterator path(paths.begin());path!=paths.end();++path) {
+			memcpy(&(p->paths[p->pathCount].address),&(path->first->address()),sizeof(struct sockaddr_storage));
+			p->paths[p->pathCount].lastSend = path->first->lastOut();
+			p->paths[p->pathCount].lastReceive = path->first->lastIn();
+			p->paths[p->pathCount].expired = path->second;
+			p->paths[p->pathCount].preferred = (path->first == bestp) ? 1 : 0;
+			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust(path->first->address());
 			++p->pathCount;
 		}
 	}

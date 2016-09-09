@@ -27,6 +27,14 @@
 #include "Cluster.hpp"
 #include "Packet.hpp"
 
+#ifndef AF_MAX
+#if AF_INET > AF_INET6
+#define AF_MAX AF_INET
+#else
+#define AF_MAX AF_INET6
+#endif
+#endif
+
 namespace ZeroTier {
 
 // Used to send varying values for NAT keepalive
@@ -37,7 +45,6 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastReceive(0),
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
-	_lastAnnouncedTo(0),
 	_lastDirectPathPushSent(0),
 	_lastDirectPathPushReceive(0),
 	RR(renv),
@@ -58,11 +65,11 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 
 void Peer::received(
 	const SharedPtr<Path> &path,
-	unsigned int hops,
-	uint64_t packetId,
-	Packet::Verb verb,
-	uint64_t inRePacketId,
-	Packet::Verb inReVerb,
+	const unsigned int hops,
+	const uint64_t packetId,
+	const Packet::Verb verb,
+	const uint64_t inRePacketId,
+	const Packet::Verb inReVerb,
 	const bool trustEstablished)
 {
 	const uint64_t now = RR->node->now();
@@ -150,7 +157,7 @@ void Peer::received(
 					uint64_t worstScore = 0xffffffffffffffffULL;
 					for(unsigned int p=0;p<_numPaths;++p) {
 						if (_paths[p].path->address().ss_family == path->address().ss_family) {
-							const uint64_t s = _pathScore(p);
+							const uint64_t s = _pathScore(p,now);
 							if (s < worstScore) {
 								worstScore = s;
 								worstSlot = (int)p;
@@ -163,7 +170,7 @@ void Peer::received(
 						// If we can't find one with the same family, replace the worst of any family
 						slot = ZT_MAX_PEER_NETWORK_PATHS - 1;
 						for(unsigned int p=0;p<_numPaths;++p) {
-							const uint64_t s = _pathScore(p);
+							const uint64_t s = _pathScore(p,now);
 							if (s < worstScore) {
 								worstScore = s;
 								slot = p;
@@ -181,28 +188,13 @@ void Peer::received(
 #endif
 			} else {
 				TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),path->address().toString().c_str());
-
-				if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
-					// Newer than 1.1.0 can use ECHO, which is smaller
-					Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
-					outp.armor(_key,true);
-					path->send(RR,outp.data(),outp.size(),now);
-				} else {
-					// For backward compatibility we send HELLO to ancient nodes
-					sendHELLO(path->localAddress(),path->address(),now);
-				}
+				attemptToContactAt(path->localAddress(),path->address(),now);
+				path->sent(now);
 			}
 		}
 	} else if (trustEstablished) {
 		// Send PUSH_DIRECT_PATHS if hops>0 (relayed) and we have a trust relationship (common network membership)
 		_pushDirectPaths(path,now);
-	}
-
-	if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
-		_lastAnnouncedTo = now;
-		const std::vector< SharedPtr<Network> > networks(RR->node->allNetworks());
-		for(std::vector< SharedPtr<Network> >::const_iterator n(networks.begin());n!=networks.end();++n)
-			(*n)->tryAnnounceMulticastGroupsTo(SharedPtr<Peer>(this));
 	}
 }
 
@@ -210,7 +202,7 @@ bool Peer::hasActivePathTo(uint64_t now,const InetAddress &addr) const
 {
 	Mutex::Lock _l(_paths_m);
 	for(unsigned int p=0;p<_numPaths;++p) {
-		if ( (_paths[p].path->address() == addr) && (_paths[p].path->alive(now)) )
+		if ( (_paths[p].path->address() == addr) && ((now - _paths[p].lastReceive) <= ZT_PEER_PATH_EXPIRATION) && (_paths[p].path->alive(now)) )
 			return true; 
 	}
 	return false;
@@ -223,8 +215,8 @@ bool Peer::sendDirect(const void *data,unsigned int len,uint64_t now,bool forceE
 	int bestp = -1;
 	uint64_t best = 0ULL;
 	for(unsigned int p=0;p<_numPaths;++p) {
-		if (_paths[p].path->alive(now)||(forceEvenIfDead)) {
-			const uint64_t s = _pathScore(p);
+		if ( ((now - _paths[p].lastReceive) <= ZT_PEER_PATH_EXPIRATION) && (_paths[p].path->alive(now)||(forceEvenIfDead)) ) {
+			const uint64_t s = _pathScore(p,now);
 			if (s >= best) {
 				best = s;
 				bestp = (int)p;
@@ -239,17 +231,19 @@ bool Peer::sendDirect(const void *data,unsigned int len,uint64_t now,bool forceE
 	}
 }
 
-SharedPtr<Path> Peer::getBestPath(uint64_t now)
+SharedPtr<Path> Peer::getBestPath(uint64_t now,bool includeExpired)
 {
 	Mutex::Lock _l(_paths_m);
 
 	int bestp = -1;
 	uint64_t best = 0ULL;
 	for(unsigned int p=0;p<_numPaths;++p) {
-		const uint64_t s = _pathScore(p);
-		if (s >= best) {
-			best = s;
-			bestp = (int)p;
+		if ( ((now - _paths[p].lastReceive) <= ZT_PEER_PATH_EXPIRATION) || (includeExpired) ) {
+			const uint64_t s = _pathScore(p,now);
+			if (s >= best) {
+				best = s;
+				bestp = (int)p;
+			}
 		}
 	}
 
@@ -276,6 +270,17 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
 }
 
+void Peer::attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now)
+{
+	if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
+		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
+		outp.armor(_key,true);
+		RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
+	} else {
+		sendHELLO(localAddr,atAddress,now);
+	}
+}
+
 bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 {
 	Mutex::Lock _l(_paths_m);
@@ -283,8 +288,8 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 	int bestp = -1;
 	uint64_t best = 0ULL;
 	for(unsigned int p=0;p<_numPaths;++p) {
-		if ((inetAddressFamily < 0)||((int)_paths[p].path->address().ss_family == inetAddressFamily)) {
-			const uint64_t s = _pathScore(p);
+		if ( ((now - _paths[p].lastReceive) <= ZT_PEER_PATH_EXPIRATION) && ((inetAddressFamily < 0)||((int)_paths[p].path->address().ss_family == inetAddressFamily)) ) {
+			const uint64_t s = _pathScore(p,now);
 			if (s >= best) {
 				best = s;
 				bestp = (int)p;
@@ -294,7 +299,8 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 
 	if (bestp >= 0) {
 		if ((now - _paths[bestp].lastReceive) >= ZT_PEER_PING_PERIOD) {
-			sendHELLO(_paths[bestp].path->localAddress(),_paths[bestp].path->address(),now);
+			attemptToContactAt(_paths[bestp].path->localAddress(),_paths[bestp].path->address(),now);
+			_paths[bestp].path->sent(now);
 		} else if (_paths[bestp].path->needsHeartbeat(now)) {
 			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
 			_paths[bestp].path->send(RR,&_natKeepaliveBuf,sizeof(_natKeepaliveBuf),now);
@@ -309,39 +315,25 @@ bool Peer::hasActiveDirectPath(uint64_t now) const
 {
 	Mutex::Lock _l(_paths_m);
 	for(unsigned int p=0;p<_numPaths;++p) {
-		if (_paths[p].path->alive(now))
+		if (((now - _paths[p].lastReceive) <= ZT_PEER_PATH_EXPIRATION)&&(_paths[p].path->alive(now)))
 			return true;
 	}
 	return false;
 }
 
-bool Peer::resetWithinScope(InetAddress::IpScope scope,uint64_t now)
+bool Peer::resetWithinScope(InetAddress::IpScope scope,int inetAddressFamily,uint64_t now)
 {
 	Mutex::Lock _l(_paths_m);
-	unsigned int np = _numPaths;
-	unsigned int x = 0;
-	unsigned int y = 0;
-	while (x < np) {
-		if (_paths[x].path->address().ipScope() == scope) {
-			// Resetting a path means sending a HELLO and then forgetting it. If we
-			// get OK(HELLO) then it will be re-learned.
-			sendHELLO(_paths[x].path->localAddress(),_paths[x].path->address(),now);
-		} else {
-			if (x != y) {
-				_paths[y].lastReceive = _paths[x].lastReceive;
-				_paths[y].path = _paths[x].path;
-#ifdef ZT_ENABLE_CLUSTER
-				_paths[y].localClusterSuboptimal = _paths[x].localClusterSuboptimal;
-#endif
-			}
-			++y;
+	bool resetSomething = false;
+	for(unsigned int p=0;p<_numPaths;++p) {
+		if ( (_paths[p].path->address().ss_family == inetAddressFamily) && (_paths[p].path->address().ipScope() == scope) ) {
+			attemptToContactAt(_paths[p].path->localAddress(),_paths[p].path->address(),now);
+			_paths[p].path->sent(now);
+			_paths[p].lastReceive >>= 2; // de-prioritize heavily vs. other paths, will get reset if we get OK(HELLO) or other traffic
+			resetSomething = true;
 		}
-		++x;
 	}
-	_numPaths = y;
-	while (y < ZT_MAX_PEER_NETWORK_PATHS)
-		_paths[y++].path.zero(); // let go of unused SmartPtr<>'s
-	return (_numPaths < np);
+	return resetSomething;
 }
 
 void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
@@ -351,17 +343,19 @@ void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) 
 	int bestp4 = -1,bestp6 = -1;
 	uint64_t best4 = 0ULL,best6 = 0ULL;
 	for(unsigned int p=0;p<_numPaths;++p) {
-		if (_paths[p].path->address().ss_family == AF_INET) {
-			const uint64_t s = _pathScore(p);
-			if (s >= best4) {
-				best4 = s;
-				bestp4 = (int)p;
-			}
-		} else if (_paths[p].path->address().ss_family == AF_INET6) {
-			const uint64_t s = _pathScore(p);
-			if (s >= best6) {
-				best6 = s;
-				bestp6 = (int)p;
+		if ( ((now - _paths[p].lastReceive) <= ZT_PEER_PATH_EXPIRATION) && (_paths[p].path->alive(now)) ) {
+			if (_paths[p].path->address().ss_family == AF_INET) {
+				const uint64_t s = _pathScore(p,now);
+				if (s >= best4) {
+					best4 = s;
+					bestp4 = (int)p;
+				}
+			} else if (_paths[p].path->address().ss_family == AF_INET6) {
+				const uint64_t s = _pathScore(p,now);
+				if (s >= best6) {
+					best6 = s;
+					bestp6 = (int)p;
+				}
 			}
 		}
 	}
@@ -370,30 +364,6 @@ void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) 
 		v4 = _paths[bestp4].path->address();
 	if (bestp6 >= 0)
 		v6 = _paths[bestp6].path->address();
-}
-
-void Peer::clean(uint64_t now)
-{
-	Mutex::Lock _l(_paths_m);
-	unsigned int np = _numPaths;
-	unsigned int x = 0;
-	unsigned int y = 0;
-	while (x < np) {
-		if ((now - _paths[x].lastReceive) <= ZT_PEER_PATH_EXPIRATION) {
-			if (y != x) {
-				_paths[y].lastReceive = _paths[x].lastReceive;
-				_paths[y].path = _paths[x].path;
-#ifdef ZT_ENABLE_CLUSTER
-				_paths[y].localClusterSuboptimal = _paths[x].localClusterSuboptimal;
-#endif
-			}
-			++y;
-		}
-		++x;
-	}
-	_numPaths = y;
-	while (y < ZT_MAX_PEER_NETWORK_PATHS)
-		_paths[y++].path.zero(); // let go of unused SmartPtr<>'s
 }
 
 bool Peer::_pushDirectPaths(const SharedPtr<Path> &path,uint64_t now)

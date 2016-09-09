@@ -191,14 +191,6 @@ public:
 	void multicastUnsubscribe(const MulticastGroup &mg);
 
 	/**
-	 * Announce multicast groups to a peer if that peer is authorized on this network
-	 *
-	 * @param peer Peer to try to announce multicast groups to
-	 * @return True if peer was authorized and groups were announced
-	 */
-	bool tryAnnounceMulticastGroupsTo(const SharedPtr<Peer> &peer);
-
-	/**
 	 * Apply a NetworkConfig to this network
 	 *
 	 * @param conf Configuration in NetworkConfig form
@@ -273,6 +265,15 @@ public:
 	void clean();
 
 	/**
+	 * Announce multicast groups to all members, anchors, etc.
+	 */
+	inline void announceMulticastGroups()
+	{
+		Mutex::Lock _l(_lock);
+		_announceMulticastGroups((const MulticastGroup *)0);
+	}
+
+	/**
 	 * @return Time of last updated configuration or 0 if none
 	 */
 	inline uint64_t lastConfigUpdate() const throw() { return _lastConfigUpdate; }
@@ -298,22 +299,9 @@ public:
 	/**
 	 * Get current network config
 	 *
-	 * This returns a const reference to the network config in place, which is safe
-	 * to concurrently access but *may* change during access. Normally this isn't a
-	 * problem, but if it is use configCopy().
-	 *
 	 * @return Network configuration (may be a null config if we don't have one yet)
 	 */
 	inline const NetworkConfig &config() const { return _config; }
-
-	/**
-	 * @return A thread-safe copy of our NetworkConfig instead of a const reference
-	 */
-	inline NetworkConfig configCopy() const
-	{
-		Mutex::Lock _l(_lock);
-		return _config;
-	}
 
 	/**
 	 * @return True if this network has a valid config
@@ -323,7 +311,7 @@ public:
 	/**
 	 * @return Ethernet MAC address for this network's local interface
 	 */
-	inline const MAC &mac() const throw() { return _mac; }
+	inline const MAC &mac() const { return _mac; }
 
 	/**
 	 * Find the node on this network that has this MAC behind it (if any)
@@ -365,7 +353,7 @@ public:
 		if (com.networkId() != _id)
 			return -1;
 		Mutex::Lock _l(_lock);
-		return _memberships[com.issuedTo()].addCredential(RR,com);
+		return _membership(com.issuedTo()).addCredential(RR,com);
 	}
 
 	/**
@@ -377,7 +365,7 @@ public:
 		if (cap.networkId() != _id)
 			return -1;
 		Mutex::Lock _l(_lock);
-		return _memberships[cap.issuedTo()].addCredential(RR,cap);
+		return _membership(cap.issuedTo()).addCredential(RR,cap);
 	}
 
 	/**
@@ -389,7 +377,7 @@ public:
 		if (tag.networkId() != _id)
 			return -1;
 		Mutex::Lock _l(_lock);
-		return _memberships[tag.issuedTo()].addCredential(RR,tag);
+		return _membership(tag.issuedTo()).addCredential(RR,tag);
 	}
 
 	/**
@@ -400,7 +388,7 @@ public:
 	inline void blacklistBefore(const Address &peerAddress,const uint64_t ts)
 	{
 		Mutex::Lock _l(_lock);
-		_memberships[peerAddress].blacklistBefore(ts);
+		_membership(peerAddress).blacklistBefore(ts);
 	}
 
 	/**
@@ -417,24 +405,19 @@ public:
 	 */
 	inline void **userPtr() throw() { return &_uPtr; }
 
-	inline bool operator==(const Network &n) const throw() { return (_id == n._id); }
-	inline bool operator!=(const Network &n) const throw() { return (_id != n._id); }
-	inline bool operator<(const Network &n) const throw() { return (_id < n._id); }
-	inline bool operator>(const Network &n) const throw() { return (_id > n._id); }
-	inline bool operator<=(const Network &n) const throw() { return (_id <= n._id); }
-	inline bool operator>=(const Network &n) const throw() { return (_id >= n._id); }
-
 private:
 	ZT_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
 	bool _isAllowed(const SharedPtr<Peer> &peer) const;
-	void _announceMulticastGroups();
-	void _announceMulticastGroupsTo(const SharedPtr<Peer> &peer,const std::vector<MulticastGroup> &allMulticastGroups);
+	void _announceMulticastGroups(const MulticastGroup *const onlyThis);
+	void _announceMulticastGroupsTo(const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups);
 	std::vector<MulticastGroup> _allMulticastGroups() const;
+	Membership &_membership(const Address &a); // also lazily sends COM and MULTICAST_LIKE(s) if this is a new member
 
 	const RuntimeEnvironment *RR;
 	void *_uPtr;
 	uint64_t _id;
+	uint64_t _lastAnnouncedMulticastGroupsUpstream;
 	MAC _mac; // local MAC address
 	volatile bool _portInitialized;
 

@@ -95,7 +95,9 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const CertificateOfMe
 		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx ACCEPTED (redundant)",com.issuedTo().toString().c_str(),com.networkId());
 		return 0;
 	}
+
 	const int vr = com.verify(RR);
+
 	if (vr == 0) {
 		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx ACCEPTED (new)",com.issuedTo().toString().c_str(),com.networkId());
 		if (com.timestamp().first > _com.timestamp().first) {
@@ -104,6 +106,7 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const CertificateOfMe
 	} else {
 		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx REJECTED (%d)",com.issuedTo().toString().c_str(),com.networkId(),vr);
 	}
+
 	return vr;
 }
 

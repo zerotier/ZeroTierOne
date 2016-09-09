@@ -577,6 +577,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 	RR(renv),
 	_uPtr(uptr),
 	_id(nwid),
+	_lastAnnouncedMulticastGroupsUpstream(0),
 	_mac(renv->identity.address(),nwid),
 	_portInitialized(false),
 	_inboundConfigPacketId(0),
@@ -677,7 +678,7 @@ bool Network::filterOutgoingPacket(
 						accept = true;
 
 						if ((!noTee)&&(cc2)) {
-							_memberships[cc2].sendCredentialsIfNeeded(RR,RR->node->now(),cc2,_config,relevantCap);
+							_membership(cc2).sendCredentialsIfNeeded(RR,RR->node->now(),cc2,_config,relevantCap);
 
 							Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 							outp.append(_id);
@@ -709,7 +710,7 @@ bool Network::filterOutgoingPacket(
 
 	if (accept) {
 		if ((!noTee)&&(cc)) {
-			_memberships[cc].sendCredentialsIfNeeded(RR,RR->node->now(),cc,_config,relevantCap);
+			_membership(cc).sendCredentialsIfNeeded(RR,RR->node->now(),cc,_config,relevantCap);
 
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
@@ -723,7 +724,7 @@ bool Network::filterOutgoingPacket(
 		}
 
 		if ((ztDest != ztDest2)&&(ztDest2)) {
-			_memberships[ztDest2].sendCredentialsIfNeeded(RR,RR->node->now(),ztDest2,_config,relevantCap);
+			_membership(ztDest2).sendCredentialsIfNeeded(RR,RR->node->now(),ztDest2,_config,relevantCap);
 
 			Packet outp(ztDest2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
@@ -763,7 +764,7 @@ int Network::filterIncomingPacket(
 
 	Mutex::Lock _l(_lock);
 
-	Membership &m = _memberships[ztDest];
+	Membership &m = _membership(ztDest);
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
 	switch (_doZtFilter(RR,_config,true,sourcePeer->address(),ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc,ccLength)) {
@@ -790,7 +791,7 @@ int Network::filterIncomingPacket(
 
 				if (accept) {
 					if (cc2) {
-						_memberships[cc2].sendCredentialsIfNeeded(RR,RR->node->now(),cc2,_config,(const Capability *)0);
+						_membership(cc2).sendCredentialsIfNeeded(RR,RR->node->now(),cc2,_config,(const Capability *)0);
 
 						Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 						outp.append(_id);
@@ -821,7 +822,7 @@ int Network::filterIncomingPacket(
 
 	if (accept) {
 		if (cc) {
-			_memberships[cc].sendCredentialsIfNeeded(RR,RR->node->now(),cc,_config,(const Capability *)0);
+			_membership(cc).sendCredentialsIfNeeded(RR,RR->node->now(),cc,_config,(const Capability *)0);
 
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
@@ -835,7 +836,7 @@ int Network::filterIncomingPacket(
 		}
 
 		if ((ztDest != ztDest2)&&(ztDest2)) {
-			_memberships[ztDest2].sendCredentialsIfNeeded(RR,RR->node->now(),ztDest2,_config,(const Capability *)0);
+			_membership(ztDest2).sendCredentialsIfNeeded(RR,RR->node->now(),ztDest2,_config,(const Capability *)0);
 
 			Packet outp(ztDest2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
@@ -872,8 +873,8 @@ void Network::multicastSubscribe(const MulticastGroup &mg)
 			return;
 		_myMulticastGroups.push_back(mg);
 		std::sort(_myMulticastGroups.begin(),_myMulticastGroups.end());
+		_announceMulticastGroups(&mg);
 	}
-	_announceMulticastGroups();
 }
 
 void Network::multicastUnsubscribe(const MulticastGroup &mg)
@@ -886,20 +887,6 @@ void Network::multicastUnsubscribe(const MulticastGroup &mg)
 	}
 	if (nmg.size() != _myMulticastGroups.size())
 		_myMulticastGroups.swap(nmg);
-}
-
-bool Network::tryAnnounceMulticastGroupsTo(const SharedPtr<Peer> &peer)
-{
-	Mutex::Lock _l(_lock);
-	if (
-	    (_isAllowed(peer)) ||
-	    (peer->address() == this->controller()) ||
-	    (RR->topology->isUpstream(peer->identity()))
-	   ) {
-		_announceMulticastGroupsTo(peer,_allMulticastGroups());
-		return true;
-	}
-	return false;
 }
 
 bool Network::applyConfiguration(const NetworkConfig &conf)
@@ -1094,8 +1081,9 @@ void Network::clean()
 		Membership *m = (Membership *)0;
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
-			if ((now - m->clean(now)) > ZT_MEMBERSHIP_EXPIRATION_TIME)
-				_memberships.erase(*a);
+			if (RR->topology->getPeerNoCache(*a))
+				m->clean(_config);
+			else _memberships.erase(*a);
 		}
 	}
 }
@@ -1143,7 +1131,7 @@ void Network::learnBridgedMulticastGroup(const MulticastGroup &mg,uint64_t now)
 	const unsigned long tmp = (unsigned long)_multicastGroupsBehindMe.size();
 	_multicastGroupsBehindMe.set(mg,now);
 	if (tmp != _multicastGroupsBehindMe.size())
-		_announceMulticastGroups();
+		_announceMulticastGroups(&mg);
 }
 
 void Network::destroy()
@@ -1223,61 +1211,74 @@ bool Network::_isAllowed(const SharedPtr<Peer> &peer) const
 	return false;
 }
 
-class _MulticastAnnounceAll
+void Network::_announceMulticastGroups(const MulticastGroup *const onlyThis)
 {
-public:
-	_MulticastAnnounceAll(const RuntimeEnvironment *renv,Network *nw) :
-		_now(renv->node->now()),
-		_controller(nw->controller()),
-		_network(nw),
-		_anchors(nw->config().anchors()),
-		_upstreamAddresses(renv->topology->upstreamAddresses())
-	{}
-	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
+	// Assumes _lock is locked
+	const uint64_t now = RR->node->now();
+
+	std::vector<MulticastGroup> groups;
+	if (onlyThis)
+		groups.push_back(*onlyThis);
+	else groups = _allMulticastGroups();
+
+	if ((onlyThis)||((now - _lastAnnouncedMulticastGroupsUpstream) >= ZT_MULTICAST_ANNOUNCE_PERIOD)) {
+		if (!onlyThis)
+			_lastAnnouncedMulticastGroupsUpstream = now;
+
+		// Announce multicast groups to upstream peers (roots, etc.) and also send
+		// them our COM so that MULTICAST_GATHER can be authenticated properly.
+		const std::vector<Address> upstreams(RR->topology->upstreamAddresses());
+		for(std::vector<Address>::const_iterator a(upstreams.begin());a!=upstreams.end();++a) {
+			if ((_config.isPrivate())&&(_config.com)) {
+				Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
+				_config.com.serialize(outp);
+				outp.append((uint8_t)0x00);
+				RR->sw->send(outp,true);
+			}
+			_announceMulticastGroupsTo(*a,groups);
+		}
+
+		// Announce to controller, which does not need our COM since it obviously
+		// knows if we are a member. Of course if we already did or are going to
+		// below then we can skip it here.
+		const Address c(controller());
+		if ( (std::find(upstreams.begin(),upstreams.end(),c) == upstreams.end()) && (!_memberships.contains(c)) )
+			_announceMulticastGroupsTo(c,groups);
+	}
+
+	// Make sure that all "network anchors" have Membership records so we will
+	// push multicasts to them. Note that _membership() also does this but in a
+	// piecemeal on-demand fashion.
+	const std::vector<Address> anchors(_config.anchors());
+	for(std::vector<Address>::const_iterator a(anchors.begin());a!=anchors.end();++a)
+		_memberships[*a];
+
+	// Send MULTICAST_LIKE(s) to all members of this network
 	{
-		if ( (_network->_isAllowed(p)) || // FIXME: this causes multicast LIKEs for public networks to get spammed, which isn't terrible but is a bit stupid
-		     (p->address() == _controller) ||
-		     (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),p->address()) != _upstreamAddresses.end()) ||
-				 (std::find(_anchors.begin(),_anchors.end(),p->address()) != _anchors.end()) ) {
-			peers.push_back(p);
+		Address *a = (Address *)0;
+		Membership *m = (Membership *)0;
+		Hashtable<Address,Membership>::Iterator i(_memberships);
+		while (i.next(a,m)) {
+			if ((onlyThis)||(m->shouldLikeMulticasts(now))) {
+				if (!onlyThis)
+					m->likingMulticasts(now);
+				m->sendCredentialsIfNeeded(RR,RR->node->now(),*a,_config,(const Capability *)0);
+				_announceMulticastGroupsTo(*a,groups);
+			}
 		}
 	}
-	std::vector< SharedPtr<Peer> > peers;
-private:
-	const uint64_t _now;
-	const Address _controller;
-	Network *const _network;
-	const std::vector<Address> _anchors;
-	const std::vector<Address> _upstreamAddresses;
-};
-void Network::_announceMulticastGroups()
-{
-	// Assumes _lock is locked
-	std::vector<MulticastGroup> allMulticastGroups(_allMulticastGroups());
-	_MulticastAnnounceAll gpfunc(RR,this);
-	RR->topology->eachPeer<_MulticastAnnounceAll &>(gpfunc);
-	for(std::vector< SharedPtr<Peer> >::const_iterator i(gpfunc.peers.begin());i!=gpfunc.peers.end();++i)
-		_announceMulticastGroupsTo(*i,allMulticastGroups);
 }
 
-void Network::_announceMulticastGroupsTo(const SharedPtr<Peer> &peer,const std::vector<MulticastGroup> &allMulticastGroups)
+void Network::_announceMulticastGroupsTo(const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups)
 {
 	// Assumes _lock is locked
-
-	// Anyone we announce multicast groups to will need our COM to authenticate GATHER requests.
-	{
-		Membership *m = _memberships.get(peer->address());
-		if (m)
-			m->sendCredentialsIfNeeded(RR,RR->node->now(),peer->address(),_config,(const Capability *)0);
-	}
-
-	Packet outp(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+	Packet outp(peer,RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
 	for(std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {
 		if ((outp.size() + 24) >= ZT_PROTO_MAX_PACKET_LENGTH) {
 			outp.compress();
 			RR->sw->send(outp,true);
-			outp.reset(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+			outp.reset(peer,RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 		}
 
 		// network ID, MAC, ADI
@@ -1295,7 +1296,6 @@ void Network::_announceMulticastGroupsTo(const SharedPtr<Peer> &peer,const std::
 std::vector<MulticastGroup> Network::_allMulticastGroups() const
 {
 	// Assumes _lock is locked
-
 	std::vector<MulticastGroup> mgs;
 	mgs.reserve(_myMulticastGroups.size() + _multicastGroupsBehindMe.size() + 1);
 	mgs.insert(mgs.end(),_myMulticastGroups.begin(),_myMulticastGroups.end());
@@ -1304,8 +1304,21 @@ std::vector<MulticastGroup> Network::_allMulticastGroups() const
 		mgs.push_back(Network::BROADCAST);
 	std::sort(mgs.begin(),mgs.end());
 	mgs.erase(std::unique(mgs.begin(),mgs.end()),mgs.end());
-
 	return mgs;
+}
+
+Membership &Network::_membership(const Address &a)
+{
+	// assumes _lock is locked
+	const unsigned long ms = _memberships.size();
+	Membership &m = _memberships[a];
+	if (ms != _memberships.size()) {
+		const uint64_t now = RR->node->now();
+		m.sendCredentialsIfNeeded(RR,now,a,_config,(const Capability *)0);
+		_announceMulticastGroupsTo(a,_allMulticastGroups());
+		m.likingMulticasts(now);
+	}
+	return m;
 }
 
 } // namespace ZeroTier

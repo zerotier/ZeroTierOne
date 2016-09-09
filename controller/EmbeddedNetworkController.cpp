@@ -654,16 +654,16 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	// for both.) This is computed by reference to the last time we deauthorized
 	// a member, since within the time period since this event any temporal
 	// differences are not particularly relevant.
-	uint64_t credentialTtl = ZT_NETWORKCONFIG_DEFAULT_MIN_CREDENTIAL_TTL;
+	uint64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA;
 	if (now > nmi.mostRecentDeauthTime)
-		credentialTtl += (now - nmi.mostRecentDeauthTime);
-	if (credentialTtl > ZT_NETWORKCONFIG_DEFAULT_MAX_CREDENTIAL_TTL)
-		credentialTtl = ZT_NETWORKCONFIG_DEFAULT_MAX_CREDENTIAL_TTL;
+		credentialtmd += (now - nmi.mostRecentDeauthTime);
+	if (credentialtmd > ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA)
+		credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
 
 	nc.networkId = nwid;
 	nc.type = _jB(network["private"],true) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
 	nc.timestamp = now;
-	nc.credentialTimeToLive = credentialTtl;
+	nc.credentialTimeMaxDelta = credentialtmd;
 	nc.revision = _jI(network["revision"],0ULL);
 	nc.issuedTo = identity.address();
 	if (_jB(network["enableBroadcast"],true)) nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
@@ -925,7 +925,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	}
 
 	if (_jB(network["private"],true)) {
-		CertificateOfMembership com(now,credentialTtl,nwid,identity.address());
+		CertificateOfMembership com(now,credentialtmd,nwid,identity.address());
 		if (com.sign(signingId)) {
 			nc.com = com;
 		} else {
