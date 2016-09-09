@@ -237,6 +237,11 @@
 #define ZT_MULTICAST_EXPLICIT_GATHER_DELAY (ZT_MULTICAST_LIKE_EXPIRE / 10)
 
 /**
+ * Expiration for credentials presented for MULTICAST_LIKE or MULTICAST_GATHER (for non-network-members)
+ */
+#define ZT_MULTICAST_CREDENTIAL_EXPIRATON ZT_MULTICAST_LIKE_EXPIRE
+
+/**
  * Timeout for outgoing multicasts
  *
  * This is how long we wait for explicit or implicit gather results.
@@ -264,6 +269,11 @@
 #define ZT_PATH_MIN_REACTIVATE_INTERVAL 2500
 
 /**
+ * Do not accept HELLOs over a given path more often than this
+ */
+#define ZT_PATH_HELLO_RATE_LIMIT 1000
+
+/**
  * Delay between full-fledge pings of directly connected peers
  */
 #define ZT_PEER_PING_PERIOD 60000
@@ -282,6 +292,11 @@
  * Timeout for overall peer activity (measured from last receive)
  */
 #define ZT_PEER_ACTIVITY_TIMEOUT 500000
+
+/**
+ * General rate limit timeout for multiple packet types (HELLO, etc.)
+ */
+#define ZT_PEER_GENERAL_INBOUND_RATE_LIMIT 1000
 
 /**
  * Delay between requests for updated network autoconf information
@@ -325,6 +340,11 @@
  * Time horizon for push direct paths cutoff
  */
 #define ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME 60000
+
+/**
+ * General rate limit for other kinds of rate-limited packets (HELLO, credential request, etc.) both inbound and outbound
+ */
+#define ZT_PEER_GENERAL_RATE_LIMIT 1000
 
 /**
  * Maximum number of direct path pushes within cutoff time

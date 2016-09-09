@@ -924,13 +924,11 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		}
 	}
 
-	if (_jB(network["private"],true)) {
-		CertificateOfMembership com(now,credentialtmd,nwid,identity.address());
-		if (com.sign(signingId)) {
-			nc.com = com;
-		} else {
-			return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
-		}
+	CertificateOfMembership com(now,credentialtmd,nwid,identity.address());
+	if (com.sign(signingId)) {
+		nc.com = com;
+	} else {
+		return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
 
 	_writeJson(memberJP,member);

@@ -104,6 +104,7 @@ public:
 	Path() :
 		_lastOut(0),
 		_lastIn(0),
+		_lastHello(0),
 		_addr(),
 		_localAddress(),
 		_ipScope(InetAddress::IP_SCOPE_NONE)
@@ -113,6 +114,7 @@ public:
 	Path(const InetAddress &localAddress,const InetAddress &addr) :
 		_lastOut(0),
 		_lastIn(0),
+		_lastHello(0),
 		_addr(addr),
 		_localAddress(localAddress),
 		_ipScope(addr.ipScope())
@@ -229,9 +231,22 @@ public:
 	 */
 	inline uint64_t lastIn() const { return _lastIn; }
 
+	/**
+	 * @return True if we should allow HELLO via this path
+	 */
+	inline bool rateGateHello(const uint64_t now)
+	{
+		if ((now - _lastHello) >= ZT_PATH_HELLO_RATE_LIMIT) {
+			_lastHello = now;
+			return true;
+		}
+		return false;
+	}
+
 private:
 	uint64_t _lastOut;
 	uint64_t _lastIn;
+	uint64_t _lastHello;
 	InetAddress _addr;
 	InetAddress _localAddress;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often

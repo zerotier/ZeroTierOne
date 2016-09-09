@@ -34,8 +34,8 @@ namespace ZeroTier {
 
 Multicaster::Multicaster(const RuntimeEnvironment *renv) :
 	RR(renv),
-	_groups(1024),
-	_groups_m()
+	_groups(256),
+	_gatherAuth(256)
 {
 }
 
@@ -244,7 +244,7 @@ void Multicaster::send(
 				}
 
 				for(unsigned int k=0;k<numExplicitGatherPeers;++k) {
-					const CertificateOfMembership *com = (network) ? (((network->config())&&(network->config().isPrivate())) ? &(network->config().com) : (const CertificateOfMembership *)0) : (const CertificateOfMembership *)0;
+					const CertificateOfMembership *com = (network) ? ((network->config().com) ? &(network->config().com) : (const CertificateOfMembership *)0) : (const CertificateOfMembership *)0;
 					Packet outp(explicitGatherPeers[k],RR->identity.address(),Packet::VERB_MULTICAST_GATHER);
 					outp.append(nwid);
 					outp.append((uint8_t)((com) ? 0x01 : 0x00));
@@ -301,39 +301,59 @@ void Multicaster::send(
 
 void Multicaster::clean(uint64_t now)
 {
-	Mutex::Lock _l(_groups_m);
+	{
+		Mutex::Lock _l(_groups_m);
+		Multicaster::Key *k = (Multicaster::Key *)0;
+		MulticastGroupStatus *s = (MulticastGroupStatus *)0;
+		Hashtable<Multicaster::Key,MulticastGroupStatus>::Iterator mm(_groups);
+		while (mm.next(k,s)) {
+			for(std::list<OutboundMulticast>::iterator tx(s->txQueue.begin());tx!=s->txQueue.end();) {
+				if ((tx->expired(now))||(tx->atLimit()))
+					s->txQueue.erase(tx++);
+				else ++tx;
+			}
 
-	Multicaster::Key *k = (Multicaster::Key *)0;
-	MulticastGroupStatus *s = (MulticastGroupStatus *)0;
-	Hashtable<Multicaster::Key,MulticastGroupStatus>::Iterator mm(_groups);
-	while (mm.next(k,s)) {
-		for(std::list<OutboundMulticast>::iterator tx(s->txQueue.begin());tx!=s->txQueue.end();) {
-			if ((tx->expired(now))||(tx->atLimit()))
-				s->txQueue.erase(tx++);
-			else ++tx;
-		}
-
-		unsigned long count = 0;
-		{
-			std::vector<MulticastGroupMember>::iterator reader(s->members.begin());
-			std::vector<MulticastGroupMember>::iterator writer(reader);
-			while (reader != s->members.end()) {
-				if ((now - reader->timestamp) < ZT_MULTICAST_LIKE_EXPIRE) {
-					*writer = *reader;
-					++writer;
-					++count;
+			unsigned long count = 0;
+			{
+				std::vector<MulticastGroupMember>::iterator reader(s->members.begin());
+				std::vector<MulticastGroupMember>::iterator writer(reader);
+				while (reader != s->members.end()) {
+					if ((now - reader->timestamp) < ZT_MULTICAST_LIKE_EXPIRE) {
+						*writer = *reader;
+						++writer;
+						++count;
+					}
+					++reader;
 				}
-				++reader;
+			}
+
+			if (count) {
+				s->members.resize(count);
+			} else if (s->txQueue.empty()) {
+				_groups.erase(*k);
+			} else {
+				s->members.clear();
 			}
 		}
+	}
 
-		if (count) {
-			s->members.resize(count);
-		} else if (s->txQueue.empty()) {
-			_groups.erase(*k);
-		} else {
-			s->members.clear();
+	{
+		Mutex::Lock _l(_gatherAuth_m);
+		_GatherAuthKey *k = (_GatherAuthKey *)0;
+		uint64_t *ts = (uint64_t *)ts;
+		Hashtable<_GatherAuthKey,uint64_t>::Iterator i(_gatherAuth);
+		while (i.next(k,ts)) {
+			if ((now - *ts) >= ZT_MULTICAST_CREDENTIAL_EXPIRATON)
+				_gatherAuth.erase(*k);
 		}
+	}
+}
+
+void Multicaster::addCredential(const CertificateOfMembership &com,bool alreadyValidated)
+{
+	if ((alreadyValidated)||(com.verify(RR) == 0)) {
+		Mutex::Lock _l(_gatherAuth_m);
+		_gatherAuth[_GatherAuthKey(com.networkId(),com.issuedTo())] = RR->node->now();
 	}
 }
 

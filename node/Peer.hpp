@@ -348,13 +348,49 @@ public:
 	 * @param now Current time
 	 * @return True if we should respond
 	 */
-	inline bool shouldRespondToDirectPathPush(const uint64_t now)
+	inline bool rateGatePushDirectPaths(const uint64_t now)
 	{
 		if ((now - _lastDirectPathPushReceive) <= ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME)
 			++_directPathPushCutoffCount;
 		else _directPathPushCutoffCount = 0;
 		_lastDirectPathPushReceive = now;
 		return (_directPathPushCutoffCount < ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT);
+	}
+
+	/**
+	 * Rate limit gate for sending of ERROR_NEED_MEMBERSHIP_CERTIFICATE
+	 */
+	inline bool rateGateRequestCredentials(const uint64_t now)
+	{
+		if ((now - _lastCredentialRequestSent) >= ZT_PEER_GENERAL_RATE_LIMIT) {
+			_lastCredentialRequestSent = now;
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Rate limit gate for inbound WHOIS requests
+	 */
+	inline bool rateGateInboundWhoisRequest(const uint64_t now)
+	{
+		if ((now - _lastWhoisRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
+			_lastWhoisRequestReceived = now;
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Rate limit gate for inbound ECHO requests
+	 */
+	inline bool rateGateEchoRequest(const uint64_t now)
+	{
+		if ((now - _lastEchoRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
+			_lastEchoRequestReceived = now;
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -378,8 +414,6 @@ public:
 	}
 
 private:
-	bool _pushDirectPaths(const SharedPtr<Path> &path,uint64_t now);
-
 	inline uint64_t _pathScore(const unsigned int p,const uint64_t now) const
 	{
 		uint64_t s = ZT_PEER_PING_PERIOD + _paths[p].lastReceive + (uint64_t)(_paths[p].path->preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK));
@@ -415,6 +449,9 @@ private:
 	uint64_t _lastMulticastFrame;
 	uint64_t _lastDirectPathPushSent;
 	uint64_t _lastDirectPathPushReceive;
+	uint64_t _lastCredentialRequestSent;
+	uint64_t _lastWhoisRequestReceived;
+	uint64_t _lastEchoRequestReceived;
 	const RuntimeEnvironment *RR;
 	uint32_t _remoteClusterOptimal4;
 	uint16_t _vProto;

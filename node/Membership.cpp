@@ -71,7 +71,7 @@ void Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint
 			}
 			capsAndTags.setAt<uint16_t>(tagCountPos,(uint16_t)appendedTags);
 
-			const bool needCom = ((nconf.isPrivate())&&(nconf.com)&&((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY));
+			const bool needCom = ((nconf.com)&&((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY));
 			if ( (needCom) || (appendedCaps) || (appendedTags) ) {
 				Packet outp(peerAddress,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 				if (needCom) {

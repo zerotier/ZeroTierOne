@@ -260,7 +260,7 @@ public:
 	/**
 	 * Check whether this peer is allowed to provide multicast info for this network
 	 */
-	bool gateMulticastGather(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uint64_t packetId);
+	bool gateMulticastGatherReply(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uint64_t packetId);
 
 	/**
 	 * @param peer Peer to check
@@ -276,10 +276,10 @@ public:
 	/**
 	 * Push state to members such as multicast group memberships and latest COM (if needed)
 	 */
-	inline void pushStateToMembers()
+	inline void sendUpdatesToMembers()
 	{
 		Mutex::Lock _l(_lock);
-		_pushStateToMembers((const MulticastGroup *)0);
+		_sendUpdatesToMembers((const MulticastGroup *)0);
 	}
 
 	/**
@@ -332,9 +332,7 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 		const Address *const br = _remoteBridgeRoutes.get(mac);
-		if (br)
-			return *br;
-		return Address();
+		return ((br) ? *br : Address());
 	}
 
 	/**
@@ -357,13 +355,7 @@ public:
 	 * @param com Certificate of membership
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
-	inline int addCredential(const CertificateOfMembership &com)
-	{
-		if (com.networkId() != _id)
-			return -1;
-		Mutex::Lock _l(_lock);
-		return _membership(com.issuedTo()).addCredential(RR,com);
-	}
+	int addCredential(const CertificateOfMembership &com);
 
 	/**
 	 * @param cap Capability
@@ -418,7 +410,7 @@ private:
 	ZT_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
 	bool _gate(const SharedPtr<Peer> &peer);
-	void _pushStateToMembers(const MulticastGroup *const newMulticastGroup);
+	void _sendUpdatesToMembers(const MulticastGroup *const newMulticastGroup);
 	void _announceMulticastGroupsTo(const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups);
 	std::vector<MulticastGroup> _allMulticastGroups() const;
 	Membership &_membership(const Address &a);
