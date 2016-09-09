@@ -75,6 +75,9 @@ Node::Node(
 {
 	_online = false;
 
+	memset(_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
+	memset(_expectingRepliesTo,0,sizeof(_expectingRepliesTo));
+
 	// Use Salsa20 alone as a high-quality non-crypto PRNG
 	{
 		char foo[32];

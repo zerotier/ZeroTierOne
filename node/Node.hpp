@@ -44,6 +44,10 @@
 #define TRACE(f,...) {}
 #endif
 
+// Bit mask for "expecting reply" hash
+#define ZT_EXPECTING_REPLIES_BUCKET_MASK1 255
+#define ZT_EXPECTING_REPLIES_BUCKET_MASK2 31
+
 namespace ZeroTier {
 
 /**
@@ -250,6 +254,33 @@ public:
 	void postCircuitTestReport(const ZT_CircuitTestReport *report);
 	void setTrustedPaths(const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count);
 
+	/**
+	 * Register that we are expecting a reply to a packet ID
+	 *
+	 * @param packetId Packet ID to expect reply to
+	 */
+	inline void expectReplyTo(const uint64_t packetId)
+	{
+		const unsigned long bucket = (unsigned long)(packetId & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
+		_expectingRepliesTo[bucket][_expectingRepliesToBucketPtr[bucket]++ & ZT_EXPECTING_REPLIES_BUCKET_MASK2] = packetId;
+	}
+
+	/**
+	 * Check whether a given packet ID is something we are expecting a reply to
+	 *
+	 * @param packetId Packet ID to check
+	 * @return True if we're expecting a reply
+	 */
+	inline bool expectingReplyTo(const uint64_t packetId) const
+	{
+		const unsigned long bucket = (unsigned long)(packetId & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
+		for(unsigned long i=0;i<=ZT_EXPECTING_REPLIES_BUCKET_MASK2;++i) {
+			if (_expectingRepliesTo[bucket][i] == packetId)
+				return true;
+		}
+		return false;
+	}
+
 private:
 	inline SharedPtr<Network> _network(uint64_t nwid) const
 	{
@@ -265,6 +296,9 @@ private:
 	RuntimeEnvironment *RR;
 
 	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P
+
+	uint8_t _expectingRepliesToBucketPtr[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1];
+	uint64_t _expectingRepliesTo[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1][ZT_EXPECTING_REPLIES_BUCKET_MASK2 + 1];
 
 	ZT_DataStoreGetFunction _dataStoreGetFunction;
 	ZT_DataStorePutFunction _dataStorePutFunction;

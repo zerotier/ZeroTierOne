@@ -1585,7 +1585,6 @@ void EmbeddedNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTes
 		"\t\"upstream\": \"%.10llx\"," ZT_EOL_S
 		"\t\"current\": \"%.10llx\"," ZT_EOL_S
 		"\t\"receivedTimestamp\": %llu," ZT_EOL_S
-		"\t\"remoteTimestamp\": %llu," ZT_EOL_S
 		"\t\"sourcePacketId\": \"%.16llx\"," ZT_EOL_S
 		"\t\"flags\": %llu," ZT_EOL_S
 		"\t\"sourcePacketHopCount\": %u," ZT_EOL_S
@@ -1606,7 +1605,6 @@ void EmbeddedNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTes
 		(unsigned long long)report->upstream,
 		(unsigned long long)report->current,
 		(unsigned long long)OSUtils::now(),
-		(unsigned long long)report->remoteTimestamp,
 		(unsigned long long)report->sourcePacketId,
 		(unsigned long long)report->flags,
 		report->sourcePacketHopCount,

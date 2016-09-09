@@ -155,6 +155,11 @@ extern "C" {
 #define ZT_CIRCUIT_TEST_MAX_HOP_BREADTH 8
 
 /**
+ * Circuit test report flag: upstream peer authorized in path (e.g. by network COM)
+ */
+#define ZT_CIRCUIT_TEST_REPORT_FLAGS_UPSTREAM_AUTHORIZED_IN_PATH 0x0000000000000001ULL
+
+/**
  * Maximum number of cluster members (and max member ID plus one)
  */
 #define ZT_CLUSTER_MAX_MEMBERS 128
@@ -1219,17 +1224,12 @@ typedef struct {
 	uint64_t timestamp;
 
 	/**
-	 * Timestamp on remote device
-	 */
-	uint64_t remoteTimestamp;
-
-	/**
 	 * 64-bit packet ID of packet received by the reporting device
 	 */
 	uint64_t sourcePacketId;
 
 	/**
-	 * Flags (currently unused, will be zero)
+	 * Flags
 	 */
 	uint64_t flags;
 

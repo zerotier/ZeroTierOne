@@ -163,8 +163,10 @@ public:
 			return true;
 		if (_com) {
 			const uint64_t a = _com.timestamp().first;
-			const std::pair<uint64_t,uint64_t> b(nconf.com.timestamp());
-			return ((a <= b.first) ? ((b.first - a) <= ZT_PEER_ACTIVITY_TIMEOUT) : true);
+			if ((_blacklistBefore)&&(a <= _blacklistBefore))
+				return false;
+			const uint64_t b = nconf.com.timestamp().first;
+			return ((a <= b) ? ((b - a) <= ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA) : true);
 		}
 		return false;
 	}

@@ -253,6 +253,7 @@ void Multicaster::send(
 					outp.append((uint32_t)gatherLimit);
 					if (com)
 						com->serialize(outp);
+					RR->node->expectReplyTo(outp.packetId());
 					RR->sw->send(outp,true);
 				}
 			}

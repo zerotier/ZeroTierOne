@@ -266,6 +266,7 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 	atAddress.serialize(outp);
 	outp.append((uint64_t)RR->topology->worldId());
 	outp.append((uint64_t)RR->topology->worldTimestamp());
+	RR->node->expectReplyTo(outp.packetId());
 	outp.armor(_key,false); // HELLO is sent in the clear
 	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
 }
@@ -274,6 +275,7 @@ void Peer::attemptToContactAt(const InetAddress &localAddr,const InetAddress &at
 {
 	if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
 		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
+		RR->node->expectReplyTo(outp.packetId());
 		outp.armor(_key,true);
 		RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
 	} else {

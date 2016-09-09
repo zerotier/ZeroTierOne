@@ -734,13 +734,12 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 
 Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted)
 {
-	SharedPtr<Peer> root(RR->topology->getBestRoot(peersAlreadyConsulted,numPeersAlreadyConsulted,false));
-	if (root) {
-		Packet outp(root->address(),RR->identity.address(),Packet::VERB_WHOIS);
+	SharedPtr<Peer> upstream(RR->topology->getBestRoot(peersAlreadyConsulted,numPeersAlreadyConsulted,false));
+	if (upstream) {
+		Packet outp(upstream->address(),RR->identity.address(),Packet::VERB_WHOIS);
 		addr.appendTo(outp);
-		outp.armor(root->key(),true);
-		if (root->sendDirect(outp.data(),outp.size(),RR->node->now(),true))
-			return root->address();
+		RR->node->expectReplyTo(outp.packetId());
+		send(outp,true);
 	}
 	return Address();
 }

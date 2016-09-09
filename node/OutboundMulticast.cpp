@@ -91,6 +91,7 @@ void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,const Address &toA
 		//TRACE(">>MC %.16llx -> %s",(unsigned long long)this,toAddr.toString().c_str());
 		_packet.newInitializationVector();
 		_packet.setDestination(toAddr2);
+		RR->node->expectReplyTo(_packet.packetId());
 		RR->sw->send(_packet,true);
 	}
 }

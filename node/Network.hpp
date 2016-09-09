@@ -258,6 +258,12 @@ public:
 	bool gate(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uint64_t packetId);
 
 	/**
+	 * @param peer Peer to check
+	 * @return True if peer has recently been a valid member of this network
+	 */
+	bool recentlyAllowedOnNetwork(const SharedPtr<Peer> &peer) const;
+
+	/**
 	 * Perform cleanup and possibly save state
 	 */
 	void clean();

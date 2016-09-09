@@ -1054,6 +1054,7 @@ void Network::requestConfiguration()
 	} else {
 		outp.append((unsigned char)0,16);
 	}
+	RR->node->expectReplyTo(outp.packetId());
 	outp.compress();
 	RR->sw->send(outp,true);
 
@@ -1089,6 +1090,15 @@ bool Network::gate(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uin
 	} catch ( ... ) {
 		TRACE("gate() check failed for peer %s: unexpected exception",peer->address().toString().c_str());
 	}
+	return false;
+}
+
+bool Network::recentlyAllowedOnNetwork(const SharedPtr<Peer> &peer) const
+{
+	Mutex::Lock _l(_lock);
+	const Membership *m = _memberships.get(peer->address());
+	if (m)
+		return m->recentlyAllowedOnNetwork(_config);
 	return false;
 }
 
