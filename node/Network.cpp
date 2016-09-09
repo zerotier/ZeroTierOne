@@ -1093,6 +1093,11 @@ bool Network::gate(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uin
 	return false;
 }
 
+bool Network::gateMulticastGather(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uint64_t packetId)
+{
+	return ( (peer->address() == controller()) || RR->topology->isUpstream(peer->identity()) || gate(peer,verb,packetId) || _config.isAnchor(peer->address()) );
+}
+
 bool Network::recentlyAllowedOnNetwork(const SharedPtr<Peer> &peer) const
 {
 	Mutex::Lock _l(_lock);

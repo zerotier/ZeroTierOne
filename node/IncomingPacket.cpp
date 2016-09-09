@@ -443,7 +443,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 			case Packet::VERB_MULTICAST_GATHER: {
 				const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_NETWORK_ID);
 				SharedPtr<Network> network(RR->node->network(nwid));
-				if ((network)&&(network->gate(peer,verb(),packetId()))) {
+				if ((network)&&(network->gateMulticastGather(peer,verb(),packetId()))) {
 					const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_ADI));
 					//TRACE("%s(%s): OK(MULTICAST_GATHER) %.16llx/%s length %u",source().toString().c_str(),_path->address().toString().c_str(),nwid,mg.toString().c_str(),size());
 					const unsigned int count = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS + 4);
@@ -469,7 +469,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 							network->addCredential(com);
 					}
 
-					if (network->gate(peer,verb(),packetId())) {
+					if (network->gateMulticastGather(peer,verb(),packetId())) {
 						if ((flags & 0x02) != 0) {
 							// OK(MULTICAST_FRAME) includes implicit gather results
 							offset += ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS;

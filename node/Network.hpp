@@ -258,6 +258,11 @@ public:
 	bool gate(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uint64_t packetId);
 
 	/**
+	 * Check whether this peer is allowed to provide multicast info for this network
+	 */
+	bool gateMulticastGather(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uint64_t packetId);
+
+	/**
 	 * @param peer Peer to check
 	 * @return True if peer has recently been a valid member of this network
 	 */

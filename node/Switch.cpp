@@ -759,11 +759,8 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 
 		SharedPtr<Path> viaPath(peer->getBestPath(now,false));
 		if ( (viaPath) && (!viaPath->alive(now)) && (!RR->topology->isRoot(peer->identity())) ) {
-			if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) >> 2,(uint64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL)) {
-				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ECHO);
-				outp.armor(peer->key(),true);
-				viaPath->send(RR,outp.data(),outp.size(),now);
-			}
+			if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) * 4,(uint64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL))
+				peer->attemptToContactAt(viaPath->localAddress(),viaPath->address(),now);
 			viaPath.zero();
 		}
 		if (!viaPath) {

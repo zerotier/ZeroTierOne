@@ -286,6 +286,19 @@ public:
 	}
 
 	/**
+	 * @param a Address to check
+	 * @return True if address is an anchor
+	 */
+	inline bool isAnchor(const Address &a) const
+	{
+		for(unsigned int i=0;i<specialistCount;++i) {
+			if ((a == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR) != 0))
+				return true;
+		}
+		return false;
+	}
+
+	/**
 	 * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
 	 * @return True if this network allows bridging
 	 */
