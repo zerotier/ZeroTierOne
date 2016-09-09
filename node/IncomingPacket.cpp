@@ -949,7 +949,8 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 			}
 		}
 
-		if ( ( ((network)&&(network->gate(peer,verb(),packetId()))) || (RR->mc->cacheAuthorized(peer->address(),nwid,RR->node->now())) ) && (gatherLimit > 0) ) {
+		const bool trustEstablished = ((network)&&(network->gate(peer,verb(),packetId())));
+		if ( ( trustEstablished || RR->mc->cacheAuthorized(peer->address(),nwid,RR->node->now()) ) && (gatherLimit > 0) ) {
 			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 			outp.append((unsigned char)Packet::VERB_MULTICAST_GATHER);
 			outp.append(packetId());
@@ -969,7 +970,7 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 #endif
 		}
 
-		peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_GATHER,0,Packet::VERB_NOP,false);
+		peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_GATHER,0,Packet::VERB_NOP,trustEstablished);
 	} catch ( ... ) {
 		TRACE("dropped MULTICAST_GATHER from %s(%s): unexpected exception",peer->address().toString().c_str(),_path->address().toString().c_str());
 	}
@@ -995,8 +996,6 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 					network->addCredential(com);
 			}
 
-			// Check membership after we've read any included COM, since
-			// that cert might be what we needed.
 			if (!network->gate(peer,verb(),packetId())) {
 				TRACE("dropped MULTICAST_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_path->address().toString().c_str(),(unsigned long long)network->id());
 				peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,false);
