@@ -435,7 +435,7 @@ bool ManagedRoute::sync()
 		}
 	}
 
-	if (_systemVia) {
+	// if (_systemVia) {
 		if (!_applied.count(leftt)) {
 			_applied.insert(leftt);
 			_routeCmd("add",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
@@ -446,11 +446,11 @@ bool ManagedRoute::sync()
 			_routeCmd("add",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 			_routeCmd("change",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		}
-		if (_applied.count(_target)) {
+		/*if (_applied.count(_target)) {
 			_applied.erase(_target);
 			_routeCmd("delete",_target,_via,(const char *)0,(_via) ? (const char *)0 : _device);
-		}
-	} else {
+		}*/
+	/*} else {
 		if (_applied.count(leftt)) {
 			_applied.erase(leftt);
 			_routeCmd("delete",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
@@ -464,7 +464,7 @@ bool ManagedRoute::sync()
 			_routeCmd("add",_target,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 			_routeCmd("change",_target,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		}
-	}
+	}*/
 
 #endif // __BSD__ ------------------------------------------------------------
 
@@ -502,7 +502,7 @@ bool ManagedRoute::sync()
 
 #ifdef __WINDOWS__ // --------------------------------------------------------
 
-	if (needBifurcation) {
+	//if (needBifurcation) {
 		if (!_applied.count(leftt)) {
 			_applied.insert(leftt);
 			_winRoute(false,interfaceLuid,interfaceIndex,leftt,_via);
@@ -511,11 +511,11 @@ bool ManagedRoute::sync()
 			_applied.insert(rightt);
 			_winRoute(false,interfaceLuid,interfaceIndex,rightt,_via);
 		}
-		if (_applied.count(_target)) {
+		/*if (_applied.count(_target)) {
 			_applied.erase(_target);
 			_winRoute(true,interfaceLuid,interfaceIndex,_target,_via);
-		}
-	} else {
+		}*/
+	/*} else {
 		if (_applied.count(leftt)) {
 			_applied.erase(leftt);
 			_winRoute(true,interfaceLuid,interfaceIndex,leftt,_via);
@@ -528,7 +528,7 @@ bool ManagedRoute::sync()
 			_applied.insert(_target);
 			_winRoute(false,interfaceLuid,interfaceIndex,_target,_via);
 		}
-	}
+	}*/
 
 #endif // __WINDOWS__ --------------------------------------------------------
 
