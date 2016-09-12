@@ -394,6 +394,18 @@ public:
 	}
 
 	/**
+	 * Rate gate requests for network COM
+	 */
+	inline bool rateGateComRequest(const uint64_t now)
+	{
+		if ((now - _lastComRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
+			_lastComRequestReceived = now;
+			return true;
+		}
+		return false;
+	}
+
+	/**
 	 * Find a common set of addresses by which two peers can link, if any
 	 *
 	 * @param a Peer A
@@ -452,6 +464,7 @@ private:
 	uint64_t _lastCredentialRequestSent;
 	uint64_t _lastWhoisRequestReceived;
 	uint64_t _lastEchoRequestReceived;
+	uint64_t _lastComRequestReceived;
 	const RuntimeEnvironment *RR;
 	uint32_t _remoteClusterOptimal4;
 	uint16_t _vProto;

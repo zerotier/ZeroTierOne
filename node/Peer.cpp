@@ -50,6 +50,7 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastCredentialRequestSent(0),
 	_lastWhoisRequestReceived(0),
 	_lastEchoRequestReceived(0),
+	_lastComRequestReceived(0),
 	RR(renv),
 	_remoteClusterOptimal4(0),
 	_vProto(0),

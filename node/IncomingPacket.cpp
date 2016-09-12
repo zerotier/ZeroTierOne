@@ -156,11 +156,14 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 			case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE: {
 				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if ((network)&&(network->recentlyAllowedOnNetwork(peer))) {
-					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
-					network->config().com.serialize(outp);
-					outp.append((uint8_t)0);
-					outp.armor(peer->key(),true);
-					_path->send(RR,outp.data(),outp.size(),RR->node->now());
+					const uint64_t now = RR->node->now();
+					if (peer->rateGateComRequest(now)) {
+						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
+						network->config().com.serialize(outp);
+						outp.append((uint8_t)0);
+						outp.armor(peer->key(),true);
+						_path->send(RR,outp.data(),outp.size(),now);
+					}
 				}
 			}	break;
 
