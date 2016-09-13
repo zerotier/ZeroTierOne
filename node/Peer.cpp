@@ -51,6 +51,7 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastWhoisRequestReceived(0),
 	_lastEchoRequestReceived(0),
 	_lastComRequestReceived(0),
+	_lastCredentialsReceived(0),
 	RR(renv),
 	_remoteClusterOptimal4(0),
 	_vProto(0),
@@ -60,7 +61,8 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_id(peerIdentity),
 	_numPaths(0),
 	_latency(0),
-	_directPathPushCutoffCount(0)
+	_directPathPushCutoffCount(0),
+	_credentialsCutoffCount(0)
 {
 	memset(_remoteClusterOptimal6,0,sizeof(_remoteClusterOptimal6));
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))

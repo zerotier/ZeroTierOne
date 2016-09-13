@@ -133,6 +133,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 		switch(errorCode) {
 
 			case Packet::ERROR_OBJ_NOT_FOUND:
+				// Object not found, currently only meaningful from network controllers.
 				if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
 					SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 					if ((network)&&(network->controller() == peer->address()))
@@ -141,6 +142,9 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				break;
 
 			case Packet::ERROR_UNSUPPORTED_OPERATION:
+				// This can be sent in response to any operation, though right now we only
+				// consider it meaningful from network controllers. This would indicate
+				// that the queried node does not support acting as a controller.
 				if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
 					SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 					if ((network)&&(network->controller() == peer->address()))
@@ -149,11 +153,18 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				break;
 
 			case Packet::ERROR_IDENTITY_COLLISION:
+				// Roots are the only peers currently permitted to state authoritatively
+				// that an identity has collided. When this occurs the node should be shut
+				// down and a new identity created. The odds of this ever happening are
+				// very low.
 				if (RR->topology->isRoot(peer->identity()))
 					RR->node->postEvent(ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION);
 				break;
 
 			case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE: {
+				// This error can be sent in response to any packet that fails network
+				// authorization. We only listen to it if it's from a peer that has recently
+				// been authorized on this network.
 				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if ((network)&&(network->recentlyAllowedOnNetwork(peer))) {
 					const uint64_t now = RR->node->now();
@@ -168,12 +179,15 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 			}	break;
 
 			case Packet::ERROR_NETWORK_ACCESS_DENIED_: {
+				// Network controller: network access denied.
 				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if ((network)&&(network->controller() == peer->address()))
 					network->setAccessDenied();
 			}	break;
 
 			case Packet::ERROR_UNWANTED_MULTICAST: {
+				// Members of networks can use this error to indicate that they no longer
+				// want to receive multicasts on a given channel.
 				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if ((network)&&(network->gate(peer,verb(),packetId()))) {
 					MulticastGroup mg(MAC(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8,6),6),at<uint32_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 14));
@@ -301,6 +315,8 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 
 		// VALID -- if we made it here, packet passed identity and authenticity checks!
 
+		// Learn our external surface address from other peers to help us negotiate symmetric NATs
+		// and detect changes to our global IP that can trigger path renegotiation.
 		if ((externalSurfaceAddress)&&(hops() == 0))
 			RR->sa->iam(id.address(),_path->localAddress(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(id),now);
 
@@ -370,6 +386,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 		const Packet::Verb inReVerb = (Packet::Verb)(*this)[ZT_PROTO_VERB_OK_IDX_IN_RE_VERB];
 		const uint64_t inRePacketId = at<uint64_t>(ZT_PROTO_VERB_OK_IDX_IN_RE_PACKET_ID);
 
+		// Don't parse OK packets that are not in response to a packet ID we sent
 		if (!RR->node->expectingReplyTo(inRePacketId)) {
 			TRACE("%s(%s): OK(%s) DROPPED: not expecting reply to %.16llx",peer->address().toString().c_str(),_path->address().toString().c_str(),Packet::verbString(inReVerb),packetId());
 			return true;
@@ -711,6 +728,7 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 		uint64_t authOnNetwork[256];
 		unsigned int authOnNetworkCount = 0;
 		SharedPtr<Network> network;
+		bool trustEstablished = false;
 
 		// Iterate through 18-byte network,MAC,ADI tuples
 		for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18) {
@@ -726,7 +744,9 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 			if (!auth) {
 				if ((!network)||(network->id() != nwid))
 					network = RR->node->network(nwid);
-				if ( ((network)&&(network->gate(peer,verb(),packetId()))) || RR->mc->cacheAuthorized(peer->address(),nwid,now) ) {
+				const bool authOnNet = ((network)&&(network->gate(peer,verb(),packetId())));
+				trustEstablished |= authOnNet;
+				if (authOnNet||RR->mc->cacheAuthorized(peer->address(),nwid,now)) {
 					auth = true;
 					if (authOnNetworkCount < 256) // sanity check, packets can't really be this big
 						authOnNetwork[authOnNetworkCount++] = nwid;
@@ -739,7 +759,7 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 			}
 		}
 
-		peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP,false);
+		peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP,trustEstablished);
 	} catch ( ... ) {
 		TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
@@ -749,9 +769,15 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
+		if (!peer->rateGateCredentialsReceived(RR->node->now())) {
+			TRACE("dropped NETWORK_CREDENTIALS from %s(%s): rate limit circuit breaker tripped",source().toString().c_str(),_path->address().toString().c_str());
+			return true;
+		}
+
 		CertificateOfMembership com;
 		Capability cap;
 		Tag tag;
+		bool trustEstablished = false;
 
 		unsigned int p = ZT_PACKET_IDX_PAYLOAD;
 		while ((p < size())&&((*this)[p])) {
@@ -759,8 +785,10 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 			if (com) {
 				SharedPtr<Network> network(RR->node->network(com.networkId()));
 				if (network) {
-					if (network->addCredential(com) == 1)
-						return false; // wait for WHOIS
+					switch (network->addCredential(com)) {
+						case 0: trustEstablished = true; break;
+						case 1: return false; // wait for WHOIS
+					}
 				} else RR->mc->addCredential(com,false);
 			}
 		}
@@ -772,8 +800,10 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 				p += cap.deserialize(*this,p);
 				SharedPtr<Network> network(RR->node->network(cap.networkId()));
 				if (network) {
-					if (network->addCredential(cap) == 1)
-						return false; // wait for WHOIS
+					switch (network->addCredential(cap)) {
+						case 0: trustEstablished = true; break;
+						case 1: return false; // wait for WHOIS
+					}
 				}
 			}
 
@@ -782,13 +812,15 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 				p += tag.deserialize(*this,p);
 				SharedPtr<Network> network(RR->node->network(tag.networkId()));
 				if (network) {
-					if (network->addCredential(tag) == 1)
-						return false; // wait for WHOIS
+					switch (network->addCredential(tag)) {
+						case 0: trustEstablished = true; break;
+						case 1: return false; // wait for WHOIS
+					}
 				}
 			}
 		}
 
-		peer->received(_path,hops(),packetId(),Packet::VERB_NETWORK_CREDENTIALS,0,Packet::VERB_NOP,false);
+		peer->received(_path,hops(),packetId(),Packet::VERB_NETWORK_CREDENTIALS,0,Packet::VERB_NOP,trustEstablished);
 	} catch ( ... ) {
 		TRACE("dropped NETWORK_CREDENTIALS from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
@@ -900,11 +932,13 @@ bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,cons
 {
 	try {
 		const uint64_t nwid = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);
+		bool trustEstablished = false;
 
 		if (Network::controllerFor(nwid) == peer->address()) {
 			SharedPtr<Network> network(RR->node->network(nwid));
 			if (network) {
 				network->requestConfiguration();
+				trustEstablished = true;
 			} else {
 				TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): not a member of %.16llx",source().toString().c_str(),_path->address().toString().c_str(),nwid);
 				peer->received(_path,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP,false);
@@ -919,7 +953,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,cons
 			}
 		}
 
-		peer->received(_path,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP,false);
+		peer->received(_path,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP,trustEstablished);
 	} catch ( ... ) {
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}

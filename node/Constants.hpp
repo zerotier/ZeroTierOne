@@ -342,11 +342,6 @@
 #define ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME 60000
 
 /**
- * General rate limit for other kinds of rate-limited packets (HELLO, credential request, etc.) both inbound and outbound
- */
-#define ZT_PEER_GENERAL_RATE_LIMIT 1000
-
-/**
  * Maximum number of direct path pushes within cutoff time
  *
  * This limits response to PUSH_DIRECT_PATHS to CUTOFF_LIMIT responses
@@ -354,6 +349,21 @@
  * useful for DOS amplification attacks.
  */
 #define ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT 5
+
+/**
+ * Time horizon for VERB_NETWORK_CREDENTIALS cutoff
+ */
+#define ZT_PEER_CREDENTIALS_CUTOFF_TIME 60000
+
+/**
+ * Maximum number of VERB_NETWORK_CREDENTIALS within cutoff time
+ */
+#define ZT_PEER_CREDEITIALS_CUTOFF_LIMIT 15
+
+/**
+ * General rate limit for other kinds of rate-limited packets (HELLO, credential request, etc.) both inbound and outbound
+ */
+#define ZT_PEER_GENERAL_RATE_LIMIT 1000
 
 /**
  * Maximum number of paths per IP scope (e.g. global, link-local) and family (e.g. v4/v6)

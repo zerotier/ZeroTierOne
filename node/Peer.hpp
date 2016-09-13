@@ -338,15 +338,7 @@ public:
 	inline bool remoteVersionKnown() const throw() { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
 
 	/**
-	 * Update direct path push stats and return true if we should respond
-	 *
-	 * This is a circuit breaker to make VERB_PUSH_DIRECT_PATHS not particularly
-	 * useful as a DDOS amplification attack vector. Otherwise a malicious peer
-	 * could send loads of these and cause others to bombard arbitrary IPs with
-	 * traffic.
-	 *
-	 * @param now Current time
-	 * @return True if we should respond
+	 * Rate limit gate for VERB_PUSH_DIRECT_PATHS
 	 */
 	inline bool rateGatePushDirectPaths(const uint64_t now)
 	{
@@ -355,6 +347,18 @@ public:
 		else _directPathPushCutoffCount = 0;
 		_lastDirectPathPushReceive = now;
 		return (_directPathPushCutoffCount < ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT);
+	}
+
+	/**
+	 * Rate limit gate for VERB_NETWORK_CREDENTIALS
+	 */
+	inline bool rateGateCredentialsReceived(const uint64_t now)
+	{
+		if ((now - _lastCredentialsReceived) <= ZT_PEER_CREDENTIALS_CUTOFF_TIME)
+			++_credentialsCutoffCount;
+		else _credentialsCutoffCount = 0;
+		_lastCredentialsReceived = now;
+		return (_directPathPushCutoffCount < ZT_PEER_CREDEITIALS_CUTOFF_LIMIT);
 	}
 
 	/**
@@ -465,6 +469,7 @@ private:
 	uint64_t _lastWhoisRequestReceived;
 	uint64_t _lastEchoRequestReceived;
 	uint64_t _lastComRequestReceived;
+	uint64_t _lastCredentialsReceived;
 	const RuntimeEnvironment *RR;
 	uint32_t _remoteClusterOptimal4;
 	uint16_t _vProto;
@@ -483,6 +488,7 @@ private:
 	unsigned int _numPaths;
 	unsigned int _latency;
 	unsigned int _directPathPushCutoffCount;
+	unsigned int _credentialsCutoffCount;
 
 	AtomicCounter __refCount;
 };
