@@ -105,7 +105,18 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 				const Address destination(fragment.destination());
 
 				if (destination != RR->identity.address()) {
-					// Fragment is not for us, so try to relay it
+					switch(RR->node->relayPolicy()) {
+						case ZT_RELAY_POLICY_ALWAYS:
+							break;
+						case ZT_RELAY_POLICY_TRUSTED:
+							if (!path->trustEstablished(now))
+								return;
+							break;
+						// case ZT_RELAY_POLICY_NEVER:
+						default:
+							return;
+					}
+
 					if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
 						fragment.incrementHops();
 
@@ -203,9 +214,20 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 				//TRACE("<< %.16llx %s -> %s (size: %u)",(unsigned long long)packet->packetId(),source.toString().c_str(),destination.toString().c_str(),packet->size());
 
 				if (destination != RR->identity.address()) {
+					switch(RR->node->relayPolicy()) {
+						case ZT_RELAY_POLICY_ALWAYS:
+							break;
+						case ZT_RELAY_POLICY_TRUSTED:
+							if (!path->trustEstablished(now))
+								return;
+							break;
+						// case ZT_RELAY_POLICY_NEVER:
+						default:
+							return;
+					}
+
 					Packet packet(data,len);
 
-					// Packet is not for us, so try to relay it
 					if (packet.hops() < ZT_RELAY_MAX_HOPS) {
 						packet.incrementHops();
 
@@ -327,6 +349,11 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	}
 
 	if (to.isMulticast()) {
+		if (network->config().multicastLimit == 0) {
+			TRACE("%.16llx: dropped multicast: not allowed on network",network->id());
+			return;
+		}
+
 		// Destination is a multicast address (including broadcast)
 		MulticastGroup mg(to,0);
 

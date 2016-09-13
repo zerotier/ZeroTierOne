@@ -312,7 +312,7 @@ public:
 	/**
 	 * @return 256-bit secret symmetric encryption key
 	 */
-	inline const unsigned char *key() const throw() { return _key; }
+	inline const unsigned char *key() const { return _key; }
 
 	/**
 	 * Set the currently known remote version of this peer's client
@@ -330,12 +330,17 @@ public:
 		_vRevision = (uint16_t)vrev;
 	}
 
-	inline unsigned int remoteVersionProtocol() const throw() { return _vProto; }
-	inline unsigned int remoteVersionMajor() const throw() { return _vMajor; }
-	inline unsigned int remoteVersionMinor() const throw() { return _vMinor; }
-	inline unsigned int remoteVersionRevision() const throw() { return _vRevision; }
+	inline unsigned int remoteVersionProtocol() const { return _vProto; }
+	inline unsigned int remoteVersionMajor() const { return _vMajor; }
+	inline unsigned int remoteVersionMinor() const { return _vMinor; }
+	inline unsigned int remoteVersionRevision() const { return _vRevision; }
 
-	inline bool remoteVersionKnown() const throw() { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
+	inline bool remoteVersionKnown() const { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
+
+	/**
+	 * @return True if peer has received a trust established packet (e.g. common network membership) in the past ZT_TRUST_EXPIRATION ms
+	 */
+	inline bool trustEstablished(const uint64_t now) const { return ((now - _lastTrustEstablishedPacketReceived) < ZT_TRUST_EXPIRATION); }
 
 	/**
 	 * Rate limit gate for VERB_PUSH_DIRECT_PATHS
@@ -470,6 +475,7 @@ private:
 	uint64_t _lastEchoRequestReceived;
 	uint64_t _lastComRequestReceived;
 	uint64_t _lastCredentialsReceived;
+	uint64_t _lastTrustEstablishedPacketReceived;
 	const RuntimeEnvironment *RR;
 	uint32_t _remoteClusterOptimal4;
 	uint16_t _vProto;

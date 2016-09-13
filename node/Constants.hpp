@@ -351,6 +351,11 @@
 #define ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT 5
 
 /**
+ * Maximum number of paths per IP scope (e.g. global, link-local) and family (e.g. v4/v6)
+ */
+#define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 4
+
+/**
  * Time horizon for VERB_NETWORK_CREDENTIALS cutoff
  */
 #define ZT_PEER_CREDENTIALS_CUTOFF_TIME 60000
@@ -366,9 +371,9 @@
 #define ZT_PEER_GENERAL_RATE_LIMIT 1000
 
 /**
- * Maximum number of paths per IP scope (e.g. global, link-local) and family (e.g. v4/v6)
+ * How long is a path or peer considered to have a trust relationship with us (for e.g. relay policy) since last trusted established packet?
  */
-#define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 4
+#define ZT_TRUST_EXPIRATION 600000
 
 /**
  * Enable support for older network configurations from older (pre-1.1.6) controllers

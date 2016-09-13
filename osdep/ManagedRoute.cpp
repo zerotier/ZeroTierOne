@@ -436,12 +436,12 @@ bool ManagedRoute::sync()
 	}
 
 	if (!_applied.count(leftt)) {
-		_applied.insert(leftt);
+		_applied[rightt] = false; // not ifscoped
 		_routeCmd("add",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		_routeCmd("change",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 	}
 	if ((rightt)&&(!_applied.count(rightt))) {
-		_applied.insert(rightt);
+		_applied[rightt] = false; // not ifscoped
 		_routeCmd("add",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		_routeCmd("change",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 	}
@@ -457,7 +457,7 @@ bool ManagedRoute::sync()
 			}
 		} else {
 			if (!_applied.count(_target)) {
-				_applied.insert(_target);
+				_applied[_target] = true; // ifscoped
 				_routeCmd("add",_target,_via,_device,(_via) ? (const char *)0 : _device);
 				_routeCmd("change",_target,_via,_device,(_via) ? (const char *)0 : _device);
 			}
@@ -468,65 +468,27 @@ bool ManagedRoute::sync()
 
 #ifdef __LINUX__ // ----------------------------------------------------------
 
-	//if (needBifurcation) {
-		if (!_applied.count(leftt)) {
-			_applied.insert(leftt);
-			_routeCmd("replace",leftt,_via,(_via) ? (const char *)0 : _device);
-		}
-		if ((rightt)&&(!_applied.count(rightt))) {
-			_applied.insert(rightt);
-			_routeCmd("replace",rightt,_via,(_via) ? (const char *)0 : _device);
-		}
-		/*if (_applied.count(_target)) {
-			_applied.erase(_target);
-			_routeCmd("del",_target,_via,(_via) ? (const char *)0 : _device);
-		}*/
-	/*} else {
-		if (_applied.count(leftt)) {
-			_applied.erase(leftt);
-			_routeCmd("del",leftt,_via,(_via) ? (const char *)0 : _device);
-		}
-		if ((rightt)&&(_applied.count(rightt))) {
-			_applied.erase(rightt);
-			_routeCmd("del",rightt,_via,(_via) ? (const char *)0 : _device);
-		}
-		if (!_applied.count(_target)) {
-			_applied.insert(_target);
-			_routeCmd("replace",_target,_via,(_via) ? (const char *)0 : _device);
-		}
-	}*/
+	if (!_applied.count(leftt)) {
+		_applied[leftt] = false; // boolean unused
+		_routeCmd("replace",leftt,_via,(_via) ? (const char *)0 : _device);
+	}
+	if ((rightt)&&(!_applied.count(rightt))) {
+		_applied[rightt] = false; // boolean unused
+		_routeCmd("replace",rightt,_via,(_via) ? (const char *)0 : _device);
+	}
 
 #endif // __LINUX__ ----------------------------------------------------------
 
 #ifdef __WINDOWS__ // --------------------------------------------------------
 
-	//if (needBifurcation) {
-		if (!_applied.count(leftt)) {
-			_applied.insert(leftt);
-			_winRoute(false,interfaceLuid,interfaceIndex,leftt,_via);
-		}
-		if ((rightt)&&(!_applied.count(rightt))) {
-			_applied.insert(rightt);
-			_winRoute(false,interfaceLuid,interfaceIndex,rightt,_via);
-		}
-		/*if (_applied.count(_target)) {
-			_applied.erase(_target);
-			_winRoute(true,interfaceLuid,interfaceIndex,_target,_via);
-		}*/
-	/*} else {
-		if (_applied.count(leftt)) {
-			_applied.erase(leftt);
-			_winRoute(true,interfaceLuid,interfaceIndex,leftt,_via);
-		}
-		if ((rightt)&&(_applied.count(rightt))) {
-			_applied.erase(rightt);
-			_winRoute(true,interfaceLuid,interfaceIndex,rightt,_via);
-		}
-		if (!_applied.count(_target)) {
-			_applied.insert(_target);
-			_winRoute(false,interfaceLuid,interfaceIndex,_target,_via);
-		}
-	}*/
+	if (!_applied.count(leftt)) {
+		_applied[leftt] = false; // boolean unused
+		_winRoute(false,interfaceLuid,interfaceIndex,leftt,_via);
+	}
+	if ((rightt)&&(!_applied.count(rightt))) {
+		_applied[rightt] = false; // boolean unused
+		_winRoute(false,interfaceLuid,interfaceIndex,rightt,_via);
+	}
 
 #endif // __WINDOWS__ --------------------------------------------------------
 
@@ -553,9 +515,9 @@ void ManagedRoute::remove()
 	}
 #endif // __BSD__ ------------------------------------------------------------
 
-	for(std::set<InetAddress>::iterator r(_applied.begin());r!=_applied.end();++r) {
+	for(std::map<InetAddress,bool>::iterator r(_applied.begin());r!=_applied.end();++r) {
 #ifdef __BSD__ // ------------------------------------------------------------
-		_routeCmd("delete",*r,_via,(const char *)0,(_via) ? (const char *)0 : _device);
+		_routeCmd("delete",r->first,_via,r->second ? _device : (const char *)0,(_via) ? (const char *)0 : _device);
 #endif // __BSD__ ------------------------------------------------------------
 
 #ifdef __LINUX__ // ----------------------------------------------------------

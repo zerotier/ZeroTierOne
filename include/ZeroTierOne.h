@@ -870,19 +870,28 @@ enum ZT_VirtualNetworkConfigOperation
 	ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY = 4
 };
 
+enum ZT_RelayPolicy
+{
+	ZT_RELAY_POLICY_NEVER = 0,
+	ZT_RELAY_POLICY_TRUSTED = 1,
+	ZT_RELAY_POLICY_ALWAYS = 2
+};
+
 /**
  * What trust hierarchy role does this peer have?
  */
-enum ZT_PeerRole {
+enum ZT_PeerRole
+{
 	ZT_PEER_ROLE_LEAF = 0,     // ordinary node
-	ZT_PEER_ROLE_RELAY = 1,    // relay node
-	ZT_PEER_ROLE_ROOT = 2      // root server
+	ZT_PEER_ROLE_UPSTREAM = 1, // upstream node
+	ZT_PEER_ROLE_ROOT = 2      // global root
 };
 
 /**
  * Vendor ID
  */
-enum ZT_Vendor {
+enum ZT_Vendor
+{
 	ZT_VENDOR_UNSPECIFIED = 0,
 	ZT_VENDOR_ZEROTIER = 1
 };
@@ -890,7 +899,8 @@ enum ZT_Vendor {
 /**
  * Platform type
  */
-enum ZT_Platform {
+enum ZT_Platform
+{
 	ZT_PLATFORM_UNSPECIFIED = 0,
 	ZT_PLATFORM_LINUX = 1,
 	ZT_PLATFORM_WINDOWS = 2,
@@ -905,13 +915,15 @@ enum ZT_Platform {
 	ZT_PLATFORM_VXWORKS = 11,
 	ZT_PLATFORM_FREERTOS = 12,
 	ZT_PLATFORM_SYSBIOS = 13,
-	ZT_PLATFORM_HURD = 14
+	ZT_PLATFORM_HURD = 14,
+	ZT_PLATFORM_WEB = 15
 };
 
 /**
  * Architecture type
  */
-enum ZT_Architecture {
+enum ZT_Architecture
+{
 	ZT_ARCHITECTURE_UNSPECIFIED = 0,
 	ZT_ARCHITECTURE_X86 = 1,
 	ZT_ARCHITECTURE_X64 = 2,
@@ -926,7 +938,8 @@ enum ZT_Architecture {
 	ZT_ARCHITECTURE_SPARC32 = 11,
 	ZT_ARCHITECTURE_SPARC64 = 12,
 	ZT_ARCHITECTURE_DOTNET_CLR = 13,
-	ZT_ARCHITECTURE_JAVA_JVM = 14
+	ZT_ARCHITECTURE_JAVA_JVM = 14,
+	ZT_ARCHITECTURE_WEB = 15
 };
 
 /**
@@ -1680,6 +1693,15 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
+
+/**
+ * Set node's relay policy
+ *
+ * @param node Node instance
+ * @param rp New relay policy
+ * @return OK(0) or error code
+ */
+enum ZT_ResultCode ZT_Node_setRelayPolicy(ZT_Node *node,enum ZT_RelayPolicy rp);
 
 /**
  * Join a network

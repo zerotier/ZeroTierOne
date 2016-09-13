@@ -91,6 +91,7 @@ public:
 		unsigned int frameLength,
 		volatile uint64_t *nextBackgroundTaskDeadline);
 	ZT_ResultCode processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
+	ZT_ResultCode setRelayPolicy(enum ZT_RelayPolicy rp);
 	ZT_ResultCode join(uint64_t nwid,void *uptr);
 	ZT_ResultCode leave(uint64_t nwid,void **uptr);
 	ZT_ResultCode multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
@@ -245,6 +246,7 @@ public:
 	inline int configureVirtualNetworkPort(uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,nwid,nuptr,op,nc); }
 
 	inline bool online() const throw() { return _online; }
+	inline ZT_RelayPolicy relayPolicy() const { return _relayPolicy; }
 
 #ifdef ZT_TRACE
 	void postTrace(const char *module,unsigned int line,const char *fmt,...);
@@ -326,6 +328,7 @@ private:
 	uint64_t _now;
 	uint64_t _lastPingCheck;
 	uint64_t _lastHousekeepingRun;
+	ZT_RelayPolicy _relayPolicy;
 	bool _online;
 };
 

@@ -52,6 +52,7 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastEchoRequestReceived(0),
 	_lastComRequestReceived(0),
 	_lastCredentialsReceived(0),
+	_lastTrustEstablishedPacketReceived(0),
 	RR(renv),
 	_remoteClusterOptimal4(0),
 	_vProto(0),
@@ -131,6 +132,11 @@ void Peer::received(
 		_lastUnicastFrame = now;
 	else if (verb == Packet::VERB_MULTICAST_FRAME)
 		_lastMulticastFrame = now;
+
+	if (trustEstablished) {
+		_lastTrustEstablishedPacketReceived = now;
+		path->trustedPacketReceived(now);
+	}
 
 	if (hops == 0) {
 		bool pathIsConfirmed = false;

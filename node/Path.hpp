@@ -104,6 +104,7 @@ public:
 	Path() :
 		_lastOut(0),
 		_lastIn(0),
+		_lastTrustEstablishedPacketReceived(0),
 		_addr(),
 		_localAddress(),
 		_ipScope(InetAddress::IP_SCOPE_NONE)
@@ -113,6 +114,7 @@ public:
 	Path(const InetAddress &localAddress,const InetAddress &addr) :
 		_lastOut(0),
 		_lastIn(0),
+		_lastTrustEstablishedPacketReceived(0),
 		_addr(addr),
 		_localAddress(localAddress),
 		_ipScope(addr.ipScope())
@@ -125,6 +127,11 @@ public:
 	 * @param t Time of receive
 	 */
 	inline void received(const uint64_t t) { _lastIn = t; }
+
+	/**
+	 * Set time last trusted packet was received (done in Peer::received())
+	 */
+	inline void trustedPacketReceived(const uint64_t t) { _lastTrustEstablishedPacketReceived = t; }
 
 	/**
 	 * Send a packet via this path (last out time is also updated)
@@ -158,6 +165,11 @@ public:
 	 * @return IP scope -- faster shortcut for address().ipScope()
 	 */
 	inline InetAddress::IpScope ipScope() const { return _ipScope; }
+
+	/**
+	 * @return True if path has received a trust established packet (e.g. common network membership) in the past ZT_TRUST_EXPIRATION ms
+	 */
+	inline bool trustEstablished(const uint64_t now) const { return ((now - _lastTrustEstablishedPacketReceived) < ZT_TRUST_EXPIRATION); }
 
 	/**
 	 * @return Preference rank, higher == better
@@ -232,6 +244,7 @@ public:
 private:
 	uint64_t _lastOut;
 	uint64_t _lastIn;
+	uint64_t _lastTrustEstablishedPacketReceived;
 	InetAddress _addr;
 	InetAddress _localAddress;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often

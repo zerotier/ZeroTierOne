@@ -9,7 +9,7 @@
 
 #include <stdexcept>
 #include <vector>
-#include <set>
+#include <map>
 
 namespace ZeroTier {
 
@@ -105,7 +105,7 @@ private:
 	InetAddress _target;
 	InetAddress _via;
 	InetAddress _systemVia; // for route overrides
-	std::set<InetAddress> _applied; // routes currently applied
+	std::map<InetAddress,bool> _applied; // routes currently applied
 	char _device[128];
 	char _systemDevice[128]; // for route overrides
 };
