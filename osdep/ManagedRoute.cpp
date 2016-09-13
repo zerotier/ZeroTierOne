@@ -435,36 +435,34 @@ bool ManagedRoute::sync()
 		}
 	}
 
-	// if (_systemVia) {
-		if (!_applied.count(leftt)) {
-			_applied.insert(leftt);
-			_routeCmd("add",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
-			_routeCmd("change",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
+	if (!_applied.count(leftt)) {
+		_applied.insert(leftt);
+		_routeCmd("add",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
+		_routeCmd("change",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
+	}
+	if ((rightt)&&(!_applied.count(rightt))) {
+		_applied.insert(rightt);
+		_routeCmd("add",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
+		_routeCmd("change",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
+	}
+
+	// Create a device-bound default target if there is none in the system. This
+	// is to allow e.g. IPv6 default route to work even if there is no native
+	// IPv6 on your LAN.
+	if (_target.isDefaultRoute()) {
+		if (_systemVia) {
+			if (_applied.count(_target)) {
+				_applied.erase(_target);
+				_routeCmd("delete",_target,_via,_device,(_via) ? (const char *)0 : _device);
+			}
+		} else {
+			if (!_applied.count(_target)) {
+				_applied.insert(_target);
+				_routeCmd("add",_target,_via,_device,(_via) ? (const char *)0 : _device);
+				_routeCmd("change",_target,_via,_device,(_via) ? (const char *)0 : _device);
+			}
 		}
-		if ((rightt)&&(!_applied.count(rightt))) {
-			_applied.insert(rightt);
-			_routeCmd("add",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
-			_routeCmd("change",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
-		}
-		/*if (_applied.count(_target)) {
-			_applied.erase(_target);
-			_routeCmd("delete",_target,_via,(const char *)0,(_via) ? (const char *)0 : _device);
-		}*/
-	/*} else {
-		if (_applied.count(leftt)) {
-			_applied.erase(leftt);
-			_routeCmd("delete",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
-		}
-		if ((rightt)&&(_applied.count(rightt))) {
-			_applied.erase(rightt);
-			_routeCmd("delete",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
-		}
-		if (!_applied.count(_target)) {
-			_applied.insert(_target);
-			_routeCmd("add",_target,_via,(const char *)0,(_via) ? (const char *)0 : _device);
-			_routeCmd("change",_target,_via,(const char *)0,(_via) ? (const char *)0 : _device);
-		}
-	}*/
+	}
 
 #endif // __BSD__ ------------------------------------------------------------
 
