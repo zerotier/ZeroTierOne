@@ -211,11 +211,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 	try {
 		const uint64_t now = RR->node->now();
 
-		if (!_path->rateGateHello(now)) {
-			TRACE("dropped HELLO from %s(%s): rate limiting circuit breaker for HELLO on this path tripped",source().toString().c_str(),_path->address().toString().c_str());
-			return true;
-		}
-
 		const uint64_t pid = packetId();
 		const Address fromAddress(source());
 		const unsigned int protoVersion = (*this)[ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION];
@@ -258,14 +253,14 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 				if (peer->identity() != id) {
 					// Identity is different from the one we already have -- address collision
 
-					unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
+					uint8_t key[ZT_PEER_SECRET_KEY_LENGTH];
 					if (RR->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
 						if (dearmor(key)) { // ensure packet is authentic, otherwise drop
 							TRACE("rejected HELLO from %s(%s): address already claimed",id.address().toString().c_str(),_path->address().toString().c_str());
 							Packet outp(id.address(),RR->identity.address(),Packet::VERB_ERROR);
-							outp.append((unsigned char)Packet::VERB_HELLO);
+							outp.append((uint8_t)Packet::VERB_HELLO);
 							outp.append((uint64_t)pid);
-							outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
+							outp.append((uint8_t)Packet::ERROR_IDENTITY_COLLISION);
 							outp.armor(key,true);
 							_path->send(RR,outp.data(),outp.size(),RR->node->now());
 						} else {
@@ -296,7 +291,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 				return true;
 			}
 
-			// Check identity proof of work
+			// Check that identity's address is valid as per the derivation function
 			if (!id.locallyValidate()) {
 				TRACE("dropped HELLO from %s(%s): identity invalid",id.address().toString().c_str(),_path->address().toString().c_str());
 				return true;
