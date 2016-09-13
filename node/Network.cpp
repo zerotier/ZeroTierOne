@@ -1299,7 +1299,7 @@ void Network::_sendUpdatesToMembers(const MulticastGroup *const newMulticastGrou
 	for(std::vector<Address>::const_iterator a(anchors.begin());a!=anchors.end();++a)
 		_membership(*a);
 
-	// Send MULTICAST_LIKE(s) to all members of this network
+	// Send credentials and multicast LIKEs to members, upstreams, and controller
 	{
 		Address *a = (Address *)0;
 		Membership *m = (Membership *)0;
