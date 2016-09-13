@@ -240,6 +240,7 @@ static std::vector<_RTE> _getRTEs(const InetAddress &target,bool contains)
 
 static void _routeCmd(const char *op,const InetAddress &target,const InetAddress &via,const char *ifscope,const char *localInterface)
 {
+	//printf("route %s %s %s %s %s\n",op,target.toString().c_str(),(via) ? via.toString().c_str() : "(null)",(ifscope) ? ifscope : "(null)",(localInterface) ? localInterface : "(null)");
 	long p = (long)fork();
 	if (p > 0) {
 		int exitcode = -1;
@@ -436,7 +437,7 @@ bool ManagedRoute::sync()
 	}
 
 	if (!_applied.count(leftt)) {
-		_applied[rightt] = false; // not ifscoped
+		_applied[leftt] = false; // not ifscoped
 		_routeCmd("add",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		_routeCmd("change",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 	}

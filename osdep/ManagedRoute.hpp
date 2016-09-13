@@ -6,6 +6,9 @@
 
 #include "../node/InetAddress.hpp"
 #include "../node/Utils.hpp"
+#include "../node/SharedPtr.hpp"
+#include "../node/AtomicCounter.hpp"
+#include "../node/NonCopyable.hpp"
 
 #include <stdexcept>
 #include <vector>
@@ -16,58 +19,13 @@ namespace ZeroTier {
 /**
  * A ZT-managed route that used C++ RAII semantics to automatically clean itself up on deallocate
  */
-class ManagedRoute
+class ManagedRoute : NonCopyable
 {
+	friend class SharedPtr<ManagedRoute>;
+
 public:
-	ManagedRoute()
+	ManagedRoute(const InetAddress &target,const InetAddress &via,const char *device)
 	{
-		_device[0] = (char)0;
-		_systemDevice[0] = (char)0;
-	}
-
-	~ManagedRoute()
-	{
-		this->remove();
-	}
-
-	ManagedRoute(const ManagedRoute &r)
-	{
-		*this = r;
-	}
-
-	inline ManagedRoute &operator=(const ManagedRoute &r)
-	{
-		if (_applied.size() == 0) {
-			_target = r._target;
-			_via = r._via;
-			_systemVia = r._systemVia;
-			_applied = r._applied;
-			Utils::scopy(_device,sizeof(_device),r._device);
-			Utils::scopy(_systemDevice,sizeof(_systemDevice),r._systemDevice);
-		} else {
-			// Sanity check -- this is an 'assert' to detect a bug
-			fprintf(stderr,"Applied ManagedRoute isn't copyable!\n");
-			abort();
-		}
-		return *this;
-	}
-
-	/**
-	 * Initialize object and set route
-	 *
-	 * Note: on Windows, use the interface NET_LUID in hexadecimal as the
-	 * "device name."
-	 *
-	 * @param target Route target (e.g. 0.0.0.0/0 for default)
-	 * @param via Route next L3 hop or NULL InetAddress if local in which case it will be routed via device
-	 * @param device Name or hex LUID of ZeroTier device (e.g. zt#)
-	 * @return True if route was successfully set
-	 */
-	inline bool set(const InetAddress &target,const InetAddress &via,const char *device)
-	{
-		if ((!via)&&(!device[0]))
-			return false;
-		this->remove();
 		_target = target;
 		_via = via;
 		if (via.ss_family == AF_INET)
@@ -75,7 +33,12 @@ public:
 		else if (via.ss_family == AF_INET6)
 			_via.setPort(128);
 		Utils::scopy(_device,sizeof(_device),device);
-		return this->sync();
+		_systemDevice[0] = (char)0;
+	}
+
+	~ManagedRoute()
+	{
+		this->remove();
 	}
 
 	/**
@@ -108,6 +71,8 @@ private:
 	std::map<InetAddress,bool> _applied; // routes currently applied
 	char _device[128];
 	char _systemDevice[128]; // for route overrides
+
+	AtomicCounter __refCount;
 };
 
 } // namespace ZeroTier
