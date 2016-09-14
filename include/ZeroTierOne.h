@@ -978,6 +978,11 @@ typedef struct
 	unsigned int mtu;
 
 	/**
+	 * Recommended MTU to avoid fragmentation at the physical layer (hint)
+	 */
+	unsigned int physicalMtu;
+
+	/**
 	 * If nonzero, the network this port belongs to indicates DHCP availability
 	 *
 	 * This is a suggestion. The underlying implementation is free to ignore it
@@ -1603,6 +1608,9 @@ typedef int (*ZT_PathCheckFunction)(
  *
  * Note that this can take a few seconds the first time it's called, as it
  * will generate an identity.
+ *
+ * TODO: should consolidate function pointers into versioned structure for
+ * better API stability.
  *
  * @param node Result: pointer is set to new node instance on success
  * @param uptr User pointer to pass to functions/callbacks
