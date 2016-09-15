@@ -108,9 +108,13 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION "v"
 // Protocol version (see Packet.hpp)
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION "pv"
-// Software major, minor, revision
+// Software vendor
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_VENDOR "vend"
+// Software major version
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION "majv"
+// Software minor version
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION "minv"
+// Software revision
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION "revv"
 // Rules engine revision
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV "revr"
@@ -123,9 +127,11 @@ namespace ZeroTier {
 // Maximum number of tags this node can accept
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_TAGS "mt"
 // Network join authorization token (if any)
-#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH_TOKEN "atok"
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH "a"
 // Network configuration meta-data flags
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS "f"
+// Relay policy for this node
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_RELAY_POLICY "rp"
 
 // These dictionary keys are short so they don't take up much room.
 // By convention we use upper case for binary blobs, but it doesn't really matter.
