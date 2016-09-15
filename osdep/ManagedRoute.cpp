@@ -450,6 +450,7 @@ bool ManagedRoute::sync()
 	// Create a device-bound default target if there is none in the system. This
 	// is to allow e.g. IPv6 default route to work even if there is no native
 	// IPv6 on your LAN.
+	/*
 	if (_target.isDefaultRoute()) {
 		if (_systemVia) {
 			if (_applied.count(_target)) {
@@ -464,6 +465,7 @@ bool ManagedRoute::sync()
 			}
 		}
 	}
+	*/
 
 #endif // __BSD__ ------------------------------------------------------------
 
