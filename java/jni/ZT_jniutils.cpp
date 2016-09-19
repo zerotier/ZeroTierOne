@@ -313,11 +313,20 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
         return NULL;
     }
 
-    jobject inetAddressObject = newInetAddress(env, addr);
-
-    if(env->ExceptionCheck() || inetAddressObject == NULL)
+    jobject inetAddressObject = NULL;
+    
+    if(addr.ss_family != 0)
     {
-        LOGE("Error creating new inet address");
+        inetAddressObject = newInetAddress(env, addr);
+
+        if(env->ExceptionCheck() || inetAddressObject == NULL)
+        {
+            LOGE("Error creating new inet address");
+            return NULL;
+        }
+    }
+    else
+    {
         return NULL;
     }
 
@@ -350,10 +359,9 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
         break;
         default:
         {
-            LOGE("ERROR:  addr.ss_family is not set or unknown");
             break;
         }
-    };
+    }
 
 
     jobject inetSocketAddressObject = env->NewObject(inetSocketAddressClass, inetSocketAddress_constructor, inetAddressObject, port);
