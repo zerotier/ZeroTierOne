@@ -71,9 +71,13 @@ Node::Node(
 	_prngStreamPtr(0),
 	_now(now),
 	_lastPingCheck(0),
-	_lastHousekeepingRun(0)
+	_lastHousekeepingRun(0),
+	_relayPolicy(ZT_RELAY_POLICY_TRUSTED)
 {
 	_online = false;
+
+	memset(_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
+	memset(_expectingRepliesTo,0,sizeof(_expectingRepliesTo));
 
 	// Use Salsa20 alone as a high-quality non-crypto PRNG
 	{
@@ -115,6 +119,9 @@ Node::Node(
 		throw;
 	}
 
+	if (RR->topology->amRoot())
+		_relayPolicy = ZT_RELAY_POLICY_ALWAYS;
+
 	postEvent(ZT_EVENT_UP);
 }
 
@@ -128,6 +135,7 @@ Node::~Node()
 	delete RR->topology;
 	delete RR->mc;
 	delete RR->sw;
+
 #ifdef ZT_ENABLE_CLUSTER
 	delete RR->cluster;
 #endif
@@ -263,7 +271,7 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 				for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
 					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!n->second->hasConfig()))
 						needConfig.push_back(n->second);
-					n->second->announceMulticastGroups();
+					n->second->sendUpdatesToMembers();
 				}
 			}
 			for(std::vector< SharedPtr<Network> >::const_iterator n(needConfig.begin());n!=needConfig.end();++n)
@@ -313,6 +321,12 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}
 
+	return ZT_RESULT_OK;
+}
+
+ZT_ResultCode Node::setRelayPolicy(enum ZT_RelayPolicy rp)
+{
+	_relayPolicy = rp;
 	return ZT_RESULT_OK;
 }
 
@@ -816,6 +830,15 @@ enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,uint64_t now,vol
 		return reinterpret_cast<ZeroTier::Node *>(node)->processBackgroundTasks(now,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
+	} catch ( ... ) {
+		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+	}
+}
+
+enum ZT_ResultCode ZT_Node_setRelayPolicy(ZT_Node *node,enum ZT_RelayPolicy rp)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->setRelayPolicy(rp);
 	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}

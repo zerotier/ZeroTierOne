@@ -537,7 +537,7 @@ public:
 		EthernetTap *tap;
 		ZT_VirtualNetworkConfig config; // memcpy() of raw config from core
 		std::vector<InetAddress> managedIps;
-		std::list<ManagedRoute> managedRoutes;
+		std::list< SharedPtr<ManagedRoute> > managedRoutes;
 		NetworkSettings settings;
 	};
 	std::map<uint64_t,NetworkState> _nets;
@@ -1128,13 +1128,13 @@ public:
 			std::vector<InetAddress> myIps(n.tap->ips());
 
 			// Nuke applied routes that are no longer in n.config.routes[] and/or are not allowed
-			for(std::list<ManagedRoute>::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();) {
+			for(std::list< SharedPtr<ManagedRoute> >::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();) {
 				bool haveRoute = false;
-				if ( (checkIfManagedIsAllowed(n,mr->target())) && ((mr->via().ss_family != mr->target().ss_family)||(!matchIpOnly(myIps,mr->via()))) ) {
+				if ( (checkIfManagedIsAllowed(n,(*mr)->target())) && (((*mr)->via().ss_family != (*mr)->target().ss_family)||(!matchIpOnly(myIps,(*mr)->via()))) ) {
 					for(unsigned int i=0;i<n.config.routeCount;++i) {
 						const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
 						const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
-						if ( (mr->target() == *target) && ( ((via->ss_family == target->ss_family)&&(mr->via() == *via)) || (tapdev == mr->device()) ) ) {
+						if ( ((*mr)->target() == *target) && ( ((via->ss_family == target->ss_family)&&((*mr)->via().ipsEqual(*via))) || (tapdev == (*mr)->device()) ) ) {
 							haveRoute = true;
 							break;
 						}
@@ -1168,10 +1168,10 @@ public:
 					continue;
 
 				// If we've already applied this route, just sync it and continue
-				for(std::list<ManagedRoute>::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();++mr) {
-					if ( (mr->target() == *target) && ( ((via->ss_family == target->ss_family)&&(mr->via() == *via)) || (tapdev == mr->device()) ) ) {
+				for(std::list< SharedPtr<ManagedRoute> >::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();++mr) {
+					if ( ((*mr)->target() == *target) && ( ((via->ss_family == target->ss_family)&&((*mr)->via().ipsEqual(*via))) || (tapdev == (*mr)->device()) ) ) {
 						haveRoute = true;
-						mr->sync();
+						(*mr)->sync();
 						break;
 					}
 				}
@@ -1179,8 +1179,8 @@ public:
 					continue;
 
 				// Add and apply new routes
-				n.managedRoutes.push_back(ManagedRoute());
-				if (!n.managedRoutes.back().set(*target,*via,tapdev))
+				n.managedRoutes.push_back(SharedPtr<ManagedRoute>(new ManagedRoute(*target,*via,tapdev)));
+				if (!n.managedRoutes.back()->sync())
 					n.managedRoutes.pop_back();
 			}
 		}

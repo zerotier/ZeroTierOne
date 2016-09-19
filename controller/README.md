@@ -229,9 +229,7 @@ This returns an object containing all currently online members and the most rece
 | nwid                  | string        | 16-digit network ID                               | no       |
 | clock                 | integer       | Current clock, ms since epoch                     | no       |
 | authorized            | boolean       | Is member authorized? (for private networks)      | YES      |
-| lastAuthorizedTime    | integer       | Time 'authorized' was last set to 'true'          | no       |
-| lastAuthorizedBy      | string        | What last set 'authorized' to 'true'?             | no       |
-| lastDeauthorizedTime  | integer       | Time 'authorized' was last set to 'false'         | no       |
+| authHistory           | array[object] | History of auth changes, latest at end            | no       |
 | activeBridge          | boolean       | Member is able to bridge to other Ethernet nets   | YES      |
 | identity              | string        | Member's public ZeroTier identity (if known)      | no       |
 | ipAssignments         | array[string] | Managed IP address assignments                    | YES      |

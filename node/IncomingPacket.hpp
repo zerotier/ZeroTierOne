@@ -136,7 +136,7 @@ private:
 	// These are called internally to handle packet contents once it has
 	// been authenticated, decrypted, decompressed, and classified.
 	bool _doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer); // can be called with NULL peer, while all others cannot
+	bool _doHELLO(const RuntimeEnvironment *RR,const bool alreadyAuthenticated);
 	bool _doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);

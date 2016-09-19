@@ -105,7 +105,18 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 				const Address destination(fragment.destination());
 
 				if (destination != RR->identity.address()) {
-					// Fragment is not for us, so try to relay it
+					switch(RR->node->relayPolicy()) {
+						case ZT_RELAY_POLICY_ALWAYS:
+							break;
+						case ZT_RELAY_POLICY_TRUSTED:
+							if (!path->trustEstablished(now))
+								return;
+							break;
+						// case ZT_RELAY_POLICY_NEVER:
+						default:
+							return;
+					}
+
 					if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
 						fragment.incrementHops();
 
@@ -203,9 +214,20 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 				//TRACE("<< %.16llx %s -> %s (size: %u)",(unsigned long long)packet->packetId(),source.toString().c_str(),destination.toString().c_str(),packet->size());
 
 				if (destination != RR->identity.address()) {
+					switch(RR->node->relayPolicy()) {
+						case ZT_RELAY_POLICY_ALWAYS:
+							break;
+						case ZT_RELAY_POLICY_TRUSTED:
+							if (!path->trustEstablished(now))
+								return;
+							break;
+						// case ZT_RELAY_POLICY_NEVER:
+						default:
+							return;
+					}
+
 					Packet packet(data,len);
 
-					// Packet is not for us, so try to relay it
 					if (packet.hops() < ZT_RELAY_MAX_HOPS) {
 						packet.incrementHops();
 
@@ -327,6 +349,11 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	}
 
 	if (to.isMulticast()) {
+		if (network->config().multicastLimit == 0) {
+			TRACE("%.16llx: dropped multicast: not allowed on network",network->id());
+			return;
+		}
+
 		// Destination is a multicast address (including broadcast)
 		MulticastGroup mg(to,0);
 
@@ -734,13 +761,12 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 
 Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted)
 {
-	SharedPtr<Peer> root(RR->topology->getBestRoot(peersAlreadyConsulted,numPeersAlreadyConsulted,false));
-	if (root) {
-		Packet outp(root->address(),RR->identity.address(),Packet::VERB_WHOIS);
+	SharedPtr<Peer> upstream(RR->topology->getBestRoot(peersAlreadyConsulted,numPeersAlreadyConsulted,false));
+	if (upstream) {
+		Packet outp(upstream->address(),RR->identity.address(),Packet::VERB_WHOIS);
 		addr.appendTo(outp);
-		outp.armor(root->key(),true);
-		if (root->sendDirect(outp.data(),outp.size(),RR->node->now(),true))
-			return root->address();
+		RR->node->expectReplyTo(outp.packetId());
+		send(outp,true);
 	}
 	return Address();
 }
@@ -760,11 +786,8 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 
 		SharedPtr<Path> viaPath(peer->getBestPath(now,false));
 		if ( (viaPath) && (!viaPath->alive(now)) && (!RR->topology->isRoot(peer->identity())) ) {
-			if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) >> 2,(uint64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL)) {
-				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ECHO);
-				outp.armor(peer->key(),true);
-				viaPath->send(RR,outp.data(),outp.size(),now);
-			}
+			if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) * 4,(uint64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL))
+				peer->attemptToContactAt(viaPath->localAddress(),viaPath->address(),now);
 			viaPath.zero();
 		}
 		if (!viaPath) {

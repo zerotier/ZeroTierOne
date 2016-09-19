@@ -24,13 +24,13 @@
 #include "Packet.hpp"
 #include "Node.hpp"
 
-#define ZT_CREDENTIAL_PUSH_EVERY (ZT_NETWORK_AUTOCONF_DELAY / 4)
+#define ZT_CREDENTIAL_PUSH_EVERY (ZT_NETWORK_AUTOCONF_DELAY / 3)
 
 namespace ZeroTier {
 
 void Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,const Capability *cap)
 {
-	if ((now - _lastPushAttempt) < 1000ULL)
+	if ((now - _lastPushAttempt) < 2000ULL)
 		return;
 	_lastPushAttempt = now;
 
@@ -71,7 +71,7 @@ void Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint
 			}
 			capsAndTags.setAt<uint16_t>(tagCountPos,(uint16_t)appendedTags);
 
-			const bool needCom = ((nconf.isPrivate())&&(nconf.com)&&((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY));
+			const bool needCom = ((nconf.com)&&((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY));
 			if ( (needCom) || (appendedCaps) || (appendedTags) ) {
 				Packet outp(peerAddress,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 				if (needCom) {
@@ -99,9 +99,11 @@ int Membership::addCredential(const RuntimeEnvironment *RR,const CertificateOfMe
 	const int vr = com.verify(RR);
 
 	if (vr == 0) {
-		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx ACCEPTED (new)",com.issuedTo().toString().c_str(),com.networkId());
-		if (com.timestamp().first > _com.timestamp().first) {
+		if (com.timestamp().first >= _com.timestamp().first) {
+			TRACE("addCredential(CertificateOfMembership) for %s on %.16llx ACCEPTED (new)",com.issuedTo().toString().c_str(),com.networkId());
 			_com = com;
+		} else {
+			TRACE("addCredential(CertificateOfMembership) for %s on %.16llx ACCEPTED but not used (OK but older than current)",com.issuedTo().toString().c_str(),com.networkId());
 		}
 	} else {
 		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx REJECTED (%d)",com.issuedTo().toString().c_str(),com.networkId(),vr);

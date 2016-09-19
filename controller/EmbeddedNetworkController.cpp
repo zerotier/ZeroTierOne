@@ -566,42 +566,69 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 
 	// Determine whether and how member is authorized
 	const char *authorizedBy = (const char *)0;
-	if (!_jB(network["private"],true)) {
+	if (_jB(member["authorized"],false)) {
+		authorizedBy = "memberIsAuthorized";
+	} else if (!_jB(network["private"],true)) {
 		authorizedBy = "networkIsPublic";
-		// If member already has an authorized field, leave it alone. That way its state is
-		// preserved if the user toggles the network back to private. Otherwise set it to
-		// true by default for new members of public nets.
 		if (!member.count("authorized")) {
 			member["authorized"] = true;
-			member["lastAuthorizedTime"] = now;
-			member["lastAuthorizedBy"] = authorizedBy;
+			json ah;
+			ah["a"] = true;
+			ah["by"] = authorizedBy;
+			ah["ts"] = now;
+			ah["ct"] = json();
+			ah["c"] = json();
+			member["authHistory"].push_back(ah);
 			member["lastModified"] = now;
-			auto revj = member["revision"];
+			json &revj = member["revision"];
 			member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 		}
-	} else if (_jB(member["authorized"],false)) {
-		authorizedBy = "memberIsAuthorized";
 	} else {
-		char atok[256];
-		if (metaData.get(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH_TOKEN,atok,sizeof(atok)) > 0) {
-			atok[255] = (char)0; // not necessary but YDIFLO
-			if (strlen(atok) > 0) { // extra sanity check since we never want to compare a null token on either side
-				auto authTokens = network["authTokens"];
+		char presentedAuth[512];
+		if (metaData.get(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH,presentedAuth,sizeof(presentedAuth)) > 0) {
+			presentedAuth[511] = (char)0; // sanity check
+
+			// Check for bearer token presented by member
+			if ((strlen(presentedAuth) > 6)&&(!strncmp(presentedAuth,"token:",6))) {
+				const char *const presentedToken = presentedAuth + 6;
+
+				json &authTokens = network["authTokens"];
 				if (authTokens.is_array()) {
 					for(unsigned long i=0;i<authTokens.size();++i) {
-						auto at = authTokens[i];
-						if (at.is_object()) {
-							const uint64_t expires = _jI(at["expires"],0ULL);
-							std::string tok = _jS(at["token"],"");
-							if ( ((expires == 0ULL)||(expires > now)) && (tok.length() > 0) && (tok == atok) ) {
-								authorizedBy = "token";
-								member["authorized"] = true; // tokens actually change member authorization state
-								member["lastAuthorizedTime"] = now;
-								member["lastAuthorizedBy"] = authorizedBy;
-								member["lastModified"] = now;
-								auto revj = member["revision"];
-								member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-								break;
+						json &token = authTokens[i];
+						if (token.is_object()) {
+							const uint64_t expires = _jI(token["expires"],0ULL);
+							const uint64_t maxUses = _jI(token["maxUsesPerMember"],0ULL);
+							std::string tstr = _jS(token["token"],"");
+
+							if (((expires == 0ULL)||(expires > now))&&(tstr == presentedToken)) {
+								bool usable = (maxUses == 0);
+								if (!usable) {
+									uint64_t useCount = 0;
+									json &ahist = member["authHistory"];
+									if (ahist.is_array()) {
+										for(unsigned long j=0;j<ahist.size();++j) {
+											json &ah = ahist[j];
+											if ((_jS(ah["ct"],"") == "token")&&(_jS(ah["c"],"") == tstr)&&(_jB(ah["a"],false)))
+												++useCount;
+										}
+									}
+									usable = (useCount < maxUses);
+								}
+								if (usable) {
+									authorizedBy = "token";
+									member["authorized"] = true;
+									json ah;
+									ah["a"] = true;
+									ah["by"] = authorizedBy;
+									ah["ts"] = now;
+									ah["ct"] = "token";
+									ah["c"] = tstr;
+									member["authHistory"].push_back(ah);
+									member["lastModified"] = now;
+									json &revj = member["revision"];
+									member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
+								}
 							}
 						}
 					}
@@ -924,13 +951,11 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		}
 	}
 
-	if (_jB(network["private"],true)) {
-		CertificateOfMembership com(now,credentialtmd,nwid,identity.address());
-		if (com.sign(signingId)) {
-			nc.com = com;
-		} else {
-			return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
-		}
+	CertificateOfMembership com(now,credentialtmd,nwid,identity.address());
+	if (com.sign(signingId)) {
+		nc.com = com;
+	} else {
+		return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
 
 	_writeJson(memberJP,member);
@@ -1139,16 +1164,15 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 						if (b.count("authorized")) {
 							const bool newAuth = _jB(b["authorized"],false);
-							const bool oldAuth = _jB(member["authorized"],false);
-							if (newAuth != oldAuth) {
-								if (newAuth) {
-									member["authorized"] = true;
-									member["lastAuthorizedTime"] = now;
-									member["lastAuthorizedBy"] = "user";
-								} else {
-									member["authorized"] = false;
-									member["lastDeauthorizedTime"] = now;
-								}
+							if (newAuth != _jB(member["authorized"],false)) {
+								member["authorized"] = newAuth;
+								json ah;
+								ah["a"] = newAuth;
+								ah["by"] = "api";
+								ah["ts"] = now;
+								ah["ct"] = json();
+								ah["c"] = json();
+								member["authHistory"].push_back(ah);
 							}
 						}
 
@@ -1429,13 +1453,14 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						if (authTokens.is_array()) {
 							json nat = json::array();
 							for(unsigned long i=0;i<authTokens.size();++i) {
-								auto token = authTokens[i];
+								json &token = authTokens[i];
 								if (token.is_object()) {
 									std::string tstr = token["token"];
 									if (tstr.length() > 0) {
 										json t = json::object();
 										t["token"] = tstr;
 										t["expires"] = _jI(token["expires"],0ULL);
+										t["maxUsesPerMember"] = _jI(token["maxUsesPerMember"],0ULL);
 										nat.push_back(t);
 									}
 								}
@@ -1585,7 +1610,6 @@ void EmbeddedNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTes
 		"\t\"upstream\": \"%.10llx\"," ZT_EOL_S
 		"\t\"current\": \"%.10llx\"," ZT_EOL_S
 		"\t\"receivedTimestamp\": %llu," ZT_EOL_S
-		"\t\"remoteTimestamp\": %llu," ZT_EOL_S
 		"\t\"sourcePacketId\": \"%.16llx\"," ZT_EOL_S
 		"\t\"flags\": %llu," ZT_EOL_S
 		"\t\"sourcePacketHopCount\": %u," ZT_EOL_S
@@ -1606,7 +1630,6 @@ void EmbeddedNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTes
 		(unsigned long long)report->upstream,
 		(unsigned long long)report->current,
 		(unsigned long long)OSUtils::now(),
-		(unsigned long long)report->remoteTimestamp,
 		(unsigned long long)report->sourcePacketId,
 		(unsigned long long)report->flags,
 		report->sourcePacketHopCount,

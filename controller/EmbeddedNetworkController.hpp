@@ -143,9 +143,7 @@ private:
 	inline void _initMember(nlohmann::json &member)
 	{
 		if (!member.count("authorized")) member["authorized"] = false;
-		if (!member.count("lastAuthorizedTime")) member["lastAuthorizedTime"] = 0ULL;
-		if (!member.count("lastAuthorizedBy")) member["lastAuthorizedBy"] = "";
-		if (!member.count("lastDeauthorizedTime")) member["lastDeauthorizedTime"] = 0ULL;
+		if (!member.count("authHistory")) member["authHistory"] = nlohmann::json::array();
  		if (!member.count("ipAssignments")) member["ipAssignments"] = nlohmann::json::array();
 		if (!member.count("recentLog")) member["recentLog"] = nlohmann::json::array();
 		if (!member.count("activeBridge")) member["activeBridge"] = false;

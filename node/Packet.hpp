@@ -965,7 +965,7 @@ public:
 		 *   <[2] 16-bit reporter OS/platform or 0 if not specified>
 		 *   <[2] 16-bit reporter architecture or 0 if not specified>
 		 *   <[2] 16-bit error code (set to 0, currently unused)>
-		 *   <[8] 64-bit report flags (set to 0, currently unused)>
+		 *   <[8] 64-bit report flags>
 		 *   <[8] 64-bit packet ID of received CIRCUIT_TEST packet>
 		 *   <[5] upstream ZeroTier address from which CIRCUIT_TEST was received>
 		 *   <[1] 8-bit packet hop count of received CIRCUIT_TEST>
@@ -979,6 +979,9 @@ public:
 		 * Next hop information record format:
 		 *   <[5] ZeroTier address of next hop>
 		 *   <[...] current best direct path address, if any, 0 if none>
+		 *
+		 * Report flags:
+		 *   0x1 - Upstream peer in circuit test path allowed in path (e.g. network COM valid)
 		 *
 		 * Circuit test reports can be sent by hops in a circuit test to report
 		 * back results. They should include information about the sender as well
@@ -1066,6 +1069,9 @@ public:
 
 		/* Verb or use case not supported/enabled by this node */
 		ERROR_UNSUPPORTED_OPERATION = 0x05,
+
+		/* Network membership certificate update needed */
+		ERROR_NEED_MEMBERSHIP_CERTIFICATE = 0x06,
 
 		/* Tried to join network, but you're not a member */
 		ERROR_NETWORK_ACCESS_DENIED_ = 0x07, /* extra _ at end to avoid Windows name conflict */

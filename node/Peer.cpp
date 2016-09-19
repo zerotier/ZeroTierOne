@@ -47,6 +47,12 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastMulticastFrame(0),
 	_lastDirectPathPushSent(0),
 	_lastDirectPathPushReceive(0),
+	_lastCredentialRequestSent(0),
+	_lastWhoisRequestReceived(0),
+	_lastEchoRequestReceived(0),
+	_lastComRequestReceived(0),
+	_lastCredentialsReceived(0),
+	_lastTrustEstablishedPacketReceived(0),
 	RR(renv),
 	_remoteClusterOptimal4(0),
 	_vProto(0),
@@ -56,7 +62,8 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_id(peerIdentity),
 	_numPaths(0),
 	_latency(0),
-	_directPathPushCutoffCount(0)
+	_directPathPushCutoffCount(0),
+	_credentialsCutoffCount(0)
 {
 	memset(_remoteClusterOptimal6,0,sizeof(_remoteClusterOptimal6));
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))
@@ -126,6 +133,11 @@ void Peer::received(
 	else if (verb == Packet::VERB_MULTICAST_FRAME)
 		_lastMulticastFrame = now;
 
+	if (trustEstablished) {
+		_lastTrustEstablishedPacketReceived = now;
+		path->trustedPacketReceived(now);
+	}
+
 	if (hops == 0) {
 		bool pathIsConfirmed = false;
 		{
@@ -194,7 +206,80 @@ void Peer::received(
 		}
 	} else if (trustEstablished) {
 		// Send PUSH_DIRECT_PATHS if hops>0 (relayed) and we have a trust relationship (common network membership)
-		_pushDirectPaths(path,now);
+#ifdef ZT_ENABLE_CLUSTER
+			// Cluster mode disables normal PUSH_DIRECT_PATHS in favor of cluster-based peer redirection
+			const bool haveCluster = (RR->cluster);
+#else
+			const bool haveCluster = false;
+#endif
+		if ( ((now - _lastDirectPathPushSent) >= ZT_DIRECT_PATH_PUSH_INTERVAL) && (!haveCluster) ) {
+			_lastDirectPathPushSent = now;
+
+			std::vector<InetAddress> pathsToPush;
+
+			std::vector<InetAddress> dps(RR->node->directPaths());
+			for(std::vector<InetAddress>::const_iterator i(dps.begin());i!=dps.end();++i)
+				pathsToPush.push_back(*i);
+
+			std::vector<InetAddress> sym(RR->sa->getSymmetricNatPredictions());
+			for(unsigned long i=0,added=0;i<sym.size();++i) {
+				InetAddress tmp(sym[(unsigned long)RR->node->prng() % sym.size()]);
+				if (std::find(pathsToPush.begin(),pathsToPush.end(),tmp) == pathsToPush.end()) {
+					pathsToPush.push_back(tmp);
+					if (++added >= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY)
+						break;
+				}
+			}
+
+			if (pathsToPush.size() > 0) {
+#ifdef ZT_TRACE
+				std::string ps;
+				for(std::vector<InetAddress>::const_iterator p(pathsToPush.begin());p!=pathsToPush.end();++p) {
+					if (ps.length() > 0)
+						ps.push_back(',');
+					ps.append(p->toString());
+				}
+				TRACE("pushing %u direct paths to %s: %s",(unsigned int)pathsToPush.size(),_id.address().toString().c_str(),ps.c_str());
+#endif
+
+				std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
+				while (p != pathsToPush.end()) {
+					Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
+					outp.addSize(2); // leave room for count
+
+					unsigned int count = 0;
+					while ((p != pathsToPush.end())&&((outp.size() + 24) < 1200)) {
+						uint8_t addressType = 4;
+						switch(p->ss_family) {
+							case AF_INET:
+								break;
+							case AF_INET6:
+								addressType = 6;
+								break;
+							default: // we currently only push IP addresses
+								++p;
+								continue;
+						}
+
+						outp.append((uint8_t)0); // no flags
+						outp.append((uint16_t)0); // no extensions
+						outp.append(addressType);
+						outp.append((uint8_t)((addressType == 4) ? 6 : 18));
+						outp.append(p->rawIpData(),((addressType == 4) ? 4 : 16));
+						outp.append((uint16_t)p->port());
+
+						++count;
+						++p;
+					}
+
+					if (count) {
+						outp.setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
+						outp.armor(_key,true);
+						path->send(RR,outp.data(),outp.size(),now);
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -266,6 +351,7 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 	atAddress.serialize(outp);
 	outp.append((uint64_t)RR->topology->worldId());
 	outp.append((uint64_t)RR->topology->worldTimestamp());
+	RR->node->expectReplyTo(outp.packetId());
 	outp.armor(_key,false); // HELLO is sent in the clear
 	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
 }
@@ -274,6 +360,7 @@ void Peer::attemptToContactAt(const InetAddress &localAddr,const InetAddress &at
 {
 	if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
 		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
+		RR->node->expectReplyTo(outp.packetId());
 		outp.armor(_key,true);
 		RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
 	} else {
@@ -364,88 +451,6 @@ void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) 
 		v4 = _paths[bestp4].path->address();
 	if (bestp6 >= 0)
 		v6 = _paths[bestp6].path->address();
-}
-
-bool Peer::_pushDirectPaths(const SharedPtr<Path> &path,uint64_t now)
-{
-#ifdef ZT_ENABLE_CLUSTER
-	// Cluster mode disables normal PUSH_DIRECT_PATHS in favor of cluster-based peer redirection
-	if (RR->cluster)
-		return false;
-#endif
-
-	if ((now - _lastDirectPathPushSent) < ZT_DIRECT_PATH_PUSH_INTERVAL)
-		return false;
-	else _lastDirectPathPushSent = now;
-
-	std::vector<InetAddress> pathsToPush;
-
-	std::vector<InetAddress> dps(RR->node->directPaths());
-	for(std::vector<InetAddress>::const_iterator i(dps.begin());i!=dps.end();++i)
-		pathsToPush.push_back(*i);
-
-	std::vector<InetAddress> sym(RR->sa->getSymmetricNatPredictions());
-	for(unsigned long i=0,added=0;i<sym.size();++i) {
-		InetAddress tmp(sym[(unsigned long)RR->node->prng() % sym.size()]);
-		if (std::find(pathsToPush.begin(),pathsToPush.end(),tmp) == pathsToPush.end()) {
-			pathsToPush.push_back(tmp);
-			if (++added >= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY)
-				break;
-		}
-	}
-	if (pathsToPush.empty())
-		return false;
-
-#ifdef ZT_TRACE
-	{
-		std::string ps;
-		for(std::vector<InetAddress>::const_iterator p(pathsToPush.begin());p!=pathsToPush.end();++p) {
-			if (ps.length() > 0)
-				ps.push_back(',');
-			ps.append(p->toString());
-		}
-		TRACE("pushing %u direct paths to %s: %s",(unsigned int)pathsToPush.size(),_id.address().toString().c_str(),ps.c_str());
-	}
-#endif
-
-	std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
-	while (p != pathsToPush.end()) {
-		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
-		outp.addSize(2); // leave room for count
-
-		unsigned int count = 0;
-		while ((p != pathsToPush.end())&&((outp.size() + 24) < 1200)) {
-			uint8_t addressType = 4;
-			switch(p->ss_family) {
-				case AF_INET:
-					break;
-				case AF_INET6:
-					addressType = 6;
-					break;
-				default: // we currently only push IP addresses
-					++p;
-					continue;
-			}
-
-			outp.append((uint8_t)0); // no flags
-			outp.append((uint16_t)0); // no extensions
-			outp.append(addressType);
-			outp.append((uint8_t)((addressType == 4) ? 6 : 18));
-			outp.append(p->rawIpData(),((addressType == 4) ? 4 : 16));
-			outp.append((uint16_t)p->port());
-
-			++count;
-			++p;
-		}
-
-		if (count) {
-			outp.setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
-			outp.armor(_key,true);
-			path->send(RR,outp.data(),outp.size(),now);
-		}
-	}
-
-	return true;
 }
 
 } // namespace ZeroTier
