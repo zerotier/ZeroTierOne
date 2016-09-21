@@ -34,9 +34,9 @@ public enum PeerRole {
     PEER_ROLE_LEAF,
 
     /**
-     * relay node
+     * upstream node
      */
-    PEER_ROLE_RELAY,
+    PEER_ROLE_UPSTREAM,
 
     /**
      * root server
