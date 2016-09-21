@@ -162,7 +162,7 @@ jobject createPeerRole(JNIEnv *env, ZT_PeerRole role)
     case ZT_PEER_ROLE_LEAF:
         fieldName = "PEER_ROLE_LEAF";
         break;
-    case ZT_PEER_ROLE_RELAY:
+    case ZT_PEER_ROLE_UPSTREAM:
         fieldName = "PEER_ROLE_RELAY";
         break;
     case ZT_PEER_ROLE_ROOT:
@@ -313,11 +313,20 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
         return NULL;
     }
 
-    jobject inetAddressObject = newInetAddress(env, addr);
-
-    if(env->ExceptionCheck() || inetAddressObject == NULL)
+    jobject inetAddressObject = NULL;
+    
+    if(addr.ss_family != 0)
     {
-        LOGE("Error creating new inet address");
+        inetAddressObject = newInetAddress(env, addr);
+
+        if(env->ExceptionCheck() || inetAddressObject == NULL)
+        {
+            LOGE("Error creating new inet address");
+            return NULL;
+        }
+    }
+    else
+    {
         return NULL;
     }
 
@@ -350,10 +359,9 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
         break;
         default:
         {
-            LOGE("ERROR:  addr.ss_family is not set or unknown");
             break;
         }
-    };
+    }
 
 
     jobject inetSocketAddressObject = env->NewObject(inetSocketAddressClass, inetSocketAddress_constructor, inetAddressObject, port);
@@ -889,14 +897,14 @@ jobject newVirtualNetworkRoute(JNIEnv *env, const ZT_VirtualNetworkRoute &route)
     jfieldID metricField = NULL;
 
     targetField = lookup.findField(virtualNetworkRouteClass, "target",
-        "Ljava/net/InetSocketAddress");
+        "Ljava/net/InetSocketAddress;");
     if(env->ExceptionCheck() || targetField == NULL)
     {
         return NULL;
     }
 
     viaField = lookup.findField(virtualNetworkRouteClass, "via",
-        "Ljava/net/InetSocketAddress");
+        "Ljava/net/InetSocketAddress;");
     if(env->ExceptionCheck() || targetField == NULL)
     {
         return NULL;
