@@ -45,9 +45,7 @@ public:
 		_family(inetAddressFamily),
 		_scope(scope) {}
 
-	inline void operator()(Topology &t,const SharedPtr<Peer> &p) { if (p->resetWithinScope(_scope,_family,_now)) peersReset.push_back(p); }
-
-	std::vector< SharedPtr<Peer> > peersReset;
+	inline void operator()(Topology &t,const SharedPtr<Peer> &p) { p->resetWithinScope(_scope,_family,_now); }
 
 private:
 	uint64_t _now;
@@ -95,16 +93,6 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &receivedOnLoc
 		// Reset all paths within this scope and address family
 		_ResetWithinScope rset(now,myPhysicalAddress.ss_family,(InetAddress::IpScope)scope);
 		RR->topology->eachPeer<_ResetWithinScope &>(rset);
-
-		// Send a NOP to all peers for whom we forgot a path. This will cause direct
-		// links to be re-established if possible, possibly using a root server or some
-		// other relay.
-		for(std::vector< SharedPtr<Peer> >::const_iterator p(rset.peersReset.begin());p!=rset.peersReset.end();++p) {
-			if ((*p)->activelyTransferringFrames(now)) {
-				Packet outp((*p)->address(),RR->identity.address(),Packet::VERB_NOP);
-				RR->sw->send(outp,true);
-			}
-		}
 	} else {
 		// Otherwise just update DB to use to determine external surface info
 		entry.mySurface = myPhysicalAddress;

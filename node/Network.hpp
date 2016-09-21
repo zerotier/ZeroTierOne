@@ -248,7 +248,10 @@ public:
 	void requestConfiguration();
 
 	/**
-	 * Membership check gate for incoming packets related to this network
+	 * Determine whether this peer is permitted to communicate on this network
+	 *
+	 * This also performs certain periodic actions such as pushing renewed
+	 * credentials to peers or requesting them if not present.
 	 *
 	 * @param peer Peer to check
 	 * @param verb Packet verb
@@ -261,12 +264,6 @@ public:
 	 * Check whether this peer is allowed to provide multicast info for this network
 	 */
 	bool gateMulticastGatherReply(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uint64_t packetId);
-
-	/**
-	 * @param peer Peer to check
-	 * @return True if peer has recently been a valid member of this network
-	 */
-	bool recentlyAllowedOnNetwork(const SharedPtr<Peer> &peer) const;
 
 	/**
 	 * Perform cleanup and possibly save state

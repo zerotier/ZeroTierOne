@@ -648,11 +648,12 @@ bool Network::filterOutgoingPacket(
 {
 	uint32_t remoteTagIds[ZT_MAX_NETWORK_TAGS];
 	uint32_t remoteTagValues[ZT_MAX_NETWORK_TAGS];
-	Address ztDest2(ztDest);
+	Address ztFinalDest(ztDest);
 	Address cc;
 	const Capability *relevantCap = (const Capability *)0;
 	unsigned int ccLength = 0;
 	bool accept = false;
+	const uint64_t now = RR->node->now();
 
 	Mutex::Lock _l(_lock);
 
@@ -663,26 +664,27 @@ bool Network::filterOutgoingPacket(
 		remoteTagCount = m->getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 	}
 
-	switch(_doZtFilter(RR,_config,false,ztSource,ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc,ccLength)) {
+	switch(_doZtFilter(RR,_config,false,ztSource,ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc,ccLength)) {
 
 		case DOZTFILTER_NO_MATCH:
 			for(unsigned int c=0;c<_config.capabilityCount;++c) {
-				ztDest2 = ztDest; // sanity check
+				ztFinalDest = ztDest; // sanity check
 				Address cc2;
 				unsigned int ccLength2 = 0;
-				switch (_doZtFilter(RR,_config,false,ztSource,ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.capabilities[c].rules(),_config.capabilities[c].ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc2,ccLength2)) {
+				switch (_doZtFilter(RR,_config,false,ztSource,ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.capabilities[c].rules(),_config.capabilities[c].ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc2,ccLength2)) {
 					case DOZTFILTER_NO_MATCH:
 					case DOZTFILTER_DROP: // explicit DROP in a capability just terminates its evaluation and is an anti-pattern
 						break;
 
-					case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztDest2 will have been changed in _doZtFilter()
+					case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztFinalDest will have been changed in _doZtFilter()
 					case DOZTFILTER_ACCEPT:
 					case DOZTFILTER_SUPER_ACCEPT: // no difference in behavior on outbound side
 						relevantCap = &(_config.capabilities[c]);
 						accept = true;
 
 						if ((!noTee)&&(cc2)) {
-							_membership(cc2).sendCredentialsIfNeeded(RR,RR->node->now(),cc2,_config,relevantCap);
+							Membership &m2 = _membership(cc2);
+							m2.sendCredentialsIfNeeded(RR,now,cc2,_config,relevantCap);
 
 							Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 							outp.append(_id);
@@ -705,7 +707,7 @@ bool Network::filterOutgoingPacket(
 		case DOZTFILTER_DROP:
 			return false;
 
-		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztDest2 will have been changed in _doZtFilter()
+		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztFinalDest will have been changed in _doZtFilter()
 		case DOZTFILTER_ACCEPT:
 		case DOZTFILTER_SUPER_ACCEPT: // no difference in behavior on outbound side
 			accept = true;
@@ -714,7 +716,8 @@ bool Network::filterOutgoingPacket(
 
 	if (accept) {
 		if ((!noTee)&&(cc)) {
-			_membership(cc).sendCredentialsIfNeeded(RR,RR->node->now(),cc,_config,relevantCap);
+			Membership &m2 = _membership(cc);
+			m2.sendCredentialsIfNeeded(RR,now,cc,_config,relevantCap);
 
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
@@ -727,10 +730,11 @@ bool Network::filterOutgoingPacket(
 			RR->sw->send(outp,true);
 		}
 
-		if ((ztDest != ztDest2)&&(ztDest2)) {
-			_membership(ztDest2).sendCredentialsIfNeeded(RR,RR->node->now(),ztDest2,_config,relevantCap);
+		if ((ztDest != ztFinalDest)&&(ztFinalDest)) {
+			Membership &m2 = _membership(ztFinalDest);
+			m2.sendCredentialsIfNeeded(RR,now,ztFinalDest,_config,relevantCap);
 
-			Packet outp(ztDest2,RR->identity.address(),Packet::VERB_EXT_FRAME);
+			Packet outp(ztFinalDest,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
 			outp.append((uint8_t)0x02); // TEE/REDIRECT from outbound side: 0x02
 			macDest.appendTo(outp);
@@ -742,11 +746,13 @@ bool Network::filterOutgoingPacket(
 
 			return false; // DROP locally, since we redirected
 		} else if (m) {
-			m->sendCredentialsIfNeeded(RR,RR->node->now(),ztDest,_config,relevantCap);
+			m->sendCredentialsIfNeeded(RR,now,ztDest,_config,relevantCap);
 		}
-	}
 
-	return accept;
+		return true;
+	} else {
+		return false;
+	}
 }
 
 int Network::filterIncomingPacket(
@@ -761,7 +767,7 @@ int Network::filterIncomingPacket(
 {
 	uint32_t remoteTagIds[ZT_MAX_NETWORK_TAGS];
 	uint32_t remoteTagValues[ZT_MAX_NETWORK_TAGS];
-	Address ztDest2(ztDest);
+	Address ztFinalDest(ztDest);
 	Address cc;
 	unsigned int ccLength = 0;
 	int accept = 0;
@@ -771,16 +777,16 @@ int Network::filterIncomingPacket(
 	Membership &m = _membership(sourcePeer->address());
 	const unsigned int remoteTagCount = m.getAllTags(_config,remoteTagIds,remoteTagValues,ZT_MAX_NETWORK_TAGS);
 
-	switch (_doZtFilter(RR,_config,true,sourcePeer->address(),ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc,ccLength)) {
+	switch (_doZtFilter(RR,_config,true,sourcePeer->address(),ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc,ccLength)) {
 
 		case DOZTFILTER_NO_MATCH: {
 			Membership::CapabilityIterator mci(m);
 			const Capability *c;
 			while ((c = mci.next(_config))) {
-				ztDest2 = ztDest; // sanity check
+				ztFinalDest = ztDest; // sanity check
 				Address cc2;
 				unsigned int ccLength2 = 0;
-				switch(_doZtFilter(RR,_config,true,sourcePeer->address(),ztDest2,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc2,ccLength2)) {
+				switch(_doZtFilter(RR,_config,true,sourcePeer->address(),ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),_config.tags,_config.tagCount,remoteTagIds,remoteTagValues,remoteTagCount,cc2,ccLength2)) {
 					case DOZTFILTER_NO_MATCH:
 					case DOZTFILTER_DROP: // explicit DROP in a capability just terminates its evaluation and is an anti-pattern
 						break;
@@ -815,7 +821,7 @@ int Network::filterIncomingPacket(
 		case DOZTFILTER_DROP:
 			return 0; // DROP
 
-		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztDest2 will have been changed in _doZtFilter()
+		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztFinalDest will have been changed in _doZtFilter()
 		case DOZTFILTER_ACCEPT:
 			accept = 1; // ACCEPT
 			break;
@@ -839,10 +845,10 @@ int Network::filterIncomingPacket(
 			RR->sw->send(outp,true);
 		}
 
-		if ((ztDest != ztDest2)&&(ztDest2)) {
-			_membership(ztDest2).sendCredentialsIfNeeded(RR,RR->node->now(),ztDest2,_config,(const Capability *)0);
+		if ((ztDest != ztFinalDest)&&(ztFinalDest)) {
+			_membership(ztFinalDest).sendCredentialsIfNeeded(RR,RR->node->now(),ztFinalDest,_config,(const Capability *)0);
 
-			Packet outp(ztDest2,RR->identity.address(),Packet::VERB_EXT_FRAME);
+			Packet outp(ztFinalDest,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
 			outp.append((uint8_t)0x06); // TEE/REDIRECT from inbound side: 0x06
 			macDest.appendTo(outp);
@@ -1063,23 +1069,26 @@ bool Network::gate(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uin
 	Mutex::Lock _l(_lock);
 	try {
 		if (_config) {
-			Membership &m = _membership(peer->address());
-			const bool allow = m.isAllowedOnNetwork(_config);
-			if (allow) {
-				m.sendCredentialsIfNeeded(RR,now,peer->address(),_config,(const Capability *)0);
-				if (m.shouldLikeMulticasts(now)) {
+			Membership *m = _memberships.get(peer->address());
+			if ( (_config.isPublic()) || ((m)&&(m->isAllowedOnNetwork(_config))) ) {
+				if (!m)
+					m = &(_membership(peer->address()));
+				m->sendCredentialsIfNeeded(RR,now,peer->address(),_config,(const Capability *)0);
+				if (m->shouldLikeMulticasts(now)) {
 					_announceMulticastGroupsTo(peer->address(),_allMulticastGroups());
-					m.likingMulticasts(now);
+					m->likingMulticasts(now);
 				}
-			} else if (m.recentlyAllowedOnNetwork(_config)&&peer->rateGateRequestCredentials(now)) {
-				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
-				outp.append((uint8_t)verb);
-				outp.append(packetId);
-				outp.append((uint8_t)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
-				outp.append(_id);
-				RR->sw->send(outp,true);
+				return true;
+			} else {
+				if (peer->rateGateRequestCredentials(now)) {
+					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
+					outp.append((uint8_t)verb);
+					outp.append(packetId);
+					outp.append((uint8_t)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
+					outp.append(_id);
+					RR->sw->send(outp,true);
+				}
 			}
-			return allow;
 		}
 	} catch ( ... ) {
 		TRACE("gate() check failed for peer %s: unexpected exception",peer->address().toString().c_str());
@@ -1090,15 +1099,6 @@ bool Network::gate(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uin
 bool Network::gateMulticastGatherReply(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uint64_t packetId)
 {
 	return ( (peer->address() == controller()) || RR->topology->isUpstream(peer->identity()) || gate(peer,verb,packetId) || _config.isAnchor(peer->address()) );
-}
-
-bool Network::recentlyAllowedOnNetwork(const SharedPtr<Peer> &peer) const
-{
-	Mutex::Lock _l(_lock);
-	const Membership *m = _memberships.get(peer->address());
-	if (m)
-		return m->recentlyAllowedOnNetwork(_config);
-	return false;
 }
 
 void Network::clean()
@@ -1308,13 +1308,11 @@ void Network::_sendUpdatesToMembers(const MulticastGroup *const newMulticastGrou
 		Membership *m = (Membership *)0;
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
-			if ( (m->recentlyAllowedOnNetwork(_config)) || (std::find(anchors.begin(),anchors.end(),*a) != anchors.end()) ) {
-				m->sendCredentialsIfNeeded(RR,RR->node->now(),*a,_config,(const Capability *)0);
-				if ( ((newMulticastGroup)||(m->shouldLikeMulticasts(now))) && (m->isAllowedOnNetwork(_config)) ) {
-					if (!newMulticastGroup)
-						m->likingMulticasts(now);
-					_announceMulticastGroupsTo(*a,groups);
-				}
+			m->sendCredentialsIfNeeded(RR,now,*a,_config,(const Capability *)0);
+			if ( ((newMulticastGroup)||(m->shouldLikeMulticasts(now))) && (m->isAllowedOnNetwork(_config)) ) {
+				if (!newMulticastGroup)
+					m->likingMulticasts(now);
+				_announceMulticastGroupsTo(*a,groups);
 			}
 		}
 	}

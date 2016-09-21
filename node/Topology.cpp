@@ -96,7 +96,6 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 		np = hp;
 	}
 
-	np->use(RR->node->now());
 	saveIdentity(np->identity());
 
 	return np;
@@ -113,7 +112,6 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 		Mutex::Lock _l(_lock);
 		const SharedPtr<Peer> *const ap = _peers.get(zta);
 		if (ap) {
-			(*ap)->use(RR->node->now());
 			return *ap;
 		}
 	}
@@ -127,7 +125,6 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 				SharedPtr<Peer> &ap = _peers[zta];
 				if (!ap)
 					ap.swap(np);
-				ap->use(RR->node->now());
 				return ap;
 			}
 		}
@@ -176,10 +173,8 @@ SharedPtr<Peer> Topology::getBestRoot(const Address *avoid,unsigned int avoidCou
 			if (_rootAddresses[p] == RR->identity.address()) {
 				for(unsigned long q=1;q<_rootAddresses.size();++q) {
 					const SharedPtr<Peer> *const nextsn = _peers.get(_rootAddresses[(p + q) % _rootAddresses.size()]);
-					if ((nextsn)&&((*nextsn)->hasActiveDirectPath(now))) {
-						(*nextsn)->use(now);
+					if ((nextsn)&&((*nextsn)->hasActiveDirectPath(now)))
 						return *nextsn;
-					}
 				}
 				break;
 			}
@@ -214,10 +209,8 @@ SharedPtr<Peer> Topology::getBestRoot(const Address *avoid,unsigned int avoidCou
 		}
 
 		if (bestNotAvoid) {
-			(*bestNotAvoid)->use(now);
 			return *bestNotAvoid;
 		} else if ((!strictAvoid)&&(bestOverall)) {
-			(*bestOverall)->use(now);
 			return *bestOverall;
 		}
 
@@ -256,7 +249,7 @@ void Topology::clean(uint64_t now)
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p)) {
-			if (((now - (*p)->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(std::find(_rootAddresses.begin(),_rootAddresses.end(),*a) == _rootAddresses.end()))
+			if ( (!(*p)->isAlive(now)) && (std::find(_rootAddresses.begin(),_rootAddresses.end(),*a) == _rootAddresses.end()) )
 				_peers.erase(*a);
 		}
 	}

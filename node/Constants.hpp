@@ -296,7 +296,12 @@
 /**
  * General rate limit timeout for multiple packet types (HELLO, etc.)
  */
-#define ZT_PEER_GENERAL_INBOUND_RATE_LIMIT 1000
+#define ZT_PEER_GENERAL_INBOUND_RATE_LIMIT 500
+
+/**
+ * General limit for max RTT for requests over the network
+ */
+#define ZT_GENERAL_RTT_LIMIT 5000
 
 /**
  * Delay between requests for updated network autoconf information

@@ -155,23 +155,6 @@ public:
 	}
 
 	/**
-	 * @return True if this member has been on this network recently (or network is public)
-	 */
-	inline bool recentlyAllowedOnNetwork(const NetworkConfig &nconf) const
-	{
-		if (nconf.isPublic())
-			return true;
-		if (_com) {
-			const uint64_t a = _com.timestamp().first;
-			if ((_blacklistBefore)&&(a <= _blacklistBefore))
-				return false;
-			const uint64_t b = nconf.com.timestamp().first;
-			return ((a <= b) ? ((b - a) <= ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA) : true);
-		}
-		return false;
-	}
-
-	/**
 	 * Check whether a capability or tag is within its max delta from the timestamp of our network config and newer than any blacklist cutoff time
 	 *
 	 * @param cred Credential to check -- must have timestamp() accessor method
@@ -259,10 +242,7 @@ public:
 	 *
 	 * @param ts Blacklist cutoff
 	 */
-	inline void blacklistBefore(const uint64_t ts)
-	{
-		_blacklistBefore = ts;
-	}
+	inline void blacklistBefore(const uint64_t ts) { _blacklistBefore = ts; }
 
 	/**
 	 * Clean up old or stale entries

@@ -153,28 +153,21 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				break;
 
 			case Packet::ERROR_IDENTITY_COLLISION:
-				// Roots are the only peers currently permitted to state authoritatively
-				// that an identity has collided. When this occurs the node should be shut
-				// down and a new identity created. The odds of this ever happening are
-				// very low.
+				// FIXME: for federation this will need a payload with a signature or something.
 				if (RR->topology->isRoot(peer->identity()))
 					RR->node->postEvent(ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION);
 				break;
 
 			case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE: {
-				// This error can be sent in response to any packet that fails network
-				// authorization. We only listen to it if it's from a peer that has recently
-				// been authorized on this network.
+				// Peers can send this in response to frames if they do not have a recent enough COM from us
 				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
-				if ((network)&&(network->recentlyAllowedOnNetwork(peer))) {
-					const uint64_t now = RR->node->now();
-					if (peer->rateGateComRequest(now)) {
-						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
-						network->config().com.serialize(outp);
-						outp.append((uint8_t)0);
-						outp.armor(peer->key(),true);
-						_path->send(RR,outp.data(),outp.size(),now);
-					}
+				const uint64_t now = RR->node->now();
+				if ( (network) && (network->config().com) && (peer->rateGateComRequest(now)) ) {
+					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
+					network->config().com.serialize(outp);
+					outp.append((uint8_t)0);
+					outp.armor(peer->key(),true);
+					_path->send(RR,outp.data(),outp.size(),now);
 				}
 			}	break;
 

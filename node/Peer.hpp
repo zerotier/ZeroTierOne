@@ -69,18 +69,6 @@ public:
 	Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity);
 
 	/**
-	 * @return Time peer record was last used in any way
-	 */
-	inline uint64_t lastUsed() const throw() { return _lastUsed; }
-
-	/**
-	 * Log a use of this peer record (done by Topology when peers are looked up)
-	 *
-	 * @param now New time of last use
-	 */
-	inline void use(uint64_t now) throw() { _lastUsed = now; }
-
-	/**
 	 * @return This peer's ZT address (short for identity().address())
 	 */
 	inline const Address &address() const throw() { return _id.address(); }
@@ -194,15 +182,14 @@ public:
 	/**
 	 * Reset paths within a given IP scope and address family
 	 *
-	 * Resetting a path involves sending a HELLO to it and then de-prioritizing
-	 * it vs. other paths.
+	 * Resetting a path involves sending an ECHO to it and then deactivating
+	 * it until or unless it responds.
 	 *
 	 * @param scope IP scope
 	 * @param inetAddressFamily Family e.g. AF_INET
 	 * @param now Current time
-	 * @return True if we forgot at least one path
 	 */
-	bool resetWithinScope(InetAddress::IpScope scope,int inetAddressFamily,uint64_t now);
+	void resetWithinScope(InetAddress::IpScope scope,int inetAddressFamily,uint64_t now);
 
 	/**
 	 * Get most recently active path addresses for IPv4 and/or IPv6
@@ -232,27 +219,32 @@ public:
 	/**
 	 * @return Time of last receive of anything, whether direct or relayed
 	 */
-	inline uint64_t lastReceive() const throw() { return _lastReceive; }
+	inline uint64_t lastReceive() const { return _lastReceive; }
+
+	/**
+	 * @return True if we've heard from this peer in less than ZT_PEER_ACTIVITY_TIMEOUT
+	 */
+	inline bool isAlive(const uint64_t now) const { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Time of most recent unicast frame received
 	 */
-	inline uint64_t lastUnicastFrame() const throw() { return _lastUnicastFrame; }
+	inline uint64_t lastUnicastFrame() const { return _lastUnicastFrame; }
 
 	/**
 	 * @return Time of most recent multicast frame received
 	 */
-	inline uint64_t lastMulticastFrame() const throw() { return _lastMulticastFrame; }
+	inline uint64_t lastMulticastFrame() const { return _lastMulticastFrame; }
 
 	/**
 	 * @return Time of most recent frame of any kind (unicast or multicast)
 	 */
-	inline uint64_t lastFrame() const throw() { return std::max(_lastUnicastFrame,_lastMulticastFrame); }
+	inline uint64_t lastFrame() const { return std::max(_lastUnicastFrame,_lastMulticastFrame); }
 
 	/**
 	 * @return True if this peer has sent us real network traffic recently
 	 */
-	inline uint64_t activelyTransferringFrames(uint64_t now) const throw() { return ((now - lastFrame()) < ZT_PEER_ACTIVITY_TIMEOUT); }
+	inline uint64_t isActive(uint64_t now) const { return ((now - lastFrame()) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Latency in milliseconds or 0 if unknown
@@ -464,7 +456,6 @@ private:
 
 	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
 	uint8_t _remoteClusterOptimal6[16];
-	uint64_t _lastUsed;
 	uint64_t _lastReceive; // direct or indirect
 	uint64_t _lastUnicastFrame;
 	uint64_t _lastMulticastFrame;

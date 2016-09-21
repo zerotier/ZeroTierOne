@@ -354,8 +354,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			return;
 		}
 
-		// Destination is a multicast address (including broadcast)
-		MulticastGroup mg(to,0);
+		MulticastGroup multicastGroup(to,0);
 
 		if (to.isBroadcast()) {
 			if ( (etherType == ZT_ETHERTYPE_ARP) && (len >= 28) && ((((const uint8_t *)data)[2] == 0x08)&&(((const uint8_t *)data)[3] == 0x00)&&(((const uint8_t *)data)[4] == 6)&&(((const uint8_t *)data)[5] == 4)&&(((const uint8_t *)data)[7] == 0x01)) ) {
@@ -368,7 +367,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				 * them into multicasts by stuffing the IP address being queried into
 				 * the 32-bit ADI field. In practice this uses our multicast pub/sub
 				 * system to implement a kind of extended/distributed ARP table. */
-				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(((const unsigned char *)data) + 24,4,0));
+				multicastGroup = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(((const unsigned char *)data) + 24,4,0));
 			} else if (!network->config().enableBroadcast()) {
 				// Don't transmit broadcasts if this network doesn't want them
 				TRACE("%.16llx: dropped broadcast since ff:ff:ff:ff:ff:ff is not enabled",network->id());
@@ -463,9 +462,9 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		 * multicast addresses on bridge interfaces and subscribing each slave.
 		 * But in that case this does no harm, as the sets are just merged. */
 		if (fromBridged)
-			network->learnBridgedMulticastGroup(mg,RR->node->now());
+			network->learnBridgedMulticastGroup(multicastGroup,RR->node->now());
 
-		//TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),len);
+		//TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),multicastGroup.toString().c_str(),etherTypeName(etherType),len);
 
 		// First pass sets noTee to false, but noTee is set to true in OutboundMulticast to prevent duplicates.
 		if (!network->filterOutgoingPacket(false,RR->identity.address(),Address(),from,to,(const uint8_t *)data,len,etherType,vlanId)) {
@@ -478,7 +477,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			RR->node->now(),
 			network->id(),
 			network->config().activeBridges(),
-			mg,
+			multicastGroup,
 			(fromBridged) ? from : MAC(),
 			etherType,
 			data,

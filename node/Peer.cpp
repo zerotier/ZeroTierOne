@@ -41,7 +41,6 @@ namespace ZeroTier {
 static uint32_t _natKeepaliveBuf = 0;
 
 Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
-	_lastUsed(0),
 	_lastReceive(0),
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
@@ -408,19 +407,16 @@ bool Peer::hasActiveDirectPath(uint64_t now) const
 	return false;
 }
 
-bool Peer::resetWithinScope(InetAddress::IpScope scope,int inetAddressFamily,uint64_t now)
+void Peer::resetWithinScope(InetAddress::IpScope scope,int inetAddressFamily,uint64_t now)
 {
 	Mutex::Lock _l(_paths_m);
-	bool resetSomething = false;
 	for(unsigned int p=0;p<_numPaths;++p) {
 		if ( (_paths[p].path->address().ss_family == inetAddressFamily) && (_paths[p].path->address().ipScope() == scope) ) {
 			attemptToContactAt(_paths[p].path->localAddress(),_paths[p].path->address(),now);
 			_paths[p].path->sent(now);
-			_paths[p].lastReceive >>= 2; // de-prioritize heavily vs. other paths, will get reset if we get OK(HELLO) or other traffic
-			resetSomething = true;
+			_paths[p].lastReceive = 0; // path will not be used unless it speaks again
 		}
 	}
-	return resetSomething;
 }
 
 void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
