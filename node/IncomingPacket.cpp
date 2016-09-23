@@ -39,6 +39,7 @@
 #include "CertificateOfMembership.hpp"
 #include "Capability.hpp"
 #include "Tag.hpp"
+#include "Revocation.hpp"
 
 namespace ZeroTier {
 
@@ -162,13 +163,8 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				// Peers can send this in response to frames if they do not have a recent enough COM from us
 				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				const uint64_t now = RR->node->now();
-				if ( (network) && (network->config().com) && (peer->rateGateComRequest(now)) ) {
-					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
-					network->config().com.serialize(outp);
-					outp.append((uint8_t)0);
-					outp.armor(peer->key(),true);
-					_path->send(RR,outp.data(),outp.size(),now);
-				}
+				if ( (network) && (network->config().com) && (peer->rateGateComRequest(now)) )
+					network->pushCredentialsNow(peer->address(),now);
 			}	break;
 
 			case Packet::ERROR_NETWORK_ACCESS_DENIED_: {
@@ -681,9 +677,17 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 						RR->node->putFrame(nwid,network->userPtr(),from,to,etherType,0,(const void *)frameData,frameLen);
 						break;
 				}
-
-				peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true);
 			}
+
+			if ((flags & 0x10) != 0) {
+				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
+				outp.append((uint8_t)Packet::VERB_EXT_FRAME);
+				outp.append((uint64_t)packetId());
+				outp.armor(peer->key(),true);
+				_path->send(RR,outp.data(),outp.size(),RR->node->now());
+			}
+
+			peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true);
 		} else {
 			TRACE("dropped EXT_FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_path->address().toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
 			peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,false);
@@ -775,6 +779,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 		CertificateOfMembership com;
 		Capability cap;
 		Tag tag;
+		Revocation revocation;
 		bool trustEstablished = false;
 
 		unsigned int p = ZT_PACKET_IDX_PAYLOAD;
@@ -784,8 +789,14 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 				SharedPtr<Network> network(RR->node->network(com.networkId()));
 				if (network) {
 					switch (network->addCredential(com)) {
-						case 0: trustEstablished = true; break;
-						case 1: return false; // wait for WHOIS
+						case Membership::ADD_REJECTED:
+							break;
+						case Membership::ADD_ACCEPTED_NEW:
+						case Membership::ADD_ACCEPTED_REDUNDANT:
+							trustEstablished = true;
+							break;
+						case Membership::ADD_DEFERRED_FOR_WHOIS:
+							return false;
 					}
 				} else RR->mc->addCredential(com,false);
 			}
@@ -799,8 +810,14 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 				SharedPtr<Network> network(RR->node->network(cap.networkId()));
 				if (network) {
 					switch (network->addCredential(cap)) {
-						case 0: trustEstablished = true; break;
-						case 1: return false; // wait for WHOIS
+						case Membership::ADD_REJECTED:
+							break;
+						case Membership::ADD_ACCEPTED_NEW:
+						case Membership::ADD_ACCEPTED_REDUNDANT:
+							trustEstablished = true;
+							break;
+						case Membership::ADD_DEFERRED_FOR_WHOIS:
+							return false;
 					}
 				}
 			}
@@ -811,9 +828,23 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 				SharedPtr<Network> network(RR->node->network(tag.networkId()));
 				if (network) {
 					switch (network->addCredential(tag)) {
-						case 0: trustEstablished = true; break;
-						case 1: return false; // wait for WHOIS
+						case Membership::ADD_REJECTED:
+							break;
+						case Membership::ADD_ACCEPTED_NEW:
+						case Membership::ADD_ACCEPTED_REDUNDANT:
+							trustEstablished = true;
+							break;
+						case Membership::ADD_DEFERRED_FOR_WHOIS:
+							return false;
 					}
+				}
+			}
+
+			const unsigned int numRevocations = at<uint16_t>(p); p += 2;
+			for(unsigned int i=0;i<numRevocations;++i) {
+				p += revocation.deserialize(*this,p);
+				SharedPtr<Network> network(RR->node->network(revocation.networkId()));
+				if (network) {
 				}
 			}
 		}
@@ -932,24 +963,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,cons
 		const uint64_t nwid = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);
 		bool trustEstablished = false;
 
-		if (Network::controllerFor(nwid) == peer->address()) {
-			SharedPtr<Network> network(RR->node->network(nwid));
-			if (network) {
-				network->requestConfiguration();
-				trustEstablished = true;
-			} else {
-				TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): not a member of %.16llx",source().toString().c_str(),_path->address().toString().c_str(),nwid);
-				peer->received(_path,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP,false);
-				return true;
-			}
 
-			const unsigned int blacklistCount = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 8);
-			unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 10;
-			for(unsigned int i=0;i<blacklistCount;++i) {
-				network->blacklistBefore(Address(field(ptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH),at<uint64_t>(ptr + 5));
-				ptr += 13;
-			}
-		}
 
 		peer->received(_path,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP,trustEstablished);
 	} catch ( ... ) {

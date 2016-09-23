@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Tag.hpp"
+#include "Revocation.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Identity.hpp"
 #include "Topology.hpp"
@@ -25,7 +25,7 @@
 
 namespace ZeroTier {
 
-int Tag::verify(const RuntimeEnvironment *RR) const
+int Revocation::verify(const RuntimeEnvironment *RR) const
 {
 	if ((!_signedBy)||(_signedBy != Network::controllerFor(_networkId)))
 		return -1;
@@ -35,7 +35,7 @@ int Tag::verify(const RuntimeEnvironment *RR) const
 		return 1;
 	}
 	try {
-		Buffer<(sizeof(Tag) * 2)> tmp;
+		Buffer<sizeof(Revocation) + 64> tmp;
 		this->serialize(tmp,true);
 		return (id.verify(tmp.data(),tmp.size(),_signature) ? 0 : -1);
 	} catch ( ... ) {

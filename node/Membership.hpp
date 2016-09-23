@@ -21,14 +21,12 @@
 
 #include <stdint.h>
 
-#include <map>
-
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"
 #include "CertificateOfMembership.hpp"
 #include "Capability.hpp"
 #include "Tag.hpp"
-#include "Hashtable.hpp"
+#include "Revocation.hpp"
 #include "NetworkConfig.hpp"
 
 namespace ZeroTier {
@@ -40,77 +38,135 @@ class Network;
  * A container for certificates of membership and other network credentials
  *
  * This is kind of analogous to a join table between Peer and Network. It is
- * presently held by the Network object for each participating Peer.
+ * held by the Network object for each participating Peer.
  *
- * This is not thread safe. It must be locked externally.
+ * This class is not thread safe. It must be locked externally.
  */
 class Membership
 {
 private:
 	// Tags and related state
-	struct TState
+	struct _RemoteTag
 	{
-		TState() : lastPushed(0),lastReceived(0) {}
-		// Last time we pushed OUR tag to this peer (with this ID)
-		uint64_t lastPushed;
+		_RemoteTag() : id(0xffffffffffffffffULL),lastReceived(0),revocationThreshold(0) {}
+		// Tag ID (last 32 bits, first 32 bits are set in unused entries to sort them to end)
+		uint64_t id;
 		// Last time we received THEIR tag (with this ID)
 		uint64_t lastReceived;
+		// Revocation blacklist threshold or 0 if none
+		uint64_t revocationThreshold;
 		// THEIR tag
 		Tag tag;
 	};
 
 	// Credentials and related state
-	struct CState
+	struct _RemoteCapability
 	{
-		CState() : lastPushed(0),lastReceived(0) {}
-		// Last time we pushed OUR capability to this peer (with this ID)
-		uint64_t lastPushed;
+		_RemoteCapability() : id(0xffffffffffffffffULL),lastReceived(0),revocationThreshold(0) {}
+		// Capability ID (last 32 bits, first 32 bits are set in unused entries to sort them to end)
+		uint64_t id;
 		// Last time we received THEIR capability (with this ID)
 		uint64_t lastReceived;
+		// Revocation blacklist threshold or 0 if none
+		uint64_t revocationThreshold;
 		// THEIR capability
 		Capability cap;
 	};
 
+	// Comparison operator for remote credential entries
+	template<typename T>
+	struct _RemoteCredentialSorter
+	{
+		inline bool operator()(const T *a,const T *b) const { return (a->id < b->id); }
+		inline bool operator()(const uint64_t a,const T *b) const { return (a < b->id); }
+		inline bool operator()(const T *a,const uint64_t b) const { return (a->id < b); }
+		inline bool operator()(const uint64_t a,const uint64_t b) const { return (a < b); }
+	};
+
+	// Used to track push state for network config tags[] and capabilities[] entries
+	struct _LocalCredentialPushState
+	{
+		_LocalCredentialPushState() : lastPushed(0),id(0) {}
+		uint64_t lastPushed;
+		uint32_t id;
+	};
+
 public:
+	enum AddCredentialResult
+	{
+		ADD_REJECTED,
+		ADD_ACCEPTED_NEW,
+		ADD_ACCEPTED_REDUNDANT,
+		ADD_DEFERRED_FOR_WHOIS
+	};
+
 	/**
-	 * A wrapper to iterate through member capabilities in ascending order of capability ID and return only valid ones
+	 * Iterator to scan forward through capabilities in ascending order of ID
 	 */
 	class CapabilityIterator
 	{
 	public:
-		CapabilityIterator(const Membership &m) :
-			_m(m),
-			_i(m._caps.begin()),
-			_e(m._caps.end())
-		{
-		}
+		CapabilityIterator(const Membership &m,const NetworkConfig &nconf) :
+			_m(&m),
+			_c(&nconf),
+			_i(&(m._remoteCaps[0])) {}
 
-		inline const Capability *next(const NetworkConfig &nconf)
+		inline const Capability *next()
 		{
-			while (_i != _e) {
-				if ((_i->second.lastReceived)&&(_m.isCredentialTimestampValid(nconf,_i->second.cap)))
-					return &((_i++)->second.cap);
-				else ++_i;
+			for(;;) {
+				if ((_i != &(_m->_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]))&&((*_i)->id != 0xffffffffffffffffULL)) {
+					const Capability *tmp = &((*_i)->cap);
+					if (_m->_isCredentialTimestampValid(*_c,*tmp,**_i)) {
+						++_i;
+						return tmp;
+					} else ++_i;
+				} else {
+					return (const Capability *)0;
+				}
 			}
-			return (const Capability *)0;
 		}
 
 	private:
-		const Membership &_m;
-		std::map<uint32_t,CState>::const_iterator _i,_e;
+		const Membership *_m;
+		const NetworkConfig *_c;
+		const _RemoteCapability *const *_i;
 	};
 	friend class CapabilityIterator;
 
-	Membership() :
-		_lastUpdatedMulticast(0),
-		_lastPushAttempt(0),
-		_lastPushedCom(0),
-		_blacklistBefore(0),
-		_com(),
-		_caps(),
-		_tags(8)
+	/**
+	 * Iterator to scan forward through tags in ascending order of ID
+	 */
+	class TagIterator
 	{
-	}
+	public:
+		TagIterator(const Membership &m,const NetworkConfig &nconf) :
+			_m(&m),
+			_c(&nconf),
+			_i(&(m._remoteTags[0])) {}
+
+		inline const Tag *next()
+		{
+			for(;;) {
+				if ((_i != &(_m->_remoteTags[ZT_MAX_NETWORK_TAGS]))&&((*_i)->id != 0xffffffffffffffffULL)) {
+					const Tag *tmp = &((*_i)->tag);
+					if (_m->_isCredentialTimestampValid(*_c,*tmp,**_i)) {
+						++_i;
+						return tmp;
+					} else ++_i;
+				} else {
+					return (const Tag *)0;
+				}
+			}
+		}
+
+	private:
+		const Membership *_m;
+		const NetworkConfig *_c;
+		const _RemoteTag *const *_i;
+	};
+	friend class TagIterator;
+
+	Membership();
 
 	/**
 	 * Send COM and other credentials to this peer if needed
@@ -122,9 +178,10 @@ public:
 	 * @param now Current time
 	 * @param peerAddress Address of member peer (the one that this Membership describes)
 	 * @param nconf My network config
-	 * @param cap Capability to send or 0 if none
+	 * @param localCapabilityIndex Index of local capability to include (in nconf.capabilities[]) or -1 if none
+	 * @param force If true, send objects regardless of last push time
 	 */
-	void sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,const Capability *cap);
+	void pushCredentials(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex,const bool force);
 
 	/**
 	 * Check whether we should push MULTICAST_LIKEs to this peer
@@ -142,6 +199,8 @@ public:
 	inline void likingMulticasts(const uint64_t now) { _lastUpdatedMulticast = now; }
 
 	/**
+	 * Check whether the peer represented by this Membership should be allowed on this network at all
+	 *
 	 * @param nconf Our network config
 	 * @return True if this peer is allowed on this network at all
 	 */
@@ -149,58 +208,9 @@ public:
 	{
 		if (nconf.isPublic())
 			return true;
-		if ((_blacklistBefore)&&(_com.timestamp().first <= _blacklistBefore))
+		if ((_comRevocationThreshold)&&(_com.timestamp().first <= _comRevocationThreshold))
 			return false;
 		return nconf.com.agreesWith(_com);
-	}
-
-	/**
-	 * Check whether a capability or tag is within its max delta from the timestamp of our network config and newer than any blacklist cutoff time
-	 *
-	 * @param cred Credential to check -- must have timestamp() accessor method
-	 * @return True if credential is NOT expired
-	 */
-	template<typename C>
-	inline bool isCredentialTimestampValid(const NetworkConfig &nconf,const C &cred) const
-	{
-		const uint64_t ts = cred.timestamp();
-		const uint64_t delta = (ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts);
-		return ((delta <= nconf.credentialTimeMaxDelta)&&(ts > _blacklistBefore));
-	}
-
-	/**
-	 * @param nconf Network configuration
-	 * @param id Tag ID
-	 * @return Pointer to tag or NULL if not found
-	 */
-	inline const Tag *getTag(const NetworkConfig &nconf,const uint32_t id) const
-	{
-		const TState *t = _tags.get(id);
-		return ((t) ? (((t->lastReceived != 0)&&(isCredentialTimestampValid(nconf,t->tag))) ? &(t->tag) : (const Tag *)0) : (const Tag *)0);
-	}
-
-	/**
-	 * @param nconf Network configuration
-	 * @param ids Array to store IDs into
-	 * @param values Array to store values into
-	 * @param maxTags Capacity of ids[] and values[]
-	 * @return Number of tags added to arrays
-	 */
-	inline unsigned int getAllTags(const NetworkConfig &nconf,uint32_t *ids,uint32_t *values,unsigned int maxTags) const
-	{
-		unsigned int n = 0;
-		uint32_t *id = (uint32_t *)0;
-		TState *ts = (TState *)0;
-		Hashtable<uint32_t,TState>::Iterator i(const_cast<Membership *>(this)->_tags);
-		while (i.next(id,ts)) {
-			if ((ts->lastReceived)&&(isCredentialTimestampValid(nconf,ts->tag))) {
-				if (n >= maxTags)
-					return n;
-				ids[n] = *id;
-				values[n] = ts->tag.value();
-			}
-		}
-		return n;
 	}
 
 	/**
@@ -208,67 +218,38 @@ public:
 	 * @param id Capablity ID
 	 * @return Pointer to capability or NULL if not found
 	 */
-	inline const Capability *getCapability(const NetworkConfig &nconf,const uint32_t id) const
-	{
-		std::map<uint32_t,CState>::const_iterator c(_caps.find(id));
-		return ((c != _caps.end()) ? (((c->second.lastReceived != 0)&&(isCredentialTimestampValid(nconf,c->second.cap))) ? &(c->second.cap) : (const Capability *)0) : (const Capability *)0);
-	}
+	const Capability *getCapability(const NetworkConfig &nconf,const uint32_t id) const;
+
+	/**
+	 * @param nconf Network configuration
+	 * @param id Tag ID
+	 * @return Pointer to tag or NULL if not found
+	 */
+	const Tag *getTag(const NetworkConfig &nconf,const uint32_t id) const;
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
-	 *
-	 * @param RR Runtime environment
-	 * @param com Certificate of membership
-	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
-	int addCredential(const RuntimeEnvironment *RR,const CertificateOfMembership &com);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const CertificateOfMembership &com);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
-	 *
-	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
-	int addCredential(const RuntimeEnvironment *RR,const Tag &tag);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const Tag &tag);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
-	 *
-	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
-	int addCredential(const RuntimeEnvironment *RR,const Capability &cap);
-
-	/**
-	 * Blacklist COM, tags, and capabilities before this time
-	 *
-	 * @param ts Blacklist cutoff
-	 */
-	inline void blacklistBefore(const uint64_t ts) { _blacklistBefore = ts; }
-
-	/**
-	 * Clean up old or stale entries
-	 *
-	 * @param nconf Network config
-	 */
-	inline void clean(const NetworkConfig &nconf)
-	{
-		for(std::map<uint32_t,CState>::iterator i(_caps.begin());i!=_caps.end();) {
-			if (!isCredentialTimestampValid(nconf,i->second.cap)) {
-				_caps.erase(i++);
-			} else {
-				++i;
-			}
-		}
-
-		uint32_t *i = (uint32_t *)0;
-		TState *ts = (TState *)0;
-		Hashtable<uint32_t,TState>::Iterator tsi(_tags);
-		while (tsi.next(i,ts)) {
-			if (!isCredentialTimestampValid(nconf,ts->tag))
-				_tags.erase(*i);
-		}
-	}
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const Capability &cap);
 
 private:
+	template<typename C,typename CS>
+	inline bool _isCredentialTimestampValid(const NetworkConfig &nconf,const C &cred,const CS &state) const
+	{
+		const uint64_t ts = cred.timestamp();
+		return ( (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts)) <= nconf.credentialTimeMaxDelta) && (ts > state.revocationThreshold) );
+	}
+
 	// Last time we pushed MULTICAST_LIKE(s)
 	uint64_t _lastUpdatedMulticast;
 
@@ -278,17 +259,23 @@ private:
 	// Last time we pushed our COM to this peer
 	uint64_t _lastPushedCom;
 
-	// Time before which to blacklist credentials from this peer
-	uint64_t _blacklistBefore;
+	// Revocation threshold for COM or 0 if none
+	uint64_t _comRevocationThreshold;
 
-	// COM from this peer
+	// Remote member's latest network COM
 	CertificateOfMembership _com;
 
-	// Capability-related state (we need an ordered container here, hence std::map)
-	std::map<uint32_t,CState> _caps;
+	// Sorted (in ascending order of ID) arrays of pointers to remote tags and capabilities
+	_RemoteTag *_remoteTags[ZT_MAX_NETWORK_TAGS];
+	_RemoteCapability *_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES];
 
-	// Tag-related state
-	Hashtable<uint32_t,TState> _tags;
+	// This is the RAM allocated for remote tags and capabilities from which the sorted arrays are populated
+	_RemoteTag _tagMem[ZT_MAX_NETWORK_TAGS];
+	_RemoteCapability _capMem[ZT_MAX_NETWORK_CAPABILITIES];
+
+	// Local credential push state tracking
+	_LocalCredentialPushState _localTags[ZT_MAX_NETWORK_TAGS];
+	_LocalCredentialPushState _localCaps[ZT_MAX_NETWORK_CAPABILITIES];
 };
 
 } // namespace ZeroTier

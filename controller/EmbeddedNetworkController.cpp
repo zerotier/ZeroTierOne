@@ -140,6 +140,12 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 			r["flags"] = (unsigned int)rule.v.fwd.flags;
 			r["length"] = (unsigned int)rule.v.fwd.length;
 			break;
+		case ZT_NETWORK_RULE_ACTION_WATCH:
+			r["type"] = "ACTION_WATCH";
+			r["address"] = Address(rule.v.fwd.address).toString();
+			r["flags"] = (unsigned int)rule.v.fwd.flags;
+			r["length"] = (unsigned int)rule.v.fwd.length;
+			break;
 		case ZT_NETWORK_RULE_ACTION_REDIRECT:
 			r["type"] = "ACTION_REDIRECT";
 			r["address"] = Address(rule.v.fwd.address).toString();
@@ -299,6 +305,12 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 		return true;
 	} else if (t == "ACTION_TEE") {
 		rule.t |= ZT_NETWORK_RULE_ACTION_TEE;
+		rule.v.fwd.address = Utils::hexStrToU64(_jS(r["address"],"0").c_str()) & 0xffffffffffULL;
+		rule.v.fwd.flags = (uint32_t)(_jI(r["flags"],0ULL) & 0xffffffffULL);
+		rule.v.fwd.length = (uint16_t)(_jI(r["length"],0ULL) & 0xffffULL);
+		return true;
+	} else if (t == "ACTION_WATCH") {
+		rule.t |= ZT_NETWORK_RULE_ACTION_WATCH;
 		rule.v.fwd.address = Utils::hexStrToU64(_jS(r["address"],"0").c_str()) & 0xffffffffffULL;
 		rule.v.fwd.flags = (uint32_t)(_jI(r["flags"],0ULL) & 0xffffffffULL);
 		rule.v.fwd.length = (uint16_t)(_jI(r["length"],0ULL) & 0xffffULL);

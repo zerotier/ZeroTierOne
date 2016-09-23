@@ -67,7 +67,7 @@ public:
 	 * @param value Tag value
 	 */
 	Tag(const uint64_t nwid,const uint64_t ts,const Address &issuedTo,const uint32_t id,const uint32_t value) :
-		_nwid(nwid),
+		_networkId(nwid),
 		_ts(ts),
 		_id(id),
 		_value(value),
@@ -76,7 +76,7 @@ public:
 	{
 	}
 
-	inline uint64_t networkId() const { return _nwid; }
+	inline uint64_t networkId() const { return _networkId; }
 	inline uint64_t timestamp() const { return _ts; }
 	inline uint32_t id() const { return _id; }
 	inline const uint32_t &value() const { return _value; }
@@ -91,13 +91,13 @@ public:
 	 */
 	inline bool sign(const Identity &signer)
 	{
-		try {
-			Buffer<(sizeof(Tag) * 2)> tmp;
+		if (signer.hasPrivate()) {
+			Buffer<sizeof(Tag) + 64> tmp;
 			_signedBy = signer.address();
 			this->serialize(tmp,true);
 			_signature = signer.sign(tmp.data(),tmp.size());
 			return true;
-		} catch ( ... ) {}
+		}
 		return false;
 	}
 
@@ -115,7 +115,7 @@ public:
 		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
 
 		// These are the same between Tag and Capability
-		b.append(_nwid);
+		b.append(_networkId);
 		b.append(_ts);
 		b.append(_id);
 
@@ -140,7 +140,7 @@ public:
 		unsigned int p = startAt;
 
 		// These are the same between Tag and Capability
-		_nwid = b.template at<uint64_t>(p); p += 8;
+		_networkId = b.template at<uint64_t>(p); p += 8;
 		_ts = b.template at<uint64_t>(p); p += 8;
 		_id = b.template at<uint32_t>(p); p += 4;
 
@@ -168,8 +168,22 @@ public:
 	inline bool operator==(const Tag &t) const { return (memcmp(this,&t,sizeof(Tag)) == 0); }
 	inline bool operator!=(const Tag &t) const { return (memcmp(this,&t,sizeof(Tag)) != 0); }
 
+	// For searching sorted arrays or lists of Tags by ID
+	struct IdComparePredicate
+	{
+		inline bool operator()(const Tag &a,const Tag &b) const { return (a.id() < b.id()); }
+		inline bool operator()(const uint32_t a,const Tag &b) const { return (a < b.id()); }
+		inline bool operator()(const Tag &a,const uint32_t b) const { return (a.id() < b); }
+		inline bool operator()(const Tag *a,const Tag *b) const { return (a->id() < b->id()); }
+		inline bool operator()(const Tag *a,const Tag &b) const { return (a->id() < b.id()); }
+		inline bool operator()(const Tag &a,const Tag *b) const { return (a.id() < b->id()); }
+		inline bool operator()(const uint32_t a,const Tag *b) const { return (a < b->id()); }
+		inline bool operator()(const Tag *a,const uint32_t b) const { return (a->id() < b); }
+		inline bool operator()(const uint32_t a,const uint32_t b) const { return (a < b); }
+	};
+
 private:
-	uint64_t _nwid;
+	uint64_t _networkId;
 	uint64_t _ts;
 	uint32_t _id;
 	uint32_t _value;

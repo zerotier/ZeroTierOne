@@ -17,6 +17,7 @@ OBJS=\
 	node/Path.o \
 	node/Peer.o \
 	node/Poly1305.o \
+	node/Revocation.o \
 	node/Salsa20.o \
 	node/SelfAwareness.o \
 	node/SHA512.o \

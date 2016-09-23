@@ -655,15 +655,27 @@ public:
 		 *
 		 * Flags:
 		 *   0x01 - Certificate of network membership attached (DEPRECATED)
-		 *   0x02 - This is a TEE'd or REDIRECT'ed packet
-		 *   0x04 - TEE/REDIRECT'ed packet is from inbound side
+		 *   0x02 - Most significant bit of subtype (see below)
+		 *   0x04 - Middle bit of subtype (see below)
+		 *   0x08 - Least significant bit of subtype (see below)
+		 *   0x10 - ACK requested in the form of OK(EXT_FRAME)
 		 *
+		 * Subtypes (0..7):
+		 *   0x0 - Normal frame (bridging can be determined by checking MAC)
+		 *   0x1 - TEEd outbound frame
+		 *   0x2 - REDIRECTed outbound frame
+		 *   0x3 - WATCHed outbound frame (TEE with ACK, ACK bit also set)
+		 *   0x4 - TEEd inbound frame
+		 *   0x5 - REDIRECTed inbound frame
+		 *   0x6 - WATCHed inbound frame
+		 *   0x7 - (reserved for future use)
+		 *   
 		 * An extended frame carries full MAC addressing, making them a
 		 * superset of VERB_FRAME. They're used for bridging or when we
 		 * want to attach a certificate since FRAME does not support that.
 		 *
-		 * ERROR may be generated if a membership certificate is needed for a
-		 * closed network. Payload will be network ID.
+		 * If the ACK flag (0x08) is set, an OK(EXT_FRAME) is sent with
+		 * no payload to acknowledge receipt of the frame.
 		 */
 		VERB_EXT_FRAME = 0x07,
 
@@ -698,7 +710,7 @@ public:
 		VERB_MULTICAST_LIKE = 0x09,
 
 		/**
-		 * Network membership credential push:
+		 * Network credentials push:
 		 *   <[...] serialized certificate of membership>
 		 *   [<[...] additional certificates of membership>]
 		 *   <[1] 0x00, null byte marking end of COM array>
@@ -706,12 +718,12 @@ public:
 		 *   <[...] one or more serialized Capability>
 		 *   <[2] 16-bit number of tags>
 		 *   <[...] one or more serialized Tags>
+		 *   <[2] 16-bit number of revocations>
+		 *   <[...] one or more serialized Revocations>
 		 *
-		 * This is sent in response to ERROR_NEED_MEMBERSHIP_CERTIFICATE and may
-		 * be pushed at any other time to keep exchanged certificates up to date.
-		 *
-		 * COMs and other credentials need not be for the same network, since each
-		 * includes its own network ID and signature.
+		 * This can be sent by anyone at any time to push network credentials.
+		 * These will of course only be accepted if they are properly signed.
+		 * Credentials can be for any number of networks.
 		 *
 		 * OK/ERROR are not generated.
 		 */
@@ -742,23 +754,18 @@ public:
 		VERB_NETWORK_CONFIG_REQUEST = 0x0b,
 
 		/**
-		 * Network configuration update push:
-		 *   <[8] network ID to refresh>
-		 *   <[2] 16-bit number of address/timestamp pairs to blacklist>
-		 *  [<[5] ZeroTier address of peer being revoked>]
-		 *  [<[8] blacklist credentials older than this timestamp>]
-		 *  [<[...] additional address/timestamp pairs>]
+		 * Network configuration push:
+		 *   <[8] 64-bit network ID>
+		 *   <[8] 64-bit value used to group chunks in this push>
+		 *   <[2] 16-bit length of network configuration dictionary chunk>
+		 *   <[...] network configuration dictionary (may be incomplete)>
+		 *   <[4] 32-bit total length of assembled dictionary>
+		 *   <[4] 32-bit index of chunk in this reply>
 		 *
-		 * This can be sent by a network controller to both request that a network
-		 * config be updated and push instantaneous revocations of specific peers
-		 * or peer credentials.
-		 *
-		 * Specific revocations can be pushed to blacklist a specific peer's
-		 * credentials (COM, tags, and capabilities) if older than a specified
-		 * timestamp. This can be used to accomplish expedited revocation of
-		 * a peer's access to things on a network or to the network itself among
-		 * those other peers that can currently reach the controller. This is not
-		 * the only mechanism for revocation of course, but it's the fastest.
+		 * This is a direct push variant for network config updates. It otherwise
+		 * carries the same payload as OK(NETWORK_CONFIG_REQUEST). There is an
+		 * extra number after network ID in this version that is used in place of
+		 * the in-re packet ID sent with OKs to group chunks together.
 		 */
 		VERB_NETWORK_CONFIG_REFRESH = 0x0c,
 

@@ -16,6 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <algorithm>
+
 #include "Membership.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Peer.hpp"
@@ -28,28 +30,43 @@
 
 namespace ZeroTier {
 
-void Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,const Capability *cap)
+Membership::Membership() :
+	_lastUpdatedMulticast(0),
+	_lastPushAttempt(0),
+	_lastPushedCom(0),
+	_comRevocationThreshold(0)
 {
-	if ((now - _lastPushAttempt) < 2000ULL)
+	for(unsigned int i=0;i<ZT_MAX_NETWORK_TAGS;++i) _remoteTags[i] = &(_tagMem[i]);
+	for(unsigned int i=0;i<ZT_MAX_NETWORK_CAPABILITIES;++i) _remoteCaps[i] = &(_capMem[i]);
+}
+
+void Membership::pushCredentials(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex,const bool force)
+{
+	// This limits how often we go through this logic, which prevents us from
+	// doing all this for every single packet or other event.
+	if ( ((now - _lastPushAttempt) < 1000ULL) && (!force) )
 		return;
 	_lastPushAttempt = now;
 
 	try {
-		bool unfinished;
+		unsigned int localTagPtr = 0;
+		bool needCom = ( (nconf.com) && ( ((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) );
 		do {
-			unfinished = false;
 			Buffer<ZT_PROTO_MAX_PACKET_LENGTH> capsAndTags;
 
 			unsigned int appendedCaps = 0;
-			if (cap) {
+			if (localCapabilityIndex >= 0) {
 				capsAndTags.addSize(2);
-				std::map<uint32_t,CState>::iterator cs(_caps.find(cap->id()));
-				if ((cs != _caps.end())&&((now - cs->second.lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY)) {
-					cap->serialize(capsAndTags);
-					cs->second.lastPushed = now;
+
+				if ( (_localCaps[localCapabilityIndex].id != nconf.capabilities[localCapabilityIndex].id()) || ((now - _localCaps[localCapabilityIndex].lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
+					_localCaps[localCapabilityIndex].lastPushed = now;
+					_localCaps[localCapabilityIndex].id = nconf.capabilities[localCapabilityIndex].id();
+					nconf.capabilities[localCapabilityIndex].serialize(capsAndTags);
 					++appendedCaps;
 				}
+
 				capsAndTags.setAt<uint16_t>(0,(uint16_t)appendedCaps);
+				localCapabilityIndex = -1; // don't send this cap again on subsequent loops if force is true
 			} else {
 				capsAndTags.append((uint16_t)0);
 			}
@@ -57,22 +74,17 @@ void Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint
 			unsigned int appendedTags = 0;
 			const unsigned int tagCountPos = capsAndTags.size();
 			capsAndTags.addSize(2);
-			for(unsigned int i=0;i<nconf.tagCount;++i) {
-				TState *const ts = _tags.get(nconf.tags[i].id());
-				if ((now - ts->lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) {
-					if ((capsAndTags.size() + sizeof(Tag)) >= (ZT_PROTO_MAX_PACKET_LENGTH - sizeof(CertificateOfMembership))) {
-						unfinished = true;
+			for(;localTagPtr<nconf.tagCount;++localTagPtr) {
+				if ( (_localTags[localTagPtr].id != nconf.tags[localTagPtr].id()) || ((now - _localTags[localTagPtr].lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
+					if ((capsAndTags.size() + sizeof(Tag)) >= (ZT_PROTO_MAX_PACKET_LENGTH - sizeof(CertificateOfMembership)))
 						break;
-					}
-					nconf.tags[i].serialize(capsAndTags);
-					ts->lastPushed = now;
+					nconf.tags[localTagPtr].serialize(capsAndTags);
 					++appendedTags;
 				}
 			}
 			capsAndTags.setAt<uint16_t>(tagCountPos,(uint16_t)appendedTags);
 
-			const bool needCom = ((nconf.com)&&((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY));
-			if ( (needCom) || (appendedCaps) || (appendedTags) ) {
+			if (needCom||appendedCaps||appendedTags) {
 				Packet outp(peerAddress,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 				if (needCom) {
 					nconf.com.serialize(outp);
@@ -80,110 +92,148 @@ void Membership::sendCredentialsIfNeeded(const RuntimeEnvironment *RR,const uint
 				}
 				outp.append((uint8_t)0x00);
 				outp.append(capsAndTags.data(),capsAndTags.size());
+				outp.append((uint16_t)0); // no revocations, these propagate differently
 				outp.compress();
 				RR->sw->send(outp,true);
+				needCom = false; // don't send COM again on subsequent loops if force is true
 			}
-		} while (unfinished); // if there are many tags, etc., we can send more than one
+		} while (localTagPtr < nconf.tagCount);
 	} catch ( ... ) {
 		TRACE("unable to send credentials due to unexpected exception");
 	}
 }
 
-int Membership::addCredential(const RuntimeEnvironment *RR,const CertificateOfMembership &com)
+const Capability *Membership::getCapability(const NetworkConfig &nconf,const uint32_t id) const
 {
-	if (_com == com) {
-		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx ACCEPTED (redundant)",com.issuedTo().toString().c_str(),com.networkId());
-		return 0;
+	const _RemoteCapability *const *c = std::lower_bound(&(_remoteCaps[0]),&(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]),(uint64_t)id,_RemoteCredentialSorter<_RemoteCapability>());
+	return ( ((c != &(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]))&&((*c)->id == (uint64_t)id)) ? ((((*c)->lastReceived)&&(_isCredentialTimestampValid(nconf,(*c)->cap,**c))) ? &((*c)->cap) : (const Capability *)0) : (const Capability *)0);
+}
+
+const Tag *Membership::getTag(const NetworkConfig &nconf,const uint32_t id) const
+{
+	const _RemoteTag *const *t = std::lower_bound(&(_remoteTags[0]),&(_remoteTags[ZT_MAX_NETWORK_TAGS]),(uint64_t)id,_RemoteCredentialSorter<_RemoteTag>());
+	return ( ((t != &(_remoteTags[ZT_MAX_NETWORK_CAPABILITIES]))&&((*t)->id == (uint64_t)id)) ? ((((*t)->lastReceived)&&(_isCredentialTimestampValid(nconf,(*t)->tag,**t))) ? &((*t)->tag) : (const Tag *)0) : (const Tag *)0);
+}
+
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const CertificateOfMembership &com)
+{
+	const uint64_t newts = com.timestamp().first;
+	if (newts <= _comRevocationThreshold) {
+		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx REJECTED (revoked)",com.issuedTo().toString().c_str(),com.networkId());
+		return ADD_REJECTED;
 	}
 
-	const int vr = com.verify(RR);
+	const uint64_t oldts = _com.timestamp().first;
+	if (newts < oldts) {
+		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx REJECTED (older than current)",com.issuedTo().toString().c_str(),com.networkId());
+		return ADD_REJECTED;
+	}
+	if ((newts == oldts)&&(_com == com)) {
+		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx ACCEPTED (redundant)",com.issuedTo().toString().c_str(),com.networkId());
+		return ADD_ACCEPTED_REDUNDANT;
+	}
 
-	if (vr == 0) {
-		if (com.timestamp().first >= _com.timestamp().first) {
+	switch(com.verify(RR)) {
+		default:
+			TRACE("addCredential(CertificateOfMembership) for %s on %.16llx REJECTED (invalid signature or object)",com.issuedTo().toString().c_str(),com.networkId());
+			return ADD_REJECTED;
+		case 0:
 			TRACE("addCredential(CertificateOfMembership) for %s on %.16llx ACCEPTED (new)",com.issuedTo().toString().c_str(),com.networkId());
 			_com = com;
-		} else {
-			TRACE("addCredential(CertificateOfMembership) for %s on %.16llx ACCEPTED but not used (OK but older than current)",com.issuedTo().toString().c_str(),com.networkId());
-		}
-	} else {
-		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx REJECTED (%d)",com.issuedTo().toString().c_str(),com.networkId(),vr);
+			return ADD_ACCEPTED_NEW;
+		case 1:
+			return ADD_DEFERRED_FOR_WHOIS;
 	}
-
-	return vr;
 }
 
-int Membership::addCredential(const RuntimeEnvironment *RR,const Tag &tag)
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const Tag &tag)
 {
-	TState *t = _tags.get(tag.id());
-	if ((t)&&(t->lastReceived != 0)&&(t->tag == tag)) {
-		TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (redundant)",tag.issuedTo().toString().c_str(),tag.networkId());
-		return 0;
+	_RemoteTag *const *htmp = std::lower_bound(&(_remoteTags[0]),&(_remoteTags[ZT_MAX_NETWORK_TAGS]),(uint64_t)tag.id(),_RemoteCredentialSorter<_RemoteTag>());
+	_RemoteTag *have = ((htmp != &(_remoteTags[ZT_MAX_NETWORK_TAGS]))&&((*htmp)->id == (uint64_t)tag.id())) ? *htmp : (_RemoteTag *)0;
+	if (have) {
+		if ( (!_isCredentialTimestampValid(nconf,tag,*have)) || (have->tag.timestamp() > tag.timestamp()) ) {
+			TRACE("addCredential(Tag) for %s on %.16llx REJECTED (revoked or too old)",tag.issuedTo().toString().c_str(),tag.networkId());
+			return ADD_REJECTED;
+		}
+		if (have->tag == tag) {
+			TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (redundant)",tag.issuedTo().toString().c_str(),tag.networkId());
+			return ADD_ACCEPTED_REDUNDANT;
+		}
 	}
-	const int vr = tag.verify(RR);
-	if (vr == 0) {
-		TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (new)",tag.issuedTo().toString().c_str(),tag.networkId());
-		if (!t) {
-			while (_tags.size() >= ZT_MAX_NETWORK_TAGS) {
-				uint32_t oldest = 0;
-				uint64_t oldestLastReceived = 0xffffffffffffffffULL;
-				uint32_t *i = (uint32_t *)0;
-				TState *ts = (TState *)0;
-				Hashtable<uint32_t,TState>::Iterator tsi(_tags);
-				while (tsi.next(i,ts)) {
-					if (ts->lastReceived < oldestLastReceived) {
-						oldestLastReceived = ts->lastReceived;
-						oldest = *i;
+
+	switch(tag.verify(RR)) {
+		default:
+			TRACE("addCredential(Tag) for %s on %.16llx REJECTED (invalid)",tag.issuedTo().toString().c_str(),tag.networkId());
+			return ADD_REJECTED;
+		case 0:
+			TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (new)",tag.issuedTo().toString().c_str(),tag.networkId());
+			if (have) {
+				have->lastReceived = RR->node->now();
+				have->tag = tag;
+			} else {
+				uint64_t minlr = 0xffffffffffffffffULL;
+				for(unsigned int i=0;i<ZT_MAX_NETWORK_TAGS;++i) {
+					if (_remoteTags[i]->id == 0xffffffffffffffffULL) {
+						have = _remoteTags[i];
+						break;
+					} else if (_remoteTags[i]->lastReceived <= minlr) {
+						have = _remoteTags[i];
+						minlr = _remoteTags[i]->lastReceived;
 					}
 				}
-				if (oldestLastReceived != 0xffffffffffffffffULL)
-					_tags.erase(oldest);
+				have->lastReceived = RR->node->now();
+				have->tag = tag;
+				std::sort(&(_remoteTags[0]),&(_remoteTags[ZT_MAX_NETWORK_TAGS]),_RemoteCredentialSorter<_RemoteTag>());
 			}
-			t = &(_tags[tag.id()]);
-		}
-		if (t->tag.timestamp() <= tag.timestamp()) {
-			t->lastReceived = RR->node->now();
-			t->tag = tag;
-		}
-	} else {
-		TRACE("addCredential(Tag) for %s on %.16llx REJECTED (%d)",tag.issuedTo().toString().c_str(),tag.networkId(),vr);
+			return ADD_ACCEPTED_NEW;
+		case 1:
+			return ADD_DEFERRED_FOR_WHOIS;
 	}
-	return vr;
 }
 
-int Membership::addCredential(const RuntimeEnvironment *RR,const Capability &cap)
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const Capability &cap)
 {
-	std::map<uint32_t,CState>::iterator c(_caps.find(cap.id()));
-	if ((c != _caps.end())&&(c->second.lastReceived != 0)&&(c->second.cap == cap)) {
-		TRACE("addCredential(Capability) for %s on %.16llx ACCEPTED (redundant)",cap.issuedTo().toString().c_str(),cap.networkId());
-		return 0;
+	_RemoteCapability *const *htmp = std::lower_bound(&(_remoteCaps[0]),&(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]),(uint64_t)cap.id(),_RemoteCredentialSorter<_RemoteCapability>());
+	_RemoteCapability *have = ((htmp != &(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]))&&((*htmp)->id == (uint64_t)cap.id())) ? *htmp : (_RemoteCapability *)0;
+	if (have) {
+		if ( (!_isCredentialTimestampValid(nconf,cap,*have)) || (have->cap.timestamp() > cap.timestamp()) ) {
+			TRACE("addCredential(Tag) for %s on %.16llx REJECTED (revoked or too old)",tag.issuedTo().toString().c_str(),tag.networkId());
+			return ADD_REJECTED;
+		}
+		if (have->cap == cap) {
+			TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (redundant)",tag.issuedTo().toString().c_str(),tag.networkId());
+			return ADD_ACCEPTED_REDUNDANT;
+		}
 	}
-	const int vr = cap.verify(RR);
-	if (vr == 0) {
-		TRACE("addCredential(Capability) for %s on %.16llx ACCEPTED (new)",cap.issuedTo().toString().c_str(),cap.networkId());
-		if (c == _caps.end()) {
-			while (_caps.size() >= ZT_MAX_NETWORK_CAPABILITIES) {
-				std::map<uint32_t,CState>::iterator oldest;
-				uint64_t oldestLastReceived = 0xffffffffffffffffULL;
-				for(std::map<uint32_t,CState>::iterator i(_caps.begin());i!=_caps.end();++i) {
-					if (i->second.lastReceived < oldestLastReceived) {
-						oldestLastReceived = i->second.lastReceived;
-						oldest = i;
+
+	switch(cap.verify(RR)) {
+		default:
+			TRACE("addCredential(Tag) for %s on %.16llx REJECTED (invalid)",tag.issuedTo().toString().c_str(),tag.networkId());
+			return ADD_REJECTED;
+		case 0:
+			TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (new)",tag.issuedTo().toString().c_str(),tag.networkId());
+			if (have) {
+				have->lastReceived = RR->node->now();
+				have->cap = cap;
+			} else {
+				uint64_t minlr = 0xffffffffffffffffULL;
+				for(unsigned int i=0;i<ZT_MAX_NETWORK_CAPABILITIES;++i) {
+					if (_remoteCaps[i]->id == 0xffffffffffffffffULL) {
+						have = _remoteCaps[i];
+						break;
+					} else if (_remoteCaps[i]->lastReceived <= minlr) {
+						have = _remoteCaps[i];
+						minlr = _remoteCaps[i]->lastReceived;
 					}
 				}
-				if (oldestLastReceived != 0xffffffffffffffffULL)
-					_caps.erase(oldest);
+				have->lastReceived = RR->node->now();
+				have->cap = cap;
+				std::sort(&(_remoteCaps[0]),&(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]),_RemoteCredentialSorter<_RemoteCapability>());
 			}
-			CState &c2 = _caps[cap.id()];
-			c2.lastReceived = RR->node->now();
-			c2.cap = cap;
-		} else if (c->second.cap.timestamp() <= cap.timestamp()) {
-			c->second.lastReceived = RR->node->now();
-			c->second.cap = cap;
-		}
-	} else {
-		TRACE("addCredential(Capability) for %s on %.16llx REJECTED (%d)",cap.issuedTo().toString().c_str(),cap.networkId(),vr);
+			return ADD_ACCEPTED_NEW;
+		case 1:
+			return ADD_DEFERRED_FOR_WHOIS;
 	}
-	return vr;
 }
 
 } // namespace ZeroTier

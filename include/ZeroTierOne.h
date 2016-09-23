@@ -517,14 +517,19 @@ enum ZT_VirtualNetworkRuleType
 	ZT_NETWORK_RULE_ACTION_TEE = 2,
 
 	/**
+	 * Exactly like TEE but frames are dropped if previous TEEs were not acknowledged by the observer
+	 */
+	ZT_NETWORK_RULE_ACTION_WATCH = 3,
+
+	/**
 	 * Drop and redirect this frame to another node (by ZT address)
 	 */
-	ZT_NETWORK_RULE_ACTION_REDIRECT = 3,
+	ZT_NETWORK_RULE_ACTION_REDIRECT = 4,
 
 	/**
 	 * Log if match and if rule debugging is enabled in the build, otherwise does nothing (for developers)
 	 */
-	ZT_NETWORK_RULE_ACTION_DEBUG_LOG = 4,
+	ZT_NETWORK_RULE_ACTION_DEBUG_LOG = 5,
 
 	/**
 	 * Maximum ID for an ACTION, anything higher is a MATCH

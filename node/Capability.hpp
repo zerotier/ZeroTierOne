@@ -174,6 +174,7 @@ public:
 					b.append((uint8_t)0);
 					break;
 				case ZT_NETWORK_RULE_ACTION_TEE:
+				case ZT_NETWORK_RULE_ACTION_WATCH:
 				case ZT_NETWORK_RULE_ACTION_REDIRECT:
 					b.append((uint8_t)14);
 					b.append((uint64_t)rules[i].v.fwd.address);
@@ -270,6 +271,7 @@ public:
 				default:
 					break;
 				case ZT_NETWORK_RULE_ACTION_TEE:
+				case ZT_NETWORK_RULE_ACTION_WATCH:
 				case ZT_NETWORK_RULE_ACTION_REDIRECT:
 					rules[ruleCount].v.fwd.address = b.template at<uint64_t>(p);
 					rules[ruleCount].v.fwd.flags = b.template at<uint32_t>(p + 8);
