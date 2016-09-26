@@ -517,7 +517,7 @@ enum ZT_VirtualNetworkRuleType
 	ZT_NETWORK_RULE_ACTION_TEE = 2,
 
 	/**
-	 * Exactly like TEE but frames are dropped if previous TEEs were not acknowledged by the observer
+	 * Exactly like TEE but mandates ACKs from observer
 	 */
 	ZT_NETWORK_RULE_ACTION_WATCH = 3,
 

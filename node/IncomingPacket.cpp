@@ -67,7 +67,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 			return _doHELLO(RR,false);
 		}
 
-		SharedPtr<Peer> peer(RR->topology->getPeer(sourceAddress));
+		const SharedPtr<Peer> peer(RR->topology->getPeer(sourceAddress));
 		if (peer) {
 			if (!trusted) {
 				if (!dearmor(peer->key())) {
@@ -100,7 +100,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 				case Packet::VERB_MULTICAST_LIKE:             return _doMULTICAST_LIKE(RR,peer);
 				case Packet::VERB_NETWORK_CREDENTIALS:        return _doNETWORK_CREDENTIALS(RR,peer);
 				case Packet::VERB_NETWORK_CONFIG_REQUEST:     return _doNETWORK_CONFIG_REQUEST(RR,peer);
-				case Packet::VERB_NETWORK_CONFIG_REFRESH:     return _doNETWORK_CONFIG_REFRESH(RR,peer);
+				case Packet::VERB_NETWORK_CONFIG:             return _doNETWORK_CONFIG(RR,peer);
 				case Packet::VERB_MULTICAST_GATHER:           return _doMULTICAST_GATHER(RR,peer);
 				case Packet::VERB_MULTICAST_FRAME:            return _doMULTICAST_FRAME(RR,peer);
 				case Packet::VERB_PUSH_DIRECT_PATHS:          return _doPUSH_DIRECT_PATHS(RR,peer);
@@ -131,12 +131,18 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 
 		//TRACE("ERROR %s from %s(%s) in-re %s",Packet::errorString(errorCode),peer->address().toString().c_str(),_path->address().toString().c_str(),Packet::verbString(inReVerb));
 
+		/* Security note: we do not gate doERROR() with expectingReplyTo() to
+		 * avoid having to log every outgoing packet ID. Instead we put the
+		 * logic to determine whether we should consider an ERROR in each
+		 * error handler. In most cases these are only trusted in specific
+		 * circumstances. */
+
 		switch(errorCode) {
 
 			case Packet::ERROR_OBJ_NOT_FOUND:
 				// Object not found, currently only meaningful from network controllers.
 				if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
-					SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
+					const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 					if ((network)&&(network->controller() == peer->address()))
 						network->setNotFound();
 				}
@@ -147,7 +153,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				// consider it meaningful from network controllers. This would indicate
 				// that the queried node does not support acting as a controller.
 				if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
-					SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
+					const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 					if ((network)&&(network->controller() == peer->address()))
 						network->setNotFound();
 				}
@@ -161,7 +167,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 
 			case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE: {
 				// Peers can send this in response to frames if they do not have a recent enough COM from us
-				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
+				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				const uint64_t now = RR->node->now();
 				if ( (network) && (network->config().com) && (peer->rateGateComRequest(now)) )
 					network->pushCredentialsNow(peer->address(),now);
@@ -169,7 +175,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 
 			case Packet::ERROR_NETWORK_ACCESS_DENIED_: {
 				// Network controller: network access denied.
-				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
+				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if ((network)&&(network->controller() == peer->address()))
 					network->setAccessDenied();
 			}	break;
@@ -177,9 +183,9 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 			case Packet::ERROR_UNWANTED_MULTICAST: {
 				// Members of networks can use this error to indicate that they no longer
 				// want to receive multicasts on a given channel.
-				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
+				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if ((network)&&(network->gate(peer,verb(),packetId()))) {
-					MulticastGroup mg(MAC(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8,6),6),at<uint32_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 14));
+					const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8,6),6),at<uint32_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 14));
 					TRACE("%.16llx: peer %s unsubscrubed from multicast group %s",network->id(),peer->address().toString().c_str(),mg.toString().c_str());
 					RR->mc->remove(network->id(),mg,peer->address());
 				}
@@ -371,7 +377,6 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 		const uint64_t inRePacketId = at<uint64_t>(ZT_PROTO_VERB_OK_IDX_IN_RE_PACKET_ID);
 		bool trustEstablished = false;
 
-		// Don't parse OK packets that are not in response to a packet ID we sent
 		if (!RR->node->expectingReplyTo(inRePacketId)) {
 			TRACE("%s(%s): OK(%s) DROPPED: not expecting reply to %.16llx",peer->address().toString().c_str(),_path->address().toString().c_str(),Packet::verbString(inReVerb),packetId());
 			return true;
@@ -450,7 +455,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 
 			case Packet::VERB_MULTICAST_GATHER: {
 				const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_NETWORK_ID);
-				SharedPtr<Network> network(RR->node->network(nwid));
+				const SharedPtr<Network> network(RR->node->network(nwid));
 				if ((network)&&(network->gateMulticastGatherReply(peer,verb(),packetId()))) {
 					trustEstablished = true;
 					const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_ADI));
@@ -467,7 +472,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 
 				//TRACE("%s(%s): OK(MULTICAST_FRAME) %.16llx/%s flags %.2x",peer->address().toString().c_str(),_path->address().toString().c_str(),nwid,mg.toString().c_str(),flags);
 
-				SharedPtr<Network> network(RR->node->network(nwid));
+				const SharedPtr<Network> network(RR->node->network(nwid));
 				if (network) {
 					unsigned int offset = 0;
 
@@ -683,6 +688,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 				outp.append((uint8_t)Packet::VERB_EXT_FRAME);
 				outp.append((uint64_t)packetId());
+				outp.append((uint64_t)nwid);
 				outp.armor(peer->key(),true);
 				_path->send(RR,outp.data(),outp.size(),RR->node->now());
 			}
@@ -727,7 +733,7 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 	try {
 		const uint64_t now = RR->node->now();
 
-		uint64_t authOnNetwork[256];
+		uint64_t authOnNetwork[256]; // cache for approved network IDs
 		unsigned int authOnNetworkCount = 0;
 		SharedPtr<Network> network;
 		bool trustEstablished = false;
@@ -786,7 +792,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 		while ((p < size())&&((*this)[p])) {
 			p += com.deserialize(*this,p);
 			if (com) {
-				SharedPtr<Network> network(RR->node->network(com.networkId()));
+				const SharedPtr<Network> network(RR->node->network(com.networkId()));
 				if (network) {
 					switch (network->addCredential(com)) {
 						case Membership::ADD_REJECTED:
@@ -803,11 +809,11 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 		}
 		++p; // skip trailing 0 after COMs if present
 
-		if (p < size()) { // check if new capabilities and tags fields are present
+		if (p < size()) { // older ZeroTier versions do not send capabilities, tags, or revocations
 			const unsigned int numCapabilities = at<uint16_t>(p); p += 2;
 			for(unsigned int i=0;i<numCapabilities;++i) {
 				p += cap.deserialize(*this,p);
-				SharedPtr<Network> network(RR->node->network(cap.networkId()));
+				const SharedPtr<Network> network(RR->node->network(cap.networkId()));
 				if (network) {
 					switch (network->addCredential(cap)) {
 						case Membership::ADD_REJECTED:
@@ -825,7 +831,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 			const unsigned int numTags = at<uint16_t>(p); p += 2;
 			for(unsigned int i=0;i<numTags;++i) {
 				p += tag.deserialize(*this,p);
-				SharedPtr<Network> network(RR->node->network(tag.networkId()));
+				const SharedPtr<Network> network(RR->node->network(tag.networkId()));
 				if (network) {
 					switch (network->addCredential(tag)) {
 						case Membership::ADD_REJECTED:
@@ -843,8 +849,18 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 			const unsigned int numRevocations = at<uint16_t>(p); p += 2;
 			for(unsigned int i=0;i<numRevocations;++i) {
 				p += revocation.deserialize(*this,p);
-				SharedPtr<Network> network(RR->node->network(revocation.networkId()));
+				const SharedPtr<Network> network(RR->node->network(revocation.networkId()));
 				if (network) {
+					switch(network->addCredential(peer->address(),revocation)) {
+						case Membership::ADD_REJECTED:
+							break;
+						case Membership::ADD_ACCEPTED_NEW:
+						case Membership::ADD_ACCEPTED_REDUNDANT:
+							trustEstablished = true;
+							break;
+						case Membership::ADD_DEFERRED_FOR_WHOIS:
+							return false;
+					}
 				}
 			}
 		}
@@ -879,6 +895,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 						try {
 							if (netconf->toDictionary(*dconf,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6)) {
 								dconf->wrapWithSignature(ZT_NETWORKCONFIG_DICT_KEY_SIGNATURE,RR->identity.privateKeyPair());
+
 								const unsigned int totalSize = dconf->sizeBytes();
 								unsigned int chunkIndex = 0;
 								while (chunkIndex < totalSize) {
@@ -957,7 +974,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 	return true;
 }
 
-bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
 		const uint64_t nwid = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);

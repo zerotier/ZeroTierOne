@@ -36,7 +36,7 @@
 #include "Peer.hpp"
 
 // Uncomment to make the rules engine dump trace info to stdout
-#define ZT_RULES_ENGINE_DEBUGGING 1
+//#define ZT_RULES_ENGINE_DEBUGGING 1
 
 namespace ZeroTier {
 
@@ -1116,8 +1116,41 @@ Membership::AddCredentialResult Network::addCredential(const CertificateOfMember
 	return result;
 }
 
-Membership::AddCredentialResult Network::addCredential(const Revocation &rev)
+Membership::AddCredentialResult Network::addCredential(const Address &sentFrom,const Revocation &rev)
 {
+	if (rev.networkId() != _id)
+		return Membership::ADD_REJECTED;
+
+	Mutex::Lock _l(_lock);
+	Membership &m = _membership(rev.target());
+
+	const Membership::AddCredentialResult result = m.addCredential(RR,_config,rev);
+
+	if ((result == Membership::ADD_ACCEPTED_NEW)&&(rev.fastPropagate())) {
+		/* Fast propagation is done by using a very aggressive rumor mill
+		 * propagation algorithm. When we see a Revocation that we haven't
+		 * seen before we blast it to every known member. This leads to
+		 * a huge number of redundant messages, but eventually everybody
+		 * will get it. This helps revocation speed and also helps in cases
+		 * where the controller is under attack. It need only get one
+		 * revocation out and the rest is history. */
+		Address *a = (Address *)0;
+		Membership *m = (Membership *)0;
+		Hashtable<Address,Membership>::Iterator i(_memberships);
+		while (i.next(a,m)) {
+			if ((*a != sentFrom)&&(*a != rev.signer())) {
+				Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
+				outp.append((uint8_t)0x00); // no COM
+				outp.append((uint16_t)0); // no capabilities
+				outp.append((uint16_t)0); // no tags
+				outp.append((uint16_t)1); // one revocation!
+				rev.serialize(outp);
+				RR->sw->send(outp,true);
+			}
+		}
+	}
+
+	return result;
 }
 
 void Network::destroy()

@@ -49,7 +49,7 @@ class Revocation
 public:
 	enum CredentialType
 	{
-		CREDENTIAL_TYPE_NIL = 0,
+		CREDENTIAL_TYPE_ALL = 0,
 		CREDENTIAL_TYPE_COM = 1,
 		CREDENTIAL_TYPE_CAPABILITY = 2,
 		CREDENTIAL_TYPE_TAG = 3

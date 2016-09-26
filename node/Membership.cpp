@@ -167,24 +167,9 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 			return ADD_REJECTED;
 		case 0:
 			TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (new)",tag.issuedTo().toString().c_str(),tag.networkId());
-			if (have) {
-				have->lastReceived = RR->node->now();
-				have->tag = tag;
-			} else {
-				uint64_t minlr = 0xffffffffffffffffULL;
-				for(unsigned int i=0;i<ZT_MAX_NETWORK_TAGS;++i) {
-					if (_remoteTags[i]->id == 0xffffffffffffffffULL) {
-						have = _remoteTags[i];
-						break;
-					} else if (_remoteTags[i]->lastReceived <= minlr) {
-						have = _remoteTags[i];
-						minlr = _remoteTags[i]->lastReceived;
-					}
-				}
-				have->lastReceived = RR->node->now();
-				have->tag = tag;
-				std::sort(&(_remoteTags[0]),&(_remoteTags[ZT_MAX_NETWORK_TAGS]),_RemoteCredentialSorter<_RemoteTag>());
-			}
+			if (!have) have = _newTag(tag.id());
+			have->lastReceived = RR->node->now();
+			have->tag = tag;
 			return ADD_ACCEPTED_NEW;
 		case 1:
 			return ADD_DEFERRED_FOR_WHOIS;
@@ -212,28 +197,114 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 			return ADD_REJECTED;
 		case 0:
 			TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (new)",tag.issuedTo().toString().c_str(),tag.networkId());
-			if (have) {
-				have->lastReceived = RR->node->now();
-				have->cap = cap;
-			} else {
-				uint64_t minlr = 0xffffffffffffffffULL;
-				for(unsigned int i=0;i<ZT_MAX_NETWORK_CAPABILITIES;++i) {
-					if (_remoteCaps[i]->id == 0xffffffffffffffffULL) {
-						have = _remoteCaps[i];
-						break;
-					} else if (_remoteCaps[i]->lastReceived <= minlr) {
-						have = _remoteCaps[i];
-						minlr = _remoteCaps[i]->lastReceived;
-					}
-				}
-				have->lastReceived = RR->node->now();
-				have->cap = cap;
-				std::sort(&(_remoteCaps[0]),&(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]),_RemoteCredentialSorter<_RemoteCapability>());
-			}
+			if (!have) have = _newCapability(cap.id());
+			have->lastReceived = RR->node->now();
+			have->cap = cap;
 			return ADD_ACCEPTED_NEW;
 		case 1:
 			return ADD_DEFERRED_FOR_WHOIS;
 	}
+}
+
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const Revocation &rev)
+{
+	switch(rev.verify(RR)) {
+		default:
+			return ADD_REJECTED;
+		case 0: {
+			const uint64_t now = RR->node->now();
+			switch(rev.type()) {
+				default:
+				//case Revocation::CREDENTIAL_TYPE_ALL:
+					return ( (_revokeCom(rev)||_revokeCap(rev,now)||_revokeTag(rev,now)) ? ADD_ACCEPTED_NEW : ADD_ACCEPTED_REDUNDANT );
+				case Revocation::CREDENTIAL_TYPE_COM:
+					return (_revokeCom(rev) ? ADD_ACCEPTED_NEW : ADD_ACCEPTED_REDUNDANT);
+				case Revocation::CREDENTIAL_TYPE_CAPABILITY:
+					return (_revokeCap(rev,now) ? ADD_ACCEPTED_NEW : ADD_ACCEPTED_REDUNDANT);
+				case Revocation::CREDENTIAL_TYPE_TAG:
+					return (_revokeTag(rev,now) ? ADD_ACCEPTED_NEW : ADD_ACCEPTED_REDUNDANT);
+			}
+		}
+		case 1:
+			return ADD_DEFERRED_FOR_WHOIS;
+	}
+}
+
+Membership::_RemoteTag *Membership::_newTag(const uint64_t id)
+{
+	_RemoteTag *t;
+	uint64_t minlr = 0xffffffffffffffffULL;
+	for(unsigned int i=0;i<ZT_MAX_NETWORK_TAGS;++i) {
+		if (_remoteTags[i]->id == ZT_MEMBERSHIP_CRED_ID_UNUSED) {
+			t = _remoteTags[i];
+			break;
+		} else if (_remoteTags[i]->lastReceived <= minlr) {
+			t = _remoteTags[i];
+			minlr = _remoteTags[i]->lastReceived;
+		}
+	}
+	t->id = id;
+	t->lastReceived = 0;
+	t->revocationThreshold = 0;
+	t->tag = Tag();
+	std::sort(&(_remoteTags[0]),&(_remoteTags[ZT_MAX_NETWORK_TAGS]),_RemoteCredentialSorter<_RemoteTag>());
+	return t;
+}
+
+Membership::_RemoteCapability *Membership::_newCapability(const uint64_t id)
+{
+	_RemoteCapability *c;
+	uint64_t minlr = 0xffffffffffffffffULL;
+	for(unsigned int i=0;i<ZT_MAX_NETWORK_CAPABILITIES;++i) {
+		if (_remoteCaps[i]->id == ZT_MEMBERSHIP_CRED_ID_UNUSED) {
+			c = _remoteCaps[i];
+			break;
+		} else if (_remoteCaps[i]->lastReceived <= minlr) {
+			c = _remoteCaps[i];
+			minlr = _remoteCaps[i]->lastReceived;
+		}
+	}
+	c->id = id;
+	c->lastReceived = 0;
+	c->revocationThreshold = 0;
+	c->cap = Capability();
+	std::sort(&(_remoteCaps[0]),&(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]),_RemoteCredentialSorter<_RemoteCapability>());
+	return c;
+}
+
+bool Membership::_revokeCom(const Revocation &rev)
+{
+	if (rev.threshold() > _comRevocationThreshold) {
+		_comRevocationThreshold = rev.threshold();
+		return true;
+	}
+	return false;
+}
+
+bool Membership::_revokeCap(const Revocation &rev,const uint64_t now)
+{
+	_RemoteCapability *const *htmp = std::lower_bound(&(_remoteCaps[0]),&(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]),(uint64_t)rev.credentialId(),_RemoteCredentialSorter<_RemoteCapability>());
+	_RemoteCapability *have = ((htmp != &(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]))&&((*htmp)->id == (uint64_t)rev.credentialId())) ? *htmp : (_RemoteCapability *)0;
+	if (!have) have = _newCapability(rev.credentialId());
+	if (rev.threshold() > have->revocationThreshold) {
+		have->lastReceived = now;
+		have->revocationThreshold = rev.threshold();
+		return true;
+	}
+	return false;
+}
+
+bool Membership::_revokeTag(const Revocation &rev,const uint64_t now)
+{
+	_RemoteTag *const *htmp = std::lower_bound(&(_remoteTags[0]),&(_remoteTags[ZT_MAX_NETWORK_TAGS]),(uint64_t)rev.credentialId(),_RemoteCredentialSorter<_RemoteTag>());
+	_RemoteTag *have = ((htmp != &(_remoteTags[ZT_MAX_NETWORK_TAGS]))&&((*htmp)->id == (uint64_t)rev.credentialId())) ? *htmp : (_RemoteTag *)0;
+	if (!have) have = _newTag(rev.credentialId());
+	if (rev.threshold() > have->revocationThreshold) {
+		have->lastReceived = now;
+		have->revocationThreshold = rev.threshold();
+		return true;
+	}
+	return false;
 }
 
 } // namespace ZeroTier

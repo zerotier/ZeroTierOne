@@ -299,7 +299,7 @@ public:
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Membership::AddCredentialResult addCredential(const Revocation &rev);
+	Membership::AddCredentialResult addCredential(const Address &sentFrom,const Revocation &rev);
 
 	/**
 	 * Force push credentials (COM, etc.) to a peer now

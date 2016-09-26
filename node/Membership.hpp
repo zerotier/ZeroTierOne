@@ -29,6 +29,8 @@
 #include "Revocation.hpp"
 #include "NetworkConfig.hpp"
 
+#define ZT_MEMBERSHIP_CRED_ID_UNUSED 0xffffffffffffffffULL
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -48,7 +50,7 @@ private:
 	// Tags and related state
 	struct _RemoteTag
 	{
-		_RemoteTag() : id(0xffffffffffffffffULL),lastReceived(0),revocationThreshold(0) {}
+		_RemoteTag() : id(ZT_MEMBERSHIP_CRED_ID_UNUSED),lastReceived(0),revocationThreshold(0) {}
 		// Tag ID (last 32 bits, first 32 bits are set in unused entries to sort them to end)
 		uint64_t id;
 		// Last time we received THEIR tag (with this ID)
@@ -62,7 +64,7 @@ private:
 	// Credentials and related state
 	struct _RemoteCapability
 	{
-		_RemoteCapability() : id(0xffffffffffffffffULL),lastReceived(0),revocationThreshold(0) {}
+		_RemoteCapability() : id(ZT_MEMBERSHIP_CRED_ID_UNUSED),lastReceived(0),revocationThreshold(0) {}
 		// Capability ID (last 32 bits, first 32 bits are set in unused entries to sort them to end)
 		uint64_t id;
 		// Last time we received THEIR capability (with this ID)
@@ -114,7 +116,7 @@ public:
 		inline const Capability *next()
 		{
 			for(;;) {
-				if ((_i != &(_m->_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]))&&((*_i)->id != 0xffffffffffffffffULL)) {
+				if ((_i != &(_m->_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]))&&((*_i)->id != ZT_MEMBERSHIP_CRED_ID_UNUSED)) {
 					const Capability *tmp = &((*_i)->cap);
 					if (_m->_isCredentialTimestampValid(*_c,*tmp,**_i)) {
 						++_i;
@@ -147,7 +149,7 @@ public:
 		inline const Tag *next()
 		{
 			for(;;) {
-				if ((_i != &(_m->_remoteTags[ZT_MAX_NETWORK_TAGS]))&&((*_i)->id != 0xffffffffffffffffULL)) {
+				if ((_i != &(_m->_remoteTags[ZT_MAX_NETWORK_TAGS]))&&((*_i)->id != ZT_MEMBERSHIP_CRED_ID_UNUSED)) {
 					const Tag *tmp = &((*_i)->tag);
 					if (_m->_isCredentialTimestampValid(*_c,*tmp,**_i)) {
 						++_i;
@@ -242,7 +244,18 @@ public:
 	 */
 	AddCredentialResult addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const Capability &cap);
 
+	/**
+	 * Validate and add a credential if signature is okay and it's otherwise good
+	 */
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const Revocation &rev);
+
 private:
+	_RemoteTag *_newTag(const uint64_t id);
+	_RemoteCapability *_newCapability(const uint64_t id);
+	bool _revokeCom(const Revocation &rev);
+	bool _revokeCap(const Revocation &rev,const uint64_t now);
+	bool _revokeTag(const Revocation &rev,const uint64_t now);
+
 	template<typename C,typename CS>
 	inline bool _isCredentialTimestampValid(const NetworkConfig &nconf,const C &cred,const CS &state) const
 	{

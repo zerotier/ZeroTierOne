@@ -674,8 +674,8 @@ public:
 		 * superset of VERB_FRAME. They're used for bridging or when we
 		 * want to attach a certificate since FRAME does not support that.
 		 *
-		 * If the ACK flag (0x08) is set, an OK(EXT_FRAME) is sent with
-		 * no payload to acknowledge receipt of the frame.
+		 * OK payload (if ACK flag is set):
+		 *   <[8] 64-bit network ID>
 		 */
 		VERB_EXT_FRAME = 0x07,
 
@@ -738,9 +738,14 @@ public:
 		 *   <[8] 64-bit timestamp of netconf we currently have>
 		 *
 		 * This message requests network configuration from a node capable of
-		 * providing it. If the optional revision is included, a response is
-		 * only generated if there is a newer network configuration available.
+		 * providing it.
 		 *
+		 * Respones to this are always whole configs intended for the recipient.
+		 * For patches and other updates a NETWORK_CONFIG is sent instead.
+		 *
+		 * It would be valid and correct as of 1.2.0 to use NETWORK_CONFIG always,
+		 * but OK(NTEWORK_CONFIG_REQUEST) should be sent for compatibility.
+		 * 
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit length of network configuration dictionary chunk>
@@ -754,9 +759,10 @@ public:
 		VERB_NETWORK_CONFIG_REQUEST = 0x0b,
 
 		/**
-		 * Network configuration push:
+		 * Network configuration data push:
 		 *   <[8] 64-bit network ID>
-		 *   <[8] 64-bit value used to group chunks in this push>
+		 *   <[8] 64-bit config update ID (token to identify this update)>
+		 *   <[1] flags>
 		 *   <[2] 16-bit length of network configuration dictionary chunk>
 		 *   <[...] network configuration dictionary (may be incomplete)>
 		 *   <[4] 32-bit total length of assembled dictionary>
@@ -766,8 +772,16 @@ public:
 		 * carries the same payload as OK(NETWORK_CONFIG_REQUEST). There is an
 		 * extra number after network ID in this version that is used in place of
 		 * the in-re packet ID sent with OKs to group chunks together.
+		 *
+		 * Unlike OK(NETWORK_CONFIG_REQUEST) this can be sent by peers other than
+		 * network controllers. In that case the certificate inside the Dictionary
+		 * is used for verification purposes.
+		 *
+		 * Flags:
+		 *   0x01 - Patch, not whole config
+		 *   0x02 - Use fast P2P propagation
 		 */
-		VERB_NETWORK_CONFIG_REFRESH = 0x0c,
+		VERB_NETWORK_CONFIG = 0x0c,
 
 		/**
 		 * Request endpoints for multicast distribution:
