@@ -56,6 +56,7 @@ public:
 	 * @param RR Runtime environment
 	 * @param timestamp Creation time
 	 * @param nwid Network ID
+	 * @param disableCompression Disable compression of frame payload
 	 * @param limit Multicast limit for desired number of packets to send
 	 * @param gatherLimit Number to lazily/implicitly gather with this frame or 0 for none
 	 * @param src Source MAC address of frame or NULL to imply compute from sender ZT address
@@ -69,6 +70,7 @@ public:
 		const RuntimeEnvironment *RR,
 		uint64_t timestamp,
 		uint64_t nwid,
+		bool disableCompression,
 		unsigned int limit,
 		unsigned int gatherLimit,
 		const MAC &src,

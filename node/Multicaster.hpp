@@ -153,6 +153,7 @@ public:
 	 * @param limit Multicast limit
 	 * @param now Current time
 	 * @param nwid Network ID
+	 * @param disableCompression Disable packet payload compression?
 	 * @param alwaysSendTo Send to these peers first and even if not included in subscriber list
 	 * @param mg Multicast group
 	 * @param src Source Ethernet MAC address or NULL to skip in packet and compute from ZT address (non-bridged mode)
@@ -164,6 +165,7 @@ public:
 		unsigned int limit,
 		uint64_t now,
 		uint64_t nwid,
+		bool disableCompression,
 		const std::vector<Address> &alwaysSendTo,
 		const MulticastGroup &mg,
 		const MAC &src,

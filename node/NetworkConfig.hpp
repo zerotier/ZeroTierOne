@@ -77,6 +77,11 @@
 #define ZT_NETWORKCONFIG_FLAG_RULES_RESULT_OF_UNSUPPORTED_MATCH 0x0000000000000008ULL
 
 /**
+ * Flag: disable frame compression
+ */
+#define ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION 0x0000000000000010ULL
+
+/**
  * Device is an active bridge
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE 0x0000020000000000ULL
@@ -254,6 +259,11 @@ public:
 	 * @return True if IPv6 NDP emulation should be allowed for certain "magic" IPv6 address patterns
 	 */
 	inline bool ndpEmulation() const throw() { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
+
+	/**
+	 * @return True if frames should not be compressed
+	 */
+	inline bool disableCompression() const throw() { return ((this->flags & ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION) != 0); }
 
 	/**
 	 * @return Network type is public (no access control)

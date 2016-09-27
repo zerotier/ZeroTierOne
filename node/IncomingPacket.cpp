@@ -425,21 +425,18 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 					RR->sa->iam(peer->address(),_path->localAddress(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(peer->identity()),RR->node->now());
 			}	break;
 
-			case Packet::VERB_WHOIS: {
+			case Packet::VERB_WHOIS:
 				if (RR->topology->isUpstream(peer->identity())) {
 					const Identity id(*this,ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY);
 					RR->sw->doAnythingWaitingForPeer(RR->topology->addPeer(SharedPtr<Peer>(new Peer(RR,RR->identity,id))));
 				}
-			} break;
+				break;
 
 			case Packet::VERB_NETWORK_CONFIG_REQUEST: {
 				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_OK_IDX_PAYLOAD)));
 				if (network)
 					network->handleConfigChunk(*this,ZT_PROTO_VERB_OK_IDX_PAYLOAD);
 			}	break;
-
-			//case Packet::VERB_ECHO: {
-			//}	break;
 
 			case Packet::VERB_MULTICAST_GATHER: {
 				const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_NETWORK_ID);

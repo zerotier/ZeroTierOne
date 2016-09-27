@@ -155,6 +155,7 @@ void Multicaster::send(
 	unsigned int limit,
 	uint64_t now,
 	uint64_t nwid,
+	bool disableCompression,
 	const std::vector<Address> &alwaysSendTo,
 	const MulticastGroup &mg,
 	const MAC &src,
@@ -193,6 +194,7 @@ void Multicaster::send(
 				RR,
 				now,
 				nwid,
+				disableCompression,
 				limit,
 				1, // we'll still gather a little from peers to keep multicast list fresh
 				src,
@@ -265,6 +267,7 @@ void Multicaster::send(
 				RR,
 				now,
 				nwid,
+				disableCompression,
 				limit,
 				gatherLimit,
 				src,

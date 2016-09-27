@@ -31,6 +31,7 @@ void OutboundMulticast::init(
 	const RuntimeEnvironment *RR,
 	uint64_t timestamp,
 	uint64_t nwid,
+	bool disableCompression,
 	unsigned int limit,
 	unsigned int gatherLimit,
 	const MAC &src,
@@ -78,7 +79,8 @@ void OutboundMulticast::init(
 	_packet.append((uint32_t)dest.adi());
 	_packet.append((uint16_t)etherType);
 	_packet.append(payload,_frameLen);
-	_packet.compress();
+	if (!disableCompression)
+		_packet.compress();
 
 	memcpy(_frameData,payload,_frameLen);
 }

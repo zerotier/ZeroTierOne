@@ -476,6 +476,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			network->config().multicastLimit,
 			RR->node->now(),
 			network->id(),
+			network->config().disableCompression(),
 			network->config().activeBridges(),
 			multicastGroup,
 			(fromBridged) ? from : MAC(),
@@ -501,14 +502,16 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			from.appendTo(outp);
 			outp.append((uint16_t)etherType);
 			outp.append(data,len);
-			outp.compress();
+			if (!network->config().disableCompression())
+				outp.compress();
 			send(outp,true);
 		} else {
 			Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
 			outp.append(network->id());
 			outp.append((uint16_t)etherType);
 			outp.append(data,len);
-			outp.compress();
+			if (!network->config().disableCompression())
+				outp.compress();
 			send(outp,true);
 		}
 
@@ -565,7 +568,8 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				from.appendTo(outp);
 				outp.append((uint16_t)etherType);
 				outp.append(data,len);
-				outp.compress();
+				if (!network->config().disableCompression())
+					outp.compress();
 				send(outp,true);
 			} else {
 				TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));

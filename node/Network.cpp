@@ -962,7 +962,6 @@ uint64_t Network::handleConfigChunk(const Packet &chunk,unsigned int ptr)
 		if (totalLength >= ZT_NETWORKCONFIG_DICT_CAPACITY)
 			return 0;
 
-		// Find oldest slot for this udpate to use buffer space
 		for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i) {
 			if ((!c)||(_incomingConfigChunks[i].ts < c->ts))
 				c = &(_incomingConfigChunks[i]);

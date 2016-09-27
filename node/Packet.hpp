@@ -799,6 +799,9 @@ public:
 		 * carries the same payload as OK(NETWORK_CONFIG_REQUEST) and has the same
 		 * semantics.
 		 *
+		 * The legacy mode missing the additional chunking fields is not supported
+		 * here.
+		 *
 		 * Flags:
 		 *   0x01 - Use fast propagation
 		 *
