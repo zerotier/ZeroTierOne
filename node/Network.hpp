@@ -44,6 +44,9 @@
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
 
+#define ZT_NETWORK_MAX_INCOMING_UPDATES 3
+#define ZT_NETWORK_MAX_UPDATE_CHUNKS ((ZT_NETWORKCONFIG_DICT_CAPACITY / 1024) + 1)
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -174,16 +177,15 @@ public:
 	/**
 	 * Handle an inbound network config chunk
 	 *
-	 * This is called from IncomingPacket when we receive a chunk from a network
-	 * controller.
+	 * This is called from IncomingPacket to handle incoming network config
+	 * chunks via OK(NETWORK_CONFIG_REQUEST) or NETWORK_CONFIG. It verifies
+	 * each chunk and once assembled applies the configuration.
 	 *
-	 * @param requestId An ID for grouping chunks, e.g. in-re packet ID for OK(NETWORK_CONFIG_REQUEST)
-	 * @param data Chunk data
-	 * @param chunkSize Size of data[]
-	 * @param chunkIndex Index of chunk in full config
-	 * @param totalSize Total size of network config
+	 * @param chunk Packet containing chunk
+	 * @param ptr Index of chunk and related fields in packet
+	 * @return Update ID if update was fully assembled and accepted or 0 otherwise
 	 */
-	void handleInboundConfigChunk(const uint64_t requestId,const void *data,unsigned int chunkSize,unsigned int chunkIndex,unsigned int totalSize);
+	uint64_t handleConfigChunk(const Packet &chunk,unsigned int ptr);
 
 	/**
 	 * Set netconf failure to 'access denied' -- called in IncomingPacket when controller reports this
@@ -353,19 +355,27 @@ private:
 	const uint64_t _id;
 	uint64_t _lastAnnouncedMulticastGroupsUpstream;
 	MAC _mac; // local MAC address
-	volatile bool _portInitialized;
+	bool _portInitialized;
 
 	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to (according to tap)
 	Hashtable< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
 	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
 
-	uint64_t _inboundConfigPacketId;
-	std::map<unsigned int,std::string> _inboundConfigChunks;
-
 	NetworkConfig _config;
-	volatile uint64_t _lastConfigUpdate;
+	uint64_t _lastConfigUpdate;
 
-	volatile bool _destroyed;
+	struct _IncomingConfigChunk
+	{
+		uint64_t ts;
+		uint64_t updateId;
+		uint64_t haveChunkIds[ZT_NETWORK_MAX_UPDATE_CHUNKS];
+		unsigned long haveChunks;
+		unsigned long haveBytes;
+		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> data;
+	};
+	_IncomingConfigChunk _incomingConfigChunks[ZT_NETWORK_MAX_INCOMING_UPDATES];
+
+	bool _destroyed;
 
 	enum {
 		NETCONF_FAILURE_NONE,
@@ -373,7 +383,7 @@ private:
 		NETCONF_FAILURE_NOT_FOUND,
 		NETCONF_FAILURE_INIT_FAILED
 	} _netconfFailure;
-	volatile int _portError; // return value from port config callback
+	int _portError; // return value from port config callback
 
 	Hashtable<Address,Membership> _memberships;
 

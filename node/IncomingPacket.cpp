@@ -433,21 +433,9 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 			} break;
 
 			case Packet::VERB_NETWORK_CONFIG_REQUEST: {
-				const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID);
-				const SharedPtr<Network> network(RR->node->network(nwid));
-				if ((network)&&(network->controller() == peer->address())) {
-					trustEstablished = true;
-					const unsigned int chunkLen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN);
-					const void *chunkData = field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT,chunkLen);
-					unsigned int chunkIndex = 0;
-					unsigned int totalSize = chunkLen;
-					if ((ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT + chunkLen) < size()) {
-						totalSize = at<uint32_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT + chunkLen);
-						chunkIndex = at<uint32_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT + chunkLen + 4);
-					}
-					TRACE("%s(%s): OK(NETWORK_CONFIG_REQUEST) chunkLen==%u chunkIndex==%u totalSize==%u",source().toString().c_str(),_path->address().toString().c_str(),chunkLen,chunkIndex,totalSize);
-					network->handleInboundConfigChunk(inRePacketId,chunkData,chunkLen,chunkIndex,totalSize);
-				}
+				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_OK_IDX_PAYLOAD)));
+				if (network)
+					network->handleConfigChunk(*this,ZT_PROTO_VERB_OK_IDX_PAYLOAD);
 			}	break;
 
 			//case Packet::VERB_ECHO: {
@@ -894,20 +882,31 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 						Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
 						try {
 							if (netconf->toDictionary(*dconf,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6)) {
-								dconf->wrapWithSignature(ZT_NETWORKCONFIG_DICT_KEY_SIGNATURE,RR->identity.privateKeyPair());
-
+								uint64_t configUpdateId = RR->node->prng();
+								if (!configUpdateId) ++configUpdateId;
 								const unsigned int totalSize = dconf->sizeBytes();
 								unsigned int chunkIndex = 0;
 								while (chunkIndex < totalSize) {
-									const unsigned int chunkLen = std::min(totalSize - chunkIndex,(unsigned int)(ZT_PROTO_MAX_PACKET_LENGTH - (ZT_PACKET_IDX_PAYLOAD + 32)));
+									const unsigned int chunkLen = std::min(totalSize - chunkIndex,(unsigned int)(ZT_UDP_DEFAULT_PAYLOAD_MTU - (ZT_PACKET_IDX_PAYLOAD + 256)));
 									Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 									outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
 									outp.append(requestPacketId);
+
+									const unsigned int sigStart = outp.size();
 									outp.append(nwid);
 									outp.append((uint16_t)chunkLen);
 									outp.append((const void *)(dconf->data() + chunkIndex),chunkLen);
+
+									outp.append((uint8_t)0); // no flags
+									outp.append((uint64_t)configUpdateId);
 									outp.append((uint32_t)totalSize);
 									outp.append((uint32_t)chunkIndex);
+
+									C25519::Signature sig(RR->identity.sign(reinterpret_cast<const uint8_t *>(outp.data()) + sigStart,outp.size() - sigStart));
+									outp.append((uint8_t)1);
+									outp.append((uint16_t)ZT_C25519_SIGNATURE_LEN);
+									outp.append(sig.data,ZT_C25519_SIGNATURE_LEN);
+
 									outp.compress();
 									RR->sw->send(outp,true);
 									chunkIndex += chunkLen;
@@ -977,12 +976,21 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		const uint64_t nwid = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);
-		bool trustEstablished = false;
+		const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PACKET_IDX_PAYLOAD)));
+		if (network) {
+			const uint64_t configUpdateId = network->handleConfigChunk(*this,ZT_PACKET_IDX_PAYLOAD);
+			if (configUpdateId) {
+				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
+				outp.append((uint8_t)Packet::VERB_ECHO);
+				outp.append((uint64_t)packetId());
+				outp.append((uint64_t)network->id());
+				outp.append((uint64_t)configUpdateId);
+				outp.armor(peer->key(),true);
+				_path->send(RR,outp.data(),outp.size(),RR->node->now());
+			}
+		}
 
-
-
-		peer->received(_path,hops(),packetId(),Packet::VERB_NETWORK_CONFIG,0,Packet::VERB_NOP,trustEstablished);
+		peer->received(_path,hops(),packetId(),Packet::VERB_NETWORK_CONFIG,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}

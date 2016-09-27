@@ -569,12 +569,14 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 	_lastAnnouncedMulticastGroupsUpstream(0),
 	_mac(renv->identity.address(),nwid),
 	_portInitialized(false),
-	_inboundConfigPacketId(0),
 	_lastConfigUpdate(0),
 	_destroyed(false),
 	_netconfFailure(NETCONF_FAILURE_NONE),
 	_portError(0)
 {
+	for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i)
+		_incomingConfigChunks[i].ts = 0;
+
 	char confn[128];
 	Utils::snprintf(confn,sizeof(confn),"networks.d/%.16llx.conf",_id);
 
@@ -875,54 +877,133 @@ void Network::multicastUnsubscribe(const MulticastGroup &mg)
 		_myMulticastGroups.erase(i);
 }
 
-void Network::handleInboundConfigChunk(const uint64_t inRePacketId,const void *data,unsigned int chunkSize,unsigned int chunkIndex,unsigned int totalSize)
+uint64_t Network::handleConfigChunk(const Packet &chunk,unsigned int ptr)
 {
-	std::string newConfig;
-	if ((_inboundConfigPacketId == inRePacketId)&&(totalSize < ZT_NETWORKCONFIG_DICT_CAPACITY)&&((chunkIndex + chunkSize) <= totalSize)) {
-		Mutex::Lock _l(_lock);
+	const unsigned int start = ptr;
 
-		_inboundConfigChunks[chunkIndex].append((const char *)data,chunkSize);
+	ptr += 8; // skip network ID, which is already obviously known
+	const uint16_t chunkLen = chunk.at<uint16_t>(ptr); ptr += 2;
+	const void *chunkData = chunk.field(ptr,chunkLen); ptr += chunkLen;
 
-		unsigned int totalWeHave = 0;
-		for(std::map<unsigned int,std::string>::iterator c(_inboundConfigChunks.begin());c!=_inboundConfigChunks.end();++c)
-			totalWeHave += (unsigned int)c->second.length();
+	Mutex::Lock _l(_lock);
 
-		if (totalWeHave == totalSize) {
-			TRACE("have all chunks for network config request %.16llx, assembling...",inRePacketId);
-			for(std::map<unsigned int,std::string>::iterator c(_inboundConfigChunks.begin());c!=_inboundConfigChunks.end();++c)
-				newConfig.append(c->second);
-			_inboundConfigPacketId = 0;
-			_inboundConfigChunks.clear();
-		} else if (totalWeHave > totalSize) {
-			_inboundConfigPacketId = 0;
-			_inboundConfigChunks.clear();
+	_IncomingConfigChunk *c = (_IncomingConfigChunk *)0;
+	uint64_t chunkId = 0;
+	uint64_t configUpdateId;
+	unsigned long totalLength,chunkIndex;
+	if (ptr < chunk.size()) {
+		const bool fastPropagate = ((chunk[ptr++] & 0x01) != 0);
+		configUpdateId = chunk.at<uint64_t>(ptr); ptr += 8;
+		totalLength = chunk.at<uint32_t>(ptr); ptr += 4;
+		chunkIndex = chunk.at<uint32_t>(ptr); ptr += 4;
+
+		if (((chunkIndex + chunkLen) > totalLength)||(totalLength >= ZT_NETWORKCONFIG_DICT_CAPACITY)) { // >= since we need room for a null at the end
+			TRACE("discarded chunk from %s: invalid length or length overflow",chunk.source().toString().c_str());
+			return 0;
 		}
-	} else {
-		return;
-	}
 
-	if ((newConfig.length() > 0)&&(newConfig.length() < ZT_NETWORKCONFIG_DICT_CAPACITY)) {
-		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dict = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>(newConfig.c_str());
-		NetworkConfig *nc = new NetworkConfig();
-		try {
-			Identity controllerId(RR->topology->getIdentity(this->controller()));
-			if (controllerId) {
-				if (nc->fromDictionary(*dict)) {
-					Mutex::Lock _l(_lock);
-					this->_setConfiguration(*nc,true);
-				} else {
-					TRACE("error parsing new config with length %u: deserialization of NetworkConfig failed (certificate error?)",(unsigned int)newConfig.length());
+		if ((chunk[ptr] != 1)||(chunk.at<uint16_t>(ptr + 1) != ZT_C25519_SIGNATURE_LEN)) {
+			TRACE("discarded chunk from %s: unrecognized signature type",chunk.source().toString().c_str());
+			return 0;
+		}
+		const uint8_t *sig = reinterpret_cast<const uint8_t *>(chunk.field(ptr + 3,ZT_C25519_SIGNATURE_LEN));
+
+		// We can use the signature, which is unique per chunk, to get a per-chunk ID for local deduplication use
+		for(unsigned int i=0;i<16;++i)
+			reinterpret_cast<uint8_t *>(&chunkId)[i & 7] ^= sig[i];
+
+		// Find existing or new slot for this update and check if this is a duplicate chunk
+		for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i) {
+			if (_incomingConfigChunks[i].updateId == configUpdateId) {
+				c = &(_incomingConfigChunks[i]);
+
+				for(unsigned long j=0;j<c->haveChunks;++j) {
+					if (c->haveChunkIds[j] == chunkId)
+						return 0;
+				}
+
+				break;
+			} else if ((!c)||(_incomingConfigChunks[i].ts < c->ts)) {
+				c = &(_incomingConfigChunks[i]);
+			}
+		}
+
+		// If it's not a duplicate, check chunk signature
+		const Identity controllerId(RR->topology->getIdentity(controller()));
+		if (!controllerId) { // we should always have the controller identity by now, otherwise how would we have queried it the first time?
+			TRACE("unable to verify chunk from %s: don't have controller identity",chunk.source().toString().c_str());
+			return 0;
+		}
+		if (!controllerId.verify(chunk.field(start,ptr - start),ptr - start,sig,ZT_C25519_SIGNATURE_LEN)) {
+			TRACE("discarded chunk from %s: signature check failed",chunk.source().toString().c_str());
+			return 0;
+		}
+
+		// New properly verified chunks can be flooded "virally" through the network
+		if (fastPropagate) {
+			Address *a = (Address *)0;
+			Membership *m = (Membership *)0;
+			Hashtable<Address,Membership>::Iterator i(_memberships);
+			while (i.next(a,m)) {
+				if ((*a != chunk.source())&&(*a != controller())) {
+					Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CONFIG);
+					outp.append(reinterpret_cast<const uint8_t *>(chunk.data()) + start,chunk.size() - start);
+					RR->sw->send(outp,true);
 				}
 			}
+		}
+	} else if (chunk.source() == controller()) {
+		// Legacy support for OK(NETWORK_CONFIG_REQUEST) from older controllers
+		chunkId = chunk.packetId();
+		configUpdateId = chunkId;
+		totalLength = chunkLen;
+		chunkIndex = 0;
+
+		if (totalLength >= ZT_NETWORKCONFIG_DICT_CAPACITY)
+			return 0;
+
+		// Find oldest slot for this udpate to use buffer space
+		for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i) {
+			if ((!c)||(_incomingConfigChunks[i].ts < c->ts))
+				c = &(_incomingConfigChunks[i]);
+		}
+	} else {
+		TRACE("discarded single-chunk unsigned legacy config: this is only allowed if the sender is the controller itself");
+		return 0;
+	}
+
+	++c->ts; // newer is higher, that's all we need
+
+	if (c->updateId != configUpdateId) {
+		c->updateId = configUpdateId;
+		for(int i=0;i<ZT_NETWORK_MAX_UPDATE_CHUNKS;++i)
+			c->haveChunkIds[i] = 0;
+		c->haveChunks = 0;
+		c->haveBytes = 0;
+	}
+	if (c->haveChunks >= ZT_NETWORK_MAX_UPDATE_CHUNKS)
+		return false;
+	c->haveChunkIds[c->haveChunks++] = chunkId;
+
+	memcpy(c->data.unsafeData() + chunkIndex,chunkData,chunkLen);
+	c->haveBytes += chunkLen;
+
+	if (c->haveBytes == totalLength) {
+		c->data.unsafeData()[c->haveBytes] = (char)0; // ensure null terminated
+
+		NetworkConfig *const nc = new NetworkConfig();
+		try {
+			if (nc->fromDictionary(c->data)) {
+				this->_setConfiguration(*nc,true);
+				return configUpdateId;
+			}
 			delete nc;
-			delete dict;
 		} catch ( ... ) {
-			TRACE("error parsing new config with length %u: unexpected exception",(unsigned int)newConfig.length());
 			delete nc;
-			delete dict;
-			throw;
 		}
 	}
+
+	return 0;
 }
 
 void Network::requestConfiguration()
@@ -980,10 +1061,7 @@ void Network::requestConfiguration()
 	} else {
 		outp.append((unsigned char)0,16);
 	}
-
-	RR->node->expectReplyTo(_inboundConfigPacketId = outp.packetId());
-	_inboundConfigChunks.clear();
-
+	RR->node->expectReplyTo(outp.packetId());
 	outp.compress();
 	RR->sw->send(outp,true);
 }
@@ -1127,13 +1205,6 @@ Membership::AddCredentialResult Network::addCredential(const Address &sentFrom,c
 	const Membership::AddCredentialResult result = m.addCredential(RR,_config,rev);
 
 	if ((result == Membership::ADD_ACCEPTED_NEW)&&(rev.fastPropagate())) {
-		/* Fast propagation is done by using a very aggressive rumor mill
-		 * propagation algorithm. When we see a Revocation that we haven't
-		 * seen before we blast it to every known member. This leads to
-		 * a huge number of redundant messages, but eventually everybody
-		 * will get it. This helps revocation speed and also helps in cases
-		 * where the controller is under attack. It need only get one
-		 * revocation out and the rest is history. */
 		Address *a = (Address *)0;
 		Membership *m = (Membership *)0;
 		Hashtable<Address,Membership>::Iterator i(_memberships);

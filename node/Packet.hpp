@@ -755,8 +755,26 @@ public:
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit length of network configuration dictionary chunk>
 		 *   <[...] network configuration dictionary (may be incomplete)>
+		 *   [ ... end of legacy single chunk response ... ]
+		 *   <[1] 8-bit flags>
+		 *   <[8] 64-bit config update ID (should never be 0)>
 		 *   <[4] 32-bit total length of assembled dictionary>
-		 *   <[4] 32-bit index of chunk in this reply>
+		 *   <[4] 32-bit index of chunk>
+		 *   [ ... end signed portion ... ]
+		 *   <[1] 8-bit chunk signature type>
+		 *   <[2] 16-bit length of chunk signature>
+		 *   <[...] chunk signature>
+		 *
+		 * The chunk signature signs the entire payload of the OK response.
+		 * Currently only one signature type is supported: ed25519 (1).
+		 *
+		 * Each config chunk is signed to prevent memory exhaustion or
+		 * traffic crowding DOS attacks against config fragment assembly.
+		 *
+		 * If the packet is from the network controller it is permitted to end
+		 * before the config update ID or other chunking related or signature
+		 * fields. This is to support older controllers that don't include
+		 * these fields and may be removed in the future.
 		 *
 		 * ERROR response payload:
 		 *   <[8] 64-bit network ID>
@@ -766,25 +784,30 @@ public:
 		/**
 		 * Network configuration data push:
 		 *   <[8] 64-bit network ID>
-		 *   <[8] 64-bit config update ID (token to identify this update)>
-		 *   <[1] flags>
 		 *   <[2] 16-bit length of network configuration dictionary chunk>
 		 *   <[...] network configuration dictionary (may be incomplete)>
+		 *   <[1] 8-bit flags>
+		 *   <[8] 64-bit config update ID (should never be 0)>
 		 *   <[4] 32-bit total length of assembled dictionary>
-		 *   <[4] 32-bit index of chunk in this reply>
+		 *   <[4] 32-bit index of chunk>
+		 *   [ ... end signed portion ... ]
+		 *   <[1] 8-bit chunk signature type>
+		 *   <[2] 16-bit length of chunk signature>
+		 *   <[...] chunk signature>
 		 *
 		 * This is a direct push variant for network config updates. It otherwise
-		 * carries the same payload as OK(NETWORK_CONFIG_REQUEST). There is an
-		 * extra number after network ID in this version that is used in place of
-		 * the in-re packet ID sent with OKs to group chunks together.
-		 *
-		 * Unlike OK(NETWORK_CONFIG_REQUEST) this can be sent by peers other than
-		 * network controllers. In that case the certificate inside the Dictionary
-		 * is used for verification purposes.
+		 * carries the same payload as OK(NETWORK_CONFIG_REQUEST) and has the same
+		 * semantics.
 		 *
 		 * Flags:
-		 *   0x01 - Patch, not whole config
-		 *   0x02 - Use fast P2P propagation
+		 *   0x01 - Use fast propagation
+		 *
+		 * An OK should be sent if the config is successfully received and
+		 * accepted.
+		 *
+		 * OK payload:
+		 *   <[8] 64-bit network ID>
+		 *   <[8] 64-bit config update ID>
 		 */
 		VERB_NETWORK_CONFIG = 0x0c,
 
