@@ -50,6 +50,7 @@ static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
 		case ZT_NETWORK_RULE_ACTION_DROP: return "ACTION_DROP";
 		case ZT_NETWORK_RULE_ACTION_ACCEPT: return "ACTION_ACCEPT";
 		case ZT_NETWORK_RULE_ACTION_TEE: return "ACTION_TEE";
+		case ZT_NETWORK_RULE_ACTION_WATCH: return "ACTION_WATCH";
 		case ZT_NETWORK_RULE_ACTION_REDIRECT: return "ACTION_REDIRECT";
 		case ZT_NETWORK_RULE_ACTION_DEBUG_LOG: return "ACTION_DEBUG_LOG";
 		case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS: return "MATCH_SOURCE_ZEROTIER_ADDRESS";
@@ -882,7 +883,7 @@ uint64_t Network::handleConfigChunk(const Packet &chunk,unsigned int ptr)
 	const unsigned int start = ptr;
 
 	ptr += 8; // skip network ID, which is already obviously known
-	const uint16_t chunkLen = chunk.at<uint16_t>(ptr); ptr += 2;
+	const unsigned int chunkLen = chunk.at<uint16_t>(ptr); ptr += 2;
 	const void *chunkData = chunk.field(ptr,chunkLen); ptr += chunkLen;
 
 	Mutex::Lock _l(_lock);
@@ -975,8 +976,6 @@ uint64_t Network::handleConfigChunk(const Packet &chunk,unsigned int ptr)
 
 	if (c->updateId != configUpdateId) {
 		c->updateId = configUpdateId;
-		for(int i=0;i<ZT_NETWORK_MAX_UPDATE_CHUNKS;++i)
-			c->haveChunkIds[i] = 0;
 		c->haveChunks = 0;
 		c->haveBytes = 0;
 	}
@@ -1065,7 +1064,7 @@ void Network::requestConfiguration()
 	RR->sw->send(outp,true);
 }
 
-bool Network::gate(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uint64_t packetId)
+bool Network::gate(const SharedPtr<Peer> &peer)
 {
 	const uint64_t now = RR->node->now();
 	Mutex::Lock _l(_lock);
@@ -1081,26 +1080,12 @@ bool Network::gate(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uin
 					m->likingMulticasts(now);
 				}
 				return true;
-			} else {
-				if (peer->rateGateRequestCredentials(now)) {
-					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
-					outp.append((uint8_t)verb);
-					outp.append(packetId);
-					outp.append((uint8_t)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
-					outp.append(_id);
-					RR->sw->send(outp,true);
-				}
 			}
 		}
 	} catch ( ... ) {
 		TRACE("gate() check failed for peer %s: unexpected exception",peer->address().toString().c_str());
 	}
 	return false;
-}
-
-bool Network::gateMulticastGatherReply(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uint64_t packetId)
-{
-	return ( (peer->address() == controller()) || RR->topology->isUpstream(peer->identity()) || gate(peer,verb,packetId) || _config.isAnchor(peer->address()) );
 }
 
 void Network::clean()

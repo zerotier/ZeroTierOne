@@ -154,6 +154,8 @@ private:
 	bool _doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 
+	void _sendErrorNeedCredentials(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,const uint64_t nwid);
+
 	uint64_t _receiveTime;
 	SharedPtr<Path> _path;
 };

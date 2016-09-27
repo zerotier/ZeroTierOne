@@ -212,21 +212,8 @@ public:
 
 	/**
 	 * Determine whether this peer is permitted to communicate on this network
-	 *
-	 * This also performs certain periodic actions such as pushing renewed
-	 * credentials to peers, so like the filters it is not side-effect-free.
-	 *
-	 * @param peer Peer to check
-	 * @param verb Packet verb
-	 * @param packetId Packet ID
-	 * @return True if peer is allowed to communicate on this network
 	 */
-	bool gate(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uint64_t packetId);
-
-	/**
-	 * Check whether this peer is allowed to provide multicast info for this network
-	 */
-	bool gateMulticastGatherReply(const SharedPtr<Peer> &peer,const Packet::Verb verb,const uint64_t packetId);
+	bool gate(const SharedPtr<Peer> &peer);
 
 	/**
 	 * Do periodic cleanup and housekeeping tasks
