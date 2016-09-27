@@ -737,6 +737,8 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 				if ((!network)||(network->id() != nwid))
 					network = RR->node->network(nwid);
 				const bool authOnNet = ((network)&&(network->gate(peer)));
+				if (!authOnNet)
+					_sendErrorNeedCredentials(RR,peer,nwid);
 				trustEstablished |= authOnNet;
 				if (authOnNet||RR->mc->cacheAuthorized(peer->address(),nwid,now)) {
 					auth = true;
@@ -1019,6 +1021,8 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 		}
 
 		const bool trustEstablished = ((network)&&(network->gate(peer)));
+		if (!trustEstablished)
+			_sendErrorNeedCredentials(RR,peer,nwid);
 		if ( ( trustEstablished || RR->mc->cacheAuthorized(peer->address(),nwid,RR->node->now()) ) && (gatherLimit > 0) ) {
 			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 			outp.append((unsigned char)Packet::VERB_MULTICAST_GATHER);
