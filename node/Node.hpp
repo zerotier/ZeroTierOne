@@ -267,19 +267,17 @@ public:
 	}
 
 	/**
-	 * Check whether a given packet ID is something we are expecting a reply to (and erase from list)
+	 * Check whether a given packet ID is something we are expecting a reply to
 	 *
 	 * @param packetId Packet ID to check
 	 * @return True if we're expecting a reply
 	 */
-	inline bool expectingReplyTo(const uint64_t packetId)
+	inline bool expectingReplyTo(const uint64_t packetId) const
 	{
 		const unsigned long bucket = (unsigned long)(packetId & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
 		for(unsigned long i=0;i<=ZT_EXPECTING_REPLIES_BUCKET_MASK2;++i) {
-			if (_expectingRepliesTo[bucket][i] == packetId) {
-				_expectingRepliesTo[bucket][i] = 0;
+			if (_expectingRepliesTo[bucket][i] == packetId)
 				return true;
-			}
 		}
 		return false;
 	}

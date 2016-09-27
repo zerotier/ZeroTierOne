@@ -1481,14 +1481,15 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 
 void IncomingPacket::_sendErrorNeedCredentials(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,const uint64_t nwid)
 {
-	if (peer->rateGateOutgoingComRequest(RR->node->now())) {
+	const uint64_t now = RR->node->now();
+	if (peer->rateGateOutgoingComRequest(now)) {
 		Packet outp(source(),RR->identity.address(),Packet::VERB_ERROR);
 		outp.append((uint8_t)verb());
 		outp.append(packetId());
 		outp.append((uint8_t)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
 		outp.append(nwid);
 		outp.armor(peer->key(),true);
-		_path->send(RR,outp.data(),outp.size(),RR->node->now());
+		_path->send(RR,outp.data(),outp.size(),now);
 	}
 }
 
