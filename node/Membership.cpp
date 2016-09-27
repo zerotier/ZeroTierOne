@@ -182,21 +182,21 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	_RemoteCapability *have = ((htmp != &(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]))&&((*htmp)->id == (uint64_t)cap.id())) ? *htmp : (_RemoteCapability *)0;
 	if (have) {
 		if ( (!_isCredentialTimestampValid(nconf,cap,*have)) || (have->cap.timestamp() > cap.timestamp()) ) {
-			TRACE("addCredential(Tag) for %s on %.16llx REJECTED (revoked or too old)",tag.issuedTo().toString().c_str(),tag.networkId());
+			TRACE("addCredential(Tag) for %s on %.16llx REJECTED (revoked or too old)",cap.issuedTo().toString().c_str(),cap.networkId());
 			return ADD_REJECTED;
 		}
 		if (have->cap == cap) {
-			TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (redundant)",tag.issuedTo().toString().c_str(),tag.networkId());
+			TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (redundant)",cap.issuedTo().toString().c_str(),cap.networkId());
 			return ADD_ACCEPTED_REDUNDANT;
 		}
 	}
 
 	switch(cap.verify(RR)) {
 		default:
-			TRACE("addCredential(Tag) for %s on %.16llx REJECTED (invalid)",tag.issuedTo().toString().c_str(),tag.networkId());
+			TRACE("addCredential(Tag) for %s on %.16llx REJECTED (invalid)",cap.issuedTo().toString().c_str(),cap.networkId());
 			return ADD_REJECTED;
 		case 0:
-			TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (new)",tag.issuedTo().toString().c_str(),tag.networkId());
+			TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (new)",cap.issuedTo().toString().c_str(),cap.networkId());
 			if (!have) have = _newCapability(cap.id());
 			have->lastReceived = RR->node->now();
 			have->cap = cap;
