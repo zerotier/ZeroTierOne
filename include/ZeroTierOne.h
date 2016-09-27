@@ -1929,27 +1929,6 @@ enum ZT_ResultCode ZT_Node_circuitTestBegin(ZT_Node *node,ZT_CircuitTest *test,v
 void ZT_Node_circuitTestEnd(ZT_Node *node,ZT_CircuitTest *test);
 
 /**
- * Push a network refresh
- *
- * This is used by network controller implementations to send a
- * NETWORK_CONFIG_REFRESH message to tell a node to refresh its
- * config and to optionally push one or more credential timestamp
- * blacklist thresholds for members of the network.
- *
- * Code outside a controller implementation will have no use for
- * this as these messages are ignored if they do not come from a
- * controller.
- *
- * @param node Node instance
- * @param dest ZeroTier address of destination to which to send NETWORK_CONFIG_REFRESH
- * @param nwid Network ID
- * @param blacklistAddresses Array of ZeroTier addresses of network members to set timestamp blacklists for
- * @param blacklistBeforeTimestamps Timestamps before which to blacklist credentials for each corresponding address in blacklistAddresses[]
- * @param blacklistCount Size of blacklistAddresses[] and blacklistBeforeTimestamps[]
- */
-void ZT_Node_pushNetworkRefresh(ZT_Node *node,uint64_t dest,uint64_t nwid,const uint64_t *blacklistAddresses,const uint64_t *blacklistBeforeTimestamps,unsigned int blacklistCount);
-
-/**
  * Initialize cluster operation
  *
  * This initializes the internal structures and state for cluster operation.

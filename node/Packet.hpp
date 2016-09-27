@@ -670,9 +670,11 @@ public:
 		 *   0x6 - WATCHed inbound frame
 		 *   0x7 - (reserved for future use)
 		 *   
-		 * An extended frame carries full MAC addressing, making them a
-		 * superset of VERB_FRAME. They're used for bridging or when we
-		 * want to attach a certificate since FRAME does not support that.
+		 * An extended frame carries full MAC addressing, making it a
+		 * superset of VERB_FRAME. It is used for bridged traffic,
+		 * redirected or observed traffic via rules, and can in theory
+		 * be used for multicast though MULTICAST_FRAME exists for that
+		 * purpose and has additional options and capabilities.
 		 *
 		 * OK payload (if ACK flag is set):
 		 *   <[8] 64-bit network ID>
@@ -724,6 +726,9 @@ public:
 		 * This can be sent by anyone at any time to push network credentials.
 		 * These will of course only be accepted if they are properly signed.
 		 * Credentials can be for any number of networks.
+		 *
+		 * The use of a zero byte to terminate the COM section is for legacy
+		 * backward compatiblity. Newer fields are prefixed with a length.
 		 *
 		 * OK/ERROR are not generated.
 		 */

@@ -516,8 +516,8 @@ void EmbeddedNetworkController::threadMain()
 			Mutex::Lock _l(_refreshQueue_m);
 			while (_refreshQueue.size() > 0) {
 				_Refresh &r = _refreshQueue.front();
-				if (_node)
-					_node->pushNetworkRefresh(r.dest,r.nwid,r.blacklistAddresses,r.blacklistThresholds,r.numBlacklistEntries);
+				//if (_node)
+				//	_node->pushNetworkRefresh(r.dest,r.nwid,r.blacklistAddresses,r.blacklistThresholds,r.numBlacklistEntries);
 				_refreshQueue.pop_front();
 				if (++count >= 50)
 					break;
