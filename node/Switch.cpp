@@ -349,11 +349,6 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	}
 
 	if (to.isMulticast()) {
-		if (network->config().multicastLimit == 0) {
-			TRACE("%.16llx: dropped multicast: not allowed on network",network->id());
-			return;
-		}
-
 		MulticastGroup multicastGroup(to,0);
 
 		if (to.isBroadcast()) {
@@ -455,6 +450,12 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 					return; // NDP emulation done. We have forged a "fake" reply, so no need to send actual NDP query.
 				} // else no NDP emulation
 			} // else no NDP emulation
+		}
+
+		// Check this after NDP emulation, since that has to be allowed in exactly this case
+		if (network->config().multicastLimit == 0) {
+			TRACE("%.16llx: dropped multicast: not allowed on network",network->id());
+			return;
 		}
 
 		/* Learn multicast groups for bridged-in hosts.
