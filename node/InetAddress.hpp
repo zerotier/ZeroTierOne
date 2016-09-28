@@ -414,6 +414,25 @@ struct InetAddress : public sockaddr_storage
 		return false;
 	}
 
+	inline unsigned long hashCode() const
+	{
+		if (ss_family == AF_INET) {
+			return ((unsigned long)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr + (unsigned long)reinterpret_cast<const struct sockaddr_in *>(this)->sin_port);
+		} else if (ss_family == AF_INET6) {
+			unsigned long tmp = reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port;
+			const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+			for(long i=0;i<16;++i)
+				reinterpret_cast<uint8_t *>(&tmp)[i % sizeof(tmp)] ^= a[i];
+			return tmp;
+		} else {
+			unsigned long tmp = reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port;
+			const uint8_t *a = reinterpret_cast<const uint8_t *>(this);
+			for(long i=0;i<sizeof(InetAddress);++i)
+				reinterpret_cast<uint8_t *>(&tmp)[i % sizeof(tmp)] ^= a[i];
+			return tmp;
+		}
+	}
+
 	/**
 	 * Set to null/zero
 	 */
