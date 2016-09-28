@@ -993,12 +993,11 @@ uint64_t Network::handleConfigChunk(const Packet &chunk,unsigned int ptr)
 		try {
 			if (nc->fromDictionary(c->data)) {
 				this->_setConfiguration(*nc,true);
+				delete nc;
 				return configUpdateId;
 			}
-			delete nc;
-		} catch ( ... ) {
-			delete nc;
-		}
+		} catch ( ... ) {}
+		delete nc;
 	}
 
 	return 0;
@@ -1025,25 +1024,31 @@ void Network::requestConfiguration()
 
 	if (ctrl == RR->identity.address()) {
 		if (RR->localNetworkController) {
-			NetworkConfig nconf;
-			switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,rmd,nconf)) {
-				case NetworkController::NETCONF_QUERY_OK: {
-					Mutex::Lock _l(_lock);
-					this->_setConfiguration(nconf,true);
-				}	return;
-				case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND:
-					this->setNotFound();
-					return;
-				case NetworkController::NETCONF_QUERY_ACCESS_DENIED:
-					this->setAccessDenied();
-					return;
-				default:
-					return;
+			NetworkConfig *nconf = new NetworkConfig();
+			try {
+				switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,rmd,*nconf)) {
+					case NetworkController::NETCONF_QUERY_OK: {
+						Mutex::Lock _l(_lock);
+						this->_setConfiguration(*nconf,true);
+					}	break;
+					case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND:
+						this->setNotFound();
+						break;
+					case NetworkController::NETCONF_QUERY_ACCESS_DENIED:
+						this->setAccessDenied();
+						break;
+					default:
+						this->setNotFound();
+						break;
+				}
+			} catch ( ... ) {
+				this->setNotFound();
 			}
+			delete nconf;
 		} else {
 			this->setNotFound();
-			return;
 		}
+		return;
 	}
 
 	TRACE("requesting netconf for network %.16llx from controller %s",(unsigned long long)_id,ctrl.toString().c_str());
