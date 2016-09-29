@@ -1004,12 +1004,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 						if (!member.size())
 							return 404;
 
-						char addrs[24];
-						Utils::snprintf(addrs,sizeof(addrs),"%.10llx",address);
-
-						// Add non-persisted fields
-						member["clock"] = OSUtils::now();
-
+						_addMemberNonPersistedFields(member,now);
 						responseBody = member.dump(2);
 						responseContentType = "application/json";
 

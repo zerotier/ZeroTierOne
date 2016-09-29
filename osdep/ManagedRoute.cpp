@@ -524,11 +524,11 @@ void ManagedRoute::remove()
 #endif // __BSD__ ------------------------------------------------------------
 
 #ifdef __LINUX__ // ----------------------------------------------------------
-		_routeCmd("del",*r,_via,(_via) ? (const char *)0 : _device);
+		_routeCmd("del",r->first,_via,(_via) ? (const char *)0 : _device);
 #endif // __LINUX__ ----------------------------------------------------------
 
 #ifdef __WINDOWS__ // --------------------------------------------------------
-		_winRoute(true,interfaceLuid,interfaceIndex,*r,_via);
+		_winRoute(true,interfaceLuid,interfaceIndex,r->first,_via);
 #endif // __WINDOWS__ --------------------------------------------------------
 	}
 

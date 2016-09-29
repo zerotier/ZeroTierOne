@@ -181,6 +181,10 @@ private:
 		network["activeMemberCount"] = nmi.activeMemberCount;
 		network["totalMemberCount"] = nmi.totalMemberCount;
 	}
+	inline void _addMemberNonPersistedFields(nlohmann::json &member,uint64_t now)
+	{
+		member["clock"] = now;
+	}
 
 	// These are const after construction
 	Node *const _node;
