@@ -170,9 +170,11 @@ bool OSUtils::rmDashRf(const char *path)
 		return true;
 	dptr = (struct dirent *)0;
 	for(;;) {
-		if (readdir_r(d,&de,&dptr))
+		if (readdir_r(d,&de,&dptr) != 0)
 			break;
-		if ((dptr)&&(strcmp(dptr->d_name,".") != 0)&&(strcmp(dptr->d_name,"..") != 0)) {
+		if (!dptr)
+			break;
+		if ((strcmp(dptr->d_name,".") != 0)&&(strcmp(dptr->d_name,"..") != 0)&&(strlen(dptr->d_name) > 0)) {
 			std::string p(path);
 			p.push_back(ZT_PATH_SEPARATOR);
 			p.append(dptr->d_name);
@@ -180,7 +182,7 @@ bool OSUtils::rmDashRf(const char *path)
 				if (!rmDashRf(p.c_str()))
 					return false;
 			}
-		} else break;
+		}
 	}
 	closedir(d);
 	return (rmdir(path) == 0);
