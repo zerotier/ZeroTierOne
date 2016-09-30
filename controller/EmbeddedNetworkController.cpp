@@ -1004,7 +1004,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 						if (!member.size())
 							return 404;
 
-						_addMemberNonPersistedFields(member,now);
+						_addMemberNonPersistedFields(member,OSUtils::now());
 						responseBody = member.dump(2);
 						responseContentType = "application/json";
 
@@ -1324,28 +1324,28 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					if (b.count("multicastLimit")) network["multicastLimit"] = _jI(b["multicastLimit"],32ULL);
 
 					if (b.count("v4AssignMode")) {
-						json &nv4m = network["v4AssignMode"];
-						if (!nv4m.is_object()) nv4m = json::object();
-						if (b["v4AssignMode"].is_string()) { // backward compatibility
-							nv4m["zt"] = (_jS(b["v4AssignMode"],"") == "zt");
-						} else if (b["v4AssignMode"].is_object()) {
-							json &v4m = b["v4AssignMode"];
-							if (v4m.count("zt")) nv4m["zt"] = _jB(v4m["zt"],false);
-						}
-						if (!nv4m.count("zt")) nv4m["zt"] = false;
+						json nv4m;
+						json &v4m = b["v4AssignMode"];
+						if (v4m.is_string()) { // backward compatibility
+							nv4m["zt"] = (_jS(v4m,"") == "zt");
+						} else if (v4m.is_object()) {
+							nv4m["zt"] = _jB(v4m["zt"],false);
+						} else nv4m["zt"] = false;
+						network["v4AssignMode"] = nv4m;
 					}
 
 					if (b.count("v6AssignMode")) {
-						json &nv6m = network["v6AssignMode"];
+						json nv6m;
+						json &v6m = b["v6AssignMode"];
 						if (!nv6m.is_object()) nv6m = json::object();
-						if (b["v6AssignMode"].is_string()) { // backward compatibility
-							std::vector<std::string> v6m(Utils::split(_jS(b["v6AssignMode"],"").c_str(),",","",""));
-							std::sort(v6m.begin(),v6m.end());
-							v6m.erase(std::unique(v6m.begin(),v6m.end()),v6m.end());
+						if (v6m.is_string()) { // backward compatibility
+							std::vector<std::string> v6ms(Utils::split(_jS(v6m,"").c_str(),",","",""));
+							std::sort(v6ms.begin(),v6ms.end());
+							v6ms.erase(std::unique(v6ms.begin(),v6ms.end()),v6ms.end());
 							nv6m["rfc4193"] = false;
 							nv6m["zt"] = false;
 							nv6m["6plane"] = false;
-							for(std::vector<std::string>::iterator i(v6m.begin());i!=v6m.end();++i) {
+							for(std::vector<std::string>::iterator i(v6ms.begin());i!=v6ms.end();++i) {
 								if (*i == "rfc4193")
 									nv6m["rfc4193"] = true;
 								else if (*i == "zt")
@@ -1353,15 +1353,16 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 								else if (*i == "6plane")
 									nv6m["6plane"] = true;
 							}
-						} else if (b["v6AssignMode"].is_object()) {
-							json &v6m = b["v6AssignMode"];
+						} else if (v6m.is_object()) {
 							if (v6m.count("rfc4193")) nv6m["rfc4193"] = _jB(v6m["rfc4193"],false);
 							if (v6m.count("zt")) nv6m["zt"] = _jB(v6m["zt"],false);
 							if (v6m.count("6plane")) nv6m["6plane"] = _jB(v6m["6plane"],false);
+						} else {
+							nv6m["rfc4193"] = false;
+							nv6m["zt"] = false;
+							nv6m["6plane"] = false;
 						}
-						if (!nv6m.count("rfc4193")) nv6m["rfc4193"] = false;
-						if (!nv6m.count("zt")) nv6m["zt"] = false;
-						if (!nv6m.count("6plane")) nv6m["6plane"] = false;
+						network["v6AssignMode"] = nv6m;
 					}
 
 					if (b.count("routes")) {

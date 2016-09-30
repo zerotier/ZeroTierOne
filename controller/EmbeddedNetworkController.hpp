@@ -165,6 +165,7 @@ private:
 		if (!network.count("v6AssignMode")) network["v6AssignMode"] = {{"rfc4193",false},{"zt",false},{"6plane",false}};
 		if (!network.count("authTokens")) network["authTokens"] = nlohmann::json::array();
 		if (!network.count("capabilities")) network["capabilities"] = nlohmann::json::array();
+		if (!network.count("ipAssignmentPools")) network["ipAssignmentPools"] = nlohmann::json::array();
 		if (!network.count("rules")) {
 			// If unspecified, rules are set to allow anything and behave like a flat L2 segment
 			network["rules"] = {
