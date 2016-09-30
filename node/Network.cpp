@@ -504,6 +504,10 @@ static _doZtFilterResult _doZtFilter(
 				thisRuleMatches = (uint8_t)((frameLen >= (unsigned int)rules[rn].v.frameSize[0])&&(frameLen <= (unsigned int)rules[rn].v.frameSize[1]));
 				FILTER_TRACE("%u %s %c %u in %u-%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),frameLen,(unsigned int)rules[rn].v.frameSize[0],(unsigned int)rules[rn].v.frameSize[1],(unsigned int)thisRuleMatches);
 				break;
+			case ZT_NETWORK_RULE_MATCH_RANDOM:
+				thisRuleMatches = (uint8_t)((uint32_t)(RR->node->prng() & 0xffffffffULL) <= rules[rn].v.randomProbability);
+				FILTER_TRACE("%u %s %c -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)thisRuleMatches);
+				break;
 			case ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE:
 			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
 			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:

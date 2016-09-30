@@ -634,24 +634,29 @@ enum ZT_VirtualNetworkRuleType
 	ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE = 50,
 
 	/**
+	 * Random match with selectable probability
+	 */
+	ZT_NETWORK_RULE_MATCH_RANDOM = 51,
+
+	/**
 	 * Match if local and remote tags differ by no more than value, use 0 to check for equality
 	 */
-	ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE = 51,
+	ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE = 52,
 
 	/**
 	 * Match if local and remote tags ANDed together equal value.
 	 */
-	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND = 52,
+	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND = 53,
 
 	/**
 	 * Match if local and remote tags ANDed together equal value.
 	 */
-	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR = 53,
+	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR = 54,
 
 	/**
 	 * Match if local and remote tags XORed together equal value.
 	 */
-	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR = 54,
+	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR = 55,
 
 	/**
 	 * Maximum ID allowed for a MATCH entry in the rules table
@@ -719,6 +724,11 @@ typedef struct
 		 * 40-bit ZeroTier address (in least significant bits, host byte order)
 		 */
 		uint64_t zt;
+
+		/**
+		 * 0 = never, UINT32_MAX = always
+		 */
+		uint32_t randomProbability;
 
 		/**
 		 * 48-bit Ethernet MAC address in big-endian order

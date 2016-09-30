@@ -249,6 +249,10 @@ public:
 					b.append((uint16_t)rules[i].v.frameSize[0]);
 					b.append((uint16_t)rules[i].v.frameSize[1]);
 					break;
+				case ZT_NETWORK_RULE_MATCH_RANDOM:
+					b.append((uint8_t)4);
+					b.append((uint32_t)rules[i].v.randomProbability);
+					break;
 				case ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
@@ -330,6 +334,9 @@ public:
 				case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
 					rules[ruleCount].v.frameSize[0] = b.template at<uint16_t>(p);
 					rules[ruleCount].v.frameSize[1] = b.template at<uint16_t>(p + 2);
+					break;
+				case ZT_NETWORK_RULE_MATCH_RANDOM:
+					rules[ruleCount].v.randomProbability = b.template at<uint32_t>(p);
 					break;
 				case ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
