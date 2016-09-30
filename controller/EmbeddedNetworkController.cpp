@@ -56,7 +56,7 @@ using json = nlohmann::json;
 #define ZT_NETCONF_MIN_REQUEST_PERIOD 1000
 
 // Nodes are considered active if they've queried in less than this long
-#define ZT_NETCONF_NODE_ACTIVE_THRESHOLD ((ZT_NETWORK_AUTOCONF_DELAY * 2) + 5000)
+#define ZT_NETCONF_NODE_ACTIVE_THRESHOLD (ZT_NETWORK_AUTOCONF_DELAY * 2)
 
 namespace ZeroTier {
 
@@ -1029,32 +1029,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 
 						return 200;
 					}
-
-				} else if ((path[2] == "active")&&(path.size() == 3)) {
-
-					responseBody = "{";
-					std::vector<std::string> members(OSUtils::listSubdirectories((_networkBP(nwid,false) + ZT_PATH_SEPARATOR_S + "member").c_str()));
-					const uint64_t threshold = OSUtils::now() - ZT_NETCONF_NODE_ACTIVE_THRESHOLD;
-					for(std::vector<std::string>::iterator i(members.begin());i!=members.end();++i) {
-						if (i->length() == ZT_ADDRESS_LENGTH_HEX) {
-							json member(_readJson(_memberJP(nwid,Address(Utils::hexStrToU64(i->c_str())),false)));
-							if (member.size()) {
-								auto recentLog = member["recentLog"];
-								if ((recentLog.is_array())&&(recentLog.size() > 0)) {
-									auto mostRecentLog = recentLog[0];
-									if ((mostRecentLog.is_object())&&(_jI(mostRecentLog["ts"],0ULL) >= threshold)) {
-										responseBody.append((responseBody.length() == 1) ? "\"" : ",\"");
-										responseBody.append(*i);
-										responseBody.append("\":");
-										responseBody.append(mostRecentLog.dump());
-									}
-								}
-							}
-						}
-					}
-					responseBody.push_back('}');
-					responseContentType = "application/json";
-					return 200;
 
 				} else if ((path[2] == "test")&&(path.size() >= 4)) {
 
