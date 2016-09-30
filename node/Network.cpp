@@ -886,118 +886,130 @@ uint64_t Network::handleConfigChunk(const Packet &chunk,unsigned int ptr)
 	const unsigned int chunkLen = chunk.at<uint16_t>(ptr); ptr += 2;
 	const void *chunkData = chunk.field(ptr,chunkLen); ptr += chunkLen;
 
-	Mutex::Lock _l(_lock);
-
-	_IncomingConfigChunk *c = (_IncomingConfigChunk *)0;
-	uint64_t chunkId = 0;
+	NetworkConfig *nc = (NetworkConfig *)0;
 	uint64_t configUpdateId;
-	unsigned long totalLength,chunkIndex;
-	if (ptr < chunk.size()) {
-		const bool fastPropagate = ((chunk[ptr++] & 0x01) != 0);
-		configUpdateId = chunk.at<uint64_t>(ptr); ptr += 8;
-		totalLength = chunk.at<uint32_t>(ptr); ptr += 4;
-		chunkIndex = chunk.at<uint32_t>(ptr); ptr += 4;
+	{
+		Mutex::Lock _l(_lock);
 
-		if (((chunkIndex + chunkLen) > totalLength)||(totalLength >= ZT_NETWORKCONFIG_DICT_CAPACITY)) { // >= since we need room for a null at the end
-			TRACE("discarded chunk from %s: invalid length or length overflow",chunk.source().toString().c_str());
-			return 0;
-		}
+		_IncomingConfigChunk *c = (_IncomingConfigChunk *)0;
+		uint64_t chunkId = 0;
+		unsigned long totalLength,chunkIndex;
+		if (ptr < chunk.size()) {
+			const bool fastPropagate = ((chunk[ptr++] & 0x01) != 0);
+			configUpdateId = chunk.at<uint64_t>(ptr); ptr += 8;
+			totalLength = chunk.at<uint32_t>(ptr); ptr += 4;
+			chunkIndex = chunk.at<uint32_t>(ptr); ptr += 4;
 
-		if ((chunk[ptr] != 1)||(chunk.at<uint16_t>(ptr + 1) != ZT_C25519_SIGNATURE_LEN)) {
-			TRACE("discarded chunk from %s: unrecognized signature type",chunk.source().toString().c_str());
-			return 0;
-		}
-		const uint8_t *sig = reinterpret_cast<const uint8_t *>(chunk.field(ptr + 3,ZT_C25519_SIGNATURE_LEN));
-
-		// We can use the signature, which is unique per chunk, to get a per-chunk ID for local deduplication use
-		for(unsigned int i=0;i<16;++i)
-			reinterpret_cast<uint8_t *>(&chunkId)[i & 7] ^= sig[i];
-
-		// Find existing or new slot for this update and check if this is a duplicate chunk
-		for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i) {
-			if (_incomingConfigChunks[i].updateId == configUpdateId) {
-				c = &(_incomingConfigChunks[i]);
-
-				for(unsigned long j=0;j<c->haveChunks;++j) {
-					if (c->haveChunkIds[j] == chunkId)
-						return 0;
-				}
-
-				break;
-			} else if ((!c)||(_incomingConfigChunks[i].ts < c->ts)) {
-				c = &(_incomingConfigChunks[i]);
+			if (((chunkIndex + chunkLen) > totalLength)||(totalLength >= ZT_NETWORKCONFIG_DICT_CAPACITY)) { // >= since we need room for a null at the end
+				TRACE("discarded chunk from %s: invalid length or length overflow",chunk.source().toString().c_str());
+				return 0;
 			}
-		}
 
-		// If it's not a duplicate, check chunk signature
-		const Identity controllerId(RR->topology->getIdentity(controller()));
-		if (!controllerId) { // we should always have the controller identity by now, otherwise how would we have queried it the first time?
-			TRACE("unable to verify chunk from %s: don't have controller identity",chunk.source().toString().c_str());
-			return 0;
-		}
-		if (!controllerId.verify(chunk.field(start,ptr - start),ptr - start,sig,ZT_C25519_SIGNATURE_LEN)) {
-			TRACE("discarded chunk from %s: signature check failed",chunk.source().toString().c_str());
-			return 0;
-		}
+			if ((chunk[ptr] != 1)||(chunk.at<uint16_t>(ptr + 1) != ZT_C25519_SIGNATURE_LEN)) {
+				TRACE("discarded chunk from %s: unrecognized signature type",chunk.source().toString().c_str());
+				return 0;
+			}
+			const uint8_t *sig = reinterpret_cast<const uint8_t *>(chunk.field(ptr + 3,ZT_C25519_SIGNATURE_LEN));
 
-		// New properly verified chunks can be flooded "virally" through the network
-		if (fastPropagate) {
-			Address *a = (Address *)0;
-			Membership *m = (Membership *)0;
-			Hashtable<Address,Membership>::Iterator i(_memberships);
-			while (i.next(a,m)) {
-				if ((*a != chunk.source())&&(*a != controller())) {
-					Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CONFIG);
-					outp.append(reinterpret_cast<const uint8_t *>(chunk.data()) + start,chunk.size() - start);
-					RR->sw->send(outp,true);
+			// We can use the signature, which is unique per chunk, to get a per-chunk ID for local deduplication use
+			for(unsigned int i=0;i<16;++i)
+				reinterpret_cast<uint8_t *>(&chunkId)[i & 7] ^= sig[i];
+
+			// Find existing or new slot for this update and check if this is a duplicate chunk
+			for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i) {
+				if (_incomingConfigChunks[i].updateId == configUpdateId) {
+					c = &(_incomingConfigChunks[i]);
+
+					for(unsigned long j=0;j<c->haveChunks;++j) {
+						if (c->haveChunkIds[j] == chunkId)
+							return 0;
+					}
+
+					break;
+				} else if ((!c)||(_incomingConfigChunks[i].ts < c->ts)) {
+					c = &(_incomingConfigChunks[i]);
 				}
 			}
-		}
-	} else if (chunk.source() == controller()) {
-		// Legacy support for OK(NETWORK_CONFIG_REQUEST) from older controllers
-		chunkId = chunk.packetId();
-		configUpdateId = chunkId;
-		totalLength = chunkLen;
-		chunkIndex = 0;
 
-		if (totalLength >= ZT_NETWORKCONFIG_DICT_CAPACITY)
+			// If it's not a duplicate, check chunk signature
+			const Identity controllerId(RR->topology->getIdentity(controller()));
+			if (!controllerId) { // we should always have the controller identity by now, otherwise how would we have queried it the first time?
+				TRACE("unable to verify chunk from %s: don't have controller identity",chunk.source().toString().c_str());
+				return 0;
+			}
+			if (!controllerId.verify(chunk.field(start,ptr - start),ptr - start,sig,ZT_C25519_SIGNATURE_LEN)) {
+				TRACE("discarded chunk from %s: signature check failed",chunk.source().toString().c_str());
+				return 0;
+			}
+
+			// New properly verified chunks can be flooded "virally" through the network
+			if (fastPropagate) {
+				Address *a = (Address *)0;
+				Membership *m = (Membership *)0;
+				Hashtable<Address,Membership>::Iterator i(_memberships);
+				while (i.next(a,m)) {
+					if ((*a != chunk.source())&&(*a != controller())) {
+						Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CONFIG);
+						outp.append(reinterpret_cast<const uint8_t *>(chunk.data()) + start,chunk.size() - start);
+						RR->sw->send(outp,true);
+					}
+				}
+			}
+		} else if (chunk.source() == controller()) {
+			// Legacy support for OK(NETWORK_CONFIG_REQUEST) from older controllers
+			chunkId = chunk.packetId();
+			configUpdateId = chunkId;
+			totalLength = chunkLen;
+			chunkIndex = 0;
+
+			if (totalLength >= ZT_NETWORKCONFIG_DICT_CAPACITY)
+				return 0;
+
+			for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i) {
+				if ((!c)||(_incomingConfigChunks[i].ts < c->ts))
+					c = &(_incomingConfigChunks[i]);
+			}
+		} else {
+			TRACE("discarded single-chunk unsigned legacy config: this is only allowed if the sender is the controller itself");
 			return 0;
-
-		for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i) {
-			if ((!c)||(_incomingConfigChunks[i].ts < c->ts))
-				c = &(_incomingConfigChunks[i]);
 		}
-	} else {
-		TRACE("discarded single-chunk unsigned legacy config: this is only allowed if the sender is the controller itself");
-		return 0;
-	}
 
-	++c->ts; // newer is higher, that's all we need
+		++c->ts; // newer is higher, that's all we need
 
-	if (c->updateId != configUpdateId) {
-		c->updateId = configUpdateId;
-		c->haveChunks = 0;
-		c->haveBytes = 0;
-	}
-	if (c->haveChunks >= ZT_NETWORK_MAX_UPDATE_CHUNKS)
-		return false;
-	c->haveChunkIds[c->haveChunks++] = chunkId;
+		if (c->updateId != configUpdateId) {
+			c->updateId = configUpdateId;
+			c->haveChunks = 0;
+			c->haveBytes = 0;
+		}
+		if (c->haveChunks >= ZT_NETWORK_MAX_UPDATE_CHUNKS)
+			return false;
+		c->haveChunkIds[c->haveChunks++] = chunkId;
 
-	memcpy(c->data.unsafeData() + chunkIndex,chunkData,chunkLen);
-	c->haveBytes += chunkLen;
+		memcpy(c->data.unsafeData() + chunkIndex,chunkData,chunkLen);
+		c->haveBytes += chunkLen;
 
-	if (c->haveBytes == totalLength) {
-		c->data.unsafeData()[c->haveBytes] = (char)0; // ensure null terminated
+		if (c->haveBytes == totalLength) {
+			c->data.unsafeData()[c->haveBytes] = (char)0; // ensure null terminated
 
-		NetworkConfig *const nc = new NetworkConfig();
-		try {
-			if (nc->fromDictionary(c->data)) {
-				this->_setConfiguration(*nc,true);
+			nc = new NetworkConfig();
+			try {
+				if (!nc->fromDictionary(c->data)) {
+					delete nc;
+					nc = (NetworkConfig *)0;
+				}
+			} catch ( ... ) {
 				delete nc;
-				return configUpdateId;
+				nc = (NetworkConfig *)0;
 			}
-		} catch ( ... ) {}
+		}
+	}
+
+	if (nc) {
+		this->_setConfiguration(*nc,true);
 		delete nc;
+		return configUpdateId;
+	} else {
+		return 0;
 	}
 
 	return 0;
@@ -1027,10 +1039,9 @@ void Network::requestConfiguration()
 			NetworkConfig *nconf = new NetworkConfig();
 			try {
 				switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,rmd,*nconf)) {
-					case NetworkController::NETCONF_QUERY_OK: {
-						Mutex::Lock _l(_lock);
+					case NetworkController::NETCONF_QUERY_OK:
 						this->_setConfiguration(*nconf,true);
-					}	break;
+						break;
 					case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND:
 						this->setNotFound();
 						break;
@@ -1238,7 +1249,7 @@ ZT_VirtualNetworkStatus Network::_status() const
 
 int Network::_setConfiguration(const NetworkConfig &nconf,bool saveToDisk)
 {
-	// assumes _lock is locked
+	// _lock is NOT locked when this is called
 	try {
 		if ((nconf.issuedTo != RR->identity.address())||(nconf.networkId != _id))
 			return 0;
@@ -1246,20 +1257,27 @@ int Network::_setConfiguration(const NetworkConfig &nconf,bool saveToDisk)
 			return 1; // OK config, but duplicate of what we already have
 
 		ZT_VirtualNetworkConfig ctmp;
-		_config = nconf;
-		_lastConfigUpdate = RR->node->now();
-		_netconfFailure = NETCONF_FAILURE_NONE;
-		_externalConfig(&ctmp);
-		const bool oldPortInitialized = _portInitialized;
-		_portInitialized = true;
+		bool oldPortInitialized;
+		{
+			Mutex::Lock _l(_lock);
+			_config = nconf;
+			_lastConfigUpdate = RR->node->now();
+			_netconfFailure = NETCONF_FAILURE_NONE;
+			oldPortInitialized = _portInitialized;
+			_portInitialized = true;
+			_externalConfig(&ctmp);
+		}
 		_portError = RR->node->configureVirtualNetworkPort(_id,&_uPtr,(oldPortInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 
 		if (saveToDisk) {
-			char n[64];
-			Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
-			Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> d;
-			if (nconf.toDictionary(d,false))
-				RR->node->dataStorePut(n,(const void *)d.data(),d.sizeBytes(),true);
+			Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *d = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+			try {
+				char n[64];
+				Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
+				if (nconf.toDictionary(*d,false))
+					RR->node->dataStorePut(n,(const void *)d->data(),d->sizeBytes(),true);
+			} catch ( ... ) {}
+			delete d;
 		}
 
 		return 2; // OK and configuration has changed
