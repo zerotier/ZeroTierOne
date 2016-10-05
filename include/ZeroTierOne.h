@@ -659,6 +659,11 @@ enum ZT_VirtualNetworkRuleType
 	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR = 55,
 
 	/**
+	 * Match if local and remote tags both equal a value
+	 */
+	ZT_NETWORK_RULE_MATCH_TAGS_EQUAL = 56,
+
+	/**
 	 * Maximum ID allowed for a MATCH entry in the rules table
 	 */
 	ZT_NETWORK_RULE_MATCH__MAX_ID = 127

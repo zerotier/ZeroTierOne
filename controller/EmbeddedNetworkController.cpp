@@ -287,6 +287,12 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 			r["id"] = rule.v.tag.id;
 			r["value"] = rule.v.tag.value;
 			break;
+		case ZT_NETWORK_RULE_MATCH_TAGS_EQUAL:
+			r["type"] = "MATCH_TAGS_EQUAL";
+			r["not"] = ((rule.t & 0x80) != 0);
+			r["id"] = rule.v.tag.id;
+			r["value"] = rule.v.tag.value;
+			break;
 	}
 	return r;
 }
@@ -455,6 +461,11 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 		return true;
 	} else if (t == "MATCH_TAGS_BITWISE_XOR") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR;
+		rule.v.tag.id = (uint32_t)(_jI(r["id"],0ULL) & 0xffffffffULL);
+		rule.v.tag.value = (uint32_t)(_jI(r["value"],0ULL) & 0xffffffffULL);
+		return true;
+	} else if (t == "MATCH_TAGS_EQUAL") {
+		rule.t |= ZT_NETWORK_RULE_MATCH_TAGS_EQUAL;
 		rule.v.tag.id = (uint32_t)(_jI(r["id"],0ULL) & 0xffffffffULL);
 		rule.v.tag.value = (uint32_t)(_jI(r["value"],0ULL) & 0xffffffffULL);
 		return true;

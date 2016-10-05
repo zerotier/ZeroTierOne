@@ -340,6 +340,7 @@ public:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR:
+				case ZT_NETWORK_RULE_MATCH_TAGS_EQUAL:
 					rules[ruleCount].v.tag.id = b.template at<uint32_t>(p);
 					rules[ruleCount].v.tag.value = b.template at<uint32_t>(p + 4);
 					break;

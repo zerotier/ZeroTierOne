@@ -511,7 +511,8 @@ static _doZtFilterResult _doZtFilter(
 			case ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE:
 			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
 			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
-			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR: {
+			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR:
+			case ZT_NETWORK_RULE_MATCH_TAGS_EQUAL: {
 				const Tag *const localTag = std::lower_bound(&(nconf.tags[0]),&(nconf.tags[nconf.tagCount]),rules[rn].v.tag.id,Tag::IdComparePredicate());
 				if ((localTag != &(nconf.tags[nconf.tagCount]))&&(localTag->id() == rules[rn].v.tag.id)) {
 					const Tag *const remoteTag = ((membership) ? membership->getTag(nconf,rules[rn].v.tag.id) : (const Tag *)0);
@@ -531,6 +532,9 @@ static _doZtFilterResult _doZtFilter(
 						} else if (rt == ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR) {
 							thisRuleMatches = (uint8_t)((ltv ^ rtv) == rules[rn].v.tag.value);
 							FILTER_TRACE("%u %s %c TAG %u local:%.8x ^ remote:%.8x == %.8x -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,ltv,rtv,(unsigned int)rules[rn].v.tag.value,(unsigned int)thisRuleMatches);
+						} else if (rt == ZT_NETWORK_RULE_MATCH_TAGS_EQUAL) {
+							thisRuleMatches = (uint8_t)((ltv == rules[rn].v.tag.value)&&(rtv == rules[rn].v.tag.value));
+							FILTER_TRACE("%u %s %c TAG %u local:%.8x and remote:%.8x == %.8x -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,ltv,rtv,(unsigned int)rules[rn].v.tag.value,(unsigned int)thisRuleMatches);
 						} else { // sanity check, can't really happen
 							thisRuleMatches = 0;
 						}
