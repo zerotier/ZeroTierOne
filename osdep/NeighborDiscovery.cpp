@@ -180,7 +180,7 @@ void NeighborDiscovery::remove(const sockaddr_storage &address)
 sockaddr_storage NeighborDiscovery::processIncomingND(const uint8_t *nd, unsigned int len, const sockaddr_storage &localIp, uint8_t *response, unsigned int &responseLen, MAC &responseDest)
 {
     assert(sizeof(_neighbor_solicitation) == 28);
-    assert(sizeof(_neighbor_advertisement) == 30);
+    assert(sizeof(_neighbor_advertisement) == 32);
 
     const uint64_t now = OSUtils::now();
     sockaddr_storage ip = ZT_SOCKADDR_NULL;
