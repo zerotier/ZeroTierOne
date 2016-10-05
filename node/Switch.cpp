@@ -334,18 +334,13 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	if (!network->hasConfig())
 		return;
 
-	// Sanity check -- bridge loop? OS problem?
-	if (to == network->mac())
-		return;
-
 	// Check if this packet is from someone other than the tap -- i.e. bridged in
-	bool fromBridged = false;
-	if (from != network->mac()) {
+	bool fromBridged;
+	if ((fromBridged = (from != network->mac()))) {
 		if (!network->config().permitsBridging(RR->identity.address())) {
 			TRACE("%.16llx: %s -> %s %s not forwarded, bridging disabled or this peer not a bridge",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 			return;
 		}
-		fromBridged = true;
 	}
 
 	if (to.isMulticast()) {
@@ -484,6 +479,9 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			etherType,
 			data,
 			len);
+	} else if (to == network->mac()) {
+		// Destination is this node, so just reinject it
+		RR->node->putFrame(network->id(),network->userPtr(),from,to,etherType,vlanId,data,len);
 	} else if (to[0] == MAC::firstOctetForNetwork(network->id())) {
 		// Destination is another ZeroTier peer on the same network
 
