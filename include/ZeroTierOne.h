@@ -713,7 +713,7 @@ typedef struct
 		/**
 		 * Packet characteristic flags being matched
 		 */
-		uint64_t characteristics[2];
+		uint64_t characteristics;
 
 		/**
 		 * IP port range -- start-end inclusive -- host byte order

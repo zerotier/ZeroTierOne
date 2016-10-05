@@ -249,10 +249,8 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 		case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
 			r["type"] = "MATCH_CHARACTERISTICS";
 			r["not"] = ((rule.t & 0x80) != 0);
-			Utils::snprintf(tmp,sizeof(tmp),"%.16llx",rule.v.characteristics[0]);
+			Utils::snprintf(tmp,sizeof(tmp),"%.16llx",rule.v.characteristics);
 			r["mask"] = tmp;
-			Utils::snprintf(tmp,sizeof(tmp),"%.16llx",rule.v.characteristics[1]);
-			r["value"] = tmp;
 			break;
 		case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
 			r["type"] = "MATCH_FRAME_SIZE_RANGE";
@@ -423,21 +421,12 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 	} else if (t == "MATCH_CHARACTERISTICS") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_CHARACTERISTICS;
 		if (r.count("mask")) {
-			auto v = r["mask"];
+			json &v = r["mask"];
 			if (v.is_number()) {
-				rule.v.characteristics[0] = v;
+				rule.v.characteristics = v;
 			} else {
 				std::string tmp = v;
-				rule.v.characteristics[0] = Utils::hexStrToU64(tmp.c_str());
-			}
-		}
-		if (r.count("value")) {
-			auto v = r["value"];
-			if (v.is_number()) {
-				rule.v.characteristics[1] = v;
-			} else {
-				std::string tmp = v;
-				rule.v.characteristics[1] = Utils::hexStrToU64(tmp.c_str());
+				rule.v.characteristics = Utils::hexStrToU64(tmp.c_str());
 			}
 		}
 		return true;

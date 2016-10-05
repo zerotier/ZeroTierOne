@@ -497,7 +497,7 @@ static _doZtFilterResult _doZtFilter(
 						}
 					}
 				}
-				thisRuleMatches = (uint8_t)((cf & rules[rn].v.characteristics[0]) == rules[rn].v.characteristics[1]);
+				thisRuleMatches = (uint8_t)((cf | rules[rn].v.characteristics) != 0);
 				FILTER_TRACE("%u %s %c (%.16llx & %.16llx)==%.16llx -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),cf,rules[rn].v.characteristics[0],rules[rn].v.characteristics[1],(unsigned int)thisRuleMatches);
 			}	break;
 			case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:

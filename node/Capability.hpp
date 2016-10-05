@@ -240,9 +240,8 @@ public:
 					b.append((uint16_t)rules[i].v.port[1]);
 					break;
 				case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
-					b.append((uint8_t)16);
-					b.append((uint64_t)rules[i].v.characteristics[0]);
-					b.append((uint64_t)rules[i].v.characteristics[1]);
+					b.append((uint8_t)8);
+					b.append((uint64_t)rules[i].v.characteristics);
 					break;
 				case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
 					b.append((uint8_t)4);
@@ -328,8 +327,7 @@ public:
 					rules[ruleCount].v.port[1] = b.template at<uint16_t>(p + 2);
 					break;
 				case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
-					rules[ruleCount].v.characteristics[0] = b.template at<uint64_t>(p);
-					rules[ruleCount].v.characteristics[1] = b.template at<uint64_t>(p + 8);
+					rules[ruleCount].v.characteristics = b.template at<uint64_t>(p);
 					break;
 				case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
 					rules[ruleCount].v.frameSize[0] = b.template at<uint16_t>(p);
