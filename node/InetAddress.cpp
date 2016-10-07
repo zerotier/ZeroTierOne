@@ -236,8 +236,14 @@ InetAddress InetAddress::netmask() const
 		case AF_INET6: {
 			uint64_t nm[2];
 			const unsigned int bits = netmaskBits();
-			nm[0] = Utils::hton((uint64_t)((bits >= 64) ? 0xffffffffffffffffULL : (0xffffffffffffffffULL << (64 - bits))));
-			nm[1] = Utils::hton((uint64_t)((bits <= 64) ? 0ULL : (0xffffffffffffffffULL << (128 - bits))));
+            if(bits) {
+                nm[0] = Utils::hton((uint64_t)((bits >= 64) ? 0xffffffffffffffffULL : (0xffffffffffffffffULL << (64 - bits))));
+                nm[1] = Utils::hton((uint64_t)((bits <= 64) ? 0ULL : (0xffffffffffffffffULL << (128 - bits))));
+            }
+            else {
+                nm[0] = 0;
+                nm[1] = 0;
+            }
 			memcpy(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,nm,16);
 		}	break;
 	}
