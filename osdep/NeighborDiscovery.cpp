@@ -83,6 +83,7 @@ struct _neighbor_solicitation {
         , checksum(0)
         , option(1)
     {
+        memset(&reserved, 0, sizeof(reserved));
         memset(target, 0, sizeof(target));
     }
 
@@ -111,6 +112,7 @@ struct _neighbor_solicitation {
     uint8_t type; // 135
     uint8_t code; // 0
     uint16_t checksum;
+    uint32_t reserved;
     uint8_t target[16];
     _option option;
 };
