@@ -491,15 +491,15 @@ enum ZT_VirtualNetworkType
 /**
  * The type of a virtual network rules table entry
  *
- * These must range from 0 to 127 (0x7f) because the most significant bit
- * is reserved as a NOT flag.
+ * These must be from 0 to 63 since the most significant two bits of each
+ * rule type are NOT (MSB) and AND/OR.
  *
  * Each rule is composed of zero or more MATCHes followed by an ACTION.
  * An ACTION with no MATCHes is always taken.
  */
 enum ZT_VirtualNetworkRuleType
 {
-	// 0 to 31 reserved for actions
+	// 0 to 15 reserved for actions
 
 	/**
 	 * Drop frame
@@ -534,139 +534,40 @@ enum ZT_VirtualNetworkRuleType
 	/**
 	 * Maximum ID for an ACTION, anything higher is a MATCH
 	 */
-	ZT_NETWORK_RULE_ACTION__MAX_ID = 31,
+	ZT_NETWORK_RULE_ACTION__MAX_ID = 15,
 
-	// 32 to 127 reserved for match criteria
+	// 16 to 63 reserved for match criteria
 
-	/**
-	 * Source ZeroTier address -- analogous to an Ethernet port ID on a switch
-	 */
-	ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS = 32,
-
-	/**
-	 * Destination ZeroTier address -- analogous to an Ethernet port ID on a switch
-	 */
-	ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS = 33,
-
-	/**
-	 * Ethernet VLAN ID
-	 */
-	ZT_NETWORK_RULE_MATCH_VLAN_ID = 34,
-
-	/** 
-	 * Ethernet VLAN PCP
-	 */
-	ZT_NETWORK_RULE_MATCH_VLAN_PCP = 35,
-
-	/**
-	 * Ethernet VLAN DEI
-	 */
-	ZT_NETWORK_RULE_MATCH_VLAN_DEI = 36,
-
-	/**
-	 * Ethernet frame type
-	 */
+	ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS = 24,
+	ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS = 25,
+	ZT_NETWORK_RULE_MATCH_VLAN_ID = 26,
+	ZT_NETWORK_RULE_MATCH_VLAN_PCP = 27,
+	ZT_NETWORK_RULE_MATCH_VLAN_DEI = 28,
+	ZT_NETWORK_RULE_MATCH_MAC_SOURCE = 29,
+	ZT_NETWORK_RULE_MATCH_MAC_DEST = 30,
+	ZT_NETWORK_RULE_MATCH_IPV4_SOURCE = 31,
+	ZT_NETWORK_RULE_MATCH_IPV4_DEST = 32,
+	ZT_NETWORK_RULE_MATCH_IPV6_SOURCE = 33,
+	ZT_NETWORK_RULE_MATCH_IPV6_DEST = 34,
+	ZT_NETWORK_RULE_MATCH_IP_TOS = 35,
+	ZT_NETWORK_RULE_MATCH_IP_PROTOCOL = 36,
 	ZT_NETWORK_RULE_MATCH_ETHERTYPE = 37,
-
-	/**
-	 * Source Ethernet MAC address
-	 */
-	ZT_NETWORK_RULE_MATCH_MAC_SOURCE = 38,
-
-	/**
-	 * Destination Ethernet MAC address
-	 */
-	ZT_NETWORK_RULE_MATCH_MAC_DEST = 39,
-
-	/**
-	 * Source IPv4 address
-	 */
-	ZT_NETWORK_RULE_MATCH_IPV4_SOURCE = 40,
-
-	/**
-	 * Destination IPv4 address
-	 */
-	ZT_NETWORK_RULE_MATCH_IPV4_DEST = 41,
-
-	/**
-	 * Source IPv6 address
-	 */
-	ZT_NETWORK_RULE_MATCH_IPV6_SOURCE = 42,
-
-	/**
-	 * Destination IPv6 address
-	 */
-	ZT_NETWORK_RULE_MATCH_IPV6_DEST = 43,
-
-	/**
-	 * IP TOS (type of service)
-	 */
-	ZT_NETWORK_RULE_MATCH_IP_TOS = 44,
-
-	/**
-	 * IP protocol
-	 */
-	ZT_NETWORK_RULE_MATCH_IP_PROTOCOL = 45,
-
-	/**
-	 * ICMP type and possibly code (does not match if not ICMP)
-	 */
-	ZT_NETWORK_RULE_MATCH_ICMP = 46,
-
-	/**
-	 * IP source port range (start-end, inclusive)
-	 */
-	ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE = 47,
-
-	/**
-	 * IP destination port range (start-end, inclusive)
-	 */
-	ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE = 48,
-
-	/**
-	 * Packet characteristics (set of flags)
-	 */
-	ZT_NETWORK_RULE_MATCH_CHARACTERISTICS = 49,
-
-	/**
-	 * Frame size range (start-end, inclusive)
-	 */
-	ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE = 50,
-
-	/**
-	 * Random match with selectable probability
-	 */
-	ZT_NETWORK_RULE_MATCH_RANDOM = 51,
-
-	/**
-	 * Match if local and remote tags differ by no more than value, use 0 to check for equality
-	 */
-	ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE = 52,
-
-	/**
-	 * Match if local and remote tags ANDed together equal value.
-	 */
-	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND = 53,
-
-	/**
-	 * Match if local and remote tags ANDed together equal value.
-	 */
-	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR = 54,
-
-	/**
-	 * Match if local and remote tags XORed together equal value.
-	 */
-	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR = 55,
-
-	/**
-	 * Match if local and remote tags both equal a value
-	 */
-	ZT_NETWORK_RULE_MATCH_TAGS_EQUAL = 56,
+	ZT_NETWORK_RULE_MATCH_ICMP = 38,
+	ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE = 39,
+	ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE = 40,
+	ZT_NETWORK_RULE_MATCH_CHARACTERISTICS = 41,
+	ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE = 42,
+	ZT_NETWORK_RULE_MATCH_RANDOM = 43,
+	ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE = 44,
+	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND = 45,
+	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR = 46,
+	ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR = 47,
+	ZT_NETWORK_RULE_MATCH_TAGS_EQUAL = 48,
 
 	/**
 	 * Maximum ID allowed for a MATCH entry in the rules table
 	 */
-	ZT_NETWORK_RULE_MATCH__MAX_ID = 127
+	ZT_NETWORK_RULE_MATCH__MAX_ID = 63
 };
 
 /**

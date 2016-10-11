@@ -58,7 +58,6 @@ static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
 		case ZT_NETWORK_RULE_MATCH_VLAN_ID: return "MATCH_VLAN_ID";
 		case ZT_NETWORK_RULE_MATCH_VLAN_PCP: return "MATCH_VLAN_PCP";
 		case ZT_NETWORK_RULE_MATCH_VLAN_DEI: return "MATCH_VLAN_DEI";
-		case ZT_NETWORK_RULE_MATCH_ETHERTYPE: return "MATCH_ETHERTYPE";
 		case ZT_NETWORK_RULE_MATCH_MAC_SOURCE: return "MATCH_MAC_SOURCE";
 		case ZT_NETWORK_RULE_MATCH_MAC_DEST: return "MATCH_MAC_DEST";
 		case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE: return "MATCH_IPV4_SOURCE";
@@ -67,6 +66,7 @@ static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
 		case ZT_NETWORK_RULE_MATCH_IPV6_DEST: return "MATCH_IPV6_DEST";
 		case ZT_NETWORK_RULE_MATCH_IP_TOS: return "MATCH_IP_TOS";
 		case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL: return "MATCH_IP_PROTOCOL";
+		case ZT_NETWORK_RULE_MATCH_ETHERTYPE: return "MATCH_ETHERTYPE";
 		case ZT_NETWORK_RULE_MATCH_ICMP: return "MATCH_ICMP";
 		case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE: return "MATCH_IP_SOURCE_PORT_RANGE";
 		case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE: return "MATCH_IP_DEST_PORT_RANGE";
@@ -182,7 +182,7 @@ static _doZtFilterResult _doZtFilter(
 	uint8_t thisSetMatches = 1;
 
 	for(unsigned int rn=0;rn<ruleCount;++rn) {
-		const ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rules[rn].t & 0x7f);
+		const ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rules[rn].t & 0x3f);
 
 		// First check if this is an ACTION
 		if ((unsigned int)rt <= (unsigned int)ZT_NETWORK_RULE_ACTION__MAX_ID) {
@@ -272,8 +272,9 @@ static _doZtFilterResult _doZtFilter(
 			}
 		}
 
-		// Circuit breaker: skip further MATCH entries up to next ACTION if match state is false
-		if (!thisSetMatches)
+		// Circuit breaker: no need to evaluate an AND if the set's match state
+		// is currently false since anything AND false is false.
+		if ((!thisSetMatches)&&(!(rules[rn].t & 0x40)))
 			continue;
 
 		// If this was not an ACTION evaluate next MATCH and update thisSetMatches with (AND [result])
@@ -300,10 +301,6 @@ static _doZtFilterResult _doZtFilter(
 				// NOT SUPPORTED YET
 				thisRuleMatches = (uint8_t)(rules[rn].v.vlanDei == 0);
 				FILTER_TRACE("%u %s %c %u==%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.vlanDei,0,(unsigned int)thisRuleMatches);
-				break;
-			case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
-				thisRuleMatches = (uint8_t)(rules[rn].v.etherType == (uint16_t)etherType);
-				FILTER_TRACE("%u %s %c %u==%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.etherType,etherType,(unsigned int)thisRuleMatches);
 				break;
 			case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
 				thisRuleMatches = (uint8_t)(MAC(rules[rn].v.mac,6) == macSource);
@@ -379,6 +376,10 @@ static _doZtFilterResult _doZtFilter(
 					thisRuleMatches = 0;
 					FILTER_TRACE("%u %s %c [frame not IP] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
 				}
+				break;
+			case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
+				thisRuleMatches = (uint8_t)(rules[rn].v.etherType == (uint16_t)etherType);
+				FILTER_TRACE("%u %s %c %u==%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.etherType,etherType,(unsigned int)thisRuleMatches);
 				break;
 			case ZT_NETWORK_RULE_MATCH_ICMP:
 				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
@@ -560,8 +561,9 @@ static _doZtFilterResult _doZtFilter(
 				break;
 		}
 
-		// State of equals state AND result of last MATCH (possibly NOTed depending on bit 0x80)
-		thisSetMatches &= (thisRuleMatches ^ ((rules[rn].t >> 7) & 1));
+		if ((rules[rn].t & 0x40))
+			thisSetMatches |= (thisRuleMatches ^ ((rules[rn].t >> 7) & 1));
+		else thisSetMatches &= (thisRuleMatches ^ ((rules[rn].t >> 7) & 1));
 	}
 
 	return DOZTFILTER_NO_MATCH;

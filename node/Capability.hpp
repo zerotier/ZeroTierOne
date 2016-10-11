@@ -166,7 +166,7 @@ public:
 			// field followed by field data. The inclusion of the size will allow non-supported
 			// rules to be ignored but still parsed.
 			b.append((uint8_t)rules[i].t);
-			switch((ZT_VirtualNetworkRuleType)(rules[i].t & 0x7f)) {
+			switch((ZT_VirtualNetworkRuleType)(rules[i].t & 0x3f)) {
 				//case ZT_NETWORK_RULE_ACTION_DROP:
 				//case ZT_NETWORK_RULE_ACTION_ACCEPT:
 				//case ZT_NETWORK_RULE_ACTION_DEBUG_LOG:
@@ -198,10 +198,6 @@ public:
 					b.append((uint8_t)1);
 					b.append((uint8_t)rules[i].v.vlanDei);
 					break;
-				case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
-					b.append((uint8_t)2);
-					b.append((uint16_t)rules[i].v.etherType);
-					break;
 				case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_MAC_DEST:
 					b.append((uint8_t)6);
@@ -226,6 +222,10 @@ public:
 				case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
 					b.append((uint8_t)1);
 					b.append((uint8_t)rules[i].v.ipProtocol);
+					break;
+				case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
+					b.append((uint8_t)2);
+					b.append((uint16_t)rules[i].v.etherType);
 					break;
 				case ZT_NETWORK_RULE_MATCH_ICMP:
 					b.append((uint8_t)3);
@@ -270,7 +270,7 @@ public:
 		while ((ruleCount < maxRuleCount)&&(p < b.size())) {
 			rules[ruleCount].t = (uint8_t)b[p++];
 			const unsigned int fieldLen = (unsigned int)b[p++];
-			switch((ZT_VirtualNetworkRuleType)(rules[ruleCount].t & 0x7f)) {
+			switch((ZT_VirtualNetworkRuleType)(rules[ruleCount].t & 0x3f)) {
 				default:
 					break;
 				case ZT_NETWORK_RULE_ACTION_TEE:
@@ -293,9 +293,6 @@ public:
 				case ZT_NETWORK_RULE_MATCH_VLAN_DEI:
 					rules[ruleCount].v.vlanDei = (uint8_t)b[p];
 					break;
-				case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
-					rules[ruleCount].v.etherType = b.template at<uint16_t>(p);
-					break;
 				case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_MAC_DEST:
 					memcpy(rules[ruleCount].v.mac,b.field(p,6),6);
@@ -315,6 +312,9 @@ public:
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
 					rules[ruleCount].v.ipProtocol = (uint8_t)b[p];
+					break;
+				case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
+					rules[ruleCount].v.etherType = b.template at<uint16_t>(p);
 					break;
 				case ZT_NETWORK_RULE_MATCH_ICMP:
 					rules[ruleCount].v.icmp.type = (uint8_t)b[p];
