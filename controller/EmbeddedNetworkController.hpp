@@ -168,10 +168,10 @@ private:
 		if (!network.count("ipAssignmentPools")) network["ipAssignmentPools"] = nlohmann::json::array();
 		if (!network.count("rules")) {
 			// If unspecified, rules are set to allow anything and behave like a flat L2 segment
-			network["rules"] = {
+			network["rules"] = {{
 				{ "not",false },
 				{ "type","ACTION_ACCEPT" }
-			};
+			}};
 		}
 		network["objtype"] = "network";
 	}
