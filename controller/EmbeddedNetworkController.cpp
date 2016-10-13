@@ -517,19 +517,6 @@ void EmbeddedNetworkController::threadMain()
 			lastUpdatedNetworkMemberCache = OSUtils::now();
 		}
 
-		{	// Every 25ms we push up to 50 network refreshes, which amounts to a max of about 300-500kb/sec
-			unsigned int count = 0;
-			Mutex::Lock _l(_refreshQueue_m);
-			while (_refreshQueue.size() > 0) {
-				_Refresh &r = _refreshQueue.front();
-				//if (_node)
-				//	_node->pushNetworkRefresh(r.dest,r.nwid,r.blacklistAddresses,r.blacklistThresholds,r.numBlacklistEntries);
-				_refreshQueue.pop_front();
-				if (++count >= 50)
-					break;
-			}
-		}
-
 		Thread::sleep(25);
 	}
 }
@@ -1228,15 +1215,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					{
 						Mutex::Lock _l(_networkMemberCache_m);
 						_networkMemberCache[nwid][Address(address)] = member;
-					}
-
-					{
-						Mutex::Lock _l(_refreshQueue_m);
-						_refreshQueue.push_back(_Refresh());
-						_Refresh &r = _refreshQueue.back();
-						r.dest = Address(address);
-						r.nwid = nwid;
-						r.numBlacklistEntries = 0;
 					}
 
 					// Add non-persisted fields

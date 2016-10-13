@@ -204,18 +204,6 @@ private:
 	std::map< std::pair<uint64_t,uint64_t>,uint64_t > _lastRequestTime;
 	Mutex _lastRequestTime_m;
 
-	// Queue of network member refreshes to be pushed
-	struct _Refresh
-	{
-		Address dest;
-		uint64_t nwid;
-		uint64_t blacklistAddresses[64];
-		uint64_t blacklistThresholds[64];
-		unsigned int numBlacklistEntries;
-	};
-	std::list< _Refresh > _refreshQueue;
-	Mutex _refreshQueue_m;
-
 	Thread _daemon;
 	volatile bool _daemonRun;
 };
