@@ -111,27 +111,6 @@ public:
 	 */
 	inline uint64_t receiveTime() const throw() { return _receiveTime; }
 
-	/**
-	 * Compute the Salsa20/12+SHA512 proof of work function
-	 *
-	 * @param difficulty Difficulty in bits (max: 64)
-	 * @param challenge Challenge string
-	 * @param challengeLength Length of challenge in bytes (max allowed: ZT_PROTO_MAX_PACKET_LENGTH)
-	 * @param result Buffer to fill with 16-byte result
-	 */
-	static void computeSalsa2012Sha512ProofOfWork(unsigned int difficulty,const void *challenge,unsigned int challengeLength,unsigned char result[16]);
-
-	/**
-	 * Verify the result of Salsa20/12+SHA512 proof of work
-	 *
-	 * @param difficulty Difficulty in bits (max: 64)
-	 * @param challenge Challenge bytes
-	 * @param challengeLength Length of challenge in bytes (max allowed: ZT_PROTO_MAX_PACKET_LENGTH)
-	 * @param proposedResult Result supplied by client
-	 * @return True if result is valid
-	 */
-	static bool testSalsa2012Sha512ProofOfWorkResult(unsigned int difficulty,const void *challenge,unsigned int challengeLength,const unsigned char proposedResult[16]);
-
 private:
 	// These are called internally to handle packet contents once it has
 	// been authenticated, decrypted, decompressed, and classified.
@@ -152,7 +131,6 @@ private:
 	bool _doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 
 	void _sendErrorNeedCredentials(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,const uint64_t nwid);
 

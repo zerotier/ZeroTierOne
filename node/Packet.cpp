@@ -46,7 +46,6 @@ const char *Packet::verbString(Verb v)
 		case VERB_PUSH_DIRECT_PATHS: return "PUSH_DIRECT_PATHS";
 		case VERB_CIRCUIT_TEST: return "CIRCUIT_TEST";
 		case VERB_CIRCUIT_TEST_REPORT: return "CIRCUIT_TEST_REPORT";
-		case VERB_REQUEST_PROOF_OF_WORK: return "REQUEST_PROOF_OF_WORK";
 		case VERB_USER_MESSAGE: return "USER_MESSAGE";
 	}
 	return "(unknown)";
