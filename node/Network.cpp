@@ -383,8 +383,8 @@ static _doZtFilterResult _doZtFilter(
 				break;
 			case ZT_NETWORK_RULE_MATCH_ICMP:
 				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
-					if (frameData[9] == 0x01) {
-						const unsigned int ihl = (frameData[0] & 0xf) * 32;
+					if (frameData[9] == 0x01) { // IP protocol == ICMP
+						const unsigned int ihl = (frameData[0] & 0xf) * 4;
 						if (frameLen >= (ihl + 2)) {
 							if (rules[rn].v.icmp.type == frameData[ihl]) {
 								if ((rules[rn].v.icmp.flags & 0x01) != 0) {
