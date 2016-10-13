@@ -417,7 +417,7 @@ static _doZtFilterResult _doZtFilter(
 							} else {
 								thisRuleMatches = 0;
 							}
-							FILTER_TRACE("%u %s %c (IPv4) icmp-type:%d==%d icmp-code:%d==%d -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(int)frameData[pos],(int)rules[rn].v.icmp.type,(int)frameData[pos+1],(((rules[rn].v.icmp.flags & 0x01) != 0) ? (int)rules[rn].v.icmp.code : -1),(unsigned int)thisRuleMatches);
+							FILTER_TRACE("%u %s %c (IPv6) icmp-type:%d==%d icmp-code:%d==%d -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(int)frameData[pos],(int)rules[rn].v.icmp.type,(int)frameData[pos+1],(((rules[rn].v.icmp.flags & 0x01) != 0) ? (int)rules[rn].v.icmp.code : -1),(unsigned int)thisRuleMatches);
 						} else {
 							thisRuleMatches = 0;
 							FILTER_TRACE("%u %s %c [frame not ICMPv6] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
