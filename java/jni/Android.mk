@@ -28,6 +28,7 @@ LOCAL_SRC_FILES := \
 	$(ZT1)/node/Path.cpp \
 	$(ZT1)/node/Peer.cpp \
 	$(ZT1)/node/Poly1305.cpp \
+	$(ZT1)/node/Revocation.cpp \
 	$(ZT1)/node/Salsa20.cpp \
 	$(ZT1)/node/SelfAwareness.cpp \
 	$(ZT1)/node/SHA512.cpp \
