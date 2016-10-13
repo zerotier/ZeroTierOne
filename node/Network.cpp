@@ -36,7 +36,7 @@
 #include "Peer.hpp"
 
 // Uncomment to make the rules engine dump trace info to stdout
-#define ZT_RULES_ENGINE_DEBUGGING 1
+//#define ZT_RULES_ENGINE_DEBUGGING 1
 
 namespace ZeroTier {
 
