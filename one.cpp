@@ -44,6 +44,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>
+
+#ifdef __linux__
+#include "osdep/LinuxDropPrivileges.hpp"
+#endif
 #endif
 
 #include <string>
@@ -900,7 +904,7 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"Available switches:" ZT_EOL_S);
 	fprintf(out,"  -h                - Display this help" ZT_EOL_S);
 	fprintf(out,"  -v                - Show version" ZT_EOL_S);
-	fprintf(out,"  -U                - Run as unprivileged user (skip privilege check)" ZT_EOL_S);
+	fprintf(out,"  -U                - Skip privilege check and do not attempt to drop privileges" ZT_EOL_S);
 	fprintf(out,"  -p<port>          - Port for UDP and TCP/HTTP (default: 9993, 0 for random)" ZT_EOL_S);
 
 #ifdef __UNIX_LIKE__
@@ -1141,6 +1145,14 @@ int main(int argc,char **argv)
 #endif // __WINDOWS__
 
 #ifdef __UNIX_LIKE__
+
+#ifndef ZT_ONE_RUN_AS_ROOT
+#ifdef __linux__
+	if (!skipRootCheck)
+		dropPrivileges(homeDir);
+#endif
+#endif
+
 	std::string pidPath(homeDir + ZT_PATH_SEPARATOR_S + ZT_PID_PATH);
 	{
 		// Write .pid file to home folder

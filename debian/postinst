@@ -1,0 +1,9 @@
+#!/bin/sh -e
+
+case "$1" in
+  configure)
+      adduser --system --group --home /var/lib/zerotier-one --no-create-home zerotier-one
+      ;;
+esac
+
+#DEBHELPER#
