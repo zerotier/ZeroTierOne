@@ -16,7 +16,6 @@ NSString * const JoinedNetworksKey = @"com.zerotier.one.joined-networks";
 @interface NSString (extra)
 
 - (BOOL)contains:(NSString*)find;
-//- (NSString*)trunc:(NSInteger)length trailing:(NSString*)trailing;
 
 @end
 
@@ -26,10 +25,6 @@ NSString * const JoinedNetworksKey = @"com.zerotier.one.joined-networks";
     NSRange range = [self rangeOfString:find];
     return range.location != NSNotFound;
 }
-//
-//- (NSString*)trunc:(NSInteger)length trailing:(NSString*)trailing {
-//
-//}
 
 @end
 
