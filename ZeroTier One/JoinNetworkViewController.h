@@ -11,6 +11,8 @@
 
 extern NSString * const JoinedNetworksKey;
 
+@class AppDelegate;
+
 @interface JoinNetworkViewController : NSViewController <NSComboBoxDelegate, NSComboBoxDataSource>
 
 @property (nonatomic, weak) IBOutlet NSComboBox *network;
@@ -18,6 +20,7 @@ extern NSString * const JoinedNetworksKey;
 @property (nonatomic, weak) IBOutlet NSButton *allowManagedCheckBox;
 @property (nonatomic, weak) IBOutlet NSButton *allowGlobalCheckBox;
 @property (nonatomic, weak) IBOutlet NSButton *allowDefaultCheckBox;
+@property (nonatomic, weak) IBOutlet AppDelegate *appDelegate;
 
 @property (nonatomic) NSMutableArray<NSString*> *values;
 

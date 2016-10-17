@@ -8,7 +8,7 @@
 
 #import "JoinNetworkViewController.h"
 #import "ServiceCom.h"
-
+#import "AppDelegate.h"
 
 
 NSString * const JoinedNetworksKey = @"com.zerotier.one.joined-networks";
@@ -92,6 +92,8 @@ NSString * const JoinedNetworksKey = @"com.zerotier.one.joined-networks";
             [self.values removeLastObject];
         }
     }
+
+    [self.appDelegate closeJoinNetworkPopover];
 }
 
 // NSComboBoxDelegate methods

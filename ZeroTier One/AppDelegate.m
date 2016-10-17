@@ -59,8 +59,9 @@
                                                           object:nil];
 
     [self buildMenu];
-
-    self.joinNetworkPopover.contentViewController = [[JoinNetworkViewController alloc] initWithNibName:@"JoinNetworkViewController" bundle:nil];
+    JoinNetworkViewController *jnvc = [[JoinNetworkViewController alloc] initWithNibName:@"JoinNetworkViewController" bundle:nil];
+    jnvc.appDelegate = self;
+    self.joinNetworkPopover.contentViewController = jnvc;
     self.joinNetworkPopover.behavior = NSPopoverBehaviorTransient;
 
     ShowNetworksViewController *showNetworksView = [[ShowNetworksViewController alloc] initWithNibName:@"ShowNetworksViewController" bundle:nil];
