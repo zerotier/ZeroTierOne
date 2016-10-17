@@ -84,9 +84,12 @@
 
         [prefsView setLaunchAtLoginEnabled:YES];
 
-        [[NSOperationQueue mainQueue] addOperationWithBlock:^{
-            [self showAbout];
-        }];
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            sleep(2);
+            [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+                [self showAbout];
+            }];
+        });
     }
 
     [self.monitor updateNetworkInfo];
@@ -316,7 +319,11 @@
 }
 
 - (void)closeJoinNetworkPopover {
-
+    if (self.transientMonitor) {
+        [NSEvent removeMonitor:self.transientMonitor];
+        self.transientMonitor = nil;
+    }
+    [self.joinNetworkPopover close];
 }
 
 @end
