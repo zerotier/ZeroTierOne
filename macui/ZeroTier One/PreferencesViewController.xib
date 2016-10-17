@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="10116" systemVersion="15F34" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="10116"/>
+    </dependencies>
+    <objects>
+        <customObject id="-2" userLabel="File's Owner" customClass="PreferencesViewController" customModule="ZeroTier_One" customModuleProvider="target">
+            <connections>
+                <outlet property="startupCheckBox" destination="XSk-jN-ner" id="nvL-b1-gza"/>
+                <outlet property="view" destination="Hz6-mo-xeY" id="0bl-1N-x8E"/>
+            </connections>
+        </customObject>
+        <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
+        <customObject id="-3" userLabel="Application" customClass="NSObject"/>
+        <customView id="Hz6-mo-xeY">
+            <rect key="frame" x="0.0" y="0.0" width="284" height="54"/>
+            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+            <subviews>
+                <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="XSk-jN-ner">
+                    <rect key="frame" x="18" y="18" width="248" height="18"/>
+                    <buttonCell key="cell" type="check" title="Start ZeroTier One on system startup" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="VkJ-h4-tHf">
+                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                        <font key="font" metaFont="system"/>
+                    </buttonCell>
+                    <connections>
+                        <action selector="onStartupCheckBoxChanged:" target="-2" id="zAQ-DJ-c3w"/>
+                    </connections>
+                </button>
+            </subviews>
+            <point key="canvasLocation" x="365" y="208"/>
+        </customView>
+    </objects>
+</document>

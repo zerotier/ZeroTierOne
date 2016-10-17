@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Main binaries created in *nix builds
 /zerotier-one
 /zerotier-idtool
@@ -83,3 +84,21 @@ windows/WinUI/obj/
 windows/WinUI/bin/
 windows/ZeroTierOne/Debug/
 /ext/installfiles/windows/chocolatey/zerotier-one/*.nupkg
+
+# Miscellaneous mac/Xcode droppings
+.DS_Store
+.Trashes
+*.swp
+*~.nib
+DerivedData/
+build/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+!default.pbxuser
+!default.mode1v3
+!default.mode2v3
+!default.perspectivev3
+*.xccheckout
+xcuserdata/
