@@ -88,6 +88,7 @@
         cell.allowManaged.enabled = YES;
     }
     else {
+        cell.connectedCheckbox.state = NSOffState;
         cell.allowDefault.enabled = NO;
         cell.allowGlobal.enabled = NO;
         cell.allowManaged.enabled = NO;
