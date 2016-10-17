@@ -12,7 +12,7 @@
 @class Network;
 @class NodeStatus;
 
-@interface AppDelegate : NSObject <NSApplicationDelegate, NSMenuDelegate>
+@interface AppDelegate : NSObject <NSApplicationDelegate>
 
 @property (weak, nonatomic) IBOutlet NSWindow *window;
 

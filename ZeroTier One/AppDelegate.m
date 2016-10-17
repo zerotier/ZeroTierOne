@@ -304,14 +304,6 @@
     }
 }
 
-- (void)menuWillOpen:(NSMenu*)menu {
-
-}
-
-- (void)menuDidClose:(NSMenu*)menu {
-
-}
-
 - (void)darkModeChanged:(NSNotification*)note {
     NSString *osxMode = [[NSUserDefaults standardUserDefaults] stringForKey:@"AppleInterfaceStyle"];
 
