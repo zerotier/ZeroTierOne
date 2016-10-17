@@ -192,7 +192,6 @@
 
 - (void)buildMenu {
     NSMenu *menu = [[NSMenu alloc] init];
-    menu.delegate = self;
 
     if(self.status != nil) {
         NSString *nodeId = @"Node ID: ";
@@ -313,6 +312,10 @@
     else {
         self.statusItem.image = [NSImage imageNamed:@"MenuBarIconMac"];
     }
+}
+
+- (void)closeJoinNetworkPopover {
+
 }
 
 @end

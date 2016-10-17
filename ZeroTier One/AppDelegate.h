@@ -43,8 +43,8 @@
 - (void)quit;
 - (void)toggleNetwork:(NSMenuItem*)sender;
 - (void)copyNodeID;
-- (void)menuWillOpen:(NSMenu*)menu;
-- (void)menuDidClose:(NSMenu*)menu;
+
+- (void)closeJoinNetworkPopover;
 
 - (void)darkModeChanged:(NSNotification*)note;
 
