@@ -74,7 +74,7 @@ The first line of defense employed against remote vulnerabilities and other majo
 
 ## Cryptographic Security Practices
 
-* We use [boring crypto](https://cr.yp.to/talks/2015.10.05/slides-djb-20151005-a4.pdf). A single symmetric algorithm (Salsa20/12), a single asymmetric algorithm (Curve25519 ECDH-256), and a single MAC (Poly1305). The way these algorithms are used is identical to how they're used in the NaCl reference implementation. The protocol supports selection of alternative algorithms but only for "future proofing" in the case that a serious flaw is discovered in any of these. Avoding algorithm bloat and cryptographic state negotiation helps guard against down-grade, "oracle," and other protocol level attacks.
+* We use [boring crypto](https://cr.yp.to/talks/2015.10.05/slides-djb-20151005-a4.pdf). A single symmetric algorithm (Salsa20/12), a single asymmetric algorithm (Curve25519 ECDH-256), and a single MAC (Poly1305). The way these algorithms are used is identical to how they're used in the NaCl reference implementation. The protocol supports selection of alternative algorithms but only for "future proofing" in the case that a serious flaw is discovered in any of these. Avoiding algorithm bloat and cryptographic state negotiation helps guard against down-grade, "oracle," and other protocol level attacks.
 
 * Authenticated encryption is employed with authentication being performed prior to any other operations on received messages. See also: [the cryptographic doom principle](https://moxie.org/blog/the-cryptographic-doom-principle/).
 
