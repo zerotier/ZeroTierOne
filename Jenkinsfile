@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-slackSend "Building ${env.JOB_NAME}/${env.BRANCH_NAME} #${env.BUILD_NUM}"
+slackSend "Building ${env.JOB_NAME}/${env.BRANCH_NAME} #${env.BUILD_NUMBER}"
 parallel 'centos7': {
     node('centos7') {
         try {
@@ -55,4 +55,4 @@ parallel 'centos7': {
     }
 }
 
-slackSend "${env.JOB_NAME}/${env.BRANCH_NAME} #${env.BUILD_NUM} Complete (<${env.BUILD_URL}|Show More...>)"
+slackSend "${env.JOB_NAME}/${env.BRANCH_NAME} #${env.BUILD_NUMBER} Complete (<${env.BUILD_URL}|Show More...>)"
