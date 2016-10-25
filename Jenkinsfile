@@ -25,7 +25,7 @@ parallel 'centos7': {
         }
 
         stage('Build macOS UI') {
-            sh 'cd macui && xcodebuild -scheme "ZeroTier One" -configuration Debug'
+            sh 'cd macui && xcodebuild -target "ZeroTier One" -configuration Debug'
         }
     }
 }
