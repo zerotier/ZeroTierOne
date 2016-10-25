@@ -23,5 +23,11 @@ parallel 'centos7': {
         stage('Build macOS') {
             sh 'make -f make-mac.mk'
         }
+
+        stage('Build macOS UI') {
+            dir('$WORKSPACE/macui') {
+                sh 'xcodebuild -scheme "ZeroTier One" -configuration Debug'
+            }
+        }
     }
 }
