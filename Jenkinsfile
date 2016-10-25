@@ -1,9 +1,13 @@
 #!/usr/bin/env groovy
 
-passedBuilds = []
-def changelog = lastSuccessfulBuild(passedBuilds, currentBuild)
+node('master') {
+    checkout scm
+    passedBuilds = []
+    def changelog = lastSuccessfulBuild(passedBuilds, currentBuild)
 
-slackSend "Building ${env.JOB_NAME} #${env.BUILD_NUMBER} \n ${changelog}"
+    slackSend "Building ${env.JOB_NAME} #${env.BUILD_NUMBER} \n ${changelog}"
+}
+
 parallel 'centos7': {
     node('centos7') {
         try {
