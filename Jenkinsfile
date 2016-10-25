@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-slackSend "Building ${env.JOB_NAME}/${env.BRANCH_NAME} #${env.BUILD_NUMBER}"
+slackSend "Building ${env.JOB_NAME} #${env.BUILD_NUMBER}"
 parallel 'centos7': {
     node('centos7') {
         try {
@@ -12,7 +12,7 @@ parallel 'centos7': {
         }
         catch (err) {
             currentBuild.result = "FAILURE"
-            slackSend color: '#ff0000', message: "${env.JOB_NAME}/${env.BRANCH_NAME} broken on Centos 7 (<${env.BUILD_URL}|Open>)"
+            slackSend color: '#ff0000', message: "${env.JOB_NAME} broken on Centos 7 (<${env.BUILD_URL}|Open>)"
 
             throw err
         }
@@ -28,7 +28,7 @@ parallel 'centos7': {
         }
         catch (err) {
             currentBuild.result = "FAILURE"
-            slackSend color: '#ff0000', message: "${env.JOB_NAME}/${env.BRANCH_NAME} broken on Android NDK (<${env.BUILD_URL}|Open>)"
+            slackSend color: '#ff0000', message: "${env.JOB_NAME} broken on Android NDK (<${env.BUILD_URL}|Open>)"
 
             throw err
         }
@@ -48,11 +48,11 @@ parallel 'centos7': {
         }
         catch (err) {
             currentBuild.result = "FAILURE"
-            slackSend color: '#ff0000', message: "${env.JOB_NAME}/${env.BRANCH_NAME} broken on macOS (<${env.BUILD_URL}|Open>)"
+            slackSend color: '#ff0000', message: "${env.JOB_NAME} broken on macOS (<${env.BUILD_URL}|Open>)"
 
             throw err
         }
     }
 }
 
-slackSend "${env.JOB_NAME}/${env.BRANCH_NAME} #${env.BUILD_NUMBER} Complete (<${env.BUILD_URL}|Show More...>)"
+slackSend "${env.JOB_NAME} #${env.BUILD_NUMBER} Complete (<${env.BUILD_URL}|Show More...>)"
