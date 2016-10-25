@@ -1,6 +1,9 @@
 #!/usr/bin/env groovy
 
-slackSend "Building ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+passedBuilds = []
+def changelog = lastSuccessfulBuild(passedBuilds, currentBuild)
+
+slackSend "Building ${env.JOB_NAME} #${env.BUILD_NUMBER} \n ${changelog}"
 parallel 'centos7': {
     node('centos7') {
         try {
@@ -56,3 +59,27 @@ parallel 'centos7': {
 }
 
 slackSend "${env.JOB_NAME} #${env.BUILD_NUMBER} Complete (<${env.BUILD_URL}|Show More...>)"
+
+def lastSuccessfulBuild(passedBuilds, build) {
+  if ((build != null) && (build.result != 'SUCCESS')) {
+      passedBuilds.add(build)
+      lastSuccessfulBuild(passedBuilds, build.getPreviousBuild())
+   }
+}
+
+@NonCPS
+def getChangeLog(passedBuilds) {
+    def log = ""
+    for (int x = 0; x < passedBuilds.size(); x++) {
+        def currentBuild = passedBuilds[x];
+        def changeLogSets = currentBuild.rawBuild.changeSets
+        for (int i = 0; i < changeLogSets.size(); i++) {
+            def entries = changeLogSets[i].items
+            for (int j = 0; j < entries.length; j++) {
+                def entry = entries[j]
+                log += "* ${entry.msg} by ${entry.author} \n"
+            }
+        }
+    }
+    return log;
+}
