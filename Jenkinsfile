@@ -28,7 +28,7 @@ parallel 'centos7': {
             checkout scm
 	
             stage('Build Android NDK') { 
-                sh "/android/android-ndk-r13/ndk-build -C $WORKSPACE/java ZT1=${WORKSPACE}"
+                sh "/android/android-ndk-r13b/ndk-build -C $WORKSPACE/java ZT1=${WORKSPACE}"
             }
         }
         catch (err) {
