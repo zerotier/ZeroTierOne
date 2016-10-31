@@ -28,7 +28,7 @@ namespace ZeroTier {
 uint16_t calc_checksum (uint16_t *addr, int len)
 {
     int count = len;
-    register uint32_t sum = 0;
+    uint32_t sum = 0;
     uint16_t answer = 0;
 
     // Sum up 2-byte values until none or only one byte left.
@@ -103,7 +103,7 @@ struct _neighbor_solicitation {
         memcpy(tmp, &ph, sizeof(_pseudo_header));
         memcpy(tmp+sizeof(_pseudo_header), this, sizeof(_neighbor_solicitation));
 
-        checksum = calc_checksum((uint16_t*)tmp, len);
+        checksum = calc_checksum((uint16_t*)tmp, (int)len);
 
         free(tmp);
         tmp = NULL;
@@ -145,7 +145,7 @@ struct _neighbor_advertisement {
         memcpy(tmp, &ph, sizeof(_pseudo_header));
         memcpy(tmp+sizeof(_pseudo_header), this, sizeof(_neighbor_advertisement));
 
-        checksum = calc_checksum((uint16_t*)tmp, len);
+        checksum = calc_checksum((uint16_t*)tmp, (int)len);
 
         free(tmp);
         tmp = NULL;
