@@ -30,6 +30,13 @@ Thumbs.db
 /ext/installfiles/windows/Prerequisites
 /ext/installfiles/windows/*-cache
 /ZeroTier One.msi
+/windows/.vs
+*.vcxproj.backup
+/windows/TapDriver6/Win7Debug
+/windows/TapDriver6/win7Release
+/windows/*.db
+/windows/*.opendb
+
 
 # *nix/Mac build droppings
 /build-*
