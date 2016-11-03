@@ -1,5 +1,6 @@
 OBJS=\
 	controller/EmbeddedNetworkController.o \
+	controller/JSONDB.o \
 	node/C25519.o \
 	node/Capability.o \
 	node/CertificateOfMembership.o \
