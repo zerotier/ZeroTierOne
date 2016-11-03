@@ -402,7 +402,7 @@ static int cli(int argc,char **argv)
 									auto &addr = assignedAddresses[j];
 									if (addr.is_string()) {
 										if (aa.length() > 0) aa.push_back(',');
-										aa.append(addr);
+										aa.append(addr.get<std::string>());
 									}
 								}
 							}
@@ -1193,10 +1193,6 @@ int main(int argc,char **argv)
 
 	delete zt1Service;
 	zt1Service = (OneService *)0;
-
-#ifdef __UNIX_LIKE__
-	OSUtils::rm(pidPath.c_str());
-#endif
 
 	return returnValue;
 }

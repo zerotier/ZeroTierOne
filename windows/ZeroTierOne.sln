@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroTierOne", "ZeroTierOne\ZeroTierOne.vcxproj", "{B00A4957-5977-4AC1-9EF4-571DC27EADA2}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TapDriver6", "TapDriver6\TapDriver6.vcxproj", "{43BA7584-D4DB-4F7C-90FC-E2B18A68A213}"
@@ -157,7 +159,8 @@ Global
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Debug|Win32.ActiveCfg = Debug|Win32
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Debug|Win32.Build.0 = Debug|Win32
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Debug|Win32.Deploy.0 = Debug|Win32
-		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Debug|x64.ActiveCfg = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Debug|x64.ActiveCfg = Debug|x64
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Debug|x64.Build.0 = Debug|x64
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Debug|x86.ActiveCfg = Debug|Win32
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Debug|x86.Build.0 = Debug|Win32
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Debug|x86.Deploy.0 = Debug|Win32
@@ -169,6 +172,7 @@ Global
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|Win32.Build.0 = Release|Win32
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|Win32.Deploy.0 = Release|Win32
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|x64.ActiveCfg = Release|x64
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|x64.Build.0 = Release|x64
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|x86.ActiveCfg = Release|Win32
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|x86.Build.0 = Release|Win32
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|x86.Deploy.0 = Release|Win32
@@ -392,14 +396,18 @@ Global
 		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win7 Debug|Mixed Platforms.Build.0 = Debug|Any CPU
 		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win7 Debug|Win32.ActiveCfg = Debug|Any CPU
 		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win7 Debug|x64.ActiveCfg = Debug|Any CPU
+		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win7 Debug|x64.Build.0 = Debug|Any CPU
 		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win7 Debug|x86.ActiveCfg = Debug|Any CPU
+		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win7 Debug|x86.Build.0 = Debug|Any CPU
 		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win7 Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win7 Release|Any CPU.Build.0 = Release|Any CPU
 		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win7 Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win7 Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win7 Release|Win32.ActiveCfg = Release|Any CPU
 		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win7 Release|x64.ActiveCfg = Release|Any CPU
+		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win7 Release|x64.Build.0 = Release|Any CPU
 		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win7 Release|x86.ActiveCfg = Release|Any CPU
+		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win7 Release|x86.Build.0 = Release|Any CPU
 		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win8 Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win8 Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4CCA6B98-5E64-45BF-AC34-19B3E2570DB1}.Win8 Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU

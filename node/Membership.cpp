@@ -232,7 +232,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 
 Membership::_RemoteTag *Membership::_newTag(const uint64_t id)
 {
-	_RemoteTag *t;
+	_RemoteTag *t = NULL;
 	uint64_t minlr = 0xffffffffffffffffULL;
 	for(unsigned int i=0;i<ZT_MAX_NETWORK_TAGS;++i) {
 		if (_remoteTags[i]->id == ZT_MEMBERSHIP_CRED_ID_UNUSED) {
@@ -243,17 +243,21 @@ Membership::_RemoteTag *Membership::_newTag(const uint64_t id)
 			minlr = _remoteTags[i]->lastReceived;
 		}
 	}
-	t->id = id;
-	t->lastReceived = 0;
-	t->revocationThreshold = 0;
-	t->tag = Tag();
+	
+    if (t) {
+        t->id = id;
+        t->lastReceived = 0;
+        t->revocationThreshold = 0;
+        t->tag = Tag();
+    }
+
 	std::sort(&(_remoteTags[0]),&(_remoteTags[ZT_MAX_NETWORK_TAGS]),_RemoteCredentialSorter<_RemoteTag>());
 	return t;
 }
 
 Membership::_RemoteCapability *Membership::_newCapability(const uint64_t id)
 {
-	_RemoteCapability *c;
+	_RemoteCapability *c = NULL;
 	uint64_t minlr = 0xffffffffffffffffULL;
 	for(unsigned int i=0;i<ZT_MAX_NETWORK_CAPABILITIES;++i) {
 		if (_remoteCaps[i]->id == ZT_MEMBERSHIP_CRED_ID_UNUSED) {
@@ -264,10 +268,14 @@ Membership::_RemoteCapability *Membership::_newCapability(const uint64_t id)
 			minlr = _remoteCaps[i]->lastReceived;
 		}
 	}
-	c->id = id;
-	c->lastReceived = 0;
-	c->revocationThreshold = 0;
-	c->cap = Capability();
+
+	if (c) {
+		c->id = id;
+		c->lastReceived = 0;
+		c->revocationThreshold = 0;
+		c->cap = Capability();
+	}
+
 	std::sort(&(_remoteCaps[0]),&(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]),_RemoteCredentialSorter<_RemoteCapability>());
 	return c;
 }

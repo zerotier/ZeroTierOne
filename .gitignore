@@ -36,7 +36,7 @@ Thumbs.db
 /windows/TapDriver6/win7Release
 /windows/*.db
 /windows/*.opendb
-
+enc_temp_folder
 
 # *nix/Mac build droppings
 /build-*

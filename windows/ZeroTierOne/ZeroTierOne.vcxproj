@@ -19,8 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\controller\EmbeddedNetworkController.cpp" />
     <ClCompile Include="..\..\ext\http-parser\http_parser.c" />
-    <ClCompile Include="..\..\ext\json-parser\json.c" />
     <ClCompile Include="..\..\ext\libnatpmp\getgateway.c" />
     <ClCompile Include="..\..\ext\libnatpmp\natpmp.c" />
     <ClCompile Include="..\..\ext\libnatpmp\wingettimeofday.c" />
@@ -39,12 +39,13 @@
     <ClCompile Include="..\..\ext\miniupnpc\upnperrors.c" />
     <ClCompile Include="..\..\ext\miniupnpc\upnpreplyparse.c" />
     <ClCompile Include="..\..\node\C25519.cpp" />
+    <ClCompile Include="..\..\node\Capability.cpp" />
     <ClCompile Include="..\..\node\CertificateOfMembership.cpp" />
     <ClCompile Include="..\..\node\Cluster.cpp" />
-    <ClCompile Include="..\..\node\DeferredPackets.cpp" />
     <ClCompile Include="..\..\node\Identity.cpp" />
     <ClCompile Include="..\..\node\IncomingPacket.cpp" />
     <ClCompile Include="..\..\node\InetAddress.cpp" />
+    <ClCompile Include="..\..\node\Membership.cpp" />
     <ClCompile Include="..\..\node\Multicaster.cpp" />
     <ClCompile Include="..\..\node\Network.cpp" />
     <ClCompile Include="..\..\node\NetworkConfig.cpp" />
@@ -54,10 +55,12 @@
     <ClCompile Include="..\..\node\Path.cpp" />
     <ClCompile Include="..\..\node\Peer.cpp" />
     <ClCompile Include="..\..\node\Poly1305.cpp" />
+    <ClCompile Include="..\..\node\Revocation.cpp" />
     <ClCompile Include="..\..\node\Salsa20.cpp" />
     <ClCompile Include="..\..\node\SelfAwareness.cpp" />
     <ClCompile Include="..\..\node\SHA512.cpp" />
     <ClCompile Include="..\..\node\Switch.cpp" />
+    <ClCompile Include="..\..\node\Tag.cpp" />
     <ClCompile Include="..\..\node\Topology.cpp" />
     <ClCompile Include="..\..\node\Utils.cpp" />
     <ClCompile Include="..\..\one.cpp">
@@ -251,6 +254,7 @@
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -267,6 +271,7 @@
       </AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -290,6 +295,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -315,6 +321,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

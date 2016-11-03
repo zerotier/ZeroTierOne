@@ -343,7 +343,7 @@ void Multicaster::clean(uint64_t now)
 	{
 		Mutex::Lock _l(_gatherAuth_m);
 		_GatherAuthKey *k = (_GatherAuthKey *)0;
-		uint64_t *ts = (uint64_t *)ts;
+		uint64_t *ts = NULL;
 		Hashtable<_GatherAuthKey,uint64_t>::Iterator i(_gatherAuth);
 		while (i.next(k,ts)) {
 			if ((now - *ts) >= ZT_MULTICAST_CREDENTIAL_EXPIRATON)

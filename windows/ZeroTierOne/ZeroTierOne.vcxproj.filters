@@ -55,9 +55,6 @@
     <Filter Include="Source Files\ext\http-parser">
       <UniqueIdentifier>{f8a1c208-15b8-4d85-a4cb-11d2b82f2d1e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\ext\json-parser">
-      <UniqueIdentifier>{da28e961-1761-41d8-9a59-65b00dfb1302}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\windows">
       <UniqueIdentifier>{43f75f84-c70d-4d44-a0ef-28a7a399abd4}</UniqueIdentifier>
     </Filter>
@@ -90,6 +87,9 @@
     </Filter>
     <Filter Include="Source Files\ext\libnatpmp">
       <UniqueIdentifier>{409ec37e-ff36-4c13-b18d-52d6052e0ca2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\controller">
+      <UniqueIdentifier>{3cad34c8-c436-43ae-8323-57803637c832}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -171,9 +171,6 @@
     <ClCompile Include="..\..\ext\http-parser\http_parser.c">
       <Filter>Source Files\ext\http-parser</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ext\json-parser\json.c">
-      <Filter>Source Files\ext\json-parser</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\one.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -190,9 +187,6 @@
       <Filter>Source Files\osdep</Filter>
     </ClCompile>
     <ClCompile Include="..\..\node\Path.cpp">
-      <Filter>Source Files\node</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\node\DeferredPackets.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
     <ClCompile Include="..\..\node\Cluster.cpp">
@@ -251,6 +245,21 @@
     </ClCompile>
     <ClCompile Include="..\..\osdep\ManagedRoute.cpp">
       <Filter>Source Files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\node\Membership.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\node\Capability.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\node\Revocation.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\node\Tag.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\controller\EmbeddedNetworkController.cpp">
+      <Filter>Source Files\controller</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
