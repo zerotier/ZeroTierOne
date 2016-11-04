@@ -1364,7 +1364,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						if (ipp.is_array()) {
 							json nipp = json::array();
 							for(unsigned long i=0;i<ipp.size();++i) {
-								auto ip = ipp[i];
+								json &ip = ipp[i];
 								if ((ip.is_object())&&(ip.count("ipRangeStart"))&&(ip.count("ipRangeEnd"))) {
 									InetAddress f(_jS(ip["ipRangeStart"],""));
 									InetAddress t(_jS(ip["ipRangeEnd"],""));
@@ -1432,7 +1432,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 									json nrules = json::array();
 									if (rules.is_array()) {
 										for(unsigned long i=0;i<rules.size();++i) {
-											json rule = rules[i];
+											json &rule = rules[i];
 											if (rule.is_object()) {
 												ZT_VirtualNetworkRule ztr;
 												if (_parseRule(rule,ztr))
