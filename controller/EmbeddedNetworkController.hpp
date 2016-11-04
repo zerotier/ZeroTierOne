@@ -85,49 +85,6 @@ public:
 private:
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
 
-	// Network base path and network JSON path
-	/*
-	inline std::string _networkBP(const uint64_t nwid,bool create)
-	{
-		char tmp[64];
-		std::string p(_path + ZT_PATH_SEPARATOR_S + "network");
-		if (create) OSUtils::mkdir(p.c_str());
-		p.push_back(ZT_PATH_SEPARATOR);
-		Utils::snprintf(tmp,sizeof(tmp),"%.16llx",nwid);
-		p.append(tmp);
-		if (create) OSUtils::mkdir(p.c_str());
-		return p;
-	}
-	inline std::string _networkJP(const uint64_t nwid,bool create)
-	{
-		return (_networkBP(nwid,create) + ZT_PATH_SEPARATOR + "config.json");
-	}
-
-	// Member base path and member JSON path
-	inline std::string _memberBP(const uint64_t nwid,const Address &member,bool create)
-	{
-		std::string p(_networkBP(nwid,create));
-		p.push_back(ZT_PATH_SEPARATOR);
-		p.append("member");
-		if (create) OSUtils::mkdir(p.c_str());
-		p.push_back(ZT_PATH_SEPARATOR);
-		p.append(member.toString());
-		if (create) OSUtils::mkdir(p.c_str());
-		return p;
-	}
-	inline std::string _memberJP(const uint64_t nwid,const Address &member,bool create)
-	{
-		return (_memberBP(nwid,member,create) + ZT_PATH_SEPARATOR + "config.json");
-	}
-
-	// In-memory cache of network members
-	std::map< uint64_t,std::map< Address,nlohmann::json > > _networkMemberCache;
-	Mutex _networkMemberCache_m;
-	*/
-
-	JSONDB _db;
-	Mutex _db_m;
-
 	// Gathers a bunch of statistics about members of a network, IP assignments, etc. that we need in various places
 	// This does lock _networkMemberCache_m
 	struct _NetworkMemberInfo
@@ -190,11 +147,12 @@ private:
 		member["clock"] = now;
 	}
 
-	// These are const after construction
+	JSONDB _db;
+	Mutex _db_m;
+
 	Node *const _node;
 	std::string _path;
 
-	// Circuit tests outstanding
 	struct _CircuitTestEntry
 	{
 		ZT_CircuitTest *test;
@@ -203,7 +161,6 @@ private:
 	std::map< uint64_t,_CircuitTestEntry > _circuitTests;
 	Mutex _circuitTests_m;
 
-	// Last request time by address, for rate limitation
 	std::map< std::pair<uint64_t,uint64_t>,uint64_t > _lastRequestTime;
 	Mutex _lastRequestTime_m;
 };
