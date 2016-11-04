@@ -1019,16 +1019,22 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 			}
 		} else if (path.size() == 1) {
 
-			/*
-			std::vector<std::string> networks(OSUtils::listSubdirectories((_path + ZT_PATH_SEPARATOR_S + "network").c_str()));
-			for(auto i(networks.begin());i!=networks.end();++i) {
-				if (i->length() == 16) {
-					responseBody.append((responseBody.length() == 1) ? "\"" : ",\"");
-					responseBody.append(*i);
-					responseBody.append("\"");
-				}
+			std::set<std::string> networkIds;
+			{
+				Mutex::Lock _l(_db_m);
+				_db.filter("network/",120000,[&networkIds](const std::string &n,const json &obj) {
+					if (n.length() == (16 + 8))
+						networkIds.insert(n.substr(8));
+					return true; // do not delete
+				});
 			}
-			*/
+
+			responseBody.push_back('[');
+			for(std::set<std::string>::iterator i(networkIds.begin());i!=networkIds.end();++i) {
+				responseBody.append((responseBody.length() == 1) ? "\"" : ",\"");
+				responseBody.append(*i);
+				responseBody.append("\"");
+			}
 			responseBody.push_back(']');
 			responseContentType = "application/json";
 			return 200;
@@ -1147,7 +1153,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 							if (tags.is_array()) {
 								std::map<uint64_t,uint64_t> mtags;
 								for(unsigned long i=0;i<tags.size();++i) {
-									auto tag = tags[i];
+									json &tag = tags[i];
 									if ((tag.is_array())&&(tag.size() == 2))
 										mtags[_jI(tag[0],0ULL) & 0xffffffffULL] = _jI(tag[1],0ULL) & 0xffffffffULL;
 								}
@@ -1211,7 +1217,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					json hops = b["hops"];
 					if (hops.is_array()) {
 						for(unsigned long i=0;i<hops.size();++i) {
-							auto hops2 = hops[i];
+							json &hops2 = hops[i];
 							if (hops2.is_array()) {
 								for(unsigned long j=0;j<hops2.size();++j) {
 									std::string s = hops2[j];

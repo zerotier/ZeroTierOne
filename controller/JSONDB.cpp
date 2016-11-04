@@ -119,7 +119,9 @@ void JSONDB::_reload(const std::string &p)
 			if (ZT_PATH_SEPARATOR != '/') std::replace(n.begin(),n.end(),ZT_PATH_SEPARATOR,'/');
 			if ((n.length() > 0)&&(n[n.length() - 1] != '/')) n.push_back('/');
 			n.append(li->first);
-			this->get(n,0); // causes load and cache or update
+			if ((n.length() > 5)&&(n.substr(n.length() - 5) == ".json")) {
+				this->get(n.substr(0,n.length() - 5),0); // causes load and cache or update
+			}
 		} else if (li->second == 'd') {
 			this->_reload(p + ZT_PATH_SEPARATOR + li->first);
 		}
