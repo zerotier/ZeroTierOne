@@ -63,24 +63,6 @@ using json = nlohmann::json;
 
 namespace ZeroTier {
 
-// JSON blob I/O
-/*
-static json _readJson(const std::string &path)
-{
-	std::string buf;
-	if (OSUtils::readFile(path.c_str(),buf)) {
-		try {
-			return json::parse(buf);
-		} catch ( ... ) {}
-	}
-	return json::object();
-}
-static bool _writeJson(const std::string &path,const json &obj)
-{
-	return OSUtils::writeFile(path.c_str(),obj.dump(2));
-}
-*/
-
 // Get JSON values as unsigned integers, strings, or booleans, doing type conversion if possible
 static uint64_t _jI(const json &jv,const uint64_t dfl)
 {

@@ -19,6 +19,9 @@
 #ifndef ZT_JSONDB_HPP
 #define ZT_JSONDB_HPP
 
+#include <stdlib.h>
+#include <string.h>
+
 #include <string>
 #include <map>
 #include <stdexcept>
@@ -75,7 +78,7 @@ public:
 	inline void filter(const std::string &prefix,unsigned long maxSinceCheck,F func)
 	{
 		for(std::map<std::string,_E>::iterator i(_db.lower_bound(prefix));i!=_db.end();) {
-			if (i->first.substr(0,prefix.length()) == prefix) {
+			if ((i->first.length() >= prefix.length())&&(!memcmp(i->first.data(),prefix.data(),prefix.length()))) {
 				if (!func(i->first,get(i->second.obj,maxSinceCheck))) {
 					std::map<std::string,_E>::iterator i2(i); ++i2;
 					this->erase(i->first);
