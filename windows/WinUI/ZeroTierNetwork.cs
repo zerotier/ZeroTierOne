@@ -42,13 +42,22 @@ namespace WinUI
         [JsonProperty("netconfRevision")]
         public int NetconfRevision { get; set; }
 
-        [JsonProperty("multicastSubscriptions")]
-        public string[] MulticastSubscriptions { get; set; }
-
         [JsonProperty("assignedAddresses")]
         public string[] AssignedAddresses { get; set; }
 
+        [JsonProperty("routes")]
+        public NetworkRoute[] Routes { get; set; }
+
         [JsonProperty("portDeviceName")]
         public string DeviceName { get; set; }
+
+        [JsonProperty("allowManaged")]
+        public bool AllowManaged { get; set; }
+
+        [JsonProperty("allowGlobal")]
+        public bool AllowGlobal { get; set; }
+
+        [JsonProperty("allowDefault")]
+        public bool AllowDefault { get; set; }
     }
 }

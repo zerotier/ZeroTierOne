@@ -54,6 +54,10 @@ namespace WinUI
             }
 
             this.managedIps.Text = iplist;
+
+            this.allowDefault.IsChecked = network.AllowDefault;
+            this.allowGlobal.IsChecked = network.AllowGlobal;
+            this.allowManaged.IsChecked = network.AllowManaged;
         }
 
         public bool HasNetwork(ZeroTierNetwork network)
@@ -67,6 +71,33 @@ namespace WinUI
         private void leaveButton_Click(object sender, RoutedEventArgs e)
         {
             handler.LeaveNetwork(network.NetworkId);
+        }
+
+        private void AllowManaged_CheckStateChanged(object sender, RoutedEventArgs e)
+        {
+            CheckBox cb = sender as CheckBox;
+            handler.JoinNetwork(network.NetworkId,
+                allowManaged.IsChecked ?? false,
+                allowGlobal.IsChecked ?? false,
+                allowDefault.IsChecked ?? false);
+        }
+
+        private void AllowGlobal_CheckStateChanged(object sender, RoutedEventArgs e)
+        {
+            CheckBox cb = sender as CheckBox;
+            handler.JoinNetwork(network.NetworkId,
+                allowManaged.IsChecked ?? false,
+                allowGlobal.IsChecked ?? false,
+                allowDefault.IsChecked ?? false);
+        }
+
+        private void AllowDefault_CheckStateChanged(object sender, RoutedEventArgs e)
+        {
+            CheckBox cb = sender as CheckBox;
+            handler.JoinNetwork(network.NetworkId,
+                allowManaged.IsChecked ?? false,
+                allowGlobal.IsChecked ?? false,
+                allowDefault.IsChecked ?? false);
         }
     }
 }
