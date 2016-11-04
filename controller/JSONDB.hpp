@@ -41,13 +41,21 @@ public:
 	JSONDB(const std::string &basePath) :
 		_basePath(basePath)
 	{
-		this->_reloadAll(_basePath);
+		_reload(_basePath);
+	}
+
+	inline void reload()
+	{
+		_db.clear();
+		_reload(_basePath);
 	}
 
 	bool put(const std::string &n,const nlohmann::json &obj);
 
 	inline bool put(const std::string &n1,const std::string &n2,const nlohmann::json &obj) { return this->put((n1 + "/" + n2),obj); }
 	inline bool put(const std::string &n1,const std::string &n2,const std::string &n3,const nlohmann::json &obj) { return this->put((n1 + "/" + n2 + "/" + n3),obj); }
+	inline bool put(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4,const nlohmann::json &obj) { return this->put((n1 + "/" + n2 + "/" + n3 + "/" + n4),obj); }
+	inline bool put(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4,const std::string &n5,const nlohmann::json &obj) { return this->put((n1 + "/" + n2 + "/" + n3 + "/" + n4 + "/" + n5),obj); }
 
 	const nlohmann::json &get(const std::string &n,unsigned long maxSinceCheck = 0);
 
@@ -56,27 +64,37 @@ public:
 	inline const nlohmann::json &get(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4,unsigned long maxSinceCheck = 0) { return this->get((n1 + "/" + n2 + "/" + n3 + "/" + n4),maxSinceCheck); }
 	inline const nlohmann::json &get(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4,const std::string &n5,unsigned long maxSinceCheck = 0) { return this->get((n1 + "/" + n2 + "/" + n3 + "/" + n4 + "/" + n5),maxSinceCheck); }
 
+	void erase(const std::string &n);
+
+	inline void erase(const std::string &n1,const std::string &n2) { this->erase(n1 + "/" + n2); }
+	inline void erase(const std::string &n1,const std::string &n2,const std::string &n3) { this->erase(n1 + "/" + n2 + "/" + n3); }
+	inline void erase(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4) { this->erase(n1 + "/" + n2 + "/" + n3 + "/" + n4); }
+	inline void erase(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4,const std::string &n5) { this->erase(n1 + "/" + n2 + "/" + n3 + "/" + n4 + "/" + n5); }
+
 	template<typename F>
-	inline void each(F func,unsigned long maxSinceCheck = 0)
+	inline void filter(const std::string &prefix,unsigned long maxSinceCheck,F func)
 	{
-		const uint64_t now = OSUtils::now();
-		for(std::map<std::string,_E>::const_iterator i(_db.begin());i!=_db.end();++i) {
-			if ((now - i->second.lastCheck) > (uint64_t)maxSinceCheck)
-				this->get(i->first);
-			func(i->first,i->second.obj);
+		for(std::map<std::string,_E>::iterator i(_db.lower_bound(prefix));i!=_db.end();) {
+			if (i->first.substr(0,prefix.length()) == prefix) {
+				if (!func(i->first,get(i->second.obj,maxSinceCheck))) {
+					std::map<std::string,_E>::iterator i2(i); ++i2;
+					this->erase(i->first);
+					i = i2;
+				} else ++i;
+			} else break;
 		}
 	}
 
 private:
+	void _reload(const std::string &p);
 	bool _isValidObjectName(const std::string &n);
 	std::string _genPath(const std::string &n,bool create);
-	void _reloadAll(const std::string &path);
 
 	struct _E
 	{
+		nlohmann::json obj;
 		uint64_t lastModifiedOnDisk;
 		uint64_t lastCheck;
-		nlohmann::json obj;
 	};
 
 	std::string _basePath;

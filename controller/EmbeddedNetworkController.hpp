@@ -40,6 +40,8 @@
 
 #include "../ext/json/json.hpp"
 
+#include "JSONDB.hpp"
+
 namespace ZeroTier {
 
 class Node;
@@ -49,10 +51,6 @@ class EmbeddedNetworkController : public NetworkController
 public:
 	EmbeddedNetworkController(Node *node,const char *dbPath);
 	virtual ~EmbeddedNetworkController();
-
-	// Thread main method -- do not call directly
-	void threadMain()
-		throw();
 
 	virtual NetworkController::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
@@ -88,6 +86,7 @@ private:
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
 
 	// Network base path and network JSON path
+	/*
 	inline std::string _networkBP(const uint64_t nwid,bool create)
 	{
 		char tmp[64];
@@ -124,6 +123,10 @@ private:
 	// In-memory cache of network members
 	std::map< uint64_t,std::map< Address,nlohmann::json > > _networkMemberCache;
 	Mutex _networkMemberCache_m;
+	*/
+
+	JSONDB _db;
+	Mutex _db_m;
 
 	// Gathers a bunch of statistics about members of a network, IP assignments, etc. that we need in various places
 	// This does lock _networkMemberCache_m
@@ -203,9 +206,6 @@ private:
 	// Last request time by address, for rate limitation
 	std::map< std::pair<uint64_t,uint64_t>,uint64_t > _lastRequestTime;
 	Mutex _lastRequestTime_m;
-
-	Thread _daemon;
-	volatile bool _daemonRun;
 };
 
 } // namespace ZeroTier

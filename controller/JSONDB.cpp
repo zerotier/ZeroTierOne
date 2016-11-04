@@ -27,7 +27,7 @@ bool JSONDB::put(const std::string &n,const nlohmann::json &obj)
 	if (!_isValidObjectName(n))
 		return false;
 
-	std::string path(_genPath(n,false));
+	std::string path(_genPath(n,true));
 	if (!path.length())
 		return false;
 
@@ -36,10 +36,9 @@ bool JSONDB::put(const std::string &n,const nlohmann::json &obj)
 		return false;
 
 	_E &e = _db[n];
-
+	e.obj = obj;
 	e.lastModifiedOnDisk = OSUtils::getLastModified(path.c_str());
 	e.lastCheck = OSUtils::now();
-	e.obj = obj;
 
 	return true;
 }
@@ -56,7 +55,6 @@ const nlohmann::json &JSONDB::get(const std::string &n,unsigned long maxSinceChe
 	if (e != _db.end()) {
 		if ((now - e->second.lastCheck) <= (uint64_t)maxSinceCheck)
 			return e->second.obj;
-
 		std::string path(_genPath(n,false));
 		if (!path.length()) // sanity check
 			return _EMPTY_JSON;
@@ -64,15 +62,13 @@ const nlohmann::json &JSONDB::get(const std::string &n,unsigned long maxSinceChe
 		// We are somewhat tolerant to momentary disk failures here. This may
 		// occur over e.g. EC2's elastic filesystem (NFS).
 		const uint64_t lm = OSUtils::getLastModified(path.c_str());
-		if ((lm)&&(e->second.lastModifiedOnDisk != lm)) {
+		if (e->second.lastModifiedOnDisk != lm) {
 			if (OSUtils::readFile(path.c_str(),buf)) {
 				try {
-					e->second.lastModifiedOnDisk = lm;
-					e->second.lastCheck = now;
 					e->second.obj = nlohmann::json::parse(buf);
-				} catch ( ... ) {
-					e->second.obj = _EMPTY_JSON;
-				}
+					e->second.lastModifiedOnDisk = lm; // don't update these if there is a parse error -- try again and again ASAP
+					e->second.lastCheck = now;
+				} catch ( ... ) {} // parse errors result in "holding pattern" behavior
 			}
 		}
 
@@ -86,19 +82,47 @@ const nlohmann::json &JSONDB::get(const std::string &n,unsigned long maxSinceChe
 			return _EMPTY_JSON;
 
 		const uint64_t lm = OSUtils::getLastModified(path.c_str());
-		if (!lm)
-			return _EMPTY_JSON;
-
 		_E &e2 = _db[n];
-		e2.lastModifiedOnDisk = lm;
-		e2.lastCheck = now;
 		try {
 			e2.obj = nlohmann::json::parse(buf);
 		} catch ( ... ) {
 			e2.obj = _EMPTY_JSON;
 		}
+		e2.lastModifiedOnDisk = lm;
+		e2.lastCheck = now;
 
 		return e2.obj;
+	}
+}
+
+void JSONDB::erase(const std::string &n)
+{
+	if (!_isValidObjectName(n))
+		return;
+
+	std::string path(_genPath(n,true));
+	if (!path.length())
+		return;
+
+	OSUtils::rm(path.c_str());
+	_db.erase(n);
+}
+
+void JSONDB::_reload(const std::string &p)
+{
+	std::map<std::string,char> l(OSUtils::listDirectoryFull(p.c_str()));
+	for(std::map<std::string,char>::iterator li(l.begin());li!=l.end();++li) {
+		if (li->second == 'f') {
+			// assume p starts with _basePath, which it always does -- will throw otherwise
+			std::string n(p.substr(_basePath.length()));
+			while ((n.length() > 0)&&(n[0] == ZT_PATH_SEPARATOR)) n = n.substr(1);
+			if (ZT_PATH_SEPARATOR != '/') std::replace(n.begin(),n.end(),ZT_PATH_SEPARATOR,'/');
+			if ((n.length() > 0)&&(n[n.length() - 1] != '/')) n.push_back('/');
+			n.append(li->first);
+			this->get(n,0); // causes load and cache or update
+		} else if (li->second == 'd') {
+			this->_reload(p + ZT_PATH_SEPARATOR + li->first);
+		}
 	}
 }
 
@@ -137,10 +161,6 @@ std::string JSONDB::_genPath(const std::string &n,bool create)
 	p.append(".json");
 
 	return p;
-}
-
-void JSONDB::_reloadAll(const std::string &path)
-{
 }
 
 } // namespace ZeroTier

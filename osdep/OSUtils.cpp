@@ -107,17 +107,18 @@ std::vector<std::string> OSUtils::listDirectory(const char *path)
 	return r;
 }
 
-std::vector<std::string> OSUtils::listSubdirectories(const char *path)
+std::map<std::string,char> OSUtils::listDirectoryFull(const char *path)
 {
-	std::vector<std::string> r;
+	std::map<std::string,char> r;
 
 #ifdef __WINDOWS__
 	HANDLE hFind;
 	WIN32_FIND_DATAA ffd;
 	if ((hFind = FindFirstFileA((std::string(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
 		do {
-			if ((strcmp(ffd.cFileName,"."))&&(strcmp(ffd.cFileName,".."))&&((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0))
-				r.push_back(std::string(ffd.cFileName));
+			if ((strcmp(ffd.cFileName,"."))&&(strcmp(ffd.cFileName,".."))) {
+				r[ffd.cFileName] = ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) ? 'd' : 'f';
+			}
 		} while (FindNextFileA(hFind,&ffd));
 		FindClose(hFind);
 	}
@@ -132,8 +133,9 @@ std::vector<std::string> OSUtils::listSubdirectories(const char *path)
 		if (readdir_r(d,&de,&dptr))
 			break;
 		if (dptr) {
-			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,".."))&&(dptr->d_type == DT_DIR))
-				r.push_back(std::string(dptr->d_name));
+			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,".."))) {
+				r[dptr->d_name] = (dptr->d_type == DT_DIR) ? 'd' : 'f';
+			}
 		} else break;
 	}
 	closedir(d);
@@ -178,7 +180,7 @@ bool OSUtils::rmDashRf(const char *path)
 			std::string p(path);
 			p.push_back(ZT_PATH_SEPARATOR);
 			p.append(dptr->d_name);
-			if (unlink(p.c_str()) != 0) {
+			if (unlink(p.c_str()) != 0) { // unlink first will remove symlinks instead of recursing them
 				if (!rmDashRf(p.c_str()))
 					return false;
 			}

@@ -110,12 +110,12 @@ public:
 	static std::vector<std::string> listDirectory(const char *path);
 
 	/**
-	 * List a directory's subdirectories
+	 * List all contents in a directory
 	 *
 	 * @param path Path to list
-	 * @return Names of subdirectories (without path prepended)
+	 * @return Names of things and types, currently just 'f' and 'd'
 	 */
-	static std::vector<std::string> listSubdirectories(const char *path);
+	static std::map<std::string,char> listDirectoryFull(const char *path);
 
 	/**
 	 * Delete a directory and all its files and subdirectories recursively
