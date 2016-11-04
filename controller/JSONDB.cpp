@@ -20,7 +20,7 @@
 
 namespace ZeroTier {
 
-static const nlohmann::json _EMPTY_JSON({{}});
+static const nlohmann::json _EMPTY_JSON(nlohmann::json::object());
 
 bool JSONDB::put(const std::string &n,const nlohmann::json &obj)
 {
