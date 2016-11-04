@@ -130,6 +130,7 @@ private:
 			// If unspecified, rules are set to allow anything and behave like a flat L2 segment
 			network["rules"] = {{
 				{ "not",false },
+				{ "or", false },
 				{ "type","ACTION_ACCEPT" }
 			}};
 		}
