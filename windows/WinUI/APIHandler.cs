@@ -107,7 +107,7 @@ namespace WinUI
             }
         }
 
-        public void JoinNetwork(string nwid)
+        public void JoinNetwork(string nwid, bool allowManaged = true, bool allowGlobal = false, bool allowDefault = false)
         {
             var request = WebRequest.Create(url + "/network/" + nwid + "?auth=" + authtoken) as HttpWebRequest;
             if (request == null)
@@ -116,6 +116,17 @@ namespace WinUI
             }
 
             request.Method = "POST";
+            request.ContentType = "applicaiton/json";
+
+            using (var streamWriter = new StreamWriter(((HttpWebRequest)request).GetRequestStream()))
+            {
+                string json = "{\"allowManaged\":" + (allowManaged ? "true" : "false") + "," +
+                    "\"allowGlobal\":" + (allowGlobal ? "true" : "false") + "," +
+                    "\"allowDefault\":" + (allowDefault ? "true" : "false") + "}";
+                streamWriter.Write(json);
+                streamWriter.Flush();
+                streamWriter.Close();
+            }
 
             try
             {
