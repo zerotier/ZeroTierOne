@@ -58,6 +58,14 @@ namespace WinUI
             this.allowDefault.IsChecked = network.AllowDefault;
             this.allowGlobal.IsChecked = network.AllowGlobal;
             this.allowManaged.IsChecked = network.AllowManaged;
+
+            allowDefault.Checked += AllowDefault_CheckStateChanged;
+            allowDefault.Unchecked += AllowDefault_CheckStateChanged;
+            allowGlobal.Checked += AllowGlobal_CheckStateChanged;
+            allowGlobal.Unchecked += AllowGlobal_CheckStateChanged;
+            allowManaged.Checked += AllowManaged_CheckStateChanged;
+            allowManaged.Unchecked += AllowManaged_CheckStateChanged;
+
         }
 
         public bool HasNetwork(ZeroTierNetwork network)

@@ -107,7 +107,7 @@ namespace WinUI
             }
         }
 
-        public void JoinNetwork(string nwid, bool allowManaged = false, bool allowGlobal = false, bool allowDefault = false)
+        public void JoinNetwork(string nwid, bool allowManaged = true, bool allowGlobal = false, bool allowDefault = false)
         {
             var request = WebRequest.Create(url + "/network/" + nwid + "?auth=" + authtoken) as HttpWebRequest;
             if (request == null)
