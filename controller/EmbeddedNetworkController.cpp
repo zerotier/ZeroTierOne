@@ -1073,10 +1073,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 			responseContentType = "application/json";
 			return 400;
 		}
-	} catch (std::exception &exc) {
-		responseBody = std::string("{ \"message\": \"body JSON is invalid: ") + exc.what() + "\" }";
-		responseContentType = "application/json";
-		return 400;
 	} catch ( ... ) {
 		responseBody = "{ \"message\": \"body JSON is invalid\" }";
 		responseContentType = "application/json";
@@ -1092,13 +1088,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
 
 			if (path.size() >= 3) {
-				json network;
-				{
-					Mutex::Lock _l(_db_m);
-					network = _db.get("network",nwids,0);
-				}
-				if (!network.size())
-					return 404;
 
 				if ((path.size() == 4)&&(path[2] == "member")&&(path[3].length() == 10)) {
 					uint64_t address = Utils::hexStrToU64(path[3].c_str());
@@ -1110,8 +1099,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						Mutex::Lock _l(_db_m);
 						member = _db.get("network",nwids,"member",Address(address).toString(),0);
 					}
-					if (!member.size())
-						return 404;
 					_initMember(member);
 
 					try {
@@ -1283,8 +1270,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					}
 
 					network = _db.get("network",nwids,0);
-					if (!network.size())
-						return 404;
 				}
 				_initNetwork(network);
 
