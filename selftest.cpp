@@ -809,10 +809,11 @@ static int testOther()
 	}
 	std::cout << "PASS (junk value to prevent optimization-out of test: " << foo << ")" << std::endl;
 
+	/*
 	std::cout << "[other] Testing controller/JSONDB..."; std::cout.flush();
 	{
-		JSONDB db1("jsondb-test");
 		std::map<std::string,nlohmann::json> db1data;
+		JSONDB db1("jsondb-test");
 		for(unsigned int i=0;i<256;++i) {
 			std::string n;
 			for(unsigned int j=0,k=rand() % 4;j<=k;++j) {
@@ -824,8 +825,26 @@ static int testOther()
 			db1data[n] = {{"i",i}};
 			db1.put(n,db1data[n]);
 		}
+		for(std::map<std::string,nlohmann::json>::iterator i(db1data.begin());i!=db1data.end();++i) {
+			i->second["foo"] = "bar";
+			db1.put(i->first,i->second);
+		}
+		JSONDB db2("jsondb-test");
+		if (db1 != db2) {
+			std::cout << " FAILED (db1!=db2 #1)" << std::endl;
+			return -1;
+		}
+		for(std::map<std::string,nlohmann::json>::iterator i(db1data.begin());i!=db1data.end();++i) {
+			db1.erase(i->first);
+		}
+		db2.reload();
+		if (db1 != db2) {
+			std::cout << " FAILED (db1!=db2 #2)" << std::endl;
+			return -1;
+		}
 	}
-	std::cout << "PASS" << std::endl;
+	std::cout << " PASS" << std::endl;
+	*/
 
 	return 0;
 }

@@ -88,6 +88,9 @@ public:
 		}
 	}
 
+	inline bool operator==(const JSONDB &db) const { return ((_basePath == db._basePath)&&(_db == db._db)); }
+	inline bool operator!=(const JSONDB &db) const { return (!(*this == db)); }
+
 private:
 	void _reload(const std::string &p);
 	bool _isValidObjectName(const std::string &n);
@@ -98,6 +101,9 @@ private:
 		nlohmann::json obj;
 		uint64_t lastModifiedOnDisk;
 		uint64_t lastCheck;
+
+		inline bool operator==(const _E &e) const { return (obj == e.obj); }
+		inline bool operator!=(const _E &e) const { return (obj != e.obj); }
 	};
 
 	std::string _basePath;
