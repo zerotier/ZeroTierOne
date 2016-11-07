@@ -37,6 +37,8 @@ Thumbs.db
 /windows/*.db
 /windows/*.opendb
 enc_temp_folder
+/windows/copyutil/bin
+/windows/copyutil/obj
 
 # *nix/Mac build droppings
 /build-*
