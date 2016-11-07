@@ -53,6 +53,8 @@
 #include "osdep/PortMapper.hpp"
 #include "osdep/Thread.hpp"
 
+#include "controller/JSONDB.hpp"
+
 #ifdef __WINDOWS__
 #include <tchar.h>
 #endif
@@ -806,6 +808,24 @@ static int testOther()
 		}
 	}
 	std::cout << "PASS (junk value to prevent optimization-out of test: " << foo << ")" << std::endl;
+
+	std::cout << "[other] Testing controller/JSONDB..."; std::cout.flush();
+	{
+		JSONDB db1("jsondb-test");
+		std::map<std::string,nlohmann::json> db1data;
+		for(unsigned int i=0;i<256;++i) {
+			std::string n;
+			for(unsigned int j=0,k=rand() % 4;j<=k;++j) {
+				if (j > 0) n.push_back('/');
+				char foo[24];
+				Utils::snprintf(foo,sizeof(foo),"%lx",rand());
+				n.append(foo);
+			}
+			db1data[n] = {{"i",i}};
+			db1.put(n,db1data[n]);
+		}
+	}
+	std::cout << "PASS" << std::endl;
 
 	return 0;
 }
