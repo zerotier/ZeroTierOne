@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #include <string>
 #include <map>
@@ -1105,6 +1106,23 @@ public:
 	// Apply or update managed IPs for a configured network (be sure n.tap exists)
 	void syncManagedStuff(NetworkState &n,bool syncIps,bool syncRoutes)
 	{
+	    int origns = 0;
+        if (!n.settings.nsname.empty()) {
+            origns = open("/proc/self/ns/net", O_RDONLY);
+	        int fd = open(("/var/run/netns/" + n.settings.nsname).c_str(), O_RDONLY);
+            if (origns == -1 || fd == -1) {
+                if (fd > 0) close(fd);
+                if (origns > 0) close(origns);
+                throw std::runtime_error("unable to open network namespace");
+            }
+            if (setns(fd, 0) == -1) {
+                if (fd > 0) close(fd);
+                if (origns > 0) close(origns);
+                throw std::runtime_error("unable to open network namespace");
+            }
+            close(fd);
+        }
+	    
 		// assumes _nets_m is locked
 		if (syncIps) {
 			std::vector<InetAddress> newManagedIps;
@@ -1200,6 +1218,11 @@ public:
 					n.managedRoutes.pop_back();
 			}
 		}
+        if (origns > 0) {
+            // revert to our previous netns
+            setns(origns, 0);
+            close(origns);
+        }
 	}
 
 	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
@@ -1444,6 +1467,38 @@ public:
 					try {
 						char friendlyName[128];
 						Utils::snprintf(friendlyName,sizeof(friendlyName),"ZeroTier One [%.16llx]",nwid);
+
+						char nlcpath[256];
+						Utils::snprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
+						std::string nlcbuf;
+				        int origns = 0;
+						if (OSUtils::readFile(nlcpath,nlcbuf)) {
+						    Dictionary<4096> nc;
+				            char tmp[2048];
+							nc.load(nlcbuf.c_str());
+				            if (nc.get("netns",tmp,sizeof(tmp)) > 0) {
+							    n.settings.nsname = tmp;
+			                    // remember our current namespace so we can go
+			                    // back to it later
+			                    origns = open("/proc/self/ns/net", O_RDONLY);
+			                    int fd = open(("/var/run/netns/" + n.settings.nsname).c_str(), O_RDONLY);
+			                    if (origns == -1 || fd == -1) {
+			                        if (fd > 0) close(fd);
+			                        if (origns > 0) close(origns);
+			                        throw std::runtime_error("unable to open network namespace");
+			                    }
+			                    if (setns(fd, 0) == -1) {
+			                        if (fd > 0) close(fd);
+			                        if (origns > 0) close(origns);
+			                        throw std::runtime_error("unable to open network namespace");
+			                    }
+			                    close(fd);
+				            }
+							n.settings.allowManaged = nc.getB("allowManaged",true);
+							n.settings.allowGlobal = nc.getB("allowGlobal",false);
+							n.settings.allowDefault = nc.getB("allowDefault",false);
+						}
+
 						n.tap = new EthernetTap(
 							_homePath.c_str(),
 							MAC(nwc->mac),
@@ -1455,16 +1510,11 @@ public:
 							(void *)this);
 						*nuptr = (void *)&n;
 
-						char nlcpath[256];
-						Utils::snprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
-						std::string nlcbuf;
-						if (OSUtils::readFile(nlcpath,nlcbuf)) {
-							Dictionary<4096> nc;
-							nc.load(nlcbuf.c_str());
-							n.settings.allowManaged = nc.getB("allowManaged",true);
-							n.settings.allowGlobal = nc.getB("allowGlobal",false);
-							n.settings.allowDefault = nc.getB("allowDefault",false);
-						}
+			            if (origns > 0) {
+			                // revert to our previous netns
+			                setns(origns, 0);
+			                close(origns);
+			            }
 					} catch (std::exception &exc) {
 #ifdef __WINDOWS__
 						FILE *tapFailLog = fopen((_homePath + ZT_PATH_SEPARATOR_S"port_error_log.txt").c_str(),"a");

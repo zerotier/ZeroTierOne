@@ -86,6 +86,11 @@ public:
 		 * Allow overriding of system default routes for "full tunnel" operation?
 		 */
 		bool allowDefault;
+
+		/**
+		 * Set a network namespace for the service
+		 */
+		std::string nsname;
 	};
 
 	/**
