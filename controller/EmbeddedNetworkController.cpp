@@ -622,6 +622,9 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		member["recentLog"] = recentLog;
 	}
 
+	// Update last modified time
+	member["lastModified"] = now;
+
 	// If they are not authorized, STOP!
 	if (!authorizedBy) {
 		Mutex::Lock _l(_db_m);
