@@ -7,6 +7,7 @@ using System.Net;
 using System.IO;
 using System.Windows;
 using Newtonsoft.Json;
+using System.Diagnostics;
 
 namespace WinUI
 {
@@ -18,7 +19,95 @@ namespace WinUI
 
         private string url = null;
 
-        public APIHandler()
+        private static APIHandler instance;
+
+        public static APIHandler Instance
+        {
+            get
+            {
+                if (instance == null)
+                {
+
+                }
+
+                return instance;
+            }
+        }
+
+        private static bool initHandler()
+        {
+            String localZtDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\ZeroTier\\One";
+            String globalZtDir = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData) + "\\ZeroTier\\One";
+
+            String authToken = "";
+            Int32 port = 9993;
+
+            if (!File.Exists(localZtDir + "\\authtoken.secret") || !File.Exists(localZtDir + "\\zerotier-one.port"))
+            {
+                // launch external process to copy file into place
+                String curPath = System.Reflection.Assembly.GetEntryAssembly().Location;
+                int index = curPath.LastIndexOf("\\");
+                curPath = curPath.Substring(0, index);
+                ProcessStartInfo startInfo = new ProcessStartInfo(curPath + "\\copyutil.exe", globalZtDir + " " + localZtDir);
+                startInfo.Verb = "runas";
+
+
+                var process = Process.Start(startInfo);
+                process.WaitForExit();
+            }
+
+            authToken = readAuthToken(localZtDir + "\\authtoken.secret");
+
+            if ((authToken == null) || (authToken.Length <= 0))
+            {
+                MessageBox.Show("Unable to read ZeroTier One authtoken", "ZeroTier One");
+                return false;
+            }
+
+            port = readPort(localZtDir + "\\zerotier-one.port");
+            instance = new APIHandler(port, authToken);
+            return true;
+        }
+
+        private static String readAuthToken(String path)
+        {
+            String authToken = "";
+
+            if (File.Exists(path))
+            {
+                try
+                {
+                    byte[] tmp = File.ReadAllBytes(path);
+                    authToken = System.Text.Encoding.UTF8.GetString(tmp).Trim();
+                }
+                catch
+                {
+                    MessageBox.Show("Unable to read ZeroTier One Auth Token from:\r\n" + path, "ZeroTier One");
+                }
+            }
+
+            return authToken;
+        }
+
+        private static Int32 readPort(String path)
+        {
+            Int32 port = 9993;
+
+            try
+            {
+                byte[] tmp = File.ReadAllBytes(path);
+                port = Int32.Parse(System.Text.Encoding.ASCII.GetString(tmp).Trim());
+                if ((port <= 0) || (port > 65535))
+                    port = 9993;
+            }
+            catch
+            {
+            }
+
+            return port;
+        }
+
+        private APIHandler()
         {
             url = "http://127.0.0.1:9993";
         }
