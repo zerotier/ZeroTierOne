@@ -66,6 +66,10 @@
   <PropertyGroup />
   <ItemGroup>
     <Reference Include="Accessibility" />
+    <Reference Include="Hardcodet.Wpf.TaskbarNotification, Version=1.0.5.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Hardcodet.NotifyIcon.Wpf.1.0.8\lib\net45\Hardcodet.Wpf.TaskbarNotification.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
@@ -104,6 +108,9 @@
     <Compile Include="PeersPage.xaml.cs">
       <DependentUpon>PeersPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="ToolbarItem.xaml.cs">
+      <DependentUpon>ToolbarItem.xaml</DependentUpon>
+    </Compile>
     <Compile Include="ZeroTierPeerPhysicalPath.cs" />
     <Compile Include="ZeroTierPeer.cs" />
     <Compile Include="ZeroTierNetwork.cs" />
@@ -140,6 +147,10 @@
     <Page Include="Themes\Generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="ToolbarItem.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
   <ItemGroup>
@@ -213,6 +224,9 @@
       <AutoFill>True</AutoFill>
     </BlendEmbeddedFont>
     <Resource Include="ZeroTierIcon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ZeroTierIcon.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\Expression\Blend\.NETFramework\v4.5\Microsoft.Expression.Blend.WPF.targets" />

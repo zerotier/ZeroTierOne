@@ -36,102 +36,35 @@ namespace WinUI
         public MainWindow()
         {
             InitializeComponent();
-
-            if (InitAPIHandler())
-            {
-                networksPage.SetAPIHandler(handler);
-
-                updateStatus();
-                if (!connected)
-                {
-                    MessageBox.Show("Unable to connect to ZeroTier Service.");
-                }
-
-                updateNetworks();
-                //updatePeers();
-
-                DataObject.AddPastingHandler(joinNetworkID, OnPaste);
-
-                timer.Elapsed += new ElapsedEventHandler(OnUpdateTimer);
-                timer.Interval = 2000;
-                timer.Enabled = true;
-            }
         }
 
 
-        private String readAuthToken(String path)
+        public void SetAPIHandler(APIHandler handler)
         {
-            String authToken = "";
+            timer.Stop();
+            timer = new Timer();
 
-            if (File.Exists(path))
+            this.handler = handler;
+
+            networksPage.SetAPIHandler(handler);
+
+            updateStatus();
+
+            if (!connected)
             {
-                try
-                {
-                    byte[] tmp = File.ReadAllBytes(path);
-                    authToken = System.Text.Encoding.UTF8.GetString(tmp).Trim();
-                }
-                catch
-                {
-                    MessageBox.Show("Unable to read ZeroTier One Auth Token from:\r\n" + path, "ZeroTier One");
-                }
+                MessageBox.Show("Unable to connect to ZerOTier Service");
+                return;
             }
 
-            return authToken;
+            updateNetworks();
+
+            DataObject.AddPastingHandler(joinNetworkID, OnPaste);
+
+            timer.Elapsed += new ElapsedEventHandler(OnUpdateTimer);
+            timer.Interval = 2000;
+            timer.Enabled = true;
         }
-
-        private Int32 readPort(String path)
-        {
-            Int32 port = 9993;
-
-            try
-            {
-                byte[] tmp = File.ReadAllBytes(path);
-                port = Int32.Parse(System.Text.Encoding.ASCII.GetString(tmp).Trim());
-                if ((port <= 0) || (port > 65535))
-                    port = 9993;
-            }
-            catch
-            {
-            }
-
-            return port;
-        }
-
-        private bool InitAPIHandler()
-        {
-            String localZtDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\ZeroTier\\One";
-            String globalZtDir = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData) + "\\ZeroTier\\One";
-
-            String authToken = "";
-            Int32 port = 9993;
-
-            if (!File.Exists(localZtDir + "\\authtoken.secret") || !File.Exists(localZtDir + "\\zerotier-one.port"))
-            {
-                // launch external process to copy file into place
-                String curPath = System.Reflection.Assembly.GetEntryAssembly().Location;
-                int index = curPath.LastIndexOf("\\");
-                curPath = curPath.Substring(0, index);
-                ProcessStartInfo startInfo = new ProcessStartInfo(curPath + "\\copyutil.exe", globalZtDir + " " + localZtDir);
-                startInfo.Verb = "runas";
-
-
-                var process = Process.Start(startInfo);
-                process.WaitForExit();
-            }
-
-            authToken = readAuthToken(localZtDir + "\\authtoken.secret");
-
-            if ((authToken == null) || (authToken.Length <= 0))
-            {
-                MessageBox.Show("Unable to read ZeroTier One authtoken", "ZeroTier One");
-                this.Close();
-                return false;
-            }
-
-            port = readPort(localZtDir + "\\zerotier-one.port");
-            handler = new APIHandler(port, authToken);
-            return true;
-        }
+        
 
         private void updateStatus()
         {
