@@ -102,6 +102,8 @@ void dropPrivileges(std::string homeDir) {
         return;
     }
 
+    createOwnedHomedir(homeDir, targetUser);
+
     if (prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_IS_SET, CAP_NET_RAW, 0, 0) < 0) {
         // Kernel has no support for ambient capabilities.
         notDropping(homeDir);
@@ -112,8 +114,6 @@ void dropPrivileges(std::string homeDir) {
         notDropping(homeDir);
         return;
     }
-
-    createOwnedHomedir(homeDir, targetUser);
 
     if (setCapabilities((1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW) | (1 << CAP_SETUID) | (1 << CAP_SETGID)) < 0) {
         fprintf(stderr, "ERROR: failed to set capabilities (not running as real root?)\n");
