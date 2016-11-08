@@ -673,12 +673,20 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	json &memberCapabilities = member["capabilities"];
 	json &memberTags = member["tags"];
 
-	if (rules.is_array()) {
-		for(unsigned long i=0;i<rules.size();++i) {
-			if (nc.ruleCount >= ZT_MAX_NETWORK_RULES)
-				break;
-			if (_parseRule(rules[i],nc.rules[nc.ruleCount]))
-				++nc.ruleCount;
+	if (metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,0) <= 0) {
+		// Old versions with no rules engine support get an allow everything rule.
+		// Since rules are enforced bidirectionally, newer versions *will* still
+		// enforce rules on the inbound side.
+		nc.ruleCount = 1;
+		nc.rules[0].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
+	} else {
+		if (rules.is_array()) {
+			for(unsigned long i=0;i<rules.size();++i) {
+				if (nc.ruleCount >= ZT_MAX_NETWORK_RULES)
+					break;
+				if (_parseRule(rules[i],nc.rules[nc.ruleCount]))
+					++nc.ruleCount;
+			}
 		}
 	}
 
