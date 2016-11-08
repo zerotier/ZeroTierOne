@@ -82,6 +82,9 @@ Most network settings are not writable, as they are defined by the network contr
 <tr><td>assignedAddresses</td><td>[string]</td><td>ZeroTier-managed IP address assignments as array of IP/netmask bits tuples</td><td>no</td></tr>
 <tr><td>routes</td><td>[route]</td><td>ZeroTier-managed route assignments for a network. See below for a description of the route object.</td><td>no</td></tr>
 <tr><td>portDeviceName</td><td>string</td><td>OS-specific network device name (if available)</td><td>no</td></tr>
+<tr><td>allowManaged</td><td>boolean</td><td>Whether ZeroTier-managed IP addresses are allowed.</td><td>yes</td></tr>
+<tr><td>allowGlobal</td><td>boolean</td><td>Whether globally-reachable IP addresses are allowed to be assigned.</td><td>yes</td></tr>
+<tr><td>allowDefault</td><td>boolean</td><td>Whether a default route is allowed to be assigned for the network (route all traffic via ZeroTier)</td><td>yes</td></tr> 
 </table>
 
 `route` objects
