@@ -1508,20 +1508,22 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 					Mutex::Lock _l(_db_m);
 
 					json member = _db.get("network",nwids,"member",Address(address).toString(),0);
-					if (!member.size())
-						return 404;
 					_db.erase("network",nwids,"member",Address(address).toString());
 
+					if (!member.size())
+						return 404;
 					responseBody = member.dump(2);
 					responseContentType = "application/json";
 					return 200;
 				}
 			} else {
 				Mutex::Lock _l(_db_m);
+
 				std::string pfx("network/"); pfx.append(nwids);
 				_db.filter(pfx,120000,[](const std::string &n,const json &obj) {
 					return false; // delete
 				});
+
 				responseBody = network.dump(2);
 				responseContentType = "application/json";
 				return 200;

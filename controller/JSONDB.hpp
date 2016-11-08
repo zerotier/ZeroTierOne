@@ -79,7 +79,7 @@ public:
 	{
 		for(std::map<std::string,_E>::iterator i(_db.lower_bound(prefix));i!=_db.end();) {
 			if ((i->first.length() >= prefix.length())&&(!memcmp(i->first.data(),prefix.data(),prefix.length()))) {
-				if (!func(i->first,get(i->second.obj,maxSinceCheck))) {
+				if (!func(i->first,get(i->first,maxSinceCheck))) {
 					std::map<std::string,_E>::iterator i2(i); ++i2;
 					this->erase(i->first);
 					i = i2;
