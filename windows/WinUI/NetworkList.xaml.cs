@@ -23,9 +23,8 @@ namespace WinUI
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class NetworkList : Window
     {
-        APIHandler handler;
         Regex charRegex = new Regex("[0-9a-fxA-FX]");
         Regex wholeStringRegex = new Regex("^[0-9a-fxA-FX]+$");
 
@@ -33,20 +32,9 @@ namespace WinUI
 
         bool connected = false;
 
-        public MainWindow()
+        public NetworkList()
         {
             InitializeComponent();
-        }
-
-
-        public void SetAPIHandler(APIHandler handler)
-        {
-            timer.Stop();
-            timer = new Timer();
-
-            this.handler = handler;
-
-            networksPage.SetAPIHandler(handler);
 
             updateStatus();
 
@@ -64,11 +52,10 @@ namespace WinUI
             timer.Interval = 2000;
             timer.Enabled = true;
         }
-        
 
         private void updateStatus()
         {
-            var status = handler.GetStatus();
+            var status = APIHandler.Instance.GetStatus();
 
             if (status != null)
             {
@@ -108,7 +95,7 @@ namespace WinUI
 
         private void updateNetworks()
         {
-            var networks = handler.GetNetworks();
+            var networks = APIHandler.Instance.GetNetworks();
 
             networksPage.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
             {
@@ -141,7 +128,7 @@ namespace WinUI
             }
             else
             {
-                handler.JoinNetwork(joinNetworkID.Text);
+                APIHandler.Instance.JoinNetwork(joinNetworkID.Text);
             }
         }
 

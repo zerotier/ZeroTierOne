@@ -19,7 +19,8 @@ namespace WinUI
 
         private string url = null;
 
-        private static APIHandler instance;
+        private static volatile APIHandler instance;
+        private static object syncRoot = new Object();
 
         public static APIHandler Instance
         {
@@ -27,7 +28,16 @@ namespace WinUI
             {
                 if (instance == null)
                 {
-
+                    lock (syncRoot)
+                    {
+                        if (instance == null)
+                        {
+                            if (!initHandler())
+                            {
+                                return null;
+                            }
+                        }
+                    }
                 }
 
                 return instance;

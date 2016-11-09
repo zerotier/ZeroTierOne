@@ -20,14 +20,12 @@ namespace WinUI
     /// </summary>
     public partial class NetworkInfoView : UserControl
     {
-        private APIHandler handler;
         private ZeroTierNetwork network;
 
-        public NetworkInfoView(APIHandler handler, ZeroTierNetwork network)
+        public NetworkInfoView(ZeroTierNetwork network)
         {
             InitializeComponent();
 
-            this.handler = handler;
             this.network = network;
 
             UpdateNetworkData();
@@ -78,13 +76,13 @@ namespace WinUI
 
         private void leaveButton_Click(object sender, RoutedEventArgs e)
         {
-            handler.LeaveNetwork(network.NetworkId);
+            APIHandler.Instance.LeaveNetwork(network.NetworkId);
         }
 
         private void AllowManaged_CheckStateChanged(object sender, RoutedEventArgs e)
         {
             CheckBox cb = sender as CheckBox;
-            handler.JoinNetwork(network.NetworkId,
+            APIHandler.Instance.JoinNetwork(network.NetworkId,
                 allowManaged.IsChecked ?? false,
                 allowGlobal.IsChecked ?? false,
                 allowDefault.IsChecked ?? false);
@@ -93,7 +91,7 @@ namespace WinUI
         private void AllowGlobal_CheckStateChanged(object sender, RoutedEventArgs e)
         {
             CheckBox cb = sender as CheckBox;
-            handler.JoinNetwork(network.NetworkId,
+            APIHandler.Instance.JoinNetwork(network.NetworkId,
                 allowManaged.IsChecked ?? false,
                 allowGlobal.IsChecked ?? false,
                 allowDefault.IsChecked ?? false);
@@ -102,7 +100,7 @@ namespace WinUI
         private void AllowDefault_CheckStateChanged(object sender, RoutedEventArgs e)
         {
             CheckBox cb = sender as CheckBox;
-            handler.JoinNetwork(network.NetworkId,
+            APIHandler.Instance.JoinNetwork(network.NetworkId,
                 allowManaged.IsChecked ?? false,
                 allowGlobal.IsChecked ?? false,
                 allowDefault.IsChecked ?? false);

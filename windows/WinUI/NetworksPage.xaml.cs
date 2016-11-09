@@ -20,16 +20,9 @@ namespace WinUI
     /// </summary>
     public partial class NetworksPage : UserControl
     {
-        private APIHandler handler;
-
         public NetworksPage()
         {
             InitializeComponent();
-        }
-
-        public void SetAPIHandler(APIHandler handler)
-        {
-            this.handler = handler;
         }
 
         public void setNetworks(List<ZeroTierNetwork> networks)
@@ -44,7 +37,6 @@ namespace WinUI
             {
                 this.wrapPanel.Children.Add(
                     new NetworkInfoView(
-                        handler,
                         networks.ElementAt<ZeroTierNetwork>(i)));
             }
         }

@@ -15,10 +15,12 @@
                         PreviewTrayContextMenuOpen="ToolbarItem_PreviewTrayContextMenuOpen">
             <tb:TaskbarIcon.ContextMenu>
                 <ContextMenu>
-                    <MenuItem Header="Node ID: abeb9f9bc5"/>
+                    <MenuItem Header="Node ID: abeb9f9bc5"
+                              Click="ToolbarItem_NodeIDClicked"/>
                     <Separator/>
                     <MenuItem Header="Join Network..."/>
-                    <MenuItem Header="Show Networks..."/>
+                    <MenuItem Header="Show Networks..."
+                              Click="ToolbarItem_ShowNetworksClicked"/>
                     <Separator/>
                     <MenuItem Header="About..."/>
                     <MenuItem Header="Preferences..."/>

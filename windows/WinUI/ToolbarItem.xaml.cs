@@ -24,7 +24,9 @@ namespace WinUI
     /// </summary>
     public partial class ToolbarItem : Window
     {
-        APIHandler handler = APIHandler.Instance;
+        private APIHandler handler = APIHandler.Instance;
+
+        NetworkList netList = null;
 
         public ToolbarItem()
         {
@@ -39,6 +41,30 @@ namespace WinUI
         private void ToolbarItem_PreviewTrayContextMenuOpen(object sender, System.Windows.RoutedEventArgs e)
         {
             Console.WriteLine("PreviewTrayContextMenuOpen");
+        }
+
+        private void ToolbarItem_NodeIDClicked(object sender, System.Windows.RoutedEventArgs e)
+        {
+
+        }
+
+        private void ToolbarItem_ShowNetworksClicked(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (netList == null)
+            {
+                netList = new WinUI.NetworkList();
+                netList.Closed += ShowNetworksClosed;
+            }
+
+            if (!netList.IsVisible)
+            {
+                netList.Show();
+            }
+        }
+
+        private void ShowNetworksClosed(object sender, System.EventArgs e)
+        {
+            netList = null;
         }
     }
 }
