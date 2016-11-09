@@ -115,7 +115,6 @@ private:
 		if (!member.count("creationTime")) member["creationTime"] = OSUtils::now();
 		if (!member.count("noAutoAssignIps")) member["noAutoAssignIps"] = false;
 		if (!member.count("revision")) member["revision"] = 0ULL;
-		if (!member.count("enableBroadcast")) member["enableBroadcast"] = true;
 		member["objtype"] = "member";
 	}
 	inline void _initNetwork(nlohmann::json &network)
@@ -124,6 +123,7 @@ private:
 		if (!network.count("creationTime")) network["creationTime"] = OSUtils::now();
 		if (!network.count("name")) network["name"] = "";
 		if (!network.count("multicastLimit")) network["multicastLimit"] = (uint64_t)32;
+		if (!network.count("enableBroadcast")) network["enableBroadcast"] = true;
 		if (!network.count("v4AssignMode")) network["v4AssignMode"] = {{"zt",false}};
 		if (!network.count("v6AssignMode")) network["v6AssignMode"] = {{"rfc4193",false},{"zt",false},{"6plane",false}};
 		if (!network.count("authTokens")) network["authTokens"] = nlohmann::json::array();
