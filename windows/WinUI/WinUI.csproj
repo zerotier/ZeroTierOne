@@ -115,7 +115,7 @@
     <Compile Include="ZeroTierPeer.cs" />
     <Compile Include="ZeroTierNetwork.cs" />
     <Compile Include="ZeroTierStatus.cs" />
-    <Page Include="NetworkList.xaml">
+    <Page Include="NetworkListView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -124,8 +124,8 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="NetworkList.xaml.cs">
-      <DependentUpon>NetworkList.xaml</DependentUpon>
+    <Compile Include="NetworkListView.xaml.cs">
+      <DependentUpon>NetworkListView.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
     <Page Include="NetworkInfoView.xaml">

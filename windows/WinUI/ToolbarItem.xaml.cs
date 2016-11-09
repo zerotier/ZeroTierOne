@@ -26,7 +26,7 @@ namespace WinUI
     {
         private APIHandler handler = APIHandler.Instance;
 
-        NetworkList netList = null;
+        NetworkListView netList = null;
 
         public ToolbarItem()
         {
@@ -52,12 +52,8 @@ namespace WinUI
         {
             if (netList == null)
             {
-                netList = new WinUI.NetworkList();
+                netList = new WinUI.NetworkListView();
                 netList.Closed += ShowNetworksClosed;
-            }
-
-            if (!netList.IsVisible)
-            {
                 netList.Show();
             }
         }

@@ -23,7 +23,7 @@ namespace WinUI
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class NetworkList : Window
+    public partial class NetworkListView : Window
     {
         Regex charRegex = new Regex("[0-9a-fxA-FX]");
         Regex wholeStringRegex = new Regex("^[0-9a-fxA-FX]+$");
@@ -32,7 +32,7 @@ namespace WinUI
 
         bool connected = false;
 
-        public NetworkList()
+        public NetworkListView()
         {
             InitializeComponent();
 
