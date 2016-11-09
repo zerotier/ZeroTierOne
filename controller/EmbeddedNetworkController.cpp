@@ -1535,6 +1535,9 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 					return false; // delete
 				});
 
+				Mutex::Lock _l2(_nmiCache_m);
+				_nmiCache.erase(nwid);
+
 				responseBody = network.dump(2);
 				responseContentType = "application/json";
 				return 200;
@@ -1614,43 +1617,60 @@ void EmbeddedNetworkController::_getNetworkMemberInfo(uint64_t now,uint64_t nwid
 	char pfx[256];
 	Utils::snprintf(pfx,sizeof(pfx),"network/%.16llx/member",nwid);
 
-	Mutex::Lock _l(_db_m);
-	_db.filter(pfx,120000,[&nmi,&now](const std::string &n,const json &member) {
-		try {
-			if (_jB(member["authorized"],false)) {
-				++nmi.authorizedMemberCount;
+	{
+		Mutex::Lock _l(_nmiCache_m);
+		std::map<uint64_t,_NetworkMemberInfo>::iterator c(_nmiCache.find(nwid));
+		if ((c != _nmiCache.end())&&((now - c->second.nmiTimestamp) < 1000)) { // a short duration cache but limits CPU use on big networks
+			nmi = c->second;
+			return;
+		}
+	}
 
-				if (member.count("recentLog")) {
-					const json &mlog = member["recentLog"];
-					if ((mlog.is_array())&&(mlog.size() > 0)) {
-						const json &mlog1 = mlog[0];
-						if (mlog1.is_object()) {
-							if ((now - _jI(mlog1["ts"],0ULL)) < ZT_NETCONF_NODE_ACTIVE_THRESHOLD)
-								++nmi.activeMemberCount;
+	{
+		Mutex::Lock _l(_db_m);
+		_db.filter(pfx,120000,[&nmi,&now](const std::string &n,const json &member) {
+			try {
+				if (_jB(member["authorized"],false)) {
+					++nmi.authorizedMemberCount;
+
+					if (member.count("recentLog")) {
+						const json &mlog = member["recentLog"];
+						if ((mlog.is_array())&&(mlog.size() > 0)) {
+							const json &mlog1 = mlog[0];
+							if (mlog1.is_object()) {
+								if ((now - _jI(mlog1["ts"],0ULL)) < ZT_NETCONF_NODE_ACTIVE_THRESHOLD)
+									++nmi.activeMemberCount;
+							}
 						}
 					}
-				}
 
-				if (_jB(member["activeBridge"],false)) {
-					nmi.activeBridges.insert(_jS(member["id"],"0000000000"));
-				}
+					if (_jB(member["activeBridge"],false)) {
+						nmi.activeBridges.insert(_jS(member["id"],"0000000000"));
+					}
 
-				if (member.count("ipAssignments")) {
-					const json &mips = member["ipAssignments"];
-					if (mips.is_array()) {
-						for(unsigned long i=0;i<mips.size();++i) {
-							InetAddress mip(_jS(mips[i],""));
-							if ((mip.ss_family == AF_INET)||(mip.ss_family == AF_INET6))
-								nmi.allocatedIps.insert(mip);
+					if (member.count("ipAssignments")) {
+						const json &mips = member["ipAssignments"];
+						if (mips.is_array()) {
+							for(unsigned long i=0;i<mips.size();++i) {
+								InetAddress mip(_jS(mips[i],""));
+								if ((mip.ss_family == AF_INET)||(mip.ss_family == AF_INET6))
+									nmi.allocatedIps.insert(mip);
+							}
 						}
 					}
+				} else {
+					nmi.mostRecentDeauthTime = std::max(nmi.mostRecentDeauthTime,_jI(member["lastDeauthorizedTime"],0ULL));
 				}
-			} else {
-				nmi.mostRecentDeauthTime = std::max(nmi.mostRecentDeauthTime,_jI(member["lastDeauthorizedTime"],0ULL));
-			}
-		} catch ( ... ) {}
-		return true;
-	});
+			} catch ( ... ) {}
+			return true;
+		});
+	}
+	nmi.nmiTimestamp = now;
+
+	{
+		Mutex::Lock _l(_nmiCache_m);
+		_nmiCache[nwid] = nmi;
+	}
 }
 
 } // namespace ZeroTier

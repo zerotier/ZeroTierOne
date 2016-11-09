@@ -96,7 +96,10 @@ private:
 		unsigned long activeMemberCount;
 		unsigned long totalMemberCount;
 		uint64_t mostRecentDeauthTime;
+		uint64_t nmiTimestamp; // time this NMI structure was computed
 	};
+	std::map<uint64_t,_NetworkMemberInfo> _nmiCache;
+	Mutex _nmiCache_m;
 	void _getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi);
 
 	// These init objects with default and static/informational fields
