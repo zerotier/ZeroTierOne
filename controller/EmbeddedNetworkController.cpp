@@ -470,11 +470,21 @@ EmbeddedNetworkController::~EmbeddedNetworkController()
 {
 }
 
-NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData,NetworkConfig &nc)
+void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 {
-	if (((!signingId)||(!signingId.hasPrivate()))||(signingId.address().toInt() != (nwid >> 24))) {
-		return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
-	}
+	this->_sender = sender;
+	this->_signingId = signingId;
+}
+
+void EmbeddedNetworkController::request(
+	uint64_t nwid,
+	const InetAddress &fromAddr,
+	uint64_t requestPacketId,
+	const Identity &identity,
+	const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData)
+{
+	if (((!_signingId)||(!_signingId.hasPrivate()))||(_signingId.address().toInt() != (nwid >> 24))||(!_sender))
+		return;
 
 	const uint64_t now = OSUtils::now();
 
@@ -483,7 +493,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		Mutex::Lock _l(_lastRequestTime_m);
 		uint64_t &lrt = _lastRequestTime[std::pair<uint64_t,uint64_t>(identity.address().toInt(),nwid)];
 		if ((now - lrt) <= ZT_NETCONF_MIN_REQUEST_PERIOD)
-			return NetworkController::NETCONF_QUERY_IGNORE;
+			return;
 		lrt = now;
 	}
 
@@ -496,8 +506,13 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		network = _db.get("network",nwids,0);
 		member = _db.get("network",nwids,"member",identity.address().toString(),0);
 	}
-	if (!network.size())
-		return NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND;
+
+	if (!network.size()) {
+		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
+		return;
+	}
+
+	json origMember(member); // for detecting modification later
 	_initMember(member);
 
 	{
@@ -507,10 +522,13 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 			// a "collision" from being able to auth onto our network in place of an already
 			// known member.
 			try {
-				if (Identity(haveIdStr.c_str()) != identity)
-					return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
+				if (Identity(haveIdStr.c_str()) != identity) {
+					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
+					return;
+				}
 			} catch ( ... ) {
-				return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
+				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
+				return;
 			}
 		} else {
 			// If we do not yet know this member's identity, learn it.
@@ -521,7 +539,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	// These are always the same, but make sure they are set
 	member["id"] = identity.address().toString();
 	member["address"] = member["id"];
-	member["nwid"] = network["id"];
+	member["nwid"] = nwids;
 
 	// Determine whether and how member is authorized
 	const char *authorizedBy = (const char *)0;
@@ -597,7 +615,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	}
 
 	// Log this request
-	{
+	if (requestPacketId) { // only log if this is a request, not for generated pushes
 		json rlEntry = json::object();
 		rlEntry["ts"] = now;
 		rlEntry["authorized"] = (authorizedBy) ? true : false;
@@ -620,22 +638,27 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 			}
 		}
 		member["recentLog"] = recentLog;
-	}
 
-	member["lastModified"] = now;
-	member["lastRequestMetaData"] = metaData.data();
+		// Also only do this on real requests
+		member["lastRequestMetaData"] = metaData.data();
+	}
 
 	// If they are not authorized, STOP!
 	if (!authorizedBy) {
-		Mutex::Lock _l(_db_m);
-		_db.put("network",nwids,"member",identity.address().toString(),member);
-		return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
+		if (origMember != member) {
+			member["lastModified"] = now;
+			Mutex::Lock _l(_db_m);
+			_db.put("network",nwids,"member",identity.address().toString(),member);
+		}
+		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
+		return;
 	}
 
 	// -------------------------------------------------------------------------
 	// If we made it this far, they are authorized.
 	// -------------------------------------------------------------------------
 
+	NetworkConfig nc;
 	_NetworkMemberInfo nmi;
 	_getNetworkMemberInfo(now,nwid,nmi);
 
@@ -661,8 +684,9 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	Utils::scopy(nc.name,sizeof(nc.name),_jS(network["name"],"").c_str());
 	nc.multicastLimit = (unsigned int)_jI(network["multicastLimit"],32ULL);
 
-	for(std::set<Address>::const_iterator ab(nmi.activeBridges.begin());ab!=nmi.activeBridges.end();++ab)
+	for(std::set<Address>::const_iterator ab(nmi.activeBridges.begin());ab!=nmi.activeBridges.end();++ab) {
 		nc.addSpecialist(*ab,ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
+	}
 
 	json &v4AssignMode = network["v4AssignMode"];
 	json &v6AssignMode = network["v6AssignMode"];
@@ -714,7 +738,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 					}
 				}
 				nc.capabilities[nc.capabilityCount] = Capability((uint32_t)capId,nwid,now,1,capr,caprc);
-				if (nc.capabilities[nc.capabilityCount].sign(signingId,identity.address()))
+				if (nc.capabilities[nc.capabilityCount].sign(_signingId,identity.address()))
 					++nc.capabilityCount;
 				if (nc.capabilityCount >= ZT_MAX_NETWORK_CAPABILITIES)
 					break;
@@ -733,7 +757,7 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 			if (nc.tagCount >= ZT_MAX_NETWORK_TAGS)
 				break;
 			nc.tags[nc.tagCount] = Tag(nwid,now,identity.address(),t->first,t->second);
-			if (nc.tags[nc.tagCount].sign(signingId))
+			if (nc.tags[nc.tagCount].sign(_signingId))
 				++nc.tagCount;
 		}
 	}
@@ -923,17 +947,20 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	}
 
 	CertificateOfMembership com(now,credentialtmd,nwid,identity.address());
-	if (com.sign(signingId)) {
+	if (com.sign(_signingId)) {
 		nc.com = com;
 	} else {
-		return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR);
+		return;
 	}
 
-	{
+	if (member != origMember) {
+		member["lastModified"] = now;
 		Mutex::Lock _l(_db_m);
 		_db.put("network",nwids,"member",identity.address().toString(),member);
 	}
-	return NetworkController::NETCONF_QUERY_OK;
+
+	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),nc,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
 }
 
 unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(

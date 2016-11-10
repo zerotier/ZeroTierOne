@@ -490,6 +490,7 @@ void Node::clearLocalInterfaceAddresses()
 void Node::setNetconfMaster(void *networkControllerInstance)
 {
 	RR->localNetworkController = reinterpret_cast<NetworkController *>(networkControllerInstance);
+	RR->localNetworkController->init(RR->identity,this);
 }
 
 ZT_ResultCode Node::circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *))
@@ -716,6 +717,90 @@ void Node::postCircuitTestReport(const ZT_CircuitTestReport *report)
 void Node::setTrustedPaths(const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count)
 {
 	RR->topology->setTrustedPaths(reinterpret_cast<const InetAddress *>(networks),ids,count);
+}
+
+void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig)
+{
+	if (destination == RR->identity.address()) {
+		SharedPtr<Network> n(network(nwid));
+		if (!n) return;
+		n->setConfiguration(nc,true);
+	} else {
+		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+		try {
+			if (nc.toDictionary(*dconf,sendLegacyFormatConfig)) {
+				uint64_t configUpdateId = prng();
+				if (!configUpdateId) ++configUpdateId;
+
+				const unsigned int totalSize = dconf->sizeBytes();
+				unsigned int chunkIndex = 0;
+				while (chunkIndex < totalSize) {
+					const unsigned int chunkLen = std::min(totalSize - chunkIndex,(unsigned int)(ZT_UDP_DEFAULT_PAYLOAD_MTU - (ZT_PACKET_IDX_PAYLOAD + 256)));
+					Packet outp(destination,RR->identity.address(),Packet::VERB_OK);
+					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+					outp.append(requestPacketId);
+
+					const unsigned int sigStart = outp.size();
+					outp.append(nwid);
+					outp.append((uint16_t)chunkLen);
+					outp.append((const void *)(dconf->data() + chunkIndex),chunkLen);
+
+					outp.append((uint8_t)0); // no flags
+					outp.append((uint64_t)configUpdateId);
+					outp.append((uint32_t)totalSize);
+					outp.append((uint32_t)chunkIndex);
+
+					C25519::Signature sig(RR->identity.sign(reinterpret_cast<const uint8_t *>(outp.data()) + sigStart,outp.size() - sigStart));
+					outp.append((uint8_t)1);
+					outp.append((uint16_t)ZT_C25519_SIGNATURE_LEN);
+					outp.append(sig.data,ZT_C25519_SIGNATURE_LEN);
+
+					outp.compress();
+					RR->sw->send(outp,true);
+					chunkIndex += chunkLen;
+				}
+			}
+			delete dconf;
+		} catch ( ... ) {
+			delete dconf;
+			throw;
+		}
+	}
+}
+
+void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode)
+{
+	if (destination == RR->identity.address()) {
+		SharedPtr<Network> n(network(nwid));
+		if (!n) return;
+		switch(errorCode) {
+			case NetworkController::NC_ERROR_OBJECT_NOT_FOUND:
+			case NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR:
+				n->setNotFound();
+				break;
+			case NetworkController::NC_ERROR_ACCESS_DENIED:
+				n->setAccessDenied();
+				break;
+
+			default: break;
+		}
+	} else if (requestPacketId) {
+		Packet outp(destination,RR->identity.address(),Packet::VERB_ERROR);
+		outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+		outp.append(requestPacketId);
+		switch(errorCode) {
+			//case NetworkController::NC_ERROR_OBJECT_NOT_FOUND:
+			//case NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR:
+			default:
+				outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
+				break;
+			case NetworkController::NC_ERROR_ACCESS_DENIED:
+				outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
+				break;
+		}
+		outp.append(nwid);
+		RR->sw->send(outp,true);
+	}
 }
 
 } // namespace ZeroTier

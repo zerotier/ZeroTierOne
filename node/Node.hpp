@@ -36,6 +36,7 @@
 #include "Network.hpp"
 #include "Path.hpp"
 #include "Salsa20.hpp"
+#include "NetworkController.hpp"
 
 #undef TRACE
 #ifdef ZT_TRACE
@@ -55,7 +56,7 @@ namespace ZeroTier {
  *
  * The pointer returned by ZT_Node_new() is an instance of this class.
  */
-class Node
+class Node : public NetworkController::Sender
 {
 public:
 	Node(
@@ -69,7 +70,7 @@ public:
 		ZT_PathCheckFunction pathCheckFunction,
 		ZT_EventCallback eventCallback);
 
-	~Node();
+	virtual ~Node();
 
 	// Public API Functions ----------------------------------------------------
 
@@ -281,6 +282,9 @@ public:
 		}
 		return false;
 	}
+
+	virtual void ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig);
+	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode);
 
 private:
 	inline SharedPtr<Network> _network(uint64_t nwid) const

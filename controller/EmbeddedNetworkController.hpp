@@ -52,13 +52,14 @@ public:
 	EmbeddedNetworkController(Node *node,const char *dbPath);
 	virtual ~EmbeddedNetworkController();
 
-	virtual NetworkController::ResultCode doNetworkConfigRequest(
-		const InetAddress &fromAddr,
-		const Identity &signingId,
-		const Identity &identity,
+	virtual void init(const Identity &signingId,Sender *sender);
+
+	virtual void request(
 		uint64_t nwid,
-		const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData,
-		NetworkConfig &nc);
+		const InetAddress &fromAddr,
+		uint64_t requestPacketId,
+		const Identity &identity,
+		const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
 
 	unsigned int handleControlPlaneHttpGET(
 		const std::vector<std::string> &path,
@@ -156,6 +157,9 @@ private:
 
 	Node *const _node;
 	std::string _path;
+
+	NetworkController::Sender *_sender;
+	Identity _signingId;
 
 	struct _CircuitTestEntry
 	{

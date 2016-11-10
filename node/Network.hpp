@@ -188,6 +188,15 @@ public:
 	uint64_t handleConfigChunk(const Packet &chunk,unsigned int ptr);
 
 	/**
+	 * Set network configuration
+	 *
+	 * @param nconf Network configuration
+	 * @param saveToDisk Save to disk? Used during loading, should usually be true otherwise.
+	 * @return 0 == bad, 1 == accepted but duplicate/unchanged, 2 == accepted and new
+	 */
+	int setConfiguration(const NetworkConfig &nconf,bool saveToDisk);
+
+	/**
 	 * Set netconf failure to 'access denied' -- called in IncomingPacket when controller reports this
 	 */
 	inline void setAccessDenied()
@@ -328,7 +337,6 @@ public:
 	inline void **userPtr() throw() { return &_uPtr; }
 
 private:
-	int _setConfiguration(const NetworkConfig &nconf,bool saveToDisk);
 	ZT_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
 	bool _gate(const SharedPtr<Peer> &peer);
