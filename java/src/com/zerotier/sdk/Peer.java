@@ -34,8 +34,6 @@ import java.util.ArrayList;
  */
 public final class Peer {
     private long address;
-    private long lastUnicastFrame;
-    private long lastMulticastFrame;
     private int versionMajor;
     private int versionMinor;
     private int versionRev;
@@ -50,20 +48,6 @@ public final class Peer {
      */
     public final long address() {
         return address;
-    }
-
-    /**
-     * Time we last received a unicast frame from this peer
-     */
-    public final long lastUnicastFrame() {
-        return lastUnicastFrame;
-    }
-
-    /**
-     * Time we last received a multicast rame from this peer
-     */
-    public final long lastMulticastFrame() {
-        return lastMulticastFrame;
     }
 
     /**
