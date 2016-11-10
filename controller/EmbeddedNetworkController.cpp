@@ -622,8 +622,8 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		member["recentLog"] = recentLog;
 	}
 
-	// Update last modified time
 	member["lastModified"] = now;
+	member["lastRequestMetaData"] = metaData.data();
 
 	// If they are not authorized, STOP!
 	if (!authorizedBy) {
