@@ -488,7 +488,7 @@ void EmbeddedNetworkController::request(
 
 	const uint64_t now = OSUtils::now();
 
-	{
+	if (requestPacketId) {
 		Mutex::Lock _l(_lastRequestTime_m);
 		uint64_t &lrt = _lastRequestTime[std::pair<uint64_t,uint64_t>(identity.address().toInt(),nwid)];
 		if ((now - lrt) <= ZT_NETCONF_MIN_REQUEST_PERIOD)
