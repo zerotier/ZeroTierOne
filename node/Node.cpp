@@ -736,9 +736,11 @@ void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &de
 				unsigned int chunkIndex = 0;
 				while (chunkIndex < totalSize) {
 					const unsigned int chunkLen = std::min(totalSize - chunkIndex,(unsigned int)(ZT_UDP_DEFAULT_PAYLOAD_MTU - (ZT_PACKET_IDX_PAYLOAD + 256)));
-					Packet outp(destination,RR->identity.address(),Packet::VERB_OK);
-					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-					outp.append(requestPacketId);
+					Packet outp(destination,RR->identity.address(),(requestPacketId) ? Packet::VERB_OK : Packet::VERB_NETWORK_CONFIG);
+					if (requestPacketId) {
+						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+						outp.append(requestPacketId);
+					}
 
 					const unsigned int sigStart = outp.size();
 					outp.append(nwid);
@@ -800,7 +802,7 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 		}
 		outp.append(nwid);
 		RR->sw->send(outp,true);
-	}
+	} // else we can't send an ERROR() in response to nothing, so discard
 }
 
 } // namespace ZeroTier
