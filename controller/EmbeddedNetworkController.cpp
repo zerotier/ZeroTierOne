@@ -488,7 +488,6 @@ void EmbeddedNetworkController::request(
 
 	const uint64_t now = OSUtils::now();
 
-	// Check rate limit circuit breaker to prevent flooding
 	{
 		Mutex::Lock _l(_lastRequestTime_m);
 		uint64_t &lrt = _lastRequestTime[std::pair<uint64_t,uint64_t>(identity.address().toInt(),nwid)];
@@ -1137,12 +1136,12 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						Mutex::Lock _l(_db_m);
 						member = _db.get("network",nwids,"member",Address(address).toString(),0);
 					}
+					json origMember(member); // for detecting changes
 					_initMember(member);
 
 					try {
 						if (b.count("activeBridge")) member["activeBridge"] = _jB(b["activeBridge"],false);
 						if (b.count("noAutoAssignIps")) member["noAutoAssignIps"] = _jB(b["noAutoAssignIps"],false);
-						if ((b.count("identity"))&&(!member.count("identity"))) member["identity"] = _jS(b["identity"],""); // allow identity to be populated only if not already known
 
 						if (b.count("authorized")) {
 							const bool newAuth = _jB(b["authorized"],false);
@@ -1214,13 +1213,16 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					member["id"] = addrs;
 					member["address"] = addrs; // legacy
 					member["nwid"] = nwids;
-					member["lastModified"] = now;
-					json &revj = member["revision"];
-					member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 
-					{
-						Mutex::Lock _l(_db_m);
-						_db.put("network",nwids,"member",Address(address).toString(),member);
+					if (member != origMember) {
+						member["lastModified"] = now;
+						json &revj = member["revision"];
+						member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
+						{
+							Mutex::Lock _l(_db_m);
+							_db.put("network",nwids,"member",Address(address).toString(),member);
+						}
+						_pushMemberUpdate(now,nwid,member);
 					}
 
 					// Add non-persisted fields
@@ -1309,6 +1311,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 					network = _db.get("network",nwids,0);
 				}
+				json origNetwork(network); // for detecting changes
 				_initNetwork(network);
 
 				try {
@@ -1489,13 +1492,20 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 				network["id"] = nwids;
 				network["nwid"] = nwids; // legacy
-				json &rev = network["revision"];
-				network["revision"] = (rev.is_number() ? ((uint64_t)rev + 1ULL) : 1ULL);
-				network["lastModified"] = now;
 
-				{
-					Mutex::Lock _l(_db_m);
-					_db.put("network",nwids,network);
+				if (network != origNetwork) {
+					json &revj = network["revision"];
+					network["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
+					network["lastModified"] = now;
+					{
+						Mutex::Lock _l(_db_m);
+						_db.put("network",nwids,network);
+					}
+					std::string pfx("network/"); pfx.append(nwids); pfx.append("/member/");
+					_db.filter(pfx,120000,[this,&now,&nwid](const std::string &n,const json &obj) {
+						_pushMemberUpdate(now,nwid,obj);
+						return true; // do not delete
+					});
 				}
 
 				_NetworkMemberInfo nmi;
@@ -1698,6 +1708,28 @@ void EmbeddedNetworkController::_getNetworkMemberInfo(uint64_t now,uint64_t nwid
 		Mutex::Lock _l(_nmiCache_m);
 		_nmiCache[nwid] = nmi;
 	}
+}
+
+void EmbeddedNetworkController::_pushMemberUpdate(uint64_t now,uint64_t nwid,const nlohmann::json &member)
+{
+	try {
+		const std::string idstr = member["identity"];
+		const std::string mdstr = member["lastRequestMetaData"];
+		if ((idstr.length() > 0)&&(mdstr.length() > 0)) {
+			const Identity id(idstr);
+			bool online;
+			{
+				Mutex::Lock _l(_lastRequestTime_m);
+				std::map<std::pair<uint64_t,uint64_t>,uint64_t>::iterator lrt(_lastRequestTime.find(std::pair<uint64_t,uint64_t>(id.address().toInt(),nwid)));
+				online = ( (lrt != _lastRequestTime.end()) && ((now - lrt->second) < ZT_NETWORK_AUTOCONF_DELAY) );
+			}
+			Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> *metaData = new Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY>(mdstr.c_str());
+			try {
+				this->request(nwid,InetAddress(),0,id,*metaData);
+			} catch ( ... ) {}
+			delete metaData;
+		}
+	} catch ( ... ) {}
 }
 
 } // namespace ZeroTier

@@ -103,6 +103,8 @@ private:
 	Mutex _nmiCache_m;
 	void _getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi);
 
+	void _pushMemberUpdate(uint64_t now,uint64_t nwid,const nlohmann::json &member);
+
 	// These init objects with default and static/informational fields
 	inline void _initMember(nlohmann::json &member)
 	{
