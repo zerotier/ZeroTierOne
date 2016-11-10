@@ -5,8 +5,18 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WinUI"
         xmlns:tb="http://www.hardcodet.net/taskbar"
+        xmlns:scm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
         mc:Ignorable="d"
-        Height="300" Width="300" Visibility="Hidden">
+        Height="300" Width="300" Visibility="Hidden" Name="Toolbar">
+
+    <Window.Resources>
+        <CollectionViewSource Source="{Binding ElementName=Toolbar, Path=NetworkCollection}" x:Key="KnownNetworks">
+            <CollectionViewSource.SortDescriptions>
+                <scm:SortDescription PropertyName="NetworkId" Direction="Ascending"/>
+            </CollectionViewSource.SortDescriptions>
+        </CollectionViewSource>   
+    </Window.Resources>
+    
     <Grid>
         <tb:TaskbarIcon x:Name="MyNotifyIcon"
                         IconSource="ZeroTierIcon.ico"
@@ -16,17 +26,34 @@
             <tb:TaskbarIcon.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="Node ID: abeb9f9bc5"
-                              Click="ToolbarItem_NodeIDClicked"/>
+                        Click="ToolbarItem_NodeIDClicked"
+                        x:Name="nodeIdMenuItem"/>
                     <Separator/>
-                    <MenuItem Header="Join Network..."/>
+                    <MenuItem Header="Join Network..."
+                        Click="ToolbarItem_JoinNetworkClicked"/>
                     <MenuItem Header="Show Networks..."
-                              Click="ToolbarItem_ShowNetworksClicked"/>
+                        Click="ToolbarItem_ShowNetworksClicked"/>
+                    <Separator/>
+                    <MenuItem Header="Networks">
+                        <MenuItem.ItemsSource>
+                            <CompositeCollection>
+                                <CollectionContainer Collection="{Binding Source={StaticResource KnownNetworks}}"/>
+                            </CompositeCollection>
+                        </MenuItem.ItemsSource>
+                        <MenuItem.ItemContainerStyle>
+                            <Style>
+                                <Setter Property="MenuItem.Header" Value="{Binding Title}"/>
+                                <Setter Property="MenuItem.IsCheckable" Value="True"/>
+                                <Setter Property="MenuItem.IsChecked" Value="{Binding IsConnected}"/>
+                            </Style>
+                        </MenuItem.ItemContainerStyle>
+                    </MenuItem>
                     <Separator/>
                     <MenuItem Header="About..."/>
                     <MenuItem Header="Preferences..."/>
                     <Separator/>
                     <MenuItem Header="Quit"/>
-                </ContextMenu>
+                 </ContextMenu>
             </tb:TaskbarIcon.ContextMenu>
 
         </tb:TaskbarIcon>

@@ -128,7 +128,9 @@ namespace WinUI
             this.authtoken = authtoken;
         }
 
-        public ZeroTierStatus GetStatus()
+        public delegate void StatusCallback(ZeroTierStatus status);
+
+        public void GetStatus(StatusCallback cb)
         {
             var request = WebRequest.Create(url + "/status" + "?auth=" + authtoken) as HttpWebRequest;
             if (request != null)
@@ -153,25 +155,27 @@ namespace WinUI
                     {
                         Console.WriteLine(e.ToString());
                     }
-                    return status;
+                    cb(status);
                 }
             }
             catch (System.Net.Sockets.SocketException)
             {
-                return null;
+                cb(null);
             }
             catch (System.Net.WebException)
             {
-                return null;
+                cb(null);
             }
         }
 
-        public List<ZeroTierNetwork> GetNetworks()
+        public delegate void NetworkListCallback(List<ZeroTierNetwork> networks);
+
+        public void GetNetworks(NetworkListCallback cb)
         {
             var request = WebRequest.Create(url + "/network" + "?auth=" + authtoken) as HttpWebRequest;
             if (request == null)
             {
-                return null;
+                cb(null);
             }
 
             request.Method = "GET";
@@ -188,21 +192,26 @@ namespace WinUI
                     try
                     {
                         networkList = JsonConvert.DeserializeObject<List<ZeroTierNetwork>>(responseText);
+                        foreach (ZeroTierNetwork n in networkList)
+                        {
+                            // all networks received via JSON are connected by definition
+                            n.IsConnected = true;
+                        }
                     }
                     catch (JsonReaderException e)
                     {
                         Console.WriteLine(e.ToString());
                     }
-                    return networkList;
+                    cb(networkList);
                 }
             }
             catch (System.Net.Sockets.SocketException)
             {
-                return null;
+                cb(null);
             }
             catch (System.Net.WebException)
             {
-                return null;
+                cb(null);
             }
         }
 
@@ -275,12 +284,14 @@ namespace WinUI
             }
         }
 
-        public List<ZeroTierPeer> GetPeers()
+        public delegate void PeersCallback(List<ZeroTierPeer> peers);
+
+        public void GetPeers(PeersCallback cb)
         {
             var request = WebRequest.Create(url + "/peer" + "?auth=" + authtoken) as HttpWebRequest;
             if (request == null)
             {
-                return null;
+                cb(null);
             }
 
             request.Method = "GET";
@@ -302,16 +313,16 @@ namespace WinUI
                     {
                         Console.WriteLine(e.ToString());
                     }
-                    return peerList;
+                    cb(peerList);
                 }
             }
             catch (System.Net.Sockets.SocketException)
             {
-                return null;
+                cb(null);
             }
             catch (System.Net.WebException)
             {
-                return null;
+                cb(null);
             }
         }
     }

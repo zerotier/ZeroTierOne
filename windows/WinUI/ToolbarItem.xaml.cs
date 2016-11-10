@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -26,11 +27,75 @@ namespace WinUI
     {
         private APIHandler handler = APIHandler.Instance;
 
-        NetworkListView netList = null;
+        private NetworkListView netListView = null;
+        private List<ZeroTierNetwork> networkList = null;
+
+        private ObservableCollection<ZeroTierNetwork> _networkCollection = new ObservableCollection<ZeroTierNetwork>();
+
+        public ObservableCollection<ZeroTierNetwork> NetworkCollection
+        {
+            get { return _networkCollection; }
+            set { _networkCollection = value; }
+        }
+
+        private Timer timer = null;
 
         public ToolbarItem()
         {
             InitializeComponent();
+
+            onUpdateTimer(this, null);
+
+            timer = new Timer();
+            timer.Elapsed += new ElapsedEventHandler(onUpdateTimer);
+            timer.Interval = 2000;
+            timer.Enabled = true;
+
+            nodeIdMenuItem.Header = "OFFLINE";
+            nodeIdMenuItem.IsEnabled = false;
+        }
+
+        private void updateNetworks(List<ZeroTierNetwork> networks)
+        {
+            if (networks != null)
+            {
+                this.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    foreach (ZeroTierNetwork n in networks)
+                    {
+                        int index = _networkCollection.IndexOf(n);
+
+                        if (index == -1)
+                        {
+                            _networkCollection.Add(n);
+                        }
+                        else
+                        {
+                            _networkCollection[index] = n;
+                        }
+                    }
+
+                    this.networkList = networks;
+                }));
+            }
+        }
+
+        private void updateStatus(ZeroTierStatus status) 
+        {
+            if (status != null)
+            {
+                Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    nodeIdMenuItem.Header = "Node ID: " + status.Address;
+                    nodeIdMenuItem.IsEnabled = true;
+                }));
+            }
+        }
+
+        private void onUpdateTimer(object source, ElapsedEventArgs e)
+        {
+            APIHandler.Instance.GetStatus(updateStatus);
+            APIHandler.Instance.GetNetworks(updateNetworks);
         }
 
         private void ToolbarItem_TrayContextMenuOpen(object sender, System.Windows.RoutedEventArgs e)
@@ -50,17 +115,27 @@ namespace WinUI
 
         private void ToolbarItem_ShowNetworksClicked(object sender, System.Windows.RoutedEventArgs e)
         {
-            if (netList == null)
+            if (netListView == null)
             {
-                netList = new WinUI.NetworkListView();
-                netList.Closed += ShowNetworksClosed;
-                netList.Show();
+                netListView = new WinUI.NetworkListView();
+                netListView.Closed += ShowNetworksClosed;
+                netListView.Show();
             }
         }
 
         private void ShowNetworksClosed(object sender, System.EventArgs e)
         {
-            netList = null;
+            netListView = null;
+        }
+
+        private void ToolbarItem_JoinNetworkClicked(object sender, System.EventArgs e)
+        {
+
+        }
+
+        private void JoinNetworkClosed(object sender, System.EventArgs e)
+        {
+
         }
     }
 }

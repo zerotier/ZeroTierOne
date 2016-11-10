@@ -36,7 +36,7 @@ namespace WinUI
         {
             InitializeComponent();
 
-            updateStatus();
+            APIHandler.Instance.GetStatus(updateStatus);
 
             if (!connected)
             {
@@ -44,19 +44,19 @@ namespace WinUI
                 return;
             }
 
-            updateNetworks();
+            APIHandler.Instance.GetNetworks(updateNetworks);
 
             DataObject.AddPastingHandler(joinNetworkID, OnPaste);
 
             timer.Elapsed += new ElapsedEventHandler(OnUpdateTimer);
             timer.Interval = 2000;
             timer.Enabled = true;
+
+            
         }
 
-        private void updateStatus()
+        private void updateStatus(ZeroTierStatus status)
         {
-            var status = APIHandler.Instance.GetStatus();
-
             if (status != null)
             {
                 connected = true;
@@ -93,31 +93,21 @@ namespace WinUI
             }
         }
 
-        private void updateNetworks()
+        private void updateNetworks(List<ZeroTierNetwork> networks)
         {
-            var networks = APIHandler.Instance.GetNetworks();
-
-            networksPage.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+            if (networks != null)
             {
-                networksPage.setNetworks(networks);
-            }));
-        }
-
-        private void updatePeers()
-        {
-            //var peers = handler.GetPeers();
-
-            //peersPage.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-            //{
-            //    peersPage.SetPeers(peers);
-            //}));
+                networksPage.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    networksPage.setNetworks(networks);
+                }));
+            }
         }
 
         private void OnUpdateTimer(object source, ElapsedEventArgs e)
         {
-            updateStatus();
-            updateNetworks();
-            //updatePeers();
+            APIHandler.Instance.GetStatus(updateStatus);
+            APIHandler.Instance.GetNetworks(updateNetworks);
         }
 
         private void joinButton_Click(object sender, RoutedEventArgs e)
