@@ -459,6 +459,7 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 }
 
 EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPath) :
+	_threadsStarted(false),
 	_db(dbPath),
 	_node(node)
 {
@@ -468,6 +469,13 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPa
 
 EmbeddedNetworkController::~EmbeddedNetworkController()
 {
+	Mutex::Lock _l(_threads_m);
+	if (_threadsStarted) {
+		for(int i=0;i<(ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT*2);++i)
+			_queue.post((_RQEntry *)0);
+		for(int i=0;i<ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT;++i)
+			Thread::join(_threads[i]);
+	}
 }
 
 void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
@@ -486,480 +494,22 @@ void EmbeddedNetworkController::request(
 	if (((!_signingId)||(!_signingId.hasPrivate()))||(_signingId.address().toInt() != (nwid >> 24))||(!_sender))
 		return;
 
-	const uint64_t now = OSUtils::now();
-
-	if (requestPacketId) {
-		Mutex::Lock _l(_lastRequestTime_m);
-		uint64_t &lrt = _lastRequestTime[std::pair<uint64_t,uint64_t>(identity.address().toInt(),nwid)];
-		if ((now - lrt) <= ZT_NETCONF_MIN_REQUEST_PERIOD)
-			return;
-		lrt = now;
-	}
-
-	char nwids[24];
-	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",nwid);
-	json network;
-	json member;
 	{
-		Mutex::Lock _l(_db_m);
-		network = _db.get("network",nwids,0);
-		member = _db.get("network",nwids,"member",identity.address().toString(),0);
-	}
-
-	if (!network.size()) {
-		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
-		return;
-	}
-
-	json origMember(member); // for detecting modification later
-	_initMember(member);
-
-	{
-		std::string haveIdStr(_jS(member["identity"],""));
-		if (haveIdStr.length() > 0) {
-			// If we already know this member's identity perform a full compare. This prevents
-			// a "collision" from being able to auth onto our network in place of an already
-			// known member.
-			try {
-				if (Identity(haveIdStr.c_str()) != identity) {
-					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
-					return;
-				}
-			} catch ( ... ) {
-				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
-				return;
-			}
-		} else {
-			// If we do not yet know this member's identity, learn it.
-			member["identity"] = identity.toString(false);
+		Mutex::Lock _l(_threads_m);
+		if (!_threadsStarted) {
+			for(int i=0;i<ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT;++i)
+				_threads[i] = Thread::start(this);
 		}
+		_threadsStarted = true;
 	}
 
-	// These are always the same, but make sure they are set
-	member["id"] = identity.address().toString();
-	member["address"] = member["id"];
-	member["nwid"] = nwids;
-
-	// Determine whether and how member is authorized
-	const char *authorizedBy = (const char *)0;
-	if (_jB(member["authorized"],false)) {
-		authorizedBy = "memberIsAuthorized";
-	} else if (!_jB(network["private"],true)) {
-		authorizedBy = "networkIsPublic";
-		if (!member.count("authorized")) {
-			member["authorized"] = true;
-			json ah;
-			ah["a"] = true;
-			ah["by"] = authorizedBy;
-			ah["ts"] = now;
-			ah["ct"] = json();
-			ah["c"] = json();
-			member["authHistory"].push_back(ah);
-			member["lastModified"] = now;
-			json &revj = member["revision"];
-			member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-		}
-	} else {
-		char presentedAuth[512];
-		if (metaData.get(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH,presentedAuth,sizeof(presentedAuth)) > 0) {
-			presentedAuth[511] = (char)0; // sanity check
-
-			// Check for bearer token presented by member
-			if ((strlen(presentedAuth) > 6)&&(!strncmp(presentedAuth,"token:",6))) {
-				const char *const presentedToken = presentedAuth + 6;
-
-				json &authTokens = network["authTokens"];
-				if (authTokens.is_array()) {
-					for(unsigned long i=0;i<authTokens.size();++i) {
-						json &token = authTokens[i];
-						if (token.is_object()) {
-							const uint64_t expires = _jI(token["expires"],0ULL);
-							const uint64_t maxUses = _jI(token["maxUsesPerMember"],0ULL);
-							std::string tstr = _jS(token["token"],"");
-
-							if (((expires == 0ULL)||(expires > now))&&(tstr == presentedToken)) {
-								bool usable = (maxUses == 0);
-								if (!usable) {
-									uint64_t useCount = 0;
-									json &ahist = member["authHistory"];
-									if (ahist.is_array()) {
-										for(unsigned long j=0;j<ahist.size();++j) {
-											json &ah = ahist[j];
-											if ((_jS(ah["ct"],"") == "token")&&(_jS(ah["c"],"") == tstr)&&(_jB(ah["a"],false)))
-												++useCount;
-										}
-									}
-									usable = (useCount < maxUses);
-								}
-								if (usable) {
-									authorizedBy = "token";
-									member["authorized"] = true;
-									json ah;
-									ah["a"] = true;
-									ah["by"] = authorizedBy;
-									ah["ts"] = now;
-									ah["ct"] = "token";
-									ah["c"] = tstr;
-									member["authHistory"].push_back(ah);
-									member["lastModified"] = now;
-									json &revj = member["revision"];
-									member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// Log this request
-	if (requestPacketId) { // only log if this is a request, not for generated pushes
-		json rlEntry = json::object();
-		rlEntry["ts"] = now;
-		rlEntry["authorized"] = (authorizedBy) ? true : false;
-		rlEntry["authorizedBy"] = (authorizedBy) ? authorizedBy : "";
-		rlEntry["clientMajorVersion"] = metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0);
-		rlEntry["clientMinorVersion"] = metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0);
-		rlEntry["clientRevision"] = metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0);
-		rlEntry["clientProtocolVersion"] = metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION,0);
-		if (fromAddr)
-			rlEntry["fromAddr"] = fromAddr.toString();
-
-		json recentLog = json::array();
-		recentLog.push_back(rlEntry);
-		json &oldLog = member["recentLog"];
-		if (oldLog.is_array()) {
-			for(unsigned long i=0;i<oldLog.size();++i) {
-				recentLog.push_back(oldLog[i]);
-				if (recentLog.size() >= ZT_NETCONF_DB_MEMBER_HISTORY_LENGTH)
-					break;
-			}
-		}
-		member["recentLog"] = recentLog;
-
-		// Also only do this on real requests
-		member["lastRequestMetaData"] = metaData.data();
-	}
-
-	// If they are not authorized, STOP!
-	if (!authorizedBy) {
-		if (origMember != member) {
-			member["lastModified"] = now;
-			Mutex::Lock _l(_db_m);
-			_db.put("network",nwids,"member",identity.address().toString(),member);
-		}
-		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
-		return;
-	}
-
-	// -------------------------------------------------------------------------
-	// If we made it this far, they are authorized.
-	// -------------------------------------------------------------------------
-
-	NetworkConfig nc;
-	_NetworkMemberInfo nmi;
-	_getNetworkMemberInfo(now,nwid,nmi);
-
-	// Compute credential TTL. This is the "moving window" for COM agreement and
-	// the global TTL for Capability and Tag objects. (The same value is used
-	// for both.) This is computed by reference to the last time we deauthorized
-	// a member, since within the time period since this event any temporal
-	// differences are not particularly relevant.
-	uint64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA;
-	if (now > nmi.mostRecentDeauthTime)
-		credentialtmd += (now - nmi.mostRecentDeauthTime);
-	if (credentialtmd > ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA)
-		credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
-
-	nc.networkId = nwid;
-	nc.type = _jB(network["private"],true) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
-	nc.timestamp = now;
-	nc.credentialTimeMaxDelta = credentialtmd;
-	nc.revision = _jI(network["revision"],0ULL);
-	nc.issuedTo = identity.address();
-	if (_jB(network["enableBroadcast"],true)) nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
-	if (_jB(network["allowPassiveBridging"],false)) nc.flags |= ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING;
-	Utils::scopy(nc.name,sizeof(nc.name),_jS(network["name"],"").c_str());
-	nc.multicastLimit = (unsigned int)_jI(network["multicastLimit"],32ULL);
-
-	for(std::set<Address>::const_iterator ab(nmi.activeBridges.begin());ab!=nmi.activeBridges.end();++ab) {
-		nc.addSpecialist(*ab,ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
-	}
-
-	json &v4AssignMode = network["v4AssignMode"];
-	json &v6AssignMode = network["v6AssignMode"];
-	json &ipAssignmentPools = network["ipAssignmentPools"];
-	json &routes = network["routes"];
-	json &rules = network["rules"];
-	json &capabilities = network["capabilities"];
-	json &memberCapabilities = member["capabilities"];
-	json &memberTags = member["tags"];
-
-	if (metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,0) <= 0) {
-		// Old versions with no rules engine support get an allow everything rule.
-		// Since rules are enforced bidirectionally, newer versions *will* still
-		// enforce rules on the inbound side.
-		nc.ruleCount = 1;
-		nc.rules[0].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
-	} else {
-		if (rules.is_array()) {
-			for(unsigned long i=0;i<rules.size();++i) {
-				if (nc.ruleCount >= ZT_MAX_NETWORK_RULES)
-					break;
-				if (_parseRule(rules[i],nc.rules[nc.ruleCount]))
-					++nc.ruleCount;
-			}
-		}
-
-		if ((memberCapabilities.is_array())&&(memberCapabilities.size() > 0)&&(capabilities.is_array())) {
-			std::map< uint64_t,json * > capsById;
-			for(unsigned long i=0;i<capabilities.size();++i) {
-				json &cap = capabilities[i];
-				if (cap.is_object())
-					capsById[_jI(cap["id"],0ULL) & 0xffffffffULL] = &cap;
-			}
-
-			for(unsigned long i=0;i<memberCapabilities.size();++i) {
-				const uint64_t capId = _jI(memberCapabilities[i],0ULL) & 0xffffffffULL;
-				json *cap = capsById[capId];
-				if ((cap->is_object())&&(cap->size() > 0)) {
-					ZT_VirtualNetworkRule capr[ZT_MAX_CAPABILITY_RULES];
-					unsigned int caprc = 0;
-					json &caprj = (*cap)["rules"];
-					if ((caprj.is_array())&&(caprj.size() > 0)) {
-						for(unsigned long j=0;j<caprj.size();++j) {
-							if (caprc >= ZT_MAX_CAPABILITY_RULES)
-								break;
-							if (_parseRule(caprj[j],capr[caprc]))
-								++caprc;
-						}
-					}
-					nc.capabilities[nc.capabilityCount] = Capability((uint32_t)capId,nwid,now,1,capr,caprc);
-					if (nc.capabilities[nc.capabilityCount].sign(_signingId,identity.address()))
-						++nc.capabilityCount;
-					if (nc.capabilityCount >= ZT_MAX_NETWORK_CAPABILITIES)
-						break;
-				}
-			}
-		}
-
-		if (memberTags.is_array()) {
-			std::map< uint32_t,uint32_t > tagsById;
-			for(unsigned long i=0;i<memberTags.size();++i) {
-				json &t = memberTags[i];
-				if ((t.is_array())&&(t.size() == 2))
-					tagsById[(uint32_t)(_jI(t[0],0ULL) & 0xffffffffULL)] = (uint32_t)(_jI(t[1],0ULL) & 0xffffffffULL);
-			}
-			for(std::map< uint32_t,uint32_t >::const_iterator t(tagsById.begin());t!=tagsById.end();++t) {
-				if (nc.tagCount >= ZT_MAX_NETWORK_TAGS)
-					break;
-				nc.tags[nc.tagCount] = Tag(nwid,now,identity.address(),t->first,t->second);
-				if (nc.tags[nc.tagCount].sign(_signingId))
-					++nc.tagCount;
-			}
-		}
-	}
-
-	if (routes.is_array()) {
-		for(unsigned long i=0;i<routes.size();++i) {
-			if (nc.routeCount >= ZT_MAX_NETWORK_ROUTES)
-				break;
-			json &route = routes[i];
-			json &target = route["target"];
-			json &via = route["via"];
-			if (target.is_string()) {
-				const InetAddress t(target.get<std::string>());
-				InetAddress v;
-				if (via.is_string()) v.fromString(via.get<std::string>());
-				if ((t.ss_family == AF_INET)||(t.ss_family == AF_INET6)) {
-					ZT_VirtualNetworkRoute *r = &(nc.routes[nc.routeCount]);
-					*(reinterpret_cast<InetAddress *>(&(r->target))) = t;
-					if (v.ss_family == t.ss_family)
-						*(reinterpret_cast<InetAddress *>(&(r->via))) = v;
-					++nc.routeCount;
-				}
-			}
-		}
-	}
-
-	const bool noAutoAssignIps = _jB(member["noAutoAssignIps"],false);
-
-	if ((v6AssignMode.is_object())&&(!noAutoAssignIps)) {
-		if ((_jB(v6AssignMode["rfc4193"],false))&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
-			nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt());
-			nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
-		}
-		if ((_jB(v6AssignMode["6plane"],false))&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
-			nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv66plane(nwid,identity.address().toInt());
-			nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
-		}
-	}
-
-	bool haveManagedIpv4AutoAssignment = false;
-	bool haveManagedIpv6AutoAssignment = false; // "special" NDP-emulated address types do not count
-	json ipAssignments = member["ipAssignments"]; // we want to make a copy
-	if (ipAssignments.is_array()) {
-		for(unsigned long i=0;i<ipAssignments.size();++i) {
-			if (!ipAssignments[i].is_string())
-				continue;
-			std::string ips = ipAssignments[i];
-			InetAddress ip(ips);
-
-			// IP assignments are only pushed if there is a corresponding local route. We also now get the netmask bits from
-			// this route, ignoring the netmask bits field of the assigned IP itself. Using that was worthless and a source
-			// of user error / poor UX.
-			int routedNetmaskBits = 0;
-			for(unsigned int rk=0;rk<nc.routeCount;++rk) {
-				if ( (!nc.routes[rk].via.ss_family) && (reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->containsAddress(ip)) )
-					routedNetmaskBits = reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->netmaskBits();
-			}
-
-			if (routedNetmaskBits > 0) {
-				if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
-					ip.setPort(routedNetmaskBits);
-					nc.staticIps[nc.staticIpCount++] = ip;
-				}
-				if (ip.ss_family == AF_INET)
-					haveManagedIpv4AutoAssignment = true;
-				else if (ip.ss_family == AF_INET6)
-					haveManagedIpv6AutoAssignment = true;
-			}
-		}
-	} else {
-		ipAssignments = json::array();
-	}
-
-	if ( (ipAssignmentPools.is_array()) && ((v6AssignMode.is_object())&&(_jB(v6AssignMode["zt"],false))) && (!haveManagedIpv6AutoAssignment) && (!noAutoAssignIps) ) {
-		for(unsigned long p=0;((p<ipAssignmentPools.size())&&(!haveManagedIpv6AutoAssignment));++p) {
-			json &pool = ipAssignmentPools[p];
-			if (pool.is_object()) {
-				InetAddress ipRangeStart(_jS(pool["ipRangeStart"],""));
-				InetAddress ipRangeEnd(_jS(pool["ipRangeEnd"],""));
-				if ( (ipRangeStart.ss_family == AF_INET6) && (ipRangeEnd.ss_family == AF_INET6) ) {
-					uint64_t s[2],e[2],x[2],xx[2];
-					memcpy(s,ipRangeStart.rawIpData(),16);
-					memcpy(e,ipRangeEnd.rawIpData(),16);
-					s[0] = Utils::ntoh(s[0]);
-					s[1] = Utils::ntoh(s[1]);
-					e[0] = Utils::ntoh(e[0]);
-					e[1] = Utils::ntoh(e[1]);
-					x[0] = s[0];
-					x[1] = s[1];
-
-					for(unsigned int trialCount=0;trialCount<1000;++trialCount) {
-						if ((trialCount == 0)&&(e[1] > s[1])&&((e[1] - s[1]) >= 0xffffffffffULL)) {
-							// First see if we can just cram a ZeroTier ID into the higher 64 bits. If so do that.
-							xx[0] = Utils::hton(x[0]);
-							xx[1] = Utils::hton(x[1] + identity.address().toInt());
-						} else {
-							// Otherwise pick random addresses -- this technically doesn't explore the whole range if the lower 64 bit range is >= 1 but that won't matter since that would be huge anyway
-							Utils::getSecureRandom((void *)xx,16);
-							if ((e[0] > s[0]))
-								xx[0] %= (e[0] - s[0]);
-							else xx[0] = 0;
-							if ((e[1] > s[1]))
-								xx[1] %= (e[1] - s[1]);
-							else xx[1] = 0;
-							xx[0] = Utils::hton(x[0] + xx[0]);
-							xx[1] = Utils::hton(x[1] + xx[1]);
-						}
-
-						InetAddress ip6((const void *)xx,16,0);
-
-						// Check if this IP is within a local-to-Ethernet routed network
-						int routedNetmaskBits = 0;
-						for(unsigned int rk=0;rk<nc.routeCount;++rk) {
-							if ( (!nc.routes[rk].via.ss_family) && (nc.routes[rk].target.ss_family == AF_INET6) && (reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->containsAddress(ip6)) )
-								routedNetmaskBits = reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->netmaskBits();
-						}
-
-						// If it's routed, then try to claim and assign it and if successful end loop
-						if ((routedNetmaskBits > 0)&&(!nmi.allocatedIps.count(ip6))) {
-							ipAssignments.push_back(ip6.toIpString());
-							member["ipAssignments"] = ipAssignments;
-							ip6.setPort((unsigned int)routedNetmaskBits);
-							if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)
-								nc.staticIps[nc.staticIpCount++] = ip6;
-							haveManagedIpv6AutoAssignment = true;
-							break;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if ( (ipAssignmentPools.is_array()) && ((v4AssignMode.is_object())&&(_jB(v4AssignMode["zt"],false))) && (!haveManagedIpv4AutoAssignment) && (!noAutoAssignIps) ) {
-		for(unsigned long p=0;((p<ipAssignmentPools.size())&&(!haveManagedIpv4AutoAssignment));++p) {
-			json &pool = ipAssignmentPools[p];
-			if (pool.is_object()) {
-				InetAddress ipRangeStartIA(_jS(pool["ipRangeStart"],""));
-				InetAddress ipRangeEndIA(_jS(pool["ipRangeEnd"],""));
-				if ( (ipRangeStartIA.ss_family == AF_INET) && (ipRangeEndIA.ss_family == AF_INET) ) {
-					uint32_t ipRangeStart = Utils::ntoh((uint32_t)(reinterpret_cast<struct sockaddr_in *>(&ipRangeStartIA)->sin_addr.s_addr));
-					uint32_t ipRangeEnd = Utils::ntoh((uint32_t)(reinterpret_cast<struct sockaddr_in *>(&ipRangeEndIA)->sin_addr.s_addr));
-					if ((ipRangeEnd < ipRangeStart)||(ipRangeStart == 0))
-						continue;
-					uint32_t ipRangeLen = ipRangeEnd - ipRangeStart;
-
-					// Start with the LSB of the member's address
-					uint32_t ipTrialCounter = (uint32_t)(identity.address().toInt() & 0xffffffff);
-
-					for(uint32_t k=ipRangeStart,trialCount=0;((k<=ipRangeEnd)&&(trialCount < 1000));++k,++trialCount) {
-						uint32_t ip = (ipRangeLen > 0) ? (ipRangeStart + (ipTrialCounter % ipRangeLen)) : ipRangeStart;
-						++ipTrialCounter;
-						if ((ip & 0x000000ff) == 0x000000ff)
-							continue; // don't allow addresses that end in .255
-
-						// Check if this IP is within a local-to-Ethernet routed network
-						int routedNetmaskBits = -1;
-						for(unsigned int rk=0;rk<nc.routeCount;++rk) {
-							if (nc.routes[rk].target.ss_family == AF_INET) {
-								uint32_t targetIp = Utils::ntoh((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc.routes[rk].target))->sin_addr.s_addr));
-								int targetBits = Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc.routes[rk].target))->sin_port));
-								if ((ip & (0xffffffff << (32 - targetBits))) == targetIp) {
-									routedNetmaskBits = targetBits;
-									break;
-								}
-							}
-						}
-
-						// If it's routed, then try to claim and assign it and if successful end loop
-						const InetAddress ip4(Utils::hton(ip),0);
-						if ((routedNetmaskBits > 0)&&(!nmi.allocatedIps.count(ip4))) {
-							ipAssignments.push_back(ip4.toIpString());
-							member["ipAssignments"] = ipAssignments;
-							if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
-								struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc.staticIps[nc.staticIpCount++]));
-								v4ip->sin_family = AF_INET;
-								v4ip->sin_port = Utils::hton((uint16_t)routedNetmaskBits);
-								v4ip->sin_addr.s_addr = Utils::hton(ip);
-							}
-							haveManagedIpv4AutoAssignment = true;
-							break;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	CertificateOfMembership com(now,credentialtmd,nwid,identity.address());
-	if (com.sign(_signingId)) {
-		nc.com = com;
-	} else {
-		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR);
-		return;
-	}
-
-	if (member != origMember) {
-		member["lastModified"] = now;
-		Mutex::Lock _l(_db_m);
-		_db.put("network",nwids,"member",identity.address().toString(),member);
-	}
-
-	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),nc,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
+	_RQEntry *qe = new _RQEntry;
+	qe->nwid = nwid;
+	qe->requestPacketId = requestPacketId;
+	qe->fromAddr = fromAddr;
+	qe->identity = identity;
+	qe->metaData = metaData;
+	_queue.post(qe);
 }
 
 unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
@@ -1586,6 +1136,19 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 	return 404;
 }
 
+void EmbeddedNetworkController::threadMain()
+	throw()
+{
+	for(;;) {
+		_RQEntry *const qe = _queue.get();
+		if (!qe) break; // enqueue a NULL to terminate threads
+		try {
+			_request(qe->nwid,qe->fromAddr,qe->requestPacketId,qe->identity,qe->metaData);
+		} catch ( ... ) {}
+		delete qe;
+	}
+}
+
 void EmbeddedNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report)
 {
 	char tmp[65535];
@@ -1647,6 +1210,492 @@ void EmbeddedNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTes
 		reinterpret_cast<const InetAddress *>(&(report->receivedFromRemoteAddress))->toString().c_str());
 
 	cte->second.jsonResults.append(tmp);
+}
+
+void EmbeddedNetworkController::_request(
+	uint64_t nwid,
+	const InetAddress &fromAddr,
+	uint64_t requestPacketId,
+	const Identity &identity,
+	const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData)
+{
+	if (((!_signingId)||(!_signingId.hasPrivate()))||(_signingId.address().toInt() != (nwid >> 24))||(!_sender))
+		return;
+
+	const uint64_t now = OSUtils::now();
+
+	if (requestPacketId) {
+		Mutex::Lock _l(_lastRequestTime_m);
+		uint64_t &lrt = _lastRequestTime[std::pair<uint64_t,uint64_t>(identity.address().toInt(),nwid)];
+		if ((now - lrt) <= ZT_NETCONF_MIN_REQUEST_PERIOD)
+			return;
+		lrt = now;
+	}
+
+	char nwids[24];
+	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",nwid);
+	json network;
+	json member;
+	{
+		Mutex::Lock _l(_db_m);
+		network = _db.get("network",nwids,0);
+		member = _db.get("network",nwids,"member",identity.address().toString(),0);
+	}
+
+	if (!network.size()) {
+		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
+		return;
+	}
+
+	json origMember(member); // for detecting modification later
+	_initMember(member);
+
+	{
+		std::string haveIdStr(_jS(member["identity"],""));
+		if (haveIdStr.length() > 0) {
+			// If we already know this member's identity perform a full compare. This prevents
+			// a "collision" from being able to auth onto our network in place of an already
+			// known member.
+			try {
+				if (Identity(haveIdStr.c_str()) != identity) {
+					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
+					return;
+				}
+			} catch ( ... ) {
+				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
+				return;
+			}
+		} else {
+			// If we do not yet know this member's identity, learn it.
+			member["identity"] = identity.toString(false);
+		}
+	}
+
+	// These are always the same, but make sure they are set
+	member["id"] = identity.address().toString();
+	member["address"] = member["id"];
+	member["nwid"] = nwids;
+
+	// Determine whether and how member is authorized
+	const char *authorizedBy = (const char *)0;
+	if (_jB(member["authorized"],false)) {
+		authorizedBy = "memberIsAuthorized";
+	} else if (!_jB(network["private"],true)) {
+		authorizedBy = "networkIsPublic";
+		if (!member.count("authorized")) {
+			member["authorized"] = true;
+			json ah;
+			ah["a"] = true;
+			ah["by"] = authorizedBy;
+			ah["ts"] = now;
+			ah["ct"] = json();
+			ah["c"] = json();
+			member["authHistory"].push_back(ah);
+			member["lastModified"] = now;
+			json &revj = member["revision"];
+			member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
+		}
+	} else {
+		char presentedAuth[512];
+		if (metaData.get(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH,presentedAuth,sizeof(presentedAuth)) > 0) {
+			presentedAuth[511] = (char)0; // sanity check
+
+			// Check for bearer token presented by member
+			if ((strlen(presentedAuth) > 6)&&(!strncmp(presentedAuth,"token:",6))) {
+				const char *const presentedToken = presentedAuth + 6;
+
+				json &authTokens = network["authTokens"];
+				if (authTokens.is_array()) {
+					for(unsigned long i=0;i<authTokens.size();++i) {
+						json &token = authTokens[i];
+						if (token.is_object()) {
+							const uint64_t expires = _jI(token["expires"],0ULL);
+							const uint64_t maxUses = _jI(token["maxUsesPerMember"],0ULL);
+							std::string tstr = _jS(token["token"],"");
+
+							if (((expires == 0ULL)||(expires > now))&&(tstr == presentedToken)) {
+								bool usable = (maxUses == 0);
+								if (!usable) {
+									uint64_t useCount = 0;
+									json &ahist = member["authHistory"];
+									if (ahist.is_array()) {
+										for(unsigned long j=0;j<ahist.size();++j) {
+											json &ah = ahist[j];
+											if ((_jS(ah["ct"],"") == "token")&&(_jS(ah["c"],"") == tstr)&&(_jB(ah["a"],false)))
+												++useCount;
+										}
+									}
+									usable = (useCount < maxUses);
+								}
+								if (usable) {
+									authorizedBy = "token";
+									member["authorized"] = true;
+									json ah;
+									ah["a"] = true;
+									ah["by"] = authorizedBy;
+									ah["ts"] = now;
+									ah["ct"] = "token";
+									ah["c"] = tstr;
+									member["authHistory"].push_back(ah);
+									member["lastModified"] = now;
+									json &revj = member["revision"];
+									member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Log this request
+	if (requestPacketId) { // only log if this is a request, not for generated pushes
+		json rlEntry = json::object();
+		rlEntry["ts"] = now;
+		rlEntry["authorized"] = (authorizedBy) ? true : false;
+		rlEntry["authorizedBy"] = (authorizedBy) ? authorizedBy : "";
+		rlEntry["clientMajorVersion"] = metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0);
+		rlEntry["clientMinorVersion"] = metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0);
+		rlEntry["clientRevision"] = metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0);
+		rlEntry["clientProtocolVersion"] = metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION,0);
+		if (fromAddr)
+			rlEntry["fromAddr"] = fromAddr.toString();
+
+		json recentLog = json::array();
+		recentLog.push_back(rlEntry);
+		json &oldLog = member["recentLog"];
+		if (oldLog.is_array()) {
+			for(unsigned long i=0;i<oldLog.size();++i) {
+				recentLog.push_back(oldLog[i]);
+				if (recentLog.size() >= ZT_NETCONF_DB_MEMBER_HISTORY_LENGTH)
+					break;
+			}
+		}
+		member["recentLog"] = recentLog;
+
+		// Also only do this on real requests
+		member["lastRequestMetaData"] = metaData.data();
+	}
+
+	// If they are not authorized, STOP!
+	if (!authorizedBy) {
+		if (origMember != member) {
+			member["lastModified"] = now;
+			Mutex::Lock _l(_db_m);
+			_db.put("network",nwids,"member",identity.address().toString(),member);
+		}
+		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
+		return;
+	}
+
+	// -------------------------------------------------------------------------
+	// If we made it this far, they are authorized.
+	// -------------------------------------------------------------------------
+
+	NetworkConfig nc;
+	_NetworkMemberInfo nmi;
+	_getNetworkMemberInfo(now,nwid,nmi);
+
+	// Compute credential TTL. This is the "moving window" for COM agreement and
+	// the global TTL for Capability and Tag objects. (The same value is used
+	// for both.) This is computed by reference to the last time we deauthorized
+	// a member, since within the time period since this event any temporal
+	// differences are not particularly relevant.
+	uint64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA;
+	if (now > nmi.mostRecentDeauthTime)
+		credentialtmd += (now - nmi.mostRecentDeauthTime);
+	if (credentialtmd > ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA)
+		credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
+
+	nc.networkId = nwid;
+	nc.type = _jB(network["private"],true) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
+	nc.timestamp = now;
+	nc.credentialTimeMaxDelta = credentialtmd;
+	nc.revision = _jI(network["revision"],0ULL);
+	nc.issuedTo = identity.address();
+	if (_jB(network["enableBroadcast"],true)) nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
+	if (_jB(network["allowPassiveBridging"],false)) nc.flags |= ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING;
+	Utils::scopy(nc.name,sizeof(nc.name),_jS(network["name"],"").c_str());
+	nc.multicastLimit = (unsigned int)_jI(network["multicastLimit"],32ULL);
+
+	for(std::set<Address>::const_iterator ab(nmi.activeBridges.begin());ab!=nmi.activeBridges.end();++ab) {
+		nc.addSpecialist(*ab,ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
+	}
+
+	json &v4AssignMode = network["v4AssignMode"];
+	json &v6AssignMode = network["v6AssignMode"];
+	json &ipAssignmentPools = network["ipAssignmentPools"];
+	json &routes = network["routes"];
+	json &rules = network["rules"];
+	json &capabilities = network["capabilities"];
+	json &memberCapabilities = member["capabilities"];
+	json &memberTags = member["tags"];
+
+	if (metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,0) <= 0) {
+		// Old versions with no rules engine support get an allow everything rule.
+		// Since rules are enforced bidirectionally, newer versions *will* still
+		// enforce rules on the inbound side.
+		nc.ruleCount = 1;
+		nc.rules[0].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
+	} else {
+		if (rules.is_array()) {
+			for(unsigned long i=0;i<rules.size();++i) {
+				if (nc.ruleCount >= ZT_MAX_NETWORK_RULES)
+					break;
+				if (_parseRule(rules[i],nc.rules[nc.ruleCount]))
+					++nc.ruleCount;
+			}
+		}
+
+		if ((memberCapabilities.is_array())&&(memberCapabilities.size() > 0)&&(capabilities.is_array())) {
+			std::map< uint64_t,json * > capsById;
+			for(unsigned long i=0;i<capabilities.size();++i) {
+				json &cap = capabilities[i];
+				if (cap.is_object())
+					capsById[_jI(cap["id"],0ULL) & 0xffffffffULL] = &cap;
+			}
+
+			for(unsigned long i=0;i<memberCapabilities.size();++i) {
+				const uint64_t capId = _jI(memberCapabilities[i],0ULL) & 0xffffffffULL;
+				json *cap = capsById[capId];
+				if ((cap->is_object())&&(cap->size() > 0)) {
+					ZT_VirtualNetworkRule capr[ZT_MAX_CAPABILITY_RULES];
+					unsigned int caprc = 0;
+					json &caprj = (*cap)["rules"];
+					if ((caprj.is_array())&&(caprj.size() > 0)) {
+						for(unsigned long j=0;j<caprj.size();++j) {
+							if (caprc >= ZT_MAX_CAPABILITY_RULES)
+								break;
+							if (_parseRule(caprj[j],capr[caprc]))
+								++caprc;
+						}
+					}
+					nc.capabilities[nc.capabilityCount] = Capability((uint32_t)capId,nwid,now,1,capr,caprc);
+					if (nc.capabilities[nc.capabilityCount].sign(_signingId,identity.address()))
+						++nc.capabilityCount;
+					if (nc.capabilityCount >= ZT_MAX_NETWORK_CAPABILITIES)
+						break;
+				}
+			}
+		}
+
+		if (memberTags.is_array()) {
+			std::map< uint32_t,uint32_t > tagsById;
+			for(unsigned long i=0;i<memberTags.size();++i) {
+				json &t = memberTags[i];
+				if ((t.is_array())&&(t.size() == 2))
+					tagsById[(uint32_t)(_jI(t[0],0ULL) & 0xffffffffULL)] = (uint32_t)(_jI(t[1],0ULL) & 0xffffffffULL);
+			}
+			for(std::map< uint32_t,uint32_t >::const_iterator t(tagsById.begin());t!=tagsById.end();++t) {
+				if (nc.tagCount >= ZT_MAX_NETWORK_TAGS)
+					break;
+				nc.tags[nc.tagCount] = Tag(nwid,now,identity.address(),t->first,t->second);
+				if (nc.tags[nc.tagCount].sign(_signingId))
+					++nc.tagCount;
+			}
+		}
+	}
+
+	if (routes.is_array()) {
+		for(unsigned long i=0;i<routes.size();++i) {
+			if (nc.routeCount >= ZT_MAX_NETWORK_ROUTES)
+				break;
+			json &route = routes[i];
+			json &target = route["target"];
+			json &via = route["via"];
+			if (target.is_string()) {
+				const InetAddress t(target.get<std::string>());
+				InetAddress v;
+				if (via.is_string()) v.fromString(via.get<std::string>());
+				if ((t.ss_family == AF_INET)||(t.ss_family == AF_INET6)) {
+					ZT_VirtualNetworkRoute *r = &(nc.routes[nc.routeCount]);
+					*(reinterpret_cast<InetAddress *>(&(r->target))) = t;
+					if (v.ss_family == t.ss_family)
+						*(reinterpret_cast<InetAddress *>(&(r->via))) = v;
+					++nc.routeCount;
+				}
+			}
+		}
+	}
+
+	const bool noAutoAssignIps = _jB(member["noAutoAssignIps"],false);
+
+	if ((v6AssignMode.is_object())&&(!noAutoAssignIps)) {
+		if ((_jB(v6AssignMode["rfc4193"],false))&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
+			nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt());
+			nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
+		}
+		if ((_jB(v6AssignMode["6plane"],false))&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
+			nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv66plane(nwid,identity.address().toInt());
+			nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
+		}
+	}
+
+	bool haveManagedIpv4AutoAssignment = false;
+	bool haveManagedIpv6AutoAssignment = false; // "special" NDP-emulated address types do not count
+	json ipAssignments = member["ipAssignments"]; // we want to make a copy
+	if (ipAssignments.is_array()) {
+		for(unsigned long i=0;i<ipAssignments.size();++i) {
+			if (!ipAssignments[i].is_string())
+				continue;
+			std::string ips = ipAssignments[i];
+			InetAddress ip(ips);
+
+			// IP assignments are only pushed if there is a corresponding local route. We also now get the netmask bits from
+			// this route, ignoring the netmask bits field of the assigned IP itself. Using that was worthless and a source
+			// of user error / poor UX.
+			int routedNetmaskBits = 0;
+			for(unsigned int rk=0;rk<nc.routeCount;++rk) {
+				if ( (!nc.routes[rk].via.ss_family) && (reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->containsAddress(ip)) )
+					routedNetmaskBits = reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->netmaskBits();
+			}
+
+			if (routedNetmaskBits > 0) {
+				if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
+					ip.setPort(routedNetmaskBits);
+					nc.staticIps[nc.staticIpCount++] = ip;
+				}
+				if (ip.ss_family == AF_INET)
+					haveManagedIpv4AutoAssignment = true;
+				else if (ip.ss_family == AF_INET6)
+					haveManagedIpv6AutoAssignment = true;
+			}
+		}
+	} else {
+		ipAssignments = json::array();
+	}
+
+	if ( (ipAssignmentPools.is_array()) && ((v6AssignMode.is_object())&&(_jB(v6AssignMode["zt"],false))) && (!haveManagedIpv6AutoAssignment) && (!noAutoAssignIps) ) {
+		for(unsigned long p=0;((p<ipAssignmentPools.size())&&(!haveManagedIpv6AutoAssignment));++p) {
+			json &pool = ipAssignmentPools[p];
+			if (pool.is_object()) {
+				InetAddress ipRangeStart(_jS(pool["ipRangeStart"],""));
+				InetAddress ipRangeEnd(_jS(pool["ipRangeEnd"],""));
+				if ( (ipRangeStart.ss_family == AF_INET6) && (ipRangeEnd.ss_family == AF_INET6) ) {
+					uint64_t s[2],e[2],x[2],xx[2];
+					memcpy(s,ipRangeStart.rawIpData(),16);
+					memcpy(e,ipRangeEnd.rawIpData(),16);
+					s[0] = Utils::ntoh(s[0]);
+					s[1] = Utils::ntoh(s[1]);
+					e[0] = Utils::ntoh(e[0]);
+					e[1] = Utils::ntoh(e[1]);
+					x[0] = s[0];
+					x[1] = s[1];
+
+					for(unsigned int trialCount=0;trialCount<1000;++trialCount) {
+						if ((trialCount == 0)&&(e[1] > s[1])&&((e[1] - s[1]) >= 0xffffffffffULL)) {
+							// First see if we can just cram a ZeroTier ID into the higher 64 bits. If so do that.
+							xx[0] = Utils::hton(x[0]);
+							xx[1] = Utils::hton(x[1] + identity.address().toInt());
+						} else {
+							// Otherwise pick random addresses -- this technically doesn't explore the whole range if the lower 64 bit range is >= 1 but that won't matter since that would be huge anyway
+							Utils::getSecureRandom((void *)xx,16);
+							if ((e[0] > s[0]))
+								xx[0] %= (e[0] - s[0]);
+							else xx[0] = 0;
+							if ((e[1] > s[1]))
+								xx[1] %= (e[1] - s[1]);
+							else xx[1] = 0;
+							xx[0] = Utils::hton(x[0] + xx[0]);
+							xx[1] = Utils::hton(x[1] + xx[1]);
+						}
+
+						InetAddress ip6((const void *)xx,16,0);
+
+						// Check if this IP is within a local-to-Ethernet routed network
+						int routedNetmaskBits = 0;
+						for(unsigned int rk=0;rk<nc.routeCount;++rk) {
+							if ( (!nc.routes[rk].via.ss_family) && (nc.routes[rk].target.ss_family == AF_INET6) && (reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->containsAddress(ip6)) )
+								routedNetmaskBits = reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->netmaskBits();
+						}
+
+						// If it's routed, then try to claim and assign it and if successful end loop
+						if ((routedNetmaskBits > 0)&&(!nmi.allocatedIps.count(ip6))) {
+							ipAssignments.push_back(ip6.toIpString());
+							member["ipAssignments"] = ipAssignments;
+							ip6.setPort((unsigned int)routedNetmaskBits);
+							if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)
+								nc.staticIps[nc.staticIpCount++] = ip6;
+							haveManagedIpv6AutoAssignment = true;
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if ( (ipAssignmentPools.is_array()) && ((v4AssignMode.is_object())&&(_jB(v4AssignMode["zt"],false))) && (!haveManagedIpv4AutoAssignment) && (!noAutoAssignIps) ) {
+		for(unsigned long p=0;((p<ipAssignmentPools.size())&&(!haveManagedIpv4AutoAssignment));++p) {
+			json &pool = ipAssignmentPools[p];
+			if (pool.is_object()) {
+				InetAddress ipRangeStartIA(_jS(pool["ipRangeStart"],""));
+				InetAddress ipRangeEndIA(_jS(pool["ipRangeEnd"],""));
+				if ( (ipRangeStartIA.ss_family == AF_INET) && (ipRangeEndIA.ss_family == AF_INET) ) {
+					uint32_t ipRangeStart = Utils::ntoh((uint32_t)(reinterpret_cast<struct sockaddr_in *>(&ipRangeStartIA)->sin_addr.s_addr));
+					uint32_t ipRangeEnd = Utils::ntoh((uint32_t)(reinterpret_cast<struct sockaddr_in *>(&ipRangeEndIA)->sin_addr.s_addr));
+					if ((ipRangeEnd < ipRangeStart)||(ipRangeStart == 0))
+						continue;
+					uint32_t ipRangeLen = ipRangeEnd - ipRangeStart;
+
+					// Start with the LSB of the member's address
+					uint32_t ipTrialCounter = (uint32_t)(identity.address().toInt() & 0xffffffff);
+
+					for(uint32_t k=ipRangeStart,trialCount=0;((k<=ipRangeEnd)&&(trialCount < 1000));++k,++trialCount) {
+						uint32_t ip = (ipRangeLen > 0) ? (ipRangeStart + (ipTrialCounter % ipRangeLen)) : ipRangeStart;
+						++ipTrialCounter;
+						if ((ip & 0x000000ff) == 0x000000ff)
+							continue; // don't allow addresses that end in .255
+
+						// Check if this IP is within a local-to-Ethernet routed network
+						int routedNetmaskBits = -1;
+						for(unsigned int rk=0;rk<nc.routeCount;++rk) {
+							if (nc.routes[rk].target.ss_family == AF_INET) {
+								uint32_t targetIp = Utils::ntoh((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc.routes[rk].target))->sin_addr.s_addr));
+								int targetBits = Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc.routes[rk].target))->sin_port));
+								if ((ip & (0xffffffff << (32 - targetBits))) == targetIp) {
+									routedNetmaskBits = targetBits;
+									break;
+								}
+							}
+						}
+
+						// If it's routed, then try to claim and assign it and if successful end loop
+						const InetAddress ip4(Utils::hton(ip),0);
+						if ((routedNetmaskBits > 0)&&(!nmi.allocatedIps.count(ip4))) {
+							ipAssignments.push_back(ip4.toIpString());
+							member["ipAssignments"] = ipAssignments;
+							if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
+								struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc.staticIps[nc.staticIpCount++]));
+								v4ip->sin_family = AF_INET;
+								v4ip->sin_port = Utils::hton((uint16_t)routedNetmaskBits);
+								v4ip->sin_addr.s_addr = Utils::hton(ip);
+							}
+							haveManagedIpv4AutoAssignment = true;
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	CertificateOfMembership com(now,credentialtmd,nwid,identity.address());
+	if (com.sign(_signingId)) {
+		nc.com = com;
+	} else {
+		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR);
+		return;
+	}
+
+	if (member != origMember) {
+		member["lastModified"] = now;
+		Mutex::Lock _l(_db_m);
+		_db.put("network",nwids,"member",identity.address().toString(),member);
+	}
+
+	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),nc,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
 }
 
 void EmbeddedNetworkController::_getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi)

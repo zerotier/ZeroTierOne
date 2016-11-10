@@ -37,10 +37,14 @@
 
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Thread.hpp"
+#include "../osdep/BlockingQueue.hpp"
 
 #include "../ext/json/json.hpp"
 
 #include "JSONDB.hpp"
+
+// Number of background threads to start -- not actually started until needed
+#define ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT 2
 
 namespace ZeroTier {
 
@@ -83,8 +87,31 @@ public:
 		std::string &responseBody,
 		std::string &responseContentType);
 
+	void threadMain()
+		throw();
+
 private:
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
+	void _request(
+		uint64_t nwid,
+		const InetAddress &fromAddr,
+		uint64_t requestPacketId,
+		const Identity &identity,
+		const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
+
+	struct _RQEntry
+	{
+		uint64_t nwid;
+		uint64_t requestPacketId;
+		InetAddress fromAddr;
+		Identity identity;
+		Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> metaData;
+	};
+	BlockingQueue<_RQEntry *> _queue;
+
+	Thread _threads[ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT];
+	bool _threadsStarted;
+	Mutex _threads_m;
 
 	// Gathers a bunch of statistics about members of a network, IP assignments, etc. that we need in various places
 	// This does lock _networkMemberCache_m
