@@ -13,18 +13,18 @@ namespace WinUI
     {
         protected NetworkRoute(SerializationInfo info, StreamingContext ctx)
         {
-            Target = info.GetString("Target");
-            Via = info.GetString("Via");
-            Flags = info.GetInt32("Flags");
-            Metric = info.GetInt32("Metric");
+            Target = info.GetString("target");
+            Via = info.GetString("via");
+            Flags = info.GetInt32("flags");
+            Metric = info.GetInt32("metric");
         }
 
         public virtual void GetObjectData(SerializationInfo info, StreamingContext ctx)
         {
-            info.AddValue("Target", Target);
-            info.AddValue("Via", Via);
-            info.AddValue("Flags", Flags);
-            info.AddValue("Metric", Metric);
+            info.AddValue("target", Target);
+            info.AddValue("via", Via);
+            info.AddValue("flags", Flags);
+            info.AddValue("metric", Metric);
         }
 
         [JsonProperty("target")]

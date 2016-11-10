@@ -13,45 +13,49 @@ namespace WinUI
     {
         protected ZeroTierNetwork(SerializationInfo info, StreamingContext ctx)
         {
-            NetworkId = info.GetString("NetworkId");
-            MacAddress = info.GetString("MacAddress");
-            NetworkName = info.GetString("NetworkName");
-            NetworkStatus = info.GetString("NetworkStatus");
-            NetworkType = info.GetString("NetworkType");
-            MTU = info.GetInt32("MTU");
-            DHCP = info.GetBoolean("DHCP");
-            Bridge = info.GetBoolean("Bridge");
-            BroadcastEnabled = info.GetBoolean("BroadcastEnabled");
-            PortError = info.GetInt32("PortError");
-            NetconfRevision = info.GetInt32("NetconfRevision");
-            AssignedAddresses = (string[])info.GetValue("AssignedAddresses", typeof(string[]));
-            Routes = (NetworkRoute[])info.GetValue("Routes", typeof(NetworkRoute[]));
-            DeviceName = info.GetString("DeviceName");
-            AllowManaged = info.GetBoolean("AllowManaged");
-            AllowGlobal = info.GetBoolean("AllowGlobal");
-            AllowDefault = info.GetBoolean("AllowDefault");
+            try
+            {
+                NetworkId = info.GetString("nwid");
+                MacAddress = info.GetString("mac");
+                NetworkName = info.GetString("name");
+                NetworkStatus = info.GetString("status");
+                NetworkType = info.GetString("type");
+                MTU = info.GetInt32("mtu");
+                DHCP = info.GetBoolean("dhcp");
+                Bridge = info.GetBoolean("bridge");
+                BroadcastEnabled = info.GetBoolean("broadcastEnabled");
+                PortError = info.GetInt32("portError");
+                NetconfRevision = info.GetInt32("netconfRevision");
+                AssignedAddresses = (string[])info.GetValue("assignedAddresses", typeof(string[]));
+                Routes = (NetworkRoute[])info.GetValue("routes", typeof(NetworkRoute[]));
+                DeviceName = info.GetString("portDeviceName");
+                AllowManaged = info.GetBoolean("allowManaged");
+                AllowGlobal = info.GetBoolean("allowGlobal");
+                AllowDefault = info.GetBoolean("allowDefault");
+            }
+            catch { }
             IsConnected = false;
         }
 
         public virtual void GetObjectData(SerializationInfo info, StreamingContext ctx)
         {
-            info.AddValue("NetworkId", NetworkId);
-            info.AddValue("MacAddress", MacAddress);
-            info.AddValue("NetworkName", NetworkName);
-            info.AddValue("NetworkStatus", NetworkStatus);
-            info.AddValue("NetworkType", NetworkType);
-            info.AddValue("MTU", MTU);
-            info.AddValue("DHCP", DHCP);
-            info.AddValue("Bridge", Bridge);
-            info.AddValue("BroadcastEnabled", BroadcastEnabled);
-            info.AddValue("PortError", PortError);
-            info.AddValue("NetconfRevision", NetconfRevision);
-            info.AddValue("AssignedAddresses", AssignedAddresses);
-            info.AddValue("Routes", Routes);
-            info.AddValue("DeviceName", DeviceName);
-            info.AddValue("AllowManaged", AllowManaged);
-            info.AddValue("AllowGlobal", AllowGlobal);
-            info.AddValue("AllowDefault", AllowDefault);
+            info.AddValue("nwid", NetworkId);
+            info.AddValue("mac", MacAddress);
+            info.AddValue("name", NetworkName);
+            info.AddValue("status", NetworkStatus);
+            info.AddValue("type", NetworkType);
+            info.AddValue("mtu", MTU);
+            info.AddValue("dhcp", DHCP);
+            info.AddValue("bridge", Bridge);
+            info.AddValue("broadcastEnabled", BroadcastEnabled);
+            info.AddValue("portError", PortError);
+            info.AddValue("netconfRevision", NetconfRevision);
+            info.AddValue("assignedAddresses", AssignedAddresses);
+            info.AddValue("routes", Routes);
+            info.AddValue("portDeviceName", DeviceName);
+            info.AddValue("allowManaged", AllowManaged);
+            info.AddValue("allowGlobal", AllowGlobal);
+            info.AddValue("allowDefault", AllowDefault);
         }
 
 
@@ -126,11 +130,17 @@ namespace WinUI
 
         public bool Equals(ZeroTierNetwork network)
         {
+            if (NetworkId == null || network == null)
+                return false;
+
             return NetworkId.Equals(network.NetworkId);
         }
         
         public int CompareTo(ZeroTierNetwork network)
         {
+            if (NetworkId == null || network == null)
+                return -1;
+
             UInt64 thisNwid = UInt64.Parse(NetworkId, System.Globalization.NumberStyles.HexNumber);
             UInt64 otherNwid = UInt64.Parse(network.NetworkId, System.Globalization.NumberStyles.HexNumber);
 
