@@ -1019,16 +1019,6 @@ typedef struct
 	uint64_t address;
 
 	/**
-	 * Time we last received a unicast frame from this peer
-	 */
-	uint64_t lastUnicastFrame;
-
-	/**
-	 * Time we last received a multicast rame from this peer
-	 */
-	uint64_t lastMulticastFrame;
-
-	/**
 	 * Remote major version or -1 if not known
 	 */
 	int versionMajor;

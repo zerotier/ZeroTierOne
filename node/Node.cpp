@@ -405,8 +405,6 @@ ZT_PeerList *Node::peers() const
 	for(std::vector< std::pair< Address,SharedPtr<Peer> > >::iterator pi(peers.begin());pi!=peers.end();++pi) {
 		ZT_Peer *p = &(pl->peers[pl->peerCount++]);
 		p->address = pi->second->address().toInt();
-		p->lastUnicastFrame = pi->second->lastUnicastFrame();
-		p->lastMulticastFrame = pi->second->lastMulticastFrame();
 		if (pi->second->remoteVersionKnown()) {
 			p->versionMajor = pi->second->remoteVersionMajor();
 			p->versionMinor = pi->second->remoteVersionMinor();

@@ -222,8 +222,6 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_Peer *peer)
 	Utils::snprintf(json,sizeof(json),
 		"%s{\n"
 		"%s\t\"address\": \"%.10llx\",\n"
-		"%s\t\"lastUnicastFrame\": %llu,\n"
-		"%s\t\"lastMulticastFrame\": %llu,\n"
 		"%s\t\"versionMajor\": %d,\n"
 		"%s\t\"versionMinor\": %d,\n"
 		"%s\t\"versionRev\": %d,\n"
@@ -234,8 +232,6 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_Peer *peer)
 		"%s}",
 		prefix,
 		prefix,peer->address,
-		prefix,peer->lastUnicastFrame,
-		prefix,peer->lastMulticastFrame,
 		prefix,peer->versionMajor,
 		prefix,peer->versionMinor,
 		prefix,peer->versionRev,

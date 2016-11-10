@@ -114,8 +114,6 @@ Getting /peer returns an array of peer objects for all current peers. See below 
 <table>
 <tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
 <tr><td>address</td><td>string</td><td>10-digit hex ZeroTier address</td><td>no</td></tr>
-<tr><td>lastUnicastFrame</td><td>integer</td><td>Time of last unicast frame in ms since epoch</td><td>no</td></tr>
-<tr><td>lastMulticastFrame</td><td>integer</td><td>Time of last multicast frame in ms since epoch</td><td>no</td></tr>
 <tr><td>versionMajor</td><td>integer</td><td>Major version of remote if known</td><td>no</td></tr>
 <tr><td>versionMinor</td><td>integer</td><td>Minor version of remote if known</td><td>no</td></tr>
 <tr><td>versionRev</td><td>integer</td><td>Revision of remote if known</td><td>no</td></tr>
