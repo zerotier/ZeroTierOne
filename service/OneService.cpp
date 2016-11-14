@@ -1259,12 +1259,10 @@ public:
 
 	inline void phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
 	{
-		if ((!from)||(reinterpret_cast<const InetAddress *>(from)->ipScope() != InetAddress::IP_SCOPE_LOOPBACK)) {
-			// Non-Loopback: deny (for now)
+		if (!from) {
 			_phy.close(sockN,false);
 			return;
 		} else {
-			// Loopback == HTTP JSON API request
 			TcpConnection *tc = new TcpConnection();
 			_tcpConnections.insert(tc);
 			tc->type = TcpConnection::TCP_HTTP_INCOMING;
