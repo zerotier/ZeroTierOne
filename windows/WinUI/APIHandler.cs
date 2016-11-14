@@ -22,6 +22,13 @@ namespace WinUI
         private static volatile APIHandler instance;
         private static object syncRoot = new Object();
 
+        public delegate void NetworkListCallback(List<ZeroTierNetwork> networks);
+        public delegate void StatusCallback(ZeroTierStatus status);
+
+
+        private NetworkListCallback _networkCallbacks;
+        private StatusCallback _statusCallbacks;
+
         public static APIHandler Instance
         {
             get
@@ -128,7 +135,7 @@ namespace WinUI
             this.authtoken = authtoken;
         }
 
-        public delegate void StatusCallback(ZeroTierStatus status);
+        
 
         public void GetStatus(StatusCallback cb)
         {
@@ -168,7 +175,7 @@ namespace WinUI
             }
         }
 
-        public delegate void NetworkListCallback(List<ZeroTierNetwork> networks);
+        
 
         public void GetNetworks(NetworkListCallback cb)
         {

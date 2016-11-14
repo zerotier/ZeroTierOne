@@ -30,6 +30,8 @@ namespace WinUI
         private NetworkListView netListView = null;
         private List<ZeroTierNetwork> networkList = null;
 
+        private NetworkMonitor mon = NetworkMonitor.Instance;
+
         private ObservableCollection<ZeroTierNetwork> _networkCollection = new ObservableCollection<ZeroTierNetwork>();
 
         public ObservableCollection<ZeroTierNetwork> NetworkCollection
@@ -44,15 +46,14 @@ namespace WinUI
         {
             InitializeComponent();
 
-            onUpdateTimer(this, null);
+            mon.SubscribeNetworkUpdates(updateNetworks);
+            mon.SubscribeStatusUpdates(updateStatus);
+        }
 
-            timer = new Timer();
-            timer.Elapsed += new ElapsedEventHandler(onUpdateTimer);
-            timer.Interval = 2000;
-            timer.Enabled = true;
-
-            nodeIdMenuItem.Header = "OFFLINE";
-            nodeIdMenuItem.IsEnabled = false;
+        ~ToolbarItem()
+        {
+            mon.UnsubscribeNetworkUpdates(updateNetworks);
+            mon.UnsubscribeStatusUpdates(updateStatus);
         }
 
         private void updateNetworks(List<ZeroTierNetwork> networks)
@@ -90,12 +91,6 @@ namespace WinUI
                     nodeIdMenuItem.IsEnabled = true;
                 }));
             }
-        }
-
-        private void onUpdateTimer(object source, ElapsedEventArgs e)
-        {
-            APIHandler.Instance.GetStatus(updateStatus);
-            APIHandler.Instance.GetNetworks(updateNetworks);
         }
 
         private void ToolbarItem_TrayContextMenuOpen(object sender, System.Windows.RoutedEventArgs e)

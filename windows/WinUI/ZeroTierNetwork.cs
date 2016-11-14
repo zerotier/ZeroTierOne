@@ -158,4 +158,17 @@ namespace WinUI
             }
         }
     }
+
+     public class NetworkEqualityComparer : IEqualityComparer<ZeroTierNetwork>
+    {
+        public bool Equals(ZeroTierNetwork lhs, ZeroTierNetwork rhs)
+        {
+            return lhs.NetworkId.Equals(rhs.NetworkId);
+        }
+
+        public int GetHashCode(ZeroTierNetwork obj)
+        {
+            return obj.NetworkId.GetHashCode();
+        }
+    }
 }
