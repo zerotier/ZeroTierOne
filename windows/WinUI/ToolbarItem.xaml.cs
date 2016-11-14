@@ -40,8 +40,6 @@ namespace WinUI
             set { _networkCollection = value; }
         }
 
-        private Timer timer = null;
-
         public ToolbarItem()
         {
             InitializeComponent();
