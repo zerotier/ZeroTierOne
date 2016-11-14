@@ -270,9 +270,6 @@ unsigned int ControlPlane::handleRequest(
 	std::map<std::string,std::string> urlArgs;
 	Mutex::Lock _l(_lock);
 
-	if (!((fromAddress.ipsEqual(InetAddress::LO4))||(fromAddress.ipsEqual(InetAddress::LO6))))
-		return 403; // Forbidden: we only allow access from localhost right now
-
 	/* Note: this is kind of restricted in what it'll take. It does not support
 	 * URL encoding, and /'s in URL args will screw it up. But the only URL args
 	 * it really uses in ?jsonp=funcionName, and otherwise it just takes simple
