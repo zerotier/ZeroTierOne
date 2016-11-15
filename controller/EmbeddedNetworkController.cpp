@@ -1399,16 +1399,18 @@ void EmbeddedNetworkController::_request(
 	_NetworkMemberInfo nmi;
 	_getNetworkMemberInfo(now,nwid,nmi);
 
-	// Compute credential TTL. This is the "moving window" for COM agreement and
-	// the global TTL for Capability and Tag objects. (The same value is used
-	// for both.) This is computed by reference to the last time we deauthorized
-	// a member, since within the time period since this event any temporal
-	// differences are not particularly relevant.
-	uint64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA;
-	if (now > nmi.mostRecentDeauthTime)
-		credentialtmd += (now - nmi.mostRecentDeauthTime);
-	if (credentialtmd > ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA)
-		credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
+	uint64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
+	if (now > nmi.mostRecentDeauthTime) {
+		// If we recently de-authorized a member, shrink credential TTL/max delta to
+		// be below the threshold required to exclude it. Cap this to a min/max to
+		// prevent jitter or absurdly large values.
+		const uint64_t deauthWindow = now - nmi.mostRecentDeauthTime;
+		if (deauthWindow < ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA) {
+			credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA;
+		} else if (deauthWindow < (ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA + 5000ULL)) {
+			credentialtmd = deauthWindow - 5000ULL;
+		}
+	}
 
 	nc.networkId = nwid;
 	nc.type = _jB(network["private"],true) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
