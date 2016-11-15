@@ -84,6 +84,10 @@ ifeq ($(ZT_TRACE),1)
 	DEFS+=-DZT_TRACE
 endif
 
+ifeq ($(ZT_RULES_ENGINE_DEBUGGING),1)
+	DEFS+=-DZT_RULES_ENGINE_DEBUGGING
+endif
+
 ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE
 	override CFLAGS+=-Wall -g -O -pthread $(INCLUDES) $(DEFS)
