@@ -145,6 +145,8 @@ private:
 		if (!member.count("creationTime")) member["creationTime"] = OSUtils::now();
 		if (!member.count("noAutoAssignIps")) member["noAutoAssignIps"] = false;
 		if (!member.count("revision")) member["revision"] = 0ULL;
+		if (!member.count("lastDeauthorizedTime")) member["lastDeauthorizedTime"] = 0ULL;
+		if (!member.count("lastAuthorizedTime")) member["lastAuthorizedTime"] = 0ULL;
 		member["objtype"] = "member";
 	}
 	inline void _initNetwork(nlohmann::json &network)

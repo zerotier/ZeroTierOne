@@ -697,6 +697,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 							const bool newAuth = _jB(b["authorized"],false);
 							if (newAuth != _jB(member["authorized"],false)) {
 								member["authorized"] = newAuth;
+								member[((newAuth) ? "lastAuthorizedTime" : "lastDeauthorizedTime")] = now;
+
 								json ah;
 								ah["a"] = newAuth;
 								ah["by"] = "api";
@@ -1278,23 +1280,14 @@ void EmbeddedNetworkController::_request(
 
 	// Determine whether and how member is authorized
 	const char *authorizedBy = (const char *)0;
+	bool autoAuthorized = false;
+	json autoAuthCredentialType,autoAuthCredential;
 	if (_jB(member["authorized"],false)) {
 		authorizedBy = "memberIsAuthorized";
 	} else if (!_jB(network["private"],true)) {
 		authorizedBy = "networkIsPublic";
-		if (!member.count("authorized")) {
-			member["authorized"] = true;
-			json ah;
-			ah["a"] = true;
-			ah["by"] = authorizedBy;
-			ah["ts"] = now;
-			ah["ct"] = json();
-			ah["c"] = json();
-			member["authHistory"].push_back(ah);
-			member["lastModified"] = now;
-			json &revj = member["revision"];
-			member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-		}
+		if (!member.count("authorized"))
+			autoAuthorized = true;
 	} else {
 		char presentedAuth[512];
 		if (metaData.get(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH,presentedAuth,sizeof(presentedAuth)) > 0) {
@@ -1329,17 +1322,9 @@ void EmbeddedNetworkController::_request(
 								}
 								if (usable) {
 									authorizedBy = "token";
-									member["authorized"] = true;
-									json ah;
-									ah["a"] = true;
-									ah["by"] = authorizedBy;
-									ah["ts"] = now;
-									ah["ct"] = "token";
-									ah["c"] = tstr;
-									member["authHistory"].push_back(ah);
-									member["lastModified"] = now;
-									json &revj = member["revision"];
-									member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
+									autoAuthorized = true;
+									autoAuthCredentialType = "token";
+									autoAuthCredential = tstr;
 								}
 							}
 						}
@@ -1347,6 +1332,23 @@ void EmbeddedNetworkController::_request(
 				}
 			}
 		}
+	}
+
+	// If we auto-authorized, update member record
+	if ((autoAuthorized)&&(authorizedBy)) {
+		member["authorized"] = true;
+		member["lastAuthorizedTime"] = now;
+
+		json ah;
+		ah["a"] = true;
+		ah["by"] = authorizedBy;
+		ah["ts"] = now;
+		ah["ct"] = autoAuthCredentialType;
+		ah["c"] = autoAuthCredential;
+		member["authHistory"].push_back(ah);
+
+		json &revj = member["revision"];
+		member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 	}
 
 	// Log this request
