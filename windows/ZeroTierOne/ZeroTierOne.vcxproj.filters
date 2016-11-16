@@ -261,6 +261,9 @@
     <ClCompile Include="..\..\controller\EmbeddedNetworkController.cpp">
       <Filter>Source Files\controller</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\controller\JSONDB.cpp">
+      <Filter>Source Files\controller</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
