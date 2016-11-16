@@ -275,4 +275,63 @@ NSString *NetworkAllowDefaultKey = @"allowDefault";
     }
 }
 
+- (BOOL)hasSameNetworkId:(UInt64)networkId
+{
+    return self.nwid == networkId;
+}
+
+- (BOOL)isEqualToNetwork:(Network*)network
+{
+    return [self.assignedAddresses isEqualToArray:network.assignedAddresses] &&
+        self.bridge == network.bridge &&
+        self.broadcastEnabled == network.broadcastEnabled &&
+        self.dhcp == network.dhcp &&
+        [self.mac isEqualToString:network.mac] &&
+        self.mtu == network.mtu &&
+        self.netconfRevision == network.netconfRevision &&
+        [self.name isEqualToString:network.name] &&
+        self.nwid == network.nwid &&
+        [self.portDeviceName isEqualToString:network.portDeviceName] &&
+        self.status == network.status &&
+        self.type == network.type &&
+        self.allowManaged == network.allowManaged &&
+        self.allowGlobal == network.allowGlobal &&
+        self.allowDefault == network.allowDefault &&
+        self.connected == network.connected;
+}
+
+- (BOOL)isEqual:(id)object
+{
+    if (self == object) {
+        return YES;
+    }
+
+    if (![object isKindOfClass:[Network class]]) {
+        return NO;
+    }
+
+    return [self isEqualToNetwork:object];
+}
+
+- (NSUInteger)hash
+{
+    return [self.assignedAddresses hash] ^
+        self.bridge ^
+        self.broadcastEnabled ^
+        self.dhcp ^
+        [self.mac hash] ^
+        self.mtu ^
+        self.netconfRevision ^
+        [self.name hash] ^
+        self.nwid ^
+        [self.portDeviceName hash] ^
+        self.portError ^
+        self.status ^
+        self.type ^
+        self.allowManaged ^
+        self.allowGlobal ^
+        self.allowDefault ^
+        self.connected;
+}
+
 @end

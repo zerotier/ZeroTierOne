@@ -23,7 +23,7 @@
 
 @interface ShowNetworksViewController : NSViewController<NSTableViewDelegate, NSTableViewDataSource>
 
-@property (nonatomic) NSArray<Network*> *networkList;
+@property (nonatomic) NSMutableArray<Network*> *networkList;
 @property (nonatomic) NetworkMonitor *netMonitor;
 @property (nonatomic) BOOL visible;
 
