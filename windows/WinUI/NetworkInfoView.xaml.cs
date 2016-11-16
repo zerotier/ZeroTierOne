@@ -21,7 +21,7 @@ namespace WinUI
     public partial class NetworkInfoView : UserControl
     {
         private APIHandler handler;
-        private ZeroTierNetwork network;
+        public ZeroTierNetwork network;
 
         public NetworkInfoView(APIHandler handler, ZeroTierNetwork network)
         {
@@ -31,19 +31,41 @@ namespace WinUI
             this.network = network;
 
             UpdateNetworkData();
+
+            allowDefault.Checked += AllowDefault_CheckStateChanged;
+            allowDefault.Unchecked += AllowDefault_CheckStateChanged;
+            allowGlobal.Checked += AllowGlobal_CheckStateChanged;
+            allowGlobal.Unchecked += AllowGlobal_CheckStateChanged;
+            allowManaged.Checked += AllowManaged_CheckStateChanged;
+            allowManaged.Unchecked += AllowManaged_CheckStateChanged;
         }
 
         private void UpdateNetworkData()
         {
-            this.networkId.Text = network.NetworkId;
-            this.networkName.Text = network.NetworkName;
-            this.networkStatus.Text = network.NetworkStatus;
-            this.networkType.Text = network.NetworkType;
-            this.macAddress.Text = network.MacAddress;
-            this.mtu.Text = network.MTU.ToString();
+
+            if (this.networkId.Text != network.NetworkId)
+                this.networkId.Text = network.NetworkId;
+
+            if (this.networkName.Text != network.NetworkName)
+                this.networkName.Text = network.NetworkName;
+
+            if (this.networkStatus.Text != network.NetworkStatus)
+                this.networkStatus.Text = network.NetworkStatus;
+
+            if (this.networkType.Text != network.NetworkType)
+                this.networkType.Text = network.NetworkType;
+
+            if (this.macAddress.Text != network.MacAddress)
+                this.macAddress.Text = network.MacAddress;
+
+            if (this.mtu.Text != network.MTU.ToString())
+                this.mtu.Text = network.MTU.ToString();
+
             this.broadcastEnabled.Text = (network.BroadcastEnabled ? "ENABLED" : "DISABLED");
             this.bridgingEnabled.Text = (network.Bridge ? "ENABLED" : "DISABLED");
-            this.deviceName.Text = network.DeviceName;
+
+            if (this.deviceName.Text != network.DeviceName)
+                this.deviceName.Text = network.DeviceName;
 
             string iplist = "";
             for (int i = 0; i < network.AssignedAddresses.Length; ++i)
@@ -53,19 +75,12 @@ namespace WinUI
                     iplist += "\n";
             }
 
-            this.managedIps.Text = iplist;
+            if (this.managedIps.Text != iplist)
+                this.managedIps.Text = iplist;
 
             this.allowDefault.IsChecked = network.AllowDefault;
             this.allowGlobal.IsChecked = network.AllowGlobal;
             this.allowManaged.IsChecked = network.AllowManaged;
-
-            allowDefault.Checked += AllowDefault_CheckStateChanged;
-            allowDefault.Unchecked += AllowDefault_CheckStateChanged;
-            allowGlobal.Checked += AllowGlobal_CheckStateChanged;
-            allowGlobal.Unchecked += AllowGlobal_CheckStateChanged;
-            allowManaged.Checked += AllowManaged_CheckStateChanged;
-            allowManaged.Unchecked += AllowManaged_CheckStateChanged;
-
         }
 
         public bool HasNetwork(ZeroTierNetwork network)
@@ -74,6 +89,13 @@ namespace WinUI
                 return true;
 
             return false;
+        }
+
+        public void SetNetworkInfo(ZeroTierNetwork network)
+        {
+            this.network = network;
+
+            UpdateNetworkData();
         }
 
         private void leaveButton_Click(object sender, RoutedEventArgs e)
