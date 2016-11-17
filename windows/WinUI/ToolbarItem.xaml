@@ -12,7 +12,7 @@
     <Window.Resources>
         <CollectionViewSource Source="{Binding ElementName=Toolbar, Path=NetworkCollection}" x:Key="KnownNetworks">
             <CollectionViewSource.SortDescriptions>
-                <scm:SortDescription PropertyName="NetworkId" Direction="Ascending"/>
+                <scm:SortDescription PropertyName="Header" Direction="Ascending"/>
             </CollectionViewSource.SortDescriptions>
         </CollectionViewSource>   
     </Window.Resources>
@@ -25,16 +25,32 @@
                         PreviewTrayContextMenuOpen="ToolbarItem_PreviewTrayContextMenuOpen">
             <tb:TaskbarIcon.ContextMenu>
                 <ContextMenu>
-                    <MenuItem Header="Node ID: abeb9f9bc5"
-                        Click="ToolbarItem_NodeIDClicked"
-                        x:Name="nodeIdMenuItem"/>
-                    <Separator/>
-                    <MenuItem Header="Join Network..."
-                        Click="ToolbarItem_JoinNetworkClicked"/>
-                    <MenuItem Header="Show Networks..."
-                        Click="ToolbarItem_ShowNetworksClicked"/>
-                    <Separator/>
-                    <MenuItem Header="Networks">
+                    <ContextMenu.ItemsSource>
+                        <CompositeCollection>
+                            <MenuItem Header="Node ID: abeb9f9bc5"
+                                      Click="ToolbarItem_NodeIDClicked"
+                                      x:Name="nodeIdMenuItem"/>
+                            <Separator/>
+                            <MenuItem Header="Join Network..."
+                                      Click="ToolbarItem_JoinNetworkClicked"/>
+                            <MenuItem Header="Show Networks..."
+                                      Click="ToolbarItem_ShowNetworksClicked"/>
+                            <Separator/>
+
+                            <CollectionContainer Collection="{Binding Source={StaticResource KnownNetworks}}">
+                                
+                            </CollectionContainer>
+
+                            <Separator/>
+                            <MenuItem Header="About..."/>
+                            <MenuItem Header="Preferences..."/>
+                            <Separator/>
+                            <MenuItem Header="Quit"/>
+                            
+                        </CompositeCollection>
+                    </ContextMenu.ItemsSource>
+                    
+                    <!--<MenuItem Header="Networks">
                         <MenuItem.ItemsSource>
                             <CompositeCollection>
                                 <CollectionContainer Collection="{Binding Source={StaticResource KnownNetworks}}"/>
@@ -43,16 +59,13 @@
                         <MenuItem.ItemContainerStyle>
                             <Style>
                                 <Setter Property="MenuItem.Header" Value="{Binding Title}"/>
-                                <Setter Property="MenuItem.IsCheckable" Value="True"/>
+                                --><!-- <Setter Property="MenuItem.IsCheckable" Value="True"/> --><!--
                                 <Setter Property="MenuItem.IsChecked" Value="{Binding IsConnected}"/>
+                                <EventSetter Event="MenuItem.Click" Handler="ToolbarItem_NetworkClicked"/>
                             </Style>
                         </MenuItem.ItemContainerStyle>
-                    </MenuItem>
-                    <Separator/>
-                    <MenuItem Header="About..."/>
-                    <MenuItem Header="Preferences..."/>
-                    <Separator/>
-                    <MenuItem Header="Quit"/>
+                    </MenuItem>-->
+                    
                  </ContextMenu>
             </tb:TaskbarIcon.ContextMenu>
 

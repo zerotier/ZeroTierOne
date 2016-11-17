@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -23,18 +25,17 @@ namespace WinUI
     /// <summary>
     /// Interaction logic for ToolbarItem.xaml
     /// </summary>
-    public partial class ToolbarItem : Window
+    public partial class ToolbarItem : Window, INotifyPropertyChanged
     {
         private APIHandler handler = APIHandler.Instance;
 
         private NetworkListView netListView = null;
-        private List<ZeroTierNetwork> networkList = null;
 
         private NetworkMonitor mon = NetworkMonitor.Instance;
 
-        private ObservableCollection<ZeroTierNetwork> _networkCollection = new ObservableCollection<ZeroTierNetwork>();
+        private ObservableCollection<MenuItem> _networkCollection = new ObservableCollection<MenuItem>();
 
-        public ObservableCollection<ZeroTierNetwork> NetworkCollection
+        public ObservableCollection<MenuItem> NetworkCollection
         {
             get { return _networkCollection; }
             set { _networkCollection = value; }
@@ -54,27 +55,30 @@ namespace WinUI
             mon.UnsubscribeStatusUpdates(updateStatus);
         }
 
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected void NotifyPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
         private void updateNetworks(List<ZeroTierNetwork> networks)
         {
             if (networks != null)
             {
                 this.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                 {
+                    NetworkCollection.Clear();
                     foreach (ZeroTierNetwork n in networks)
                     {
-                        int index = _networkCollection.IndexOf(n);
+                        MenuItem item = new MenuItem();
+                        item.Header = n.Title;
+                        item.DataContext = n;
+                        item.IsChecked = n.IsConnected;
+                        item.Click += ToolbarItem_NetworkClicked;
 
-                        if (index == -1)
-                        {
-                            _networkCollection.Add(n);
-                        }
-                        else
-                        {
-                            _networkCollection[index] = n;
-                        }
+                        NetworkCollection.Add(item);
                     }
-
-                    this.networkList = networks;
                 }));
             }
         }
@@ -129,6 +133,26 @@ namespace WinUI
         private void JoinNetworkClosed(object sender, System.EventArgs e)
         {
 
+        }
+
+        private void ToolbarItem_NetworkClicked(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if(sender.GetType() == typeof(MenuItem))
+            {
+                MenuItem item = e.Source as MenuItem;
+                if (item.DataContext != null)
+                {
+                    ZeroTierNetwork network = item.DataContext as ZeroTierNetwork;
+                    if (item.IsChecked)
+                    {
+                        APIHandler.Instance.LeaveNetwork(network.NetworkId);
+                    }
+                    else
+                    {
+                        APIHandler.Instance.JoinNetwork(network.NetworkId, network.AllowManaged, network.AllowGlobal, network.AllowDefault);
+                    }
+                }   
+            }
         }
     }
 }

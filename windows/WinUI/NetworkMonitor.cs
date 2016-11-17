@@ -101,6 +101,10 @@ namespace WinUI
                 {
                     n.IsConnected = true;
                 }
+                else
+                {
+                    n.IsConnected = false;
+                }
             }
 
             _nwCb(_knownNetworks);

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,8 +11,27 @@ using Newtonsoft.Json;
 namespace WinUI
 {
     [Serializable]
-    public class ZeroTierNetwork : ISerializable, IEquatable<ZeroTierNetwork>, IComparable<ZeroTierNetwork>
+    public class ZeroTierNetwork : ISerializable, IEquatable<ZeroTierNetwork>, IComparable<ZeroTierNetwork>, INotifyPropertyChanged
     {
+        private string networkId;
+        private string macAddress;
+        private string networkName;
+        private string networkStatus;
+        private string networkType;
+        private Int32 mtu;
+        private bool dhcp;
+        private bool bridge;
+        private bool broadcastEnabled;
+        private Int32 portError;
+        private Int32 netconfRevision;
+        private string[] assignedAddresses;
+        private NetworkRoute[] routes;
+        private string deviceName;
+        private bool allowManaged;
+        private bool allowGlobal;
+        private bool allowDefault;
+        private bool isConnected;
+
         protected ZeroTierNetwork(SerializationInfo info, StreamingContext ctx)
         {
             try
@@ -37,6 +58,8 @@ namespace WinUI
             IsConnected = false;
         }
 
+        public event PropertyChangedEventHandler PropertyChanged;
+
         public virtual void GetObjectData(SerializationInfo info, StreamingContext ctx)
         {
             info.AddValue("nwid", NetworkId);
@@ -58,59 +81,351 @@ namespace WinUI
             info.AddValue("allowDefault", AllowDefault);
         }
 
+        public void UpdateNetwork(ZeroTierNetwork network)
+        {
+            if (network == null)
+                return;
+
+            if (!NetworkId.Equals(network.NetworkId))
+            {
+                NetworkId = network.NetworkId;
+            }
+
+            if (!MacAddress.Equals(network.MacAddress))
+            {
+                MacAddress = network.MacAddress;
+            }
+
+            if (!NetworkName.Equals(network.NetworkName))
+            {
+                NetworkName = network.NetworkName;
+            }
+
+            if (!NetworkStatus.Equals(network.NetworkStatus))
+            {
+                NetworkStatus = network.NetworkStatus;
+            }
+
+            if (!NetworkType.Equals(network.NetworkType))
+            {
+                NetworkType = network.NetworkType;
+            }
+
+            if (MTU != network.MTU)
+            {
+                MTU = network.MTU;
+            }
+
+            if (DHCP != network.DHCP)
+            {
+                DHCP = network.DHCP;
+            }
+
+            if (Bridge != network.Bridge)
+            {
+                Bridge = network.Bridge;
+            }
+
+            if (BroadcastEnabled != network.BroadcastEnabled)
+            {
+                BroadcastEnabled = network.BroadcastEnabled;
+            }
+
+            if (PortError != network.PortError)
+            {
+                PortError = network.PortError;
+            }
+
+            if (NetconfRevision != network.NetconfRevision)
+            {
+                NetconfRevision = network.NetconfRevision;
+            }
+
+            AssignedAddresses = network.AssignedAddresses;
+
+            Routes = network.Routes;
+
+            if (!DeviceName.Equals(network.DeviceName))
+            {
+                DeviceName = network.DeviceName;
+            }
+
+            if (AllowManaged != network.AllowManaged)
+            {
+                AllowManaged = network.AllowManaged;
+            }
+
+            if (AllowGlobal != network.AllowGlobal)
+            {
+                AllowGlobal = network.AllowGlobal;
+            }
+
+            if (AllowDefault != network.AllowDefault)
+            {
+                AllowDefault = network.AllowDefault;
+            }
+
+            if (IsConnected != network.IsConnected)
+            {
+                IsConnected = network.IsConnected;
+            }
+        }
+
+        protected void NotifyPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
 
         [JsonProperty("nwid")]
-        public string NetworkId { get; set; }
+        public string NetworkId {
+            get
+            {
+                return networkId;
+            }
+            set
+            {
+                networkId = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         [JsonProperty("mac")]
-        public string MacAddress { get; set; }
+        public string MacAddress
+        {
+            get
+            {
+                return macAddress;
+            }
+            set
+            {
+                macAddress = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         [JsonProperty("name")]
-        public string NetworkName { get; set; }
+        public string NetworkName
+        {
+            get
+            {
+                return networkName;
+            }
+            set
+            {
+                networkName = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         [JsonProperty("status")]
-        public string NetworkStatus { get; set; }
+        public string NetworkStatus
+        {
+            get
+            {
+                return networkStatus;
+            }
+            set
+            {
+                networkStatus = value;
+                NotifyPropertyChanged();
+            }
+
+        }
 
         [JsonProperty("type")]
-        public string NetworkType { get; set; }
+        public string NetworkType
+        {
+            get
+            {
+                return networkType;
+            }
+            set
+            {
+                networkType = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         [JsonProperty("mtu")]
-        public int MTU { get; set; }
+        public int MTU
+        {
+            get
+            {
+                return mtu;
+            }
+            set
+            {
+                mtu = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         [JsonProperty("dhcp")]
-        public bool DHCP { get; set; }
+        public bool DHCP
+        {
+            get
+            {
+                return dhcp;
+            }
+            set
+            {
+                dhcp = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         [JsonProperty("bridge")]
-        public bool Bridge { get; set ; }
+        public bool Bridge
+        {
+            get
+            {
+                return bridge;
+            }
+            set
+            {
+                bridge = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         [JsonProperty("broadcastEnabled")]
-        public bool BroadcastEnabled { get ; set; }
+        public bool BroadcastEnabled
+        {
+            get
+            {
+                return broadcastEnabled;
+            }
+            set
+            {
+                broadcastEnabled = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         [JsonProperty("portError")]
-        public int PortError { get; set; }
+        public int PortError
+        {
+            get
+            {
+                return portError;
+            }
+            set
+            {
+                portError = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         [JsonProperty("netconfRevision")]
-        public int NetconfRevision { get; set; }
+        public int NetconfRevision
+        {
+            get
+            {
+                return netconfRevision;
+            }
+            set
+            {
+                netconfRevision = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         [JsonProperty("assignedAddresses")]
-        public string[] AssignedAddresses { get; set; }
+        public string[] AssignedAddresses
+        {
+            get
+            {
+                return assignedAddresses;
+            }
+            set
+            {
+                assignedAddresses = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         [JsonProperty("routes")]
-        public NetworkRoute[] Routes { get; set; }
+        public NetworkRoute[] Routes
+        {
+            get
+            {
+                return routes;
+            }
+            set
+            {
+                routes = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         [JsonProperty("portDeviceName")]
-        public string DeviceName { get; set; }
+        public string DeviceName
+        {
+            get
+            {
+                return deviceName;
+            }
+            set
+            {
+                deviceName = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         [JsonProperty("allowManaged")]
-        public bool AllowManaged { get; set; }
+        public bool AllowManaged
+        {
+            get
+            {
+                return allowManaged;
+            }
+            set
+            {
+                allowManaged = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         [JsonProperty("allowGlobal")]
-        public bool AllowGlobal { get; set; }
+        public bool AllowGlobal
+        {
+            get
+            {
+                return allowGlobal;
+            }
+            set
+            {
+                allowGlobal = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         [JsonProperty("allowDefault")]
-        public bool AllowDefault { get; set; }
+        public bool AllowDefault
+        {
+            get
+            {
+                return allowDefault;
+            }
+            set
+            {
+                allowDefault = value;
+                NotifyPropertyChanged();
+            }
+        }
         
-        public bool IsConnected { get; set; } = false;
+        public bool IsConnected
+        {
+            get
+            {
+                return isConnected;
+            }
+            set
+            {
+                isConnected = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         public String Title
         {
