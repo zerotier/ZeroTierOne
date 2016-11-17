@@ -187,6 +187,7 @@ namespace WinUI
 
             request.Method = "GET";
             request.ContentType = "application/json";
+            request.Timeout = 2000;
 
             try
             {
@@ -232,6 +233,7 @@ namespace WinUI
 
             request.Method = "POST";
             request.ContentType = "applicaiton/json";
+            request.Timeout = 2000;
 
             using (var streamWriter = new StreamWriter(((HttpWebRequest)request).GetRequestStream()))
             {
@@ -271,6 +273,7 @@ namespace WinUI
             }
 
             request.Method = "DELETE";
+            request.Timeout = 2000;
 
             try
             {
@@ -288,6 +291,10 @@ namespace WinUI
             catch (System.Net.WebException)
             {
                 MessageBox.Show("Error Leaving Network: Cannot connect to ZeroTier service.");
+            }
+            catch
+            {
+                Console.WriteLine("Error leaving network: Unknown error");
             }
         }
 
