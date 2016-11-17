@@ -459,6 +459,7 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 }
 
 EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPath) :
+	_threadsStarted(false),
 	_db(dbPath),
 	_node(node)
 {
@@ -468,22 +469,768 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPa
 
 EmbeddedNetworkController::~EmbeddedNetworkController()
 {
+	Mutex::Lock _l(_threads_m);
+	if (_threadsStarted) {
+		for(int i=0;i<(ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT*2);++i)
+			_queue.post((_RQEntry *)0);
+		for(int i=0;i<ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT;++i)
+			Thread::join(_threads[i]);
+	}
 }
 
-NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData,NetworkConfig &nc)
+void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 {
-	if (((!signingId)||(!signingId.hasPrivate()))||(signingId.address().toInt() != (nwid >> 24))) {
-		return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+	this->_sender = sender;
+	this->_signingId = signingId;
+}
+
+void EmbeddedNetworkController::request(
+	uint64_t nwid,
+	const InetAddress &fromAddr,
+	uint64_t requestPacketId,
+	const Identity &identity,
+	const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData)
+{
+	if (((!_signingId)||(!_signingId.hasPrivate()))||(_signingId.address().toInt() != (nwid >> 24))||(!_sender))
+		return;
+
+	{
+		Mutex::Lock _l(_threads_m);
+		if (!_threadsStarted) {
+			for(int i=0;i<ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT;++i)
+				_threads[i] = Thread::start(this);
+		}
+		_threadsStarted = true;
 	}
+
+	_RQEntry *qe = new _RQEntry;
+	qe->nwid = nwid;
+	qe->requestPacketId = requestPacketId;
+	qe->fromAddr = fromAddr;
+	qe->identity = identity;
+	qe->metaData = metaData;
+	_queue.post(qe);
+}
+
+unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
+	const std::vector<std::string> &path,
+	const std::map<std::string,std::string> &urlArgs,
+	const std::map<std::string,std::string> &headers,
+	const std::string &body,
+	std::string &responseBody,
+	std::string &responseContentType)
+{
+	if ((path.size() > 0)&&(path[0] == "network")) {
+
+		if ((path.size() >= 2)&&(path[1].length() == 16)) {
+			const uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
+			char nwids[24];
+			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
+
+			json network;
+			{
+				Mutex::Lock _l(_db_m);
+				network = _db.get("network",nwids,0);
+			}
+			if (!network.size())
+				return 404;
+
+			if (path.size() >= 3) {
+
+				if (path[2] == "member") {
+
+					if (path.size() >= 4) {
+						const uint64_t address = Utils::hexStrToU64(path[3].c_str());
+
+						json member;
+						{
+							Mutex::Lock _l(_db_m);
+							member = _db.get("network",nwids,"member",Address(address).toString(),0);
+						}
+						if (!member.size())
+							return 404;
+
+						_addMemberNonPersistedFields(member,OSUtils::now());
+						responseBody = member.dump(2);
+						responseContentType = "application/json";
+
+						return 200;
+					} else {
+
+						Mutex::Lock _l(_db_m);
+
+						responseBody = "{";
+						std::string pfx(std::string("network/") + nwids + "member/");
+						_db.filter(pfx,120000,[&responseBody](const std::string &n,const json &member) {
+							if (member.size() > 0) {
+								responseBody.append((responseBody.length() == 1) ? "\"" : ",\"");
+								responseBody.append(_jS(member["id"],""));
+								responseBody.append("\":");
+								responseBody.append(_jS(member["revision"],"0"));
+							}
+							return true; // never delete
+						});
+						responseBody.push_back('}');
+						responseContentType = "application/json";
+
+						return 200;
+					}
+
+				} else if ((path[2] == "test")&&(path.size() >= 4)) {
+
+					Mutex::Lock _l(_circuitTests_m);
+					std::map< uint64_t,_CircuitTestEntry >::iterator cte(_circuitTests.find(Utils::hexStrToU64(path[3].c_str())));
+					if ((cte != _circuitTests.end())&&(cte->second.test)) {
+
+						responseBody = "[";
+						responseBody.append(cte->second.jsonResults);
+						responseBody.push_back(']');
+						responseContentType = "application/json";
+
+						return 200;
+
+					} // else 404
+
+				} // else 404
+
+			} else {
+
+				const uint64_t now = OSUtils::now();
+				_NetworkMemberInfo nmi;
+				_getNetworkMemberInfo(now,nwid,nmi);
+				_addNetworkNonPersistedFields(network,now,nmi);
+				responseBody = network.dump(2);
+				responseContentType = "application/json";
+				return 200;
+
+			}
+		} else if (path.size() == 1) {
+
+			std::set<std::string> networkIds;
+			{
+				Mutex::Lock _l(_db_m);
+				_db.filter("network/",120000,[&networkIds](const std::string &n,const json &obj) {
+					if (n.length() == (16 + 8))
+						networkIds.insert(n.substr(8));
+					return true; // do not delete
+				});
+			}
+
+			responseBody.push_back('[');
+			for(std::set<std::string>::iterator i(networkIds.begin());i!=networkIds.end();++i) {
+				responseBody.append((responseBody.length() == 1) ? "\"" : ",\"");
+				responseBody.append(*i);
+				responseBody.append("\"");
+			}
+			responseBody.push_back(']');
+			responseContentType = "application/json";
+			return 200;
+
+		} // else 404
+
+	} else {
+
+		char tmp[4096];
+		Utils::snprintf(tmp,sizeof(tmp),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now());
+		responseBody = tmp;
+		responseContentType = "application/json";
+		return 200;
+
+	}
+
+	return 404;
+}
+
+unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
+	const std::vector<std::string> &path,
+	const std::map<std::string,std::string> &urlArgs,
+	const std::map<std::string,std::string> &headers,
+	const std::string &body,
+	std::string &responseBody,
+	std::string &responseContentType)
+{
+	if (path.empty())
+		return 404;
+
+	json b;
+	try {
+		b = json::parse(body);
+		if (!b.is_object()) {
+			responseBody = "{ \"message\": \"body is not a JSON object\" }";
+			responseContentType = "application/json";
+			return 400;
+		}
+	} catch ( ... ) {
+		responseBody = "{ \"message\": \"body JSON is invalid\" }";
+		responseContentType = "application/json";
+		return 400;
+	}
+	const uint64_t now = OSUtils::now();
+
+	if (path[0] == "network") {
+
+		if ((path.size() >= 2)&&(path[1].length() == 16)) {
+			uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
+			char nwids[24];
+			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
+
+			if (path.size() >= 3) {
+
+				if ((path.size() == 4)&&(path[2] == "member")&&(path[3].length() == 10)) {
+					uint64_t address = Utils::hexStrToU64(path[3].c_str());
+					char addrs[24];
+					Utils::snprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)address);
+
+					json member;
+					{
+						Mutex::Lock _l(_db_m);
+						member = _db.get("network",nwids,"member",Address(address).toString(),0);
+					}
+					json origMember(member); // for detecting changes
+					_initMember(member);
+
+					try {
+						if (b.count("activeBridge")) member["activeBridge"] = _jB(b["activeBridge"],false);
+						if (b.count("noAutoAssignIps")) member["noAutoAssignIps"] = _jB(b["noAutoAssignIps"],false);
+
+						if (b.count("authorized")) {
+							const bool newAuth = _jB(b["authorized"],false);
+							if (newAuth != _jB(member["authorized"],false)) {
+								member["authorized"] = newAuth;
+								member[((newAuth) ? "lastAuthorizedTime" : "lastDeauthorizedTime")] = now;
+
+								json ah;
+								ah["a"] = newAuth;
+								ah["by"] = "api";
+								ah["ts"] = now;
+								ah["ct"] = json();
+								ah["c"] = json();
+								member["authHistory"].push_back(ah);
+							}
+						}
+
+						if (b.count("ipAssignments")) {
+							json &ipa = b["ipAssignments"];
+							if (ipa.is_array()) {
+								json mipa(json::array());
+								for(unsigned long i=0;i<ipa.size();++i) {
+									std::string ips = ipa[i];
+									InetAddress ip(ips);
+									if ((ip.ss_family == AF_INET)||(ip.ss_family == AF_INET6)) {
+										mipa.push_back(ip.toIpString());
+									}
+								}
+								member["ipAssignments"] = mipa;
+							}
+						}
+
+						if (b.count("tags")) {
+							json &tags = b["tags"];
+							if (tags.is_array()) {
+								std::map<uint64_t,uint64_t> mtags;
+								for(unsigned long i=0;i<tags.size();++i) {
+									json &tag = tags[i];
+									if ((tag.is_array())&&(tag.size() == 2))
+										mtags[_jI(tag[0],0ULL) & 0xffffffffULL] = _jI(tag[1],0ULL) & 0xffffffffULL;
+								}
+								json mtagsa = json::array();
+								for(std::map<uint64_t,uint64_t>::iterator t(mtags.begin());t!=mtags.end();++t) {
+									json ta = json::array();
+									ta.push_back(t->first);
+									ta.push_back(t->second);
+									mtagsa.push_back(ta);
+								}
+								member["tags"] = mtagsa;
+							}
+						}
+
+						if (b.count("capabilities")) {
+							json &capabilities = b["capabilities"];
+							if (capabilities.is_array()) {
+								json mcaps = json::array();
+								for(unsigned long i=0;i<capabilities.size();++i) {
+									mcaps.push_back(_jI(capabilities[i],0ULL));
+								}
+								std::sort(mcaps.begin(),mcaps.end());
+								mcaps.erase(std::unique(mcaps.begin(),mcaps.end()),mcaps.end());
+								member["capabilities"] = mcaps;
+							}
+						}
+					} catch ( ... ) {
+						responseBody = "{ \"message\": \"exception while processing parameters in JSON body\" }";
+						responseContentType = "application/json";
+						return 400;
+					}
+
+					member["id"] = addrs;
+					member["address"] = addrs; // legacy
+					member["nwid"] = nwids;
+
+					if (member != origMember) {
+						member["lastModified"] = now;
+						json &revj = member["revision"];
+						member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
+						{
+							Mutex::Lock _l(_db_m);
+							_db.put("network",nwids,"member",Address(address).toString(),member);
+						}
+						_pushMemberUpdate(now,nwid,member);
+					}
+
+					// Add non-persisted fields
+					member["clock"] = now;
+
+					responseBody = member.dump(2);
+					responseContentType = "application/json";
+					return 200;
+				} else if ((path.size() == 3)&&(path[2] == "test")) {
+
+					Mutex::Lock _l(_circuitTests_m);
+
+					ZT_CircuitTest *test = (ZT_CircuitTest *)malloc(sizeof(ZT_CircuitTest));
+					memset(test,0,sizeof(ZT_CircuitTest));
+
+					Utils::getSecureRandom(&(test->testId),sizeof(test->testId));
+					test->credentialNetworkId = nwid;
+					test->ptr = (void *)this;
+					json hops = b["hops"];
+					if (hops.is_array()) {
+						for(unsigned long i=0;i<hops.size();++i) {
+							json &hops2 = hops[i];
+							if (hops2.is_array()) {
+								for(unsigned long j=0;j<hops2.size();++j) {
+									std::string s = hops2[j];
+									test->hops[test->hopCount].addresses[test->hops[test->hopCount].breadth++] = Utils::hexStrToU64(s.c_str()) & 0xffffffffffULL;
+								}
+							} else if (hops2.is_string()) {
+								std::string s = hops2;
+								test->hops[test->hopCount].addresses[test->hops[test->hopCount].breadth++] = Utils::hexStrToU64(s.c_str()) & 0xffffffffffULL;
+							}
+						}
+					}
+					test->reportAtEveryHop = (_jB(b["reportAtEveryHop"],true) ? 1 : 0);
+
+					if (!test->hopCount) {
+						::free((void *)test);
+						responseBody = "{ \"message\": \"a test must contain at least one hop\" }";
+						responseContentType = "application/json";
+						return 400;
+					}
+
+					test->timestamp = OSUtils::now();
+
+					_CircuitTestEntry &te = _circuitTests[test->testId];
+					te.test = test;
+					te.jsonResults = "";
+
+					if (_node)
+						_node->circuitTestBegin(test,&(EmbeddedNetworkController::_circuitTestCallback));
+					else return 500;
+
+					char json[1024];
+					Utils::snprintf(json,sizeof(json),"{\"testId\":\"%.16llx\"}",test->testId);
+					responseBody = json;
+					responseContentType = "application/json";
+					return 200;
+
+				} // else 404
+
+			} else {
+				// POST to network ID
+
+				json network;
+				{
+					Mutex::Lock _l(_db_m);
+
+					// Magic ID ending with ______ picks a random unused network ID
+					if (path[1].substr(10) == "______") {
+						nwid = 0;
+						uint64_t nwidPrefix = (Utils::hexStrToU64(path[1].substr(0,10).c_str()) << 24) & 0xffffffffff000000ULL;
+						uint64_t nwidPostfix = 0;
+						for(unsigned long k=0;k<100000;++k) { // sanity limit on trials
+							Utils::getSecureRandom(&nwidPostfix,sizeof(nwidPostfix));
+							uint64_t tryNwid = nwidPrefix | (nwidPostfix & 0xffffffULL);
+							if ((tryNwid & 0xffffffULL) == 0ULL) tryNwid |= 1ULL;
+							Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)tryNwid);
+							if (_db.get("network",nwids,120000).size() <= 0) {
+								nwid = tryNwid;
+								break;
+							}
+						}
+						if (!nwid)
+							return 503;
+					}
+
+					network = _db.get("network",nwids,0);
+				}
+				json origNetwork(network); // for detecting changes
+				_initNetwork(network);
+
+				try {
+					if (b.count("name")) network["name"] = _jS(b["name"],"");
+					if (b.count("private")) network["private"] = _jB(b["private"],true);
+					if (b.count("enableBroadcast")) network["enableBroadcast"] = _jB(b["enableBroadcast"],false);
+					if (b.count("allowPassiveBridging")) network["allowPassiveBridging"] = _jB(b["allowPassiveBridging"],false);
+					if (b.count("multicastLimit")) network["multicastLimit"] = _jI(b["multicastLimit"],32ULL);
+
+					if (b.count("v4AssignMode")) {
+						json nv4m;
+						json &v4m = b["v4AssignMode"];
+						if (v4m.is_string()) { // backward compatibility
+							nv4m["zt"] = (_jS(v4m,"") == "zt");
+						} else if (v4m.is_object()) {
+							nv4m["zt"] = _jB(v4m["zt"],false);
+						} else nv4m["zt"] = false;
+						network["v4AssignMode"] = nv4m;
+					}
+
+					if (b.count("v6AssignMode")) {
+						json nv6m;
+						json &v6m = b["v6AssignMode"];
+						if (!nv6m.is_object()) nv6m = json::object();
+						if (v6m.is_string()) { // backward compatibility
+							std::vector<std::string> v6ms(Utils::split(_jS(v6m,"").c_str(),",","",""));
+							std::sort(v6ms.begin(),v6ms.end());
+							v6ms.erase(std::unique(v6ms.begin(),v6ms.end()),v6ms.end());
+							nv6m["rfc4193"] = false;
+							nv6m["zt"] = false;
+							nv6m["6plane"] = false;
+							for(std::vector<std::string>::iterator i(v6ms.begin());i!=v6ms.end();++i) {
+								if (*i == "rfc4193")
+									nv6m["rfc4193"] = true;
+								else if (*i == "zt")
+									nv6m["zt"] = true;
+								else if (*i == "6plane")
+									nv6m["6plane"] = true;
+							}
+						} else if (v6m.is_object()) {
+							if (v6m.count("rfc4193")) nv6m["rfc4193"] = _jB(v6m["rfc4193"],false);
+							if (v6m.count("zt")) nv6m["zt"] = _jB(v6m["zt"],false);
+							if (v6m.count("6plane")) nv6m["6plane"] = _jB(v6m["6plane"],false);
+						} else {
+							nv6m["rfc4193"] = false;
+							nv6m["zt"] = false;
+							nv6m["6plane"] = false;
+						}
+						network["v6AssignMode"] = nv6m;
+					}
+
+					if (b.count("routes")) {
+						json &rts = b["routes"];
+						if (rts.is_array()) {
+							json nrts = json::array();
+							for(unsigned long i=0;i<rts.size();++i) {
+								json &rt = rts[i];
+								if (rt.is_object()) {
+									json &target = rt["target"];
+									json &via = rt["via"];
+									if (target.is_string()) {
+										InetAddress t(target.get<std::string>());
+										InetAddress v;
+										if (via.is_string()) v.fromString(via.get<std::string>());
+										if ( ((t.ss_family == AF_INET)||(t.ss_family == AF_INET6)) && (t.netmaskBitsValid()) ) {
+											json tmp;
+											tmp["target"] = t.toString();
+											if (v.ss_family == t.ss_family)
+												tmp["via"] = v.toIpString();
+											else tmp["via"] = json();
+											nrts.push_back(tmp);
+										}
+									}
+								}
+							}
+							network["routes"] = nrts;
+						}
+					}
+
+					if (b.count("ipAssignmentPools")) {
+						json &ipp = b["ipAssignmentPools"];
+						if (ipp.is_array()) {
+							json nipp = json::array();
+							for(unsigned long i=0;i<ipp.size();++i) {
+								json &ip = ipp[i];
+								if ((ip.is_object())&&(ip.count("ipRangeStart"))&&(ip.count("ipRangeEnd"))) {
+									InetAddress f(_jS(ip["ipRangeStart"],""));
+									InetAddress t(_jS(ip["ipRangeEnd"],""));
+									if ( ((f.ss_family == AF_INET)||(f.ss_family == AF_INET6)) && (f.ss_family == t.ss_family) ) {
+										json tmp = json::object();
+										tmp["ipRangeStart"] = f.toIpString();
+										tmp["ipRangeEnd"] = t.toIpString();
+										nipp.push_back(tmp);
+									}
+								}
+							}
+							network["ipAssignmentPools"] = nipp;
+						}
+					}
+
+					if (b.count("rules")) {
+						json &rules = b["rules"];
+						if (rules.is_array()) {
+							json nrules = json::array();
+							for(unsigned long i=0;i<rules.size();++i) {
+								json &rule = rules[i];
+								if (rule.is_object()) {
+									ZT_VirtualNetworkRule ztr;
+									if (_parseRule(rule,ztr))
+										nrules.push_back(_renderRule(ztr));
+								}
+							}
+							network["rules"] = nrules;
+						}
+					}
+
+					if (b.count("authTokens")) {
+						json &authTokens = b["authTokens"];
+						if (authTokens.is_array()) {
+							json nat = json::array();
+							for(unsigned long i=0;i<authTokens.size();++i) {
+								json &token = authTokens[i];
+								if (token.is_object()) {
+									std::string tstr = token["token"];
+									if (tstr.length() > 0) {
+										json t = json::object();
+										t["token"] = tstr;
+										t["expires"] = _jI(token["expires"],0ULL);
+										t["maxUsesPerMember"] = _jI(token["maxUsesPerMember"],0ULL);
+										nat.push_back(t);
+									}
+								}
+							}
+							network["authTokens"] = nat;
+						}
+					}
+
+					if (b.count("capabilities")) {
+						json &capabilities = b["capabilities"];
+						if (capabilities.is_array()) {
+							std::map< uint64_t,json > ncaps;
+							for(unsigned long i=0;i<capabilities.size();++i) {
+								json &cap = capabilities[i];
+								if (cap.is_object()) {
+									json ncap = json::object();
+									const uint64_t capId = _jI(cap["id"],0ULL);
+									ncap["id"] = capId;
+
+									json &rules = cap["rules"];
+									json nrules = json::array();
+									if (rules.is_array()) {
+										for(unsigned long i=0;i<rules.size();++i) {
+											json &rule = rules[i];
+											if (rule.is_object()) {
+												ZT_VirtualNetworkRule ztr;
+												if (_parseRule(rule,ztr))
+													nrules.push_back(_renderRule(ztr));
+											}
+										}
+									}
+									ncap["rules"] = nrules;
+
+									ncaps[capId] = ncap;
+								}
+							}
+
+							json ncapsa = json::array();
+							for(std::map< uint64_t,json >::iterator c(ncaps.begin());c!=ncaps.end();++c)
+								ncapsa.push_back(c->second);
+							network["capabilities"] = ncapsa;
+						}
+					}
+				} catch ( ... ) {
+					responseBody = "{ \"message\": \"exception occurred while parsing body variables\" }";
+					responseContentType = "application/json";
+					return 400;
+				}
+
+				network["id"] = nwids;
+				network["nwid"] = nwids; // legacy
+
+				if (network != origNetwork) {
+					json &revj = network["revision"];
+					network["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
+					network["lastModified"] = now;
+					{
+						Mutex::Lock _l(_db_m);
+						_db.put("network",nwids,network);
+					}
+					std::string pfx("network/"); pfx.append(nwids); pfx.append("/member/");
+					_db.filter(pfx,120000,[this,&now,&nwid](const std::string &n,const json &obj) {
+						_pushMemberUpdate(now,nwid,obj);
+						return true; // do not delete
+					});
+				}
+
+				_NetworkMemberInfo nmi;
+				_getNetworkMemberInfo(now,nwid,nmi);
+				_addNetworkNonPersistedFields(network,now,nmi);
+
+				responseBody = network.dump(2);
+				responseContentType = "application/json";
+				return 200;
+			} // else 404
+
+		} // else 404
+
+	} // else 404
+
+	return 404;
+}
+
+unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
+	const std::vector<std::string> &path,
+	const std::map<std::string,std::string> &urlArgs,
+	const std::map<std::string,std::string> &headers,
+	const std::string &body,
+	std::string &responseBody,
+	std::string &responseContentType)
+{
+	if (path.empty())
+		return 404;
+
+	if (path[0] == "network") {
+		if ((path.size() >= 2)&&(path[1].length() == 16)) {
+			const uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
+
+			char nwids[24];
+			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",nwid);
+			json network;
+			{
+				Mutex::Lock _l(_db_m);
+				network = _db.get("network",nwids,0);
+			}
+			if (!network.size())
+				return 404;
+
+			if (path.size() >= 3) {
+				if ((path.size() == 4)&&(path[2] == "member")&&(path[3].length() == 10)) {
+					const uint64_t address = Utils::hexStrToU64(path[3].c_str());
+
+					Mutex::Lock _l(_db_m);
+
+					json member = _db.get("network",nwids,"member",Address(address).toString(),0);
+					_db.erase("network",nwids,"member",Address(address).toString());
+
+					if (!member.size())
+						return 404;
+					responseBody = member.dump(2);
+					responseContentType = "application/json";
+					return 200;
+				}
+			} else {
+				Mutex::Lock _l(_db_m);
+
+				std::string pfx("network/"); pfx.append(nwids);
+				_db.filter(pfx,120000,[](const std::string &n,const json &obj) {
+					return false; // delete
+				});
+
+				Mutex::Lock _l2(_nmiCache_m);
+				_nmiCache.erase(nwid);
+
+				responseBody = network.dump(2);
+				responseContentType = "application/json";
+				return 200;
+			}
+		} // else 404
+
+	} // else 404
+
+	return 404;
+}
+
+void EmbeddedNetworkController::threadMain()
+	throw()
+{
+	for(;;) {
+		_RQEntry *const qe = _queue.get();
+		if (!qe) break; // enqueue a NULL to terminate threads
+		try {
+			_request(qe->nwid,qe->fromAddr,qe->requestPacketId,qe->identity,qe->metaData);
+		} catch ( ... ) {}
+		delete qe;
+	}
+}
+
+void EmbeddedNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report)
+{
+	char tmp[65535];
+	EmbeddedNetworkController *const self = reinterpret_cast<EmbeddedNetworkController *>(test->ptr);
+
+	if (!test)
+		return;
+	if (!report)
+		return;
+
+	Mutex::Lock _l(self->_circuitTests_m);
+	std::map< uint64_t,_CircuitTestEntry >::iterator cte(self->_circuitTests.find(test->testId));
+
+	if (cte == self->_circuitTests.end()) { // sanity check: a circuit test we didn't launch?
+		self->_node->circuitTestEnd(test);
+		::free((void *)test);
+		return;
+	}
+
+	Utils::snprintf(tmp,sizeof(tmp),
+		"%s{\n"
+		"\t\"timestamp\": %llu," ZT_EOL_S
+		"\t\"testId\": \"%.16llx\"," ZT_EOL_S
+		"\t\"upstream\": \"%.10llx\"," ZT_EOL_S
+		"\t\"current\": \"%.10llx\"," ZT_EOL_S
+		"\t\"receivedTimestamp\": %llu," ZT_EOL_S
+		"\t\"sourcePacketId\": \"%.16llx\"," ZT_EOL_S
+		"\t\"flags\": %llu," ZT_EOL_S
+		"\t\"sourcePacketHopCount\": %u," ZT_EOL_S
+		"\t\"errorCode\": %u," ZT_EOL_S
+		"\t\"vendor\": %d," ZT_EOL_S
+		"\t\"protocolVersion\": %u," ZT_EOL_S
+		"\t\"majorVersion\": %u," ZT_EOL_S
+		"\t\"minorVersion\": %u," ZT_EOL_S
+		"\t\"revision\": %u," ZT_EOL_S
+		"\t\"platform\": %d," ZT_EOL_S
+		"\t\"architecture\": %d," ZT_EOL_S
+		"\t\"receivedOnLocalAddress\": \"%s\"," ZT_EOL_S
+		"\t\"receivedFromRemoteAddress\": \"%s\"" ZT_EOL_S
+		"}",
+		((cte->second.jsonResults.length() > 0) ? ",\n" : ""),
+		(unsigned long long)report->timestamp,
+		(unsigned long long)test->testId,
+		(unsigned long long)report->upstream,
+		(unsigned long long)report->current,
+		(unsigned long long)OSUtils::now(),
+		(unsigned long long)report->sourcePacketId,
+		(unsigned long long)report->flags,
+		report->sourcePacketHopCount,
+		report->errorCode,
+		(int)report->vendor,
+		report->protocolVersion,
+		report->majorVersion,
+		report->minorVersion,
+		report->revision,
+		(int)report->platform,
+		(int)report->architecture,
+		reinterpret_cast<const InetAddress *>(&(report->receivedOnLocalAddress))->toString().c_str(),
+		reinterpret_cast<const InetAddress *>(&(report->receivedFromRemoteAddress))->toString().c_str());
+
+	cte->second.jsonResults.append(tmp);
+}
+
+void EmbeddedNetworkController::_request(
+	uint64_t nwid,
+	const InetAddress &fromAddr,
+	uint64_t requestPacketId,
+	const Identity &identity,
+	const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData)
+{
+	if (((!_signingId)||(!_signingId.hasPrivate()))||(_signingId.address().toInt() != (nwid >> 24))||(!_sender))
+		return;
 
 	const uint64_t now = OSUtils::now();
 
-	// Check rate limit circuit breaker to prevent flooding
-	{
+	if (requestPacketId) {
 		Mutex::Lock _l(_lastRequestTime_m);
 		uint64_t &lrt = _lastRequestTime[std::pair<uint64_t,uint64_t>(identity.address().toInt(),nwid)];
 		if ((now - lrt) <= ZT_NETCONF_MIN_REQUEST_PERIOD)
-			return NetworkController::NETCONF_QUERY_IGNORE;
+			return;
 		lrt = now;
 	}
 
@@ -496,8 +1243,13 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		network = _db.get("network",nwids,0);
 		member = _db.get("network",nwids,"member",identity.address().toString(),0);
 	}
-	if (!network.size())
-		return NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND;
+
+	if (!network.size()) {
+		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
+		return;
+	}
+
+	json origMember(member); // for detecting modification later
 	_initMember(member);
 
 	{
@@ -507,10 +1259,13 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 			// a "collision" from being able to auth onto our network in place of an already
 			// known member.
 			try {
-				if (Identity(haveIdStr.c_str()) != identity)
-					return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
+				if (Identity(haveIdStr.c_str()) != identity) {
+					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
+					return;
+				}
 			} catch ( ... ) {
-				return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
+				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
+				return;
 			}
 		} else {
 			// If we do not yet know this member's identity, learn it.
@@ -521,27 +1276,18 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	// These are always the same, but make sure they are set
 	member["id"] = identity.address().toString();
 	member["address"] = member["id"];
-	member["nwid"] = network["id"];
+	member["nwid"] = nwids;
 
 	// Determine whether and how member is authorized
 	const char *authorizedBy = (const char *)0;
+	bool autoAuthorized = false;
+	json autoAuthCredentialType,autoAuthCredential;
 	if (_jB(member["authorized"],false)) {
 		authorizedBy = "memberIsAuthorized";
 	} else if (!_jB(network["private"],true)) {
 		authorizedBy = "networkIsPublic";
-		if (!member.count("authorized")) {
-			member["authorized"] = true;
-			json ah;
-			ah["a"] = true;
-			ah["by"] = authorizedBy;
-			ah["ts"] = now;
-			ah["ct"] = json();
-			ah["c"] = json();
-			member["authHistory"].push_back(ah);
-			member["lastModified"] = now;
-			json &revj = member["revision"];
-			member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-		}
+		if (!member.count("authorized"))
+			autoAuthorized = true;
 	} else {
 		char presentedAuth[512];
 		if (metaData.get(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH,presentedAuth,sizeof(presentedAuth)) > 0) {
@@ -576,17 +1322,9 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 								}
 								if (usable) {
 									authorizedBy = "token";
-									member["authorized"] = true;
-									json ah;
-									ah["a"] = true;
-									ah["by"] = authorizedBy;
-									ah["ts"] = now;
-									ah["ct"] = "token";
-									ah["c"] = tstr;
-									member["authHistory"].push_back(ah);
-									member["lastModified"] = now;
-									json &revj = member["revision"];
-									member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
+									autoAuthorized = true;
+									autoAuthCredentialType = "token";
+									autoAuthCredential = tstr;
 								}
 							}
 						}
@@ -596,8 +1334,25 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 		}
 	}
 
+	// If we auto-authorized, update member record
+	if ((autoAuthorized)&&(authorizedBy)) {
+		member["authorized"] = true;
+		member["lastAuthorizedTime"] = now;
+
+		json ah;
+		ah["a"] = true;
+		ah["by"] = authorizedBy;
+		ah["ts"] = now;
+		ah["ct"] = autoAuthCredentialType;
+		ah["c"] = autoAuthCredential;
+		member["authHistory"].push_back(ah);
+
+		json &revj = member["revision"];
+		member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
+	}
+
 	// Log this request
-	{
+	if (requestPacketId) { // only log if this is a request, not for generated pushes
 		json rlEntry = json::object();
 		rlEntry["ts"] = now;
 		rlEntry["authorized"] = (authorizedBy) ? true : false;
@@ -620,32 +1375,42 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 			}
 		}
 		member["recentLog"] = recentLog;
+
+		// Also only do this on real requests
+		member["lastRequestMetaData"] = metaData.data();
 	}
 
 	// If they are not authorized, STOP!
 	if (!authorizedBy) {
-		Mutex::Lock _l(_db_m);
-		_db.put("network",nwids,"member",identity.address().toString(),member);
-		return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
+		if (origMember != member) {
+			member["lastModified"] = now;
+			Mutex::Lock _l(_db_m);
+			_db.put("network",nwids,"member",identity.address().toString(),member);
+		}
+		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
+		return;
 	}
 
 	// -------------------------------------------------------------------------
 	// If we made it this far, they are authorized.
 	// -------------------------------------------------------------------------
 
+	NetworkConfig nc;
 	_NetworkMemberInfo nmi;
 	_getNetworkMemberInfo(now,nwid,nmi);
 
-	// Compute credential TTL. This is the "moving window" for COM agreement and
-	// the global TTL for Capability and Tag objects. (The same value is used
-	// for both.) This is computed by reference to the last time we deauthorized
-	// a member, since within the time period since this event any temporal
-	// differences are not particularly relevant.
-	uint64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA;
-	if (now > nmi.mostRecentDeauthTime)
-		credentialtmd += (now - nmi.mostRecentDeauthTime);
-	if (credentialtmd > ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA)
-		credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
+	uint64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
+	if (now > nmi.mostRecentDeauthTime) {
+		// If we recently de-authorized a member, shrink credential TTL/max delta to
+		// be below the threshold required to exclude it. Cap this to a min/max to
+		// prevent jitter or absurdly large values.
+		const uint64_t deauthWindow = now - nmi.mostRecentDeauthTime;
+		if (deauthWindow < ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA) {
+			credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA;
+		} else if (deauthWindow < (ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA + 5000ULL)) {
+			credentialtmd = deauthWindow - 5000ULL;
+		}
+	}
 
 	nc.networkId = nwid;
 	nc.type = _jB(network["private"],true) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
@@ -658,8 +1423,9 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	Utils::scopy(nc.name,sizeof(nc.name),_jS(network["name"],"").c_str());
 	nc.multicastLimit = (unsigned int)_jI(network["multicastLimit"],32ULL);
 
-	for(std::set<Address>::const_iterator ab(nmi.activeBridges.begin());ab!=nmi.activeBridges.end();++ab)
+	for(std::set<Address>::const_iterator ab(nmi.activeBridges.begin());ab!=nmi.activeBridges.end();++ab) {
 		nc.addSpecialist(*ab,ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
+	}
 
 	json &v4AssignMode = network["v4AssignMode"];
 	json &v6AssignMode = network["v6AssignMode"];
@@ -670,60 +1436,68 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	json &memberCapabilities = member["capabilities"];
 	json &memberTags = member["tags"];
 
-	if (rules.is_array()) {
-		for(unsigned long i=0;i<rules.size();++i) {
-			if (nc.ruleCount >= ZT_MAX_NETWORK_RULES)
-				break;
-			if (_parseRule(rules[i],nc.rules[nc.ruleCount]))
-				++nc.ruleCount;
-		}
-	}
-
-	if ((memberCapabilities.is_array())&&(memberCapabilities.size() > 0)&&(capabilities.is_array())) {
-		std::map< uint64_t,json * > capsById;
-		for(unsigned long i=0;i<capabilities.size();++i) {
-			json &cap = capabilities[i];
-			if (cap.is_object())
-				capsById[_jI(cap["id"],0ULL) & 0xffffffffULL] = &cap;
-		}
-
-		for(unsigned long i=0;i<memberCapabilities.size();++i) {
-			const uint64_t capId = _jI(memberCapabilities[i],0ULL) & 0xffffffffULL;
-			json *cap = capsById[capId];
-			if ((cap->is_object())&&(cap->size() > 0)) {
-				ZT_VirtualNetworkRule capr[ZT_MAX_CAPABILITY_RULES];
-				unsigned int caprc = 0;
-				json &caprj = (*cap)["rules"];
-				if ((caprj.is_array())&&(caprj.size() > 0)) {
-					for(unsigned long j=0;j<caprj.size();++j) {
-						if (caprc >= ZT_MAX_CAPABILITY_RULES)
-							break;
-						if (_parseRule(caprj[j],capr[caprc]))
-							++caprc;
-					}
-				}
-				nc.capabilities[nc.capabilityCount] = Capability((uint32_t)capId,nwid,now,1,capr,caprc);
-				if (nc.capabilities[nc.capabilityCount].sign(signingId,identity.address()))
-					++nc.capabilityCount;
-				if (nc.capabilityCount >= ZT_MAX_NETWORK_CAPABILITIES)
+	if (metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,0) <= 0) {
+		// Old versions with no rules engine support get an allow everything rule.
+		// Since rules are enforced bidirectionally, newer versions *will* still
+		// enforce rules on the inbound side.
+		nc.ruleCount = 1;
+		nc.rules[0].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
+	} else {
+		if (rules.is_array()) {
+			for(unsigned long i=0;i<rules.size();++i) {
+				if (nc.ruleCount >= ZT_MAX_NETWORK_RULES)
 					break;
+				if (_parseRule(rules[i],nc.rules[nc.ruleCount]))
+					++nc.ruleCount;
 			}
 		}
-	}
 
-	if (memberTags.is_array()) {
-		std::map< uint32_t,uint32_t > tagsById;
-		for(unsigned long i=0;i<memberTags.size();++i) {
-			json &t = memberTags[i];
-			if ((t.is_array())&&(t.size() == 2))
-				tagsById[(uint32_t)(_jI(t[0],0ULL) & 0xffffffffULL)] = (uint32_t)(_jI(t[1],0ULL) & 0xffffffffULL);
+		if ((memberCapabilities.is_array())&&(memberCapabilities.size() > 0)&&(capabilities.is_array())) {
+			std::map< uint64_t,json * > capsById;
+			for(unsigned long i=0;i<capabilities.size();++i) {
+				json &cap = capabilities[i];
+				if (cap.is_object())
+					capsById[_jI(cap["id"],0ULL) & 0xffffffffULL] = &cap;
+			}
+
+			for(unsigned long i=0;i<memberCapabilities.size();++i) {
+				const uint64_t capId = _jI(memberCapabilities[i],0ULL) & 0xffffffffULL;
+				json *cap = capsById[capId];
+				if ((cap->is_object())&&(cap->size() > 0)) {
+					ZT_VirtualNetworkRule capr[ZT_MAX_CAPABILITY_RULES];
+					unsigned int caprc = 0;
+					json &caprj = (*cap)["rules"];
+					if ((caprj.is_array())&&(caprj.size() > 0)) {
+						for(unsigned long j=0;j<caprj.size();++j) {
+							if (caprc >= ZT_MAX_CAPABILITY_RULES)
+								break;
+							if (_parseRule(caprj[j],capr[caprc]))
+								++caprc;
+						}
+					}
+					nc.capabilities[nc.capabilityCount] = Capability((uint32_t)capId,nwid,now,1,capr,caprc);
+					if (nc.capabilities[nc.capabilityCount].sign(_signingId,identity.address()))
+						++nc.capabilityCount;
+					if (nc.capabilityCount >= ZT_MAX_NETWORK_CAPABILITIES)
+						break;
+				}
+			}
 		}
-		for(std::map< uint32_t,uint32_t >::const_iterator t(tagsById.begin());t!=tagsById.end();++t) {
-			if (nc.tagCount >= ZT_MAX_NETWORK_TAGS)
-				break;
-			nc.tags[nc.tagCount] = Tag(nwid,now,identity.address(),t->first,t->second);
-			if (nc.tags[nc.tagCount].sign(signingId))
-				++nc.tagCount;
+
+		if (memberTags.is_array()) {
+			std::map< uint32_t,uint32_t > tagsById;
+			for(unsigned long i=0;i<memberTags.size();++i) {
+				json &t = memberTags[i];
+				if ((t.is_array())&&(t.size() == 2))
+					tagsById[(uint32_t)(_jI(t[0],0ULL) & 0xffffffffULL)] = (uint32_t)(_jI(t[1],0ULL) & 0xffffffffULL);
+			}
+			for(std::map< uint32_t,uint32_t >::const_iterator t(tagsById.begin());t!=tagsById.end();++t) {
+				if (nc.tagCount >= ZT_MAX_NETWORK_TAGS)
+					break;
+				nc.tags[nc.tagCount] = Tag(nwid,now,identity.address(),t->first,t->second);
+				if (nc.tags[nc.tagCount].sign(_signingId))
+					++nc.tagCount;
+			}
 		}
 	}
 
@@ -912,703 +1686,20 @@ NetworkController::ResultCode EmbeddedNetworkController::doNetworkConfigRequest(
 	}
 
 	CertificateOfMembership com(now,credentialtmd,nwid,identity.address());
-	if (com.sign(signingId)) {
+	if (com.sign(_signingId)) {
 		nc.com = com;
 	} else {
-		return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR);
+		return;
 	}
 
-	{
+	if (member != origMember) {
+		member["lastModified"] = now;
 		Mutex::Lock _l(_db_m);
 		_db.put("network",nwids,"member",identity.address().toString(),member);
 	}
-	return NetworkController::NETCONF_QUERY_OK;
-}
 
-unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
-	const std::vector<std::string> &path,
-	const std::map<std::string,std::string> &urlArgs,
-	const std::map<std::string,std::string> &headers,
-	const std::string &body,
-	std::string &responseBody,
-	std::string &responseContentType)
-{
-	if ((path.size() > 0)&&(path[0] == "network")) {
-
-		if ((path.size() >= 2)&&(path[1].length() == 16)) {
-			const uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
-			char nwids[24];
-			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
-
-			json network;
-			{
-				Mutex::Lock _l(_db_m);
-				network = _db.get("network",nwids,0);
-			}
-			if (!network.size())
-				return 404;
-
-			if (path.size() >= 3) {
-
-				if (path[2] == "member") {
-
-					if (path.size() >= 4) {
-						const uint64_t address = Utils::hexStrToU64(path[3].c_str());
-
-						json member;
-						{
-							Mutex::Lock _l(_db_m);
-							member = _db.get("network",nwids,"member",Address(address).toString(),0);
-						}
-						if (!member.size())
-							return 404;
-
-						_addMemberNonPersistedFields(member,OSUtils::now());
-						responseBody = member.dump(2);
-						responseContentType = "application/json";
-
-						return 200;
-					} else {
-
-						Mutex::Lock _l(_db_m);
-
-						responseBody = "{";
-						std::string pfx(std::string("network/") + nwids + "member/");
-						_db.filter(pfx,120000,[&responseBody](const std::string &n,const json &member) {
-							if (member.size() > 0) {
-								responseBody.append((responseBody.length() == 1) ? "\"" : ",\"");
-								responseBody.append(_jS(member["id"],""));
-								responseBody.append("\":");
-								responseBody.append(_jS(member["revision"],"0"));
-							}
-							return true; // never delete
-						});
-						responseBody.push_back('}');
-						responseContentType = "application/json";
-
-						return 200;
-					}
-
-				} else if ((path[2] == "test")&&(path.size() >= 4)) {
-
-					Mutex::Lock _l(_circuitTests_m);
-					std::map< uint64_t,_CircuitTestEntry >::iterator cte(_circuitTests.find(Utils::hexStrToU64(path[3].c_str())));
-					if ((cte != _circuitTests.end())&&(cte->second.test)) {
-
-						responseBody = "[";
-						responseBody.append(cte->second.jsonResults);
-						responseBody.push_back(']');
-						responseContentType = "application/json";
-
-						return 200;
-
-					} // else 404
-
-				} // else 404
-
-			} else {
-
-				const uint64_t now = OSUtils::now();
-				_NetworkMemberInfo nmi;
-				_getNetworkMemberInfo(now,nwid,nmi);
-				_addNetworkNonPersistedFields(network,now,nmi);
-				responseBody = network.dump(2);
-				responseContentType = "application/json";
-				return 200;
-
-			}
-		} else if (path.size() == 1) {
-
-			std::set<std::string> networkIds;
-			{
-				Mutex::Lock _l(_db_m);
-				_db.filter("network/",120000,[&networkIds](const std::string &n,const json &obj) {
-					if (n.length() == (16 + 8))
-						networkIds.insert(n.substr(8));
-					return true; // do not delete
-				});
-			}
-
-			responseBody.push_back('[');
-			for(std::set<std::string>::iterator i(networkIds.begin());i!=networkIds.end();++i) {
-				responseBody.append((responseBody.length() == 1) ? "\"" : ",\"");
-				responseBody.append(*i);
-				responseBody.append("\"");
-			}
-			responseBody.push_back(']');
-			responseContentType = "application/json";
-			return 200;
-
-		} // else 404
-
-	} else {
-
-		char tmp[4096];
-		Utils::snprintf(tmp,sizeof(tmp),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now());
-		responseBody = tmp;
-		responseContentType = "application/json";
-		return 200;
-
-	}
-
-	return 404;
-}
-
-unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
-	const std::vector<std::string> &path,
-	const std::map<std::string,std::string> &urlArgs,
-	const std::map<std::string,std::string> &headers,
-	const std::string &body,
-	std::string &responseBody,
-	std::string &responseContentType)
-{
-	if (path.empty())
-		return 404;
-
-	json b;
-	try {
-		b = json::parse(body);
-		if (!b.is_object()) {
-			responseBody = "{ \"message\": \"body is not a JSON object\" }";
-			responseContentType = "application/json";
-			return 400;
-		}
-	} catch (std::exception &exc) {
-		responseBody = std::string("{ \"message\": \"body JSON is invalid: ") + exc.what() + "\" }";
-		responseContentType = "application/json";
-		return 400;
-	} catch ( ... ) {
-		responseBody = "{ \"message\": \"body JSON is invalid\" }";
-		responseContentType = "application/json";
-		return 400;
-	}
-	const uint64_t now = OSUtils::now();
-
-	if (path[0] == "network") {
-
-		if ((path.size() >= 2)&&(path[1].length() == 16)) {
-			uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
-			char nwids[24];
-			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
-
-			if (path.size() >= 3) {
-				json network;
-				{
-					Mutex::Lock _l(_db_m);
-					network = _db.get("network",nwids,0);
-				}
-				if (!network.size())
-					return 404;
-
-				if ((path.size() == 4)&&(path[2] == "member")&&(path[3].length() == 10)) {
-					uint64_t address = Utils::hexStrToU64(path[3].c_str());
-					char addrs[24];
-					Utils::snprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)address);
-
-					json member;
-					{
-						Mutex::Lock _l(_db_m);
-						member = _db.get("network",nwids,"member",Address(address).toString(),0);
-					}
-					if (!member.size())
-						return 404;
-					_initMember(member);
-
-					try {
-						if (b.count("activeBridge")) member["activeBridge"] = _jB(b["activeBridge"],false);
-						if (b.count("noAutoAssignIps")) member["noAutoAssignIps"] = _jB(b["noAutoAssignIps"],false);
-						if ((b.count("identity"))&&(!member.count("identity"))) member["identity"] = _jS(b["identity"],""); // allow identity to be populated only if not already known
-
-						if (b.count("authorized")) {
-							const bool newAuth = _jB(b["authorized"],false);
-							if (newAuth != _jB(member["authorized"],false)) {
-								member["authorized"] = newAuth;
-								json ah;
-								ah["a"] = newAuth;
-								ah["by"] = "api";
-								ah["ts"] = now;
-								ah["ct"] = json();
-								ah["c"] = json();
-								member["authHistory"].push_back(ah);
-							}
-						}
-
-						if (b.count("ipAssignments")) {
-							json &ipa = b["ipAssignments"];
-							if (ipa.is_array()) {
-								json mipa(json::array());
-								for(unsigned long i=0;i<ipa.size();++i) {
-									std::string ips = ipa[i];
-									InetAddress ip(ips);
-									if ((ip.ss_family == AF_INET)||(ip.ss_family == AF_INET6)) {
-										mipa.push_back(ip.toIpString());
-									}
-								}
-								member["ipAssignments"] = mipa;
-							}
-						}
-
-						if (b.count("tags")) {
-							json &tags = b["tags"];
-							if (tags.is_array()) {
-								std::map<uint64_t,uint64_t> mtags;
-								for(unsigned long i=0;i<tags.size();++i) {
-									json &tag = tags[i];
-									if ((tag.is_array())&&(tag.size() == 2))
-										mtags[_jI(tag[0],0ULL) & 0xffffffffULL] = _jI(tag[1],0ULL) & 0xffffffffULL;
-								}
-								json mtagsa = json::array();
-								for(std::map<uint64_t,uint64_t>::iterator t(mtags.begin());t!=mtags.end();++t) {
-									json ta = json::array();
-									ta.push_back(t->first);
-									ta.push_back(t->second);
-									mtagsa.push_back(ta);
-								}
-								member["tags"] = mtagsa;
-							}
-						}
-
-						if (b.count("capabilities")) {
-							json &capabilities = b["capabilities"];
-							if (capabilities.is_array()) {
-								json mcaps = json::array();
-								for(unsigned long i=0;i<capabilities.size();++i) {
-									mcaps.push_back(_jI(capabilities[i],0ULL));
-								}
-								std::sort(mcaps.begin(),mcaps.end());
-								mcaps.erase(std::unique(mcaps.begin(),mcaps.end()),mcaps.end());
-								member["capabilities"] = mcaps;
-							}
-						}
-					} catch ( ... ) {
-						responseBody = "{ \"message\": \"exception while processing parameters in JSON body\" }";
-						responseContentType = "application/json";
-						return 400;
-					}
-
-					member["id"] = addrs;
-					member["address"] = addrs; // legacy
-					member["nwid"] = nwids;
-					member["lastModified"] = now;
-					json &revj = member["revision"];
-					member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-
-					{
-						Mutex::Lock _l(_db_m);
-						_db.put("network",nwids,"member",Address(address).toString(),member);
-					}
-
-					// Add non-persisted fields
-					member["clock"] = now;
-
-					responseBody = member.dump(2);
-					responseContentType = "application/json";
-					return 200;
-				} else if ((path.size() == 3)&&(path[2] == "test")) {
-
-					Mutex::Lock _l(_circuitTests_m);
-
-					ZT_CircuitTest *test = (ZT_CircuitTest *)malloc(sizeof(ZT_CircuitTest));
-					memset(test,0,sizeof(ZT_CircuitTest));
-
-					Utils::getSecureRandom(&(test->testId),sizeof(test->testId));
-					test->credentialNetworkId = nwid;
-					test->ptr = (void *)this;
-					json hops = b["hops"];
-					if (hops.is_array()) {
-						for(unsigned long i=0;i<hops.size();++i) {
-							json &hops2 = hops[i];
-							if (hops2.is_array()) {
-								for(unsigned long j=0;j<hops2.size();++j) {
-									std::string s = hops2[j];
-									test->hops[test->hopCount].addresses[test->hops[test->hopCount].breadth++] = Utils::hexStrToU64(s.c_str()) & 0xffffffffffULL;
-								}
-							} else if (hops2.is_string()) {
-								std::string s = hops2;
-								test->hops[test->hopCount].addresses[test->hops[test->hopCount].breadth++] = Utils::hexStrToU64(s.c_str()) & 0xffffffffffULL;
-							}
-						}
-					}
-					test->reportAtEveryHop = (_jB(b["reportAtEveryHop"],true) ? 1 : 0);
-
-					if (!test->hopCount) {
-						::free((void *)test);
-						responseBody = "{ \"message\": \"a test must contain at least one hop\" }";
-						responseContentType = "application/json";
-						return 400;
-					}
-
-					test->timestamp = OSUtils::now();
-
-					_CircuitTestEntry &te = _circuitTests[test->testId];
-					te.test = test;
-					te.jsonResults = "";
-
-					if (_node)
-						_node->circuitTestBegin(test,&(EmbeddedNetworkController::_circuitTestCallback));
-					else return 500;
-
-					char json[1024];
-					Utils::snprintf(json,sizeof(json),"{\"testId\":\"%.16llx\"}",test->testId);
-					responseBody = json;
-					responseContentType = "application/json";
-					return 200;
-
-				} // else 404
-
-			} else {
-				// POST to network ID
-
-				json network;
-				{
-					Mutex::Lock _l(_db_m);
-
-					// Magic ID ending with ______ picks a random unused network ID
-					if (path[1].substr(10) == "______") {
-						nwid = 0;
-						uint64_t nwidPrefix = (Utils::hexStrToU64(path[1].substr(0,10).c_str()) << 24) & 0xffffffffff000000ULL;
-						uint64_t nwidPostfix = 0;
-						for(unsigned long k=0;k<100000;++k) { // sanity limit on trials
-							Utils::getSecureRandom(&nwidPostfix,sizeof(nwidPostfix));
-							uint64_t tryNwid = nwidPrefix | (nwidPostfix & 0xffffffULL);
-							if ((tryNwid & 0xffffffULL) == 0ULL) tryNwid |= 1ULL;
-							Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)tryNwid);
-							if (_db.get("network",nwids,120000).size() <= 0) {
-								nwid = tryNwid;
-								break;
-							}
-						}
-						if (!nwid)
-							return 503;
-					}
-
-					network = _db.get("network",nwids,0);
-					if (!network.size())
-						return 404;
-				}
-				_initNetwork(network);
-
-				try {
-					if (b.count("name")) network["name"] = _jS(b["name"],"");
-					if (b.count("private")) network["private"] = _jB(b["private"],true);
-					if (b.count("enableBroadcast")) network["enableBroadcast"] = _jB(b["enableBroadcast"],false);
-					if (b.count("allowPassiveBridging")) network["allowPassiveBridging"] = _jB(b["allowPassiveBridging"],false);
-					if (b.count("multicastLimit")) network["multicastLimit"] = _jI(b["multicastLimit"],32ULL);
-
-					if (b.count("v4AssignMode")) {
-						json nv4m;
-						json &v4m = b["v4AssignMode"];
-						if (v4m.is_string()) { // backward compatibility
-							nv4m["zt"] = (_jS(v4m,"") == "zt");
-						} else if (v4m.is_object()) {
-							nv4m["zt"] = _jB(v4m["zt"],false);
-						} else nv4m["zt"] = false;
-						network["v4AssignMode"] = nv4m;
-					}
-
-					if (b.count("v6AssignMode")) {
-						json nv6m;
-						json &v6m = b["v6AssignMode"];
-						if (!nv6m.is_object()) nv6m = json::object();
-						if (v6m.is_string()) { // backward compatibility
-							std::vector<std::string> v6ms(Utils::split(_jS(v6m,"").c_str(),",","",""));
-							std::sort(v6ms.begin(),v6ms.end());
-							v6ms.erase(std::unique(v6ms.begin(),v6ms.end()),v6ms.end());
-							nv6m["rfc4193"] = false;
-							nv6m["zt"] = false;
-							nv6m["6plane"] = false;
-							for(std::vector<std::string>::iterator i(v6ms.begin());i!=v6ms.end();++i) {
-								if (*i == "rfc4193")
-									nv6m["rfc4193"] = true;
-								else if (*i == "zt")
-									nv6m["zt"] = true;
-								else if (*i == "6plane")
-									nv6m["6plane"] = true;
-							}
-						} else if (v6m.is_object()) {
-							if (v6m.count("rfc4193")) nv6m["rfc4193"] = _jB(v6m["rfc4193"],false);
-							if (v6m.count("zt")) nv6m["zt"] = _jB(v6m["zt"],false);
-							if (v6m.count("6plane")) nv6m["6plane"] = _jB(v6m["6plane"],false);
-						} else {
-							nv6m["rfc4193"] = false;
-							nv6m["zt"] = false;
-							nv6m["6plane"] = false;
-						}
-						network["v6AssignMode"] = nv6m;
-					}
-
-					if (b.count("routes")) {
-						json &rts = b["routes"];
-						if (rts.is_array()) {
-							json nrts = json::array();
-							for(unsigned long i=0;i<rts.size();++i) {
-								json &rt = rts[i];
-								if (rt.is_object()) {
-									json &target = rt["target"];
-									json &via = rt["via"];
-									if (target.is_string()) {
-										InetAddress t(target.get<std::string>());
-										InetAddress v;
-										if (via.is_string()) v.fromString(via.get<std::string>());
-										if ( ((t.ss_family == AF_INET)||(t.ss_family == AF_INET6)) && (t.netmaskBitsValid()) ) {
-											json tmp;
-											tmp["target"] = t.toString();
-											if (v.ss_family == t.ss_family)
-												tmp["via"] = v.toIpString();
-											else tmp["via"] = json();
-											nrts.push_back(tmp);
-										}
-									}
-								}
-							}
-							network["routes"] = nrts;
-						}
-					}
-
-					if (b.count("ipAssignmentPools")) {
-						json &ipp = b["ipAssignmentPools"];
-						if (ipp.is_array()) {
-							json nipp = json::array();
-							for(unsigned long i=0;i<ipp.size();++i) {
-								json &ip = ipp[i];
-								if ((ip.is_object())&&(ip.count("ipRangeStart"))&&(ip.count("ipRangeEnd"))) {
-									InetAddress f(_jS(ip["ipRangeStart"],""));
-									InetAddress t(_jS(ip["ipRangeEnd"],""));
-									if ( ((f.ss_family == AF_INET)||(f.ss_family == AF_INET6)) && (f.ss_family == t.ss_family) ) {
-										json tmp = json::object();
-										tmp["ipRangeStart"] = f.toIpString();
-										tmp["ipRangeEnd"] = t.toIpString();
-										nipp.push_back(tmp);
-									}
-								}
-							}
-							network["ipAssignmentPools"] = nipp;
-						}
-					}
-
-					if (b.count("rules")) {
-						json &rules = b["rules"];
-						if (rules.is_array()) {
-							json nrules = json::array();
-							for(unsigned long i=0;i<rules.size();++i) {
-								json &rule = rules[i];
-								if (rule.is_object()) {
-									ZT_VirtualNetworkRule ztr;
-									if (_parseRule(rule,ztr))
-										nrules.push_back(_renderRule(ztr));
-								}
-							}
-							network["rules"] = nrules;
-						}
-					}
-
-					if (b.count("authTokens")) {
-						json &authTokens = b["authTokens"];
-						if (authTokens.is_array()) {
-							json nat = json::array();
-							for(unsigned long i=0;i<authTokens.size();++i) {
-								json &token = authTokens[i];
-								if (token.is_object()) {
-									std::string tstr = token["token"];
-									if (tstr.length() > 0) {
-										json t = json::object();
-										t["token"] = tstr;
-										t["expires"] = _jI(token["expires"],0ULL);
-										t["maxUsesPerMember"] = _jI(token["maxUsesPerMember"],0ULL);
-										nat.push_back(t);
-									}
-								}
-							}
-							network["authTokens"] = nat;
-						}
-					}
-
-					if (b.count("capabilities")) {
-						json &capabilities = b["capabilities"];
-						if (capabilities.is_array()) {
-							std::map< uint64_t,json > ncaps;
-							for(unsigned long i=0;i<capabilities.size();++i) {
-								json &cap = capabilities[i];
-								if (cap.is_object()) {
-									json ncap = json::object();
-									const uint64_t capId = _jI(cap["id"],0ULL);
-									ncap["id"] = capId;
-
-									json &rules = cap["rules"];
-									json nrules = json::array();
-									if (rules.is_array()) {
-										for(unsigned long i=0;i<rules.size();++i) {
-											json &rule = rules[i];
-											if (rule.is_object()) {
-												ZT_VirtualNetworkRule ztr;
-												if (_parseRule(rule,ztr))
-													nrules.push_back(_renderRule(ztr));
-											}
-										}
-									}
-									ncap["rules"] = nrules;
-
-									ncaps[capId] = ncap;
-								}
-							}
-
-							json ncapsa = json::array();
-							for(std::map< uint64_t,json >::iterator c(ncaps.begin());c!=ncaps.end();++c)
-								ncapsa.push_back(c->second);
-							network["capabilities"] = ncapsa;
-						}
-					}
-				} catch ( ... ) {
-					responseBody = "{ \"message\": \"exception occurred while parsing body variables\" }";
-					responseContentType = "application/json";
-					return 400;
-				}
-
-				network["id"] = nwids;
-				network["nwid"] = nwids; // legacy
-				json &rev = network["revision"];
-				network["revision"] = (rev.is_number() ? ((uint64_t)rev + 1ULL) : 1ULL);
-				network["lastModified"] = now;
-
-				{
-					Mutex::Lock _l(_db_m);
-					_db.put("network",nwids,network);
-				}
-
-				_NetworkMemberInfo nmi;
-				_getNetworkMemberInfo(now,nwid,nmi);
-				_addNetworkNonPersistedFields(network,now,nmi);
-
-				responseBody = network.dump(2);
-				responseContentType = "application/json";
-				return 200;
-			} // else 404
-
-		} // else 404
-
-	} // else 404
-
-	return 404;
-}
-
-unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
-	const std::vector<std::string> &path,
-	const std::map<std::string,std::string> &urlArgs,
-	const std::map<std::string,std::string> &headers,
-	const std::string &body,
-	std::string &responseBody,
-	std::string &responseContentType)
-{
-	if (path.empty())
-		return 404;
-
-	if (path[0] == "network") {
-		if ((path.size() >= 2)&&(path[1].length() == 16)) {
-			const uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
-
-			char nwids[24];
-			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",nwid);
-			json network;
-			{
-				Mutex::Lock _l(_db_m);
-				network = _db.get("network",nwids,0);
-			}
-			if (!network.size())
-				return 404;
-
-			if (path.size() >= 3) {
-				if ((path.size() == 4)&&(path[2] == "member")&&(path[3].length() == 10)) {
-					const uint64_t address = Utils::hexStrToU64(path[3].c_str());
-
-					Mutex::Lock _l(_db_m);
-
-					json member = _db.get("network",nwids,"member",Address(address).toString(),0);
-					if (!member.size())
-						return 404;
-					_db.erase("network",nwids,"member",Address(address).toString());
-
-					responseBody = member.dump(2);
-					responseContentType = "application/json";
-					return 200;
-				}
-			} else {
-				Mutex::Lock _l(_db_m);
-				std::string pfx("network/"); pfx.append(nwids);
-				_db.filter(pfx,120000,[](const std::string &n,const json &obj) {
-					return false; // delete
-				});
-				responseBody = network.dump(2);
-				responseContentType = "application/json";
-				return 200;
-			}
-		} // else 404
-
-	} // else 404
-
-	return 404;
-}
-
-void EmbeddedNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report)
-{
-	char tmp[65535];
-	EmbeddedNetworkController *const self = reinterpret_cast<EmbeddedNetworkController *>(test->ptr);
-
-	if (!test)
-		return;
-	if (!report)
-		return;
-
-	Mutex::Lock _l(self->_circuitTests_m);
-	std::map< uint64_t,_CircuitTestEntry >::iterator cte(self->_circuitTests.find(test->testId));
-
-	if (cte == self->_circuitTests.end()) { // sanity check: a circuit test we didn't launch?
-		self->_node->circuitTestEnd(test);
-		::free((void *)test);
-		return;
-	}
-
-	Utils::snprintf(tmp,sizeof(tmp),
-		"%s{\n"
-		"\t\"timestamp\": %llu," ZT_EOL_S
-		"\t\"testId\": \"%.16llx\"," ZT_EOL_S
-		"\t\"upstream\": \"%.10llx\"," ZT_EOL_S
-		"\t\"current\": \"%.10llx\"," ZT_EOL_S
-		"\t\"receivedTimestamp\": %llu," ZT_EOL_S
-		"\t\"sourcePacketId\": \"%.16llx\"," ZT_EOL_S
-		"\t\"flags\": %llu," ZT_EOL_S
-		"\t\"sourcePacketHopCount\": %u," ZT_EOL_S
-		"\t\"errorCode\": %u," ZT_EOL_S
-		"\t\"vendor\": %d," ZT_EOL_S
-		"\t\"protocolVersion\": %u," ZT_EOL_S
-		"\t\"majorVersion\": %u," ZT_EOL_S
-		"\t\"minorVersion\": %u," ZT_EOL_S
-		"\t\"revision\": %u," ZT_EOL_S
-		"\t\"platform\": %d," ZT_EOL_S
-		"\t\"architecture\": %d," ZT_EOL_S
-		"\t\"receivedOnLocalAddress\": \"%s\"," ZT_EOL_S
-		"\t\"receivedFromRemoteAddress\": \"%s\"" ZT_EOL_S
-		"}",
-		((cte->second.jsonResults.length() > 0) ? ",\n" : ""),
-		(unsigned long long)report->timestamp,
-		(unsigned long long)test->testId,
-		(unsigned long long)report->upstream,
-		(unsigned long long)report->current,
-		(unsigned long long)OSUtils::now(),
-		(unsigned long long)report->sourcePacketId,
-		(unsigned long long)report->flags,
-		report->sourcePacketHopCount,
-		report->errorCode,
-		(int)report->vendor,
-		report->protocolVersion,
-		report->majorVersion,
-		report->minorVersion,
-		report->revision,
-		(int)report->platform,
-		(int)report->architecture,
-		reinterpret_cast<const InetAddress *>(&(report->receivedOnLocalAddress))->toString().c_str(),
-		reinterpret_cast<const InetAddress *>(&(report->receivedFromRemoteAddress))->toString().c_str());
-
-	cte->second.jsonResults.append(tmp);
+	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),nc,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
 }
 
 void EmbeddedNetworkController::_getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi)
@@ -1616,43 +1707,82 @@ void EmbeddedNetworkController::_getNetworkMemberInfo(uint64_t now,uint64_t nwid
 	char pfx[256];
 	Utils::snprintf(pfx,sizeof(pfx),"network/%.16llx/member",nwid);
 
-	Mutex::Lock _l(_db_m);
-	_db.filter(pfx,120000,[&nmi,&now](const std::string &n,const json &member) {
-		try {
-			if (_jB(member["authorized"],false)) {
-				++nmi.authorizedMemberCount;
+	{
+		Mutex::Lock _l(_nmiCache_m);
+		std::map<uint64_t,_NetworkMemberInfo>::iterator c(_nmiCache.find(nwid));
+		if ((c != _nmiCache.end())&&((now - c->second.nmiTimestamp) < 1000)) { // a short duration cache but limits CPU use on big networks
+			nmi = c->second;
+			return;
+		}
+	}
 
-				if (member.count("recentLog")) {
-					const json &mlog = member["recentLog"];
-					if ((mlog.is_array())&&(mlog.size() > 0)) {
-						const json &mlog1 = mlog[0];
-						if (mlog1.is_object()) {
-							if ((now - _jI(mlog1["ts"],0ULL)) < ZT_NETCONF_NODE_ACTIVE_THRESHOLD)
-								++nmi.activeMemberCount;
+	{
+		Mutex::Lock _l(_db_m);
+		_db.filter(pfx,120000,[&nmi,&now](const std::string &n,const json &member) {
+			try {
+				if (_jB(member["authorized"],false)) {
+					++nmi.authorizedMemberCount;
+
+					if (member.count("recentLog")) {
+						const json &mlog = member["recentLog"];
+						if ((mlog.is_array())&&(mlog.size() > 0)) {
+							const json &mlog1 = mlog[0];
+							if (mlog1.is_object()) {
+								if ((now - _jI(mlog1["ts"],0ULL)) < ZT_NETCONF_NODE_ACTIVE_THRESHOLD)
+									++nmi.activeMemberCount;
+							}
 						}
 					}
-				}
 
-				if (_jB(member["activeBridge"],false)) {
-					nmi.activeBridges.insert(_jS(member["id"],"0000000000"));
-				}
+					if (_jB(member["activeBridge"],false)) {
+						nmi.activeBridges.insert(_jS(member["id"],"0000000000"));
+					}
 
-				if (member.count("ipAssignments")) {
-					const json &mips = member["ipAssignments"];
-					if (mips.is_array()) {
-						for(unsigned long i=0;i<mips.size();++i) {
-							InetAddress mip(_jS(mips[i],""));
-							if ((mip.ss_family == AF_INET)||(mip.ss_family == AF_INET6))
-								nmi.allocatedIps.insert(mip);
+					if (member.count("ipAssignments")) {
+						const json &mips = member["ipAssignments"];
+						if (mips.is_array()) {
+							for(unsigned long i=0;i<mips.size();++i) {
+								InetAddress mip(_jS(mips[i],""));
+								if ((mip.ss_family == AF_INET)||(mip.ss_family == AF_INET6))
+									nmi.allocatedIps.insert(mip);
+							}
 						}
 					}
+				} else {
+					nmi.mostRecentDeauthTime = std::max(nmi.mostRecentDeauthTime,_jI(member["lastDeauthorizedTime"],0ULL));
 				}
-			} else {
-				nmi.mostRecentDeauthTime = std::max(nmi.mostRecentDeauthTime,_jI(member["lastDeauthorizedTime"],0ULL));
+			} catch ( ... ) {}
+			return true;
+		});
+	}
+	nmi.nmiTimestamp = now;
+
+	{
+		Mutex::Lock _l(_nmiCache_m);
+		_nmiCache[nwid] = nmi;
+	}
+}
+
+void EmbeddedNetworkController::_pushMemberUpdate(uint64_t now,uint64_t nwid,const nlohmann::json &member)
+{
+	try {
+		const std::string idstr = member["identity"];
+		const std::string mdstr = member["lastRequestMetaData"];
+		if ((idstr.length() > 0)&&(mdstr.length() > 0)) {
+			const Identity id(idstr);
+			bool online;
+			{
+				Mutex::Lock _l(_lastRequestTime_m);
+				std::map<std::pair<uint64_t,uint64_t>,uint64_t>::iterator lrt(_lastRequestTime.find(std::pair<uint64_t,uint64_t>(id.address().toInt(),nwid)));
+				online = ( (lrt != _lastRequestTime.end()) && ((now - lrt->second) < ZT_NETWORK_AUTOCONF_DELAY) );
 			}
-		} catch ( ... ) {}
-		return true;
-	});
+			Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> *metaData = new Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY>(mdstr.c_str());
+			try {
+				this->request(nwid,InetAddress(),0,id,*metaData);
+			} catch ( ... ) {}
+			delete metaData;
+		}
+	} catch ( ... ) {}
 }
 
 } // namespace ZeroTier

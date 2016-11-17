@@ -98,10 +98,12 @@ public:
 	 *
 	 * @param hp Home path
 	 * @param port TCP and UDP port for packets and HTTP control (if 0, pick random port)
+	 * @param allowManagementFrom If non-NULL, allow control from supplied IP/netmask
 	 */
 	static OneService *newInstance(
 		const char *hp,
-		unsigned int port);
+		unsigned int port,
+		const char *allowManagementFrom = (const char *)0);
 
 	virtual ~OneService();
 

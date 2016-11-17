@@ -865,92 +865,12 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
 		const unsigned int hopCount = hops();
 		const uint64_t requestPacketId = packetId();
-		bool trustEstablished = false;
 
 		if (RR->localNetworkController) {
 			const unsigned int metaDataLength = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
 			const char *metaDataBytes = (const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength);
 			const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> metaData(metaDataBytes,metaDataLength);
-
-			NetworkConfig *netconf = new NetworkConfig();
-			try {
-				switch(RR->localNetworkController->doNetworkConfigRequest((hopCount > 0) ? InetAddress() : _path->address(),RR->identity,peer->identity(),nwid,metaData,*netconf)) {
-
-					case NetworkController::NETCONF_QUERY_OK: {
-						trustEstablished = true;
-						Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
-						try {
-							if (netconf->toDictionary(*dconf,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6)) {
-								uint64_t configUpdateId = RR->node->prng();
-								if (!configUpdateId) ++configUpdateId;
-								const unsigned int totalSize = dconf->sizeBytes();
-								unsigned int chunkIndex = 0;
-								while (chunkIndex < totalSize) {
-									const unsigned int chunkLen = std::min(totalSize - chunkIndex,(unsigned int)(ZT_UDP_DEFAULT_PAYLOAD_MTU - (ZT_PACKET_IDX_PAYLOAD + 256)));
-									Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
-									outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-									outp.append(requestPacketId);
-
-									const unsigned int sigStart = outp.size();
-									outp.append(nwid);
-									outp.append((uint16_t)chunkLen);
-									outp.append((const void *)(dconf->data() + chunkIndex),chunkLen);
-
-									outp.append((uint8_t)0); // no flags
-									outp.append((uint64_t)configUpdateId);
-									outp.append((uint32_t)totalSize);
-									outp.append((uint32_t)chunkIndex);
-
-									C25519::Signature sig(RR->identity.sign(reinterpret_cast<const uint8_t *>(outp.data()) + sigStart,outp.size() - sigStart));
-									outp.append((uint8_t)1);
-									outp.append((uint16_t)ZT_C25519_SIGNATURE_LEN);
-									outp.append(sig.data,ZT_C25519_SIGNATURE_LEN);
-
-									outp.compress();
-									RR->sw->send(outp,true);
-									chunkIndex += chunkLen;
-								}
-							}
-							delete dconf;
-						} catch ( ... ) {
-							delete dconf;
-							throw;
-						}
-					}	break;
-
-					case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND: {
-						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
-						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-						outp.append(requestPacketId);
-						outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
-						outp.append(nwid);
-						outp.armor(peer->key(),true);
-						_path->send(RR,outp.data(),outp.size(),RR->node->now());
-					}	break;
-
-					case NetworkController::NETCONF_QUERY_ACCESS_DENIED: {
-						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
-						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-						outp.append(requestPacketId);
-						outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
-						outp.append(nwid);
-						outp.armor(peer->key(),true);
-						_path->send(RR,outp.data(),outp.size(),RR->node->now());
-					} break;
-
-					case NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR:
-						break;
-					case NetworkController::NETCONF_QUERY_IGNORE:
-						break;
-					default:
-						TRACE("NETWORK_CONFIG_REQUEST failed: invalid return value from NetworkController::doNetworkConfigRequest()");
-						break;
-				}
-				delete netconf;
-			} catch ( ... ) {
-				delete netconf;
-				throw;
-			}
+			RR->localNetworkController->request(nwid,(hopCount > 0) ? InetAddress() : _path->address(),requestPacketId,peer->identity(),metaData);
 		} else {
 			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 			outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
@@ -961,7 +881,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 			_path->send(RR,outp.data(),outp.size(),RR->node->now());
 		}
 
-		peer->received(_path,hopCount,requestPacketId,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,trustEstablished);
+		peer->received(_path,hopCount,requestPacketId,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,false);
 	} catch (std::exception &exc) {
 		fprintf(stderr,"WARNING: network config request failed with exception: %s" ZT_EOL_S,exc.what());
 		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): %s",source().toString().c_str(),_path->address().toString().c_str(),exc.what());

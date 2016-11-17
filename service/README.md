@@ -25,6 +25,8 @@ A *jsonp* URL argument may be supplied to request JSONP encapsulation. A JSONP r
 <tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
 <tr><td>address</td><td>string</td><td>10-digit hexadecimal ZeroTier address of this node</td><td>no</td></tr>
 <tr><td>publicIdentity</td><td>string</td><td>Full public ZeroTier identity of this node</td><td>no</td></tr>
+<tr><td>worldId</td><td>integer</td><td>Fixed value representing the virtual data center of Earth.</td><td>no</td></tr>
+<tr><td>worldTimestamp</td><td>integer</td><td>Timestamp of the last root server topology change.</td><td>no</td></tr>
 <tr><td>online</td><td>boolean</td><td>Does this node appear to have upstream network access?</td><td>no</td></tr>
 <tr><td>tcpFallbackActive</td><td>boolean</td><td>Is TCP fallback mode active?</td><td>no</td></tr>
 <tr><td>versionMajor</td><td>integer</td><td>ZeroTier major version</td><td>no</td></tr>
@@ -77,9 +79,22 @@ Most network settings are not writable, as they are defined by the network contr
 <tr><td>broadcastEnabled</td><td>boolean</td><td>Is Ethernet broadcast (ff:ff:ff:ff:ff:ff) allowed?</td><td>no</td></tr>
 <tr><td>portError</td><td>integer</td><td>Error code (if any) returned by underlying OS "tap" driver</td><td>no</td></tr>
 <tr><td>netconfRevision</td><td>integer</td><td>Network configuration revision ID</td><td>no</td></tr>
-<tr><td>multicastSubscriptions</td><td>[string]</td><td>Multicast memberships as array of MAC/ADI tuples</td><td>no</td></tr>
 <tr><td>assignedAddresses</td><td>[string]</td><td>ZeroTier-managed IP address assignments as array of IP/netmask bits tuples</td><td>no</td></tr>
+<tr><td>routes</td><td>[route]</td><td>ZeroTier-managed route assignments for a network. See below for a description of the route object.</td><td>no</td></tr>
 <tr><td>portDeviceName</td><td>string</td><td>OS-specific network device name (if available)</td><td>no</td></tr>
+<tr><td>allowManaged</td><td>boolean</td><td>Whether ZeroTier-managed IP addresses are allowed.</td><td>yes</td></tr>
+<tr><td>allowGlobal</td><td>boolean</td><td>Whether globally-reachable IP addresses are allowed to be assigned.</td><td>yes</td></tr>
+<tr><td>allowDefault</td><td>boolean</td><td>Whether a default route is allowed to be assigned for the network (route all traffic via ZeroTier)</td><td>yes</td></tr> 
+</table>
+
+`route` objects
+
+<table>
+<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
+<tr><td>target</td><td>string</td><td>Target network / netmask bits, NULL, or 0.0.0.0/0 for default route</td><td>no</td></tr>
+<tr><td>via</td><td>string</td><td>Gateway IP address</td><td>no</td></tr>
+<tr><td>flags</td><td>integer</td><td>Route flags</td><td>no</td></tr>
+<tr><td>metric</td><td>integer</td><td>Route metric (not currently used)</td><td>no</td></tr>
 </table>
 
 #### /peer
@@ -99,8 +114,6 @@ Getting /peer returns an array of peer objects for all current peers. See below 
 <table>
 <tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
 <tr><td>address</td><td>string</td><td>10-digit hex ZeroTier address</td><td>no</td></tr>
-<tr><td>lastUnicastFrame</td><td>integer</td><td>Time of last unicast frame in ms since epoch</td><td>no</td></tr>
-<tr><td>lastMulticastFrame</td><td>integer</td><td>Time of last multicast frame in ms since epoch</td><td>no</td></tr>
 <tr><td>versionMajor</td><td>integer</td><td>Major version of remote if known</td><td>no</td></tr>
 <tr><td>versionMinor</td><td>integer</td><td>Minor version of remote if known</td><td>no</td></tr>
 <tr><td>versionRev</td><td>integer</td><td>Revision of remote if known</td><td>no</td></tr>

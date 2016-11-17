@@ -483,6 +483,7 @@ public:
 
 	const std::string _homePath;
 	BackgroundResolver _tcpFallbackResolver;
+	InetAddress _allowManagementFrom;
 	EmbeddedNetworkController *_controller;
 	Phy<OneServiceImpl *> _phy;
 	Node *_node;
@@ -570,7 +571,7 @@ public:
 
 	// end member variables ----------------------------------------------------
 
-	OneServiceImpl(const char *hp,unsigned int port) :
+	OneServiceImpl(const char *hp,unsigned int port,const char *allowManagementFrom) :
 		_homePath((hp) ? hp : ".")
 		,_tcpFallbackResolver(ZT_TCP_FALLBACK_RELAY)
 		,_controller((EmbeddedNetworkController *)0)
@@ -595,6 +596,9 @@ public:
 #endif
 		,_run(true)
 	{
+		if (allowManagementFrom)
+			_allowManagementFrom.fromString(allowManagementFrom);
+
 		_ports[0] = 0;
 		_ports[1] = 0;
 		_ports[2] = 0;
@@ -614,7 +618,7 @@ public:
 				struct sockaddr_in in4;
 				memset(&in4,0,sizeof(in4));
 				in4.sin_family = AF_INET;
-				in4.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001); // right now we just listen for TCP @127.0.0.1
+				in4.sin_addr.s_addr = Utils::hton((uint32_t)((allowManagementFrom) ? 0 : 0x7f000001)); // right now we just listen for TCP @127.0.0.1
 				in4.sin_port = Utils::hton((uint16_t)port);
 				_v4TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
 
@@ -622,7 +626,8 @@ public:
 				memset((void *)&in6,0,sizeof(in6));
 				in6.sin6_family = AF_INET6;
 				in6.sin6_port = in4.sin_port;
-				in6.sin6_addr.s6_addr[15] = 1; // IPv6 localhost == ::1
+				if (!allowManagementFrom)
+					in6.sin6_addr.s6_addr[15] = 1; // IPv6 localhost == ::1
 				_v6TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
 
 				// We must bind one of IPv4 or IPv6 -- support either failing to support hosts that
@@ -1259,12 +1264,10 @@ public:
 
 	inline void phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
 	{
-		if ((!from)||(reinterpret_cast<const InetAddress *>(from)->ipScope() != InetAddress::IP_SCOPE_LOOPBACK)) {
-			// Non-Loopback: deny (for now)
+		if (!from) {
 			_phy.close(sockN,false);
 			return;
 		} else {
-			// Loopback == HTTP JSON API request
 			TcpConnection *tc = new TcpConnection();
 			_tcpConnections.insert(tc);
 			tc->type = TcpConnection::TCP_HTTP_INCOMING;
@@ -1701,16 +1704,20 @@ public:
 		std::string contentType("text/plain"); // default if not changed in handleRequest()
 		unsigned int scode = 404;
 
-		try {
-			if (_controlPlane)
-				scode = _controlPlane->handleRequest(tc->from,tc->parser.method,tc->url,tc->headers,tc->body,data,contentType);
-			else scode = 500;
-		} catch (std::exception &exc) {
-			fprintf(stderr,"WARNING: unexpected exception processing control HTTP request: %s" ZT_EOL_S,exc.what());
-			scode = 500;
-		} catch ( ... ) {
-			fprintf(stderr,"WARNING: unexpected exception processing control HTTP request: unknown exceptino" ZT_EOL_S);
-			scode = 500;
+		if ( ((!_allowManagementFrom)&&(tc->from.ipScope() == InetAddress::IP_SCOPE_LOOPBACK)) || (_allowManagementFrom.containsAddress(tc->from)) ) {
+			try {
+				if (_controlPlane)
+					scode = _controlPlane->handleRequest(tc->from,tc->parser.method,tc->url,tc->headers,tc->body,data,contentType);
+				else scode = 500;
+			} catch (std::exception &exc) {
+				fprintf(stderr,"WARNING: unexpected exception processing control HTTP request: %s" ZT_EOL_S,exc.what());
+				scode = 500;
+			} catch ( ... ) {
+				fprintf(stderr,"WARNING: unexpected exception processing control HTTP request: unknown exceptino" ZT_EOL_S);
+				scode = 500;
+			}
+		} else {
+			scode = 401;
 		}
 
 		const char *scodestr;
@@ -1975,7 +1982,7 @@ std::string OneService::autoUpdateUrl()
 	return std::string();
 }
 
-OneService *OneService::newInstance(const char *hp,unsigned int port) { return new OneServiceImpl(hp,port); }
+OneService *OneService::newInstance(const char *hp,unsigned int port,const char *allowManagementFrom) { return new OneServiceImpl(hp,port,allowManagementFrom); }
 OneService::~OneService() {}
 
 } // namespace ZeroTier

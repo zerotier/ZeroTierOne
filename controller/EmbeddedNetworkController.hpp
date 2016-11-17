@@ -37,10 +37,14 @@
 
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Thread.hpp"
+#include "../osdep/BlockingQueue.hpp"
 
 #include "../ext/json/json.hpp"
 
 #include "JSONDB.hpp"
+
+// Number of background threads to start -- not actually started until needed
+#define ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT 2
 
 namespace ZeroTier {
 
@@ -52,13 +56,14 @@ public:
 	EmbeddedNetworkController(Node *node,const char *dbPath);
 	virtual ~EmbeddedNetworkController();
 
-	virtual NetworkController::ResultCode doNetworkConfigRequest(
-		const InetAddress &fromAddr,
-		const Identity &signingId,
-		const Identity &identity,
+	virtual void init(const Identity &signingId,Sender *sender);
+
+	virtual void request(
 		uint64_t nwid,
-		const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData,
-		NetworkConfig &nc);
+		const InetAddress &fromAddr,
+		uint64_t requestPacketId,
+		const Identity &identity,
+		const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
 
 	unsigned int handleControlPlaneHttpGET(
 		const std::vector<std::string> &path,
@@ -82,8 +87,31 @@ public:
 		std::string &responseBody,
 		std::string &responseContentType);
 
+	void threadMain()
+		throw();
+
 private:
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
+	void _request(
+		uint64_t nwid,
+		const InetAddress &fromAddr,
+		uint64_t requestPacketId,
+		const Identity &identity,
+		const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
+
+	struct _RQEntry
+	{
+		uint64_t nwid;
+		uint64_t requestPacketId;
+		InetAddress fromAddr;
+		Identity identity;
+		Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> metaData;
+	};
+	BlockingQueue<_RQEntry *> _queue;
+
+	Thread _threads[ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT];
+	bool _threadsStarted;
+	Mutex _threads_m;
 
 	// Gathers a bunch of statistics about members of a network, IP assignments, etc. that we need in various places
 	// This does lock _networkMemberCache_m
@@ -96,8 +124,13 @@ private:
 		unsigned long activeMemberCount;
 		unsigned long totalMemberCount;
 		uint64_t mostRecentDeauthTime;
+		uint64_t nmiTimestamp; // time this NMI structure was computed
 	};
+	std::map<uint64_t,_NetworkMemberInfo> _nmiCache;
+	Mutex _nmiCache_m;
 	void _getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi);
+
+	void _pushMemberUpdate(uint64_t now,uint64_t nwid,const nlohmann::json &member);
 
 	// These init objects with default and static/informational fields
 	inline void _initMember(nlohmann::json &member)
@@ -112,7 +145,8 @@ private:
 		if (!member.count("creationTime")) member["creationTime"] = OSUtils::now();
 		if (!member.count("noAutoAssignIps")) member["noAutoAssignIps"] = false;
 		if (!member.count("revision")) member["revision"] = 0ULL;
-		if (!member.count("enableBroadcast")) member["enableBroadcast"] = true;
+		if (!member.count("lastDeauthorizedTime")) member["lastDeauthorizedTime"] = 0ULL;
+		if (!member.count("lastAuthorizedTime")) member["lastAuthorizedTime"] = 0ULL;
 		member["objtype"] = "member";
 	}
 	inline void _initNetwork(nlohmann::json &network)
@@ -121,6 +155,7 @@ private:
 		if (!network.count("creationTime")) network["creationTime"] = OSUtils::now();
 		if (!network.count("name")) network["name"] = "";
 		if (!network.count("multicastLimit")) network["multicastLimit"] = (uint64_t)32;
+		if (!network.count("enableBroadcast")) network["enableBroadcast"] = true;
 		if (!network.count("v4AssignMode")) network["v4AssignMode"] = {{"zt",false}};
 		if (!network.count("v6AssignMode")) network["v6AssignMode"] = {{"rfc4193",false},{"zt",false},{"6plane",false}};
 		if (!network.count("authTokens")) network["authTokens"] = nlohmann::json::array();
@@ -153,6 +188,9 @@ private:
 
 	Node *const _node;
 	std::string _path;
+
+	NetworkController::Sender *_sender;
+	Identity _signingId;
 
 	struct _CircuitTestEntry
 	{

@@ -256,12 +256,12 @@
 /**
  * How frequently to send heartbeats over in-use paths
  */
-#define ZT_PATH_HEARTBEAT_PERIOD 10000
+#define ZT_PATH_HEARTBEAT_PERIOD 14000
 
 /**
  * Paths are considered inactive if they have not received traffic in this long
  */
-#define ZT_PATH_ALIVE_TIMEOUT 25000
+#define ZT_PATH_ALIVE_TIMEOUT 45000
 
 /**
  * Minimum time between attempts to check dead paths to see if they can be re-awakened

@@ -222,8 +222,6 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_Peer *peer)
 	Utils::snprintf(json,sizeof(json),
 		"%s{\n"
 		"%s\t\"address\": \"%.10llx\",\n"
-		"%s\t\"lastUnicastFrame\": %llu,\n"
-		"%s\t\"lastMulticastFrame\": %llu,\n"
 		"%s\t\"versionMajor\": %d,\n"
 		"%s\t\"versionMinor\": %d,\n"
 		"%s\t\"versionRev\": %d,\n"
@@ -234,8 +232,6 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_Peer *peer)
 		"%s}",
 		prefix,
 		prefix,peer->address,
-		prefix,peer->lastUnicastFrame,
-		prefix,peer->lastMulticastFrame,
 		prefix,peer->versionMajor,
 		prefix,peer->versionMinor,
 		prefix,peer->versionRev,
@@ -273,9 +269,6 @@ unsigned int ControlPlane::handleRequest(
 	std::vector<std::string> ps(Utils::split(path.c_str(),"/","",""));
 	std::map<std::string,std::string> urlArgs;
 	Mutex::Lock _l(_lock);
-
-	if (!((fromAddress.ipsEqual(InetAddress::LO4))||(fromAddress.ipsEqual(InetAddress::LO6))))
-		return 403; // Forbidden: we only allow access from localhost right now
 
 	/* Note: this is kind of restricted in what it'll take. It does not support
 	 * URL encoding, and /'s in URL args will screw it up. But the only URL args

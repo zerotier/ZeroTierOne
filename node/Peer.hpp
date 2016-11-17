@@ -227,24 +227,9 @@ public:
 	inline bool isAlive(const uint64_t now) const { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
-	 * @return Time of most recent unicast frame received
-	 */
-	inline uint64_t lastUnicastFrame() const { return _lastUnicastFrame; }
-
-	/**
-	 * @return Time of most recent multicast frame received
-	 */
-	inline uint64_t lastMulticastFrame() const { return _lastMulticastFrame; }
-
-	/**
-	 * @return Time of most recent frame of any kind (unicast or multicast)
-	 */
-	inline uint64_t lastFrame() const { return std::max(_lastUnicastFrame,_lastMulticastFrame); }
-
-	/**
 	 * @return True if this peer has sent us real network traffic recently
 	 */
-	inline uint64_t isActive(uint64_t now) const { return ((now - lastFrame()) < ZT_PEER_ACTIVITY_TIMEOUT); }
+	inline uint64_t isActive(uint64_t now) const { return ((now - _lastNontrivialReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Latency in milliseconds or 0 if unknown
@@ -469,8 +454,7 @@ private:
 	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
 	uint8_t _remoteClusterOptimal6[16];
 	uint64_t _lastReceive; // direct or indirect
-	uint64_t _lastUnicastFrame;
-	uint64_t _lastMulticastFrame;
+	uint64_t _lastNontrivialReceive; // frames, things like netconf, etc.
 	uint64_t _lastDirectPathPushSent;
 	uint64_t _lastDirectPathPushReceive;
 	uint64_t _lastCredentialRequestSent;

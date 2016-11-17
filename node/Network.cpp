@@ -599,7 +599,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 		if (conf.length()) {
 			dconf->load(conf.c_str());
 			if (nconf->fromDictionary(*dconf)) {
-				this->_setConfiguration(*nconf,false);
+				this->setConfiguration(*nconf,false);
 				_lastConfigUpdate = 0; // we still want to re-request a new config from the network
 				gotConf = true;
 			}
@@ -1015,13 +1015,53 @@ uint64_t Network::handleConfigChunk(const Packet &chunk,unsigned int ptr)
 	}
 
 	if (nc) {
-		this->_setConfiguration(*nc,true);
+		this->setConfiguration(*nc,true);
 		delete nc;
 		return configUpdateId;
 	} else {
 		return 0;
 	}
 
+	return 0;
+}
+
+int Network::setConfiguration(const NetworkConfig &nconf,bool saveToDisk)
+{
+	// _lock is NOT locked when this is called
+	try {
+		if ((nconf.issuedTo != RR->identity.address())||(nconf.networkId != _id))
+			return 0;
+		if (_config == nconf)
+			return 1; // OK config, but duplicate of what we already have
+
+		ZT_VirtualNetworkConfig ctmp;
+		bool oldPortInitialized;
+		{
+			Mutex::Lock _l(_lock);
+			_config = nconf;
+			_lastConfigUpdate = RR->node->now();
+			_netconfFailure = NETCONF_FAILURE_NONE;
+			oldPortInitialized = _portInitialized;
+			_portInitialized = true;
+			_externalConfig(&ctmp);
+		}
+		_portError = RR->node->configureVirtualNetworkPort(_id,&_uPtr,(oldPortInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
+
+		if (saveToDisk) {
+			Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *d = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+			try {
+				char n[64];
+				Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
+				if (nconf.toDictionary(*d,false))
+					RR->node->dataStorePut(n,(const void *)d->data(),d->sizeBytes(),true);
+			} catch ( ... ) {}
+			delete d;
+		}
+
+		return 2; // OK and configuration has changed
+	} catch ( ... ) {
+		TRACE("ignored invalid configuration for network %.16llx",(unsigned long long)_id);
+	}
 	return 0;
 }
 
@@ -1046,26 +1086,7 @@ void Network::requestConfiguration()
 
 	if (ctrl == RR->identity.address()) {
 		if (RR->localNetworkController) {
-			NetworkConfig *nconf = new NetworkConfig();
-			try {
-				switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,rmd,*nconf)) {
-					case NetworkController::NETCONF_QUERY_OK:
-						this->_setConfiguration(*nconf,true);
-						break;
-					case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND:
-						this->setNotFound();
-						break;
-					case NetworkController::NETCONF_QUERY_ACCESS_DENIED:
-						this->setAccessDenied();
-						break;
-					default:
-						this->setNotFound();
-						break;
-				}
-			} catch ( ... ) {
-				this->setNotFound();
-			}
-			delete nconf;
+			RR->localNetworkController->request(_id,InetAddress(),0xffffffffffffffffULL,RR->identity,rmd);
 		} else {
 			this->setNotFound();
 		}
@@ -1255,46 +1276,6 @@ ZT_VirtualNetworkStatus Network::_status() const
 		default:
 			return ZT_NETWORK_STATUS_PORT_ERROR;
 	}
-}
-
-int Network::_setConfiguration(const NetworkConfig &nconf,bool saveToDisk)
-{
-	// _lock is NOT locked when this is called
-	try {
-		if ((nconf.issuedTo != RR->identity.address())||(nconf.networkId != _id))
-			return 0;
-		if (_config == nconf)
-			return 1; // OK config, but duplicate of what we already have
-
-		ZT_VirtualNetworkConfig ctmp;
-		bool oldPortInitialized;
-		{
-			Mutex::Lock _l(_lock);
-			_config = nconf;
-			_lastConfigUpdate = RR->node->now();
-			_netconfFailure = NETCONF_FAILURE_NONE;
-			oldPortInitialized = _portInitialized;
-			_portInitialized = true;
-			_externalConfig(&ctmp);
-		}
-		_portError = RR->node->configureVirtualNetworkPort(_id,&_uPtr,(oldPortInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
-
-		if (saveToDisk) {
-			Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *d = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
-			try {
-				char n[64];
-				Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
-				if (nconf.toDictionary(*d,false))
-					RR->node->dataStorePut(n,(const void *)d->data(),d->sizeBytes(),true);
-			} catch ( ... ) {}
-			delete d;
-		}
-
-		return 2; // OK and configuration has changed
-	} catch ( ... ) {
-		TRACE("ignored invalid configuration for network %.16llx",(unsigned long long)_id);
-	}
-	return 0;
 }
 
 void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const

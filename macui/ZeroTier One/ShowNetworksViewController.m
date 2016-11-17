@@ -21,6 +21,17 @@
 #import "NetworkInfoCell.h"
 #import "Network.h"
 
+BOOL hasNetworkWithID(NSArray<Network*> *list, UInt64 nwid)
+{
+    for(Network *n in list) {
+        if(n.nwid == nwid) {
+            return YES;
+        }
+    }
+
+    return NO;
+}
+
 @interface ShowNetworksViewController ()
 
 @end
@@ -29,6 +40,8 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+
+    self.networkList = [NSMutableArray array];
 
     [self.tableView setDelegate:self];
     [self.tableView setDataSource:self];
@@ -50,9 +63,30 @@
 }
 
 - (void)setNetworks:(NSArray<Network *> *)list {
-    _networkList = list;
-    if(_visible) {
-        [_tableView reloadData];
+    for (Network *n in list) {
+        if ([_networkList containsObject:n]) {
+            // don't need to do anything here.  Already an identical object in the list
+            continue;
+        }
+        else {
+            // network not in the list based on equality.  Did an object change? or is it a new item?
+            if (hasNetworkWithID(_networkList, n.nwid)) {
+
+                for (int i = 0; i < [_networkList count]; ++i) {
+                    Network *n2 = [_networkList objectAtIndex:i];
+                    if (n.nwid == n2.nwid)
+                    {
+                        [_networkList replaceObjectAtIndex:i withObject:n];
+                        [_tableView reloadDataForRowIndexes:[NSIndexSet indexSetWithIndex:i]
+                                              columnIndexes:[NSIndexSet indexSetWithIndex:0]];
+                    }
+                }
+            }
+            else {
+                [_networkList addObject:n];
+                [_tableView reloadData];
+            }
+        }
     }
 }
 

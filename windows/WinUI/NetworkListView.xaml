@@ -93,7 +93,9 @@
                     </Grid>
                 </ItemsPanelTemplate>
             </StatusBar.ItemsPanel>
-			<StatusBarItem Grid.Column="0" x:Name="networkId" Content="deadbeef00" Foreground="White" FontFamily="Lucida Console"/>
+            <StatusBarItem Grid.Column="0" x:Name="networkId_placeholder">
+                <TextBox x:Name="networkId" Text="deadbeef00" HorizontalAlignment="Left" Grid.Column="0" Foreground="White" FontFamily="Lucida Console" BorderThickness="0" IsReadOnly="true" Background="Transparent"/>
+            </StatusBarItem>
             <StatusBarItem Grid.Column="1" x:Name="onlineStatus" Content="ONLINE" Foreground="White" FontFamily="Lucida Console"/>
             <StatusBarItem Grid.Column="2" x:Name="versionString" Content="1.0.5" Foreground="White" FontFamily="Lucida Console"/>
 			<StatusBarItem Grid.Column="3" x:Name="blank" Content="" Height="43" Foreground="White"/>

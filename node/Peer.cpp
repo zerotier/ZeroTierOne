@@ -42,8 +42,7 @@ static uint32_t _natKeepaliveBuf = 0;
 
 Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
 	_lastReceive(0),
-	_lastUnicastFrame(0),
-	_lastMulticastFrame(0),
+	_lastNontrivialReceive(0),
 	_lastDirectPathPushSent(0),
 	_lastDirectPathPushReceive(0),
 	_lastCredentialRequestSent(0),
@@ -128,10 +127,16 @@ void Peer::received(
 #endif
 
 	_lastReceive = now;
-	if ((verb == Packet::VERB_FRAME)||(verb == Packet::VERB_EXT_FRAME))
-		_lastUnicastFrame = now;
-	else if (verb == Packet::VERB_MULTICAST_FRAME)
-		_lastMulticastFrame = now;
+	switch (verb) {
+		case Packet::VERB_FRAME:
+		case Packet::VERB_EXT_FRAME:
+		case Packet::VERB_NETWORK_CONFIG_REQUEST:
+		case Packet::VERB_NETWORK_CONFIG:
+		case Packet::VERB_MULTICAST_FRAME:
+			_lastNontrivialReceive = now;
+			break;
+		default: break;
+	}
 
 	if (trustEstablished) {
 		_lastTrustEstablishedPacketReceived = now;

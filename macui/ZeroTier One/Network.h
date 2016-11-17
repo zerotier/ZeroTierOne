@@ -59,4 +59,10 @@ enum NetworkType {
 - (NSString*)statusString;
 - (NSString*)typeString;
 
+- (BOOL)hasSameNetworkId:(UInt64)networkId;
+
+- (BOOL)isEqualToNetwork:(Network*)network;
+- (BOOL)isEqual:(id)object;
+- (NSUInteger)hash;
+
 @end

@@ -475,8 +475,6 @@ jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
     jclass peerClass = NULL;
 
     jfieldID addressField = NULL;
-    jfieldID lastUnicastFrameField = NULL;
-    jfieldID lastMulticastFrameField = NULL;
     jfieldID versionMajorField = NULL;
     jfieldID versionMinorField = NULL;
     jfieldID versionRevField = NULL;
@@ -497,20 +495,6 @@ jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
     if(env->ExceptionCheck() || addressField == NULL)
     {
         LOGE("Error finding address field of Peer object");
-        return NULL;
-    }
-
-    lastUnicastFrameField = lookup.findField(peerClass, "lastUnicastFrame", "J");
-    if(env->ExceptionCheck() || lastUnicastFrameField == NULL)
-    {
-        LOGE("Error finding lastUnicastFrame field of Peer object");
-        return NULL;
-    }
-
-    lastMulticastFrameField = lookup.findField(peerClass, "lastMulticastFrame", "J");
-    if(env->ExceptionCheck() || lastMulticastFrameField == NULL)
-    {
-        LOGE("Error finding lastMulticastFrame field of Peer object");
         return NULL;
     }
 
@@ -571,8 +555,6 @@ jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
     }
 
     env->SetLongField(peerObject, addressField, (jlong)peer.address);
-    env->SetLongField(peerObject, lastUnicastFrameField, (jlong)peer.lastUnicastFrame);
-    env->SetLongField(peerObject, lastMulticastFrameField, (jlong)peer.lastMulticastFrame);
     env->SetIntField(peerObject, versionMajorField, peer.versionMajor);
     env->SetIntField(peerObject, versionMinorField, peer.versionMinor);
     env->SetIntField(peerObject, versionRevField, peer.versionRev);

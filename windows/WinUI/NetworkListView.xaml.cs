@@ -63,7 +63,7 @@ namespace WinUI
 
                 networkId.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                 {
-                    this.networkId.Content = status.Address;
+                    this.networkId.Text = status.Address;
                 }));
                 versionString.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                 {
@@ -80,7 +80,7 @@ namespace WinUI
 
                 networkId.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                 {
-                    this.networkId.Content = "";
+                    this.networkId.Text = "";
                 }));
                 versionString.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                 {

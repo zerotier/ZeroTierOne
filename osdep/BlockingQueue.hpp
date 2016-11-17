@@ -16,21 +16,49 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#import <Cocoa/Cocoa.h>
+#ifndef ZT_BLOCKINGQUEUE_HPP
+#define ZT_BLOCKINGQUEUE_HPP
 
-@class NetworkMonitor;
-@class Network;
+#include <queue>
+#include <mutex>
+#include <condition_variable>
 
-@interface ShowNetworksViewController : NSViewController<NSTableViewDelegate, NSTableViewDataSource>
+namespace ZeroTier {
 
-@property (nonatomic) NSMutableArray<Network*> *networkList;
-@property (nonatomic) NetworkMonitor *netMonitor;
-@property (nonatomic) BOOL visible;
+/**
+ * Simple C++11 thread-safe queue
+ *
+ * Do not use in node/ since we have not gone C++11 there yet.
+ */
+template <class T>
+class BlockingQueue
+{
+public:
+	BlockingQueue(void) {}
 
-@property (weak, nonatomic) IBOutlet NSTableView *tableView;
+	inline void post(T t)
+	{
+		std::lock_guard<std::mutex> lock(m);
+		q.push(t);
+		c.notify_one();
+	}
 
-- (void)deleteNetworkFromList:(NSString*)nwid;
-- (void)setNetworks:(NSArray<Network*>*)list;
+	inline T get(void)
+	{
+		std::unique_lock<std::mutex> lock(m);
+		while(q.empty())
+			c.wait(lock);
+		T val = q.front();
+		q.pop();
+		return val;
+	}
 
+private:
+	std::queue<T> q;
+	mutable std::mutex m;
+	std::condition_variable c;
+};
 
-@end
+} // namespace ZeroTier
+
+#endif
