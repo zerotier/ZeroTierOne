@@ -5,12 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WinUI"
         mc:Ignorable="d"
-        Title="Join a Network" Height="120" Width="320" Icon="ZeroTierIcon.ico">
+        Title="Join a Network" SizeToContent="WidthAndHeight" Height="Auto" Width="Auto" Icon="ZeroTierIcon.ico">
     <Grid HorizontalAlignment="Left" Margin="0,0,0,0" Width="315">
         <TextBox x:Name="joinNetworkBox" HorizontalAlignment="Left" Height="23" Margin="10,10,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="291" PreviewTextInput="joinNetworkBox_OnTextEntered" PreviewKeyDown="joinNetworkBox_OnKeyDown"/>
         <CheckBox x:Name="allowManagedCheckbox" Content="Allow Managed" HorizontalAlignment="Left" Margin="10,38,0,0" VerticalAlignment="Top" IsChecked="True"/>
         <CheckBox x:Name="allowGlobalCheckbox" Content="Allow Global" HorizontalAlignment="Left" Margin="118,38,0,0" VerticalAlignment="Top"/>
         <CheckBox x:Name="allowDefaultCheckbox" Content="Allow Default" HorizontalAlignment="Left" Margin="210,38,-6,0" VerticalAlignment="Top"/>
-        <Button x:Name="joinButton" Content="Join" HorizontalAlignment="Left" Margin="226,58,0,0" Background="#FFFFB354" VerticalAlignment="Top" Width="75" Click="joinButton_Click" IsEnabled="False"/>
+        <Button x:Name="joinButton" Content="Join" HorizontalAlignment="Left" Margin="226,58,0,10" Background="#FFFFB354" VerticalAlignment="Top" Width="75" Click="joinButton_Click" IsEnabled="False"/>
     </Grid>
 </Window>

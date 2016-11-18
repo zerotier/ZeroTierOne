@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="PreferencesView" SizeToContent="WidthAndHeight" Height="Auto" Width="Auto" Icon="ZeroTierIcon.ico">
     <Grid>
-        <CheckBox x:Name="checkBox" Content="Launch ZeroTier On Startup" HorizontalAlignment="Left" Margin="10,10,10,10" VerticalAlignment="Top"/>
+        <CheckBox x:Name="startupCheckbox" Content="Launch ZeroTier On Startup" HorizontalAlignment="Left" Margin="10,10,10,10" VerticalAlignment="Top" Checked="startupCheckbox_Checked" Unchecked="startupCheckbox_Unchecked"/>
 
     </Grid>
 </Window>

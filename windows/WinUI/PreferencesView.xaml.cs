@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,9 +20,31 @@ namespace WinUI
     /// </summary>
     public partial class PreferencesView : Window
     {
+        public static string AppName = "ZeroTier One";
+        private RegistryKey rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+
         public PreferencesView()
         {
             InitializeComponent();
+
+
+            string keyValue = rk.GetValue(AppName) as string;
+
+            if (keyValue != null && keyValue.Equals(System.Reflection.Assembly.GetExecutingAssembly().Location))
+            {
+                startupCheckbox.IsChecked = true;
+            }
         }
+
+        private void startupCheckbox_Checked(object sender, RoutedEventArgs e)
+        {
+            rk.SetValue(AppName, System.Reflection.Assembly.GetExecutingAssembly().Location);
+        }
+
+        private void startupCheckbox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            rk.DeleteValue(AppName);
+        }
+
     }
 }
