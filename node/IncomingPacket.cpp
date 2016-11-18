@@ -160,7 +160,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 
 			case Packet::ERROR_IDENTITY_COLLISION:
 				// FIXME: for federation this will need a payload with a signature or something.
-				if (RR->topology->isRoot(peer->identity()))
+				if (RR->topology->isUpstream(peer->identity()))
 					RR->node->postEvent(ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION);
 				break;
 
@@ -247,6 +247,10 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 				if (peer->identity() != id) {
 					// Identity is different from the one we already have -- address collision
 
+					// Check rate limits
+					if (!RR->node->rateGateIdentityVerification(now,_path->address()))
+						return true;
+
 					uint8_t key[ZT_PEER_SECRET_KEY_LENGTH];
 					if (RR->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
 						if (dearmor(key)) { // ensure packet is authentic, otherwise drop
@@ -275,7 +279,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 
 					// Continue at // VALID
 				}
-			} // else continue at // VALID
+			} // else if alreadyAuthenticated then continue at // VALID
 		} else {
 			// We don't already have an identity with this address -- validate and learn it
 
@@ -285,18 +289,23 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 				return true;
 			}
 
+			// Check rate limits
+			if (!RR->node->rateGateIdentityVerification(now,_path->address()))
+				return true;
+
+			// Check packet integrity and MAC (this is faster than locallyValidate() so do it first to filter out total crap)
+			SharedPtr<Peer> newPeer(new Peer(RR,RR->identity,id));
+			if (!dearmor(newPeer->key())) {
+				TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_path->address().toString().c_str());
+				return true;
+			}
+
 			// Check that identity's address is valid as per the derivation function
 			if (!id.locallyValidate()) {
 				TRACE("dropped HELLO from %s(%s): identity invalid",id.address().toString().c_str(),_path->address().toString().c_str());
 				return true;
 			}
 
-			// Check packet integrity and authentication
-			SharedPtr<Peer> newPeer(new Peer(RR,RR->identity,id));
-			if (!dearmor(newPeer->key())) {
-				TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_path->address().toString().c_str());
-				return true;
-			}
 			peer = RR->topology->addPeer(newPeer);
 
 			// Continue at // VALID
@@ -508,11 +517,7 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				id.serialize(outp,false);
 				++count;
 			} else {
-				// If I am not the root and don't know this identity, ask upstream. Downstream
-				// peer may re-request in the future and if so we will be able to provide it.
-				if (!RR->topology->amRoot())
-					RR->sw->requestWhois(addr);
-
+				RR->sw->requestWhois(addr);
 #ifdef ZT_ENABLE_CLUSTER
 				// Distribute WHOIS queries across a cluster if we do not know the ID.
 				// This may result in duplicate OKs to the querying peer, which is fine.
@@ -666,7 +671,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				}
 			}
 
-			if ((flags & 0x10) != 0) {
+			if ((flags & 0x10) != 0) { // ACK requested
 				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 				outp.append((uint8_t)Packet::VERB_EXT_FRAME);
 				outp.append((uint64_t)packetId());

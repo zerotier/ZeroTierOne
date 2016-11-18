@@ -403,26 +403,6 @@ public:
 		return false;
 	}
 
-	/**
-	 * Find a common set of addresses by which two peers can link, if any
-	 *
-	 * @param a Peer A
-	 * @param b Peer B
-	 * @param now Current time
-	 * @return Pair: B's address (to send to A), A's address (to send to B)
-	 */
-	static inline std::pair<InetAddress,InetAddress> findCommonGround(const Peer &a,const Peer &b,uint64_t now)
-	{
-		std::pair<InetAddress,InetAddress> v4,v6;
-		b.getBestActiveAddresses(now,v4.first,v6.first);
-		a.getBestActiveAddresses(now,v4.second,v6.second);
-		if ((v6.first)&&(v6.second)) // prefer IPv6 if both have it since NAT-t is (almost) unnecessary
-			return v6;
-		else if ((v4.first)&&(v4.second))
-			return v4;
-		else return std::pair<InetAddress,InetAddress>();
-	}
-
 private:
 	inline uint64_t _pathScore(const unsigned int p,const uint64_t now) const
 	{

@@ -78,6 +78,7 @@ Node::Node(
 
 	memset(_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
 	memset(_expectingRepliesTo,0,sizeof(_expectingRepliesTo));
+	memset(_lastIdentityVerification,0,sizeof(_lastIdentityVerification));
 
 	// Use Salsa20 alone as a high-quality non-crypto PRNG
 	{
@@ -211,8 +212,7 @@ public:
 		}
 
 		if (upstream) {
-			// "Upstream" devices are roots and relays and get special treatment -- they stay alive
-			// forever and we try to keep (if available) both IPv4 and IPv6 channels open to them.
+			// We keep connections to upstream peers alive forever.
 			bool needToContactIndirect = true;
 			if (p->doPingAndKeepalive(_now,AF_INET)) {
 				needToContactIndirect = false;
@@ -231,11 +231,8 @@ public:
 				}
 			}
 
+			// If we don't have a direct path or a static endpoint, send something indirectly to find one.
 			if (needToContactIndirect) {
-				// If this is an upstream and we have no stable endpoint for either IPv4 or IPv6,
-				// send a NOP indirectly if possible to see if we can get to this peer in any
-				// way whatsoever. This will e.g. find network preferred relays that lack
-				// stable endpoints by using root servers.
 				Packet outp(p->address(),RR->identity.address(),Packet::VERB_NOP);
 				RR->sw->send(outp,true);
 			}
@@ -415,7 +412,7 @@ ZT_PeerList *Node::peers() const
 			p->versionRev = -1;
 		}
 		p->latency = pi->second->latency();
-		p->role = RR->topology->isRoot(pi->second->identity()) ? ZT_PEER_ROLE_ROOT : ZT_PEER_ROLE_LEAF;
+		p->role = RR->topology->isRoot(pi->second->identity()) ? ZT_PEER_ROLE_ROOT : (RR->topology->isUpstream(pi->second->identity()) ? ZT_PEER_ROLE_UPSTREAM : ZT_PEER_ROLE_LEAF);
 
 		std::vector< std::pair< SharedPtr<Path>,bool > > paths(pi->second->paths(_now));
 		SharedPtr<Path> bestp(pi->second->getBestPath(_now,false));
@@ -485,6 +482,11 @@ void Node::clearLocalInterfaceAddresses()
 {
 	Mutex::Lock _l(_directPaths_m);
 	_directPaths.clear();
+}
+
+void Node::setRole(uint64_t ztAddress,ZT_PeerRole role)
+{
+	RR->topology->setUpstream(Address(ztAddress),(role == ZT_PEER_ROLE_UPSTREAM));
 }
 
 void Node::setNetconfMaster(void *networkControllerInstance)
@@ -1007,6 +1009,13 @@ void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node)
 {
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->clearLocalInterfaceAddresses();
+	} catch ( ... ) {}
+}
+
+void ZT_Node_setRole(ZT_Node *node,uint64_t ztAddress,ZT_PeerRole role)
+{
+	try {
+		reinterpret_cast<ZeroTier::Node *>(node)->setRole(ztAddress,role);
 	} catch ( ... ) {}
 }
 

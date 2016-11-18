@@ -1785,6 +1785,17 @@ int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage
 void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node);
 
 /**
+ * Set peer role
+ *
+ * Right now this can only be used to set a peer to either LEAF or
+ * UPSTREAM, since roots are fixed and defined by the World.
+ *
+ * @param ztAddress ZeroTier address (least significant 40 bits)
+ * @param role New peer role (LEAF or UPSTREAM)
+ */
+void ZT_Node_setRole(ZT_Node *node,uint64_t ztAddress,ZT_PeerRole role);
+
+/**
  * Set a network configuration master instance for this node
  *
  * Normal nodes should not need to use this. This is for nodes with

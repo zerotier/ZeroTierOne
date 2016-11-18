@@ -427,7 +427,7 @@ struct InetAddress : public sockaddr_storage
 		} else {
 			unsigned long tmp = reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port;
 			const uint8_t *a = reinterpret_cast<const uint8_t *>(this);
-			for(long i=0;i<sizeof(InetAddress);++i)
+			for(long i=0;i<(long)sizeof(InetAddress);++i)
 				reinterpret_cast<uint8_t *>(&tmp)[i % sizeof(tmp)] ^= a[i];
 			return tmp;
 		}
@@ -448,6 +448,30 @@ struct InetAddress : public sockaddr_storage
 	 */
 	bool isNetwork() const
 		throw();
+
+	/**
+	 * @return 14-bit (0-16383) hash of this IP's first 24 or 48 bits (for V4 or V6) for rate limiting code, or 0 if non-IP
+	 */
+	inline unsigned long rateGateHash() const
+	{
+		unsigned long h = 0;
+		switch(ss_family) {
+			case AF_INET:
+				h = (Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr) & 0xffffff00) >> 8;
+				h ^= (h >> 14);
+				break;
+			case AF_INET6: {
+				const uint8_t *ip = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+				h = ((unsigned long)ip[0]); h <<= 1;
+				h += ((unsigned long)ip[1]); h <<= 1;
+				h += ((unsigned long)ip[2]); h <<= 1;
+				h += ((unsigned long)ip[3]); h <<= 1;
+				h += ((unsigned long)ip[4]); h <<= 1;
+				h += ((unsigned long)ip[5]);
+			}	break;
+		}
+		return (h & 0x3fff);
+	}
 
 	/**
 	 * @return True if address family is non-zero

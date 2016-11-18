@@ -327,6 +327,17 @@ static int testCrypto()
 	}
 	std::cout << "PASS" << std::endl;
 
+	std::cout << "[crypto] Benchmarking C25519 ECC key agreement... "; std::cout.flush();
+	C25519::Pair bp[8];
+	for(int k=0;k<8;++k)
+		bp[k] = C25519::generate();
+	const uint64_t st = OSUtils::now();
+	for(unsigned int k=0;k<50;++k) {
+		C25519::agree(bp[~k & 7],bp[k & 7].pub,buf1,64);
+	}
+	const uint64_t et = OSUtils::now();
+	std::cout << ((double)(et - st) / 50.0) << "ms per agreement." << std::endl;
+
 	std::cout << "[crypto] Testing Ed25519 ECC signatures... "; std::cout.flush();
 	C25519::Pair didntSign = C25519::generate();
 	for(unsigned int i=0;i<10;++i) {
@@ -376,11 +387,15 @@ static int testIdentity()
 		std::cout << "FAIL (1)" << std::endl;
 		return -1;
 	}
-	if (!id.locallyValidate()) {
-		std::cout << "FAIL (2)" << std::endl;
-		return -1;
+	const uint64_t vst = OSUtils::now();
+	for(int k=0;k<10;++k) {
+		if (!id.locallyValidate()) {
+			std::cout << "FAIL (2)" << std::endl;
+			return -1;
+		}
 	}
-	std::cout << "PASS" << std::endl;
+	const uint64_t vet = OSUtils::now();
+	std::cout << "PASS (" << ((double)(vet - vst) / 10.0) << "ms per validation)" << std::endl;
 
 	std::cout << "[identity] Validate known-bad identity... "; std::cout.flush();
 	if (!id.fromString(KNOWN_BAD_IDENTITY)) {

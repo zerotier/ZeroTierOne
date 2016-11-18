@@ -105,6 +105,7 @@ public:
 	void freeQueryResult(void *qr);
 	int addLocalInterfaceAddress(const struct sockaddr_storage *addr);
 	void clearLocalInterfaceAddresses();
+	void setRole(uint64_t ztAddress,ZT_PeerRole role);
 	void setNetconfMaster(void *networkControllerInstance);
 	ZT_ResultCode circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *));
 	void circuitTestEnd(ZT_CircuitTest *test);
@@ -283,6 +284,23 @@ public:
 		return false;
 	}
 
+	/**
+	 * Check whether we should do potentially expensive identity verification (rate limit)
+	 *
+	 * @param now Current time
+	 * @param from Source address of packet
+	 * @return True if within rate limits
+	 */
+	inline bool rateGateIdentityVerification(const uint64_t now,const InetAddress &from)
+	{
+		unsigned long iph = from.rateGateHash();
+		if ((now - _lastIdentityVerification[iph]) >= ZT_IDENTITY_VALIDATION_SOURCE_RATE_LIMIT) {
+			_lastIdentityVerification[iph] = now;
+			return true;
+		}
+		return false;
+	}
+
 	virtual void ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig);
 	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode);
 
@@ -302,8 +320,12 @@ private:
 
 	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P
 
+	// For tracking packet IDs to filter out OK/ERROR replies to packets we did not send
 	uint8_t _expectingRepliesToBucketPtr[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1];
 	uint64_t _expectingRepliesTo[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1][ZT_EXPECTING_REPLIES_BUCKET_MASK2 + 1];
+
+	// Time of last identity verification indexed by InetAddress.rateGateHash()
+	uint64_t _lastIdentityVerification[16384];
 
 	ZT_DataStoreGetFunction _dataStoreGetFunction;
 	ZT_DataStorePutFunction _dataStorePutFunction;

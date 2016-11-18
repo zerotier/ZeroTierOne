@@ -617,10 +617,8 @@ public:
 		 *   <[1] protocol address length (4 for IPv4, 16 for IPv6)>
 		 *   <[...] protocol address (network byte order)>
 		 *
-		 * This is sent by a relaying node to initiate NAT traversal between two
-		 * peers that are communicating by way of indirect relay. The relay will
-		 * send this to both peers at the same time on a periodic basis, telling
-		 * each where it might find the other on the network.
+		 * An upstream node can send this to inform both sides of a relay of
+		 * information they might use to establish a direct connection.
 		 *
 		 * Upon receipt a peer sends HELLO to establish a direct link.
 		 *
