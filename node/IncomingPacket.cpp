@@ -160,7 +160,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 
 			case Packet::ERROR_IDENTITY_COLLISION:
 				// FIXME: for federation this will need a payload with a signature or something.
-				if (RR->topology->isRoot(peer->identity()))
+				if (RR->topology->isUpstream(peer->identity()))
 					RR->node->postEvent(ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION);
 				break;
 
@@ -508,11 +508,7 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				id.serialize(outp,false);
 				++count;
 			} else {
-				// If I am not the root and don't know this identity, ask upstream. Downstream
-				// peer may re-request in the future and if so we will be able to provide it.
-				if (!RR->topology->amRoot())
-					RR->sw->requestWhois(addr);
-
+				RR->sw->requestWhois(addr);
 #ifdef ZT_ENABLE_CLUSTER
 				// Distribute WHOIS queries across a cluster if we do not know the ID.
 				// This may result in duplicate OKs to the querying peer, which is fine.
@@ -666,7 +662,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				}
 			}
 
-			if ((flags & 0x10) != 0) {
+			if ((flags & 0x10) != 0) { // ACK requested
 				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 				outp.append((uint8_t)Packet::VERB_EXT_FRAME);
 				outp.append((uint64_t)packetId());

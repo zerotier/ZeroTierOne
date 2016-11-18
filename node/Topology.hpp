@@ -125,41 +125,43 @@ public:
 	void saveIdentity(const Identity &id);
 
 	/**
-	 * Get the current favorite root server
+	 * Get the current best upstream peer
 	 *
 	 * @return Root server with lowest latency or NULL if none
 	 */
-	inline SharedPtr<Peer> getBestRoot() { return getBestRoot((const Address *)0,0,false); }
+	inline SharedPtr<Peer> getUpstreamPeer() { return getUpstreamPeer((const Address *)0,0,false); }
 
 	/**
-	 * Get the best root server, avoiding root servers listed in an array
-	 *
-	 * This will get the best root server (lowest latency, etc.) but will
-	 * try to avoid the listed root servers, only using them if no others
-	 * are available.
+	 * Get the current best upstream peer, avoiding those in the supplied avoid list
 	 *
 	 * @param avoid Nodes to avoid
 	 * @param avoidCount Number of nodes to avoid
 	 * @param strictAvoid If false, consider avoided root servers anyway if no non-avoid root servers are available
 	 * @return Root server or NULL if none available
 	 */
-	SharedPtr<Peer> getBestRoot(const Address *avoid,unsigned int avoidCount,bool strictAvoid);
+	SharedPtr<Peer> getUpstreamPeer(const Address *avoid,unsigned int avoidCount,bool strictAvoid);
 
 	/**
 	 * @param id Identity to check
 	 * @return True if this is a designated root server in this world
 	 */
-	inline bool isRoot(const Identity &id) const
-	{
-		Mutex::Lock _l(_lock);
-		return (std::find(_rootAddresses.begin(),_rootAddresses.end(),id.address()) != _rootAddresses.end());
-	}
+	bool isRoot(const Identity &id) const;
 
 	/**
 	 * @param id Identity to check
 	 * @return True if this is a root server or a network preferred relay from one of our networks
 	 */
 	bool isUpstream(const Identity &id) const;
+
+	/**
+	 * Set whether or not an address is upstream
+	 *
+	 * If the address is a root this does nothing, since roots are fixed.
+	 *
+	 * @param a Target address
+	 * @param upstream New upstream status
+	 */
+	void setUpstream(const Address &a,bool upstream);
 
 	/**
 	 * @return Vector of root server addresses
@@ -175,7 +177,8 @@ public:
 	 */
 	inline std::vector<Address> upstreamAddresses() const
 	{
-		return rootAddresses();
+		Mutex::Lock _l(_lock);
+		return _upstreamAddresses;
 	}
 
 	/**
@@ -342,9 +345,9 @@ private:
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
 
-	std::vector< Address > _rootAddresses;
-	std::vector< SharedPtr<Peer> > _rootPeers;
-	bool _amRoot;
+	std::vector< Address > _upstreamAddresses; // includes roots
+	std::vector< Address > _rootAddresses; // only roots
+	bool _amRoot; // am I a root?
 
 	Mutex _lock;
 };
