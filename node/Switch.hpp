@@ -98,17 +98,6 @@ public:
 	void send(const Packet &packet,bool encrypt);
 
 	/**
-	 * Send RENDEZVOUS to two peers to permit them to directly connect
-	 *
-	 * This only works if both peers are known, with known working direct
-	 * links to this peer. The best link for each peer is sent to the other.
-	 *
-	 * @param p1 One of two peers (order doesn't matter)
-	 * @param p2 Second of pair
-	 */
-	bool unite(const Address &p1,const Address &p2);
-
-	/**
 	 * Request WHOIS on a given address
 	 *
 	 * @param addr Address to look up
@@ -138,6 +127,7 @@ public:
 private:
 	Address _sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
 	bool _trySend(const Packet &packet,bool encrypt);
+	bool _unite(const Address &p1,const Address &p2);
 
 	const RuntimeEnvironment *const RR;
 	uint64_t _lastBeaconResponse;

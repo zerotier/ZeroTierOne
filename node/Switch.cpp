@@ -237,7 +237,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 							uint64_t &luts = _lastUniteAttempt[_LastUniteKey(source,destination)];
 							if ((now - luts) >= ZT_MIN_UNITE_INTERVAL) {
 								luts = now;
-								unite(source,destination);
+								_unite(source,destination);
 							}
 						} else {
 #ifdef ZT_ENABLE_CLUSTER
@@ -590,75 +590,6 @@ void Switch::send(const Packet &packet,bool encrypt)
 	}
 }
 
-bool Switch::unite(const Address &p1,const Address &p2)
-{
-	if ((p1 == RR->identity.address())||(p2 == RR->identity.address()))
-		return false;
-	SharedPtr<Peer> p1p = RR->topology->getPeer(p1);
-	if (!p1p)
-		return false;
-	SharedPtr<Peer> p2p = RR->topology->getPeer(p2);
-	if (!p2p)
-		return false;
-
-	const uint64_t now = RR->node->now();
-
-	std::pair<InetAddress,InetAddress> cg(Peer::findCommonGround(*p1p,*p2p,now));
-	if ((!(cg.first))||(cg.first.ipScope() != cg.second.ipScope()))
-		return false;
-
-	TRACE("unite: %s(%s) <> %s(%s)",p1.toString().c_str(),cg.second.toString().c_str(),p2.toString().c_str(),cg.first.toString().c_str());
-
-	/* Tell P1 where to find P2 and vice versa, sending the packets to P1 and
-	 * P2 in randomized order in terms of which gets sent first. This is done
-	 * since in a few cases NAT-t can be sensitive to slight timing differences
-	 * in terms of when the two peers initiate. Normally this is accounted for
-	 * by the nearly-simultaneous RENDEZVOUS kickoff from the relay, but
-	 * given that relay are hosted on cloud providers this can in some
-	 * cases have a few ms of latency between packet departures. By randomizing
-	 * the order we make each attempted NAT-t favor one or the other going
-	 * first, meaning if it doesn't succeed the first time it might the second
-	 * and so forth. */
-	unsigned int alt = (unsigned int)RR->node->prng() & 1;
-	unsigned int completed = alt + 2;
-	while (alt != completed) {
-		if ((alt & 1) == 0) {
-			// Tell p1 where to find p2.
-			Packet outp(p1,RR->identity.address(),Packet::VERB_RENDEZVOUS);
-			outp.append((unsigned char)0);
-			p2.appendTo(outp);
-			outp.append((uint16_t)cg.first.port());
-			if (cg.first.isV6()) {
-				outp.append((unsigned char)16);
-				outp.append(cg.first.rawIpData(),16);
-			} else {
-				outp.append((unsigned char)4);
-				outp.append(cg.first.rawIpData(),4);
-			}
-			outp.armor(p1p->key(),true);
-			p1p->sendDirect(outp.data(),outp.size(),now,true);
-		} else {
-			// Tell p2 where to find p1.
-			Packet outp(p2,RR->identity.address(),Packet::VERB_RENDEZVOUS);
-			outp.append((unsigned char)0);
-			p1.appendTo(outp);
-			outp.append((uint16_t)cg.second.port());
-			if (cg.second.isV6()) {
-				outp.append((unsigned char)16);
-				outp.append(cg.second.rawIpData(),16);
-			} else {
-				outp.append((unsigned char)4);
-				outp.append(cg.second.rawIpData(),4);
-			}
-			outp.armor(p2p->key(),true);
-			p2p->sendDirect(outp.data(),outp.size(),now,true);
-		}
-		++alt; // counts up and also flips LSB
-	}
-
-	return true;
-}
-
 void Switch::requestWhois(const Address &addr)
 {
 	bool inserted = false;
@@ -837,6 +768,98 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 		requestWhois(packet.destination());
 	}
 	return false;
+}
+
+bool Switch::_unite(const Address &p1,const Address &p2)
+{
+	if ((p1 == RR->identity.address())||(p2 == RR->identity.address()))
+		return false;
+
+	const uint64_t now = RR->node->now();
+	InetAddress *p1a = (InetAddress *)0;
+	InetAddress *p2a = (InetAddress *)0;
+	InetAddress p1v4,p1v6,p2v4,p2v6,uv4,uv6;
+	{
+		const SharedPtr<Peer> p1p(RR->topology->getPeer(p1));
+		const SharedPtr<Peer> p2p(RR->topology->getPeer(p2));
+		if ((!p1p)&&(!p2p)) return false;
+		if (p1p) p1p->getBestActiveAddresses(now,p1v4,p1v6);
+		if (p2p) p2p->getBestActiveAddresses(now,p2v4,p2v6);
+	}
+	if ((p1v6)&&(p2v6)) {
+		p1a = &p1v6;
+		p2a = &p2v6;
+	} else if ((p1v4)&&(p2v4)) {
+		p1a = &p1v4;
+		p2a = &p2v4;
+	} else {
+		SharedPtr<Peer> upstream(RR->topology->getUpstreamPeer());
+		if (!upstream)
+			return false;
+		upstream->getBestActiveAddresses(now,uv4,uv6);
+		if ((p1v6)&&(uv6)) {
+			p1a = &p1v6;
+			p2a = &uv6;
+		} else if ((p1v4)&&(uv4)) {
+			p1a = &p1v4;
+			p2a = &uv4;
+		} else if ((p2v6)&&(uv6)) {
+			p1a = &p2v6;
+			p2a = &uv6;
+		} else if ((p2v4)&&(uv4)) {
+			p1a = &p2v4;
+			p2a = &uv4;
+		} else return false;
+	}
+
+	TRACE("unite: %s(%s) <> %s(%s)",p1.toString().c_str(),p1a->toString().c_str(),p2.toString().c_str(),p2a->toString().c_str());
+
+	/* Tell P1 where to find P2 and vice versa, sending the packets to P1 and
+	 * P2 in randomized order in terms of which gets sent first. This is done
+	 * since in a few cases NAT-t can be sensitive to slight timing differences
+	 * in terms of when the two peers initiate. Normally this is accounted for
+	 * by the nearly-simultaneous RENDEZVOUS kickoff from the relay, but
+	 * given that relay are hosted on cloud providers this can in some
+	 * cases have a few ms of latency between packet departures. By randomizing
+	 * the order we make each attempted NAT-t favor one or the other going
+	 * first, meaning if it doesn't succeed the first time it might the second
+	 * and so forth. */
+	unsigned int alt = (unsigned int)RR->node->prng() & 1;
+	const unsigned int completed = alt + 2;
+	while (alt != completed) {
+		if ((alt & 1) == 0) {
+			// Tell p1 where to find p2.
+			Packet outp(p1,RR->identity.address(),Packet::VERB_RENDEZVOUS);
+			outp.append((unsigned char)0);
+			p2.appendTo(outp);
+			outp.append((uint16_t)p2a->port());
+			if (p2a->isV6()) {
+				outp.append((unsigned char)16);
+				outp.append(p2a->rawIpData(),16);
+			} else {
+				outp.append((unsigned char)4);
+				outp.append(p2a->rawIpData(),4);
+			}
+			send(outp,true);
+		} else {
+			// Tell p2 where to find p1.
+			Packet outp(p2,RR->identity.address(),Packet::VERB_RENDEZVOUS);
+			outp.append((unsigned char)0);
+			p1.appendTo(outp);
+			outp.append((uint16_t)p1a->port());
+			if (p1a->isV6()) {
+				outp.append((unsigned char)16);
+				outp.append(p1a->rawIpData(),16);
+			} else {
+				outp.append((unsigned char)4);
+				outp.append(p1a->rawIpData(),4);
+			}
+			send(outp,true);
+		}
+		++alt; // counts up and also flips LSB
+	}
+
+	return true;
 }
 
 } // namespace ZeroTier
