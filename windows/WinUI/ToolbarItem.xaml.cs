@@ -30,6 +30,7 @@ namespace WinUI
         private APIHandler handler = APIHandler.Instance;
 
         private NetworkListView netListView = null;
+        private JoinNetworkView joinNetView = null;
 
         private NetworkMonitor mon = NetworkMonitor.Instance;
 
@@ -127,12 +128,17 @@ namespace WinUI
 
         private void ToolbarItem_JoinNetworkClicked(object sender, System.EventArgs e)
         {
-
+            if (joinNetView == null)
+            {
+                joinNetView = new JoinNetworkView();
+                joinNetView.Closed += JoinNetworkClosed;
+                joinNetView.Show();
+            }
         }
 
         private void JoinNetworkClosed(object sender, System.EventArgs e)
         {
-
+            joinNetView = null;
         }
 
         private void ToolbarItem_NetworkClicked(object sender, System.Windows.RoutedEventArgs e)

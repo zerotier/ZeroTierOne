@@ -101,6 +101,12 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="AboutView.xaml.cs">
+      <DependentUpon>AboutView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="JoinNetworkView.xaml.cs">
+      <DependentUpon>JoinNetworkView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="NetworkMonitor.cs" />
     <Compile Include="NetworkRoute.cs" />
     <Compile Include="NetworksPage.xaml.cs">
@@ -116,6 +122,14 @@
     <Compile Include="ZeroTierPeer.cs" />
     <Compile Include="ZeroTierNetwork.cs" />
     <Compile Include="ZeroTierStatus.cs" />
+    <Page Include="AboutView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="JoinNetworkView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="NetworkListView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
