@@ -118,6 +118,7 @@ namespace WinUI
                     }
                 }
 
+                _knownNetworks.Sort();
                 _nwCb(_knownNetworks);
             }
 

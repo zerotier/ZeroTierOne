@@ -478,7 +478,12 @@ namespace WinUI
     {
         public bool Equals(ZeroTierNetwork lhs, ZeroTierNetwork rhs)
         {
-            return lhs.NetworkId.Equals(rhs.NetworkId);
+            if (lhs.NetworkId.Equals(rhs.NetworkId))
+            {
+                lhs.UpdateNetwork(rhs);
+                return true;
+            }
+            return false;
         }
 
         public int GetHashCode(ZeroTierNetwork obj)
