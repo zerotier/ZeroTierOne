@@ -131,8 +131,8 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 							}
 #endif
 
-							// Don't know peer or no direct path -- so relay via root server
-							relayTo = RR->topology->getBestRoot();
+							// Don't know peer or no direct path -- so relay via someone upstream
+							relayTo = RR->topology->getUpstreamPeer();
 							if (relayTo)
 								relayTo->sendDirect(fragment.data(),fragment.size(),now,true);
 						}
@@ -254,7 +254,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 								return;
 							}
 #endif
-							relayTo = RR->topology->getBestRoot(&source,1,true);
+							relayTo = RR->topology->getUpstreamPeer(&source,1,true);
 							if (relayTo)
 								relayTo->sendDirect(packet.data(),packet.size(),now,true);
 						}
@@ -763,7 +763,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 
 Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted)
 {
-	SharedPtr<Peer> upstream(RR->topology->getBestRoot(peersAlreadyConsulted,numPeersAlreadyConsulted,false));
+	SharedPtr<Peer> upstream(RR->topology->getUpstreamPeer(peersAlreadyConsulted,numPeersAlreadyConsulted,false));
 	if (upstream) {
 		Packet outp(upstream->address(),RR->identity.address(),Packet::VERB_WHOIS);
 		addr.appendTo(outp);
@@ -793,7 +793,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 			viaPath.zero();
 		}
 		if (!viaPath) {
-			SharedPtr<Peer> relay(RR->topology->getBestRoot());
+			SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());
 			if ( (!relay) || (!(viaPath = relay->getBestPath(now,false))) ) {
 				if (!(viaPath = peer->getBestPath(now,true)))
 					return false;

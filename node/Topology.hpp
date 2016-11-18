@@ -164,15 +164,6 @@ public:
 	void setUpstream(const Address &a,bool upstream);
 
 	/**
-	 * @return Vector of root server addresses
-	 */
-	inline std::vector<Address> rootAddresses() const
-	{
-		Mutex::Lock _l(_lock);
-		return _rootAddresses;
-	}
-
-	/**
 	 * @return Vector of active upstream addresses (including roots)
 	 */
 	inline std::vector<Address> upstreamAddresses() const

@@ -229,7 +229,7 @@ void Multicaster::send(
 
 				Address explicitGatherPeers[16];
 				unsigned int numExplicitGatherPeers = 0;
-				SharedPtr<Peer> bestRoot(RR->topology->getBestRoot());
+				SharedPtr<Peer> bestRoot(RR->topology->getUpstreamPeer());
 				if (bestRoot)
 					explicitGatherPeers[numExplicitGatherPeers++] = bestRoot->address();
 				explicitGatherPeers[numExplicitGatherPeers++] = Network::controllerFor(nwid);

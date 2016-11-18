@@ -1049,18 +1049,7 @@ public:
 		 * OK or ERROR and has no special semantics outside of whatever the user
 		 * (via the ZeroTier core API) chooses to give it.
 		 */
-		VERB_USER_MESSAGE = 0x14,
-
-		/**
-		 * Information related to federation and mesh-like behavior:
-		 *   <[2] 16-bit length of Dictionary>
-		 *   <[...] topology definition info Dictionary>
-		 *
-		 * This message can carry information that can be used to define topology
-		 * and implement "mesh-like" behavior. It can optionally generate OK or
-		 * ERROR, and these carry the same payload.
-		 */
-		VERB_TOPOLOGY_HINT = 0x15
+		VERB_USER_MESSAGE = 0x14
 	};
 
 	/**
