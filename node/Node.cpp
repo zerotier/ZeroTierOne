@@ -78,6 +78,7 @@ Node::Node(
 
 	memset(_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
 	memset(_expectingRepliesTo,0,sizeof(_expectingRepliesTo));
+	memset(_lastIdentityVerification,0,sizeof(_lastIdentityVerification));
 
 	// Use Salsa20 alone as a high-quality non-crypto PRNG
 	{

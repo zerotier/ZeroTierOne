@@ -247,6 +247,10 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 				if (peer->identity() != id) {
 					// Identity is different from the one we already have -- address collision
 
+					// Check rate limits
+					if (!RR->node->rateGateIdentityVerification(now,_path->address()))
+						return true;
+
 					uint8_t key[ZT_PEER_SECRET_KEY_LENGTH];
 					if (RR->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
 						if (dearmor(key)) { // ensure packet is authentic, otherwise drop
@@ -285,7 +289,11 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 				return true;
 			}
 
-			// Check packet integrity and MAC
+			// Check rate limits
+			if (!RR->node->rateGateIdentityVerification(now,_path->address()))
+				return true;
+
+			// Check packet integrity and MAC (this is faster than locallyValidate() so do it first to filter out total crap)
 			SharedPtr<Peer> newPeer(new Peer(RR,RR->identity,id));
 			if (!dearmor(newPeer->key())) {
 				TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_path->address().toString().c_str());

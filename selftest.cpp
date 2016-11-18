@@ -327,6 +327,17 @@ static int testCrypto()
 	}
 	std::cout << "PASS" << std::endl;
 
+	std::cout << "[crypto] Benchmarking C25519 ECC key agreement... "; std::cout.flush();
+	C25519::Pair bp[8];
+	for(int k=0;k<8;++k)
+		bp[k] = C25519::generate();
+	const uint64_t st = OSUtils::now();
+	for(unsigned int k=0;k<50;++k) {
+		C25519::agree(bp[~k & 7],bp[k & 7].pub,buf1,64);
+	}
+	const uint64_t et = OSUtils::now();
+	std::cout << ((double)(et - st) / 50.0) << "ms per agreement." << std::endl;
+
 	std::cout << "[crypto] Testing Ed25519 ECC signatures... "; std::cout.flush();
 	C25519::Pair didntSign = C25519::generate();
 	for(unsigned int i=0;i<10;++i) {
