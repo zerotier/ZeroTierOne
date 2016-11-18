@@ -23,6 +23,7 @@
 #include "Network.hpp"
 #include "NetworkConfig.hpp"
 #include "Buffer.hpp"
+#include "Switch.hpp"
 
 namespace ZeroTier {
 
@@ -180,8 +181,8 @@ SharedPtr<Peer> Topology::getUpstreamPeer(const Address *avoid,unsigned int avoi
 		}
 
 	} else {
-		/* If I am not a root server, the best root server is the active one with
-		 * the lowest quality score. (lower == better) */
+		/* Otherwise pick the best upstream from among roots and any other
+		 * designated upstreams that we trust. */
 
 		unsigned int bestQualityOverall = ~((unsigned int)0);
 		unsigned int bestQualityNotAvoid = ~((unsigned int)0);
@@ -189,24 +190,33 @@ SharedPtr<Peer> Topology::getUpstreamPeer(const Address *avoid,unsigned int avoi
 		const SharedPtr<Peer> *bestNotAvoid = (const SharedPtr<Peer> *)0;
 
 		for(std::vector<Address>::const_iterator a(_upstreamAddresses.begin());a!=_upstreamAddresses.end();++a) {
-			const SharedPtr<Peer> *const p = _peers.get(*a);
-			if (p) {
-				bool avoiding = false;
-				for(unsigned int i=0;i<avoidCount;++i) {
-					if (avoid[i] == (*p)->address()) {
-						avoiding = true;
-						break;
-					}
+			const SharedPtr<Peer> *p = _peers.get(*a);
+
+			if (!p) {
+				const Identity id(_getIdentity(*a));
+				if (id) {
+					p = &(_peers.set(*a,SharedPtr<Peer>(new Peer(RR,RR->identity,id))));
+				} else {
+					RR->sw->requestWhois(*a);
 				}
-				const unsigned int q = (*p)->relayQuality(now);
-				if (q <= bestQualityOverall) {
-					bestQualityOverall = q;
-					bestOverall = &(*p);
+				continue; // always skip since even if we loaded it, it's not going to be ready
+			}
+
+			bool avoiding = false;
+			for(unsigned int i=0;i<avoidCount;++i) {
+				if (avoid[i] == (*p)->address()) {
+					avoiding = true;
+					break;
 				}
-				if ((!avoiding)&&(q <= bestQualityNotAvoid)) {
-					bestQualityNotAvoid = q;
-					bestNotAvoid = &(*p);
-				}
+			}
+			const unsigned int q = (*p)->relayQuality(now);
+			if (q <= bestQualityOverall) {
+				bestQualityOverall = q;
+				bestOverall = &(*p);
+			}
+			if ((!avoiding)&&(q <= bestQualityNotAvoid)) {
+				bestQualityNotAvoid = q;
+				bestNotAvoid = &(*p);
 			}
 		}
 
@@ -238,8 +248,19 @@ void Topology::setUpstream(const Address &a,bool upstream)
 	Mutex::Lock _l(_lock);
 	if (std::find(_rootAddresses.begin(),_rootAddresses.end(),a) == _rootAddresses.end()) {
 		if (upstream) {
-			if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),a) == _upstreamAddresses.end())
+			if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),a) == _upstreamAddresses.end()) {
 				_upstreamAddresses.push_back(a);
+
+				const SharedPtr<Peer> *p = _peers.get(a);
+				if (!p) {
+					const Identity id(_getIdentity(a));
+					if (id) {
+						_peers.set(a,SharedPtr<Peer>(new Peer(RR,RR->identity,id)));
+					} else {
+						RR->sw->requestWhois(a);
+					}
+				}
+			}
 		} else {
 			std::vector<Address> ua;
 			for(std::vector<Address>::iterator i(_upstreamAddresses.begin());i!=_upstreamAddresses.end();++i) {
@@ -326,10 +347,8 @@ void Topology::_setWorld(const World &newWorld)
 			_amRoot = true;
 		} else {
 			SharedPtr<Peer> *rp = _peers.get(r->identity.address());
-			if (!rp) {
-				SharedPtr<Peer> newrp(new Peer(RR,RR->identity,r->identity));
-				_peers.set(r->identity.address(),newrp);
-			}
+			if (!rp)
+				_peers.set(r->identity.address(),SharedPtr<Peer>(new Peer(RR,RR->identity,r->identity)));
 		}
 	}
 
