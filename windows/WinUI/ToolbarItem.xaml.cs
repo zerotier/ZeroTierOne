@@ -175,9 +175,9 @@ namespace WinUI
 
         private void ToolbarItem_QuitClicked(object sender, System.EventArgs e)
         {
+            NetworkMonitor.Instance.StopMonitor();
             this.Close();
             Application.Current.Shutdown();
-            Environment.Exit(0);
         }
 
         private void ToolbarItem_NetworkClicked(object sender, System.Windows.RoutedEventArgs e)

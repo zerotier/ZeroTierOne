@@ -188,5 +188,10 @@ namespace WinUI
                 }
             }
         }
+
+        public void StopMonitor()
+        {
+            runThread.Abort();
+        }
     }
 }
