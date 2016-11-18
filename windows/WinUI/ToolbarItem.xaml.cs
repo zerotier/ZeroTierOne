@@ -44,6 +44,8 @@ namespace WinUI
             set { _networkCollection = value; }
         }
 
+        private string nodeId;
+
         public ToolbarItem()
         {
             InitializeComponent();
@@ -94,6 +96,7 @@ namespace WinUI
                 {
                     nodeIdMenuItem.Header = "Node ID: " + status.Address;
                     nodeIdMenuItem.IsEnabled = true;
+                    nodeId = status.Address;
                 }));
             }
         }
@@ -111,6 +114,7 @@ namespace WinUI
         private void ToolbarItem_NodeIDClicked(object sender, System.Windows.RoutedEventArgs e)
         {
             // TODO: Copy Node ID to clipboard
+            Clipboard.SetText(nodeId);
         }
 
         private void ToolbarItem_ShowNetworksClicked(object sender, System.Windows.RoutedEventArgs e)
