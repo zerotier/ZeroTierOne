@@ -5,8 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WinUI"
         mc:Ignorable="d"
-        Title="PreferencesView" Height="300" Width="300" Icon="ZeroTierIcon.ico">
+        Title="PreferencesView" SizeToContent="WidthAndHeight" Height="Auto" Width="Auto" Icon="ZeroTierIcon.ico">
     <Grid>
-        
+        <CheckBox x:Name="checkBox" Content="Launch ZeroTier On Startup" HorizontalAlignment="Left" Margin="10,10,10,10" VerticalAlignment="Top"/>
+
     </Grid>
 </Window>
