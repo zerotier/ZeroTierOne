@@ -173,6 +173,13 @@ namespace WinUI
             prefsView = null;
         }
 
+        private void ToolbarItem_QuitClicked(object sender, System.EventArgs e)
+        {
+            this.Close();
+            Application.Current.Shutdown();
+            Environment.Exit(0);
+        }
+
         private void ToolbarItem_NetworkClicked(object sender, System.Windows.RoutedEventArgs e)
         {
             if(sender.GetType() == typeof(MenuItem))

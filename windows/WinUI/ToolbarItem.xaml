@@ -47,7 +47,8 @@
                             <MenuItem Header="Preferences..."
                                       Click="ToolbarItem_PreferencesClicked"/>
                             <Separator/>
-                            <MenuItem Header="Quit"/>
+                            <MenuItem Header="Quit"
+                                      Click="ToolbarItem_QuitClicked"/>
                             
                         </CompositeCollection>
                     </ContextMenu.ItemsSource>
