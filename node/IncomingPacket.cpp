@@ -275,7 +275,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 
 					// Continue at // VALID
 				}
-			} // else continue at // VALID
+			} // else if alreadyAuthenticated then continue at // VALID
 		} else {
 			// We don't already have an identity with this address -- validate and learn it
 
@@ -285,18 +285,19 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 				return true;
 			}
 
+			// Check packet integrity and MAC
+			SharedPtr<Peer> newPeer(new Peer(RR,RR->identity,id));
+			if (!dearmor(newPeer->key())) {
+				TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_path->address().toString().c_str());
+				return true;
+			}
+
 			// Check that identity's address is valid as per the derivation function
 			if (!id.locallyValidate()) {
 				TRACE("dropped HELLO from %s(%s): identity invalid",id.address().toString().c_str(),_path->address().toString().c_str());
 				return true;
 			}
 
-			// Check packet integrity and authentication
-			SharedPtr<Peer> newPeer(new Peer(RR,RR->identity,id));
-			if (!dearmor(newPeer->key())) {
-				TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_path->address().toString().c_str());
-				return true;
-			}
 			peer = RR->topology->addPeer(newPeer);
 
 			// Continue at // VALID
