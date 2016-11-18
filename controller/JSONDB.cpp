@@ -144,7 +144,7 @@ bool JSONDB::_isValidObjectName(const std::string &n)
 
 std::string JSONDB::_genPath(const std::string &n,bool create)
 {
-	std::vector<std::string> pt(Utils::split(n.c_str(),"/","",""));
+	std::vector<std::string> pt(OSUtils::split(n.c_str(),"/","",""));
 	if (pt.size() == 0)
 		return std::string();
 

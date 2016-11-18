@@ -696,7 +696,7 @@ static int idtool(int argc,char **argv)
 
 		CertificateOfMembership com;
 		for(int a=3;a<argc;++a) {
-			std::vector<std::string> params(Utils::split(argv[a],",","",""));
+			std::vector<std::string> params(OSUtils::split(argv[a],",","",""));
 			if (params.size() == 3) {
 				uint64_t qId = Utils::hexStrToU64(params[0].c_str());
 				uint64_t qValue = Utils::hexStrToU64(params[1].c_str());
@@ -1084,7 +1084,7 @@ int main(int argc,char **argv)
 		fprintf(stderr,"%s: no home path specified and no platform default available" ZT_EOL_S,argv[0]);
 		return 1;
 	} else {
-		std::vector<std::string> hpsp(Utils::split(homeDir.c_str(),ZT_PATH_SEPARATOR_S,"",""));
+		std::vector<std::string> hpsp(OSUtils::split(homeDir.c_str(),ZT_PATH_SEPARATOR_S,"",""));
 		std::string ptmp;
 		if (homeDir[0] == ZT_PATH_SEPARATOR)
 			ptmp.push_back(ZT_PATH_SEPARATOR);

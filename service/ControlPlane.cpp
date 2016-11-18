@@ -266,7 +266,7 @@ unsigned int ControlPlane::handleRequest(
 {
 	char json[8194];
 	unsigned int scode = 404;
-	std::vector<std::string> ps(Utils::split(path.c_str(),"/","",""));
+	std::vector<std::string> ps(OSUtils::split(path.c_str(),"/","",""));
 	std::map<std::string,std::string> urlArgs;
 	Mutex::Lock _l(_lock);
 
@@ -279,7 +279,7 @@ unsigned int ControlPlane::handleRequest(
 		if (qpos != std::string::npos) {
 			std::string args(ps[ps.size() - 1].substr(qpos + 1));
 			ps[ps.size() - 1] = ps[ps.size() - 1].substr(0,qpos);
-			std::vector<std::string> asplit(Utils::split(args.c_str(),"&","",""));
+			std::vector<std::string> asplit(OSUtils::split(args.c_str(),"&","",""));
 			for(std::vector<std::string>::iterator a(asplit.begin());a!=asplit.end();++a) {
 				std::size_t eqpos = a->find('=');
 				if (eqpos == std::string::npos)

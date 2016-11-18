@@ -112,17 +112,6 @@ public:
 	static void getSecureRandom(void *buf,unsigned int bytes);
 
 	/**
-	 * Split a string by delimiter, with optional escape and quote characters
-	 *
-	 * @param s String to split
-	 * @param sep One or more separators
-	 * @param esc Zero or more escape characters
-	 * @param quot Zero or more quote characters
-	 * @return Vector of tokens
-	 */
-	static std::vector<std::string> split(const char *s,const char *const sep,const char *esc,const char *quot);
-
-	/**
 	 * Tokenize a string (alias for strtok_r or strtok_s depending on platform)
 	 *
 	 * @param str String to split
