@@ -293,7 +293,6 @@ public:
 	inline bool rateGateIdentityVerification(const uint64_t now,const InetAddress &from)
 	{
 		unsigned long iph = from.rateGateHash();
-		printf("%s %.4lx\n",from.toString().c_str(),iph);
 		if ((now - _lastIdentityVerification[iph]) >= ZT_IDENTITY_VALIDATION_SOURCE_RATE_LIMIT) {
 			_lastIdentityVerification[iph] = now;
 			return true;
