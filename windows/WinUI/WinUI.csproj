@@ -115,6 +115,9 @@
     <Compile Include="PeersPage.xaml.cs">
       <DependentUpon>PeersPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="PreferencesView.xaml.cs">
+      <DependentUpon>PreferencesView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="ToolbarItem.xaml.cs">
       <DependentUpon>ToolbarItem.xaml</DependentUpon>
     </Compile>
@@ -152,6 +155,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="PeersPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="PreferencesView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

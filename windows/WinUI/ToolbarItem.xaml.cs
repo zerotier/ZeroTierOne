@@ -31,6 +31,8 @@ namespace WinUI
 
         private NetworkListView netListView = null;
         private JoinNetworkView joinNetView = null;
+        private AboutView aboutView = null;
+        private PreferencesView prefsView = null;
 
         private NetworkMonitor mon = NetworkMonitor.Instance;
 
@@ -108,7 +110,7 @@ namespace WinUI
 
         private void ToolbarItem_NodeIDClicked(object sender, System.Windows.RoutedEventArgs e)
         {
-
+            // TODO: Copy Node ID to clipboard
         }
 
         private void ToolbarItem_ShowNetworksClicked(object sender, System.Windows.RoutedEventArgs e)
@@ -139,6 +141,36 @@ namespace WinUI
         private void JoinNetworkClosed(object sender, System.EventArgs e)
         {
             joinNetView = null;
+        }
+
+        private void ToolbarItem_AboutClicked(object sender, System.EventArgs e)
+        {
+            if (aboutView == null)
+            {
+                aboutView = new AboutView();
+                aboutView.Closed += AboutClosed;
+                aboutView.Show();
+            }
+        }
+
+        private void AboutClosed(object sender, System.EventArgs e)
+        {
+            aboutView = null;
+        }
+
+        private void ToolbarItem_PreferencesClicked(object sender, System.EventArgs e)
+        {
+            if (prefsView == null)
+            {
+                prefsView = new PreferencesView();
+                prefsView.Closed += PreferencesClosed;
+                prefsView.Show();
+            }
+        }
+
+        private void PreferencesClosed(object sender, System.EventArgs e)
+        {
+            prefsView = null;
         }
 
         private void ToolbarItem_NetworkClicked(object sender, System.Windows.RoutedEventArgs e)

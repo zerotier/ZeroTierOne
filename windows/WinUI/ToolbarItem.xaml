@@ -42,8 +42,10 @@
                             </CollectionContainer>
 
                             <Separator/>
-                            <MenuItem Header="About..."/>
-                            <MenuItem Header="Preferences..."/>
+                            <MenuItem Header="About..."
+                                      Click="ToolbarItem_AboutClicked"/>
+                            <MenuItem Header="Preferences..."
+                                      Click="ToolbarItem_PreferencesClicked"/>
                             <Separator/>
                             <MenuItem Header="Quit"/>
                             
