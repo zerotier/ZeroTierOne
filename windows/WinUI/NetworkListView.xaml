@@ -75,60 +75,14 @@
     </Window.Resources>
     
     <DockPanel>
-		<StatusBar DockPanel.Dock="Bottom" Height="26" Background="#FF234447" Margin="0">
-			<StatusBar.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-							<ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-							<ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                    </Grid>
-                </ItemsPanelTemplate>
-            </StatusBar.ItemsPanel>
-            <StatusBarItem Grid.Column="0" x:Name="networkId_placeholder">
-                <TextBox x:Name="networkId" Text="deadbeef00" HorizontalAlignment="Left" Grid.Column="0" Foreground="White" FontFamily="Lucida Console" BorderThickness="0" IsReadOnly="true" Background="Transparent"/>
-            </StatusBarItem>
-            <StatusBarItem Grid.Column="1" x:Name="onlineStatus" Content="ONLINE" Foreground="White" FontFamily="Lucida Console"/>
-            <StatusBarItem Grid.Column="2" x:Name="versionString" Content="1.0.5" Foreground="White" FontFamily="Lucida Console"/>
-			<StatusBarItem Grid.Column="3" x:Name="blank" Content="" Height="43" Foreground="White"/>
-			<StatusBarItem Grid.Column="4">
-				<TextBox x:Name="joinNetworkID" TextWrapping="Wrap" Width="140" HorizontalAlignment="Right" ToolTip="Enter Network ID" PreviewTextInput="OnNetworkEntered" MaxLength="16" FontFamily="Lucida Console" FontSize="12" BorderThickness="1"/>
-			</StatusBarItem>
-			<StatusBarItem Grid.Column="5" x:Name="statusBarButton" Foreground="White" RenderTransformOrigin="0.789,0.442">
-				<Button x:Name="joinButton" Content="Join" Background="#FFFFB354" Width="76" Click="joinButton_Click"/>
-			</StatusBarItem>
-		</StatusBar>
-		<!--<TabControl Margin="0,0,0,0">
-            <TabItem x:Name="Networks" Header="Networks" Foreground="White" IsSelected="True" IsManipulationEnabled="True">-->
-                <Grid Background="LightGray" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <local:NetworksPage x:Name="networksPage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Column="0" Grid.Row="0" Margin="0,0,0,0"/>
-                </Grid>
-            <!--</TabItem>-->
-            <!--<TabItem x:Name="Peers" Header="Peers" Foreground="White">
-                <Grid Background="#FFE5E5E5" HorizontalAlignment="Left" VerticalAlignment="Top">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <local:PeersPage x:Name="peersPage" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="0" Grid.Row="0"/>
-                </Grid>
-            </TabItem>-->
-		<!--</TabControl>-->
+	    <Grid Background="LightGray" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <local:NetworksPage x:Name="networksPage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Column="0" Grid.Row="0" Margin="0,0,0,0"/>
+        </Grid>
 	</DockPanel>
 </Window>

@@ -28,69 +28,22 @@ namespace WinUI
         Regex charRegex = new Regex("[0-9a-fxA-FX]");
         Regex wholeStringRegex = new Regex("^[0-9a-fxA-FX]+$");
 
-        Timer timer = new Timer();
-
-        bool connected = false;
-
         public NetworkListView()
         {
             InitializeComponent();
 
-            APIHandler.Instance.GetStatus(updateStatus);
+            Closed += onClosed;
 
-            if (!connected)
-            {
-                MessageBox.Show("Unable to connect to ZerOTier Service");
-                return;
-            }
-
-            APIHandler.Instance.GetNetworks(updateNetworks);
-
-            DataObject.AddPastingHandler(joinNetworkID, OnPaste);
-
-            timer.Elapsed += new ElapsedEventHandler(OnUpdateTimer);
-            timer.Interval = 2000;
-            timer.Enabled = true;
-
-            
+            NetworkMonitor.Instance.SubscribeNetworkUpdates(updateNetworks);
         }
 
-        private void updateStatus(ZeroTierStatus status)
+        ~NetworkListView()
         {
-            if (status != null)
-            {
-                connected = true;
+        }
 
-                networkId.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                {
-                    this.networkId.Text = status.Address;
-                }));
-                versionString.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                {
-                    this.versionString.Content = status.Version;
-                }));
-                onlineStatus.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                {
-                    this.onlineStatus.Content = (status.Online ? "ONLINE" : "OFFLINE");
-                }));
-            }
-            else
-            {
-                connected = false;
-
-                networkId.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                {
-                    this.networkId.Text = "";
-                }));
-                versionString.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                {
-                    this.versionString.Content = "0";
-                }));
-                onlineStatus.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                {
-                    this.onlineStatus.Content = "OFFLINE";
-                }));
-            }
+        private void onClosed(object sender, System.EventArgs e)
+        {
+            NetworkMonitor.Instance.UnsubscribeNetworkUpdates(updateNetworks);
         }
 
         private void updateNetworks(List<ZeroTierNetwork> networks)
@@ -101,24 +54,6 @@ namespace WinUI
                 {
                     networksPage.setNetworks(networks);
                 }));
-            }
-        }
-
-        private void OnUpdateTimer(object source, ElapsedEventArgs e)
-        {
-            APIHandler.Instance.GetStatus(updateStatus);
-            APIHandler.Instance.GetNetworks(updateNetworks);
-        }
-
-        private void joinButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (joinNetworkID.Text.Length < 16)
-            {
-                MessageBox.Show("Invalid Network ID");
-            }
-            else
-            {
-                APIHandler.Instance.JoinNetwork(joinNetworkID.Text);
             }
         }
 

@@ -25,10 +25,6 @@ namespace WinUI
         public delegate void NetworkListCallback(List<ZeroTierNetwork> networks);
         public delegate void StatusCallback(ZeroTierStatus status);
 
-
-        private NetworkListCallback _networkCallbacks;
-        private StatusCallback _statusCallbacks;
-
         public static APIHandler Instance
         {
             get
@@ -187,7 +183,7 @@ namespace WinUI
 
             request.Method = "GET";
             request.ContentType = "application/json";
-            request.Timeout = 2000;
+            request.Timeout = 10000;
 
             try
             {
@@ -233,7 +229,7 @@ namespace WinUI
 
             request.Method = "POST";
             request.ContentType = "applicaiton/json";
-            request.Timeout = 2000;
+            request.Timeout = 10000;
 
             using (var streamWriter = new StreamWriter(((HttpWebRequest)request).GetRequestStream()))
             {
@@ -273,7 +269,7 @@ namespace WinUI
             }
 
             request.Method = "DELETE";
-            request.Timeout = 2000;
+            request.Timeout = 10000;
 
             try
             {

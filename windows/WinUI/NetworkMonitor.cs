@@ -68,9 +68,13 @@ namespace WinUI
                 {
                     var bformatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
                     netList = (List<ZeroTierNetwork>)bformatter.Deserialize(stream);
+                    stream.Close();
                 }
 
-                _knownNetworks = netList;
+                lock (_knownNetworks)
+                {
+                    _knownNetworks = netList;
+                }
             }
         }
 
@@ -86,28 +90,36 @@ namespace WinUI
 
             using (Stream stream = File.Open(dataFile, FileMode.OpenOrCreate))
             {
-                var bformatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                bformatter.Serialize(stream, _knownNetworks);
+                lock (_knownNetworks)
+                {
+                    var bformatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+                    bformatter.Serialize(stream, _knownNetworks);
+                    stream.Flush();
+                    stream.Close();
+                }
             }
         }
 
         private void apiNetworkCallback(List<ZeroTierNetwork> networks)
         {
-            _knownNetworks = _knownNetworks.Union(networks, new NetworkEqualityComparer()).ToList();
-
-            foreach (ZeroTierNetwork n in _knownNetworks)
+            lock (_knownNetworks)
             {
-                if (networks.Contains(n))
-                {
-                    n.IsConnected = true;
-                }
-                else
-                {
-                    n.IsConnected = false;
-                }
-            }
+                _knownNetworks = _knownNetworks.Union(networks, new NetworkEqualityComparer()).ToList();
 
-            _nwCb(_knownNetworks);
+                foreach (ZeroTierNetwork n in _knownNetworks)
+                {
+                    if (networks.Contains(n))
+                    {
+                        n.IsConnected = true;
+                    }
+                    else
+                    {
+                        n.IsConnected = false;
+                    }
+                }
+
+                _nwCb(_knownNetworks);
+            }
 
             writeNetworks();
         }
@@ -136,7 +148,7 @@ namespace WinUI
             }
             catch
             {
-
+                Console.WriteLine("Monitor Thread Ended");
             }
         }
 
@@ -158,6 +170,22 @@ namespace WinUI
         public void UnsubscribeNetworkUpdates(NetworkListCallback cb)
         {
             _nwCb -= cb;
+        }
+
+        public void RemoveNetwork(String networkID)
+        {
+            lock(_knownNetworks)
+            {
+                foreach (ZeroTierNetwork n in _knownNetworks)
+                {
+                    if (n.NetworkId.Equals(networkID))
+                    {
+                        _knownNetworks.Remove(n);
+                        writeNetworks();
+                        break;
+                    }
+                }
+            }
         }
     }
 }

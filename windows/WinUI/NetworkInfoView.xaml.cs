@@ -79,6 +79,8 @@ namespace WinUI
             this.allowDefault.IsChecked = network.AllowDefault;
             this.allowGlobal.IsChecked = network.AllowGlobal;
             this.allowManaged.IsChecked = network.AllowManaged;
+
+            this.connectedCheckBox.IsChecked = network.IsConnected;
         }
 
         public bool HasNetwork(ZeroTierNetwork network)
@@ -96,9 +98,10 @@ namespace WinUI
             UpdateNetworkData();
         }
 
-        private void leaveButton_Click(object sender, RoutedEventArgs e)
+        private void deleteButton_Click(object sender, RoutedEventArgs e)
         {
             APIHandler.Instance.LeaveNetwork(network.NetworkId);
+            NetworkMonitor.Instance.RemoveNetwork(network.NetworkId);
         }
 
         private void AllowManaged_CheckStateChanged(object sender, RoutedEventArgs e)
@@ -126,6 +129,32 @@ namespace WinUI
                 allowManaged.IsChecked ?? false,
                 allowGlobal.IsChecked ?? false,
                 allowDefault.IsChecked ?? false);
+        }
+
+        private void connectedCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            onConnectedCheckboxUpdated(true);
+        }
+
+        private void connectedCheckbox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            onConnectedCheckboxUpdated(false);
+        }
+
+        private void onConnectedCheckboxUpdated(bool isChecked)
+        {
+            if (isChecked)
+            {
+                bool global = allowGlobal.IsChecked.Value;
+                bool managed = allowManaged.IsChecked.Value;
+                bool defRoute = allowDefault.IsChecked.Value;
+
+                APIHandler.Instance.JoinNetwork(networkId.Text, managed, global, defRoute);
+            }
+            else
+            {
+                APIHandler.Instance.LeaveNetwork(networkId.Text);
+            }
         }
     }
 }
