@@ -27,7 +27,7 @@
                 <ContextMenu>
                     <ContextMenu.ItemsSource>
                         <CompositeCollection>
-                            <MenuItem Header="Node ID: abeb9f9bc5"
+                            <MenuItem Header="Node ID: unknown"
                                       Click="ToolbarItem_NodeIDClicked"
                                       x:Name="nodeIdMenuItem"/>
                             <Separator/>
