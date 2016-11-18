@@ -1776,11 +1776,13 @@ void EmbeddedNetworkController::_pushMemberUpdate(uint64_t now,uint64_t nwid,con
 				std::map<std::pair<uint64_t,uint64_t>,uint64_t>::iterator lrt(_lastRequestTime.find(std::pair<uint64_t,uint64_t>(id.address().toInt(),nwid)));
 				online = ( (lrt != _lastRequestTime.end()) && ((now - lrt->second) < ZT_NETWORK_AUTOCONF_DELAY) );
 			}
-			Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> *metaData = new Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY>(mdstr.c_str());
-			try {
-				this->request(nwid,InetAddress(),0,id,*metaData);
-			} catch ( ... ) {}
-			delete metaData;
+			if (online) {
+				Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> *metaData = new Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY>(mdstr.c_str());
+				try {
+					this->request(nwid,InetAddress(),0,id,*metaData);
+				} catch ( ... ) {}
+				delete metaData;
+			}
 		}
 	} catch ( ... ) {}
 }

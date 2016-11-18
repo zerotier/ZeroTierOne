@@ -427,7 +427,7 @@ struct InetAddress : public sockaddr_storage
 		} else {
 			unsigned long tmp = reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port;
 			const uint8_t *a = reinterpret_cast<const uint8_t *>(this);
-			for(long i=0;i<sizeof(InetAddress);++i)
+			for(long i=0;i<(long)sizeof(InetAddress);++i)
 				reinterpret_cast<uint8_t *>(&tmp)[i % sizeof(tmp)] ^= a[i];
 			return tmp;
 		}
