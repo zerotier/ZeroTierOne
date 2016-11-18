@@ -412,7 +412,7 @@ ZT_PeerList *Node::peers() const
 			p->versionRev = -1;
 		}
 		p->latency = pi->second->latency();
-		p->role = RR->topology->isRoot(pi->second->identity()) ? ZT_PEER_ROLE_ROOT : ZT_PEER_ROLE_LEAF;
+		p->role = RR->topology->isRoot(pi->second->identity()) ? ZT_PEER_ROLE_ROOT : (RR->topology->isUpstream(pi->second->identity()) ? ZT_PEER_ROLE_UPSTREAM : ZT_PEER_ROLE_LEAF);
 
 		std::vector< std::pair< SharedPtr<Path>,bool > > paths(pi->second->paths(_now));
 		SharedPtr<Path> bestp(pi->second->getBestPath(_now,false));
@@ -482,6 +482,11 @@ void Node::clearLocalInterfaceAddresses()
 {
 	Mutex::Lock _l(_directPaths_m);
 	_directPaths.clear();
+}
+
+void Node::setRole(uint64_t ztAddress,ZT_PeerRole role)
+{
+	RR->topology->setUpstream(Address(ztAddress),(role == ZT_PEER_ROLE_UPSTREAM));
 }
 
 void Node::setNetconfMaster(void *networkControllerInstance)
@@ -1004,6 +1009,13 @@ void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node)
 {
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->clearLocalInterfaceAddresses();
+	} catch ( ... ) {}
+}
+
+void ZT_Node_setRole(ZT_Node *node,uint64_t ztAddress,ZT_PeerRole role)
+{
+	try {
+		reinterpret_cast<ZeroTier::Node *>(node)->setRole(ztAddress,role);
 	} catch ( ... ) {}
 }
 

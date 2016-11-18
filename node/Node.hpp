@@ -105,6 +105,7 @@ public:
 	void freeQueryResult(void *qr);
 	int addLocalInterfaceAddress(const struct sockaddr_storage *addr);
 	void clearLocalInterfaceAddresses();
+	void setRole(uint64_t ztAddress,ZT_PeerRole role);
 	void setNetconfMaster(void *networkControllerInstance);
 	ZT_ResultCode circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *));
 	void circuitTestEnd(ZT_CircuitTest *test);
