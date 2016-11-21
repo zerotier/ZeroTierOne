@@ -883,13 +883,24 @@ public:
 				json &virt = _localConfig["virtual"];
 				if (virt.is_object()) {
 					for(json::iterator v(virt.begin());v!=virt.end();++v) {
-						std::string nstr = v.key();
+						const std::string nstr = v.key();
 						if ((nstr.length() == ZT_ADDRESS_LENGTH_HEX)&&(v.value().is_object())) {
 							const Address ztaddr(nstr.c_str());
 							if (ztaddr)
 								_node->setRole(ztaddr.toInt(),(_jS(v.value()["role"],"") == "upstream") ? ZT_PEER_ROLE_UPSTREAM : ZT_PEER_ROLE_LEAF);
 						}
 					}
+				}
+
+				// Set any other local config stuff
+				json &settings = _localConfig["settings"];
+				if (settings.is_object()) {
+					const std::string rp(_jS(settings["relayPolicy"],""));
+					if (rp == "always")
+						_node->setRelayPolicy(ZT_RELAY_POLICY_ALWAYS);
+					else if (rp == "never")
+						_node->setRelayPolicy(ZT_RELAY_POLICY_NEVER);
+					else _node->setRelayPolicy(ZT_RELAY_POLICY_TRUSTED);
 				}
 			}
 
