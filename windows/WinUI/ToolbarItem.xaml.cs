@@ -123,8 +123,10 @@ namespace WinUI
                 netListView = new WinUI.NetworkListView();
                 netListView.Closed += ShowNetworksClosed;
             }
-
+            
             netListView.Show();
+
+            setWindowPosition(netListView);
         }
 
         private void ShowNetworksClosed(object sender, System.EventArgs e)
@@ -138,7 +140,10 @@ namespace WinUI
             {
                 joinNetView = new JoinNetworkView();
                 joinNetView.Closed += JoinNetworkClosed;
+                
                 joinNetView.Show();
+
+                setWindowPosition(joinNetView);
             }
         }
 
@@ -153,7 +158,9 @@ namespace WinUI
             {
                 aboutView = new AboutView();
                 aboutView.Closed += AboutClosed;
+                
                 aboutView.Show();
+                setWindowPosition(aboutView);
             }
         }
 
@@ -168,7 +175,10 @@ namespace WinUI
             {
                 prefsView = new PreferencesView();
                 prefsView.Closed += PreferencesClosed;
+            
                 prefsView.Show();
+
+                setWindowPosition(prefsView);
             }
         }
 
@@ -202,6 +212,21 @@ namespace WinUI
                     }
                 }   
             }
+        }
+
+        private void setWindowPosition(Window w)
+        {
+            double width = w.ActualWidth;
+            double height = w.ActualHeight;
+
+            double screenHeight = SystemParameters.PrimaryScreenHeight;
+            double screenWidth = SystemParameters.PrimaryScreenWidth;
+
+            double top = screenHeight - height - 40;
+            double left = screenWidth - width - 20;
+            
+            w.Top = top;
+            w.Left = left;
         }
     }
 }

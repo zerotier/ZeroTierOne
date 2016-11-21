@@ -8,7 +8,7 @@
         Title="AboutView" Height="460" Width="300" Icon="ZeroTierIcon.ico">
     <Grid>
         <Image x:Name="image" HorizontalAlignment="Center" Height="100" Margin="0,10,0,0" VerticalAlignment="Top" Width="100" Source="ZeroTierIcon.ico"/>
-        <RichTextBox x:Name="richTextBox" HorizontalAlignment="Left" Height="307" Margin="10,115,0,0" VerticalAlignment="Top" Width="275" IsReadOnly="True" IsDocumentEnabled="True">
+        <RichTextBox x:Name="richTextBox" HorizontalAlignment="Left" Height="307" Margin="10,115,0,0" VerticalAlignment="Top" Width="275" IsReadOnly="True" IsDocumentEnabled="True" BorderThickness="0">
             <RichTextBox.Resources>
                 <Style TargetType="Hyperlink">
                     <Setter Property="Cursor" Value="Hand" />
