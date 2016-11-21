@@ -31,12 +31,6 @@
 #include "../version.h"
 #include "../include/ZeroTierOne.h"
 
-#ifdef ZT_USE_SYSTEM_HTTP_PARSER
-#include <http_parser.h>
-#else
-#include "../ext/http-parser/http_parser.h"
-#endif
-
 #include "../node/Constants.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/Node.hpp"
@@ -58,6 +52,16 @@
 #include "ControlPlane.hpp"
 #include "ClusterGeoIpService.hpp"
 #include "ClusterDefinition.hpp"
+
+#ifdef ZT_USE_SYSTEM_HTTP_PARSER
+#include <http_parser.h>
+#else
+#include "../ext/http-parser/http_parser.h"
+#endif
+
+#include "../ext/json/json.hpp"
+
+using json = nlohmann::json;
 
 /**
  * Uncomment to enable UDP breakage switch
@@ -143,6 +147,54 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 namespace ZeroTier {
 
 namespace {
+
+static uint64_t _jI(const json &jv,const uint64_t dfl)
+{
+	if (jv.is_number()) {
+		return (uint64_t)jv;
+	} else if (jv.is_string()) {
+		std::string s = jv;
+		return Utils::strToU64(s.c_str());
+	} else if (jv.is_boolean()) {
+		return ((bool)jv ? 1ULL : 0ULL);
+	}
+	return dfl;
+}
+/*
+static bool _jB(const json &jv,const bool dfl)
+{
+	if (jv.is_boolean()) {
+		return (bool)jv;
+	} else if (jv.is_number()) {
+		return ((uint64_t)jv > 0ULL);
+	} else if (jv.is_string()) {
+		std::string s = jv;
+		if (s.length() > 0) {
+			switch(s[0]) {
+				case 't':
+				case 'T':
+				case '1':
+					return true;
+			}
+		}
+		return false;
+	}
+	return dfl;
+}
+*/
+static std::string _jS(const json &jv,const char *dfl)
+{
+	if (jv.is_string()) {
+		return jv;
+	} else if (jv.is_number()) {
+		char tmp[64];
+		Utils::snprintf(tmp,sizeof(tmp),"%llu",(uint64_t)jv);
+		return tmp;
+	} else if (jv.is_boolean()) {
+		return ((bool)jv ? std::string("1") : std::string("0"));
+	}
+	return std::string((dfl) ? dfl : "");
+}
 
 #ifdef ZT_AUTO_UPDATE
 #define ZT_AUTO_UPDATE_MAX_HTTP_RESPONSE_SIZE (1024 * 1024 * 64)
@@ -484,6 +536,7 @@ public:
 	const std::string _homePath;
 	BackgroundResolver _tcpFallbackResolver;
 	InetAddress _allowManagementFrom;
+	json _localConfig;
 	EmbeddedNetworkController *_controller;
 	Phy<OneServiceImpl *> _phy;
 	Node *_node;
@@ -758,13 +811,15 @@ public:
 				_portsBE[i] = Utils::hton((uint16_t)_ports[i]);
 
 			{
+				uint64_t trustedPathIds[ZT_MAX_TRUSTED_PATHS];
+				InetAddress trustedPathNetworks[ZT_MAX_TRUSTED_PATHS];
+				unsigned int trustedPathCount = 0;
+
+				// Old style "trustedpaths" flat file -- will eventually go away
 				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S + "trustedpaths").c_str(),"r");
-				uint64_t ids[ZT_MAX_TRUSTED_PATHS];
-				InetAddress addresses[ZT_MAX_TRUSTED_PATHS];
 				if (trustpaths) {
 					char buf[1024];
-					unsigned int count = 0;
-					while ((fgets(buf,sizeof(buf),trustpaths))&&(count < ZT_MAX_TRUSTED_PATHS)) {
+					while ((fgets(buf,sizeof(buf),trustpaths))&&(trustedPathCount < ZT_MAX_TRUSTED_PATHS)) {
 						int fno = 0;
 						char *saveptr = (char *)0;
 						uint64_t trustedPathId = 0;
@@ -778,14 +833,69 @@ public:
 							++fno;
 						}
 						if ( (trustedPathId != 0) && ((trustedPathNetwork.ss_family == AF_INET)||(trustedPathNetwork.ss_family == AF_INET6)) && (trustedPathNetwork.ipScope() != InetAddress::IP_SCOPE_GLOBAL) && (trustedPathNetwork.netmaskBits() > 0) ) {
-							ids[count] = trustedPathId;
-							addresses[count] = trustedPathNetwork;
-							++count;
+							trustedPathIds[trustedPathCount] = trustedPathId;
+							trustedPathNetworks[trustedPathCount] = trustedPathNetwork;
+							++trustedPathCount;
 						}
 					}
 					fclose(trustpaths);
-					if (count)
-						_node->setTrustedPaths(reinterpret_cast<const struct sockaddr_storage *>(addresses),ids,count);
+				}
+
+				// Read local config file
+				std::string lcbuf;
+				if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S + "local.conf").c_str(),lcbuf)) {
+					try {
+						_localConfig = json::parse(lcbuf);
+						if (!_localConfig.is_object()) {
+							Mutex::Lock _l(_termReason_m);
+							_termReason = ONE_UNRECOVERABLE_ERROR;
+							_fatalErrorMessage = "invalid local.conf (content is not JSON object)";
+							return _termReason;
+						}
+					} catch ( ... ) {
+						Mutex::Lock _l(_termReason_m);
+						_termReason = ONE_UNRECOVERABLE_ERROR;
+						_fatalErrorMessage = "invalid local.conf (JSON parse error)";
+						return _termReason;
+					}
+				}
+
+				// Get any trusted paths in local.conf
+				json &physical = _localConfig["physical"];
+				if (physical.is_object()) {
+					for(json::iterator phy(physical.begin());phy!=physical.end();++phy) {
+						std::string nstr = phy.key();
+						if (nstr.length()) {
+							if (phy.value().is_object()) {
+								uint64_t tpid = 0;
+								if ((tpid = _jI(phy.value()["trustedPathId"],0ULL))) {
+									InetAddress trustedPathNetwork(nstr);
+									if ( ((trustedPathNetwork.ss_family == AF_INET)||(trustedPathNetwork.ss_family == AF_INET6)) && (trustedPathCount < ZT_MAX_TRUSTED_PATHS) && (trustedPathNetwork.ipScope() != InetAddress::IP_SCOPE_GLOBAL) && (trustedPathNetwork.netmaskBits() > 0) ) {
+										trustedPathIds[trustedPathCount] = tpid;
+										trustedPathNetworks[trustedPathCount] = trustedPathNetwork;
+										++trustedPathCount;
+									}
+								}
+							}
+						}
+					}
+				}
+
+				// Set trusted paths if there are any
+				if (trustedPathCount)
+					_node->setTrustedPaths(reinterpret_cast<const struct sockaddr_storage *>(trustedPathNetworks),trustedPathIds,trustedPathCount);
+
+				// Set any roles (upstream/federation)
+				json &virt = _localConfig["virtual"];
+				if (virt.is_object()) {
+					for(json::iterator v(virt.begin());v!=virt.end();++v) {
+						std::string nstr = v.key();
+						if ((nstr.length() == ZT_ADDRESS_LENGTH_HEX)&&(v.value().is_object())) {
+							const Address ztaddr(nstr.c_str());
+							if (ztaddr)
+								_node->setRole(ztaddr.toInt(),(_jS(v.value()["role"],"") == "upstream") ? ZT_PEER_ROLE_UPSTREAM : ZT_PEER_ROLE_LEAF);
+						}
+					}
 				}
 			}
 
@@ -806,7 +916,7 @@ public:
 
 								Mutex::Lock _l(_termReason_m);
 								_termReason = ONE_UNRECOVERABLE_ERROR;
-								_fatalErrorMessage = "Cluster: can't determine my cluster member ID: able to bind more than one cluster message socket IP/port!";
+								_fatalErrorMessage = "cluster: can't determine my cluster member ID: able to bind more than one cluster message socket IP/port!";
 								return _termReason;
 							}
 							_clusterMessageSocket = cs;
@@ -817,7 +927,7 @@ public:
 					if (!_clusterMessageSocket) {
 						Mutex::Lock _l(_termReason_m);
 						_termReason = ONE_UNRECOVERABLE_ERROR;
-						_fatalErrorMessage = "Cluster: can't determine my cluster member ID: unable to bind to any cluster message socket IP/port.";
+						_fatalErrorMessage = "cluster: can't determine my cluster member ID: unable to bind to any cluster message socket IP/port.";
 						return _termReason;
 					}
 
