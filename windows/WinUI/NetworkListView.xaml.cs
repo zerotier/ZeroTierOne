@@ -17,6 +17,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using System.ComponentModel;
 
 namespace WinUI
 {
@@ -39,6 +40,12 @@ namespace WinUI
 
         ~NetworkListView()
         {
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            e.Cancel = true;
+            Hide();
         }
 
         private void onClosed(object sender, System.EventArgs e)

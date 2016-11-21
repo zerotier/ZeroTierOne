@@ -29,7 +29,7 @@ namespace WinUI
     {
         private APIHandler handler = APIHandler.Instance;
 
-        private NetworkListView netListView = null;
+        private NetworkListView netListView = new NetworkListView();
         private JoinNetworkView joinNetView = null;
         private AboutView aboutView = null;
         private PreferencesView prefsView = null;
@@ -122,8 +122,9 @@ namespace WinUI
             {
                 netListView = new WinUI.NetworkListView();
                 netListView.Closed += ShowNetworksClosed;
-                netListView.Show();
             }
+
+            netListView.Show();
         }
 
         private void ShowNetworksClosed(object sender, System.EventArgs e)
