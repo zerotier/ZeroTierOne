@@ -384,6 +384,7 @@ void Node::status(ZT_NodeStatus *status) const
 	status->worldTimestamp = RR->topology->worldTimestamp();
 	status->publicIdentity = RR->publicIdentityStr.c_str();
 	status->secretIdentity = RR->secretIdentityStr.c_str();
+	status->relayPolicy = _relayPolicy;
 	status->online = _online ? 1 : 0;
 }
 

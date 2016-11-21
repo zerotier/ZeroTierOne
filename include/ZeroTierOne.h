@@ -397,6 +397,16 @@ enum ZT_Event
 };
 
 /**
+ * Node relay policy
+ */
+enum ZT_RelayPolicy
+{
+	ZT_RELAY_POLICY_NEVER = 0,
+	ZT_RELAY_POLICY_TRUSTED = 1,
+	ZT_RELAY_POLICY_ALWAYS = 2
+};
+
+/**
  * Current node status
  */
 typedef struct
@@ -429,6 +439,11 @@ typedef struct
 	 * This pointer will remain valid as long as the node exists.
 	 */
 	const char *secretIdentity;
+
+	/**
+	 * Node relay policy
+	 */
+	ZT_RelayPolicy relayPolicy;
 
 	/**
 	 * True if some kind of connectivity appears available
@@ -789,13 +804,6 @@ enum ZT_VirtualNetworkConfigOperation
 	 * Network is going down permanently (leave/delete)
 	 */
 	ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY = 4
-};
-
-enum ZT_RelayPolicy
-{
-	ZT_RELAY_POLICY_NEVER = 0,
-	ZT_RELAY_POLICY_TRUSTED = 1,
-	ZT_RELAY_POLICY_ALWAYS = 2
 };
 
 /**

@@ -389,6 +389,7 @@ unsigned int ControlPlane::handleRequest(
 					"\t\"worldId\": %llu,\n"
 					"\t\"worldTimestamp\": %llu,\n"
 					"\t\"online\": %s,\n"
+					"\t\"relayPolicy\": \"%s\",\n"
 					"\t\"tcpFallbackActive\": %s,\n"
 					"\t\"versionMajor\": %d,\n"
 					"\t\"versionMinor\": %d,\n"
@@ -402,6 +403,7 @@ unsigned int ControlPlane::handleRequest(
 					status.worldId,
 					status.worldTimestamp,
 					(status.online) ? "true" : "false",
+					((status.relayPolicy == ZT_RELAY_POLICY_ALWAYS) ? "always" : ((status.relayPolicy == ZT_RELAY_POLICY_NEVER) ? "never" : "trusted")),
 					(_svc->tcpFallbackActive()) ? "true" : "false",
 					ZEROTIER_ONE_VERSION_MAJOR,
 					ZEROTIER_ONE_VERSION_MINOR,
