@@ -847,16 +847,10 @@ public:
 					try {
 						_localConfig = json::parse(lcbuf);
 						if (!_localConfig.is_object()) {
-							Mutex::Lock _l(_termReason_m);
-							_termReason = ONE_UNRECOVERABLE_ERROR;
-							_fatalErrorMessage = "invalid local.conf (content is not JSON object)";
-							return _termReason;
+							fprintf(stderr,"WARNING: unable to parse local.conf (root element is not a JSON object)" ZT_EOL_S);
 						}
 					} catch ( ... ) {
-						Mutex::Lock _l(_termReason_m);
-						_termReason = ONE_UNRECOVERABLE_ERROR;
-						_fatalErrorMessage = "invalid local.conf (JSON parse error)";
-						return _termReason;
+						fprintf(stderr,"WARNING: unable to parse local.conf (invalid JSON)" ZT_EOL_S);
 					}
 				}
 
