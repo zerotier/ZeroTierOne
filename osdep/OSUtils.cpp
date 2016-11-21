@@ -315,6 +315,50 @@ bool OSUtils::writeFile(const char *path,const void *buf,unsigned int len)
 	return false;
 }
 
+std::vector<std::string> OSUtils::split(const char *s,const char *const sep,const char *esc,const char *quot)
+{
+	std::vector<std::string> fields;
+	std::string buf;
+
+	if (!esc)
+		esc = "";
+	if (!quot)
+		quot = "";
+
+	bool escapeState = false;
+	char quoteState = 0;
+	while (*s) {
+		if (escapeState) {
+			escapeState = false;
+			buf.push_back(*s);
+		} else if (quoteState) {
+			if (*s == quoteState) {
+				quoteState = 0;
+				fields.push_back(buf);
+				buf.clear();
+			} else buf.push_back(*s);
+		} else {
+			const char *quotTmp;
+			if (strchr(esc,*s))
+				escapeState = true;
+			else if ((buf.size() <= 0)&&((quotTmp = strchr(quot,*s))))
+				quoteState = *quotTmp;
+			else if (strchr(sep,*s)) {
+				if (buf.size() > 0) {
+					fields.push_back(buf);
+					buf.clear();
+				} // else skip runs of seperators
+			} else buf.push_back(*s);
+		}
+		++s;
+	}
+
+	if (buf.size())
+		fields.push_back(buf);
+
+	return fields;
+}
+
 std::string OSUtils::platformDefaultHomePath()
 {
 #ifdef __UNIX_LIKE__

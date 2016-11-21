@@ -218,50 +218,6 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	s20.encrypt12(buf,buf,bytes);
 }
 
-std::vector<std::string> Utils::split(const char *s,const char *const sep,const char *esc,const char *quot)
-{
-	std::vector<std::string> fields;
-	std::string buf;
-
-	if (!esc)
-		esc = "";
-	if (!quot)
-		quot = "";
-
-	bool escapeState = false;
-	char quoteState = 0;
-	while (*s) {
-		if (escapeState) {
-			escapeState = false;
-			buf.push_back(*s);
-		} else if (quoteState) {
-			if (*s == quoteState) {
-				quoteState = 0;
-				fields.push_back(buf);
-				buf.clear();
-			} else buf.push_back(*s);
-		} else {
-			const char *quotTmp;
-			if (strchr(esc,*s))
-				escapeState = true;
-			else if ((buf.size() <= 0)&&((quotTmp = strchr(quot,*s))))
-				quoteState = *quotTmp;
-			else if (strchr(sep,*s)) {
-				if (buf.size() > 0) {
-					fields.push_back(buf);
-					buf.clear();
-				} // else skip runs of seperators
-			} else buf.push_back(*s);
-		}
-		++s;
-	}
-
-	if (buf.size())
-		fields.push_back(buf);
-
-	return fields;
-}
-
 bool Utils::scopy(char *dest,unsigned int len,const char *src)
 {
 	if (!len)

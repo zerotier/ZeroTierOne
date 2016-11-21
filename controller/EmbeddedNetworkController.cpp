@@ -889,7 +889,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						json &v6m = b["v6AssignMode"];
 						if (!nv6m.is_object()) nv6m = json::object();
 						if (v6m.is_string()) { // backward compatibility
-							std::vector<std::string> v6ms(Utils::split(_jS(v6m,"").c_str(),",","",""));
+							std::vector<std::string> v6ms(OSUtils::split(_jS(v6m,"").c_str(),",","",""));
 							std::sort(v6ms.begin(),v6ms.end());
 							v6ms.erase(std::unique(v6ms.begin(),v6ms.end()),v6ms.end());
 							nv6m["rfc4193"] = false;
