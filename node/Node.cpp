@@ -174,12 +174,14 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
+// Closure used to ping upstream and active/online peers
 class _PingPeersThatNeedPing
 {
 public:
-	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) :
+	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,const std::vector<Address> &upstreams,uint64_t now) :
 		lastReceiveFromUpstream(0),
 		RR(renv),
+		_upstreams(upstreams),
 		_now(now),
 		_world(RR->topology->world())
 	{
@@ -189,29 +191,25 @@ public:
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		bool upstream = false;
-		InetAddress stableEndpoint4,stableEndpoint6;
-
-		// If this is a world root, pick (if possible) both an IPv4 and an IPv6 stable endpoint to use if link isn't currently alive.
-		for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
-			if (r->identity == p->identity()) {
-				upstream = true;
-				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)r->stableEndpoints.size();++k) {
-					const InetAddress &addr = r->stableEndpoints[ptr++ % r->stableEndpoints.size()];
-					if (!stableEndpoint4) {
-						if (addr.ss_family == AF_INET)
-							stableEndpoint4 = addr;
+		if (std::find(_upstreams.begin(),_upstreams.end(),p->address()) != _upstreams.end()) {
+			InetAddress stableEndpoint4,stableEndpoint6;
+			for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
+				if (r->identity == p->identity()) {
+					for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)r->stableEndpoints.size();++k) {
+						const InetAddress &addr = r->stableEndpoints[ptr++ % r->stableEndpoints.size()];
+						if (!stableEndpoint4) {
+							if (addr.ss_family == AF_INET)
+								stableEndpoint4 = addr;
+						}
+						if (!stableEndpoint6) {
+							if (addr.ss_family == AF_INET6)
+								stableEndpoint6 = addr;
+						}
 					}
-					if (!stableEndpoint6) {
-						if (addr.ss_family == AF_INET6)
-							stableEndpoint6 = addr;
-					}
+					break;
 				}
-				break;
 			}
-		}
 
-		if (upstream) {
 			// We keep connections to upstream peers alive forever.
 			bool needToContactIndirect = true;
 			if (p->doPingAndKeepalive(_now,AF_INET)) {
@@ -246,6 +244,7 @@ public:
 
 private:
 	const RuntimeEnvironment *RR;
+	const std::vector<Address> &_upstreams;
 	uint64_t _now;
 	World _world;
 };
@@ -274,8 +273,15 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 			for(std::vector< SharedPtr<Network> >::const_iterator n(needConfig.begin());n!=needConfig.end();++n)
 				(*n)->requestConfiguration();
 
+			// Run WHOIS on upstreams we don't know about
+			const std::vector<Address> upstreams(RR->topology->upstreamAddresses());
+			for(std::vector<Address>::const_iterator a(upstreams.begin());a!=upstreams.end();++a) {
+				if (!RR->topology->getPeer(*a))
+					RR->sw->requestWhois(*a);
+			}
+
 			// Do pings and keepalives
-			_PingPeersThatNeedPing pfunc(RR,now);
+			_PingPeersThatNeedPing pfunc(RR,upstreams,now);
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
 
 			// Update online status, post status change as event
