@@ -160,7 +160,7 @@ void Peer::received(
 			}
 		}
 
-		if ( (!pathIsConfirmed) && (RR->node->shouldUsePathForZeroTierTraffic(path->localAddress(),path->address())) ) {
+		if ( (!pathIsConfirmed) && (RR->node->shouldUsePathForZeroTierTraffic(_id.address(),path->localAddress(),path->address())) ) {
 			if (verb == Packet::VERB_OK) {
 				Mutex::Lock _l(_paths_m);
 

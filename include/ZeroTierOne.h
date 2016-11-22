@@ -1495,8 +1495,9 @@ typedef int (*ZT_WirePacketSendFunction)(
  * Paramters:
  *  (1) Node
  *  (2) User pointer
- *  (3) Local interface address
- *  (4) Remote address
+ *  (3) ZeroTier address or 0 for none/any
+ *  (4) Local interface address
+ *  (5) Remote address
  *
  * This function must return nonzero (true) if the path should be used.
  *
@@ -1515,12 +1516,86 @@ typedef int (*ZT_WirePacketSendFunction)(
 typedef int (*ZT_PathCheckFunction)(
 	ZT_Node *,                        /* Node */
 	void *,                           /* User ptr */
+	uint64_t,                         /* ZeroTier address */
 	const struct sockaddr_storage *,  /* Local address */
 	const struct sockaddr_storage *); /* Remote address */
+
+/**
+ * Function to get physical addresses for ZeroTier peers
+ *
+ * Parameters:
+ *  (1) Node
+ *  (2) User pointer
+ *  (3) ZeroTier address (least significant 40 bits)
+ *  (4) Desried address family or -1 for any
+ *  (5) Buffer to fill with result
+ *
+ * If provided this function will be occasionally called to get physical
+ * addresses that might be tried to reach a ZeroTier address. It must
+ * return a nonzero (true) value if the result buffer has been filled
+ * with an address.
+ */
+typedef int (*ZT_PathLookupFunction)(
+	ZT_Node *,                        /* Node */
+	void *,                           /* User ptr */
+	uint64_t,                         /* ZeroTier address (40 bits) */
+	int,                              /* Desired ss_family or -1 for any */
+	struct sockaddr_storage *);       /* Result buffer */
 
 /****************************************************************************/
 /* C Node API                                                               */
 /****************************************************************************/
+
+/**
+ * Structure for configuring ZeroTier core callback functions
+ */
+struct ZT_Node_Callbacks
+{
+	/**
+	 * Struct version -- must currently be 0
+	 */
+	long version;
+
+	/**
+	 * REQUIRED: Function to get objects from persistent storage
+	 */
+	ZT_DataStoreGetFunction dataStoreGetFunction;
+
+	/**
+	 * REQUIRED: Function to store objects in persistent storage
+	 */
+	ZT_DataStorePutFunction dataStorePutFunction;
+
+	/**
+	 * REQUIRED: Function to send packets over the physical wire
+	 */
+	ZT_WirePacketSendFunction wirePacketSendFunction;
+
+	/**
+	 * REQUIRED: Function to inject frames into a virtual network's TAP
+	 */
+	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction;
+
+	/**
+	 * REQUIRED: Function to be called when virtual networks are configured or changed
+	 */
+	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction;
+
+	/**
+	 * REQUIRED: Function to be called to notify external code of important events
+	 */
+	ZT_EventCallback eventCallback;
+
+	/**
+	 * OPTIONAL: Function to check whether a given physical path should be used
+	 */
+	ZT_PathCheckFunction pathCheckFunction;
+
+	/**
+	 * OPTIONAL: Function to get hints to physical paths to ZeroTier addresses
+	 */
+	ZT_PathLookupFunction pathLookupFunction;
+};
 
 /**
  * Create a new ZeroTier One node
@@ -1533,25 +1608,11 @@ typedef int (*ZT_PathCheckFunction)(
  *
  * @param node Result: pointer is set to new node instance on success
  * @param uptr User pointer to pass to functions/callbacks
+ * @param callbacks Callback function configuration
  * @param now Current clock in milliseconds
- * @param dataStoreGetFunction Function called to get objects from persistent storage
- * @param dataStorePutFunction Function called to put objects in persistent storage
- * @param virtualNetworkConfigFunction Function to be called when virtual LANs are created, deleted, or their config parameters change
- * @param pathCheckFunction A function to check whether a path should be used for ZeroTier traffic, or NULL to allow any path
- * @param eventCallback Function to receive status updates and non-fatal error notices
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_new(
-	ZT_Node **node,
-	void *uptr,
-	uint64_t now,
-	ZT_DataStoreGetFunction dataStoreGetFunction,
-	ZT_DataStorePutFunction dataStorePutFunction,
-	ZT_WirePacketSendFunction wirePacketSendFunction,
-	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
-	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT_PathCheckFunction pathCheckFunction,
-	ZT_EventCallback eventCallback);
+enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now);
 
 /**
  * Delete a node and free all resources it consumes

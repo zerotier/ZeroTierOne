@@ -85,7 +85,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 			Address beaconAddr(reinterpret_cast<const char *>(data) + 8,5);
 			if (beaconAddr == RR->identity.address())
 				return;
-			if (!RR->node->shouldUsePathForZeroTierTraffic(localAddr,fromAddr))
+			if (!RR->node->shouldUsePathForZeroTierTraffic(beaconAddr,localAddr,fromAddr))
 				return;
 			SharedPtr<Peer> peer(RR->topology->getPeer(beaconAddr));
 			if (peer) { // we'll only respond to beacons from known peers

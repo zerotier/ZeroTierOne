@@ -46,34 +46,20 @@ namespace ZeroTier {
 /* Public Node interface (C++, exposed via CAPI bindings)                   */
 /****************************************************************************/
 
-Node::Node(
-	uint64_t now,
-	void *uptr,
-	ZT_DataStoreGetFunction dataStoreGetFunction,
-	ZT_DataStorePutFunction dataStorePutFunction,
-	ZT_WirePacketSendFunction wirePacketSendFunction,
-	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
-	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT_PathCheckFunction pathCheckFunction,
-	ZT_EventCallback eventCallback) :
+Node::Node(void *uptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now) :
 	_RR(this),
 	RR(&_RR),
 	_uPtr(uptr),
-	_dataStoreGetFunction(dataStoreGetFunction),
-	_dataStorePutFunction(dataStorePutFunction),
-	_wirePacketSendFunction(wirePacketSendFunction),
-	_virtualNetworkFrameFunction(virtualNetworkFrameFunction),
-	_virtualNetworkConfigFunction(virtualNetworkConfigFunction),
-	_pathCheckFunction(pathCheckFunction),
-	_eventCallback(eventCallback),
-	_networks(),
-	_networks_m(),
 	_prngStreamPtr(0),
 	_now(now),
 	_lastPingCheck(0),
 	_lastHousekeepingRun(0),
 	_relayPolicy(ZT_RELAY_POLICY_TRUSTED)
 {
+	if (callbacks->version != 0)
+		throw std::runtime_error("callbacks struct version mismatch");
+	memcpy(&_cb,callbacks,sizeof(ZT_Node_Callbacks));
+
 	_online = false;
 
 	memset(_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
@@ -81,30 +67,26 @@ Node::Node(
 	memset(_lastIdentityVerification,0,sizeof(_lastIdentityVerification));
 
 	// Use Salsa20 alone as a high-quality non-crypto PRNG
-	{
-		char foo[32];
-		Utils::getSecureRandom(foo,32);
-		_prng.init(foo,256,foo);
-		memset(_prngStream,0,sizeof(_prngStream));
-		_prng.encrypt12(_prngStream,_prngStream,sizeof(_prngStream));
-	}
+	char foo[32];
+	Utils::getSecureRandom(foo,32);
+	_prng.init(foo,256,foo);
+	memset(_prngStream,0,sizeof(_prngStream));
+	_prng.encrypt12(_prngStream,_prngStream,sizeof(_prngStream));
 
-	{
-		std::string idtmp(dataStoreGet("identity.secret"));
-		if ((!idtmp.length())||(!RR->identity.fromString(idtmp))||(!RR->identity.hasPrivate())) {
-			TRACE("identity.secret not found, generating...");
-			RR->identity.generate();
-			idtmp = RR->identity.toString(true);
-			if (!dataStorePut("identity.secret",idtmp,true))
-				throw std::runtime_error("unable to write identity.secret");
-		}
-		RR->publicIdentityStr = RR->identity.toString(false);
-		RR->secretIdentityStr = RR->identity.toString(true);
-		idtmp = dataStoreGet("identity.public");
-		if (idtmp != RR->publicIdentityStr) {
-			if (!dataStorePut("identity.public",RR->publicIdentityStr,false))
-				throw std::runtime_error("unable to write identity.public");
-		}
+	std::string idtmp(dataStoreGet("identity.secret"));
+	if ((!idtmp.length())||(!RR->identity.fromString(idtmp))||(!RR->identity.hasPrivate())) {
+		TRACE("identity.secret not found, generating...");
+		RR->identity.generate();
+		idtmp = RR->identity.toString(true);
+		if (!dataStorePut("identity.secret",idtmp,true))
+			throw std::runtime_error("unable to write identity.secret");
+	}
+	RR->publicIdentityStr = RR->identity.toString(false);
+	RR->secretIdentityStr = RR->identity.toString(true);
+	idtmp = dataStoreGet("identity.public");
+	if (idtmp != RR->publicIdentityStr) {
+		if (!dataStorePut("identity.public",RR->publicIdentityStr,false))
+			throw std::runtime_error("unable to write identity.public");
 	}
 
 	try {
@@ -638,7 +620,7 @@ std::string Node::dataStoreGet(const char *name)
 	std::string r;
 	unsigned long olen = 0;
 	do {
-		long n = _dataStoreGetFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,name,buf,sizeof(buf),(unsigned long)r.length(),&olen);
+		long n = _cb.dataStoreGetFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,name,buf,sizeof(buf),(unsigned long)r.length(),&olen);
 		if (n <= 0)
 			return std::string();
 		r.append(buf,n);
@@ -646,7 +628,7 @@ std::string Node::dataStoreGet(const char *name)
 	return r;
 }
 
-bool Node::shouldUsePathForZeroTierTraffic(const InetAddress &localAddress,const InetAddress &remoteAddress)
+bool Node::shouldUsePathForZeroTierTraffic(const Address &ztaddr,const InetAddress &localAddress,const InetAddress &remoteAddress)
 {
 	if (!Path::isAddressValidForPath(remoteAddress))
 		return false;
@@ -663,9 +645,7 @@ bool Node::shouldUsePathForZeroTierTraffic(const InetAddress &localAddress,const
 		}
 	}
 
-	if (_pathCheckFunction)
-		return (_pathCheckFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,reinterpret_cast<const struct sockaddr_storage *>(&localAddress),reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0);
-	else return true;
+	return ( (_cb.pathCheckFunction) ? (_cb.pathCheckFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,ztaddr.toInt(),reinterpret_cast<const struct sockaddr_storage *>(&localAddress),reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0) : true);
 }
 
 #ifdef ZT_TRACE
@@ -822,21 +802,11 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 
 extern "C" {
 
-enum ZT_ResultCode ZT_Node_new(
-	ZT_Node **node,
-	void *uptr,
-	uint64_t now,
-	ZT_DataStoreGetFunction dataStoreGetFunction,
-	ZT_DataStorePutFunction dataStorePutFunction,
-	ZT_WirePacketSendFunction wirePacketSendFunction,
-	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
-	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT_PathCheckFunction pathCheckFunction,
-	ZT_EventCallback eventCallback)
+enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now)
 {
 	*node = (ZT_Node *)0;
 	try {
-		*node = reinterpret_cast<ZT_Node *>(new ZeroTier::Node(now,uptr,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigFunction,pathCheckFunction,eventCallback));
+		*node = reinterpret_cast<ZT_Node *>(new ZeroTier::Node(uptr,callbacks,now));
 		return ZT_RESULT_OK;
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
