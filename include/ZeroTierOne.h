@@ -443,7 +443,7 @@ typedef struct
 	/**
 	 * Node relay policy
 	 */
-	ZT_RelayPolicy relayPolicy;
+	enum ZT_RelayPolicy relayPolicy;
 
 	/**
 	 * True if some kind of connectivity appears available
@@ -1862,7 +1862,7 @@ void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node);
  * @param ztAddress ZeroTier address (least significant 40 bits)
  * @param role New peer role (LEAF or UPSTREAM)
  */
-void ZT_Node_setRole(ZT_Node *node,uint64_t ztAddress,ZT_PeerRole role);
+void ZT_Node_setRole(ZT_Node *node,uint64_t ztAddress,enum ZT_PeerRole role);
 
 /**
  * Set a network configuration master instance for this node
