@@ -1163,6 +1163,7 @@ public:
 
 	// Internal implementation methods -----------------------------------------
 
+	// Must be called after _localConfig is read or modified
 	void applyLocalConfig()
 	{
 		Mutex::Lock _l(_localConfig_m);
@@ -1872,6 +1873,12 @@ public:
 			}
 		}
 
+		/* Note: I do not think we need to scan for overlap with managed routes
+		 * because of the "route forking" and interface binding that we do. This
+		 * ensures (we hope) that ZeroTier traffic will still take the physical
+		 * path even if its managed routes override this for other traffic. Will
+		 * revisit if we see recursion problems. */
+
 		// Check blacklists
 		const Hashtable< uint64_t,std::vector<InetAddress> > *blh = (const Hashtable< uint64_t,std::vector<InetAddress> > *)0;
 		const std::vector<InetAddress> *gbl = (const std::vector<InetAddress> *)0;
@@ -1896,12 +1903,6 @@ public:
 					return 0;
 			}
 		}
-
-		/* Note: I do not think we need to scan for overlap with managed routes
-		 * because of the "route forking" and interface binding that we do. This
-		 * ensures (we hope) that ZeroTier traffic will still take the physical
-		 * path even if its managed routes override this for other traffic. Will
-		 * revisit if we see problems with this. */
 
 		return 1;
 	}

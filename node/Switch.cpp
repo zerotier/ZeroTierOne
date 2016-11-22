@@ -710,12 +710,12 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 	if (peer) {
 		const uint64_t now = RR->node->now();
 
-		// First get the best path, and if it's dead (and this is not a root)
-		// we attempt to re-activate that path but this packet will flow
-		// upstream. If the path comes back alive, it will be used in the future.
-		// For roots we don't do the alive check since roots are not required
-		// to send heartbeats "down" and because we have to at least try to
-		// go somewhere.
+		/* First get the best path, and if it's dead (and this is not a root)
+		 * we attempt to re-activate that path but this packet will flow
+		 * upstream. If the path comes back alive, it will be used in the future.
+		 * For roots we don't do the alive check since roots are not required
+		 * to send heartbeats "down" and because we have to at least try to
+		 * go somewhere. */
 
 		SharedPtr<Path> viaPath(peer->getBestPath(now,false));
 		if ( (viaPath) && (!viaPath->alive(now)) && (!RR->topology->isRoot(peer->identity())) ) {
@@ -724,7 +724,8 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 			viaPath.zero();
 		}
 		if (!viaPath) {
-			SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());
+			peer->tryMemorizedPath(now); // periodically attempt memorized or statically defined paths, if any are known
+			const SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());
 			if ( (!relay) || (!(viaPath = relay->getBestPath(now,false))) ) {
 				if (!(viaPath = peer->getBestPath(now,true)))
 					return false;

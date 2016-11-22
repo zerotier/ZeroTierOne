@@ -43,6 +43,7 @@ static uint32_t _natKeepaliveBuf = 0;
 Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
 	_lastReceive(0),
 	_lastNontrivialReceive(0),
+	_lastTriedMemorizedPath(0),
 	_lastDirectPathPushSent(0),
 	_lastDirectPathPushReceive(0),
 	_lastCredentialRequestSent(0),
@@ -370,6 +371,16 @@ void Peer::attemptToContactAt(const InetAddress &localAddr,const InetAddress &at
 		RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
 	} else {
 		sendHELLO(localAddr,atAddress,now);
+	}
+}
+
+void Peer::tryMemorizedPath(uint64_t now)
+{
+	if ((now - _lastTriedMemorizedPath) >= ZT_TRY_MEMORIZED_PATH_INTERVAL) {
+		_lastTriedMemorizedPath = now;
+		InetAddress mp;
+		if (RR->node->externalPathLookup(_id.address(),-1,mp))
+			attemptToContactAt(InetAddress(),mp,now);
 	}
 }
 

@@ -49,6 +49,9 @@
 #define ZT_EXPECTING_REPLIES_BUCKET_MASK1 255
 #define ZT_EXPECTING_REPLIES_BUCKET_MASK2 31
 
+// Size of PRNG stream buffer
+#define ZT_NODE_PRNG_BUF_SIZE 64
+
 namespace ZeroTier {
 
 /**
@@ -195,7 +198,7 @@ public:
 #endif
 
 	bool shouldUsePathForZeroTierTraffic(const Address &ztaddr,const InetAddress &localAddress,const InetAddress &remoteAddress);
-	inline bool getPathHint(const Address &ztaddr,int family,InetAddress &addr) { return ( (_cb.pathLookupFunction) ? (_cb.pathLookupFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,ztaddr.toInt(),family,reinterpret_cast<struct sockaddr_storage *>(&addr)) != 0) : false ); }
+	inline bool externalPathLookup(const Address &ztaddr,int family,InetAddress &addr) { return ( (_cb.pathLookupFunction) ? (_cb.pathLookupFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,ztaddr.toInt(),family,reinterpret_cast<struct sockaddr_storage *>(&addr)) != 0) : false ); }
 
 	uint64_t prng();
 	void postCircuitTestReport(const ZT_CircuitTestReport *report);
@@ -284,7 +287,7 @@ private:
 
 	unsigned int _prngStreamPtr;
 	Salsa20 _prng;
-	uint64_t _prngStream[16]; // repeatedly encrypted with _prng to yield a high-quality non-crypto PRNG stream
+	uint64_t _prngStream[ZT_NODE_PRNG_BUF_SIZE]; // repeatedly encrypted with _prng to yield a high-quality non-crypto PRNG stream
 
 	uint64_t _now;
 	uint64_t _lastPingCheck;

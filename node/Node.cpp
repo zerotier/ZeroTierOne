@@ -683,7 +683,7 @@ void Node::postTrace(const char *module,unsigned int line,const char *fmt,...)
 
 uint64_t Node::prng()
 {
-	unsigned int p = (++_prngStreamPtr % (sizeof(_prngStream) / sizeof(uint64_t)));
+	unsigned int p = (++_prngStreamPtr % ZT_NODE_PRNG_BUF_SIZE);
 	if (!p)
 		_prng.encrypt12(_prngStream,_prngStream,sizeof(_prngStream));
 	return _prngStream[p];
