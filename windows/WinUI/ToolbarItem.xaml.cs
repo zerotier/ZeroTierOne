@@ -19,6 +19,7 @@ using System.Timers;
 using System.Windows.Threading;
 using System.IO;
 using System.Diagnostics;
+using Microsoft.Win32;
 
 namespace WinUI
 {
@@ -57,6 +58,8 @@ namespace WinUI
 
             mon.SubscribeNetworkUpdates(updateNetworks);
             mon.SubscribeStatusUpdates(updateStatus);
+
+            SystemEvents.DisplaySettingsChanged += new EventHandler(SystemEvents_DisplaySettingsChanged);
         }
 
         ~ToolbarItem()
@@ -275,6 +278,19 @@ namespace WinUI
             
             w.Top = top;
             w.Left = left;
+        }
+
+        private void SystemEvents_DisplaySettingsChanged(object sender, EventArgs e)
+        {
+            // reset cached locations to (0, 0) when display size changes
+            netListLocation.X = 0;
+            netListLocation.Y = 0;
+            joinNetLocation.X = 0;
+            joinNetLocation.Y = 0;
+            aboutViewLocation.X = 0;
+            aboutViewLocation.Y = 0;
+            prefsViewLocation.X = 0;
+            prefsViewLocation.Y = 0;
         }
     }
 }
