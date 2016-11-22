@@ -29,6 +29,11 @@ namespace WinUI
     {
         private APIHandler handler = APIHandler.Instance;
 
+        private Point netListLocation = new Point(0, 0);
+        private Point joinNetLocation = new Point(0, 0);
+        private Point aboutViewLocation = new Point(0, 0);
+        private Point prefsViewLocation = new Point(0, 0);
+
         private NetworkListView netListView = new NetworkListView();
         private JoinNetworkView joinNetView = null;
         private AboutView aboutView = null;
@@ -101,16 +106,6 @@ namespace WinUI
             }
         }
 
-        private void ToolbarItem_TrayContextMenuOpen(object sender, System.Windows.RoutedEventArgs e)
-        {
-            Console.WriteLine("TrayContextMenuOpen");
-        }
-
-        private void ToolbarItem_PreviewTrayContextMenuOpen(object sender, System.Windows.RoutedEventArgs e)
-        {
-            Console.WriteLine("PreviewTrayContextMenuOpen");
-        }
-
         private void ToolbarItem_NodeIDClicked(object sender, System.Windows.RoutedEventArgs e)
         {
             Clipboard.SetText(nodeId);
@@ -123,10 +118,23 @@ namespace WinUI
                 netListView = new WinUI.NetworkListView();
                 netListView.Closed += ShowNetworksClosed;
             }
+
+            bool netListNeedsMoving = true;
+            if (netListLocation.X > 0 && netListLocation.Y > 0)
+            {
+                netListView.Left = netListLocation.X;
+                netListView.Top = netListLocation.Y;
+                netListNeedsMoving = false;
+            }
             
             netListView.Show();
 
-            setWindowPosition(netListView);
+            if (netListNeedsMoving)
+            {
+                setWindowPosition(netListView);
+                netListLocation.X = netListView.Left;
+                netListLocation.Y = netListView.Top;
+            }
         }
 
         private void ShowNetworksClosed(object sender, System.EventArgs e)
@@ -140,10 +148,23 @@ namespace WinUI
             {
                 joinNetView = new JoinNetworkView();
                 joinNetView.Closed += JoinNetworkClosed;
-                
+
+                bool needsMove = true;
+                if (joinNetLocation.X > 0 && joinNetLocation.Y > 0)
+                {
+                    joinNetView.Left = joinNetLocation.X;
+                    joinNetView.Top = joinNetLocation.Y;
+                    needsMove = false;
+                }
+
                 joinNetView.Show();
 
-                setWindowPosition(joinNetView);
+                if (needsMove)
+                {
+                    setWindowPosition(joinNetView);
+                    joinNetLocation.X = joinNetView.Left;
+                    joinNetLocation.Y = joinNetView.Top;
+                }
             }
         }
 
@@ -158,9 +179,23 @@ namespace WinUI
             {
                 aboutView = new AboutView();
                 aboutView.Closed += AboutClosed;
-                
+
+                bool needsMove = true;
+                if (aboutViewLocation.X > 0 && aboutViewLocation.Y > 0)
+                {
+                    aboutView.Left = aboutViewLocation.X;
+                    aboutView.Top = aboutViewLocation.Y;
+                    needsMove = false;
+                }
+
                 aboutView.Show();
-                setWindowPosition(aboutView);
+
+                if (needsMove)
+                {
+                    setWindowPosition(aboutView);
+                    aboutViewLocation.X = aboutView.Left;
+                    aboutViewLocation.Y = aboutView.Top;
+                }
             }
         }
 
@@ -175,10 +210,23 @@ namespace WinUI
             {
                 prefsView = new PreferencesView();
                 prefsView.Closed += PreferencesClosed;
-            
+
+                bool needsMove = true;
+                if (prefsViewLocation.X > 0 && prefsViewLocation.Y > 0)
+                {
+                    prefsView.Left = prefsViewLocation.X;
+                    prefsView.Top = prefsViewLocation.Y;
+                    needsMove = false;
+                }
+
                 prefsView.Show();
 
-                setWindowPosition(prefsView);
+                if (needsMove)
+                {
+                    setWindowPosition(prefsView);
+                    prefsViewLocation.X = prefsView.Left;
+                    prefsViewLocation.Y = prefsView.Top;
+                }
             }
         }
 

@@ -20,9 +20,7 @@
     <Grid>
         <tb:TaskbarIcon x:Name="MyNotifyIcon"
                         IconSource="ZeroTierIcon.ico"
-                        ToolTipText="ZeroTier One"
-                        TrayContextMenuOpen="ToolbarItem_TrayContextMenuOpen"
-                        PreviewTrayContextMenuOpen="ToolbarItem_PreviewTrayContextMenuOpen">
+                        ToolTipText="ZeroTier One">
             <tb:TaskbarIcon.ContextMenu>
                 <ContextMenu>
                     <ContextMenu.ItemsSource>
