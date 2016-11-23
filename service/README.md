@@ -52,6 +52,7 @@ A *jsonp* URL argument may be supplied to request JSONP encapsulation. A JSONP r
 | worldTimestamp        | integer       | Timestamp of most recent world definition         | no       |
 | online                | boolean       | If true at least one upstream peer is reachable   | no       |
 | tcpFallbackActive     | boolean       | If true we are using slow TCP fallback            | no       |
+| relayPolicy           | string        | Relay policy: ALWAYS, TRUSTED, or NEVER           | no       |
 | versionMajor          | integer       | Software major version                            | no       |
 | versionMinor          | integer       | Software minor version                            | no       |
 | versionRev            | integer       | Software revision                                 | no       |
