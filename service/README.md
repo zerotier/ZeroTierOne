@@ -3,7 +3,30 @@ ZeroTier One Network Virtualization Service
 
 This is the common background service implementation for ZeroTier One, the VPN-like OS-level network virtualization service.
 
-It provides a ready-made core I/O loop and a local HTTP-based JSON control bus for controlling the service. This control bus HTTP server can also serve the files in ui/ if this folder's contents are installed in the ZeroTier home folder. The ui/ implements a React-based HTML5 user interface which is then wrappered for various platforms via MacGap, Windows .NET WebControl, etc. It can also be used locally from scripts or via *curl*.
+### Local Configuration File
+
+Example `local.conf`:
+
+```javascript
+{
+	"physical": {
+		"network/bits": {
+			"trustedPathId": 0,
+			"blacklist": false
+		}
+	},
+	"virtual": {
+		"##########": {
+			"role": "UPSTREAM",
+			"try": [ "IP/port" ],
+			"blacklist": [ "network/bits" ]
+		}
+	},
+	"settings": {
+		"relayPolicy": "TRUSTED"
+	}
+}
+```
 
 ### Network Virtualization Service API
 
@@ -21,32 +44,19 @@ A *jsonp* URL argument may be supplied to request JSONP encapsulation. A JSONP r
  * Methods: GET
  * Returns: { object }
 
-<table>
-<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
-<tr><td>address</td><td>string</td><td>10-digit hexadecimal ZeroTier address of this node</td><td>no</td></tr>
-<tr><td>publicIdentity</td><td>string</td><td>Full public ZeroTier identity of this node</td><td>no</td></tr>
-<tr><td>worldId</td><td>integer</td><td>Fixed value representing the virtual data center of Earth.</td><td>no</td></tr>
-<tr><td>worldTimestamp</td><td>integer</td><td>Timestamp of the last root server topology change.</td><td>no</td></tr>
-<tr><td>online</td><td>boolean</td><td>Does this node appear to have upstream network access?</td><td>no</td></tr>
-<tr><td>tcpFallbackActive</td><td>boolean</td><td>Is TCP fallback mode active?</td><td>no</td></tr>
-<tr><td>versionMajor</td><td>integer</td><td>ZeroTier major version</td><td>no</td></tr>
-<tr><td>versionMinor</td><td>integer</td><td>ZeroTier minor version</td><td>no</td></tr>
-<tr><td>versionRev</td><td>integer</td><td>ZeroTier revision</td><td>no</td></tr>
-<tr><td>version</td><td>string</td><td>Version in major.minor.rev format</td><td>no</td></tr>
-<tr><td>clock</td><td>integer</td><td>Node system clock in ms since epoch</td><td>no</td></tr>
-</table>
-
-#### /config
-
- * Purpose: Get or set local configuration
- * Methods: GET, POST
- * Returns: { object }
-
-No local configuration options are exposed yet.
-
-<table>
-<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
-</table>
+| Field                 | Type          | Description                                       | Writable |
+| --------------------- | ------------- | ------------------------------------------------- | -------- |
+| address               | string        | 10-digit hex ZeroTier address of this node        | no       |
+| publicIdentity        | string        | This node's ZeroTier identity.public              | no       |
+| worldId               | integer       | ZeroTier world ID (never changes except for test) | no       |
+| worldTimestamp        | integer       | Timestamp of most recent world definition         | no       |
+| online                | boolean       | If true at least one upstream peer is reachable   | no       |
+| tcpFallbackActive     | boolean       | If true we are using slow TCP fallback            | no       |
+| versionMajor          | integer       | Software major version                            | no       |
+| versionMinor          | integer       | Software minor version                            | no       |
+| versionRev            | integer       | Software revision                                 | no       |
+| version               | string        | major.minor.revision                              | no       |
+| clock                 | integer       | Current system clock at node (ms since epoch)     | no       |
 
 #### /network
 
@@ -66,36 +76,35 @@ To join a network, POST to it. Since networks have no mandatory writable paramet
 
 Most network settings are not writable, as they are defined by the network controller.
 
-<table>
-<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
-<tr><td>nwid</td><td>string</td><td>16-digit hex network ID</td><td>no</td></tr>
-<tr><td>mac</td><td>string</td><td>Ethernet MAC address of virtual network port</td><td>no</td></tr>
-<tr><td>name</td><td>string</td><td>Network short name as configured on network controller</td><td>no</td></tr>
-<tr><td>status</td><td>string</td><td>Network status: OK, ACCESS_DENIED, PORT_ERROR, etc.</td><td>no</td></tr>
-<tr><td>type</td><td>string</td><td>Network type, currently PUBLIC or PRIVATE</td><td>no</td></tr>
-<tr><td>mtu</td><td>integer</td><td>Ethernet MTU</td><td>no</td></tr>
-<tr><td>dhcp</td><td>boolean</td><td>If true, DHCP may be used to obtain an IP address</td><td>no</td></tr>
-<tr><td>bridge</td><td>boolean</td><td>If true, this node may bridge in other Ethernet devices</td><td>no</td></tr>
-<tr><td>broadcastEnabled</td><td>boolean</td><td>Is Ethernet broadcast (ff:ff:ff:ff:ff:ff) allowed?</td><td>no</td></tr>
-<tr><td>portError</td><td>integer</td><td>Error code (if any) returned by underlying OS "tap" driver</td><td>no</td></tr>
-<tr><td>netconfRevision</td><td>integer</td><td>Network configuration revision ID</td><td>no</td></tr>
-<tr><td>assignedAddresses</td><td>[string]</td><td>ZeroTier-managed IP address assignments as array of IP/netmask bits tuples</td><td>no</td></tr>
-<tr><td>routes</td><td>[route]</td><td>ZeroTier-managed route assignments for a network. See below for a description of the route object.</td><td>no</td></tr>
-<tr><td>portDeviceName</td><td>string</td><td>OS-specific network device name (if available)</td><td>no</td></tr>
-<tr><td>allowManaged</td><td>boolean</td><td>Whether ZeroTier-managed IP addresses are allowed.</td><td>yes</td></tr>
-<tr><td>allowGlobal</td><td>boolean</td><td>Whether globally-reachable IP addresses are allowed to be assigned.</td><td>yes</td></tr>
-<tr><td>allowDefault</td><td>boolean</td><td>Whether a default route is allowed to be assigned for the network (route all traffic via ZeroTier)</td><td>yes</td></tr> 
-</table>
+| Field                 | Type          | Description                                       | Writable |
+| --------------------- | ------------- | ------------------------------------------------- | -------- |
+| id                    | string        | 16-digit hex network ID                           | no       |
+| nwid                  | string        | 16-digit hex network ID (legacy field)            | no       |
+| mac                   | string        | MAC address of network device for this network    | no       |
+| name                  | string        | Short name of this network (from controller)      | no       |
+| status                | string        | Network status (OK, ACCESS_DENIED, etc.)          | no       |
+| type                  | string        | Network type (PUBLIC or PRIVATE)                  | no       |
+| mtu                   | integer       | Ethernet MTU                                      | no       |
+| dhcp                  | boolean       | If true, DHCP should be used to get IP info       | no       |
+| bridge                | boolean       | If true, this device can bridge others            | no       |
+| broadcastEnabled      | boolean       | If true ff:ff:ff:ff:ff:ff broadcasts work         | no       |
+| portError             | integer       | Error code returned by underlying tap driver      | no       |
+| netconfRevision       | integer       | Network configuration revision ID                 | no       |
+| assignedAddresses     | [string]      | Array of ZeroTier-assigned IP addresses (/bits)   | no       |
+| routes                | [object]      | Array of ZeroTier-assigned routes (see below)     | no       |
+| portDeviceName        | string        | Name of virtual network device (if any)           | no       |
+| allowManaged          | boolean       | Allow IP and route management                     | yes      |
+| allowGlobal           | boolean       | Allow IPs and routes that overlap with global IPs | yes      |
+| allowDefault          | boolean       | Allow overriding of system default route          | yes      |
 
-`route` objects
+Route objects:
 
-<table>
-<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
-<tr><td>target</td><td>string</td><td>Target network / netmask bits, NULL, or 0.0.0.0/0 for default route</td><td>no</td></tr>
-<tr><td>via</td><td>string</td><td>Gateway IP address</td><td>no</td></tr>
-<tr><td>flags</td><td>integer</td><td>Route flags</td><td>no</td></tr>
-<tr><td>metric</td><td>integer</td><td>Route metric (not currently used)</td><td>no</td></tr>
-</table>
+| Field                 | Type          | Description                                       | Writable |
+| --------------------- | ------------- | ------------------------------------------------- | -------- |
+| target                | string        | Target network / netmask bits                     | no       |
+| via                   | string        | Gateway IP address (next hop) or null for LAN     | no       |
+| flags                 | integer       | Flags, currently always 0                         | no       |
+| metric                | integer       | Route metric (not currently used)                 | no       |
 
 #### /peer
 
@@ -107,29 +116,29 @@ Getting /peer returns an array of peer objects for all current peers. See below 
 
 #### /peer/\<address\>
 
- * Purpose: Get information about a peer
- * Methods: GET
+ * Purpose: Get or set information about a peer
+ * Methods: GET, POST
  * Returns: { object }
 
-<table>
-<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
-<tr><td>address</td><td>string</td><td>10-digit hex ZeroTier address</td><td>no</td></tr>
-<tr><td>versionMajor</td><td>integer</td><td>Major version of remote if known</td><td>no</td></tr>
-<tr><td>versionMinor</td><td>integer</td><td>Minor version of remote if known</td><td>no</td></tr>
-<tr><td>versionRev</td><td>integer</td><td>Revision of remote if known</td><td>no</td></tr>
-<tr><td>version</td><td>string</td><td>Version in major.minor.rev format</td><td>no</td></tr>
-<tr><td>latency</td><td>integer</td><td>Latency in milliseconds if known</td><td>no</td></tr>
-<tr><td>role</td><td>string</td><td>LEAF, HUB, or ROOTSERVER</td><td>no</td></tr>
-<tr><td>paths</td><td>[object]</td><td>Array of path objects (see below)</td><td>no</td></tr>
-</table>
+| Field                 | Type          | Description                                       | Writable |
+| --------------------- | ------------- | ------------------------------------------------- | -------- |
+| address               | string        | 10-digit hex ZeroTier address of peer             | no       |
+| versionMajor          | integer       | Major version of remote (if known)                | no       |
+| versionMinor          | integer       | Minor version of remote (if known)                | no       |
+| versionRev            | integer       | Software revision of remote (if known)            | no       |
+| version               | string        | major.minor.revision                              | no       |
+| latency               | integer       | Latency in milliseconds if known                  | no       |
+| role                  | string        | LEAF, UPSTREAM, or ROOT                           | no       |
+| paths                 | [object]      | Currently active physical paths (see below)       | no       |
 
-Path objects describe direct physical paths to peer. If no path objects are listed, peer is only reachable via indirect relay fallback. Path object format is:
+Path objects:
 
-<table>
-<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
-<tr><td>address</td><td>string</td><td>Physical socket address e.g. IP/port for UDP</td><td>no</td></tr>
-<tr><td>lastSend</td><td>integer</td><td>Last send via this path in ms since epoch</td><td>no</td></tr>
-<tr><td>lastReceive</td><td>integer</td><td>Last receive via this path in ms since epoch</td><td>no</td></tr>
-<tr><td>fixed</td><td>boolean</td><td>If true, this is a statically-defined "fixed" path</td><td>no</td></tr>
-<tr><td>preferred</td><td>boolean</td><td>If true, this is the current preferred path</td><td>no</td></tr>
-</table>
+| Field                 | Type          | Description                                       | Writable |
+| --------------------- | ------------- | ------------------------------------------------- | -------- |
+| address               | string        | Physical socket address e.g. IP/port              | no       |
+| lastSend              | integer       | Time of last send through this path               | no       |
+| lastReceive           | integer       | Time of last receive through this path            | no       |
+| active                | boolean       | Is this path in use?                              | no       |
+| expired               | boolean       | Is this path expired?                             | no       |
+| preferred             | boolean       | Is this a current preferred path?                 | no       |
+| trustedPathId         | integer       | If nonzero this is a trusted path (unencrypted)   | no       |

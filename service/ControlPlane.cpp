@@ -123,6 +123,7 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetw
 
 	Utils::snprintf(json,sizeof(json),
 		"%s{\n"
+		"%s\t\"id\": \"%.16llx\",\n"
 		"%s\t\"nwid\": \"%.16llx\",\n"
 		"%s\t\"mac\": \"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x\",\n"
 		"%s\t\"name\": \"%s\",\n"
@@ -142,6 +143,7 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetw
 		"%s\t\"allowDefault\": %s\n"
 		"%s}",
 		prefix,
+		prefix,nc->nwid,
 		prefix,nc->nwid,
 		prefix,(unsigned int)((nc->mac >> 40) & 0xff),(unsigned int)((nc->mac >> 32) & 0xff),(unsigned int)((nc->mac >> 24) & 0xff),(unsigned int)((nc->mac >> 16) & 0xff),(unsigned int)((nc->mac >> 8) & 0xff),(unsigned int)(nc->mac & 0xff),
 		prefix,_jsonEscape(nc->name).c_str(),
@@ -214,9 +216,9 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_Peer *peer)
 
 	const char *prole = "";
 	switch(peer->role) {
-		case ZT_PEER_ROLE_LEAF:  prole = "LEAF"; break;
+		case ZT_PEER_ROLE_LEAF: prole = "LEAF"; break;
 		case ZT_PEER_ROLE_UPSTREAM: prole = "UPSTREAM"; break;
-		case ZT_PEER_ROLE_ROOT:  prole = "ROOT"; break;
+		case ZT_PEER_ROLE_ROOT: prole = "ROOT"; break;
 	}
 
 	Utils::snprintf(json,sizeof(json),

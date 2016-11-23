@@ -1179,7 +1179,8 @@ public:
 				if ((nstr.length() == ZT_ADDRESS_LENGTH_HEX)&&(v.value().is_object())) {
 					const Address ztaddr(nstr.c_str());
 					if (ztaddr) {
-						_node->setRole(ztaddr.toInt(),(_jS(v.value()["role"],"") == "upstream") ? ZT_PEER_ROLE_UPSTREAM : ZT_PEER_ROLE_LEAF);
+						const std::string rstr(_jS(v.value()["role"],""));
+						_node->setRole(ztaddr.toInt(),((rstr == "upstream")||(rstr == "UPSTREAM")) ? ZT_PEER_ROLE_UPSTREAM : ZT_PEER_ROLE_LEAF);
 
 						const uint64_t ztaddr2 = ztaddr.toInt();
 						std::vector<InetAddress> &v4h = _v4Hints[ztaddr2];
@@ -1239,9 +1240,9 @@ public:
 		json &settings = _localConfig["settings"];
 		if (settings.is_object()) {
 			const std::string rp(_jS(settings["relayPolicy"],""));
-			if (rp == "always")
+			if ((rp == "always")||(rp == "ALWAYS"))
 				_node->setRelayPolicy(ZT_RELAY_POLICY_ALWAYS);
-			else if (rp == "never")
+			else if ((rp == "never")||(rp == "NEVER"))
 				_node->setRelayPolicy(ZT_RELAY_POLICY_NEVER);
 			else _node->setRelayPolicy(ZT_RELAY_POLICY_TRUSTED);
 		}
