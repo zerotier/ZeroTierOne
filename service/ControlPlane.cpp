@@ -415,7 +415,7 @@ unsigned int ControlPlane::handleRequest(
 					((clusterJson.length() > 0) ? clusterJson.c_str() : "null"));
 				responseBody = json;
 				scode = 200;
-			} else if (ps[0] == "config") {
+			} else if (ps[0] == "settings") {
 				responseContentType = "application/json";
 				responseBody = "{}"; // TODO
 				scode = 200;
@@ -501,7 +501,7 @@ unsigned int ControlPlane::handleRequest(
 
 		if (isAuth) {
 
-			if (ps[0] == "config") {
+			if (ps[0] == "settings") {
 				// TODO
 			} else if (ps[0] == "network") {
 				if (ps.size() == 2) {
@@ -517,11 +517,11 @@ unsigned int ControlPlane::handleRequest(
 								try {
 									nlohmann::json j(nlohmann::json::parse(body));
 									if (j.is_object()) {
-										auto allowManaged = j["allowManaged"];
+										nlohmann::json &allowManaged = j["allowManaged"];
 										if (allowManaged.is_boolean()) localSettings.allowManaged = (bool)allowManaged;
-										auto allowGlobal = j["allowGlobal"];
+										nlohmann::json &allowGlobal = j["allowGlobal"];
 										if (allowGlobal.is_boolean()) localSettings.allowGlobal = (bool)allowGlobal;
-										auto allowDefault = j["allowDefault"];
+										nlohmann::json &allowDefault = j["allowDefault"];
 										if (allowDefault.is_boolean()) localSettings.allowDefault = (bool)allowDefault;
 									}
 								} catch ( ... ) {
