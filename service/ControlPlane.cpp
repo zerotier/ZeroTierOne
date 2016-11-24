@@ -552,9 +552,7 @@ unsigned int ControlPlane::handleRequest(
 
 		if (isAuth) {
 
-			if (ps[0] == "config") {
-				// TODO
-			} else if (ps[0] == "network") {
+			if (ps[0] == "network") {
 				ZT_VirtualNetworkList *nws = _node->networks();
 				if (nws) {
 					if (ps.size() == 2) {
