@@ -58,6 +58,24 @@ parallel 'centos7': {
             throw err
         }
     }
+}, 'windows': {
+    node('windows') {
+        try {
+            checkout scm
+            
+            stage('Build Windows') {
+                bat '''CALL "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat" amd64
+
+devenv windows\\ZeroTierOne.sln /clean
+devenv windows\\ZeroTierOne.sln /build
+'''
+            }
+        }
+        catch (err) {
+            currentBuild.result = "FAILURE"
+            slackSend color: '#ff0000', message: "${env.JOB_NAME} broken on Windows (<${env.BUILD_URL}|Open>)"
+        }
+    }
 }
 
 slackSend color: "#00ff00", message: "${env.JOB_NAME} #${env.BUILD_NUMBER} Complete (<${env.BUILD_URL}|Show More...>)"
