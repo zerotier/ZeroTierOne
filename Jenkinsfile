@@ -65,9 +65,8 @@ parallel 'centos7': {
             
             stage('Build Windows') {
                 bat '''CALL "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat" amd64
-
-devenv windows\\ZeroTierOne.sln /clean
-devenv windows\\ZeroTierOne.sln /build
+git clean -dfx
+msbuild windows\\ZeroTierOne.sln
 '''
             }
         }
