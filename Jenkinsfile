@@ -74,6 +74,8 @@ devenv windows\\ZeroTierOne.sln /build
         catch (err) {
             currentBuild.result = "FAILURE"
             slackSend color: '#ff0000', message: "${env.JOB_NAME} broken on Windows (<${env.BUILD_URL}|Open>)"
+
+            throw err
         }
     }
 }
