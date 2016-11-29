@@ -1,29 +1,59 @@
 ZeroTier One Network Virtualization Service
 ======
 
-This is the common background service implementation for ZeroTier One, the VPN-like OS-level network virtualization service.
+This is the actual implementation of ZeroTier One, a service providing connectivity to ZeroTier virtual networks for desktops, laptops, servers, VMs, etc. (Mobile versions for iOS and Android have their own implementations in native Java and Objective C that leverage only the ZeroTier core engine.)
 
 ### Local Configuration File
 
-Example `local.conf`:
+A file called `local.conf` in the ZeroTier home folder contains configuration options that apply to the local node. It can be used to set up trusted paths, blacklist physical paths, set up physical path hints for certain nodes, and define trusted upstream devices (federated roots). In a large deployment it can be deployed using a tool like Puppet, Chef, SaltStack, etc. to set a uniform configuration across systems. It's a JSON format file that can also be edited and rewritten by ZeroTier One itself, so ensure that proper JSON formatting is used.
+
+Settings available in `local.conf` (this is not valid JSON, and JSON does not allow comments):
+
+```javascript
+{
+	"physical": { /* Settings that apply to physical L2/L3 network paths. */
+		"NETWORK/bits": { /* Network e.g. 10.0.0.0/24 or fd00::/32 */
+			"blacklist": true|false, /* If true, blacklist this path for all ZeroTier traffic */
+			"trustedPathId": 0|!0 /* If present and nonzero, define this as a trusted path (see below) */
+		} /* ,... additional networks */
+	},
+	"virtual": { /* Settings applied to ZeroTier virtual network devices (VL1) */
+		"##########": { /* 10-digit ZeroTier address */
+			"role": "UPSTREAM"|"LEAF", /* If UPSTREAM, define this as a trusted "federated root" */
+			"try": [ "IP/port"/*,...*/ ], /* Hints on where to reach this peer if no upstreams/roots are online */
+			"blacklist": [ "NETWORK/bits"/*,...*/ ] /* Blacklist a physical path for only this peer. */
+		}
+	},
+	"settings": { /* Other global settings */
+		"relayPolicy": "TRUSTED"|"ALWAYS"|"NEVER" /* Policy for relaying others' traffic (see below) */
+	}
+}
+```
+
+ * **trustedPathId**: A trusted path is a physical network over which encryption and authentication are not required. This provides a performance boost but sacrifices all ZeroTier's security features when communicating over this path. Only use this if you know what you are doing and really need the performance! To set up a trusted path, all devices using it *MUST* have the *same trusted path ID* for the same network. Trusted path IDs are arbitrary positive non-zero integers. For example a group of devices on a LAN with IPs in 10.0.0.0/24 could use it as a fast trusted path if they all had the same trusted path ID of "25" defined for that network.
+ * **relayPolicy**: Under what circumstances should this device relay traffic for other devices? The default is TRUSTED, meaning that we'll only relay for devices we know to be members of a network we have joined. NEVER is the default on mobile devices (iOS/Android) and tells us to never relay traffic. ALWAYS is usually only set for upstreams and roots, allowing them to act as promiscuous relays for anyone who desires it.
+
+An example `local.conf`:
 
 ```javascript
 {
 	"physical": {
-		"network/bits": {
-			"trustedPathId": 0,
-			"blacklist": false
-		}
+		"10.0.0.0/24": {
+			"blacklist": true
+		},
+		"10.10.10.0/24": {
+			"trustedPathId": 101010024
+		},
 	},
 	"virtual": {
-		"##########": {
+		"feedbeef12": {
 			"role": "UPSTREAM",
-			"try": [ "IP/port" ],
-			"blacklist": [ "network/bits" ]
+			"try": [ "10.10.20.1/9993" ],
+			"blacklist": [ "192.168.0.0/24" ]
 		}
 	},
 	"settings": {
-		"relayPolicy": "TRUSTED"
+		"relayPolicy": "ALWAYS"
 	}
 }
 ```
