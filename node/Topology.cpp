@@ -128,10 +128,7 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 				return ap;
 			}
 		}
-	} catch ( ... ) {
-		fprintf(stderr,"EXCEPTION in getPeer() part 2\n");
-		abort();
-	} // invalid identity on disk?
+	} catch ( ... ) {} // invalid identity on disk?
 
 	return SharedPtr<Peer>();
 }
