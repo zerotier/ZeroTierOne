@@ -599,10 +599,10 @@ WindowsEthernetTap::WindowsEthernetTap(
 		unsigned int tmpsl = Utils::snprintf(tmps,sizeof(tmps),"%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",(unsigned int)mac[0],(unsigned int)mac[1],(unsigned int)mac[2],(unsigned int)mac[3],(unsigned int)mac[4],(unsigned int)mac[5]) + 1;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"NetworkAddress",REG_SZ,tmps,tmpsl);
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MAC",REG_SZ,tmps,tmpsl);
-		DWORD tmp = mtu;
-		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MTU",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
+        tmpsl = Utils::snprintf(tmps, sizeof(tmps), "%d", mtu);
+		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MTU",REG_SZ,tmps,tmpsl);
 
-		tmp = 0;
+		DWORD tmp = 0;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"*NdisDeviceType",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
 		tmp = IF_TYPE_ETHERNET_CSMACD;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"*IfType",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
