@@ -321,6 +321,11 @@
 #define ZT_MIN_UNITE_INTERVAL 30000
 
 /**
+ * How often should peers try memorized or statically defined paths?
+ */
+#define ZT_TRY_MEMORIZED_PATH_INTERVAL 30000
+
+/**
  * Sanity limit on maximum bridge routes
  *
  * If the number of bridge routes exceeds this, we cull routes from the

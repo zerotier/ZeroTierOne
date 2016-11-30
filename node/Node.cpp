@@ -46,34 +46,20 @@ namespace ZeroTier {
 /* Public Node interface (C++, exposed via CAPI bindings)                   */
 /****************************************************************************/
 
-Node::Node(
-	uint64_t now,
-	void *uptr,
-	ZT_DataStoreGetFunction dataStoreGetFunction,
-	ZT_DataStorePutFunction dataStorePutFunction,
-	ZT_WirePacketSendFunction wirePacketSendFunction,
-	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
-	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT_PathCheckFunction pathCheckFunction,
-	ZT_EventCallback eventCallback) :
+Node::Node(void *uptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now) :
 	_RR(this),
 	RR(&_RR),
 	_uPtr(uptr),
-	_dataStoreGetFunction(dataStoreGetFunction),
-	_dataStorePutFunction(dataStorePutFunction),
-	_wirePacketSendFunction(wirePacketSendFunction),
-	_virtualNetworkFrameFunction(virtualNetworkFrameFunction),
-	_virtualNetworkConfigFunction(virtualNetworkConfigFunction),
-	_pathCheckFunction(pathCheckFunction),
-	_eventCallback(eventCallback),
-	_networks(),
-	_networks_m(),
 	_prngStreamPtr(0),
 	_now(now),
 	_lastPingCheck(0),
 	_lastHousekeepingRun(0),
 	_relayPolicy(ZT_RELAY_POLICY_TRUSTED)
 {
+	if (callbacks->version != 0)
+		throw std::runtime_error("callbacks struct version mismatch");
+	memcpy(&_cb,callbacks,sizeof(ZT_Node_Callbacks));
+
 	_online = false;
 
 	memset(_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
@@ -81,30 +67,26 @@ Node::Node(
 	memset(_lastIdentityVerification,0,sizeof(_lastIdentityVerification));
 
 	// Use Salsa20 alone as a high-quality non-crypto PRNG
-	{
-		char foo[32];
-		Utils::getSecureRandom(foo,32);
-		_prng.init(foo,256,foo);
-		memset(_prngStream,0,sizeof(_prngStream));
-		_prng.encrypt12(_prngStream,_prngStream,sizeof(_prngStream));
-	}
+	char foo[32];
+	Utils::getSecureRandom(foo,32);
+	_prng.init(foo,256,foo);
+	memset(_prngStream,0,sizeof(_prngStream));
+	_prng.encrypt12(_prngStream,_prngStream,sizeof(_prngStream));
 
-	{
-		std::string idtmp(dataStoreGet("identity.secret"));
-		if ((!idtmp.length())||(!RR->identity.fromString(idtmp))||(!RR->identity.hasPrivate())) {
-			TRACE("identity.secret not found, generating...");
-			RR->identity.generate();
-			idtmp = RR->identity.toString(true);
-			if (!dataStorePut("identity.secret",idtmp,true))
-				throw std::runtime_error("unable to write identity.secret");
-		}
-		RR->publicIdentityStr = RR->identity.toString(false);
-		RR->secretIdentityStr = RR->identity.toString(true);
-		idtmp = dataStoreGet("identity.public");
-		if (idtmp != RR->publicIdentityStr) {
-			if (!dataStorePut("identity.public",RR->publicIdentityStr,false))
-				throw std::runtime_error("unable to write identity.public");
-		}
+	std::string idtmp(dataStoreGet("identity.secret"));
+	if ((!idtmp.length())||(!RR->identity.fromString(idtmp))||(!RR->identity.hasPrivate())) {
+		TRACE("identity.secret not found, generating...");
+		RR->identity.generate();
+		idtmp = RR->identity.toString(true);
+		if (!dataStorePut("identity.secret",idtmp,true))
+			throw std::runtime_error("unable to write identity.secret");
+	}
+	RR->publicIdentityStr = RR->identity.toString(false);
+	RR->secretIdentityStr = RR->identity.toString(true);
+	idtmp = dataStoreGet("identity.public");
+	if (idtmp != RR->publicIdentityStr) {
+		if (!dataStorePut("identity.public",RR->publicIdentityStr,false))
+			throw std::runtime_error("unable to write identity.public");
 	}
 
 	try {
@@ -174,12 +156,14 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
+// Closure used to ping upstream and active/online peers
 class _PingPeersThatNeedPing
 {
 public:
-	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) :
+	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,const std::vector<Address> &upstreams,uint64_t now) :
 		lastReceiveFromUpstream(0),
 		RR(renv),
+		_upstreams(upstreams),
 		_now(now),
 		_world(RR->topology->world())
 	{
@@ -189,29 +173,25 @@ public:
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		bool upstream = false;
-		InetAddress stableEndpoint4,stableEndpoint6;
-
-		// If this is a world root, pick (if possible) both an IPv4 and an IPv6 stable endpoint to use if link isn't currently alive.
-		for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
-			if (r->identity == p->identity()) {
-				upstream = true;
-				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)r->stableEndpoints.size();++k) {
-					const InetAddress &addr = r->stableEndpoints[ptr++ % r->stableEndpoints.size()];
-					if (!stableEndpoint4) {
-						if (addr.ss_family == AF_INET)
-							stableEndpoint4 = addr;
+		if (std::find(_upstreams.begin(),_upstreams.end(),p->address()) != _upstreams.end()) {
+			InetAddress stableEndpoint4,stableEndpoint6;
+			for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
+				if (r->identity == p->identity()) {
+					for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)r->stableEndpoints.size();++k) {
+						const InetAddress &addr = r->stableEndpoints[ptr++ % r->stableEndpoints.size()];
+						if (!stableEndpoint4) {
+							if (addr.ss_family == AF_INET)
+								stableEndpoint4 = addr;
+						}
+						if (!stableEndpoint6) {
+							if (addr.ss_family == AF_INET6)
+								stableEndpoint6 = addr;
+						}
 					}
-					if (!stableEndpoint6) {
-						if (addr.ss_family == AF_INET6)
-							stableEndpoint6 = addr;
-					}
+					break;
 				}
-				break;
 			}
-		}
 
-		if (upstream) {
 			// We keep connections to upstream peers alive forever.
 			bool needToContactIndirect = true;
 			if (p->doPingAndKeepalive(_now,AF_INET)) {
@@ -246,6 +226,7 @@ public:
 
 private:
 	const RuntimeEnvironment *RR;
+	const std::vector<Address> &_upstreams;
 	uint64_t _now;
 	World _world;
 };
@@ -274,8 +255,15 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 			for(std::vector< SharedPtr<Network> >::const_iterator n(needConfig.begin());n!=needConfig.end();++n)
 				(*n)->requestConfiguration();
 
+			// Run WHOIS on upstreams we don't know about
+			const std::vector<Address> upstreams(RR->topology->upstreamAddresses());
+			for(std::vector<Address>::const_iterator a(upstreams.begin());a!=upstreams.end();++a) {
+				if (!RR->topology->getPeer(*a))
+					RR->sw->requestWhois(*a);
+			}
+
 			// Do pings and keepalives
-			_PingPeersThatNeedPing pfunc(RR,now);
+			_PingPeersThatNeedPing pfunc(RR,upstreams,now);
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
 
 			// Update online status, post status change as event
@@ -384,6 +372,7 @@ void Node::status(ZT_NodeStatus *status) const
 	status->worldTimestamp = RR->topology->worldTimestamp();
 	status->publicIdentity = RR->publicIdentityStr.c_str();
 	status->secretIdentity = RR->secretIdentityStr.c_str();
+	status->relayPolicy = _relayPolicy;
 	status->online = _online ? 1 : 0;
 }
 
@@ -631,7 +620,7 @@ std::string Node::dataStoreGet(const char *name)
 	std::string r;
 	unsigned long olen = 0;
 	do {
-		long n = _dataStoreGetFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,name,buf,sizeof(buf),(unsigned long)r.length(),&olen);
+		long n = _cb.dataStoreGetFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,name,buf,sizeof(buf),(unsigned long)r.length(),&olen);
 		if (n <= 0)
 			return std::string();
 		r.append(buf,n);
@@ -639,7 +628,7 @@ std::string Node::dataStoreGet(const char *name)
 	return r;
 }
 
-bool Node::shouldUsePathForZeroTierTraffic(const InetAddress &localAddress,const InetAddress &remoteAddress)
+bool Node::shouldUsePathForZeroTierTraffic(const Address &ztaddr,const InetAddress &localAddress,const InetAddress &remoteAddress)
 {
 	if (!Path::isAddressValidForPath(remoteAddress))
 		return false;
@@ -656,9 +645,7 @@ bool Node::shouldUsePathForZeroTierTraffic(const InetAddress &localAddress,const
 		}
 	}
 
-	if (_pathCheckFunction)
-		return (_pathCheckFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,reinterpret_cast<const struct sockaddr_storage *>(&localAddress),reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0);
-	else return true;
+	return ( (_cb.pathCheckFunction) ? (_cb.pathCheckFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,ztaddr.toInt(),reinterpret_cast<const struct sockaddr_storage *>(&localAddress),reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0) : true);
 }
 
 #ifdef ZT_TRACE
@@ -696,7 +683,7 @@ void Node::postTrace(const char *module,unsigned int line,const char *fmt,...)
 
 uint64_t Node::prng()
 {
-	unsigned int p = (++_prngStreamPtr % (sizeof(_prngStream) / sizeof(uint64_t)));
+	unsigned int p = (++_prngStreamPtr % ZT_NODE_PRNG_BUF_SIZE);
 	if (!p)
 		_prng.encrypt12(_prngStream,_prngStream,sizeof(_prngStream));
 	return _prngStream[p];
@@ -815,21 +802,11 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 
 extern "C" {
 
-enum ZT_ResultCode ZT_Node_new(
-	ZT_Node **node,
-	void *uptr,
-	uint64_t now,
-	ZT_DataStoreGetFunction dataStoreGetFunction,
-	ZT_DataStorePutFunction dataStorePutFunction,
-	ZT_WirePacketSendFunction wirePacketSendFunction,
-	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
-	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT_PathCheckFunction pathCheckFunction,
-	ZT_EventCallback eventCallback)
+enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now)
 {
 	*node = (ZT_Node *)0;
 	try {
-		*node = reinterpret_cast<ZT_Node *>(new ZeroTier::Node(now,uptr,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigFunction,pathCheckFunction,eventCallback));
+		*node = reinterpret_cast<ZT_Node *>(new ZeroTier::Node(uptr,callbacks,now));
 		return ZT_RESULT_OK;
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;

@@ -49,6 +49,9 @@
 #define ZT_EXPECTING_REPLIES_BUCKET_MASK1 255
 #define ZT_EXPECTING_REPLIES_BUCKET_MASK2 31
 
+// Size of PRNG stream buffer
+#define ZT_NODE_PRNG_BUF_SIZE 64
+
 namespace ZeroTier {
 
 /**
@@ -59,17 +62,7 @@ namespace ZeroTier {
 class Node : public NetworkController::Sender
 {
 public:
-	Node(
-		uint64_t now,
-		void *uptr,
-		ZT_DataStoreGetFunction dataStoreGetFunction,
-		ZT_DataStorePutFunction dataStorePutFunction,
-		ZT_WirePacketSendFunction wirePacketSendFunction,
-		ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
-		ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-		ZT_PathCheckFunction pathCheckFunction,
-		ZT_EventCallback eventCallback);
-
+	Node(void *uptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now);
 	virtual ~Node();
 
 	// Public API Functions ----------------------------------------------------
@@ -127,24 +120,11 @@ public:
 
 	// Internal functions ------------------------------------------------------
 
-	/**
-	 * @return Time as of last call to run()
-	 */
 	inline uint64_t now() const throw() { return _now; }
 
-	/**
-	 * Enqueue a ZeroTier message to be sent
-	 *
-	 * @param localAddress Local address
-	 * @param addr Destination address
-	 * @param data Packet data
-	 * @param len Packet length
-	 * @param ttl Desired TTL (default: 0 for unchanged/default TTL)
-	 * @return True if packet appears to have been sent
-	 */
 	inline bool putPacket(const InetAddress &localAddress,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0)
 	{
-		return (_wirePacketSendFunction(
+		return (_cb.wirePacketSendFunction(
 			reinterpret_cast<ZT_Node *>(this),
 			_uPtr,
 			reinterpret_cast<const struct sockaddr_storage *>(&localAddress),
@@ -154,21 +134,9 @@ public:
 			ttl) == 0);
 	}
 
-	/**
-	 * Enqueue a frame to be injected into a tap device (port)
-	 *
-	 * @param nwid Network ID
-	 * @param nuptr Network user ptr
-	 * @param source Source MAC
-	 * @param dest Destination MAC
-	 * @param etherType 16-bit ethernet type
-	 * @param vlanId VLAN ID or 0 if none
-	 * @param data Frame data
-	 * @param len Frame length
-	 */
 	inline void putFrame(uint64_t nwid,void **nuptr,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
-		_virtualNetworkFrameFunction(
+		_cb.virtualNetworkFrameFunction(
 			reinterpret_cast<ZT_Node *>(this),
 			_uPtr,
 			nwid,
@@ -180,13 +148,6 @@ public:
 			data,
 			len);
 	}
-
-	/**
-	 * @param localAddress Local address
-	 * @param remoteAddress Remote address
-	 * @return True if path should be used
-	 */
-	bool shouldUsePathForZeroTierTraffic(const InetAddress &localAddress,const InetAddress &remoteAddress);
 
 	inline SharedPtr<Network> network(uint64_t nwid) const
 	{
@@ -214,37 +175,20 @@ public:
 		return nw;
 	}
 
-	/**
-	 * @return Potential direct paths to me a.k.a. local interface addresses
-	 */
 	inline std::vector<InetAddress> directPaths() const
 	{
 		Mutex::Lock _l(_directPaths_m);
 		return _directPaths;
 	}
 
-	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure) { return (_dataStorePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,name,data,len,(int)secure) == 0); }
+	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure) { return (_cb.dataStorePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,name,data,len,(int)secure) == 0); }
 	inline bool dataStorePut(const char *name,const std::string &data,bool secure) { return dataStorePut(name,(const void *)data.data(),(unsigned int)data.length(),secure); }
-	inline void dataStoreDelete(const char *name) { _dataStorePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,name,(const void *)0,0,0); }
+	inline void dataStoreDelete(const char *name) { _cb.dataStorePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,name,(const void *)0,0,0); }
 	std::string dataStoreGet(const char *name);
 
-	/**
-	 * Post an event to the external user
-	 *
-	 * @param ev Event type
-	 * @param md Meta-data (default: NULL/none)
-	 */
-	inline void postEvent(ZT_Event ev,const void *md = (const void *)0) { _eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,ev,md); }
+	inline void postEvent(ZT_Event ev,const void *md = (const void *)0) { _cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,ev,md); }
 
-	/**
-	 * Update virtual network port configuration
-	 *
-	 * @param nwid Network ID
-	 * @param nuptr Network user ptr
-	 * @param op Configuration operation
-	 * @param nc Network configuration
-	 */
-	inline int configureVirtualNetworkPort(uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,nwid,nuptr,op,nc); }
+	inline int configureVirtualNetworkPort(uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { return _cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,nwid,nuptr,op,nc); }
 
 	inline bool online() const throw() { return _online; }
 	inline ZT_RelayPolicy relayPolicy() const { return _relayPolicy; }
@@ -252,6 +196,9 @@ public:
 #ifdef ZT_TRACE
 	void postTrace(const char *module,unsigned int line,const char *fmt,...);
 #endif
+
+	bool shouldUsePathForZeroTierTraffic(const Address &ztaddr,const InetAddress &localAddress,const InetAddress &remoteAddress);
+	inline bool externalPathLookup(const Address &ztaddr,int family,InetAddress &addr) { return ( (_cb.pathLookupFunction) ? (_cb.pathLookupFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,ztaddr.toInt(),family,reinterpret_cast<struct sockaddr_storage *>(&addr)) != 0) : false ); }
 
 	uint64_t prng();
 	void postCircuitTestReport(const ZT_CircuitTestReport *report);
@@ -317,8 +264,8 @@ private:
 
 	RuntimeEnvironment _RR;
 	RuntimeEnvironment *RR;
-
 	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P
+	ZT_Node_Callbacks _cb;
 
 	// For tracking packet IDs to filter out OK/ERROR replies to packets we did not send
 	uint8_t _expectingRepliesToBucketPtr[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1];
@@ -326,14 +273,6 @@ private:
 
 	// Time of last identity verification indexed by InetAddress.rateGateHash()
 	uint64_t _lastIdentityVerification[16384];
-
-	ZT_DataStoreGetFunction _dataStoreGetFunction;
-	ZT_DataStorePutFunction _dataStorePutFunction;
-	ZT_WirePacketSendFunction _wirePacketSendFunction;
-	ZT_VirtualNetworkFrameFunction _virtualNetworkFrameFunction;
-	ZT_VirtualNetworkConfigFunction _virtualNetworkConfigFunction;
-	ZT_PathCheckFunction _pathCheckFunction;
-	ZT_EventCallback _eventCallback;
 
 	std::vector< std::pair< uint64_t, SharedPtr<Network> > > _networks;
 	Mutex _networks_m;
@@ -348,7 +287,7 @@ private:
 
 	unsigned int _prngStreamPtr;
 	Salsa20 _prng;
-	uint64_t _prngStream[16]; // repeatedly encrypted with _prng to yield a high-quality non-crypto PRNG stream
+	uint64_t _prngStream[ZT_NODE_PRNG_BUF_SIZE]; // repeatedly encrypted with _prng to yield a high-quality non-crypto PRNG stream
 
 	uint64_t _now;
 	uint64_t _lastPingCheck;

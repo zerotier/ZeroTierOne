@@ -191,32 +191,23 @@ SharedPtr<Peer> Topology::getUpstreamPeer(const Address *avoid,unsigned int avoi
 
 		for(std::vector<Address>::const_iterator a(_upstreamAddresses.begin());a!=_upstreamAddresses.end();++a) {
 			const SharedPtr<Peer> *p = _peers.get(*a);
-
-			if (!p) {
-				const Identity id(_getIdentity(*a));
-				if (id) {
-					p = &(_peers.set(*a,SharedPtr<Peer>(new Peer(RR,RR->identity,id))));
-				} else {
-					RR->sw->requestWhois(*a);
+			if (p) {
+				bool avoiding = false;
+				for(unsigned int i=0;i<avoidCount;++i) {
+					if (avoid[i] == (*p)->address()) {
+						avoiding = true;
+						break;
+					}
 				}
-				continue; // always skip since even if we loaded it, it's not going to be ready
-			}
-
-			bool avoiding = false;
-			for(unsigned int i=0;i<avoidCount;++i) {
-				if (avoid[i] == (*p)->address()) {
-					avoiding = true;
-					break;
+				const unsigned int q = (*p)->relayQuality(now);
+				if (q <= bestQualityOverall) {
+					bestQualityOverall = q;
+					bestOverall = &(*p);
 				}
-			}
-			const unsigned int q = (*p)->relayQuality(now);
-			if (q <= bestQualityOverall) {
-				bestQualityOverall = q;
-				bestOverall = &(*p);
-			}
-			if ((!avoiding)&&(q <= bestQualityNotAvoid)) {
-				bestQualityNotAvoid = q;
-				bestNotAvoid = &(*p);
+				if ((!avoiding)&&(q <= bestQualityNotAvoid)) {
+					bestQualityNotAvoid = q;
+					bestNotAvoid = &(*p);
+				}
 			}
 		}
 
@@ -245,31 +236,35 @@ bool Topology::isUpstream(const Identity &id) const
 
 void Topology::setUpstream(const Address &a,bool upstream)
 {
-	Mutex::Lock _l(_lock);
-	if (std::find(_rootAddresses.begin(),_rootAddresses.end(),a) == _rootAddresses.end()) {
-		if (upstream) {
-			if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),a) == _upstreamAddresses.end()) {
-				_upstreamAddresses.push_back(a);
-
-				const SharedPtr<Peer> *p = _peers.get(a);
-				if (!p) {
-					const Identity id(_getIdentity(a));
-					if (id) {
-						_peers.set(a,SharedPtr<Peer>(new Peer(RR,RR->identity,id)));
-					} else {
-						RR->sw->requestWhois(a);
+	bool needWhois = false;
+	{
+		Mutex::Lock _l(_lock);
+		if (std::find(_rootAddresses.begin(),_rootAddresses.end(),a) == _rootAddresses.end()) {
+			if (upstream) {
+				if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),a) == _upstreamAddresses.end()) {
+					_upstreamAddresses.push_back(a);
+					const SharedPtr<Peer> *p = _peers.get(a);
+					if (!p) {
+						const Identity id(_getIdentity(a));
+						if (id) {
+							_peers.set(a,SharedPtr<Peer>(new Peer(RR,RR->identity,id)));
+						} else {
+							needWhois = true; // need to do this later due to _lock
+						}
 					}
 				}
+			} else {
+				std::vector<Address> ua;
+				for(std::vector<Address>::iterator i(_upstreamAddresses.begin());i!=_upstreamAddresses.end();++i) {
+					if (a != *i)
+						ua.push_back(*i);
+				}
+				_upstreamAddresses.swap(ua);
 			}
-		} else {
-			std::vector<Address> ua;
-			for(std::vector<Address>::iterator i(_upstreamAddresses.begin());i!=_upstreamAddresses.end();++i) {
-				if (a != *i)
-					ua.push_back(*i);
-			}
-			_upstreamAddresses.swap(ua);
 		}
 	}
+	if (needWhois)
+		RR->sw->requestWhois(a);
 }
 
 bool Topology::worldUpdateIfValid(const World &newWorld)

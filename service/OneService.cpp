@@ -31,12 +31,6 @@
 #include "../version.h"
 #include "../include/ZeroTierOne.h"
 
-#ifdef ZT_USE_SYSTEM_HTTP_PARSER
-#include <http_parser.h>
-#else
-#include "../ext/http-parser/http_parser.h"
-#endif
-
 #include "../node/Constants.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/Node.hpp"
@@ -58,6 +52,16 @@
 #include "ControlPlane.hpp"
 #include "ClusterGeoIpService.hpp"
 #include "ClusterDefinition.hpp"
+
+#ifdef ZT_USE_SYSTEM_HTTP_PARSER
+#include <http_parser.h>
+#else
+#include "../ext/http-parser/http_parser.h"
+#endif
+
+#include "../ext/json/json.hpp"
+
+using json = nlohmann::json;
 
 /**
  * Uncomment to enable UDP breakage switch
@@ -143,6 +147,52 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 namespace ZeroTier {
 
 namespace {
+
+static uint64_t _jI(const json &jv,const uint64_t dfl)
+{
+	if (jv.is_number()) {
+		return (uint64_t)jv;
+	} else if (jv.is_string()) {
+		std::string s = jv;
+		return Utils::strToU64(s.c_str());
+	} else if (jv.is_boolean()) {
+		return ((bool)jv ? 1ULL : 0ULL);
+	}
+	return dfl;
+}
+static bool _jB(const json &jv,const bool dfl)
+{
+	if (jv.is_boolean()) {
+		return (bool)jv;
+	} else if (jv.is_number()) {
+		return ((uint64_t)jv > 0ULL);
+	} else if (jv.is_string()) {
+		std::string s = jv;
+		if (s.length() > 0) {
+			switch(s[0]) {
+				case 't':
+				case 'T':
+				case '1':
+					return true;
+			}
+		}
+		return false;
+	}
+	return dfl;
+}
+static std::string _jS(const json &jv,const char *dfl)
+{
+	if (jv.is_string()) {
+		return jv;
+	} else if (jv.is_number()) {
+		char tmp[64];
+		Utils::snprintf(tmp,sizeof(tmp),"%llu",(uint64_t)jv);
+		return tmp;
+	} else if (jv.is_boolean()) {
+		return ((bool)jv ? std::string("1") : std::string("0"));
+	}
+	return std::string((dfl) ? dfl : "");
+}
 
 #ifdef ZT_AUTO_UPDATE
 #define ZT_AUTO_UPDATE_MAX_HTTP_RESPONSE_SIZE (1024 * 1024 * 64)
@@ -400,7 +450,8 @@ static long SnodeDataStoreGetFunction(ZT_Node *node,void *uptr,const char *name,
 static int SnodeDataStorePutFunction(ZT_Node *node,void *uptr,const char *name,const void *data,unsigned long len,int secure);
 static int SnodeWirePacketSendFunction(ZT_Node *node,void *uptr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *addr,const void *data,unsigned int len,unsigned int ttl);
 static void SnodeVirtualNetworkFrameFunction(ZT_Node *node,void *uptr,uint64_t nwid,void **nuptr,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
-static int SnodePathCheckFunction(ZT_Node *node,void *uptr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *remoteAddr);
+static int SnodePathCheckFunction(ZT_Node *node,void *uptr,uint64_t ztaddr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *remoteAddr);
+static int SnodePathLookupFunction(ZT_Node *node,void *uptr,uint64_t ztaddr,int family,struct sockaddr_storage *result);
 
 #ifdef ZT_ENABLE_CLUSTER
 static void SclusterSendFunction(void *uptr,unsigned int toMemberId,const void *data,unsigned int len);
@@ -488,6 +539,16 @@ public:
 	Phy<OneServiceImpl *> _phy;
 	Node *_node;
 
+	// Local configuration and memo-ized static path definitions
+	json _localConfig;
+	Hashtable< uint64_t,std::vector<InetAddress> > _v4Hints;
+	Hashtable< uint64_t,std::vector<InetAddress> > _v6Hints;
+	Hashtable< uint64_t,std::vector<InetAddress> > _v4Blacklists;
+	Hashtable< uint64_t,std::vector<InetAddress> > _v6Blacklists;
+	std::vector< InetAddress > _globalV4Blacklist;
+	std::vector< InetAddress > _globalV6Blacklist;
+	Mutex _localConfig_m;
+
 	/*
 	 * To attempt to handle NAT/gateway craziness we use three local UDP ports:
 	 *
@@ -499,7 +560,6 @@ public:
 	 * destructively with uPnP port mapping behavior in very weird buggy ways.
 	 * It's only used if uPnP/NAT-PMP is enabled in this build.
 	 */
-
 	Binder _bindings[3];
 	unsigned int _ports[3];
 	uint16_t _portsBE[3]; // ports in big-endian network byte order as in sockaddr
@@ -703,16 +763,19 @@ public:
 			// Clean up any legacy files if present
 			OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S + "peers.save").c_str());
 
-			_node = new Node(
-				OSUtils::now(),
-				this,
-				SnodeDataStoreGetFunction,
-				SnodeDataStorePutFunction,
-				SnodeWirePacketSendFunction,
-				SnodeVirtualNetworkFrameFunction,
-				SnodeVirtualNetworkConfigFunction,
-				SnodePathCheckFunction,
-				SnodeEventCallback);
+			{
+				struct ZT_Node_Callbacks cb;
+				cb.version = 0;
+				cb.dataStoreGetFunction = SnodeDataStoreGetFunction;
+				cb.dataStorePutFunction = SnodeDataStorePutFunction;
+				cb.wirePacketSendFunction = SnodeWirePacketSendFunction;
+				cb.virtualNetworkFrameFunction = SnodeVirtualNetworkFrameFunction;
+				cb.virtualNetworkConfigFunction = SnodeVirtualNetworkConfigFunction;
+				cb.eventCallback = SnodeEventCallback;
+				cb.pathCheckFunction = SnodePathCheckFunction;
+				cb.pathLookupFunction = SnodePathLookupFunction;
+				_node = new Node(this,&cb,OSUtils::now());
+			}
 
 			// Attempt to bind to a secondary port chosen from our ZeroTier address.
 			// This exists because there are buggy NATs out there that fail if more
@@ -758,13 +821,15 @@ public:
 				_portsBE[i] = Utils::hton((uint16_t)_ports[i]);
 
 			{
+				uint64_t trustedPathIds[ZT_MAX_TRUSTED_PATHS];
+				InetAddress trustedPathNetworks[ZT_MAX_TRUSTED_PATHS];
+				unsigned int trustedPathCount = 0;
+
+				// Old style "trustedpaths" flat file -- will eventually go away
 				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S + "trustedpaths").c_str(),"r");
-				uint64_t ids[ZT_MAX_TRUSTED_PATHS];
-				InetAddress addresses[ZT_MAX_TRUSTED_PATHS];
 				if (trustpaths) {
 					char buf[1024];
-					unsigned int count = 0;
-					while ((fgets(buf,sizeof(buf),trustpaths))&&(count < ZT_MAX_TRUSTED_PATHS)) {
+					while ((fgets(buf,sizeof(buf),trustpaths))&&(trustedPathCount < ZT_MAX_TRUSTED_PATHS)) {
 						int fno = 0;
 						char *saveptr = (char *)0;
 						uint64_t trustedPathId = 0;
@@ -778,16 +843,53 @@ public:
 							++fno;
 						}
 						if ( (trustedPathId != 0) && ((trustedPathNetwork.ss_family == AF_INET)||(trustedPathNetwork.ss_family == AF_INET6)) && (trustedPathNetwork.ipScope() != InetAddress::IP_SCOPE_GLOBAL) && (trustedPathNetwork.netmaskBits() > 0) ) {
-							ids[count] = trustedPathId;
-							addresses[count] = trustedPathNetwork;
-							++count;
+							trustedPathIds[trustedPathCount] = trustedPathId;
+							trustedPathNetworks[trustedPathCount] = trustedPathNetwork;
+							++trustedPathCount;
 						}
 					}
 					fclose(trustpaths);
-					if (count)
-						_node->setTrustedPaths(reinterpret_cast<const struct sockaddr_storage *>(addresses),ids,count);
 				}
+
+				// Read local config file
+				Mutex::Lock _l2(_localConfig_m);
+				std::string lcbuf;
+				if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S + "local.conf").c_str(),lcbuf)) {
+					try {
+						_localConfig = json::parse(lcbuf);
+						if (!_localConfig.is_object()) {
+							fprintf(stderr,"WARNING: unable to parse local.conf (root element is not a JSON object)" ZT_EOL_S);
+						}
+					} catch ( ... ) {
+						fprintf(stderr,"WARNING: unable to parse local.conf (invalid JSON)" ZT_EOL_S);
+					}
+				}
+
+				// Get any trusted paths in local.conf (we'll parse the rest of physical[] elsewhere)
+				json &physical = _localConfig["physical"];
+				if (physical.is_object()) {
+					for(json::iterator phy(physical.begin());phy!=physical.end();++phy) {
+						InetAddress net(_jS(phy.key(),""));
+						if (net) {
+							if (phy.value().is_object()) {
+								uint64_t tpid;
+								if ((tpid = _jI(phy.value()["trustedPathId"],0ULL)) != 0ULL) {
+									if ( ((net.ss_family == AF_INET)||(net.ss_family == AF_INET6)) && (trustedPathCount < ZT_MAX_TRUSTED_PATHS) && (net.ipScope() != InetAddress::IP_SCOPE_GLOBAL) && (net.netmaskBits() > 0) ) {
+										trustedPathIds[trustedPathCount] = tpid;
+										trustedPathNetworks[trustedPathCount] = net;
+										++trustedPathCount;
+									}
+								}
+							}
+						}
+					}
+				}
+
+				// Set trusted paths if there are any
+				if (trustedPathCount)
+					_node->setTrustedPaths(reinterpret_cast<const struct sockaddr_storage *>(trustedPathNetworks),trustedPathIds,trustedPathCount);
 			}
+			applyLocalConfig();
 
 			_controller = new EmbeddedNetworkController(_node,(_homePath + ZT_PATH_SEPARATOR_S + ZT_CONTROLLER_DB_PATH).c_str());
 			_node->setNetconfMaster((void *)_controller);
@@ -806,7 +908,7 @@ public:
 
 								Mutex::Lock _l(_termReason_m);
 								_termReason = ONE_UNRECOVERABLE_ERROR;
-								_fatalErrorMessage = "Cluster: can't determine my cluster member ID: able to bind more than one cluster message socket IP/port!";
+								_fatalErrorMessage = "cluster: can't determine my cluster member ID: able to bind more than one cluster message socket IP/port!";
 								return _termReason;
 							}
 							_clusterMessageSocket = cs;
@@ -817,7 +919,7 @@ public:
 					if (!_clusterMessageSocket) {
 						Mutex::Lock _l(_termReason_m);
 						_termReason = ONE_UNRECOVERABLE_ERROR;
-						_fatalErrorMessage = "Cluster: can't determine my cluster member ID: unable to bind to any cluster message socket IP/port.";
+						_fatalErrorMessage = "cluster: can't determine my cluster member ID: unable to bind to any cluster message socket IP/port.";
 						return _termReason;
 					}
 
@@ -1059,7 +1161,92 @@ public:
 		return true;
 	}
 
-	// Begin private implementation methods
+	// Internal implementation methods -----------------------------------------
+
+	// Must be called after _localConfig is read or modified
+	void applyLocalConfig()
+	{
+		Mutex::Lock _l(_localConfig_m);
+
+		_v4Hints.clear();
+		_v6Hints.clear();
+		_v4Blacklists.clear();
+		_v6Blacklists.clear();
+		json &virt = _localConfig["virtual"];
+		if (virt.is_object()) {
+			for(json::iterator v(virt.begin());v!=virt.end();++v) {
+				const std::string nstr = v.key();
+				if ((nstr.length() == ZT_ADDRESS_LENGTH_HEX)&&(v.value().is_object())) {
+					const Address ztaddr(nstr.c_str());
+					if (ztaddr) {
+						const std::string rstr(_jS(v.value()["role"],""));
+						_node->setRole(ztaddr.toInt(),((rstr == "upstream")||(rstr == "UPSTREAM")) ? ZT_PEER_ROLE_UPSTREAM : ZT_PEER_ROLE_LEAF);
+
+						const uint64_t ztaddr2 = ztaddr.toInt();
+						std::vector<InetAddress> &v4h = _v4Hints[ztaddr2];
+						std::vector<InetAddress> &v6h = _v6Hints[ztaddr2];
+						std::vector<InetAddress> &v4b = _v4Blacklists[ztaddr2];
+						std::vector<InetAddress> &v6b = _v6Blacklists[ztaddr2];
+
+						json &tryAddrs = v.value()["try"];
+						if (tryAddrs.is_array()) {
+							for(unsigned long i=0;i<tryAddrs.size();++i) {
+								const InetAddress ip(_jS(tryAddrs[i],""));
+								if (ip.ss_family == AF_INET)
+									v4h.push_back(ip);
+								else if (ip.ss_family == AF_INET6)
+									v6h.push_back(ip);
+							}
+						}
+						json &blAddrs = v.value()["blacklist"];
+						if (blAddrs.is_array()) {
+							for(unsigned long i=0;i<blAddrs.size();++i) {
+								const InetAddress ip(_jS(tryAddrs[i],""));
+								if (ip.ss_family == AF_INET)
+									v4b.push_back(ip);
+								else if (ip.ss_family == AF_INET6)
+									v6b.push_back(ip);
+							}
+						}
+
+						if (v4h.empty()) _v4Hints.erase(ztaddr2);
+						if (v6h.empty()) _v6Hints.erase(ztaddr2);
+						if (v4b.empty()) _v4Blacklists.erase(ztaddr2);
+						if (v6b.empty()) _v6Blacklists.erase(ztaddr2);
+					}
+				}
+			}
+		}
+
+		_globalV4Blacklist.clear();
+		_globalV6Blacklist.clear();
+		json &physical = _localConfig["physical"];
+		if (physical.is_object()) {
+			for(json::iterator phy(physical.begin());phy!=physical.end();++phy) {
+				const InetAddress net(_jS(phy.key(),""));
+				if ((net)&&(net.netmaskBits() > 0)) {
+					if (phy.value().is_object()) {
+						if (_jB(phy.value()["blacklist"],false)) {
+							if (net.ss_family == AF_INET)
+								_globalV4Blacklist.push_back(net);
+							else if (net.ss_family == AF_INET6)
+								_globalV6Blacklist.push_back(net);
+						}
+					}
+				}
+			}
+		}
+
+		json &settings = _localConfig["settings"];
+		if (settings.is_object()) {
+			const std::string rp(_jS(settings["relayPolicy"],""));
+			if ((rp == "always")||(rp == "ALWAYS"))
+				_node->setRelayPolicy(ZT_RELAY_POLICY_ALWAYS);
+			else if ((rp == "never")||(rp == "NEVER"))
+				_node->setRelayPolicy(ZT_RELAY_POLICY_NEVER);
+			else _node->setRelayPolicy(ZT_RELAY_POLICY_TRUSTED);
+		}
+	}
 
 	// Checks if a managed IP or route target is allowed
 	bool checkIfManagedIsAllowed(const NetworkState &n,const InetAddress &target)
@@ -1190,6 +1377,8 @@ public:
 			}
 		}
 	}
+
+	// Handlers for Node and Phy<> callbacks -----------------------------------
 
 	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
 	{
@@ -1668,28 +1857,72 @@ public:
 		n->tap->put(MAC(sourceMac),MAC(destMac),etherType,data,len);
 	}
 
-	inline int nodePathCheckFunction(const struct sockaddr_storage *localAddr,const struct sockaddr_storage *remoteAddr)
+	inline int nodePathCheckFunction(uint64_t ztaddr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *remoteAddr)
 	{
-		Mutex::Lock _l(_nets_m);
-	
-		for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
-			if (n->second.tap) {
-				std::vector<InetAddress> ips(n->second.tap->ips());
-				for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
-					if (i->containsAddress(*(reinterpret_cast<const InetAddress *>(remoteAddr)))) {
-						return 0;
+		// Make sure we're not trying to do ZeroTier-over-ZeroTier
+		{
+			Mutex::Lock _l(_nets_m);
+			for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
+				if (n->second.tap) {
+					std::vector<InetAddress> ips(n->second.tap->ips());
+					for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
+						if (i->containsAddress(*(reinterpret_cast<const InetAddress *>(remoteAddr)))) {
+							return 0;
+						}
 					}
 				}
 			}
 		}
-	
+
 		/* Note: I do not think we need to scan for overlap with managed routes
 		 * because of the "route forking" and interface binding that we do. This
 		 * ensures (we hope) that ZeroTier traffic will still take the physical
 		 * path even if its managed routes override this for other traffic. Will
-		 * revisit if we see problems with this. */
+		 * revisit if we see recursion problems. */
+
+		// Check blacklists
+		const Hashtable< uint64_t,std::vector<InetAddress> > *blh = (const Hashtable< uint64_t,std::vector<InetAddress> > *)0;
+		const std::vector<InetAddress> *gbl = (const std::vector<InetAddress> *)0;
+		if (remoteAddr->ss_family == AF_INET) {
+			blh = &_v4Blacklists;
+			gbl = &_globalV4Blacklist;
+		} else if (remoteAddr->ss_family == AF_INET6) {
+			blh = &_v6Blacklists;
+			gbl = &_globalV6Blacklist;
+		}
+		if (blh) {
+			Mutex::Lock _l(_localConfig_m);
+			const std::vector<InetAddress> *l = blh->get(ztaddr);
+			if (l) {
+				for(std::vector<InetAddress>::const_iterator a(l->begin());a!=l->end();++a) {
+					if (a->containsAddress(*reinterpret_cast<const InetAddress *>(remoteAddr)))
+						return 0;
+				}
+			}
+			for(std::vector<InetAddress>::const_iterator a(gbl->begin());a!=gbl->end();++a) {
+				if (a->containsAddress(*reinterpret_cast<const InetAddress *>(remoteAddr)))
+					return 0;
+			}
+		}
 
 		return 1;
+	}
+
+	inline int nodePathLookupFunction(uint64_t ztaddr,int family,struct sockaddr_storage *result)
+	{
+		const Hashtable< uint64_t,std::vector<InetAddress> > *lh = (const Hashtable< uint64_t,std::vector<InetAddress> > *)0;
+		if (family < 0)
+			lh = (_node->prng() & 1) ? &_v4Hints : &_v6Hints;
+		else if (family == AF_INET)
+			lh = &_v4Hints;
+		else if (family == AF_INET6)
+			lh = &_v6Hints;
+		else return 0;
+		const std::vector<InetAddress> *l = lh->get(ztaddr);
+		if ((l)&&(l->size() > 0)) {
+			memcpy(result,&((*l)[(unsigned long)_node->prng() % l->size()]),sizeof(struct sockaddr_storage));
+			return 1;
+		} else return 0;
 	}
 
 	inline void tapFrameHandler(uint64_t nwid,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
@@ -1841,8 +2074,10 @@ static int SnodeWirePacketSendFunction(ZT_Node *node,void *uptr,const struct soc
 { return reinterpret_cast<OneServiceImpl *>(uptr)->nodeWirePacketSendFunction(localAddr,addr,data,len,ttl); }
 static void SnodeVirtualNetworkFrameFunction(ZT_Node *node,void *uptr,uint64_t nwid,void **nuptr,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 { reinterpret_cast<OneServiceImpl *>(uptr)->nodeVirtualNetworkFrameFunction(nwid,nuptr,sourceMac,destMac,etherType,vlanId,data,len); }
-static int SnodePathCheckFunction(ZT_Node *node,void *uptr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *remoteAddr)
-{ return reinterpret_cast<OneServiceImpl *>(uptr)->nodePathCheckFunction(localAddr,remoteAddr); }
+static int SnodePathCheckFunction(ZT_Node *node,void *uptr,uint64_t ztaddr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *remoteAddr)
+{ return reinterpret_cast<OneServiceImpl *>(uptr)->nodePathCheckFunction(ztaddr,localAddr,remoteAddr); }
+static int SnodePathLookupFunction(ZT_Node *node,void *uptr,uint64_t ztaddr,int family,struct sockaddr_storage *result)
+{ return reinterpret_cast<OneServiceImpl *>(uptr)->nodePathLookupFunction(ztaddr,family,result); }
 
 #ifdef ZT_ENABLE_CLUSTER
 static void SclusterSendFunction(void *uptr,unsigned int toMemberId,const void *data,unsigned int len)

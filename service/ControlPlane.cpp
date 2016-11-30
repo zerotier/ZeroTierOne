@@ -123,6 +123,7 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetw
 
 	Utils::snprintf(json,sizeof(json),
 		"%s{\n"
+		"%s\t\"id\": \"%.16llx\",\n"
 		"%s\t\"nwid\": \"%.16llx\",\n"
 		"%s\t\"mac\": \"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x\",\n"
 		"%s\t\"name\": \"%s\",\n"
@@ -142,6 +143,7 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetw
 		"%s\t\"allowDefault\": %s\n"
 		"%s}",
 		prefix,
+		prefix,nc->nwid,
 		prefix,nc->nwid,
 		prefix,(unsigned int)((nc->mac >> 40) & 0xff),(unsigned int)((nc->mac >> 32) & 0xff),(unsigned int)((nc->mac >> 24) & 0xff),(unsigned int)((nc->mac >> 16) & 0xff),(unsigned int)((nc->mac >> 8) & 0xff),(unsigned int)(nc->mac & 0xff),
 		prefix,_jsonEscape(nc->name).c_str(),
@@ -214,9 +216,9 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_Peer *peer)
 
 	const char *prole = "";
 	switch(peer->role) {
-		case ZT_PEER_ROLE_LEAF:  prole = "LEAF"; break;
+		case ZT_PEER_ROLE_LEAF: prole = "LEAF"; break;
 		case ZT_PEER_ROLE_UPSTREAM: prole = "UPSTREAM"; break;
-		case ZT_PEER_ROLE_ROOT:  prole = "ROOT"; break;
+		case ZT_PEER_ROLE_ROOT: prole = "ROOT"; break;
 	}
 
 	Utils::snprintf(json,sizeof(json),
@@ -389,6 +391,7 @@ unsigned int ControlPlane::handleRequest(
 					"\t\"worldId\": %llu,\n"
 					"\t\"worldTimestamp\": %llu,\n"
 					"\t\"online\": %s,\n"
+					"\t\"relayPolicy\": \"%s\",\n"
 					"\t\"tcpFallbackActive\": %s,\n"
 					"\t\"versionMajor\": %d,\n"
 					"\t\"versionMinor\": %d,\n"
@@ -402,6 +405,7 @@ unsigned int ControlPlane::handleRequest(
 					status.worldId,
 					status.worldTimestamp,
 					(status.online) ? "true" : "false",
+					((status.relayPolicy == ZT_RELAY_POLICY_ALWAYS) ? "always" : ((status.relayPolicy == ZT_RELAY_POLICY_NEVER) ? "never" : "trusted")),
 					(_svc->tcpFallbackActive()) ? "true" : "false",
 					ZEROTIER_ONE_VERSION_MAJOR,
 					ZEROTIER_ONE_VERSION_MINOR,
@@ -411,7 +415,7 @@ unsigned int ControlPlane::handleRequest(
 					((clusterJson.length() > 0) ? clusterJson.c_str() : "null"));
 				responseBody = json;
 				scode = 200;
-			} else if (ps[0] == "config") {
+			} else if (ps[0] == "settings") {
 				responseContentType = "application/json";
 				responseBody = "{}"; // TODO
 				scode = 200;
@@ -497,7 +501,7 @@ unsigned int ControlPlane::handleRequest(
 
 		if (isAuth) {
 
-			if (ps[0] == "config") {
+			if (ps[0] == "settings") {
 				// TODO
 			} else if (ps[0] == "network") {
 				if (ps.size() == 2) {
@@ -513,11 +517,11 @@ unsigned int ControlPlane::handleRequest(
 								try {
 									nlohmann::json j(nlohmann::json::parse(body));
 									if (j.is_object()) {
-										auto allowManaged = j["allowManaged"];
+										nlohmann::json &allowManaged = j["allowManaged"];
 										if (allowManaged.is_boolean()) localSettings.allowManaged = (bool)allowManaged;
-										auto allowGlobal = j["allowGlobal"];
+										nlohmann::json &allowGlobal = j["allowGlobal"];
 										if (allowGlobal.is_boolean()) localSettings.allowGlobal = (bool)allowGlobal;
-										auto allowDefault = j["allowDefault"];
+										nlohmann::json &allowDefault = j["allowDefault"];
 										if (allowDefault.is_boolean()) localSettings.allowDefault = (bool)allowDefault;
 									}
 								} catch ( ... ) {
@@ -548,9 +552,7 @@ unsigned int ControlPlane::handleRequest(
 
 		if (isAuth) {
 
-			if (ps[0] == "config") {
-				// TODO
-			} else if (ps[0] == "network") {
+			if (ps[0] == "network") {
 				ZT_VirtualNetworkList *nws = _node->networks();
 				if (nws) {
 					if (ps.size() == 2) {

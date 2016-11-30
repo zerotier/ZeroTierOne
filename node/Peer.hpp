@@ -165,6 +165,13 @@ public:
 	void attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now);
 
 	/**
+	 * Try a memorized or statically defined path if any are known
+	 *
+	 * Under the hood this is done periodically based on ZT_TRY_MEMORIZED_PATH_INTERVAL.
+	 */
+	void tryMemorizedPath(uint64_t now);
+
+	/**
 	 * Send pings or keepalives depending on configured timeouts
 	 *
 	 * @param now Current time
@@ -435,6 +442,7 @@ private:
 	uint8_t _remoteClusterOptimal6[16];
 	uint64_t _lastReceive; // direct or indirect
 	uint64_t _lastNontrivialReceive; // frames, things like netconf, etc.
+	uint64_t _lastTriedMemorizedPath;
 	uint64_t _lastDirectPathPushSent;
 	uint64_t _lastDirectPathPushReceive;
 	uint64_t _lastCredentialRequestSent;

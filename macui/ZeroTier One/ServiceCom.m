@@ -43,7 +43,7 @@
 {
     self = [super init];
     if(self) {
-        baseURL = @"http://localhost:9993";
+        baseURL = @"http://127.0.0.1:9993";
         session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration ephemeralSessionConfiguration]];
         _isQuitting = NO;
     }

@@ -56,7 +56,11 @@ namespace {
             , eventListener(NULL)
             , frameListener(NULL)
             , configListener(NULL)
-        {}
+            , callbacks(NULL)
+        {
+            callbacks = (ZT_Node_Callbacks*)malloc(sizeof(ZT_Node_Callbacks));
+            memset(callbacks, 0, sizeof(ZT_Node_Callbacks));
+        }
 
         ~JniRef()
         {
@@ -69,6 +73,9 @@ namespace {
             env->DeleteGlobalRef(eventListener);
             env->DeleteGlobalRef(frameListener);
             env->DeleteGlobalRef(configListener);
+
+            free(callbacks);
+            callbacks = NULL;
         }
 
         uint64_t id;
@@ -83,6 +90,8 @@ namespace {
         jobject eventListener;
         jobject frameListener;
         jobject configListener;
+
+        ZT_Node_Callbacks *callbacks;
     };
 
 
@@ -602,17 +611,18 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
     }
     ref->eventListener = env->NewGlobalRef(tmp);
 
+    ref->callbacks->dataStoreGetFunction = &DataStoreGetFunction;
+    ref->callbacks->dataStorePutFunction = &DataStorePutFunction;
+    ref->callbacks->wirePacketSendFunction = &WirePacketSendFunction;
+    ref->callbacks->virtualNetworkFrameFunction = &VirtualNetworkFrameFunctionCallback;
+    ref->callbacks->virtualNetworkConfigFunction = &VirtualNetworkConfigFunctionCallback;
+    ref->callbacks->eventCallback = &EventCallback;
+
     ZT_ResultCode rc = ZT_Node_new(
         &node,
         ref,
-        (uint64_t)now,
-        &DataStoreGetFunction,
-        &DataStorePutFunction,
-        &WirePacketSendFunction,
-        &VirtualNetworkFrameFunctionCallback,
-        &VirtualNetworkConfigFunctionCallback,
-        NULL,
-        &EventCallback);
+        ref->callbacks,
+        (uint64_t)now);
 
     if(rc != ZT_RESULT_OK)
     {
