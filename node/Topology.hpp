@@ -164,6 +164,22 @@ public:
 	void setUpstream(const Address &a,bool upstream);
 
 	/**
+	 * Check for prohibited endpoints
+	 *
+	 * Right now this returns true if the designated ZT address is a root and if
+	 * the IP (IP only, not port) does not equal any of the IPs defined in the
+	 * current World. This is an extra little security feature in case root keys
+	 * get appropriated or something.
+	 *
+	 * Otherwise it returns false.
+	 *
+	 * @param ztaddr ZeroTier address
+	 * @param ipaddr IP address
+	 * @return True if this ZT/IP pair should not be allowed to be used
+	 */
+	bool isProhibitedEndpoint(const Address &ztaddr,const InetAddress &ipaddr) const;
+
+	/**
 	 * @return Vector of active upstream addresses (including roots)
 	 */
 	inline std::vector<Address> upstreamAddresses() const

@@ -633,6 +633,9 @@ bool Node::shouldUsePathForZeroTierTraffic(const Address &ztaddr,const InetAddre
 	if (!Path::isAddressValidForPath(remoteAddress))
 		return false;
 
+	if (RR->topology->isProhibitedEndpoint(ztaddr,remoteAddress))
+		return false;
+
 	{
 		Mutex::Lock _l(_networks_m);
 		for(std::vector< std::pair< uint64_t, SharedPtr<Network> > >::const_iterator i=_networks.begin();i!=_networks.end();++i) {

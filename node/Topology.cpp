@@ -264,6 +264,23 @@ void Topology::setUpstream(const Address &a,bool upstream)
 		RR->sw->requestWhois(a);
 }
 
+bool Topology::isProhibitedEndpoint(const Address &ztaddr,const InetAddress &ipaddr) const
+{
+	Mutex::Lock _l(_lock);
+
+	if (std::find(_rootAddresses.begin(),_rootAddresses.end(),ztaddr) != _rootAddresses.end()) {
+		for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
+			for(std::vector<InetAddress>::const_iterator e(r->stableEndpoints.begin());e!=r->stableEndpoints.end();++e) {
+				if (ipaddr.ipsEqual(*e))
+					return false;
+			}
+		}
+		return true;
+	}
+
+	return false;
+}
+
 bool Topology::worldUpdateIfValid(const World &newWorld)
 {
 	Mutex::Lock _l(_lock);
