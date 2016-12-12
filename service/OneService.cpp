@@ -403,26 +403,6 @@ public:
 static BackgroundSoftwareUpdateChecker backgroundSoftwareUpdateChecker;
 #endif // ZT_AUTO_UPDATE
 
-static bool isBlacklistedLocalInterfaceForZeroTierTraffic(const char *ifn)
-{
-#if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
-	if ((ifn[0] == 'l')&&(ifn[1] == 'o')) return true; // loopback
-	if ((ifn[0] == 'z')&&(ifn[1] == 't')) return true; // sanity check: zt#
-	if ((ifn[0] == 't')&&(ifn[1] == 'u')&&(ifn[2] == 'n')) return true; // tun# is probably an OpenVPN tunnel or similar
-	if ((ifn[0] == 't')&&(ifn[1] == 'a')&&(ifn[2] == 'p')) return true; // tap# is probably an OpenVPN tunnel or similar
-#endif
-
-#ifdef __APPLE__
-	if ((ifn[0] == 'l')&&(ifn[1] == 'o')) return true; // loopback
-	if ((ifn[0] == 'z')&&(ifn[1] == 't')) return true; // sanity check: zt#
-	if ((ifn[0] == 't')&&(ifn[1] == 'u')&&(ifn[2] == 'n')) return true; // tun# is probably an OpenVPN tunnel or similar
-	if ((ifn[0] == 't')&&(ifn[1] == 'a')&&(ifn[2] == 'p')) return true; // tap# is probably an OpenVPN tunnel or similar
-	if ((ifn[0] == 'u')&&(ifn[1] == 't')&&(ifn[2] == 'u')&&(ifn[3] == 'n')) return true; // ... as is utun#
-#endif
-
-	return false;
-}
-
 static std::string _trimString(const std::string &s)
 {
 	unsigned long end = (unsigned long)s.length();
@@ -547,6 +527,7 @@ public:
 	Hashtable< uint64_t,std::vector<InetAddress> > _v6Blacklists;
 	std::vector< InetAddress > _globalV4Blacklist;
 	std::vector< InetAddress > _globalV6Blacklist;
+	std::vector< std::string > _interfacePrefixBlacklist;
 	Mutex _localConfig_m;
 
 	/*
@@ -1237,6 +1218,7 @@ public:
 			}
 		}
 
+		_interfacePrefixBlacklist.clear();
 		json &settings = _localConfig["settings"];
 		if (settings.is_object()) {
 			const std::string rp(_jS(settings["relayPolicy"],""));
@@ -1245,6 +1227,15 @@ public:
 			else if ((rp == "never")||(rp == "NEVER"))
 				_node->setRelayPolicy(ZT_RELAY_POLICY_NEVER);
 			else _node->setRelayPolicy(ZT_RELAY_POLICY_TRUSTED);
+
+			json &ignoreIfs = settings["interfacePrefixBlacklist"];
+			if (ignoreIfs.is_array()) {
+				for(unsigned long i=0;i<ignoreIfs.size();++i) {
+					const std::string tmp(_jS(ignoreIfs[i],""));
+					if (tmp.length() > 0)
+						_interfacePrefixBlacklist.push_back(tmp);
+				}
+			}
 		}
 	}
 
@@ -1992,16 +1983,40 @@ public:
 
 	bool shouldBindInterface(const char *ifname,const InetAddress &ifaddr)
 	{
-		if (isBlacklistedLocalInterfaceForZeroTierTraffic(ifname))
-			return false;
+#if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+		if ((ifname[0] == 'l')&&(ifname[1] == 'o')) return false; // loopback
+		if ((ifname[0] == 'z')&&(ifname[1] == 't')) return false; // sanity check: zt#
+		if ((ifname[0] == 't')&&(ifname[1] == 'u')&&(ifname[2] == 'n')) return false; // tun# is probably an OpenVPN tunnel or similar
+		if ((ifname[0] == 't')&&(ifname[1] == 'a')&&(ifname[2] == 'p')) return false; // tap# is probably an OpenVPN tunnel or similar
+#endif
 
-		Mutex::Lock _l(_nets_m);
-		for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
-			if (n->second.tap) {
-				std::vector<InetAddress> ips(n->second.tap->ips());
-				for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
-					if (i->ipsEqual(ifaddr))
-						return false;
+#ifdef __APPLE__
+		if ((ifname[0] == 'l')&&(ifname[1] == 'o')) return false; // loopback
+		if ((ifname[0] == 'z')&&(ifname[1] == 't')) return false; // sanity check: zt#
+		if ((ifname[0] == 't')&&(ifname[1] == 'u')&&(ifname[2] == 'n')) return false; // tun# is probably an OpenVPN tunnel or similar
+		if ((ifname[0] == 't')&&(ifname[1] == 'a')&&(ifname[2] == 'p')) return false; // tap# is probably an OpenVPN tunnel or similar
+		if ((ifname[0] == 'u')&&(ifname[1] == 't')&&(ifname[2] == 'u')&&(ifname[3] == 'n')) return false; // ... as is utun#
+#endif
+
+		{
+			Mutex::Lock _l(_localConfig_m);
+			for(std::vector<std::string>::const_iterator p(_interfacePrefixBlacklist.begin());p!=_interfacePrefixBlacklist.end();++p) {
+				if (!strncmp(p->c_str(),ifname,p->length())) {
+					printf("%s\n",ifname);
+					return false;
+				}
+			}
+		}
+
+		{
+			Mutex::Lock _l(_nets_m);
+			for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
+				if (n->second.tap) {
+					std::vector<InetAddress> ips(n->second.tap->ips());
+					for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
+						if (i->ipsEqual(ifaddr))
+							return false;
+					}
 				}
 			}
 		}
