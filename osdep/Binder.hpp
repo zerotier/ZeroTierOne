@@ -262,8 +262,6 @@ public:
 			}
 		}
 
-		for(std::map<InetAddress,std::string>::iterator i(localIfAddrs.begin());i!=localIfAddrs.end();++i)
-			printf("%s %s\n",i->second.c_str(),i->first.toString().c_str());
 		const bool gotViaProc = (localIfAddrs.size() > 0);
 #else
 		const bool gotViaProc = false;
