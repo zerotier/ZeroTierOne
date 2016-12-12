@@ -2001,10 +2001,8 @@ public:
 		{
 			Mutex::Lock _l(_localConfig_m);
 			for(std::vector<std::string>::const_iterator p(_interfacePrefixBlacklist.begin());p!=_interfacePrefixBlacklist.end();++p) {
-				if (!strncmp(p->c_str(),ifname,p->length())) {
-					printf("%s\n",ifname);
+				if (!strncmp(p->c_str(),ifname,p->length()))
 					return false;
-				}
 			}
 		}
 
