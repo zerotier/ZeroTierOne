@@ -53,8 +53,10 @@
 #include "../node/NonCopyable.hpp"
 #include "../node/InetAddress.hpp"
 #include "../node/Mutex.hpp"
+#include "../node/Utils.hpp"
 
 #include "Phy.hpp"
+#include "OSUtils.hpp"
 
 /**
  * Period between binder rescans/refreshes
@@ -164,14 +166,57 @@ public:
 
 #else // not __WINDOWS__
 
-		struct ifaddrs *ifatbl = (struct ifaddrs *)0;
-		struct ifaddrs *ifa;
-		if ((getifaddrs(&ifatbl) == 0)&&(ifatbl)) {
-			ifa = ifatbl;
-			while (ifa) {
-				if ((ifa->ifa_name)&&(ifa->ifa_addr)) {
-					InetAddress ip = *(ifa->ifa_addr);
-					if (ifChecker.shouldBindInterface(ifa->ifa_name,ip)) {
+		/* On Linux we use an alternative method if available since getifaddrs()
+		 * gets very slow when there are lots of network namespaces. This won't
+		 * work unless /proc/PID/net/if_inet6 exists and it may not on some
+		 * embedded systems, so revert to getifaddrs() there. */
+
+#ifdef __LINUX__
+		char fn[256],tmp[256];
+		std::set<std::string> ifnames;
+		const unsigned long pid = (unsigned long)getpid();
+
+		// Get all device names
+		Utils::snprintf(fn,sizeof(fn),"/proc/%lu/net/dev",pid);
+		FILE *procf = fopen(fn,"r");
+		if (procf) {
+			while (fgets(tmp,sizeof(tmp),procf)) {
+				tmp[255] = 0;
+				char *saveptr = (char *)0;
+				for(char *f=Utils::stok(tmp," \t\r\n:|",&saveptr);(f);f=Utils::stok((char *)0," \t\r\n:|",&saveptr)) {
+					if ((strcmp(f,"Inter-") != 0)&&(strcmp(f,"face") != 0)&&(f[0] != 0))
+						ifnames.insert(f);
+					break; // we only want the first field
+				}
+			}
+			fclose(procf);
+		}
+
+		// Get IPv6 addresses (and any device names we don't already know)
+		Utils::snprintf(fn,sizeof(fn),"/proc/%lu/net/if_inet6",pid);
+		procf = fopen(fn,"r");
+		if (procf) {
+			while (fgets(tmp,sizeof(tmp),procf)) {
+				tmp[255] = 0;
+				char *saveptr = (char *)0;
+				unsigned char ipbits[16];
+				memset(ipbits,0,sizeof(ipbits));
+				char *devname = (char *)0;
+				int n = 0;
+				for(char *f=Utils::stok(tmp," \t\r\n",&saveptr);(f);f=Utils::stok((char *)0," \t\r\n",&saveptr)) {
+					switch(n++) {
+						case 0: // IP in hex
+							Utils::unhex(f,32,ipbits,16);
+							break;
+						case 5: // device name
+							devname = f;
+							break;
+					}
+				}
+				if (devname) {
+					ifnames.insert(devname);
+					InetAddress ip(ipbits,16,0);
+					if (ifChecker.shouldBindInterface(devname,ip)) {
 						switch(ip.ipScope()) {
 							default: break;
 							case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
@@ -179,14 +224,76 @@ public:
 							case InetAddress::IP_SCOPE_SHARED:
 							case InetAddress::IP_SCOPE_PRIVATE:
 								ip.setPort(port);
-								localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string(ifa->ifa_name)));
+								localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string(devname)));
 								break;
 						}
 					}
 				}
-				ifa = ifa->ifa_next;
 			}
-			freeifaddrs(ifatbl);
+			fclose(procf);
+		}
+
+		// Get IPv4 addresses for each device
+		if (ifnames.size() > 0) {
+			const int controlfd = (int)socket(AF_INET,SOCK_DGRAM,0);
+			if (controlfd >= 0) {
+				for(std::set<std::string>::iterator devname(ifnames.begin());devname!=ifnames.end();++devname) {
+					struct ifreq ifr;
+					memset(&ifr,0,sizeof(ifr));
+					ifr.ifr_addr.sa_family = AF_INET;
+					Utils::scopy(ifr.ifr_name,sizeof(ifr.ifr_name),devname->c_str());
+					if (ioctl(controlfd,SIOCGIFADDR,&ifr) >= 0) {
+						InetAddress ip(&(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr),4,0);
+						if (ifChecker.shouldBindInterface(devname->c_str(),ip)) {
+							switch(ip.ipScope()) {
+								default: break;
+								case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
+								case InetAddress::IP_SCOPE_GLOBAL:
+								case InetAddress::IP_SCOPE_SHARED:
+								case InetAddress::IP_SCOPE_PRIVATE:
+									ip.setPort(port);
+									localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,*devname));
+									break;
+							}
+						}
+					}
+				}
+				close(controlfd);
+			}
+		}
+
+		for(std::map<InetAddress,std::string>::iterator i(localIfAddrs.begin());i!=localIfAddrs.end();++i)
+			printf("%s %s\n",i->second.c_str(),i->first.toString().c_str());
+		const bool gotViaProc = (localIfAddrs.size() > 0);
+#else
+		const bool gotViaProc = false;
+#endif
+
+		if (!gotViaProc) {
+			struct ifaddrs *ifatbl = (struct ifaddrs *)0;
+			struct ifaddrs *ifa;
+			if ((getifaddrs(&ifatbl) == 0)&&(ifatbl)) {
+				ifa = ifatbl;
+				while (ifa) {
+					if ((ifa->ifa_name)&&(ifa->ifa_addr)) {
+						InetAddress ip = *(ifa->ifa_addr);
+						if (ifChecker.shouldBindInterface(ifa->ifa_name,ip)) {
+							switch(ip.ipScope()) {
+								default: break;
+								case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
+								case InetAddress::IP_SCOPE_GLOBAL:
+								case InetAddress::IP_SCOPE_SHARED:
+								case InetAddress::IP_SCOPE_PRIVATE:
+									ip.setPort(port);
+									localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string(ifa->ifa_name)));
+									break;
+							}
+						}
+					}
+					ifa = ifa->ifa_next;
+				}
+				freeifaddrs(ifatbl);
+			}
 		}
 
 #endif
