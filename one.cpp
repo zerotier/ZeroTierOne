@@ -973,7 +973,6 @@ int main(int argc,char **argv)
 	std::string homeDir;
 	unsigned int port = ZT_DEFAULT_PORT;
 	bool skipRootCheck = false;
-	const char *allowManagementFrom = (const char *)0;
 
 	for(int i=1;i<argc;++i) {
 		if (argv[i][0] == '-') {
@@ -982,14 +981,6 @@ int main(int argc,char **argv)
 				case 'p': // port -- for both UDP and TCP, packets and control plane
 					port = Utils::strToUInt(argv[i] + 2);
 					if (port > 0xffff) {
-						printHelp(argv[0],stdout);
-						return 1;
-					}
-					break;
-
-				case 'M': // allow management from this IP/bits network
-					allowManagementFrom = argv[i] + 2;
-					if (!strlen(allowManagementFrom)) {
 						printHelp(argv[0],stdout);
 						return 1;
 					}
@@ -1176,7 +1167,7 @@ int main(int argc,char **argv)
 	unsigned int returnValue = 0;
 
 	for(;;) {
-		zt1Service = OneService::newInstance(homeDir.c_str(),port,allowManagementFrom);
+		zt1Service = OneService::newInstance(homeDir.c_str(),port);
 		switch(zt1Service->run()) {
 			case OneService::ONE_STILL_RUNNING: // shouldn't happen, run() won't return until done
 			case OneService::ONE_NORMAL_TERMINATION:

@@ -514,10 +514,10 @@ public:
 
 	const std::string _homePath;
 	BackgroundResolver _tcpFallbackResolver;
-	InetAddress _allowManagementFrom;
 	EmbeddedNetworkController *_controller;
 	Phy<OneServiceImpl *> _phy;
 	Node *_node;
+	unsigned int _primaryPort;
 
 	// Local configuration and memo-ized static path definitions
 	json _localConfig;
@@ -527,6 +527,7 @@ public:
 	Hashtable< uint64_t,std::vector<InetAddress> > _v6Blacklists;
 	std::vector< InetAddress > _globalV4Blacklist;
 	std::vector< InetAddress > _globalV6Blacklist;
+	std::vector< InetAddress > _allowManagementFrom;
 	std::vector< std::string > _interfacePrefixBlacklist;
 	Mutex _localConfig_m;
 
@@ -612,12 +613,13 @@ public:
 
 	// end member variables ----------------------------------------------------
 
-	OneServiceImpl(const char *hp,unsigned int port,const char *allowManagementFrom) :
+	OneServiceImpl(const char *hp,unsigned int port) :
 		_homePath((hp) ? hp : ".")
 		,_tcpFallbackResolver(ZT_TCP_FALLBACK_RELAY)
 		,_controller((EmbeddedNetworkController *)0)
 		,_phy(this,false,true)
 		,_node((Node *)0)
+		,_primaryPort(port)
 		,_controlPlane((ControlPlane *)0)
 		,_lastDirectReceiveFromGlobal(0)
 #ifdef ZT_TCP_FALLBACK_RELAY
@@ -637,63 +639,9 @@ public:
 #endif
 		,_run(true)
 	{
-		if (allowManagementFrom)
-			_allowManagementFrom.fromString(allowManagementFrom);
-
 		_ports[0] = 0;
 		_ports[1] = 0;
 		_ports[2] = 0;
-
-		// The control socket is bound to the default/static port on localhost. If we
-		// can do this, we have successfully allocated a port. The binders will take
-		// care of binding non-local addresses for ZeroTier traffic.
-		const int portTrials = (port == 0) ? 256 : 1; // if port is 0, pick random
-		for(int k=0;k<portTrials;++k) {
-			if (port == 0) {
-				unsigned int randp = 0;
-				Utils::getSecureRandom(&randp,sizeof(randp));
-				port = 20000 + (randp % 45500);
-			}
-
-			if (_trialBind(port)) {
-				struct sockaddr_in in4;
-				memset(&in4,0,sizeof(in4));
-				in4.sin_family = AF_INET;
-				in4.sin_addr.s_addr = Utils::hton((uint32_t)((allowManagementFrom) ? 0 : 0x7f000001)); // right now we just listen for TCP @127.0.0.1
-				in4.sin_port = Utils::hton((uint16_t)port);
-				_v4TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
-
-				struct sockaddr_in6 in6;
-				memset((void *)&in6,0,sizeof(in6));
-				in6.sin6_family = AF_INET6;
-				in6.sin6_port = in4.sin_port;
-				if (!allowManagementFrom)
-					in6.sin6_addr.s6_addr[15] = 1; // IPv6 localhost == ::1
-				_v6TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
-
-				// We must bind one of IPv4 or IPv6 -- support either failing to support hosts that
-				// have only IPv4 or only IPv6 stacks.
-				if ((_v4TcpControlSocket)||(_v6TcpControlSocket)) {
-					_ports[0] = port;
-					break;
-				} else {
-					if (_v4TcpControlSocket)
-						_phy.close(_v4TcpControlSocket,false);
-					if (_v6TcpControlSocket)
-						_phy.close(_v6TcpControlSocket,false);
-					port = 0;
-				}
-			} else {
-				port = 0;
-			}
-		}
-
-		if (_ports[0] == 0)
-			throw std::runtime_error("cannot bind to local control interface port");
-
-		char portstr[64];
-		Utils::snprintf(portstr,sizeof(portstr),"%u",_ports[0]);
-		OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "zerotier-one.port").c_str(),std::string(portstr));
 	}
 
 	virtual ~OneServiceImpl()
@@ -758,49 +706,7 @@ public:
 				_node = new Node(this,&cb,OSUtils::now());
 			}
 
-			// Attempt to bind to a secondary port chosen from our ZeroTier address.
-			// This exists because there are buggy NATs out there that fail if more
-			// than one device behind the same NAT tries to use the same internal
-			// private address port number.
-			_ports[1] = 20000 + ((unsigned int)_node->address() % 45500);
-			for(int i=0;;++i) {
-				if (i > 1000) {
-					_ports[1] = 0;
-					break;
-				} else if (++_ports[1] >= 65536) {
-					_ports[1] = 20000;
-				}
-				if (_trialBind(_ports[1]))
-					break;
-			}
-
-#ifdef ZT_USE_MINIUPNPC
-			// If we're running uPnP/NAT-PMP, bind a *third* port for that. We can't
-			// use the other two ports for that because some NATs do really funky
-			// stuff with ports that are explicitly mapped that breaks things.
-			if (_ports[1]) {
-				_ports[2] = _ports[1];
-				for(int i=0;;++i) {
-					if (i > 1000) {
-						_ports[2] = 0;
-						break;
-					} else if (++_ports[2] >= 65536) {
-						_ports[2] = 20000;
-					}
-					if (_trialBind(_ports[2]))
-						break;
-				}
-				if (_ports[2]) {
-					char uniqueName[64];
-					Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
-					_portMapper = new PortMapper(_ports[2],uniqueName);
-				}
-			}
-#endif
-
-			for(int i=0;i<3;++i)
-				_portsBE[i] = Utils::hton((uint16_t)_ports[i]);
-
+			// Read local configuration
 			{
 				uint64_t trustedPathIds[ZT_MAX_TRUSTED_PATHS];
 				InetAddress trustedPathNetworks[ZT_MAX_TRUSTED_PATHS];
@@ -871,6 +777,103 @@ public:
 					_node->setTrustedPaths(reinterpret_cast<const struct sockaddr_storage *>(trustedPathNetworks),trustedPathIds,trustedPathCount);
 			}
 			applyLocalConfig();
+
+			// Bind TCP control socket
+			const int portTrials = (_primaryPort == 0) ? 256 : 1; // if port is 0, pick random
+			for(int k=0;k<portTrials;++k) {
+				if (_primaryPort == 0) {
+					unsigned int randp = 0;
+					Utils::getSecureRandom(&randp,sizeof(randp));
+					_primaryPort = 20000 + (randp % 45500);
+				}
+
+				if (_trialBind(_primaryPort)) {
+					struct sockaddr_in in4;
+					memset(&in4,0,sizeof(in4));
+					in4.sin_family = AF_INET;
+					in4.sin_addr.s_addr = Utils::hton((uint32_t)((_allowManagementFrom.size() > 0) ? 0 : 0x7f000001)); // right now we just listen for TCP @127.0.0.1
+					in4.sin_port = Utils::hton((uint16_t)_primaryPort);
+					_v4TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
+
+					struct sockaddr_in6 in6;
+					memset((void *)&in6,0,sizeof(in6));
+					in6.sin6_family = AF_INET6;
+					in6.sin6_port = in4.sin_port;
+					if (_allowManagementFrom.size() == 0)
+						in6.sin6_addr.s6_addr[15] = 1; // IPv6 localhost == ::1
+					_v6TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
+
+					// We must bind one of IPv4 or IPv6 -- support either failing to support hosts that
+					// have only IPv4 or only IPv6 stacks.
+					if ((_v4TcpControlSocket)||(_v6TcpControlSocket)) {
+						_ports[0] = _primaryPort;
+						break;
+					} else {
+						if (_v4TcpControlSocket)
+							_phy.close(_v4TcpControlSocket,false);
+						if (_v6TcpControlSocket)
+							_phy.close(_v6TcpControlSocket,false);
+						_primaryPort = 0;
+					}
+				} else {
+					_primaryPort = 0;
+				}
+			}
+			if (_ports[0] == 0) {
+				Mutex::Lock _l(_termReason_m);
+				_termReason = ONE_UNRECOVERABLE_ERROR;
+				_fatalErrorMessage = "cannot bind to local control interface port";
+				return _termReason;
+			}
+
+			// Write file containing primary port to be read by CLIs, etc.
+			char portstr[64];
+			Utils::snprintf(portstr,sizeof(portstr),"%u",_ports[0]);
+			OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "zerotier-one.port").c_str(),std::string(portstr));
+
+			// Attempt to bind to a secondary port chosen from our ZeroTier address.
+			// This exists because there are buggy NATs out there that fail if more
+			// than one device behind the same NAT tries to use the same internal
+			// private address port number.
+			_ports[1] = 20000 + ((unsigned int)_node->address() % 45500);
+			for(int i=0;;++i) {
+				if (i > 1000) {
+					_ports[1] = 0;
+					break;
+				} else if (++_ports[1] >= 65536) {
+					_ports[1] = 20000;
+				}
+				if (_trialBind(_ports[1]))
+					break;
+			}
+
+#ifdef ZT_USE_MINIUPNPC
+			// If we're running uPnP/NAT-PMP, bind a *third* port for that. We can't
+			// use the other two ports for that because some NATs do really funky
+			// stuff with ports that are explicitly mapped that breaks things.
+			if (_ports[1]) {
+				_ports[2] = _ports[1];
+				for(int i=0;;++i) {
+					if (i > 1000) {
+						_ports[2] = 0;
+						break;
+					} else if (++_ports[2] >= 65536) {
+						_ports[2] = 20000;
+					}
+					if (_trialBind(_ports[2]))
+						break;
+				}
+				if (_ports[2]) {
+					char uniqueName[64];
+					Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
+					_portMapper = new PortMapper(_ports[2],uniqueName);
+				}
+			}
+#endif
+
+			// Populate ports in big-endian format for quick compare
+			for(int i=0;i<3;++i)
+				_portsBE[i] = Utils::hton((uint16_t)_ports[i]);
 
 			_controller = new EmbeddedNetworkController(_node,(_homePath + ZT_PATH_SEPARATOR_S + ZT_CONTROLLER_DB_PATH).c_str());
 			_node->setNetconfMaster((void *)_controller);
@@ -1218,6 +1221,7 @@ public:
 			}
 		}
 
+		_allowManagementFrom.clear();
 		_interfacePrefixBlacklist.clear();
 		json &settings = _localConfig["settings"];
 		if (settings.is_object()) {
@@ -1234,6 +1238,15 @@ public:
 					const std::string tmp(_jS(ignoreIfs[i],""));
 					if (tmp.length() > 0)
 						_interfacePrefixBlacklist.push_back(tmp);
+				}
+			}
+
+			json &amf = settings["allowManagementFrom"];
+			if (amf.is_array()) {
+				for(unsigned long i=0;i<amf.size();++i) {
+					const InetAddress nw(_jS(amf[i],""));
+					if (nw)
+						_allowManagementFrom.push_back(nw);
 				}
 			}
 		}
@@ -1928,7 +1941,23 @@ public:
 		std::string contentType("text/plain"); // default if not changed in handleRequest()
 		unsigned int scode = 404;
 
-		if ( ((!_allowManagementFrom)&&(tc->from.ipScope() == InetAddress::IP_SCOPE_LOOPBACK)) || (_allowManagementFrom.containsAddress(tc->from)) ) {
+		bool allow;
+		{
+			Mutex::Lock _l(_localConfig_m);
+			if (_allowManagementFrom.size() == 0) {
+				allow = (tc->from.ipScope() == InetAddress::IP_SCOPE_LOOPBACK);
+			} else {
+				allow = false;
+				for(std::vector<InetAddress>::const_iterator i(_allowManagementFrom.begin());i!=_allowManagementFrom.end();++i) {
+					if (i->containsAddress(tc->from)) {
+						allow = true;
+						break;
+					}
+				}
+			}
+		}
+
+		if (allow) {
 			try {
 				if (_controlPlane)
 					scode = _controlPlane->handleRequest(tc->from,tc->parser.method,tc->url,tc->headers,tc->body,data,contentType);
@@ -2230,7 +2259,7 @@ std::string OneService::autoUpdateUrl()
 	return std::string();
 }
 
-OneService *OneService::newInstance(const char *hp,unsigned int port,const char *allowManagementFrom) { return new OneServiceImpl(hp,port,allowManagementFrom); }
+OneService *OneService::newInstance(const char *hp,unsigned int port) { return new OneServiceImpl(hp,port); }
 OneService::~OneService() {}
 
 } // namespace ZeroTier
