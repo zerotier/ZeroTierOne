@@ -19,6 +19,7 @@
 #ifndef ZT_JSONDB_HPP
 #define ZT_JSONDB_HPP
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -41,7 +42,8 @@ namespace ZeroTier {
 class JSONDB
 {
 public:
-	JSONDB(const std::string &basePath) :
+	JSONDB(const std::string &basePath,FILE *feed) :
+		_feed(feed),
 		_basePath(basePath)
 	{
 		_reload(_basePath);
@@ -106,6 +108,7 @@ private:
 		inline bool operator!=(const _E &e) const { return (obj != e.obj); }
 	};
 
+	FILE *_feed;
 	std::string _basePath;
 	std::map<std::string,_E> _db;
 };

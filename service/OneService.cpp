@@ -875,7 +875,7 @@ public:
 			for(int i=0;i<3;++i)
 				_portsBE[i] = Utils::hton((uint16_t)_ports[i]);
 
-			_controller = new EmbeddedNetworkController(_node,(_homePath + ZT_PATH_SEPARATOR_S + ZT_CONTROLLER_DB_PATH).c_str());
+			_controller = new EmbeddedNetworkController(_node,(_homePath + ZT_PATH_SEPARATOR_S + ZT_CONTROLLER_DB_PATH).c_str(),(FILE *)0);
 			_node->setNetconfMaster((void *)_controller);
 
 #ifdef ZT_ENABLE_CLUSTER

@@ -27,13 +27,16 @@ bool JSONDB::put(const std::string &n,const nlohmann::json &obj)
 	if (!_isValidObjectName(n))
 		return false;
 
-	std::string path(_genPath(n,true));
+	const std::string path(_genPath(n,true));
 	if (!path.length())
 		return false;
 
-	std::string buf(obj.dump(2));
+	const std::string buf(obj.dump(2));
 	if (!OSUtils::writeFile(path.c_str(),buf))
 		return false;
+
+	if (_feed)
+		fwrite(buf.c_str(),buf.length()+1,1,_feed);
 
 	_E &e = _db[n];
 	e.obj = obj;
@@ -55,7 +58,8 @@ const nlohmann::json &JSONDB::get(const std::string &n,unsigned long maxSinceChe
 	if (e != _db.end()) {
 		if ((now - e->second.lastCheck) <= (uint64_t)maxSinceCheck)
 			return e->second.obj;
-		std::string path(_genPath(n,false));
+
+		const std::string path(_genPath(n,false));
 		if (!path.length()) // sanity check
 			return _EMPTY_JSON;
 
@@ -68,13 +72,16 @@ const nlohmann::json &JSONDB::get(const std::string &n,unsigned long maxSinceChe
 					e->second.obj = nlohmann::json::parse(buf);
 					e->second.lastModifiedOnDisk = lm; // don't update these if there is a parse error -- try again and again ASAP
 					e->second.lastCheck = now;
+
+					if (_feed)
+						fwrite(buf.c_str(),buf.length()+1,1,_feed); // it changed, so send to feed (also sends all objects on startup, which we want for Central)
 				} catch ( ... ) {} // parse errors result in "holding pattern" behavior
 			}
 		}
 
 		return e->second.obj;
 	} else {
-		std::string path(_genPath(n,false));
+		const std::string path(_genPath(n,false));
 		if (!path.length())
 			return _EMPTY_JSON;
 
@@ -87,9 +94,13 @@ const nlohmann::json &JSONDB::get(const std::string &n,unsigned long maxSinceChe
 			e2.obj = nlohmann::json::parse(buf);
 		} catch ( ... ) {
 			e2.obj = _EMPTY_JSON;
+			buf = "{}";
 		}
 		e2.lastModifiedOnDisk = lm;
 		e2.lastCheck = now;
+
+		if (_feed)
+			fwrite(buf.c_str(),buf.length()+1,1,_feed);
 
 		return e2.obj;
 	}

@@ -458,9 +458,9 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 	return false;
 }
 
-EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPath) :
+EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPath,FILE *feed) :
 	_threadsStarted(false),
-	_db(dbPath),
+	_db(dbPath,feed),
 	_node(node)
 {
 	OSUtils::mkdir(dbPath);

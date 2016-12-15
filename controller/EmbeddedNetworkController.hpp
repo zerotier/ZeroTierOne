@@ -53,7 +53,12 @@ class Node;
 class EmbeddedNetworkController : public NetworkController
 {
 public:
-	EmbeddedNetworkController(Node *node,const char *dbPath);
+	/**
+	 * @param node Parent node
+	 * @param dbPath Path to store data
+	 * @param feed FILE to send feed of all data and changes to (zero-delimited JSON objects) or NULL for none
+	 */
+	EmbeddedNetworkController(Node *node,const char *dbPath,FILE *feed);
 	virtual ~EmbeddedNetworkController();
 
 	virtual void init(const Identity &signingId,Sender *sender);
