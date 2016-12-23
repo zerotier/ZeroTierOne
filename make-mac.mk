@@ -69,12 +69,12 @@ one:	$(OBJS) service/OneService.o one.o
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
 	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) zerotier-one
-	$(CODESIGN) -vvv zerotier-one
+	#$(CODESIGN) -vvv zerotier-one
 
 macui:	FORCE
 	cd macui && xcodebuild -target "ZeroTier One" -configuration Release
 	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) "macui/build/Release/ZeroTier One.app"
-	$(CODESIGN) -vvv "macui/build/Release/ZeroTier One.app"
+	#$(CODESIGN) -vvv "macui/build/Release/ZeroTier One.app"
 
 cli:	FORCE
 	$(CXX) $(CXXFLAGS) -o zerotier cli/zerotier.cpp osdep/OSUtils.cpp node/InetAddress.cpp node/Utils.cpp node/Salsa20.cpp node/Identity.cpp node/SHA512.cpp node/C25519.cpp -lcurl
@@ -94,7 +94,7 @@ mac-dist-pkg: FORCE
 # For ZeroTier, Inc. to build official signed packages
 official: FORCE
 	make clean
-	make ZT_OFFICIAL_RELEASE=1 -j 4 one
+	make ZT_OFFICIAL_RELEASE=1 -j 4 one macui
 	make ZT_OFFICIAL_RELEASE=1 mac-dist-pkg
 
 clean:
