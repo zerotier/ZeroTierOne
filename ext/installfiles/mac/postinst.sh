@@ -22,7 +22,7 @@ if [ "$OSX_RELEASE" = "10.7" ]; then
 	rm -f tap.kext.10_7.tar.gz
 fi
 
-rm -rf node.log node.log.old root-topology shutdownIfUnreadable autoupdate.log updates.d
+rm -rf node.log node.log.old root-topology shutdownIfUnreadable autoupdate.log updates.d ui peers.save
 chown -R 0 tap.kext
 chgrp -R 0 tap.kext
 if [ ! -f authtoken.secret ]; then
