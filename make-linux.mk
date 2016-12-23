@@ -113,7 +113,7 @@ endif
 #LDFLAGS=
 #STRIP=echo
 
-all:	one manpages
+all:	one
 
 one:	$(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o osdep/LinuxDropPrivileges.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o osdep/LinuxDropPrivileges.o $(LDLIBS)
@@ -131,13 +131,9 @@ manpages:	FORCE
 doc:	manpages
 
 clean: FORCE
-	rm -rf *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend doc/*.1 doc/*.2 doc/*.8 debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one
+	rm -rf *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one doc/node_modules
 
 distclean:	clean
-	rm -rf doc/node_modules
-	find linux-build-farm -type f -name '*.deb' -print0 | xargs -0 rm -fv
-	find linux-build-farm -type f -name '*.rpm' -print0 | xargs -0 rm -fv
-	find linux-build-farm -type f -name 'zt1-src.tar.gz' | xargs rm -fv
 
 realclean:	distclean
 
