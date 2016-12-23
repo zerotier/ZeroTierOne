@@ -111,6 +111,7 @@ static const void _dumpFilterTrace(const char *ruleName,uint8_t thisSetMatches,b
 	);
 	if (msg)
 		printf("     +   (%s)" ZT_EOL_S,msg);
+	fflush(stdout);
 }
 #else
 #define FILTER_TRACE(f,...) {}

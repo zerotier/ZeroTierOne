@@ -428,6 +428,7 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 	} else if (t == "MATCH_RANDOM") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_RANDOM;
 		rule.v.randomProbability = (uint32_t)(_jI(r["probability"],0ULL) & 0xffffffffULL);
+		return true;
 	} else if (t == "MATCH_TAGS_DIFFERENCE") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE;
 		rule.v.tag.id = (uint32_t)(_jI(r["id"],0ULL) & 0xffffffffULL);
