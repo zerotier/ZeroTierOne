@@ -310,7 +310,7 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 		return true;
 	} else if (t == "ACTION_REDIRECT") {
 		rule.t |= ZT_NETWORK_RULE_ACTION_REDIRECT;
-		rule.v.fwd.address = Utils::hexStrToU64(_jS(r["zt"],"0").c_str()) & 0xffffffffffULL;
+		rule.v.fwd.address = Utils::hexStrToU64(_jS(r["address"],"0").c_str()) & 0xffffffffffULL;
 		rule.v.fwd.flags = (uint32_t)(_jI(r["flags"],0ULL) & 0xffffffffULL);
 		return true;
 	} else if (t == "ACTION_DEBUG_LOG") {
