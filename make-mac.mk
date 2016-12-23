@@ -28,8 +28,8 @@ ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	ZT_USE_MINIUPNPC=1
 	CODESIGN=codesign
 	PRODUCTSIGN=productsign
-	CODESIGN_APP_CERT="Developer ID Application: ZeroTier Networks LLC (8ZD9JUCZ4V)"
-	CODESIGN_INSTALLER_CERT="Developer ID Installer: ZeroTier Networks LLC (8ZD9JUCZ4V)"
+	CODESIGN_APP_CERT="Developer ID Application: ZeroTier, Inc (8ZD9JUCZ4V)"
+	CODESIGN_INSTALLER_CERT="Developer ID Installer: ZeroTier, Inc (8ZD9JUCZ4V)"
 endif
 
 ifeq ($(ZT_ENABLE_CLUSTER),1)
@@ -61,7 +61,7 @@ endif
 
 CXXFLAGS=$(CFLAGS) -mmacosx-version-min=10.7 -std=c++11 -stdlib=libc++ 
 
-all: one
+all: one macui
 
 one:	$(OBJS) service/OneService.o one.o
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o $(LIBS)
@@ -70,6 +70,11 @@ one:	$(OBJS) service/OneService.o one.o
 	ln -sf zerotier-one zerotier-cli
 	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) zerotier-one
 	$(CODESIGN) -vvv zerotier-one
+
+macui:	FORCE
+	cd macui && xcodebuild -target "ZeroTier One" -configuration Release
+	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) "macui/build/Release/ZeroTier One.app"
+	$(CODESIGN) -vvv "macui/build/Release/ZeroTier One.app"
 
 cli:	FORCE
 	$(CXX) $(CXXFLAGS) -o zerotier cli/zerotier.cpp osdep/OSUtils.cpp node/InetAddress.cpp node/Utils.cpp node/Salsa20.cpp node/Identity.cpp node/SHA512.cpp node/C25519.cpp -lcurl
@@ -93,10 +98,9 @@ official: FORCE
 	make ZT_OFFICIAL_RELEASE=1 mac-dist-pkg
 
 clean:
-	rm -rf *.dSYM build-* *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier ZeroTierOneInstaller-* mkworld doc/node_modules
+	rm -rf *.dSYM build-* *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier ZeroTierOneInstaller-* mkworld doc/node_modules macui/build
 
 distclean:	clean
-	rm -rf doc/node_modules
 
 # For those building from source -- installs signed binary tap driver in system ZT home
 install-mac-tap: FORCE
