@@ -240,7 +240,7 @@ static _doZtFilterResult _doZtFilter(
 								return DOZTFILTER_REDIRECT;
 							} else {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-								_dumpFilterTrace("ACTION_TEE",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+								_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 								dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
 								cc = fwdAddr;
