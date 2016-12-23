@@ -1287,7 +1287,8 @@ void EmbeddedNetworkController::_request(
 		authorizedBy = "memberIsAuthorized";
 	} else if (!_jB(network["private"],true)) {
 		authorizedBy = "networkIsPublic";
-		if (!member.count("authorized"))
+		json &ahist = member["authHistory"];
+		if ((!ahist.is_array())||(ahist.size() == 0))
 			autoAuthorized = true;
 	} else {
 		char presentedAuth[512];
