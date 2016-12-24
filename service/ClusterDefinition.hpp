@@ -26,14 +26,17 @@
 
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
+#include "../node/NonCopyable.hpp"
 #include "../osdep/OSUtils.hpp"
+
+#include "ClusterGeoIpService.hpp"
 
 namespace ZeroTier {
 
 /**
  * Parser for cluster definition file
  */
-class ClusterDefinition
+class ClusterDefinition : NonCopyable
 {
 public:
 	struct MemberDefinition
@@ -47,6 +50,13 @@ public:
 		std::vector<InetAddress> zeroTierEndpoints;
 	};
 
+	/**
+	 * Load and initialize cluster definition and GeoIP data if any
+	 *
+	 * @param myAddress My ZeroTier address
+	 * @param pathToClusterFile Path to cluster definition file
+	 * @throws std::runtime_error Invalid cluster definition or unable to load data
+	 */
 	ClusterDefinition(uint64_t myAddress,const char *pathToClusterFile)
 	{
 		std::string cf;
@@ -62,9 +72,23 @@ public:
 			if ((fields.size() < 5)||(fields[0][0] == '#')||(fields[0] != myAddressStr))
 				continue;
 
+			// <address> geo <CSV path> <ip start column> <ip end column> <latitutde column> <longitude column>
+			if (fields[1] == "geo") {
+				if ((fields.size() >= 7)&&(OSUtils::fileExists(fields[2].c_str()))) {
+					int ipStartColumn = Utils::strToInt(fields[3].c_str());
+					int ipEndColumn = Utils::strToInt(fields[4].c_str());
+					int latitudeColumn = Utils::strToInt(fields[5].c_str());
+					int longitudeColumn = Utils::strToInt(fields[6].c_str());
+					if (_geo.load(fields[2].c_str(),ipStartColumn,ipEndColumn,latitudeColumn,longitudeColumn) <= 0)
+						throw std::runtime_error(std::string("failed to load geo-ip data from ")+fields[2]);
+				}
+				continue;
+			}
+
+			// <address> <ID> <name> <backplane IP/port(s)> <ZT frontplane IP/port(s)> <x,y,z>
 			int id = Utils::strToUInt(fields[1].c_str());
 			if ((id < 0)||(id > ZT_CLUSTER_MAX_MEMBERS))
-				continue;
+				throw std::runtime_error(std::string("invalid cluster member ID: ")+fields[1]);
 			MemberDefinition &md = _md[id];
 
 			md.id = (unsigned int)id;
@@ -92,10 +116,29 @@ public:
 		std::sort(_ids.begin(),_ids.end());
 	}
 
+	/**
+	 * @return All member definitions in this cluster by ID (ID is array index)
+	 */
 	inline const MemberDefinition &operator[](unsigned int id) const throw() { return _md[id]; }
+
+	/**
+	 * @return Number of members in this cluster
+	 */
 	inline unsigned int size() const throw() { return (unsigned int)_ids.size(); }
+
+	/**
+	 * @return IDs of members in this cluster sorted by ID
+	 */
 	inline const std::vector<unsigned int> &ids() const throw() { return _ids; }
 
+	/**
+	 * @return GeoIP service for this cluster
+	 */
+	inline ClusterGeoIpService &geo() throw() { return _geo; }
+
+	/**
+	 * @return A vector (new copy) containing all cluster members
+	 */
 	inline std::vector<MemberDefinition> members() const
 	{
 		std::vector<MemberDefinition> m;
@@ -107,6 +150,7 @@ public:
 private:
 	MemberDefinition _md[ZT_CLUSTER_MAX_MEMBERS];
 	std::vector<unsigned int> _ids;
+	ClusterGeoIpService _geo;
 };
 
 } // namespace ZeroTier

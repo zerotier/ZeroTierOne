@@ -231,7 +231,6 @@ struct InetAddress : public sockaddr_storage
 	 * @param port Port, 0 to 65535
 	 */
 	inline void setPort(unsigned int port)
-		throw()
 	{
 		switch(ss_family) {
 			case AF_INET:
@@ -241,6 +240,25 @@ struct InetAddress : public sockaddr_storage
 				reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_port = Utils::hton((uint16_t)port);
 				break;
 		}
+	}
+
+	/**
+	 * @return True if this network/netmask route describes a default route (e.g. 0.0.0.0/0)
+	 */
+	inline bool isDefaultRoute() const
+	{
+		switch(ss_family) {
+			case AF_INET:
+				return ( (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == 0) && (reinterpret_cast<const struct sockaddr_in *>(this)->sin_port == 0) );
+			case AF_INET6:
+				const uint8_t *ipb = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+				for(int i=0;i<16;++i) {
+					if (ipb[i])
+						return false;
+				}
+				return (reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port == 0);
+		}
+		return false;
 	}
 
 	/**
@@ -453,8 +471,7 @@ struct InetAddress : public sockaddr_storage
 	 * @param mac MAC address seed
 	 * @return IPv6 link-local address
 	 */
-	static InetAddress makeIpv6LinkLocal(const MAC &mac)
-		throw();
+	static InetAddress makeIpv6LinkLocal(const MAC &mac);
 
 	/**
 	 * Compute private IPv6 unicast address from network ID and ZeroTier address
@@ -497,8 +514,12 @@ struct InetAddress : public sockaddr_storage
 	 * @param zeroTierAddress 40-bit device address (in least significant 40 bits, highest 24 bits ignored)
 	 * @return IPv6 private unicast address with /88 netmask
 	 */
-	static InetAddress makeIpv6rfc4193(uint64_t nwid,uint64_t zeroTierAddress)
-		throw();
+	static InetAddress makeIpv6rfc4193(uint64_t nwid,uint64_t zeroTierAddress);
+
+	/**
+	 * Compute a private IPv6 "6plane" unicast address from network ID and ZeroTier address
+	 */
+	static InetAddress makeIpv66plane(uint64_t nwid,uint64_t zeroTierAddress);
 };
 
 } // namespace ZeroTier

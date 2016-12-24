@@ -1,5 +1,9 @@
 # Main binaries created in *nix builds
-/zerotier-*
+/zerotier-one
+/zerotier-idtool
+/zerotier-cli
+/zerotier-selftest
+/zerotier
 
 # OS-created garbage files from various platforms
 .DS_Store
@@ -33,6 +37,7 @@ Thumbs.db
 /examples/docker/test-*.env
 /world/mkworld
 /world/*.c25519
+zt1-src.tar.gz
 
 # Miscellaneous temporaries, build files, etc.
 *.log
@@ -54,18 +59,16 @@ Thumbs.db
 *.rpm
 *.autosave
 *.tmp
+doc/*.1
+doc/*.2
+doc/*.8
 .depend
 node_modules
-cluster-geo/cluster-geo/config.js
-cluster-geo/cluster-geo/cache.*
-tests/http/zerotier-one
-tests/http/big-test-hosts
-netcon/httpstub
-
-# MacGap wrapper build files
-/ext/mac-ui-macgap1-wrapper/src/MacGap.xcodeproj/project.xcworkspace/xcuserdata/*
-/ext/mac-ui-macgap1-wrapper/src/MacGap.xcodeproj/xcuserdata/*
-/ext/mac-ui-macgap1-wrapper/src/build
+debian/files
+debian/zerotier-one
+debian/zerotier-one*.debhelper
+debian/*.log
+debian/zerotier-one.substvars
 
 # Java/Android/JNI build droppings
 java/obj/
@@ -79,3 +82,4 @@ java/build_win32/
 windows/WinUI/obj/
 windows/WinUI/bin/
 windows/ZeroTierOne/Debug/
+/ext/installfiles/windows/chocolatey/zerotier-one/*.nupkg

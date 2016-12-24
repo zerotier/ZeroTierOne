@@ -1,7 +1,0 @@
-// MaxMind GeoIP2 config
-module.exports.maxmind = {
-	userId: 1234,
-	licenseKey: 'asdf',
-	service: 'city',
-	requestTimeout: 1000
-};

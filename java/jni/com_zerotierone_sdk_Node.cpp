@@ -90,6 +90,7 @@ namespace {
         ZT_Node *node,
         void *userData,
         uint64_t nwid,
+        void **,
         enum ZT_VirtualNetworkConfigOperation operation,
         const ZT_VirtualNetworkConfig *config)
     {
@@ -137,6 +138,7 @@ namespace {
     void VirtualNetworkFrameFunctionCallback(ZT_Node *node,
         void *userData,
         uint64_t nwid,
+        void**,
         uint64_t sourceMac,
         uint64_t destMac,
         unsigned int etherType,
@@ -609,6 +611,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
         &WirePacketSendFunction,
         &VirtualNetworkFrameFunctionCallback,
         &VirtualNetworkConfigFunctionCallback,
+        NULL,
         &EventCallback);
 
     if(rc != ZT_RESULT_OK)
@@ -995,7 +998,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_join(
 
     uint64_t nwid = (uint64_t)in_nwid;
 
-    ZT_ResultCode rc = ZT_Node_join(node, nwid);
+    ZT_ResultCode rc = ZT_Node_join(node, nwid, NULL);
 
     return createResultObject(env, rc);
 }
@@ -1018,8 +1021,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_leave(
 
     uint64_t nwid = (uint64_t)in_nwid;
 
-    ZT_ResultCode rc = ZT_Node_leave(node, nwid);
-
+    ZT_ResultCode rc = ZT_Node_leave(node, nwid, NULL);
+    
     return createResultObject(env, rc);
 }
 
@@ -1231,11 +1234,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_version(
     int major = 0;
     int minor = 0;
     int revision = 0;
-    unsigned long featureFlags = 0;
 
-    ZT_version(&major, &minor, &revision, &featureFlags);
+    ZT_version(&major, &minor, &revision);
 
-    return newVersion(env, major, minor, revision, featureFlags);
+    return newVersion(env, major, minor, revision);
 }
 
 /*

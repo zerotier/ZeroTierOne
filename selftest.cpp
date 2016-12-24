@@ -36,6 +36,7 @@
 #include "node/Packet.hpp"
 #include "node/Salsa20.hpp"
 #include "node/MAC.hpp"
+#include "node/NetworkConfig.hpp"
 #include "node/Peer.hpp"
 #include "node/Dictionary.hpp"
 #include "node/SHA512.hpp"
@@ -763,28 +764,65 @@ static int testOther()
 	}
 	std::cout << "PASS" << std::endl;
 
-	std::cout << "[other] Testing Dictionary... "; std::cout.flush();
+	std::cout << "[other] Testing/fuzzing Dictionary... "; std::cout.flush();
 	for(int k=0;k<1000;++k) {
-		Dictionary a,b;
-		int nk = rand() % 32;
-		for(int q=0;q<nk;++q) {
-			std::string k,v;
-			int kl = (rand() % 512);
-			int vl = (rand() % 512);
-			for(int i=0;i<kl;++i)
-				k.push_back((char)rand());
-			for(int i=0;i<vl;++i)
-				v.push_back((char)rand());
-			a[k] = v;
+		Dictionary<8194> test;
+		char key[32][16];
+		char value[32][128];
+		for(unsigned int q=0;q<32;++q) {
+			Utils::snprintf(key[q],16,"%.8lx",(unsigned long)rand());
+			int r = rand() % 128;
+			for(int x=0;x<r;++x)
+				value[q][x] = ("0123456789\0\t\r\n= ")[rand() % 16];
+			value[q][r] = (char)0;
+			test.add(key[q],value[q],r);
 		}
-		std::string aser = a.toString();
-		b.fromString(aser);
-		if (a != b) {
-			std::cout << "FAIL!" << std::endl;
-			return -1;
+		for(unsigned int q=0;q<1024;++q) {
+			//int r = rand() % 128;
+			int r = 31;
+			char tmp[128];
+			if (test.get(key[r],tmp,sizeof(tmp)) >= 0) {
+				if (strcmp(value[r],tmp)) {
+					std::cout << "FAILED (invalid value)!" << std::endl;
+					return -1;
+				}
+			} else {
+				std::cout << "FAILED (can't find key '" << key[r] << "')!" << std::endl;
+				return -1;
+			}
+		}
+		for(unsigned int q=0;q<31;++q) {
+			char tmp[128];
+			test.erase(key[q]);
+			if (test.get(key[q],tmp,sizeof(tmp)) >= 0) {
+				std::cout << "FAILED (key should have been erased)!" << std::endl;
+				return -1;
+			}
+			if (test.get(key[q+1],tmp,sizeof(tmp)) < 0) {
+				std::cout << "FAILED (key should NOT have been erased)!" << std::endl;
+				return -1;
+			}
 		}
 	}
-	std::cout << "PASS" << std::endl;
+	int foo = 0;
+	volatile int *volatile bar = &foo; // force compiler not to optimize out test.get() below
+	for(int k=0;k<200;++k) {
+		int r = rand() % 8194;
+		unsigned char tmp[8194];
+		for(int q=0;q<r;++q)
+			tmp[q] = (unsigned char)((rand() % 254) + 1); // don't put nulls since those will always just terminate scan
+		tmp[r] = (r % 32) ? (char)(rand() & 0xff) : (char)0; // every 32nd iteration don't terminate the string maybe...
+		Dictionary<8194> test((const char *)tmp);
+		for(unsigned int q=0;q<100;++q) {
+			char tmp[128];
+			for(unsigned int x=0;x<128;++x)
+				tmp[x] = (char)(rand() & 0xff);
+			tmp[127] = (char)0;
+			char value[8194];
+			*bar += test.get(tmp,value,sizeof(value));
+		}
+	}
+	std::cout << "PASS (junk value to prevent optimization-out of test: " << foo << ")" << std::endl;
 
 	return 0;
 }
@@ -804,7 +842,7 @@ struct TestPhyHandlers;
 static Phy<TestPhyHandlers *> *testPhyInstance = (Phy<TestPhyHandlers *> *)0;
 struct TestPhyHandlers
 {
-	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
+	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
 	{
 		++phyTestUdpPacketCount;
 	}
@@ -852,7 +890,7 @@ struct TestPhyHandlers
 	inline void phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN) {}
 	inline void phyOnUnixClose(PhySocket *sock,void **uptr) {}
 	inline void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
-	inline void phyOnUnixWritable(PhySocket *sock,void **uptr) {}
+	inline void phyOnUnixWritable(PhySocket *sock,void **uptr,bool b) {}
 #endif // __UNIX_LIKE__
 
 	inline void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable) {}
@@ -937,42 +975,6 @@ static int testPhy()
 	return 0;
 }
 
-static int testSqliteNetworkController()
-{
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-
-	OSUtils::rm("./selftest_network_controller.db");
-
-	try {
-		std::cout << "[network-controller] Generating signing identity..." << std::endl;
-		Identity signingId;
-		signingId.generate();
-
-		{
-			std::cout << "[network-controller] Creating database..." << std::endl;
-			SqliteNetworkController controller("./selftest_network_controller.db");
-			std::cout << "[network-controller] Closing database..." << std::endl;
-		}
-
-		{
-			std::cout << "[network-controller] Re-opening database..." << std::endl;
-			SqliteNetworkController controller("./selftest_network_controller.db");
-			std::cout << "[network-controller] Closing database..." << std::endl;
-		}
-	} catch (std::runtime_error &exc) {
-		std::cout << "FAIL! (unexpected exception: " << exc.what() << ")" << std::endl;
-		return -1;
-	} catch ( ... ) {
-		std::cout << "FAIL! (unexpected exception: ...)" << std::endl;
-		return -1;
-	}
-
-	OSUtils::rm("./selftest_network_controller.db");
-
-#endif // ZT_ENABLE_NETWORK_CONTROLLER
-	return 0;
-}
-
 static int testResolver()
 {
 	std::cout << "[resolver] Testing BackgroundResolver..."; std::cout.flush();
@@ -990,6 +992,7 @@ static int testResolver()
 	return 0;
 }
 
+/*
 static int testHttp()
 {
 	std::map<std::string,std::string> requestHeaders,responseHeaders;
@@ -1032,6 +1035,7 @@ static int testHttp()
 
 	return 0;
 }
+*/
 
 #ifdef __WINDOWS__
 int _tmain(int argc, _TCHAR* argv[])
@@ -1084,11 +1088,11 @@ int main(int argc,char **argv)
 	*/
 
 	std::cout << "[info] sizeof(void *) == " << sizeof(void *) << std::endl;
+	std::cout << "[info] sizeof(NetworkConfig) == " << sizeof(ZeroTier::NetworkConfig) << std::endl;
 
 	srand((unsigned int)time(0));
 
 	///*
-	r |= testSqliteNetworkController();
 	r |= testOther();
 	r |= testCrypto();
 	r |= testPacket();

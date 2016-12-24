@@ -1,12 +1,8 @@
 OBJS=\
-	ext/lz4/lz4.o \
-	ext/json-parser/json.o \
-	ext/http-parser/http_parser.o \
 	node/C25519.o \
 	node/CertificateOfMembership.o \
 	node/Cluster.o \
 	node/DeferredPackets.o \
-	node/Dictionary.o \
 	node/Identity.o \
 	node/IncomingPacket.o \
 	node/InetAddress.o \
@@ -26,6 +22,7 @@ OBJS=\
 	node/Topology.o \
 	node/Utils.o \
 	osdep/BackgroundResolver.o \
+	osdep/ManagedRoute.o \
 	osdep/Http.o \
 	osdep/OSUtils.o \
 	service/ClusterGeoIpService.o \

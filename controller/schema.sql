@@ -9,12 +9,11 @@ CREATE TABLE Network (
   private integer NOT NULL DEFAULT(1),
   enableBroadcast integer NOT NULL DEFAULT(1),
   allowPassiveBridging integer NOT NULL DEFAULT(0),
-  v4AssignMode varchar(8) NOT NULL DEFAULT('none'),
-  v6AssignMode varchar(8) NOT NULL DEFAULT('none'),
   multicastLimit integer NOT NULL DEFAULT(32),
   creationTime integer NOT NULL DEFAULT(0),
   revision integer NOT NULL DEFAULT(1),
-  memberRevisionCounter integer NOT NULL DEFAULT(1)
+  memberRevisionCounter integer NOT NULL DEFAULT(1),
+  flags integer NOT NULL DEFAULT(0)
 );
 
 CREATE TABLE AuthToken (
@@ -33,15 +32,6 @@ CREATE TABLE Node (
   id char(10) PRIMARY KEY NOT NULL,
   identity varchar(4096) NOT NULL
 );
-
-CREATE TABLE Gateway (
-  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
-  ip blob(16) NOT NULL,
-  ipVersion integer NOT NULL DEFAULT(4),
-  metric integer NOT NULL DEFAULT(0)
-);
-
-CREATE UNIQUE INDEX Gateway_networkId_ip ON Gateway (networkId, ip);
 
 CREATE TABLE IpAssignment (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
@@ -71,11 +61,30 @@ CREATE TABLE Member (
   authorized integer NOT NULL DEFAULT(0),
   activeBridge integer NOT NULL DEFAULT(0),
   memberRevision integer NOT NULL DEFAULT(0),
+  flags integer NOT NULL DEFAULT(0),
+  lastRequestTime integer NOT NULL DEFAULT(0),
+  lastPowDifficulty integer NOT NULL DEFAULT(0),
+  lastPowTime integer NOT NULL DEFAULT(0),
+  recentHistory blob,
   PRIMARY KEY (networkId, nodeId)
 );
 
+CREATE INDEX Member_networkId_nodeId ON Member(networkId,nodeId);
 CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);
 CREATE INDEX Member_networkId_memberRevision ON Member(networkId, memberRevision);
+CREATE INDEX Member_networkId_lastRequestTime ON Member(networkId, lastRequestTime);
+
+CREATE TABLE Route (
+  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
+  target blob(16) NOT NULL,
+  via blob(16),
+  targetNetmaskBits integer NOT NULL,
+  ipVersion integer NOT NULL,
+  flags integer NOT NULL,
+  metric integer NOT NULL
+);
+
+CREATE INDEX Route_networkId ON Route (networkId);
 
 CREATE TABLE Relay (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,

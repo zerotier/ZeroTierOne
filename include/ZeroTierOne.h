@@ -79,12 +79,32 @@ extern "C" {
 /**
  * Maximum length of network short name
  */
-#define ZT_MAX_NETWORK_SHORT_NAME_LENGTH 255
+#define ZT_MAX_NETWORK_SHORT_NAME_LENGTH 127
+
+/**
+ * Maximum number of pushed routes on a network
+ */
+#define ZT_MAX_NETWORK_ROUTES 32
 
 /**
  * Maximum number of statically assigned IP addresses per network endpoint using ZT address management (not DHCP)
  */
 #define ZT_MAX_ZT_ASSIGNED_ADDRESSES 16
+
+/**
+ * Maximum number of "specialists" on a network -- bridges, relays, etc.
+ */
+#define ZT_MAX_NETWORK_SPECIALISTS 256
+
+/**
+ * Maximum number of static physical to ZeroTier address mappings (typically relays, etc.)
+ */
+#define ZT_MAX_NETWORK_PINNED 16
+
+/**
+ * Maximum number of rule table entries per network (can be increased)
+ */
+#define ZT_MAX_NETWORK_RULES 256
 
 /**
  * Maximum number of multicast group subscriptions per network
@@ -97,14 +117,9 @@ extern "C" {
 #define ZT_MAX_PEER_NETWORK_PATHS 4
 
 /**
- * Feature flag: ZeroTier One was built to be thread-safe -- concurrent processXXX() calls are okay
+ * Maximum number of trusted physical network paths
  */
-#define ZT_FEATURE_FLAG_THREAD_SAFE 0x00000001
-
-/**
- * Feature flag: FIPS compliant build (not available yet, but reserved for future use if we ever do this)
- */
-#define ZT_FEATURE_FLAG_FIPS 0x00000002
+#define ZT_MAX_TRUSTED_PATHS 16
 
 /**
  * Maximum number of hops in a ZeroTier circuit test
@@ -112,12 +127,12 @@ extern "C" {
  * This is more or less the max that can be fit in a given packet (with
  * fragmentation) and only one address per hop.
  */
-#define ZT_CIRCUIT_TEST_MAX_HOPS 512
+#define ZT_CIRCUIT_TEST_MAX_HOPS 256
 
 /**
  * Maximum number of addresses per hop in a circuit test
  */
-#define ZT_CIRCUIT_TEST_MAX_HOP_BREADTH 256
+#define ZT_CIRCUIT_TEST_MAX_HOP_BREADTH 8
 
 /**
  * Maximum number of cluster members (and max member ID plus one)
@@ -352,7 +367,7 @@ enum ZT_VirtualNetworkStatus
 	ZT_NETWORK_STATUS_PORT_ERROR = 4,
 
 	/**
-	 * ZeroTier One version too old
+	 * ZeroTier core version too old
 	 */
 	ZT_NETWORK_STATUS_CLIENT_TOO_OLD = 5
 };
@@ -372,6 +387,285 @@ enum ZT_VirtualNetworkType
 	 */
 	ZT_NETWORK_TYPE_PUBLIC = 1
 };
+
+/**
+ * The type of a virtual network rules table entry
+ *
+ * These must range from 0 to 127 (0x7f).
+ *
+ * Each rule is composed of one or more MATCHes followed by an ACTION.
+ */
+enum ZT_VirtualNetworkRuleType
+{
+	/**
+	 * Drop frame
+	 */
+	ZT_NETWORK_RULE_ACTION_DROP = 0,
+
+	/**
+	 * Accept and pass frame
+	 */
+	ZT_NETWORK_RULE_ACTION_ACCEPT = 1,
+
+	/**
+	 * Forward a copy of this frame to an observer
+	 */
+	ZT_NETWORK_RULE_ACTION_TEE = 2,
+
+	/**
+	 * Explicitly redirect this frame to another device (ignored if this is the target device)
+	 */
+	ZT_NETWORK_RULE_ACTION_REDIRECT = 3,
+
+	// <32 == actions
+
+	/**
+	 * Source ZeroTier address -- analogous to an Ethernet port ID on a switch
+	 */
+	ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS = 32,
+
+	/**
+	 * Destination ZeroTier address -- analogous to an Ethernet port ID on a switch
+	 */
+	ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS = 33,
+
+	/**
+	 * Ethernet VLAN ID
+	 */
+	ZT_NETWORK_RULE_MATCH_VLAN_ID = 34,
+
+	/** 
+	 * Ethernet VLAN PCP
+	 */
+	ZT_NETWORK_RULE_MATCH_VLAN_PCP = 35,
+
+	/**
+	 * Ethernet VLAN DEI
+	 */
+	ZT_NETWORK_RULE_MATCH_VLAN_DEI = 36,
+
+	/**
+	 * Ethernet frame type
+	 */
+	ZT_NETWORK_RULE_MATCH_ETHERTYPE = 37,
+
+	/**
+	 * Source Ethernet MAC address
+	 */
+	ZT_NETWORK_RULE_MATCH_MAC_SOURCE = 38,
+
+	/**
+	 * Destination Ethernet MAC address
+	 */
+	ZT_NETWORK_RULE_MATCH_MAC_DEST = 39,
+
+	/**
+	 * Source IPv4 address
+	 */
+	ZT_NETWORK_RULE_MATCH_IPV4_SOURCE = 40,
+
+	/**
+	 * Destination IPv4 address
+	 */
+	ZT_NETWORK_RULE_MATCH_IPV4_DEST = 41,
+
+	/**
+	 * Source IPv6 address
+	 */
+	ZT_NETWORK_RULE_MATCH_IPV6_SOURCE = 42,
+
+	/**
+	 * Destination IPv6 address
+	 */
+	ZT_NETWORK_RULE_MATCH_IPV6_DEST = 43,
+
+	/**
+	 * IP TOS (type of service)
+	 */
+	ZT_NETWORK_RULE_MATCH_IP_TOS = 44,
+
+	/**
+	 * IP protocol
+	 */
+	ZT_NETWORK_RULE_MATCH_IP_PROTOCOL = 45,
+
+	/**
+	 * IP source port range (start-end, inclusive)
+	 */
+	ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE = 46,
+
+	/**
+	 * IP destination port range (start-end, inclusive)
+	 */
+	ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE = 47,
+
+	/**
+	 * Packet characteristics (set of flags)
+	 */
+	ZT_NETWORK_RULE_MATCH_CHARACTERISTICS = 48,
+
+	/**
+	 * Frame size range (start-end, inclusive)
+	 */
+	ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE = 49,
+
+	/**
+	 * Match a range of relative TCP sequence numbers (e.g. approx first N bytes of stream)
+	 */
+	ZT_NETWORK_RULE_MATCH_TCP_RELATIVE_SEQUENCE_NUMBER_RANGE = 50,
+
+	/**
+	 * Match a certificate of network membership field from the ZT origin's COM: greater than or equal to
+	 */
+	ZT_NETWORK_RULE_MATCH_COM_FIELD_GE = 51,
+
+	/**
+	 * Match a certificate of network membership field from the ZT origin's COM: less than or equal to
+	 */
+	ZT_NETWORK_RULE_MATCH_COM_FIELD_LE = 52
+};
+
+/**
+ * Network flow rule
+ *
+ * NOTE: Currently (1.1.x) only etherType is supported! Other things will
+ * have no effect until the rules engine is fully implemented.
+ *
+ * Rules are stored in a table in which one or more match entries is followed
+ * by an action. If more than one match precedes an action, the rule is
+ * the AND of all matches. An action with no match is always taken since it
+ * matches anything. If nothing matches, the default action is DROP.
+ *
+ * This is designed to be a more memory-efficient way of storing rules than
+ * a wide table, yet still fast and simple to access in code.
+ */
+typedef struct
+{
+	/** 
+	 * Least significant 7 bits: ZT_VirtualNetworkRuleType, most significant 1 bit is NOT bit
+	 *
+	 * If the NOT bit is set, then matches will be interpreted as "does not
+	 * match." The NOT bit has no effect on actions.
+	 *
+	 * Use "& 0x7f" to get the enum and "& 0x80" to get the NOT flag.
+	 *
+	 * The union 'v' is a variant type, and this selects which field in 'v' is
+	 * actually used and valid.
+	 */
+	uint8_t t;
+
+	/**
+	 * Union containing the value of this rule -- which field is used depends on 't'
+	 */
+	union {
+		/**
+		 * IPv6 address in big-endian / network byte order and netmask bits
+		 */
+		struct {
+			uint8_t ip[16];
+			uint8_t mask;
+		} ipv6;
+
+		/**
+		 * IPv4 address in big-endian / network byte order
+		 */
+		struct {
+			uint32_t ip;
+			uint8_t mask;
+		} ipv4;
+
+		/**
+		 * Packet characteristic flags being matched
+		 */
+		uint64_t characteristics;
+
+		/**
+		 * IP port range -- start-end inclusive -- host byte order
+		 */
+		uint16_t port[2];
+
+		/**
+		 * TCP relative sequence number range -- start-end inclusive -- host byte order
+		 */
+		uint32_t tcpseq[2];
+
+		/**
+		 * 40-bit ZeroTier address (in least significant bits, host byte order)
+		 */
+		uint64_t zt;
+
+		/**
+		 * 48-bit Ethernet MAC address in big-endian order
+		 */
+		uint8_t mac[6];
+
+		/**
+		 * VLAN ID in host byte order
+		 */
+		uint16_t vlanId;
+
+		/**
+		 * VLAN PCP (least significant 3 bits)
+		 */
+		uint8_t vlanPcp;
+
+		/**
+		 * VLAN DEI (single bit / boolean)
+		 */
+		uint8_t vlanDei;
+
+		/**
+		 * Ethernet type in host byte order
+		 */
+		uint16_t etherType;
+
+		/**
+		 * IP protocol
+		 */
+		uint8_t ipProtocol;
+
+		/**
+		 * IP type of service
+		 */
+		uint8_t ipTos;
+
+		/**
+		 * Ethernet packet size in host byte order (start-end, inclusive)
+		 */
+		uint16_t frameSize[2];
+
+		/**
+		 * COM ID and value for ZT_NETWORK_RULE_MATCH_COM_FIELD_GE and ZT_NETWORK_RULE_MATCH_COM_FIELD_LE
+		 */
+		uint64_t comIV[2];
+	} v;
+} ZT_VirtualNetworkRule;
+
+/**
+ * A route to be pushed on a virtual network
+ */
+typedef struct
+{
+	/**
+	 * Target network / netmask bits (in port field) or NULL or 0.0.0.0/0 for default
+	 */
+	struct sockaddr_storage target;
+
+	/**
+	 * Gateway IP address (port ignored) or NULL (family == 0) for LAN-local (no gateway)
+	 */
+	struct sockaddr_storage via;
+
+	/**
+	 * Route flags
+	 */
+	uint16_t flags;
+
+	/**
+	 * Route metric (not currently used)
+	 */
+	uint16_t metric;
+} ZT_VirtualNetworkRoute;
 
 /**
  * An Ethernet multicast group
@@ -465,7 +759,13 @@ enum ZT_Architecture {
 	ZT_ARCHITECTURE_MIPS32 = 5,
 	ZT_ARCHITECTURE_MIPS64 = 6,
 	ZT_ARCHITECTURE_POWER32 = 7,
-	ZT_ARCHITECTURE_POWER64 = 8
+	ZT_ARCHITECTURE_POWER64 = 8,
+	ZT_ARCHITECTURE_OPENRISC32 = 9,
+	ZT_ARCHITECTURE_OPENRISC64 = 10,
+	ZT_ARCHITECTURE_SPARC32 = 11,
+	ZT_ARCHITECTURE_SPARC64 = 12,
+	ZT_ARCHITECTURE_DOTNET_CLR = 13,
+	ZT_ARCHITECTURE_JAVA_JVM = 14
 };
 
 /**
@@ -526,31 +826,14 @@ typedef struct
 	int broadcastEnabled;
 
 	/**
-	 * If the network is in PORT_ERROR state, this is the error most recently returned by the port config callback
+	 * If the network is in PORT_ERROR state, this is the (negative) error code most recently reported
 	 */
 	int portError;
 
 	/**
-	 * Is this network enabled? If not, all frames to/from are dropped.
-	 */
-	int enabled;
-
-	/**
-	 * Network config revision as reported by netconf master
-	 *
-	 * If this is zero, it means we're still waiting for our netconf.
+	 * Revision number as reported by controller or 0 if still waiting for config
 	 */
 	unsigned long netconfRevision;
-
-	/**
-	 * Number of multicast group subscriptions
-	 */
-	unsigned int multicastSubscriptionCount;
-
-	/**
-	 * Multicast group subscriptions
-	 */
-	ZT_MulticastGroup multicastSubscriptions[ZT_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS];
 
 	/**
 	 * Number of assigned addresses
@@ -568,6 +851,16 @@ typedef struct
 	 * virtual network's configuration master.
 	 */
 	struct sockaddr_storage assignedAddresses[ZT_MAX_ZT_ASSIGNED_ADDRESSES];
+
+	/**
+	 * Number of ZT-pushed routes
+	 */
+	unsigned int routeCount;
+
+	/**
+	 * Routes (excluding those implied by assigned addresses and their masks)
+	 */
+	ZT_VirtualNetworkRoute routes[ZT_MAX_NETWORK_ROUTES];
 } ZT_VirtualNetworkConfig;
 
 /**
@@ -598,6 +891,11 @@ typedef struct
 	 * Time of last receive in milliseconds or 0 for never
 	 */
 	uint64_t lastReceive;
+
+	/**
+	 * Is this a trusted path? If so this will be its nonzero ID.
+	 */
+	uint64_t trustedPathId;
 
 	/**
 	 * Is path active?
@@ -1550,6 +1848,29 @@ void ZT_Node_clusterHandleIncomingMessage(ZT_Node *node,const void *msg,unsigned
 void ZT_Node_clusterStatus(ZT_Node *node,ZT_ClusterStatus *cs);
 
 /**
+ * Set trusted paths
+ *
+ * A trusted path is a physical network (network/bits) over which both
+ * encryption and authentication can be skipped to improve performance.
+ * Each trusted path must have a non-zero unique ID that is the same across
+ * all participating nodes.
+ *
+ * We don't recommend using trusted paths at all unless you really *need*
+ * near-bare-metal performance. Even on a LAN authentication and encryption
+ * are never a bad thing, and anything that introduces an "escape hatch"
+ * for encryption should be treated with the utmost care.
+ *
+ * Calling with NULL pointers for networks and ids and a count of zero clears
+ * all trusted paths.
+ *
+ * @param node Node instance
+ * @param networks Array of [count] networks
+ * @param ids Array of [count] corresponding non-zero path IDs (zero path IDs are ignored)
+ * @param count Number of trusted paths-- values greater than ZT_MAX_TRUSTED_PATHS are clipped
+ */
+void ZT_Node_setTrustedPaths(ZT_Node *node,const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count);
+
+/**
  * Do things in the background until Node dies
  *
  * This function can be called from one or more background threads to process
@@ -1576,9 +1897,8 @@ void ZT_Node_backgroundThreadMain(ZT_Node *node);
  * @param major Result: major version
  * @param minor Result: minor version
  * @param revision Result: revision
- * @param featureFlags: Result: feature flag bitmap
  */
-void ZT_version(int *major,int *minor,int *revision,unsigned long *featureFlags);
+void ZT_version(int *major,int *minor,int *revision);
 
 #ifdef __cplusplus
 }

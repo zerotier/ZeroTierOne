@@ -22,14 +22,15 @@
 #include <stdint.h>
 
 #include "Constants.hpp"
-#include "InetAddress.hpp"
 #include "Dictionary.hpp"
-#include "Address.hpp"
-#include "Identity.hpp"
+#include "NetworkConfig.hpp"
 
 namespace ZeroTier {
 
 class RuntimeEnvironment;
+class Identity;
+class Address;
+struct InetAddress;
 
 /**
  * Interface for network controller implementations
@@ -65,17 +66,17 @@ public:
 	 * @param signingId Identity that should be used to sign results -- must include private key
 	 * @param identity Originating peer ZeroTier identity
 	 * @param nwid 64-bit network ID
-	 * @param metaData Meta-data bundled with request (empty if none)
-	 * @param result Dictionary to receive resulting signed netconf on success
-	 * @return Returns NETCONF_QUERY_OK if result dictionary is valid, or an error code on error
+	 * @param metaData Meta-data bundled with request (if any)
+	 * @param nc NetworkConfig to fill with results
+	 * @return Returns NETCONF_QUERY_OK if result 'nc' is valid, or an error code on error
 	 */
 	virtual NetworkController::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
 		const Identity &signingId,
 		const Identity &identity,
 		uint64_t nwid,
-		const Dictionary &metaData,
-		Dictionary &result) = 0;
+		const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &metaData,
+		NetworkConfig &nc) = 0;
 };
 
 } // namespace ZeroTier

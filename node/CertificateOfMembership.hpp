@@ -23,8 +23,8 @@
 #include <string.h>
 
 #include <string>
-#include <vector>
 #include <stdexcept>
+#include <algorithm>
 
 #include "Constants.hpp"
 #include "Buffer.hpp"
@@ -32,6 +32,21 @@
 #include "C25519.hpp"
 #include "Identity.hpp"
 #include "Utils.hpp"
+
+/**
+ * Default window of time for certificate agreement
+ *
+ * Right now we use time for 'revision' so this is the maximum time divergence
+ * between two certs for them to agree. It comes out to five minutes, which
+ * gives a lot of margin for error if the controller hiccups or its clock
+ * drifts but causes de-authorized peers to fall off fast enough.
+ */
+#define ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA (ZT_NETWORK_AUTOCONF_DELAY * 5)
+
+/**
+ * Maximum number of qualifiers in a COM
+ */
+#define ZT_NETWORK_COM_MAX_QUALIFIERS 16
 
 namespace ZeroTier {
 
@@ -57,6 +72,9 @@ namespace ZeroTier {
  * often enough to stay within the max delta for this qualifier. But other
  * criteria could be added in the future for very special behaviors, things
  * like latitude and longitude for instance.
+ *
+ * This is a memcpy()'able structure and is safe (in a crash sense) to modify
+ * without locks.
  */
 class CertificateOfMembership
 {
@@ -110,7 +128,16 @@ public:
 	/**
 	 * Create an empty certificate
 	 */
-	CertificateOfMembership() { memset(_signature.data,0,_signature.size()); }
+	CertificateOfMembership() :
+		_qualifierCount(0)
+	{
+		memset(_signature.data,0,_signature.size());
+	}
+
+	CertificateOfMembership(const CertificateOfMembership &c)
+	{
+		memcpy(this,&c,sizeof(CertificateOfMembership));
+	}
 
 	/**
 	 * Create from required fields common to all networks
@@ -122,12 +149,26 @@ public:
 	 */
 	CertificateOfMembership(uint64_t revision,uint64_t revisionMaxDelta,uint64_t nwid,const Address &issuedTo)
 	{
-		_qualifiers.push_back(_Qualifier(COM_RESERVED_ID_REVISION,revision,revisionMaxDelta));
-		_qualifiers.push_back(_Qualifier(COM_RESERVED_ID_NETWORK_ID,nwid,0));
-		_qualifiers.push_back(_Qualifier(COM_RESERVED_ID_ISSUED_TO,issuedTo.toInt(),0xffffffffffffffffULL));
+		_qualifiers[0].id = COM_RESERVED_ID_REVISION;
+		_qualifiers[0].value = revision;
+		_qualifiers[0].maxDelta = revisionMaxDelta;
+		_qualifiers[1].id = COM_RESERVED_ID_NETWORK_ID;
+		_qualifiers[1].value = nwid;
+		_qualifiers[1].maxDelta = 0;
+		_qualifiers[2].id = COM_RESERVED_ID_ISSUED_TO;
+		_qualifiers[2].value = issuedTo.toInt();
+		_qualifiers[2].maxDelta = 0xffffffffffffffffULL;
+		_qualifierCount = 3;
 		memset(_signature.data,0,_signature.size());
 	}
 
+	inline CertificateOfMembership &operator=(const CertificateOfMembership &c)
+	{
+		memcpy(this,&c,sizeof(CertificateOfMembership));
+		return *this;
+	}
+
+#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 	/**
 	 * Create from string-serialized data
 	 *
@@ -141,6 +182,7 @@ public:
 	 * @param s String-serialized COM
 	 */
 	CertificateOfMembership(const std::string &s) { fromString(s.c_str()); }
+#endif // ZT_SUPPORT_OLD_STYLE_NETCONF
 
 	/**
 	 * Create from binary-serialized COM in buffer
@@ -150,7 +192,6 @@ public:
 	 */
 	template<unsigned int C>
 	CertificateOfMembership(const Buffer<C> &b,unsigned int startAt = 0)
-		throw(std::out_of_range,std::invalid_argument)
 	{
 		deserialize(b,startAt);
 	}
@@ -158,11 +199,7 @@ public:
 	/**
 	 * @return True if there's something here
 	 */
-	inline operator bool() const
-		throw()
-	{
-		return (_qualifiers.size() != 0);
-	}
+	inline operator bool() const throw() { return (_qualifierCount != 0); }
 
 	/**
 	 * Check for presence of all required fields common to all networks
@@ -170,9 +207,8 @@ public:
 	 * @return True if all required fields are present
 	 */
 	inline bool hasRequiredFields() const
-		throw()
 	{
-		if (_qualifiers.size() < 3)
+		if (_qualifierCount < 3)
 			return false;
 		if (_qualifiers[0].id != COM_RESERVED_ID_REVISION)
 			return false;
@@ -187,11 +223,10 @@ public:
 	 * @return Maximum delta for mandatory revision field or 0 if field missing
 	 */
 	inline uint64_t revisionMaxDelta() const
-		throw()
 	{
-		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
-			if (q->id == COM_RESERVED_ID_REVISION)
-				return q->maxDelta;
+		for(unsigned int i=0;i<_qualifierCount;++i) {
+			if (_qualifiers[i].id == COM_RESERVED_ID_REVISION)
+				return _qualifiers[i].maxDelta;
 		}
 		return 0ULL;
 	}
@@ -200,11 +235,10 @@ public:
 	 * @return Revision number for this cert
 	 */
 	inline uint64_t revision() const
-		throw()
 	{
-		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
-			if (q->id == COM_RESERVED_ID_REVISION)
-				return q->value;
+		for(unsigned int i=0;i<_qualifierCount;++i) {
+			if (_qualifiers[i].id == COM_RESERVED_ID_REVISION)
+				return _qualifiers[i].value;
 		}
 		return 0ULL;
 	}
@@ -213,11 +247,10 @@ public:
 	 * @return Address to which this cert was issued
 	 */
 	inline Address issuedTo() const
-		throw()
 	{
-		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
-			if (q->id == COM_RESERVED_ID_ISSUED_TO)
-				return Address(q->value);
+		for(unsigned int i=0;i<_qualifierCount;++i) {
+			if (_qualifiers[i].id == COM_RESERVED_ID_ISSUED_TO)
+				return Address(_qualifiers[i].value);
 		}
 		return Address();
 	}
@@ -226,11 +259,10 @@ public:
 	 * @return Network ID for which this cert was issued
 	 */
 	inline uint64_t networkId() const
-		throw()
 	{
-		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
-			if (q->id == COM_RESERVED_ID_NETWORK_ID)
-				return q->value;
+		for(unsigned int i=0;i<_qualifierCount;++i) {
+			if (_qualifiers[i].id == COM_RESERVED_ID_NETWORK_ID)
+				return _qualifiers[i].value;
 		}
 		return 0ULL;
 	}
@@ -247,6 +279,7 @@ public:
 	void setQualifier(uint64_t id,uint64_t value,uint64_t maxDelta);
 	inline void setQualifier(ReservedId id,uint64_t value,uint64_t maxDelta) { setQualifier((uint64_t)id,value,maxDelta); }
 
+#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 	/**
 	 * @return String-serialized representation of this certificate
 	 */
@@ -262,7 +295,7 @@ public:
 	 * @param s String to deserialize
 	 */
 	void fromString(const char *s);
-	inline void fromString(const std::string &s) { fromString(s.c_str()); }
+#endif // ZT_SUPPORT_OLD_STYLE_NETCONF
 
 	/**
 	 * Compare two certificates for parameter agreement
@@ -277,8 +310,7 @@ public:
 	 * @param other Cert to compare with
 	 * @return True if certs agree and 'other' may be communicated with
 	 */
-	bool agreesWith(const CertificateOfMembership &other) const
-		throw();
+	bool agreesWith(const CertificateOfMembership &other) const;
 
 	/**
 	 * Sign this certificate
@@ -310,11 +342,11 @@ public:
 	inline void serialize(Buffer<C> &b) const
 	{
 		b.append((unsigned char)COM_UINT64_ED25519);
-		b.append((uint16_t)_qualifiers.size());
-		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
-			b.append(q->id);
-			b.append(q->value);
-			b.append(q->maxDelta);
+		b.append((uint16_t)_qualifierCount);
+		for(unsigned int i=0;i<_qualifierCount;++i) {
+			b.append(_qualifiers[i].id);
+			b.append(_qualifiers[i].value);
+			b.append(_qualifiers[i].maxDelta);
 		}
 		_signedBy.appendTo(b);
 		if (_signedBy)
@@ -326,25 +358,28 @@ public:
 	{
 		unsigned int p = startAt;
 
-		_qualifiers.clear();
+		_qualifierCount = 0;
 		_signedBy.zero();
 
 		if (b[p++] != COM_UINT64_ED25519)
-			throw std::invalid_argument("unknown certificate of membership type");
+			throw std::invalid_argument("invalid type");
 
 		unsigned int numq = b.template at<uint16_t>(p); p += sizeof(uint16_t);
 		uint64_t lastId = 0;
 		for(unsigned int i=0;i<numq;++i) {
-			uint64_t tmp = b.template at<uint64_t>(p);
-			if (tmp < lastId)
-				throw std::invalid_argument("certificate qualifiers are not sorted");
-			else lastId = tmp;
-			_qualifiers.push_back(_Qualifier(
-					tmp,
-					b.template at<uint64_t>(p + 8),
-					b.template at<uint64_t>(p + 16)
-				));
-			p += 24;
+			const uint64_t qid = b.template at<uint64_t>(p);
+			if (qid < lastId)
+				throw std::invalid_argument("qualifiers not sorted");
+			else lastId = qid;
+			if (_qualifierCount < ZT_NETWORK_COM_MAX_QUALIFIERS) {
+				_qualifiers[_qualifierCount].id = qid;
+				_qualifiers[_qualifierCount].value = b.template at<uint64_t>(p + 8);
+				_qualifiers[_qualifierCount].maxDelta = b.template at<uint64_t>(p + 16);
+				p += 24;
+				++_qualifierCount;
+			} else {
+				throw std::invalid_argument("too many qualifiers");
+			}
 		}
 
 		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
@@ -363,10 +398,9 @@ public:
 	{
 		if (_signedBy != c._signedBy)
 			return false;
-		// We have to compare in depth manually since == only compares id
-		if (_qualifiers.size() != c._qualifiers.size())
+		if (_qualifierCount != c._qualifierCount)
 			return false;
-		for(unsigned long i=0;i<_qualifiers.size();++i) {
+		for(unsigned int i=0;i<_qualifierCount;++i) {
 			const _Qualifier &a = _qualifiers[i];
 			const _Qualifier &b = c._qualifiers[i];
 			if ((a.id != b.id)||(a.value != b.value)||(a.maxDelta != b.maxDelta))
@@ -379,22 +413,16 @@ public:
 private:
 	struct _Qualifier
 	{
-		_Qualifier() throw() {}
-		_Qualifier(uint64_t i,uint64_t v,uint64_t m) throw() :
-			id(i),
-			value(v),
-			maxDelta(m) {}
-
+		_Qualifier() : id(0),value(0),maxDelta(0) {}
 		uint64_t id;
 		uint64_t value;
 		uint64_t maxDelta;
-
-		inline bool operator==(const _Qualifier &q) const throw() { return (id == q.id); } // for unique
-		inline bool operator<(const _Qualifier &q) const throw() { return (id < q.id); } // for sort
+		inline bool operator<(const _Qualifier &q) const throw() { return (id < q.id); } // sort order
 	};
 
 	Address _signedBy;
-	std::vector<_Qualifier> _qualifiers; // sorted by id and unique
+	_Qualifier _qualifiers[ZT_NETWORK_COM_MAX_QUALIFIERS];
+	unsigned int _qualifierCount;
 	C25519::Signature _signature;
 };
 

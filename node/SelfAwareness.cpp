@@ -20,6 +20,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <set>
+#include <vector>
+
 #include "Constants.hpp"
 #include "SelfAwareness.hpp"
 #include "RuntimeEnvironment.hpp"
@@ -64,34 +67,18 @@ SelfAwareness::~SelfAwareness()
 {
 }
 
-void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now)
+void SelfAwareness::iam(const Address &reporter,const InetAddress &receivedOnLocalAddress,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now)
 {
 	const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
 
-	// This would be weird, e.g. a public IP talking to 10.0.0.1, so just ignore it.
-	// If your network is this weird it's probably not reliable information.
-	if (scope != reporterPhysicalAddress.ipScope())
+	if ((scope != reporterPhysicalAddress.ipScope())||(scope == InetAddress::IP_SCOPE_NONE)||(scope == InetAddress::IP_SCOPE_LOOPBACK)||(scope == InetAddress::IP_SCOPE_MULTICAST))
 		return;
 
-	// Some scopes we ignore, and global scope IPs are only used for this
-	// mechanism if they come from someone we trust (e.g. a root).
-	switch(scope) {
-		case InetAddress::IP_SCOPE_NONE:
-		case InetAddress::IP_SCOPE_LOOPBACK:
-		case InetAddress::IP_SCOPE_MULTICAST:
-			return;
-		case InetAddress::IP_SCOPE_GLOBAL:
-			if (!trusted)
-				return;
-			break;
-		default:
-			break;
-	}
-
 	Mutex::Lock _l(_phy_m);
-	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,reporterPhysicalAddress,scope)];
+	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,receivedOnLocalAddress,reporterPhysicalAddress,scope)];
 
-	if ( ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
+	if ( (trusted) && ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
+		// Changes to external surface reported by trusted peers causes path reset in this scope
 		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;
 		TRACE("physical address %s for scope %u as seen from %s(%s) differs from %s, resetting paths in scope",myPhysicalAddress.toString().c_str(),(unsigned int)scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str(),entry.mySurface.toString().c_str());
@@ -123,6 +110,7 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 			}
 		}
 	} else {
+		// Otherwise just update DB to use to determine external surface info
 		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;
 	}
@@ -138,6 +126,62 @@ void SelfAwareness::clean(uint64_t now)
 		if ((now - e->ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 			_phy.erase(*k);
 	}
+}
+
+std::vector<InetAddress> SelfAwareness::getSymmetricNatPredictions()
+{
+	/* This is based on ideas and strategies found here:
+	 * https://tools.ietf.org/html/draft-takeda-symmetric-nat-traversal-00
+	 *
+	 * In short: a great many symmetric NATs allocate ports sequentially.
+	 * This is common on enterprise and carrier grade NATs as well as consumer
+	 * devices. This code generates a list of "you might try this" addresses by
+	 * extrapolating likely port assignments from currently known external
+	 * global IPv4 surfaces. These can then be included in a PUSH_DIRECT_PATHS
+	 * message to another peer, causing it to possibly try these addresses and
+	 * bust our local symmetric NAT. It works often enough to be worth the
+	 * extra bit of code and does no harm in cases where it fails. */
+
+	// Gather unique surfaces indexed by local received-on address and flag
+	// us as behind a symmetric NAT if there is more than one.
+	std::map< InetAddress,std::set<InetAddress> > surfaces;
+	bool symmetric = false;
+	{
+		Mutex::Lock _l(_phy_m);
+		Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
+		PhySurfaceKey *k = (PhySurfaceKey *)0;
+		PhySurfaceEntry *e = (PhySurfaceEntry *)0;
+		while (i.next(k,e)) {
+			if ((e->mySurface.ss_family == AF_INET)&&(e->mySurface.ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
+				std::set<InetAddress> &s = surfaces[k->receivedOnLocalAddress];
+				s.insert(e->mySurface);
+				symmetric = symmetric||(s.size() > 1);
+			}
+		}
+	}
+
+	// If we appear to be symmetrically NATed, generate and return extrapolations
+	// of those surfaces. Since PUSH_DIRECT_PATHS is sent multiple times, we
+	// probabilistically generate extrapolations of anywhere from +1 to +5 to
+	// increase the odds that it will work "eventually".
+	if (symmetric) {
+		std::vector<InetAddress> r;
+		for(std::map< InetAddress,std::set<InetAddress> >::iterator si(surfaces.begin());si!=surfaces.end();++si) {
+			for(std::set<InetAddress>::iterator i(si->second.begin());i!=si->second.end();++i) {
+				InetAddress ipp(*i);
+				unsigned int p = ipp.port() + 1 + ((unsigned int)RR->node->prng() & 3);
+				if (p >= 65535)
+					p -= 64510; // NATs seldom use ports <=1024 so wrap to 1025
+				ipp.setPort(p);
+				if ((si->second.count(ipp) == 0)&&(std::find(r.begin(),r.end(),ipp) == r.end())) {
+					r.push_back(ipp);
+				}
+			}
+		}
+		return r;
+	}
+
+	return std::vector<InetAddress>();
 }
 
 } // namespace ZeroTier

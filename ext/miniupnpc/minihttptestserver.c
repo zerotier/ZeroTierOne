@@ -1,4 +1,4 @@
-/* $Id: minihttptestserver.c,v 1.18 2015/07/15 12:41:15 nanard Exp $ */
+/* $Id: minihttptestserver.c,v 1.19 2015/11/17 09:07:17 nanard Exp $ */
 /* Project : miniUPnP
  * Author : Thomas Bernard
  * Copyright (c) 2011-2015 Thomas Bernard
@@ -17,6 +17,10 @@
 #include <signal.h>
 #include <time.h>
 #include <errno.h>
+
+#ifndef INADDR_LOOPBACK
+#define INADDR_LOOPBACK         0x7f000001
+#endif
 
 #define CRAP_LENGTH (2048)
 

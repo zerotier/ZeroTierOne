@@ -235,6 +235,11 @@ public:
 	 */
 	static inline char toLower(char c) throw() { return (char)OSUtils::TOLOWER_TABLE[(unsigned long)c]; }
 
+	/**
+	 * @return Platform default ZeroTier One home path
+	 */
+	static std::string platformDefaultHomePath();
+
 private:
 	static const unsigned char TOLOWER_TABLE[256];
 };

@@ -21,37 +21,63 @@
 
 #ifdef ZT_ENABLE_CLUSTER
 
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
 #include <vector>
-#include <map>
 #include <string>
+#include <algorithm>
 
 #include "../node/Constants.hpp"
-#include "../node/InetAddress.hpp"
 #include "../node/Mutex.hpp"
-#include "../osdep/Thread.hpp"
+#include "../node/NonCopyable.hpp"
+#include "../node/InetAddress.hpp"
 
 namespace ZeroTier {
 
 /**
- * Runs the Cluster GeoIP service in the background and resolves geoIP queries
+ * Loads a GeoIP CSV into memory for fast lookup, reloading as needed
+ *
+ * This was designed around the CSV from https://db-ip.com but can be used
+ * with any similar GeoIP CSV database that is presented in the form of an
+ * IP range and lat/long coordinates.
+ *
+ * It loads the whole database into memory, which can be kind of large. If
+ * the CSV file changes, the changes are loaded automatically.
  */
-class ClusterGeoIpService
+class ClusterGeoIpService : NonCopyable
 {
 public:
-	/**
-	 * @param pathToExe Path to cluster geo-resolution service executable
-	 */
-	ClusterGeoIpService(const char *pathToExe);
-
+	ClusterGeoIpService();
 	~ClusterGeoIpService();
+
+	/**
+	 * Load or reload CSV file
+	 *
+	 * CSV column indexes start at zero. CSVs can be quoted with single or
+	 * double quotes. Whitespace before or after commas is ignored. Backslash
+	 * may be used for escaping whitespace as well.
+	 *
+	 * @param pathToCsv Path to (uncompressed) CSV file
+	 * @param ipStartColumn Column with IP range start
+	 * @param ipEndColumn Column with IP range end (inclusive)
+	 * @param latitudeColumn Column with latitude
+	 * @param longitudeColumn Column with longitude
+	 * @return Number of valid records loaded or -1 on error (invalid file, not found, etc.)
+	 */
+	inline long load(const char *pathToCsv,int ipStartColumn,int ipEndColumn,int latitudeColumn,int longitudeColumn)
+	{
+		Mutex::Lock _l(_lock);
+		return _load(pathToCsv,ipStartColumn,ipEndColumn,latitudeColumn,longitudeColumn);
+	}
 
 	/**
 	 * Attempt to locate an IP
 	 *
-	 * This returns true if x, y, and z are set. Otherwise it returns false
-	 * and a geo-locate job is ordered in the background. This usually takes
-	 * 500-1500ms to complete, after which time results will be available.
-	 * If false is returned the supplied coordinate variables are unchanged.
+	 * This returns true if x, y, and z are set. If the return value is false
+	 * the values of x, y, and z are undefined.
 	 *
 	 * @param ip IPv4 or IPv6 address
 	 * @param x Reference to variable to receive X
@@ -61,21 +87,53 @@ public:
 	 */
 	bool locate(const InetAddress &ip,int &x,int &y,int &z);
 
-	void threadMain()
-		throw();
+	/**
+	 * @return True if IP database/service is available for queries (otherwise locate() will always be false)
+	 */
+	inline bool available() const
+	{
+		Mutex::Lock _l(_lock);
+		return ((_v4db.size() + _v6db.size()) > 0);
+	}
 
 private:
-	const std::string _pathToExe;
-	int _sOutputFd;
-	int _sInputFd;
-	volatile long _sPid;
-	volatile bool _run;
-	Thread _thread;
-	Mutex _sOutputLock;
+	struct _V4E
+	{
+		uint32_t start;
+		uint32_t end;
+		float lat,lon;
+		int16_t x,y,z;
 
-	struct _CE { uint64_t ts; int x,y,z; };
-	std::map< InetAddress,_CE > _cache;
-	Mutex _cache_m;
+		inline bool operator<(const _V4E &e) const { return (start < e.start); }
+	};
+
+	struct _V6E
+	{
+		uint8_t start[16];
+		uint8_t end[16];
+		float lat,lon;
+		int16_t x,y,z;
+
+		inline bool operator<(const _V6E &e) const { return (memcmp(start,e.start,16) < 0); }
+	};
+
+	static void _parseLine(const char *line,std::vector<_V4E> &v4db,std::vector<_V6E> &v6db,int ipStartColumn,int ipEndColumn,int latitudeColumn,int longitudeColumn);
+	long _load(const char *pathToCsv,int ipStartColumn,int ipEndColumn,int latitudeColumn,int longitudeColumn);
+
+	std::string _pathToCsv;
+	int _ipStartColumn;
+	int _ipEndColumn;
+	int _latitudeColumn;
+	int _longitudeColumn;
+
+	uint64_t _lastFileCheckTime;
+	uint64_t _csvModificationTime;
+	int64_t _csvFileSize;
+
+	std::vector<_V4E> _v4db;
+	std::vector<_V6E> _v6db;
+
+	Mutex _lock;
 };
 
 } // namespace ZeroTier

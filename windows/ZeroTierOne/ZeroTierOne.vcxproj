@@ -42,7 +42,6 @@
     <ClCompile Include="..\..\node\CertificateOfMembership.cpp" />
     <ClCompile Include="..\..\node\Cluster.cpp" />
     <ClCompile Include="..\..\node\DeferredPackets.cpp" />
-    <ClCompile Include="..\..\node\Dictionary.cpp" />
     <ClCompile Include="..\..\node\Identity.cpp" />
     <ClCompile Include="..\..\node\IncomingPacket.cpp" />
     <ClCompile Include="..\..\node\InetAddress.cpp" />
@@ -66,6 +65,7 @@
     </ClCompile>
     <ClCompile Include="..\..\osdep\BackgroundResolver.cpp" />
     <ClCompile Include="..\..\osdep\Http.cpp" />
+    <ClCompile Include="..\..\osdep\ManagedRoute.cpp" />
     <ClCompile Include="..\..\osdep\OSUtils.cpp" />
     <ClCompile Include="..\..\osdep\PortMapper.cpp" />
     <ClCompile Include="..\..\osdep\WindowsEthernetTap.cpp" />
@@ -156,7 +156,9 @@
     <ClInclude Include="..\..\node\Utils.hpp" />
     <ClInclude Include="..\..\node\World.hpp" />
     <ClInclude Include="..\..\osdep\BackgroundResolver.hpp" />
+    <ClInclude Include="..\..\osdep\Binder.hpp" />
     <ClInclude Include="..\..\osdep\Http.hpp" />
+    <ClInclude Include="..\..\osdep\ManagedRoute.hpp" />
     <ClInclude Include="..\..\osdep\OSUtils.hpp" />
     <ClInclude Include="..\..\osdep\Phy.hpp" />
     <ClInclude Include="..\..\osdep\PortMapper.hpp" />

@@ -33,5 +33,4 @@ public final class Version {
 	public int major = 0;
 	public int minor = 0;
 	public int revision = 0;
-	public long featureFlags = 0;
 }

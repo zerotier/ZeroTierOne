@@ -173,7 +173,7 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 class _PingPeersThatNeedPing
 {
 public:
-	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now,const std::vector< std::pair<Address,InetAddress> > &relays) :
+	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now,const std::vector<NetworkConfig::Relay> &relays) :
 		lastReceiveFromUpstream(0),
 		RR(renv),
 		_now(now),
@@ -191,7 +191,7 @@ public:
 
 		// If this is a world root, pick (if possible) both an IPv4 and an IPv6 stable endpoint to use if link isn't currently alive.
 		for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
-			if (r->identity.address() == p->address()) {
+			if (r->identity == p->identity()) {
 				upstream = true;
 				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)r->stableEndpoints.size();++k) {
 					const InetAddress &addr = r->stableEndpoints[ptr++ % r->stableEndpoints.size()];
@@ -217,12 +217,10 @@ public:
 
 			// Check for network preferred relays, also considered 'upstream' and thus always
 			// pinged to keep links up. If they have stable addresses we will try them there.
-			for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(_relays.begin());r!=_relays.end();++r) {
-				if (r->first == p->address()) {
-					if (r->second.ss_family == AF_INET)
-						stableEndpoint4 = r->second;
-					else if (r->second.ss_family == AF_INET6)
-						stableEndpoint6 = r->second;
+			for(std::vector<NetworkConfig::Relay>::const_iterator r(_relays.begin());r!=_relays.end();++r) {
+				if (r->address == p->address()) {
+					stableEndpoint4 = r->phy4;
+					stableEndpoint6 = r->phy6;
 					upstream = true;
 					break;
 				}
@@ -269,7 +267,7 @@ public:
 private:
 	const RuntimeEnvironment *RR;
 	uint64_t _now;
-	const std::vector< std::pair<Address,InetAddress> > &_relays;
+	const std::vector<NetworkConfig::Relay> &_relays;
 	World _world;
 };
 
@@ -285,16 +283,18 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 			_lastPingCheck = now;
 
 			// Get relays and networks that need config without leaving the mutex locked
-			std::vector< std::pair<Address,InetAddress> > networkRelays;
+			std::vector< NetworkConfig::Relay > networkRelays;
 			std::vector< SharedPtr<Network> > needConfig;
 			{
 				Mutex::Lock _l(_networks_m);
 				for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
-					SharedPtr<NetworkConfig> nc(n->second->config2());
-					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!nc))
+					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!n->second->hasConfig())) {
 						needConfig.push_back(n->second);
-					if (nc)
-						networkRelays.insert(networkRelays.end(),nc->relays().begin(),nc->relays().end());
+					}
+					if (n->second->hasConfig()) {
+						std::vector<NetworkConfig::Relay> r(n->second->config().relays());
+						networkRelays.insert(networkRelays.end(),r.begin(),r.end());
+					}
 				}
 			}
 
@@ -447,6 +447,7 @@ ZT_PeerList *Node::peers() const
 			p->paths[p->pathCount].lastReceive = path->lastReceived();
 			p->paths[p->pathCount].active = path->active(_now) ? 1 : 0;
 			p->paths[p->pathCount].preferred = ((bestPath)&&(*path == *bestPath)) ? 1 : 0;
+			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust(path->address());
 			++p->pathCount;
 		}
 	}
@@ -493,10 +494,10 @@ int Node::addLocalInterfaceAddress(const struct sockaddr_storage *addr)
 {
 	if (Path::isAddressValidForPath(*(reinterpret_cast<const InetAddress *>(addr)))) {
 		Mutex::Lock _l(_directPaths_m);
-		_directPaths.push_back(*(reinterpret_cast<const InetAddress *>(addr)));
-		std::sort(_directPaths.begin(),_directPaths.end());
-		_directPaths.erase(std::unique(_directPaths.begin(),_directPaths.end()),_directPaths.end());
-		return 1;
+		if (std::find(_directPaths.begin(),_directPaths.end(),*(reinterpret_cast<const InetAddress *>(addr))) == _directPaths.end()) {
+			_directPaths.push_back(*(reinterpret_cast<const InetAddress *>(addr)));
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -670,15 +671,16 @@ std::string Node::dataStoreGet(const char *name)
 
 bool Node::shouldUsePathForZeroTierTraffic(const InetAddress &localAddress,const InetAddress &remoteAddress)
 {
+	if (!Path::isAddressValidForPath(remoteAddress))
+		return false;
+
 	{
 		Mutex::Lock _l(_networks_m);
 		for(std::vector< std::pair< uint64_t, SharedPtr<Network> > >::const_iterator i=_networks.begin();i!=_networks.end();++i) {
-			SharedPtr<NetworkConfig> nc(i->second->config2());
-			if (nc) {
-				for(std::vector<InetAddress>::const_iterator a(nc->staticIps().begin());a!=nc->staticIps().end();++a) {
-					if (a->containsAddress(remoteAddress)) {
+			if (i->second->hasConfig()) {
+				for(unsigned int k=0;k<i->second->config().staticIpCount;++k) {
+					if (i->second->config().staticIps[k].containsAddress(remoteAddress))
 						return false;
-					}
 				}
 			}
 		}
@@ -742,6 +744,11 @@ void Node::postCircuitTestReport(const ZT_CircuitTestReport *report)
 	}
 	for(std::vector< ZT_CircuitTest * >::iterator i(toNotify.begin());i!=toNotify.end();++i)
 		(reinterpret_cast<void (*)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *)>((*i)->_internalPtr))(reinterpret_cast<ZT_Node *>(this),*i,report);
+}
+
+void Node::setTrustedPaths(const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count)
+{
+	RR->topology->setTrustedPaths(reinterpret_cast<const InetAddress *>(networks),ids,count);
 }
 
 } // namespace ZeroTier
@@ -1013,6 +1020,13 @@ void ZT_Node_clusterStatus(ZT_Node *node,ZT_ClusterStatus *cs)
 	} catch ( ... ) {}
 }
 
+void ZT_Node_setTrustedPaths(ZT_Node *node,const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count)
+{
+	try {
+		reinterpret_cast<ZeroTier::Node *>(node)->setTrustedPaths(networks,ids,count);
+	} catch ( ... ) {}
+}
+
 void ZT_Node_backgroundThreadMain(ZT_Node *node)
 {
 	try {
@@ -1020,16 +1034,11 @@ void ZT_Node_backgroundThreadMain(ZT_Node *node)
 	} catch ( ... ) {}
 }
 
-void ZT_version(int *major,int *minor,int *revision,unsigned long *featureFlags)
+void ZT_version(int *major,int *minor,int *revision)
 {
 	if (major) *major = ZEROTIER_ONE_VERSION_MAJOR;
 	if (minor) *minor = ZEROTIER_ONE_VERSION_MINOR;
 	if (revision) *revision = ZEROTIER_ONE_VERSION_REVISION;
-	if (featureFlags) {
-		*featureFlags = (
-			ZT_FEATURE_FLAG_THREAD_SAFE
-		);
-	}
 }
 
 } // extern "C"

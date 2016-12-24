@@ -26,11 +26,16 @@
 #include <set>
 #include <vector>
 #include <algorithm>
+#include <list>
 
 #include "../version.h"
 #include "../include/ZeroTierOne.h"
 
+#ifdef ZT_USE_SYSTEM_HTTP_PARSER
+#include <http_parser.h>
+#else
 #include "../ext/http-parser/http_parser.h"
+#endif
 
 #include "../node/Constants.hpp"
 #include "../node/Mutex.hpp"
@@ -46,6 +51,8 @@
 #include "../osdep/Http.hpp"
 #include "../osdep/BackgroundResolver.hpp"
 #include "../osdep/PortMapper.hpp"
+#include "../osdep/Binder.hpp"
+#include "../osdep/ManagedRoute.hpp"
 
 #include "OneService.hpp"
 #include "ControlPlane.hpp"
@@ -114,8 +121,9 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #define ZT_MAX_HTTP_MESSAGE_SIZE (1024 * 1024 * 64)
 #define ZT_MAX_HTTP_CONNECTIONS 64
 
-// Interface metric for ZeroTier taps
-#define ZT_IF_METRIC 32768
+// Interface metric for ZeroTier taps -- this ensures that if we are on WiFi and also
+// bridged via ZeroTier to the same LAN traffic will (if the OS is sane) prefer WiFi.
+#define ZT_IF_METRIC 5000
 
 // How often to check for new multicast subscriptions on a tap device
 #define ZT_TAP_CHECK_MULTICAST_INTERVAL 5000
@@ -134,7 +142,7 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #define ZT_TCP_FALLBACK_AFTER 60000
 
 // How often to check for local interface addresses
-#define ZT_LOCAL_INTERFACE_CHECK_INTERVAL 300000
+#define ZT_LOCAL_INTERFACE_CHECK_INTERVAL 60000
 
 namespace ZeroTier {
 
@@ -149,6 +157,7 @@ public:
 	bool isValidSigningIdentity(const Identity &id)
 	{
 		return (
+			/* 0001 - 0004 : obsolete, used in old versions */
 		  /* 0005 */   (id == Identity("ba57ea350e:0:9d4be6d7f86c5660d5ee1951a3d759aa6e12a84fc0c0b74639500f1dbc1a8c566622e7d1c531967ebceb1e9d1761342f88324a8ba520c93c35f92f35080fa23f"))
 		  /* 0006 */ ||(id == Identity("5067b21b83:0:8af477730f5055c48135b84bed6720a35bca4c0e34be4060a4c636288b1ec22217eb22709d610c66ed464c643130c51411bbb0294eef12fbe8ecc1a1e2c63a7a"))
 		  /* 0007 */ ||(id == Identity("4f5e97a8f1:0:57880d056d7baeb04bbc057d6f16e6cb41388570e87f01492fce882485f65a798648595610a3ad49885604e7fb1db2dd3c2c534b75e42c3c0b110ad07b4bb138"))
@@ -192,27 +201,33 @@ public:
 				 *
 				 * file=<filename>
 				 * signedBy=<signing identity>
-				 * ed25519=<ed25519 ECC signature of archive>
+				 * ed25519=<ed25519 ECC signature of archive in hex>
 				 * vMajor=<major version>
 				 * vMinor=<minor version>
 				 * vRevision=<revision> */
-				Dictionary nfo(body);
+				Dictionary<4096> nfo(body.c_str());
+				char tmp[2048];
 
-				unsigned int vMajor = Utils::strToUInt(nfo.get("vMajor","0").c_str());
-				unsigned int vMinor = Utils::strToUInt(nfo.get("vMinor","0").c_str());
-				unsigned int vRevision = Utils::strToUInt(nfo.get("vRevision","0").c_str());
+				if (nfo.get("vMajor",tmp,sizeof(tmp)) <= 0) return;
+				const unsigned int vMajor = Utils::strToUInt(tmp);
+				if (nfo.get("vMinor",tmp,sizeof(tmp)) <= 0) return;
+				const unsigned int vMinor = Utils::strToUInt(tmp);
+				if (nfo.get("vRevision",tmp,sizeof(tmp)) <= 0) return;
+				const unsigned int vRevision = Utils::strToUInt(tmp);
 				if (Utils::compareVersion(vMajor,vMinor,vRevision,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION) <= 0) {
 					//fprintf(stderr,"UPDATE %u.%u.%u is not newer than our version\n",vMajor,vMinor,vRevision);
 					return;
 				}
 
+				if (nfo.get("signedBy",tmp,sizeof(tmp)) <= 0) return;
 				Identity signedBy;
-				if ((!signedBy.fromString(nfo.get("signedBy","")))||(!isValidSigningIdentity(signedBy))) {
+				if ((!signedBy.fromString(tmp))||(!isValidSigningIdentity(signedBy))) {
 					//fprintf(stderr,"UPDATE invalid signedBy or not authorized signing identity.\n");
 					return;
 				}
 
-				std::string filePath(nfo.get("file",""));
+				if (nfo.get("file",tmp,sizeof(tmp)) <= 0) return;
+				std::string filePath(tmp);
 				if ((!filePath.length())||(filePath.find("..") != std::string::npos))
 					return;
 				filePath = httpPath + filePath;
@@ -223,7 +238,8 @@ public:
 					return;
 				}
 
-				std::string ed25519(Utils::unhex(nfo.get("ed25519","")));
+				if (nfo.get("ed25519",tmp,sizeof(tmp)) <= 0) return;
+				std::string ed25519(Utils::unhex(tmp));
 				if ((ed25519.length() == 0)||(!signedBy.verify(fileData.data(),(unsigned int)fileData.length(),ed25519.data(),(unsigned int)ed25519.length()))) {
 					//fprintf(stderr,"UPDATE %s failed signature check!\n",filePath.c_str());
 					return;
@@ -399,12 +415,18 @@ static void StapFrameHandler(void *uptr,uint64_t nwid,const MAC &from,const MAC 
 
 static int ShttpOnMessageBegin(http_parser *parser);
 static int ShttpOnUrl(http_parser *parser,const char *ptr,size_t length);
+#if (HTTP_PARSER_VERSION_MAJOR >= 2) && (HTTP_PARSER_VERSION_MINOR >= 2)
 static int ShttpOnStatus(http_parser *parser,const char *ptr,size_t length);
+#else
+static int ShttpOnStatus(http_parser *parser);
+#endif
 static int ShttpOnHeaderField(http_parser *parser,const char *ptr,size_t length);
 static int ShttpOnValue(http_parser *parser,const char *ptr,size_t length);
 static int ShttpOnHeadersComplete(http_parser *parser);
 static int ShttpOnBody(http_parser *parser,const char *ptr,size_t length);
 static int ShttpOnMessageComplete(http_parser *parser);
+
+#if (HTTP_PARSER_VERSION_MAJOR >= 2) && (HTTP_PARSER_VERSION_MINOR >= 1)
 static const struct http_parser_settings HTTP_PARSER_SETTINGS = {
 	ShttpOnMessageBegin,
 	ShttpOnUrl,
@@ -415,6 +437,17 @@ static const struct http_parser_settings HTTP_PARSER_SETTINGS = {
 	ShttpOnBody,
 	ShttpOnMessageComplete
 };
+#else
+static const struct http_parser_settings HTTP_PARSER_SETTINGS = {
+	ShttpOnMessageBegin,
+	ShttpOnUrl,
+	ShttpOnHeaderField,
+	ShttpOnValue,
+	ShttpOnHeadersComplete,
+	ShttpOnBody,
+	ShttpOnMessageComplete
+};
+#endif
 
 struct TcpConnection
 {
@@ -444,18 +477,105 @@ struct TcpConnection
 	Mutex writeBuf_m;
 };
 
-// Use a bigger buffer on AMD64 since these are likely to be bigger and
-// servers. Otherwise use a smaller buffer. This makes no difference
-// except under very high load.
-#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__))
-#define ZT_UDP_DESIRED_BUF_SIZE 1048576
-#else
-#define ZT_UDP_DESIRED_BUF_SIZE 131072
-#endif
+// Used to pseudo-randomize local source port picking
+static volatile unsigned int _udpPortPickerCounter = 0;
 
 class OneServiceImpl : public OneService
 {
 public:
+	// begin member variables --------------------------------------------------
+
+	const std::string _homePath;
+	BackgroundResolver _tcpFallbackResolver;
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
+	SqliteNetworkController *_controller;
+#endif
+	Phy<OneServiceImpl *> _phy;
+	Node *_node;
+
+	/*
+	 * To attempt to handle NAT/gateway craziness we use three local UDP ports:
+	 *
+	 * [0] is the normal/default port, usually 9993
+	 * [1] is a port dervied from our ZeroTier address
+	 * [2] is a port computed from the normal/default for use with uPnP/NAT-PMP mappings
+	 *
+	 * [2] exists because on some gateways trying to do regular NAT-t interferes
+	 * destructively with uPnP port mapping behavior in very weird buggy ways.
+	 * It's only used if uPnP/NAT-PMP is enabled in this build.
+	 */
+
+	Binder _bindings[3];
+	unsigned int _ports[3];
+	uint16_t _portsBE[3]; // ports in big-endian network byte order as in sockaddr
+
+	// Sockets for JSON API -- bound only to V4 and V6 localhost
+	PhySocket *_v4TcpControlSocket;
+	PhySocket *_v6TcpControlSocket;
+
+	// JSON API handler
+	ControlPlane *_controlPlane;
+
+	// Time we last received a packet from a global address
+	uint64_t _lastDirectReceiveFromGlobal;
+#ifdef ZT_TCP_FALLBACK_RELAY
+	uint64_t _lastSendToGlobalV4;
+#endif
+
+	// Last potential sleep/wake event
+	uint64_t _lastRestart;
+
+	// Deadline for the next background task service function
+	volatile uint64_t _nextBackgroundTaskDeadline;
+
+	// Configured networks
+	struct NetworkState
+	{
+		NetworkState() :
+			tap((EthernetTap *)0)
+		{
+			// Real defaults are in network 'up' code in network event handler
+			settings.allowManaged = true;
+			settings.allowGlobal = false;
+			settings.allowDefault = false;
+		}
+
+		EthernetTap *tap;
+		ZT_VirtualNetworkConfig config; // memcpy() of raw config from core
+		std::vector<InetAddress> managedIps;
+		std::list<ManagedRoute> managedRoutes;
+		NetworkSettings settings;
+	};
+	std::map<uint64_t,NetworkState> _nets;
+	Mutex _nets_m;
+
+	// Active TCP/IP connections
+	std::set< TcpConnection * > _tcpConnections; // no mutex for this since it's done in the main loop thread only
+	TcpConnection *_tcpFallbackTunnel;
+
+	// Termination status information
+	ReasonForTermination _termReason;
+	std::string _fatalErrorMessage;
+	Mutex _termReason_m;
+
+	// uPnP/NAT-PMP port mapper if enabled
+#ifdef ZT_USE_MINIUPNPC
+	PortMapper *_portMapper;
+#endif
+
+	// Cluster management instance if enabled
+#ifdef ZT_ENABLE_CLUSTER
+	PhySocket *_clusterMessageSocket;
+	ClusterDefinition *_clusterDefinition;
+	unsigned int _clusterMemberId;
+#endif
+
+	// Set to false to force service to stop
+	volatile bool _run;
+	Mutex _run_m;
+
+	// end member variables ----------------------------------------------------
+
 	OneServiceImpl(const char *hp,unsigned int port) :
 		_homePath((hp) ? hp : ".")
 		,_tcpFallbackResolver(ZT_TCP_FALLBACK_RELAY)
@@ -466,90 +586,97 @@ public:
 		,_node((Node *)0)
 		,_controlPlane((ControlPlane *)0)
 		,_lastDirectReceiveFromGlobal(0)
-		,_lastSendToGlobal(0)
+#ifdef ZT_TCP_FALLBACK_RELAY
+		,_lastSendToGlobalV4(0)
+#endif
 		,_lastRestart(0)
 		,_nextBackgroundTaskDeadline(0)
 		,_tcpFallbackTunnel((TcpConnection *)0)
 		,_termReason(ONE_STILL_RUNNING)
-		,_port(0)
 #ifdef ZT_USE_MINIUPNPC
-		,_v4UpnpUdpSocket((PhySocket *)0)
 		,_portMapper((PortMapper *)0)
 #endif
 #ifdef ZT_ENABLE_CLUSTER
 		,_clusterMessageSocket((PhySocket *)0)
-		,_clusterGeoIpService((ClusterGeoIpService *)0)
 		,_clusterDefinition((ClusterDefinition *)0)
 		,_clusterMemberId(0)
 #endif
 		,_run(true)
 	{
+		_ports[0] = 0;
+		_ports[1] = 0;
+		_ports[2] = 0;
+
+		// The control socket is bound to the default/static port on localhost. If we
+		// can do this, we have successfully allocated a port. The binders will take
+		// care of binding non-local addresses for ZeroTier traffic.
 		const int portTrials = (port == 0) ? 256 : 1; // if port is 0, pick random
 		for(int k=0;k<portTrials;++k) {
 			if (port == 0) {
 				unsigned int randp = 0;
 				Utils::getSecureRandom(&randp,sizeof(randp));
-				port = 40000 + (randp % 25500);
+				port = 20000 + (randp % 45500);
 			}
 
-			_v4LocalAddress = InetAddress((uint32_t)0,port);
-			_v4UdpSocket = _phy.udpBind((const struct sockaddr *)&_v4LocalAddress,reinterpret_cast<void *>(&_v4LocalAddress),ZT_UDP_DESIRED_BUF_SIZE);
-
-			if (_v4UdpSocket) {
+			if (_trialBind(port)) {
 				struct sockaddr_in in4;
 				memset(&in4,0,sizeof(in4));
 				in4.sin_family = AF_INET;
-				in4.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001); // right now we just listen for TCP @localhost
+				in4.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001); // right now we just listen for TCP @127.0.0.1
 				in4.sin_port = Utils::hton((uint16_t)port);
-				_v4TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
+				_v4TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
 
-				if (_v4TcpListenSocket) {
-					_v6LocalAddress = InetAddress("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,port);
-					_v6UdpSocket = _phy.udpBind((const struct sockaddr *)&_v6LocalAddress,reinterpret_cast<void *>(&_v6LocalAddress),ZT_UDP_DESIRED_BUF_SIZE);
+				struct sockaddr_in6 in6;
+				memset((void *)&in6,0,sizeof(in6));
+				in6.sin6_family = AF_INET6;
+				in6.sin6_port = in4.sin_port;
+				in6.sin6_addr.s6_addr[15] = 1; // IPv6 localhost == ::1
+				_v6TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
 
-					struct sockaddr_in6 in6;
-					memset((void *)&in6,0,sizeof(in6));
-					in6.sin6_family = AF_INET6;
-					in6.sin6_port = in4.sin_port;
-					in6.sin6_addr.s6_addr[15] = 1; // IPv6 localhost == ::1
-					_v6TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
-
-					_port = port;
-					break; // success!
+				// We must bind one of IPv4 or IPv6 -- support either failing to support hosts that
+				// have only IPv4 or only IPv6 stacks.
+				if ((_v4TcpControlSocket)||(_v6TcpControlSocket)) {
+					_ports[0] = port;
+					break;
 				} else {
-					_phy.close(_v4UdpSocket,false);
+					if (_v4TcpControlSocket)
+						_phy.close(_v4TcpControlSocket,false);
+					if (_v6TcpControlSocket)
+						_phy.close(_v6TcpControlSocket,false);
+					port = 0;
 				}
+			} else {
+				port = 0;
 			}
-
-			port = 0;
 		}
 
-		if (_port == 0)
-			throw std::runtime_error("cannot bind to port");
+		if (_ports[0] == 0)
+			throw std::runtime_error("cannot bind to local control interface port");
 
 		char portstr[64];
-		Utils::snprintf(portstr,sizeof(portstr),"%u",_port);
+		Utils::snprintf(portstr,sizeof(portstr),"%u",_ports[0]);
 		OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "zerotier-one.port").c_str(),std::string(portstr));
 	}
 
 	virtual ~OneServiceImpl()
 	{
-		_phy.close(_v4UdpSocket);
-		_phy.close(_v6UdpSocket);
-		_phy.close(_v4TcpListenSocket);
-		_phy.close(_v6TcpListenSocket);
+		for(int i=0;i<3;++i)
+			_bindings[i].closeAll(_phy);
+
+		_phy.close(_v4TcpControlSocket);
+		_phy.close(_v6TcpControlSocket);
+
 #ifdef ZT_ENABLE_CLUSTER
 		_phy.close(_clusterMessageSocket);
 #endif
+
 #ifdef ZT_USE_MINIUPNPC
-		_phy.close(_v4UpnpUdpSocket);
 		delete _portMapper;
 #endif
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 		delete _controller;
 #endif
 #ifdef ZT_ENABLE_CLUSTER
-		delete _clusterGeoIpService;
 		delete _clusterDefinition;
 #endif
 	}
@@ -571,7 +698,9 @@ public:
 						_termReason = ONE_UNRECOVERABLE_ERROR;
 						_fatalErrorMessage = "authtoken.secret could not be written";
 						return _termReason;
-					} else OSUtils::lockDownFile(authTokenPath.c_str(),false);
+					} else {
+						OSUtils::lockDownFile(authTokenPath.c_str(),false);
+					}
 				}
 			}
 			authToken = _trimString(authToken);
@@ -587,23 +716,80 @@ public:
 				SnodePathCheckFunction,
 				SnodeEventCallback);
 
-#ifdef ZT_USE_MINIUPNPC
-			// Bind a secondary port for use with uPnP, since some NAT routers
-			// (cough Ubiquity Edge cough) barf up a lung if you do both conventional
-			// NAT-t and uPnP from behind the same port. I think this is a bug, but
-			// everyone else's router bugs are our problem. :P
-			for(int k=0;k<512;++k) {
-				unsigned int mapperPort = 40000 + (((_port + 1) * (k + 1)) % 25500);
-				char uniqueName[64];
-				_v4UpnpLocalAddress = InetAddress(0,mapperPort);
-				_v4UpnpUdpSocket = _phy.udpBind((const struct sockaddr *)&_v4UpnpLocalAddress,reinterpret_cast<void *>(&_v4UpnpLocalAddress),ZT_UDP_DESIRED_BUF_SIZE);
-				if (_v4UpnpUdpSocket) {
-					Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx",_node->address());
-					_portMapper = new PortMapper(mapperPort,uniqueName);
+			// Attempt to bind to a secondary port chosen from our ZeroTier address.
+			// This exists because there are buggy NATs out there that fail if more
+			// than one device behind the same NAT tries to use the same internal
+			// private address port number.
+			_ports[1] = 20000 + ((unsigned int)_node->address() % 45500);
+			for(int i=0;;++i) {
+				if (i > 1000) {
+					_ports[1] = 0;
 					break;
+				} else if (++_ports[1] >= 65536) {
+					_ports[1] = 20000;
+				}
+				if (_trialBind(_ports[1]))
+					break;
+			}
+
+#ifdef ZT_USE_MINIUPNPC
+			// If we're running uPnP/NAT-PMP, bind a *third* port for that. We can't
+			// use the other two ports for that because some NATs do really funky
+			// stuff with ports that are explicitly mapped that breaks things.
+			if (_ports[1]) {
+				_ports[2] = _ports[1];
+				for(int i=0;;++i) {
+					if (i > 1000) {
+						_ports[2] = 0;
+						break;
+					} else if (++_ports[2] >= 65536) {
+						_ports[2] = 20000;
+					}
+					if (_trialBind(_ports[2]))
+						break;
+				}
+				if (_ports[2]) {
+					char uniqueName[64];
+					Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
+					_portMapper = new PortMapper(_ports[2],uniqueName);
 				}
 			}
 #endif
+
+			for(int i=0;i<3;++i)
+				_portsBE[i] = Utils::hton((uint16_t)_ports[i]);
+
+			{
+				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S + "trustedpaths").c_str(),"r");
+				uint64_t ids[ZT_MAX_TRUSTED_PATHS];
+				InetAddress addresses[ZT_MAX_TRUSTED_PATHS];
+				if (trustpaths) {
+					char buf[1024];
+					unsigned int count = 0;
+					while ((fgets(buf,sizeof(buf),trustpaths))&&(count < ZT_MAX_TRUSTED_PATHS)) {
+						int fno = 0;
+						char *saveptr = (char *)0;
+						uint64_t trustedPathId = 0;
+						InetAddress trustedPathNetwork;
+						for(char *f=Utils::stok(buf,"=\r\n \t",&saveptr);(f);f=Utils::stok((char *)0,"=\r\n \t",&saveptr)) {
+							if (fno == 0) {
+								trustedPathId = Utils::hexStrToU64(f);
+							} else if (fno == 1) {
+								trustedPathNetwork = InetAddress(f);
+							} else break;
+							++fno;
+						}
+						if ( (trustedPathId != 0) && ((trustedPathNetwork.ss_family == AF_INET)||(trustedPathNetwork.ss_family == AF_INET6)) && (trustedPathNetwork.ipScope() != InetAddress::IP_SCOPE_GLOBAL) && (trustedPathNetwork.netmaskBits() > 0) ) {
+							ids[count] = trustedPathId;
+							addresses[count] = trustedPathNetwork;
+							++count;
+						}
+					}
+					fclose(trustpaths);
+					if (count)
+						_node->setTrustedPaths(reinterpret_cast<const struct sockaddr_storage *>(addresses),ids,count);
+				}
+			}
 
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 			_controller = new SqliteNetworkController(_node,(_homePath + ZT_PATH_SEPARATOR_S + ZT_CONTROLLER_DB_PATH).c_str(),(_homePath + ZT_PATH_SEPARATOR_S + "circuitTestResults.d").c_str());
@@ -639,33 +825,18 @@ public:
 						return _termReason;
 					}
 
-					if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S + "cluster-geo.exe").c_str()))
-						_clusterGeoIpService = new ClusterGeoIpService((_homePath + ZT_PATH_SEPARATOR_S + "cluster-geo.exe").c_str());
-
 					const ClusterDefinition::MemberDefinition &me = (*_clusterDefinition)[_clusterMemberId];
 					InetAddress endpoints[255];
 					unsigned int numEndpoints = 0;
 					for(std::vector<InetAddress>::const_iterator i(me.zeroTierEndpoints.begin());i!=me.zeroTierEndpoints.end();++i)
 						endpoints[numEndpoints++] = *i;
 
-					if (_node->clusterInit(
-						_clusterMemberId,
-						reinterpret_cast<const struct sockaddr_storage *>(endpoints),
-						numEndpoints,
-						me.x,
-						me.y,
-						me.z,
-						&SclusterSendFunction,
-						this,
-						(_clusterGeoIpService) ? &SclusterGeoIpFunction : 0,
-						this) == ZT_RESULT_OK) {
-
+					if (_node->clusterInit(_clusterMemberId,reinterpret_cast<const struct sockaddr_storage *>(endpoints),numEndpoints,me.x,me.y,me.z,&SclusterSendFunction,this,_clusterDefinition->geo().available() ? &SclusterGeoIpFunction : 0,this) == ZT_RESULT_OK) {
 						std::vector<ClusterDefinition::MemberDefinition> members(_clusterDefinition->members());
 						for(std::vector<ClusterDefinition::MemberDefinition>::iterator m(members.begin());m!=members.end();++m) {
 							if (m->id != _clusterMemberId)
 								_node->clusterAddMember(m->id);
 						}
-
 					}
 				} else {
 					delete _clusterDefinition;
@@ -699,6 +870,7 @@ public:
 			_lastRestart = clockShouldBe;
 			uint64_t lastTapMulticastGroupCheck = 0;
 			uint64_t lastTcpFallbackResolve = 0;
+			uint64_t lastBindRefresh = 0;
 			uint64_t lastLocalInterfaceAddressCheck = (OSUtils::now() - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
 #ifdef ZT_AUTO_UPDATE
 			uint64_t lastSoftwareUpdateCheck = 0;
@@ -711,19 +883,41 @@ public:
 					_termReason = ONE_NORMAL_TERMINATION;
 					_termReason_m.unlock();
 					break;
-				} else _run_m.unlock();
+				} else {
+					_run_m.unlock();
+				}
 
-				uint64_t now = OSUtils::now();
+				const uint64_t now = OSUtils::now();
+
+				// Attempt to detect sleep/wake events by detecting delay overruns
+				bool restarted = false;
+				if ((now > clockShouldBe)&&((now - clockShouldBe) > 10000)) {
+					_lastRestart = now;
+					restarted = true;
+				}
+
+				// Refresh bindings in case device's interfaces have changed, and also sync routes to update any shadow routes (e.g. shadow default)
+				if (((now - lastBindRefresh) >= ZT_BINDER_REFRESH_PERIOD)||(restarted)) {
+					lastBindRefresh = now;
+					for(int i=0;i<3;++i) {
+						if (_ports[i]) {
+							_bindings[i].refresh(_phy,_ports[i],*this);
+						}
+					}
+					{
+						Mutex::Lock _l(_nets_m);
+						for(std::map<uint64_t,NetworkState>::iterator n(_nets.begin());n!=_nets.end();++n) {
+							if (n->second.tap)
+								syncManagedStuff(n->second,false,true);
+						}
+					}
+				}
 
 				uint64_t dl = _nextBackgroundTaskDeadline;
 				if (dl <= now) {
 					_node->processBackgroundTasks(now,&_nextBackgroundTaskDeadline);
 					dl = _nextBackgroundTaskDeadline;
 				}
-
-				// Attempt to detect sleep/wake events by detecting delay overruns
-				if ((now > clockShouldBe)&&((now - clockShouldBe) > 2000))
-					_lastRestart = now;
 
 #ifdef ZT_AUTO_UPDATE
 				if ((now - lastSoftwareUpdateCheck) >= ZT_AUTO_UPDATE_CHECK_PERIOD) {
@@ -742,90 +936,35 @@ public:
 
 				if ((now - lastTapMulticastGroupCheck) >= ZT_TAP_CHECK_MULTICAST_INTERVAL) {
 					lastTapMulticastGroupCheck = now;
-					Mutex::Lock _l(_taps_m);
-					for(std::map< uint64_t,EthernetTap *>::const_iterator t(_taps.begin());t!=_taps.end();++t) {
-						std::vector<MulticastGroup> added,removed;
-						t->second->scanMulticastGroups(added,removed);
-						for(std::vector<MulticastGroup>::iterator m(added.begin());m!=added.end();++m)
-							_node->multicastSubscribe(t->first,m->mac().toInt(),m->adi());
-						for(std::vector<MulticastGroup>::iterator m(removed.begin());m!=removed.end();++m)
-							_node->multicastUnsubscribe(t->first,m->mac().toInt(),m->adi());
+					Mutex::Lock _l(_nets_m);
+					for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
+						if (n->second.tap) {
+							std::vector<MulticastGroup> added,removed;
+							n->second.tap->scanMulticastGroups(added,removed);
+							for(std::vector<MulticastGroup>::iterator m(added.begin());m!=added.end();++m)
+								_node->multicastSubscribe(n->first,m->mac().toInt(),m->adi());
+							for(std::vector<MulticastGroup>::iterator m(removed.begin());m!=removed.end();++m)
+								_node->multicastUnsubscribe(n->first,m->mac().toInt(),m->adi());
+						}
 					}
 				}
 
 				if ((now - lastLocalInterfaceAddressCheck) >= ZT_LOCAL_INTERFACE_CHECK_INTERVAL) {
 					lastLocalInterfaceAddressCheck = now;
 
-				_node->clearLocalInterfaceAddresses();
+					_node->clearLocalInterfaceAddresses();
+
 #ifdef ZT_USE_MINIUPNPC
-				std::vector<InetAddress> mappedAddresses(_portMapper->get());
-				for(std::vector<InetAddress>::const_iterator ext(mappedAddresses.begin());ext!=mappedAddresses.end();++ext)
-					_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)));
+					if (_portMapper) {
+						std::vector<InetAddress> mappedAddresses(_portMapper->get());
+						for(std::vector<InetAddress>::const_iterator ext(mappedAddresses.begin());ext!=mappedAddresses.end();++ext)
+							_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)));
+					}
 #endif
 
-#ifdef __UNIX_LIKE__
-					std::vector<std::string> ztDevices;
-					{
-						Mutex::Lock _l(_taps_m);
-						for(std::map< uint64_t,EthernetTap *>::const_iterator t(_taps.begin());t!=_taps.end();++t)
-							ztDevices.push_back(t->second->deviceName());
-					}
-					struct ifaddrs *ifatbl = (struct ifaddrs *)0;
-					if ((getifaddrs(&ifatbl) == 0)&&(ifatbl)) {
-						struct ifaddrs *ifa = ifatbl;
-						while (ifa) {
-							if ((ifa->ifa_name)&&(ifa->ifa_addr)&&(!isBlacklistedLocalInterfaceForZeroTierTraffic(ifa->ifa_name))) {
-								bool isZT = false;
-								for(std::vector<std::string>::const_iterator d(ztDevices.begin());d!=ztDevices.end();++d) {
-									if (*d == ifa->ifa_name) {
-										isZT = true;
-										break;
-									}
-								}
-								if (!isZT) {
-									InetAddress ip(ifa->ifa_addr);
-									ip.setPort(_port);
-									_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip));
-								}
-							}
-							ifa = ifa->ifa_next;
-						}
-						freeifaddrs(ifatbl);
-					}
-#endif // __UNIX_LIKE__
-
-#ifdef __WINDOWS__
-					std::vector<NET_LUID> ztDevices;
-					{
-						Mutex::Lock _l(_taps_m);
-						for(std::map< uint64_t,EthernetTap *>::const_iterator t(_taps.begin());t!=_taps.end();++t)
-							ztDevices.push_back(t->second->luid());
-					}
-					char aabuf[16384];
-					ULONG aalen = sizeof(aabuf);
-					if (GetAdaptersAddresses(AF_UNSPEC,GAA_FLAG_SKIP_ANYCAST|GAA_FLAG_SKIP_MULTICAST|GAA_FLAG_SKIP_DNS_SERVER,(void *)0,reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf),&aalen) == NO_ERROR) {
-						PIP_ADAPTER_ADDRESSES a = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf);
-						while (a) {
-							bool isZT = false;
-							for(std::vector<NET_LUID>::const_iterator d(ztDevices.begin());d!=ztDevices.end();++d) {
-								if (a->Luid.Value == d->Value) {
-									isZT = true;
-									break;
-								}
-							}
-							if (!isZT) {
-								PIP_ADAPTER_UNICAST_ADDRESS ua = a->FirstUnicastAddress;
-								while (ua) {
-									InetAddress ip(ua->Address.lpSockaddr);
-									ip.setPort(_port);
-									_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip));
-									ua = ua->Next;
-								}
-							}
-							a = a->Next;
-						}
-					}
-#endif // __WINDOWS__
+					std::vector<InetAddress> boundAddrs(_bindings[0].allBoundLocalInterfaceAddresses());
+					for(std::vector<InetAddress>::const_iterator i(boundAddrs.begin());i!=boundAddrs.end();++i)
+						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*i)));
 				}
 
 				const unsigned long delay = (dl > now) ? (unsigned long)(dl - now) : 100;
@@ -848,10 +987,10 @@ public:
 		} catch ( ... ) {}
 
 		{
-			Mutex::Lock _l(_taps_m);
-			for(std::map< uint64_t,EthernetTap * >::iterator t(_taps.begin());t!=_taps.end();++t)
-				delete t->second;
-			_taps.clear();
+			Mutex::Lock _l(_nets_m);
+			for(std::map<uint64_t,NetworkState>::iterator n(_nets.begin());n!=_nets.end();++n)
+				delete n->second.tap;
+			_nets.clear();
 		}
 
 		delete _controlPlane;
@@ -876,11 +1015,11 @@ public:
 
 	virtual std::string portDeviceName(uint64_t nwid) const
 	{
-		Mutex::Lock _l(_taps_m);
-		std::map< uint64_t,EthernetTap * >::const_iterator t(_taps.find(nwid));
-		if (t != _taps.end())
-			return t->second->deviceName();
-		return std::string();
+		Mutex::Lock _l(_nets_m);
+		std::map<uint64_t,NetworkState>::const_iterator n(_nets.find(nwid));
+		if ((n != _nets.end())&&(n->second.tap))
+			return n->second.tap->deviceName();
+		else return std::string();
 	}
 
 	virtual bool tcpFallbackActive() const
@@ -896,9 +1035,174 @@ public:
 		_phy.whack();
 	}
 
+	virtual bool getNetworkSettings(const uint64_t nwid,NetworkSettings &settings) const
+	{
+		Mutex::Lock _l(_nets_m);
+		std::map<uint64_t,NetworkState>::const_iterator n(_nets.find(nwid));
+		if (n == _nets.end())
+			return false;
+		memcpy(&settings,&(n->second.settings),sizeof(NetworkSettings));
+		return true;
+	}
+
+	virtual bool setNetworkSettings(const uint64_t nwid,const NetworkSettings &settings)
+	{
+		Mutex::Lock _l(_nets_m);
+
+		std::map<uint64_t,NetworkState>::iterator n(_nets.find(nwid));
+		if (n == _nets.end())
+			return false;
+		memcpy(&(n->second.settings),&settings,sizeof(NetworkSettings));
+
+		char nlcpath[256];
+		Utils::snprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
+		FILE *out = fopen(nlcpath,"w");
+		if (out) {
+			fprintf(out,"allowManaged=%d\n",(int)n->second.settings.allowManaged);
+			fprintf(out,"allowGlobal=%d\n",(int)n->second.settings.allowGlobal);
+			fprintf(out,"allowDefault=%d\n",(int)n->second.settings.allowDefault);
+			fclose(out);
+		}
+
+		if (n->second.tap)
+			syncManagedStuff(n->second,true,true);
+
+		return true;
+	}
+
 	// Begin private implementation methods
 
-	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
+	// Checks if a managed IP or route target is allowed
+	bool checkIfManagedIsAllowed(const NetworkState &n,const InetAddress &target)
+	{
+		if (!n.settings.allowManaged)
+			return false;
+		if (target.isDefaultRoute())
+			return n.settings.allowDefault;
+		switch(target.ipScope()) {
+			case InetAddress::IP_SCOPE_NONE:
+			case InetAddress::IP_SCOPE_MULTICAST:
+			case InetAddress::IP_SCOPE_LOOPBACK:
+			case InetAddress::IP_SCOPE_LINK_LOCAL:
+				return false;
+			case InetAddress::IP_SCOPE_GLOBAL:
+				return n.settings.allowGlobal;
+			default:
+				return true;
+		}
+	}
+
+	// Match only an IP from a vector of IPs -- used in syncManagedStuff()
+	bool matchIpOnly(const std::vector<InetAddress> &ips,const InetAddress &ip) const
+	{
+		for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
+			if (i->ipsEqual(ip))
+				return true;
+		}
+		return false;
+	}
+
+	// Apply or update managed IPs for a configured network (be sure n.tap exists)
+	void syncManagedStuff(NetworkState &n,bool syncIps,bool syncRoutes)
+	{
+		// assumes _nets_m is locked
+		if (syncIps) {
+			std::vector<InetAddress> newManagedIps;
+			newManagedIps.reserve(n.config.assignedAddressCount);
+			for(unsigned int i=0;i<n.config.assignedAddressCount;++i) {
+				const InetAddress *ii = reinterpret_cast<const InetAddress *>(&(n.config.assignedAddresses[i]));
+				if (checkIfManagedIsAllowed(n,*ii))
+					newManagedIps.push_back(*ii);
+			}
+			std::sort(newManagedIps.begin(),newManagedIps.end());
+			newManagedIps.erase(std::unique(newManagedIps.begin(),newManagedIps.end()),newManagedIps.end());
+
+			for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
+				if (std::find(newManagedIps.begin(),newManagedIps.end(),*ip) == newManagedIps.end()) {
+					if (!n.tap->removeIp(*ip))
+						fprintf(stderr,"ERROR: unable to remove ip address %s"ZT_EOL_S, ip->toString().c_str());
+				}
+			}
+			for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
+				if (std::find(n.managedIps.begin(),n.managedIps.end(),*ip) == n.managedIps.end()) {
+					if (!n.tap->addIp(*ip))
+						fprintf(stderr,"ERROR: unable to add ip address %s"ZT_EOL_S, ip->toString().c_str());
+				}
+			}
+
+			n.managedIps.swap(newManagedIps);
+		}
+
+		if (syncRoutes) {
+			char tapdev[64];
+#ifdef __WINDOWS__
+			Utils::snprintf(tapdev,sizeof(tapdev),"%.16llx",(unsigned long long)n.tap->luid().Value);
+#else
+			Utils::scopy(tapdev,sizeof(tapdev),n.tap->deviceName().c_str());
+#endif
+
+			std::vector<InetAddress> myIps(n.tap->ips());
+
+			// Nuke applied routes that are no longer in n.config.routes[] and/or are not allowed
+			for(std::list<ManagedRoute>::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();) {
+				bool haveRoute = false;
+				if ( (checkIfManagedIsAllowed(n,mr->target())) && ((mr->via().ss_family != mr->target().ss_family)||(!matchIpOnly(myIps,mr->via()))) ) {
+					for(unsigned int i=0;i<n.config.routeCount;++i) {
+						const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
+						const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
+						if ( (mr->target() == *target) && ( ((via->ss_family == target->ss_family)&&(mr->via() == *via)) || (tapdev == mr->device()) ) ) {
+							haveRoute = true;
+							break;
+						}
+					}
+				}
+				if (haveRoute) {
+					++mr;
+				} else {
+					n.managedRoutes.erase(mr++);
+				}
+			}
+
+			// Apply routes in n.config.routes[] that we haven't applied yet, and sync those we have in case shadow routes need to change
+			for(unsigned int i=0;i<n.config.routeCount;++i) {
+				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
+				const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
+
+				if ( (!checkIfManagedIsAllowed(n,*target)) || ((via->ss_family == target->ss_family)&&(matchIpOnly(myIps,*via))) )
+					continue;
+
+				bool haveRoute = false;
+
+				// Ignore routes implied by local managed IPs since adding the IP adds the route
+				for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
+					if ((target->netmaskBits() == ip->netmaskBits())&&(target->containsAddress(*ip))) {
+						haveRoute = true;
+						break;
+					}
+				}
+				if (haveRoute)
+					continue;
+
+				// If we've already applied this route, just sync it and continue
+				for(std::list<ManagedRoute>::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();++mr) {
+					if ( (mr->target() == *target) && ( ((via->ss_family == target->ss_family)&&(mr->via() == *via)) || (tapdev == mr->device()) ) ) {
+						haveRoute = true;
+						mr->sync();
+						break;
+					}
+				}
+				if (haveRoute)
+					continue;
+
+				// Add and apply new routes
+				n.managedRoutes.push_back(ManagedRoute());
+				if (!n.managedRoutes.back().set(*target,*via,tapdev))
+					n.managedRoutes.pop_back();
+			}
+		}
+	}
+
+	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
 	{
 #ifdef ZT_ENABLE_CLUSTER
 		if (sock == _clusterMessageSocket) {
@@ -915,9 +1219,10 @@ public:
 
 		if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(from)->ipScope() == InetAddress::IP_SCOPE_GLOBAL))
 			_lastDirectReceiveFromGlobal = OSUtils::now();
-		ZT_ResultCode rc = _node->processWirePacket(
+
+		const ZT_ResultCode rc = _node->processWirePacket(
 			OSUtils::now(),
-			reinterpret_cast<const struct sockaddr_storage *>(*uptr),
+			reinterpret_cast<const struct sockaddr_storage *>(localAddr),
 			(const struct sockaddr_storage *)from, // Phy<> uses sockaddr_storage, so it'll always be that big
 			data,
 			len,
@@ -970,28 +1275,32 @@ public:
 
 	inline void phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
 	{
-		// Incoming TCP connections are HTTP JSON API requests.
-
-		TcpConnection *tc = new TcpConnection();
-		_tcpConnections.insert(tc);
-
-		tc->type = TcpConnection::TCP_HTTP_INCOMING;
-		tc->shouldKeepAlive = true;
-		tc->parent = this;
-		tc->sock = sockN;
-		tc->from = from;
-		http_parser_init(&(tc->parser),HTTP_REQUEST);
-		tc->parser.data = (void *)tc;
-		tc->messageSize = 0;
-		tc->lastActivity = OSUtils::now();
-		tc->currentHeaderField = "";
-		tc->currentHeaderValue = "";
-		tc->url = "";
-		tc->status = "";
-		tc->headers.clear();
-		tc->body = "";
-		tc->writeBuf = "";
-		*uptrN = (void *)tc;
+		if ((!from)||(reinterpret_cast<const InetAddress *>(from)->ipScope() != InetAddress::IP_SCOPE_LOOPBACK)) {
+			// Non-Loopback: deny (for now)
+			_phy.close(sockN,false);
+			return;
+		} else {
+			// Loopback == HTTP JSON API request
+			TcpConnection *tc = new TcpConnection();
+			_tcpConnections.insert(tc);
+			tc->type = TcpConnection::TCP_HTTP_INCOMING;
+			tc->shouldKeepAlive = true;
+			tc->parent = this;
+			tc->sock = sockN;
+			tc->from = from;
+			http_parser_init(&(tc->parser),HTTP_REQUEST);
+			tc->parser.data = (void *)tc;
+			tc->messageSize = 0;
+			tc->lastActivity = OSUtils::now();
+			tc->currentHeaderField = "";
+			tc->currentHeaderValue = "";
+			tc->url = "";
+			tc->status = "";
+			tc->headers.clear();
+			tc->body = "";
+			tc->writeBuf = "";
+			*uptrN = (void *)tc;
+		}
 	}
 
 	inline void phyOnTcpClose(PhySocket *sock,void **uptr)
@@ -1064,9 +1373,10 @@ public:
 							}
 
 							if (from) {
-								ZT_ResultCode rc = _node->processWirePacket(
+								InetAddress fakeTcpLocalInterfaceAddress((uint32_t)0xffffffff,0xffff);
+								const ZT_ResultCode rc = _node->processWirePacket(
 									OSUtils::now(),
-									&ZT_SOCKADDR_NULL,
+									reinterpret_cast<struct sockaddr_storage *>(&fakeTcpLocalInterfaceAddress),
 									reinterpret_cast<struct sockaddr_storage *>(&from),
 									data,
 									plen,
@@ -1124,15 +1434,17 @@ public:
 
 	inline int nodeVirtualNetworkConfigFunction(uint64_t nwid,void **nuptr,enum ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nwc)
 	{
-		Mutex::Lock _l(_taps_m);
-		std::map< uint64_t,EthernetTap * >::iterator t(_taps.find(nwid));
+		Mutex::Lock _l(_nets_m);
+		NetworkState &n = _nets[nwid];
+
 		switch(op) {
+
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP:
-				if (t == _taps.end()) {
+				if (!n.tap) {
 					try {
-						char friendlyName[1024];
+						char friendlyName[128];
 						Utils::snprintf(friendlyName,sizeof(friendlyName),"ZeroTier One [%.16llx]",nwid);
-						t = _taps.insert(std::pair< uint64_t,EthernetTap *>(nwid,new EthernetTap(
+						n.tap = new EthernetTap(
 							_homePath.c_str(),
 							MAC(nwc->mac),
 							nwc->mtu,
@@ -1140,8 +1452,19 @@ public:
 							nwid,
 							friendlyName,
 							StapFrameHandler,
-							(void *)this))).first;
-						*nuptr = (void *)t->second;
+							(void *)this);
+						*nuptr = (void *)&n;
+
+						char nlcpath[256];
+						Utils::snprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
+						std::string nlcbuf;
+						if (OSUtils::readFile(nlcpath,nlcbuf)) {
+							Dictionary<4096> nc;
+							nc.load(nlcbuf.c_str());
+							n.settings.allowManaged = nc.getB("allowManaged",true);
+							n.settings.allowGlobal = nc.getB("allowGlobal",false);
+							n.settings.allowDefault = nc.getB("allowDefault",false);
+						}
 					} catch (std::exception &exc) {
 #ifdef __WINDOWS__
 						FILE *tapFailLog = fopen((_homePath + ZT_PATH_SEPARATOR_S"port_error_log.txt").c_str(),"a");
@@ -1152,53 +1475,47 @@ public:
 #else
 						fprintf(stderr,"ERROR: unable to configure virtual network port: %s"ZT_EOL_S,exc.what());
 #endif
+						_nets.erase(nwid);
 						return -999;
 					} catch ( ... ) {
 						return -999; // tap init failed
 					}
 				}
-				// fall through...
-			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
-				if (t != _taps.end()) {
-					t->second->setEnabled(nwc->enabled != 0);
+				// After setting up tap, fall through to CONFIG_UPDATE since we also want to do this...
 
-					std::vector<InetAddress> &assignedIps = _tapAssignedIps[nwid];
-					std::vector<InetAddress> newAssignedIps;
-					for(unsigned int i=0;i<nwc->assignedAddressCount;++i)
-						newAssignedIps.push_back(InetAddress(nwc->assignedAddresses[i]));
-					std::sort(newAssignedIps.begin(),newAssignedIps.end());
-					newAssignedIps.erase(std::unique(newAssignedIps.begin(),newAssignedIps.end()),newAssignedIps.end());
-					for(std::vector<InetAddress>::iterator ip(newAssignedIps.begin());ip!=newAssignedIps.end();++ip) {
-						if (!std::binary_search(assignedIps.begin(),assignedIps.end(),*ip))
-							if (!t->second->addIp(*ip))
-								fprintf(stderr,"ERROR: unable to add ip address %s"ZT_EOL_S, ip->toString().c_str());
-					}
-					for(std::vector<InetAddress>::iterator ip(assignedIps.begin());ip!=assignedIps.end();++ip) {
-						if (!std::binary_search(newAssignedIps.begin(),newAssignedIps.end(),*ip))
-							if (!t->second->removeIp(*ip))
-								fprintf(stderr,"ERROR: unable to remove ip address %s"ZT_EOL_S, ip->toString().c_str());
-					}
-					assignedIps.swap(newAssignedIps);
+			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
+				memcpy(&(n.config),nwc,sizeof(ZT_VirtualNetworkConfig));
+				if (n.tap) { // sanity check
+					syncManagedStuff(n,true,true);
 				} else {
+					_nets.erase(nwid);
 					return -999; // tap init failed
 				}
 				break;
+
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN:
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY:
-				if (t != _taps.end()) {
+				if (n.tap) { // sanity check
 #ifdef __WINDOWS__
-					std::string winInstanceId(t->second->instanceId());
+					std::string winInstanceId(n.tap->instanceId());
 #endif
 					*nuptr = (void *)0;
-					delete t->second;
-					_taps.erase(t);
-					_tapAssignedIps.erase(nwid);
+					delete n.tap;
+					_nets.erase(nwid);
 #ifdef __WINDOWS__
 					if ((op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY)&&(winInstanceId.length() > 0))
 						WindowsEthernetTap::deletePersistentTapDevice(winInstanceId.c_str());
 #endif
+					if (op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY) {
+						char nlcpath[256];
+						Utils::snprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
+						OSUtils::rm(nlcpath);
+					}
+				} else {
+					_nets.erase(nwid);
 				}
 				break;
+
 		}
 		return 0;
 	}
@@ -1281,119 +1598,96 @@ public:
 
 	inline int nodeWirePacketSendFunction(const struct sockaddr_storage *localAddr,const struct sockaddr_storage *addr,const void *data,unsigned int len,unsigned int ttl)
 	{
-#ifdef ZT_USE_MINIUPNPC
-		if ((localAddr->ss_family == AF_INET)&&(reinterpret_cast<const struct sockaddr_in *>(localAddr)->sin_port == reinterpret_cast<const struct sockaddr_in *>(&_v4UpnpLocalAddress)->sin_port)) {
-#ifdef ZT_BREAK_UDP
-			if (!OSUtils::fileExists("/tmp/ZT_BREAK_UDP")) {
-#endif
-				if (addr->ss_family == AF_INET) {
-					if (ttl)
-						_phy.setIp4UdpTtl(_v4UpnpUdpSocket,ttl);
-					const int result = ((_phy.udpSend(_v4UpnpUdpSocket,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1);
-					if (ttl)
-						_phy.setIp4UdpTtl(_v4UpnpUdpSocket,255);
-					return result;
-				} else {
-					return -1;
-				}
-#ifdef ZT_BREAK_UDP
-			}
-#endif
-		}
-#endif // ZT_USE_MINIUPNPC
+		unsigned int fromBindingNo = 0;
 
-		int result = -1;
-		switch(addr->ss_family) {
-			case AF_INET:
-#ifdef ZT_BREAK_UDP
-				if (!OSUtils::fileExists("/tmp/ZT_BREAK_UDP")) {
-#endif
-					if (_v4UdpSocket) {
-						if (ttl)
-							_phy.setIp4UdpTtl(_v4UdpSocket,ttl);
-						result = ((_phy.udpSend(_v4UdpSocket,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1);
-						if (ttl)
-							_phy.setIp4UdpTtl(_v4UdpSocket,255);
-					}
-#ifdef ZT_BREAK_UDP
-				}
-#endif
+		if (addr->ss_family == AF_INET) {
+			if (reinterpret_cast<const struct sockaddr_in *>(localAddr)->sin_port == 0) {
+				// If sender is sending from wildcard (null address), choose the secondary backup
+				// port 1/4 of the time. (but only for IPv4)
+				fromBindingNo = (++_udpPortPickerCounter & 0x4) >> 2;
+				if (!_ports[fromBindingNo])
+					fromBindingNo = 0;
+			} else {
+				const uint16_t lp = reinterpret_cast<const struct sockaddr_in *>(localAddr)->sin_port;
+				if (lp == _portsBE[1])
+					fromBindingNo = 1;
+				else if (lp == _portsBE[2])
+					fromBindingNo = 2;
+			}
 
 #ifdef ZT_TCP_FALLBACK_RELAY
-				// TCP fallback tunnel support
-				if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(addr)->ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
-					uint64_t now = OSUtils::now();
-
-					// Engage TCP tunnel fallback if we haven't received anything valid from a global
-					// IP address in ZT_TCP_FALLBACK_AFTER milliseconds. If we do start getting
-					// valid direct traffic we'll stop using it and close the socket after a while.
-					if (((now - _lastDirectReceiveFromGlobal) > ZT_TCP_FALLBACK_AFTER)&&((now - _lastRestart) > ZT_TCP_FALLBACK_AFTER)) {
-						if (_tcpFallbackTunnel) {
-							Mutex::Lock _l(_tcpFallbackTunnel->writeBuf_m);
-							if (!_tcpFallbackTunnel->writeBuf.length())
-								_phy.setNotifyWritable(_tcpFallbackTunnel->sock,true);
-							unsigned long mlen = len + 7;
-							_tcpFallbackTunnel->writeBuf.push_back((char)0x17);
-							_tcpFallbackTunnel->writeBuf.push_back((char)0x03);
-							_tcpFallbackTunnel->writeBuf.push_back((char)0x03); // fake TLS 1.2 header
-							_tcpFallbackTunnel->writeBuf.push_back((char)((mlen >> 8) & 0xff));
-							_tcpFallbackTunnel->writeBuf.push_back((char)(mlen & 0xff));
-							_tcpFallbackTunnel->writeBuf.push_back((char)4); // IPv4
-							_tcpFallbackTunnel->writeBuf.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_addr.s_addr))),4);
-							_tcpFallbackTunnel->writeBuf.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port))),2);
-							_tcpFallbackTunnel->writeBuf.append((const char *)data,len);
-							result = 0;
-						} else if (((now - _lastSendToGlobal) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobal) > (ZT_PING_CHECK_INVERVAL / 2))) {
-							std::vector<InetAddress> tunnelIps(_tcpFallbackResolver.get());
-							if (tunnelIps.empty()) {
-								if (!_tcpFallbackResolver.running())
-									_tcpFallbackResolver.resolveNow();
-							} else {
-								bool connected = false;
-								InetAddress addr(tunnelIps[(unsigned long)now % tunnelIps.size()]);
-								addr.setPort(ZT_TCP_FALLBACK_RELAY_PORT);
-								_phy.tcpConnect(reinterpret_cast<const struct sockaddr *>(&addr),connected);
-							}
+			// TCP fallback tunnel support, currently IPv4 only
+			if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(addr)->ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
+				// Engage TCP tunnel fallback if we haven't received anything valid from a global
+				// IP address in ZT_TCP_FALLBACK_AFTER milliseconds. If we do start getting
+				// valid direct traffic we'll stop using it and close the socket after a while.
+				const uint64_t now = OSUtils::now();
+				if (((now - _lastDirectReceiveFromGlobal) > ZT_TCP_FALLBACK_AFTER)&&((now - _lastRestart) > ZT_TCP_FALLBACK_AFTER)) {
+					if (_tcpFallbackTunnel) {
+						Mutex::Lock _l(_tcpFallbackTunnel->writeBuf_m);
+						if (!_tcpFallbackTunnel->writeBuf.length())
+							_phy.setNotifyWritable(_tcpFallbackTunnel->sock,true);
+						unsigned long mlen = len + 7;
+						_tcpFallbackTunnel->writeBuf.push_back((char)0x17);
+						_tcpFallbackTunnel->writeBuf.push_back((char)0x03);
+						_tcpFallbackTunnel->writeBuf.push_back((char)0x03); // fake TLS 1.2 header
+						_tcpFallbackTunnel->writeBuf.push_back((char)((mlen >> 8) & 0xff));
+						_tcpFallbackTunnel->writeBuf.push_back((char)(mlen & 0xff));
+						_tcpFallbackTunnel->writeBuf.push_back((char)4); // IPv4
+						_tcpFallbackTunnel->writeBuf.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_addr.s_addr))),4);
+						_tcpFallbackTunnel->writeBuf.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port))),2);
+						_tcpFallbackTunnel->writeBuf.append((const char *)data,len);
+					} else if (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2))) {
+						std::vector<InetAddress> tunnelIps(_tcpFallbackResolver.get());
+						if (tunnelIps.empty()) {
+							if (!_tcpFallbackResolver.running())
+								_tcpFallbackResolver.resolveNow();
+						} else {
+							bool connected = false;
+							InetAddress addr(tunnelIps[(unsigned long)now % tunnelIps.size()]);
+							addr.setPort(ZT_TCP_FALLBACK_RELAY_PORT);
+							_phy.tcpConnect(reinterpret_cast<const struct sockaddr *>(&addr),connected);
 						}
 					}
-
-					_lastSendToGlobal = now;
 				}
+				_lastSendToGlobalV4 = now;
+			}
 #endif // ZT_TCP_FALLBACK_RELAY
-
-				break;
-
-			case AF_INET6:
-#ifdef ZT_BREAK_UDP
-				if (!OSUtils::fileExists("/tmp/ZT_BREAK_UDP")) {
-#endif
-				if (_v6UdpSocket)
-					result = ((_phy.udpSend(_v6UdpSocket,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1);
-#ifdef ZT_BREAK_UDP
-				}
-#endif
-				break;
-
-			default:
-				return -1;
+		} else if (addr->ss_family == AF_INET6) {
+			if (reinterpret_cast<const struct sockaddr_in6 *>(localAddr)->sin6_port != 0) {
+				const uint16_t lp = reinterpret_cast<const struct sockaddr_in6 *>(localAddr)->sin6_port;
+				if (lp == _portsBE[1])
+					fromBindingNo = 1;
+				else if (lp == _portsBE[2])
+					fromBindingNo = 2;
+			}
+		} else {
+			return -1;
 		}
-		return result;
+
+#ifdef ZT_BREAK_UDP
+		if (OSUtils::fileExists("/tmp/ZT_BREAK_UDP"))
+			return 0; // silently break UDP
+#endif
+
+		return (_bindings[fromBindingNo].udpSend(_phy,*(reinterpret_cast<const InetAddress *>(localAddr)),*(reinterpret_cast<const InetAddress *>(addr)),data,len,ttl)) ? 0 : -1;
 	}
 
 	inline void nodeVirtualNetworkFrameFunction(uint64_t nwid,void **nuptr,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
-		EthernetTap *tap = reinterpret_cast<EthernetTap *>(*nuptr);
-		if (!tap)
+		NetworkState *n = reinterpret_cast<NetworkState *>(*nuptr);
+		if ((!n)||(!n->tap))
 			return;
-		tap->put(MAC(sourceMac),MAC(destMac),etherType,data,len);
+		n->tap->put(MAC(sourceMac),MAC(destMac),etherType,data,len);
 	}
 
 	inline int nodePathCheckFunction(const struct sockaddr_storage *localAddr,const struct sockaddr_storage *remoteAddr)
 	{
-		Mutex::Lock _l(_taps_m);
-		for(std::map< uint64_t,EthernetTap * >::const_iterator t(_taps.begin());t!=_taps.end();++t) {
-			if (t->second) {
-				std::vector<InetAddress> ips(t->second->ips());
+		Mutex::Lock _l(_nets_m);
+	
+		for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
+			if (n->second.tap) {
+				std::vector<InetAddress> ips(n->second.tap->ips());
 				for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
 					if (i->containsAddress(*(reinterpret_cast<const InetAddress *>(remoteAddr)))) {
 						return 0;
@@ -1401,6 +1695,13 @@ public:
 				}
 			}
 		}
+	
+		/* Note: I do not think we need to scan for overlap with managed routes
+		 * because of the "route forking" and interface binding that we do. This
+		 * ensures (we hope) that ZeroTier traffic will still take the physical
+		 * path even if its managed routes override this for other traffic. Will
+		 * revisit if we see problems with this. */
+
 		return 1;
 	}
 
@@ -1461,6 +1762,25 @@ public:
 			_phy.close(tc->sock); // will call close handler, which deletes from _tcpConnections
 	}
 
+	bool shouldBindInterface(const char *ifname,const InetAddress &ifaddr)
+	{
+		if (isBlacklistedLocalInterfaceForZeroTierTraffic(ifname))
+			return false;
+
+		Mutex::Lock _l(_nets_m);
+		for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
+			if (n->second.tap) {
+				std::vector<InetAddress> ips(n->second.tap->ips());
+				for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
+					if (i->ipsEqual(ifaddr))
+						return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
 	std::string _dataStorePrepPath(const char *name) const
 	{
 		std::string p(_homePath);
@@ -1478,52 +1798,40 @@ public:
 		return p;
 	}
 
-	const std::string _homePath;
-	BackgroundResolver _tcpFallbackResolver;
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-	SqliteNetworkController *_controller;
-#endif
-	Phy<OneServiceImpl *> _phy;
-	Node *_node;
-	InetAddress _v4LocalAddress,_v6LocalAddress;
-	PhySocket *_v4UdpSocket;
-	PhySocket *_v6UdpSocket;
-	PhySocket *_v4TcpListenSocket;
-	PhySocket *_v6TcpListenSocket;
-	ControlPlane *_controlPlane;
-	uint64_t _lastDirectReceiveFromGlobal;
-	uint64_t _lastSendToGlobal;
-	uint64_t _lastRestart;
-	volatile uint64_t _nextBackgroundTaskDeadline;
+	bool _trialBind(unsigned int port)
+	{
+		struct sockaddr_in in4;
+		struct sockaddr_in6 in6;
+		PhySocket *tb;
 
-	std::map< uint64_t,EthernetTap * > _taps;
-	std::map< uint64_t,std::vector<InetAddress> > _tapAssignedIps; // ZeroTier assigned IPs, not user or dhcp assigned
-	Mutex _taps_m;
+		memset(&in4,0,sizeof(in4));
+		in4.sin_family = AF_INET;
+		in4.sin_port = Utils::hton((uint16_t)port);
+		tb = _phy.udpBind(reinterpret_cast<const struct sockaddr *>(&in4),(void *)0,0);
+		if (tb) {
+			_phy.close(tb,false);
+			tb = _phy.tcpListen(reinterpret_cast<const struct sockaddr *>(&in4),(void *)0);
+			if (tb) {
+				_phy.close(tb,false);
+				return true;
+			}
+		}
 
-	std::set< TcpConnection * > _tcpConnections; // no mutex for this since it's done in the main loop thread only
-	TcpConnection *_tcpFallbackTunnel;
+		memset(&in6,0,sizeof(in6));
+		in6.sin6_family = AF_INET6;
+		in6.sin6_port = Utils::hton((uint16_t)port);
+		tb = _phy.udpBind(reinterpret_cast<const struct sockaddr *>(&in6),(void *)0,0);
+		if (tb) {
+			_phy.close(tb,false);
+			tb = _phy.tcpListen(reinterpret_cast<const struct sockaddr *>(&in6),(void *)0);
+			if (tb) {
+				_phy.close(tb,false);
+				return true;
+			}
+		}
 
-	ReasonForTermination _termReason;
-	std::string _fatalErrorMessage;
-	Mutex _termReason_m;
-
-	unsigned int _port;
-
-#ifdef ZT_USE_MINIUPNPC
-	InetAddress _v4UpnpLocalAddress;
-	PhySocket *_v4UpnpUdpSocket;
-	PortMapper *_portMapper;
-#endif
-
-#ifdef ZT_ENABLE_CLUSTER
-	PhySocket *_clusterMessageSocket;
-	ClusterGeoIpService *_clusterGeoIpService;
-	ClusterDefinition *_clusterDefinition;
-	unsigned int _clusterMemberId;
-#endif
-
-	bool _run;
-	Mutex _run_m;
+		return false;
+	}
 };
 
 static int SnodeVirtualNetworkConfigFunction(ZT_Node *node,void *uptr,uint64_t nwid,void **nuptr,enum ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nwconf)
@@ -1552,7 +1860,7 @@ static void SclusterSendFunction(void *uptr,unsigned int toMemberId,const void *
 static int SclusterGeoIpFunction(void *uptr,const struct sockaddr_storage *addr,int *x,int *y,int *z)
 {
 	OneServiceImpl *const impl = reinterpret_cast<OneServiceImpl *>(uptr);
-	return (int)(impl->_clusterGeoIpService->locate(*(reinterpret_cast<const InetAddress *>(addr)),*x,*y,*z));
+	return (int)(impl->_clusterDefinition->geo().locate(*(reinterpret_cast<const InetAddress *>(addr)),*x,*y,*z));
 }
 #endif
 
@@ -1580,13 +1888,19 @@ static int ShttpOnUrl(http_parser *parser,const char *ptr,size_t length)
 	tc->url.append(ptr,length);
 	return 0;
 }
+#if (HTTP_PARSER_VERSION_MAJOR >= 2) && (HTTP_PARSER_VERSION_MINOR >= 2)
 static int ShttpOnStatus(http_parser *parser,const char *ptr,size_t length)
+#else
+static int ShttpOnStatus(http_parser *parser)
+#endif
 {
+	/*
 	TcpConnection *tc = reinterpret_cast<TcpConnection *>(parser->data);
 	tc->messageSize += (unsigned long)length;
 	if (tc->messageSize > ZT_MAX_HTTP_MESSAGE_SIZE)
 		return -1;
 	tc->status.append(ptr,length);
+	*/
 	return 0;
 }
 static int ShttpOnHeaderField(http_parser *parser,const char *ptr,size_t length)
@@ -1646,38 +1960,7 @@ static int ShttpOnMessageComplete(http_parser *parser)
 
 std::string OneService::platformDefaultHomePath()
 {
-#ifdef __UNIX_LIKE__
-
-#ifdef __APPLE__
-	// /Library/... on Apple
-	return std::string("/Library/Application Support/ZeroTier/One");
-#else
-
-#ifdef __BSD__
-	// BSD likes /var/db instead of /var/lib
-	return std::string("/var/db/zerotier-one");
-#else
-	// Use /var/lib for Linux and other *nix
-	return std::string("/var/lib/zerotier-one");
-#endif
-
-#endif
-
-#else // not __UNIX_LIKE__
-
-#ifdef __WINDOWS__
-	// Look up app data folder on Windows, e.g. C:\ProgramData\...
-	char buf[16384];
-	if (SUCCEEDED(SHGetFolderPathA(NULL,CSIDL_COMMON_APPDATA,NULL,0,buf)))
-		return (std::string(buf) + "\\ZeroTier\\One");
-	else return std::string("C:\\ZeroTier\\One");
-#else
-
-	return std::string(); // UNKNOWN PLATFORM
-
-#endif
-
-#endif // __UNIX_LIKE__ or not...
+	return OSUtils::platformDefaultHomePath();
 }
 
 std::string OneService::autoUpdateUrl()

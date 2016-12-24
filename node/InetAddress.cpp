@@ -127,8 +127,10 @@ void InetAddress::set(const void *ipBytes,unsigned int ipLen,unsigned int port)
 {
 	memset(this,0,sizeof(InetAddress));
 	if (ipLen == 4) {
+		uint32_t ipb[1];
+		memcpy(ipb,ipBytes,4);
 		ss_family = AF_INET;
-		reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr = *(reinterpret_cast<const uint32_t *>(ipBytes));
+		reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr = ipb[0];
 		reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton((uint16_t)port);
 	} else if (ipLen == 16) {
 		ss_family = AF_INET6;
@@ -277,6 +279,8 @@ bool InetAddress::containsAddress(const InetAddress &addr) const
 		switch(ss_family) {
 			case AF_INET: {
 				const unsigned int bits = netmaskBits();
+				if (bits == 0)
+					return true;
 				return ( (Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(&addr)->sin_addr.s_addr) >> (32 - bits)) == (Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr) >> (32 - bits)) );
 			}
 			case AF_INET6: {
@@ -391,7 +395,6 @@ bool InetAddress::operator<(const InetAddress &a) const
 }
 
 InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac)
-	throw()
 {
 	struct sockaddr_in6 sin6;
 	sin6.sin6_family = AF_INET6;
@@ -416,7 +419,6 @@ InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac)
 }
 
 InetAddress InetAddress::makeIpv6rfc4193(uint64_t nwid,uint64_t zeroTierAddress)
-	throw()
 {
 	InetAddress r;
 	struct sockaddr_in6 *const sin6 = reinterpret_cast<struct sockaddr_in6 *>(&r);
@@ -438,6 +440,27 @@ InetAddress InetAddress::makeIpv6rfc4193(uint64_t nwid,uint64_t zeroTierAddress)
 	sin6->sin6_addr.s6_addr[14] = (uint8_t)(zeroTierAddress >> 8);
 	sin6->sin6_addr.s6_addr[15] = (uint8_t)zeroTierAddress;
 	sin6->sin6_port = Utils::hton((uint16_t)88); // /88 includes 0xfd + network ID, discriminating by device ID below that
+	return r;
+}
+
+InetAddress InetAddress::makeIpv66plane(uint64_t nwid,uint64_t zeroTierAddress)
+{
+	nwid ^= (nwid >> 32);
+	InetAddress r;
+	struct sockaddr_in6 *const sin6 = reinterpret_cast<struct sockaddr_in6 *>(&r);
+	sin6->sin6_family = AF_INET6;
+	sin6->sin6_addr.s6_addr[0] = 0xfc;
+	sin6->sin6_addr.s6_addr[1] = (uint8_t)(nwid >> 24);
+	sin6->sin6_addr.s6_addr[2] = (uint8_t)(nwid >> 16);
+	sin6->sin6_addr.s6_addr[3] = (uint8_t)(nwid >> 8);
+	sin6->sin6_addr.s6_addr[4] = (uint8_t)nwid;
+	sin6->sin6_addr.s6_addr[5] = (uint8_t)(zeroTierAddress >> 32);
+	sin6->sin6_addr.s6_addr[6] = (uint8_t)(zeroTierAddress >> 24);
+	sin6->sin6_addr.s6_addr[7] = (uint8_t)(zeroTierAddress >> 16);
+	sin6->sin6_addr.s6_addr[8] = (uint8_t)(zeroTierAddress >> 8);
+	sin6->sin6_addr.s6_addr[9] = (uint8_t)zeroTierAddress;
+	sin6->sin6_addr.s6_addr[15] = 0x01;
+	sin6->sin6_port = Utils::hton((uint16_t)40);
 	return r;
 }
 

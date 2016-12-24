@@ -37,7 +37,11 @@
 #endif
 
 #ifdef __WINDOWS__
+#include <windows.h>
 #include <wincrypt.h>
+#include <ShlObj.h>
+#include <netioapi.h>
+#include <iphlpapi.h>
 #endif
 
 #include "OSUtils.hpp"
@@ -225,6 +229,42 @@ bool OSUtils::writeFile(const char *path,const void *buf,unsigned int len)
 		}
 	}
 	return false;
+}
+
+std::string OSUtils::platformDefaultHomePath()
+{
+#ifdef __UNIX_LIKE__
+
+#ifdef __APPLE__
+	// /Library/... on Apple
+	return std::string("/Library/Application Support/ZeroTier/One");
+#else
+
+#ifdef __BSD__
+	// BSD likes /var/db instead of /var/lib
+	return std::string("/var/db/zerotier-one");
+#else
+	// Use /var/lib for Linux and other *nix
+	return std::string("/var/lib/zerotier-one");
+#endif
+
+#endif
+
+#else // not __UNIX_LIKE__
+
+#ifdef __WINDOWS__
+	// Look up app data folder on Windows, e.g. C:\ProgramData\...
+	char buf[16384];
+	if (SUCCEEDED(SHGetFolderPathA(NULL,CSIDL_COMMON_APPDATA,NULL,0,buf)))
+		return (std::string(buf) + "\\ZeroTier\\One");
+	else return std::string("C:\\ZeroTier\\One");
+#else
+
+	return (std::string(ZT_PATH_SEPARATOR_S) + "ZeroTier" + ZT_PATH_SEPARATOR_S + "One"); // UNKNOWN PLATFORM
+
+#endif
+
+#endif // __UNIX_LIKE__ or not...
 }
 
 // Used to convert HTTP header names to ASCII lower case

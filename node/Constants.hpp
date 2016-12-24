@@ -51,8 +51,20 @@
 #include <endian.h>
 #endif
 
-// Disable type punning on ARM architecture -- some ARM chips throw SIGBUS on unaligned access
-#if defined(__arm__) || defined(__ARMEL__)
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#ifndef __UNIX_LIKE__
+#define __UNIX_LIKE__
+#endif
+#ifndef __BSD__
+#define __BSD__
+#endif
+#include <machine/endian.h>
+#endif
+
+// Defined this macro to disable "type punning" on a number of targets that
+// have issues with unaligned memory access.
+#if defined(__arm__) || defined(__ARMEL__) || (defined(__APPLE__) && ( (defined(TARGET_OS_IPHONE) && (TARGET_OS_IPHONE != 0)) || (defined(TARGET_OS_WATCH) && (TARGET_OS_WATCH != 0)) || (defined(TARGET_IPHONE_SIMULATOR) && (TARGET_IPHONE_SIMULATOR != 0)) ) )
 #ifndef ZT_NO_TYPE_PUNNING
 #define ZT_NO_TYPE_PUNNING
 #endif
@@ -70,18 +82,6 @@
 #define __BYTE_ORDER _BYTE_ORDER
 #define __LITTLE_ENDIAN _LITTLE_ENDIAN
 #define __BIG_ENDIAN _BIG_ENDIAN
-#endif
-#endif
-
-// TODO: Android is what? Linux technically, but does it define it?
-
-#ifdef __APPLE__
-#include <TargetConditionals.h>
-#ifndef __UNIX_LIKE__
-#define __UNIX_LIKE__
-#endif
-#ifndef __BSD__
-#define __BSD__
 #endif
 #endif
 
@@ -104,9 +104,8 @@
 #include <Windows.h>
 #endif
 
-// Assume these are little-endian. PPC is not supported for OSX, and ARM
-// runs in little-endian mode for these OS families.
-#if defined(__APPLE__) || defined(__WINDOWS__)
+// Assume little endian if not defined
+#if (defined(__APPLE__) || defined(__WINDOWS__)) && (!defined(__BYTE_ORDER))
 #undef __BYTE_ORDER
 #undef __LITTLE_ENDIAN
 #undef __BIG_ENDIAN
@@ -163,9 +162,17 @@
 #define ZT_MAX_PACKET_FRAGMENTS 4
 
 /**
- * Timeout for receipt of fragmented packets in ms
+ * Size of RX queue
+ *
+ * This is about 2mb, and can be decreased for small devices. A queue smaller
+ * than about 4 is probably going to cause a lot of lost packets.
  */
-#define ZT_FRAGMENTED_PACKET_RECEIVE_TIMEOUT 500
+#define ZT_RX_QUEUE_SIZE 64
+
+/**
+ * RX queue entries older than this do not "exist"
+ */
+#define ZT_RX_QUEUE_EXPIRE 4000
 
 /**
  * Length of secret key in bytes -- 256-bit -- do not change
@@ -255,17 +262,22 @@
 /**
  * Delay between ordinary case pings of direct links
  */
-#define ZT_PEER_DIRECT_PING_DELAY 90000
+#define ZT_PEER_DIRECT_PING_DELAY 60000
 
 /**
  * Timeout for overall peer activity (measured from last receive)
  */
-#define ZT_PEER_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 4) + ZT_PING_CHECK_INVERVAL)
+#define ZT_PEER_ACTIVITY_TIMEOUT 500000
+
+/**
+ * Timeout for path activity
+ */
+#define ZT_PATH_ACTIVITY_TIMEOUT ZT_PEER_ACTIVITY_TIMEOUT
 
 /**
  * No answer timeout to trigger dead path detection
  */
-#define ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT 2500
+#define ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT 2000
 
 /**
  * Probation threshold after which a path becomes dead
@@ -274,6 +286,9 @@
 
 /**
  * Delay between requests for updated network autoconf information
+ *
+ * Don't lengthen this as it affects things like QoS / uptime monitoring
+ * via ZeroTier Central. This is the heartbeat, basically.
  */
 #define ZT_NETWORK_AUTOCONF_DELAY 60000
 
@@ -342,6 +357,11 @@
 #define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 4
 
 /**
+ * Enable support for old Dictionary based network configs
+ */
+#define ZT_SUPPORT_OLD_STYLE_NETCONF 1
+
+/**
  * A test pseudo-network-ID that can be joined
  *
  * Joining this network ID will result in a network with no IP addressing
@@ -353,6 +373,15 @@
  * prefix.
  */
 #define ZT_TEST_NETWORK_ID 0xffffffffffffffffULL
+
+/**
+ * Desired buffer size for UDP sockets (used in service and osdep but defined here)
+ */
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__))
+#define ZT_UDP_DESIRED_BUF_SIZE 1048576
+#else
+#define ZT_UDP_DESIRED_BUF_SIZE 131072
+#endif
 
 /* Ethernet frame types that might be relevant to us */
 #define ZT_ETHERTYPE_IPV4 0x0800

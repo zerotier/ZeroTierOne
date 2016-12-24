@@ -1,0 +1,49 @@
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:          zerotier-one
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:
+# Short-Description: ZeroTier One network virtualization service
+### END INIT INFO
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+DESC="zerotier-one daemon"
+NAME=zerotier-one
+DAEMON=/usr/sbin/zerotier-one
+PIDFILE=/var/lib/zerotier-one/zerotier-one.pid
+SCRIPTNAME=/etc/init.d/"$NAME"
+EXTRA_OPTS=-d
+
+test -f $DAEMON || exit 0
+
+. /lib/lsb/init-functions
+
+case "$1" in
+start)	log_daemon_msg "Starting ZeroTier One" "zerotier-one"
+        start_daemon -p $PIDFILE $DAEMON $EXTRA_OPTS
+        log_end_msg $?
+	;;
+stop)	log_daemon_msg "Stopping ZeroTier One" "zerotier-one"
+        killproc -p $PIDFILE $DAEMON
+        RETVAL=$?
+        [ $RETVAL -eq 0 ] && [ -e "$PIDFILE" ] && rm -f $PIDFILE
+        log_end_msg $RETVAL
+        ;;
+restart) log_daemon_msg "Restarting ZeroTier One" "zerotier-one" 
+        $0 stop
+        $0 start
+        ;;
+reload|force-reload) log_daemon_msg "Reloading ZeroTier One" "zerotier-one"
+        log_end_msg 0
+        ;;
+status)
+        status_of_proc -p $PIDFILE $DAEMON $NAME && exit 0 || exit $?
+        ;;
+*)	log_action_msg "Usage: /etc/init.d/cron {start|stop|status|restart|reload|force-reload}"
+        exit 2
+        ;;
+esac
+exit 0

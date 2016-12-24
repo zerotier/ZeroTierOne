@@ -68,7 +68,6 @@ typedef BOOL (WINAPI *SetupDiSetClassInstallParamsA_t)(_In_ HDEVINFO DeviceInfoS
 typedef CONFIGRET (WINAPI *CM_Get_Device_ID_ExA_t)(_In_ DEVINST dnDevInst,_Out_writes_(BufferLen) PSTR Buffer,_In_ ULONG BufferLen,_In_ ULONG ulFlags,_In_opt_ HMACHINE hMachine);
 typedef BOOL (WINAPI *SetupDiGetDeviceInstanceIdA_t)(_In_ HDEVINFO DeviceInfoSet,_In_ PSP_DEVINFO_DATA DeviceInfoData,_Out_writes_opt_(DeviceInstanceIdSize) PSTR DeviceInstanceId,_In_ DWORD DeviceInstanceIdSize,_Out_opt_ PDWORD RequiredSize);
 
-
 namespace ZeroTier {
 
 namespace {
@@ -477,7 +476,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 	std::string mySubkeyName;
 
 	if (mtu > 2800)
-		throw std::runtime_error("MTU too large for Windows tap");
+		throw std::runtime_error("MTU too large.");
 
 	// We "tag" registry entries with the network ID to identify persistent devices
 	Utils::snprintf(tag,sizeof(tag),"%.16llx",(unsigned long long)nwid);
@@ -696,37 +695,39 @@ bool WindowsEthernetTap::removeIp(const InetAddress &ip)
 	try {
 		MIB_UNICASTIPADDRESS_TABLE *ipt = (MIB_UNICASTIPADDRESS_TABLE *)0;
 		if (GetUnicastIpAddressTable(AF_UNSPEC,&ipt) == NO_ERROR) {
-			for(DWORD i=0;i<ipt->NumEntries;++i) {
-				if (ipt->Table[i].InterfaceLuid.Value == _deviceLuid.Value) {
-					InetAddress addr;
-					switch(ipt->Table[i].Address.si_family) {
-						case AF_INET:
-							addr.set(&(ipt->Table[i].Address.Ipv4.sin_addr.S_un.S_addr),4,ipt->Table[i].OnLinkPrefixLength);
-							break;
-						case AF_INET6:
-							addr.set(ipt->Table[i].Address.Ipv6.sin6_addr.u.Byte,16,ipt->Table[i].OnLinkPrefixLength);
-							if (addr.ipScope() == InetAddress::IP_SCOPE_LINK_LOCAL)
-								continue; // can't remove link-local IPv6 addresses
-							break;
-					}
-					if (addr == ip) {
-						DeleteUnicastIpAddressEntry(&(ipt->Table[i]));
-						FreeMibTable(ipt);
-
-						std::vector<std::string> regIps(_getRegistryIPv4Value("IPAddress"));
-						std::vector<std::string> regSubnetMasks(_getRegistryIPv4Value("SubnetMask"));
-						std::string ipstr(ip.toIpString());
-						for(std::vector<std::string>::iterator rip(regIps.begin()),rm(regSubnetMasks.begin());((rip!=regIps.end())&&(rm!=regSubnetMasks.end()));++rip,++rm) {
-							if (*rip == ipstr) {
-								regIps.erase(rip);
-								regSubnetMasks.erase(rm);
-								_setRegistryIPv4Value("IPAddress",regIps);
-								_setRegistryIPv4Value("SubnetMask",regSubnetMasks);
+			if ((ipt)&&(ipt->NumEntries > 0)) {
+				for(DWORD i=0;i<(DWORD)ipt->NumEntries;++i) {
+					if (ipt->Table[i].InterfaceLuid.Value == _deviceLuid.Value) {
+						InetAddress addr;
+						switch(ipt->Table[i].Address.si_family) {
+							case AF_INET:
+								addr.set(&(ipt->Table[i].Address.Ipv4.sin_addr.S_un.S_addr),4,ipt->Table[i].OnLinkPrefixLength);
 								break;
-							}
+							case AF_INET6:
+								addr.set(ipt->Table[i].Address.Ipv6.sin6_addr.u.Byte,16,ipt->Table[i].OnLinkPrefixLength);
+								if (addr.ipScope() == InetAddress::IP_SCOPE_LINK_LOCAL)
+									continue; // can't remove link-local IPv6 addresses
+								break;
 						}
+						if (addr == ip) {
+							DeleteUnicastIpAddressEntry(&(ipt->Table[i]));
+							FreeMibTable(ipt);
 
-						return true;
+							std::vector<std::string> regIps(_getRegistryIPv4Value("IPAddress"));
+							std::vector<std::string> regSubnetMasks(_getRegistryIPv4Value("SubnetMask"));
+							std::string ipstr(ip.toIpString());
+							for(std::vector<std::string>::iterator rip(regIps.begin()),rm(regSubnetMasks.begin());((rip!=regIps.end())&&(rm!=regSubnetMasks.end()));++rip,++rm) {
+								if (*rip == ipstr) {
+									regIps.erase(rip);
+									regSubnetMasks.erase(rm);
+									_setRegistryIPv4Value("IPAddress",regIps);
+									_setRegistryIPv4Value("SubnetMask",regSubnetMasks);
+									break;
+								}
+							}
+
+							return true;
+						}
 					}
 				}
 			}
@@ -747,19 +748,21 @@ std::vector<InetAddress> WindowsEthernetTap::ips() const
 	try {
 		MIB_UNICASTIPADDRESS_TABLE *ipt = (MIB_UNICASTIPADDRESS_TABLE *)0;
 		if (GetUnicastIpAddressTable(AF_UNSPEC,&ipt) == NO_ERROR) {
-			for(DWORD i=0;i<ipt->NumEntries;++i) {
-				if (ipt->Table[i].InterfaceLuid.Value == _deviceLuid.Value) {
-					switch(ipt->Table[i].Address.si_family) {
-						case AF_INET: {
-							InetAddress ip(&(ipt->Table[i].Address.Ipv4.sin_addr.S_un.S_addr),4,ipt->Table[i].OnLinkPrefixLength);
-							if (ip != InetAddress::LO4)
-								addrs.push_back(ip);
-						}	break;
-						case AF_INET6: {
-							InetAddress ip(ipt->Table[i].Address.Ipv6.sin6_addr.u.Byte,16,ipt->Table[i].OnLinkPrefixLength);
-							if ((ip != linkLocalLoopback)&&(ip != InetAddress::LO6))
-								addrs.push_back(ip);
-						}	break;
+			if ((ipt)&&(ipt->NumEntries > 0)) {
+				for(DWORD i=0;i<(DWORD)ipt->NumEntries;++i) {
+					if (ipt->Table[i].InterfaceLuid.Value == _deviceLuid.Value) {
+						switch(ipt->Table[i].Address.si_family) {
+							case AF_INET: {
+								InetAddress ip(&(ipt->Table[i].Address.Ipv4.sin_addr.S_un.S_addr),4,ipt->Table[i].OnLinkPrefixLength);
+								if (ip != InetAddress::LO4)
+									addrs.push_back(ip);
+							}	break;
+							case AF_INET6: {
+								InetAddress ip(ipt->Table[i].Address.Ipv6.sin6_addr.u.Byte,16,ipt->Table[i].OnLinkPrefixLength);
+								if ((ip != linkLocalLoopback)&&(ip != InetAddress::LO6))
+									addrs.push_back(ip);
+							}	break;
+						}
 					}
 				}
 			}
@@ -768,7 +771,7 @@ std::vector<InetAddress> WindowsEthernetTap::ips() const
 	} catch ( ... ) {} // sanity check, shouldn't happen unless out of memory
 
 	std::sort(addrs.begin(),addrs.end());
-	std::unique(addrs.begin(),addrs.end());
+	addrs.erase(std::unique(addrs.begin(),addrs.end()),addrs.end());
 
 	return addrs;
 }
@@ -825,14 +828,16 @@ void WindowsEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,
 	unsigned char mcastbuf[TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS_OUTPUT_BUF_SIZE];
 	DWORD bytesReturned = 0;
 	if (DeviceIoControl(t,TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS,(LPVOID)0,0,(LPVOID)mcastbuf,sizeof(mcastbuf),&bytesReturned,NULL)) {
-		MAC mac;
-		DWORD i = 0;
-		while ((i + 6) <= bytesReturned) {
-			mac.setTo(mcastbuf + i,6);
-			i += 6;
-			if ((mac.isMulticast())&&(!mac.isBroadcast())) {
-				// exclude the nulls that may be returned or any other junk Windows puts in there
-				newGroups.push_back(MulticastGroup(mac,0));
+		if ((bytesReturned > 0)&&(bytesReturned <= TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS_OUTPUT_BUF_SIZE)) { // sanity check
+			MAC mac;
+			DWORD i = 0;
+			while ((i + 6) <= bytesReturned) {
+				mac.setTo(mcastbuf + i,6);
+				i += 6;
+				if ((mac.isMulticast())&&(!mac.isBroadcast())) {
+					// exclude the nulls that may be returned or any other junk Windows puts in there
+					newGroups.push_back(MulticastGroup(mac,0));
+				}
 			}
 		}
 	}
@@ -842,7 +847,7 @@ void WindowsEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,
 		newGroups.push_back(MulticastGroup::deriveMulticastGroupForAddressResolution(*ip));
 
 	std::sort(newGroups.begin(),newGroups.end());
-	std::unique(newGroups.begin(),newGroups.end());
+	newGroups.erase(std::unique(newGroups.begin(),newGroups.end()),newGroups.end());
 
 	for(std::vector<MulticastGroup>::iterator m(newGroups.begin());m!=newGroups.end();++m) {
 		if (!std::binary_search(_multicastGroups.begin(),_multicastGroups.end(),*m))
@@ -854,6 +859,14 @@ void WindowsEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,
 	}
 
 	_multicastGroups.swap(newGroups);
+}
+
+NET_IFINDEX WindowsEthernetTap::interfaceIndex() const
+{
+	NET_IFINDEX idx = -1;
+	if (ConvertInterfaceLuidToIndex(&_deviceLuid,&idx) == NO_ERROR)
+		return idx;
+	return -1;
 }
 
 void WindowsEthernetTap::threadMain()
@@ -869,18 +882,19 @@ void WindowsEthernetTap::threadMain()
 	try {
 		while (_run) {
 			// Because Windows
+			Sleep(250);
 			setPersistentTapDeviceState(_deviceInstanceId.c_str(),false);
-			Sleep(500);
+			Sleep(250);
 			setPersistentTapDeviceState(_deviceInstanceId.c_str(),true);
-			Sleep(500);
+			Sleep(250);
 			setPersistentTapDeviceState(_deviceInstanceId.c_str(),false);
-			Sleep(500);
+			Sleep(250);
 			setPersistentTapDeviceState(_deviceInstanceId.c_str(),true);
-			Sleep(500);
+			Sleep(250);
 
 			_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
 			if (_tap == INVALID_HANDLE_VALUE) {
-				Sleep(1000);
+				Sleep(250);
 				continue;
 			}
 
@@ -948,7 +962,7 @@ void WindowsEthernetTap::threadMain()
 					ipnr.ReachabilityTime.LastUnreachable = 1;
 					DWORD result = CreateIpNetEntry2(&ipnr);
 					if (result != NO_ERROR)
-						Sleep(500);
+						Sleep(250);
 					else break;
 				}
 				for(int i=0;i<8;++i) {
@@ -963,7 +977,7 @@ void WindowsEthernetTap::threadMain()
 					nr.Protocol = MIB_IPPROTO_NETMGMT;
 					DWORD result = CreateIpForwardEntry2(&nr);
 					if (result != NO_ERROR)
-						Sleep(500);
+						Sleep(250);
 					else break;
 				}
 			}
@@ -1021,8 +1035,10 @@ void WindowsEthernetTap::threadMain()
 					}
 				}
 
-				if ((waitResult == WAIT_TIMEOUT)||(waitResult == WAIT_FAILED))
+				if ((waitResult == WAIT_TIMEOUT)||(waitResult == WAIT_FAILED)) {
+					Sleep(250); // guard against spinning under some conditions
 					continue;
+				}
 
 				if (HasOverlappedIoCompleted(&tapOvlRead)) {
 					DWORD bytesRead = 0;
@@ -1075,11 +1091,13 @@ NET_IFINDEX WindowsEthernetTap::_getDeviceIndex()
 	if (GetIfTable2Ex(MibIfTableRaw,&ift) != NO_ERROR)
 		throw std::runtime_error("GetIfTable2Ex() failed");
 
-	for(ULONG i=0;i<ift->NumEntries;++i) {
-		if (ift->Table[i].InterfaceLuid.Value == _deviceLuid.Value) {
-			NET_IFINDEX idx = ift->Table[i].InterfaceIndex;
-			FreeMibTable(ift);
-			return idx;
+	if (ift->NumEntries > 0) {
+		for(ULONG i=0;i<ift->NumEntries;++i) {
+			if (ift->Table[i].InterfaceLuid.Value == _deviceLuid.Value) {
+				NET_IFINDEX idx = ift->Table[i].InterfaceIndex;
+				FreeMibTable(ift);
+				return idx;
+			}
 		}
 	}
 

@@ -248,26 +248,15 @@ public:
 	 */
 	inline int configureVirtualNetworkPort(uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,nwid,nuptr,op,nc); }
 
-	/**
-	 * @return True if we appear to be online
-	 */
 	inline bool online() const throw() { return _online; }
 
 #ifdef ZT_TRACE
 	void postTrace(const char *module,unsigned int line,const char *fmt,...);
 #endif
 
-	/**
-	 * @return Next 64-bit random number (not for cryptographic use)
-	 */
 	uint64_t prng();
-
-	/**
-	 * Post a circuit test report to any listeners for a given test ID
-	 *
-	 * @param report Report (includes test ID)
-	 */
 	void postCircuitTestReport(const ZT_CircuitTestReport *report);
+	void setTrustedPaths(const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count);
 
 private:
 	inline SharedPtr<Network> _network(uint64_t nwid) const

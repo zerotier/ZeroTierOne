@@ -44,8 +44,8 @@
 // Number of in-memory last log entries to maintain per user
 #define ZT_SQLITENETWORKCONTROLLER_IN_MEMORY_LOG_SIZE 32
 
-// How long do circuit tests "live"? This is just to prevent buildup in memory.
-#define ZT_SQLITENETWORKCONTROLLER_CIRCUIT_TEST_TIMEOUT 300000
+// How long do circuit tests last before they're forgotten?
+#define ZT_SQLITENETWORKCONTROLLER_CIRCUIT_TEST_TIMEOUT 60000
 
 namespace ZeroTier {
 
@@ -62,8 +62,8 @@ public:
 		const Identity &signingId,
 		const Identity &identity,
 		uint64_t nwid,
-		const Dictionary &metaData,
-		Dictionary &netconf);
+		const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &metaData,
+		NetworkConfig &nc);
 
 	unsigned int handleControlPlaneHttpGET(
 		const std::vector<std::string> &path,
@@ -92,12 +92,14 @@ public:
 		throw();
 
 private:
+	/* deprecated
 	enum IpAssignmentType {
 		// IP assignment is a static IP address
 		ZT_IP_ASSIGNMENT_TYPE_ADDRESS = 0,
 		// IP assignment is a network -- a route via this interface, not an address
 		ZT_IP_ASSIGNMENT_TYPE_NETWORK = 1
 	};
+	*/
 
 	unsigned int _doCPGet(
 		const std::vector<std::string> &path,
@@ -106,54 +108,27 @@ private:
 		const std::string &body,
 		std::string &responseBody,
 		std::string &responseContentType);
-	NetworkController::ResultCode _doNetworkConfigRequest(
-		const InetAddress &fromAddr,
-		const Identity &signingId,
-		const Identity &identity,
-		uint64_t nwid,
-		const Dictionary &metaData,
-		Dictionary &netconf);
 
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
 
 	Node *_node;
 	Thread _backupThread;
 	volatile bool _backupThreadRun;
+	volatile bool _backupNeeded;
 	std::string _dbPath;
 	std::string _circuitTestPath;
 	std::string _instanceId;
 
-	// A circular buffer last log
-	struct _LLEntry
-	{
-		_LLEntry()
-		{
-			for(long i=0;i<ZT_SQLITENETWORKCONTROLLER_IN_MEMORY_LOG_SIZE;++i)
-				this->l[i].ts = 0;
-			this->lastRequestTime = 0;
-			this->totalRequests = 0;
-		}
-
-		// Circular buffer of last log entries
-		struct {
-			uint64_t ts; // timestamp or 0 if circular buffer entry unused
-			char version[64];
-			InetAddress fromAddr;
-			bool authorized;
-		} l[ZT_SQLITENETWORKCONTROLLER_IN_MEMORY_LOG_SIZE];
-
-		// Time of last request whether successful or not
-		uint64_t lastRequestTime;
-
-		// Total requests by this address / network ID pair (also serves mod IN_MEMORY_LOG_SIZE as circular buffer ptr)
-		uint64_t totalRequests;
-	};
-
-	// Last log entries by address and network ID pair
-	std::map< std::pair<Address,uint64_t>,_LLEntry > _lastLog;
-
 	// Circuit tests outstanding
-	std::map< uint64_t,ZT_CircuitTest * > _circuitTests;
+	struct _CircuitTestEntry
+	{
+		ZT_CircuitTest *test;
+		std::string jsonResults;
+	};
+	std::map< uint64_t,_CircuitTestEntry > _circuitTests;
+
+	// Last request time by address, for rate limitation
+	std::map< std::pair<uint64_t,uint64_t>,uint64_t > _lastRequestTime;
 
 	sqlite3 *_db;
 
@@ -166,11 +141,9 @@ private:
 	sqlite3_stmt *_sGetActiveBridges;
 	sqlite3_stmt *_sGetIpAssignmentsForNode;
 	sqlite3_stmt *_sGetIpAssignmentPools;
-	sqlite3_stmt *_sGetLocalRoutes;
 	sqlite3_stmt *_sCheckIfIpIsAllocated;
 	sqlite3_stmt *_sAllocateIp;
 	sqlite3_stmt *_sDeleteIpAllocations;
-	sqlite3_stmt *_sDeleteLocalRoutes;
 	sqlite3_stmt *_sGetRelays;
 	sqlite3_stmt *_sListNetworks;
 	sqlite3_stmt *_sListNetworkMembers;
@@ -181,7 +154,6 @@ private:
 	sqlite3_stmt *_sCreateNetwork;
 	sqlite3_stmt *_sGetNetworkRevision;
 	sqlite3_stmt *_sSetNetworkRevision;
-	sqlite3_stmt *_sGetIpAssignmentsForNode2;
 	sqlite3_stmt *_sDeleteRelaysForNetwork;
 	sqlite3_stmt *_sCreateRelay;
 	sqlite3_stmt *_sDeleteIpAssignmentPoolsForNetwork;
@@ -189,12 +161,14 @@ private:
 	sqlite3_stmt *_sCreateIpAssignmentPool;
 	sqlite3_stmt *_sUpdateMemberAuthorized;
 	sqlite3_stmt *_sUpdateMemberActiveBridge;
+	sqlite3_stmt *_sUpdateMemberHistory;
 	sqlite3_stmt *_sDeleteMember;
 	sqlite3_stmt *_sDeleteAllNetworkMembers;
+	sqlite3_stmt *_sGetActiveNodesOnNetwork;
 	sqlite3_stmt *_sDeleteNetwork;
-	sqlite3_stmt *_sGetGateways;
-	sqlite3_stmt *_sDeleteGateways;
-	sqlite3_stmt *_sCreateGateway;
+	sqlite3_stmt *_sCreateRoute;
+	sqlite3_stmt *_sGetRoutes;
+	sqlite3_stmt *_sDeleteRoutes;
 	sqlite3_stmt *_sIncrementMemberRevisionCounter;
 	sqlite3_stmt *_sGetConfig;
 	sqlite3_stmt *_sSetConfig;

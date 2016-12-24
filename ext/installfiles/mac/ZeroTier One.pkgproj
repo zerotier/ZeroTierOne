@@ -37,7 +37,7 @@
 								<key>GID</key>
 								<integer>80</integer>
 								<key>PATH</key>
-								<string>../../mac-ui-macgap1-wrapper/bin/ZeroTier One.app</string>
+								<string>mac-ui-macgap1-wrapper/bin/ZeroTier One.app</string>
 								<key>PATH_TYPE</key>
 								<integer>1</integer>
 								<key>PERMISSIONS</key>
@@ -130,7 +130,7 @@
 																<key>GID</key>
 																<integer>0</integer>
 																<key>PATH</key>
-																<string>../../../ui/index.html</string>
+																<string>ui/index.html</string>
 																<key>PATH_TYPE</key>
 																<integer>1</integer>
 																<key>PERMISSIONS</key>
@@ -146,7 +146,7 @@
 																<key>GID</key>
 																<integer>0</integer>
 																<key>PATH</key>
-																<string>../../../ui/main.js</string>
+																<string>ui/main.js</string>
 																<key>PATH_TYPE</key>
 																<integer>1</integer>
 																<key>PERMISSIONS</key>
@@ -162,7 +162,7 @@
 																<key>GID</key>
 																<integer>0</integer>
 																<key>PATH</key>
-																<string>../../../ui/react.min.js</string>
+																<string>ui/react.min.js</string>
 																<key>PATH_TYPE</key>
 																<integer>1</integer>
 																<key>PERMISSIONS</key>
@@ -178,7 +178,7 @@
 																<key>GID</key>
 																<integer>0</integer>
 																<key>PATH</key>
-																<string>../../../ui/simpleajax.min.js</string>
+																<string>ui/simpleajax.min.js</string>
 																<key>PATH_TYPE</key>
 																<integer>1</integer>
 																<key>PERMISSIONS</key>
@@ -194,7 +194,7 @@
 																<key>GID</key>
 																<integer>0</integer>
 																<key>PATH</key>
-																<string>../../../ui/zerotier.css</string>
+																<string>ui/zerotier.css</string>
 																<key>PATH_TYPE</key>
 																<integer>1</integer>
 																<key>PERMISSIONS</key>
@@ -210,7 +210,7 @@
 																<key>GID</key>
 																<integer>0</integer>
 																<key>PATH</key>
-																<string>../../../ui/ztui.min.js</string>
+																<string>ui/ztui.min.js</string>
 																<key>PATH_TYPE</key>
 																<integer>1</integer>
 																<key>PERMISSIONS</key>
@@ -759,7 +759,7 @@
 			<key>OVERWRITE_PERMISSIONS</key>
 			<false/>
 			<key>VERSION</key>
-			<string>1.0.3</string>
+			<string>1.1.14</string>
 		</dict>
 		<key>PROJECT_COMMENTS</key>
 		<dict>
@@ -773,26 +773,27 @@
 			ZW50LVN0eWxlLVR5cGUiIGNvbnRlbnQ9InRleHQvY3NzIj4KPHRp
 			dGxlPjwvdGl0bGU+CjxtZXRhIG5hbWU9IkdlbmVyYXRvciIgY29u
 			dGVudD0iQ29jb2EgSFRNTCBXcml0ZXIiPgo8bWV0YSBuYW1lPSJD
-			b2NvYVZlcnNpb24iIGNvbnRlbnQ9IjEzNDcuNTciPgo8c3R5bGUg
+			b2NvYVZlcnNpb24iIGNvbnRlbnQ9IjE0MDQuNDciPgo8c3R5bGUg
 			dHlwZT0idGV4dC9jc3MiPgpwLnAxIHttYXJnaW46IDAuMHB4IDAu
-			MHB4IDAuMHB4IDAuMHB4OyBmb250OiAxMi4wcHggSGVsdmV0aWNh
-			OyBjb2xvcjogIzAwMDAwMDsgLXdlYmtpdC10ZXh0LXN0cm9rZTog
-			IzAwMDAwMH0Kc3Bhbi5zMSB7Zm9udC1rZXJuaW5nOiBub25lfQo8
-			L3N0eWxlPgo8L2hlYWQ+Cjxib2R5Pgo8cCBjbGFzcz0icDEiPjxz
-			cGFuIGNsYXNzPSJzMSI+WmVyb1RpZXIgT25lIC0gTmV0d29yayBW
-			aXJ0dWFsaXphdGlvbiBFdmVyeXdoZXJlPC9zcGFuPjwvcD4KPHAg
-			Y2xhc3M9InAxIj48c3BhbiBjbGFzcz0iczEiPihjKTIwMTEtMjAx
-			NSBaZXJvVGllciwgSW5jLjwvc3Bhbj48L3A+CjxwIGNsYXNzPSJw
-			MSI+PHNwYW4gY2xhc3M9InMxIj5jb250YWN0QHplcm90aWVyLmNv
-			bTwvc3Bhbj48L3A+CjxwIGNsYXNzPSJwMSI+PHNwYW4gY2xhc3M9
-			InMxIj48YnI+Cjwvc3Bhbj48L3A+CjxwIGNsYXNzPSJwMSI+PHNw
-			YW4gY2xhc3M9InMxIj5UbyB1bmluc3RhbGwgbWFudWFsbHksIHR5
-			cGUgdGhlIGZvbGxvd2luZyBpbiBhIHRlcm1pbmFsIHdpbmRvdzo8
-			L3NwYW4+PC9wPgo8cCBjbGFzcz0icDEiPjxzcGFuIGNsYXNzPSJz
-			MSI+PGJyPgo8L3NwYW4+PC9wPgo8cCBjbGFzcz0icDEiPjxzcGFu
-			IGNsYXNzPSJzMSI+c3VkbyAiL0xpYnJhcnkvQXBwbGljYXRpb24g
-			U3VwcG9ydC9aZXJvVGllci9PbmUvdW5pbnN0YWxsLnNoIjwvc3Bh
-			bj48L3A+CjwvYm9keT4KPC9odG1sPgo=
+			MHB4IDAuMHB4IDAuMHB4OyBsaW5lLWhlaWdodDogMTQuMHB4OyBm
+			b250OiAxMi4wcHggSGVsdmV0aWNhOyBjb2xvcjogIzAwMDAwMDsg
+			LXdlYmtpdC10ZXh0LXN0cm9rZTogIzAwMDAwMH0Kc3Bhbi5zMSB7
+			Zm9udC1rZXJuaW5nOiBub25lfQo8L3N0eWxlPgo8L2hlYWQ+Cjxi
+			b2R5Pgo8cCBjbGFzcz0icDEiPjxzcGFuIGNsYXNzPSJzMSI+WmVy
+			b1RpZXIgT25lIC0gTmV0d29yayBWaXJ0dWFsaXphdGlvbiBFdmVy
+			eXdoZXJlPC9zcGFuPjwvcD4KPHAgY2xhc3M9InAxIj48c3BhbiBj
+			bGFzcz0iczEiPihjKTIwMTEtMjAxNiBaZXJvVGllciwgSW5jLjwv
+			c3Bhbj48L3A+CjxwIGNsYXNzPSJwMSI+PHNwYW4gY2xhc3M9InMx
+			Ij5jb250YWN0QHplcm90aWVyLmNvbTwvc3Bhbj48L3A+CjxwIGNs
+			YXNzPSJwMSI+PHNwYW4gY2xhc3M9InMxIj48YnI+Cjwvc3Bhbj48
+			L3A+CjxwIGNsYXNzPSJwMSI+PHNwYW4gY2xhc3M9InMxIj5UbyB1
+			bmluc3RhbGwgbWFudWFsbHksIHR5cGUgdGhlIGZvbGxvd2luZyBp
+			biBhIHRlcm1pbmFsIHdpbmRvdzo8L3NwYW4+PC9wPgo8cCBjbGFz
+			cz0icDEiPjxzcGFuIGNsYXNzPSJzMSI+PGJyPgo8L3NwYW4+PC9w
+			Pgo8cCBjbGFzcz0icDEiPjxzcGFuIGNsYXNzPSJzMSI+c3VkbyAi
+			L0xpYnJhcnkvQXBwbGljYXRpb24gU3VwcG9ydC9aZXJvVGllci9P
+			bmUvdW5pbnN0YWxsLnNoIjwvc3Bhbj48L3A+CjwvYm9keT4KPC9o
+			dG1sPgo=
 			</data>
 		</dict>
 		<key>PROJECT_SETTINGS</key>

@@ -10,12 +10,11 @@
 "  private integer NOT NULL DEFAULT(1),\n"\
 "  enableBroadcast integer NOT NULL DEFAULT(1),\n"\
 "  allowPassiveBridging integer NOT NULL DEFAULT(0),\n"\
-"  v4AssignMode varchar(8) NOT NULL DEFAULT('none'),\n"\
-"  v6AssignMode varchar(8) NOT NULL DEFAULT('none'),\n"\
 "  multicastLimit integer NOT NULL DEFAULT(32),\n"\
 "  creationTime integer NOT NULL DEFAULT(0),\n"\
 "  revision integer NOT NULL DEFAULT(1),\n"\
-"  memberRevisionCounter integer NOT NULL DEFAULT(1)\n"\
+"  memberRevisionCounter integer NOT NULL DEFAULT(1),\n"\
+"  flags integer NOT NULL DEFAULT(0)\n"\
 ");\n"\
 "\n"\
 "CREATE TABLE AuthToken (\n"\
@@ -34,15 +33,6 @@
 "  id char(10) PRIMARY KEY NOT NULL,\n"\
 "  identity varchar(4096) NOT NULL\n"\
 ");\n"\
-"\n"\
-"CREATE TABLE Gateway (\n"\
-"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
-"  ip blob(16) NOT NULL,\n"\
-"  ipVersion integer NOT NULL DEFAULT(4),\n"\
-"  metric integer NOT NULL DEFAULT(0)\n"\
-");\n"\
-"\n"\
-"CREATE UNIQUE INDEX Gateway_networkId_ip ON Gateway (networkId, ip);\n"\
 "\n"\
 "CREATE TABLE IpAssignment (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
@@ -72,11 +62,30 @@
 "  authorized integer NOT NULL DEFAULT(0),\n"\
 "  activeBridge integer NOT NULL DEFAULT(0),\n"\
 "  memberRevision integer NOT NULL DEFAULT(0),\n"\
+"  flags integer NOT NULL DEFAULT(0),\n"\
+"  lastRequestTime integer NOT NULL DEFAULT(0),\n"\
+"  lastPowDifficulty integer NOT NULL DEFAULT(0),\n"\
+"  lastPowTime integer NOT NULL DEFAULT(0),\n"\
+"  recentHistory blob,\n"\
 "  PRIMARY KEY (networkId, nodeId)\n"\
 ");\n"\
 "\n"\
+"CREATE INDEX Member_networkId_nodeId ON Member(networkId,nodeId);\n"\
 "CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);\n"\
 "CREATE INDEX Member_networkId_memberRevision ON Member(networkId, memberRevision);\n"\
+"CREATE INDEX Member_networkId_lastRequestTime ON Member(networkId, lastRequestTime);\n"\
+"\n"\
+"CREATE TABLE Route (\n"\
+"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
+"  target blob(16) NOT NULL,\n"\
+"  via blob(16),\n"\
+"  targetNetmaskBits integer NOT NULL,\n"\
+"  ipVersion integer NOT NULL,\n"\
+"  flags integer NOT NULL,\n"\
+"  metric integer NOT NULL\n"\
+");\n"\
+"\n"\
+"CREATE INDEX Route_networkId ON Route (networkId);\n"\
 "\n"\
 "CREATE TABLE Relay (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\

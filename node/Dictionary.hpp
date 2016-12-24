@@ -19,255 +19,442 @@
 #ifndef ZT_DICTIONARY_HPP
 #define ZT_DICTIONARY_HPP
 
-#include <stdint.h>
-
-#include <string>
-#include <vector>
-#include <stdexcept>
-#include <algorithm>
-
 #include "Constants.hpp"
 #include "Utils.hpp"
+#include "Buffer.hpp"
+#include "Address.hpp"
 
-// Three fields are added/updated by sign()
-#define ZT_DICTIONARY_SIGNATURE "~!ed25519"
-#define ZT_DICTIONARY_SIGNATURE_IDENTITY "~!sigid"
-#define ZT_DICTIONARY_SIGNATURE_TIMESTAMP "~!sigts"
+#include <stdint.h>
 
 namespace ZeroTier {
 
-class Identity;
-
 /**
- * Simple key/value dictionary with string serialization
+ * A small (in code and data) packed key=value store
  *
- * The serialization format is a flat key=value with backslash escape.
- * It does not support comments or other syntactic complexities. It is
- * human-readable if the keys and values in the dictionary are also
- * human-readable. Otherwise it might contain unprintable characters.
+ * This stores data in the form of a compact blob that is sort of human
+ * readable (depending on whether you put binary data in it) and is backward
+ * compatible with older versions. Binary data is escaped such that the
+ * serialized form of a Dictionary is always a valid null-terminated C string.
  *
- * Keys beginning with "~!" are reserved for signature data fields.
+ * Keys are restricted: no binary data, no CR/LF, and no equals (=). If a key
+ * contains these characters it may not be retrievable. This is not checked.
  *
- * It's stored as a simple vector and can be linearly scanned or
- * binary searched. Dictionaries are only used for very small things
- * outside the core loop, so this is not a significant performance
- * issue and it reduces memory use and code footprint.
+ * Lookup is via linear search and will be slow with a lot of keys. It's
+ * designed for small things.
+ *
+ * There is code to test and fuzz this in selftest.cpp. Fuzzing a blob of
+ * pointer tricks like this is important after any modifications.
+ *
+ * This is used for network configurations and for saving some things on disk
+ * in the ZeroTier One service code.
+ *
+ * @tparam C Dictionary max capacity in bytes
  */
-class Dictionary : public std::vector< std::pair<std::string,std::string> >
+template<unsigned int C>
+class Dictionary
 {
 public:
-	Dictionary() {}
+	Dictionary()
+	{
+		_d[0] = (char)0;
+	}
+
+	Dictionary(const char *s)
+	{
+		Utils::scopy(_d,sizeof(_d),s);
+	}
+
+	Dictionary(const char *s,unsigned int len)
+	{
+		if (len > (C-1))
+			len = C-1;
+		memcpy(_d,s,len);
+		_d[len] = (char)0;
+	}
+
+	Dictionary(const Dictionary &d)
+	{
+		Utils::scopy(_d,sizeof(_d),d._d);
+	}
+
+	inline Dictionary &operator=(const Dictionary &d)
+	{
+		Utils::scopy(_d,sizeof(_d),d._d);
+		return *this;
+	}
 
 	/**
-	 * @param s String-serialized dictionary
-	 * @param maxlen Maximum length of buffer
+	 * Load a dictionary from a C-string
+	 *
+	 * @param s Dictionary in string form
+	 * @return False if 's' was longer than our capacity
 	 */
-	Dictionary(const char *s,unsigned int maxlen) { fromString(s,maxlen); }
+	inline bool load(const char *s)
+	{
+		return Utils::scopy(_d,sizeof(_d),s);
+	}
 
 	/**
-	 * @param s String-serialized dictionary
+	 * Delete all entries
 	 */
-	Dictionary(const std::string &s) { fromString(s.c_str(),(unsigned int)s.length()); }
-
-	iterator find(const std::string &key);
-	const_iterator find(const std::string &key) const;
+	inline void clear()
+	{
+		_d[0] = (char)0;
+	}
 
 	/**
-	 * Get a key, returning a default if not present
+	 * @return Size of dictionary in bytes not including terminating NULL
+	 */
+	inline unsigned int sizeBytes() const
+	{
+		for(unsigned int i=0;i<C;++i) {
+			if (!_d[i])
+				return i;
+		}
+		return C-1;
+	}
+
+	/**
+	 * Get an entry
+	 *
+	 * Note that to get binary values, dest[] should be at least one more than
+	 * the maximum size of the value being retrieved. That's because even if
+	 * the data is binary a terminating 0 is still appended to dest[] after it.
+	 *
+	 * If the key is not found, dest[0] is set to 0 to make dest[] an empty
+	 * C string in that case. The dest[] array will *never* be unterminated
+	 * after this call.
+	 *
+	 * Security note: if 'key' is ever directly based on anything that is not
+	 * a hard-code or internally-generated name, it must be checked to ensure
+	 * that the buffer is NULL-terminated since key[] does not take a secondary
+	 * size parameter. In NetworkConfig all keys are hard-coded strings so this
+	 * isn't a problem in the core.
 	 *
 	 * @param key Key to look up
-	 * @param dfl Default if not present
-	 * @return Value or default
+	 * @param dest Destination buffer
+	 * @param destlen Size of destination buffer
+	 * @return -1 if not found, or actual number of bytes stored in dest[] minus trailing 0
 	 */
-	inline const std::string &get(const std::string &key,const std::string &dfl) const
+	inline int get(const char *key,char *dest,unsigned int destlen) const
 	{
-		const_iterator e(find(key));
-		if (e == end())
-			return dfl;
-		return e->second;
+		const char *p = _d;
+		const char *const eof = p + C;
+		const char *k;
+		bool esc;
+		int j;
+
+		if (!destlen) // sanity check
+			return -1;
+
+		while (*p) {
+			k = key;
+			while ((*k)&&(*p)) {
+				if (*p != *k)
+					break;
+				++k;
+				if (++p == eof) {
+					dest[0] = (char)0;
+					return -1;
+				}
+			}
+
+			if ((!*k)&&(*p == '=')) {
+				j = 0;
+				esc = false;
+				++p;
+				while ((*p != 0)&&(*p != '\r')&&(*p != '\n')) {
+					if (esc) {
+						esc = false;
+						switch(*p) {
+							case 'r': dest[j++] = '\r'; break;
+							case 'n': dest[j++] = '\n'; break;
+							case '0': dest[j++] = (char)0; break;
+							case 'e': dest[j++] = '='; break;
+							default: dest[j++] = *p; break;
+						}
+						if (j == (int)destlen) {
+							dest[j-1] = (char)0;
+							return j-1;
+						}
+					} else if (*p == '\\') {
+						esc = true;
+					} else {
+						dest[j++] = *p;
+						if (j == (int)destlen) {
+							dest[j-1] = (char)0;
+							return j-1;
+						}
+					}
+					if (++p == eof) {
+						dest[0] = (char)0;
+						return -1;
+					}
+				}
+				dest[j] = (char)0;
+				return j;
+			} else {
+				while ((*p)&&(*p != '\r')&&(*p != '\n')) {
+					if (++p == eof) {
+						dest[0] = (char)0;
+						return -1;
+					}
+				}
+				if (*p) {
+					if (++p == eof) {
+						dest[0] = (char)0;
+						return -1;
+					}
+				}
+				else break;
+			}
+		}
+
+		dest[0] = (char)0;
+		return -1;
 	}
 
 	/**
+	 * Get the contents of a key into a buffer
+	 *
 	 * @param key Key to get
-	 * @param dfl Default boolean result if key not found or empty (default: false)
-	 * @return Boolean value of key
+	 * @param dest Destination buffer
+	 * @return True if key was found (if false, dest will be empty)
+	 * @tparam BC Buffer capacity (usually inferred)
 	 */
-	bool getBoolean(const std::string &key,bool dfl = false) const;
-
-	/**
-	 * @param key Key to get
-	 * @param dfl Default value if not present (default: 0)
-	 * @return Value converted to unsigned 64-bit int or 0 if not found
-	 */
-	inline uint64_t getUInt(const std::string &key,uint64_t dfl = 0) const
+	template<unsigned int BC>
+	inline bool get(const char *key,Buffer<BC> &dest) const
 	{
-		const_iterator e(find(key));
-		if (e == end())
-			return dfl;
-		return Utils::strToU64(e->second.c_str());
+		const int r = this->get(key,const_cast<char *>(reinterpret_cast<const char *>(dest.data())),BC);
+		if (r >= 0) {
+			dest.setSize((unsigned int)r);
+			return true;
+		} else {
+			dest.clear();
+			return false;
+		}
 	}
 
 	/**
-	 * @param key Key to get
-	 * @param dfl Default value if not present (default: 0)
-	 * @return Value converted to unsigned 64-bit int or 0 if not found
+	 * Get a boolean value
+	 *
+	 * @param key Key to look up
+	 * @param dfl Default value if not found in dictionary
+	 * @return Boolean value of key or 'dfl' if not found
 	 */
-	inline uint64_t getHexUInt(const std::string &key,uint64_t dfl = 0) const
+	bool getB(const char *key,bool dfl = false) const
 	{
-		const_iterator e(find(key));
-		if (e == end())
-			return dfl;
-		return Utils::hexStrToU64(e->second.c_str());
+		char tmp[4];
+		if (this->get(key,tmp,sizeof(tmp)) >= 0)
+			return ((*tmp == '1')||(*tmp == 't')||(*tmp == 'T'));
+		return dfl;
 	}
 
 	/**
-	 * @param key Key to get
-	 * @param dfl Default value if not present (default: 0)
-	 * @return Value converted to signed 64-bit int or 0 if not found
+	 * Get an unsigned int64 stored as hex in the dictionary
+	 *
+	 * @param key Key to look up
+	 * @param dfl Default value or 0 if unspecified
+	 * @return Decoded hex UInt value or 'dfl' if not found
 	 */
-	inline int64_t getInt(const std::string &key,int64_t dfl = 0) const
+	inline uint64_t getUI(const char *key,uint64_t dfl = 0) const
 	{
-		const_iterator e(find(key));
-		if (e == end())
-			return dfl;
-		return Utils::strTo64(e->second.c_str());
-	}
-
-	std::string &operator[](const std::string &key);
-
-	/**
-	 * @param key Key to set
-	 * @param value String value
-	 */
-	inline void set(const std::string &key,const char *value)
-	{
-		(*this)[key] = value;
+		char tmp[128];
+		if (this->get(key,tmp,sizeof(tmp)) >= 1)
+			return Utils::hexStrToU64(tmp);
+		return dfl;
 	}
 
 	/**
-	 * @param key Key to set
-	 * @param value String value
+	 * Add a new key=value pair
+	 *
+	 * If the key is already present this will append another, but the first
+	 * will always be returned by get(). This is not checked. If you want to
+	 * ensure a key is not present use erase() first.
+	 *
+	 * Use the vlen parameter to add binary values. Nulls will be escaped.
+	 *
+	 * @param key Key -- nulls, CR/LF, and equals (=) are illegal characters
+	 * @param value Value to set
+	 * @param vlen Length of value in bytes or -1 to treat value[] as a C-string and look for terminating 0
+	 * @return True if there was enough room to add this key=value pair
 	 */
-	inline void set(const std::string &key,const std::string &value)
+	inline bool add(const char *key,const char *value,int vlen = -1)
 	{
-		(*this)[key] = value;
+		for(unsigned int i=0;i<C;++i) {
+			if (!_d[i]) {
+				unsigned int j = i;
+
+				if (j > 0) {
+					_d[j++] = '\n';
+					if (j == C) {
+						_d[i] = (char)0;
+						return false;
+					}
+				}
+
+				const char *p = key;
+				while (*p) {
+					_d[j++] = *(p++);
+					if (j == C) {
+						_d[i] = (char)0;
+						return false;
+					}
+				}
+
+				_d[j++] = '=';
+				if (j == C) {
+					_d[i] = (char)0;
+					return false;
+				}
+
+				p = value;
+				int k = 0;
+				while ( ((vlen < 0)&&(*p)) || (k < vlen) ) {
+					switch(*p) {
+						case 0:
+						case '\r':
+						case '\n':
+						case '\\':
+						case '=':
+							_d[j++] = '\\';
+							if (j == C) {
+								_d[i] = (char)0;
+								return false;
+							}
+							switch(*p) {
+								case 0: _d[j++] = '0'; break;
+								case '\r': _d[j++] = 'r'; break;
+								case '\n': _d[j++] = 'n'; break;
+								case '\\': _d[j++] = '\\'; break;
+								case '=': _d[j++] = 'e'; break;
+							}
+							if (j == C) {
+								_d[i] = (char)0;
+								return false;
+							}
+							break;
+						default:
+							_d[j++] = *p;
+							if (j == C) {
+								_d[i] = (char)0;
+								return false;
+							}
+							break;
+					}
+					++p;
+					++k;
+				}
+
+				_d[j] = (char)0;
+
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
-	 * @param key Key to set
-	 * @param value Boolean value
+	 * Add a boolean as a '1' or a '0'
 	 */
-	inline void set(const std::string &key,bool value)
+	inline bool add(const char *key,bool value)
 	{
-		(*this)[key] = ((value) ? "1" : "0");
+		return this->add(key,(value) ? "1" : "0",1);
 	}
 
-	/**
-	 * @param key Key to set
-	 * @param value Integer value
+	/** 
+	 * Add a 64-bit integer (unsigned) as a hex value
 	 */
-	inline void set(const std::string &key,uint64_t value)
+	inline bool add(const char *key,uint64_t value)
 	{
-		char tmp[24];
-		Utils::snprintf(tmp,sizeof(tmp),"%llu",(unsigned long long)value);
-		(*this)[key] = tmp;
-	}
-
-	/**
-	 * @param key Key to set
-	 * @param value Integer value
-	 */
-	inline void set(const std::string &key,int64_t value)
-	{
-		char tmp[24];
-		Utils::snprintf(tmp,sizeof(tmp),"%lld",(long long)value);
-		(*this)[key] = tmp;
-	}
-
-	/**
-	 * @param key Key to set
-	 * @param value Integer value
-	 */
-	inline void setHex(const std::string &key,uint64_t value)
-	{
-		char tmp[24];
+		char tmp[32];
 		Utils::snprintf(tmp,sizeof(tmp),"%llx",(unsigned long long)value);
-		(*this)[key] = tmp;
+		return this->add(key,tmp,-1);
+	}
+
+	/** 
+	 * Add a 64-bit integer (unsigned) as a hex value
+	 */
+	inline bool add(const char *key,const Address &a)
+	{
+		char tmp[32];
+		Utils::snprintf(tmp,sizeof(tmp),"%.10llx",(unsigned long long)a.toInt());
+		return this->add(key,tmp,-1);
+	}
+
+	/**
+	 * Add a binary buffer's contents as a value
+	 *
+	 * @tparam BC Buffer capacity (usually inferred)
+	 */
+	template<unsigned int BC>
+	inline bool add(const char *key,const Buffer<BC> &value)
+	{
+		return this->add(key,(const char *)value.data(),(int)value.size());
 	}
 
 	/**
 	 * @param key Key to check
-	 * @return True if dictionary contains key
+	 * @return True if key is present
 	 */
-	inline bool contains(const std::string &key) const { return (find(key) != end()); }
-
-	/**
-	 * @return String-serialized dictionary
-	 */
-	std::string toString() const;
-
-	/**
-	 * Clear and initialize from a string
-	 *
-	 * @param s String-serialized dictionary
-	 * @param maxlen Maximum length of string buffer
-	 */
-	void fromString(const char *s,unsigned int maxlen);
-	inline void fromString(const std::string &s) { fromString(s.c_str(),(unsigned int)s.length()); }
-	void updateFromString(const char *s,unsigned int maxlen);
-	inline void update(const char *s,unsigned int maxlen) { updateFromString(s, maxlen); }
-	inline void update(const std::string &s) { updateFromString(s.c_str(),(unsigned int)s.length()); }
-
-	/**
-	 * @return True if this dictionary is cryptographically signed
-	 */
-	inline bool hasSignature() const { return (find(ZT_DICTIONARY_SIGNATURE) != end()); }
-
-	/**
-	 * @return Signing identity in string-serialized format or empty string if none
-	 */
-	inline std::string signingIdentity() const { return get(ZT_DICTIONARY_SIGNATURE_IDENTITY,std::string()); }
-
-	/**
-	 * @return Signature timestamp in milliseconds since epoch or 0 if none
-	 */
-	uint64_t signatureTimestamp() const;
-
-	/**
-	 * @param key Key to erase
-	 */
-	void eraseKey(const std::string &key);
-
-	/**
-	 * Remove any signature from this dictionary
-	 */
-	inline void removeSignature()
+	inline bool contains(const char *key) const
 	{
-		eraseKey(ZT_DICTIONARY_SIGNATURE);
-		eraseKey(ZT_DICTIONARY_SIGNATURE_IDENTITY);
-		eraseKey(ZT_DICTIONARY_SIGNATURE_TIMESTAMP);
+		char tmp[2];
+		return (this->get(key,tmp,2) >= 0);
 	}
 
 	/**
-	 * Add or update signature fields with a signature of all other keys and values
+	 * Erase a key from this dictionary
 	 *
-	 * @param with Identity to sign with (must have secret key)
-	 * @param now Current time
-	 * @return True on success
+	 * Use this before add() to ensure that a key is replaced if it might
+	 * already be present.
+	 *
+	 * @param key Key to erase
+	 * @return True if key was found and erased
 	 */
-	bool sign(const Identity &id,uint64_t now);
+	inline bool erase(const char *key)
+	{
+		char d2[C];
+		char *saveptr = (char *)0;
+		unsigned int d2ptr = 0;
+		bool found = false;
+		for(char *f=Utils::stok(_d,"\r\n",&saveptr);(f);f=Utils::stok((char *)0,"\r\n",&saveptr)) {
+			if (*f) {
+				const char *p = f;
+				const char *k = key;
+				while ((*k)&&(*p)) {
+					if (*k != *p)
+						break;
+					++k;
+					++p;
+				}
+				if (*k) {
+					p = f;
+					while (*p)
+						d2[d2ptr++] = *(p++);
+					d2[d2ptr++] = '\n';
+				} else {
+					found = true;
+				}
+			}
+		}
+		d2[d2ptr++] = (char)0;
+		memcpy(_d,d2,d2ptr);
+		return found;
+	}
 
 	/**
-	 * Verify signature against an identity
-	 *
-	 * @param id Identity to verify against
-	 * @return True if signature verification OK
+	 * @return Dictionary data as a 0-terminated C-string
 	 */
-	bool verify(const Identity &id) const;
+	inline const char *data() const { return _d; }
+
+	/**
+	 * @return Value of C template parameter
+	 */
+	inline unsigned int capacity() const { return C; }
 
 private:
-	void _mkSigBuf(std::string &buf) const;
-	static void _appendEsc(const char *data,unsigned int len,std::string &to);
+	char _d[C];
 };
 
 } // namespace ZeroTier

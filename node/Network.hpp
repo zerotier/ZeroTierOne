@@ -47,7 +47,7 @@ namespace ZeroTier {
 
 class RuntimeEnvironment;
 class Peer;
-class _GetPeersThatNeedMulticastAnnouncement;
+class _MulticastAnnounceAll;
 
 /**
  * A virtual LAN
@@ -55,7 +55,7 @@ class _GetPeersThatNeedMulticastAnnouncement;
 class Network : NonCopyable
 {
 	friend class SharedPtr<Network>;
-	friend class _GetPeersThatNeedMulticastAnnouncement; // internal function object
+	friend class _MulticastAnnounceAll; // internal function object
 
 public:
 	/**
@@ -146,19 +146,16 @@ public:
 	 * @param conf Configuration in NetworkConfig form
 	 * @return True if configuration was accepted
 	 */
-	bool applyConfiguration(const SharedPtr<NetworkConfig> &conf);
+	bool applyConfiguration(const NetworkConfig &conf);
 
 	/**
 	 * Set or update this network's configuration
 	 *
-	 * This decodes a network configuration in key=value dictionary form,
-	 * applies it if valid, and persists it to disk if saveToDisk is true.
-	 *
-	 * @param conf Configuration in key/value dictionary form
+	 * @param nconf Network configuration
 	 * @param saveToDisk IF true (default), write config to disk
 	 * @return 0 -- rejected, 1 -- accepted but not new, 2 -- accepted new config
 	 */
-	int setConfiguration(const Dictionary &conf,bool saveToDisk = true);
+	int setConfiguration(const NetworkConfig &nconf,bool saveToDisk);
 
 	/**
 	 * Set netconf failure to 'access denied' -- called in IncomingPacket when controller reports this
@@ -222,56 +219,34 @@ public:
 	}
 
 	/**
-	 * Get current network config or throw exception
+	 * Get current network config
 	 *
-	 * This version never returns null. Instead it throws a runtime error if
-	 * there is no current configuration. Callers should check isUp() first or
-	 * use config2() to get with the potential for null.
+	 * This returns a const reference to the network config in place, which is safe
+	 * to concurrently access but *may* change during access. Normally this isn't a
+	 * problem, but if it is use configCopy().
 	 *
-	 * Since it never returns null, it's safe to config()->whatever() inside
-	 * a try/catch block.
-	 *
-	 * @return Network configuration (never null)
-	 * @throws std::runtime_error Network configuration unavailable
+	 * @return Network configuration (may be a null config if we don't have one yet)
 	 */
-	inline SharedPtr<NetworkConfig> config() const
-	{
-		Mutex::Lock _l(_lock);
-		if (_config)
-			return _config;
-		throw std::runtime_error("no configuration");
-	}
+	inline const NetworkConfig &config() const { return _config; }
 
 	/**
-	 * Get current network config or return NULL
-	 *
-	 * @return Network configuration -- may be NULL
+	 * @return A thread-safe copy of our NetworkConfig instead of a const reference
 	 */
-	inline SharedPtr<NetworkConfig> config2() const
-		throw()
+	inline NetworkConfig configCopy() const
 	{
 		Mutex::Lock _l(_lock);
 		return _config;
 	}
 
 	/**
+	 * @return True if this network has a valid config
+	 */
+	inline bool hasConfig() const { return (_config); }
+
+	/**
 	 * @return Ethernet MAC address for this network's local interface
 	 */
 	inline const MAC &mac() const throw() { return _mac; }
-
-	/**
-	 * Shortcut for config()->permitsBridging(), returns false if no config
-	 *
-	 * @param peer Peer address to check
-	 * @return True if peer can bridge other Ethernet nodes into this network or network is in permissive bridging mode
-	 */
-	inline bool permitsBridging(const Address &peer) const
-	{
-		Mutex::Lock _l(_lock);
-		if (_config)
-			return _config->permitsBridging(peer);
-		return false;
-	}
 
 	/**
 	 * Find the node on this network that has this MAC behind it (if any)
@@ -305,16 +280,6 @@ public:
 	void learnBridgedMulticastGroup(const MulticastGroup &mg,uint64_t now);
 
 	/**
-	 * @return True if traffic on this network's tap is enabled
-	 */
-	inline bool enabled() const throw() { return _enabled; }
-
-	/**
-	 * @param enabled Should traffic be allowed on this network?
-	 */
-	void setEnabled(bool enabled);
-
-	/**
 	 * Destroy this network
 	 *
 	 * This causes the network to disable itself, destroy its tap device, and on
@@ -339,23 +304,21 @@ private:
 	ZT_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
 	bool _isAllowed(const SharedPtr<Peer> &peer) const;
-	bool _tryAnnounceMulticastGroupsTo(const std::vector<Address> &rootAddresses,const std::vector<MulticastGroup> &allMulticastGroups,const SharedPtr<Peer> &peer,uint64_t now) const;
 	void _announceMulticastGroups();
-	void _announceMulticastGroupsTo(const Address &peerAddress,const std::vector<MulticastGroup> &allMulticastGroups) const;
+	void _announceMulticastGroupsTo(const SharedPtr<Peer> &peer,const std::vector<MulticastGroup> &allMulticastGroups) const;
 	std::vector<MulticastGroup> _allMulticastGroups() const;
 
 	const RuntimeEnvironment *RR;
 	void *_uPtr;
 	uint64_t _id;
 	MAC _mac; // local MAC address
-	volatile bool _enabled;
 	volatile bool _portInitialized;
 
 	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to (according to tap)
 	Hashtable< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
 	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
 
-	SharedPtr<NetworkConfig> _config; // Most recent network configuration, which is an immutable value-object
+	NetworkConfig _config;
 	volatile uint64_t _lastConfigUpdate;
 
 	volatile bool _destroyed;

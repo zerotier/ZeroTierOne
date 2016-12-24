@@ -3,7 +3,7 @@ Project web page: http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
 github: https://github.com/miniupnp/miniupnp
 freecode: http://freecode.com/projects/miniupnp
 Author: Thomas Bernard
-Copyright (c) 2005-2014 Thomas Bernard
+Copyright (c) 2005-2016 Thomas Bernard
 This software is subject to the conditions detailed in the
 LICENSE file provided within this distribution.
 
@@ -32,6 +32,7 @@ To use the libminiupnpc in your application, link it with
 libminiupnpc.a (or .so) and use the following functions found in miniupnpc.h,
 upnpcommands.h and miniwget.h :
 - upnpDiscover()
+- UPNP_GetValidIGD()
 - miniwget()
 - parserootdesc()
 - GetUPNPUrls()
@@ -59,3 +60,5 @@ send me an email !
 For any question, you can use the web forum :
 http://miniupnp.tuxfamily.org/forum/
 
+Bugs should be reported on github :
+https://github.com/miniupnp/miniupnp/issues

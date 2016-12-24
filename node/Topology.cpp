@@ -44,6 +44,7 @@ static const unsigned char ZT_DEFAULT_WORLD[ZT_DEFAULT_WORLD_LENGTH] = {0x01,0x0
 
 Topology::Topology(const RuntimeEnvironment *renv) :
 	RR(renv),
+	_trustedPathCount(0),
 	_amRoot(false)
 {
 	std::string alls(RR->node->dataStoreGet("peers.save"));
@@ -284,12 +285,8 @@ bool Topology::isUpstream(const Identity &id) const
 		return true;
 	std::vector< SharedPtr<Network> > nws(RR->node->allNetworks());
 	for(std::vector< SharedPtr<Network> >::const_iterator nw(nws.begin());nw!=nws.end();++nw) {
-		SharedPtr<NetworkConfig> nc((*nw)->config2());
-		if (nc) {
-			for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(nc->relays().begin());r!=nc->relays().end();++r) {
-				if (r->first == id.address())
-					return true;
-			}
+		if ((*nw)->config().isRelay(id.address())) {
+			return true;
 		}
 	}
 	return false;

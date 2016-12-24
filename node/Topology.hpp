@@ -28,6 +28,7 @@
 #include <utility>
 
 #include "Constants.hpp"
+#include "../include/ZeroTierOne.h"
 
 #include "Address.hpp"
 #include "Identity.hpp"
@@ -252,12 +253,64 @@ public:
 	 */
 	inline bool amRoot() const throw() { return _amRoot; }
 
+	/**
+	 * Get the outbound trusted path ID for a physical address, or 0 if none
+	 *
+	 * @param physicalAddress Physical address to which we are sending the packet
+	 * @return Trusted path ID or 0 if none (0 is not a valid trusted path ID)
+	 */
+	inline uint64_t getOutboundPathTrust(const InetAddress &physicalAddress)
+	{
+		for(unsigned int i=0;i<_trustedPathCount;++i) {
+			if (_trustedPathNetworks[i].containsAddress(physicalAddress))
+				return _trustedPathIds[i];
+		}
+		return 0;
+	}
+
+	/**
+	 * Check whether in incoming trusted path marked packet is valid
+	 *
+	 * @param physicalAddress Originating physical address
+	 * @param trustedPathId Trusted path ID from packet (from MAC field)
+	 */
+	inline bool shouldInboundPathBeTrusted(const InetAddress &physicalAddress,const uint64_t trustedPathId)
+	{
+		for(unsigned int i=0;i<_trustedPathCount;++i) {
+			if ((_trustedPathIds[i] == trustedPathId)&&(_trustedPathNetworks[i].containsAddress(physicalAddress)))
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Set trusted paths in this topology
+	 *
+	 * @param networks Array of networks (prefix/netmask bits)
+	 * @param ids Array of trusted path IDs
+	 * @param count Number of trusted paths (if larger than ZT_MAX_TRUSTED_PATHS overflow is ignored)
+	 */
+	inline void setTrustedPaths(const InetAddress *networks,const uint64_t *ids,unsigned int count)
+	{
+		if (count > ZT_MAX_TRUSTED_PATHS)
+			count = ZT_MAX_TRUSTED_PATHS;
+		Mutex::Lock _l(_lock);
+		for(unsigned int i=0;i<count;++i) {
+			_trustedPathIds[i] = ids[i];
+			_trustedPathNetworks[i] = networks[i];
+		}
+		_trustedPathCount = count;
+	}
+
 private:
 	Identity _getIdentity(const Address &zta);
 	void _setWorld(const World &newWorld);
 
 	const RuntimeEnvironment *const RR;
 
+	uint64_t _trustedPathIds[ZT_MAX_TRUSTED_PATHS];
+	InetAddress _trustedPathNetworks[ZT_MAX_TRUSTED_PATHS];
+	unsigned int _trustedPathCount;
 	World _world;
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	std::vector< Address > _rootAddresses;

@@ -128,6 +128,36 @@ public:
 	inline Path *getBestPath(uint64_t now) { return _getBestPath(now); }
 
 	/**
+	 * @param now Current time
+	 * @param addr Remote address
+	 * @return True if we have an active path to this destination
+	 */
+	inline bool hasActivePathTo(uint64_t now,const InetAddress &addr) const
+	{
+		for(unsigned int p=0;p<_numPaths;++p) {
+			if ((_paths[p].active(now))&&(_paths[p].address() == addr))
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Set all paths in the same ss_family that are not this one to cluster suboptimal
+	 *
+	 * Addresses in other families are not affected.
+	 *
+	 * @param addr Address to make exclusive
+	 */
+	inline void setClusterOptimalPathForAddressFamily(const InetAddress &addr)
+	{
+		for(unsigned int p=0;p<_numPaths;++p) {
+			if (_paths[p].address().ss_family == addr.ss_family) {
+				_paths[p].setClusterSuboptimal(_paths[p].address() != addr);
+			}
+		}
+	}
+
+	/**
 	 * Send via best path
 	 *
 	 * @param data Packet data
@@ -170,11 +200,14 @@ public:
 	/**
 	 * Push direct paths back to self if we haven't done so in the configured timeout
 	 *
-	 * @param path Remote path to use to send the push
+	 * @param localAddr Local address
+	 * @param toAddress Remote address to send push to (usually from path)
 	 * @param now Current time
 	 * @param force If true, push regardless of rate limit
+	 * @param includePrivatePaths If true, include local interface address paths (should only be done to peers with a trust relationship)
+	 * @return True if something was actually sent
 	 */
-	void pushDirectPaths(Path *path,uint64_t now,bool force);
+	bool pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAddress,uint64_t now,bool force,bool includePrivatePaths);
 
 	/**
 	 * @return All known direct paths to this peer (active or inactive)
@@ -279,20 +312,6 @@ public:
 		return false;
 	}
 #endif
-
-	/**
-	 * @param now Current time
-	 * @param addr Remote address
-	 * @return True if peer currently has an active direct path to addr
-	 */
-	inline bool hasActivePathTo(uint64_t now,const InetAddress &addr) const
-	{
-		for(unsigned int p=0;p<_numPaths;++p) {
-			if ((_paths[p].active(now))&&(_paths[p].address() == addr))
-				return true;
-		}
-		return false;
-	}
 
 	/**
 	 * Reset paths within a given scope
@@ -542,7 +561,7 @@ public:
 	}
 
 private:
-	bool _checkPath(Path &p,const uint64_t now);
+	void _doDeadPathDetection(Path &p,const uint64_t now);
 	Path *_getBestPath(const uint64_t now);
 	Path *_getBestPath(const uint64_t now,int inetAddressFamily);
 

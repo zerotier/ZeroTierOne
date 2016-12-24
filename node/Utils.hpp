@@ -49,11 +49,10 @@ public:
 	 * @return True if strings are equal
 	 */
 	static inline bool secureEq(const void *a,const void *b,unsigned int len)
-		throw()
 	{
-		char diff = 0;
+		uint8_t diff = 0;
 		for(unsigned int i=0;i<len;++i)
-			diff |= ( (reinterpret_cast<const char *>(a))[i] ^ (reinterpret_cast<const char *>(b))[i] );
+			diff |= ( (reinterpret_cast<const uint8_t *>(a))[i] ^ (reinterpret_cast<const uint8_t *>(b))[i] );
 		return (diff == 0);
 	}
 
@@ -225,27 +224,17 @@ public:
 	}
 
 	/**
-	 * Perform a safe C string copy
+	 * Perform a safe C string copy, ALWAYS null-terminating the result
 	 *
-	 * @param dest Destination buffer
-	 * @param len Length of buffer
-	 * @param src Source string
+	 * This will never ever EVER result in dest[] not being null-terminated
+	 * regardless of any input parameter (other than len==0 which is invalid).
+	 *
+	 * @param dest Destination buffer (must not be NULL)
+	 * @param len Length of dest[] (if zero, false is returned and nothing happens)
+	 * @param src Source string (if NULL, dest will receive a zero-length string and true is returned)
 	 * @return True on success, false on overflow (buffer will still be 0-terminated)
 	 */
-	static inline bool scopy(char *dest,unsigned int len,const char *src)
-		throw()
-	{
-		if (!len)
-			return false; // sanity check
-		char *end = dest + len;
-		while ((*dest++ = *src++)) {
-			if (dest == end) {
-				*(--dest) = (char)0;
-				return false;
-			}
-		}
-		return true;
-	}
+	static bool scopy(char *dest,unsigned int len,const char *src);
 
 	/**
 	 * Variant of snprintf that is portable and throws an exception
@@ -269,7 +258,6 @@ public:
 	 * @return Number of bits set in this integer (0-32)
 	 */
 	static inline uint32_t countBits(uint32_t v)
-		throw()
 	{
 		v = v - ((v >> 1) & (uint32_t)0x55555555);
 		v = (v & (uint32_t)0x33333333) + ((v >> 2) & (uint32_t)0x33333333);
@@ -284,7 +272,6 @@ public:
 	 * @return True if memory is all zero
 	 */
 	static inline bool isZero(const void *p,unsigned int len)
-		throw()
 	{
 		for(unsigned int i=0;i<len;++i) {
 			if (((const unsigned char *)p)[i])

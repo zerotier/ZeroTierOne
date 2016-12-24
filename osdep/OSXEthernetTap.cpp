@@ -34,7 +34,6 @@
 #include <sys/cdefs.h>
 #include <sys/uio.h>
 #include <sys/param.h>
-#include <sys/sysctl.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -44,6 +43,7 @@
 #include <net/if_arp.h>
 #include <net/if_dl.h>
 #include <net/if_media.h>
+#include <sys/sysctl.h>
 #include <netinet6/in6_var.h>
 #include <netinet/in_var.h>
 #include <netinet/icmp6.h>
@@ -354,12 +354,12 @@ OSXEthernetTap::OSXEthernetTap(
 	// Try to reopen the last device we had, if we had one and it's still unused.
 	bool recalledDevice = false;
 	std::string devmapbuf;
-	Dictionary devmap;
+	Dictionary<8194> devmap;
 	if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),devmapbuf)) {
-		devmap.fromString(devmapbuf);
-		std::string desiredDevice(devmap.get(nwids,""));
-		if (desiredDevice.length() > 2) {
-			Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",desiredDevice.c_str());
+		devmap.load(devmapbuf.c_str());
+		char desiredDevice[128];
+		if (devmap.get(nwids,desiredDevice,sizeof(desiredDevice)) > 0) {
+			Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",desiredDevice);
 			if (stat(devpath,&stattmp) == 0) {
 				_fd = ::open(devpath,O_RDWR);
 				if (_fd > 0) {
@@ -420,8 +420,9 @@ OSXEthernetTap::OSXEthernetTap(
 
 	++globalTapsRunning;
 
-	devmap[nwids] = _dev;
-	OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),devmap.toString());
+	devmap.erase(nwids);
+	devmap.add(nwids,_dev.c_str());
+	OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),(const void *)devmap.data(),devmap.sizeBytes());
 
 	_thread = Thread::start(this);
 }
@@ -473,7 +474,7 @@ bool OSXEthernetTap::addIp(const InetAddress &ip)
 
 	long cpid = (long)vfork();
 	if (cpid == 0) {
-		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),ip.isV4() ? "inet" : "inet6",ip.toString().c_str(),"alias",(const char *)0);
+		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toString().c_str(),"alias",(const char *)0);
 		::_exit(-1);
 	} else if (cpid > 0) {
 		int exitcode = -1;
@@ -493,7 +494,7 @@ bool OSXEthernetTap::removeIp(const InetAddress &ip)
 		if (*i == ip) {
 			long cpid = (long)vfork();
 			if (cpid == 0) {
-				execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"inet",ip.toIpString().c_str(),"-alias",(const char *)0);
+				execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toIpString().c_str(),"-alias",(const char *)0);
 				_exit(-1);
 			} else if (cpid > 0) {
 				int exitcode = -1;

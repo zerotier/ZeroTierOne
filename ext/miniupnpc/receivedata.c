@@ -1,4 +1,4 @@
-/* $Id: receivedata.c,v 1.6 2014/11/13 13:51:52 nanard Exp $ */
+/* $Id: receivedata.c,v 1.7 2015/11/09 21:51:41 nanard Exp $ */
 /* Project : miniupnp
  * Website : http://miniupnp.free.fr/
  * Author : Thomas Bernard
@@ -40,7 +40,7 @@ receivedata(int socket,
             char * data, int length,
             int timeout, unsigned int * scope_id)
 {
-#if MINIUPNPC_GET_SRC_ADDR
+#ifdef MINIUPNPC_GET_SRC_ADDR
 	struct sockaddr_storage src_addr;
 	socklen_t src_addr_len = sizeof(src_addr);
 #endif	/* MINIUPNPC_GET_SRC_ADDR */
@@ -80,7 +80,7 @@ receivedata(int socket,
         return 0;
     }
 #endif	/* !defined(_WIN32) && !defined(__amigaos__) && !defined(__amigaos4__) */
-#if MINIUPNPC_GET_SRC_ADDR
+#ifdef MINIUPNPC_GET_SRC_ADDR
 	memset(&src_addr, 0, sizeof(src_addr));
 	n = recvfrom(socket, data, length, 0,
 	             (struct sockaddr *)&src_addr, &src_addr_len);
@@ -90,7 +90,7 @@ receivedata(int socket,
 	if(n<0) {
 		PRINT_SOCKET_ERROR("recv");
 	}
-#if MINIUPNPC_GET_SRC_ADDR
+#ifdef MINIUPNPC_GET_SRC_ADDR
 	if (src_addr.ss_family == AF_INET6) {
 		const struct sockaddr_in6 * src_addr6 = (struct sockaddr_in6 *)&src_addr;
 #ifdef DEBUG

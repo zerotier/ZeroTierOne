@@ -1,0 +1,11 @@
+﻿From: https://raw.githubusercontent.com/zerotier/ZeroTierOne/master/COPYING
+
+LICENSE
+
+ZeroTier One is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3 of the License, or (at
+your option) any later version.
+
+See the file ‘LICENSE.GPL-3’ for the text of the GNU GPL version 3.
+If that file is not present, see <http://www.gnu.org/licenses/>.

@@ -301,6 +301,23 @@ public:
 	}
 
 	/**
+	 * Append a C string including null termination byte
+	 *
+	 * @param s C string
+	 * @throws std::out_of_range Attempt to append beyond capacity
+	 */
+	inline void appendCString(const char *s)
+		throw(std::out_of_range)
+	{
+		for(;;) {
+			if (_l >= C)
+				throw std::out_of_range("Buffer: append beyond capacity");
+			if (!(_b[_l++] = *(s++)))
+				break;
+		}
+	}
+
+	/**
 	 * Append a buffer
 	 *
 	 * @param b Buffer to append

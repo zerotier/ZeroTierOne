@@ -228,7 +228,9 @@ void Multicaster::send(
 				gs.lastExplicitGather = now;
 				SharedPtr<Peer> explicitGatherPeers[2];
 				explicitGatherPeers[0] = RR->topology->getBestRoot();
-				explicitGatherPeers[1] = RR->topology->getPeer(Network::controllerFor(nwid));
+				const Address nwidc(Network::controllerFor(nwid));
+				if (nwidc != RR->identity.address())
+					explicitGatherPeers[1] = RR->topology->getPeer(nwidc);
 				for(unsigned int k=0;k<2;++k) {
 					const SharedPtr<Peer> &p = explicitGatherPeers[k];
 					if (!p)
@@ -238,11 +240,8 @@ void Multicaster::send(
 					const CertificateOfMembership *com = (CertificateOfMembership *)0;
 					{
 						SharedPtr<Network> nw(RR->node->network(nwid));
-						if (nw) {
-							SharedPtr<NetworkConfig> nconf(nw->config2());
-							if ((nconf)&&(nconf->com())&&(nconf->isPrivate())&&(p->needsOurNetworkMembershipCertificate(nwid,now,true)))
-								com = &(nconf->com());
-						}
+						if ((nw)&&(nw->hasConfig())&&(nw->config().com)&&(nw->config().isPrivate())&&(p->needsOurNetworkMembershipCertificate(nwid,now,true)))
+							com = &(nw->config().com);
 					}
 
 					Packet outp(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_GATHER);

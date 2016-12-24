@@ -53,6 +53,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #undef USE_PROC_NET_ROUTE
 #define USE_SOCKET_ROUTE
 #undef USE_SYSCTL_NET_ROUTE
+#include <sys/sysctl.h>
 #endif
 
 #ifdef __APPLE__
@@ -96,7 +97,6 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef USE_SYSCTL_NET_ROUTE
 #include <stdlib.h>
-#include <sys/sysctl.h>
 #include <sys/socket.h>
 #include <net/route.h>
 #endif
