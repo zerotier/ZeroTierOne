@@ -6,7 +6,7 @@ DEFS=
 LIBS=
 
 include objects.mk
-OBJS+=osdep/BSDEthernetTap.o ext/lz4/lz4.o ext/json-parser/json.o ext/http-parser/http_parser.o
+OBJS+=osdep/NetBSDEthernetTap.o ext/lz4/lz4.o ext/json-parser/json.o ext/http-parser/http_parser.o
 
 # "make official" is a shortcut for this
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
@@ -29,17 +29,17 @@ ifeq ($(ZT_DEBUG),1)
 ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
 	CFLAGS?=-O3 -fstack-protector
-	CFLAGS+=-Wall -fPIE -fvisibility=hidden -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	CFLAGS+=-fPIE -fvisibility=hidden -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS+=-pie -Wl,-z,relro,-z,now
 	STRIP=strip --strip-all
 endif
 
-CXXFLAGS+=$(CFLAGS) -fno-rtti
+CXXFLAGS+=$(CFLAGS) -fno-rtti -fpermissive -w
 
 all:	one
 
 one:	$(OBJS) service/OneService.o one.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o $(LIBS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS)  -o zerotier-one $(OBJS) service/OneService.o one.o $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli

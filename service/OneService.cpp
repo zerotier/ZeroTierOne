@@ -114,6 +114,10 @@ namespace ZeroTier { typedef WindowsEthernetTap EthernetTap; }
 #include "../osdep/BSDEthernetTap.hpp"
 namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #endif // __FreeBSD__
+#ifdef __NetBSD__
+#include "../osdep/NetBSDEthernetTap.hpp"
+namespace ZeroTier { typedef NetBSDEthernetTap EthernetTap; }
+#endif // __FreeBSD__
 
 #endif // ZT_SERVICE_NETCON
 
@@ -1684,7 +1688,7 @@ public:
 	inline int nodePathCheckFunction(const struct sockaddr_storage *localAddr,const struct sockaddr_storage *remoteAddr)
 	{
 		Mutex::Lock _l(_nets_m);
-	
+
 		for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
 			if (n->second.tap) {
 				std::vector<InetAddress> ips(n->second.tap->ips());
@@ -1695,7 +1699,7 @@ public:
 				}
 			}
 		}
-	
+
 		/* Note: I do not think we need to scan for overlap with managed routes
 		 * because of the "route forking" and interface binding that we do. This
 		 * ensures (we hope) that ZeroTier traffic will still take the physical
