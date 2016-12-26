@@ -61,6 +61,8 @@
 #include "OSUtils.hpp"
 #include "NetBSDEthernetTap.hpp"
 
+#include <iostream>
+using namespace std;
 #define ZT_BASE32_CHARS "0123456789abcdefghijklmnopqrstuv"
 
 // ff:ff:ff:ff:ff:ff with no ADI
@@ -111,13 +113,12 @@ NetBSDEthernetTap::NetBSDEthernetTap(
 	if (mtu > 2800)
 		throw std::runtime_error("max tap MTU is 2800");
 
-	// On BSD we create taps and they can have high numbers, so use ones starting
-	// at 9993 to not conflict with other stuff. Then we rename it to zt<base32 of nwid>
+	// On NetBSD there are /dev/tap{0..3} pre-created and for a moment I will stick with only them
 	std::vector<std::string> devFiles(OSUtils::listDirectory("/dev"));
-	for(int i=9993;i<(9993+128);++i) {
+	for(int i=0;i<4;++i) {
 		Utils::snprintf(tmpdevname,sizeof(tmpdevname),"tap%d",i);
 		Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",tmpdevname);
-		if (std::find(devFiles.begin(),devFiles.end(),std::string(tmpdevname)) == devFiles.end()) {
+		//if (std::find(devFiles.begin(),devFiles.end(),std::string(tmpdevname)) == devFiles.end()) {
 			long cpid = (long)vfork();
 			if (cpid == 0) {
 				::execl("/sbin/ifconfig","/sbin/ifconfig",tmpdevname,"create",(const char *)0);
@@ -127,8 +128,10 @@ NetBSDEthernetTap::NetBSDEthernetTap(
 				::waitpid(cpid,&exitcode,0);
 			} else throw std::runtime_error("fork() failed");
 
+			_dev = tmpdevname;
+			_fd = ::open(  devpath,O_RDWR);
 			if (!stat(devpath,&stattmp)) {
-				cpid = (long)vfork();
+				/*cpid = (long)vfork();
 				if (cpid == 0) {
 					::execl("/sbin/ifconfig","/sbin/ifconfig",tmpdevname,"name",_dev.c_str(),(const char *)0);
 					::_exit(-1);
@@ -137,16 +140,16 @@ NetBSDEthernetTap::NetBSDEthernetTap(
 					::waitpid(cpid,&exitcode,0);
 					if (exitcode)
 						throw std::runtime_error("ifconfig rename operation failed");
-				} else throw std::runtime_error("fork() failed");
+				} else throw std::runtime_error("fork() failed");*/
 
-				_fd = ::open(devpath,O_RDWR);
+
 				if (_fd > 0)
 					break;
-				else throw std::runtime_error("unable to open created tap device");
+				//else throw std::runtime_error("unable to open created tap device ");
 			} else {
 				throw std::runtime_error("cannot find /dev node for newly created tap device");
 			}
-		}
+		//}
 	}
 
 	if (_fd <= 0)
@@ -163,7 +166,7 @@ NetBSDEthernetTap::NetBSDEthernetTap(
 	Utils::snprintf(metstr,sizeof(metstr),"%u",_metric);
 	long cpid = (long)vfork();
 	if (cpid == 0) {
-		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"lladdr",ethaddr,"mtu",mtustr,"metric",metstr,"up",(const char *)0);
+		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"link",ethaddr,"mtu",mtustr,"metric",metstr,"up",(const char *)0);
 		::_exit(-1);
 	} else if (cpid > 0) {
 		int exitcode = -1;
@@ -174,12 +177,30 @@ NetBSDEthernetTap::NetBSDEthernetTap(
 		}
 	}
 
+	// ifconfig link seems to be different from address
+	// https://wiki.netbsd.org/tutorials/faking_a_mac_address/
+	cpid = (long)vfork();
+	if (cpid == 0) {
+		string cmdline = "net.link.tap."+string(_dev);
+		cmdline += "="+string(ethaddr);
+		::execl("/sbin/sysctl","/sbin/sysctl","-w",cmdline.c_str(),(const char *)0);
+		::_exit(-1);
+	} else if (cpid > 0) {
+		int exitcode = -1;
+		::waitpid(cpid,&exitcode,0);
+		if (exitcode) {
+			::close(_fd);
+			throw std::runtime_error("sysctl failure setting link-layer address and activating tap interface");
+		}
+	}
+
 	// Set close-on-exec so that devices cannot persist if we fork/exec for update
 	fcntl(_fd,F_SETFD,fcntl(_fd,F_GETFD) | FD_CLOEXEC);
 
 	::pipe(_shutdownSignalPipe);
 
 	_thread = Thread::start(this);
+
 }
 
 NetBSDEthernetTap::~NetBSDEthernetTap()
