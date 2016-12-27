@@ -91,35 +91,17 @@ NetBSDEthernetTap::NetBSDEthernetTap(
 	char devpath[64],ethaddr[64],mtustr[32],metstr[32],tmpdevname[32];
 	struct stat stattmp;
 
-	// On FreeBSD at least we can rename, so use nwid to generate a deterministic unique zt#### name using base32
-	// As a result we don't use desiredDevice
-	_dev = "zt";
-	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)((nwid >> 60) & 0x1f)]);
-	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)((nwid >> 55) & 0x1f)]);
-	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)((nwid >> 50) & 0x1f)]);
-	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)((nwid >> 45) & 0x1f)]);
-	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)((nwid >> 40) & 0x1f)]);
-	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)((nwid >> 35) & 0x1f)]);
-	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)((nwid >> 30) & 0x1f)]);
-	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)((nwid >> 25) & 0x1f)]);
-	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)((nwid >> 20) & 0x1f)]);
-	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)((nwid >> 15) & 0x1f)]);
-	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)((nwid >> 10) & 0x1f)]);
-	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)((nwid >> 5) & 0x1f)]);
-	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)(nwid & 0x1f)]);
-
 	Mutex::Lock _gl(globalTapCreateLock);
 
 	if (mtu > 2800)
 		throw std::runtime_error("max tap MTU is 2800");
 
-	// On NetBSD there are /dev/tap{0..3} pre-created and for a moment I will stick with only them
+	// we can create /dev/tap*
 	std::vector<std::string> devFiles(OSUtils::listDirectory("/dev"));
-//	for(int i=0;i<4;++i) {
 	for(int i=9993;i<(9993+128);++i) {
 		Utils::snprintf(tmpdevname,sizeof(tmpdevname),"tap%d",i);
 		Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",tmpdevname);
-		//if (std::find(devFiles.begin(),devFiles.end(),std::string(tmpdevname)) == devFiles.end()) {
+		if (std::find(devFiles.begin(),devFiles.end(),std::string(tmpdevname)) == devFiles.end()) {
 			long cpid = (long)vfork();
 			if (cpid == 0) {
 				::execl("/sbin/ifconfig","/sbin/ifconfig",tmpdevname,"create",(const char *)0);
@@ -134,7 +116,9 @@ NetBSDEthernetTap::NetBSDEthernetTap(
 				string tmp;
 				sprintf((char*)tmp.c_str(), "%d", i);
 				string minor = tmp.c_str();
-				::execl("/sbin/mknod","/sbin/mknod",devpath,"c","169",minor.c_str(),(const char *)0); //major 169 => tap
+				::execl("/sbin/mknod","/sbin/mknod",devpath,"c","169",minor.c_str(),(const char *)0);
+				// http://ftp.netbsd.org/pub/NetBSD/NetBSD-current/src/sys/conf/majors
+				// major 169 => tap
 				::_exit(-1);
 			} else if (cpid > 0) {
 				int exitcode = -1;
@@ -146,25 +130,14 @@ NetBSDEthernetTap::NetBSDEthernetTap(
 			_dev = tmpdevname;
 			_fd = ::open(  devpath,O_RDWR);
 			if (!stat(devpath,&stattmp)) {
-				/*cpid = (long)vfork();
-				if (cpid == 0) {
-					::execl("/sbin/ifconfig","/sbin/ifconfig",tmpdevname,"name",_dev.c_str(),(const char *)0);
-					::_exit(-1);
-				} else if (cpid > 0) {
-					int exitcode = -1;
-					::waitpid(cpid,&exitcode,0);
-					if (exitcode)
-						throw std::runtime_error("ifconfig rename operation failed");
-				} else throw std::runtime_error("fork() failed");*/
-
-
 				if (_fd > 0)
 					break;
-				//else throw std::runtime_error("unable to open created tap device ");
+				else
+					throw std::runtime_error("unable to open created tap device ");
 			} else {
 				throw std::runtime_error("cannot find /dev node for newly created tap device");
 			}
-		//}
+		}
 	}
 
 	if (_fd <= 0)

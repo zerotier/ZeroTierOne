@@ -37,7 +37,7 @@ For Mac, Linux, and BSD, just type "make" (or "gmake" on BSD). You won't need mu
 
  * **Mac**: Xcode command line tools. It should build on OSX 10.7 or newer.
  * **Linux**: gcc/g++ (4.9 or newer recommended) or clang/clang++ (3.4 or newer recommended) Makefile will use clang by default if available. The Linux build will auto-detect the presence of development headers for *json-parser*, *http-parser*, *li8bnatpmp*, and *libminiupnpc* and will link against the system libraries for these if they are present and recent enough. Otherwise the bundled versions in [ext/](ext/) will be used. Type `make install` to install the binaries and other files on the system, though this will not create init.d or systemd links.
- * **FreeBSD**: C++ compiler (G++ usually) and GNU make (gmake).
+ * **FreeBSD/OpenBSD/NetBSD**: C++ compiler (G++ usually) and GNU make (gmake).
 
 Each supported platform has its own *make-XXX.mk* file that contains the actual make rules for the platform. The right .mk file is included by the main Makefile based on the GNU make *OSTYPE* variable. Take a look at the .mk file for your platform for other targets, debug build rules, etc.
 

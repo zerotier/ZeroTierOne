@@ -1,3 +1,8 @@
+/*
+	this BSD licensed code is from https://github.com/freebsd/freebsd/blob/386ddae58459341ec567604707805814a2128a57/lib/libc/net/getifmaddrs.c
+	as in older OS X there is no getifmaddrs() and related functions is NetBSD
+*/
+
 #define	NET_RT_IFMALIST	4		/* return multicast address list */
 #define	RTM_NEWMADDR	0xf    /* mcast group membership being added to if */
 

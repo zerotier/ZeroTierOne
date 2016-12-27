@@ -1,3 +1,8 @@
+/*
+	this BSD code is from https://github.com/freebsd/freebsd/blob/386ddae58459341ec567604707805814a2128a57/include/ifaddrs.h
+	as in older OS X there is no getifmaddrs() and related functions is NetBSD
+*/
+
 /*	$FreeBSD$	*/
 
 /*
