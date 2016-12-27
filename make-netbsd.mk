@@ -34,7 +34,7 @@ else
 	STRIP=strip --strip-all
 endif
 
-CXXFLAGS+=$(CFLAGS) -fno-rtti -fpermissive -w
+CXXFLAGS+=$(CFLAGS) -fno-rtti -fpermissive
 
 all:	one
 

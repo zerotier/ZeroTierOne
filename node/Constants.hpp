@@ -124,6 +124,10 @@
 #include <endian.h>
 #endif
 
+#ifdef __NetBSD__
+#define RTF_MULTICAST   0x20000000
+#endif
+
 /**
  * Length of a ZeroTier address in bytes
  */
