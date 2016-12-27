@@ -115,7 +115,8 @@ NetBSDEthernetTap::NetBSDEthernetTap(
 
 	// On NetBSD there are /dev/tap{0..3} pre-created and for a moment I will stick with only them
 	std::vector<std::string> devFiles(OSUtils::listDirectory("/dev"));
-	for(int i=0;i<4;++i) {
+//	for(int i=0;i<4;++i) {
+	for(int i=9993;i<(9993+128);++i) {
 		Utils::snprintf(tmpdevname,sizeof(tmpdevname),"tap%d",i);
 		Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",tmpdevname);
 		//if (std::find(devFiles.begin(),devFiles.end(),std::string(tmpdevname)) == devFiles.end()) {
@@ -127,6 +128,20 @@ NetBSDEthernetTap::NetBSDEthernetTap(
 				int exitcode = -1;
 				::waitpid(cpid,&exitcode,0);
 			} else throw std::runtime_error("fork() failed");
+
+			cpid = (long)vfork();
+			if (cpid == 0) {
+				string tmp;
+				sprintf((char*)tmp.c_str(), "%d", i);
+				string minor = tmp.c_str();
+				::execl("/sbin/mknod","/sbin/mknod",devpath,"c","169",minor.c_str(),(const char *)0); //major 169 => tap
+				::_exit(-1);
+			} else if (cpid > 0) {
+				int exitcode = -1;
+				::waitpid(cpid,&exitcode,0);
+			} else throw std::runtime_error("fork() failed");
+
+			cerr<<"created device "<<devpath<<endl;
 
 			_dev = tmpdevname;
 			_fd = ::open(  devpath,O_RDWR);
@@ -219,6 +234,17 @@ NetBSDEthernetTap::~NetBSDEthernetTap()
 		int exitcode = -1;
 		::waitpid(cpid,&exitcode,0);
 	}
+
+	cpid = (long)vfork();
+	if (cpid == 0) {
+		string tmp="/dev/";
+		tmp+=_dev.c_str();
+		::execl("/bin/rm","/bin/rm",tmp.c_str(),(const char *)0);
+		::_exit(-1);
+	} else if (cpid > 0) {
+		int exitcode = -1;
+		::waitpid(cpid,&exitcode,0);
+	} else throw std::runtime_error("fork() failed");
 }
 
 void NetBSDEthernetTap::setEnabled(bool en)
