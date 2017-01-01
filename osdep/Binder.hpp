@@ -236,30 +236,46 @@ public:
 		// Get IPv4 addresses for each device
 		if (ifnames.size() > 0) {
 			const int controlfd = (int)socket(AF_INET,SOCK_DGRAM,0);
-			if (controlfd >= 0) {
-				for(std::set<std::string>::iterator devname(ifnames.begin());devname!=ifnames.end();++devname) {
-					struct ifreq ifr;
-					memset(&ifr,0,sizeof(ifr));
-					ifr.ifr_addr.sa_family = AF_INET;
-					Utils::scopy(ifr.ifr_name,sizeof(ifr.ifr_name),devname->c_str());
-					if (ioctl(controlfd,SIOCGIFADDR,&ifr) >= 0) {
-						InetAddress ip(&(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr),4,0);
-						if (ifChecker.shouldBindInterface(devname->c_str(),ip)) {
-							switch(ip.ipScope()) {
-								default: break;
-								case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
-								case InetAddress::IP_SCOPE_GLOBAL:
-								case InetAddress::IP_SCOPE_SHARED:
-								case InetAddress::IP_SCOPE_PRIVATE:
-									ip.setPort(port);
-									localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,*devname));
-									break;
-							}
-						}
+			struct ifconf configuration;
+			configuration.ifc_len = 0;
+			configuration.ifc_buf = nullptr;
+
+			if (controlfd < 0) goto ip4_address_error;
+
+			if (ioctl(controlfd, SIOCGIFCONF, &configuration) < 0) goto ip4_address_error;
+
+			configuration.ifc_buf = (char*)malloc(configuration.ifc_len);
+
+			if (ioctl(controlfd, SIOCGIFCONF, &configuration) < 0) goto ip4_address_error;
+
+			for (int i=0; i < (int)(configuration.ifc_len / sizeof(ifreq)); i ++) {
+				struct ifreq& request = configuration.ifc_req[i];
+				struct sockaddr* addr = &request.ifr_ifru.ifru_addr;
+				if (addr->sa_family != AF_INET) continue;
+				std::string ifname = request.ifr_ifrn.ifrn_name;
+				// name can either be just interface name or interface name followed by ':' and arbitrary label
+				if (ifname.find(':') != std::string::npos) {
+					ifname = ifname.substr(0, ifname.find(':'));
+				}
+
+				InetAddress ip(&(((struct sockaddr_in *)addr)->sin_addr),4,0);
+				if (ifChecker.shouldBindInterface(ifname.c_str(), ip)) {
+					switch(ip.ipScope()) {
+					default: break;
+					case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
+					case InetAddress::IP_SCOPE_GLOBAL:
+					case InetAddress::IP_SCOPE_SHARED:
+					case InetAddress::IP_SCOPE_PRIVATE:
+						ip.setPort(port);
+						localIfAddrs.insert(std::pair<InetAddress,std::string>(ip, ifname));
+						break;
 					}
 				}
-				close(controlfd);
 			}
+
+		ip4_address_error:
+			free(configuration.ifc_buf);
+			if (controlfd > 0) close(controlfd);
 		}
 
 		const bool gotViaProc = (localIfAddrs.size() > 0);
