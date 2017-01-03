@@ -61,7 +61,7 @@ namespace WinUI
                 String curPath = System.Reflection.Assembly.GetEntryAssembly().Location;
                 int index = curPath.LastIndexOf("\\");
                 curPath = curPath.Substring(0, index);
-                ProcessStartInfo startInfo = new ProcessStartInfo(curPath + "\\copyutil.exe", globalZtDir + " " + localZtDir);
+                ProcessStartInfo startInfo = new ProcessStartInfo(curPath + "\\copyutil.exe", "\""+globalZtDir+"\"" + " " + "\""+localZtDir+"\"");
                 startInfo.Verb = "runas";
 
 
