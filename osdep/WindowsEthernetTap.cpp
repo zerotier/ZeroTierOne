@@ -640,7 +640,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 	if (ConvertInterfaceGuidToLuid(&_deviceGuid,&_deviceLuid) != NO_ERROR)
 		throw std::runtime_error("unable to convert device interface GUID to LUID");
 
-	_initialized = true;
+	//_initialized = true;
 
 	if (friendlyName)
 		setFriendlyName(friendlyName);
@@ -1007,6 +1007,10 @@ void WindowsEthernetTap::threadMain()
 			ReadFile(_tap,tapReadBuf,sizeof(tapReadBuf),NULL,&tapOvlRead);
 			bool writeInProgress = false;
 			ULONGLONG timeOfLastBorkCheck = GetTickCount64();
+
+
+            _initialized = true;
+
 			while (_run) {
 				DWORD waitResult = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,2500,TRUE);
 				if (!_run) break; // will also break outer while(_run)

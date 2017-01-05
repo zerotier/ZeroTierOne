@@ -110,11 +110,16 @@ public:
 	void threadMain()
 		throw();
 
+    bool isInitialized() const { return _initialized; };
+
 private:
 	NET_IFINDEX _getDeviceIndex(); // throws on failure
 	std::vector<std::string> _getRegistryIPv4Value(const char *regKey);
 	void _setRegistryIPv4Value(const char *regKey,const std::vector<std::string> &value);
 	void _syncIps();
+
+    // clean up invalid values put into the windows registry
+    // void _cleanRegistry();
 
 	void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
