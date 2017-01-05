@@ -29,9 +29,14 @@ package com.zerotier.sdk;
 
 import java.net.InetSocketAddress;
 
-public final class VirtualNetworkRoute
+public final class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute>
 {
-	private VirtualNetworkRoute() {}
+	private VirtualNetworkRoute() {
+        target = null;
+        via = null;
+        flags = 0;
+        metric = 0;
+    }
 
 	/**
 	 * Target network / netmask bits (in port field) or NULL or 0.0.0.0/0 for default
@@ -52,4 +57,46 @@ public final class VirtualNetworkRoute
 	 * Route metric (not currently used)
 	 */
 	public int metric;
+
+
+    @Override
+	public int compareTo(VirtualNetworkRoute other) {
+        return target.toString().compareTo(other.target.toString());
+	}
+
+    public boolean equals(VirtualNetworkRoute other) {
+        boolean targetEquals;
+        if (target == null && other.target == null) {
+            targetEquals = true;
+        }
+        else if (target == null && other.target != null) {
+            targetEquals = false;
+        }
+        else if (target != null && other.target == null) {
+            targetEquals = false;
+        }
+        else {
+            targetEquals = target.equals(other.target);
+        }
+
+
+        boolean viaEquals;
+        if (via == null && other.via == null) {
+            viaEquals = true;
+        }
+        else if (via == null && other.via != null) {
+            viaEquals = false;
+        }
+        else if (via != null && other.via == null) {
+            viaEquals = false;
+        }
+        else {
+            viaEquals = via.equals(other.via);
+        }
+
+        return viaEquals &&
+                viaEquals &&
+                flags == other.flags &&
+                metric == other.metric;
+    }
 }
