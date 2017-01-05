@@ -310,7 +310,7 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 		return true;
 	} else if (t == "ACTION_REDIRECT") {
 		rule.t |= ZT_NETWORK_RULE_ACTION_REDIRECT;
-		rule.v.fwd.address = Utils::hexStrToU64(_jS(r["zt"],"0").c_str()) & 0xffffffffffULL;
+		rule.v.fwd.address = Utils::hexStrToU64(_jS(r["address"],"0").c_str()) & 0xffffffffffULL;
 		rule.v.fwd.flags = (uint32_t)(_jI(r["flags"],0ULL) & 0xffffffffULL);
 		return true;
 	} else if (t == "ACTION_DEBUG_LOG") {
@@ -428,6 +428,7 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 	} else if (t == "MATCH_RANDOM") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_RANDOM;
 		rule.v.randomProbability = (uint32_t)(_jI(r["probability"],0ULL) & 0xffffffffULL);
+		return true;
 	} else if (t == "MATCH_TAGS_DIFFERENCE") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE;
 		rule.v.tag.id = (uint32_t)(_jI(r["id"],0ULL) & 0xffffffffULL);
@@ -1286,7 +1287,8 @@ void EmbeddedNetworkController::_request(
 		authorizedBy = "memberIsAuthorized";
 	} else if (!_jB(network["private"],true)) {
 		authorizedBy = "networkIsPublic";
-		if (!member.count("authorized"))
+		json &ahist = member["authHistory"];
+		if ((!ahist.is_array())||(ahist.size() == 0))
 			autoAuthorized = true;
 	} else {
 		char presentedAuth[512];

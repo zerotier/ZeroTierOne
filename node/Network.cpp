@@ -111,6 +111,7 @@ static const void _dumpFilterTrace(const char *ruleName,uint8_t thisSetMatches,b
 	);
 	if (msg)
 		printf("     +   (%s)" ZT_EOL_S,msg);
+	fflush(stdout);
 }
 #else
 #define FILTER_TRACE(f,...) {}
@@ -177,6 +178,9 @@ static _doZtFilterResult _doZtFilter(
 	std::vector<std::string> dlog;
 #endif // ZT_RULES_ENGINE_DEBUGGING
 
+	// Set to true if we are a TEE/REDIRECT/WATCH target
+	bool superAccept = false;
+
 	// The default match state for each set of entries starts as 'true' since an
 	// ACTION with no MATCH entries preceding it is always taken.
 	uint8_t thisSetMatches = 1;
@@ -198,7 +202,7 @@ static _doZtFilterResult _doZtFilter(
 #ifdef ZT_RULES_ENGINE_DEBUGGING
 						_dumpFilterTrace("ACTION_ACCEPT",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 #endif // ZT_RULES_ENGINE_DEBUGGING
-						return DOZTFILTER_ACCEPT; // match, accept packet
+						return (superAccept ? DOZTFILTER_SUPER_ACCEPT : DOZTFILTER_ACCEPT); // match, accept packet
 
 					// These are initially handled together since preliminary logic is common
 					case ZT_NETWORK_RULE_ACTION_TEE:
@@ -236,7 +240,7 @@ static _doZtFilterResult _doZtFilter(
 								return DOZTFILTER_REDIRECT;
 							} else {
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-								_dumpFilterTrace("ACTION_TEE",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+								_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 								dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
 								cc = fwdAddr;
@@ -263,6 +267,22 @@ static _doZtFilterResult _doZtFilter(
 						continue;
 				}
 			} else {
+				// If this is an incoming packet and we are a TEE or REDIRECT target, we should
+				// super-accept if we accept at all. This will cause us to accept redirected or
+				// tee'd packets in spite of MAC and ZT addressing checks.
+				if (inbound) {
+					switch(rt) {
+						case ZT_NETWORK_RULE_ACTION_TEE:
+						case ZT_NETWORK_RULE_ACTION_WATCH:
+						case ZT_NETWORK_RULE_ACTION_REDIRECT:
+							if (RR->identity.address() == rules[rn].v.fwd.address)
+								superAccept = true;
+							break;
+						default:
+							break;
+					}
+				}
+
 #ifdef ZT_RULES_ENGINE_DEBUGGING
 				_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 				dlog.clear();
@@ -498,7 +518,7 @@ static _doZtFilterResult _doZtFilter(
 						}
 					}
 				}
-				thisRuleMatches = (uint8_t)((cf | rules[rn].v.characteristics) != 0);
+				thisRuleMatches = (uint8_t)((cf & rules[rn].v.characteristics) != 0);
 				FILTER_TRACE("%u %s %c (%.16llx | %.16llx)!=0 -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),cf,rules[rn].v.characteristics,(unsigned int)thisRuleMatches);
 			}	break;
 			case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
@@ -540,12 +560,12 @@ static _doZtFilterResult _doZtFilter(
 							thisRuleMatches = 0;
 						}
 					} else {
-						if (inbound) {
+						if ((inbound)&&(!superAccept)) {
 							thisRuleMatches = 0;
 							FILTER_TRACE("%u %s %c remote tag %u not found -> 0 (inbound side is strict)",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
 						} else {
 							thisRuleMatches = 1;
-							FILTER_TRACE("%u %s %c remote tag %u not found -> 1 (outbound side is not strict)",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
+							FILTER_TRACE("%u %s %c remote tag %u not found -> 1 (outbound side and TEE/REDIRECT targets are not strict)",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
 						}
 					}
 				} else {

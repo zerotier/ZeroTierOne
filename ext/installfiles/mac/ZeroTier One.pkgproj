@@ -37,7 +37,7 @@
 								<key>GID</key>
 								<integer>80</integer>
 								<key>PATH</key>
-								<string>mac-ui-macgap1-wrapper/bin/ZeroTier One.app</string>
+								<string>../../../macui/build/Release/ZeroTier One.app</string>
 								<key>PATH_TYPE</key>
 								<integer>1</integer>
 								<key>PERMISSIONS</key>
@@ -118,119 +118,6 @@
 														<integer>493</integer>
 														<key>TYPE</key>
 														<integer>3</integer>
-														<key>UID</key>
-														<integer>0</integer>
-													</dict>
-													<dict>
-														<key>CHILDREN</key>
-														<array>
-															<dict>
-																<key>CHILDREN</key>
-																<array/>
-																<key>GID</key>
-																<integer>0</integer>
-																<key>PATH</key>
-																<string>ui/index.html</string>
-																<key>PATH_TYPE</key>
-																<integer>1</integer>
-																<key>PERMISSIONS</key>
-																<integer>420</integer>
-																<key>TYPE</key>
-																<integer>3</integer>
-																<key>UID</key>
-																<integer>0</integer>
-															</dict>
-															<dict>
-																<key>CHILDREN</key>
-																<array/>
-																<key>GID</key>
-																<integer>0</integer>
-																<key>PATH</key>
-																<string>ui/main.js</string>
-																<key>PATH_TYPE</key>
-																<integer>1</integer>
-																<key>PERMISSIONS</key>
-																<integer>420</integer>
-																<key>TYPE</key>
-																<integer>3</integer>
-																<key>UID</key>
-																<integer>0</integer>
-															</dict>
-															<dict>
-																<key>CHILDREN</key>
-																<array/>
-																<key>GID</key>
-																<integer>0</integer>
-																<key>PATH</key>
-																<string>ui/react.min.js</string>
-																<key>PATH_TYPE</key>
-																<integer>1</integer>
-																<key>PERMISSIONS</key>
-																<integer>420</integer>
-																<key>TYPE</key>
-																<integer>3</integer>
-																<key>UID</key>
-																<integer>0</integer>
-															</dict>
-															<dict>
-																<key>CHILDREN</key>
-																<array/>
-																<key>GID</key>
-																<integer>0</integer>
-																<key>PATH</key>
-																<string>ui/simpleajax.min.js</string>
-																<key>PATH_TYPE</key>
-																<integer>1</integer>
-																<key>PERMISSIONS</key>
-																<integer>420</integer>
-																<key>TYPE</key>
-																<integer>3</integer>
-																<key>UID</key>
-																<integer>0</integer>
-															</dict>
-															<dict>
-																<key>CHILDREN</key>
-																<array/>
-																<key>GID</key>
-																<integer>0</integer>
-																<key>PATH</key>
-																<string>ui/zerotier.css</string>
-																<key>PATH_TYPE</key>
-																<integer>1</integer>
-																<key>PERMISSIONS</key>
-																<integer>420</integer>
-																<key>TYPE</key>
-																<integer>3</integer>
-																<key>UID</key>
-																<integer>0</integer>
-															</dict>
-															<dict>
-																<key>CHILDREN</key>
-																<array/>
-																<key>GID</key>
-																<integer>0</integer>
-																<key>PATH</key>
-																<string>ui/ztui.min.js</string>
-																<key>PATH_TYPE</key>
-																<integer>1</integer>
-																<key>PERMISSIONS</key>
-																<integer>420</integer>
-																<key>TYPE</key>
-																<integer>3</integer>
-																<key>UID</key>
-																<integer>0</integer>
-															</dict>
-														</array>
-														<key>GID</key>
-														<integer>0</integer>
-														<key>PATH</key>
-														<string>ui</string>
-														<key>PATH_TYPE</key>
-														<integer>0</integer>
-														<key>PERMISSIONS</key>
-														<integer>493</integer>
-														<key>TYPE</key>
-														<integer>2</integer>
 														<key>UID</key>
 														<integer>0</integer>
 													</dict>
@@ -759,7 +646,7 @@
 			<key>OVERWRITE_PERMISSIONS</key>
 			<false/>
 			<key>VERSION</key>
-			<string>1.1.14</string>
+			<string>1.1.17</string>
 		</dict>
 		<key>PROJECT_COMMENTS</key>
 		<dict>
@@ -773,7 +660,7 @@
 			ZW50LVN0eWxlLVR5cGUiIGNvbnRlbnQ9InRleHQvY3NzIj4KPHRp
 			dGxlPjwvdGl0bGU+CjxtZXRhIG5hbWU9IkdlbmVyYXRvciIgY29u
 			dGVudD0iQ29jb2EgSFRNTCBXcml0ZXIiPgo8bWV0YSBuYW1lPSJD
-			b2NvYVZlcnNpb24iIGNvbnRlbnQ9IjE0MDQuNDciPgo8c3R5bGUg
+			b2NvYVZlcnNpb24iIGNvbnRlbnQ9IjE1MDQuNzYiPgo8c3R5bGUg
 			dHlwZT0idGV4dC9jc3MiPgpwLnAxIHttYXJnaW46IDAuMHB4IDAu
 			MHB4IDAuMHB4IDAuMHB4OyBsaW5lLWhlaWdodDogMTQuMHB4OyBm
 			b250OiAxMi4wcHggSGVsdmV0aWNhOyBjb2xvcjogIzAwMDAwMDsg
@@ -782,7 +669,7 @@
 			b2R5Pgo8cCBjbGFzcz0icDEiPjxzcGFuIGNsYXNzPSJzMSI+WmVy
 			b1RpZXIgT25lIC0gTmV0d29yayBWaXJ0dWFsaXphdGlvbiBFdmVy
 			eXdoZXJlPC9zcGFuPjwvcD4KPHAgY2xhc3M9InAxIj48c3BhbiBj
-			bGFzcz0iczEiPihjKTIwMTEtMjAxNiBaZXJvVGllciwgSW5jLjwv
+			bGFzcz0iczEiPihjKTIwMTEtMjAxNyBaZXJvVGllciwgSW5jLjwv
 			c3Bhbj48L3A+CjxwIGNsYXNzPSJwMSI+PHNwYW4gY2xhc3M9InMx
 			Ij5jb250YWN0QHplcm90aWVyLmNvbTwvc3Bhbj48L3A+CjxwIGNs
 			YXNzPSJwMSI+PHNwYW4gY2xhc3M9InMxIj48YnI+Cjwvc3Bhbj48
