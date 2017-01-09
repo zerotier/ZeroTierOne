@@ -1666,6 +1666,16 @@ public:
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
 				memcpy(&(n.config),nwc,sizeof(ZT_VirtualNetworkConfig));
 				if (n.tap) { // sanity check
+#ifdef __WINDOWS__
+                    // wait for up to 5 seconds for the WindowsEthernetTap to actually be initialized
+                    // 
+                    // without WindowsEthernetTap::isInitialized() returning true, the won't actually
+                    // be online yet and setting managed routes on it will fail.
+                    const int MAX_SLEEP_COUNT = 500;
+                    for (int i = 0; !n.tap->isInitialized() && i < MAX_SLEEP_COUNT; i++) {
+                        Sleep(10);
+                    }
+#endif
 					syncManagedStuff(n,true,true);
 				} else {
 					_nets.erase(nwid);
