@@ -138,6 +138,8 @@ namespace WinUI
                 netListLocation.X = netListView.Left;
                 netListLocation.Y = netListView.Top;
             }
+
+            netListView.Activate();
         }
 
         private void ShowNetworksClosed(object sender, System.EventArgs e)
@@ -168,6 +170,10 @@ namespace WinUI
                     joinNetLocation.X = joinNetView.Left;
                     joinNetLocation.Y = joinNetView.Top;
                 }
+            }
+            else
+            {
+                joinNetView.Activate();
             }
         }
 
@@ -200,6 +206,10 @@ namespace WinUI
                     aboutViewLocation.Y = aboutView.Top;
                 }
             }
+            else
+            {
+                aboutView.Activate();
+            }
         }
 
         private void AboutClosed(object sender, System.EventArgs e)
@@ -230,6 +240,10 @@ namespace WinUI
                     prefsViewLocation.X = prefsView.Left;
                     prefsViewLocation.Y = prefsView.Top;
                 }
+            }
+            else
+            {
+                prefsView.Activate();
             }
         }
 
