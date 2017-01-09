@@ -473,6 +473,20 @@ void Node::clearLocalInterfaceAddresses()
 	_directPaths.clear();
 }
 
+int Node::sendUserMessage(uint64_t dest,uint64_t typeId,const void *data,unsigned int len)
+{
+	try {
+		Packet outp(Address(dest),RR->identity.address(),Packet::VERB_USER_MESSAGE);
+		outp.append(typeId);
+		outp.append(data,len);
+		outp.compress();
+		RR->sw->send(outp,true);
+		return 1;
+	} catch ( ... ) {
+		return 0;
+	}
+}
+
 void Node::setRole(uint64_t ztAddress,ZT_PeerRole role)
 {
 	RR->topology->setUpstream(Address(ztAddress),(role == ZT_PEER_ROLE_UPSTREAM));
@@ -990,6 +1004,15 @@ void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node)
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->clearLocalInterfaceAddresses();
 	} catch ( ... ) {}
+}
+
+int ZT_Node_sendUserMessage(ZT_Node *node,uint64_t dest,uint64_t typeId,const void *data,unsigned int len)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->sendUserMessage(dest,typeId,data,len);
+	} catch ( ... ) {
+		return 0;
+	}
 }
 
 void ZT_Node_setRole(ZT_Node *node,uint64_t ztAddress,ZT_PeerRole role)

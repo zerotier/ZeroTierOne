@@ -106,8 +106,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 				case Packet::VERB_PUSH_DIRECT_PATHS:          return _doPUSH_DIRECT_PATHS(RR,peer);
 				case Packet::VERB_CIRCUIT_TEST:               return _doCIRCUIT_TEST(RR,peer);
 				case Packet::VERB_CIRCUIT_TEST_REPORT:        return _doCIRCUIT_TEST_REPORT(RR,peer);
-				case Packet::VERB_USER_MESSAGE:
-					return true;
+				case Packet::VERB_USER_MESSAGE:               return _doUSER_MESSAGE(RR,peer);
 			}
 		} else {
 			RR->sw->requestWhois(sourceAddress);
@@ -1338,6 +1337,24 @@ bool IncomingPacket::_doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const S
 
 		RR->node->postCircuitTestReport(&report);
 
+		peer->received(_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST_REPORT,0,Packet::VERB_NOP,false);
+	} catch ( ... ) {
+		TRACE("dropped CIRCUIT_TEST_REPORT from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
+	}
+	return true;
+}
+
+bool IncomingPacket::_doUSER_MESSAGE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+{
+	try {
+		if (size() >= (ZT_PACKET_IDX_PAYLOAD + 8)) {
+			ZT_UserMessage um;
+			um.origin = peer->address().toInt();
+			um.typeId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);
+			um.data = reinterpret_cast<const void *>(reinterpret_cast<const uint8_t *>(data()) + ZT_PACKET_IDX_PAYLOAD + 8);
+			um.length = size() - (ZT_PACKET_IDX_PAYLOAD + 8);
+			RR->node->postEvent(ZT_EVENT_USER_MESSAGE,reinterpret_cast<const void *>(&um));
+		}
 		peer->received(_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST_REPORT,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
 		TRACE("dropped CIRCUIT_TEST_REPORT from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());

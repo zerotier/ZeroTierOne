@@ -393,7 +393,17 @@ enum ZT_Event
 	 *
 	 * Meta-data: C string, TRACE message
 	 */
-	ZT_EVENT_TRACE = 5
+	ZT_EVENT_TRACE = 5,
+
+	/**
+	 * VERB_USER_MESSAGE received
+	 *
+	 * These are generated when a VERB_USER_MESSAGE packet is received via
+	 * ZeroTier VL1.
+	 *
+	 * Meta-data: ZT_UserMessage structure
+	 */
+	ZT_EVENT_USER_MESSAGE = 6
 };
 
 /**
@@ -405,6 +415,32 @@ enum ZT_RelayPolicy
 	ZT_RELAY_POLICY_TRUSTED = 1,
 	ZT_RELAY_POLICY_ALWAYS = 2
 };
+
+/**
+ * User message used with ZT_EVENT_USER_MESSAGE
+ */
+typedef struct
+{
+	/**
+	 * ZeroTier address of sender (least significant 40 bits)
+	 */
+	uint64_t origin;
+
+	/**
+	 * User message type ID
+	 */
+	uint64_t typeId;
+
+	/**
+	 * User message data (not including type ID)
+	 */
+	const void *data;
+
+	/**
+	 * Length of data in bytes
+	 */
+	unsigned int length;
+} ZT_UserMessage;
 
 /**
  * Current node status
@@ -1852,6 +1888,20 @@ int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage
  * Clear local interface addresses
  */
 void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node);
+
+/**
+ * Send a VERB_USER_MESSAGE to another ZeroTier node
+ *
+ * There is no delivery guarantee here. Failure can occur if the message is
+ * too large or if dest is not a valid ZeroTier address.
+ *
+ * @param dest Destination ZeroTier address
+ * @param typeId VERB_USER_MESSAGE type ID
+ * @param data Payload data to attach to user message
+ * @param len Length of data in bytes
+ * @return Boolean: non-zero on success, zero on failure
+ */
+int ZT_Node_sendUserMessage(ZT_Node *node,uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
 
 /**
  * Set peer role

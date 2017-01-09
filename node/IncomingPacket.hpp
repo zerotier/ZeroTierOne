@@ -131,6 +131,7 @@ private:
 	bool _doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
+	bool _doUSER_MESSAGE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 
 	void _sendErrorNeedCredentials(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,const uint64_t nwid);
 

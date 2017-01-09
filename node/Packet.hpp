@@ -1048,6 +1048,10 @@ public:
 		 * This can be used to send arbitrary messages over VL1. It generates no
 		 * OK or ERROR and has no special semantics outside of whatever the user
 		 * (via the ZeroTier core API) chooses to give it.
+		 *
+		 * Message type IDs less than or equal to 65535 are reserved for use by
+		 * ZeroTier, Inc. itself. We recommend making up random ones for your own
+		 * implementations.
 		 */
 		VERB_USER_MESSAGE = 0x14
 	};
