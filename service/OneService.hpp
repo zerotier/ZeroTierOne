@@ -82,11 +82,6 @@ public:
 	static std::string platformDefaultHomePath();
 
 	/**
-	 * @return Auto-update URL or empty string if auto-updates unsupported or not enabled
-	 */
-	static std::string autoUpdateUrl();
-
-	/**
 	 * Create a new instance of the service
 	 *
 	 * Once created, you must call the run() method to actually start

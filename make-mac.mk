@@ -24,7 +24,7 @@ ZT_USE_MINIUPNPC?=1
 
 # For internal use only -- signs everything with ZeroTier's developer cert
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
-	DEFS+=-DZT_OFFICIAL_RELEASE -DZT_AUTO_UPDATE
+	DEFS+=-DZT_OFFICIAL_RELEASE
 	ZT_USE_MINIUPNPC=1
 	CODESIGN=codesign
 	PRODUCTSIGN=productsign
@@ -34,10 +34,6 @@ endif
 
 ifeq ($(ZT_ENABLE_CLUSTER),1)
 	DEFS+=-DZT_ENABLE_CLUSTER
-endif
-
-ifeq ($(ZT_AUTO_UPDATE),1)
-	DEFS+=-DZT_AUTO_UPDATE
 endif
 
 ifeq ($(ZT_USE_MINIUPNPC),1)

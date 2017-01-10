@@ -194,6 +194,8 @@ static std::string _jS(const json &jv,const char *dfl)
 	return std::string((dfl) ? dfl : "");
 }
 
+#if 0
+
 #ifdef ZT_AUTO_UPDATE
 #define ZT_AUTO_UPDATE_MAX_HTTP_RESPONSE_SIZE (1024 * 1024 * 64)
 #define ZT_AUTO_UPDATE_CHECK_PERIOD 21600000
@@ -402,6 +404,8 @@ public:
 };
 static BackgroundSoftwareUpdateChecker backgroundSoftwareUpdateChecker;
 #endif // ZT_AUTO_UPDATE
+
+#endif
 
 static std::string _trimString(const std::string &s)
 {
@@ -947,9 +951,6 @@ public:
 			uint64_t lastTcpFallbackResolve = 0;
 			uint64_t lastBindRefresh = 0;
 			uint64_t lastLocalInterfaceAddressCheck = (OSUtils::now() - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
-#ifdef ZT_AUTO_UPDATE
-			uint64_t lastSoftwareUpdateCheck = 0;
-#endif // ZT_AUTO_UPDATE
 			for(;;) {
 				_run_m.lock();
 				if (!_run) {
@@ -993,13 +994,6 @@ public:
 					_node->processBackgroundTasks(now,&_nextBackgroundTaskDeadline);
 					dl = _nextBackgroundTaskDeadline;
 				}
-
-#ifdef ZT_AUTO_UPDATE
-				if ((now - lastSoftwareUpdateCheck) >= ZT_AUTO_UPDATE_CHECK_PERIOD) {
-					lastSoftwareUpdateCheck = now;
-					Thread::start(&backgroundSoftwareUpdateChecker);
-				}
-#endif // ZT_AUTO_UPDATE
 
 				if ((now - lastTcpFallbackResolve) >= ZT_TCP_FALLBACK_RERESOLVE_DELAY) {
 					lastTcpFallbackResolve = now;
@@ -2243,30 +2237,6 @@ static int ShttpOnMessageComplete(http_parser *parser)
 std::string OneService::platformDefaultHomePath()
 {
 	return OSUtils::platformDefaultHomePath();
-}
-
-std::string OneService::autoUpdateUrl()
-{
-#ifdef ZT_AUTO_UPDATE
-
-/*
-#if defined(__LINUX__) && ( defined(__i386__) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__i386) )
-	if (sizeof(void *) == 8)
-		return "http://download.zerotier.com/ZeroTierOneInstaller-linux-x64-LATEST.nfo";
-	else return "http://download.zerotier.com/ZeroTierOneInstaller-linux-x86-LATEST.nfo";
-#endif
-*/
-
-#if defined(__APPLE__) && ( defined(__i386__) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__i386) )
-	return "http://download.zerotier.com/update/mac_intel/";
-#endif
-
-#ifdef __WINDOWS__
-	return "http://download.zerotier.com/update/win_intel/";
-#endif
-
-#endif // ZT_AUTO_UPDATE
-	return std::string();
 }
 
 OneService *OneService::newInstance(const char *hp,unsigned int port) { return new OneServiceImpl(hp,port); }
