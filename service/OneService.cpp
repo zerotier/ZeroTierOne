@@ -148,52 +148,6 @@ namespace ZeroTier {
 
 namespace {
 
-static uint64_t _jI(const json &jv,const uint64_t dfl)
-{
-	if (jv.is_number()) {
-		return (uint64_t)jv;
-	} else if (jv.is_string()) {
-		std::string s = jv;
-		return Utils::strToU64(s.c_str());
-	} else if (jv.is_boolean()) {
-		return ((bool)jv ? 1ULL : 0ULL);
-	}
-	return dfl;
-}
-static bool _jB(const json &jv,const bool dfl)
-{
-	if (jv.is_boolean()) {
-		return (bool)jv;
-	} else if (jv.is_number()) {
-		return ((uint64_t)jv > 0ULL);
-	} else if (jv.is_string()) {
-		std::string s = jv;
-		if (s.length() > 0) {
-			switch(s[0]) {
-				case 't':
-				case 'T':
-				case '1':
-					return true;
-			}
-		}
-		return false;
-	}
-	return dfl;
-}
-static std::string _jS(const json &jv,const char *dfl)
-{
-	if (jv.is_string()) {
-		return jv;
-	} else if (jv.is_number()) {
-		char tmp[64];
-		Utils::snprintf(tmp,sizeof(tmp),"%llu",(uint64_t)jv);
-		return tmp;
-	} else if (jv.is_boolean()) {
-		return ((bool)jv ? std::string("1") : std::string("0"));
-	}
-	return std::string((dfl) ? dfl : "");
-}
-
 #if 0
 
 #ifdef ZT_AUTO_UPDATE
@@ -747,7 +701,7 @@ public:
 				std::string lcbuf;
 				if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S + "local.conf").c_str(),lcbuf)) {
 					try {
-						_localConfig = json::parse(lcbuf);
+						_localConfig = OSUtils::jsonParse(lcbuf);
 						if (!_localConfig.is_object()) {
 							fprintf(stderr,"WARNING: unable to parse local.conf (root element is not a JSON object)" ZT_EOL_S);
 						}
@@ -760,11 +714,11 @@ public:
 				json &physical = _localConfig["physical"];
 				if (physical.is_object()) {
 					for(json::iterator phy(physical.begin());phy!=physical.end();++phy) {
-						InetAddress net(_jS(phy.key(),""));
+						InetAddress net(OSUtils::jsonString(phy.key(),""));
 						if (net) {
 							if (phy.value().is_object()) {
 								uint64_t tpid;
-								if ((tpid = _jI(phy.value()["trustedPathId"],0ULL)) != 0ULL) {
+								if ((tpid = OSUtils::jsonInt(phy.value()["trustedPathId"],0ULL)) != 0ULL) {
 									if ( ((net.ss_family == AF_INET)||(net.ss_family == AF_INET6)) && (trustedPathCount < ZT_MAX_TRUSTED_PATHS) && (net.ipScope() != InetAddress::IP_SCOPE_GLOBAL) && (net.netmaskBits() > 0) ) {
 										trustedPathIds[trustedPathCount] = tpid;
 										trustedPathNetworks[trustedPathCount] = net;
@@ -1157,7 +1111,7 @@ public:
 				if ((nstr.length() == ZT_ADDRESS_LENGTH_HEX)&&(v.value().is_object())) {
 					const Address ztaddr(nstr.c_str());
 					if (ztaddr) {
-						const std::string rstr(_jS(v.value()["role"],""));
+						const std::string rstr(OSUtils::jsonString(v.value()["role"],""));
 						_node->setRole(ztaddr.toInt(),((rstr == "upstream")||(rstr == "UPSTREAM")) ? ZT_PEER_ROLE_UPSTREAM : ZT_PEER_ROLE_LEAF);
 
 						const uint64_t ztaddr2 = ztaddr.toInt();
@@ -1169,7 +1123,7 @@ public:
 						json &tryAddrs = v.value()["try"];
 						if (tryAddrs.is_array()) {
 							for(unsigned long i=0;i<tryAddrs.size();++i) {
-								const InetAddress ip(_jS(tryAddrs[i],""));
+								const InetAddress ip(OSUtils::jsonString(tryAddrs[i],""));
 								if (ip.ss_family == AF_INET)
 									v4h.push_back(ip);
 								else if (ip.ss_family == AF_INET6)
@@ -1179,7 +1133,7 @@ public:
 						json &blAddrs = v.value()["blacklist"];
 						if (blAddrs.is_array()) {
 							for(unsigned long i=0;i<blAddrs.size();++i) {
-								const InetAddress ip(_jS(tryAddrs[i],""));
+								const InetAddress ip(OSUtils::jsonString(tryAddrs[i],""));
 								if (ip.ss_family == AF_INET)
 									v4b.push_back(ip);
 								else if (ip.ss_family == AF_INET6)
@@ -1201,10 +1155,10 @@ public:
 		json &physical = _localConfig["physical"];
 		if (physical.is_object()) {
 			for(json::iterator phy(physical.begin());phy!=physical.end();++phy) {
-				const InetAddress net(_jS(phy.key(),""));
+				const InetAddress net(OSUtils::jsonString(phy.key(),""));
 				if ((net)&&(net.netmaskBits() > 0)) {
 					if (phy.value().is_object()) {
-						if (_jB(phy.value()["blacklist"],false)) {
+						if (OSUtils::jsonBool(phy.value()["blacklist"],false)) {
 							if (net.ss_family == AF_INET)
 								_globalV4Blacklist.push_back(net);
 							else if (net.ss_family == AF_INET6)
@@ -1219,7 +1173,7 @@ public:
 		_interfacePrefixBlacklist.clear();
 		json &settings = _localConfig["settings"];
 		if (settings.is_object()) {
-			const std::string rp(_jS(settings["relayPolicy"],""));
+			const std::string rp(OSUtils::jsonString(settings["relayPolicy"],""));
 			if ((rp == "always")||(rp == "ALWAYS"))
 				_node->setRelayPolicy(ZT_RELAY_POLICY_ALWAYS);
 			else if ((rp == "never")||(rp == "NEVER"))
@@ -1229,7 +1183,7 @@ public:
 			json &ignoreIfs = settings["interfacePrefixBlacklist"];
 			if (ignoreIfs.is_array()) {
 				for(unsigned long i=0;i<ignoreIfs.size();++i) {
-					const std::string tmp(_jS(ignoreIfs[i],""));
+					const std::string tmp(OSUtils::jsonString(ignoreIfs[i],""));
 					if (tmp.length() > 0)
 						_interfacePrefixBlacklist.push_back(tmp);
 				}
@@ -1238,7 +1192,7 @@ public:
 			json &amf = settings["allowManagementFrom"];
 			if (amf.is_array()) {
 				for(unsigned long i=0;i<amf.size();++i) {
-					const InetAddress nw(_jS(amf[i],""));
+					const InetAddress nw(OSUtils::jsonString(amf[i],""));
 					if (nw)
 						_allowManagementFrom.push_back(nw);
 				}

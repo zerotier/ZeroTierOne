@@ -515,7 +515,7 @@ unsigned int ControlPlane::handleRequest(
 								_svc->getNetworkSettings(nws->networks[i].nwid,localSettings);
 
 								try {
-									nlohmann::json j(nlohmann::json::parse(body));
+									nlohmann::json j(OSUtils::jsonParse(body));
 									if (j.is_object()) {
 										nlohmann::json &allowManaged = j["allowManaged"];
 										if (allowManaged.is_boolean()) localSettings.allowManaged = (bool)allowManaged;

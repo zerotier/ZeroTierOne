@@ -897,9 +897,6 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,
 		COPYRIGHT_NOTICE ZT_EOL_S
 		LICENSE_GRANT ZT_EOL_S);
-	std::string updateUrl(OneService::autoUpdateUrl());
-	if (updateUrl.length())
-		fprintf(out,"Automatic updates enabled:" ZT_EOL_S"  %s" ZT_EOL_S"  (all updates are securely authenticated by 256-bit ECDSA signature)" ZT_EOL_S"" ZT_EOL_S,updateUrl.c_str());
 	fprintf(out,"Usage: %s [-switches] [home directory]" ZT_EOL_S"" ZT_EOL_S,cn);
 	fprintf(out,"Available switches:" ZT_EOL_S);
 	fprintf(out,"  -h                - Display this help" ZT_EOL_S);

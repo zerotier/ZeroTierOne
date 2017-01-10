@@ -31,7 +31,7 @@ bool JSONDB::put(const std::string &n,const nlohmann::json &obj)
 	if (!path.length())
 		return false;
 
-	const std::string buf(obj.dump(2));
+	const std::string buf(OSUtils::jsonDump(obj));
 	if (!OSUtils::writeFile(path.c_str(),buf))
 		return false;
 
@@ -69,7 +69,7 @@ const nlohmann::json &JSONDB::get(const std::string &n,unsigned long maxSinceChe
 		if (e->second.lastModifiedOnDisk != lm) {
 			if (OSUtils::readFile(path.c_str(),buf)) {
 				try {
-					e->second.obj = nlohmann::json::parse(buf);
+					e->second.obj = OSUtils::jsonParse(buf);
 					e->second.lastModifiedOnDisk = lm; // don't update these if there is a parse error -- try again and again ASAP
 					e->second.lastCheck = now;
 
@@ -91,7 +91,7 @@ const nlohmann::json &JSONDB::get(const std::string &n,unsigned long maxSinceChe
 		const uint64_t lm = OSUtils::getLastModified(path.c_str());
 		_E &e2 = _db[n];
 		try {
-			e2.obj = nlohmann::json::parse(buf);
+			e2.obj = OSUtils::jsonParse(buf);
 		} catch ( ... ) {
 			e2.obj = _EMPTY_JSON;
 			buf = "{}";
