@@ -274,6 +274,7 @@ public:
 	static uint64_t jsonInt(const nlohmann::json &jv,const uint64_t dfl);
 	static bool jsonBool(const nlohmann::json &jv,const bool dfl);
 	static std::string jsonString(const nlohmann::json &jv,const char *dfl);
+	static std::string jsonBinFromHex(const nlohmann::json &jv);
 
 private:
 	static const unsigned char TOLOWER_TABLE[256];

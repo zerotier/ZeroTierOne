@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 
 #include "../node/Constants.hpp"
+#include "../node/Utils.hpp"
 
 #ifdef __UNIX_LIKE__
 #include <unistd.h>
@@ -451,6 +452,23 @@ std::string OSUtils::jsonString(const nlohmann::json &jv,const char *dfl)
 		}
 	} catch ( ... ) {}
 	return std::string((dfl) ? dfl : "");
+}
+
+std::string OSUtils::jsonBinFromHex(const nlohmann::json &jv)
+{
+	std::string s(jsonString(jv,""));
+	if (s.length() > 0) {
+		char *buf = new char[(s.length() / 2) + 1];
+		try {
+			unsigned int l = Utils::unhex(s,buf,(unsigned int)s.length());
+			std::string b(buf,l);
+			delete [] buf;
+			return b;
+		} catch ( ... ) {
+			delete [] buf;
+		}
+	}
+	return std::string();
 }
 
 // Used to convert HTTP header names to ASCII lower case

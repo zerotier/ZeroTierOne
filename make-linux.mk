@@ -113,6 +113,32 @@ endif
 #LDFLAGS=
 #STRIP=echo
 
+# Determine system build architecture from compiler target
+CC_MACH=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
+ZT_ARCHITECTURE=0
+ifeq ($(CC_MACH),x86_64)
+        ZT_ARCHITECTURE=2
+endif
+ifeq ($(CC_MACH),amd64)
+        ZT_ARCHITECTURE=2
+endif
+ifeq ($(CC_MACH),i386)
+        ZT_ARCHITECTURE=1
+endif
+ifeq ($(CC_MACH),i686)
+        ZT_ARCHITECTURE=1
+endif
+ifeq ($(CC_MACH),arm)
+        ZT_ARCHITECTURE=3
+endif
+ifeq ($(CC_MACH),arm64)
+        ZT_ARCHITECTURE=4
+endif
+ifeq ($(CC_MACH),aarch64)
+        ZT_ARCHITECTURE=4
+endif
+DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE)
+
 all:	one
 
 one:	$(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o osdep/LinuxDropPrivileges.o

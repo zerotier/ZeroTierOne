@@ -57,6 +57,9 @@ endif
 
 CXXFLAGS=$(CFLAGS) -mmacosx-version-min=10.7 -std=c++11 -stdlib=libc++ 
 
+# 3 == MacOS, 2 == X64
+DEFS+=-DZT_BUILD_PLATFORM=3 -DZT_BUILD_ARCHITECTURE=2
+
 all: one macui
 
 one:	$(OBJS) service/OneService.o one.o
