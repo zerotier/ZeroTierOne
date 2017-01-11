@@ -30,7 +30,15 @@
 #include "../node/SHA512.hpp"
 #include "../node/Buffer.hpp"
 #include "../node/Node.hpp"
+
 #include "../osdep/OSUtils.hpp"
+
+#ifndef ZT_BUILD_ARCHITECTURE
+#define ZT_BUILD_ARCHITECTURE 0
+#endif
+#ifndef ZT_BUILD_PLATFORM
+#define ZT_BUILD_PLATFORM 0
+#endif
 
 namespace ZeroTier {
 
@@ -83,18 +91,27 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 					const unsigned int rvMaj = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR],0);
 					const unsigned int rvMin = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR],0);
 					const unsigned int rvRev = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION],0);
+					const unsigned int rvPlatform = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_PLATFORM],0);
+					const unsigned int rvArch = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_ARCHITECTURE],0);
+					const unsigned int rvVendor = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_VENDOR],0);
+					const std::string rvChannel(OSUtils::jsonString(req[ZT_SOFTWARE_UPDATE_JSON_CHANNEL],""));
 					if (v == VERB_GET_LATEST) {
 
 						if (_dist.size() > 0) {
 							const nlohmann::json *latest = (const nlohmann::json *)0;
-							const std::string rSigner = OSUtils::jsonString(req[ZT_SOFTWARE_UPDATE_JSON_EXPECT_SIGNED_BY],"");
+							const std::string expectedSigner = OSUtils::jsonString(req[ZT_SOFTWARE_UPDATE_JSON_EXPECT_SIGNED_BY],"");
 							for(std::map< Array<uint8_t,16>,_D >::const_iterator d(_dist.begin());d!=_dist.end();++d) {
-								if (OSUtils::jsonString(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNED_BY],"") == rSigner) {
+								if ((OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_PLATFORM],0) == rvPlatform)&&
+								    (OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_ARCHITECTURE],0) == rvArch)&&
+								    (OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_VENDOR],0) == rvVendor)&&
+								    (OSUtils::jsonString(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_CHANNEL],"") == rvChannel)&&
+								    (OSUtils::jsonString(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNED_BY],"") == expectedSigner)) {
 									const unsigned int dvMaj = (unsigned int)OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR],0);
 									const unsigned int dvMin = (unsigned int)OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR],0);
 									const unsigned int dvRev = (unsigned int)OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION],0);
-									if (Utils::compareVersion(dvMaj,dvMin,dvRev,rvMaj,rvMin,rvRev) > 0)
+									if (Utils::compareVersion(dvMaj,dvMin,dvRev,rvMaj,rvMin,rvRev) > 0) {
 										latest = &(d->second.meta);
+									}
 								}
 							}
 							if (latest) {
@@ -221,6 +238,27 @@ nlohmann::json SoftwareUpdater::check()
 
 	const uint64_t now = OSUtils::now();
 	if ((now - _lastCheckTime) >= ZT_SOFTWARE_UPDATE_CHECK_PERIOD) {
+		_lastCheckTime = now;
+		char tmp[512];
+		const unsigned int len = Utils::snprintf(tmp,sizeof(tmp),
+			"%c{\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR "\":%d,"
+			"\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR "\":%d,"
+			"\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION "\":%d,"
+			"\"" ZT_SOFTWARE_UPDATE_JSON_EXPECT_SIGNED_BY "\":\"%s\","
+			"\"" ZT_SOFTWARE_UPDATE_JSON_PLATFORM "\":%d,"
+			"\"" ZT_SOFTWARE_UPDATE_JSON_ARCHITECTURE "\":%d,"
+			"\"" ZT_SOFTWARE_UPDATE_JSON_VENDOR "\":%d,"
+			"\"" ZT_SOFTWARE_UPDATE_JSON_CHANNEL "\":\"%s\"}",
+			(char)VERB_GET_LATEST,
+			ZEROTIER_ONE_VERSION_MAJOR,
+			ZEROTIER_ONE_VERSION_MINOR,
+			ZEROTIER_ONE_VERSION_REVISION,
+			ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY,
+			ZT_BUILD_PLATFORM,
+			ZT_BUILD_ARCHITECTURE,
+			(int)ZT_VENDOR_ZEROTIER,
+			"release");
+		_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,tmp,len);
 	}
 
 	return nlohmann::json();
