@@ -258,9 +258,10 @@ SoftwareUpdater::SoftwareUpdater(Node &node,const std::string &homePath) :
 	_lastCheckTime(0),
 	_homePath(homePath),
 	_channel(ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL),
-	_latestBinLength(0),
-	_latestBinValid(false)
+	_latestValid(false),
+	_downloadLength(0)
 {
+	// Check for a cached newer update. If there's a cached update that is not newer, delete.
 }
 
 SoftwareUpdater::~SoftwareUpdater()
@@ -286,6 +287,7 @@ void SoftwareUpdater::setUpdateDistribution(bool distribute)
 							uint8_t sha512[ZT_SHA512_DIGEST_LEN];
 							SHA512::hash(sha512,d.bin.data(),(unsigned int)d.bin.length());
 							if (!memcmp(sha512,metaHash.data(),ZT_SHA512_DIGEST_LEN)) { // double check that hash in JSON is correct
+								d.meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIZE] = d.bin.length(); // override with correct value -- setting this in meta json is optional
 								_dist[Array<uint8_t,16>(sha512)] = d;
 								printf("update-dist.d: %s\n",u->c_str());
 							}
@@ -351,19 +353,24 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 							if ((len <= ZT_SOFTWARE_UPDATE_MAX_SIZE)&&(hash.length() >= 16)) {
 								if (_latestMeta != req) {
 									_latestMeta = req;
-									_latestBin = "";
-									memcpy(_latestBinHashPrefix.data,hash.data(),16);
-									_latestBinLength = len;
-									_latestBinValid = false;
-									printf("<< LATEST\n%s\n",OSUtils::jsonDump(req).c_str());
+									_latestValid = false;
+
+									OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S + ZT_SOFTWARE_UPDATE_META_FILENAME).c_str());
+									OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S + ZT_SOFTWARE_UPDATE_BIN_FILENAME).c_str());
+
+									_download = std::string();
+									memcpy(_downloadHashPrefix.data,hash.data(),16);
+									_downloadLength = len;
 								}
 
-								Buffer<128> gd;
-								gd.append((uint8_t)VERB_GET_DATA);
-								gd.append(_latestBinHashPrefix.data,16);
-								gd.append((uint32_t)_latestBin.length());
-								_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
-								printf(">> GET_DATA @%u\n",(unsigned int)_latestBin.length());
+								if ((_downloadLength > 0)&&(_download.length() < _downloadLength)) {
+									Buffer<128> gd;
+									gd.append((uint8_t)VERB_GET_DATA);
+									gd.append(_downloadHashPrefix.data,16);
+									gd.append((uint32_t)_download.length());
+									_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
+									printf(">> GET_DATA @%u\n",(unsigned int)_download.length());
+								}
 							}
 						}
 
@@ -379,7 +386,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 20);
 					printf("<< GET_DATA @%u from %.10llx for %s\n",(unsigned int)idx,origin,Utils::hex(reinterpret_cast<const uint8_t *>(data) + 1,16).c_str());
 					std::map< Array<uint8_t,16>,_D >::iterator d(_dist.find(Array<uint8_t,16>(reinterpret_cast<const uint8_t *>(data) + 1)));
-					if ((d != _dist.end())&&(idx < d->second.bin.length())) {
+					if ((d != _dist.end())&&(idx < (unsigned long)d->second.bin.length())) {
 						Buffer<ZT_SOFTWARE_UPDATE_CHUNK_SIZE + 128> buf;
 						buf.append((uint8_t)VERB_DATA);
 						buf.append(reinterpret_cast<const uint8_t *>(data) + 1,16);
@@ -392,21 +399,21 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 				break;
 
 			case VERB_DATA:
-				if ((len >= 21)&&(!memcmp(_latestBinHashPrefix.data,reinterpret_cast<const uint8_t *>(data) + 1,16))) {
+				if ((len >= 21)&&(_downloadLength > 0)&&(!memcmp(_downloadHashPrefix.data,reinterpret_cast<const uint8_t *>(data) + 1,16))) {
 					unsigned long idx = (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 17) << 24;
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 18) << 16;
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 19) << 8;
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 20);
-					printf("<< DATA @%u / %u bytes (we now have %u bytes)\n",(unsigned int)idx,(unsigned int)(len - 21),(unsigned int)_latestBin.length());
-					if (idx == _latestBin.length()) {
-						_latestBin.append(reinterpret_cast<const char *>(data) + 21,len - 21);
-						if (_latestBin.length() < _latestBinLength) {
+					printf("<< DATA @%u / %u bytes (we now have %u bytes)\n",(unsigned int)idx,(unsigned int)(len - 21),(unsigned int)_download.length());
+					if (idx == (unsigned long)_download.length()) {
+						_download.append(reinterpret_cast<const char *>(data) + 21,len - 21);
+						if (_download.length() < _downloadLength) {
 							Buffer<128> gd;
 							gd.append((uint8_t)VERB_GET_DATA);
-							gd.append(_latestBinHashPrefix.data,16);
-							gd.append((uint32_t)_latestBin.length());
+							gd.append(_downloadHashPrefix.data,16);
+							gd.append((uint32_t)_download.length());
 							_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
-							printf(">> GET_DATA @%u\n",(unsigned int)_latestBin.length());
+							printf(">> GET_DATA @%u\n",(unsigned int)_download.length());
 						}
 					}
 				}
@@ -447,44 +454,50 @@ bool SoftwareUpdater::check(const uint64_t now)
 		printf(">> GET_LATEST\n");
 	}
 
-	if (_latestBinLength > 0) {
-		if (_latestBin.length() >= _latestBinLength) {
-			if (_latestBinValid) {
-				return true;
-			} else {
-				// This is the very important security validation part that makes sure
-				// this software update doesn't have cooties.
+	if (_latestValid)
+		return true;
 
-				try {
-					// (1) Check the hash itself to make sure the image is basically okay
-					uint8_t sha512[ZT_SHA512_DIGEST_LEN];
-					SHA512::hash(sha512,_latestBin.data(),(unsigned int)_latestBin.length());
-					if (Utils::hex(sha512,ZT_SHA512_DIGEST_LEN) == OSUtils::jsonString(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH],"~")) {
-						// (2) Check signature by signing authority
-						std::string sig(OSUtils::jsonBinFromHex(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNATURE]));
-						if (Identity(ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY).verify(_latestBin.data(),(unsigned int)_latestBin.length(),sig.data(),(unsigned int)sig.length())) {
-							// If we passed both of these, the update is good!
-							_latestBinValid = true;
+	if (_downloadLength > 0) {
+		if (_download.length() >= _downloadLength) {
+			// This is the very important security validation part that makes sure
+			// this software update doesn't have cooties.
+
+			try {
+				// (1) Check the hash itself to make sure the image is basically okay
+				uint8_t sha512[ZT_SHA512_DIGEST_LEN];
+				SHA512::hash(sha512,_download.data(),(unsigned int)_download.length());
+				if (Utils::hex(sha512,ZT_SHA512_DIGEST_LEN) == OSUtils::jsonString(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH],"~")) {
+					// (2) Check signature by signing authority
+					std::string sig(OSUtils::jsonBinFromHex(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNATURE]));
+					if (Identity(ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY).verify(_download.data(),(unsigned int)_download.length(),sig.data(),(unsigned int)sig.length())) {
+						// If we passed both of these, the update is good!
+						if (OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + ZT_SOFTWARE_UPDATE_META_FILENAME).c_str(),OSUtils::jsonDump(_latestMeta)) && OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + ZT_SOFTWARE_UPDATE_BIN_FILENAME).c_str(),_download)) {
+							_latestValid = true;
 							printf("VALID UPDATE\n%s\n",OSUtils::jsonDump(_latestMeta).c_str());
-							return true;
+						} else {
+							_latestMeta = nlohmann::json();
+							_latestValid = false;
 						}
+						_download = std::string();
+						_downloadLength = 0;
+						return _latestValid;
 					}
-				} catch ( ... ) {} // any exception equals verification failure
-				printf("INVALID UPDATE (!!!)\n%s\n",OSUtils::jsonDump(_latestMeta).c_str());
+				}
+			} catch ( ... ) {} // any exception equals verification failure
 
-				// If we get here, checks failed.
-				_latestMeta = nlohmann::json();
-				_latestBin = "";
-				_latestBinLength = 0;
-				_latestBinValid = false;
-			}
+			// If we get here, checks failed.
+			printf("INVALID UPDATE (!!!)\n%s\n",OSUtils::jsonDump(_latestMeta).c_str());
+			_latestMeta = nlohmann::json();
+			_latestValid = false;
+			_download = std::string();
+			_downloadLength = 0;
 		} else {
 			Buffer<128> gd;
 			gd.append((uint8_t)VERB_GET_DATA);
-			gd.append(_latestBinHashPrefix.data,16);
-			gd.append((uint32_t)_latestBin.length());
+			gd.append(_downloadHashPrefix.data,16);
+			gd.append((uint32_t)_download.length());
 			_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
-			printf(">> GET_DATA @%u\n",(unsigned int)_latestBin.length());
+			printf(">> GET_DATA @%u\n",(unsigned int)_download.length());
 		}
 	}
 
@@ -493,8 +506,6 @@ bool SoftwareUpdater::check(const uint64_t now)
 
 void SoftwareUpdater::apply()
 {
-	if ((_latestBin.length() > 0)&&(_latestBinValid)) {
-	}
 }
 
 } // namespace ZeroTier
