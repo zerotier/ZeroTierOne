@@ -1477,6 +1477,13 @@ public:
 				}
 			}	break;
 
+			case ZT_EVENT_USER_MESSAGE: {
+				const ZT_UserMessage *um = reinterpret_cast<const ZT_UserMessage *>(metaData);
+				if ((um->typeId == ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE)&&(_updater)) {
+					_updater->handleSoftwareUpdateUserMessage(um->origin,um->data,um->length);
+				}
+			}	break;
+
 			default:
 				break;
 		}
