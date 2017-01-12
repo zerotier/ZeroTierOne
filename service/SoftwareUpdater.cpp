@@ -376,16 +376,14 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 20);
 					printf("<< GET_DATA @%u from %.10llx for %s\n",(unsigned int)idx,origin,Utils::hex(reinterpret_cast<const uint8_t *>(data) + 1,16).c_str());
 					std::map< Array<uint8_t,16>,_D >::iterator d(_dist.find(Array<uint8_t,16>(reinterpret_cast<const uint8_t *>(data) + 1)));
-					if (d != _dist.end()) {
-						if (idx < d->second.bin.length()) {
-							Buffer<ZT_SOFTWARE_UPDATE_CHUNK_SIZE + 128> buf;
-							buf.append((uint8_t)VERB_DATA);
-							buf.append(reinterpret_cast<const uint8_t *>(data) + 1,16);
-							buf.append((uint32_t)idx);
-							buf.append(d->second.bin.data() + idx,std::max((unsigned long)ZT_SOFTWARE_UPDATE_CHUNK_SIZE,(unsigned long)(d->second.bin.length() - idx)));
-							_node.sendUserMessage(origin,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,buf.data(),buf.size());
-							printf(">> DATA @%u\n",(unsigned int)idx);
-						}
+					if ((d != _dist.end())&&(idx < d->second.bin.length())) {
+						Buffer<ZT_SOFTWARE_UPDATE_CHUNK_SIZE + 128> buf;
+						buf.append((uint8_t)VERB_DATA);
+						buf.append(reinterpret_cast<const uint8_t *>(data) + 1,16);
+						buf.append((uint32_t)idx);
+						buf.append(d->second.bin.data() + idx,std::min((unsigned long)ZT_SOFTWARE_UPDATE_CHUNK_SIZE,(unsigned long)(d->second.bin.length() - idx)));
+						_node.sendUserMessage(origin,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,buf.data(),buf.size());
+						printf(">> DATA @%u\n",(unsigned int)idx);
 					}
 				}
 				break;
