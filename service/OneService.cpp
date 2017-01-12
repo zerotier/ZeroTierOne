@@ -264,6 +264,7 @@ public:
 	Phy<OneServiceImpl *> _phy;
 	Node *_node;
 	SoftwareUpdater *_updater;
+	bool _updateAutoApply;
 	unsigned int _primaryPort;
 
 	// Local configuration and memo-ized static path definitions
@@ -367,6 +368,7 @@ public:
 		,_phy(this,false,true)
 		,_node((Node *)0)
 		,_updater((SoftwareUpdater *)0)
+		,_updateAutoApply(false)
 		,_primaryPort(port)
 		,_controlPlane((ControlPlane *)0)
 		,_lastDirectReceiveFromGlobal(0)
@@ -453,9 +455,6 @@ public:
 				cb.pathLookupFunction = SnodePathLookupFunction;
 				_node = new Node(this,&cb,OSUtils::now());
 			}
-
-			_updater = new SoftwareUpdater(*_node,_homePath);
-			_updater->loadUpdatesToDistribute();
 
 			// Read local configuration
 			{
@@ -981,6 +980,20 @@ public:
 			else if ((rp == "never")||(rp == "NEVER"))
 				_node->setRelayPolicy(ZT_RELAY_POLICY_NEVER);
 			else _node->setRelayPolicy(ZT_RELAY_POLICY_TRUSTED);
+
+			const std::string up(OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT));
+			const bool udist = OSUtils::jsonBool(settings["softwareUpdateDist"],false);
+			if (((up == "apply")||(up == "download"))||(udist)) {
+				if (!_updater)
+					_updater = new SoftwareUpdater(*_node,_homePath);
+				_updateAutoApply = (up == "apply");
+				_updater->setUpdateDistribution(udist);
+				_updater->setChannel(OSUtils::jsonString(settings["softwareUpdateChannel"],ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL));
+			} else {
+				delete _updater;
+				_updater = (SoftwareUpdater *)0;
+				_updateAutoApply = false;
+			}
 
 			json &ignoreIfs = settings["interfacePrefixBlacklist"];
 			if (ignoreIfs.is_array()) {

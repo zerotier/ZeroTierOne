@@ -64,19 +64,25 @@
 //#define ZT_SOFTWARE_UPDATE_CHECK_PERIOD (60 * 60 * 1000)
 #define ZT_SOFTWARE_UPDATE_CHECK_PERIOD 5000
 
+/**
+ * Default update channel
+ */
+#define ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL "release"
+
 #define ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR "versionMajor"
 #define ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR "versionMinor"
 #define ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION "versionRev"
-#define ZT_SOFTWARE_UPDATE_JSON_EXPECT_SIGNED_BY "expectedSigner"
 #define ZT_SOFTWARE_UPDATE_JSON_PLATFORM "platform"
 #define ZT_SOFTWARE_UPDATE_JSON_ARCHITECTURE "arch"
 #define ZT_SOFTWARE_UPDATE_JSON_VENDOR "vendor"
 #define ZT_SOFTWARE_UPDATE_JSON_CHANNEL "channel"
+#define ZT_SOFTWARE_UPDATE_JSON_EXPECT_SIGNED_BY "expectedSigner"
 #define ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNED_BY "updateSigner"
 #define ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNATURE "updateSig"
 #define ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH "updateHash"
 #define ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIZE "updateSize"
-#define ZT_SOFTWARE_UPDATE_JSON_EXEC_ARGS "updateExecArgs"
+#define ZT_SOFTWARE_UPDATE_JSON_UPDATE_EXEC_ARGS "updateExecArgs"
+#define ZT_SOFTWARE_UPDATE_JSON_UPDATE_URL "updateUrl"
 
 namespace ZeroTier {
 
@@ -123,9 +129,11 @@ public:
 	~SoftwareUpdater();
 
 	/**
-	 * Load update-dist.d if it exists
+	 * Set whether or not we will distribute updates
+	 *
+	 * @param distribute If true, scan update-dist.d now and distribute updates found there -- if false, clear and stop distributing
 	 */
-	void loadUpdatesToDistribute();
+	void setUpdateDistribution(bool distribute);
 
 	/**
 	 * Handle a software update user message
@@ -141,9 +149,14 @@ public:
 	 *
 	 * It should be called about every 10 seconds.
 	 *
-	 * @return Null JSON object or update information if there is an update downloaded and ready
+	 * @return True if we've downloaded and verified an update
 	 */
-	nlohmann::json check(const uint64_t now);
+	bool check(const uint64_t now);
+
+	/**
+	 * @return Meta-data for downloaded update or NULL if none
+	 */
+	inline const nlohmann::json &pending() const { return _latestMeta; }
 
 	/**
 	 * Apply any ready update now
@@ -153,10 +166,18 @@ public:
 	 */
 	void apply();
 
+	/**
+	 * Set software update channel
+	 *
+	 * @param channel 'release', 'beta', etc.
+	 */
+	inline void setChannel(const std::string &channel) { _channel = channel; }
+
 private:
 	Node &_node;
 	uint64_t _lastCheckTime;
 	std::string _homePath;
+	std::string _channel;
 
 	// Offered software updates if we are an update host (we have update-dist.d and update hosting is enabled)
 	struct _D

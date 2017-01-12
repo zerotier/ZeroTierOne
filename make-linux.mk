@@ -1,24 +1,3 @@
-#
-# Makefile for ZeroTier One on Linux
-#
-# This is confirmed to work on distributions newer than CentOS 6 (the
-# one used for reference builds) and on 32 and 64 bit x86 and ARM
-# machines. It should also work on other 'normal' machines and recent
-# distributions. Editing might be required for tiny devices or weird
-# distros.
-#
-# Targets
-#   one: zerotier-one and symlinks (cli and idtool)
-#   manpages: builds manpages, requires 'ronn' or nodeJS (will use either)
-#   all: builds 'one' and 'manpages'
-#   selftest: zerotier-selftest
-#   debug: builds 'one' and 'selftest' with tracing and debug flags
-#   clean: removes all built files, objects, other trash
-#   distclean: removes a few other things that might be present
-#   debian: build DEB packages; deb dev tools must be present
-#   redhat: build RPM packages; rpm dev tools must be present
-#
-
 # Automagically pick clang or gcc, with preference for clang
 # This is only done if we have not overridden these with an environment or CLI variable
 ifeq ($(origin CC),default)
@@ -27,8 +6,6 @@ endif
 ifeq ($(origin CXX),default)
 	CXX=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
 endif
-
-#UNAME_M=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
 
 INCLUDES?=
 DEFS?=-D_FORTIFY_SOURCE=2
@@ -52,28 +29,23 @@ else
 	DEFS+=-DZT_USE_SYSTEM_HTTP_PARSER
 endif
 
-ifeq ($(ZT_USE_MINIUPNPC),1)
-	OBJS+=osdep/PortMapper.o
-
-	DEFS+=-DZT_USE_MINIUPNPC
-
-	# Auto-detect libminiupnpc at least v2.0
-	MINIUPNPC_IS_NEW_ENOUGH=$(shell grep -sqr '.*define.*MINIUPNPC_VERSION.*"2.."' /usr/include/miniupnpc/miniupnpc.h && echo 1)
-	ifeq ($(MINIUPNPC_IS_NEW_ENOUGH),1)
-		DEFS+=-DZT_USE_SYSTEM_MINIUPNPC
-		LDLIBS+=-lminiupnpc
-	else
-		DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING=\"Linux\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
-		OBJS+=ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o
-	endif
-
-	# Auto-detect libnatpmp
-	ifeq ($(wildcard /usr/include/natpmp.h),)
-		OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o
-	else
-		LDLIBS+=-lnatpmp
-		DEFS+=-DZT_USE_SYSTEM_NATPMP
-	endif
+# Auto-detect miniupnpc and nat-pmp as well and use system libs if present,
+# otherwise build into binary as done on Mac and Windows.
+OBJS+=osdep/PortMapper.o
+DEFS+=-DZT_USE_MINIUPNPC
+MINIUPNPC_IS_NEW_ENOUGH=$(shell grep -sqr '.*define.*MINIUPNPC_VERSION.*"2.."' /usr/include/miniupnpc/miniupnpc.h && echo 1)
+ifeq ($(MINIUPNPC_IS_NEW_ENOUGH),1)
+	DEFS+=-DZT_USE_SYSTEM_MINIUPNPC
+	LDLIBS+=-lminiupnpc
+else
+	DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING=\"Linux\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
+	OBJS+=ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o
+endif
+ifeq ($(wildcard /usr/include/natpmp.h),)
+	OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o
+else
+	LDLIBS+=-lnatpmp
+	DEFS+=-DZT_USE_SYSTEM_NATPMP
 endif
 
 ifeq ($(ZT_ENABLE_CLUSTER),1)
@@ -137,7 +109,7 @@ endif
 ifeq ($(CC_MACH),aarch64)
         ZT_ARCHITECTURE=4
 endif
-DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE)
+DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""
 
 all:	one
 

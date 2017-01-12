@@ -1,45 +1,39 @@
-ifeq ($(origin CC),default)
-	CC=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
-endif
-ifeq ($(origin CXX),default)
-	CXX=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
-endif
-
+CC=clang
+CXX=clang++
 INCLUDES=
 DEFS=
 LIBS=
-ARCH_FLAGS=-arch x86_64
-
-include objects.mk
-OBJS+=osdep/OSXEthernetTap.o ext/lz4/lz4.o ext/http-parser/http_parser.o
-
-# Disable codesign since open source users will not have ZeroTier's certs
+ARCH_FLAGS=
 CODESIGN=echo
 PRODUCTSIGN=echo
 CODESIGN_APP_CERT=
 CODESIGN_INSTALLER_CERT=
 
-# Build with libminiupnpc by default for Mac -- desktops/laptops almost always want this
-ZT_USE_MINIUPNPC?=1
+# 3 == MacOS, 2 == X64 (the only arch for MacOS right now)
+DEFS+=-DZT_BUILD_PLATFORM=3 -DZT_BUILD_ARCHITECTURE=2
 
-# For internal use only -- signs everything with ZeroTier's developer cert
+include objects.mk
+OBJS+=osdep/OSXEthernetTap.o ext/lz4/lz4.o ext/http-parser/http_parser.o
+
+# Official releases are signed with our Apple cert and apply software updates by default
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
-	DEFS+=-DZT_OFFICIAL_RELEASE
+	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="apply"
 	ZT_USE_MINIUPNPC=1
 	CODESIGN=codesign
 	PRODUCTSIGN=productsign
 	CODESIGN_APP_CERT="Developer ID Application: ZeroTier, Inc (8ZD9JUCZ4V)"
 	CODESIGN_INSTALLER_CERT="Developer ID Installer: ZeroTier, Inc (8ZD9JUCZ4V)"
+else
+	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="download"
 endif
 
 ifeq ($(ZT_ENABLE_CLUSTER),1)
 	DEFS+=-DZT_ENABLE_CLUSTER
 endif
 
-ifeq ($(ZT_USE_MINIUPNPC),1)
-	DEFS+=-DMACOSX -DZT_USE_MINIUPNPC -DMINIUPNP_STATICLIB -D_DARWIN_C_SOURCE -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -DOS_STRING=\"Darwin/15.0.0\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
-	OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o osdep/PortMapper.o
-endif
+# Build miniupnpc and nat-pmp as included libraries -- extra defs are required for these sources
+DEFS+=-DMACOSX -DZT_USE_MINIUPNPC -DMINIUPNP_STATICLIB -D_DARWIN_C_SOURCE -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -DOS_STRING=\"Darwin/15.0.0\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
+OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o osdep/PortMapper.o
 
 # Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)
@@ -55,10 +49,7 @@ else
 	STRIP=strip
 endif
 
-CXXFLAGS=$(CFLAGS) -mmacosx-version-min=10.7 -std=c++11 -stdlib=libc++ 
-
-# 3 == MacOS, 2 == X64
-DEFS+=-DZT_BUILD_PLATFORM=3 -DZT_BUILD_ARCHITECTURE=2
+CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++ 
 
 all: one macui
 

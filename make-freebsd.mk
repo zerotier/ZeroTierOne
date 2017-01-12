@@ -1,17 +1,11 @@
 CC=cc
 CXX=c++
-
 INCLUDES=
 DEFS=
 LIBS=
 
 include objects.mk
 OBJS+=osdep/BSDEthernetTap.o ext/lz4/lz4.o ext/http-parser/http_parser.o
-
-# "make official" is a shortcut for this
-ifeq ($(ZT_OFFICIAL_RELEASE),1)
-	DEFS+=-DZT_OFFICIAL_RELEASE
-endif
 
 # Build with ZT_ENABLE_CLUSTER=1 to build with cluster support
 ifeq ($(ZT_ENABLE_CLUSTER),1)
@@ -34,6 +28,32 @@ else
 	STRIP=strip --strip-all
 endif
 
+# Determine system build architecture from compiler target
+CC_MACH=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
+ZT_ARCHITECTURE=0
+ifeq ($(CC_MACH),x86_64)
+        ZT_ARCHITECTURE=2
+endif
+ifeq ($(CC_MACH),amd64)
+        ZT_ARCHITECTURE=2
+endif
+ifeq ($(CC_MACH),i386)
+        ZT_ARCHITECTURE=1
+endif
+ifeq ($(CC_MACH),i686)
+        ZT_ARCHITECTURE=1
+endif
+ifeq ($(CC_MACH),arm)
+        ZT_ARCHITECTURE=3
+endif
+ifeq ($(CC_MACH),arm64)
+        ZT_ARCHITECTURE=4
+endif
+ifeq ($(CC_MACH),aarch64)
+        ZT_ARCHITECTURE=4
+endif
+DEFS+=-DZT_BUILD_PLATFORM=7 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="disable"
+
 CXXFLAGS+=$(CFLAGS) -fno-rtti
 
 all:	one
@@ -48,18 +68,10 @@ selftest:	$(OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LIBS)
 	$(STRIP) zerotier-selftest
 
-# No installer on FreeBSD yet
-#installer: one FORCE
-#	./buildinstaller.sh
-
 clean:
 	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o build-* zerotier-one zerotier-idtool zerotier-selftest zerotier-cli ZeroTierOneInstaller-*
 
 debug:	FORCE
 	make -j 4 ZT_DEBUG=1
-
-#official: FORCE
-#	make -j 4 ZT_OFFICIAL_RELEASE=1
-#	./buildinstaller.sh
 
 FORCE:
