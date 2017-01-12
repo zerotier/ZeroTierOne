@@ -282,6 +282,7 @@ void SoftwareUpdater::loadUpdatesToDistribute()
 						SHA512::hash(sha512,d.bin.data(),(unsigned int)d.bin.length());
 						if (!memcmp(sha512,metaHash.data(),ZT_SHA512_DIGEST_LEN)) { // double check that hash in JSON is correct
 							_dist[Array<uint8_t,16>(sha512)] = d;
+							printf("update-dist.d: %s\n",u->c_str());
 						}
 					}
 				} catch ( ... ) {} // ignore bad meta JSON, etc.
@@ -331,6 +332,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 								lj.push_back((char)VERB_LATEST);
 								lj.append(OSUtils::jsonDump(*latest));
 								_node.sendUserMessage(origin,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,lj.data(),(unsigned int)lj.length());
+								printf(">> LATEST\n%s\n",OSUtils::jsonDump(*latest).c_str());
 							}
 						} // else no reply, since we have nothing to distribute
 
@@ -355,6 +357,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 								gd.append(_latestBinHashPrefix.data,16);
 								gd.append((uint32_t)_latestBin.length());
 								_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
+								printf(">> GET_DATA @%u\n",(unsigned int)_latestBin.length());
 							}
 						}
 
@@ -377,6 +380,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 							buf.append((uint32_t)idx);
 							buf.append(d->second.bin.data() + idx,std::max((unsigned long)ZT_SOFTWARE_UPDATE_CHUNK_SIZE,(unsigned long)(d->second.bin.length() - idx)));
 							_node.sendUserMessage(origin,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,buf.data(),buf.size());
+							printf(">> DATA @%u\n",(unsigned int)idx);
 						}
 					}
 				}
@@ -388,8 +392,10 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 18) << 16;
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 19) << 8;
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 20);
-					if (idx == _latestBin.length())
+					if (idx == _latestBin.length()) {
 						_latestBin.append(reinterpret_cast<const char *>(data) + 21,len - 21);
+						printf("<< DATA @%u / %u bytes\n",(unsigned int)idx,(unsigned int)(len - 21));
+					}
 
 					if (_latestBin.length() < _latestBinLength) {
 						Buffer<128> gd;
@@ -397,6 +403,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 						gd.append(_latestBinHashPrefix.data,16);
 						gd.append((uint32_t)_latestBin.length());
 						_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
+						printf(">> GET_DATA @%u\n",(unsigned int)_latestBin.length());
 					}
 				}
 				break;
@@ -428,10 +435,12 @@ nlohmann::json SoftwareUpdater::check(const uint64_t now)
 						if (Identity(ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY).verify(_latestBin.data(),(unsigned int)_latestBin.length(),sig.data(),(unsigned int)sig.length())) {
 							// If we passed both of these, the update is good!
 							_latestBinValid = true;
+							printf("VALID UPDATE\n%s\n",OSUtils::jsonDump(_latestMeta).c_str());
 							return _latestMeta;
 						}
 					}
 				} catch ( ... ) {} // any exception equals verification failure
+				printf("INVALID UPDATE (!!!)\n%s\n",OSUtils::jsonDump(_latestMeta).c_str());
 
 				// If we get here, checks failed.
 				_latestMeta = nlohmann::json();
@@ -445,6 +454,7 @@ nlohmann::json SoftwareUpdater::check(const uint64_t now)
 			gd.append(_latestBinHashPrefix.data,16);
 			gd.append((uint32_t)_latestBin.length());
 			_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
+			printf(">> GET_DATA @%u\n",(unsigned int)_latestBin.length());
 		}
 	}
 
@@ -470,6 +480,7 @@ nlohmann::json SoftwareUpdater::check(const uint64_t now)
 			(int)ZT_VENDOR_ZEROTIER,
 			"release");
 		_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,tmp,len);
+		printf(">> GET_LATEST\n");
 	}
 
 	return nlohmann::json();
