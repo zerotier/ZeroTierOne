@@ -352,6 +352,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 									memcpy(_latestBinHashPrefix.data,hash.data(),16);
 									_latestBinLength = len;
 									_latestBinValid = false;
+									printf("<< LATEST\n%s\n",OSUtils::jsonDump(req).c_str());
 								}
 
 								Buffer<128> gd;
@@ -369,6 +370,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 
 			case VERB_GET_DATA:
 				if ((len >= 21)&&(_dist.size() > 0)) {
+					printf("<< DATA from %.10llx\n",origin);
 					std::map< Array<uint8_t,16>,_D >::iterator d(_dist.find(Array<uint8_t,16>(reinterpret_cast<const uint8_t *>(data) + 1)));
 					if (d != _dist.end()) {
 						unsigned long idx = (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 17) << 24;
