@@ -256,7 +256,9 @@ static BackgroundSoftwareUpdateChecker backgroundSoftwareUpdateChecker;
 SoftwareUpdater::SoftwareUpdater(Node &node,const std::string &homePath) :
 	_node(node),
 	_lastCheckTime(0),
-	_homePath(homePath)
+	_homePath(homePath),
+	_latestBinLength(0),
+	_latestBinValid(false)
 {
 }
 
