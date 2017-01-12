@@ -24,7 +24,7 @@ ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	CODESIGN_APP_CERT="Developer ID Application: ZeroTier, Inc (8ZD9JUCZ4V)"
 	CODESIGN_INSTALLER_CERT="Developer ID Installer: ZeroTier, Inc (8ZD9JUCZ4V)"
 else
-	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""
+	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="\"download\""
 endif
 
 ifeq ($(ZT_ENABLE_CLUSTER),1)
