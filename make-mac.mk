@@ -17,14 +17,14 @@ OBJS+=osdep/OSXEthernetTap.o ext/lz4/lz4.o ext/http-parser/http_parser.o
 
 # Official releases are signed with our Apple cert and apply software updates by default
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
-	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="apply"
+	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="\"apply\""
 	ZT_USE_MINIUPNPC=1
 	CODESIGN=codesign
 	PRODUCTSIGN=productsign
 	CODESIGN_APP_CERT="Developer ID Application: ZeroTier, Inc (8ZD9JUCZ4V)"
 	CODESIGN_INSTALLER_CERT="Developer ID Installer: ZeroTier, Inc (8ZD9JUCZ4V)"
 else
-	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="download"
+	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="\"download\""
 endif
 
 ifeq ($(ZT_ENABLE_CLUSTER),1)
