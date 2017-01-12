@@ -52,6 +52,7 @@
 #include "ControlPlane.hpp"
 #include "ClusterGeoIpService.hpp"
 #include "ClusterDefinition.hpp"
+#include "SoftwareUpdater.hpp"
 
 #ifdef ZT_USE_SYSTEM_HTTP_PARSER
 #include <http_parser.h>
@@ -147,219 +148,6 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 namespace ZeroTier {
 
 namespace {
-
-#if 0
-
-#ifdef ZT_AUTO_UPDATE
-#define ZT_AUTO_UPDATE_MAX_HTTP_RESPONSE_SIZE (1024 * 1024 * 64)
-#define ZT_AUTO_UPDATE_CHECK_PERIOD 21600000
-class BackgroundSoftwareUpdateChecker
-{
-public:
-	bool isValidSigningIdentity(const Identity &id)
-	{
-		return (
-			/* 0001 - 0004 : obsolete, used in old versions */
-		  /* 0005 */   (id == Identity("ba57ea350e:0:9d4be6d7f86c5660d5ee1951a3d759aa6e12a84fc0c0b74639500f1dbc1a8c566622e7d1c531967ebceb1e9d1761342f88324a8ba520c93c35f92f35080fa23f"))
-		  /* 0006 */ ||(id == Identity("5067b21b83:0:8af477730f5055c48135b84bed6720a35bca4c0e34be4060a4c636288b1ec22217eb22709d610c66ed464c643130c51411bbb0294eef12fbe8ecc1a1e2c63a7a"))
-		  /* 0007 */ ||(id == Identity("4f5e97a8f1:0:57880d056d7baeb04bbc057d6f16e6cb41388570e87f01492fce882485f65a798648595610a3ad49885604e7fb1db2dd3c2c534b75e42c3c0b110ad07b4bb138"))
-		  /* 0008 */ ||(id == Identity("580bbb8e15:0:ad5ef31155bebc6bc413991992387e083fed26d699997ef76e7c947781edd47d1997161fa56ba337b1a2b44b129fd7c7197ce5185382f06011bc88d1363b4ddd"))
-		);
-	}
-
-	void doUpdateCheck()
-	{
-		std::string url(OneService::autoUpdateUrl());
-		if ((url.length() <= 7)||(url.substr(0,7) != "http://"))
-			return;
-
-		std::string httpHost;
-		std::string httpPath;
-		{
-			std::size_t slashIdx = url.substr(7).find_first_of('/');
-			if (slashIdx == std::string::npos) {
-				httpHost = url.substr(7);
-				httpPath = "/";
-			} else {
-				httpHost = url.substr(7,slashIdx);
-				httpPath = url.substr(slashIdx + 7);
-			}
-		}
-		if (httpHost.length() == 0)
-			return;
-
-		std::vector<InetAddress> ips(OSUtils::resolve(httpHost.c_str()));
-		for(std::vector<InetAddress>::iterator ip(ips.begin());ip!=ips.end();++ip) {
-			if (!ip->port())
-				ip->setPort(80);
-			std::string nfoPath = httpPath + "LATEST.nfo";
-			std::map<std::string,std::string> requestHeaders,responseHeaders;
-			std::string body;
-			requestHeaders["Host"] = httpHost;
-			unsigned int scode = Http::GET(ZT_AUTO_UPDATE_MAX_HTTP_RESPONSE_SIZE,60000,reinterpret_cast<const struct sockaddr *>(&(*ip)),nfoPath.c_str(),requestHeaders,responseHeaders,body);
-			//fprintf(stderr,"UPDATE %s %s %u %lu\n",ip->toString().c_str(),nfoPath.c_str(),scode,body.length());
-			if ((scode == 200)&&(body.length() > 0)) {
-				/* NFO fields:
-				 *
-				 * file=<filename>
-				 * signedBy=<signing identity>
-				 * ed25519=<ed25519 ECC signature of archive in hex>
-				 * vMajor=<major version>
-				 * vMinor=<minor version>
-				 * vRevision=<revision> */
-				Dictionary<4096> nfo(body.c_str());
-				char tmp[2048];
-
-				if (nfo.get("vMajor",tmp,sizeof(tmp)) <= 0) return;
-				const unsigned int vMajor = Utils::strToUInt(tmp);
-				if (nfo.get("vMinor",tmp,sizeof(tmp)) <= 0) return;
-				const unsigned int vMinor = Utils::strToUInt(tmp);
-				if (nfo.get("vRevision",tmp,sizeof(tmp)) <= 0) return;
-				const unsigned int vRevision = Utils::strToUInt(tmp);
-				if (Utils::compareVersion(vMajor,vMinor,vRevision,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION) <= 0) {
-					//fprintf(stderr,"UPDATE %u.%u.%u is not newer than our version\n",vMajor,vMinor,vRevision);
-					return;
-				}
-
-				if (nfo.get("signedBy",tmp,sizeof(tmp)) <= 0) return;
-				Identity signedBy;
-				if ((!signedBy.fromString(tmp))||(!isValidSigningIdentity(signedBy))) {
-					//fprintf(stderr,"UPDATE invalid signedBy or not authorized signing identity.\n");
-					return;
-				}
-
-				if (nfo.get("file",tmp,sizeof(tmp)) <= 0) return;
-				std::string filePath(tmp);
-				if ((!filePath.length())||(filePath.find("..") != std::string::npos))
-					return;
-				filePath = httpPath + filePath;
-
-				std::string fileData;
-				if (Http::GET(ZT_AUTO_UPDATE_MAX_HTTP_RESPONSE_SIZE,60000,reinterpret_cast<const struct sockaddr *>(&(*ip)),filePath.c_str(),requestHeaders,responseHeaders,fileData) != 200) {
-					//fprintf(stderr,"UPDATE GET %s failed\n",filePath.c_str());
-					return;
-				}
-
-				if (nfo.get("ed25519",tmp,sizeof(tmp)) <= 0) return;
-				std::string ed25519(Utils::unhex(tmp));
-				if ((ed25519.length() == 0)||(!signedBy.verify(fileData.data(),(unsigned int)fileData.length(),ed25519.data(),(unsigned int)ed25519.length()))) {
-					//fprintf(stderr,"UPDATE %s failed signature check!\n",filePath.c_str());
-					return;
-				}
-
-				/* --------------------------------------------------------------- */
-				/* We made it! Begin OS-specific installation code. */
-
-#ifdef __APPLE__
-				/* OSX version is in the form of a MacOSX .pkg file, so we will
-				 * launch installer (normally in /usr/sbin) to install it. It will
-				 * then turn around and shut down the service, update files, and
-				 * relaunch. */
-				{
-					char bashp[128],pkgp[128];
-					Utils::snprintf(bashp,sizeof(bashp),"/tmp/ZeroTierOne-update-%u.%u.%u.sh",vMajor,vMinor,vRevision);
-					Utils::snprintf(pkgp,sizeof(pkgp),"/tmp/ZeroTierOne-update-%u.%u.%u.pkg",vMajor,vMinor,vRevision);
-					FILE *pkg = fopen(pkgp,"w");
-					if ((!pkg)||(fwrite(fileData.data(),fileData.length(),1,pkg) != 1)) {
-						fclose(pkg);
-						unlink(bashp);
-						unlink(pkgp);
-						fprintf(stderr,"UPDATE error writing %s\n",pkgp);
-						return;
-					}
-					fclose(pkg);
-					FILE *bash = fopen(bashp,"w");
-					if (!bash) {
-						fclose(pkg);
-						unlink(bashp);
-						unlink(pkgp);
-						fprintf(stderr,"UPDATE error writing %s\n",bashp);
-						return;
-					}
-					fprintf(bash,
-						"#!/bin/bash\n"
-						"export PATH=/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/sbin\n"
-						"sleep 1\n"
-						"installer -pkg \"%s\" -target /\n"
-						"sleep 1\n"
-						"rm -f \"%s\" \"%s\"\n"
-						"exit 0\n",
-						pkgp,
-						pkgp,
-						bashp);
-					fclose(bash);
-					long pid = (long)vfork();
-					if (pid == 0) {
-						setsid(); // detach from parent so that shell isn't killed when parent is killed
-						signal(SIGHUP,SIG_IGN);
-						signal(SIGTERM,SIG_IGN);
-						signal(SIGQUIT,SIG_IGN);
-						execl("/bin/bash","/bin/bash",bashp,(char *)0);
-						exit(0);
-					}
-				}
-#endif // __APPLE__
-
-#ifdef __WINDOWS__
-				/* Windows version comes in the form of .MSI package that
-				 * takes care of everything. */
-				{
-					char tempp[512],batp[512],msip[512],cmdline[512];
-					if (GetTempPathA(sizeof(tempp),tempp) <= 0)
-						return;
-					CreateDirectoryA(tempp,(LPSECURITY_ATTRIBUTES)0);
-					Utils::snprintf(batp,sizeof(batp),"%s\\ZeroTierOne-update-%u.%u.%u.bat",tempp,vMajor,vMinor,vRevision);
-					Utils::snprintf(msip,sizeof(msip),"%s\\ZeroTierOne-update-%u.%u.%u.msi",tempp,vMajor,vMinor,vRevision);
-					FILE *msi = fopen(msip,"wb");
-					if ((!msi)||(fwrite(fileData.data(),(size_t)fileData.length(),1,msi) != 1)) {
-						fclose(msi);
-						return;
-					}
-					fclose(msi);
-					FILE *bat = fopen(batp,"wb");
-					if (!bat)
-						return;
-					fprintf(bat,
-						"TIMEOUT.EXE /T 1 /NOBREAK\r\n"
-						"NET.EXE STOP \"ZeroTierOneService\"\r\n"
-						"TIMEOUT.EXE /T 1 /NOBREAK\r\n"
-						"MSIEXEC.EXE /i \"%s\" /qn\r\n"
-						"TIMEOUT.EXE /T 1 /NOBREAK\r\n"
-						"NET.EXE START \"ZeroTierOneService\"\r\n"
-						"DEL \"%s\"\r\n"
-						"DEL \"%s\"\r\n",
-						msip,
-						msip,
-						batp);
-					fclose(bat);
-					STARTUPINFOA si;
-					PROCESS_INFORMATION pi;
-					memset(&si,0,sizeof(si));
-					memset(&pi,0,sizeof(pi));
-					Utils::snprintf(cmdline,sizeof(cmdline),"CMD.EXE /c \"%s\"",batp);
-					CreateProcessA(NULL,cmdline,NULL,NULL,FALSE,CREATE_NO_WINDOW|CREATE_NEW_PROCESS_GROUP,NULL,NULL,&si,&pi);
-				}
-#endif // __WINDOWS__
-
-				/* --------------------------------------------------------------- */
-
-				return;
-			} // else try to fetch from next IP address
-		}
-	}
-
-	void threadMain()
-		throw()
-	{
-		try {
-			this->doUpdateCheck();
-		} catch ( ... ) {}
-	}
-};
-static BackgroundSoftwareUpdateChecker backgroundSoftwareUpdateChecker;
-#endif // ZT_AUTO_UPDATE
-
-#endif
 
 static std::string _trimString(const std::string &s)
 {
@@ -475,6 +263,7 @@ public:
 	EmbeddedNetworkController *_controller;
 	Phy<OneServiceImpl *> _phy;
 	Node *_node;
+	SoftwareUpdater *_updater;
 	unsigned int _primaryPort;
 
 	// Local configuration and memo-ized static path definitions
@@ -577,6 +366,7 @@ public:
 		,_controller((EmbeddedNetworkController *)0)
 		,_phy(this,false,true)
 		,_node((Node *)0)
+		,_updater((SoftwareUpdater *)0)
 		,_primaryPort(port)
 		,_controlPlane((ControlPlane *)0)
 		,_lastDirectReceiveFromGlobal(0)
@@ -663,6 +453,8 @@ public:
 				cb.pathLookupFunction = SnodePathLookupFunction;
 				_node = new Node(this,&cb,OSUtils::now());
 			}
+
+			_updater = new SoftwareUpdater(*_node,_homePath);
 
 			// Read local configuration
 			{
@@ -904,6 +696,7 @@ public:
 			uint64_t lastTapMulticastGroupCheck = 0;
 			uint64_t lastTcpFallbackResolve = 0;
 			uint64_t lastBindRefresh = 0;
+			uint64_t lastUpdateCheck = clockShouldBe;
 			uint64_t lastLocalInterfaceAddressCheck = (OSUtils::now() - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
 			for(;;) {
 				_run_m.lock();
@@ -924,6 +717,12 @@ public:
 				if ((now > clockShouldBe)&&((now - clockShouldBe) > 10000)) {
 					_lastRestart = now;
 					restarted = true;
+				}
+
+				// Check for updates (if enabled)
+				if ((_updater)&&((now - lastUpdateCheck) > 10000)) {
+					lastUpdateCheck = now;
+					_updater->check(now);
 				}
 
 				// Refresh bindings in case device's interfaces have changed, and also sync routes to update any shadow routes (e.g. shadow default)
@@ -1018,6 +817,8 @@ public:
 
 		delete _controlPlane;
 		_controlPlane = (ControlPlane *)0;
+		delete _updater;
+		_updater = (SoftwareUpdater *)0;
 		delete _node;
 		_node = (Node *)0;
 

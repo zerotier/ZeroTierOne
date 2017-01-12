@@ -34,17 +34,17 @@
 /**
  * VERB_USER_MESSAGE type ID for software update messages
  */
-#define ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE 1000
+#define ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE 100
 
 /**
  * ZeroTier address of node that provides software updates
  */
-#define ZT_SOFTWARE_UPDATE_SERVICE 0xc1243d3869ULL
+#define ZT_SOFTWARE_UPDATE_SERVICE 0xb1d366e81fULL
 
 /**
  * ZeroTier identity that must be used to sign software updates
  */
-#define ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY ""
+#define ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY "a60ed7a9eb:0:740fd482e02eabd28f69c83ad4353d44c9514627bc0656b5d194e2f34715745b62297120d47d7f0c728424c33297ea499dea4ce006ee3d7c0d802a6fb199d909"
 
 /**
  * Chunk size for in-band downloads (can be changed, designed to always fit in one UDP packet easily)
@@ -117,8 +117,13 @@ public:
 		VERB_DATA = 4
 	};
 
-	SoftwareUpdater(Node &node,const char *homePath,bool updateDistributor);
+	SoftwareUpdater(Node &node,const std::string &homePath);
 	~SoftwareUpdater();
+
+	/**
+	 * Load update-dist.d if it exists
+	 */
+	void loadUpdatesToDistribute();
 
 	/**
 	 * Handle a software update user message
@@ -136,7 +141,7 @@ public:
 	 *
 	 * @return Null JSON object or update information if there is an update downloaded and ready
 	 */
-	nlohmann::json check();
+	nlohmann::json check(const uint64_t now);
 
 	/**
 	 * Apply any ready update now
