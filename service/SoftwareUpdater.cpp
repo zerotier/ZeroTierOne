@@ -370,13 +370,13 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 
 			case VERB_GET_DATA:
 				if ((len >= 21)&&(_dist.size() > 0)) {
-					printf("<< GET_DATA from %.10llx for %s\n",origin,Utils::hex(reinterpret_cast<const uint8_t *>(data) + 1,16).c_str());
+					unsigned long idx = (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 17) << 24;
+					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 18) << 16;
+					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 19) << 8;
+					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 20);
+					printf("<< GET_DATA @%u from %.10llx for %s\n",(unsigned int)idx,origin,Utils::hex(reinterpret_cast<const uint8_t *>(data) + 1,16).c_str());
 					std::map< Array<uint8_t,16>,_D >::iterator d(_dist.find(Array<uint8_t,16>(reinterpret_cast<const uint8_t *>(data) + 1)));
 					if (d != _dist.end()) {
-						unsigned long idx = (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 17) << 24;
-						idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 18) << 16;
-						idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 19) << 8;
-						idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 20);
 						if (idx < d->second.bin.length()) {
 							Buffer<ZT_SOFTWARE_UPDATE_CHUNK_SIZE + 128> buf;
 							buf.append((uint8_t)VERB_DATA);
