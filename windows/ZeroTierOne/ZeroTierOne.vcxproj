@@ -75,6 +75,7 @@
     <ClCompile Include="..\..\osdep\WindowsEthernetTap.cpp" />
     <ClCompile Include="..\..\service\ControlPlane.cpp" />
     <ClCompile Include="..\..\service\OneService.cpp" />
+    <ClCompile Include="..\..\service\SoftwareUpdater.cpp" />
     <ClCompile Include="ServiceBase.cpp" />
     <ClCompile Include="ServiceInstaller.cpp" />
     <ClCompile Include="ZeroTierOneService.cpp" />
@@ -169,8 +170,8 @@
     <ClInclude Include="..\..\osdep\Thread.hpp" />
     <ClInclude Include="..\..\osdep\WindowsEthernetTap.hpp" />
     <ClInclude Include="..\..\service\ControlPlane.hpp" />
-    <ClInclude Include="..\..\service\ControlPlaneSubsystem.hpp" />
     <ClInclude Include="..\..\service\OneService.hpp" />
+    <ClInclude Include="..\..\service\SoftwareUpdater.hpp" />
     <ClInclude Include="..\..\version.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="ServiceBase.h" />
