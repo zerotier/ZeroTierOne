@@ -261,7 +261,28 @@ SoftwareUpdater::SoftwareUpdater(Node &node,const std::string &homePath) :
 	_latestValid(false),
 	_downloadLength(0)
 {
-	// Check for a cached newer update. If there's a cached update that is not newer, delete.
+	// Check for a cached newer update. If there's a cached update that is not newer or looks bad, delete.
+	try {
+		std::string buf;
+		if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S ZT_SOFTWARE_UPDATE_META_FILENAME).c_str(),buf)) {
+			nlohmann::json meta = OSUtils::jsonParse(buf);
+			buf = std::string();
+			const unsigned int rvMaj = (unsigned int)OSUtils::jsonInt(meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR],0);
+			const unsigned int rvMin = (unsigned int)OSUtils::jsonInt(meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR],0);
+			const unsigned int rvRev = (unsigned int)OSUtils::jsonInt(meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION],0);
+			if ((Utils::compareVersion(rvMaj,rvMin,rvRev,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION) > 0)&&(OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S ZT_SOFTWARE_UPDATE_BIN_FILENAME).c_str(),buf))) {
+				if ((uint64_t)buf.length() == OSUtils::jsonInt(meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIZE],0)) {
+					_latestMeta = meta;
+					_latestValid = true;
+					printf("CACHED UPDATE IS NEWER AND LOOKS GOOD\n");
+				}
+			}
+		}
+	} catch ( ... ) {} // exceptions indicate invalid cached update
+	if (!_latestValid) {
+		OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S ZT_SOFTWARE_UPDATE_META_FILENAME).c_str());
+		OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S ZT_SOFTWARE_UPDATE_BIN_FILENAME).c_str());
+	}
 }
 
 SoftwareUpdater::~SoftwareUpdater()
@@ -355,8 +376,8 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 									_latestMeta = req;
 									_latestValid = false;
 
-									OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S + ZT_SOFTWARE_UPDATE_META_FILENAME).c_str());
-									OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S + ZT_SOFTWARE_UPDATE_BIN_FILENAME).c_str());
+									OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S ZT_SOFTWARE_UPDATE_META_FILENAME).c_str());
+									OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S ZT_SOFTWARE_UPDATE_BIN_FILENAME).c_str());
 
 									_download = std::string();
 									memcpy(_downloadHashPrefix.data,hash.data(),16);
@@ -462,6 +483,9 @@ bool SoftwareUpdater::check(const uint64_t now)
 			// This is the very important security validation part that makes sure
 			// this software update doesn't have cooties.
 
+			const std::string metaPath(_homePath + ZT_PATH_SEPARATOR_S ZT_SOFTWARE_UPDATE_META_FILENAME);
+			const std::string binPath(_homePath + ZT_PATH_SEPARATOR_S ZT_SOFTWARE_UPDATE_BIN_FILENAME);
+
 			try {
 				// (1) Check the hash itself to make sure the image is basically okay
 				uint8_t sha512[ZT_SHA512_DIGEST_LEN];
@@ -470,23 +494,24 @@ bool SoftwareUpdater::check(const uint64_t now)
 					// (2) Check signature by signing authority
 					std::string sig(OSUtils::jsonBinFromHex(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNATURE]));
 					if (Identity(ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY).verify(_download.data(),(unsigned int)_download.length(),sig.data(),(unsigned int)sig.length())) {
-						// If we passed both of these, the update is good!
-						if (OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + ZT_SOFTWARE_UPDATE_META_FILENAME).c_str(),OSUtils::jsonDump(_latestMeta)) && OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + ZT_SOFTWARE_UPDATE_BIN_FILENAME).c_str(),_download)) {
+						// (3) Try to save file, and if so we are good.
+						if (OSUtils::writeFile(metaPath.c_str(),OSUtils::jsonDump(_latestMeta)) && OSUtils::writeFile(binPath.c_str(),_download)) {
+							OSUtils::lockDownFile(metaPath.c_str(),false);
+							OSUtils::lockDownFile(binPath.c_str(),false);
 							_latestValid = true;
 							printf("VALID UPDATE\n%s\n",OSUtils::jsonDump(_latestMeta).c_str());
-						} else {
-							_latestMeta = nlohmann::json();
-							_latestValid = false;
+							_download = std::string();
+							_downloadLength = 0;
+							return true;
 						}
-						_download = std::string();
-						_downloadLength = 0;
-						return _latestValid;
 					}
 				}
 			} catch ( ... ) {} // any exception equals verification failure
 
 			// If we get here, checks failed.
 			printf("INVALID UPDATE (!!!)\n%s\n",OSUtils::jsonDump(_latestMeta).c_str());
+			OSUtils::rm(metaPath.c_str());
+			OSUtils::rm(binPath.c_str());
 			_latestMeta = nlohmann::json();
 			_latestValid = false;
 			_download = std::string();
