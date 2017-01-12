@@ -697,7 +697,7 @@ public:
 			uint64_t lastTcpFallbackResolve = 0;
 			uint64_t lastBindRefresh = 0;
 			uint64_t lastUpdateCheck = clockShouldBe;
-			uint64_t lastLocalInterfaceAddressCheck = (OSUtils::now() - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
+			uint64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
 			for(;;) {
 				_run_m.lock();
 				if (!_run) {
