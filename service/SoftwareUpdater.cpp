@@ -398,8 +398,8 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 20);
 					if (idx == _latestBin.length()) {
 						_latestBin.append(reinterpret_cast<const char *>(data) + 21,len - 21);
-						printf("<< DATA @%u / %u bytes\n",(unsigned int)idx,(unsigned int)(len - 21));
 					}
+					printf("<< DATA @%u / %u bytes (we now have %u bytes)\n",(unsigned int)idx,(unsigned int)(len - 21),(unsigned int)_latestBin.length());
 
 					if (_latestBin.length() < _latestBinLength) {
 						Buffer<128> gd;
