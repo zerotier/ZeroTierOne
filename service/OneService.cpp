@@ -455,6 +455,7 @@ public:
 			}
 
 			_updater = new SoftwareUpdater(*_node,_homePath);
+			_updater->loadUpdatesToDistribute();
 
 			// Read local configuration
 			{
