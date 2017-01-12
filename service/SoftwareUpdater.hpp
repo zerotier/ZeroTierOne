@@ -26,8 +26,10 @@
 #include <string>
 
 #include "../include/ZeroTierOne.h"
+
 #include "../node/Identity.hpp"
 #include "../node/Array.hpp"
+#include "../node/Packet.hpp"
 
 #include "../ext/json/json.hpp"
 
@@ -49,7 +51,7 @@
 /**
  * Chunk size for in-band downloads (can be changed, designed to always fit in one UDP packet easily)
  */
-#define ZT_SOFTWARE_UPDATE_CHUNK_SIZE 1380
+#define ZT_SOFTWARE_UPDATE_CHUNK_SIZE (ZT_PROTO_MAX_PACKET_LENGTH - 128)
 
 /**
  * Sanity limit for the size of an update binary image

@@ -334,7 +334,6 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 								lj.push_back((char)VERB_LATEST);
 								lj.append(OSUtils::jsonDump(*latest));
 								_node.sendUserMessage(origin,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,lj.data(),(unsigned int)lj.length());
-								printf(">> LATEST\n%s\n",OSUtils::jsonDump(*latest).c_str());
 							}
 						} // else no reply, since we have nothing to distribute
 
@@ -420,6 +419,31 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 
 nlohmann::json SoftwareUpdater::check(const uint64_t now)
 {
+	if ((now - _lastCheckTime) >= ZT_SOFTWARE_UPDATE_CHECK_PERIOD) {
+		_lastCheckTime = now;
+		char tmp[512];
+		const unsigned int len = Utils::snprintf(tmp,sizeof(tmp),
+			"%c{\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR "\":%d,"
+			"\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR "\":%d,"
+			"\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION "\":%d,"
+			"\"" ZT_SOFTWARE_UPDATE_JSON_EXPECT_SIGNED_BY "\":\"%s\","
+			"\"" ZT_SOFTWARE_UPDATE_JSON_PLATFORM "\":%d,"
+			"\"" ZT_SOFTWARE_UPDATE_JSON_ARCHITECTURE "\":%d,"
+			"\"" ZT_SOFTWARE_UPDATE_JSON_VENDOR "\":%d,"
+			"\"" ZT_SOFTWARE_UPDATE_JSON_CHANNEL "\":\"%s\"}",
+			(char)VERB_GET_LATEST,
+			ZEROTIER_ONE_VERSION_MAJOR,
+			ZEROTIER_ONE_VERSION_MINOR,
+			ZEROTIER_ONE_VERSION_REVISION,
+			ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY,
+			ZT_BUILD_PLATFORM,
+			ZT_BUILD_ARCHITECTURE,
+			(int)ZT_VENDOR_ZEROTIER,
+			"release");
+		_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,tmp,len);
+		printf(">> GET_LATEST\n");
+	}
+
 	if (_latestBinLength > 0) {
 		if (_latestBin.length() >= _latestBinLength) {
 			if (_latestBinValid) {
@@ -458,31 +482,6 @@ nlohmann::json SoftwareUpdater::check(const uint64_t now)
 			_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
 			printf(">> GET_DATA @%u\n",(unsigned int)_latestBin.length());
 		}
-	}
-
-	if ((now - _lastCheckTime) >= ZT_SOFTWARE_UPDATE_CHECK_PERIOD) {
-		_lastCheckTime = now;
-		char tmp[512];
-		const unsigned int len = Utils::snprintf(tmp,sizeof(tmp),
-			"%c{\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR "\":%d,"
-			"\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR "\":%d,"
-			"\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION "\":%d,"
-			"\"" ZT_SOFTWARE_UPDATE_JSON_EXPECT_SIGNED_BY "\":\"%s\","
-			"\"" ZT_SOFTWARE_UPDATE_JSON_PLATFORM "\":%d,"
-			"\"" ZT_SOFTWARE_UPDATE_JSON_ARCHITECTURE "\":%d,"
-			"\"" ZT_SOFTWARE_UPDATE_JSON_VENDOR "\":%d,"
-			"\"" ZT_SOFTWARE_UPDATE_JSON_CHANNEL "\":\"%s\"}",
-			(char)VERB_GET_LATEST,
-			ZEROTIER_ONE_VERSION_MAJOR,
-			ZEROTIER_ONE_VERSION_MINOR,
-			ZEROTIER_ONE_VERSION_REVISION,
-			ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY,
-			ZT_BUILD_PLATFORM,
-			ZT_BUILD_ARCHITECTURE,
-			(int)ZT_VENDOR_ZEROTIER,
-			"release");
-		_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,tmp,len);
-		printf(">> GET_LATEST\n");
 	}
 
 	return nlohmann::json();
