@@ -476,15 +476,16 @@ void Node::clearLocalInterfaceAddresses()
 int Node::sendUserMessage(uint64_t dest,uint64_t typeId,const void *data,unsigned int len)
 {
 	try {
-		Packet outp(Address(dest),RR->identity.address(),Packet::VERB_USER_MESSAGE);
-		outp.append(typeId);
-		outp.append(data,len);
-		outp.compress();
-		RR->sw->send(outp,true);
-		return 1;
-	} catch ( ... ) {
-		return 0;
-	}
+		if (RR->identity.address().toInt() != dest) {
+			Packet outp(Address(dest),RR->identity.address(),Packet::VERB_USER_MESSAGE);
+			outp.append(typeId);
+			outp.append(data,len);
+			outp.compress();
+			RR->sw->send(outp,true);
+			return 1;
+		}
+	} catch ( ... ) {}
+	return 0;
 }
 
 void Node::setRole(uint64_t ztAddress,ZT_PeerRole role)
