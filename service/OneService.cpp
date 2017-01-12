@@ -722,7 +722,8 @@ public:
 				// Check for updates (if enabled)
 				if ((_updater)&&((now - lastUpdateCheck) > 10000)) {
 					lastUpdateCheck = now;
-					_updater->check(now);
+					if (_updater->check(now) && _updateAutoApply)
+						_updater->apply();
 				}
 
 				// Refresh bindings in case device's interfaces have changed, and also sync routes to update any shadow routes (e.g. shadow default)

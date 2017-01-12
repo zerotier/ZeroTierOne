@@ -450,7 +450,7 @@ bool SoftwareUpdater::check(const uint64_t now)
 	if (_latestBinLength > 0) {
 		if (_latestBin.length() >= _latestBinLength) {
 			if (_latestBinValid) {
-				return _latestMeta;
+				return true;
 			} else {
 				// This is the very important security validation part that makes sure
 				// this software update doesn't have cooties.
@@ -466,7 +466,7 @@ bool SoftwareUpdater::check(const uint64_t now)
 							// If we passed both of these, the update is good!
 							_latestBinValid = true;
 							printf("VALID UPDATE\n%s\n",OSUtils::jsonDump(_latestMeta).c_str());
-							return _latestMeta;
+							return true;
 						}
 					}
 				} catch ( ... ) {} // any exception equals verification failure
@@ -488,7 +488,7 @@ bool SoftwareUpdater::check(const uint64_t now)
 		}
 	}
 
-	return nlohmann::json();
+	return false;
 }
 
 void SoftwareUpdater::apply()
