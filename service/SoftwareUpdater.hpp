@@ -69,6 +69,16 @@
  */
 #define ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL "release"
 
+/**
+ * Filename for latest update's meta JSON
+ */
+#define ZT_SOFTWARE_UPDATE_META_FILENAME "latest-update.json"
+
+/**
+ * Filename for latest update's binary image
+ */
+#define ZT_SOFTWARE_UPDATE_BIN_FILENAME "latest-update.exe"
+
 #define ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR "versionMajor"
 #define ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR "versionMinor"
 #define ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION "versionRev"
@@ -188,10 +198,11 @@ private:
 	std::map< Array<uint8_t,16>,_D > _dist; // key is first 16 bytes of hash
 
 	nlohmann::json _latestMeta;
-	std::string _latestBin;
-	Array<uint8_t,16> _latestBinHashPrefix;
-	unsigned long _latestBinLength;
-	bool _latestBinValid;
+	bool _latestValid;
+
+	std::string _download;
+	Array<uint8_t,16> _downloadHashPrefix;
+	unsigned long _downloadLength;
 };
 
 } // namespace ZeroTier
