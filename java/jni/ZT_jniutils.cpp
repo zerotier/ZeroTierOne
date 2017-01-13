@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #include "ZT_jniutils.h"
 #include "ZT_jnilookup.h"
 #include <string>
@@ -30,7 +30,7 @@ extern "C" {
 jobject createResultObject(JNIEnv *env, ZT_ResultCode code)
 {
     jclass resultClass = NULL;
-    
+
     jobject resultObject = NULL;
 
     resultClass = lookup.findClass("com/zerotier/sdk/ResultCode");
@@ -67,14 +67,14 @@ jobject createResultObject(JNIEnv *env, ZT_ResultCode code)
     }
 
     jfieldID enumField = lookup.findStaticField(resultClass, fieldName.c_str(), "Lcom/zerotier/sdk/ResultCode;");
-    if(env->ExceptionCheck() || enumField == NULL) 
+    if(env->ExceptionCheck() || enumField == NULL)
     {
         LOGE("Error on FindStaticField");
         return NULL;
     }
 
     resultObject = env->GetStaticObjectField(resultClass, enumField);
-    if(env->ExceptionCheck() || resultObject == NULL) 
+    if(env->ExceptionCheck() || resultObject == NULL)
     {
         LOGE("Error on GetStaticObjectField");
     }
@@ -153,6 +153,8 @@ jobject createEvent(JNIEnv *env, ZT_Event event)
         break;
     case ZT_EVENT_TRACE:
         fieldName = "EVENT_TRACE";
+        break;
+    case ZT_EVENT_USER_MESSAGE:
         break;
     }
 
@@ -332,7 +334,7 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
     }
 
     jobject inetAddressObject = NULL;
-    
+
     if(addr.ss_family != 0)
     {
         inetAddressObject = newInetAddress(env, addr);
@@ -468,7 +470,7 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
     return pppObject;
 }
 
-jobject newPeer(JNIEnv *env, const ZT_Peer &peer) 
+jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
 {
     LOGV("newPeer called");
 
@@ -570,7 +572,7 @@ jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
 
     jobjectArray arrayObject = env->NewObjectArray(
         peer.pathCount, peerPhysicalPathClass, NULL);
-    if(env->ExceptionCheck() || arrayObject == NULL) 
+    if(env->ExceptionCheck() || arrayObject == NULL)
     {
         LOGE("Error creating PeerPhysicalPath[] array");
         return NULL;
@@ -709,7 +711,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
         return NULL;
     }
 
-    assignedAddressesField = lookup.findField(vnetConfigClass, "assignedAddresses", 
+    assignedAddressesField = lookup.findField(vnetConfigClass, "assignedAddresses",
         "[Ljava/net/InetSocketAddress;");
     if(env->ExceptionCheck() || assignedAddressesField == NULL)
     {
@@ -717,7 +719,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
         return NULL;
     }
 
-    routesField = lookup.findField(vnetConfigClass, "routes", 
+    routesField = lookup.findField(vnetConfigClass, "routes",
         "[Lcom/zerotier/sdk/VirtualNetworkRoute;");
     if(env->ExceptionCheck() || routesField == NULL)
     {

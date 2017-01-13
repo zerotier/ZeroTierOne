@@ -35,9 +35,9 @@ LOCAL_SRC_FILES := \
 	$(ZT1)/node/Switch.cpp \
 	$(ZT1)/node/Tag.cpp \
 	$(ZT1)/node/Topology.cpp \
-	$(ZT1)/node/Utils.cpp \
-	$(ZT1)/osdep/Http.cpp \
-	$(ZT1)/osdep/OSUtils.cpp
+	$(ZT1)/node/Utils.cpp
+#	$(ZT1)/osdep/Http.cpp \
+#	$(ZT1)/osdep/OSUtils.cpp
 
 # JNI Files
 LOCAL_SRC_FILES += \
