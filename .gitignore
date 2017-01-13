@@ -71,6 +71,7 @@ zt1-src.tar.gz
 *.tmp
 .depend
 node_modules
+zt1_update_*
 debian/files
 debian/zerotier-one
 debian/zerotier-one*.debhelper

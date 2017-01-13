@@ -161,7 +161,7 @@ std::string JSONDB::_genPath(const std::string &n,bool create)
 
 	std::string p(_basePath);
 	if (create) OSUtils::mkdir(p.c_str());
-	for(unsigned long i=0,j=pt.size()-1;i<j;++i) {
+	for(unsigned long i=0,j=(unsigned long)(pt.size()-1);i<j;++i) {
 		p.push_back(ZT_PATH_SEPARATOR);
 		p.append(pt[i]);
 		if (create) OSUtils::mkdir(p.c_str());
