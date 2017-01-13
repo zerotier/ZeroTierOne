@@ -145,6 +145,9 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 						if (_dist.size() > 0) {
 							const nlohmann::json *latest = (const nlohmann::json *)0;
 							const std::string expectedSigner = OSUtils::jsonString(req[ZT_SOFTWARE_UPDATE_JSON_EXPECT_SIGNED_BY],"");
+							unsigned int bestVMaj = rvMaj;
+							unsigned int bestVMin = rvMin;
+							unsigned int bestVRev = rvRev;
 							for(std::map< Array<uint8_t,16>,_D >::const_iterator d(_dist.begin());d!=_dist.end();++d) {
 								if ((OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_PLATFORM],0) == rvPlatform)&&
 								    (OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_ARCHITECTURE],0) == rvArch)&&
@@ -154,8 +157,11 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 									const unsigned int dvMaj = (unsigned int)OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR],0);
 									const unsigned int dvMin = (unsigned int)OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR],0);
 									const unsigned int dvRev = (unsigned int)OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION],0);
-									if (Utils::compareVersion(dvMaj,dvMin,dvRev,rvMaj,rvMin,rvRev) > 0) {
+									if (Utils::compareVersion(dvMaj,dvMin,dvRev,bestVMaj,bestVMin,bestVRev) > 0) {
 										latest = &(d->second.meta);
+										bestVMaj = dvMaj;
+										bestVMin = dvMin;
+										bestVRev = dvRev;
 									}
 								}
 							}
