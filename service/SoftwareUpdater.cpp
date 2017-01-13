@@ -61,6 +61,7 @@ SoftwareUpdater::SoftwareUpdater(Node &node,const std::string &homePath) :
 	_lastCheckTime(0),
 	_homePath(homePath),
 	_channel(ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL),
+	_distLog((FILE *)0),
 	_latestValid(false),
 	_downloadLength(0)
 {
@@ -90,13 +91,16 @@ SoftwareUpdater::SoftwareUpdater(Node &node,const std::string &homePath) :
 
 SoftwareUpdater::~SoftwareUpdater()
 {
+	if (_distLog)
+		fclose(_distLog);
 }
 
 void SoftwareUpdater::setUpdateDistribution(bool distribute)
 {
 	_dist.clear();
 	if (distribute) {
-		std::string udd(_homePath + ZT_PATH_SEPARATOR_S + "update-dist.d");
+		_distLog = fopen((_homePath + ZT_PATH_SEPARATOR_S "update-dist.log").c_str(),"a");
+		std::string udd(_homePath + ZT_PATH_SEPARATOR_S "update-dist.d");
 		std::vector<std::string> ud(OSUtils::listDirectory(udd.c_str()));
 		for(std::vector<std::string>::iterator u(ud.begin());u!=ud.end();++u) {
 			// Each update has a companion .json file describing it. Other files are ignored.
@@ -107,18 +111,27 @@ void SoftwareUpdater::setUpdateDistribution(bool distribute)
 						_D d;
 						d.meta = OSUtils::jsonParse(buf);
 						std::string metaHash = OSUtils::jsonBinFromHex(d.meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH]);
-						if ((metaHash.length() == ZT_SHA512_DIGEST_LEN)&&(OSUtils::readFile((udd + ZT_PATH_SEPARATOR_S + u->substr(0,u->length() - 5)).c_str(),d.bin))) {
+						std::string binPath(udd + ZT_PATH_SEPARATOR_S + u->substr(0,u->length() - 5));
+						if ((metaHash.length() == ZT_SHA512_DIGEST_LEN)&&(OSUtils::readFile(binPath.c_str(),d.bin))) {
 							uint8_t sha512[ZT_SHA512_DIGEST_LEN];
 							SHA512::hash(sha512,d.bin.data(),(unsigned int)d.bin.length());
 							if (!memcmp(sha512,metaHash.data(),ZT_SHA512_DIGEST_LEN)) { // double check that hash in JSON is correct
 								d.meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIZE] = d.bin.length(); // override with correct value -- setting this in meta json is optional
 								_dist[Array<uint8_t,16>(sha512)] = d;
-								//printf("update-dist.d: %s\n",u->c_str());
+								if (_distLog) {
+									fprintf(_distLog,".......... INIT: DISTRIBUTING %s (%u bytes)" ZT_EOL_S,binPath.c_str(),(unsigned int)d.bin.length());
+									fflush(_distLog);
+								}
 							}
 						}
 					} catch ( ... ) {} // ignore bad meta JSON, etc.
 				}
 			}
+		}
+	} else {
+		if (_distLog) {
+			fclose(_distLog);
+			_distLog = (FILE *)0;
 		}
 	}
 }
@@ -170,6 +183,10 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 								lj.push_back((char)VERB_LATEST);
 								lj.append(OSUtils::jsonDump(*latest));
 								_node.sendUserMessage(origin,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,lj.data(),(unsigned int)lj.length());
+								if (_distLog) {
+									fprintf(_distLog,"%.10llx GET_LATEST %u.%u.%u platform %u arch %u vendor %u channel %s -> LATEST %u.%u.%u" ZT_EOL_S,(unsigned long long)origin,rvMaj,rvMin,rvRev,rvPlatform,rvArch,rvVendor,rvChannel.c_str(),bestVMaj,bestVMin,bestVRev);
+									fflush(_distLog);
+								}
 							}
 						} // else no reply, since we have nothing to distribute
 

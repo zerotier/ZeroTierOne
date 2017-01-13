@@ -20,6 +20,7 @@
 #define ZT_SOFTWAREUPDATER_HPP
 
 #include <stdint.h>
+#include <stdio.h>
 
 #include <vector>
 #include <map>
@@ -188,6 +189,7 @@ private:
 	uint64_t _lastCheckTime;
 	std::string _homePath;
 	std::string _channel;
+	FILE *_distLog;
 
 	// Offered software updates if we are an update host (we have update-dist.d and update hosting is enabled)
 	struct _D
