@@ -12,7 +12,7 @@ scriptPath="`dirname "$0"`/`basename "$0"`"
 if [ ! -s "$scriptPath" ]; then
 	scriptPath="$0"
 	if [ ! -s "$scriptPath" ]; then
-		echo "Installer cannot determine its own path; $scriptPath is not readable."
+		echo "*** Auto-updater cannot determine its own path; $scriptPath is not readable."
 		exit 2
 	fi
 fi

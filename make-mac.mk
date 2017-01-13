@@ -9,8 +9,13 @@ PRODUCTSIGN=echo
 CODESIGN_APP_CERT=
 CODESIGN_INSTALLER_CERT=
 
-# 3 == MacOS, 2 == X64 (the only arch for MacOS right now)
-DEFS+=-DZT_BUILD_PLATFORM=3 -DZT_BUILD_ARCHITECTURE=2
+ZT_BUILD_PLATFORM=3
+ZT_BUILD_ARCHITECTURE=2
+ZT_VERSION_MAJOR=$(shell cat version.h | grep -F VERSION_MAJOR | cut -d ' ' -f 3)
+ZT_VERSION_MINOR=$(shell cat version.h | grep -F VERSION_MINOR | cut -d ' ' -f 3)
+ZT_VERSION_REV=$(shell cat version.h | grep -F VERSION_REVISION | cut -d ' ' -f 3)
+
+DEFS+=-DZT_BUILD_PLATFORM=$(ZT_BUILD_PLATFORM) -DZT_BUILD_ARCHITECTURE=$(ZT_BUILD_ARCHITECTURE)
 
 include objects.mk
 OBJS+=osdep/OSXEthernetTap.o ext/lz4/lz4.o ext/http-parser/http_parser.o
@@ -59,16 +64,14 @@ one:	$(OBJS) service/OneService.o one.o
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
 	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) zerotier-one
-	#$(CODESIGN) -vvv zerotier-one
 
 macui:	FORCE
 	cd macui && xcodebuild -target "ZeroTier One" -configuration Release
 	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) "macui/build/Release/ZeroTier One.app"
-	#$(CODESIGN) -vvv "macui/build/Release/ZeroTier One.app"
 
-cli:	FORCE
-	$(CXX) $(CXXFLAGS) -o zerotier cli/zerotier.cpp osdep/OSUtils.cpp node/InetAddress.cpp node/Utils.cpp node/Salsa20.cpp node/Identity.cpp node/SHA512.cpp node/C25519.cpp -lcurl
-	$(STRIP) zerotier
+#cli:	FORCE
+#	$(CXX) $(CXXFLAGS) -o zerotier cli/zerotier.cpp osdep/OSUtils.cpp node/InetAddress.cpp node/Utils.cpp node/Salsa20.cpp node/Identity.cpp node/SHA512.cpp node/C25519.cpp -lcurl
+#	$(STRIP) zerotier
 
 selftest: $(OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LIBS)
@@ -80,17 +83,22 @@ mac-dist-pkg: FORCE
 	rm -f "ZeroTier One Signed.pkg"
 	$(PRODUCTSIGN) --sign $(CODESIGN_INSTALLER_CERT) "ZeroTier One.pkg" "ZeroTier One Signed.pkg"
 	if [ -f "ZeroTier One Signed.pkg" ]; then mv -f "ZeroTier One Signed.pkg" "ZeroTier One.pkg"; fi
+	rm -f zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_*
+	cat ext/installfiles/mac-update/updater.tmpl.sh "ZeroTier One.pkg" >zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_$(ZT_VERSION_MAJOR).$(ZT_VERSION_MINOR).$(ZT_VERSION_REV)
 
 # For ZeroTier, Inc. to build official signed packages
 official: FORCE
 	make clean
-	make ZT_OFFICIAL_RELEASE=1 -j 4 one macui
+	make ZT_OFFICIAL_RELEASE=1 -j 4 one
+	make ZT_OFFICIAL_RELEASE=1 macui
 	make ZT_OFFICIAL_RELEASE=1 mac-dist-pkg
 
 clean:
-	rm -rf *.dSYM build-* *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier ZeroTierOneInstaller-* mkworld doc/node_modules macui/build
+	rm -rf *.dSYM build-* *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier mkworld doc/node_modules macui/build zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_*
 
 distclean:	clean
+
+realclean:	clean
 
 # For those building from source -- installs signed binary tap driver in system ZT home
 install-mac-tap: FORCE
