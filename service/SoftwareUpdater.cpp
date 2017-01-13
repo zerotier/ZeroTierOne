@@ -77,7 +77,7 @@ SoftwareUpdater::SoftwareUpdater(Node &node,const std::string &homePath) :
 				if ((uint64_t)buf.length() == OSUtils::jsonInt(meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIZE],0)) {
 					_latestMeta = meta;
 					_latestValid = true;
-					printf("CACHED UPDATE IS NEWER AND LOOKS GOOD\n");
+					//printf("CACHED UPDATE IS NEWER AND LOOKS GOOD\n");
 				}
 			}
 		}
@@ -113,7 +113,7 @@ void SoftwareUpdater::setUpdateDistribution(bool distribute)
 							if (!memcmp(sha512,metaHash.data(),ZT_SHA512_DIGEST_LEN)) { // double check that hash in JSON is correct
 								d.meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIZE] = d.bin.length(); // override with correct value -- setting this in meta json is optional
 								_dist[Array<uint8_t,16>(sha512)] = d;
-								printf("update-dist.d: %s\n",u->c_str());
+								//printf("update-dist.d: %s\n",u->c_str());
 							}
 						}
 					} catch ( ... ) {} // ignore bad meta JSON, etc.
@@ -193,7 +193,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 									gd.append(_downloadHashPrefix.data,16);
 									gd.append((uint32_t)_download.length());
 									_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
-									printf(">> GET_DATA @%u\n",(unsigned int)_download.length());
+									//printf(">> GET_DATA @%u\n",(unsigned int)_download.length());
 								}
 							}
 						}
@@ -208,7 +208,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 18) << 16;
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 19) << 8;
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 20);
-					printf("<< GET_DATA @%u from %.10llx for %s\n",(unsigned int)idx,origin,Utils::hex(reinterpret_cast<const uint8_t *>(data) + 1,16).c_str());
+					//printf("<< GET_DATA @%u from %.10llx for %s\n",(unsigned int)idx,origin,Utils::hex(reinterpret_cast<const uint8_t *>(data) + 1,16).c_str());
 					std::map< Array<uint8_t,16>,_D >::iterator d(_dist.find(Array<uint8_t,16>(reinterpret_cast<const uint8_t *>(data) + 1)));
 					if ((d != _dist.end())&&(idx < (unsigned long)d->second.bin.length())) {
 						Buffer<ZT_SOFTWARE_UPDATE_CHUNK_SIZE + 128> buf;
@@ -217,7 +217,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 						buf.append((uint32_t)idx);
 						buf.append(d->second.bin.data() + idx,std::min((unsigned long)ZT_SOFTWARE_UPDATE_CHUNK_SIZE,(unsigned long)(d->second.bin.length() - idx)));
 						_node.sendUserMessage(origin,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,buf.data(),buf.size());
-						printf(">> DATA @%u\n",(unsigned int)idx);
+						//printf(">> DATA @%u\n",(unsigned int)idx);
 					}
 				}
 				break;
@@ -228,7 +228,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 18) << 16;
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 19) << 8;
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 20);
-					printf("<< DATA @%u / %u bytes (we now have %u bytes)\n",(unsigned int)idx,(unsigned int)(len - 21),(unsigned int)_download.length());
+					//printf("<< DATA @%u / %u bytes (we now have %u bytes)\n",(unsigned int)idx,(unsigned int)(len - 21),(unsigned int)_download.length());
 					if (idx == (unsigned long)_download.length()) {
 						_download.append(reinterpret_cast<const char *>(data) + 21,len - 21);
 						if (_download.length() < _downloadLength) {
@@ -237,7 +237,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 							gd.append(_downloadHashPrefix.data,16);
 							gd.append((uint32_t)_download.length());
 							_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
-							printf(">> GET_DATA @%u\n",(unsigned int)_download.length());
+							//printf(">> GET_DATA @%u\n",(unsigned int)_download.length());
 						}
 					}
 				}
@@ -275,7 +275,7 @@ bool SoftwareUpdater::check(const uint64_t now)
 			(int)ZT_VENDOR_ZEROTIER,
 			_channel.c_str());
 		_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,tmp,len);
-		printf(">> GET_LATEST\n");
+		//printf(">> GET_LATEST\n");
 	}
 
 	if (_latestValid)
@@ -302,7 +302,7 @@ bool SoftwareUpdater::check(const uint64_t now)
 							OSUtils::lockDownFile(metaPath.c_str(),false);
 							OSUtils::lockDownFile(binPath.c_str(),false);
 							_latestValid = true;
-							printf("VALID UPDATE\n%s\n",OSUtils::jsonDump(_latestMeta).c_str());
+							//printf("VALID UPDATE\n%s\n",OSUtils::jsonDump(_latestMeta).c_str());
 							_download = std::string();
 							_downloadLength = 0;
 							return true;
@@ -312,7 +312,7 @@ bool SoftwareUpdater::check(const uint64_t now)
 			} catch ( ... ) {} // any exception equals verification failure
 
 			// If we get here, checks failed.
-			printf("INVALID UPDATE (!!!)\n%s\n",OSUtils::jsonDump(_latestMeta).c_str());
+			//printf("INVALID UPDATE (!!!)\n%s\n",OSUtils::jsonDump(_latestMeta).c_str());
 			OSUtils::rm(metaPath.c_str());
 			OSUtils::rm(binPath.c_str());
 			_latestMeta = nlohmann::json();
@@ -325,7 +325,7 @@ bool SoftwareUpdater::check(const uint64_t now)
 			gd.append(_downloadHashPrefix.data,16);
 			gd.append((uint32_t)_download.length());
 			_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
-			printf(">> GET_DATA @%u\n",(unsigned int)_download.length());
+			//printf(">> GET_DATA @%u\n",(unsigned int)_download.length());
 		}
 	}
 
@@ -337,14 +337,16 @@ void SoftwareUpdater::apply()
 	std::string updatePath(_homePath + ZT_PATH_SEPARATOR_S ZT_SOFTWARE_UPDATE_BIN_FILENAME);
 	if ((_latestMeta.is_object())&&(_latestValid)&&(OSUtils::fileExists(updatePath.c_str(),false))) {
 #ifdef __WINDOWS__
-		std::string cmdArgs = " ";
-		cmdArgs.append(OSUtils::jsonString(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_EXEC_ARGS],""));
-		if (cmdArgs.length() == 1) cmdArgs = std::string();
+		std::string cmdArgs(OSUtils::jsonString(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_EXEC_ARGS],""));
+		if (cmdArgs.length() > 0) {
+			updatePath.push_back(' ');
+			updatePath.append(cmdArgs);
+		}
 		STARTUPINFOA si;
 		PROCESS_INFORMATION pi;
 		memset(&si,0,sizeof(si));
 		memset(&pi,0,sizeof(pi));
-		CreateProcessA(NULL,(updatePath + cmdArgs).c_str(),NULL,NULL,FALSE,CREATE_NO_WINDOW|CREATE_NEW_PROCESS_GROUP,NULL,NULL,&si,&pi);
+		CreateProcessA(NULL,updatePath.c_str(),NULL,NULL,FALSE,CREATE_NO_WINDOW|CREATE_NEW_PROCESS_GROUP,NULL,NULL,&si,&pi);
 #else
 		char *argv[256];
 		unsigned long ac = 0;
