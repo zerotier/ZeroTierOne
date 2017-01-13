@@ -264,6 +264,9 @@
     <ClCompile Include="..\..\controller\JSONDB.cpp">
       <Filter>Source Files\controller</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\service\SoftwareUpdater.cpp">
+      <Filter>Source Files\service</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -291,9 +294,6 @@
       <Filter>Header Files\osdep</Filter>
     </ClInclude>
     <ClInclude Include="..\..\service\ControlPlane.hpp">
-      <Filter>Header Files\service</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\service\ControlPlaneSubsystem.hpp">
       <Filter>Header Files\service</Filter>
     </ClInclude>
     <ClInclude Include="..\..\service\OneService.hpp">
@@ -553,6 +553,9 @@
     </ClInclude>
     <ClInclude Include="..\..\osdep\ManagedRoute.hpp">
       <Filter>Header Files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\service\SoftwareUpdater.hpp">
+      <Filter>Header Files\service</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

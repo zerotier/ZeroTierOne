@@ -220,7 +220,7 @@ private:
 	{
 		_GatherAuthKey() : member(0),networkId(0) {}
 		_GatherAuthKey(const uint64_t nwid,const Address &a) : member(a.toInt()),networkId(nwid) {}
-		inline unsigned long hashCode() const { return (member ^ networkId); }
+		inline unsigned long hashCode() const { return (unsigned long)(member ^ networkId); }
 		inline bool operator==(const _GatherAuthKey &k) const { return ((member == k.member)&&(networkId == k.networkId)); }
 		uint64_t member;
 		uint64_t networkId;

@@ -21,6 +21,9 @@
 #include <string.h>
 #include <stdint.h>
 
+#include "../node/Constants.hpp"
+#include "../version.h"
+
 #ifdef __WINDOWS__
 #include <WinSock2.h>
 #include <Windows.h>
@@ -37,9 +40,6 @@
 
 #include "SoftwareUpdater.hpp"
 
-#include "../version.h"
-
-#include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
 #include "../node/SHA512.hpp"
 #include "../node/Buffer.hpp"
@@ -369,7 +369,7 @@ void SoftwareUpdater::apply()
 		PROCESS_INFORMATION pi;
 		memset(&si,0,sizeof(si));
 		memset(&pi,0,sizeof(pi));
-		CreateProcessA(NULL,updatePath.c_str(),NULL,NULL,FALSE,CREATE_NO_WINDOW|CREATE_NEW_PROCESS_GROUP,NULL,NULL,&si,&pi);
+		CreateProcessA(NULL,const_cast<LPSTR>(updatePath.c_str()),NULL,NULL,FALSE,CREATE_NO_WINDOW|CREATE_NEW_PROCESS_GROUP,NULL,NULL,&si,&pi);
 #else
 		char *argv[256];
 		unsigned long ac = 0;
