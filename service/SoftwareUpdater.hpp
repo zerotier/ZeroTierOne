@@ -46,8 +46,10 @@
 
 /**
  * ZeroTier identity that must be used to sign software updates
+ *
+ * df24360f3e - update-signing-key-0010 generated Fri Jan 13th, 2017 at 4:05pm PST
  */
-#define ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY "a60ed7a9eb:0:740fd482e02eabd28f69c83ad4353d44c9514627bc0656b5d194e2f34715745b62297120d47d7f0c728424c33297ea499dea4ce006ee3d7c0d802a6fb199d909"
+#define ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY "df24360f3e:0:06072642959c8dfb68312904d74d90197c8a7692697caa1b3fd769eca714f4370fab462fcee6ebcb5fffb63bc5af81f28a2514b2cd68daabb42f7352c06f21db"
 
 /**
  * Chunk size for in-band downloads (can be changed, designed to always fit in one UDP packet easily)
