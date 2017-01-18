@@ -34,4 +34,13 @@
  */
 #define ZEROTIER_ONE_VERSION_REVISION 17
 
+/**
+ * Build version
+ *
+ * This starts at 0 for each major.minor.rev tuple and can be incremented
+ * to force a minor update without an actual version number change. It's
+ * not part of the actual release version number.
+ */
+#define ZEROTIER_ONE_VERSION_BUILD 0
+
 #endif

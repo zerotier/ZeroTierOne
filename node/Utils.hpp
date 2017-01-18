@@ -335,8 +335,7 @@ public:
 	 *
 	 * @return -1, 0, or 1 based on whether first tuple is less than, equal to, or greater than second
 	 */
-	static inline int compareVersion(unsigned int maj1,unsigned int min1,unsigned int rev1,unsigned int maj2,unsigned int min2,unsigned int rev2)
-		throw()
+	static inline int compareVersion(unsigned int maj1,unsigned int min1,unsigned int rev1,unsigned int b1,unsigned int maj2,unsigned int min2,unsigned int rev2,unsigned int b2)
 	{
 		if (maj1 > maj2)
 			return 1;
@@ -352,7 +351,13 @@ public:
 					return 1;
 				else if (rev1 < rev2)
 					return -1;
-				else return 0;
+				else {
+					if (b1 > b2)
+						return 1;
+					else if (b1 < b2)
+						return -1;
+					else return 0;
+				}
 			}
 		}
 	}

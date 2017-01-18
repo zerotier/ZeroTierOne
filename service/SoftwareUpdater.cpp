@@ -74,7 +74,9 @@ SoftwareUpdater::SoftwareUpdater(Node &node,const std::string &homePath) :
 			const unsigned int rvMaj = (unsigned int)OSUtils::jsonInt(meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR],0);
 			const unsigned int rvMin = (unsigned int)OSUtils::jsonInt(meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR],0);
 			const unsigned int rvRev = (unsigned int)OSUtils::jsonInt(meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION],0);
-			if ((Utils::compareVersion(rvMaj,rvMin,rvRev,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION) > 0)&&(OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S ZT_SOFTWARE_UPDATE_BIN_FILENAME).c_str(),buf))) {
+			const unsigned int rvBld = (unsigned int)OSUtils::jsonInt(meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_BUILD],0);
+			if ((Utils::compareVersion(rvMaj,rvMin,rvRev,rvBld,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION,ZEROTIER_ONE_VERSION_BUILD) > 0)&&
+			    (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S ZT_SOFTWARE_UPDATE_BIN_FILENAME).c_str(),buf))) {
 				if ((uint64_t)buf.length() == OSUtils::jsonInt(meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIZE],0)) {
 					_latestMeta = meta;
 					_latestValid = true;
@@ -149,6 +151,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 					const unsigned int rvMaj = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR],0);
 					const unsigned int rvMin = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR],0);
 					const unsigned int rvRev = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION],0);
+					const unsigned int rvBld = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_VERSION_BUILD],0);
 					const unsigned int rvPlatform = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_PLATFORM],0);
 					const unsigned int rvArch = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_ARCHITECTURE],0);
 					const unsigned int rvVendor = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_VENDOR],0);
@@ -161,6 +164,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 							unsigned int bestVMaj = rvMaj;
 							unsigned int bestVMin = rvMin;
 							unsigned int bestVRev = rvRev;
+							unsigned int bestVBld = rvBld;
 							for(std::map< Array<uint8_t,16>,_D >::const_iterator d(_dist.begin());d!=_dist.end();++d) {
 								if ((OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_PLATFORM],0) == rvPlatform)&&
 								    (OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_ARCHITECTURE],0) == rvArch)&&
@@ -170,11 +174,13 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 									const unsigned int dvMaj = (unsigned int)OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR],0);
 									const unsigned int dvMin = (unsigned int)OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR],0);
 									const unsigned int dvRev = (unsigned int)OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION],0);
-									if (Utils::compareVersion(dvMaj,dvMin,dvRev,bestVMaj,bestVMin,bestVRev) > 0) {
+									const unsigned int dvBld = (unsigned int)OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_BUILD],0);
+									if (Utils::compareVersion(dvMaj,dvMin,dvRev,dvBld,bestVMaj,bestVMin,bestVRev,bestVBld) > 0) {
 										latest = &(d->second.meta);
 										bestVMaj = dvMaj;
 										bestVMin = dvMin;
 										bestVRev = dvRev;
+										bestVBld = dvBld;
 									}
 								}
 							}
@@ -184,7 +190,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 								lj.append(OSUtils::jsonDump(*latest));
 								_node.sendUserMessage(origin,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,lj.data(),(unsigned int)lj.length());
 								if (_distLog) {
-									fprintf(_distLog,"%.10llx GET_LATEST %u.%u.%u platform %u arch %u vendor %u channel %s -> LATEST %u.%u.%u" ZT_EOL_S,(unsigned long long)origin,rvMaj,rvMin,rvRev,rvPlatform,rvArch,rvVendor,rvChannel.c_str(),bestVMaj,bestVMin,bestVRev);
+									fprintf(_distLog,"%.10llx GET_LATEST %u.%u.%u_%u platform %u arch %u vendor %u channel %s -> LATEST %u.%u.%u_%u" ZT_EOL_S,(unsigned long long)origin,rvMaj,rvMin,rvRev,rvBld,rvPlatform,rvArch,rvVendor,rvChannel.c_str(),bestVMaj,bestVMin,bestVRev,bestVBld);
 									fflush(_distLog);
 								}
 							}
@@ -193,7 +199,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 					} else { // VERB_LATEST
 
 						if ((origin == ZT_SOFTWARE_UPDATE_SERVICE)&&
-							  (Utils::compareVersion(rvMaj,rvMin,rvRev,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION) > 0)&&
+							  (Utils::compareVersion(rvMaj,rvMin,rvRev,rvBld,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION,ZEROTIER_ONE_VERSION_BUILD) > 0)&&
 							  (OSUtils::jsonString(req[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNED_BY],"") == ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY)) {
 							const unsigned long len = (unsigned long)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIZE],0);
 							const std::string hash = OSUtils::jsonBinFromHex(req[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH]);
@@ -283,6 +289,7 @@ bool SoftwareUpdater::check(const uint64_t now)
 			"%c{\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR "\":%d,"
 			"\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR "\":%d,"
 			"\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION "\":%d,"
+			"\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_BUILD "\":%d,"
 			"\"" ZT_SOFTWARE_UPDATE_JSON_EXPECT_SIGNED_BY "\":\"%s\","
 			"\"" ZT_SOFTWARE_UPDATE_JSON_PLATFORM "\":%d,"
 			"\"" ZT_SOFTWARE_UPDATE_JSON_ARCHITECTURE "\":%d,"
@@ -292,6 +299,7 @@ bool SoftwareUpdater::check(const uint64_t now)
 			ZEROTIER_ONE_VERSION_MAJOR,
 			ZEROTIER_ONE_VERSION_MINOR,
 			ZEROTIER_ONE_VERSION_REVISION,
+			ZEROTIER_ONE_VERSION_BUILD,
 			ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY,
 			ZT_BUILD_PLATFORM,
 			ZT_BUILD_ARCHITECTURE,
