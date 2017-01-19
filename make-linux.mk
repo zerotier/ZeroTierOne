@@ -14,16 +14,8 @@ DESTDIR?=
 
 include objects.mk
 
-# Used to auto-detect these and use them if dev headers were present, but stopped
-# since it caused too many damn problems. The http-parser library in particular
-# is basically broken between versions. Fark the Debian policies about including
-# libraries. It's better if things work.
-#ifeq ($(wildcard /usr/include/http_parser.h),)
-#	OBJS+=ext/http-parser/http_parser.o
-#else
-#	LDLIBS+=-lhttp_parser
-#	DEFS+=-DZT_USE_SYSTEM_HTTP_PARSER
-#endif
+# Use bundled http-parser since distribution versions are NOT API-stable or compatible!
+# Trying to use dynamically linked libhttp-parser causes tons of compatibility problems.
 OBJS+=ext/http-parser/http_parser.o
 
 # Auto-detect miniupnpc and nat-pmp as well and use system libs if present,
