@@ -54,7 +54,7 @@ ifeq ($(CC_MACH),aarch64)
 endif
 DEFS+=-DZT_BUILD_PLATFORM=7 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""
 
-CXXFLAGS+=$(CFLAGS) -fno-rtti
+CXXFLAGS+=$(CFLAGS) -fno-rtti -std=c++11
 
 all:	one
 
