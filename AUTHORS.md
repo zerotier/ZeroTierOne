@@ -29,9 +29,9 @@ These are included in ext/ for platforms that do not have them available in comm
 
  * LZ4 compression algorithm by Yann Collet
 
-   * Files: ext/lz4/*
+   * Files: node/Packet.cpp (bundled within anonymous namespace)
    * Home page: http://code.google.com/p/lz4/
-   * License grant: BSD attribution
+   * License grant: BSD 2-clause
 
  * http-parser by Joyent, Inc. (many authors)
 
