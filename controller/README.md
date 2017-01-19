@@ -7,7 +7,7 @@ As of ZeroTier One version 1.2.0 this code is included in normal builds for desk
 
 Controller data is stored in JSON format under `controller.d` in the ZeroTier working directory. It can be copied, rsync'd, placed in `git`, etc. The files under `controller.d` should not be modified in place while the controller is running or data loss may result, and if they are edited directly take care not to save corrupt JSON since that can also lead to data loss when the controller is restarted. Going through the API is strongly preferred to directly modifying these files.
 
-### Upgrading from Older Versions
+### Upgrading from Older (1.1.14 or earlier) Versions
 
 Older versions of this code used a SQLite database instead of in-filesystem JSON. A migration utility called `migrate-sqlite` is included here and *must* be used to migrate this data to the new format. If the controller is started with an old `controller.db` in its working directory it will terminate after printing an error to *stderr*. This is done to prevent "surprises" for those running DIY controllers using the old code.
 
