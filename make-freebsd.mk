@@ -5,7 +5,7 @@ DEFS=
 LIBS=
 
 include objects.mk
-OBJS+=osdep/BSDEthernetTap.o ext/lz4/lz4.o ext/http-parser/http_parser.o
+OBJS+=osdep/BSDEthernetTap.o ext/http-parser/http_parser.o
 
 # Build with ZT_ENABLE_CLUSTER=1 to build with cluster support
 ifeq ($(ZT_ENABLE_CLUSTER),1)
@@ -20,7 +20,7 @@ ifeq ($(ZT_DEBUG),1)
 	STRIP=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in heavy testing without it.
-ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
+node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
 	CFLAGS?=-O3 -fstack-protector
 	CFLAGS+=-Wall -fPIE -fvisibility=hidden -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
@@ -69,7 +69,7 @@ selftest:	$(OBJS) selftest.o
 	$(STRIP) zerotier-selftest
 
 clean:
-	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o build-* zerotier-one zerotier-idtool zerotier-selftest zerotier-cli ZeroTierOneInstaller-*
+	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o build-* zerotier-one zerotier-idtool zerotier-selftest zerotier-cli ZeroTierOneInstaller-*
 
 debug:	FORCE
 	make -j 4 ZT_DEBUG=1

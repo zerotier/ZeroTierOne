@@ -37,7 +37,7 @@
 //#ifdef ZT_USE_SYSTEM_LZ4
 //#include <lz4.h>
 //#else
-#include "../ext/lz4/lz4.h"
+//#include "../ext/lz4/lz4.h"
 //#endif
 
 /**

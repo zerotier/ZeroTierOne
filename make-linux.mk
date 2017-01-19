@@ -18,19 +18,13 @@ include objects.mk
 # since it caused too many damn problems. The http-parser library in particular
 # is basically broken between versions. Fark the Debian policies about including
 # libraries. It's better if things work.
-#ifeq ($(wildcard /usr/include/lz4.h),)
-#	OBJS+=ext/lz4/lz4.o
-#else
-#	LDLIBS+=-llz4
-#	DEFS+=-DZT_USE_SYSTEM_LZ4
-#endif
 #ifeq ($(wildcard /usr/include/http_parser.h),)
 #	OBJS+=ext/http-parser/http_parser.o
 #else
 #	LDLIBS+=-lhttp_parser
 #	DEFS+=-DZT_USE_SYSTEM_HTTP_PARSER
 #endif
-OBJS+=ext/lz4/lz4.o ext/http-parser/http_parser.o
+OBJS+=ext/http-parser/http_parser.o
 
 # Auto-detect miniupnpc and nat-pmp as well and use system libs if present,
 # otherwise build into binary as done on Mac and Windows.
@@ -71,7 +65,7 @@ ifeq ($(ZT_DEBUG),1)
 	STRIP?=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
-ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
+node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
 	CFLAGS?=-O3 -fstack-protector
 	override CFLAGS+=-Wall -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
@@ -132,7 +126,7 @@ manpages:	FORCE
 doc:	manpages
 
 clean: FORCE
-	rm -rf *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one doc/node_modules
+	rm -rf *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one doc/node_modules
 
 distclean:	clean
 
