@@ -15,15 +15,9 @@ The migration tool is written in nodeJS and can be used like this:
 
     cd migrate-sqlite
     npm install
-    node migrate-sqlite.js <path to ZeroTier working directory>
+    node migrate.js </path/to/controller.db> </path/to/controller.d>
 
-You may need to `sudo node ...` if the ZeroTier working directory is owned by root.
-
-This code will dump the contents of any `controller.db` in the ZeroTier working directory and recreate its data in the form of JSON objects under `controller.d`. The old `controller.db` will then be renamed to `controller.db.migrated` and the controller will start normally.
-
-After migrating make sure that the contents of `controller.d` are owned and writable by the user that will be running the ZeroTier controller process! (Usually this is root but controllers that don't also join networks are sometimes run as unprivileged users.)
-
-If you don't have nodeJS on the machine running ZeroTier it is perfectly fine to just copy `controller.db` to a directory on another machine and run the migration tool there. After running your migration the contents of `controller.d` can be tar'd up and copied back over to the controller. Just remember to rename or remove `controller.db` on the controller machine afterwords so the controller will start.
+Very old versions of nodeJS may have issues. We tested it with version 7.
 
 ### Scalability and Reliability
 
