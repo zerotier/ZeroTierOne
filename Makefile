@@ -13,10 +13,12 @@ endif
 ifeq ($(OSTYPE),FreeBSD)
 	CC=gcc
 	CXX=g++
-	include make-freebsd.mk
+	ZT_BUILD_PLATFORM=7
+	include make-bsd.mk
 endif
 ifeq ($(OSTYPE),OpenBSD)
 	CC=egcc
 	CXX=eg++
-	include make-freebsd.mk
+	ZT_BUILD_PLATFORM=9
+	include make-bsd.mk
 endif

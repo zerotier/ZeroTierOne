@@ -83,7 +83,6 @@ BSDEthernetTap::BSDEthernetTap(
 {
 	static Mutex globalTapCreateLock;
 	char devpath[64],ethaddr[64],mtustr[32],metstr[32],tmpdevname[32];
-	struct stat stattmp;
 
 	Mutex::Lock _gl(globalTapCreateLock);
 
@@ -122,6 +121,7 @@ BSDEthernetTap::BSDEthernetTap(
 				::waitpid(cpid,&exitcode,0);
 			} else throw std::runtime_error("fork() failed");
 
+			struct stat stattmp;
 			if (!stat(devpath,&stattmp)) {
 				cpid = (long)vfork();
 				if (cpid == 0) {

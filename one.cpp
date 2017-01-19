@@ -289,7 +289,7 @@ static int cli(int argc,char **argv)
 
 		nlohmann::json j;
 		try {
-			j = nlohmann::json::parse(responseBody);
+			j = OSUtils::jsonParse(responseBody);
 		} catch (std::exception &exc) {
 			printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
 			return 1;
@@ -299,14 +299,16 @@ static int cli(int argc,char **argv)
 		}
 
 		if (scode == 200) {
-			std::ostringstream out;
 			if (json) {
-				out << j.dump(2) << ZT_EOL_S;
+				printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
 			} else {
-				if (j.is_object())
-					out << "200 info " << j["address"].get<std::string>() << " " << j["version"].get<std::string>() << " " << ((j["tcpFallbackActive"]) ? "TUNNELED" : ((j["online"]) ? "ONLINE" : "OFFLINE")) << ZT_EOL_S;
+				if (j.is_object()) {
+					printf("200 info %s %s %s" ZT_EOL_S,
+						OSUtils::jsonString(j["address"],"-").c_str(),
+						OSUtils::jsonString(j["version"],"-").c_str(),
+						((j["tcpFallbackActive"]) ? "TUNNELED" : ((j["online"]) ? "ONLINE" : "OFFLINE")));
+				}
 			}
-			printf("%s",out.str().c_str());
 			return 0;
 		} else {
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
@@ -317,7 +319,7 @@ static int cli(int argc,char **argv)
 
 		nlohmann::json j;
 		try {
-			j = nlohmann::json::parse(responseBody);
+			j = OSUtils::jsonParse(responseBody);
 		} catch (std::exception &exc) {
 			printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
 			return 1;
@@ -327,19 +329,18 @@ static int cli(int argc,char **argv)
 		}
 
 		if (scode == 200) {
-			std::ostringstream out;
 			if (json) {
-				out << j.dump(2) << ZT_EOL_S;
+				printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
 			} else {
-				out << "200 listpeers <ztaddr> <path> <latency> <version> <role>" << ZT_EOL_S;
+				printf("200 listpeers <ztaddr> <path> <latency> <version> <role>" ZT_EOL_S);
 				if (j.is_array()) {
 					for(unsigned long k=0;k<j.size();++k) {
-						auto &p = j[k];
+						nlohmann::json &p = j[k];
 						std::string bestPath;
-						auto paths = p["paths"];
+						nlohmann::json &paths = p["paths"];
 						if (paths.is_array()) {
 							for(unsigned long i=0;i<paths.size();++i) {
-								auto &path = paths[i];
+								nlohmann::json &path = paths[i];
 								if (path["preferred"]) {
 									char tmp[256];
 									std::string addr = path["address"];
@@ -361,11 +362,15 @@ static int cli(int argc,char **argv)
 							ver[0] = '-';
 							ver[1] = (char)0;
 						}
-						out << "200 listpeers " << p["address"].get<std::string>() << " " << bestPath << " " << p["latency"] << " " << ver << " " << p["role"].get<std::string>() << ZT_EOL_S;
+						printf("200 listpeers %s %s %d %s %s" ZT_EOL_S,
+							OSUtils::jsonString(p["address"],"-").c_str(),
+							bestPath.c_str(),
+							(int)OSUtils::jsonInt(p["latency"],0),
+							ver,
+							OSUtils::jsonString(p["role"],"-").c_str());
 					}
 				}
 			}
-			printf("%s",out.str().c_str());
 			return 0;
 		} else {
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
@@ -376,7 +381,7 @@ static int cli(int argc,char **argv)
 
 		nlohmann::json j;
 		try {
-			j = nlohmann::json::parse(responseBody);
+			j = OSUtils::jsonParse(responseBody);
 		} catch (std::exception &exc) {
 			printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
 			return 1;
@@ -386,20 +391,19 @@ static int cli(int argc,char **argv)
 		}
 
 		if (scode == 200) {
-			std::ostringstream out;
 			if (json) {
-				out << j.dump(2) << ZT_EOL_S;
+				printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
 			} else {
-				out << "200 listnetworks <nwid> <name> <mac> <status> <type> <dev> <ZT assigned ips>" << ZT_EOL_S;
+				printf("200 listnetworks <nwid> <name> <mac> <status> <type> <dev> <ZT assigned ips>" ZT_EOL_S);
 				if (j.is_array()) {
 					for(unsigned long i=0;i<j.size();++i) {
-						auto &n = j[i];
+						nlohmann::json &n = j[i];
 						if (n.is_object()) {
 							std::string aa;
-							auto &assignedAddresses = n["assignedAddresses"];
+							nlohmann::json &assignedAddresses = n["assignedAddresses"];
 							if (assignedAddresses.is_array()) {
 								for(unsigned long j=0;j<assignedAddresses.size();++j) {
-									auto &addr = assignedAddresses[j];
+									nlohmann::json &addr = assignedAddresses[j];
 									if (addr.is_string()) {
 										if (aa.length() > 0) aa.push_back(',');
 										aa.append(addr.get<std::string>());
@@ -407,14 +411,18 @@ static int cli(int argc,char **argv)
 								}
 							}
 							if (aa.length() == 0) aa = "-";
-							std::string name = n["name"];
-							if (name.length() == 0) name = "-";
-							out << "200 listnetworks " << n["nwid"].get<std::string>() << " " << name << " " << n["mac"].get<std::string>() << " " << n["status"].get<std::string>() << " " << n["type"].get<std::string>() << " " << n["portDeviceName"].get<std::string>() << " " << aa << ZT_EOL_S;
+							printf("200 listnetworks %s %s %s %s %s %s %s" ZT_EOL_S,
+								OSUtils::jsonString(n["nwid"],"-").c_str(),
+								OSUtils::jsonString(n["name"],"-").c_str(),
+								OSUtils::jsonString(n["mac"],"-").c_str(),
+								OSUtils::jsonString(n["status"],"-").c_str(),
+								OSUtils::jsonString(n["type"],"-").c_str(),
+								OSUtils::jsonString(n["portDeviceName"],"-").c_str(),
+								aa.c_str());
 						}
 					}
 				}
 			}
-			printf("%s",out.str().c_str());
 			return 0;
 		} else {
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
