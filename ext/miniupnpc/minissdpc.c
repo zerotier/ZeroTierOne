@@ -1,11 +1,9 @@
-#define _CRT_SECURE_NO_WARNINGS
-
-/* $Id: minissdpc.c,v 1.31 2016/01/19 09:56:46 nanard Exp $ */
+/* $Id: minissdpc.c,v 1.33 2016/12/16 08:57:20 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * Project : miniupnp
  * Web : http://miniupnp.free.fr/
  * Author : Thomas BERNARD
- * copyright (c) 2005-2015 Thomas Bernard
+ * copyright (c) 2005-2016 Thomas Bernard
  * This software is subjet to the conditions detailed in the
  * provided LICENCE file. */
 /*#include <syslog.h>*/
@@ -13,6 +11,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#if defined (__NetBSD__)
+#include <net/if.h>
+#endif
 #if defined(_WIN32) || defined(__amigaos__) || defined(__amigaos4__)
 #ifdef _WIN32
 #include <winsock2.h>
@@ -72,6 +73,9 @@ struct sockaddr_un {
 
 #if !defined(HAS_IP_MREQN) && !defined(_WIN32)
 #include <sys/ioctl.h>
+#if defined(__sun)
+#include <sys/sockio.h>
+#endif
 #endif
 
 #if defined(HAS_IP_MREQN) && defined(NEED_STRUCT_IP_MREQN)
@@ -168,7 +172,7 @@ connectToMiniSSDPD(const char * socketpath)
 {
 	int s;
 	struct sockaddr_un addr;
-#ifdef MINIUPNPC_SET_SOCKET_TIMEOUT
+#if defined(MINIUPNPC_SET_SOCKET_TIMEOUT) && !defined(__sun)
 	struct timeval timeout;
 #endif /* #ifdef MINIUPNPC_SET_SOCKET_TIMEOUT */
 
@@ -179,19 +183,20 @@ connectToMiniSSDPD(const char * socketpath)
 		perror("socket(unix)");
 		return MINISSDPC_SOCKET_ERROR;
 	}
-#ifdef MINIUPNPC_SET_SOCKET_TIMEOUT
+#if defined(MINIUPNPC_SET_SOCKET_TIMEOUT) && !defined(__sun)
 	/* setting a 3 seconds timeout */
+	/* not supported for AF_UNIX sockets under Solaris */
 	timeout.tv_sec = 3;
 	timeout.tv_usec = 0;
 	if(setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(struct timeval)) < 0)
 	{
-		perror("setsockopt");
+		perror("setsockopt SO_RCVTIMEO unix");
 	}
 	timeout.tv_sec = 3;
 	timeout.tv_usec = 0;
 	if(setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(struct timeval)) < 0)
 	{
-		perror("setsockopt");
+		perror("setsockopt SO_SNDTIMEO unix");
 	}
 #endif /* #ifdef MINIUPNPC_SET_SOCKET_TIMEOUT */
 	if(!socketpath)
@@ -627,7 +632,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 			unsigned int ifindex = if_nametoindex(multicastif); /* eth0, etc. */
 			if(setsockopt(sudp, IPPROTO_IPV6, IPV6_MULTICAST_IF, &ifindex, sizeof(ifindex)) < 0)
 			{
-				PRINT_SOCKET_ERROR("setsockopt");
+				PRINT_SOCKET_ERROR("setsockopt IPV6_MULTICAST_IF");
 			}
 #else
 #ifdef DEBUG
@@ -642,7 +647,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 				((struct sockaddr_in *)&sockudp_r)->sin_addr.s_addr = mc_if.s_addr;
 				if(setsockopt(sudp, IPPROTO_IP, IP_MULTICAST_IF, (const char *)&mc_if, sizeof(mc_if)) < 0)
 				{
-					PRINT_SOCKET_ERROR("setsockopt");
+					PRINT_SOCKET_ERROR("setsockopt IP_MULTICAST_IF");
 				}
 			} else {
 #ifdef HAS_IP_MREQN
@@ -652,7 +657,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 				reqn.imr_ifindex = if_nametoindex(multicastif);
 				if(setsockopt(sudp, IPPROTO_IP, IP_MULTICAST_IF, (const char *)&reqn, sizeof(reqn)) < 0)
 				{
-					PRINT_SOCKET_ERROR("setsockopt");
+					PRINT_SOCKET_ERROR("setsockopt IP_MULTICAST_IF");
 				}
 #elif !defined(_WIN32)
 				struct ifreq ifr;
@@ -666,7 +671,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 				mc_if.s_addr = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
 				if(setsockopt(sudp, IPPROTO_IP, IP_MULTICAST_IF, (const char *)&mc_if, sizeof(mc_if)) < 0)
 				{
-					PRINT_SOCKET_ERROR("setsockopt");
+					PRINT_SOCKET_ERROR("setsockopt IP_MULTICAST_IF");
 				}
 #else /* _WIN32 */
 #ifdef DEBUG

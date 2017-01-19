@@ -32,7 +32,7 @@ Requires:       systemd
 %endif
 
 Provides:       bundled(http-parser) = 2.7.0
-Provides:       bundled(miniupnpc) = 2.0
+Provides:       bundled(miniupnpc) = 2.0.20161216
 
 %if 0%{?rhel} >= 6
 Provides:       bundled(libnatpmp) = 20131126

@@ -1,4 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
 /* $Id: minixml.c,v 1.11 2014/02/03 15:54:12 nanard Exp $ */
 /* minixml.c : the minimum size a xml parser can be ! */
 /* Project : miniupnp

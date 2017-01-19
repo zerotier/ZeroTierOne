@@ -1,7 +1,7 @@
-/* $Id: minihttptestserver.c,v 1.19 2015/11/17 09:07:17 nanard Exp $ */
+/* $Id: minihttptestserver.c,v 1.20 2016/12/16 08:54:55 nanard Exp $ */
 /* Project : miniUPnP
  * Author : Thomas Bernard
- * Copyright (c) 2011-2015 Thomas Bernard
+ * Copyright (c) 2011-2016 Thomas Bernard
  * This software is subject to the conditions detailed in the
  * LICENCE file provided in this distribution.
  * */
@@ -611,7 +611,7 @@ int main(int argc, char * * argv) {
 			if(pid < 0) {
 				perror("wait");
 			} else {
-				printf("child(%d) terminated with status %d\n", pid, status);
+				printf("child(%d) terminated with status %d\n", (int)pid, status);
 			}
 			--child_to_wait_for;
 		}
@@ -648,7 +648,7 @@ int main(int argc, char * * argv) {
 			if(pid < 0) {
 				perror("wait");
 			} else {
-				printf("child(%d) terminated with status %d\n", pid, status);
+				printf("child(%d) terminated with status %d\n", (int)pid, status);
 			}
 			--child_to_wait_for;
 		}

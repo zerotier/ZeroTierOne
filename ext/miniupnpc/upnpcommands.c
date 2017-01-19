@@ -1,5 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
-
 /* $Id: upnpcommands.c,v 1.47 2016/03/07 12:26:48 nanard Exp $ */
 /* Project : miniupnp
  * Author : Thomas Bernard

@@ -19,7 +19,7 @@
 #define UPNPDISCOVER_MEMORY_ERROR (-102)
 
 /* versions : */
-#define MINIUPNPC_VERSION	"2.0"
+#define MINIUPNPC_VERSION	"2.0.20161216"
 #define MINIUPNPC_API_VERSION	16
 
 /* Source port:
