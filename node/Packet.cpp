@@ -125,7 +125,7 @@ bool Packet::compress()
 	unsigned char buf[ZT_PROTO_MAX_PACKET_LENGTH * 2];
 	if ((!compressed())&&(size() > (ZT_PACKET_IDX_PAYLOAD + 32))) {
 		int pl = (int)(size() - ZT_PACKET_IDX_PAYLOAD);
-		int cl = LZ4_compress((const char *)field(ZT_PACKET_IDX_PAYLOAD,(unsigned int)pl),(char *)buf,pl);
+		int cl = LZ4_compress_default((const char *)field(ZT_PACKET_IDX_PAYLOAD,(unsigned int)pl),(char *)buf,pl,ZT_PROTO_MAX_PACKET_LENGTH * 2);
 		if ((cl > 0)&&(cl < pl)) {
 			(*this)[ZT_PACKET_IDX_VERB] |= (char)ZT_PROTO_VERB_FLAG_COMPRESSED;
 			setSize((unsigned int)cl + ZT_PACKET_IDX_PAYLOAD);

@@ -14,20 +14,23 @@ DESTDIR?=
 
 include objects.mk
 
-# On Linux we auto-detect the presence of some libraries and if present we
-# link against the system version. This works with our package build images.
-ifeq ($(wildcard /usr/include/lz4.h),)
-	OBJS+=ext/lz4/lz4.o
-else
-	LDLIBS+=-llz4
-	DEFS+=-DZT_USE_SYSTEM_LZ4
-endif
-ifeq ($(wildcard /usr/include/http_parser.h),)
-	OBJS+=ext/http-parser/http_parser.o
-else
-	LDLIBS+=-lhttp_parser
-	DEFS+=-DZT_USE_SYSTEM_HTTP_PARSER
-endif
+# Used to auto-detect these and use them if dev headers were present, but stopped
+# since it caused too many damn problems. The http-parser library in particular
+# is basically broken between versions. Fark the Debian policies about including
+# libraries. It's better if things work.
+#ifeq ($(wildcard /usr/include/lz4.h),)
+#	OBJS+=ext/lz4/lz4.o
+#else
+#	LDLIBS+=-llz4
+#	DEFS+=-DZT_USE_SYSTEM_LZ4
+#endif
+#ifeq ($(wildcard /usr/include/http_parser.h),)
+#	OBJS+=ext/http-parser/http_parser.o
+#else
+#	LDLIBS+=-lhttp_parser
+#	DEFS+=-DZT_USE_SYSTEM_HTTP_PARSER
+#endif
+OBJS+=ext/lz4/lz4.o ext/http-parser/http_parser.o
 
 # Auto-detect miniupnpc and nat-pmp as well and use system libs if present,
 # otherwise build into binary as done on Mac and Windows.

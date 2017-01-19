@@ -34,11 +34,11 @@
 #include "Utils.hpp"
 #include "Buffer.hpp"
 
-#ifdef ZT_USE_SYSTEM_LZ4
-#include <lz4.h>
-#else
+//#ifdef ZT_USE_SYSTEM_LZ4
+//#include <lz4.h>
+//#else
 #include "../ext/lz4/lz4.h"
-#endif
+//#endif
 
 /**
  * Protocol version -- incremented only for major changes
