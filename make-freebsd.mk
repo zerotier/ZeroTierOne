@@ -1,5 +1,3 @@
-CC=cc
-CXX=c++
 INCLUDES=
 DEFS=
 LIBS=

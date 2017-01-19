@@ -11,8 +11,12 @@ ifeq ($(OSTYPE),Linux)
 endif
 
 ifeq ($(OSTYPE),FreeBSD)
+	CC=gcc
+	CXX=g++
 	include make-freebsd.mk
 endif
 ifeq ($(OSTYPE),OpenBSD)
+	CC=egcc
+	CXX=eg++
 	include make-freebsd.mk
 endif
