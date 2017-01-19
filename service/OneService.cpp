@@ -344,6 +344,7 @@ public:
 	Mutex _termReason_m;
 
 	// uPnP/NAT-PMP port mapper if enabled
+	bool _portMappingEnabled; // local.conf settings
 #ifdef ZT_USE_MINIUPNPC
 	PortMapper *_portMapper;
 #endif
@@ -379,6 +380,7 @@ public:
 		,_nextBackgroundTaskDeadline(0)
 		,_tcpFallbackTunnel((TcpConnection *)0)
 		,_termReason(ONE_STILL_RUNNING)
+		,_portMappingEnabled(true)
 #ifdef ZT_USE_MINIUPNPC
 		,_portMapper((PortMapper *)0)
 #endif
@@ -598,25 +600,27 @@ public:
 			}
 
 #ifdef ZT_USE_MINIUPNPC
-			// If we're running uPnP/NAT-PMP, bind a *third* port for that. We can't
-			// use the other two ports for that because some NATs do really funky
-			// stuff with ports that are explicitly mapped that breaks things.
-			if (_ports[1]) {
-				_ports[2] = _ports[1];
-				for(int i=0;;++i) {
-					if (i > 1000) {
-						_ports[2] = 0;
-						break;
-					} else if (++_ports[2] >= 65536) {
-						_ports[2] = 20000;
+			if (_portMappingEnabled) {
+				// If we're running uPnP/NAT-PMP, bind a *third* port for that. We can't
+				// use the other two ports for that because some NATs do really funky
+				// stuff with ports that are explicitly mapped that breaks things.
+				if (_ports[1]) {
+					_ports[2] = _ports[1];
+					for(int i=0;;++i) {
+						if (i > 1000) {
+							_ports[2] = 0;
+							break;
+						} else if (++_ports[2] >= 65536) {
+							_ports[2] = 20000;
+						}
+						if (_trialBind(_ports[2]))
+							break;
 					}
-					if (_trialBind(_ports[2]))
-						break;
-				}
-				if (_ports[2]) {
-					char uniqueName[64];
-					Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
-					_portMapper = new PortMapper(_ports[2],uniqueName);
+					if (_ports[2]) {
+						char uniqueName[64];
+						Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
+						_portMapper = new PortMapper(_ports[2],uniqueName);
+					}
 				}
 			}
 #endif
@@ -983,6 +987,8 @@ public:
 		_interfacePrefixBlacklist.clear();
 		json &settings = _localConfig["settings"];
 		if (settings.is_object()) {
+			_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
+
 			const std::string rp(OSUtils::jsonString(settings["relayPolicy"],""));
 			if ((rp == "always")||(rp == "ALWAYS"))
 				_node->setRelayPolicy(ZT_RELAY_POLICY_ALWAYS);
