@@ -19,13 +19,18 @@ Settings available in `local.conf` (this is not valid JSON, and JSON does not al
 	},
 	"virtual": { /* Settings applied to ZeroTier virtual network devices (VL1) */
 		"##########": { /* 10-digit ZeroTier address */
-			"role": "UPSTREAM"|"LEAF", /* If UPSTREAM, define this as a trusted "federated root" */
+			"role": "upstream"|"leaf", /* If upstream, define this as a trusted "federated root" (default is leaf) */
 			"try": [ "IP/port"/*,...*/ ], /* Hints on where to reach this peer if no upstreams/roots are online */
 			"blacklist": [ "NETWORK/bits"/*,...*/ ] /* Blacklist a physical path for only this peer. */
 		}
 	},
 	"settings": { /* Other global settings */
-		"relayPolicy": "TRUSTED"|"ALWAYS"|"NEVER" /* Policy for relaying others' traffic (see below) */
+		"relayPolicy": "trusted"|"always"|"never", /* Policy for relaying others' traffic (see below) */
+		"portMappingEnabled": true|false, /* If true (the default), try to use uPnP or NAT-PMP to map ports */
+		"softwareUpdate": "apply"|"download"|"disable", /* Automatically apply updates, just download, or disable built-in software updates */
+		"softwareUpdateDist": true|false, /* If true, distribute software updates (only really useful to ZeroTier, Inc. itself, default is false) */
+		"interfacePrefixBlacklist": [ "XXX",... ], /* Array of interface name prefixes (e.g. eth for eth#) to blacklist for ZT traffic */
+		"allowManagementFrom": "NETWORK/bits"|null /* If non-NULL, allow JSON/HTTP management from this IP network. Default is 127.0.0.1 only. */
 	}
 }
 ```
