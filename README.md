@@ -70,10 +70,6 @@ To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU 
 
 Typing `make selftest` will build a *zerotier-selftest* binary which unit tests various internals and reports on a few aspects of the build environment. It's a good idea to try this on novel platforms or architectures.
 
-Windows, of course, is special. A Visual Studio solution file is located in the *windows/* subfolder. We have not tried MinGW or CLANG for Windows but these may work, though you will have issues building the Windows GUI with them.
-
-Mac and Windows require tun/tap virtual network port drivers. We include pre-built signed binaries for these in `ext/bin`, so you should not need to build these yourself. Linux, FreeBSD, and others can use built-in kernel support for tun/tap network devices.
-
 ### Running
 
 Running *zerotier-one* with -h will show help.
