@@ -65,6 +65,12 @@ public:
 	Node(void *uptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now);
 	virtual ~Node();
 
+	// Get rid of alignment warnings on 32-bit Windows and possibly improve performance
+#ifdef __WINDOWS__
+	void * operator new(size_t i) { return _mm_malloc(i,16); }
+	void operator delete(void* p) { _mm_free(p); }
+#endif
+
 	// Public API Functions ----------------------------------------------------
 
 	ZT_ResultCode processWirePacket(
