@@ -54,6 +54,11 @@ To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU 
    - The minimum compiler versions required are GCC/G++ 4.9.3 or CLANG/CLANG++ 3.4.2.
    - Linux makefiles automatically detect and prefer clang/clang++ if present as it produces smaller and slightly faster binaries in most cases. You can override by supplying CC and CXX variables on the make command line.
    - CentOS 7 ships with a version of GCC/G++ that is too old, but a new enough version of CLANG can be found in the *epel* repositories. Type `yum install epel-release` and then `yum install clang` to build there.
+ - **Windows**
+   - Windows 7 or newer (and equivalent server versions) are supported. This *may* work on Vista but you're on your own there. Windows XP is not supported since it lacks many important network API functions.
+   - We build with Visual Studio 2015. Older versions may not work with the solution file and project files we ship and may not have new enough C++11 support.
+   - Pre-built signed Windows drivers are included in `ext/bin/tap-windows-ndis6`. The MSI files found there will install them on 32-bit and 64-bit systems. (These are included in our multi-architecture installer as chained MSIs.)
+   - Windows builds are more painful in general than other platforms and are for the adventurous.
  - **FreeBSD**
    - Tested most recently on FreeBSD-11. Older versions may work but we're not sure.
    - GCC/G++ 4.9 and gmake are required. These can be installed from packages or ports. Type `gmake` to build.
