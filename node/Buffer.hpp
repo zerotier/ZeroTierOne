@@ -61,11 +61,11 @@ public:
 	// STL container idioms
 	typedef unsigned char value_type;
 	typedef unsigned char * pointer;
-	typedef const unsigned char * const_pointer;
-	typedef unsigned char & reference;
-	typedef const unsigned char & const_reference;
-	typedef unsigned char * iterator;
-	typedef const unsigned char * const_iterator;
+	typedef const char * const_pointer;
+	typedef char & reference;
+	typedef const char & const_reference;
+	typedef char * iterator;
+	typedef const char * const_iterator;
 	typedef unsigned int size_type;
 	typedef int difference_type;
 	typedef std::reverse_iterator<iterator> reverse_iterator;

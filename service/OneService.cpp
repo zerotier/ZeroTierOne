@@ -1039,6 +1039,18 @@ public:
 	{
 		if (!n.settings.allowManaged)
 			return false;
+
+		if (n.settings.allowManagedWhitelist.size() > 0) {
+			bool allowed = false;
+			for (InetAddress addr : n.settings.allowManagedWhitelist) {
+				if (addr.containsAddress(target) && addr.netmaskBits() <= target.netmaskBits()) {
+					allowed = true;
+					break;
+				}
+			}
+			if (!allowed) return false;
+		}
+
 		if (target.isDefaultRoute())
 			return n.settings.allowDefault;
 		switch(target.ipScope()) {
@@ -1423,9 +1435,32 @@ public:
 						if (OSUtils::readFile(nlcpath,nlcbuf)) {
 							Dictionary<4096> nc;
 							nc.load(nlcbuf.c_str());
-							n.settings.allowManaged = nc.getB("allowManaged",true);
-							n.settings.allowGlobal = nc.getB("allowGlobal",false);
-							n.settings.allowDefault = nc.getB("allowDefault",false);
+							Buffer<1024> allowManaged;
+							if (nc.get("allowManaged", allowManaged) && allowManaged.size() != 0) {
+								std::string addresses (allowManaged.begin(), allowManaged.size());
+								if (allowManaged.size() <= 5) { // untidy parsing for backward compatibility
+									if (allowManaged[0] == '1' || allowManaged[0] == 't' || allowManaged[0] == 'T') {
+										n.settings.allowManaged = true;
+									} else {
+										n.settings.allowManaged = false;
+									}
+								} else {
+									// this should be a list of IP addresses
+									n.settings.allowManaged = true;
+									size_t pos = 0;
+									while (true) {
+										size_t nextPos = addresses.find(',', pos);
+										std::string address = addresses.substr(pos, (nextPos == std::string::npos ? addresses.size() : nextPos) - pos);
+										n.settings.allowManagedWhitelist.push_back(InetAddress(address));
+										if (nextPos == std::string::npos) break;
+										pos = nextPos + 1;
+									}
+								}
+							} else {
+								n.settings.allowManaged = true;
+							}
+							n.settings.allowGlobal = nc.getB("allowGlobal", false);
+							n.settings.allowDefault = nc.getB("allowDefault", false);
 						}
 					} catch (std::exception &exc) {
 #ifdef __WINDOWS__

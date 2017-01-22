@@ -121,6 +121,15 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetw
 		case ZT_NETWORK_TYPE_PUBLIC:                     ntype = "PUBLIC"; break;
 	}
 
+	std::string allowManaged = (localSettings.allowManaged) ? "true" : "false";
+	if (localSettings.allowManagedWhitelist.size() != 0) {
+		allowManaged = "";
+		for (InetAddress address : localSettings.allowManagedWhitelist) {
+			if (allowManaged.size() != 0) allowManaged += ',';
+			allowManaged += address.toIpString() + "/" + std::to_string(address.netmaskBits());
+		}
+	}
+
 	Utils::snprintf(json,sizeof(json),
 		"%s{\n"
 		"%s\t\"id\": \"%.16llx\",\n"
@@ -158,7 +167,7 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetw
 		prefix,_jsonEnumerate(nc->assignedAddresses,nc->assignedAddressCount).c_str(),
 		prefix,_jsonEnumerate(nc->routes,nc->routeCount).c_str(),
 		prefix,_jsonEscape(portDeviceName).c_str(),
-		prefix,(localSettings.allowManaged) ? "true" : "false",
+		prefix,allowManaged.c_str(),
 		prefix,(localSettings.allowGlobal) ? "true" : "false",
 		prefix,(localSettings.allowDefault) ? "true" : "false",
 		prefix);
