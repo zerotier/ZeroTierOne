@@ -256,34 +256,6 @@ int64_t OSUtils::getFileSize(const char *path)
 	return -1;
 }
 
-std::vector<InetAddress> OSUtils::resolve(const char *name)
-{
-	std::vector<InetAddress> r;
-	std::vector<InetAddress>::iterator i;
-	InetAddress tmp;
-	struct addrinfo *ai = (struct addrinfo *)0,*p;
-	if (!getaddrinfo(name,(const char *)0,(const struct addrinfo *)0,&ai)) {
-		try {
-			p = ai;
-			while (p) {
-				if ((p->ai_addr)&&((p->ai_addr->sa_family == AF_INET)||(p->ai_addr->sa_family == AF_INET6))) {
-					tmp = *(p->ai_addr);
-					for(i=r.begin();i!=r.end();++i) {
-						if (i->ipsEqual(tmp))
-							goto skip_add_inetaddr;
-					}
-					r.push_back(tmp);
-				}
-skip_add_inetaddr:
-				p = p->ai_next;
-			}
-		} catch ( ... ) {}
-		freeaddrinfo(ai);
-	}
-	std::sort(r.begin(),r.end());
-	return r;
-}
-
 bool OSUtils::readFile(const char *path,std::string &buf)
 {
 	char tmp[1024];

@@ -43,7 +43,6 @@
 #include "../osdep/Thread.hpp"
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Http.hpp"
-#include "../osdep/BackgroundResolver.hpp"
 #include "../osdep/PortMapper.hpp"
 #include "../osdep/Binder.hpp"
 #include "../osdep/ManagedRoute.hpp"
@@ -136,9 +135,8 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 // Path under ZT1 home for controller database if controller is enabled
 #define ZT_CONTROLLER_DB_PATH "controller.d"
 
-// TCP fallback relay host -- geo-distributed using Amazon Route53 geo-aware DNS
-#define ZT_TCP_FALLBACK_RELAY "tcp-fallback.zerotier.com"
-#define ZT_TCP_FALLBACK_RELAY_PORT 443
+// TCP fallback relay (run by ZeroTier, Inc. -- this will eventually go away)
+#define ZT_TCP_FALLBACK_RELAY "204.80.128.1/443"
 
 // Frequency at which we re-resolve the TCP fallback relay
 #define ZT_TCP_FALLBACK_RERESOLVE_DELAY 86400000
@@ -263,7 +261,6 @@ public:
 	// begin member variables --------------------------------------------------
 
 	const std::string _homePath;
-	BackgroundResolver _tcpFallbackResolver;
 	EmbeddedNetworkController *_controller;
 	Phy<OneServiceImpl *> _phy;
 	Node *_node;
@@ -368,7 +365,6 @@ public:
 
 	OneServiceImpl(const char *hp,unsigned int port) :
 		_homePath((hp) ? hp : ".")
-		,_tcpFallbackResolver(ZT_TCP_FALLBACK_RELAY)
 		,_controller((EmbeddedNetworkController *)0)
 		,_phy(this,false,true)
 		,_node((Node *)0)
@@ -710,7 +706,6 @@ public:
 			uint64_t clockShouldBe = OSUtils::now();
 			_lastRestart = clockShouldBe;
 			uint64_t lastTapMulticastGroupCheck = 0;
-			uint64_t lastTcpFallbackResolve = 0;
 			uint64_t lastBindRefresh = 0;
 			uint64_t lastUpdateCheck = clockShouldBe;
 			uint64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
@@ -763,11 +758,6 @@ public:
 				if (dl <= now) {
 					_node->processBackgroundTasks(now,&_nextBackgroundTaskDeadline);
 					dl = _nextBackgroundTaskDeadline;
-				}
-
-				if ((now - lastTcpFallbackResolve) >= ZT_TCP_FALLBACK_RERESOLVE_DELAY) {
-					lastTcpFallbackResolve = now;
-					_tcpFallbackResolver.resolveNow();
 				}
 
 				if ((_tcpFallbackTunnel)&&((now - _lastDirectReceiveFromGlobal) < (ZT_TCP_FALLBACK_AFTER / 2)))
@@ -1617,16 +1607,9 @@ public:
 						_tcpFallbackTunnel->writeBuf.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port))),2);
 						_tcpFallbackTunnel->writeBuf.append((const char *)data,len);
 					} else if (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2))) {
-						std::vector<InetAddress> tunnelIps(_tcpFallbackResolver.get());
-						if (tunnelIps.empty()) {
-							if (!_tcpFallbackResolver.running())
-								_tcpFallbackResolver.resolveNow();
-						} else {
-							bool connected = false;
-							InetAddress addr(tunnelIps[(unsigned long)now % tunnelIps.size()]);
-							addr.setPort(ZT_TCP_FALLBACK_RELAY_PORT);
-							_phy.tcpConnect(reinterpret_cast<const struct sockaddr *>(&addr),connected);
-						}
+						bool connected = false;
+						const InetAddress addr(ZT_TCP_FALLBACK_RELAY);
+						_phy.tcpConnect(reinterpret_cast<const struct sockaddr *>(&addr),connected);
 					}
 				}
 				_lastSendToGlobalV4 = now;
