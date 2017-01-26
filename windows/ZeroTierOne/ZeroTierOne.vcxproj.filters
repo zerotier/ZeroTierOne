@@ -165,9 +165,6 @@
     <ClCompile Include="ZeroTierOneService.cpp">
       <Filter>Source Files\windows\ZeroTierOne</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\osdep\BackgroundResolver.cpp">
-      <Filter>Source Files\osdep</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\node\Path.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
@@ -397,9 +394,6 @@
     </ClInclude>
     <ClInclude Include="ZeroTierOneService.h">
       <Filter>Header Files\windows\ZeroTierOne</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\osdep\BackgroundResolver.hpp">
-      <Filter>Header Files\osdep</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\BinarySemaphore.hpp">
       <Filter>Header Files\node</Filter>
