@@ -253,7 +253,7 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\Expression\Blend\.NETFramework\v4.5\Microsoft.Expression.Blend.WPF.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy $(SolutionDir)\copyutil\bin\$(ConfigurationName)\copyutil.exe $(ProjectDir)\$(OutDir)\copyutil.exe</PostBuildEvent>
+    <PostBuildEvent>copy "$(SolutionDir)\copyutil\bin\$(ConfigurationName)\copyutil.exe" "$(ProjectDir)\$(OutDir)\copyutil.exe"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
