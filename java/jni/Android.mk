@@ -10,8 +10,6 @@ LOCAL_LDLIBS := -llog -latomic
 
 # ZeroTierOne SDK source files
 LOCAL_SRC_FILES := \
-	$(ZT1)/ext/lz4/lz4.c \
-	$(ZT1)/ext/http-parser/http_parser.c \
 	$(ZT1)/node/C25519.cpp \
 	$(ZT1)/node/Capability.cpp \
 	$(ZT1)/node/CertificateOfMembership.cpp \
@@ -36,8 +34,7 @@ LOCAL_SRC_FILES := \
 	$(ZT1)/node/Tag.cpp \
 	$(ZT1)/node/Topology.cpp \
 	$(ZT1)/node/Utils.cpp
-#	$(ZT1)/osdep/Http.cpp \
-#	$(ZT1)/osdep/OSUtils.cpp
+
 
 # JNI Files
 LOCAL_SRC_FILES += \

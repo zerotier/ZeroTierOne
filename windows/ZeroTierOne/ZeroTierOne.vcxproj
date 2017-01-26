@@ -66,7 +66,6 @@
     <ClCompile Include="..\..\one.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\..\osdep\BackgroundResolver.cpp" />
     <ClCompile Include="..\..\osdep\Http.cpp" />
     <ClCompile Include="..\..\osdep\ManagedRoute.cpp" />
     <ClCompile Include="..\..\osdep\OSUtils.cpp" />
@@ -142,7 +141,6 @@
     <ClInclude Include="..\..\node\Topology.hpp" />
     <ClInclude Include="..\..\node\Utils.hpp" />
     <ClInclude Include="..\..\node\World.hpp" />
-    <ClInclude Include="..\..\osdep\BackgroundResolver.hpp" />
     <ClInclude Include="..\..\osdep\Binder.hpp" />
     <ClInclude Include="..\..\osdep\Http.hpp" />
     <ClInclude Include="..\..\osdep\ManagedRoute.hpp" />
