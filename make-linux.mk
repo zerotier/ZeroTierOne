@@ -100,6 +100,11 @@ ifeq ($(CC_MACH),aarch64)
 endif
 DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""
 
+# Define this to build a static binary, which is needed to make this runnable on a few ancient Linux distros
+ifeq ($(ZT_STATIC),1)
+	override LDFLAGS+=-static
+endif
+
 all:	one
 
 one:	$(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o osdep/LinuxDropPrivileges.o
