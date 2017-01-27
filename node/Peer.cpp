@@ -366,8 +366,13 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 	}
 
 	RR->node->expectReplyTo(outp.packetId());
-	outp.armor(_key,false); // HELLO is sent in the clear
-	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
+
+	if (atAddress) {
+		outp.armor(_key,false);
+		RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
+	} else {
+		RR->sw->send(outp,false);
+	}
 }
 
 void Peer::attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now)

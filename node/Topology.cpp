@@ -48,13 +48,6 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 	_trustedPathCount(0),
 	_amRoot(false)
 {
-	World defaultPlanet;
-	{
-		Buffer<ZT_DEFAULT_WORLD_LENGTH> wtmp(ZT_DEFAULT_WORLD,ZT_DEFAULT_WORLD_LENGTH);
-		defaultPlanet.deserialize(wtmp,0); // throws on error, which would indicate a bad static variable up top
-	}
-	addWorld(defaultPlanet,false);
-
 	try {
 		World cachedPlanet;
 		std::string buf(RR->node->dataStoreGet("planet"));
@@ -64,6 +57,13 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 		}
 		addWorld(cachedPlanet,false);
 	} catch ( ... ) {}
+
+	World defaultPlanet;
+	{
+		Buffer<ZT_DEFAULT_WORLD_LENGTH> wtmp(ZT_DEFAULT_WORLD,ZT_DEFAULT_WORLD_LENGTH);
+		defaultPlanet.deserialize(wtmp,0); // throws on error, which would indicate a bad static variable up top
+	}
+	addWorld(defaultPlanet,false);
 }
 
 SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
@@ -287,7 +287,7 @@ bool Topology::addWorld(const World &newWorld,bool updateOnly)
 
 	char savePath[64];
 	if (existing->type() == World::TYPE_MOON)
-		Utils::snprintf(savePath,sizeof(savePath),"moons.d/%.16llx",existing->id());
+		Utils::snprintf(savePath,sizeof(savePath),"moons.d/%.16llx.moon",existing->id());
 	else Utils::scopy(savePath,sizeof(savePath),"planet");
 	try {
 		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp;
@@ -297,22 +297,71 @@ bool Topology::addWorld(const World &newWorld,bool updateOnly)
 		RR->node->dataStoreDelete(savePath);
 	}
 
-	_upstreamAddresses.clear();
-	_amRoot = false;
-	for(std::vector<World::Root>::const_iterator i(_planet.roots().begin());i!=_planet.roots().end();++i) {
-		if (i->identity == RR->identity)
-			_amRoot = true;
-		else _upstreamAddresses.push_back(i->identity.address());
-	}
-	for(std::vector<World>::const_iterator m(_moons.begin());m!=_moons.end();++m) {
-		for(std::vector<World::Root>::const_iterator i(m->roots().begin());i!=m->roots().end();++i) {
-			if (i->identity == RR->identity)
-				_amRoot = true;
-			else _upstreamAddresses.push_back(i->identity.address());
+	if (existing->type() == World::TYPE_MOON) {
+		std::vector<Address> cm;
+		for(std::vector<Address>::const_iterator m(_contacingMoons.begin());m!=_contacingMoons.end();++m) {
+			if (m->toInt() != ((existing->id() >> 24) & 0xffffffffffULL))
+				cm.push_back(*m);
 		}
+		_contacingMoons.swap(cm);
 	}
 
-	return false;
+	_memoizeUpstreams();
+
+	return true;
+}
+
+void Topology::addMoon(const uint64_t id)
+{
+	char savePath[64];
+	Utils::snprintf(savePath,sizeof(savePath),"moons.d/%.16llx.moon",id);
+
+	try {
+		std::string moonBin(RR->node->dataStoreGet(savePath));
+		if (moonBin.length() > 1) {
+			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> wtmp(moonBin.data(),(unsigned int)moonBin.length());
+			World w;
+			w.deserialize(wtmp);
+			if (w.type() == World::TYPE_MOON) {
+				addWorld(w,false);
+				return;
+			}
+		}
+	} catch ( ... ) {}
+
+	{
+		const Address a(id >> 24);
+		Mutex::Lock _l(_lock);
+		if (std::find(_contacingMoons.begin(),_contacingMoons.end(),a) == _contacingMoons.end())
+			_contacingMoons.push_back(a);
+	}
+	RR->node->dataStorePut(savePath,"\0",1,false); // persist that we want to be a member
+}
+
+void Topology::removeMoon(const uint64_t id)
+{
+	Mutex::Lock _l(_lock);
+
+	std::vector<World> nm;
+	for(std::vector<World>::const_iterator m(_moons.begin());m!=_moons.end();++m) {
+		if (m->id() != id) {
+			nm.push_back(*m);
+		} else {
+			char savePath[64];
+			Utils::snprintf(savePath,sizeof(savePath),"moons.d/%.16llx.moon",id);
+			RR->node->dataStoreDelete(savePath);
+		}
+	}
+	_moons.swap(nm);
+
+	std::vector<Address> cm;
+	for(std::vector<Address>::const_iterator m(_contacingMoons.begin());m!=_contacingMoons.end();++m) {
+		if (m->toInt() != ((id >> 24) & 0xffffffffffULL))
+			cm.push_back(*m);
+	}
+	_contacingMoons.swap(cm);
+
+	_memoizeUpstreams();
 }
 
 void Topology::clean(uint64_t now)
@@ -349,6 +398,39 @@ Identity Topology::_getIdentity(const Address &zta)
 		} catch ( ... ) {} // ignore invalid IDs
 	}
 	return Identity();
+}
+
+void Topology::_memoizeUpstreams()
+{
+	// assumes _lock is locked
+	_upstreamAddresses.clear();
+	_amRoot = false;
+	for(std::vector<World::Root>::const_iterator i(_planet.roots().begin());i!=_planet.roots().end();++i) {
+		if (i->identity == RR->identity) {
+			_amRoot = true;
+		} else {
+			_upstreamAddresses.push_back(i->identity.address());
+			SharedPtr<Peer> &hp = _peers[i->identity.address()];
+			if (!hp) {
+				hp = new Peer(RR,RR->identity,i->identity);
+				saveIdentity(i->identity);
+			}
+		}
+	}
+	for(std::vector<World>::const_iterator m(_moons.begin());m!=_moons.end();++m) {
+		for(std::vector<World::Root>::const_iterator i(m->roots().begin());i!=m->roots().end();++i) {
+			if (i->identity == RR->identity) {
+				_amRoot = true;
+			} else {
+				_upstreamAddresses.push_back(i->identity.address());
+				SharedPtr<Peer> &hp = _peers[i->identity.address()];
+				if (!hp) {
+					hp = new Peer(RR,RR->identity,i->identity);
+					saveIdentity(i->identity);
+				}
+			}
+		}
+	}
 }
 
 } // namespace ZeroTier

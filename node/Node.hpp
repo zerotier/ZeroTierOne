@@ -95,6 +95,8 @@ public:
 	ZT_ResultCode leave(uint64_t nwid,void **uptr);
 	ZT_ResultCode multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	ZT_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
+	ZT_ResultCode orbit(uint64_t moonWorldId);
+	ZT_ResultCode deorbit(uint64_t moonWorldId);
 	uint64_t address() const;
 	void status(ZT_NodeStatus *status) const;
 	ZT_PeerList *peers() const;

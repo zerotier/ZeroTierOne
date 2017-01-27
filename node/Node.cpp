@@ -168,26 +168,35 @@ public:
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		const std::vector<InetAddress> *upstreamStableEndpoints = _upstreams.get(p->address());
-		if ((upstreamStableEndpoints)&&(upstreamStableEndpoints->size() > 0)) {
+		const std::vector<InetAddress> *const upstreamStableEndpoints = _upstreams.get(p->address());
+		if (upstreamStableEndpoints) {
+			bool contacted = false;
+
 			if (!p->doPingAndKeepalive(_now,AF_INET)) {
 				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)upstreamStableEndpoints->size();++k) {
 					const InetAddress &addr = (*upstreamStableEndpoints)[ptr++ % upstreamStableEndpoints->size()];
 					if (addr.ss_family == AF_INET) {
 						p->sendHELLO(InetAddress(),addr,_now);
+						contacted = true;
 						break;
 					}
 				}
-			}
+			} else contacted = true;
+
 			if (!p->doPingAndKeepalive(_now,AF_INET6)) {
 				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)upstreamStableEndpoints->size();++k) {
 					const InetAddress &addr = (*upstreamStableEndpoints)[ptr++ % upstreamStableEndpoints->size()];
 					if (addr.ss_family == AF_INET6) {
 						p->sendHELLO(InetAddress(),addr,_now);
+						contacted = true;
 						break;
 					}
 				}
-			}
+			} else contacted = true;
+
+			if (!contacted)
+				p->sendHELLO(InetAddress(),InetAddress(),_now);
+
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
 		} else if (p->isActive(_now)) {
 			p->doPingAndKeepalive(_now,-1);
@@ -224,7 +233,7 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 			for(std::vector< SharedPtr<Network> >::const_iterator n(needConfig.begin());n!=needConfig.end();++n)
 				(*n)->requestConfiguration();
 
-			// Run WHOIS on upstreams we don't know about
+			// Attempt to get identity for any unknown upstreams
 			const std::vector<Address> upstreams(RR->topology->upstreamAddresses());
 			for(std::vector<Address>::const_iterator a(upstreams.begin());a!=upstreams.end();++a) {
 				if (!RR->topology->getPeer(*a))
@@ -321,6 +330,18 @@ ZT_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,u
 		nw->multicastUnsubscribe(MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
 		return ZT_RESULT_OK;
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
+}
+
+ZT_ResultCode Node::orbit(uint64_t moonWorldId)
+{
+	RR->topology->addMoon(moonWorldId);
+	return ZT_RESULT_OK;
+}
+
+ZT_ResultCode Node::deorbit(uint64_t moonWorldId)
+{
+	RR->topology->removeMoon(moonWorldId);
+	return ZT_RESULT_OK;
 }
 
 uint64_t Node::address() const
@@ -888,6 +909,24 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint
 		return reinterpret_cast<ZeroTier::Node *>(node)->multicastUnsubscribe(nwid,multicastGroup,multicastAdi);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
+	} catch ( ... ) {
+		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+	}
+}
+
+enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,uint64_t moonWorldId)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->orbit(moonWorldId);
+	} catch ( ... ) {
+		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+	}
+}
+
+ZT_ResultCode ZT_Node_deorbit(ZT_Node *node,uint64_t moonWorldId)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->deorbit(moonWorldId);
 	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}

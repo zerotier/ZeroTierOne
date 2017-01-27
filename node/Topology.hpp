@@ -169,6 +169,11 @@ public:
 	bool isProhibitedEndpoint(const Address &ztaddr,const InetAddress &ipaddr) const;
 
 	/**
+	 * This gets the known stable endpoints for any upstream
+	 *
+	 * It also adds empty entries for any upstreams we are attempting to
+	 * contact.
+	 *
 	 * @param eps Hash table to fill with addresses and their stable endpoints
 	 */
 	inline void getUpstreamStableEndpoints(Hashtable< Address,std::vector<InetAddress> > &eps) const
@@ -190,6 +195,8 @@ public:
 				}
 			}
 		}
+		for(std::vector<Address>::const_iterator m(_contacingMoons.begin());m!=_contacingMoons.end();++m)
+			eps[*m];
 	}
 
 	/**
@@ -198,7 +205,12 @@ public:
 	inline std::vector<Address> upstreamAddresses() const
 	{
 		Mutex::Lock _l(_lock);
-		return _upstreamAddresses;
+		std::vector<Address> u(_upstreamAddresses);
+		for(std::vector<Address>::const_iterator m(_contacingMoons.begin());m!=_contacingMoons.end();++m) {
+			if (std::find(u.begin(),u.end(),*m) == u.end())
+				u.push_back(*m);
+		}
+		return u;
 	}
 
 	/**
@@ -243,6 +255,25 @@ public:
 	 * @return True if it was valid and newer than current (or totally new for moons)
 	 */
 	bool addWorld(const World &newWorld,bool updateOnly);
+
+	/**
+	 * Add a moon
+	 *
+	 * This loads it from moons.d if present, and if not adds it to
+	 * a list of moons that we want to contact. It does not actually
+	 * send anything, though this will happen on the next background
+	 * task loop where pings etc. are checked.
+	 *
+	 * @param id Moon ID
+	 */
+	void addMoon(const uint64_t id);
+
+	/**
+	 * Remove a moon
+	 *
+	 * @param id Moon's world ID
+	 */
+	void removeMoon(const uint64_t id);
 
 	/**
 	 * Clean and flush database
@@ -362,6 +393,7 @@ public:
 
 private:
 	Identity _getIdentity(const Address &zta);
+	void _memoizeUpstreams();
 
 	const RuntimeEnvironment *const RR;
 
@@ -375,8 +407,9 @@ private:
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
 
-	std::vector< Address > _upstreamAddresses; // includes root addresses of both planets and moons
-	bool _amRoot; // am I a root in a planet or moon?
+	std::vector<Address> _contacingMoons;
+	std::vector<Address> _upstreamAddresses;
+	bool _amRoot;
 
 	Mutex _lock;
 };

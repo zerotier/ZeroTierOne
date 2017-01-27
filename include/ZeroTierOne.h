@@ -1780,6 +1780,28 @@ enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node,uint64_t nwid,uint64
 enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 
 /**
+ * Add or update a moon
+ *
+ * Moons are persisted in the data store in moons.d/, so this can persist
+ * across invocations if the contents of moon.d are scanned and orbit is
+ * called for each on startup.
+ *
+ * @param moonWorldId Moon's world ID
+ * @param len Length of moonWorld in bytes
+ * @return Error if moon was invalid or failed to be added
+ */
+enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,uint64_t moonWorldId);
+
+/**
+ * Remove a moon (does nothing if not present)
+ *
+ * @param node Node instance
+ * @param moonWorldId World ID of moon to remove
+ * @return Error if anything bad happened
+ */
+ZT_ResultCode ZT_Node_deorbit(ZT_Node *node,uint64_t moonWorldId);
+
+/**
  * Get this node's 40-bit ZeroTier address
  *
  * @param node Node instance

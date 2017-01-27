@@ -702,6 +702,14 @@ public:
 						_node->join(Utils::hexStrToU64(f->substr(0,dot).c_str()),(void *)0);
 				}
 			}
+			{ // Load existing moons
+				std::vector<std::string> moonsDotD(OSUtils::listDirectory((_homePath + ZT_PATH_SEPARATOR_S "moons.d").c_str()));
+				for(std::vector<std::string>::iterator f(moonsDotD.begin());f!=moonsDotD.end();++f) {
+					std::size_t dot = f->find_last_of('.');
+					if ((dot == 16)&&(f->substr(16) == ".moon"))
+						_node->orbit(Utils::hexStrToU64(f->substr(0,dot).c_str()));
+				}
+			}
 
 			_nextBackgroundTaskDeadline = 0;
 			uint64_t clockShouldBe = OSUtils::now();
