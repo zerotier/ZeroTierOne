@@ -536,12 +536,17 @@ public:
 		 *   <[1] software major version>
 		 *   <[1] software minor version>
 		 *   <[2] software revision>
-		 *   <[8] timestamp (ms since epoch)>
+		 *   <[8] timestamp for determining latench>
 		 *   <[...] binary serialized identity (see Identity)>
 		 *   <[1] destination address type>
 		 *   [<[...] destination address to which packet was sent>]
-		 *   <[8] 64-bit world ID of current world>
-		 *   <[8] 64-bit timestamp of current world>
+		 *   <[8] 64-bit world ID of current planet>
+		 *   <[8] 64-bit timestamp of current planet>
+		 *   <[2] 16-bit number of moons>
+		 *   [<[1] 8-bit type ID of moon>]
+		 *   [<[8] 64-bit world ID of moon>]
+		 *   [<[8] 64-bit timestamp of moon>]
+		 *   [... additional moons ...]
 		 *
 		 * This is the only message that ever must be sent in the clear, since it
 		 * is used to push an identity to a new peer.
@@ -567,7 +572,7 @@ public:
 		 *   <[1] destination address type (for this OK, not copied from HELLO)>
 		 *   [<[...] destination address>]
 		 *   <[2] 16-bit length of world update or 0 if none>
-		 *   [[...] world update]
+		 *   [[...] updates to planets and/or moons]
 		 *
 		 * ERROR has no payload.
 		 */

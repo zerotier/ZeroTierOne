@@ -176,6 +176,8 @@ public:
 			for(std::vector<InetAddress>::const_iterator ep(r->stableEndpoints.begin());ep!=r->stableEndpoints.end();++ep)
 				ep->serialize(b);
 		}
+		if (_type == TYPE_MOON)
+			b.append((uint16_t)0); // no attached dictionary (for future use)
 
 		if (forSign) b.append((uint64_t)0xf7f7f7f7f7f7f7f7ULL);
 	}
@@ -214,6 +216,8 @@ public:
 				p += r.stableEndpoints.back().deserialize(b,p);
 			}
 		}
+		if (_type == TYPE_MOON)
+			p += b.template at<uint16_t>(p) + 2;
 
 		return (p - startAt);
 	}

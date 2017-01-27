@@ -345,6 +345,7 @@ SharedPtr<Path> Peer::getBestPath(uint64_t now,bool includeExpired)
 void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now)
 {
 	Packet outp(_id.address(),RR->identity.address(),Packet::VERB_HELLO);
+
 	outp.append((unsigned char)ZT_PROTO_VERSION);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
@@ -352,8 +353,18 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 	outp.append(now);
 	RR->identity.serialize(outp,false);
 	atAddress.serialize(outp);
+
 	outp.append((uint64_t)RR->topology->planetWorldId());
 	outp.append((uint64_t)RR->topology->planetWorldTimestamp());
+
+	std::vector<World> moons(RR->topology->moons());
+	outp.append((uint16_t)moons.size());
+	for(std::vector<World>::const_iterator m(moons.begin());m!=moons.end();++m) {
+		outp.append((uint8_t)m->type());
+		outp.append((uint64_t)m->id());
+		outp.append((uint64_t)m->timestamp());
+	}
+
 	RR->node->expectReplyTo(outp.packetId());
 	outp.armor(_key,false); // HELLO is sent in the clear
 	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());

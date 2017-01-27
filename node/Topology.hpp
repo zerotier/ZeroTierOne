@@ -202,6 +202,15 @@ public:
 	}
 
 	/**
+	 * @return Current moons
+	 */
+	inline std::vector<World> moons() const
+	{
+		Mutex::Lock _l(_lock);
+		return _moons;
+	}
+
+	/**
 	 * @return Current planet
 	 */
 	inline World planet() const

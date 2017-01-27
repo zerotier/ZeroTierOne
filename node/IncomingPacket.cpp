@@ -216,6 +216,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 		InetAddress externalSurfaceAddress;
 		uint64_t planetWorldId = 0;
 		uint64_t planetWorldTimestamp = 0;
+		std::vector< std::pair<uint64_t,uint64_t> > moonIdsAndTimestamps;
 		{
 			unsigned int ptr = ZT_PROTO_VERB_HELLO_IDX_IDENTITY + id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
 
@@ -227,6 +228,16 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 			if ((ptr + 16) <= size()) {
 				planetWorldId = at<uint64_t>(ptr); ptr += 8;
 				planetWorldTimestamp = at<uint64_t>(ptr);
+			}
+
+			// Get moon IDs and timestamps if present
+			if ((ptr + 2) <= size()) {
+				unsigned int numMoons = at<uint16_t>(ptr); ptr += 2;
+				for(unsigned int i=0;i<numMoons;++i) {
+					if ((World::Type)(*this)[ptr++] == World::TYPE_MOON)
+						moonIdsAndTimestamps.push_back(std::pair<uint64_t,uint64_t>(at<uint64_t>(ptr),at<uint64_t>(ptr + 8)));
+					ptr += 16;
+				}
 			}
 		}
 
@@ -356,15 +367,24 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 			tmpa.serialize(outp);
 		}
 
+		const unsigned int worldUpdateSizeAt = outp.size();
+		outp.addSize(2); // make room for 16-bit size field
 		if ((planetWorldId)&&(RR->topology->planetWorldTimestamp() > planetWorldTimestamp)&&(planetWorldId == RR->topology->planetWorldId())) {
-			World w(RR->topology->planet());
-			const unsigned int sizeAt = outp.size();
-			outp.addSize(2); // make room for 16-bit size field
-			w.serialize(outp,false);
-			outp.setAt<uint16_t>(sizeAt,(uint16_t)(outp.size() - (sizeAt + 2)));
-		} else {
-			outp.append((uint16_t)0); // no planet update needed
+			RR->topology->planet().serialize(outp,false);
 		}
+		if (moonIdsAndTimestamps.size() > 0) {
+			std::vector<World> moons(RR->topology->moons());
+			for(std::vector<World>::const_iterator m(moons.begin());m!=moons.end();++m) {
+				for(std::vector< std::pair<uint64_t,uint64_t> >::const_iterator i(moonIdsAndTimestamps.begin());i!=moonIdsAndTimestamps.end();++i) {
+					if (i->first == m->id()) {
+						if (m->timestamp() > i->second)
+							m->serialize(outp,false);
+						break;
+					}
+				}
+			}
+		}
+		outp.setAt<uint16_t>(worldUpdateSizeAt,(uint16_t)(outp.size() - (worldUpdateSizeAt + 2)));
 
 		outp.armor(peer->key(),true);
 		_path->send(RR,outp.data(),outp.size(),now);
@@ -411,11 +431,11 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				if (ptr < size())
 					ptr += externalSurfaceAddress.deserialize(*this,ptr);
 
-				// Handle planet or moon updates
+				// Handle planet or moon updates if present (older versions don't send this)
 				if ((ptr + 2) <= size()) {
-					World worldUpdate;
 					const unsigned int worldLen = at<uint16_t>(ptr); ptr += 2;
-					if (worldLen > 0) {
+					const unsigned int endOfWorlds = ptr + worldLen;
+					while (ptr < endOfWorlds) {
 						World w;
 						w.deserialize(*this,ptr);
 						RR->topology->addWorld(w,true);
