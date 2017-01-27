@@ -55,7 +55,7 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp(buf.data(),(unsigned int)buf.length());
 			cachedPlanet.deserialize(dswtmp,0);
 		}
-		addWorld(cachedPlanet,false);
+		addWorld(cachedPlanet);
 	} catch ( ... ) {}
 
 	World defaultPlanet;
@@ -63,7 +63,7 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 		Buffer<ZT_DEFAULT_WORLD_LENGTH> wtmp(ZT_DEFAULT_WORLD,ZT_DEFAULT_WORLD_LENGTH);
 		defaultPlanet.deserialize(wtmp,0); // throws on error, which would indicate a bad static variable up top
 	}
-	addWorld(defaultPlanet,false);
+	addWorld(defaultPlanet);
 }
 
 SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
@@ -252,7 +252,7 @@ bool Topology::isProhibitedEndpoint(const Address &ztaddr,const InetAddress &ipa
 	return false;
 }
 
-bool Topology::addWorld(const World &newWorld,bool updateOnly)
+bool Topology::addWorld(const World &newWorld)
 {
 	if ((newWorld.type() != World::TYPE_PLANET)&&(newWorld.type() != World::TYPE_MOON))
 		return false;
@@ -280,9 +280,16 @@ bool Topology::addWorld(const World &newWorld,bool updateOnly)
 		if (existing->shouldBeReplacedBy(newWorld))
 			*existing = newWorld;
 		else return false;
-	} else if ((newWorld.type() == World::TYPE_MOON)&&(!updateOnly)) {
+	} else if ((newWorld.type() == World::TYPE_MOON)&&(std::find(_contactingMoons.begin(),_contactingMoons.end(),Address(newWorld.id() >> 24)) != _contactingMoons.end())) {
 		_moons.push_back(newWorld);
 		existing = &(_moons.back());
+
+		std::vector<Address> cm;
+		for(std::vector<Address>::const_iterator m(_contactingMoons.begin());m!=_contactingMoons.end();++m) {
+			if (m->toInt() != ((existing->id() >> 24) & 0xffffffffffULL))
+				cm.push_back(*m);
+		}
+		_contactingMoons.swap(cm);
 	} else return false;
 
 	char savePath[64];
@@ -297,15 +304,6 @@ bool Topology::addWorld(const World &newWorld,bool updateOnly)
 		RR->node->dataStoreDelete(savePath);
 	}
 
-	if (existing->type() == World::TYPE_MOON) {
-		std::vector<Address> cm;
-		for(std::vector<Address>::const_iterator m(_contacingMoons.begin());m!=_contacingMoons.end();++m) {
-			if (m->toInt() != ((existing->id() >> 24) & 0xffffffffffULL))
-				cm.push_back(*m);
-		}
-		_contacingMoons.swap(cm);
-	}
-
 	_memoizeUpstreams();
 
 	return true;
@@ -313,6 +311,13 @@ bool Topology::addWorld(const World &newWorld,bool updateOnly)
 
 void Topology::addMoon(const uint64_t id)
 {
+	{
+		const Address a(id >> 24);
+		Mutex::Lock _l(_lock);
+		if (std::find(_contactingMoons.begin(),_contactingMoons.end(),a) == _contactingMoons.end())
+			_contactingMoons.push_back(a);
+	}
+
 	char savePath[64];
 	Utils::snprintf(savePath,sizeof(savePath),"moons.d/%.16llx.moon",id);
 
@@ -323,18 +328,12 @@ void Topology::addMoon(const uint64_t id)
 			World w;
 			w.deserialize(wtmp);
 			if (w.type() == World::TYPE_MOON) {
-				addWorld(w,false);
+				addWorld(w);
 				return;
 			}
 		}
 	} catch ( ... ) {}
 
-	{
-		const Address a(id >> 24);
-		Mutex::Lock _l(_lock);
-		if (std::find(_contacingMoons.begin(),_contacingMoons.end(),a) == _contacingMoons.end())
-			_contacingMoons.push_back(a);
-	}
 	RR->node->dataStorePut(savePath,"\0",1,false); // persist that we want to be a member
 }
 
@@ -355,11 +354,11 @@ void Topology::removeMoon(const uint64_t id)
 	_moons.swap(nm);
 
 	std::vector<Address> cm;
-	for(std::vector<Address>::const_iterator m(_contacingMoons.begin());m!=_contacingMoons.end();++m) {
+	for(std::vector<Address>::const_iterator m(_contactingMoons.begin());m!=_contactingMoons.end();++m) {
 		if (m->toInt() != ((id >> 24) & 0xffffffffffULL))
 			cm.push_back(*m);
 	}
-	_contacingMoons.swap(cm);
+	_contactingMoons.swap(cm);
 
 	_memoizeUpstreams();
 }

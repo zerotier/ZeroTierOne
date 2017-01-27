@@ -220,7 +220,7 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 		try {
 			_lastPingCheck = now;
 
-			// Get relays and networks that need config without leaving the mutex locked
+			// Get networks that need config without leaving mutex locked
 			std::vector< SharedPtr<Network> > needConfig;
 			{
 				Mutex::Lock _l(_networks_m);

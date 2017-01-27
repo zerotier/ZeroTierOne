@@ -195,7 +195,7 @@ public:
 				}
 			}
 		}
-		for(std::vector<Address>::const_iterator m(_contacingMoons.begin());m!=_contacingMoons.end();++m)
+		for(std::vector<Address>::const_iterator m(_contactingMoons.begin());m!=_contactingMoons.end();++m)
 			eps[*m];
 	}
 
@@ -206,7 +206,7 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 		std::vector<Address> u(_upstreamAddresses);
-		for(std::vector<Address>::const_iterator m(_contacingMoons.begin());m!=_contacingMoons.end();++m) {
+		for(std::vector<Address>::const_iterator m(_contactingMoons.begin());m!=_contactingMoons.end();++m) {
 			if (std::find(u.begin(),u.end(),*m) == u.end())
 				u.push_back(*m);
 		}
@@ -251,10 +251,9 @@ public:
 	 * Validate new world and update if newer and signature is okay
 	 *
 	 * @param newWorld A new or updated planet or moon to learn
-	 * @param updateOnly If true only update currently known worlds
 	 * @return True if it was valid and newer than current (or totally new for moons)
 	 */
-	bool addWorld(const World &newWorld,bool updateOnly);
+	bool addWorld(const World &newWorld);
 
 	/**
 	 * Add a moon
@@ -407,7 +406,7 @@ private:
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
 
-	std::vector<Address> _contacingMoons;
+	std::vector<Address> _contactingMoons;
 	std::vector<Address> _upstreamAddresses;
 	bool _amRoot;
 
