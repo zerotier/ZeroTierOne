@@ -37,9 +37,6 @@
 
 namespace ZeroTier {
 
-// Used to send varying values for NAT keepalive
-static uint32_t _natKeepaliveBuf = 0;
-
 Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
 	_lastReceive(0),
 	_lastNontrivialReceive(0),
@@ -355,8 +352,8 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 	outp.append(now);
 	RR->identity.serialize(outp,false);
 	atAddress.serialize(outp);
-	outp.append((uint64_t)RR->topology->worldId());
-	outp.append((uint64_t)RR->topology->worldTimestamp());
+	outp.append((uint64_t)RR->topology->planetWorldId());
+	outp.append((uint64_t)RR->topology->planetWorldTimestamp());
 	RR->node->expectReplyTo(outp.packetId());
 	outp.armor(_key,false); // HELLO is sent in the clear
 	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
@@ -401,12 +398,9 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 	}
 
 	if (bestp >= 0) {
-		if ((now - _paths[bestp].lastReceive) >= ZT_PEER_PING_PERIOD) {
+		if ( ((now - _paths[bestp].lastReceive) >= ZT_PEER_PING_PERIOD) || (_paths[bestp].path->needsHeartbeat(now)) ) {
 			attemptToContactAt(_paths[bestp].path->localAddress(),_paths[bestp].path->address(),now);
 			_paths[bestp].path->sent(now);
-		} else if (_paths[bestp].path->needsHeartbeat(now)) {
-			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
-			_paths[bestp].path->send(RR,&_natKeepaliveBuf,sizeof(_natKeepaliveBuf),now);
 		}
 		return true;
 	} else {

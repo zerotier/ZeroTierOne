@@ -214,8 +214,8 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 
 		Identity id;
 		InetAddress externalSurfaceAddress;
-		uint64_t worldId = ZT_WORLD_ID_NULL;
-		uint64_t worldTimestamp = 0;
+		uint64_t planetWorldId = 0;
+		uint64_t planetWorldTimestamp = 0;
 		{
 			unsigned int ptr = ZT_PROTO_VERB_HELLO_IDX_IDENTITY + id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
 
@@ -223,10 +223,10 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 			if (ptr < size())
 				ptr += externalSurfaceAddress.deserialize(*this,ptr);
 
-			// Get world ID and world timestamp if present (was not in old versions)
+			// Get primary planet world ID and world timestamp if present
 			if ((ptr + 16) <= size()) {
-				worldId = at<uint64_t>(ptr); ptr += 8;
-				worldTimestamp = at<uint64_t>(ptr);
+				planetWorldId = at<uint64_t>(ptr); ptr += 8;
+				planetWorldTimestamp = at<uint64_t>(ptr);
 			}
 		}
 
@@ -356,14 +356,14 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 			tmpa.serialize(outp);
 		}
 
-		if ((worldId != ZT_WORLD_ID_NULL)&&(RR->topology->worldTimestamp() > worldTimestamp)&&(worldId == RR->topology->worldId())) {
-			World w(RR->topology->world());
+		if ((planetWorldId)&&(RR->topology->planetWorldTimestamp() > planetWorldTimestamp)&&(planetWorldId == RR->topology->planetWorldId())) {
+			World w(RR->topology->planet());
 			const unsigned int sizeAt = outp.size();
 			outp.addSize(2); // make room for 16-bit size field
 			w.serialize(outp,false);
 			outp.setAt<uint16_t>(sizeAt,(uint16_t)(outp.size() - (sizeAt + 2)));
 		} else {
-			outp.append((uint16_t)0); // no world update needed
+			outp.append((uint16_t)0); // no planet update needed
 		}
 
 		outp.armor(peer->key(),true);
@@ -411,14 +411,14 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				if (ptr < size())
 					ptr += externalSurfaceAddress.deserialize(*this,ptr);
 
-				// Handle world updates from root servers if present (was not on old versions)
-				if (((ptr + 2) <= size())&&(RR->topology->isRoot(peer->identity()))) {
+				// Handle planet or moon updates
+				if ((ptr + 2) <= size()) {
 					World worldUpdate;
 					const unsigned int worldLen = at<uint16_t>(ptr); ptr += 2;
 					if (worldLen > 0) {
 						World w;
 						w.deserialize(*this,ptr);
-						RR->topology->worldUpdateIfValid(w);
+						RR->topology->addWorld(w,true);
 					}
 				}
 

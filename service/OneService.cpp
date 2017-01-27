@@ -422,7 +422,7 @@ public:
 		try {
 			std::string authToken;
 			{
-				std::string authTokenPath(_homePath + ZT_PATH_SEPARATOR_S + "authtoken.secret");
+				std::string authTokenPath(_homePath + ZT_PATH_SEPARATOR_S "authtoken.secret");
 				if (!OSUtils::readFile(authTokenPath.c_str(),authToken)) {
 					unsigned char foo[24];
 					Utils::getSecureRandom(foo,sizeof(foo));
@@ -442,7 +442,8 @@ public:
 			authToken = _trimString(authToken);
 
 			// Clean up any legacy files if present
-			OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S + "peers.save").c_str());
+			OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S "peers.save").c_str());
+			OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S "world").c_str());
 
 			{
 				struct ZT_Node_Callbacks cb;
@@ -465,7 +466,7 @@ public:
 				unsigned int trustedPathCount = 0;
 
 				// Old style "trustedpaths" flat file -- will eventually go away
-				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S + "trustedpaths").c_str(),"r");
+				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S "trustedpaths").c_str(),"r");
 				if (trustpaths) {
 					char buf[1024];
 					while ((fgets(buf,sizeof(buf),trustpaths))&&(trustedPathCount < ZT_MAX_TRUSTED_PATHS)) {
@@ -493,7 +494,7 @@ public:
 				// Read local config file
 				Mutex::Lock _l2(_localConfig_m);
 				std::string lcbuf;
-				if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S + "local.conf").c_str(),lcbuf)) {
+				if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S "local.conf").c_str(),lcbuf)) {
 					try {
 						_localConfig = OSUtils::jsonParse(lcbuf);
 						if (!_localConfig.is_object()) {
@@ -581,7 +582,7 @@ public:
 			// Write file containing primary port to be read by CLIs, etc.
 			char portstr[64];
 			Utils::snprintf(portstr,sizeof(portstr),"%u",_ports[0]);
-			OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "zerotier-one.port").c_str(),std::string(portstr));
+			OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S "zerotier-one.port").c_str(),std::string(portstr));
 
 			// Attempt to bind to a secondary port chosen from our ZeroTier address.
 			// This exists because there are buggy NATs out there that fail if more
@@ -641,8 +642,8 @@ public:
 			_node->setNetconfMaster((void *)_controller);
 
 #ifdef ZT_ENABLE_CLUSTER
-			if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S + "cluster").c_str())) {
-				_clusterDefinition = new ClusterDefinition(_node->address(),(_homePath + ZT_PATH_SEPARATOR_S + "cluster").c_str());
+			if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S "cluster").c_str())) {
+				_clusterDefinition = new ClusterDefinition(_node->address(),(_homePath + ZT_PATH_SEPARATOR_S "cluster").c_str());
 				if (_clusterDefinition->size() > 0) {
 					std::vector<ClusterDefinition::MemberDefinition> members(_clusterDefinition->members());
 					for(std::vector<ClusterDefinition::MemberDefinition>::iterator m(members.begin());m!=members.end();++m) {
@@ -689,12 +690,12 @@ public:
 			}
 #endif
 
-			_controlPlane = new ControlPlane(this,_node,(_homePath + ZT_PATH_SEPARATOR_S + "ui").c_str());
+			_controlPlane = new ControlPlane(this,_node,(_homePath + ZT_PATH_SEPARATOR_S "ui").c_str());
 			_controlPlane->addAuthToken(authToken.c_str());
 			_controlPlane->setController(_controller);
 
 			{	// Remember networks from previous session
-				std::vector<std::string> networksDotD(OSUtils::listDirectory((_homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str()));
+				std::vector<std::string> networksDotD(OSUtils::listDirectory((_homePath + ZT_PATH_SEPARATOR_S "networks.d").c_str()));
 				for(std::vector<std::string>::iterator f(networksDotD.begin());f!=networksDotD.end();++f) {
 					std::size_t dot = f->find_last_of('.');
 					if ((dot == 16)&&(f->substr(16) == ".conf"))
@@ -919,9 +920,6 @@ public:
 				if ((nstr.length() == ZT_ADDRESS_LENGTH_HEX)&&(v.value().is_object())) {
 					const Address ztaddr(nstr.c_str());
 					if (ztaddr) {
-						const std::string rstr(OSUtils::jsonString(v.value()["role"],""));
-						_node->setRole(ztaddr.toInt(),((rstr == "upstream")||(rstr == "UPSTREAM")) ? ZT_PEER_ROLE_UPSTREAM : ZT_PEER_ROLE_LEAF);
-
 						const uint64_t ztaddr2 = ztaddr.toInt();
 						std::vector<InetAddress> &v4h = _v4Hints[ztaddr2];
 						std::vector<InetAddress> &v6h = _v6Hints[ztaddr2];

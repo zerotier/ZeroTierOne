@@ -53,11 +53,12 @@ using namespace ZeroTier;
 class WorldMaker : public World
 {
 public:
-	static inline World make(uint64_t id,uint64_t ts,const C25519::Public &sk,const std::vector<World::Root> &roots,const C25519::Pair &signWith)
+	static inline World make(World::Type t,uint64_t id,uint64_t ts,const C25519::Public &sk,const std::vector<World::Root> &roots,const C25519::Pair &signWith)
 	{
 		WorldMaker w;
 		w._id = id;
 		w._ts = ts;
+		w._type = t;
 		w._updateSigningKey = sk;
 		w._roots = roots;
 
@@ -139,7 +140,7 @@ int main(int argc,char **argv)
 
 	fprintf(stderr,"INFO: generating and signing id==%llu ts==%llu"ZT_EOL_S,(unsigned long long)id,(unsigned long long)ts);
 
-	World nw = WorldMaker::make(id,ts,currentKP.pub,roots,previousKP);
+	World nw = WorldMaker::make(World::TYPE_PLANET,id,ts,currentKP.pub,roots,previousKP);
 
 	Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> outtmp;
 	nw.serialize(outtmp,false);

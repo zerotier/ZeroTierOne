@@ -160,75 +160,48 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 class _PingPeersThatNeedPing
 {
 public:
-	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,const std::vector<Address> &upstreams,uint64_t now) :
+	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) :
 		lastReceiveFromUpstream(0),
 		RR(renv),
-		_upstreams(upstreams),
-		_now(now),
-		_world(RR->topology->world())
+		_now(now)
 	{
+		RR->topology->getUpstreamStableEndpoints(_upstreams);
 	}
 
 	uint64_t lastReceiveFromUpstream; // tracks last time we got a packet from an 'upstream' peer like a root or a relay
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		if (std::find(_upstreams.begin(),_upstreams.end(),p->address()) != _upstreams.end()) {
-			InetAddress stableEndpoint4,stableEndpoint6;
-			for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
-				if (r->identity == p->identity()) {
-					for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)r->stableEndpoints.size();++k) {
-						const InetAddress &addr = r->stableEndpoints[ptr++ % r->stableEndpoints.size()];
-						if (!stableEndpoint4) {
-							if (addr.ss_family == AF_INET)
-								stableEndpoint4 = addr;
-						}
-						if (!stableEndpoint6) {
-							if (addr.ss_family == AF_INET6)
-								stableEndpoint6 = addr;
-						}
+		const std::vector<InetAddress> *upstreamStableEndpoints = _upstreams.get(p->address());
+		if ((upstreamStableEndpoints)&&(upstreamStableEndpoints->size() > 0)) {
+			if (!p->doPingAndKeepalive(_now,AF_INET)) {
+				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)upstreamStableEndpoints->size();++k) {
+					const InetAddress &addr = (*upstreamStableEndpoints)[ptr++ % upstreamStableEndpoints->size()];
+					if (addr.ss_family == AF_INET) {
+						p->sendHELLO(InetAddress(),addr,_now);
+						break;
 					}
-					break;
 				}
 			}
-
-			// We keep connections to upstream peers alive forever.
-			bool needToContactIndirect = true;
-			if (p->doPingAndKeepalive(_now,AF_INET)) {
-				needToContactIndirect = false;
-			} else {
-				if (stableEndpoint4) {
-					needToContactIndirect = false;
-					p->sendHELLO(InetAddress(),stableEndpoint4,_now);
+			if (!p->doPingAndKeepalive(_now,AF_INET6)) {
+				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)upstreamStableEndpoints->size();++k) {
+					const InetAddress &addr = (*upstreamStableEndpoints)[ptr++ % upstreamStableEndpoints->size()];
+					if (addr.ss_family == AF_INET6) {
+						p->sendHELLO(InetAddress(),addr,_now);
+						break;
+					}
 				}
 			}
-			if (p->doPingAndKeepalive(_now,AF_INET6)) {
-				needToContactIndirect = false;
-			} else {
-				if (stableEndpoint6) {
-					needToContactIndirect = false;
-					p->sendHELLO(InetAddress(),stableEndpoint6,_now);
-				}
-			}
-
-			// If we don't have a direct path or a static endpoint, send something indirectly to find one.
-			if (needToContactIndirect) {
-				Packet outp(p->address(),RR->identity.address(),Packet::VERB_NOP);
-				RR->sw->send(outp,true);
-			}
-
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
 		} else if (p->isActive(_now)) {
-			// Normal nodes get their preferred link kept alive if the node has generated frame traffic recently
 			p->doPingAndKeepalive(_now,-1);
 		}
 	}
 
 private:
 	const RuntimeEnvironment *RR;
-	const std::vector<Address> &_upstreams;
 	uint64_t _now;
-	World _world;
+	Hashtable< Address,std::vector<InetAddress> > _upstreams;
 };
 
 ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline)
@@ -263,7 +236,7 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 			}
 
 			// Do pings and keepalives
-			_PingPeersThatNeedPing pfunc(RR,upstreams,now);
+			_PingPeersThatNeedPing pfunc(RR,now);
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
 
 			// Update online status, post status change as event
@@ -368,8 +341,8 @@ uint64_t Node::address() const
 void Node::status(ZT_NodeStatus *status) const
 {
 	status->address = RR->identity.address().toInt();
-	status->worldId = RR->topology->worldId();
-	status->worldTimestamp = RR->topology->worldTimestamp();
+	status->worldId = RR->topology->planetWorldId();
+	status->worldTimestamp = RR->topology->planetWorldTimestamp();
 	status->publicIdentity = RR->publicIdentityStr.c_str();
 	status->secretIdentity = RR->secretIdentityStr.c_str();
 	status->relayPolicy = _relayPolicy;
@@ -401,7 +374,7 @@ ZT_PeerList *Node::peers() const
 			p->versionRev = -1;
 		}
 		p->latency = pi->second->latency();
-		p->role = RR->topology->isRoot(pi->second->identity()) ? ZT_PEER_ROLE_ROOT : (RR->topology->isUpstream(pi->second->identity()) ? ZT_PEER_ROLE_UPSTREAM : ZT_PEER_ROLE_LEAF);
+		p->role = RR->topology->role(pi->second->identity().address());
 
 		std::vector< std::pair< SharedPtr<Path>,bool > > paths(pi->second->paths(_now));
 		SharedPtr<Path> bestp(pi->second->getBestPath(_now,false));
@@ -486,11 +459,6 @@ int Node::sendUserMessage(uint64_t dest,uint64_t typeId,const void *data,unsigne
 		}
 	} catch ( ... ) {}
 	return 0;
-}
-
-void Node::setRole(uint64_t ztAddress,ZT_PeerRole role)
-{
-	RR->topology->setUpstream(Address(ztAddress),(role == ZT_PEER_ROLE_UPSTREAM));
 }
 
 void Node::setNetconfMaster(void *networkControllerInstance)
@@ -1014,13 +982,6 @@ int ZT_Node_sendUserMessage(ZT_Node *node,uint64_t dest,uint64_t typeId,const vo
 	} catch ( ... ) {
 		return 0;
 	}
-}
-
-void ZT_Node_setRole(ZT_Node *node,uint64_t ztAddress,ZT_PeerRole role)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->setRole(ztAddress,role);
-	} catch ( ... ) {}
 }
 
 void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkControllerInstance)

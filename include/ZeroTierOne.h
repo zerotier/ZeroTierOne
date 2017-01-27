@@ -848,8 +848,8 @@ enum ZT_VirtualNetworkConfigOperation
 enum ZT_PeerRole
 {
 	ZT_PEER_ROLE_LEAF = 0,     // ordinary node
-	ZT_PEER_ROLE_UPSTREAM = 1, // upstream node
-	ZT_PEER_ROLE_ROOT = 2      // global root
+	ZT_PEER_ROLE_UPSTREAM = 1, // moon root
+	ZT_PEER_ROLE_ROOT = 2      // planetary root
 };
 
 /**
@@ -1902,17 +1902,6 @@ void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node);
  * @return Boolean: non-zero on success, zero on failure
  */
 int ZT_Node_sendUserMessage(ZT_Node *node,uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
-
-/**
- * Set peer role
- *
- * Right now this can only be used to set a peer to either LEAF or
- * UPSTREAM, since roots are fixed and defined by the World.
- *
- * @param ztAddress ZeroTier address (least significant 40 bits)
- * @param role New peer role (LEAF or UPSTREAM)
- */
-void ZT_Node_setRole(ZT_Node *node,uint64_t ztAddress,enum ZT_PeerRole role);
 
 /**
  * Set a network configuration master instance for this node

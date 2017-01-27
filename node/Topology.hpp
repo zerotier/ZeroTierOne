@@ -50,7 +50,6 @@ class Topology
 {
 public:
 	Topology(const RuntimeEnvironment *renv);
-	~Topology();
 
 	/**
 	 * Add a peer to database
@@ -143,25 +142,15 @@ public:
 
 	/**
 	 * @param id Identity to check
-	 * @return True if this is a designated root server in this world
-	 */
-	bool isRoot(const Identity &id) const;
-
-	/**
-	 * @param id Identity to check
 	 * @return True if this is a root server or a network preferred relay from one of our networks
 	 */
 	bool isUpstream(const Identity &id) const;
 
 	/**
-	 * Set whether or not an address is upstream
-	 *
-	 * If the address is a root this does nothing, since roots are fixed.
-	 *
-	 * @param a Target address
-	 * @param upstream New upstream status
+	 * @param ztaddr ZeroTier address
+	 * @return Peer role for this device
 	 */
-	void setUpstream(const Address &a,bool upstream);
+	ZT_PeerRole role(const Address &ztaddr) const;
 
 	/**
 	 * Check for prohibited endpoints
@@ -180,6 +169,30 @@ public:
 	bool isProhibitedEndpoint(const Address &ztaddr,const InetAddress &ipaddr) const;
 
 	/**
+	 * @param eps Hash table to fill with addresses and their stable endpoints
+	 */
+	inline void getUpstreamStableEndpoints(Hashtable< Address,std::vector<InetAddress> > &eps) const
+	{
+		Mutex::Lock _l(_lock);
+		for(std::vector<World::Root>::const_iterator i(_planet.roots().begin());i!=_planet.roots().end();++i) {
+			std::vector<InetAddress> &ips = eps[i->identity.address()];
+			for(std::vector<InetAddress>::const_iterator j(i->stableEndpoints.begin());j!=i->stableEndpoints.end();++j) {
+				if (std::find(ips.begin(),ips.end(),*j) == ips.end())
+					ips.push_back(*j);
+			}
+		}
+		for(std::vector<World>::const_iterator m(_moons.begin());m!=_moons.end();++m) {
+			for(std::vector<World::Root>::const_iterator i(m->roots().begin());i!=m->roots().end();++i) {
+				std::vector<InetAddress> &ips = eps[i->identity.address()];
+				for(std::vector<InetAddress>::const_iterator j(i->stableEndpoints.begin());j!=i->stableEndpoints.end();++j) {
+					if (std::find(ips.begin(),ips.end(),*j) == ips.end())
+						ips.push_back(*j);
+				}
+			}
+		}
+	}
+
+	/**
 	 * @return Vector of active upstream addresses (including roots)
 	 */
 	inline std::vector<Address> upstreamAddresses() const
@@ -189,37 +202,38 @@ public:
 	}
 
 	/**
-	 * @return Current World (copy)
+	 * @return Current planet
 	 */
-	inline World world() const
+	inline World planet() const
 	{
 		Mutex::Lock _l(_lock);
-		return _world;
+		return _planet;
 	}
 
 	/**
-	 * @return Current world ID
+	 * @return Current planet's world ID
 	 */
-	inline uint64_t worldId() const
+	inline uint64_t planetWorldId() const
 	{
-		return _world.id(); // safe to read without lock, and used from within eachPeer() so don't lock
+		return _planet.id(); // safe to read without lock, and used from within eachPeer() so don't lock
 	}
 
 	/**
-	 * @return Current world timestamp
+	 * @return Current planet's world timestamp
 	 */
-	inline uint64_t worldTimestamp() const
+	inline uint64_t planetWorldTimestamp() const
 	{
-		return _world.timestamp(); // safe to read without lock, and used from within eachPeer() so don't lock
+		return _planet.timestamp(); // safe to read without lock, and used from within eachPeer() so don't lock
 	}
 
 	/**
 	 * Validate new world and update if newer and signature is okay
 	 *
-	 * @param newWorld Potential new world definition revision
-	 * @return True if an update actually occurred
+	 * @param newWorld A new or updated planet or moon to learn
+	 * @param updateOnly If true only update currently known worlds
+	 * @return True if it was valid and newer than current (or totally new for moons)
 	 */
-	bool worldUpdateIfValid(const World &newWorld);
+	bool addWorld(const World &newWorld,bool updateOnly);
 
 	/**
 	 * Clean and flush database
@@ -284,9 +298,9 @@ public:
 	}
 
 	/**
-	 * @return True if I am a root server in the current World
+	 * @return True if I am a root server in a planet or moon
 	 */
-	inline bool amRoot() const throw() { return _amRoot; }
+	inline bool amRoot() const { return _amRoot; }
 
 	/**
 	 * Get the outbound trusted path ID for a physical address, or 0 if none
@@ -339,7 +353,6 @@ public:
 
 private:
 	Identity _getIdentity(const Address &zta);
-	void _setWorld(const World &newWorld);
 
 	const RuntimeEnvironment *const RR;
 
@@ -347,14 +360,14 @@ private:
 	InetAddress _trustedPathNetworks[ZT_MAX_TRUSTED_PATHS];
 	unsigned int _trustedPathCount;
 
-	World _world;
+	World _planet;
+	std::vector< World > _moons;
 
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
 
-	std::vector< Address > _upstreamAddresses; // includes roots
-	std::vector< Address > _rootAddresses; // only roots
-	bool _amRoot; // am I a root?
+	std::vector< Address > _upstreamAddresses; // includes root addresses of both planets and moons
+	bool _amRoot; // am I a root in a planet or moon?
 
 	Mutex _lock;
 };

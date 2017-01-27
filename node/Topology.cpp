@@ -48,33 +48,22 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 	_trustedPathCount(0),
 	_amRoot(false)
 {
-	// Get cached world if present
-	std::string dsWorld(RR->node->dataStoreGet("world"));
-	World cachedWorld;
-	if (dsWorld.length() > 0) {
-		try {
-			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp(dsWorld.data(),(unsigned int)dsWorld.length());
-			cachedWorld.deserialize(dswtmp,0);
-		} catch ( ... ) {
-			cachedWorld = World(); // clear if cached world is invalid
-		}
-	}
-
-	// Use default or cached world depending on which is shinier
-	World defaultWorld;
+	World defaultPlanet;
 	{
 		Buffer<ZT_DEFAULT_WORLD_LENGTH> wtmp(ZT_DEFAULT_WORLD,ZT_DEFAULT_WORLD_LENGTH);
-		defaultWorld.deserialize(wtmp,0); // throws on error, which would indicate a bad static variable up top
+		defaultPlanet.deserialize(wtmp,0); // throws on error, which would indicate a bad static variable up top
 	}
-	if (cachedWorld.shouldBeReplacedBy(defaultWorld,false)) {
-		_setWorld(defaultWorld);
-		if (dsWorld.length() > 0)
-			RR->node->dataStoreDelete("world");
-	} else _setWorld(cachedWorld);
-}
+	addWorld(defaultPlanet,false);
 
-Topology::~Topology()
-{
+	try {
+		World cachedPlanet;
+		std::string buf(RR->node->dataStoreGet("planet"));
+		if (buf.length() > 0) {
+			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp(buf.data(),(unsigned int)buf.length());
+			cachedPlanet.deserialize(dswtmp,0);
+		}
+		addWorld(cachedPlanet,false);
+	} catch ( ... ) {}
 }
 
 SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
@@ -161,15 +150,14 @@ SharedPtr<Peer> Topology::getUpstreamPeer(const Address *avoid,unsigned int avoi
 	Mutex::Lock _l(_lock);
 
 	if (_amRoot) {
-		/* If I am a root server, the "best" root server is the one whose address
-		 * is numerically greater than mine (with wrap at top of list). This
-		 * causes packets searching for a route to pretty much literally
-		 * circumnavigate the globe rather than bouncing between just two. */
+		/* If I am a root, pick another root that isn't mine and that
+		 * has a numerically greater ID. This causes packets to roam
+		 * around the top rather than bouncing between just two. */
 
-		for(unsigned long p=0;p<_rootAddresses.size();++p) {
-			if (_rootAddresses[p] == RR->identity.address()) {
-				for(unsigned long q=1;q<_rootAddresses.size();++q) {
-					const SharedPtr<Peer> *const nextsn = _peers.get(_rootAddresses[(p + q) % _rootAddresses.size()]);
+		for(unsigned long p=0;p<_upstreamAddresses.size();++p) {
+			if (_upstreamAddresses[p] == RR->identity.address()) {
+				for(unsigned long q=1;q<_upstreamAddresses.size();++q) {
+					const SharedPtr<Peer> *const nextsn = _peers.get(_upstreamAddresses[(p + q) % _upstreamAddresses.size()]);
 					if ((nextsn)&&((*nextsn)->hasActiveDirectPath(now)))
 						return *nextsn;
 				}
@@ -178,8 +166,7 @@ SharedPtr<Peer> Topology::getUpstreamPeer(const Address *avoid,unsigned int avoi
 		}
 
 	} else {
-		/* Otherwise pick the best upstream from among roots and any other
-		 * designated upstreams that we trust. */
+		/* Otherwise pick the bestest looking upstream */
 
 		unsigned int bestQualityOverall = ~((unsigned int)0);
 		unsigned int bestQualityNotAvoid = ~((unsigned int)0);
@@ -219,60 +206,44 @@ SharedPtr<Peer> Topology::getUpstreamPeer(const Address *avoid,unsigned int avoi
 	return SharedPtr<Peer>();
 }
 
-bool Topology::isRoot(const Identity &id) const
-{
-	Mutex::Lock _l(_lock);
-	return (std::find(_rootAddresses.begin(),_rootAddresses.end(),id.address()) != _rootAddresses.end());
-}
-
 bool Topology::isUpstream(const Identity &id) const
 {
 	Mutex::Lock _l(_lock);
 	return (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),id.address()) != _upstreamAddresses.end());
 }
 
-void Topology::setUpstream(const Address &a,bool upstream)
+ZT_PeerRole Topology::role(const Address &ztaddr) const
 {
-	bool needWhois = false;
-	{
-		Mutex::Lock _l(_lock);
-		if (std::find(_rootAddresses.begin(),_rootAddresses.end(),a) == _rootAddresses.end()) {
-			if (upstream) {
-				if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),a) == _upstreamAddresses.end()) {
-					_upstreamAddresses.push_back(a);
-					const SharedPtr<Peer> *p = _peers.get(a);
-					if (!p) {
-						const Identity id(_getIdentity(a));
-						if (id) {
-							_peers.set(a,SharedPtr<Peer>(new Peer(RR,RR->identity,id)));
-						} else {
-							needWhois = true; // need to do this later due to _lock
-						}
-					}
-				}
-			} else {
-				std::vector<Address> ua;
-				for(std::vector<Address>::iterator i(_upstreamAddresses.begin());i!=_upstreamAddresses.end();++i) {
-					if (a != *i)
-						ua.push_back(*i);
-				}
-				_upstreamAddresses.swap(ua);
-			}
+	Mutex::Lock _l(_lock);
+	if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),ztaddr) != _upstreamAddresses.end()) {
+		for(std::vector<World::Root>::const_iterator i(_planet.roots().begin());i!=_planet.roots().end();++i) {
+			if (i->identity.address() == ztaddr)
+				return ZT_PEER_ROLE_ROOT;
 		}
+		return ZT_PEER_ROLE_UPSTREAM;
 	}
-	if (needWhois)
-		RR->sw->requestWhois(a);
+	return ZT_PEER_ROLE_LEAF;
 }
 
 bool Topology::isProhibitedEndpoint(const Address &ztaddr,const InetAddress &ipaddr) const
 {
 	Mutex::Lock _l(_lock);
 
-	if (std::find(_rootAddresses.begin(),_rootAddresses.end(),ztaddr) != _rootAddresses.end()) {
-		for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
+	// For roots the only permitted addresses are those defined. This adds just a little
+	// bit of extra security against spoofing, replaying, etc.
+	if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),ztaddr) != _upstreamAddresses.end()) {
+		for(std::vector<World::Root>::const_iterator r(_planet.roots().begin());r!=_planet.roots().end();++r) {
 			for(std::vector<InetAddress>::const_iterator e(r->stableEndpoints.begin());e!=r->stableEndpoints.end();++e) {
 				if (ipaddr.ipsEqual(*e))
 					return false;
+			}
+		}
+		for(std::vector<World>::const_iterator m(_moons.begin());m!=_moons.end();++m) {
+			for(std::vector<World::Root>::const_iterator r(m->roots().begin());r!=m->roots().end();++r) {
+				for(std::vector<InetAddress>::const_iterator e(r->stableEndpoints.begin());e!=r->stableEndpoints.end();++e) {
+					if (ipaddr.ipsEqual(*e))
+						return false;
+				}
 			}
 		}
 		return true;
@@ -281,20 +252,66 @@ bool Topology::isProhibitedEndpoint(const Address &ztaddr,const InetAddress &ipa
 	return false;
 }
 
-bool Topology::worldUpdateIfValid(const World &newWorld)
+bool Topology::addWorld(const World &newWorld,bool updateOnly)
 {
+	if ((newWorld.type() != World::TYPE_PLANET)&&(newWorld.type() != World::TYPE_MOON))
+		return false;
+
 	Mutex::Lock _l(_lock);
-	if (_world.shouldBeReplacedBy(newWorld,true)) {
-		_setWorld(newWorld);
-		try {
-			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp;
-			newWorld.serialize(dswtmp,false);
-			RR->node->dataStorePut("world",dswtmp.data(),dswtmp.size(),false);
-		} catch ( ... ) {
-			RR->node->dataStoreDelete("world");
-		}
-		return true;
+
+	World *existing = (World *)0;
+	switch(newWorld.type()) {
+		case World::TYPE_PLANET:
+			existing = &_planet;
+			break;
+		case World::TYPE_MOON:
+			for(std::vector< World >::iterator m(_moons.begin());m!=_moons.end();++m) {
+				if (m->id() == newWorld.id()) {
+					existing = &(*m);
+					break;
+				}
+			}
+			break;
+		default:
+			return false;
 	}
+
+	if (existing) {
+		if (existing->shouldBeReplacedBy(newWorld))
+			*existing = newWorld;
+		else return false;
+	} else if ((newWorld.type() == World::TYPE_MOON)&&(!updateOnly)) {
+		_moons.push_back(newWorld);
+		existing = &(_moons.back());
+	} else return false;
+
+	char savePath[64];
+	if (existing->type() == World::TYPE_MOON)
+		Utils::snprintf(savePath,sizeof(savePath),"moons.d/%.16llx",existing->id());
+	else Utils::scopy(savePath,sizeof(savePath),"planet");
+	try {
+		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp;
+		existing->serialize(dswtmp,false);
+		RR->node->dataStorePut(savePath,dswtmp.data(),dswtmp.size(),false);
+	} catch ( ... ) {
+		RR->node->dataStoreDelete(savePath);
+	}
+
+	_upstreamAddresses.clear();
+	_amRoot = false;
+	for(std::vector<World::Root>::const_iterator i(_planet.roots().begin());i!=_planet.roots().end();++i) {
+		if (i->identity == RR->identity)
+			_amRoot = true;
+		else _upstreamAddresses.push_back(i->identity.address());
+	}
+	for(std::vector<World>::const_iterator m(_moons.begin());m!=_moons.end();++m) {
+		for(std::vector<World::Root>::const_iterator i(m->roots().begin());i!=m->roots().end();++i) {
+			if (i->identity == RR->identity)
+				_amRoot = true;
+			else _upstreamAddresses.push_back(i->identity.address());
+		}
+	}
+
 	return false;
 }
 
@@ -332,36 +349,6 @@ Identity Topology::_getIdentity(const Address &zta)
 		} catch ( ... ) {} // ignore invalid IDs
 	}
 	return Identity();
-}
-
-void Topology::_setWorld(const World &newWorld)
-{
-	// assumed _lock is locked (or in constructor)
-
-	std::vector<Address> ua;
-	for(std::vector<Address>::iterator a(_upstreamAddresses.begin());a!=_upstreamAddresses.end();++a) {
-		if (std::find(_rootAddresses.begin(),_rootAddresses.end(),*a) == _rootAddresses.end())
-			ua.push_back(*a);
-	}
-
-	_world = newWorld;
-	_rootAddresses.clear();
-	_amRoot = false;
-
-	for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
-		_rootAddresses.push_back(r->identity.address());
-		if (std::find(ua.begin(),ua.end(),r->identity.address()) == ua.end())
-			ua.push_back(r->identity.address());
-		if (r->identity.address() == RR->identity.address()) {
-			_amRoot = true;
-		} else {
-			SharedPtr<Peer> *rp = _peers.get(r->identity.address());
-			if (!rp)
-				_peers.set(r->identity.address(),SharedPtr<Peer>(new Peer(RR,RR->identity,r->identity)));
-		}
-	}
-
-	_upstreamAddresses.swap(ua);
 }
 
 } // namespace ZeroTier

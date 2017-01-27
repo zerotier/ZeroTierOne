@@ -19,7 +19,6 @@ Settings available in `local.conf` (this is not valid JSON, and JSON does not al
 	},
 	"virtual": { /* Settings applied to ZeroTier virtual network devices (VL1) */
 		"##########": { /* 10-digit ZeroTier address */
-			"role": "upstream"|"leaf", /* If upstream, define this as a trusted "federated root" (default is leaf) */
 			"try": [ "IP/port"/*,...*/ ], /* Hints on where to reach this peer if no upstreams/roots are online */
 			"blacklist": [ "NETWORK/bits"/*,...*/ ] /* Blacklist a physical path for only this peer. */
 		}
