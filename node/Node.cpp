@@ -53,8 +53,7 @@ Node::Node(void *uptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now) :
 	_prngStreamPtr(0),
 	_now(now),
 	_lastPingCheck(0),
-	_lastHousekeepingRun(0),
-	_relayPolicy(ZT_RELAY_POLICY_TRUSTED)
+	_lastHousekeepingRun(0)
 {
 	if (callbacks->version != 0)
 		throw std::runtime_error("callbacks struct version mismatch");
@@ -101,9 +100,6 @@ Node::Node(void *uptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now) :
 		delete RR->sw;
 		throw;
 	}
-
-	if (RR->topology->amRoot())
-		_relayPolicy = ZT_RELAY_POLICY_ALWAYS;
 
 	postEvent(ZT_EVENT_UP);
 }
@@ -282,12 +278,6 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::setRelayPolicy(enum ZT_RelayPolicy rp)
-{
-	_relayPolicy = rp;
-	return ZT_RESULT_OK;
-}
-
 ZT_ResultCode Node::join(uint64_t nwid,void *uptr)
 {
 	Mutex::Lock _l(_networks_m);
@@ -345,7 +335,6 @@ void Node::status(ZT_NodeStatus *status) const
 	status->worldTimestamp = RR->topology->planetWorldTimestamp();
 	status->publicIdentity = RR->publicIdentityStr.c_str();
 	status->secretIdentity = RR->secretIdentityStr.c_str();
-	status->relayPolicy = _relayPolicy;
 	status->online = _online ? 1 : 0;
 }
 
@@ -855,15 +844,6 @@ enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,uint64_t now,vol
 		return reinterpret_cast<ZeroTier::Node *>(node)->processBackgroundTasks(now,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
-	} catch ( ... ) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
-	}
-}
-
-enum ZT_ResultCode ZT_Node_setRelayPolicy(ZT_Node *node,enum ZT_RelayPolicy rp)
-{
-	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->setRelayPolicy(rp);
 	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}

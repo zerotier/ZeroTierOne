@@ -407,16 +407,6 @@ enum ZT_Event
 };
 
 /**
- * Node relay policy
- */
-enum ZT_RelayPolicy
-{
-	ZT_RELAY_POLICY_NEVER = 0,
-	ZT_RELAY_POLICY_TRUSTED = 1,
-	ZT_RELAY_POLICY_ALWAYS = 2
-};
-
-/**
  * User message used with ZT_EVENT_USER_MESSAGE
  */
 typedef struct
@@ -475,11 +465,6 @@ typedef struct
 	 * This pointer will remain valid as long as the node exists.
 	 */
 	const char *secretIdentity;
-
-	/**
-	 * Node relay policy
-	 */
-	enum ZT_RelayPolicy relayPolicy;
 
 	/**
 	 * True if some kind of connectivity appears available
@@ -1717,15 +1702,6 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
-
-/**
- * Set node's relay policy
- *
- * @param node Node instance
- * @param rp New relay policy
- * @return OK(0) or error code
- */
-enum ZT_ResultCode ZT_Node_setRelayPolicy(ZT_Node *node,enum ZT_RelayPolicy rp);
 
 /**
  * Join a network

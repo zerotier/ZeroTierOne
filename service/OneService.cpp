@@ -694,7 +694,7 @@ public:
 			_controlPlane->addAuthToken(authToken.c_str());
 			_controlPlane->setController(_controller);
 
-			{	// Remember networks from previous session
+			{	// Load existing networks
 				std::vector<std::string> networksDotD(OSUtils::listDirectory((_homePath + ZT_PATH_SEPARATOR_S "networks.d").c_str()));
 				for(std::vector<std::string>::iterator f(networksDotD.begin());f!=networksDotD.end();++f) {
 					std::size_t dot = f->find_last_of('.');
@@ -980,13 +980,6 @@ public:
 		json &settings = _localConfig["settings"];
 		if (settings.is_object()) {
 			_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
-
-			const std::string rp(OSUtils::jsonString(settings["relayPolicy"],""));
-			if ((rp == "always")||(rp == "ALWAYS"))
-				_node->setRelayPolicy(ZT_RELAY_POLICY_ALWAYS);
-			else if ((rp == "never")||(rp == "NEVER"))
-				_node->setRelayPolicy(ZT_RELAY_POLICY_NEVER);
-			else _node->setRelayPolicy(ZT_RELAY_POLICY_TRUSTED);
 
 			const std::string up(OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT));
 			const bool udist = OSUtils::jsonBool(settings["softwareUpdateDist"],false);

@@ -1102,7 +1102,6 @@ void Network::requestConfiguration()
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_TAGS,(uint64_t)ZT_MAX_NETWORK_TAGS);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS,(uint64_t)0);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,(uint64_t)ZT_RULES_ENGINE_REVISION);
-	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_RELAY_POLICY,(uint64_t)RR->node->relayPolicy());
 
 	if (ctrl == RR->identity.address()) {
 		if (RR->localNetworkController) {

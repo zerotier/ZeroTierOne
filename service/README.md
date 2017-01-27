@@ -24,7 +24,6 @@ Settings available in `local.conf` (this is not valid JSON, and JSON does not al
 		}
 	},
 	"settings": { /* Other global settings */
-		"relayPolicy": "trusted"|"always"|"never", /* Policy for relaying others' traffic (see below) */
 		"portMappingEnabled": true|false, /* If true (the default), try to use uPnP or NAT-PMP to map ports */
 		"softwareUpdate": "apply"|"download"|"disable", /* Automatically apply updates, just download, or disable built-in software updates */
 		"softwareUpdateDist": true|false, /* If true, distribute software updates (only really useful to ZeroTier, Inc. itself, default is false) */

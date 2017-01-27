@@ -105,17 +105,8 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 				const Address destination(fragment.destination());
 
 				if (destination != RR->identity.address()) {
-					switch(RR->node->relayPolicy()) {
-						case ZT_RELAY_POLICY_ALWAYS:
-							break;
-						case ZT_RELAY_POLICY_TRUSTED:
-							if (!path->trustEstablished(now))
-								return;
-							break;
-						// case ZT_RELAY_POLICY_NEVER:
-						default:
-							return;
-					}
+					if ( (!RR->topology->amRoot()) && (!path->trustEstablished(now)) )
+						return;
 
 					if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
 						fragment.incrementHops();
@@ -213,18 +204,10 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 
 				//TRACE("<< %.16llx %s -> %s (size: %u)",(unsigned long long)packet->packetId(),source.toString().c_str(),destination.toString().c_str(),packet->size());
 
+
 				if (destination != RR->identity.address()) {
-					switch(RR->node->relayPolicy()) {
-						case ZT_RELAY_POLICY_ALWAYS:
-							break;
-						case ZT_RELAY_POLICY_TRUSTED:
-							if (!path->trustEstablished(now))
-								return;
-							break;
-						// case ZT_RELAY_POLICY_NEVER:
-						default:
-							return;
-					}
+					if ( (!RR->topology->amRoot()) && (!path->trustEstablished(now)) )
+						return;
 
 					Packet packet(data,len);
 
