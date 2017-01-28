@@ -82,7 +82,7 @@ public:
 	 */
 	inline SharedPtr<Peer> getPeerNoCache(const Address &zta)
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_peers_m);
 		const SharedPtr<Peer> *const ap = _peers.get(zta);
 		if (ap)
 			return *ap;
@@ -98,7 +98,7 @@ public:
 	 */
 	inline SharedPtr<Path> getPath(const InetAddress &l,const InetAddress &r)
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_paths_m);
 		SharedPtr<Path> &p = _paths[Path::HashKey(l,r)];
 		if (!p)
 			p.setToUnsafe(new Path(l,r));
@@ -178,7 +178,7 @@ public:
 	 */
 	inline void getUpstreamStableEndpoints(Hashtable< Address,std::vector<InetAddress> > &eps) const
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_upstreams_m);
 		for(std::vector<World::Root>::const_iterator i(_planet.roots().begin());i!=_planet.roots().end();++i) {
 			std::vector<InetAddress> &ips = eps[i->identity.address()];
 			for(std::vector<InetAddress>::const_iterator j(i->stableEndpoints.begin());j!=i->stableEndpoints.end();++j) {
@@ -204,7 +204,7 @@ public:
 	 */
 	inline std::vector<Address> upstreamAddresses() const
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_upstreams_m);
 		std::vector<Address> u(_upstreamAddresses);
 		for(std::vector<Address>::const_iterator m(_contactingMoons.begin());m!=_contactingMoons.end();++m) {
 			if (std::find(u.begin(),u.end(),*m) == u.end())
@@ -218,7 +218,7 @@ public:
 	 */
 	inline std::vector<World> moons() const
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_upstreams_m);
 		return _moons;
 	}
 
@@ -227,7 +227,7 @@ public:
 	 */
 	inline World planet() const
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_upstreams_m);
 		return _planet;
 	}
 
@@ -286,7 +286,7 @@ public:
 	inline unsigned long countActive(uint64_t now) const
 	{
 		unsigned long cnt = 0;
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_peers_m);
 		Hashtable< Address,SharedPtr<Peer> >::Iterator i(const_cast<Topology *>(this)->_peers);
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
@@ -299,20 +299,13 @@ public:
 	/**
 	 * Apply a function or function object to all peers
 	 *
-	 * Note: explicitly template this by reference if you want the object
-	 * passed by reference instead of copied.
-	 *
-	 * Warning: be careful not to use features in these that call any other
-	 * methods of Topology that may lock _lock, otherwise a recursive lock
-	 * and deadlock or lock corruption may occur.
-	 *
 	 * @param f Function to apply
 	 * @tparam F Function or function object type
 	 */
 	template<typename F>
 	inline void eachPeer(F f)
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_peers_m);
 		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
@@ -332,7 +325,7 @@ public:
 	 */
 	inline std::vector< std::pair< Address,SharedPtr<Peer> > > allPeers() const
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_peers_m);
 		return _peers.entries();
 	}
 
@@ -382,7 +375,7 @@ public:
 	{
 		if (count > ZT_MAX_TRUSTED_PATHS)
 			count = ZT_MAX_TRUSTED_PATHS;
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_trustedPaths_m);
 		for(unsigned int i=0;i<count;++i) {
 			_trustedPathIds[i] = ids[i];
 			_trustedPathNetworks[i] = networks[i];
@@ -399,18 +392,20 @@ private:
 	uint64_t _trustedPathIds[ZT_MAX_TRUSTED_PATHS];
 	InetAddress _trustedPathNetworks[ZT_MAX_TRUSTED_PATHS];
 	unsigned int _trustedPathCount;
-
-	World _planet;
-	std::vector< World > _moons;
+	Mutex _trustedPaths_m;
 
 	Hashtable< Address,SharedPtr<Peer> > _peers;
-	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
+	Mutex _peers_m;
 
+	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
+	Mutex _paths_m;
+
+	World _planet;
+	std::vector<World> _moons;
 	std::vector<Address> _contactingMoons;
 	std::vector<Address> _upstreamAddresses;
 	bool _amRoot;
-
-	Mutex _lock;
+	Mutex _upstreams_m; // locks worlds, upstream info, moon info, etc.
 };
 
 } // namespace ZeroTier

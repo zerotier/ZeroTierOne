@@ -79,7 +79,7 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 
 	SharedPtr<Peer> np;
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_peers_m);
 		SharedPtr<Peer> &hp = _peers[peer->address()];
 		if (!hp)
 			hp = peer;
@@ -99,7 +99,7 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 	}
 
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_peers_m);
 		const SharedPtr<Peer> *const ap = _peers.get(zta);
 		if (ap)
 			return *ap;
@@ -110,7 +110,7 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 		if (id) {
 			SharedPtr<Peer> np(new Peer(RR,RR->identity,id));
 			{
-				Mutex::Lock _l(_lock);
+				Mutex::Lock _l(_peers_m);
 				SharedPtr<Peer> &ap = _peers[zta];
 				if (!ap)
 					ap.swap(np);
@@ -127,7 +127,7 @@ Identity Topology::getIdentity(const Address &zta)
 	if (zta == RR->identity.address()) {
 		return RR->identity;
 	} else {
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_peers_m);
 		const SharedPtr<Peer> *const ap = _peers.get(zta);
 		if (ap)
 			return (*ap)->identity();
@@ -147,7 +147,8 @@ void Topology::saveIdentity(const Identity &id)
 SharedPtr<Peer> Topology::getUpstreamPeer(const Address *avoid,unsigned int avoidCount,bool strictAvoid)
 {
 	const uint64_t now = RR->node->now();
-	Mutex::Lock _l(_lock);
+	Mutex::Lock _l1(_peers_m);
+	Mutex::Lock _l2(_upstreams_m);
 
 	if (_amRoot) {
 		/* If I am a root, pick another root that isn't mine and that
@@ -208,13 +209,13 @@ SharedPtr<Peer> Topology::getUpstreamPeer(const Address *avoid,unsigned int avoi
 
 bool Topology::isUpstream(const Identity &id) const
 {
-	Mutex::Lock _l(_lock);
+	Mutex::Lock _l(_upstreams_m);
 	return (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),id.address()) != _upstreamAddresses.end());
 }
 
 ZT_PeerRole Topology::role(const Address &ztaddr) const
 {
-	Mutex::Lock _l(_lock);
+	Mutex::Lock _l(_upstreams_m);
 	if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),ztaddr) != _upstreamAddresses.end()) {
 		for(std::vector<World::Root>::const_iterator i(_planet.roots().begin());i!=_planet.roots().end();++i) {
 			if (i->identity.address() == ztaddr)
@@ -227,7 +228,7 @@ ZT_PeerRole Topology::role(const Address &ztaddr) const
 
 bool Topology::isProhibitedEndpoint(const Address &ztaddr,const InetAddress &ipaddr) const
 {
-	Mutex::Lock _l(_lock);
+	Mutex::Lock _l(_upstreams_m);
 
 	// For roots the only permitted addresses are those defined. This adds just a little
 	// bit of extra security against spoofing, replaying, etc.
@@ -257,7 +258,8 @@ bool Topology::addWorld(const World &newWorld)
 	if ((newWorld.type() != World::TYPE_PLANET)&&(newWorld.type() != World::TYPE_MOON))
 		return false;
 
-	Mutex::Lock _l(_lock);
+	Mutex::Lock _l1(_upstreams_m);
+	Mutex::Lock _l2(_peers_m);
 
 	World *existing = (World *)0;
 	switch(newWorld.type()) {
@@ -313,7 +315,7 @@ void Topology::addMoon(const uint64_t id)
 {
 	{
 		const Address a(id >> 24);
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_upstreams_m);
 		if (std::find(_contactingMoons.begin(),_contactingMoons.end(),a) == _contactingMoons.end())
 			_contactingMoons.push_back(a);
 	}
@@ -339,7 +341,8 @@ void Topology::addMoon(const uint64_t id)
 
 void Topology::removeMoon(const uint64_t id)
 {
-	Mutex::Lock _l(_lock);
+	Mutex::Lock _l1(_upstreams_m);
+	Mutex::Lock _l2(_peers_m);
 
 	std::vector<World> nm;
 	for(std::vector<World>::const_iterator m(_moons.begin());m!=_moons.end();++m) {
@@ -365,8 +368,9 @@ void Topology::removeMoon(const uint64_t id)
 
 void Topology::clean(uint64_t now)
 {
-	Mutex::Lock _l(_lock);
 	{
+		Mutex::Lock _l1(_peers_m);
+		Mutex::Lock _l2(_upstreams_m);
 		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
@@ -376,6 +380,7 @@ void Topology::clean(uint64_t now)
 		}
 	}
 	{
+		Mutex::Lock _l(_paths_m);
 		Hashtable< Path::HashKey,SharedPtr<Path> >::Iterator i(_paths);
 		Path::HashKey *k = (Path::HashKey *)0;
 		SharedPtr<Path> *p = (SharedPtr<Path> *)0;
@@ -401,7 +406,7 @@ Identity Topology::_getIdentity(const Address &zta)
 
 void Topology::_memoizeUpstreams()
 {
-	// assumes _lock is locked
+	// assumes _upstreams_m and _peers_m are locked
 	_upstreamAddresses.clear();
 	_amRoot = false;
 	for(std::vector<World::Root>::const_iterator i(_planet.roots().begin());i!=_planet.roots().end();++i) {

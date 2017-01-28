@@ -159,7 +159,8 @@ public:
 	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) :
 		lastReceiveFromUpstream(0),
 		RR(renv),
-		_now(now)
+		_now(now),
+		_bestCurrentUpstream(RR->topology->getUpstreamPeer())
 	{
 		RR->topology->getUpstreamStableEndpoints(_upstreams);
 	}
@@ -194,8 +195,11 @@ public:
 				}
 			} else contacted = true;
 
-			if (!contacted)
-				p->sendHELLO(InetAddress(),InetAddress(),_now);
+			if ((!contacted)&&(_bestCurrentUpstream)) {
+				const SharedPtr<Path> up(_bestCurrentUpstream->getBestPath(_now,true));
+				if (up)
+					p->sendHELLO(up->localAddress(),up->address(),_now);
+			}
 
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
 		} else if (p->isActive(_now)) {
@@ -205,7 +209,8 @@ public:
 
 private:
 	const RuntimeEnvironment *RR;
-	uint64_t _now;
+	const uint64_t _now;
+	const SharedPtr<Peer> _bestCurrentUpstream;
 	Hashtable< Address,std::vector<InetAddress> > _upstreams;
 };
 
