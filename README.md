@@ -39,7 +39,6 @@ To create networks of your own, you'll need a network controller. ZeroTier One (
  - `service/`: the ZeroTier One service, which wraps the ZeroTier core and provides VPN-like connectivity to virtual networks for desktops, laptops, servers, VMs, and containers.
  - `tcp-proxy/`: TCP proxy code run by ZeroTier, Inc. to provide TCP fallback (this will die soon!).
  - `windows/`: Visual Studio solution files, Windows service code for ZeroTier One, and the Windows task bar app UI.
- - `world/`: ZeroTier "world" definition and source for building and signing it -- normally only of use to ZeroTier, Inc. A "world" is one virtual switch. We've defined one for planet Earth and surrounding space and operate a network of free anchor points (root servers) for it.
 
 The base path contains the ZeroTier One service main entry point (`one.cpp`), self test code, makefiles, etc.
 
