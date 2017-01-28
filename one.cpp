@@ -62,6 +62,8 @@
 #include "node/CertificateOfMembership.hpp"
 #include "node/Utils.hpp"
 #include "node/NetworkController.hpp"
+#include "node/Buffer.hpp"
+#include "node/World.hpp"
 
 #include "osdep/OSUtils.hpp"
 #include "osdep/Http.hpp"
@@ -545,6 +547,8 @@ static void idtoolPrintHelp(FILE *out,const char *pn)
 	fprintf(out,"  getpublic <identity.secret>" ZT_EOL_S);
 	fprintf(out,"  sign <identity.secret> <file>" ZT_EOL_S);
 	fprintf(out,"  verify <identity.secret/public> <file> <signature>" ZT_EOL_S);
+	fprintf(out,"  initmoon <identity.public of primary root>" ZT_EOL_S);
+	fprintf(out,"  genmoon <moon json>" ZT_EOL_S);
 }
 
 static Identity getIdFromArg(char *arg)
@@ -688,6 +692,89 @@ static int idtool(int argc,char **argv)
 		} else {
 			fprintf(stderr,"%s signature check FAILED" ZT_EOL_S,argv[3]);
 			return 1;
+		}
+	} else if (!strcmp(argv[1],"initmoon")) {
+		if (argc < 3) {
+			idtoolPrintHelp(stdout,argv[0]);
+		} else {
+			const Identity id = getIdFromArg(argv[2]);
+			if (!id) {
+				fprintf(stderr,"%s is not a valid identity" ZT_EOL_S,argv[2]);
+				return 1;
+			}
+
+			C25519::Pair kp(C25519::generate());
+
+			nlohmann::json mj;
+			mj["objtype"] = "world";
+			mj["worldType"] = "moon";
+			mj["updatesMustBeSignedBy"] = mj["signingKey"] = Utils::hex(kp.pub.data,(unsigned int)kp.pub.size());
+			mj["signingKeySECRET"] = Utils::hex(kp.priv.data,(unsigned int)kp.priv.size());
+			mj["id"] = (id.address().toString() + "000000");
+			nlohmann::json seedj;
+			seedj["identity"] = id.toString(false);
+			seedj["stableEndpoints"] = nlohmann::json::array();
+			(mj["roots"] = nlohmann::json::array()).push_back(seedj);
+			std::string mjd(OSUtils::jsonDump(mj));
+
+			printf("%s" ZT_EOL_S,mjd.c_str());
+		}
+	} else if (!strcmp(argv[1],"genmoon")) {
+		if (argc < 3) {
+			idtoolPrintHelp(stdout,argv[0]);
+		} else {
+			std::string buf;
+			if (!OSUtils::readFile(argv[2],buf)) {
+				fprintf(stderr,"cannot read %s" ZT_EOL_S,argv[2]);
+				return 1;
+			}
+			nlohmann::json mj(OSUtils::jsonParse(buf));
+
+			uint64_t id = Utils::hexStrToU64(OSUtils::jsonString(mj["id"],"").c_str());
+
+			World::Type t;
+			if (mj["worldType"] == "moon") {
+				t = World::TYPE_MOON;
+			} else if (mj["worldType"] == "planet") {
+				t = World::TYPE_PLANET;
+			} else {
+				fprintf(stderr,"invalid worldType" ZT_EOL_S);
+				return 1;
+			}
+
+			C25519::Pair signingKey;
+			C25519::Public updatesMustBeSignedBy;
+			Utils::unhex(OSUtils::jsonString(mj["singingKey"],""),signingKey.pub.data,(unsigned int)signingKey.pub.size());
+			Utils::unhex(OSUtils::jsonString(mj["singingKeySECRET"],""),signingKey.priv.data,(unsigned int)signingKey.priv.size());
+			Utils::unhex(OSUtils::jsonString(mj["updatesMustBeSignedBy"],""),updatesMustBeSignedBy.data,(unsigned int)updatesMustBeSignedBy.size());
+
+			std::vector<World::Root> roots;
+			nlohmann::json &rootsj = mj["roots"];
+			if (rootsj.is_array()) {
+				for(unsigned long i=0;i<(unsigned long)rootsj.size();++i) {
+					nlohmann::json &r = rootsj[i];
+					if (r.is_object()) {
+						roots.push_back(World::Root());
+						roots.back().identity = Identity(OSUtils::jsonString(r["identity"],""));
+						nlohmann::json &stableEndpointsj = r["stableEndpoints"];
+						if (stableEndpointsj.is_array()) {
+							for(unsigned long k=0;k<(unsigned long)stableEndpointsj.size();++k)
+								roots.back().stableEndpoints.push_back(InetAddress(OSUtils::jsonString(stableEndpointsj[k],"")));
+							std::sort(roots.back().stableEndpoints.begin(),roots.back().stableEndpoints.end());
+						}
+					}
+				}
+			}
+			std::sort(roots.begin(),roots.end());
+
+			const uint64_t now = OSUtils::now();
+			World w(World::make(t,id,now,updatesMustBeSignedBy,roots,signingKey));
+			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> wbuf;
+			w.serialize(wbuf);
+			char fn[128];
+			Utils::snprintf(fn,sizeof(fn),"%.16llx_%.16llx.moon",w.id(),now);
+			OSUtils::writeFile(fn,wbuf.data(),wbuf.size());
+			printf("wrote %s (signed world with timestamp %llu)" ZT_EOL_S,fn,now);
 		}
 	} else {
 		idtoolPrintHelp(stdout,argv[0]);

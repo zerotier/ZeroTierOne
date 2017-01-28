@@ -227,6 +227,33 @@ public:
 
 	inline bool operator<(const World &w) const { return (((int)_type < (int)w._type) ? true : ((_type == w._type) ? (_id < w._id) : false)); }
 
+	/**
+	 * Create a World object signed with a key pair
+	 *
+	 * @param t World type
+	 * @param id World ID
+	 * @param ts World timestamp / revision
+	 * @param sk Key that must be used to sign the next future update to this world
+	 * @param roots Roots and their stable endpoints
+	 * @param signWith Key to sign this World with (can have the same public as the next-update signing key, but doesn't have to)
+	 * @return Signed World object
+	 */
+	static inline World make(World::Type t,uint64_t id,uint64_t ts,const C25519::Public &sk,const std::vector<World::Root> &roots,const C25519::Pair &signWith)
+	{
+		World w;
+		w._id = id;
+		w._ts = ts;
+		w._type = t;
+		w._updatesMustBeSignedBy = sk;
+		w._roots = roots;
+
+		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> tmp;
+		w.serialize(tmp,true);
+		w._signature = C25519::sign(signWith,tmp.data(),tmp.size());
+
+		return w;
+	}
+
 protected:
 	uint64_t _id;
 	uint64_t _ts;
