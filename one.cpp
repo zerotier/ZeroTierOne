@@ -545,7 +545,6 @@ static void idtoolPrintHelp(FILE *out,const char *pn)
 	fprintf(out,"  getpublic <identity.secret>" ZT_EOL_S);
 	fprintf(out,"  sign <identity.secret> <file>" ZT_EOL_S);
 	fprintf(out,"  verify <identity.secret/public> <file> <signature>" ZT_EOL_S);
-	fprintf(out,"  mkcom <identity.secret> [<id,value,maxDelta> ...] (hexadecimal integers)" ZT_EOL_S);
 }
 
 static Identity getIdFromArg(char *arg)
@@ -690,34 +689,6 @@ static int idtool(int argc,char **argv)
 			fprintf(stderr,"%s signature check FAILED" ZT_EOL_S,argv[3]);
 			return 1;
 		}
-	} else if (!strcmp(argv[1],"mkcom")) {
-		if (argc < 3) {
-			idtoolPrintHelp(stdout,argv[0]);
-			return 1;
-		}
-
-		Identity id = getIdFromArg(argv[2]);
-		if ((!id)||(!id.hasPrivate())) {
-			fprintf(stderr,"Identity argument invalid, does not include private key, or file unreadable: %s" ZT_EOL_S,argv[2]);
-			return 1;
-		}
-
-		CertificateOfMembership com;
-		for(int a=3;a<argc;++a) {
-			std::vector<std::string> params(OSUtils::split(argv[a],",","",""));
-			if (params.size() == 3) {
-				uint64_t qId = Utils::hexStrToU64(params[0].c_str());
-				uint64_t qValue = Utils::hexStrToU64(params[1].c_str());
-				uint64_t qMaxDelta = Utils::hexStrToU64(params[2].c_str());
-				com.setQualifier(qId,qValue,qMaxDelta);
-			}
-		}
-		if (!com.sign(id)) {
-			fprintf(stderr,"Signature of certificate of membership failed." ZT_EOL_S);
-			return 1;
-		}
-
-		printf("%s",com.toString().c_str());
 	} else {
 		idtoolPrintHelp(stdout,argv[0]);
 		return 1;
