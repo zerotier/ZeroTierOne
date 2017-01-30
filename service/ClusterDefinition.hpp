@@ -66,9 +66,9 @@ public:
 		char myAddressStr[64];
 		Utils::snprintf(myAddressStr,sizeof(myAddressStr),"%.10llx",myAddress);
 
-		std::vector<std::string> lines(Utils::split(cf.c_str(),"\r\n","",""));
+		std::vector<std::string> lines(OSUtils::split(cf.c_str(),"\r\n","",""));
 		for(std::vector<std::string>::iterator l(lines.begin());l!=lines.end();++l) {
-			std::vector<std::string> fields(Utils::split(l->c_str()," \t","",""));
+			std::vector<std::string> fields(OSUtils::split(l->c_str()," \t","",""));
 			if ((fields.size() < 5)||(fields[0][0] == '#')||(fields[0] != myAddressStr))
 				continue;
 
@@ -93,7 +93,7 @@ public:
 
 			md.id = (unsigned int)id;
 			if (fields.size() >= 6) {
-				std::vector<std::string> xyz(Utils::split(fields[5].c_str(),",","",""));
+				std::vector<std::string> xyz(OSUtils::split(fields[5].c_str(),",","",""));
 				md.x = (xyz.size() > 0) ? Utils::strToInt(xyz[0].c_str()) : 0;
 				md.y = (xyz.size() > 1) ? Utils::strToInt(xyz[1].c_str()) : 0;
 				md.z = (xyz.size() > 2) ? Utils::strToInt(xyz[2].c_str()) : 0;
@@ -102,7 +102,7 @@ public:
 			md.clusterEndpoint.fromString(fields[3]);
 			if (!md.clusterEndpoint)
 				continue;
-			std::vector<std::string> zips(Utils::split(fields[4].c_str(),",","",""));
+			std::vector<std::string> zips(OSUtils::split(fields[4].c_str(),",","",""));
 			for(std::vector<std::string>::iterator zip(zips.begin());zip!=zips.end();++zip) {
 				InetAddress i;
 				i.fromString(*zip);
