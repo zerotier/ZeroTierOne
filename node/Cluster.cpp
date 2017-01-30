@@ -44,6 +44,7 @@
 #include "Packet.hpp"
 #include "Switch.hpp"
 #include "Node.hpp"
+#include "Network.hpp"
 #include "Array.hpp"
 
 namespace ZeroTier {
@@ -469,6 +470,15 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						RR->sw->send(outp,true);
 						//TRACE("[%u] proxy send %s to %s length %u",(unsigned int)fromMemberId,Packet::verbString(verb),rcpt.toString().c_str(),len);
 					}	break;
+
+					case CLUSTER_MESSAGE_NETWORK_CONFIG: {
+						const SharedPtr<Network> network(RR->node->network(dmsg.at<uint64_t>(ptr)));
+						if (network) {
+							// Copy into a Packet just to conform to Network API. Eventually
+							// will want to refactor.
+							network->handleConfigChunk(Packet(dmsg),ptr);
+						}
+					}	break;
 				}
 			} catch ( ... ) {
 				TRACE("invalid message of size %u type %d (inner decode), discarding",mlen,mtype);
@@ -491,6 +501,15 @@ void Cluster::broadcastHavePeer(const Identity &id)
 	for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
 		Mutex::Lock _l2(_members[*mid].lock);
 		_send(*mid,CLUSTER_MESSAGE_HAVE_PEER,buf.data(),buf.size());
+	}
+}
+
+void Cluster::broadcastNetworkConfigChunk(const void *chunk,unsigned int len)
+{
+	Mutex::Lock _l(_memberIds_m);
+	for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
+		Mutex::Lock _l2(_members[*mid].lock);
+		_send(*mid,CLUSTER_MESSAGE_NETWORK_CONFIG,chunk,len);
 	}
 }
 

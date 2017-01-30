@@ -461,8 +461,12 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 
 			case Packet::VERB_NETWORK_CONFIG_REQUEST: {
 				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_OK_IDX_PAYLOAD)));
-				if (network)
+				if (network) {
+#ifdef ZT_ENABLE_CLUSTER
+					RR->cluster->broadcastNetworkConfigChunk(field(ZT_PACKET_IDX_PAYLOAD,size() - ZT_PROTO_VERB_OK_IDX_PAYLOAD),size() - ZT_PROTO_VERB_OK_IDX_PAYLOAD);
+#endif
 					network->handleConfigChunk(*this,ZT_PROTO_VERB_OK_IDX_PAYLOAD);
+				}
 			}	break;
 
 			case Packet::VERB_MULTICAST_GATHER: {
@@ -922,6 +926,9 @@ bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,const Shared
 	try {
 		const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PACKET_IDX_PAYLOAD)));
 		if (network) {
+#ifdef ZT_ENABLE_CLUSTER
+			RR->cluster->broadcastNetworkConfigChunk(field(ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD),size() - ZT_PACKET_IDX_PAYLOAD);
+#endif
 			const uint64_t configUpdateId = network->handleConfigChunk(*this,ZT_PACKET_IDX_PAYLOAD);
 			if (configUpdateId) {
 				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);

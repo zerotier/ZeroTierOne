@@ -216,14 +216,13 @@ public:
 
 		/**
 		 * Replicate a network config for a network we belong to:
-		 *   <[8] 64-bit network ID>
-		 *   <[2] 16-bit length of network config>
-		 *   <[...] serialized network config>
+		 *   <[...] network config chunk>
 		 *
 		 * This is used by clusters to avoid every member having to query
 		 * for the same netconf for networks all members belong to.
 		 *
-		 * TODO: not implemented yet!
+		 * The first field of a network config chunk is the network ID,
+		 * so this can be checked to look up the network on receipt.
 		 */
 		CLUSTER_MESSAGE_NETWORK_CONFIG = 7
 	};
@@ -266,6 +265,14 @@ public:
 	 * @param id Identity of peer
 	 */
 	void broadcastHavePeer(const Identity &id);
+
+	/**
+	 * Broadcast a network config chunk to other members of cluster
+	 *
+	 * @param chunk Chunk data
+	 * @param len Length of chunk
+	 */
+	void broadcastNetworkConfigChunk(const void *chunk,unsigned int len);
 
 	/**
 	 * Send this packet via another node in this cluster if another node has this peer
