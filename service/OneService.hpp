@@ -20,6 +20,7 @@
 #define ZT_ONESERVICE_HPP
 
 #include <string>
+#include <vector>
 
 namespace ZeroTier {
 
@@ -64,6 +65,12 @@ public:
 		 * Allow this network to configure IP addresses and routes?
 		 */
 		bool allowManaged;
+
+		/**
+		 * Whitelist of addresses that can be configured by this network.
+		 * If empty and allowManaged is true, allow all private/pseudoprivate addresses.
+		 */
+		std::vector<InetAddress> allowManagedWhitelist;
 
 		/**
 		 * Allow configuration of IPs and routes within global (Internet) IP space?
