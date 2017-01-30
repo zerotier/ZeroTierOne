@@ -22,6 +22,8 @@
 #include <string>
 #include <vector>
 
+#include "../node/InetAddress.hpp"
+
 namespace ZeroTier {
 
 /**
