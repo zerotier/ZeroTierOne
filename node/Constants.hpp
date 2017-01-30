@@ -419,6 +419,11 @@
 #define ZT_UDP_DESIRED_BUF_SIZE 131072
 #endif
 
+/**
+ * Desired / recommended min stack size for threads (used on some platforms to reset thread stack size)
+ */
+#define ZT_THREAD_MIN_STACK_SIZE 1048576
+
 /* Ethernet frame types that might be relevant to us */
 #define ZT_ETHERTYPE_IPV4 0x0800
 #define ZT_ETHERTYPE_ARP 0x0806
