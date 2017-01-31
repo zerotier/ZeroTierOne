@@ -476,7 +476,8 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						if (network) {
 							// Copy into a Packet just to conform to Network API. Eventually
 							// will want to refactor.
-							network->handleConfigChunk(0,Address(),Packet(dmsg),ptr);
+							printf("<< CLUSTER_MESSAGE_NETWORK_CONFIG %.16llx\n",dmsg.at<uint64_t>(ptr));
+							network->handleConfigChunk(0,Address(),Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(dmsg),ptr);
 						}
 					}	break;
 				}
@@ -511,6 +512,7 @@ void Cluster::broadcastNetworkConfigChunk(const void *chunk,unsigned int len)
 		Mutex::Lock _l2(_members[*mid].lock);
 		_send(*mid,CLUSTER_MESSAGE_NETWORK_CONFIG,chunk,len);
 	}
+	printf(">> CLUSTER_MESSAGE_NETWORK_CONFIG\n");
 }
 
 void Cluster::sendViaCluster(const Address &fromPeerAddress,const Address &toPeerAddress,const void *data,unsigned int len,bool unite)
