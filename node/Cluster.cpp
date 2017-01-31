@@ -476,7 +476,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						if (network) {
 							// Copy into a Packet just to conform to Network API. Eventually
 							// will want to refactor.
-							network->handleConfigChunk(Packet(dmsg),ptr);
+							network->handleConfigChunk(0,Address(),Packet(dmsg),ptr);
 						}
 					}	break;
 				}

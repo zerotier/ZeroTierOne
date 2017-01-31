@@ -34,6 +34,7 @@
 #include "NetworkController.hpp"
 #include "Node.hpp"
 #include "Peer.hpp"
+#include "Cluster.hpp"
 
 // Uncomment to make the rules engine dump trace info to stdout
 //#define ZT_RULES_ENGINE_DEBUGGING 1
@@ -908,7 +909,7 @@ void Network::multicastUnsubscribe(const MulticastGroup &mg)
 		_myMulticastGroups.erase(i);
 }
 
-uint64_t Network::handleConfigChunk(const Packet &chunk,unsigned int ptr)
+uint64_t Network::handleConfigChunk(const uint64_t packetId,const Address &source,const Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &chunk,unsigned int ptr)
 {
 	const unsigned int start = ptr;
 
@@ -931,12 +932,12 @@ uint64_t Network::handleConfigChunk(const Packet &chunk,unsigned int ptr)
 			chunkIndex = chunk.at<uint32_t>(ptr); ptr += 4;
 
 			if (((chunkIndex + chunkLen) > totalLength)||(totalLength >= ZT_NETWORKCONFIG_DICT_CAPACITY)) { // >= since we need room for a null at the end
-				TRACE("discarded chunk from %s: invalid length or length overflow",chunk.source().toString().c_str());
+				TRACE("discarded chunk from %s: invalid length or length overflow",source.toString().c_str());
 				return 0;
 			}
 
 			if ((chunk[ptr] != 1)||(chunk.at<uint16_t>(ptr + 1) != ZT_C25519_SIGNATURE_LEN)) {
-				TRACE("discarded chunk from %s: unrecognized signature type",chunk.source().toString().c_str());
+				TRACE("discarded chunk from %s: unrecognized signature type",source.toString().c_str());
 				return 0;
 			}
 			const uint8_t *sig = reinterpret_cast<const uint8_t *>(chunk.field(ptr + 3,ZT_C25519_SIGNATURE_LEN));
@@ -964,13 +965,18 @@ uint64_t Network::handleConfigChunk(const Packet &chunk,unsigned int ptr)
 			// If it's not a duplicate, check chunk signature
 			const Identity controllerId(RR->topology->getIdentity(controller()));
 			if (!controllerId) { // we should always have the controller identity by now, otherwise how would we have queried it the first time?
-				TRACE("unable to verify chunk from %s: don't have controller identity",chunk.source().toString().c_str());
+				TRACE("unable to verify chunk from %s: don't have controller identity",source.toString().c_str());
 				return 0;
 			}
 			if (!controllerId.verify(chunk.field(start,ptr - start),ptr - start,sig,ZT_C25519_SIGNATURE_LEN)) {
-				TRACE("discarded chunk from %s: signature check failed",chunk.source().toString().c_str());
+				TRACE("discarded chunk from %s: signature check failed",source.toString().c_str());
 				return 0;
 			}
+
+#ifdef ZT_ENABLE_CLUSTER
+			if (source)
+				RR->cluster->broadcastNetworkConfigChunk(chunk.field(start,chunk.size() - start),chunk.size() - start);
+#endif
 
 			// New properly verified chunks can be flooded "virally" through the network
 			if (fastPropagate) {
@@ -978,16 +984,16 @@ uint64_t Network::handleConfigChunk(const Packet &chunk,unsigned int ptr)
 				Membership *m = (Membership *)0;
 				Hashtable<Address,Membership>::Iterator i(_memberships);
 				while (i.next(a,m)) {
-					if ((*a != chunk.source())&&(*a != controller())) {
+					if ((*a != source)&&(*a != controller())) {
 						Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CONFIG);
 						outp.append(reinterpret_cast<const uint8_t *>(chunk.data()) + start,chunk.size() - start);
 						RR->sw->send(outp,true);
 					}
 				}
 			}
-		} else if (chunk.source() == controller()) {
+		} else if ((source == controller())||(!source)) { // since old chunks aren't signed, only accept from controller itself (or via cluster backplane)
 			// Legacy support for OK(NETWORK_CONFIG_REQUEST) from older controllers
-			chunkId = chunk.packetId();
+			chunkId = packetId;
 			configUpdateId = chunkId;
 			totalLength = chunkLen;
 			chunkIndex = 0;
@@ -999,6 +1005,11 @@ uint64_t Network::handleConfigChunk(const Packet &chunk,unsigned int ptr)
 				if ((!c)||(_incomingConfigChunks[i].ts < c->ts))
 					c = &(_incomingConfigChunks[i]);
 			}
+
+#ifdef ZT_ENABLE_CLUSTER
+			if (source)
+				RR->cluster->broadcastNetworkConfigChunk(chunk.field(start,chunk.size() - start),chunk.size() - start);
+#endif
 		} else {
 			TRACE("discarded single-chunk unsigned legacy config: this is only allowed if the sender is the controller itself");
 			return 0;

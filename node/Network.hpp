@@ -181,11 +181,13 @@ public:
 	 * chunks via OK(NETWORK_CONFIG_REQUEST) or NETWORK_CONFIG. It verifies
 	 * each chunk and once assembled applies the configuration.
 	 *
-	 * @param chunk Packet containing chunk
+	 * @param packetId Packet ID or 0 if none (e.g. via cluster path)
+	 * @param source Address of sender of chunk or NULL if none (e.g. via cluster path)
+	 * @param chunk Buffer containing chunk
 	 * @param ptr Index of chunk and related fields in packet
 	 * @return Update ID if update was fully assembled and accepted or 0 otherwise
 	 */
-	uint64_t handleConfigChunk(const Packet &chunk,unsigned int ptr);
+	uint64_t handleConfigChunk(const uint64_t packetId,const Address &source,const Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &chunk,unsigned int ptr);
 
 	/**
 	 * Set network configuration
