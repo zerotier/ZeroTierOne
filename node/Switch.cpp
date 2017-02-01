@@ -729,24 +729,25 @@ bool Switch::_trySend(Packet &packet,bool encrypt)
 #endif
 		}
 	} else {
-		requestWhois(destination);
-#ifndef ZT_ENABLE_CLUSTER
-		return false; // if we are not in cluster mode, there is no way we can send without knowing the peer directly
+#ifdef ZT_ENABLE_CLUSTER
+		if (RR->cluster)
+			clusterMostRecentMemberId = RR->cluster->prepSendViaCluster(destination,clusterPeerSecret);
+		if (clusterMostRecentMemberId < 0) {
+#else
+			requestWhois(destination);
+			return false; // if we are not in cluster mode, there is no way we can send without knowing the peer directly
+#endif
+#ifdef ZT_ENABLE_CLUSTER
+		}
 #endif
 	}
 
-#ifdef ZT_TRACE
 #ifdef ZT_ENABLE_CLUSTER
-	if ((!viaPath)&&(clusterMostRecentMemberId < 0)) {
-		TRACE("BUG: both viaPath and clusterMostRecentMemberId ended up invalid in Switch::_trySend()!");
-		abort();
-	}
+	if ((!viaPath)&&(clusterMostRecentMemberId < 0))
+		return false;
 #else
-	if (!viaPath) {
-		TRACE("BUG: viaPath ended up NULL in Switch::_trySend()!");
-		abort();
-	}
-#endif
+	if (!viaPath)
+		return false;
 #endif
 
 	unsigned int chunkSize = std::min(packet.size(),(unsigned int)ZT_UDP_DEFAULT_PAYLOAD_MTU);

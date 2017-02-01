@@ -536,37 +536,35 @@ int Cluster::prepSendViaCluster(const Address &toPeerAddress,void *peerSecret)
 		}
 	}
 
-	if (mostRecentMemberId >= 0) {
-		const uint64_t ageOfMostRecentHavePeerAnnouncement = now - mostRecentTs;
-		if (ageOfMostRecentHavePeerAnnouncement >= (ZT_PEER_ACTIVITY_TIMEOUT / 3)) {
-			if (ageOfMostRecentHavePeerAnnouncement >= ZT_PEER_ACTIVITY_TIMEOUT)
-				return -1;
+	const uint64_t ageOfMostRecentHavePeerAnnouncement = now - mostRecentTs;
+	if (ageOfMostRecentHavePeerAnnouncement >= (ZT_PEER_ACTIVITY_TIMEOUT / 3)) {
+		if (ageOfMostRecentHavePeerAnnouncement >= ZT_PEER_ACTIVITY_TIMEOUT)
+			mostRecentMemberId = -1;
 
-			bool sendWantPeer = true;
-			{
-				Mutex::Lock _l(_remotePeers_m);
-				_RemotePeer &rp = _remotePeers[std::pair<Address,unsigned int>(toPeerAddress,(unsigned int)_id)];
-				if ((now - rp.lastSentWantPeer) >= ZT_CLUSTER_WANT_PEER_EVERY) {
-					rp.lastSentWantPeer = now;
-				} else {
-					sendWantPeer = false; // don't flood WANT_PEER
-				}
+		bool sendWantPeer = true;
+		{
+			Mutex::Lock _l(_remotePeers_m);
+			_RemotePeer &rp = _remotePeers[std::pair<Address,unsigned int>(toPeerAddress,(unsigned int)_id)];
+			if ((now - rp.lastSentWantPeer) >= ZT_CLUSTER_WANT_PEER_EVERY) {
+				rp.lastSentWantPeer = now;
+			} else {
+				sendWantPeer = false; // don't flood WANT_PEER
 			}
-			if (sendWantPeer) {
-				char tmp[ZT_ADDRESS_LENGTH];
-				toPeerAddress.copyTo(tmp,ZT_ADDRESS_LENGTH);
-				{
-					Mutex::Lock _l(_memberIds_m);
-					for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
-						Mutex::Lock _l2(_members[*mid].lock);
-						_send(*mid,CLUSTER_MESSAGE_WANT_PEER,tmp,ZT_ADDRESS_LENGTH);
-					}
+		}
+		if (sendWantPeer) {
+			char tmp[ZT_ADDRESS_LENGTH];
+			toPeerAddress.copyTo(tmp,ZT_ADDRESS_LENGTH);
+			{
+				Mutex::Lock _l(_memberIds_m);
+				for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
+					Mutex::Lock _l2(_members[*mid].lock);
+					_send(*mid,CLUSTER_MESSAGE_WANT_PEER,tmp,ZT_ADDRESS_LENGTH);
 				}
 			}
 		}
+	}
 
-		return mostRecentMemberId;
-	} else return -1;
+	return mostRecentMemberId;
 }
 
 bool Cluster::sendViaCluster(int mostRecentMemberId,const Address &toPeerAddress,const void *data,unsigned int len)
