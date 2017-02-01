@@ -691,10 +691,13 @@ bool Switch::_trySend(Packet &packet,bool encrypt)
 	SharedPtr<Path> viaPath;
 	const uint64_t now = RR->node->now();
 	const Address destination(packet.destination());
+
 #ifdef ZT_ENABLE_CLUSTER
 	uint64_t clusterMostRecentTs = 0;
 	int clusterMostRecentMemberId = -1;
 	uint8_t clusterPeerSecret[ZT_PEER_SECRET_KEY_LENGTH];
+	if (RR->cluster)
+		clusterMostRecentMemberId = RR->cluster->checkSendViaCluster(destination,clusterMostRecentTs,clusterPeerSecret);
 #endif
 
 	const SharedPtr<Peer> peer(RR->topology->getPeer(destination));
@@ -708,37 +711,40 @@ bool Switch::_trySend(Packet &packet,bool encrypt)
 
 		viaPath = peer->getBestPath(now,false);
 		if ( (viaPath) && (!viaPath->alive(now)) && (!RR->topology->isUpstream(peer->identity())) ) {
-			if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) * 4,(uint64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL))
-				peer->attemptToContactAt(viaPath->localAddress(),viaPath->address(),now);
+#ifdef ZT_ENABLE_CLUSTER
+			if ((clusterMostRecentMemberId < 0)||(viaPath->lastIn() > clusterMostRecentTs)) {
+#endif
+				if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) * 4,(uint64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL)) {
+					peer->attemptToContactAt(viaPath->localAddress(),viaPath->address(),now);
+					viaPath->sent(now);
+				}
+#ifdef ZT_ENABLE_CLUSTER
+			}
+#endif
 			viaPath.zero();
 		}
 
-		if (!viaPath) {
-			const SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());
-			if ( (!relay) || (!(viaPath = relay->getBestPath(now,false))) )
-				viaPath = peer->getBestPath(now,true);
-		}
-
 #ifdef ZT_ENABLE_CLUSTER
-		if (RR->cluster)
-			clusterMostRecentMemberId = RR->cluster->prepSendViaCluster(destination,clusterMostRecentTs,clusterPeerSecret);
 		if (clusterMostRecentMemberId >= 0) {
 			if ((viaPath)&&(viaPath->lastIn() < clusterMostRecentTs))
 				viaPath.zero();
 		} else if (!viaPath) {
-			peer->tryMemorizedPath(now); // periodically attempt memorized or statically defined paths, if any are known
-			return false;
-		}
 #else
 		if (!viaPath) {
+#endif
 			peer->tryMemorizedPath(now); // periodically attempt memorized or statically defined paths, if any are known
-			return false;
+			const SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());
+			if ( (!relay) || (!(viaPath = relay->getBestPath(now,false))) ) {
+				if (!(viaPath = peer->getBestPath(now,true)))
+					return false;
+			}
+#ifdef ZT_ENABLE_CLUSTER
+		}
+#else
 		}
 #endif
 	} else {
 #ifdef ZT_ENABLE_CLUSTER
-		if (RR->cluster)
-			clusterMostRecentMemberId = RR->cluster->prepSendViaCluster(destination,clusterMostRecentTs,clusterPeerSecret);
 		if (clusterMostRecentMemberId < 0) {
 #else
 			requestWhois(destination);
@@ -748,15 +754,6 @@ bool Switch::_trySend(Packet &packet,bool encrypt)
 		}
 #endif
 	}
-
-	// Sanity checks
-#ifdef ZT_ENABLE_CLUSTER
-	if ((!viaPath)&&(clusterMostRecentMemberId < 0))
-		return false;
-#else
-	if (!viaPath)
-		return false;
-#endif
 
 	unsigned int chunkSize = std::min(packet.size(),(unsigned int)ZT_UDP_DEFAULT_PAYLOAD_MTU);
 	packet.setFragmented(chunkSize < packet.size());

@@ -289,7 +289,7 @@ public:
 	 * @param peerSecret Result: Buffer to fill with peer secret on valid return value, must be at least ZT_PEER_SECRET_KEY_LENGTH bytes
 	 * @return -1 if cluster does not know this peer, or a member ID to pass to sendViaCluster()
 	 */
-	int prepSendViaCluster(const Address &toPeerAddress,uint64_t &mostRecentTs,void *peerSecret);
+	int checkSendViaCluster(const Address &toPeerAddress,uint64_t &mostRecentTs,void *peerSecret);
 
 	/**
 	 * Send data via cluster front plane (packet head or fragment)

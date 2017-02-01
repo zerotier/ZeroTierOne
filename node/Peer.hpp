@@ -137,7 +137,7 @@ public:
 	 * Get the best current direct path
 	 *
 	 * @param now Current time
-	 * @param includeDead If true, include even expired paths
+	 * @param includeExpired If true, include even expired paths
 	 * @return Best current path or NULL if none
 	 */
 	SharedPtr<Path> getBestPath(uint64_t now,bool includeExpired);

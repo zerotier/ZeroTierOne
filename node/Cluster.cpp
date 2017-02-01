@@ -516,7 +516,7 @@ void Cluster::broadcastNetworkConfigChunk(const void *chunk,unsigned int len)
 	}
 }
 
-int Cluster::prepSendViaCluster(const Address &toPeerAddress,uint64_t &mostRecentTs,void *peerSecret)
+int Cluster::checkSendViaCluster(const Address &toPeerAddress,uint64_t &mostRecentTs,void *peerSecret)
 {
 	const uint64_t now = RR->node->now();
 	mostRecentTs = 0;
