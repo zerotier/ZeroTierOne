@@ -285,11 +285,10 @@ public:
 	 * Note that outp is only armored (or modified at all) if the return value is a member ID.
 	 *
 	 * @param toPeerAddress Value of outp.destination(), simply to save additional lookup
-	 * @param outp Packet to armor with peer key (via cluster knowledge of peer shared secret)
-	 * @param encrypt If true, encrypt packet payload (passed to Packet::armor())
+	 * @param peerSecret Buffer to fill with peer secret on valid return value, must be at least ZT_PEER_SECRET_KEY_LENGTH bytes
 	 * @return -1 if cluster does not know this peer, or a member ID to pass to sendViaCluster()
 	 */
-	int prepSendViaCluster(const Address &toPeerAddress,Packet &outp,bool encrypt);
+	int prepSendViaCluster(const Address &toPeerAddress,void *peerSecret);
 
 	/**
 	 * Send data via cluster front plane (packet head or fragment)

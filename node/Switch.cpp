@@ -693,6 +693,7 @@ bool Switch::_trySend(Packet &packet,bool encrypt)
 	const Address destination(packet.destination());
 #ifdef ZT_ENABLE_CLUSTER
 	int clusterMostRecentMemberId = -1;
+	uint8_t clusterPeerSecret[ZT_PEER_SECRET_KEY_LENGTH];
 #endif
 
 	const SharedPtr<Peer> peer(RR->topology->getPeer(destination));
@@ -714,7 +715,7 @@ bool Switch::_trySend(Packet &packet,bool encrypt)
 		if (!viaPath) {
 #ifdef ZT_ENABLE_CLUSTER
 			if (RR->cluster)
-				clusterMostRecentMemberId = RR->cluster->prepSendViaCluster(destination,packet,encrypt);
+				clusterMostRecentMemberId = RR->cluster->prepSendViaCluster(destination,clusterPeerSecret);
 			if (clusterMostRecentMemberId < 0) {
 #endif
 				peer->tryMemorizedPath(now); // periodically attempt memorized or statically defined paths, if any are known
@@ -751,12 +752,21 @@ bool Switch::_trySend(Packet &packet,bool encrypt)
 	unsigned int chunkSize = std::min(packet.size(),(unsigned int)ZT_UDP_DEFAULT_PAYLOAD_MTU);
 	packet.setFragmented(chunkSize < packet.size());
 
+#ifdef ZT_ENABLE_CLUSTER
+	const uint64_t trustedPathId = (viaPath) ? RR->topology->getOutboundPathTrust(viaPath->address()) : 0;
+	if (trustedPathId) {
+		packet.setTrusted(trustedPathId);
+	} else {
+		packet.armor((clusterMostRecentMemberId >= 0) ? clusterPeerSecret : peer->key(),encrypt);
+	}
+#else
 	const uint64_t trustedPathId = RR->topology->getOutboundPathTrust(viaPath->address());
 	if (trustedPathId) {
 		packet.setTrusted(trustedPathId);
 	} else {
 		packet.armor(peer->key(),encrypt);
 	}
+#endif
 
 #ifdef ZT_ENABLE_CLUSTER
 	if ( ((viaPath)&&(viaPath->send(RR,packet.data(),chunkSize,now))) || ((clusterMostRecentMemberId >= 0)&&(RR->cluster->sendViaCluster(clusterMostRecentMemberId,destination,packet.data(),chunkSize))) ) {

@@ -516,12 +516,11 @@ void Cluster::broadcastNetworkConfigChunk(const void *chunk,unsigned int len)
 	}
 }
 
-int Cluster::prepSendViaCluster(const Address &toPeerAddress,Packet &outp,bool encrypt)
+int Cluster::prepSendViaCluster(const Address &toPeerAddress,void *peerSecret)
 {
 	const uint64_t now = RR->node->now();
 	uint64_t mostRecentTs = 0;
 	int mostRecentMemberId = -1;
-	uint8_t mostRecentSecretKey[ZT_PEER_SECRET_KEY_LENGTH];
 	{
 		Mutex::Lock _l2(_remotePeers_m);
 		std::map< std::pair<Address,unsigned int>,_RemotePeer >::const_iterator rpe(_remotePeers.lower_bound(std::pair<Address,unsigned int>(toPeerAddress,0)));
@@ -530,7 +529,7 @@ int Cluster::prepSendViaCluster(const Address &toPeerAddress,Packet &outp,bool e
 				break;
 			else if (rpe->second.lastHavePeerReceived > mostRecentTs) {
 				mostRecentTs = rpe->second.lastHavePeerReceived;
-				memcpy(mostRecentSecretKey,rpe->second.key,ZT_PEER_SECRET_KEY_LENGTH);
+				memcpy(peerSecret,rpe->second.key,ZT_PEER_SECRET_KEY_LENGTH);
 				mostRecentMemberId = (int)rpe->first.second;
 			}
 			++rpe;
@@ -566,7 +565,6 @@ int Cluster::prepSendViaCluster(const Address &toPeerAddress,Packet &outp,bool e
 			}
 		}
 
-		outp.armor(mostRecentSecretKey,encrypt);
 		return mostRecentMemberId;
 	} else return -1;
 }
