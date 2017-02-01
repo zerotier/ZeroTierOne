@@ -774,7 +774,7 @@ static int idtool(int argc,char **argv)
 			char fn[128];
 			Utils::snprintf(fn,sizeof(fn),"%.16llx_%.16llx.moon",w.id(),now);
 			OSUtils::writeFile(fn,wbuf.data(),wbuf.size());
-			printf("wrote %s (signed world with timestamp %llu)" ZT_EOL_S,fn,now);
+			printf("wrote %s (signed world with timestamp %llu)" ZT_EOL_S,fn,(unsigned long long)now);
 		}
 	} else {
 		idtoolPrintHelp(stdout,argv[0]);
