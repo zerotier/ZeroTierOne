@@ -88,6 +88,11 @@
  */
 #define ZT_CLUSTER_SEND_QUEUE_DATA_MAX 1500
 
+/**
+ * We won't send WANT_PEER to other members more than every (ms) per recipient
+ */
+#define ZT_CLUSTER_WANT_PEER_EVERY 1000
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -275,7 +280,30 @@ public:
 	void broadcastNetworkConfigChunk(const void *chunk,unsigned int len);
 
 	/**
-	 * Send this packet via another node in this cluster if another node has this peer
+	 * If the cluster has this peer, prepare the packet to send via cluster
+	 *
+	 * Note that outp is only armored (or modified at all) if the return value is a member ID.
+	 *
+	 * @param toPeerAddress Value of outp.destination(), simply to save additional lookup
+	 * @param outp Packet to armor with peer key (via cluster knowledge of peer shared secret)
+	 * @param encrypt If true, encrypt packet payload (passed to Packet::armor())
+	 * @return -1 if cluster does not know this peer, or a member ID to pass to sendViaCluster()
+	 */
+	int prepSendViaCluster(const Address &toPeerAddress,Packet &outp,bool encrypt);
+
+	/**
+	 * Send data via cluster front plane (packet head or fragment)
+	 *
+	 * @param haveMemberId Member ID that has this peer as returned by prepSendviaCluster()
+	 * @param toPeerAddress Destination peer address
+	 * @param data Packet or packet fragment data
+	 * @param len Length of packet or fragment
+	 * @return True if packet was sent (and outp was modified via armoring)
+	 */
+	bool sendViaCluster(int haveMemberId,const Address &toPeerAddress,const void *data,unsigned int len);
+
+	/**
+	 * Relay a packet via the cluster
 	 *
 	 * This is used in the outgoing packet and relaying logic in Switch to
 	 * relay packets to other cluster members. It isn't PROXY_SEND-- that is
@@ -287,7 +315,7 @@ public:
 	 * @param len Length of packet or fragment
 	 * @param unite If true, also request proxy unite across cluster
 	 */
-	void sendViaCluster(const Address &fromPeerAddress,const Address &toPeerAddress,const void *data,unsigned int len,bool unite);
+	void relayViaCluster(const Address &fromPeerAddress,const Address &toPeerAddress,const void *data,unsigned int len,bool unite);
 
 	/**
 	 * Send a distributed query to other cluster members
@@ -398,7 +426,15 @@ private:
 	std::vector<uint16_t> _memberIds;
 	Mutex _memberIds_m;
 
-	std::map< std::pair<Address,unsigned int>,uint64_t > _remotePeers; // we need ordered behavior and lower_bound here
+	struct _RemotePeer
+	{
+		_RemotePeer() : lastHavePeerReceived(0),lastSentWantPeer(0) {}
+		~_RemotePeer() { Utils::burn(key,ZT_PEER_SECRET_KEY_LENGTH); }
+		uint64_t lastHavePeerReceived;
+		uint64_t lastSentWantPeer;
+		uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]; // secret key from identity agreement
+	};
+	std::map< std::pair<Address,unsigned int>,_RemotePeer > _remotePeers; // we need ordered behavior and lower_bound here
 	Mutex _remotePeers_m;
 
 	uint64_t _lastFlushed;

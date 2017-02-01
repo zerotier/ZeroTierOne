@@ -92,10 +92,10 @@ public:
 	 * Needless to say, the packet's source must be this node. Otherwise it
 	 * won't be encrypted right. (This is not used for relaying.)
 	 *
-	 * @param packet Packet to send
+	 * @param packet Packet to send (buffer may be modified)
 	 * @param encrypt Encrypt packet payload? (always true except for HELLO)
 	 */
-	void send(const Packet &packet,bool encrypt);
+	void send(Packet &packet,bool encrypt);
 
 	/**
 	 * Request WHOIS on a given address
@@ -126,7 +126,7 @@ public:
 
 private:
 	Address _sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
-	bool _trySend(const Packet &packet,bool encrypt);
+	bool _trySend(Packet &packet,bool encrypt); // packet is modified if return is true
 	bool _unite(const Address &p1,const Address &p2);
 
 	const RuntimeEnvironment *const RR;

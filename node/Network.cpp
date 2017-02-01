@@ -974,7 +974,7 @@ uint64_t Network::handleConfigChunk(const uint64_t packetId,const Address &sourc
 			}
 
 #ifdef ZT_ENABLE_CLUSTER
-			if (source)
+			if ((source)&&(RR->cluster))
 				RR->cluster->broadcastNetworkConfigChunk(chunk.field(start,chunk.size() - start),chunk.size() - start);
 #endif
 
@@ -1007,7 +1007,7 @@ uint64_t Network::handleConfigChunk(const uint64_t packetId,const Address &sourc
 			}
 
 #ifdef ZT_ENABLE_CLUSTER
-			if (source)
+			if ((source)&&(RR->cluster))
 				RR->cluster->broadcastNetworkConfigChunk(chunk.field(start,chunk.size() - start),chunk.size() - start);
 #endif
 		} else {
