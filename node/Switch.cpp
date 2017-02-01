@@ -197,11 +197,6 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 				const Address destination(reinterpret_cast<const uint8_t *>(data) + 8,ZT_ADDRESS_LENGTH);
 				const Address source(reinterpret_cast<const uint8_t *>(data) + 13,ZT_ADDRESS_LENGTH);
 
-				// Catch this and toss it -- it would never work, but it could happen if we somehow
-				// mistakenly guessed an address we're bound to as a destination for another peer.
-				if (source == RR->identity.address())
-					return;
-
 				//TRACE("<< %.16llx %s -> %s (size: %u)",(unsigned long long)packet->packetId(),source.toString().c_str(),destination.toString().c_str(),packet->size());
 
 				if (destination != RR->identity.address()) {
@@ -223,7 +218,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 							}
 						} else {
 #ifdef ZT_ENABLE_CLUSTER
-							if (RR->cluster) {
+							if ((RR->cluster)&&(source != RR->identity.address())) {
 								bool shouldUnite;
 								{
 									Mutex::Lock _l(_lastUniteAttempt_m);
