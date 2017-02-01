@@ -105,7 +105,13 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 				const Address destination(fragment.destination());
 
 				if (destination != RR->identity.address()) {
-					if ( (!RR->topology->amRoot()) && (!path->trustEstablished(now)) )
+#ifdef ZT_ENABLE_CLUSTER
+					const bool isClusterFrontplane = ((RR->cluster)&&(RR->cluster->isClusterPeerFrontplane(fromAddr)));
+#else
+					const bool isClusterFrontplane = false;
+#endif
+
+					if ( (!RR->topology->amRoot()) && (!path->trustEstablished(now)) && (!isClusterFrontplane) )
 						return;
 
 					if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
@@ -116,7 +122,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 						SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
 						if ((!relayTo)||(!relayTo->sendDirect(fragment.data(),fragment.size(),now,false))) {
 #ifdef ZT_ENABLE_CLUSTER
-							if (RR->cluster) {
+							if ((RR->cluster)&&(!isClusterFrontplane)) {
 								RR->cluster->relayViaCluster(Address(),destination,fragment.data(),fragment.size(),false);
 								return;
 							}
@@ -208,7 +214,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 #endif
 
 				if (destination != RR->identity.address()) {
-					if ( (!RR->topology->amRoot()) && (!path->trustEstablished(now)) )
+					if ( (!RR->topology->amRoot()) && (!path->trustEstablished(now)) && (source != RR->identity.address()) )
 						return;
 
 					Packet packet(data,len);
@@ -223,11 +229,13 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 
 						SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
 						if ((relayTo)&&((relayTo->sendDirect(packet.data(),packet.size(),now,false)))) {
-							Mutex::Lock _l(_lastUniteAttempt_m);
-							uint64_t &luts = _lastUniteAttempt[_LastUniteKey(source,destination)];
-							if ((now - luts) >= ZT_MIN_UNITE_INTERVAL) {
-								luts = now;
-								_unite(source,destination);
+							if (source != RR->identity.address()) {
+								Mutex::Lock _l(_lastUniteAttempt_m);
+								uint64_t &luts = _lastUniteAttempt[_LastUniteKey(source,destination)];
+								if ((now - luts) >= ZT_MIN_UNITE_INTERVAL) {
+									luts = now;
+									_unite(source,destination);
+								}
 							}
 						} else {
 #ifdef ZT_ENABLE_CLUSTER
