@@ -862,6 +862,19 @@ bool Cluster::findBetterEndpoint(InetAddress &redirectTo,const Address &peerAddr
 	}
 }
 
+bool Cluster::isClusterPeerFrontplane(const InetAddress &ip) const
+{
+	Mutex::Lock _l(_memberIds_m);
+	for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
+		Mutex::Lock _l2(_members[*mid].lock);
+		for(std::vector<InetAddress>::const_iterator i2(_members[*mid].zeroTierPhysicalEndpoints.begin());i2!=_members[*mid].zeroTierPhysicalEndpoints.end();++i2) {
+			if (ip == *i2)
+				return true;
+		}
+	}
+	return false;
+}
+
 void Cluster::status(ZT_ClusterStatus &status) const
 {
 	const uint64_t now = RR->node->now();

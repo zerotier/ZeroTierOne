@@ -359,6 +359,12 @@ public:
 	bool findBetterEndpoint(InetAddress &redirectTo,const Address &peerAddress,const InetAddress &peerPhysicalAddress,bool offload);
 
 	/**
+	 * @param ip Address to check
+	 * @return True if this is a cluster frontplane address (excluding our addresses)
+	 */
+	bool isClusterPeerFrontplane(const InetAddress &ip) const;
+
+	/**
 	 * Fill out ZT_ClusterStatus structure (from core API)
 	 *
 	 * @param status Reference to structure to hold result (anything there is replaced)

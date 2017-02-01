@@ -199,6 +199,14 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 
 				//TRACE("<< %.16llx %s -> %s (size: %u)",(unsigned long long)packet->packetId(),source.toString().c_str(),destination.toString().c_str(),packet->size());
 
+#ifdef ZT_ENABLE_CLUSTER
+				if ( (source == RR->identity.address()) && ((!RR->cluster)||(!RR->cluster->isClusterPeerFrontplane(fromAddr))) )
+					return;
+#else
+				if (source == RR->identity.address())
+					return;
+#endif
+
 				if (destination != RR->identity.address()) {
 					if ( (!RR->topology->amRoot()) && (!path->trustEstablished(now)) )
 						return;
@@ -206,7 +214,12 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 					Packet packet(data,len);
 
 					if (packet.hops() < ZT_RELAY_MAX_HOPS) {
+#ifdef ZT_ENABLE_CLUSTER
+						if (source != RR->identity.address())
+							packet.incrementHops();
+#else
 						packet.incrementHops();
+#endif
 
 						SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
 						if ((relayTo)&&((relayTo->sendDirect(packet.data(),packet.size(),now,false)))) {
