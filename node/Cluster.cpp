@@ -516,10 +516,10 @@ void Cluster::broadcastNetworkConfigChunk(const void *chunk,unsigned int len)
 	}
 }
 
-int Cluster::prepSendViaCluster(const Address &toPeerAddress,void *peerSecret)
+int Cluster::prepSendViaCluster(const Address &toPeerAddress,uint64_t &mostRecentTs,void *peerSecret)
 {
 	const uint64_t now = RR->node->now();
-	uint64_t mostRecentTs = 0;
+	mostRecentTs = 0;
 	int mostRecentMemberId = -1;
 	{
 		Mutex::Lock _l2(_remotePeers_m);

@@ -692,6 +692,7 @@ bool Switch::_trySend(Packet &packet,bool encrypt)
 	const uint64_t now = RR->node->now();
 	const Address destination(packet.destination());
 #ifdef ZT_ENABLE_CLUSTER
+	uint64_t clusterMostRecentTs = 0;
 	int clusterMostRecentMemberId = -1;
 	uint8_t clusterPeerSecret[ZT_PEER_SECRET_KEY_LENGTH];
 #endif
@@ -713,25 +714,31 @@ bool Switch::_trySend(Packet &packet,bool encrypt)
 		}
 
 		if (!viaPath) {
-#ifdef ZT_ENABLE_CLUSTER
-			if (RR->cluster)
-				clusterMostRecentMemberId = RR->cluster->prepSendViaCluster(destination,clusterPeerSecret);
-			if (clusterMostRecentMemberId < 0) {
-#endif
-				peer->tryMemorizedPath(now); // periodically attempt memorized or statically defined paths, if any are known
-				const SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());
-				if ( (!relay) || (!(viaPath = relay->getBestPath(now,false))) ) {
-					if (!(viaPath = peer->getBestPath(now,true))) // last resort: try an expired path... we usually can never get here
-						return false;
-				}
-#ifdef ZT_ENABLE_CLUSTER
-			}
-#endif
+			const SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());
+			if ( (!relay) || (!(viaPath = relay->getBestPath(now,false))) )
+				viaPath = peer->getBestPath(now,true);
 		}
+
+#ifdef ZT_ENABLE_CLUSTER
+		if (RR->cluster)
+			clusterMostRecentMemberId = RR->cluster->prepSendViaCluster(destination,clusterMostRecentTs,clusterPeerSecret);
+		if (clusterMostRecentMemberId >= 0) {
+			if ((viaPath)&&(viaPath->lastIn() < clusterMostRecentTs))
+				viaPath.zero();
+		} else if (!viaPath) {
+			peer->tryMemorizedPath(now); // periodically attempt memorized or statically defined paths, if any are known
+			return false;
+		}
+#else
+		if (!viaPath) {
+			peer->tryMemorizedPath(now); // periodically attempt memorized or statically defined paths, if any are known
+			return false;
+		}
+#endif
 	} else {
 #ifdef ZT_ENABLE_CLUSTER
 		if (RR->cluster)
-			clusterMostRecentMemberId = RR->cluster->prepSendViaCluster(destination,clusterPeerSecret);
+			clusterMostRecentMemberId = RR->cluster->prepSendViaCluster(destination,clusterMostRecentTs,clusterPeerSecret);
 		if (clusterMostRecentMemberId < 0) {
 #else
 			requestWhois(destination);
@@ -742,6 +749,7 @@ bool Switch::_trySend(Packet &packet,bool encrypt)
 #endif
 	}
 
+	// Sanity checks
 #ifdef ZT_ENABLE_CLUSTER
 	if ((!viaPath)&&(clusterMostRecentMemberId < 0))
 		return false;
