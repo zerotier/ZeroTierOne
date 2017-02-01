@@ -82,12 +82,12 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 			 * no longer send these, but we'll listen for them for a while to
 			 * locate peers with versions <1.0.4. */
 
-			Address beaconAddr(reinterpret_cast<const char *>(data) + 8,5);
+			const Address beaconAddr(reinterpret_cast<const char *>(data) + 8,5);
 			if (beaconAddr == RR->identity.address())
 				return;
 			if (!RR->node->shouldUsePathForZeroTierTraffic(beaconAddr,localAddr,fromAddr))
 				return;
-			SharedPtr<Peer> peer(RR->topology->getPeer(beaconAddr));
+			const SharedPtr<Peer> peer(RR->topology->getPeer(beaconAddr));
 			if (peer) { // we'll only respond to beacons from known peers
 				if ((now - _lastBeaconResponse) >= 2500) { // limit rate of responses
 					_lastBeaconResponse = now;

@@ -347,7 +347,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 								_RemotePeer &rp = _remotePeers[std::pair<Address,unsigned int>(id.address(),(unsigned int)fromMemberId)];
 								if (!rp.lastHavePeerReceived) {
 									RR->topology->saveIdentity(id);
-									id.agree(RR->identity,rp.key,ZT_PEER_SECRET_KEY_LENGTH);
+									RR->identity.agree(id,rp.key,ZT_PEER_SECRET_KEY_LENGTH);
 								}
 								rp.lastHavePeerReceived = RR->node->now();
 							}
