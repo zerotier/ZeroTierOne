@@ -124,6 +124,7 @@ public:
 	unsigned long doTimerTasks(uint64_t now);
 
 private:
+	bool _shouldUnite(const uint64_t now,const Address &source,const Address &destination);
 	Address _sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
 	bool _trySend(Packet &packet,bool encrypt); // packet is modified if return is true
 

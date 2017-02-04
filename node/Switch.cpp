@@ -225,87 +225,66 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 
 						SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
 						if ((relayTo)&&((relayTo->sendDirect(packet.data(),packet.size(),now,false)))) {
-							if (source != RR->identity.address()) { // don't send RENDEZVOUS for cluster frontplane relays
+							if ((source != RR->identity.address())&&(_shouldUnite(now,source,destination))) { // don't send RENDEZVOUS for cluster frontplane relays
+								const InetAddress *hintToSource = (InetAddress *)0;
+								const InetAddress *hintToDest = (InetAddress *)0;
 
-								bool shouldUnite;
-								{
-									Mutex::Lock _l(_lastUniteAttempt_m);
-									uint64_t &lastUniteAt = _lastUniteAttempt[_LastUniteKey(source,destination)];
-									shouldUnite = ((now - lastUniteAt) >= ZT_MIN_UNITE_INTERVAL);
-									if (shouldUnite)
-										lastUniteAt = now;
-								}
+								InetAddress destV4,destV6;
+								InetAddress sourceV4,sourceV6;
+								relayTo->getRendezvousAddresses(now,destV4,destV6);
 
-								if (shouldUnite) {
-									const InetAddress *hintToSource = (InetAddress *)0;
-									const InetAddress *hintToDest = (InetAddress *)0;
+								const SharedPtr<Peer> sourcePeer(RR->topology->getPeer(source));
+								if (sourcePeer) {
+									sourcePeer->getRendezvousAddresses(now,sourceV4,sourceV6);
+									if ((destV6)&&(sourceV6)) {
+										hintToSource = &destV6;
+										hintToDest = &sourceV6;
+									} else if ((destV4)&&(sourceV4)) {
+										hintToSource = &destV4;
+										hintToDest = &sourceV4;
+									}
 
-									InetAddress destV4,destV6;
-									InetAddress sourceV4,sourceV6;
-									relayTo->getRendezvousAddresses(now,destV4,destV6);
-
-									const SharedPtr<Peer> sourcePeer(RR->topology->getPeer(source));
-									if (sourcePeer) {
-										sourcePeer->getRendezvousAddresses(now,sourceV4,sourceV6);
-										if ((destV6)&&(sourceV6)) {
-											hintToSource = &destV6;
-											hintToDest = &sourceV6;
-										} else if ((destV4)&&(sourceV4)) {
-											hintToSource = &destV4;
-											hintToDest = &sourceV4;
-										}
-
-										if ((hintToSource)&&(hintToDest)) {
-											TRACE(">> RENDEZVOUS: %s(%s) <> %s(%s)",p1.toString().c_str(),p1a->toString().c_str(),p2.toString().c_str(),p2a->toString().c_str());
-											unsigned int alt = (unsigned int)RR->node->prng() & 1; // randomize which hint we send first for obscure NAT-t reasons
-											const unsigned int completed = alt + 2;
-											while (alt != completed) {
-												if ((alt & 1) == 0) {
-													Packet outp(source,RR->identity.address(),Packet::VERB_RENDEZVOUS);
-													outp.append((uint8_t)0);
-													destination.appendTo(outp);
-													outp.append((uint16_t)hintToSource->port());
-													if (hintToSource->ss_family == AF_INET6) {
-														outp.append((uint8_t)16);
-														outp.append(hintToSource->rawIpData(),16);
-													} else {
-														outp.append((uint8_t)4);
-														outp.append(hintToSource->rawIpData(),4);
-													}
-													send(outp,true);
+									if ((hintToSource)&&(hintToDest)) {
+										TRACE(">> RENDEZVOUS: %s(%s) <> %s(%s)",p1.toString().c_str(),p1a->toString().c_str(),p2.toString().c_str(),p2a->toString().c_str());
+										unsigned int alt = (unsigned int)RR->node->prng() & 1; // randomize which hint we send first for obscure NAT-t reasons
+										const unsigned int completed = alt + 2;
+										while (alt != completed) {
+											if ((alt & 1) == 0) {
+												Packet outp(source,RR->identity.address(),Packet::VERB_RENDEZVOUS);
+												outp.append((uint8_t)0);
+												destination.appendTo(outp);
+												outp.append((uint16_t)hintToSource->port());
+												if (hintToSource->ss_family == AF_INET6) {
+													outp.append((uint8_t)16);
+													outp.append(hintToSource->rawIpData(),16);
 												} else {
-													Packet outp(destination,RR->identity.address(),Packet::VERB_RENDEZVOUS);
-													outp.append((uint8_t)0);
-													source.appendTo(outp);
-													outp.append((uint16_t)hintToDest->port());
-													if (hintToDest->ss_family == AF_INET6) {
-														outp.append((uint8_t)16);
-														outp.append(hintToDest->rawIpData(),16);
-													} else {
-														outp.append((uint8_t)4);
-														outp.append(hintToDest->rawIpData(),4);
-													}
-													send(outp,true);
+													outp.append((uint8_t)4);
+													outp.append(hintToSource->rawIpData(),4);
 												}
-												++alt;
+												send(outp,true);
+											} else {
+												Packet outp(destination,RR->identity.address(),Packet::VERB_RENDEZVOUS);
+												outp.append((uint8_t)0);
+												source.appendTo(outp);
+												outp.append((uint16_t)hintToDest->port());
+												if (hintToDest->ss_family == AF_INET6) {
+													outp.append((uint8_t)16);
+													outp.append(hintToDest->rawIpData(),16);
+												} else {
+													outp.append((uint8_t)4);
+													outp.append(hintToDest->rawIpData(),4);
+												}
+												send(outp,true);
 											}
+											++alt;
 										}
 									}
 								}
-
 							}
 						} else {
 #ifdef ZT_ENABLE_CLUSTER
 							if ((RR->cluster)&&(source != RR->identity.address())) {
-								bool shouldUnite;
-								{
-									Mutex::Lock _l(_lastUniteAttempt_m);
-									uint64_t &luts = _lastUniteAttempt[_LastUniteKey(source,destination)];
-									shouldUnite = ((now - luts) >= ZT_MIN_UNITE_INTERVAL);
-									if (shouldUnite)
-										luts = now;
-								}
-								RR->cluster->relayViaCluster(source,destination,packet.data(),packet.size(),shouldUnite);
+								RR->cluster->relayViaCluster(source,destination,packet.data(),packet.size(),_shouldUnite(now,source,destination));
 								return;
 							}
 #endif
@@ -745,6 +724,17 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 	}
 
 	return nextDelay;
+}
+
+bool Switch::_shouldUnite(const uint64_t now,const Address &source,const Address &destination)
+{
+	Mutex::Lock _l(_lastUniteAttempt_m);
+	uint64_t &ts = _lastUniteAttempt[_LastUniteKey(source,destination)];
+	if ((now - ts) >= ZT_MIN_UNITE_INTERVAL) {
+		ts = now;
+		return true;
+	}
+	return false;
 }
 
 Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted)
