@@ -536,7 +536,7 @@ public:
 		 *   <[1] software major version>
 		 *   <[1] software minor version>
 		 *   <[2] software revision>
-		 *   <[8] timestamp for determining latench>
+		 *   <[8] timestamp for determining latency>
 		 *   <[...] binary serialized identity (see Identity)>
 		 *   <[1] destination address type>
 		 *   [<[...] destination address to which packet was sent>]
@@ -548,8 +548,9 @@ public:
 		 *   [<[8] 64-bit timestamp of moon>]
 		 *   [... additional moons ...]
 		 *
-		 * This is the only message that ever must be sent in the clear, since it
-		 * is used to push an identity to a new peer.
+		 * Important security note: this message is sent in the clear as it
+		 * contains the initial identity for key agreement. It can therefore
+		 * contain no secrets or sensitive information.
 		 *
 		 * The destination address is the wire address to which this packet is
 		 * being sent, and in OK is *also* the destination address of the OK
@@ -1058,7 +1059,27 @@ public:
 		 * ZeroTier, Inc. itself. We recommend making up random ones for your own
 		 * implementations.
 		 */
-		VERB_USER_MESSAGE = 0x14
+		VERB_USER_MESSAGE = 0x14,
+
+		/**
+		 * Announce that we can reach a particular address:
+		 *   <[1] protocol version>
+		 *   <[1] software major version>
+		 *   <[1] software minor version>
+		 *   <[2] software revision>
+		 *   <[...] binary serialized identity (see Identity)>
+		 *   <[1] 8-bit number of direct addresses where peer is reachable (if any)>
+		 *   [... serialized direct addresses ...]
+		 *
+		 * This message can be sent upstream to announce that we can reach a
+		 * particular address. It can optionally report physical paths upstream
+		 * to allow upstream peers to send RENDEZVOUS, but this may be omitted
+		 * if it is not known or if endpoint address privacy is desired.
+		 *
+		 * The receiving peer should confirm this message by sending a message
+		 * downstream and waiting for a reply.
+		 */
+		VERB_CAN_REACH = 0x15
 	};
 
 	/**

@@ -215,6 +215,11 @@
 #define ZT_RECEIVE_QUEUE_TIMEOUT (ZT_WHOIS_RETRY_DELAY * (ZT_MAX_WHOIS_RETRIES + 1))
 
 /**
+ * Maximum latency to allow for OK(HELLO) before packet is discarded
+ */
+#define ZT_HELLO_MAX_ALLOWABLE_LATENCY 60000
+
+/**
  * Maximum number of ZT hops allowed (this is not IP hops/TTL)
  *
  * The protocol allows up to 7, but we limit it to something smaller.
