@@ -55,7 +55,6 @@ class Switch : NonCopyable
 {
 public:
 	Switch(const RuntimeEnvironment *renv);
-	~Switch();
 
 	/**
 	 * Called when a packet is received from the real network
@@ -127,7 +126,6 @@ public:
 private:
 	Address _sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
 	bool _trySend(Packet &packet,bool encrypt); // packet is modified if return is true
-	bool _unite(const Address &p1,const Address &p2);
 
 	const RuntimeEnvironment *const RR;
 	uint64_t _lastBeaconResponse;

@@ -400,7 +400,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						SharedPtr<Peer> localPeer(RR->topology->getPeerNoCache(localPeerAddress));
 						if ((localPeer)&&(numRemotePeerPaths > 0)) {
 							InetAddress bestLocalV4,bestLocalV6;
-							localPeer->getBestActiveAddresses(now,bestLocalV4,bestLocalV6);
+							localPeer->getRendezvousAddresses(now,bestLocalV4,bestLocalV6);
 
 							InetAddress bestRemoteV4,bestRemoteV6;
 							for(unsigned int i=0;i<numRemotePeerPaths;++i) {
@@ -652,7 +652,7 @@ void Cluster::relayViaCluster(const Address &fromPeerAddress,const Address &toPe
 			if (fromPeerAddress) {
 				SharedPtr<Peer> fromPeer(RR->topology->getPeerNoCache(fromPeerAddress));
 				if (fromPeer)
-					fromPeer->getBestActiveAddresses(now,v4,v6);
+					fromPeer->getRendezvousAddresses(now,v4,v6);
 			}
 			uint8_t addrCount = 0;
 			if (v4)

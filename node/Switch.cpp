@@ -64,10 +64,6 @@ Switch::Switch(const RuntimeEnvironment *renv) :
 {
 }
 
-Switch::~Switch()
-{
-}
-
 void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len)
 {
 	try {
@@ -221,7 +217,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 
 					if (packet.hops() < ZT_RELAY_MAX_HOPS) {
 #ifdef ZT_ENABLE_CLUSTER
-						if (source != RR->identity.address())
+						if (source != RR->identity.address()) // don't increment hops for cluster frontplane relays
 							packet.incrementHops();
 #else
 						packet.incrementHops();
@@ -229,13 +225,74 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 
 						SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
 						if ((relayTo)&&((relayTo->sendDirect(packet.data(),packet.size(),now,false)))) {
-							if (source != RR->identity.address()) {
-								Mutex::Lock _l(_lastUniteAttempt_m);
-								uint64_t &luts = _lastUniteAttempt[_LastUniteKey(source,destination)];
-								if ((now - luts) >= ZT_MIN_UNITE_INTERVAL) {
-									luts = now;
-									_unite(source,destination);
+							if (source != RR->identity.address()) { // don't send RENDEZVOUS for cluster frontplane relays
+
+								bool shouldUnite;
+								{
+									Mutex::Lock _l(_lastUniteAttempt_m);
+									uint64_t &lastUniteAt = _lastUniteAttempt[_LastUniteKey(source,destination)];
+									shouldUnite = ((now - lastUniteAt) >= ZT_MIN_UNITE_INTERVAL);
+									if (shouldUnite)
+										lastUniteAt = now;
 								}
+
+								if (shouldUnite) {
+									const InetAddress *hintToSource = (InetAddress *)0;
+									const InetAddress *hintToDest = (InetAddress *)0;
+
+									InetAddress destV4,destV6;
+									InetAddress sourceV4,sourceV6;
+									relayTo->getRendezvousAddresses(now,destV4,destV6);
+
+									const SharedPtr<Peer> sourcePeer(RR->topology->getPeer(source));
+									if (sourcePeer) {
+										sourcePeer->getRendezvousAddresses(now,sourceV4,sourceV6);
+										if ((destV6)&&(sourceV6)) {
+											hintToSource = &destV6;
+											hintToDest = &sourceV6;
+										} else if ((destV4)&&(sourceV4)) {
+											hintToSource = &destV4;
+											hintToDest = &sourceV4;
+										}
+
+										if ((hintToSource)&&(hintToDest)) {
+											TRACE(">> RENDEZVOUS: %s(%s) <> %s(%s)",p1.toString().c_str(),p1a->toString().c_str(),p2.toString().c_str(),p2a->toString().c_str());
+											unsigned int alt = (unsigned int)RR->node->prng() & 1; // randomize which hint we send first for obscure NAT-t reasons
+											const unsigned int completed = alt + 2;
+											while (alt != completed) {
+												if ((alt & 1) == 0) {
+													Packet outp(source,RR->identity.address(),Packet::VERB_RENDEZVOUS);
+													outp.append((uint8_t)0);
+													destination.appendTo(outp);
+													outp.append((uint16_t)hintToSource->port());
+													if (hintToSource->ss_family == AF_INET6) {
+														outp.append((uint8_t)16);
+														outp.append(hintToSource->rawIpData(),16);
+													} else {
+														outp.append((uint8_t)4);
+														outp.append(hintToSource->rawIpData(),4);
+													}
+													send(outp,true);
+												} else {
+													Packet outp(destination,RR->identity.address(),Packet::VERB_RENDEZVOUS);
+													outp.append((uint8_t)0);
+													source.appendTo(outp);
+													outp.append((uint16_t)hintToDest->port());
+													if (hintToDest->ss_family == AF_INET6) {
+														outp.append((uint8_t)16);
+														outp.append(hintToDest->rawIpData(),16);
+													} else {
+														outp.append((uint8_t)4);
+														outp.append(hintToDest->rawIpData(),4);
+													}
+													send(outp,true);
+												}
+												++alt;
+											}
+										}
+									}
+								}
+
 							}
 						} else {
 #ifdef ZT_ENABLE_CLUSTER
@@ -819,98 +876,6 @@ bool Switch::_trySend(Packet &packet,bool encrypt)
 				remaining -= chunkSize;
 			}
 		}
-	}
-
-	return true;
-}
-
-bool Switch::_unite(const Address &p1,const Address &p2)
-{
-	if ((p1 == RR->identity.address())||(p2 == RR->identity.address()))
-		return false;
-
-	const uint64_t now = RR->node->now();
-	InetAddress *p1a = (InetAddress *)0;
-	InetAddress *p2a = (InetAddress *)0;
-	InetAddress p1v4,p1v6,p2v4,p2v6,uv4,uv6;
-	{
-		const SharedPtr<Peer> p1p(RR->topology->getPeer(p1));
-		const SharedPtr<Peer> p2p(RR->topology->getPeer(p2));
-		if ((!p1p)&&(!p2p)) return false;
-		if (p1p) p1p->getBestActiveAddresses(now,p1v4,p1v6);
-		if (p2p) p2p->getBestActiveAddresses(now,p2v4,p2v6);
-	}
-	if ((p1v6)&&(p2v6)) {
-		p1a = &p1v6;
-		p2a = &p2v6;
-	} else if ((p1v4)&&(p2v4)) {
-		p1a = &p1v4;
-		p2a = &p2v4;
-	} else {
-		SharedPtr<Peer> upstream(RR->topology->getUpstreamPeer());
-		if (!upstream)
-			return false;
-		upstream->getBestActiveAddresses(now,uv4,uv6);
-		if ((p1v6)&&(uv6)) {
-			p1a = &p1v6;
-			p2a = &uv6;
-		} else if ((p1v4)&&(uv4)) {
-			p1a = &p1v4;
-			p2a = &uv4;
-		} else if ((p2v6)&&(uv6)) {
-			p1a = &p2v6;
-			p2a = &uv6;
-		} else if ((p2v4)&&(uv4)) {
-			p1a = &p2v4;
-			p2a = &uv4;
-		} else return false;
-	}
-
-	TRACE("unite: %s(%s) <> %s(%s)",p1.toString().c_str(),p1a->toString().c_str(),p2.toString().c_str(),p2a->toString().c_str());
-
-	/* Tell P1 where to find P2 and vice versa, sending the packets to P1 and
-	 * P2 in randomized order in terms of which gets sent first. This is done
-	 * since in a few cases NAT-t can be sensitive to slight timing differences
-	 * in terms of when the two peers initiate. Normally this is accounted for
-	 * by the nearly-simultaneous RENDEZVOUS kickoff from the relay, but
-	 * given that relay are hosted on cloud providers this can in some
-	 * cases have a few ms of latency between packet departures. By randomizing
-	 * the order we make each attempted NAT-t favor one or the other going
-	 * first, meaning if it doesn't succeed the first time it might the second
-	 * and so forth. */
-	unsigned int alt = (unsigned int)RR->node->prng() & 1;
-	const unsigned int completed = alt + 2;
-	while (alt != completed) {
-		if ((alt & 1) == 0) {
-			// Tell p1 where to find p2.
-			Packet outp(p1,RR->identity.address(),Packet::VERB_RENDEZVOUS);
-			outp.append((unsigned char)0);
-			p2.appendTo(outp);
-			outp.append((uint16_t)p2a->port());
-			if (p2a->isV6()) {
-				outp.append((unsigned char)16);
-				outp.append(p2a->rawIpData(),16);
-			} else {
-				outp.append((unsigned char)4);
-				outp.append(p2a->rawIpData(),4);
-			}
-			send(outp,true);
-		} else {
-			// Tell p2 where to find p1.
-			Packet outp(p2,RR->identity.address(),Packet::VERB_RENDEZVOUS);
-			outp.append((unsigned char)0);
-			p1.appendTo(outp);
-			outp.append((uint16_t)p1a->port());
-			if (p1a->isV6()) {
-				outp.append((unsigned char)16);
-				outp.append(p1a->rawIpData(),16);
-			} else {
-				outp.append((unsigned char)4);
-				outp.append(p1a->rawIpData(),4);
-			}
-			send(outp,true);
-		}
-		++alt; // counts up and also flips LSB
 	}
 
 	return true;

@@ -208,7 +208,7 @@ public:
 	 * @param v4 Result parameter to receive active IPv4 address, if any
 	 * @param v6 Result parameter to receive active IPv6 address, if any
 	 */
-	void getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const;
+	void getRendezvousAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const;
 
 	/**
 	 * @param now Current time

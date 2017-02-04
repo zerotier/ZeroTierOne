@@ -446,7 +446,7 @@ void Peer::resetWithinScope(InetAddress::IpScope scope,int inetAddressFamily,uin
 	}
 }
 
-void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
+void Peer::getRendezvousAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
 {
 	Mutex::Lock _l(_paths_m);
 
