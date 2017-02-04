@@ -38,6 +38,7 @@
 namespace ZeroTier {
 
 Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
+	RR(renv),
 	_lastReceive(0),
 	_lastNontrivialReceive(0),
 	_lastTriedMemorizedPath(0),
@@ -50,7 +51,6 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastComRequestSent(0),
 	_lastCredentialsReceived(0),
 	_lastTrustEstablishedPacketReceived(0),
-	RR(renv),
 	_remoteClusterOptimal4(0),
 	_vProto(0),
 	_vMajor(0),
@@ -364,6 +364,11 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 		outp.append((uint64_t)m->id());
 		outp.append((uint64_t)m->timestamp());
 	}
+
+	const unsigned int corSizeAt = outp.size();
+	outp.addSize(2);
+	RR->topology->appendCertificateOfRepresentation(outp);
+	outp.setAt(corSizeAt,(uint16_t)((outp.size() - corSizeAt) - 2));
 
 	RR->node->expectReplyTo(outp.packetId());
 

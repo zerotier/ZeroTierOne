@@ -531,7 +531,7 @@ public:
 		VERB_NOP = 0x00,
 
 		/**
-		 * Announcement of a node's existence:
+		 * Announcement of a node's existence and vitals:
 		 *   <[1] protocol version>
 		 *   <[1] software major version>
 		 *   <[1] software minor version>
@@ -547,10 +547,12 @@ public:
 		 *   [<[8] 64-bit world ID of moon>]
 		 *   [<[8] 64-bit timestamp of moon>]
 		 *   [... additional moons ...]
+		 *   <[2] 16-bit length of certificate of representation>
+		 *   [... certificate of representation ...]
 		 *
-		 * Important security note: this message is sent in the clear as it
-		 * contains the initial identity for key agreement. It can therefore
-		 * contain no secrets or sensitive information.
+		 * HELLO is sent in the clear, and therefore cannot contain anything
+		 * secret or highly confidential. It should contain nothing that is
+		 * not either public or easy to obtain via other means.
 		 *
 		 * The destination address is the wire address to which this packet is
 		 * being sent, and in OK is *also* the destination address of the OK
@@ -1059,27 +1061,7 @@ public:
 		 * ZeroTier, Inc. itself. We recommend making up random ones for your own
 		 * implementations.
 		 */
-		VERB_USER_MESSAGE = 0x14,
-
-		/**
-		 * Announce that we can reach a particular address:
-		 *   <[1] protocol version>
-		 *   <[1] software major version>
-		 *   <[1] software minor version>
-		 *   <[2] software revision>
-		 *   <[...] binary serialized identity (see Identity)>
-		 *   <[1] 8-bit number of direct addresses where peer is reachable (if any)>
-		 *   [... serialized direct addresses ...]
-		 *
-		 * This message can be sent upstream to announce that we can reach a
-		 * particular address. It can optionally report physical paths upstream
-		 * to allow upstream peers to send RENDEZVOUS, but this may be omitted
-		 * if it is not known or if endpoint address privacy is desired.
-		 *
-		 * The receiving peer should confirm this message by sending a message
-		 * downstream and waiting for a reply.
-		 */
-		VERB_CAN_REACH = 0x15
+		VERB_USER_MESSAGE = 0x14
 	};
 
 	/**

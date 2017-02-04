@@ -414,7 +414,14 @@ public:
 				throw std::runtime_error("unterminated custody chain");
 			_custody[i].to = to;
 			_custody[i].from.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-			memcpy(_custody[i].signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
+			if (b[p++] == 1) {
+				if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN)
+					throw std::runtime_error("invalid signature");
+				p += 2;
+				memcpy(_custody[i].signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
+			} else {
+				p += 2 + b.template at<uint16_t>(p);
+			}
 		}
 
 		p += 2 + b.template at<uint16_t>(p);

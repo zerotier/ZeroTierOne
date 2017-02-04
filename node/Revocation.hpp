@@ -152,6 +152,8 @@ public:
 				memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
 				p += ZT_C25519_SIGNATURE_LEN;
 			} else throw std::runtime_error("invalid signature");
+		} else {
+			p += 2 + b.template at<uint16_t>(p);
 		}
 
 		p += 2 + b.template at<uint16_t>(p);

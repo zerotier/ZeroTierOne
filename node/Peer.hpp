@@ -439,7 +439,9 @@ private:
 	}
 
 	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
-	uint8_t _remoteClusterOptimal6[16];
+
+	const RuntimeEnvironment *RR;
+
 	uint64_t _lastReceive; // direct or indirect
 	uint64_t _lastNontrivialReceive; // frames, things like netconf, etc.
 	uint64_t _lastTriedMemorizedPath;
@@ -452,13 +454,17 @@ private:
 	uint64_t _lastComRequestSent;
 	uint64_t _lastCredentialsReceived;
 	uint64_t _lastTrustEstablishedPacketReceived;
-	const RuntimeEnvironment *RR;
+
+	uint8_t _remoteClusterOptimal6[16];
 	uint32_t _remoteClusterOptimal4;
+
 	uint16_t _vProto;
 	uint16_t _vMajor;
 	uint16_t _vMinor;
 	uint16_t _vRevision;
+
 	Identity _id;
+
 	struct {
 		uint64_t lastReceive;
 		SharedPtr<Path> path;
@@ -467,6 +473,7 @@ private:
 #endif
 	} _paths[ZT_MAX_PEER_NETWORK_PATHS];
 	Mutex _paths_m;
+
 	unsigned int _numPaths;
 	unsigned int _latency;
 	unsigned int _directPathPushCutoffCount;

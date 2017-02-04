@@ -148,12 +148,14 @@ public:
 
 		_issuedTo.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
 		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-		if (b[p++] != 1)
-			throw std::runtime_error("unrecognized signature type");
-		if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN)
-			throw std::runtime_error("invalid signature length");
-		p += 2;
-		memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
+		if (b[p++] == 1) {
+			if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN)
+				throw std::runtime_error("invalid signature length");
+			p += 2;
+			memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
+		} else {
+			p += 2 + b.template at<uint16_t>(p);
+		}
 
 		p += 2 + b.template at<uint16_t>(p);
 		if (p > b.size())

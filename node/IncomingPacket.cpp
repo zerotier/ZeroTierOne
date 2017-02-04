@@ -37,6 +37,7 @@
 #include "Cluster.hpp"
 #include "Node.hpp"
 #include "CertificateOfMembership.hpp"
+#include "CertificateOfRepresentation.hpp"
 #include "Capability.hpp"
 #include "Tag.hpp"
 #include "Revocation.hpp"
@@ -443,6 +444,14 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 						ptr += w.deserialize(*this,ptr);
 						RR->topology->addWorld(w);
 					}
+				}
+
+				// Handle COR if present (older versions don't send this)
+				if ((ptr + 2) <= size()) {
+					//const unsigned int corSize = at<uint16_t>(ptr); ptr += 2;
+					ptr += 2;
+					CertificateOfRepresentation cor;
+					ptr += cor.deserialize(*this,ptr);
 				}
 
 				TRACE("%s(%s): OK(HELLO), version %u.%u.%u, latency %u, reported external address %s",source().toString().c_str(),_path->address().toString().c_str(),vMajor,vMinor,vRevision,latency,((externalSurfaceAddress) ? externalSurfaceAddress.toString().c_str() : "(none)"));

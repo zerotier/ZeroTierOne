@@ -417,6 +417,7 @@ void Topology::_memoizeUpstreams()
 	// assumes _upstreams_m and _peers_m are locked
 	_upstreamAddresses.clear();
 	_amRoot = false;
+
 	for(std::vector<World::Root>::const_iterator i(_planet.roots().begin());i!=_planet.roots().end();++i) {
 		if (i->identity == RR->identity) {
 			_amRoot = true;
@@ -429,6 +430,7 @@ void Topology::_memoizeUpstreams()
 			}
 		}
 	}
+
 	for(std::vector<World>::const_iterator m(_moons.begin());m!=_moons.end();++m) {
 		for(std::vector<World::Root>::const_iterator i(m->roots().begin());i!=m->roots().end();++i) {
 			if (i->identity == RR->identity) {
@@ -443,6 +445,15 @@ void Topology::_memoizeUpstreams()
 			}
 		}
 	}
+
+	std::sort(_upstreamAddresses.begin(),_upstreamAddresses.end());
+
+	_cor.clear();
+	for(std::vector<Address>::const_iterator a(_upstreamAddresses.begin());a!=_upstreamAddresses.end();++a) {
+		if (!_cor.addRepresentative(*a))
+			break;
+	}
+	_cor.sign(RR->identity,RR->node->now());
 }
 
 } // namespace ZeroTier

@@ -227,6 +227,11 @@
 #define ZT_RELAY_MAX_HOPS 3
 
 /**
+ * Maximum number of upstreams to use (far more than we should ever need)
+ */
+#define ZT_MAX_UPSTREAMS 64
+
+/**
  * Expire time for multicast 'likes' and indirect multicast memberships in ms
  */
 #define ZT_MULTICAST_LIKE_EXPIRE 600000
