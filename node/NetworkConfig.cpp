@@ -258,7 +258,7 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES_OLD,tmp2,sizeof(tmp2)) > 0) {
 				char *saveptr = (char *)0;
 				for(char *f=Utils::stok(tmp2,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
-					this->addSpecialist(Address(f),ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
+					this->addSpecialist(Address(Utils::hexStrToU64(f)),ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
 				}
 			}
 	#else

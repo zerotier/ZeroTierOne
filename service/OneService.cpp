@@ -926,7 +926,7 @@ public:
 			for(json::iterator v(virt.begin());v!=virt.end();++v) {
 				const std::string nstr = v.key();
 				if ((nstr.length() == ZT_ADDRESS_LENGTH_HEX)&&(v.value().is_object())) {
-					const Address ztaddr(nstr.c_str());
+					const Address ztaddr(Utils::hexStrToU64(nstr.c_str()));
 					if (ztaddr) {
 						const uint64_t ztaddr2 = ztaddr.toInt();
 						std::vector<InetAddress> &v4h = _v4Hints[ztaddr2];

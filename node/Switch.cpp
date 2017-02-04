@@ -224,7 +224,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 #endif
 
 						SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
-						if ((relayTo)&&((relayTo->sendDirect(packet.data(),packet.size(),now,false)))) {
+						if ((relayTo)&&(relayTo->sendDirect(packet.data(),packet.size(),now,false))) {
 							if ((source != RR->identity.address())&&(_shouldUnite(now,source,destination))) { // don't send RENDEZVOUS for cluster frontplane relays
 								const InetAddress *hintToSource = (InetAddress *)0;
 								const InetAddress *hintToDest = (InetAddress *)0;
@@ -245,7 +245,6 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 									}
 
 									if ((hintToSource)&&(hintToDest)) {
-										TRACE(">> RENDEZVOUS: %s(%s) <> %s(%s)",p1.toString().c_str(),p1a->toString().c_str(),p2.toString().c_str(),p2a->toString().c_str());
 										unsigned int alt = (unsigned int)RR->node->prng() & 1; // randomize which hint we send first for obscure NAT-t reasons
 										const unsigned int completed = alt + 2;
 										while (alt != completed) {

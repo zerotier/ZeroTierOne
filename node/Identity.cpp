@@ -160,7 +160,7 @@ bool Identity::fromString(const char *str)
 	for(char *f=Utils::stok(tmp,":",&saveptr);(f);f=Utils::stok((char *)0,":",&saveptr)) {
 		switch(fno++) {
 			case 0:
-				_address = Address(f);
+				_address = Address(Utils::hexStrToU64(f));
 				if (_address.isReserved())
 					return false;
 				break;

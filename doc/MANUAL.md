@@ -109,8 +109,6 @@ In the simplest case using only global roots, an initial connection setup betwee
 3. R also sends a message called *RENDEZVOUS* to A containing hints about how it might reach B, and to B informing it how it might reach A. We call this "transport triggered link provisioning."
 4. A and B get *RENDEZVOUS* and attempt to send test messages to each other, possibly accomplishing [hole punching](https://en.wikipedia.org/wiki/UDP_hole_punching) of any NATs or stateful firewalls that happen to be in the way. If this works a direct link is established and packets no longer need to take the scenic route.
 
-If R is a federated root the same process occurs, but possibly with additional steps.
-
 VL1 provides instant always-on virtual L1 connectivity between all devices in the world. Indirect paths are automatically and transparently upgraded to direct paths whenever possible, and if a direct path is lost ZeroTier falls back to indirect communication and the process begins again.
 
 If a direct path can never be established, indirect communication can continue forever with direct connection attempts also continuing indefinitely on a periodic basis. The protocol also contains other facilities for direct connectivity establishment such as LAN peer discovery, port prediction to traverse IPv4 symmetric NATs, and explicit endpoint advertisement that can be coupled with port mapping using uPnP or NAT-PMP if available. VL1 is persistent and determined when it comes to finding the most efficient way to move data.

@@ -1690,7 +1690,7 @@ void EmbeddedNetworkController::_getNetworkMemberInfo(uint64_t now,uint64_t nwid
 					}
 
 					if (OSUtils::jsonBool(member["activeBridge"],false)) {
-						nmi.activeBridges.insert(OSUtils::jsonString(member["id"],"0000000000"));
+						nmi.activeBridges.insert(Address(Utils::hexStrToU64(OSUtils::jsonString(member["id"],"0000000000").c_str())));
 					}
 
 					if (member.count("ipAssignments")) {
