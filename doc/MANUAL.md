@@ -24,7 +24,7 @@ This manual describes the design and operation of ZeroTier and its associated se
       6. [Rules Engine](#2_2_6)
       7. [Capabilities](#2_2_7)
       8. [Tags](#2_2_8)
-5. [ZeroTier One: The Network Virtualization Service](#5)
+3. [ZeroTier One: The Network Virtualization Service](#5)
    1. [Installation and Operation](#5_1)
       1. [Joining and Leaving Networks](#5_1_1)
       2. [Listing VL1 Peers for Network Troubleshooting](#5_1_2)
@@ -41,7 +41,7 @@ This manual describes the design and operation of ZeroTier and its associated se
       3. [Allowing Remote Administrative Requests](#5_5_3)
       4. [Creating Federated Roots ("Moons")](#5_5_4)
       5. [Clustering and Geo-Optimized Routing](#5_5_5)
-6. [Common Use Cases](#6)
+4. [Common Use Cases](#6)
    1. [SDN and General Network Virtualization](#6_1)
    2. [Replacing Conventional VPNs for Remote Access](#6_2)
       1. [Layer 2 Bridge Deployment Strategy](#6_2_1)
@@ -59,12 +59,12 @@ This manual describes the design and operation of ZeroTier and its associated se
    5. [Deivce (IoT) and Application Peer-to-Peer Networking](#6_5)
       1. [Running ZeroTier One in Containers and Virtual Appliances](#6_5_1)
       2. [ZeroTier One on Linux or BSD Powered IoT Devices](#6_5_2)
-7. [For Developers: Connecting IoT Devices and Apps](#7)
+5. [For Developers: Connecting IoT Devices and Apps](#7)
    1. [ZeroTier SDK for Apps](#7_1)
    2. [ZeroTier Network Hypervisor Core](#7_2)
       1. [Code Layout and Design](#7_2_1)
       2. [Building and Using](#7_2_2)
-7. [Licensing](#8)
+6. [Licensing](#8)
 
 ------
 
@@ -72,17 +72,17 @@ This manual describes the design and operation of ZeroTier and its associated se
 
 ZeroTier is a smart Ethernet switch for planet Earth.
 
-When the world is a single data center VPN, SDN, SD-WAN, and application peer to peer networking converge. The vast byzantine complexity of managing all these systems independently largely disappears. We've re-thought networking from first principles to deliver the flat end-to-end simplicity of the original pre-NAT pre-mobility Internet but in a way that meets the security, privacy, and mobility requirements of the 21st century.
+We've re-thought networking from first principles to deliver the flat end-to-end simplicity of the original pre-NAT pre-mobility Internet in a way that meets the security and mobility requirements of the 21st century. ZeroTier transforms the world into a unified modern data center where VPN, SDN, SD-WAN, and application peer to peer networking converge and where the distinction between the cloud and the endpoint largely disappears. All the complexity of managing these networking aspects as disparate systems is replaced by the simplicity of a single virtual cloud.
 
-This guide is written for users with at least an intermediate understanding of topics like Ethernet and TCP/IP networking. It explains ZeroTier's design and use in considerable detail. Most users with sufficient IT expertise to configure a router or firewall will *not* need this guide to deploy ZeroTier for simple use cases. Indeed we've built a substantial user base prior to its publication.
+At first some users struggle with this paradigm, finding it difficult to forget the fragmentation and complexity that has accreted around networking over the past decade or two. We urge skeptical users to just try it and see how many networking acronyms vanish before their eyes.
 
-So before reading all this you might want to just try installing ZeroTier on a few things and creating a network. Come back when you want to understand what's happening or when you need to make use of more advanced features like rules, capabilities, federation, or clustering.
+Unlike most networking products it won't take you hours, days, or weeks to test or deploy ZeroTier. Most of the time everything just works with zero configuration, and most users with some level of TCP/IP knowledge can get up and running in minutes. More advanced features like rules, micro-segmentation, capability based security credentials, network monitoring, and clustering are available but you don't need to worry about them until they're needed.
+
+The first section (2) of this guide explains ZeroTier's design and operation in detail and is written for users with at least an intermediate knowledge of topics like TCP/IP and Ethernet networking. Reading and understanding everything in it is not mandatory but we've written it as a deep technical dive as serious IT users typically like to understand the systems they deploy and use. Sections 3 and 4 deal more concretely with the ZeroTier One endpoint service software and how to deploy for common use cases.
 
 ## **2.** How it Works <a name="2"></a>
 
-This section explains how ZeroTier's network hypervisor works. It's not required reading to operate ZeroTier for all but the most advanced deployments, but understanding how things work is always helpful if you ever need to troubleshoot anything.
-
-ZeroTier is comprised of two closely coupled but conceptually distinct layers [in the OSI model](https://en.wikipedia.org/wiki/OSI_model) sense: a virtual "wire" layer called VL1 that moves data around and a virtual switched Ethernet layer called VL2 to provide devices and apps with a familiar interface. Since almost any protocol can be carried over Ethernet, emulating standard Ethernet behavior maximizes versatility.
+ZeroTier is comprised of two closely coupled but conceptually distinct layers [in the OSI model](https://en.wikipedia.org/wiki/OSI_model) sense: a virtual "wire" layer called VL1 that carries data and a virtual switched Ethernet layer called VL2 to provide devices and apps with a familiar communication paradigm.
 
 ### **2.1.** VL1: The ZeroTier Peer to Peer Network
 
