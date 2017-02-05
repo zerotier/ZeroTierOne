@@ -421,7 +421,7 @@ void Topology::_memoizeUpstreams()
 	for(std::vector<World::Root>::const_iterator i(_planet.roots().begin());i!=_planet.roots().end();++i) {
 		if (i->identity == RR->identity) {
 			_amRoot = true;
-		} else {
+		} else if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),i->identity.address()) == _upstreamAddresses.end()) {
 			_upstreamAddresses.push_back(i->identity.address());
 			SharedPtr<Peer> &hp = _peers[i->identity.address()];
 			if (!hp) {
@@ -435,7 +435,7 @@ void Topology::_memoizeUpstreams()
 		for(std::vector<World::Root>::const_iterator i(m->roots().begin());i!=m->roots().end();++i) {
 			if (i->identity == RR->identity) {
 				_amRoot = true;
-			} else {
+			} else if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),i->identity.address()) == _upstreamAddresses.end()) {
 				_upstreamAddresses.push_back(i->identity.address());
 				SharedPtr<Peer> &hp = _peers[i->identity.address()];
 				if (!hp) {
