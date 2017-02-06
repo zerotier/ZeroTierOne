@@ -538,8 +538,7 @@ public:
 		 *   <[2] software revision>
 		 *   <[8] timestamp for determining latency>
 		 *   <[...] binary serialized identity (see Identity)>
-		 *   <[1] destination address type>
-		 *   [<[...] destination address to which packet was sent>]
+		 *   <[...] physical destination address of packet>
 		 *   <[8] 64-bit world ID of current planet>
 		 *   <[8] 64-bit timestamp of current planet>
 		 *   [... remainder if packet is encrypted using cryptField() ...]
@@ -547,39 +546,38 @@ public:
 		 *   [<[1] 8-bit type ID of moon>]
 		 *   [<[8] 64-bit world ID of moon>]
 		 *   [<[8] 64-bit timestamp of moon>]
-		 *   [... additional moons ...]
+		 *   [... additional moon type/ID/timestamp tuples ...]
 		 *   <[2] 16-bit length of certificate of representation>
 		 *   [... certificate of representation ...]
 		 *
-		 * The initial fields of HELLO are sent in the clear. Fields after the
-		 * planet definition (which are common knowledge) are however encrypted
-		 * using the cryptField() function. The packet is MAC'd as usual using
-		 * the same MAC construct as other packets.
+		 * HELLO is sent in the clear as it is how peers share their identity
+		 * public keys. A few additional fields are sent in the clear too, but
+		 * these are things that are public info or are easy to determine. As
+		 * of 1.2.0 we have added a few more fields, but since these could have
+		 * the potential to be sensitive we introduced the encryption of the
+		 * remainder of the packet. See cryptField(). Packet MAC is still
+		 * performed of course, so authentication occurs as normal.
 		 *
-		 * The destination address is the wire address to which this packet is
-		 * being sent, and in OK is *also* the destination address of the OK
-		 * packet. This can be used by the receiver to detect NAT, learn its real
-		 * external address if behind NAT, and detect changes to its external
-		 * address that require re-establishing connectivity.
+		 * Destination address is the actual wire address to which the packet
+		 * was sent. See InetAddress::serialize() for format.
 		 *
-		 * Destination address types and formats (not all of these are used now):
-		 *   0x00 - None -- no destination address data present
-		 *   0x01 - Ethernet address -- format: <[6] Ethernet MAC>
-		 *   0x04 - 6-byte IPv4 UDP address/port -- format: <[4] IP>, <[2] port>
-		 *   0x06 - 18-byte IPv6 UDP address/port -- format: <[16] IP>, <[2] port>
-		 *
-		 * OK payload (note that OK is encrypted):
-		 *   <[8] timestamp (echoed from original HELLO)>
-		 *   <[1] protocol version (of responder)>
-		 *   <[1] software major version (of responder)>
-		 *   <[1] software minor version (of responder)>
-		 *   <[2] software revision (of responder)>
-		 *   <[1] destination address type (for this OK, not copied from HELLO)>
-		 *   [<[...] destination address>]
-		 *   <[2] 16-bit length of world update or 0 if none>
+		 * OK payload:
+		 *   <[8] HELLO timestamp field echo>
+		 *   <[1] protocol version>
+		 *   <[1] software major version>
+		 *   <[1] software minor version>
+		 *   <[2] software revision>
+		 *   <[...] physical destination address of packet>
+		 *   <[2] 16-bit length of world update(s) or 0 if none>
 		 *   [[...] updates to planets and/or moons]
-		 *   <[2] 16-bit length of certificate of representation (of responder)>
+		 *   <[2] 16-bit length of certificate of representation>
 		 *   [... certificate of representation ...]
+		 *
+		 * With the exception of the timestamp, the other fields pertain to the
+		 * respondent who is sending OK and are not echoes.
+		 *
+		 * Note that OK is fully encrypted so no selective cryptField() of
+		 * potentially sensitive fields is needed.
 		 *
 		 * ERROR has no payload.
 		 */

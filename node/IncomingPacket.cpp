@@ -212,15 +212,13 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 		const unsigned int vMinor = (*this)[ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION];
 		const unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO_IDX_REVISION);
 		const uint64_t timestamp = at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
+		Identity id;
+		unsigned int ptr = ZT_PROTO_VERB_HELLO_IDX_IDENTITY + id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
 
 		if (protoVersion < ZT_PROTO_VERSION_MIN) {
 			TRACE("dropped HELLO from %s(%s): protocol version too old",id.address().toString().c_str(),_path->address().toString().c_str());
 			return true;
 		}
-
-		Identity id;
-		unsigned int ptr = ZT_PROTO_VERB_HELLO_IDX_IDENTITY + id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
-
 		if (fromAddress != id.address()) {
 			TRACE("dropped HELLO from %s(%s): identity does not match packet source address",fromAddress.toString().c_str(),_path->address().toString().c_str());
 			return true;
@@ -301,8 +299,11 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 
 		// Get external surface address if present (was not in old versions)
 		InetAddress externalSurfaceAddress;
-		if (ptr < size())
+		if (ptr < size()) {
 			ptr += externalSurfaceAddress.deserialize(*this,ptr);
+			if ((externalSurfaceAddress)&&(hops() == 0))
+				RR->sa->iam(id.address(),_path->localAddress(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(id),now);
+		}
 
 		// Get primary planet world ID and world timestamp if present
 		uint64_t planetWorldId = 0;
@@ -329,17 +330,16 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 
 			// Handle COR if present (older versions don't send this)
 			if ((ptr + 2) <= size()) {
-				//const unsigned int corSize = at<uint16_t>(ptr); ptr += 2;
-				ptr += 2;
-				CertificateOfRepresentation cor;
-				ptr += cor.deserialize(*this,ptr);
+				if (at<uint16_t>(ptr) > 0) {
+					CertificateOfRepresentation cor;
+					ptr += 2;
+					ptr += cor.deserialize(*this,ptr);
+				} else ptr += 2;
 			}
 		}
 
-		// Learn our external surface address from other peers to help us negotiate symmetric NATs
-		// and detect changes to our global IP that can trigger path renegotiation.
-		if ((externalSurfaceAddress)&&(hops() == 0))
-			RR->sa->iam(id.address(),_path->localAddress(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(id),now);
+		// Send OK(HELLO) with an echo of the packet's timestamp and some of the same
+		// information about us: version, sent-to address, etc.
 
 		Packet outp(id.address(),RR->identity.address(),Packet::VERB_OK);
 		outp.append((unsigned char)Packet::VERB_HELLO);
@@ -466,10 +466,11 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 
 				// Handle COR if present (older versions don't send this)
 				if ((ptr + 2) <= size()) {
-					//const unsigned int corSize = at<uint16_t>(ptr); ptr += 2;
-					ptr += 2;
-					CertificateOfRepresentation cor;
-					ptr += cor.deserialize(*this,ptr);
+					if (at<uint16_t>(ptr) > 0) {
+						CertificateOfRepresentation cor;
+						ptr += 2;
+						ptr += cor.deserialize(*this,ptr);
+					} else ptr += 2;
 				}
 
 				TRACE("%s(%s): OK(HELLO), version %u.%u.%u, latency %u, reported external address %s",source().toString().c_str(),_path->address().toString().c_str(),vMajor,vMinor,vRevision,latency,((externalSurfaceAddress) ? externalSurfaceAddress.toString().c_str() : "(none)"));
