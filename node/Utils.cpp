@@ -144,6 +144,8 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	static Mutex globalLock;
 	static Salsa20 s20;
 	static bool s20Initialized = false;
+	static uint8_t randomBuf[65536];
+	static unsigned int randomPtr = sizeof(randomBuf);
 
 	Mutex::Lock _l(globalLock);
 
@@ -168,27 +170,31 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 
 	static HCRYPTPROV cryptProvider = NULL;
 
-	if (cryptProvider == NULL) {
-		if (!CryptAcquireContextA(&cryptProvider,NULL,NULL,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT|CRYPT_SILENT)) {
-			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
-			exit(1);
-			return;
+	for(unsigned int i=0;i<bytes;++i) {
+		if (randomPtr >= sizeof(randomBuf)) {
+			if (cryptProvider == NULL) {
+				if (!CryptAcquireContextA(&cryptProvider,NULL,NULL,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT|CRYPT_SILENT)) {
+					fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
+					exit(1);
+				}
+			}
+			if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomBuf),(BYTE *)randomBuf)) {
+				fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
+				exit(1);
+			}
+			randomPtr = 0;
+			s20.crypt12(randomBuf,randomBuf,sizeof(randomBuf));
 		}
-	}
-	if (!CryptGenRandom(cryptProvider,(DWORD)bytes,(BYTE *)buf)) {
-		fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
-		exit(1);
+		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
 	}
 
 #else // not __WINDOWS__
 
-	static char randomBuf[65536];
-	static unsigned int randomPtr = sizeof(randomBuf);
 	static int devURandomFd = -1;
 
-	if (devURandomFd <= 0) {
+	if (devURandomFd < 0) {
 		devURandomFd = ::open("/dev/urandom",O_RDONLY);
-		if (devURandomFd <= 0) {
+		if (devURandomFd < 0) {
 			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
 			exit(1);
 			return;
@@ -201,7 +207,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 				if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
 					::close(devURandomFd);
 					devURandomFd = ::open("/dev/urandom",O_RDONLY);
-					if (devURandomFd <= 0) {
+					if (devURandomFd < 0) {
 						fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
 						exit(1);
 						return;
@@ -209,13 +215,12 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 				} else break;
 			}
 			randomPtr = 0;
+			s20.crypt12(randomBuf,randomBuf,sizeof(randomBuf));
 		}
-		((char *)buf)[i] = randomBuf[randomPtr++];
+		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
 	}
 
 #endif // __WINDOWS__ or not
-
-	s20.crypt12(buf,buf,bytes);
 }
 
 bool Utils::scopy(char *dest,unsigned int len,const char *src)

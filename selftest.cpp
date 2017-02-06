@@ -154,9 +154,9 @@ static int testCrypto()
 		memset(buf3,0,sizeof(buf3));
 		Salsa20 s20;
 		s20.init("12345678123456781234567812345678",256,"12345678");
-		s20.encrypt20(buf1,buf2,sizeof(buf1));
+		s20.crypt20(buf1,buf2,sizeof(buf1));
 		s20.init("12345678123456781234567812345678",256,"12345678");
-		s20.decrypt20(buf2,buf3,sizeof(buf2));
+		s20.crypt20(buf2,buf3,sizeof(buf2));
 		if (memcmp(buf1,buf3,sizeof(buf1))) {
 			std::cout << "FAIL (encrypt/decrypt test)" << std::endl;
 			return -1;
@@ -165,7 +165,7 @@ static int testCrypto()
 	Salsa20 s20(s20TV0Key,256,s20TV0Iv);
 	memset(buf1,0,sizeof(buf1));
 	memset(buf2,0,sizeof(buf2));
-	s20.encrypt20(buf1,buf2,64);
+	s20.crypt20(buf1,buf2,64);
 	if (memcmp(buf2,s20TV0Ks,64)) {
 		std::cout << "FAIL (test vector 0)" << std::endl;
 		return -1;
@@ -173,7 +173,7 @@ static int testCrypto()
 	s20.init(s2012TV0Key,256,s2012TV0Iv);
 	memset(buf1,0,sizeof(buf1));
 	memset(buf2,0,sizeof(buf2));
-	s20.encrypt12(buf1,buf2,64);
+	s20.crypt12(buf1,buf2,64);
 	if (memcmp(buf2,s2012TV0Ks,64)) {
 		std::cout << "FAIL (test vector 1)" << std::endl;
 		return -1;
@@ -195,7 +195,7 @@ static int testCrypto()
 		double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
-			s20.encrypt12(bb,bb,1234567);
+			s20.crypt12(bb,bb,1234567);
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
@@ -213,7 +213,7 @@ static int testCrypto()
 		double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
-			s20.encrypt20(bb,bb,1234567);
+			s20.crypt20(bb,bb,1234567);
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
