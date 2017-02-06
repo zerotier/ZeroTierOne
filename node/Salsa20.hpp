@@ -56,50 +56,24 @@ public:
 		throw();
 
 	/**
-	 * Encrypt data using Salsa20/12
+	 * Encrypt/decrypt data using Salsa20/12
 	 *
 	 * @param in Input data
 	 * @param out Output buffer
 	 * @param bytes Length of data
 	 */
-	void encrypt12(const void *in,void *out,unsigned int bytes)
+	void crypt12(const void *in,void *out,unsigned int bytes)
 		throw();
 
 	/**
-	 * Encrypt data using Salsa20/20
+	 * Encrypt/decrypt data using Salsa20/20
 	 *
 	 * @param in Input data
 	 * @param out Output buffer
 	 * @param bytes Length of data
 	 */
-	void encrypt20(const void *in,void *out,unsigned int bytes)
+	void crypt20(const void *in,void *out,unsigned int bytes)
 		throw();
-
-	/**
-	 * Decrypt data
-	 *
-	 * @param in Input data
-	 * @param out Output buffer
-	 * @param bytes Length of data
-	 */
-	inline void decrypt12(const void *in,void *out,unsigned int bytes)
-		throw()
-	{
-		encrypt12(in,out,bytes);
-	}
-
-	/**
-	 * Decrypt data
-	 *
-	 * @param in Input data
-	 * @param out Output buffer
-	 * @param bytes Length of data
-	 */
-	inline void decrypt20(const void *in,void *out,unsigned int bytes)
-		throw()
-	{
-		encrypt20(in,out,bytes);
-	}
 
 private:
 	union {

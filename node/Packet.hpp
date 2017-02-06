@@ -542,6 +542,7 @@ public:
 		 *   [<[...] destination address to which packet was sent>]
 		 *   <[8] 64-bit world ID of current planet>
 		 *   <[8] 64-bit timestamp of current planet>
+		 *   [... remainder if packet is encrypted using cryptField() ...]
 		 *   <[2] 16-bit number of moons>
 		 *   [<[1] 8-bit type ID of moon>]
 		 *   [<[8] 64-bit world ID of moon>]
@@ -550,9 +551,10 @@ public:
 		 *   <[2] 16-bit length of certificate of representation>
 		 *   [... certificate of representation ...]
 		 *
-		 * HELLO is sent in the clear, and therefore cannot contain anything
-		 * secret or highly confidential. It should contain nothing that is
-		 * not either public or easy to obtain via other means.
+		 * The initial fields of HELLO are sent in the clear. Fields after the
+		 * planet definition (which are common knowledge) are however encrypted
+		 * using the cryptField() function. The packet is MAC'd as usual using
+		 * the same MAC construct as other packets.
 		 *
 		 * The destination address is the wire address to which this packet is
 		 * being sent, and in OK is *also* the destination address of the OK
@@ -566,7 +568,7 @@ public:
 		 *   0x04 - 6-byte IPv4 UDP address/port -- format: <[4] IP>, <[2] port>
 		 *   0x06 - 18-byte IPv6 UDP address/port -- format: <[16] IP>, <[2] port>
 		 *
-		 * OK payload:
+		 * OK payload (note that OK is encrypted):
 		 *   <[8] timestamp (echoed from original HELLO)>
 		 *   <[1] protocol version (of responder)>
 		 *   <[1] software major version (of responder)>
@@ -576,6 +578,8 @@ public:
 		 *   [<[...] destination address>]
 		 *   <[2] 16-bit length of world update or 0 if none>
 		 *   [[...] updates to planets and/or moons]
+		 *   <[2] 16-bit length of certificate of representation (of responder)>
+		 *   [... certificate of representation ...]
 		 *
 		 * ERROR has no payload.
 		 */
@@ -1347,6 +1351,25 @@ public:
 	 * @return False if packet is invalid or failed MAC authenticity check
 	 */
 	bool dearmor(const void *key);
+
+	/**
+	 * Encrypt/decrypt a separately armored portion of a packet
+	 *
+	 * This keys using the same key in the same way as armor/dearmor, but
+	 * uses a different IV computed from the packet's IV plus the starting
+	 * point index.
+	 *
+	 * This currently uses Salsa20/12, but any message that uses this should
+	 * incorporate a cipher selector to permit this to be changed later.
+	 *
+	 * This is currently only used to mask portions of HELLO as an extra
+	 * security precation since most of that message is sent in the clear.
+	 *
+	 * @param key 32-byte key
+	 * @param start Start of encrypted portion
+	 * @param len Length of encrypted portion
+	 */
+	void cryptField(const void *key,unsigned int start,unsigned int len);
 
 	/**
 	 * Attempt to compress payload if not already (must be unencrypted)

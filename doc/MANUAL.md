@@ -72,13 +72,11 @@ This manual describes the design and operation of ZeroTier and its associated se
 
 ZeroTier is a smart Ethernet switch for planet Earth.
 
-We've re-thought networking from first principles to deliver the flat end-to-end simplicity of the original pre-NAT pre-mobility Internet in a way that meets the security and mobility requirements of the 21st century. ZeroTier transforms the world into a unified modern data center where VPN, SDN, SD-WAN, and application peer to peer networking converge and where the distinction between the cloud and the endpoint largely disappears. All the complexity of managing these networking aspects as disparate systems is replaced by the simplicity of a single virtual cloud.
+We've re-thought networking from first principles to deliver the flat end-to-end simplicity of the original pre-NAT pre-mobility Internet, yet in a way that meets the security and mobility needs of the 21st century. ZeroTier erases the distinction between cloud and endpoint, bringing modern data center SDN to every device regardless of its physical location. The objectives of VPN, SDN, SD-WAN, and application peer to peer networking can all be achieved together and with reduced complexity.
 
-At first some users struggle with this paradigm, finding it difficult to forget the fragmentation and complexity that has accreted around networking over the past decade or two. We urge skeptical users to just try it and see how many networking acronyms vanish before their eyes.
+Unlike most networking products it won't take you hours, days, or weeks to test or deploy ZeroTier. Most of the time everything just works with zero configuration, and most users with some level of TCP/IP knowledge can get up and running in minutes. More advanced features like federation, rules, micro-segmentation, capability based security credentials, network monitoring, and clustering are available but you don't need to worry about them until they're needed.
 
-Unlike most networking products it won't take you hours, days, or weeks to test or deploy ZeroTier. Most of the time everything just works with zero configuration, and most users with some level of TCP/IP knowledge can get up and running in minutes. More advanced features like rules, micro-segmentation, capability based security credentials, network monitoring, and clustering are available but you don't need to worry about them until they're needed.
-
-The first section (2) of this guide explains ZeroTier's design and operation in detail and is written for users with at least an intermediate knowledge of topics like TCP/IP and Ethernet networking. Reading and understanding everything in it is not mandatory but we've written it as a deep technical dive as serious IT users typically like to understand the systems they deploy and use. Sections 3 and 4 deal more concretely with the ZeroTier One endpoint service software and how to deploy for common use cases.
+The first section (2) of this guide explains ZeroTier's design and operation in detail and is written for users with at least an intermediate knowledge of topics like TCP/IP and Ethernet networking. All of it is not required reading for most users, but we've created a deep technical dive to satisfy the desire of IT professionals to understand the systems that they use. Sections 3 and 4 deal more concretely with the ZeroTier One endpoint service software and how to deploy for common use cases.
 
 ## **2.** How it Works <a name="2"></a>
 
@@ -88,7 +86,7 @@ ZeroTier is comprised of two closely coupled but conceptually distinct layers [i
 
 To build a planetary data center we first had to begin with the wiring. Tunneling into the Earth's core and putting a giant wire closet down there wasn't an option, so we decided to use software to build virtual wires over the existing Internet instead.
 
-In conventional networks L1 (OSI layer 1) refers to the actual CAT5/CAT6 cables or wireless radio channels over which data is carried and the physical transciever chips that modulate and demodulate it. VL1 is a peer to peer network that does the same thing by using encryption, authentication, and a lot of networking tricks to create virtual wires as needed.
+In conventional networks L1 (OSI layer 1) refers to the actual CAT5/CAT6 cables or wireless radio channels over which data is carried and the physical transciever chips that modulate and demodulate it. VL1 is a peer to peer network that does the same thing by using encryption, authentication, and a lot of networking tricks to create virtual wires on a dyniamic as-needed basis.
 
 ### **2.1.1.** Network Topology and Peer Discovery
 
@@ -98,7 +96,7 @@ Roots run the same software as regular endpoints but reside at fast stable locat
 
 There is only one planet. Earth's root servers are operated by ZeroTier, Inc. as a free service. Their presence defines and unifies the global data center where we all reside.
 
-Users can create "moons." These nominate additional roots for redundancy or performance. The most common reasons for doing this are to eliminate hard dependency on ZeroTier's third party infrastructure or to designate local roots inside your building or cloud so ZeroTier can work without a connection to the Internet. Moons are by no means required and most of our users get by just fine without them. 
+Moons can be created by users. These nominate additional roots for redundancy or performance. The most common reasons for doing this are to eliminate hard dependency on ZeroTier's third party infrastructure or to designate local roots inside your building or cloud so ZeroTier can work without a connection to the Internet. Moons are by no means required and most of our users get by just fine without them. 
 
 When peers start out they have no direct links to one another, only upstream to roots. Every peer on VL1 possesses a globally unique address, but unlike IP addresses these are opaque cryptographic identifiers that encode no routing information. To communicate peers first send packets "up" the tree, and as these packets traverse the network they trigger the opportunistic creation of direct links along the way. The tree is constantly trying to "collapse itself" to optimize itself to the pattern of traffic it is carrying.
 

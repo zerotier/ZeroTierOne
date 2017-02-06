@@ -203,7 +203,7 @@ void Peer::received(
 #endif
 			} else {
 				TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),path->address().toString().c_str());
-				attemptToContactAt(path->localAddress(),path->address(),now);
+				attemptToContactAt(path->localAddress(),path->address(),now,true);
 				path->sent(now);
 			}
 		}
@@ -357,6 +357,8 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 	outp.append((uint64_t)RR->topology->planetWorldId());
 	outp.append((uint64_t)RR->topology->planetWorldTimestamp());
 
+	const unsigned int startCryptedPortionAt = outp.size();
+
 	std::vector<World> moons(RR->topology->moons());
 	outp.append((uint16_t)moons.size());
 	for(std::vector<World>::const_iterator m(moons.begin());m!=moons.end();++m) {
@@ -368,21 +370,23 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 	const unsigned int corSizeAt = outp.size();
 	outp.addSize(2);
 	RR->topology->appendCertificateOfRepresentation(outp);
-	outp.setAt(corSizeAt,(uint16_t)((outp.size() - corSizeAt) - 2));
+	outp.setAt(corSizeAt,(uint16_t)(outp.size() - (corSizeAt + 2)));
+
+	outp.cryptField(_key,startCryptedPortionAt,outp.size() - startCryptedPortionAt);
 
 	RR->node->expectReplyTo(outp.packetId());
 
 	if (atAddress) {
-		outp.armor(_key,false);
+		outp.armor(_key,false); // false == don't encrypt full payload, but add MAC
 		RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
 	} else {
-		RR->sw->send(outp,false);
+		RR->sw->send(outp,false); // false == don't encrypt full payload, but add MAC
 	}
 }
 
-void Peer::attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now)
+void Peer::attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,bool sendFullHello)
 {
-	if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
+	if ( (!sendFullHello) && (_vProto >= 5) && (!((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0))) ) {
 		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
 		RR->node->expectReplyTo(outp.packetId());
 		outp.armor(_key,true);
@@ -398,7 +402,7 @@ void Peer::tryMemorizedPath(uint64_t now)
 		_lastTriedMemorizedPath = now;
 		InetAddress mp;
 		if (RR->node->externalPathLookup(_id.address(),-1,mp))
-			attemptToContactAt(InetAddress(),mp,now);
+			attemptToContactAt(InetAddress(),mp,now,true);
 	}
 }
 
@@ -420,7 +424,7 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 
 	if (bestp >= 0) {
 		if ( ((now - _paths[bestp].lastReceive) >= ZT_PEER_PING_PERIOD) || (_paths[bestp].path->needsHeartbeat(now)) ) {
-			attemptToContactAt(_paths[bestp].path->localAddress(),_paths[bestp].path->address(),now);
+			attemptToContactAt(_paths[bestp].path->localAddress(),_paths[bestp].path->address(),now,false);
 			_paths[bestp].path->sent(now);
 		}
 		return true;
@@ -444,7 +448,7 @@ void Peer::resetWithinScope(InetAddress::IpScope scope,int inetAddressFamily,uin
 	Mutex::Lock _l(_paths_m);
 	for(unsigned int p=0;p<_numPaths;++p) {
 		if ( (_paths[p].path->address().ss_family == inetAddressFamily) && (_paths[p].path->address().ipScope() == scope) ) {
-			attemptToContactAt(_paths[p].path->localAddress(),_paths[p].path->address(),now);
+			attemptToContactAt(_paths[p].path->localAddress(),_paths[p].path->address(),now,false);
 			_paths[p].path->sent(now);
 			_paths[p].lastReceive = 0; // path will not be used unless it speaks again
 		}

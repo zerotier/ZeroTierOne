@@ -182,7 +182,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 
 #else // not __WINDOWS__
 
-	static char randomBuf[131072];
+	static char randomBuf[65536];
 	static unsigned int randomPtr = sizeof(randomBuf);
 	static int devURandomFd = -1;
 
@@ -215,7 +215,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 
 #endif // __WINDOWS__ or not
 
-	s20.encrypt12(buf,buf,bytes);
+	s20.crypt12(buf,buf,bytes);
 }
 
 bool Utils::scopy(char *dest,unsigned int len,const char *src)

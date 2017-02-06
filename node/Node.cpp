@@ -70,7 +70,7 @@ Node::Node(void *uptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now) :
 	Utils::getSecureRandom(foo,32);
 	_prng.init(foo,256,foo);
 	memset(_prngStream,0,sizeof(_prngStream));
-	_prng.encrypt12(_prngStream,_prngStream,sizeof(_prngStream));
+	_prng.crypt12(_prngStream,_prngStream,sizeof(_prngStream));
 
 	std::string idtmp(dataStoreGet("identity.secret"));
 	if ((!idtmp.length())||(!RR->identity.fromString(idtmp))||(!RR->identity.hasPrivate())) {
@@ -686,7 +686,7 @@ uint64_t Node::prng()
 {
 	unsigned int p = (++_prngStreamPtr % ZT_NODE_PRNG_BUF_SIZE);
 	if (!p)
-		_prng.encrypt12(_prngStream,_prngStream,sizeof(_prngStream));
+		_prng.crypt12(_prngStream,_prngStream,sizeof(_prngStream));
 	return _prngStream[p];
 }
 

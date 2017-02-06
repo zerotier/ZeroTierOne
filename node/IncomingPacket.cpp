@@ -213,41 +213,16 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 		const unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO_IDX_REVISION);
 		const uint64_t timestamp = at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
 
-		Identity id;
-		InetAddress externalSurfaceAddress;
-		uint64_t planetWorldId = 0;
-		uint64_t planetWorldTimestamp = 0;
-		std::vector< std::pair<uint64_t,uint64_t> > moonIdsAndTimestamps;
-		{
-			unsigned int ptr = ZT_PROTO_VERB_HELLO_IDX_IDENTITY + id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
-
-			// Get external surface address if present (was not in old versions)
-			if (ptr < size())
-				ptr += externalSurfaceAddress.deserialize(*this,ptr);
-
-			// Get primary planet world ID and world timestamp if present
-			if ((ptr + 16) <= size()) {
-				planetWorldId = at<uint64_t>(ptr); ptr += 8;
-				planetWorldTimestamp = at<uint64_t>(ptr);
-			}
-
-			// Get moon IDs and timestamps if present
-			if ((ptr + 2) <= size()) {
-				unsigned int numMoons = at<uint16_t>(ptr); ptr += 2;
-				for(unsigned int i=0;i<numMoons;++i) {
-					if ((World::Type)(*this)[ptr++] == World::TYPE_MOON)
-						moonIdsAndTimestamps.push_back(std::pair<uint64_t,uint64_t>(at<uint64_t>(ptr),at<uint64_t>(ptr + 8)));
-					ptr += 16;
-				}
-			}
-		}
-
-		if (fromAddress != id.address()) {
-			TRACE("dropped HELLO from %s(%s): identity not for sending address",fromAddress.toString().c_str(),_path->address().toString().c_str());
-			return true;
-		}
 		if (protoVersion < ZT_PROTO_VERSION_MIN) {
 			TRACE("dropped HELLO from %s(%s): protocol version too old",id.address().toString().c_str(),_path->address().toString().c_str());
+			return true;
+		}
+
+		Identity id;
+		unsigned int ptr = ZT_PROTO_VERB_HELLO_IDX_IDENTITY + id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
+
+		if (fromAddress != id.address()) {
+			TRACE("dropped HELLO from %s(%s): identity does not match packet source address",fromAddress.toString().c_str(),_path->address().toString().c_str());
 			return true;
 		}
 
@@ -324,6 +299,43 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 
 		// VALID -- if we made it here, packet passed identity and authenticity checks!
 
+		// Get external surface address if present (was not in old versions)
+		InetAddress externalSurfaceAddress;
+		if (ptr < size())
+			ptr += externalSurfaceAddress.deserialize(*this,ptr);
+
+		// Get primary planet world ID and world timestamp if present
+		uint64_t planetWorldId = 0;
+		uint64_t planetWorldTimestamp = 0;
+		if ((ptr + 16) <= size()) {
+			planetWorldId = at<uint64_t>(ptr); ptr += 8;
+			planetWorldTimestamp = at<uint64_t>(ptr);
+		}
+
+		std::vector< std::pair<uint64_t,uint64_t> > moonIdsAndTimestamps;
+		if (ptr < size()) {
+			// Remainder of packet, if present, is encrypted
+			cryptField(peer->key(),ptr,size() - ptr);
+
+			// Get moon IDs and timestamps if present
+			if ((ptr + 2) <= size()) {
+				unsigned int numMoons = at<uint16_t>(ptr); ptr += 2;
+				for(unsigned int i=0;i<numMoons;++i) {
+					if ((World::Type)(*this)[ptr++] == World::TYPE_MOON)
+						moonIdsAndTimestamps.push_back(std::pair<uint64_t,uint64_t>(at<uint64_t>(ptr),at<uint64_t>(ptr + 8)));
+					ptr += 16;
+				}
+			}
+
+			// Handle COR if present (older versions don't send this)
+			if ((ptr + 2) <= size()) {
+				//const unsigned int corSize = at<uint16_t>(ptr); ptr += 2;
+				ptr += 2;
+				CertificateOfRepresentation cor;
+				ptr += cor.deserialize(*this,ptr);
+			}
+		}
+
 		// Learn our external surface address from other peers to help us negotiate symmetric NATs
 		// and detect changes to our global IP that can trigger path renegotiation.
 		if ((externalSurfaceAddress)&&(hops() == 0))
@@ -337,6 +349,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 		outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
 		outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
 		outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
+
 		if (protoVersion >= 5) {
 			_path->address().serialize(outp);
 		} else {
@@ -386,6 +399,11 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 			}
 		}
 		outp.setAt<uint16_t>(worldUpdateSizeAt,(uint16_t)(outp.size() - (worldUpdateSizeAt + 2)));
+
+		const unsigned int corSizeAt = outp.size();
+		outp.addSize(2);
+		RR->topology->appendCertificateOfRepresentation(outp);
+		outp.setAt(corSizeAt,(uint16_t)(outp.size() - (corSizeAt + 2)));
 
 		outp.armor(peer->key(),true);
 		_path->send(RR,outp.data(),outp.size(),now);
@@ -586,7 +604,7 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<
 					const InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
 					if (RR->node->shouldUsePathForZeroTierTraffic(with,_path->localAddress(),atAddr)) {
 						RR->node->putPacket(_path->localAddress(),atAddr,"ABRE",4,2); // send low-TTL junk packet to 'open' local NAT(s) and stateful firewalls
-						rendezvousWith->attemptToContactAt(_path->localAddress(),atAddr,RR->node->now());
+						rendezvousWith->attemptToContactAt(_path->localAddress(),atAddr,RR->node->now(),false);
 						TRACE("RENDEZVOUS from %s says %s might be at %s, sent verification attempt",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
 					} else {
 						TRACE("RENDEZVOUS from %s says %s might be at %s, ignoring since path is not suitable",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
@@ -1155,7 +1173,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 					if ( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && (!redundant) && (RR->node->shouldUsePathForZeroTierTraffic(peer->address(),_path->localAddress(),a)) ) {
 						if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-							peer->attemptToContactAt(InetAddress(),a,now);
+							peer->attemptToContactAt(InetAddress(),a,now,false);
 						} else {
 							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
@@ -1174,7 +1192,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 					if ( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && (!redundant) && (RR->node->shouldUsePathForZeroTierTraffic(peer->address(),_path->localAddress(),a)) ) {
 						if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-							peer->attemptToContactAt(InetAddress(),a,now);
+							peer->attemptToContactAt(InetAddress(),a,now,false);
 						} else {
 							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}

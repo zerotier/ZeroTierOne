@@ -161,8 +161,9 @@ public:
 	 * @param localAddr Local address
 	 * @param atAddress Destination address
 	 * @param now Current time
+	 * @param sendFullHello If true, always send a full HELLO instead of just an ECHO
 	 */
-	void attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now);
+	void attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,bool sendFullHello);
 
 	/**
 	 * Try a memorized or statically defined path if any are known

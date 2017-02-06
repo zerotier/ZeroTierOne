@@ -294,6 +294,11 @@
 #define ZT_PEER_PATH_EXPIRATION ((ZT_PEER_PING_PERIOD * 4) + 3000)
 
 /**
+ * Send a full HELLO every this often (ms)
+ */
+#define ZT_PEER_SEND_FULL_HELLO_EVERY (ZT_PEER_PING_PERIOD * 2)
+
+/**
  * How often to retry expired paths that we're still remembering
  */
 #define ZT_PEER_EXPIRED_PATH_TRIAL_PERIOD (ZT_PEER_PING_PERIOD * 10)

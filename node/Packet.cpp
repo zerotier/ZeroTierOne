@@ -18,8 +18,20 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #include "Packet.hpp"
+
+#ifdef _MSC_VER
+#define FORCE_INLINE static __forceinline
+#include <intrin.h>
+#pragma warning(disable : 4127)        /* disable: C4127: conditional expression is constant */
+#pragma warning(disable : 4293)        /* disable: C4293: too large shift (32-bits) */
+#else
+#define FORCE_INLINE static inline
+#endif
 
 namespace ZeroTier {
 
@@ -367,7 +379,7 @@ LZ4_decompress_*_continue() :
 #define LZ4_HASH_SIZE_U32 (1 << LZ4_HASHLOG)       /* required as macro for static allocation */
 
 #if defined(__cplusplus) || (defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) /* C99 */)
-#include <stdint.h>
+//#include <stdint.h>
 
 typedef struct {
     uint32_t hashTable[LZ4_HASH_SIZE_U32];
@@ -536,6 +548,7 @@ union LZ4_streamDecode_u {
 /*-************************************
 *  Compiler Options
 **************************************/
+#if 0
 #ifdef _MSC_VER    /* Visual Studio */
 #  define FORCE_INLINE static __forceinline
 #  include <intrin.h>
@@ -550,6 +563,7 @@ union LZ4_streamDecode_u {
 #    define FORCE_INLINE static
 #  endif
 #endif  /* _MSC_VER */
+#endif
 
 #if (defined(__GNUC__) && (__GNUC__ >= 3)) || (defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 800)) || defined(__clang__)
 #  define expect(expr,value)    (__builtin_expect ((expr),(value)) )
@@ -564,38 +578,39 @@ union LZ4_streamDecode_u {
 /*-************************************
 *  Memory routines
 **************************************/
-#include <stdlib.h>   /* malloc, calloc, free */
+//#include <stdlib.h>   /* malloc, calloc, free */
 #define ALLOCATOR(n,s) calloc(n,s)
 #define FREEMEM        free
-#include <string.h>   /* memset, memcpy */
+//#include <string.h>   /* memset, memcpy */
 #define MEM_INIT       memset
 
 
 /*-************************************
 *  Basic Types
 **************************************/
-#if defined(__cplusplus) || (defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) /* C99 */)
-# include <stdint.h>
+//#if defined(__cplusplus) || (defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) /* C99 */)
+//# include <stdint.h>
   typedef  uint8_t BYTE;
   typedef uint16_t U16;
   typedef uint32_t U32;
   typedef  int32_t S32;
   typedef uint64_t U64;
   typedef uintptr_t uptrval;
-#else
+/*#else
   typedef unsigned char       BYTE;
   typedef unsigned short      U16;
   typedef unsigned int        U32;
   typedef   signed int        S32;
   typedef unsigned long long  U64;
-  typedef size_t              uptrval;   /* generally true, except OpenVMS-64 */
-#endif
+  typedef size_t              uptrval;
+#endif */
 
-#if defined(__x86_64__)
-  typedef U64    reg_t;   /* 64-bits in x32 mode */
-#else
-  typedef size_t reg_t;   /* 32-bits in x32 mode */
-#endif
+typedef uintptr_t reg_t;
+//#if defined(__x86_64__)
+//  typedef U64    reg_t;   /* 64-bits in x32 mode */
+//#else
+//  typedef size_t reg_t;   /* 32-bits in x32 mode */
+//#endif
 
 /*-************************************
 *  Reading and writing into memory
@@ -605,7 +620,6 @@ static unsigned LZ4_isLittleEndian(void)
     const union { U32 u; BYTE c[4]; } one = { 1 };   /* don't use static : performance detrimental */
     return one.c[0];
 }
-
 
 #if defined(LZ4_FORCE_MEMORY_ACCESS) && (LZ4_FORCE_MEMORY_ACCESS==2)
 /* lie to the compiler about data alignment; use with caution */
@@ -1975,10 +1989,10 @@ void Packet::armor(const void *key,bool encryptPayload)
 
 	// MAC key is always the first 32 bytes of the Salsa20 key stream
 	// This is the same construction DJB's NaCl library uses
-	s20.encrypt12(ZERO_KEY,macKey,sizeof(macKey));
+	s20.crypt12(ZERO_KEY,macKey,sizeof(macKey));
 
 	if (encryptPayload)
-		s20.encrypt12(payload,payload,payloadLen);
+		s20.crypt12(payload,payload,payloadLen);
 
 	Poly1305::compute(mac,payload,payloadLen,macKey);
 	memcpy(field(ZT_PACKET_IDX_MAC,8),mac,8);
@@ -1995,18 +2009,28 @@ bool Packet::dearmor(const void *key)
 
 	if ((cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)||(cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)) {
 		_salsa20MangleKey((const unsigned char *)key,mangledKey);
-		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8)/*,ZT_PROTO_SALSA20_ROUNDS*/);
+		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8));
 
-		s20.encrypt12(ZERO_KEY,macKey,sizeof(macKey));
+		s20.crypt12(ZERO_KEY,macKey,sizeof(macKey));
 		Poly1305::compute(mac,payload,payloadLen,macKey);
 		if (!Utils::secureEq(mac,field(ZT_PACKET_IDX_MAC,8),8))
 			return false;
 
 		if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
-			s20.decrypt12(payload,payload,payloadLen);
+			s20.crypt12(payload,payload,payloadLen);
 
 		return true;
 	} else return false; // unrecognized cipher suite
+}
+
+void Packet::cryptField(const void *key,unsigned int start,unsigned int len)
+{
+	unsigned char mangledKey[32];
+    uint64_t iv = Utils::hton((uint64_t)start ^ at<uint64_t>(ZT_PACKET_IDX_IV));
+	_salsa20MangleKey((const unsigned char *)key,mangledKey);
+	Salsa20 s20(mangledKey,256,&iv);
+    unsigned char *const ptr = field(start,len);
+    s20.crypt12(ptr,ptr,len);
 }
 
 bool Packet::compress()

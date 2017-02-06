@@ -777,7 +777,7 @@ bool Switch::_trySend(Packet &packet,bool encrypt)
 			if ((clusterMostRecentMemberId < 0)||(viaPath->lastIn() > clusterMostRecentTs)) {
 #endif
 				if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) * 4,(uint64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL)) {
-					peer->attemptToContactAt(viaPath->localAddress(),viaPath->address(),now);
+					peer->attemptToContactAt(viaPath->localAddress(),viaPath->address(),now,false);
 					viaPath->sent(now);
 				}
 #ifdef ZT_ENABLE_CLUSTER

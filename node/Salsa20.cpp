@@ -123,7 +123,7 @@ void Salsa20::init(const void *key,unsigned int kbits,const void *iv)
 #endif
 }
 
-void Salsa20::encrypt12(const void *in,void *out,unsigned int bytes)
+void Salsa20::crypt12(const void *in,void *out,unsigned int bytes)
 	throw()
 {
 	uint8_t tmp[64];
@@ -623,7 +623,7 @@ void Salsa20::encrypt12(const void *in,void *out,unsigned int bytes)
 	}
 }
 
-void Salsa20::encrypt20(const void *in,void *out,unsigned int bytes)
+void Salsa20::crypt20(const void *in,void *out,unsigned int bytes)
 	throw()
 {
 	uint8_t tmp[64];
