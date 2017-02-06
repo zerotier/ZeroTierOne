@@ -1353,15 +1353,17 @@ public:
 	/**
 	 * Encrypt/decrypt a separately armored portion of a packet
 	 *
-	 * This keys using the same key in the same way as armor/dearmor, but
-	 * uses a different IV computed from the packet's IV plus the starting
-	 * point index.
-	 *
 	 * This currently uses Salsa20/12, but any message that uses this should
-	 * incorporate a cipher selector to permit this to be changed later.
+	 * incorporate a cipher selector to permit this to be changed later. To
+	 * ensure that key stream is not reused, the key is slightly altered for
+	 * this use case and the same initial 32 keystream bytes that are taken
+	 * for MAC in ordinary armor() are also skipped here.
 	 *
 	 * This is currently only used to mask portions of HELLO as an extra
 	 * security precation since most of that message is sent in the clear.
+	 *
+	 * This must NEVER be used more than once in the same packet, as doing
+	 * so will result in re-use of the same key stream.
 	 *
 	 * @param key 32-byte key
 	 * @param start Start of encrypted portion

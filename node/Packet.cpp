@@ -2026,9 +2026,11 @@ bool Packet::dearmor(const void *key)
 void Packet::cryptField(const void *key,unsigned int start,unsigned int len)
 {
 	unsigned char mangledKey[32];
-    uint64_t iv = Utils::hton((uint64_t)start ^ at<uint64_t>(ZT_PACKET_IDX_IV));
+	unsigned char macKey[32];
 	_salsa20MangleKey((const unsigned char *)key,mangledKey);
-	Salsa20 s20(mangledKey,256,&iv);
+    mangledKey[0] ^= 1; // slightly alter key for this use case as an added guard against key stream reuse
+	Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8));
+	s20.crypt12(ZERO_KEY,macKey,sizeof(macKey)); // discard the first 32 bytes of key stream (the ones use for MAC in armor()) as a precaution
     unsigned char *const ptr = field(start,len);
     s20.crypt12(ptr,ptr,len);
 }
