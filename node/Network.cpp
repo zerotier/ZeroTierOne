@@ -53,7 +53,7 @@ static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
 		case ZT_NETWORK_RULE_ACTION_TEE: return "ACTION_TEE";
 		case ZT_NETWORK_RULE_ACTION_WATCH: return "ACTION_WATCH";
 		case ZT_NETWORK_RULE_ACTION_REDIRECT: return "ACTION_REDIRECT";
-		case ZT_NETWORK_RULE_ACTION_DEBUG_LOG: return "ACTION_DEBUG_LOG";
+		case ZT_NETWORK_RULE_ACTION_BREAK: return "ACTION_BREAK";
 		case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS: return "MATCH_SOURCE_ZEROTIER_ADDRESS";
 		case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS: return "MATCH_DEST_ZEROTIER_ADDRESS";
 		case ZT_NETWORK_RULE_MATCH_VLAN_ID: return "MATCH_VLAN_ID";
@@ -251,13 +251,12 @@ static _doZtFilterResult _doZtFilter(
 						}
 					}	continue;
 
-					// This is a no-op that exists for use with rules engine tracing and isn't for use in production
-					case ZT_NETWORK_RULE_ACTION_DEBUG_LOG: // a no-op target specifically for debugging purposes
+					case ZT_NETWORK_RULE_ACTION_BREAK:
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-						_dumpFilterTrace("ACTION_DEBUG_LOG",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+						_dumpFilterTrace("ACTION_BREAK",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
 						dlog.clear();
 #endif // ZT_RULES_ENGINE_DEBUGGING
-						continue;
+						return DOZTFILTER_NO_MATCH;
 
 					// Unrecognized ACTIONs are ignored as no-ops
 					default:

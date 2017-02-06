@@ -563,9 +563,9 @@ enum ZT_VirtualNetworkRuleType
 	ZT_NETWORK_RULE_ACTION_REDIRECT = 4,
 
 	/**
-	 * Log if match and if rule debugging is enabled in the build, otherwise does nothing (for developers)
+	 * Stop evaluating rule set (drops unless there are capabilities, etc.)
 	 */
-	ZT_NETWORK_RULE_ACTION_DEBUG_LOG = 5,
+	ZT_NETWORK_RULE_ACTION_BREAK = 5,
 
 	/**
 	 * Maximum ID for an ACTION, anything higher is a MATCH
