@@ -93,8 +93,8 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 			r["address"] = Address(rule.v.fwd.address).toString();
 			r["flags"] = (unsigned int)rule.v.fwd.flags;
 			break;
-		case ZT_NETWORK_RULE_ACTION_DEBUG_LOG:
-			r["type"] = "ACTION_DEBUG_LOG";
+		case ZT_NETWORK_RULE_ACTION_BREAK:
+			r["type"] = "ACTION_BREAK";
 			break;
 		default:
 			break;
@@ -266,8 +266,8 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 		rule.v.fwd.address = Utils::hexStrToU64(OSUtils::jsonString(r["address"],"0").c_str()) & 0xffffffffffULL;
 		rule.v.fwd.flags = (uint32_t)(OSUtils::jsonInt(r["flags"],0ULL) & 0xffffffffULL);
 		return true;
-	} else if (t == "ACTION_DEBUG_LOG") {
-		rule.t |= ZT_NETWORK_RULE_ACTION_DEBUG_LOG;
+	} else if (t == "ACTION_BREAK") {
+		rule.t |= ZT_NETWORK_RULE_ACTION_BREAK;
 		return true;
 	} else if (t == "MATCH_SOURCE_ZEROTIER_ADDRESS") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS;
