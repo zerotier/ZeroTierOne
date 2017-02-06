@@ -310,7 +310,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 		uint64_t planetWorldTimestamp = 0;
 		if ((ptr + 16) <= size()) {
 			planetWorldId = at<uint64_t>(ptr); ptr += 8;
-			planetWorldTimestamp = at<uint64_t>(ptr);
+			planetWorldTimestamp = at<uint64_t>(ptr); ptr += 8;
 		}
 
 		std::vector< std::pair<uint64_t,uint64_t> > moonIdsAndTimestamps;
