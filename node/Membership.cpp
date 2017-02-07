@@ -32,7 +32,6 @@ namespace ZeroTier {
 
 Membership::Membership() :
 	_lastUpdatedMulticast(0),
-	_lastPushAttempt(0),
 	_lastPushedCom(0),
 	_comRevocationThreshold(0)
 {
@@ -42,12 +41,7 @@ Membership::Membership() :
 
 void Membership::pushCredentials(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex,const bool force)
 {
-	// This limits how often we go through this logic, which prevents us from
-	// doing all this for every single packet or other event.
-	if ( ((now - _lastPushAttempt) < 1000ULL) && (!force) )
-		return;
-	_lastPushAttempt = now;
-
+	//TRACE("pushCredentials() to %s localCapabilityIndex==%d force==%d",peerAddress.toString().c_str(),localCapabilityIndex,(int)force);
 	try {
 		unsigned int localTagPtr = 0;
 		bool needCom = ( (nconf.com) && ( ((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) );
@@ -182,21 +176,21 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	_RemoteCapability *have = ((htmp != &(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]))&&((*htmp)->id == (uint64_t)cap.id())) ? *htmp : (_RemoteCapability *)0;
 	if (have) {
 		if ( (!_isCredentialTimestampValid(nconf,cap,*have)) || (have->cap.timestamp() > cap.timestamp()) ) {
-			TRACE("addCredential(Tag) for %s on %.16llx REJECTED (revoked or too old)",cap.issuedTo().toString().c_str(),cap.networkId());
+			TRACE("addCredential(Capability) for %s on %.16llx REJECTED (revoked or too old)",cap.issuedTo().toString().c_str(),cap.networkId());
 			return ADD_REJECTED;
 		}
 		if (have->cap == cap) {
-			TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (redundant)",cap.issuedTo().toString().c_str(),cap.networkId());
+			TRACE("addCredential(Capability) for %s on %.16llx ACCEPTED (redundant)",cap.issuedTo().toString().c_str(),cap.networkId());
 			return ADD_ACCEPTED_REDUNDANT;
 		}
 	}
 
 	switch(cap.verify(RR)) {
 		default:
-			TRACE("addCredential(Tag) for %s on %.16llx REJECTED (invalid)",cap.issuedTo().toString().c_str(),cap.networkId());
+			TRACE("addCredential(Capability) for %s on %.16llx REJECTED (invalid)",cap.issuedTo().toString().c_str(),cap.networkId());
 			return ADD_REJECTED;
 		case 0:
-			TRACE("addCredential(Tag) for %s on %.16llx ACCEPTED (new)",cap.issuedTo().toString().c_str(),cap.networkId());
+			TRACE("addCredential(Capability) for %s on %.16llx ACCEPTED (new)",cap.issuedTo().toString().c_str(),cap.networkId());
 			if (!have) have = _newCapability(cap.id());
 			have->lastReceived = RR->node->now();
 			have->cap = cap;

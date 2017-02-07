@@ -266,9 +266,6 @@ private:
 	// Last time we pushed MULTICAST_LIKE(s)
 	uint64_t _lastUpdatedMulticast;
 
-	// Last time we checked if credential push was needed
-	uint64_t _lastPushAttempt;
-
 	// Last time we pushed our COM to this peer
 	uint64_t _lastPushedCom;
 

@@ -1150,8 +1150,8 @@ bool Network::gate(const SharedPtr<Peer> &peer)
 			if ( (_config.isPublic()) || ((m)&&(m->isAllowedOnNetwork(_config))) ) {
 				if (!m)
 					m = &(_membership(peer->address()));
-				m->pushCredentials(RR,now,peer->address(),_config,-1,false);
 				if (m->shouldLikeMulticasts(now)) {
+					m->pushCredentials(RR,now,peer->address(),_config,-1,false);
 					_announceMulticastGroupsTo(peer->address(),_allMulticastGroups());
 					m->likingMulticasts(now);
 				}
