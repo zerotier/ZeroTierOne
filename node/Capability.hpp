@@ -216,8 +216,10 @@ public:
 					b.append((uint8_t)rules[i].v.ipv6.mask);
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_TOS:
-					b.append((uint8_t)1);
-					b.append((uint8_t)rules[i].v.ipTos);
+					b.append((uint8_t)3);
+					b.append((uint8_t)rules[i].v.ipTos.mask);
+					b.append((uint8_t)rules[i].v.ipTos.value[0]);
+					b.append((uint8_t)rules[i].v.ipTos.value[1]);
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
 					b.append((uint8_t)1);
@@ -308,7 +310,9 @@ public:
 					rules[ruleCount].v.ipv6.mask = (uint8_t)b[p + 16];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_TOS:
-					rules[ruleCount].v.ipTos = (uint8_t)b[p];
+					rules[ruleCount].v.ipTos.mask = (uint8_t)b[p];
+					rules[ruleCount].v.ipTos.value[0] = (uint8_t)b[p+1];
+					rules[ruleCount].v.ipTos.value[1] = (uint8_t)b[p+2];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
 					rules[ruleCount].v.ipProtocol = (uint8_t)b[p];

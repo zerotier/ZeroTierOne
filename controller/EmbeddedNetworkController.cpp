@@ -150,7 +150,9 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 				break;
 			case ZT_NETWORK_RULE_MATCH_IP_TOS:
 				r["type"] = "MATCH_IP_TOS";
-				r["ipTos"] = (unsigned int)rule.v.ipTos;
+				r["mask"] = (unsigned int)rule.v.ipTos.mask;
+				r["start"] = (unsigned int)rule.v.ipTos.value[0];
+				r["end"] = (unsigned int)rule.v.ipTos.value[1];
 				break;
 			case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
 				r["type"] = "MATCH_IP_PROTOCOL";
@@ -329,7 +331,9 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 		return true;
 	} else if (t == "MATCH_IP_TOS") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_IP_TOS;
-		rule.v.ipTos = (uint8_t)(OSUtils::jsonInt(r["ipTos"],0ULL) & 0xffULL);
+		rule.v.ipTos.mask = (uint8_t)(OSUtils::jsonInt(r["mask"],0ULL) & 0xffULL);
+		rule.v.ipTos.value[0] = (uint8_t)(OSUtils::jsonInt(r["start"],0ULL) & 0xffULL);
+		rule.v.ipTos.value[1] = (uint8_t)(OSUtils::jsonInt(r["end"],0ULL) & 0xffULL);
 		return true;
 	} else if (t == "MATCH_IP_PROTOCOL") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_IP_PROTOCOL;

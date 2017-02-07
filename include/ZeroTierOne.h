@@ -705,7 +705,10 @@ typedef struct
 		/**
 		 * IP type of service a.k.a. DSCP field
 		 */
-		uint8_t ipTos;
+		struct {
+			uint8_t mask;
+			uint8_t value[2];
+		} ipTos;
 
 		/**
 		 * Ethernet packet size in host byte order (start-end, inclusive)

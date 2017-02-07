@@ -368,11 +368,13 @@ static _doZtFilterResult _doZtFilter(
 				break;
 			case ZT_NETWORK_RULE_MATCH_IP_TOS:
 				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
-					thisRuleMatches = (uint8_t)(rules[rn].v.ipTos == ((frameData[1] & 0xfc) >> 2));
+					//thisRuleMatches = (uint8_t)(rules[rn].v.ipTos == ((frameData[1] & 0xfc) >> 2));
+					const uint8_t tosMasked = frameData[1] & rules[rn].v.ipTos.mask;
+					thisRuleMatches = (uint8_t)((tosMasked >= rules[rn].v.ipTos.value[0])&&(tosMasked <= rules[rn].v.ipTos.value[1]));
 					FILTER_TRACE("%u %s %c (IPv4) %u==%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.ipTos,(unsigned int)((frameData[1] & 0xfc) >> 2),(unsigned int)thisRuleMatches);
 				} else if ((etherType == ZT_ETHERTYPE_IPV6)&&(frameLen >= 40)) {
-					const uint8_t trafficClass = ((frameData[0] << 4) & 0xf0) | ((frameData[1] >> 4) & 0x0f);
-					thisRuleMatches = (uint8_t)(rules[rn].v.ipTos == ((trafficClass & 0xfc) >> 2));
+					const uint8_t tosMasked = (((frameData[0] << 4) & 0xf0) | ((frameData[1] >> 4) & 0x0f)) & rules[rn].v.ipTos.mask;
+					thisRuleMatches = (uint8_t)((tosMasked >= rules[rn].v.ipTos.value[0])&&(tosMasked <= rules[rn].v.ipTos.value[1]));
 					FILTER_TRACE("%u %s %c (IPv6) %u==%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.ipTos,(unsigned int)((trafficClass & 0xfc) >> 2),(unsigned int)thisRuleMatches);
 				} else {
 					thisRuleMatches = 0;
