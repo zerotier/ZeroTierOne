@@ -41,59 +41,53 @@ Membership::Membership() :
 
 void Membership::pushCredentials(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex,const bool force)
 {
-	//TRACE("pushCredentials() to %s localCapabilityIndex==%d force==%d",peerAddress.toString().c_str(),localCapabilityIndex,(int)force);
-	try {
-		unsigned int localTagPtr = 0;
-		bool needCom = ( (nconf.com) && ( ((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) );
-		do {
-			Buffer<ZT_PROTO_MAX_PACKET_LENGTH> capsAndTags;
+	bool sendCom = ( (nconf.com) && ( ((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) );
 
-			unsigned int appendedCaps = 0;
-			if (localCapabilityIndex >= 0) {
-				capsAndTags.addSize(2);
+	const Capability *sendCap;
+	if (localCapabilityIndex >= 0) {
+		sendCap = &(nconf.capabilities[localCapabilityIndex]);
+		if ( (_localCaps[localCapabilityIndex].id != sendCap->id()) || ((now - _localCaps[localCapabilityIndex].lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
+			_localCaps[localCapabilityIndex].lastPushed = now;
+			_localCaps[localCapabilityIndex].id = sendCap->id();
+		} else sendCap = (const Capability *)0;
+	} else sendCap = (const Capability *)0;
 
-				if ( (_localCaps[localCapabilityIndex].id != nconf.capabilities[localCapabilityIndex].id()) || ((now - _localCaps[localCapabilityIndex].lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
-					_localCaps[localCapabilityIndex].lastPushed = now;
-					_localCaps[localCapabilityIndex].id = nconf.capabilities[localCapabilityIndex].id();
-					nconf.capabilities[localCapabilityIndex].serialize(capsAndTags);
-					++appendedCaps;
-				}
+	unsigned int tagPtr = 0;
+	while ((tagPtr < nconf.tagCount)||(sendCom)||(sendCap)) {
+		Packet outp(peerAddress,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 
-				capsAndTags.setAt<uint16_t>(0,(uint16_t)appendedCaps);
-				localCapabilityIndex = -1; // don't send this cap again on subsequent loops if force is true
-			} else {
-				capsAndTags.append((uint16_t)0);
+		if (sendCom) {
+			sendCom = false;
+			nconf.com.serialize(outp);
+			_lastPushedCom = now;
+		}
+		outp.append((uint8_t)0x00);
+
+		if (sendCap) {
+			outp.append((uint16_t)1);
+			sendCap->serialize(outp);
+			sendCap = (const Capability *)0;
+		} else outp.append((uint16_t)0);
+
+		const unsigned int tagCountAt = outp.size();
+		outp.addSize(2);
+		unsigned int thisPacketTagCount = 0;
+		while ((tagPtr < nconf.tagCount)&&((outp.size() + sizeof(Tag) + 32) < ZT_PROTO_MAX_PACKET_LENGTH)) {
+			if ( (_localTags[tagPtr].id != nconf.tags[tagPtr].id()) || ((now - _localTags[tagPtr].lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
+				_localTags[tagPtr].lastPushed = now;
+				_localTags[tagPtr].id = nconf.tags[tagPtr].id();
+				nconf.tags[tagPtr].serialize(outp);
+				++thisPacketTagCount;
 			}
+			++tagPtr;
+		}
+		outp.setAt(tagCountAt,(uint16_t)thisPacketTagCount);
 
-			unsigned int appendedTags = 0;
-			const unsigned int tagCountPos = capsAndTags.size();
-			capsAndTags.addSize(2);
-			for(;localTagPtr<nconf.tagCount;++localTagPtr) {
-				if ( (_localTags[localTagPtr].id != nconf.tags[localTagPtr].id()) || ((now - _localTags[localTagPtr].lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
-					if ((capsAndTags.size() + sizeof(Tag)) >= (ZT_PROTO_MAX_PACKET_LENGTH - sizeof(CertificateOfMembership)))
-						break;
-					nconf.tags[localTagPtr].serialize(capsAndTags);
-					++appendedTags;
-				}
-			}
-			capsAndTags.setAt<uint16_t>(tagCountPos,(uint16_t)appendedTags);
+		// No revocations, these propagate differently
+		outp.append((uint16_t)0);
 
-			if (needCom||appendedCaps||appendedTags) {
-				Packet outp(peerAddress,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
-				if (needCom) {
-					nconf.com.serialize(outp);
-					_lastPushedCom = now;
-				}
-				outp.append((uint8_t)0x00);
-				outp.append(capsAndTags.data(),capsAndTags.size());
-				outp.append((uint16_t)0); // no revocations, these propagate differently
-				outp.compress();
-				RR->sw->send(outp,true);
-				needCom = false; // don't send COM again on subsequent loops if force is true
-			}
-		} while (localTagPtr < nconf.tagCount);
-	} catch ( ... ) {
-		TRACE("unable to send credentials due to unexpected exception");
+		outp.compress();
+		RR->sw->send(outp,true);
 	}
 }
 
