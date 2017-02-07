@@ -52,8 +52,18 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,const uint64_t now
 		} else sendCap = (const Capability *)0;
 	} else sendCap = (const Capability *)0;
 
+	const Tag *sendTags[ZT_MAX_NETWORK_TAGS];
+	unsigned int sendTagCount = 0;
+	for(unsigned int t=0;t<nconf.tagCount;++t) {
+		if ( (_localTags[t].id != nconf.tags[t].id()) || ((now - _localTags[t].lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
+			_localTags[t].lastPushed = now;
+			_localTags[t].id = nconf.tags[t].id();
+			sendTags[sendTagCount++] = &(nconf.tags[t]);
+		}
+	}
+
 	unsigned int tagPtr = 0;
-	while ((tagPtr < nconf.tagCount)||(sendCom)||(sendCap)) {
+	while ((tagPtr < sendTagCount)||(sendCom)||(sendCap)) {
 		Packet outp(peerAddress,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 
 		if (sendCom) {
@@ -72,11 +82,9 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,const uint64_t now
 		const unsigned int tagCountAt = outp.size();
 		outp.addSize(2);
 		unsigned int thisPacketTagCount = 0;
-		while ((tagPtr < nconf.tagCount)&&((outp.size() + sizeof(Tag) + 32) < ZT_PROTO_MAX_PACKET_LENGTH)) {
+		while ((tagPtr < sendTagCount)&&((outp.size() + sizeof(Tag) + 32) < ZT_PROTO_MAX_PACKET_LENGTH)) {
 			if ( (_localTags[tagPtr].id != nconf.tags[tagPtr].id()) || ((now - _localTags[tagPtr].lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
-				_localTags[tagPtr].lastPushed = now;
-				_localTags[tagPtr].id = nconf.tags[tagPtr].id();
-				nconf.tags[tagPtr].serialize(outp);
+				sendTags[tagPtr]->serialize(outp);
 				++thisPacketTagCount;
 			}
 			++tagPtr;
