@@ -78,7 +78,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 			}
 
 			if (!uncompress()) {
-				TRACE("dropped packet from %s(%s), compressed data invalid",sourceAddress.toString().c_str(),_path->address().toString().c_str());
+				TRACE("dropped packet from %s(%s), compressed data invalid (verb may be %u)",sourceAddress.toString().c_str(),_path->address().toString().c_str(),(unsigned int)verb());
 				return true;
 			}
 

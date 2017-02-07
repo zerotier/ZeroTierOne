@@ -83,11 +83,8 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,const uint64_t now
 		outp.addSize(2);
 		unsigned int thisPacketTagCount = 0;
 		while ((tagPtr < sendTagCount)&&((outp.size() + sizeof(Tag) + 32) < ZT_PROTO_MAX_PACKET_LENGTH)) {
-			if ( (_localTags[tagPtr].id != nconf.tags[tagPtr].id()) || ((now - _localTags[tagPtr].lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
-				sendTags[tagPtr]->serialize(outp);
-				++thisPacketTagCount;
-			}
-			++tagPtr;
+			sendTags[tagPtr++]->serialize(outp);
+			++thisPacketTagCount;
 		}
 		outp.setAt(tagCountAt,(uint16_t)thisPacketTagCount);
 
