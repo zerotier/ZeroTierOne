@@ -58,8 +58,36 @@ BOOL hasNetworkWithID(NSArray<Network*> *list, UInt64 nwid)
     self.visible = NO;
 }
 
+- (NSInteger)findNetworkWithID:(UInt64)networkId
+{
+    for(int i = 0; i < [_networkList count]; ++i) {
+        Network *nw = [_networkList objectAtIndex:i];
+        
+        if(nw.nwid == networkId) {
+            return i;
+        }
+    }
+    
+    return NSNotFound;
+}
+
+
 - (void)deleteNetworkFromList:(NSString *)nwid {
     [self.netMonitor deleteSavedNetwork:nwid];
+    
+    UInt64 netid = 0;
+    NSScanner *scanner = [NSScanner scannerWithString:nwid];
+    [scanner scanHexLongLong:&netid];
+    for (Network *n in _networkList) {
+        if (n.nwid == netid) {
+            NSInteger index = [self findNetworkWithID:netid];
+            
+            if (index != NSNotFound) {
+                [_networkList removeObjectAtIndex:index];
+                [_tableView reloadData];
+            }
+        }
+    }
 }
 
 - (void)setNetworks:(NSArray<Network *> *)list {
