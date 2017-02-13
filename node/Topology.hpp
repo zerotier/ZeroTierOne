@@ -216,6 +216,20 @@ public:
 	}
 
 	/**
+	 * @return Moon IDs we are waiting for from seeds
+	 */
+	inline std::vector<uint64_t> moonsWanted() const
+	{
+		Mutex::Lock _l(_upstreams_m);
+		std::vector<uint64_t> mw;
+		for(std::vector< std::pair<uint64_t,Address> >::const_iterator s(_moonSeeds.begin());s!=_moonSeeds.end();++s) {
+			if (std::find(mw.begin(),mw.end(),s->first) == mw.end())
+				mw.push_back(s->first);
+		}
+		return mw;
+	}
+
+	/**
 	 * @return Current planet
 	 */
 	inline World planet() const

@@ -449,22 +449,26 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				InetAddress externalSurfaceAddress;
 				unsigned int ptr = ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2;
 
-				// Get reported external surface address if present (was not on old versions)
+				// Get reported external surface address if present
 				if (ptr < size())
 					ptr += externalSurfaceAddress.deserialize(*this,ptr);
 
-				// Handle planet or moon updates if present (older versions don't send this)
+				// Handle planet or moon updates if present
 				if ((ptr + 2) <= size()) {
 					const unsigned int worldLen = at<uint16_t>(ptr); ptr += 2;
-					const unsigned int endOfWorlds = ptr + worldLen;
-					while (ptr < endOfWorlds) {
-						World w;
-						ptr += w.deserialize(*this,ptr);
-						RR->topology->addWorld(w);
+					if (RR->topology->isUpstream(peer->identity())) {
+						const unsigned int endOfWorlds = ptr + worldLen;
+						while (ptr < endOfWorlds) {
+							World w;
+							ptr += w.deserialize(*this,ptr);
+							RR->topology->addWorld(w);
+						}
+					} else {
+						ptr += worldLen;
 					}
 				}
 
-				// Handle COR if present (older versions don't send this)
+				// Handle certificate of representation if present
 				if ((ptr + 2) <= size()) {
 					if (at<uint16_t>(ptr) > 0) {
 						CertificateOfRepresentation cor;

@@ -360,11 +360,17 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 	const unsigned int startCryptedPortionAt = outp.size();
 
 	std::vector<World> moons(RR->topology->moons());
-	outp.append((uint16_t)moons.size());
+	std::vector<uint64_t> moonsWanted(RR->topology->moonsWanted());
+	outp.append((uint16_t)(moons.size() + moonsWanted.size()));
 	for(std::vector<World>::const_iterator m(moons.begin());m!=moons.end();++m) {
 		outp.append((uint8_t)m->type());
 		outp.append((uint64_t)m->id());
 		outp.append((uint64_t)m->timestamp());
+	}
+	for(std::vector<uint64_t>::const_iterator m(moonsWanted.begin());m!=moonsWanted.end();++m) {
+		outp.append((uint8_t)World::TYPE_MOON);
+		outp.append(*m);
+		outp.append((uint64_t)0);
 	}
 
 	const unsigned int corSizeAt = outp.size();
