@@ -303,7 +303,7 @@ bool Topology::addWorld(const World &newWorld)
 			*existing = newWorld;
 		else return false;
 	} else if (newWorld.type() == World::TYPE_MOON) {
-		for(std::vector< std::pair<uint64_t,Address> >::const_iterator m(_moonSeeds.begin());m!=_moonSeeds.end();++m) {
+		for(std::vector< std::pair<uint64_t,Address> >::iterator m(_moonSeeds.begin());m!=_moonSeeds.end();++m) {
 			if (m->first == newWorld.id()) {
 				for(std::vector<World::Root>::const_iterator r(newWorld.roots().begin());r!=newWorld.roots().end();++r) {
 					if (r->identity.address() == m->second) {
