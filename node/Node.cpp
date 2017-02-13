@@ -156,22 +156,25 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 class _PingPeersThatNeedPing
 {
 public:
-	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) :
+	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,Hashtable< Address,std::vector<InetAddress> > &upstreamsToContact,uint64_t now) :
 		lastReceiveFromUpstream(0),
 		RR(renv),
+		_upstreamsToContact(upstreamsToContact),
 		_now(now),
 		_bestCurrentUpstream(RR->topology->getUpstreamPeer())
 	{
-		RR->topology->getUpstreamStableEndpoints(_upstreams);
 	}
 
 	uint64_t lastReceiveFromUpstream; // tracks last time we got a packet from an 'upstream' peer like a root or a relay
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		const std::vector<InetAddress> *const upstreamStableEndpoints = _upstreams.get(p->address());
+		const std::vector<InetAddress> *const upstreamStableEndpoints = _upstreamsToContact.get(p->address());
 		if (upstreamStableEndpoints) {
 			bool contacted = false;
+
+			// Upstreams must be pinged constantly over both IPv4 and IPv6 to allow
+			// them to perform three way handshake introductions for both stacks.
 
 			if (!p->doPingAndKeepalive(_now,AF_INET)) {
 				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)upstreamStableEndpoints->size();++k) {
@@ -183,7 +186,6 @@ public:
 					}
 				}
 			} else contacted = true;
-
 			if (!p->doPingAndKeepalive(_now,AF_INET6)) {
 				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)upstreamStableEndpoints->size();++k) {
 					const InetAddress &addr = (*upstreamStableEndpoints)[ptr++ % upstreamStableEndpoints->size()];
@@ -202,6 +204,7 @@ public:
 			}
 
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
+			_upstreamsToContact.erase(p->address()); // erase from upstreams to contact so that we can WHOIS those that remain
 		} else if (p->isActive(_now)) {
 			p->doPingAndKeepalive(_now,-1);
 		}
@@ -209,9 +212,9 @@ public:
 
 private:
 	const RuntimeEnvironment *RR;
+	Hashtable< Address,std::vector<InetAddress> > &_upstreamsToContact;
 	const uint64_t _now;
 	const SharedPtr<Peer> _bestCurrentUpstream;
-	Hashtable< Address,std::vector<InetAddress> > _upstreams;
 };
 
 ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline)
@@ -238,16 +241,18 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 			for(std::vector< SharedPtr<Network> >::const_iterator n(needConfig.begin());n!=needConfig.end();++n)
 				(*n)->requestConfiguration();
 
-			// Attempt to get identity for any unknown upstreams
-			const std::vector<Address> upstreams(RR->topology->upstreamAddresses());
-			for(std::vector<Address>::const_iterator a(upstreams.begin());a!=upstreams.end();++a) {
-				if (!RR->topology->getPeer(*a))
-					RR->sw->requestWhois(*a);
-			}
-
 			// Do pings and keepalives
-			_PingPeersThatNeedPing pfunc(RR,now);
+			Hashtable< Address,std::vector<InetAddress> > upstreamsToContact;
+			RR->topology->getUpstreamsToContact(upstreamsToContact);
+			_PingPeersThatNeedPing pfunc(RR,upstreamsToContact,now);
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
+
+			// Run WHOIS to create Peer for any upstreams we could not contact (including pending moon seeds)
+			Hashtable< Address,std::vector<InetAddress> >::Iterator i(upstreamsToContact);
+			Address *upstreamAddress = (Address *)0;
+			std::vector<InetAddress> *upstreamStableEndpoints = (std::vector<InetAddress> *)0;
+			while (i.next(upstreamAddress,upstreamStableEndpoints))
+				RR->sw->requestWhois(*upstreamAddress);
 
 			// Update online status, post status change as event
 			const bool oldOnline = _online;
@@ -337,9 +342,9 @@ ZT_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,u
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
-ZT_ResultCode Node::orbit(uint64_t moonWorldId)
+ZT_ResultCode Node::orbit(uint64_t moonWorldId,uint64_t moonSeed)
 {
-	RR->topology->addMoon(moonWorldId);
+	RR->topology->addMoon(moonWorldId,Address(moonSeed));
 	return ZT_RESULT_OK;
 }
 
@@ -919,10 +924,10 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint
 	}
 }
 
-enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,uint64_t moonWorldId)
+enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,uint64_t moonWorldId,uint64_t moonSeed)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->orbit(moonWorldId);
+		return reinterpret_cast<ZeroTier::Node *>(node)->orbit(moonWorldId,moonSeed);
 	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}

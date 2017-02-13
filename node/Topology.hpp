@@ -170,14 +170,11 @@ public:
 	bool isProhibitedEndpoint(const Address &ztaddr,const InetAddress &ipaddr) const;
 
 	/**
-	 * This gets the known stable endpoints for any upstream
-	 *
-	 * It also adds empty entries for any upstreams we are attempting to
-	 * contact.
+	 * Gets upstreams to contact and their stable endpoints (if known)
 	 *
 	 * @param eps Hash table to fill with addresses and their stable endpoints
 	 */
-	inline void getUpstreamStableEndpoints(Hashtable< Address,std::vector<InetAddress> > &eps) const
+	inline void getUpstreamsToContact(Hashtable< Address,std::vector<InetAddress> > &eps) const
 	{
 		Mutex::Lock _l(_upstreams_m);
 		for(std::vector<World::Root>::const_iterator i(_planet.roots().begin());i!=_planet.roots().end();++i) {
@@ -196,8 +193,8 @@ public:
 				}
 			}
 		}
-		for(std::vector<Address>::const_iterator m(_contactingMoons.begin());m!=_contactingMoons.end();++m)
-			eps[*m];
+		for(std::vector< std::pair<uint64_t,Address> >::const_iterator m(_moonSeeds.begin());m!=_moonSeeds.end();++m)
+			eps[m->second];
 	}
 
 	/**
@@ -206,12 +203,7 @@ public:
 	inline std::vector<Address> upstreamAddresses() const
 	{
 		Mutex::Lock _l(_upstreams_m);
-		std::vector<Address> u(_upstreamAddresses);
-		for(std::vector<Address>::const_iterator m(_contactingMoons.begin());m!=_contactingMoons.end();++m) {
-			if (std::find(u.begin(),u.end(),*m) == u.end())
-				u.push_back(*m);
-		}
-		return u;
+		return _upstreamAddresses;
 	}
 
 	/**
@@ -260,13 +252,12 @@ public:
 	 * Add a moon
 	 *
 	 * This loads it from moons.d if present, and if not adds it to
-	 * a list of moons that we want to contact. It does not actually
-	 * send anything, though this will happen on the next background
-	 * task loop where pings etc. are checked.
+	 * a list of moons that we want to contact.
 	 *
 	 * @param id Moon ID
+	 * @param seed If non-NULL, an address of any member of the moon to contact
 	 */
-	void addMoon(const uint64_t id);
+	void addMoon(const uint64_t id,const Address &seed);
 
 	/**
 	 * Remove a moon
@@ -422,7 +413,7 @@ private:
 
 	World _planet;
 	std::vector<World> _moons;
-	std::vector<Address> _contactingMoons;
+	std::vector< std::pair<uint64_t,Address> > _moonSeeds;
 	std::vector<Address> _upstreamAddresses;
 	CertificateOfRepresentation _cor;
 	bool _amRoot;

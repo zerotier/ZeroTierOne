@@ -59,8 +59,7 @@ public:
 	/**
 	 * Securely zero memory, avoiding compiler optimizations and such
 	 */
-	static void burn(void *ptr,unsigned int len)
-		throw();
+	static void burn(void *ptr,unsigned int len);
 
 	/**
 	 * Convert binary data to hexadecimal

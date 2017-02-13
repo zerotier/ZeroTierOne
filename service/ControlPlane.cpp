@@ -226,8 +226,8 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_Peer *peer)
 	const char *prole = "";
 	switch(peer->role) {
 		case ZT_PEER_ROLE_LEAF: prole = "LEAF"; break;
-		case ZT_PEER_ROLE_UPSTREAM: prole = "UPSTREAM"; break;
-		case ZT_PEER_ROLE_ROOT: prole = "ROOT"; break;
+		case ZT_PEER_ROLE_MOON: prole = "MOON"; break;
+		case ZT_PEER_ROLE_PLANET: prole = "PLANET"; break;
 	}
 
 	Utils::snprintf(json,sizeof(json),

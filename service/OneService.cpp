@@ -707,7 +707,7 @@ public:
 				for(std::vector<std::string>::iterator f(moonsDotD.begin());f!=moonsDotD.end();++f) {
 					std::size_t dot = f->find_last_of('.');
 					if ((dot == 16)&&(f->substr(16) == ".moon"))
-						_node->orbit(Utils::hexStrToU64(f->substr(0,dot).c_str()));
+						_node->orbit(Utils::hexStrToU64(f->substr(0,dot).c_str()),0);
 				}
 			}
 

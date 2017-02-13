@@ -568,6 +568,7 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				id.serialize(outp,false);
 				++count;
 			} else {
+				// Request unknown WHOIS from upstream from us (if we have one)
 				RR->sw->requestWhois(addr);
 #ifdef ZT_ENABLE_CLUSTER
 				// Distribute WHOIS queries across a cluster if we do not know the ID.

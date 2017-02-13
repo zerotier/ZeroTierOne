@@ -835,9 +835,9 @@ enum ZT_VirtualNetworkConfigOperation
  */
 enum ZT_PeerRole
 {
-	ZT_PEER_ROLE_LEAF = 0,     // ordinary node
-	ZT_PEER_ROLE_UPSTREAM = 1, // moon root
-	ZT_PEER_ROLE_ROOT = 2      // planetary root
+	ZT_PEER_ROLE_LEAF = 0,       // ordinary node
+	ZT_PEER_ROLE_MOON = 1,       // moon root
+	ZT_PEER_ROLE_PLANET = 2      // planetary root
 };
 
 /**
@@ -1790,10 +1790,11 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint
  * called for each on startup.
  *
  * @param moonWorldId Moon's world ID
+ * @param moonSeed If non-zero, the ZeroTier address of any member of the moon to query for moon definition
  * @param len Length of moonWorld in bytes
  * @return Error if moon was invalid or failed to be added
  */
-enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,uint64_t moonWorldId);
+enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,uint64_t moonWorldId,uint64_t moonSeed);
 
 /**
  * Remove a moon (does nothing if not present)

@@ -47,21 +47,14 @@ namespace ZeroTier {
 
 const char Utils::HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
 
-static void _Utils_doBurn(char *ptr,unsigned int len)
+// Crazy hack to force memory to be securely zeroed in spite of the best efforts of optimizing compilers.
+static void _Utils_doBurn(volatile uint8_t *ptr,unsigned int len)
 {
-	for(unsigned int i=0;i<len;++i)
-		ptr[i] = (char)0;
+	volatile uint8_t *const end = ptr + len;
+	while (ptr != end) *(ptr++) = (uint8_t)0;
 }
-void (*volatile _Utils_doBurn_ptr)(char *,unsigned int) = _Utils_doBurn;
-void Utils::burn(void *ptr,unsigned int len)
-	throw()
-{
-	// Ridiculous hack: call _doBurn() via a volatile function pointer to
-	// hold down compiler optimizers and beat them mercilessly until they
-	// cry and mumble something about never eliding secure memory zeroing
-	// again.
-	(_Utils_doBurn_ptr)((char *)ptr,len);
-}
+static void (*volatile _Utils_doBurn_ptr)(volatile uint8_t *,unsigned int) = _Utils_doBurn;
+void Utils::burn(void *ptr,unsigned int len) { (_Utils_doBurn_ptr)((volatile uint8_t *)ptr,len); }
 
 std::string Utils::hex(const void *data,unsigned int len)
 {
