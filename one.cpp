@@ -547,7 +547,7 @@ static void idtoolPrintHelp(FILE *out,const char *pn)
 	fprintf(out,"  getpublic <identity.secret>" ZT_EOL_S);
 	fprintf(out,"  sign <identity.secret> <file>" ZT_EOL_S);
 	fprintf(out,"  verify <identity.secret/public> <file> <signature>" ZT_EOL_S);
-	fprintf(out,"  initmoon <identity.public of primary root>" ZT_EOL_S);
+	fprintf(out,"  initmoon <identity.public of first seed>" ZT_EOL_S);
 	fprintf(out,"  genmoon <moon json>" ZT_EOL_S);
 }
 
@@ -709,8 +709,8 @@ static int idtool(int argc,char **argv)
 			mj["objtype"] = "world";
 			mj["worldType"] = "moon";
 			mj["updatesMustBeSignedBy"] = mj["signingKey"] = Utils::hex(kp.pub.data,(unsigned int)kp.pub.size());
-			mj["signingKeySECRET"] = Utils::hex(kp.priv.data,(unsigned int)kp.priv.size());
-			mj["id"] = (id.address().toString() + "000000");
+			mj["updatesMustBeSignedBy_SECRET"] = Utils::hex(kp.priv.data,(unsigned int)kp.priv.size());
+			mj["id"] = id.address().toInt();
 			nlohmann::json seedj;
 			seedj["identity"] = id.toString(false);
 			seedj["stableEndpoints"] = nlohmann::json::array();
@@ -730,7 +730,11 @@ static int idtool(int argc,char **argv)
 			}
 			nlohmann::json mj(OSUtils::jsonParse(buf));
 
-			uint64_t id = Utils::hexStrToU64(OSUtils::jsonString(mj["id"],"").c_str());
+			const uint64_t id = OSUtils::jsonInt(mj["id"],0);
+			if (!id) {
+				fprintf(stderr,"ID in %s is invalid" ZT_EOL_S,argv[2]);
+				return 1;
+			}
 
 			World::Type t;
 			if (mj["worldType"] == "moon") {
@@ -743,10 +747,8 @@ static int idtool(int argc,char **argv)
 			}
 
 			C25519::Pair signingKey;
-			C25519::Public updatesMustBeSignedBy;
-			Utils::unhex(OSUtils::jsonString(mj["singingKey"],""),signingKey.pub.data,(unsigned int)signingKey.pub.size());
-			Utils::unhex(OSUtils::jsonString(mj["singingKeySECRET"],""),signingKey.priv.data,(unsigned int)signingKey.priv.size());
-			Utils::unhex(OSUtils::jsonString(mj["updatesMustBeSignedBy"],""),updatesMustBeSignedBy.data,(unsigned int)updatesMustBeSignedBy.size());
+			Utils::unhex(OSUtils::jsonString(mj["updatesMustBeSignedBy"],""),signingKey.pub.data,(unsigned int)signingKey.pub.size());
+			Utils::unhex(OSUtils::jsonString(mj["updatesMustBeSignedBy_SECRET"],""),signingKey.priv.data,(unsigned int)signingKey.priv.size());
 
 			std::vector<World::Root> roots;
 			nlohmann::json &rootsj = mj["roots"];
@@ -768,7 +770,7 @@ static int idtool(int argc,char **argv)
 			std::sort(roots.begin(),roots.end());
 
 			const uint64_t now = OSUtils::now();
-			World w(World::make(t,id,now,updatesMustBeSignedBy,roots,signingKey));
+			World w(World::make(t,id,now,signingKey.pub,roots,signingKey));
 			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> wbuf;
 			w.serialize(wbuf);
 			char fn[128];
