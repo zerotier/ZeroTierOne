@@ -276,7 +276,7 @@ unsigned int ControlPlane::handleRequest(
 						res.push_back(mj);
 					}
 
-					scode = 2;;
+					scode = 200;
 				} else {
 					// Return a single moon by ID
 
