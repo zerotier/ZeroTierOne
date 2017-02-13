@@ -116,6 +116,9 @@ static void cliPrintHelp(const char *pn,FILE *out)
 	fprintf(out,"  join <network>          - Join a network" ZT_EOL_S);
 	fprintf(out,"  leave <network>         - Leave a network" ZT_EOL_S);
 	fprintf(out,"  set <network> <setting> - Set a network setting" ZT_EOL_S);
+	fprintf(out,"  listmoons               - List moons (federated root sets)" ZT_EOL_S);
+	fprintf(out,"  orbit <world ID> <seed> - Join a moon via any member root" ZT_EOL_S);
+	fprintf(out,"  deorbit <world ID>      - Leave a moon" ZT_EOL_S);
 }
 
 static std::string cliFixJsonCRs(const std::string &s)
@@ -482,6 +485,75 @@ static int cli(int argc,char **argv)
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
 		}
+	} else if (command == "listmoons") {
+		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/moon",requestHeaders,responseHeaders,responseBody);
+
+		nlohmann::json j;
+		try {
+			j = OSUtils::jsonParse(responseBody);
+		} catch (std::exception &exc) {
+			printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
+			return 1;
+		} catch ( ... ) {
+			printf("%u %s invalid JSON response (unknown exception)" ZT_EOL_S,scode,command.c_str());
+			return 1;
+		}
+
+		if (scode == 200) {
+			printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
+			return 0;
+		} else {
+			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			return 1;
+		}
+	} else if (command == "orbit") {
+		const uint64_t worldId = Utils::hexStrToU64(arg1.c_str());
+		const uint64_t seed = Utils::hexStrToU64(arg2.c_str());
+		if ((worldId)&&(seed)) {
+			char jsons[1024];
+			Utils::snprintf(jsons,sizeof(jsons),"{\"seed\":\"%s\"}",arg2.c_str());
+			char cl[128];
+			Utils::snprintf(cl,sizeof(cl),"%u",(unsigned int)strlen(jsons));
+			requestHeaders["Content-Type"] = "application/json";
+			requestHeaders["Content-Length"] = cl;
+			unsigned int scode = Http::POST(
+				1024 * 1024 * 16,
+				60000,
+				(const struct sockaddr *)&addr,
+				(std::string("/moon/") + arg1).c_str(),
+				requestHeaders,
+				jsons,
+				(unsigned long)strlen(jsons),
+				responseHeaders,
+				responseBody);
+			if (scode == 200) {
+				printf("200 orbit OK" ZT_EOL_S);
+				return 0;
+			} else {
+				printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+				return 1;
+			}
+		}
+	} else if (command == "deorbit") {
+		unsigned int scode = Http::DEL(
+			1024 * 1024 * 16,
+			60000,
+			(const struct sockaddr *)&addr,
+			(std::string("/moon/") + arg1).c_str(),
+			requestHeaders,
+			responseHeaders,
+			responseBody);
+		if (scode == 200) {
+			if (json) {
+				printf("%s",cliFixJsonCRs(responseBody).c_str());
+			} else {
+				printf("200 deorbit OK" ZT_EOL_S);
+			}
+			return 0;
+		} else {
+			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			return 1;
+		}
 	} else if (command == "set") {
 		if (arg1.length() != 16) {
 			cliPrintHelp(argv[0],stderr);
@@ -710,7 +782,7 @@ static int idtool(int argc,char **argv)
 			mj["worldType"] = "moon";
 			mj["updatesMustBeSignedBy"] = mj["signingKey"] = Utils::hex(kp.pub.data,(unsigned int)kp.pub.size());
 			mj["updatesMustBeSignedBy_SECRET"] = Utils::hex(kp.priv.data,(unsigned int)kp.priv.size());
-			mj["id"] = id.address().toInt();
+			mj["id"] = id.address().toString();
 			nlohmann::json seedj;
 			seedj["identity"] = id.toString(false);
 			seedj["stableEndpoints"] = nlohmann::json::array();
@@ -730,7 +802,7 @@ static int idtool(int argc,char **argv)
 			}
 			nlohmann::json mj(OSUtils::jsonParse(buf));
 
-			const uint64_t id = OSUtils::jsonInt(mj["id"],0);
+			const uint64_t id = Utils::hexStrToU64(OSUtils::jsonString(mj["id"],"0").c_str());
 			if (!id) {
 				fprintf(stderr,"ID in %s is invalid" ZT_EOL_S,argv[2]);
 				return 1;

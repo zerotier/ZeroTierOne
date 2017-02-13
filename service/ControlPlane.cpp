@@ -138,7 +138,9 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 
 static void _moonToJson(nlohmann::json &mj,const World &world)
 {
-	mj["id"] = world.id();
+	char tmp[64];
+	Utils::snprintf(tmp,sizeof(tmp),"%.16llx",world.id());
+	mj["id"] = tmp;
 	mj["timestamp"] = world.timestamp();
 	mj["signature"] = Utils::hex(world.signature().data,world.signature().size());
 	mj["updatesMustBeSignedBy"] = Utils::hex(world.updatesMustBeSignedBy().data,world.updatesMustBeSignedBy().size());
@@ -153,7 +155,7 @@ static void _moonToJson(nlohmann::json &mj,const World &world)
 		ra.push_back(rj);
 	}
 	mj["roots"] = ra;
-	mj["active"] = true;
+	mj["waiting"] = false;
 }
 
 } // anonymous namespace
@@ -369,7 +371,7 @@ unsigned int ControlPlane::handleRequest(
 					try {
 						nlohmann::json j(OSUtils::jsonParse(body));
 						if (j.is_object()) {
-							seed = OSUtils::jsonInt(j["seed"],0);
+							seed = Utils::hexStrToU64(OSUtils::jsonString(j["seed"],"0").c_str());
 						}
 					} catch ( ... ) {
 						// discard invalid JSON
@@ -386,13 +388,14 @@ unsigned int ControlPlane::handleRequest(
 					}
 
 					if ((scode != 200)&&(seed != 0)) {
-						res["seed"] = seed;
-						res["id"] = id;
+						char tmp[64];
+						Utils::snprintf(tmp,sizeof(tmp),"%.16llx",id);
+						res["id"] = tmp;
 						res["roots"] = nlohmann::json::array();
 						res["timestamp"] = 0;
 						res["signature"] = nlohmann::json();
 						res["updatesMustBeSignedBy"] = nlohmann::json();
-						res["active"] = false;
+						res["waiting"] = true;
 						_node->orbit(id,seed);
 					}
 
