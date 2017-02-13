@@ -690,7 +690,7 @@ public:
 			}
 #endif
 
-			_controlPlane = new ControlPlane(this,_node,(_homePath + ZT_PATH_SEPARATOR_S "ui").c_str());
+			_controlPlane = new ControlPlane(this,_node);
 			_controlPlane->addAuthToken(authToken.c_str());
 			_controlPlane->setController(_controller);
 

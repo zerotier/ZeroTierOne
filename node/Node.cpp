@@ -362,8 +362,6 @@ uint64_t Node::address() const
 void Node::status(ZT_NodeStatus *status) const
 {
 	status->address = RR->identity.address().toInt();
-	status->worldId = RR->topology->planetWorldId();
-	status->worldTimestamp = RR->topology->planetWorldTimestamp();
 	status->publicIdentity = RR->publicIdentityStr.c_str();
 	status->secretIdentity = RR->secretIdentityStr.c_str();
 	status->online = _online ? 1 : 0;
@@ -712,6 +710,16 @@ void Node::postCircuitTestReport(const ZT_CircuitTestReport *report)
 void Node::setTrustedPaths(const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count)
 {
 	RR->topology->setTrustedPaths(reinterpret_cast<const InetAddress *>(networks),ids,count);
+}
+
+World Node::planet() const
+{
+	return RR->topology->planet();
+}
+
+std::vector<World> Node::moons() const
+{
+	return RR->topology->moons();
 }
 
 void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig)

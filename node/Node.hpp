@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include <map>
+#include <vector>
 
 #include "Constants.hpp"
 
@@ -53,6 +54,8 @@
 #define ZT_NODE_PRNG_BUF_SIZE 64
 
 namespace ZeroTier {
+
+class World;
 
 /**
  * Implementation of Node object as defined in CAPI
@@ -209,6 +212,9 @@ public:
 	uint64_t prng();
 	void postCircuitTestReport(const ZT_CircuitTestReport *report);
 	void setTrustedPaths(const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count);
+
+	World planet() const;
+	std::vector<World> moons() const;
 
 	/**
 	 * Register that we are expecting a reply to a packet ID

@@ -136,6 +136,16 @@ public:
 	inline uint64_t timestamp() const { return _ts; }
 
 	/**
+	 * @return C25519 signature
+	 */
+	inline const C25519::Signature &signature() const { return _signature; }
+
+	/**
+	 * @return Public key that must sign next update
+	 */
+	inline const C25519::Public &updatesMustBeSignedBy() const { return _updatesMustBeSignedBy; }
+
+	/**
 	 * Check whether a world update should replace this one
 	 *
 	 * @param update Candidate update

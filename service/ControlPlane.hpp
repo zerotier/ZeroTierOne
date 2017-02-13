@@ -40,8 +40,7 @@ struct InetAddress;
 class ControlPlane
 {
 public:
-	ControlPlane(OneService *svc,Node *n,const char *uiStaticPath);
-	~ControlPlane();
+	ControlPlane(OneService *svc,Node *n);
 
 	/**
 	 * Set controller, which will be available under /controller
@@ -88,7 +87,6 @@ private:
 	OneService *const _svc;
 	Node *const _node;
 	EmbeddedNetworkController *_controller;
-	std::string _uiStaticPath;
 	std::set<std::string> _authTokens;
 	Mutex _lock;
 };
