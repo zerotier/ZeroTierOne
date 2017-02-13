@@ -24,6 +24,7 @@ Settings available in `local.conf` (this is not valid JSON, and JSON does not al
 		}
 	},
 	"settings": { /* Other global settings */
+		"primaryPort": 0-65535, /* If set, override default port of 9993 and any command line port */
 		"portMappingEnabled": true|false, /* If true (the default), try to use uPnP or NAT-PMP to map ports */
 		"softwareUpdate": "apply"|"download"|"disable", /* Automatically apply updates, just download, or disable built-in software updates */
 		"softwareUpdateDist": true|false, /* If true, distribute software updates (only really useful to ZeroTier, Inc. itself, default is false) */

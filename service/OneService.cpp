@@ -987,6 +987,7 @@ public:
 		_interfacePrefixBlacklist.clear();
 		json &settings = _localConfig["settings"];
 		if (settings.is_object()) {
+			_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 			_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 
 			const std::string up(OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT));
