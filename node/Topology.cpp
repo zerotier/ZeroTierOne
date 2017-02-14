@@ -225,6 +225,18 @@ bool Topology::isUpstream(const Identity &id) const
 	return (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),id.address()) != _upstreamAddresses.end());
 }
 
+bool Topology::shouldAcceptWorldUpdateFrom(const Address &addr) const
+{
+	Mutex::Lock _l(_upstreams_m);
+	if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),addr) != _upstreamAddresses.end())
+		return true;
+	for(std::vector< std::pair< uint64_t,Address> >::const_iterator s(_moonSeeds.begin());s!=_moonSeeds.end();++s) {
+		if (s->second == addr)
+			return true;
+	}
+	return false;
+}
+
 ZT_PeerRole Topology::role(const Address &ztaddr) const
 {
 	Mutex::Lock _l(_upstreams_m);
@@ -312,12 +324,13 @@ bool Topology::addWorld(const World &newWorld,bool alwaysAcceptNew)
 					for(std::vector<World::Root>::const_iterator r(newWorld.roots().begin());r!=newWorld.roots().end();++r) {
 						if (r->identity.address() == m->second) {
 							_moonSeeds.erase(m);
-							m = _moonSeeds.end(); // cause outer loop to terminate
 							_moons.push_back(newWorld);
 							existing = &(_moons.back());
 							break;
 						}
 					}
+					if (existing)
+						break;
 				}
 			}
 		}

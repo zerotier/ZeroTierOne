@@ -455,16 +455,16 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 
 				// Handle planet or moon updates if present
 				if ((ptr + 2) <= size()) {
-					const unsigned int worldLen = at<uint16_t>(ptr); ptr += 2;
-					if (RR->topology->isUpstream(peer->identity())) {
-						const unsigned int endOfWorlds = ptr + worldLen;
+					const unsigned int worldsLen = at<uint16_t>(ptr); ptr += 2;
+					if (RR->topology->shouldAcceptWorldUpdateFrom(peer->address())) {
+						const unsigned int endOfWorlds = ptr + worldsLen;
 						while (ptr < endOfWorlds) {
 							World w;
 							ptr += w.deserialize(*this,ptr);
 							RR->topology->addWorld(w,false);
 						}
 					} else {
-						ptr += worldLen;
+						ptr += worldsLen;
 					}
 				}
 

@@ -148,6 +148,12 @@ public:
 	bool isUpstream(const Identity &id) const;
 
 	/**
+	 * @param addr Address to check
+	 * @return True if we should accept a world update from this address
+	 */
+	bool shouldAcceptWorldUpdateFrom(const Address &addr) const;
+
+	/**
 	 * @param ztaddr ZeroTier address
 	 * @return Peer role for this device
 	 */
