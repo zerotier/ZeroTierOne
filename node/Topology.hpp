@@ -258,9 +258,10 @@ public:
 	 * Validate new world and update if newer and signature is okay
 	 *
 	 * @param newWorld A new or updated planet or moon to learn
+	 * @param alwaysAcceptNew If true, always accept new moons even if we're not waiting for one
 	 * @return True if it was valid and newer than current (or totally new for moons)
 	 */
-	bool addWorld(const World &newWorld);
+	bool addWorld(const World &newWorld,bool alwaysAcceptNew);
 
 	/**
 	 * Add a moon

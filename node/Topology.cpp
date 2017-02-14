@@ -67,7 +67,7 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp(buf.data(),(unsigned int)buf.length());
 			cachedPlanet.deserialize(dswtmp,0);
 		}
-		addWorld(cachedPlanet);
+		addWorld(cachedPlanet,false);
 	} catch ( ... ) {}
 
 	World defaultPlanet;
@@ -75,7 +75,7 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 		Buffer<ZT_DEFAULT_WORLD_LENGTH> wtmp(ZT_DEFAULT_WORLD,ZT_DEFAULT_WORLD_LENGTH);
 		defaultPlanet.deserialize(wtmp,0); // throws on error, which would indicate a bad static variable up top
 	}
-	addWorld(defaultPlanet);
+	addWorld(defaultPlanet,false);
 }
 
 SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
@@ -273,7 +273,7 @@ bool Topology::isProhibitedEndpoint(const Address &ztaddr,const InetAddress &ipa
 	return false;
 }
 
-bool Topology::addWorld(const World &newWorld)
+bool Topology::addWorld(const World &newWorld,bool alwaysAcceptNew)
 {
 	if ((newWorld.type() != World::TYPE_PLANET)&&(newWorld.type() != World::TYPE_MOON))
 		return false;
@@ -303,15 +303,20 @@ bool Topology::addWorld(const World &newWorld)
 			*existing = newWorld;
 		else return false;
 	} else if (newWorld.type() == World::TYPE_MOON) {
-		for(std::vector< std::pair<uint64_t,Address> >::iterator m(_moonSeeds.begin());m!=_moonSeeds.end();++m) {
-			if (m->first == newWorld.id()) {
-				for(std::vector<World::Root>::const_iterator r(newWorld.roots().begin());r!=newWorld.roots().end();++r) {
-					if (r->identity.address() == m->second) {
-						_moonSeeds.erase(m);
-						m = _moonSeeds.end(); // cause outer loop to terminate
-						_moons.push_back(newWorld);
-						existing = &(_moons.back());
-						break;
+		if (alwaysAcceptNew) {
+			_moons.push_back(newWorld);
+			existing = &(_moons.back());
+		} else {
+			for(std::vector< std::pair<uint64_t,Address> >::iterator m(_moonSeeds.begin());m!=_moonSeeds.end();++m) {
+				if (m->first == newWorld.id()) {
+					for(std::vector<World::Root>::const_iterator r(newWorld.roots().begin());r!=newWorld.roots().end();++r) {
+						if (r->identity.address() == m->second) {
+							_moonSeeds.erase(m);
+							m = _moonSeeds.end(); // cause outer loop to terminate
+							_moons.push_back(newWorld);
+							existing = &(_moons.back());
+							break;
+						}
 					}
 				}
 			}
@@ -352,8 +357,8 @@ void Topology::addMoon(const uint64_t id,const Address &seed)
 			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> wtmp(moonBin.data(),(unsigned int)moonBin.length());
 			World w;
 			w.deserialize(wtmp);
-			if (w.type() == World::TYPE_MOON) {
-				addWorld(w);
+			if ((w.type() == World::TYPE_MOON)&&(w.id() == id)) {
+				addWorld(w,true);
 				return;
 			}
 		}

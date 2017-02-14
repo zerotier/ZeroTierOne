@@ -461,7 +461,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 						while (ptr < endOfWorlds) {
 							World w;
 							ptr += w.deserialize(*this,ptr);
-							RR->topology->addWorld(w);
+							RR->topology->addWorld(w,false);
 						}
 					} else {
 						ptr += worldLen;
