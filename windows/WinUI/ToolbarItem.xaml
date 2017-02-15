@@ -20,54 +20,38 @@
     <Grid>
         <tb:TaskbarIcon x:Name="MyNotifyIcon"
                         IconSource="ZeroTierIcon.ico"
-                        ToolTipText="ZeroTier One">
+                        ToolTipText="ZeroTier One"
+												MenuActivation="LeftOrRightClick">
             <tb:TaskbarIcon.ContextMenu>
                 <ContextMenu>
-                    <ContextMenu.ItemsSource>
-                        <CompositeCollection>
-                            <MenuItem Header="Node ID: unknown"
+					<ContextMenu.ItemsSource>
+						<CompositeCollection>
+							<MenuItem Header="Node ID: unknown"
                                       Click="ToolbarItem_NodeIDClicked"
                                       x:Name="nodeIdMenuItem"/>
-                            <Separator/>
-                            <MenuItem Header="Join Network..."
+							<Separator/>
+							<MenuItem Header="Join Network..."
                                       Click="ToolbarItem_JoinNetworkClicked"/>
-                            <MenuItem Header="Show Networks..."
+							<MenuItem Header="Show Networks..."
                                       Click="ToolbarItem_ShowNetworksClicked"/>
-                            <Separator/>
+							<Separator/>
 
-                            <CollectionContainer Collection="{Binding Source={StaticResource KnownNetworks}}">
-                                
-                            </CollectionContainer>
+							<CollectionContainer Collection="{Binding Source={StaticResource KnownNetworks}}">
 
-                            <Separator/>
-                            <MenuItem Header="About..."
+							</CollectionContainer>
+
+							<Separator/>
+							<MenuItem Header="About..."
                                       Click="ToolbarItem_AboutClicked"/>
-                            <MenuItem Header="Preferences..."
+							<MenuItem Header="Preferences..."
                                       Click="ToolbarItem_PreferencesClicked"/>
-                            <Separator/>
-                            <MenuItem Header="Quit"
+							<Separator/>
+							<MenuItem Header="Quit"
                                       Click="ToolbarItem_QuitClicked"/>
-                            
-                        </CompositeCollection>
-                    </ContextMenu.ItemsSource>
-                    
-                    <!--<MenuItem Header="Networks">
-                        <MenuItem.ItemsSource>
-                            <CompositeCollection>
-                                <CollectionContainer Collection="{Binding Source={StaticResource KnownNetworks}}"/>
-                            </CompositeCollection>
-                        </MenuItem.ItemsSource>
-                        <MenuItem.ItemContainerStyle>
-                            <Style>
-                                <Setter Property="MenuItem.Header" Value="{Binding Title}"/>
-                                --><!-- <Setter Property="MenuItem.IsCheckable" Value="True"/> --><!--
-                                <Setter Property="MenuItem.IsChecked" Value="{Binding IsConnected}"/>
-                                <EventSetter Event="MenuItem.Click" Handler="ToolbarItem_NetworkClicked"/>
-                            </Style>
-                        </MenuItem.ItemContainerStyle>
-                    </MenuItem>-->
-                    
-                 </ContextMenu>
+
+						</CompositeCollection>
+					</ContextMenu.ItemsSource>
+				</ContextMenu>
             </tb:TaskbarIcon.ContextMenu>
 
         </tb:TaskbarIcon>
