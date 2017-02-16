@@ -70,9 +70,9 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 	nj["status"] = nstatus;
 	nj["type"] = ntype;
 	nj["mtu"] = nc->mtu;
-	nj["dhcp"] = (bool)(nc->dhcp == 0);
-	nj["bridge"] = (bool)(nc->bridge == 0);
-	nj["broadcastEnabled"] = (bool)(nc->broadcastEnabled == 0);
+	nj["dhcp"] = (bool)(nc->dhcp != 0);
+	nj["bridge"] = (bool)(nc->bridge != 0);
+	nj["broadcastEnabled"] = (bool)(nc->broadcastEnabled != 0);
 	nj["portError"] = nc->portError;
 	nj["netconfRevision"] = nc->netconfRevision;
 	nj["portDeviceName"] = portDeviceName;
@@ -224,7 +224,7 @@ unsigned int ControlPlane::handleRequest(
 				Utils::snprintf(tmp,sizeof(tmp),"%.10llx",status.address);
 				res["address"] = tmp;
 				res["publicIdentity"] = status.publicIdentity;
-				res["online"] = (bool)status.online;
+				res["online"] = (bool)(status.online != 0);
 				res["tcpFallbackActive"] = _svc->tcpFallbackActive();
 				res["versionMajor"] = ZEROTIER_ONE_VERSION_MAJOR;
 				res["versionMinor"] = ZEROTIER_ONE_VERSION_MINOR;
