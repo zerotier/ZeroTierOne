@@ -207,7 +207,7 @@ void Peer::received(
 				path->sent(now);
 			}
 		}
-	} else if (trustEstablished) {
+	} else if (this->trustEstablished(now)) {
 		// Send PUSH_DIRECT_PATHS if hops>0 (relayed) and we have a trust relationship (common network membership)
 #ifdef ZT_ENABLE_CLUSTER
 			// Cluster mode disables normal PUSH_DIRECT_PATHS in favor of cluster-based peer redirection
