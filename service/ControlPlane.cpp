@@ -127,9 +127,9 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 		j["address"] = reinterpret_cast<const InetAddress *>(&(peer->paths[i].address))->toString();
 		j["lastSend"] = peer->paths[i].lastSend;
 		j["lastReceive"] = peer->paths[i].lastReceive;
-		j["active"] = (bool)(peer->paths[i].expired != 0);
-		j["expired"] = (bool)(peer->paths[i].expired == 0);
-		j["preferred"] = (bool)(peer->paths[i].preferred == 0);
+		j["active"] = (bool)(peer->paths[i].expired == 0);
+		j["expired"] = (bool)(peer->paths[i].expired != 0);
+		j["preferred"] = (bool)(peer->paths[i].preferred != 0);
 		j["trustedPathId"] = peer->paths[i].trustedPathId;
 		pa.push_back(j);
 	}
