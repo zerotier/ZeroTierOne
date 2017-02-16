@@ -43,10 +43,15 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/uio.h>
+#include <dirent.h>
 #include <signal.h>
-
-#ifdef __linux__
-#include "osdep/LinuxDropPrivileges.hpp"
+#ifdef __LINUX__
+#include <sys/prctl.h>
+#include <sys/syscall.h>
+#include <sys/wait.h>
+#include <linux/capability.h>
+#include <linux/securebits.h>
 #endif
 #endif
 
@@ -875,6 +880,142 @@ static void _sighandlerQuit(int sig)
 }
 #endif
 
+// Drop privileges on Linux, if supported by libc etc. and "zerotier-one" user exists on system
+#ifdef __LINUX__
+#ifdef PR_CAP_AMBIENT
+#define ZT_LINUX_USER "zerotier-one"
+#define ZT_HAVE_DROP_PRIVILEGES 1
+namespace {
+
+// libc doesn't export capset, it is instead located in libcap
+// We ignore libcap and call it manually.
+struct cap_header_struct {
+	__u32 version;
+	int pid;
+};
+struct cap_data_struct {
+	__u32 effective;
+	__u32 permitted;
+	__u32 inheritable;
+};
+static inline int _zt_capset(cap_header_struct* hdrp, cap_data_struct* datap) { return syscall(SYS_capset, hdrp, datap); }
+
+static void _notDropping(const char *procName,const std::string &homeDir)
+{
+	struct stat buf;
+	if (lstat(homeDir.c_str(),&buf) < 0) {
+		if (buf.st_uid != 0 || buf.st_gid != 0) {
+			fprintf(stderr, "%s: FATAL: failed to drop privileges and can't run as root since privileges were previously dropped (home directory not owned by root)" ZT_EOL_S,procName);
+			exit(1);
+		}
+	}
+	fprintf(stderr, "%s: WARNING: failed to drop privileges (kernel may not support required prctl features), running as root" ZT_EOL_S,procName);
+}
+
+static int _setCapabilities(int flags)
+{
+	cap_header_struct capheader = {_LINUX_CAPABILITY_VERSION_1, 0};
+	cap_data_struct capdata;
+	capdata.inheritable = capdata.permitted = capdata.effective = flags;
+	return _zt_capset(&capheader, &capdata);
+}
+
+static void _recursiveChown(const char *path,uid_t uid,gid_t gid)
+{
+	struct dirent de;
+	struct dirent *dptr;
+	lchown(path,uid,gid);
+	DIR *d = opendir(path);
+	if (!d)
+		return;
+	dptr = (struct dirent *)0;
+	for(;;) {
+		if (readdir_r(d,&de,&dptr) != 0)
+			break;
+		if (!dptr)
+			break;
+		if ((strcmp(dptr->d_name,".") != 0)&&(strcmp(dptr->d_name,"..") != 0)&&(strlen(dptr->d_name) > 0)) {
+			std::string p(path);
+			p.push_back(ZT_PATH_SEPARATOR);
+			p.append(dptr->d_name);
+			_recursiveChown(p.c_str(),uid,gid); // will just fail and return on regular files
+		}
+	}
+	closedir(d);
+}
+
+static void dropPrivileges(const char *procName,const std::string &homeDir)
+{
+	if (getuid() != 0)
+		return;
+
+	// dropPrivileges switches to zerotier-one user while retaining CAP_NET_ADMIN
+	// and CAP_NET_RAW capabilities.
+	struct passwd *targetUser = getpwnam(ZT_LINUX_USER);
+	if (!targetUser)
+		return;
+
+	if (prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_IS_SET, CAP_NET_RAW, 0, 0) < 0) {
+		// Kernel has no support for ambient capabilities.
+		_notDropping(procName,homeDir);
+		return;
+	}
+	if (prctl(PR_SET_SECUREBITS, SECBIT_KEEP_CAPS | SECBIT_NOROOT) < 0) {
+		_notDropping(procName,homeDir);
+		return;
+	}
+
+	// Change ownership of our home directory if everything looks good (does nothing if already chown'd)
+	_recursiveChown(homeDir.c_str(),targetUser->pw_uid,targetUser->pw_gid);
+
+	if (_setCapabilities((1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW) | (1 << CAP_SETUID) | (1 << CAP_SETGID)) < 0) {
+		_notDropping(procName,homeDir);
+		return;
+	}
+
+	int oldDumpable = prctl(PR_GET_DUMPABLE);
+	if (prctl(PR_SET_DUMPABLE, 0) < 0) {
+		// Disable ptracing. Otherwise there is a small window when previous
+		// compromised ZeroTier process could ptrace us, when we still have CAP_SETUID.
+		// (this is mitigated anyway on most distros by ptrace_scope=1)
+		fprintf(stderr,"%s: FATAL: prctl(PR_SET_DUMPABLE) failed while attempting to relinquish root permissions" ZT_EOL_S,procName);
+		exit(1);
+	}
+
+	// Relinquish root
+	if (setgid(targetUser->pw_gid) < 0) {
+		perror("setgid");
+		exit(1);
+	}
+	if (setuid(targetUser->pw_uid) < 0) {
+		perror("setuid");
+		exit(1);
+	}
+
+	if (_setCapabilities((1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW)) < 0) {
+		fprintf(stderr,"%s: FATAL: unable to drop capabilities after relinquishing root" ZT_EOL_S,procName);
+		exit(1);
+	}
+
+	if (prctl(PR_SET_DUMPABLE, oldDumpable) < 0) {
+		fprintf(stderr,"%s: FATAL: prctl(PR_SET_DUMPABLE) failed while attempting to relinquish root permissions" ZT_EOL_S,procName);
+		exit(1);
+	}
+
+	if (prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_RAISE, CAP_NET_ADMIN, 0, 0) < 0) {
+		fprintf(stderr,"%s: FATAL: prctl(PR_CAP_AMBIENT,PR_CAP_AMBIENT_RAISE,CAP_NET_ADMIN) failed while attempting to relinquish root permissions" ZT_EOL_S,procName);
+		exit(1);
+	}
+	if (prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_RAISE, CAP_NET_RAW, 0, 0) < 0) {
+		fprintf(stderr,"%s: FATAL: prctl(PR_CAP_AMBIENT,PR_CAP_AMBIENT_RAISE,CAP_NET_RAW) failed while attempting to relinquish root permissions" ZT_EOL_S,procName);
+		exit(1);
+	}
+}
+
+} // anonymous namespace
+#endif // PR_CAP_AMBIENT
+#endif // __LINUX__
+
 /****************************************************************************/
 /* Windows helper functions and signal handlers                             */
 /****************************************************************************/
@@ -1283,11 +1424,8 @@ int main(int argc,char **argv)
 
 #ifdef __UNIX_LIKE__
 
-#ifndef ZT_ONE_RUN_AS_ROOT
-#ifdef __linux__
-	if (!skipRootCheck)
-		dropPrivileges(homeDir);
-#endif
+#ifdef ZT_HAVE_DROP_PRIVILEGES
+	dropPrivileges(argv[0],homeDir);
 #endif
 
 	std::string pidPath(homeDir + ZT_PATH_SEPARATOR_S + ZT_PID_PATH);

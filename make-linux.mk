@@ -107,8 +107,8 @@ endif
 
 all:	one
 
-one:	$(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o osdep/LinuxDropPrivileges.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o osdep/LinuxDropPrivileges.o $(LDLIBS)
+one:	$(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o $(LDLIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
