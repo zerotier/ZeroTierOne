@@ -882,7 +882,13 @@ static void _sighandlerQuit(int sig)
 
 // Drop privileges on Linux, if supported by libc etc. and "zerotier-one" user exists on system
 #ifdef __LINUX__
-#ifdef PR_CAP_AMBIENT
+#ifndef PR_CAP_AMBIENT
+#define PR_CAP_AMBIENT 47
+#define PR_CAP_AMBIENT_IS_SET 1
+#define PR_CAP_AMBIENT_RAISE 2
+#define PR_CAP_AMBIENT_LOWER 3
+#define PR_CAP_AMBIENT_CLEAR_ALL 4
+#endif
 #define ZT_LINUX_USER "zerotier-one"
 #define ZT_HAVE_DROP_PRIVILEGES 1
 namespace {
@@ -1013,7 +1019,6 @@ static void dropPrivileges(const char *procName,const std::string &homeDir)
 }
 
 } // anonymous namespace
-#endif // PR_CAP_AMBIENT
 #endif // __LINUX__
 
 /****************************************************************************/
