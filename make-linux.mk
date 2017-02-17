@@ -80,6 +80,10 @@ ifeq ($(ZT_ENABLE_CLUSTER),1)
 	DEFS+=-DZT_ENABLE_CLUSTER
 endif
 
+ifeq ($(ZT_SYNOLOGY), 1)
+	DEFS+=-D__SYNOLOGY__
+endif
+
 ifeq ($(ZT_TRACE),1)
 	DEFS+=-DZT_TRACE
 endif

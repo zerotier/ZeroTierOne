@@ -1108,12 +1108,17 @@ public:
 				}
 			}
 			for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
+#ifdef __SYNOLOGY__
+				if (!n.tap->addIp(*ip))
+					fprintf(stderr,"ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString().c_str());
+#else
 				if (std::find(n.managedIps.begin(),n.managedIps.end(),*ip) == n.managedIps.end()) {
+
 					if (!n.tap->addIp(*ip))
 						fprintf(stderr,"ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString().c_str());
 				}
+#endif
 			}
-
 			n.managedIps.swap(newManagedIps);
 		}
 
