@@ -221,8 +221,10 @@ bool LinuxEthernetTap::addIp(const InetAddress &ip)
 		return false;
 
 	std::vector<InetAddress> allIps(ips());
+#ifndef __SYNOLOGY__
 	if (std::binary_search(allIps.begin(),allIps.end(),ip))
 		return true;
+#endif
 
 	// Remove and reconfigure if address is the same but netmask is different
 	for(std::vector<InetAddress>::iterator i(allIps.begin());i!=allIps.end();++i) {
