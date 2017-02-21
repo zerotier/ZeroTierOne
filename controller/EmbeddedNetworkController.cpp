@@ -1465,24 +1465,27 @@ void EmbeddedNetworkController::_request(
 		}
 		for(unsigned long i=0;i<memberCapabilities.size();++i) {
 			const uint64_t capId = OSUtils::jsonInt(memberCapabilities[i],0ULL) & 0xffffffffULL;
-			json *cap = capsById[capId];
-			if ((cap->is_object())&&(cap->size() > 0)) {
-				ZT_VirtualNetworkRule capr[ZT_MAX_CAPABILITY_RULES];
-				unsigned int caprc = 0;
-				json &caprj = (*cap)["rules"];
-				if ((caprj.is_array())&&(caprj.size() > 0)) {
-					for(unsigned long j=0;j<caprj.size();++j) {
-						if (caprc >= ZT_MAX_CAPABILITY_RULES)
-							break;
-						if (_parseRule(caprj[j],capr[caprc]))
-							++caprc;
+			std::map< uint64_t,json * >::const_iterator ctmp = capsById.find(capId);
+			if (ctmp != capsById.end()) {
+				json *cap = ctmp->second;
+				if ((cap)&&(cap->is_object())&&(cap->size() > 0)) {
+					ZT_VirtualNetworkRule capr[ZT_MAX_CAPABILITY_RULES];
+					unsigned int caprc = 0;
+					json &caprj = (*cap)["rules"];
+					if ((caprj.is_array())&&(caprj.size() > 0)) {
+						for(unsigned long j=0;j<caprj.size();++j) {
+							if (caprc >= ZT_MAX_CAPABILITY_RULES)
+								break;
+							if (_parseRule(caprj[j],capr[caprc]))
+								++caprc;
+						}
 					}
+					nc.capabilities[nc.capabilityCount] = Capability((uint32_t)capId,nwid,now,1,capr,caprc);
+					if (nc.capabilities[nc.capabilityCount].sign(_signingId,identity.address()))
+						++nc.capabilityCount;
+					if (nc.capabilityCount >= ZT_MAX_NETWORK_CAPABILITIES)
+						break;
 				}
-				nc.capabilities[nc.capabilityCount] = Capability((uint32_t)capId,nwid,now,1,capr,caprc);
-				if (nc.capabilities[nc.capabilityCount].sign(_signingId,identity.address()))
-					++nc.capabilityCount;
-				if (nc.capabilityCount >= ZT_MAX_NETWORK_CAPABILITIES)
-					break;
 			}
 		}
 
