@@ -747,8 +747,8 @@ function compile(src,rules,caps,tags)
 						if ((id < 0)||(id > 0xffffffff))
 							return [ tag[k][1],tag[k][2],'Invalid or out of range tag ID.' ];
 					} else if (tkeyword === 'default') {
-						if (id >= 0)
-							return [ tag[k][1],tag[k][2],'Duplicate tag id definition.' ];
+						if (dfl !== null)
+							return [ tag[k][1],tag[k][2],'Duplicate tag default directive.' ];
 						if ((k + 1) >= tag.length)
 							return [ tag[k][1],tag[k][2],'Missing value for default.' ];
 						dfl = tag[++k][0]||null;
