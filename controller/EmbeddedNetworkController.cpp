@@ -969,6 +969,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 									json ncap = json::object();
 									const uint64_t capId = OSUtils::jsonInt(cap["id"],0ULL);
 									ncap["id"] = capId;
+									ncap["default"] = OSUtils::jsonBool(cap["default"],false);
 
 									json &rules = cap["rules"];
 									json nrules = json::array();
@@ -994,6 +995,31 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 							network["capabilities"] = ncapsa;
 						}
 					}
+
+					if (b.count("tags")) {
+						json &tags = b["tags"];
+						if (tags.is_array()) {
+							std::map< uint64_t,json > ntags;
+							for(unsigned long i=0;i<tags.size();++i) {
+								json &tag = tags[i];
+								if (tag.is_object()) {
+									json ntag = json::object();
+									const uint64_t tagId = OSUtils::jsonInt(tag["id"],0ULL);
+									ntag["id"] = tagId;
+									if (tag.find("default") == tag.end())
+										ntag["default"] = json();
+									else ntag["default"] = OSUtils::jsonInt(tag["default"],0ULL);
+									ntags[tagId] = ntag;
+								}
+							}
+
+							json ntagsa = json::array();
+							for(std::map< uint64_t,json >::iterator t(ntags.begin());t!=ntags.end();++t)
+								ntagsa.push_back(t->second);
+							network["tags"] = ntagsa;
+						}
+					}
+
 				} catch ( ... ) {
 					responseBody = "{ \"message\": \"exception occurred while parsing body variables\" }";
 					responseContentType = "application/json";
@@ -1207,6 +1233,8 @@ void EmbeddedNetworkController::_request(
 		return;
 	}
 
+	const bool newMember = (member.size() == 0);
+
 	json origMember(member); // for detecting modification later
 	_initMember(member);
 
@@ -1392,6 +1420,7 @@ void EmbeddedNetworkController::_request(
 	json &routes = network["routes"];
 	json &rules = network["rules"];
 	json &capabilities = network["capabilities"];
+	json &tags = network["tags"];
 	json &memberCapabilities = member["capabilities"];
 	json &memberTags = member["tags"];
 
@@ -1411,52 +1440,82 @@ void EmbeddedNetworkController::_request(
 			}
 		}
 
-		if ((memberCapabilities.is_array())&&(memberCapabilities.size() > 0)&&(capabilities.is_array())) {
-			std::map< uint64_t,json * > capsById;
+		std::map< uint64_t,json * > capsById;
+		if (!memberCapabilities.is_array())
+			memberCapabilities = json::array();
+		if (capabilities.is_array()) {
 			for(unsigned long i=0;i<capabilities.size();++i) {
 				json &cap = capabilities[i];
-				if (cap.is_object())
-					capsById[OSUtils::jsonInt(cap["id"],0ULL) & 0xffffffffULL] = &cap;
-			}
-
-			for(unsigned long i=0;i<memberCapabilities.size();++i) {
-				const uint64_t capId = OSUtils::jsonInt(memberCapabilities[i],0ULL) & 0xffffffffULL;
-				json *cap = capsById[capId];
-				if ((cap->is_object())&&(cap->size() > 0)) {
-					ZT_VirtualNetworkRule capr[ZT_MAX_CAPABILITY_RULES];
-					unsigned int caprc = 0;
-					json &caprj = (*cap)["rules"];
-					if ((caprj.is_array())&&(caprj.size() > 0)) {
-						for(unsigned long j=0;j<caprj.size();++j) {
-							if (caprc >= ZT_MAX_CAPABILITY_RULES)
+				if (cap.is_object()) {
+					const uint64_t id = OSUtils::jsonInt(cap["id"],0ULL) & 0xffffffffULL;
+					capsById[id] = &cap;
+					if ((newMember)&&(OSUtils::jsonBool(cap["default"],false))) {
+						bool have = false;
+						for(unsigned long i=0;i<memberCapabilities.size();++i) {
+							if (id == (OSUtils::jsonInt(memberCapabilities[i],0ULL) & 0xffffffffULL)) {
+								have = true;
 								break;
-							if (_parseRule(caprj[j],capr[caprc]))
-								++caprc;
+							}
 						}
+						if (!have)
+							memberCapabilities.push_back(id);
 					}
-					nc.capabilities[nc.capabilityCount] = Capability((uint32_t)capId,nwid,now,1,capr,caprc);
-					if (nc.capabilities[nc.capabilityCount].sign(_signingId,identity.address()))
-						++nc.capabilityCount;
-					if (nc.capabilityCount >= ZT_MAX_NETWORK_CAPABILITIES)
-						break;
 				}
 			}
 		}
+		for(unsigned long i=0;i<memberCapabilities.size();++i) {
+			const uint64_t capId = OSUtils::jsonInt(memberCapabilities[i],0ULL) & 0xffffffffULL;
+			json *cap = capsById[capId];
+			if ((cap->is_object())&&(cap->size() > 0)) {
+				ZT_VirtualNetworkRule capr[ZT_MAX_CAPABILITY_RULES];
+				unsigned int caprc = 0;
+				json &caprj = (*cap)["rules"];
+				if ((caprj.is_array())&&(caprj.size() > 0)) {
+					for(unsigned long j=0;j<caprj.size();++j) {
+						if (caprc >= ZT_MAX_CAPABILITY_RULES)
+							break;
+						if (_parseRule(caprj[j],capr[caprc]))
+							++caprc;
+					}
+				}
+				nc.capabilities[nc.capabilityCount] = Capability((uint32_t)capId,nwid,now,1,capr,caprc);
+				if (nc.capabilities[nc.capabilityCount].sign(_signingId,identity.address()))
+					++nc.capabilityCount;
+				if (nc.capabilityCount >= ZT_MAX_NETWORK_CAPABILITIES)
+					break;
+			}
+		}
 
+		std::map< uint32_t,uint32_t > memberTagsById;
 		if (memberTags.is_array()) {
-			std::map< uint32_t,uint32_t > tagsById;
 			for(unsigned long i=0;i<memberTags.size();++i) {
 				json &t = memberTags[i];
 				if ((t.is_array())&&(t.size() == 2))
-					tagsById[(uint32_t)(OSUtils::jsonInt(t[0],0ULL) & 0xffffffffULL)] = (uint32_t)(OSUtils::jsonInt(t[1],0ULL) & 0xffffffffULL);
+					memberTagsById[(uint32_t)(OSUtils::jsonInt(t[0],0ULL) & 0xffffffffULL)] = (uint32_t)(OSUtils::jsonInt(t[1],0ULL) & 0xffffffffULL);
 			}
-			for(std::map< uint32_t,uint32_t >::const_iterator t(tagsById.begin());t!=tagsById.end();++t) {
-				if (nc.tagCount >= ZT_MAX_NETWORK_TAGS)
-					break;
-				nc.tags[nc.tagCount] = Tag(nwid,now,identity.address(),t->first,t->second);
-				if (nc.tags[nc.tagCount].sign(_signingId))
-					++nc.tagCount;
+		}
+		if (tags.is_array()) { // check network tags array for defaults that are not present in member tags
+			for(unsigned long i=0;i<tags.size();++i) {
+				json &t = tags[i];
+				if (t.is_object()) {
+					const uint32_t id = (uint32_t)(OSUtils::jsonInt(t["id"],0) & 0xffffffffULL);
+					json &dfl = t["default"];
+					if ((dfl.is_number())&&(memberTagsById.find(id) == memberTagsById.end())) {
+						memberTagsById[id] = (uint32_t)(OSUtils::jsonInt(dfl,0) & 0xffffffffULL);
+						json mt = json::array();
+						mt.push_back(id);
+						mt.push_back(dfl);
+						memberTags.push_back(mt); // add default to member tags if not present
+					}
+				}
 			}
+		}
+		for(std::map< uint32_t,uint32_t >::const_iterator t(memberTagsById.begin());t!=memberTagsById.end();++t) {
+			if (nc.tagCount >= ZT_MAX_NETWORK_TAGS)
+				break;
+			nc.tags[nc.tagCount] = Tag(nwid,now,identity.address(),t->first,t->second);
+			if (nc.tags[nc.tagCount].sign(_signingId))
+				++nc.tagCount;
 		}
 	}
 
