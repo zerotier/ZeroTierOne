@@ -52,6 +52,7 @@ public:
 	void setEnabled(bool en);
 	bool enabled() const;
 	bool addIp(const InetAddress &ip);
+	bool addIpSyn(std::vector<InetAddress> ips);
 	bool removeIp(const InetAddress &ip);
 	std::vector<InetAddress> ips() const;
 	void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);

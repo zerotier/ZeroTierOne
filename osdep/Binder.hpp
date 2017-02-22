@@ -63,12 +63,8 @@
  *
  * OneService also does this on detected restarts.
  */
-#ifdef __SYNOLOGY___
- 	// Synology devices like to kill routes, check more often and re-add
-	#define ZT_BINDER_REFRESH_PERIOD 10000
-#else
- 	#define ZT_BINDER_REFRESH_PERIOD 30000
-#endif
+#define ZT_BINDER_REFRESH_PERIOD 30000
+
 namespace ZeroTier {
 
 /**
