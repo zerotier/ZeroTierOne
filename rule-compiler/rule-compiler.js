@@ -838,7 +838,8 @@ function compile(src,rules,caps,tags)
 				let id = -1;
 				let dfl = false;
 				for(let k=1;k<cap.length;++k) {
-					if (cap[k][0].toLowerCase() === 'id') {
+					let dn = (typeof cap[k][0] === 'string') ? cap[k][0].toLowerCase() : null;
+					if (dn === 'id') {
 						if (id >= 0)
 							return [ cap[k][1],cap[k][2],'Duplicate id directive in capability definition.' ];
 						if ((k + 1) >= cap.length)
@@ -850,7 +851,7 @@ function compile(src,rules,caps,tags)
 							if (caps[cn].id === id)
 								return [ cap[k - 1][1],cap[k - 1][2],'Duplicate capability ID.' ];
 						}
-					} else if (cap[k][0].toLowerCase() === 'default') {
+					} else if (dn === 'default') {
 						dfl = true;
 					} else {
 						capRules.push(cap[k]);
