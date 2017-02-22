@@ -1099,6 +1099,72 @@ int Network::setConfiguration(const NetworkConfig &nconf,bool saveToDisk)
 
 void Network::requestConfiguration()
 {
+	/* ZeroTier addresses can't begin with 0xff, so this is used to mark controllerless
+	 * network IDs. Controllerless network IDs only support unicast IPv6 using the 6plane
+	 * addressing scheme and have the following format: 0xffSSSSEEEE000000 where SSSS
+	 * is the 16-bit starting IP port range allowed and EEEE is the 16-bit ending IP port
+	 * range allowed. Remaining digits are reserved for future use and must be zero. */
+	if ((_id >> 56) == 0xff) {
+		const uint16_t startPortRange = (uint16_t)((_id >> 40) & 0xffff);
+		const uint16_t endPortRange = (uint16_t)((_id >> 24) & 0xffff);
+		if (((_id & 0xffffff) == 0)&&(endPortRange >= startPortRange)) {
+			NetworkConfig *const nconf = new NetworkConfig();
+
+			nconf->networkId = _id;
+			nconf->timestamp = RR->node->now();
+			nconf->credentialTimeMaxDelta = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
+			nconf->revision = 1;
+			nconf->issuedTo = RR->identity.address();
+			nconf->flags = ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
+			nconf->staticIpCount = 1;
+			nconf->ruleCount = 14;
+			nconf->staticIps[0] = InetAddress::makeIpv66plane(_id,RR->identity.address().toInt());
+
+			// Drop everything but IPv6
+			nconf->rules[0].t = (uint8_t)ZT_NETWORK_RULE_MATCH_ETHERTYPE | 0x80; // NOT
+			nconf->rules[0].v.etherType = 0x86dd; // IPv6
+			nconf->rules[1].t = (uint8_t)ZT_NETWORK_RULE_ACTION_DROP;
+
+			// Allow ICMPv6
+			nconf->rules[2].t = (uint8_t)ZT_NETWORK_RULE_MATCH_IP_PROTOCOL;
+			nconf->rules[2].v.ipProtocol = 0x3a; // ICMPv6
+			nconf->rules[3].t = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
+
+			// Allow destination ports within range
+			nconf->rules[4].t = (uint8_t)ZT_NETWORK_RULE_MATCH_IP_PROTOCOL;
+			nconf->rules[4].v.ipProtocol = 0x11; // UDP
+			nconf->rules[5].t = (uint8_t)ZT_NETWORK_RULE_MATCH_IP_PROTOCOL | 0x40; // OR
+			nconf->rules[5].v.ipProtocol = 0x06; // TCP
+			nconf->rules[6].t = (uint8_t)ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE;
+			nconf->rules[6].v.port[0] = startPortRange;
+			nconf->rules[6].v.port[1] = endPortRange;
+			nconf->rules[7].t = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
+
+			// Allow non-SYN TCP packets to permit non-connection-initiating traffic
+			nconf->rules[8].t = (uint8_t)ZT_NETWORK_RULE_MATCH_CHARACTERISTICS | 0x80; // NOT
+			nconf->rules[8].v.characteristics = ZT_RULE_PACKET_CHARACTERISTICS_TCP_SYN;
+			nconf->rules[9].t = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
+
+			// Also allow SYN+ACK which are replies to SYN
+			nconf->rules[10].t = (uint8_t)ZT_NETWORK_RULE_MATCH_CHARACTERISTICS;
+			nconf->rules[10].v.characteristics = ZT_RULE_PACKET_CHARACTERISTICS_TCP_SYN;
+			nconf->rules[11].t = (uint8_t)ZT_NETWORK_RULE_MATCH_CHARACTERISTICS;
+			nconf->rules[11].v.characteristics = ZT_RULE_PACKET_CHARACTERISTICS_TCP_ACK;
+			nconf->rules[12].t = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
+
+			nconf->rules[13].t = (uint8_t)ZT_NETWORK_RULE_ACTION_DROP;
+
+			nconf->type = ZT_NETWORK_TYPE_PUBLIC;
+			Utils::snprintf(nconf->name,sizeof(nconf->name),"adhoc-%.04x-%.04x",(int)startPortRange,(int)endPortRange);
+
+			this->setConfiguration(*nconf,false);
+			delete nconf;
+		} else {
+			this->setNotFound();
+		}
+		return;
+	}
+
 	const Address ctrl(controller());
 
 	Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> rmd;

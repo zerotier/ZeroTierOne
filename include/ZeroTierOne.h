@@ -610,15 +610,15 @@ enum ZT_VirtualNetworkRuleType
 typedef struct
 {
 	/** 
-	 * Least significant 7 bits: ZT_VirtualNetworkRuleType, most significant 1 bit is NOT bit
+	 * Type and flags
 	 *
-	 * If the NOT bit is set, then matches will be interpreted as "does not
-	 * match." The NOT bit has no effect on actions.
+	 * Bits are: NOTTTTTT
 	 *
-	 * Use "& 0x7f" to get the enum and "& 0x80" to get the NOT flag.
+	 * N - If true, sense of match is inverted (no effect on actions)
+	 * O - If true, result is ORed with previous instead of ANDed (no effect on actions)
+	 * T - Rule or action type
 	 *
-	 * The union 'v' is a variant type, and this selects which field in 'v' is
-	 * actually used and valid.
+	 * AND with 0x3f to get type, 0x80 to get NOT bit, and 0x40 to get OR bit.
 	 */
 	uint8_t t;
 
