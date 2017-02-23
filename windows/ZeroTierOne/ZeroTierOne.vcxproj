@@ -41,6 +41,7 @@
     <ClCompile Include="..\..\node\C25519.cpp" />
     <ClCompile Include="..\..\node\Capability.cpp" />
     <ClCompile Include="..\..\node\CertificateOfMembership.cpp" />
+    <ClCompile Include="..\..\node\CertificateOfOwnership.cpp" />
     <ClCompile Include="..\..\node\Cluster.cpp" />
     <ClCompile Include="..\..\node\Identity.cpp" />
     <ClCompile Include="..\..\node\IncomingPacket.cpp" />
@@ -109,6 +110,7 @@
     <ClInclude Include="..\..\node\Buffer.hpp" />
     <ClInclude Include="..\..\node\C25519.hpp" />
     <ClInclude Include="..\..\node\CertificateOfMembership.hpp" />
+    <ClInclude Include="..\..\node\CertificateOfOwnership.hpp" />
     <ClInclude Include="..\..\node\Cluster.hpp" />
     <ClInclude Include="..\..\node\CMWC4096.hpp" />
     <ClInclude Include="..\..\node\Constants.hpp" />

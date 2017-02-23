@@ -142,8 +142,8 @@ static void _moonToJson(nlohmann::json &mj,const World &world)
 	Utils::snprintf(tmp,sizeof(tmp),"%.16llx",world.id());
 	mj["id"] = tmp;
 	mj["timestamp"] = world.timestamp();
-	mj["signature"] = Utils::hex(world.signature().data,world.signature().size());
-	mj["updatesMustBeSignedBy"] = Utils::hex(world.updatesMustBeSignedBy().data,world.updatesMustBeSignedBy().size());
+	mj["signature"] = Utils::hex(world.signature().data,(unsigned int)world.signature().size());
+	mj["updatesMustBeSignedBy"] = Utils::hex(world.updatesMustBeSignedBy().data,(unsigned int)world.updatesMustBeSignedBy().size());
 	nlohmann::json ra = nlohmann::json::array();
 	for(std::vector<World::Root>::const_iterator r(world.roots().begin());r!=world.roots().end();++r) {
 		nlohmann::json rj;

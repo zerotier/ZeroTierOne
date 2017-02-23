@@ -246,6 +246,9 @@
     <ClCompile Include="..\..\service\SoftwareUpdater.cpp">
       <Filter>Source Files\service</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\node\CertificateOfOwnership.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -481,6 +484,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ext\json\json.hpp">
       <Filter>Header Files\ext\json</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\node\CertificateOfOwnership.hpp">
+      <Filter>Header Files\node</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
