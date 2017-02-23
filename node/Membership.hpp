@@ -99,7 +99,7 @@ public:
 			for(;;) {
 				if ((_i != &(_m->_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]))&&((*_i)->id != ZT_MEMBERSHIP_CRED_ID_UNUSED)) {
 					const Capability *tmp = &((*_i)->credential);
-					if (_m->_isCredentialTimestampValid(*_c,*tmp,**_i)) {
+					if (_m->_isCredentialTimestampValid(*_c,**_i)) {
 						++_i;
 						return tmp;
 					} else ++_i;
@@ -132,7 +132,7 @@ public:
 			for(;;) {
 				if ((_i != &(_m->_remoteTags[ZT_MAX_NETWORK_TAGS]))&&((*_i)->id != ZT_MEMBERSHIP_CRED_ID_UNUSED)) {
 					const Tag *tmp = &((*_i)->credential);
-					if (_m->_isCredentialTimestampValid(*_c,*tmp,**_i)) {
+					if (_m->_isCredentialTimestampValid(*_c,**_i)) {
 						++_i;
 						return tmp;
 					} else ++_i;
@@ -197,11 +197,24 @@ public:
 	}
 
 	/**
-	 * @param nconf Network configuration
-	 * @param id Capablity ID
-	 * @return Pointer to capability or NULL if not found
+	 * Check whether the peer represented by this Membership owns a given resource
+	 *
+	 * @tparam Type of resource: InetAddress or MAC
+	 * @param nconf Our network config
+	 * @param r Resource to check
+	 * @return True if this peer has a certificate of ownership for the given resource
 	 */
-	const Capability *getCapability(const NetworkConfig &nconf,const uint32_t id) const;
+	template<typename T>
+	inline bool hasCertificateOfOwnershipFor(const NetworkConfig &nconf,const T &r) const
+	{
+		for(unsigned int i=0;i<ZT_MAX_CERTIFICATES_OF_OWNERSHIP;++i) {
+			if (_remoteCoos[i]->id == ZT_MEMBERSHIP_CRED_ID_UNUSED)
+				break;
+			if ((_isCredentialTimestampValid(nconf,*_remoteCoos[i]))&&(_remoteCoos[i]->credential.owns(r)))
+				return true;
+		}
+		return false;
+	}
 
 	/**
 	 * @param nconf Network configuration
@@ -244,11 +257,13 @@ private:
 	bool _revokeTag(const Revocation &rev,const uint64_t now);
 	bool _revokeCoo(const Revocation &rev,const uint64_t now);
 
-	template<typename C,typename CS>
-	inline bool _isCredentialTimestampValid(const NetworkConfig &nconf,const C &cred,const CS &state) const
+	template<typename C>
+	inline bool _isCredentialTimestampValid(const NetworkConfig &nconf,const _RemoteCredential<C> &remoteCredential) const
 	{
-		const uint64_t ts = cred.timestamp();
-		return ( (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts)) <= nconf.credentialTimeMaxDelta) && (ts > state.revocationThreshold) );
+		if (!remoteCredential.lastReceived)
+			return false;
+		const uint64_t ts = remoteCredential.credential.timestamp();
+		return ( (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts)) <= nconf.credentialTimeMaxDelta) && (ts > remoteCredential.revocationThreshold) );
 	}
 
 	// Last time we pushed MULTICAST_LIKE(s)

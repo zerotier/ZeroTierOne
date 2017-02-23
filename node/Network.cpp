@@ -299,6 +299,7 @@ static _doZtFilterResult _doZtFilter(
 
 		// If this was not an ACTION evaluate next MATCH and update thisSetMatches with (AND [result])
 		uint8_t thisRuleMatches = 0;
+		uint64_t ownershipVerificationMask = 1; // this magic value means it hasn't been computed yet -- this is done lazily the first time it's needed
 		switch(rt) {
 			case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 				thisRuleMatches = (uint8_t)(rules[rn].v.zt == ztSource.toInt());
@@ -507,6 +508,30 @@ static _doZtFilterResult _doZtFilter(
 				uint64_t cf = (inbound) ? ZT_RULE_PACKET_CHARACTERISTICS_INBOUND : 0ULL;
 				if (macDest.isMulticast()) cf |= ZT_RULE_PACKET_CHARACTERISTICS_MULTICAST;
 				if (macDest.isBroadcast()) cf |= ZT_RULE_PACKET_CHARACTERISTICS_BROADCAST;
+				if (ownershipVerificationMask == 1) {
+					ownershipVerificationMask = 0;
+					InetAddress src;
+					if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
+						src.set((const void *)(frameData + 12),4,0);
+					} else if ((etherType == ZT_ETHERTYPE_IPV6)&&(frameLen >= 40)) {
+						src.set((const void *)(frameData + 8),16,0);
+					}
+					if (inbound) {
+						if (membership) {
+							if ((src)&&(membership->hasCertificateOfOwnershipFor(nconf,src)))
+								ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_IP_AUTHENTICATED;
+							if (membership->hasCertificateOfOwnershipFor(nconf,macSource))
+								ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_MAC_AUTHENTICATED;
+						}
+					} else {
+						for(unsigned int i=0;i<nconf.certificateOfOwnershipCount;++i) {
+							if ((src)&&(nconf.certificatesOfOwnership[i].owns(src)))
+								ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_IP_AUTHENTICATED;
+							if (nconf.certificatesOfOwnership[i].owns(macSource))
+								ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_MAC_AUTHENTICATED;
+						}
+					}
+				}
 				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)&&(frameData[9] == 0x06)) {
 					const unsigned int headerLen = 4 * (frameData[0] & 0xf);
 					cf |= (uint64_t)frameData[headerLen + 13];

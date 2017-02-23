@@ -5,6 +5,8 @@ const CHARACTERISTIC_BITS = {
 	'inbound': 63,
 	'multicast': 62,
 	'broadcast': 61,
+	'ipauth': 60,
+	'macauth': 59,
 	'tcp_fin': 0,
 	'tcp_syn': 1,
 	'tcp_rst': 2,

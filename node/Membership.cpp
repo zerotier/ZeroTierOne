@@ -117,16 +117,10 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,const uint64_t now
 	}
 }
 
-const Capability *Membership::getCapability(const NetworkConfig &nconf,const uint32_t id) const
-{
-	const _RemoteCredential<Capability> *const *c = std::lower_bound(&(_remoteCaps[0]),&(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]),(uint64_t)id,_RemoteCredentialComp<Capability>());
-	return ( ((c != &(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]))&&((*c)->id == (uint64_t)id)) ? ((((*c)->lastReceived)&&(_isCredentialTimestampValid(nconf,(*c)->credential,**c))) ? &((*c)->credential) : (const Capability *)0) : (const Capability *)0);
-}
-
 const Tag *Membership::getTag(const NetworkConfig &nconf,const uint32_t id) const
 {
 	const _RemoteCredential<Tag> *const *t = std::lower_bound(&(_remoteTags[0]),&(_remoteTags[ZT_MAX_NETWORK_TAGS]),(uint64_t)id,_RemoteCredentialComp<Tag>());
-	return ( ((t != &(_remoteTags[ZT_MAX_NETWORK_CAPABILITIES]))&&((*t)->id == (uint64_t)id)) ? ((((*t)->lastReceived)&&(_isCredentialTimestampValid(nconf,(*t)->credential,**t))) ? &((*t)->credential) : (const Tag *)0) : (const Tag *)0);
+	return ( ((t != &(_remoteTags[ZT_MAX_NETWORK_CAPABILITIES]))&&((*t)->id == (uint64_t)id)) ? ((((*t)->lastReceived)&&(_isCredentialTimestampValid(nconf,**t))) ? &((*t)->credential) : (const Tag *)0) : (const Tag *)0);
 }
 
 Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const CertificateOfMembership &com)
@@ -165,7 +159,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	_RemoteCredential<Tag> *const *htmp = std::lower_bound(&(_remoteTags[0]),&(_remoteTags[ZT_MAX_NETWORK_TAGS]),(uint64_t)tag.id(),_RemoteCredentialComp<Tag>());
 	_RemoteCredential<Tag> *have = ((htmp != &(_remoteTags[ZT_MAX_NETWORK_TAGS]))&&((*htmp)->id == (uint64_t)tag.id())) ? *htmp : (_RemoteCredential<Tag> *)0;
 	if (have) {
-		if ( (!_isCredentialTimestampValid(nconf,tag,*have)) || (have->credential.timestamp() > tag.timestamp()) ) {
+		if ( (!_isCredentialTimestampValid(nconf,*have)) || (have->credential.timestamp() > tag.timestamp()) ) {
 			TRACE("addCredential(Tag) for %s on %.16llx REJECTED (revoked or too old)",tag.issuedTo().toString().c_str(),tag.networkId());
 			return ADD_REJECTED;
 		}
@@ -195,7 +189,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	_RemoteCredential<Capability> *const *htmp = std::lower_bound(&(_remoteCaps[0]),&(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]),(uint64_t)cap.id(),_RemoteCredentialComp<Capability>());
 	_RemoteCredential<Capability> *have = ((htmp != &(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]))&&((*htmp)->id == (uint64_t)cap.id())) ? *htmp : (_RemoteCredential<Capability> *)0;
 	if (have) {
-		if ( (!_isCredentialTimestampValid(nconf,cap,*have)) || (have->credential.timestamp() > cap.timestamp()) ) {
+		if ( (!_isCredentialTimestampValid(nconf,*have)) || (have->credential.timestamp() > cap.timestamp()) ) {
 			TRACE("addCredential(Capability) for %s on %.16llx REJECTED (revoked or too old)",cap.issuedTo().toString().c_str(),cap.networkId());
 			return ADD_REJECTED;
 		}
@@ -252,7 +246,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	_RemoteCredential<CertificateOfOwnership> *const *htmp = std::lower_bound(&(_remoteCoos[0]),&(_remoteCoos[ZT_MAX_CERTIFICATES_OF_OWNERSHIP]),(uint64_t)coo.id(),_RemoteCredentialComp<CertificateOfOwnership>());
 	_RemoteCredential<CertificateOfOwnership> *have = ((htmp != &(_remoteCoos[ZT_MAX_CERTIFICATES_OF_OWNERSHIP]))&&((*htmp)->id == (uint64_t)coo.id())) ? *htmp : (_RemoteCredential<CertificateOfOwnership> *)0;
 	if (have) {
-		if ( (!_isCredentialTimestampValid(nconf,coo,*have)) || (have->credential.timestamp() > coo.timestamp()) ) {
+		if ( (!_isCredentialTimestampValid(nconf,*have)) || (have->credential.timestamp() > coo.timestamp()) ) {
 			TRACE("addCredential(CertificateOfOwnership) for %s on %.16llx REJECTED (revoked or too old)",cap.issuedTo().toString().c_str(),cap.networkId());
 			return ADD_REJECTED;
 		}
@@ -298,7 +292,7 @@ Membership::_RemoteCredential<Tag> *Membership::_newTag(const uint64_t id)
 		t->credential = Tag();
 	}
 
-	std::sort(&(_remoteTags[0]),&(_remoteTags[ZT_MAX_NETWORK_TAGS]));
+	std::sort(&(_remoteTags[0]),&(_remoteTags[ZT_MAX_NETWORK_TAGS]),_RemoteCredentialComp<Tag>());
 	return t;
 }
 
@@ -323,7 +317,7 @@ Membership::_RemoteCredential<Capability> *Membership::_newCapability(const uint
 		c->credential = Capability();
 	}
 
-	std::sort(&(_remoteCaps[0]),&(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]));
+	std::sort(&(_remoteCaps[0]),&(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]),_RemoteCredentialComp<Capability>());
 	return c;
 }
 
@@ -348,7 +342,7 @@ Membership::_RemoteCredential<CertificateOfOwnership> *Membership::_newCoo(const
 		c->credential = CertificateOfOwnership();
 	}
 
-	std::sort(&(_remoteCoos[0]),&(_remoteCoos[ZT_MAX_CERTIFICATES_OF_OWNERSHIP]));
+	std::sort(&(_remoteCoos[0]),&(_remoteCoos[ZT_MAX_CERTIFICATES_OF_OWNERSHIP]),_RemoteCredentialComp<CertificateOfOwnership>());
 	return c;
 }
 

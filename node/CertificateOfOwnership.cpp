@@ -43,4 +43,21 @@ int CertificateOfOwnership::verify(const RuntimeEnvironment *RR) const
 	}
 }
 
+bool CertificateOfOwnership::_owns(const CertificateOfOwnership::Thing &t,const void *v,unsigned int l) const
+{
+	for(unsigned int i=0,j=_thingCount;i<j;++i) {
+		if (_thingTypes[i] == (uint8_t)t) {
+			unsigned int k = 0;
+			while (k < l) {
+				if (reinterpret_cast<const uint8_t *>(v)[k] != _thingValues[i][k])
+					break;
+				++k;
+			}
+			if (k == l)
+				return true;
+		}
+	}
+	return false;
+}
+
 } // namespace ZeroTier

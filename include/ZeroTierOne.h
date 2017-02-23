@@ -195,6 +195,16 @@ extern "C" {
 #define ZT_RULE_PACKET_CHARACTERISTICS_BROADCAST 0x2000000000000000ULL
 
 /**
+ * Packet characteristics flag: sending IP address has a certificate of ownership
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_SENDER_IP_AUTHENTICATED 0x1000000000000000ULL
+
+/**
+ * Packet characteristics flag: sending MAC address has a certificate of ownership
+ */
+#define ZT_RULE_PACKET_CHARACTERISTICS_SENDER_MAC_AUTHENTICATED 0x0800000000000000ULL
+
+/**
  * Packet characteristics flag: TCP left-most reserved bit
  */
 #define ZT_RULE_PACKET_CHARACTERISTICS_TCP_RESERVED_0 0x0000000000000800ULL

@@ -84,37 +84,20 @@ public:
 
 	inline const Address &issuedTo() const { return _issuedTo; }
 
-	inline bool owns(const Thing &t,const void *v,unsigned int l)
-	{
-		for(unsigned int i=0,j=_thingCount;i<j;++i) {
-			if (_thingTypes[i] == (uint8_t)t) {
-				unsigned int k = 0;
-				while (k < l) {
-					if (reinterpret_cast<const uint8_t *>(v)[k] != _thingValues[i][k])
-						break;
-					++k;
-				}
-				if (k == l)
-					return true;
-			}
-		}
-		return false;
-	}
-
-	inline bool owns(const InetAddress &ip)
+	inline bool owns(const InetAddress &ip) const
 	{
 		if (ip.ss_family == AF_INET)
-			return this->owns(THING_IPV4_ADDRESS,&(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),4);
+			return this->_owns(THING_IPV4_ADDRESS,&(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),4);
 		if (ip.ss_family == AF_INET6)
-			return this->owns(THING_IPV6_ADDRESS,reinterpret_cast<const struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
+			return this->_owns(THING_IPV6_ADDRESS,reinterpret_cast<const struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
 		return false;
 	}
 
-	inline bool owns(const MAC &mac)
+	inline bool owns(const MAC &mac) const
 	{
 		uint8_t tmp[6];
 		mac.copyTo(tmp,6);
-		return this->owns(THING_MAC_ADDRESS,tmp,6);
+		return this->_owns(THING_MAC_ADDRESS,tmp,6);
 	}
 
 	inline void addThing(const InetAddress &ip)
@@ -234,6 +217,8 @@ public:
 	inline bool operator!=(const CertificateOfOwnership &coo) const { return (memcmp(this,&coo,sizeof(CertificateOfOwnership)) != 0); }
 
 private:
+	bool _owns(const Thing &t,const void *v,unsigned int l) const;
+
 	uint64_t _networkId;
 	uint64_t _ts;
 	uint64_t _flags;
