@@ -1706,6 +1706,15 @@ void EmbeddedNetworkController::_request(
 		}
 	}
 
+	// Issue a certificate of ownership for all static IPs
+	if (nc.staticIpCount) {
+		nc.certificatesOfOwnership[0] = CertificateOfOwnership(nwid,now,identity.address(),1);
+		for(unsigned int i=0;i<nc.staticIpCount;++i)
+			nc.certificatesOfOwnership[0].addThing(nc.staticIps[i]);
+		nc.certificatesOfOwnership[0].sign(_signingId);
+		nc.certificateOfOwnershipCount = 1;
+	}
+
 	CertificateOfMembership com(now,credentialtmd,nwid,identity.address());
 	if (com.sign(_signingId)) {
 		nc.com = com;

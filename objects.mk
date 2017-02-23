@@ -4,6 +4,7 @@ OBJS=\
 	node/C25519.o \
 	node/Capability.o \
 	node/CertificateOfMembership.o \
+	node/CertificateOfOwnership.o \
 	node/Cluster.o \
 	node/Identity.o \
 	node/IncomingPacket.o \

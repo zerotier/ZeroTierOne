@@ -35,10 +35,12 @@
 #include "MulticastGroup.hpp"
 #include "Address.hpp"
 #include "CertificateOfMembership.hpp"
+#include "CertificateOfOwnership.hpp"
 #include "Capability.hpp"
 #include "Tag.hpp"
 #include "Dictionary.hpp"
 #include "Identity.hpp"
+#include "Utils.hpp"
 
 /**
  * Default maximum time delta for COMs, tags, and capabilities
@@ -99,7 +101,7 @@
 namespace ZeroTier {
 
 // Dictionary capacity needed for max size network config
-#define ZT_NETWORKCONFIG_DICT_CAPACITY (4096 + (sizeof(ZT_VirtualNetworkRule) * ZT_MAX_NETWORK_RULES) + (sizeof(Capability) * ZT_MAX_NETWORK_CAPABILITIES) + (sizeof(Tag) * ZT_MAX_NETWORK_TAGS))
+#define ZT_NETWORKCONFIG_DICT_CAPACITY (1024 + (sizeof(ZT_VirtualNetworkRule) * ZT_MAX_NETWORK_RULES) + (sizeof(Capability) * ZT_MAX_NETWORK_CAPABILITIES) + (sizeof(Tag) * ZT_MAX_NETWORK_TAGS) + (sizeof(CertificateOfOwnership) * ZT_MAX_CERTIFICATES_OF_OWNERSHIP))
 
 // Dictionary capacity needed for max size network meta-data
 #define ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY 1024
@@ -173,6 +175,8 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES "CAP"
 // tags (binary blobs)
 #define ZT_NETWORKCONFIG_DICT_KEY_TAGS "TAG"
+// tags (binary blobs)
+#define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP "COO"
 // curve25519 signature
 #define ZT_NETWORKCONFIG_DICT_KEY_SIGNATURE "C25519"
 
@@ -474,11 +478,6 @@ public:
 	unsigned int staticIpCount;
 
 	/**
-	 * Number of pinned devices (devices with physical address hints)
-	 */
-	unsigned int pinnedCount;
-
-	/**
 	 * Number of rule table entries
 	 */
 	unsigned int ruleCount;
@@ -492,6 +491,11 @@ public:
 	 * Number of tags
 	 */
 	unsigned int tagCount;
+
+	/**
+	 * Number of certificates of ownership
+	 */
+	unsigned int certificateOfOwnershipCount;
 
 	/**
 	 * Specialist devices
@@ -525,6 +529,11 @@ public:
 	 * Tags for this node on this network, in ascending order of tag ID
 	 */
 	Tag tags[ZT_MAX_NETWORK_TAGS];
+
+	/**
+	 * Certificates of ownership for this network member
+	 */
+	CertificateOfOwnership certificatesOfOwnership[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
 
 	/**
 	 * Network type (currently just public or private)

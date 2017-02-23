@@ -832,6 +832,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 		Capability cap;
 		Tag tag;
 		Revocation revocation;
+		CertificateOfOwnership coo;
 		bool trustEstablished = false;
 
 		unsigned int p = ZT_PACKET_IDX_PAYLOAD;
@@ -898,6 +899,24 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 				const SharedPtr<Network> network(RR->node->network(revocation.networkId()));
 				if (network) {
 					switch(network->addCredential(peer->address(),revocation)) {
+						case Membership::ADD_REJECTED:
+							break;
+						case Membership::ADD_ACCEPTED_NEW:
+						case Membership::ADD_ACCEPTED_REDUNDANT:
+							trustEstablished = true;
+							break;
+						case Membership::ADD_DEFERRED_FOR_WHOIS:
+							return false;
+					}
+				}
+			}
+
+			const unsigned int numCoos = at<uint16_t>(p); p += 2;
+			for(unsigned int i=0;i<numCoos;++i) {
+				p += coo.deserialize(*this,p);
+				const SharedPtr<Network> network(RR->node->network(coo.networkId()));
+				if (network) {
+					switch(network->addCredential(coo)) {
 						case Membership::ADD_REJECTED:
 							break;
 						case Membership::ADD_ACCEPTED_NEW:

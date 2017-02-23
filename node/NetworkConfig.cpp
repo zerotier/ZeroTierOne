@@ -21,7 +21,6 @@
 #include <algorithm>
 
 #include "NetworkConfig.hpp"
-#include "Utils.hpp"
 
 namespace ZeroTier {
 
@@ -135,6 +134,13 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 			this->tags[i].serialize(*tmp);
 		if (tmp->size()) {
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TAGS,*tmp)) return false;
+		}
+
+		tmp->clear();
+		for(unsigned int i=0;i<this->certificateOfOwnershipCount;++i)
+			this->certificatesOfOwnership[i].serialize(*tmp);
+		if (tmp->size()) {
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP,*tmp)) return false;
 		}
 
 		tmp->clear();
@@ -297,10 +303,23 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 				std::sort(&(this->tags[0]),&(this->tags[this->tagCount]));
 			}
 
+			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP,*tmp)) {
+				unsigned int p = 0;
+				while (p < tmp->size()) {
+					if (certificateOfOwnershipCount < ZT_MAX_CERTIFICATES_OF_OWNERSHIP)
+						p += certificatesOfOwnership[certificateOfOwnershipCount++].deserialize(*tmp,p);
+					else {
+						CertificateOfOwnership foo;
+						p += foo.deserialize(*tmp,p);
+					}
+				}
+			}
+
 			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_SPECIALISTS,*tmp)) {
 				unsigned int p = 0;
-				while (((p + 8) <= tmp->size())&&(specialistCount < ZT_MAX_NETWORK_SPECIALISTS)) {
-					this->specialists[this->specialistCount++] = tmp->at<uint64_t>(p);
+				while ((p + 8) <= tmp->size()) {
+					if (specialistCount < ZT_MAX_NETWORK_SPECIALISTS)
+						this->specialists[this->specialistCount++] = tmp->at<uint64_t>(p);
 					p += 8;
 				}
 			}

@@ -396,7 +396,6 @@ public:
 
 		unsigned int p = startAt;
 
-		// These are the same between Tag and Capability
 		_nwid = b.template at<uint64_t>(p); p += 8;
 		_ts = b.template at<uint64_t>(p); p += 8;
 		_id = b.template at<uint32_t>(p); p += 4;

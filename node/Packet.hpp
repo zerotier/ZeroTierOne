@@ -730,6 +730,8 @@ public:
 		 *   <[...] one or more serialized Tags>
 		 *   <[2] 16-bit number of revocations>
 		 *   <[...] one or more serialized Revocations>
+		 *   <[2] 16-bit number of certificates of ownership>
+		 *   <[...] one or more serialized CertificateOfOwnership>
 		 *
 		 * This can be sent by anyone at any time to push network credentials.
 		 * These will of course only be accepted if they are properly signed.

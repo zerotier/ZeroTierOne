@@ -50,9 +50,10 @@ public:
 	enum CredentialType
 	{
 		CREDENTIAL_TYPE_ALL = 0,
-		CREDENTIAL_TYPE_COM = 1,
+		CREDENTIAL_TYPE_COM = 1, // CertificateOfMembership
 		CREDENTIAL_TYPE_CAPABILITY = 2,
-		CREDENTIAL_TYPE_TAG = 3
+		CREDENTIAL_TYPE_TAG = 3,
+		CREDENTIAL_TYPE_COO = 4 // CertificateOfOwnership
 	};
 
 	Revocation()

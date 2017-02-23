@@ -302,6 +302,17 @@ public:
 	Membership::AddCredentialResult addCredential(const Address &sentFrom,const Revocation &rev);
 
 	/**
+	 * Validate a credential and learn it if it passes certificate and other checks
+	 */
+	inline Membership::AddCredentialResult addCredential(const CertificateOfOwnership &coo)
+	{
+		if (coo.networkId() != _id)
+			return Membership::ADD_REJECTED;
+		Mutex::Lock _l(_lock);
+		return _membership(coo.issuedTo()).addCredential(RR,_config,coo);
+	}
+
+	/**
 	 * Force push credentials (COM, etc.) to a peer now
 	 *
 	 * @param to Destination peer address

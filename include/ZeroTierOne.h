@@ -137,6 +137,11 @@ extern "C" {
 #define ZT_MAX_CAPABILITY_RULES 64
 
 /**
+ * Maximum number of certificates of ownership to assign to a single network member
+ */
+#define ZT_MAX_CERTIFICATES_OF_OWNERSHIP 4
+
+/**
  * Global maximum length for capability chain of custody (including initial issue)
  */
 #define ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH 7

@@ -39,49 +39,30 @@ class Network;
 /**
  * A container for certificates of membership and other network credentials
  *
- * This is kind of analogous to a join table between Peer and Network. It is
- * held by the Network object for each participating Peer.
+ * This is essentially a relational join between Peer and Network.
  *
  * This class is not thread safe. It must be locked externally.
  */
 class Membership
 {
 private:
-	// Tags and related state
-	struct _RemoteTag
-	{
-		_RemoteTag() : id(ZT_MEMBERSHIP_CRED_ID_UNUSED),lastReceived(0),revocationThreshold(0) {}
-		// Tag ID (last 32 bits, first 32 bits are set in unused entries to sort them to end)
-		uint64_t id;
-		// Last time we received THEIR tag (with this ID)
-		uint64_t lastReceived;
-		// Revocation blacklist threshold or 0 if none
-		uint64_t revocationThreshold;
-		// THEIR tag
-		Tag tag;
-	};
-
-	// Credentials and related state
-	struct _RemoteCapability
-	{
-		_RemoteCapability() : id(ZT_MEMBERSHIP_CRED_ID_UNUSED),lastReceived(0),revocationThreshold(0) {}
-		// Capability ID (last 32 bits, first 32 bits are set in unused entries to sort them to end)
-		uint64_t id;
-		// Last time we received THEIR capability (with this ID)
-		uint64_t lastReceived;
-		// Revocation blacklist threshold or 0 if none
-		uint64_t revocationThreshold;
-		// THEIR capability
-		Capability cap;
-	};
-
-	// Comparison operator for remote credential entries
 	template<typename T>
-	struct _RemoteCredentialSorter
+	struct _RemoteCredential
 	{
-		inline bool operator()(const T *a,const T *b) const { return (a->id < b->id); }
-		inline bool operator()(const uint64_t a,const T *b) const { return (a < b->id); }
-		inline bool operator()(const T *a,const uint64_t b) const { return (a->id < b); }
+		_RemoteCredential() : id(ZT_MEMBERSHIP_CRED_ID_UNUSED),lastReceived(0),revocationThreshold(0) {}
+		uint64_t id;
+		uint64_t lastReceived; // last time we got this credential
+		uint64_t revocationThreshold; // credentials before this time are invalid
+		T credential;
+		inline bool operator<(const _RemoteCredential &c) const { return (id < c.id); }
+	};
+
+	template<typename T>
+	struct _RemoteCredentialComp
+	{
+		inline bool operator()(const _RemoteCredential<T> *a,const _RemoteCredential<T> *b) const { return (a->id < b->id); }
+		inline bool operator()(const uint64_t a,const _RemoteCredential<T> *b) const { return (a < b->id); }
+		inline bool operator()(const _RemoteCredential<T> *a,const uint64_t b) const { return (a->id < b); }
 		inline bool operator()(const uint64_t a,const uint64_t b) const { return (a < b); }
 	};
 
@@ -89,8 +70,8 @@ private:
 	struct _LocalCredentialPushState
 	{
 		_LocalCredentialPushState() : lastPushed(0),id(0) {}
-		uint64_t lastPushed;
-		uint32_t id;
+		uint64_t lastPushed; // last time we sent our own copy of this credential
+		uint64_t id;
 	};
 
 public:
@@ -117,7 +98,7 @@ public:
 		{
 			for(;;) {
 				if ((_i != &(_m->_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]))&&((*_i)->id != ZT_MEMBERSHIP_CRED_ID_UNUSED)) {
-					const Capability *tmp = &((*_i)->cap);
+					const Capability *tmp = &((*_i)->credential);
 					if (_m->_isCredentialTimestampValid(*_c,*tmp,**_i)) {
 						++_i;
 						return tmp;
@@ -131,7 +112,7 @@ public:
 	private:
 		const Membership *_m;
 		const NetworkConfig *_c;
-		const _RemoteCapability *const *_i;
+		const _RemoteCredential<Capability> *const *_i;
 	};
 	friend class CapabilityIterator;
 
@@ -150,7 +131,7 @@ public:
 		{
 			for(;;) {
 				if ((_i != &(_m->_remoteTags[ZT_MAX_NETWORK_TAGS]))&&((*_i)->id != ZT_MEMBERSHIP_CRED_ID_UNUSED)) {
-					const Tag *tmp = &((*_i)->tag);
+					const Tag *tmp = &((*_i)->credential);
 					if (_m->_isCredentialTimestampValid(*_c,*tmp,**_i)) {
 						++_i;
 						return tmp;
@@ -164,7 +145,7 @@ public:
 	private:
 		const Membership *_m;
 		const NetworkConfig *_c;
-		const _RemoteTag *const *_i;
+		const _RemoteCredential<Tag> *const *_i;
 	};
 	friend class TagIterator;
 
@@ -249,12 +230,19 @@ public:
 	 */
 	AddCredentialResult addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const Revocation &rev);
 
+	/**
+	 * Validate and add a credential if signature is okay and it's otherwise good
+	 */
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const CertificateOfOwnership &coo);
+
 private:
-	_RemoteTag *_newTag(const uint64_t id);
-	_RemoteCapability *_newCapability(const uint64_t id);
+	_RemoteCredential<Tag> *_newTag(const uint64_t id);
+	_RemoteCredential<Capability> *_newCapability(const uint64_t id);
+	_RemoteCredential<CertificateOfOwnership> *_newCoo(const uint64_t id);
 	bool _revokeCom(const Revocation &rev);
 	bool _revokeCap(const Revocation &rev,const uint64_t now);
 	bool _revokeTag(const Revocation &rev,const uint64_t now);
+	bool _revokeCoo(const Revocation &rev,const uint64_t now);
 
 	template<typename C,typename CS>
 	inline bool _isCredentialTimestampValid(const NetworkConfig &nconf,const C &cred,const CS &state) const
@@ -275,17 +263,20 @@ private:
 	// Remote member's latest network COM
 	CertificateOfMembership _com;
 
-	// Sorted (in ascending order of ID) arrays of pointers to remote tags and capabilities
-	_RemoteTag *_remoteTags[ZT_MAX_NETWORK_TAGS];
-	_RemoteCapability *_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES];
+	// Sorted (in ascending order of ID) arrays of pointers to remote credentials
+	_RemoteCredential<Tag> *_remoteTags[ZT_MAX_NETWORK_TAGS];
+	_RemoteCredential<Capability> *_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES];
+	_RemoteCredential<CertificateOfOwnership> *_remoteCoos[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
 
-	// This is the RAM allocated for remote tags and capabilities from which the sorted arrays are populated
-	_RemoteTag _tagMem[ZT_MAX_NETWORK_TAGS];
-	_RemoteCapability _capMem[ZT_MAX_NETWORK_CAPABILITIES];
+	// This is the RAM allocated for remote credential cache objects
+	_RemoteCredential<Tag> _tagMem[ZT_MAX_NETWORK_TAGS];
+	_RemoteCredential<Capability> _capMem[ZT_MAX_NETWORK_CAPABILITIES];
+	_RemoteCredential<CertificateOfOwnership> _cooMem[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
 
 	// Local credential push state tracking
 	_LocalCredentialPushState _localTags[ZT_MAX_NETWORK_TAGS];
 	_LocalCredentialPushState _localCaps[ZT_MAX_NETWORK_CAPABILITIES];
+	_LocalCredentialPushState _localCoos[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
 };
 
 } // namespace ZeroTier
