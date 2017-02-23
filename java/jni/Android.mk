@@ -13,6 +13,7 @@ LOCAL_SRC_FILES := \
 	$(ZT1)/node/C25519.cpp \
 	$(ZT1)/node/Capability.cpp \
 	$(ZT1)/node/CertificateOfMembership.cpp \
+	$(ZT1)/node/CertificateOfOwnership.cpp \
 	$(ZT1)/node/Identity.cpp \
 	$(ZT1)/node/IncomingPacket.cpp \
 	$(ZT1)/node/InetAddress.cpp \
