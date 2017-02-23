@@ -532,6 +532,7 @@ static _doZtFilterResult _doZtFilter(
 						}
 					}
 				}
+				cf |= ownershipVerificationMask;
 				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)&&(frameData[9] == 0x06)) {
 					const unsigned int headerLen = 4 * (frameData[0] & 0xf);
 					cf |= (uint64_t)frameData[headerLen + 13];
