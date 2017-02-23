@@ -80,8 +80,14 @@ namespace WinUI
             this.allowGlobal.IsChecked = network.AllowGlobal;
             this.allowManaged.IsChecked = network.AllowManaged;
 
+						this.connectedCheckBox.Checked -= connectedCheckBox_Checked;
+						this.connectedCheckBox.Unchecked -= connectedCheckbox_Unchecked;
+
             this.connectedCheckBox.IsChecked = network.IsConnected;
-        }
+
+						this.connectedCheckBox.Checked += connectedCheckBox_Checked;
+						this.connectedCheckBox.Unchecked += connectedCheckbox_Unchecked;
+				}
 
         public bool HasNetwork(ZeroTierNetwork network)
         {
