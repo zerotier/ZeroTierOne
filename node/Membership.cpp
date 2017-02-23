@@ -247,21 +247,21 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	_RemoteCredential<CertificateOfOwnership> *have = ((htmp != &(_remoteCoos[ZT_MAX_CERTIFICATES_OF_OWNERSHIP]))&&((*htmp)->id == (uint64_t)coo.id())) ? *htmp : (_RemoteCredential<CertificateOfOwnership> *)0;
 	if (have) {
 		if ( (!_isCredentialTimestampValid(nconf,*have)) || (have->credential.timestamp() > coo.timestamp()) ) {
-			TRACE("addCredential(CertificateOfOwnership) for %s on %.16llx REJECTED (revoked or too old)",cap.issuedTo().toString().c_str(),cap.networkId());
+			TRACE("addCredential(CertificateOfOwnership) for %s on %.16llx REJECTED (revoked or too old)",coo.issuedTo().toString().c_str(),coo.networkId());
 			return ADD_REJECTED;
 		}
 		if (have->credential == coo) {
-			TRACE("addCredential(CertificateOfOwnership) for %s on %.16llx ACCEPTED (redundant)",cap.issuedTo().toString().c_str(),cap.networkId());
+			TRACE("addCredential(CertificateOfOwnership) for %s on %.16llx ACCEPTED (redundant)",coo.issuedTo().toString().c_str(),coo.networkId());
 			return ADD_ACCEPTED_REDUNDANT;
 		}
 	}
 
 	switch(coo.verify(RR)) {
 		default:
-			TRACE("addCredential(CertificateOfOwnership) for %s on %.16llx REJECTED (invalid)",cap.issuedTo().toString().c_str(),cap.networkId());
+			TRACE("addCredential(CertificateOfOwnership) for %s on %.16llx REJECTED (invalid)",coo.issuedTo().toString().c_str(),coo.networkId());
 			return ADD_REJECTED;
 		case 0:
-			TRACE("addCredential(CertificateOfOwnership) for %s on %.16llx ACCEPTED (new)",cap.issuedTo().toString().c_str(),cap.networkId());
+			TRACE("addCredential(CertificateOfOwnership) for %s on %.16llx ACCEPTED (new)",coo.issuedTo().toString().c_str(),coo.networkId());
 			if (!have) have = _newCoo(coo.id());
 			have->lastReceived = RR->node->now();
 			have->credential = coo;

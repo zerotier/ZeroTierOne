@@ -1808,7 +1808,7 @@ enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,uint64_t moonWorldId,uint64_t moo
  * @param moonWorldId World ID of moon to remove
  * @return Error if anything bad happened
  */
-ZT_ResultCode ZT_Node_deorbit(ZT_Node *node,uint64_t moonWorldId);
+enum ZT_ResultCode ZT_Node_deorbit(ZT_Node *node,uint64_t moonWorldId);
 
 /**
  * Get this node's 40-bit ZeroTier address
