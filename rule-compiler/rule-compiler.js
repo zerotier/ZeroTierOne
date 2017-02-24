@@ -25,6 +25,7 @@ const CHARACTERISTIC_BITS = {
 const ETHERTYPES = {
 	'ipv4': 0x0800,
 	'arp': 0x0806,
+	'wol': 0x0842,
 	'rarp': 0x8035,
 	'ipv6': 0x86dd,
 	'atalk': 0x809b,
