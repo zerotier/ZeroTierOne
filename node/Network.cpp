@@ -515,7 +515,6 @@ static _doZtFilterResult _doZtFilter(
 						src.set((const void *)(frameData + 12),4,0);
 					} else if ((etherType == ZT_ETHERTYPE_IPV6)&&(frameLen >= 40)) {
 						// IPv6 NDP requires special handling, since the src and dest IPs in the packet are empty or link-local.
-						unsigned int pos = 0,proto = 0;
 						if ( (frameLen >= (40 + 8 + 16)) && (frameData[6] == 0x3a) && ((frameData[40] == 0x87)||(frameData[40] == 0x88)) ) {
 							if (frameData[40] == 0x87) {
 								// Neighbor solicitations contain no reliable source address, so we implement a small
@@ -609,6 +608,11 @@ static _doZtFilterResult _doZtFilter(
 							thisRuleMatches = 0;
 							FILTER_TRACE("%u %s %c remote tag %u not found -> 0 (inbound side is strict)",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
 						} else {
+							// Outbound side is not strict since if we have to match both tags and
+							// we are sending a first packet to a recipient, we probably do not know
+							// about their tags yet. They will filter on inbound and we will filter
+							// once we get their tag. If we are a tee/redirect target we are also
+							// not strict since we likely do not have these tags.
 							thisRuleMatches = 1;
 							FILTER_TRACE("%u %s %c remote tag %u not found -> 1 (outbound side and TEE/REDIRECT targets are not strict)",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
 						}
@@ -616,6 +620,38 @@ static _doZtFilterResult _doZtFilter(
 				} else {
 					thisRuleMatches = 0;
 					FILTER_TRACE("%u %s %c local tag %u not found -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
+				}
+			}	break;
+			case ZT_NETWORK_RULE_MATCH_TAG_SENDER:
+			case ZT_NETWORK_RULE_MATCH_TAG_RECEIVER: {
+				if (superAccept) {
+					thisRuleMatches = 1;
+					FILTER_TRACE("%u %s %c we are a TEE/REDIRECT target -> 1",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+				} else if ( ((rt == ZT_NETWORK_RULE_MATCH_TAG_SENDER)&&(inbound)) || ((rt == ZT_NETWORK_RULE_MATCH_TAG_RECEIVER)&&(!inbound)) ) {
+					const Tag *const remoteTag = ((membership) ? membership->getTag(nconf,rules[rn].v.tag.id) : (const Tag *)0);
+					if (remoteTag) {
+						thisRuleMatches = (uint8_t)(remoteTag->value() == rules[rn].v.tag.value);
+						FILTER_TRACE("%u %s %c TAG %u %.8x == %.8x -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,remoteTag->value(),(unsigned int)rules[rn].v.tag.value,(unsigned int)thisRuleMatches);
+					} else {
+						if (rt == ZT_NETWORK_RULE_MATCH_TAG_RECEIVER) {
+							// If we are checking the receiver and this is an outbound packet, we
+							// can't be strict since we may not yet know the receiver's tag.
+							thisRuleMatches = 1;
+							FILTER_TRACE("%u %s %c (inbound) remote tag %u not found -> 1 (outbound receiver match is not strict)",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
+						} else {
+							thisRuleMatches = 0;
+							FILTER_TRACE("%u %s %c (inbound) remote tag %u not found -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
+						}
+					}
+				} else { // sender and outbound or receiver and inbound
+					const Tag *const localTag = std::lower_bound(&(nconf.tags[0]),&(nconf.tags[nconf.tagCount]),rules[rn].v.tag.id,Tag::IdComparePredicate());
+					if ((localTag != &(nconf.tags[nconf.tagCount]))&&(localTag->id() == rules[rn].v.tag.id)) {
+						thisRuleMatches = (uint8_t)(localTag->value() == rules[rn].v.tag.value);
+						FILTER_TRACE("%u %s %c TAG %u %.8x == %.8x -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,remoteTag->value(),(unsigned int)rules[rn].v.tag.value,(unsigned int)thisRuleMatches);
+					} else {
+						thisRuleMatches = 0;
+						FILTER_TRACE("%u %s %c local tag %u not found -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
+					}
 				}
 			}	break;
 

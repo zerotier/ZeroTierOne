@@ -167,9 +167,6 @@ public:
 			// rules to be ignored but still parsed.
 			b.append((uint8_t)rules[i].t);
 			switch((ZT_VirtualNetworkRuleType)(rules[i].t & 0x3f)) {
-				//case ZT_NETWORK_RULE_ACTION_DROP:
-				//case ZT_NETWORK_RULE_ACTION_ACCEPT:
-				//case ZT_NETWORK_RULE_ACTION_DEBUG_LOG:
 				default:
 					b.append((uint8_t)0);
 					break;
@@ -258,6 +255,9 @@ public:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR:
+				case ZT_NETWORK_RULE_MATCH_TAGS_EQUAL:
+				case ZT_NETWORK_RULE_MATCH_TAG_SENDER:
+				case ZT_NETWORK_RULE_MATCH_TAG_RECEIVER:
 					b.append((uint8_t)8);
 					b.append((uint32_t)rules[i].v.tag.id);
 					b.append((uint32_t)rules[i].v.tag.value);
@@ -345,6 +345,8 @@ public:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
 				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR:
 				case ZT_NETWORK_RULE_MATCH_TAGS_EQUAL:
+				case ZT_NETWORK_RULE_MATCH_TAG_SENDER:
+				case ZT_NETWORK_RULE_MATCH_TAG_RECEIVER:
 					rules[ruleCount].v.tag.id = b.template at<uint32_t>(p);
 					rules[ruleCount].v.tag.value = b.template at<uint32_t>(p + 4);
 					break;

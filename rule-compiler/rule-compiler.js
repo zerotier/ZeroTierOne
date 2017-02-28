@@ -105,6 +105,8 @@ const RESERVED_WORDS = {
 	'txor': true,
 	'tdiff': true,
 	'teq': true,
+	'tseq': true,
+	'treq': true,
 
 	'type': true,
 	'enum': true,
@@ -152,7 +154,9 @@ const KEYWORD_TO_API_MAP = {
 	'tor': 'MATCH_TAGS_BITWISE_OR',
 	'txor': 'MATCH_TAGS_BITWISE_XOR',
 	'tdiff': 'MATCH_TAGS_DIFFERENCE',
-	'teq': 'MATCH_TAGS_EQUAL'
+	'teq': 'MATCH_TAGS_EQUAL',
+	'tseq': 'MATCH_TAG_SENDER',
+	'treq': 'MATCH_TAG_RECEIVER'
 };
 
 // Number of args for each match
@@ -179,7 +183,9 @@ const MATCH_ARG_COUNTS = {
 	'tor': 2,
 	'txor': 2,
 	'tdiff': 2,
-	'teq': 2
+	'teq': 2,
+	'tseq': 2,
+	'treq': 2
 };
 
 // Regex of all alphanumeric characters in Unicode
@@ -477,7 +483,9 @@ function _renderMatches(mtree,rules,macros,caps,tags,params)
 				case 'tor':
 				case 'txor':
 				case 'tdiff':
-				case 'teq': {
+				case 'teq':
+				case 'tseq':
+				case 'treq': {
 					let tag = tags[args[0][0]];
 					let tagId = -1;
 					let tagValue = -1;
