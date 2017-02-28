@@ -514,7 +514,22 @@ static _doZtFilterResult _doZtFilter(
 					if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
 						src.set((const void *)(frameData + 12),4,0);
 					} else if ((etherType == ZT_ETHERTYPE_IPV6)&&(frameLen >= 40)) {
-						src.set((const void *)(frameData + 8),16,0);
+						// IPv6 NDP requires special handling, since the src and dest IPs in the packet are empty or link-local.
+						unsigned int pos = 0,proto = 0;
+						if ( (frameLen >= (40 + 8 + 16)) && (frameData[6] == 0x3a) && ((frameData[40] == 0x87)||(frameData[40] == 0x88)) ) {
+							if (frameData[40] == 0x87) {
+								// Neighbor solicitations contain no reliable source address, so we implement a small
+								// hack by considering them authenticated. Otherwise you would pretty much have to do
+								// this manually in the rule set for IPv6 to work at all.
+								ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_IP_AUTHENTICATED;
+							} else {
+								// Neighbor advertisements on the other hand can absolutely be authenticated.
+								src.set((const void *)(frameData + 40 + 8),16,0);
+							}
+						} else {
+							// Other IPv6 packets can be handled normally
+							src.set((const void *)(frameData + 8),16,0);
+						}
 					} else if ((etherType == ZT_ETHERTYPE_ARP)&&(frameLen >= 28)) {
 						src.set((const void *)(frameData + 14),4,0);
 					}
