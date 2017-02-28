@@ -515,6 +515,8 @@ static _doZtFilterResult _doZtFilter(
 						src.set((const void *)(frameData + 12),4,0);
 					} else if ((etherType == ZT_ETHERTYPE_IPV6)&&(frameLen >= 40)) {
 						src.set((const void *)(frameData + 8),16,0);
+					} else if ((etherType == ZT_ETHERTYPE_ARP)&&(frameLen >= 28)) {
+						src.set((const void *)(frameData + 14),4,0);
 					}
 					if (inbound) {
 						if (membership) {

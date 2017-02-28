@@ -240,7 +240,6 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	}
 }
 
-
 Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const CertificateOfOwnership &coo)
 {
 	_RemoteCredential<CertificateOfOwnership> *const *htmp = std::lower_bound(&(_remoteCoos[0]),&(_remoteCoos[ZT_MAX_CERTIFICATES_OF_OWNERSHIP]),(uint64_t)coo.id(),_RemoteCredentialComp<CertificateOfOwnership>());
