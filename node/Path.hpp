@@ -105,6 +105,7 @@ public:
 		_lastOut(0),
 		_lastIn(0),
 		_lastTrustEstablishedPacketReceived(0),
+		_outgoingPacketCounter(0),
 		_addr(),
 		_localAddress(),
 		_ipScope(InetAddress::IP_SCOPE_NONE)
@@ -115,6 +116,7 @@ public:
 		_lastOut(0),
 		_lastIn(0),
 		_lastTrustEstablishedPacketReceived(0),
+		_outgoingPacketCounter(0),
 		_addr(addr),
 		_localAddress(localAddress),
 		_ipScope(addr.ipScope())
@@ -241,10 +243,18 @@ public:
 	 */
 	inline uint64_t lastIn() const { return _lastIn; }
 
+	/**
+	 * Return and increment outgoing packet counter (used with Packet::armor())
+	 *
+	 * @return Next value that should be used for outgoing packet counter (only least significant 3 bits are used)
+	 */
+	inline unsigned int nextOutgoingCounter() { return _outgoingPacketCounter++; }
+
 private:
 	uint64_t _lastOut;
 	uint64_t _lastIn;
 	uint64_t _lastTrustEstablishedPacketReceived;
+	unsigned int _outgoingPacketCounter;
 	InetAddress _addr;
 	InetAddress _localAddress;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often

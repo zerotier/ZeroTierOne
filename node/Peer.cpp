@@ -101,7 +101,7 @@ void Peer::received(
 					outp.append(redirectTo.rawIpData(),16);
 				}
 				outp.append((uint16_t)redirectTo.port());
-				outp.armor(_key,true);
+				outp.armor(_key,true,path->nextOutgoingCounter());
 				path->send(RR,outp.data(),outp.size(),now);
 			} else {
 				// For older peers we use RENDEZVOUS to coax them into contacting us elsewhere.
@@ -116,7 +116,7 @@ void Peer::received(
 					outp.append((uint8_t)16);
 					outp.append(redirectTo.rawIpData(),16);
 				}
-				outp.armor(_key,true);
+				outp.armor(_key,true,path->nextOutgoingCounter());
 				path->send(RR,outp.data(),outp.size(),now);
 			}
 			suboptimalPath = true;
@@ -203,7 +203,7 @@ void Peer::received(
 #endif
 			} else {
 				TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),path->address().toString().c_str());
-				attemptToContactAt(path->localAddress(),path->address(),now,true);
+				attemptToContactAt(path->localAddress(),path->address(),now,true,path->nextOutgoingCounter());
 				path->sent(now);
 			}
 		}
@@ -277,7 +277,7 @@ void Peer::received(
 
 					if (count) {
 						outp.setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
-						outp.armor(_key,true);
+						outp.armor(_key,true,path->nextOutgoingCounter());
 						path->send(RR,outp.data(),outp.size(),now);
 					}
 				}
@@ -342,7 +342,7 @@ SharedPtr<Path> Peer::getBestPath(uint64_t now,bool includeExpired)
 	}
 }
 
-void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now)
+void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int counter)
 {
 	Packet outp(_id.address(),RR->identity.address(),Packet::VERB_HELLO);
 
@@ -383,22 +383,22 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 	RR->node->expectReplyTo(outp.packetId());
 
 	if (atAddress) {
-		outp.armor(_key,false); // false == don't encrypt full payload, but add MAC
+		outp.armor(_key,false,counter); // false == don't encrypt full payload, but add MAC
 		RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
 	} else {
 		RR->sw->send(outp,false); // false == don't encrypt full payload, but add MAC
 	}
 }
 
-void Peer::attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,bool sendFullHello)
+void Peer::attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,bool sendFullHello,unsigned int counter)
 {
 	if ( (!sendFullHello) && (_vProto >= 5) && (!((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0))) ) {
 		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
 		RR->node->expectReplyTo(outp.packetId());
-		outp.armor(_key,true);
+		outp.armor(_key,true,counter);
 		RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
 	} else {
-		sendHELLO(localAddr,atAddress,now);
+		sendHELLO(localAddr,atAddress,now,counter);
 	}
 }
 
@@ -408,7 +408,7 @@ void Peer::tryMemorizedPath(uint64_t now)
 		_lastTriedMemorizedPath = now;
 		InetAddress mp;
 		if (RR->node->externalPathLookup(_id.address(),-1,mp))
-			attemptToContactAt(InetAddress(),mp,now,true);
+			attemptToContactAt(InetAddress(),mp,now,true,0);
 	}
 }
 
@@ -430,7 +430,7 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 
 	if (bestp >= 0) {
 		if ( ((now - _paths[bestp].lastReceive) >= ZT_PEER_PING_PERIOD) || (_paths[bestp].path->needsHeartbeat(now)) ) {
-			attemptToContactAt(_paths[bestp].path->localAddress(),_paths[bestp].path->address(),now,false);
+			attemptToContactAt(_paths[bestp].path->localAddress(),_paths[bestp].path->address(),now,false,_paths[bestp].path->nextOutgoingCounter());
 			_paths[bestp].path->sent(now);
 		}
 		return true;
@@ -454,7 +454,7 @@ void Peer::resetWithinScope(InetAddress::IpScope scope,int inetAddressFamily,uin
 	Mutex::Lock _l(_paths_m);
 	for(unsigned int p=0;p<_numPaths;++p) {
 		if ( (_paths[p].path->address().ss_family == inetAddressFamily) && (_paths[p].path->address().ipScope() == scope) ) {
-			attemptToContactAt(_paths[p].path->localAddress(),_paths[p].path->address(),now,false);
+			attemptToContactAt(_paths[p].path->localAddress(),_paths[p].path->address(),now,false,_paths[p].path->nextOutgoingCounter());
 			_paths[p].path->sent(now);
 			_paths[p].lastReceive = 0; // path will not be used unless it speaks again
 		}

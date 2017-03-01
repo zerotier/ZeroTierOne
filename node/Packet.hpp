@@ -351,7 +351,7 @@ namespace ZeroTier {
  * ZeroTier packet
  *
  * Packet format:
- *   <[8] 64-bit random packet ID and crypto initialization vector>
+ *   <[8] 64-bit packet ID / crypto IV / packet counter>
  *   <[5] destination ZT address>
  *   <[5] source ZT address>
  *   <[1] flags/cipher/hops>
@@ -361,6 +361,14 @@ namespace ZeroTier {
  *   [... verb-specific payload ...]
  *
  * Packets smaller than 28 bytes are invalid and silently discarded.
+ *
+ * The 64-bit packet ID is a strongly random value used as a crypto IV.
+ * Its least significant 3 bits are also used as a monotonically increasing
+ * (and looping) counter for sending packets to a particular recipient. This
+ * can be used for link quality monitoring and reporting and has no crypto
+ * impact as it does not increase the likelihood of an IV collision. (The
+ * crypto we use is not sensitive to the nature of the IV, only that it does
+ * not repeat.)
  *
  * The flags/cipher/hops bit field is: FFCCCHHH where C is a 3-bit cipher
  * selection allowing up to 7 cipher suites, F is outside-envelope flags,
@@ -1102,10 +1110,8 @@ public:
 	};
 
 #ifdef ZT_TRACE
-	static const char *verbString(Verb v)
-		throw();
-	static const char *errorString(ErrorCode e)
-		throw();
+	static const char *verbString(Verb v);
+	static const char *errorString(ErrorCode e);
 #endif
 
 	template<unsigned int C2>
@@ -1303,6 +1309,12 @@ public:
 	/**
 	 * Get this packet's unique ID (the IV field interpreted as uint64_t)
 	 *
+	 * Note that the least significant 3 bits of this ID will change when armor()
+	 * is called to armor the packet for transport. This is because armor() will
+	 * mask the last 3 bits against the send counter for QoS monitoring use prior
+	 * to actually using the IV to encrypt and MAC the packet. Be aware of this
+	 * when grabbing the packetId of a new packet prior to armor/send.
+	 *
 	 * @return Packet ID
 	 */
 	inline uint64_t packetId() const { return at<uint64_t>(ZT_PACKET_IDX_IV); }
@@ -1337,8 +1349,9 @@ public:
 	 *
 	 * @param key 32-byte key
 	 * @param encryptPayload If true, encrypt packet payload, else just MAC
+	 * @param counter Packet send counter for destination peer -- only least significant 3 bits are used
 	 */
-	void armor(const void *key,bool encryptPayload);
+	void armor(const void *key,bool encryptPayload,unsigned int counter);
 
 	/**
 	 * Verify and (if encrypted) decrypt packet

@@ -150,8 +150,9 @@ public:
 	 * @param localAddr Local address
 	 * @param atAddress Destination address
 	 * @param now Current time
+	 * @param counter Outgoing packet counter
 	 */
-	void sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now);
+	void sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int counter);
 
 	/**
 	 * Send ECHO (or HELLO for older peers) to this peer at the given address
@@ -162,8 +163,9 @@ public:
 	 * @param atAddress Destination address
 	 * @param now Current time
 	 * @param sendFullHello If true, always send a full HELLO instead of just an ECHO
+	 * @param counter Outgoing packet counter
 	 */
-	void attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,bool sendFullHello);
+	void attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,bool sendFullHello,unsigned int counter);
 
 	/**
 	 * Try a memorized or statically defined path if any are known

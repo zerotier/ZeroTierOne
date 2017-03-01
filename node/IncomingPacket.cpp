@@ -243,7 +243,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 							outp.append((uint8_t)Packet::VERB_HELLO);
 							outp.append((uint64_t)pid);
 							outp.append((uint8_t)Packet::ERROR_IDENTITY_COLLISION);
-							outp.armor(key,true);
+							outp.armor(key,true,_path->nextOutgoingCounter());
 							_path->send(RR,outp.data(),outp.size(),RR->node->now());
 						} else {
 							TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_path->address().toString().c_str());
@@ -405,7 +405,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 		RR->topology->appendCertificateOfRepresentation(outp);
 		outp.setAt(corSizeAt,(uint16_t)(outp.size() - (corSizeAt + 2)));
 
-		outp.armor(peer->key(),true);
+		outp.armor(peer->key(),true,_path->nextOutgoingCounter());
 		_path->send(RR,outp.data(),outp.size(),now);
 
 		peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision); // important for this to go first so received() knows the version
@@ -584,7 +584,7 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 		}
 
 		if (count > 0) {
-			outp.armor(peer->key(),true);
+			outp.armor(peer->key(),true,_path->nextOutgoingCounter());
 			_path->send(RR,outp.data(),outp.size(),RR->node->now());
 		}
 
@@ -610,7 +610,7 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<
 					const InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
 					if (RR->node->shouldUsePathForZeroTierTraffic(with,_path->localAddress(),atAddr)) {
 						RR->node->putPacket(_path->localAddress(),atAddr,"ABRE",4,2); // send low-TTL junk packet to 'open' local NAT(s) and stateful firewalls
-						rendezvousWith->attemptToContactAt(_path->localAddress(),atAddr,RR->node->now(),false);
+						rendezvousWith->attemptToContactAt(_path->localAddress(),atAddr,RR->node->now(),false,0);
 						TRACE("RENDEZVOUS from %s says %s might be at %s, sent verification attempt",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
 					} else {
 						TRACE("RENDEZVOUS from %s says %s might be at %s, ignoring since path is not suitable",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
@@ -732,7 +732,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				outp.append((uint8_t)Packet::VERB_EXT_FRAME);
 				outp.append((uint64_t)packetId());
 				outp.append((uint64_t)nwid);
-				outp.armor(peer->key(),true);
+				outp.armor(peer->key(),true,_path->nextOutgoingCounter());
 				_path->send(RR,outp.data(),outp.size(),RR->node->now());
 			}
 
@@ -762,7 +762,7 @@ bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,const SharedPtr<Peer> 
 		outp.append((uint64_t)pid);
 		if (size() > ZT_PACKET_IDX_PAYLOAD)
 			outp.append(reinterpret_cast<const unsigned char *>(data()) + ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD);
-		outp.armor(peer->key(),true);
+		outp.armor(peer->key(),true,_path->nextOutgoingCounter());
 		_path->send(RR,outp.data(),outp.size(),RR->node->now());
 
 		peer->received(_path,hops(),pid,Packet::VERB_ECHO,0,Packet::VERB_NOP,false);
@@ -957,7 +957,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 			outp.append(requestPacketId);
 			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
 			outp.append(nwid);
-			outp.armor(peer->key(),true);
+			outp.armor(peer->key(),true,_path->nextOutgoingCounter());
 			_path->send(RR,outp.data(),outp.size(),RR->node->now());
 		}
 
@@ -984,7 +984,7 @@ bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,const Shared
 				outp.append((uint64_t)packetId());
 				outp.append((uint64_t)network->id());
 				outp.append((uint64_t)configUpdateId);
-				outp.armor(peer->key(),true);
+				outp.armor(peer->key(),true,_path->nextOutgoingCounter());
 				_path->send(RR,outp.data(),outp.size(),RR->node->now());
 			}
 		}
@@ -1033,7 +1033,7 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 			outp.append((uint32_t)mg.adi());
 			const unsigned int gatheredLocally = RR->mc->gather(peer->address(),nwid,mg,outp,gatherLimit);
 			if (gatheredLocally > 0) {
-				outp.armor(peer->key(),true);
+				outp.armor(peer->key(),true,_path->nextOutgoingCounter());
 				_path->send(RR,outp.data(),outp.size(),RR->node->now());
 			}
 
@@ -1140,7 +1140,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				outp.append((uint32_t)to.adi());
 				outp.append((unsigned char)0x02); // flag 0x02 = contains gather results
 				if (RR->mc->gather(peer->address(),nwid,to,outp,gatherLimit)) {
-					outp.armor(peer->key(),true);
+					outp.armor(peer->key(),true,_path->nextOutgoingCounter());
 					_path->send(RR,outp.data(),outp.size(),RR->node->now());
 				}
 			}
@@ -1198,7 +1198,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 					if ( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && (!redundant) && (RR->node->shouldUsePathForZeroTierTraffic(peer->address(),_path->localAddress(),a)) ) {
 						if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-							peer->attemptToContactAt(InetAddress(),a,now,false);
+							peer->attemptToContactAt(InetAddress(),a,now,false,0);
 						} else {
 							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
@@ -1217,7 +1217,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 					if ( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && (!redundant) && (RR->node->shouldUsePathForZeroTierTraffic(peer->address(),_path->localAddress(),a)) ) {
 						if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-							peer->attemptToContactAt(InetAddress(),a,now,false);
+							peer->attemptToContactAt(InetAddress(),a,now,false,0);
 						} else {
 							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
@@ -1447,7 +1447,7 @@ void IncomingPacket::_sendErrorNeedCredentials(const RuntimeEnvironment *RR,cons
 		outp.append(packetId());
 		outp.append((uint8_t)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
 		outp.append(nwid);
-		outp.armor(peer->key(),true);
+		outp.armor(peer->key(),true,_path->nextOutgoingCounter());
 		_path->send(RR,outp.data(),outp.size(),now);
 	}
 }

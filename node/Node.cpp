@@ -180,7 +180,7 @@ public:
 				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)upstreamStableEndpoints->size();++k) {
 					const InetAddress &addr = (*upstreamStableEndpoints)[ptr++ % upstreamStableEndpoints->size()];
 					if (addr.ss_family == AF_INET) {
-						p->sendHELLO(InetAddress(),addr,_now);
+						p->sendHELLO(InetAddress(),addr,_now,0);
 						contacted = true;
 						break;
 					}
@@ -190,7 +190,7 @@ public:
 				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)upstreamStableEndpoints->size();++k) {
 					const InetAddress &addr = (*upstreamStableEndpoints)[ptr++ % upstreamStableEndpoints->size()];
 					if (addr.ss_family == AF_INET6) {
-						p->sendHELLO(InetAddress(),addr,_now);
+						p->sendHELLO(InetAddress(),addr,_now,0);
 						contacted = true;
 						break;
 					}
@@ -200,7 +200,7 @@ public:
 			if ((!contacted)&&(_bestCurrentUpstream)) {
 				const SharedPtr<Path> up(_bestCurrentUpstream->getBestPath(_now,true));
 				if (up)
-					p->sendHELLO(up->localAddress(),up->address(),_now);
+					p->sendHELLO(up->localAddress(),up->address(),_now,up->nextOutgoingCounter());
 			}
 
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);

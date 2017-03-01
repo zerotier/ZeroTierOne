@@ -88,7 +88,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 				if ((now - _lastBeaconResponse) >= 2500) { // limit rate of responses
 					_lastBeaconResponse = now;
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
-					outp.armor(peer->key(),true);
+					outp.armor(peer->key(),true,path->nextOutgoingCounter());
 					path->send(RR,outp.data(),outp.size(),now);
 				}
 			}
@@ -777,7 +777,7 @@ bool Switch::_trySend(Packet &packet,bool encrypt)
 			if ((clusterMostRecentMemberId < 0)||(viaPath->lastIn() > clusterMostRecentTs)) {
 #endif
 				if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) * 4,(uint64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL)) {
-					peer->attemptToContactAt(viaPath->localAddress(),viaPath->address(),now,false);
+					peer->attemptToContactAt(viaPath->localAddress(),viaPath->address(),now,false,viaPath->nextOutgoingCounter());
 					viaPath->sent(now);
 				}
 #ifdef ZT_ENABLE_CLUSTER
@@ -825,14 +825,14 @@ bool Switch::_trySend(Packet &packet,bool encrypt)
 	if (trustedPathId) {
 		packet.setTrusted(trustedPathId);
 	} else {
-		packet.armor((clusterMostRecentMemberId >= 0) ? clusterPeerSecret : peer->key(),encrypt);
+		packet.armor((clusterMostRecentMemberId >= 0) ? clusterPeerSecret : peer->key(),encrypt,(viaPath) ? viaPath->nextOutgoingCounter() : 0);
 	}
 #else
 	const uint64_t trustedPathId = RR->topology->getOutboundPathTrust(viaPath->address());
 	if (trustedPathId) {
 		packet.setTrusted(trustedPathId);
 	} else {
-		packet.armor(peer->key(),encrypt);
+		packet.armor(peer->key(),encrypt,viaPath->nextOutgoingCounter());
 	}
 #endif
 

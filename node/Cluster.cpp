@@ -255,7 +255,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 		// One-time-use Poly1305 key from first 32 bytes of Salsa20 keystream (as per DJB/NaCl "standard")
 		char polykey[ZT_POLY1305_KEY_LEN];
 		memset(polykey,0,sizeof(polykey));
-		s20.encrypt12(polykey,polykey,sizeof(polykey));
+		s20.crypt12(polykey,polykey,sizeof(polykey));
 
 		// Compute 16-byte MAC
 		char mac[ZT_POLY1305_MAC_LEN];
@@ -267,7 +267,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 
 		// Decrypt!
 		dmsg.setSize(len - 24);
-		s20.decrypt12(reinterpret_cast<const char *>(msg) + 24,const_cast<void *>(dmsg.data()),dmsg.size());
+		s20.crypt12(reinterpret_cast<const char *>(msg) + 24,const_cast<void *>(dmsg.data()),dmsg.size());
 	}
 
 	if (dmsg.size() < 4)
@@ -954,10 +954,10 @@ void Cluster::_flush(uint16_t memberId)
 		// One-time-use Poly1305 key from first 32 bytes of Salsa20 keystream (as per DJB/NaCl "standard")
 		char polykey[ZT_POLY1305_KEY_LEN];
 		memset(polykey,0,sizeof(polykey));
-		s20.encrypt12(polykey,polykey,sizeof(polykey));
+		s20.crypt12(polykey,polykey,sizeof(polykey));
 
 		// Encrypt m.q in place
-		s20.encrypt12(reinterpret_cast<const char *>(m.q.data()) + 24,const_cast<char *>(reinterpret_cast<const char *>(m.q.data())) + 24,m.q.size() - 24);
+		s20.crypt12(reinterpret_cast<const char *>(m.q.data()) + 24,const_cast<char *>(reinterpret_cast<const char *>(m.q.data())) + 24,m.q.size() - 24);
 
 		// Add MAC for authentication (encrypt-then-MAC)
 		char mac[ZT_POLY1305_MAC_LEN];
