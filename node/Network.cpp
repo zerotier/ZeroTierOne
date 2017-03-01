@@ -647,7 +647,7 @@ static _doZtFilterResult _doZtFilter(
 					const Tag *const localTag = std::lower_bound(&(nconf.tags[0]),&(nconf.tags[nconf.tagCount]),rules[rn].v.tag.id,Tag::IdComparePredicate());
 					if ((localTag != &(nconf.tags[nconf.tagCount]))&&(localTag->id() == rules[rn].v.tag.id)) {
 						thisRuleMatches = (uint8_t)(localTag->value() == rules[rn].v.tag.value);
-						FILTER_TRACE("%u %s %c TAG %u %.8x == %.8x -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,remoteTag->value(),(unsigned int)rules[rn].v.tag.value,(unsigned int)thisRuleMatches);
+						// FILTER_TRACE("%u %s %c TAG %u %.8x == %.8x -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,remoteTag->value(),(unsigned int)rules[rn].v.tag.value,(unsigned int)thisRuleMatches);
 					} else {
 						thisRuleMatches = 0;
 						FILTER_TRACE("%u %s %c local tag %u not found -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
