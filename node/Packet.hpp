@@ -1041,8 +1041,7 @@ public:
 		 *   <[1] 8-bit packet hop count of received CIRCUIT_TEST>
 		 *   <[...] local wire address on which packet was received>
 		 *   <[...] remote wire address from which packet was received>
-		 *   <[2] 16-bit length of additional fields>
-		 *   <[...] additional fields>
+		 *   <[2] 16-bit path link quality of path over which packet was received>
 		 *   <[1] 8-bit number of next hops (breadth)>
 		 *   <[...] next hop information>
 		 *

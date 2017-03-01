@@ -1271,6 +1271,11 @@ typedef struct {
 	struct sockaddr_storage receivedFromRemoteAddress;
 
 	/**
+	 * Path link quality of physical path over which test was received
+	 */
+	int receivedFromLinkQuality;
+
+	/**
 	 * Next hops to which packets are being or will be sent by the reporter
 	 *
 	 * In addition to reporting back, the reporter may send the test on if

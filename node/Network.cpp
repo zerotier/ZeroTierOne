@@ -1422,6 +1422,7 @@ Membership::AddCredentialResult Network::addCredential(const Address &sentFrom,c
 				outp.append((uint16_t)0); // no capabilities
 				outp.append((uint16_t)0); // no tags
 				outp.append((uint16_t)1); // one revocation!
+				outp.append((uint16_t)0); // no certificates of ownership
 				rev.serialize(outp);
 				RR->sw->send(outp,true);
 			}

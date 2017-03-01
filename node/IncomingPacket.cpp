@@ -1342,7 +1342,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 			outp.append((uint8_t)hops());
 			_path->localAddress().serialize(outp);
 			_path->address().serialize(outp);
-			outp.append((uint16_t)0); // no additional fields
+			outp.append((uint16_t)_path->linkQuality());
 			outp.append((uint8_t)breadth);
 			for(unsigned int h=0;h<breadth;++h) {
 				nextHop[h].appendTo(outp);
@@ -1399,16 +1399,20 @@ bool IncomingPacket::_doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const S
 
 		const unsigned int receivedOnLocalAddressLen = reinterpret_cast<InetAddress *>(&(report.receivedOnLocalAddress))->deserialize(*this,ZT_PACKET_IDX_PAYLOAD + 58);
 		const unsigned int receivedFromRemoteAddressLen = reinterpret_cast<InetAddress *>(&(report.receivedFromRemoteAddress))->deserialize(*this,ZT_PACKET_IDX_PAYLOAD + 58 + receivedOnLocalAddressLen);
+		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 58 + receivedOnLocalAddressLen + receivedFromRemoteAddressLen;
+		if (report.protocolVersion >= 9) {
+			report.receivedFromLinkQuality = at<uint16_t>(ptr); ptr += 2;
+		} else {
+			report.receivedFromLinkQuality = ZT_PATH_LINK_QUALITY_MAX;
+			ptr += at<uint16_t>(ptr) + 2; // this field was once an 'extended field length' reserved field, which was always set to 0
+		}
 
-		unsigned int nhptr = ZT_PACKET_IDX_PAYLOAD + 58 + receivedOnLocalAddressLen + receivedFromRemoteAddressLen;
-		nhptr += at<uint16_t>(nhptr) + 2; // add "additional field" length, which right now will be zero
-
-		report.nextHopCount = (*this)[nhptr++];
+		report.nextHopCount = (*this)[ptr++];
 		if (report.nextHopCount > ZT_CIRCUIT_TEST_MAX_HOP_BREADTH) // sanity check, shouldn't be possible
 			report.nextHopCount = ZT_CIRCUIT_TEST_MAX_HOP_BREADTH;
 		for(unsigned int h=0;h<report.nextHopCount;++h) {
-			report.nextHops[h].address = Address(field(nhptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH).toInt(); nhptr += ZT_ADDRESS_LENGTH;
-			nhptr += reinterpret_cast<InetAddress *>(&(report.nextHops[h].physicalAddress))->deserialize(*this,nhptr);
+			report.nextHops[h].address = Address(field(ptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH).toInt(); ptr += ZT_ADDRESS_LENGTH;
+			ptr += reinterpret_cast<InetAddress *>(&(report.nextHops[h].physicalAddress))->deserialize(*this,ptr);
 		}
 
 		RR->node->postCircuitTestReport(&report);
