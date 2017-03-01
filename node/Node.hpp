@@ -219,16 +219,24 @@ public:
 	/**
 	 * Register that we are expecting a reply to a packet ID
 	 *
+	 * This only uses the most significant bits of the packet ID, both to save space
+	 * and to avoid using the higher bits that can be modified during armor() to
+	 * mask against the packet send counter used for QoS detection.
+	 *
 	 * @param packetId Packet ID to expect reply to
 	 */
 	inline void expectReplyTo(const uint64_t packetId)
 	{
 		const unsigned long bucket = (unsigned long)(packetId & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
-		_expectingRepliesTo[bucket][_expectingRepliesToBucketPtr[bucket]++ & ZT_EXPECTING_REPLIES_BUCKET_MASK2] = packetId;
+		_expectingRepliesTo[bucket][_expectingRepliesToBucketPtr[bucket]++ & ZT_EXPECTING_REPLIES_BUCKET_MASK2] = (uint32_t)(packetId >> 32);
 	}
 
 	/**
 	 * Check whether a given packet ID is something we are expecting a reply to
+	 *
+	 * This only uses the most significant bits of the packet ID, both to save space
+	 * and to avoid using the higher bits that can be modified during armor() to
+	 * mask against the packet send counter used for QoS detection.
 	 *
 	 * @param packetId Packet ID to check
 	 * @return True if we're expecting a reply
@@ -236,8 +244,9 @@ public:
 	inline bool expectingReplyTo(const uint64_t packetId) const
 	{
 		const unsigned long bucket = (unsigned long)(packetId & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
+		const uint32_t pid = (uint32_t)(packetId >> 32);
 		for(unsigned long i=0;i<=ZT_EXPECTING_REPLIES_BUCKET_MASK2;++i) {
-			if (_expectingRepliesTo[bucket][i] == packetId)
+			if (_expectingRepliesTo[bucket][i] == pid)
 				return true;
 		}
 		return false;
@@ -281,9 +290,9 @@ private:
 
 	// For tracking packet IDs to filter out OK/ERROR replies to packets we did not send
 	uint8_t _expectingRepliesToBucketPtr[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1];
-	uint64_t _expectingRepliesTo[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1][ZT_EXPECTING_REPLIES_BUCKET_MASK2 + 1];
+	uint32_t _expectingRepliesTo[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1][ZT_EXPECTING_REPLIES_BUCKET_MASK2 + 1];
 
-	// Time of last identity verification indexed by InetAddress.rateGateHash()
+	// Time of last identity verification indexed by InetAddress.rateGateHash() -- used in IncomingPacket::_doHELLO() via rateGateIdentityVerification()
 	uint64_t _lastIdentityVerification[16384];
 
 	std::vector< std::pair< uint64_t, SharedPtr<Network> > > _networks;
