@@ -185,17 +185,6 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 			} else if (len >= ZT_PROTO_MIN_PACKET_LENGTH) { // min length check is important!
 				// Handle packet head -------------------------------------------------
 
-				// See packet format in Packet.hpp to understand this
-				const uint64_t packetId = (
-					(((uint64_t)reinterpret_cast<const uint8_t *>(data)[0]) << 56) |
-					(((uint64_t)reinterpret_cast<const uint8_t *>(data)[1]) << 48) |
-					(((uint64_t)reinterpret_cast<const uint8_t *>(data)[2]) << 40) |
-					(((uint64_t)reinterpret_cast<const uint8_t *>(data)[3]) << 32) |
-					(((uint64_t)reinterpret_cast<const uint8_t *>(data)[4]) << 24) |
-					(((uint64_t)reinterpret_cast<const uint8_t *>(data)[5]) << 16) |
-					(((uint64_t)reinterpret_cast<const uint8_t *>(data)[6]) << 8) |
-					((uint64_t)reinterpret_cast<const uint8_t *>(data)[7])
-				);
 				const Address destination(reinterpret_cast<const uint8_t *>(data) + 8,ZT_ADDRESS_LENGTH);
 				const Address source(reinterpret_cast<const uint8_t *>(data) + 13,ZT_ADDRESS_LENGTH);
 
@@ -297,6 +286,17 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 				} else if ((reinterpret_cast<const uint8_t *>(data)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED) != 0) {
 					// Packet is the head of a fragmented packet series
 
+					const uint64_t packetId = (
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[0]) << 56) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[1]) << 48) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[2]) << 40) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[3]) << 32) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[4]) << 24) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[5]) << 16) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[6]) << 8) |
+						((uint64_t)reinterpret_cast<const uint8_t *>(data)[7])
+					);
+
 					Mutex::Lock _l(_rxQueue_m);
 					RXQueueEntry *const rq = _findRXQueueEntry(now,packetId);
 
@@ -344,7 +344,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 								rq = tmp;
 						}
 						rq->timestamp = now;
-						rq->packetId = packetId;
+						rq->packetId = packet.packetId();
 						rq->frag0 = packet;
 						rq->totalFragments = 1;
 						rq->haveFragments = 1;

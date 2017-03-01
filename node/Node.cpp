@@ -401,9 +401,10 @@ ZT_PeerList *Node::peers() const
 			memcpy(&(p->paths[p->pathCount].address),&(path->first->address()),sizeof(struct sockaddr_storage));
 			p->paths[p->pathCount].lastSend = path->first->lastOut();
 			p->paths[p->pathCount].lastReceive = path->first->lastIn();
+			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust(path->first->address());
+			p->paths[p->pathCount].linkQuality = (int)path->first->linkQuality();
 			p->paths[p->pathCount].expired = path->second;
 			p->paths[p->pathCount].preferred = (path->first == bestp) ? 1 : 0;
-			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust(path->first->address());
 			++p->pathCount;
 		}
 	}

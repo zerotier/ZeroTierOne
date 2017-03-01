@@ -180,6 +180,11 @@ extern "C" {
 #define ZT_CLUSTER_MAX_MESSAGE_LENGTH (1500 - 48)
 
 /**
+ * Maximum value for link quality (min is 0)
+ */
+#define ZT_PATH_LINK_QUALITY_MAX 0xff
+
+/**
  * Packet characteristics flag: packet direction, 1 if inbound 0 if outbound
  */
 #define ZT_RULE_PACKET_CHARACTERISTICS_INBOUND 0x8000000000000000ULL
@@ -1035,6 +1040,11 @@ typedef struct
 	 * Is this a trusted path? If so this will be its nonzero ID.
 	 */
 	uint64_t trustedPathId;
+
+	/**
+	 * Path link quality from 0 to 255 (always 255 if peer does not support)
+	 */
+	int linkQuality;
 
 	/**
 	 * Is path expired?

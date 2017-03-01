@@ -253,6 +253,20 @@ public:
 	}
 
 	/**
+	 * Count the number of bits set in an integer
+	 *
+	 * @param v 64-bit integer
+	 * @return Number of bits set in this integer (0-64)
+	 */
+	static inline uint64_t countBits(uint64_t v)
+	{
+		v = v - ((v >> 1) & (uint64_t)~(uint64_t)0/3);
+		v = (v & (uint64_t)~(uint64_t)0/15*3) + ((v >> 2) & (uint64_t)~(uint64_t)0/15*3);
+		v = (v + (v >> 4)) & (uint64_t)~(uint64_t)0/255*15;
+		return (uint64_t)(v * ((uint64_t)~(uint64_t)0/255)) >> 56;
+	}
+
+	/**
 	 * Check if a memory buffer is all-zero
 	 *
 	 * @param p Memory to scan

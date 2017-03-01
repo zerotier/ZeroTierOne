@@ -59,15 +59,17 @@
  *   + Otherwise backward compatible with protocol v4
  * 6 - 1.1.5 ... 1.1.10
  *   + Network configuration format revisions including binary values
- * 7 - 1.1.10 -- 1.2.0
+ * 7 - 1.1.10 ... 1.1.17
  *   + Introduce trusted paths for local SDN use
- * 8 - 1.2.0  -- CURRENT
+ * 8 - 1.1.17 ... 1.2.0
  *   + Multipart network configurations for large network configs
  *   + Tags and Capabilities
  *   + Inline push of CertificateOfMembership deprecated
  *   + Certificates of representation for federation and mesh
+ * 9 - 1.2.0 ... CURRENT
+ *   + In-band encoding of packet counter for link quality measurement
  */
-#define ZT_PROTO_VERSION 8
+#define ZT_PROTO_VERSION 9
 
 /**
  * Minimum supported protocol version
@@ -1318,6 +1320,11 @@ public:
 	 * @return Packet ID
 	 */
 	inline uint64_t packetId() const { return at<uint64_t>(ZT_PACKET_IDX_IV); }
+
+	/**
+	 * @return Value of link quality counter extracted from this packet's ID, range 0 to 7 (3 bits)
+	 */
+	inline unsigned int linkQualityCounter() const { return (unsigned int)(reinterpret_cast<const uint8_t *>(data())[7] & 7); }
 
 	/**
 	 * Set packet verb

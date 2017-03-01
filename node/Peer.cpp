@@ -142,6 +142,9 @@ void Peer::received(
 	}
 
 	if (hops == 0) {
+		if (_vProto >= 9)
+			path->updateLinkQuality((unsigned int)(packetId & 7));
+
 		bool pathIsConfirmed = false;
 		{
 			Mutex::Lock _l(_paths_m);
