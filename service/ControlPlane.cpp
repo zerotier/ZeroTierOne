@@ -215,6 +215,55 @@ unsigned int ControlPlane::handleRequest(
 		}
 	}
 
+#ifdef __SYNOLOGY__
+	#include <stdlib.h>
+	// Authenticate via Synology's built-in cgi script
+	if (!isAuth) {
+		/*
+		fprintf(stderr, "path = %s\n", path.c_str());
+		fprintf(stderr, "headers.size=%d\n", headers.size());
+		std::map<std::string, std::string>::const_iterator it(headers.begin());		
+		while(it != headers.end()) {	
+			fprintf(stderr,"header[%s] = %s\n", (it->first).c_str(), (it->second).c_str());
+			it++;
+		}
+		*/
+		// parse out url args
+		int synotoken_pos = path.find("SynoToken");
+		int argpos = path.find("?");
+		if(synotoken_pos != std::string::npos && argpos != std::string::npos) {	
+			std::string cookie = path.substr(argpos+1, synotoken_pos-(argpos+1));
+			std::string synotoken = path.substr(synotoken_pos);
+			std::string cookie_val = cookie.substr(cookie.find("=")+1);
+			std::string synotoken_val = synotoken.substr(synotoken.find("=")+1);
+			// Set necessary env for auth script
+			std::map<std::string,std::string>::const_iterator ah2(headers.find("x-forwarded-for"));
+			setenv("HTTP_COOKIE", cookie_val.c_str(), true);
+			setenv("HTTP_X_SYNO_TOKEN", synotoken_val.c_str(), true);
+			setenv("REMOTE_ADDR", ah2->second.c_str(),true);
+	    	//fprintf(stderr, "HTTP_COOKIE: %s\n",std::getenv ("HTTP_COOKIE"));
+	    	//fprintf(stderr, "HTTP_X_SYNO_TOKEN: %s\n",std::getenv ("HTTP_X_SYNO_TOKEN"));
+	    	//fprintf(stderr, "REMOTE_ADDR: %s\n",std::getenv ("REMOTE_ADDR"));
+			// check synology web auth
+			char user[256], buf[1024];
+			FILE *fp = NULL;
+			bzero(user, 256);
+			fp = popen("/usr/syno/synoman/webman/modules/authenticate.cgi", "r");
+			if(!fp)
+				isAuth = false;
+			else {
+				bzero(buf, sizeof(buf));
+				fread(buf, 1024, 1, fp);
+				if(strlen(buf) > 0) {
+					snprintf(user, 256, "%s", buf);
+					isAuth = true;
+				}
+			}
+			pclose(fp);
+		}
+	}
+#endif
+
 	if (httpMethod == HTTP_GET) {
 		if (isAuth) {
 			if (ps[0] == "status") {
