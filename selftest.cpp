@@ -572,7 +572,7 @@ static int testPacket()
 		return -1;
 	}
 
-	a.armor(salsaKey,true);
+	a.armor(salsaKey,true,0);
 	if (!a.dearmor(salsaKey)) {
 		std::cout << "FAIL (encrypt-decrypt/verify)" << std::endl;
 		return -1;
