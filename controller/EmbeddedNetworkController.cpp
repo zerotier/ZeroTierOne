@@ -782,8 +782,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						return 500;
 					}
 
-					char json[1024];
-					Utils::snprintf(json,sizeof(json),"{\"testId\":\"%.16llx\"}",test->testId);
+					char json[512];
+					Utils::snprintf(json,sizeof(json),"{\"testId\":\"%.16llx\",\"timestamp\":%llu}",test->testId,test->timestamp);
 					responseBody = json;
 					responseContentType = "application/json";
 
@@ -1808,7 +1808,7 @@ void EmbeddedNetworkController::_pushMemberUpdate(uint64_t now,uint64_t nwid,con
 			bool online;
 			{
 				Mutex::Lock _l(_lastRequestTime_m);
-				std::map<std::pair<uint64_t,uint64_t>,uint64_t>::iterator lrt(_lastRequestTime.find(std::pair<uint64_t,uint64_t>(id.address().toInt(),nwid)));
+				std::map< std::pair<uint64_t,uint64_t>,uint64_t >::iterator lrt(_lastRequestTime.find(std::pair<uint64_t,uint64_t>(id.address().toInt(),nwid)));
 				online = ( (lrt != _lastRequestTime.end()) && ((now - lrt->second) < ZT_NETWORK_AUTOCONF_DELAY) );
 			}
 			if (online) {

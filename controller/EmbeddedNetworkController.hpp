@@ -204,7 +204,7 @@ private:
 	std::list< ZT_CircuitTest > _tests;
 	Mutex _tests_m;
 
-	std::map< std::pair<uint64_t,uint64_t>,uint64_t > _lastRequestTime;
+	std::map< std::pair<uint64_t,uint64_t>,uint64_t > _lastRequestTime; // last request time by <address,networkId>
 	Mutex _lastRequestTime_m;
 };
 
