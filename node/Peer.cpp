@@ -141,10 +141,10 @@ void Peer::received(
 		path->trustedPacketReceived(now);
 	}
 
-	if (hops == 0) {
-		if (_vProto >= 9)
-			path->updateLinkQuality((unsigned int)(packetId & 7));
+	if (_vProto >= 9)
+		path->updateLinkQuality((unsigned int)(packetId & 7));
 
+	if (hops == 0) {
 		bool pathIsConfirmed = false;
 		{
 			Mutex::Lock _l(_paths_m);

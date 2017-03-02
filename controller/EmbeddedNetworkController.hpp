@@ -46,6 +46,9 @@
 // Number of background threads to start -- not actually started until needed
 #define ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT 2
 
+// TTL for circuit tests
+#define ZT_EMBEDDEDNETWORKCONTROLLER_CIRCUIT_TEST_EXPIRATION 120000
+
 namespace ZeroTier {
 
 class Node;
@@ -56,9 +59,8 @@ public:
 	/**
 	 * @param node Parent node
 	 * @param dbPath Path to store data
-	 * @param feed FILE to send feed of all data and changes to (zero-delimited JSON objects) or NULL for none
 	 */
-	EmbeddedNetworkController(Node *node,const char *dbPath,FILE *feed);
+	EmbeddedNetworkController(Node *node,const char *dbPath);
 	virtual ~EmbeddedNetworkController();
 
 	virtual void init(const Identity &signingId,Sender *sender);
@@ -199,13 +201,8 @@ private:
 	NetworkController::Sender *_sender;
 	Identity _signingId;
 
-	struct _CircuitTestEntry
-	{
-		ZT_CircuitTest *test;
-		std::string jsonResults;
-	};
-	std::map< uint64_t,_CircuitTestEntry > _circuitTests;
-	Mutex _circuitTests_m;
+	std::list< ZT_CircuitTest > _tests;
+	Mutex _tests_m;
 
 	std::map< std::pair<uint64_t,uint64_t>,uint64_t > _lastRequestTime;
 	Mutex _lastRequestTime_m;

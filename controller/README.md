@@ -237,11 +237,12 @@ Note that managed IP assignments are only used if they fall within a managed rou
 | Field                 | Type          | Description                                       |
 | --------------------- | ------------- | ------------------------------------------------- |
 | ts                    | integer       | Time of request, ms since epoch                   |
-| authorized            | boolean       | Was member authorized?                            |
-| clientMajorVersion    | integer       | Client major version or -1 if unknown             |
-| clientMinorVersion    | integer       | Client minor version or -1 if unknown             |
-| clientRevision        | integer       | Client revision or -1 if unknown                  |
-| clientProtocolVersion | integer       | ZeroTier protocol version reported by client      |
+| auth                  | boolean       | Was member authorized?                            |
+| authBy                | string        | How was member authorized?                        |
+| vMajor                | integer       | Client major version or -1 if unknown             |
+| vMinor                | integer       | Client minor version or -1 if unknown             |
+| vRev                  | integer       | Client revision or -1 if unknown                  |
+| vProto                | integer       | ZeroTier protocol version reported by client      |
 | fromAddr              | string        | Physical address if known                         |
 
 The controller can only know a member's `fromAddr` if it's able to establish a direct path to it. Members behind very restrictive firewalls may not have this information since the controller will be receiving the member's requests by way of a relay. ZeroTier does not back-trace IP paths as packets are relayed since this would add a lot of protocol overhead.

@@ -42,8 +42,7 @@ namespace ZeroTier {
 class JSONDB
 {
 public:
-	JSONDB(const std::string &basePath,FILE *feed) :
-		_feed(feed),
+	JSONDB(const std::string &basePath) :
 		_basePath(basePath)
 	{
 		_reload(_basePath);
@@ -54,6 +53,8 @@ public:
 		_db.clear();
 		_reload(_basePath);
 	}
+
+	bool writeRaw(const std::string &n,const std::string &obj);
 
 	bool put(const std::string &n,const nlohmann::json &obj);
 
@@ -108,7 +109,6 @@ private:
 		inline bool operator!=(const _E &e) const { return (obj != e.obj); }
 	};
 
-	FILE *_feed;
 	std::string _basePath;
 	std::map<std::string,_E> _db;
 };

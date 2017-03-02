@@ -22,6 +22,22 @@ namespace ZeroTier {
 
 static const nlohmann::json _EMPTY_JSON(nlohmann::json::object());
 
+bool JSONDB::writeRaw(const std::string &n,const std::string &obj)
+{
+	if (!_isValidObjectName(n))
+		return false;
+
+	const std::string path(_genPath(n,true));
+	if (!path.length())
+		return false;
+
+	const std::string buf(obj);
+	if (!OSUtils::writeFile(path.c_str(),buf))
+		return false;
+
+	return true;
+}
+
 bool JSONDB::put(const std::string &n,const nlohmann::json &obj)
 {
 	if (!_isValidObjectName(n))
@@ -34,9 +50,6 @@ bool JSONDB::put(const std::string &n,const nlohmann::json &obj)
 	const std::string buf(OSUtils::jsonDump(obj));
 	if (!OSUtils::writeFile(path.c_str(),buf))
 		return false;
-
-	if (_feed)
-		fwrite(buf.c_str(),buf.length()+1,1,_feed);
 
 	_E &e = _db[n];
 	e.obj = obj;
@@ -72,9 +85,6 @@ const nlohmann::json &JSONDB::get(const std::string &n,unsigned long maxSinceChe
 					e->second.obj = OSUtils::jsonParse(buf);
 					e->second.lastModifiedOnDisk = lm; // don't update these if there is a parse error -- try again and again ASAP
 					e->second.lastCheck = now;
-
-					if (_feed)
-						fwrite(buf.c_str(),buf.length()+1,1,_feed); // it changed, so send to feed (also sends all objects on startup, which we want for Central)
 				} catch ( ... ) {} // parse errors result in "holding pattern" behavior
 			}
 		}
@@ -98,9 +108,6 @@ const nlohmann::json &JSONDB::get(const std::string &n,unsigned long maxSinceChe
 		}
 		e2.lastModifiedOnDisk = lm;
 		e2.lastCheck = now;
-
-		if (_feed)
-			fwrite(buf.c_str(),buf.length()+1,1,_feed);
 
 		return e2.obj;
 	}
