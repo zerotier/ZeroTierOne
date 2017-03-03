@@ -227,8 +227,9 @@ public:
 	 */
 	inline void expectReplyTo(const uint64_t packetId)
 	{
-		const unsigned long bucket = (unsigned long)(packetId & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
-		_expectingRepliesTo[bucket][_expectingRepliesToBucketPtr[bucket]++ & ZT_EXPECTING_REPLIES_BUCKET_MASK2] = (uint32_t)(packetId >> 32);
+		const unsigned long pid2 = (unsigned long)(packetId >> 32);
+		const unsigned long bucket = (unsigned long)(pid2 & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
+		_expectingRepliesTo[bucket][_expectingRepliesToBucketPtr[bucket]++ & ZT_EXPECTING_REPLIES_BUCKET_MASK2] = (uint32_t)pid2;
 	}
 
 	/**
@@ -243,10 +244,10 @@ public:
 	 */
 	inline bool expectingReplyTo(const uint64_t packetId) const
 	{
-		const unsigned long bucket = (unsigned long)(packetId & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
-		const uint32_t pid = (uint32_t)(packetId >> 32);
+		const uint32_t pid2 = (uint32_t)(packetId >> 32);
+		const unsigned long bucket = (unsigned long)(pid2 & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
 		for(unsigned long i=0;i<=ZT_EXPECTING_REPLIES_BUCKET_MASK2;++i) {
-			if (_expectingRepliesTo[bucket][i] == pid)
+			if (_expectingRepliesTo[bucket][i] == pid2)
 				return true;
 		}
 		return false;

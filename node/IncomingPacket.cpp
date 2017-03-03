@@ -875,6 +875,8 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 				}
 			}
 
+			if (p >= size()) return true;
+
 			const unsigned int numTags = at<uint16_t>(p); p += 2;
 			for(unsigned int i=0;i<numTags;++i) {
 				p += tag.deserialize(*this,p);
@@ -893,6 +895,8 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 				}
 			}
 
+			if (p >= size()) return true;
+
 			const unsigned int numRevocations = at<uint16_t>(p); p += 2;
 			for(unsigned int i=0;i<numRevocations;++i) {
 				p += revocation.deserialize(*this,p);
@@ -910,6 +914,8 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 					}
 				}
 			}
+
+			if (p >= size()) return true;
 
 			const unsigned int numCoos = at<uint16_t>(p); p += 2;
 			for(unsigned int i=0;i<numCoos;++i) {
