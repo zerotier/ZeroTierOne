@@ -661,6 +661,17 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 								ah["ct"] = json();
 								ah["c"] = json();
 								member["authHistory"].push_back(ah);
+
+								// Member is being de-authorized, so spray Revocation objects to all online members
+								if (!newAuth) {
+									Revocation rev(_node->prng(),nwid,0,now,ZT_REVOCATION_FLAG_FAST_PROPAGATE,Address(address),Revocation::CREDENTIAL_TYPE_COM);
+									rev.sign(_signingId);
+									Mutex::Lock _l(_lastRequestTime_m);
+									for(std::map< std::pair<uint64_t,uint64_t>,uint64_t >::iterator i(_lastRequestTime.begin());i!=_lastRequestTime.end();++i) {
+										if ((now - i->second) < ZT_NETWORK_AUTOCONF_DELAY)
+											_node->ncSendRevocation(Address(i->first.first),rev);
+									}
+								}
 							}
 						}
 
@@ -1037,8 +1048,9 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						Mutex::Lock _l(_db_m);
 						_db.put("network",nwids,network);
 					}
-					std::string pfx("network/"); pfx.append(nwids); pfx.append("/member/");
-					_db.filter(pfx,120000,[this,&now,&nwid](const std::string &n,const json &obj) {
+
+					// Send an update to all members of the network
+					_db.filter((std::string("network/") + nwids + "/member/"),120000,[this,&now,&nwid](const std::string &n,const json &obj) {
 						_pushMemberUpdate(now,nwid,obj);
 						return true; // do not delete
 					});

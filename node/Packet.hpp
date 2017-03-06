@@ -731,8 +731,7 @@ public:
 
 		/**
 		 * Network credentials push:
-		 *   <[...] serialized certificate of membership>
-		 *   [<[...] additional certificates of membership>]
+		 *   [<[...] one or more certificates of membership>]
 		 *   <[1] 0x00, null byte marking end of COM array>
 		 *   <[2] 16-bit number of capabilities>
 		 *   <[...] one or more serialized Capability>

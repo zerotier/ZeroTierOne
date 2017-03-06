@@ -191,7 +191,7 @@ public:
 	{
 		if (nconf.isPublic())
 			return true;
-		if ((_comRevocationThreshold)&&(_com.timestamp().first <= _comRevocationThreshold))
+		if (_com.timestamp().first <= _comRevocationThreshold)
 			return false;
 		return nconf.com.agreesWith(_com);
 	}

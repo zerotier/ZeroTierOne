@@ -774,6 +774,24 @@ void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &de
 	}
 }
 
+void Node::ncSendRevocation(const Address &destination,const Revocation &rev)
+{
+	if (destination == RR->identity.address()) {
+		SharedPtr<Network> n(network(rev.networkId()));
+		if (!n) return;
+		n->addCredential(RR->identity.address(),rev);
+	} else {
+		Packet outp(destination,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
+		outp.append((uint8_t)0x00);
+		outp.append((uint16_t)0);
+		outp.append((uint16_t)0);
+		outp.append((uint16_t)1);
+		rev.serialize(outp);
+		outp.append((uint16_t)0);
+		RR->sw->send(outp,true);
+	}
+}
+
 void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode)
 {
 	if (destination == RR->identity.address()) {

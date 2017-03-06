@@ -89,8 +89,8 @@ public:
 	{
 		if (signer.hasPrivate()) {
 			Buffer<sizeof(Revocation) + 64> tmp;
-			this->serialize(tmp,true);
 			_signedBy = signer.address();
+			this->serialize(tmp,true);
 			_signature = signer.sign(tmp.data(),tmp.size());
 			return true;
 		}

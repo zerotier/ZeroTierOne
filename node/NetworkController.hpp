@@ -24,11 +24,12 @@
 #include "Constants.hpp"
 #include "Dictionary.hpp"
 #include "NetworkConfig.hpp"
+#include "Revocation.hpp"
+#include "Address.hpp"
 
 namespace ZeroTier {
 
 class Identity;
-class Address;
 struct InetAddress;
 
 /**
@@ -61,6 +62,14 @@ public:
 		 * @param sendLegacyFormatConfig If true, send an old-format network config
 		 */
 		virtual void ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig) = 0;
+
+		/**
+		 * Send revocation to a node
+		 *
+		 * @param destination Destination node address
+		 * @param rev Revocation to send
+		 */
+		virtual void ncSendRevocation(const Address &destination,const Revocation &rev) = 0;
 
 		/**
 		 * Send a network configuration request error
