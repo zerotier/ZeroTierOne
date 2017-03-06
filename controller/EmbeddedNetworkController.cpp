@@ -758,9 +758,11 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 									std::string s = hops2[j];
 									test->hops[test->hopCount].addresses[test->hops[test->hopCount].breadth++] = Utils::hexStrToU64(s.c_str()) & 0xffffffffffULL;
 								}
+								++test->hopCount;
 							} else if (hops2.is_string()) {
 								std::string s = hops2;
 								test->hops[test->hopCount].addresses[test->hops[test->hopCount].breadth++] = Utils::hexStrToU64(s.c_str()) & 0xffffffffffULL;
+								++test->hopCount;
 							}
 						}
 					}
