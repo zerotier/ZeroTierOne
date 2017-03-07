@@ -102,18 +102,22 @@ void SoftwareUpdater::setUpdateDistribution(bool distribute)
 	_dist.clear();
 	if (distribute) {
 		_distLog = fopen((_homePath + ZT_PATH_SEPARATOR_S "update-dist.log").c_str(),"a");
-		std::string udd(_homePath + ZT_PATH_SEPARATOR_S "update-dist.d");
-		std::vector<std::string> ud(OSUtils::listDirectory(udd.c_str()));
-		for(std::vector<std::string>::iterator u(ud.begin());u!=ud.end();++u) {
+
+		const std::string udd(_homePath + ZT_PATH_SEPARATOR_S "update-dist.d");
+		const std::vector<std::string> ud(OSUtils::listDirectory(udd.c_str()));
+		for(std::vector<std::string>::const_iterator u(ud.begin());u!=ud.end();++u) {
 			// Each update has a companion .json file describing it. Other files are ignored.
 			if ((u->length() > 5)&&(u->substr(u->length() - 5,5) == ".json")) {
+
 				std::string buf;
 				if (OSUtils::readFile((udd + ZT_PATH_SEPARATOR_S + *u).c_str(),buf)) {
 					try {
 						_D d;
-						d.meta = OSUtils::jsonParse(buf);
-						std::string metaHash = OSUtils::jsonBinFromHex(d.meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH]);
-						std::string binPath(udd + ZT_PATH_SEPARATOR_S + u->substr(0,u->length() - 5));
+						d.meta = OSUtils::jsonParse(buf); // throws on invalid JSON
+
+						// If update meta is called e.g. foo.exe.json, then foo.exe is the update itself
+						const std::string binPath(udd + ZT_PATH_SEPARATOR_S + u->substr(0,u->length() - 5));
+						const std::string metaHash(OSUtils::jsonBinFromHex(d.meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH]));
 						if ((metaHash.length() == ZT_SHA512_DIGEST_LEN)&&(OSUtils::readFile(binPath.c_str(),d.bin))) {
 							uint8_t sha512[ZT_SHA512_DIGEST_LEN];
 							SHA512::hash(sha512,d.bin.data(),(unsigned int)d.bin.length());
@@ -128,6 +132,7 @@ void SoftwareUpdater::setUpdateDistribution(bool distribute)
 						}
 					} catch ( ... ) {} // ignore bad meta JSON, etc.
 				}
+
 			}
 		}
 	} else {
@@ -141,12 +146,13 @@ void SoftwareUpdater::setUpdateDistribution(bool distribute)
 void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void *data,unsigned int len)
 {
 	if (!len) return;
+	const MessageVerb v = (MessageVerb)reinterpret_cast<const uint8_t *>(data)[0];
 	try {
-		const MessageVerb v = (MessageVerb)reinterpret_cast<const uint8_t *>(data)[0];
 		switch(v) {
+
 			case VERB_GET_LATEST:
 			case VERB_LATEST: {
-				nlohmann::json req = OSUtils::jsonParse(std::string(reinterpret_cast<const char *>(data) + 1,len - 1));
+				nlohmann::json req = OSUtils::jsonParse(std::string(reinterpret_cast<const char *>(data) + 1,len - 1)); // throws on invalid JSON
 				if (req.is_object()) {
 					const unsigned int rvMaj = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR],0);
 					const unsigned int rvMin = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR],0);
@@ -156,6 +162,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 					const unsigned int rvArch = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_ARCHITECTURE],0);
 					const unsigned int rvVendor = (unsigned int)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_VENDOR],0);
 					const std::string rvChannel(OSUtils::jsonString(req[ZT_SOFTWARE_UPDATE_JSON_CHANNEL],""));
+
 					if (v == VERB_GET_LATEST) {
 
 						if (_dist.size() > 0) {
@@ -226,8 +233,8 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 								}
 							}
 						}
-
 					}
+
 				}
 			}	break;
 
@@ -273,10 +280,17 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 				break;
 
 			default:
+				if (_distLog) {
+					fprintf(_distLog,"%.10llx WARNING: bad update message verb==%u length==%u (unrecognized verb)" ZT_EOL_S,origin,(unsigned int)v,len);
+					fflush(_distLog);
+				}
 				break;
 		}
 	} catch ( ... ) {
-		// Discard bad messages
+		if (_distLog) {
+			fprintf(_distLog,"%.10llx WARNING: bad update message verb==%u length==%u (unexpected exception, likely invalid JSON)" ZT_EOL_S,origin,(unsigned int)v,len);
+			fflush(_distLog);
+		}
 	}
 }
 
@@ -324,9 +338,9 @@ bool SoftwareUpdater::check(const uint64_t now)
 				// (1) Check the hash itself to make sure the image is basically okay
 				uint8_t sha512[ZT_SHA512_DIGEST_LEN];
 				SHA512::hash(sha512,_download.data(),(unsigned int)_download.length());
-				if (Utils::hex(sha512,ZT_SHA512_DIGEST_LEN) == OSUtils::jsonString(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH],"~")) {
+				if (Utils::hex(sha512,ZT_SHA512_DIGEST_LEN) == OSUtils::jsonString(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH],"")) {
 					// (2) Check signature by signing authority
-					std::string sig(OSUtils::jsonBinFromHex(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNATURE]));
+					const std::string sig(OSUtils::jsonBinFromHex(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNATURE]));
 					if (Identity(ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY).verify(_download.data(),(unsigned int)_download.length(),sig.data(),(unsigned int)sig.length())) {
 						// (3) Try to save file, and if so we are good.
 						if (OSUtils::writeFile(metaPath.c_str(),OSUtils::jsonDump(_latestMeta)) && OSUtils::writeFile(binPath.c_str(),_download)) {
@@ -382,8 +396,8 @@ void SoftwareUpdater::apply()
 		char *argv[256];
 		unsigned long ac = 0;
 		argv[ac++] = const_cast<char *>(updatePath.c_str());
-		std::vector<std::string> argsSplit(OSUtils::split(OSUtils::jsonString(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_EXEC_ARGS],"").c_str()," ","\\","\""));
-		for(std::vector<std::string>::iterator a(argsSplit.begin());a!=argsSplit.end();++a) {
+		const std::vector<std::string> argsSplit(OSUtils::split(OSUtils::jsonString(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_EXEC_ARGS],"").c_str()," ","\\","\""));
+		for(std::vector<std::string>::const_iterator a(argsSplit.begin());a!=argsSplit.end();++a) {
 			argv[ac] = const_cast<char *>(a->c_str());
 			if (++ac == 255) break;
 		}
