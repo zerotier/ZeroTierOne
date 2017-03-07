@@ -186,7 +186,7 @@ uninstall:	FORCE
 # These are just for convenience for building Linux packages
 
 debian:	FORCE
-	debuild -I -i -us -uc
+	debuild -I -i -us -uc -nc -b
 
 redhat:	FORCE
 	rpmbuild -ba zerotier-one.spec
