@@ -1126,7 +1126,16 @@ public:
 					res["version"] = tmp;
 					res["clock"] = OSUtils::now();
 
-					World planet(_node->planet());
+					{
+						Mutex::Lock _l(_localConfig_m);
+						res["config"] = _localConfig;
+					}
+					json &settings = res["config"]["settings"];
+					settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
+					settings["portMappingEnabled"] = OSUtils::jsonBool(settings["portMappingEnabled"],true);
+					settings["softwareUpdate"] = OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT);
+
+					const World planet(_node->planet());
 					res["planetWorldId"] = planet.id();
 					res["planetWorldTimestamp"] = planet.timestamp();
 
