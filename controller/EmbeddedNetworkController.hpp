@@ -121,7 +121,6 @@ private:
 	Mutex _threads_m;
 
 	// Gathers a bunch of statistics about members of a network, IP assignments, etc. that we need in various places
-	// This does lock _networkMemberCache_m
 	struct _NetworkMemberInfo
 	{
 		_NetworkMemberInfo() : authorizedMemberCount(0),activeMemberCount(0),totalMemberCount(0),mostRecentDeauthTime(0) {}
@@ -136,6 +135,11 @@ private:
 	std::map<uint64_t,_NetworkMemberInfo> _nmiCache;
 	Mutex _nmiCache_m;
 	void _getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi);
+	inline void _clearNetworkMemberInfoCache(const uint64_t nwid)
+	{
+		Mutex::Lock _l(_nmiCache_m);
+		_nmiCache.erase(nwid);
+	}
 
 	void _pushMemberUpdate(uint64_t now,uint64_t nwid,const nlohmann::json &member);
 

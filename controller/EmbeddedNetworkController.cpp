@@ -664,6 +664,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 								// Member is being de-authorized, so spray Revocation objects to all online members
 								if (!newAuth) {
+									_clearNetworkMemberInfoCache(nwid);
 									Revocation rev(_node->prng(),nwid,0,now,ZT_REVOCATION_FLAG_FAST_PROPAGATE,Address(address),Revocation::CREDENTIAL_TYPE_COM);
 									rev.sign(_signingId);
 									Mutex::Lock _l(_lastRequestTime_m);
@@ -1662,6 +1663,7 @@ void EmbeddedNetworkController::_request(
 							if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)
 								nc.staticIps[nc.staticIpCount++] = ip6;
 							haveManagedIpv6AutoAssignment = true;
+							_clearNetworkMemberInfoCache(nwid); // clear cache to prevent IP assignment duplication on many rapid assigns
 							break;
 						}
 					}
@@ -1717,6 +1719,7 @@ void EmbeddedNetworkController::_request(
 								v4ip->sin_addr.s_addr = Utils::hton(ip);
 							}
 							haveManagedIpv4AutoAssignment = true;
+							_clearNetworkMemberInfoCache(nwid); // clear cache to prevent IP assignment duplication on many rapid assigns
 							break;
 						}
 					}
