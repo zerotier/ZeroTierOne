@@ -392,6 +392,9 @@ void SoftwareUpdater::apply()
 		memset(&si,0,sizeof(si));
 		memset(&pi,0,sizeof(pi));
 		CreateProcessA(NULL,const_cast<LPSTR>(updatePath.c_str()),NULL,NULL,FALSE,CREATE_NO_WINDOW|CREATE_NEW_PROCESS_GROUP,NULL,NULL,&si,&pi);
+		// Windows doesn't exit here -- updater will stop the service during update, etc. -- but we do want to stop multiple runs from happening
+		_latestMeta = nlohmann::json();
+		_latestValid = false;
 #else
 		char *argv[256];
 		unsigned long ac = 0;
@@ -403,7 +406,25 @@ void SoftwareUpdater::apply()
 		}
 		argv[ac] = (char *)0;
 		chmod(updatePath.c_str(),0700);
+
+		// Close all open file descriptors except stdout/stderr/etc.
+		int minMyFd = STDIN_FILENO;
+		if (STDOUT_FILENO > minMyFd) minMyFd = STDOUT_FILENO;
+		if (STDERR_FILENO > minMyFd) minMyFd = STDERR_FILENO;
+		++minMyFd;
+#ifdef _SC_OPEN_MAX
+		int maxMyFd = (int)sysconf(_SC_OPEN_MAX);
+		if (maxMyFd <= minMyFd)
+			maxMyFd = 65536;
+#else
+		int maxMyFd = 65536;
+#endif
+		while (minMyFd < maxMyFd)
+			close(minMyFd++);
+
 		execv(updatePath.c_str(),argv);
+		fprintf(stderr,"FATAL: unable to execute software update binary at %s\n",updatePath.c_str());
+		exit(1);
 #endif
 	}
 }
