@@ -72,7 +72,6 @@
     <ClCompile Include="..\..\osdep\OSUtils.cpp" />
     <ClCompile Include="..\..\osdep\PortMapper.cpp" />
     <ClCompile Include="..\..\osdep\WindowsEthernetTap.cpp" />
-    <ClCompile Include="..\..\service\ControlPlane.cpp" />
     <ClCompile Include="..\..\service\OneService.cpp" />
     <ClCompile Include="..\..\service\SoftwareUpdater.cpp" />
     <ClCompile Include="ServiceBase.cpp" />
@@ -151,7 +150,6 @@
     <ClInclude Include="..\..\osdep\PortMapper.hpp" />
     <ClInclude Include="..\..\osdep\Thread.hpp" />
     <ClInclude Include="..\..\osdep\WindowsEthernetTap.hpp" />
-    <ClInclude Include="..\..\service\ControlPlane.hpp" />
     <ClInclude Include="..\..\service\OneService.hpp" />
     <ClInclude Include="..\..\service\SoftwareUpdater.hpp" />
     <ClInclude Include="..\..\version.h" />

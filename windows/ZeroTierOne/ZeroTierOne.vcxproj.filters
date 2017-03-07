@@ -78,9 +78,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\service\ControlPlane.cpp">
-      <Filter>Source Files\service</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\service\OneService.cpp">
       <Filter>Source Files\service</Filter>
     </ClCompile>
@@ -274,9 +271,6 @@
     </ClInclude>
     <ClInclude Include="..\..\osdep\WindowsEthernetTap.hpp">
       <Filter>Header Files\osdep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\service\ControlPlane.hpp">
-      <Filter>Header Files\service</Filter>
     </ClInclude>
     <ClInclude Include="..\..\service\OneService.hpp">
       <Filter>Header Files\service</Filter>

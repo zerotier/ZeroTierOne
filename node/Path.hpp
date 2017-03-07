@@ -156,7 +156,7 @@ public:
 		const uint64_t fl = (_incomingLinkQualityFastLog = ((_incomingLinkQualityFastLog << 1) | (uint64_t)(prev == ((counter - 1) & 0x7))));
 		if (++_incomingLinkQualitySlowLogCounter >= 64) {
 			_incomingLinkQualitySlowLogCounter = 0;
-			_incomingLinkQualitySlowLog[_incomingLinkQualitySlowLogPtr++ % sizeof(_incomingLinkQualitySlowLog)] = Utils::countBits(fl);
+			_incomingLinkQualitySlowLog[_incomingLinkQualitySlowLogPtr++ % sizeof(_incomingLinkQualitySlowLog)] = (uint8_t)Utils::countBits(fl);
 		}
 	}
 
