@@ -32,7 +32,7 @@
 /**
  * Revision
  */
-#define ZEROTIER_ONE_VERSION_REVISION 17
+#define ZEROTIER_ONE_VERSION_REVISION 19
 
 /**
  * Build version
