@@ -152,9 +152,22 @@ long OSUtils::cleanDirectory(const char *path,const uint64_t olderThan)
 #ifdef __WINDOWS__
 	HANDLE hFind;
 	WIN32_FIND_DATAA ffd;
+	LARGE_INTEGER date,adjust;
+	adjust.QuadPart = 11644473600000 * 10000;
+	char tmp[4096];
 	if ((hFind = FindFirstFileA((std::string(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
 		do {
-			if ((strcmp(ffd.cFileName,"."))&&(strcmp(ffd.cFileName,".."))) {
+			if ((strcmp(ffd.cFileName,"."))&&(strcmp(ffd.cFileName,".."))&&((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)) {
+					date.HighPart = ffd.ftLastWriteTime.dwHighDateTime;
+					date.LowPart = ffd.ftLastWriteTime.dwLowDateTime;
+					if (date.QuadPart > 0) {
+							date.QuadPart -= adjust.QuadPart;
+							if (((date.QuadPart / 10000000) * 1000) < olderThan) {
+									Utils::snprintf(tmp, sizeof(tmp), "%s\\%s", path, ffd.cFileName);
+									if (DeleteFileA(tmp))
+											++cleaned;
+							}
+					}
 			}
 		} while (FindNextFileA(hFind,&ffd));
 		FindClose(hFind);
@@ -414,7 +427,7 @@ std::string OSUtils::platformDefaultHomePath()
 }
 
 // Inline these massive JSON operations in one place only to reduce binary footprint and compile time
-nlohmann::json OSUtils::jsonParse(const std::string &buf) { return nlohmann::json::parse(buf); }
+nlohmann::json OSUtils::jsonParse(const std::string &buf) { return nlohmann::json::parse(buf.c_str()); }
 std::string OSUtils::jsonDump(const nlohmann::json &j) { return j.dump(1); }
 
 uint64_t OSUtils::jsonInt(const nlohmann::json &jv,const uint64_t dfl)
