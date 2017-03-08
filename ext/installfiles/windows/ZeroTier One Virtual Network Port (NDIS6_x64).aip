@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="12.0" version="12.3.1" Modules="enterprise" RootPath="." Language="en" Id="{4070644B-EC9F-4962-B14A-770B9E309DC3}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="12.0" version="12.5.1" Modules="enterprise" RootPath="." Language="en" Id="{4070644B-EC9F-4962-B14A-770B9E309DC3}">
   <COMPONENT cid="caphyon.advinst.msicomp.ProjectOptionsComponent">
     <ROW Name="HiddenItems" Value="UpdaterComponent;SerValComponent;AutorunComponent;MultipleInstancesComponent;MsiJavaComponent;MsiRegsComponent;MsiExtComponent;MsiAssemblyComponent;MsiServInstComponent;AnalyticsComponent;ActSyncAppComponent;MsiMergeModsComponent;MsiThemeComponent;BackgroundImagesComponent;DictionaryComponent;MsiEnvComponent;ScheduledTasksComponent;CPLAppletComponent;GameUxComponent;FirewallExceptionComponent;UserAccountsComponent;MsiClassComponent;WebApplicationsComponent;MsiOdbcDataSrcComponent;SqlConnectionComponent;SharePointSlnComponent;SilverlightSlnComponent;MsiAppSearchComponent"/>
   </COMPONENT>
@@ -15,7 +15,7 @@
     <ROW Property="LIMITUI" MultiBuildValue="DefaultBuild:1"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier"/>
-    <ROW Property="ProductCode" Value="1033:{D7093B7A-71BA-484B-A27C-59ACDAD2206F} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{4AFE4740-C680-40FE-B6B0-0C15EB0176F1} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One Virtual Network Port"/>
     <ROW Property="ProductVersion" Value="1.0.0" Type="32"/>
@@ -58,7 +58,7 @@
     <ROW Path="&lt;AI_DICTS&gt;ui_en.ail"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DigCertStoreComponent">
-    <ROW TimeStampUrl="http://timestamp.verisign.com/scripts/timstamp.dll" SignerDescription="[|ProductName]" SignOptions="7" SignTool="0" Thumbprint="2ad023dc7aa92bf4265b33852a2ed2406d2bee86 Subject: ZeroTier Networks LLC&#10;Issuer: DigiCert High Assurance Code Signing CA-1&#10;Valid from 04/24/2015 to 04/01/2016"/>
+    <ROW TimeStampUrl="http://timestamp.verisign.com/scripts/timstamp.dll" SignerDescription="[|ProductName]" SignOptions="7" SignTool="0" UseSha256="1" Thumbprint="7f01c3746df9e6c8235ea2ae38d3cdfeb185728b Subject: ZeroTier, Inc.&#10;Issuer: DigiCert EV Code Signing CA (SHA2)&#10;Valid from 11/30/2016 to 12/05/2019"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FragmentComponent">
     <ROW Fragment="CommonUI.aip" Path="&lt;AI_FRAGS&gt;CommonUI.aip"/>

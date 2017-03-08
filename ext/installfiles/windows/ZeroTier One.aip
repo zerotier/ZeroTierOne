@@ -27,10 +27,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{EDA42EDB-45DE-446E-AB3A-31D209558255} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{99A3C357-A412-4230-AFFF-E9205222FDF3} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
-    <ROW Property="ProductVersion" Value="1.1.17" Type="32"/>
+    <ROW Property="ProductVersion" Value="1.1.19" Type="32"/>
     <ROW Property="REBOOT" MultiBuildValue="DefaultBuild:ReallySuppress"/>
     <ROW Property="RUNAPPLICATION" Value="1" Type="4"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
@@ -60,7 +60,7 @@
     <ROW Directory="x86_Dir" Directory_Parent="tapwindows_Dir" DefaultDir="x86"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{449F1B5F-F32A-4290-B892-F1B63EB68D29}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{5E2F0984-B6F7-4037-9407-662F90522113}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{020DCABD-5D56-49B9-AF48-F07F0B55E590}" Directory_="APPDIR" Attributes="4" KeyPath="NoModify" Options="1"/>
     <ROW Component="AI_ExePath" ComponentId="{8E02B36C-7A19-429B-A93E-77A9261AC918}" Directory_="APPDIR" Attributes="4" KeyPath="AI_ExePath"/>
     <ROW Component="Hardcodet.Wpf.TaskbarNotification.dll" ComponentId="{BEA825AF-2555-44AF-BE40-47FFC16DCBA6}" Directory_="APPDIR" Attributes="0" KeyPath="Hardcodet.Wpf.TaskbarNotification.dll"/>
@@ -70,7 +70,7 @@
     <ROW Component="copyutil.exe" ComponentId="{9B9E89FB-81CB-4500-978B-11E2FA81B5B4}" Directory_="APPDIR" Attributes="0" KeyPath="copyutil.exe"/>
     <ROW Component="networks.d" ComponentId="{EF54D0DF-889F-41DC-AF5C-4E7F96AB1C8B}" Directory_="networks.d_Dir" Attributes="0"/>
     <ROW Component="regid.201001.com.zerotier" ComponentId="{A39C80FC-6A8F-454F-9052-10DAC3C3B139}" Directory_="regid.201001.com.zerotier_Dir" Attributes="0"/>
-    <ROW Component="segoeui.ttf" ComponentId="{9F415308-A118-419F-AD8A-678DEA856B78}" Directory_="FontsFolder" Attributes="0" Type="0"/>
+    <ROW Component="segoeui.ttf" ComponentId="{9F415308-A118-419F-AD8A-678DEA856B78}" Directory_="FontsFolder" Attributes="144" Type="0"/>
     <ROW Component="zerotierone_x64.exe" ComponentId="{DFCFB72D-B055-4E60-B6D8-81FF585C2183}" Directory_="One_Dir" Attributes="256" Condition="VersionNT64" KeyPath="zerotierone_x64.exe"/>
     <ROW Component="zerotierone_x86.exe" ComponentId="{5D2F3366-4FE1-40A4-A81A-66C49FA11F1C}" Directory_="One_Dir" Attributes="0" Condition="NOT VersionNT64" KeyPath="zerotierone_x86.exe"/>
     <ROW Component="zttap300.cat" ComponentId="{123CD683-FD99-4F0F-8F9B-0222DF409B09}" Directory_="x64_Dir" Attributes="256" Condition="VersionNT64" KeyPath="zttap300.cat_2" Type="0"/>
@@ -106,7 +106,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BuildComponent">
     <ROW BuildKey="DefaultBuild" BuildName="MSI" BuildOrder="1" BuildType="1" PackageFolder="..\..\.." PackageFileName="ZeroTier One" Languages="en" InstallationType="4" ExtUI="true" UseLargeSchema="true"/>
-    <ROW BuildKey="ExeBuild" BuildName="update" BuildOrder="2" BuildType="1" PackageFolder="..\..\.." PackageFileName="ZeroTier One" Languages="en" InstallationType="2" CabsLocation="1" CompressCabs="false" UseLzma="true" LzmaMethod="2" LzmaCompressionLevel="4" PackageType="1" FilesInsideExe="true" ExeIconPath="..\..\..\artwork\ZeroTierIcon.ico" ExtractionFolder="[AppDataFolder][|Manufacturer]\[|ProductName] [|ProductVersion]\install" MsiCmdLine="/qn" UseLargeSchema="true" ExeName="zt1_update_2_1,2_[|ProductVersion]"/>
+    <ROW BuildKey="ExeBuild" BuildName="update" BuildOrder="2" BuildType="1" PackageFolder="..\..\.." PackageFileName="ZeroTier One" Languages="en" InstallationType="2" CabsLocation="1" CompressCabs="false" UseLzma="true" LzmaMethod="2" LzmaCompressionLevel="4" PackageType="1" FilesInsideExe="true" ExeIconPath="..\..\..\artwork\ZeroTierIcon.ico" ExtractionFolder="[AppDataFolder][|Manufacturer]\[|ProductName] [|ProductVersion]\install" MsiCmdLine="/qn" UseLargeSchema="true" ExeName="zt1_update_2_1,2_[|ProductVersion]_0"/>
     <ATTRIBUTE name="CurrentBuild" value="DefaultBuild"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.CacheComponent">
@@ -125,7 +125,7 @@
     <ROW Path="&lt;AI_DICTS&gt;ui_en.ail"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DigCertStoreComponent">
-    <ROW TimeStampUrl="http://timestamp.verisign.com/scripts/timstamp.dll" SignerDescription="ZeroTier One" DescriptionUrl="https://www.zerotier.com/" SignOptions="7" SignTool="0" UseSha256="1" Thumbprint="45f6b8ef02b543eeaa08d5f0f08ebe72c2a8a2d5 Subject: ZeroTier, Inc.&#10;Issuer: DigiCert SHA2 High Assurance Code Signing CA&#10;Valid from 03/22/2016 to 05/06/2019"/>
+    <ROW TimeStampUrl="http://timestamp.verisign.com/scripts/timstamp.dll" SignerDescription="ZeroTier One" DescriptionUrl="https://www.zerotier.com/" SignOptions="7" SignTool="0" UseSha256="1" Thumbprint="7f01c3746df9e6c8235ea2ae38d3cdfeb185728b Subject: ZeroTier, Inc.&#10;Issuer: DigiCert EV Code Signing CA (SHA2)&#10;Valid from 11/30/2016 to 12/05/2019"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FirewallExceptionComponent">
     <ROW FirewallException="ZeroTierOneControl" DisplayName="ZeroTier One TCP/9993" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="1" Profiles="7" Port="9993" Protocol="TCP"/>
@@ -283,7 +283,7 @@
     <ROW Action="SET_TARGETDIR_TO_APPDIR" Type="51" Source="TARGETDIR" Target="[APPDIR]"/>
     <ROW Action="TapDeviceRemove32" Type="3154" Source="zerotierone_x86.exe" Target="-D"/>
     <ROW Action="TapDeviceRemove64" Type="3154" Source="zerotierone_x64.exe" Target="-D"/>
-    <ROW Action="TerminateUI" Type="1" Source="aicustact.dll" Target="StopProcess" Options="1" AdditionalSeq="AI_DATA_SETTER_6"/>
+    <ROW Action="TerminateUI" Type="65" Source="aicustact.dll" Target="StopProcess" Options="1" AdditionalSeq="AI_DATA_SETTER_6"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiEmbeddedChainerComponent">
     <ROW MsiEmbeddedChainer="msichainer.exe" Condition="VersionMsi &gt;= &quot;4.05&quot;" CommandLine="[AI_CHAINER_CMD_LINE]" Source="msichainer.exe" Type="2"/>
@@ -389,8 +389,6 @@
     <ROW FileKey="devcon.log" Component_="ProductInformation" FileName="devcon.log" DirProperty="One_Dir" InstallMode="3"/>
     <ROW FileKey="devcon_x64.exe" Component_="ProductInformation" FileName="devcon_x64.exe" DirProperty="One_Dir" InstallMode="3"/>
     <ROW FileKey="devcon_x86.exe" Component_="ProductInformation" FileName="devcon_x86.exe" DirProperty="One_Dir" InstallMode="3"/>
-    <ROW FileKey="latestupdate.exe" Component_="ProductInformation" FileName="latest-update.exe" DirProperty="One_Dir" InstallMode="3"/>
-    <ROW FileKey="latestupdate.json" Component_="ProductInformation" FileName="latest-update.json" DirProperty="One_Dir" InstallMode="3"/>
     <ROW FileKey="node.log" Component_="ProductInformation" FileName="node.log" DirProperty="One_Dir" InstallMode="3"/>
     <ROW FileKey="node.log.old" Component_="ProductInformation" FileName="node.log.old" DirProperty="One_Dir" InstallMode="3"/>
     <ROW FileKey="roottopology" Component_="ProductInformation" FileName="root-topology" DirProperty="One_Dir" InstallMode="3"/>
@@ -431,7 +429,7 @@
     <ROW XmlAttribute="xsischemaLocation" XmlElement="swidsoftware_identification_tag" Name="xsi:schemaLocation" Flags="14" Order="3" Value="http://standards.iso.org/iso/19770/-2/2008/schema.xsd software_identification_tag.xsd"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlElementComponent">
-    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Condition="1" Order="2" Flags="14" Text="17"/>
+    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Condition="1" Order="2" Flags="14" Text="19"/>
     <ROW XmlElement="swidentitlement_required_indicator" ParentElement="swidsoftware_identification_tag" Name="swid:entitlement_required_indicator" Condition="1" Order="0" Flags="14" Text="false"/>
     <ROW XmlElement="swidmajor" ParentElement="swidnumeric" Name="swid:major" Condition="1" Order="0" Flags="14" Text="1"/>
     <ROW XmlElement="swidminor" ParentElement="swidnumeric" Name="swid:minor" Condition="1" Order="1" Flags="14" Text="1"/>
