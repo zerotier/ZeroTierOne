@@ -1132,14 +1132,18 @@ public:
 					}
 					json &settings = res["config"]["settings"];
 					settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
+#ifdef ZT_USE_MINIUPNPC
 					settings["portMappingEnabled"] = OSUtils::jsonBool(settings["portMappingEnabled"],true);
+#else
+					settings["portMappingEnabled"] = false; // not supported in build
+#endif
 					settings["softwareUpdate"] = OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT);
 
 					const World planet(_node->planet());
 					res["planetWorldId"] = planet.id();
 					res["planetWorldTimestamp"] = planet.timestamp();
 
-	#ifdef ZT_ENABLE_CLUSTER
+#ifdef ZT_ENABLE_CLUSTER
 					json cj;
 					ZT_ClusterStatus cs;
 					_node->clusterStatus(&cs);
@@ -1162,9 +1166,9 @@ public:
 						cj["clusterSize"] = cs.clusterSize;
 					}
 					res["cluster"] = cj;
-	#else
+#else
 					res["cluster"] = json();
-	#endif
+#endif
 
 					scode = 200;
 				} else if (ps[0] == "moon") {
