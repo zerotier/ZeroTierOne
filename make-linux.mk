@@ -185,10 +185,10 @@ uninstall:	FORCE
 
 # These are just for convenience for building Linux packages
 
-debian:	distclean
-	debuild -I -i -us -uc
+debian:	FORCE
+	debuild -I -i -us -uc -nc -b
 
-redhat:	distclean
+redhat:	FORCE
 	rpmbuild -ba zerotier-one.spec
 
 FORCE:
