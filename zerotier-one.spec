@@ -18,6 +18,7 @@ Requires:       iproute
 
 %if 0%{?rhel} >= 7
 Requires:       systemd
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
 %if 0%{?rhel} <= 6
@@ -53,6 +54,14 @@ containers (Docker, OpenVZ, etc.).
 #%else
 #make CFLAGS="%{optflags}" CXXFLAGS="%{optflags}" ZT_USE_MINIUPNPC=1 %{?_smp_mflags} one manpages selftest
 #%endif
+
+%pre
+%if 0%{?rhel} >= 7
+/usr/bin/getent passwd zerotier-one || /usr/sbin/useradd -r -d /var/lib/zerotier-one -s /sbin/nologin zerotier-one
+%endif
+%if 0%{?fedora} >= 21
+/usr/bin/getent passwd zerotier-one || /usr/sbin/useradd -r -d /var/lib/zerotier-one -s /sbin/nologin zerotier-one
+%endif
 
 %install
 rm -rf $RPM_BUILD_ROOT
