@@ -102,6 +102,11 @@ namespace WinUI
 
         private void apiNetworkCallback(List<ZeroTierNetwork> networks)
         {
+						if (networks == null)
+						{
+								return;
+						}
+
             lock (_knownNetworks)
             {
                 _knownNetworks = _knownNetworks.Union(networks, new NetworkEqualityComparer()).ToList();
