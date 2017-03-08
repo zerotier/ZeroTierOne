@@ -147,6 +147,9 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 // How often to check for local interface addresses
 #define ZT_LOCAL_INTERFACE_CHECK_INTERVAL 60000
 
+// Clean files from iddb.d that are older than this (60 days)
+#define ZT_IDDB_CLEANUP_AGE 5184000000ULL
+
 namespace ZeroTier {
 
 namespace {
@@ -826,6 +829,7 @@ public:
 			uint64_t lastBindRefresh = 0;
 			uint64_t lastUpdateCheck = clockShouldBe;
 			uint64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
+			uint64_t lastCleanedIddb = 0;
 			for(;;) {
 				_run_m.lock();
 				if (!_run) {
@@ -839,6 +843,12 @@ public:
 				}
 
 				const uint64_t now = OSUtils::now();
+
+				// Clean iddb.d on start and every 24 hours
+				if ((now - lastCleanedIddb) > 86400000) {
+					lastCleanedIddb = now;
+					OSUtils::cleanDirectory((_homePath + ZT_PATH_SEPARATOR_S "iddb.d").c_str(),now - ZT_IDDB_CLEANUP_AGE);
+				}
 
 				// Attempt to detect sleep/wake events by detecting delay overruns
 				bool restarted = false;

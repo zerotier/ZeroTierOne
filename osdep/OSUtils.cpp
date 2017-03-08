@@ -145,6 +145,52 @@ std::map<std::string,char> OSUtils::listDirectoryFull(const char *path)
 	return r;
 }
 
+long OSUtils::cleanDirectory(const char *path,const uint64_t olderThan)
+{
+	long cleaned = 0;
+
+#ifdef __WINDOWS__
+	HANDLE hFind;
+	WIN32_FIND_DATAA ffd;
+	if ((hFind = FindFirstFileA((std::string(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
+		do {
+			if ((strcmp(ffd.cFileName,"."))&&(strcmp(ffd.cFileName,".."))) {
+			}
+		} while (FindNextFileA(hFind,&ffd));
+		FindClose(hFind);
+	}
+#else
+	struct dirent de;
+	struct dirent *dptr;
+	struct stat st;
+	char tmp[4096];
+	DIR *d = opendir(path);
+	if (!d)
+		return -1;
+	dptr = (struct dirent *)0;
+	for(;;) {
+		if (readdir_r(d,&de,&dptr))
+			break;
+		if (dptr) {
+			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,".."))&&(dptr->d_type == DT_REG)) {
+				Utils::snprintf(tmp,sizeof(tmp),"%s/%s",path,dptr->d_name);
+				if (stat(tmp,&st) == 0) {
+					uint64_t mt = (uint64_t)(st.st_mtime);
+					if ((mt > 0)&&((mt * 1000) < olderThan)) {
+						printf("%s\n",tmp);
+						if (unlink(tmp) == 0)
+							++cleaned;
+					}
+				}
+			}
+		} else break;
+	}
+	closedir(d);
+#endif
+
+	return cleaned;
+}
+
 bool OSUtils::rmDashRf(const char *path)
 {
 #ifdef __WINDOWS__

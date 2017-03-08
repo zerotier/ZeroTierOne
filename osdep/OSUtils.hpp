@@ -120,6 +120,16 @@ public:
 	static std::map<std::string,char> listDirectoryFull(const char *path);
 
 	/**
+	 * Clean a directory of files whose last modified time is older than this
+	 *
+	 * This ignores directories, symbolic links, and other special files.
+	 *
+	 * @param olderThan Last modified older than timestamp (ms since epoch)
+	 * @return Number of cleaned files or negative on fatal error
+	 */
+	static long cleanDirectory(const char *path,const uint64_t olderThan);
+
+	/**
 	 * Delete a directory and all its files and subdirectories recursively
 	 *
 	 * @param path Path to delete
