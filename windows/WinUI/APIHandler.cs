@@ -230,16 +230,23 @@ namespace WinUI
             request.Method = "POST";
             request.ContentType = "applicaiton/json";
             request.Timeout = 10000;
-
-            using (var streamWriter = new StreamWriter(((HttpWebRequest)request).GetRequestStream()))
-            {
-                string json = "{\"allowManaged\":" + (allowManaged ? "true" : "false") + "," +
-                    "\"allowGlobal\":" + (allowGlobal ? "true" : "false") + "," +
-                    "\"allowDefault\":" + (allowDefault ? "true" : "false") + "}";
-                streamWriter.Write(json);
-                streamWriter.Flush();
-                streamWriter.Close();
-            }
+						try
+						{
+								using (var streamWriter = new StreamWriter(((HttpWebRequest)request).GetRequestStream()))
+								{
+										string json = "{\"allowManaged\":" + (allowManaged ? "true" : "false") + "," +
+												"\"allowGlobal\":" + (allowGlobal ? "true" : "false") + "," +
+												"\"allowDefault\":" + (allowDefault ? "true" : "false") + "}";
+										streamWriter.Write(json);
+										streamWriter.Flush();
+										streamWriter.Close();
+								}
+						}
+						catch (System.Net.WebException)
+						{
+								MessageBox.Show("Error Joining Network: Cannot connect to ZeroTier service.");
+								return;
+						}
 
             try
             {
