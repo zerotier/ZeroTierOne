@@ -177,7 +177,6 @@ long OSUtils::cleanDirectory(const char *path,const uint64_t olderThan)
 				if (stat(tmp,&st) == 0) {
 					uint64_t mt = (uint64_t)(st.st_mtime);
 					if ((mt > 0)&&((mt * 1000) < olderThan)) {
-						printf("%s\n",tmp);
 						if (unlink(tmp) == 0)
 							++cleaned;
 					}
