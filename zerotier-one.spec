@@ -27,6 +27,7 @@ Requires:       chkconfig
 
 %if 0%{?fedora} >= 21
 Requires:       systemd
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
 %description
