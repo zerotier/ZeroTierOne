@@ -220,6 +220,7 @@ static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
 	}
 }
 
+#ifdef __SYNOLOGY__
 bool LinuxEthernetTap::addIpSyn(std::vector<InetAddress> ips)
 {
 	// Here we fill out interface config (ifcfg-dev) to prevent it from being killed
@@ -233,14 +234,14 @@ bool LinuxEthernetTap::addIpSyn(std::vector<InetAddress> ips)
 		setenv("PATH", "/sbin:/bin:/usr/sbin:/usr/bin", 1);
 		// We must know if there is at least (one) of each protocol version so we 
 		// can properly enumerate address/netmask combinations in the ifcfg-dev file
-		for(int i=0; i<ips.size(); i++) {
+		for(int i=0; i<(int)ips.size(); i++) {
 			if (ips[i].isV4())
 				ip4_tot++;
 			else
 				ip6_tot++;
 		}
 		// Assemble and write contents of ifcfg-dev file
-		for(int i=0; i<ips.size(); i++) {
+		for(int i=0; i<(int)ips.size(); i++) {
 			if (ips[i].isV4()) {
 				std::string numstr4 = ip4_tot > 1 ? std::to_string(ip4) : "";
 				cfg_contents += "\nIPADDR"+numstr4+"="+ips[i].toIpString()
@@ -256,7 +257,7 @@ bool LinuxEthernetTap::addIpSyn(std::vector<InetAddress> ips)
 		}
 		OSUtils::writeFile(filepath.c_str(), cfg_contents.c_str(), cfg_contents.length());
 		// Finaly, add IPs
-		for(int i=0; i<ips.size(); i++){
+		for(int i=0; i<(int)ips.size(); i++){
 			if (ips[i].isV4())
 				::execlp("ip","ip","addr","add",ips[i].toString().c_str(),"broadcast",ips[i].broadcast().toIpString().c_str(),"dev",_dev.c_str(),(const char *)0);
 			else
@@ -270,6 +271,7 @@ bool LinuxEthernetTap::addIpSyn(std::vector<InetAddress> ips)
 	}
 	return true;
 }
+#endif // __SYNOLOGY__
 
 bool LinuxEthernetTap::addIp(const InetAddress &ip)
 {
