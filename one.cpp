@@ -852,7 +852,7 @@ static int idtool(int argc,char **argv)
 			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> wbuf;
 			w.serialize(wbuf);
 			char fn[128];
-			Utils::snprintf(fn,sizeof(fn),"%.16llx_%.16llx.moon",w.id(),now);
+			Utils::snprintf(fn,sizeof(fn),"%.16llx.moon",w.id());
 			OSUtils::writeFile(fn,wbuf.data(),wbuf.size());
 			printf("wrote %s (signed world with timestamp %llu)" ZT_EOL_S,fn,(unsigned long long)now);
 		}
