@@ -1,7 +1,9 @@
 ZeroTier - A Planetary Ethernet Switch
 ======
 
-ZeroTier is an advanced SDN Ethernet switch for planet Earth. It erases the LAN/WAN distinction and makes VPNs, tunnels, proxies, and other kludges arising from the inflexible nature of physical networks obsolete. Everything is encrypted end-to-end and traffic takes the most direct (peer to peer) path available.
+ZeroTier is an enterprise Ethernet switch for planet Earth.
+
+It erases the LAN/WAN distinction and makes VPNs, tunnels, proxies, and other kludges arising from the inflexible nature of physical networks obsolete. Everything is encrypted end-to-end and traffic takes the most direct (peer to peer) path available.
 
 Visit [ZeroTier's site](https://www.zerotier.com/) for more information and [pre-built binary packages](https://www.zerotier.com/download.shtml). Apps for Android and iOS are available for free in the Google Play and Apple app stores.
 
