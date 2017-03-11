@@ -1312,6 +1312,7 @@ public:
 							res["updatesMustBeSignedBy"] = json();
 							res["waiting"] = true;
 							_node->orbit(id,seed);
+							scode = 200;
 						}
 
 					} else scode = 404;
