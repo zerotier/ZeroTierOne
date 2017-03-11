@@ -64,8 +64,7 @@
 /**
  * How often (ms) do we check?
  */
-//#define ZT_SOFTWARE_UPDATE_CHECK_PERIOD (60 * 60 * 1000)
-#define ZT_SOFTWARE_UPDATE_CHECK_PERIOD 5000
+#define ZT_SOFTWARE_UPDATE_CHECK_PERIOD (60 * 10 * 1000)
 
 /**
  * Default update channel
