@@ -688,9 +688,9 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 					_outstandingWhoisRequests.erase(*a);
 				} else {
 					r->lastSent = now;
-					r->peersConsulted[r->retries] = _sendWhoisRequest(*a,r->peersConsulted,r->retries);
-					++r->retries;
+					r->peersConsulted[r->retries] = _sendWhoisRequest(*a,r->peersConsulted,(r->retries > 1) ? r->retries : 0);
 					TRACE("WHOIS %s (retry %u)",a->toString().c_str(),r->retries);
+					++r->retries;
 					nextDelay = std::min(nextDelay,(unsigned long)ZT_WHOIS_RETRY_DELAY);
 				}
 			} else {

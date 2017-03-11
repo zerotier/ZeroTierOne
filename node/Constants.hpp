@@ -202,7 +202,7 @@
 /**
  * Maximum identity WHOIS retries (each attempt tries consulting a different peer)
  */
-#define ZT_MAX_WHOIS_RETRIES 3
+#define ZT_MAX_WHOIS_RETRIES 4
 
 /**
  * Transmit queue entry timeout
@@ -389,6 +389,11 @@
  * Maximum number of VERB_NETWORK_CREDENTIALS within cutoff time
  */
 #define ZT_PEER_CREDEITIALS_CUTOFF_LIMIT 15
+
+/**
+ * WHOIS rate limit (we allow these to be pretty fast)
+ */
+#define ZT_PEER_WHOIS_RATE_LIMIT 50
 
 /**
  * General rate limit for other kinds of rate-limited packets (HELLO, credential request, etc.) both inbound and outbound

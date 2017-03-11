@@ -370,7 +370,7 @@ public:
 	 */
 	inline bool rateGateInboundWhoisRequest(const uint64_t now)
 	{
-		if ((now - _lastWhoisRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
+		if ((now - _lastWhoisRequestReceived) >= ZT_PEER_WHOIS_RATE_LIMIT) {
 			_lastWhoisRequestReceived = now;
 			return true;
 		}
