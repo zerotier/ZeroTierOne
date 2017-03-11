@@ -2025,9 +2025,11 @@ bool Packet::dearmor(const void *key)
 
 void Packet::cryptField(const void *key,unsigned int start,unsigned int len)
 {
-	unsigned char discard[32];
-	Salsa20 s20(key,256,field(ZT_PACKET_IDX_IV,8));
-	s20.crypt12(ZERO_KEY,discard,sizeof(discard)); // discard the first 32 bytes of key stream (the ones use for MAC in armor()) as a precaution
+	const uint8_t *const data = reinterpret_cast<const uint8_t *>(data());
+	uint8_t iv[8];
+	for(int i=0;i<8;++i) iv[i] = data[i];
+	iv[7] &= 0xf8; // mask off least significant 3 bits of packet ID / IV since this is unset when this function gets called
+	Salsa20 s20(key,256,data);
 	unsigned char *const ptr = field(start,len);
 	s20.crypt12(ptr,ptr,len);
 }
