@@ -320,7 +320,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 
 			// Get moon IDs and timestamps if present
 			if ((ptr + 2) <= size()) {
-				unsigned int numMoons = at<uint16_t>(ptr); ptr += 2;
+				const unsigned int numMoons = at<uint16_t>(ptr); ptr += 2;
 				for(unsigned int i=0;i<numMoons;++i) {
 					if ((World::Type)(*this)[ptr++] == World::TYPE_MOON)
 						moonIdsAndTimestamps.push_back(std::pair<uint64_t,uint64_t>(at<uint64_t>(ptr),at<uint64_t>(ptr + 8)));
