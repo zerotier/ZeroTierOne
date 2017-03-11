@@ -159,61 +159,40 @@ void Topology::saveIdentity(const Identity &id)
 SharedPtr<Peer> Topology::getUpstreamPeer(const Address *avoid,unsigned int avoidCount,bool strictAvoid)
 {
 	const uint64_t now = RR->node->now();
+	unsigned int bestQualityOverall = ~((unsigned int)0);
+	unsigned int bestQualityNotAvoid = ~((unsigned int)0);
+	const SharedPtr<Peer> *bestOverall = (const SharedPtr<Peer> *)0;
+	const SharedPtr<Peer> *bestNotAvoid = (const SharedPtr<Peer> *)0;
+
 	Mutex::Lock _l1(_peers_m);
 	Mutex::Lock _l2(_upstreams_m);
 
-	if (_amRoot) {
-		/* If I am a root, pick another root that isn't mine and that
-		 * has a numerically greater ID. This causes packets to roam
-		 * around the top rather than bouncing between just two. */
-
-		for(unsigned long p=0;p<_upstreamAddresses.size();++p) {
-			if (_upstreamAddresses[p] == RR->identity.address()) {
-				for(unsigned long q=1;q<_upstreamAddresses.size();++q) {
-					const SharedPtr<Peer> *const nextsn = _peers.get(_upstreamAddresses[(p + q) % _upstreamAddresses.size()]);
-					if ((nextsn)&&((*nextsn)->hasActiveDirectPath(now)))
-						return *nextsn;
-				}
-				break;
-			}
-		}
-
-	} else {
-		/* Otherwise pick the bestest looking upstream */
-
-		unsigned int bestQualityOverall = ~((unsigned int)0);
-		unsigned int bestQualityNotAvoid = ~((unsigned int)0);
-		const SharedPtr<Peer> *bestOverall = (const SharedPtr<Peer> *)0;
-		const SharedPtr<Peer> *bestNotAvoid = (const SharedPtr<Peer> *)0;
-
-		for(std::vector<Address>::const_iterator a(_upstreamAddresses.begin());a!=_upstreamAddresses.end();++a) {
-			const SharedPtr<Peer> *p = _peers.get(*a);
-			if (p) {
-				bool avoiding = false;
-				for(unsigned int i=0;i<avoidCount;++i) {
-					if (avoid[i] == (*p)->address()) {
-						avoiding = true;
-						break;
-					}
-				}
-				const unsigned int q = (*p)->relayQuality(now);
-				if (q <= bestQualityOverall) {
-					bestQualityOverall = q;
-					bestOverall = &(*p);
-				}
-				if ((!avoiding)&&(q <= bestQualityNotAvoid)) {
-					bestQualityNotAvoid = q;
-					bestNotAvoid = &(*p);
+	for(std::vector<Address>::const_iterator a(_upstreamAddresses.begin());a!=_upstreamAddresses.end();++a) {
+		const SharedPtr<Peer> *p = _peers.get(*a);
+		if (p) {
+			bool avoiding = false;
+			for(unsigned int i=0;i<avoidCount;++i) {
+				if (avoid[i] == (*p)->address()) {
+					avoiding = true;
+					break;
 				}
 			}
+			const unsigned int q = (*p)->relayQuality(now);
+			if (q <= bestQualityOverall) {
+				bestQualityOverall = q;
+				bestOverall = &(*p);
+			}
+			if ((!avoiding)&&(q <= bestQualityNotAvoid)) {
+				bestQualityNotAvoid = q;
+				bestNotAvoid = &(*p);
+			}
 		}
+	}
 
-		if (bestNotAvoid) {
-			return *bestNotAvoid;
-		} else if ((!strictAvoid)&&(bestOverall)) {
-			return *bestOverall;
-		}
-
+	if (bestNotAvoid) {
+		return *bestNotAvoid;
+	} else if ((!strictAvoid)&&(bestOverall)) {
+		return *bestOverall;
 	}
 
 	return SharedPtr<Peer>();
