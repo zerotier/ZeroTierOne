@@ -393,7 +393,7 @@
 /**
  * WHOIS rate limit (we allow these to be pretty fast)
  */
-#define ZT_PEER_WHOIS_RATE_LIMIT 50
+#define ZT_PEER_WHOIS_RATE_LIMIT 100
 
 /**
  * General rate limit for other kinds of rate-limited packets (HELLO, credential request, etc.) both inbound and outbound

@@ -552,7 +552,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		if (!peer->rateGateInboundWhoisRequest(RR->node->now())) {
+		if ((!RR->topology->amRoot())&&(!peer->rateGateInboundWhoisRequest(RR->node->now()))) {
 			TRACE("dropped WHOIS from %s(%s): rate limit circuit breaker tripped",source().toString().c_str(),_path->address().toString().c_str());
 			return true;
 		}
