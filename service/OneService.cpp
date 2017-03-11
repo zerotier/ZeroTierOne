@@ -1148,6 +1148,7 @@ public:
 					settings["portMappingEnabled"] = false; // not supported in build
 #endif
 					settings["softwareUpdate"] = OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT);
+					settings["softwareUpdateChannel"] = OSUtils::jsonString(settings["softwareUpdateChannel"],ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL);
 
 					const World planet(_node->planet());
 					res["planetWorldId"] = planet.id();
@@ -1420,12 +1421,13 @@ public:
 	void applyLocalConfig()
 	{
 		Mutex::Lock _l(_localConfig_m);
+		json lc(_localConfig);
 
 		_v4Hints.clear();
 		_v6Hints.clear();
 		_v4Blacklists.clear();
 		_v6Blacklists.clear();
-		json &virt = _localConfig["virtual"];
+		json &virt = lc["virtual"];
 		if (virt.is_object()) {
 			for(json::iterator v(virt.begin());v!=virt.end();++v) {
 				const std::string nstr = v.key();
@@ -1470,7 +1472,7 @@ public:
 
 		_globalV4Blacklist.clear();
 		_globalV6Blacklist.clear();
-		json &physical = _localConfig["physical"];
+		json &physical = lc["physical"];
 		if (physical.is_object()) {
 			for(json::iterator phy(physical.begin());phy!=physical.end();++phy) {
 				const InetAddress net(OSUtils::jsonString(phy.key(),""));
@@ -1489,41 +1491,41 @@ public:
 
 		_allowManagementFrom.clear();
 		_interfacePrefixBlacklist.clear();
-		json &settings = _localConfig["settings"];
-		if (settings.is_object()) {
-			_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
-			_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 
-			const std::string up(OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT));
-			const bool udist = OSUtils::jsonBool(settings["softwareUpdateDist"],false);
-			if (((up == "apply")||(up == "download"))||(udist)) {
-				if (!_updater)
-					_updater = new SoftwareUpdater(*_node,_homePath);
-				_updateAutoApply = (up == "apply");
-				_updater->setUpdateDistribution(udist);
-				_updater->setChannel(OSUtils::jsonString(settings["softwareUpdateChannel"],ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL));
-			} else {
-				delete _updater;
-				_updater = (SoftwareUpdater *)0;
-				_updateAutoApply = false;
+		json &settings = lc["settings"];
+
+		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
+		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
+
+		const std::string up(OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT));
+		const bool udist = OSUtils::jsonBool(settings["softwareUpdateDist"],false);
+		if (((up == "apply")||(up == "download"))||(udist)) {
+			if (!_updater)
+				_updater = new SoftwareUpdater(*_node,_homePath);
+			_updateAutoApply = (up == "apply");
+			_updater->setUpdateDistribution(udist);
+			_updater->setChannel(OSUtils::jsonString(settings["softwareUpdateChannel"],ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL));
+		} else {
+			delete _updater;
+			_updater = (SoftwareUpdater *)0;
+			_updateAutoApply = false;
+		}
+
+		json &ignoreIfs = settings["interfacePrefixBlacklist"];
+		if (ignoreIfs.is_array()) {
+			for(unsigned long i=0;i<ignoreIfs.size();++i) {
+				const std::string tmp(OSUtils::jsonString(ignoreIfs[i],""));
+				if (tmp.length() > 0)
+					_interfacePrefixBlacklist.push_back(tmp);
 			}
+		}
 
-			json &ignoreIfs = settings["interfacePrefixBlacklist"];
-			if (ignoreIfs.is_array()) {
-				for(unsigned long i=0;i<ignoreIfs.size();++i) {
-					const std::string tmp(OSUtils::jsonString(ignoreIfs[i],""));
-					if (tmp.length() > 0)
-						_interfacePrefixBlacklist.push_back(tmp);
-				}
-			}
-
-			json &amf = settings["allowManagementFrom"];
-			if (amf.is_array()) {
-				for(unsigned long i=0;i<amf.size();++i) {
-					const InetAddress nw(OSUtils::jsonString(amf[i],""));
-					if (nw)
-						_allowManagementFrom.push_back(nw);
-				}
+		json &amf = settings["allowManagementFrom"];
+		if (amf.is_array()) {
+			for(unsigned long i=0;i<amf.size();++i) {
+				const InetAddress nw(OSUtils::jsonString(amf[i],""));
+				if (nw)
+					_allowManagementFrom.push_back(nw);
 			}
 		}
 	}
