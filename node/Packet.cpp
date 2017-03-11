@@ -2025,7 +2025,7 @@ bool Packet::dearmor(const void *key)
 
 void Packet::cryptField(const void *key,unsigned int start,unsigned int len)
 {
-	const uint8_t *const data = reinterpret_cast<const uint8_t *>(data());
+	const uint8_t *const data = reinterpret_cast<const uint8_t *>(unsafeData());
 	uint8_t iv[8];
 	for(int i=0;i<8;++i) iv[i] = data[i];
 	iv[7] &= 0xf8; // mask off least significant 3 bits of packet ID / IV since this is unset when this function gets called
