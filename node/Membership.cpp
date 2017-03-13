@@ -223,8 +223,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 			const uint64_t now = RR->node->now();
 			switch(rev.type()) {
 				default:
-				//case Revocation::CREDENTIAL_TYPE_ALL:
-					return ( (_revokeCom(rev)||_revokeCap(rev,now)||_revokeTag(rev,now)||_revokeCoo(rev,now)) ? ADD_ACCEPTED_NEW : ADD_ACCEPTED_REDUNDANT );
+					return ADD_REJECTED;
 				case Revocation::CREDENTIAL_TYPE_COM:
 					return (_revokeCom(rev) ? ADD_ACCEPTED_NEW : ADD_ACCEPTED_REDUNDANT);
 				case Revocation::CREDENTIAL_TYPE_CAPABILITY:

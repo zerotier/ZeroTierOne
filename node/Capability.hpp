@@ -52,6 +52,11 @@ class RuntimeEnvironment;
  *
  * Note that this is after evaluation of network scope rules and only if
  * network scope rules do not deliver an explicit match.
+ *
+ * Capabilities support a chain of custody. This is currently unused but
+ * in the future would allow the publication of capabilities that can be
+ * handed off between nodes. Limited transferrability of capabilities is
+ * a feature of true capability based security.
  */
 class Capability
 {

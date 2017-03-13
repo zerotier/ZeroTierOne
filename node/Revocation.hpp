@@ -47,9 +47,12 @@ class RuntimeEnvironment;
 class Revocation
 {
 public:
+	/**
+	 * Credential type being revoked
+	 */
 	enum CredentialType
 	{
-		CREDENTIAL_TYPE_ALL = 0,
+		CREDENTIAL_TYPE_NULL = 0,
 		CREDENTIAL_TYPE_COM = 1, // CertificateOfMembership
 		CREDENTIAL_TYPE_CAPABILITY = 2,
 		CREDENTIAL_TYPE_TAG = 3,
@@ -61,6 +64,15 @@ public:
 		memset(this,0,sizeof(Revocation));
 	}
 
+	/**
+	 * @param i ID (arbitrary for revocations, currently random)
+	 * @param nwid Network ID
+	 * @param cid Credential ID being revoked (0 for all or for COMs, which lack IDs)
+	 * @param thr Revocation time threshold before which credentials will be revoked
+	 * @param fl Flags
+	 * @param tgt Target node whose credential(s) are being revoked
+	 * @param ct Credential type being revoked
+	 */
 	Revocation(const uint64_t i,const uint64_t nwid,const uint64_t cid,const uint64_t thr,const uint64_t fl,const Address &tgt,const CredentialType ct) :
 		_id(i),
 		_networkId(nwid),

@@ -32,6 +32,21 @@
 
 namespace ZeroTier {
 
+/**
+ * A signed enumeration of a node's roots (planet and moons)
+ *
+ * This is sent as part of HELLO and attests to which roots a node trusts
+ * to represent it on the network. Federated roots (moons) can send these
+ * further upstream to tell global roots which nodes they represent, making
+ * them reachable via federated roots if they are not reachable directly.
+ *
+ * As of 1.2.0 this is sent but not used. Right now nodes still always
+ * announce to planetary roots no matter what. In the future this can be
+ * used to implement even better fault tolerance for federation for the
+ * no roots are reachable case as well as a "privacy mode" where federated
+ * roots can shield nodes entirely and p2p connectivity behind them can
+ * be disabled. This will be desirable for a number of use cases.
+ */
 class CertificateOfRepresentation
 {
 public:
