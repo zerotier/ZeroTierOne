@@ -61,6 +61,9 @@ using json = nlohmann::json;
 // Nodes are considered active if they've queried in less than this long
 #define ZT_NETCONF_NODE_ACTIVE_THRESHOLD (ZT_NETWORK_AUTOCONF_DELAY * 2)
 
+// Timeout for disk read cache (ms)
+#define ZT_NETCONF_DB_CACHE_TTL 5000
+
 namespace ZeroTier {
 
 static json _renderRule(ZT_VirtualNetworkRule &rule)
@@ -1244,8 +1247,8 @@ void EmbeddedNetworkController::_request(
 	json member;
 	{
 		Mutex::Lock _l(_db_m);
-		network = _db.get("network",nwids,0);
-		member = _db.get("network",nwids,"member",identity.address().toString(),0);
+		network = _db.get("network",nwids,ZT_NETCONF_DB_CACHE_TTL);
+		member = _db.get("network",nwids,"member",identity.address().toString(),ZT_NETCONF_DB_CACHE_TTL);
 	}
 
 	if (!network.size()) {
