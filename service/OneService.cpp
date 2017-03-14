@@ -827,7 +827,7 @@ public:
 			_lastRestart = clockShouldBe;
 			uint64_t lastTapMulticastGroupCheck = 0;
 			uint64_t lastBindRefresh = 0;
-			uint64_t lastUpdateCheck = clockShouldBe + 60000;
+			uint64_t lastUpdateCheck = clockShouldBe;
 			uint64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
 			uint64_t lastCleanedIddb = 0;
 			for(;;) {
