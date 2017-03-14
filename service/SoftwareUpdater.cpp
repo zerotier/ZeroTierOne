@@ -143,8 +143,18 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 							unsigned int bestVRev = rvRev;
 							unsigned int bestVBld = rvBld;
 							for(std::map< Array<uint8_t,16>,_D >::const_iterator d(_dist.begin());d!=_dist.end();++d) {
+								// The arch field in update description .json files can be an array for e.g. multi-arch update files
+								const nlohmann::json &dvArch2 = d->second.meta[ZT_SOFTWARE_UPDATE_JSON_ARCHITECTURE];
+								std::vector<unsigned int> dvArch;
+								if (dvArch2.is_array()) {
+									for(unsigned long i=0;i<dvArch2.size();++i)
+										dvArch.push_back(OSUtils::jsonInt(dvArch2[i],0));
+								} else {
+									dvArch.push_back(OSUtils::jsonInt(dvArch2,0));
+								}
+
 								if ((OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_PLATFORM],0) == rvPlatform)&&
-								    (OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_ARCHITECTURE],0) == rvArch)&&
+								    (std::find(dvArch.begin(),dvArch.end(),rvArch) != dvArch.end())&&
 								    (OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_VENDOR],0) == rvVendor)&&
 								    (OSUtils::jsonString(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_CHANNEL],"") == rvChannel)&&
 								    (OSUtils::jsonString(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNED_BY],"") == expectedSigner)) {
