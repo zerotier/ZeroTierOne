@@ -44,7 +44,7 @@
 #include "JSONDB.hpp"
 
 // Number of background threads to start -- not actually started until needed
-#define ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT 2
+#define ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT 4
 
 // TTL for circuit tests
 #define ZT_EMBEDDEDNETWORKCONTROLLER_CIRCUIT_TEST_EXPIRATION 120000

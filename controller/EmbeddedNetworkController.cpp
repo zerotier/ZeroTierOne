@@ -53,7 +53,7 @@ using json = nlohmann::json;
 #define ZT_NETCONF_CONTROLLER_API_VERSION 3
 
 // Number of requests to remember in member history
-#define ZT_NETCONF_DB_MEMBER_HISTORY_LENGTH 24
+#define ZT_NETCONF_DB_MEMBER_HISTORY_LENGTH 2
 
 // Min duration between requests for an address/nwid combo to prevent floods
 #define ZT_NETCONF_MIN_REQUEST_PERIOD 1000
@@ -62,7 +62,7 @@ using json = nlohmann::json;
 #define ZT_NETCONF_NODE_ACTIVE_THRESHOLD (ZT_NETWORK_AUTOCONF_DELAY * 2)
 
 // Timeout for disk read cache (ms)
-#define ZT_NETCONF_DB_CACHE_TTL 5000
+#define ZT_NETCONF_DB_CACHE_TTL 60000
 
 namespace ZeroTier {
 
@@ -503,7 +503,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 			json network;
 			{
 				Mutex::Lock _l(_db_m);
-				network = _db.get("network",nwids,0);
+				network = _db.get("network",nwids,ZT_NETCONF_DB_CACHE_TTL);
 			}
 			if (!network.size())
 				return 404;
@@ -518,7 +518,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 						json member;
 						{
 							Mutex::Lock _l(_db_m);
-							member = _db.get("network",nwids,"member",Address(address).toString(),0);
+							member = _db.get("network",nwids,"member",Address(address).toString(),ZT_NETCONF_DB_CACHE_TTL);
 						}
 						if (!member.size())
 							return 404;
@@ -534,7 +534,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 
 						responseBody = "{";
 						std::string pfx(std::string("network/") + nwids + "member/");
-						_db.filter(pfx,120000,[&responseBody](const std::string &n,const json &member) {
+						_db.filter(pfx,ZT_NETCONF_DB_CACHE_TTL,[&responseBody](const std::string &n,const json &member) {
 							if (member.size() > 0) {
 								responseBody.append((responseBody.length() == 1) ? "\"" : ",\"");
 								responseBody.append(OSUtils::jsonString(member["id"],""));
@@ -642,7 +642,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					json member;
 					{
 						Mutex::Lock _l(_db_m);
-						member = _db.get("network",nwids,"member",Address(address).toString(),0);
+						member = _db.get("network",nwids,"member",Address(address).toString(),ZT_NETCONF_DB_CACHE_TTL);
 					}
 					json origMember(member); // for detecting changes
 					_initMember(member);
@@ -825,7 +825,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 							uint64_t tryNwid = nwidPrefix | (nwidPostfix & 0xffffffULL);
 							if ((tryNwid & 0xffffffULL) == 0ULL) tryNwid |= 1ULL;
 							Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)tryNwid);
-							if (_db.get("network",nwids,120000).size() <= 0) {
+							if (_db.get("network",nwids,ZT_NETCONF_DB_CACHE_TTL).size() <= 0) {
 								nwid = tryNwid;
 								break;
 							}
@@ -834,7 +834,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 							return 503;
 					}
 
-					network = _db.get("network",nwids,0);
+					network = _db.get("network",nwids,ZT_NETCONF_DB_CACHE_TTL);
 				}
 				json origNetwork(network); // for detecting changes
 				_initNetwork(network);
@@ -1096,7 +1096,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 			json network;
 			{
 				Mutex::Lock _l(_db_m);
-				network = _db.get("network",nwids,0);
+				network = _db.get("network",nwids,ZT_NETCONF_DB_CACHE_TTL);
 			}
 			if (!network.size())
 				return 404;
@@ -1107,7 +1107,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 
 					Mutex::Lock _l(_db_m);
 
-					json member = _db.get("network",nwids,"member",Address(address).toString(),0);
+					json member = _db.get("network",nwids,"member",Address(address).toString(),ZT_NETCONF_DB_CACHE_TTL);
 					_db.erase("network",nwids,"member",Address(address).toString());
 
 					if (!member.size())
