@@ -72,11 +72,6 @@
 #define ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL "release"
 
 /**
- * Filename for latest update's meta JSON
- */
-#define ZT_SOFTWARE_UPDATE_META_FILENAME "latest-update.json"
-
-/**
  * Filename for latest update's binary image
  */
 #define ZT_SOFTWARE_UPDATE_BIN_FILENAME "latest-update.exe"
