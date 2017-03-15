@@ -145,6 +145,9 @@ esac
 %endif
 
 %changelog
+* Tue Mar 14 2017 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.2.0-0.1
+- see https://github.com/zerotier/ZeroTierOne for release notes
+
 * Tue Jul 12 2016 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.1.10-0.1
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
