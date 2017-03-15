@@ -1,7 +1,6 @@
 'use strict';
 
 var fs = require('fs');
-
 var RuleCompiler = require('./rule-compiler.js');
 
 if (process.argv.length < 3) {
@@ -9,21 +8,39 @@ if (process.argv.length < 3) {
 	process.exit(1);
 }
 
-var src = fs.readFileSync(process.argv[2]).toString();
-
 var rules = [];
 var caps = {};
 var tags = {};
-var err = RuleCompiler.compile(src,rules,caps,tags);
+var err = RuleCompiler.compile(fs.readFileSync(process.argv[2]).toString(),rules,caps,tags);
 
 if (err) {
-	console.log('ERROR parsing '+process.argv[2]+' line '+err[0]+' column '+err[1]+': '+err[2]);
+	console.error('ERROR parsing '+process.argv[2]+' line '+err[0]+' column '+err[1]+': '+err[2]);
 	process.exit(1);
 } else {
+	let capsArray = [];
+	let capabilitiesByName = {};
+	for(let n in caps) {
+		capsArray.push(caps[n]);
+		capabilitiesByName[n] = caps[n].id;
+	}
+	let tagsArray = [];
+	for(let n in tags) {
+		let t = tags[n];
+		tagsArray.push({
+			'id': t.id,
+			'default': t['default']||null
+		});
+	}
+
 	console.log(JSON.stringify({
-		rules: rules,
-		caps: caps,
-		tags: tags
-	},null,2));
+		config: {
+			rules: rules,
+			capabilities: capsArray,
+			tags: tagsArray
+		},
+		capabilitiesByName: capabilitiesByName,
+		tagsByName: tags
+	},null,1));
+
 	process.exit(0);
 }

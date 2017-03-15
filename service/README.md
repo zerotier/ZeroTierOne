@@ -27,6 +27,7 @@ Settings available in `local.conf` (this is not valid JSON, and JSON does not al
 		"primaryPort": 0-65535, /* If set, override default port of 9993 and any command line port */
 		"portMappingEnabled": true|false, /* If true (the default), try to use uPnP or NAT-PMP to map ports */
 		"softwareUpdate": "apply"|"download"|"disable", /* Automatically apply updates, just download, or disable built-in software updates */
+		"softwareUpdateChannel": "release"|"beta", /* Software update channel */
 		"softwareUpdateDist": true|false, /* If true, distribute software updates (only really useful to ZeroTier, Inc. itself, default is false) */
 		"interfacePrefixBlacklist": [ "XXX",... ], /* Array of interface name prefixes (e.g. eth for eth#) to blacklist for ZT traffic */
 		"allowManagementFrom": "NETWORK/bits"|null /* If non-NULL, allow JSON/HTTP management from this IP network. Default is 127.0.0.1 only. */
@@ -57,7 +58,8 @@ An example `local.conf`:
 		}
 	},
 	"settings": {
-		"relayPolicy": "ALWAYS"
+		"softwareUpdate": "apply",
+		"softwraeUpdateChannel": "release"
 	}
 }
 ```

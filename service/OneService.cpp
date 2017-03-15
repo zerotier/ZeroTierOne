@@ -745,14 +745,6 @@ public:
 			for(int i=0;i<3;++i)
 				_portsBE[i] = Utils::hton((uint16_t)_ports[i]);
 
-			// Check for legacy controller.db and terminate if present to prevent nasty surprises for DIY controller folks
-			if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S "controller.db").c_str())) {
-				Mutex::Lock _l(_termReason_m);
-				_termReason = ONE_UNRECOVERABLE_ERROR;
-				_fatalErrorMessage = "controller.db is present in our home path! run migrate-sqlite to migrate to new controller.d format.";
-				return _termReason;
-			}
-
 			_controller = new EmbeddedNetworkController(_node,(_homePath + ZT_PATH_SEPARATOR_S ZT_CONTROLLER_DB_PATH).c_str());
 			_node->setNetconfMaster((void *)_controller);
 
