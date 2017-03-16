@@ -258,14 +258,14 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 
 			default:
 				if (_distLog) {
-					fprintf(_distLog,"%.10llx WARNING: bad update message verb==%u length==%u (unrecognized verb)" ZT_EOL_S,origin,(unsigned int)v,len);
+					fprintf(_distLog,"%.10llx WARNING: bad update message verb==%u length==%u (unrecognized verb)" ZT_EOL_S,(unsigned long long)origin,(unsigned int)v,len);
 					fflush(_distLog);
 				}
 				break;
 		}
 	} catch ( ... ) {
 		if (_distLog) {
-			fprintf(_distLog,"%.10llx WARNING: bad update message verb==%u length==%u (unexpected exception, likely invalid JSON)" ZT_EOL_S,origin,(unsigned int)v,len);
+			fprintf(_distLog,"%.10llx WARNING: bad update message verb==%u length==%u (unexpected exception, likely invalid JSON)" ZT_EOL_S,(unsigned long long)origin,(unsigned int)v,len);
 			fflush(_distLog);
 		}
 	}
