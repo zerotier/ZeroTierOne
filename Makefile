@@ -11,8 +11,8 @@ ifeq ($(OSTYPE),Linux)
 endif
 
 ifeq ($(OSTYPE),FreeBSD)
-	CC=gcc
-	CXX=g++
+	CC=clang
+	CXX=clang++
 	ZT_BUILD_PLATFORM=7
 	include make-bsd.mk
 endif
