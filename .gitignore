@@ -10,6 +10,7 @@
 .DS_Store
 .Apple*
 Thumbs.db
+@eaDir
 
 # Windows build droppings
 /windows/ZeroTierOne.sdf

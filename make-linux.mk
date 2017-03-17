@@ -54,7 +54,7 @@ ifeq ($(ZT_RULES_ENGINE_DEBUGGING),1)
 endif
 
 ifeq ($(ZT_DEBUG),1)
-#	DEFS+=-DZT_TRACE
+	DEFS+=-DZT_TRACE
 	override CFLAGS+=-Wall -g -O -pthread $(INCLUDES) $(DEFS)
 	override CXXFLAGS+=-Wall -g -O -std=c++11 -pthread $(INCLUDES) $(DEFS)
 	override LDFLAGS+=

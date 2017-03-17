@@ -477,7 +477,11 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 					} else ptr += 2;
 				}
 
-				TRACE("%s(%s): OK(HELLO), version %u.%u.%u, latency %u, reported external address %s",source().toString().c_str(),_path->address().toString().c_str(),vMajor,vMinor,vRevision,latency,((externalSurfaceAddress) ? externalSurfaceAddress.toString().c_str() : "(none)"));
+#ifdef ZT_TRACE
+				const std::string tmp1(source().toString());
+				const std::string tmp2(_path->address().toString());
+				TRACE("%s(%s): OK(HELLO), version %u.%u.%u, latency %u",tmp1.c_str(),tmp2.c_str(),vMajor,vMinor,vRevision,latency);
+#endif
 
 				if (!hops())
 					peer->addDirectLatencyMeasurment((unsigned int)latency);

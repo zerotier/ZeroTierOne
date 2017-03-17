@@ -184,18 +184,22 @@ public:
 	{
 		Mutex::Lock _l(_upstreams_m);
 		for(std::vector<World::Root>::const_iterator i(_planet.roots().begin());i!=_planet.roots().end();++i) {
-			std::vector<InetAddress> &ips = eps[i->identity.address()];
-			for(std::vector<InetAddress>::const_iterator j(i->stableEndpoints.begin());j!=i->stableEndpoints.end();++j) {
-				if (std::find(ips.begin(),ips.end(),*j) == ips.end())
-					ips.push_back(*j);
-			}
-		}
-		for(std::vector<World>::const_iterator m(_moons.begin());m!=_moons.end();++m) {
-			for(std::vector<World::Root>::const_iterator i(m->roots().begin());i!=m->roots().end();++i) {
+			if (i->identity != RR->identity) {
 				std::vector<InetAddress> &ips = eps[i->identity.address()];
 				for(std::vector<InetAddress>::const_iterator j(i->stableEndpoints.begin());j!=i->stableEndpoints.end();++j) {
 					if (std::find(ips.begin(),ips.end(),*j) == ips.end())
 						ips.push_back(*j);
+				}
+			}
+		}
+		for(std::vector<World>::const_iterator m(_moons.begin());m!=_moons.end();++m) {
+			for(std::vector<World::Root>::const_iterator i(m->roots().begin());i!=m->roots().end();++i) {
+				if (i->identity != RR->identity) {
+					std::vector<InetAddress> &ips = eps[i->identity.address()];
+					for(std::vector<InetAddress>::const_iterator j(i->stableEndpoints.begin());j!=i->stableEndpoints.end();++j) {
+						if (std::find(ips.begin(),ips.end(),*j) == ips.end())
+							ips.push_back(*j);
+					}
 				}
 			}
 		}

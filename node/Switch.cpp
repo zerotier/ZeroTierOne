@@ -625,6 +625,13 @@ void Switch::send(Packet &packet,bool encrypt)
 
 void Switch::requestWhois(const Address &addr)
 {
+#ifdef ZT_TRACE
+	if (addr == RR->identity.address()) {
+		fprintf(stderr,"FATAL BUG: Switch::requestWhois() caught attempt to WHOIS self" ZT_EOL_S);
+		abort();
+	}
+#endif
+
 	bool inserted = false;
 	{
 		Mutex::Lock _l(_outstandingWhoisRequests_m);
