@@ -488,6 +488,8 @@ public:
 		,_updater((SoftwareUpdater *)0)
 		,_updateAutoApply(false)
 		,_primaryPort(port)
+		,_v4TcpControlSocket((PhySocket *)0)
+		,_v6TcpControlSocket((PhySocket *)0)
 		,_lastDirectReceiveFromGlobal(0)
 #ifdef ZT_TCP_FALLBACK_RELAY
 		,_lastSendToGlobalV4(0)

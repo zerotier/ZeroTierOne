@@ -836,7 +836,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 		bool trustEstablished = false;
 
 		unsigned int p = ZT_PACKET_IDX_PAYLOAD;
-		while ((p < size())&&((*this)[p])) {
+		while ((p < size())&&((*this)[p] != 0)) {
 			p += com.deserialize(*this,p);
 			if (com) {
 				const SharedPtr<Network> network(RR->node->network(com.networkId()));
@@ -953,8 +953,8 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 		const uint64_t requestPacketId = packetId();
 
 		if (RR->localNetworkController) {
-			const unsigned int metaDataLength = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
-			const char *metaDataBytes = (const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength);
+			const unsigned int metaDataLength = (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN <= size()) ? at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN) : 0;
+			const char *metaDataBytes = (metaDataLength != 0) ? (const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength) : (const char *)0;
 			const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> metaData(metaDataBytes,metaDataLength);
 			RR->localNetworkController->request(nwid,(hopCount > 0) ? InetAddress() : _path->address(),requestPacketId,peer->identity(),metaData);
 		} else {
