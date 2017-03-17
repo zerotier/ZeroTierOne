@@ -1517,6 +1517,10 @@ void Network::_sendUpdatesToMembers(const MulticastGroup *const newMulticastGrou
 				Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 				_config.com.serialize(outp);
 				outp.append((uint8_t)0x00);
+				outp.append((uint16_t)0); // no capabilities
+				outp.append((uint16_t)0); // no tags
+				outp.append((uint16_t)0); // no revocations
+				outp.append((uint16_t)0); // no certificates of ownership
 				RR->sw->send(outp,true);
 			}
 			_announceMulticastGroupsTo(*a,groups);
@@ -1529,6 +1533,10 @@ void Network::_sendUpdatesToMembers(const MulticastGroup *const newMulticastGrou
 				Packet outp(c,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 				_config.com.serialize(outp);
 				outp.append((uint8_t)0x00);
+				outp.append((uint16_t)0); // no capabilities
+				outp.append((uint16_t)0); // no tags
+				outp.append((uint16_t)0); // no revocations
+				outp.append((uint16_t)0); // no certificates of ownership
 				RR->sw->send(outp,true);
 			}
 			_announceMulticastGroupsTo(c,groups);

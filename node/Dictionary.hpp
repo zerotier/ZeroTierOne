@@ -61,15 +61,23 @@ public:
 
 	Dictionary(const char *s)
 	{
-		Utils::scopy(_d,sizeof(_d),s);
+		if (s) {
+			Utils::scopy(_d,sizeof(_d),s);
+		} else {
+			_d[0] = (char)0;
+		}
 	}
 
 	Dictionary(const char *s,unsigned int len)
 	{
-		if (len > (C-1))
-			len = C-1;
-		memcpy(_d,s,len);
-		_d[len] = (char)0;
+		if (s) {
+			if (len > (C-1))
+				len = C-1;
+			memcpy(_d,s,len);
+			_d[len] = (char)0;
+		} else {
+			_d[0] = (char)0;
+		}
 	}
 
 	Dictionary(const Dictionary &d)
@@ -91,7 +99,12 @@ public:
 	 */
 	inline bool load(const char *s)
 	{
-		return Utils::scopy(_d,sizeof(_d),s);
+		if (s) {
+			return Utils::scopy(_d,sizeof(_d),s);
+		} else {
+			_d[0] = (char)0;
+			return true;
+		}
 	}
 
 	/**
