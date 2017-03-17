@@ -938,9 +938,11 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 
 		peer->received(_path,hops(),packetId(),Packet::VERB_NETWORK_CREDENTIALS,0,Packet::VERB_NOP,trustEstablished);
 	} catch (std::exception &exc) {
+		fprintf(stderr,"dropped NETWORK_CREDENTIALS from %s(%s): %s",source().toString().c_str(),_path->address().toString().c_str(),exc.what());
 		TRACE("dropped NETWORK_CREDENTIALS from %s(%s): %s",source().toString().c_str(),_path->address().toString().c_str(),exc.what());
 	} catch ( ... ) {
-		TRACE("dropped NETWORK_CREDENTIALS from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
+		fprintf(stderr,"dropped NETWORK_CREDENTIALS from %s(%s): unknown exception",source().toString().c_str(),_path->address().toString().c_str());
+		TRACE("dropped NETWORK_CREDENTIALS from %s(%s): unknown exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
@@ -969,10 +971,10 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 
 		peer->received(_path,hopCount,requestPacketId,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,false);
 	} catch (std::exception &exc) {
-		fprintf(stderr,"WARNING: network config request failed with exception: %s" ZT_EOL_S,exc.what());
+		fprintf(stderr,"dropped NETWORK_CONFIG_REQUEST from %s(%s): %s",source().toString().c_str(),_path->address().toString().c_str(),exc.what());
 		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): %s",source().toString().c_str(),_path->address().toString().c_str(),exc.what());
 	} catch ( ... ) {
-		fprintf(stderr,"WARNING: network config request failed with exception: unknown exception" ZT_EOL_S);
+		fprintf(stderr,"dropped NETWORK_CONFIG_REQUEST from %s(%s): unknown exception",source().toString().c_str(),_path->address().toString().c_str());
 		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unknown exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
