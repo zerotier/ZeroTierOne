@@ -1282,8 +1282,8 @@ void Network::requestConfiguration()
 	} else {
 		outp.append((unsigned char)0,16);
 	}
-	RR->node->expectReplyTo(outp.packetId());
 	outp.compress();
+	RR->node->expectReplyTo(outp.packetId());
 	RR->sw->send(outp,true);
 }
 
