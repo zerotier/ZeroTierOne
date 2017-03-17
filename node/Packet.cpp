@@ -122,6 +122,7 @@ namespace {
 *  LZ4_DLL_EXPORT :
 *  Enable exporting of functions when building a Windows DLL
 */
+#if 0
 #if defined(LZ4_DLL_EXPORT) && (LZ4_DLL_EXPORT==1)
 #  define LZ4LIB_API __declspec(dllexport)
 #elif defined(LZ4_DLL_IMPORT) && (LZ4_DLL_IMPORT==1)
@@ -129,7 +130,9 @@ namespace {
 #else
 #  define LZ4LIB_API
 #endif
-
+#else
+#define LZ4LIB_API
+#endif
 
 /*========== Version =========== */
 #define LZ4_VERSION_MAJOR    1    /* for breaking interface changes  */
@@ -378,9 +381,6 @@ LZ4_decompress_*_continue() :
 #define LZ4_HASHTABLESIZE (1 << LZ4_MEMORY_USAGE)
 #define LZ4_HASH_SIZE_U32 (1 << LZ4_HASHLOG)       /* required as macro for static allocation */
 
-#if defined(__cplusplus) || (defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) /* C99 */)
-//#include <stdint.h>
-
 typedef struct {
 	uint32_t hashTable[LZ4_HASH_SIZE_U32];
 	uint32_t currentOffset;
@@ -396,26 +396,6 @@ typedef struct {
 	const uint8_t* prefixEnd;
 	size_t prefixSize;
 } LZ4_streamDecode_t_internal;
-
-#else
-
-typedef struct {
-	unsigned int hashTable[LZ4_HASH_SIZE_U32];
-	unsigned int currentOffset;
-	unsigned int initCheck;
-	const unsigned char* dictionary;
-	unsigned char* bufferStart;   /* obsolete, used for slideInputBuffer */
-	unsigned int dictSize;
-} LZ4_stream_t_internal;
-
-typedef struct {
-	const unsigned char* externalDict;
-	size_t extDictSize;
-	const unsigned char* prefixEnd;
-	size_t prefixSize;
-} LZ4_streamDecode_t_internal;
-
-#endif
 
 /*!
  * LZ4_stream_t :
@@ -2046,7 +2026,7 @@ bool Packet::compress()
 	unsigned char buf[ZT_PROTO_MAX_PACKET_LENGTH * 2];
 	if ((!compressed())&&(size() > (ZT_PACKET_IDX_PAYLOAD + 32))) {
 		int pl = (int)(size() - ZT_PACKET_IDX_PAYLOAD);
-		int cl = LZ4_compress_fast((const char *)field(ZT_PACKET_IDX_PAYLOAD,(unsigned int)pl),(char *)buf,pl,ZT_PROTO_MAX_PACKET_LENGTH * 2,2);
+		int cl = LZ4_compress_fast((const char *)field(ZT_PACKET_IDX_PAYLOAD,(unsigned int)pl),(char *)buf,pl,ZT_PROTO_MAX_PACKET_LENGTH * 2,1);
 		if ((cl > 0)&&(cl < pl)) {
 			(*this)[ZT_PACKET_IDX_VERB] |= (char)ZT_PROTO_VERB_FLAG_COMPRESSED;
 			setSize((unsigned int)cl + ZT_PACKET_IDX_PAYLOAD);
