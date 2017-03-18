@@ -125,7 +125,7 @@ long OSUtils::cleanDirectory(const char *path,const uint64_t olderThan)
 					date.LowPart = ffd.ftLastWriteTime.dwLowDateTime;
 					if (date.QuadPart > 0) {
 							date.QuadPart -= adjust.QuadPart;
-							if (((date.QuadPart / 10000000) * 1000) < olderThan) {
+							if ((uint64_t)((date.QuadPart / 10000000) * 1000) < olderThan) {
 									Utils::snprintf(tmp, sizeof(tmp), "%s\\%s", path, ffd.cFileName);
 									if (DeleteFileA(tmp))
 											++cleaned;

@@ -1479,7 +1479,6 @@ int main(int argc,char **argv)
 #endif // __WINDOWS__
 
 #ifdef __UNIX_LIKE__
-
 #ifdef ZT_HAVE_DROP_PRIVILEGES
 	dropPrivileges(argv[0],homeDir);
 #endif
@@ -1499,7 +1498,9 @@ int main(int argc,char **argv)
 	thr.threadMain();
 	//Thread::join(Thread::start(&thr));
 
+#ifdef __UNIX_LIKE__
 	OSUtils::rm(pidPath.c_str());
+#endif
 
 	return thr.returnValue;
 }

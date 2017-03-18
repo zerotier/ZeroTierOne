@@ -5,99 +5,31 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WinUI"
         mc:Ignorable="d"
-        Title="AboutView" Height="460" Width="300" Icon="ZeroTierIcon.ico">
-    <Grid>
-        <Image x:Name="image" HorizontalAlignment="Center" Height="100" Margin="0,10,0,0" VerticalAlignment="Top" Width="100" Source="ZeroTierIcon.ico"/>
-        <RichTextBox x:Name="richTextBox" HorizontalAlignment="Left" Height="307" Margin="10,115,0,0" VerticalAlignment="Top" Width="275" IsReadOnly="True" IsDocumentEnabled="True" BorderThickness="0">
-            <RichTextBox.Resources>
-                <Style TargetType="Hyperlink">
-                    <Setter Property="Cursor" Value="Hand" />
-                </Style>
-            </RichTextBox.Resources>
-            <FlowDocument>
-                <Paragraph>
-                    <Span FontWeight="Bold" FontSize="18" FontFamily="HelveticaNeue">
-                        <Run Text="Getting Started"/>
-                    </Span>
-                    <Span FontWeight="Bold" FontSize="12" FontFamily="HelveticaNeue">
-                        <LineBreak/>
-                    </Span>
-                    <Span FontSize="12" FontFamily="HelveticaNeue">
-                        <Run/>
-                    </Span>
-                </Paragraph>
-                <Paragraph>
-                    <Span FontSize="12" FontFamily="HelveticaNeue">
-                        <Run Text="Getting started is simple. Simply click "/>
-                    </Span>
-                    <Span FontSize="12" FontFamily="Menlo-Regular">
-                        <Run Text="Join Network"/>
-                    </Span>
-                    <Span FontSize="12" FontFamily="HelveticaNeue">
-                        <Run Text=" from the ZeroTier status bar menu. To join the public network &quot;Earth&quot;, enter "/>
-                    </Span>
-                    <Span FontSize="12" FontFamily="Menlo-Regular">
-                        <Run Text="8056c2e21c000001"/>
-                    </Span>
-                    <Span FontSize="12" FontFamily="HelveticaNeue">
-                        <Run Text=" and click the Join button. Once connected, you'll be able to navigate to "/>
-                    </Span>
-                    <Hyperlink NavigateUri="http://earth.zerotier.net/" RequestNavigate="Hyperlink_MouseLeftButtonDown">
-                        <Span Foreground="#FF0000E9" FontSize="12" FontFamily="HelveticaNeue">
-                            <Run Text="earth.zerotier.net"/>
-                        </Span>
-                    </Hyperlink>
-                    <Span FontSize="12" FontFamily="HelveticaNeue">
-                        <Run Text="."/>
-                    </Span>
-                </Paragraph>
-                <Paragraph>
-                    <Span FontSize="12" FontFamily="HelveticaNeue">
-                        <Run/>
-                        <LineBreak/>
-                    </Span>
-                    <Span FontWeight="Bold" FontSize="18" FontFamily="HelveticaNeue">
-                        <Run Text="Create a Network"/>
-                    </Span>
-                    <Span FontWeight="Bold" FontSize="12" FontFamily="HelveticaNeue">
-                        <LineBreak/>
-                    </Span>
-                    <Span FontSize="12" FontFamily="HelveticaNeue">
-                        <Run/>
-                    </Span>
-                </Paragraph>
-                <Paragraph>
-                    <Span FontSize="12" FontFamily="HelveticaNeue">
-                        <Run Text="Visit "/>
-                    </Span>
-                    <Hyperlink NavigateUri="http://my.zerotier.com/" RequestNavigate="Hyperlink_MouseLeftButtonDown">
-                        <Span Foreground="#FF0000E9" FontSize="12" FontFamily="HelveticaNeue">
-                            <Run Text="my.zerotier.com"/>
-                        </Span>
-                    </Hyperlink>
-                    <Span FontSize="12" FontFamily="HelveticaNeue">
-                        <Run Text=" to create and manage your own virtual networks."/>
-                    </Span>
-                    <Span FontSize="12" FontFamily="HelveticaNeue">
-                        <LineBreak/>
-                        <Run/>
-                    </Span>
-                </Paragraph>
-                <Paragraph>
-                    <Span FontSize="12" FontFamily="HelveticaNeue">
-                        <Run Text="For more information, visit "/>
-                    </Span>
-                    <Hyperlink NavigateUri="http://www.zerotier.com/" RequestNavigate="Hyperlink_MouseLeftButtonDown">
-                        <Span Foreground="#FF0000E9" FontSize="12" FontFamily="HelveticaNeue">
-                            <Run Text="zerotier.com"/>
-                        </Span>
-                    </Hyperlink>
-                    <Span FontSize="12" FontFamily="HelveticaNeue">
-                        <Run Text="."/>
-                    </Span>
-                </Paragraph>
-            </FlowDocument>
-        </RichTextBox>
+        Title="AboutView" Height="368.267" Width="300" Icon="ZeroTierIcon.ico">
+	<Grid>
+		<Image x:Name="image" HorizontalAlignment="Center" Height="100" Margin="0,10,0,0" VerticalAlignment="Top" Width="100" Source="ZeroTierIcon.ico"/>
+		<RichTextBox x:Name="richTextBox" HorizontalAlignment="Left" Height="209" Margin="10,123,0,0" VerticalAlignment="Top" Width="275" IsReadOnly="True" IsDocumentEnabled="True" BorderThickness="0" TextChanged="richTextBox_TextChanged" FontSize="18" RenderTransformOrigin="0.506,0.63">
+			<RichTextBox.Resources>
+				<Style TargetType="Hyperlink">
+					<Setter Property="Cursor" Value="Hand" />
+				</Style>
+			</RichTextBox.Resources>
+			<FlowDocument>
+				<Paragraph TextAlignment="Center">
+					<Run Text="ZeroTier One"/>
+				</Paragraph>
+				<Paragraph TextAlignment="Center">
+					<Run FontSize="14" Text="Version 1.2.2"/>
+					<LineBreak/>
+					<Run FontSize="14" Text="(c) 2011-2017 ZeroTier, Inc."/>
+					<LineBreak/>
+					<Run FontSize="14" Text="www.zerotier.com"/>
+				</Paragraph>
+				<Paragraph TextAlignment="Center">
+					<Run FontSize="14" Text="ZeroTier One allows your computer to join virtual networks. Just select &quot;join&quot; and enter a network's 16-digit ID. Each network appears on your computer as a new network port."/>
+				</Paragraph>
+			</FlowDocument>
+		</RichTextBox>
 
-    </Grid>
+	</Grid>
 </Window>

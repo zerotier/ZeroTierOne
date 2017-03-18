@@ -273,7 +273,9 @@ union LZ4_streamDecode_u {
 #endif  /* _MSC_VER */
 #endif
 
+#ifndef FORCE_INLINE
 #define FORCE_INLINE static inline
+#endif
 
 #if (defined(__GNUC__) && (__GNUC__ >= 3)) || (defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 800)) || defined(__clang__)
 #  define expect(expr,value)    (__builtin_expect ((expr),(value)) )
