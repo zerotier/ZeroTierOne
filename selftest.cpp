@@ -582,8 +582,34 @@ static int testPacket()
 	return 0;
 }
 
+static void _testExcept(int &depth)
+{
+	if (depth >= 16) {
+		throw std::runtime_error("LOL!");
+	} else {
+		++depth;
+		_testExcept(depth);
+	}
+}
+
 static int testOther()
 {
+	std::cout << "[other] Testing C++ exceptions... "; std::cout.flush();
+	int depth = 0;
+	try {
+		_testExcept(depth);
+	} catch (std::runtime_error &e) {
+		if (depth == 16) {
+			std::cout << "OK" << std::endl;
+		} else {
+			std::cout << "ERROR (depth not 16)" << std::endl;
+			return -1;
+		}
+	} catch ( ... ) {
+		std::cout << "ERROR (exception not std::runtime_error)" << std::endl;
+		return -1;
+	}
+
 	std::cout << "[other] Testing Hashtable... "; std::cout.flush();
 	{
 		Hashtable<uint64_t,std::string> ht;

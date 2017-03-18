@@ -1,6 +1,16 @@
 ZeroTier Release Notes
 ======
 
+# 2017-03-17 -- Version 1.2.2
+
+Version 1.2.2 fixes a few bugs discovered after the 1.2.0 release. These are:
+
+ * A bug causing unreliable multicast propagation (GitHub issue #461).
+ * A crash in ARM binaries due to a build chain and flags problem.
+ * A bug in the network controller preventing members from being listed (GitHub issue #460).
+
+------
+
 # 2017-03-14 -- Version 1.2.0
 
 Version 1.2.0 is a major milestone release representing almost nine months of work. It includes our rules engine for distributed network packet filtering and security monitoring, federated roots, and many other architectural and UI improvements and bug fixes.
