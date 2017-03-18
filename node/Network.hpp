@@ -374,6 +374,7 @@ private:
 
 	struct _IncomingConfigChunk
 	{
+		_IncomingConfigChunk() { memset(this,0,sizeof(_IncomingConfigChunk)); }
 		uint64_t ts;
 		uint64_t updateId;
 		uint64_t haveChunkIds[ZT_NETWORK_MAX_UPDATE_CHUNKS];

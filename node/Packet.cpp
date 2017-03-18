@@ -1066,7 +1066,7 @@ void Packet::armor(const void *key,bool encryptPayload,unsigned int counter)
 	uint8_t *const data = reinterpret_cast<uint8_t *>(unsafeData());
 
 	// Mask least significant 3 bits of packet ID with counter to embed packet send counter for QoS use
-	data[7] = (data[7] & 0xf8) | ((uint8_t)counter & 0x07);
+	data[7] = (data[7] & 0xf8) | (uint8_t)(counter & 0x07);
 
 	// Set flag now, since it affects key mangle function
 	setCipher(encryptPayload ? ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 : ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE);
@@ -1124,35 +1124,43 @@ void Packet::cryptField(const void *key,unsigned int start,unsigned int len)
 
 bool Packet::compress()
 {
-	unsigned char buf[ZT_PROTO_MAX_PACKET_LENGTH * 2];
+	char *const data = reinterpret_cast<char *>(unsafeData());
+	char buf[ZT_PROTO_MAX_PACKET_LENGTH * 2];
+
 	if ((!compressed())&&(size() > (ZT_PACKET_IDX_PAYLOAD + 64))) { // don't bother compressing tiny packets
 		int pl = (int)(size() - ZT_PACKET_IDX_PAYLOAD);
-		int cl = LZ4_compress_fast((const char *)field(ZT_PACKET_IDX_PAYLOAD,(unsigned int)pl),(char *)buf,pl,ZT_PROTO_MAX_PACKET_LENGTH * 2,2);
+		int cl = LZ4_compress_fast(data + ZT_PACKET_IDX_PAYLOAD,buf,pl,ZT_PROTO_MAX_PACKET_LENGTH * 2,2);
 		if ((cl > 0)&&(cl < pl)) {
-			(*this)[ZT_PACKET_IDX_VERB] |= (char)ZT_PROTO_VERB_FLAG_COMPRESSED;
+			data[ZT_PACKET_IDX_VERB] |= (char)ZT_PROTO_VERB_FLAG_COMPRESSED;
 			setSize((unsigned int)cl + ZT_PACKET_IDX_PAYLOAD);
-			memcpy(field(ZT_PACKET_IDX_PAYLOAD,(unsigned int)cl),buf,cl);
+			memcpy(data + ZT_PACKET_IDX_PAYLOAD,buf,cl);
 			return true;
 		}
 	}
-	(*this)[ZT_PACKET_IDX_VERB] &= (char)(~ZT_PROTO_VERB_FLAG_COMPRESSED);
+	data[ZT_PACKET_IDX_VERB] &= (char)(~ZT_PROTO_VERB_FLAG_COMPRESSED);
+
 	return false;
 }
 
 bool Packet::uncompress()
 {
-	unsigned char buf[ZT_PROTO_MAX_PACKET_LENGTH];
+	char *const data = reinterpret_cast<char *>(unsafeData());
+	char buf[ZT_PROTO_MAX_PACKET_LENGTH];
+
 	if ((compressed())&&(size() >= ZT_PROTO_MIN_PACKET_LENGTH)) {
 		if (size() > ZT_PACKET_IDX_PAYLOAD) {
 			unsigned int compLen = size() - ZT_PACKET_IDX_PAYLOAD;
-			int ucl = LZ4_decompress_safe((const char *)field(ZT_PACKET_IDX_PAYLOAD,compLen),(char *)buf,compLen,sizeof(buf));
+			int ucl = LZ4_decompress_safe((const char *)data + ZT_PACKET_IDX_PAYLOAD,buf,compLen,sizeof(buf));
 			if ((ucl > 0)&&(ucl <= (int)(capacity() - ZT_PACKET_IDX_PAYLOAD))) {
 				setSize((unsigned int)ucl + ZT_PACKET_IDX_PAYLOAD);
-				memcpy(field(ZT_PACKET_IDX_PAYLOAD,(unsigned int)ucl),buf,ucl);
-			} else return false;
+				memcpy(data + ZT_PACKET_IDX_PAYLOAD,buf,ucl);
+			} else {
+				return false;
+			}
 		}
-		(*this)[ZT_PACKET_IDX_VERB] &= (char)(~ZT_PROTO_VERB_FLAG_COMPRESSED);
+		data[ZT_PACKET_IDX_VERB] &= (char)(~ZT_PROTO_VERB_FLAG_COMPRESSED);
 	}
+
 	return true;
 }
 

@@ -72,13 +72,15 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 		if (peer) {
 			if (!trusted) {
 				if (!dearmor(peer->key())) {
+					//fprintf(stderr,"dropped packet from %s(%s), MAC authentication failed (size: %u)" ZT_EOL_S,sourceAddress.toString().c_str(),_path->address().toString().c_str(),size());
 					TRACE("dropped packet from %s(%s), MAC authentication failed (size: %u)",sourceAddress.toString().c_str(),_path->address().toString().c_str(),size());
 					return true;
 				}
 			}
 
 			if (!uncompress()) {
-				TRACE("dropped packet from %s(%s), compressed data invalid (verb may be %u)",sourceAddress.toString().c_str(),_path->address().toString().c_str(),(unsigned int)verb());
+				//fprintf(stderr,"dropped packet from %s(%s), compressed data invalid (size %u, verb may be %u)" ZT_EOL_S,sourceAddress.toString().c_str(),_path->address().toString().c_str(),size(),(unsigned int)verb());
+				TRACE("dropped packet from %s(%s), compressed data invalid (size %u, verb may be %u)",sourceAddress.toString().c_str(),_path->address().toString().c_str(),size(),(unsigned int)verb());
 				return true;
 			}
 

@@ -1322,7 +1322,7 @@ public:
 	/**
 	 * @return Value of link quality counter extracted from this packet's ID, range 0 to 7 (3 bits)
 	 */
-	inline unsigned int linkQualityCounter() const { return (unsigned int)(reinterpret_cast<const uint8_t *>(data())[7] & 7); }
+	inline unsigned int linkQualityCounter() const { return (unsigned int)(reinterpret_cast<const uint8_t *>(data())[7] & 0x07); }
 
 	/**
 	 * Set packet verb

@@ -56,12 +56,9 @@ public:
 		THING_IPV6_ADDRESS = 3
 	};
 
-	CertificateOfOwnership() :
-		_networkId(0),
-		_ts(0),
-		_id(0),
-		_thingCount(0)
+	CertificateOfOwnership()
 	{
+		memset(this,0,sizeof(CertificateOfOwnership));
 	}
 
 	CertificateOfOwnership(const uint64_t nwid,const uint64_t ts,const Address &issuedTo,const uint32_t id) :
