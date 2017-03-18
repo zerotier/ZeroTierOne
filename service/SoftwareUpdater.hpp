@@ -32,7 +32,11 @@
 #include "../node/Array.hpp"
 #include "../node/Packet.hpp"
 
+#ifdef ZT_USE_SYSTEM_JSON
+#include <json.hpp>
+#else
 #include "../ext/json/json.hpp"
+#endif
 
 /**
  * VERB_USER_MESSAGE type ID for software update messages

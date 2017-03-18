@@ -16,7 +16,13 @@ include objects.mk
 
 # Use bundled http-parser since distribution versions are NOT API-stable or compatible!
 # Trying to use dynamically linked libhttp-parser causes tons of compatibility problems.
-OBJS+=ext/http-parser/http_parser.o
+#OBJS+=ext/http-parser/http_parser.o
+
+# Use system json
+DEFS+=-DZT_USE_SYSTEM_JSON
+# Use system http-parser
+DEFS+=-DZT_USE_SYSTEM_HTTP_PARSER
+LDLIBS+=-lhttp_parser
 
 # Auto-detect miniupnpc and nat-pmp as well and use system libs if present,
 # otherwise build into binary as done on Mac and Windows.

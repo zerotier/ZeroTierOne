@@ -31,7 +31,13 @@
 
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
+
+#ifdef ZT_USE_SYSTEM_JSON
+#include <json.hpp>
+#else
 #include "../ext/json/json.hpp"
+#endif
+
 #include "../osdep/OSUtils.hpp"
 
 namespace ZeroTier {
