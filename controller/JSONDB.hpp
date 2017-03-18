@@ -45,13 +45,13 @@ public:
 	JSONDB(const std::string &basePath) :
 		_basePath(basePath)
 	{
-		_reload(_basePath);
+		_reload(_basePath,std::string());
 	}
 
 	inline void reload()
 	{
 		_db.clear();
-		_reload(_basePath);
+		_reload(_basePath,std::string());
 	}
 
 	bool writeRaw(const std::string &n,const std::string &obj);
@@ -95,7 +95,7 @@ public:
 	inline bool operator!=(const JSONDB &db) const { return (!(*this == db)); }
 
 private:
-	void _reload(const std::string &p);
+	void _reload(const std::string &p,const std::string &b);
 	bool _isValidObjectName(const std::string &n);
 	std::string _genPath(const std::string &n,bool create);
 

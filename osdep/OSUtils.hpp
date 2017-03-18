@@ -112,14 +112,6 @@ public:
 	static std::vector<std::string> listDirectory(const char *path);
 
 	/**
-	 * List all contents in a directory
-	 *
-	 * @param path Path to list
-	 * @return Names of things and types, currently just 'f' and 'd'
-	 */
-	static std::map<std::string,char> listDirectoryFull(const char *path);
-
-	/**
 	 * Clean a directory of files whose last modified time is older than this
 	 *
 	 * This ignores directories, symbolic links, and other special files.

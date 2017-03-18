@@ -126,22 +126,14 @@ void JSONDB::erase(const std::string &n)
 	_db.erase(n);
 }
 
-void JSONDB::_reload(const std::string &p)
+void JSONDB::_reload(const std::string &p,const std::string &b)
 {
-	std::map<std::string,char> l(OSUtils::listDirectoryFull(p.c_str()));
-	for(std::map<std::string,char>::iterator li(l.begin());li!=l.end();++li) {
-		if (li->second == 'f') {
-			// assume p starts with _basePath, which it always does -- will throw otherwise
-			std::string n(p.substr(_basePath.length()));
-			while ((n.length() > 0)&&(n[0] == ZT_PATH_SEPARATOR)) n = n.substr(1);
-			if (ZT_PATH_SEPARATOR != '/') std::replace(n.begin(),n.end(),ZT_PATH_SEPARATOR,'/');
-			if ((n.length() > 0)&&(n[n.length() - 1] != '/')) n.push_back('/');
-			n.append(li->first);
-			if ((n.length() > 5)&&(n.substr(n.length() - 5) == ".json")) {
-				this->get(n.substr(0,n.length() - 5),0); // causes load and cache or update
-			}
-		} else if (li->second == 'd') {
-			this->_reload(p + ZT_PATH_SEPARATOR + li->first);
+	std::vector<std::string> dl(OSUtils::listDirectory(p.c_str()));
+	for(std::vector<std::string>::const_iterator di(dl.begin());di!=dl.end();++di) {
+		if ((di->length() > 5)&&(di->substr(di->length() - 5) == ".json")) {
+			this->get(b + di->substr(0,di->length() - 5),0);
+		} else {
+			this->_reload((p + ZT_PATH_SEPARATOR + *di),(b + *di + ZT_PATH_SEPARATOR));
 		}
 	}
 }

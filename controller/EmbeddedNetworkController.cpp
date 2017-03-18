@@ -533,11 +533,10 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 						Mutex::Lock _l(_db_m);
 
 						responseBody = "{";
-						std::string pfx(std::string("network/") + nwids + "member/");
-						_db.filter(pfx,ZT_NETCONF_DB_CACHE_TTL,[&responseBody](const std::string &n,const json &member) {
-							if (member.size() > 0) {
+						_db.filter((std::string("network/") + nwids + "/member/"),ZT_NETCONF_DB_CACHE_TTL,[&responseBody](const std::string &n,const json &member) {
+							if ((member.is_object())&&(member.size() > 0)) {
 								responseBody.append((responseBody.length() == 1) ? "\"" : ",\"");
-								responseBody.append(OSUtils::jsonString(member["id"],""));
+								responseBody.append(OSUtils::jsonString(member["id"],"0"));
 								responseBody.append("\":");
 								responseBody.append(OSUtils::jsonString(member["revision"],"0"));
 							}
