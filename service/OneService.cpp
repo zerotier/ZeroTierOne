@@ -73,7 +73,11 @@
 #include "../ext/http-parser/http_parser.h"
 #endif
 
+#ifdef ZT_USE_SYSTEM_JSON
+#include <json.hpp>
+#else
 #include "../ext/json/json.hpp"
+#endif
 
 using json = nlohmann::json;
 
