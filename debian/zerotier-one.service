@@ -1,5 +1,6 @@
 [Unit]
 Description=ZeroTier One
+Documentation=https://www.zerotier.com/manual.shtml
 After=network.target
 Before=ssh.service docker.service
 
