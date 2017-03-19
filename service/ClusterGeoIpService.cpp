@@ -101,7 +101,7 @@ bool ClusterGeoIpService::locate(const InetAddress &ip,int &x,int &y,int &z)
 
 void ClusterGeoIpService::_parseLine(const char *line,std::vector<_V4E> &v4db,std::vector<_V6E> &v6db,int ipStartColumn,int ipEndColumn,int latitudeColumn,int longitudeColumn)
 {
-	std::vector<std::string> ls(Utils::split(line,",\t","\\","\"'"));
+	std::vector<std::string> ls(OSUtils::split(line,",\t","\\","\"'"));
 	if ( ((ipStartColumn >= 0)&&(ipStartColumn < (int)ls.size()))&&
 	     ((ipEndColumn >= 0)&&(ipEndColumn < (int)ls.size()))&&
 	     ((latitudeColumn >= 0)&&(latitudeColumn < (int)ls.size()))&&

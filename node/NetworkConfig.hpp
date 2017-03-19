@@ -35,7 +35,28 @@
 #include "MulticastGroup.hpp"
 #include "Address.hpp"
 #include "CertificateOfMembership.hpp"
+#include "CertificateOfOwnership.hpp"
+#include "Capability.hpp"
+#include "Tag.hpp"
 #include "Dictionary.hpp"
+#include "Identity.hpp"
+#include "Utils.hpp"
+
+/**
+ * Default maximum time delta for COMs, tags, and capabilities
+ *
+ * The current value is two hours, providing ample time for a controller to
+ * experience fail-over, etc.
+ */
+#define ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA 7200000ULL
+
+/**
+ * Default minimum credential TTL and maxDelta for COM timestamps
+ *
+ * This is just slightly over three minutes and provides three retries for
+ * all currently online members to refresh.
+ */
+#define ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA 185000ULL
 
 /**
  * Flag: allow passive bridging (experimental)
@@ -53,9 +74,14 @@
 #define ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION 0x0000000000000004ULL
 
 /**
- * Device is a network preferred relay
+ * Flag: result of unrecognized MATCH entries in a rules table: match if set, no-match if clear
  */
-#define ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY 0x0000010000000000ULL
+#define ZT_NETWORKCONFIG_FLAG_RULES_RESULT_OF_UNSUPPORTED_MATCH 0x0000000000000008ULL
+
+/**
+ * Flag: disable frame compression
+ */
+#define ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION 0x0000000000000010ULL
 
 /**
  * Device is an active bridge
@@ -63,26 +89,57 @@
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE 0x0000020000000000ULL
 
 /**
- * An anchor is a device that is willing to be one and has been online/stable for a long time on this network
+ * Anchors are stable devices on this network that can cache multicast info, etc.
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR 0x0000040000000000ULL
 
+/**
+ * Device can send CIRCUIT_TESTs for this network
+ */
+#define ZT_NETWORKCONFIG_SPECIALIST_TYPE_CIRCUIT_TESTER 0x0000080000000000ULL
+
 namespace ZeroTier {
 
-// Maximum size of a network config dictionary (can be increased)
-#define ZT_NETWORKCONFIG_DICT_CAPACITY 8194
+// Dictionary capacity needed for max size network config
+#define ZT_NETWORKCONFIG_DICT_CAPACITY (1024 + (sizeof(ZT_VirtualNetworkRule) * ZT_MAX_NETWORK_RULES) + (sizeof(Capability) * ZT_MAX_NETWORK_CAPABILITIES) + (sizeof(Tag) * ZT_MAX_NETWORK_TAGS) + (sizeof(CertificateOfOwnership) * ZT_MAX_CERTIFICATES_OF_OWNERSHIP))
+
+// Dictionary capacity needed for max size network meta-data
+#define ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY 1024
 
 // Network config version
-#define ZT_NETWORKCONFIG_VERSION 6
+#define ZT_NETWORKCONFIG_VERSION 7
 
 // Fields for meta-data sent with network config requests
+
+// Network config version
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION "v"
+// Protocol version (see Packet.hpp)
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION "pv"
+// Software vendor
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_VENDOR "vend"
+// Software major version
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION "majv"
+// Software minor version
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION "minv"
+// Software revision
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION "revv"
+// Rules engine revision
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV "revr"
+// Maximum number of rules per network this node can accept
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_RULES "mr"
+// Maximum number of capabilities this node can accept
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_CAPABILITIES "mc"
+// Maximum number of rules per capability this node can accept
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_CAPABILITY_RULES "mcr"
+// Maximum number of tags this node can accept
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_TAGS "mt"
+// Network join authorization token (if any)
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH "a"
+// Network configuration meta-data flags
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS "f"
 
 // These dictionary keys are short so they don't take up much room.
+// By convention we use upper case for binary blobs, but it doesn't really matter.
 
 // network config version
 #define ZT_NETWORKCONFIG_DICT_KEY_VERSION "v"
@@ -102,6 +159,8 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_TYPE "t"
 // text
 #define ZT_NETWORKCONFIG_DICT_KEY_NAME "n"
+// credential time max delta in ms
+#define ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA "ctmd"
 // binary serialized certificate of membership
 #define ZT_NETWORKCONFIG_DICT_KEY_COM "C"
 // specialists (binary array of uint64_t)
@@ -110,10 +169,16 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_ROUTES "RT"
 // static IPs (binary blob)
 #define ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS "I"
-// pinned address physical route mappings (binary blob)
-#define ZT_NETWORKCONFIG_DICT_KEY_PINNED "P"
 // rules (binary blob)
 #define ZT_NETWORKCONFIG_DICT_KEY_RULES "R"
+// capabilities (binary blobs)
+#define ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES "CAP"
+// tags (binary blobs)
+#define ZT_NETWORKCONFIG_DICT_KEY_TAGS "TAG"
+// tags (binary blobs)
+#define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP "COO"
+// curve25519 signature
+#define ZT_NETWORKCONFIG_DICT_KEY_SIGNATURE "C25519"
 
 // Legacy fields -- these are obsoleted but are included when older clients query
 
@@ -138,6 +203,8 @@ namespace ZeroTier {
 // node;IP/port[,node;IP/port]
 #define ZT_NETWORKCONFIG_DICT_KEY_RELAYS_OLD "rl"
 
+// End legacy fields
+
 /**
  * Network configuration received from network controller nodes
  *
@@ -147,58 +214,6 @@ namespace ZeroTier {
 class NetworkConfig
 {
 public:
-	/**
-	 * Network preferred relay with optional physical endpoint addresses
-	 *
-	 * This is used by the convenience relays() method.
-	 */
-	struct Relay
-	{
-		Address address;
-		InetAddress phy4,phy6;
-	};
-
-	/**
-	 * Create an instance of a NetworkConfig for the test network ID
-	 *
-	 * The test network ID is defined as ZT_TEST_NETWORK_ID. This is a
-	 * "fake" network with no real controller and default options.
-	 *
-	 * @param self This node's ZT address
-	 * @return Configuration for test network ID
-	 */
-	static inline NetworkConfig createTestNetworkConfig(const Address &self)
-	{
-		NetworkConfig nc;
-
-		nc.networkId = ZT_TEST_NETWORK_ID;
-		nc.timestamp = 1;
-		nc.revision = 1;
-		nc.issuedTo = self;
-		nc.multicastLimit = ZT_MULTICAST_DEFAULT_LIMIT;
-		nc.flags = ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
-		nc.type = ZT_NETWORK_TYPE_PUBLIC;
-
-		nc.rules[0].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
-		nc.ruleCount = 1;
-
-		Utils::snprintf(nc.name,sizeof(nc.name),"ZT_TEST_NETWORK");
-
-		// Make up a V4 IP from 'self' in the 10.0.0.0/8 range -- no
-		// guarantee of uniqueness but collisions are unlikely.
-		uint32_t ip = (uint32_t)((self.toInt() & 0x00ffffff) | 0x0a000000); // 10.x.x.x
-		if ((ip & 0x000000ff) == 0x000000ff) ip ^= 0x00000001; // but not ending in .255
-		if ((ip & 0x000000ff) == 0x00000000) ip ^= 0x00000001; // or .0
-		nc.staticIps[0] = InetAddress(Utils::hton(ip),8);
-
-		// Assign an RFC4193-compliant IPv6 address -- will never collide
-		nc.staticIps[1] = InetAddress::makeIpv6rfc4193(ZT_TEST_NETWORK_ID,self.toInt());
-
-		nc.staticIpCount = 2;
-
-		return nc;
-	}
-
 	NetworkConfig()
 	{
 		memset(this,0,sizeof(NetworkConfig));
@@ -216,26 +231,6 @@ public:
 	}
 
 	/**
-	 * @param etherType Ethernet frame type to check
-	 * @return True if allowed on this network
-	 */
-	inline bool permitsEtherType(unsigned int etherType) const
-	{
-		unsigned int et = 0;
-		for(unsigned int i=0;i<ruleCount;++i) {
-			ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rules[i].t & 0x7f);
-			if (rt == ZT_NETWORK_RULE_MATCH_ETHERTYPE) {
-				et = rules[i].v.etherType;
-			} else if (rt == ZT_NETWORK_RULE_ACTION_ACCEPT) {
-				if ((!et)||(et == etherType))
-					return true;
-				et = 0;
-			}
-		}
-		return false;
-	}
-
-	/**
 	 * Write this network config to a dictionary for transport
 	 *
 	 * @param d Dictionary
@@ -247,7 +242,7 @@ public:
 	/**
 	 * Read this network config from a dictionary
 	 *
-	 * @param d Dictionary
+	 * @param d Dictionary (non-const since it might be modified during parse, should not be used after call)
 	 * @return True if dictionary was valid and network config successfully initialized
 	 */
 	bool fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d);
@@ -266,6 +261,11 @@ public:
 	 * @return True if IPv6 NDP emulation should be allowed for certain "magic" IPv6 address patterns
 	 */
 	inline bool ndpEmulation() const throw() { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
+
+	/**
+	 * @return True if frames should not be compressed
+	 */
+	inline bool disableCompression() const throw() { return ((this->flags & ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION) != 0); }
 
 	/**
 	 * @return Network type is public (no access control)
@@ -304,40 +304,16 @@ public:
 	}
 
 	/**
-	 * Get pinned physical address for a given ZeroTier address, if any
-	 *
-	 * @param zt ZeroTier address
-	 * @param af Address family (e.g. AF_INET) or 0 for the first we find of any type
-	 * @return Physical address, if any
+	 * @param a Address to check
+	 * @return True if address is an anchor
 	 */
-	inline InetAddress findPinnedAddress(const Address &zt,unsigned int af) const
+	inline bool isAnchor(const Address &a) const
 	{
-		for(unsigned int i=0;i<pinnedCount;++i) {
-			if (pinned[i].zt == zt) {
-				if ((af == 0)||((unsigned int)pinned[i].phy.ss_family == af))
-					return pinned[i].phy;
-			}
-		}
-		return InetAddress();
-	}
-
-	/**
-	 * This gets network preferred relays with their static physical address if one is defined
-	 *
-	 * @return Network-preferred relays for this network (if none, only roots will be used)
-	 */
-	inline std::vector<Relay> relays() const
-	{
-		std::vector<Relay> r;
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY) != 0) {
-				r.push_back(Relay());
-				r.back().address = specialists[i];
-				r.back().phy4 = findPinnedAddress(r.back().address,AF_INET);
-				r.back().phy6 = findPinnedAddress(r.back().address,AF_INET6);
-			}
+			if ((a == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR) != 0))
+				return true;
 		}
-		return r;
+		return false;
 	}
 
 	/**
@@ -356,31 +332,15 @@ public:
 	}
 
 	/**
-	 * Iterate through relays efficiently
-	 *
-	 * @param ptr Value-result parameter -- start by initializing with zero, then call until return is null
-	 * @return Address of relay or NULL if no more
+	 * @param byPeer Address to check
+	 * @return True if this peer is allowed to do circuit tests on this network (controller is always true)
 	 */
-	Address nextRelay(unsigned int &ptr) const
+	inline bool circuitTestingAllowed(const Address &byPeer) const
 	{
-		while (ptr < specialistCount) {
-			if ((specialists[ptr] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY) != 0) {
-				return Address(specialists[ptr++]);
-			} else {
-				++ptr;
-			}
-		}
-		return Address();
-	}
-
-	/**
-	 * @param zt ZeroTier address
-	 * @return True if this address is a relay
-	 */
-	bool isRelay(const Address &zt) const
-	{
+		if (byPeer.toInt() == ((networkId >> 24) & 0xffffffffffULL))
+			return true;
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((zt == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_NETWORK_PREFERRED_RELAY) != 0))
+			if ((byPeer == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_CIRCUIT_TESTER) != 0))
 				return true;
 		}
 		return false;
@@ -393,39 +353,6 @@ public:
 
 	inline bool operator==(const NetworkConfig &nc) const { return (memcmp(this,&nc,sizeof(NetworkConfig)) == 0); }
 	inline bool operator!=(const NetworkConfig &nc) const { return (!(*this == nc)); }
-
-	/*
-	inline void dump() const
-	{
-		printf("networkId==%.16llx\n",networkId);
-		printf("timestamp==%llu\n",timestamp);
-		printf("revision==%llu\n",revision);
-		printf("issuedTo==%.10llx\n",issuedTo.toInt());
-		printf("multicastLimit==%u\n",multicastLimit);
-		printf("flags=%.8lx\n",(unsigned long)flags);
-		printf("specialistCount==%u\n",specialistCount);
-		for(unsigned int i=0;i<specialistCount;++i)
-			printf("  specialists[%u]==%.16llx\n",i,specialists[i]);
-		printf("routeCount==%u\n",routeCount);
-		for(unsigned int i=0;i<routeCount;++i) {
-			printf("  routes[i].target==%s\n",reinterpret_cast<const InetAddress *>(&(routes[i].target))->toString().c_str());
-			printf("  routes[i].via==%s\n",reinterpret_cast<const InetAddress *>(&(routes[i].via))->toIpString().c_str());
-			printf("  routes[i].flags==%.4x\n",(unsigned int)routes[i].flags);
-			printf("  routes[i].metric==%u\n",(unsigned int)routes[i].metric);
-		}
-		printf("staticIpCount==%u\n",staticIpCount);
-		for(unsigned int i=0;i<staticIpCount;++i)
-			printf("  staticIps[i]==%s\n",staticIps[i].toString().c_str());
-		printf("pinnedCount==%u\n",pinnedCount);
-		for(unsigned int i=0;i<pinnedCount;++i) {
-			printf("  pinned[i].zt==%s\n",pinned[i].zt.toString().c_str());
-			printf("  pinned[i].phy==%s\n",pinned[i].phy.toString().c_str());
-		}
-		printf("ruleCount==%u\n",ruleCount);
-		printf("name==%s\n",name);
-		printf("com==%s\n",com.toString().c_str());
-	}
-	*/
 
 	/**
 	 * Add a specialist or mask flags if already present
@@ -453,6 +380,53 @@ public:
 		return false;
 	}
 
+	const Capability *capability(const uint32_t id) const
+	{
+		for(unsigned int i=0;i<capabilityCount;++i) {
+			if (capabilities[i].id() == id)
+				return &(capabilities[i]);
+		}
+		return (Capability *)0;
+	}
+
+	const Tag *tag(const uint32_t id) const
+	{
+		for(unsigned int i=0;i<tagCount;++i) {
+			if (tags[i].id() == id)
+				return &(tags[i]);
+		}
+		return (Tag *)0;
+	}
+
+	/*
+	inline void dump() const
+	{
+		printf("networkId==%.16llx\n",networkId);
+		printf("timestamp==%llu\n",timestamp);
+		printf("credentialTimeMaxDelta==%llu\n",credentialTimeMaxDelta);
+		printf("revision==%llu\n",revision);
+		printf("issuedTo==%.10llx\n",issuedTo.toInt());
+		printf("multicastLimit==%u\n",multicastLimit);
+		printf("flags=%.8lx\n",(unsigned long)flags);
+		printf("specialistCount==%u\n",specialistCount);
+		for(unsigned int i=0;i<specialistCount;++i)
+			printf("  specialists[%u]==%.16llx\n",i,specialists[i]);
+		printf("routeCount==%u\n",routeCount);
+		for(unsigned int i=0;i<routeCount;++i) {
+			printf("  routes[i].target==%s\n",reinterpret_cast<const InetAddress *>(&(routes[i].target))->toString().c_str());
+			printf("  routes[i].via==%s\n",reinterpret_cast<const InetAddress *>(&(routes[i].via))->toIpString().c_str());
+			printf("  routes[i].flags==%.4x\n",(unsigned int)routes[i].flags);
+			printf("  routes[i].metric==%u\n",(unsigned int)routes[i].metric);
+		}
+		printf("staticIpCount==%u\n",staticIpCount);
+		for(unsigned int i=0;i<staticIpCount;++i)
+			printf("  staticIps[i]==%s\n",staticIps[i].toString().c_str());
+		printf("ruleCount==%u\n",ruleCount);
+		printf("name==%s\n",name);
+		printf("com==%s\n",com.toString().c_str());
+	}
+	*/
+
 	/**
 	 * Network ID that this configuration applies to
 	 */
@@ -462,6 +436,11 @@ public:
 	 * Controller-side time of config generation/issue
 	 */
 	uint64_t timestamp;
+
+	/**
+	 * Max difference between timestamp and tag/capability timestamp
+	 */
+	uint64_t credentialTimeMaxDelta;
 
 	/**
 	 * Controller-side revision counter for this configuration
@@ -499,14 +478,24 @@ public:
 	unsigned int staticIpCount;
 
 	/**
-	 * Number of pinned devices (devices with physical address hints)
-	 */
-	unsigned int pinnedCount;
-
-	/**
 	 * Number of rule table entries
 	 */
 	unsigned int ruleCount;
+
+	/**
+	 * Number of capabilities
+	 */
+	unsigned int capabilityCount;
+
+	/**
+	 * Number of tags
+	 */
+	unsigned int tagCount;
+
+	/**
+	 * Number of certificates of ownership
+	 */
+	unsigned int certificateOfOwnershipCount;
 
 	/**
 	 * Specialist devices
@@ -527,20 +516,24 @@ public:
 	InetAddress staticIps[ZT_MAX_ZT_ASSIGNED_ADDRESSES];
 
 	/**
-	 * Pinned devices with physical address hints
-	 *
-	 * These can be used to specify a physical address where a given device
-	 * can be reached. It's usually used with network relays (specialists).
-	 */
-	struct {
-		Address zt;
-		InetAddress phy;
-	} pinned[ZT_MAX_NETWORK_PINNED];
-
-	/**
-	 * Rules table
+	 * Base network rules
 	 */
 	ZT_VirtualNetworkRule rules[ZT_MAX_NETWORK_RULES];
+
+	/**
+	 * Capabilities for this node on this network, in ascending order of capability ID
+	 */
+	Capability capabilities[ZT_MAX_NETWORK_CAPABILITIES];
+
+	/**
+	 * Tags for this node on this network, in ascending order of tag ID
+	 */
+	Tag tags[ZT_MAX_NETWORK_TAGS];
+
+	/**
+	 * Certificates of ownership for this network member
+	 */
+	CertificateOfOwnership certificatesOfOwnership[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
 
 	/**
 	 * Network type (currently just public or private)

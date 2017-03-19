@@ -1,3 +1,21 @@
+/*
+ * ZeroTier One - Network Virtualization Everywhere
+ * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "ZT_jniutils.h"
 #include "ZT_jnilookup.h"
 #include <string>
@@ -12,7 +30,7 @@ extern "C" {
 jobject createResultObject(JNIEnv *env, ZT_ResultCode code)
 {
     jclass resultClass = NULL;
-    
+
     jobject resultObject = NULL;
 
     resultClass = lookup.findClass("com/zerotier/sdk/ResultCode");
@@ -49,14 +67,14 @@ jobject createResultObject(JNIEnv *env, ZT_ResultCode code)
     }
 
     jfieldID enumField = lookup.findStaticField(resultClass, fieldName.c_str(), "Lcom/zerotier/sdk/ResultCode;");
-    if(env->ExceptionCheck() || enumField == NULL) 
+    if(env->ExceptionCheck() || enumField == NULL)
     {
         LOGE("Error on FindStaticField");
         return NULL;
     }
 
     resultObject = env->GetStaticObjectField(resultClass, enumField);
-    if(env->ExceptionCheck() || resultObject == NULL) 
+    if(env->ExceptionCheck() || resultObject == NULL)
     {
         LOGE("Error on GetStaticObjectField");
     }
@@ -136,6 +154,8 @@ jobject createEvent(JNIEnv *env, ZT_Event event)
     case ZT_EVENT_TRACE:
         fieldName = "EVENT_TRACE";
         break;
+    case ZT_EVENT_USER_MESSAGE:
+        break;
     }
 
     jfieldID enumField = lookup.findStaticField(eventClass, fieldName.c_str(), "Lcom/zerotier/sdk/Event;");
@@ -162,11 +182,11 @@ jobject createPeerRole(JNIEnv *env, ZT_PeerRole role)
     case ZT_PEER_ROLE_LEAF:
         fieldName = "PEER_ROLE_LEAF";
         break;
-    case ZT_PEER_ROLE_RELAY:
-        fieldName = "PEER_ROLE_RELAY";
+    case ZT_PEER_ROLE_MOON:
+        fieldName = "PEER_ROLE_MOON";
         break;
-    case ZT_PEER_ROLE_ROOT:
-        fieldName = "PEER_ROLE_ROOTS";
+    case ZT_PEER_ROLE_PLANET:
+        fieldName = "PEER_ROLE_PLANET";
         break;
     }
 
@@ -313,11 +333,20 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
         return NULL;
     }
 
-    jobject inetAddressObject = newInetAddress(env, addr);
+    jobject inetAddressObject = NULL;
 
-    if(env->ExceptionCheck() || inetAddressObject == NULL)
+    if(addr.ss_family != 0)
     {
-        LOGE("Error creating new inet address");
+        inetAddressObject = newInetAddress(env, addr);
+
+        if(env->ExceptionCheck() || inetAddressObject == NULL)
+        {
+            LOGE("Error creating new inet address");
+            return NULL;
+        }
+    }
+    else
+    {
         return NULL;
     }
 
@@ -350,10 +379,9 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
         break;
         default:
         {
-            LOGE("ERROR:  addr.ss_family is not set or unknown");
             break;
         }
-    };
+    }
 
 
     jobject inetSocketAddressObject = env->NewObject(inetSocketAddressClass, inetSocketAddress_constructor, inetAddressObject, port);
@@ -371,7 +399,6 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
     jfieldID addressField = NULL;
     jfieldID lastSendField = NULL;
     jfieldID lastReceiveField = NULL;
-    jfieldID activeField = NULL;
     jfieldID preferredField = NULL;
 
     jmethodID ppp_constructor = NULL;
@@ -401,13 +428,6 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
     if(env->ExceptionCheck() || lastReceiveField == NULL)
     {
         LOGE("Error finding lastReceive field");
-        return NULL;
-    }
-
-    activeField = lookup.findField(pppClass, "active", "Z");
-    if(env->ExceptionCheck() || activeField == NULL)
-    {
-        LOGE("Error finding active field");
         return NULL;
     }
 
@@ -441,7 +461,6 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
     env->SetObjectField(pppObject, addressField, addressObject);
     env->SetLongField(pppObject, lastSendField, ppp.lastSend);
     env->SetLongField(pppObject, lastReceiveField, ppp.lastReceive);
-    env->SetBooleanField(pppObject, activeField, ppp.active);
     env->SetBooleanField(pppObject, preferredField, ppp.preferred);
 
     if(env->ExceptionCheck()) {
@@ -451,15 +470,13 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
     return pppObject;
 }
 
-jobject newPeer(JNIEnv *env, const ZT_Peer &peer) 
+jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
 {
     LOGV("newPeer called");
 
     jclass peerClass = NULL;
 
     jfieldID addressField = NULL;
-    jfieldID lastUnicastFrameField = NULL;
-    jfieldID lastMulticastFrameField = NULL;
     jfieldID versionMajorField = NULL;
     jfieldID versionMinorField = NULL;
     jfieldID versionRevField = NULL;
@@ -480,20 +497,6 @@ jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
     if(env->ExceptionCheck() || addressField == NULL)
     {
         LOGE("Error finding address field of Peer object");
-        return NULL;
-    }
-
-    lastUnicastFrameField = lookup.findField(peerClass, "lastUnicastFrame", "J");
-    if(env->ExceptionCheck() || lastUnicastFrameField == NULL)
-    {
-        LOGE("Error finding lastUnicastFrame field of Peer object");
-        return NULL;
-    }
-
-    lastMulticastFrameField = lookup.findField(peerClass, "lastMulticastFrame", "J");
-    if(env->ExceptionCheck() || lastMulticastFrameField == NULL)
-    {
-        LOGE("Error finding lastMulticastFrame field of Peer object");
         return NULL;
     }
 
@@ -554,8 +557,6 @@ jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
     }
 
     env->SetLongField(peerObject, addressField, (jlong)peer.address);
-    env->SetLongField(peerObject, lastUnicastFrameField, (jlong)peer.lastUnicastFrame);
-    env->SetLongField(peerObject, lastMulticastFrameField, (jlong)peer.lastMulticastFrame);
     env->SetIntField(peerObject, versionMajorField, peer.versionMajor);
     env->SetIntField(peerObject, versionMinorField, peer.versionMinor);
     env->SetIntField(peerObject, versionRevField, peer.versionRev);
@@ -571,7 +572,7 @@ jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
 
     jobjectArray arrayObject = env->NewObjectArray(
         peer.pathCount, peerPhysicalPathClass, NULL);
-    if(env->ExceptionCheck() || arrayObject == NULL) 
+    if(env->ExceptionCheck() || arrayObject == NULL)
     {
         LOGE("Error creating PeerPhysicalPath[] array");
         return NULL;
@@ -609,6 +610,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
     jfieldID portErrorField = NULL;
     jfieldID netconfRevisionField = NULL;
     jfieldID assignedAddressesField = NULL;
+    jfieldID routesField = NULL;
 
     vnetConfigClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkConfig");
     if(vnetConfigClass == NULL)
@@ -709,10 +711,19 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
         return NULL;
     }
 
-    assignedAddressesField = lookup.findField(vnetConfigClass, "assignedAddresses", "[Ljava/net/InetSocketAddress;");
+    assignedAddressesField = lookup.findField(vnetConfigClass, "assignedAddresses",
+        "[Ljava/net/InetSocketAddress;");
     if(env->ExceptionCheck() || assignedAddressesField == NULL)
     {
         LOGE("Error getting assignedAddresses field");
+        return NULL;
+    }
+
+    routesField = lookup.findField(vnetConfigClass, "routes",
+        "[Lcom/zerotier/sdk/VirtualNetworkRoute;");
+    if(env->ExceptionCheck() || routesField == NULL)
+    {
+        LOGE("Error getting routes field");
         return NULL;
     }
 
@@ -773,6 +784,34 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
 
     env->SetObjectField(vnetConfigObj, assignedAddressesField, assignedAddrArrayObj);
 
+    jclass virtualNetworkRouteClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkRoute");
+    if(env->ExceptionCheck() || virtualNetworkRouteClass == NULL)
+    {
+        LOGE("Error finding VirtualNetworkRoute class");
+        return NULL;
+    }
+
+    jobjectArray routesArrayObj = env->NewObjectArray(
+        vnetConfig.routeCount, virtualNetworkRouteClass, NULL);
+    if(env->ExceptionCheck() || routesArrayObj == NULL)
+    {
+        LOGE("Error creating VirtualNetworkRoute[] array");
+        return NULL;
+    }
+
+    for(unsigned int i = 0; i < vnetConfig.routeCount; ++i)
+    {
+        jobject routeObj = newVirtualNetworkRoute(env, vnetConfig.routes[i]);
+        env->SetObjectArrayElement(routesArrayObj, i, routeObj);
+        if(env->ExceptionCheck())
+        {
+            LOGE("Error assigning VirtualNetworkRoute to array");
+            return NULL;
+        }
+    }
+
+    env->SetObjectField(vnetConfigObj, routesField, routesArrayObj);
+
     return vnetConfigObj;
 }
 
@@ -831,6 +870,72 @@ jobject newVersion(JNIEnv *env, int major, int minor, int rev)
     return versionObj;
 }
 
+jobject newVirtualNetworkRoute(JNIEnv *env, const ZT_VirtualNetworkRoute &route)
+{
+    jclass virtualNetworkRouteClass = NULL;
+    jmethodID routeConstructor = NULL;
+
+    virtualNetworkRouteClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkRoute");
+    if(env->ExceptionCheck() || virtualNetworkRouteClass == NULL)
+    {
+        return NULL;
+    }
+
+    routeConstructor = lookup.findMethod(virtualNetworkRouteClass, "<init>", "()V");
+    if(env->ExceptionCheck() || routeConstructor == NULL)
+    {
+        return NULL;
+    }
+
+    jobject routeObj = env->NewObject(virtualNetworkRouteClass, routeConstructor);
+    if(env->ExceptionCheck() || routeObj == NULL)
+    {
+        return NULL;
+    }
+
+    jfieldID targetField = NULL;
+    jfieldID viaField = NULL;
+    jfieldID flagsField = NULL;
+    jfieldID metricField = NULL;
+
+    targetField = lookup.findField(virtualNetworkRouteClass, "target",
+        "Ljava/net/InetSocketAddress;");
+    if(env->ExceptionCheck() || targetField == NULL)
+    {
+        return NULL;
+    }
+
+    viaField = lookup.findField(virtualNetworkRouteClass, "via",
+        "Ljava/net/InetSocketAddress;");
+    if(env->ExceptionCheck() || targetField == NULL)
+    {
+        return NULL;
+    }
+
+    flagsField = lookup.findField(virtualNetworkRouteClass, "flags", "I");
+    if(env->ExceptionCheck() || flagsField == NULL)
+    {
+        return NULL;
+    }
+
+    metricField = lookup.findField(virtualNetworkRouteClass, "metric", "I");
+    if(env->ExceptionCheck() || metricField == NULL)
+    {
+        return NULL;
+    }
+
+    jobject targetObj = newInetSocketAddress(env, route.target);
+    jobject viaObj = newInetSocketAddress(env, route.via);
+
+    env->SetObjectField(routeObj, targetField, targetObj);
+    env->SetObjectField(routeObj, viaField, viaObj);
+    env->SetIntField(routeObj, flagsField, (jint)route.flags);
+    env->SetIntField(routeObj, metricField, (jint)route.metric);
+
+    return routeObj;
+}
+
 #ifdef __cplusplus
 }
 #endif
+

@@ -64,14 +64,13 @@ Switch::Switch(const RuntimeEnvironment *renv) :
 {
 }
 
-Switch::~Switch()
-{
-}
-
 void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len)
 {
 	try {
 		const uint64_t now = RR->node->now();
+
+		SharedPtr<Path> path(RR->topology->getPath(localAddr,fromAddr));
+		path->received(now);
 
 		if (len == 13) {
 			/* LEGACY: before VERB_PUSH_DIRECT_PATHS, peers used broadcast
@@ -79,22 +78,22 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 			 * no longer send these, but we'll listen for them for a while to
 			 * locate peers with versions <1.0.4. */
 
-			Address beaconAddr(reinterpret_cast<const char *>(data) + 8,5);
+			const Address beaconAddr(reinterpret_cast<const char *>(data) + 8,5);
 			if (beaconAddr == RR->identity.address())
 				return;
-			if (!RR->node->shouldUsePathForZeroTierTraffic(localAddr,fromAddr))
+			if (!RR->node->shouldUsePathForZeroTierTraffic(beaconAddr,localAddr,fromAddr))
 				return;
-			SharedPtr<Peer> peer(RR->topology->getPeer(beaconAddr));
+			const SharedPtr<Peer> peer(RR->topology->getPeer(beaconAddr));
 			if (peer) { // we'll only respond to beacons from known peers
 				if ((now - _lastBeaconResponse) >= 2500) { // limit rate of responses
 					_lastBeaconResponse = now;
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
-					outp.armor(peer->key(),true);
-					RR->node->putPacket(localAddr,fromAddr,outp.data(),outp.size());
+					outp.armor(peer->key(),true,path->nextOutgoingCounter());
+					path->send(RR,outp.data(),outp.size(),now);
 				}
 			}
 
-		} else if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) { // min length check is important!
+		} else if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) { // SECURITY: min length check is important since we do some C-style stuff below!
 			if (reinterpret_cast<const uint8_t *>(data)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR) {
 				// Handle fragment ----------------------------------------------------
 
@@ -102,25 +101,33 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 				const Address destination(fragment.destination());
 
 				if (destination != RR->identity.address()) {
-					// Fragment is not for us, so try to relay it
+#ifdef ZT_ENABLE_CLUSTER
+					const bool isClusterFrontplane = ((RR->cluster)&&(RR->cluster->isClusterPeerFrontplane(fromAddr)));
+#else
+					const bool isClusterFrontplane = false;
+#endif
+
+					if ( (!RR->topology->amRoot()) && (!path->trustEstablished(now)) && (!isClusterFrontplane) )
+						return;
+
 					if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
 						fragment.incrementHops();
 
 						// Note: we don't bother initiating NAT-t for fragments, since heads will set that off.
 						// It wouldn't hurt anything, just redundant and unnecessary.
 						SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
-						if ((!relayTo)||(!relayTo->send(fragment.data(),fragment.size(),now))) {
+						if ((!relayTo)||(!relayTo->sendDirect(fragment.data(),fragment.size(),now,false))) {
 #ifdef ZT_ENABLE_CLUSTER
-							if (RR->cluster) {
-								RR->cluster->sendViaCluster(Address(),destination,fragment.data(),fragment.size(),false);
+							if ((RR->cluster)&&(!isClusterFrontplane)) {
+								RR->cluster->relayViaCluster(Address(),destination,fragment.data(),fragment.size(),false);
 								return;
 							}
 #endif
 
-							// Don't know peer or no direct path -- so relay via root server
-							relayTo = RR->topology->getBestRoot();
+							// Don't know peer or no direct path -- so relay via someone upstream
+							relayTo = RR->topology->getUpstreamPeer();
 							if (relayTo)
-								relayTo->send(fragment.data(),fragment.size(),now);
+								relayTo->sendDirect(fragment.data(),fragment.size(),now,true);
 						}
 					} else {
 						TRACE("dropped relay [fragment](%s) -> %s, max hops exceeded",fromAddr.toString().c_str(),destination.toString().c_str());
@@ -164,7 +171,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 								for(unsigned int f=1;f<totalFragments;++f)
 									rq->frag0.append(rq->frags[f - 1].payload(),rq->frags[f - 1].payloadLength());
 
-								if (rq->frag0.tryDecode(RR,false)) {
+								if (rq->frag0.tryDecode(RR)) {
 									rq->timestamp = 0; // packet decoded, free entry
 								} else {
 									rq->complete = true; // set complete flag but leave entry since it probably needs WHOIS or something
@@ -178,66 +185,117 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 			} else if (len >= ZT_PROTO_MIN_PACKET_LENGTH) { // min length check is important!
 				// Handle packet head -------------------------------------------------
 
-				// See packet format in Packet.hpp to understand this
-				const uint64_t packetId = (
-					(((uint64_t)reinterpret_cast<const uint8_t *>(data)[0]) << 56) |
-					(((uint64_t)reinterpret_cast<const uint8_t *>(data)[1]) << 48) |
-					(((uint64_t)reinterpret_cast<const uint8_t *>(data)[2]) << 40) |
-					(((uint64_t)reinterpret_cast<const uint8_t *>(data)[3]) << 32) |
-					(((uint64_t)reinterpret_cast<const uint8_t *>(data)[4]) << 24) |
-					(((uint64_t)reinterpret_cast<const uint8_t *>(data)[5]) << 16) |
-					(((uint64_t)reinterpret_cast<const uint8_t *>(data)[6]) << 8) |
-					((uint64_t)reinterpret_cast<const uint8_t *>(data)[7])
-				);
 				const Address destination(reinterpret_cast<const uint8_t *>(data) + 8,ZT_ADDRESS_LENGTH);
 				const Address source(reinterpret_cast<const uint8_t *>(data) + 13,ZT_ADDRESS_LENGTH);
 
-				// Catch this and toss it -- it would never work, but it could happen if we somehow
-				// mistakenly guessed an address we're bound to as a destination for another peer.
-				if (source == RR->identity.address())
-					return;
-
 				//TRACE("<< %.16llx %s -> %s (size: %u)",(unsigned long long)packet->packetId(),source.toString().c_str(),destination.toString().c_str(),packet->size());
 
+#ifdef ZT_ENABLE_CLUSTER
+				if ( (source == RR->identity.address()) && ((!RR->cluster)||(!RR->cluster->isClusterPeerFrontplane(fromAddr))) )
+					return;
+#else
+				if (source == RR->identity.address())
+					return;
+#endif
+
 				if (destination != RR->identity.address()) {
+					if ( (!RR->topology->amRoot()) && (!path->trustEstablished(now)) && (source != RR->identity.address()) )
+						return;
+
 					Packet packet(data,len);
 
-					// Packet is not for us, so try to relay it
 					if (packet.hops() < ZT_RELAY_MAX_HOPS) {
+#ifdef ZT_ENABLE_CLUSTER
+						if (source != RR->identity.address()) // don't increment hops for cluster frontplane relays
+							packet.incrementHops();
+#else
 						packet.incrementHops();
+#endif
 
 						SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
-						if ((relayTo)&&((relayTo->send(packet.data(),packet.size(),now)))) {
-							Mutex::Lock _l(_lastUniteAttempt_m);
-							uint64_t &luts = _lastUniteAttempt[_LastUniteKey(source,destination)];
-							if ((now - luts) >= ZT_MIN_UNITE_INTERVAL) {
-								luts = now;
-								unite(source,destination);
+						if ((relayTo)&&(relayTo->sendDirect(packet.data(),packet.size(),now,false))) {
+							if ((source != RR->identity.address())&&(_shouldUnite(now,source,destination))) { // don't send RENDEZVOUS for cluster frontplane relays
+								const InetAddress *hintToSource = (InetAddress *)0;
+								const InetAddress *hintToDest = (InetAddress *)0;
+
+								InetAddress destV4,destV6;
+								InetAddress sourceV4,sourceV6;
+								relayTo->getRendezvousAddresses(now,destV4,destV6);
+
+								const SharedPtr<Peer> sourcePeer(RR->topology->getPeer(source));
+								if (sourcePeer) {
+									sourcePeer->getRendezvousAddresses(now,sourceV4,sourceV6);
+									if ((destV6)&&(sourceV6)) {
+										hintToSource = &destV6;
+										hintToDest = &sourceV6;
+									} else if ((destV4)&&(sourceV4)) {
+										hintToSource = &destV4;
+										hintToDest = &sourceV4;
+									}
+
+									if ((hintToSource)&&(hintToDest)) {
+										unsigned int alt = (unsigned int)RR->node->prng() & 1; // randomize which hint we send first for obscure NAT-t reasons
+										const unsigned int completed = alt + 2;
+										while (alt != completed) {
+											if ((alt & 1) == 0) {
+												Packet outp(source,RR->identity.address(),Packet::VERB_RENDEZVOUS);
+												outp.append((uint8_t)0);
+												destination.appendTo(outp);
+												outp.append((uint16_t)hintToSource->port());
+												if (hintToSource->ss_family == AF_INET6) {
+													outp.append((uint8_t)16);
+													outp.append(hintToSource->rawIpData(),16);
+												} else {
+													outp.append((uint8_t)4);
+													outp.append(hintToSource->rawIpData(),4);
+												}
+												send(outp,true);
+											} else {
+												Packet outp(destination,RR->identity.address(),Packet::VERB_RENDEZVOUS);
+												outp.append((uint8_t)0);
+												source.appendTo(outp);
+												outp.append((uint16_t)hintToDest->port());
+												if (hintToDest->ss_family == AF_INET6) {
+													outp.append((uint8_t)16);
+													outp.append(hintToDest->rawIpData(),16);
+												} else {
+													outp.append((uint8_t)4);
+													outp.append(hintToDest->rawIpData(),4);
+												}
+												send(outp,true);
+											}
+											++alt;
+										}
+									}
+								}
 							}
 						} else {
 #ifdef ZT_ENABLE_CLUSTER
-							if (RR->cluster) {
-								bool shouldUnite;
-								{
-									Mutex::Lock _l(_lastUniteAttempt_m);
-									uint64_t &luts = _lastUniteAttempt[_LastUniteKey(source,destination)];
-									shouldUnite = ((now - luts) >= ZT_MIN_UNITE_INTERVAL);
-									if (shouldUnite)
-										luts = now;
-								}
-								RR->cluster->sendViaCluster(source,destination,packet.data(),packet.size(),shouldUnite);
+							if ((RR->cluster)&&(source != RR->identity.address())) {
+								RR->cluster->relayViaCluster(source,destination,packet.data(),packet.size(),_shouldUnite(now,source,destination));
 								return;
 							}
 #endif
-							relayTo = RR->topology->getBestRoot(&source,1,true);
+							relayTo = RR->topology->getUpstreamPeer(&source,1,true);
 							if (relayTo)
-								relayTo->send(packet.data(),packet.size(),now);
+								relayTo->sendDirect(packet.data(),packet.size(),now,true);
 						}
 					} else {
 						TRACE("dropped relay %s(%s) -> %s, max hops exceeded",packet.source().toString().c_str(),fromAddr.toString().c_str(),destination.toString().c_str());
 					}
 				} else if ((reinterpret_cast<const uint8_t *>(data)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED) != 0) {
 					// Packet is the head of a fragmented packet series
+
+					const uint64_t packetId = (
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[0]) << 56) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[1]) << 48) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[2]) << 40) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[3]) << 32) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[4]) << 24) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[5]) << 16) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[6]) << 8) |
+						((uint64_t)reinterpret_cast<const uint8_t *>(data)[7])
+					);
 
 					Mutex::Lock _l(_rxQueue_m);
 					RXQueueEntry *const rq = _findRXQueueEntry(now,packetId);
@@ -248,7 +306,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 
 						rq->timestamp = now;
 						rq->packetId = packetId;
-						rq->frag0.init(data,len,localAddr,fromAddr,now);
+						rq->frag0.init(data,len,path,now);
 						rq->totalFragments = 0;
 						rq->haveFragments = 1;
 						rq->complete = false;
@@ -259,24 +317,24 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 							// We have all fragments -- assemble and process full Packet
 							//TRACE("packet %.16llx is complete, assembling and processing...",pid);
 
-							rq->frag0.init(data,len,localAddr,fromAddr,now);
+							rq->frag0.init(data,len,path,now);
 							for(unsigned int f=1;f<rq->totalFragments;++f)
 								rq->frag0.append(rq->frags[f - 1].payload(),rq->frags[f - 1].payloadLength());
 
-							if (rq->frag0.tryDecode(RR,false)) {
+							if (rq->frag0.tryDecode(RR)) {
 								rq->timestamp = 0; // packet decoded, free entry
 							} else {
 								rq->complete = true; // set complete flag but leave entry since it probably needs WHOIS or something
 							}
 						} else {
 							// Still waiting on more fragments, but keep the head
-							rq->frag0.init(data,len,localAddr,fromAddr,now);
+							rq->frag0.init(data,len,path,now);
 						}
 					} // else this is a duplicate head, ignore
 				} else {
 					// Packet is unfragmented, so just process it
-					IncomingPacket packet(data,len,localAddr,fromAddr,now);
-					if (!packet.tryDecode(RR,false)) {
+					IncomingPacket packet(data,len,path,now);
+					if (!packet.tryDecode(RR)) {
 						Mutex::Lock _l(_rxQueue_m);
 						RXQueueEntry *rq = &(_rxQueue[ZT_RX_QUEUE_SIZE - 1]);
 						unsigned long i = ZT_RX_QUEUE_SIZE - 1;
@@ -286,7 +344,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 								rq = tmp;
 						}
 						rq->timestamp = now;
-						rq->packetId = packetId;
+						rq->packetId = packet.packetId();
 						rq->frag0 = packet;
 						rq->totalFragments = 1;
 						rq->haveFragments = 1;
@@ -309,29 +367,17 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	if (!network->hasConfig())
 		return;
 
-	// Sanity check -- bridge loop? OS problem?
-	if (to == network->mac())
-		return;
-
-	// Check to make sure this protocol is allowed on this network
-	if (!network->config().permitsEtherType(etherType)) {
-		TRACE("%.16llx: ignored tap: %s -> %s: ethertype %s not allowed on network %.16llx",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),(unsigned long long)network->id());
-		return;
-	}
-
 	// Check if this packet is from someone other than the tap -- i.e. bridged in
-	bool fromBridged = false;
-	if (from != network->mac()) {
+	bool fromBridged;
+	if ((fromBridged = (from != network->mac()))) {
 		if (!network->config().permitsBridging(RR->identity.address())) {
 			TRACE("%.16llx: %s -> %s %s not forwarded, bridging disabled or this peer not a bridge",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 			return;
 		}
-		fromBridged = true;
 	}
 
 	if (to.isMulticast()) {
-		// Destination is a multicast address (including broadcast)
-		MulticastGroup mg(to,0);
+		MulticastGroup multicastGroup(to,0);
 
 		if (to.isBroadcast()) {
 			if ( (etherType == ZT_ETHERTYPE_ARP) && (len >= 28) && ((((const uint8_t *)data)[2] == 0x08)&&(((const uint8_t *)data)[3] == 0x00)&&(((const uint8_t *)data)[4] == 6)&&(((const uint8_t *)data)[5] == 4)&&(((const uint8_t *)data)[7] == 0x01)) ) {
@@ -344,7 +390,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				 * them into multicasts by stuffing the IP address being queried into
 				 * the 32-bit ADI field. In practice this uses our multicast pub/sub
 				 * system to implement a kind of extended/distributed ARP table. */
-				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(((const unsigned char *)data) + 24,4,0));
+				multicastGroup = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(((const unsigned char *)data) + 24,4,0));
 			} else if (!network->config().enableBroadcast()) {
 				// Don't transmit broadcasts if this network doesn't want them
 				TRACE("%.16llx: dropped broadcast since ff:ff:ff:ff:ff:ff is not enabled",network->id());
@@ -434,67 +480,84 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			} // else no NDP emulation
 		}
 
+		// Check this after NDP emulation, since that has to be allowed in exactly this case
+		if (network->config().multicastLimit == 0) {
+			TRACE("%.16llx: dropped multicast: not allowed on network",network->id());
+			return;
+		}
+
 		/* Learn multicast groups for bridged-in hosts.
 		 * Note that some OSes, most notably Linux, do this for you by learning
 		 * multicast addresses on bridge interfaces and subscribing each slave.
 		 * But in that case this does no harm, as the sets are just merged. */
 		if (fromBridged)
-			network->learnBridgedMulticastGroup(mg,RR->node->now());
+			network->learnBridgedMulticastGroup(multicastGroup,RR->node->now());
 
-		//TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),len);
+		//TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),multicastGroup.toString().c_str(),etherTypeName(etherType),len);
+
+		// First pass sets noTee to false, but noTee is set to true in OutboundMulticast to prevent duplicates.
+		if (!network->filterOutgoingPacket(false,RR->identity.address(),Address(),from,to,(const uint8_t *)data,len,etherType,vlanId)) {
+			TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+			return;
+		}
 
 		RR->mc->send(
-			((!network->config().isPublic())&&(network->config().com)) ? &(network->config().com) : (const CertificateOfMembership *)0,
 			network->config().multicastLimit,
 			RR->node->now(),
 			network->id(),
+			network->config().disableCompression(),
 			network->config().activeBridges(),
-			mg,
+			multicastGroup,
 			(fromBridged) ? from : MAC(),
 			etherType,
 			data,
 			len);
-
-		return;
-	}
-
-	if (to[0] == MAC::firstOctetForNetwork(network->id())) {
+	} else if (to == network->mac()) {
+		// Destination is this node, so just reinject it
+		RR->node->putFrame(network->id(),network->userPtr(),from,to,etherType,vlanId,data,len);
+	} else if (to[0] == MAC::firstOctetForNetwork(network->id())) {
 		// Destination is another ZeroTier peer on the same network
 
 		Address toZT(to.toAddress(network->id())); // since in-network MACs are derived from addresses and network IDs, we can reverse this
 		SharedPtr<Peer> toPeer(RR->topology->getPeer(toZT));
-		const bool includeCom = ( (network->config().isPrivate()) && (network->config().com) && ((!toPeer)||(toPeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true))) );
-		if ((fromBridged)||(includeCom)) {
+
+		if (!network->filterOutgoingPacket(false,RR->identity.address(),toZT,from,to,(const uint8_t *)data,len,etherType,vlanId)) {
+			TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+			return;
+		}
+
+		if (fromBridged) {
 			Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
-			if (includeCom) {
-				outp.append((unsigned char)0x01); // 0x01 -- COM included
-				network->config().com.serialize(outp);
-			} else {
-				outp.append((unsigned char)0x00);
-			}
+			outp.append((unsigned char)0x00);
 			to.appendTo(outp);
 			from.appendTo(outp);
 			outp.append((uint16_t)etherType);
 			outp.append(data,len);
-			outp.compress();
-			send(outp,true,network->id());
+			if (!network->config().disableCompression())
+				outp.compress();
+			send(outp,true);
 		} else {
 			Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
 			outp.append(network->id());
 			outp.append((uint16_t)etherType);
 			outp.append(data,len);
-			outp.compress();
-			send(outp,true,network->id());
+			if (!network->config().disableCompression())
+				outp.compress();
+			send(outp,true);
 		}
 
 		//TRACE("%.16llx: UNICAST: %s -> %s etherType==%s(%.4x) vlanId==%u len==%u fromBridged==%d includeCom==%d",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),etherType,vlanId,len,(int)fromBridged,(int)includeCom);
-
-		return;
-	}
-
-	{
+	} else {
 		// Destination is bridged behind a remote peer
+
+		// We filter with a NULL destination ZeroTier address first. Filtrations
+		// for each ZT destination are also done below. This is the same rationale
+		// and design as for multicast.
+		if (!network->filterOutgoingPacket(false,RR->identity.address(),Address(),from,to,(const uint8_t *)data,len,etherType,vlanId)) {
+			TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+			return;
+		}
 
 		Address bridges[ZT_MAX_BRIDGE_SPAM];
 		unsigned int numBridges = 0;
@@ -529,122 +592,46 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		}
 
 		for(unsigned int b=0;b<numBridges;++b) {
-			SharedPtr<Peer> bridgePeer(RR->topology->getPeer(bridges[b]));
-			Packet outp(bridges[b],RR->identity.address(),Packet::VERB_EXT_FRAME);
-			outp.append(network->id());
-			if ( (network->config().isPrivate()) && (network->config().com) && ((!bridgePeer)||(bridgePeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true))) ) {
-				outp.append((unsigned char)0x01); // 0x01 -- COM included
-				network->config().com.serialize(outp);
+			if (network->filterOutgoingPacket(true,RR->identity.address(),bridges[b],from,to,(const uint8_t *)data,len,etherType,vlanId)) {
+				Packet outp(bridges[b],RR->identity.address(),Packet::VERB_EXT_FRAME);
+				outp.append(network->id());
+				outp.append((uint8_t)0x00);
+				to.appendTo(outp);
+				from.appendTo(outp);
+				outp.append((uint16_t)etherType);
+				outp.append(data,len);
+				if (!network->config().disableCompression())
+					outp.compress();
+				send(outp,true);
 			} else {
-				outp.append((unsigned char)0);
+				TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 			}
-			to.appendTo(outp);
-			from.appendTo(outp);
-			outp.append((uint16_t)etherType);
-			outp.append(data,len);
-			outp.compress();
-			send(outp,true,network->id());
 		}
 	}
 }
 
-void Switch::send(const Packet &packet,bool encrypt,uint64_t nwid)
+void Switch::send(Packet &packet,bool encrypt)
 {
 	if (packet.destination() == RR->identity.address()) {
 		TRACE("BUG: caught attempt to send() to self, ignored");
 		return;
 	}
 
-	//TRACE(">> %s to %s (%u bytes, encrypt==%d, nwid==%.16llx)",Packet::verbString(packet.verb()),packet.destination().toString().c_str(),packet.size(),(int)encrypt,nwid);
-
-	if (!_trySend(packet,encrypt,nwid)) {
+	if (!_trySend(packet,encrypt)) {
 		Mutex::Lock _l(_txQueue_m);
-		_txQueue.push_back(TXQueueEntry(packet.destination(),RR->node->now(),packet,encrypt,nwid));
-	}
-}
-
-bool Switch::unite(const Address &p1,const Address &p2)
-{
-	if ((p1 == RR->identity.address())||(p2 == RR->identity.address()))
-		return false;
-	SharedPtr<Peer> p1p = RR->topology->getPeer(p1);
-	if (!p1p)
-		return false;
-	SharedPtr<Peer> p2p = RR->topology->getPeer(p2);
-	if (!p2p)
-		return false;
-
-	const uint64_t now = RR->node->now();
-
-	std::pair<InetAddress,InetAddress> cg(Peer::findCommonGround(*p1p,*p2p,now));
-	if ((!(cg.first))||(cg.first.ipScope() != cg.second.ipScope()))
-		return false;
-
-	TRACE("unite: %s(%s) <> %s(%s)",p1.toString().c_str(),cg.second.toString().c_str(),p2.toString().c_str(),cg.first.toString().c_str());
-
-	/* Tell P1 where to find P2 and vice versa, sending the packets to P1 and
-	 * P2 in randomized order in terms of which gets sent first. This is done
-	 * since in a few cases NAT-t can be sensitive to slight timing differences
-	 * in terms of when the two peers initiate. Normally this is accounted for
-	 * by the nearly-simultaneous RENDEZVOUS kickoff from the relay, but
-	 * given that relay are hosted on cloud providers this can in some
-	 * cases have a few ms of latency between packet departures. By randomizing
-	 * the order we make each attempted NAT-t favor one or the other going
-	 * first, meaning if it doesn't succeed the first time it might the second
-	 * and so forth. */
-	unsigned int alt = (unsigned int)RR->node->prng() & 1;
-	unsigned int completed = alt + 2;
-	while (alt != completed) {
-		if ((alt & 1) == 0) {
-			// Tell p1 where to find p2.
-			Packet outp(p1,RR->identity.address(),Packet::VERB_RENDEZVOUS);
-			outp.append((unsigned char)0);
-			p2.appendTo(outp);
-			outp.append((uint16_t)cg.first.port());
-			if (cg.first.isV6()) {
-				outp.append((unsigned char)16);
-				outp.append(cg.first.rawIpData(),16);
-			} else {
-				outp.append((unsigned char)4);
-				outp.append(cg.first.rawIpData(),4);
-			}
-			outp.armor(p1p->key(),true);
-			p1p->send(outp.data(),outp.size(),now);
-		} else {
-			// Tell p2 where to find p1.
-			Packet outp(p2,RR->identity.address(),Packet::VERB_RENDEZVOUS);
-			outp.append((unsigned char)0);
-			p1.appendTo(outp);
-			outp.append((uint16_t)cg.second.port());
-			if (cg.second.isV6()) {
-				outp.append((unsigned char)16);
-				outp.append(cg.second.rawIpData(),16);
-			} else {
-				outp.append((unsigned char)4);
-				outp.append(cg.second.rawIpData(),4);
-			}
-			outp.armor(p2p->key(),true);
-			p2p->send(outp.data(),outp.size(),now);
-		}
-		++alt; // counts up and also flips LSB
-	}
-
-	return true;
-}
-
-void Switch::rendezvous(const SharedPtr<Peer> &peer,const InetAddress &localAddr,const InetAddress &atAddr)
-{
-	TRACE("sending NAT-t message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
-	const uint64_t now = RR->node->now();
-	peer->sendHELLO(localAddr,atAddr,now,2); // first attempt: send low-TTL packet to 'open' local NAT
-	{
-		Mutex::Lock _l(_contactQueue_m);
-		_contactQueue.push_back(ContactQueueEntry(peer,now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY,localAddr,atAddr));
+		_txQueue.push_back(TXQueueEntry(packet.destination(),RR->node->now(),packet,encrypt));
 	}
 }
 
 void Switch::requestWhois(const Address &addr)
 {
+#ifdef ZT_TRACE
+	if (addr == RR->identity.address()) {
+		fprintf(stderr,"FATAL BUG: Switch::requestWhois() caught attempt to WHOIS self" ZT_EOL_S);
+		abort();
+	}
+#endif
+
 	bool inserted = false;
 	{
 		Mutex::Lock _l(_outstandingWhoisRequests_m);
@@ -673,7 +660,7 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 		while (i) {
 			RXQueueEntry *rq = &(_rxQueue[--i]);
 			if ((rq->timestamp)&&(rq->complete)) {
-				if (rq->frag0.tryDecode(RR,false))
+				if (rq->frag0.tryDecode(RR))
 					rq->timestamp = 0;
 			}
 		}
@@ -683,7 +670,7 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 		Mutex::Lock _l(_txQueue_m);
 		for(std::list< TXQueueEntry >::iterator txi(_txQueue.begin());txi!=_txQueue.end();) {
 			if (txi->dest == peer->address()) {
-				if (_trySend(txi->packet,txi->encrypt,txi->nwid))
+				if (_trySend(txi->packet,txi->encrypt))
 					_txQueue.erase(txi++);
 				else ++txi;
 			} else ++txi;
@@ -694,42 +681,6 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 unsigned long Switch::doTimerTasks(uint64_t now)
 {
 	unsigned long nextDelay = 0xffffffff; // ceiling delay, caller will cap to minimum
-
-	{	// Iterate through NAT traversal strategies for entries in contact queue
-		Mutex::Lock _l(_contactQueue_m);
-		for(std::list<ContactQueueEntry>::iterator qi(_contactQueue.begin());qi!=_contactQueue.end();) {
-			if (now >= qi->fireAtTime) {
-				if (!qi->peer->pushDirectPaths(qi->localAddr,qi->inaddr,now,true,false))
-					qi->peer->sendHELLO(qi->localAddr,qi->inaddr,now);
-				_contactQueue.erase(qi++);
-				continue;
-				/* Old symmetric NAT buster code, obsoleted by port prediction alg in SelfAwareness but left around for now in case we revert
-				if (qi->strategyIteration == 0) {
-					// First strategy: send packet directly to destination
-					qi->peer->sendHELLO(qi->localAddr,qi->inaddr,now);
-				} else if (qi->strategyIteration <= 3) {
-					// Strategies 1-3: try escalating ports for symmetric NATs that remap sequentially
-					InetAddress tmpaddr(qi->inaddr);
-					int p = (int)qi->inaddr.port() + qi->strategyIteration;
-					if (p > 65535)
-						p -= 64511;
-					tmpaddr.setPort((unsigned int)p);
-					qi->peer->sendHELLO(qi->localAddr,tmpaddr,now);
-				} else {
-					// All strategies tried, expire entry
-					_contactQueue.erase(qi++);
-					continue;
-				}
-				++qi->strategyIteration;
-				qi->fireAtTime = now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY;
-				nextDelay = std::min(nextDelay,(unsigned long)ZT_NAT_T_TACTICAL_ESCALATION_DELAY);
-				*/
-			} else {
-				nextDelay = std::min(nextDelay,(unsigned long)(qi->fireAtTime - now));
-			}
-			++qi; // if qi was erased, loop will have continued before here
-		}
-	}
 
 	{	// Retry outstanding WHOIS requests
 		Mutex::Lock _l(_outstandingWhoisRequests_m);
@@ -744,9 +695,9 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 					_outstandingWhoisRequests.erase(*a);
 				} else {
 					r->lastSent = now;
-					r->peersConsulted[r->retries] = _sendWhoisRequest(*a,r->peersConsulted,r->retries);
-					++r->retries;
+					r->peersConsulted[r->retries] = _sendWhoisRequest(*a,r->peersConsulted,(r->retries > 1) ? r->retries : 0);
 					TRACE("WHOIS %s (retry %u)",a->toString().c_str(),r->retries);
+					++r->retries;
 					nextDelay = std::min(nextDelay,(unsigned long)ZT_WHOIS_RETRY_DELAY);
 				}
 			} else {
@@ -758,7 +709,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 	{	// Time out TX queue packets that never got WHOIS lookups or other info.
 		Mutex::Lock _l(_txQueue_m);
 		for(std::list< TXQueueEntry >::iterator txi(_txQueue.begin());txi!=_txQueue.end();) {
-			if (_trySend(txi->packet,txi->encrypt,txi->nwid))
+			if (_trySend(txi->packet,txi->encrypt))
 				_txQueue.erase(txi++);
 			else if ((now - txi->creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
 				TRACE("TX %s -> %s timed out",txi->packet.source().toString().c_str(),txi->packet.destination().toString().c_str());
@@ -781,106 +732,149 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 	return nextDelay;
 }
 
+bool Switch::_shouldUnite(const uint64_t now,const Address &source,const Address &destination)
+{
+	Mutex::Lock _l(_lastUniteAttempt_m);
+	uint64_t &ts = _lastUniteAttempt[_LastUniteKey(source,destination)];
+	if ((now - ts) >= ZT_MIN_UNITE_INTERVAL) {
+		ts = now;
+		return true;
+	}
+	return false;
+}
+
 Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted)
 {
-	SharedPtr<Peer> root(RR->topology->getBestRoot(peersAlreadyConsulted,numPeersAlreadyConsulted,false));
-	if (root) {
-		Packet outp(root->address(),RR->identity.address(),Packet::VERB_WHOIS);
+	SharedPtr<Peer> upstream(RR->topology->getUpstreamPeer(peersAlreadyConsulted,numPeersAlreadyConsulted,false));
+	if (upstream) {
+		Packet outp(upstream->address(),RR->identity.address(),Packet::VERB_WHOIS);
 		addr.appendTo(outp);
-		outp.armor(root->key(),true);
-		if (root->send(outp.data(),outp.size(),RR->node->now()))
-			return root->address();
+		RR->node->expectReplyTo(outp.packetId());
+		send(outp,true);
 	}
 	return Address();
 }
 
-bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
+bool Switch::_trySend(Packet &packet,bool encrypt)
 {
-	SharedPtr<Peer> peer(RR->topology->getPeer(packet.destination()));
+	SharedPtr<Path> viaPath;
+	const uint64_t now = RR->node->now();
+	const Address destination(packet.destination());
 
+#ifdef ZT_ENABLE_CLUSTER
+	uint64_t clusterMostRecentTs = 0;
+	int clusterMostRecentMemberId = -1;
+	uint8_t clusterPeerSecret[ZT_PEER_SECRET_KEY_LENGTH];
+	if (RR->cluster)
+		clusterMostRecentMemberId = RR->cluster->checkSendViaCluster(destination,clusterMostRecentTs,clusterPeerSecret);
+#endif
+
+	const SharedPtr<Peer> peer(RR->topology->getPeer(destination));
 	if (peer) {
-		const uint64_t now = RR->node->now();
+		/* First get the best path, and if it's dead (and this is not a root)
+		 * we attempt to re-activate that path but this packet will flow
+		 * upstream. If the path comes back alive, it will be used in the future.
+		 * For roots we don't do the alive check since roots are not required
+		 * to send heartbeats "down" and because we have to at least try to
+		 * go somewhere. */
 
-		SharedPtr<Network> network;
-		if (nwid) {
-			network = RR->node->network(nwid);
-			if ((!network)||(!network->hasConfig()))
-				return false; // we probably just left this network, let its packets die
+		viaPath = peer->getBestPath(now,false);
+		if ( (viaPath) && (!viaPath->alive(now)) && (!RR->topology->isUpstream(peer->identity())) ) {
+#ifdef ZT_ENABLE_CLUSTER
+			if ((clusterMostRecentMemberId < 0)||(viaPath->lastIn() > clusterMostRecentTs)) {
+#endif
+				if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) * 4,(uint64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL)) {
+					peer->attemptToContactAt(viaPath->localAddress(),viaPath->address(),now,false,viaPath->nextOutgoingCounter());
+					viaPath->sent(now);
+				}
+#ifdef ZT_ENABLE_CLUSTER
+			}
+#endif
+			viaPath.zero();
 		}
 
-		Path *viaPath = peer->getBestPath(now);
-		SharedPtr<Peer> relay;
-
+#ifdef ZT_ENABLE_CLUSTER
+		if (clusterMostRecentMemberId >= 0) {
+			if ((viaPath)&&(viaPath->lastIn() < clusterMostRecentTs))
+				viaPath.zero();
+		} else if (!viaPath) {
+#else
 		if (!viaPath) {
-			if (network) {
-				unsigned int bestq = ~((unsigned int)0); // max unsigned int since quality is lower==better
-				unsigned int ptr = 0;
-				for(;;) {
-					const Address raddr(network->config().nextRelay(ptr));
-					if (raddr) {
-						SharedPtr<Peer> rp(RR->topology->getPeer(raddr));
-						if (rp) {
-							const unsigned int q = rp->relayQuality(now);
-							if (q < bestq) {
-								bestq = q;
-								rp.swap(relay);
-							}
-						}
-					} else break;
-				}
+#endif
+			peer->tryMemorizedPath(now); // periodically attempt memorized or statically defined paths, if any are known
+			const SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());
+			if ( (!relay) || (!(viaPath = relay->getBestPath(now,false))) ) {
+				if (!(viaPath = peer->getBestPath(now,true)))
+					return false;
 			}
-
-			if (!relay)
-				relay = RR->topology->getBestRoot();
-
-			if ( (!relay) || (!(viaPath = relay->getBestPath(now))) )
-				return false;
+#ifdef ZT_ENABLE_CLUSTER
 		}
-		// viaPath will not be null if we make it here
-
-		// Push possible direct paths to us if we are relaying
-		if (relay) {
-			peer->pushDirectPaths(viaPath->localAddress(),viaPath->address(),now,false,( (network)&&(network->isAllowed(peer)) ));
-			viaPath->sent(now);
+#else
 		}
-
-		Packet tmp(packet);
-
-		unsigned int chunkSize = std::min(tmp.size(),(unsigned int)ZT_UDP_DEFAULT_PAYLOAD_MTU);
-		tmp.setFragmented(chunkSize < tmp.size());
-
-		const uint64_t trustedPathId = RR->topology->getOutboundPathTrust(viaPath->address());
-		if (trustedPathId) {
-			tmp.setTrusted(trustedPathId);
-		} else {
-			tmp.armor(peer->key(),encrypt);
-		}
-
-		if (viaPath->send(RR,tmp.data(),chunkSize,now)) {
-			if (chunkSize < tmp.size()) {
-				// Too big for one packet, fragment the rest
-				unsigned int fragStart = chunkSize;
-				unsigned int remaining = tmp.size() - chunkSize;
-				unsigned int fragsRemaining = (remaining / (ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));
-				if ((fragsRemaining * (ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH)) < remaining)
-					++fragsRemaining;
-				unsigned int totalFragments = fragsRemaining + 1;
-
-				for(unsigned int fno=1;fno<totalFragments;++fno) {
-					chunkSize = std::min(remaining,(unsigned int)(ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));
-					Packet::Fragment frag(tmp,fragStart,chunkSize,fno,totalFragments);
-					viaPath->send(RR,frag.data(),frag.size(),now);
-					fragStart += chunkSize;
-					remaining -= chunkSize;
-				}
-			}
-
-			return true;
-		}
+#endif
 	} else {
-		requestWhois(packet.destination());
+#ifdef ZT_ENABLE_CLUSTER
+		if (clusterMostRecentMemberId < 0) {
+#else
+			requestWhois(destination);
+			return false; // if we are not in cluster mode, there is no way we can send without knowing the peer directly
+#endif
+#ifdef ZT_ENABLE_CLUSTER
+		}
+#endif
 	}
-	return false;
+
+	unsigned int chunkSize = std::min(packet.size(),(unsigned int)ZT_UDP_DEFAULT_PAYLOAD_MTU);
+	packet.setFragmented(chunkSize < packet.size());
+
+#ifdef ZT_ENABLE_CLUSTER
+	const uint64_t trustedPathId = (viaPath) ? RR->topology->getOutboundPathTrust(viaPath->address()) : 0;
+	if (trustedPathId) {
+		packet.setTrusted(trustedPathId);
+	} else {
+		packet.armor((clusterMostRecentMemberId >= 0) ? clusterPeerSecret : peer->key(),encrypt,(viaPath) ? viaPath->nextOutgoingCounter() : 0);
+	}
+#else
+	const uint64_t trustedPathId = RR->topology->getOutboundPathTrust(viaPath->address());
+	if (trustedPathId) {
+		packet.setTrusted(trustedPathId);
+	} else {
+		packet.armor(peer->key(),encrypt,viaPath->nextOutgoingCounter());
+	}
+#endif
+
+#ifdef ZT_ENABLE_CLUSTER
+	if ( ((viaPath)&&(viaPath->send(RR,packet.data(),chunkSize,now))) || ((clusterMostRecentMemberId >= 0)&&(RR->cluster->sendViaCluster(clusterMostRecentMemberId,destination,packet.data(),chunkSize))) ) {
+#else
+	if (viaPath->send(RR,packet.data(),chunkSize,now)) {
+#endif
+		if (chunkSize < packet.size()) {
+			// Too big for one packet, fragment the rest
+			unsigned int fragStart = chunkSize;
+			unsigned int remaining = packet.size() - chunkSize;
+			unsigned int fragsRemaining = (remaining / (ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));
+			if ((fragsRemaining * (ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH)) < remaining)
+				++fragsRemaining;
+			const unsigned int totalFragments = fragsRemaining + 1;
+
+			for(unsigned int fno=1;fno<totalFragments;++fno) {
+				chunkSize = std::min(remaining,(unsigned int)(ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));
+				Packet::Fragment frag(packet,fragStart,chunkSize,fno,totalFragments);
+#ifdef ZT_ENABLE_CLUSTER
+				if (viaPath)
+					viaPath->send(RR,frag.data(),frag.size(),now);
+				else if (clusterMostRecentMemberId >= 0)
+					RR->cluster->sendViaCluster(clusterMostRecentMemberId,destination,frag.data(),frag.size());
+#else
+				viaPath->send(RR,frag.data(),frag.size(),now);
+#endif
+				fragStart += chunkSize;
+				remaining -= chunkSize;
+			}
+		}
+	}
+
+	return true;
 }
 
 } // namespace ZeroTier

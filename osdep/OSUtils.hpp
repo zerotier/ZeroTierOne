@@ -45,6 +45,8 @@
 #include <arpa/inet.h>
 #endif
 
+#include "../ext/json/json.hpp"
+
 namespace ZeroTier {
 
 /**
@@ -105,9 +107,27 @@ public:
 	 * This returns only files, not sub-directories.
 	 *
 	 * @param path Path to list
-	 * @return Names of files in directory
+	 * @return Names of files in directory (without path prepended)
 	 */
 	static std::vector<std::string> listDirectory(const char *path);
+
+	/**
+	 * Clean a directory of files whose last modified time is older than this
+	 *
+	 * This ignores directories, symbolic links, and other special files.
+	 *
+	 * @param olderThan Last modified older than timestamp (ms since epoch)
+	 * @return Number of cleaned files or negative on fatal error
+	 */
+	static long cleanDirectory(const char *path,const uint64_t olderThan);
+
+	/**
+	 * Delete a directory and all its files and subdirectories recursively
+	 *
+	 * @param path Path to delete
+	 * @return True on success
+	 */
+	static bool rmDashRf(const char *path);
 
 	/**
 	 * Set modes on a file to something secure
@@ -221,6 +241,17 @@ public:
 	static bool writeFile(const char *path,const void *buf,unsigned int len);
 
 	/**
+	 * Split a string by delimiter, with optional escape and quote characters
+	 *
+	 * @param s String to split
+	 * @param sep One or more separators
+	 * @param esc Zero or more escape characters
+	 * @param quot Zero or more quote characters
+	 * @return Vector of tokens
+	 */
+	static std::vector<std::string> split(const char *s,const char *const sep,const char *esc,const char *quot);
+
+	/**
 	 * Write a block of data to disk, replacing any current file contents
 	 *
 	 * @param path Path to write
@@ -239,6 +270,13 @@ public:
 	 * @return Platform default ZeroTier One home path
 	 */
 	static std::string platformDefaultHomePath();
+
+	static nlohmann::json jsonParse(const std::string &buf);
+	static std::string jsonDump(const nlohmann::json &j);
+	static uint64_t jsonInt(const nlohmann::json &jv,const uint64_t dfl);
+	static bool jsonBool(const nlohmann::json &jv,const bool dfl);
+	static std::string jsonString(const nlohmann::json &jv,const char *dfl);
+	static std::string jsonBinFromHex(const nlohmann::json &jv);
 
 private:
 	static const unsigned char TOLOWER_TABLE[256];

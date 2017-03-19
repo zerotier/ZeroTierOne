@@ -59,8 +59,7 @@ public:
 	/**
 	 * Securely zero memory, avoiding compiler optimizations and such
 	 */
-	static void burn(void *ptr,unsigned int len)
-		throw();
+	static void burn(void *ptr,unsigned int len);
 
 	/**
 	 * Convert binary data to hexadecimal
@@ -110,17 +109,6 @@ public:
 	 * @param bytes Number of random bytes to generate
 	 */
 	static void getSecureRandom(void *buf,unsigned int bytes);
-
-	/**
-	 * Split a string by delimiter, with optional escape and quote characters
-	 *
-	 * @param s String to split
-	 * @param sep One or more separators
-	 * @param esc Zero or more escape characters
-	 * @param quot Zero or more quote characters
-	 * @return Vector of tokens
-	 */
-	static std::vector<std::string> split(const char *s,const char *const sep,const char *esc,const char *quot);
 
 	/**
 	 * Tokenize a string (alias for strtok_r or strtok_s depending on platform)
@@ -265,6 +253,20 @@ public:
 	}
 
 	/**
+	 * Count the number of bits set in an integer
+	 *
+	 * @param v 64-bit integer
+	 * @return Number of bits set in this integer (0-64)
+	 */
+	static inline uint64_t countBits(uint64_t v)
+	{
+		v = v - ((v >> 1) & (uint64_t)~(uint64_t)0/3);
+		v = (v & (uint64_t)~(uint64_t)0/15*3) + ((v >> 2) & (uint64_t)~(uint64_t)0/15*3);
+		v = (v + (v >> 4)) & (uint64_t)~(uint64_t)0/255*15;
+		return (uint64_t)(v * ((uint64_t)~(uint64_t)0/255)) >> 56;
+	}
+
+	/**
 	 * Check if a memory buffer is all-zero
 	 *
 	 * @param p Memory to scan
@@ -346,8 +348,7 @@ public:
 	 *
 	 * @return -1, 0, or 1 based on whether first tuple is less than, equal to, or greater than second
 	 */
-	static inline int compareVersion(unsigned int maj1,unsigned int min1,unsigned int rev1,unsigned int maj2,unsigned int min2,unsigned int rev2)
-		throw()
+	static inline int compareVersion(unsigned int maj1,unsigned int min1,unsigned int rev1,unsigned int b1,unsigned int maj2,unsigned int min2,unsigned int rev2,unsigned int b2)
 	{
 		if (maj1 > maj2)
 			return 1;
@@ -363,7 +364,13 @@ public:
 					return 1;
 				else if (rev1 < rev2)
 					return -1;
-				else return 0;
+				else {
+					if (b1 > b2)
+						return 1;
+					else if (b1 < b2)
+						return -1;
+					else return 0;
+				}
 			}
 		}
 	}

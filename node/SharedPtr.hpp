@@ -119,15 +119,39 @@ public:
 	inline T *ptr() const throw() { return _ptr; }
 
 	/**
-	 * Set this pointer to null
+	 * Set this pointer to NULL
 	 */
 	inline void zero()
 	{
 		if (_ptr) {
 			if (--_ptr->__refCount <= 0)
 				delete _ptr;
+			_ptr = (T *)0;
 		}
-		_ptr = (T *)0;
+	}
+
+	/**
+	 * Set this pointer to NULL if this is the only pointer holding the object
+	 *
+	 * @return True if object was deleted and SharedPtr is now NULL (or was already NULL)
+	 */
+	inline bool reclaimIfWeak()
+	{
+		if (_ptr) {
+			if (++_ptr->__refCount <= 2) {
+				if (--_ptr->__refCount <= 1) {
+					delete _ptr;
+					_ptr = (T *)0;
+					return true;
+				} else {
+					return false;
+				}
+			} else {
+				return false;
+			}
+		} else {
+			return true;
+		}
 	}
 
 	inline bool operator==(const SharedPtr &sp) const throw() { return (_ptr == sp._ptr); }

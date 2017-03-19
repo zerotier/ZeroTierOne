@@ -61,11 +61,11 @@ public:
 	// STL container idioms
 	typedef unsigned char value_type;
 	typedef unsigned char * pointer;
-	typedef const unsigned char * const_pointer;
-	typedef unsigned char & reference;
-	typedef const unsigned char & const_reference;
-	typedef unsigned char * iterator;
-	typedef const unsigned char * const_iterator;
+	typedef const char * const_pointer;
+	typedef char & reference;
+	typedef const char & const_reference;
+	typedef char * iterator;
+	typedef const char * const_iterator;
 	typedef unsigned int size_type;
 	typedef int difference_type;
 	typedef std::reverse_iterator<iterator> reverse_iterator;
@@ -79,8 +79,7 @@ public:
 	inline const_reverse_iterator rbegin() const { return const_reverse_iterator(begin()); }
 	inline const_reverse_iterator rend() const { return const_reverse_iterator(end()); }
 
-	Buffer()
-		throw() :
+	Buffer() :
 		_l(0)
 	{
 	}
@@ -419,87 +418,70 @@ public:
 	/**
 	 * Set buffer data length to zero
 	 */
-	inline void clear()
-		throw()
-	{
-		_l = 0;
-	}
+	inline void clear() { _l = 0; }
 
 	/**
 	 * Zero buffer up to size()
 	 */
-	inline void zero()
-		throw()
-	{
-		memset(_b,0,_l);
-	}
+	inline void zero() { memset(_b,0,_l); }
 
 	/**
 	 * Zero unused capacity area
 	 */
-	inline void zeroUnused()
-		throw()
-	{
-		memset(_b + _l,0,C - _l);
-	}
+	inline void zeroUnused() { memset(_b + _l,0,C - _l); }
 
 	/**
 	 * Unconditionally and securely zero buffer's underlying memory
 	 */
-	inline void burn()
-		throw()
-	{
-		Utils::burn(_b,sizeof(_b));
-	}
+	inline void burn() { Utils::burn(_b,sizeof(_b)); }
 
 	/**
 	 * @return Constant pointer to data in buffer
 	 */
-	inline const void *data() const throw() { return _b; }
+	inline const void *data() const { return _b; }
+
+	/**
+	 * @return Non-constant pointer to data in buffer
+	 */
+	inline void *unsafeData() { return _b; }
 
 	/**
 	 * @return Size of data in buffer
 	 */
-	inline unsigned int size() const throw() { return _l; }
+	inline unsigned int size() const { return _l; }
 
 	/**
 	 * @return Capacity of buffer
 	 */
-	inline unsigned int capacity() const throw() { return C; }
+	inline unsigned int capacity() const { return C; }
 
 	template<unsigned int C2>
 	inline bool operator==(const Buffer<C2> &b) const
-		throw()
 	{
 		return ((_l == b._l)&&(!memcmp(_b,b._b,_l)));
 	}
 	template<unsigned int C2>
 	inline bool operator!=(const Buffer<C2> &b) const
-		throw()
 	{
 		return ((_l != b._l)||(memcmp(_b,b._b,_l)));
 	}
 	template<unsigned int C2>
 	inline bool operator<(const Buffer<C2> &b) const
-		throw()
 	{
 		return (memcmp(_b,b._b,std::min(_l,b._l)) < 0);
 	}
 	template<unsigned int C2>
 	inline bool operator>(const Buffer<C2> &b) const
-		throw()
 	{
 		return (b < *this);
 	}
 	template<unsigned int C2>
 	inline bool operator<=(const Buffer<C2> &b) const
-		throw()
 	{
 		return !(b < *this);
 	}
 	template<unsigned int C2>
 	inline bool operator>=(const Buffer<C2> &b) const
-		throw()
 	{
 		return !(*this < b);
 	}

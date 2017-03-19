@@ -63,7 +63,6 @@
     <VCTargetsPath Condition="'$(VCTargetsPath11)' != '' and '$(VisualStudioVersion)' == '11.0'">$(VCTargetsPath11)</VCTargetsPath>
   </PropertyGroup>
   <PropertyGroup Label="PropertySheets">
-    <PlatformToolset>WindowsKernelModeDriver8.0</PlatformToolset>
     <ConfigurationType>Driver</ConfigurationType>
     <DriverType>KMDF</DriverType>
   </PropertyGroup>
@@ -71,54 +70,66 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|Win32'" Label="Configuration">
     <TargetVersion>Windows8</TargetVersion>
     <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'" Label="Configuration">
     <TargetVersion>Windows8</TargetVersion>
     <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'" Label="Configuration">
     <TargetVersion>Windows7</TargetVersion>
     <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'" Label="Configuration">
     <TargetVersion>Windows7</TargetVersion>
     <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Debug|Win32'" Label="Configuration">
     <TargetVersion>Vista</TargetVersion>
     <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver8.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Release|Win32'" Label="Configuration">
     <TargetVersion>Vista</TargetVersion>
     <UseDebugLibraries>false</UseDebugLibraries>
     <KMDF_VERSION_MAJOR>1</KMDF_VERSION_MAJOR>
     <KMDF_VERSION_MINOR>7</KMDF_VERSION_MINOR>
+    <PlatformToolset>WindowsKernelModeDriver8.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|x64'" Label="Configuration">
     <TargetVersion>Windows8</TargetVersion>
     <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'" Label="Configuration">
     <TargetVersion>Windows8</TargetVersion>
     <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'" Label="Configuration">
     <TargetVersion>Windows7</TargetVersion>
     <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'" Label="Configuration">
     <TargetVersion>Windows7</TargetVersion>
     <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Debug|x64'" Label="Configuration">
     <TargetVersion>Vista</TargetVersion>
     <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver8.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Release|x64'" Label="Configuration">
     <TargetVersion>Vista</TargetVersion>
     <UseDebugLibraries>false</UseDebugLibraries>
     <KMDF_VERSION_MAJOR>1</KMDF_VERSION_MAJOR>
     <KMDF_VERSION_MINOR>7</KMDF_VERSION_MINOR>
+    <PlatformToolset>WindowsKernelModeDriver8.0</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -218,10 +229,10 @@
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Vista Release|x64'">C:\WinDDK\7600.16385.1\lib\win7\amd64\ndis.lib;C:\WinDDK\7600.16385.1\lib\win7\amd64\ntstrsafe.lib;C:\WinDDK\7600.16385.1\lib\win7\amd64\wdmsec.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Link>
-      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">C:\WinDDK\7600.16385.1\lib\win7\amd64\ndis.lib;C:\WinDDK\7600.16385.1\lib\win7\amd64\ntstrsafe.lib;C:\WinDDK\7600.16385.1\lib\win7\amd64\wdmsec.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">$(DDK_LIB_PATH)ndis.lib;$(DDK_LIB_PATH)ntstrsafe.lib;$(DDK_LIB_PATH)wdmsec.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Link>
-      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">C:\WinDDK\7600.16385.1\lib\win7\amd64\ndis.lib;C:\WinDDK\7600.16385.1\lib\win7\amd64\ntstrsafe.lib;C:\WinDDK\7600.16385.1\lib\win7\amd64\wdmsec.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">$(DDK_LIB_PATH)ndis.lib;$(DDK_LIB_PATH)ntstrsafe.lib;$(DDK_LIB_PATH)wdmsec.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Link>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">C:\WinDDK\7600.16385.1\lib\win7\amd64\ndis.lib;C:\WinDDK\7600.16385.1\lib\win7\amd64\ntstrsafe.lib;C:\WinDDK\7600.16385.1\lib\win7\amd64\wdmsec.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -236,10 +247,10 @@
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Vista Release|Win32'">C:\WinDDK\7600.16385.1\lib\win7\i386\ndis.lib;C:\WinDDK\7600.16385.1\lib\win7\i386\ntstrsafe.lib;C:\WinDDK\7600.16385.1\lib\win7\i386\wdmsec.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Link>
-      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">C:\WinDDK\7600.16385.1\lib\win7\i386\ndis.lib;C:\WinDDK\7600.16385.1\lib\win7\i386\ntstrsafe.lib;C:\WinDDK\7600.16385.1\lib\win7\i386\wdmsec.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">$(DDK_LIB_PATH)ndis.lib;$(DDK_LIB_PATH)ntstrsafe.lib;$(DDK_LIB_PATH)wdmsec.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Link>
-      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">C:\WinDDK\7600.16385.1\lib\win7\i386\ndis.lib;C:\WinDDK\7600.16385.1\lib\win7\i386\ntstrsafe.lib;C:\WinDDK\7600.16385.1\lib\win7\i386\wdmsec.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">$(DDK_LIB_PATH)ndis.lib;$(DDK_LIB_PATH)ntstrsafe.lib;$(DDK_LIB_PATH)wdmsec.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Link>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">C:\WinDDK\7600.16385.1\lib\win7\i386\ndis.lib;C:\WinDDK\7600.16385.1\lib\win7\i386\ntstrsafe.lib;C:\WinDDK\7600.16385.1\lib\win7\i386\wdmsec.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -261,13 +272,18 @@
     </Inf>
     <Inf>
       <TimeStamp Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">3.00.00.0</TimeStamp>
-      <SpecifyDriverVerDirectiveVersion Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">false</SpecifyDriverVerDirectiveVersion>
-      <SpecifyDriverVerDirectiveDate Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">false</SpecifyDriverVerDirectiveDate>
+      <SpecifyDriverVerDirectiveVersion Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">true</SpecifyDriverVerDirectiveVersion>
+      <SpecifyDriverVerDirectiveDate Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">true</SpecifyDriverVerDirectiveDate>
+      <VersionHeaderPath Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
+      </VersionHeaderPath>
+      <CatalogFileName Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">zttap300.cat</CatalogFileName>
     </Inf>
     <Inf>
-      <TimeStamp Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">3.00.00.0</TimeStamp>
+      <TimeStamp Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
+      </TimeStamp>
       <SpecifyDriverVerDirectiveVersion Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">false</SpecifyDriverVerDirectiveVersion>
       <SpecifyDriverVerDirectiveDate Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">false</SpecifyDriverVerDirectiveDate>
+      <DateStamp Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'" />
     </Inf>
     <Inf>
       <TimeStamp Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">3.00.00.0</TimeStamp>
@@ -291,13 +307,18 @@
     </Inf>
     <Inf>
       <TimeStamp Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">3.00.00.0</TimeStamp>
-      <SpecifyDriverVerDirectiveVersion Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">false</SpecifyDriverVerDirectiveVersion>
-      <SpecifyDriverVerDirectiveDate Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">false</SpecifyDriverVerDirectiveDate>
+      <SpecifyDriverVerDirectiveVersion Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">true</SpecifyDriverVerDirectiveVersion>
+      <SpecifyDriverVerDirectiveDate Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">true</SpecifyDriverVerDirectiveDate>
+      <VersionHeaderPath Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">
+      </VersionHeaderPath>
+      <CatalogFileName Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">zttap300.cat</CatalogFileName>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">-v "3.00.00.0" %(AdditionalOptions)</AdditionalOptions>
     </Inf>
     <Inf>
       <TimeStamp Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">3.00.00.0</TimeStamp>
-      <SpecifyDriverVerDirectiveVersion Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">false</SpecifyDriverVerDirectiveVersion>
-      <SpecifyDriverVerDirectiveDate Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">false</SpecifyDriverVerDirectiveDate>
+      <SpecifyDriverVerDirectiveVersion Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">true</SpecifyDriverVerDirectiveVersion>
+      <SpecifyDriverVerDirectiveDate Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">true</SpecifyDriverVerDirectiveDate>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">-v "3.00.00.0" %(AdditionalOptions)</AdditionalOptions>
     </Inf>
     <Inf>
       <TimeStamp Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">3.00.00.0</TimeStamp>

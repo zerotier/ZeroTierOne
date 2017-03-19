@@ -47,21 +47,14 @@ namespace ZeroTier {
 
 const char Utils::HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
 
-static void _Utils_doBurn(char *ptr,unsigned int len)
+// Crazy hack to force memory to be securely zeroed in spite of the best efforts of optimizing compilers.
+static void _Utils_doBurn(volatile uint8_t *ptr,unsigned int len)
 {
-	for(unsigned int i=0;i<len;++i)
-		ptr[i] = (char)0;
+	volatile uint8_t *const end = ptr + len;
+	while (ptr != end) *(ptr++) = (uint8_t)0;
 }
-void (*volatile _Utils_doBurn_ptr)(char *,unsigned int) = _Utils_doBurn;
-void Utils::burn(void *ptr,unsigned int len)
-	throw()
-{
-	// Ridiculous hack: call _doBurn() via a volatile function pointer to
-	// hold down compiler optimizers and beat them mercilessly until they
-	// cry and mumble something about never eliding secure memory zeroing
-	// again.
-	(_Utils_doBurn_ptr)((char *)ptr,len);
-}
+static void (*volatile _Utils_doBurn_ptr)(volatile uint8_t *,unsigned int) = _Utils_doBurn;
+void Utils::burn(void *ptr,unsigned int len) { (_Utils_doBurn_ptr)((volatile uint8_t *)ptr,len); }
 
 std::string Utils::hex(const void *data,unsigned int len)
 {
@@ -144,6 +137,8 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	static Mutex globalLock;
 	static Salsa20 s20;
 	static bool s20Initialized = false;
+	static uint8_t randomBuf[65536];
+	static unsigned int randomPtr = sizeof(randomBuf);
 
 	Mutex::Lock _l(globalLock);
 
@@ -168,27 +163,31 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 
 	static HCRYPTPROV cryptProvider = NULL;
 
-	if (cryptProvider == NULL) {
-		if (!CryptAcquireContextA(&cryptProvider,NULL,NULL,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT|CRYPT_SILENT)) {
-			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
-			exit(1);
-			return;
+	for(unsigned int i=0;i<bytes;++i) {
+		if (randomPtr >= sizeof(randomBuf)) {
+			if (cryptProvider == NULL) {
+				if (!CryptAcquireContextA(&cryptProvider,NULL,NULL,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT|CRYPT_SILENT)) {
+					fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
+					exit(1);
+				}
+			}
+			if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomBuf),(BYTE *)randomBuf)) {
+				fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
+				exit(1);
+			}
+			randomPtr = 0;
+			s20.crypt12(randomBuf,randomBuf,sizeof(randomBuf));
 		}
-	}
-	if (!CryptGenRandom(cryptProvider,(DWORD)bytes,(BYTE *)buf)) {
-		fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
-		exit(1);
+		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
 	}
 
 #else // not __WINDOWS__
 
-	static char randomBuf[131072];
-	static unsigned int randomPtr = sizeof(randomBuf);
 	static int devURandomFd = -1;
 
-	if (devURandomFd <= 0) {
+	if (devURandomFd < 0) {
 		devURandomFd = ::open("/dev/urandom",O_RDONLY);
-		if (devURandomFd <= 0) {
+		if (devURandomFd < 0) {
 			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
 			exit(1);
 			return;
@@ -201,7 +200,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 				if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
 					::close(devURandomFd);
 					devURandomFd = ::open("/dev/urandom",O_RDONLY);
-					if (devURandomFd <= 0) {
+					if (devURandomFd < 0) {
 						fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
 						exit(1);
 						return;
@@ -209,57 +208,12 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 				} else break;
 			}
 			randomPtr = 0;
+			s20.crypt12(randomBuf,randomBuf,sizeof(randomBuf));
 		}
-		((char *)buf)[i] = randomBuf[randomPtr++];
+		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
 	}
 
 #endif // __WINDOWS__ or not
-
-	s20.encrypt12(buf,buf,bytes);
-}
-
-std::vector<std::string> Utils::split(const char *s,const char *const sep,const char *esc,const char *quot)
-{
-	std::vector<std::string> fields;
-	std::string buf;
-
-	if (!esc)
-		esc = "";
-	if (!quot)
-		quot = "";
-
-	bool escapeState = false;
-	char quoteState = 0;
-	while (*s) {
-		if (escapeState) {
-			escapeState = false;
-			buf.push_back(*s);
-		} else if (quoteState) {
-			if (*s == quoteState) {
-				quoteState = 0;
-				fields.push_back(buf);
-				buf.clear();
-			} else buf.push_back(*s);
-		} else {
-			const char *quotTmp;
-			if (strchr(esc,*s))
-				escapeState = true;
-			else if ((buf.size() <= 0)&&((quotTmp = strchr(quot,*s))))
-				quoteState = *quotTmp;
-			else if (strchr(sep,*s)) {
-				if (buf.size() > 0) {
-					fields.push_back(buf);
-					buf.clear();
-				} // else skip runs of seperators
-			} else buf.push_back(*s);
-		}
-		++s;
-	}
-
-	if (buf.size())
-		fields.push_back(buf);
-
-	return fields;
 }
 
 bool Utils::scopy(char *dest,unsigned int len,const char *src)

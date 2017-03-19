@@ -120,7 +120,7 @@ struct TcpProxyService
 		return (PhySocket *)0;
 	}
 
-	void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
+	void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
 	{
 		if (!*uptr)
 			return;
@@ -134,7 +134,7 @@ struct TcpProxyService
 
 			if ((c.tcpWritePtr + 5 + mlen) <= sizeof(c.tcpWriteBuf)) {
 				if (!c.tcpWritePtr)
-					phy->tcpSetNotifyWritable(c.tcp,true);
+					phy->setNotifyWritable(c.tcp,true);
 
 				c.tcpWriteBuf[c.tcpWritePtr++] = 0x17; // look like TLS data
 				c.tcpWriteBuf[c.tcpWritePtr++] = 0x03; // look like TLS 1.2
@@ -257,13 +257,13 @@ struct TcpProxyService
 	{
 		Client &c = *((Client *)*uptr);
 		if (c.tcpWritePtr) {
-			long n = phy->tcpSend(sock,c.tcpWriteBuf,c.tcpWritePtr);
+			long n = phy->streamSend(sock,c.tcpWriteBuf,c.tcpWritePtr);
 			if (n > 0) {
 				memmove(c.tcpWriteBuf,c.tcpWriteBuf + n,c.tcpWritePtr -= (unsigned long)n);
 				if (!c.tcpWritePtr)
-					phy->tcpSetNotifyWritable(sock,false);
+					phy->setNotifyWritable(sock,false);
 			}
-		} else phy->tcpSetNotifyWritable(sock,false);
+		} else phy->setNotifyWritable(sock,false);
 	}
 
 	void doHousekeeping()

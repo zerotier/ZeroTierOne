@@ -1,4 +1,4 @@
-ZeroTier Virtual Switch Core
+ZeroTier Network Hypervisor Core
 ======
 
 This directory contains the *real* ZeroTier: a completely OS-independent global virtual Ethernet switch engine. This is where the magic happens.

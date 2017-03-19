@@ -25,13 +25,13 @@
 
 ## Third-Party Code
 
-These are included in ext/ for platforms that do not have them available in common repositories. Otherwise they may be linked and the package may ship with them as dependencies.
+ZeroTier includes the following third party code, either in ext/ or incorporated into the ZeroTier core.
 
  * LZ4 compression algorithm by Yann Collet
 
-   * Files: ext/lz4/*
+   * Files: node/Packet.cpp (bundled within anonymous namespace)
    * Home page: http://code.google.com/p/lz4/
-   * License grant: BSD attribution
+   * License grant: BSD 2-clause
 
  * http-parser by Joyent, Inc. (many authors)
 
@@ -39,11 +39,11 @@ These are included in ext/ for platforms that do not have them available in comm
    * Home page: https://github.com/joyent/http-parser/
    * License grant: MIT/Expat
 
- * json-parser by James McLaughlin
+ * C++11 json (nlohmann/json) by Niels Lohmann
 
-   * Files: ext/json-parser/*
-   * Home page: https://github.com/udp/json-parser/
-   * License grant: BSD attribution
+   * Files: ext/json/*
+   * Home page: https://github.com/nlohmann/json
+   * License grant: MIT
 
  * TunTapOSX by Mattias Nissler
 
@@ -55,26 +55,19 @@ These are included in ext/ for platforms that do not have them available in comm
  * tap-windows6 by the OpenVPN project
 
    * Files: windows/TapDriver6/*
-   * Home page:
-       https://github.com/OpenVPN/tap-windows6/
+   * Home page: https://github.com/OpenVPN/tap-windows6/
    * License grant: GNU GPL v2
    * ZeroTier Modifications: change name of driver to ZeroTier, add ioctl() to get L2 multicast memberships (source is in ext/ and modifications inherit GPL)
 
- * Salsa20 stream cipher, Curve25519 elliptic curve cipher, Ed25519
-   digital signature algorithm, and Poly1305 MAC algorithm, all by
-   Daniel J. Bernstein
+ * Salsa20 stream cipher, Curve25519 elliptic curve cipher, Ed25519 digital signature algorithm, and Poly1305 MAC algorithm, all by Daniel J. Bernstein
 
-   * Files:
-       node/Salsa20.hpp
-       node/C25519.hpp
-       node/Poly1305.hpp
+   * Files: node/Salsa20.* node/C25519.* node/Poly1305.*
    * Home page: http://cr.yp.to/
    * License grant: public domain
+   * ZeroTier Modifications: slight cryptographically-irrelevant modifications for inclusion into ZeroTier core
 
  * MiniUPNPC and libnatpmp by Thomas Bernard
 
-   * Files:
-       ext/libnatpmp/*
-       ext/miniupnpc/*
+   * Files: ext/libnatpmp/* ext/miniupnpc/*
    * Home page: http://miniupnp.free.fr/
    * License grant: BSD attribution no-endorsement

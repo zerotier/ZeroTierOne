@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -19,12 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\controller\EmbeddedNetworkController.cpp" />
+    <ClCompile Include="..\..\controller\JSONDB.cpp" />
     <ClCompile Include="..\..\ext\http-parser\http_parser.c" />
-    <ClCompile Include="..\..\ext\json-parser\json.c" />
     <ClCompile Include="..\..\ext\libnatpmp\getgateway.c" />
     <ClCompile Include="..\..\ext\libnatpmp\natpmp.c" />
     <ClCompile Include="..\..\ext\libnatpmp\wingettimeofday.c" />
-    <ClCompile Include="..\..\ext\lz4\lz4.c" />
     <ClCompile Include="..\..\ext\miniupnpc\connecthostport.c" />
     <ClCompile Include="..\..\ext\miniupnpc\igd_desc_parse.c" />
     <ClCompile Include="..\..\ext\miniupnpc\minisoap.c" />
@@ -39,12 +39,14 @@
     <ClCompile Include="..\..\ext\miniupnpc\upnperrors.c" />
     <ClCompile Include="..\..\ext\miniupnpc\upnpreplyparse.c" />
     <ClCompile Include="..\..\node\C25519.cpp" />
+    <ClCompile Include="..\..\node\Capability.cpp" />
     <ClCompile Include="..\..\node\CertificateOfMembership.cpp" />
+    <ClCompile Include="..\..\node\CertificateOfOwnership.cpp" />
     <ClCompile Include="..\..\node\Cluster.cpp" />
-    <ClCompile Include="..\..\node\DeferredPackets.cpp" />
     <ClCompile Include="..\..\node\Identity.cpp" />
     <ClCompile Include="..\..\node\IncomingPacket.cpp" />
     <ClCompile Include="..\..\node\InetAddress.cpp" />
+    <ClCompile Include="..\..\node\Membership.cpp" />
     <ClCompile Include="..\..\node\Multicaster.cpp" />
     <ClCompile Include="..\..\node\Network.cpp" />
     <ClCompile Include="..\..\node\NetworkConfig.cpp" />
@@ -54,50 +56,34 @@
     <ClCompile Include="..\..\node\Path.cpp" />
     <ClCompile Include="..\..\node\Peer.cpp" />
     <ClCompile Include="..\..\node\Poly1305.cpp" />
+    <ClCompile Include="..\..\node\Revocation.cpp" />
     <ClCompile Include="..\..\node\Salsa20.cpp" />
     <ClCompile Include="..\..\node\SelfAwareness.cpp" />
     <ClCompile Include="..\..\node\SHA512.cpp" />
     <ClCompile Include="..\..\node\Switch.cpp" />
+    <ClCompile Include="..\..\node\Tag.cpp" />
     <ClCompile Include="..\..\node\Topology.cpp" />
     <ClCompile Include="..\..\node\Utils.cpp" />
     <ClCompile Include="..\..\one.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\..\osdep\BackgroundResolver.cpp" />
     <ClCompile Include="..\..\osdep\Http.cpp" />
     <ClCompile Include="..\..\osdep\ManagedRoute.cpp" />
     <ClCompile Include="..\..\osdep\OSUtils.cpp" />
     <ClCompile Include="..\..\osdep\PortMapper.cpp" />
     <ClCompile Include="..\..\osdep\WindowsEthernetTap.cpp" />
-    <ClCompile Include="..\..\service\ControlPlane.cpp" />
     <ClCompile Include="..\..\service\OneService.cpp" />
+    <ClCompile Include="..\..\service\SoftwareUpdater.cpp" />
     <ClCompile Include="ServiceBase.cpp" />
     <ClCompile Include="ServiceInstaller.cpp" />
     <ClCompile Include="ZeroTierOneService.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\codelength.h" />
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\connecthostport.h" />
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\igd_desc_parse.h" />
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\minisoap.h" />
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\minissdpc.h" />
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpc.h" />
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpcstrings.h" />
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpctypes.h" />
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpc_declspec.h" />
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniwget.h" />
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\minixml.h" />
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\portlistingparse.h" />
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\receivedata.h" />
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\upnpcommands.h" />
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\upnperrors.h" />
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\upnpreplyparse.h" />
     <ClInclude Include="..\..\ext\http-parser\http_parser.h" />
-    <ClInclude Include="..\..\ext\json-parser\json.h" />
+    <ClInclude Include="..\..\ext\json\json.hpp" />
     <ClInclude Include="..\..\ext\libnatpmp\getgateway.h" />
     <ClInclude Include="..\..\ext\libnatpmp\natpmp.h" />
     <ClInclude Include="..\..\ext\libnatpmp\wingettimeofday.h" />
-    <ClInclude Include="..\..\ext\lz4\lz4.h" />
     <ClInclude Include="..\..\ext\miniupnpc\codelength.h" />
     <ClInclude Include="..\..\ext\miniupnpc\connecthostport.h" />
     <ClInclude Include="..\..\ext\miniupnpc\igd_desc_parse.h" />
@@ -123,6 +109,7 @@
     <ClInclude Include="..\..\node\Buffer.hpp" />
     <ClInclude Include="..\..\node\C25519.hpp" />
     <ClInclude Include="..\..\node\CertificateOfMembership.hpp" />
+    <ClInclude Include="..\..\node\CertificateOfOwnership.hpp" />
     <ClInclude Include="..\..\node\Cluster.hpp" />
     <ClInclude Include="..\..\node\CMWC4096.hpp" />
     <ClInclude Include="..\..\node\Constants.hpp" />
@@ -155,7 +142,6 @@
     <ClInclude Include="..\..\node\Topology.hpp" />
     <ClInclude Include="..\..\node\Utils.hpp" />
     <ClInclude Include="..\..\node\World.hpp" />
-    <ClInclude Include="..\..\osdep\BackgroundResolver.hpp" />
     <ClInclude Include="..\..\osdep\Binder.hpp" />
     <ClInclude Include="..\..\osdep\Http.hpp" />
     <ClInclude Include="..\..\osdep\ManagedRoute.hpp" />
@@ -164,9 +150,8 @@
     <ClInclude Include="..\..\osdep\PortMapper.hpp" />
     <ClInclude Include="..\..\osdep\Thread.hpp" />
     <ClInclude Include="..\..\osdep\WindowsEthernetTap.hpp" />
-    <ClInclude Include="..\..\service\ControlPlane.hpp" />
-    <ClInclude Include="..\..\service\ControlPlaneSubsystem.hpp" />
     <ClInclude Include="..\..\service\OneService.hpp" />
+    <ClInclude Include="..\..\service\SoftwareUpdater.hpp" />
     <ClInclude Include="..\..\version.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="ServiceBase.h" />
@@ -184,26 +169,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -250,7 +235,8 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -265,13 +251,15 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_RULES_ENGINE_DEBUGGING;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <AdditionalOptions>"notelemetry.obj" %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -283,13 +271,14 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>STATICLIB;ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>STATICLIB;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;ZT_SOFTWARE_UPDATE_DEFAULT="apply";ZT_BUILD_PLATFORM=2;ZT_BUILD_ARCHITECTURE=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -308,13 +297,14 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>STATICLIB;ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="apply";ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;ZT_BUILD_PLATFORM=2;ZT_BUILD_ARCHITECTURE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

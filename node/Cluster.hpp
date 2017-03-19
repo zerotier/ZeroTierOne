@@ -88,6 +88,11 @@
  */
 #define ZT_CLUSTER_SEND_QUEUE_DATA_MAX 1500
 
+/**
+ * We won't send WANT_PEER to other members more than every (ms) per recipient
+ */
+#define ZT_CLUSTER_WANT_PEER_EVERY 1000
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -216,14 +221,13 @@ public:
 
 		/**
 		 * Replicate a network config for a network we belong to:
-		 *   <[8] 64-bit network ID>
-		 *   <[2] 16-bit length of network config>
-		 *   <[...] serialized network config>
+		 *   <[...] network config chunk>
 		 *
 		 * This is used by clusters to avoid every member having to query
 		 * for the same netconf for networks all members belong to.
 		 *
-		 * TODO: not implemented yet!
+		 * The first field of a network config chunk is the network ID,
+		 * so this can be checked to look up the network on receipt.
 		 */
 		CLUSTER_MESSAGE_NETWORK_CONFIG = 7
 	};
@@ -268,7 +272,38 @@ public:
 	void broadcastHavePeer(const Identity &id);
 
 	/**
-	 * Send this packet via another node in this cluster if another node has this peer
+	 * Broadcast a network config chunk to other members of cluster
+	 *
+	 * @param chunk Chunk data
+	 * @param len Length of chunk
+	 */
+	void broadcastNetworkConfigChunk(const void *chunk,unsigned int len);
+
+	/**
+	 * If the cluster has this peer, prepare the packet to send via cluster
+	 *
+	 * Note that outp is only armored (or modified at all) if the return value is a member ID.
+	 *
+	 * @param toPeerAddress Value of outp.destination(), simply to save additional lookup
+	 * @param ts Result: set to time of last HAVE_PEER from the cluster
+	 * @param peerSecret Result: Buffer to fill with peer secret on valid return value, must be at least ZT_PEER_SECRET_KEY_LENGTH bytes
+	 * @return -1 if cluster does not know this peer, or a member ID to pass to sendViaCluster()
+	 */
+	int checkSendViaCluster(const Address &toPeerAddress,uint64_t &mostRecentTs,void *peerSecret);
+
+	/**
+	 * Send data via cluster front plane (packet head or fragment)
+	 *
+	 * @param haveMemberId Member ID that has this peer as returned by prepSendviaCluster()
+	 * @param toPeerAddress Destination peer address
+	 * @param data Packet or packet fragment data
+	 * @param len Length of packet or fragment
+	 * @return True if packet was sent (and outp was modified via armoring)
+	 */
+	bool sendViaCluster(int haveMemberId,const Address &toPeerAddress,const void *data,unsigned int len);
+
+	/**
+	 * Relay a packet via the cluster
 	 *
 	 * This is used in the outgoing packet and relaying logic in Switch to
 	 * relay packets to other cluster members. It isn't PROXY_SEND-- that is
@@ -280,7 +315,7 @@ public:
 	 * @param len Length of packet or fragment
 	 * @param unite If true, also request proxy unite across cluster
 	 */
-	void sendViaCluster(const Address &fromPeerAddress,const Address &toPeerAddress,const void *data,unsigned int len,bool unite);
+	void relayViaCluster(const Address &fromPeerAddress,const Address &toPeerAddress,const void *data,unsigned int len,bool unite);
 
 	/**
 	 * Send a distributed query to other cluster members
@@ -322,6 +357,12 @@ public:
 	 * @return True if redirectTo was set to a new address, false if redirectTo was not modified
 	 */
 	bool findBetterEndpoint(InetAddress &redirectTo,const Address &peerAddress,const InetAddress &peerPhysicalAddress,bool offload);
+
+	/**
+	 * @param ip Address to check
+	 * @return True if this is a cluster frontplane address (excluding our addresses)
+	 */
+	bool isClusterPeerFrontplane(const InetAddress &ip) const;
 
 	/**
 	 * Fill out ZT_ClusterStatus structure (from core API)
@@ -391,7 +432,15 @@ private:
 	std::vector<uint16_t> _memberIds;
 	Mutex _memberIds_m;
 
-	std::map< std::pair<Address,unsigned int>,uint64_t > _remotePeers; // we need ordered behavior and lower_bound here
+	struct _RemotePeer
+	{
+		_RemotePeer() : lastHavePeerReceived(0),lastSentWantPeer(0) {}
+		~_RemotePeer() { Utils::burn(key,ZT_PEER_SECRET_KEY_LENGTH); }
+		uint64_t lastHavePeerReceived;
+		uint64_t lastSentWantPeer;
+		uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]; // secret key from identity agreement
+	};
+	std::map< std::pair<Address,unsigned int>,_RemotePeer > _remotePeers; // we need ordered behavior and lower_bound here
 	Mutex _remotePeers_m;
 
 	uint64_t _lastFlushed;

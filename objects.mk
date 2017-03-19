@@ -1,11 +1,15 @@
 OBJS=\
+	controller/EmbeddedNetworkController.o \
+	controller/JSONDB.o \
 	node/C25519.o \
+	node/Capability.o \
 	node/CertificateOfMembership.o \
+	node/CertificateOfOwnership.o \
 	node/Cluster.o \
-	node/DeferredPackets.o \
 	node/Identity.o \
 	node/IncomingPacket.o \
 	node/InetAddress.o \
+	node/Membership.o \
 	node/Multicaster.o \
 	node/Network.o \
 	node/NetworkConfig.o \
@@ -15,15 +19,16 @@ OBJS=\
 	node/Path.o \
 	node/Peer.o \
 	node/Poly1305.o \
+	node/Revocation.o \
 	node/Salsa20.o \
 	node/SelfAwareness.o \
 	node/SHA512.o \
 	node/Switch.o \
+	node/Tag.o \
 	node/Topology.o \
 	node/Utils.o \
-	osdep/BackgroundResolver.o \
 	osdep/ManagedRoute.o \
 	osdep/Http.o \
 	osdep/OSUtils.o \
 	service/ClusterGeoIpService.o \
-	service/ControlPlane.o
+	service/SoftwareUpdater.o

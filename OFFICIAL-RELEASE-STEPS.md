@@ -15,6 +15,7 @@ The version must be incremented in all of the following files:
     /ext/installfiles/mac/ZeroTier One.pkgproj
     /ext/installfiles/windows/chocolatey/zerotier-one.nuspec
     /ext/installfiles/windows/ZeroTier One.aip
+    /windows/WinUI/AboutView.xaml
 
 The final .AIP file can only be edited on Windows with [Advanced Installer Enterprise](http://www.advancedinstaller.com/). In addition to incrementing the version be sure that a new product code is generated. (The "upgrade code" GUID on the other hand must never change.)
 

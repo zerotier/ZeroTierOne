@@ -22,17 +22,655 @@
 #include <math.h>
 
 #include "Constants.hpp"
+#include "../version.h"
 #include "Network.hpp"
 #include "RuntimeEnvironment.hpp"
+#include "MAC.hpp"
+#include "Address.hpp"
+#include "InetAddress.hpp"
 #include "Switch.hpp"
-#include "Packet.hpp"
 #include "Buffer.hpp"
+#include "Packet.hpp"
 #include "NetworkController.hpp"
 #include "Node.hpp"
+#include "Peer.hpp"
+#include "Cluster.hpp"
 
-#include "../version.h"
+// Uncomment to make the rules engine dump trace info to stdout
+//#define ZT_RULES_ENGINE_DEBUGGING 1
 
 namespace ZeroTier {
+
+namespace {
+
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+#define FILTER_TRACE(f,...) { Utils::snprintf(dpbuf,sizeof(dpbuf),f,##__VA_ARGS__); dlog.push_back(std::string(dpbuf)); }
+static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
+{
+	switch(rt) {
+		case ZT_NETWORK_RULE_ACTION_DROP: return "ACTION_DROP";
+		case ZT_NETWORK_RULE_ACTION_ACCEPT: return "ACTION_ACCEPT";
+		case ZT_NETWORK_RULE_ACTION_TEE: return "ACTION_TEE";
+		case ZT_NETWORK_RULE_ACTION_WATCH: return "ACTION_WATCH";
+		case ZT_NETWORK_RULE_ACTION_REDIRECT: return "ACTION_REDIRECT";
+		case ZT_NETWORK_RULE_ACTION_BREAK: return "ACTION_BREAK";
+		case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS: return "MATCH_SOURCE_ZEROTIER_ADDRESS";
+		case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS: return "MATCH_DEST_ZEROTIER_ADDRESS";
+		case ZT_NETWORK_RULE_MATCH_VLAN_ID: return "MATCH_VLAN_ID";
+		case ZT_NETWORK_RULE_MATCH_VLAN_PCP: return "MATCH_VLAN_PCP";
+		case ZT_NETWORK_RULE_MATCH_VLAN_DEI: return "MATCH_VLAN_DEI";
+		case ZT_NETWORK_RULE_MATCH_MAC_SOURCE: return "MATCH_MAC_SOURCE";
+		case ZT_NETWORK_RULE_MATCH_MAC_DEST: return "MATCH_MAC_DEST";
+		case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE: return "MATCH_IPV4_SOURCE";
+		case ZT_NETWORK_RULE_MATCH_IPV4_DEST: return "MATCH_IPV4_DEST";
+		case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE: return "MATCH_IPV6_SOURCE";
+		case ZT_NETWORK_RULE_MATCH_IPV6_DEST: return "MATCH_IPV6_DEST";
+		case ZT_NETWORK_RULE_MATCH_IP_TOS: return "MATCH_IP_TOS";
+		case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL: return "MATCH_IP_PROTOCOL";
+		case ZT_NETWORK_RULE_MATCH_ETHERTYPE: return "MATCH_ETHERTYPE";
+		case ZT_NETWORK_RULE_MATCH_ICMP: return "MATCH_ICMP";
+		case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE: return "MATCH_IP_SOURCE_PORT_RANGE";
+		case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE: return "MATCH_IP_DEST_PORT_RANGE";
+		case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS: return "MATCH_CHARACTERISTICS";
+		case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE: return "MATCH_FRAME_SIZE_RANGE";
+		case ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE: return "MATCH_TAGS_DIFFERENCE";
+		case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND: return "MATCH_TAGS_BITWISE_AND";
+		case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR: return "MATCH_TAGS_BITWISE_OR";
+		case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR: return "MATCH_TAGS_BITWISE_XOR";
+		default: return "???";
+	}
+}
+static const void _dumpFilterTrace(const char *ruleName,uint8_t thisSetMatches,bool inbound,const Address &ztSource,const Address &ztDest,const MAC &macSource,const MAC &macDest,const std::vector<std::string> &dlog,unsigned int frameLen,unsigned int etherType,const char *msg)
+{
+	static volatile unsigned long cnt = 0;
+	printf("%.6lu %c %s %s frameLen=%u etherType=%u" ZT_EOL_S,
+		cnt++,
+		((thisSetMatches) ? 'Y' : '.'),
+		ruleName,
+		((inbound) ? "INBOUND" : "OUTBOUND"),
+		frameLen,
+		etherType
+	);
+	for(std::vector<std::string>::const_iterator m(dlog.begin());m!=dlog.end();++m)
+		printf("     | %s" ZT_EOL_S,m->c_str());
+	printf("     + %c %s->%s %.2x:%.2x:%.2x:%.2x:%.2x:%.2x->%.2x:%.2x:%.2x:%.2x:%.2x:%.2x" ZT_EOL_S,
+		((thisSetMatches) ? 'Y' : '.'),
+		ztSource.toString().c_str(),
+		ztDest.toString().c_str(),
+		(unsigned int)macSource[0],
+		(unsigned int)macSource[1],
+		(unsigned int)macSource[2],
+		(unsigned int)macSource[3],
+		(unsigned int)macSource[4],
+		(unsigned int)macSource[5],
+		(unsigned int)macDest[0],
+		(unsigned int)macDest[1],
+		(unsigned int)macDest[2],
+		(unsigned int)macDest[3],
+		(unsigned int)macDest[4],
+		(unsigned int)macDest[5]
+	);
+	if (msg)
+		printf("     +   (%s)" ZT_EOL_S,msg);
+	fflush(stdout);
+}
+#else
+#define FILTER_TRACE(f,...) {}
+#endif // ZT_RULES_ENGINE_DEBUGGING
+
+// Returns true if packet appears valid; pos and proto will be set
+static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsigned int &pos,unsigned int &proto)
+{
+	if (frameLen < 40)
+		return false;
+	pos = 40;
+	proto = frameData[6];
+	while (pos <= frameLen) {
+		switch(proto) {
+			case 0: // hop-by-hop options
+			case 43: // routing
+			case 60: // destination options
+			case 135: // mobility options
+				if ((pos + 8) > frameLen)
+					return false; // invalid!
+				proto = frameData[pos];
+				pos += ((unsigned int)frameData[pos + 1] * 8) + 8;
+				break;
+
+			//case 44: // fragment -- we currently can't parse these and they are deprecated in IPv6 anyway
+			//case 50:
+			//case 51: // IPSec ESP and AH -- we have to stop here since this is encrypted stuff
+			default:
+				return true;
+		}
+	}
+	return false; // overflow == invalid
+}
+
+enum _doZtFilterResult
+{
+	DOZTFILTER_NO_MATCH,
+	DOZTFILTER_DROP,
+	DOZTFILTER_REDIRECT,
+	DOZTFILTER_ACCEPT,
+	DOZTFILTER_SUPER_ACCEPT
+};
+static _doZtFilterResult _doZtFilter(
+	const RuntimeEnvironment *RR,
+	const NetworkConfig &nconf,
+	const Membership *membership, // can be NULL
+	const bool inbound,
+	const Address &ztSource,
+	Address &ztDest, // MUTABLE -- is changed on REDIRECT actions
+	const MAC &macSource,
+	const MAC &macDest,
+	const uint8_t *const frameData,
+	const unsigned int frameLen,
+	const unsigned int etherType,
+	const unsigned int vlanId,
+	const ZT_VirtualNetworkRule *rules, // cannot be NULL
+	const unsigned int ruleCount,
+	Address &cc, // MUTABLE -- set to TEE destination if TEE action is taken or left alone otherwise
+	unsigned int &ccLength, // MUTABLE -- set to length of packet payload to TEE
+	bool &ccWatch) // MUTABLE -- set to true for WATCH target as opposed to normal TEE
+{
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+	char dpbuf[1024]; // used by FILTER_TRACE macro
+	std::vector<std::string> dlog;
+#endif // ZT_RULES_ENGINE_DEBUGGING
+
+	// Set to true if we are a TEE/REDIRECT/WATCH target
+	bool superAccept = false;
+
+	// The default match state for each set of entries starts as 'true' since an
+	// ACTION with no MATCH entries preceding it is always taken.
+	uint8_t thisSetMatches = 1;
+
+	for(unsigned int rn=0;rn<ruleCount;++rn) {
+		const ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rules[rn].t & 0x3f);
+
+		// First check if this is an ACTION
+		if ((unsigned int)rt <= (unsigned int)ZT_NETWORK_RULE_ACTION__MAX_ID) {
+			if (thisSetMatches) {
+				switch(rt) {
+					case ZT_NETWORK_RULE_ACTION_DROP:
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+						_dumpFilterTrace("ACTION_DROP",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+#endif // ZT_RULES_ENGINE_DEBUGGING
+						return DOZTFILTER_DROP;
+
+					case ZT_NETWORK_RULE_ACTION_ACCEPT:
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+						_dumpFilterTrace("ACTION_ACCEPT",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+#endif // ZT_RULES_ENGINE_DEBUGGING
+						return (superAccept ? DOZTFILTER_SUPER_ACCEPT : DOZTFILTER_ACCEPT); // match, accept packet
+
+					// These are initially handled together since preliminary logic is common
+					case ZT_NETWORK_RULE_ACTION_TEE:
+					case ZT_NETWORK_RULE_ACTION_WATCH:
+					case ZT_NETWORK_RULE_ACTION_REDIRECT:	{
+						const Address fwdAddr(rules[rn].v.fwd.address);
+						if (fwdAddr == ztSource) {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+							_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"skipped as no-op since source is target");
+							dlog.clear();
+#endif // ZT_RULES_ENGINE_DEBUGGING
+						} else if (fwdAddr == RR->identity.address()) {
+							if (inbound) {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+								_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"interpreted as super-ACCEPT on inbound since we are target");
+#endif // ZT_RULES_ENGINE_DEBUGGING
+								return DOZTFILTER_SUPER_ACCEPT;
+							} else {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+								_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"skipped as no-op on outbound since we are target");
+								dlog.clear();
+#endif // ZT_RULES_ENGINE_DEBUGGING
+							}
+						} else if (fwdAddr == ztDest) {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+							_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,"skipped as no-op because destination is already target");
+							dlog.clear();
+#endif // ZT_RULES_ENGINE_DEBUGGING
+						} else {
+							if (rt == ZT_NETWORK_RULE_ACTION_REDIRECT) {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+								_dumpFilterTrace("ACTION_REDIRECT",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+#endif // ZT_RULES_ENGINE_DEBUGGING
+								ztDest = fwdAddr;
+								return DOZTFILTER_REDIRECT;
+							} else {
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+								_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+								dlog.clear();
+#endif // ZT_RULES_ENGINE_DEBUGGING
+								cc = fwdAddr;
+								ccLength = (rules[rn].v.fwd.length != 0) ? ((frameLen < (unsigned int)rules[rn].v.fwd.length) ? frameLen : (unsigned int)rules[rn].v.fwd.length) : frameLen;
+								ccWatch = (rt == ZT_NETWORK_RULE_ACTION_WATCH);
+							}
+						}
+					}	continue;
+
+					case ZT_NETWORK_RULE_ACTION_BREAK:
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+						_dumpFilterTrace("ACTION_BREAK",thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+						dlog.clear();
+#endif // ZT_RULES_ENGINE_DEBUGGING
+						return DOZTFILTER_NO_MATCH;
+
+					// Unrecognized ACTIONs are ignored as no-ops
+					default:
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+						_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+						dlog.clear();
+#endif // ZT_RULES_ENGINE_DEBUGGING
+						continue;
+				}
+			} else {
+				// If this is an incoming packet and we are a TEE or REDIRECT target, we should
+				// super-accept if we accept at all. This will cause us to accept redirected or
+				// tee'd packets in spite of MAC and ZT addressing checks.
+				if (inbound) {
+					switch(rt) {
+						case ZT_NETWORK_RULE_ACTION_TEE:
+						case ZT_NETWORK_RULE_ACTION_WATCH:
+						case ZT_NETWORK_RULE_ACTION_REDIRECT:
+							if (RR->identity.address() == rules[rn].v.fwd.address)
+								superAccept = true;
+							break;
+						default:
+							break;
+					}
+				}
+
+#ifdef ZT_RULES_ENGINE_DEBUGGING
+				_dumpFilterTrace(_rtn(rt),thisSetMatches,inbound,ztSource,ztDest,macSource,macDest,dlog,frameLen,etherType,(const char *)0);
+				dlog.clear();
+#endif // ZT_RULES_ENGINE_DEBUGGING
+				thisSetMatches = 1; // reset to default true for next batch of entries
+				continue;
+			}
+		}
+
+		// Circuit breaker: no need to evaluate an AND if the set's match state
+		// is currently false since anything AND false is false.
+		if ((!thisSetMatches)&&(!(rules[rn].t & 0x40)))
+			continue;
+
+		// If this was not an ACTION evaluate next MATCH and update thisSetMatches with (AND [result])
+		uint8_t thisRuleMatches = 0;
+		uint64_t ownershipVerificationMask = 1; // this magic value means it hasn't been computed yet -- this is done lazily the first time it's needed
+		switch(rt) {
+			case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
+				thisRuleMatches = (uint8_t)(rules[rn].v.zt == ztSource.toInt());
+				FILTER_TRACE("%u %s %c %.10llx==%.10llx -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),rules[rn].v.zt,ztSource.toInt(),(unsigned int)thisRuleMatches);
+				break;
+			case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS:
+				thisRuleMatches = (uint8_t)(rules[rn].v.zt == ztDest.toInt());
+				FILTER_TRACE("%u %s %c %.10llx==%.10llx -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),rules[rn].v.zt,ztDest.toInt(),(unsigned int)thisRuleMatches);
+				break;
+			case ZT_NETWORK_RULE_MATCH_VLAN_ID:
+				thisRuleMatches = (uint8_t)(rules[rn].v.vlanId == (uint16_t)vlanId);
+				FILTER_TRACE("%u %s %c %u==%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.vlanId,(unsigned int)vlanId,(unsigned int)thisRuleMatches);
+				break;
+			case ZT_NETWORK_RULE_MATCH_VLAN_PCP:
+				// NOT SUPPORTED YET
+				thisRuleMatches = (uint8_t)(rules[rn].v.vlanPcp == 0);
+				FILTER_TRACE("%u %s %c %u==%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.vlanPcp,0,(unsigned int)thisRuleMatches);
+				break;
+			case ZT_NETWORK_RULE_MATCH_VLAN_DEI:
+				// NOT SUPPORTED YET
+				thisRuleMatches = (uint8_t)(rules[rn].v.vlanDei == 0);
+				FILTER_TRACE("%u %s %c %u==%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.vlanDei,0,(unsigned int)thisRuleMatches);
+				break;
+			case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
+				thisRuleMatches = (uint8_t)(MAC(rules[rn].v.mac,6) == macSource);
+				FILTER_TRACE("%u %s %c %.12llx=%.12llx -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),rules[rn].v.mac,macSource.toInt(),(unsigned int)thisRuleMatches);
+				break;
+			case ZT_NETWORK_RULE_MATCH_MAC_DEST:
+				thisRuleMatches = (uint8_t)(MAC(rules[rn].v.mac,6) == macDest);
+				FILTER_TRACE("%u %s %c %.12llx=%.12llx -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),rules[rn].v.mac,macDest.toInt(),(unsigned int)thisRuleMatches);
+				break;
+			case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
+				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
+					thisRuleMatches = (uint8_t)(InetAddress((const void *)&(rules[rn].v.ipv4.ip),4,rules[rn].v.ipv4.mask).containsAddress(InetAddress((const void *)(frameData + 12),4,0)));
+					FILTER_TRACE("%u %s %c %s contains %s -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),InetAddress((const void *)&(rules[rn].v.ipv4.ip),4,rules[rn].v.ipv4.mask).toString().c_str(),InetAddress((const void *)(frameData + 12),4,0).toIpString().c_str(),(unsigned int)thisRuleMatches);
+				} else {
+					thisRuleMatches = 0;
+					FILTER_TRACE("%u %s %c [frame not IPv4] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+				}
+				break;
+			case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
+				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
+					thisRuleMatches = (uint8_t)(InetAddress((const void *)&(rules[rn].v.ipv4.ip),4,rules[rn].v.ipv4.mask).containsAddress(InetAddress((const void *)(frameData + 16),4,0)));
+					FILTER_TRACE("%u %s %c %s contains %s -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),InetAddress((const void *)&(rules[rn].v.ipv4.ip),4,rules[rn].v.ipv4.mask).toString().c_str(),InetAddress((const void *)(frameData + 16),4,0).toIpString().c_str(),(unsigned int)thisRuleMatches);
+				} else {
+					thisRuleMatches = 0;
+					FILTER_TRACE("%u %s %c [frame not IPv4] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+				}
+				break;
+			case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
+				if ((etherType == ZT_ETHERTYPE_IPV6)&&(frameLen >= 40)) {
+					thisRuleMatches = (uint8_t)(InetAddress((const void *)rules[rn].v.ipv6.ip,16,rules[rn].v.ipv6.mask).containsAddress(InetAddress((const void *)(frameData + 8),16,0)));
+					FILTER_TRACE("%u %s %c %s contains %s -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),InetAddress((const void *)rules[rn].v.ipv6.ip,16,rules[rn].v.ipv6.mask).toString().c_str(),InetAddress((const void *)(frameData + 8),16,0).toIpString().c_str(),(unsigned int)thisRuleMatches);
+				} else {
+					thisRuleMatches = 0;
+					FILTER_TRACE("%u %s %c [frame not IPv6] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+				}
+				break;
+			case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
+				if ((etherType == ZT_ETHERTYPE_IPV6)&&(frameLen >= 40)) {
+					thisRuleMatches = (uint8_t)(InetAddress((const void *)rules[rn].v.ipv6.ip,16,rules[rn].v.ipv6.mask).containsAddress(InetAddress((const void *)(frameData + 24),16,0)));
+					FILTER_TRACE("%u %s %c %s contains %s -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),InetAddress((const void *)rules[rn].v.ipv6.ip,16,rules[rn].v.ipv6.mask).toString().c_str(),InetAddress((const void *)(frameData + 24),16,0).toIpString().c_str(),(unsigned int)thisRuleMatches);
+				} else {
+					thisRuleMatches = 0;
+					FILTER_TRACE("%u %s %c [frame not IPv6] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+				}
+				break;
+			case ZT_NETWORK_RULE_MATCH_IP_TOS:
+				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
+					//thisRuleMatches = (uint8_t)(rules[rn].v.ipTos == ((frameData[1] & 0xfc) >> 2));
+					const uint8_t tosMasked = frameData[1] & rules[rn].v.ipTos.mask;
+					thisRuleMatches = (uint8_t)((tosMasked >= rules[rn].v.ipTos.value[0])&&(tosMasked <= rules[rn].v.ipTos.value[1]));
+					FILTER_TRACE("%u %s %c (IPv4) %u&%u==%u-%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)tosMasked,(unsigned int)rules[rn].v.ipTos.mask,(unsigned int)rules[rn].v.ipTos.value[0],(unsigned int)rules[rn].v.ipTos.value[1],(unsigned int)thisRuleMatches);
+				} else if ((etherType == ZT_ETHERTYPE_IPV6)&&(frameLen >= 40)) {
+					const uint8_t tosMasked = (((frameData[0] << 4) & 0xf0) | ((frameData[1] >> 4) & 0x0f)) & rules[rn].v.ipTos.mask;
+					thisRuleMatches = (uint8_t)((tosMasked >= rules[rn].v.ipTos.value[0])&&(tosMasked <= rules[rn].v.ipTos.value[1]));
+					FILTER_TRACE("%u %s %c (IPv4) %u&%u==%u-%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)tosMasked,(unsigned int)rules[rn].v.ipTos.mask,(unsigned int)rules[rn].v.ipTos.value[0],(unsigned int)rules[rn].v.ipTos.value[1],(unsigned int)thisRuleMatches);
+				} else {
+					thisRuleMatches = 0;
+					FILTER_TRACE("%u %s %c [frame not IP] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+				}
+				break;
+			case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
+				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
+					thisRuleMatches = (uint8_t)(rules[rn].v.ipProtocol == frameData[9]);
+					FILTER_TRACE("%u %s %c (IPv4) %u==%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.ipProtocol,(unsigned int)frameData[9],(unsigned int)thisRuleMatches);
+				} else if (etherType == ZT_ETHERTYPE_IPV6) {
+					unsigned int pos = 0,proto = 0;
+					if (_ipv6GetPayload(frameData,frameLen,pos,proto)) {
+						thisRuleMatches = (uint8_t)(rules[rn].v.ipProtocol == (uint8_t)proto);
+						FILTER_TRACE("%u %s %c (IPv6) %u==%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.ipProtocol,proto,(unsigned int)thisRuleMatches);
+					} else {
+						thisRuleMatches = 0;
+						FILTER_TRACE("%u %s %c [invalid IPv6] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+					}
+				} else {
+					thisRuleMatches = 0;
+					FILTER_TRACE("%u %s %c [frame not IP] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+				}
+				break;
+			case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
+				thisRuleMatches = (uint8_t)(rules[rn].v.etherType == (uint16_t)etherType);
+				FILTER_TRACE("%u %s %c %u==%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.etherType,etherType,(unsigned int)thisRuleMatches);
+				break;
+			case ZT_NETWORK_RULE_MATCH_ICMP:
+				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
+					if (frameData[9] == 0x01) { // IP protocol == ICMP
+						const unsigned int ihl = (frameData[0] & 0xf) * 4;
+						if (frameLen >= (ihl + 2)) {
+							if (rules[rn].v.icmp.type == frameData[ihl]) {
+								if ((rules[rn].v.icmp.flags & 0x01) != 0) {
+									thisRuleMatches = (uint8_t)(frameData[ihl+1] == rules[rn].v.icmp.code);
+								} else {
+									thisRuleMatches = 1;
+								}
+							} else {
+								thisRuleMatches = 0;
+							}
+							FILTER_TRACE("%u %s %c (IPv4) icmp-type:%d==%d icmp-code:%d==%d -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(int)frameData[ihl],(int)rules[rn].v.icmp.type,(int)frameData[ihl+1],(((rules[rn].v.icmp.flags & 0x01) != 0) ? (int)rules[rn].v.icmp.code : -1),(unsigned int)thisRuleMatches);
+						} else {
+							thisRuleMatches = 0;
+							FILTER_TRACE("%u %s %c [IPv4 frame invalid] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+						}
+					} else {
+						thisRuleMatches = 0;
+						FILTER_TRACE("%u %s %c [frame not ICMP] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+					}
+				} else if (etherType == ZT_ETHERTYPE_IPV6) {
+					unsigned int pos = 0,proto = 0;
+					if (_ipv6GetPayload(frameData,frameLen,pos,proto)) {
+						if ((proto == 0x3a)&&(frameLen >= (pos+2))) {
+							if (rules[rn].v.icmp.type == frameData[pos]) {
+								if ((rules[rn].v.icmp.flags & 0x01) != 0) {
+									thisRuleMatches = (uint8_t)(frameData[pos+1] == rules[rn].v.icmp.code);
+								} else {
+									thisRuleMatches = 1;
+								}
+							} else {
+								thisRuleMatches = 0;
+							}
+							FILTER_TRACE("%u %s %c (IPv6) icmp-type:%d==%d icmp-code:%d==%d -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(int)frameData[pos],(int)rules[rn].v.icmp.type,(int)frameData[pos+1],(((rules[rn].v.icmp.flags & 0x01) != 0) ? (int)rules[rn].v.icmp.code : -1),(unsigned int)thisRuleMatches);
+						} else {
+							thisRuleMatches = 0;
+							FILTER_TRACE("%u %s %c [frame not ICMPv6] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+						}
+					} else {
+						thisRuleMatches = 0;
+						FILTER_TRACE("%u %s %c [invalid IPv6] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+					}
+				} else {
+					thisRuleMatches = 0;
+					FILTER_TRACE("%u %s %c [frame not IP] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+				}
+				break;
+				break;
+			case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
+			case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE:
+				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
+					const unsigned int headerLen = 4 * (frameData[0] & 0xf);
+					int p = -1;
+					switch(frameData[9]) { // IP protocol number
+						// All these start with 16-bit source and destination port in that order
+						case 0x06: // TCP
+						case 0x11: // UDP
+						case 0x84: // SCTP
+						case 0x88: // UDPLite
+							if (frameLen > (headerLen + 4)) {
+								unsigned int pos = headerLen + ((rt == ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE) ? 2 : 0);
+								p = (int)frameData[pos++] << 8;
+								p |= (int)frameData[pos];
+							}
+							break;
+					}
+
+					thisRuleMatches = (p >= 0) ? (uint8_t)((p >= (int)rules[rn].v.port[0])&&(p <= (int)rules[rn].v.port[1])) : (uint8_t)0;
+					FILTER_TRACE("%u %s %c (IPv4) %d in %d-%d -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),p,(int)rules[rn].v.port[0],(int)rules[rn].v.port[1],(unsigned int)thisRuleMatches);
+				} else if (etherType == ZT_ETHERTYPE_IPV6) {
+					unsigned int pos = 0,proto = 0;
+					if (_ipv6GetPayload(frameData,frameLen,pos,proto)) {
+						int p = -1;
+						switch(proto) { // IP protocol number
+							// All these start with 16-bit source and destination port in that order
+							case 0x06: // TCP
+							case 0x11: // UDP
+							case 0x84: // SCTP
+							case 0x88: // UDPLite
+								if (frameLen > (pos + 4)) {
+									if (rt == ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE) pos += 2;
+									p = (int)frameData[pos++] << 8;
+									p |= (int)frameData[pos];
+								}
+								break;
+						}
+						thisRuleMatches = (p > 0) ? (uint8_t)((p >= (int)rules[rn].v.port[0])&&(p <= (int)rules[rn].v.port[1])) : (uint8_t)0;
+						FILTER_TRACE("%u %s %c (IPv6) %d in %d-%d -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),p,(int)rules[rn].v.port[0],(int)rules[rn].v.port[1],(unsigned int)thisRuleMatches);
+					} else {
+						thisRuleMatches = 0;
+						FILTER_TRACE("%u %s %c [invalid IPv6] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+					}
+				} else {
+					thisRuleMatches = 0;
+					FILTER_TRACE("%u %s %c [frame not IP] -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+				}
+				break;
+			case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS: {
+				uint64_t cf = (inbound) ? ZT_RULE_PACKET_CHARACTERISTICS_INBOUND : 0ULL;
+				if (macDest.isMulticast()) cf |= ZT_RULE_PACKET_CHARACTERISTICS_MULTICAST;
+				if (macDest.isBroadcast()) cf |= ZT_RULE_PACKET_CHARACTERISTICS_BROADCAST;
+				if (ownershipVerificationMask == 1) {
+					ownershipVerificationMask = 0;
+					InetAddress src;
+					if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
+						src.set((const void *)(frameData + 12),4,0);
+					} else if ((etherType == ZT_ETHERTYPE_IPV6)&&(frameLen >= 40)) {
+						// IPv6 NDP requires special handling, since the src and dest IPs in the packet are empty or link-local.
+						if ( (frameLen >= (40 + 8 + 16)) && (frameData[6] == 0x3a) && ((frameData[40] == 0x87)||(frameData[40] == 0x88)) ) {
+							if (frameData[40] == 0x87) {
+								// Neighbor solicitations contain no reliable source address, so we implement a small
+								// hack by considering them authenticated. Otherwise you would pretty much have to do
+								// this manually in the rule set for IPv6 to work at all.
+								ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_IP_AUTHENTICATED;
+							} else {
+								// Neighbor advertisements on the other hand can absolutely be authenticated.
+								src.set((const void *)(frameData + 40 + 8),16,0);
+							}
+						} else {
+							// Other IPv6 packets can be handled normally
+							src.set((const void *)(frameData + 8),16,0);
+						}
+					} else if ((etherType == ZT_ETHERTYPE_ARP)&&(frameLen >= 28)) {
+						src.set((const void *)(frameData + 14),4,0);
+					}
+					if (inbound) {
+						if (membership) {
+							if ((src)&&(membership->hasCertificateOfOwnershipFor(nconf,src)))
+								ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_IP_AUTHENTICATED;
+							if (membership->hasCertificateOfOwnershipFor(nconf,macSource))
+								ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_MAC_AUTHENTICATED;
+						}
+					} else {
+						for(unsigned int i=0;i<nconf.certificateOfOwnershipCount;++i) {
+							if ((src)&&(nconf.certificatesOfOwnership[i].owns(src)))
+								ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_IP_AUTHENTICATED;
+							if (nconf.certificatesOfOwnership[i].owns(macSource))
+								ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_MAC_AUTHENTICATED;
+						}
+					}
+				}
+				cf |= ownershipVerificationMask;
+				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)&&(frameData[9] == 0x06)) {
+					const unsigned int headerLen = 4 * (frameData[0] & 0xf);
+					cf |= (uint64_t)frameData[headerLen + 13];
+					cf |= (((uint64_t)(frameData[headerLen + 12] & 0x0f)) << 8);
+				} else if (etherType == ZT_ETHERTYPE_IPV6) {
+					unsigned int pos = 0,proto = 0;
+					if (_ipv6GetPayload(frameData,frameLen,pos,proto)) {
+						if ((proto == 0x06)&&(frameLen > (pos + 14))) {
+							cf |= (uint64_t)frameData[pos + 13];
+							cf |= (((uint64_t)(frameData[pos + 12] & 0x0f)) << 8);
+						}
+					}
+				}
+				thisRuleMatches = (uint8_t)((cf & rules[rn].v.characteristics) != 0);
+				FILTER_TRACE("%u %s %c (%.16llx | %.16llx)!=0 -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),cf,rules[rn].v.characteristics,(unsigned int)thisRuleMatches);
+			}	break;
+			case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
+				thisRuleMatches = (uint8_t)((frameLen >= (unsigned int)rules[rn].v.frameSize[0])&&(frameLen <= (unsigned int)rules[rn].v.frameSize[1]));
+				FILTER_TRACE("%u %s %c %u in %u-%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),frameLen,(unsigned int)rules[rn].v.frameSize[0],(unsigned int)rules[rn].v.frameSize[1],(unsigned int)thisRuleMatches);
+				break;
+			case ZT_NETWORK_RULE_MATCH_RANDOM:
+				thisRuleMatches = (uint8_t)((uint32_t)(RR->node->prng() & 0xffffffffULL) <= rules[rn].v.randomProbability);
+				FILTER_TRACE("%u %s %c -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)thisRuleMatches);
+				break;
+			case ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE:
+			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
+			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
+			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR:
+			case ZT_NETWORK_RULE_MATCH_TAGS_EQUAL: {
+				const Tag *const localTag = std::lower_bound(&(nconf.tags[0]),&(nconf.tags[nconf.tagCount]),rules[rn].v.tag.id,Tag::IdComparePredicate());
+				if ((localTag != &(nconf.tags[nconf.tagCount]))&&(localTag->id() == rules[rn].v.tag.id)) {
+					const Tag *const remoteTag = ((membership) ? membership->getTag(nconf,rules[rn].v.tag.id) : (const Tag *)0);
+					if (remoteTag) {
+						const uint32_t ltv = localTag->value();
+						const uint32_t rtv = remoteTag->value();
+						if (rt == ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE) {
+							const uint32_t diff = (ltv > rtv) ? (ltv - rtv) : (rtv - ltv);
+							thisRuleMatches = (uint8_t)(diff <= rules[rn].v.tag.value);
+							FILTER_TRACE("%u %s %c TAG %u local:%u remote:%u difference:%u<=%u -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,ltv,rtv,diff,(unsigned int)rules[rn].v.tag.value,thisRuleMatches);
+						} else if (rt == ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND) {
+							thisRuleMatches = (uint8_t)((ltv & rtv) == rules[rn].v.tag.value);
+							FILTER_TRACE("%u %s %c TAG %u local:%.8x & remote:%.8x == %.8x -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,ltv,rtv,(unsigned int)rules[rn].v.tag.value,(unsigned int)thisRuleMatches);
+						} else if (rt == ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR) {
+							thisRuleMatches = (uint8_t)((ltv | rtv) == rules[rn].v.tag.value);
+							FILTER_TRACE("%u %s %c TAG %u local:%.8x | remote:%.8x == %.8x -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,ltv,rtv,(unsigned int)rules[rn].v.tag.value,(unsigned int)thisRuleMatches);
+						} else if (rt == ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR) {
+							thisRuleMatches = (uint8_t)((ltv ^ rtv) == rules[rn].v.tag.value);
+							FILTER_TRACE("%u %s %c TAG %u local:%.8x ^ remote:%.8x == %.8x -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,ltv,rtv,(unsigned int)rules[rn].v.tag.value,(unsigned int)thisRuleMatches);
+						} else if (rt == ZT_NETWORK_RULE_MATCH_TAGS_EQUAL) {
+							thisRuleMatches = (uint8_t)((ltv == rules[rn].v.tag.value)&&(rtv == rules[rn].v.tag.value));
+							FILTER_TRACE("%u %s %c TAG %u local:%.8x and remote:%.8x == %.8x -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,ltv,rtv,(unsigned int)rules[rn].v.tag.value,(unsigned int)thisRuleMatches);
+						} else { // sanity check, can't really happen
+							thisRuleMatches = 0;
+						}
+					} else {
+						if ((inbound)&&(!superAccept)) {
+							thisRuleMatches = 0;
+							FILTER_TRACE("%u %s %c remote tag %u not found -> 0 (inbound side is strict)",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
+						} else {
+							// Outbound side is not strict since if we have to match both tags and
+							// we are sending a first packet to a recipient, we probably do not know
+							// about their tags yet. They will filter on inbound and we will filter
+							// once we get their tag. If we are a tee/redirect target we are also
+							// not strict since we likely do not have these tags.
+							thisRuleMatches = 1;
+							FILTER_TRACE("%u %s %c remote tag %u not found -> 1 (outbound side and TEE/REDIRECT targets are not strict)",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
+						}
+					}
+				} else {
+					thisRuleMatches = 0;
+					FILTER_TRACE("%u %s %c local tag %u not found -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
+				}
+			}	break;
+			case ZT_NETWORK_RULE_MATCH_TAG_SENDER:
+			case ZT_NETWORK_RULE_MATCH_TAG_RECEIVER: {
+				if (superAccept) {
+					thisRuleMatches = 1;
+					FILTER_TRACE("%u %s %c we are a TEE/REDIRECT target -> 1",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='));
+				} else if ( ((rt == ZT_NETWORK_RULE_MATCH_TAG_SENDER)&&(inbound)) || ((rt == ZT_NETWORK_RULE_MATCH_TAG_RECEIVER)&&(!inbound)) ) {
+					const Tag *const remoteTag = ((membership) ? membership->getTag(nconf,rules[rn].v.tag.id) : (const Tag *)0);
+					if (remoteTag) {
+						thisRuleMatches = (uint8_t)(remoteTag->value() == rules[rn].v.tag.value);
+						FILTER_TRACE("%u %s %c TAG %u %.8x == %.8x -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,remoteTag->value(),(unsigned int)rules[rn].v.tag.value,(unsigned int)thisRuleMatches);
+					} else {
+						if (rt == ZT_NETWORK_RULE_MATCH_TAG_RECEIVER) {
+							// If we are checking the receiver and this is an outbound packet, we
+							// can't be strict since we may not yet know the receiver's tag.
+							thisRuleMatches = 1;
+							FILTER_TRACE("%u %s %c (inbound) remote tag %u not found -> 1 (outbound receiver match is not strict)",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
+						} else {
+							thisRuleMatches = 0;
+							FILTER_TRACE("%u %s %c (inbound) remote tag %u not found -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
+						}
+					}
+				} else { // sender and outbound or receiver and inbound
+					const Tag *const localTag = std::lower_bound(&(nconf.tags[0]),&(nconf.tags[nconf.tagCount]),rules[rn].v.tag.id,Tag::IdComparePredicate());
+					if ((localTag != &(nconf.tags[nconf.tagCount]))&&(localTag->id() == rules[rn].v.tag.id)) {
+						thisRuleMatches = (uint8_t)(localTag->value() == rules[rn].v.tag.value);
+						FILTER_TRACE("%u %s %c TAG %u %.8x == %.8x -> %u",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id,localTag->value(),(unsigned int)rules[rn].v.tag.value,(unsigned int)thisRuleMatches);
+					} else {
+						thisRuleMatches = 0;
+						FILTER_TRACE("%u %s %c local tag %u not found -> 0",rn,_rtn(rt),(((rules[rn].t & 0x80) != 0) ? '!' : '='),(unsigned int)rules[rn].v.tag.id);
+					}
+				}
+			}	break;
+
+			// The result of an unsupported MATCH is configurable at the network
+			// level via a flag.
+			default:
+				thisRuleMatches = (uint8_t)((nconf.flags & ZT_NETWORKCONFIG_FLAG_RULES_RESULT_OF_UNSUPPORTED_MATCH) != 0);
+				break;
+		}
+
+		if ((rules[rn].t & 0x40))
+			thisSetMatches |= (thisRuleMatches ^ ((rules[rn].t >> 7) & 1));
+		else thisSetMatches &= (thisRuleMatches ^ ((rules[rn].t >> 7) & 1));
+	}
+
+	return DOZTFILTER_NO_MATCH;
+}
+
+} // anonymous namespace
 
 const ZeroTier::MulticastGroup Network::BROADCAST(ZeroTier::MAC(0xffffffffffffULL),0);
 
@@ -40,6 +678,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 	RR(renv),
 	_uPtr(uptr),
 	_id(nwid),
+	_lastAnnouncedMulticastGroupsUpstream(0),
 	_mac(renv->identity.address(),nwid),
 	_portInitialized(false),
 	_lastConfigUpdate(0),
@@ -47,37 +686,32 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 	_netconfFailure(NETCONF_FAILURE_NONE),
 	_portError(0)
 {
-	char confn[128],mcdbn[128];
+	for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i)
+		_incomingConfigChunks[i].ts = 0;
+
+	char confn[128];
 	Utils::snprintf(confn,sizeof(confn),"networks.d/%.16llx.conf",_id);
-	Utils::snprintf(mcdbn,sizeof(mcdbn),"networks.d/%.16llx.mcerts",_id);
 
-	// These files are no longer used, so clean them.
-	RR->node->dataStoreDelete(mcdbn);
-
-	if (_id == ZT_TEST_NETWORK_ID) {
-		applyConfiguration(NetworkConfig::createTestNetworkConfig(RR->identity.address()));
-
-		// Save a one-byte CR to persist membership in the test network
-		RR->node->dataStorePut(confn,"\n",1,false);
-	} else {
-		bool gotConf = false;
-		try {
-			std::string conf(RR->node->dataStoreGet(confn));
-			if (conf.length()) {
-				Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> dconf(conf.c_str());
-				NetworkConfig nconf;
-				if (nconf.fromDictionary(dconf)) {
-					this->setConfiguration(nconf,false);
-					_lastConfigUpdate = 0; // we still want to re-request a new config from the network
-					gotConf = true;
-				}
+	bool gotConf = false;
+	Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+	NetworkConfig *nconf = new NetworkConfig();
+	try {
+		std::string conf(RR->node->dataStoreGet(confn));
+		if (conf.length()) {
+			dconf->load(conf.c_str());
+			if (nconf->fromDictionary(*dconf)) {
+				this->setConfiguration(*nconf,false);
+				_lastConfigUpdate = 0; // we still want to re-request a new config from the network
+				gotConf = true;
 			}
-		} catch ( ... ) {} // ignore invalids, we'll re-request
-
-		if (!gotConf) {
-			// Save a one-byte CR to persist membership while we request a real netconf
-			RR->node->dataStorePut(confn,"\n",1,false);
 		}
+	} catch ( ... ) {} // ignore invalids, we'll re-request
+	delete nconf;
+	delete dconf;
+
+	if (!gotConf) {
+		// Save a one-byte CR to persist membership while we request a real netconf
+		RR->node->dataStorePut(confn,"\n",1,false);
 	}
 
 	if (!_portInitialized) {
@@ -103,6 +737,231 @@ Network::~Network()
 	}
 }
 
+bool Network::filterOutgoingPacket(
+	const bool noTee,
+	const Address &ztSource,
+	const Address &ztDest,
+	const MAC &macSource,
+	const MAC &macDest,
+	const uint8_t *frameData,
+	const unsigned int frameLen,
+	const unsigned int etherType,
+	const unsigned int vlanId)
+{
+	const uint64_t now = RR->node->now();
+	Address ztFinalDest(ztDest);
+	int localCapabilityIndex = -1;
+	bool accept = false;
+
+	Mutex::Lock _l(_lock);
+
+	Membership *const membership = (ztDest) ? _memberships.get(ztDest) : (Membership *)0;
+
+	Address cc;
+	unsigned int ccLength = 0;
+	bool ccWatch = false;
+	switch(_doZtFilter(RR,_config,membership,false,ztSource,ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,cc,ccLength,ccWatch)) {
+
+		case DOZTFILTER_NO_MATCH:
+			for(unsigned int c=0;c<_config.capabilityCount;++c) {
+				ztFinalDest = ztDest; // sanity check, shouldn't be possible if there was no match
+				Address cc2;
+				unsigned int ccLength2 = 0;
+				bool ccWatch2 = false;
+				switch (_doZtFilter(RR,_config,membership,false,ztSource,ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.capabilities[c].rules(),_config.capabilities[c].ruleCount(),cc2,ccLength2,ccWatch2)) {
+					case DOZTFILTER_NO_MATCH:
+					case DOZTFILTER_DROP: // explicit DROP in a capability just terminates its evaluation and is an anti-pattern
+						break;
+
+					case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztFinalDest will have been changed in _doZtFilter()
+					case DOZTFILTER_ACCEPT:
+					case DOZTFILTER_SUPER_ACCEPT: // no difference in behavior on outbound side
+						localCapabilityIndex = (int)c;
+						accept = true;
+
+						if ((!noTee)&&(cc2)) {
+							Membership &m2 = _membership(cc2);
+							m2.pushCredentials(RR,now,cc2,_config,localCapabilityIndex,false);
+
+							Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
+							outp.append(_id);
+							outp.append((uint8_t)(ccWatch2 ? 0x16 : 0x02));
+							macDest.appendTo(outp);
+							macSource.appendTo(outp);
+							outp.append((uint16_t)etherType);
+							outp.append(frameData,ccLength2);
+							outp.compress();
+							RR->sw->send(outp,true);
+						}
+
+						break;
+				}
+				if (accept)
+					break;
+			}
+			break;
+
+		case DOZTFILTER_DROP:
+			return false;
+
+		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztFinalDest will have been changed in _doZtFilter()
+		case DOZTFILTER_ACCEPT:
+		case DOZTFILTER_SUPER_ACCEPT: // no difference in behavior on outbound side
+			accept = true;
+			break;
+	}
+
+	if (accept) {
+		if (membership)
+			membership->pushCredentials(RR,now,ztDest,_config,localCapabilityIndex,false);
+
+		if ((!noTee)&&(cc)) {
+			Membership &m2 = _membership(cc);
+			m2.pushCredentials(RR,now,cc,_config,localCapabilityIndex,false);
+
+			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
+			outp.append(_id);
+			outp.append((uint8_t)(ccWatch ? 0x16 : 0x02));
+			macDest.appendTo(outp);
+			macSource.appendTo(outp);
+			outp.append((uint16_t)etherType);
+			outp.append(frameData,ccLength);
+			outp.compress();
+			RR->sw->send(outp,true);
+		}
+
+		if ((ztDest != ztFinalDest)&&(ztFinalDest)) {
+			Membership &m2 = _membership(ztFinalDest);
+			m2.pushCredentials(RR,now,ztFinalDest,_config,localCapabilityIndex,false);
+
+			Packet outp(ztFinalDest,RR->identity.address(),Packet::VERB_EXT_FRAME);
+			outp.append(_id);
+			outp.append((uint8_t)0x04);
+			macDest.appendTo(outp);
+			macSource.appendTo(outp);
+			outp.append((uint16_t)etherType);
+			outp.append(frameData,frameLen);
+			outp.compress();
+			RR->sw->send(outp,true);
+
+			return false; // DROP locally, since we redirected
+		} else {
+			return true;
+		}
+	} else {
+		return false;
+	}
+}
+
+int Network::filterIncomingPacket(
+	const SharedPtr<Peer> &sourcePeer,
+	const Address &ztDest,
+	const MAC &macSource,
+	const MAC &macDest,
+	const uint8_t *frameData,
+	const unsigned int frameLen,
+	const unsigned int etherType,
+	const unsigned int vlanId)
+{
+	Address ztFinalDest(ztDest);
+	int accept = 0;
+
+	Mutex::Lock _l(_lock);
+
+	Membership &membership = _membership(sourcePeer->address());
+
+	Address cc;
+	unsigned int ccLength = 0;
+	bool ccWatch = false;
+	switch (_doZtFilter(RR,_config,&membership,true,sourcePeer->address(),ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,cc,ccLength,ccWatch)) {
+
+		case DOZTFILTER_NO_MATCH: {
+			Membership::CapabilityIterator mci(membership,_config);
+			const Capability *c;
+			while ((c = mci.next())) {
+				ztFinalDest = ztDest; // sanity check, should be unmodified if there was no match
+				Address cc2;
+				unsigned int ccLength2 = 0;
+				bool ccWatch2 = false;
+				switch(_doZtFilter(RR,_config,&membership,true,sourcePeer->address(),ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),cc2,ccLength2,ccWatch2)) {
+					case DOZTFILTER_NO_MATCH:
+					case DOZTFILTER_DROP: // explicit DROP in a capability just terminates its evaluation and is an anti-pattern
+						break;
+					case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztDest will have been changed in _doZtFilter()
+					case DOZTFILTER_ACCEPT:
+						accept = 1; // ACCEPT
+						break;
+					case DOZTFILTER_SUPER_ACCEPT:
+						accept = 2; // super-ACCEPT
+						break;
+				}
+
+				if (accept) {
+					if (cc2) {
+						_membership(cc2).pushCredentials(RR,RR->node->now(),cc2,_config,-1,false);
+
+						Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
+						outp.append(_id);
+						outp.append((uint8_t)(ccWatch2 ? 0x1c : 0x08));
+						macDest.appendTo(outp);
+						macSource.appendTo(outp);
+						outp.append((uint16_t)etherType);
+						outp.append(frameData,ccLength2);
+						outp.compress();
+						RR->sw->send(outp,true);
+					}
+					break;
+				}
+			}
+		}	break;
+
+		case DOZTFILTER_DROP:
+			return 0; // DROP
+
+		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztFinalDest will have been changed in _doZtFilter()
+		case DOZTFILTER_ACCEPT:
+			accept = 1; // ACCEPT
+			break;
+		case DOZTFILTER_SUPER_ACCEPT:
+			accept = 2; // super-ACCEPT
+			break;
+	}
+
+	if (accept) {
+		if (cc) {
+			_membership(cc).pushCredentials(RR,RR->node->now(),cc,_config,-1,false);
+
+			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
+			outp.append(_id);
+			outp.append((uint8_t)(ccWatch ? 0x1c : 0x08));
+			macDest.appendTo(outp);
+			macSource.appendTo(outp);
+			outp.append((uint16_t)etherType);
+			outp.append(frameData,ccLength);
+			outp.compress();
+			RR->sw->send(outp,true);
+		}
+
+		if ((ztDest != ztFinalDest)&&(ztFinalDest)) {
+			_membership(ztFinalDest).pushCredentials(RR,RR->node->now(),ztFinalDest,_config,-1,false);
+
+			Packet outp(ztFinalDest,RR->identity.address(),Packet::VERB_EXT_FRAME);
+			outp.append(_id);
+			outp.append((uint8_t)0x0a);
+			macDest.appendTo(outp);
+			macSource.appendTo(outp);
+			outp.append((uint16_t)etherType);
+			outp.append(frameData,frameLen);
+			outp.compress();
+			RR->sw->send(outp,true);
+
+			return 0; // DROP locally, since we redirected
+		}
+	}
+
+	return accept;
+}
+
 bool Network::subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const
 {
 	Mutex::Lock _l(_lock);
@@ -110,95 +969,207 @@ bool Network::subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBr
 		return true;
 	else if (includeBridgedGroups)
 		return _multicastGroupsBehindMe.contains(mg);
-	else return false;
+	return false;
 }
 
 void Network::multicastSubscribe(const MulticastGroup &mg)
 {
-	{
-		Mutex::Lock _l(_lock);
-		if (std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg))
-			return;
-		_myMulticastGroups.push_back(mg);
-		std::sort(_myMulticastGroups.begin(),_myMulticastGroups.end());
+	Mutex::Lock _l(_lock);
+	if (!std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg)) {
+		_myMulticastGroups.insert(std::upper_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg),mg);
+		_sendUpdatesToMembers(&mg);
 	}
-	_announceMulticastGroups();
 }
 
 void Network::multicastUnsubscribe(const MulticastGroup &mg)
 {
 	Mutex::Lock _l(_lock);
-	std::vector<MulticastGroup> nmg;
-	for(std::vector<MulticastGroup>::const_iterator i(_myMulticastGroups.begin());i!=_myMulticastGroups.end();++i) {
-		if (*i != mg)
-			nmg.push_back(*i);
-	}
-	if (nmg.size() != _myMulticastGroups.size())
-		_myMulticastGroups.swap(nmg);
+	std::vector<MulticastGroup>::iterator i(std::lower_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg));
+	if ( (i != _myMulticastGroups.end()) && (*i == mg) )
+		_myMulticastGroups.erase(i);
 }
 
-bool Network::tryAnnounceMulticastGroupsTo(const SharedPtr<Peer> &peer)
+uint64_t Network::handleConfigChunk(const uint64_t packetId,const Address &source,const Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &chunk,unsigned int ptr)
 {
-	Mutex::Lock _l(_lock);
-	if (
-	    (_isAllowed(peer)) ||
-	    (peer->address() == this->controller()) ||
-	    (RR->topology->isRoot(peer->identity()))
-	   ) {
-		_announceMulticastGroupsTo(peer,_allMulticastGroups());
-		return true;
-	}
-	return false;
-}
+	const unsigned int start = ptr;
 
-bool Network::applyConfiguration(const NetworkConfig &conf)
-{
-	if (_destroyed) // sanity check
-		return false;
-	try {
-		if ((conf.networkId == _id)&&(conf.issuedTo == RR->identity.address())) {
-			ZT_VirtualNetworkConfig ctmp;
-			bool portInitialized;
-			{
-				Mutex::Lock _l(_lock);
-				_config = conf;
-				_lastConfigUpdate = RR->node->now();
-				_netconfFailure = NETCONF_FAILURE_NONE;
-				_externalConfig(&ctmp);
-				portInitialized = _portInitialized;
-				_portInitialized = true;
+	ptr += 8; // skip network ID, which is already obviously known
+	const unsigned int chunkLen = chunk.at<uint16_t>(ptr); ptr += 2;
+	const void *chunkData = chunk.field(ptr,chunkLen); ptr += chunkLen;
+
+	NetworkConfig *nc = (NetworkConfig *)0;
+	uint64_t configUpdateId;
+	{
+		Mutex::Lock _l(_lock);
+
+		_IncomingConfigChunk *c = (_IncomingConfigChunk *)0;
+		uint64_t chunkId = 0;
+		unsigned long totalLength,chunkIndex;
+		if (ptr < chunk.size()) {
+			const bool fastPropagate = ((chunk[ptr++] & 0x01) != 0);
+			configUpdateId = chunk.at<uint64_t>(ptr); ptr += 8;
+			totalLength = chunk.at<uint32_t>(ptr); ptr += 4;
+			chunkIndex = chunk.at<uint32_t>(ptr); ptr += 4;
+
+			if (((chunkIndex + chunkLen) > totalLength)||(totalLength >= ZT_NETWORKCONFIG_DICT_CAPACITY)) { // >= since we need room for a null at the end
+				TRACE("discarded chunk from %s: invalid length or length overflow",source.toString().c_str());
+				return 0;
 			}
-			_portError = RR->node->configureVirtualNetworkPort(_id,&_uPtr,(portInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
-			return true;
+
+			if ((chunk[ptr] != 1)||(chunk.at<uint16_t>(ptr + 1) != ZT_C25519_SIGNATURE_LEN)) {
+				TRACE("discarded chunk from %s: unrecognized signature type",source.toString().c_str());
+				return 0;
+			}
+			const uint8_t *sig = reinterpret_cast<const uint8_t *>(chunk.field(ptr + 3,ZT_C25519_SIGNATURE_LEN));
+
+			// We can use the signature, which is unique per chunk, to get a per-chunk ID for local deduplication use
+			for(unsigned int i=0;i<16;++i)
+				reinterpret_cast<uint8_t *>(&chunkId)[i & 7] ^= sig[i];
+
+			// Find existing or new slot for this update and check if this is a duplicate chunk
+			for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i) {
+				if (_incomingConfigChunks[i].updateId == configUpdateId) {
+					c = &(_incomingConfigChunks[i]);
+
+					for(unsigned long j=0;j<c->haveChunks;++j) {
+						if (c->haveChunkIds[j] == chunkId)
+							return 0;
+					}
+
+					break;
+				} else if ((!c)||(_incomingConfigChunks[i].ts < c->ts)) {
+					c = &(_incomingConfigChunks[i]);
+				}
+			}
+
+			// If it's not a duplicate, check chunk signature
+			const Identity controllerId(RR->topology->getIdentity(controller()));
+			if (!controllerId) { // we should always have the controller identity by now, otherwise how would we have queried it the first time?
+				TRACE("unable to verify chunk from %s: don't have controller identity",source.toString().c_str());
+				return 0;
+			}
+			if (!controllerId.verify(chunk.field(start,ptr - start),ptr - start,sig,ZT_C25519_SIGNATURE_LEN)) {
+				TRACE("discarded chunk from %s: signature check failed",source.toString().c_str());
+				return 0;
+			}
+
+#ifdef ZT_ENABLE_CLUSTER
+			if ((source)&&(RR->cluster))
+				RR->cluster->broadcastNetworkConfigChunk(chunk.field(start,chunk.size() - start),chunk.size() - start);
+#endif
+
+			// New properly verified chunks can be flooded "virally" through the network
+			if (fastPropagate) {
+				Address *a = (Address *)0;
+				Membership *m = (Membership *)0;
+				Hashtable<Address,Membership>::Iterator i(_memberships);
+				while (i.next(a,m)) {
+					if ((*a != source)&&(*a != controller())) {
+						Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CONFIG);
+						outp.append(reinterpret_cast<const uint8_t *>(chunk.data()) + start,chunk.size() - start);
+						RR->sw->send(outp,true);
+					}
+				}
+			}
+		} else if ((source == controller())||(!source)) { // since old chunks aren't signed, only accept from controller itself (or via cluster backplane)
+			// Legacy support for OK(NETWORK_CONFIG_REQUEST) from older controllers
+			chunkId = packetId;
+			configUpdateId = chunkId;
+			totalLength = chunkLen;
+			chunkIndex = 0;
+
+			if (totalLength >= ZT_NETWORKCONFIG_DICT_CAPACITY)
+				return 0;
+
+			for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i) {
+				if ((!c)||(_incomingConfigChunks[i].ts < c->ts))
+					c = &(_incomingConfigChunks[i]);
+			}
+
+#ifdef ZT_ENABLE_CLUSTER
+			if ((source)&&(RR->cluster))
+				RR->cluster->broadcastNetworkConfigChunk(chunk.field(start,chunk.size() - start),chunk.size() - start);
+#endif
 		} else {
-			TRACE("ignored invalid configuration for network %.16llx (configuration contains mismatched network ID or issued-to address)",(unsigned long long)_id);
+			TRACE("discarded single-chunk unsigned legacy config: this is only allowed if the sender is the controller itself");
+			return 0;
 		}
-	} catch (std::exception &exc) {
-		TRACE("ignored invalid configuration for network %.16llx (%s)",(unsigned long long)_id,exc.what());
-	} catch ( ... ) {
-		TRACE("ignored invalid configuration for network %.16llx (unknown exception)",(unsigned long long)_id);
+
+		++c->ts; // newer is higher, that's all we need
+
+		if (c->updateId != configUpdateId) {
+			c->updateId = configUpdateId;
+			c->haveChunks = 0;
+			c->haveBytes = 0;
+		}
+		if (c->haveChunks >= ZT_NETWORK_MAX_UPDATE_CHUNKS)
+			return false;
+		c->haveChunkIds[c->haveChunks++] = chunkId;
+
+		memcpy(c->data.unsafeData() + chunkIndex,chunkData,chunkLen);
+		c->haveBytes += chunkLen;
+
+		if (c->haveBytes == totalLength) {
+			c->data.unsafeData()[c->haveBytes] = (char)0; // ensure null terminated
+
+			nc = new NetworkConfig();
+			try {
+				if (!nc->fromDictionary(c->data)) {
+					delete nc;
+					nc = (NetworkConfig *)0;
+				}
+			} catch ( ... ) {
+				delete nc;
+				nc = (NetworkConfig *)0;
+			}
+		}
 	}
-	return false;
+
+	if (nc) {
+		this->setConfiguration(*nc,true);
+		delete nc;
+		return configUpdateId;
+	} else {
+		return 0;
+	}
+
+	return 0;
 }
 
 int Network::setConfiguration(const NetworkConfig &nconf,bool saveToDisk)
 {
+	// _lock is NOT locked when this is called
 	try {
+		if ((nconf.issuedTo != RR->identity.address())||(nconf.networkId != _id))
+			return 0;
+		if (_config == nconf)
+			return 1; // OK config, but duplicate of what we already have
+
+		ZT_VirtualNetworkConfig ctmp;
+		bool oldPortInitialized;
 		{
 			Mutex::Lock _l(_lock);
-			if (_config == nconf)
-				return 1; // OK config, but duplicate of what we already have
+			_config = nconf;
+			_lastConfigUpdate = RR->node->now();
+			_netconfFailure = NETCONF_FAILURE_NONE;
+			oldPortInitialized = _portInitialized;
+			_portInitialized = true;
+			_externalConfig(&ctmp);
 		}
-		if (applyConfiguration(nconf)) {
-			if (saveToDisk) {
+		_portError = RR->node->configureVirtualNetworkPort(_id,&_uPtr,(oldPortInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
+
+		if (saveToDisk) {
+			Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *d = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+			try {
 				char n[64];
 				Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
-				Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> d;
-				if (nconf.toDictionary(d,false))
-					RR->node->dataStorePut(n,(const void *)d.data(),d.sizeBytes(),true);
-			}
-			return 2; // OK and configuration has changed
+				if (nconf.toDictionary(*d,false))
+					RR->node->dataStorePut(n,(const void *)d->data(),d->sizeBytes(),true);
+			} catch ( ... ) {}
+			delete d;
 		}
+
+		return 2; // OK and configuration has changed
 	} catch ( ... ) {
 		TRACE("ignored invalid configuration for network %.16llx",(unsigned long long)_id);
 	}
@@ -207,48 +1178,137 @@ int Network::setConfiguration(const NetworkConfig &nconf,bool saveToDisk)
 
 void Network::requestConfiguration()
 {
-	if (_id == ZT_TEST_NETWORK_ID) // pseudo-network-ID, uses locally generated static config
-		return;
+	/* ZeroTier addresses can't begin with 0xff, so this is used to mark controllerless
+	 * network IDs. Controllerless network IDs only support unicast IPv6 using the 6plane
+	 * addressing scheme and have the following format: 0xffSSSSEEEE000000 where SSSS
+	 * is the 16-bit starting IP port range allowed and EEEE is the 16-bit ending IP port
+	 * range allowed. Remaining digits are reserved for future use and must be zero. */
+	if ((_id >> 56) == 0xff) {
+		const uint16_t startPortRange = (uint16_t)((_id >> 40) & 0xffff);
+		const uint16_t endPortRange = (uint16_t)((_id >> 24) & 0xffff);
+		if (((_id & 0xffffff) == 0)&&(endPortRange >= startPortRange)) {
+			NetworkConfig *const nconf = new NetworkConfig();
 
-	Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> rmd;
+			nconf->networkId = _id;
+			nconf->timestamp = RR->node->now();
+			nconf->credentialTimeMaxDelta = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
+			nconf->revision = 1;
+			nconf->issuedTo = RR->identity.address();
+			nconf->flags = ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
+			nconf->staticIpCount = 1;
+			nconf->ruleCount = 14;
+			nconf->staticIps[0] = InetAddress::makeIpv66plane(_id,RR->identity.address().toInt());
+
+			// Drop everything but IPv6
+			nconf->rules[0].t = (uint8_t)ZT_NETWORK_RULE_MATCH_ETHERTYPE | 0x80; // NOT
+			nconf->rules[0].v.etherType = 0x86dd; // IPv6
+			nconf->rules[1].t = (uint8_t)ZT_NETWORK_RULE_ACTION_DROP;
+
+			// Allow ICMPv6
+			nconf->rules[2].t = (uint8_t)ZT_NETWORK_RULE_MATCH_IP_PROTOCOL;
+			nconf->rules[2].v.ipProtocol = 0x3a; // ICMPv6
+			nconf->rules[3].t = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
+
+			// Allow destination ports within range
+			nconf->rules[4].t = (uint8_t)ZT_NETWORK_RULE_MATCH_IP_PROTOCOL;
+			nconf->rules[4].v.ipProtocol = 0x11; // UDP
+			nconf->rules[5].t = (uint8_t)ZT_NETWORK_RULE_MATCH_IP_PROTOCOL | 0x40; // OR
+			nconf->rules[5].v.ipProtocol = 0x06; // TCP
+			nconf->rules[6].t = (uint8_t)ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE;
+			nconf->rules[6].v.port[0] = startPortRange;
+			nconf->rules[6].v.port[1] = endPortRange;
+			nconf->rules[7].t = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
+
+			// Allow non-SYN TCP packets to permit non-connection-initiating traffic
+			nconf->rules[8].t = (uint8_t)ZT_NETWORK_RULE_MATCH_CHARACTERISTICS | 0x80; // NOT
+			nconf->rules[8].v.characteristics = ZT_RULE_PACKET_CHARACTERISTICS_TCP_SYN;
+			nconf->rules[9].t = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
+
+			// Also allow SYN+ACK which are replies to SYN
+			nconf->rules[10].t = (uint8_t)ZT_NETWORK_RULE_MATCH_CHARACTERISTICS;
+			nconf->rules[10].v.characteristics = ZT_RULE_PACKET_CHARACTERISTICS_TCP_SYN;
+			nconf->rules[11].t = (uint8_t)ZT_NETWORK_RULE_MATCH_CHARACTERISTICS;
+			nconf->rules[11].v.characteristics = ZT_RULE_PACKET_CHARACTERISTICS_TCP_ACK;
+			nconf->rules[12].t = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
+
+			nconf->rules[13].t = (uint8_t)ZT_NETWORK_RULE_ACTION_DROP;
+
+			nconf->type = ZT_NETWORK_TYPE_PUBLIC;
+			Utils::snprintf(nconf->name,sizeof(nconf->name),"adhoc-%.04x-%.04x",(int)startPortRange,(int)endPortRange);
+
+			this->setConfiguration(*nconf,false);
+			delete nconf;
+		} else {
+			this->setNotFound();
+		}
+		return;
+	}
+
+	const Address ctrl(controller());
+
+	Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> rmd;
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_VENDOR,(uint64_t)ZT_VENDOR_ZEROTIER);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION,(uint64_t)ZT_PROTO_VERSION);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,(uint64_t)ZEROTIER_ONE_VERSION_MAJOR);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,(uint64_t)ZEROTIER_ONE_VERSION_MINOR);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,(uint64_t)ZEROTIER_ONE_VERSION_REVISION);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_RULES,(uint64_t)ZT_MAX_NETWORK_RULES);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_CAPABILITIES,(uint64_t)ZT_MAX_NETWORK_CAPABILITIES);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_CAPABILITY_RULES,(uint64_t)ZT_MAX_CAPABILITY_RULES);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_TAGS,(uint64_t)ZT_MAX_NETWORK_TAGS);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS,(uint64_t)0);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,(uint64_t)ZT_RULES_ENGINE_REVISION);
 
-	if (controller() == RR->identity.address()) {
+	if (ctrl == RR->identity.address()) {
 		if (RR->localNetworkController) {
-			NetworkConfig nconf;
-			switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,rmd,nconf)) {
-				case NetworkController::NETCONF_QUERY_OK:
-					this->setConfiguration(nconf,true);
-					return;
-				case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND:
-					this->setNotFound();
-					return;
-				case NetworkController::NETCONF_QUERY_ACCESS_DENIED:
-					this->setAccessDenied();
-					return;
-				default:
-					return;
-			}
+			RR->localNetworkController->request(_id,InetAddress(),0xffffffffffffffffULL,RR->identity,rmd);
 		} else {
 			this->setNotFound();
-			return;
 		}
+		return;
 	}
 
-	TRACE("requesting netconf for network %.16llx from controller %s",(unsigned long long)_id,controller().toString().c_str());
+	TRACE("requesting netconf for network %.16llx from controller %s",(unsigned long long)_id,ctrl.toString().c_str());
 
-	Packet outp(controller(),RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
+	Packet outp(ctrl,RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
 	outp.append((uint64_t)_id);
 	const unsigned int rmdSize = rmd.sizeBytes();
 	outp.append((uint16_t)rmdSize);
 	outp.append((const void *)rmd.data(),rmdSize);
-	outp.append((_config) ? (uint64_t)_config.revision : (uint64_t)0);
+	if (_config) {
+		outp.append((uint64_t)_config.revision);
+		outp.append((uint64_t)_config.timestamp);
+	} else {
+		outp.append((unsigned char)0,16);
+	}
 	outp.compress();
-	RR->sw->send(outp,true,0);
+	RR->node->expectReplyTo(outp.packetId());
+	RR->sw->send(outp,true);
+}
+
+bool Network::gate(const SharedPtr<Peer> &peer)
+{
+	const uint64_t now = RR->node->now();
+	Mutex::Lock _l(_lock);
+	try {
+		if (_config) {
+			Membership *m = _memberships.get(peer->address());
+			if ( (_config.isPublic()) || ((m)&&(m->isAllowedOnNetwork(_config))) ) {
+				if (!m)
+					m = &(_membership(peer->address()));
+				if (m->shouldLikeMulticasts(now)) {
+					m->pushCredentials(RR,now,peer->address(),_config,-1,false);
+					_announceMulticastGroupsTo(peer->address(),_allMulticastGroups());
+					m->likingMulticasts(now);
+				}
+				return true;
+			}
+		}
+	} catch ( ... ) {
+		TRACE("gate() check failed for peer %s: unexpected exception",peer->address().toString().c_str());
+	}
+	return false;
 }
 
 void Network::clean()
@@ -266,6 +1326,16 @@ void Network::clean()
 		while (i.next(mg,ts)) {
 			if ((now - *ts) > (ZT_MULTICAST_LIKE_EXPIRE * 2))
 				_multicastGroupsBehindMe.erase(*mg);
+		}
+	}
+
+	{
+		Address *a = (Address *)0;
+		Membership *m = (Membership *)0;
+		Hashtable<Address,Membership>::Iterator i(_memberships);
+		while (i.next(a,m)) {
+			if (!RR->topology->getPeerNoCache(*a))
+				_memberships.erase(*a);
 		}
 	}
 }
@@ -313,7 +1383,53 @@ void Network::learnBridgedMulticastGroup(const MulticastGroup &mg,uint64_t now)
 	const unsigned long tmp = (unsigned long)_multicastGroupsBehindMe.size();
 	_multicastGroupsBehindMe.set(mg,now);
 	if (tmp != _multicastGroupsBehindMe.size())
-		_announceMulticastGroups();
+		_sendUpdatesToMembers(&mg);
+}
+
+Membership::AddCredentialResult Network::addCredential(const CertificateOfMembership &com)
+{
+	if (com.networkId() != _id)
+		return Membership::ADD_REJECTED;
+	const Address a(com.issuedTo());
+	Mutex::Lock _l(_lock);
+	Membership &m = _membership(a);
+	const Membership::AddCredentialResult result = m.addCredential(RR,_config,com);
+	if ((result == Membership::ADD_ACCEPTED_NEW)||(result == Membership::ADD_ACCEPTED_REDUNDANT)) {
+		m.pushCredentials(RR,RR->node->now(),a,_config,-1,false);
+		RR->mc->addCredential(com,true);
+	}
+	return result;
+}
+
+Membership::AddCredentialResult Network::addCredential(const Address &sentFrom,const Revocation &rev)
+{
+	if (rev.networkId() != _id)
+		return Membership::ADD_REJECTED;
+
+	Mutex::Lock _l(_lock);
+	Membership &m = _membership(rev.target());
+
+	const Membership::AddCredentialResult result = m.addCredential(RR,_config,rev);
+
+	if ((result == Membership::ADD_ACCEPTED_NEW)&&(rev.fastPropagate())) {
+		Address *a = (Address *)0;
+		Membership *m = (Membership *)0;
+		Hashtable<Address,Membership>::Iterator i(_memberships);
+		while (i.next(a,m)) {
+			if ((*a != sentFrom)&&(*a != rev.signer())) {
+				Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
+				outp.append((uint8_t)0x00); // no COM
+				outp.append((uint16_t)0); // no capabilities
+				outp.append((uint16_t)0); // no tags
+				outp.append((uint16_t)1); // one revocation!
+				rev.serialize(outp);
+				outp.append((uint16_t)0); // no certificates of ownership
+				RR->sw->send(outp,true);
+			}
+		}
+	}
+
+	return result;
 }
 
 void Network::destroy()
@@ -350,6 +1466,7 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	ec->status = _status();
 	ec->type = (_config) ? (_config.isPrivate() ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC) : ZT_NETWORK_TYPE_PRIVATE;
 	ec->mtu = ZT_IF_MTU;
+	ec->physicalMtu = ZT_UDP_DEFAULT_PAYLOAD_MTU - (ZT_PACKET_IDX_PAYLOAD + 16);
 	ec->dhcp = 0;
 	std::vector<Address> ab(_config.activeBridges());
 	ec->bridge = ((_config.allowPassiveBridging())||(std::find(ab.begin(),ab.end(),RR->identity.address()) != ab.end())) ? 1 : 0;
@@ -378,96 +1495,104 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	}
 }
 
-bool Network::_isAllowed(const SharedPtr<Peer> &peer) const
+void Network::_sendUpdatesToMembers(const MulticastGroup *const newMulticastGroup)
 {
 	// Assumes _lock is locked
-	try {
-		if (!_config)
-			return false;
-		if (_config.isPublic())
-			return true;
-		return ((_config.com)&&(peer->networkMembershipCertificatesAgree(_id,_config.com)));
-	} catch (std::exception &exc) {
-		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer->address().toString().c_str(),exc.what());
-	} catch ( ... ) {
-		TRACE("isAllowed() check failed for peer %s: unexpected exception: unknown exception",peer->address().toString().c_str());
-	}
-	return false; // default position on any failure
-}
+	const uint64_t now = RR->node->now();
 
-class _MulticastAnnounceAll
-{
-public:
-	_MulticastAnnounceAll(const RuntimeEnvironment *renv,Network *nw) :
-		_now(renv->node->now()),
-		_controller(nw->controller()),
-		_network(nw),
-		_anchors(nw->config().anchors()),
-		_rootAddresses(renv->topology->rootAddresses())
-	{}
-	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
-	{
-		if ( (_network->_isAllowed(p)) || // FIXME: this causes multicast LIKEs for public networks to get spammed
-		     (p->address() == _controller) ||
-		     (std::find(_rootAddresses.begin(),_rootAddresses.end(),p->address()) != _rootAddresses.end()) ||
-				 (std::find(_anchors.begin(),_anchors.end(),p->address()) != _anchors.end()) ) {
-			peers.push_back(p);
-		}
-	}
-	std::vector< SharedPtr<Peer> > peers;
-private:
-	const uint64_t _now;
-	const Address _controller;
-	Network *const _network;
-	const std::vector<Address> _anchors;
-	const std::vector<Address> _rootAddresses;
-};
-void Network::_announceMulticastGroups()
-{
-	// Assumes _lock is locked
-	std::vector<MulticastGroup> allMulticastGroups(_allMulticastGroups());
-	_MulticastAnnounceAll gpfunc(RR,this);
-	RR->topology->eachPeer<_MulticastAnnounceAll &>(gpfunc);
-	for(std::vector< SharedPtr<Peer> >::const_iterator i(gpfunc.peers.begin());i!=gpfunc.peers.end();++i)
-		_announceMulticastGroupsTo(*i,allMulticastGroups);
-}
+	std::vector<MulticastGroup> groups;
+	if (newMulticastGroup)
+		groups.push_back(*newMulticastGroup);
+	else groups = _allMulticastGroups();
 
-void Network::_announceMulticastGroupsTo(const SharedPtr<Peer> &peer,const std::vector<MulticastGroup> &allMulticastGroups) const
-{
-	// Assumes _lock is locked
+	if ((newMulticastGroup)||((now - _lastAnnouncedMulticastGroupsUpstream) >= ZT_MULTICAST_ANNOUNCE_PERIOD)) {
+		if (!newMulticastGroup)
+			_lastAnnouncedMulticastGroupsUpstream = now;
 
-	// We push COMs ahead of MULTICAST_LIKE since they're used for access control -- a COM is a public
-	// credential so "over-sharing" isn't really an issue (and we only do so with roots).
-	if ((_config)&&(_config.com)&&(!_config.isPublic())&&(peer->needsOurNetworkMembershipCertificate(_id,RR->node->now(),true))) {
-		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
-		_config.com.serialize(outp);
-		RR->sw->send(outp,true,0);
-	}
-
-	{
-		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
-
-		for(std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {
-			if ((outp.size() + 18) >= ZT_UDP_DEFAULT_PAYLOAD_MTU) {
-				RR->sw->send(outp,true,0);
-				outp.reset(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+		// Announce multicast groups to upstream peers (roots, etc.) and also send
+		// them our COM so that MULTICAST_GATHER can be authenticated properly.
+		const std::vector<Address> upstreams(RR->topology->upstreamAddresses());
+		for(std::vector<Address>::const_iterator a(upstreams.begin());a!=upstreams.end();++a) {
+			if (_config.com) {
+				Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
+				_config.com.serialize(outp);
+				outp.append((uint8_t)0x00);
+				outp.append((uint16_t)0); // no capabilities
+				outp.append((uint16_t)0); // no tags
+				outp.append((uint16_t)0); // no revocations
+				outp.append((uint16_t)0); // no certificates of ownership
+				RR->sw->send(outp,true);
 			}
-
-			// network ID, MAC, ADI
-			outp.append((uint64_t)_id);
-			mg->mac().appendTo(outp);
-			outp.append((uint32_t)mg->adi());
+			_announceMulticastGroupsTo(*a,groups);
 		}
 
-		if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH)
-			RR->sw->send(outp,true,0);
+		// Also announce to controller, and send COM to simplify and generalize behavior even though in theory it does not need it
+		const Address c(controller());
+		if ( (std::find(upstreams.begin(),upstreams.end(),c) == upstreams.end()) && (!_memberships.contains(c)) ) {
+			if (_config.com) {
+				Packet outp(c,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
+				_config.com.serialize(outp);
+				outp.append((uint8_t)0x00);
+				outp.append((uint16_t)0); // no capabilities
+				outp.append((uint16_t)0); // no tags
+				outp.append((uint16_t)0); // no revocations
+				outp.append((uint16_t)0); // no certificates of ownership
+				RR->sw->send(outp,true);
+			}
+			_announceMulticastGroupsTo(c,groups);
+		}
+	}
+
+	// Make sure that all "network anchors" have Membership records so we will
+	// push multicasts to them. Note that _membership() also does this but in a
+	// piecemeal on-demand fashion.
+	const std::vector<Address> anchors(_config.anchors());
+	for(std::vector<Address>::const_iterator a(anchors.begin());a!=anchors.end();++a)
+		_membership(*a);
+
+	// Send credentials and multicast LIKEs to members, upstreams, and controller
+	{
+		Address *a = (Address *)0;
+		Membership *m = (Membership *)0;
+		Hashtable<Address,Membership>::Iterator i(_memberships);
+		while (i.next(a,m)) {
+			m->pushCredentials(RR,now,*a,_config,-1,false);
+			if ( ((newMulticastGroup)||(m->shouldLikeMulticasts(now))) && (m->isAllowedOnNetwork(_config)) ) {
+				if (!newMulticastGroup)
+					m->likingMulticasts(now);
+				_announceMulticastGroupsTo(*a,groups);
+			}
+		}
+	}
+}
+
+void Network::_announceMulticastGroupsTo(const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups)
+{
+	// Assumes _lock is locked
+	Packet outp(peer,RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+
+	for(std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {
+		if ((outp.size() + 24) >= ZT_PROTO_MAX_PACKET_LENGTH) {
+			outp.compress();
+			RR->sw->send(outp,true);
+			outp.reset(peer,RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+		}
+
+		// network ID, MAC, ADI
+		outp.append((uint64_t)_id);
+		mg->mac().appendTo(outp);
+		outp.append((uint32_t)mg->adi());
+	}
+
+	if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
+		outp.compress();
+		RR->sw->send(outp,true);
 	}
 }
 
 std::vector<MulticastGroup> Network::_allMulticastGroups() const
 {
 	// Assumes _lock is locked
-
 	std::vector<MulticastGroup> mgs;
 	mgs.reserve(_myMulticastGroups.size() + _multicastGroupsBehindMe.size() + 1);
 	mgs.insert(mgs.end(),_myMulticastGroups.begin(),_myMulticastGroups.end());
@@ -476,8 +1601,13 @@ std::vector<MulticastGroup> Network::_allMulticastGroups() const
 		mgs.push_back(Network::BROADCAST);
 	std::sort(mgs.begin(),mgs.end());
 	mgs.erase(std::unique(mgs.begin(),mgs.end()),mgs.end());
-
 	return mgs;
+}
+
+Membership &Network::_membership(const Address &a)
+{
+	// assumes _lock is locked
+	return _memberships[a];
 }
 
 } // namespace ZeroTier

@@ -46,14 +46,6 @@ namespace ZeroTier {
 class Identity
 {
 public:
-	/**
-	 * Identity types
-	 */
-	enum Type
-	{
-		IDENTITY_TYPE_C25519 = 0
-	};
-
 	Identity() :
 		_privateKey((C25519::Private *)0)
 	{
@@ -206,11 +198,6 @@ public:
 	}
 
 	/**
-	 * @return Identity type
-	 */
-	inline Type type() const throw() { return IDENTITY_TYPE_C25519; }
-
-	/**
 	 * @return This identity's address
 	 */
 	inline const Address &address() const throw() { return _address; }
@@ -226,7 +213,7 @@ public:
 	inline void serialize(Buffer<C> &b,bool includePrivate = false) const
 	{
 		_address.appendTo(b);
-		b.append((unsigned char)IDENTITY_TYPE_C25519);
+		b.append((uint8_t)0); // C25519/Ed25519 identity type
 		b.append(_publicKey.data,(unsigned int)_publicKey.size());
 		if ((_privateKey)&&(includePrivate)) {
 			b.append((unsigned char)_privateKey->size());
@@ -257,7 +244,7 @@ public:
 		_address.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 		p += ZT_ADDRESS_LENGTH;
 
-		if (b[p++] != IDENTITY_TYPE_C25519)
+		if (b[p++] != 0)
 			throw std::invalid_argument("unsupported identity type");
 
 		memcpy(_publicKey.data,b.field(p,(unsigned int)_publicKey.size()),(unsigned int)_publicKey.size());
@@ -294,6 +281,24 @@ public:
 	 */
 	bool fromString(const char *str);
 	inline bool fromString(const std::string &str) { return fromString(str.c_str()); }
+
+	/**
+	 * @return C25519 public key
+	 */
+	inline const C25519::Public &publicKey() const { return _publicKey; }
+
+	/**
+	 * @return C25519 key pair (only returns valid pair if private key is present in this Identity object)
+	 */
+	inline const C25519::Pair privateKeyPair() const
+	{
+		C25519::Pair pair;
+		pair.pub = _publicKey;
+		if (_privateKey)
+			pair.priv = *_privateKey;
+		else memset(pair.priv.data,0,ZT_C25519_PRIVATE_KEY_LEN);
+		return pair;
+	}
 
 	/**
 	 * @return True if this identity contains something

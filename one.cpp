@@ -43,30 +43,40 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/uio.h>
+#include <dirent.h>
 #include <signal.h>
+#ifdef __LINUX__
+#include <sys/prctl.h>
+#include <sys/syscall.h>
+#include <sys/wait.h>
+#include <linux/capability.h>
+#include <linux/securebits.h>
+#endif
 #endif
 
 #include <string>
 #include <stdexcept>
+#include <iostream>
+#include <sstream>
 
 #include "version.h"
 #include "include/ZeroTierOne.h"
-
-#ifdef ZT_USE_SYSTEM_JSON_PARSER
-#include <json-parser/json.h>
-#else
-#include "ext/json-parser/json.h"
-#endif
 
 #include "node/Identity.hpp"
 #include "node/CertificateOfMembership.hpp"
 #include "node/Utils.hpp"
 #include "node/NetworkController.hpp"
+#include "node/Buffer.hpp"
+#include "node/World.hpp"
 
 #include "osdep/OSUtils.hpp"
 #include "osdep/Http.hpp"
+#include "osdep/Thread.hpp"
 
 #include "service/OneService.hpp"
+
+#include "ext/json/json.hpp"
 
 #define ZT_PID_PATH "zerotier-one.pid"
 
@@ -75,7 +85,7 @@ using namespace ZeroTier;
 static OneService *volatile zt1Service = (OneService *)0;
 
 #define PROGRAM_NAME "ZeroTier One"
-#define COPYRIGHT_NOTICE "Copyright © 2011–2016 ZeroTier, Inc."
+#define COPYRIGHT_NOTICE "Copyright (c) 2011-2017 ZeroTier, Inc."
 #define LICENSE_GRANT \
 	"This is free software: you may copy, modify, and/or distribute this" ZT_EOL_S \
 	"work under the terms of the GNU General Public License, version 3 or" ZT_EOL_S \
@@ -91,9 +101,10 @@ static OneService *volatile zt1Service = (OneService *)0;
 static void cliPrintHelp(const char *pn,FILE *out)
 {
 	fprintf(out,
-		"%s version %d.%d.%d" ZT_EOL_S,
+		"%s version %d.%d.%d build %d (platform %d arch %d)" ZT_EOL_S,
 		PROGRAM_NAME,
-		ZEROTIER_ONE_VERSION_MAJOR, ZEROTIER_ONE_VERSION_MINOR, ZEROTIER_ONE_VERSION_REVISION);
+		ZEROTIER_ONE_VERSION_MAJOR, ZEROTIER_ONE_VERSION_MINOR, ZEROTIER_ONE_VERSION_REVISION, ZEROTIER_ONE_VERSION_BUILD,
+		ZT_BUILD_PLATFORM, ZT_BUILD_ARCHITECTURE);
 	fprintf(out,
 		COPYRIGHT_NOTICE ZT_EOL_S
 		LICENSE_GRANT ZT_EOL_S);
@@ -112,6 +123,9 @@ static void cliPrintHelp(const char *pn,FILE *out)
 	fprintf(out,"  join <network>          - Join a network" ZT_EOL_S);
 	fprintf(out,"  leave <network>         - Leave a network" ZT_EOL_S);
 	fprintf(out,"  set <network> <setting> - Set a network setting" ZT_EOL_S);
+	fprintf(out,"  listmoons               - List moons (federated root sets)" ZT_EOL_S);
+	fprintf(out,"  orbit <world ID> <seed> - Join a moon via any member root" ZT_EOL_S);
+	fprintf(out,"  deorbit <world ID>      - Leave a moon" ZT_EOL_S);
 }
 
 static std::string cliFixJsonCRs(const std::string &s)
@@ -283,221 +297,146 @@ static int cli(int argc,char **argv)
 			return 1;
 		}
 	} else if ((command == "info")||(command == "status")) {
-		unsigned int scode = Http::GET(
-			1024 * 1024 * 16,
-			60000,
-			(const struct sockaddr *)&addr,
-			"/status",
-			requestHeaders,
-			responseHeaders,
-			responseBody);
+		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/status",requestHeaders,responseHeaders,responseBody);
+
+		nlohmann::json j;
+		try {
+			j = OSUtils::jsonParse(responseBody);
+		} catch (std::exception &exc) {
+			printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
+			return 1;
+		} catch ( ... ) {
+			printf("%u %s invalid JSON response (unknown exception)" ZT_EOL_S,scode,command.c_str());
+			return 1;
+		}
+
 		if (scode == 200) {
 			if (json) {
-				printf("%s",cliFixJsonCRs(responseBody).c_str());
-				return 0;
+				printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
 			} else {
-				json_value *j = json_parse(responseBody.c_str(),responseBody.length());
-				bool good = false;
-				if (j) {
-					if (j->type == json_object) {
-						const char *address = (const char *)0;
-						bool online = false;
-						const char *version = (const char *)0;
-						for(unsigned int k=0;k<j->u.object.length;++k) {
-							if ((!strcmp(j->u.object.values[k].name,"address"))&&(j->u.object.values[k].value->type == json_string))
-								address = j->u.object.values[k].value->u.string.ptr;
-							else if ((!strcmp(j->u.object.values[k].name,"version"))&&(j->u.object.values[k].value->type == json_string))
-								version = j->u.object.values[k].value->u.string.ptr;
-							else if ((!strcmp(j->u.object.values[k].name,"online"))&&(j->u.object.values[k].value->type == json_boolean))
-								online = (j->u.object.values[k].value->u.boolean != 0);
-						}
-						if ((address)&&(version)) {
-							printf("200 info %s %s %s" ZT_EOL_S,address,(online ? "ONLINE" : "OFFLINE"),version);
-							good = true;
-						}
-					}
-					json_value_free(j);
-				}
-				if (good) {
-					return 0;
-				} else {
-					printf("%u %s invalid JSON response" ZT_EOL_S,scode,command.c_str());
-					return 1;
+				if (j.is_object()) {
+					printf("200 info %s %s %s" ZT_EOL_S,
+						OSUtils::jsonString(j["address"],"-").c_str(),
+						OSUtils::jsonString(j["version"],"-").c_str(),
+						((j["tcpFallbackActive"]) ? "TUNNELED" : ((j["online"]) ? "ONLINE" : "OFFLINE")));
 				}
 			}
+			return 0;
 		} else {
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
 		}
 	} else if (command == "listpeers") {
-		unsigned int scode = Http::GET(
-			1024 * 1024 * 16,
-			60000,
-			(const struct sockaddr *)&addr,
-			"/peer",
-			requestHeaders,
-			responseHeaders,
-			responseBody);
+		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/peer",requestHeaders,responseHeaders,responseBody);
+
+		nlohmann::json j;
+		try {
+			j = OSUtils::jsonParse(responseBody);
+		} catch (std::exception &exc) {
+			printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
+			return 1;
+		} catch ( ... ) {
+			printf("%u %s invalid JSON response (unknown exception)" ZT_EOL_S,scode,command.c_str());
+			return 1;
+		}
+
 		if (scode == 200) {
 			if (json) {
-				printf("%s",cliFixJsonCRs(responseBody).c_str());
-				return 0;
+				printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
 			} else {
-				printf("200 listpeers <ztaddr> <paths> <latency> <version> <role>" ZT_EOL_S);
-				json_value *j = json_parse(responseBody.c_str(),responseBody.length());
-				if (j) {
-					if (j->type == json_array) {
-						for(unsigned int p=0;p<j->u.array.length;++p) {
-							json_value *jp = j->u.array.values[p];
-							if (jp->type == json_object) {
-								const char *address = (const char *)0;
-								std::string paths;
-								int64_t latency = 0;
-								int64_t versionMajor = -1,versionMinor = -1,versionRev = -1;
-								const char *role = (const char *)0;
-								for(unsigned int k=0;k<jp->u.object.length;++k) {
-									if ((!strcmp(jp->u.object.values[k].name,"address"))&&(jp->u.object.values[k].value->type == json_string))
-										address = jp->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jp->u.object.values[k].name,"versionMajor"))&&(jp->u.object.values[k].value->type == json_integer))
-										versionMajor = jp->u.object.values[k].value->u.integer;
-									else if ((!strcmp(jp->u.object.values[k].name,"versionMinor"))&&(jp->u.object.values[k].value->type == json_integer))
-										versionMinor = jp->u.object.values[k].value->u.integer;
-									else if ((!strcmp(jp->u.object.values[k].name,"versionRev"))&&(jp->u.object.values[k].value->type == json_integer))
-										versionRev = jp->u.object.values[k].value->u.integer;
-									else if ((!strcmp(jp->u.object.values[k].name,"role"))&&(jp->u.object.values[k].value->type == json_string))
-										role = jp->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jp->u.object.values[k].name,"latency"))&&(jp->u.object.values[k].value->type == json_integer))
-										latency = jp->u.object.values[k].value->u.integer;
-									else if ((!strcmp(jp->u.object.values[k].name,"paths"))&&(jp->u.object.values[k].value->type == json_array)) {
-										for(unsigned int pp=0;pp<jp->u.object.values[k].value->u.array.length;++pp) {
-											json_value *jpath = jp->u.object.values[k].value->u.array.values[pp];
-											if (jpath->type == json_object) {
-												const char *paddr = (const char *)0;
-												int64_t lastSend = 0;
-												int64_t lastReceive = 0;
-												bool preferred = false;
-												bool active = false;
-												for(unsigned int kk=0;kk<jpath->u.object.length;++kk) {
-													if ((!strcmp(jpath->u.object.values[kk].name,"address"))&&(jpath->u.object.values[kk].value->type == json_string))
-														paddr = jpath->u.object.values[kk].value->u.string.ptr;
-													else if ((!strcmp(jpath->u.object.values[kk].name,"lastSend"))&&(jpath->u.object.values[kk].value->type == json_integer))
-														lastSend = jpath->u.object.values[kk].value->u.integer;
-													else if ((!strcmp(jpath->u.object.values[kk].name,"lastReceive"))&&(jpath->u.object.values[kk].value->type == json_integer))
-														lastReceive = jpath->u.object.values[kk].value->u.integer;
-													else if ((!strcmp(jpath->u.object.values[kk].name,"preferred"))&&(jpath->u.object.values[kk].value->type == json_boolean))
-														preferred = (jpath->u.object.values[kk].value->u.boolean != 0);
-													else if ((!strcmp(jpath->u.object.values[kk].name,"active"))&&(jpath->u.object.values[kk].value->type == json_boolean))
-														active = (jpath->u.object.values[kk].value->u.boolean != 0);
-												}
-												if ((paddr)&&(active)) {
-													int64_t now = (int64_t)OSUtils::now();
-													if (lastSend > 0)
-														lastSend = now - lastSend;
-													if (lastReceive > 0)
-														lastReceive = now - lastReceive;
-													char pathtmp[256];
-													Utils::snprintf(pathtmp,sizeof(pathtmp),"%s;%lld;%lld;%s",
-														paddr,
-														lastSend,
-														lastReceive,
-														(preferred ? "preferred" : "active"));
-													if (paths.length())
-														paths.push_back(',');
-													paths.append(pathtmp);
-												}
-											}
-										}
-									}
-								}
-								if ((address)&&(role)) {
-									char verstr[64];
-									if ((versionMajor >= 0)&&(versionMinor >= 0)&&(versionRev >= 0))
-										Utils::snprintf(verstr,sizeof(verstr),"%lld.%lld.%lld",versionMajor,versionMinor,versionRev);
-									else {
-										verstr[0] = '-';
-										verstr[1] = (char)0;
-									}
-									printf("200 listpeers %s %s %lld %s %s" ZT_EOL_S,address,(paths.length()) ? paths.c_str() : "-",(long long)latency,verstr,role);
+				printf("200 listpeers <ztaddr> <path> <latency> <version> <role>" ZT_EOL_S);
+				if (j.is_array()) {
+					for(unsigned long k=0;k<j.size();++k) {
+						nlohmann::json &p = j[k];
+						std::string bestPath;
+						nlohmann::json &paths = p["paths"];
+						if (paths.is_array()) {
+							for(unsigned long i=0;i<paths.size();++i) {
+								nlohmann::json &path = paths[i];
+								if (path["preferred"]) {
+									char tmp[256];
+									std::string addr = path["address"];
+									const uint64_t now = OSUtils::now();
+									const double lq = (path.count("linkQuality")) ? (double)path["linkQuality"] : -1.0;
+									Utils::snprintf(tmp,sizeof(tmp),"%s;%llu;%llu;%1.2f",addr.c_str(),now - (uint64_t)path["lastSend"],now - (uint64_t)path["lastReceive"],lq);
+									bestPath = tmp;
+									break;
 								}
 							}
 						}
+						if (bestPath.length() == 0) bestPath = "-";
+						char ver[128];
+						int64_t vmaj = p["versionMajor"];
+						int64_t vmin = p["versionMinor"];
+						int64_t vrev = p["versionRev"];
+						if (vmaj >= 0) {
+							Utils::snprintf(ver,sizeof(ver),"%lld.%lld.%lld",vmaj,vmin,vrev);
+						} else {
+							ver[0] = '-';
+							ver[1] = (char)0;
+						}
+						printf("200 listpeers %s %s %d %s %s" ZT_EOL_S,
+							OSUtils::jsonString(p["address"],"-").c_str(),
+							bestPath.c_str(),
+							(int)OSUtils::jsonInt(p["latency"],0),
+							ver,
+							OSUtils::jsonString(p["role"],"-").c_str());
 					}
-					json_value_free(j);
 				}
-				return 0;
 			}
+			return 0;
 		} else {
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
 		}
 	} else if (command == "listnetworks") {
-		unsigned int scode = Http::GET(
-			1024 * 1024 * 16,
-			60000,
-			(const struct sockaddr *)&addr,
-			"/network",
-			requestHeaders,
-			responseHeaders,
-			responseBody);
+		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/network",requestHeaders,responseHeaders,responseBody);
+
+		nlohmann::json j;
+		try {
+			j = OSUtils::jsonParse(responseBody);
+		} catch (std::exception &exc) {
+			printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
+			return 1;
+		} catch ( ... ) {
+			printf("%u %s invalid JSON response (unknown exception)" ZT_EOL_S,scode,command.c_str());
+			return 1;
+		}
+
 		if (scode == 200) {
 			if (json) {
-				printf("%s",cliFixJsonCRs(responseBody).c_str());
-				return 0;
+				printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
 			} else {
 				printf("200 listnetworks <nwid> <name> <mac> <status> <type> <dev> <ZT assigned ips>" ZT_EOL_S);
-				json_value *j = json_parse(responseBody.c_str(),responseBody.length());
-				if (j) {
-					if (j->type == json_array) {
-						for(unsigned int p=0;p<j->u.array.length;++p) {
-							json_value *jn = j->u.array.values[p];
-							if (jn->type == json_object) {
-								const char *nwid = (const char *)0;
-								const char *name = "";
-								const char *mac = (const char *)0;
-								const char *status = (const char *)0;
-								const char *type = (const char *)0;
-								const char *portDeviceName = "";
-								std::string ips;
-								for(unsigned int k=0;k<jn->u.object.length;++k) {
-									if ((!strcmp(jn->u.object.values[k].name,"nwid"))&&(jn->u.object.values[k].value->type == json_string))
-										nwid = jn->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jn->u.object.values[k].name,"name"))&&(jn->u.object.values[k].value->type == json_string))
-										name = jn->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jn->u.object.values[k].name,"mac"))&&(jn->u.object.values[k].value->type == json_string))
-										mac = jn->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jn->u.object.values[k].name,"status"))&&(jn->u.object.values[k].value->type == json_string))
-										status = jn->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jn->u.object.values[k].name,"type"))&&(jn->u.object.values[k].value->type == json_string))
-										type = jn->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jn->u.object.values[k].name,"portDeviceName"))&&(jn->u.object.values[k].value->type == json_string))
-										portDeviceName = jn->u.object.values[k].value->u.string.ptr;
-									else if ((!strcmp(jn->u.object.values[k].name,"assignedAddresses"))&&(jn->u.object.values[k].value->type == json_array)) {
-										for(unsigned int a=0;a<jn->u.object.values[k].value->u.array.length;++a) {
-											json_value *aa = jn->u.object.values[k].value->u.array.values[a];
-											if (aa->type == json_string) {
-												if (ips.length())
-													ips.push_back(',');
-												ips.append(aa->u.string.ptr);
-											}
-										}
+				if (j.is_array()) {
+					for(unsigned long i=0;i<j.size();++i) {
+						nlohmann::json &n = j[i];
+						if (n.is_object()) {
+							std::string aa;
+							nlohmann::json &assignedAddresses = n["assignedAddresses"];
+							if (assignedAddresses.is_array()) {
+								for(unsigned long j=0;j<assignedAddresses.size();++j) {
+									nlohmann::json &addr = assignedAddresses[j];
+									if (addr.is_string()) {
+										if (aa.length() > 0) aa.push_back(',');
+										aa.append(addr.get<std::string>());
 									}
 								}
-								if ((nwid)&&(mac)&&(status)&&(type)) {
-									printf("200 listnetworks %s %s %s %s %s %s %s" ZT_EOL_S,
-										nwid,
-										(((name)&&(name[0])) ? name : "-"),
-										mac,
-										status,
-										type,
-										(((portDeviceName)&&(portDeviceName[0])) ? portDeviceName : "-"),
-										((ips.length() > 0) ? ips.c_str() : "-"));
-								}
 							}
+							if (aa.length() == 0) aa = "-";
+							printf("200 listnetworks %s %s %s %s %s %s %s" ZT_EOL_S,
+								OSUtils::jsonString(n["nwid"],"-").c_str(),
+								OSUtils::jsonString(n["name"],"-").c_str(),
+								OSUtils::jsonString(n["mac"],"-").c_str(),
+								OSUtils::jsonString(n["status"],"-").c_str(),
+								OSUtils::jsonString(n["type"],"-").c_str(),
+								OSUtils::jsonString(n["portDeviceName"],"-").c_str(),
+								aa.c_str());
 						}
 					}
-					json_value_free(j);
 				}
 			}
+			return 0;
 		} else {
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
@@ -554,6 +493,75 @@ static int cli(int argc,char **argv)
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
 		}
+	} else if (command == "listmoons") {
+		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/moon",requestHeaders,responseHeaders,responseBody);
+
+		nlohmann::json j;
+		try {
+			j = OSUtils::jsonParse(responseBody);
+		} catch (std::exception &exc) {
+			printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
+			return 1;
+		} catch ( ... ) {
+			printf("%u %s invalid JSON response (unknown exception)" ZT_EOL_S,scode,command.c_str());
+			return 1;
+		}
+
+		if (scode == 200) {
+			printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
+			return 0;
+		} else {
+			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			return 1;
+		}
+	} else if (command == "orbit") {
+		const uint64_t worldId = Utils::hexStrToU64(arg1.c_str());
+		const uint64_t seed = Utils::hexStrToU64(arg2.c_str());
+		if ((worldId)&&(seed)) {
+			char jsons[1024];
+			Utils::snprintf(jsons,sizeof(jsons),"{\"seed\":\"%s\"}",arg2.c_str());
+			char cl[128];
+			Utils::snprintf(cl,sizeof(cl),"%u",(unsigned int)strlen(jsons));
+			requestHeaders["Content-Type"] = "application/json";
+			requestHeaders["Content-Length"] = cl;
+			unsigned int scode = Http::POST(
+				1024 * 1024 * 16,
+				60000,
+				(const struct sockaddr *)&addr,
+				(std::string("/moon/") + arg1).c_str(),
+				requestHeaders,
+				jsons,
+				(unsigned long)strlen(jsons),
+				responseHeaders,
+				responseBody);
+			if (scode == 200) {
+				printf("200 orbit OK" ZT_EOL_S);
+				return 0;
+			} else {
+				printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+				return 1;
+			}
+		}
+	} else if (command == "deorbit") {
+		unsigned int scode = Http::DEL(
+			1024 * 1024 * 16,
+			60000,
+			(const struct sockaddr *)&addr,
+			(std::string("/moon/") + arg1).c_str(),
+			requestHeaders,
+			responseHeaders,
+			responseBody);
+		if (scode == 200) {
+			if (json) {
+				printf("%s",cliFixJsonCRs(responseBody).c_str());
+			} else {
+				printf("200 deorbit OK" ZT_EOL_S);
+			}
+			return 0;
+		} else {
+			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			return 1;
+		}
 	} else if (command == "set") {
 		if (arg1.length() != 16) {
 			cliPrintHelp(argv[0],stderr);
@@ -577,7 +585,7 @@ static int cli(int argc,char **argv)
 					(std::string("/network/") + arg1).c_str(),
 					requestHeaders,
 					jsons,
-					strlen(jsons),
+					(unsigned long)strlen(jsons),
 					responseHeaders,
 					responseBody);
 				if (scode == 200) {
@@ -619,7 +627,8 @@ static void idtoolPrintHelp(FILE *out,const char *pn)
 	fprintf(out,"  getpublic <identity.secret>" ZT_EOL_S);
 	fprintf(out,"  sign <identity.secret> <file>" ZT_EOL_S);
 	fprintf(out,"  verify <identity.secret/public> <file> <signature>" ZT_EOL_S);
-	fprintf(out,"  mkcom <identity.secret> [<id,value,maxDelta> ...] (hexadecimal integers)" ZT_EOL_S);
+	fprintf(out,"  initmoon <identity.public of first seed>" ZT_EOL_S);
+	fprintf(out,"  genmoon <moon json>" ZT_EOL_S);
 }
 
 static Identity getIdFromArg(char *arg)
@@ -654,7 +663,7 @@ static int idtool(int argc,char **argv)
 		int vanityBits = 0;
 		if (argc >= 5) {
 			vanity = Utils::hexStrToU64(argv[4]) & 0xffffffffffULL;
-			vanityBits = 4 * strlen(argv[4]);
+			vanityBits = 4 * (int)strlen(argv[4]);
 			if (vanityBits > 40)
 				vanityBits = 40;
 		}
@@ -764,34 +773,93 @@ static int idtool(int argc,char **argv)
 			fprintf(stderr,"%s signature check FAILED" ZT_EOL_S,argv[3]);
 			return 1;
 		}
-	} else if (!strcmp(argv[1],"mkcom")) {
+	} else if (!strcmp(argv[1],"initmoon")) {
 		if (argc < 3) {
 			idtoolPrintHelp(stdout,argv[0]);
-			return 1;
-		}
-
-		Identity id = getIdFromArg(argv[2]);
-		if ((!id)||(!id.hasPrivate())) {
-			fprintf(stderr,"Identity argument invalid, does not include private key, or file unreadable: %s" ZT_EOL_S,argv[2]);
-			return 1;
-		}
-
-		CertificateOfMembership com;
-		for(int a=3;a<argc;++a) {
-			std::vector<std::string> params(Utils::split(argv[a],",","",""));
-			if (params.size() == 3) {
-				uint64_t qId = Utils::hexStrToU64(params[0].c_str());
-				uint64_t qValue = Utils::hexStrToU64(params[1].c_str());
-				uint64_t qMaxDelta = Utils::hexStrToU64(params[2].c_str());
-				com.setQualifier(qId,qValue,qMaxDelta);
+		} else {
+			const Identity id = getIdFromArg(argv[2]);
+			if (!id) {
+				fprintf(stderr,"%s is not a valid identity" ZT_EOL_S,argv[2]);
+				return 1;
 			}
-		}
-		if (!com.sign(id)) {
-			fprintf(stderr,"Signature of certificate of membership failed." ZT_EOL_S);
-			return 1;
-		}
 
-		printf("%s",com.toString().c_str());
+			C25519::Pair kp(C25519::generate());
+
+			nlohmann::json mj;
+			mj["objtype"] = "world";
+			mj["worldType"] = "moon";
+			mj["updatesMustBeSignedBy"] = mj["signingKey"] = Utils::hex(kp.pub.data,(unsigned int)kp.pub.size());
+			mj["signingKey_SECRET"] = Utils::hex(kp.priv.data,(unsigned int)kp.priv.size());
+			mj["id"] = id.address().toString();
+			nlohmann::json seedj;
+			seedj["identity"] = id.toString(false);
+			seedj["stableEndpoints"] = nlohmann::json::array();
+			(mj["roots"] = nlohmann::json::array()).push_back(seedj);
+			std::string mjd(OSUtils::jsonDump(mj));
+
+			printf("%s" ZT_EOL_S,mjd.c_str());
+		}
+	} else if (!strcmp(argv[1],"genmoon")) {
+		if (argc < 3) {
+			idtoolPrintHelp(stdout,argv[0]);
+		} else {
+			std::string buf;
+			if (!OSUtils::readFile(argv[2],buf)) {
+				fprintf(stderr,"cannot read %s" ZT_EOL_S,argv[2]);
+				return 1;
+			}
+			nlohmann::json mj(OSUtils::jsonParse(buf));
+
+			const uint64_t id = Utils::hexStrToU64(OSUtils::jsonString(mj["id"],"0").c_str());
+			if (!id) {
+				fprintf(stderr,"ID in %s is invalid" ZT_EOL_S,argv[2]);
+				return 1;
+			}
+
+			World::Type t;
+			if (mj["worldType"] == "moon") {
+				t = World::TYPE_MOON;
+			} else if (mj["worldType"] == "planet") {
+				t = World::TYPE_PLANET;
+			} else {
+				fprintf(stderr,"invalid worldType" ZT_EOL_S);
+				return 1;
+			}
+
+			C25519::Pair signingKey;
+			C25519::Public updatesMustBeSignedBy;
+			Utils::unhex(OSUtils::jsonString(mj["signingKey"],""),signingKey.pub.data,(unsigned int)signingKey.pub.size());
+			Utils::unhex(OSUtils::jsonString(mj["signingKey_SECRET"],""),signingKey.priv.data,(unsigned int)signingKey.priv.size());
+			Utils::unhex(OSUtils::jsonString(mj["updatesMustBeSignedBy"],""),updatesMustBeSignedBy.data,(unsigned int)updatesMustBeSignedBy.size());
+
+			std::vector<World::Root> roots;
+			nlohmann::json &rootsj = mj["roots"];
+			if (rootsj.is_array()) {
+				for(unsigned long i=0;i<(unsigned long)rootsj.size();++i) {
+					nlohmann::json &r = rootsj[i];
+					if (r.is_object()) {
+						roots.push_back(World::Root());
+						roots.back().identity = Identity(OSUtils::jsonString(r["identity"],""));
+						nlohmann::json &stableEndpointsj = r["stableEndpoints"];
+						if (stableEndpointsj.is_array()) {
+							for(unsigned long k=0;k<(unsigned long)stableEndpointsj.size();++k)
+								roots.back().stableEndpoints.push_back(InetAddress(OSUtils::jsonString(stableEndpointsj[k],"")));
+							std::sort(roots.back().stableEndpoints.begin(),roots.back().stableEndpoints.end());
+						}
+					}
+				}
+			}
+			std::sort(roots.begin(),roots.end());
+
+			const uint64_t now = OSUtils::now();
+			World w(World::make(t,id,now,updatesMustBeSignedBy,roots,signingKey));
+			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> wbuf;
+			w.serialize(wbuf);
+			char fn[128];
+			Utils::snprintf(fn,sizeof(fn),"%.16llx.moon",w.id());
+			OSUtils::writeFile(fn,wbuf.data(),wbuf.size());
+			printf("wrote %s (signed world with timestamp %llu)" ZT_EOL_S,fn,(unsigned long long)now);
+		}
 	} else {
 		idtoolPrintHelp(stdout,argv[0]);
 		return 1;
@@ -816,6 +884,147 @@ static void _sighandlerQuit(int sig)
 	else exit(0);
 }
 #endif
+
+// Drop privileges on Linux, if supported by libc etc. and "zerotier-one" user exists on system
+#ifdef __LINUX__
+#ifndef PR_CAP_AMBIENT
+#define PR_CAP_AMBIENT 47
+#define PR_CAP_AMBIENT_IS_SET 1
+#define PR_CAP_AMBIENT_RAISE 2
+#define PR_CAP_AMBIENT_LOWER 3
+#define PR_CAP_AMBIENT_CLEAR_ALL 4
+#endif
+#define ZT_LINUX_USER "zerotier-one"
+#define ZT_HAVE_DROP_PRIVILEGES 1
+namespace {
+
+// libc doesn't export capset, it is instead located in libcap
+// We ignore libcap and call it manually.
+struct cap_header_struct {
+	__u32 version;
+	int pid;
+};
+struct cap_data_struct {
+	__u32 effective;
+	__u32 permitted;
+	__u32 inheritable;
+};
+static inline int _zt_capset(cap_header_struct* hdrp, cap_data_struct* datap) { return syscall(SYS_capset, hdrp, datap); }
+
+static void _notDropping(const char *procName,const std::string &homeDir)
+{
+	struct stat buf;
+	if (lstat(homeDir.c_str(),&buf) < 0) {
+		if (buf.st_uid != 0 || buf.st_gid != 0) {
+			fprintf(stderr, "%s: FATAL: failed to drop privileges and can't run as root since privileges were previously dropped (home directory not owned by root)" ZT_EOL_S,procName);
+			exit(1);
+		}
+	}
+	fprintf(stderr, "%s: WARNING: failed to drop privileges (kernel may not support required prctl features), running as root" ZT_EOL_S,procName);
+}
+
+static int _setCapabilities(int flags)
+{
+	cap_header_struct capheader = {_LINUX_CAPABILITY_VERSION_1, 0};
+	cap_data_struct capdata;
+	capdata.inheritable = capdata.permitted = capdata.effective = flags;
+	return _zt_capset(&capheader, &capdata);
+}
+
+static void _recursiveChown(const char *path,uid_t uid,gid_t gid)
+{
+	struct dirent de;
+	struct dirent *dptr;
+	lchown(path,uid,gid);
+	DIR *d = opendir(path);
+	if (!d)
+		return;
+	dptr = (struct dirent *)0;
+	for(;;) {
+		if (readdir_r(d,&de,&dptr) != 0)
+			break;
+		if (!dptr)
+			break;
+		if ((strcmp(dptr->d_name,".") != 0)&&(strcmp(dptr->d_name,"..") != 0)&&(strlen(dptr->d_name) > 0)) {
+			std::string p(path);
+			p.push_back(ZT_PATH_SEPARATOR);
+			p.append(dptr->d_name);
+			_recursiveChown(p.c_str(),uid,gid); // will just fail and return on regular files
+		}
+	}
+	closedir(d);
+}
+
+static void dropPrivileges(const char *procName,const std::string &homeDir)
+{
+	if (getuid() != 0)
+		return;
+
+	// dropPrivileges switches to zerotier-one user while retaining CAP_NET_ADMIN
+	// and CAP_NET_RAW capabilities.
+	struct passwd *targetUser = getpwnam(ZT_LINUX_USER);
+	if (!targetUser)
+		return;
+
+	if (prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_IS_SET, CAP_NET_RAW, 0, 0) < 0) {
+		// Kernel has no support for ambient capabilities.
+		_notDropping(procName,homeDir);
+		return;
+	}
+	if (prctl(PR_SET_SECUREBITS, SECBIT_KEEP_CAPS | SECBIT_NOROOT) < 0) {
+		_notDropping(procName,homeDir);
+		return;
+	}
+
+	// Change ownership of our home directory if everything looks good (does nothing if already chown'd)
+	_recursiveChown(homeDir.c_str(),targetUser->pw_uid,targetUser->pw_gid);
+
+	if (_setCapabilities((1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW) | (1 << CAP_SETUID) | (1 << CAP_SETGID)) < 0) {
+		_notDropping(procName,homeDir);
+		return;
+	}
+
+	int oldDumpable = prctl(PR_GET_DUMPABLE);
+	if (prctl(PR_SET_DUMPABLE, 0) < 0) {
+		// Disable ptracing. Otherwise there is a small window when previous
+		// compromised ZeroTier process could ptrace us, when we still have CAP_SETUID.
+		// (this is mitigated anyway on most distros by ptrace_scope=1)
+		fprintf(stderr,"%s: FATAL: prctl(PR_SET_DUMPABLE) failed while attempting to relinquish root permissions" ZT_EOL_S,procName);
+		exit(1);
+	}
+
+	// Relinquish root
+	if (setgid(targetUser->pw_gid) < 0) {
+		perror("setgid");
+		exit(1);
+	}
+	if (setuid(targetUser->pw_uid) < 0) {
+		perror("setuid");
+		exit(1);
+	}
+
+	if (_setCapabilities((1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW)) < 0) {
+		fprintf(stderr,"%s: FATAL: unable to drop capabilities after relinquishing root" ZT_EOL_S,procName);
+		exit(1);
+	}
+
+	if (prctl(PR_SET_DUMPABLE, oldDumpable) < 0) {
+		fprintf(stderr,"%s: FATAL: prctl(PR_SET_DUMPABLE) failed while attempting to relinquish root permissions" ZT_EOL_S,procName);
+		exit(1);
+	}
+
+	if (prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_RAISE, CAP_NET_ADMIN, 0, 0) < 0) {
+		fprintf(stderr,"%s: FATAL: prctl(PR_CAP_AMBIENT,PR_CAP_AMBIENT_RAISE,CAP_NET_ADMIN) failed while attempting to relinquish root permissions" ZT_EOL_S,procName);
+		exit(1);
+	}
+	if (prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_RAISE, CAP_NET_RAW, 0, 0) < 0) {
+		fprintf(stderr,"%s: FATAL: prctl(PR_CAP_AMBIENT,PR_CAP_AMBIENT_RAISE,CAP_NET_RAW) failed while attempting to relinquish root permissions" ZT_EOL_S,procName);
+		exit(1);
+	}
+}
+
+} // anonymous namespace
+#endif // __LINUX__
 
 /****************************************************************************/
 /* Windows helper functions and signal handlers                             */
@@ -979,14 +1188,11 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,
 		COPYRIGHT_NOTICE ZT_EOL_S
 		LICENSE_GRANT ZT_EOL_S);
-	std::string updateUrl(OneService::autoUpdateUrl());
-	if (updateUrl.length())
-		fprintf(out,"Automatic updates enabled:" ZT_EOL_S"  %s" ZT_EOL_S"  (all updates are securely authenticated by 256-bit ECDSA signature)" ZT_EOL_S"" ZT_EOL_S,updateUrl.c_str());
 	fprintf(out,"Usage: %s [-switches] [home directory]" ZT_EOL_S"" ZT_EOL_S,cn);
 	fprintf(out,"Available switches:" ZT_EOL_S);
 	fprintf(out,"  -h                - Display this help" ZT_EOL_S);
 	fprintf(out,"  -v                - Show version" ZT_EOL_S);
-	fprintf(out,"  -U                - Run as unprivileged user (skip privilege check)" ZT_EOL_S);
+	fprintf(out,"  -U                - Skip privilege check and do not attempt to drop privileges" ZT_EOL_S);
 	fprintf(out,"  -p<port>          - Port for UDP and TCP/HTTP (default: 9993, 0 for random)" ZT_EOL_S);
 
 #ifdef __UNIX_LIKE__
@@ -1003,6 +1209,52 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -i                - Generate and manage identities (zerotier-idtool)" ZT_EOL_S);
 	fprintf(out,"  -q                - Query API (zerotier-cli)" ZT_EOL_S);
 }
+
+class _OneServiceRunner
+{
+public:
+	_OneServiceRunner(const char *pn,const std::string &hd,unsigned int p) : progname(pn),returnValue(0),port(p),homeDir(hd) {}
+	void threadMain()
+		throw()
+	{
+		try {
+			for(;;) {
+				zt1Service = OneService::newInstance(homeDir.c_str(),port);
+				switch(zt1Service->run()) {
+					case OneService::ONE_STILL_RUNNING: // shouldn't happen, run() won't return until done
+					case OneService::ONE_NORMAL_TERMINATION:
+						break;
+					case OneService::ONE_UNRECOVERABLE_ERROR:
+						fprintf(stderr,"%s: fatal error: %s" ZT_EOL_S,progname,zt1Service->fatalErrorMessage().c_str());
+						returnValue = 1;
+						break;
+					case OneService::ONE_IDENTITY_COLLISION: {
+						delete zt1Service;
+						zt1Service = (OneService *)0;
+						std::string oldid;
+						OSUtils::readFile((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret").c_str(),oldid);
+						if (oldid.length()) {
+							OSUtils::writeFile((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret.saved_after_collision").c_str(),oldid);
+							OSUtils::rm((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret").c_str());
+							OSUtils::rm((homeDir + ZT_PATH_SEPARATOR_S + "identity.public").c_str());
+						}
+					}	continue; // restart!
+				}
+				break; // terminate loop -- normally we don't keep restarting
+			}
+
+			delete zt1Service;
+			zt1Service = (OneService *)0;
+		} catch ( ... ) {
+			fprintf(stderr,"%s: unexpected exception starting main OneService instance" ZT_EOL_S,progname);
+			returnValue = 1;
+		}
+	}
+	const char *progname;
+	unsigned int returnValue;
+	unsigned int port;
+	const std::string &homeDir;
+};
 
 #ifdef __WINDOWS__
 int _tmain(int argc, _TCHAR* argv[])
@@ -1157,7 +1409,7 @@ int main(int argc,char **argv)
 		fprintf(stderr,"%s: no home path specified and no platform default available" ZT_EOL_S,argv[0]);
 		return 1;
 	} else {
-		std::vector<std::string> hpsp(Utils::split(homeDir.c_str(),ZT_PATH_SEPARATOR_S,"",""));
+		std::vector<std::string> hpsp(OSUtils::split(homeDir.c_str(),ZT_PATH_SEPARATOR_S,"",""));
 		std::string ptmp;
 		if (homeDir[0] == ZT_PATH_SEPARATOR)
 			ptmp.push_back(ZT_PATH_SEPARATOR);
@@ -1170,6 +1422,12 @@ int main(int argc,char **argv)
 					throw std::runtime_error("home path does not exist, and could not create");
 			}
 		}
+	}
+
+	// This can be removed once the new controller code has been around for many versions
+	if (OSUtils::fileExists((homeDir + ZT_PATH_SEPARATOR_S + "controller.db").c_str(),true)) {
+		fprintf(stderr,"%s: FATAL: an old controller.db exists in %s -- see instructions in controller/README.md for how to migrate!" ZT_EOL_S,argv[0],homeDir.c_str());
+		return 1;
 	}
 
 #ifdef __UNIX_LIKE__
@@ -1210,8 +1468,8 @@ int main(int argc,char **argv)
 	} else {
 		// Running from service manager
 		_winPokeAHole();
-		ZeroTierOneService zt1Service;
-		if (CServiceBase::Run(zt1Service) == TRUE) {
+		ZeroTierOneService zt1WindowsService;
+		if (CServiceBase::Run(zt1WindowsService) == TRUE) {
 			return 0;
 		} else {
 			fprintf(stderr,"%s: unable to start service (try -h for help)" ZT_EOL_S,argv[0]);
@@ -1221,6 +1479,10 @@ int main(int argc,char **argv)
 #endif // __WINDOWS__
 
 #ifdef __UNIX_LIKE__
+#ifdef ZT_HAVE_DROP_PRIVILEGES
+	dropPrivileges(argv[0],homeDir);
+#endif
+
 	std::string pidPath(homeDir + ZT_PATH_SEPARATOR_S + ZT_PID_PATH);
 	{
 		// Write .pid file to home folder
@@ -1232,39 +1494,13 @@ int main(int argc,char **argv)
 	}
 #endif // __UNIX_LIKE__
 
-	unsigned int returnValue = 0;
-
-	for(;;) {
-		zt1Service = OneService::newInstance(homeDir.c_str(),port);
-		switch(zt1Service->run()) {
-			case OneService::ONE_STILL_RUNNING: // shouldn't happen, run() won't return until done
-			case OneService::ONE_NORMAL_TERMINATION:
-				break;
-			case OneService::ONE_UNRECOVERABLE_ERROR:
-				fprintf(stderr,"%s: fatal error: %s" ZT_EOL_S,argv[0],zt1Service->fatalErrorMessage().c_str());
-				returnValue = 1;
-				break;
-			case OneService::ONE_IDENTITY_COLLISION: {
-				delete zt1Service;
-				zt1Service = (OneService *)0;
-				std::string oldid;
-				OSUtils::readFile((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret").c_str(),oldid);
-				if (oldid.length()) {
-					OSUtils::writeFile((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret.saved_after_collision").c_str(),oldid);
-					OSUtils::rm((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret").c_str());
-					OSUtils::rm((homeDir + ZT_PATH_SEPARATOR_S + "identity.public").c_str());
-				}
-			}	continue; // restart!
-		}
-		break; // terminate loop -- normally we don't keep restarting
-	}
-
-	delete zt1Service;
-	zt1Service = (OneService *)0;
+	_OneServiceRunner thr(argv[0],homeDir,port);
+	thr.threadMain();
+	//Thread::join(Thread::start(&thr));
 
 #ifdef __UNIX_LIKE__
 	OSUtils::rm(pidPath.c_str());
 #endif
 
-	return returnValue;
+	return thr.returnValue;
 }

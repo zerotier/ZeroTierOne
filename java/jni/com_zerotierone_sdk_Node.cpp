@@ -56,7 +56,11 @@ namespace {
             , eventListener(NULL)
             , frameListener(NULL)
             , configListener(NULL)
-        {}
+            , callbacks(NULL)
+        {
+            callbacks = (ZT_Node_Callbacks*)malloc(sizeof(ZT_Node_Callbacks));
+            memset(callbacks, 0, sizeof(ZT_Node_Callbacks));
+        }
 
         ~JniRef()
         {
@@ -69,6 +73,9 @@ namespace {
             env->DeleteGlobalRef(eventListener);
             env->DeleteGlobalRef(frameListener);
             env->DeleteGlobalRef(configListener);
+
+            free(callbacks);
+            callbacks = NULL;
         }
 
         uint64_t id;
@@ -83,6 +90,8 @@ namespace {
         jobject eventListener;
         jobject frameListener;
         jobject configListener;
+
+        ZT_Node_Callbacks *callbacks;
     };
 
 
@@ -130,8 +139,8 @@ namespace {
         }
 
         return env->CallIntMethod(
-            ref->configListener, 
-            configListenerCallbackMethod, 
+            ref->configListener,
+            configListenerCallbackMethod,
             (jlong)nwid, operationObject, networkConfigObject);
     }
 
@@ -194,7 +203,7 @@ namespace {
 
     void EventCallback(ZT_Node *node,
         void *userData,
-        enum ZT_Event event, 
+        enum ZT_Event event,
         const void *data)
     {
         LOGV("EventCallback");
@@ -282,6 +291,8 @@ namespace {
             }
         }
         break;
+        case ZT_EVENT_USER_MESSAGE:
+            break;
         }
     }
 
@@ -339,7 +350,7 @@ namespace {
             objectName, buffer, bufferIndex, objectSizeObj);
 
         long retval = (long)env->CallLongMethod(
-            ref->dataStoreGetListener, dataStoreGetCallbackMethod, 
+            ref->dataStoreGetListener, dataStoreGetCallbackMethod,
             nameStr, bufferObj, (jlong)bufferIndex, objectSizeObj);
 
         if(retval > 0)
@@ -454,7 +465,7 @@ namespace {
             LOGE("Couldn't find onSendPacketRequested method");
             return -2;
         }
-        
+
         jobject localAddressObj = NULL;
         if(memcmp(localAddress, &ZT_SOCKADDR_NULL, sizeof(sockaddr_storage)) != 0)
         {
@@ -487,7 +498,7 @@ namespace {
     }
 }
 
-JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) 
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
     lookup.setJavaVM(vm);
     return JNI_VERSION_1_6;
@@ -602,17 +613,18 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
     }
     ref->eventListener = env->NewGlobalRef(tmp);
 
+    ref->callbacks->dataStoreGetFunction = &DataStoreGetFunction;
+    ref->callbacks->dataStorePutFunction = &DataStorePutFunction;
+    ref->callbacks->wirePacketSendFunction = &WirePacketSendFunction;
+    ref->callbacks->virtualNetworkFrameFunction = &VirtualNetworkFrameFunctionCallback;
+    ref->callbacks->virtualNetworkConfigFunction = &VirtualNetworkConfigFunctionCallback;
+    ref->callbacks->eventCallback = &EventCallback;
+
     ZT_ResultCode rc = ZT_Node_new(
         &node,
         ref,
-        (uint64_t)now,
-        &DataStoreGetFunction,
-        &DataStorePutFunction,
-        &WirePacketSendFunction,
-        &VirtualNetworkFrameFunctionCallback,
-        &VirtualNetworkConfigFunctionCallback,
-        NULL,
-        &EventCallback);
+        ref->callbacks,
+        (uint64_t)now);
 
     if(rc != ZT_RESULT_OK)
     {
@@ -631,7 +643,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
     ZeroTier::Mutex::Lock lock(nodeMapMutex);
     ref->node = node;
     nodeMap.insert(std::make_pair(ref->id, ref));
-    
+
 
     return resultObject;
 }
@@ -649,7 +661,7 @@ JNIEXPORT void JNICALL Java_com_zerotier_sdk_Node_node_1delete(
 
     NodeMap::iterator found;
     {
-        ZeroTier::Mutex::Lock lock(nodeMapMutex);  
+        ZeroTier::Mutex::Lock lock(nodeMapMutex);
         found = nodeMap.find(nodeId);
     }
 
@@ -675,9 +687,9 @@ JNIEXPORT void JNICALL Java_com_zerotier_sdk_Node_node_1delete(
  * Signature: (JJJJJII[B[J)Lcom/zerotier/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
-    JNIEnv *env, jobject obj, 
-    jlong id, 
-    jlong in_now, 
+    JNIEnv *env, jobject obj,
+    jlong id,
+    jlong in_now,
     jlong in_nwid,
     jlong in_sourceMac,
     jlong in_destMac,
@@ -687,7 +699,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
     jlongArray out_nextBackgroundTaskDeadline)
 {
     uint64_t nodeId = (uint64_t) id;
-    
+
     ZT_Node *node = findNode(nodeId);
     if(node == NULL)
     {
@@ -742,9 +754,9 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
  * Signature: (JJLjava/net/InetSocketAddress;I[B[J)Lcom/zerotier/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
-    JNIEnv *env, jobject obj, 
+    JNIEnv *env, jobject obj,
     jlong id,
-    jlong in_now, 
+    jlong in_now,
     jobject in_localAddress,
     jobject in_remoteAddress,
     jbyteArray in_packetData,
@@ -810,7 +822,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
     jmethodID inetSock_getPort = lookup.findMethod(
         InetSocketAddressClass, "getPort", "()I");
 
-    if(env->ExceptionCheck() || inetSock_getPort == NULL) 
+    if(env->ExceptionCheck() || inetSock_getPort == NULL)
     {
         LOGE("Couldn't find getPort method on InetSocketAddress");
         return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
@@ -834,10 +846,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
     }
 
     unsigned int addrSize = env->GetArrayLength(remoteAddressArray);
-    
+
 
     sockaddr_storage localAddress = {};
-    
+
     if(localAddrObj == NULL)
     {
         localAddress = ZT_SOCKADDR_NULL;
@@ -929,7 +941,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
         localData,
         packetLength,
         &nextBackgroundTaskDeadline);
-    if(rc != ZT_RESULT_OK) 
+    if(rc != ZT_RESULT_OK)
     {
         LOGE("ZT_Node_processWirePacket returned: %d", rc);
     }
@@ -949,7 +961,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
  * Signature: (JJ[J)Lcom/zerotier/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processBackgroundTasks(
-    JNIEnv *env, jobject obj, 
+    JNIEnv *env, jobject obj,
     jlong id,
     jlong in_now,
     jlongArray out_nextBackgroundTaskDeadline)
@@ -1022,7 +1034,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_leave(
     uint64_t nwid = (uint64_t)in_nwid;
 
     ZT_ResultCode rc = ZT_Node_leave(node, nwid, NULL);
-    
+
     return createResultObject(env, rc);
 }
 
@@ -1032,8 +1044,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_leave(
  * Signature: (JJJJ)Lcom/zerotier/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_multicastSubscribe(
-    JNIEnv *env, jobject obj, 
-    jlong id, 
+    JNIEnv *env, jobject obj,
+    jlong id,
     jlong in_nwid,
     jlong in_multicastGroup,
     jlong in_multicastAdi)
@@ -1062,8 +1074,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_multicastSubscribe(
  * Signature: (JJJJ)Lcom/zerotier/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_multicastUnsubscribe(
-    JNIEnv *env, jobject obj, 
-    jlong id, 
+    JNIEnv *env, jobject obj,
+    jlong id,
     jlong in_nwid,
     jlong in_multicastGroup,
     jlong in_multicastAdi)
@@ -1131,7 +1143,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_status
     {
         return NULL;
     }
-    
+
     nodeStatusConstructor = lookup.findMethod(
         nodeStatusClass, "<init>", "()V");
     if(nodeStatusConstructor == NULL)
@@ -1215,7 +1227,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_networkConfig(
     }
 
     ZT_VirtualNetworkConfig *vnetConfig = ZT_Node_networkConfig(node, nwid);
-    
+
     jobject vnetConfigObject = newNetworkConfig(env, *vnetConfig);
 
     ZT_Node_freeQueryResult(node, vnetConfig);
@@ -1257,7 +1269,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_peers(
     }
 
     ZT_PeerList *peerList = ZT_Node_peers(node);
-    
+
     if(peerList == NULL)
     {
         LOGE("ZT_Node_peers returned NULL");
@@ -1296,7 +1308,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_peers(
     {
         jobject peerObj = newPeer(env, peerList->peers[i]);
         env->SetObjectArrayElement(peerArrayObj, i, peerObj);
-        if(env->ExceptionCheck()) 
+        if(env->ExceptionCheck())
         {
             LOGE("Error assigning Peer object to array");
             break;

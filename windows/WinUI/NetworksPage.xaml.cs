@@ -20,33 +20,80 @@ namespace WinUI
     /// </summary>
     public partial class NetworksPage : UserControl
     {
-        private APIHandler handler;
-
         public NetworksPage()
         {
             InitializeComponent();
         }
 
-        public void SetAPIHandler(APIHandler handler)
-        {
-            this.handler = handler;
-        }
-
         public void setNetworks(List<ZeroTierNetwork> networks)
         {
-            this.wrapPanel.Children.Clear();
             if (networks == null)
             {
+                this.wrapPanel.Children.Clear();
                 return;
             }
 
-            for (int i = 0; i < networks.Count; ++i)
+            foreach (ZeroTierNetwork network in networks)
             {
-                this.wrapPanel.Children.Add(
-                    new NetworkInfoView(
-                        handler,
-                        networks.ElementAt<ZeroTierNetwork>(i)));
+                NetworkInfoView view = ChildWithNetwork(network);
+                if (view != null)
+                {
+                    view.SetNetworkInfo(network);
+                }
+                else
+                {
+                    wrapPanel.Children.Add(
+                        new NetworkInfoView(
+                            network));
+                }
             }
+
+            // remove networks we're no longer joined to.
+            List<ZeroTierNetwork> tmpList = GetNetworksFromChildren();
+            foreach (ZeroTierNetwork n in networks)
+            {
+                if (tmpList.Contains(n))
+                {
+                    tmpList.Remove(n);
+                }
+            }
+
+            foreach (ZeroTierNetwork n in tmpList)
+            {
+                NetworkInfoView view = ChildWithNetwork(n);
+                if (view != null)
+                {
+                    wrapPanel.Children.Remove(view);
+                }
+            }
+        }
+
+        private NetworkInfoView ChildWithNetwork(ZeroTierNetwork network)
+        {
+            List<NetworkInfoView> list = wrapPanel.Children.OfType<NetworkInfoView>().ToList();
+           
+            foreach (NetworkInfoView view in list)
+            {
+                if (view.HasNetwork(network))
+                {
+                    return view;
+                }
+            }
+
+            return null;
+        }
+
+        private List<ZeroTierNetwork> GetNetworksFromChildren()
+        {
+            List<ZeroTierNetwork> networks = new List<ZeroTierNetwork>(wrapPanel.Children.Count);
+
+            List<NetworkInfoView> list = wrapPanel.Children.OfType<NetworkInfoView>().ToList();
+            foreach (NetworkInfoView n in list)
+            {
+                networks.Add(n.network);
+            }
+
+            return networks;
         }
     }
 }

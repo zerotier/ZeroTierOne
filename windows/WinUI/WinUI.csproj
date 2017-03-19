@@ -63,13 +63,15 @@
   <PropertyGroup>
     <SignManifests>false</SignManifests>
   </PropertyGroup>
-  <PropertyGroup>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-  </PropertyGroup>
+  <PropertyGroup />
   <ItemGroup>
     <Reference Include="Accessibility" />
-    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Hardcodet.Wpf.TaskbarNotification, Version=1.0.5.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Hardcodet.NotifyIcon.Wpf.1.0.8\lib\net45\Hardcodet.Wpf.TaskbarNotification.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="PresentationUI, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
@@ -99,17 +101,39 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="AboutView.xaml.cs">
+      <DependentUpon>AboutView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="JoinNetworkView.xaml.cs">
+      <DependentUpon>JoinNetworkView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="NetworkMonitor.cs" />
+    <Compile Include="NetworkRoute.cs" />
     <Compile Include="NetworksPage.xaml.cs">
       <DependentUpon>NetworksPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="PeersPage.xaml.cs">
       <DependentUpon>PeersPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="PreferencesView.xaml.cs">
+      <DependentUpon>PreferencesView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="ToolbarItem.xaml.cs">
+      <DependentUpon>ToolbarItem.xaml</DependentUpon>
+    </Compile>
     <Compile Include="ZeroTierPeerPhysicalPath.cs" />
     <Compile Include="ZeroTierPeer.cs" />
     <Compile Include="ZeroTierNetwork.cs" />
     <Compile Include="ZeroTierStatus.cs" />
-    <Page Include="MainWindow.xaml">
+    <Page Include="AboutView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="JoinNetworkView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="NetworkListView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -118,8 +142,8 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MainWindow.xaml.cs">
-      <DependentUpon>MainWindow.xaml</DependentUpon>
+    <Compile Include="NetworkListView.xaml.cs">
+      <DependentUpon>NetworkListView.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
     <Page Include="NetworkInfoView.xaml">
@@ -134,6 +158,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="PreferencesView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Simple Styles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -141,6 +169,10 @@
     <Page Include="Themes\Generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="ToolbarItem.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
   <ItemGroup>
@@ -215,8 +247,14 @@
     </BlendEmbeddedFont>
     <Resource Include="ZeroTierIcon.ico" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ZeroTierIcon.ico" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\Expression\Blend\.NETFramework\v4.5\Microsoft.Expression.Blend.WPF.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>copy "$(SolutionDir)\copyutil\bin\$(ConfigurationName)\copyutil.exe" "$(ProjectDir)\$(OutDir)\copyutil.exe"</PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

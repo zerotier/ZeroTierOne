@@ -21,33 +21,17 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include <stdexcept>
 #include <algorithm>
 
 #include "Constants.hpp"
 #include "InetAddress.hpp"
-
-// Note: if you change these flags check the logic below. Some of it depends
-// on these bits being what they are.
-
-/**
- * Flag indicating that this path is suboptimal
- *
- * Clusters set this flag on remote paths if GeoIP or other routing decisions
- * indicate that a peer should be handed off to another cluster member.
- */
-#define ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL 0x0001
-
-/**
- * Flag indicating that this path is optimal
- *
- * Peers set this flag on paths that are pushed by a cluster and indicated as
- * optimal. A second flag is needed since we want to prioritize cluster optimal
- * paths and de-prioritize sub-optimal paths and for new paths we don't know
- * which one they are. So we want a trinary state: optimal, suboptimal, unknown.
- */
-#define ZT_PATH_FLAG_CLUSTER_OPTIMAL 0x0002
+#include "SharedPtr.hpp"
+#include "AtomicCounter.hpp"
+#include "NonCopyable.hpp"
+#include "Utils.hpp"
 
 /**
  * Maximum return value of preferenceRank()
@@ -59,89 +43,147 @@ namespace ZeroTier {
 class RuntimeEnvironment;
 
 /**
- * Base class for paths
- *
- * The base Path class is an immutable value.
+ * A path across the physical network
  */
-class Path
+class Path : NonCopyable
 {
+	friend class SharedPtr<Path>;
+
 public:
+	/**
+	 * Efficient unique key for paths in a Hashtable
+	 */
+	class HashKey
+	{
+	public:
+		HashKey() {}
+
+		HashKey(const InetAddress &l,const InetAddress &r)
+		{
+			// This is an ad-hoc bit packing algorithm to yield unique keys for
+			// remote addresses and their local-side counterparts if defined.
+			// Portability across runtimes is not needed.
+			if (r.ss_family == AF_INET) {
+				_k[0] = (uint64_t)reinterpret_cast<const struct sockaddr_in *>(&r)->sin_addr.s_addr;
+				_k[1] = (uint64_t)reinterpret_cast<const struct sockaddr_in *>(&r)->sin_port;
+				if (l.ss_family == AF_INET) {
+					_k[2] = (uint64_t)reinterpret_cast<const struct sockaddr_in *>(&l)->sin_addr.s_addr;
+					_k[3] = (uint64_t)reinterpret_cast<const struct sockaddr_in *>(&r)->sin_port;
+				} else {
+					_k[2] = 0;
+					_k[3] = 0;
+				}
+			} else if (r.ss_family == AF_INET6) {
+				const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr);
+				uint8_t *b = reinterpret_cast<uint8_t *>(_k);
+				for(unsigned int i=0;i<16;++i) b[i] = a[i];
+				_k[2] = ~((uint64_t)reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_port);
+				if (l.ss_family == AF_INET6) {
+					_k[2] ^= ((uint64_t)reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_port) << 32;
+					a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&l)->sin6_addr.s6_addr);
+					b += 24;
+					for(unsigned int i=0;i<8;++i) b[i] = a[i];
+					a += 8;
+					for(unsigned int i=0;i<8;++i) b[i] ^= a[i];
+				}
+			} else {
+				_k[0] = 0;
+				_k[1] = 0;
+				_k[2] = 0;
+				_k[3] = 0;
+			}
+		}
+
+		inline unsigned long hashCode() const { return (unsigned long)(_k[0] + _k[1] + _k[2] + _k[3]); }
+
+		inline bool operator==(const HashKey &k) const { return ( (_k[0] == k._k[0]) && (_k[1] == k._k[1]) && (_k[2] == k._k[2]) && (_k[3] == k._k[3]) ); }
+		inline bool operator!=(const HashKey &k) const { return (!(*this == k)); }
+
+	private:
+		uint64_t _k[4];
+	};
+
 	Path() :
-		_lastSend(0),
-		_lastPing(0),
-		_lastKeepalive(0),
-		_lastReceived(0),
+		_lastOut(0),
+		_lastIn(0),
+		_lastTrustEstablishedPacketReceived(0),
+		_incomingLinkQualityFastLog(0xffffffffffffffffULL),
+		_incomingLinkQualitySlowLogPtr(0),
+		_incomingLinkQualitySlowLogCounter(-64), // discard first fast log
+		_incomingLinkQualityPreviousPacketCounter(0),
+		_outgoingPacketCounter(0),
 		_addr(),
 		_localAddress(),
-		_flags(0),
 		_ipScope(InetAddress::IP_SCOPE_NONE)
 	{
+		for(int i=0;i<(int)sizeof(_incomingLinkQualitySlowLog);++i)
+			_incomingLinkQualitySlowLog[i] = ZT_PATH_LINK_QUALITY_MAX;
 	}
 
 	Path(const InetAddress &localAddress,const InetAddress &addr) :
-		_lastSend(0),
-		_lastPing(0),
-		_lastKeepalive(0),
-		_lastReceived(0),
+		_lastOut(0),
+		_lastIn(0),
+		_lastTrustEstablishedPacketReceived(0),
+		_incomingLinkQualityFastLog(0xffffffffffffffffULL),
+		_incomingLinkQualitySlowLogPtr(0),
+		_incomingLinkQualitySlowLogCounter(-64), // discard first fast log
+		_incomingLinkQualityPreviousPacketCounter(0),
+		_outgoingPacketCounter(0),
 		_addr(addr),
 		_localAddress(localAddress),
-		_flags(0),
 		_ipScope(addr.ipScope())
 	{
-	}
-
-	inline Path &operator=(const Path &p)
-	{
-		if (this != &p)
-			memcpy(this,&p,sizeof(Path));
-		return *this;
+		for(int i=0;i<(int)sizeof(_incomingLinkQualitySlowLog);++i)
+			_incomingLinkQualitySlowLog[i] = ZT_PATH_LINK_QUALITY_MAX;
 	}
 
 	/**
-	 * Called when a packet is sent to this remote path
-	 *
-	 * This is called automatically by Path::send().
-	 *
-	 * @param t Time of send
-	 */
-	inline void sent(uint64_t t) { _lastSend = t; }
-
-	/**
-	 * Called when we've sent a ping or echo
-	 *
-	 * @param t Time of send
-	 */
-	inline void pinged(uint64_t t) { _lastPing = t; }
-
-	/**
-	 * Called when we send a NAT keepalive
-	 *
-	 * @param t Time of send
-	 */
-	inline void sentKeepalive(uint64_t t) { _lastKeepalive = t; }
-
-	/**
-	 * Called when a packet is received from this remote path
+	 * Called when a packet is received from this remote path, regardless of content
 	 *
 	 * @param t Time of receive
 	 */
-	inline void received(uint64_t t)
-	{
-		_lastReceived = t;
-		_probation = 0;
-	}
+	inline void received(const uint64_t t) { _lastIn = t; }
 
 	/**
-	 * @param now Current time
-	 * @return True if this path appears active
+	 * Update link quality using a counter from an incoming packet (or packet head in fragmented case)
+	 *
+	 * @param counter Packet link quality counter (range 0 to 7, must not have other bits set)
 	 */
-	inline bool active(uint64_t now) const
+	inline void updateLinkQuality(const unsigned int counter)
 	{
-		return ( ((now - _lastReceived) < ZT_PATH_ACTIVITY_TIMEOUT) && (_probation < ZT_PEER_DEAD_PATH_DETECTION_MAX_PROBATION) );
+		const unsigned int prev = _incomingLinkQualityPreviousPacketCounter;
+		_incomingLinkQualityPreviousPacketCounter = counter;
+		const uint64_t fl = (_incomingLinkQualityFastLog = ((_incomingLinkQualityFastLog << 1) | (uint64_t)(prev == ((counter - 1) & 0x7))));
+		if (++_incomingLinkQualitySlowLogCounter >= 64) {
+			_incomingLinkQualitySlowLogCounter = 0;
+			_incomingLinkQualitySlowLog[_incomingLinkQualitySlowLogPtr++ % sizeof(_incomingLinkQualitySlowLog)] = (uint8_t)Utils::countBits(fl);
+		}
 	}
 
 	/**
-	 * Send a packet via this path
+	 * @return Link quality from 0 (min) to 255 (max)
+	 */
+	inline unsigned int linkQuality() const
+	{
+		unsigned long slsize = _incomingLinkQualitySlowLogPtr;
+		if (slsize > (unsigned long)sizeof(_incomingLinkQualitySlowLog))
+			slsize = (unsigned long)sizeof(_incomingLinkQualitySlowLog);
+		else if (!slsize)
+			return 255; // ZT_PATH_LINK_QUALITY_MAX
+		unsigned long lq = 0;
+		for(unsigned long i=0;i<slsize;++i)
+			lq += (unsigned long)_incomingLinkQualitySlowLog[i] * 4;
+		lq /= slsize;
+		return (unsigned int)((lq >= 255) ? 255 : lq);
+	}
+
+	/**
+	 * Set time last trusted packet was received (done in Peer::received())
+	 */
+	inline void trustedPacketReceived(const uint64_t t) { _lastTrustEstablishedPacketReceived = t; }
+
+	/**
+	 * Send a packet via this path (last out time is also updated)
 	 *
 	 * @param RR Runtime environment
 	 * @param data Packet data
@@ -152,115 +194,41 @@ public:
 	bool send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now);
 
 	/**
+	 * Manually update last sent time
+	 *
+	 * @param t Time of send
+	 */
+	inline void sent(const uint64_t t) { _lastOut = t; }
+
+	/**
 	 * @return Address of local side of this path or NULL if unspecified
 	 */
-	inline const InetAddress &localAddress() const throw() { return _localAddress; }
-
-	/**
-	 * @return Time of last send to this path
-	 */
-	inline uint64_t lastSend() const throw() { return _lastSend; }
-
-	/**
-	 * @return Time we last pinged or dead path checked this link
-	 */
-	inline uint64_t lastPing() const throw() { return _lastPing; }
-
-	/**
-	 * @return Time of last keepalive
-	 */
-	inline uint64_t lastKeepalive() const throw() { return _lastKeepalive; }
-
-	/**
-	 * @return Time of last receive from this path
-	 */
-	inline uint64_t lastReceived() const throw() { return _lastReceived; }
+	inline const InetAddress &localAddress() const { return _localAddress; }
 
 	/**
 	 * @return Physical address
 	 */
-	inline const InetAddress &address() const throw() { return _addr; }
+	inline const InetAddress &address() const { return _addr; }
 
 	/**
 	 * @return IP scope -- faster shortcut for address().ipScope()
 	 */
-	inline InetAddress::IpScope ipScope() const throw() { return _ipScope; }
+	inline InetAddress::IpScope ipScope() const { return _ipScope; }
 
 	/**
-	 * @param f Valuve of ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL and inverse of ZT_PATH_FLAG_CLUSTER_OPTIMAL (both are changed)
+	 * @return True if path has received a trust established packet (e.g. common network membership) in the past ZT_TRUST_EXPIRATION ms
 	 */
-	inline void setClusterSuboptimal(bool f)
+	inline bool trustEstablished(const uint64_t now) const { return ((now - _lastTrustEstablishedPacketReceived) < ZT_TRUST_EXPIRATION); }
+
+	/**
+	 * @return Preference rank, higher == better
+	 */
+	inline unsigned int preferenceRank() const
 	{
-		if (f) {
-			_flags = (_flags | ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL) & ~ZT_PATH_FLAG_CLUSTER_OPTIMAL;
-		} else {
-			_flags = (_flags | ZT_PATH_FLAG_CLUSTER_OPTIMAL) & ~ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL;
-		}
-	}
-
-	/**
-	 * @return True if ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL is set
-	 */
-	inline bool isClusterSuboptimal() const { return ((_flags & ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL) != 0); }
-
-	/**
-	 * @return True if ZT_PATH_FLAG_CLUSTER_OPTIMAL is set
-	 */
-	inline bool isClusterOptimal() const { return ((_flags & ZT_PATH_FLAG_CLUSTER_OPTIMAL) != 0); }
-
-	/**
-	 * @return Preference rank, higher == better (will be less than 255)
-	 */
-	inline unsigned int preferenceRank() const throw()
-	{
-		/* First, since the scope enum values in InetAddress.hpp are in order of
-		 * use preference rank, we take that. Then we multiple by two, yielding
-		 * a sequence like 0, 2, 4, 6, etc. Then if it's IPv6 we add one. This
-		 * makes IPv6 addresses of a given scope outrank IPv4 addresses of the
-		 * same scope -- e.g. 1 outranks 0. This makes us prefer IPv6, but not
-		 * if the address scope/class is of a fundamentally lower rank. */
+		// This causes us to rank paths in order of IP scope rank (see InetAdddress.hpp) but
+		// within each IP scope class to prefer IPv6 over IPv4.
 		return ( ((unsigned int)_ipScope << 1) | (unsigned int)(_addr.ss_family == AF_INET6) );
 	}
-
-	/**
-	 * @return This path's overall quality score (higher is better)
-	 */
-	inline uint64_t score() const throw()
-	{
-		// This is a little bit convoluted because we try to be branch-free, using multiplication instead of branches for boolean flags
-
-		// Start with the last time this path was active, and add a fudge factor to prevent integer underflow if _lastReceived is 0
-		uint64_t score = _lastReceived + (ZT_PEER_DIRECT_PING_DELAY * (ZT_PEER_DEAD_PATH_DETECTION_MAX_PROBATION + 1));
-
-		// Increase score based on path preference rank, which is based on IP scope and address family
-		score += preferenceRank() * (ZT_PEER_DIRECT_PING_DELAY / ZT_PATH_MAX_PREFERENCE_RANK);
-
-		// Increase score if this is known to be an optimal path to a cluster
-		score += (uint64_t)(_flags & ZT_PATH_FLAG_CLUSTER_OPTIMAL) * (ZT_PEER_DIRECT_PING_DELAY / 2); // /2 because CLUSTER_OPTIMAL is flag 0x0002
-
-		// Decrease score if this is known to be a sub-optimal path to a cluster
-		score -= (uint64_t)(_flags & ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL) * ZT_PEER_DIRECT_PING_DELAY;
-
-		// Penalize for missed ECHO tests in dead path detection
-		score -= (uint64_t)((ZT_PEER_DIRECT_PING_DELAY / 2) * _probation);
-
-		return score;
-	}
-
-	/**
-	 * @return True if path is considered reliable (no NAT keepalives etc. are needed)
-	 */
-	inline bool reliable() const throw()
-	{
-		if ((_addr.ss_family == AF_INET)||(_addr.ss_family == AF_INET6))
-			return ((_ipScope != InetAddress::IP_SCOPE_GLOBAL)&&(_ipScope != InetAddress::IP_SCOPE_PSEUDOPRIVATE));
-		return true;
-	}
-
-	/**
-	 * @return True if address is non-NULL
-	 */
-	inline operator bool() const throw() { return (_addr); }
 
 	/**
 	 * Check whether this address is valid for a ZeroTier path
@@ -272,7 +240,6 @@ public:
 	 * @return True if address is good for ZeroTier path use
 	 */
 	static inline bool isAddressValidForPath(const InetAddress &a)
-		throw()
 	{
 		if ((a.ss_family == AF_INET)||(a.ss_family == AF_INET6)) {
 			switch(a.ipScope()) {
@@ -304,60 +271,46 @@ public:
 	}
 
 	/**
-	 * @return Current path probation count (for dead path detect)
+	 * @return True if path appears alive
 	 */
-	inline unsigned int probation() const { return _probation; }
+	inline bool alive(const uint64_t now) const { return ((now - _lastIn) <= ZT_PATH_ALIVE_TIMEOUT); }
 
 	/**
-	 * Increase this path's probation violation count (for dead path detect)
+	 * @return True if this path needs a heartbeat
 	 */
-	inline void increaseProbation() { ++_probation; }
+	inline bool needsHeartbeat(const uint64_t now) const { return ((now - _lastOut) >= ZT_PATH_HEARTBEAT_PERIOD); }
 
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b) const
-	{
-		b.append((uint8_t)2); // version
-		b.append((uint64_t)_lastSend);
-		b.append((uint64_t)_lastPing);
-		b.append((uint64_t)_lastKeepalive);
-		b.append((uint64_t)_lastReceived);
-		_addr.serialize(b);
-		_localAddress.serialize(b);
-		b.append((uint16_t)_flags);
-		b.append((uint16_t)_probation);
-	}
+	/**
+	 * @return Last time we sent something
+	 */
+	inline uint64_t lastOut() const { return _lastOut; }
 
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-	{
-		unsigned int p = startAt;
-		if (b[p++] != 2)
-			throw std::invalid_argument("invalid serialized Path");
-		_lastSend = b.template at<uint64_t>(p); p += 8;
-		_lastPing = b.template at<uint64_t>(p); p += 8;
-		_lastKeepalive = b.template at<uint64_t>(p); p += 8;
-		_lastReceived = b.template at<uint64_t>(p); p += 8;
-		p += _addr.deserialize(b,p);
-		p += _localAddress.deserialize(b,p);
-		_flags = b.template at<uint16_t>(p); p += 2;
-		_probation = b.template at<uint16_t>(p); p += 2;
-		_ipScope = _addr.ipScope();
-		return (p - startAt);
-	}
+	/**
+	 * @return Last time we received anything
+	 */
+	inline uint64_t lastIn() const { return _lastIn; }
 
-	inline bool operator==(const Path &p) const { return ((p._addr == _addr)&&(p._localAddress == _localAddress)); }
-	inline bool operator!=(const Path &p) const { return ((p._addr != _addr)||(p._localAddress != _localAddress)); }
+	/**
+	 * Return and increment outgoing packet counter (used with Packet::armor())
+	 *
+	 * @return Next value that should be used for outgoing packet counter (only least significant 3 bits are used)
+	 */
+	inline unsigned int nextOutgoingCounter() { return _outgoingPacketCounter++; }
 
 private:
-	uint64_t _lastSend;
-	uint64_t _lastPing;
-	uint64_t _lastKeepalive;
-	uint64_t _lastReceived;
+	volatile uint64_t _lastOut;
+	volatile uint64_t _lastIn;
+	volatile uint64_t _lastTrustEstablishedPacketReceived;
+	volatile uint64_t _incomingLinkQualityFastLog;
+	volatile unsigned long _incomingLinkQualitySlowLogPtr;
+	volatile signed int _incomingLinkQualitySlowLogCounter;
+	volatile unsigned int _incomingLinkQualityPreviousPacketCounter;
+	volatile unsigned int _outgoingPacketCounter;
 	InetAddress _addr;
 	InetAddress _localAddress;
-	unsigned int _flags;
-	unsigned int _probation;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often
+	volatile uint8_t _incomingLinkQualitySlowLog[32];
+	AtomicCounter __refCount;
 };
 
 } // namespace ZeroTier

@@ -103,9 +103,9 @@ public:
 	friend class Hashtable::Iterator;
 
 	/**
-	 * @param bc Initial capacity in buckets (default: 128, must be nonzero)
+	 * @param bc Initial capacity in buckets (default: 64, must be nonzero)
 	 */
-	Hashtable(unsigned long bc = 128) :
+	Hashtable(unsigned long bc = 64) :
 		_t(reinterpret_cast<_Bucket **>(::malloc(sizeof(_Bucket *) * bc))),
 		_bc(bc),
 		_s(0)
@@ -362,7 +362,7 @@ private:
 	template<typename O>
 	static inline unsigned long _hc(const O &obj)
 	{
-		return obj.hashCode();
+		return (unsigned long)obj.hashCode();
 	}
 	static inline unsigned long _hc(const uint64_t i)
 	{

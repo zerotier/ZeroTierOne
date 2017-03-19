@@ -1,4 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
 /* $Id: upnpreplyparse.c,v 1.19 2015/07/15 10:29:11 nanard Exp $ */
 /* MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/

@@ -83,10 +83,15 @@ BSDEthernetTap::BSDEthernetTap(
 {
 	static Mutex globalTapCreateLock;
 	char devpath[64],ethaddr[64],mtustr[32],metstr[32],tmpdevname[32];
-	struct stat stattmp;
 
-	// On FreeBSD at least we can rename, so use nwid to generate a deterministic unique zt#### name using base32
-	// As a result we don't use desiredDevice
+	Mutex::Lock _gl(globalTapCreateLock);
+
+	if (mtu > 2800)
+		throw std::runtime_error("max tap MTU is 2800");
+
+#ifdef __FreeBSD__
+	/* FreeBSD allows long interface names and interface renaming */
+
 	_dev = "zt";
 	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)((nwid >> 60) & 0x1f)]);
 	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)((nwid >> 55) & 0x1f)]);
@@ -102,13 +107,6 @@ BSDEthernetTap::BSDEthernetTap(
 	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)((nwid >> 5) & 0x1f)]);
 	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)(nwid & 0x1f)]);
 
-	Mutex::Lock _gl(globalTapCreateLock);
-
-	if (mtu > 2800)
-		throw std::runtime_error("max tap MTU is 2800");
-
-	// On BSD we create taps and they can have high numbers, so use ones starting
-	// at 9993 to not conflict with other stuff. Then we rename it to zt<base32 of nwid>
 	std::vector<std::string> devFiles(OSUtils::listDirectory("/dev"));
 	for(int i=9993;i<(9993+128);++i) {
 		Utils::snprintf(tmpdevname,sizeof(tmpdevname),"tap%d",i);
@@ -123,6 +121,7 @@ BSDEthernetTap::BSDEthernetTap(
 				::waitpid(cpid,&exitcode,0);
 			} else throw std::runtime_error("fork() failed");
 
+			struct stat stattmp;
 			if (!stat(devpath,&stattmp)) {
 				cpid = (long)vfork();
 				if (cpid == 0) {
@@ -144,6 +143,19 @@ BSDEthernetTap::BSDEthernetTap(
 			}
 		}
 	}
+#else
+	/* Other BSDs like OpenBSD only have a limited number of tap devices that cannot be renamed */
+
+	for(int i=0;i<64;++i) {
+		Utils::snprintf(tmpdevname,sizeof(tmpdevname),"tap%d",i);
+		Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",tmpdevname);
+		_fd = ::open(devpath,O_RDWR);
+		if (_fd > 0) {
+			_dev = tmpdevname;
+			break;
+		}
+	}
+#endif
 
 	if (_fd <= 0)
 		throw std::runtime_error("unable to open TAP device or no more devices available");
@@ -325,6 +337,7 @@ void BSDEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std:
 {
 	std::vector<MulticastGroup> newGroups;
 
+#ifndef __OpenBSD__
 	struct ifmaddrs *ifmap = (struct ifmaddrs *)0;
 	if (!getifmaddrs(&ifmap)) {
 		struct ifmaddrs *p = ifmap;
@@ -339,6 +352,7 @@ void BSDEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std:
 		}
 		freeifmaddrs(ifmap);
 	}
+#endif // __OpenBSD__
 
 	std::vector<InetAddress> allIps(ips());
 	for(std::vector<InetAddress>::iterator ip(allIps.begin());ip!=allIps.end();++ip)

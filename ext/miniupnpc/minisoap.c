@@ -1,4 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
 /* $Id: minisoap.c,v 1.24 2015/10/26 17:05:07 nanard Exp $ */
 /* Project : miniupnp
  * Author : Thomas Bernard
@@ -20,6 +19,7 @@
 #include <sys/socket.h>
 #endif
 #include "minisoap.h"
+
 #ifdef _WIN32
 #define OS_STRING "Win32"
 #define MINIUPNPC_VERSION_STRING "2.0"
@@ -124,3 +124,5 @@ int soapPostSubmit(int fd,
 #endif
 	return httpWrite(fd, body, bodysize, headerbuf, headerssize);
 }
+
+

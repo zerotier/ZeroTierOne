@@ -40,23 +40,11 @@
     <Filter Include="Header Files\ext\http-parser">
       <UniqueIdentifier>{17ae9a01-d39f-4c6d-a800-8f2cd0804c96}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\ext\json-parser">
-      <UniqueIdentifier>{736aad7f-8d95-4602-88df-3bb970869c6f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\ext\lz4">
-      <UniqueIdentifier>{3636527c-bc03-4852-bd3c-20ee25e56d82}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\ext">
       <UniqueIdentifier>{7784af31-5b60-4300-b07e-44cf864c54db}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\ext\lz4">
-      <UniqueIdentifier>{29164186-10fc-45f5-b253-6d03f0ddd4db}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\ext\http-parser">
       <UniqueIdentifier>{f8a1c208-15b8-4d85-a4cb-11d2b82f2d1e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\ext\json-parser">
-      <UniqueIdentifier>{da28e961-1761-41d8-9a59-65b00dfb1302}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\windows">
       <UniqueIdentifier>{43f75f84-c70d-4d44-a0ef-28a7a399abd4}</UniqueIdentifier>
@@ -70,15 +58,6 @@
     <Filter Include="Header Files\windows\ZeroTierOne">
       <UniqueIdentifier>{bf604491-14c4-4a74-81a6-6105d07c5c7c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\ext\bin">
-      <UniqueIdentifier>{5939db69-ab17-47c6-97fb-185e2c678737}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\ext\bin\miniupnpc">
-      <UniqueIdentifier>{3666f510-b6da-47cb-8039-56441f2dac3e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\ext\bin\miniupnpc\include">
-      <UniqueIdentifier>{1a47071e-e51b-4535-89ae-858946f03118}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\ext\miniupnpc">
       <UniqueIdentifier>{5423fb64-896b-432e-a19d-88d4467f89f9}</UniqueIdentifier>
     </Filter>
@@ -91,11 +70,14 @@
     <Filter Include="Source Files\ext\libnatpmp">
       <UniqueIdentifier>{409ec37e-ff36-4c13-b18d-52d6052e0ca2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\controller">
+      <UniqueIdentifier>{3cad34c8-c436-43ae-8323-57803637c832}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ext\json">
+      <UniqueIdentifier>{ff20532b-d9a2-440d-a7b4-b49e26a9b2f8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\service\ControlPlane.cpp">
-      <Filter>Source Files\service</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\service\OneService.cpp">
       <Filter>Source Files\service</Filter>
     </ClCompile>
@@ -165,14 +147,8 @@
     <ClCompile Include="..\..\node\Utils.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ext\lz4\lz4.c">
-      <Filter>Source Files\ext\lz4</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ext\http-parser\http_parser.c">
       <Filter>Source Files\ext\http-parser</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\ext\json-parser\json.c">
-      <Filter>Source Files\ext\json-parser</Filter>
     </ClCompile>
     <ClCompile Include="..\..\one.cpp">
       <Filter>Source Files</Filter>
@@ -186,13 +162,7 @@
     <ClCompile Include="ZeroTierOneService.cpp">
       <Filter>Source Files\windows\ZeroTierOne</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\osdep\BackgroundResolver.cpp">
-      <Filter>Source Files\osdep</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\node\Path.cpp">
-      <Filter>Source Files\node</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\node\DeferredPackets.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
     <ClCompile Include="..\..\node\Cluster.cpp">
@@ -252,6 +222,30 @@
     <ClCompile Include="..\..\osdep\ManagedRoute.cpp">
       <Filter>Source Files\osdep</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\node\Membership.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\node\Capability.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\node\Revocation.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\node\Tag.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\controller\EmbeddedNetworkController.cpp">
+      <Filter>Source Files\controller</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\controller\JSONDB.cpp">
+      <Filter>Source Files\controller</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\service\SoftwareUpdater.cpp">
+      <Filter>Source Files\service</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\node\CertificateOfOwnership.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -277,12 +271,6 @@
     </ClInclude>
     <ClInclude Include="..\..\osdep\WindowsEthernetTap.hpp">
       <Filter>Header Files\osdep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\service\ControlPlane.hpp">
-      <Filter>Header Files\service</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\service\ControlPlaneSubsystem.hpp">
-      <Filter>Header Files\service</Filter>
     </ClInclude>
     <ClInclude Include="..\..\service\OneService.hpp">
       <Filter>Header Files\service</Filter>
@@ -392,12 +380,6 @@
     <ClInclude Include="..\..\node\Utils.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ext\lz4\lz4.h">
-      <Filter>Header Files\ext\lz4</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\json-parser\json.h">
-      <Filter>Header Files\ext\json-parser</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ext\http-parser\http_parser.h">
       <Filter>Header Files\ext\http-parser</Filter>
     </ClInclude>
@@ -409,57 +391,6 @@
     </ClInclude>
     <ClInclude Include="ZeroTierOneService.h">
       <Filter>Header Files\windows\ZeroTierOne</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\osdep\BackgroundResolver.hpp">
-      <Filter>Header Files\osdep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\codelength.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\connecthostport.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\igd_desc_parse.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\minisoap.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\minissdpc.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpc.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpc_declspec.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpcstrings.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpctypes.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniwget.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\minixml.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\portlistingparse.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\receivedata.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\upnpcommands.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\upnperrors.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\upnpreplyparse.h">
-      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\BinarySemaphore.hpp">
       <Filter>Header Files\node</Filter>
@@ -541,6 +472,15 @@
     </ClInclude>
     <ClInclude Include="..\..\osdep\ManagedRoute.hpp">
       <Filter>Header Files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\service\SoftwareUpdater.hpp">
+      <Filter>Header Files\service</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\json\json.hpp">
+      <Filter>Header Files\ext\json</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\node\CertificateOfOwnership.hpp">
+      <Filter>Header Files\node</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

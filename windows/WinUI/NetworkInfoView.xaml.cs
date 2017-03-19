@@ -20,30 +20,50 @@ namespace WinUI
     /// </summary>
     public partial class NetworkInfoView : UserControl
     {
-        private APIHandler handler;
-        private ZeroTierNetwork network;
+        public ZeroTierNetwork network;
 
-        public NetworkInfoView(APIHandler handler, ZeroTierNetwork network)
+        public NetworkInfoView(ZeroTierNetwork network)
         {
             InitializeComponent();
 
-            this.handler = handler;
             this.network = network;
 
             UpdateNetworkData();
+
+            allowDefault.Checked += AllowDefault_CheckStateChanged;
+            allowDefault.Unchecked += AllowDefault_CheckStateChanged;
+            allowGlobal.Checked += AllowGlobal_CheckStateChanged;
+            allowGlobal.Unchecked += AllowGlobal_CheckStateChanged;
+            allowManaged.Checked += AllowManaged_CheckStateChanged;
+            allowManaged.Unchecked += AllowManaged_CheckStateChanged;
         }
 
         private void UpdateNetworkData()
         {
-            this.networkId.Text = network.NetworkId;
-            this.networkName.Text = network.NetworkName;
-            this.networkStatus.Text = network.NetworkStatus;
-            this.networkType.Text = network.NetworkType;
-            this.macAddress.Text = network.MacAddress;
-            this.mtu.Text = network.MTU.ToString();
+
+            if (this.networkId.Text != network.NetworkId)
+                this.networkId.Text = network.NetworkId;
+
+            if (this.networkName.Text != network.NetworkName)
+                this.networkName.Text = network.NetworkName;
+
+            if (this.networkStatus.Text != network.NetworkStatus)
+                this.networkStatus.Text = network.NetworkStatus;
+
+            if (this.networkType.Text != network.NetworkType)
+                this.networkType.Text = network.NetworkType;
+
+            if (this.macAddress.Text != network.MacAddress)
+                this.macAddress.Text = network.MacAddress;
+
+            if (this.mtu.Text != network.MTU.ToString())
+                this.mtu.Text = network.MTU.ToString();
+
             this.broadcastEnabled.Text = (network.BroadcastEnabled ? "ENABLED" : "DISABLED");
             this.bridgingEnabled.Text = (network.Bridge ? "ENABLED" : "DISABLED");
-            this.deviceName.Text = network.DeviceName;
+
+            if (this.deviceName.Text != network.DeviceName)
+                this.deviceName.Text = network.DeviceName;
 
             string iplist = "";
             for (int i = 0; i < network.AssignedAddresses.Length; ++i)
@@ -53,8 +73,21 @@ namespace WinUI
                     iplist += "\n";
             }
 
-            this.managedIps.Text = iplist;
-        }
+            if (this.managedIps.Text != iplist)
+                this.managedIps.Text = iplist;
+
+            this.allowDefault.IsChecked = network.AllowDefault;
+            this.allowGlobal.IsChecked = network.AllowGlobal;
+            this.allowManaged.IsChecked = network.AllowManaged;
+
+						this.connectedCheckBox.Checked -= connectedCheckBox_Checked;
+						this.connectedCheckBox.Unchecked -= connectedCheckbox_Unchecked;
+
+            this.connectedCheckBox.IsChecked = network.IsConnected;
+
+						this.connectedCheckBox.Checked += connectedCheckBox_Checked;
+						this.connectedCheckBox.Unchecked += connectedCheckbox_Unchecked;
+				}
 
         public bool HasNetwork(ZeroTierNetwork network)
         {
@@ -64,9 +97,70 @@ namespace WinUI
             return false;
         }
 
-        private void leaveButton_Click(object sender, RoutedEventArgs e)
+        public void SetNetworkInfo(ZeroTierNetwork network)
         {
-            handler.LeaveNetwork(network.NetworkId);
+            this.network = network;
+
+            UpdateNetworkData();
+        }
+
+        private void deleteButton_Click(object sender, RoutedEventArgs e)
+        {
+            APIHandler.Instance.LeaveNetwork(network.NetworkId);
+            NetworkMonitor.Instance.RemoveNetwork(network.NetworkId);
+        }
+
+        private void AllowManaged_CheckStateChanged(object sender, RoutedEventArgs e)
+        {
+            CheckBox cb = sender as CheckBox;
+            APIHandler.Instance.JoinNetwork(network.NetworkId,
+                allowManaged.IsChecked ?? false,
+                allowGlobal.IsChecked ?? false,
+                allowDefault.IsChecked ?? false);
+        }
+
+        private void AllowGlobal_CheckStateChanged(object sender, RoutedEventArgs e)
+        {
+            CheckBox cb = sender as CheckBox;
+            APIHandler.Instance.JoinNetwork(network.NetworkId,
+                allowManaged.IsChecked ?? false,
+                allowGlobal.IsChecked ?? false,
+                allowDefault.IsChecked ?? false);
+        }
+
+        private void AllowDefault_CheckStateChanged(object sender, RoutedEventArgs e)
+        {
+            CheckBox cb = sender as CheckBox;
+            APIHandler.Instance.JoinNetwork(network.NetworkId,
+                allowManaged.IsChecked ?? false,
+                allowGlobal.IsChecked ?? false,
+                allowDefault.IsChecked ?? false);
+        }
+
+        private void connectedCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            onConnectedCheckboxUpdated(true);
+        }
+
+        private void connectedCheckbox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            onConnectedCheckboxUpdated(false);
+        }
+
+        private void onConnectedCheckboxUpdated(bool isChecked)
+        {
+            if (isChecked)
+            {
+                bool global = allowGlobal.IsChecked.Value;
+                bool managed = allowManaged.IsChecked.Value;
+                bool defRoute = allowDefault.IsChecked.Value;
+
+                APIHandler.Instance.JoinNetwork(networkId.Text, managed, global, defRoute);
+            }
+            else
+            {
+                APIHandler.Instance.LeaveNetwork(networkId.Text);
+            }
         }
     }
 }

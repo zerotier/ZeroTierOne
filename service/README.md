@@ -1,9 +1,68 @@
 ZeroTier One Network Virtualization Service
 ======
 
-This is the common background service implementation for ZeroTier One, the VPN-like OS-level network virtualization service.
+This is the actual implementation of ZeroTier One, a service providing connectivity to ZeroTier virtual networks for desktops, laptops, servers, VMs, etc. (Mobile versions for iOS and Android have their own implementations in native Java and Objective C that leverage only the ZeroTier core engine.)
 
-It provides a ready-made core I/O loop and a local HTTP-based JSON control bus for controlling the service. This control bus HTTP server can also serve the files in ui/ if this folder's contents are installed in the ZeroTier home folder. The ui/ implements a React-based HTML5 user interface which is then wrappered for various platforms via MacGap, Windows .NET WebControl, etc. It can also be used locally from scripts or via *curl*.
+### Local Configuration File
+
+A file called `local.conf` in the ZeroTier home folder contains configuration options that apply to the local node. It can be used to set up trusted paths, blacklist physical paths, set up physical path hints for certain nodes, and define trusted upstream devices (federated roots). In a large deployment it can be deployed using a tool like Puppet, Chef, SaltStack, etc. to set a uniform configuration across systems. It's a JSON format file that can also be edited and rewritten by ZeroTier One itself, so ensure that proper JSON formatting is used.
+
+Settings available in `local.conf` (this is not valid JSON, and JSON does not allow comments):
+
+```javascript
+{
+	"physical": { /* Settings that apply to physical L2/L3 network paths. */
+		"NETWORK/bits": { /* Network e.g. 10.0.0.0/24 or fd00::/32 */
+			"blacklist": true|false, /* If true, blacklist this path for all ZeroTier traffic */
+			"trustedPathId": 0|!0 /* If present and nonzero, define this as a trusted path (see below) */
+		} /* ,... additional networks */
+	},
+	"virtual": { /* Settings applied to ZeroTier virtual network devices (VL1) */
+		"##########": { /* 10-digit ZeroTier address */
+			"try": [ "IP/port"/*,...*/ ], /* Hints on where to reach this peer if no upstreams/roots are online */
+			"blacklist": [ "NETWORK/bits"/*,...*/ ] /* Blacklist a physical path for only this peer. */
+		}
+	},
+	"settings": { /* Other global settings */
+		"primaryPort": 0-65535, /* If set, override default port of 9993 and any command line port */
+		"portMappingEnabled": true|false, /* If true (the default), try to use uPnP or NAT-PMP to map ports */
+		"softwareUpdate": "apply"|"download"|"disable", /* Automatically apply updates, just download, or disable built-in software updates */
+		"softwareUpdateChannel": "release"|"beta", /* Software update channel */
+		"softwareUpdateDist": true|false, /* If true, distribute software updates (only really useful to ZeroTier, Inc. itself, default is false) */
+		"interfacePrefixBlacklist": [ "XXX",... ], /* Array of interface name prefixes (e.g. eth for eth#) to blacklist for ZT traffic */
+		"allowManagementFrom": "NETWORK/bits"|null /* If non-NULL, allow JSON/HTTP management from this IP network. Default is 127.0.0.1 only. */
+	}
+}
+```
+
+ * **trustedPathId**: A trusted path is a physical network over which encryption and authentication are not required. This provides a performance boost but sacrifices all ZeroTier's security features when communicating over this path. Only use this if you know what you are doing and really need the performance! To set up a trusted path, all devices using it *MUST* have the *same trusted path ID* for the same network. Trusted path IDs are arbitrary positive non-zero integers. For example a group of devices on a LAN with IPs in 10.0.0.0/24 could use it as a fast trusted path if they all had the same trusted path ID of "25" defined for that network.
+ * **relayPolicy**: Under what circumstances should this device relay traffic for other devices? The default is TRUSTED, meaning that we'll only relay for devices we know to be members of a network we have joined. NEVER is the default on mobile devices (iOS/Android) and tells us to never relay traffic. ALWAYS is usually only set for upstreams and roots, allowing them to act as promiscuous relays for anyone who desires it.
+
+An example `local.conf`:
+
+```javascript
+{
+	"physical": {
+		"10.0.0.0/24": {
+			"blacklist": true
+		},
+		"10.10.10.0/24": {
+			"trustedPathId": 101010024
+		},
+	},
+	"virtual": {
+		"feedbeef12": {
+			"role": "UPSTREAM",
+			"try": [ "10.10.20.1/9993" ],
+			"blacklist": [ "192.168.0.0/24" ]
+		}
+	},
+	"settings": {
+		"softwareUpdate": "apply",
+		"softwraeUpdateChannel": "release"
+	}
+}
+```
 
 ### Network Virtualization Service API
 
@@ -21,30 +80,20 @@ A *jsonp* URL argument may be supplied to request JSONP encapsulation. A JSONP r
  * Methods: GET
  * Returns: { object }
 
-<table>
-<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
-<tr><td>address</td><td>string</td><td>10-digit hexadecimal ZeroTier address of this node</td><td>no</td></tr>
-<tr><td>publicIdentity</td><td>string</td><td>Full public ZeroTier identity of this node</td><td>no</td></tr>
-<tr><td>online</td><td>boolean</td><td>Does this node appear to have upstream network access?</td><td>no</td></tr>
-<tr><td>tcpFallbackActive</td><td>boolean</td><td>Is TCP fallback mode active?</td><td>no</td></tr>
-<tr><td>versionMajor</td><td>integer</td><td>ZeroTier major version</td><td>no</td></tr>
-<tr><td>versionMinor</td><td>integer</td><td>ZeroTier minor version</td><td>no</td></tr>
-<tr><td>versionRev</td><td>integer</td><td>ZeroTier revision</td><td>no</td></tr>
-<tr><td>version</td><td>string</td><td>Version in major.minor.rev format</td><td>no</td></tr>
-<tr><td>clock</td><td>integer</td><td>Node system clock in ms since epoch</td><td>no</td></tr>
-</table>
-
-#### /config
-
- * Purpose: Get or set local configuration
- * Methods: GET, POST
- * Returns: { object }
-
-No local configuration options are exposed yet.
-
-<table>
-<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
-</table>
+| Field                 | Type          | Description                                       | Writable |
+| --------------------- | ------------- | ------------------------------------------------- | -------- |
+| address               | string        | 10-digit hex ZeroTier address of this node        | no       |
+| publicIdentity        | string        | This node's ZeroTier identity.public              | no       |
+| worldId               | integer       | ZeroTier world ID (never changes except for test) | no       |
+| worldTimestamp        | integer       | Timestamp of most recent world definition         | no       |
+| online                | boolean       | If true at least one upstream peer is reachable   | no       |
+| tcpFallbackActive     | boolean       | If true we are using slow TCP fallback            | no       |
+| relayPolicy           | string        | Relay policy: ALWAYS, TRUSTED, or NEVER           | no       |
+| versionMajor          | integer       | Software major version                            | no       |
+| versionMinor          | integer       | Software minor version                            | no       |
+| versionRev            | integer       | Software revision                                 | no       |
+| version               | string        | major.minor.revision                              | no       |
+| clock                 | integer       | Current system clock at node (ms since epoch)     | no       |
 
 #### /network
 
@@ -64,23 +113,35 @@ To join a network, POST to it. Since networks have no mandatory writable paramet
 
 Most network settings are not writable, as they are defined by the network controller.
 
-<table>
-<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
-<tr><td>nwid</td><td>string</td><td>16-digit hex network ID</td><td>no</td></tr>
-<tr><td>mac</td><td>string</td><td>Ethernet MAC address of virtual network port</td><td>no</td></tr>
-<tr><td>name</td><td>string</td><td>Network short name as configured on network controller</td><td>no</td></tr>
-<tr><td>status</td><td>string</td><td>Network status: OK, ACCESS_DENIED, PORT_ERROR, etc.</td><td>no</td></tr>
-<tr><td>type</td><td>string</td><td>Network type, currently PUBLIC or PRIVATE</td><td>no</td></tr>
-<tr><td>mtu</td><td>integer</td><td>Ethernet MTU</td><td>no</td></tr>
-<tr><td>dhcp</td><td>boolean</td><td>If true, DHCP may be used to obtain an IP address</td><td>no</td></tr>
-<tr><td>bridge</td><td>boolean</td><td>If true, this node may bridge in other Ethernet devices</td><td>no</td></tr>
-<tr><td>broadcastEnabled</td><td>boolean</td><td>Is Ethernet broadcast (ff:ff:ff:ff:ff:ff) allowed?</td><td>no</td></tr>
-<tr><td>portError</td><td>integer</td><td>Error code (if any) returned by underlying OS "tap" driver</td><td>no</td></tr>
-<tr><td>netconfRevision</td><td>integer</td><td>Network configuration revision ID</td><td>no</td></tr>
-<tr><td>multicastSubscriptions</td><td>[string]</td><td>Multicast memberships as array of MAC/ADI tuples</td><td>no</td></tr>
-<tr><td>assignedAddresses</td><td>[string]</td><td>ZeroTier-managed IP address assignments as array of IP/netmask bits tuples</td><td>no</td></tr>
-<tr><td>portDeviceName</td><td>string</td><td>OS-specific network device name (if available)</td><td>no</td></tr>
-</table>
+| Field                 | Type          | Description                                       | Writable |
+| --------------------- | ------------- | ------------------------------------------------- | -------- |
+| id                    | string        | 16-digit hex network ID                           | no       |
+| nwid                  | string        | 16-digit hex network ID (legacy field)            | no       |
+| mac                   | string        | MAC address of network device for this network    | no       |
+| name                  | string        | Short name of this network (from controller)      | no       |
+| status                | string        | Network status (OK, ACCESS_DENIED, etc.)          | no       |
+| type                  | string        | Network type (PUBLIC or PRIVATE)                  | no       |
+| mtu                   | integer       | Ethernet MTU                                      | no       |
+| dhcp                  | boolean       | If true, DHCP should be used to get IP info       | no       |
+| bridge                | boolean       | If true, this device can bridge others            | no       |
+| broadcastEnabled      | boolean       | If true ff:ff:ff:ff:ff:ff broadcasts work         | no       |
+| portError             | integer       | Error code returned by underlying tap driver      | no       |
+| netconfRevision       | integer       | Network configuration revision ID                 | no       |
+| assignedAddresses     | [string]      | Array of ZeroTier-assigned IP addresses (/bits)   | no       |
+| routes                | [object]      | Array of ZeroTier-assigned routes (see below)     | no       |
+| portDeviceName        | string        | Name of virtual network device (if any)           | no       |
+| allowManaged          | boolean       | Allow IP and route management                     | yes      |
+| allowGlobal           | boolean       | Allow IPs and routes that overlap with global IPs | yes      |
+| allowDefault          | boolean       | Allow overriding of system default route          | yes      |
+
+Route objects:
+
+| Field                 | Type          | Description                                       | Writable |
+| --------------------- | ------------- | ------------------------------------------------- | -------- |
+| target                | string        | Target network / netmask bits                     | no       |
+| via                   | string        | Gateway IP address (next hop) or null for LAN     | no       |
+| flags                 | integer       | Flags, currently always 0                         | no       |
+| metric                | integer       | Route metric (not currently used)                 | no       |
 
 #### /peer
 
@@ -92,31 +153,29 @@ Getting /peer returns an array of peer objects for all current peers. See below 
 
 #### /peer/\<address\>
 
- * Purpose: Get information about a peer
- * Methods: GET
+ * Purpose: Get or set information about a peer
+ * Methods: GET, POST
  * Returns: { object }
 
-<table>
-<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
-<tr><td>address</td><td>string</td><td>10-digit hex ZeroTier address</td><td>no</td></tr>
-<tr><td>lastUnicastFrame</td><td>integer</td><td>Time of last unicast frame in ms since epoch</td><td>no</td></tr>
-<tr><td>lastMulticastFrame</td><td>integer</td><td>Time of last multicast frame in ms since epoch</td><td>no</td></tr>
-<tr><td>versionMajor</td><td>integer</td><td>Major version of remote if known</td><td>no</td></tr>
-<tr><td>versionMinor</td><td>integer</td><td>Minor version of remote if known</td><td>no</td></tr>
-<tr><td>versionRev</td><td>integer</td><td>Revision of remote if known</td><td>no</td></tr>
-<tr><td>version</td><td>string</td><td>Version in major.minor.rev format</td><td>no</td></tr>
-<tr><td>latency</td><td>integer</td><td>Latency in milliseconds if known</td><td>no</td></tr>
-<tr><td>role</td><td>string</td><td>LEAF, HUB, or ROOTSERVER</td><td>no</td></tr>
-<tr><td>paths</td><td>[object]</td><td>Array of path objects (see below)</td><td>no</td></tr>
-</table>
+| Field                 | Type          | Description                                       | Writable |
+| --------------------- | ------------- | ------------------------------------------------- | -------- |
+| address               | string        | 10-digit hex ZeroTier address of peer             | no       |
+| versionMajor          | integer       | Major version of remote (if known)                | no       |
+| versionMinor          | integer       | Minor version of remote (if known)                | no       |
+| versionRev            | integer       | Software revision of remote (if known)            | no       |
+| version               | string        | major.minor.revision                              | no       |
+| latency               | integer       | Latency in milliseconds if known                  | no       |
+| role                  | string        | LEAF, UPSTREAM, or ROOT                           | no       |
+| paths                 | [object]      | Currently active physical paths (see below)       | no       |
 
-Path objects describe direct physical paths to peer. If no path objects are listed, peer is only reachable via indirect relay fallback. Path object format is:
+Path objects:
 
-<table>
-<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
-<tr><td>address</td><td>string</td><td>Physical socket address e.g. IP/port for UDP</td><td>no</td></tr>
-<tr><td>lastSend</td><td>integer</td><td>Last send via this path in ms since epoch</td><td>no</td></tr>
-<tr><td>lastReceive</td><td>integer</td><td>Last receive via this path in ms since epoch</td><td>no</td></tr>
-<tr><td>fixed</td><td>boolean</td><td>If true, this is a statically-defined "fixed" path</td><td>no</td></tr>
-<tr><td>preferred</td><td>boolean</td><td>If true, this is the current preferred path</td><td>no</td></tr>
-</table>
+| Field                 | Type          | Description                                       | Writable |
+| --------------------- | ------------- | ------------------------------------------------- | -------- |
+| address               | string        | Physical socket address e.g. IP/port              | no       |
+| lastSend              | integer       | Time of last send through this path               | no       |
+| lastReceive           | integer       | Time of last receive through this path            | no       |
+| active                | boolean       | Is this path in use?                              | no       |
+| expired               | boolean       | Is this path expired?                             | no       |
+| preferred             | boolean       | Is this a current preferred path?                 | no       |
+| trustedPathId         | integer       | If nonzero this is a trusted path (unencrypted)   | no       |

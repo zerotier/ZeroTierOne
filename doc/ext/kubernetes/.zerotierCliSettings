@@ -1,0 +1,18 @@
+{
+  "configVersion": 1,
+  "defaultCentral": "@my.zerotier.com",
+  "defaultController": "@my.zerotier.com",
+  "defaultOne": "@local",
+  "things": {
+    "local": {
+      "auth": "local_service_auth_token_replaced_automatically",
+      "type": "one",
+      "url": "http://127.0.0.1:9993/"
+    },
+    "my.zerotier.com": {
+      "auth": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "type": "central",
+      "url": "https://my.zerotier.com/"
+    }
+  }
+}

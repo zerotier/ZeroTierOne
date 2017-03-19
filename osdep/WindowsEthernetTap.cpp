@@ -599,10 +599,10 @@ WindowsEthernetTap::WindowsEthernetTap(
 		unsigned int tmpsl = Utils::snprintf(tmps,sizeof(tmps),"%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",(unsigned int)mac[0],(unsigned int)mac[1],(unsigned int)mac[2],(unsigned int)mac[3],(unsigned int)mac[4],(unsigned int)mac[5]) + 1;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"NetworkAddress",REG_SZ,tmps,tmpsl);
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MAC",REG_SZ,tmps,tmpsl);
-		DWORD tmp = mtu;
-		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MTU",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
+        tmpsl = Utils::snprintf(tmps, sizeof(tmps), "%d", mtu);
+		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MTU",REG_SZ,tmps,tmpsl);
 
-		tmp = 0;
+		DWORD tmp = 0;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"*NdisDeviceType",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
 		tmp = IF_TYPE_ETHERNET_CSMACD;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"*IfType",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
@@ -640,7 +640,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 	if (ConvertInterfaceGuidToLuid(&_deviceGuid,&_deviceLuid) != NO_ERROR)
 		throw std::runtime_error("unable to convert device interface GUID to LUID");
 
-	_initialized = true;
+	//_initialized = true;
 
 	if (friendlyName)
 		setFriendlyName(friendlyName);
@@ -672,6 +672,7 @@ bool WindowsEthernetTap::addIp(const InetAddress &ip)
 {
 	if (!ip.netmaskBits()) // sanity check... netmask of 0.0.0.0 is WUT?
 		return false;
+
 	Mutex::Lock _l(_assignedIps_m);
 	if (std::find(_assignedIps.begin(),_assignedIps.end(),ip) != _assignedIps.end())
 		return true;
@@ -682,6 +683,9 @@ bool WindowsEthernetTap::addIp(const InetAddress &ip)
 
 bool WindowsEthernetTap::removeIp(const InetAddress &ip)
 {
+    if (ip.isV6())
+        return true;
+
 	{
 		Mutex::Lock _l(_assignedIps_m);
 		std::vector<InetAddress>::iterator aip(std::find(_assignedIps.begin(),_assignedIps.end(),ip));
@@ -713,18 +717,20 @@ bool WindowsEthernetTap::removeIp(const InetAddress &ip)
 							DeleteUnicastIpAddressEntry(&(ipt->Table[i]));
 							FreeMibTable(ipt);
 
-							std::vector<std::string> regIps(_getRegistryIPv4Value("IPAddress"));
-							std::vector<std::string> regSubnetMasks(_getRegistryIPv4Value("SubnetMask"));
-							std::string ipstr(ip.toIpString());
-							for(std::vector<std::string>::iterator rip(regIps.begin()),rm(regSubnetMasks.begin());((rip!=regIps.end())&&(rm!=regSubnetMasks.end()));++rip,++rm) {
-								if (*rip == ipstr) {
-									regIps.erase(rip);
-									regSubnetMasks.erase(rm);
-									_setRegistryIPv4Value("IPAddress",regIps);
-									_setRegistryIPv4Value("SubnetMask",regSubnetMasks);
-									break;
-								}
-							}
+                            if (ip.isV4()) {
+                                std::vector<std::string> regIps(_getRegistryIPv4Value("IPAddress"));
+                                std::vector<std::string> regSubnetMasks(_getRegistryIPv4Value("SubnetMask"));
+                                std::string ipstr(ip.toIpString());
+                                for (std::vector<std::string>::iterator rip(regIps.begin()), rm(regSubnetMasks.begin()); ((rip != regIps.end()) && (rm != regSubnetMasks.end())); ++rip, ++rm) {
+                                    if (*rip == ipstr) {
+                                        regIps.erase(rip);
+                                        regSubnetMasks.erase(rm);
+                                        _setRegistryIPv4Value("IPAddress", regIps);
+                                        _setRegistryIPv4Value("SubnetMask", regSubnetMasks);
+                                        break;
+                                    }
+                                }
+                            }
 
 							return true;
 						}
@@ -1001,6 +1007,10 @@ void WindowsEthernetTap::threadMain()
 			ReadFile(_tap,tapReadBuf,sizeof(tapReadBuf),NULL,&tapOvlRead);
 			bool writeInProgress = false;
 			ULONGLONG timeOfLastBorkCheck = GetTickCount64();
+
+
+            _initialized = true;
+
 			while (_run) {
 				DWORD waitResult = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,2500,TRUE);
 				if (!_run) break; // will also break outer while(_run)
@@ -1195,15 +1205,18 @@ void WindowsEthernetTap::_syncIps()
 			CreateUnicastIpAddressEntry(&ipr);
 		}
 
-		std::string ipStr(aip->toString());
-		std::vector<std::string> regIps(_getRegistryIPv4Value("IPAddress"));
-		if (std::find(regIps.begin(),regIps.end(),ipStr) == regIps.end()) {
-			std::vector<std::string> regSubnetMasks(_getRegistryIPv4Value("SubnetMask"));
-			regIps.push_back(ipStr);
-			regSubnetMasks.push_back(aip->netmask().toIpString());
-			_setRegistryIPv4Value("IPAddress",regIps);
-			_setRegistryIPv4Value("SubnetMask",regSubnetMasks);
-		}
+        if (aip->isV4())
+        {
+            std::string ipStr(aip->toIpString());
+            std::vector<std::string> regIps(_getRegistryIPv4Value("IPAddress"));
+            if (std::find(regIps.begin(), regIps.end(), ipStr) == regIps.end()) {
+                std::vector<std::string> regSubnetMasks(_getRegistryIPv4Value("SubnetMask"));
+                regIps.push_back(ipStr);
+                regSubnetMasks.push_back(aip->netmask().toIpString());
+                _setRegistryIPv4Value("IPAddress", regIps);
+                _setRegistryIPv4Value("SubnetMask", regSubnetMasks);
+            }
+        }
 	}
 }
 

@@ -1,4 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
 /* $Id: minixmlvalid.c,v 1.7 2015/07/15 12:41:15 nanard Exp $ */
 /* MiniUPnP Project
  * http://miniupnp.tuxfamily.org/ or http://miniupnp.free.fr/

@@ -180,14 +180,14 @@
 #define ZT_PEER_SECRET_KEY_LENGTH 32
 
 /**
+ * Minimum delay between timer task checks to prevent thrashing
+ */
+#define ZT_CORE_TIMER_TASK_GRANULARITY 500
+
+/**
  * How often Topology::clean() and Network::clean() and similar are called, in ms
  */
 #define ZT_HOUSEKEEPING_PERIOD 120000
-
-/**
- * Overriding granularity for timer tasks to prevent CPU-intensive thrashing on every packet
- */
-#define ZT_CORE_TIMER_TASK_GRANULARITY 500
 
 /**
  * How long to remember peer records in RAM if they haven't been used
@@ -202,7 +202,7 @@
 /**
  * Maximum identity WHOIS retries (each attempt tries consulting a different peer)
  */
-#define ZT_MAX_WHOIS_RETRIES 3
+#define ZT_MAX_WHOIS_RETRIES 4
 
 /**
  * Transmit queue entry timeout
@@ -215,6 +215,11 @@
 #define ZT_RECEIVE_QUEUE_TIMEOUT (ZT_WHOIS_RETRY_DELAY * (ZT_MAX_WHOIS_RETRIES + 1))
 
 /**
+ * Maximum latency to allow for OK(HELLO) before packet is discarded
+ */
+#define ZT_HELLO_MAX_ALLOWABLE_LATENCY 60000
+
+/**
  * Maximum number of ZT hops allowed (this is not IP hops/TTL)
  *
  * The protocol allows up to 7, but we limit it to something smaller.
@@ -222,14 +227,29 @@
 #define ZT_RELAY_MAX_HOPS 3
 
 /**
+ * Maximum number of upstreams to use (far more than we should ever need)
+ */
+#define ZT_MAX_UPSTREAMS 64
+
+/**
  * Expire time for multicast 'likes' and indirect multicast memberships in ms
  */
 #define ZT_MULTICAST_LIKE_EXPIRE 600000
 
 /**
+ * Period for multicast LIKE announcements
+ */
+#define ZT_MULTICAST_ANNOUNCE_PERIOD 120000
+
+/**
  * Delay between explicit MULTICAST_GATHER requests for a given multicast channel
  */
 #define ZT_MULTICAST_EXPLICIT_GATHER_DELAY (ZT_MULTICAST_LIKE_EXPIRE / 10)
+
+/**
+ * Expiration for credentials presented for MULTICAST_LIKE or MULTICAST_GATHER (for non-network-members)
+ */
+#define ZT_MULTICAST_CREDENTIAL_EXPIRATON ZT_MULTICAST_LIKE_EXPIRE
 
 /**
  * Timeout for outgoing multicasts
@@ -239,30 +259,49 @@
 #define ZT_MULTICAST_TRANSMIT_TIMEOUT 5000
 
 /**
- * Default maximum number of peers to address with a single multicast (if unspecified in network config)
+ * Delay between checks of peer pings, etc., and also related housekeeping tasks
  */
-#define ZT_MULTICAST_DEFAULT_LIMIT 32
+#define ZT_PING_CHECK_INVERVAL 5000
 
 /**
- * How frequently to send a zero-byte UDP keepalive packet
- *
- * There are NATs with timeouts as short as 20 seconds, so this turns out
- * to be needed.
+ * How frequently to send heartbeats over in-use paths
  */
-#define ZT_NAT_KEEPALIVE_DELAY 19000
+#define ZT_PATH_HEARTBEAT_PERIOD 14000
 
 /**
- * Delay between scans of the topology active peer DB for peers that need ping
- *
- * This is also how often pings will be retried to upstream peers (relays, roots)
- * constantly until something is heard.
+ * Paths are considered inactive if they have not received traffic in this long
  */
-#define ZT_PING_CHECK_INVERVAL 9500
+#define ZT_PATH_ALIVE_TIMEOUT 45000
 
 /**
- * Delay between ordinary case pings of direct links
+ * Minimum time between attempts to check dead paths to see if they can be re-awakened
  */
-#define ZT_PEER_DIRECT_PING_DELAY 60000
+#define ZT_PATH_MIN_REACTIVATE_INTERVAL 2500
+
+/**
+ * Do not accept HELLOs over a given path more often than this
+ */
+#define ZT_PATH_HELLO_RATE_LIMIT 1000
+
+/**
+ * Delay between full-fledge pings of directly connected peers
+ */
+#define ZT_PEER_PING_PERIOD 60000
+
+/**
+ * Paths are considered expired if they have not produced a real packet in this long
+ */
+#define ZT_PEER_PATH_EXPIRATION ((ZT_PEER_PING_PERIOD * 4) + 3000)
+
+/**
+ * Send a full HELLO every this often (ms)
+ */
+#define ZT_PEER_SEND_FULL_HELLO_EVERY (ZT_PEER_PING_PERIOD * 2)
+
+/**
+ * How often to retry expired paths that we're still remembering
+ */
+#define ZT_PEER_EXPIRED_PATH_TRIAL_PERIOD (ZT_PEER_PING_PERIOD * 10)
 
 /**
  * Timeout for overall peer activity (measured from last receive)
@@ -270,19 +309,14 @@
 #define ZT_PEER_ACTIVITY_TIMEOUT 500000
 
 /**
- * Timeout for path activity
+ * General rate limit timeout for multiple packet types (HELLO, etc.)
  */
-#define ZT_PATH_ACTIVITY_TIMEOUT ZT_PEER_ACTIVITY_TIMEOUT
+#define ZT_PEER_GENERAL_INBOUND_RATE_LIMIT 500
 
 /**
- * No answer timeout to trigger dead path detection
+ * General limit for max RTT for requests over the network
  */
-#define ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT 2000
-
-/**
- * Probation threshold after which a path becomes dead
- */
-#define ZT_PEER_DEAD_PATH_DETECTION_MAX_PROBATION 3
+#define ZT_GENERAL_RTT_LIMIT 5000
 
 /**
  * Delay between requests for updated network autoconf information
@@ -302,19 +336,9 @@
 #define ZT_MIN_UNITE_INTERVAL 30000
 
 /**
- * Delay between initial direct NAT-t packet and more aggressive techniques
- *
- * This may also be a delay before sending the first packet if we determine
- * that we should wait for the remote to initiate rendezvous first.
+ * How often should peers try memorized or statically defined paths?
  */
-#define ZT_NAT_T_TACTICAL_ESCALATION_DELAY 1000
-
-/**
- * How long (max) to remember network certificates of membership?
- *
- * This only applies to networks we don't belong to.
- */
-#define ZT_PEER_NETWORK_COM_EXPIRATION 3600000
+#define ZT_TRY_MEMORIZED_PATH_INTERVAL 30000
 
 /**
  * Sanity limit on maximum bridge routes
@@ -330,7 +354,7 @@
 /**
  * If there is no known route, spam to up to this many active bridges
  */
-#define ZT_MAX_BRIDGE_SPAM 16
+#define ZT_MAX_BRIDGE_SPAM 32
 
 /**
  * Interval between direct path pushes in milliseconds
@@ -357,22 +381,54 @@
 #define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 4
 
 /**
- * Enable support for old Dictionary based network configs
+ * Time horizon for VERB_NETWORK_CREDENTIALS cutoff
  */
-#define ZT_SUPPORT_OLD_STYLE_NETCONF 1
+#define ZT_PEER_CREDENTIALS_CUTOFF_TIME 60000
 
 /**
- * A test pseudo-network-ID that can be joined
- *
- * Joining this network ID will result in a network with no IP addressing
- * and default parameters. No network configuration master will be consulted
- * and instead a static config will be used. This is used in built-in testnet
- * scenarios and can also be used for external testing.
- *
- * This is an impossible real network ID since 0xff is a reserved address
- * prefix.
+ * Maximum number of VERB_NETWORK_CREDENTIALS within cutoff time
  */
-#define ZT_TEST_NETWORK_ID 0xffffffffffffffffULL
+#define ZT_PEER_CREDEITIALS_CUTOFF_LIMIT 15
+
+/**
+ * WHOIS rate limit (we allow these to be pretty fast)
+ */
+#define ZT_PEER_WHOIS_RATE_LIMIT 100
+
+/**
+ * General rate limit for other kinds of rate-limited packets (HELLO, credential request, etc.) both inbound and outbound
+ */
+#define ZT_PEER_GENERAL_RATE_LIMIT 1000
+
+/**
+ * Don't do expensive identity validation more often than this
+ *
+ * IPv4 and IPv6 address prefixes are hashed down to 14-bit (0-16383) integers
+ * using the first 24 bits for IPv4 or the first 48 bits for IPv6. These are
+ * then rate limited to one identity validation per this often milliseconds.
+ */
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64) || defined(_M_AMD64))
+// AMD64 machines can do anywhere from one every 50ms to one every 10ms. This provides plenty of margin.
+#define ZT_IDENTITY_VALIDATION_SOURCE_RATE_LIMIT 2000
+#else
+#if (defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(_X86_) || defined(__I86__))
+// 32-bit Intel machines usually average about one every 100ms
+#define ZT_IDENTITY_VALIDATION_SOURCE_RATE_LIMIT 5000
+#else
+// This provides a safe margin for ARM, MIPS, etc. that usually average one every 250-400ms
+#define ZT_IDENTITY_VALIDATION_SOURCE_RATE_LIMIT 10000
+#endif
+#endif
+
+/**
+ * How long is a path or peer considered to have a trust relationship with us (for e.g. relay policy) since last trusted established packet?
+ */
+#define ZT_TRUST_EXPIRATION 600000
+
+/**
+ * Enable support for older network configurations from older (pre-1.1.6) controllers
+ */
+#define ZT_SUPPORT_OLD_STYLE_NETCONF 1
 
 /**
  * Desired buffer size for UDP sockets (used in service and osdep but defined here)
@@ -382,6 +438,11 @@
 #else
 #define ZT_UDP_DESIRED_BUF_SIZE 131072
 #endif
+
+/**
+ * Desired / recommended min stack size for threads (used on some platforms to reset thread stack size)
+ */
+#define ZT_THREAD_MIN_STACK_SIZE 1048576
 
 /* Ethernet frame types that might be relevant to us */
 #define ZT_ETHERTYPE_IPV4 0x0800

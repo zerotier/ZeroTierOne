@@ -21,8 +21,9 @@
 #include "OutboundMulticast.hpp"
 #include "Switch.hpp"
 #include "Network.hpp"
-#include "CertificateOfMembership.hpp"
 #include "Node.hpp"
+#include "Peer.hpp"
+#include "Topology.hpp"
 
 namespace ZeroTier {
 
@@ -30,7 +31,7 @@ void OutboundMulticast::init(
 	const RuntimeEnvironment *RR,
 	uint64_t timestamp,
 	uint64_t nwid,
-	const CertificateOfMembership *com,
+	bool disableCompression,
 	unsigned int limit,
 	unsigned int gatherLimit,
 	const MAC &src,
@@ -39,16 +40,25 @@ void OutboundMulticast::init(
 	const void *payload,
 	unsigned int len)
 {
+	uint8_t flags = 0;
+
 	_timestamp = timestamp;
 	_nwid = nwid;
+	if (src) {
+		_macSrc = src;
+		flags |= 0x04;
+	} else {
+		_macSrc.fromAddress(RR->identity.address(),nwid);
+	}
+	_macDest = dest.mac();
 	_limit = limit;
+	_frameLen = (len < ZT_MAX_MTU) ? len : ZT_MAX_MTU;
+	_etherType = etherType;
 
-	uint8_t flags = 0;
 	if (gatherLimit) flags |= 0x02;
-	if (src) flags |= 0x04;
 
 	/*
-	TRACE(">>MC %.16llx INIT %.16llx/%s limit %u gatherLimit %u from %s to %s length %u com==%d",
+	TRACE(">>MC %.16llx INIT %.16llx/%s limit %u gatherLimit %u from %s to %s length %u",
 		(unsigned long long)this,
 		nwid,
 		dest.toString().c_str(),
@@ -56,58 +66,38 @@ void OutboundMulticast::init(
 		gatherLimit,
 		(src) ? src.toString().c_str() : MAC(RR->identity.address(),nwid).toString().c_str(),
 		dest.toString().c_str(),
-		len,
-		(com) ? 1 : 0);
+		len);
 	*/
 
-	_packetNoCom.setSource(RR->identity.address());
-	_packetNoCom.setVerb(Packet::VERB_MULTICAST_FRAME);
-	_packetNoCom.append((uint64_t)nwid);
-	_packetNoCom.append(flags);
-	if (gatherLimit) _packetNoCom.append((uint32_t)gatherLimit);
-	if (src) src.appendTo(_packetNoCom);
-	dest.mac().appendTo(_packetNoCom);
-	_packetNoCom.append((uint32_t)dest.adi());
-	_packetNoCom.append((uint16_t)etherType);
-	_packetNoCom.append(payload,len);
-	_packetNoCom.compress();
+	_packet.setSource(RR->identity.address());
+	_packet.setVerb(Packet::VERB_MULTICAST_FRAME);
+	_packet.append((uint64_t)nwid);
+	_packet.append(flags);
+	if (gatherLimit) _packet.append((uint32_t)gatherLimit);
+	if (src) src.appendTo(_packet);
+	dest.mac().appendTo(_packet);
+	_packet.append((uint32_t)dest.adi());
+	_packet.append((uint16_t)etherType);
+	_packet.append(payload,_frameLen);
+	if (!disableCompression)
+		_packet.compress();
 
-	if (com) {
-		_haveCom = true;
-		flags |= 0x01;
-
-		_packetWithCom.setSource(RR->identity.address());
-		_packetWithCom.setVerb(Packet::VERB_MULTICAST_FRAME);
-		_packetWithCom.append((uint64_t)nwid);
-		_packetWithCom.append(flags);
-		com->serialize(_packetWithCom);
-		if (gatherLimit) _packetWithCom.append((uint32_t)gatherLimit);
-		if (src) src.appendTo(_packetWithCom);
-		dest.mac().appendTo(_packetWithCom);
-		_packetWithCom.append((uint32_t)dest.adi());
-		_packetWithCom.append((uint16_t)etherType);
-		_packetWithCom.append(payload,len);
-		_packetWithCom.compress();
-	} else _haveCom = false;
+	memcpy(_frameData,payload,_frameLen);
 }
 
 void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,const Address &toAddr)
 {
-	if (_haveCom) {
-		SharedPtr<Peer> peer(RR->topology->getPeer(toAddr));
-		if ( (!peer) || (peer->needsOurNetworkMembershipCertificate(_nwid,RR->node->now(),true)) ) {
-			//TRACE(">>MC %.16llx -> %s (with COM)",(unsigned long long)this,toAddr.toString().c_str());
-			_packetWithCom.newInitializationVector();
-			_packetWithCom.setDestination(toAddr);
-			RR->sw->send(_packetWithCom,true,_nwid);
-			return;
-		}
-	}
+	const SharedPtr<Network> nw(RR->node->network(_nwid));
+	const Address toAddr2(toAddr);
+	if ((nw)&&(nw->filterOutgoingPacket(true,RR->identity.address(),toAddr2,_macSrc,_macDest,_frameData,_frameLen,_etherType,0))) {
+		//TRACE(">>MC %.16llx -> %s",(unsigned long long)this,toAddr.toString().c_str());
+		_packet.newInitializationVector();
+		_packet.setDestination(toAddr2);
+		RR->node->expectReplyTo(_packet.packetId());
 
-	//TRACE(">>MC %.16llx -> %s (without COM)",(unsigned long long)this,toAddr.toString().c_str());
-	_packetNoCom.newInitializationVector();
-	_packetNoCom.setDestination(toAddr);
-	RR->sw->send(_packetNoCom,true,_nwid);
+		Packet tmp(_packet); // make a copy of packet so as not to garble the original -- GitHub issue #461
+		RR->sw->send(tmp,true);
+	}
 }
 
 } // namespace ZeroTier

@@ -36,11 +36,15 @@
 #include "World.hpp"
 #include "Cluster.hpp"
 #include "Node.hpp"
-#include "DeferredPackets.hpp"
+#include "CertificateOfMembership.hpp"
+#include "CertificateOfRepresentation.hpp"
+#include "Capability.hpp"
+#include "Tag.hpp"
+#include "Revocation.hpp"
 
 namespace ZeroTier {
 
-bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
+bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 {
 	const Address sourceAddress(source());
 
@@ -52,68 +56,60 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
 			// If this is marked as a packet via a trusted path, check source address and path ID.
 			// Obviously if no trusted paths are configured this always returns false and such
 			// packets are dropped on the floor.
-			if (RR->topology->shouldInboundPathBeTrusted(_remoteAddress,trustedPathId())) {
+			if (RR->topology->shouldInboundPathBeTrusted(_path->address(),trustedPathId())) {
 				trusted = true;
-				TRACE("TRUSTED PATH packet approved from %s(%s), trusted path ID %llx",sourceAddress.toString().c_str(),_remoteAddress.toString().c_str(),trustedPathId());
+				TRACE("TRUSTED PATH packet approved from %s(%s), trusted path ID %llx",sourceAddress.toString().c_str(),_path->address().toString().c_str(),trustedPathId());
 			} else {
-				TRACE("dropped packet from %s(%s), cipher set to trusted path mode but path %llx@%s is not trusted!",sourceAddress.toString().c_str(),_remoteAddress.toString().c_str(),trustedPathId(),_remoteAddress.toString().c_str());
+				TRACE("dropped packet from %s(%s), cipher set to trusted path mode but path %llx@%s is not trusted!",sourceAddress.toString().c_str(),_path->address().toString().c_str(),trustedPathId(),_path->address().toString().c_str());
 				return true;
 			}
 		} else if ((c == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)&&(verb() == Packet::VERB_HELLO)) {
-			// Unencrypted HELLOs require some potentially expensive verification, so
-			// do this in the background if background processing is enabled.
-			if ((RR->dpEnabled > 0)&&(!deferred)) {
-				RR->dp->enqueue(this);
-				return true; // 'handled' via deferring to background thread(s)
-			} else {
-				// A null pointer for peer to _doHELLO() tells it to run its own
-				// special internal authentication logic. This is done for unencrypted
-				// HELLOs to learn new identities, etc.
-				SharedPtr<Peer> tmp;
-				return _doHELLO(RR,tmp);
-			}
+			// Only HELLO is allowed in the clear, but will still have a MAC
+			return _doHELLO(RR,false);
 		}
 
-		SharedPtr<Peer> peer(RR->topology->getPeer(sourceAddress));
+		const SharedPtr<Peer> peer(RR->topology->getPeer(sourceAddress));
 		if (peer) {
 			if (!trusted) {
 				if (!dearmor(peer->key())) {
-					TRACE("dropped packet from %s(%s), MAC authentication failed (size: %u)",sourceAddress.toString().c_str(),_remoteAddress.toString().c_str(),size());
+					//fprintf(stderr,"dropped packet from %s(%s), MAC authentication failed (size: %u)" ZT_EOL_S,sourceAddress.toString().c_str(),_path->address().toString().c_str(),size());
+					TRACE("dropped packet from %s(%s), MAC authentication failed (size: %u)",sourceAddress.toString().c_str(),_path->address().toString().c_str(),size());
 					return true;
 				}
 			}
 
 			if (!uncompress()) {
-				TRACE("dropped packet from %s(%s), compressed data invalid",sourceAddress.toString().c_str(),_remoteAddress.toString().c_str());
+				//fprintf(stderr,"dropped packet from %s(%s), compressed data invalid (size %u, verb may be %u)" ZT_EOL_S,sourceAddress.toString().c_str(),_path->address().toString().c_str(),size(),(unsigned int)verb());
+				TRACE("dropped packet from %s(%s), compressed data invalid (size %u, verb may be %u)",sourceAddress.toString().c_str(),_path->address().toString().c_str(),size(),(unsigned int)verb());
 				return true;
 			}
 
 			const Packet::Verb v = verb();
-			//TRACE("<< %s from %s(%s)",Packet::verbString(v),sourceAddress.toString().c_str(),_remoteAddress.toString().c_str());
+			//TRACE("<< %s from %s(%s)",Packet::verbString(v),sourceAddress.toString().c_str(),_path->address().toString().c_str());
 			switch(v) {
 				//case Packet::VERB_NOP:
 				default: // ignore unknown verbs, but if they pass auth check they are "received"
-					peer->received(_localAddress,_remoteAddress,hops(),packetId(),v,0,Packet::VERB_NOP);
+					peer->received(_path,hops(),packetId(),v,0,Packet::VERB_NOP,false);
 					return true;
 
-				case Packet::VERB_HELLO:                          return _doHELLO(RR,peer);
-				case Packet::VERB_ERROR:                          return _doERROR(RR,peer);
-				case Packet::VERB_OK:                             return _doOK(RR,peer);
-				case Packet::VERB_WHOIS:                          return _doWHOIS(RR,peer);
-				case Packet::VERB_RENDEZVOUS:                     return _doRENDEZVOUS(RR,peer);
-				case Packet::VERB_FRAME:                          return _doFRAME(RR,peer);
-				case Packet::VERB_EXT_FRAME:                      return _doEXT_FRAME(RR,peer);
-				case Packet::VERB_ECHO:                           return _doECHO(RR,peer);
-				case Packet::VERB_MULTICAST_LIKE:                 return _doMULTICAST_LIKE(RR,peer);
-				case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return _doNETWORK_MEMBERSHIP_CERTIFICATE(RR,peer);
-				case Packet::VERB_NETWORK_CONFIG_REQUEST:         return _doNETWORK_CONFIG_REQUEST(RR,peer);
-				case Packet::VERB_NETWORK_CONFIG_REFRESH:         return _doNETWORK_CONFIG_REFRESH(RR,peer);
-				case Packet::VERB_MULTICAST_GATHER:               return _doMULTICAST_GATHER(RR,peer);
-				case Packet::VERB_MULTICAST_FRAME:                return _doMULTICAST_FRAME(RR,peer);
-				case Packet::VERB_PUSH_DIRECT_PATHS:              return _doPUSH_DIRECT_PATHS(RR,peer);
-				case Packet::VERB_CIRCUIT_TEST:                   return _doCIRCUIT_TEST(RR,peer);
-				case Packet::VERB_CIRCUIT_TEST_REPORT:            return _doCIRCUIT_TEST_REPORT(RR,peer);
-				case Packet::VERB_REQUEST_PROOF_OF_WORK:          return _doREQUEST_PROOF_OF_WORK(RR,peer);
+				case Packet::VERB_HELLO:                      return _doHELLO(RR,true);
+				case Packet::VERB_ERROR:                      return _doERROR(RR,peer);
+				case Packet::VERB_OK:                         return _doOK(RR,peer);
+				case Packet::VERB_WHOIS:                      return _doWHOIS(RR,peer);
+				case Packet::VERB_RENDEZVOUS:                 return _doRENDEZVOUS(RR,peer);
+				case Packet::VERB_FRAME:                      return _doFRAME(RR,peer);
+				case Packet::VERB_EXT_FRAME:                  return _doEXT_FRAME(RR,peer);
+				case Packet::VERB_ECHO:                       return _doECHO(RR,peer);
+				case Packet::VERB_MULTICAST_LIKE:             return _doMULTICAST_LIKE(RR,peer);
+				case Packet::VERB_NETWORK_CREDENTIALS:        return _doNETWORK_CREDENTIALS(RR,peer);
+				case Packet::VERB_NETWORK_CONFIG_REQUEST:     return _doNETWORK_CONFIG_REQUEST(RR,peer);
+				case Packet::VERB_NETWORK_CONFIG:             return _doNETWORK_CONFIG(RR,peer);
+				case Packet::VERB_MULTICAST_GATHER:           return _doMULTICAST_GATHER(RR,peer);
+				case Packet::VERB_MULTICAST_FRAME:            return _doMULTICAST_FRAME(RR,peer);
+				case Packet::VERB_PUSH_DIRECT_PATHS:          return _doPUSH_DIRECT_PATHS(RR,peer);
+				case Packet::VERB_CIRCUIT_TEST:               return _doCIRCUIT_TEST(RR,peer);
+				case Packet::VERB_CIRCUIT_TEST_REPORT:        return _doCIRCUIT_TEST_REPORT(RR,peer);
+				case Packet::VERB_USER_MESSAGE:               return _doUSER_MESSAGE(RR,peer);
 			}
 		} else {
 			RR->sw->requestWhois(sourceAddress);
@@ -122,7 +118,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
 	} catch ( ... ) {
 		// Exceptions are more informatively caught in _do...() handlers but
 		// this outer try/catch will catch anything else odd.
-		TRACE("dropped ??? from %s(%s): unexpected exception in tryDecode()",sourceAddress.toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped ??? from %s(%s): unexpected exception in tryDecode()",sourceAddress.toString().c_str(),_path->address().toString().c_str());
 		return true;
 	}
 }
@@ -134,77 +130,83 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 		const uint64_t inRePacketId = at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_IN_RE_PACKET_ID);
 		const Packet::ErrorCode errorCode = (Packet::ErrorCode)(*this)[ZT_PROTO_VERB_ERROR_IDX_ERROR_CODE];
 
-		//TRACE("ERROR %s from %s(%s) in-re %s",Packet::errorString(errorCode),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
+		//TRACE("ERROR %s from %s(%s) in-re %s",Packet::errorString(errorCode),peer->address().toString().c_str(),_path->address().toString().c_str(),Packet::verbString(inReVerb));
+
+		/* Security note: we do not gate doERROR() with expectingReplyTo() to
+		 * avoid having to log every outgoing packet ID. Instead we put the
+		 * logic to determine whether we should consider an ERROR in each
+		 * error handler. In most cases these are only trusted in specific
+		 * circumstances. */
 
 		switch(errorCode) {
 
 			case Packet::ERROR_OBJ_NOT_FOUND:
+				// Object not found, currently only meaningful from network controllers.
 				if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
-					SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
+					const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 					if ((network)&&(network->controller() == peer->address()))
 						network->setNotFound();
 				}
 				break;
 
 			case Packet::ERROR_UNSUPPORTED_OPERATION:
+				// This can be sent in response to any operation, though right now we only
+				// consider it meaningful from network controllers. This would indicate
+				// that the queried node does not support acting as a controller.
 				if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
-					SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
+					const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 					if ((network)&&(network->controller() == peer->address()))
 						network->setNotFound();
 				}
 				break;
 
 			case Packet::ERROR_IDENTITY_COLLISION:
-				if (RR->topology->isRoot(peer->identity()))
+				// FIXME: for federation this will need a payload with a signature or something.
+				if (RR->topology->isUpstream(peer->identity()))
 					RR->node->postEvent(ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION);
 				break;
 
 			case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE: {
-				/* Note: certificates are public so it's safe to push them to anyone
-				 * who asks. We won't communicate unless we also get a certificate
-				 * from the remote that agrees. */
-				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
-				if ((network)&&(network->hasConfig())&&(network->config().com)) {
-					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
-					network->config().com.serialize(outp);
-					outp.armor(peer->key(),true);
-					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
-				}
+				// Peers can send this in response to frames if they do not have a recent enough COM from us
+				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
+				const uint64_t now = RR->node->now();
+				if ( (network) && (network->config().com) && (peer->rateGateIncomingComRequest(now)) )
+					network->pushCredentialsNow(peer->address(),now);
 			}	break;
 
 			case Packet::ERROR_NETWORK_ACCESS_DENIED_: {
-				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
+				// Network controller: network access denied.
+				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if ((network)&&(network->controller() == peer->address()))
 					network->setAccessDenied();
 			}	break;
 
 			case Packet::ERROR_UNWANTED_MULTICAST: {
-				uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD);
-				MulticastGroup mg(MAC(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8,6),6),at<uint32_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 14));
-				TRACE("%.16llx: peer %s unsubscrubed from multicast group %s",nwid,peer->address().toString().c_str(),mg.toString().c_str());
-				RR->mc->remove(nwid,mg,peer->address());
+				// Members of networks can use this error to indicate that they no longer
+				// want to receive multicasts on a given channel.
+				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
+				if ((network)&&(network->gate(peer))) {
+					const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8,6),6),at<uint32_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 14));
+					TRACE("%.16llx: peer %s unsubscrubed from multicast group %s",network->id(),peer->address().toString().c_str(),mg.toString().c_str());
+					RR->mc->remove(network->id(),mg,peer->address());
+				}
 			}	break;
 
 			default: break;
 		}
 
-		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_ERROR,inRePacketId,inReVerb);
+		peer->received(_path,hops(),packetId(),Packet::VERB_ERROR,inRePacketId,inReVerb,false);
 	} catch ( ... ) {
-		TRACE("dropped ERROR from %s(%s): unexpected exception",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped ERROR from %s(%s): unexpected exception",peer->address().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer)
+bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAuthenticated)
 {
-	/* Note: this is the only packet ever sent in the clear, and it's also
-	 * the only packet that we authenticate via a different path. Authentication
-	 * occurs here and is based on the validity of the identity and the
-	 * integrity of the packet's MAC, but it must be done after we check
-	 * the identity since HELLO is a mechanism for learning new identities
-	 * in the first place. */
-
 	try {
+		const uint64_t now = RR->node->now();
+
 		const uint64_t pid = packetId();
 		const Address fromAddress(source());
 		const unsigned int protoVersion = (*this)[ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION];
@@ -212,53 +214,44 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer
 		const unsigned int vMinor = (*this)[ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION];
 		const unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO_IDX_REVISION);
 		const uint64_t timestamp = at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
-
 		Identity id;
-		InetAddress externalSurfaceAddress;
-		uint64_t worldId = ZT_WORLD_ID_NULL;
-		uint64_t worldTimestamp = 0;
-		{
-			unsigned int ptr = ZT_PROTO_VERB_HELLO_IDX_IDENTITY + id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
-			if (ptr < size()) // ZeroTier One < 1.0.3 did not include physical destination address info
-				ptr += externalSurfaceAddress.deserialize(*this,ptr);
-			if ((ptr + 16) <= size()) { // older versions also did not include World IDs or timestamps
-				worldId = at<uint64_t>(ptr); ptr += 8;
-				worldTimestamp = at<uint64_t>(ptr);
-			}
-		}
+		unsigned int ptr = ZT_PROTO_VERB_HELLO_IDX_IDENTITY + id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
 
 		if (protoVersion < ZT_PROTO_VERSION_MIN) {
-			TRACE("dropped HELLO from %s(%s): protocol version too old",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+			TRACE("dropped HELLO from %s(%s): protocol version too old",id.address().toString().c_str(),_path->address().toString().c_str());
 			return true;
 		}
 		if (fromAddress != id.address()) {
-			TRACE("dropped HELLO from %s(%s): identity not for sending address",fromAddress.toString().c_str(),_remoteAddress.toString().c_str());
+			TRACE("dropped HELLO from %s(%s): identity does not match packet source address",fromAddress.toString().c_str(),_path->address().toString().c_str());
 			return true;
 		}
 
-		if (!peer) { // peer == NULL is the normal case here
-			peer = RR->topology->getPeer(id.address());
-			if (peer) {
-				// We already have an identity with this address -- check for collisions
-
+		SharedPtr<Peer> peer(RR->topology->getPeer(id.address()));
+		if (peer) {
+			// We already have an identity with this address -- check for collisions
+			if (!alreadyAuthenticated) {
 				if (peer->identity() != id) {
 					// Identity is different from the one we already have -- address collision
 
-					unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
+					// Check rate limits
+					if (!RR->node->rateGateIdentityVerification(now,_path->address()))
+						return true;
+
+					uint8_t key[ZT_PEER_SECRET_KEY_LENGTH];
 					if (RR->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
 						if (dearmor(key)) { // ensure packet is authentic, otherwise drop
-							TRACE("rejected HELLO from %s(%s): address already claimed",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+							TRACE("rejected HELLO from %s(%s): address already claimed",id.address().toString().c_str(),_path->address().toString().c_str());
 							Packet outp(id.address(),RR->identity.address(),Packet::VERB_ERROR);
-							outp.append((unsigned char)Packet::VERB_HELLO);
+							outp.append((uint8_t)Packet::VERB_HELLO);
 							outp.append((uint64_t)pid);
-							outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
-							outp.armor(key,true);
-							RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+							outp.append((uint8_t)Packet::ERROR_IDENTITY_COLLISION);
+							outp.armor(key,true,_path->nextOutgoingCounter());
+							_path->send(RR,outp.data(),outp.size(),RR->node->now());
 						} else {
-							TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+							TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_path->address().toString().c_str());
 						}
 					} else {
-						TRACE("rejected HELLO from %s(%s): key agreement failed",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+						TRACE("rejected HELLO from %s(%s): key agreement failed",id.address().toString().c_str(),_path->address().toString().c_str());
 					}
 
 					return true;
@@ -266,37 +259,89 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer
 					// Identity is the same as the one we already have -- check packet integrity
 
 					if (!dearmor(peer->key())) {
-						TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+						TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_path->address().toString().c_str());
 						return true;
 					}
 
 					// Continue at // VALID
 				}
-			} else {
-				// We don't already have an identity with this address -- validate and learn it
+			} // else if alreadyAuthenticated then continue at // VALID
+		} else {
+			// We don't already have an identity with this address -- validate and learn it
 
-				// Check identity proof of work
-				if (!id.locallyValidate()) {
-					TRACE("dropped HELLO from %s(%s): identity invalid",id.address().toString().c_str(),_remoteAddress.toString().c_str());
-					return true;
-				}
-
-				// Check packet integrity and authentication
-				SharedPtr<Peer> newPeer(new Peer(RR,RR->identity,id));
-				if (!dearmor(newPeer->key())) {
-					TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
-					return true;
-				}
-				peer = RR->topology->addPeer(newPeer);
-
-				// Continue at // VALID
+			// Sanity check: this basically can't happen
+			if (alreadyAuthenticated) {
+				TRACE("dropped HELLO from %s(%s): somehow already authenticated with unknown peer?",id.address().toString().c_str(),_path->address().toString().c_str());
+				return true;
 			}
 
-			// VALID -- if we made it here, packet passed identity and authenticity checks!
+			// Check rate limits
+			if (!RR->node->rateGateIdentityVerification(now,_path->address()))
+				return true;
+
+			// Check packet integrity and MAC (this is faster than locallyValidate() so do it first to filter out total crap)
+			SharedPtr<Peer> newPeer(new Peer(RR,RR->identity,id));
+			if (!dearmor(newPeer->key())) {
+				TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_path->address().toString().c_str());
+				return true;
+			}
+
+			// Check that identity's address is valid as per the derivation function
+			if (!id.locallyValidate()) {
+				TRACE("dropped HELLO from %s(%s): identity invalid",id.address().toString().c_str(),_path->address().toString().c_str());
+				return true;
+			}
+
+			peer = RR->topology->addPeer(newPeer);
+
+			// Continue at // VALID
 		}
 
-		if (externalSurfaceAddress)
-			RR->sa->iam(id.address(),_localAddress,_remoteAddress,externalSurfaceAddress,RR->topology->isRoot(id),RR->node->now());
+		// VALID -- if we made it here, packet passed identity and authenticity checks!
+
+		// Get external surface address if present (was not in old versions)
+		InetAddress externalSurfaceAddress;
+		if (ptr < size()) {
+			ptr += externalSurfaceAddress.deserialize(*this,ptr);
+			if ((externalSurfaceAddress)&&(hops() == 0))
+				RR->sa->iam(id.address(),_path->localAddress(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(id),now);
+		}
+
+		// Get primary planet world ID and world timestamp if present
+		uint64_t planetWorldId = 0;
+		uint64_t planetWorldTimestamp = 0;
+		if ((ptr + 16) <= size()) {
+			planetWorldId = at<uint64_t>(ptr); ptr += 8;
+			planetWorldTimestamp = at<uint64_t>(ptr); ptr += 8;
+		}
+
+		std::vector< std::pair<uint64_t,uint64_t> > moonIdsAndTimestamps;
+		if (ptr < size()) {
+			// Remainder of packet, if present, is encrypted
+			cryptField(peer->key(),ptr,size() - ptr);
+
+			// Get moon IDs and timestamps if present
+			if ((ptr + 2) <= size()) {
+				const unsigned int numMoons = at<uint16_t>(ptr); ptr += 2;
+				for(unsigned int i=0;i<numMoons;++i) {
+					if ((World::Type)(*this)[ptr++] == World::TYPE_MOON)
+						moonIdsAndTimestamps.push_back(std::pair<uint64_t,uint64_t>(at<uint64_t>(ptr),at<uint64_t>(ptr + 8)));
+					ptr += 16;
+				}
+			}
+
+			// Handle COR if present (older versions don't send this)
+			if ((ptr + 2) <= size()) {
+				if (at<uint16_t>(ptr) > 0) {
+					CertificateOfRepresentation cor;
+					ptr += 2;
+					ptr += cor.deserialize(*this,ptr);
+				} else ptr += 2;
+			}
+		}
+
+		// Send OK(HELLO) with an echo of the packet's timestamp and some of the same
+		// information about us: version, sent-to address, etc.
 
 		Packet outp(id.address(),RR->identity.address(),Packet::VERB_OK);
 		outp.append((unsigned char)Packet::VERB_HELLO);
@@ -306,8 +351,9 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer
 		outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
 		outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
 		outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
+
 		if (protoVersion >= 5) {
-			_remoteAddress.serialize(outp);
+			_path->address().serialize(outp);
 		} else {
 			/* LEGACY COMPATIBILITY HACK:
 			 *
@@ -332,28 +378,42 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer
 			 * nulling out the port field. Since this info is only used for empirical
 			 * detection of link changes, it doesn't break anything else.
 			 */
-			InetAddress tmpa(_remoteAddress);
+			InetAddress tmpa(_path->address());
 			tmpa.setPort(0);
 			tmpa.serialize(outp);
 		}
 
-		if ((worldId != ZT_WORLD_ID_NULL)&&(RR->topology->worldTimestamp() > worldTimestamp)&&(worldId == RR->topology->worldId())) {
-			World w(RR->topology->world());
-			const unsigned int sizeAt = outp.size();
-			outp.addSize(2); // make room for 16-bit size field
-			w.serialize(outp,false);
-			outp.setAt<uint16_t>(sizeAt,(uint16_t)(outp.size() - (sizeAt + 2)));
-		} else {
-			outp.append((uint16_t)0); // no world update needed
+		const unsigned int worldUpdateSizeAt = outp.size();
+		outp.addSize(2); // make room for 16-bit size field
+		if ((planetWorldId)&&(RR->topology->planetWorldTimestamp() > planetWorldTimestamp)&&(planetWorldId == RR->topology->planetWorldId())) {
+			RR->topology->planet().serialize(outp,false);
 		}
+		if (moonIdsAndTimestamps.size() > 0) {
+			std::vector<World> moons(RR->topology->moons());
+			for(std::vector<World>::const_iterator m(moons.begin());m!=moons.end();++m) {
+				for(std::vector< std::pair<uint64_t,uint64_t> >::const_iterator i(moonIdsAndTimestamps.begin());i!=moonIdsAndTimestamps.end();++i) {
+					if (i->first == m->id()) {
+						if (m->timestamp() > i->second)
+							m->serialize(outp,false);
+						break;
+					}
+				}
+			}
+		}
+		outp.setAt<uint16_t>(worldUpdateSizeAt,(uint16_t)(outp.size() - (worldUpdateSizeAt + 2)));
 
-		outp.armor(peer->key(),true);
-		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+		const unsigned int corSizeAt = outp.size();
+		outp.addSize(2);
+		RR->topology->appendCertificateOfRepresentation(outp);
+		outp.setAt(corSizeAt,(uint16_t)(outp.size() - (corSizeAt + 2)));
+
+		outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+		_path->send(RR,outp.data(),outp.size(),now);
 
 		peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision); // important for this to go first so received() knows the version
-		peer->received(_localAddress,_remoteAddress,hops(),pid,Packet::VERB_HELLO,0,Packet::VERB_NOP);
+		peer->received(_path,hops(),pid,Packet::VERB_HELLO,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
-		TRACE("dropped HELLO from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped HELLO from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
@@ -364,82 +424,97 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 		const Packet::Verb inReVerb = (Packet::Verb)(*this)[ZT_PROTO_VERB_OK_IDX_IN_RE_VERB];
 		const uint64_t inRePacketId = at<uint64_t>(ZT_PROTO_VERB_OK_IDX_IN_RE_PACKET_ID);
 
-		//TRACE("%s(%s): OK(%s)",source().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
+		if (!RR->node->expectingReplyTo(inRePacketId)) {
+			TRACE("%s(%s): OK(%s) DROPPED: not expecting reply to %.16llx",peer->address().toString().c_str(),_path->address().toString().c_str(),Packet::verbString(inReVerb),packetId());
+			return true;
+		}
+
+		//TRACE("%s(%s): OK(%s)",peer->address().toString().c_str(),_path->address().toString().c_str(),Packet::verbString(inReVerb));
 
 		switch(inReVerb) {
 
 			case Packet::VERB_HELLO: {
-				const unsigned int latency = std::min((unsigned int)(RR->node->now() - at<uint64_t>(ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP)),(unsigned int)0xffff);
+				const uint64_t latency = RR->node->now() - at<uint64_t>(ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP);
+				if (latency > ZT_HELLO_MAX_ALLOWABLE_LATENCY)
+					return true;
+
 				const unsigned int vProto = (*this)[ZT_PROTO_VERB_HELLO__OK__IDX_PROTOCOL_VERSION];
 				const unsigned int vMajor = (*this)[ZT_PROTO_VERB_HELLO__OK__IDX_MAJOR_VERSION];
 				const unsigned int vMinor = (*this)[ZT_PROTO_VERB_HELLO__OK__IDX_MINOR_VERSION];
 				const unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO__OK__IDX_REVISION);
 
 				if (vProto < ZT_PROTO_VERSION_MIN) {
-					TRACE("%s(%s): OK(HELLO) dropped, protocol version too old",source().toString().c_str(),_remoteAddress.toString().c_str());
+					TRACE("%s(%s): OK(HELLO) dropped, protocol version too old",source().toString().c_str(),_path->address().toString().c_str());
 					return true;
 				}
 
-				const bool trusted = RR->topology->isRoot(peer->identity());
-
 				InetAddress externalSurfaceAddress;
 				unsigned int ptr = ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2;
-				if (ptr < size()) // ZeroTier One < 1.0.3 did not include this field
+
+				// Get reported external surface address if present
+				if (ptr < size())
 					ptr += externalSurfaceAddress.deserialize(*this,ptr);
-				if ((trusted)&&((ptr + 2) <= size())) { // older versions also did not include this field, and right now we only use if from a root
-					World worldUpdate;
-					const unsigned int worldLen = at<uint16_t>(ptr); ptr += 2;
-					if (worldLen > 0) {
-						World w;
-						w.deserialize(*this,ptr);
-						RR->topology->worldUpdateIfValid(w);
+
+				// Handle planet or moon updates if present
+				if ((ptr + 2) <= size()) {
+					const unsigned int worldsLen = at<uint16_t>(ptr); ptr += 2;
+					if (RR->topology->shouldAcceptWorldUpdateFrom(peer->address())) {
+						const unsigned int endOfWorlds = ptr + worldsLen;
+						while (ptr < endOfWorlds) {
+							World w;
+							ptr += w.deserialize(*this,ptr);
+							RR->topology->addWorld(w,false);
+						}
+					} else {
+						ptr += worldsLen;
 					}
 				}
 
-				TRACE("%s(%s): OK(HELLO), version %u.%u.%u, latency %u, reported external address %s",source().toString().c_str(),_remoteAddress.toString().c_str(),vMajor,vMinor,vRevision,latency,((externalSurfaceAddress) ? externalSurfaceAddress.toString().c_str() : "(none)"));
+				// Handle certificate of representation if present
+				if ((ptr + 2) <= size()) {
+					if (at<uint16_t>(ptr) > 0) {
+						CertificateOfRepresentation cor;
+						ptr += 2;
+						ptr += cor.deserialize(*this,ptr);
+					} else ptr += 2;
+				}
 
-				peer->addDirectLatencyMeasurment(latency);
+#ifdef ZT_TRACE
+				const std::string tmp1(source().toString());
+				const std::string tmp2(_path->address().toString());
+				TRACE("%s(%s): OK(HELLO), version %u.%u.%u, latency %u",tmp1.c_str(),tmp2.c_str(),vMajor,vMinor,vRevision,latency);
+#endif
+
+				if (!hops())
+					peer->addDirectLatencyMeasurment((unsigned int)latency);
 				peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
 
-				if (externalSurfaceAddress)
-					RR->sa->iam(peer->address(),_localAddress,_remoteAddress,externalSurfaceAddress,trusted,RR->node->now());
+				if ((externalSurfaceAddress)&&(hops() == 0))
+					RR->sa->iam(peer->address(),_path->localAddress(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(peer->identity()),RR->node->now());
 			}	break;
 
-			case Packet::VERB_WHOIS: {
-				if (RR->topology->isRoot(peer->identity())) {
+			case Packet::VERB_WHOIS:
+				if (RR->topology->isUpstream(peer->identity())) {
 					const Identity id(*this,ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY);
-					// Right now we can skip this since OK(WHOIS) is only accepted from
-					// roots. In the future it should be done if we query less trusted
-					// sources.
-					//if (id.locallyValidate())
-						RR->sw->doAnythingWaitingForPeer(RR->topology->addPeer(SharedPtr<Peer>(new Peer(RR,RR->identity,id))));
+					RR->sw->doAnythingWaitingForPeer(RR->topology->addPeer(SharedPtr<Peer>(new Peer(RR,RR->identity,id))));
 				}
-			} break;
+				break;
 
 			case Packet::VERB_NETWORK_CONFIG_REQUEST: {
-				const SharedPtr<Network> nw(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID)));
-				if ((nw)&&(nw->controller() == peer->address())) {
-					const unsigned int nclen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN);
-					if (nclen) {
-						Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> dconf((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT,nclen),nclen);
-						NetworkConfig nconf;
-						if (nconf.fromDictionary(dconf)) {
-							nw->setConfiguration(nconf,true);
-							TRACE("got network configuration for network %.16llx from %s",(unsigned long long)nw->id(),source().toString().c_str());
-						}
-					}
-				}
+				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_OK_IDX_PAYLOAD)));
+				if (network)
+					network->handleConfigChunk(packetId(),source(),*this,ZT_PROTO_VERB_OK_IDX_PAYLOAD);
 			}	break;
-
-			//case Packet::VERB_ECHO: {
-			//}	break;
 
 			case Packet::VERB_MULTICAST_GATHER: {
 				const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_NETWORK_ID);
-				const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_ADI));
-				TRACE("%s(%s): OK(MULTICAST_GATHER) %.16llx/%s length %u",source().toString().c_str(),_remoteAddress.toString().c_str(),nwid,mg.toString().c_str(),size());
-				const unsigned int count = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS + 4);
-				RR->mc->addMultiple(RR->node->now(),nwid,mg,field(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS + 6,count * 5),count,at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS));
+				const SharedPtr<Network> network(RR->node->network(nwid));
+				if (network) {
+					const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_ADI));
+					//TRACE("%s(%s): OK(MULTICAST_GATHER) %.16llx/%s length %u",source().toString().c_str(),_path->address().toString().c_str(),nwid,mg.toString().c_str(),size());
+					const unsigned int count = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS + 4);
+					RR->mc->addMultiple(RR->node->now(),nwid,mg,field(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS + 6,count * 5),count,at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS));
+				}
 			}	break;
 
 			case Packet::VERB_MULTICAST_FRAME: {
@@ -447,32 +522,35 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_NETWORK_ID);
 				const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI));
 
-				//TRACE("%s(%s): OK(MULTICAST_FRAME) %.16llx/%s flags %.2x",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),nwid,mg.toString().c_str(),flags);
+				//TRACE("%s(%s): OK(MULTICAST_FRAME) %.16llx/%s flags %.2x",peer->address().toString().c_str(),_path->address().toString().c_str(),nwid,mg.toString().c_str(),flags);
 
-				unsigned int offset = 0;
+				const SharedPtr<Network> network(RR->node->network(nwid));
+				if (network) {
+					unsigned int offset = 0;
 
-				if ((flags & 0x01) != 0) {
-					// OK(MULTICAST_FRAME) includes certificate of membership update
-					CertificateOfMembership com;
-					offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS);
-					peer->validateAndSetNetworkMembershipCertificate(nwid,com);
-				}
+					if ((flags & 0x01) != 0) { // deprecated but still used by older peers
+						CertificateOfMembership com;
+						offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS);
+						if (com)
+							network->addCredential(com);
+					}
 
-				if ((flags & 0x02) != 0) {
-					// OK(MULTICAST_FRAME) includes implicit gather results
-					offset += ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS;
-					unsigned int totalKnown = at<uint32_t>(offset); offset += 4;
-					unsigned int count = at<uint16_t>(offset); offset += 2;
-					RR->mc->addMultiple(RR->node->now(),nwid,mg,field(offset,count * 5),count,totalKnown);
+					if ((flags & 0x02) != 0) {
+						// OK(MULTICAST_FRAME) includes implicit gather results
+						offset += ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS;
+						unsigned int totalKnown = at<uint32_t>(offset); offset += 4;
+						unsigned int count = at<uint16_t>(offset); offset += 2;
+						RR->mc->addMultiple(RR->node->now(),nwid,mg,field(offset,count * 5),count,totalKnown);
+					}
 				}
 			}	break;
 
 			default: break;
 		}
 
-		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_OK,inRePacketId,inReVerb);
+		peer->received(_path,hops(),packetId(),Packet::VERB_OK,inRePacketId,inReVerb,false);
 	} catch ( ... ) {
-		TRACE("dropped OK from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped OK from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
@@ -480,27 +558,45 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		if (payloadLength() == ZT_ADDRESS_LENGTH) {
-			Identity queried(RR->topology->getIdentity(Address(payload(),ZT_ADDRESS_LENGTH)));
-			if (queried) {
-				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
-				outp.append((unsigned char)Packet::VERB_WHOIS);
-				outp.append(packetId());
-				queried.serialize(outp,false);
-				outp.armor(peer->key(),true);
-				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+		if ((!RR->topology->amRoot())&&(!peer->rateGateInboundWhoisRequest(RR->node->now()))) {
+			TRACE("dropped WHOIS from %s(%s): rate limit circuit breaker tripped",source().toString().c_str(),_path->address().toString().c_str());
+			return true;
+		}
+
+		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
+		outp.append((unsigned char)Packet::VERB_WHOIS);
+		outp.append(packetId());
+
+		unsigned int count = 0;
+		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
+		while ((ptr + ZT_ADDRESS_LENGTH) <= size()) {
+			const Address addr(field(ptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+			ptr += ZT_ADDRESS_LENGTH;
+
+			const Identity id(RR->topology->getIdentity(addr));
+			if (id) {
+				id.serialize(outp,false);
+				++count;
 			} else {
+				// Request unknown WHOIS from upstream from us (if we have one)
+				RR->sw->requestWhois(addr);
 #ifdef ZT_ENABLE_CLUSTER
+				// Distribute WHOIS queries across a cluster if we do not know the ID.
+				// This may result in duplicate OKs to the querying peer, which is fine.
 				if (RR->cluster)
 					RR->cluster->sendDistributedQuery(*this);
 #endif
 			}
-		} else {
-			TRACE("dropped WHOIS from %s(%s): missing or invalid address",source().toString().c_str(),_remoteAddress.toString().c_str());
 		}
-		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_WHOIS,0,Packet::VERB_NOP);
+
+		if (count > 0) {
+			outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+			_path->send(RR,outp.data(),outp.size(),RR->node->now());
+		}
+
+		peer->received(_path,hops(),packetId(),Packet::VERB_WHOIS,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
-		TRACE("dropped WHOIS from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped WHOIS from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
@@ -508,31 +604,33 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		if (RR->topology->isUpstream(peer->identity())) {
+		if (!RR->topology->isUpstream(peer->identity())) {
+			TRACE("RENDEZVOUS from %s ignored since source is not upstream",peer->address().toString().c_str());
+		} else {
 			const Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-			const SharedPtr<Peer> withPeer(RR->topology->getPeer(with));
-			if (withPeer) {
+			const SharedPtr<Peer> rendezvousWith(RR->topology->getPeer(with));
+			if (rendezvousWith) {
 				const unsigned int port = at<uint16_t>(ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT);
 				const unsigned int addrlen = (*this)[ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN];
 				if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
-					peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP);
-
-					InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
-					TRACE("RENDEZVOUS from %s says %s might be at %s, starting NAT-t",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
-					if (RR->node->shouldUsePathForZeroTierTraffic(_localAddress,atAddr))
-						RR->sw->rendezvous(withPeer,_localAddress,atAddr);
+					const InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
+					if (RR->node->shouldUsePathForZeroTierTraffic(with,_path->localAddress(),atAddr)) {
+						RR->node->putPacket(_path->localAddress(),atAddr,"ABRE",4,2); // send low-TTL junk packet to 'open' local NAT(s) and stateful firewalls
+						rendezvousWith->attemptToContactAt(_path->localAddress(),atAddr,RR->node->now(),false,0);
+						TRACE("RENDEZVOUS from %s says %s might be at %s, sent verification attempt",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
+					} else {
+						TRACE("RENDEZVOUS from %s says %s might be at %s, ignoring since path is not suitable",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
+					}
 				} else {
-					TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+					TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",peer->address().toString().c_str(),_path->address().toString().c_str());
 				}
 			} else {
-				RR->sw->requestWhois(with);
-				TRACE("ignored RENDEZVOUS from %s(%s) to meet unknown peer %s",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),with.toString().c_str());
+				TRACE("ignored RENDEZVOUS from %s(%s) to meet unknown peer %s",peer->address().toString().c_str(),_path->address().toString().c_str(),with.toString().c_str());
 			}
-		} else {
-			TRACE("ignored RENDEZVOUS from %s(%s): not a root server or a network relay",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 		}
+		peer->received(_path,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
-		TRACE("dropped RENDEZVOUS from %s(%s): unexpected exception",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped RENDEZVOUS from %s(%s): unexpected exception",peer->address().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
@@ -540,31 +638,31 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<
 bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID)));
+		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID);
+		const SharedPtr<Network> network(RR->node->network(nwid));
+		bool trustEstablished = false;
 		if (network) {
-			if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD) {
-				if (!network->isAllowed(peer)) {
-					TRACE("dropped FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)network->id());
-					_sendErrorNeedCertificate(RR,peer,network->id());
-					return true;
+			if (network->gate(peer)) {
+				trustEstablished = true;
+				if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD) {
+					const unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
+					const MAC sourceMac(peer->address(),nwid);
+					const unsigned int frameLen = size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
+					const uint8_t *const frameData = reinterpret_cast<const uint8_t *>(data()) + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
+					if (network->filterIncomingPacket(peer,RR->identity.address(),sourceMac,network->mac(),frameData,frameLen,etherType,0) > 0)
+						RR->node->putFrame(nwid,network->userPtr(),sourceMac,network->mac(),etherType,0,(const void *)frameData,frameLen);
 				}
-
-				const unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
-				if (!network->config().permitsEtherType(etherType)) {
-					TRACE("dropped FRAME from %s(%s): ethertype %.4x not allowed on %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned int)etherType,(unsigned long long)network->id());
-					return true;
-				}
-
-				const unsigned int payloadLen = size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
-				RR->node->putFrame(network->id(),network->userPtr(),MAC(peer->address(),network->id()),network->mac(),etherType,0,field(ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,payloadLen),payloadLen);
+			} else {
+				TRACE("dropped FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_path->address().toString().c_str(),(unsigned long long)network->id());
+				_sendErrorNeedCredentials(RR,peer,nwid);
 			}
-
-			peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP);
 		} else {
-			TRACE("dropped FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
+			TRACE("dropped FRAME from %s(%s): we are not a member of network %.16llx",source().toString().c_str(),_path->address().toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
+			_sendErrorNeedCredentials(RR,peer,nwid);
 		}
+		peer->received(_path,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP,trustEstablished);
 	} catch ( ... ) {
-		TRACE("dropped FRAME from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped FRAME from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
@@ -572,70 +670,86 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_EXT_FRAME_IDX_NETWORK_ID)));
+		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_EXT_FRAME_IDX_NETWORK_ID);
+		const SharedPtr<Network> network(RR->node->network(nwid));
 		if (network) {
-			if (size() > ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD) {
-				const unsigned int flags = (*this)[ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS];
+			const unsigned int flags = (*this)[ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS];
 
-				unsigned int comLen = 0;
-				if ((flags & 0x01) != 0) {
-					CertificateOfMembership com;
-					comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
-					peer->validateAndSetNetworkMembershipCertificate(network->id(),com);
-				}
-
-				if (!network->isAllowed(peer)) {
-					TRACE("dropped EXT_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),network->id());
-					_sendErrorNeedCertificate(RR,peer,network->id());
-					return true;
-				}
-
-				// Everything after flags must be adjusted based on the length
-				// of the certificate, if there was one...
-
-				const unsigned int etherType = at<uint16_t>(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_ETHERTYPE);
-				if (!network->config().permitsEtherType(etherType)) {
-					TRACE("dropped EXT_FRAME from %s(%s): ethertype %.4x not allowed on network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned int)etherType,(unsigned long long)network->id());
-					return true;
-				}
-
-				const MAC to(field(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_TO,ZT_PROTO_VERB_EXT_FRAME_LEN_TO),ZT_PROTO_VERB_EXT_FRAME_LEN_TO);
-				const MAC from(field(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_FROM,ZT_PROTO_VERB_EXT_FRAME_LEN_FROM),ZT_PROTO_VERB_EXT_FRAME_LEN_FROM);
-
-				if (to.isMulticast()) {
-					TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: destination is multicast, must use MULTICAST_FRAME",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
-					return true;
-				}
-
-				if ((!from)||(from.isMulticast())||(from == network->mac())) {
-					TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: invalid source MAC",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
-					return true;
-				}
-
-				if (from != MAC(peer->address(),network->id())) {
-					if (network->config().permitsBridging(peer->address())) {
-						network->learnBridgeRoute(from,peer->address());
-					} else {
-						TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
-						return true;
-					}
-				} else if (to != network->mac()) {
-					if (!network->config().permitsBridging(RR->identity.address())) {
-						TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: I cannot bridge to %.16llx or bridging disabled on network",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
-						return true;
-					}
-				}
-
-				const unsigned int payloadLen = size() - (comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD);
-				RR->node->putFrame(network->id(),network->userPtr(),from,to,etherType,0,field(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD,payloadLen),payloadLen);
+			unsigned int comLen = 0;
+			if ((flags & 0x01) != 0) { // inline COM with EXT_FRAME is deprecated but still used with old peers
+				CertificateOfMembership com;
+				comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
+				if (com)
+					network->addCredential(com);
 			}
 
-			peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP);
+			if (!network->gate(peer)) {
+				TRACE("dropped EXT_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_path->address().toString().c_str(),network->id());
+				_sendErrorNeedCredentials(RR,peer,nwid);
+				peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,false);
+				return true;
+			}
+
+			if (size() > ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD) {
+				const unsigned int etherType = at<uint16_t>(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_ETHERTYPE);
+				const MAC to(field(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_TO,ZT_PROTO_VERB_EXT_FRAME_LEN_TO),ZT_PROTO_VERB_EXT_FRAME_LEN_TO);
+				const MAC from(field(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_FROM,ZT_PROTO_VERB_EXT_FRAME_LEN_FROM),ZT_PROTO_VERB_EXT_FRAME_LEN_FROM);
+				const unsigned int frameLen = size() - (comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD);
+				const uint8_t *const frameData = (const uint8_t *)field(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD,frameLen);
+
+				if ((!from)||(from.isMulticast())||(from == network->mac())) {
+					TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: invalid source MAC %s",from.toString().c_str(),peer->address().toString().c_str(),_path->address().toString().c_str(),to.toString().c_str(),from.toString().c_str());
+					peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
+					return true;
+				}
+
+				switch (network->filterIncomingPacket(peer,RR->identity.address(),from,to,frameData,frameLen,etherType,0)) {
+					case 1:
+						if (from != MAC(peer->address(),nwid)) {
+							if (network->config().permitsBridging(peer->address())) {
+								network->learnBridgeRoute(from,peer->address());
+							} else {
+								TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_path->address().toString().c_str(),to.toString().c_str(),network->id());
+								peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
+								return true;
+							}
+						} else if (to != network->mac()) {
+							if (to.isMulticast()) {
+								if (network->config().multicastLimit == 0) {
+									TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: network %.16llx does not allow multicast",from.toString().c_str(),peer->address().toString().c_str(),_path->address().toString().c_str(),to.toString().c_str(),network->id());
+									peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
+									return true;
+								}
+							} else if (!network->config().permitsBridging(RR->identity.address())) {
+								TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: I cannot bridge to %.16llx or bridging disabled on network",from.toString().c_str(),peer->address().toString().c_str(),_path->address().toString().c_str(),to.toString().c_str(),network->id());
+								peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
+								return true;
+							}
+						}
+						// fall through -- 2 means accept regardless of bridging checks or other restrictions
+					case 2:
+						RR->node->putFrame(nwid,network->userPtr(),from,to,etherType,0,(const void *)frameData,frameLen);
+						break;
+				}
+			}
+
+			if ((flags & 0x10) != 0) { // ACK requested
+				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
+				outp.append((uint8_t)Packet::VERB_EXT_FRAME);
+				outp.append((uint64_t)packetId());
+				outp.append((uint64_t)nwid);
+				outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+				_path->send(RR,outp.data(),outp.size(),RR->node->now());
+			}
+
+			peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true);
 		} else {
-			TRACE("dropped EXT_FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
+			TRACE("dropped EXT_FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_path->address().toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
+			_sendErrorNeedCredentials(RR,peer,nwid);
+			peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,false);
 		}
 	} catch ( ... ) {
-		TRACE("dropped EXT_FRAME from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped EXT_FRAME from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
@@ -643,17 +757,23 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
+		if (!peer->rateGateEchoRequest(RR->node->now())) {
+			TRACE("dropped ECHO from %s(%s): rate limit circuit breaker tripped",source().toString().c_str(),_path->address().toString().c_str());
+			return true;
+		}
+
 		const uint64_t pid = packetId();
 		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 		outp.append((unsigned char)Packet::VERB_ECHO);
 		outp.append((uint64_t)pid);
 		if (size() > ZT_PACKET_IDX_PAYLOAD)
 			outp.append(reinterpret_cast<const unsigned char *>(data()) + ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD);
-		outp.armor(peer->key(),true);
-		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
-		peer->received(_localAddress,_remoteAddress,hops(),pid,Packet::VERB_ECHO,0,Packet::VERB_NOP);
+		outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+		_path->send(RR,outp.data(),outp.size(),RR->node->now());
+
+		peer->received(_path,hops(),pid,Packet::VERB_ECHO,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
-		TRACE("dropped ECHO from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped ECHO from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
@@ -663,34 +783,172 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 	try {
 		const uint64_t now = RR->node->now();
 
+		uint64_t authOnNetwork[256]; // cache for approved network IDs
+		unsigned int authOnNetworkCount = 0;
+		SharedPtr<Network> network;
+		bool trustEstablished = false;
+
 		// Iterate through 18-byte network,MAC,ADI tuples
 		for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18) {
 			const uint64_t nwid = at<uint64_t>(ptr);
-			const MulticastGroup group(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14));
-			RR->mc->add(now,nwid,group,peer->address());
+
+			bool auth = false;
+			for(unsigned int i=0;i<authOnNetworkCount;++i) {
+				if (nwid == authOnNetwork[i]) {
+					auth = true;
+					break;
+				}
+			}
+			if (!auth) {
+				if ((!network)||(network->id() != nwid))
+					network = RR->node->network(nwid);
+				const bool authOnNet = ((network)&&(network->gate(peer)));
+				if (!authOnNet)
+					_sendErrorNeedCredentials(RR,peer,nwid);
+				trustEstablished |= authOnNet;
+				if (authOnNet||RR->mc->cacheAuthorized(peer->address(),nwid,now)) {
+					auth = true;
+					if (authOnNetworkCount < 256) // sanity check, packets can't really be this big
+						authOnNetwork[authOnNetworkCount++] = nwid;
+				}
+			}
+
+			if (auth) {
+				const MulticastGroup group(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14));
+				RR->mc->add(now,nwid,group,peer->address());
+			}
 		}
 
-		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP);
+		peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP,trustEstablished);
 	} catch ( ... ) {
-		TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		CertificateOfMembership com;
-
-		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
-		while (ptr < size()) {
-			ptr += com.deserialize(*this,ptr);
-			peer->validateAndSetNetworkMembershipCertificate(com.networkId(),com);
+		if (!peer->rateGateCredentialsReceived(RR->node->now())) {
+			TRACE("dropped NETWORK_CREDENTIALS from %s(%s): rate limit circuit breaker tripped",source().toString().c_str(),_path->address().toString().c_str());
+			return true;
 		}
 
-		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE,0,Packet::VERB_NOP);
+		CertificateOfMembership com;
+		Capability cap;
+		Tag tag;
+		Revocation revocation;
+		CertificateOfOwnership coo;
+		bool trustEstablished = false;
+
+		unsigned int p = ZT_PACKET_IDX_PAYLOAD;
+		while ((p < size())&&((*this)[p] != 0)) {
+			p += com.deserialize(*this,p);
+			if (com) {
+				const SharedPtr<Network> network(RR->node->network(com.networkId()));
+				if (network) {
+					switch (network->addCredential(com)) {
+						case Membership::ADD_REJECTED:
+							break;
+						case Membership::ADD_ACCEPTED_NEW:
+						case Membership::ADD_ACCEPTED_REDUNDANT:
+							trustEstablished = true;
+							break;
+						case Membership::ADD_DEFERRED_FOR_WHOIS:
+							return false;
+					}
+				} else RR->mc->addCredential(com,false);
+			}
+		}
+		++p; // skip trailing 0 after COMs if present
+
+		if (p < size()) { // older ZeroTier versions do not send capabilities, tags, or revocations
+			const unsigned int numCapabilities = at<uint16_t>(p); p += 2;
+			for(unsigned int i=0;i<numCapabilities;++i) {
+				p += cap.deserialize(*this,p);
+				const SharedPtr<Network> network(RR->node->network(cap.networkId()));
+				if (network) {
+					switch (network->addCredential(cap)) {
+						case Membership::ADD_REJECTED:
+							break;
+						case Membership::ADD_ACCEPTED_NEW:
+						case Membership::ADD_ACCEPTED_REDUNDANT:
+							trustEstablished = true;
+							break;
+						case Membership::ADD_DEFERRED_FOR_WHOIS:
+							return false;
+					}
+				}
+			}
+
+			if (p >= size()) return true;
+
+			const unsigned int numTags = at<uint16_t>(p); p += 2;
+			for(unsigned int i=0;i<numTags;++i) {
+				p += tag.deserialize(*this,p);
+				const SharedPtr<Network> network(RR->node->network(tag.networkId()));
+				if (network) {
+					switch (network->addCredential(tag)) {
+						case Membership::ADD_REJECTED:
+							break;
+						case Membership::ADD_ACCEPTED_NEW:
+						case Membership::ADD_ACCEPTED_REDUNDANT:
+							trustEstablished = true;
+							break;
+						case Membership::ADD_DEFERRED_FOR_WHOIS:
+							return false;
+					}
+				}
+			}
+
+			if (p >= size()) return true;
+
+			const unsigned int numRevocations = at<uint16_t>(p); p += 2;
+			for(unsigned int i=0;i<numRevocations;++i) {
+				p += revocation.deserialize(*this,p);
+				const SharedPtr<Network> network(RR->node->network(revocation.networkId()));
+				if (network) {
+					switch(network->addCredential(peer->address(),revocation)) {
+						case Membership::ADD_REJECTED:
+							break;
+						case Membership::ADD_ACCEPTED_NEW:
+						case Membership::ADD_ACCEPTED_REDUNDANT:
+							trustEstablished = true;
+							break;
+						case Membership::ADD_DEFERRED_FOR_WHOIS:
+							return false;
+					}
+				}
+			}
+
+			if (p >= size()) return true;
+
+			const unsigned int numCoos = at<uint16_t>(p); p += 2;
+			for(unsigned int i=0;i<numCoos;++i) {
+				p += coo.deserialize(*this,p);
+				const SharedPtr<Network> network(RR->node->network(coo.networkId()));
+				if (network) {
+					switch(network->addCredential(coo)) {
+						case Membership::ADD_REJECTED:
+							break;
+						case Membership::ADD_ACCEPTED_NEW:
+						case Membership::ADD_ACCEPTED_REDUNDANT:
+							trustEstablished = true;
+							break;
+						case Membership::ADD_DEFERRED_FOR_WHOIS:
+							return false;
+					}
+				}
+			}
+		}
+
+		peer->received(_path,hops(),packetId(),Packet::VERB_NETWORK_CREDENTIALS,0,Packet::VERB_NOP,trustEstablished);
+	} catch (std::exception &exc) {
+		//fprintf(stderr,"dropped NETWORK_CREDENTIALS from %s(%s): %s" ZT_EOL_S,source().toString().c_str(),_path->address().toString().c_str(),exc.what());
+		TRACE("dropped NETWORK_CREDENTIALS from %s(%s): %s",source().toString().c_str(),_path->address().toString().c_str(),exc.what());
 	} catch ( ... ) {
-		TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		//fprintf(stderr,"dropped NETWORK_CREDENTIALS from %s(%s): unknown exception" ZT_EOL_S,source().toString().c_str(),_path->address().toString().c_str());
+		TRACE("dropped NETWORK_CREDENTIALS from %s(%s): unknown exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
@@ -699,97 +957,54 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 {
 	try {
 		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
-
-		const unsigned int metaDataLength = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
-		const char *metaDataBytes = (const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength);
-		const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> metaData(metaDataBytes,metaDataLength);
-
-		//const uint64_t haveRevision = ((ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength + 8) <= size()) ? at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength) : 0ULL;
-
-		const unsigned int h = hops();
-		const uint64_t pid = packetId();
-		peer->received(_localAddress,_remoteAddress,h,pid,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP);
+		const unsigned int hopCount = hops();
+		const uint64_t requestPacketId = packetId();
 
 		if (RR->localNetworkController) {
-			NetworkConfig netconf;
-			switch(RR->localNetworkController->doNetworkConfigRequest((h > 0) ? InetAddress() : _remoteAddress,RR->identity,peer->identity(),nwid,metaData,netconf)) {
-
-				case NetworkController::NETCONF_QUERY_OK: {
-					Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> dconf;
-					if (netconf.toDictionary(dconf,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6)) {
-						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
-						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-						outp.append(pid);
-						outp.append(nwid);
-						const unsigned int dlen = dconf.sizeBytes();
-						outp.append((uint16_t)dlen);
-						outp.append((const void *)dconf.data(),dlen);
-						outp.compress();
-						RR->sw->send(outp,true,0);
-					}
-				}	break;
-
-				case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND: {
-					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
-					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-					outp.append(pid);
-					outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
-					outp.append(nwid);
-					outp.armor(peer->key(),true);
-					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
-				}	break;
-
-				case NetworkController::NETCONF_QUERY_ACCESS_DENIED: {
-					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
-					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-					outp.append(pid);
-					outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
-					outp.append(nwid);
-					outp.armor(peer->key(),true);
-					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
-				} break;
-
-				case NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR:
-					// TRACE("NETWORK_CONFIG_REQUEST failed: internal error: %s",netconf.get("error","(unknown)").c_str());
-					break;
-
-				case NetworkController::NETCONF_QUERY_IGNORE:
-					break;
-
-				default:
-					TRACE("NETWORK_CONFIG_REQUEST failed: invalid return value from NetworkController::doNetworkConfigRequest()");
-					break;
-
-			}
+			const unsigned int metaDataLength = (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN <= size()) ? at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN) : 0;
+			const char *metaDataBytes = (metaDataLength != 0) ? (const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength) : (const char *)0;
+			const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> metaData(metaDataBytes,metaDataLength);
+			RR->localNetworkController->request(nwid,(hopCount > 0) ? InetAddress() : _path->address(),requestPacketId,peer->identity(),metaData);
 		} else {
 			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 			outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-			outp.append(pid);
+			outp.append(requestPacketId);
 			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
 			outp.append(nwid);
-			outp.armor(peer->key(),true);
-			RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+			outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+			_path->send(RR,outp.data(),outp.size(),RR->node->now());
 		}
+
+		peer->received(_path,hopCount,requestPacketId,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,false);
+	} catch (std::exception &exc) {
+		//fprintf(stderr,"dropped NETWORK_CONFIG_REQUEST from %s(%s): %s" ZT_EOL_S,source().toString().c_str(),_path->address().toString().c_str(),exc.what());
+		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): %s",source().toString().c_str(),_path->address().toString().c_str(),exc.what());
 	} catch ( ... ) {
-		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		//fprintf(stderr,"dropped NETWORK_CONFIG_REQUEST from %s(%s): unknown exception" ZT_EOL_S,source().toString().c_str(),_path->address().toString().c_str());
+		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unknown exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
-		while ((ptr + 8) <= size()) {
-			uint64_t nwid = at<uint64_t>(ptr);
-			SharedPtr<Network> nw(RR->node->network(nwid));
-			if ((nw)&&(peer->address() == nw->controller()))
-				nw->requestConfiguration();
-			ptr += 8;
+		const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PACKET_IDX_PAYLOAD)));
+		if (network) {
+			const uint64_t configUpdateId = network->handleConfigChunk(packetId(),source(),*this,ZT_PACKET_IDX_PAYLOAD);
+			if (configUpdateId) {
+				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
+				outp.append((uint8_t)Packet::VERB_ECHO);
+				outp.append((uint64_t)packetId());
+				outp.append((uint64_t)network->id());
+				outp.append((uint64_t)configUpdateId);
+				outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+				_path->send(RR,outp.data(),outp.size(),RR->node->now());
+			}
 		}
-		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP);
+		peer->received(_path,hops(),packetId(),Packet::VERB_NETWORK_CONFIG,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
-		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
@@ -798,12 +1013,32 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 {
 	try {
 		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_NETWORK_ID);
+		const unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_GATHER_IDX_FLAGS];
 		const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI));
 		const unsigned int gatherLimit = at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT);
 
-		//TRACE("<<MC %s(%s) GATHER up to %u in %.16llx/%s",source().toString().c_str(),_remoteAddress.toString().c_str(),gatherLimit,nwid,mg.toString().c_str());
+		//TRACE("<<MC %s(%s) GATHER up to %u in %.16llx/%s",source().toString().c_str(),_path->address().toString().c_str(),gatherLimit,nwid,mg.toString().c_str());
 
-		if (gatherLimit) {
+		const SharedPtr<Network> network(RR->node->network(nwid));
+
+		if ((flags & 0x01) != 0) {
+			try {
+				CertificateOfMembership com;
+				com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_GATHER_IDX_COM);
+				if (com) {
+					if (network)
+						network->addCredential(com);
+					else RR->mc->addCredential(com,false);
+				}
+			} catch ( ... ) {
+				TRACE("MULTICAST_GATHER from %s(%s): discarded invalid COM",peer->address().toString().c_str(),_path->address().toString().c_str());
+			}
+		}
+
+		const bool trustEstablished = ((network)&&(network->gate(peer)));
+		if (!trustEstablished)
+			_sendErrorNeedCredentials(RR,peer,nwid);
+		if ( ( trustEstablished || RR->mc->cacheAuthorized(peer->address(),nwid,RR->node->now()) ) && (gatherLimit > 0) ) {
 			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 			outp.append((unsigned char)Packet::VERB_MULTICAST_GATHER);
 			outp.append(packetId());
@@ -811,20 +1046,21 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 			mg.mac().appendTo(outp);
 			outp.append((uint32_t)mg.adi());
 			const unsigned int gatheredLocally = RR->mc->gather(peer->address(),nwid,mg,outp,gatherLimit);
-			if (gatheredLocally) {
-				outp.armor(peer->key(),true);
-				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+			if (gatheredLocally > 0) {
+				outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+				_path->send(RR,outp.data(),outp.size(),RR->node->now());
 			}
 
+			// If we are a member of a cluster, distribute this GATHER across it
 #ifdef ZT_ENABLE_CLUSTER
 			if ((RR->cluster)&&(gatheredLocally < gatherLimit))
 				RR->cluster->sendDistributedQuery(*this);
 #endif
 		}
 
-		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_GATHER,0,Packet::VERB_NOP);
+		peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_GATHER,0,Packet::VERB_NOP,trustEstablished);
 	} catch ( ... ) {
-		TRACE("dropped MULTICAST_GATHER from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped MULTICAST_GATHER from %s(%s): unexpected exception",peer->address().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
@@ -841,16 +1077,23 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 			unsigned int offset = 0;
 
 			if ((flags & 0x01) != 0) {
+				// This is deprecated but may still be sent by old peers
 				CertificateOfMembership com;
 				offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
-				peer->validateAndSetNetworkMembershipCertificate(nwid,com);
+				if (com)
+					network->addCredential(com);
 			}
 
-			// Check membership after we've read any included COM, since
-			// that cert might be what we needed.
-			if (!network->isAllowed(peer)) {
-				TRACE("dropped MULTICAST_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)network->id());
-				_sendErrorNeedCertificate(RR,peer,network->id());
+			if (!network->gate(peer)) {
+				TRACE("dropped MULTICAST_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_path->address().toString().c_str(),(unsigned long long)network->id());
+				_sendErrorNeedCredentials(RR,peer,nwid);
+				peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,false);
+				return true;
+			}
+
+			if (network->config().multicastLimit == 0) {
+				TRACE("dropped MULTICAST_FRAME from %s(%s): network %.16llx does not allow multicast",peer->address().toString().c_str(),_path->address().toString().c_str(),(unsigned long long)network->id());
+				peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,false);
 				return true;
 			}
 
@@ -870,30 +1113,36 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 
 			const MulticastGroup to(MAC(field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC,6),6),at<uint32_t>(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI));
 			const unsigned int etherType = at<uint16_t>(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
-			const unsigned int payloadLen = size() - (offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME);
+			const unsigned int frameLen = size() - (offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME);
 
-			//TRACE("<<MC FRAME %.16llx/%s from %s@%s flags %.2x length %u",nwid,to.toString().c_str(),from.toString().c_str(),peer->address().toString().c_str(),flags,payloadLen);
+			//TRACE("<<MC FRAME %.16llx/%s from %s@%s flags %.2x length %u",nwid,to.toString().c_str(),from.toString().c_str(),peer->address().toString().c_str(),flags,frameLen);
 
-			if ((payloadLen > 0)&&(payloadLen <= ZT_IF_MTU)) {
+			if ((frameLen > 0)&&(frameLen <= ZT_IF_MTU)) {
 				if (!to.mac().isMulticast()) {
-					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: destination is unicast, must use FRAME or EXT_FRAME",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
+					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: destination is unicast, must use FRAME or EXT_FRAME",from.toString().c_str(),peer->address().toString().c_str(),_path->address().toString().c_str(),to.toString().c_str());
+					peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
 					return true;
 				}
 				if ((!from)||(from.isMulticast())||(from == network->mac())) {
-					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: invalid source MAC",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
+					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: invalid source MAC",from.toString().c_str(),peer->address().toString().c_str(),_path->address().toString().c_str(),to.toString().c_str());
+					peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
 					return true;
 				}
 
-				if (from != MAC(peer->address(),network->id())) {
+				if (from != MAC(peer->address(),nwid)) {
 					if (network->config().permitsBridging(peer->address())) {
 						network->learnBridgeRoute(from,peer->address());
 					} else {
-						TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
+						TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_path->address().toString().c_str(),to.toString().c_str(),network->id());
+						peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
 						return true;
 					}
 				}
 
-				RR->node->putFrame(network->id(),network->userPtr(),from,to.mac(),etherType,0,field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,payloadLen),payloadLen);
+				const uint8_t *const frameData = (const uint8_t *)field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,frameLen);
+				if (network->filterIncomingPacket(peer,RR->identity.address(),from,to.mac(),frameData,frameLen,etherType,0) > 0) {
+					RR->node->putFrame(nwid,network->userPtr(),from,to.mac(),etherType,0,(const void *)frameData,frameLen);
+				}
 			}
 
 			if (gatherLimit) {
@@ -905,15 +1154,18 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				outp.append((uint32_t)to.adi());
 				outp.append((unsigned char)0x02); // flag 0x02 = contains gather results
 				if (RR->mc->gather(peer->address(),nwid,to,outp,gatherLimit)) {
-					outp.armor(peer->key(),true);
-					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+					outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+					_path->send(RR,outp.data(),outp.size(),RR->node->now());
 				}
 			}
-		} // else ignore -- not a member of this network
 
-		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP);
+			peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,true);
+		} else {
+			_sendErrorNeedCredentials(RR,peer,nwid);
+			peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,false);
+		}
 	} catch ( ... ) {
-		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
@@ -924,8 +1176,9 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 		const uint64_t now = RR->node->now();
 
 		// First, subject this to a rate limit
-		if (!peer->shouldRespondToDirectPathPush(now)) {
-			TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): circuit breaker tripped",source().toString().c_str(),_remoteAddress.toString().c_str());
+		if (!peer->rateGatePushDirectPaths(now)) {
+			TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): circuit breaker tripped",source().toString().c_str(),_path->address().toString().c_str());
+			peer->received(_path,hops(),packetId(),Packet::VERB_PUSH_DIRECT_PATHS,0,Packet::VERB_NOP,false);
 			return true;
 		}
 
@@ -951,15 +1204,15 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 
 					bool redundant = false;
 					if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0) {
-						peer->setClusterOptimalPathForAddressFamily(a);
+						peer->setClusterOptimal(a);
 					} else {
 						redundant = peer->hasActivePathTo(now,a);
 					}
 
-					if ( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && (!redundant) && (RR->node->shouldUsePathForZeroTierTraffic(_localAddress,a)) ) {
+					if ( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && (!redundant) && (RR->node->shouldUsePathForZeroTierTraffic(peer->address(),_path->localAddress(),a)) ) {
 						if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-							peer->sendHELLO(InetAddress(),a,now);
+							peer->attemptToContactAt(InetAddress(),a,now,false,0);
 						} else {
 							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
@@ -970,15 +1223,15 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 
 					bool redundant = false;
 					if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0) {
-						peer->setClusterOptimalPathForAddressFamily(a);
+						peer->setClusterOptimal(a);
 					} else {
 						redundant = peer->hasActivePathTo(now,a);
 					}
 
-					if ( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && (!redundant) && (RR->node->shouldUsePathForZeroTierTraffic(_localAddress,a)) ) {
+					if ( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && (!redundant) && (RR->node->shouldUsePathForZeroTierTraffic(peer->address(),_path->localAddress(),a)) ) {
 						if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-							peer->sendHELLO(InetAddress(),a,now);
+							peer->attemptToContactAt(InetAddress(),a,now,false,0);
 						} else {
 							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
@@ -988,9 +1241,9 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 			ptr += addrLen;
 		}
 
-		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_PUSH_DIRECT_PATHS,0,Packet::VERB_NOP);
+		peer->received(_path,hops(),packetId(),Packet::VERB_PUSH_DIRECT_PATHS,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
-		TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
@@ -1012,7 +1265,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 		// Tracks total length of variable length fields, initialized to originator credential length below
 		unsigned int vlf;
 
-		// Originator credentials
+		// Originator credentials -- right now only a network ID for which the originator is controller or is authorized by controller is allowed
 		const unsigned int originatorCredentialLength = vlf = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 23);
 		uint64_t originatorCredentialNetworkId = 0;
 		if (originatorCredentialLength >= 1) {
@@ -1031,7 +1284,8 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 		// Verify signature -- only tests signed by their originators are allowed
 		const unsigned int signatureLength = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 27 + vlf);
 		if (!originator->identity().verify(field(ZT_PACKET_IDX_PAYLOAD,27 + vlf),27 + vlf,field(ZT_PACKET_IDX_PAYLOAD + 29 + vlf,signatureLength),signatureLength)) {
-			TRACE("dropped CIRCUIT_TEST from %s(%s): signature by originator %s invalid",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str());
+			TRACE("dropped CIRCUIT_TEST from %s(%s): signature by originator %s invalid",source().toString().c_str(),_path->address().toString().c_str(),originatorAddress.toString().c_str());
+			peer->received(_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
 			return true;
 		}
 		vlf += signatureLength;
@@ -1040,46 +1294,24 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 		// into the one we send along to next hops.
 		const unsigned int lengthOfSignedPortionAndSignature = 29 + vlf;
 
-		// Get previous hop's credential, if any
-		const unsigned int previousHopCredentialLength = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 29 + vlf);
-		CertificateOfMembership previousHopCom;
-		if (previousHopCredentialLength >= 1) {
-			switch((*this)[ZT_PACKET_IDX_PAYLOAD + 31 + vlf]) {
-				case 0x01: { // network certificate of membership for previous hop
-					const unsigned int phcl = previousHopCom.deserialize(*this,ZT_PACKET_IDX_PAYLOAD + 32 + vlf);
-					if (phcl != (previousHopCredentialLength - 1)) {
-						TRACE("dropped CIRCUIT_TEST from %s(%s): previous hop COM invalid (%u != %u)",source().toString().c_str(),_remoteAddress.toString().c_str(),phcl,(previousHopCredentialLength - 1));
-						return true;
-					}
-				}	break;
-				default: break;
-			}
-		}
-		vlf += previousHopCredentialLength;
+		// Add length of second "additional fields" section.
+		vlf += at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 29 + vlf);
+
+		uint64_t reportFlags = 0;
 
 		// Check credentials (signature already verified)
-		NetworkConfig originatorCredentialNetworkConfig;
 		if (originatorCredentialNetworkId) {
-			if (Network::controllerFor(originatorCredentialNetworkId) == originatorAddress) {
-				SharedPtr<Network> nw(RR->node->network(originatorCredentialNetworkId));
-				if ((nw)&&(nw->hasConfig())) {
-					originatorCredentialNetworkConfig = nw->config();
-					if ( ( (originatorCredentialNetworkConfig.isPublic()) || (peer->address() == originatorAddress) || ((originatorCredentialNetworkConfig.com)&&(previousHopCom)&&(originatorCredentialNetworkConfig.com.agreesWith(previousHopCom))) ) ) {
-						TRACE("CIRCUIT_TEST %.16llx received from hop %s(%s) and originator %s with valid network ID credential %.16llx (verified from originator and next hop)",testId,source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
-					} else {
-						TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID %.16llx as credential, and previous hop %s did not supply a valid COM",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId,peer->address().toString().c_str());
-						return true;
-					}
-				} else {
-					TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID %.16llx as credential, and we are not a member",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
-					return true;
-				}
-			} else {
-				TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID as credential, is not controller for %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
+			SharedPtr<Network> network(RR->node->network(originatorCredentialNetworkId));
+			if ((!network)||(!network->config().circuitTestingAllowed(originatorAddress))) {
+				TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID %.16llx as credential, and we don't belong to that network or originator is not allowed'",source().toString().c_str(),_path->address().toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
+				peer->received(_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
 				return true;
 			}
+			if (network->gate(peer))
+				reportFlags |= ZT_CIRCUIT_TEST_REPORT_FLAGS_UPSTREAM_AUTHORIZED_IN_PATH;
 		} else {
-			TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s did not specify a credential or credential type",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str());
+			TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s did not specify a credential or credential type",source().toString().c_str(),_path->address().toString().c_str(),originatorAddress.toString().c_str());
+			peer->received(_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
 			return true;
 		}
 
@@ -1097,9 +1329,9 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 				remainingHopsPtr += ZT_ADDRESS_LENGTH;
 				SharedPtr<Peer> nhp(RR->topology->getPeer(nextHop[h]));
 				if (nhp) {
-					Path *const rp = nhp->getBestPath(now);
-					if (rp)
-						nextHopBestPathAddress[h] = rp->address();
+					SharedPtr<Path> nhbp(nhp->getBestPath(now,false));
+					if ((nhbp)&&(nhbp->alive(now)))
+						nextHopBestPathAddress[h] = nhbp->address();
 				}
 			}
 		}
@@ -1118,32 +1350,26 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 			outp.append((uint16_t)ZT_PLATFORM_UNSPECIFIED);
 			outp.append((uint16_t)ZT_ARCHITECTURE_UNSPECIFIED);
 			outp.append((uint16_t)0); // error code, currently unused
-			outp.append((uint64_t)0); // flags, currently unused
+			outp.append((uint64_t)reportFlags);
 			outp.append((uint64_t)packetId());
 			peer->address().appendTo(outp);
 			outp.append((uint8_t)hops());
-			_localAddress.serialize(outp);
-			_remoteAddress.serialize(outp);
-			outp.append((uint16_t)0); // no additional fields
+			_path->localAddress().serialize(outp);
+			_path->address().serialize(outp);
+			outp.append((uint16_t)_path->linkQuality());
 			outp.append((uint8_t)breadth);
 			for(unsigned int h=0;h<breadth;++h) {
 				nextHop[h].appendTo(outp);
 				nextHopBestPathAddress[h].serialize(outp); // appends 0 if null InetAddress
 			}
-			RR->sw->send(outp,true,0);
+			RR->sw->send(outp,true);
 		}
 
 		// If there are next hops, forward the test along through the graph
 		if (breadth > 0) {
 			Packet outp(Address(),RR->identity.address(),Packet::VERB_CIRCUIT_TEST);
 			outp.append(field(ZT_PACKET_IDX_PAYLOAD,lengthOfSignedPortionAndSignature),lengthOfSignedPortionAndSignature);
-			const unsigned int previousHopCredentialPos = outp.size();
-			outp.append((uint16_t)0); // no previous hop credentials: default
-			if ((originatorCredentialNetworkConfig)&&(!originatorCredentialNetworkConfig.isPublic())&&(originatorCredentialNetworkConfig.com)) {
-				outp.append((uint8_t)0x01); // COM
-				originatorCredentialNetworkConfig.com.serialize(outp);
-				outp.setAt<uint16_t>(previousHopCredentialPos,(uint16_t)(outp.size() - (previousHopCredentialPos + 2)));
-			}
+			outp.append((uint16_t)0); // no additional fields
 			if (remainingHopsPtr < size())
 				outp.append(field(remainingHopsPtr,size() - remainingHopsPtr),size() - remainingHopsPtr);
 
@@ -1151,14 +1377,14 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 				if (RR->identity.address() != nextHop[h]) { // next hops that loop back to the current hop are not valid
 					outp.newInitializationVector();
 					outp.setDestination(nextHop[h]);
-					RR->sw->send(outp,true,originatorCredentialNetworkId);
+					RR->sw->send(outp,true);
 				}
 			}
 		}
 
-		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP);
+		peer->received(_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
-		TRACE("dropped CIRCUIT_TEST from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped CIRCUIT_TEST from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
@@ -1173,7 +1399,6 @@ bool IncomingPacket::_doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const S
 		report.upstream = Address(field(ZT_PACKET_IDX_PAYLOAD + 52,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH).toInt();
 		report.testId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 8);
 		report.timestamp = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);
-		report.remoteTimestamp = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 16);
 		report.sourcePacketId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 44);
 		report.flags = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 36);
 		report.sourcePacketHopCount = (*this)[ZT_PACKET_IDX_PAYLOAD + 57]; // end of fixed length headers: 58
@@ -1188,176 +1413,61 @@ bool IncomingPacket::_doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const S
 
 		const unsigned int receivedOnLocalAddressLen = reinterpret_cast<InetAddress *>(&(report.receivedOnLocalAddress))->deserialize(*this,ZT_PACKET_IDX_PAYLOAD + 58);
 		const unsigned int receivedFromRemoteAddressLen = reinterpret_cast<InetAddress *>(&(report.receivedFromRemoteAddress))->deserialize(*this,ZT_PACKET_IDX_PAYLOAD + 58 + receivedOnLocalAddressLen);
+		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 58 + receivedOnLocalAddressLen + receivedFromRemoteAddressLen;
+		if (report.protocolVersion >= 9) {
+			report.receivedFromLinkQuality = at<uint16_t>(ptr); ptr += 2;
+		} else {
+			report.receivedFromLinkQuality = ZT_PATH_LINK_QUALITY_MAX;
+			ptr += at<uint16_t>(ptr) + 2; // this field was once an 'extended field length' reserved field, which was always set to 0
+		}
 
-		unsigned int nhptr = ZT_PACKET_IDX_PAYLOAD + 58 + receivedOnLocalAddressLen + receivedFromRemoteAddressLen;
-		nhptr += at<uint16_t>(nhptr) + 2; // add "additional field" length, which right now will be zero
-
-		report.nextHopCount = (*this)[nhptr++];
+		report.nextHopCount = (*this)[ptr++];
 		if (report.nextHopCount > ZT_CIRCUIT_TEST_MAX_HOP_BREADTH) // sanity check, shouldn't be possible
 			report.nextHopCount = ZT_CIRCUIT_TEST_MAX_HOP_BREADTH;
 		for(unsigned int h=0;h<report.nextHopCount;++h) {
-			report.nextHops[h].address = Address(field(nhptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH).toInt(); nhptr += ZT_ADDRESS_LENGTH;
-			nhptr += reinterpret_cast<InetAddress *>(&(report.nextHops[h].physicalAddress))->deserialize(*this,nhptr);
+			report.nextHops[h].address = Address(field(ptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH).toInt(); ptr += ZT_ADDRESS_LENGTH;
+			ptr += reinterpret_cast<InetAddress *>(&(report.nextHops[h].physicalAddress))->deserialize(*this,ptr);
 		}
 
 		RR->node->postCircuitTestReport(&report);
+
+		peer->received(_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST_REPORT,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
-		TRACE("dropped CIRCUIT_TEST_REPORT from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped CIRCUIT_TEST_REPORT from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doUSER_MESSAGE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		// If this were allowed from anyone, it would itself be a DOS vector. Right
-		// now we only allow it from roots and controllers of networks you have joined.
-		bool allowed = RR->topology->isRoot(peer->identity());
-		if (!allowed) {
-			std::vector< SharedPtr<Network> > allNetworks(RR->node->allNetworks());
-			for(std::vector< SharedPtr<Network> >::const_iterator n(allNetworks.begin());n!=allNetworks.end();++n) {
-				if (peer->address() == (*n)->controller()) {
-					allowed = true;
-					break;
-				}
-			}
+		if (size() >= (ZT_PACKET_IDX_PAYLOAD + 8)) {
+			ZT_UserMessage um;
+			um.origin = peer->address().toInt();
+			um.typeId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);
+			um.data = reinterpret_cast<const void *>(reinterpret_cast<const uint8_t *>(data()) + ZT_PACKET_IDX_PAYLOAD + 8);
+			um.length = size() - (ZT_PACKET_IDX_PAYLOAD + 8);
+			RR->node->postEvent(ZT_EVENT_USER_MESSAGE,reinterpret_cast<const void *>(&um));
 		}
-
-		if (allowed) {
-			const uint64_t pid = packetId();
-			const unsigned int difficulty = (*this)[ZT_PACKET_IDX_PAYLOAD + 1];
-			const unsigned int challengeLength = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 2);
-			if (challengeLength > ZT_PROTO_MAX_PACKET_LENGTH)
-				return true; // sanity check, drop invalid size
-			const unsigned char *challenge = field(ZT_PACKET_IDX_PAYLOAD + 4,challengeLength);
-
-			switch((*this)[ZT_PACKET_IDX_PAYLOAD]) {
-
-				// Salsa20/12+SHA512 hashcash
-				case 0x01: {
-					if (difficulty <= 14) {
-						unsigned char result[16];
-						computeSalsa2012Sha512ProofOfWork(difficulty,challenge,challengeLength,result);
-						TRACE("PROOF_OF_WORK computed for %s: difficulty==%u, challengeLength==%u, result: %.16llx%.16llx",peer->address().toString().c_str(),difficulty,challengeLength,Utils::ntoh(*(reinterpret_cast<const uint64_t *>(result))),Utils::ntoh(*(reinterpret_cast<const uint64_t *>(result + 8))));
-						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
-						outp.append((unsigned char)Packet::VERB_REQUEST_PROOF_OF_WORK);
-						outp.append(pid);
-						outp.append((uint16_t)sizeof(result));
-						outp.append(result,sizeof(result));
-						outp.armor(peer->key(),true);
-						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
-					} else {
-						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
-						outp.append((unsigned char)Packet::VERB_REQUEST_PROOF_OF_WORK);
-						outp.append(pid);
-						outp.append((unsigned char)Packet::ERROR_INVALID_REQUEST);
-						outp.armor(peer->key(),true);
-						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
-					}
-				}	break;
-
-				default:
-					TRACE("dropped REQUEST_PROOF_OF_WORK from %s(%s): unrecognized proof of work type",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
-					break;
-			}
-
-			peer->received(_localAddress,_remoteAddress,hops(),pid,Packet::VERB_REQUEST_PROOF_OF_WORK,0,Packet::VERB_NOP);
-		} else {
-			TRACE("dropped REQUEST_PROOF_OF_WORK from %s(%s): not trusted enough",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
-		}
+		peer->received(_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST_REPORT,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
-		TRACE("dropped REQUEST_PROOF_OF_WORK from %s(%s): unexpected exception",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped CIRCUIT_TEST_REPORT from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-void IncomingPacket::computeSalsa2012Sha512ProofOfWork(unsigned int difficulty,const void *challenge,unsigned int challengeLength,unsigned char result[16])
+void IncomingPacket::_sendErrorNeedCredentials(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,const uint64_t nwid)
 {
-	unsigned char salsabuf[131072]; // 131072 == protocol constant, size of memory buffer for this proof of work function
-	char candidatebuf[ZT_PROTO_MAX_PACKET_LENGTH + 256];
-	unsigned char shabuf[ZT_SHA512_DIGEST_LEN];
-	const uint64_t s20iv = 0; // zero IV for Salsa20
-	char *const candidate = (char *)(( ((uintptr_t)&(candidatebuf[0])) | 0xf ) + 1); // align to 16-byte boundary to ensure that uint64_t type punning of initial nonce is okay
-	Salsa20 s20;
-	unsigned int d;
-	unsigned char *p;
-
-	Utils::getSecureRandom(candidate,16);
-	memcpy(candidate + 16,challenge,challengeLength);
-
-	if (difficulty > 512)
-		difficulty = 512; // sanity check
-
-try_salsa2012sha512_again:
-	++*(reinterpret_cast<volatile uint64_t *>(candidate));
-
-	SHA512::hash(shabuf,candidate,16 + challengeLength);
-	s20.init(shabuf,256,&s20iv);
-	memset(salsabuf,0,sizeof(salsabuf));
-	s20.encrypt12(salsabuf,salsabuf,sizeof(salsabuf));
-	SHA512::hash(shabuf,salsabuf,sizeof(salsabuf));
-
-	d = difficulty;
-	p = shabuf;
-	while (d >= 8) {
-		if (*(p++))
-			goto try_salsa2012sha512_again;
-		d -= 8;
+	const uint64_t now = RR->node->now();
+	if (peer->rateGateOutgoingComRequest(now)) {
+		Packet outp(source(),RR->identity.address(),Packet::VERB_ERROR);
+		outp.append((uint8_t)verb());
+		outp.append(packetId());
+		outp.append((uint8_t)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
+		outp.append(nwid);
+		outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+		_path->send(RR,outp.data(),outp.size(),now);
 	}
-	if (d > 0) {
-		if ( ((((unsigned int)*p) << d) & 0xff00) != 0 )
-			goto try_salsa2012sha512_again;
-	}
-
-	memcpy(result,candidate,16);
-}
-
-bool IncomingPacket::testSalsa2012Sha512ProofOfWorkResult(unsigned int difficulty,const void *challenge,unsigned int challengeLength,const unsigned char proposedResult[16])
-{
-	unsigned char salsabuf[131072]; // 131072 == protocol constant, size of memory buffer for this proof of work function
-	char candidate[ZT_PROTO_MAX_PACKET_LENGTH + 256];
-	unsigned char shabuf[ZT_SHA512_DIGEST_LEN];
-	const uint64_t s20iv = 0; // zero IV for Salsa20
-	Salsa20 s20;
-	unsigned int d;
-	unsigned char *p;
-
-	if (difficulty > 512)
-		difficulty = 512; // sanity check
-
-	memcpy(candidate,proposedResult,16);
-	memcpy(candidate + 16,challenge,challengeLength);
-
-	SHA512::hash(shabuf,candidate,16 + challengeLength);
-	s20.init(shabuf,256,&s20iv);
-	memset(salsabuf,0,sizeof(salsabuf));
-	s20.encrypt12(salsabuf,salsabuf,sizeof(salsabuf));
-	SHA512::hash(shabuf,salsabuf,sizeof(salsabuf));
-
-	d = difficulty;
-	p = shabuf;
-	while (d >= 8) {
-		if (*(p++))
-			return false;
-		d -= 8;
-	}
-	if (d > 0) {
-		if ( ((((unsigned int)*p) << d) & 0xff00) != 0 )
-			return false;
-	}
-
-	return true;
-}
-
-void IncomingPacket::_sendErrorNeedCertificate(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,uint64_t nwid)
-{
-	Packet outp(source(),RR->identity.address(),Packet::VERB_ERROR);
-	outp.append((unsigned char)verb());
-	outp.append(packetId());
-	outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
-	outp.append(nwid);
-	outp.armor(peer->key(),true);
-	RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 }
 
 } // namespace ZeroTier

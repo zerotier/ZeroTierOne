@@ -1,11 +1,9 @@
 ZeroTier - A Planetary Ethernet Switch
 ======
 
-ZeroTier is a software-based managed Ethernet switch for planet Earth.
+ZeroTier is an enterprise Ethernet switch for planet Earth.
 
 It erases the LAN/WAN distinction and makes VPNs, tunnels, proxies, and other kludges arising from the inflexible nature of physical networks obsolete. Everything is encrypted end-to-end and traffic takes the most direct (peer to peer) path available.
-
-This repository contains ZeroTier One, a service that provides ZeroTier network connectivity to devices running Windows, Mac, Linux, iOS, Android, and FreeBSD and makes joining virtual networks as easy as joining IRC or Slack channels. It also contains the OS-independent core ZeroTier protocol implementation in [node/](node/).
 
 Visit [ZeroTier's site](https://www.zerotier.com/) for more information and [pre-built binary packages](https://www.zerotier.com/download.shtml). Apps for Android and iOS are available for free in the Google Play and Apple app stores.
 
@@ -13,39 +11,65 @@ Visit [ZeroTier's site](https://www.zerotier.com/) for more information and [pre
 
 ZeroTier's basic operation is easy to understand. Devices have 10-digit *ZeroTier addresses* like `89e92ceee5` and networks have 16-digit network IDs like `8056c2e21c000001`. All it takes for a device to join a network is its 16-digit ID, and all it takes for a network to authorize a device is its 10-digit address. Everything else is automatic.
 
-A "device" can be anything really: desktops, laptops, phones, servers, VMs/VPSes, containers, and even (soon) apps.
+A "device" in our terminology is any "unit of compute" capable of talking to a network: desktops, laptops, phones, servers, VMs/VPSes, containers, and even user-space applications via our [SDK](https://github.com/zerotier/ZeroTierSDK).
 
-For testing we provide a public virtual network called *Earth* with network ID `8056c2e21c000001`. On Linux and Mac you can do this with:
+For testing purposes we provide a public virtual network called *Earth* with network ID `8056c2e21c000001`. You can join it with:
 
     sudo zerotier-cli join 8056c2e21c000001
 
-Now wait about 30 seconds and check your system with `ip addr list` or `ifconfig`. You'll see a new interface whose name starts with *zt* and it should quickly get an IPv4 and an IPv6 address. Once you see it get an IP, try pinging `earth.zerotier.net` at `29.209.112.93`. If you've joined Earth from more than one system, try pinging your other machine.
-
-*(IPv4 addresses for Earth are assigned from the block 28.0.0.0/7, which is not a part of the public Internet but is non-standard for private networks. It's used to avoid IP conflicts during testing. Your networks can run any IP addressing scheme you want.)*
-
-If you don't want to belong to a giant Ethernet party line anymore, just type:
+Now wait about 30 seconds and check your system with `ip addr list` or `ifconfig`. You'll see a new interface whose name starts with *zt* and it should quickly get an IPv4 and an IPv6 address. Once you see it get an IP, try pinging `earth.zerotier.net` at `29.209.112.93`. If you've joined Earth from more than one system, try pinging your other machine. If you don't want to belong to a giant Ethernet party line anymore, just type:
 
     sudo zerotier-cli leave 8056c2e21c000001
 
 The *zt* interface will disappear. You're no longer on the network.
 
-To create networks of your own you'll need a network controller. You can use [our hosted controller at my.zerotier.com](https://my.zerotier.com) which is free for up to 100 devices on an unlimited number of networks, or you can build your own controller and run it through its local JSON API. See [README.md in controller/](controller/) for more information.
+To create networks of your own, you'll need a network controller. ZeroTier One (for desktops and servers) includes controller functionality in its default build that can be configured via its JSON API (see [README.md in controller/](controller/)). ZeroTier provides a hosted solution with a nice web UI and SaaS add-ons at [my.zerotier.com](https://my.zerotier.com/). Basic controller functionality is free for up to 100 devices.
 
-### Building from Source
+### Project Layout
 
-For Mac, Linux, and BSD, just type "make" (or "gmake" on BSD). You won't need much installed; here are the requirements for various platforms:
+ - `artwork/`: icons, logos, etc.
+ - `attic/`: old stuff and experimental code that we want to keep around for reference.
+ - `controller/`: the reference network controller implementation, which is built and included by default on desktop and server build targets.
+ - `debian/`: files for building Debian packages on Linux.
+ - `doc/`: manual pages and other documentation.
+ - `ext/`: third party libraries, binaries that we ship for convenience on some platforms (Mac and Windows), and installation support files.
+ - `include/`: include files for the ZeroTier core.
+ - `java/`: a JNI wrapper used with our Android mobile app. (The whole Android app is not open source but may be made so in the future.)
+ - `macui/`: a Macintosh menu-bar app for controlling ZeroTier One, written in Objective C.
+ - `node/`: the ZeroTier virtual Ethernet switch core, which is designed to be entirely separate from the rest of the code and able to be built as a stand-alone OS-independent library. Note to developers: do not use C++11 features in here, since we want this to build on old embedded platforms that lack C++11 support. C++11 can be used elsewhere.
+ - `osdep/`: code to support and integrate with OSes, including platform-specific stuff only built for certain targets.
+ - `service/`: the ZeroTier One service, which wraps the ZeroTier core and provides VPN-like connectivity to virtual networks for desktops, laptops, servers, VMs, and containers.
+ - `tcp-proxy/`: TCP proxy code run by ZeroTier, Inc. to provide TCP fallback (this will die soon!).
+ - `windows/`: Visual Studio solution files, Windows service code for ZeroTier One, and the Windows task bar app UI.
 
- * **Mac**: Xcode command line tools. It should build on OSX 10.7 or newer.
- * **Linux**: gcc/g++ (4.9 or newer recommended) or clang/clang++ (3.4 or newer recommended) Makefile will use clang by default if available. The Linux build will auto-detect the presence of development headers for *json-parser*, *http-parser*, *li8bnatpmp*, and *libminiupnpc* and will link against the system libraries for these if they are present and recent enough. Otherwise the bundled versions in [ext/](ext/) will be used. Type `make install` to install the binaries and other files on the system, though this will not create init.d or systemd links.
- * **FreeBSD**: C++ compiler (G++ usually) and GNU make (gmake).
+The base path contains the ZeroTier One service main entry point (`one.cpp`), self test code, makefiles, etc.
 
-Each supported platform has its own *make-XXX.mk* file that contains the actual make rules for the platform. The right .mk file is included by the main Makefile based on the GNU make *OSTYPE* variable. Take a look at the .mk file for your platform for other targets, debug build rules, etc.
+### Build and Platform Notes
+
+To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU make) is required and can be installed from packages or ports. For Windows there is a Visual Studio solution in `windows/'.
+
+ - **Mac**
+   - Xcode command line tools for OSX 10.7 or newer are required.
+   - Tap device driver kext source is in `ext/tap-mac` and a signed pre-built binary can be found in `ext/bin/tap-mac`. You should not need to build it yourself. It's a fork of [tuntaposx](http://tuntaposx.sourceforge.net) with device names changed to `zt#`, support for a larger MTU, and tun functionality removed.
+ - **Linux**
+   - The minimum compiler versions required are GCC/G++ 4.9.3 or CLANG/CLANG++ 3.4.2.
+   - Linux makefiles automatically detect and prefer clang/clang++ if present as it produces smaller and slightly faster binaries in most cases. You can override by supplying CC and CXX variables on the make command line.
+   - CentOS 7 ships with a version of GCC/G++ that is too old, but a new enough version of CLANG can be found in the *epel* repositories. Type `yum install epel-release` and then `yum install clang` to build there.
+ - **Windows**
+   - Windows 7 or newer (and equivalent server versions) are supported. This *may* work on Vista but you're on your own there. Windows XP is not supported since it lacks many important network API functions.
+   - We build with Visual Studio 2015. Older versions may not work with the solution file and project files we ship and may not have new enough C++11 support.
+   - Pre-built signed Windows drivers are included in `ext/bin/tap-windows-ndis6`. The MSI files found there will install them on 32-bit and 64-bit systems. (These are included in our multi-architecture installer as chained MSIs.)
+   - Windows builds are more painful in general than other platforms and are for the adventurous.
+ - **FreeBSD**
+   - Tested most recently on FreeBSD-11. Older versions may work but we're not sure.
+   - GCC/G++ 4.9 and gmake are required. These can be installed from packages or ports. Type `gmake` to build.
+ - **OpenBSD**
+   - There is a limit of four network memberships on OpenBSD as there are only four tap devices (`/dev/tap0` through `/dev/tap3`). We're not sure if this can be increased.
+   - OpenBSD lacks `getifmaddrs` (or any equivalent method) to get interface multicast memberships. As a result multicast will only work on OpenBSD for ARP and NDP (IP/MAC lookup) and not for other purposes.
+   - Only tested on OpenBSD 6.0. Older versions may not work.
+   - GCC/G++ 4.9 and gmake are required and can be installed using `pkg_add` or from ports. They get installed in `/usr/local/bin` as `egcc` and `eg++` and our makefile is pre-configured to use them on OpenBSD.
 
 Typing `make selftest` will build a *zerotier-selftest* binary which unit tests various internals and reports on a few aspects of the build environment. It's a good idea to try this on novel platforms or architectures.
-
-Windows, of course, is special. We build for Windows with Microsoft Visual Studio 2012 on Windows 7. A solution file is located in the *windows/* subfolder. Newer versions of Visual Studio (and Windows) may work but haven't been tested. Older versions almost certainly will not, since they lack things like *stdint.h* and certain STL features. MinGW or other ports of gcc/clang to Windows should also work but haven't been tested.
-
-32 and 64 bit X86 and ARM (e.g. Raspberry Pi, Android) are officially supported. Community members have built for MIPS and Sparc without issues.
 
 ### Running
 
@@ -62,7 +86,7 @@ The service is controlled via the JSON API, which by default is available at 127
 Here's where home folders live (by default) on each OS:
 
  * **Linux**: `/var/lib/zerotier-one`
- * **FreeBSD**: `/var/db/zerotier-one`
+ * **FreeBSD** / **OpenBSD**: `/var/db/zerotier-one`
  * **Mac**: `/Library/Application Support/ZeroTier/One`
  * **Windows**: `\ProgramData\ZeroTier\One` (That's for Windows 7. The base 'shared app data' folder might be different on different Windows versions.)
 

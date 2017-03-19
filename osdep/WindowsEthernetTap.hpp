@@ -110,6 +110,8 @@ public:
 	void threadMain()
 		throw();
 
+    bool isInitialized() const { return _initialized; };
+
 private:
 	NET_IFINDEX _getDeviceIndex(); // throws on failure
 	std::vector<std::string> _getRegistryIPv4Value(const char *regKey);

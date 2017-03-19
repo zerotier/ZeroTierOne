@@ -38,57 +38,26 @@ namespace ZeroTier {
 class Address
 {
 public:
-	Address()
-		throw() :
-		_a(0)
-	{
-	}
-
-	Address(const Address &a)
-		throw() :
-		_a(a._a)
-	{
-	}
-
-	Address(uint64_t a)
-		throw() :
-		_a(a & 0xffffffffffULL)
-	{
-	}
-
-	Address(const char *s)
-		throw()
-	{
-		unsigned char foo[ZT_ADDRESS_LENGTH];
-		setTo(foo,Utils::unhex(s,foo,ZT_ADDRESS_LENGTH));
-	}
-
-	Address(const std::string &s)
-		throw()
-	{
-		unsigned char foo[ZT_ADDRESS_LENGTH];
-		setTo(foo,Utils::unhex(s.c_str(),foo,ZT_ADDRESS_LENGTH));
-	}
+	Address() : _a(0) {}
+	Address(const Address &a) : _a(a._a) {}
+	Address(uint64_t a) : _a(a & 0xffffffffffULL) {}
 
 	/**
 	 * @param bits Raw address -- 5 bytes, big-endian byte order
 	 * @param len Length of array
 	 */
 	Address(const void *bits,unsigned int len)
-		throw()
 	{
 		setTo(bits,len);
 	}
 
 	inline Address &operator=(const Address &a)
-		throw()
 	{
 		_a = a._a;
 		return *this;
 	}
 
 	inline Address &operator=(const uint64_t a)
-		throw()
 	{
 		_a = (a & 0xffffffffffULL);
 		return *this;
@@ -99,7 +68,6 @@ public:
 	 * @param len Length of array
 	 */
 	inline void setTo(const void *bits,unsigned int len)
-		throw()
 	{
 		if (len < ZT_ADDRESS_LENGTH) {
 			_a = 0;
@@ -119,7 +87,6 @@ public:
 	 * @param len Length of array
 	 */
 	inline void copyTo(void *bits,unsigned int len) const
-		throw()
 	{
 		if (len < ZT_ADDRESS_LENGTH)
 			return;
@@ -138,7 +105,6 @@ public:
 	 */
 	template<unsigned int C>
 	inline void appendTo(Buffer<C> &b) const
-		throw(std::out_of_range)
 	{
 		unsigned char *p = (unsigned char *)b.appendField(ZT_ADDRESS_LENGTH);
 		*(p++) = (unsigned char)((_a >> 32) & 0xff);
@@ -152,7 +118,6 @@ public:
 	 * @return Integer containing address (0 to 2^40)
 	 */
 	inline uint64_t toInt() const
-		throw()
 	{
 		return _a;
 	}
@@ -161,7 +126,6 @@ public:
 	 * @return Hash code for use with Hashtable
 	 */
 	inline unsigned long hashCode() const
-		throw()
 	{
 		return (unsigned long)_a;
 	}
@@ -188,12 +152,12 @@ public:
 	/**
 	 * @return True if this address is not zero
 	 */
-	inline operator bool() const throw() { return (_a != 0); }
+	inline operator bool() const { return (_a != 0); }
 
 	/**
 	 * Set to null/zero
 	 */
-	inline void zero() throw() { _a = 0; }
+	inline void zero() { _a = 0; }
 
 	/**
 	 * Check if this address is reserved
@@ -205,7 +169,6 @@ public:
 	 * @return True if address is reserved and may not be used
 	 */
 	inline bool isReserved() const
-		throw()
 	{
 		return ((!_a)||((_a >> 32) == ZT_ADDRESS_RESERVED_PREFIX));
 	}
@@ -214,21 +177,21 @@ public:
 	 * @param i Value from 0 to 4 (inclusive)
 	 * @return Byte at said position (address interpreted in big-endian order)
 	 */
-	inline unsigned char operator[](unsigned int i) const throw() { return (unsigned char)((_a >> (32 - (i * 8))) & 0xff); }
+	inline unsigned char operator[](unsigned int i) const { return (unsigned char)((_a >> (32 - (i * 8))) & 0xff); }
 
-	inline bool operator==(const uint64_t &a) const throw() { return (_a == (a & 0xffffffffffULL)); }
-	inline bool operator!=(const uint64_t &a) const throw() { return (_a != (a & 0xffffffffffULL)); }
-	inline bool operator>(const uint64_t &a) const throw() { return (_a > (a & 0xffffffffffULL)); }
-	inline bool operator<(const uint64_t &a) const throw() { return (_a < (a & 0xffffffffffULL)); }
-	inline bool operator>=(const uint64_t &a) const throw() { return (_a >= (a & 0xffffffffffULL)); }
-	inline bool operator<=(const uint64_t &a) const throw() { return (_a <= (a & 0xffffffffffULL)); }
+	inline bool operator==(const uint64_t &a) const { return (_a == (a & 0xffffffffffULL)); }
+	inline bool operator!=(const uint64_t &a) const { return (_a != (a & 0xffffffffffULL)); }
+	inline bool operator>(const uint64_t &a) const { return (_a > (a & 0xffffffffffULL)); }
+	inline bool operator<(const uint64_t &a) const { return (_a < (a & 0xffffffffffULL)); }
+	inline bool operator>=(const uint64_t &a) const { return (_a >= (a & 0xffffffffffULL)); }
+	inline bool operator<=(const uint64_t &a) const { return (_a <= (a & 0xffffffffffULL)); }
 
-	inline bool operator==(const Address &a) const throw() { return (_a == a._a); }
-	inline bool operator!=(const Address &a) const throw() { return (_a != a._a); }
-	inline bool operator>(const Address &a) const throw() { return (_a > a._a); }
-	inline bool operator<(const Address &a) const throw() { return (_a < a._a); }
-	inline bool operator>=(const Address &a) const throw() { return (_a >= a._a); }
-	inline bool operator<=(const Address &a) const throw() { return (_a <= a._a); }
+	inline bool operator==(const Address &a) const { return (_a == a._a); }
+	inline bool operator!=(const Address &a) const { return (_a != a._a); }
+	inline bool operator>(const Address &a) const { return (_a > a._a); }
+	inline bool operator<(const Address &a) const { return (_a < a._a); }
+	inline bool operator>=(const Address &a) const { return (_a >= a._a); }
+	inline bool operator<=(const Address &a) const { return (_a <= a._a); }
 
 private:
 	uint64_t _a;

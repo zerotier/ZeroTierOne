@@ -49,13 +49,10 @@
 #include "osdep/OSUtils.hpp"
 #include "osdep/Phy.hpp"
 #include "osdep/Http.hpp"
-#include "osdep/BackgroundResolver.hpp"
 #include "osdep/PortMapper.hpp"
 #include "osdep/Thread.hpp"
 
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-#include "controller/SqliteNetworkController.hpp"
-#endif // ZT_ENABLE_NETWORK_CONTROLLER
+#include "controller/JSONDB.hpp"
 
 #ifdef __WINDOWS__
 #include <tchar.h>
@@ -157,9 +154,9 @@ static int testCrypto()
 		memset(buf3,0,sizeof(buf3));
 		Salsa20 s20;
 		s20.init("12345678123456781234567812345678",256,"12345678");
-		s20.encrypt20(buf1,buf2,sizeof(buf1));
+		s20.crypt20(buf1,buf2,sizeof(buf1));
 		s20.init("12345678123456781234567812345678",256,"12345678");
-		s20.decrypt20(buf2,buf3,sizeof(buf2));
+		s20.crypt20(buf2,buf3,sizeof(buf2));
 		if (memcmp(buf1,buf3,sizeof(buf1))) {
 			std::cout << "FAIL (encrypt/decrypt test)" << std::endl;
 			return -1;
@@ -168,7 +165,7 @@ static int testCrypto()
 	Salsa20 s20(s20TV0Key,256,s20TV0Iv);
 	memset(buf1,0,sizeof(buf1));
 	memset(buf2,0,sizeof(buf2));
-	s20.encrypt20(buf1,buf2,64);
+	s20.crypt20(buf1,buf2,64);
 	if (memcmp(buf2,s20TV0Ks,64)) {
 		std::cout << "FAIL (test vector 0)" << std::endl;
 		return -1;
@@ -176,7 +173,7 @@ static int testCrypto()
 	s20.init(s2012TV0Key,256,s2012TV0Iv);
 	memset(buf1,0,sizeof(buf1));
 	memset(buf2,0,sizeof(buf2));
-	s20.encrypt12(buf1,buf2,64);
+	s20.crypt12(buf1,buf2,64);
 	if (memcmp(buf2,s2012TV0Ks,64)) {
 		std::cout << "FAIL (test vector 1)" << std::endl;
 		return -1;
@@ -198,7 +195,7 @@ static int testCrypto()
 		double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
-			s20.encrypt12(bb,bb,1234567);
+			s20.crypt12(bb,bb,1234567);
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
@@ -216,7 +213,7 @@ static int testCrypto()
 		double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
-			s20.encrypt20(bb,bb,1234567);
+			s20.crypt20(bb,bb,1234567);
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
@@ -329,6 +326,17 @@ static int testCrypto()
 	}
 	std::cout << "PASS" << std::endl;
 
+	std::cout << "[crypto] Benchmarking C25519 ECC key agreement... "; std::cout.flush();
+	C25519::Pair bp[8];
+	for(int k=0;k<8;++k)
+		bp[k] = C25519::generate();
+	const uint64_t st = OSUtils::now();
+	for(unsigned int k=0;k<50;++k) {
+		C25519::agree(bp[~k & 7],bp[k & 7].pub,buf1,64);
+	}
+	const uint64_t et = OSUtils::now();
+	std::cout << ((double)(et - st) / 50.0) << "ms per agreement." << std::endl;
+
 	std::cout << "[crypto] Testing Ed25519 ECC signatures... "; std::cout.flush();
 	C25519::Pair didntSign = C25519::generate();
 	for(unsigned int i=0;i<10;++i) {
@@ -378,11 +386,15 @@ static int testIdentity()
 		std::cout << "FAIL (1)" << std::endl;
 		return -1;
 	}
-	if (!id.locallyValidate()) {
-		std::cout << "FAIL (2)" << std::endl;
-		return -1;
+	const uint64_t vst = OSUtils::now();
+	for(int k=0;k<10;++k) {
+		if (!id.locallyValidate()) {
+			std::cout << "FAIL (2)" << std::endl;
+			return -1;
+		}
 	}
-	std::cout << "PASS" << std::endl;
+	const uint64_t vet = OSUtils::now();
+	std::cout << "PASS (" << ((double)(vet - vst) / 10.0) << "ms per validation)" << std::endl;
 
 	std::cout << "[identity] Validate known-bad identity... "; std::cout.flush();
 	if (!id.fromString(KNOWN_BAD_IDENTITY)) {
@@ -505,19 +517,6 @@ static int testCertificate()
 		return -1;
 	}
 
-	std::cout << "[certificate] Testing string serialization... ";
-	CertificateOfMembership copyA(cA.toString());
-	CertificateOfMembership copyB(cB.toString());
-	if (copyA != cA) {
-		std::cout << "FAIL" << std::endl;
-		return -1;
-	}
-	if (copyB != cB) {
-		std::cout << "FAIL" << std::endl;
-		return -1;
-	}
-	std::cout << "PASS" << std::endl;
-
 	std::cout << "[certificate] Generating two certificates that should not agree...";
 	cA = CertificateOfMembership(10000,100,1,idA.address());
 	cB = CertificateOfMembership(10101,100,1,idB.address());
@@ -573,7 +572,7 @@ static int testPacket()
 		return -1;
 	}
 
-	a.armor(salsaKey,true);
+	a.armor(salsaKey,true,0);
 	if (!a.dearmor(salsaKey)) {
 		std::cout << "FAIL (encrypt-decrypt/verify)" << std::endl;
 		return -1;
@@ -583,8 +582,34 @@ static int testPacket()
 	return 0;
 }
 
+static void _testExcept(int &depth)
+{
+	if (depth >= 16) {
+		throw std::runtime_error("LOL!");
+	} else {
+		++depth;
+		_testExcept(depth);
+	}
+}
+
 static int testOther()
 {
+	std::cout << "[other] Testing C++ exceptions... "; std::cout.flush();
+	int depth = 0;
+	try {
+		_testExcept(depth);
+	} catch (std::runtime_error &e) {
+		if (depth == 16) {
+			std::cout << "OK" << std::endl;
+		} else {
+			std::cout << "ERROR (depth not 16)" << std::endl;
+			return -1;
+		}
+	} catch ( ... ) {
+		std::cout << "ERROR (exception not std::runtime_error)" << std::endl;
+		return -1;
+	}
+
 	std::cout << "[other] Testing Hashtable... "; std::cout.flush();
 	{
 		Hashtable<uint64_t,std::string> ht;
@@ -824,6 +849,43 @@ static int testOther()
 	}
 	std::cout << "PASS (junk value to prevent optimization-out of test: " << foo << ")" << std::endl;
 
+	/*
+	std::cout << "[other] Testing controller/JSONDB..."; std::cout.flush();
+	{
+		std::map<std::string,nlohmann::json> db1data;
+		JSONDB db1("jsondb-test");
+		for(unsigned int i=0;i<256;++i) {
+			std::string n;
+			for(unsigned int j=0,k=rand() % 4;j<=k;++j) {
+				if (j > 0) n.push_back('/');
+				char foo[24];
+				Utils::snprintf(foo,sizeof(foo),"%lx",rand());
+				n.append(foo);
+			}
+			db1data[n] = {{"i",i}};
+			db1.put(n,db1data[n]);
+		}
+		for(std::map<std::string,nlohmann::json>::iterator i(db1data.begin());i!=db1data.end();++i) {
+			i->second["foo"] = "bar";
+			db1.put(i->first,i->second);
+		}
+		JSONDB db2("jsondb-test");
+		if (db1 != db2) {
+			std::cout << " FAILED (db1!=db2 #1)" << std::endl;
+			return -1;
+		}
+		for(std::map<std::string,nlohmann::json>::iterator i(db1data.begin());i!=db1data.end();++i) {
+			db1.erase(i->first);
+		}
+		db2.reload();
+		if (db1 != db2) {
+			std::cout << " FAILED (db1!=db2 #2)" << std::endl;
+			return -1;
+		}
+	}
+	std::cout << " PASS" << std::endl;
+	*/
+
 	return 0;
 }
 
@@ -975,23 +1037,6 @@ static int testPhy()
 	return 0;
 }
 
-static int testResolver()
-{
-	std::cout << "[resolver] Testing BackgroundResolver..."; std::cout.flush();
-
-	BackgroundResolver r("tcp-fallback.zerotier.com");
-	r.resolveNow();
-	r.wait();
-
-	std::vector<InetAddress> ips(r.get());
-	for(std::vector<InetAddress>::const_iterator ip(ips.begin());ip!=ips.end();++ip) {
-		std::cout << ' ' << ip->toString();
-	}
-	std::cout << std::endl;
-
-	return 0;
-}
-
 /*
 static int testHttp()
 {
@@ -1099,7 +1144,6 @@ int main(int argc,char **argv)
 	r |= testIdentity();
 	r |= testCertificate();
 	r |= testPhy();
-	r |= testResolver();
 	//r |= testHttp();
 	//*/
 

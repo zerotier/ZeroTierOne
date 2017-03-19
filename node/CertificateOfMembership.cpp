@@ -17,6 +17,10 @@
  */
 
 #include "CertificateOfMembership.hpp"
+#include "RuntimeEnvironment.hpp"
+#include "Topology.hpp"
+#include "Switch.hpp"
+#include "Network.hpp"
 
 namespace ZeroTier {
 
@@ -152,6 +156,9 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) c
 	unsigned int myidx = 0;
 	unsigned int otheridx = 0;
 
+	if ((_qualifierCount == 0)||(other._qualifierCount == 0))
+		return false;
+
 	while (myidx < _qualifierCount) {
 		// Fail if we're at the end of other, since this means the field is
 		// missing.
@@ -182,7 +189,7 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) c
 
 bool CertificateOfMembership::sign(const Identity &with)
 {
-	uint64_t *const buf = new uint64_t[_qualifierCount * 3];
+	uint64_t buf[ZT_NETWORK_COM_MAX_QUALIFIERS * 3];
 	unsigned int ptr = 0;
 	for(unsigned int i=0;i<_qualifierCount;++i) {
 		buf[ptr++] = Utils::hton(_qualifiers[i].id);
@@ -193,38 +200,32 @@ bool CertificateOfMembership::sign(const Identity &with)
 	try {
 		_signature = with.sign(buf,ptr * sizeof(uint64_t));
 		_signedBy = with.address();
-		delete [] buf;
 		return true;
 	} catch ( ... ) {
 		_signedBy.zero();
-		delete [] buf;
 		return false;
 	}
 }
 
-bool CertificateOfMembership::verify(const Identity &id) const
+int CertificateOfMembership::verify(const RuntimeEnvironment *RR) const
 {
-	if (!_signedBy)
-		return false;
-	if (id.address() != _signedBy)
-		return false;
+	if ((!_signedBy)||(_signedBy != Network::controllerFor(networkId()))||(_qualifierCount > ZT_NETWORK_COM_MAX_QUALIFIERS))
+		return -1;
 
-	uint64_t *const buf = new uint64_t[_qualifierCount * 3];
+	const Identity id(RR->topology->getIdentity(_signedBy));
+	if (!id) {
+		RR->sw->requestWhois(_signedBy);
+		return 1;
+	}
+
+	uint64_t buf[ZT_NETWORK_COM_MAX_QUALIFIERS * 3];
 	unsigned int ptr = 0;
 	for(unsigned int i=0;i<_qualifierCount;++i) {
 		buf[ptr++] = Utils::hton(_qualifiers[i].id);
 		buf[ptr++] = Utils::hton(_qualifiers[i].value);
 		buf[ptr++] = Utils::hton(_qualifiers[i].maxDelta);
 	}
-
-	bool valid = false;
-	try {
-		valid = id.verify(buf,ptr * sizeof(uint64_t),_signature);
-		delete [] buf;
-	} catch ( ... ) {
-		delete [] buf;
-	}
-	return valid;
+	return (id.verify(buf,ptr * sizeof(uint64_t),_signature) ? 0 : -1);
 }
 
 } // namespace ZeroTier

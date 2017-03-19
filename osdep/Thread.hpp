@@ -28,6 +28,7 @@
 #include <WinSock2.h>
 #include <Windows.h>
 #include <string.h>
+
 #include "../node/Mutex.hpp"
 
 namespace ZeroTier {
@@ -126,10 +127,15 @@ public:
 	{
 		memset(&_tid,0,sizeof(_tid));
 		pthread_attr_init(&_tattr);
-#ifdef __LINUX__
-		pthread_attr_setstacksize(&_tattr,8388608); // for MUSL libc and others, has no effect in normal glibc environments
-#endif
+		// This corrects for systems with abnormally small defaults (musl) and also
+		// shrinks the stack on systems with large defaults to save a bit of memory.
+		pthread_attr_setstacksize(&_tattr,ZT_THREAD_MIN_STACK_SIZE);
 		_started = false;
+	}
+
+	~Thread()
+	{
+		pthread_attr_destroy(&_tattr);
 	}
 
 	Thread(const Thread &t)
