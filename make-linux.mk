@@ -118,9 +118,9 @@ DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFT
 
 # Define some conservative CPU instruction set flags for arm32 since there's a ton of variation out there
 ifeq ($(ZT_ARCHITECTURE),3)
-				override CFLAGS+=-march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp
-				override CXXFLAGS+=-march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp
-				override DEFS+=-DZT_NO_TYPE_PUNNING
+	override CFLAGS+=-march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp
+	override CXXFLAGS+=-march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp
+	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 
 # Define this to build a static binary, which is needed to make this runnable on a few ancient Linux distros
