@@ -429,6 +429,7 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 }
 
 EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPath) :
+	_startTime(OSUtils::now()),
 	_threadsStarted(false),
 	_db(dbPath),
 	_node(node)
@@ -1067,7 +1068,15 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 		} // else 404
 
-	} // else 404
+	} else if (path[0] == "dbtest") {
+
+		json testRec;
+		const uint64_t now = OSUtils::now();
+		testRec["clock"] = now;
+		testRec["uptime"] = (now - _startTime);
+		_db.put("dbtest",testRec);
+
+	}
 
 	return 404;
 }
