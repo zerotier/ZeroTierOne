@@ -99,12 +99,7 @@ public:
 
 private:
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
-	void _request(
-		uint64_t nwid,
-		const InetAddress &fromAddr,
-		uint64_t requestPacketId,
-		const Identity &identity,
-		const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
+	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
 
 	struct _RQEntry
 	{
@@ -134,12 +129,9 @@ private:
 	};
 	std::map<uint64_t,_NetworkMemberInfo> _nmiCache;
 	Mutex _nmiCache_m;
+
 	void _getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi);
-	inline void _clearNetworkMemberInfoCache(const uint64_t nwid)
-	{
-		Mutex::Lock _l(_nmiCache_m);
-		_nmiCache.erase(nwid);
-	}
+	inline void _clearNetworkMemberInfoCache(const uint64_t nwid) { Mutex::Lock _l(_nmiCache_m); _nmiCache.erase(nwid); }
 
 	void _pushMemberUpdate(uint64_t now,uint64_t nwid,const nlohmann::json &member);
 
