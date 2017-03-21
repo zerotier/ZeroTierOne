@@ -57,7 +57,7 @@ bool JSONDB::put(const std::string &n,const nlohmann::json &obj)
 	return true;
 }
 
-const nlohmann::json &JSONDB::get(const std::string &n,unsigned long maxSinceCheck)
+const nlohmann::json &JSONDB::get(const std::string &n)
 {
 	if (!_isValidObjectName(n))
 		return _EMPTY_JSON;
