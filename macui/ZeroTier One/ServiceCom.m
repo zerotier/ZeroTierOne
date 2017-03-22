@@ -365,6 +365,9 @@
 
                    completionHandler(status);
                }
+               else if (status == 401) {
+                   self->_resetKey = YES;
+               }
            }];
     [task resume];
 }
@@ -436,6 +439,9 @@
         if(status == 200) {
             NSLog(@"join ok");
         }
+        else if (status == 401) {
+            self->_resetKey = YES;
+        }
         else {
             NSLog(@"join error: %ld", (long)status);
         }
@@ -491,6 +497,9 @@
 
         if(status == 200) {
             NSLog(@"leave ok");
+        }
+        else if (status == 401) {
+            self->_resetKey = YES;
         }
         else {
             NSLog(@"leave error: %ld", status);
