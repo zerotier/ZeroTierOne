@@ -46,6 +46,7 @@
         baseURL = @"http://127.0.0.1:9993";
         session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration ephemeralSessionConfiguration]];
         _isQuitting = NO;
+        _resetKey = NO;
     }
 
     return self;
@@ -54,6 +55,37 @@
 - (NSString*)key:(NSError* __autoreleasing *)err
 {
     static NSString *k = nil;
+    static NSUInteger resetCount = 10;
+    
+    if (_resetKey && k != nil) {
+        k = nil;
+        ++resetCount;
+        NSLog(@"ResetCount: %lu", (unsigned long)resetCount);
+        if (resetCount > 10) {
+            [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+                NSAlert *alert = [NSAlert alertWithMessageText:@"Error obtaining Auth Token"
+                                                 defaultButton:@"Quit"
+                                               alternateButton:@"Retry"
+                                                   otherButton:nil
+                                     informativeTextWithFormat:@"Please ensure ZeroTier is installed correctly"];
+                alert.alertStyle = NSCriticalAlertStyle;
+                
+                NSModalResponse res;
+                if (!_isQuitting) {
+                    res = [alert runModal];
+                }
+                else {
+                    return;
+                }
+                
+                if(res == 1) {
+                    _isQuitting = YES;
+                    [NSApp performSelector:@selector(terminate:) withObject:nil afterDelay:0.0];
+                }
+            }];
+            return @"";
+        }
+    }
 
     if (k == nil) {
         NSError *error = nil;
@@ -67,10 +99,12 @@
         appSupportDir = [[appSupportDir URLByAppendingPathComponent:@"ZeroTier"] URLByAppendingPathComponent:@"One"];
         NSURL *authtokenURL = [appSupportDir URLByAppendingPathComponent:@"authtoken.secret"];
 
-        if ([[NSFileManager defaultManager] fileExistsAtPath:[authtokenURL path]]) {
+        if (!_resetKey && [[NSFileManager defaultManager] fileExistsAtPath:[authtokenURL path]]) {
             k = [NSString stringWithContentsOfURL:authtokenURL
                                          encoding:NSUTF8StringEncoding
                                             error:&error];
+            
+            k = [k stringByReplacingOccurrencesOfString:@"\n" withString:@""];
 
             if (error) {
                 NSLog(@"Error: %@", error);
@@ -80,6 +114,7 @@
             }
         }
         else {
+            _resetKey = NO;
             NSURL *sysAppSupportDir = [[NSFileManager defaultManager] URLForDirectory:NSApplicationSupportDirectory inDomain:NSSystemDomainMask appropriateForURL:nil create:false error:nil];
 
             sysAppSupportDir = [[sysAppSupportDir URLByAppendingPathComponent:@"ZeroTier"] URLByAppendingPathComponent:@"One"];
@@ -248,6 +283,9 @@
                    }
 
                    completionHandler(networks);
+               }
+               else if (status == 401) {
+                   self->_resetKey = YES;
                }
     }];
     [task resume];
