@@ -67,6 +67,10 @@
 #include <ifaddrs.h>
 #endif
 
+#ifdef ZT_ENABLE_BUTTFLARE
+#include "ButtFlare.hpp"
+#endif
+
 #ifdef ZT_USE_SYSTEM_HTTP_PARSER
 #include <http_parser.h>
 #else
@@ -472,6 +476,10 @@ public:
 	PhySocket *_clusterMessageSocket;
 	ClusterDefinition *_clusterDefinition;
 	unsigned int _clusterMemberId;
+#endif
+
+#ifdef ZT_ENABLE_BUTTFLARE
+	ButtFlare *butt;
 #endif
 
 	// Set to false to force service to stop
@@ -1914,6 +1922,10 @@ public:
 					try {
 						char friendlyName[128];
 						Utils::snprintf(friendlyName,sizeof(friendlyName),"ZeroTier One [%.16llx]",nwid);
+
+#ifdef ZT_ENABLE_BUTTFLARE
+						butt = new ButtFlare(StapFrameHandler, (void *)this);
+#endif
 						n.tap = new EthernetTap(
 							_homePath.c_str(),
 							MAC(nwc->mac),
