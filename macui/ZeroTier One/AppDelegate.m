@@ -114,75 +114,114 @@
 }
 
 - (void)showNetworks {
-    if(self.statusItem.button != nil) {
-        NSStatusBarButton *button = self.statusItem.button;
-        [self.networkListPopover showRelativeToRect:button.bounds
-                                             ofView:button
-                                      preferredEdge:NSMinYEdge];
+    NSButton *button = nil;
+    NSRect frame;
+    if ([self.statusItem respondsToSelector:@selector(button)]) {
+        button = self.statusItem.button;
+        frame = button.bounds;
+    } else if ([self.statusItem respondsToSelector:@selector(_button)]) {
+        button = [self.statusItem performSelector:@selector(_button)];
+        frame = button.bounds;
+    } else {
+        NSLog(@"Can't get view.  Uh oh.");
+        return;
+    }
+    
+    [self.networkListPopover showRelativeToRect:frame
+                                         ofView:button
+                                  preferredEdge:NSMinYEdge];
 
-        if(self.transientMonitor == nil) {
-            self.transientMonitor =
-            [NSEvent addGlobalMonitorForEventsMatchingMask:(NSLeftMouseDown|NSRightMouseDown|NSOtherMouseDown)
-                                                   handler:^(NSEvent * _Nonnull e) {
-                                                       [NSEvent removeMonitor:self.transientMonitor];
-                                                       self.transientMonitor = nil;
-                                                       [self.networkListPopover close];
-                                                   }];
-        }
+    if(self.transientMonitor == nil) {
+        self.transientMonitor =
+        [NSEvent addGlobalMonitorForEventsMatchingMask:(NSLeftMouseDown|NSRightMouseDown|NSOtherMouseDown)
+                                               handler:^(NSEvent * _Nonnull e) {
+                                                   [NSEvent removeMonitor:self.transientMonitor];
+                                                   self.transientMonitor = nil;
+                                                   [self.networkListPopover close];
+                                               }];
     }
 }
 
 - (void)joinNetwork {
-    if(self.statusItem.button != nil) {
-        NSStatusBarButton *button = self.statusItem.button;
-        [self.joinNetworkPopover showRelativeToRect:button.bounds
-                                             ofView:button
-                                      preferredEdge:NSMinYEdge];
-        if(self.transientMonitor == nil) {
-            self.transientMonitor =
-            [NSEvent addGlobalMonitorForEventsMatchingMask:(NSLeftMouseDown|NSRightMouseDown|NSOtherMouseDown)
-                                                   handler:^(NSEvent * _Nonnull e) {
-                                                       [NSEvent removeMonitor:self.transientMonitor];
-                                                       self.transientMonitor = nil;
-                                                       [self.joinNetworkPopover close];
-                                                   }];
-        }
+    NSButton *button = nil;
+    NSRect frame;
+    if ([self.statusItem respondsToSelector:@selector(button)]) {
+        button = self.statusItem.button;
+        frame = button.bounds;
+    } else if ([self.statusItem respondsToSelector:@selector(_button)]) {
+        button = [self.statusItem performSelector:@selector(_button)];
+        frame = button.bounds;
+    } else {
+        NSLog(@"Can't get view.  Uh oh.");
+        return;
+    }
+    
+    [self.joinNetworkPopover showRelativeToRect:button.bounds
+                                         ofView:button
+                                  preferredEdge:NSMinYEdge];
+    if(self.transientMonitor == nil) {
+        self.transientMonitor =
+        [NSEvent addGlobalMonitorForEventsMatchingMask:(NSLeftMouseDown|NSRightMouseDown|NSOtherMouseDown)
+                                               handler:^(NSEvent * _Nonnull e) {
+                                                   [NSEvent removeMonitor:self.transientMonitor];
+                                                   self.transientMonitor = nil;
+                                                   [self.joinNetworkPopover close];
+                                               }];
     }
 }
 
 - (void)showPreferences {
-    if(self.statusItem.button != nil) {
-        NSStatusBarButton *button = self.statusItem.button;
-        [self.preferencesPopover showRelativeToRect:button.bounds
-                                             ofView:button
-                                      preferredEdge:NSMinYEdge];
-        if(self.transientMonitor == nil) {
-            [NSEvent addGlobalMonitorForEventsMatchingMask:(NSLeftMouseDown|NSRightMouseDown|NSOtherMouseDown)
-                                                   handler:^(NSEvent * _Nonnull e) {
-                                                       [NSEvent removeMonitor:self.transientMonitor];
-                                                       self.transientMonitor = nil;
-                                                       [self.preferencesPopover close];
-                                                   }];
-        }
+    NSButton *button = nil;
+    NSRect frame;
+    if ([self.statusItem respondsToSelector:@selector(button)]) {
+        button = self.statusItem.button;
+        frame = button.bounds;
+    } else if ([self.statusItem respondsToSelector:@selector(_button)]) {
+        button = [self.statusItem performSelector:@selector(_button)];
+        frame = button.bounds;
+    } else {
+        NSLog(@"Can't get view.  Uh oh.");
+        return;
+    }
+
+    [self.preferencesPopover showRelativeToRect:button.bounds
+                                         ofView:button
+                                  preferredEdge:NSMinYEdge];
+    if(self.transientMonitor == nil) {
+        [NSEvent addGlobalMonitorForEventsMatchingMask:(NSLeftMouseDown|NSRightMouseDown|NSOtherMouseDown)
+                                               handler:^(NSEvent * _Nonnull e) {
+                                                   [NSEvent removeMonitor:self.transientMonitor];
+                                                   self.transientMonitor = nil;
+                                                   [self.preferencesPopover close];
+                                               }];
     }
 }
 
 - (void)showAbout {
-    if(self.statusItem.button != nil) {
-        NSStatusBarButton *button = self.statusItem.button;
-        [self.aboutPopover showRelativeToRect:button.bounds
-                                       ofView:button
-                                preferredEdge:NSMinYEdge];
-        if(self.transientMonitor == nil) {
-            [NSEvent addGlobalMonitorForEventsMatchingMask:(NSLeftMouseDown|NSRightMouseDown|NSOtherMouseDown)
-                                                   handler:^(NSEvent * _Nonnull e) {
-                                                       [NSEvent removeMonitor:self.transientMonitor];
-                                                       self.transientMonitor = nil;
-                                                       [self.aboutPopover close];
-                                                   }];
-        }
+    NSButton *button = nil;
+    NSRect frame;
+    if ([self.statusItem respondsToSelector:@selector(button)]) {
+        button = self.statusItem.button;
+        frame = button.bounds;
+    } else if ([self.statusItem respondsToSelector:@selector(_button)]) {
+        button = [self.statusItem performSelector:@selector(_button)];
+        frame = button.bounds;
+    } else {
+        NSLog(@"Can't get view.  Uh oh.");
+        return;
     }
-
+    
+    [self.aboutPopover showRelativeToRect:button.bounds
+                                   ofView:button
+                            preferredEdge:NSMinYEdge];
+    if(self.transientMonitor == nil) {
+        [NSEvent addGlobalMonitorForEventsMatchingMask:(NSLeftMouseDown|NSRightMouseDown|NSOtherMouseDown)
+                                               handler:^(NSEvent * _Nonnull e) {
+                                                   [NSEvent removeMonitor:self.transientMonitor];
+                                                   self.transientMonitor = nil;
+                                                   [self.aboutPopover close];
+                                               }];
+    }
 }
 
 - (void)quit {
