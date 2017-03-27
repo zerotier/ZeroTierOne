@@ -31,5 +31,4 @@ OBJS=\
 	osdep/Http.o \
 	osdep/OSUtils.o \
 	service/ClusterGeoIpService.o \
-	service/SoftwareUpdater.o \
-	service/ButtFlare.o
+	service/SoftwareUpdater.o
