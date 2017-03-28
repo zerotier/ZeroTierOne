@@ -346,7 +346,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 								Mutex::Lock _l(_remotePeers_m);
 								_RemotePeer &rp = _remotePeers[std::pair<Address,unsigned int>(id.address(),(unsigned int)fromMemberId)];
 								if (!rp.lastHavePeerReceived) {
-									RR->topology->saveIdentity(id);
+									RR->topology->saveIdentity((void *)0,id);
 									RR->identity.agree(id,rp.key,ZT_PEER_SECRET_KEY_LENGTH);
 								}
 								rp.lastHavePeerReceived = RR->node->now();
@@ -459,7 +459,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 									Mutex::Lock _l2(_members[fromMemberId].lock);
 									_send(fromMemberId,CLUSTER_MESSAGE_PROXY_SEND,rendezvousForRemote.data(),rendezvousForRemote.size());
 								}
-								RR->sw->send(rendezvousForLocal,true);
+								RR->sw->send((void *)0,rendezvousForLocal,true);
 							}
 						}
 					}	break;
@@ -470,7 +470,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						const unsigned int len = dmsg.at<uint16_t>(ptr); ptr += 2;
 						Packet outp(rcpt,RR->identity.address(),verb);
 						outp.append(dmsg.field(ptr,len),len); ptr += len;
-						RR->sw->send(outp,true);
+						RR->sw->send((void *)0,outp,true);
 						//TRACE("[%u] proxy send %s to %s length %u",(unsigned int)fromMemberId,Packet::verbString(verb),rcpt.toString().c_str(),len);
 					}	break;
 
@@ -479,7 +479,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						if (network) {
 							// Copy into a Packet just to conform to Network API. Eventually
 							// will want to refactor.
-							network->handleConfigChunk(0,Address(),Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(dmsg),ptr);
+							network->handleConfigChunk((void *)0,0,Address(),Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(dmsg),ptr);
 						}
 					}	break;
 				}
@@ -576,7 +576,7 @@ bool Cluster::sendViaCluster(int mostRecentMemberId,const Address &toPeerAddress
 		for(std::vector<InetAddress>::const_iterator i2(_members[mostRecentMemberId].zeroTierPhysicalEndpoints.begin());i2!=_members[mostRecentMemberId].zeroTierPhysicalEndpoints.end();++i2) {
 			if (i1->ss_family == i2->ss_family) {
 				TRACE("sendViaCluster sending %u bytes to %s by way of %u (%s->%s)",len,toPeerAddress.toString().c_str(),(unsigned int)mostRecentMemberId,i1->toString().c_str(),i2->toString().c_str());
-				RR->node->putPacket(*i1,*i2,data,len);
+				RR->node->putPacket((void *)0,*i1,*i2,data,len);
 				return true;
 			}
 		}
@@ -679,7 +679,7 @@ void Cluster::relayViaCluster(const Address &fromPeerAddress,const Address &toPe
 				for(std::vector<InetAddress>::const_iterator i2(_members[mostRecentMemberId].zeroTierPhysicalEndpoints.begin());i2!=_members[mostRecentMemberId].zeroTierPhysicalEndpoints.end();++i2) {
 					if (i1->ss_family == i2->ss_family) {
 						TRACE("relayViaCluster relaying %u bytes from %s to %s by way of %u (%s->%s)",len,fromPeerAddress.toString().c_str(),toPeerAddress.toString().c_str(),(unsigned int)mostRecentMemberId,i1->toString().c_str(),i2->toString().c_str());
-						RR->node->putPacket(*i1,*i2,data,len);
+						RR->node->putPacket((void *)0,*i1,*i2,data,len);
 						return;
 					}
 				}
@@ -981,7 +981,7 @@ void Cluster::_flush(uint16_t memberId)
 void Cluster::_doREMOTE_WHOIS(uint64_t fromMemberId,const Packet &remotep)
 {
 	if (remotep.payloadLength() >= ZT_ADDRESS_LENGTH) {
-		Identity queried(RR->topology->getIdentity(Address(remotep.payload(),ZT_ADDRESS_LENGTH)));
+		Identity queried(RR->topology->getIdentity((void *)0,Address(remotep.payload(),ZT_ADDRESS_LENGTH)));
 		if (queried) {
 			Buffer<1024> routp;
 			remotep.source().appendTo(routp);

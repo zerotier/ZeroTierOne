@@ -285,7 +285,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,uint64_t now,volatile uint
 #ifdef ZT_ENABLE_CLUSTER
 		// If clustering is enabled we have to call cluster->doPeriodicTasks() very often, so we override normal timer deadline behavior
 		if (RR->cluster) {
-			RR->sw->doTimerTasks(now);
+			RR->sw->doTimerTasks(tptr,now);
 			RR->cluster->doPeriodicTasks();
 			*nextBackgroundTaskDeadline = now + ZT_CLUSTER_PERIODIC_TASK_PERIOD; // this is really short so just tick at this rate
 		} else {
@@ -686,7 +686,7 @@ void Node::postTrace(const char *module,unsigned int line,const char *fmt,...)
 	tmp2[sizeof(tmp2)-1] = (char)0;
 
 	Utils::snprintf(tmp1,sizeof(tmp1),"[%s] %s:%u %s",nowstr,module,line,tmp2);
-	postEvent(ZT_EVENT_TRACE,tmp1);
+	postEvent((void *)0,ZT_EVENT_TRACE,tmp1);
 }
 #endif // ZT_TRACE
 

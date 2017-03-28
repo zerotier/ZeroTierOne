@@ -863,7 +863,7 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 				Packet::Fragment frag(packet,fragStart,chunkSize,fno,totalFragments);
 #ifdef ZT_ENABLE_CLUSTER
 				if (viaPath)
-					viaPath->send(RR,frag.data(),frag.size(),now);
+					viaPath->send(RR,tPtr,frag.data(),frag.size(),now);
 				else if (clusterMostRecentMemberId >= 0)
 					RR->cluster->sendViaCluster(clusterMostRecentMemberId,destination,frag.data(),frag.size());
 #else

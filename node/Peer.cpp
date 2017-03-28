@@ -103,7 +103,7 @@ void Peer::received(
 				}
 				outp.append((uint16_t)redirectTo.port());
 				outp.armor(_key,true,path->nextOutgoingCounter());
-				path->send(RR,outp.data(),outp.size(),now);
+				path->send(RR,tPtr,outp.data(),outp.size(),now);
 			} else {
 				// For older peers we use RENDEZVOUS to coax them into contacting us elsewhere.
 				Packet outp(_id.address(),RR->identity.address(),Packet::VERB_RENDEZVOUS);
@@ -118,7 +118,7 @@ void Peer::received(
 					outp.append(redirectTo.rawIpData(),16);
 				}
 				outp.armor(_key,true,path->nextOutgoingCounter());
-				path->send(RR,outp.data(),outp.size(),now);
+				path->send(RR,tPtr,outp.data(),outp.size(),now);
 			}
 			suboptimalPath = true;
 		}
