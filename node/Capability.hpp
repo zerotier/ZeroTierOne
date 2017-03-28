@@ -161,7 +161,7 @@ public:
 	 * @param RR Runtime environment to provide for peer lookup, etc.
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or chain
 	 */
-	int verify(const RuntimeEnvironment *RR) const;
+	int verify(const RuntimeEnvironment *RR,void *tPtr) const;
 
 	template<unsigned int C>
 	static inline void serializeRules(Buffer<C> &b,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)

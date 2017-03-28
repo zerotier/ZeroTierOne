@@ -48,7 +48,7 @@ public:
 		unsigned int metric,
 		uint64_t nwid,
 		const char *friendlyName,
-		void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
+		void (*handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 		void *arg);
 
 	~OSXEthernetTap();
@@ -67,7 +67,7 @@ public:
 		throw();
 
 private:
-	void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
+	void (*_handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
 	uint64_t _nwid;
 	Thread _thread;

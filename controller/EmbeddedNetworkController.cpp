@@ -790,7 +790,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					test->timestamp = OSUtils::now();
 
 					if (_node) {
-						_node->circuitTestBegin(test,&(EmbeddedNetworkController::_circuitTestCallback));
+						_node->circuitTestBegin((void *)0,test,&(EmbeddedNetworkController::_circuitTestCallback));
 					} else {
 						_tests.pop_back();
 						return 500;

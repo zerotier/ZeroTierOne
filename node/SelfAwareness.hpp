@@ -47,7 +47,7 @@ public:
 	 * @param trusted True if this peer is trusted as an authority to inform us of external address changes
 	 * @param now Current time
 	 */
-	void iam(const Address &reporter,const InetAddress &receivedOnLocalAddress,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now);
+	void iam(void *tPtr,const Address &reporter,const InetAddress &receivedOnLocalAddress,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now);
 
 	/**
 	 * Clean up database periodically

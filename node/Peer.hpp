@@ -84,6 +84,7 @@ public:
 	 * This is called by the decode pipe when a packet is proven to be authentic
 	 * and appears to be valid.
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param path Path over which packet was received
 	 * @param hops ZeroTier (not IP) hops
 	 * @param packetId Packet ID
@@ -93,6 +94,7 @@ public:
 	 * @param trustEstablished If true, some form of non-trivial trust (like allowed in network) has been established
 	 */
 	void received(
+		void *tPtr,
 		const SharedPtr<Path> &path,
 		const unsigned int hops,
 		const uint64_t packetId,
@@ -125,13 +127,14 @@ public:
 	/**
 	 * Send via best direct path
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param data Packet data
 	 * @param len Packet length
 	 * @param now Current time
 	 * @param forceEvenIfDead If true, send even if the path is not 'alive'
 	 * @return True if we actually sent something
 	 */
-	bool sendDirect(const void *data,unsigned int len,uint64_t now,bool forceEvenIfDead);
+	bool sendDirect(void *tPtr,const void *data,unsigned int len,uint64_t now,bool forceEvenIfDead);
 
 	/**
 	 * Get the best current direct path
@@ -147,41 +150,47 @@ public:
 	 *
 	 * No statistics or sent times are updated here.
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param localAddr Local address
 	 * @param atAddress Destination address
 	 * @param now Current time
 	 * @param counter Outgoing packet counter
 	 */
-	void sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int counter);
+	void sendHELLO(void *tPtr,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int counter);
 
 	/**
 	 * Send ECHO (or HELLO for older peers) to this peer at the given address
 	 *
 	 * No statistics or sent times are updated here.
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param localAddr Local address
 	 * @param atAddress Destination address
 	 * @param now Current time
 	 * @param sendFullHello If true, always send a full HELLO instead of just an ECHO
 	 * @param counter Outgoing packet counter
 	 */
-	void attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,bool sendFullHello,unsigned int counter);
+	void attemptToContactAt(void *tPtr,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,bool sendFullHello,unsigned int counter);
 
 	/**
 	 * Try a memorized or statically defined path if any are known
 	 *
 	 * Under the hood this is done periodically based on ZT_TRY_MEMORIZED_PATH_INTERVAL.
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param now Current time
 	 */
-	void tryMemorizedPath(uint64_t now);
+	void tryMemorizedPath(void *tPtr,uint64_t now);
 
 	/**
 	 * Send pings or keepalives depending on configured timeouts
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 * @param inetAddressFamily Keep this address family alive, or -1 for any
 	 * @return True if we have at least one direct path of the given family (or any if family is -1)
 	 */
-	bool doPingAndKeepalive(uint64_t now,int inetAddressFamily);
+	bool doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily);
 
 	/**
 	 * @param now Current time
@@ -195,11 +204,12 @@ public:
 	 * Resetting a path involves sending an ECHO to it and then deactivating
 	 * it until or unless it responds.
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param scope IP scope
 	 * @param inetAddressFamily Family e.g. AF_INET
 	 * @param now Current time
 	 */
-	void resetWithinScope(InetAddress::IpScope scope,int inetAddressFamily,uint64_t now);
+	void resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,uint64_t now);
 
 	/**
 	 * Get most recently active path addresses for IPv4 and/or IPv6

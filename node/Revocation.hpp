@@ -113,9 +113,10 @@ public:
 	 * Verify this revocation's signature
 	 *
 	 * @param RR Runtime environment to provide for peer lookup, etc.
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or chain
 	 */
-	int verify(const RuntimeEnvironment *RR) const;
+	int verify(const RuntimeEnvironment *RR,void *tPtr) const;
 
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,const bool forSign = false) const

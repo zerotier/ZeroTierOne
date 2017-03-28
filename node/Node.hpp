@@ -65,7 +65,7 @@ class World;
 class Node : public NetworkController::Sender
 {
 public:
-	Node(void *uptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now);
+	Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now);
 	virtual ~Node();
 
 	// Get rid of alignment warnings on 32-bit Windows and possibly improve performance
@@ -77,6 +77,7 @@ public:
 	// Public API Functions ----------------------------------------------------
 
 	ZT_ResultCode processWirePacket(
+		void *tptr,
 		uint64_t now,
 		const struct sockaddr_storage *localAddress,
 		const struct sockaddr_storage *remoteAddress,
@@ -84,6 +85,7 @@ public:
 		unsigned int packetLength,
 		volatile uint64_t *nextBackgroundTaskDeadline);
 	ZT_ResultCode processVirtualNetworkFrame(
+		void *tptr,
 		uint64_t now,
 		uint64_t nwid,
 		uint64_t sourceMac,
@@ -93,13 +95,13 @@ public:
 		const void *frameData,
 		unsigned int frameLength,
 		volatile uint64_t *nextBackgroundTaskDeadline);
-	ZT_ResultCode processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
-	ZT_ResultCode join(uint64_t nwid,void *uptr);
-	ZT_ResultCode leave(uint64_t nwid,void **uptr);
-	ZT_ResultCode multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
+	ZT_ResultCode processBackgroundTasks(void *tptr,uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
+	ZT_ResultCode join(uint64_t nwid,void *uptr,void *tptr);
+	ZT_ResultCode leave(uint64_t nwid,void **uptr,void *tptr);
+	ZT_ResultCode multicastSubscribe(void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	ZT_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
-	ZT_ResultCode orbit(uint64_t moonWorldId,uint64_t moonSeed);
-	ZT_ResultCode deorbit(uint64_t moonWorldId);
+	ZT_ResultCode orbit(void *tptr,uint64_t moonWorldId,uint64_t moonSeed);
+	ZT_ResultCode deorbit(void *tptr,uint64_t moonWorldId);
 	uint64_t address() const;
 	void status(ZT_NodeStatus *status) const;
 	ZT_PeerList *peers() const;
@@ -108,9 +110,9 @@ public:
 	void freeQueryResult(void *qr);
 	int addLocalInterfaceAddress(const struct sockaddr_storage *addr);
 	void clearLocalInterfaceAddresses();
-	int sendUserMessage(uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
+	int sendUserMessage(void *tptr,uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
 	void setNetconfMaster(void *networkControllerInstance);
-	ZT_ResultCode circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *));
+	ZT_ResultCode circuitTestBegin(void *tptr,ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *));
 	void circuitTestEnd(ZT_CircuitTest *test);
 	ZT_ResultCode clusterInit(
 		unsigned int myId,
@@ -132,11 +134,12 @@ public:
 
 	inline uint64_t now() const throw() { return _now; }
 
-	inline bool putPacket(const InetAddress &localAddress,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0)
+	inline bool putPacket(void *tPtr,const InetAddress &localAddress,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0)
 	{
 		return (_cb.wirePacketSendFunction(
 			reinterpret_cast<ZT_Node *>(this),
 			_uPtr,
+			tPtr,
 			reinterpret_cast<const struct sockaddr_storage *>(&localAddress),
 			reinterpret_cast<const struct sockaddr_storage *>(&addr),
 			data,
@@ -144,11 +147,12 @@ public:
 			ttl) == 0);
 	}
 
-	inline void putFrame(uint64_t nwid,void **nuptr,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
+	inline void putFrame(void *tPtr,uint64_t nwid,void **nuptr,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
 		_cb.virtualNetworkFrameFunction(
 			reinterpret_cast<ZT_Node *>(this),
 			_uPtr,
+			tPtr,
 			nwid,
 			nuptr,
 			source.toInt(),
@@ -191,14 +195,14 @@ public:
 		return _directPaths;
 	}
 
-	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure) { return (_cb.dataStorePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,name,data,len,(int)secure) == 0); }
-	inline bool dataStorePut(const char *name,const std::string &data,bool secure) { return dataStorePut(name,(const void *)data.data(),(unsigned int)data.length(),secure); }
-	inline void dataStoreDelete(const char *name) { _cb.dataStorePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,name,(const void *)0,0,0); }
-	std::string dataStoreGet(const char *name);
+	inline bool dataStorePut(void *tPtr,const char *name,const void *data,unsigned int len,bool secure) { return (_cb.dataStorePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,name,data,len,(int)secure) == 0); }
+	inline bool dataStorePut(void *tPtr,const char *name,const std::string &data,bool secure) { return dataStorePut(tPtr,name,(const void *)data.data(),(unsigned int)data.length(),secure); }
+	inline void dataStoreDelete(void *tPtr,const char *name) { _cb.dataStorePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,name,(const void *)0,0,0); }
+	std::string dataStoreGet(void *tPtr,const char *name);
 
-	inline void postEvent(ZT_Event ev,const void *md = (const void *)0) { _cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,ev,md); }
+	inline void postEvent(void *tPtr,ZT_Event ev,const void *md = (const void *)0) { _cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ev,md); }
 
-	inline int configureVirtualNetworkPort(uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { return _cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,nwid,nuptr,op,nc); }
+	inline int configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { return _cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,nwid,nuptr,op,nc); }
 
 	inline bool online() const throw() { return _online; }
 
@@ -206,8 +210,8 @@ public:
 	void postTrace(const char *module,unsigned int line,const char *fmt,...);
 #endif
 
-	bool shouldUsePathForZeroTierTraffic(const Address &ztaddr,const InetAddress &localAddress,const InetAddress &remoteAddress);
-	inline bool externalPathLookup(const Address &ztaddr,int family,InetAddress &addr) { return ( (_cb.pathLookupFunction) ? (_cb.pathLookupFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,ztaddr.toInt(),family,reinterpret_cast<struct sockaddr_storage *>(&addr)) != 0) : false ); }
+	bool shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,const InetAddress &localAddress,const InetAddress &remoteAddress);
+	inline bool externalPathLookup(void *tPtr,const Address &ztaddr,int family,InetAddress &addr) { return ( (_cb.pathLookupFunction) ? (_cb.pathLookupFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ztaddr.toInt(),family,reinterpret_cast<struct sockaddr_storage *>(&addr)) != 0) : false ); }
 
 	uint64_t prng();
 	void postCircuitTestReport(const ZT_CircuitTestReport *report);

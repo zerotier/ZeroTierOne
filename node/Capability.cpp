@@ -25,7 +25,7 @@
 
 namespace ZeroTier {
 
-int Capability::verify(const RuntimeEnvironment *RR) const
+int Capability::verify(const RuntimeEnvironment *RR,void *tPtr) const
 {
 	try {
 		// There must be at least one entry, and sanity check for bad chain max length
@@ -46,12 +46,12 @@ int Capability::verify(const RuntimeEnvironment *RR) const
 					return -1; // otherwise if we have another entry it must be from the previous holder in the chain
 			}
 
-			const Identity id(RR->topology->getIdentity(_custody[c].from));
+			const Identity id(RR->topology->getIdentity(tPtr,_custody[c].from));
 			if (id) {
 				if (!id.verify(tmp.data(),tmp.size(),_custody[c].signature))
 					return -1;
 			} else {
-				RR->sw->requestWhois(_custody[c].from);
+				RR->sw->requestWhois(tPtr,_custody[c].from);
 				return 1;
 			}
 		}

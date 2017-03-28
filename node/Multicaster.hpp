@@ -90,10 +90,10 @@ public:
 	 * @param mg Multicast group
 	 * @param member New member address
 	 */
-	inline void add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &member)
+	inline void add(void *tPtr,uint64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &member)
 	{
 		Mutex::Lock _l(_groups_m);
-		_add(now,nwid,mg,_groups[Multicaster::Key(nwid,mg)],member);
+		_add(tPtr,now,nwid,mg,_groups[Multicaster::Key(nwid,mg)],member);
 	}
 
 	/**
@@ -101,6 +101,7 @@ public:
 	 *
 	 * It's up to the caller to check bounds on the array before calling this.
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 * @param nwid Network ID
 	 * @param mg Multicast group
@@ -108,7 +109,7 @@ public:
 	 * @param count Number of addresses
 	 * @param totalKnown Total number of known addresses as reported by peer
 	 */
-	void addMultiple(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,unsigned int totalKnown);
+	void addMultiple(void *tPtr,uint64_t now,uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,unsigned int totalKnown);
 
 	/**
 	 * Remove a multicast group member (if present)
@@ -150,6 +151,7 @@ public:
 	/**
 	 * Send a multicast
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param limit Multicast limit
 	 * @param now Current time
 	 * @param nwid Network ID
@@ -162,6 +164,7 @@ public:
 	 * @param len Length of packet data
 	 */
 	void send(
+		void *tPtr,
 		unsigned int limit,
 		uint64_t now,
 		uint64_t nwid,
@@ -191,7 +194,7 @@ public:
 	 * @param com Certificate of membership
 	 * @param alreadyValidated If true, COM has already been checked and found to be valid and signed
 	 */
-	void addCredential(const CertificateOfMembership &com,bool alreadyValidated);
+	void addCredential(void *tPtr,const CertificateOfMembership &com,bool alreadyValidated);
 
 	/**
 	 * Check authorization for GATHER and LIKE for non-network-members
@@ -209,7 +212,7 @@ public:
 	}
 
 private:
-	void _add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &member);
+	void _add(void *tPtr,uint64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &member);
 
 	const RuntimeEnvironment *RR;
 

@@ -158,13 +158,14 @@ public:
 	 * sends VERB_NETWORK_CREDENTIALS if the recipient might need them.
 	 *
 	 * @param RR Runtime environment
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 * @param peerAddress Address of member peer (the one that this Membership describes)
 	 * @param nconf My network config
 	 * @param localCapabilityIndex Index of local capability to include (in nconf.capabilities[]) or -1 if none
 	 * @param force If true, send objects regardless of last push time
 	 */
-	void pushCredentials(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex,const bool force);
+	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex,const bool force);
 
 	/**
 	 * Check whether we should push MULTICAST_LIKEs to this peer
@@ -226,27 +227,27 @@ public:
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 */
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const CertificateOfMembership &com);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const CertificateOfMembership &com);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 */
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const Tag &tag);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Tag &tag);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 */
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const Capability &cap);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Capability &cap);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 */
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const Revocation &rev);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Revocation &rev);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 */
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const CertificateOfOwnership &coo);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const CertificateOfOwnership &coo);
 
 private:
 	_RemoteCredential<Tag> *_newTag(const uint64_t id);

@@ -62,7 +62,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 	unsigned int metric,
 	uint64_t nwid,
 	const char *friendlyName,
-	void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
+	void (*handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 	void *arg) :
 	_handler(handler),
 	_arg(arg),
@@ -470,7 +470,7 @@ void LinuxEthernetTap::threadMain()
 						from.setTo(getBuf + 6,6);
 						unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
 						// TODO: VLAN support
-						_handler(_arg,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
+						_handler(_arg,(void *)0,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
 					}
 
 					r = 0;

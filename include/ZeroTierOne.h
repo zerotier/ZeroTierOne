@@ -1408,6 +1408,7 @@ typedef void ZT_Node;
 typedef int (*ZT_VirtualNetworkConfigFunction)(
 	ZT_Node *,                             /* Node */
 	void *,                                /* User ptr */
+	void *,                                /* Thread ptr */
 	uint64_t,                              /* Network ID */
 	void **,                               /* Modifiable network user PTR */
 	enum ZT_VirtualNetworkConfigOperation, /* Config operation */
@@ -1423,6 +1424,7 @@ typedef int (*ZT_VirtualNetworkConfigFunction)(
 typedef void (*ZT_VirtualNetworkFrameFunction)(
 	ZT_Node *,                             /* Node */
 	void *,                                /* User ptr */
+	void *,                                /* Thread ptr */
 	uint64_t,                              /* Network ID */
 	void **,                               /* Modifiable network user PTR */
 	uint64_t,                              /* Source MAC */
@@ -1442,10 +1444,11 @@ typedef void (*ZT_VirtualNetworkFrameFunction)(
  * in the definition of ZT_Event.
  */
 typedef void (*ZT_EventCallback)(
-	ZT_Node *,
-	void *,
-	enum ZT_Event,
-	const void *);
+	ZT_Node *,                             /* Node */
+	void *,                                /* User ptr */
+	void *,                                /* Thread ptr */
+	enum ZT_Event,                         /* Event type */
+	const void *);                         /* Event payload (if applicable) */
 
 /**
  * Function to get an object from the data store
@@ -1468,8 +1471,9 @@ typedef void (*ZT_EventCallback)(
  * object.
  */
 typedef long (*ZT_DataStoreGetFunction)(
-	ZT_Node *,
-	void *,
+	ZT_Node *,                             /* Node */
+	void *,                                /* User ptr */
+	void *,                                /* Thread ptr */
 	const char *,
 	void *,
 	unsigned long,
@@ -1495,6 +1499,7 @@ typedef long (*ZT_DataStoreGetFunction)(
 typedef int (*ZT_DataStorePutFunction)(
 	ZT_Node *,
 	void *,
+	void *,                                /* Thread ptr */
 	const char *,
 	const void *,
 	unsigned long,
@@ -1529,6 +1534,7 @@ typedef int (*ZT_DataStorePutFunction)(
 typedef int (*ZT_WirePacketSendFunction)(
 	ZT_Node *,                        /* Node */
 	void *,                           /* User ptr */
+	void *,                           /* Thread ptr */
 	const struct sockaddr_storage *,  /* Local address */
 	const struct sockaddr_storage *,  /* Remote address */
 	const void *,                     /* Packet data */
@@ -1562,6 +1568,7 @@ typedef int (*ZT_WirePacketSendFunction)(
 typedef int (*ZT_PathCheckFunction)(
 	ZT_Node *,                        /* Node */
 	void *,                           /* User ptr */
+	void *,                           /* Thread ptr */
 	uint64_t,                         /* ZeroTier address */
 	const struct sockaddr_storage *,  /* Local address */
 	const struct sockaddr_storage *); /* Remote address */
@@ -1584,6 +1591,7 @@ typedef int (*ZT_PathCheckFunction)(
 typedef int (*ZT_PathLookupFunction)(
 	ZT_Node *,                        /* Node */
 	void *,                           /* User ptr */
+	void *,                           /* Thread ptr */
 	uint64_t,                         /* ZeroTier address (40 bits) */
 	int,                              /* Desired ss_family or -1 for any */
 	struct sockaddr_storage *);       /* Result buffer */
@@ -1654,11 +1662,12 @@ struct ZT_Node_Callbacks
  *
  * @param node Result: pointer is set to new node instance on success
  * @param uptr User pointer to pass to functions/callbacks
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param callbacks Callback function configuration
  * @param now Current clock in milliseconds
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now);
+enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now);
 
 /**
  * Delete a node and free all resources it consumes
@@ -1674,6 +1683,7 @@ void ZT_Node_delete(ZT_Node *node);
  * Process a packet received from the physical wire
  *
  * @param node Node instance
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param now Current clock in milliseconds
  * @param localAddress Local address, or point to ZT_SOCKADDR_NULL if unspecified
  * @param remoteAddress Origin of packet
@@ -1684,6 +1694,7 @@ void ZT_Node_delete(ZT_Node *node);
  */
 enum ZT_ResultCode ZT_Node_processWirePacket(
 	ZT_Node *node,
+	void *tptr,
 	uint64_t now,
 	const struct sockaddr_storage *localAddress,
 	const struct sockaddr_storage *remoteAddress,
@@ -1695,6 +1706,7 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
  * Process a frame from a virtual network port (tap)
  *
  * @param node Node instance
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param now Current clock in milliseconds
  * @param nwid ZeroTier 64-bit virtual network ID
  * @param sourceMac Source MAC address (least significant 48 bits)
@@ -1708,6 +1720,7 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
  */
 enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	ZT_Node *node,
+	void *tptr,
 	uint64_t now,
 	uint64_t nwid,
 	uint64_t sourceMac,
@@ -1722,11 +1735,12 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
  * Perform periodic background operations
  *
  * @param node Node instance
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param now Current clock in milliseconds
  * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
+enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,void *tptr,uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
 
 /**
  * Join a network
@@ -1742,7 +1756,7 @@ enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,uint64_t now,vol
  * @param uptr An arbitrary pointer to associate with this network (default: NULL)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr);
+enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr,void *tptr);
 
 /**
  * Leave a network
@@ -1759,7 +1773,7 @@ enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr);
  * @param uptr Target pointer is set to uptr (if not NULL)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr);
+enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr,void *tptr);
 
 /**
  * Subscribe to an Ethernet multicast group
@@ -1781,12 +1795,13 @@ enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr);
  * This does not generate an update call to networkConfigCallback().
  *
  * @param node Node instance
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param nwid 64-bit network ID
  * @param multicastGroup Ethernet multicast or broadcast MAC (least significant 48 bits)
  * @param multicastAdi Multicast ADI (least significant 32 bits only, use 0 if not needed)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
+enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node,void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 
 /**
  * Unsubscribe from an Ethernet multicast group (or all groups)
@@ -1811,21 +1826,24 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint
  * across invocations if the contents of moon.d are scanned and orbit is
  * called for each on startup.
  *
+ * @param node Node instance
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param moonWorldId Moon's world ID
  * @param moonSeed If non-zero, the ZeroTier address of any member of the moon to query for moon definition
  * @param len Length of moonWorld in bytes
  * @return Error if moon was invalid or failed to be added
  */
-enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,uint64_t moonWorldId,uint64_t moonSeed);
+enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,void *tptr,uint64_t moonWorldId,uint64_t moonSeed);
 
 /**
  * Remove a moon (does nothing if not present)
  *
  * @param node Node instance
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param moonWorldId World ID of moon to remove
  * @return Error if anything bad happened
  */
-enum ZT_ResultCode ZT_Node_deorbit(ZT_Node *node,uint64_t moonWorldId);
+enum ZT_ResultCode ZT_Node_deorbit(ZT_Node *node,void *tptr,uint64_t moonWorldId);
 
 /**
  * Get this node's 40-bit ZeroTier address
@@ -1919,13 +1937,15 @@ void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node);
  * There is no delivery guarantee here. Failure can occur if the message is
  * too large or if dest is not a valid ZeroTier address.
  *
+ * @param node Node instance
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param dest Destination ZeroTier address
  * @param typeId VERB_USER_MESSAGE type ID
  * @param data Payload data to attach to user message
  * @param len Length of data in bytes
  * @return Boolean: non-zero on success, zero on failure
  */
-int ZT_Node_sendUserMessage(ZT_Node *node,uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
+int ZT_Node_sendUserMessage(ZT_Node *node,void *tptr,uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
 
 /**
  * Set a network configuration master instance for this node
@@ -1957,11 +1977,12 @@ void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkConfigMasterInstance);
  * for results forever.
  *
  * @param node Node instance
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param test Test configuration
  * @param reportCallback Function to call each time a report is received
  * @return OK or error if, for example, test is too big for a packet or support isn't compiled in
  */
-enum ZT_ResultCode ZT_Node_circuitTestBegin(ZT_Node *node,ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *, ZT_CircuitTest *,const ZT_CircuitTestReport *));
+enum ZT_ResultCode ZT_Node_circuitTestBegin(ZT_Node *node,void *tptr,ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *, ZT_CircuitTest *,const ZT_CircuitTestReport *));
 
 /**
  * Stop listening for results to a given circuit test

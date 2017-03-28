@@ -43,14 +43,14 @@ Multicaster::~Multicaster()
 {
 }
 
-void Multicaster::addMultiple(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,unsigned int totalKnown)
+void Multicaster::addMultiple(void *tPtr,uint64_t now,uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,unsigned int totalKnown)
 {
 	const unsigned char *p = (const unsigned char *)addresses;
 	const unsigned char *e = p + (5 * count);
 	Mutex::Lock _l(_groups_m);
 	MulticastGroupStatus &gs = _groups[Multicaster::Key(nwid,mg)];
 	while (p != e) {
-		_add(now,nwid,mg,gs,Address(p,5));
+		_add(tPtr,now,nwid,mg,gs,Address(p,5));
 		p += 5;
 	}
 }
@@ -152,6 +152,7 @@ std::vector<Address> Multicaster::getMembers(uint64_t nwid,const MulticastGroup 
 }
 
 void Multicaster::send(
+	void *tPtr,
 	unsigned int limit,
 	uint64_t now,
 	uint64_t nwid,
@@ -207,7 +208,7 @@ void Multicaster::send(
 
 			for(std::vector<Address>::const_iterator ast(alwaysSendTo.begin());ast!=alwaysSendTo.end();++ast) {
 				if (*ast != RR->identity.address()) {
-					out.sendOnly(RR,*ast); // optimization: don't use dedup log if it's a one-pass send
+					out.sendOnly(RR,tPtr,*ast); // optimization: don't use dedup log if it's a one-pass send
 					if (++count >= limit)
 						break;
 				}
@@ -217,7 +218,7 @@ void Multicaster::send(
 			while ((count < limit)&&(idx < gs.members.size())) {
 				Address ma(gs.members[indexes[idx++]].address);
 				if (std::find(alwaysSendTo.begin(),alwaysSendTo.end(),ma) == alwaysSendTo.end()) {
-					out.sendOnly(RR,ma); // optimization: don't use dedup log if it's a one-pass send
+					out.sendOnly(RR,tPtr,ma); // optimization: don't use dedup log if it's a one-pass send
 					++count;
 				}
 			}
@@ -256,7 +257,7 @@ void Multicaster::send(
 					if (com)
 						com->serialize(outp);
 					RR->node->expectReplyTo(outp.packetId());
-					RR->sw->send(outp,true);
+					RR->sw->send(tPtr,outp,true);
 				}
 			}
 
@@ -280,7 +281,7 @@ void Multicaster::send(
 
 			for(std::vector<Address>::const_iterator ast(alwaysSendTo.begin());ast!=alwaysSendTo.end();++ast) {
 				if (*ast != RR->identity.address()) {
-					out.sendAndLog(RR,*ast);
+					out.sendAndLog(RR,tPtr,*ast);
 					if (++count >= limit)
 						break;
 				}
@@ -290,7 +291,7 @@ void Multicaster::send(
 			while ((count < limit)&&(idx < gs.members.size())) {
 				Address ma(gs.members[indexes[idx++]].address);
 				if (std::find(alwaysSendTo.begin(),alwaysSendTo.end(),ma) == alwaysSendTo.end()) {
-					out.sendAndLog(RR,ma);
+					out.sendAndLog(RR,tPtr,ma);
 					++count;
 				}
 			}
@@ -352,15 +353,15 @@ void Multicaster::clean(uint64_t now)
 	}
 }
 
-void Multicaster::addCredential(const CertificateOfMembership &com,bool alreadyValidated)
+void Multicaster::addCredential(void *tPtr,const CertificateOfMembership &com,bool alreadyValidated)
 {
-	if ((alreadyValidated)||(com.verify(RR) == 0)) {
+	if ((alreadyValidated)||(com.verify(RR,tPtr) == 0)) {
 		Mutex::Lock _l(_gatherAuth_m);
 		_gatherAuth[_GatherAuthKey(com.networkId(),com.issuedTo())] = RR->node->now();
 	}
 }
 
-void Multicaster::_add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &member)
+void Multicaster::_add(void *tPtr,uint64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &member)
 {
 	// assumes _groups_m is locked
 
@@ -383,7 +384,7 @@ void Multicaster::_add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,Multi
 		if (tx->atLimit())
 			gs.txQueue.erase(tx++);
 		else {
-			tx->sendIfNew(RR,member);
+			tx->sendIfNew(RR,tPtr,member);
 			if (tx->atLimit())
 				gs.txQueue.erase(tx++);
 			else ++tx;

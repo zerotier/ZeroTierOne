@@ -68,6 +68,7 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 }
 
 void Peer::received(
+	void *tPtr,
 	const SharedPtr<Path> &path,
 	const unsigned int hops,
 	const uint64_t packetId,
@@ -161,7 +162,7 @@ void Peer::received(
 			}
 		}
 
-		if ( (!pathIsConfirmed) && (RR->node->shouldUsePathForZeroTierTraffic(_id.address(),path->localAddress(),path->address())) ) {
+		if ( (!pathIsConfirmed) && (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),path->localAddress(),path->address())) ) {
 			if (verb == Packet::VERB_OK) {
 				Mutex::Lock _l(_paths_m);
 
@@ -206,7 +207,7 @@ void Peer::received(
 #endif
 			} else {
 				TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),path->address().toString().c_str());
-				attemptToContactAt(path->localAddress(),path->address(),now,true,path->nextOutgoingCounter());
+				attemptToContactAt(tPtr,path->localAddress(),path->address(),now,true,path->nextOutgoingCounter());
 				path->sent(now);
 			}
 		}
@@ -281,7 +282,7 @@ void Peer::received(
 					if (count) {
 						outp.setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
 						outp.armor(_key,true,path->nextOutgoingCounter());
-						path->send(RR,outp.data(),outp.size(),now);
+						path->send(RR,tPtr,outp.data(),outp.size(),now);
 					}
 				}
 			}
@@ -299,7 +300,7 @@ bool Peer::hasActivePathTo(uint64_t now,const InetAddress &addr) const
 	return false;
 }
 
-bool Peer::sendDirect(const void *data,unsigned int len,uint64_t now,bool forceEvenIfDead)
+bool Peer::sendDirect(void *tPtr,const void *data,unsigned int len,uint64_t now,bool forceEvenIfDead)
 {
 	Mutex::Lock _l(_paths_m);
 
@@ -316,7 +317,7 @@ bool Peer::sendDirect(const void *data,unsigned int len,uint64_t now,bool forceE
 	}
 
 	if (bestp >= 0) {
-		return _paths[bestp].path->send(RR,data,len,now);
+		return _paths[bestp].path->send(RR,tPtr,data,len,now);
 	} else {
 		return false;
 	}
@@ -345,7 +346,7 @@ SharedPtr<Path> Peer::getBestPath(uint64_t now,bool includeExpired)
 	}
 }
 
-void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int counter)
+void Peer::sendHELLO(void *tPtr,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int counter)
 {
 	Packet outp(_id.address(),RR->identity.address(),Packet::VERB_HELLO);
 
@@ -387,35 +388,35 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 
 	if (atAddress) {
 		outp.armor(_key,false,counter); // false == don't encrypt full payload, but add MAC
-		RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
+		RR->node->putPacket(tPtr,localAddr,atAddress,outp.data(),outp.size());
 	} else {
-		RR->sw->send(outp,false); // false == don't encrypt full payload, but add MAC
+		RR->sw->send(tPtr,outp,false); // false == don't encrypt full payload, but add MAC
 	}
 }
 
-void Peer::attemptToContactAt(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,bool sendFullHello,unsigned int counter)
+void Peer::attemptToContactAt(void *tPtr,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,bool sendFullHello,unsigned int counter)
 {
 	if ( (!sendFullHello) && (_vProto >= 5) && (!((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0))) ) {
 		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
 		RR->node->expectReplyTo(outp.packetId());
 		outp.armor(_key,true,counter);
-		RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
+		RR->node->putPacket(tPtr,localAddr,atAddress,outp.data(),outp.size());
 	} else {
-		sendHELLO(localAddr,atAddress,now,counter);
+		sendHELLO(tPtr,localAddr,atAddress,now,counter);
 	}
 }
 
-void Peer::tryMemorizedPath(uint64_t now)
+void Peer::tryMemorizedPath(void *tPtr,uint64_t now)
 {
 	if ((now - _lastTriedMemorizedPath) >= ZT_TRY_MEMORIZED_PATH_INTERVAL) {
 		_lastTriedMemorizedPath = now;
 		InetAddress mp;
-		if (RR->node->externalPathLookup(_id.address(),-1,mp))
-			attemptToContactAt(InetAddress(),mp,now,true,0);
+		if (RR->node->externalPathLookup(tPtr,_id.address(),-1,mp))
+			attemptToContactAt(tPtr,InetAddress(),mp,now,true,0);
 	}
 }
 
-bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
+bool Peer::doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily)
 {
 	Mutex::Lock _l(_paths_m);
 
@@ -433,7 +434,7 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 
 	if (bestp >= 0) {
 		if ( ((now - _paths[bestp].lastReceive) >= ZT_PEER_PING_PERIOD) || (_paths[bestp].path->needsHeartbeat(now)) ) {
-			attemptToContactAt(_paths[bestp].path->localAddress(),_paths[bestp].path->address(),now,false,_paths[bestp].path->nextOutgoingCounter());
+			attemptToContactAt(tPtr,_paths[bestp].path->localAddress(),_paths[bestp].path->address(),now,false,_paths[bestp].path->nextOutgoingCounter());
 			_paths[bestp].path->sent(now);
 		}
 		return true;
@@ -452,12 +453,12 @@ bool Peer::hasActiveDirectPath(uint64_t now) const
 	return false;
 }
 
-void Peer::resetWithinScope(InetAddress::IpScope scope,int inetAddressFamily,uint64_t now)
+void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,uint64_t now)
 {
 	Mutex::Lock _l(_paths_m);
 	for(unsigned int p=0;p<_numPaths;++p) {
 		if ( (_paths[p].path->address().ss_family == inetAddressFamily) && (_paths[p].path->address().ipScope() == scope) ) {
-			attemptToContactAt(_paths[p].path->localAddress(),_paths[p].path->address(),now,false,_paths[p].path->nextOutgoingCounter());
+			attemptToContactAt(tPtr,_paths[p].path->localAddress(),_paths[p].path->address(),now,false,_paths[p].path->nextOutgoingCounter());
 			_paths[p].path->sent(now);
 			_paths[p].lastReceive = 0; // path will not be used unless it speaks again
 		}

@@ -40,7 +40,7 @@ Membership::Membership() :
 	for(unsigned int i=0;i<ZT_MAX_CERTIFICATES_OF_OWNERSHIP;++i) _remoteCoos[i] = &(_cooMem[i]);
 }
 
-void Membership::pushCredentials(const RuntimeEnvironment *RR,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex,const bool force)
+void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex,const bool force)
 {
 	bool sendCom = ( (nconf.com) && ( ((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) );
 
@@ -113,7 +113,7 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,const uint64_t now
 		outp.setAt(cooCountAt,(uint16_t)thisPacketCooCount);
 
 		outp.compress();
-		RR->sw->send(outp,true);
+		RR->sw->send(tPtr,outp,true);
 	}
 }
 
@@ -123,7 +123,7 @@ const Tag *Membership::getTag(const NetworkConfig &nconf,const uint32_t id) cons
 	return ( ((t != &(_remoteTags[ZT_MAX_NETWORK_CAPABILITIES]))&&((*t)->id == (uint64_t)id)) ? ((((*t)->lastReceived)&&(_isCredentialTimestampValid(nconf,**t))) ? &((*t)->credential) : (const Tag *)0) : (const Tag *)0);
 }
 
-Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const CertificateOfMembership &com)
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const CertificateOfMembership &com)
 {
 	const uint64_t newts = com.timestamp().first;
 	if (newts <= _comRevocationThreshold) {
@@ -141,7 +141,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 		return ADD_ACCEPTED_REDUNDANT;
 	}
 
-	switch(com.verify(RR)) {
+	switch(com.verify(RR,tPtr)) {
 		default:
 			TRACE("addCredential(CertificateOfMembership) for %s on %.16llx REJECTED (invalid signature or object)",com.issuedTo().toString().c_str(),com.networkId());
 			return ADD_REJECTED;
@@ -154,7 +154,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	}
 }
 
-Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const Tag &tag)
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Tag &tag)
 {
 	_RemoteCredential<Tag> *const *htmp = std::lower_bound(&(_remoteTags[0]),&(_remoteTags[ZT_MAX_NETWORK_TAGS]),(uint64_t)tag.id(),_RemoteCredentialComp<Tag>());
 	_RemoteCredential<Tag> *have = ((htmp != &(_remoteTags[ZT_MAX_NETWORK_TAGS]))&&((*htmp)->id == (uint64_t)tag.id())) ? *htmp : (_RemoteCredential<Tag> *)0;
@@ -169,7 +169,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 		}
 	}
 
-	switch(tag.verify(RR)) {
+	switch(tag.verify(RR,tPtr)) {
 		default:
 			TRACE("addCredential(Tag) for %s on %.16llx REJECTED (invalid)",tag.issuedTo().toString().c_str(),tag.networkId());
 			return ADD_REJECTED;
@@ -184,7 +184,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	}
 }
 
-Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const Capability &cap)
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Capability &cap)
 {
 	_RemoteCredential<Capability> *const *htmp = std::lower_bound(&(_remoteCaps[0]),&(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]),(uint64_t)cap.id(),_RemoteCredentialComp<Capability>());
 	_RemoteCredential<Capability> *have = ((htmp != &(_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]))&&((*htmp)->id == (uint64_t)cap.id())) ? *htmp : (_RemoteCredential<Capability> *)0;
@@ -199,7 +199,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 		}
 	}
 
-	switch(cap.verify(RR)) {
+	switch(cap.verify(RR,tPtr)) {
 		default:
 			TRACE("addCredential(Capability) for %s on %.16llx REJECTED (invalid)",cap.issuedTo().toString().c_str(),cap.networkId());
 			return ADD_REJECTED;
@@ -214,9 +214,9 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	}
 }
 
-Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const Revocation &rev)
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Revocation &rev)
 {
-	switch(rev.verify(RR)) {
+	switch(rev.verify(RR,tPtr)) {
 		default:
 			return ADD_REJECTED;
 		case 0: {
@@ -239,7 +239,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	}
 }
 
-Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,const NetworkConfig &nconf,const CertificateOfOwnership &coo)
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const CertificateOfOwnership &coo)
 {
 	_RemoteCredential<CertificateOfOwnership> *const *htmp = std::lower_bound(&(_remoteCoos[0]),&(_remoteCoos[ZT_MAX_CERTIFICATES_OF_OWNERSHIP]),(uint64_t)coo.id(),_RemoteCredentialComp<CertificateOfOwnership>());
 	_RemoteCredential<CertificateOfOwnership> *have = ((htmp != &(_remoteCoos[ZT_MAX_CERTIFICATES_OF_OWNERSHIP]))&&((*htmp)->id == (uint64_t)coo.id())) ? *htmp : (_RemoteCredential<CertificateOfOwnership> *)0;
@@ -254,7 +254,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 		}
 	}
 
-	switch(coo.verify(RR)) {
+	switch(coo.verify(RR,tPtr)) {
 		default:
 			TRACE("addCredential(CertificateOfOwnership) for %s on %.16llx REJECTED (invalid)",coo.issuedTo().toString().c_str(),coo.networkId());
 			return ADD_REJECTED;

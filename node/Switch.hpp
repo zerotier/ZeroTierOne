@@ -59,16 +59,18 @@ public:
 	/**
 	 * Called when a packet is received from the real network
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param localAddr Local interface address
 	 * @param fromAddr Internet IP address of origin
 	 * @param data Packet data
 	 * @param len Packet length
 	 */
-	void onRemotePacket(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len);
+	void onRemotePacket(void *tPtr,const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len);
 
 	/**
 	 * Called when a packet comes from a local Ethernet tap
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param network Which network's TAP did this packet come from?
 	 * @param from Originating MAC address
 	 * @param to Destination MAC address
@@ -77,7 +79,7 @@ public:
 	 * @param data Ethernet payload
 	 * @param len Frame length
 	 */
-	void onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
+	void onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
 
 	/**
 	 * Send a packet to a ZeroTier address (destination in packet)
@@ -91,26 +93,29 @@ public:
 	 * Needless to say, the packet's source must be this node. Otherwise it
 	 * won't be encrypted right. (This is not used for relaying.)
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param packet Packet to send (buffer may be modified)
 	 * @param encrypt Encrypt packet payload? (always true except for HELLO)
 	 */
-	void send(Packet &packet,bool encrypt);
+	void send(void *tPtr,Packet &packet,bool encrypt);
 
 	/**
 	 * Request WHOIS on a given address
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param addr Address to look up
 	 */
-	void requestWhois(const Address &addr);
+	void requestWhois(void *tPtr,const Address &addr);
 
 	/**
 	 * Run any processes that are waiting for this peer's identity
 	 *
 	 * Called when we learn of a peer's identity from HELLO, OK(WHOIS), etc.
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param peer New peer
 	 */
-	void doAnythingWaitingForPeer(const SharedPtr<Peer> &peer);
+	void doAnythingWaitingForPeer(void *tPtr,const SharedPtr<Peer> &peer);
 
 	/**
 	 * Perform retries and other periodic timer tasks
@@ -118,15 +123,16 @@ public:
 	 * This can return a very long delay if there are no pending timer
 	 * tasks. The caller should cap this comparatively vs. other values.
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 * @return Number of milliseconds until doTimerTasks() should be run again
 	 */
-	unsigned long doTimerTasks(uint64_t now);
+	unsigned long doTimerTasks(void *tPtr,uint64_t now);
 
 private:
 	bool _shouldUnite(const uint64_t now,const Address &source,const Address &destination);
-	Address _sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
-	bool _trySend(Packet &packet,bool encrypt); // packet is modified if return is true
+	Address _sendWhoisRequest(void *tPtr,const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
+	bool _trySend(void *tPtr,Packet &packet,bool encrypt); // packet is modified if return is true
 
 	const RuntimeEnvironment *const RR;
 	uint64_t _lastBeaconResponse;

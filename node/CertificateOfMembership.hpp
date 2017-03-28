@@ -250,9 +250,10 @@ public:
 	 * Verify this COM and its signature
 	 *
 	 * @param RR Runtime environment for looking up peers
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
-	int verify(const RuntimeEnvironment *RR) const;
+	int verify(const RuntimeEnvironment *RR,void *tPtr) const;
 
 	/**
 	 * @return True if signed
