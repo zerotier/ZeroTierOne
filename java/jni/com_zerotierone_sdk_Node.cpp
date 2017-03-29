@@ -98,6 +98,7 @@ namespace {
     int VirtualNetworkConfigFunctionCallback(
         ZT_Node *node,
         void *userData,
+        void *threadData,
         uint64_t nwid,
         void **,
         enum ZT_VirtualNetworkConfigOperation operation,
@@ -146,6 +147,7 @@ namespace {
 
     void VirtualNetworkFrameFunctionCallback(ZT_Node *node,
         void *userData,
+        void *threadData,
         uint64_t nwid,
         void**,
         uint64_t sourceMac,
@@ -203,6 +205,7 @@ namespace {
 
     void EventCallback(ZT_Node *node,
         void *userData,
+        void *threadData,
         enum ZT_Event event,
         const void *data)
     {
@@ -298,6 +301,7 @@ namespace {
 
     long DataStoreGetFunction(ZT_Node *node,
         void *userData,
+        void *threadData,
         const char *objectName,
         void *buffer,
         unsigned long bufferSize,
@@ -371,6 +375,7 @@ namespace {
 
     int DataStorePutFunction(ZT_Node *node,
         void *userData,
+        void *threadData,
         const char *objectName,
         const void *buffer,
         unsigned long bufferSize,
@@ -437,6 +442,7 @@ namespace {
 
     int WirePacketSendFunction(ZT_Node *node,
         void *userData,
+        void *threadData,
         const struct sockaddr_storage *localAddress,
         const struct sockaddr_storage *remoteAddress,
         const void *buffer,
@@ -623,6 +629,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
     ZT_ResultCode rc = ZT_Node_new(
         &node,
         ref,
+        NULL,
         ref->callbacks,
         (uint64_t)now);
 
@@ -731,6 +738,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
 
     ZT_ResultCode rc = ZT_Node_processVirtualNetworkFrame(
         node,
+        NULL,
         now,
         nwid,
         sourceMac,
@@ -935,6 +943,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
 
     ZT_ResultCode rc = ZT_Node_processWirePacket(
         node,
+        NULL,
         now,
         &localAddress,
         &remoteAddress,
@@ -983,7 +992,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processBackgroundTasks(
     uint64_t now = (uint64_t)in_now;
     uint64_t nextBackgroundTaskDeadline = 0;
 
-    ZT_ResultCode rc = ZT_Node_processBackgroundTasks(node, now, &nextBackgroundTaskDeadline);
+    ZT_ResultCode rc = ZT_Node_processBackgroundTasks(node, NULL, now, &nextBackgroundTaskDeadline);
 
     jlong *outDeadline = (jlong*)env->GetPrimitiveArrayCritical(out_nextBackgroundTaskDeadline, NULL);
     outDeadline[0] = (jlong)nextBackgroundTaskDeadline;
@@ -1010,7 +1019,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_join(
 
     uint64_t nwid = (uint64_t)in_nwid;
 
-    ZT_ResultCode rc = ZT_Node_join(node, nwid, NULL);
+    ZT_ResultCode rc = ZT_Node_join(node, nwid, NULL, NULL);
 
     return createResultObject(env, rc);
 }
@@ -1033,7 +1042,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_leave(
 
     uint64_t nwid = (uint64_t)in_nwid;
 
-    ZT_ResultCode rc = ZT_Node_leave(node, nwid, NULL);
+    ZT_ResultCode rc = ZT_Node_leave(node, nwid, NULL, NULL);
 
     return createResultObject(env, rc);
 }
@@ -1063,7 +1072,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_multicastSubscribe(
     unsigned long multicastAdi = (unsigned long)in_multicastAdi;
 
     ZT_ResultCode rc = ZT_Node_multicastSubscribe(
-        node, nwid, multicastGroup, multicastAdi);
+        node, NULL, nwid, multicastGroup, multicastAdi);
 
     return createResultObject(env, rc);
 }
