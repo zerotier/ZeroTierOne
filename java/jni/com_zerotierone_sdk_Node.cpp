@@ -1286,6 +1286,54 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_multicastUnsubscribe(
 }
 
 /*
+ * Class:   com_zerotier_sdk_Node
+ * Method:  orbit
+ * Signature: (JJJ)Lcom/zerotier/sdk/ResultCode;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_orbit(
+    JNIEnv *env, jobject obj,
+    jlong id,
+    jlong in_moonWorldId,
+    jlong in_moonSeed)
+{
+    uint64_t nodeId = (uint64_t)id;
+    ZT_Node *node = findNode(nodeId);
+    if(node == NULL)
+    {
+        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    uint64_t moonWorldId = (uint64_t)in_moonWorldId;
+    uint64_t moonSeed = (uint64_t)in_moonSeed;
+
+    ZT_ResultCode rc = ZT_Node_orbit(node, NULL, moonWorldId, moonSeed);
+    return createResultObject(env, rc);
+}
+
+/*
+ * Class:   com_zerotier_sdk_Node
+ * Method:  deorbit
+ * Signature: (JJ)L/com/zerotier/sdk/ResultCode;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_deorbit(
+    JNIEnv *env, jobject obj,
+    jlong id,
+    jlong in_moonWorldId)
+{
+    uint64_t nodeId = (uint64_t)id;
+    ZT_Node *node = findNode(nodeId);
+    if(node == NULL)
+    {
+        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    uint64_t moonWorldId = (uint64_t)in_moonWorldId;
+
+    ZT_ResultCode rc = ZT_Node_deorbit(node, NULL, moonWorldId);
+    return createResultObject(env, rc);
+}
+
+/*
  * Class:     com_zerotier_sdk_Node
  * Method:    address
  * Signature: (J)J
