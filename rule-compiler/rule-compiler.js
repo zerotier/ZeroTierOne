@@ -762,7 +762,7 @@ function compile(src,rules,caps,tags)
 							return [ tag[k][1],tag[k][2],'Duplicate tag default directive.' ];
 						if ((k + 1) >= tag.length)
 							return [ tag[k][1],tag[k][2],'Missing value for default.' ];
-						dfl = tag[++k][0]||0;
+						dfl = tag[++k][0];
 					} else if (tkeyword === 'flag') {
 						if ((k + 2) >= tag.length)
 							return [ tag[k][1],tag[k][2],'Missing tag flag name or bit index.' ];
@@ -806,7 +806,7 @@ function compile(src,rules,caps,tags)
 				if (id < 0)
 					return [ tag[0][1],tag[0][2],'Tag definition is missing a numeric ID.' ];
 
-				if (dfl !== null) {
+				if (typeof dfl === 'string') {
 					let dfl2 = enums[dfl];
 					if (typeof dfl2 === 'number') {
 						dfl = dfl2;
@@ -815,9 +815,11 @@ function compile(src,rules,caps,tags)
 						if (typeof dfl2 === 'number') {
 							dfl = dfl2;
 						} else {
-							dfl = Math.abs(_parseNum(dfl)||0) & 0xffffffff;
+							dfl = Math.abs(parseInt(dfl)||0) & 0xffffffff;
 						}
 					}
+				} else if (typeof dfl === 'number') {
+					dfl = Math.abs(dfl) & 0xffffffff;
 				}
 
 				tags[tagName] = {

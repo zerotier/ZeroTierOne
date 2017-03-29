@@ -26,9 +26,10 @@ if (err) {
 	let tagsArray = [];
 	for(let n in tags) {
 		let t = tags[n];
+		let dfl = t['default'];
 		tagsArray.push({
 			'id': t.id,
-			'default': t['default']||null
+			'default': (((dfl)||(dfl === 0)) ? dfl : null)
 		});
 	}
 
