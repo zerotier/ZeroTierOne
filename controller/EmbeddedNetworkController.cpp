@@ -1018,9 +1018,10 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 									json ntag = json::object();
 									const uint64_t tagId = OSUtils::jsonInt(tag["id"],0ULL);
 									ntag["id"] = tagId;
-									if (tag.find("default") == tag.end())
-										ntag["default"] = json();
-									else ntag["default"] = OSUtils::jsonInt(tag["default"],0ULL);
+									json &dfl = tag["default"];
+									if (dfl.is_null())
+										ntag["default"] = dfl;
+									else ntag["default"] = OSUtils::jsonInt(dfl,0ULL);
 									ntags[tagId] = ntag;
 								}
 							}
