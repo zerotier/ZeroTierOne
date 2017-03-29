@@ -74,6 +74,7 @@ public class Node {
     private final EventListener eventListener;
     private final VirtualNetworkFrameListener frameListener;
     private final VirtualNetworkConfigListener configListener;
+    private final PathChecker pathChecker;
     
     /**
      * Create a new ZeroTier One node
@@ -95,7 +96,8 @@ public class Node {
                 PacketSender sender,
                 EventListener eventListener,
                 VirtualNetworkFrameListener frameListener,
-                VirtualNetworkConfigListener configListener) throws NodeException
+                VirtualNetworkConfigListener configListener,
+                PathChecker pathChecker) throws NodeException
 	{
         this.nodeId = now;
 
@@ -105,6 +107,7 @@ public class Node {
         this.eventListener = eventListener;
         this.frameListener = frameListener;
         this.configListener = configListener;
+        this.pathChecker = pathChecker;
 
         ResultCode rc = node_init(now);
         if(rc != ResultCode.RESULT_OK)
