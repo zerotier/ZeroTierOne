@@ -785,15 +785,15 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
         cls, "pathChecker", "Lcom/zerotier/sdk/PathChecker;");
     if(fid == NULL)
     {
+        LOGE("no path checker?");
         return NULL;
     }
 
     tmp = env->GetObjectField(obj, fid);
-    if(tmp == NULL)
+    if(tmp != NULL)
     {
-        return NULL;
+        ref->pathChecker = env->NewGlobalRef(tmp);
     }
-    ref->pathChecker = env->NewGlobalRef(tmp);
 
     ref->callbacks->dataStoreGetFunction = &DataStoreGetFunction;
     ref->callbacks->dataStorePutFunction = &DataStorePutFunction;
