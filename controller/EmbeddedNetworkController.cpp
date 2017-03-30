@@ -1069,13 +1069,17 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 		} // else 404
 
-	} else if (path[0] == "dbtest") {
+	} else if (path[0] == "ping") {
 
 		json testRec;
 		const uint64_t now = OSUtils::now();
 		testRec["clock"] = now;
 		testRec["uptime"] = (now - _startTime);
-		_db.put("dbtest",testRec);
+		testRec["content"] = b;
+		_db.put("pong",testRec);
+		responseBody = OSUtils::jsonDump(testRec);
+		responseContentType = "application/json";
+		return 200;
 
 	}
 
