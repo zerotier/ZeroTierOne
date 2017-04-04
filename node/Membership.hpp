@@ -23,6 +23,8 @@
 
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"
+#include "Credential.hpp"
+#include "Hashtable.hpp"
 #include "CertificateOfMembership.hpp"
 #include "Capability.hpp"
 #include "Tag.hpp"
@@ -49,29 +51,17 @@ private:
 	template<typename T>
 	struct _RemoteCredential
 	{
-		_RemoteCredential() : id(ZT_MEMBERSHIP_CRED_ID_UNUSED),lastReceived(0),revocationThreshold(0) {}
-		uint64_t id;
+		_RemoteCredential() : lastReceived(0),revocationThreshold(0),credential() {}
 		uint64_t lastReceived; // last time we got this credential
 		uint64_t revocationThreshold; // credentials before this time are invalid
 		T credential;
-		inline bool operator<(const _RemoteCredential &c) const { return (id < c.id); }
 	};
 
-	template<typename T>
-	struct _RemoteCredentialComp
-	{
-		inline bool operator()(const _RemoteCredential<T> *a,const _RemoteCredential<T> *b) const { return (a->id < b->id); }
-		inline bool operator()(const uint64_t a,const _RemoteCredential<T> *b) const { return (a < b->id); }
-		inline bool operator()(const _RemoteCredential<T> *a,const uint64_t b) const { return (a->id < b); }
-		inline bool operator()(const uint64_t a,const uint64_t b) const { return (a < b); }
-	};
-
-	// Used to track push state for network config tags[] and capabilities[] entries
 	struct _LocalCredentialPushState
 	{
 		_LocalCredentialPushState() : lastPushed(0),id(0) {}
 		uint64_t lastPushed; // last time we sent our own copy of this credential
-		uint64_t id;
+		uint32_t id;
 	};
 
 public:
@@ -82,72 +72,6 @@ public:
 		ADD_ACCEPTED_REDUNDANT,
 		ADD_DEFERRED_FOR_WHOIS
 	};
-
-	/**
-	 * Iterator to scan forward through capabilities in ascending order of ID
-	 */
-	class CapabilityIterator
-	{
-	public:
-		CapabilityIterator(const Membership &m,const NetworkConfig &nconf) :
-			_m(&m),
-			_c(&nconf),
-			_i(&(m._remoteCaps[0])) {}
-
-		inline const Capability *next()
-		{
-			for(;;) {
-				if ((_i != &(_m->_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES]))&&((*_i)->id != ZT_MEMBERSHIP_CRED_ID_UNUSED)) {
-					const Capability *tmp = &((*_i)->credential);
-					if (_m->_isCredentialTimestampValid(*_c,**_i)) {
-						++_i;
-						return tmp;
-					} else ++_i;
-				} else {
-					return (const Capability *)0;
-				}
-			}
-		}
-
-	private:
-		const Membership *_m;
-		const NetworkConfig *_c;
-		const _RemoteCredential<Capability> *const *_i;
-	};
-	friend class CapabilityIterator;
-
-	/**
-	 * Iterator to scan forward through tags in ascending order of ID
-	 */
-	class TagIterator
-	{
-	public:
-		TagIterator(const Membership &m,const NetworkConfig &nconf) :
-			_m(&m),
-			_c(&nconf),
-			_i(&(m._remoteTags[0])) {}
-
-		inline const Tag *next()
-		{
-			for(;;) {
-				if ((_i != &(_m->_remoteTags[ZT_MAX_NETWORK_TAGS]))&&((*_i)->id != ZT_MEMBERSHIP_CRED_ID_UNUSED)) {
-					const Tag *tmp = &((*_i)->credential);
-					if (_m->_isCredentialTimestampValid(*_c,**_i)) {
-						++_i;
-						return tmp;
-					} else ++_i;
-				} else {
-					return (const Tag *)0;
-				}
-			}
-		}
-
-	private:
-		const Membership *_m;
-		const NetworkConfig *_c;
-		const _RemoteCredential<Tag> *const *_i;
-	};
-	friend class TagIterator;
 
 	Membership();
 
@@ -190,10 +114,8 @@ public:
 	 */
 	inline bool isAllowedOnNetwork(const NetworkConfig &nconf) const
 	{
-		if (nconf.isPublic())
-			return true;
-		if (_com.timestamp().first <= _comRevocationThreshold)
-			return false;
+		if (nconf.isPublic()) return true;
+		if (_com.timestamp() <= _comRevocationThreshold) return false;
 		return nconf.com.agreesWith(_com);
 	}
 
@@ -206,23 +128,30 @@ public:
 	 * @return True if this peer has a certificate of ownership for the given resource
 	 */
 	template<typename T>
-	inline bool hasCertificateOfOwnershipFor(const NetworkConfig &nconf,const T &r) const
+	inline bool hasCertificateOfOwnershipFor(const NetworkConfig &nconf,const T &r)
 	{
-		for(unsigned int i=0;i<ZT_MAX_CERTIFICATES_OF_OWNERSHIP;++i) {
-			if (_remoteCoos[i]->id == ZT_MEMBERSHIP_CRED_ID_UNUSED)
-				break;
-			if ((_isCredentialTimestampValid(nconf,*_remoteCoos[i]))&&(_remoteCoos[i]->credential.owns(r)))
+		uint32_t *k = (uint32_t *)0;
+		CertificateOfOwnership *v = (CertificateOfOwnership *)0;
+		Hashtable< uint32_t,CertificateOfOwnership >::Iterator i(_remoteCoos);
+		while (i.next(k,v)) {
+			if (_isCredentialTimestampValid(nconf,*v)&&(v->owns(r)))
 				return true;
 		}
 		return false;
 	}
 
 	/**
+	 * Get a remote member's tag (if we have it)
+	 *
 	 * @param nconf Network configuration
 	 * @param id Tag ID
 	 * @return Pointer to tag or NULL if not found
 	 */
-	const Tag *getTag(const NetworkConfig &nconf,const uint32_t id) const;
+	inline const Tag *getTag(const NetworkConfig &nconf,const uint32_t id) const
+	{
+		const Tag *const t = _remoteTags.get(id);
+		return (((t)&&(_isCredentialTimestampValid(nconf,*t))) ? t : (Tag *)0);
+	}
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
@@ -242,29 +171,32 @@ public:
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 */
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Revocation &rev);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const CertificateOfOwnership &coo);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 */
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const CertificateOfOwnership &coo);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Revocation &rev);
+
+	/**
+	 * Generates a key for the internal revocation tracking hash table
+	 *
+	 * @param t Credential type
+	 * @param i Credential ID
+	 * @return Key for tracking revocations of this credential
+	 */
+	static uint64_t revocationKey(const Credential::Type &t,const uint32_t i) { return (((uint64_t)t << 32) | (uint64_t)i); }
 
 private:
-	_RemoteCredential<Tag> *_newTag(const uint64_t id);
-	_RemoteCredential<Capability> *_newCapability(const uint64_t id);
-	_RemoteCredential<CertificateOfOwnership> *_newCoo(const uint64_t id);
-	bool _revokeCom(const Revocation &rev);
-	bool _revokeCap(const Revocation &rev,const uint64_t now);
-	bool _revokeTag(const Revocation &rev,const uint64_t now);
-	bool _revokeCoo(const Revocation &rev,const uint64_t now);
-
 	template<typename C>
-	inline bool _isCredentialTimestampValid(const NetworkConfig &nconf,const _RemoteCredential<C> &remoteCredential) const
+	inline bool _isCredentialTimestampValid(const NetworkConfig &nconf,const C &remoteCredential) const
 	{
-		if (!remoteCredential.lastReceived)
-			return false;
-		const uint64_t ts = remoteCredential.credential.timestamp();
-		return ( (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts)) <= nconf.credentialTimeMaxDelta) && (ts > remoteCredential.revocationThreshold) );
+		const uint64_t ts = remoteCredential.timestamp();
+		if (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts)) <= nconf.credentialTimeMaxDelta) {
+			const uint64_t *threshold = _revocations.get(revocationKey(C::credentialType(),remoteCredential.id()));
+			return ((!threshold)||(ts > *threshold));
+		}
+		return false;
 	}
 
 	// Last time we pushed MULTICAST_LIKE(s)
@@ -279,15 +211,13 @@ private:
 	// Remote member's latest network COM
 	CertificateOfMembership _com;
 
-	// Sorted (in ascending order of ID) arrays of pointers to remote credentials
-	_RemoteCredential<Tag> *_remoteTags[ZT_MAX_NETWORK_TAGS];
-	_RemoteCredential<Capability> *_remoteCaps[ZT_MAX_NETWORK_CAPABILITIES];
-	_RemoteCredential<CertificateOfOwnership> *_remoteCoos[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
+	// Revocations
+	Hashtable< uint64_t,uint64_t > _revocations;
 
-	// This is the RAM allocated for remote credential cache objects
-	_RemoteCredential<Tag> _tagMem[ZT_MAX_NETWORK_TAGS];
-	_RemoteCredential<Capability> _capMem[ZT_MAX_NETWORK_CAPABILITIES];
-	_RemoteCredential<CertificateOfOwnership> _cooMem[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
+	// Remote credentials and credential state
+	Hashtable< uint32_t,Tag > _remoteTags;
+	Hashtable< uint32_t,Capability > _remoteCaps;
+	Hashtable< uint32_t,CertificateOfOwnership > _remoteCoos;
 
 	// Local credential push state tracking
 	_LocalCredentialPushState _localTags[ZT_MAX_NETWORK_TAGS];
