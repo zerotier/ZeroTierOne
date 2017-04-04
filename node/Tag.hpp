@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "Constants.hpp"
+#include "Credential.hpp"
 #include "C25519.hpp"
 #include "Address.hpp"
 #include "Identity.hpp"
@@ -51,9 +52,11 @@ class RuntimeEnvironment;
  * Unlike capabilities tags are signed only by the issuer and are never
  * transferrable.
  */
-class Tag
+class Tag : public Credential
 {
 public:
+	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_TAG; }
+
 	Tag()
 	{
 		memset(this,0,sizeof(Tag));
@@ -67,19 +70,19 @@ public:
 	 * @param value Tag value
 	 */
 	Tag(const uint64_t nwid,const uint64_t ts,const Address &issuedTo,const uint32_t id,const uint32_t value) :
-		_networkId(nwid),
-		_ts(ts),
 		_id(id),
 		_value(value),
+		_networkId(nwid),
+		_ts(ts),
 		_issuedTo(issuedTo),
 		_signedBy()
 	{
 	}
 
-	inline uint64_t networkId() const { return _networkId; }
-	inline uint64_t timestamp() const { return _ts; }
 	inline uint32_t id() const { return _id; }
 	inline const uint32_t &value() const { return _value; }
+	inline uint64_t networkId() const { return _networkId; }
+	inline uint64_t timestamp() const { return _ts; }
 	inline const Address &issuedTo() const { return _issuedTo; }
 	inline const Address &signedBy() const { return _signedBy; }
 
@@ -115,11 +118,9 @@ public:
 	{
 		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
 
-		// These are the same between Tag and Capability
 		b.append(_networkId);
 		b.append(_ts);
 		b.append(_id);
-
 		b.append(_value);
 
 		_issuedTo.appendTo(b);
@@ -187,10 +188,10 @@ public:
 	};
 
 private:
-	uint64_t _networkId;
-	uint64_t _ts;
 	uint32_t _id;
 	uint32_t _value;
+	uint64_t _networkId;
+	uint64_t _ts;
 	Address _issuedTo;
 	Address _signedBy;
 	C25519::Signature _signature;

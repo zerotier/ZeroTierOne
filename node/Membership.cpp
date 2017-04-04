@@ -39,6 +39,7 @@ Membership::Membership() :
 	_remoteCaps(4),
 	_remoteCoos(4)
 {
+	resetPushState();
 }
 
 void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex,const bool force)
@@ -48,18 +49,16 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const u
 	const Capability *sendCap;
 	if (localCapabilityIndex >= 0) {
 		sendCap = &(nconf.capabilities[localCapabilityIndex]);
-		if ( (_localCaps[localCapabilityIndex].id != sendCap->id()) || ((now - _localCaps[localCapabilityIndex].lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
-			_localCaps[localCapabilityIndex].lastPushed = now;
-			_localCaps[localCapabilityIndex].id = sendCap->id();
-		} else sendCap = (const Capability *)0;
+		if ( ((now - _localCredLastPushed.cap[localCapabilityIndex]) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) )
+			_localCredLastPushed.cap[localCapabilityIndex] = now;
+		else sendCap = (const Capability *)0;
 	} else sendCap = (const Capability *)0;
 
 	const Tag *sendTags[ZT_MAX_NETWORK_TAGS];
 	unsigned int sendTagCount = 0;
 	for(unsigned int t=0;t<nconf.tagCount;++t) {
-		if ( (_localTags[t].id != nconf.tags[t].id()) || ((now - _localTags[t].lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
-			_localTags[t].lastPushed = now;
-			_localTags[t].id = nconf.tags[t].id();
+		if ( ((now - _localCredLastPushed.tag[t]) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
+			_localCredLastPushed.tag[t] = now;
 			sendTags[sendTagCount++] = &(nconf.tags[t]);
 		}
 	}
@@ -67,9 +66,8 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const u
 	const CertificateOfOwnership *sendCoos[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
 	unsigned int sendCooCount = 0;
 	for(unsigned int c=0;c<nconf.certificateOfOwnershipCount;++c) {
-		if ( (_localCoos[c].id != nconf.certificatesOfOwnership[c].id()) || ((now - _localCoos[c].lastPushed) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
-			_localCoos[c].lastPushed = now;
-			_localCoos[c].id = nconf.certificatesOfOwnership[c].id();
+		if ( ((now - _localCredLastPushed.coo[c]) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
+			_localCredLastPushed.coo[c] = now;
 			sendCoos[sendCooCount++] = &(nconf.certificatesOfOwnership[c]);
 		}
 	}
@@ -149,7 +147,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	}
 }
 
-// Template out addCredential() for most cred types to avoid copypasta
+// Template out addCredential() for many cred types to avoid copypasta
 template<typename C>
 static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t,C> &remoteCreds,const Hashtable<uint64_t,uint64_t> &revocations,const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const C &cred)
 {
@@ -165,7 +163,7 @@ static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t,C> &remot
 		}
 	}
 
-	const uint64_t *rt = revocations.get(Membership::revocationKey(C::credentialType(),cred.id()));
+	const uint64_t *const rt = revocations.get(Membership::credentialKey(C::credentialType(),cred.id()));
 	if ((rt)&&(*rt >= cred.timestamp())) {
 		TRACE("addCredential(type==%d) for %s on %.16llx REJECTED (timestamp below revocation threshold)",(int)C::credentialType(),cred.issuedTo().toString().c_str(),cred.networkId());
 		return Membership::ADD_REJECTED;
@@ -186,20 +184,9 @@ static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t,C> &remot
 	}
 }
 
-Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Tag &tag)
-{
-	return _addCredImpl<Tag>(_remoteTags,_revocations,RR,tPtr,nconf,tag);
-}
-
-Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Capability &cap)
-{
-	return _addCredImpl<Capability>(_remoteCaps,_revocations,RR,tPtr,nconf,cap);
-}
-
-Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const CertificateOfOwnership &coo)
-{
-	return _addCredImpl<CertificateOfOwnership>(_remoteCoos,_revocations,RR,tPtr,nconf,coo);
-}
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Tag &tag) { return _addCredImpl<Tag>(_remoteTags,_revocations,RR,tPtr,nconf,tag); }
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Capability &cap) { return _addCredImpl<Capability>(_remoteCaps,_revocations,RR,tPtr,nconf,cap); }
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const CertificateOfOwnership &coo) { return _addCredImpl<CertificateOfOwnership>(_remoteCoos,_revocations,RR,tPtr,nconf,coo); }
 
 Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Revocation &rev)
 {
@@ -219,7 +206,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 				case Credential::CREDENTIAL_TYPE_CAPABILITY:
 				case Credential::CREDENTIAL_TYPE_TAG:
 				case Credential::CREDENTIAL_TYPE_COO:
-					rt = &(_revocations[revocationKey(ct,rev.credentialId())]);
+					rt = &(_revocations[credentialKey(ct,rev.credentialId())]);
 					if (*rt < rev.threshold()) {
 						*rt = rev.threshold();
 						return ADD_ACCEPTED_NEW;
@@ -232,6 +219,13 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 		case 1:
 			return ADD_DEFERRED_FOR_WHOIS;
 	}
+}
+
+void Membership::clean(const uint64_t now,const NetworkConfig &nconf)
+{
+	_cleanCredImpl<Tag>(nconf,_remoteTags);
+	_cleanCredImpl<Capability>(nconf,_remoteCaps);
+	_cleanCredImpl<CertificateOfOwnership>(nconf,_remoteCoos);
 }
 
 } // namespace ZeroTier

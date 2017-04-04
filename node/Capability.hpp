@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "Constants.hpp"
+#include "Credential.hpp"
 #include "Address.hpp"
 #include "C25519.hpp"
 #include "Utils.hpp"
@@ -58,9 +59,11 @@ class RuntimeEnvironment;
  * handed off between nodes. Limited transferrability of capabilities is
  * a feature of true capability based security.
  */
-class Capability
+class Capability : public Credential
 {
 public:
+	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_CAPABILITY; }
+
 	Capability()
 	{
 		memset(this,0,sizeof(Capability));

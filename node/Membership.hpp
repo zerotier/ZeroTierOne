@@ -47,23 +47,6 @@ class Network;
  */
 class Membership
 {
-private:
-	template<typename T>
-	struct _RemoteCredential
-	{
-		_RemoteCredential() : lastReceived(0),revocationThreshold(0),credential() {}
-		uint64_t lastReceived; // last time we got this credential
-		uint64_t revocationThreshold; // credentials before this time are invalid
-		T credential;
-	};
-
-	struct _LocalCredentialPushState
-	{
-		_LocalCredentialPushState() : lastPushed(0),id(0) {}
-		uint64_t lastPushed; // last time we sent our own copy of this credential
-		uint32_t id;
-	};
-
 public:
 	enum AddCredentialResult
 	{
@@ -92,19 +75,19 @@ public:
 	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex,const bool force);
 
 	/**
-	 * Check whether we should push MULTICAST_LIKEs to this peer
+	 * Check whether we should push MULTICAST_LIKEs to this peer, and update last sent time if true
 	 *
 	 * @param now Current time
 	 * @return True if we should update multicasts
 	 */
-	inline bool shouldLikeMulticasts(const uint64_t now) const { return ((now - _lastUpdatedMulticast) >= ZT_MULTICAST_ANNOUNCE_PERIOD); }
-
-	/**
-	 * Set time we last updated multicasts for this peer
-	 *
-	 * @param now Current time
-	 */
-	inline void likingMulticasts(const uint64_t now) { _lastUpdatedMulticast = now; }
+	inline bool multicastLikeGate(const uint64_t now)
+	{
+		if ((now - _lastUpdatedMulticast) >= ZT_MULTICAST_ANNOUNCE_PERIOD) {
+			_lastUpdatedMulticast = now;
+			return true;
+		}
+		return false;
+	}
 
 	/**
 	 * Check whether the peer represented by this Membership should be allowed on this network at all
@@ -128,11 +111,11 @@ public:
 	 * @return True if this peer has a certificate of ownership for the given resource
 	 */
 	template<typename T>
-	inline bool hasCertificateOfOwnershipFor(const NetworkConfig &nconf,const T &r)
+	inline bool hasCertificateOfOwnershipFor(const NetworkConfig &nconf,const T &r) const
 	{
 		uint32_t *k = (uint32_t *)0;
 		CertificateOfOwnership *v = (CertificateOfOwnership *)0;
-		Hashtable< uint32_t,CertificateOfOwnership >::Iterator i(_remoteCoos);
+		Hashtable< uint32_t,CertificateOfOwnership >::Iterator i(*(const_cast< Hashtable< uint32_t,CertificateOfOwnership> *>(&_remoteCoos)));
 		while (i.next(k,v)) {
 			if (_isCredentialTimestampValid(nconf,*v)&&(v->owns(r)))
 				return true;
@@ -179,13 +162,28 @@ public:
 	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Revocation &rev);
 
 	/**
-	 * Generates a key for the internal revocation tracking hash table
+	 * Clean internal databases of stale entries
 	 *
-	 * @param t Credential type
-	 * @param i Credential ID
-	 * @return Key for tracking revocations of this credential
+	 * @param now Current time
+	 * @param nconf Current network configuration
 	 */
-	static uint64_t revocationKey(const Credential::Type &t,const uint32_t i) { return (((uint64_t)t << 32) | (uint64_t)i); }
+	void clean(const uint64_t now,const NetworkConfig &nconf);
+
+	/**
+	 * Reset last pushed time for local credentials
+	 *
+	 * This is done when we update our network configuration and our credentials have changed
+	 */
+	inline void resetPushState()
+	{
+		_lastPushedCom = 0;
+		memset(&_localCredLastPushed,0,sizeof(_localCredLastPushed));
+	}
+
+	/**
+	 * Generates a key for the internal use in indexing credentials by type and credential ID
+	 */
+	static uint64_t credentialKey(const Credential::Type &t,const uint32_t i) { return (((uint64_t)t << 32) | (uint64_t)i); }
 
 private:
 	template<typename C>
@@ -193,10 +191,22 @@ private:
 	{
 		const uint64_t ts = remoteCredential.timestamp();
 		if (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts)) <= nconf.credentialTimeMaxDelta) {
-			const uint64_t *threshold = _revocations.get(revocationKey(C::credentialType(),remoteCredential.id()));
+			const uint64_t *threshold = _revocations.get(credentialKey(C::credentialType(),remoteCredential.id()));
 			return ((!threshold)||(ts > *threshold));
 		}
 		return false;
+	}
+
+	template<typename C>
+	void _cleanCredImpl(const NetworkConfig &nconf,Hashtable<uint32_t,C> &remoteCreds)
+	{
+		uint32_t *k = (uint32_t *)0;
+		C *v = (C *)0;
+		typename Hashtable<uint32_t,C>::Iterator i(remoteCreds);
+		while (i.next(k,v)) {
+			if (!_isCredentialTimestampValid(nconf,*v))
+				remoteCreds.erase(*k);
+		}
 	}
 
 	// Last time we pushed MULTICAST_LIKE(s)
@@ -211,18 +221,46 @@ private:
 	// Remote member's latest network COM
 	CertificateOfMembership _com;
 
-	// Revocations
+	// Revocations by credentialKey()
 	Hashtable< uint64_t,uint64_t > _revocations;
 
-	// Remote credentials and credential state
+	// Remote credentials that we have received from this member (and that are valid)
 	Hashtable< uint32_t,Tag > _remoteTags;
 	Hashtable< uint32_t,Capability > _remoteCaps;
 	Hashtable< uint32_t,CertificateOfOwnership > _remoteCoos;
 
-	// Local credential push state tracking
-	_LocalCredentialPushState _localTags[ZT_MAX_NETWORK_TAGS];
-	_LocalCredentialPushState _localCaps[ZT_MAX_NETWORK_CAPABILITIES];
-	_LocalCredentialPushState _localCoos[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
+	// Time we last pushed our local credentials to this member
+	struct {
+		uint64_t tag[ZT_MAX_NETWORK_TAGS];
+		uint64_t cap[ZT_MAX_NETWORK_CAPABILITIES];
+		uint64_t coo[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
+	} _localCredLastPushed;
+
+public:
+	class CapabilityIterator
+	{
+	public:
+		CapabilityIterator(Membership &m,const NetworkConfig &nconf) :
+			_hti(m._remoteCaps),
+			_k((uint32_t *)0),
+			_c((Capability *)0),
+			_nconf(nconf)
+		{
+		}
+
+		inline Capability *next()
+		{
+			if (_hti.next(_k,_c))
+				return _c;
+			else return (Capability *)0;
+		}
+
+	private:
+		Hashtable< uint32_t,Capability >::Iterator _hti;
+		uint32_t *_k;
+		Capability *_c;
+		const NetworkConfig &_nconf;
+	};
 };
 
 } // namespace ZeroTier

@@ -20,6 +20,7 @@
 #define ZT_CERTIFICATEOFREPRESENTATION_HPP
 
 #include "Constants.hpp"
+#include "Credential.hpp"
 #include "Address.hpp"
 #include "C25519.hpp"
 #include "Identity.hpp"
@@ -47,14 +48,17 @@ namespace ZeroTier {
  * roots can shield nodes entirely and p2p connectivity behind them can
  * be disabled. This will be desirable for a number of use cases.
  */
-class CertificateOfRepresentation
+class CertificateOfRepresentation : public Credential
 {
 public:
+	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_COR; }
+
 	CertificateOfRepresentation()
 	{
 		memset(this,0,sizeof(CertificateOfRepresentation));
 	}
 
+	inline uint32_t id() const { return 0; }
 	inline uint64_t timestamp() const { return _timestamp; }
 	inline const Address &representative(const unsigned int i) const { return _reps[i]; }
 	inline unsigned int repCount() const { return _repCount; }

@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "Constants.hpp"
+#include "Credential.hpp"
 #include "C25519.hpp"
 #include "Address.hpp"
 #include "Identity.hpp"
@@ -45,9 +46,11 @@ class RuntimeEnvironment;
 /**
  * Certificate indicating ownership of a network identifier
  */
-class CertificateOfOwnership
+class CertificateOfOwnership : public Credential
 {
 public:
+	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_COO; }
+
 	enum Thing
 	{
 		THING_NULL = 0,

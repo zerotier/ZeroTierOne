@@ -26,6 +26,7 @@
 
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"
+#include "Credential.hpp"
 #include "Address.hpp"
 #include "C25519.hpp"
 #include "Utils.hpp"
@@ -44,20 +45,10 @@ class RuntimeEnvironment;
 /**
  * Revocation certificate to instantaneously revoke a COM, capability, or tag
  */
-class Revocation
+class Revocation : public Credential
 {
 public:
-	/**
-	 * Credential type being revoked
-	 */
-	enum CredentialType
-	{
-		CREDENTIAL_TYPE_NULL = 0,
-		CREDENTIAL_TYPE_COM = 1, // CertificateOfMembership
-		CREDENTIAL_TYPE_CAPABILITY = 2,
-		CREDENTIAL_TYPE_TAG = 3,
-		CREDENTIAL_TYPE_COO = 4 // CertificateOfOwnership
-	};
+	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_REVOCATION; }
 
 	Revocation()
 	{
@@ -73,23 +64,23 @@ public:
 	 * @param tgt Target node whose credential(s) are being revoked
 	 * @param ct Credential type being revoked
 	 */
-	Revocation(const uint64_t i,const uint64_t nwid,const uint64_t cid,const uint64_t thr,const uint64_t fl,const Address &tgt,const CredentialType ct) :
+	Revocation(const uint32_t i,const uint64_t nwid,const uint32_t cid,const uint64_t thr,const uint64_t fl,const Address &tgt,const Credential::Type ct) :
 		_id(i),
-		_networkId(nwid),
 		_credentialId(cid),
+		_networkId(nwid),
 		_threshold(thr),
 		_flags(fl),
 		_target(tgt),
 		_signedBy(),
 		_type(ct) {}
 
-	inline uint64_t id() const { return _id; }
+	inline uint32_t id() const { return _id; }
+	inline uint32_t credentialId() const { return _credentialId; }
 	inline uint64_t networkId() const { return _networkId; }
-	inline uint64_t credentialId() const { return _credentialId; }
 	inline uint64_t threshold() const { return _threshold; }
 	inline const Address &target() const { return _target; }
 	inline const Address &signer() const { return _signedBy; }
-	inline CredentialType type() const { return _type; }
+	inline Credential::Type type() const { return _type; }
 
 	inline bool fastPropagate() const { return ((_flags & ZT_REVOCATION_FLAG_FAST_PROPAGATE) != 0); }
 
@@ -123,8 +114,10 @@ public:
 	{
 		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
 
+		b.append((uint32_t)0); // 4 unused bytes, currently set to 0
 		b.append(_id);
 		b.append(_networkId);
+		b.append((uint32_t)0); // 4 unused bytes, currently set to 0
 		b.append(_credentialId);
 		b.append(_threshold);
 		b.append(_flags);
@@ -151,14 +144,16 @@ public:
 
 		unsigned int p = startAt;
 
-		_id = b.template at<uint64_t>(p); p += 8;
+		p += 4; // 4 bytes, currently unused
+		_id = b.template at<uint32_t>(p); p += 4;
 		_networkId = b.template at<uint64_t>(p); p += 8;
-		_credentialId = b.template at<uint64_t>(p); p += 8;
+		p += 4; // 4 bytes, currently unused
+		_credentialId = b.template at<uint32_t>(p); p += 4;
 		_threshold = b.template at<uint64_t>(p); p += 8;
 		_flags = b.template at<uint64_t>(p); p += 8;
 		_target.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
 		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-		_type = (CredentialType)b[p++];
+		_type = (Credential::Type)b[p++];
 
 		if (b[p++] == 1) {
 			if (b.template at<uint16_t>(p) == ZT_C25519_SIGNATURE_LEN) {
@@ -178,14 +173,14 @@ public:
 	}
 
 private:
-	uint64_t _id;
+	uint32_t _id;
+	uint32_t _credentialId;
 	uint64_t _networkId;
-	uint64_t _credentialId;
 	uint64_t _threshold;
 	uint64_t _flags;
 	Address _target;
 	Address _signedBy;
-	CredentialType _type;
+	Credential::Type _type;
 	C25519::Signature _signature;
 };
 
