@@ -244,21 +244,25 @@ public:
 			_hti(m._remoteCaps),
 			_k((uint32_t *)0),
 			_c((Capability *)0),
+			_m(m),
 			_nconf(nconf)
 		{
 		}
 
 		inline Capability *next()
 		{
-			if (_hti.next(_k,_c))
-				return _c;
-			else return (Capability *)0;
+			while (_hti.next(_k,_c)) {
+				if (_m._isCredentialTimestampValid(_nconf,*_c))
+					return _c;
+			}
+			return (Capability *)0;
 		}
 
 	private:
 		Hashtable< uint32_t,Capability >::Iterator _hti;
 		uint32_t *_k;
 		Capability *_c;
+		Membership &_m;
 		const NetworkConfig &_nconf;
 	};
 };
