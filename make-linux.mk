@@ -105,6 +105,12 @@ endif
 ifeq ($(CC_MACH),armv6)
         ZT_ARCHITECTURE=3
 endif
+ifeq ($(CC_MACH),armv6zk)
+        ZT_ARCHITECTURE=3
+endif
+ifeq ($(CC_MACH),armv6kz)
+        ZT_ARCHITECTURE=3
+endif
 ifeq ($(CC_MACH),armv7)
         ZT_ARCHITECTURE=3
 endif
@@ -118,8 +124,13 @@ DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFT
 
 # Define some conservative CPU instruction set flags for arm32 since there's a ton of variation out there
 ifeq ($(ZT_ARCHITECTURE),3)
-	override CFLAGS+=-march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp
-	override CXXFLAGS+=-march=armv6zk -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp
+	ifeq ($(CC_MACH),armel)
+		override CFLAGS+=-march=armv5te -mfpu=softfp -marm -mno-unaligned-access
+		override CXXFLAGS+=-march=armv5te -mfpu=softfp -marm -mno-unaligned-access
+	else
+		override CFLAGS+=-march=armv6kz -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -mno-unaligned-access
+		override CXXFLAGS+=-march=armv6kz -mcpu=arm1176jzf-s -mfloat-abi=hard -mfpu=vfp -mno-unaligned-access
+	endif
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 
