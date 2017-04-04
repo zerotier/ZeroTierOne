@@ -1076,8 +1076,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 		testRec["clock"] = now;
 		testRec["uptime"] = (now - _startTime);
 		testRec["content"] = b;
-		_db.put("pong",testRec);
 		responseBody = OSUtils::jsonDump(testRec);
+		_db.writeRaw("pong",responseBody);
 		responseContentType = "application/json";
 		return 200;
 
