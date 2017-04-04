@@ -665,7 +665,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 								// Member is being de-authorized, so spray Revocation objects to all online members
 								if (!newAuth) {
 									_clearNetworkMemberInfoCache(nwid);
-									Revocation rev(_node->prng(),nwid,0,now,ZT_REVOCATION_FLAG_FAST_PROPAGATE,Address(address),Revocation::CREDENTIAL_TYPE_COM);
+									Revocation rev((uint32_t)_node->prng(),nwid,0,now,ZT_REVOCATION_FLAG_FAST_PROPAGATE,Address(address),Revocation::CREDENTIAL_TYPE_COM);
 									rev.sign(_signingId);
 									Mutex::Lock _l(_lastRequestTime_m);
 									for(std::map< std::pair<uint64_t,uint64_t>,uint64_t >::iterator i(_lastRequestTime.begin());i!=_lastRequestTime.end();++i) {
