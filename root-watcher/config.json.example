@@ -1,0 +1,30 @@
+{
+	"interval": 30000,
+	"dbSaveInterval": 60000,
+	"peerTimeout": 600000,
+	"db": {
+		"database": "ztr",
+		"user": "postgres",
+		"password": "s00p3rs3kr3t",
+		"host": "127.0.0.1",
+		"port": 5432,
+		"max": 16,
+		"idleTimeoutMillis": 30000
+	},
+	"roots": {
+		"my-root-01": {
+			"id": 1,
+			"ip": "10.0.0.1",
+			"port": 9993,
+			"authToken": "foobarbaz",
+			"peers": "/peer"
+		},
+		"my-root-02": {
+			"id": 2,
+			"ip": "10.0.0.2",
+			"port": 9993,
+			"authToken": "lalafoo",
+			"peers": "/peer"
+		}
+	}
+}

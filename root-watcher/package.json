@@ -9,6 +9,8 @@
   "author": "ZeroTier, Inc. <contact@zerotier.com>",
   "license": "GPL-3.0",
   "dependencies": {
-    "pg": "^6.1.5"
+    "async": "^2.3.0",
+    "pg": "^6.1.5",
+    "zlib": "^1.0.5"
   }
 }
