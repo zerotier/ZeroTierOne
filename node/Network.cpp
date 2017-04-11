@@ -729,7 +729,8 @@ Network::~Network()
 
 	char n[128];
 	if (_destroyed) {
-		RR->node->configureVirtualNetworkPort((void *)0,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
+		// This is done in Node::leave() so we can pass tPtr
+		//RR->node->configureVirtualNetworkPort((void *)0,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
 		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
 		RR->node->dataStoreDelete((void *)0,n);
 	} else {
@@ -993,6 +994,9 @@ void Network::multicastUnsubscribe(const MulticastGroup &mg)
 
 uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Address &source,const Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &chunk,unsigned int ptr)
 {
+	if (_destroyed)
+		return 0;
+
 	const unsigned int start = ptr;
 
 	ptr += 8; // skip network ID, which is already obviously known
@@ -1140,6 +1144,9 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 
 int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToDisk)
 {
+	if (_destroyed)
+		return 0;
+
 	// _lock is NOT locked when this is called
 	try {
 		if ((nconf.issuedTo != RR->identity.address())||(nconf.networkId != _id))
@@ -1190,6 +1197,9 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 
 void Network::requestConfiguration(void *tPtr)
 {
+	if (_destroyed)
+		return;
+
 	/* ZeroTier addresses can't begin with 0xff, so this is used to mark controllerless
 	 * network IDs. Controllerless network IDs only support unicast IPv6 using the 6plane
 	 * addressing scheme and have the following format: 0xffSSSSEEEE000000 where SSSS

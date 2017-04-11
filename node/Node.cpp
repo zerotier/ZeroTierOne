@@ -305,26 +305,35 @@ ZT_ResultCode Node::join(uint64_t nwid,void *uptr,void *tptr)
 {
 	Mutex::Lock _l(_networks_m);
 	SharedPtr<Network> nw = _network(nwid);
-	if(!nw)
-		_networks.push_back(std::pair< uint64_t,SharedPtr<Network> >(nwid,SharedPtr<Network>(new Network(RR,tptr,nwid,uptr))));
-	std::sort(_networks.begin(),_networks.end()); // will sort by nwid since it's the first in a pair<>
+	if(!nw) {
+		const std::pair< uint64_t,SharedPtr<Network> > nn(nwid,SharedPtr<Network>(new Network(RR,tptr,nwid,uptr)));
+		_networks.insert(std::upper_bound(_networks.begin(),_networks.end(),nn),nn);
+	}
 	return ZT_RESULT_OK;
 }
 
 ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 {
+	ZT_VirtualNetworkConfig ctmp;
 	std::vector< std::pair< uint64_t,SharedPtr<Network> > > newn;
+	void **nUserPtr = (void **)0;
 	Mutex::Lock _l(_networks_m);
+
 	for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
-		if (n->first != nwid)
+		if (n->first != nwid) {
 			newn.push_back(*n);
-		else {
+		} else {
 			if (uptr)
-				*uptr = n->second->userPtr();
+				*uptr = *n->second->userPtr();
 			n->second->destroy();
+			nUserPtr = n->second->userPtr();
 		}
 	}
 	_networks.swap(newn);
+ 
+	if (nUserPtr)
+		RR->node->configureVirtualNetworkPort(tptr,nwid,nUserPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
+
 	return ZT_RESULT_OK;
 }
 

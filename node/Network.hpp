@@ -344,9 +344,8 @@ public:
 	/**
 	 * Destroy this network
 	 *
-	 * This causes the network to disable itself, destroy its tap device, and on
-	 * delete to delete all trace of itself on disk and remove any persistent tap
-	 * device instances. Call this when a network is being removed from the system.
+	 * This sets the network to completely remove itself on delete. This also prevents the
+	 * call of the normal port shutdown event on delete.
 	 */
 	void destroy();
 
@@ -364,7 +363,7 @@ public:
 	/**
 	 * @return Externally usable pointer-to-pointer exported via the core API
 	 */
-	inline void **userPtr() throw() { return &_uPtr; }
+	inline void **userPtr() { return &_uPtr; }
 
 private:
 	ZT_VirtualNetworkStatus _status() const;
