@@ -169,7 +169,7 @@ void Peer::received(
 			if (verb == Packet::VERB_OK) {
 				Mutex::Lock _l(_paths_m);
 				if (path->address().ss_family == AF_INET) {
-					if ((!_v4Path.p)||(!_v4Path.p->alive(now))||(path->preferenceRank() >= _v4Path.p->preferenceRank())) {
+					if ( (!_v4Path.p) || (!_v4Path.p->alive(now)) || ((_v4Path.p->address() != _v4ClusterPreferred)&&(path->preferenceRank() >= _v4Path.p->preferenceRank())) ) {
 						_v4Path.lr = now;
 						_v4Path.p = path;
 #ifdef ZT_ENABLE_CLUSTER
@@ -179,7 +179,7 @@ void Peer::received(
 #endif
 					}
 				} else if (path->address().ss_family == AF_INET6) {
-					if ((!_v6Path.p)||(!_v6Path.p->alive(now))||(path->preferenceRank() >= _v6Path.p->preferenceRank())) {
+					if ( (!_v6Path.p) || (!_v6Path.p->alive(now)) || ((_v6Path.p->address() != _v6ClusterPreferred)&&(path->preferenceRank() >= _v6Path.p->preferenceRank())) ) {
 						_v6Path.lr = now;
 						_v6Path.p = path;
 #ifdef ZT_ENABLE_CLUSTER

@@ -211,6 +211,19 @@ public:
 	}
 
 	/**
+	 * Indicate that the given address was provided by a cluster as a preferred destination
+	 *
+	 * @param addr Address cluster prefers that we use
+	 */
+	inline void setClusterPreferred(const InetAddress &addr)
+	{
+		if (addr.ss_family == AF_INET)
+			_v4ClusterPreferred = addr;
+		else if (addr.ss_family == AF_INET6)
+			_v6ClusterPreferred = addr;
+	}
+
+	/**
 	 * Fill parameters with V4 and V6 addresses if known and alive
 	 *
 	 * @param now Current time
@@ -464,6 +477,9 @@ private:
 	uint16_t _vMajor;
 	uint16_t _vMinor;
 	uint16_t _vRevision;
+
+	InetAddress _v4ClusterPreferred;
+	InetAddress _v6ClusterPreferred;
 
 	_PeerPath _v4Path; // IPv4 direct path
 	_PeerPath _v6Path; // IPv6 direct path
