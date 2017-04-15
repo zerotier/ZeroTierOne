@@ -407,17 +407,17 @@ ZT_PeerList *Node::peers() const
 		p->latency = pi->second->latency();
 		p->role = RR->topology->role(pi->second->identity().address());
 
-		std::vector< std::pair< SharedPtr<Path>,bool > > paths(pi->second->paths(_now));
+		std::vector< SharedPtr<Path> > paths(pi->second->paths(_now));
 		SharedPtr<Path> bestp(pi->second->getBestPath(_now,false));
 		p->pathCount = 0;
-		for(std::vector< std::pair< SharedPtr<Path>,bool > >::iterator path(paths.begin());path!=paths.end();++path) {
-			memcpy(&(p->paths[p->pathCount].address),&(path->first->address()),sizeof(struct sockaddr_storage));
-			p->paths[p->pathCount].lastSend = path->first->lastOut();
-			p->paths[p->pathCount].lastReceive = path->first->lastIn();
-			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust(path->first->address());
-			p->paths[p->pathCount].linkQuality = (int)path->first->linkQuality();
-			p->paths[p->pathCount].expired = path->second;
-			p->paths[p->pathCount].preferred = (path->first == bestp) ? 1 : 0;
+		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
+			memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
+			p->paths[p->pathCount].lastSend = (*path)->lastOut();
+			p->paths[p->pathCount].lastReceive = (*path)->lastIn();
+			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
+			p->paths[p->pathCount].linkQuality = (int)(*path)->linkQuality();
+			p->paths[p->pathCount].expired = 0;
+			p->paths[p->pathCount].preferred = ((*path) == bestp) ? 1 : 0;
 			++p->pathCount;
 		}
 	}

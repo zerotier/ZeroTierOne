@@ -108,20 +108,10 @@ public:
 	 * @param addr Remote address
 	 * @return True if we have an active path to this destination
 	 */
-	bool hasActivePathTo(uint64_t now,const InetAddress &addr) const;
-
-	/**
-	 * Set which known path for an address family is optimal
-	 *
-	 * @param addr Address to make exclusive
-	 */
-	inline void setClusterOptimal(const InetAddress &addr)
+	inline bool hasActivePathTo(uint64_t now,const InetAddress &addr) const
 	{
-		if (addr.ss_family == AF_INET) {
-			_remoteClusterOptimal4 = (uint32_t)reinterpret_cast<const struct sockaddr_in *>(&addr)->sin_addr.s_addr;
-		} else if (addr.ss_family == AF_INET6) {
-			memcpy(_remoteClusterOptimal6,reinterpret_cast<const struct sockaddr_in6 *>(&addr)->sin6_addr.s6_addr,16);
-		}
+		Mutex::Lock _l(_paths_m);
+		return ( ((addr.ss_family == AF_INET)&&(_v4Path.p)&&(_v4Path.p->address() == addr)&&(_v4Path.p->alive(now))) || ((addr.ss_family == AF_INET6)&&(_v6Path.p)&&(_v6Path.p->address() == addr)&&(_v6Path.p->alive(now))) );
 	}
 
 	/**
@@ -131,13 +121,16 @@ public:
 	 * @param data Packet data
 	 * @param len Packet length
 	 * @param now Current time
-	 * @param forceEvenIfDead If true, send even if the path is not 'alive'
+	 * @param force If true, send even if path is not alive
 	 * @return True if we actually sent something
 	 */
-	bool sendDirect(void *tPtr,const void *data,unsigned int len,uint64_t now,bool forceEvenIfDead);
+	bool sendDirect(void *tPtr,const void *data,unsigned int len,uint64_t now,bool force);
 
 	/**
 	 * Get the best current direct path
+	 *
+	 * This does not check Path::alive(), but does return the most recently
+	 * active path and does check expiration (which is a longer timeout).
 	 *
 	 * @param now Current time
 	 * @param includeExpired If true, include even expired paths
@@ -193,12 +186,6 @@ public:
 	bool doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily);
 
 	/**
-	 * @param now Current time
-	 * @return True if this peer has at least one active and alive direct path
-	 */
-	bool hasActiveDirectPath(uint64_t now) const;
-
-	/**
 	 * Reset paths within a given IP scope and address family
 	 *
 	 * Resetting a path involves sending an ECHO to it and then deactivating
@@ -209,30 +196,48 @@ public:
 	 * @param inetAddressFamily Family e.g. AF_INET
 	 * @param now Current time
 	 */
-	void resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,uint64_t now);
+	inline void resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,uint64_t now)
+	{
+		Mutex::Lock _l(_paths_m);
+		if ((inetAddressFamily == AF_INET)&&(_v4Path.lr)&&(_v4Path.p->address().ipScope() == scope)) {
+			attemptToContactAt(tPtr,_v4Path.p->localAddress(),_v4Path.p->address(),now,false,_v4Path.p->nextOutgoingCounter());
+			_v4Path.p->sent(now);
+			_v4Path.lr = 0; // path will not be used unless it speaks again
+		} else if ((inetAddressFamily == AF_INET6)&&(_v6Path.lr)&&(_v6Path.p->address().ipScope() == scope)) {
+			attemptToContactAt(tPtr,_v6Path.p->localAddress(),_v6Path.p->address(),now,false,_v6Path.p->nextOutgoingCounter());
+			_v6Path.p->sent(now);
+			_v6Path.lr = 0; // path will not be used unless it speaks again
+		}
+	}
 
 	/**
-	 * Get most recently active path addresses for IPv4 and/or IPv6
-	 *
-	 * Note that v4 and v6 are not modified if they are not found, so
-	 * initialize these to a NULL address to be able to check.
+	 * Fill parameters with V4 and V6 addresses if known and alive
 	 *
 	 * @param now Current time
 	 * @param v4 Result parameter to receive active IPv4 address, if any
 	 * @param v6 Result parameter to receive active IPv6 address, if any
 	 */
-	void getRendezvousAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const;
+	inline void getRendezvousAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
+	{
+		Mutex::Lock _l(_paths_m);
+		if (((now - _v4Path.lr) < ZT_PEER_PATH_EXPIRATION)&&(_v4Path.p->alive(now)))
+			v4 = _v4Path.p->address();
+		if (((now - _v6Path.lr) < ZT_PEER_PATH_EXPIRATION)&&(_v6Path.p->alive(now)))
+			v6 = _v6Path.p->address();
+	}
 
 	/**
 	 * @param now Current time
-	 * @return All known direct paths to this peer and whether they are expired (true == expired)
+	 * @return All known paths to this peer
 	 */
-	inline std::vector< std::pair< SharedPtr<Path>,bool > > paths(const uint64_t now) const
+	inline std::vector< SharedPtr<Path> > paths(const uint64_t now) const
 	{
-		std::vector< std::pair< SharedPtr<Path>,bool > > pp;
+		std::vector< SharedPtr<Path> > pp;
 		Mutex::Lock _l(_paths_m);
-		for(unsigned int p=0,np=_numPaths;p<np;++p)
-			pp.push_back(std::pair< SharedPtr<Path>,bool >(_paths[p].path,(now - _paths[p].lastReceive) > ZT_PEER_PATH_EXPIRATION));
+		if (((now - _v4Path.lr) < ZT_PEER_PATH_EXPIRATION)&&(_v4Path.p->alive(now)))
+			pp.push_back(_v4Path.p);
+		if (((now - _v6Path.lr) < ZT_PEER_PATH_EXPIRATION)&&(_v6Path.p->alive(now)))
+			pp.push_back(_v6Path.p);
 		return pp;
 	}
 
@@ -424,32 +429,19 @@ public:
 	}
 
 private:
-	inline uint64_t _pathScore(const unsigned int p,const uint64_t now) const
+	struct _PeerPath
 	{
-		uint64_t s = ZT_PEER_PING_PERIOD + _paths[p].lastReceive + (uint64_t)(_paths[p].path->preferenceRank() * (ZT_PEER_PING_PERIOD / ZT_PATH_MAX_PREFERENCE_RANK));
-
-		if (_paths[p].path->address().ss_family == AF_INET) {
-			s +=  (uint64_t)(ZT_PEER_PING_PERIOD * (unsigned long)(reinterpret_cast<const struct sockaddr_in *>(&(_paths[p].path->address()))->sin_addr.s_addr == _remoteClusterOptimal4));
-		} else if (_paths[p].path->address().ss_family == AF_INET6) {
-			uint64_t clusterWeight = ZT_PEER_PING_PERIOD;
-			const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&(_paths[p].path->address()))->sin6_addr.s6_addr);
-			for(long i=0;i<16;++i) {
-				if (a[i] != _remoteClusterOptimal6[i]) {
-					clusterWeight = 0;
-					break;
-				}
-			}
-			s += clusterWeight;
-		}
-
-		s += (ZT_PEER_PING_PERIOD / 2) * (uint64_t)_paths[p].path->alive(now);
-
 #ifdef ZT_ENABLE_CLUSTER
-		s -= ZT_PEER_PING_PERIOD * (uint64_t)_paths[p].localClusterSuboptimal;
+		_PeerPath() : lr(0),p(),localClusterSuboptimal(false) {}
+#else
+		_PeerPath() : lr(0),p() {}
 #endif
-
-		return s;
-	}
+		uint64_t lr; // time of last valid ZeroTier packet
+		SharedPtr<Path> p;
+#ifdef ZT_ENABLE_CLUSTER
+		bool localClusterSuboptimal; // true if our cluster has determined that we should not be serving this peer
+#endif
+	};
 
 	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
 
@@ -468,26 +460,17 @@ private:
 	uint64_t _lastCredentialsReceived;
 	uint64_t _lastTrustEstablishedPacketReceived;
 
-	uint8_t _remoteClusterOptimal6[16];
-	uint32_t _remoteClusterOptimal4;
-
 	uint16_t _vProto;
 	uint16_t _vMajor;
 	uint16_t _vMinor;
 	uint16_t _vRevision;
 
-	Identity _id;
-
-	struct {
-		uint64_t lastReceive;
-		SharedPtr<Path> path;
-#ifdef ZT_ENABLE_CLUSTER
-		bool localClusterSuboptimal;
-#endif
-	} _paths[ZT_MAX_PEER_NETWORK_PATHS];
+	_PeerPath _v4Path; // IPv4 direct path
+	_PeerPath _v6Path; // IPv6 direct path
 	Mutex _paths_m;
 
-	unsigned int _numPaths;
+	Identity _id;
+
 	unsigned int _latency;
 	unsigned int _directPathPushCutoffCount;
 	unsigned int _credentialsCutoffCount;

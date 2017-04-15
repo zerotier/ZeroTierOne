@@ -314,7 +314,9 @@ public:
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p)) {
-			cnt += (unsigned long)((*p)->hasActiveDirectPath(now));
+			const SharedPtr<Path> pp((*p)->getBestPath(now,false));
+			if ((pp)&&(pp->alive(now)))
+				++cnt;
 		}
 		return cnt;
 	}

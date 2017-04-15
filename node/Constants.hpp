@@ -289,7 +289,7 @@
 #define ZT_PEER_PING_PERIOD 60000
 
 /**
- * Paths are considered expired if they have not produced a real packet in this long
+ * Paths are considered expired if they have not sent us a real packet in this long
  */
 #define ZT_PEER_PATH_EXPIRATION ((ZT_PEER_PING_PERIOD * 4) + 3000)
 
