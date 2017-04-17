@@ -10,6 +10,8 @@
 #include "Constants.hpp"
 #include "Salsa20.hpp"
 
+#ifndef ZT_USE_LIBSODIUM
+
 #define ROTATE(v,c) (((v) << (c)) | ((v) >> (32 - (c))))
 #define XOR(v,w) ((v) ^ (w))
 #define PLUS(v,w) ((uint32_t)((v) + (w)))
@@ -66,8 +68,7 @@ static const _s20sseconsts _S20SSECONSTANTS;
 
 namespace ZeroTier {
 
-void Salsa20::init(const void *key,unsigned int kbits,const void *iv)
-	throw()
+void Salsa20::init(const void *key,const void *iv)
 {
 #ifdef ZT_SALSA20_SSE
 	const uint32_t *k = (const uint32_t *)key;
@@ -78,14 +79,9 @@ void Salsa20::init(const void *key,unsigned int kbits,const void *iv)
 	_state.i[10] = k[1];
 	_state.i[7] = k[2];
 	_state.i[4] = k[3];
-	if (kbits == 256) {
-		k += 4;
-		_state.i[1] = 0x3320646e;
-		_state.i[2] = 0x79622d32;
-	} else {
-		_state.i[1] = 0x3120646e;
-		_state.i[2] = 0x79622d36;
-	}
+	k += 4;
+	_state.i[1] = 0x3320646e;
+	_state.i[2] = 0x79622d32;
 	_state.i[15] = k[0];
 	_state.i[12] = k[1];
 	_state.i[9] = k[2];
@@ -95,19 +91,14 @@ void Salsa20::init(const void *key,unsigned int kbits,const void *iv)
 	_state.i[5] = 0;
 	_state.i[8] = 0;
 #else
-	const char *constants;
+	const char *const constants = "expand 32-byte k";
 	const uint8_t *k = (const uint8_t *)key;
 
 	_state.i[1] = U8TO32_LITTLE(k + 0);
 	_state.i[2] = U8TO32_LITTLE(k + 4);
 	_state.i[3] = U8TO32_LITTLE(k + 8);
 	_state.i[4] = U8TO32_LITTLE(k + 12);
-	if (kbits == 256) { /* recommended */
-		k += 16;
-		constants = "expand 32-byte k";
-	} else { /* kbits == 128 */
-		constants = "expand 16-byte k";
-	}
+	k += 16;
 	_state.i[5] = U8TO32_LITTLE(constants + 4);
 	_state.i[6] = U8TO32_LITTLE(((const uint8_t *)iv) + 0);
 	_state.i[7] = U8TO32_LITTLE(((const uint8_t *)iv) + 4);
@@ -124,7 +115,6 @@ void Salsa20::init(const void *key,unsigned int kbits,const void *iv)
 }
 
 void Salsa20::crypt12(const void *in,void *out,unsigned int bytes)
-	throw()
 {
 	uint8_t tmp[64];
 	const uint8_t *m = (const uint8_t *)in;
@@ -624,7 +614,6 @@ void Salsa20::crypt12(const void *in,void *out,unsigned int bytes)
 }
 
 void Salsa20::crypt20(const void *in,void *out,unsigned int bytes)
-	throw()
 {
 	uint8_t tmp[64];
 	const uint8_t *m = (const uint8_t *)in;
@@ -1356,3 +1345,5 @@ void Salsa20::crypt20(const void *in,void *out,unsigned int bytes)
 }
 
 } // namespace ZeroTier
+
+#endif // !ZT_USE_LIBSODIUM

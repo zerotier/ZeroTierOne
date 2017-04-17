@@ -153,16 +153,16 @@ static int testCrypto()
 		memset(buf2,0,sizeof(buf2));
 		memset(buf3,0,sizeof(buf3));
 		Salsa20 s20;
-		s20.init("12345678123456781234567812345678",256,"12345678");
+		s20.init("12345678123456781234567812345678","12345678");
 		s20.crypt20(buf1,buf2,sizeof(buf1));
-		s20.init("12345678123456781234567812345678",256,"12345678");
+		s20.init("12345678123456781234567812345678","12345678");
 		s20.crypt20(buf2,buf3,sizeof(buf2));
 		if (memcmp(buf1,buf3,sizeof(buf1))) {
 			std::cout << "FAIL (encrypt/decrypt test)" << std::endl;
 			return -1;
 		}
 	}
-	Salsa20 s20(s20TV0Key,256,s20TV0Iv);
+	Salsa20 s20(s20TV0Key,s20TV0Iv);
 	memset(buf1,0,sizeof(buf1));
 	memset(buf2,0,sizeof(buf2));
 	s20.crypt20(buf1,buf2,64);
@@ -170,7 +170,7 @@ static int testCrypto()
 		std::cout << "FAIL (test vector 0)" << std::endl;
 		return -1;
 	}
-	s20.init(s2012TV0Key,256,s2012TV0Iv);
+	s20.init(s2012TV0Key,s2012TV0Iv);
 	memset(buf1,0,sizeof(buf1));
 	memset(buf2,0,sizeof(buf2));
 	s20.crypt12(buf1,buf2,64);
@@ -191,7 +191,7 @@ static int testCrypto()
 		unsigned char *bb = (unsigned char *)::malloc(1234567);
 		for(unsigned int i=0;i<1234567;++i)
 			bb[i] = (unsigned char)i;
-		Salsa20 s20(s20TV0Key,256,s20TV0Iv);
+		Salsa20 s20(s20TV0Key,s20TV0Iv);
 		double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
@@ -209,7 +209,7 @@ static int testCrypto()
 		unsigned char *bb = (unsigned char *)::malloc(1234567);
 		for(unsigned int i=0;i<1234567;++i)
 			bb[i] = (unsigned char)i;
-		Salsa20 s20(s20TV0Key,256,s20TV0Iv);
+		Salsa20 s20(s20TV0Key,s20TV0Iv);
 		double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {

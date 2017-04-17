@@ -1074,7 +1074,7 @@ void Packet::armor(const void *key,bool encryptPayload,unsigned int counter)
 	setCipher(encryptPayload ? ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 : ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE);
 
 	_salsa20MangleKey((const unsigned char *)key,mangledKey);
-	Salsa20 s20(mangledKey,256,data + ZT_PACKET_IDX_IV);
+	Salsa20 s20(mangledKey,data + ZT_PACKET_IDX_IV);
 
 	// MAC key is always the first 32 bytes of the Salsa20 key stream
 	// This is the same construction DJB's NaCl library uses
@@ -1098,7 +1098,7 @@ bool Packet::dearmor(const void *key)
 
 	if ((cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)||(cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)) {
 		_salsa20MangleKey((const unsigned char *)key,mangledKey);
-		Salsa20 s20(mangledKey,256,data + ZT_PACKET_IDX_IV);
+		Salsa20 s20(mangledKey,data + ZT_PACKET_IDX_IV);
 
 		s20.crypt12(ZERO_KEY,macKey,sizeof(macKey));
 		Poly1305::compute(mac,payload,payloadLen,macKey);
@@ -1120,7 +1120,7 @@ void Packet::cryptField(const void *key,unsigned int start,unsigned int len)
 	uint8_t iv[8];
 	for(int i=0;i<8;++i) iv[i] = data[i];
 	iv[7] &= 0xf8; // mask off least significant 3 bits of packet ID / IV since this is unset when this function gets called
-	Salsa20 s20(key,256,iv);
+	Salsa20 s20(key,iv);
 	s20.crypt12(data + start,data + start,len);
 }
 

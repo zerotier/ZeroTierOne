@@ -45,7 +45,7 @@ static inline void _computeMemoryHardHash(const void *publicKey,unsigned int pub
 	// ordinary Salsa20 is randomly seekable. This is good for a cipher
 	// but is not what we want for sequential memory-harndess.
 	memset(genmem,0,ZT_IDENTITY_GEN_MEMORY);
-	Salsa20 s20(digest,256,(char *)digest + 32);
+	Salsa20 s20(digest,(char *)digest + 32);
 	s20.crypt20((char *)genmem,(char *)genmem,64);
 	for(unsigned long i=64;i<ZT_IDENTITY_GEN_MEMORY;i+=64) {
 		unsigned long k = i - 64;

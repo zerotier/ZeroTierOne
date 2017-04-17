@@ -66,9 +66,9 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 	memset(_lastIdentityVerification,0,sizeof(_lastIdentityVerification));
 
 	// Use Salsa20 alone as a high-quality non-crypto PRNG
-	char foo[32];
-	Utils::getSecureRandom(foo,32);
-	_prng.init(foo,256,foo);
+	char foo[64];
+	Utils::getSecureRandom(foo,64);
+	_prng.init(foo,foo + 32);
 	memset(_prngStream,0,sizeof(_prngStream));
 	_prng.crypt12(_prngStream,_prngStream,sizeof(_prngStream));
 
