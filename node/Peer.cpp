@@ -166,33 +166,31 @@ void Peer::received(
 		}
 
 		if ( (!pathAlreadyKnown) && (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),path->localAddress(),path->address())) ) {
-			if (verb == Packet::VERB_OK) {
-				Mutex::Lock _l(_paths_m);
-				if (path->address().ss_family == AF_INET) {
-					if ( (!_v4Path.p) || (!_v4Path.p->alive(now)) || ((_v4Path.p->address() != _v4ClusterPreferred)&&(path->preferenceRank() >= _v4Path.p->preferenceRank())) ) {
-						_v4Path.lr = now;
-						_v4Path.p = path;
-#ifdef ZT_ENABLE_CLUSTER
-						_v4Path.localClusterSuboptimal = isClusterSuboptimalPath;
-						if (RR->cluster)
-							RR->cluster->broadcastHavePeer(_id);
-#endif
-					}
-				} else if (path->address().ss_family == AF_INET6) {
-					if ( (!_v6Path.p) || (!_v6Path.p->alive(now)) || ((_v6Path.p->address() != _v6ClusterPreferred)&&(path->preferenceRank() >= _v6Path.p->preferenceRank())) ) {
-						_v6Path.lr = now;
-						_v6Path.p = path;
-#ifdef ZT_ENABLE_CLUSTER
-						_v6Path.localClusterSuboptimal = isClusterSuboptimalPath;
-						if (RR->cluster)
-							RR->cluster->broadcastHavePeer(_id);
-#endif
-					}
+			Mutex::Lock _l(_paths_m);
+			_PeerPath *potentialNewPeerPath = (_PeerPath *)0;
+			if (path->address().ss_family == AF_INET) {
+				if ( (!_v4Path.p) || (!_v4Path.p->alive(now)) || ((_v4Path.p->address() != _v4ClusterPreferred)&&(path->preferenceRank() >= _v4Path.p->preferenceRank())) ) {
+					potentialNewPeerPath = &_v4Path;
 				}
-			} else {
-				TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),path->address().toString().c_str());
-				attemptToContactAt(tPtr,path->localAddress(),path->address(),now,true,path->nextOutgoingCounter());
-				path->sent(now);
+			} else if (path->address().ss_family == AF_INET6) {
+				if ( (!_v6Path.p) || (!_v6Path.p->alive(now)) || ((_v6Path.p->address() != _v6ClusterPreferred)&&(path->preferenceRank() >= _v6Path.p->preferenceRank())) ) {
+					potentialNewPeerPath = &_v6Path;
+				}
+			}
+			if (potentialNewPeerPath) {
+				if (verb == Packet::VERB_OK) {
+					potentialNewPeerPath->lr = now;
+					potentialNewPeerPath->p = path;
+#ifdef ZT_ENABLE_CLUSTER
+					potentialNewPeerPath->localClusterSuboptimal = isClusterSuboptimalPath;
+					if (RR->cluster)
+						RR->cluster->broadcastHavePeer(_id);
+#endif
+				} else {
+					TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),path->address().toString().c_str());
+					attemptToContactAt(tPtr,path->localAddress(),path->address(),now,true,path->nextOutgoingCounter());
+					path->sent(now);
+				}
 			}
 		}
 	} else if (this->trustEstablished(now)) {
