@@ -153,7 +153,7 @@ static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t,C> &remot
 {
 	C *rc = remoteCreds.get(cred.id());
 	if (rc) {
-		if (rc->timestamp() >= cred.timestamp()) {
+		if (rc->timestamp() > cred.timestamp()) {
 			TRACE("addCredential(type==%d) for %s on %.16llx REJECTED (older than credential we have)",(int)C::credentialType(),cred.issuedTo().toString().c_str(),cred.networkId());
 			return Membership::ADD_REJECTED;
 		}
