@@ -158,7 +158,7 @@ static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t,C> &remot
 			return Membership::ADD_REJECTED;
 		}
 		if (*rc == cred) {
-			TRACE("addCredential(type==%d) for %s on %.16llx ACCEPTED (redundant)",(int)C::credentialType(),cred.issuedTo().toString().c_str(),cred.networkId());
+			//TRACE("addCredential(type==%d) for %s on %.16llx ACCEPTED (redundant)",(int)C::credentialType(),cred.issuedTo().toString().c_str(),cred.networkId());
 			return Membership::ADD_ACCEPTED_REDUNDANT;
 		}
 	}
