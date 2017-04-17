@@ -482,6 +482,9 @@
     <ClInclude Include="..\..\node\CertificateOfOwnership.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\node\Credential.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ZeroTierOne.rc">

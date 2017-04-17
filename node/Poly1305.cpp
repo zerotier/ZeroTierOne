@@ -135,10 +135,11 @@ typedef struct poly1305_context {
   unsigned char opaque[136];
 } poly1305_context;
 
-#if (defined(_MSC_VER) || defined(__GNUC__)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__))
+#if (defined(_MSC_VER) || defined(__GNUC__)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 
 //////////////////////////////////////////////////////////////////////////////
 // 128-bit implementation for MSC and GCC from Poly1305-donna
+
 
 #if defined(_MSC_VER)
   #include <intrin.h>
@@ -183,9 +184,9 @@ typedef struct poly1305_state_internal_t {
   unsigned char final;
 } poly1305_state_internal_t;
 
-/* interpret eight 8 bit unsigned integers as a 64 bit unsigned integer in little endian */
-static inline unsigned long long
-U8TO64(const unsigned char *p) {
+#if defined(ZT_NO_TYPE_PUNNING) || (__BYTE_ORDER != __LITTLE_ENDIAN)
+static inline unsigned long long U8TO64(const unsigned char *p)
+{
   return
     (((unsigned long long)(p[0] & 0xff)      ) |
      ((unsigned long long)(p[1] & 0xff) <<  8) |
@@ -196,10 +197,13 @@ U8TO64(const unsigned char *p) {
      ((unsigned long long)(p[6] & 0xff) << 48) |
      ((unsigned long long)(p[7] & 0xff) << 56));
 }
+#else
+#define U8TO64(p) (*reinterpret_cast<const unsigned long long *>(p))
+#endif
 
-/* store a 64 bit unsigned integer as eight 8 bit unsigned integers in little endian */
-static inline void
-U64TO8(unsigned char *p, unsigned long long v) {
+#if defined(ZT_NO_TYPE_PUNNING) || (__BYTE_ORDER != __LITTLE_ENDIAN)
+static inline void U64TO8(unsigned char *p, unsigned long long v)
+{
   p[0] = (v      ) & 0xff;
   p[1] = (v >>  8) & 0xff;
   p[2] = (v >> 16) & 0xff;
@@ -209,6 +213,9 @@ U64TO8(unsigned char *p, unsigned long long v) {
   p[6] = (v >> 48) & 0xff;
   p[7] = (v >> 56) & 0xff;
 }
+#else
+#define U64TO8(p,v) ((*reinterpret_cast<unsigned long long *>(p)) = (v))
+#endif
 
 static inline void
 poly1305_init(poly1305_context *ctx, const unsigned char key[32]) {
