@@ -109,7 +109,7 @@ void Peer::received(
 				outp.armor(_key,true,path->nextOutgoingCounter());
 				path->send(RR,tPtr,outp.data(),outp.size(),now);
 			}
-			suboptimalPath = true;
+			isClusterSuboptimalPath = true;
 		}
 	}
 #endif

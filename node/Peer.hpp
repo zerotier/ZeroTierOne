@@ -316,11 +316,8 @@ public:
 	 */
 	inline bool hasLocalClusterOptimalPath(uint64_t now) const
 	{
-		for(unsigned int p=0,np=_numPaths;p<np;++p) {
-			if ( (_paths[p].path->alive(now)) && (!_paths[p].localClusterSuboptimal) )
-				return true;
-		}
-		return false;
+		Mutex::Lock _l(_paths_m);
+		return ( ((_v4Path.p)&&(_v4Path.p->alive(now))&&(!_v4Path.localClusterSuboptimal)) || ((_v6Path.p)&&(_v6Path.p->alive(now))&&(!_v6Path.localClusterSuboptimal)) );
 	}
 #endif
 
