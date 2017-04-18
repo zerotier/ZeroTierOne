@@ -93,19 +93,31 @@ LinuxEthernetTap::LinuxEthernetTap(
 	memset(&ifr,0,sizeof(ifr));
 
 	// Try to recall our last device name, or pick an unused one if that fails.
-	bool recalledDevice = false;
-	std::string devmapbuf;
-	Dictionary<8194> devmap;
-	if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),devmapbuf)) {
-		devmap.load(devmapbuf.c_str());
-		char desiredDevice[128];
-		if (devmap.get(nwids,desiredDevice,sizeof(desiredDevice)) > 0) {
-			Utils::scopy(ifr.ifr_name,sizeof(ifr.ifr_name),desiredDevice);
-			Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
-			recalledDevice = (stat(procpath,&sbuf) != 0);
+	std::map<std::string,std::string> globalDeviceMap;
+	FILE *devmapf = fopen((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),"r");
+	if (devmapf) {
+		char buf[256];
+		while (fgets(buf,sizeof(buf),devmapf)) {
+			char *x = (char *)0;
+			char *y = (char *)0;
+			char *saveptr = (char *)0;
+			for(char *f=Utils::stok(buf,"\r\n=",&saveptr);(f);f=Utils::stok((char *)0,"\r\n=",&saveptr)) {
+				if (!x) x = f;
+				else if (!y) y = f;
+				else break;
+			}
+			if ((x)&&(y)&&(x[0])&&(y[0]))
+				globalDeviceMap[x] = y;
 		}
+		fclose(devmapf);
 	}
-
+	bool recalledDevice = false;
+	std::map<std::string,std::string>::const_iterator gdmEntry = globalDeviceMap.find(nwids);
+	if (gdmEntry != globalDeviceMap.end()) {
+		Utils::scopy(ifr.ifr_name,sizeof(ifr.ifr_name),gdmEntry->second.c_str());
+		Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
+		recalledDevice = (stat(procpath,&sbuf) != 0);
+	}
 	if (!recalledDevice) {
 		int devno = 0;
 		do {
@@ -179,9 +191,16 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 	(void)::pipe(_shutdownSignalPipe);
 
-	devmap.erase(nwids);
-	devmap.add(nwids,_dev.c_str());
-	OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),(const void *)devmap.data(),devmap.sizeBytes());
+	globalDeviceMap[nwids] = _dev;
+	devmapf = fopen((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),"w");
+	if (devmapf) {
+		gdmEntry = globalDeviceMap.begin();
+		while (gdmEntry != globalDeviceMap.end()) {
+			fprintf(devmapf,"%s=%s\n",gdmEntry->first.c_str(),gdmEntry->second.c_str());
+			++gdmEntry;
+		}
+		fclose(devmapf);
+	}
 
 	_thread = Thread::start(this);
 }

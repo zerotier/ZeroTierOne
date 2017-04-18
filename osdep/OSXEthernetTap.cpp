@@ -368,6 +368,7 @@ OSXEthernetTap::OSXEthernetTap(
 			if ((x)&&(y)&&(x[0])&&(y[0]))
 				globalDeviceMap[x] = y;
 		}
+		fclose(devmapf);
 	}
 	bool recalledDevice = false;
 	std::map<std::string,std::string>::const_iterator gdmEntry = globalDeviceMap.find(nwids);
