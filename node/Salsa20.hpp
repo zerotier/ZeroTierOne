@@ -35,11 +35,6 @@ public:
 	~Salsa20() { Utils::burn(&_state,sizeof(_state)); }
 
 	/**
-	 * If this returns true, crypt can only be done once
-	 */
-	static inline bool singleUseOnly() { return false; }
-
-	/**
 	 * @param key 256-bit (32 byte) key
 	 * @param iv 64-bit initialization vector
 	 */
