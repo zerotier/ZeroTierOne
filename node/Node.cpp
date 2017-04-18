@@ -50,7 +50,6 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 	_RR(this),
 	RR(&_RR),
 	_uPtr(uptr),
-	_prngStreamPtr(0),
 	_now(now),
 	_lastPingCheck(0),
 	_lastHousekeepingRun(0)
@@ -59,18 +58,13 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 		throw std::runtime_error("callbacks struct version mismatch");
 	memcpy(&_cb,callbacks,sizeof(ZT_Node_Callbacks));
 
+	Utils::getSecureRandom((void *)_prngState,sizeof(_prngState));
+
 	_online = false;
 
 	memset(_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
 	memset(_expectingRepliesTo,0,sizeof(_expectingRepliesTo));
 	memset(_lastIdentityVerification,0,sizeof(_lastIdentityVerification));
-
-	// Use Salsa20 alone as a high-quality non-crypto PRNG
-	char foo[64];
-	Utils::getSecureRandom(foo,64);
-	_prng.init(foo,foo + 32);
-	memset(_prngStream,0,sizeof(_prngStream));
-	_prng.crypt12(_prngStream,_prngStream,sizeof(_prngStream));
 
 	std::string idtmp(dataStoreGet(tptr,"identity.secret"));
 	if ((!idtmp.length())||(!RR->identity.fromString(idtmp))||(!RR->identity.hasPrivate())) {
@@ -701,10 +695,14 @@ void Node::postTrace(const char *module,unsigned int line,const char *fmt,...)
 
 uint64_t Node::prng()
 {
-	unsigned int p = (++_prngStreamPtr % ZT_NODE_PRNG_BUF_SIZE);
-	if (!p)
-		_prng.crypt12(_prngStream,_prngStream,sizeof(_prngStream));
-	return _prngStream[p];
+	// https://en.wikipedia.org/wiki/Xorshift#xorshift.2B
+	uint64_t x = _prngState[0];
+	const uint64_t y = _prngState[1];
+	_prngState[0] = y;
+	x ^= x << 23;
+	const uint64_t z = x ^ y ^ (x >> 17) ^ (y >> 26);
+	_prngState[1] = z;
+	return z + y;
 }
 
 void Node::postCircuitTestReport(const ZT_CircuitTestReport *report)

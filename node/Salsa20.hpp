@@ -15,77 +15,6 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 
-#ifdef ZT_USE_LIBSODIUM
-
-#include <sodium/crypto_stream_salsa20.h>
-#include <sodium/crypto_stream_salsa2012.h>
-
-namespace ZeroTier {
-
-/**
- * Salsa20 stream cipher
- */
-class Salsa20
-{
-public:
-	Salsa20() {}
-	~Salsa20() { Utils::burn(_k,sizeof(_k)); }
-
-	/**
-	 * @param key 256-bit (32 byte) key
-	 * @param iv 64-bit initialization vector
-	 */
-	Salsa20(const void *key,const void *iv)
-	{
-		memcpy(_k,key,32);
-		memcpy(&_iv,iv,8);
-	}
-
-	/**
-	 * Initialize cipher
-	 *
-	 * @param key Key bits
-	 * @param iv 64-bit initialization vector
-	 */
-	inline void init(const void *key,const void *iv)
-	{
-		memcpy(_k,key,32);
-		memcpy(&_iv,iv,8);
-	}
-
-	/**
-	 * Encrypt/decrypt data using Salsa20/12
-	 *
-	 * @param in Input data
-	 * @param out Output buffer
-	 * @param bytes Length of data
-	 */
-	inline void crypt12(const void *in,void *out,unsigned int bytes)
-	{
-		crypto_stream_salsa2012_xor(reinterpret_cast<unsigned char *>(out),reinterpret_cast<const unsigned char *>(in),bytes,reinterpret_cast<const unsigned char *>(&_iv),reinterpret_cast<const unsigned char *>(_k));
-	}
-
-	/**
-	 * Encrypt/decrypt data using Salsa20/20
-	 *
-	 * @param in Input data
-	 * @param out Output buffer
-	 * @param bytes Length of data
-	 */
-	inline void crypt20(const void *in,void *out,unsigned int bytes)
-	{
-		crypto_stream_salsa20_xor(reinterpret_cast<unsigned char *>(out),reinterpret_cast<const unsigned char *>(in),bytes,reinterpret_cast<const unsigned char *>(&_iv),reinterpret_cast<const unsigned char *>(_k));
-	}
-
-private:
-	uint64_t _k[4];
-	uint64_t _iv;
-};
-
-} // namespace ZeroTier
-
-#else // !ZT_USE_LIBSODIUM
-
 #if (!defined(ZT_SALSA20_SSE)) && (defined(__SSE2__) || defined(__WINDOWS__))
 #define ZT_SALSA20_SSE 1
 #endif
@@ -104,6 +33,11 @@ class Salsa20
 public:
 	Salsa20() {}
 	~Salsa20() { Utils::burn(&_state,sizeof(_state)); }
+
+	/**
+	 * If this returns true, crypt can only be done once
+	 */
+	static inline bool singleUseOnly() { return false; }
 
 	/**
 	 * @param key 256-bit (32 byte) key
@@ -150,7 +84,5 @@ private:
 };
 
 } // namespace ZeroTier
-
-#endif // ZT_USE_LIBSODIUM
 
 #endif

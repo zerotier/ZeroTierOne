@@ -10,8 +10,6 @@
 #include "Constants.hpp"
 #include "Salsa20.hpp"
 
-#ifndef ZT_USE_LIBSODIUM
-
 #define ROTATE(v,c) (((v) << (c)) | ((v) >> (32 - (c))))
 #define XOR(v,w) ((v) ^ (w))
 #define PLUS(v,w) ((uint32_t)((v) + (w)))
@@ -1345,5 +1343,3 @@ void Salsa20::crypt20(const void *in,void *out,unsigned int bytes)
 }
 
 } // namespace ZeroTier
-
-#endif // !ZT_USE_LIBSODIUM

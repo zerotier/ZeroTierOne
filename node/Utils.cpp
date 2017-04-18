@@ -177,6 +177,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 			}
 			randomPtr = 0;
 			s20.crypt12(randomBuf,randomBuf,sizeof(randomBuf));
+			s20.init(randomBuf,randomBuf);
 		}
 		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
 	}
@@ -209,6 +210,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 			}
 			randomPtr = 0;
 			s20.crypt12(randomBuf,randomBuf,sizeof(randomBuf));
+			s20.init(randomBuf,randomBuf);
 		}
 		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
 	}

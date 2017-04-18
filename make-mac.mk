@@ -33,12 +33,6 @@ else
 	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="\"download\""
 endif
 
-# Use precompiled extremely fast Salsa20/12 from "cnacl" included in ext/bin
-# See https://github.com/cjdelisle/cnacl
-DEFS+=-DZT_USE_LIBSODIUM
-CFLAGS+=-Iext/bin/cnacl-osx-amd64/include
-LIBS+=ext/bin/cnacl-osx-amd64/libnacl.a
-
 ifeq ($(ZT_ENABLE_CLUSTER),1)
 	DEFS+=-DZT_ENABLE_CLUSTER
 endif
