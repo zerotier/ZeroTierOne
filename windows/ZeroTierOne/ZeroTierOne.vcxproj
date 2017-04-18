@@ -72,10 +72,7 @@
     <ClCompile Include="..\..\node\Tag.cpp" />
     <ClCompile Include="..\..\node\Topology.cpp" />
     <ClCompile Include="..\..\node\Utils.cpp" />
-    <ClCompile Include="..\..\one.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">false</ExcludedFromBuild>
-    </ClCompile>
+    <ClCompile Include="..\..\one.cpp" />
     <ClCompile Include="..\..\osdep\Http.cpp" />
     <ClCompile Include="..\..\osdep\ManagedRoute.cpp" />
     <ClCompile Include="..\..\osdep\OSUtils.cpp" />
@@ -88,6 +85,8 @@
     <ClCompile Include="ZeroTierOneService.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\controller\EmbeddedNetworkController.hpp" />
+    <ClInclude Include="..\..\controller\JSONDB.hpp" />
     <ClInclude Include="..\..\ext\http-parser\http_parser.h" />
     <ClInclude Include="..\..\ext\json\json.hpp" />
     <ClInclude Include="..\..\ext\libnatpmp\getgateway.h" />
@@ -109,6 +108,7 @@
     <ClInclude Include="..\..\ext\miniupnpc\upnpdev.h" />
     <ClInclude Include="..\..\ext\miniupnpc\upnperrors.h" />
     <ClInclude Include="..\..\ext\miniupnpc\upnpreplyparse.h" />
+    <ClInclude Include="..\..\ext\x64-salsa2012-asm\salsa2012.h" />
     <ClInclude Include="..\..\include\ZeroTierOne.h" />
     <ClInclude Include="..\..\node\Address.hpp" />
     <ClInclude Include="..\..\node\Array.hpp" />

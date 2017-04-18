@@ -417,46 +417,6 @@ public:
 	}
 
 	/**
-	 * Erase a key from this dictionary
-	 *
-	 * Use this before add() to ensure that a key is replaced if it might
-	 * already be present.
-	 *
-	 * @param key Key to erase
-	 * @return True if key was found and erased
-	 */
-	inline bool erase(const char *key)
-	{
-		char d2[C];
-		char *saveptr = (char *)0;
-		unsigned int d2ptr = 0;
-		bool found = false;
-		for(char *f=Utils::stok(_d,"\r\n",&saveptr);(f);f=Utils::stok((char *)0,"\r\n",&saveptr)) {
-			if (*f) {
-				const char *p = f;
-				const char *k = key;
-				while ((*k)&&(*p)) {
-					if (*k != *p)
-						break;
-					++k;
-					++p;
-				}
-				if (*k) {
-					p = f;
-					while (*p)
-						d2[d2ptr++] = *(p++);
-					d2[d2ptr++] = '\n';
-				} else {
-					found = true;
-				}
-			}
-		}
-		d2[d2ptr++] = (char)0;
-		memcpy(_d,d2,d2ptr);
-		return found;
-	}
-
-	/**
 	 * @return Value of C template parameter
 	 */
 	inline unsigned int capacity() const { return C; }
