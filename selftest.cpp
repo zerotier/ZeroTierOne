@@ -212,12 +212,10 @@ static int testCrypto()
 	std::cout << "[crypto] Benchmarking Salsa20/12 fast x64 ASM... "; std::cout.flush();
 	{
 		unsigned char *bb = (unsigned char *)::malloc(1234567);
-		for(unsigned int i=0;i<1234567;++i)
-			bb[i] = (unsigned char)i;
 		double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
-			zt_salsa2012_amd64_xmm6_xor(bb,bb,1234567,s20TV0Iv,s20TV0Key);
+			zt_salsa2012_amd64_xmm6(bb, 1234567, s20TV0Iv, s20TV0Key);
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
@@ -806,20 +804,19 @@ static int testOther()
 		memset(key, 0, sizeof(key));
 		memset(value, 0, sizeof(value));
 		for(unsigned int q=0;q<32;++q) {
-			Utils::snprintf(key[q],16,"%.8lx",(unsigned long)rand());
-			int r = (rand() % 127) + 1;
+			Utils::snprintf(key[q],16,"%.8lx",(unsigned long)(rand() % 1000) + (q * 1000));
+			int r = rand() % 128;
 			for(int x=0;x<r;++x)
 				value[q][x] = ("0123456789\0\t\r\n= ")[rand() % 16];
 			value[q][r] = (char)0;
 			test->add(key[q],value[q],r);
 		}
 		for(unsigned int q=0;q<1024;++q) {
-			//int r = rand() % 128;
-			int r = 31;
+			int r = rand() % 32;
 			char tmp[128];
 			if (test->get(key[r],tmp,sizeof(tmp)) >= 0) {
 				if (strcmp(value[r],tmp)) {
-					std::cout << "FAILED (invalid value)!" << std::endl;
+					std::cout << "FAILED (invalid value '" << value[r] << "' != '" << tmp << "')!" << std::endl;
 					return -1;
 				}
 			} else {
@@ -1048,7 +1045,7 @@ static int testHttp()
 */
 
 #ifdef __WINDOWS__
-int _tmain(int argc, _TCHAR* argv[])
+int __cdecl _tmain(int argc, _TCHAR* argv[])
 #else
 int main(int argc,char **argv)
 #endif
