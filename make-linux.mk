@@ -156,7 +156,7 @@ err: ; $(ERR)
 endif
 
 # Disable software updates by default on Linux since that is normally done with package management
-DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""
+override DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""
 
 # Use X64 ASM Salsa20/12 on X86_64 target
 ifeq ($(ZT_USE_X64_ASM_SALSA2012),1)
