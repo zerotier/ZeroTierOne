@@ -1129,7 +1129,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 			} else {
 				Mutex::Lock _l(_db_m);
 
-				std::string pfx("network/"); pfx.append(nwids);
+				std::string pfx("network/");
+				pfx.append(nwids);
 				_db.filter(pfx,[](const std::string &n,const json &obj) {
 					return false; // delete
 				});

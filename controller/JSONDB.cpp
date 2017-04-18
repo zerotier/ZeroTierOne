@@ -99,8 +99,9 @@ void JSONDB::erase(const std::string &n)
 
 void JSONDB::_reload(const std::string &p,const std::string &b)
 {
-	std::vector<std::string> dl(OSUtils::listDirectory(p.c_str()));
+	std::vector<std::string> dl(OSUtils::listDirectory(p.c_str(),true));
 	for(std::vector<std::string>::const_iterator di(dl.begin());di!=dl.end();++di) {
+		printf("%s\n",di->c_str());
 		if ((di->length() > 5)&&(di->substr(di->length() - 5) == ".json")) {
 			this->get(b + di->substr(0,di->length() - 5));
 		} else {

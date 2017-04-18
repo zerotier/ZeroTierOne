@@ -104,12 +104,11 @@ public:
 	/**
 	 * List a directory's contents
 	 *
-	 * This returns only files, not sub-directories.
-	 *
 	 * @param path Path to list
+	 * @param includeDirectories If true, include directories as well as files
 	 * @return Names of files in directory (without path prepended)
 	 */
-	static std::vector<std::string> listDirectory(const char *path);
+	static std::vector<std::string> listDirectory(const char *path,bool includeDirectories = false);
 
 	/**
 	 * Clean a directory of files whose last modified time is older than this
