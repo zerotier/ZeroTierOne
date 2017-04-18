@@ -80,7 +80,7 @@ endif
 
 # Determine system build architecture from compiler target
 CC_MACH=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
-ZT_ARCHITECTURE=0
+ZT_ARCHITECTURE=999
 ifeq ($(CC_MACH),x86_64)
         ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA2012=1
@@ -97,40 +97,66 @@ ifeq ($(CC_MACH),i686)
 endif
 ifeq ($(CC_MACH),arm)
         ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),armel)
         ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),armhf)
         ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),armv6)
         ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),armv6zk)
         ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),armv6kz)
         ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),armv7)
         ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),arm64)
         ZT_ARCHITECTURE=4
+	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),aarch64)
         ZT_ARCHITECTURE=4
+	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
-DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""
+ifeq ($(CC_MACH),mipsel)
+        ZT_ARCHITECTURE=5
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
+ifeq ($(CC_MACH),mips)
+        ZT_ARCHITECTURE=5
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
+ifeq ($(CC_MACH),mips64)
+        ZT_ARCHITECTURE=6
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
+ifeq ($(CC_MACH),mips64el)
+        ZT_ARCHITECTURE=6
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
 
-# Ensure no unaligned access on ARM targets
-ifeq ($(ZT_ARCHITECTURE),3)
-	override DEFS+=-DZT_NO_TYPE_PUNNING
+# Fail if system architecture could not be determined
+ifeq ($(ZT_ARCHITECTURE),999)
+ERR=$(error FATAL: architecture could not be determined from $(CC) -dumpmachine: $CC_MACH)
+.PHONY: err
+err: ; $(ERR)
 endif
-ifeq ($(ZT_ARCHITECTURE),4)
-	override DEFS+=-DZT_NO_TYPE_PUNNING
-endif
+
+# Disable software updates by default on Linux since that is normally done with package management
+DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""
 
 # Use X64 ASM Salsa20/12 on X86_64 target
 ifeq ($(ZT_USE_X64_ASM_SALSA2012),1)
