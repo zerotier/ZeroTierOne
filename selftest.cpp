@@ -54,6 +54,10 @@
 
 #include "controller/JSONDB.hpp"
 
+#ifdef ZT_USE_X64_ASM_SALSA2012
+#include "ext/x64-salsa2012-asm/salsa2012.h"
+#endif
+
 #ifdef __WINDOWS__
 #include <tchar.h>
 #endif
@@ -203,6 +207,24 @@ static int testCrypto()
 		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16) << ')' << std::endl;
 		::free((void *)bb);
 	}
+
+#ifdef ZT_USE_X64_ASM_SALSA2012
+	std::cout << "[crypto] Benchmarking Salsa20/12 fast x64 ASM... "; std::cout.flush();
+	{
+		unsigned char *bb = (unsigned char *)::malloc(1234567);
+		for(unsigned int i=0;i<1234567;++i)
+			bb[i] = (unsigned char)i;
+		double bytes = 0.0;
+		uint64_t start = OSUtils::now();
+		for(unsigned int i=0;i<200;++i) {
+			zt_salsa2012_amd64_xmm6_xor(bb,bb,1234567,s20TV0Iv,s20TV0Key);
+			bytes += 1234567.0;
+		}
+		uint64_t end = OSUtils::now();
+		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl;
+		::free((void *)bb);
+	}
+#endif
 
 	std::cout << "[crypto] Benchmarking Salsa20/20... "; std::cout.flush();
 	{

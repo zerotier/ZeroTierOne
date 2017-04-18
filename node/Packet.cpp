@@ -24,6 +24,10 @@
 
 #include "Packet.hpp"
 
+#ifdef ZT_USE_X64_ASM_SALSA2012
+#include "../ext/x64-salsa2012-asm/salsa2012.h"
+#endif
+
 #ifdef _MSC_VER
 #define FORCE_INLINE static __forceinline
 #include <intrin.h>
@@ -1064,7 +1068,7 @@ const char *Packet::errorString(ErrorCode e)
 
 void Packet::armor(const void *key,bool encryptPayload,unsigned int counter)
 {
-	uint8_t mangledKey[32],macKey[32],mac[16];
+	uint8_t mangledKey[32];
 	uint8_t *const data = reinterpret_cast<uint8_t *>(unsafeData());
 
 	// Mask least significant 3 bits of packet ID with counter to embed packet send counter for QoS use
@@ -1074,23 +1078,47 @@ void Packet::armor(const void *key,bool encryptPayload,unsigned int counter)
 	setCipher(encryptPayload ? ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 : ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE);
 
 	_salsa20MangleKey((const unsigned char *)key,mangledKey);
+
+#ifdef ZT_USE_X64_ASM_SALSA2012
+	const unsigned int payloadLen = (encryptPayload) ? (size() - ZT_PACKET_IDX_VERB) : 0;
+	uint64_t keyStream[(ZT_PROTO_MAX_PACKET_LENGTH + 64 + 8) / 8];
+	zt_salsa2012_amd64_xmm6(reinterpret_cast<unsigned char *>(keyStream),payloadLen + 64,reinterpret_cast<const unsigned char *>(data + ZT_PACKET_IDX_IV),reinterpret_cast<const unsigned char *>(mangledKey));
+
+	uint64_t *ksptr = keyStream + 8; // encryption starts after first Salsa20 block
+	uint8_t *dptr = data + ZT_PACKET_IDX_VERB;
+	unsigned int ksrem = payloadLen;
+	while (ksrem >= 8) {
+		ksrem -= 8;
+		*(reinterpret_cast<uint64_t *>(dptr)) ^= *(ksptr++);
+		dptr += 8;
+	}
+	for(unsigned int i=0;i<ksrem;++i) {
+		dptr[i] ^= reinterpret_cast<const uint8_t *>(ksptr)[i];
+	}
+
+	uint64_t mac[2];
+	Poly1305::compute(mac,data + ZT_PACKET_IDX_VERB,size() - ZT_PACKET_IDX_VERB,keyStream);
+	memcpy(data + ZT_PACKET_IDX_MAC,mac,8);
+#else
 	Salsa20 s20(mangledKey,data + ZT_PACKET_IDX_IV);
 
-	// MAC key is always the first 32 bytes of the Salsa20 key stream
-	// This is the same construction DJB's NaCl library uses
+	uint64_t macKey[4];
 	s20.crypt12(ZERO_KEY,macKey,sizeof(macKey));
 
 	uint8_t *const payload = data + ZT_PACKET_IDX_VERB;
 	const unsigned int payloadLen = size() - ZT_PACKET_IDX_VERB;
 	if (encryptPayload)
 		s20.crypt12(payload,payload,payloadLen);
+
+	uint64_t mac[2];
 	Poly1305::compute(mac,payload,payloadLen,macKey);
 	memcpy(data + ZT_PACKET_IDX_MAC,mac,8);
+#endif
 }
 
 bool Packet::dearmor(const void *key)
 {
-	uint8_t mangledKey[32],macKey[32],mac[16];
+	uint8_t mangledKey[32];
 	uint8_t *const data = reinterpret_cast<uint8_t *>(unsafeData());
 	const unsigned int payloadLen = size() - ZT_PACKET_IDX_VERB;
 	unsigned char *const payload = data + ZT_PACKET_IDX_VERB;
@@ -1098,9 +1126,37 @@ bool Packet::dearmor(const void *key)
 
 	if ((cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)||(cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)) {
 		_salsa20MangleKey((const unsigned char *)key,mangledKey);
+
+#ifdef ZT_USE_X64_ASM_SALSA2012
+		uint64_t keyStream[(ZT_PROTO_MAX_PACKET_LENGTH + 64 + 8) / 8];
+		zt_salsa2012_amd64_xmm6(reinterpret_cast<unsigned char *>(keyStream),((cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012) ? (payloadLen + 64) : 64),reinterpret_cast<const unsigned char *>(data + ZT_PACKET_IDX_IV),reinterpret_cast<const unsigned char *>(mangledKey));
+
+		uint64_t mac[2];
+		Poly1305::compute(mac,payload,payloadLen,keyStream);
+		if (!Utils::secureEq(mac,data + ZT_PACKET_IDX_MAC,8))
+			return false; // MAC failed, packet is corrupt, modified, or is not from the sender
+
+		if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012) {
+			uint64_t *ksptr = keyStream + 8; // encryption starts after first Salsa20 block
+			uint8_t *dptr = data + ZT_PACKET_IDX_VERB;
+			unsigned int ksrem = payloadLen;
+			while (ksrem >= 8) {
+				ksrem -= 8;
+				*(reinterpret_cast<uint64_t *>(dptr)) ^= *(ksptr++);
+				dptr += 8;
+			}
+			for(unsigned int i=0;i<ksrem;++i) {
+				dptr[i] ^= reinterpret_cast<const uint8_t *>(ksptr)[i];
+			}
+		}
+
+		return true;
+#else
 		Salsa20 s20(mangledKey,data + ZT_PACKET_IDX_IV);
 
+		uint64_t macKey[4];
 		s20.crypt12(ZERO_KEY,macKey,sizeof(macKey));
+		uint64_t mac[2];
 		Poly1305::compute(mac,payload,payloadLen,macKey);
 		if (!Utils::secureEq(mac,data + ZT_PACKET_IDX_MAC,8))
 			return false; // MAC failed, packet is corrupt, modified, or is not from the sender
@@ -1109,6 +1165,7 @@ bool Packet::dearmor(const void *key)
 			s20.crypt12(payload,payload,payloadLen);
 
 		return true;
+#endif
 	} else {
 		return false; // unrecognized cipher suite
 	}
