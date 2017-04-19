@@ -1,3 +1,6 @@
+#ifndef ZT_X64_SALSA2012_ASM
+#define ZT_X64_SALSA2012_ASM
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -8,4 +11,6 @@ extern int zt_salsa2012_amd64_xmm6(unsigned char *, unsigned long long, const un
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
