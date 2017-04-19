@@ -98,30 +98,37 @@ endif
 ifeq ($(CC_MACH),arm)
         ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armel)
         ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armhf)
         ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armv6)
         ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armv6zk)
         ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armv6kz)
         ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armv7)
         ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),arm64)
         ZT_ARCHITECTURE=4
@@ -158,10 +165,14 @@ endif
 # Disable software updates by default on Linux since that is normally done with package management
 override DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""
 
-# Use X64 ASM Salsa20/12 on X86_64 target
+# Build faster crypto on some targets
 ifeq ($(ZT_USE_X64_ASM_SALSA2012),1)
 	override DEFS+=-DZT_USE_X64_ASM_SALSA2012
 	override OBJS+=ext/x64-salsa2012-asm/salsa2012.o
+endif
+ifeq ($(ZT_USE_ARM32_NEON_ASM_SALSA2012),1)
+	override DEFS+=-DZT_USE_ARM32_NEON_ASM_SALSA2012
+	override OBJS+=ext/arm32-neon-salsa2012-asm/salsa2012.o
 endif
 
 # Static builds, which are currently done for a number of Linux targets

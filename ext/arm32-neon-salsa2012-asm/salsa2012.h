@@ -1,6 +1,14 @@
 #ifndef ZT_SALSA2012_ARM32NEON_ASM
 #define ZT_SALSA2012_ARM32NEON_ASM
 
+#if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+#include <sys/auxv.h>
+#include <asm/hwcap.h>
+#define zt_arm_has_neon() (getauxval(AT_HWCAP) & HWCAP_NEON)
+#else
+#define zt_arm_has_neon() (true)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

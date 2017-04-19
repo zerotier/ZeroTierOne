@@ -57,6 +57,9 @@
 #ifdef ZT_USE_X64_ASM_SALSA2012
 #include "ext/x64-salsa2012-asm/salsa2012.h"
 #endif
+#ifdef ZT_USE_ARM32_NEON_ASM_SALSA2012
+#include "ext/arm32-neon-salsa2012-asm/salsa2012.h"
+#endif
 
 #ifdef __WINDOWS__
 #include <tchar.h>
@@ -215,12 +218,30 @@ static int testCrypto()
 		double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
-			zt_salsa2012_amd64_xmm6(bb, 1234567, s20TV0Iv, s20TV0Key);
+			zt_salsa2012_amd64_xmm6(bb,1234567,s20TV0Iv,s20TV0Key);
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
 		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1024.0)) << " MiB/second" << std::endl;
 		::free((void *)bb);
+	}
+#endif
+
+#ifdef ZT_USE_ARM32_NEON_ASM_SALSA2012
+	if (zt_arm_has_neon()) {
+		std::cout << "[crypto] Benchmarking Salsa20/12 fast arm32/neon ASM... "; std::cout.flush();
+		{
+			unsigned char *bb = (unsigned char *)::malloc(1234567);
+			double bytes = 0.0;
+			uint64_t start = OSUtils::now();
+			for(unsigned int i=0;i<200;++i) {
+				zt_salsa2012_armneon3_xor(bb,(const unsigned char *)0,1234567,s20TV0Iv,s20TV0Key);
+				bytes += 1234567.0;
+			}
+			uint64_t end = OSUtils::now();
+			std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1024.0)) << " MiB/second" << std::endl;
+			::free((void *)bb);
+		}
 	}
 #endif
 
