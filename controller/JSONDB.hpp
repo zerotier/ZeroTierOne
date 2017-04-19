@@ -31,22 +31,21 @@
 
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
+#include "../node/InetAddress.hpp"
+#include "../node/Mutex.hpp"
 #include "../ext/json/json.hpp"
 #include "../osdep/OSUtils.hpp"
+#include "../osdep/Http.hpp"
 
 namespace ZeroTier {
 
 /**
- * Hierarchical JSON store that persists into the filesystem
+ * Hierarchical JSON store that persists into the filesystem or via HTTP
  */
 class JSONDB
 {
 public:
-	JSONDB(const std::string &basePath) :
-		_basePath(basePath)
-	{
-		_reload(_basePath,std::string());
-	}
+	JSONDB(const std::string &basePath);
 
 	inline void reload()
 	{
@@ -106,6 +105,7 @@ private:
 		inline bool operator!=(const _E &e) const { return (obj != e.obj); }
 	};
 
+	InetAddress _httpAddr;
 	std::string _basePath;
 	std::map<std::string,_E> _db;
 };

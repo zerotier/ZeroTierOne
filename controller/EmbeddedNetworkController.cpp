@@ -434,8 +434,6 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPa
 	_db(dbPath),
 	_node(node)
 {
-	OSUtils::mkdir(dbPath);
-	OSUtils::lockDownFile(dbPath,true); // networks might contain auth tokens, etc., so restrict directory permissions
 }
 
 EmbeddedNetworkController::~EmbeddedNetworkController()

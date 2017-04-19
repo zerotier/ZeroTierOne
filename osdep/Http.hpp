@@ -135,6 +135,39 @@ public:
 			responseBody);
 	}
 
+	/**
+	 * Make HTTP PUT request
+	 *
+	 * It is the responsibility of the caller to set all headers. With PUT, the
+	 * Content-Length and Content-Type headers must be set or the PUT will not
+	 * work.
+	 *
+	 * @return HTTP status code or 0 on error (responseBody will contain error message)
+	 */
+	static inline unsigned int PUT(
+		unsigned long maxResponseSize,
+		unsigned long timeout,
+		const struct sockaddr *remoteAddress,
+		const char *path,
+		const std::map<std::string,std::string> &requestHeaders,
+		const void *postData,
+		unsigned long postDataLength,
+		std::map<std::string,std::string> &responseHeaders,
+		std::string &responseBody)
+	{
+		return _do(
+			"PUT",
+			maxResponseSize,
+			timeout,
+			remoteAddress,
+			path,
+			requestHeaders,
+			postData,
+			postDataLength,
+			responseHeaders,
+			responseBody);
+	}
+
 private:
 	static unsigned int _do(
 		const char *method,

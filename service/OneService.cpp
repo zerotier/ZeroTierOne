@@ -381,6 +381,7 @@ public:
 
 	const std::string _homePath;
 	std::string _authToken;
+	std::string _controllerDbPath;
 	EmbeddedNetworkController *_controller;
 	Phy<OneServiceImpl *> _phy;
 	Node *_node;
@@ -482,6 +483,7 @@ public:
 
 	OneServiceImpl(const char *hp,unsigned int port) :
 		_homePath((hp) ? hp : ".")
+		,_controllerDbPath(_homePath + ZT_PATH_SEPARATOR_S ZT_CONTROLLER_DB_PATH)
 		,_controller((EmbeddedNetworkController *)0)
 		,_phy(this,false,true)
 		,_node((Node *)0)
@@ -747,7 +749,7 @@ public:
 			for(int i=0;i<3;++i)
 				_portsBE[i] = Utils::hton((uint16_t)_ports[i]);
 
-			_controller = new EmbeddedNetworkController(_node,(_homePath + ZT_PATH_SEPARATOR_S ZT_CONTROLLER_DB_PATH).c_str());
+			_controller = new EmbeddedNetworkController(_node,_controllerDbPath.c_str());
 			_node->setNetconfMaster((void *)_controller);
 
 #ifdef ZT_ENABLE_CLUSTER
@@ -1520,6 +1522,26 @@ public:
 				const InetAddress nw(OSUtils::jsonString(amf[i],""));
 				if (nw)
 					_allowManagementFrom.push_back(nw);
+			}
+		}
+
+		json &controllerDbHttpHost = settings["controllerDbHttpHost"];
+		json &controllerDbHttpPort = settings["controllerDbHttpPort"];
+		json &controllerDbHttpPath = settings["controllerDbHttpPath"];
+		if ((controllerDbHttpHost.is_string())&&(controllerDbHttpPort.is_number())) {
+			_controllerDbPath = "http://";
+			_controllerDbPath.append(controllerDbHttpHost);
+			char dbp[128];
+			Utils::snprintf(dbp,sizeof(dbp),"%d",(int)controllerDbHttpPort);
+			_controllerDbPath.push_back(':');
+			_controllerDbPath.append(dbp);
+			if (controllerDbHttpPath.is_string()) {
+				std::string p = controllerDbHttpPath;
+				if ((p.length() == 0)||(p[0] != '/'))
+					_controllerDbPath.push_back('/');
+				_controllerDbPath.append(p);
+			} else {
+				_controllerDbPath.push_back('/');
 			}
 		}
 	}
