@@ -64,7 +64,7 @@ bool JSONDB::writeRaw(const std::string &n,const std::string &obj)
 		Utils::snprintf(tmp,sizeof(tmp),"%lu",(unsigned long)obj.length());
 		reqHeaders["Content-Length"] = tmp;
 		reqHeaders["Content-Type"] = "application/json";
-		const unsigned int sc = Http::PUT(1048576,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),reqHeaders,obj.data(),obj.length(),headers,body);
+		const unsigned int sc = Http::PUT(1048576,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),reqHeaders,obj.data(),(unsigned long)obj.length(),headers,body);
 		return (sc == 200);
 	} else {
 		const std::string path(_genPath(n,true));

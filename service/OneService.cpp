@@ -1530,7 +1530,8 @@ public:
 		json &controllerDbHttpPath = settings["controllerDbHttpPath"];
 		if ((controllerDbHttpHost.is_string())&&(controllerDbHttpPort.is_number())) {
 			_controllerDbPath = "http://";
-			_controllerDbPath.append(controllerDbHttpHost);
+			std::string h = controllerDbHttpHost;
+			_controllerDbPath.append(h);
 			char dbp[128];
 			Utils::snprintf(dbp,sizeof(dbp),"%d",(int)controllerDbHttpPort);
 			_controllerDbPath.push_back(':');
