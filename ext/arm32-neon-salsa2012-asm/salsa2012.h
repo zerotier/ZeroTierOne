@@ -4,7 +4,7 @@
 #if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
 #include <sys/auxv.h>
 #include <asm/hwcap.h>
-#define zt_arm_has_neon() (getauxval(AT_HWCAP) & HWCAP_NEON)
+#define zt_arm_has_neon() ((getauxval(AT_HWCAP) & HWCAP_NEON) != 0)
 #else
 #define zt_arm_has_neon() (true)
 #endif
