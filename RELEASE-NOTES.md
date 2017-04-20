@@ -1,6 +1,17 @@
 ZeroTier Release Notes
 ======
 
+# Version 1.2.4
+
+Version 1.2.4 is a minor bug fix and performance improvement release.
+
+ * Managed routes are now only bifurcated for the default route. This is a change in behavior, though few people will probably notice. Bifurcating all managed routes was causing more trouble than it was worth for most users.
+ * Up to 2X crypto speedup on x86-64 (except Windows, which will take some porting) and 32-bit ARM platforms due to integration of fast assembly language implementations of Salsa20/12 from the [supercop](http://bench.cr.yp.to/supercop.html) code base. These were written by Daniel J. Bernstein and are in the public domain.
+ * Refactored code that manages credentials to greatly reduce memory use in most cases. This may also result in a small performance improvement.
+ * Reworked and simplified path selection and priority logic to fix path instability and dead path persistence edge cases. There have been some sporadic reports of persistent path instabilities and dead paths hanging around that take minutes to resolve. These have proven difficult to reproduce in house, but hopefully this will fix them. In any case it seems to speed up path establishment in our tests and it makes the code simpler and more readable.
+ * Eliminated some unused cruft from the code around path management and in the peer class.
+ * Fixed an issue causing build problems on some MIPS architecture systems.
+
 # 2017-03-17 -- Version 1.2.2
 
 Version 1.2.2 fixes a few bugs discovered after the 1.2.0 release. These are:

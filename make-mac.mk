@@ -61,10 +61,10 @@ endif
 
 CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++ 
 
+all: one macui
+
 ext/x64-salsa2012-asm/salsa2012.o:
 	$(CC) $(CFLAGS) -c ext/x64-salsa2012-asm/salsa2012.s -o ext/x64-salsa2012-asm/salsa2012.o
-
-all: one macui
 
 one:	$(OBJS) service/OneService.o one.o
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o $(LIBS)
