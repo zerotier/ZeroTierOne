@@ -69,46 +69,42 @@ namespace ZeroTier {
 void Salsa20::init(const void *key,const void *iv)
 {
 #ifdef ZT_SALSA20_SSE
-	const uint32_t *k = (const uint32_t *)key;
-
+	const uint32_t *const k = (const uint32_t *)key;
 	_state.i[0] = 0x61707865;
-	_state.i[3] = 0x6b206574;
-	_state.i[13] = k[0];
-	_state.i[10] = k[1];
-	_state.i[7] = k[2];
-	_state.i[4] = k[3];
-	k += 4;
 	_state.i[1] = 0x3320646e;
 	_state.i[2] = 0x79622d32;
-	_state.i[15] = k[0];
-	_state.i[12] = k[1];
-	_state.i[9] = k[2];
-	_state.i[6] = k[3];
-	_state.i[14] = ((const uint32_t *)iv)[0];
-	_state.i[11] = ((const uint32_t *)iv)[1];
+	_state.i[3] = 0x6b206574;
+	_state.i[4] = k[3];
 	_state.i[5] = 0;
+	_state.i[6] = k[7];
+	_state.i[7] = k[2];
 	_state.i[8] = 0;
+	_state.i[9] = k[6];
+	_state.i[10] = k[1];
+	_state.i[11] = ((const uint32_t *)iv)[1];
+	_state.i[12] = k[5];
+	_state.i[13] = k[0];
+	_state.i[14] = ((const uint32_t *)iv)[0];
+	_state.i[15] = k[4];
 #else
 	const char *const constants = "expand 32-byte k";
-	const uint8_t *k = (const uint8_t *)key;
-
+	const uint8_t *const k = (const uint8_t *)key;
+	_state.i[0] = U8TO32_LITTLE(constants + 0);
 	_state.i[1] = U8TO32_LITTLE(k + 0);
 	_state.i[2] = U8TO32_LITTLE(k + 4);
 	_state.i[3] = U8TO32_LITTLE(k + 8);
 	_state.i[4] = U8TO32_LITTLE(k + 12);
-	k += 16;
 	_state.i[5] = U8TO32_LITTLE(constants + 4);
 	_state.i[6] = U8TO32_LITTLE(((const uint8_t *)iv) + 0);
 	_state.i[7] = U8TO32_LITTLE(((const uint8_t *)iv) + 4);
 	_state.i[8] = 0;
 	_state.i[9] = 0;
 	_state.i[10] = U8TO32_LITTLE(constants + 8);
-	_state.i[11] = U8TO32_LITTLE(k + 0);
-	_state.i[12] = U8TO32_LITTLE(k + 4);
-	_state.i[13] = U8TO32_LITTLE(k + 8);
-	_state.i[14] = U8TO32_LITTLE(k + 12);
+	_state.i[11] = U8TO32_LITTLE(k + 16);
+	_state.i[12] = U8TO32_LITTLE(k + 20);
+	_state.i[13] = U8TO32_LITTLE(k + 24);
+	_state.i[14] = U8TO32_LITTLE(k + 28);
 	_state.i[15] = U8TO32_LITTLE(constants + 12);
-	_state.i[0] = U8TO32_LITTLE(constants + 0);
 #endif
 }
 

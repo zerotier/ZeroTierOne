@@ -141,8 +141,6 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 
 //////////////////////////////////////////////////////////////////////////////
 
-static unsigned char fuzzbuf[1048576];
-
 static int testCrypto()
 {
 	unsigned char buf1[16384];

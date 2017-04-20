@@ -1109,38 +1109,26 @@ void Packet::armor(const void *key,bool encryptPayload,unsigned int counter)
 	setCipher(encryptPayload ? ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 : ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE);
 
 	_salsa20MangleKey((const unsigned char *)key,mangledKey);
-
 	if (ZT_HAS_FAST_CRYPTO()) {
-		const unsigned int payloadLen = (encryptPayload) ? (size() - ZT_PACKET_IDX_VERB) : 0;
+		const unsigned int encryptLen = (encryptPayload) ? (size() - ZT_PACKET_IDX_VERB) : 0;
 		uint64_t keyStream[(ZT_PROTO_MAX_PACKET_LENGTH + 64 + 8) / 8];
-		ZT_FAST_SINGLE_PASS_SALSA2012(keyStream,payloadLen + 64,(data + ZT_PACKET_IDX_IV),mangledKey);
-
-		uint64_t *ksptr = keyStream + 8; // encryption starts after first Salsa20 block
-		uint8_t *dptr = data + ZT_PACKET_IDX_VERB;
-		unsigned int ksrem = payloadLen;
-		while (ksrem >= 8) {
-			ksrem -= 8;
-			*(reinterpret_cast<uint64_t *>(dptr)) ^= *(ksptr++);
-			dptr += 8;
-		}
-		for(unsigned int i=0;i<ksrem;++i) {
-			dptr[i] ^= reinterpret_cast<const uint8_t *>(ksptr)[i];
-		}
-
+		ZT_FAST_SINGLE_PASS_SALSA2012(keyStream,encryptLen + 64,(data + ZT_PACKET_IDX_IV),mangledKey);
+		Salsa20::memxor(data + ZT_PACKET_IDX_VERB,reinterpret_cast<const uint8_t *>(keyStream + 8),encryptLen);
 		uint64_t mac[2];
 		Poly1305::compute(mac,data + ZT_PACKET_IDX_VERB,size() - ZT_PACKET_IDX_VERB,keyStream);
+#ifdef ZT_NO_TYPE_PUNNING
 		memcpy(data + ZT_PACKET_IDX_MAC,mac,8);
+#else
+		(*reinterpret_cast<uint64_t *>(data + ZT_PACKET_IDX_MAC)) = mac[0];
+#endif
 	} else {
 		Salsa20 s20(mangledKey,data + ZT_PACKET_IDX_IV);
-
 		uint64_t macKey[4];
 		s20.crypt12(ZERO_KEY,macKey,sizeof(macKey));
-
 		uint8_t *const payload = data + ZT_PACKET_IDX_VERB;
 		const unsigned int payloadLen = size() - ZT_PACKET_IDX_VERB;
 		if (encryptPayload)
 			s20.crypt12(payload,payload,payloadLen);
-
 		uint64_t mac[2];
 		Poly1305::compute(mac,payload,payloadLen,macKey);
 		memcpy(data + ZT_PACKET_IDX_MAC,mac,8);
@@ -1157,39 +1145,33 @@ bool Packet::dearmor(const void *key)
 
 	if ((cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)||(cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)) {
 		_salsa20MangleKey((const unsigned char *)key,mangledKey);
-
 		if (ZT_HAS_FAST_CRYPTO()) {
 			uint64_t keyStream[(ZT_PROTO_MAX_PACKET_LENGTH + 64 + 8) / 8];
 			ZT_FAST_SINGLE_PASS_SALSA2012(keyStream,((cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012) ? (payloadLen + 64) : 64),(data + ZT_PACKET_IDX_IV),mangledKey);
-
 			uint64_t mac[2];
 			Poly1305::compute(mac,payload,payloadLen,keyStream);
+#ifdef ZT_NO_TYPE_PUNNING
 			if (!Utils::secureEq(mac,data + ZT_PACKET_IDX_MAC,8))
-				return false; // MAC failed, packet is corrupt, modified, or is not from the sender
-
-			if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012) {
-				uint64_t *ksptr = keyStream + 8; // encryption starts after first Salsa20 block
-				uint8_t *dptr = data + ZT_PACKET_IDX_VERB;
-				unsigned int ksrem = payloadLen;
-				while (ksrem >= 8) {
-					ksrem -= 8;
-					*(reinterpret_cast<uint64_t *>(dptr)) ^= *(ksptr++);
-					dptr += 8;
-				}
-				for(unsigned int i=0;i<ksrem;++i) {
-					dptr[i] ^= reinterpret_cast<const uint8_t *>(ksptr)[i];
-				}
-			}
+				return false;
+#else
+			if ((*reinterpret_cast<const uint64_t *>(data + ZT_PACKET_IDX_MAC)) != mac[0]) // also secure, constant time
+				return false;
+#endif
+			if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
+				Salsa20::memxor(data + ZT_PACKET_IDX_VERB,reinterpret_cast<const uint8_t *>(keyStream + 8),payloadLen);
 		} else {
 			Salsa20 s20(mangledKey,data + ZT_PACKET_IDX_IV);
-
 			uint64_t macKey[4];
 			s20.crypt12(ZERO_KEY,macKey,sizeof(macKey));
 			uint64_t mac[2];
 			Poly1305::compute(mac,payload,payloadLen,macKey);
+#ifdef ZT_NO_TYPE_PUNNING
 			if (!Utils::secureEq(mac,data + ZT_PACKET_IDX_MAC,8))
-				return false; // MAC failed, packet is corrupt, modified, or is not from the sender
-
+				return false;
+#else
+			if ((*reinterpret_cast<const uint64_t *>(data + ZT_PACKET_IDX_MAC)) != mac[0]) // also secure, constant time
+				return false;
+#endif
 			if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
 				s20.crypt12(payload,payload,payloadLen);
 		}
