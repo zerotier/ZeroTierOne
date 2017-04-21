@@ -9,6 +9,7 @@ ZeroTier Release Notes
  * Reworked and simplified path selection and priority logic to fix path instability and dead path persistence edge cases. There have been some sporadic reports of persistent path instabilities and dead paths hanging around that take minutes to resolve. These have proven difficult to reproduce in house, but hopefully this will fix them. In any case it seems to speed up path establishment in our tests and it makes the code simpler and more readable.
  * Eliminated some unused cruft from the code around path management and in the peer class.
  * Fixed an issue causing build problems on some MIPS architecture systems.
+ * Fixed Windows forgetting routes on sleep/wake or in some other circumstances. (GitHub issue #465)
 
 # 2017-03-17 -- Version 1.2.2
 
