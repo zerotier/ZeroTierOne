@@ -988,7 +988,7 @@ public:
 		std::map<uint64_t,NetworkState>::const_iterator n(_nets.find(nwid));
 		if (n == _nets.end())
 			return false;
-		memcpy(&settings,&(n->second.settings),sizeof(NetworkSettings));
+		settings = n->second.settings;
 		return true;
 	}
 
@@ -999,7 +999,7 @@ public:
 		std::map<uint64_t,NetworkState>::iterator n(_nets.find(nwid));
 		if (n == _nets.end())
 			return false;
-		memcpy(&(n->second.settings),&settings,sizeof(NetworkSettings));
+		n->second.settings = settings;
 
 		char nlcpath[256];
 		Utils::snprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
