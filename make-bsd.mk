@@ -112,6 +112,16 @@ ERR=$(error FATAL: architecture could not be determined from $(CC) -dumpmachine:
 err: ; $(ERR)
 endif
 
+# Build faster crypto on some targets
+ifeq ($(ZT_USE_X64_ASM_SALSA2012),1)
+	override DEFS+=-DZT_USE_X64_ASM_SALSA2012
+	override OBJS+=ext/x64-salsa2012-asm/salsa2012.o
+endif
+ifeq ($(ZT_USE_ARM32_NEON_ASM_SALSA2012),1)
+	override DEFS+=-DZT_USE_ARM32_NEON_ASM_SALSA2012
+	override OBJS+=ext/arm32-neon-salsa2012-asm/salsa2012.o
+endif
+
 DEFS+=-DZT_BUILD_PLATFORM=$(ZT_BUILD_PLATFORM) -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""
 
 CXXFLAGS+=$(CFLAGS) -fno-rtti -std=c++11 #-D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_MATH -D_GLIBCXX_USE_C99_MATH_TR1
@@ -129,7 +139,7 @@ selftest:	$(OBJS) selftest.o
 	$(STRIP) zerotier-selftest
 
 clean:
-	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o build-* zerotier-one zerotier-idtool zerotier-selftest zerotier-cli ZeroTierOneInstaller-*
+	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o build-* zerotier-one zerotier-idtool zerotier-selftest zerotier-cli ZeroTierOneInstaller-* $(OBJS)
 
 debug:	FORCE
 	make -j 4 ZT_DEBUG=1
