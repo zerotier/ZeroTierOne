@@ -26,7 +26,8 @@ static const nlohmann::json _EMPTY_JSON(nlohmann::json::object());
 static const std::map<std::string,std::string> _ZT_JSONDB_GET_HEADERS;
 
 JSONDB::JSONDB(const std::string &basePath) :
-	_basePath(basePath)
+	_basePath(basePath),
+	_ready(false)
 {
 	if ((_basePath.length() > 7)&&(_basePath.substr(0,7) == "http://")) {
 		// TODO: this doesn't yet support IPv6 since bracketed address notiation isn't supported.
@@ -49,7 +50,7 @@ JSONDB::JSONDB(const std::string &basePath) :
 		OSUtils::mkdir(_basePath.c_str());
 		OSUtils::lockDownFile(_basePath.c_str(),true); // networks might contain auth tokens, etc., so restrict directory permissions
 	}
-	_reload(_basePath,std::string());
+	_ready = _reload(_basePath,std::string());
 }
 
 bool JSONDB::writeRaw(const std::string &n,const std::string &obj)
@@ -83,9 +84,13 @@ bool JSONDB::put(const std::string &n,const nlohmann::json &obj)
 
 const nlohmann::json &JSONDB::get(const std::string &n)
 {
+	while (!_ready) {
+		Thread::sleep(250);
+		_ready = _reload(_basePath,std::string());
+	}
+
 	if (!_isValidObjectName(n))
 		return _EMPTY_JSON;
-
 	std::map<std::string,_E>::iterator e(_db.find(n));
 	if (e != _db.end())
 		return e->second.obj;
@@ -133,7 +138,7 @@ void JSONDB::erase(const std::string &n)
 	_db.erase(n);
 }
 
-void JSONDB::_reload(const std::string &p,const std::string &b)
+bool JSONDB::_reload(const std::string &p,const std::string &b)
 {
 	if (_httpAddr) {
 		std::string body;
@@ -150,11 +155,11 @@ void JSONDB::_reload(const std::string &p,const std::string &b)
 							_db[tmp].obj = i.value();
 						}
 					}
+					return true;
 				}
-			} catch ( ... ) {
-				// TODO: report error?
-			}
+			} catch ( ... ) {} // invalid JSON, so maybe incomplete request
 		}
+		return false;
 	} else {
 		std::vector<std::string> dl(OSUtils::listDirectory(p.c_str(),true));
 		for(std::vector<std::string>::const_iterator di(dl.begin());di!=dl.end();++di) {
@@ -164,6 +169,7 @@ void JSONDB::_reload(const std::string &p,const std::string &b)
 				this->_reload((p + ZT_PATH_SEPARATOR + *di),(b + *di + ZT_PATH_SEPARATOR));
 			}
 		}
+		return true;
 	}
 }
 

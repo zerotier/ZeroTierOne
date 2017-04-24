@@ -36,6 +36,7 @@
 #include "../ext/json/json.hpp"
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Http.hpp"
+#include "../osdep/Thread.hpp"
 
 namespace ZeroTier {
 
@@ -46,12 +47,6 @@ class JSONDB
 {
 public:
 	JSONDB(const std::string &basePath);
-
-	inline void reload()
-	{
-		_db.clear();
-		_reload(_basePath,std::string());
-	}
 
 	bool writeRaw(const std::string &n,const std::string &obj);
 
@@ -79,6 +74,11 @@ public:
 	template<typename F>
 	inline void filter(const std::string &prefix,F func)
 	{
+		while (!_ready) {
+			Thread::sleep(250);
+			_ready = _reload(_basePath,std::string());
+		}
+
 		for(std::map<std::string,_E>::iterator i(_db.lower_bound(prefix));i!=_db.end();) {
 			if ((i->first.length() >= prefix.length())&&(!memcmp(i->first.data(),prefix.data(),prefix.length()))) {
 				if (!func(i->first,get(i->first))) {
@@ -94,7 +94,7 @@ public:
 	inline bool operator!=(const JSONDB &db) const { return (!(*this == db)); }
 
 private:
-	void _reload(const std::string &p,const std::string &b);
+	bool _reload(const std::string &p,const std::string &b);
 	bool _isValidObjectName(const std::string &n);
 	std::string _genPath(const std::string &n,bool create);
 
@@ -108,6 +108,7 @@ private:
 	InetAddress _httpAddr;
 	std::string _basePath;
 	std::map<std::string,_E> _db;
+	volatile bool _ready;
 };
 
 } // namespace ZeroTier
