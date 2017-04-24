@@ -92,6 +92,12 @@ endif
 ifeq ($(CC_MACH),i386)
         ZT_ARCHITECTURE=1
 endif
+ifeq ($(CC_MACH),i486)
+        ZT_ARCHITECTURE=1
+endif
+ifeq ($(CC_MACH),i586)
+        ZT_ARCHITECTURE=1
+endif
 ifeq ($(CC_MACH),i686)
         ZT_ARCHITECTURE=1
 endif
