@@ -189,8 +189,8 @@ ifeq ($(ZT_STATIC),1)
 			override CFLAGS+=-march=armv5te -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
 			override CXXFLAGS+=-march=armv5te -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
 		else
-			override CFLAGS+=-march=armv6kz -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard -mno-unaligned-access -marm
-			override CXXFLAGS+=-march=armv6kz -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard -mno-unaligned-access -marm
+			override CFLAGS+=-march=armv6zk -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard -mno-unaligned-access
+			override CXXFLAGS+=-march=armv6zk -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard -mno-unaligned-access
 		endif
 	endif
 endif
