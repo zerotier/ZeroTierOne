@@ -178,6 +178,7 @@ private:
 
 	const uint64_t _startTime;
 
+	volatile bool _running;
 	BlockingQueue<_RQEntry *> _queue;
 	std::vector<Thread> _threads;
 	Mutex _threads_m;

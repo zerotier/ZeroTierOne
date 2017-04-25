@@ -72,29 +72,28 @@ public:
 	template<typename F>
 	inline void filter(const std::string &prefix,F func)
 	{
-		Mutex::Lock _l(_db_m);
-
 		while (!_ready) {
 			Thread::sleep(250);
-			_ready = _reload(_basePath,std::string());
+			_reload(_basePath,std::string());
 		}
-
-		for(std::map<std::string,_E>::iterator i(_db.lower_bound(prefix));i!=_db.end();) {
-			if ((i->first.length() >= prefix.length())&&(!memcmp(i->first.data(),prefix.data(),prefix.length()))) {
-				if (!func(i->first,get(i->first))) {
-					std::map<std::string,_E>::iterator i2(i); ++i2;
-					this->erase(i->first);
-					i = i2;
-				} else ++i;
-			} else break;
+		{
+			Mutex::Lock _l(_db_m);
+			for(std::map<std::string,_E>::iterator i(_db.lower_bound(prefix));i!=_db.end();) {
+				if ((i->first.length() >= prefix.length())&&(!memcmp(i->first.data(),prefix.data(),prefix.length()))) {
+					if (!func(i->first,i->second.obj)) {
+						this->_erase(i->first);
+						_db.erase(i++);
+					} else {
+						++i;
+					}
+				} else break;
+			}
 		}
 	}
 
-	inline bool operator==(const JSONDB &db) const { return ((_basePath == db._basePath)&&(_db == db._db)); }
-	inline bool operator!=(const JSONDB &db) const { return (!(*this == db)); }
-
 private:
-	bool _reload(const std::string &p,const std::string &b);
+	void _erase(const std::string &n);
+	void _reload(const std::string &p,const std::string &b);
 	bool _isValidObjectName(const std::string &n);
 	std::string _genPath(const std::string &n,bool create);
 

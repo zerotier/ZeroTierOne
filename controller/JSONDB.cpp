@@ -50,7 +50,7 @@ JSONDB::JSONDB(const std::string &basePath) :
 		OSUtils::mkdir(_basePath.c_str());
 		OSUtils::lockDownFile(_basePath.c_str(),true); // networks might contain auth tokens, etc., so restrict directory permissions
 	}
-	_ready = _reload(_basePath,std::string());
+	_reload(_basePath,std::string());
 }
 
 bool JSONDB::writeRaw(const std::string &n,const std::string &obj)
@@ -87,16 +87,16 @@ bool JSONDB::put(const std::string &n,const nlohmann::json &obj)
 
 nlohmann::json JSONDB::get(const std::string &n)
 {
+	while (!_ready) {
+		Thread::sleep(250);
+		_reload(_basePath,std::string());
+	}
+
+	if (!_isValidObjectName(n))
+		return _EMPTY_JSON;
+
 	{
 		Mutex::Lock _l(_db_m);
-
-		while (!_ready) {
-			Thread::sleep(250);
-			_ready = _reload(_basePath,std::string());
-		}
-
-		if (!_isValidObjectName(n))
-			return _EMPTY_JSON;
 		std::map<std::string,_E>::iterator e(_db.find(n));
 		if (e != _db.end())
 			return e->second.obj;
@@ -116,14 +116,16 @@ nlohmann::json JSONDB::get(const std::string &n)
 			return _EMPTY_JSON;
 	}
 
-	try {
+	{
 		Mutex::Lock _l(_db_m);
-		_E &e2 = _db[n];
-		e2.obj = OSUtils::jsonParse(buf);
-		return e2.obj;
-	} catch ( ... ) {
-		_db.erase(n);
-		return _EMPTY_JSON;
+		try {
+			_E &e2 = _db[n];
+			e2.obj = OSUtils::jsonParse(buf);
+			return e2.obj;
+		} catch ( ... ) {
+			_db.erase(n);
+			return _EMPTY_JSON;
+		}
 	}
 }
 
@@ -131,7 +133,15 @@ void JSONDB::erase(const std::string &n)
 {
 	if (!_isValidObjectName(n))
 		return;
+	_erase(n);
+	{
+		Mutex::Lock _l(_db_m);
+		_db.erase(n);
+	}
+}
 
+void JSONDB::_erase(const std::string &n)
+{
 	if (_httpAddr) {
 		std::string body;
 		std::map<std::string,std::string> headers;
@@ -142,17 +152,12 @@ void JSONDB::erase(const std::string &n)
 			return;
 		OSUtils::rm(path.c_str());
 	}
-
-	{
-		Mutex::Lock _l(_db_m);
-		_db.erase(n);
-	}
 }
 
-bool JSONDB::_reload(const std::string &p,const std::string &b)
+void JSONDB::_reload(const std::string &p,const std::string &b)
 {
-	// Assumes _db_m is locked
 	if (_httpAddr) {
+		Mutex::Lock _l(_db_m);
 		std::string body;
 		std::map<std::string,std::string> headers;
 		const unsigned int sc = Http::GET(2147483647,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),_basePath.c_str(),_ZT_JSONDB_GET_HEADERS,headers,body);
@@ -161,18 +166,19 @@ bool JSONDB::_reload(const std::string &p,const std::string &b)
 				nlohmann::json dbImg(OSUtils::jsonParse(body));
 				std::string tmp;
 				if (dbImg.is_object()) {
+					_db.clear();
 					for(nlohmann::json::iterator i(dbImg.begin());i!=dbImg.end();++i) {
 						if (i.value().is_object()) {
 							tmp = i.key();
 							_db[tmp].obj = i.value();
 						}
 					}
-					return true;
+					_ready = true;
 				}
 			} catch ( ... ) {} // invalid JSON, so maybe incomplete request
 		}
-		return false;
 	} else {
+		_ready = true;
 		std::vector<std::string> dl(OSUtils::listDirectory(p.c_str(),true));
 		for(std::vector<std::string>::const_iterator di(dl.begin());di!=dl.end();++di) {
 			if ((di->length() > 5)&&(di->substr(di->length() - 5) == ".json")) {
@@ -181,7 +187,6 @@ bool JSONDB::_reload(const std::string &p,const std::string &b)
 				this->_reload((p + ZT_PATH_SEPARATOR + *di),(b + *di + ZT_PATH_SEPARATOR));
 			}
 		}
-		return true;
 	}
 }
 

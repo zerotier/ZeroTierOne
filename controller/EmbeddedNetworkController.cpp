@@ -431,6 +431,7 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 
 EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPath) :
 	_startTime(OSUtils::now()),
+	_running(true),
 	_db(dbPath),
 	_node(node)
 {
@@ -438,12 +439,19 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPa
 
 EmbeddedNetworkController::~EmbeddedNetworkController()
 {
-	Mutex::Lock _l(_threads_m);
-	if (_threads.size() > 0) {
-		for(unsigned long i=0;i<(((unsigned long)_threads.size())*2);++i)
+	_running = false;
+	std::vector<Thread> t;
+	{
+		Mutex::Lock _l(_threads_m);
+		t = _threads;
+	}
+	if (t.size() > 0) {
+		for(unsigned long i=0,j=(unsigned long)(t.size() * 4);i<j;++i)
 			_queue.post((_RQEntry *)0);
-		for(std::vector<Thread>::iterator i(_threads.begin());i!=_threads.end();++i)
+		/*
+		for(std::vector<Thread>::iterator i(t.begin());i!=t.end();++i)
 			Thread::join(*i);
+		*/
 	}
 }
 
@@ -1111,23 +1119,23 @@ void EmbeddedNetworkController::threadMain()
 	throw()
 {
 	uint64_t lastCircuitTestCheck = 0;
-	for(;;) {
-		_RQEntry *const qe = _queue.get(); // waits on next request
-		if (!qe) break; // enqueue a NULL to terminate threads
+	_RQEntry *qe = (_RQEntry *)0;
+	while ((_running)&&((qe = _queue.get()))) {
 		try {
 			_request(qe->nwid,qe->fromAddr,qe->requestPacketId,qe->identity,qe->metaData);
 		} catch ( ... ) {}
 		delete qe;
-
-		uint64_t now = OSUtils::now();
-		if ((now - lastCircuitTestCheck) > ZT_EMBEDDEDNETWORKCONTROLLER_CIRCUIT_TEST_EXPIRATION) {
-			lastCircuitTestCheck = now;
-			Mutex::Lock _l(_tests_m);
-			for(std::list< ZT_CircuitTest >::iterator i(_tests.begin());i!=_tests.end();) {
-				if ((now - i->timestamp) > ZT_EMBEDDEDNETWORKCONTROLLER_CIRCUIT_TEST_EXPIRATION) {
-					_node->circuitTestEnd(&(*i));
-					_tests.erase(i++);
-				} else ++i;
+		if (_running) {
+			uint64_t now = OSUtils::now();
+			if ((now - lastCircuitTestCheck) > ZT_EMBEDDEDNETWORKCONTROLLER_CIRCUIT_TEST_EXPIRATION) {
+				lastCircuitTestCheck = now;
+				Mutex::Lock _l(_tests_m);
+				for(std::list< ZT_CircuitTest >::iterator i(_tests.begin());i!=_tests.end();) {
+					if ((now - i->timestamp) > ZT_EMBEDDEDNETWORKCONTROLLER_CIRCUIT_TEST_EXPIRATION) {
+						_node->circuitTestEnd(&(*i));
+						_tests.erase(i++);
+					} else ++i;
+				}
 			}
 		}
 	}
@@ -1723,13 +1731,11 @@ void EmbeddedNetworkController::_getNetworkMemberInfo(uint64_t now,uint64_t nwid
 	char pfx[256];
 	Utils::snprintf(pfx,sizeof(pfx),"network/%.16llx/member",nwid);
 
-	{
-		Mutex::Lock _l(_nmiCache_m);
-		std::map<uint64_t,_NetworkMemberInfo>::iterator c(_nmiCache.find(nwid));
-		if ((c != _nmiCache.end())&&((now - c->second.nmiTimestamp) < 1000)) { // a short duration cache but limits CPU use on big networks
-			nmi = c->second;
-			return;
-		}
+	Mutex::Lock _l(_nmiCache_m);
+	std::map<uint64_t,_NetworkMemberInfo>::iterator c(_nmiCache.find(nwid));
+	if ((c != _nmiCache.end())&&((now - c->second.nmiTimestamp) < 1000)) { // a short duration cache but limits CPU use on big networks
+		nmi = c->second;
+		return;
 	}
 
 	_db.filter(pfx,[&nmi,&now](const std::string &n,const json &member) {
@@ -1770,10 +1776,7 @@ void EmbeddedNetworkController::_getNetworkMemberInfo(uint64_t now,uint64_t nwid
 	});
 	nmi.nmiTimestamp = now;
 
-	{
-		Mutex::Lock _l(_nmiCache_m);
-		_nmiCache[nwid] = nmi;
-	}
+	_nmiCache[nwid] = nmi;
 }
 
 void EmbeddedNetworkController::_pushMemberUpdate(uint64_t now,uint64_t nwid,const nlohmann::json &member)

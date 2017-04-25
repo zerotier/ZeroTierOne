@@ -490,7 +490,8 @@ int Node::sendUserMessage(void *tptr,uint64_t dest,uint64_t typeId,const void *d
 void Node::setNetconfMaster(void *networkControllerInstance)
 {
 	RR->localNetworkController = reinterpret_cast<NetworkController *>(networkControllerInstance);
-	RR->localNetworkController->init(RR->identity,this);
+	if (networkControllerInstance)
+		RR->localNetworkController->init(RR->identity,this);
 }
 
 ZT_ResultCode Node::circuitTestBegin(void *tptr,ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *))
