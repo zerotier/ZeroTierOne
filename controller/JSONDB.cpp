@@ -78,22 +78,29 @@ bool JSONDB::writeRaw(const std::string &n,const std::string &obj)
 bool JSONDB::put(const std::string &n,const nlohmann::json &obj)
 {
 	const bool r = writeRaw(n,OSUtils::jsonDump(obj));
-	_db[n].obj = obj;
+	{
+		Mutex::Lock _l(_db_m);
+		_db[n].obj = obj;
+	}
 	return r;
 }
 
-const nlohmann::json &JSONDB::get(const std::string &n)
+nlohmann::json JSONDB::get(const std::string &n)
 {
-	while (!_ready) {
-		Thread::sleep(250);
-		_ready = _reload(_basePath,std::string());
-	}
+	{
+		Mutex::Lock _l(_db_m);
 
-	if (!_isValidObjectName(n))
-		return _EMPTY_JSON;
-	std::map<std::string,_E>::iterator e(_db.find(n));
-	if (e != _db.end())
-		return e->second.obj;
+		while (!_ready) {
+			Thread::sleep(250);
+			_ready = _reload(_basePath,std::string());
+		}
+
+		if (!_isValidObjectName(n))
+			return _EMPTY_JSON;
+		std::map<std::string,_E>::iterator e(_db.find(n));
+		if (e != _db.end())
+			return e->second.obj;
+	}
 
 	std::string buf;
 	if (_httpAddr) {
@@ -110,6 +117,7 @@ const nlohmann::json &JSONDB::get(const std::string &n)
 	}
 
 	try {
+		Mutex::Lock _l(_db_m);
 		_E &e2 = _db[n];
 		e2.obj = OSUtils::jsonParse(buf);
 		return e2.obj;
@@ -135,11 +143,15 @@ void JSONDB::erase(const std::string &n)
 		OSUtils::rm(path.c_str());
 	}
 
-	_db.erase(n);
+	{
+		Mutex::Lock _l(_db_m);
+		_db.erase(n);
+	}
 }
 
 bool JSONDB::_reload(const std::string &p,const std::string &b)
 {
+	// Assumes _db_m is locked
 	if (_httpAddr) {
 		std::string body;
 		std::map<std::string,std::string> headers;

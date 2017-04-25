@@ -43,9 +43,6 @@
 
 #include "JSONDB.hpp"
 
-// Number of background threads to start -- not actually started until needed
-#define ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT 4
-
 // TTL for circuit tests
 #define ZT_EMBEDDEDNETWORKCONTROLLER_CIRCUIT_TEST_EXPIRATION 120000
 
@@ -182,15 +179,13 @@ private:
 	const uint64_t _startTime;
 
 	BlockingQueue<_RQEntry *> _queue;
-	Thread _threads[ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT];
-	bool _threadsStarted;
+	std::vector<Thread> _threads;
 	Mutex _threads_m;
 
 	std::map<uint64_t,_NetworkMemberInfo> _nmiCache;
 	Mutex _nmiCache_m;
 
 	JSONDB _db;
-	Mutex _db_m;
 
 	Node *const _node;
 	std::string _path;

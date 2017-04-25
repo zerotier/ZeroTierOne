@@ -51,18 +51,16 @@ public:
 	bool writeRaw(const std::string &n,const std::string &obj);
 
 	bool put(const std::string &n,const nlohmann::json &obj);
-
 	inline bool put(const std::string &n1,const std::string &n2,const nlohmann::json &obj) { return this->put((n1 + "/" + n2),obj); }
 	inline bool put(const std::string &n1,const std::string &n2,const std::string &n3,const nlohmann::json &obj) { return this->put((n1 + "/" + n2 + "/" + n3),obj); }
 	inline bool put(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4,const nlohmann::json &obj) { return this->put((n1 + "/" + n2 + "/" + n3 + "/" + n4),obj); }
 	inline bool put(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4,const std::string &n5,const nlohmann::json &obj) { return this->put((n1 + "/" + n2 + "/" + n3 + "/" + n4 + "/" + n5),obj); }
 
-	const nlohmann::json &get(const std::string &n);
-
-	inline const nlohmann::json &get(const std::string &n1,const std::string &n2) { return this->get((n1 + "/" + n2)); }
-	inline const nlohmann::json &get(const std::string &n1,const std::string &n2,const std::string &n3) { return this->get((n1 + "/" + n2 + "/" + n3)); }
-	inline const nlohmann::json &get(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4) { return this->get((n1 + "/" + n2 + "/" + n3 + "/" + n4)); }
-	inline const nlohmann::json &get(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4,const std::string &n5) { return this->get((n1 + "/" + n2 + "/" + n3 + "/" + n4 + "/" + n5)); }
+	nlohmann::json get(const std::string &n);
+	inline nlohmann::json get(const std::string &n1,const std::string &n2) { return this->get((n1 + "/" + n2)); }
+	inline nlohmann::json get(const std::string &n1,const std::string &n2,const std::string &n3) { return this->get((n1 + "/" + n2 + "/" + n3)); }
+	inline nlohmann::json get(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4) { return this->get((n1 + "/" + n2 + "/" + n3 + "/" + n4)); }
+	inline nlohmann::json get(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4,const std::string &n5) { return this->get((n1 + "/" + n2 + "/" + n3 + "/" + n4 + "/" + n5)); }
 
 	void erase(const std::string &n);
 
@@ -74,6 +72,8 @@ public:
 	template<typename F>
 	inline void filter(const std::string &prefix,F func)
 	{
+		Mutex::Lock _l(_db_m);
+
 		while (!_ready) {
 			Thread::sleep(250);
 			_ready = _reload(_basePath,std::string());
@@ -108,6 +108,7 @@ private:
 	InetAddress _httpAddr;
 	std::string _basePath;
 	std::map<std::string,_E> _db;
+	Mutex _db_m;
 	volatile bool _ready;
 };
 
