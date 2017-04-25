@@ -55,8 +55,6 @@ JSONDB::JSONDB(const std::string &basePath) :
 
 bool JSONDB::writeRaw(const std::string &n,const std::string &obj)
 {
-	if (!_isValidObjectName(n))
-		return false;
 	if (_httpAddr) {
 		std::map<std::string,std::string> headers;
 		std::string body;
@@ -91,9 +89,6 @@ nlohmann::json JSONDB::get(const std::string &n)
 		Thread::sleep(250);
 		_reload(_basePath,std::string());
 	}
-
-	if (!_isValidObjectName(n))
-		return _EMPTY_JSON;
 
 	{
 		Mutex::Lock _l(_db_m);
@@ -131,8 +126,6 @@ nlohmann::json JSONDB::get(const std::string &n)
 
 void JSONDB::erase(const std::string &n)
 {
-	if (!_isValidObjectName(n))
-		return;
 	_erase(n);
 	{
 		Mutex::Lock _l(_db_m);
@@ -188,20 +181,6 @@ void JSONDB::_reload(const std::string &p,const std::string &b)
 			}
 		}
 	}
-}
-
-bool JSONDB::_isValidObjectName(const std::string &n)
-{
-	if (n.length() == 0)
-		return false;
-	const char *p = n.c_str();
-	char c;
-	// For security reasons we should not allow dots, backslashes, or other path characters or potential path characters.
-	while ((c = *(p++))) {
-		if (!( ((c >= 'a')&&(c <= 'z')) || ((c >= 'A')&&(c <= 'Z')) || ((c >= '0')&&(c <= '9')) || (c == '/') || (c == '_') || (c == '~') || (c == '-') ))
-			return false;
-	}
-	return true;
 }
 
 std::string JSONDB::_genPath(const std::string &n,bool create)

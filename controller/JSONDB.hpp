@@ -94,7 +94,6 @@ public:
 private:
 	void _erase(const std::string &n);
 	void _reload(const std::string &p,const std::string &b);
-	bool _isValidObjectName(const std::string &n);
 	std::string _genPath(const std::string &n,bool create);
 
 	struct _E
