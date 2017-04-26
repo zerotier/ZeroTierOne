@@ -89,14 +89,19 @@ using json = nlohmann::json;
 
 #include "../controller/EmbeddedNetworkController.hpp"
 
-// Include the right tap device driver for this platform -- add new platforms here
+#ifdef ZT_USE_TEST_TAP
+
+#include "../osdep/TestEthernetTap.hpp"
+namespace ZeroTier { typedef TestEthernetTap EthernetTap; }
+
+#else
+
 #ifdef ZT_SERVICE_NETCON
 
-// In network containers builds, use the virtual netcon endpoint instead of a tun/tap port driver
 #include "../netcon/NetconEthernetTap.hpp"
 namespace ZeroTier { typedef NetconEthernetTap EthernetTap; }
 
-#else // not ZT_SERVICE_NETCON so pick a tap driver
+#else
 
 #ifdef __APPLE__
 #include "../osdep/OSXEthernetTap.hpp"
@@ -121,9 +126,11 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 
 #endif // ZT_SERVICE_NETCON
 
+#endif // ZT_USE_TEST_TAP
+
 // Sanity limits for HTTP
 #define ZT_MAX_HTTP_MESSAGE_SIZE (1024 * 1024 * 64)
-#define ZT_MAX_HTTP_CONNECTIONS 64
+#define ZT_MAX_HTTP_CONNECTIONS 65536
 
 // Interface metric for ZeroTier taps -- this ensures that if we are on WiFi and also
 // bridged via ZeroTier to the same LAN traffic will (if the OS is sane) prefer WiFi.
