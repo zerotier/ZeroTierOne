@@ -60,6 +60,15 @@ JSONDB::JSONDB(const std::string &basePath) :
 
 	for(std::unordered_map<uint64_t,_NW>::iterator n(_networks.begin());n!=_networks.end();++n)
 		_recomputeSummaryInfo(n->first);
+	for(;;) {
+		_summaryThread_m.lock();
+		if (_summaryThreadToDo.empty()) {
+			_summaryThread_m.unlock();
+			break;
+		}
+		_summaryThread_m.unlock();
+		Thread::sleep(50);
+	}
 }
 
 JSONDB::~JSONDB()
@@ -107,7 +116,7 @@ void JSONDB::saveNetwork(const uint64_t networkId,const nlohmann::json &networkC
 		Mutex::Lock _l(_networks_m);
 		_networks[networkId].config = networkConfig;
 	}
-	//_recomputeSummaryInfo(networkId);
+	_recomputeSummaryInfo(networkId);
 }
 
 void JSONDB::saveNetworkMember(const uint64_t networkId,const uint64_t nodeId,const nlohmann::json &memberConfig)

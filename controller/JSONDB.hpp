@@ -82,19 +82,12 @@ public:
 
 	inline bool getNetworkSummaryInfo(const uint64_t networkId,NetworkSummaryInfo &ns) const
 	{
-		for(;;) {
-			{
-				Mutex::Lock _l(_networks_m);
-				std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
-				if (i == _networks.end())
-					return false;
-				if (i->second.summaryInfoLastComputed) {
-					ns = i->second.summaryInfo;
-					return true;
-				}
-			}
-			Thread::sleep(100); // wait for this to be done the first time, which happens when we start
-		}
+		Mutex::Lock _l(_networks_m);
+		std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
+		if (i == _networks.end())
+			return false;
+		ns = i->second.summaryInfo;
+		return true;
 	}
 
 	/**
