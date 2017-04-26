@@ -26,12 +26,11 @@ static const nlohmann::json _EMPTY_JSON(nlohmann::json::object());
 static const std::map<std::string,std::string> _ZT_JSONDB_GET_HEADERS;
 
 JSONDB::JSONDB(const std::string &basePath) :
-	_basePath(basePath),
-	_ready(false)
+	_basePath(basePath)
 {
 	if ((_basePath.length() > 7)&&(_basePath.substr(0,7) == "http://")) {
 		// TODO: this doesn't yet support IPv6 since bracketed address notiation isn't supported.
-		// Typically it's used with 127.0.0.1 anyway.
+		// Typically it's just used with 127.0.0.1 anyway.
 		std::string hn = _basePath.substr(7);
 		std::size_t hnend = hn.find_first_of('/');
 		if (hnend != std::string::npos)
@@ -50,7 +49,32 @@ JSONDB::JSONDB(const std::string &basePath) :
 		OSUtils::mkdir(_basePath.c_str());
 		OSUtils::lockDownFile(_basePath.c_str(),true); // networks might contain auth tokens, etc., so restrict directory permissions
 	}
-	_reload(_basePath,std::string());
+
+	unsigned int cnt = 0;
+	while (!_load(_basePath)) {
+		if ((++cnt & 7) == 0)
+			fprintf(stderr,"WARNING: controller still waiting to read '%s'..." ZT_EOL_S,_basePath.c_str());
+		Thread::sleep(250);
+	}
+
+	for(std::unordered_map<uint64_t,_NW>::iterator n(_networks.begin());n!=_networks.end();++n)
+		_recomputeSummaryInfo(n->first);
+}
+
+JSONDB::~JSONDB()
+{
+	{
+		Mutex::Lock _l(_networks_m);
+		_networks.clear();
+	}
+	{
+		Mutex::Lock _l(_summaryThread_m);
+		if (_summaryThread) {
+			_updateSummaryInfoQueue.post(0);
+			_updateSummaryInfoQueue.post(0);
+			Thread::join(_summaryThread);
+		}
+	}
 }
 
 bool JSONDB::writeRaw(const std::string &n,const std::string &obj)
@@ -73,84 +97,173 @@ bool JSONDB::writeRaw(const std::string &n,const std::string &obj)
 	}
 }
 
-bool JSONDB::put(const std::string &n,const nlohmann::json &obj)
+void JSONDB::saveNetwork(const uint64_t networkId,const nlohmann::json &networkConfig)
 {
-	const bool r = writeRaw(n,OSUtils::jsonDump(obj));
+	char n[256];
+	Utils::snprintf(n,sizeof(n),"network/%.16llx",(unsigned long long)networkId);
+	writeRaw(n,OSUtils::jsonDump(networkConfig));
 	{
-		Mutex::Lock _l(_db_m);
-		_db[n].obj = obj;
+		Mutex::Lock _l(_networks_m);
+		_networks[networkId].config = networkConfig;
 	}
-	return r;
+	//_recomputeSummaryInfo(networkId);
 }
 
-nlohmann::json JSONDB::get(const std::string &n)
+void JSONDB::saveNetworkMember(const uint64_t networkId,const uint64_t nodeId,const nlohmann::json &memberConfig)
 {
-	while (!_ready) {
-		Thread::sleep(250);
-		_reload(_basePath,std::string());
-	}
-
+	char n[256];
+	Utils::snprintf(n,sizeof(n),"network/%.16llx/member/%.10llx",(unsigned long long)networkId,(unsigned long long)nodeId);
+	writeRaw(n,OSUtils::jsonDump(memberConfig));
 	{
-		Mutex::Lock _l(_db_m);
-		std::map<std::string,_E>::iterator e(_db.find(n));
-		if (e != _db.end())
-			return e->second.obj;
+		Mutex::Lock _l(_networks_m);
+		_networks[networkId].members[nodeId] = memberConfig;
+	}
+	_recomputeSummaryInfo(networkId);
+}
+
+nlohmann::json JSONDB::eraseNetwork(const uint64_t networkId)
+{
+	if (!_httpAddr) { // Member deletion is done by Central in harnessed mode, and deleting the cache network entry also deletes all members
+		std::vector<uint64_t> memberIds;
+		{
+			Mutex::Lock _l(_networks_m);
+			std::unordered_map<uint64_t,_NW>::iterator i(_networks.find(networkId));
+			if (i == _networks.end())
+				return _EMPTY_JSON;
+			for(std::unordered_map<uint64_t,nlohmann::json>::iterator m(i->second.members.begin());m!=i->second.members.end();++m)
+				memberIds.push_back(m->first);
+		}
+		for(std::vector<uint64_t>::iterator m(memberIds.begin());m!=memberIds.end();++m)
+			eraseNetworkMember(networkId,*m,false);
 	}
 
-	std::string buf;
+	char n[256];
+	Utils::snprintf(n,sizeof(n),"network/%.16llx",(unsigned long long)networkId);
+
 	if (_httpAddr) {
-		std::map<std::string,std::string> headers;
-		const unsigned int sc = Http::GET(1048576,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),_ZT_JSONDB_GET_HEADERS,headers,buf);
-		if (sc != 200)
-			return _EMPTY_JSON;
+		// Deletion is currently done by Central in harnessed mode
+		//std::map<std::string,std::string> headers;
+		//std::string body;
+		//Http::DEL(1048576,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),_ZT_JSONDB_GET_HEADERS,headers,body);
 	} else {
 		const std::string path(_genPath(n,false));
-		if (!path.length())
-			return _EMPTY_JSON;
-		if (!OSUtils::readFile(path.c_str(),buf))
-			return _EMPTY_JSON;
+		if (path.length())
+			OSUtils::rm(path.c_str());
 	}
 
 	{
-		Mutex::Lock _l(_db_m);
-		try {
-			_E &e2 = _db[n];
-			e2.obj = OSUtils::jsonParse(buf);
-			return e2.obj;
-		} catch ( ... ) {
-			_db.erase(n);
+		Mutex::Lock _l(_networks_m);
+		std::unordered_map<uint64_t,_NW>::iterator i(_networks.find(networkId));
+		if (i == _networks.end())
+			return _EMPTY_JSON; // sanity check, shouldn't happen
+		nlohmann::json tmp(i->second.config);
+		_networks.erase(i);
+		return tmp;
+	}
+}
+
+nlohmann::json JSONDB::eraseNetworkMember(const uint64_t networkId,const uint64_t nodeId,bool recomputeSummaryInfo)
+{
+	char n[256];
+	Utils::snprintf(n,sizeof(n),"network/%.16llx/member/%.10llx",(unsigned long long)networkId,(unsigned long long)nodeId);
+
+	if (_httpAddr) {
+		// Deletion is currently done by the caller in Central harnessed mode
+		//std::map<std::string,std::string> headers;
+		//std::string body;
+		//Http::DEL(1048576,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),_ZT_JSONDB_GET_HEADERS,headers,body);
+	} else {
+		const std::string path(_genPath(n,false));
+		if (path.length())
+			OSUtils::rm(path.c_str());
+	}
+
+	{
+		Mutex::Lock _l(_networks_m);
+		std::unordered_map<uint64_t,_NW>::iterator i(_networks.find(networkId));
+		if (i == _networks.end())
 			return _EMPTY_JSON;
+		std::unordered_map<uint64_t,nlohmann::json>::iterator j(i->second.members.find(nodeId));
+		if (j == i->second.members.end())
+			return _EMPTY_JSON;
+		nlohmann::json tmp(j->second);
+		i->second.members.erase(j);
+		if (recomputeSummaryInfo)
+			_recomputeSummaryInfo(networkId);
+		return tmp;
+	}
+}
+
+void JSONDB::threadMain()
+	throw()
+{
+	uint64_t networkId = 0;
+	while ((networkId = _updateSummaryInfoQueue.get()) != 0) {
+		const uint64_t now = OSUtils::now();
+		{
+			Mutex::Lock _l(_networks_m);
+			std::unordered_map<uint64_t,_NW>::iterator n(_networks.find(networkId));
+			if (n != _networks.end()) {
+				NetworkSummaryInfo &ns = n->second.summaryInfo;
+				ns.activeBridges.clear();
+				ns.allocatedIps.clear();
+				ns.authorizedMemberCount = 0;
+				ns.activeMemberCount = 0;
+				ns.totalMemberCount = 0;
+				ns.mostRecentDeauthTime = 0;
+
+				for(std::unordered_map<uint64_t,nlohmann::json>::const_iterator m(n->second.members.begin());m!=n->second.members.end();++m) {
+					try {
+						if (OSUtils::jsonBool(m->second["authorized"],false)) {
+							++ns.authorizedMemberCount;
+
+							try {
+								const nlohmann::json &mlog = m->second["recentLog"];
+								if ((mlog.is_array())&&(mlog.size() > 0)) {
+									const nlohmann::json &mlog1 = mlog[0];
+									if (mlog1.is_object()) {
+										if ((now - OSUtils::jsonInt(mlog1["ts"],0ULL)) < (ZT_NETWORK_AUTOCONF_DELAY * 2))
+											++ns.activeMemberCount;
+									}
+								}
+							} catch ( ... ) {}
+
+							try {
+								if (OSUtils::jsonBool(m->second["activeBridge"],false))
+									ns.activeBridges.push_back(Address(m->first));
+							} catch ( ... ) {}
+
+							try {
+								const nlohmann::json &mips = m->second["ipAssignments"];
+								if (mips.is_array()) {
+									for(unsigned long i=0;i<mips.size();++i) {
+										InetAddress mip(OSUtils::jsonString(mips[i],""));
+										if ((mip.ss_family == AF_INET)||(mip.ss_family == AF_INET6))
+											ns.allocatedIps.push_back(mip);
+									}
+								}
+							} catch ( ... ) {}
+						} else {
+							try {
+								ns.mostRecentDeauthTime = std::max(ns.mostRecentDeauthTime,OSUtils::jsonInt(m->second["lastDeauthorizedTime"],0ULL));
+							} catch ( ... ) {}
+						}
+						++ns.totalMemberCount;
+					} catch ( ... ) {}
+				}
+
+				std::sort(ns.activeBridges.begin(),ns.activeBridges.end());
+				std::sort(ns.allocatedIps.begin(),ns.allocatedIps.end());
+
+				n->second.summaryInfoLastComputed = now;
+			}
 		}
 	}
 }
 
-void JSONDB::erase(const std::string &n)
-{
-	_erase(n);
-	{
-		Mutex::Lock _l(_db_m);
-		_db.erase(n);
-	}
-}
-
-void JSONDB::_erase(const std::string &n)
+bool JSONDB::_load(const std::string &p)
 {
 	if (_httpAddr) {
-		std::string body;
-		std::map<std::string,std::string> headers;
-		Http::DEL(1048576,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),_ZT_JSONDB_GET_HEADERS,headers,body);
-	} else {
-		std::string path(_genPath(n,true));
-		if (!path.length())
-			return;
-		OSUtils::rm(path.c_str());
-	}
-}
-
-void JSONDB::_reload(const std::string &p,const std::string &b)
-{
-	if (_httpAddr) {
-		Mutex::Lock _l(_db_m);
 		std::string body;
 		std::map<std::string,std::string> headers;
 		const unsigned int sc = Http::GET(2147483647,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),_basePath.c_str(),_ZT_JSONDB_GET_HEADERS,headers,body);
@@ -159,28 +272,71 @@ void JSONDB::_reload(const std::string &p,const std::string &b)
 				nlohmann::json dbImg(OSUtils::jsonParse(body));
 				std::string tmp;
 				if (dbImg.is_object()) {
-					_db.clear();
+					Mutex::Lock _l(_networks_m);
 					for(nlohmann::json::iterator i(dbImg.begin());i!=dbImg.end();++i) {
-						if (i.value().is_object()) {
-							tmp = i.key();
-							_db[tmp].obj = i.value();
+						nlohmann::json &j = i.value();
+						if (j.is_object()) {
+							std::string id(OSUtils::jsonString(j["id"],"0"));
+							std::string objtype(OSUtils::jsonString(j["objtype"],""));
+
+							if ((id.length() == 16)&&(objtype == "network")) {
+								const uint64_t nwid = Utils::hexStrToU64(id.c_str());
+								if (nwid)
+									_networks[nwid].config = j;
+							} else if ((id.length() == 10)&&(objtype == "member")) {
+								const uint64_t mid = Utils::hexStrToU64(id.c_str());
+								const uint64_t nwid = Utils::hexStrToU64(OSUtils::jsonString(j["nwid"],"0").c_str());
+								if ((mid)&&(nwid))
+									_networks[nwid].members[mid] = j;
+							}
 						}
 					}
-					_ready = true;
+					return true;
 				}
 			} catch ( ... ) {} // invalid JSON, so maybe incomplete request
 		}
+		return false;
 	} else {
-		_ready = true;
 		std::vector<std::string> dl(OSUtils::listDirectory(p.c_str(),true));
 		for(std::vector<std::string>::const_iterator di(dl.begin());di!=dl.end();++di) {
 			if ((di->length() > 5)&&(di->substr(di->length() - 5) == ".json")) {
-				this->get(b + di->substr(0,di->length() - 5));
+				std::string buf;
+				if (OSUtils::readFile((p + ZT_PATH_SEPARATOR_S + *di).c_str(),buf)) {
+					try {
+						nlohmann::json j(OSUtils::jsonParse(buf));
+						std::string id(OSUtils::jsonString(j["id"],"0"));
+						std::string objtype(OSUtils::jsonString(j["objtype"],""));
+
+						if ((id.length() == 16)&&(objtype == "network")) {
+							const uint64_t nwid = Utils::strToU64(id.c_str());
+							if (nwid) {
+								Mutex::Lock _l(_networks_m);
+								_networks[nwid].config = j;
+							}
+						} else if ((id.length() == 10)&&(objtype == "member")) {
+							const uint64_t mid = Utils::strToU64(id.c_str());
+							const uint64_t nwid = Utils::strToU64(OSUtils::jsonString(j["nwid"],"0").c_str());
+							if ((mid)&&(nwid)) {
+								Mutex::Lock _l(_networks_m);
+								_networks[nwid].members[mid] = j;
+							}
+						}
+					} catch ( ... ) {}
+				}
 			} else {
-				this->_reload((p + ZT_PATH_SEPARATOR + *di),(b + *di + ZT_PATH_SEPARATOR));
+				this->_load((p + ZT_PATH_SEPARATOR_S + *di));
 			}
 		}
+		return true;
 	}
+}
+
+void JSONDB::_recomputeSummaryInfo(const uint64_t networkId)
+{
+	Mutex::Lock _l(_summaryThread_m);
+	if (!_summaryThread)
+		_summaryThread = Thread::start(this);
+	_updateSummaryInfoQueue.post(networkId);
 }
 
 std::string JSONDB::_genPath(const std::string &n,bool create)

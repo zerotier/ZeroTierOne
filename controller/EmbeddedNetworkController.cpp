@@ -59,9 +59,6 @@ using json = nlohmann::json;
 // Min duration between requests for an address/nwid combo to prevent floods
 #define ZT_NETCONF_MIN_REQUEST_PERIOD 1000
 
-// Nodes are considered active if they've queried in less than this long
-#define ZT_NETCONF_NODE_ACTIVE_THRESHOLD (ZT_NETWORK_AUTOCONF_DELAY * 2)
-
 namespace ZeroTier {
 
 static json _renderRule(ZT_VirtualNetworkRule &rule)
@@ -474,9 +471,11 @@ void EmbeddedNetworkController::request(
 	{
 		Mutex::Lock _l(_threads_m);
 		if (_threads.size() == 0) {
-			long hwc = (long)std::thread::hardware_concurrency();
-			if (hwc <= 0)
+			long hwc = (long)(std::thread::hardware_concurrency() / 2);
+			if (hwc < 1)
 				hwc = 1;
+			else if (hwc > 16)
+				hwc = 16;
 			for(long i=0;i<hwc;++i)
 				_threads.push_back(Thread::start(this));
 		}
@@ -506,8 +505,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 			char nwids[24];
 			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
 
-			json network(_db.get("network",nwids));
-			if (!network.size())
+			json network;
+			if (!_db.getNetwork(nwid,network))
 				return 404;
 
 			if (path.size() >= 3) {
@@ -516,22 +515,21 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 
 					if (path.size() >= 4) {
 						const uint64_t address = Utils::hexStrToU64(path[3].c_str());
-						json member(_db.get("network",nwids,"member",Address(address).toString()));
-						if (!member.size())
+						json member;
+						if (!_db.getNetworkMember(nwid,address,member))
 							return 404;
 						_addMemberNonPersistedFields(member,OSUtils::now());
 						responseBody = OSUtils::jsonDump(member);
 						responseContentType = "application/json";
 					} else {
 						responseBody = "{";
-						_db.filter((std::string("network/") + nwids + "/member/"),[&responseBody](const std::string &n,const json &member) {
+						_db.eachMember(nwid,[&responseBody](uint64_t networkId,uint64_t nodeId,const json &member) {
 							if ((member.is_object())&&(member.size() > 0)) {
 								responseBody.append((responseBody.length() == 1) ? "\"" : ",\"");
 								responseBody.append(OSUtils::jsonString(member["id"],"0"));
 								responseBody.append("\":");
 								responseBody.append(OSUtils::jsonString(member["revision"],"0"));
 							}
-							return true; // never delete
 						});
 						responseBody.push_back('}');
 						responseContentType = "application/json";
@@ -543,9 +541,9 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 			} else {
 
 				const uint64_t now = OSUtils::now();
-				_NetworkMemberInfo nmi;
-				_getNetworkMemberInfo(now,nwid,nmi);
-				_addNetworkNonPersistedFields(network,now,nmi);
+				JSONDB::NetworkSummaryInfo ns;
+				_db.getNetworkSummaryInfo(nwid,ns);
+				_addNetworkNonPersistedFields(network,now,ns);
 				responseBody = OSUtils::jsonDump(network);
 				responseContentType = "application/json";
 				return 200;
@@ -553,21 +551,20 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 			}
 		} else if (path.size() == 1) {
 
-			std::set<std::string> networkIds;
-			_db.filter("network/",[&networkIds](const std::string &n,const json &obj) {
-				if (n.length() == (16 + 8))
-					networkIds.insert(n.substr(8));
-				return true; // do not delete
-			});
+			std::vector<uint64_t> networkIds(_db.networkIds());
+			std::sort(networkIds.begin(),networkIds.end());
 
+			char tmp[64];
 			responseBody.push_back('[');
-			for(std::set<std::string>::iterator i(networkIds.begin());i!=networkIds.end();++i) {
-				responseBody.append((responseBody.length() == 1) ? "\"" : ",\"");
-				responseBody.append(*i);
-				responseBody.append("\"");
+			for(std::vector<uint64_t>::const_iterator i(networkIds.begin());i!=networkIds.end();++i) {
+				if (responseBody.length() > 1)
+					responseBody.push_back(',');
+				Utils::snprintf(tmp,sizeof(tmp),"\"%.16llx\"",(unsigned long long)*i);
+				responseBody.append(tmp);
 			}
 			responseBody.push_back(']');
 			responseContentType = "application/json";
+
 			return 200;
 
 		} // else 404
@@ -625,7 +622,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					char addrs[24];
 					Utils::snprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)address);
 
-					json member(_db.get("network",nwids,"member",Address(address).toString()));
+					json member;
+					_db.getNetworkMember(nwid,address,member);
 					json origMember(member); // for detecting changes
 					_initMember(member);
 
@@ -649,7 +647,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 								// Member is being de-authorized, so spray Revocation objects to all online members
 								if (!newAuth) {
-									_clearNetworkMemberInfoCache(nwid);
 									Revocation rev((uint32_t)_node->prng(),nwid,0,now,ZT_REVOCATION_FLAG_FAST_PROPAGATE,Address(address),Revocation::CREDENTIAL_TYPE_COM);
 									rev.sign(_signingId);
 									Mutex::Lock _l(_lastRequestTime_m);
@@ -722,7 +719,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						member["lastModified"] = now;
 						json &revj = member["revision"];
 						member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-						_db.put("network",nwids,"member",Address(address).toString(),member);
+						_db.saveNetworkMember(nwid,address,member);
 						_pushMemberUpdate(now,nwid,member);
 					}
 
@@ -799,8 +796,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						Utils::getSecureRandom(&nwidPostfix,sizeof(nwidPostfix));
 						uint64_t tryNwid = nwidPrefix | (nwidPostfix & 0xffffffULL);
 						if ((tryNwid & 0xffffffULL) == 0ULL) tryNwid |= 1ULL;
-						Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)tryNwid);
-						if (_db.get("network",nwids).size() <= 0) {
+						if (!_db.hasNetwork(tryNwid)) {
 							nwid = tryNwid;
 							break;
 						}
@@ -808,8 +804,10 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					if (!nwid)
 						return 503;
 				}
-				json network(_db.get("network",nwids));
+				Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
 
+				json network;
+				_db.getNetwork(nwid,network);
 				json origNetwork(network); // for detecting changes
 				_initNetwork(network);
 
@@ -1023,18 +1021,17 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					json &revj = network["revision"];
 					network["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 					network["lastModified"] = now;
-					_db.put("network",nwids,network);
+					_db.saveNetwork(nwid,network);
 
 					// Send an update to all members of the network
-					_db.filter((std::string("network/") + nwids + "/member/"),[this,&now,&nwid](const std::string &n,const json &obj) {
-						_pushMemberUpdate(now,nwid,obj);
-						return true; // do not delete
+					_db.eachMember(nwid,[this,&now,&nwid](uint64_t networkId,uint64_t nodeId,const json &obj) {
+						this->_pushMemberUpdate(now,nwid,obj);
 					});
 				}
 
-				_NetworkMemberInfo nmi;
-				_getNetworkMemberInfo(now,nwid,nmi);
-				_addNetworkNonPersistedFields(network,now,nmi);
+				JSONDB::NetworkSummaryInfo ns;
+				_db.getNetworkSummaryInfo(nwid,ns);
+				_addNetworkNonPersistedFields(network,now,ns);
 
 				responseBody = OSUtils::jsonDump(network);
 				responseContentType = "application/json";
@@ -1074,20 +1071,11 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 	if (path[0] == "network") {
 		if ((path.size() >= 2)&&(path[1].length() == 16)) {
 			const uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
-
-			char nwids[24];
-			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",nwid);
-			json network(_db.get("network",nwids));
-			if (!network.size())
-				return 404;
-
 			if (path.size() >= 3) {
 				if ((path.size() == 4)&&(path[2] == "member")&&(path[3].length() == 10)) {
 					const uint64_t address = Utils::hexStrToU64(path[3].c_str());
 
-					json member = _db.get("network",nwids,"member",Address(address).toString());
-					_db.erase("network",nwids,"member",Address(address).toString());
-
+					json member = _db.eraseNetworkMember(nwid,address);
 					if (!member.size())
 						return 404;
 					responseBody = OSUtils::jsonDump(member);
@@ -1095,15 +1083,9 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 					return 200;
 				}
 			} else {
-				std::string pfx("network/");
-				pfx.append(nwids);
-				_db.filter(pfx,[](const std::string &n,const json &obj) {
-					return false; // delete
-				});
-
-				Mutex::Lock _l2(_nmiCache_m);
-				_nmiCache.erase(nwid);
-
+				json network = _db.eraseNetwork(nwid);
+				if (!network.size())
+					return 404;
 				responseBody = OSUtils::jsonDump(network);
 				responseContentType = "application/json";
 				return 200;
@@ -1143,7 +1125,7 @@ void EmbeddedNetworkController::threadMain()
 
 void EmbeddedNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report)
 {
-	char tmp[1024],id[128];
+	char tmp[2048],id[128];
 	EmbeddedNetworkController *const self = reinterpret_cast<EmbeddedNetworkController *>(test->ptr);
 
 	if ((!test)||(!report)||(!test->credentialNetworkId)) return; // sanity check
@@ -1152,6 +1134,7 @@ void EmbeddedNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTes
 	Utils::snprintf(id,sizeof(id),"network/%.16llx/test/%.16llx-%.16llx-%.10llx-%.10llx",test->credentialNetworkId,test->testId,now,report->upstream,report->current);
 	Utils::snprintf(tmp,sizeof(tmp),
 		"{\"id\": \"%s\","
+		"\"objtype\": \"circuit_test\","
 		"\"timestamp\": %llu,"
 		"\"networkId\": \"%.16llx\","
 		"\"testId\": \"%.16llx\","
@@ -1219,16 +1202,14 @@ void EmbeddedNetworkController::_request(
 
 	char nwids[24];
 	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",nwid);
-	json network(_db.get("network",nwids));
-	json member(_db.get("network",nwids,"member",identity.address().toString()));
-
-	if (!network.size()) {
+	json network,member;
+	JSONDB::NetworkSummaryInfo ns;
+	if (!_db.getNetworkAndMember(nwid,identity.address().toInt(),network,member,ns)) {
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
 		return;
 	}
 
 	const bool newMember = (member.size() == 0);
-
 	json origMember(member); // for detecting modification later
 	_initMember(member);
 
@@ -1365,7 +1346,7 @@ void EmbeddedNetworkController::_request(
 	if (!authorizedBy) {
 		if (origMember != member) {
 			member["lastModified"] = now;
-			_db.put("network",nwids,"member",identity.address().toString(),member);
+			_db.saveNetworkMember(nwid,identity.address().toInt(),member);
 		}
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
 		return;
@@ -1376,15 +1357,13 @@ void EmbeddedNetworkController::_request(
 	// -------------------------------------------------------------------------
 
 	NetworkConfig nc;
-	_NetworkMemberInfo nmi;
-	_getNetworkMemberInfo(now,nwid,nmi);
 
 	uint64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
-	if (now > nmi.mostRecentDeauthTime) {
+	if (now > ns.mostRecentDeauthTime) {
 		// If we recently de-authorized a member, shrink credential TTL/max delta to
 		// be below the threshold required to exclude it. Cap this to a min/max to
 		// prevent jitter or absurdly large values.
-		const uint64_t deauthWindow = now - nmi.mostRecentDeauthTime;
+		const uint64_t deauthWindow = now - ns.mostRecentDeauthTime;
 		if (deauthWindow < ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA) {
 			credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA;
 		} else if (deauthWindow < (ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA + 5000ULL)) {
@@ -1403,9 +1382,8 @@ void EmbeddedNetworkController::_request(
 	Utils::scopy(nc.name,sizeof(nc.name),OSUtils::jsonString(network["name"],"").c_str());
 	nc.multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
 
-	for(std::set<Address>::const_iterator ab(nmi.activeBridges.begin());ab!=nmi.activeBridges.end();++ab) {
+	for(std::vector<Address>::const_iterator ab(ns.activeBridges.begin());ab!=ns.activeBridges.end();++ab)
 		nc.addSpecialist(*ab,ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
-	}
 
 	json &v4AssignMode = network["v4AssignMode"];
 	json &v6AssignMode = network["v6AssignMode"];
@@ -1629,14 +1607,13 @@ void EmbeddedNetworkController::_request(
 						}
 
 						// If it's routed, then try to claim and assign it and if successful end loop
-						if ((routedNetmaskBits > 0)&&(!nmi.allocatedIps.count(ip6))) {
+						if ( (routedNetmaskBits > 0) && (!std::binary_search(ns.allocatedIps.begin(),ns.allocatedIps.end(),ip6)) ) {
 							ipAssignments.push_back(ip6.toIpString());
 							member["ipAssignments"] = ipAssignments;
 							ip6.setPort((unsigned int)routedNetmaskBits);
 							if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)
 								nc.staticIps[nc.staticIpCount++] = ip6;
 							haveManagedIpv6AutoAssignment = true;
-							_clearNetworkMemberInfoCache(nwid); // clear cache to prevent IP assignment duplication on many rapid assigns
 							break;
 						}
 					}
@@ -1682,7 +1659,7 @@ void EmbeddedNetworkController::_request(
 
 						// If it's routed, then try to claim and assign it and if successful end loop
 						const InetAddress ip4(Utils::hton(ip),0);
-						if ((routedNetmaskBits > 0)&&(!nmi.allocatedIps.count(ip4))) {
+						if ( (routedNetmaskBits > 0) && (!std::binary_search(ns.allocatedIps.begin(),ns.allocatedIps.end(),ip4)) ) {
 							ipAssignments.push_back(ip4.toIpString());
 							member["ipAssignments"] = ipAssignments;
 							if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
@@ -1692,7 +1669,6 @@ void EmbeddedNetworkController::_request(
 								v4ip->sin_addr.s_addr = Utils::hton(ip);
 							}
 							haveManagedIpv4AutoAssignment = true;
-							_clearNetworkMemberInfoCache(nwid); // clear cache to prevent IP assignment duplication on many rapid assigns
 							break;
 						}
 					}
@@ -1720,63 +1696,10 @@ void EmbeddedNetworkController::_request(
 
 	if (member != origMember) {
 		member["lastModified"] = now;
-		_db.put("network",nwids,"member",identity.address().toString(),member);
+		_db.saveNetworkMember(nwid,identity.address().toInt(),member);
 	}
 
 	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),nc,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
-}
-
-void EmbeddedNetworkController::_getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi)
-{
-	char pfx[256];
-	Utils::snprintf(pfx,sizeof(pfx),"network/%.16llx/member",nwid);
-
-	Mutex::Lock _l(_nmiCache_m);
-	std::map<uint64_t,_NetworkMemberInfo>::iterator c(_nmiCache.find(nwid));
-	if ((c != _nmiCache.end())&&((now - c->second.nmiTimestamp) < 1000)) { // a short duration cache but limits CPU use on big networks
-		nmi = c->second;
-		return;
-	}
-
-	_db.filter(pfx,[&nmi,&now](const std::string &n,const json &member) {
-		try {
-			if (OSUtils::jsonBool(member["authorized"],false)) {
-				++nmi.authorizedMemberCount;
-
-				if (member.count("recentLog")) {
-					const json &mlog = member["recentLog"];
-					if ((mlog.is_array())&&(mlog.size() > 0)) {
-						const json &mlog1 = mlog[0];
-						if (mlog1.is_object()) {
-							if ((now - OSUtils::jsonInt(mlog1["ts"],0ULL)) < ZT_NETCONF_NODE_ACTIVE_THRESHOLD)
-								++nmi.activeMemberCount;
-						}
-					}
-				}
-
-				if (OSUtils::jsonBool(member["activeBridge"],false)) {
-					nmi.activeBridges.insert(Address(Utils::hexStrToU64(OSUtils::jsonString(member["id"],"0000000000").c_str())));
-				}
-
-				if (member.count("ipAssignments")) {
-					const json &mips = member["ipAssignments"];
-					if (mips.is_array()) {
-						for(unsigned long i=0;i<mips.size();++i) {
-							InetAddress mip(OSUtils::jsonString(mips[i],""));
-							if ((mip.ss_family == AF_INET)||(mip.ss_family == AF_INET6))
-								nmi.allocatedIps.insert(mip);
-						}
-					}
-				}
-			} else {
-				nmi.mostRecentDeauthTime = std::max(nmi.mostRecentDeauthTime,OSUtils::jsonInt(member["lastDeauthorizedTime"],0ULL));
-			}
-		} catch ( ... ) {}
-		return true;
-	});
-	nmi.nmiTimestamp = now;
-
-	_nmiCache[nwid] = nmi;
 }
 
 void EmbeddedNetworkController::_pushMemberUpdate(uint64_t now,uint64_t nwid,const nlohmann::json &member)

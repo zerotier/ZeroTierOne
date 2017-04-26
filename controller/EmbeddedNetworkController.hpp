@@ -104,23 +104,8 @@ private:
 		Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> metaData;
 	};
 
-	// Gathers a bunch of statistics about members of a network, IP assignments, etc. that we need in various places
-	struct _NetworkMemberInfo
-	{
-		_NetworkMemberInfo() : authorizedMemberCount(0),activeMemberCount(0),totalMemberCount(0),mostRecentDeauthTime(0) {}
-		std::set<Address> activeBridges;
-		std::set<InetAddress> allocatedIps;
-		unsigned long authorizedMemberCount;
-		unsigned long activeMemberCount;
-		unsigned long totalMemberCount;
-		uint64_t mostRecentDeauthTime;
-		uint64_t nmiTimestamp; // time this NMI structure was computed
-	};
-
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
 	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
-	void _getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi);
-	inline void _clearNetworkMemberInfoCache(const uint64_t nwid) { Mutex::Lock _l(_nmiCache_m); _nmiCache.erase(nwid); }
 	void _pushMemberUpdate(uint64_t now,uint64_t nwid,const nlohmann::json &member);
 
 	// These init objects with default and static/informational fields
@@ -164,12 +149,12 @@ private:
 		}
 		network["objtype"] = "network";
 	}
-	inline void _addNetworkNonPersistedFields(nlohmann::json &network,uint64_t now,const _NetworkMemberInfo &nmi)
+	inline void _addNetworkNonPersistedFields(nlohmann::json &network,uint64_t now,const JSONDB::NetworkSummaryInfo &ns)
 	{
 		network["clock"] = now;
-		network["authorizedMemberCount"] = nmi.authorizedMemberCount;
-		network["activeMemberCount"] = nmi.activeMemberCount;
-		network["totalMemberCount"] = nmi.totalMemberCount;
+		network["authorizedMemberCount"] = ns.authorizedMemberCount;
+		network["activeMemberCount"] = ns.activeMemberCount;
+		network["totalMemberCount"] = ns.totalMemberCount;
 	}
 	inline void _addMemberNonPersistedFields(nlohmann::json &member,uint64_t now)
 	{
@@ -182,9 +167,6 @@ private:
 	BlockingQueue<_RQEntry *> _queue;
 	std::vector<Thread> _threads;
 	Mutex _threads_m;
-
-	std::map<uint64_t,_NetworkMemberInfo> _nmiCache;
-	Mutex _nmiCache_m;
 
 	JSONDB _db;
 
