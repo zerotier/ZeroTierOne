@@ -26,7 +26,8 @@ static const nlohmann::json _EMPTY_JSON(nlohmann::json::object());
 static const std::map<std::string,std::string> _ZT_JSONDB_GET_HEADERS;
 
 JSONDB::JSONDB(const std::string &basePath) :
-	_basePath(basePath)
+	_basePath(basePath),
+	_summaryThreadRun(true)
 {
 	if ((_basePath.length() > 7)&&(_basePath.substr(0,7) == "http://")) {
 		// TODO: this doesn't yet support IPv6 since bracketed address notiation isn't supported.
@@ -67,14 +68,14 @@ JSONDB::~JSONDB()
 		Mutex::Lock _l(_networks_m);
 		_networks.clear();
 	}
+	Thread t;
 	{
 		Mutex::Lock _l(_summaryThread_m);
-		if (_summaryThread) {
-			_updateSummaryInfoQueue.post(0);
-			_updateSummaryInfoQueue.post(0);
-			Thread::join(_summaryThread);
-		}
+		_summaryThreadRun = false;
+		t = _summaryThread;
 	}
+	if (t)
+		Thread::join(t);
 }
 
 bool JSONDB::writeRaw(const std::string &n,const std::string &obj)
@@ -197,10 +198,21 @@ nlohmann::json JSONDB::eraseNetworkMember(const uint64_t networkId,const uint64_
 void JSONDB::threadMain()
 	throw()
 {
-	uint64_t networkId = 0;
-	while ((networkId = _updateSummaryInfoQueue.get()) != 0) {
-		const uint64_t now = OSUtils::now();
+	std::vector<uint64_t> todo;
+	while (_summaryThreadRun) {
+		Thread::sleep(10);
+
 		{
+			Mutex::Lock _l(_summaryThread_m);
+			if (_summaryThreadToDo.empty())
+				continue;
+			else _summaryThreadToDo.swap(todo);
+		}
+
+		const uint64_t now = OSUtils::now();
+		for(std::vector<uint64_t>::iterator ii(todo.begin());ii!=todo.end();++ii) {
+			const uint64_t networkId = *ii;
+
 			Mutex::Lock _l(_networks_m);
 			std::unordered_map<uint64_t,_NW>::iterator n(_networks.find(networkId));
 			if (n != _networks.end()) {
@@ -258,6 +270,8 @@ void JSONDB::threadMain()
 				n->second.summaryInfoLastComputed = now;
 			}
 		}
+
+		todo.clear();
 	}
 }
 
@@ -334,9 +348,10 @@ bool JSONDB::_load(const std::string &p)
 void JSONDB::_recomputeSummaryInfo(const uint64_t networkId)
 {
 	Mutex::Lock _l(_summaryThread_m);
+	if (std::find(_summaryThreadToDo.begin(),_summaryThreadToDo.end(),networkId) == _summaryThreadToDo.end())
+		_summaryThreadToDo.push_back(networkId);
 	if (!_summaryThread)
 		_summaryThread = Thread::start(this);
-	_updateSummaryInfoQueue.post(networkId);
 }
 
 std::string JSONDB::_genPath(const std::string &n,bool create)

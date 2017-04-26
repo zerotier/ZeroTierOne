@@ -38,7 +38,6 @@
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Http.hpp"
 #include "../osdep/Thread.hpp"
-#include "../osdep/BlockingQueue.hpp"
 
 namespace ZeroTier {
 
@@ -171,9 +170,9 @@ private:
 	std::string _basePath;
 	InetAddress _httpAddr;
 
-	BlockingQueue<uint64_t> _updateSummaryInfoQueue;
-
 	Thread _summaryThread;
+	std::vector<uint64_t> _summaryThreadToDo;
+	volatile bool _summaryThreadRun;
 	Mutex _summaryThread_m;
 
 	struct _NW
