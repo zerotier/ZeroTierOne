@@ -34,6 +34,7 @@
 #include "../node/Utils.hpp"
 #include "../node/Address.hpp"
 #include "../node/InetAddress.hpp"
+#include "../node/NonCopyable.hpp"
 
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Thread.hpp"
@@ -50,7 +51,7 @@ namespace ZeroTier {
 
 class Node;
 
-class EmbeddedNetworkController : public NetworkController
+class EmbeddedNetworkController : public NetworkController,NonCopyable
 {
 public:
 	/**

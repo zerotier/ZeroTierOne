@@ -72,6 +72,8 @@ public:
 		_thingCount(0),
 		_issuedTo(issuedTo)
 	{
+		memset(_thingTypes,0,sizeof(_thingTypes));
+		memset(_thingValues,0,sizeof(_thingValues));
 	}
 
 	inline uint64_t networkId() const { return _networkId; }

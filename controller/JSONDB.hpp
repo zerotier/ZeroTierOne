@@ -63,63 +63,18 @@ public:
 
 	bool writeRaw(const std::string &n,const std::string &obj);
 
-	inline bool hasNetwork(const uint64_t networkId) const
-	{
-		Mutex::Lock _l(_networks_m);
-		std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
-		return (i != _networks.end());
-	}
+	bool hasNetwork(const uint64_t networkId) const;
 
-	inline bool getNetwork(const uint64_t networkId,nlohmann::json &config) const
-	{
-		Mutex::Lock _l(_networks_m);
-		std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
-		if (i == _networks.end())
-			return false;
-		config = i->second.config;
-		return true;
-	}
+	bool getNetwork(const uint64_t networkId,nlohmann::json &config) const;
 
-	inline bool getNetworkSummaryInfo(const uint64_t networkId,NetworkSummaryInfo &ns) const
-	{
-		Mutex::Lock _l(_networks_m);
-		std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
-		if (i == _networks.end())
-			return false;
-		ns = i->second.summaryInfo;
-		return true;
-	}
+	bool getNetworkSummaryInfo(const uint64_t networkId,NetworkSummaryInfo &ns) const;
 
 	/**
 	 * @return Bit mask: 0 == none, 1 == network only, 3 == network and member
 	 */
-	inline int getNetworkAndMember(const uint64_t networkId,const uint64_t nodeId,nlohmann::json &networkConfig,nlohmann::json &memberConfig,NetworkSummaryInfo &ns) const
-	{
-		Mutex::Lock _l(_networks_m);
-		std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
-		if (i == _networks.end())
-			return 0;
-		networkConfig = i->second.config;
-		ns = i->second.summaryInfo;
-		std::unordered_map<uint64_t,nlohmann::json>::const_iterator j(i->second.members.find(nodeId));
-		if (j == i->second.members.end())
-			return 1;
-		memberConfig = j->second;
-		return 3;
-	}
+	int getNetworkAndMember(const uint64_t networkId,const uint64_t nodeId,nlohmann::json &networkConfig,nlohmann::json &memberConfig,NetworkSummaryInfo &ns) const;
 
-	inline bool getNetworkMember(const uint64_t networkId,const uint64_t nodeId,nlohmann::json &memberConfig) const
-	{
-		Mutex::Lock _l(_networks_m);
-		std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
-		if (i == _networks.end())
-			return false;
-		std::unordered_map<uint64_t,nlohmann::json>::const_iterator j(i->second.members.find(nodeId));
-		if (j == i->second.members.end())
-			return false;
-		memberConfig = j->second;
-		return true;
-	}
+	bool getNetworkMember(const uint64_t networkId,const uint64_t nodeId,nlohmann::json &memberConfig) const;
 
 	void saveNetwork(const uint64_t networkId,const nlohmann::json &networkConfig);
 

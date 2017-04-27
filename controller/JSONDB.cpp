@@ -107,9 +107,64 @@ bool JSONDB::writeRaw(const std::string &n,const std::string &obj)
 	}
 }
 
+bool JSONDB::hasNetwork(const uint64_t networkId) const
+{
+	Mutex::Lock _l(_networks_m);
+	std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
+	return (i != _networks.end());
+}
+
+bool JSONDB::getNetwork(const uint64_t networkId,nlohmann::json &config) const
+{
+	Mutex::Lock _l(_networks_m);
+	std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
+	if (i == _networks.end())
+		return false;
+	config = i->second.config;
+	return true;
+}
+
+bool JSONDB::getNetworkSummaryInfo(const uint64_t networkId,NetworkSummaryInfo &ns) const
+{
+	Mutex::Lock _l(_networks_m);
+	std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
+	if (i == _networks.end())
+		return false;
+	ns = i->second.summaryInfo;
+	return true;
+}
+
+int JSONDB::getNetworkAndMember(const uint64_t networkId,const uint64_t nodeId,nlohmann::json &networkConfig,nlohmann::json &memberConfig,NetworkSummaryInfo &ns) const
+{
+	Mutex::Lock _l(_networks_m);
+	std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
+	if (i == _networks.end())
+		return 0;
+	std::unordered_map<uint64_t,nlohmann::json>::const_iterator j(i->second.members.find(nodeId));
+	if (j == i->second.members.end())
+		return 1;
+	networkConfig = i->second.config;
+	memberConfig = j->second;
+	ns = i->second.summaryInfo;
+	return 3;
+}
+
+bool JSONDB::getNetworkMember(const uint64_t networkId,const uint64_t nodeId,nlohmann::json &memberConfig) const
+{
+	Mutex::Lock _l(_networks_m);
+	std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
+	if (i == _networks.end())
+		return false;
+	std::unordered_map<uint64_t,nlohmann::json>::const_iterator j(i->second.members.find(nodeId));
+	if (j == i->second.members.end())
+		return false;
+	memberConfig = j->second;
+	return true;
+}
+
 void JSONDB::saveNetwork(const uint64_t networkId,const nlohmann::json &networkConfig)
 {
-	char n[256];
+	char n[64];
 	Utils::snprintf(n,sizeof(n),"network/%.16llx",(unsigned long long)networkId);
 	writeRaw(n,OSUtils::jsonDump(networkConfig));
 	{

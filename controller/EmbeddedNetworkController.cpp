@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2015  ZeroTier, Inc.
+ * Copyright (C) 2011-2015  ZeroTier, Inc->
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,9 +30,9 @@
 #include <algorithm>
 #include <utility>
 #include <stdexcept>
-#include <set>
 #include <map>
 #include <thread>
+#include <memory>
 
 #include "../include/ZeroTierOne.h"
 #include "../node/Constants.hpp"
@@ -1017,7 +1017,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 				network["id"] = nwids;
 				network["nwid"] = nwids; // legacy
 
-				if (network != origNetwork) {
+				if (true) {
 					json &revj = network["revision"];
 					network["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 					network["lastModified"] = now;
@@ -1235,8 +1235,9 @@ void EmbeddedNetworkController::_request(
 	}
 
 	// These are always the same, but make sure they are set
-	member["id"] = identity.address().toString();
-	member["address"] = member["id"];
+	const std::string addrs(identity.address().toString());
+	member["id"] = addrs;
+	member["address"] = addrs;
 	member["nwid"] = nwids;
 
 	// Determine whether and how member is authorized
@@ -1356,8 +1357,6 @@ void EmbeddedNetworkController::_request(
 	// If we made it this far, they are authorized.
 	// -------------------------------------------------------------------------
 
-	NetworkConfig nc;
-
 	uint64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
 	if (now > ns.mostRecentDeauthTime) {
 		// If we recently de-authorized a member, shrink credential TTL/max delta to
@@ -1371,19 +1370,21 @@ void EmbeddedNetworkController::_request(
 		}
 	}
 
-	nc.networkId = nwid;
-	nc.type = OSUtils::jsonBool(network["private"],true) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
-	nc.timestamp = now;
-	nc.credentialTimeMaxDelta = credentialtmd;
-	nc.revision = OSUtils::jsonInt(network["revision"],0ULL);
-	nc.issuedTo = identity.address();
-	if (OSUtils::jsonBool(network["enableBroadcast"],true)) nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
-	if (OSUtils::jsonBool(network["allowPassiveBridging"],false)) nc.flags |= ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING;
-	Utils::scopy(nc.name,sizeof(nc.name),OSUtils::jsonString(network["name"],"").c_str());
-	nc.multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
+	std::auto_ptr<NetworkConfig> nc(new NetworkConfig());
+
+	nc->networkId = nwid;
+	nc->type = OSUtils::jsonBool(network["private"],true) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
+	nc->timestamp = now;
+	nc->credentialTimeMaxDelta = credentialtmd;
+	nc->revision = OSUtils::jsonInt(network["revision"],0ULL);
+	nc->issuedTo = identity.address();
+	if (OSUtils::jsonBool(network["enableBroadcast"],true)) nc->flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
+	if (OSUtils::jsonBool(network["allowPassiveBridging"],false)) nc->flags |= ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING;
+	Utils::scopy(nc->name,sizeof(nc->name),OSUtils::jsonString(network["name"],"").c_str());
+	nc->multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
 
 	for(std::vector<Address>::const_iterator ab(ns.activeBridges.begin());ab!=ns.activeBridges.end();++ab)
-		nc.addSpecialist(*ab,ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
+		nc->addSpecialist(*ab,ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
 
 	json &v4AssignMode = network["v4AssignMode"];
 	json &v6AssignMode = network["v6AssignMode"];
@@ -1399,15 +1400,15 @@ void EmbeddedNetworkController::_request(
 		// Old versions with no rules engine support get an allow everything rule.
 		// Since rules are enforced bidirectionally, newer versions *will* still
 		// enforce rules on the inbound side.
-		nc.ruleCount = 1;
-		nc.rules[0].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
+		nc->ruleCount = 1;
+		nc->rules[0].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
 	} else {
 		if (rules.is_array()) {
 			for(unsigned long i=0;i<rules.size();++i) {
-				if (nc.ruleCount >= ZT_MAX_NETWORK_RULES)
+				if (nc->ruleCount >= ZT_MAX_NETWORK_RULES)
 					break;
-				if (_parseRule(rules[i],nc.rules[nc.ruleCount]))
-					++nc.ruleCount;
+				if (_parseRule(rules[i],nc->rules[nc->ruleCount]))
+					++nc->ruleCount;
 			}
 		}
 
@@ -1451,10 +1452,10 @@ void EmbeddedNetworkController::_request(
 								++caprc;
 						}
 					}
-					nc.capabilities[nc.capabilityCount] = Capability((uint32_t)capId,nwid,now,1,capr,caprc);
-					if (nc.capabilities[nc.capabilityCount].sign(_signingId,identity.address()))
-						++nc.capabilityCount;
-					if (nc.capabilityCount >= ZT_MAX_NETWORK_CAPABILITIES)
+					nc->capabilities[nc->capabilityCount] = Capability((uint32_t)capId,nwid,now,1,capr,caprc);
+					if (nc->capabilities[nc->capabilityCount].sign(_signingId,identity.address()))
+						++nc->capabilityCount;
+					if (nc->capabilityCount >= ZT_MAX_NETWORK_CAPABILITIES)
 						break;
 				}
 			}
@@ -1485,17 +1486,17 @@ void EmbeddedNetworkController::_request(
 			}
 		}
 		for(std::map< uint32_t,uint32_t >::const_iterator t(memberTagsById.begin());t!=memberTagsById.end();++t) {
-			if (nc.tagCount >= ZT_MAX_NETWORK_TAGS)
+			if (nc->tagCount >= ZT_MAX_NETWORK_TAGS)
 				break;
-			nc.tags[nc.tagCount] = Tag(nwid,now,identity.address(),t->first,t->second);
-			if (nc.tags[nc.tagCount].sign(_signingId))
-				++nc.tagCount;
+			nc->tags[nc->tagCount] = Tag(nwid,now,identity.address(),t->first,t->second);
+			if (nc->tags[nc->tagCount].sign(_signingId))
+				++nc->tagCount;
 		}
 	}
 
 	if (routes.is_array()) {
 		for(unsigned long i=0;i<routes.size();++i) {
-			if (nc.routeCount >= ZT_MAX_NETWORK_ROUTES)
+			if (nc->routeCount >= ZT_MAX_NETWORK_ROUTES)
 				break;
 			json &route = routes[i];
 			json &target = route["target"];
@@ -1505,11 +1506,11 @@ void EmbeddedNetworkController::_request(
 				InetAddress v;
 				if (via.is_string()) v.fromString(via.get<std::string>());
 				if ((t.ss_family == AF_INET)||(t.ss_family == AF_INET6)) {
-					ZT_VirtualNetworkRoute *r = &(nc.routes[nc.routeCount]);
+					ZT_VirtualNetworkRoute *r = &(nc->routes[nc->routeCount]);
 					*(reinterpret_cast<InetAddress *>(&(r->target))) = t;
 					if (v.ss_family == t.ss_family)
 						*(reinterpret_cast<InetAddress *>(&(r->via))) = v;
-					++nc.routeCount;
+					++nc->routeCount;
 				}
 			}
 		}
@@ -1518,13 +1519,13 @@ void EmbeddedNetworkController::_request(
 	const bool noAutoAssignIps = OSUtils::jsonBool(member["noAutoAssignIps"],false);
 
 	if ((v6AssignMode.is_object())&&(!noAutoAssignIps)) {
-		if ((OSUtils::jsonBool(v6AssignMode["rfc4193"],false))&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
-			nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt());
-			nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
+		if ((OSUtils::jsonBool(v6AssignMode["rfc4193"],false))&&(nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
+			nc->staticIps[nc->staticIpCount++] = InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt());
+			nc->flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
 		}
-		if ((OSUtils::jsonBool(v6AssignMode["6plane"],false))&&(nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
-			nc.staticIps[nc.staticIpCount++] = InetAddress::makeIpv66plane(nwid,identity.address().toInt());
-			nc.flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
+		if ((OSUtils::jsonBool(v6AssignMode["6plane"],false))&&(nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
+			nc->staticIps[nc->staticIpCount++] = InetAddress::makeIpv66plane(nwid,identity.address().toInt());
+			nc->flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
 		}
 	}
 
@@ -1542,15 +1543,15 @@ void EmbeddedNetworkController::_request(
 			// this route, ignoring the netmask bits field of the assigned IP itself. Using that was worthless and a source
 			// of user error / poor UX.
 			int routedNetmaskBits = 0;
-			for(unsigned int rk=0;rk<nc.routeCount;++rk) {
-				if ( (!nc.routes[rk].via.ss_family) && (reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->containsAddress(ip)) )
-					routedNetmaskBits = reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->netmaskBits();
+			for(unsigned int rk=0;rk<nc->routeCount;++rk) {
+				if ( (!nc->routes[rk].via.ss_family) && (reinterpret_cast<const InetAddress *>(&(nc->routes[rk].target))->containsAddress(ip)) )
+					routedNetmaskBits = reinterpret_cast<const InetAddress *>(&(nc->routes[rk].target))->netmaskBits();
 			}
 
 			if (routedNetmaskBits > 0) {
-				if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
+				if (nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
 					ip.setPort(routedNetmaskBits);
-					nc.staticIps[nc.staticIpCount++] = ip;
+					nc->staticIps[nc->staticIpCount++] = ip;
 				}
 				if (ip.ss_family == AF_INET)
 					haveManagedIpv4AutoAssignment = true;
@@ -1601,9 +1602,9 @@ void EmbeddedNetworkController::_request(
 
 						// Check if this IP is within a local-to-Ethernet routed network
 						int routedNetmaskBits = 0;
-						for(unsigned int rk=0;rk<nc.routeCount;++rk) {
-							if ( (!nc.routes[rk].via.ss_family) && (nc.routes[rk].target.ss_family == AF_INET6) && (reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->containsAddress(ip6)) )
-								routedNetmaskBits = reinterpret_cast<const InetAddress *>(&(nc.routes[rk].target))->netmaskBits();
+						for(unsigned int rk=0;rk<nc->routeCount;++rk) {
+							if ( (!nc->routes[rk].via.ss_family) && (nc->routes[rk].target.ss_family == AF_INET6) && (reinterpret_cast<const InetAddress *>(&(nc->routes[rk].target))->containsAddress(ip6)) )
+								routedNetmaskBits = reinterpret_cast<const InetAddress *>(&(nc->routes[rk].target))->netmaskBits();
 						}
 
 						// If it's routed, then try to claim and assign it and if successful end loop
@@ -1611,8 +1612,8 @@ void EmbeddedNetworkController::_request(
 							ipAssignments.push_back(ip6.toIpString());
 							member["ipAssignments"] = ipAssignments;
 							ip6.setPort((unsigned int)routedNetmaskBits);
-							if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)
-								nc.staticIps[nc.staticIpCount++] = ip6;
+							if (nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)
+								nc->staticIps[nc->staticIpCount++] = ip6;
 							haveManagedIpv6AutoAssignment = true;
 							break;
 						}
@@ -1646,10 +1647,10 @@ void EmbeddedNetworkController::_request(
 
 						// Check if this IP is within a local-to-Ethernet routed network
 						int routedNetmaskBits = -1;
-						for(unsigned int rk=0;rk<nc.routeCount;++rk) {
-							if (nc.routes[rk].target.ss_family == AF_INET) {
-								uint32_t targetIp = Utils::ntoh((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc.routes[rk].target))->sin_addr.s_addr));
-								int targetBits = Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc.routes[rk].target))->sin_port));
+						for(unsigned int rk=0;rk<nc->routeCount;++rk) {
+							if (nc->routes[rk].target.ss_family == AF_INET) {
+								uint32_t targetIp = Utils::ntoh((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc->routes[rk].target))->sin_addr.s_addr));
+								int targetBits = Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in *>(&(nc->routes[rk].target))->sin_port));
 								if ((ip & (0xffffffff << (32 - targetBits))) == targetIp) {
 									routedNetmaskBits = targetBits;
 									break;
@@ -1662,8 +1663,8 @@ void EmbeddedNetworkController::_request(
 						if ( (routedNetmaskBits > 0) && (!std::binary_search(ns.allocatedIps.begin(),ns.allocatedIps.end(),ip4)) ) {
 							ipAssignments.push_back(ip4.toIpString());
 							member["ipAssignments"] = ipAssignments;
-							if (nc.staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
-								struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc.staticIps[nc.staticIpCount++]));
+							if (nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
+								struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc->staticIps[nc->staticIpCount++]));
 								v4ip->sin_family = AF_INET;
 								v4ip->sin_port = Utils::hton((uint16_t)routedNetmaskBits);
 								v4ip->sin_addr.s_addr = Utils::hton(ip);
@@ -1678,17 +1679,17 @@ void EmbeddedNetworkController::_request(
 	}
 
 	// Issue a certificate of ownership for all static IPs
-	if (nc.staticIpCount) {
-		nc.certificatesOfOwnership[0] = CertificateOfOwnership(nwid,now,identity.address(),1);
-		for(unsigned int i=0;i<nc.staticIpCount;++i)
-			nc.certificatesOfOwnership[0].addThing(nc.staticIps[i]);
-		nc.certificatesOfOwnership[0].sign(_signingId);
-		nc.certificateOfOwnershipCount = 1;
+	if (nc->staticIpCount) {
+		nc->certificatesOfOwnership[0] = CertificateOfOwnership(nwid,now,identity.address(),1);
+		for(unsigned int i=0;i<nc->staticIpCount;++i)
+			nc->certificatesOfOwnership[0].addThing(nc->staticIps[i]);
+		nc->certificatesOfOwnership[0].sign(_signingId);
+		nc->certificateOfOwnershipCount = 1;
 	}
 
 	CertificateOfMembership com(now,credentialtmd,nwid,identity.address());
 	if (com.sign(_signingId)) {
-		nc.com = com;
+		nc->com = com;
 	} else {
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR);
 		return;
@@ -1699,7 +1700,7 @@ void EmbeddedNetworkController::_request(
 		_db.saveNetworkMember(nwid,identity.address().toInt(),member);
 	}
 
-	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),nc,metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
+	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),*(nc.get()),metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
 }
 
 void EmbeddedNetworkController::_pushMemberUpdate(uint64_t now,uint64_t nwid,const nlohmann::json &member)
@@ -1716,11 +1717,10 @@ void EmbeddedNetworkController::_pushMemberUpdate(uint64_t now,uint64_t nwid,con
 				online = ( (lrt != _lastRequestTime.end()) && ((now - lrt->second) < ZT_NETWORK_AUTOCONF_DELAY) );
 			}
 			if (online) {
-				Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> *metaData = new Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY>(mdstr.c_str());
+				Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> metaData(mdstr.c_str());
 				try {
-					this->request(nwid,InetAddress(),0,id,*metaData);
+					this->request(nwid,InetAddress(),0,id,metaData);
 				} catch ( ... ) {}
-				delete metaData;
 			}
 		}
 	} catch ( ... ) {}

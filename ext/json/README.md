@@ -3,12 +3,33 @@
 [![Build Status](https://travis-ci.org/nlohmann/json.svg?branch=master)](https://travis-ci.org/nlohmann/json)
 [![Build Status](https://ci.appveyor.com/api/projects/status/1acb366xfyg3qybk/branch/develop?svg=true)](https://ci.appveyor.com/project/nlohmann/json)
 [![Coverage Status](https://img.shields.io/coveralls/nlohmann/json.svg)](https://coveralls.io/r/nlohmann/json)
-[![Try online](https://img.shields.io/badge/try-online-blue.svg)](http://melpon.org/wandbox/permlink/fsf5FqYe6GoX68W6)
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/5550/badge.svg)](https://scan.coverity.com/projects/nlohmann-json)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/f3732b3327e34358a0e9d1fe9f661f08)](https://www.codacy.com/app/nlohmann/json?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=nlohmann/json&amp;utm_campaign=Badge_Grade)
+[![Try online](https://img.shields.io/badge/try-online-blue.svg)](http://melpon.org/wandbox/permlink/nv9fOg0XVVhWmFFy)
 [![Documentation](https://img.shields.io/badge/docs-doxygen-blue.svg)](http://nlohmann.github.io/json)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/nlohmann/json/master/LICENSE.MIT)
 [![Github Releases](https://img.shields.io/github/release/nlohmann/json.svg)](https://github.com/nlohmann/json/releases)
 [![Github Issues](https://img.shields.io/github/issues/nlohmann/json.svg)](http://github.com/nlohmann/json/issues)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/289/badge)](https://bestpractices.coreinfrastructure.org/projects/289)
+
+- [Design goals](#design-goals)
+- [Integration](#integration)
+- [Examples](#examples)
+  - [JSON as first-class data type](#json-as-first-class-data-type)
+  - [Serialization / Deserialization](#serialization--deserialization)
+  - [STL-like access](#stl-like-access)
+  - [Conversion from STL containers](#conversion-from-stl-containers)
+  - [JSON Pointer and JSON Patch](#json-pointer-and-json-patch)
+  - [Implicit conversions](#implicit-conversions)
+  - [Conversions to/from arbitrary types](#arbitrary-types-conversions)
+  - [Binary formats (CBOR and MessagePack)](#binary-formats-cbor-and-messagepack)
+- [Supported compilers](#supported-compilers)
+- [License](#license)
+- [Thanks](#thanks)
+- [Used third-party tools](#used-third-party-tools)
+- [Projects using JSON for Modern C++](#projects-using-json-for-modern-c)
+- [Notes](#notes)
+- [Execute unit tests](#execute-unit-tests)
 
 ## Design goals
 
@@ -24,7 +45,7 @@ Other aspects were not so important to us:
 
 - **Memory efficiency**. Each JSON object has an overhead of one pointer (the maximal size of a union) and one enumeration element (1 byte). The default generalization uses the following C++ data types: `std::string` for strings, `int64_t`, `uint64_t` or `double` for numbers, `std::map` for objects, `std::vector` for arrays, and `bool` for Booleans. However, you can template the generalized class `basic_json` to your needs.
 
-- **Speed**. We currently implement the parser as naive [recursive descent parser](http://en.wikipedia.org/wiki/Recursive_descent_parser) with hand coded string handling. It is fast enough, but a [LALR-parser](http://en.wikipedia.org/wiki/LALR_parser) may be even faster (but would consist of more files which makes the integration harder).
+- **Speed**. There are certainly [faster JSON libraries](https://github.com/miloyip/nativejson-benchmark#parsing-time) out there. However, if your goal is to speed up your development by adding JSON support with a single header, then this library is the way to go. If you know how to use a `std::vector` or `std::map`, you are already set.
 
 See the [contribution guidelines](https://github.com/nlohmann/json/blob/master/.github/CONTRIBUTING.md#please-dont) for more information.
 
@@ -44,8 +65,14 @@ to the files you want to use JSON objects. That's it. Do not forget to set the n
 
 :beer: If you are using OS X and [Homebrew](http://brew.sh), just type `brew tap nlohmann/json` and `brew install nlohmann_json` and you're set. If you want the bleeding edge rather than the latest release, use `brew install nlohmann_json --HEAD`.
 
+:warning: [Version 3.0.0](https://github.com/nlohmann/json/wiki/Road-toward-3.0.0) is currently under development. Branch `develop` is used for the ongoing work and is probably **unstable**. Please use the `master` branch for the last stable version 2.1.1.
+
 
 ## Examples
+
+Beside the examples below, you may want to check the [documentation](https://nlohmann.github.io/json/) where each function contains a separate code example (e.g., check out [`emplace()`](https://nlohmann.github.io/json/classnlohmann_1_1basic__json_a602f275f0359ab181221384989810604.html#a602f275f0359ab181221384989810604)). All [example files](https://github.com/nlohmann/json/tree/develop/doc/examples) can be compiled and executed on their own (e.g., file [emplace.cpp](https://github.com/nlohmann/json/blob/develop/doc/examples/emplace.cpp)).
+
+### JSON as first-class data type
 
 Here are some examples to give you an idea how to use the class.
 
@@ -129,6 +156,8 @@ json array_not_object = { json::array({"currency", "USD"}), json::array({"value"
 
 ### Serialization / Deserialization
 
+#### To/from strings
+
 You can create an object (deserialization) by appending `_json` to a string literal:
 
 ```cpp
@@ -142,8 +171,14 @@ auto j2 = R"(
     "pi": 3.141
   }
 )"_json;
+```
 
-// or explicitly
+Note that without appending the `_json` suffix, the passed string literal is not parsed, but just used as JSON string value. That is, `json j = "{ \"happy\": true, \"pi\": 3.141 }"` would just store the string `"{ "happy": true, "pi": 3.141 }"` rather than parsing the actual object.
+
+The above example can also be expressed explicitly using `json::parse()`:
+
+```cpp
+// parse explicitly
 auto j3 = json::parse("{ \"happy\": true, \"pi\": 3.141 }");
 ```
 
@@ -162,6 +197,8 @@ std::cout << j.dump(4) << std::endl;
 // }
 ```
 
+#### To/from streams (e.g. files, string streams)
+
 You can also use streams to serialize and deserialize:
 
 ```cpp
@@ -176,9 +213,36 @@ std::cout << j;
 std::cout << std::setw(4) << j << std::endl;
 ```
 
-These operators work for any subclasses of `std::istream` or `std::ostream`.
+These operators work for any subclasses of `std::istream` or `std::ostream`. Here is the same example with files:
+
+```cpp
+// read a JSON file
+std::ifstream i("file.json");
+json j;
+i >> j;
+
+// write prettified JSON to another file
+std::ofstream o("pretty.json");
+o << std::setw(4) << j << std::endl;
+```
 
 Please note that setting the exception bit for `failbit` is inappropriate for this use case. It will result in program termination due to the `noexcept` specifier in use.
+
+#### Read from iterator range
+
+You can also read JSON from an iterator range; that is, from any container accessible by iterators whose content is stored as contiguous byte sequence, for instance a `std::vector<std::uint8_t>`:
+
+```cpp
+std::vector<std::uint8_t> v = {'t', 'r', 'u', 'e'};
+json j = json::parse(v.begin(), v.end());
+```
+
+You may leave the iterators for the range [begin, end):
+
+```cpp
+std::vector<std::uint8_t> v = {'t', 'r', 'u', 'e'};
+json j = json::parse(v);
+```
 
 
 ### STL-like access
@@ -191,6 +255,9 @@ json j;
 j.push_back("foo");
 j.push_back(1);
 j.push_back(true);
+
+// also use emplace_back
+j.emplace_back(1.78);
 
 // iterate the array
 for (json::iterator it = j.begin(); it != j.end(); ++it) {
@@ -207,6 +274,9 @@ const std::string tmp = j[0];
 j[1] = 42;
 bool foo = j.at(2);
 
+// comparison
+j == "[\"foo\", 1, true]"_json;  // true
+
 // other stuff
 j.size();     // 3 entries
 j.empty();    // false
@@ -221,14 +291,14 @@ j.is_object();
 j.is_array();
 j.is_string();
 
-// comparison
-j == "[\"foo\", 1, true]"_json;  // true
-
 // create an object
 json o;
 o["foo"] = 23;
 o["bar"] = false;
 o["baz"] = 3.141;
+
+// also use emplace
+o.emplace("weather", "sunny");
 
 // special iterator member functions for objects
 for (json::iterator it = o.begin(); it != o.end(); ++it) {
@@ -383,6 +453,252 @@ int vi = jn.get<int>();
 // etc.
 ```
 
+### Arbitrary types conversions
+
+Every type can be serialized in JSON, not just STL-containers and scalar types. Usually, you would do something along those lines:
+
+```cpp
+namespace ns {
+    // a simple struct to model a person
+    struct person {
+        std::string name;
+        std::string address;
+        int age;
+    };
+}
+
+ns::person p = {"Ned Flanders", "744 Evergreen Terrace", 60};
+
+// convert to JSON: copy each value into the JSON object
+json j;
+j["name"] = p.name;
+j["address"] = p.address;
+j["age"] = p.age;
+
+// ...
+
+// convert from JSON: copy each value from the JSON object
+ns::person p {
+    j["name"].get<std::string>(),
+    j["address"].get<std::string>(),
+    j["age"].get<int>()
+};
+```
+
+It works, but that's quite a lot of boilerplate... Fortunately, there's a better way:
+
+```cpp
+// create a person
+ns::person p {"Ned Flanders", "744 Evergreen Terrace", 60};
+
+// conversion: person -> json
+json j = p;
+
+std::cout << j << std::endl;
+// {"address":"744 Evergreen Terrace","age":60,"name":"Ned Flanders"}
+
+// conversion: json -> person
+ns::person p2 = j;
+
+// that's it
+assert(p == p2);
+```
+
+#### Basic usage
+
+To make this work with one of your types, you only need to provide two functions:
+
+```cpp
+using nlohmann::json;
+
+namespace ns {
+    void to_json(json& j, const person& p) {
+        j = json{{"name", p.name}, {"address", p.address}, {"age", p.age}};
+    }
+
+    void from_json(const json& j, person& p) {
+        p.name = j.at("name").get<std::string>();
+        p.address = j.at("address").get<std::string>();
+        p.age = j.at("age").get<int>();
+    }
+} // namespace ns
+```
+
+That's all! When calling the `json` constructor with your type, your custom `to_json` method will be automatically called.
+Likewise, when calling `get<your_type>()`, the `from_json` method will be called.
+
+Some important things:
+
+* Those methods **MUST** be in your type's namespace (which can be the global namespace), or the library will not be able to locate them (in this example, they are in namespace `ns`, where `person` is defined).
+* When using `get<your_type>()`, `your_type` **MUST** be [DefaultConstructible](http://en.cppreference.com/w/cpp/concept/DefaultConstructible). (There is a way to bypass this requirement described later.)
+* In function `from_json`, use function [`at()`](https://nlohmann.github.io/json/classnlohmann_1_1basic__json_a93403e803947b86f4da2d1fb3345cf2c.html#a93403e803947b86f4da2d1fb3345cf2c) to access the object values rather than `operator[]`. In case a key does not exists, `at` throws an exception that you can handle, whereas `operator[]` exhibits undefined behavior.
+
+#### How do I convert third-party types?
+
+This requires a bit more advanced technique. But first, let's see how this conversion mechanism works:
+
+The library uses **JSON Serializers** to convert types to json.
+The default serializer for `nlohmann::json` is `nlohmann::adl_serializer` (ADL means [Argument-Dependent Lookup](http://en.cppreference.com/w/cpp/language/adl)).
+
+It is implemented like this (simplified):
+
+```cpp
+template <typename T>
+struct adl_serializer {
+    static void to_json(json& j, const T& value) {
+        // calls the "to_json" method in T's namespace
+    }
+
+    static void from_json(const json& j, T& value) {
+        // same thing, but with the "from_json" method
+    }
+};
+```
+
+This serializer works fine when you have control over the type's namespace. However, what about `boost::optional`, or `std::filesystem::path` (C++17)? Hijacking the `boost` namespace is pretty bad, and it's illegal to add something other than template specializations to `std`...
+
+To solve this, you need to add a specialization of `adl_serializer` to the `nlohmann` namespace, here's an example:
+
+```cpp
+// partial specialization (full specialization works too)
+namespace nlohmann {
+    template <typename T>
+    struct adl_serializer<boost::optional<T>> {
+        static void to_json(json& j, const boost::optional<T>& opt) {
+            if (opt == boost::none) {
+                j = nullptr;
+            } else {
+              j = *opt; // this will call adl_serializer<T>::to_json which will
+                        // find the free function to_json in T's namespace!
+            }
+        }
+
+        static void from_json(const json& j, boost::optional<T>& opt) {
+            if (j.is_null()) {
+                opt = boost::none;
+            } else {
+                opt = j.get<T>(); // same as above, but with 
+                                  // adl_serializer<T>::from_json
+            }
+        }
+    };
+}
+```
+
+#### How can I use `get()` for non-default constructible/non-copyable types?
+
+There is a way, if your type is [MoveConstructible](http://en.cppreference.com/w/cpp/concept/MoveConstructible). You will need to specialize the `adl_serializer` as well, but with a special `from_json` overload:
+
+```cpp
+struct move_only_type {
+    move_only_type() = delete;
+    move_only_type(int ii): i(ii) {}
+    move_only_type(const move_only_type&) = delete;
+    move_only_type(move_only_type&&) = default;
+    
+    int i;
+};
+
+namespace nlohmann {
+    template <>
+    struct adl_serializer<move_only_type> {
+        // note: the return type is no longer 'void', and the method only takes
+        // one argument
+        static move_only_type from_json(const json& j) {
+            return {j.get<int>()};
+        }
+        
+        // Here's the catch! You must provide a to_json method! Otherwise you
+        // will not be able to convert move_only_type to json, since you fully
+        // specialized adl_serializer on that type
+        static void to_json(json& j, move_only_type t) {
+            j = t.i;
+        }
+    };
+}
+```
+
+#### Can I write my own serializer? (Advanced use)
+
+Yes. You might want to take a look at [`unit-udt.cpp`](https://github.com/nlohmann/json/blob/develop/test/src/unit-udt.cpp) in the test suite, to see a few examples.
+
+If you write your own serializer, you'll need to do a few things:
+
+* use a different `basic_json` alias than `nlohmann::json` (the last template parameter of `basic_json` is the `JSONSerializer`)
+* use your `basic_json` alias (or a template parameter) in all your `to_json`/`from_json` methods
+* use `nlohmann::to_json` and `nlohmann::from_json` when you need ADL
+
+Here is an example, without simplifications, that only accepts types with a size <= 32, and uses ADL.
+
+```cpp
+// You should use void as a second template argument
+// if you don't need compile-time checks on T
+template<typename T, typename SFINAE = typename std::enable_if<sizeof(T) <= 32>::type>
+struct less_than_32_serializer {
+    template <typename BasicJsonType>
+    static void to_json(BasicJsonType& j, T value) {
+        // we want to use ADL, and call the correct to_json overload
+        using nlohmann::to_json; // this method is called by adl_serializer,
+                                 // this is where the magic happens
+        to_json(j, value);
+    }
+    
+    template <typename BasicJsonType>
+    static void from_json(const BasicJsonType& j, T& value) {
+        // same thing here
+        using nlohmann::from_json;
+        from_json(j, value);
+    }
+};
+```
+
+Be **very** careful when reimplementing your serializer, you can stack overflow if you don't pay attention:
+
+```cpp
+template <typename T, void>
+struct bad_serializer
+{
+    template <typename BasicJsonType>
+    static void to_json(BasicJsonType& j, const T& value) {
+      // this calls BasicJsonType::json_serializer<T>::to_json(j, value);
+      // if BasicJsonType::json_serializer == bad_serializer ... oops!
+      j = value;
+    }
+    
+    template <typename BasicJsonType>
+    static void to_json(const BasicJsonType& j, T& value) {
+      // this calls BasicJsonType::json_serializer<T>::from_json(j, value);
+      // if BasicJsonType::json_serializer == bad_serializer ... oops!
+      value = j.template get<T>(); // oops!
+    }
+};
+```
+
+### Binary formats (CBOR and MessagePack)
+
+Though JSON is a ubiquitous data format, it is not a very compact format suitable for data exchange, for instance over a network. Hence, the library supports [CBOR](http://cbor.io) (Concise Binary Object Representation) and [MessagePack](http://msgpack.org) to efficiently encode JSON values to byte vectors and to decode such vectors.
+
+```cpp
+// create a JSON value
+json j = R"({"compact": true, "schema": 0})"_json;
+
+// serialize to CBOR
+std::vector<std::uint8_t> v_cbor = json::to_cbor(j);
+
+// 0xa2, 0x67, 0x63, 0x6f, 0x6d, 0x70, 0x61, 0x63, 0x74, 0xf5, 0x66, 0x73, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x00
+
+// roundtrip
+json j_from_cbor = json::from_cbor(v_cbor);
+
+// serialize to MessagePack
+std::vector<std::uint8_t> v_msgpack = json::to_msgpack(j);
+
+// 0x82, 0xa7, 0x63, 0x6f, 0x6d, 0x70, 0x61, 0x63, 0x74, 0xc3, 0xa6, 0x73, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x00
+
+// roundtrip
+json j_from_msgpack = json::from_msgpack(v_msgpack);
+```
+
 
 ## Supported compilers
 
@@ -391,6 +707,7 @@ Though it's 2016 already, the support for C++11 is still a bit sparse. Currently
 - GCC 4.9 - 6.0 (and possibly later)
 - Clang 3.4 - 3.9 (and possibly later)
 - Microsoft Visual C++ 2015 / Build Tools 14.0.25123.0 (and possibly later)
+- Microsoft Visual C++ 2017 / Build Tools 15.1.548.43366 (and possibly later)
 
 I would be happy to learn about other compilers/versions.
 
@@ -423,16 +740,14 @@ The following compilers are currently used in continuous integration at [Travis]
 | Clang 3.7.1     | Ubuntu 14.04.4 LTS           | clang version 3.7.1 (tags/RELEASE_371/final) |
 | Clang 3.8.0     | Ubuntu 14.04.4 LTS           | clang version 3.8.0 (tags/RELEASE_380/final) |
 | Clang 3.8.1     | Ubuntu 14.04.4 LTS           | clang version 3.8.1 (tags/RELEASE_381/final) |
-| Clang Xcode 6.1 | Darwin Kernel Version 13.4.0 (OSX 10.9.5) | Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn) |
-| Clang Xcode 6.2 | Darwin Kernel Version 13.4.0 (OSX 10.9.5) | Apple LLVM version 6.0 (clang-600.0.57) (based on LLVM 3.5svn) |
-| Clang Xcode 6.3 | Darwin Kernel Version 14.3.0 (OSX 10.10.3) | Apple LLVM version 6.1.0 (clang-602.0.49) (based on LLVM 3.6.0svn) |
 | Clang Xcode 6.4 | Darwin Kernel Version 14.3.0 (OSX 10.10.3) | Apple LLVM version 6.1.0 (clang-602.0.53) (based on LLVM 3.6.0svn) |
-| Clang Xcode 7.1 | Darwin Kernel Version 14.5.0 (OSX 10.10.5) | Apple LLVM version 7.0.0 (clang-700.1.76) |
-| Clang Xcode 7.2 | Darwin Kernel Version 15.0.0 (OSX 10.10.5) | Apple LLVM version 7.0.2 (clang-700.1.81) |
 | Clang Xcode 7.3 | Darwin Kernel Version 15.0.0 (OSX 10.10.5) | Apple LLVM version 7.3.0 (clang-703.0.29) |
-| Clang Xcode 8.0 | Darwin Kernel Version 15.6.0 (OSX 10.11.6) | Apple LLVM version 8.0.0 (clang-800.0.38) |
+| Clang Xcode 8.0 | Darwin Kernel Version 15.6.0 | Apple LLVM version 8.0.0 (clang-800.0.38) |
+| Clang Xcode 8.1 | Darwin Kernel Version 16.1.0 (macOS 10.12.1) | Apple LLVM version 8.0.0 (clang-800.0.42.1) |
+| Clang Xcode 8.2 | Darwin Kernel Version 16.1.0 (macOS 10.12.1) | Apple LLVM version 8.0.0 (clang-800.0.42.1) |
+| Clang Xcode 8.3 | Darwin Kernel Version 16.5.0 (macOS 10.12.4) | Apple LLVM version 8.1.0 (clang-802.0.38) |
 | Visual Studio 14 2015 | Windows Server 2012 R2 (x64) | Microsoft (R) Build Engine version 14.0.25123.0 | 
-
+| Visual Studio 2017 | Windows Server 2016 | Microsoft (R) Build Engine version 15.1.548.43366 |
 
 ## License
 
@@ -440,7 +755,7 @@ The following compilers are currently used in continuous integration at [Travis]
 
 The class is licensed under the [MIT License](http://opensource.org/licenses/MIT):
 
-Copyright &copy; 2013-2016 [Niels Lohmann](http://nlohmann.me)
+Copyright &copy; 2013-2017 [Niels Lohmann](http://nlohmann.me)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -465,7 +780,7 @@ I deeply appreciate the help of the following people.
 - [Eric Cornelius](https://github.com/EricMCornelius) pointed out a bug in the handling with NaN and infinity values. He also improved the performance of the string escaping.
 - [易思龙](https://github.com/likebeta) implemented a conversion from anonymous enums.
 - [kepkin](https://github.com/kepkin) patiently pushed forward the support for Microsoft Visual studio.
-- [gregmarr](https://github.com/gregmarr) simplified the implementation of reverse iterators and helped with numerous hints and improvements.
+- [gregmarr](https://github.com/gregmarr) simplified the implementation of reverse iterators and helped with numerous hints and improvements. In particular, he pushed forward the implementation of user-defined types.
 - [Caio Luppi](https://github.com/caiovlp) fixed a bug in the Unicode handling.
 - [dariomt](https://github.com/dariomt) fixed some typos in the examples.
 - [Daniel Frey](https://github.com/d-frey) cleaned up some pointers and implemented exception-safe memory allocation.
@@ -493,14 +808,70 @@ I deeply appreciate the help of the following people.
 - [duncanwerner](https://github.com/duncanwerner) found a really embarrassing performance regression in the 2.0.0 release.
 - [Damien](https://github.com/dtoma) fixed one of the last conversion warnings.
 - [Thomas Braun](https://github.com/t-b) fixed a warning in a test case.
-- [Théo DELRIEU](https://github.com/theodelrieu) patiently and constructively oversaw the long way toward [iterator-range parsing](https://github.com/nlohmann/json/issues/290).
+- [Théo DELRIEU](https://github.com/theodelrieu) patiently and constructively oversaw the long way toward [iterator-range parsing](https://github.com/nlohmann/json/issues/290). He also implemented the magic behind the serialization/deserialization of user-defined types.
 - [Stefan](https://github.com/5tefan) fixed a minor issue in the documentation.
 - [Vasil Dimov](https://github.com/vasild) fixed the documentation regarding conversions from `std::multiset`.
 - [ChristophJud](https://github.com/ChristophJud) overworked the CMake files to ease project inclusion.
-- [Vladimir Petrigo](https://github.com/vpetrigo) made a SFINAE hack more readable.
+- [Vladimir Petrigo](https://github.com/vpetrigo) made a SFINAE hack more readable and added Visual Studio 17 to the build matrix.
 - [Denis Andrejew](https://github.com/seeekr) fixed a grammar issue in the README file.
+- [Pierre-Antoine Lacaze](https://github.com/palacaze) found a subtle bug in the `dump()` function.
+- [TurpentineDistillery](https://github.com/TurpentineDistillery) pointed to [`std::locale::classic()`](http://en.cppreference.com/w/cpp/locale/locale/classic) to avoid too much locale joggling, found some nice performance improvements in the parser, improved the benchmarking code, and realized locale-independent number parsing and printing.
+- [cgzones](https://github.com/cgzones) had an idea how to fix the Coverity scan.
+- [Jared Grubb](https://github.com/jaredgrubb) silenced a nasty documentation warning.
+- [Yixin Zhang](https://github.com/qwename) fixed an integer overflow check.
+- [Bosswestfalen](https://github.com/Bosswestfalen) merged two iterator classes into a smaller one.
+- [Daniel599](https://github.com/Daniel599) helped to get Travis execute the tests with Clang's sanitizers.
+- [Jonathan Lee](https://github.com/vjon) fixed an example in the README file.
+- [gnzlbg](https://github.com/gnzlbg) supported the implementation of user-defined types.
+- [Alexej Harm](https://github.com/qis) helped to get the user-defined types working with Visual Studio.
+- [Jared Grubb](https://github.com/jaredgrubb) supported the implementation of user-defined types.
+- [EnricoBilla](https://github.com/EnricoBilla) noted a typo in an example.
+- [Martin Hořeňovský](https://github.com/horenmar) found a way for a 2x speedup for the compilation time of the test suite.
+- [ukhegg](https://github.com/ukhegg) found proposed an improvement for the examples section.
+- [rswanson-ihi](https://github.com/rswanson-ihi) noted a typo in the README.
+- [Mihai Stan](https://github.com/stanmihai4) fixed a bug in the comparison with `nullptr`s.
+- [Tushar Maheshwari](https://github.com/tusharpm) added [cotire](https://github.com/sakra/cotire) support to speed up the compilation.
+- [TedLyngmo](https://github.com/TedLyngmo) noted a typo in the README, removed unnecessary bit arithmetic, and fixed some `-Weffc++` warnings.
+- [Krzysztof Woś](https://github.com/krzysztofwos) made exceptions more visible.
+- [ftillier](https://github.com/ftillier) fixed a compiler warning.
+- [tinloaf](https://github.com/tinloaf) made sure all pushed warnings are properly popped.
+- [Fytch](https://github.com/Fytch) found a bug in the documentation.
 
-Thanks a lot for helping out!
+Thanks a lot for helping out! Please [let me know](mailto:mail@nlohmann.me) if I forgot someone.
+
+
+## Used third-party tools
+
+The library itself contains of a single header file licensed under the MIT license. However, it is built, tested, documented, and whatnot using a lot of third-party tools and services. Thanks a lot!
+
+- [**American fuzzy lop**](http://lcamtuf.coredump.cx/afl/) for fuzz testing
+- [**AppVeyor**](https://www.appveyor.com) for [continuous integration](https://ci.appveyor.com/project/nlohmann/json) on Windows
+- [**Artistic Style**](http://astyle.sourceforge.net) for automatic source code identation
+- [**benchpress**](https://github.com/sbs-ableton/benchpress) to benchmark the code
+- [**Catch**](https://github.com/philsquared/Catch) for the unit tests
+- [**Clang**](http://clang.llvm.org) for compilation with code sanitizers
+- [**Cmake**](https://cmake.org) for build automation
+- [**Codacity**](https://www.codacy.com) for further [code analysis](https://www.codacy.com/app/nlohmann/json)
+- [**cotire**](https://github.com/sakra/cotire) to speed of compilation
+- [**Coveralls**](https://coveralls.io) to measure [code coverage](https://coveralls.io/github/nlohmann/json)
+- [**Coverity Scan**](https://scan.coverity.com) for [static analysis](https://scan.coverity.com/projects/nlohmann-json)
+- [**cppcheck**](http://cppcheck.sourceforge.net) for static analysis
+- [**cxxopts**](https://github.com/jarro2783/cxxopts) to let benchpress parse command-line parameters
+- [**Doxygen**](http://www.stack.nl/~dimitri/doxygen/) to generate [documentation](https://nlohmann.github.io/json/)
+- [**git-update-ghpages**](https://github.com/rstacruz/git-update-ghpages) to upload the documentation to gh-pages
+- [**Github Changelog Generator**](https://github.com/skywinder/github-changelog-generator) to generate the [ChangeLog](https://github.com/nlohmann/json/blob/develop/ChangeLog.md)
+- [**libFuzzer**](http://llvm.org/docs/LibFuzzer.html) to implement fuzz testing for OSS-Fuzz
+- [**OSS-Fuzz**](https://github.com/google/oss-fuzz) for continuous fuzz testing of the library
+- [**re2c**](http://re2c.org) to generate an automaton for the lexical analysis
+- [**send_to_wandbox**](https://github.com/nlohmann/json/blob/develop/doc/scripts/send_to_wandbox.py) to send code examples to [Wandbox](http://melpon.org/wandbox)
+- [**Travis**](https://travis-ci.org) for [continuous integration](https://travis-ci.org/nlohmann/json) on Linux and macOS
+- [**Valgrind**](http://valgrind.org) to check for correct memory management
+- [**Wandbox**](http://melpon.org/wandbox) for [online examples](http://melpon.org/wandbox/permlink/4NEU6ZZMoM9lpIex)
+
+
+## Projects using JSON for Modern C++
+
+The library is currently used in Apple macOS Sierra and iOS 10. I am not sure what they are using the library for, but I am happy that it runs on so many devices.
 
 
 ## Notes
@@ -512,6 +883,10 @@ Thanks a lot for helping out!
   - Other encodings such as Latin-1, UTF-16, or UTF-32 are not supported and will yield parse errors.
   - [Unicode noncharacters](http://www.unicode.org/faq/private_use.html#nonchar1) will not be replaced by the library.
   - Invalid surrogates (e.g., incomplete pairs such as `\uDEAD`) will yield parse errors.
+  - The strings stored in the library are UTF-8 encoded. When using the default string type (`std::string`), note that its length/size functions return the number of stored bytes rather than the number of characters or glyphs.
+- The code can be compiled without C++ **runtime type identification** features; that is, you can use the `-fno-rtti` compiler flag.
+- **Exceptions** are used widely within the library. They can, however, be switched off with either using the compiler flag `-fno-exceptions` or by defining the symbol `JSON_NOEXCEPTION`. In this case, exceptions are replaced by an `abort()` call.
+- By default, the library does not preserve the **insertion order of object elements**. This is standards-compliant, as the [JSON standard](https://tools.ietf.org/html/rfc7159.html) defines objects as "an unordered collection of zero or more name/value pairs". If you do want to preserve the insertion order, you can specialize the object type with containers like [`tsl::ordered_map`](https://github.com/Tessil/ordered-map) or [`nlohmann::fifo_map`](https://github.com/nlohmann/fifo_map).
 
 
 ## Execute unit tests
@@ -519,10 +894,11 @@ Thanks a lot for helping out!
 To compile and run the tests, you need to execute
 
 ```sh
-$ make check
+$ make json_unit -Ctest
+$ ./test/json_unit "*"
 
 ===============================================================================
-All tests passed (8905491 assertions in 36 test cases)
+All tests passed (11203022 assertions in 48 test cases)
 ```
 
 Alternatively, you can use [CMake](https://cmake.org) and run

@@ -49,7 +49,6 @@
 
 #include "osdep/OSUtils.hpp"
 #include "osdep/Phy.hpp"
-#include "osdep/Http.hpp"
 #include "osdep/PortMapper.hpp"
 #include "osdep/Thread.hpp"
 
@@ -1019,51 +1018,6 @@ static int testPhy()
 	return 0;
 }
 
-/*
-static int testHttp()
-{
-	std::map<std::string,std::string> requestHeaders,responseHeaders;
-	std::string responseBody;
-
-	InetAddress downloadZerotierDotCom;
-	std::vector<InetAddress> rr(OSUtils::resolve("download.zerotier.com"));
-	if (rr.empty()) {
-		std::cout << "[http] Resolve of download.zerotier.com failed, skipping." << std::endl;
-		return 0;
-	} else {
-		for(std::vector<InetAddress>::iterator r(rr.begin());r!=rr.end();++r) {
-			std::cout << "[http] download.zerotier.com: " << r->toString() << std::endl;
-			if (r->isV4())
-				downloadZerotierDotCom = *r;
-		}
-	}
-	downloadZerotierDotCom.setPort(80);
-
-	std::cout << "[http] GET http://download.zerotier.com/dev/1k @" << downloadZerotierDotCom.toString() << " ... "; std::cout.flush();
-	requestHeaders["Host"] = "download.zerotier.com";
-	unsigned int sc = Http::GET(1024 * 1024 * 16,60000,reinterpret_cast<const struct sockaddr *>(&downloadZerotierDotCom),"/dev/1k",requestHeaders,responseHeaders,responseBody);
-	std::cout << sc << " " << responseBody.length() << " bytes ";
-	if (sc == 0)
-		std::cout << "ERROR: " << responseBody << std::endl;
-	else std::cout << "DONE" << std::endl;
-
-	std::cout << "[http] GET http://download.zerotier.com/dev/4m @" << downloadZerotierDotCom.toString() << " ... "; std::cout.flush();
-	requestHeaders["Host"] = "download.zerotier.com";
-	sc = Http::GET(1024 * 1024 * 16,60000,reinterpret_cast<const struct sockaddr *>(&downloadZerotierDotCom),"/dev/4m",requestHeaders,responseHeaders,responseBody);
-	std::cout << sc << " " << responseBody.length() << " bytes ";
-	if (sc == 0)
-		std::cout << "ERROR: " << responseBody << std::endl;
-	else std::cout << "DONE" << std::endl;
-
-	downloadZerotierDotCom = InetAddress("1.0.0.1/1234");
-	std::cout << "[http] GET @" << downloadZerotierDotCom.toString() << " ... "; std::cout.flush();
-	sc = Http::GET(1024 * 1024 * 16,2500,reinterpret_cast<const struct sockaddr *>(&downloadZerotierDotCom),"/dev/4m",requestHeaders,responseHeaders,responseBody);
-	std::cout << sc << " (should be 0, time out)" << std::endl;
-
-	return 0;
-}
-*/
-
 #ifdef __WINDOWS__
 int __cdecl _tmain(int argc, _TCHAR* argv[])
 #else
@@ -1127,7 +1081,6 @@ int main(int argc,char **argv)
 	r |= testIdentity();
 	r |= testCertificate();
 	r |= testPhy();
-	//r |= testHttp();
 	//*/
 
 	if (r)
