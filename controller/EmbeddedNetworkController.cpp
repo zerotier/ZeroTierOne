@@ -719,6 +719,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						member["lastModified"] = now;
 						json &revj = member["revision"];
 						member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
+						_removeMemberNonPersistedFields(member);
 						_db.saveNetworkMember(nwid,address,member);
 						_pushMemberUpdate(now,nwid,member);
 					}
@@ -1017,10 +1018,11 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 				network["id"] = nwids;
 				network["nwid"] = nwids; // legacy
 
-				if (true) {
+				if (network != origNetwork) {
 					json &revj = network["revision"];
 					network["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 					network["lastModified"] = now;
+					_removeNetworkNonPersistedFields(network);
 					_db.saveNetwork(nwid,network);
 
 					// Send an update to all members of the network
@@ -1187,6 +1189,10 @@ void EmbeddedNetworkController::_request(
 	const Identity &identity,
 	const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData)
 {
+	char nwids[24];
+	JSONDB::NetworkSummaryInfo ns;
+	json network,member,origMember;
+
 	if (((!_signingId)||(!_signingId.hasPrivate()))||(_signingId.address().toInt() != (nwid >> 24))||(!_sender))
 		return;
 
@@ -1200,17 +1206,13 @@ void EmbeddedNetworkController::_request(
 		lrt = now;
 	}
 
-	char nwids[24];
 	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",nwid);
-	json network,member;
-	JSONDB::NetworkSummaryInfo ns;
 	if (!_db.getNetworkAndMember(nwid,identity.address().toInt(),network,member,ns)) {
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
 		return;
 	}
-
-	const bool newMember = (member.size() == 0);
-	json origMember(member); // for detecting modification later
+	origMember = member;
+	const bool newMember = ((!member.is_object())||(member.size() == 0));
 	_initMember(member);
 
 	{
@@ -1235,10 +1237,12 @@ void EmbeddedNetworkController::_request(
 	}
 
 	// These are always the same, but make sure they are set
-	const std::string addrs(identity.address().toString());
-	member["id"] = addrs;
-	member["address"] = addrs;
-	member["nwid"] = nwids;
+	{
+		const std::string addrs(identity.address().toString());
+		member["id"] = addrs;
+		member["address"] = addrs;
+		member["nwid"] = nwids;
+	}
 
 	// Determine whether and how member is authorized
 	const char *authorizedBy = (const char *)0;
@@ -1347,6 +1351,7 @@ void EmbeddedNetworkController::_request(
 	if (!authorizedBy) {
 		if (origMember != member) {
 			member["lastModified"] = now;
+			_removeMemberNonPersistedFields(member);
 			_db.saveNetworkMember(nwid,identity.address().toInt(),member);
 		}
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
@@ -1697,6 +1702,7 @@ void EmbeddedNetworkController::_request(
 
 	if (member != origMember) {
 		member["lastModified"] = now;
+		_removeMemberNonPersistedFields(member);
 		_db.saveNetworkMember(nwid,identity.address().toInt(),member);
 	}
 

@@ -99,9 +99,9 @@ public:
 		Mutex::Lock _l(_networks_m);
 		std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
 		if (i != _networks.end()) {
-			for(std::unordered_map<uint64_t,nlohmann::json>::const_iterator m(i->second.members.begin());m!=i->second.members.end();++m) {
+			for(std::unordered_map< uint64_t,std::vector<uint8_t> >::const_iterator m(i->second.members.begin());m!=i->second.members.end();++m) {
 				try {
-					func(networkId,m->first,m->second);
+					func(networkId,m->first,nlohmann::json::from_msgpack(m->second));
 				} catch ( ... ) {}
 			}
 		}
@@ -126,10 +126,10 @@ private:
 	struct _NW
 	{
 		_NW() : summaryInfoLastComputed(0) {}
-		nlohmann::json config;
+		std::vector<uint8_t> config;
 		NetworkSummaryInfo summaryInfo;
 		uint64_t summaryInfoLastComputed;
-		std::unordered_map<uint64_t,nlohmann::json> members;
+		std::unordered_map< uint64_t,std::vector<uint8_t> > members;
 	};
 
 	std::unordered_map<uint64_t,_NW> _networks;

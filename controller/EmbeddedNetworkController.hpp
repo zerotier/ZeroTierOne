@@ -157,9 +157,20 @@ private:
 		network["activeMemberCount"] = ns.activeMemberCount;
 		network["totalMemberCount"] = ns.totalMemberCount;
 	}
+	inline void _removeNetworkNonPersistedFields(nlohmann::json &network)
+	{
+		network.erase("clock");
+		network.erase("authorizedMemberCount");
+		network.erase("activeMemberCount");
+		network.erase("totalMemberCount");
+	}
 	inline void _addMemberNonPersistedFields(nlohmann::json &member,uint64_t now)
 	{
 		member["clock"] = now;
+	}
+	inline void _removeMemberNonPersistedFields(nlohmann::json &member)
+	{
+		member.erase("clock");
 	}
 
 	const uint64_t _startTime;

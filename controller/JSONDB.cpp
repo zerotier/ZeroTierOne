@@ -110,24 +110,23 @@ bool JSONDB::writeRaw(const std::string &n,const std::string &obj)
 bool JSONDB::hasNetwork(const uint64_t networkId) const
 {
 	Mutex::Lock _l(_networks_m);
-	std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
-	return (i != _networks.end());
+	return (_networks.find(networkId) != _networks.end());
 }
 
 bool JSONDB::getNetwork(const uint64_t networkId,nlohmann::json &config) const
 {
 	Mutex::Lock _l(_networks_m);
-	std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
+	const std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
 	if (i == _networks.end())
 		return false;
-	config = i->second.config;
+	config = nlohmann::json::from_msgpack(i->second.config);
 	return true;
 }
 
 bool JSONDB::getNetworkSummaryInfo(const uint64_t networkId,NetworkSummaryInfo &ns) const
 {
 	Mutex::Lock _l(_networks_m);
-	std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
+	const std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
 	if (i == _networks.end())
 		return false;
 	ns = i->second.summaryInfo;
@@ -137,14 +136,14 @@ bool JSONDB::getNetworkSummaryInfo(const uint64_t networkId,NetworkSummaryInfo &
 int JSONDB::getNetworkAndMember(const uint64_t networkId,const uint64_t nodeId,nlohmann::json &networkConfig,nlohmann::json &memberConfig,NetworkSummaryInfo &ns) const
 {
 	Mutex::Lock _l(_networks_m);
-	std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
+	const std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
 	if (i == _networks.end())
 		return 0;
-	std::unordered_map<uint64_t,nlohmann::json>::const_iterator j(i->second.members.find(nodeId));
+	const std::unordered_map< uint64_t,std::vector<uint8_t> >::const_iterator j(i->second.members.find(nodeId));
 	if (j == i->second.members.end())
 		return 1;
-	networkConfig = i->second.config;
-	memberConfig = j->second;
+	networkConfig = nlohmann::json::from_msgpack(i->second.config);
+	memberConfig = nlohmann::json::from_msgpack(j->second);
 	ns = i->second.summaryInfo;
 	return 3;
 }
@@ -152,13 +151,13 @@ int JSONDB::getNetworkAndMember(const uint64_t networkId,const uint64_t nodeId,n
 bool JSONDB::getNetworkMember(const uint64_t networkId,const uint64_t nodeId,nlohmann::json &memberConfig) const
 {
 	Mutex::Lock _l(_networks_m);
-	std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
+	const std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
 	if (i == _networks.end())
 		return false;
-	std::unordered_map<uint64_t,nlohmann::json>::const_iterator j(i->second.members.find(nodeId));
+	const std::unordered_map< uint64_t,std::vector<uint8_t> >::const_iterator j(i->second.members.find(nodeId));
 	if (j == i->second.members.end())
 		return false;
-	memberConfig = j->second;
+	memberConfig = nlohmann::json::from_msgpack(j->second);
 	return true;
 }
 
@@ -169,7 +168,7 @@ void JSONDB::saveNetwork(const uint64_t networkId,const nlohmann::json &networkC
 	writeRaw(n,OSUtils::jsonDump(networkConfig));
 	{
 		Mutex::Lock _l(_networks_m);
-		_networks[networkId].config = networkConfig;
+		_networks[networkId].config = nlohmann::json::to_msgpack(networkConfig);
 	}
 	_recomputeSummaryInfo(networkId);
 }
@@ -181,7 +180,7 @@ void JSONDB::saveNetworkMember(const uint64_t networkId,const uint64_t nodeId,co
 	writeRaw(n,OSUtils::jsonDump(memberConfig));
 	{
 		Mutex::Lock _l(_networks_m);
-		_networks[networkId].members[nodeId] = memberConfig;
+		_networks[networkId].members[nodeId] = nlohmann::json::to_msgpack(memberConfig);
 	}
 	_recomputeSummaryInfo(networkId);
 }
@@ -192,10 +191,10 @@ nlohmann::json JSONDB::eraseNetwork(const uint64_t networkId)
 		std::vector<uint64_t> memberIds;
 		{
 			Mutex::Lock _l(_networks_m);
-			std::unordered_map<uint64_t,_NW>::iterator i(_networks.find(networkId));
+			const std::unordered_map<uint64_t,_NW>::iterator i(_networks.find(networkId));
 			if (i == _networks.end())
 				return _EMPTY_JSON;
-			for(std::unordered_map<uint64_t,nlohmann::json>::iterator m(i->second.members.begin());m!=i->second.members.end();++m)
+			for(std::unordered_map< uint64_t,std::vector<uint8_t> >::iterator m(i->second.members.begin());m!=i->second.members.end();++m)
 				memberIds.push_back(m->first);
 		}
 		for(std::vector<uint64_t>::iterator m(memberIds.begin());m!=memberIds.end();++m)
@@ -221,7 +220,7 @@ nlohmann::json JSONDB::eraseNetwork(const uint64_t networkId)
 		std::unordered_map<uint64_t,_NW>::iterator i(_networks.find(networkId));
 		if (i == _networks.end())
 			return _EMPTY_JSON; // sanity check, shouldn't happen
-		nlohmann::json tmp(i->second.config);
+		nlohmann::json tmp(nlohmann::json::from_msgpack(i->second.config));
 		_networks.erase(i);
 		return tmp;
 	}
@@ -248,7 +247,7 @@ nlohmann::json JSONDB::eraseNetworkMember(const uint64_t networkId,const uint64_
 		std::unordered_map<uint64_t,_NW>::iterator i(_networks.find(networkId));
 		if (i == _networks.end())
 			return _EMPTY_JSON;
-		std::unordered_map<uint64_t,nlohmann::json>::iterator j(i->second.members.find(nodeId));
+		std::unordered_map< uint64_t,std::vector<uint8_t> >::iterator j(i->second.members.find(nodeId));
 		if (j == i->second.members.end())
 			return _EMPTY_JSON;
 		nlohmann::json tmp(j->second);
@@ -288,13 +287,15 @@ void JSONDB::threadMain()
 				ns.totalMemberCount = 0;
 				ns.mostRecentDeauthTime = 0;
 
-				for(std::unordered_map<uint64_t,nlohmann::json>::const_iterator m(n->second.members.begin());m!=n->second.members.end();++m) {
+				for(std::unordered_map< uint64_t,std::vector<uint8_t> >::const_iterator m(n->second.members.begin());m!=n->second.members.end();++m) {
 					try {
-						if (OSUtils::jsonBool(m->second["authorized"],false)) {
+						nlohmann::json member(nlohmann::json::from_msgpack(m->second));
+
+						if (OSUtils::jsonBool(member["authorized"],false)) {
 							++ns.authorizedMemberCount;
 
 							try {
-								const nlohmann::json &mlog = m->second["recentLog"];
+								const nlohmann::json &mlog = member["recentLog"];
 								if ((mlog.is_array())&&(mlog.size() > 0)) {
 									const nlohmann::json &mlog1 = mlog[0];
 									if (mlog1.is_object()) {
@@ -305,12 +306,12 @@ void JSONDB::threadMain()
 							} catch ( ... ) {}
 
 							try {
-								if (OSUtils::jsonBool(m->second["activeBridge"],false))
+								if (OSUtils::jsonBool(member["activeBridge"],false))
 									ns.activeBridges.push_back(Address(m->first));
 							} catch ( ... ) {}
 
 							try {
-								const nlohmann::json &mips = m->second["ipAssignments"];
+								const nlohmann::json &mips = member["ipAssignments"];
 								if (mips.is_array()) {
 									for(unsigned long i=0;i<mips.size();++i) {
 										InetAddress mip(OSUtils::jsonString(mips[i],""));
@@ -321,7 +322,7 @@ void JSONDB::threadMain()
 							} catch ( ... ) {}
 						} else {
 							try {
-								ns.mostRecentDeauthTime = std::max(ns.mostRecentDeauthTime,OSUtils::jsonInt(m->second["lastDeauthorizedTime"],0ULL));
+								ns.mostRecentDeauthTime = std::max(ns.mostRecentDeauthTime,OSUtils::jsonInt(member["lastDeauthorizedTime"],0ULL));
 							} catch ( ... ) {}
 						}
 						++ns.totalMemberCount;
@@ -342,6 +343,8 @@ void JSONDB::threadMain()
 bool JSONDB::_load(const std::string &p)
 {
 	if (_httpAddr) {
+		// In HTTP harnessed mode we download our entire working data set on startup.
+
 		std::string body;
 		std::map<std::string,std::string> headers;
 		const unsigned int sc = Http::GET(2147483647,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),_basePath.c_str(),_ZT_JSONDB_GET_HEADERS,headers,body);
@@ -360,12 +363,12 @@ bool JSONDB::_load(const std::string &p)
 							if ((id.length() == 16)&&(objtype == "network")) {
 								const uint64_t nwid = Utils::hexStrToU64(id.c_str());
 								if (nwid)
-									_networks[nwid].config = j;
+									_networks[nwid].config = nlohmann::json::to_msgpack(j);
 							} else if ((id.length() == 10)&&(objtype == "member")) {
 								const uint64_t mid = Utils::hexStrToU64(id.c_str());
 								const uint64_t nwid = Utils::hexStrToU64(OSUtils::jsonString(j["nwid"],"0").c_str());
 								if ((mid)&&(nwid))
-									_networks[nwid].members[mid] = j;
+									_networks[nwid].members[mid] = nlohmann::json::to_msgpack(j);
 							}
 						}
 					}
@@ -374,7 +377,10 @@ bool JSONDB::_load(const std::string &p)
 			} catch ( ... ) {} // invalid JSON, so maybe incomplete request
 		}
 		return false;
+
 	} else {
+		// In regular mode we recursively read it from controller.d/ on disk
+
 		std::vector<std::string> dl(OSUtils::listDirectory(p.c_str(),true));
 		for(std::vector<std::string>::const_iterator di(dl.begin());di!=dl.end();++di) {
 			if ((di->length() > 5)&&(di->substr(di->length() - 5) == ".json")) {
@@ -389,14 +395,14 @@ bool JSONDB::_load(const std::string &p)
 							const uint64_t nwid = Utils::strToU64(id.c_str());
 							if (nwid) {
 								Mutex::Lock _l(_networks_m);
-								_networks[nwid].config = j;
+								_networks[nwid].config = nlohmann::json::to_msgpack(j);
 							}
 						} else if ((id.length() == 10)&&(objtype == "member")) {
 							const uint64_t mid = Utils::strToU64(id.c_str());
 							const uint64_t nwid = Utils::strToU64(OSUtils::jsonString(j["nwid"],"0").c_str());
 							if ((mid)&&(nwid)) {
 								Mutex::Lock _l(_networks_m);
-								_networks[nwid].members[mid] = j;
+								_networks[nwid].members[mid] = nlohmann::json::to_msgpack(j);
 							}
 						}
 					} catch ( ... ) {}
@@ -406,6 +412,7 @@ bool JSONDB::_load(const std::string &p)
 			}
 		}
 		return true;
+
 	}
 }
 
