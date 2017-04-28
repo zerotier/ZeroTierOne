@@ -1,5 +1,3 @@
-// Code taken from NaCl by D. J. Bernstein and others
-
 /*
 Matthew Dempsky
 Public domain.
@@ -7,7 +5,7 @@ Derived from public domain code by D. J. Bernstein.
 */
 
 // Modified very slightly for ZeroTier One by Adam Ierymenko
-// (no functional changes)
+// This code remains in the public domain.
 
 #include <stdint.h>
 #include <stdlib.h>
