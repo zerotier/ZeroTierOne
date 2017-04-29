@@ -715,20 +715,18 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					member["address"] = addrs; // legacy
 					member["nwid"] = nwids;
 
+					_removeMemberNonPersistedFields(member);
 					if (member != origMember) {
-						member["lastModified"] = now;
 						json &revj = member["revision"];
 						member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-						_removeMemberNonPersistedFields(member);
 						_db.saveNetworkMember(nwid,address,member);
 						_pushMemberUpdate(now,nwid,member);
 					}
 
-					// Add non-persisted fields
-					member["clock"] = now;
-
+					_addMemberNonPersistedFields(member,now);
 					responseBody = OSUtils::jsonDump(member);
 					responseContentType = "application/json";
+
 					return 200;
 				} else if ((path.size() == 3)&&(path[2] == "test")) {
 
@@ -1018,11 +1016,10 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 				network["id"] = nwids;
 				network["nwid"] = nwids; // legacy
 
+				_removeNetworkNonPersistedFields(network);
 				if (network != origNetwork) {
 					json &revj = network["revision"];
 					network["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-					network["lastModified"] = now;
-					_removeNetworkNonPersistedFields(network);
 					_db.saveNetwork(nwid,network);
 
 					// Send an update to all members of the network
@@ -1349,11 +1346,9 @@ void EmbeddedNetworkController::_request(
 
 	// If they are not authorized, STOP!
 	if (!authorizedBy) {
-		if (origMember != member) {
-			member["lastModified"] = now;
-			_removeMemberNonPersistedFields(member);
+		_removeMemberNonPersistedFields(member);
+		if (origMember != member)
 			_db.saveNetworkMember(nwid,identity.address().toInt(),member);
-		}
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
 		return;
 	}
@@ -1700,11 +1695,9 @@ void EmbeddedNetworkController::_request(
 		return;
 	}
 
-	if (member != origMember) {
-		member["lastModified"] = now;
-		_removeMemberNonPersistedFields(member);
+	_removeMemberNonPersistedFields(member);
+	if (member != origMember)
 		_db.saveNetworkMember(nwid,identity.address().toInt(),member);
-	}
 
 	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),*(nc.get()),metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
 }
