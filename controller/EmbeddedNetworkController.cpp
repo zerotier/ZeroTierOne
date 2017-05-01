@@ -1059,11 +1059,11 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 			_db.eachId([this,&pong,&now,&first](uint64_t networkId,uint64_t nodeId) {
 				char tmp[64];
 				auto ms = this->_memberStatus.find(_MemberStatusKey(networkId,nodeId));
-				Utils::snprintf(tmp,sizeof(tmp),"%s\"%.16llx-%.10llx\":%s",
+				Utils::snprintf(tmp,sizeof(tmp),"%s\"%.16llx-%.10llx\":%llu",
 					(first) ? "" : ",",
 					(unsigned long long)networkId,
 					(unsigned long long)nodeId,
-					((ms != _memberStatus.end())&&(ms->second.online(now))) ? "true" : "false");
+					(ms != _memberStatus.end()) ? (unsigned long long)ms->second.lastRequestTime : 0ULL);
 				pong.append(tmp);
 				first = false;
 			});
@@ -1385,7 +1385,8 @@ void EmbeddedNetworkController::_request(
 
 				if (fromAddr)
 					ms.physicalAddr = fromAddr;
-				member["physicalAddr"] = ms.physicalAddr.toString();
+				if (ms.physicalAddr)
+					member["physicalAddr"] = ms.physicalAddr.toString();
 			}
 		}
 	} else {
