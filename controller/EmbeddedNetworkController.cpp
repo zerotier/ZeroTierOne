@@ -569,26 +569,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 
 		} // else 404
 
-	} else if ((path.size() == 1)&&(path[0] == "memberStatus")) {
-
-		const uint64_t now = OSUtils::now();
-		Mutex::Lock _l(_memberStatus_m);
-		responseBody.push_back('{');
-		_db.eachId([this,&responseBody,&now](uint64_t networkId,uint64_t nodeId) {
-			char tmp[64];
-			auto ms = this->_memberStatus.find(_MemberStatusKey(networkId,nodeId));
-			Utils::snprintf(tmp,sizeof(tmp),"%s\"%.16llx-%.10llx\":%s",
-				(responseBody.length() > 1) ? "," : "",
-				(unsigned long long)networkId,
-				(unsigned long long)nodeId,
-				((ms != _memberStatus.end())&&(ms->second.online(now))) ? "true" : "false");
-			responseBody.append(tmp);
-		});
-		responseBody.push_back('}');
-		responseContentType = "application/json";
-
-		return 200;
-
 	} else {
 
 		char tmp[4096];
@@ -1071,14 +1051,31 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 	} else if (path[0] == "ping") {
 
-		json testRec;
 		const uint64_t now = OSUtils::now();
-		testRec["clock"] = now;
-		testRec["startTime"] = _startTime;
-		testRec["content"] = b;
-		responseBody = OSUtils::jsonDump(testRec);
-		_db.writeRaw("pong",responseBody);
+		bool first = true;
+		std::string pong("{\"memberStatus\":{");
+		{
+			Mutex::Lock _l(_memberStatus_m);
+			_db.eachId([this,&pong,&now,&first](uint64_t networkId,uint64_t nodeId) {
+				char tmp[64];
+				auto ms = this->_memberStatus.find(_MemberStatusKey(networkId,nodeId));
+				Utils::snprintf(tmp,sizeof(tmp),"%s\"%.16llx-%.10llx\":%s",
+					(first) ? "" : ",",
+					(unsigned long long)networkId,
+					(unsigned long long)nodeId,
+					((ms != _memberStatus.end())&&(ms->second.online(now))) ? "true" : "false");
+				pong.append(tmp);
+				first = false;
+			});
+		}
+		char tmp2[256];
+		Utils::snprintf(tmp2,sizeof(tmp2),"},\"clock\":%llu,\"startTime\":%llu}",(unsigned long long)now,(unsigned long long)_startTime);
+		pong.append(tmp2);
+		_db.writeRaw("pong",pong);
+
+		responseBody = "{}";
 		responseContentType = "application/json";
+
 		return 200;
 
 	}

@@ -114,7 +114,6 @@ private:
 		if (!member.count("authorized")) member["authorized"] = false;
 		if (!member.count("authHistory")) member["authHistory"] = nlohmann::json::array();
  		if (!member.count("ipAssignments")) member["ipAssignments"] = nlohmann::json::array();
-		if (!member.count("recentLog")) member["recentLog"] = nlohmann::json::array();
 		if (!member.count("activeBridge")) member["activeBridge"] = false;
 		if (!member.count("tags")) member["tags"] = nlohmann::json::array();
 		if (!member.count("capabilities")) member["capabilities"] = nlohmann::json::array();
@@ -123,6 +122,11 @@ private:
 		if (!member.count("revision")) member["revision"] = 0ULL;
 		if (!member.count("lastDeauthorizedTime")) member["lastDeauthorizedTime"] = 0ULL;
 		if (!member.count("lastAuthorizedTime")) member["lastAuthorizedTime"] = 0ULL;
+		if (!member.count("vMajor")) member["vMajor"] = -1;
+		if (!member.count("vMinor")) member["vMinor"] = -1;
+		if (!member.count("vRev")) member["vRev"] = -1;
+		if (!member.count("vProto")) member["vProto"] = -1;
+		if (!member.count("physicalAddr")) member["physicalAddr"] = nlohmann::json();
 		member["objtype"] = "member";
 	}
 	inline void _initNetwork(nlohmann::json &network)
@@ -162,6 +166,8 @@ private:
 		network.erase("authorizedMemberCount");
 		network.erase("activeMemberCount");
 		network.erase("totalMemberCount");
+		// legacy fields
+		network.erase("lastModified");
 	}
 	inline void _addMemberNonPersistedFields(uint64_t nwid,uint64_t nodeId,nlohmann::json &member,uint64_t now)
 	{
@@ -172,6 +178,10 @@ private:
 	inline void _removeMemberNonPersistedFields(nlohmann::json &member)
 	{
 		member.erase("clock");
+		// legacy fields
+		member.erase("recentLog");
+		member.erase("lastModified");
+		member.erase("lastRequestMetaData");
 	}
 
 	const uint64_t _startTime;
