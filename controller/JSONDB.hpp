@@ -107,6 +107,19 @@ public:
 		}
 	}
 
+	template<typename F>
+	inline void eachId(F func)
+	{
+		Mutex::Lock _l(_networks_m);
+		for(std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.begin());i!=_networks.end();++i) {
+			for(std::unordered_map< uint64_t,std::vector<uint8_t> >::const_iterator m(i->second.members.begin());m!=i->second.members.end();++m) {
+				try {
+					func(i->first,m->first);
+				} catch ( ... ) {}
+			}
+		}
+	}
+
 	void threadMain()
 		throw();
 

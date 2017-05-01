@@ -107,7 +107,6 @@ private:
 
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
 	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
-	void _pushMemberUpdate(uint64_t now,uint64_t nwid,const nlohmann::json &member);
 
 	// These init objects with default and static/informational fields
 	inline void _initMember(nlohmann::json &member)
@@ -164,9 +163,11 @@ private:
 		network.erase("activeMemberCount");
 		network.erase("totalMemberCount");
 	}
-	inline void _addMemberNonPersistedFields(nlohmann::json &member,uint64_t now)
+	inline void _addMemberNonPersistedFields(uint64_t nwid,uint64_t nodeId,nlohmann::json &member,uint64_t now)
 	{
 		member["clock"] = now;
+		Mutex::Lock _l(_memberStatus_m);
+		member["online"] = _memberStatus[_MemberStatusKey(nwid,nodeId)].online(now);
 	}
 	inline void _removeMemberNonPersistedFields(nlohmann::json &member)
 	{
@@ -191,8 +192,33 @@ private:
 	std::list< ZT_CircuitTest > _tests;
 	Mutex _tests_m;
 
-	std::map< std::pair<uint64_t,uint64_t>,uint64_t > _lastRequestTime; // last request time by <address,networkId>
-	Mutex _lastRequestTime_m;
+	struct _MemberStatusKey
+	{
+		_MemberStatusKey() : networkId(0),nodeId(0) {}
+		_MemberStatusKey(const uint64_t nwid,const uint64_t nid) : networkId(nwid),nodeId(nid) {}
+		uint64_t networkId;
+		uint64_t nodeId;
+		inline bool operator==(const _MemberStatusKey &k) const { return ((k.networkId == networkId)&&(k.nodeId == nodeId)); }
+	};
+	struct _MemberStatus
+	{
+		_MemberStatus() : lastRequestTime(0),vMajor(-1),vMinor(-1),vRev(-1),vProto(-1) {}
+		uint64_t lastRequestTime;
+		int vMajor,vMinor,vRev,vProto;
+		Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> lastRequestMetaData;
+		Identity identity;
+		InetAddress physicalAddr; // last known physical address
+		inline bool online(const uint64_t now) const { return ((now - lastRequestTime) < (ZT_NETWORK_AUTOCONF_DELAY * 2)); }
+	};
+	struct _MemberStatusHash
+	{
+		inline std::size_t operator()(const _MemberStatusKey &networkIdNodeId) const
+		{
+			return (std::size_t)(networkIdNodeId.networkId + networkIdNodeId.nodeId);
+		}
+	};
+	std::unordered_map< _MemberStatusKey,_MemberStatus,_MemberStatusHash > _memberStatus;
+	Mutex _memberStatus_m;
 };
 
 } // namespace ZeroTier

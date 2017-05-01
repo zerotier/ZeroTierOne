@@ -99,6 +99,8 @@ public:
 		return *this;
 	}
 
+	inline operator bool() const { return (_d[0] != 0); }
+
 	/**
 	 * Load a dictionary from a C-string
 	 *
