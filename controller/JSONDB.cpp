@@ -97,7 +97,7 @@ bool JSONDB::writeRaw(const std::string &n,const std::string &obj)
 		Utils::snprintf(tmp,sizeof(tmp),"%lu",(unsigned long)obj.length());
 		reqHeaders["Content-Length"] = tmp;
 		reqHeaders["Content-Type"] = "application/json";
-		const unsigned int sc = Http::PUT(1048576,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),reqHeaders,obj.data(),(unsigned long)obj.length(),headers,body);
+		const unsigned int sc = Http::PUT(0,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),reqHeaders,obj.data(),(unsigned long)obj.length(),headers,body);
 		return (sc == 200);
 	} else {
 		const std::string path(_genPath(n,true));
@@ -208,7 +208,7 @@ nlohmann::json JSONDB::eraseNetwork(const uint64_t networkId)
 		// Deletion is currently done by Central in harnessed mode
 		//std::map<std::string,std::string> headers;
 		//std::string body;
-		//Http::DEL(1048576,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),_ZT_JSONDB_GET_HEADERS,headers,body);
+		//Http::DEL(0,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),_ZT_JSONDB_GET_HEADERS,headers,body);
 	} else {
 		const std::string path(_genPath(n,false));
 		if (path.length())
@@ -235,7 +235,7 @@ nlohmann::json JSONDB::eraseNetworkMember(const uint64_t networkId,const uint64_
 		// Deletion is currently done by the caller in Central harnessed mode
 		//std::map<std::string,std::string> headers;
 		//std::string body;
-		//Http::DEL(1048576,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),_ZT_JSONDB_GET_HEADERS,headers,body);
+		//Http::DEL(0,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),_ZT_JSONDB_GET_HEADERS,headers,body);
 	} else {
 		const std::string path(_genPath(n,false));
 		if (path.length())
@@ -347,7 +347,7 @@ bool JSONDB::_load(const std::string &p)
 
 		std::string body;
 		std::map<std::string,std::string> headers;
-		const unsigned int sc = Http::GET(2147483647,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),_basePath.c_str(),_ZT_JSONDB_GET_HEADERS,headers,body);
+		const unsigned int sc = Http::GET(0,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),_basePath.c_str(),_ZT_JSONDB_GET_HEADERS,headers,body);
 		if (sc == 200) {
 			try {
 				nlohmann::json dbImg(OSUtils::jsonParse(body));
