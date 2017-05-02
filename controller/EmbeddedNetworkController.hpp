@@ -26,6 +26,7 @@
 #include <vector>
 #include <set>
 #include <list>
+#include <thread>
 
 #include "../node/Constants.hpp"
 
@@ -103,10 +104,28 @@ private:
 		InetAddress fromAddr;
 		Identity identity;
 		Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> metaData;
+		enum {
+			RQENTRY_TYPE_REQUEST = 0,
+			RQENTRY_TYPE_PING = 1
+		} type;
 	};
 
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
 	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
+
+	inline void _startThreads()
+	{
+		Mutex::Lock _l(_threads_m);
+		if (_threads.size() == 0) {
+			long hwc = (long)std::thread::hardware_concurrency();
+			if (hwc < 1)
+				hwc = 1;
+			else if (hwc > 16)
+				hwc = 16;
+			for(long i=0;i<hwc;++i)
+				_threads.push_back(Thread::start(this));
+		}
+	}
 
 	// These init objects with default and static/informational fields
 	inline void _initMember(nlohmann::json &member)
