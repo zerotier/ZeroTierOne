@@ -1058,12 +1058,15 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 			Mutex::Lock _l(_memberStatus_m);
 			_db.eachId([this,&pong,&now,&first](uint64_t networkId,uint64_t nodeId) {
 				char tmp[64];
+				uint64_t lrt = 0ULL;
 				auto ms = this->_memberStatus.find(_MemberStatusKey(networkId,nodeId));
+				if (ms != _memberStatus.end())
+					lrt = ms->second.lastRequestTime;
 				Utils::snprintf(tmp,sizeof(tmp),"%s\"%.16llx-%.10llx\":%llu",
 					(first) ? "" : ",",
 					(unsigned long long)networkId,
 					(unsigned long long)nodeId,
-					(ms != _memberStatus.end()) ? (unsigned long long)ms->second.lastRequestTime : 0ULL);
+					(unsigned long long)lrt);
 				pong.append(tmp);
 				first = false;
 			});
