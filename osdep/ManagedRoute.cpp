@@ -57,8 +57,6 @@
 #define ZT_LINUX_IP_COMMAND "/sbin/ip"
 #define ZT_LINUX_IP_COMMAND_2 "/usr/sbin/ip"
 
-// NOTE: BSD is mostly tested on Apple/Mac but is likely to work on other BSD too
-
 namespace ZeroTier {
 
 namespace {
@@ -348,10 +346,42 @@ static bool _winRoute(bool del,const NET_LUID &interfaceLuid,const NET_IFINDEX &
 	}
 }
 
+static bool _winHasRoute(const NET_LUID &interfaceLuid, const NET_IFINDEX &interfaceIndex, const InetAddress &target, const InetAddress &via)
+{
+	MIB_IPFORWARD_ROW2 rtrow;
+	InitializeIpForwardEntry(&rtrow);
+	rtrow.InterfaceLuid.Value = interfaceLuid.Value;
+	rtrow.InterfaceIndex = interfaceIndex;
+	if (target.ss_family == AF_INET) {
+		rtrow.DestinationPrefix.Prefix.si_family = AF_INET;
+		rtrow.DestinationPrefix.Prefix.Ipv4.sin_family = AF_INET;
+		rtrow.DestinationPrefix.Prefix.Ipv4.sin_addr.S_un.S_addr = reinterpret_cast<const struct sockaddr_in *>(&target)->sin_addr.S_un.S_addr;
+		if (via.ss_family == AF_INET) {
+			rtrow.NextHop.si_family = AF_INET;
+			rtrow.NextHop.Ipv4.sin_family = AF_INET;
+			rtrow.NextHop.Ipv4.sin_addr.S_un.S_addr = reinterpret_cast<const struct sockaddr_in *>(&via)->sin_addr.S_un.S_addr;
+		}
+	} else if (target.ss_family == AF_INET6) {
+		rtrow.DestinationPrefix.Prefix.si_family = AF_INET6;
+		rtrow.DestinationPrefix.Prefix.Ipv6.sin6_family = AF_INET6;
+		memcpy(rtrow.DestinationPrefix.Prefix.Ipv6.sin6_addr.u.Byte, reinterpret_cast<const struct sockaddr_in6 *>(&target)->sin6_addr.u.Byte, 16);
+		if (via.ss_family == AF_INET6) {
+			rtrow.NextHop.si_family = AF_INET6;
+			rtrow.NextHop.Ipv6.sin6_family = AF_INET6;
+			memcpy(rtrow.NextHop.Ipv6.sin6_addr.u.Byte, reinterpret_cast<const struct sockaddr_in6 *>(&via)->sin6_addr.u.Byte, 16);
+		}
+	} else {
+		return false;
+	}
+	rtrow.DestinationPrefix.PrefixLength = target.netmaskBits();
+	rtrow.SitePrefixLength = rtrow.DestinationPrefix.PrefixLength;
+	return (GetIpForwardEntry2(&rtrow) == NO_ERROR);
+}
+
 #endif // __WINDOWS__ --------------------------------------------------------
 
 #ifndef ZT_ROUTING_SUPPORT_FOUND
-#error "ManagedRoute.cpp has no support for managing routes on this platform! You'll need to check and see if one of the existing ones will work and make sure proper defines are set, or write one. Please do a Github pull request if you do this for a new OS."
+#error "ManagedRoute.cpp has no support for managing routes on this platform! You'll need to check and see if one of the existing ones will work and make sure proper defines are set, or write one. Please do a GitHub pull request if you do this for a new OS."
 #endif
 
 } // anonymous namespace
@@ -378,9 +408,10 @@ bool ManagedRoute::sync()
 		return false;
 #endif
 
-	// Generate two more specific routes than target with one extra bit
 	InetAddress leftt,rightt;
-	_forkTarget(_target,leftt,rightt);
+	if (_target.netmaskBits() == 0) // bifurcate only the default route
+		_forkTarget(_target,leftt,rightt);
+	else leftt = _target;
 
 #ifdef __BSD__ // ------------------------------------------------------------
 
@@ -447,26 +478,6 @@ bool ManagedRoute::sync()
 		_routeCmd("change",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 	}
 
-	// Create a device-bound default target if there is none in the system. This
-	// is to allow e.g. IPv6 default route to work even if there is no native
-	// IPv6 on your LAN.
-	/*
-	if (_target.isDefaultRoute()) {
-		if (_systemVia) {
-			if (_applied.count(_target)) {
-				_applied.erase(_target);
-				_routeCmd("delete",_target,_via,_device,(_via) ? (const char *)0 : _device);
-			}
-		} else {
-			if (!_applied.count(_target)) {
-				_applied[_target] = true; // ifscoped
-				_routeCmd("add",_target,_via,_device,(_via) ? (const char *)0 : _device);
-				_routeCmd("change",_target,_via,_device,(_via) ? (const char *)0 : _device);
-			}
-		}
-	}
-	*/
-
 #endif // __BSD__ ------------------------------------------------------------
 
 #ifdef __LINUX__ // ----------------------------------------------------------
@@ -484,11 +495,11 @@ bool ManagedRoute::sync()
 
 #ifdef __WINDOWS__ // --------------------------------------------------------
 
-	if (!_applied.count(leftt)) {
+	if ( (!_applied.count(leftt)) || (!_winHasRoute(interfaceLuid,interfaceIndex,leftt,_via)) ) {
 		_applied[leftt] = false; // boolean unused
 		_winRoute(false,interfaceLuid,interfaceIndex,leftt,_via);
 	}
-	if ((rightt)&&(!_applied.count(rightt))) {
+	if ( (rightt) && ( (!_applied.count(rightt)) || (!_winHasRoute(interfaceLuid,interfaceIndex,rightt,_via)) ) ) {
 		_applied[rightt] = false; // boolean unused
 		_winRoute(false,interfaceLuid,interfaceIndex,rightt,_via);
 	}

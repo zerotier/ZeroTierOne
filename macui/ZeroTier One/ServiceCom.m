@@ -46,6 +46,7 @@
         baseURL = @"http://127.0.0.1:9993";
         session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration ephemeralSessionConfiguration]];
         _isQuitting = NO;
+        _resetKey = NO;
     }
 
     return self;
@@ -54,120 +55,159 @@
 - (NSString*)key:(NSError* __autoreleasing *)err
 {
     static NSString *k = nil;
-
-    if (k == nil) {
-        NSError *error = nil;
-        NSURL *appSupportDir = [[NSFileManager defaultManager] URLForDirectory:NSApplicationSupportDirectory inDomain:NSUserDomainMask appropriateForURL:nil create:false error:&error];
-
-        if (error) {
-            NSLog(@"Error: %@", error);
+    static NSUInteger resetCount = 0;
+    
+    @synchronized (self) {
+        if (_isQuitting) {
             return @"";
         }
-
-        appSupportDir = [[appSupportDir URLByAppendingPathComponent:@"ZeroTier"] URLByAppendingPathComponent:@"One"];
-        NSURL *authtokenURL = [appSupportDir URLByAppendingPathComponent:@"authtoken.secret"];
-
-        if ([[NSFileManager defaultManager] fileExistsAtPath:[authtokenURL path]]) {
-            k = [NSString stringWithContentsOfURL:authtokenURL
-                                         encoding:NSUTF8StringEncoding
-                                            error:&error];
-
-            if (error) {
-                NSLog(@"Error: %@", error);
-                k = nil;
-                *err = error;
+        
+        if (_resetKey && k != nil) {
+            k = nil;
+            ++resetCount;
+            NSLog(@"ResetCount: %lu", (unsigned long)resetCount);
+            if (resetCount > 10) {
+                [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+                    NSAlert *alert = [NSAlert alertWithMessageText:@"Error obtaining Auth Token"
+                                                     defaultButton:@"Quit"
+                                                   alternateButton:@"Retry"
+                                                       otherButton:nil
+                                         informativeTextWithFormat:@"Please ensure ZeroTier is installed correctly"];
+                    alert.alertStyle = NSCriticalAlertStyle;
+                    
+                    NSModalResponse res;
+                    if (!_isQuitting) {
+                        res = [alert runModal];
+                    }
+                    else {
+                        return;
+                    }
+                    
+                    if(res == 1) {
+                        _isQuitting = YES;
+                        [NSApp performSelector:@selector(terminate:) withObject:nil afterDelay:0.0];
+                    }
+                }];
                 return @"";
             }
         }
-        else {
-            NSURL *sysAppSupportDir = [[NSFileManager defaultManager] URLForDirectory:NSApplicationSupportDirectory inDomain:NSSystemDomainMask appropriateForURL:nil create:false error:nil];
 
-            sysAppSupportDir = [[sysAppSupportDir URLByAppendingPathComponent:@"ZeroTier"] URLByAppendingPathComponent:@"One"];
-            NSURL *sysAuthtokenURL = [sysAppSupportDir URLByAppendingPathComponent:@"authtoken.secret"];
-
-            if(![[NSFileManager defaultManager] fileExistsAtPath:[sysAuthtokenURL path]]) {
-
-            }
-
-            [[NSFileManager defaultManager] createDirectoryAtURL:appSupportDir
-                                     withIntermediateDirectories:YES
-                                                      attributes:nil
-                                                           error:&error];
+        if (k == nil) {
+            NSError *error = nil;
+            NSURL *appSupportDir = [[NSFileManager defaultManager] URLForDirectory:NSApplicationSupportDirectory inDomain:NSUserDomainMask appropriateForURL:nil create:false error:&error];
 
             if (error) {
                 NSLog(@"Error: %@", error);
-                *err = error;
-                k = nil;
                 return @"";
             }
 
-            AuthorizationRef authRef;
-            OSStatus status = AuthorizationCreate(nil, nil, kAuthorizationFlagDefaults, &authRef);
+            appSupportDir = [[appSupportDir URLByAppendingPathComponent:@"ZeroTier"] URLByAppendingPathComponent:@"One"];
+            NSURL *authtokenURL = [appSupportDir URLByAppendingPathComponent:@"authtoken.secret"];
 
-            if (status != errAuthorizationSuccess) {
-                NSLog(@"Authorization Failed! %d", status);
-
-                NSDictionary *userInfo = @{
-                                           NSLocalizedDescriptionKey: NSLocalizedString(@"Couldn't create AuthorizationRef", nil),
-                                           };
-                *err = [NSError errorWithDomain:@"com.zerotier.one" code:-1 userInfo:userInfo];
-
-                return @"";
-            }
-
-            AuthorizationItem authItem;
-            authItem.name = kAuthorizationRightExecute;
-            authItem.valueLength = 0;
-            authItem.flags = 0;
-
-            AuthorizationRights authRights;
-            authRights.count = 1;
-            authRights.items = &authItem;
-
-            AuthorizationFlags authFlags = kAuthorizationFlagDefaults |
-                                           kAuthorizationFlagInteractionAllowed |
-                                           kAuthorizationFlagPreAuthorize |
-                                           kAuthorizationFlagExtendRights;
-
-            status = AuthorizationCopyRights(authRef, &authRights, nil, authFlags, nil);
-
-            if (status != errAuthorizationSuccess) {
-                NSLog(@"Authorization Failed! %d", status);
-                NSDictionary *userInfo = @{
-                                           NSLocalizedDescriptionKey: NSLocalizedString(@"Couldn't copy authorization rights", nil),
-                                           };
-                *err = [NSError errorWithDomain:@"com.zerotier.one" code:-1 userInfo:userInfo];
-                return @"";
-            }
-
-            NSString *localKey = getAdminAuthToken(authRef);
-            AuthorizationFree(authRef, kAuthorizationFlagDestroyRights);
-
-            if (localKey != nil && [localKey lengthOfBytesUsingEncoding:NSUTF8StringEncoding] > 0) {
-                k = localKey;
-
-                [localKey writeToURL:authtokenURL
-                          atomically:YES
-                            encoding:NSUTF8StringEncoding
-                               error:&error];
+            if (!_resetKey && [[NSFileManager defaultManager] fileExistsAtPath:[authtokenURL path]]) {
+                k = [NSString stringWithContentsOfURL:authtokenURL
+                                             encoding:NSUTF8StringEncoding
+                                                error:&error];
+                
+                k = [k stringByReplacingOccurrencesOfString:@"\n" withString:@""];
 
                 if (error) {
-                    NSLog(@"Error writing token to disk: %@", error);
+                    NSLog(@"Error: %@", error);
+                    k = nil;
                     *err = error;
+                    return @"";
+                }
+            }
+            else {
+                _resetKey = NO;
+                NSURL *sysAppSupportDir = [[NSFileManager defaultManager] URLForDirectory:NSApplicationSupportDirectory inDomain:NSSystemDomainMask appropriateForURL:nil create:false error:nil];
+
+                sysAppSupportDir = [[sysAppSupportDir URLByAppendingPathComponent:@"ZeroTier"] URLByAppendingPathComponent:@"One"];
+                NSURL *sysAuthtokenURL = [sysAppSupportDir URLByAppendingPathComponent:@"authtoken.secret"];
+
+                if(![[NSFileManager defaultManager] fileExistsAtPath:[sysAuthtokenURL path]]) {
+
+                }
+
+                [[NSFileManager defaultManager] createDirectoryAtURL:appSupportDir
+                                         withIntermediateDirectories:YES
+                                                          attributes:nil
+                                                               error:&error];
+
+                if (error) {
+                    NSLog(@"Error: %@", error);
+                    *err = error;
+                    k = nil;
+                    return @"";
+                }
+
+                AuthorizationRef authRef;
+                OSStatus status = AuthorizationCreate(nil, nil, kAuthorizationFlagDefaults, &authRef);
+
+                if (status != errAuthorizationSuccess) {
+                    NSLog(@"Authorization Failed! %d", status);
+
+                    NSDictionary *userInfo = @{
+                                               NSLocalizedDescriptionKey: NSLocalizedString(@"Couldn't create AuthorizationRef", nil),
+                                               };
+                    *err = [NSError errorWithDomain:@"com.zerotier.one" code:-1 userInfo:userInfo];
+
+                    return @"";
+                }
+
+                AuthorizationItem authItem;
+                authItem.name = kAuthorizationRightExecute;
+                authItem.valueLength = 0;
+                authItem.flags = 0;
+
+                AuthorizationRights authRights;
+                authRights.count = 1;
+                authRights.items = &authItem;
+
+                AuthorizationFlags authFlags = kAuthorizationFlagDefaults |
+                                               kAuthorizationFlagInteractionAllowed |
+                                               kAuthorizationFlagPreAuthorize |
+                                               kAuthorizationFlagExtendRights;
+
+                status = AuthorizationCopyRights(authRef, &authRights, nil, authFlags, nil);
+
+                if (status != errAuthorizationSuccess) {
+                    NSLog(@"Authorization Failed! %d", status);
+                    NSDictionary *userInfo = @{
+                                               NSLocalizedDescriptionKey: NSLocalizedString(@"Couldn't copy authorization rights", nil),
+                                               };
+                    *err = [NSError errorWithDomain:@"com.zerotier.one" code:-1 userInfo:userInfo];
+                    return @"";
+                }
+
+                NSString *localKey = getAdminAuthToken(authRef);
+                AuthorizationFree(authRef, kAuthorizationFlagDestroyRights);
+
+                if (localKey != nil && [localKey lengthOfBytesUsingEncoding:NSUTF8StringEncoding] > 0) {
+                    k = localKey;
+
+                    [localKey writeToURL:authtokenURL
+                              atomically:YES
+                                encoding:NSUTF8StringEncoding
+                                   error:&error];
+
+                    if (error) {
+                        NSLog(@"Error writing token to disk: %@", error);
+                        *err = error;
+                    }
                 }
             }
         }
+
+        if (k == nil) {
+            NSDictionary *userInfo = @{
+                                       NSLocalizedDescriptionKey: NSLocalizedString(@"Unknown error finding authorization key", nil),
+                                       };
+            *err = [NSError errorWithDomain:@"com.zerotier.one" code:-1 userInfo:userInfo];
+
+            return @"";
+        }
     }
-
-    if (k == nil) {
-        NSDictionary *userInfo = @{
-                                   NSLocalizedDescriptionKey: NSLocalizedString(@"Unknown error finding authorization key", nil),
-                                   };
-        *err = [NSError errorWithDomain:@"com.zerotier.one" code:-1 userInfo:userInfo];
-
-        return @"";
-    }
-
     return k;
 }
 
@@ -249,6 +289,9 @@
 
                    completionHandler(networks);
                }
+               else if (status == 401) {
+                   self->_resetKey = YES;
+               }
     }];
     [task resume];
 }
@@ -327,6 +370,9 @@
 
                    completionHandler(status);
                }
+               else if (status == 401) {
+                   self->_resetKey = YES;
+               }
            }];
     [task resume];
 }
@@ -398,6 +444,9 @@
         if(status == 200) {
             NSLog(@"join ok");
         }
+        else if (status == 401) {
+            self->_resetKey = YES;
+        }
         else {
             NSLog(@"join error: %ld", (long)status);
         }
@@ -453,6 +502,9 @@
 
         if(status == 200) {
             NSLog(@"leave ok");
+        }
+        else if (status == 401) {
+            self->_resetKey = YES;
         }
         else {
             NSLog(@"leave error: %ld", status);

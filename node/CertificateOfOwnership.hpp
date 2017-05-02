@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "Constants.hpp"
+#include "Credential.hpp"
 #include "C25519.hpp"
 #include "Address.hpp"
 #include "Identity.hpp"
@@ -45,9 +46,11 @@ class RuntimeEnvironment;
 /**
  * Certificate indicating ownership of a network identifier
  */
-class CertificateOfOwnership
+class CertificateOfOwnership : public Credential
 {
 public:
+	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_COO; }
+
 	enum Thing
 	{
 		THING_NULL = 0,
@@ -137,9 +140,10 @@ public:
 
 	/**
 	 * @param RR Runtime environment to allow identity lookup for signedBy
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature
 	 */
-	int verify(const RuntimeEnvironment *RR) const;
+	int verify(const RuntimeEnvironment *RR,void *tPtr) const;
 
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,const bool forSign = false) const

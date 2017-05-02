@@ -25,13 +25,13 @@
 
 namespace ZeroTier {
 
-int Tag::verify(const RuntimeEnvironment *RR) const
+int Tag::verify(const RuntimeEnvironment *RR,void *tPtr) const
 {
 	if ((!_signedBy)||(_signedBy != Network::controllerFor(_networkId)))
 		return -1;
-	const Identity id(RR->topology->getIdentity(_signedBy));
+	const Identity id(RR->topology->getIdentity(tPtr,_signedBy));
 	if (!id) {
-		RR->sw->requestWhois(_signedBy);
+		RR->sw->requestWhois(tPtr,_signedBy);
 		return 1;
 	}
 	try {

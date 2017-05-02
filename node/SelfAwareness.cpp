@@ -40,15 +40,17 @@ namespace ZeroTier {
 class _ResetWithinScope
 {
 public:
-	_ResetWithinScope(uint64_t now,int inetAddressFamily,InetAddress::IpScope scope) :
+	_ResetWithinScope(void *tPtr,uint64_t now,int inetAddressFamily,InetAddress::IpScope scope) :
 		_now(now),
+		_tPtr(tPtr),
 		_family(inetAddressFamily),
 		_scope(scope) {}
 
-	inline void operator()(Topology &t,const SharedPtr<Peer> &p) { p->resetWithinScope(_scope,_family,_now); }
+	inline void operator()(Topology &t,const SharedPtr<Peer> &p) { p->resetWithinScope(_tPtr,_scope,_family,_now); }
 
 private:
 	uint64_t _now;
+	void *_tPtr;
 	int _family;
 	InetAddress::IpScope _scope;
 };
@@ -59,7 +61,7 @@ SelfAwareness::SelfAwareness(const RuntimeEnvironment *renv) :
 {
 }
 
-void SelfAwareness::iam(const Address &reporter,const InetAddress &receivedOnLocalAddress,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now)
+void SelfAwareness::iam(void *tPtr,const Address &reporter,const InetAddress &receivedOnLocalAddress,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now)
 {
 	const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
 
@@ -91,7 +93,7 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &receivedOnLoc
 		}
 
 		// Reset all paths within this scope and address family
-		_ResetWithinScope rset(now,myPhysicalAddress.ss_family,(InetAddress::IpScope)scope);
+		_ResetWithinScope rset(tPtr,now,myPhysicalAddress.ss_family,(InetAddress::IpScope)scope);
 		RR->topology->eachPeer<_ResetWithinScope &>(rset);
 	} else {
 		// Otherwise just update DB to use to determine external surface info

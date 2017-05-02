@@ -156,7 +156,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 		s20Key[1] = (uint64_t)buf; // address of buf
 		s20Key[2] = (uint64_t)s20Key; // address of s20Key[]
 		s20Key[3] = (uint64_t)&s20; // address of s20
-		s20.init(s20Key,256,s20Key);
+		s20.init(s20Key,s20Key);
 	}
 
 #ifdef __WINDOWS__
@@ -177,6 +177,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 			}
 			randomPtr = 0;
 			s20.crypt12(randomBuf,randomBuf,sizeof(randomBuf));
+			s20.init(randomBuf,randomBuf);
 		}
 		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
 	}
@@ -209,6 +210,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 			}
 			randomPtr = 0;
 			s20.crypt12(randomBuf,randomBuf,sizeof(randomBuf));
+			s20.init(randomBuf,randomBuf);
 		}
 		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
 	}

@@ -85,18 +85,18 @@ void OutboundMulticast::init(
 	memcpy(_frameData,payload,_frameLen);
 }
 
-void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,const Address &toAddr)
+void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,void *tPtr,const Address &toAddr)
 {
 	const SharedPtr<Network> nw(RR->node->network(_nwid));
 	const Address toAddr2(toAddr);
-	if ((nw)&&(nw->filterOutgoingPacket(true,RR->identity.address(),toAddr2,_macSrc,_macDest,_frameData,_frameLen,_etherType,0))) {
+	if ((nw)&&(nw->filterOutgoingPacket(tPtr,true,RR->identity.address(),toAddr2,_macSrc,_macDest,_frameData,_frameLen,_etherType,0))) {
 		//TRACE(">>MC %.16llx -> %s",(unsigned long long)this,toAddr.toString().c_str());
 		_packet.newInitializationVector();
 		_packet.setDestination(toAddr2);
 		RR->node->expectReplyTo(_packet.packetId());
 
 		Packet tmp(_packet); // make a copy of packet so as not to garble the original -- GitHub issue #461
-		RR->sw->send(tmp,true);
+		RR->sw->send(tPtr,tmp,true);
 	}
 }
 

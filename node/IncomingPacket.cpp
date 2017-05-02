@@ -44,7 +44,7 @@
 
 namespace ZeroTier {
 
-bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
+bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 {
 	const Address sourceAddress(source());
 
@@ -65,10 +65,10 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 			}
 		} else if ((c == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)&&(verb() == Packet::VERB_HELLO)) {
 			// Only HELLO is allowed in the clear, but will still have a MAC
-			return _doHELLO(RR,false);
+			return _doHELLO(RR,tPtr,false);
 		}
 
-		const SharedPtr<Peer> peer(RR->topology->getPeer(sourceAddress));
+		const SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,sourceAddress));
 		if (peer) {
 			if (!trusted) {
 				if (!dearmor(peer->key())) {
@@ -89,30 +89,30 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 			switch(v) {
 				//case Packet::VERB_NOP:
 				default: // ignore unknown verbs, but if they pass auth check they are "received"
-					peer->received(_path,hops(),packetId(),v,0,Packet::VERB_NOP,false);
+					peer->received(tPtr,_path,hops(),packetId(),v,0,Packet::VERB_NOP,false);
 					return true;
 
-				case Packet::VERB_HELLO:                      return _doHELLO(RR,true);
-				case Packet::VERB_ERROR:                      return _doERROR(RR,peer);
-				case Packet::VERB_OK:                         return _doOK(RR,peer);
-				case Packet::VERB_WHOIS:                      return _doWHOIS(RR,peer);
-				case Packet::VERB_RENDEZVOUS:                 return _doRENDEZVOUS(RR,peer);
-				case Packet::VERB_FRAME:                      return _doFRAME(RR,peer);
-				case Packet::VERB_EXT_FRAME:                  return _doEXT_FRAME(RR,peer);
-				case Packet::VERB_ECHO:                       return _doECHO(RR,peer);
-				case Packet::VERB_MULTICAST_LIKE:             return _doMULTICAST_LIKE(RR,peer);
-				case Packet::VERB_NETWORK_CREDENTIALS:        return _doNETWORK_CREDENTIALS(RR,peer);
-				case Packet::VERB_NETWORK_CONFIG_REQUEST:     return _doNETWORK_CONFIG_REQUEST(RR,peer);
-				case Packet::VERB_NETWORK_CONFIG:             return _doNETWORK_CONFIG(RR,peer);
-				case Packet::VERB_MULTICAST_GATHER:           return _doMULTICAST_GATHER(RR,peer);
-				case Packet::VERB_MULTICAST_FRAME:            return _doMULTICAST_FRAME(RR,peer);
-				case Packet::VERB_PUSH_DIRECT_PATHS:          return _doPUSH_DIRECT_PATHS(RR,peer);
-				case Packet::VERB_CIRCUIT_TEST:               return _doCIRCUIT_TEST(RR,peer);
-				case Packet::VERB_CIRCUIT_TEST_REPORT:        return _doCIRCUIT_TEST_REPORT(RR,peer);
-				case Packet::VERB_USER_MESSAGE:               return _doUSER_MESSAGE(RR,peer);
+				case Packet::VERB_HELLO:                      return _doHELLO(RR,tPtr,true);
+				case Packet::VERB_ERROR:                      return _doERROR(RR,tPtr,peer);
+				case Packet::VERB_OK:                         return _doOK(RR,tPtr,peer);
+				case Packet::VERB_WHOIS:                      return _doWHOIS(RR,tPtr,peer);
+				case Packet::VERB_RENDEZVOUS:                 return _doRENDEZVOUS(RR,tPtr,peer);
+				case Packet::VERB_FRAME:                      return _doFRAME(RR,tPtr,peer);
+				case Packet::VERB_EXT_FRAME:                  return _doEXT_FRAME(RR,tPtr,peer);
+				case Packet::VERB_ECHO:                       return _doECHO(RR,tPtr,peer);
+				case Packet::VERB_MULTICAST_LIKE:             return _doMULTICAST_LIKE(RR,tPtr,peer);
+				case Packet::VERB_NETWORK_CREDENTIALS:        return _doNETWORK_CREDENTIALS(RR,tPtr,peer);
+				case Packet::VERB_NETWORK_CONFIG_REQUEST:     return _doNETWORK_CONFIG_REQUEST(RR,tPtr,peer);
+				case Packet::VERB_NETWORK_CONFIG:             return _doNETWORK_CONFIG(RR,tPtr,peer);
+				case Packet::VERB_MULTICAST_GATHER:           return _doMULTICAST_GATHER(RR,tPtr,peer);
+				case Packet::VERB_MULTICAST_FRAME:            return _doMULTICAST_FRAME(RR,tPtr,peer);
+				case Packet::VERB_PUSH_DIRECT_PATHS:          return _doPUSH_DIRECT_PATHS(RR,tPtr,peer);
+				case Packet::VERB_CIRCUIT_TEST:               return _doCIRCUIT_TEST(RR,tPtr,peer);
+				case Packet::VERB_CIRCUIT_TEST_REPORT:        return _doCIRCUIT_TEST_REPORT(RR,tPtr,peer);
+				case Packet::VERB_USER_MESSAGE:               return _doUSER_MESSAGE(RR,tPtr,peer);
 			}
 		} else {
-			RR->sw->requestWhois(sourceAddress);
+			RR->sw->requestWhois(tPtr,sourceAddress);
 			return false;
 		}
 	} catch ( ... ) {
@@ -123,7 +123,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 	}
 }
 
-bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		const Packet::Verb inReVerb = (Packet::Verb)(*this)[ZT_PROTO_VERB_ERROR_IDX_IN_RE_VERB];
@@ -163,7 +163,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 			case Packet::ERROR_IDENTITY_COLLISION:
 				// FIXME: for federation this will need a payload with a signature or something.
 				if (RR->topology->isUpstream(peer->identity()))
-					RR->node->postEvent(ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION);
+					RR->node->postEvent(tPtr,ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION);
 				break;
 
 			case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE: {
@@ -171,7 +171,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				const uint64_t now = RR->node->now();
 				if ( (network) && (network->config().com) && (peer->rateGateIncomingComRequest(now)) )
-					network->pushCredentialsNow(peer->address(),now);
+					network->pushCredentialsNow(tPtr,peer->address(),now);
 			}	break;
 
 			case Packet::ERROR_NETWORK_ACCESS_DENIED_: {
@@ -185,7 +185,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				// Members of networks can use this error to indicate that they no longer
 				// want to receive multicasts on a given channel.
 				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
-				if ((network)&&(network->gate(peer))) {
+				if ((network)&&(network->gate(tPtr,peer))) {
 					const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8,6),6),at<uint32_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 14));
 					TRACE("%.16llx: peer %s unsubscrubed from multicast group %s",network->id(),peer->address().toString().c_str(),mg.toString().c_str());
 					RR->mc->remove(network->id(),mg,peer->address());
@@ -195,14 +195,14 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 			default: break;
 		}
 
-		peer->received(_path,hops(),packetId(),Packet::VERB_ERROR,inRePacketId,inReVerb,false);
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_ERROR,inRePacketId,inReVerb,false);
 	} catch ( ... ) {
 		TRACE("dropped ERROR from %s(%s): unexpected exception",peer->address().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAuthenticated)
+bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool alreadyAuthenticated)
 {
 	try {
 		const uint64_t now = RR->node->now();
@@ -226,7 +226,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 			return true;
 		}
 
-		SharedPtr<Peer> peer(RR->topology->getPeer(id.address()));
+		SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,id.address()));
 		if (peer) {
 			// We already have an identity with this address -- check for collisions
 			if (!alreadyAuthenticated) {
@@ -246,7 +246,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 							outp.append((uint64_t)pid);
 							outp.append((uint8_t)Packet::ERROR_IDENTITY_COLLISION);
 							outp.armor(key,true,_path->nextOutgoingCounter());
-							_path->send(RR,outp.data(),outp.size(),RR->node->now());
+							_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 						} else {
 							TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_path->address().toString().c_str());
 						}
@@ -292,7 +292,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 				return true;
 			}
 
-			peer = RR->topology->addPeer(newPeer);
+			peer = RR->topology->addPeer(tPtr,newPeer);
 
 			// Continue at // VALID
 		}
@@ -304,7 +304,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 		if (ptr < size()) {
 			ptr += externalSurfaceAddress.deserialize(*this,ptr);
 			if ((externalSurfaceAddress)&&(hops() == 0))
-				RR->sa->iam(id.address(),_path->localAddress(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(id),now);
+				RR->sa->iam(tPtr,id.address(),_path->localAddress(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(id),now);
 		}
 
 		// Get primary planet world ID and world timestamp if present
@@ -408,17 +408,17 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,const bool alreadyAut
 		outp.setAt(corSizeAt,(uint16_t)(outp.size() - (corSizeAt + 2)));
 
 		outp.armor(peer->key(),true,_path->nextOutgoingCounter());
-		_path->send(RR,outp.data(),outp.size(),now);
+		_path->send(RR,tPtr,outp.data(),outp.size(),now);
 
 		peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision); // important for this to go first so received() knows the version
-		peer->received(_path,hops(),pid,Packet::VERB_HELLO,0,Packet::VERB_NOP,false);
+		peer->received(tPtr,_path,hops(),pid,Packet::VERB_HELLO,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
 		TRACE("dropped HELLO from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		const Packet::Verb inReVerb = (Packet::Verb)(*this)[ZT_PROTO_VERB_OK_IDX_IN_RE_VERB];
@@ -463,7 +463,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 						while (ptr < endOfWorlds) {
 							World w;
 							ptr += w.deserialize(*this,ptr);
-							RR->topology->addWorld(w,false);
+							RR->topology->addWorld(tPtr,w,false);
 						}
 					} else {
 						ptr += worldsLen;
@@ -490,20 +490,20 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
 
 				if ((externalSurfaceAddress)&&(hops() == 0))
-					RR->sa->iam(peer->address(),_path->localAddress(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(peer->identity()),RR->node->now());
+					RR->sa->iam(tPtr,peer->address(),_path->localAddress(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(peer->identity()),RR->node->now());
 			}	break;
 
 			case Packet::VERB_WHOIS:
 				if (RR->topology->isUpstream(peer->identity())) {
 					const Identity id(*this,ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY);
-					RR->sw->doAnythingWaitingForPeer(RR->topology->addPeer(SharedPtr<Peer>(new Peer(RR,RR->identity,id))));
+					RR->sw->doAnythingWaitingForPeer(tPtr,RR->topology->addPeer(tPtr,SharedPtr<Peer>(new Peer(RR,RR->identity,id))));
 				}
 				break;
 
 			case Packet::VERB_NETWORK_CONFIG_REQUEST: {
 				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_OK_IDX_PAYLOAD)));
 				if (network)
-					network->handleConfigChunk(packetId(),source(),*this,ZT_PROTO_VERB_OK_IDX_PAYLOAD);
+					network->handleConfigChunk(tPtr,packetId(),source(),*this,ZT_PROTO_VERB_OK_IDX_PAYLOAD);
 			}	break;
 
 			case Packet::VERB_MULTICAST_GATHER: {
@@ -513,7 +513,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 					const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_ADI));
 					//TRACE("%s(%s): OK(MULTICAST_GATHER) %.16llx/%s length %u",source().toString().c_str(),_path->address().toString().c_str(),nwid,mg.toString().c_str(),size());
 					const unsigned int count = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS + 4);
-					RR->mc->addMultiple(RR->node->now(),nwid,mg,field(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS + 6,count * 5),count,at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS));
+					RR->mc->addMultiple(tPtr,RR->node->now(),nwid,mg,field(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS + 6,count * 5),count,at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS));
 				}
 			}	break;
 
@@ -532,7 +532,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 						CertificateOfMembership com;
 						offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS);
 						if (com)
-							network->addCredential(com);
+							network->addCredential(tPtr,com);
 					}
 
 					if ((flags & 0x02) != 0) {
@@ -540,7 +540,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 						offset += ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS;
 						unsigned int totalKnown = at<uint32_t>(offset); offset += 4;
 						unsigned int count = at<uint16_t>(offset); offset += 2;
-						RR->mc->addMultiple(RR->node->now(),nwid,mg,field(offset,count * 5),count,totalKnown);
+						RR->mc->addMultiple(tPtr,RR->node->now(),nwid,mg,field(offset,count * 5),count,totalKnown);
 					}
 				}
 			}	break;
@@ -548,14 +548,14 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 			default: break;
 		}
 
-		peer->received(_path,hops(),packetId(),Packet::VERB_OK,inRePacketId,inReVerb,false);
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_OK,inRePacketId,inReVerb,false);
 	} catch ( ... ) {
 		TRACE("dropped OK from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		if ((!RR->topology->amRoot())&&(!peer->rateGateInboundWhoisRequest(RR->node->now()))) {
@@ -573,13 +573,13 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 			const Address addr(field(ptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 			ptr += ZT_ADDRESS_LENGTH;
 
-			const Identity id(RR->topology->getIdentity(addr));
+			const Identity id(RR->topology->getIdentity(tPtr,addr));
 			if (id) {
 				id.serialize(outp,false);
 				++count;
 			} else {
 				// Request unknown WHOIS from upstream from us (if we have one)
-				RR->sw->requestWhois(addr);
+				RR->sw->requestWhois(tPtr,addr);
 #ifdef ZT_ENABLE_CLUSTER
 				// Distribute WHOIS queries across a cluster if we do not know the ID.
 				// This may result in duplicate OKs to the querying peer, which is fine.
@@ -591,32 +591,32 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 
 		if (count > 0) {
 			outp.armor(peer->key(),true,_path->nextOutgoingCounter());
-			_path->send(RR,outp.data(),outp.size(),RR->node->now());
+			_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 		}
 
-		peer->received(_path,hops(),packetId(),Packet::VERB_WHOIS,0,Packet::VERB_NOP,false);
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_WHOIS,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
 		TRACE("dropped WHOIS from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		if (!RR->topology->isUpstream(peer->identity())) {
 			TRACE("RENDEZVOUS from %s ignored since source is not upstream",peer->address().toString().c_str());
 		} else {
 			const Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-			const SharedPtr<Peer> rendezvousWith(RR->topology->getPeer(with));
+			const SharedPtr<Peer> rendezvousWith(RR->topology->getPeer(tPtr,with));
 			if (rendezvousWith) {
 				const unsigned int port = at<uint16_t>(ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT);
 				const unsigned int addrlen = (*this)[ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN];
 				if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
 					const InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
-					if (RR->node->shouldUsePathForZeroTierTraffic(with,_path->localAddress(),atAddr)) {
-						RR->node->putPacket(_path->localAddress(),atAddr,"ABRE",4,2); // send low-TTL junk packet to 'open' local NAT(s) and stateful firewalls
-						rendezvousWith->attemptToContactAt(_path->localAddress(),atAddr,RR->node->now(),false,0);
+					if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,with,_path->localAddress(),atAddr)) {
+						RR->node->putPacket(tPtr,_path->localAddress(),atAddr,"ABRE",4,2); // send low-TTL junk packet to 'open' local NAT(s) and stateful firewalls
+						rendezvousWith->attemptToContactAt(tPtr,_path->localAddress(),atAddr,RR->node->now(),false,0);
 						TRACE("RENDEZVOUS from %s says %s might be at %s, sent verification attempt",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
 					} else {
 						TRACE("RENDEZVOUS from %s says %s might be at %s, ignoring since path is not suitable",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
@@ -628,46 +628,46 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<
 				TRACE("ignored RENDEZVOUS from %s(%s) to meet unknown peer %s",peer->address().toString().c_str(),_path->address().toString().c_str(),with.toString().c_str());
 			}
 		}
-		peer->received(_path,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP,false);
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
 		TRACE("dropped RENDEZVOUS from %s(%s): unexpected exception",peer->address().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID);
 		const SharedPtr<Network> network(RR->node->network(nwid));
 		bool trustEstablished = false;
 		if (network) {
-			if (network->gate(peer)) {
+			if (network->gate(tPtr,peer)) {
 				trustEstablished = true;
 				if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD) {
 					const unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
 					const MAC sourceMac(peer->address(),nwid);
 					const unsigned int frameLen = size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
 					const uint8_t *const frameData = reinterpret_cast<const uint8_t *>(data()) + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
-					if (network->filterIncomingPacket(peer,RR->identity.address(),sourceMac,network->mac(),frameData,frameLen,etherType,0) > 0)
-						RR->node->putFrame(nwid,network->userPtr(),sourceMac,network->mac(),etherType,0,(const void *)frameData,frameLen);
+					if (network->filterIncomingPacket(tPtr,peer,RR->identity.address(),sourceMac,network->mac(),frameData,frameLen,etherType,0) > 0)
+						RR->node->putFrame(tPtr,nwid,network->userPtr(),sourceMac,network->mac(),etherType,0,(const void *)frameData,frameLen);
 				}
 			} else {
 				TRACE("dropped FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_path->address().toString().c_str(),(unsigned long long)network->id());
-				_sendErrorNeedCredentials(RR,peer,nwid);
+				_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
 			}
 		} else {
 			TRACE("dropped FRAME from %s(%s): we are not a member of network %.16llx",source().toString().c_str(),_path->address().toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
-			_sendErrorNeedCredentials(RR,peer,nwid);
+			_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
 		}
-		peer->received(_path,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP,trustEstablished);
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP,trustEstablished);
 	} catch ( ... ) {
 		TRACE("dropped FRAME from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_EXT_FRAME_IDX_NETWORK_ID);
@@ -680,13 +680,13 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				CertificateOfMembership com;
 				comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
 				if (com)
-					network->addCredential(com);
+					network->addCredential(tPtr,com);
 			}
 
-			if (!network->gate(peer)) {
+			if (!network->gate(tPtr,peer)) {
 				TRACE("dropped EXT_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_path->address().toString().c_str(),network->id());
-				_sendErrorNeedCredentials(RR,peer,nwid);
-				peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,false);
+				_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
+				peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,false);
 				return true;
 			}
 
@@ -699,36 +699,36 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 
 				if ((!from)||(from.isMulticast())||(from == network->mac())) {
 					TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: invalid source MAC %s",from.toString().c_str(),peer->address().toString().c_str(),_path->address().toString().c_str(),to.toString().c_str(),from.toString().c_str());
-					peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
+					peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
 					return true;
 				}
 
-				switch (network->filterIncomingPacket(peer,RR->identity.address(),from,to,frameData,frameLen,etherType,0)) {
+				switch (network->filterIncomingPacket(tPtr,peer,RR->identity.address(),from,to,frameData,frameLen,etherType,0)) {
 					case 1:
 						if (from != MAC(peer->address(),nwid)) {
 							if (network->config().permitsBridging(peer->address())) {
 								network->learnBridgeRoute(from,peer->address());
 							} else {
 								TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_path->address().toString().c_str(),to.toString().c_str(),network->id());
-								peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
+								peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
 								return true;
 							}
 						} else if (to != network->mac()) {
 							if (to.isMulticast()) {
 								if (network->config().multicastLimit == 0) {
 									TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: network %.16llx does not allow multicast",from.toString().c_str(),peer->address().toString().c_str(),_path->address().toString().c_str(),to.toString().c_str(),network->id());
-									peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
+									peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
 									return true;
 								}
 							} else if (!network->config().permitsBridging(RR->identity.address())) {
 								TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: I cannot bridge to %.16llx or bridging disabled on network",from.toString().c_str(),peer->address().toString().c_str(),_path->address().toString().c_str(),to.toString().c_str(),network->id());
-								peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
+								peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
 								return true;
 							}
 						}
 						// fall through -- 2 means accept regardless of bridging checks or other restrictions
 					case 2:
-						RR->node->putFrame(nwid,network->userPtr(),from,to,etherType,0,(const void *)frameData,frameLen);
+						RR->node->putFrame(tPtr,nwid,network->userPtr(),from,to,etherType,0,(const void *)frameData,frameLen);
 						break;
 				}
 			}
@@ -739,14 +739,14 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				outp.append((uint64_t)packetId());
 				outp.append((uint64_t)nwid);
 				outp.armor(peer->key(),true,_path->nextOutgoingCounter());
-				_path->send(RR,outp.data(),outp.size(),RR->node->now());
+				_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 			}
 
-			peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true);
+			peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true);
 		} else {
 			TRACE("dropped EXT_FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_path->address().toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
-			_sendErrorNeedCredentials(RR,peer,nwid);
-			peer->received(_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,false);
+			_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
+			peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,false);
 		}
 	} catch ( ... ) {
 		TRACE("dropped EXT_FRAME from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
@@ -754,7 +754,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 	return true;
 }
 
-bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		if (!peer->rateGateEchoRequest(RR->node->now())) {
@@ -769,16 +769,16 @@ bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,const SharedPtr<Peer> 
 		if (size() > ZT_PACKET_IDX_PAYLOAD)
 			outp.append(reinterpret_cast<const unsigned char *>(data()) + ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD);
 		outp.armor(peer->key(),true,_path->nextOutgoingCounter());
-		_path->send(RR,outp.data(),outp.size(),RR->node->now());
+		_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 
-		peer->received(_path,hops(),pid,Packet::VERB_ECHO,0,Packet::VERB_NOP,false);
+		peer->received(tPtr,_path,hops(),pid,Packet::VERB_ECHO,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
 		TRACE("dropped ECHO from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		const uint64_t now = RR->node->now();
@@ -802,9 +802,9 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 			if (!auth) {
 				if ((!network)||(network->id() != nwid))
 					network = RR->node->network(nwid);
-				const bool authOnNet = ((network)&&(network->gate(peer)));
+				const bool authOnNet = ((network)&&(network->gate(tPtr,peer)));
 				if (!authOnNet)
-					_sendErrorNeedCredentials(RR,peer,nwid);
+					_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
 				trustEstablished |= authOnNet;
 				if (authOnNet||RR->mc->cacheAuthorized(peer->address(),nwid,now)) {
 					auth = true;
@@ -815,18 +815,18 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 
 			if (auth) {
 				const MulticastGroup group(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14));
-				RR->mc->add(now,nwid,group,peer->address());
+				RR->mc->add(tPtr,now,nwid,group,peer->address());
 			}
 		}
 
-		peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP,trustEstablished);
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP,trustEstablished);
 	} catch ( ... ) {
 		TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		if (!peer->rateGateCredentialsReceived(RR->node->now())) {
@@ -847,7 +847,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 			if (com) {
 				const SharedPtr<Network> network(RR->node->network(com.networkId()));
 				if (network) {
-					switch (network->addCredential(com)) {
+					switch (network->addCredential(tPtr,com)) {
 						case Membership::ADD_REJECTED:
 							break;
 						case Membership::ADD_ACCEPTED_NEW:
@@ -857,7 +857,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 						case Membership::ADD_DEFERRED_FOR_WHOIS:
 							return false;
 					}
-				} else RR->mc->addCredential(com,false);
+				} else RR->mc->addCredential(tPtr,com,false);
 			}
 		}
 		++p; // skip trailing 0 after COMs if present
@@ -868,7 +868,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 				p += cap.deserialize(*this,p);
 				const SharedPtr<Network> network(RR->node->network(cap.networkId()));
 				if (network) {
-					switch (network->addCredential(cap)) {
+					switch (network->addCredential(tPtr,cap)) {
 						case Membership::ADD_REJECTED:
 							break;
 						case Membership::ADD_ACCEPTED_NEW:
@@ -888,7 +888,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 				p += tag.deserialize(*this,p);
 				const SharedPtr<Network> network(RR->node->network(tag.networkId()));
 				if (network) {
-					switch (network->addCredential(tag)) {
+					switch (network->addCredential(tPtr,tag)) {
 						case Membership::ADD_REJECTED:
 							break;
 						case Membership::ADD_ACCEPTED_NEW:
@@ -908,7 +908,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 				p += revocation.deserialize(*this,p);
 				const SharedPtr<Network> network(RR->node->network(revocation.networkId()));
 				if (network) {
-					switch(network->addCredential(peer->address(),revocation)) {
+					switch(network->addCredential(tPtr,peer->address(),revocation)) {
 						case Membership::ADD_REJECTED:
 							break;
 						case Membership::ADD_ACCEPTED_NEW:
@@ -928,7 +928,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 				p += coo.deserialize(*this,p);
 				const SharedPtr<Network> network(RR->node->network(coo.networkId()));
 				if (network) {
-					switch(network->addCredential(coo)) {
+					switch(network->addCredential(tPtr,coo)) {
 						case Membership::ADD_REJECTED:
 							break;
 						case Membership::ADD_ACCEPTED_NEW:
@@ -942,7 +942,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 			}
 		}
 
-		peer->received(_path,hops(),packetId(),Packet::VERB_NETWORK_CREDENTIALS,0,Packet::VERB_NOP,trustEstablished);
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_NETWORK_CREDENTIALS,0,Packet::VERB_NOP,trustEstablished);
 	} catch (std::exception &exc) {
 		//fprintf(stderr,"dropped NETWORK_CREDENTIALS from %s(%s): %s" ZT_EOL_S,source().toString().c_str(),_path->address().toString().c_str(),exc.what());
 		TRACE("dropped NETWORK_CREDENTIALS from %s(%s): %s",source().toString().c_str(),_path->address().toString().c_str(),exc.what());
@@ -953,7 +953,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const S
 	return true;
 }
 
-bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
@@ -972,10 +972,10 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
 			outp.append(nwid);
 			outp.armor(peer->key(),true,_path->nextOutgoingCounter());
-			_path->send(RR,outp.data(),outp.size(),RR->node->now());
+			_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 		}
 
-		peer->received(_path,hopCount,requestPacketId,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,false);
+		peer->received(tPtr,_path,hopCount,requestPacketId,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,false);
 	} catch (std::exception &exc) {
 		//fprintf(stderr,"dropped NETWORK_CONFIG_REQUEST from %s(%s): %s" ZT_EOL_S,source().toString().c_str(),_path->address().toString().c_str(),exc.what());
 		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): %s",source().toString().c_str(),_path->address().toString().c_str(),exc.what());
@@ -986,12 +986,12 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 	return true;
 }
 
-bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PACKET_IDX_PAYLOAD)));
 		if (network) {
-			const uint64_t configUpdateId = network->handleConfigChunk(packetId(),source(),*this,ZT_PACKET_IDX_PAYLOAD);
+			const uint64_t configUpdateId = network->handleConfigChunk(tPtr,packetId(),source(),*this,ZT_PACKET_IDX_PAYLOAD);
 			if (configUpdateId) {
 				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 				outp.append((uint8_t)Packet::VERB_ECHO);
@@ -999,17 +999,17 @@ bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,const Shared
 				outp.append((uint64_t)network->id());
 				outp.append((uint64_t)configUpdateId);
 				outp.armor(peer->key(),true,_path->nextOutgoingCounter());
-				_path->send(RR,outp.data(),outp.size(),RR->node->now());
+				_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 			}
 		}
-		peer->received(_path,hops(),packetId(),Packet::VERB_NETWORK_CONFIG,0,Packet::VERB_NOP,false);
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_NETWORK_CONFIG,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_NETWORK_ID);
@@ -1027,17 +1027,17 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 				com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_GATHER_IDX_COM);
 				if (com) {
 					if (network)
-						network->addCredential(com);
-					else RR->mc->addCredential(com,false);
+						network->addCredential(tPtr,com);
+					else RR->mc->addCredential(tPtr,com,false);
 				}
 			} catch ( ... ) {
 				TRACE("MULTICAST_GATHER from %s(%s): discarded invalid COM",peer->address().toString().c_str(),_path->address().toString().c_str());
 			}
 		}
 
-		const bool trustEstablished = ((network)&&(network->gate(peer)));
+		const bool trustEstablished = ((network)&&(network->gate(tPtr,peer)));
 		if (!trustEstablished)
-			_sendErrorNeedCredentials(RR,peer,nwid);
+			_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
 		if ( ( trustEstablished || RR->mc->cacheAuthorized(peer->address(),nwid,RR->node->now()) ) && (gatherLimit > 0) ) {
 			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 			outp.append((unsigned char)Packet::VERB_MULTICAST_GATHER);
@@ -1048,7 +1048,7 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 			const unsigned int gatheredLocally = RR->mc->gather(peer->address(),nwid,mg,outp,gatherLimit);
 			if (gatheredLocally > 0) {
 				outp.armor(peer->key(),true,_path->nextOutgoingCounter());
-				_path->send(RR,outp.data(),outp.size(),RR->node->now());
+				_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 			}
 
 			// If we are a member of a cluster, distribute this GATHER across it
@@ -1058,14 +1058,14 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 #endif
 		}
 
-		peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_GATHER,0,Packet::VERB_NOP,trustEstablished);
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_MULTICAST_GATHER,0,Packet::VERB_NOP,trustEstablished);
 	} catch ( ... ) {
 		TRACE("dropped MULTICAST_GATHER from %s(%s): unexpected exception",peer->address().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID);
@@ -1081,19 +1081,19 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				CertificateOfMembership com;
 				offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
 				if (com)
-					network->addCredential(com);
+					network->addCredential(tPtr,com);
 			}
 
-			if (!network->gate(peer)) {
+			if (!network->gate(tPtr,peer)) {
 				TRACE("dropped MULTICAST_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_path->address().toString().c_str(),(unsigned long long)network->id());
-				_sendErrorNeedCredentials(RR,peer,nwid);
-				peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,false);
+				_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
+				peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,false);
 				return true;
 			}
 
 			if (network->config().multicastLimit == 0) {
 				TRACE("dropped MULTICAST_FRAME from %s(%s): network %.16llx does not allow multicast",peer->address().toString().c_str(),_path->address().toString().c_str(),(unsigned long long)network->id());
-				peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,false);
+				peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,false);
 				return true;
 			}
 
@@ -1120,12 +1120,12 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 			if ((frameLen > 0)&&(frameLen <= ZT_IF_MTU)) {
 				if (!to.mac().isMulticast()) {
 					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: destination is unicast, must use FRAME or EXT_FRAME",from.toString().c_str(),peer->address().toString().c_str(),_path->address().toString().c_str(),to.toString().c_str());
-					peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
+					peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
 					return true;
 				}
 				if ((!from)||(from.isMulticast())||(from == network->mac())) {
 					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: invalid source MAC",from.toString().c_str(),peer->address().toString().c_str(),_path->address().toString().c_str(),to.toString().c_str());
-					peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
+					peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
 					return true;
 				}
 
@@ -1134,14 +1134,14 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 						network->learnBridgeRoute(from,peer->address());
 					} else {
 						TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_path->address().toString().c_str(),to.toString().c_str(),network->id());
-						peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
+						peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay
 						return true;
 					}
 				}
 
 				const uint8_t *const frameData = (const uint8_t *)field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,frameLen);
-				if (network->filterIncomingPacket(peer,RR->identity.address(),from,to.mac(),frameData,frameLen,etherType,0) > 0) {
-					RR->node->putFrame(nwid,network->userPtr(),from,to.mac(),etherType,0,(const void *)frameData,frameLen);
+				if (network->filterIncomingPacket(tPtr,peer,RR->identity.address(),from,to.mac(),frameData,frameLen,etherType,0) > 0) {
+					RR->node->putFrame(tPtr,nwid,network->userPtr(),from,to.mac(),etherType,0,(const void *)frameData,frameLen);
 				}
 			}
 
@@ -1155,14 +1155,14 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				outp.append((unsigned char)0x02); // flag 0x02 = contains gather results
 				if (RR->mc->gather(peer->address(),nwid,to,outp,gatherLimit)) {
 					outp.armor(peer->key(),true,_path->nextOutgoingCounter());
-					_path->send(RR,outp.data(),outp.size(),RR->node->now());
+					_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 				}
 			}
 
-			peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,true);
+			peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,true);
 		} else {
-			_sendErrorNeedCredentials(RR,peer,nwid);
-			peer->received(_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,false);
+			_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
+			peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,false);
 		}
 	} catch ( ... ) {
 		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
@@ -1170,7 +1170,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 	return true;
 }
 
-bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		const uint64_t now = RR->node->now();
@@ -1178,7 +1178,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 		// First, subject this to a rate limit
 		if (!peer->rateGatePushDirectPaths(now)) {
 			TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): circuit breaker tripped",source().toString().c_str(),_path->address().toString().c_str());
-			peer->received(_path,hops(),packetId(),Packet::VERB_PUSH_DIRECT_PATHS,0,Packet::VERB_NOP,false);
+			peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_PUSH_DIRECT_PATHS,0,Packet::VERB_NOP,false);
 			return true;
 		}
 
@@ -1200,38 +1200,34 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 
 			switch(addrType) {
 				case 4: {
-					InetAddress a(field(ptr,4),4,at<uint16_t>(ptr + 4));
-
-					bool redundant = false;
-					if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0) {
-						peer->setClusterOptimal(a);
-					} else {
-						redundant = peer->hasActivePathTo(now,a);
-					}
-
-					if ( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && (!redundant) && (RR->node->shouldUsePathForZeroTierTraffic(peer->address(),_path->localAddress(),a)) ) {
+					const InetAddress a(field(ptr,4),4,at<uint16_t>(ptr + 4));
+					if (
+					    ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && // not being told to forget
+							(!( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) == 0) && (peer->hasActivePathTo(now,a)) )) && // not already known
+							(RR->node->shouldUsePathForZeroTierTraffic(tPtr,peer->address(),_path->localAddress(),a)) ) // should use path
+					{
+						if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0)
+							peer->setClusterPreferred(a);
 						if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-							peer->attemptToContactAt(InetAddress(),a,now,false,0);
+							peer->attemptToContactAt(tPtr,InetAddress(),a,now,false,0);
 						} else {
 							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
 					}
 				}	break;
 				case 6: {
-					InetAddress a(field(ptr,16),16,at<uint16_t>(ptr + 16));
-
-					bool redundant = false;
-					if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0) {
-						peer->setClusterOptimal(a);
-					} else {
-						redundant = peer->hasActivePathTo(now,a);
-					}
-
-					if ( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && (!redundant) && (RR->node->shouldUsePathForZeroTierTraffic(peer->address(),_path->localAddress(),a)) ) {
+					const InetAddress a(field(ptr,16),16,at<uint16_t>(ptr + 16));
+					if (
+					    ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && // not being told to forget
+							(!( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) == 0) && (peer->hasActivePathTo(now,a)) )) && // not already known
+							(RR->node->shouldUsePathForZeroTierTraffic(tPtr,peer->address(),_path->localAddress(),a)) ) // should use path
+					{
+						if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0)
+							peer->setClusterPreferred(a);
 						if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-							peer->attemptToContactAt(InetAddress(),a,now,false,0);
+							peer->attemptToContactAt(tPtr,InetAddress(),a,now,false,0);
 						} else {
 							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
@@ -1241,20 +1237,20 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 			ptr += addrLen;
 		}
 
-		peer->received(_path,hops(),packetId(),Packet::VERB_PUSH_DIRECT_PATHS,0,Packet::VERB_NOP,false);
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_PUSH_DIRECT_PATHS,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
 		TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		const Address originatorAddress(field(ZT_PACKET_IDX_PAYLOAD,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-		SharedPtr<Peer> originator(RR->topology->getPeer(originatorAddress));
+		SharedPtr<Peer> originator(RR->topology->getPeer(tPtr,originatorAddress));
 		if (!originator) {
-			RR->sw->requestWhois(originatorAddress);
+			RR->sw->requestWhois(tPtr,originatorAddress);
 			return false;
 		}
 
@@ -1285,7 +1281,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 		const unsigned int signatureLength = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 27 + vlf);
 		if (!originator->identity().verify(field(ZT_PACKET_IDX_PAYLOAD,27 + vlf),27 + vlf,field(ZT_PACKET_IDX_PAYLOAD + 29 + vlf,signatureLength),signatureLength)) {
 			TRACE("dropped CIRCUIT_TEST from %s(%s): signature by originator %s invalid",source().toString().c_str(),_path->address().toString().c_str(),originatorAddress.toString().c_str());
-			peer->received(_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
+			peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
 			return true;
 		}
 		vlf += signatureLength;
@@ -1304,14 +1300,14 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 			SharedPtr<Network> network(RR->node->network(originatorCredentialNetworkId));
 			if ((!network)||(!network->config().circuitTestingAllowed(originatorAddress))) {
 				TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID %.16llx as credential, and we don't belong to that network or originator is not allowed'",source().toString().c_str(),_path->address().toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
-				peer->received(_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
+				peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
 				return true;
 			}
-			if (network->gate(peer))
+			if (network->gate(tPtr,peer))
 				reportFlags |= ZT_CIRCUIT_TEST_REPORT_FLAGS_UPSTREAM_AUTHORIZED_IN_PATH;
 		} else {
 			TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s did not specify a credential or credential type",source().toString().c_str(),_path->address().toString().c_str(),originatorAddress.toString().c_str());
-			peer->received(_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
+			peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
 			return true;
 		}
 
@@ -1327,7 +1323,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 			for(unsigned int h=0;h<breadth;++h) {
 				nextHop[h].setTo(field(remainingHopsPtr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 				remainingHopsPtr += ZT_ADDRESS_LENGTH;
-				SharedPtr<Peer> nhp(RR->topology->getPeer(nextHop[h]));
+				SharedPtr<Peer> nhp(RR->topology->getPeer(tPtr,nextHop[h]));
 				if (nhp) {
 					SharedPtr<Path> nhbp(nhp->getBestPath(now,false));
 					if ((nhbp)&&(nhbp->alive(now)))
@@ -1362,7 +1358,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 				nextHop[h].appendTo(outp);
 				nextHopBestPathAddress[h].serialize(outp); // appends 0 if null InetAddress
 			}
-			RR->sw->send(outp,true);
+			RR->sw->send(tPtr,outp,true);
 		}
 
 		// If there are next hops, forward the test along through the graph
@@ -1377,19 +1373,19 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 				if (RR->identity.address() != nextHop[h]) { // next hops that loop back to the current hop are not valid
 					outp.newInitializationVector();
 					outp.setDestination(nextHop[h]);
-					RR->sw->send(outp,true);
+					RR->sw->send(tPtr,outp,true);
 				}
 			}
 		}
 
-		peer->received(_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
 		TRACE("dropped CIRCUIT_TEST from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		ZT_CircuitTestReport report;
@@ -1431,14 +1427,14 @@ bool IncomingPacket::_doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const S
 
 		RR->node->postCircuitTestReport(&report);
 
-		peer->received(_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST_REPORT,0,Packet::VERB_NOP,false);
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST_REPORT,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
 		TRACE("dropped CIRCUIT_TEST_REPORT from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-bool IncomingPacket::_doUSER_MESSAGE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doUSER_MESSAGE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		if (size() >= (ZT_PACKET_IDX_PAYLOAD + 8)) {
@@ -1447,16 +1443,16 @@ bool IncomingPacket::_doUSER_MESSAGE(const RuntimeEnvironment *RR,const SharedPt
 			um.typeId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);
 			um.data = reinterpret_cast<const void *>(reinterpret_cast<const uint8_t *>(data()) + ZT_PACKET_IDX_PAYLOAD + 8);
 			um.length = size() - (ZT_PACKET_IDX_PAYLOAD + 8);
-			RR->node->postEvent(ZT_EVENT_USER_MESSAGE,reinterpret_cast<const void *>(&um));
+			RR->node->postEvent(tPtr,ZT_EVENT_USER_MESSAGE,reinterpret_cast<const void *>(&um));
 		}
-		peer->received(_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST_REPORT,0,Packet::VERB_NOP,false);
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST_REPORT,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
 		TRACE("dropped CIRCUIT_TEST_REPORT from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }
 
-void IncomingPacket::_sendErrorNeedCredentials(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,const uint64_t nwid)
+void IncomingPacket::_sendErrorNeedCredentials(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer,const uint64_t nwid)
 {
 	const uint64_t now = RR->node->now();
 	if (peer->rateGateOutgoingComRequest(now)) {
@@ -1466,7 +1462,7 @@ void IncomingPacket::_sendErrorNeedCredentials(const RuntimeEnvironment *RR,cons
 		outp.append((uint8_t)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
 		outp.append(nwid);
 		outp.armor(peer->key(),true,_path->nextOutgoingCounter());
-		_path->send(RR,outp.data(),outp.size(),now);
+		_path->send(RR,tPtr,outp.data(),outp.size(),now);
 	}
 }
 

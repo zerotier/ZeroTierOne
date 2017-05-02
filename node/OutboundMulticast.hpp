@@ -99,33 +99,36 @@ public:
 	 * Just send without checking log
 	 *
 	 * @param RR Runtime environment
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param toAddr Destination address
 	 */
-	void sendOnly(const RuntimeEnvironment *RR,const Address &toAddr);
+	void sendOnly(const RuntimeEnvironment *RR,void *tPtr,const Address &toAddr);
 
 	/**
 	 * Just send and log but do not check sent log
 	 *
 	 * @param RR Runtime environment
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param toAddr Destination address
 	 */
-	inline void sendAndLog(const RuntimeEnvironment *RR,const Address &toAddr)
+	inline void sendAndLog(const RuntimeEnvironment *RR,void *tPtr,const Address &toAddr)
 	{
 		_alreadySentTo.push_back(toAddr);
-		sendOnly(RR,toAddr);
+		sendOnly(RR,tPtr,toAddr);
 	}
 
 	/**
 	 * Try to send this to a given peer if it hasn't been sent to them already
 	 *
 	 * @param RR Runtime environment
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param toAddr Destination address
 	 * @return True if address is new and packet was sent to switch, false if duplicate
 	 */
-	inline bool sendIfNew(const RuntimeEnvironment *RR,const Address &toAddr)
+	inline bool sendIfNew(const RuntimeEnvironment *RR,void *tPtr,const Address &toAddr)
 	{
 		if (std::find(_alreadySentTo.begin(),_alreadySentTo.end(),toAddr) == _alreadySentTo.end()) {
-			sendAndLog(RR,toAddr);
+			sendAndLog(RR,tPtr,toAddr);
 			return true;
 		} else {
 			return false;

@@ -1,0 +1,16 @@
+{
+  "name": "zerotier-root-watcher",
+  "version": "1.0.0",
+  "description": "Simple background service to watch a cluster of roots and record peer info into a database",
+  "main": "zerotier-root-watcher.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ZeroTier, Inc. <contact@zerotier.com>",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "async": "^2.3.0",
+    "pg": "^6.1.5",
+    "zlib": "^1.0.5"
+  }
+}

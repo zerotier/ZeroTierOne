@@ -26,6 +26,7 @@
     NSString *baseURL;
     NSURLSession *session;
     BOOL _isQuitting;
+    BOOL _resetKey;
 }
 + (ServiceCom*)sharedInstance;
 

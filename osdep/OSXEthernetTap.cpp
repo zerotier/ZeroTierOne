@@ -314,7 +314,7 @@ OSXEthernetTap::OSXEthernetTap(
 	unsigned int metric,
 	uint64_t nwid,
 	const char *friendlyName,
-	void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *data,unsigned int len),
+	void (*handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *data,unsigned int len),
 	void *arg) :
 	_handler(handler),
 	_arg(arg),
@@ -352,20 +352,33 @@ OSXEthernetTap::OSXEthernetTap(
 	}
 
 	// Try to reopen the last device we had, if we had one and it's still unused.
+	std::map<std::string,std::string> globalDeviceMap;
+	FILE *devmapf = fopen((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),"r");
+	if (devmapf) {
+		char buf[256];
+		while (fgets(buf,sizeof(buf),devmapf)) {
+			char *x = (char *)0;
+			char *y = (char *)0;
+			char *saveptr = (char *)0;
+			for(char *f=Utils::stok(buf,"\r\n=",&saveptr);(f);f=Utils::stok((char *)0,"\r\n=",&saveptr)) {
+				if (!x) x = f;
+				else if (!y) y = f;
+				else break;
+			}
+			if ((x)&&(y)&&(x[0])&&(y[0]))
+				globalDeviceMap[x] = y;
+		}
+		fclose(devmapf);
+	}
 	bool recalledDevice = false;
-	std::string devmapbuf;
-	Dictionary<8194> devmap;
-	if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),devmapbuf)) {
-		devmap.load(devmapbuf.c_str());
-		char desiredDevice[128];
-		if (devmap.get(nwids,desiredDevice,sizeof(desiredDevice)) > 0) {
-			Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",desiredDevice);
-			if (stat(devpath,&stattmp) == 0) {
-				_fd = ::open(devpath,O_RDWR);
-				if (_fd > 0) {
-					_dev = desiredDevice;
-					recalledDevice = true;
-				}
+	std::map<std::string,std::string>::const_iterator gdmEntry = globalDeviceMap.find(nwids);
+	if (gdmEntry != globalDeviceMap.end()) {
+		std::string devpath("/dev/"); devpath.append(gdmEntry->second);
+		if (stat(devpath.c_str(),&stattmp) == 0) {
+			_fd = ::open(devpath.c_str(),O_RDWR);
+			if (_fd > 0) {
+				_dev = gdmEntry->second;
+				recalledDevice = true;
 			}
 		}
 	}
@@ -420,9 +433,16 @@ OSXEthernetTap::OSXEthernetTap(
 
 	++globalTapsRunning;
 
-	devmap.erase(nwids);
-	devmap.add(nwids,_dev.c_str());
-	OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),(const void *)devmap.data(),devmap.sizeBytes());
+	globalDeviceMap[nwids] = _dev;
+	devmapf = fopen((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),"w");
+	if (devmapf) {
+		gdmEntry = globalDeviceMap.begin();
+		while (gdmEntry != globalDeviceMap.end()) {
+			fprintf(devmapf,"%s=%s\n",gdmEntry->first.c_str(),gdmEntry->second.c_str());
+			++gdmEntry;
+		}
+		fclose(devmapf);
+	}
 
 	_thread = Thread::start(this);
 }
@@ -646,7 +666,7 @@ void OSXEthernetTap::threadMain()
 						from.setTo(getBuf + 6,6);
 						unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
 						// TODO: VLAN support
-						_handler(_arg,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
+						_handler(_arg,(void *)0,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
 					}
 
 					r = 0;

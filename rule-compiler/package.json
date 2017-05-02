@@ -1,6 +1,6 @@
 {
   "name": "zerotier-rule-compiler",
-  "version": "1.2.0-1",
+  "version": "1.2.2-2",
   "description": "ZeroTier Rule Script Compiler",
   "main": "cli.js",
   "scripts": {

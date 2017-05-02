@@ -31,28 +31,22 @@
 
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
+#include "../node/InetAddress.hpp"
+#include "../node/Mutex.hpp"
 #include "../ext/json/json.hpp"
 #include "../osdep/OSUtils.hpp"
+#include "../osdep/Http.hpp"
+#include "../osdep/Thread.hpp"
 
 namespace ZeroTier {
 
 /**
- * Hierarchical JSON store that persists into the filesystem
+ * Hierarchical JSON store that persists into the filesystem or via HTTP
  */
 class JSONDB
 {
 public:
-	JSONDB(const std::string &basePath) :
-		_basePath(basePath)
-	{
-		_reload(_basePath,std::string());
-	}
-
-	inline void reload()
-	{
-		_db.clear();
-		_reload(_basePath,std::string());
-	}
+	JSONDB(const std::string &basePath);
 
 	bool writeRaw(const std::string &n,const std::string &obj);
 
@@ -63,12 +57,12 @@ public:
 	inline bool put(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4,const nlohmann::json &obj) { return this->put((n1 + "/" + n2 + "/" + n3 + "/" + n4),obj); }
 	inline bool put(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4,const std::string &n5,const nlohmann::json &obj) { return this->put((n1 + "/" + n2 + "/" + n3 + "/" + n4 + "/" + n5),obj); }
 
-	const nlohmann::json &get(const std::string &n,unsigned long maxSinceCheck = 0);
+	const nlohmann::json &get(const std::string &n);
 
-	inline const nlohmann::json &get(const std::string &n1,const std::string &n2,unsigned long maxSinceCheck = 0) { return this->get((n1 + "/" + n2),maxSinceCheck); }
-	inline const nlohmann::json &get(const std::string &n1,const std::string &n2,const std::string &n3,unsigned long maxSinceCheck = 0) { return this->get((n1 + "/" + n2 + "/" + n3),maxSinceCheck); }
-	inline const nlohmann::json &get(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4,unsigned long maxSinceCheck = 0) { return this->get((n1 + "/" + n2 + "/" + n3 + "/" + n4),maxSinceCheck); }
-	inline const nlohmann::json &get(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4,const std::string &n5,unsigned long maxSinceCheck = 0) { return this->get((n1 + "/" + n2 + "/" + n3 + "/" + n4 + "/" + n5),maxSinceCheck); }
+	inline const nlohmann::json &get(const std::string &n1,const std::string &n2) { return this->get((n1 + "/" + n2)); }
+	inline const nlohmann::json &get(const std::string &n1,const std::string &n2,const std::string &n3) { return this->get((n1 + "/" + n2 + "/" + n3)); }
+	inline const nlohmann::json &get(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4) { return this->get((n1 + "/" + n2 + "/" + n3 + "/" + n4)); }
+	inline const nlohmann::json &get(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4,const std::string &n5) { return this->get((n1 + "/" + n2 + "/" + n3 + "/" + n4 + "/" + n5)); }
 
 	void erase(const std::string &n);
 
@@ -78,11 +72,16 @@ public:
 	inline void erase(const std::string &n1,const std::string &n2,const std::string &n3,const std::string &n4,const std::string &n5) { this->erase(n1 + "/" + n2 + "/" + n3 + "/" + n4 + "/" + n5); }
 
 	template<typename F>
-	inline void filter(const std::string &prefix,unsigned long maxSinceCheck,F func)
+	inline void filter(const std::string &prefix,F func)
 	{
+		while (!_ready) {
+			Thread::sleep(250);
+			_ready = _reload(_basePath,std::string());
+		}
+
 		for(std::map<std::string,_E>::iterator i(_db.lower_bound(prefix));i!=_db.end();) {
 			if ((i->first.length() >= prefix.length())&&(!memcmp(i->first.data(),prefix.data(),prefix.length()))) {
-				if (!func(i->first,get(i->first,maxSinceCheck))) {
+				if (!func(i->first,get(i->first))) {
 					std::map<std::string,_E>::iterator i2(i); ++i2;
 					this->erase(i->first);
 					i = i2;
@@ -95,22 +94,21 @@ public:
 	inline bool operator!=(const JSONDB &db) const { return (!(*this == db)); }
 
 private:
-	void _reload(const std::string &p,const std::string &b);
+	bool _reload(const std::string &p,const std::string &b);
 	bool _isValidObjectName(const std::string &n);
 	std::string _genPath(const std::string &n,bool create);
 
 	struct _E
 	{
 		nlohmann::json obj;
-		uint64_t lastModifiedOnDisk;
-		uint64_t lastCheck;
-
 		inline bool operator==(const _E &e) const { return (obj == e.obj); }
 		inline bool operator!=(const _E &e) const { return (obj != e.obj); }
 	};
 
+	InetAddress _httpAddr;
 	std::string _basePath;
 	std::map<std::string,_E> _db;
+	volatile bool _ready;
 };
 
 } // namespace ZeroTier

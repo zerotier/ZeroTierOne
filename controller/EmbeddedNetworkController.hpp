@@ -98,14 +98,6 @@ public:
 		throw();
 
 private:
-	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
-	void _request(
-		uint64_t nwid,
-		const InetAddress &fromAddr,
-		uint64_t requestPacketId,
-		const Identity &identity,
-		const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
-
 	struct _RQEntry
 	{
 		uint64_t nwid;
@@ -114,11 +106,6 @@ private:
 		Identity identity;
 		Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> metaData;
 	};
-	BlockingQueue<_RQEntry *> _queue;
-
-	Thread _threads[ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT];
-	bool _threadsStarted;
-	Mutex _threads_m;
 
 	// Gathers a bunch of statistics about members of a network, IP assignments, etc. that we need in various places
 	struct _NetworkMemberInfo
@@ -132,15 +119,11 @@ private:
 		uint64_t mostRecentDeauthTime;
 		uint64_t nmiTimestamp; // time this NMI structure was computed
 	};
-	std::map<uint64_t,_NetworkMemberInfo> _nmiCache;
-	Mutex _nmiCache_m;
-	void _getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi);
-	inline void _clearNetworkMemberInfoCache(const uint64_t nwid)
-	{
-		Mutex::Lock _l(_nmiCache_m);
-		_nmiCache.erase(nwid);
-	}
 
+	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
+	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
+	void _getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi);
+	inline void _clearNetworkMemberInfoCache(const uint64_t nwid) { Mutex::Lock _l(_nmiCache_m); _nmiCache.erase(nwid); }
 	void _pushMemberUpdate(uint64_t now,uint64_t nwid,const nlohmann::json &member);
 
 	// These init objects with default and static/informational fields
@@ -195,6 +178,16 @@ private:
 	{
 		member["clock"] = now;
 	}
+
+	const uint64_t _startTime;
+
+	BlockingQueue<_RQEntry *> _queue;
+	Thread _threads[ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT];
+	bool _threadsStarted;
+	Mutex _threads_m;
+
+	std::map<uint64_t,_NetworkMemberInfo> _nmiCache;
+	Mutex _nmiCache_m;
 
 	JSONDB _db;
 	Mutex _db_m;

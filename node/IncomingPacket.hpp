@@ -102,9 +102,10 @@ public:
 	 * may no longer be valid.
 	 *
 	 * @param RR Runtime environment
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @return True if decoding and processing is complete, false if caller should try again
 	 */
-	bool tryDecode(const RuntimeEnvironment *RR);
+	bool tryDecode(const RuntimeEnvironment *RR,void *tPtr);
 
 	/**
 	 * @return Time of packet receipt / start of decode
@@ -114,26 +115,26 @@ public:
 private:
 	// These are called internally to handle packet contents once it has
 	// been authenticated, decrypted, decompressed, and classified.
-	bool _doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doHELLO(const RuntimeEnvironment *RR,const bool alreadyAuthenticated);
-	bool _doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doFRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doECHO(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doMULTICAST_LIKE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doNETWORK_CONFIG(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doMULTICAST_GATHER(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doMULTICAST_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doUSER_MESSAGE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
+	bool _doERROR(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool alreadyAuthenticated);
+	bool _doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doRENDEZVOUS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doFRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doECHO(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doMULTICAST_LIKE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doNETWORK_CONFIG(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doCIRCUIT_TEST(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doUSER_MESSAGE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
 
-	void _sendErrorNeedCredentials(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,const uint64_t nwid);
+	void _sendErrorNeedCredentials(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer,const uint64_t nwid);
 
 	uint64_t _receiveTime;
 	SharedPtr<Path> _path;

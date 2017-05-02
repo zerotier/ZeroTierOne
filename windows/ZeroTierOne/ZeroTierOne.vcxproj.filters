@@ -76,6 +76,12 @@
     <Filter Include="Header Files\ext\json">
       <UniqueIdentifier>{ff20532b-d9a2-440d-a7b4-b49e26a9b2f8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\ext\x64-salsa2012-asm">
+      <UniqueIdentifier>{05d9cde8-03ae-4e37-b9f7-7417de98cbe9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\controller">
+      <UniqueIdentifier>{7dc22e9c-f869-41e7-b43d-f07f5b94f6fb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\service\OneService.cpp">
@@ -149,9 +155,6 @@
     </ClCompile>
     <ClCompile Include="..\..\ext\http-parser\http_parser.c">
       <Filter>Source Files\ext\http-parser</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\one.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ServiceBase.cpp">
       <Filter>Source Files\windows\ZeroTierOne</Filter>
@@ -245,6 +248,12 @@
     </ClCompile>
     <ClCompile Include="..\..\node\CertificateOfOwnership.cpp">
       <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\one.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\selftest.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -481,6 +490,18 @@
     </ClInclude>
     <ClInclude Include="..\..\node\CertificateOfOwnership.hpp">
       <Filter>Header Files\node</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\node\Credential.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\x64-salsa2012-asm\salsa2012.h">
+      <Filter>Header Files\ext\x64-salsa2012-asm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\controller\EmbeddedNetworkController.hpp">
+      <Filter>Header Files\controller</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\controller\JSONDB.hpp">
+      <Filter>Header Files\controller</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

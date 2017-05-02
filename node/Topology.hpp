@@ -50,7 +50,7 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
-	Topology(const RuntimeEnvironment *renv);
+	Topology(const RuntimeEnvironment *renv,void *tPtr);
 
 	/**
 	 * Add a peer to database
@@ -58,18 +58,20 @@ public:
 	 * This will not replace existing peers. In that case the existing peer
 	 * record is returned.
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param peer Peer to add
 	 * @return New or existing peer (should replace 'peer')
 	 */
-	SharedPtr<Peer> addPeer(const SharedPtr<Peer> &peer);
+	SharedPtr<Peer> addPeer(void *tPtr,const SharedPtr<Peer> &peer);
 
 	/**
 	 * Get a peer from its address
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param zta ZeroTier address of peer
 	 * @return Peer or NULL if not found
 	 */
-	SharedPtr<Peer> getPeer(const Address &zta);
+	SharedPtr<Peer> getPeer(void *tPtr,const Address &zta);
 
 	/**
 	 * Get a peer only if it is presently in memory (no disk cache)
@@ -109,10 +111,11 @@ public:
 	/**
 	 * Get the identity of a peer
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param zta ZeroTier address of peer
 	 * @return Identity or NULL Identity if not found
 	 */
-	Identity getIdentity(const Address &zta);
+	Identity getIdentity(void *tPtr,const Address &zta);
 
 	/**
 	 * Cache an identity
@@ -120,9 +123,10 @@ public:
 	 * This is done automatically on addPeer(), and so is only useful for
 	 * cluster identity replication.
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param id Identity to cache
 	 */
-	void saveIdentity(const Identity &id);
+	void saveIdentity(void *tPtr,const Identity &id);
 
 	/**
 	 * Get the current best upstream peer
@@ -267,11 +271,12 @@ public:
 	/**
 	 * Validate new world and update if newer and signature is okay
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param newWorld A new or updated planet or moon to learn
 	 * @param alwaysAcceptNew If true, always accept new moons even if we're not waiting for one
 	 * @return True if it was valid and newer than current (or totally new for moons)
 	 */
-	bool addWorld(const World &newWorld,bool alwaysAcceptNew);
+	bool addWorld(void *tPtr,const World &newWorld,bool alwaysAcceptNew);
 
 	/**
 	 * Add a moon
@@ -282,14 +287,15 @@ public:
 	 * @param id Moon ID
 	 * @param seed If non-NULL, an address of any member of the moon to contact
 	 */
-	void addMoon(const uint64_t id,const Address &seed);
+	void addMoon(void *tPtr,const uint64_t id,const Address &seed);
 
 	/**
 	 * Remove a moon
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param id Moon's world ID
 	 */
-	void removeMoon(const uint64_t id);
+	void removeMoon(void *tPtr,const uint64_t id);
 
 	/**
 	 * Clean and flush database
@@ -308,7 +314,9 @@ public:
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p)) {
-			cnt += (unsigned long)((*p)->hasActiveDirectPath(now));
+			const SharedPtr<Path> pp((*p)->getBestPath(now,false));
+			if ((pp)&&(pp->alive(now)))
+				++cnt;
 		}
 		return cnt;
 	}
@@ -420,8 +428,8 @@ public:
 	}
 
 private:
-	Identity _getIdentity(const Address &zta);
-	void _memoizeUpstreams();
+	Identity _getIdentity(void *tPtr,const Address &zta);
+	void _memoizeUpstreams(void *tPtr);
 
 	const RuntimeEnvironment *const RR;
 

@@ -28,13 +28,11 @@ echo "Removing ZeroTier One files..."
 
 rm -rf '/Applications/ZeroTier One.app'
 rm -f '/usr/bin/zerotier-one' '/usr/bin/zerotier-idtool' '/usr/bin/zerotier-cli' '/Library/LaunchDaemons/com.zerotier.one.plist'
-mkdir -p /tmp/ZeroTierOne_uninstall_tmp
-cp "/Library/Application Support/ZeroTier/One/*.secret" /tmp/ZeroTierOne_uninstall_tmp
-rm -rf '/Library/Application Support/ZeroTier/One'
-mkdir -p '/Library/Application Support/ZeroTier/One'
-cp "/tmp/ZeroTierOne_uninstall_tmp/*.secret" '/Library/Application Support/ZeroTier/One'
-chmod 0600 "/Library/Application Support/ZeroTier/One/*.secret"
-rm -rf /tmp/ZeroTierOne_uninstall_tmp
+
+cd '/Library/Application Support/ZeroTier/One'
+if [ "`pwd`" = '/Library/Application Support/ZeroTier/One' ]; then
+	rm -rf *.d *.sh *.log *.old *.kext *.conf *.pkg *.dmg *.pid *.port *.save *.bin planet zerotier-* devicemap
+fi
 
 echo 'Uninstall complete.'
 echo

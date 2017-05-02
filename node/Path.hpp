@@ -186,12 +186,13 @@ public:
 	 * Send a packet via this path (last out time is also updated)
 	 *
 	 * @param RR Runtime environment
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param data Packet data
 	 * @param len Packet length
 	 * @param now Current time
 	 * @return True if transport reported success
 	 */
-	bool send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now);
+	bool send(const RuntimeEnvironment *RR,void *tPtr,const void *data,unsigned int len,uint64_t now);
 
 	/**
 	 * Manually update last sent time

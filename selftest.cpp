@@ -54,6 +54,13 @@
 
 #include "controller/JSONDB.hpp"
 
+#ifdef ZT_USE_X64_ASM_SALSA2012
+#include "ext/x64-salsa2012-asm/salsa2012.h"
+#endif
+#ifdef ZT_USE_ARM32_NEON_ASM_SALSA2012
+#include "ext/arm32-neon-salsa2012-asm/salsa2012.h"
+#endif
+
 #ifdef __WINDOWS__
 #include <tchar.h>
 #endif
@@ -134,8 +141,6 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 
 //////////////////////////////////////////////////////////////////////////////
 
-static unsigned char fuzzbuf[1048576];
-
 static int testCrypto()
 {
 	unsigned char buf1[16384];
@@ -153,16 +158,16 @@ static int testCrypto()
 		memset(buf2,0,sizeof(buf2));
 		memset(buf3,0,sizeof(buf3));
 		Salsa20 s20;
-		s20.init("12345678123456781234567812345678",256,"12345678");
+		s20.init("12345678123456781234567812345678","12345678");
 		s20.crypt20(buf1,buf2,sizeof(buf1));
-		s20.init("12345678123456781234567812345678",256,"12345678");
+		s20.init("12345678123456781234567812345678","12345678");
 		s20.crypt20(buf2,buf3,sizeof(buf2));
 		if (memcmp(buf1,buf3,sizeof(buf1))) {
 			std::cout << "FAIL (encrypt/decrypt test)" << std::endl;
 			return -1;
 		}
 	}
-	Salsa20 s20(s20TV0Key,256,s20TV0Iv);
+	Salsa20 s20(s20TV0Key,s20TV0Iv);
 	memset(buf1,0,sizeof(buf1));
 	memset(buf2,0,sizeof(buf2));
 	s20.crypt20(buf1,buf2,64);
@@ -170,7 +175,7 @@ static int testCrypto()
 		std::cout << "FAIL (test vector 0)" << std::endl;
 		return -1;
 	}
-	s20.init(s2012TV0Key,256,s2012TV0Iv);
+	s20.init(s2012TV0Key,s2012TV0Iv);
 	memset(buf1,0,sizeof(buf1));
 	memset(buf2,0,sizeof(buf2));
 	s20.crypt12(buf1,buf2,64);
@@ -191,8 +196,8 @@ static int testCrypto()
 		unsigned char *bb = (unsigned char *)::malloc(1234567);
 		for(unsigned int i=0;i<1234567;++i)
 			bb[i] = (unsigned char)i;
-		Salsa20 s20(s20TV0Key,256,s20TV0Iv);
-		double bytes = 0.0;
+		Salsa20 s20(s20TV0Key,s20TV0Iv);
+		long double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
 			s20.crypt12(bb,bb,1234567);
@@ -200,17 +205,51 @@ static int testCrypto()
 		}
 		uint64_t end = OSUtils::now();
 		SHA512::hash(buf1,bb,1234567);
-		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16) << ')' << std::endl;
+		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second (" << Utils::hex(buf1,16) << ')' << std::endl;
 		::free((void *)bb);
 	}
+
+#ifdef ZT_USE_X64_ASM_SALSA2012
+	std::cout << "[crypto] Benchmarking Salsa20/12 fast x64 ASM... "; std::cout.flush();
+	{
+		unsigned char *bb = (unsigned char *)::malloc(1234567);
+		double bytes = 0.0;
+		uint64_t start = OSUtils::now();
+		for(unsigned int i=0;i<200;++i) {
+			zt_salsa2012_amd64_xmm6(bb,1234567,s20TV0Iv,s20TV0Key);
+			bytes += 1234567.0;
+		}
+		uint64_t end = OSUtils::now();
+		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1024.0)) << " MiB/second" << std::endl;
+		::free((void *)bb);
+	}
+#endif
+
+#ifdef ZT_USE_ARM32_NEON_ASM_SALSA2012
+	if (zt_arm_has_neon()) {
+		std::cout << "[crypto] Benchmarking Salsa20/12 fast arm32/neon ASM... "; std::cout.flush();
+		{
+			unsigned char *bb = (unsigned char *)::malloc(1234567);
+			double bytes = 0.0;
+			uint64_t start = OSUtils::now();
+			for(unsigned int i=0;i<200;++i) {
+				zt_salsa2012_armneon3_xor(bb,(const unsigned char *)0,1234567,s20TV0Iv,s20TV0Key);
+				bytes += 1234567.0;
+			}
+			uint64_t end = OSUtils::now();
+			std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1024.0)) << " MiB/second" << std::endl;
+			::free((void *)bb);
+		}
+	}
+#endif
 
 	std::cout << "[crypto] Benchmarking Salsa20/20... "; std::cout.flush();
 	{
 		unsigned char *bb = (unsigned char *)::malloc(1234567);
 		for(unsigned int i=0;i<1234567;++i)
 			bb[i] = (unsigned char)i;
-		Salsa20 s20(s20TV0Key,256,s20TV0Iv);
-		double bytes = 0.0;
+		Salsa20 s20(s20TV0Key,s20TV0Iv);
+		long double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
 			s20.crypt20(bb,bb,1234567);
@@ -218,7 +257,7 @@ static int testCrypto()
 		}
 		uint64_t end = OSUtils::now();
 		SHA512::hash(buf1,bb,1234567);
-		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16) << ')' << std::endl;
+		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second (" << Utils::hex(buf1,16) << ')' << std::endl;
 		::free((void *)bb);
 	}
 
@@ -248,14 +287,14 @@ static int testCrypto()
 		unsigned char *bb = (unsigned char *)::malloc(1234567);
 		for(unsigned int i=0;i<1234567;++i)
 			bb[i] = (unsigned char)i;
-		double bytes = 0.0;
+		long double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
 			Poly1305::compute(buf1,bb,1234567,poly1305TV0Key);
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
-		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl;
+		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1000.0)) << " MiB/second" << std::endl;
 		::free((void *)bb);
 	}
 
@@ -610,6 +649,7 @@ static int testOther()
 		return -1;
 	}
 
+#if 0
 	std::cout << "[other] Testing Hashtable... "; std::cout.flush();
 	{
 		Hashtable<uint64_t,std::string> ht;
@@ -773,42 +813,29 @@ static int testOther()
 		}
 	}
 	std::cout << "PASS" << std::endl;
-
-	std::cout << "[other] Testing hex encode/decode... "; std::cout.flush();
-	for(unsigned int k=0;k<1000;++k) {
-		unsigned int flen = (rand() % 8194) + 1;
-		for(unsigned int i=0;i<flen;++i)
-			fuzzbuf[i] = (unsigned char)(rand() & 0xff);
-		std::string dec = Utils::unhex(Utils::hex(fuzzbuf,flen).c_str());
-		if ((dec.length() != flen)||(memcmp(dec.data(),fuzzbuf,dec.length()))) {
-			std::cout << "FAILED!" << std::endl;
-			std::cout << Utils::hex(fuzzbuf,flen) << std::endl;
-			std::cout << Utils::hex(dec.data(),(unsigned int)dec.length()) << std::endl;
-			return -1;
-		}
-	}
-	std::cout << "PASS" << std::endl;
+#endif
 
 	std::cout << "[other] Testing/fuzzing Dictionary... "; std::cout.flush();
 	for(int k=0;k<1000;++k) {
-		Dictionary<8194> test;
+		Dictionary<8194> *test = new Dictionary<8194>();
 		char key[32][16];
 		char value[32][128];
+		memset(key, 0, sizeof(key));
+		memset(value, 0, sizeof(value));
 		for(unsigned int q=0;q<32;++q) {
-			Utils::snprintf(key[q],16,"%.8lx",(unsigned long)rand());
+			Utils::snprintf(key[q],16,"%.8lx",(unsigned long)(rand() % 1000) + (q * 1000));
 			int r = rand() % 128;
 			for(int x=0;x<r;++x)
 				value[q][x] = ("0123456789\0\t\r\n= ")[rand() % 16];
 			value[q][r] = (char)0;
-			test.add(key[q],value[q],r);
+			test->add(key[q],value[q],r);
 		}
 		for(unsigned int q=0;q<1024;++q) {
-			//int r = rand() % 128;
-			int r = 31;
+			int r = rand() % 32;
 			char tmp[128];
-			if (test.get(key[r],tmp,sizeof(tmp)) >= 0) {
+			if (test->get(key[r],tmp,sizeof(tmp)) >= 0) {
 				if (strcmp(value[r],tmp)) {
-					std::cout << "FAILED (invalid value)!" << std::endl;
+					std::cout << "FAILED (invalid value '" << value[r] << "' != '" << tmp << "')!" << std::endl;
 					return -1;
 				}
 			} else {
@@ -816,75 +843,29 @@ static int testOther()
 				return -1;
 			}
 		}
-		for(unsigned int q=0;q<31;++q) {
-			char tmp[128];
-			test.erase(key[q]);
-			if (test.get(key[q],tmp,sizeof(tmp)) >= 0) {
-				std::cout << "FAILED (key should have been erased)!" << std::endl;
-				return -1;
-			}
-			if (test.get(key[q+1],tmp,sizeof(tmp)) < 0) {
-				std::cout << "FAILED (key should NOT have been erased)!" << std::endl;
-				return -1;
-			}
-		}
+		delete test;
 	}
 	int foo = 0;
 	volatile int *volatile bar = &foo; // force compiler not to optimize out test.get() below
 	for(int k=0;k<200;++k) {
 		int r = rand() % 8194;
-		unsigned char tmp[8194];
+		unsigned char *tmp = new unsigned char[8194];
 		for(int q=0;q<r;++q)
 			tmp[q] = (unsigned char)((rand() % 254) + 1); // don't put nulls since those will always just terminate scan
 		tmp[r] = (r % 32) ? (char)(rand() & 0xff) : (char)0; // every 32nd iteration don't terminate the string maybe...
-		Dictionary<8194> test((const char *)tmp);
+		Dictionary<8194> *test = new Dictionary<8194>((const char *)tmp);
 		for(unsigned int q=0;q<100;++q) {
 			char tmp[128];
 			for(unsigned int x=0;x<128;++x)
 				tmp[x] = (char)(rand() & 0xff);
 			tmp[127] = (char)0;
 			char value[8194];
-			*bar += test.get(tmp,value,sizeof(value));
+			*bar += test->get(tmp,value,sizeof(value));
 		}
+		delete test;
+		delete[] tmp;
 	}
 	std::cout << "PASS (junk value to prevent optimization-out of test: " << foo << ")" << std::endl;
-
-	/*
-	std::cout << "[other] Testing controller/JSONDB..."; std::cout.flush();
-	{
-		std::map<std::string,nlohmann::json> db1data;
-		JSONDB db1("jsondb-test");
-		for(unsigned int i=0;i<256;++i) {
-			std::string n;
-			for(unsigned int j=0,k=rand() % 4;j<=k;++j) {
-				if (j > 0) n.push_back('/');
-				char foo[24];
-				Utils::snprintf(foo,sizeof(foo),"%lx",rand());
-				n.append(foo);
-			}
-			db1data[n] = {{"i",i}};
-			db1.put(n,db1data[n]);
-		}
-		for(std::map<std::string,nlohmann::json>::iterator i(db1data.begin());i!=db1data.end();++i) {
-			i->second["foo"] = "bar";
-			db1.put(i->first,i->second);
-		}
-		JSONDB db2("jsondb-test");
-		if (db1 != db2) {
-			std::cout << " FAILED (db1!=db2 #1)" << std::endl;
-			return -1;
-		}
-		for(std::map<std::string,nlohmann::json>::iterator i(db1data.begin());i!=db1data.end();++i) {
-			db1.erase(i->first);
-		}
-		db2.reload();
-		if (db1 != db2) {
-			std::cout << " FAILED (db1!=db2 #2)" << std::endl;
-			return -1;
-		}
-	}
-	std::cout << " PASS" << std::endl;
-	*/
 
 	return 0;
 }
@@ -1083,7 +1064,7 @@ static int testHttp()
 */
 
 #ifdef __WINDOWS__
-int _tmain(int argc, _TCHAR* argv[])
+int __cdecl _tmain(int argc, _TCHAR* argv[])
 #else
 int main(int argc,char **argv)
 #endif

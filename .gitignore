@@ -60,7 +60,7 @@ zt1-src.tar.gz
 *.pid
 *.pkg
 *.o
-*.a
+/*.a
 *.dylib
 *.so
 *.so.*
@@ -78,6 +78,7 @@ debian/zerotier-one
 debian/zerotier-one*.debhelper
 debian/*.log
 debian/zerotier-one.substvars
+root-watcher/config.json
 
 # Java/Android/JNI build droppings
 java/obj/

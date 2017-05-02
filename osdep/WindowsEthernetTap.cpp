@@ -456,7 +456,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 	unsigned int metric,
 	uint64_t nwid,
 	const char *friendlyName,
-	void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
+	void (*handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 	void *arg) :
 	_handler(handler),
 	_arg(arg),
@@ -1058,8 +1058,7 @@ void WindowsEthernetTap::threadMain()
 							MAC from(tapReadBuf + 6,6);
 							unsigned int etherType = ((((unsigned int)tapReadBuf[12]) & 0xff) << 8) | (((unsigned int)tapReadBuf[13]) & 0xff);
 							try {
-								// TODO: decode vlans
-								_handler(_arg,_nwid,from,to,etherType,0,tapReadBuf + 14,bytesRead - 14);
+								_handler(_arg,(void *)0,_nwid,from,to,etherType,0,tapReadBuf + 14,bytesRead - 14);
 							} catch ( ... ) {} // handlers should not throw
 						}
 					}

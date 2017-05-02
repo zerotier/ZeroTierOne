@@ -1257,7 +1257,7 @@ public:
 };
 
 #ifdef __WINDOWS__
-int _tmain(int argc, _TCHAR* argv[])
+int __cdecl _tmain(int argc, _TCHAR* argv[])
 #else
 int main(int argc,char **argv)
 #endif

@@ -175,7 +175,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 								std::string lj;
 								lj.push_back((char)VERB_LATEST);
 								lj.append(OSUtils::jsonDump(*latest));
-								_node.sendUserMessage(origin,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,lj.data(),(unsigned int)lj.length());
+								_node.sendUserMessage((void *)0,origin,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,lj.data(),(unsigned int)lj.length());
 								if (_distLog) {
 									fprintf(_distLog,"%.10llx GET_LATEST %u.%u.%u_%u platform %u arch %u vendor %u channel %s -> LATEST %u.%u.%u_%u" ZT_EOL_S,(unsigned long long)origin,rvMaj,rvMin,rvRev,rvBld,rvPlatform,rvArch,rvVendor,rvChannel.c_str(),bestVMaj,bestVMin,bestVRev,bestVBld);
 									fflush(_distLog);
@@ -205,7 +205,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 									gd.append((uint8_t)VERB_GET_DATA);
 									gd.append(_downloadHashPrefix.data,16);
 									gd.append((uint32_t)_download.length());
-									_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
+									_node.sendUserMessage((void *)0,ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
 									//printf(">> GET_DATA @%u\n",(unsigned int)_download.length());
 								}
 							}
@@ -229,7 +229,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 						buf.append(reinterpret_cast<const uint8_t *>(data) + 1,16);
 						buf.append((uint32_t)idx);
 						buf.append(d->second.bin.data() + idx,std::min((unsigned long)ZT_SOFTWARE_UPDATE_CHUNK_SIZE,(unsigned long)(d->second.bin.length() - idx)));
-						_node.sendUserMessage(origin,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,buf.data(),buf.size());
+						_node.sendUserMessage((void *)0,origin,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,buf.data(),buf.size());
 						//printf(">> DATA @%u\n",(unsigned int)idx);
 					}
 				}
@@ -249,7 +249,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 							gd.append((uint8_t)VERB_GET_DATA);
 							gd.append(_downloadHashPrefix.data,16);
 							gd.append((uint32_t)_download.length());
-							_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
+							_node.sendUserMessage((void *)0,ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
 							//printf(">> GET_DATA @%u\n",(unsigned int)_download.length());
 						}
 					}
@@ -296,7 +296,7 @@ bool SoftwareUpdater::check(const uint64_t now)
 			ZT_BUILD_ARCHITECTURE,
 			(int)ZT_VENDOR_ZEROTIER,
 			_channel.c_str());
-		_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,tmp,len);
+		_node.sendUserMessage((void *)0,ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,tmp,len);
 		//printf(">> GET_LATEST\n");
 	}
 
@@ -343,7 +343,7 @@ bool SoftwareUpdater::check(const uint64_t now)
 			gd.append((uint8_t)VERB_GET_DATA);
 			gd.append(_downloadHashPrefix.data,16);
 			gd.append((uint32_t)_download.length());
-			_node.sendUserMessage(ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
+			_node.sendUserMessage((void *)0,ZT_SOFTWARE_UPDATE_SERVICE,ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE,gd.data(),gd.size());
 			//printf(">> GET_DATA @%u\n",(unsigned int)_download.length());
 		}
 	}

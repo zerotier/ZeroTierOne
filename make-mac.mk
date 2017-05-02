@@ -37,6 +37,10 @@ ifeq ($(ZT_ENABLE_CLUSTER),1)
 	DEFS+=-DZT_ENABLE_CLUSTER
 endif
 
+# Use fast ASM Salsa20/12 for x64 processors
+DEFS+=-DZT_USE_X64_ASM_SALSA2012
+OBJS+=ext/x64-salsa2012-asm/salsa2012.o
+
 # Build miniupnpc and nat-pmp as included libraries -- extra defs are required for these sources
 DEFS+=-DMACOSX -DZT_USE_MINIUPNPC -DMINIUPNP_STATICLIB -D_DARWIN_C_SOURCE -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -DOS_STRING=\"Darwin/15.0.0\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
 OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o osdep/PortMapper.o
@@ -58,6 +62,9 @@ endif
 CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++ 
 
 all: one macui
+
+ext/x64-salsa2012-asm/salsa2012.o:
+	$(CC) $(CFLAGS) -c ext/x64-salsa2012-asm/salsa2012.s -o ext/x64-salsa2012-asm/salsa2012.o
 
 one:	$(OBJS) service/OneService.o one.o
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o $(LIBS)

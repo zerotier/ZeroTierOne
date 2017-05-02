@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "Constants.hpp"
 #include "Utils.hpp"
@@ -30,30 +31,62 @@ namespace ZeroTier {
 class Salsa20
 {
 public:
-	Salsa20() throw() {}
-
+	Salsa20() {}
 	~Salsa20() { Utils::burn(&_state,sizeof(_state)); }
 
 	/**
-	 * @param key Key bits
-	 * @param kbits Number of key bits: 128 or 256 (recommended)
+	 * XOR d with s
+	 *
+	 * This is done efficiently using e.g. SSE if available. It's used when
+	 * alternative Salsa20 implementations are used in Packet and is here
+	 * since this is where all the SSE stuff is already included.
+	 *
+	 * @param d Destination to XOR
+	 * @param s Source bytes to XOR with destination
+	 * @param len Length of s and d
+	 */
+	static inline void memxor(uint8_t *d,const uint8_t *s,unsigned int len)
+	{
+#ifdef ZT_SALSA20_SSE
+		while (len >= 16) {
+			_mm_storeu_si128(reinterpret_cast<__m128i *>(d),_mm_xor_si128(_mm_loadu_si128(reinterpret_cast<__m128i *>(d)),_mm_loadu_si128(reinterpret_cast<const __m128i *>(s))));
+			s += 16;
+			d += 16;
+			len -= 16;
+		}
+#else
+#ifndef ZT_NO_TYPE_PUNNING
+		while (len >= 16) {
+			(*reinterpret_cast<uint64_t *>(d)) ^= (*reinterpret_cast<const uint64_t *>(s));
+			s += 8;
+			d += 8;
+			(*reinterpret_cast<uint64_t *>(d)) ^= (*reinterpret_cast<const uint64_t *>(s));
+			s += 8;
+			d += 8;
+			len -= 16;
+		}
+#endif
+#endif
+		while (len--)
+			*(d++) ^= *(s++);
+	}
+
+	/**
+	 * @param key 256-bit (32 byte) key
 	 * @param iv 64-bit initialization vector
 	 */
-	Salsa20(const void *key,unsigned int kbits,const void *iv)
-		throw()
+	Salsa20(const void *key,const void *iv)
 	{
-		init(key,kbits,iv);
+		init(key,iv);
 	}
 
 	/**
 	 * Initialize cipher
 	 *
 	 * @param key Key bits
-	 * @param kbits Number of key bits: 128 or 256 (recommended)
 	 * @param iv 64-bit initialization vector
 	 */
-	void init(const void *key,unsigned int kbits,const void *iv)
-		throw();
+	void init(const void *key,const void *iv);
 
 	/**
 	 * Encrypt/decrypt data using Salsa20/12
@@ -62,8 +95,7 @@ public:
 	 * @param out Output buffer
 	 * @param bytes Length of data
 	 */
-	void crypt12(const void *in,void *out,unsigned int bytes)
-		throw();
+	void crypt12(const void *in,void *out,unsigned int bytes);
 
 	/**
 	 * Encrypt/decrypt data using Salsa20/20
@@ -72,8 +104,7 @@ public:
 	 * @param out Output buffer
 	 * @param bytes Length of data
 	 */
-	void crypt20(const void *in,void *out,unsigned int bytes)
-		throw();
+	void crypt20(const void *in,void *out,unsigned int bytes);
 
 private:
 	union {
