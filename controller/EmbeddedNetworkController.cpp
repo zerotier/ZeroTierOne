@@ -1056,6 +1056,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 		std::string pong("{\"memberStatus\":{");
 		{
 			Mutex::Lock _l(_memberStatus_m);
+			pong.reserve(64 * _memberStatus.size());
 			_db.eachId([this,&pong,&now,&first](uint64_t networkId,uint64_t nodeId) {
 				char tmp[64];
 				uint64_t lrt = 0ULL;
