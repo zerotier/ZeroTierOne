@@ -1045,7 +1045,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 		_queue.post(qe);
 
 		char tmp[64];
-		Utils::snprintf(tmp,sizeof(tmp),"{\"clock\":%llu}",(unsigned long long)now);
+		Utils::snprintf(tmp,sizeof(tmp),"{\"clock\":%llu,\"ping\":%s}",(unsigned long long)now,OSUtils::jsonDump(b).c_str());
 		responseBody = tmp;
 		responseContentType = "application/json";
 
