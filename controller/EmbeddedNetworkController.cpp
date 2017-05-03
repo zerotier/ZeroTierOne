@@ -436,19 +436,16 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPa
 
 EmbeddedNetworkController::~EmbeddedNetworkController()
 {
-	_running = false;
 	std::vector<Thread> t;
 	{
 		Mutex::Lock _l(_threads_m);
+		_running = false;
 		t = _threads;
 	}
 	if (t.size() > 0) {
-		for(unsigned long i=0,j=(unsigned long)(t.size() * 4);i<j;++i)
-			_queue.post((_RQEntry *)0);
-		/*
+		_queue.stop();
 		for(std::vector<Thread>::iterator i(t.begin());i!=t.end();++i)
 			Thread::join(*i);
-		*/
 	}
 }
 
@@ -1117,7 +1114,7 @@ void EmbeddedNetworkController::threadMain()
 {
 	uint64_t lastCircuitTestCheck = 0;
 	_RQEntry *qe = (_RQEntry *)0;
-	while ((_running)&&((qe = _queue.get()))) {
+	while ((_running)&&(_queue.get(qe))) {
 		try {
 			if (qe->type == _RQEntry::RQENTRY_TYPE_REQUEST) {
 				_request(qe->nwid,qe->fromAddr,qe->requestPacketId,qe->identity,qe->metaData);

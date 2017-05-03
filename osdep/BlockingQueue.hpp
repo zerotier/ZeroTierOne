@@ -42,7 +42,7 @@ template <class T>
 class BlockingQueue
 {
 public:
-	BlockingQueue(void) {}
+	BlockingQueue(void) : r(true) {}
 
 	inline void post(T t)
 	{
@@ -51,19 +51,34 @@ public:
 		c.notify_one();
 	}
 
-	inline T get(void)
+	inline void stop(void)
+	{
+		std::lock_guard<std::mutex> lock(m);
+		r = false;
+		c.notify_all();
+	}
+
+	/**
+	 * @param value Value to set to next queue item if return value is true
+	 * @return False if stop() has been called, true otherwise
+	 */
+	inline bool get(T &value)
 	{
 		std::unique_lock<std::mutex> lock(m);
-		while(q.empty())
+		if (!r) return false;
+		while (q.empty()) {
 			c.wait(lock);
-		T val = q.front();
+			if (!r) return false;
+		}
+		value = q.front();
 		q.pop();
-		return val;
+		return true;
 	}
 
 private:
+	volatile bool r;
 	std::queue<T> q;
-	mutable std::mutex m;
+	std::mutex m;
 	std::condition_variable c;
 };
 
