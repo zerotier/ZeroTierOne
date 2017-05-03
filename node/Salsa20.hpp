@@ -48,6 +48,43 @@ public:
 	static inline void memxor(uint8_t *d,const uint8_t *s,unsigned int len)
 	{
 #ifdef ZT_SALSA20_SSE
+		while (len >= 128) {
+			__m128i s0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s));
+			__m128i s1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 16));
+			__m128i s2 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 32));
+			__m128i s3 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 48));
+			__m128i s4 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 64));
+			__m128i s5 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 80));
+			__m128i s6 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 96));
+			__m128i s7 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 112));
+			__m128i d0 = _mm_loadu_si128(reinterpret_cast<__m128i *>(d));
+			__m128i d1 = _mm_loadu_si128(reinterpret_cast<__m128i *>(d + 16));
+			__m128i d2 = _mm_loadu_si128(reinterpret_cast<__m128i *>(d + 32));
+			__m128i d3 = _mm_loadu_si128(reinterpret_cast<__m128i *>(d + 48));
+			__m128i d4 = _mm_loadu_si128(reinterpret_cast<__m128i *>(d + 64));
+			__m128i d5 = _mm_loadu_si128(reinterpret_cast<__m128i *>(d + 80));
+			__m128i d6 = _mm_loadu_si128(reinterpret_cast<__m128i *>(d + 96));
+			__m128i d7 = _mm_loadu_si128(reinterpret_cast<__m128i *>(d + 112));
+			d0 = _mm_xor_si128(d0,s0);
+			d1 = _mm_xor_si128(d1,s1);
+			d2 = _mm_xor_si128(d2,s2);
+			d3 = _mm_xor_si128(d3,s3);
+			d4 = _mm_xor_si128(d4,s4);
+			d5 = _mm_xor_si128(d5,s5);
+			d6 = _mm_xor_si128(d6,s6);
+			d7 = _mm_xor_si128(d7,s7);
+			_mm_storeu_si128(reinterpret_cast<__m128i *>(d),d0);
+			_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 16),d1);
+			_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 32),d2);
+			_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 48),d3);
+			_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 64),d4);
+			_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 80),d5);
+			_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 96),d6);
+			_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 112),d7);
+			s += 128;
+			d += 128;
+			len -= 128;
+		}
 		while (len >= 16) {
 			_mm_storeu_si128(reinterpret_cast<__m128i *>(d),_mm_xor_si128(_mm_loadu_si128(reinterpret_cast<__m128i *>(d)),_mm_loadu_si128(reinterpret_cast<const __m128i *>(s))));
 			s += 16;
@@ -67,8 +104,10 @@ public:
 		}
 #endif
 #endif
-		while (len--)
+		while (len) {
+			--len;
 			*(d++) ^= *(s++);
+		}
 	}
 
 	/**
