@@ -1,0 +1,17 @@
+CC=gcc
+CXX=g++
+
+DEFS=-DHAS_DEV_URANDOM
+
+CFLAGS=-std=c99 -O6 -fPIC -Wall $(DEFS)
+CXXFLAGS=-Drestrict=__restrict__ -O6 -Wall $(DEFS) -I..
+
+#CFLAGS=-g -Wall $(DEFS)
+#CXXFLAGS=-g -Wall $(DEFS)
+
+LDFLAGS=
+DLLFLAGS=-shared
+DLLEXT=so
+
+LIBANODE_LIBS=-lcrypto -lresolv -pthread
+LIBSPARK_LIBS=-lz
