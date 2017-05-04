@@ -87,82 +87,82 @@ endif
 CC_MACH=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
 ZT_ARCHITECTURE=999
 ifeq ($(CC_MACH),x86_64)
-        ZT_ARCHITECTURE=2
+	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),amd64)
-        ZT_ARCHITECTURE=2
+	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),i386)
-        ZT_ARCHITECTURE=1
+	ZT_ARCHITECTURE=1
 endif
 ifeq ($(CC_MACH),i486)
-        ZT_ARCHITECTURE=1
+	ZT_ARCHITECTURE=1
 endif
 ifeq ($(CC_MACH),i586)
-        ZT_ARCHITECTURE=1
+	ZT_ARCHITECTURE=1
 endif
 ifeq ($(CC_MACH),i686)
-        ZT_ARCHITECTURE=1
+	ZT_ARCHITECTURE=1
 endif
 ifeq ($(CC_MACH),arm)
-        ZT_ARCHITECTURE=3
+	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armel)
-        ZT_ARCHITECTURE=3
+	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armhf)
-        ZT_ARCHITECTURE=3
+	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armv6)
-        ZT_ARCHITECTURE=3
+	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armv6zk)
-        ZT_ARCHITECTURE=3
+	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armv6kz)
-        ZT_ARCHITECTURE=3
+	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armv7)
-        ZT_ARCHITECTURE=3
+	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),arm64)
-        ZT_ARCHITECTURE=4
+	ZT_ARCHITECTURE=4
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),aarch64)
-        ZT_ARCHITECTURE=4
+	ZT_ARCHITECTURE=4
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),mipsel)
-        ZT_ARCHITECTURE=5
+	ZT_ARCHITECTURE=5
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),mips)
-        ZT_ARCHITECTURE=5
+	ZT_ARCHITECTURE=5
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),mips64)
-        ZT_ARCHITECTURE=6
+	ZT_ARCHITECTURE=6
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),mips64el)
-        ZT_ARCHITECTURE=6
+	ZT_ARCHITECTURE=6
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 
@@ -179,16 +179,17 @@ override DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) 
 # Static builds, which are currently done for a number of Linux targets
 ifeq ($(ZT_STATIC),1)
 	override LDFLAGS+=-static
-	ifeq ($(ZT_ARCHITECTURE),3)
-		ifeq ($(shell if [ -e /usr/bin/dpkg ]; then dpkg --print-architecture; fi),armel)
-			override CFLAGS+=-march=armv5te -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
-			override CXXFLAGS+=-march=armv5te -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
-			ZT_USE_ARM32_NEON_ASM_SALSA2012=0
-		else
-			override CFLAGS+=-march=armv6zk -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard -mno-unaligned-access -marm
-			override CXXFLAGS+=-march=armv6zk -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard -mno-unaligned-access -marm
-			ZT_USE_ARM32_NEON_ASM_SALSA2012=0
-		endif
+endif
+
+# ARM32 hell -- use conservative CFLAGS
+ifeq ($(ZT_ARCHITECTURE),3)
+	ifeq ($(shell if [ -e /usr/bin/dpkg ]; then dpkg --print-architecture; fi),armel)
+		override CFLAGS+=-march=armv5 -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
+		override CXXFLAGS+=-march=armv5 -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
+		ZT_USE_ARM32_NEON_ASM_SALSA2012=0
+	else
+		override CFLAGS+=-march=armv5 -mfpu=vfp -mfloat-abi=hard -mno-unaligned-access -marm
+		override CXXFLAGS+=-march=armv5 -mfpu=vfp -mfloat-abi=hard -mno-unaligned-access -marm
 	endif
 endif
 
@@ -203,6 +204,12 @@ ifeq ($(ZT_USE_ARM32_NEON_ASM_SALSA2012),1)
 endif
 
 all:	one
+
+ext/x64-salsa2012-asm/salsa2012.o:
+	$(CC) $(CFLAGS) -c ext/x64-salsa2012-asm/salsa2012.s -o ext/x64-salsa2012-asm/salsa2012.o
+
+ext/arm32-neon-salsa2012-asm/salsa2012.o:
+	$(CC) $(CFLAGS) -c ext/arm32-neon-salsa2012-asm/salsa2012.s -o ext/arm32-neon-salsa2012-asm/salsa2012.o
 
 one:	$(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o $(LDLIBS)
