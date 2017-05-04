@@ -104,11 +104,12 @@ namespace ZeroTier { typedef TestEthernetTap EthernetTap; }
 
 #else
 
-#ifdef ZT_SERVICE_NETCON
-
-#include "../netcon/NetconEthernetTap.hpp"
-namespace ZeroTier { typedef NetconEthernetTap EthernetTap; }
-
+#ifdef ZT_SDK
+	#include "../controller/EmbeddedNetworkController.hpp"
+	#include "../node/Node.hpp"
+	// Use the virtual netcon endpoint instead of a tun/tap port driver
+	#include "../src/SocketTap.hpp"
+	namespace ZeroTier { typedef SocketTap EthernetTap; }
 #else
 
 #ifdef __APPLE__
@@ -989,6 +990,62 @@ public:
 		else return std::string();
 	}
 
+#ifdef ZT_SDK
+    virtual void leave(const char *hp)
+    {
+        _node->leave(Utils::hexStrToU64(hp),NULL,NULL);
+    }
+
+	virtual void join(const char *hp)
+	{
+		_node->join(Utils::hexStrToU64(hp),NULL,NULL);
+	}
+
+    virtual std::string givenHomePath()
+    {
+    	return _homePath;
+    }
+
+    virtual EthernetTap * getTap(uint64_t nwid)
+    {
+		Mutex::Lock _l(_nets_m);
+		std::map<uint64_t,NetworkState>::const_iterator n(_nets.find(nwid));
+		if (n == _nets.end())
+			return NULL;
+		return n->second.tap;
+    }
+
+    virtual EthernetTap *getTap(InetAddress &addr)
+    {
+    	Mutex::Lock _l(_nets_m);
+		std::map<uint64_t,NetworkState>::iterator it;
+	    for(it = _nets.begin(); it != _nets.end(); it++) {
+			if(it->second.tap) {
+				for(int j=0; j<it->second.tap->_ips.size(); j++) {
+					if(it->second.tap->_ips[j].isEqualPrefix(addr) || it->second.tap->_ips[j].ipsEqual(addr)) {
+						return it->second.tap;
+					}
+				}
+			}
+	    }
+	    return NULL;
+    }
+
+	virtual Node * getNode()
+	{
+		return _node;
+	}
+
+	virtual void removeNets()
+	{
+		Mutex::Lock _l(_nets_m);
+		std::map<uint64_t,NetworkState>::iterator i;
+	    for(i = _nets.begin(); i != _nets.end(); i++) {
+	        delete i->second.tap;
+	    }
+	}
+#endif // ZT_SDK
+
 	virtual void terminate()
 	{
 		_run_m.lock();
@@ -1158,9 +1215,11 @@ public:
 #else
 					settings["portMappingEnabled"] = false; // not supported in build
 #endif
+#ifndef ZT_SDK
+
 					settings["softwareUpdate"] = OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT);
 					settings["softwareUpdateChannel"] = OSUtils::jsonString(settings["softwareUpdateChannel"],ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL);
-
+#endif
 					const World planet(_node->planet());
 					res["planetWorldId"] = planet.id();
 					res["planetWorldTimestamp"] = planet.timestamp();
@@ -1508,6 +1567,7 @@ public:
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 
+#ifndef ZT_SDK
 		const std::string up(OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT));
 		const bool udist = OSUtils::jsonBool(settings["softwareUpdateDist"],false);
 		if (((up == "apply")||(up == "download"))||(udist)) {
@@ -1521,6 +1581,7 @@ public:
 			_updater = (SoftwareUpdater *)0;
 			_updateAutoApply = false;
 		}
+#endif
 
 		json &ignoreIfs = settings["interfacePrefixBlacklist"];
 		if (ignoreIfs.is_array()) {
