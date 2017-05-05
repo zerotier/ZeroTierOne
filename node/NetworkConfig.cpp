@@ -51,6 +51,7 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,(uint64_t)this->multicastLimit)) return false;
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint64_t)this->type)) return false;
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name)) return false;
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MTU,(uint64_t)this->mtu)) return false;
 
 #ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 		if (includeLegacy) {
@@ -216,6 +217,12 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 		}
 		this->multicastLimit = (unsigned int)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,0);
 		d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name,sizeof(this->name));
+
+		this->mtu = (unsigned int)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_MTU,ZT_DEFAULT_MTU);
+		if (this->mtu < 1280)
+			this->mtu = 1280; // minimum MTU allowed by IPv6 standard and others
+		else if (this->mtu > ZT_MAX_MTU)
+			this->mtu = ZT_MAX_MTU;
 
 		if (d.getUI(ZT_NETWORKCONFIG_DICT_KEY_VERSION,0) < 6) {
 	#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF

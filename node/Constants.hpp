@@ -159,15 +159,12 @@
 /**
  * Default MTU used for Ethernet tap device
  */
-#define ZT_IF_MTU ZT_MAX_MTU
+#define ZT_DEFAULT_MTU 2800
 
 /**
- * Maximum number of packet fragments we'll support
- *
- * The actual spec allows 16, but this is the most we'll support right
- * now. Packets with more than this many fragments are dropped.
+ * Maximum number of packet fragments we'll support (protocol max: 16)
  */
-#define ZT_MAX_PACKET_FRAGMENTS 4
+#define ZT_MAX_PACKET_FRAGMENTS 7
 
 /**
  * Size of RX queue

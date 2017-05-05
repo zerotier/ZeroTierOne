@@ -167,6 +167,8 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_TYPE "t"
 // text
 #define ZT_NETWORKCONFIG_DICT_KEY_NAME "n"
+// network MTU
+#define ZT_NETWORKCONFIG_DICT_KEY_MTU "mtu"
 // credential time max delta in ms
 #define ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA "ctmd"
 // binary serialized certificate of membership
@@ -464,6 +466,11 @@ public:
 	 * Flags (64-bit)
 	 */
 	uint64_t flags;
+
+	/**
+	 * Network MTU
+	 */
+	unsigned int mtu;
 
 	/**
 	 * Maximum number of recipients per multicast (not including active bridges)

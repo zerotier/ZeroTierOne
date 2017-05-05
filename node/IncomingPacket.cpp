@@ -1125,7 +1125,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 
 			//TRACE("<<MC FRAME %.16llx/%s from %s@%s flags %.2x length %u",nwid,to.toString().c_str(),from.toString().c_str(),peer->address().toString().c_str(),flags,frameLen);
 
-			if ((frameLen > 0)&&(frameLen <= ZT_IF_MTU)) {
+			if ((frameLen > 0)&&(frameLen <= ZT_MAX_MTU)) {
 				if (!to.mac().isMulticast()) {
 					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: destination is unicast, must use FRAME or EXT_FRAME",from.toString().c_str(),peer->address().toString().c_str(),_path->address().toString().c_str(),to.toString().c_str());
 					peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,true); // trustEstablished because COM is okay

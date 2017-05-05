@@ -1225,6 +1225,8 @@ void Network::requestConfiguration(void *tPtr)
 			nconf->revision = 1;
 			nconf->issuedTo = RR->identity.address();
 			nconf->flags = ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
+			nconf->mtu = ZT_DEFAULT_MTU;
+			nconf->multicastLimit = 0;
 			nconf->staticIpCount = 1;
 			nconf->ruleCount = 14;
 			nconf->staticIps[0] = InetAddress::makeIpv66plane(_id,RR->identity.address().toInt());
@@ -1495,7 +1497,7 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	else ec->name[0] = (char)0;
 	ec->status = _status();
 	ec->type = (_config) ? (_config.isPrivate() ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC) : ZT_NETWORK_TYPE_PRIVATE;
-	ec->mtu = ZT_IF_MTU;
+	ec->mtu = (_config) ? _config.mtu : ZT_DEFAULT_MTU;
 	ec->physicalMtu = ZT_UDP_DEFAULT_PAYLOAD_MTU - (ZT_PACKET_IDX_PAYLOAD + 16);
 	ec->dhcp = 0;
 	std::vector<Address> ab(_config.activeBridges());
