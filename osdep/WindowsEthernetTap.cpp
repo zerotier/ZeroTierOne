@@ -604,7 +604,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 		unsigned int tmpsl = Utils::snprintf(tmps,sizeof(tmps),"%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",(unsigned int)mac[0],(unsigned int)mac[1],(unsigned int)mac[2],(unsigned int)mac[3],(unsigned int)mac[4],(unsigned int)mac[5]) + 1;
 		RegSetKeyValueA(nwAdapters,_mySubkeyName.c_str(),"NetworkAddress",REG_SZ,tmps,tmpsl);
 		RegSetKeyValueA(nwAdapters,_mySubkeyName.c_str(),"MAC",REG_SZ,tmps,tmpsl);
-        tmpsl = Utils::snprintf(tmps, sizeof(tmps), "%d", mtu);
+		tmpsl = Utils::snprintf(tmps, sizeof(tmps), "%d", mtu);
 		RegSetKeyValueA(nwAdapters,_mySubkeyName.c_str(),"MTU",REG_SZ,tmps,tmpsl);
 
 		DWORD tmp = 0;
@@ -875,6 +875,14 @@ void WindowsEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,
 void WindowsEthernetTap::setMtu(unsigned int mtu)
 {
 	if (mtu != _mtu) {
+		_mtu = mtu;
+		HKEY nwAdapters;
+		if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}", 0, KEY_READ | KEY_WRITE, &nwAdapters) == ERROR_SUCCESS) {
+			char tmps[64];
+			unsigned int tmpsl = Utils::snprintf(tmps, sizeof(tmps), "%d", mtu);
+			RegSetKeyValueA(nwAdapters, _mySubkeyName.c_str(), "MTU", REG_SZ, tmps, tmpsl);
+			RegCloseKey(nwAdapters);
+		}
 	}
 }
 
@@ -1019,10 +1027,15 @@ void WindowsEthernetTap::threadMain()
 			bool writeInProgress = false;
 			ULONGLONG timeOfLastBorkCheck = GetTickCount64();
 			_initialized = true;
+			unsigned int oldmtu = _mtu;
 
 			while (_run) {
 				DWORD waitResult = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,2500,TRUE);
-				if (!_run) break; // will also break outer while(_run)
+				if (!_run) break; // will also break outer while(_run) since _run is false
+
+				// Check for changes in MTU and break to restart tap device to reconfigure in this case
+				if (_mtu != oldmtu)
+					break;
 
 				// Check for issues with adapter and close/reopen if any are detected. This
 				// check fixes a while boatload of Windows adapter 'coma' issues after

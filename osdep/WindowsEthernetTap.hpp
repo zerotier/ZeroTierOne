@@ -131,7 +131,7 @@ private:
 	void *_arg;
 	MAC _mac;
 	uint64_t _nwid;
-	unsigned int _mtu;
+	volatile unsigned int _mtu;
 	Thread _thread;
 
 	volatile HANDLE _tap;
