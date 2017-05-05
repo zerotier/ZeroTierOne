@@ -470,6 +470,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 	_arg(arg),
 	_mac(mac),
 	_nwid(nwid),
+	_mtu(mtu),
 	_tap(INVALID_HANDLE_VALUE),
 	_injectSemaphore(INVALID_HANDLE_VALUE),
 	_pathToHelpers(hp),
@@ -481,10 +482,6 @@ WindowsEthernetTap::WindowsEthernetTap(
 	char subkeyClass[1024];
 	char data[1024];
 	char tag[24];
-	std::string mySubkeyName;
-
-	if (mtu > 2800)
-		throw std::runtime_error("MTU too large.");
 
 	// We "tag" registry entries with the network ID to identify persistent devices
 	Utils::snprintf(tag,sizeof(tag),"%.16llx",(unsigned long long)nwid);
@@ -530,7 +527,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 								_netCfgInstanceId = instanceId;
 								_deviceInstanceId = instanceIdPath;
 
-								mySubkeyName = subkeyName;
+								_mySubkeyName = subkeyName;
 								break; // found it!
 							}
 						}
@@ -573,7 +570,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 									if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
 										_deviceInstanceId.assign(data,dataLen);
 
-									mySubkeyName = subkeyName;
+									_mySubkeyName = subkeyName;
 
 									// Disable DHCP by default on new devices
 									HKEY tcpIpInterfaces;
@@ -605,24 +602,24 @@ WindowsEthernetTap::WindowsEthernetTap(
 	if (_netCfgInstanceId.length() > 0) {
 		char tmps[64];
 		unsigned int tmpsl = Utils::snprintf(tmps,sizeof(tmps),"%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",(unsigned int)mac[0],(unsigned int)mac[1],(unsigned int)mac[2],(unsigned int)mac[3],(unsigned int)mac[4],(unsigned int)mac[5]) + 1;
-		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"NetworkAddress",REG_SZ,tmps,tmpsl);
-		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MAC",REG_SZ,tmps,tmpsl);
+		RegSetKeyValueA(nwAdapters,_mySubkeyName.c_str(),"NetworkAddress",REG_SZ,tmps,tmpsl);
+		RegSetKeyValueA(nwAdapters,_mySubkeyName.c_str(),"MAC",REG_SZ,tmps,tmpsl);
         tmpsl = Utils::snprintf(tmps, sizeof(tmps), "%d", mtu);
-		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MTU",REG_SZ,tmps,tmpsl);
+		RegSetKeyValueA(nwAdapters,_mySubkeyName.c_str(),"MTU",REG_SZ,tmps,tmpsl);
 
 		DWORD tmp = 0;
-		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"*NdisDeviceType",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
+		RegSetKeyValueA(nwAdapters,_mySubkeyName.c_str(),"*NdisDeviceType",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
 		tmp = IF_TYPE_ETHERNET_CSMACD;
-		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"*IfType",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
+		RegSetKeyValueA(nwAdapters,_mySubkeyName.c_str(),"*IfType",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
 
 		if (creatingNewDevice) {
 			// Vista/2008 does not set this
 			if (newDeviceInstanceId.length() > 0)
-				RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"DeviceInstanceID",REG_SZ,newDeviceInstanceId.c_str(),(DWORD)newDeviceInstanceId.length());
+				RegSetKeyValueA(nwAdapters,_mySubkeyName.c_str(),"DeviceInstanceID",REG_SZ,newDeviceInstanceId.c_str(),(DWORD)newDeviceInstanceId.length());
 
 			// Set EnableDHCP to 0 by default on new devices
 			tmp = 0;
-			RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"EnableDHCP",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
+			RegSetKeyValueA(nwAdapters,_mySubkeyName.c_str(),"EnableDHCP",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
 		}
 		RegCloseKey(nwAdapters);
 	} else {
@@ -792,11 +789,11 @@ std::vector<InetAddress> WindowsEthernetTap::ips() const
 
 void WindowsEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	if ((!_initialized)||(!_enabled)||(_tap == INVALID_HANDLE_VALUE)||(len > (ZT_IF_MTU)))
+	if ((!_initialized)||(!_enabled)||(_tap == INVALID_HANDLE_VALUE)||(len > _mtu))
 		return;
 
 	Mutex::Lock _l(_injectPending_m);
-	_injectPending.push( std::pair<Array<char,ZT_IF_MTU + 32>,unsigned int>(Array<char,ZT_IF_MTU + 32>(),len + 14) );
+	_injectPending.push( std::pair<Array<char,ZT_MAX_MTU + 32>,unsigned int>(Array<char,ZT_MAX_MTU + 32>(),len + 14) );
 	char *d = _injectPending.back().first.data;
 	to.copyTo(d,6);
 	from.copyTo(d + 6,6);
@@ -875,6 +872,12 @@ void WindowsEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,
 	_multicastGroups.swap(newGroups);
 }
 
+void WindowsEthernetTap::setMtu(unsigned int mtu)
+{
+	if (mtu != _mtu) {
+	}
+}
+
 NET_IFINDEX WindowsEthernetTap::interfaceIndex() const
 {
 	NET_IFINDEX idx = -1;
@@ -886,7 +889,7 @@ NET_IFINDEX WindowsEthernetTap::interfaceIndex() const
 void WindowsEthernetTap::threadMain()
 	throw()
 {
-	char tapReadBuf[ZT_IF_MTU + 32];
+	char tapReadBuf[ZT_MAX_MTU + 32];
 	char tapPath[128];
 	HANDLE wait4[3];
 	OVERLAPPED tapOvlRead,tapOvlWrite;
@@ -1015,9 +1018,7 @@ void WindowsEthernetTap::threadMain()
 			ReadFile(_tap,tapReadBuf,sizeof(tapReadBuf),NULL,&tapOvlRead);
 			bool writeInProgress = false;
 			ULONGLONG timeOfLastBorkCheck = GetTickCount64();
-
-
-            _initialized = true;
+			_initialized = true;
 
 			while (_run) {
 				DWORD waitResult = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,2500,TRUE);
@@ -1070,7 +1071,7 @@ void WindowsEthernetTap::threadMain()
 							} catch ( ... ) {} // handlers should not throw
 						}
 					}
-					ReadFile(_tap,tapReadBuf,ZT_IF_MTU + 32,NULL,&tapOvlRead);
+					ReadFile(_tap,tapReadBuf,ZT_MAX_MTU + 32,NULL,&tapOvlRead);
 				}
 
 				if (writeInProgress) {

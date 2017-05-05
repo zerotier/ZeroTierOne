@@ -94,9 +94,6 @@ BSDEthernetTap::BSDEthernetTap(
 
 	Mutex::Lock _gl(globalTapCreateLock);
 
-	if (mtu > 2800)
-		throw std::runtime_error("max tap MTU is 2800");
-
 #ifdef __FreeBSD__
 	/* FreeBSD allows long interface names and interface renaming */
 
@@ -321,7 +318,7 @@ std::vector<InetAddress> BSDEthernetTap::ips() const
 
 void BSDEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	char putBuf[4096];
+	char putBuf[ZT_MAX_MTU + 64];
 	if ((_fd > 0)&&(len <= _mtu)&&(_enabled)) {
 		to.copyTo(putBuf,6);
 		from.copyTo(putBuf + 6,6);
@@ -381,49 +378,22 @@ void BSDEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std:
 	_multicastGroups.swap(newGroups);
 }
 
-/*
-bool BSDEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
+void BSDEthernetTap::setMtu(unsigned int mtu)
 {
-	std::set<MulticastGroup> newGroups;
-	struct ifmaddrs *ifmap = (struct ifmaddrs *)0;
-	if (!getifmaddrs(&ifmap)) {
-		struct ifmaddrs *p = ifmap;
-		while (p) {
-			if (p->ifma_addr->sa_family == AF_LINK) {
-				struct sockaddr_dl *in = (struct sockaddr_dl *)p->ifma_name;
-				struct sockaddr_dl *la = (struct sockaddr_dl *)p->ifma_addr;
-				if ((la->sdl_alen == 6)&&(in->sdl_nlen <= _dev.length())&&(!memcmp(_dev.data(),in->sdl_data,in->sdl_nlen)))
-					newGroups.insert(MulticastGroup(MAC(la->sdl_data + la->sdl_nlen,6),0));
-			}
-			p = p->ifma_next;
-		}
-		freeifmaddrs(ifmap);
-	}
-
-	{
-		std::set<InetAddress> allIps(ips());
-		for(std::set<InetAddress>::const_iterator i(allIps.begin());i!=allIps.end();++i)
-			newGroups.insert(MulticastGroup::deriveMulticastGroupForAddressResolution(*i));
-	}
-
-	bool changed = false;
-
-	for(std::set<MulticastGroup>::iterator mg(newGroups.begin());mg!=newGroups.end();++mg) {
-		if (!groups.count(*mg)) {
-			groups.insert(*mg);
-			changed = true;
+	if (mtu != _mtu) {
+		_mtu = mtu;
+		long cpid = (long)vfork();
+		if (cpid == 0) {
+			char tmp[64];
+			Utils::snprintf(tmp,sizeof(tmp),"%u",mtu);
+			execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"mtu",tmp,(const char *)0);
+			_exit(-1);
+		} else if (cpid > 0) {
+			int exitcode = -1;
+			waitpid(cpid,&exitcode,0);
 		}
 	}
-	for(std::set<MulticastGroup>::iterator mg(groups.begin());mg!=groups.end();) {
-		if ((!newGroups.count(*mg))&&(*mg != _blindWildcardMulticastGroup)) {
-			groups.erase(mg++);
-			changed = true;
-		} else ++mg;
-	}
-
-	return changed;
 }
-*/
 
 void BSDEthernetTap::threadMain()
 	throw()
@@ -431,7 +401,7 @@ void BSDEthernetTap::threadMain()
 	fd_set readfds,nullfds;
 	MAC to,from;
 	int n,nfds,r;
-	char getBuf[8194];
+	char getBuf[ZT_MAX_MTU + 64];
 
 	// Wait for a moment after startup -- wait for Network to finish
 	// constructing itself.

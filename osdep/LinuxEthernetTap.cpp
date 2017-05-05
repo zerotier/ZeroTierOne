@@ -87,9 +87,6 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 	Mutex::Lock _l(__tapCreateLock); // create only one tap at a time, globally
 
-	if (mtu > 2800)
-		throw std::runtime_error("max tap MTU is 2800");
-
 	_fd = ::open("/dev/net/tun",O_RDWR);
 	if (_fd <= 0) {
 		_fd = ::open("/dev/tun",O_RDWR);
@@ -386,7 +383,7 @@ std::vector<InetAddress> LinuxEthernetTap::ips() const
 
 void LinuxEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	char putBuf[8194];
+	char putBuf[ZT_MAX_MTU + 64];
 	if ((_fd > 0)&&(len <= _mtu)&&(_enabled)) {
 		to.copyTo(putBuf,6);
 		from.copyTo(putBuf + 6,6);
@@ -455,13 +452,28 @@ void LinuxEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,st
 	_multicastGroups.swap(newGroups);
 }
 
+void LinuxEthernetTap::setMtu(unsigned int mtu)
+{
+	if (_mtu != mtu) {
+		_mtu = mtu;
+		int sock = socket(AF_INET,SOCK_DGRAM,0);
+		if (sock > 0) {
+			struct ifreq ifr;
+			memset(&ifr,0,sizeof(ifr));
+			ifr.ifr_ifru.ifru_mtu = (int)mtu;
+			ioctl(sock,SIOCSIFMTU,(void *)&ifr);
+			close(sock);
+		}
+	}
+}
+
 void LinuxEthernetTap::threadMain()
 	throw()
 {
 	fd_set readfds,nullfds;
 	MAC to,from;
 	int n,nfds,r;
-	char getBuf[8194];
+	char getBuf[ZT_MAX_MTU + 64];
 
 	Thread::sleep(500);
 

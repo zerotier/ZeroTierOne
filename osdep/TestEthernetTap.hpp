@@ -139,6 +139,10 @@ public:
 	{
 	}
 
+	inline void setMtu(unsigned int mtu)
+	{
+	}
+
 private:
 	uint64_t _nwid;
 	std::string _dev;

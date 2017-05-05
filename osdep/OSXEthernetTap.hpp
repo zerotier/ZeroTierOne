@@ -70,6 +70,7 @@ public:
 	std::string deviceName() const;
 	void setFriendlyName(const char *friendlyName);
 	void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
+	void setMtu(unsigned int mtu);
 
 	void threadMain()
 		throw();

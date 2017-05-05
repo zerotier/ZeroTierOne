@@ -109,6 +109,7 @@ public:
 	std::string deviceName() const;
 	void setFriendlyName(const char *friendlyName);
 	void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
+	void setMtu(unsigned int mtu);
 
 	inline const NET_LUID &luid() const { return _deviceLuid; }
 	inline const GUID &guid() const { return _deviceGuid; }
@@ -130,6 +131,7 @@ private:
 	void *_arg;
 	MAC _mac;
 	uint64_t _nwid;
+	unsigned int _mtu;
 	Thread _thread;
 
 	volatile HANDLE _tap;
@@ -139,13 +141,14 @@ private:
 	NET_LUID _deviceLuid;
 	std::string _netCfgInstanceId;
 	std::string _deviceInstanceId;
+	std::string _mySubkeyName;
 
 	std::vector<InetAddress> _assignedIps; // IPs assigned with addIp
 	Mutex _assignedIps_m;
 
 	std::vector<MulticastGroup> _multicastGroups;
 
-	std::queue< std::pair< Array<char,ZT_IF_MTU + 32>,unsigned int > > _injectPending;
+	std::queue< std::pair< Array<char,ZT_MAX_MTU + 32>,unsigned int > > _injectPending;
 	Mutex _injectPending_m;
 
 	std::string _pathToHelpers;
