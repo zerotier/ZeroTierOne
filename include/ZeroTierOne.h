@@ -60,6 +60,11 @@ extern "C" {
 #define ZT_DEFAULT_PORT 9993
 
 /**
+ * Minimum MTU, which is the minimum allowed by IPv6 and several specs
+ */
+#define ZT_MIN_MTU 1280
+
+/**
  * Maximum MTU for ZeroTier virtual networks
  */
 #define ZT_MAX_MTU 10000

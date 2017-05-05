@@ -162,6 +162,7 @@ private:
 		if (!network.count("tags")) network["tags"] = nlohmann::json::array();
 		if (!network.count("routes")) network["routes"] = nlohmann::json::array();
 		if (!network.count("ipAssignmentPools")) network["ipAssignmentPools"] = nlohmann::json::array();
+		if (!network.count("mtu")) network["mtu"] = ZT_DEFAULT_MTU;
 		if (!network.count("rules")) {
 			// If unspecified, rules are set to allow anything and behave like a flat L2 segment
 			network["rules"] = {{
