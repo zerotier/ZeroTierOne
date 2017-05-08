@@ -152,10 +152,11 @@ namespace WinUI
                     Thread.Sleep(2000);
                 }
             }
-            catch
+            catch (Exception e)
             {
-                Console.WriteLine("Monitor Thread Ended");
+                Console.WriteLine("Monitor Thread Exception: " + "\n" + e.StackTrace);
             }
+						Console.WriteLine("Monitor Thread Ended");
         }
 
         public void SubscribeStatusUpdates(StatusCallback cb)
