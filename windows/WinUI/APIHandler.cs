@@ -188,7 +188,8 @@ namespace WinUI
             }
             catch (System.Net.WebException e)
             {
-								if (((HttpWebResponse)e.Response).StatusCode == HttpStatusCode.Unauthorized)
+								HttpWebResponse res = (HttpWebResponse)e.Response;
+								if (res != null && res.StatusCode == HttpStatusCode.Unauthorized)
 								{
 										APIHandler.initHandler(true);
 								}
@@ -251,7 +252,8 @@ namespace WinUI
             }
             catch (System.Net.WebException e)
             {
-								if (((HttpWebResponse)e.Response).StatusCode == HttpStatusCode.Unauthorized)
+								HttpWebResponse res = (HttpWebResponse)e.Response;
+								if (res != null && res.StatusCode == HttpStatusCode.Unauthorized)
 								{
 										APIHandler.initHandler(true);
 								}
@@ -310,7 +312,8 @@ namespace WinUI
             }
             catch (System.Net.WebException e)
             {
-								if (((HttpWebResponse)e.Response).StatusCode == HttpStatusCode.Unauthorized)
+								HttpWebResponse res = (HttpWebResponse)e.Response;
+								if (res != null && res.StatusCode == HttpStatusCode.Unauthorized)
 								{
 										APIHandler.initHandler(true);
 								}
@@ -348,7 +351,8 @@ namespace WinUI
             }
             catch (System.Net.WebException e)
             {
-								if (((HttpWebResponse)e.Response).StatusCode == HttpStatusCode.Unauthorized)
+								HttpWebResponse res = (HttpWebResponse)e.Response;
+								if (res != null && res.StatusCode == HttpStatusCode.Unauthorized)
 								{
 										APIHandler.initHandler(true);
 								}
@@ -405,7 +409,8 @@ namespace WinUI
             }
             catch (System.Net.WebException e)
             {
-								if (((HttpWebResponse)e.Response).StatusCode == HttpStatusCode.Unauthorized)
+								HttpWebResponse res = (HttpWebResponse)e.Response;
+								if (res != null && res.StatusCode == HttpStatusCode.Unauthorized)
 								{
 										APIHandler.initHandler(true);
 								}
