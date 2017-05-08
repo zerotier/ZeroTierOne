@@ -14,10 +14,10 @@ endif
 
 # "make debug" is a shortcut for this
 ifeq ($(ZT_DEBUG),1)
-	DEFS+=-DZT_TRACE
-	CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
+	CFLAGS+=-Wall -Werror -g -pthread $(INCLUDES) $(DEFS)
 	LDFLAGS+=
 	STRIP=echo
+	ZT_TRACE=1
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in heavy testing without it.
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
@@ -28,80 +28,84 @@ else
 	STRIP=strip --strip-all
 endif
 
+ifeq ($(ZT_TRACE),1)
+	DEFS+=-DZT_TRACE
+endif
+
 # Determine system build architecture from compiler target
 CC_MACH=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
 ZT_ARCHITECTURE=999
 ifeq ($(CC_MACH),x86_64)
-        ZT_ARCHITECTURE=2
+	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),amd64)
-        ZT_ARCHITECTURE=2
+	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),i386)
-        ZT_ARCHITECTURE=1
+	ZT_ARCHITECTURE=1
 endif
 ifeq ($(CC_MACH),i686)
-        ZT_ARCHITECTURE=1
+	ZT_ARCHITECTURE=1
 endif
 ifeq ($(CC_MACH),arm)
-        ZT_ARCHITECTURE=3
+	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armel)
-        ZT_ARCHITECTURE=3
+	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armhf)
-        ZT_ARCHITECTURE=3
+	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armv6)
-        ZT_ARCHITECTURE=3
+	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armv6zk)
-        ZT_ARCHITECTURE=3
+	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armv6kz)
-        ZT_ARCHITECTURE=3
+	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),armv7)
-        ZT_ARCHITECTURE=3
+	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),arm64)
-        ZT_ARCHITECTURE=4
+	ZT_ARCHITECTURE=4
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),aarch64)
-        ZT_ARCHITECTURE=4
+	ZT_ARCHITECTURE=4
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),mipsel)
-        ZT_ARCHITECTURE=5
+	ZT_ARCHITECTURE=5
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),mips)
-        ZT_ARCHITECTURE=5
+	ZT_ARCHITECTURE=5
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),mips64)
-        ZT_ARCHITECTURE=6
+	ZT_ARCHITECTURE=6
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 ifeq ($(CC_MACH),mips64el)
-        ZT_ARCHITECTURE=6
+	ZT_ARCHITECTURE=6
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 

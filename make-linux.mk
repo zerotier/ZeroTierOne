@@ -55,10 +55,10 @@ ifeq ($(ZT_RULES_ENGINE_DEBUGGING),1)
 endif
 
 ifeq ($(ZT_DEBUG),1)
-	override DEFS+=-DZT_TRACE
-	override CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
-	override CXXFLAGS+=-Wall -g -std=c++11 -pthread $(INCLUDES) $(DEFS)
+	override CFLAGS+=-Wall -Werror -g -pthread $(INCLUDES) $(DEFS)
+	override CXXFLAGS+=-Wall -Werror -g -std=c++11 -pthread $(INCLUDES) $(DEFS)
 	override LDFLAGS+=
+	ZT_TRACE=1
 	STRIP?=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
@@ -66,12 +66,16 @@ node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -
 else
 	override DEFS+=-D_FORTIFY_SOURCE=2
 	CFLAGS?=-O3 -fstack-protector
-	override CFLAGS+=-Wall -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	override CFLAGS+=-Wall -Werror -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	CXXFLAGS?=-O3 -fstack-protector
-	override CXXFLAGS+=-Wall -Wno-unused-result -Wreorder -fPIE -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	override CXXFLAGS+=-Wall -Werror -Wno-unused-result -Wreorder -fPIE -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	override LDFLAGS+=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
 	STRIP+=--strip-all
+endif
+
+ifeq ($(ZT_TRACE),1)
+	override DEFS+=-DZT_TRACE
 endif
 
 ifeq ($(ZT_USE_TEST_TAP),1)

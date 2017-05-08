@@ -47,16 +47,20 @@ ONE_OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o ext/miniupnpc/connec
 
 # Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)
-	DEFS+=-DZT_TRACE
-	CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
+	ZT_TRACE=1
+	CFLAGS+=-Wall -Werror -g $(INCLUDES) $(DEFS)
 	STRIP=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in heavy testing without it.
-node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
+node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g $(INCLUDES) $(DEFS)
 else
 	CFLAGS?=-Ofast -fstack-protector-strong
-	CFLAGS+=$(ARCH_FLAGS) -Wall -flto -fPIE -pthread -mmacosx-version-min=10.7 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
+	CFLAGS+=$(ARCH_FLAGS) -Wall -Werror -flto -fPIE -mmacosx-version-min=10.7 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
 	STRIP=strip
+endif
+
+ifeq ($(ZT_TRACE),1)
+	DEFS+=-DZT_TRACE
 endif
 
 CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++ 
