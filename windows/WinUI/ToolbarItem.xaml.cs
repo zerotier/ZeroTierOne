@@ -269,11 +269,11 @@ namespace WinUI
                     ZeroTierNetwork network = item.DataContext as ZeroTierNetwork;
                     if (item.IsChecked)
                     {
-                        APIHandler.Instance.LeaveNetwork(network.NetworkId);
+                        APIHandler.Instance.LeaveNetwork(this.Dispatcher, network.NetworkId);
                     }
                     else
                     {
-                        APIHandler.Instance.JoinNetwork(network.NetworkId, network.AllowManaged, network.AllowGlobal, network.AllowDefault);
+                        APIHandler.Instance.JoinNetwork(this.Dispatcher, network.NetworkId, network.AllowManaged, network.AllowGlobal, network.AllowDefault);
                     }
                 }   
             }

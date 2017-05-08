@@ -106,14 +106,14 @@ namespace WinUI
 
         private void deleteButton_Click(object sender, RoutedEventArgs e)
         {
-            APIHandler.Instance.LeaveNetwork(network.NetworkId);
+            APIHandler.Instance.LeaveNetwork(this.Dispatcher, network.NetworkId);
             NetworkMonitor.Instance.RemoveNetwork(network.NetworkId);
         }
 
         private void AllowManaged_CheckStateChanged(object sender, RoutedEventArgs e)
         {
             CheckBox cb = sender as CheckBox;
-            APIHandler.Instance.JoinNetwork(network.NetworkId,
+            APIHandler.Instance.JoinNetwork(this.Dispatcher, network.NetworkId,
                 allowManaged.IsChecked ?? false,
                 allowGlobal.IsChecked ?? false,
                 allowDefault.IsChecked ?? false);
@@ -122,7 +122,7 @@ namespace WinUI
         private void AllowGlobal_CheckStateChanged(object sender, RoutedEventArgs e)
         {
             CheckBox cb = sender as CheckBox;
-            APIHandler.Instance.JoinNetwork(network.NetworkId,
+            APIHandler.Instance.JoinNetwork(this.Dispatcher, network.NetworkId,
                 allowManaged.IsChecked ?? false,
                 allowGlobal.IsChecked ?? false,
                 allowDefault.IsChecked ?? false);
@@ -131,7 +131,7 @@ namespace WinUI
         private void AllowDefault_CheckStateChanged(object sender, RoutedEventArgs e)
         {
             CheckBox cb = sender as CheckBox;
-            APIHandler.Instance.JoinNetwork(network.NetworkId,
+            APIHandler.Instance.JoinNetwork(this.Dispatcher, network.NetworkId,
                 allowManaged.IsChecked ?? false,
                 allowGlobal.IsChecked ?? false,
                 allowDefault.IsChecked ?? false);
@@ -155,11 +155,11 @@ namespace WinUI
                 bool managed = allowManaged.IsChecked.Value;
                 bool defRoute = allowDefault.IsChecked.Value;
 
-                APIHandler.Instance.JoinNetwork(networkId.Text, managed, global, defRoute);
+                APIHandler.Instance.JoinNetwork(this.Dispatcher, networkId.Text, managed, global, defRoute);
             }
             else
             {
-                APIHandler.Instance.LeaveNetwork(networkId.Text);
+                APIHandler.Instance.LeaveNetwork(this.Dispatcher, networkId.Text);
             }
         }
     }

@@ -118,7 +118,7 @@ namespace WinUI
             bool allowGlobal = allowGlobalCheckbox.IsChecked.Value;
             bool allowManaged = allowManagedCheckbox.IsChecked.Value;
 
-            APIHandler.Instance.JoinNetwork(joinNetworkBox.Text, allowManaged, allowGlobal, allowDefault);
+            APIHandler.Instance.JoinNetwork(this.Dispatcher, joinNetworkBox.Text, allowManaged, allowGlobal, allowDefault);
 
             Close();
         }
