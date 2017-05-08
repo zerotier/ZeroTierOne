@@ -369,7 +369,7 @@
 /**
  * Time horizon for push direct paths cutoff
  */
-#define ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME 60000
+#define ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME 30000
 
 /**
  * Maximum number of direct path pushes within cutoff time
@@ -378,12 +378,12 @@
  * per CUTOFF_TIME milliseconds per peer to prevent this from being
  * useful for DOS amplification attacks.
  */
-#define ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT 5
+#define ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT 8
 
 /**
  * Maximum number of paths per IP scope (e.g. global, link-local) and family (e.g. v4/v6)
  */
-#define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 4
+#define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 8
 
 /**
  * Time horizon for VERB_NETWORK_CREDENTIALS cutoff

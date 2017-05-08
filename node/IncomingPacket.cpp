@@ -1185,7 +1185,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 
 		// First, subject this to a rate limit
 		if (!peer->rateGatePushDirectPaths(now)) {
-			TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): circuit breaker tripped",source().toString().c_str(),_path->address().toString().c_str());
+			//TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): circuit breaker tripped",source().toString().c_str(),_path->address().toString().c_str());
 			peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_PUSH_DIRECT_PATHS,0,Packet::VERB_NOP,false);
 			return true;
 		}
@@ -1220,7 +1220,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
 							peer->attemptToContactAt(tPtr,InetAddress(),a,now,false,0);
 						} else {
-							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
+							//TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
 					}
 				}	break;
@@ -1237,7 +1237,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
 							peer->attemptToContactAt(tPtr,InetAddress(),a,now,false,0);
 						} else {
-							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
+							//TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
 					}
 				}	break;
