@@ -93,6 +93,15 @@ public:
 		return r;
 	}
 
+	inline unsigned long memberCount(const uint64_t networkId)
+	{
+		Mutex::Lock _l(_networks_m);
+		std::unordered_map<uint64_t,_NW>::const_iterator i(_networks.find(networkId));
+		if (i != _networks.end())
+			return (unsigned long)i->second.members.size();
+		return 0;
+	}
+
 	template<typename F>
 	inline void eachMember(const uint64_t networkId,F func)
 	{

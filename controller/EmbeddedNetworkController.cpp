@@ -487,9 +487,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 
 		if ((path.size() >= 2)&&(path[1].length() == 16)) {
 			const uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
-			char nwids[24];
-			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
-
 			json network;
 			if (!_db.getNetwork(nwid,network))
 				return 404;
@@ -499,6 +496,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 				if (path[2] == "member") {
 
 					if (path.size() >= 4) {
+						// Get member
+
 						const uint64_t address = Utils::hexStrToU64(path[3].c_str());
 						json member;
 						if (!_db.getNetworkMember(nwid,address,member))
@@ -506,24 +505,29 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 						_addMemberNonPersistedFields(nwid,address,member,OSUtils::now());
 						responseBody = OSUtils::jsonDump(member);
 						responseContentType = "application/json";
+
 					} else {
+						// List members and their revisions
+
 						responseBody = "{";
+						responseBody.reserve((_db.memberCount(nwid) + 1) * 32);
 						_db.eachMember(nwid,[&responseBody](uint64_t networkId,uint64_t nodeId,const json &member) {
 							if ((member.is_object())&&(member.size() > 0)) {
-								responseBody.append((responseBody.length() == 1) ? "\"" : ",\"");
-								responseBody.append(OSUtils::jsonString(member["id"],"0"));
-								responseBody.append("\":");
-								responseBody.append(OSUtils::jsonString(member["revision"],"0"));
+								char tmp[128];
+								Utils::snprintf(tmp,sizeof(tmp),"%s%.10llx\":%llu",(responseBody.length() > 1) ? ",\"" : "\"",(unsigned long long)nodeId,(unsigned long long)OSUtils::jsonInt(member["revision"],0));
+								responseBody.append(tmp);
 							}
 						});
 						responseBody.push_back('}');
 						responseContentType = "application/json";
+
 					}
 					return 200;
 
 				} // else 404
 
 			} else {
+				// Get network
 
 				const uint64_t now = OSUtils::now();
 				JSONDB::NetworkSummaryInfo ns;
@@ -535,12 +539,12 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 
 			}
 		} else if (path.size() == 1) {
+			// List networks
 
 			std::vector<uint64_t> networkIds(_db.networkIds());
-			std::sort(networkIds.begin(),networkIds.end());
-
 			char tmp[64];
-			responseBody.push_back('[');
+			responseBody = "[";
+			responseBody.reserve((networkIds.size() + 1) * 24);
 			for(std::vector<uint64_t>::const_iterator i(networkIds.begin());i!=networkIds.end();++i) {
 				if (responseBody.length() > 1)
 					responseBody.push_back(',');
@@ -555,6 +559,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 		} // else 404
 
 	} else {
+		// Controller status
 
 		char tmp[4096];
 		Utils::snprintf(tmp,sizeof(tmp),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now());
@@ -1125,7 +1130,7 @@ void EmbeddedNetworkController::threadMain()
 				std::string pong("{\"memberStatus\":{");
 				{
 					Mutex::Lock _l(_memberStatus_m);
-					pong.reserve(64 * _memberStatus.size());
+					pong.reserve(48 * (_memberStatus.size() + 1));
 					_db.eachId([this,&pong,&now,&first](uint64_t networkId,uint64_t nodeId) {
 						char tmp[64];
 						uint64_t lrt = 0ULL;
