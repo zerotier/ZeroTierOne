@@ -13,14 +13,11 @@ LDLIBS?=
 DESTDIR?=
 
 include objects.mk
-
-# Use bundled http-parser since distribution versions are NOT API-stable or compatible!
-# Trying to use dynamically linked libhttp-parser causes tons of compatibility problems.
-OBJS+=ext/http-parser/http_parser.o
+ONE_OBJS+=osdep/LinuxEthernetTap.o
 
 # Auto-detect miniupnpc and nat-pmp as well and use system libs if present,
 # otherwise build into binary as done on Mac and Windows.
-OBJS+=osdep/PortMapper.o
+ONE_OBJS+=osdep/PortMapper.o
 DEFS+=-DZT_USE_MINIUPNPC
 MINIUPNPC_IS_NEW_ENOUGH=$(shell grep -sqr '.*define.*MINIUPNPC_VERSION.*"2.."' /usr/include/miniupnpc/miniupnpc.h && echo 1)
 ifeq ($(MINIUPNPC_IS_NEW_ENOUGH),1)
@@ -28,14 +25,18 @@ ifeq ($(MINIUPNPC_IS_NEW_ENOUGH),1)
 	LDLIBS+=-lminiupnpc
 else
 	DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING=\"Linux\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
-	OBJS+=ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o
+	ONE_OBJS+=ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o
 endif
 ifeq ($(wildcard /usr/include/natpmp.h),)
-	OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o
+	ONE_OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o
 else
 	LDLIBS+=-lnatpmp
 	DEFS+=-DZT_USE_SYSTEM_NATPMP
 endif
+
+# Use bundled http-parser since distribution versions are NOT API-stable or compatible!
+# Trying to use dynamically linked libhttp-parser causes tons of compatibility problems.
+ONE_OBJS+=ext/http-parser/http_parser.o
 
 ifeq ($(ZT_ENABLE_CLUSTER),1)
 	DEFS+=-DZT_ENABLE_CLUSTER
@@ -196,11 +197,11 @@ endif
 # Build faster crypto on some targets
 ifeq ($(ZT_USE_X64_ASM_SALSA2012),1)
 	override DEFS+=-DZT_USE_X64_ASM_SALSA2012
-	override OBJS+=ext/x64-salsa2012-asm/salsa2012.o
+	override CORE_OBJS+=ext/x64-salsa2012-asm/salsa2012.o
 endif
 ifeq ($(ZT_USE_ARM32_NEON_ASM_SALSA2012),1)
 	override DEFS+=-DZT_USE_ARM32_NEON_ASM_SALSA2012
-	override OBJS+=ext/arm32-neon-salsa2012-asm/salsa2012.o
+	override CORE_OBJS+=ext/arm32-neon-salsa2012-asm/salsa2012.o
 endif
 
 all:	one
@@ -211,15 +212,29 @@ ext/x64-salsa2012-asm/salsa2012.o:
 ext/arm32-neon-salsa2012-asm/salsa2012.o:
 	$(CC) $(CFLAGS) -c ext/arm32-neon-salsa2012-asm/salsa2012.s -o ext/arm32-neon-salsa2012-asm/salsa2012.o
 
-one:	$(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o $(LDLIBS)
+one:	$(CORE_OBJS) $(ONE_OBJS) one.o
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LDLIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
 
-selftest:	$(OBJS) selftest.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LDLIBS)
+zerotier-one: one
+
+zerotier-idtool: one
+
+zerotier-cli: one
+
+libzerotiercore.a:	$(CORE_OBJS)
+	ar rcs libzerotiercore.a $(CORE_OBJS)
+	ranlib libzerotiercore.a
+
+core: libzerotiercore.a
+
+selftest:	$(CORE_OBJS) $(ONE_OBJS) selftest.o
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(CORE_OBJS) $(ONE_OBJS $(LDLIBS)
 	$(STRIP) zerotier-selftest
+
+zerotier-selftest: selftest
 
 manpages:	FORCE
 	cd doc ; ./build.sh
@@ -227,7 +242,7 @@ manpages:	FORCE
 doc:	manpages
 
 clean: FORCE
-	rm -rf *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one doc/node_modules
+	rm -rf *.a *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one doc/node_modules
 
 distclean:	clean
 
