@@ -55,8 +55,8 @@ ifeq ($(ZT_RULES_ENGINE_DEBUGGING),1)
 endif
 
 ifeq ($(ZT_DEBUG),1)
-	override CFLAGS+=-Wall -Werror -g -pthread $(INCLUDES) $(DEFS)
-	override CXXFLAGS+=-Wall -Werror -g -std=c++11 -pthread $(INCLUDES) $(DEFS)
+	override CFLAGS+=-Wall -Wno-deprecated -Werror -g -pthread $(INCLUDES) $(DEFS)
+	override CXXFLAGS+=-Wall -Wno-deprecated -Werror -g -std=c++11 -pthread $(INCLUDES) $(DEFS)
 	override LDFLAGS+=
 	ZT_TRACE=1
 	STRIP?=echo
@@ -66,9 +66,9 @@ node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -
 else
 	override DEFS+=-D_FORTIFY_SOURCE=2
 	CFLAGS?=-O3 -fstack-protector
-	override CFLAGS+=-Wall -Werror -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	override CFLAGS+=-Wall -Wno-deprecated -Werror -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	CXXFLAGS?=-O3 -fstack-protector
-	override CXXFLAGS+=-Wall -Werror -Wno-unused-result -Wreorder -fPIE -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	override CXXFLAGS+=-Wall -Wno-deprecated -Werror -Wno-unused-result -Wreorder -fPIE -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	override LDFLAGS+=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
 	STRIP+=--strip-all
@@ -210,11 +210,11 @@ endif
 
 all:	one
 
-ext/x64-salsa2012-asm/salsa2012.o:
-	$(CC) $(CFLAGS) -c ext/x64-salsa2012-asm/salsa2012.s -o ext/x64-salsa2012-asm/salsa2012.o
+#ext/x64-salsa2012-asm/salsa2012.o:
+#	$(CC) $(CFLAGS) -c ext/x64-salsa2012-asm/salsa2012.s -o ext/x64-salsa2012-asm/salsa2012.o
 
-ext/arm32-neon-salsa2012-asm/salsa2012.o:
-	$(CC) $(CFLAGS) -c ext/arm32-neon-salsa2012-asm/salsa2012.s -o ext/arm32-neon-salsa2012-asm/salsa2012.o
+#ext/arm32-neon-salsa2012-asm/salsa2012.o:
+#	$(CC) $(CFLAGS) -c ext/arm32-neon-salsa2012-asm/salsa2012.s -o ext/arm32-neon-salsa2012-asm/salsa2012.o
 
 one:	$(CORE_OBJS) $(ONE_OBJS) one.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LDLIBS)
