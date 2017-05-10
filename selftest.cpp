@@ -151,8 +151,8 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 
 static int testCrypto()
 {
-	unsigned char buf1[16384];
-	unsigned char buf2[sizeof(buf1)],buf3[sizeof(buf1)];
+	static unsigned char buf1[16384];
+	static unsigned char buf2[sizeof(buf1)],buf3[sizeof(buf1)];
 
 	for(int i=0;i<3;++i) {
 		Utils::getSecureRandom(buf1,64);
