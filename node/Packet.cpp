@@ -320,6 +320,7 @@ union LZ4_streamDecode_u {
 #define FORCE_INLINE static inline
 #endif
 
+#if 0
 #if (defined(__GNUC__) && (__GNUC__ >= 3)) || (defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 800)) || defined(__clang__)
 #  define expect(expr,value)    (__builtin_expect ((expr),(value)) )
 #else
@@ -328,6 +329,7 @@ union LZ4_streamDecode_u {
 
 #define likely(expr)     expect((expr) != 0, 1)
 #define unlikely(expr)   expect((expr) != 0, 0)
+#endif
 
 /*-************************************
 *  Memory routines
