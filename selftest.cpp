@@ -1077,6 +1077,7 @@ int main(int argc,char **argv)
 	*/
 
 	std::cout << "[info] sizeof(void *) == " << sizeof(void *) << std::endl;
+	std::cout << "[info] OSUtils::now() == " << OSUtils::now() << std::endl;
 	std::cout << "[info] hardware concurrency == " << std::thread::hardware_concurrency() << std::endl;
 	std::cout << "[info] sizeof(NetworkConfig) == " << sizeof(ZeroTier::NetworkConfig) << std::endl;
 

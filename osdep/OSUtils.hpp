@@ -51,6 +51,9 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <arpa/inet.h>
+#ifdef __LINUX__
+#include <sys/syscall.h>
+#endif
 #endif
 
 #include "../ext/json/json.hpp"
@@ -185,7 +188,6 @@ public:
 	 * @return Current time in milliseconds since epoch
 	 */
 	static inline uint64_t now()
-		throw()
 	{
 #ifdef __WINDOWS__
 		FILETIME ft;
@@ -198,32 +200,14 @@ public:
 		return ( ((tmp.QuadPart - 116444736000000000ULL) / 10000L) + st.wMilliseconds );
 #else
 		struct timeval tv;
+#ifdef __LINUX__
+		syscall(SYS_gettimeofday,&tv,0); /* fix for musl libc broken gettimeofday bug */
+#else
 		gettimeofday(&tv,(struct timezone *)0);
+#endif
 		return ( (1000ULL * (uint64_t)tv.tv_sec) + (uint64_t)(tv.tv_usec / 1000) );
 #endif
 	};
-
-	/**
-	 * @return Current time in seconds since epoch, to the highest available resolution
-	 */
-	static inline double nowf()
-		throw()
-	{
-#ifdef __WINDOWS__
-		FILETIME ft;
-		SYSTEMTIME st;
-		ULARGE_INTEGER tmp;
-		GetSystemTime(&st);
-		SystemTimeToFileTime(&st,&ft);
-		tmp.LowPart = ft.dwLowDateTime;
-		tmp.HighPart = ft.dwHighDateTime;
-		return (((double)(tmp.QuadPart - 116444736000000000ULL)) / 10000000.0);
-#else
-		struct timeval tv;
-		gettimeofday(&tv,(struct timezone *)0);
-		return ( ((double)tv.tv_sec) + (((double)tv.tv_usec) / 1000000.0) );
-#endif
-	}
 
 	/**
 	 * Read the full contents of a file into a string buffer
