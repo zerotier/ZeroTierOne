@@ -123,7 +123,7 @@ public:
 	inline Buffer &operator=(const Buffer<C2> &b)
 		throw(std::out_of_range)
 	{
-		if (b._l > C)
+		if (unlikely(b._l > C))
 			throw std::out_of_range("Buffer: assignment from buffer larger than capacity");
 		memcpy(_b,b._b,_l = b._l);
 		return *this;
@@ -139,7 +139,7 @@ public:
 	inline void copyFrom(const void *b,unsigned int l)
 		throw(std::out_of_range)
 	{
-		if (l > C)
+		if (unlikely(l > C))
 			throw std::out_of_range("Buffer: set from C array larger than capacity");
 		_l = l;
 		memcpy(_b,b,l);
@@ -148,7 +148,7 @@ public:
 	unsigned char operator[](const unsigned int i) const
 		throw(std::out_of_range)
 	{
-		if (i >= _l)
+		if (unlikely(i >= _l))
 			throw std::out_of_range("Buffer: [] beyond end of data");
 		return (unsigned char)_b[i];
 	}
@@ -156,7 +156,7 @@ public:
 	unsigned char &operator[](const unsigned int i)
 		throw(std::out_of_range)
 	{
-		if (i >= _l)
+		if (unlikely(i >= _l))
 			throw std::out_of_range("Buffer: [] beyond end of data");
 		return ((unsigned char *)_b)[i];
 	}
@@ -177,14 +177,14 @@ public:
 	unsigned char *field(unsigned int i,unsigned int l)
 		throw(std::out_of_range)
 	{
-		if ((i + l) > _l)
+		if (unlikely((i + l) > _l))
 			throw std::out_of_range("Buffer: field() beyond end of data");
 		return (unsigned char *)(_b + i);
 	}
 	const unsigned char *field(unsigned int i,unsigned int l) const
 		throw(std::out_of_range)
 	{
-		if ((i + l) > _l)
+		if (unlikely((i + l) > _l))
 			throw std::out_of_range("Buffer: field() beyond end of data");
 		return (const unsigned char *)(_b + i);
 	}
@@ -200,7 +200,7 @@ public:
 	inline void setAt(unsigned int i,const T v)
 		throw(std::out_of_range)
 	{
-		if ((i + sizeof(T)) > _l)
+		if (unlikely((i + sizeof(T)) > _l))
 			throw std::out_of_range("Buffer: setAt() beyond end of data");
 #ifdef ZT_NO_TYPE_PUNNING
 		uint8_t *p = reinterpret_cast<uint8_t *>(_b + i);
@@ -223,7 +223,7 @@ public:
 	inline T at(unsigned int i) const
 		throw(std::out_of_range)
 	{
-		if ((i + sizeof(T)) > _l)
+		if (unlikely((i + sizeof(T)) > _l))
 			throw std::out_of_range("Buffer: at() beyond end of data");
 #ifdef ZT_NO_TYPE_PUNNING
 		T v = 0;
@@ -250,7 +250,7 @@ public:
 	inline void append(const T v)
 		throw(std::out_of_range)
 	{
-		if ((_l + sizeof(T)) > C)
+		if (unlikely((_l + sizeof(T)) > C))
 			throw std::out_of_range("Buffer: append beyond capacity");
 #ifdef ZT_NO_TYPE_PUNNING
 		uint8_t *p = reinterpret_cast<uint8_t *>(_b + _l);
@@ -273,7 +273,7 @@ public:
 	inline void append(unsigned char c,unsigned int n)
 		throw(std::out_of_range)
 	{
-		if ((_l + n) > C)
+		if (unlikely((_l + n) > C))
 			throw std::out_of_range("Buffer: append beyond capacity");
 		for(unsigned int i=0;i<n;++i)
 			_b[_l++] = (char)c;
@@ -289,7 +289,7 @@ public:
 	inline void append(const void *b,unsigned int l)
 		throw(std::out_of_range)
 	{
-		if ((_l + l) > C)
+		if (unlikely((_l + l) > C))
 			throw std::out_of_range("Buffer: append beyond capacity");
 		memcpy(_b + _l,b,l);
 		_l += l;
@@ -317,7 +317,7 @@ public:
 		throw(std::out_of_range)
 	{
 		for(;;) {
-			if (_l >= C)
+			if (unlikely(_l >= C))
 				throw std::out_of_range("Buffer: append beyond capacity");
 			if (!(_b[_l++] = *(s++)))
 				break;
@@ -351,7 +351,7 @@ public:
 	inline char *appendField(unsigned int l)
 		throw(std::out_of_range)
 	{
-		if ((_l + l) > C)
+		if (unlikely((_l + l) > C))
 			throw std::out_of_range("Buffer: append beyond capacity");
 		char *r = _b + _l;
 		_l += l;
@@ -369,7 +369,7 @@ public:
 	inline void addSize(unsigned int i)
 		throw(std::out_of_range)
 	{
-		if ((i + _l) > C)
+		if (unlikely((i + _l) > C))
 			throw std::out_of_range("Buffer: setSize to larger than capacity");
 		_l += i;
 	}
@@ -385,7 +385,7 @@ public:
 	inline void setSize(const unsigned int i)
 		throw(std::out_of_range)
 	{
-		if (i > C)
+		if (unlikely(i > C))
 			throw std::out_of_range("Buffer: setSize to larger than capacity");
 		_l = i;
 	}
@@ -401,7 +401,7 @@ public:
 	{
 		if (!at)
 			return;
-		if (at > _l)
+		if (unlikely(at > _l))
 			throw std::out_of_range("Buffer: behead() beyond capacity");
 		::memmove(_b,_b + at,_l -= at);
 	}
@@ -417,7 +417,7 @@ public:
 		throw(std::out_of_range)
 	{
 		const unsigned int endr = at + length;
-		if (endr > _l)
+		if (unlikely(endr > _l))
 			throw std::out_of_range("Buffer: erase() range beyond end of buffer");
 		::memmove(_b + at,_b + endr,_l - endr);
 		_l -= length;
