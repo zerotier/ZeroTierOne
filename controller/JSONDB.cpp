@@ -392,14 +392,14 @@ bool JSONDB::_load(const std::string &p)
 						std::string objtype(OSUtils::jsonString(j["objtype"],""));
 
 						if ((id.length() == 16)&&(objtype == "network")) {
-							const uint64_t nwid = Utils::strToU64(id.c_str());
+							const uint64_t nwid = Utils::hexStrToU64(const char *s)(id.c_str());
 							if (nwid) {
 								Mutex::Lock _l(_networks_m);
 								_networks[nwid].config = nlohmann::json::to_msgpack(j);
 							}
 						} else if ((id.length() == 10)&&(objtype == "member")) {
-							const uint64_t mid = Utils::strToU64(id.c_str());
-							const uint64_t nwid = Utils::strToU64(OSUtils::jsonString(j["nwid"],"0").c_str());
+							const uint64_t mid = Utils::hexStrToU64(id.c_str());
+							const uint64_t nwid = Utils::hexStrToU64(OSUtils::jsonString(j["nwid"],"0").c_str());
 							if ((mid)&&(nwid)) {
 								Mutex::Lock _l(_networks_m);
 								_networks[nwid].members[mid] = nlohmann::json::to_msgpack(j);
