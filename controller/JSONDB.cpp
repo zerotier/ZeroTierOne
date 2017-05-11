@@ -392,7 +392,7 @@ bool JSONDB::_load(const std::string &p)
 						std::string objtype(OSUtils::jsonString(j["objtype"],""));
 
 						if ((id.length() == 16)&&(objtype == "network")) {
-							const uint64_t nwid = Utils::hexStrToU64(const char *s)(id.c_str());
+							const uint64_t nwid = Utils::hexStrToU64(id.c_str());
 							if (nwid) {
 								Mutex::Lock _l(_networks_m);
 								_networks[nwid].config = nlohmann::json::to_msgpack(j);
