@@ -111,14 +111,19 @@ namespace WinUI
 
         private void ToolbarItem_NodeIDClicked(object sender, System.Windows.RoutedEventArgs e)
         {
-						try
-						{
-								Clipboard.SetText(nodeId);
-						}
-						catch (ArgumentNullException)
-						{
-								// tried to copy a null nodeId
-						}
+            try
+            {
+		            Clipboard.SetDataObject(nodeId);
+            }
+            catch (ArgumentNullException)
+            {
+                // tried to copy a null nodeId
+                Console.WriteLine("ArgumentNullException");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
         }
 
         private void ToolbarItem_ShowNetworksClicked(object sender, System.Windows.RoutedEventArgs e)
