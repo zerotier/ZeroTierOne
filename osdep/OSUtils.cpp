@@ -363,6 +363,9 @@ std::vector<std::string> OSUtils::split(const char *s,const char *const sep,cons
 
 std::string OSUtils::platformDefaultHomePath()
 {
+#ifdef ZT_DEFAULT_HOME_PATH
+	return ZT_DEFAULT_HOME_PATH;
+#else
 #ifdef __UNIX_LIKE__
 
 #ifdef __APPLE__
@@ -395,6 +398,7 @@ std::string OSUtils::platformDefaultHomePath()
 #endif
 
 #endif // __UNIX_LIKE__ or not...
+#endif
 }
 
 // Inline these massive JSON operations in one place only to reduce binary footprint and compile time
