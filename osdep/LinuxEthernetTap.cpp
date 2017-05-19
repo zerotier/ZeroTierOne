@@ -48,6 +48,7 @@
 
 #include <algorithm>
 #include <utility>
+#include <string>
 
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
@@ -97,6 +98,22 @@ LinuxEthernetTap::LinuxEthernetTap(
 	struct ifreq ifr;
 	memset(&ifr,0,sizeof(ifr));
 
+	// Linux supports arbitrary device naming -- this isn't available on other platforms so just use a simple hack for it
+#ifdef __SYNOLOGY__
+	int devno = 50;
+#else
+	int devno = 0;
+#endif
+	std::string devicepfx;
+	OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S + "devicepfx").c_str(),devicepfx);
+	if (devicepfx.length() == 0) {
+#ifdef __SYNOLOGY__
+		devicepfx = "eth";
+#else
+		devicepfx = "zt";
+#endif
+	}
+
 	// Try to recall our last device name, or pick an unused one if that fails.
 	std::map<std::string,std::string> globalDeviceMap;
 	FILE *devmapf = fopen((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),"r");
@@ -124,14 +141,8 @@ LinuxEthernetTap::LinuxEthernetTap(
 		recalledDevice = (stat(procpath,&sbuf) != 0);
 	}
 	if (!recalledDevice) {
-		int devno = 0;
 		do {
-#ifdef __SYNOLOGY__
-			devno+=50; // Arbitrary number to prevent interface name conflicts
-			Utils::snprintf(ifr.ifr_name,sizeof(ifr.ifr_name),"eth%d",devno++);
-#else
-			Utils::snprintf(ifr.ifr_name,sizeof(ifr.ifr_name),"zt%d",devno++);
-#endif
+			Utils::snprintf(ifr.ifr_name,sizeof(ifr.ifr_name),"%s%d",devicepfx.c_str(),devno++);
 			Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
 		} while (stat(procpath,&sbuf) == 0); // try zt#++ until we find one that does not exist
 	}
