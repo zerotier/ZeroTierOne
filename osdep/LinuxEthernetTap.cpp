@@ -64,6 +64,19 @@ namespace ZeroTier {
 
 static Mutex __tapCreateLock;
 
+static const char _base32_chars[32] = { 'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','2','3','4','5','6','7' };
+static void _base32_5_to_8(const uint8_t *in,char *out)
+{
+	out[0] = _base32_chars[(in[0]) >> 3];
+	out[1] = _base32_chars[(in[0] & 0x07) << 2 | (in[1] & 0xc0) >> 6];
+	out[2] = _base32_chars[(in[1] & 0x3e) >> 1];
+	out[3] = _base32_chars[(in[1] & 0x01) << 4 | (in[2] & 0xf0) >> 4];
+	out[4] = _base32_chars[(in[2] & 0x0f) << 1 | (in[3] & 0x80) >> 7];
+	out[5] = _base32_chars[(in[3] & 0x7c) >> 2];
+	out[6] = _base32_chars[(in[3] & 0x03) << 3 | (in[4] & 0xe0) >> 5];
+	out[7] = _base32_chars[(in[4] & 0x1f)];
+}
+
 LinuxEthernetTap::LinuxEthernetTap(
 	const char *homePath,
 	const MAC &mac,
@@ -98,23 +111,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 	struct ifreq ifr;
 	memset(&ifr,0,sizeof(ifr));
 
-	// Linux supports arbitrary device naming -- this isn't available on other platforms so just use a simple hack for it
-#ifdef __SYNOLOGY__
-	int devno = 50;
-#else
-	int devno = 0;
-#endif
-	std::string devicepfx;
-	OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S + "devicepfx").c_str(),devicepfx);
-	if (devicepfx.length() == 0) {
-#ifdef __SYNOLOGY__
-		devicepfx = "eth";
-#else
-		devicepfx = "zt";
-#endif
-	}
-
-	// Try to recall our last device name, or pick an unused one if that fails.
+	// Restore device names from legacy devicemap, but for new devices we use a base32-based canonical naming
 	std::map<std::string,std::string> globalDeviceMap;
 	FILE *devmapf = fopen((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),"r");
 	if (devmapf) {
@@ -140,11 +137,30 @@ LinuxEthernetTap::LinuxEthernetTap(
 		Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
 		recalledDevice = (stat(procpath,&sbuf) != 0);
 	}
+
 	if (!recalledDevice) {
+#ifdef __SYNOLOGY__
+		int devno = 50;
 		do {
-			Utils::snprintf(ifr.ifr_name,sizeof(ifr.ifr_name),"%s%d",devicepfx.c_str(),devno++);
+			Utils::snprintf(ifr.ifr_name,sizeof(ifr.ifr_name),"eth%d",devno++);
 			Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
 		} while (stat(procpath,&sbuf) == 0); // try zt#++ until we find one that does not exist
+#else
+		char devno = 0;
+		do {
+			uint64_t tmp2[2];
+			tmp2[0] = Utils::hton(nwid);
+			tmp2[1] = 0;
+			char tmp3[17];
+			tmp3[0] = 'z';
+			tmp3[1] = 't' + (devno++);
+			_base32_5_to_8(reinterpret_cast<const uint8_t *>(tmp2),tmp3 + 2);
+			_base32_5_to_8(reinterpret_cast<const uint8_t *>(tmp2) + 5,tmp3 + 10);
+			tmp3[15] = (char)0;
+			memcpy(ifr.ifr_name,tmp3,16);
+			Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
+		} while (stat(procpath,&sbuf) == 0);
+#endif
 	}
 
 	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
@@ -207,6 +223,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 	(void)::pipe(_shutdownSignalPipe);
 
+	/*
 	globalDeviceMap[nwids] = _dev;
 	devmapf = fopen((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),"w");
 	if (devmapf) {
@@ -217,6 +234,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 		}
 		fclose(devmapf);
 	}
+	*/
 
 	_thread = Thread::start(this);
 }
