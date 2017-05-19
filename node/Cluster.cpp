@@ -257,7 +257,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 		memcpy(keytmp,_key,32);
 		for(int i=0;i<8;++i)
 			keytmp[i] ^= reinterpret_cast<const char *>(msg)[i];
-		Salsa20 s20(keytmp,256,reinterpret_cast<const char *>(msg) + 8);
+		Salsa20 s20(keytmp,reinterpret_cast<const char *>(msg) + 8);
 		Utils::burn(keytmp,sizeof(keytmp));
 
 		// One-time-use Poly1305 key from first 32 bytes of Salsa20 keystream (as per DJB/NaCl "standard")
@@ -956,7 +956,7 @@ void Cluster::_flush(uint16_t memberId)
 		memcpy(keytmp,m.key,32);
 		for(int i=0;i<8;++i)
 			keytmp[i] ^= m.q[i];
-		Salsa20 s20(keytmp,256,m.q.field(8,8));
+		Salsa20 s20(keytmp,m.q.field(8,8));
 		Utils::burn(keytmp,sizeof(keytmp));
 
 		// One-time-use Poly1305 key from first 32 bytes of Salsa20 keystream (as per DJB/NaCl "standard")
