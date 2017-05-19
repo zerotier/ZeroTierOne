@@ -1488,7 +1488,8 @@ int main(int argc,char **argv)
 
 #ifdef __UNIX_LIKE__
 #ifdef ZT_HAVE_DROP_PRIVILEGES
-	dropPrivileges(argv[0],homeDir);
+	if (!skipRootCheck)
+		dropPrivileges(argv[0],homeDir);
 #endif
 
 	std::string pidPath(homeDir + ZT_PATH_SEPARATOR_S + ZT_PID_PATH);
