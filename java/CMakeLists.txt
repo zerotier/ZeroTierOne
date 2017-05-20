@@ -10,7 +10,7 @@ set(Java_INCLUDE_DIRS $ENV{JAVA_HOME}/include)
 endif()
 
 if(APPLE)
-set(Java_INCLUDE_DIRS "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk/System/Library/Frameworks/JavaVM.framework/Headers")
+set(Java_INCLUDE_DIRS "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/System/Library/Frameworks/JavaVM.framework/Headers")
 endif()
 
 message("Java Include Dirs: ${Java_INCLUDE_DIRS}")
@@ -31,7 +31,7 @@ set(src_files
     ../ext/http-parser/http_parser.c
     ../node/C25519.cpp
     ../node/CertificateOfMembership.cpp
-    ../node/Defaults.cpp
+    ../node/DeferredPackets.cpp
     ../node/Dictionary.cpp
     ../node/Identity.cpp
     ../node/IncomingPacket.cpp
@@ -42,6 +42,7 @@ set(src_files
     ../node/Node.cpp
     ../node/OutboundMulticast.cpp
     ../node/Packet.cpp
+    ../node/Path.cpp
     ../node/Peer.cpp
     ../node/Poly1305.cpp
     ../node/Salsa20.cpp
@@ -54,7 +55,7 @@ set(src_files
     ../osdep/OSUtils.cpp
     jni/com_zerotierone_sdk_Node.cpp
     jni/ZT_jniutils.cpp
-    jni/ZT_jnicache.cpp
+    jni/ZT_jnilookup.cpp
     )
 
 set(include_dirs
