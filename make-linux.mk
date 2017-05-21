@@ -305,6 +305,7 @@ uninstall:	FORCE
 # These are just for convenience for building Linux packages
 
 debian:	FORCE
+	make one
 	debuild -I -i -us -uc -nc -b
 
 redhat:	FORCE
