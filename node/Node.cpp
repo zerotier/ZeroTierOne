@@ -327,6 +327,7 @@ ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 		} else {
 			if (uptr)
 				*uptr = *n->second->userPtr();
+			n->second->externalConfig(&ctmp);
 			n->second->destroy();
 			nUserPtr = n->second->userPtr();
 		}
