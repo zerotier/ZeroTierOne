@@ -726,59 +726,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					responseContentType = "application/json";
 
 					return 200;
-				} else if ((path.size() == 3)&&(path[2] == "test")) {
-
-					Mutex::Lock _l(_tests_m);
-
-					_tests.push_back(ZT_CircuitTest());
-					ZT_CircuitTest *const test = &(_tests.back());
-					memset(test,0,sizeof(ZT_CircuitTest));
-
-					Utils::getSecureRandom(&(test->testId),sizeof(test->testId));
-					test->credentialNetworkId = nwid;
-					test->ptr = (void *)this;
-					json hops = b["hops"];
-					if (hops.is_array()) {
-						for(unsigned long i=0;i<hops.size();++i) {
-							json &hops2 = hops[i];
-							if (hops2.is_array()) {
-								for(unsigned long j=0;j<hops2.size();++j) {
-									std::string s = hops2[j];
-									test->hops[test->hopCount].addresses[test->hops[test->hopCount].breadth++] = Utils::hexStrToU64(s.c_str()) & 0xffffffffffULL;
-								}
-								++test->hopCount;
-							} else if (hops2.is_string()) {
-								std::string s = hops2;
-								test->hops[test->hopCount].addresses[test->hops[test->hopCount].breadth++] = Utils::hexStrToU64(s.c_str()) & 0xffffffffffULL;
-								++test->hopCount;
-							}
-						}
-					}
-					test->reportAtEveryHop = (OSUtils::jsonBool(b["reportAtEveryHop"],true) ? 1 : 0);
-
-					if (!test->hopCount) {
-						_tests.pop_back();
-						responseBody = "{ \"message\": \"a test must contain at least one hop\" }";
-						responseContentType = "application/json";
-						return 400;
-					}
-
-					test->timestamp = OSUtils::now();
-
-					if (_node) {
-						_node->circuitTestBegin((void *)0,test,&(EmbeddedNetworkController::_circuitTestCallback));
-					} else {
-						_tests.pop_back();
-						return 500;
-					}
-
-					char json[512];
-					Utils::snprintf(json,sizeof(json),"{\"testId\":\"%.16llx\",\"timestamp\":%llu}",test->testId,test->timestamp);
-					responseBody = json;
-					responseContentType = "application/json";
-
-					return 200;
-
 				} // else 404
 
 			} else {
@@ -1118,7 +1065,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 void EmbeddedNetworkController::threadMain()
 	throw()
 {
-	uint64_t lastCircuitTestCheck = 0;
 	_RQEntry *qe = (_RQEntry *)0;
 	while ((_running)&&(_queue.get(qe))) {
 		try {
@@ -1153,78 +1099,7 @@ void EmbeddedNetworkController::threadMain()
 			}
 		} catch ( ... ) {}
 		delete qe;
-
-		if (_running) {
-			uint64_t now = OSUtils::now();
-			if ((now - lastCircuitTestCheck) > ZT_EMBEDDEDNETWORKCONTROLLER_CIRCUIT_TEST_EXPIRATION) {
-				lastCircuitTestCheck = now;
-				Mutex::Lock _l(_tests_m);
-				for(std::list< ZT_CircuitTest >::iterator i(_tests.begin());i!=_tests.end();) {
-					if ((now - i->timestamp) > ZT_EMBEDDEDNETWORKCONTROLLER_CIRCUIT_TEST_EXPIRATION) {
-						_node->circuitTestEnd(&(*i));
-						_tests.erase(i++);
-					} else ++i;
-				}
-			}
-		}
 	}
-}
-
-void EmbeddedNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report)
-{
-	char tmp[2048],id[128];
-	EmbeddedNetworkController *const self = reinterpret_cast<EmbeddedNetworkController *>(test->ptr);
-
-	if ((!test)||(!report)||(!test->credentialNetworkId)) return; // sanity check
-
-	const uint64_t now = OSUtils::now();
-	Utils::snprintf(id,sizeof(id),"network/%.16llx/test/%.16llx-%.16llx-%.10llx-%.10llx",test->credentialNetworkId,test->testId,now,report->upstream,report->current);
-	Utils::snprintf(tmp,sizeof(tmp),
-		"{\"id\": \"%s\","
-		"\"objtype\": \"circuit_test\","
-		"\"timestamp\": %llu,"
-		"\"networkId\": \"%.16llx\","
-		"\"testId\": \"%.16llx\","
-		"\"upstream\": \"%.10llx\","
-		"\"current\": \"%.10llx\","
-		"\"receivedTimestamp\": %llu,"
-		"\"sourcePacketId\": \"%.16llx\","
-		"\"flags\": %llu,"
-		"\"sourcePacketHopCount\": %u,"
-		"\"errorCode\": %u,"
-		"\"vendor\": %d,"
-		"\"protocolVersion\": %u,"
-		"\"majorVersion\": %u,"
-		"\"minorVersion\": %u,"
-		"\"revision\": %u,"
-		"\"platform\": %d,"
-		"\"architecture\": %d,"
-		"\"receivedOnLocalAddress\": \"%s\","
-		"\"receivedFromRemoteAddress\": \"%s\","
-		"\"receivedFromLinkQuality\": %f}",
-		id + 30, // last bit only, not leading path
-		(unsigned long long)test->timestamp,
-		(unsigned long long)test->credentialNetworkId,
-		(unsigned long long)test->testId,
-		(unsigned long long)report->upstream,
-		(unsigned long long)report->current,
-		(unsigned long long)now,
-		(unsigned long long)report->sourcePacketId,
-		(unsigned long long)report->flags,
-		report->sourcePacketHopCount,
-		report->errorCode,
-		(int)report->vendor,
-		report->protocolVersion,
-		report->majorVersion,
-		report->minorVersion,
-		report->revision,
-		(int)report->platform,
-		(int)report->architecture,
-		reinterpret_cast<const InetAddress *>(&(report->receivedOnLocalAddress))->toString().c_str(),
-		reinterpret_cast<const InetAddress *>(&(report->receivedFromRemoteAddress))->toString().c_str(),
-		((double)report->receivedFromLinkQuality / (double)ZT_PATH_LINK_QUALITY_MAX));
-
-	self->_db.writeRaw(id,std::string(tmp));
 }
 
 void EmbeddedNetworkController::_request(

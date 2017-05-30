@@ -117,8 +117,6 @@ public:
 	void clearLocalInterfaceAddresses();
 	int sendUserMessage(void *tptr,uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
 	void setNetconfMaster(void *networkControllerInstance);
-	ZT_ResultCode circuitTestBegin(void *tptr,ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *));
-	void circuitTestEnd(ZT_CircuitTest *test);
 	ZT_ResultCode clusterInit(
 		unsigned int myId,
 		const struct sockaddr_storage *zeroTierPhysicalEndpoints,
@@ -219,7 +217,6 @@ public:
 	inline bool externalPathLookup(void *tPtr,const Address &ztaddr,int family,InetAddress &addr) { return ( (_cb.pathLookupFunction) ? (_cb.pathLookupFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ztaddr.toInt(),family,reinterpret_cast<struct sockaddr_storage *>(&addr)) != 0) : false ); }
 
 	uint64_t prng();
-	void postCircuitTestReport(const ZT_CircuitTestReport *report);
 	void setTrustedPaths(const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count);
 
 	World planet() const;
@@ -308,9 +305,6 @@ private:
 
 	std::vector< std::pair< uint64_t, SharedPtr<Network> > > _networks;
 	Mutex _networks_m;
-
-	std::vector< ZT_CircuitTest * > _circuitTests;
-	Mutex _circuitTests_m;
 
 	std::vector<InetAddress> _directPaths;
 	Mutex _directPaths_m;

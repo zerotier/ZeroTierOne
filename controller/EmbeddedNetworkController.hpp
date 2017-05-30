@@ -45,9 +45,6 @@
 
 #include "JSONDB.hpp"
 
-// TTL for circuit tests
-#define ZT_EMBEDDEDNETWORKCONTROLLER_CIRCUIT_TEST_EXPIRATION 120000
-
 namespace ZeroTier {
 
 class Node;
@@ -110,7 +107,6 @@ private:
 		} type;
 	};
 
-	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
 	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
 
 	inline void _startThreads()
@@ -218,9 +214,6 @@ private:
 
 	NetworkController::Sender *_sender;
 	Identity _signingId;
-
-	std::list< ZT_CircuitTest > _tests;
-	Mutex _tests_m;
 
 	struct _MemberStatusKey
 	{

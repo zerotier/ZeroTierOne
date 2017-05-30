@@ -61,7 +61,7 @@
  * 4 - 0.6.0 ... 1.0.6
  *   + BREAKING CHANGE: New identity format based on hashcash design
  * 5 - 1.1.0 ... 1.1.5
- *   + Supports circuit test, proof of work, and echo
+ *   + Supports echo
  *   + Supports in-band world (root server definition) updates
  *   + Clustering! (Though this will work with protocol v4 clients.)
  *   + Otherwise backward compatible with protocol v4
@@ -954,119 +954,7 @@ public:
 		 */
 		VERB_PUSH_DIRECT_PATHS = 0x10,
 
-		/**
-		 * Source-routed circuit test message:
-		 *   <[5] address of originator of circuit test>
-		 *   <[2] 16-bit flags>
-		 *   <[8] 64-bit timestamp>
-		 *   <[8] 64-bit test ID (arbitrary, set by tester)>
-		 *   <[2] 16-bit originator credential length (includes type)>
-		 *   [[1] originator credential type (for authorizing test)]
-		 *   [[...] originator credential]
-		 *   <[2] 16-bit length of additional fields>
-		 *   [[...] additional fields]
-		 *   [ ... end of signed portion of request ... ]
-		 *   <[2] 16-bit length of signature of request>
-		 *   <[...] signature of request by originator>
-		 *   <[2] 16-bit length of additional fields>
-		 *   [[...] additional fields]
-		 *   <[...] next hop(s) in path>
-		 *
-		 * Flags:
-		 *   0x01 - Report back to originator at all hops
-		 *   0x02 - Report back to originator at last hop
-		 *
-		 * Originator credential types:
-		 *   0x01 - 64-bit network ID for which originator is controller
-		 *
-		 * Path record format:
-		 *   <[1] 8-bit flags (unused, must be zero)>
-		 *   <[1] 8-bit breadth (number of next hops)>
-		 *   <[...] one or more ZeroTier addresses of next hops>
-		 *
-		 * The circuit test allows a device to send a message that will traverse
-		 * the network along a specified path, with each hop optionally reporting
-		 * back to the tester via VERB_CIRCUIT_TEST_REPORT.
-		 *
-		 * Each circuit test packet includes a digital signature by the originator
-		 * of the request, as well as a credential by which that originator claims
-		 * authorization to perform the test. Currently this signature is ed25519,
-		 * but in the future flags might be used to indicate an alternative
-		 * algorithm. For example, the originator might be a network controller.
-		 * In this case the test might be authorized if the recipient is a member
-		 * of a network controlled by it, and if the previous hop(s) are also
-		 * members. Each hop may include its certificate of network membership.
-		 *
-		 * Circuit test paths consist of a series of records. When a node receives
-		 * an authorized circuit test, it:
-		 *
-		 * (1) Reports back to circuit tester as flags indicate
-		 * (2) Reads and removes the next hop from the packet's path
-		 * (3) Sends the packet along to next hop(s), if any.
-		 *
-		 * It is perfectly legal for a path to contain the same hop more than
-		 * once. In fact, this can be a very useful test to determine if a hop
-		 * can be reached bidirectionally and if so what that connectivity looks
-		 * like.
-		 *
-		 * The breadth field in source-routed path records allows a hop to forward
-		 * to more than one recipient, allowing the tester to specify different
-		 * forms of graph traversal in a test.
-		 *
-		 * There is no hard limit to the number of hops in a test, but it is
-		 * practically limited by the maximum size of a (possibly fragmented)
-		 * ZeroTier packet.
-		 *
-		 * Support for circuit tests is optional. If they are not supported, the
-		 * node should respond with an UNSUPPORTED_OPERATION error. If a circuit
-		 * test request is not authorized, it may be ignored or reported as
-		 * an INVALID_REQUEST. No OK messages are generated, but TEST_REPORT
-		 * messages may be sent (see below).
-		 *
-		 * ERROR packet format:
-		 *   <[8] 64-bit timestamp (echoed from original>
-		 *   <[8] 64-bit test ID (echoed from original)>
-		 */
-		VERB_CIRCUIT_TEST = 0x11,
-
-		/**
-		 * Circuit test hop report:
-		 *   <[8] 64-bit timestamp (echoed from original test)>
-		 *   <[8] 64-bit test ID (echoed from original test)>
-		 *   <[8] 64-bit reserved field (set to 0, currently unused)>
-		 *   <[1] 8-bit vendor ID (set to 0, currently unused)>
-		 *   <[1] 8-bit reporter protocol version>
-		 *   <[1] 8-bit reporter software major version>
-		 *   <[1] 8-bit reporter software minor version>
-		 *   <[2] 16-bit reporter software revision>
-		 *   <[2] 16-bit reporter OS/platform or 0 if not specified>
-		 *   <[2] 16-bit reporter architecture or 0 if not specified>
-		 *   <[2] 16-bit error code (set to 0, currently unused)>
-		 *   <[8] 64-bit report flags>
-		 *   <[8] 64-bit packet ID of received CIRCUIT_TEST packet>
-		 *   <[5] upstream ZeroTier address from which CIRCUIT_TEST was received>
-		 *   <[1] 8-bit packet hop count of received CIRCUIT_TEST>
-		 *   <[...] local wire address on which packet was received>
-		 *   <[...] remote wire address from which packet was received>
-		 *   <[2] 16-bit path link quality of path over which packet was received>
-		 *   <[1] 8-bit number of next hops (breadth)>
-		 *   <[...] next hop information>
-		 *
-		 * Next hop information record format:
-		 *   <[5] ZeroTier address of next hop>
-		 *   <[...] current best direct path address, if any, 0 if none>
-		 *
-		 * Report flags:
-		 *   0x1 - Upstream peer in circuit test path allowed in path (e.g. network COM valid)
-		 *
-		 * Circuit test reports can be sent by hops in a circuit test to report
-		 * back results. They should include information about the sender as well
-		 * as about the paths to which next hops are being sent.
-		 *
-		 * If a test report is received and no circuit test was sent, it should be
-		 * ignored. This message generates no OK or ERROR response.
-		 */
-		VERB_CIRCUIT_TEST_REPORT = 0x12,
+		// 0x11, 0x12 -- deprecated
 
 		/**
 		 * A message with arbitrary user-definable content:

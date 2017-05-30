@@ -115,8 +115,6 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 				case Packet::VERB_MULTICAST_GATHER:           return _doMULTICAST_GATHER(RR,tPtr,peer);
 				case Packet::VERB_MULTICAST_FRAME:            return _doMULTICAST_FRAME(RR,tPtr,peer);
 				case Packet::VERB_PUSH_DIRECT_PATHS:          return _doPUSH_DIRECT_PATHS(RR,tPtr,peer);
-				case Packet::VERB_CIRCUIT_TEST:               return _doCIRCUIT_TEST(RR,tPtr,peer);
-				case Packet::VERB_CIRCUIT_TEST_REPORT:        return _doCIRCUIT_TEST_REPORT(RR,tPtr,peer);
 				case Packet::VERB_USER_MESSAGE:               return _doUSER_MESSAGE(RR,tPtr,peer);
 			}
 		} else {
@@ -1252,196 +1250,6 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 	return true;
 }
 
-bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
-{
-	try {
-		const Address originatorAddress(field(ZT_PACKET_IDX_PAYLOAD,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-		SharedPtr<Peer> originator(RR->topology->getPeer(tPtr,originatorAddress));
-		if (!originator) {
-			RR->sw->requestWhois(tPtr,originatorAddress);
-			return false;
-		}
-
-		const unsigned int flags = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 5);
-		const uint64_t timestamp = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 7);
-		const uint64_t testId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 15);
-
-		// Tracks total length of variable length fields, initialized to originator credential length below
-		unsigned int vlf;
-
-		// Originator credentials -- right now only a network ID for which the originator is controller or is authorized by controller is allowed
-		const unsigned int originatorCredentialLength = vlf = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 23);
-		uint64_t originatorCredentialNetworkId = 0;
-		if (originatorCredentialLength >= 1) {
-			switch((*this)[ZT_PACKET_IDX_PAYLOAD + 25]) {
-				case 0x01: { // 64-bit network ID, originator must be controller
-					if (originatorCredentialLength >= 9)
-						originatorCredentialNetworkId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 26);
-				}	break;
-				default: break;
-			}
-		}
-
-		// Add length of "additional fields," which are currently unused
-		vlf += at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 25 + vlf);
-
-		// Verify signature -- only tests signed by their originators are allowed
-		const unsigned int signatureLength = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 27 + vlf);
-		if (!originator->identity().verify(field(ZT_PACKET_IDX_PAYLOAD,27 + vlf),27 + vlf,field(ZT_PACKET_IDX_PAYLOAD + 29 + vlf,signatureLength),signatureLength)) {
-			TRACE("dropped CIRCUIT_TEST from %s(%s): signature by originator %s invalid",source().toString().c_str(),_path->address().toString().c_str(),originatorAddress.toString().c_str());
-			peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
-			return true;
-		}
-		vlf += signatureLength;
-
-		// Save this length so we can copy the immutable parts of this test
-		// into the one we send along to next hops.
-		const unsigned int lengthOfSignedPortionAndSignature = 29 + vlf;
-
-		// Add length of second "additional fields" section.
-		vlf += at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 29 + vlf);
-
-		uint64_t reportFlags = 0;
-
-		// Check credentials (signature already verified)
-		if (originatorCredentialNetworkId) {
-			SharedPtr<Network> network(RR->node->network(originatorCredentialNetworkId));
-			if ((!network)||(!network->config().circuitTestingAllowed(originatorAddress))) {
-				TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID %.16llx as credential, and we don't belong to that network or originator is not allowed'",source().toString().c_str(),_path->address().toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
-				peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
-				return true;
-			}
-			if (network->gate(tPtr,peer))
-				reportFlags |= ZT_CIRCUIT_TEST_REPORT_FLAGS_UPSTREAM_AUTHORIZED_IN_PATH;
-		} else {
-			TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s did not specify a credential or credential type",source().toString().c_str(),_path->address().toString().c_str(),originatorAddress.toString().c_str());
-			peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
-			return true;
-		}
-
-		const uint64_t now = RR->node->now();
-
-		unsigned int breadth = 0;
-		Address nextHop[256]; // breadth is a uin8_t, so this is the max
-		InetAddress nextHopBestPathAddress[256];
-		unsigned int remainingHopsPtr = ZT_PACKET_IDX_PAYLOAD + 33 + vlf;
-		if ((ZT_PACKET_IDX_PAYLOAD + 31 + vlf) < size()) {
-			// unsigned int nextHopFlags = (*this)[ZT_PACKET_IDX_PAYLOAD + 31 + vlf]
-			breadth = (*this)[ZT_PACKET_IDX_PAYLOAD + 32 + vlf];
-			for(unsigned int h=0;h<breadth;++h) {
-				nextHop[h].setTo(field(remainingHopsPtr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-				remainingHopsPtr += ZT_ADDRESS_LENGTH;
-				SharedPtr<Peer> nhp(RR->topology->getPeer(tPtr,nextHop[h]));
-				if (nhp) {
-					SharedPtr<Path> nhbp(nhp->getBestPath(now,false));
-					if ((nhbp)&&(nhbp->alive(now)))
-						nextHopBestPathAddress[h] = nhbp->address();
-				}
-			}
-		}
-
-		// Report back to originator, depending on flags and whether we are last hop
-		if ( ((flags & 0x01) != 0) || ((breadth == 0)&&((flags & 0x02) != 0)) ) {
-			Packet outp(originatorAddress,RR->identity.address(),Packet::VERB_CIRCUIT_TEST_REPORT);
-			outp.append((uint64_t)timestamp);
-			outp.append((uint64_t)testId);
-			outp.append((uint64_t)0); // field reserved for future use
-			outp.append((uint8_t)ZT_VENDOR_ZEROTIER);
-			outp.append((uint8_t)ZT_PROTO_VERSION);
-			outp.append((uint8_t)ZEROTIER_ONE_VERSION_MAJOR);
-			outp.append((uint8_t)ZEROTIER_ONE_VERSION_MINOR);
-			outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
-			outp.append((uint16_t)ZT_PLATFORM_UNSPECIFIED);
-			outp.append((uint16_t)ZT_ARCHITECTURE_UNSPECIFIED);
-			outp.append((uint16_t)0); // error code, currently unused
-			outp.append((uint64_t)reportFlags);
-			outp.append((uint64_t)packetId());
-			peer->address().appendTo(outp);
-			outp.append((uint8_t)hops());
-			_path->localAddress().serialize(outp);
-			_path->address().serialize(outp);
-			outp.append((uint16_t)_path->linkQuality());
-			outp.append((uint8_t)breadth);
-			for(unsigned int h=0;h<breadth;++h) {
-				nextHop[h].appendTo(outp);
-				nextHopBestPathAddress[h].serialize(outp); // appends 0 if null InetAddress
-			}
-			RR->sw->send(tPtr,outp,true);
-		}
-
-		// If there are next hops, forward the test along through the graph
-		if (breadth > 0) {
-			Packet outp(Address(),RR->identity.address(),Packet::VERB_CIRCUIT_TEST);
-			outp.append(field(ZT_PACKET_IDX_PAYLOAD,lengthOfSignedPortionAndSignature),lengthOfSignedPortionAndSignature);
-			outp.append((uint16_t)0); // no additional fields
-			if (remainingHopsPtr < size())
-				outp.append(field(remainingHopsPtr,size() - remainingHopsPtr),size() - remainingHopsPtr);
-
-			for(unsigned int h=0;h<breadth;++h) {
-				if (RR->identity.address() != nextHop[h]) { // next hops that loop back to the current hop are not valid
-					outp.newInitializationVector();
-					outp.setDestination(nextHop[h]);
-					RR->sw->send(tPtr,outp,true);
-				}
-			}
-		}
-
-		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP,false);
-	} catch ( ... ) {
-		TRACE("dropped CIRCUIT_TEST from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
-	}
-	return true;
-}
-
-bool IncomingPacket::_doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
-{
-	try {
-		ZT_CircuitTestReport report;
-		memset(&report,0,sizeof(report));
-
-		report.current = peer->address().toInt();
-		report.upstream = Address(field(ZT_PACKET_IDX_PAYLOAD + 52,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH).toInt();
-		report.testId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 8);
-		report.timestamp = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);
-		report.sourcePacketId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 44);
-		report.flags = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 36);
-		report.sourcePacketHopCount = (*this)[ZT_PACKET_IDX_PAYLOAD + 57]; // end of fixed length headers: 58
-		report.errorCode = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 34);
-		report.vendor = (enum ZT_Vendor)((*this)[ZT_PACKET_IDX_PAYLOAD + 24]);
-		report.protocolVersion = (*this)[ZT_PACKET_IDX_PAYLOAD + 25];
-		report.majorVersion = (*this)[ZT_PACKET_IDX_PAYLOAD + 26];
-		report.minorVersion = (*this)[ZT_PACKET_IDX_PAYLOAD + 27];
-		report.revision = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 28);
-		report.platform = (enum ZT_Platform)at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 30);
-		report.architecture = (enum ZT_Architecture)at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 32);
-
-		const unsigned int receivedOnLocalAddressLen = reinterpret_cast<InetAddress *>(&(report.receivedOnLocalAddress))->deserialize(*this,ZT_PACKET_IDX_PAYLOAD + 58);
-		const unsigned int receivedFromRemoteAddressLen = reinterpret_cast<InetAddress *>(&(report.receivedFromRemoteAddress))->deserialize(*this,ZT_PACKET_IDX_PAYLOAD + 58 + receivedOnLocalAddressLen);
-		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 58 + receivedOnLocalAddressLen + receivedFromRemoteAddressLen;
-		if (report.protocolVersion >= 9) {
-			report.receivedFromLinkQuality = at<uint16_t>(ptr); ptr += 2;
-		} else {
-			report.receivedFromLinkQuality = ZT_PATH_LINK_QUALITY_MAX;
-			ptr += at<uint16_t>(ptr) + 2; // this field was once an 'extended field length' reserved field, which was always set to 0
-		}
-
-		report.nextHopCount = (*this)[ptr++];
-		if (report.nextHopCount > ZT_CIRCUIT_TEST_MAX_HOP_BREADTH) // sanity check, shouldn't be possible
-			report.nextHopCount = ZT_CIRCUIT_TEST_MAX_HOP_BREADTH;
-		for(unsigned int h=0;h<report.nextHopCount;++h) {
-			report.nextHops[h].address = Address(field(ptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH).toInt(); ptr += ZT_ADDRESS_LENGTH;
-			ptr += reinterpret_cast<InetAddress *>(&(report.nextHops[h].physicalAddress))->deserialize(*this,ptr);
-		}
-
-		RR->node->postCircuitTestReport(&report);
-
-		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST_REPORT,0,Packet::VERB_NOP,false);
-	} catch ( ... ) {
-		TRACE("dropped CIRCUIT_TEST_REPORT from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
-	}
-	return true;
-}
-
 bool IncomingPacket::_doUSER_MESSAGE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
@@ -1453,9 +1261,9 @@ bool IncomingPacket::_doUSER_MESSAGE(const RuntimeEnvironment *RR,void *tPtr,con
 			um.length = size() - (ZT_PACKET_IDX_PAYLOAD + 8);
 			RR->node->postEvent(tPtr,ZT_EVENT_USER_MESSAGE,reinterpret_cast<const void *>(&um));
 		}
-		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_CIRCUIT_TEST_REPORT,0,Packet::VERB_NOP,false);
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_USER_MESSAGE,0,Packet::VERB_NOP,false);
 	} catch ( ... ) {
-		TRACE("dropped CIRCUIT_TEST_REPORT from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
+		TRACE("dropped USER_MESSAGE from %s(%s): unexpected exception",source().toString().c_str(),_path->address().toString().c_str());
 	}
 	return true;
 }

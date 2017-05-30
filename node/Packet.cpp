@@ -1082,8 +1082,6 @@ const char *Packet::verbString(Verb v)
 		case VERB_MULTICAST_GATHER: return "MULTICAST_GATHER";
 		case VERB_MULTICAST_FRAME: return "MULTICAST_FRAME";
 		case VERB_PUSH_DIRECT_PATHS: return "PUSH_DIRECT_PATHS";
-		case VERB_CIRCUIT_TEST: return "CIRCUIT_TEST";
-		case VERB_CIRCUIT_TEST_REPORT: return "CIRCUIT_TEST_REPORT";
 		case VERB_USER_MESSAGE: return "USER_MESSAGE";
 	}
 	return "(unknown)";
