@@ -1022,7 +1022,7 @@ public:
 	    for(it = _nets.begin(); it != _nets.end(); it++) {
 			if(it->second.tap) {
 				for(int j=0; j<it->second.tap->_ips.size(); j++) {
-					if(it->second.tap->_ips[j].isEqualPrefix(addr) || it->second.tap->_ips[j].ipsEqual(addr)) {
+					if(it->second.tap->_ips[j].isEqualPrefix(addr) || it->second.tap->_ips[j].ipsEqual(addr) || it->second.tap->_ips[j].containsAddress(addr)) {
 						return it->second.tap;
 					}
 				}
