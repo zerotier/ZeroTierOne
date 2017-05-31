@@ -117,21 +117,6 @@ public:
 	void clearLocalInterfaceAddresses();
 	int sendUserMessage(void *tptr,uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
 	void setNetconfMaster(void *networkControllerInstance);
-	ZT_ResultCode clusterInit(
-		unsigned int myId,
-		const struct sockaddr_storage *zeroTierPhysicalEndpoints,
-		unsigned int numZeroTierPhysicalEndpoints,
-		int x,
-		int y,
-		int z,
-		void (*sendFunction)(void *,unsigned int,const void *,unsigned int),
-		void *sendFunctionArg,
-		int (*addressToLocationFunction)(void *,const struct sockaddr_storage *,int *,int *,int *),
-		void *addressToLocationFunctionArg);
-	ZT_ResultCode clusterAddMember(unsigned int memberId);
-	void clusterRemoveMember(unsigned int memberId);
-	void clusterHandleIncomingMessage(const void *msg,unsigned int len);
-	void clusterStatus(ZT_ClusterStatus *cs);
 
 	// Internal functions ------------------------------------------------------
 

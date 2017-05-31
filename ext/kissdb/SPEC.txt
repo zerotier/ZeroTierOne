@@ -1,0 +1,62 @@
+-----
+
+KISSDB file format (version 2)
+Author: Adam Ierymenko <adam.ierymenko@zerotier.com>
+
+http://creativecommons.org/publicdomain/zero/1.0/
+
+-----
+
+In keeping with the goal of minimalism the file format is very simple, the
+sort of thing that would be given as an example in an introductory course in
+data structures. It's a basic hash table that adds additional pages of hash
+table entries on collision.
+
+It consists of a 28 byte header followed by a series of hash tables and data.
+All integer values are stored in the native word order of the target
+architecture (in the future the code might be fixed to make everything
+little-endian if anyone cares about that).
+
+The header consists of the following fields:
+
+[0-3]   magic numbers: (ASCII) 'K', 'd', 'B', KISSDB_VERSION (currently 2)
+[4-11]  64-bit hash table size in entries
+[12-19] 64-bit key size in bytes
+[20-27] 64-bit value size in bytes
+
+Hash tables are arrays of [hash table size + 1] 64-bit integers. The extra
+entry, if nonzero, is the offset in the file of the next hash table, forming
+a linked list of hash tables across the file.
+
+Immediately following the header, the first hash table will be written when
+the first key/value is added. The algorithm for adding new entries is as
+follows:
+
+(1) The key is hashed using a 64-bit variant of the DJB2 hash function, and
+    this is taken modulo hash table size to get a bucket number.
+(2) Hash tables are checked in order, starting with the first hash table,
+    until a zero (empty) bucket is found. If one is found, skip to step (4).
+(3) If no empty buckets are found in any hash table, a new table is appended
+    to the file and the final pointer in the previous hash table is set to
+    its offset. (In the code the update of the next hash table pointer in
+    the previous hash table happens last, after the whole write is complete,
+    to avoid corruption on power loss.)
+(4) The key and value are appended, in order with no additional meta-data,
+    to the database file. Before appending the offset in the file stream
+    where they will be stored is saved. After appending, this offset is
+    written to the empty hash table bucket we chose in steps 2/3. Hash table
+    updates happen last to avoid corruption if the write does not complete.
+
+Lookup of a key/value pair occurs as follows:
+
+(1) The key is hashed and taken modulo hash table size to get a bucket
+    number.
+(2) If this bucket's entry in the hash table is nonzero, the key at the
+    offset specified by this bucket is compared to the key being looked up.
+    If they are equal, the value is read and returned.
+(3) If the keys are not equal, the next hash table is checked and step (2)
+    is repeated. If an empty bucket is encountered or if we run out of hash
+    tables, the key was not found.
+
+To update an existing value, its location is looked up and the value portion
+of the entry is rewritten.

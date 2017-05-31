@@ -54,7 +54,7 @@ ifeq ($(ZT_DEBUG),1)
 	# C25519 in particular is almost UNUSABLE in heavy testing without it.
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g $(INCLUDES) $(DEFS)
 else
-	CFLAGS?=-Ofast -fstack-protector-strong
+	CFLAGS?=-Os -fstack-protector-strong
 	CFLAGS+=$(ARCH_FLAGS) -Wall -Werror -flto -fPIE -mmacosx-version-min=10.7 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
 	STRIP=strip
 endif

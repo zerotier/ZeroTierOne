@@ -503,6 +503,7 @@ void Node::setNetconfMaster(void *networkControllerInstance)
 		RR->localNetworkController->init(RR->identity,this);
 }
 
+/*
 ZT_ResultCode Node::clusterInit(
 	unsigned int myId,
 	const struct sockaddr_storage *zeroTierPhysicalEndpoints,
@@ -570,6 +571,7 @@ void Node::clusterStatus(ZT_ClusterStatus *cs)
 #endif
 	memset(cs,0,sizeof(ZT_ClusterStatus));
 }
+*/
 
 /****************************************************************************/
 /* Node methods used only within node/                                      */
@@ -995,56 +997,6 @@ void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkControllerInstance)
 {
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->setNetconfMaster(networkControllerInstance);
-	} catch ( ... ) {}
-}
-
-enum ZT_ResultCode ZT_Node_clusterInit(
-	ZT_Node *node,
-	unsigned int myId,
-	const struct sockaddr_storage *zeroTierPhysicalEndpoints,
-	unsigned int numZeroTierPhysicalEndpoints,
-	int x,
-	int y,
-	int z,
-	void (*sendFunction)(void *,unsigned int,const void *,unsigned int),
-	void *sendFunctionArg,
-	int (*addressToLocationFunction)(void *,const struct sockaddr_storage *,int *,int *,int *),
-	void *addressToLocationFunctionArg)
-{
-	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->clusterInit(myId,zeroTierPhysicalEndpoints,numZeroTierPhysicalEndpoints,x,y,z,sendFunction,sendFunctionArg,addressToLocationFunction,addressToLocationFunctionArg);
-	} catch ( ... ) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
-	}
-}
-
-enum ZT_ResultCode ZT_Node_clusterAddMember(ZT_Node *node,unsigned int memberId)
-{
-	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->clusterAddMember(memberId);
-	} catch ( ... ) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
-	}
-}
-
-void ZT_Node_clusterRemoveMember(ZT_Node *node,unsigned int memberId)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->clusterRemoveMember(memberId);
-	} catch ( ... ) {}
-}
-
-void ZT_Node_clusterHandleIncomingMessage(ZT_Node *node,const void *msg,unsigned int len)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->clusterHandleIncomingMessage(msg,len);
-	} catch ( ... ) {}
-}
-
-void ZT_Node_clusterStatus(ZT_Node *node,ZT_ClusterStatus *cs)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->clusterStatus(cs);
 	} catch ( ... ) {}
 }
 
