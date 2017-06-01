@@ -271,22 +271,27 @@ enum ZT_ResultCode
 	 */
 	ZT_RESULT_OK = 0,
 
-	// Fatal errors (>0, <1000)
+	/**
+	 * Call produced no error but no action was taken
+	 */
+	ZT_RESULT_OK_IGNORED = 1,
+
+	// Fatal errors (>100, <1000)
 
 	/**
 	 * Ran out of memory
 	 */
-	ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY = 1,
+	ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY = 100,
 
 	/**
 	 * Data store is not writable or has failed
 	 */
-	ZT_RESULT_FATAL_ERROR_DATA_STORE_FAILED = 2,
+	ZT_RESULT_FATAL_ERROR_DATA_STORE_FAILED = 101,
 
 	/**
 	 * Internal error (e.g. unexpected exception indicating bug or build problem)
 	 */
-	ZT_RESULT_FATAL_ERROR_INTERNAL = 3,
+	ZT_RESULT_FATAL_ERROR_INTERNAL = 102,
 
 	// Non-fatal errors (>1000)
 
@@ -1090,59 +1095,97 @@ typedef struct
 } ZT_PeerList;
 
 /**
- * Types of stored objects that the core may wish to save or load
+ * ZeroTier core state objects
+ *
+ * All of these objects can be persisted if desired. To preserve the
+ * identity of a node and its address, the identity (public and secret)
+ * must be saved at a minimum.
+ *
+ * The reference service implementation currently persists identity,
+ * peer identities (for a period of time), planet, moons, and network
+ * configurations. Other state is treated as ephemeral.
+ *
+ * All state objects should be replicated in cluster mode. The reference
+ * clustering implementation uses a rumor mill algorithm in which state
+ * updates that are accepted with RESULT_OK (but not RESULT_OK_IGNORED)
+ * are flooded to all connected cluster peers. This results in updates
+ * being flooded across the cluster until all cluster members have the
+ * latest.
  */
-enum ZT_StoredObjectType
+enum ZT_StateObjectType
 {
 	/**
-	 * Node status information (reserved, not currently used)
+	 * Null object -- ignored
 	 */
-	ZT_STORED_OBJECT_STATUS = 0,
+	ZT_STATE_OBJECT_NULL = 0,
 
 	/**
-	 * String serialized public identity
+	 * identity.public
+	 *
+	 * Object ID: this node's address if known, or 0 if unknown (first query)
+	 * Canonical path: <HOME>/identity.public
+   * Persistence: required
 	 */
-	ZT_STORED_OBJECT_IDENTITY_PUBLIC = 1,
+	ZT_STATE_OBJECT_IDENTITY_PUBLIC = 1,
 
 	/**
-	 * String serialized secret identity
+	 * identity.secret
+	 *
+	 * Object ID: this node's address if known, or 0 if unknown (first query)
+	 * Canonical path: <HOME>/identity.public
+   * Persistence: required, should be stored with restricted permissions e.g. mode 0600 on *nix
 	 */
-	ZT_STORED_OBJECT_IDENTITY_SECRET = 1,
+	ZT_STATE_OBJECT_IDENTITY_SECRET = 2,
 
 	/**
-	 * Binary serialized peer state
+	 * A peer to which this node is communicating
+	 *
+	 * Object ID: peer address
+	 * Canonical path: <HOME>/peers.d/<ADDRESS> (10-digit hex address)
+	 * Persistence: optional, can be purged at any time
 	 */
-	ZT_STORED_OBJECT_PEER = 3,
+	ZT_STATE_OBJECT_PEER = 3,
 
 	/**
-	 * Identity (other node, not this one)
+	 * The identity of a known peer
+	 *
+	 * Object ID: peer address
+	 * Canonical path: <HOME>/iddb.d/<ADDRESS> (10-digit hex address)
+	 * Persistence: optional, can be purged at any time, recommended ttl 30-60 days
 	 */
-	ZT_STORED_OBJECT_IDENTITY = 4,
+	ZT_STATE_OBJECT_PEER_IDENTITY = 4,
 
 	/**
-	 * Network configuration object
+	 * Network configuration
+	 *
+	 * Object ID: peer address
+	 * Canonical path: <HOME>/networks.d/<NETWORKID>.conf (16-digit hex ID)
+	 * Persistence: required if network memberships should persist
 	 */
-	ZT_STORED_OBJECT_NETWORK_CONFIG = 5,
+	ZT_STATE_OBJECT_NETWORK_CONFIG = 5,
 
 	/**
-	 * Planet definition (object ID will be zero and should be ignored since there's only one)
+	 * The planet (there is only one per... well... planet!)
+	 *
+	 * Object ID: world ID of planet, or 0 if unknown (first query)
+	 * Canonical path: <HOME>/planet
+	 * Persistence: recommended
 	 */
-	ZT_STORED_OBJECT_PLANET = 6,
+	ZT_STATE_OBJECT_PLANET = 6,
 
 	/**
-	 * Moon definition
+	 * A moon (federated root set)
+	 *
+	 * Object ID: world ID of moon
+	 * Canonical path: <HOME>/moons.d/<ID>.moon (16-digit hex ID)
+	 * Persistence: required if moon memberships should persist
 	 */
-	ZT_STORED_OBJECT_MOON = 7,
+	ZT_STATE_OBJECT_MOON = 7,
 
 	/**
-	 * Multicast membership
+	 * IDs above this value will not be used by the core (and could be used as implementation-specific IDs)
 	 */
-	ZT_STORED_OBJECT_MULTICAST_MEMBERSHIP = 8,
-
-	/**
-	 * IDs above this are never used by the core and are available for implementation use
-	 */
-	ZT_STORED_OBJECT__MAX_TYPE_ID = 255
+	ZT_STATE_OBJECT__MAX_ID = 255
 };
 
 /**
@@ -1221,59 +1264,38 @@ typedef void (*ZT_EventCallback)(
 	const void *);                         /* Event payload (if applicable) */
 
 /**
- * Function to get an object from the data store
+ * Callback for storing and/or publishing state information
  *
- * Parameters: (1) object name, (2) buffer to fill, (3) size of buffer, (4)
- * index in object to start reading, (5) result parameter that must be set
- * to the actual size of the object if it exists.
+ * See ZT_StateObjectType docs for information about each state object type
+ * and when and if it needs to be persisted.
  *
- * Object names can contain forward slash (/) path separators. They will
- * never contain .. or backslash (\), so this is safe to map as a Unix-style
- * path if the underlying storage permits. For security reasons we recommend
- * returning errors if .. or \ are used.
- *
- * The function must return the actual number of bytes read. If the object
- * doesn't exist, it should return -1. -2 should be returned on other errors
- * such as errors accessing underlying storage.
- *
- * If the read doesn't fit in the buffer, the max number of bytes should be
- * read. The caller may call the function multiple times to read the whole
- * object.
+ * An object of length -1 is sent to indicate that an object should be
+ * deleted.
  */
-typedef long (*ZT_DataStoreGetFunction)(
+typedef void (*ZT_StatePutFunction)(
 	ZT_Node *,                             /* Node */
 	void *,                                /* User ptr */
 	void *,                                /* Thread ptr */
-	const char *,
-	void *,
-	unsigned long,
-	unsigned long,
-	unsigned long *);
+	enum ZT_StateObjectType,               /* State object type */
+	uint64_t,                              /* State object ID (if applicable) */
+	const void *,                          /* State object data */
+	int);                                  /* Length of data or -1 to delete */
 
 /**
- * Function to store an object in the data store
+ * Callback for retrieving stored state information
  *
- * Parameters: (1) node, (2) user ptr, (3) object name, (4) object data,
- * (5) object size, (6) secure? (bool).
- *
- * If secure is true, the file should be set readable and writable only
- * to the user running ZeroTier One. What this means is platform-specific.
- *
- * Name semantics are the same as the get function. This must return zero on
- * success. You can return any OS-specific error code on failure, as these
- * may be visible in logs or error messages and might aid in debugging.
- *
- * If the data pointer is null, this must be interpreted as a delete
- * operation.
+ * This function should return the number of bytes actually stored to the
+ * buffer or -1 if the state object was not found or the buffer was too
+ * small to store it.
  */
-typedef int (*ZT_DataStorePutFunction)(
-	ZT_Node *,
-	void *,
+typedef int (*ZT_StateGetFunction)(
+	ZT_Node *,                             /* Node */
+	void *,                                /* User ptr */
 	void *,                                /* Thread ptr */
-	const char *,
-	const void *,
-	unsigned long,
-	int);
+	enum ZT_StateObjectType,               /* State object type */
+	uint64_t,                              /* State object ID (if applicable) */
+	void *,                                /* Buffer to store state object data */
+	unsigned int);                         /* Length of data buffer in bytes */
 
 /**
  * Function to send a ZeroTier packet out over the wire
@@ -1381,14 +1403,14 @@ struct ZT_Node_Callbacks
 	long version;
 
 	/**
-	 * REQUIRED: Function to get objects from persistent storage
+	 * REQUIRED: Function to store and/or replicate state objects
 	 */
-	ZT_DataStoreGetFunction dataStoreGetFunction;
+	ZT_StatePutFunction statePutFunction;
 
 	/**
-	 * REQUIRED: Function to store objects in persistent storage
+	 * REQUIRED: Function to retrieve state objects from an object store
 	 */
-	ZT_DataStorePutFunction dataStorePutFunction;
+	ZT_StateGetFunction stateGetFunction;
 
 	/**
 	 * REQUIRED: Function to send packets over the physical wire
@@ -1448,6 +1470,49 @@ enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,const struct
  * @param node Node to delete
  */
 void ZT_Node_delete(ZT_Node *node);
+
+/**
+ * Notify node of an update to a state object
+ *
+ * This can be called after node startup to restore cached state objects such
+ * as network configurations for joined networks, planet, moons, etc. See
+ * the documentation of ZT_StateObjectType for more information. It's okay
+ * to call this for everything in the object store, but note that the node
+ * will automatically query for some core objects like identities so supplying
+ * these via this function is not necessary.
+ *
+ * Unless clustering is being implemented this function doesn't need to be
+ * used after startup. It could be called in response to filesystem changes
+ * to allow some degree of live configurability by filesystem observation.
+ *
+ * The return value of this function indicates whether the update was accepted
+ * as new. A return value of ZT_RESULT_OK indicates that the node gleaned new
+ * information from this update and that therefore (in cluster rumor mill mode)
+ * this update should be distributed to other members of a cluster. A return
+ * value of ZT_RESULT_OK_IGNORED indicates that the object did not provide any
+ * new information and therefore should not be propagated in a cluster.
+ *
+ * If clustering isn't being implemented the return value of this function can
+ * generally be ignored.
+ *
+ * ZT_RESULT_ERROR_BAD_PARAMETER can be returned if the parameter was invalid
+ * or not applicable. Object stores may delete the object in this case.
+ *
+ * @param node Node instance
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
+ * @param type State object type
+ * @param id State object ID
+ * @param data State object data
+ * @param len Length of state object data in bytes
+ * @return ZT_RESULT_OK if object was accepted or ZT_RESULT_OK_IGNORED if non-informative, error if object was invalid
+ */
+enum ZT_ResultCode ZT_Node_processStateUpdate(
+	ZT_Node *node,
+	void *tptr,
+	ZT_StateObjectType type,
+	uint64_t id,
+	const void *data,
+	unsigned int len);
 
 /**
  * Process a packet received from the physical wire

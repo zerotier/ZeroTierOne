@@ -82,6 +82,12 @@ public:
 
 	// Public API Functions ----------------------------------------------------
 
+	ZT_ResultCode processStateUpdate(
+		void *tptr,
+		ZT_StateObjectType type,
+		uint64_t id,
+		const void *data,
+		unsigned int len);
 	ZT_ResultCode processWirePacket(
 		void *tptr,
 		uint64_t now,
@@ -185,16 +191,15 @@ public:
 		return _directPaths;
 	}
 
-	inline bool dataStorePut(void *tPtr,const char *name,const void *data,unsigned int len,bool secure) { return (_cb.dataStorePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,name,data,len,(int)secure) == 0); }
-	inline bool dataStorePut(void *tPtr,const char *name,const std::string &data,bool secure) { return dataStorePut(tPtr,name,(const void *)data.data(),(unsigned int)data.length(),secure); }
-	inline void dataStoreDelete(void *tPtr,const char *name) { _cb.dataStorePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,name,(const void *)0,0,0); }
-	std::string dataStoreGet(void *tPtr,const char *name);
-
 	inline void postEvent(void *tPtr,ZT_Event ev,const void *md = (const void *)0) { _cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ev,md); }
 
 	inline int configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { return _cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,nwid,nuptr,op,nc); }
 
 	inline bool online() const throw() { return _online; }
+
+	inline int stateObjectGet(void *const tPtr,ZT_StateObjectType type,const uint64_t id,void *const data,const unsigned int maxlen) { return _cb.stateGetFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,data,maxlen); }
+	inline void stateObjectPut(void *const tPtr,ZT_StateObjectType type,const uint64_t id,const void *const data,const unsigned int len) { _cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,data,(int)len); }
+	inline void stateObjectDelete(void *const tPtr,ZT_StateObjectType type,const uint64_t id) { _cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,(const void *)0,-1); }
 
 #ifdef ZT_TRACE
 	void postTrace(const char *module,unsigned int line,const char *fmt,...);

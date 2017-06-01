@@ -68,15 +68,15 @@ Topology::Topology(const RuntimeEnvironment *renv,void *tPtr) :
 	_trustedPathCount(0),
 	_amRoot(false)
 {
-	try {
-		World cachedPlanet;
-		std::string buf(RR->node->dataStoreGet(tPtr,"planet"));
-		if (buf.length() > 0) {
-			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp(buf.data(),(unsigned int)buf.length());
-			cachedPlanet.deserialize(dswtmp,0);
-		}
-		addWorld(tPtr,cachedPlanet,false);
-	} catch ( ... ) {}
+	uint8_t tmp[ZT_WORLD_MAX_SERIALIZED_LENGTH];
+	int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PLANET,0,tmp,sizeof(tmp));
+	if (n > 0) {
+		try {
+			World cachedPlanet;
+			cachedPlanet.deserialize(Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH>(tmp,(unsigned int)n),0);
+			addWorld(tPtr,cachedPlanet,false);
+		} catch ( ... ) {} // ignore invalid cached planets
+	}
 
 	World defaultPlanet;
 	{
@@ -158,9 +158,8 @@ Identity Topology::getIdentity(void *tPtr,const Address &zta)
 void Topology::saveIdentity(void *tPtr,const Identity &id)
 {
 	if (id) {
-		char p[128];
-		Utils::snprintf(p,sizeof(p),"iddb.d/%.10llx",(unsigned long long)id.address().toInt());
-		RR->node->dataStorePut(tPtr,p,id.toString(false),false);
+		const std::string tmp(id.toString(false));
+		RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_PEER_IDENTITY,id.address().toInt(),tmp.data(),(unsigned int)tmp.length());
 	}
 }
 
@@ -327,19 +326,11 @@ bool Topology::addWorld(void *tPtr,const World &newWorld,bool alwaysAcceptNew)
 		return false;
 	}
 
-	char savePath[64];
-	if (existing->type() == World::TYPE_MOON) {
-		Utils::snprintf(savePath,sizeof(savePath),"moons.d/%.16llx.moon",existing->id());
-	} else {
-		Utils::scopy(savePath,sizeof(savePath),"planet");
-	}
 	try {
-		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp;
-		existing->serialize(dswtmp,false);
-		RR->node->dataStorePut(tPtr,savePath,dswtmp.data(),dswtmp.size(),false);
-	} catch ( ... ) {
-		RR->node->dataStoreDelete(tPtr,savePath);
-	}
+		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> sbuf;
+		existing->serialize(sbuf,false);
+		RR->node->stateObjectPut(tPtr,(existing->type() == World::TYPE_PLANET) ? ZT_STATE_OBJECT_PLANET : ZT_STATE_OBJECT_MOON,existing->id(),sbuf.data(),sbuf.size());
+	} catch ( ... ) {}
 
 	_memoizeUpstreams(tPtr);
 
@@ -348,21 +339,18 @@ bool Topology::addWorld(void *tPtr,const World &newWorld,bool alwaysAcceptNew)
 
 void Topology::addMoon(void *tPtr,const uint64_t id,const Address &seed)
 {
-	char savePath[64];
-	Utils::snprintf(savePath,sizeof(savePath),"moons.d/%.16llx.moon",id);
-
-	try {
-		std::string moonBin(RR->node->dataStoreGet(tPtr,savePath));
-		if (moonBin.length() > 1) {
-			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> wtmp(moonBin.data(),(unsigned int)moonBin.length());
+	char tmp[ZT_WORLD_MAX_SERIALIZED_LENGTH];
+	int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_MOON,id,tmp,sizeof(tmp));
+	if (n > 0) {
+		try {
 			World w;
-			w.deserialize(wtmp);
+			w.deserialize(Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH>(tmp,(unsigned int)n));
 			if ((w.type() == World::TYPE_MOON)&&(w.id() == id)) {
 				addWorld(tPtr,w,true);
 				return;
 			}
-		}
-	} catch ( ... ) {}
+		} catch ( ... ) {}
+	}
 
 	if (seed) {
 		Mutex::Lock _l(_upstreams_m);
@@ -381,9 +369,7 @@ void Topology::removeMoon(void *tPtr,const uint64_t id)
 		if (m->id() != id) {
 			nm.push_back(*m);
 		} else {
-			char savePath[64];
-			Utils::snprintf(savePath,sizeof(savePath),"moons.d/%.16llx.moon",id);
-			RR->node->dataStoreDelete(tPtr,savePath);
+			RR->node->stateObjectDelete(tPtr,ZT_STATE_OBJECT_MOON,id);
 		}
 	}
 	_moons.swap(nm);
@@ -425,12 +411,12 @@ void Topology::clean(uint64_t now)
 
 Identity Topology::_getIdentity(void *tPtr,const Address &zta)
 {
-	char p[128];
-	Utils::snprintf(p,sizeof(p),"iddb.d/%.10llx",(unsigned long long)zta.toInt());
-	std::string ids(RR->node->dataStoreGet(tPtr,p));
-	if (ids.length() > 0) {
+	char tmp[512];
+	int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER_IDENTITY,zta.toInt(),tmp,sizeof(tmp) - 1);
+	if (n > 0) {
+		tmp[n] = (char)0;
 		try {
-			return Identity(ids);
+			return Identity(tmp);
 		} catch ( ... ) {} // ignore invalid IDs
 	}
 	return Identity();

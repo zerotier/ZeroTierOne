@@ -682,7 +682,7 @@ static _doZtFilterResult _doZtFilter(
 
 const ZeroTier::MulticastGroup Network::BROADCAST(ZeroTier::MAC(0xffffffffffffULL),0);
 
-Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *uptr) :
+Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *uptr,const NetworkConfig *nconf) :
 	RR(renv),
 	_uPtr(uptr),
 	_id(nwid),
@@ -697,29 +697,11 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 	for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i)
 		_incomingConfigChunks[i].ts = 0;
 
-	char confn[128];
-	Utils::snprintf(confn,sizeof(confn),"networks.d/%.16llx.conf",_id);
-
-	bool gotConf = false;
-	Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
-	NetworkConfig *nconf = new NetworkConfig();
-	try {
-		std::string conf(RR->node->dataStoreGet(tPtr,confn));
-		if (conf.length()) {
-			dconf->load(conf.c_str());
-			if (nconf->fromDictionary(*dconf)) {
-				this->setConfiguration(tPtr,*nconf,false);
-				_lastConfigUpdate = 0; // we still want to re-request a new config from the network
-				gotConf = true;
-			}
-		}
-	} catch ( ... ) {} // ignore invalids, we'll re-request
-	delete nconf;
-	delete dconf;
-
-	if (!gotConf) {
-		// Save a one-byte CR to persist membership while we request a real netconf
-		RR->node->dataStorePut(tPtr,confn,"\n",1,false);
+	if (nconf) {
+		this->setConfiguration(tPtr,*nconf,false);
+		_lastConfigUpdate = 0; // still want to re-request since it's likely outdated
+	} else {
+		RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,nwid,"\n",1);
 	}
 
 	if (!_portInitialized) {
@@ -735,12 +717,9 @@ Network::~Network()
 	ZT_VirtualNetworkConfig ctmp;
 	_externalConfig(&ctmp);
 
-	char n[128];
 	if (_destroyed) {
-		// This is done in Node::leave() so we can pass tPtr
+		// This is done in Node::leave() so we can pass tPtr properly
 		//RR->node->configureVirtualNetworkPort((void *)0,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
-		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
-		RR->node->dataStoreDelete((void *)0,n);
 	} else {
 		RR->node->configureVirtualNetworkPort((void *)0,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN,&ctmp);
 	}
@@ -1188,10 +1167,8 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 		if (saveToDisk) {
 			Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *d = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
 			try {
-				char n[64];
-				Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
 				if (nconf.toDictionary(*d,false))
-					RR->node->dataStorePut(tPtr,n,(const void *)d->data(),d->sizeBytes(),true);
+					RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,_id,d->data(),d->sizeBytes());
 			} catch ( ... ) {}
 			delete d;
 		}
