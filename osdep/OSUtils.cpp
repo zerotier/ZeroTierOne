@@ -287,7 +287,7 @@ int64_t OSUtils::getFileSize(const char *path)
 
 bool OSUtils::readFile(const char *path,std::string &buf)
 {
-	char tmp[1024];
+	char tmp[16384];
 	FILE *f = fopen(path,"rb");
 	if (f) {
 		for(;;) {

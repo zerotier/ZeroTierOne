@@ -140,24 +140,6 @@ extern "C" {
 #define ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH 7
 
 /**
- * Maximum number of hops in a ZeroTier circuit test
- *
- * This is more or less the max that can be fit in a given packet (with
- * fragmentation) and only one address per hop.
- */
-#define ZT_CIRCUIT_TEST_MAX_HOPS 256
-
-/**
- * Maximum number of addresses per hop in a circuit test
- */
-#define ZT_CIRCUIT_TEST_MAX_HOP_BREADTH 8
-
-/**
- * Circuit test report flag: upstream peer authorized in path (e.g. by network COM)
- */
-#define ZT_CIRCUIT_TEST_REPORT_FLAGS_UPSTREAM_AUTHORIZED_IN_PATH 0x0000000000000001ULL
-
-/**
  * Maximum value for link quality (min is 0)
  */
 #define ZT_PATH_LINK_QUALITY_MAX 0xff
