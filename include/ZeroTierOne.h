@@ -1090,6 +1090,62 @@ typedef struct
 } ZT_PeerList;
 
 /**
+ * Types of stored objects that the core may wish to save or load
+ */
+enum ZT_StoredObjectType
+{
+	/**
+	 * Node status information (reserved, not currently used)
+	 */
+	ZT_STORED_OBJECT_STATUS = 0,
+
+	/**
+	 * String serialized public identity
+	 */
+	ZT_STORED_OBJECT_IDENTITY_PUBLIC = 1,
+
+	/**
+	 * String serialized secret identity
+	 */
+	ZT_STORED_OBJECT_IDENTITY_SECRET = 1,
+
+	/**
+	 * Binary serialized peer state
+	 */
+	ZT_STORED_OBJECT_PEER = 3,
+
+	/**
+	 * Identity (other node, not this one)
+	 */
+	ZT_STORED_OBJECT_IDENTITY = 4,
+
+	/**
+	 * Network configuration object
+	 */
+	ZT_STORED_OBJECT_NETWORK_CONFIG = 5,
+
+	/**
+	 * Planet definition (object ID will be zero and should be ignored since there's only one)
+	 */
+	ZT_STORED_OBJECT_PLANET = 6,
+
+	/**
+	 * Moon definition
+	 */
+	ZT_STORED_OBJECT_MOON = 7,
+
+	/**
+	 * Multicast membership
+	 */
+	ZT_STORED_OBJECT_MULTICAST_MEMBERSHIP = 8,
+
+	/**
+	 * IDs above this are never used by the core and are available for implementation use
+	 */
+	ZT_STORED_OBJECT__MAX_TYPE_ID = 255
+};
+
+/**
  * An instance of a ZeroTier One node (opaque)
  */
 typedef void ZT_Node;

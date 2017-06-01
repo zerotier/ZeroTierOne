@@ -93,7 +93,6 @@ public:
 	}
 
 	Buffer(unsigned int l)
-		throw(std::out_of_range)
 	{
 		if (l > C)
 			throw std::out_of_range("Buffer: construct with size larger than capacity");
@@ -102,51 +101,42 @@ public:
 
 	template<unsigned int C2>
 	Buffer(const Buffer<C2> &b)
-		throw(std::out_of_range)
 	{
 		*this = b;
 	}
 
 	Buffer(const void *b,unsigned int l)
-		throw(std::out_of_range)
 	{
 		copyFrom(b,l);
 	}
 
 	Buffer(const std::string &s)
-		throw(std::out_of_range)
 	{
 		copyFrom(s.data(),s.length());
 	}
 
 	template<unsigned int C2>
 	inline Buffer &operator=(const Buffer<C2> &b)
-		throw(std::out_of_range)
 	{
 		if (unlikely(b._l > C))
 			throw std::out_of_range("Buffer: assignment from buffer larger than capacity");
-		memcpy(_b,b._b,_l = b._l);
-		return *this;
-	}
-
-	inline Buffer &operator=(const std::string &s)
-		throw(std::out_of_range)
-	{
-		copyFrom(s.data(),s.length());
+		if (C2 == C) {
+			memcpy(this,&b,sizeof(Buffer<C>));
+		} else {
+			memcpy(_b,b._b,_l = b._l);
+		}
 		return *this;
 	}
 
 	inline void copyFrom(const void *b,unsigned int l)
-		throw(std::out_of_range)
 	{
 		if (unlikely(l > C))
 			throw std::out_of_range("Buffer: set from C array larger than capacity");
-		_l = l;
 		memcpy(_b,b,l);
+		_l = l;
 	}
 
 	unsigned char operator[](const unsigned int i) const
-		throw(std::out_of_range)
 	{
 		if (unlikely(i >= _l))
 			throw std::out_of_range("Buffer: [] beyond end of data");
@@ -154,7 +144,6 @@ public:
 	}
 
 	unsigned char &operator[](const unsigned int i)
-		throw(std::out_of_range)
 	{
 		if (unlikely(i >= _l))
 			throw std::out_of_range("Buffer: [] beyond end of data");
@@ -175,14 +164,12 @@ public:
 	 * @throws std::out_of_range Field extends beyond data size
 	 */
 	unsigned char *field(unsigned int i,unsigned int l)
-		throw(std::out_of_range)
 	{
 		if (unlikely((i + l) > _l))
 			throw std::out_of_range("Buffer: field() beyond end of data");
 		return (unsigned char *)(_b + i);
 	}
 	const unsigned char *field(unsigned int i,unsigned int l) const
-		throw(std::out_of_range)
 	{
 		if (unlikely((i + l) > _l))
 			throw std::out_of_range("Buffer: field() beyond end of data");
@@ -198,7 +185,6 @@ public:
 	 */
 	template<typename T>
 	inline void setAt(unsigned int i,const T v)
-		throw(std::out_of_range)
 	{
 		if (unlikely((i + sizeof(T)) > _l))
 			throw std::out_of_range("Buffer: setAt() beyond end of data");
@@ -221,7 +207,6 @@ public:
 	 */
 	template<typename T>
 	inline T at(unsigned int i) const
-		throw(std::out_of_range)
 	{
 		if (unlikely((i + sizeof(T)) > _l))
 			throw std::out_of_range("Buffer: at() beyond end of data");
@@ -248,7 +233,6 @@ public:
 	 */
 	template<typename T>
 	inline void append(const T v)
-		throw(std::out_of_range)
 	{
 		if (unlikely((_l + sizeof(T)) > C))
 			throw std::out_of_range("Buffer: append beyond capacity");
@@ -271,7 +255,6 @@ public:
 	 * @throws std::out_of_range Attempt to append beyond capacity
 	 */
 	inline void append(unsigned char c,unsigned int n)
-		throw(std::out_of_range)
 	{
 		if (unlikely((_l + n) > C))
 			throw std::out_of_range("Buffer: append beyond capacity");
@@ -287,7 +270,6 @@ public:
 	 * @throws std::out_of_range Attempt to append beyond capacity
 	 */
 	inline void append(const void *b,unsigned int l)
-		throw(std::out_of_range)
 	{
 		if (unlikely((_l + l) > C))
 			throw std::out_of_range("Buffer: append beyond capacity");
@@ -302,7 +284,6 @@ public:
 	 * @throws std::out_of_range Attempt to append beyond capacity
 	 */
 	inline void append(const std::string &s)
-		throw(std::out_of_range)
 	{
 		append(s.data(),(unsigned int)s.length());
 	}
@@ -314,7 +295,6 @@ public:
 	 * @throws std::out_of_range Attempt to append beyond capacity
 	 */
 	inline void appendCString(const char *s)
-		throw(std::out_of_range)
 	{
 		for(;;) {
 			if (unlikely(_l >= C))
@@ -333,7 +313,6 @@ public:
 	 */
 	template<unsigned int C2>
 	inline void append(const Buffer<C2> &b)
-		throw(std::out_of_range)
 	{
 		append(b._b,b._l);
 	}
@@ -349,7 +328,6 @@ public:
 	 * @return Pointer to beginning of appended field of length 'l'
 	 */
 	inline char *appendField(unsigned int l)
-		throw(std::out_of_range)
 	{
 		if (unlikely((_l + l) > C))
 			throw std::out_of_range("Buffer: append beyond capacity");
@@ -367,7 +345,6 @@ public:
 	 * @throws std::out_of_range Capacity exceeded
 	 */
 	inline void addSize(unsigned int i)
-		throw(std::out_of_range)
 	{
 		if (unlikely((i + _l) > C))
 			throw std::out_of_range("Buffer: setSize to larger than capacity");
@@ -383,7 +360,6 @@ public:
 	 * @throws std::out_of_range Size larger than capacity
 	 */
 	inline void setSize(const unsigned int i)
-		throw(std::out_of_range)
 	{
 		if (unlikely(i > C))
 			throw std::out_of_range("Buffer: setSize to larger than capacity");
@@ -397,7 +373,6 @@ public:
 	 * @throw std::out_of_range Position is beyond size of buffer
 	 */
 	inline void behead(const unsigned int at)
-		throw(std::out_of_range)
 	{
 		if (!at)
 			return;
@@ -414,7 +389,6 @@ public:
 	 * @throw std::out_of_range Position plus length is beyond size of buffer
 	 */
 	inline void erase(const unsigned int at,const unsigned int length)
-		throw(std::out_of_range)
 	{
 		const unsigned int endr = at + length;
 		if (unlikely(endr > _l))
@@ -495,8 +469,8 @@ public:
 	}
 
 private:
-	unsigned int _l;
 	char ZT_VAR_MAY_ALIAS _b[C];
+	unsigned int _l;
 };
 
 } // namespace ZeroTier

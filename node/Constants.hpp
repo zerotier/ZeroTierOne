@@ -150,6 +150,12 @@
 #endif
 #endif
 
+#ifdef __WINDOWS__
+#define ZT_PACKED_STRUCT(D) __pragma(pack(push,1)) D __pragma(pack(pop))
+#else
+#define ZT_PACKED_STRUCT(D) D __attribute__((packed))
+#endif
+
 /**
  * Length of a ZeroTier address in bytes
  */
