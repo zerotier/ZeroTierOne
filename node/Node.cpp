@@ -238,10 +238,13 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,uint64_t now,volatile uint
 			std::vector< SharedPtr<Network> > needConfig;
 			{
 				Mutex::Lock _l(_networks_m);
-				for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
-					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!n->second->hasConfig()))
-						needConfig.push_back(n->second);
-					n->second->sendUpdatesToMembers(tptr);
+				Hashtable< uint64_t,SharedPtr<Network> >::Iterator i(_networks);
+				uint64_t *k = (uint64_t *)0;
+				SharedPtr<Network> *v = (SharedPtr<Network> *)0;
+				while (i.next(k,v)) {
+					if (((now - (*v)->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!(*v)->hasConfig()))
+						needConfig.push_back(*v);
+					(*v)->sendUpdatesToMembers(tptr);
 				}
 			}
 			for(std::vector< SharedPtr<Network> >::const_iterator n(needConfig.begin());n!=needConfig.end();++n)
@@ -306,34 +309,30 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,uint64_t now,volatile uint
 ZT_ResultCode Node::join(uint64_t nwid,void *uptr,void *tptr)
 {
 	Mutex::Lock _l(_networks_m);
-	SharedPtr<Network> nw = _network(nwid);
-	if(!nw) {
-		const std::pair< uint64_t,SharedPtr<Network> > nn(nwid,SharedPtr<Network>(new Network(RR,tptr,nwid,uptr)));
-		_networks.insert(std::upper_bound(_networks.begin(),_networks.end(),nn),nn);
-	}
+	SharedPtr<Network> &nw = _networks[nwid];
+	if (!nw)
+		nw = SharedPtr<Network>(new Network(RR,tptr,nwid,uptr));
 	return ZT_RESULT_OK;
 }
 
 ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 {
 	ZT_VirtualNetworkConfig ctmp;
-	std::vector< std::pair< uint64_t,SharedPtr<Network> > > newn;
 	void **nUserPtr = (void **)0;
-	Mutex::Lock _l(_networks_m);
 
-	for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
-		if (n->first != nwid) {
-			newn.push_back(*n);
-		} else {
-			if (uptr)
-				*uptr = *n->second->userPtr();
-			n->second->externalConfig(&ctmp);
-			n->second->destroy();
-			nUserPtr = n->second->userPtr();
-		}
+	{
+		Mutex::Lock _l(_networks_m);
+		SharedPtr<Network> *nw = _networks.get(nwid);
+		if (!nw)
+			return ZT_RESULT_OK;
+		if (uptr)
+			*uptr = (*nw)->userPtr();
+		(*nw)->externalConfig(&ctmp);
+		(*nw)->destroy();
+		nUserPtr = (*nw)->userPtr();
+		_networks.erase(nwid);
 	}
-	_networks.swap(newn);
- 
+
 	if (nUserPtr)
 		RR->node->configureVirtualNetworkPort(tptr,nwid,nUserPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
 
@@ -431,10 +430,10 @@ ZT_PeerList *Node::peers() const
 ZT_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid) const
 {
 	Mutex::Lock _l(_networks_m);
-	SharedPtr<Network> nw = _network(nwid);
-	if(nw) {
+	const SharedPtr<Network> *nw = _networks.get(nwid);
+	if (nw) {
 		ZT_VirtualNetworkConfig *nc = (ZT_VirtualNetworkConfig *)::malloc(sizeof(ZT_VirtualNetworkConfig));
-		nw->externalConfig(nc);
+		(*nw)->externalConfig(nc);
 		return nc;
 	}
 	return (ZT_VirtualNetworkConfig *)0;
@@ -451,8 +450,11 @@ ZT_VirtualNetworkList *Node::networks() const
 	nl->networks = (ZT_VirtualNetworkConfig *)(buf + sizeof(ZT_VirtualNetworkList));
 
 	nl->networkCount = 0;
-	for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n)
-		n->second->externalConfig(&(nl->networks[nl->networkCount++]));
+	Hashtable< uint64_t,SharedPtr<Network> >::Iterator i(*const_cast< Hashtable< uint64_t,SharedPtr<Network> > *>(&_networks));
+	uint64_t *k = (uint64_t *)0;
+	SharedPtr<Network> *v = (SharedPtr<Network> *)0;
+	while (i.next(k,v))
+		(*v)->externalConfig(&(nl->networks[nl->networkCount++]));
 
 	return nl;
 }
@@ -601,10 +603,13 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,cons
 
 	{
 		Mutex::Lock _l(_networks_m);
-		for(std::vector< std::pair< uint64_t, SharedPtr<Network> > >::const_iterator i=_networks.begin();i!=_networks.end();++i) {
-			if (i->second->hasConfig()) {
-				for(unsigned int k=0;k<i->second->config().staticIpCount;++k) {
-					if (i->second->config().staticIps[k].containsAddress(remoteAddress))
+		Hashtable< uint64_t,SharedPtr<Network> >::Iterator i(_networks);
+		uint64_t *k = (uint64_t *)0;
+		SharedPtr<Network> *v = (SharedPtr<Network> *)0;
+		while (i.next(k,v)) {
+			if ((*v)->hasConfig()) {
+				for(unsigned int k=0;k<(*v)->config().staticIpCount;++k) {
+					if ((*v)->config().staticIps[k].containsAddress(remoteAddress))
 						return false;
 				}
 			}

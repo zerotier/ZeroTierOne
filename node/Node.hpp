@@ -46,6 +46,7 @@
 #include "Path.hpp"
 #include "Salsa20.hpp"
 #include "NetworkController.hpp"
+#include "Hashtable.hpp"
 
 #undef TRACE
 #ifdef ZT_TRACE
@@ -154,26 +155,27 @@ public:
 	inline SharedPtr<Network> network(uint64_t nwid) const
 	{
 		Mutex::Lock _l(_networks_m);
-		return _network(nwid);
+		const SharedPtr<Network> *n = _networks.get(nwid);
+		if (n)
+			return *n;
+		return SharedPtr<Network>();
 	}
 
 	inline bool belongsToNetwork(uint64_t nwid) const
 	{
 		Mutex::Lock _l(_networks_m);
-		for(std::vector< std::pair< uint64_t, SharedPtr<Network> > >::const_iterator i=_networks.begin();i!=_networks.end();++i) {
-			if (i->first == nwid)
-				return true;
-		}
-		return false;
+		return _networks.contains(nwid);
 	}
 
 	inline std::vector< SharedPtr<Network> > allNetworks() const
 	{
 		std::vector< SharedPtr<Network> > nw;
 		Mutex::Lock _l(_networks_m);
-		nw.reserve(_networks.size());
-		for(std::vector< std::pair< uint64_t, SharedPtr<Network> > >::const_iterator i=_networks.begin();i!=_networks.end();++i)
-			nw.push_back(i->second);
+		Hashtable< uint64_t,SharedPtr<Network> >::Iterator i(*const_cast< Hashtable< uint64_t,SharedPtr<Network> > * >(&_networks));
+		uint64_t *k = (uint64_t *)0;
+		SharedPtr<Network> *v = (SharedPtr<Network> *)0;
+		while (i.next(k,v))
+			nw.push_back(*v);
 		return nw;
 	}
 
@@ -266,16 +268,6 @@ public:
 	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode);
 
 private:
-	inline SharedPtr<Network> _network(uint64_t nwid) const
-	{
-		// assumes _networks_m is locked
-		for(std::vector< std::pair< uint64_t, SharedPtr<Network> > >::const_iterator i=_networks.begin();i!=_networks.end();++i) {
-			if (i->first == nwid)
-				return i->second;
-		}
-		return SharedPtr<Network>();
-	}
-
 	RuntimeEnvironment _RR;
 	RuntimeEnvironment *RR;
 	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P
@@ -288,7 +280,7 @@ private:
 	// Time of last identity verification indexed by InetAddress.rateGateHash() -- used in IncomingPacket::_doHELLO() via rateGateIdentityVerification()
 	uint64_t _lastIdentityVerification[16384];
 
-	std::vector< std::pair< uint64_t, SharedPtr<Network> > > _networks;
+	Hashtable< uint64_t,SharedPtr<Network> > _networks;
 	Mutex _networks_m;
 
 	std::vector<InetAddress> _directPaths;
