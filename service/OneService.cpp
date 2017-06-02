@@ -85,16 +85,6 @@
 
 using json = nlohmann::json;
 
-/**
- * Uncomment to enable UDP breakage switch
- *
- * If this is defined, the presence of a file called /tmp/ZT_BREAK_UDP
- * will cause direct UDP TX/RX to stop working. This can be used to
- * test TCP tunneling fallback and other robustness features. Deleting
- * this file will cause it to start working again.
- */
-//#define ZT_BREAK_UDP
-
 #include "../controller/EmbeddedNetworkController.hpp"
 
 #ifdef ZT_USE_TEST_TAP
@@ -105,11 +95,13 @@ namespace ZeroTier { typedef TestEthernetTap EthernetTap; }
 #else
 
 #ifdef ZT_SDK
-	#include "../controller/EmbeddedNetworkController.hpp"
-	#include "../node/Node.hpp"
-	// Use the virtual netcon endpoint instead of a tun/tap port driver
-	#include "../src/SocketTap.hpp"
-	namespace ZeroTier { typedef SocketTap EthernetTap; }
+
+#include "../controller/EmbeddedNetworkController.hpp"
+#include "../node/Node.hpp"
+// Use the virtual netcon endpoint instead of a tun/tap port driver
+#include "../src/SocketTap.hpp"
+namespace ZeroTier { typedef SocketTap EthernetTap; }
+
 #else
 
 #ifdef __APPLE__
@@ -1783,11 +1775,6 @@ public:
 		}
 #endif
 
-#ifdef ZT_BREAK_UDP
-		if (OSUtils::fileExists("/tmp/ZT_BREAK_UDP"))
-			return;
-#endif
-
 		if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(from)->ipScope() == InetAddress::IP_SCOPE_GLOBAL))
 			_lastDirectReceiveFromGlobal = OSUtils::now();
 
@@ -2270,11 +2257,6 @@ public:
 		} else {
 			return -1;
 		}
-
-#ifdef ZT_BREAK_UDP
-		if (OSUtils::fileExists("/tmp/ZT_BREAK_UDP"))
-			return 0; // silently break UDP
-#endif
 
 		return (_bindings[fromBindingNo].udpSend(_phy,*(reinterpret_cast<const InetAddress *>(localAddr)),*(reinterpret_cast<const InetAddress *>(addr)),data,len,ttl)) ? 0 : -1;
 	}
