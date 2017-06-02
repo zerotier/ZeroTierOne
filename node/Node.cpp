@@ -146,8 +146,15 @@ ZT_ResultCode Node::processStateUpdate(
 	ZT_ResultCode r = ZT_RESULT_OK_IGNORED;
 	switch(type) {
 
-		case ZT_STATE_OBJECT_PEER: {
-		}	break;
+		case ZT_STATE_OBJECT_PEER:
+			if (len) {
+			}
+			break;
+
+		case ZT_STATE_OBJECT_PEER_IDENTITY:
+			if (len) {
+			}
+			break;
 
 		case ZT_STATE_OBJECT_NETWORK_CONFIG:
 			if (len <= (ZT_NETWORKCONFIG_DICT_CAPACITY - 1)) {

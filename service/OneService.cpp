@@ -140,9 +140,6 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 // How often to check for new multicast subscriptions on a tap device
 #define ZT_TAP_CHECK_MULTICAST_INTERVAL 5000
 
-// Path under ZT1 home for controller database if controller is enabled
-#define ZT_CONTROLLER_DB_PATH "controller.d"
-
 // TCP fallback relay (run by ZeroTier, Inc. -- this will eventually go away)
 #define ZT_TCP_FALLBACK_RELAY "204.80.128.1/443"
 
@@ -301,18 +298,12 @@ class OneServiceImpl;
 
 static int SnodeVirtualNetworkConfigFunction(ZT_Node *node,void *uptr,void *tptr,uint64_t nwid,void **nuptr,enum ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nwconf);
 static void SnodeEventCallback(ZT_Node *node,void *uptr,void *tptr,enum ZT_Event event,const void *metaData);
-static long SnodeDataStoreGetFunction(ZT_Node *node,void *uptr,void *tptr,const char *name,void *buf,unsigned long bufSize,unsigned long readIndex,unsigned long *totalSize);
-static int SnodeDataStorePutFunction(ZT_Node *node,void *uptr,void *tptr,const char *name,const void *data,unsigned long len,int secure);
+static void SnodeStatePutFunction(ZT_Node *node,void *uptr,void *tptr,enum ZT_StateObjectType type,uint64_t id,const void *data,int len);
+static int SnodeStateGetFunction(ZT_Node *node,void *uptr,void *tptr,enum ZT_StateObjectType type,uint64_t id,void *data,unsigned int maxlen);
 static int SnodeWirePacketSendFunction(ZT_Node *node,void *uptr,void *tptr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *addr,const void *data,unsigned int len,unsigned int ttl);
 static void SnodeVirtualNetworkFrameFunction(ZT_Node *node,void *uptr,void *tptr,uint64_t nwid,void **nuptr,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
 static int SnodePathCheckFunction(ZT_Node *node,void *uptr,void *tptr,uint64_t ztaddr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *remoteAddr);
 static int SnodePathLookupFunction(ZT_Node *node,void *uptr,void *tptr,uint64_t ztaddr,int family,struct sockaddr_storage *result);
-
-#ifdef ZT_ENABLE_CLUSTER
-static void SclusterSendFunction(void *uptr,unsigned int toMemberId,const void *data,unsigned int len);
-static int SclusterGeoIpFunction(void *uptr,const struct sockaddr_storage *addr,int *x,int *y,int *z);
-#endif
-
 static void StapFrameHandler(void *uptr,void *tptr,uint64_t nwid,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
 
 static int ShttpOnMessageBegin(http_parser *parser);
@@ -379,9 +370,6 @@ struct TcpConnection
 	Mutex writeBuf_m;
 };
 
-// Used to pseudo-randomize local source port picking
-static volatile unsigned int _udpPortPickerCounter = 0;
-
 class OneServiceImpl : public OneService
 {
 public:
@@ -390,12 +378,17 @@ public:
 	const std::string _homePath;
 	std::string _authToken;
 	std::string _controllerDbPath;
+	const std::string _iddbPath;
+	const std::string _networksPath;
+	const std::string _moonsPath;
+
 	EmbeddedNetworkController *_controller;
 	Phy<OneServiceImpl *> _phy;
 	Node *_node;
 	SoftwareUpdater *_updater;
 	bool _updateAutoApply;
 	unsigned int _primaryPort;
+	volatile unsigned int _udpPortPickerCounter;
 
 	// Local configuration and memo-ized static path definitions
 	json _localConfig;
@@ -491,13 +484,17 @@ public:
 
 	OneServiceImpl(const char *hp,unsigned int port) :
 		_homePath((hp) ? hp : ".")
-		,_controllerDbPath(_homePath + ZT_PATH_SEPARATOR_S ZT_CONTROLLER_DB_PATH)
+		,_controllerDbPath(_homePath + ZT_PATH_SEPARATOR_S "controller.d")
+		,_iddbPath(_homePath + ZT_PATH_SEPARATOR_S "iddb.d")
+		,_networksPath(_homePath + ZT_PATH_SEPARATOR_S "networks.d")
+		,_moonsPath(_homePath + ZT_PATH_SEPARATOR_S "moons.d")
 		,_controller((EmbeddedNetworkController *)0)
 		,_phy(this,false,true)
 		,_node((Node *)0)
 		,_updater((SoftwareUpdater *)0)
 		,_updateAutoApply(false)
 		,_primaryPort(port)
+		,_udpPortPickerCounter(0)
 		,_v4TcpControlSocket((PhySocket *)0)
 		,_v6TcpControlSocket((PhySocket *)0)
 		,_lastDirectReceiveFromGlobal(0)
@@ -568,15 +565,11 @@ public:
 				_authToken = _trimString(_authToken);
 			}
 
-			// Clean up any legacy files if present
-			OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S "peers.save").c_str());
-			OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S "world").c_str());
-
 			{
 				struct ZT_Node_Callbacks cb;
 				cb.version = 0;
-				cb.dataStoreGetFunction = SnodeDataStoreGetFunction;
-				cb.dataStorePutFunction = SnodeDataStorePutFunction;
+				cb.stateGetFunction = SnodeStateGetFunction;
+				cb.statePutFunction = SnodeStatePutFunction;
 				cb.wirePacketSendFunction = SnodeWirePacketSendFunction;
 				cb.virtualNetworkFrameFunction = SnodeVirtualNetworkFrameFunction;
 				cb.virtualNetworkConfigFunction = SnodeVirtualNetworkConfigFunction;
@@ -595,6 +588,7 @@ public:
 				// Old style "trustedpaths" flat file -- will eventually go away
 				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S "trustedpaths").c_str(),"r");
 				if (trustpaths) {
+					fprintf(stderr,"WARNING: 'trustedpaths' flat file format is deprecated in favor of path definitions in local.conf" ZT_EOL_S);
 					char buf[1024];
 					while ((fgets(buf,sizeof(buf),trustpaths))&&(trustedPathCount < ZT_MAX_TRUSTED_PATHS)) {
 						int fno = 0;
@@ -658,7 +652,7 @@ public:
 			}
 			applyLocalConfig();
 
-			// Bind TCP control socket
+			// Bind TCP socket
 			const int portTrials = (_primaryPort == 0) ? 256 : 1; // if port is 0, pick random
 			for(int k=0;k<portTrials;++k) {
 				if (_primaryPort == 0) {
@@ -671,7 +665,6 @@ public:
 					struct sockaddr_in in4;
 					memset(&in4,0,sizeof(in4));
 					in4.sin_family = AF_INET;
-					in4.sin_addr.s_addr = Utils::hton((uint32_t)((_allowManagementFrom.size() > 0) ? 0 : 0x7f000001)); // right now we just listen for TCP @127.0.0.1
 					in4.sin_port = Utils::hton((uint16_t)_primaryPort);
 					_v4TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
 
@@ -679,8 +672,6 @@ public:
 					memset((void *)&in6,0,sizeof(in6));
 					in6.sin6_family = AF_INET6;
 					in6.sin6_port = in4.sin_port;
-					if (_allowManagementFrom.size() == 0)
-						in6.sin6_addr.s6_addr[15] = 1; // IPv6 localhost == ::1
 					_v6TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
 
 					// We must bind one of IPv4 or IPv6 -- support either failing to support hosts that
@@ -706,7 +697,7 @@ public:
 				return _termReason;
 			}
 
-			// Write file containing primary port to be read by CLIs, etc.
+			// Save primary port to a file so CLIs and GUIs can learn it easily
 			char portstr[64];
 			Utils::snprintf(portstr,sizeof(portstr),"%u",_ports[0]);
 			OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S "zerotier-one.port").c_str(),std::string(portstr));
@@ -757,9 +748,11 @@ public:
 			for(int i=0;i<3;++i)
 				_portsBE[i] = Utils::hton((uint16_t)_ports[i]);
 
+			// Network controller is now enabled by default for desktop and server
 			_controller = new EmbeddedNetworkController(_node,_controllerDbPath.c_str());
 			_node->setNetconfMaster((void *)_controller);
 
+/*
 #ifdef ZT_ENABLE_CLUSTER
 			if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S "cluster").c_str())) {
 				_clusterDefinition = new ClusterDefinition(_node->address(),(_homePath + ZT_PATH_SEPARATOR_S "cluster").c_str());
@@ -808,7 +801,9 @@ public:
 				}
 			}
 #endif
+*/
 
+/*
 			{	// Load existing networks
 				std::vector<std::string> networksDotD(OSUtils::listDirectory((_homePath + ZT_PATH_SEPARATOR_S "networks.d").c_str()));
 				for(std::vector<std::string>::iterator f(networksDotD.begin());f!=networksDotD.end();++f) {
@@ -825,7 +820,9 @@ public:
 						_node->orbit((void *)0,Utils::hexStrToU64(f->substr(0,dot).c_str()),0);
 				}
 			}
+*/
 
+			// Main I/O loop
 			_nextBackgroundTaskDeadline = 0;
 			uint64_t clockShouldBe = OSUtils::now();
 			_lastRestart = clockShouldBe;
@@ -851,7 +848,7 @@ public:
 				// Clean iddb.d on start and every 24 hours
 				if ((now - lastCleanedIddb) > 86400000) {
 					lastCleanedIddb = now;
-					OSUtils::cleanDirectory((_homePath + ZT_PATH_SEPARATOR_S "iddb.d").c_str(),now - ZT_IDDB_CLEANUP_AGE);
+					OSUtils::cleanDirectory(_iddbPath.c_str(),now - ZT_IDDB_CLEANUP_AGE);
 				}
 
 				// Attempt to detect sleep/wake events by detecting delay overruns
@@ -1065,8 +1062,8 @@ public:
 			return false;
 		n->second.settings = settings;
 
-		char nlcpath[256];
-		Utils::snprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
+		char nlcpath[4096];
+		Utils::snprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_networksPath.c_str(),nwid);
 		FILE *out = fopen(nlcpath,"w");
 		if (out) {
 			fprintf(out,"allowManaged=%d\n",(int)n->second.settings.allowManaged);
@@ -1208,7 +1205,6 @@ public:
 					settings["portMappingEnabled"] = false; // not supported in build
 #endif
 #ifndef ZT_SDK
-
 					settings["softwareUpdate"] = OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT);
 					settings["softwareUpdateChannel"] = OSUtils::jsonString(settings["softwareUpdateChannel"],ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL);
 #endif
@@ -1216,6 +1212,7 @@ public:
 					res["planetWorldId"] = planet.id();
 					res["planetWorldTimestamp"] = planet.timestamp();
 
+/*
 #ifdef ZT_ENABLE_CLUSTER
 					json cj;
 					ZT_ClusterStatus cs;
@@ -1242,6 +1239,7 @@ public:
 #else
 					res["cluster"] = json();
 #endif
+*/
 
 					scode = 200;
 				} else if (ps[0] == "moon") {
@@ -1767,6 +1765,7 @@ public:
 
 	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
 	{
+/*
 #ifdef ZT_ENABLE_CLUSTER
 		if (sock == _clusterMessageSocket) {
 			_lastDirectReceiveFromGlobal = OSUtils::now();
@@ -1774,6 +1773,7 @@ public:
 			return;
 		}
 #endif
+*/
 
 		if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(from)->ipScope() == InetAddress::IP_SCOPE_GLOBAL))
 			_lastDirectReceiveFromGlobal = OSUtils::now();
@@ -1971,12 +1971,12 @@ public:
 			if (sent > 0) {
 				tc->lastActivity = OSUtils::now();
 				if ((unsigned long)sent >= (unsigned long)tc->writeBuf.length()) {
-					tc->writeBuf = "";
+					tc->writeBuf.clear();
 					_phy.setNotifyWritable(sock,false);
 					if (!tc->shouldKeepAlive)
 						_phy.close(sock); // will call close handler to delete from _tcpConnections
 				} else {
-					tc->writeBuf = tc->writeBuf.substr(sent);
+					tc->writeBuf.erase(tc->writeBuf.begin(),tc->writeBuf.begin() + sent);
 				}
 			}
 		} else {
@@ -2142,58 +2142,12 @@ public:
 		}
 	}
 
-	inline long nodeDataStoreGetFunction(const char *name,void *buf,unsigned long bufSize,unsigned long readIndex,unsigned long *totalSize)
+	inline void nodeStatePutFunction(enum ZT_StateObjectType type,uint64_t id,const void *data,int len)
 	{
-		std::string p(_dataStorePrepPath(name));
-		if (!p.length())
-			return -2;
-
-		FILE *f = fopen(p.c_str(),"rb");
-		if (!f)
-			return -1;
-		if (fseek(f,0,SEEK_END) != 0) {
-			fclose(f);
-			return -2;
-		}
-		long ts = ftell(f);
-		if (ts < 0) {
-			fclose(f);
-			return -2;
-		}
-		*totalSize = (unsigned long)ts;
-		if (fseek(f,(long)readIndex,SEEK_SET) != 0) {
-			fclose(f);
-			return -2;
-		}
-		long n = (long)fread(buf,1,bufSize,f);
-		fclose(f);
-		return n;
 	}
 
-	inline int nodeDataStorePutFunction(const char *name,const void *data,unsigned long len,int secure)
+	inline int nodeStateGetFunction(enum ZT_StateObjectType type,uint64_t id,void *data,unsigned int maxlen)
 	{
-		std::string p(_dataStorePrepPath(name));
-		if (!p.length())
-			return -2;
-
-		if (!data) {
-			OSUtils::rm(p.c_str());
-			return 0;
-		}
-
-		FILE *f = fopen(p.c_str(),"wb");
-		if (!f)
-			return -1;
-		if (fwrite(data,len,1,f) == 1) {
-			fclose(f);
-			if (secure)
-				OSUtils::lockDownFile(p.c_str(),false);
-			return 0;
-		} else {
-			fclose(f);
-			OSUtils::rm(p.c_str());
-			return -1;
-		}
 	}
 
 	inline int nodeWirePacketSendFunction(const struct sockaddr_storage *localAddr,const struct sockaddr_storage *addr,const void *data,unsigned int len,unsigned int ttl)
@@ -2457,23 +2411,6 @@ public:
 		return true;
 	}
 
-	std::string _dataStorePrepPath(const char *name) const
-	{
-		std::string p(_homePath);
-		p.push_back(ZT_PATH_SEPARATOR);
-		char lastc = (char)0;
-		for(const char *n=name;(*n);++n) {
-			if ((*n == '.')&&(lastc == '.'))
-				return std::string(); // don't allow ../../ stuff as a precaution
-			if (*n == '/') {
-				OSUtils::mkdir(p.c_str());
-				p.push_back(ZT_PATH_SEPARATOR);
-			} else p.push_back(*n);
-			lastc = *n;
-		}
-		return p;
-	}
-
 	bool _trialBind(unsigned int port)
 	{
 		struct sockaddr_in in4;
@@ -2514,10 +2451,10 @@ static int SnodeVirtualNetworkConfigFunction(ZT_Node *node,void *uptr,void *tptr
 { return reinterpret_cast<OneServiceImpl *>(uptr)->nodeVirtualNetworkConfigFunction(nwid,nuptr,op,nwconf); }
 static void SnodeEventCallback(ZT_Node *node,void *uptr,void *tptr,enum ZT_Event event,const void *metaData)
 { reinterpret_cast<OneServiceImpl *>(uptr)->nodeEventCallback(event,metaData); }
-static long SnodeDataStoreGetFunction(ZT_Node *node,void *uptr,void *tptr,const char *name,void *buf,unsigned long bufSize,unsigned long readIndex,unsigned long *totalSize)
-{ return reinterpret_cast<OneServiceImpl *>(uptr)->nodeDataStoreGetFunction(name,buf,bufSize,readIndex,totalSize); }
-static int SnodeDataStorePutFunction(ZT_Node *node,void *uptr,void *tptr,const char *name,const void *data,unsigned long len,int secure)
-{ return reinterpret_cast<OneServiceImpl *>(uptr)->nodeDataStorePutFunction(name,data,len,secure); }
+static void SnodeStatePutFunction(ZT_Node *node,void *uptr,void *tptr,enum ZT_StateObjectType type,uint64_t id,const void *data,int len)
+{ reinterpret_cast<OneServiceImpl *>(uptr)->nodeStatePutFunction(type,id,data,len); }
+static int SnodeStateGetFunction(ZT_Node *node,void *uptr,void *tptr,enum ZT_StateObjectType type,uint64_t id,void *data,unsigned int maxlen)
+{ return reinterpret_cast<OneServiceImpl *>(uptr)->nodeStateGetFunction(type,id,data,maxlen); }
 static int SnodeWirePacketSendFunction(ZT_Node *node,void *uptr,void *tptr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *addr,const void *data,unsigned int len,unsigned int ttl)
 { return reinterpret_cast<OneServiceImpl *>(uptr)->nodeWirePacketSendFunction(localAddr,addr,data,len,ttl); }
 static void SnodeVirtualNetworkFrameFunction(ZT_Node *node,void *uptr,void *tptr,uint64_t nwid,void **nuptr,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
@@ -2526,22 +2463,6 @@ static int SnodePathCheckFunction(ZT_Node *node,void *uptr,void *tptr,uint64_t z
 { return reinterpret_cast<OneServiceImpl *>(uptr)->nodePathCheckFunction(ztaddr,localAddr,remoteAddr); }
 static int SnodePathLookupFunction(ZT_Node *node,void *uptr,void *tptr,uint64_t ztaddr,int family,struct sockaddr_storage *result)
 { return reinterpret_cast<OneServiceImpl *>(uptr)->nodePathLookupFunction(ztaddr,family,result); }
-
-#ifdef ZT_ENABLE_CLUSTER
-static void SclusterSendFunction(void *uptr,unsigned int toMemberId,const void *data,unsigned int len)
-{
-	OneServiceImpl *const impl = reinterpret_cast<OneServiceImpl *>(uptr);
-	const ClusterDefinition::MemberDefinition &md = (*(impl->_clusterDefinition))[toMemberId];
-	if (md.clusterEndpoint)
-		impl->_phy.udpSend(impl->_clusterMessageSocket,reinterpret_cast<const struct sockaddr *>(&(md.clusterEndpoint)),data,len);
-}
-static int SclusterGeoIpFunction(void *uptr,const struct sockaddr_storage *addr,int *x,int *y,int *z)
-{
-	OneServiceImpl *const impl = reinterpret_cast<OneServiceImpl *>(uptr);
-	return (int)(impl->_clusterDefinition->geo().locate(*(reinterpret_cast<const InetAddress *>(addr)),*x,*y,*z));
-}
-#endif
-
 static void StapFrameHandler(void *uptr,void *tptr,uint64_t nwid,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 { reinterpret_cast<OneServiceImpl *>(uptr)->tapFrameHandler(nwid,from,to,etherType,vlanId,data,len); }
 
