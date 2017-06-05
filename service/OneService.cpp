@@ -1925,6 +1925,49 @@ public:
 		delete [] buf;
 	}
 
+	void writeStateObject(enum ZT_StateObjectType type,uint64_t id,const void *data,int len)
+	{
+		char p[4096];
+		bool secure = false;
+		switch(type) {
+			case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
+				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.public",_homePath.c_str());
+				break;
+			case ZT_STATE_OBJECT_IDENTITY_SECRET:
+				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.secret",_homePath.c_str());
+				secure = true;
+				break;
+			case ZT_STATE_OBJECT_PEER_IDENTITY:
+				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "iddb.d/%.10llx",_homePath.c_str(),(unsigned long long)id);
+				break;
+			case ZT_STATE_OBJECT_NETWORK_CONFIG:
+				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d/%.16llx.conf",_homePath.c_str(),(unsigned long long)id);
+				secure = true;
+				break;
+			case ZT_STATE_OBJECT_PLANET:
+				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
+				break;
+			case ZT_STATE_OBJECT_MOON:
+				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d/%.16llx.moon",_homePath.c_str(),(unsigned long long)id);
+				break;
+			default:
+				p[0] = (char)0;
+				break;
+		}
+		if (p[0]) {
+			FILE *f = fopen(p,"w");
+			if (f) {
+				if (fwrite(data,len,1,f) != 1)
+					fprintf(stderr,"WARNING: unable to write to file: %s (I/O error)" ZT_EOL_S,p);
+				fclose(f);
+				if (secure)
+					OSUtils::lockDownFile(p,false);
+			} else {
+				fprintf(stderr,"WARNING: unable to write to file: %s (unable to open)" ZT_EOL_S,p);
+			}
+		}
+	}
+
 	// =========================================================================
 	// Handlers for Node and Phy<> callbacks
 	// =========================================================================
@@ -2229,8 +2272,10 @@ public:
 											((uint64_t)data[32] << 8) |
 											(uint64_t)data[33]
 										);
-										if (_node->processStateUpdate((void *)0,(ZT_StateObjectType)data[25],objId,data + 34,(unsigned int)(mlen - 34)) == ZT_RESULT_OK)
+										if (_node->processStateUpdate((void *)0,(ZT_StateObjectType)data[25],objId,data + 34,(unsigned int)(mlen - 34)) == ZT_RESULT_OK) {
+											writeStateObject((ZT_StateObjectType)data[25],objId,data + 34,(unsigned int)(mlen - 34));
 											replicateStateObjectToCluster((ZT_StateObjectType)data[25],objId,data + 34,(unsigned int)(mlen - 34),tc->clusterMemberId);
+										}
 									}
 									break;
 
@@ -2453,29 +2498,41 @@ public:
 
 	inline void nodeStatePutFunction(enum ZT_StateObjectType type,uint64_t id,const void *data,int len)
 	{
+		writeStateObject(type,id,data,len);
+		replicateStateObjectToCluster(type,id,data,len,0);
 	}
 
 	inline int nodeStateGetFunction(enum ZT_StateObjectType type,uint64_t id,void *data,unsigned int maxlen)
 	{
 		char p[4096];
-		FILE *f = (FILE *)0;
 		switch(type) {
 			case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
+				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.public",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_IDENTITY_SECRET:
+				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.secret",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_PEER_IDENTITY:
+				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "iddb.d/%.10llx",_homePath.c_str(),(unsigned long long)id);
 				break;
 			case ZT_STATE_OBJECT_NETWORK_CONFIG:
+				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d/%.16llx.conf",_homePath.c_str(),(unsigned long long)id);
 				break;
 			case ZT_STATE_OBJECT_PLANET:
+				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_MOON:
+				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d/%.16llx.moon",_homePath.c_str(),(unsigned long long)id);
 				break;
 			default:
 				return -1;
 		}
+		FILE *f = fopen(p,"r");
 		if (f) {
+			int n = (int)fread(data,1,maxlen,f);
+			fclose(f);
+			if (n >= 0)
+				return n;
 		}
 		return -1;
 	}
