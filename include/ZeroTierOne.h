@@ -297,7 +297,7 @@ enum ZT_ResultCode
  * @param x Result code
  * @return True if result code indicates a fatal error
  */
-#define ZT_ResultCode_isFatal(x) ((((int)(x)) > 0)&&(((int)(x)) < 1000))
+#define ZT_ResultCode_isFatal(x) ((((int)(x)) >= 100)&&(((int)(x)) < 1000))
 
 /**
  * Status codes sent to status update callback when things happen
@@ -393,6 +393,13 @@ enum ZT_Event
 
 /**
  * User message used with ZT_EVENT_USER_MESSAGE
+ *
+ * These are direct VL1 P2P messages for application use. Encryption and
+ * authentication in the ZeroTier protocol will guarantee the origin
+ * address and message content, but you are responsible for any other
+ * levels of authentication or access control that are required. Any node
+ * in the world can send you a user message! (Unless your network is air
+ * gapped.)
  */
 typedef struct
 {
@@ -719,24 +726,6 @@ typedef struct
 		} fwd;
 	} v;
 } ZT_VirtualNetworkRule;
-
-typedef struct
-{
-	/**
-	 * 128-bit ID (GUID) of this capability
-	 */
-	uint64_t id[2];
-
-	/**
-	 * Expiration time (measured vs. network config timestamp issued by controller)
-	 */
-	uint64_t expiration;
-
-	struct {
-		uint64_t from;
-		uint64_t to;
-	} custody[ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH];
-} ZT_VirtualNetworkCapability;
 
 /**
  * A route to be pushed on a virtual network
@@ -1102,7 +1091,7 @@ enum ZT_StateObjectType
 	ZT_STATE_OBJECT_NULL = 0,
 
 	/**
-	 * identity.public
+	 * Public address and public key
 	 *
 	 * Object ID: this node's address if known, or 0 if unknown (first query)
 	 * Canonical path: <HOME>/identity.public
@@ -1111,10 +1100,10 @@ enum ZT_StateObjectType
 	ZT_STATE_OBJECT_IDENTITY_PUBLIC = 1,
 
 	/**
-	 * identity.secret
+	 * Full identity with secret key
 	 *
 	 * Object ID: this node's address if known, or 0 if unknown (first query)
-	 * Canonical path: <HOME>/identity.public
+	 * Canonical path: <HOME>/identity.secret
    * Persistence: required, should be stored with restricted permissions e.g. mode 0600 on *nix
 	 */
 	ZT_STATE_OBJECT_IDENTITY_SECRET = 2,
@@ -1280,7 +1269,7 @@ typedef int (*ZT_StateGetFunction)(
 	unsigned int);                         /* Length of data buffer in bytes */
 
 /**
- * Function to send a ZeroTier packet out over the wire
+ * Function to send a ZeroTier packet out over the physical wire (L2/L3)
  *
  * Parameters:
  *  (1) Node
@@ -1335,9 +1324,6 @@ typedef int (*ZT_WirePacketSendFunction)(
  * all configured ZeroTier interfaces and check to ensure that the supplied
  * addresses will not result in ZeroTier traffic being sent over a ZeroTier
  * interface (recursion).
- *
- * Obviously this is not required in configurations where this can't happen,
- * such as network containers or embedded.
  */
 typedef int (*ZT_PathCheckFunction)(
 	ZT_Node *,                        /* Node */
@@ -1426,13 +1412,12 @@ struct ZT_Node_Callbacks
 };
 
 /**
- * Create a new ZeroTier One node
+ * Create a new ZeroTier node
  *
- * Note that this can take a few seconds the first time it's called, as it
- * will generate an identity.
- *
- * TODO: should consolidate function pointers into versioned structure for
- * better API stability.
+ * This will attempt to load its identity via the state get function in the
+ * callback struct. If that fails it will generate a new identity and store
+ * it. Identity generation can take anywhere from a few hundred milliseconds
+ * to a few seconds depending on your CPU speed.
  *
  * @param node Result: pointer is set to new node instance on success
  * @param uptr User pointer to pass to functions/callbacks

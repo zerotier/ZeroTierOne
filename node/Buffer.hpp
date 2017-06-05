@@ -263,6 +263,19 @@ public:
 	}
 
 	/**
+	 * Append secure random bytes
+	 *
+	 * @param n Number of random bytes to append
+	 */
+	inline void appendRandom(unsigned int n)
+	{
+		if (unlikely((_l + n) > C))
+			throw std::out_of_range("Buffer: append beyond capacity");
+		Utils::getSecureRandom(_b + _l,n);
+		_l += n;
+	}
+
+	/**
 	 * Append a C-array of bytes
 	 *
 	 * @param b Data

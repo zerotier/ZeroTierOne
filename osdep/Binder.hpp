@@ -446,6 +446,16 @@ public:
 		return aa;
 	}
 
+	/**
+	 * @param aa Vector to append local interface addresses to
+	 */
+	inline void allBoundLocalInterfaceAddresses(std::vector<InetAddress> &aa)
+	{
+		Mutex::Lock _l(_lock);
+		for(std::vector<_Binding>::const_iterator i(_bindings.begin());i!=_bindings.end();++i)
+			aa.push_back(i->address);
+	}
+
 private:
 	std::vector<_Binding> _bindings;
 	Mutex _lock;

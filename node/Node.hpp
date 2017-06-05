@@ -214,6 +214,8 @@ public:
 	World planet() const;
 	std::vector<World> moons() const;
 
+	inline const Identity &identity() const { return _RR.identity; }
+
 	/**
 	 * Register that we are expecting a reply to a packet ID
 	 *

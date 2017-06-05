@@ -701,7 +701,26 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 		this->setConfiguration(tPtr,*nconf,false);
 		_lastConfigUpdate = 0; // still want to re-request since it's likely outdated
 	} else {
-		RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,nwid,"\n",1);
+		bool got = false;
+		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dict = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+		try {
+			int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,nwid,dict->unsafeData(),ZT_NETWORKCONFIG_DICT_CAPACITY - 1);
+			if (n > 1) {
+				NetworkConfig *nconf = new NetworkConfig();
+				try {
+					if (nconf->fromDictionary(*dict)) {
+						this->setConfiguration(tPtr,*nconf,false);
+						_lastConfigUpdate = 0; // still want to re-request an update since it's likely outdated
+						got = true;
+					}
+				} catch ( ... ) {}
+				delete nconf;
+			}
+		} catch ( ... ) {}
+		delete dict;
+
+		if (!got)
+			RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,nwid,"\n",1);
 	}
 
 	if (!_portInitialized) {

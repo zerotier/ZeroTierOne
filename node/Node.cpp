@@ -161,8 +161,10 @@ ZT_ResultCode Node::processStateUpdate(
 				if (len < 2) {
 					Mutex::Lock _l(_networks_m);
 					SharedPtr<Network> &nw = _networks[id];
-					if (!nw)
+					if (!nw) {
 						nw = SharedPtr<Network>(new Network(RR,tptr,id,(void *)0,(const NetworkConfig *)0));
+						r = ZT_RESULT_OK;
+					}
 				} else {
 					Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dict = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>(reinterpret_cast<const char *>(data),len);
 					try {
