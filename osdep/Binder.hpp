@@ -57,6 +57,7 @@
 #include <algorithm>
 #include <utility>
 #include <map>
+#include <set>
 
 #include "../node/NonCopyable.hpp"
 #include "../node/InetAddress.hpp"
@@ -469,6 +470,20 @@ Binder_send_packet:
 		for(std::vector<_Binding>::const_iterator b(_bindings.begin());b!=_bindings.end();++b)
 			aa.push_back(b->address);
 		return aa;
+	}
+
+	/**
+	 * @param addr Address to check
+	 * @return True if this is a bound local interface address
+	 */
+	inline bool isBoundLocalInterfaceAddress(const InetAddress &addr) const
+	{
+		Mutex::Lock _l(_lock);
+		for(std::vector<_Binding>::const_iterator b(_bindings.begin());b!=_bindings.end();++b) {
+			if (b->address == addr)
+				return true;
+		}
+		return false;
 	}
 
 private:
