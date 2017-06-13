@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2017  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifdef ZT_ENABLE_CLUSTER
@@ -249,7 +257,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 		memcpy(keytmp,_key,32);
 		for(int i=0;i<8;++i)
 			keytmp[i] ^= reinterpret_cast<const char *>(msg)[i];
-		Salsa20 s20(keytmp,256,reinterpret_cast<const char *>(msg) + 8);
+		Salsa20 s20(keytmp,reinterpret_cast<const char *>(msg) + 8);
 		Utils::burn(keytmp,sizeof(keytmp));
 
 		// One-time-use Poly1305 key from first 32 bytes of Salsa20 keystream (as per DJB/NaCl "standard")
@@ -948,7 +956,7 @@ void Cluster::_flush(uint16_t memberId)
 		memcpy(keytmp,m.key,32);
 		for(int i=0;i<8;++i)
 			keytmp[i] ^= m.q[i];
-		Salsa20 s20(keytmp,256,m.q.field(8,8));
+		Salsa20 s20(keytmp,m.q.field(8,8));
 		Utils::burn(keytmp,sizeof(keytmp));
 
 		// One-time-use Poly1305 key from first 32 bytes of Salsa20 keystream (as per DJB/NaCl "standard")

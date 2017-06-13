@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2017  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #include <stdio.h>
@@ -25,6 +33,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <thread>
 
 #include "node/Constants.hpp"
 #include "node/Hashtable.hpp"
@@ -48,7 +57,6 @@
 
 #include "osdep/OSUtils.hpp"
 #include "osdep/Phy.hpp"
-#include "osdep/Http.hpp"
 #include "osdep/PortMapper.hpp"
 #include "osdep/Thread.hpp"
 
@@ -143,8 +151,8 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 
 static int testCrypto()
 {
-	unsigned char buf1[16384];
-	unsigned char buf2[sizeof(buf1)],buf3[sizeof(buf1)];
+	static unsigned char buf1[16384];
+	static unsigned char buf2[sizeof(buf1)],buf3[sizeof(buf1)];
 
 	for(int i=0;i<3;++i) {
 		Utils::getSecureRandom(buf1,64);
@@ -1018,51 +1026,6 @@ static int testPhy()
 	return 0;
 }
 
-/*
-static int testHttp()
-{
-	std::map<std::string,std::string> requestHeaders,responseHeaders;
-	std::string responseBody;
-
-	InetAddress downloadZerotierDotCom;
-	std::vector<InetAddress> rr(OSUtils::resolve("download.zerotier.com"));
-	if (rr.empty()) {
-		std::cout << "[http] Resolve of download.zerotier.com failed, skipping." << std::endl;
-		return 0;
-	} else {
-		for(std::vector<InetAddress>::iterator r(rr.begin());r!=rr.end();++r) {
-			std::cout << "[http] download.zerotier.com: " << r->toString() << std::endl;
-			if (r->isV4())
-				downloadZerotierDotCom = *r;
-		}
-	}
-	downloadZerotierDotCom.setPort(80);
-
-	std::cout << "[http] GET http://download.zerotier.com/dev/1k @" << downloadZerotierDotCom.toString() << " ... "; std::cout.flush();
-	requestHeaders["Host"] = "download.zerotier.com";
-	unsigned int sc = Http::GET(1024 * 1024 * 16,60000,reinterpret_cast<const struct sockaddr *>(&downloadZerotierDotCom),"/dev/1k",requestHeaders,responseHeaders,responseBody);
-	std::cout << sc << " " << responseBody.length() << " bytes ";
-	if (sc == 0)
-		std::cout << "ERROR: " << responseBody << std::endl;
-	else std::cout << "DONE" << std::endl;
-
-	std::cout << "[http] GET http://download.zerotier.com/dev/4m @" << downloadZerotierDotCom.toString() << " ... "; std::cout.flush();
-	requestHeaders["Host"] = "download.zerotier.com";
-	sc = Http::GET(1024 * 1024 * 16,60000,reinterpret_cast<const struct sockaddr *>(&downloadZerotierDotCom),"/dev/4m",requestHeaders,responseHeaders,responseBody);
-	std::cout << sc << " " << responseBody.length() << " bytes ";
-	if (sc == 0)
-		std::cout << "ERROR: " << responseBody << std::endl;
-	else std::cout << "DONE" << std::endl;
-
-	downloadZerotierDotCom = InetAddress("1.0.0.1/1234");
-	std::cout << "[http] GET @" << downloadZerotierDotCom.toString() << " ... "; std::cout.flush();
-	sc = Http::GET(1024 * 1024 * 16,2500,reinterpret_cast<const struct sockaddr *>(&downloadZerotierDotCom),"/dev/4m",requestHeaders,responseHeaders,responseBody);
-	std::cout << sc << " (should be 0, time out)" << std::endl;
-
-	return 0;
-}
-*/
-
 #ifdef __WINDOWS__
 int __cdecl _tmain(int argc, _TCHAR* argv[])
 #else
@@ -1114,6 +1077,8 @@ int main(int argc,char **argv)
 	*/
 
 	std::cout << "[info] sizeof(void *) == " << sizeof(void *) << std::endl;
+	std::cout << "[info] OSUtils::now() == " << OSUtils::now() << std::endl;
+	std::cout << "[info] hardware concurrency == " << std::thread::hardware_concurrency() << std::endl;
 	std::cout << "[info] sizeof(NetworkConfig) == " << sizeof(ZeroTier::NetworkConfig) << std::endl;
 
 	srand((unsigned int)time(0));
@@ -1125,7 +1090,6 @@ int main(int argc,char **argv)
 	r |= testIdentity();
 	r |= testCertificate();
 	r |= testPhy();
-	//r |= testHttp();
 	//*/
 
 	if (r)

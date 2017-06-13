@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2017  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #include <stdio.h>
@@ -279,6 +287,30 @@ InetAddress InetAddress::network() const
 	return r;
 }
 
+#ifdef ZT_SDK
+	bool InetAddress::isEqualPrefix(const InetAddress &addr) const
+	{
+		if (addr.ss_family == ss_family) {
+			switch(ss_family) {
+				case AF_INET6: {
+					const InetAddress mask(netmask());
+					InetAddress addr_mask(addr.netmask());
+					const uint8_t *n = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr_mask)->sin6_addr.s6_addr);
+					const uint8_t *m = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&mask)->sin6_addr.s6_addr);
+					const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr)->sin6_addr.s6_addr);
+					const uint8_t *b = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+					for(unsigned int i=0;i<16;++i) {
+						if ((a[i] & m[i]) != (b[i] & n[i]))
+							return false;
+					}
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+#endif
+	
 bool InetAddress::containsAddress(const InetAddress &addr) const
 {
 	if (addr.ss_family == ss_family) {

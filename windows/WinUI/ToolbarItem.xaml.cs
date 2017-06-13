@@ -111,7 +111,19 @@ namespace WinUI
 
         private void ToolbarItem_NodeIDClicked(object sender, System.Windows.RoutedEventArgs e)
         {
-            Clipboard.SetText(nodeId);
+            try
+            {
+		            Clipboard.SetDataObject(nodeId);
+            }
+            catch (ArgumentNullException)
+            {
+                // tried to copy a null nodeId
+                Console.WriteLine("ArgumentNullException");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
         }
 
         private void ToolbarItem_ShowNetworksClicked(object sender, System.Windows.RoutedEventArgs e)
@@ -269,11 +281,11 @@ namespace WinUI
                     ZeroTierNetwork network = item.DataContext as ZeroTierNetwork;
                     if (item.IsChecked)
                     {
-                        APIHandler.Instance.LeaveNetwork(network.NetworkId);
+                        APIHandler.Instance.LeaveNetwork(this.Dispatcher, network.NetworkId);
                     }
                     else
                     {
-                        APIHandler.Instance.JoinNetwork(network.NetworkId, network.AllowManaged, network.AllowGlobal, network.AllowDefault);
+                        APIHandler.Instance.JoinNetwork(this.Dispatcher, network.NetworkId, network.AllowManaged, network.AllowGlobal, network.AllowDefault);
                     }
                 }   
             }

@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2017  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #include <stdio.h>
@@ -89,14 +97,20 @@ using json = nlohmann::json;
 
 #include "../controller/EmbeddedNetworkController.hpp"
 
-// Include the right tap device driver for this platform -- add new platforms here
-#ifdef ZT_SERVICE_NETCON
+#ifdef ZT_USE_TEST_TAP
 
-// In network containers builds, use the virtual netcon endpoint instead of a tun/tap port driver
-#include "../netcon/NetconEthernetTap.hpp"
-namespace ZeroTier { typedef NetconEthernetTap EthernetTap; }
+#include "../osdep/TestEthernetTap.hpp"
+namespace ZeroTier { typedef TestEthernetTap EthernetTap; }
 
-#else // not ZT_SERVICE_NETCON so pick a tap driver
+#else
+
+#ifdef ZT_SDK
+	#include "../controller/EmbeddedNetworkController.hpp"
+	#include "../node/Node.hpp"
+	// Use the virtual netcon endpoint instead of a tun/tap port driver
+	#include "../src/SocketTap.hpp"
+	namespace ZeroTier { typedef SocketTap EthernetTap; }
+#else
 
 #ifdef __APPLE__
 #include "../osdep/OSXEthernetTap.hpp"
@@ -121,9 +135,11 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 
 #endif // ZT_SERVICE_NETCON
 
+#endif // ZT_USE_TEST_TAP
+
 // Sanity limits for HTTP
 #define ZT_MAX_HTTP_MESSAGE_SIZE (1024 * 1024 * 64)
-#define ZT_MAX_HTTP_CONNECTIONS 64
+#define ZT_MAX_HTTP_CONNECTIONS 65536
 
 // Interface metric for ZeroTier taps -- this ensures that if we are on WiFi and also
 // bridged via ZeroTier to the same LAN traffic will (if the OS is sane) prefer WiFi.
@@ -974,6 +990,62 @@ public:
 		else return std::string();
 	}
 
+#ifdef ZT_SDK
+    virtual void leave(const char *hp)
+    {
+        _node->leave(Utils::hexStrToU64(hp),NULL,NULL);
+    }
+
+	virtual void join(const char *hp)
+	{
+		_node->join(Utils::hexStrToU64(hp),NULL,NULL);
+	}
+
+    virtual std::string givenHomePath()
+    {
+    	return _homePath;
+    }
+
+    virtual EthernetTap * getTap(uint64_t nwid)
+    {
+		Mutex::Lock _l(_nets_m);
+		std::map<uint64_t,NetworkState>::const_iterator n(_nets.find(nwid));
+		if (n == _nets.end())
+			return NULL;
+		return n->second.tap;
+    }
+
+    virtual EthernetTap *getTap(InetAddress &addr)
+    {
+    	Mutex::Lock _l(_nets_m);
+		std::map<uint64_t,NetworkState>::iterator it;
+	    for(it = _nets.begin(); it != _nets.end(); it++) {
+			if(it->second.tap) {
+				for(int j=0; j<it->second.tap->_ips.size(); j++) {
+					if(it->second.tap->_ips[j].isEqualPrefix(addr) || it->second.tap->_ips[j].ipsEqual(addr)) {
+						return it->second.tap;
+					}
+				}
+			}
+	    }
+	    return NULL;
+    }
+
+	virtual Node * getNode()
+	{
+		return _node;
+	}
+
+	virtual void removeNets()
+	{
+		Mutex::Lock _l(_nets_m);
+		std::map<uint64_t,NetworkState>::iterator i;
+	    for(i = _nets.begin(); i != _nets.end(); i++) {
+	        delete i->second.tap;
+	    }
+	}
+#endif // ZT_SDK
+
 	virtual void terminate()
 	{
 		_run_m.lock();
@@ -1143,9 +1215,11 @@ public:
 #else
 					settings["portMappingEnabled"] = false; // not supported in build
 #endif
+#ifndef ZT_SDK
+
 					settings["softwareUpdate"] = OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT);
 					settings["softwareUpdateChannel"] = OSUtils::jsonString(settings["softwareUpdateChannel"],ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL);
-
+#endif
 					const World planet(_node->planet());
 					res["planetWorldId"] = planet.id();
 					res["planetWorldTimestamp"] = planet.timestamp();
@@ -1493,6 +1567,7 @@ public:
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 
+#ifndef ZT_SDK
 		const std::string up(OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT));
 		const bool udist = OSUtils::jsonBool(settings["softwareUpdateDist"],false);
 		if (((up == "apply")||(up == "download"))||(udist)) {
@@ -1506,6 +1581,7 @@ public:
 			_updater = (SoftwareUpdater *)0;
 			_updateAutoApply = false;
 		}
+#endif
 
 		json &ignoreIfs = settings["interfacePrefixBlacklist"];
 		if (ignoreIfs.is_array()) {
@@ -2006,16 +2082,17 @@ public:
 				memcpy(&(n.config),nwc,sizeof(ZT_VirtualNetworkConfig));
 				if (n.tap) { // sanity check
 #ifdef __WINDOWS__
-                    // wait for up to 5 seconds for the WindowsEthernetTap to actually be initialized
-                    // 
-                    // without WindowsEthernetTap::isInitialized() returning true, the won't actually
-                    // be online yet and setting managed routes on it will fail.
-                    const int MAX_SLEEP_COUNT = 500;
-                    for (int i = 0; !n.tap->isInitialized() && i < MAX_SLEEP_COUNT; i++) {
-                        Sleep(10);
-                    }
+					// wait for up to 5 seconds for the WindowsEthernetTap to actually be initialized
+					// 
+					// without WindowsEthernetTap::isInitialized() returning true, the won't actually
+					// be online yet and setting managed routes on it will fail.
+					const int MAX_SLEEP_COUNT = 500;
+					for (int i = 0; !n.tap->isInitialized() && i < MAX_SLEEP_COUNT; i++) {
+						Sleep(10);
+					}
 #endif
 					syncManagedStuff(n,true,true);
+					n.tap->setMtu(nwc->mtu);
 				} else {
 					_nets.erase(nwid);
 					return -999; // tap init failed

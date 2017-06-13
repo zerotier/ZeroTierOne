@@ -1,7 +1,6 @@
 /* Schema for ZeroTier root watcher log database */
 
-/* If you cluster this DB using any PG clustering scheme that uses logs, you must remove UNLOGGED here! */
-CREATE UNLOGGED TABLE "Peer"
+CREATE TABLE "Peer"
 (
 	"ztAddress" BIGINT NOT NULL,
 	"timestamp" BIGINT NOT NULL,

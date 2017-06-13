@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2017  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #include <stdint.h>
@@ -330,9 +338,6 @@ OSXEthernetTap::OSXEthernetTap(
 
 	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",nwid);
 
-	if (mtu > 2800)
-		throw std::runtime_error("max tap MTU is 2800");
-
 	Mutex::Lock _gl(globalTapCreateLock);
 
 	if (::stat("/dev/zt0",&stattmp)) {
@@ -566,7 +571,7 @@ std::vector<InetAddress> OSXEthernetTap::ips() const
 
 void OSXEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	char putBuf[4096];
+	char putBuf[ZT_MAX_MTU + 64];
 	if ((_fd > 0)&&(len <= _mtu)&&(_enabled)) {
 		to.copyTo(putBuf,6);
 		from.copyTo(putBuf + 6,6);
@@ -624,13 +629,30 @@ void OSXEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std:
 	_multicastGroups.swap(newGroups);
 }
 
+void OSXEthernetTap::setMtu(unsigned int mtu)
+{
+	if (mtu != _mtu) {
+		_mtu = mtu;
+		long cpid = (long)vfork();
+		if (cpid == 0) {
+			char tmp[64];
+			Utils::snprintf(tmp,sizeof(tmp),"%u",mtu);
+			execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"mtu",tmp,(const char *)0);
+			_exit(-1);
+		} else if (cpid > 0) {
+			int exitcode = -1;
+			waitpid(cpid,&exitcode,0);
+		}
+	}
+}
+
 void OSXEthernetTap::threadMain()
 	throw()
 {
 	fd_set readfds,nullfds;
 	MAC to,from;
 	int n,nfds,r;
-	char getBuf[8194];
+	char getBuf[ZT_MAX_MTU + 64];
 
 	Thread::sleep(500);
 

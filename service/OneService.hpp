@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2017  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifndef ZT_ONESERVICE_HPP
@@ -23,6 +31,13 @@
 #include <vector>
 
 #include "../node/InetAddress.hpp"
+
+#ifdef ZT_SDK
+ 	#include "../node/Node.hpp"
+	// Use the virtual netcon endpoint instead of a tun/tap port driver
+	#include "../src/SocketTap.hpp"
+	namespace ZeroTier { typedef SocketTap EthernetTap; }
+#endif
 
 namespace ZeroTier {
 
@@ -131,6 +146,43 @@ public:
 	 */
 	virtual std::string portDeviceName(uint64_t nwid) const = 0;
 
+#ifdef ZT_SDK
+	/**
+     * Leaves a network
+     */
+    virtual void leave(const char *hp) = 0;
+
+	/**
+	 * Joins a network
+	 */
+	virtual void join(const char *hp) = 0;
+
+    /**
+     * Returns the homePath given by the client application
+     */
+    virtual std::string givenHomePath() = 0;
+
+	/*
+	 * Returns a SocketTap that is associated with the given nwid
+	 */
+    virtual EthernetTap * getTap(uint64_t nwid) = 0;
+
+	/*
+	 * Returns a SocketTap that cant function as a route to the specified host
+	 */
+    virtual EthernetTap * getTap(InetAddress &addr) = 0;
+
+	/*
+	 * Returns a pointer to the Node
+	 */
+	virtual Node * getNode() = 0;
+
+	/*
+	 * Delete all SocketTap interfaces
+	 */
+	virtual void removeNets() = 0;
+#endif
+	
 	/**
 	 * Terminate background service (can be called from other threads)
 	 */

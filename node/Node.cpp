@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2017  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #include <stdio.h>
@@ -319,6 +327,7 @@ ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 		} else {
 			if (uptr)
 				*uptr = *n->second->userPtr();
+			n->second->externalConfig(&ctmp);
 			n->second->destroy();
 			nUserPtr = n->second->userPtr();
 		}
@@ -490,65 +499,8 @@ int Node::sendUserMessage(void *tptr,uint64_t dest,uint64_t typeId,const void *d
 void Node::setNetconfMaster(void *networkControllerInstance)
 {
 	RR->localNetworkController = reinterpret_cast<NetworkController *>(networkControllerInstance);
-	RR->localNetworkController->init(RR->identity,this);
-}
-
-ZT_ResultCode Node::circuitTestBegin(void *tptr,ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *))
-{
-	if (test->hopCount > 0) {
-		try {
-			Packet outp(Address(),RR->identity.address(),Packet::VERB_CIRCUIT_TEST);
-			RR->identity.address().appendTo(outp);
-			outp.append((uint16_t)((test->reportAtEveryHop != 0) ? 0x03 : 0x02));
-			outp.append((uint64_t)test->timestamp);
-			outp.append((uint64_t)test->testId);
-			outp.append((uint16_t)0); // originator credential length, updated later
-			if (test->credentialNetworkId) {
-				outp.append((uint8_t)0x01);
-				outp.append((uint64_t)test->credentialNetworkId);
-				outp.setAt<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 23,(uint16_t)9);
-			}
-			outp.append((uint16_t)0);
-			C25519::Signature sig(RR->identity.sign(reinterpret_cast<const char *>(outp.data()) + ZT_PACKET_IDX_PAYLOAD,outp.size() - ZT_PACKET_IDX_PAYLOAD));
-			outp.append((uint16_t)sig.size());
-			outp.append(sig.data,(unsigned int)sig.size());
-			outp.append((uint16_t)0); // originator doesn't need an extra credential, since it's the originator
-			for(unsigned int h=1;h<test->hopCount;++h) {
-				outp.append((uint8_t)0);
-				outp.append((uint8_t)(test->hops[h].breadth & 0xff));
-				for(unsigned int a=0;a<test->hops[h].breadth;++a)
-					Address(test->hops[h].addresses[a]).appendTo(outp);
-			}
-
-			for(unsigned int a=0;a<test->hops[0].breadth;++a) {
-				outp.newInitializationVector();
-				outp.setDestination(Address(test->hops[0].addresses[a]));
-				RR->sw->send(tptr,outp,true);
-			}
-		} catch ( ... ) {
-			return ZT_RESULT_FATAL_ERROR_INTERNAL; // probably indicates FIFO too big for packet
-		}
-	}
-
-	{
-		test->_internalPtr = reinterpret_cast<void *>(reportCallback);
-		Mutex::Lock _l(_circuitTests_m);
-		if (std::find(_circuitTests.begin(),_circuitTests.end(),test) == _circuitTests.end())
-			_circuitTests.push_back(test);
-	}
-
-	return ZT_RESULT_OK;
-}
-
-void Node::circuitTestEnd(ZT_CircuitTest *test)
-{
-	Mutex::Lock _l(_circuitTests_m);
-	for(;;) {
-		std::vector< ZT_CircuitTest * >::iterator ct(std::find(_circuitTests.begin(),_circuitTests.end(),test));
-		if (ct == _circuitTests.end())
-			break;
-		else _circuitTests.erase(ct);
-	}
+	if (networkControllerInstance)
+		RR->localNetworkController->init(RR->identity,this);
 }
 
 ZT_ResultCode Node::clusterInit(
@@ -703,20 +655,6 @@ uint64_t Node::prng()
 	const uint64_t z = x ^ y ^ (x >> 17) ^ (y >> 26);
 	_prngState[1] = z;
 	return z + y;
-}
-
-void Node::postCircuitTestReport(const ZT_CircuitTestReport *report)
-{
-	std::vector< ZT_CircuitTest * > toNotify;
-	{
-		Mutex::Lock _l(_circuitTests_m);
-		for(std::vector< ZT_CircuitTest * >::iterator i(_circuitTests.begin());i!=_circuitTests.end();++i) {
-			if ((*i)->testId == report->testId)
-				toNotify.push_back(*i);
-		}
-	}
-	for(std::vector< ZT_CircuitTest * >::iterator i(toNotify.begin());i!=toNotify.end();++i)
-		(reinterpret_cast<void (*)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *)>((*i)->_internalPtr))(reinterpret_cast<ZT_Node *>(this),*i,report);
 }
 
 void Node::setTrustedPaths(const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count)
@@ -1057,22 +995,6 @@ void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkControllerInstance)
 {
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->setNetconfMaster(networkControllerInstance);
-	} catch ( ... ) {}
-}
-
-enum ZT_ResultCode ZT_Node_circuitTestBegin(ZT_Node *node,void *tptr,ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *))
-{
-	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->circuitTestBegin(tptr,test,reportCallback);
-	} catch ( ... ) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
-	}
-}
-
-void ZT_Node_circuitTestEnd(ZT_Node *node,ZT_CircuitTest *test)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->circuitTestEnd(test);
 	} catch ( ... ) {}
 }
 

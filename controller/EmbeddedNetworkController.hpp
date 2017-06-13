@@ -26,6 +26,7 @@
 #include <vector>
 #include <set>
 #include <list>
+#include <thread>
 
 #include "../node/Constants.hpp"
 
@@ -34,6 +35,7 @@
 #include "../node/Utils.hpp"
 #include "../node/Address.hpp"
 #include "../node/InetAddress.hpp"
+#include "../node/NonCopyable.hpp"
 
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Thread.hpp"
@@ -43,17 +45,11 @@
 
 #include "JSONDB.hpp"
 
-// Number of background threads to start -- not actually started until needed
-#define ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT 4
-
-// TTL for circuit tests
-#define ZT_EMBEDDEDNETWORKCONTROLLER_CIRCUIT_TEST_EXPIRATION 120000
-
 namespace ZeroTier {
 
 class Node;
 
-class EmbeddedNetworkController : public NetworkController
+class EmbeddedNetworkController : public NetworkController,NonCopyable
 {
 public:
 	/**
@@ -105,26 +101,27 @@ private:
 		InetAddress fromAddr;
 		Identity identity;
 		Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> metaData;
+		enum {
+			RQENTRY_TYPE_REQUEST = 0,
+			RQENTRY_TYPE_PING = 1
+		} type;
 	};
 
-	// Gathers a bunch of statistics about members of a network, IP assignments, etc. that we need in various places
-	struct _NetworkMemberInfo
-	{
-		_NetworkMemberInfo() : authorizedMemberCount(0),activeMemberCount(0),totalMemberCount(0),mostRecentDeauthTime(0) {}
-		std::set<Address> activeBridges;
-		std::set<InetAddress> allocatedIps;
-		unsigned long authorizedMemberCount;
-		unsigned long activeMemberCount;
-		unsigned long totalMemberCount;
-		uint64_t mostRecentDeauthTime;
-		uint64_t nmiTimestamp; // time this NMI structure was computed
-	};
-
-	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
 	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
-	void _getNetworkMemberInfo(uint64_t now,uint64_t nwid,_NetworkMemberInfo &nmi);
-	inline void _clearNetworkMemberInfoCache(const uint64_t nwid) { Mutex::Lock _l(_nmiCache_m); _nmiCache.erase(nwid); }
-	void _pushMemberUpdate(uint64_t now,uint64_t nwid,const nlohmann::json &member);
+
+	inline void _startThreads()
+	{
+		Mutex::Lock _l(_threads_m);
+		if (_threads.size() == 0) {
+			long hwc = (long)std::thread::hardware_concurrency();
+			if (hwc < 1)
+				hwc = 1;
+			else if (hwc > 16)
+				hwc = 16;
+			for(long i=0;i<hwc;++i)
+				_threads.push_back(Thread::start(this));
+		}
+	}
 
 	// These init objects with default and static/informational fields
 	inline void _initMember(nlohmann::json &member)
@@ -132,7 +129,6 @@ private:
 		if (!member.count("authorized")) member["authorized"] = false;
 		if (!member.count("authHistory")) member["authHistory"] = nlohmann::json::array();
  		if (!member.count("ipAssignments")) member["ipAssignments"] = nlohmann::json::array();
-		if (!member.count("recentLog")) member["recentLog"] = nlohmann::json::array();
 		if (!member.count("activeBridge")) member["activeBridge"] = false;
 		if (!member.count("tags")) member["tags"] = nlohmann::json::array();
 		if (!member.count("capabilities")) member["capabilities"] = nlohmann::json::array();
@@ -141,6 +137,11 @@ private:
 		if (!member.count("revision")) member["revision"] = 0ULL;
 		if (!member.count("lastDeauthorizedTime")) member["lastDeauthorizedTime"] = 0ULL;
 		if (!member.count("lastAuthorizedTime")) member["lastAuthorizedTime"] = 0ULL;
+		if (!member.count("vMajor")) member["vMajor"] = -1;
+		if (!member.count("vMinor")) member["vMinor"] = -1;
+		if (!member.count("vRev")) member["vRev"] = -1;
+		if (!member.count("vProto")) member["vProto"] = -1;
+		if (!member.count("physicalAddr")) member["physicalAddr"] = nlohmann::json();
 		member["objtype"] = "member";
 	}
 	inline void _initNetwork(nlohmann::json &network)
@@ -157,6 +158,7 @@ private:
 		if (!network.count("tags")) network["tags"] = nlohmann::json::array();
 		if (!network.count("routes")) network["routes"] = nlohmann::json::array();
 		if (!network.count("ipAssignmentPools")) network["ipAssignmentPools"] = nlohmann::json::array();
+		if (!network.count("mtu")) network["mtu"] = ZT_DEFAULT_MTU;
 		if (!network.count("rules")) {
 			// If unspecified, rules are set to allow anything and behave like a flat L2 segment
 			network["rules"] = {{
@@ -167,30 +169,45 @@ private:
 		}
 		network["objtype"] = "network";
 	}
-	inline void _addNetworkNonPersistedFields(nlohmann::json &network,uint64_t now,const _NetworkMemberInfo &nmi)
+	inline void _addNetworkNonPersistedFields(nlohmann::json &network,uint64_t now,const JSONDB::NetworkSummaryInfo &ns)
 	{
 		network["clock"] = now;
-		network["authorizedMemberCount"] = nmi.authorizedMemberCount;
-		network["activeMemberCount"] = nmi.activeMemberCount;
-		network["totalMemberCount"] = nmi.totalMemberCount;
+		network["authorizedMemberCount"] = ns.authorizedMemberCount;
+		network["activeMemberCount"] = ns.activeMemberCount;
+		network["totalMemberCount"] = ns.totalMemberCount;
 	}
-	inline void _addMemberNonPersistedFields(nlohmann::json &member,uint64_t now)
+	inline void _removeNetworkNonPersistedFields(nlohmann::json &network)
+	{
+		network.erase("clock");
+		network.erase("authorizedMemberCount");
+		network.erase("activeMemberCount");
+		network.erase("totalMemberCount");
+		// legacy fields
+		network.erase("lastModified");
+	}
+	inline void _addMemberNonPersistedFields(uint64_t nwid,uint64_t nodeId,nlohmann::json &member,uint64_t now)
 	{
 		member["clock"] = now;
+		Mutex::Lock _l(_memberStatus_m);
+		member["online"] = _memberStatus[_MemberStatusKey(nwid,nodeId)].online(now);
+	}
+	inline void _removeMemberNonPersistedFields(nlohmann::json &member)
+	{
+		member.erase("clock");
+		// legacy fields
+		member.erase("recentLog");
+		member.erase("lastModified");
+		member.erase("lastRequestMetaData");
 	}
 
 	const uint64_t _startTime;
 
+	volatile bool _running;
 	BlockingQueue<_RQEntry *> _queue;
-	Thread _threads[ZT_EMBEDDEDNETWORKCONTROLLER_BACKGROUND_THREAD_COUNT];
-	bool _threadsStarted;
+	std::vector<Thread> _threads;
 	Mutex _threads_m;
 
-	std::map<uint64_t,_NetworkMemberInfo> _nmiCache;
-	Mutex _nmiCache_m;
-
 	JSONDB _db;
-	Mutex _db_m;
 
 	Node *const _node;
 	std::string _path;
@@ -198,11 +215,33 @@ private:
 	NetworkController::Sender *_sender;
 	Identity _signingId;
 
-	std::list< ZT_CircuitTest > _tests;
-	Mutex _tests_m;
-
-	std::map< std::pair<uint64_t,uint64_t>,uint64_t > _lastRequestTime; // last request time by <address,networkId>
-	Mutex _lastRequestTime_m;
+	struct _MemberStatusKey
+	{
+		_MemberStatusKey() : networkId(0),nodeId(0) {}
+		_MemberStatusKey(const uint64_t nwid,const uint64_t nid) : networkId(nwid),nodeId(nid) {}
+		uint64_t networkId;
+		uint64_t nodeId;
+		inline bool operator==(const _MemberStatusKey &k) const { return ((k.networkId == networkId)&&(k.nodeId == nodeId)); }
+	};
+	struct _MemberStatus
+	{
+		_MemberStatus() : lastRequestTime(0),vMajor(-1),vMinor(-1),vRev(-1),vProto(-1) {}
+		uint64_t lastRequestTime;
+		int vMajor,vMinor,vRev,vProto;
+		Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> lastRequestMetaData;
+		Identity identity;
+		InetAddress physicalAddr; // last known physical address
+		inline bool online(const uint64_t now) const { return ((now - lastRequestTime) < (ZT_NETWORK_AUTOCONF_DELAY * 2)); }
+	};
+	struct _MemberStatusHash
+	{
+		inline std::size_t operator()(const _MemberStatusKey &networkIdNodeId) const
+		{
+			return (std::size_t)(networkIdNodeId.networkId + networkIdNodeId.nodeId);
+		}
+	};
+	std::unordered_map< _MemberStatusKey,_MemberStatus,_MemberStatusHash > _memberStatus;
+	Mutex _memberStatus_m;
 };
 
 } // namespace ZeroTier

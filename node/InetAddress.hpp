@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2017  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifndef ZT_INETADDRESS_HPP
@@ -347,6 +355,16 @@ struct InetAddress : public sockaddr_storage
 	 */
 	InetAddress network() const;
 
+#ifdef ZT_SDK
+	/**
+	 * Test whether this IPv6 prefix matches the prefix of a given IPv6 address
+	 *
+	 * @param addr Address to check
+	 * @return True if this IPv6 prefix matches the prefix of a given IPv6 address
+	 */
+	bool isEqualPrefix(const InetAddress &addr) const;
+#endif
+	
 	/**
 	 * Test whether this IP/netmask contains this address
 	 *

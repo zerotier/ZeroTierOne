@@ -8,6 +8,7 @@ using System.IO;
 using System.Windows;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using System.Windows.Threading;
 
 namespace WinUI
 {
@@ -188,7 +189,8 @@ namespace WinUI
             }
             catch (System.Net.WebException e)
             {
-								if (((HttpWebResponse)e.Response).StatusCode == HttpStatusCode.Unauthorized)
+								HttpWebResponse res = (HttpWebResponse)e.Response;
+								if (res != null && res.StatusCode == HttpStatusCode.Unauthorized)
 								{
 										APIHandler.initHandler(true);
 								}
@@ -251,7 +253,8 @@ namespace WinUI
             }
             catch (System.Net.WebException e)
             {
-								if (((HttpWebResponse)e.Response).StatusCode == HttpStatusCode.Unauthorized)
+								HttpWebResponse res = (HttpWebResponse)e.Response;
+								if (res != null && res.StatusCode == HttpStatusCode.Unauthorized)
 								{
 										APIHandler.initHandler(true);
 								}
@@ -262,102 +265,125 @@ namespace WinUI
             }
         }
 
-        public void JoinNetwork(string nwid, bool allowManaged = true, bool allowGlobal = false, bool allowDefault = false)
+        public void JoinNetwork(Dispatcher d, string nwid, bool allowManaged = true, bool allowGlobal = false, bool allowDefault = false)
         {
-            var request = WebRequest.Create(url + "/network/" + nwid + "?auth=" + authtoken) as HttpWebRequest;
-            if (request == null)
-            {
-                return;
-            }
-
-            request.Method = "POST";
-            request.ContentType = "applicaiton/json";
-            request.Timeout = 10000;
-						try
+						Task.Factory.StartNew(() =>
 						{
-								using (var streamWriter = new StreamWriter(((HttpWebRequest)request).GetRequestStream()))
+								var request = WebRequest.Create(url + "/network/" + nwid + "?auth=" + authtoken) as HttpWebRequest;
+								if (request == null)
 								{
-										string json = "{\"allowManaged\":" + (allowManaged ? "true" : "false") + "," +
-												"\"allowGlobal\":" + (allowGlobal ? "true" : "false") + "," +
-												"\"allowDefault\":" + (allowDefault ? "true" : "false") + "}";
-										streamWriter.Write(json);
-										streamWriter.Flush();
-										streamWriter.Close();
+										return;
 								}
-						}
-						catch (System.Net.WebException)
-						{
-								MessageBox.Show("Error Joining Network: Cannot connect to ZeroTier service.");
-								return;
-						}
 
-            try
-            {
-                var httpResponse = (HttpWebResponse)request.GetResponse();
+								request.Method = "POST";
+								request.ContentType = "applicaiton/json";
+								request.Timeout = 30000;
+								try
+								{
+										using (var streamWriter = new StreamWriter(((HttpWebRequest)request).GetRequestStream()))
+										{
+												string json = "{\"allowManaged\":" + (allowManaged ? "true" : "false") + "," +
+														"\"allowGlobal\":" + (allowGlobal ? "true" : "false") + "," +
+														"\"allowDefault\":" + (allowDefault ? "true" : "false") + "}";
+												streamWriter.Write(json);
+												streamWriter.Flush();
+												streamWriter.Close();
+										}
+								}
+								catch (System.Net.WebException)
+								{
+										d.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+										{
+												MessageBox.Show("Error Joining Network: Cannot connect to ZeroTier service.");
+										}));
+										return;
+								}
 
-								if (httpResponse.StatusCode == HttpStatusCode.Unauthorized)
+								try
 								{
-										APIHandler.initHandler(true);
+										var httpResponse = (HttpWebResponse)request.GetResponse();
+
+										if (httpResponse.StatusCode == HttpStatusCode.Unauthorized)
+										{
+												APIHandler.initHandler(true);
+										}
+										else if (httpResponse.StatusCode != HttpStatusCode.OK)
+										{
+												Console.WriteLine("Error sending join network message");
+										}
 								}
-                else if (httpResponse.StatusCode != HttpStatusCode.OK)
-                {
-                    Console.WriteLine("Error sending join network message");
-                }
-            }
-            catch (System.Net.Sockets.SocketException)
-            {
-                MessageBox.Show("Error Joining Network: Cannot connect to ZeroTier service.");
-            }
-            catch (System.Net.WebException e)
-            {
-								if (((HttpWebResponse)e.Response).StatusCode == HttpStatusCode.Unauthorized)
+								catch (System.Net.Sockets.SocketException)
 								{
-										APIHandler.initHandler(true);
+										d.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+										{
+												MessageBox.Show("Error Joining Network: Cannot connect to ZeroTier service.");
+										}));
 								}
-								MessageBox.Show("Error Joining Network: Cannot connect to ZeroTier service.");
-            }
+								catch (System.Net.WebException e)
+								{
+										HttpWebResponse res = (HttpWebResponse)e.Response;
+										if (res != null && res.StatusCode == HttpStatusCode.Unauthorized)
+										{
+												APIHandler.initHandler(true);
+										}
+										d.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+										{
+												MessageBox.Show("Error Joining Network: Cannot connect to ZeroTier service.");
+										}));
+								}
+						});
         }
 
-        public void LeaveNetwork(string nwid)
+        public void LeaveNetwork(Dispatcher d, string nwid)
         {
-            var request = WebRequest.Create(url + "/network/" + nwid + "?auth=" + authtoken) as HttpWebRequest;
-            if (request == null)
-            {
-                return;
-            }
-
-            request.Method = "DELETE";
-            request.Timeout = 10000;
-
-            try
-            {
-                var httpResponse = (HttpWebResponse)request.GetResponse();
-
-								if (httpResponse.StatusCode == HttpStatusCode.Unauthorized)
+						Task.Factory.StartNew(() =>
+						{
+								var request = WebRequest.Create(url + "/network/" + nwid + "?auth=" + authtoken) as HttpWebRequest;
+								if (request == null)
 								{
-										APIHandler.initHandler(true);
+										return;
 								}
-                else if (httpResponse.StatusCode != HttpStatusCode.OK)
-                {
-                    Console.WriteLine("Error sending leave network message");
-                }
-            }
-            catch (System.Net.Sockets.SocketException)
-            {
-                MessageBox.Show("Error Leaving Network: Cannot connect to ZeroTier service.");
-            }
-            catch (System.Net.WebException e)
-            {
-								if (((HttpWebResponse)e.Response).StatusCode == HttpStatusCode.Unauthorized)
+
+								request.Method = "DELETE";
+								request.Timeout = 30000;
+
+								try
 								{
-										APIHandler.initHandler(true);
+										var httpResponse = (HttpWebResponse)request.GetResponse();
+
+										if (httpResponse.StatusCode == HttpStatusCode.Unauthorized)
+										{
+												APIHandler.initHandler(true);
+										}
+										else if (httpResponse.StatusCode != HttpStatusCode.OK)
+										{
+												Console.WriteLine("Error sending leave network message");
+										}
 								}
-								MessageBox.Show("Error Leaving Network: Cannot connect to ZeroTier service.");
-            }
-            catch
-            {
-                Console.WriteLine("Error leaving network: Unknown error");
-            }
+								catch (System.Net.Sockets.SocketException)
+								{
+										d.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+										{
+												MessageBox.Show("Error Leaving Network: Cannot connect to ZeroTier service.");
+										}));
+								}
+								catch (System.Net.WebException e)
+								{
+										HttpWebResponse res = (HttpWebResponse)e.Response;
+										if (res != null && res.StatusCode == HttpStatusCode.Unauthorized)
+										{
+												APIHandler.initHandler(true);
+										}
+										d.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+										{
+												MessageBox.Show("Error Leaving Network: Cannot connect to ZeroTier service.");
+										}));
+								}
+								catch
+								{
+										Console.WriteLine("Error leaving network: Unknown error");
+								}
+						});
         }
 
         public delegate void PeersCallback(List<ZeroTierPeer> peers);
@@ -405,7 +431,8 @@ namespace WinUI
             }
             catch (System.Net.WebException e)
             {
-								if (((HttpWebResponse)e.Response).StatusCode == HttpStatusCode.Unauthorized)
+								HttpWebResponse res = (HttpWebResponse)e.Response;
+								if (res != null && res.StatusCode == HttpStatusCode.Unauthorized)
 								{
 										APIHandler.initHandler(true);
 								}

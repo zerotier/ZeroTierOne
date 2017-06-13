@@ -5,7 +5,7 @@ ZeroTier is an enterprise Ethernet switch for planet Earth.
 
 It erases the LAN/WAN distinction and makes VPNs, tunnels, proxies, and other kludges arising from the inflexible nature of physical networks obsolete. Everything is encrypted end-to-end and traffic takes the most direct (peer to peer) path available.
 
-Visit [ZeroTier's site](https://www.zerotier.com/) for more information and [pre-built binary packages](https://www.zerotier.com/download.shtml). Apps for Android and iOS are available for free in the Google Play and Apple app stores.
+Visit [ZeroTier's site](https://www.zerotier.com/?pk_campaign=github_ZeroTierOne) for more information and [pre-built binary packages](https://www.zerotier.com/download.shtml?pk_campaign=github_ZeroTierOne). Apps for Android and iOS are available for free in the Google Play and Apple app stores.
 
 ### Getting Started
 
@@ -23,7 +23,7 @@ Now wait about 30 seconds and check your system with `ip addr list` or `ifconfig
 
 The *zt* interface will disappear. You're no longer on the network.
 
-To create networks of your own, you'll need a network controller. ZeroTier One (for desktops and servers) includes controller functionality in its default build that can be configured via its JSON API (see [README.md in controller/](controller/)). ZeroTier provides a hosted solution with a nice web UI and SaaS add-ons at [my.zerotier.com](https://my.zerotier.com/). Basic controller functionality is free for up to 100 devices.
+To create networks of your own, you'll need a network controller. ZeroTier One (for desktops and servers) includes controller functionality in its default build that can be configured via its JSON API (see [README.md in controller/](controller/)). ZeroTier provides a hosted solution with a nice web UI and SaaS add-ons at [my.zerotier.com](https://my.zerotier.com/?pk_campaign=github_ZeroTierOne). Basic controller functionality is free for up to 100 devices.
 
 ### Project Layout
 
@@ -112,7 +112,7 @@ ZeroTier One peers will automatically locate each other and communicate directly
 
 Users behind certain types of firewalls and "symmetric" NAT devices may not able able to connect to external peers directly at all. ZeroTier has limited support for port prediction and will *attempt* to traverse symmetric NATs, but this doesn't always work. If P2P connectivity fails you'll be bouncing UDP packets off our relay servers resulting in slower performance. Some NAT router(s) have a configurable NAT mode, and setting this to "full cone" will eliminate this problem. If you do this you may also see a magical improvement for things like VoIP phones, Skype, BitTorrent, WebRTC, certain games, etc., since all of these use NAT traversal techniques similar to ours.
 
-If you're interested, there's a [technical deep dive about NAT traversal on our blog](https://www.zerotier.com/blog/?p=226). A troubleshooting tool to help you diagnose NAT issues is planned for the future as are uPnP/IGD/NAT-PMP and IPv6 transport.
+If you're interested, there's a [technical deep dive about NAT traversal on our blog](https://www.zerotier.com/blog/?p=226?pk_campaign=github_ZeroTierOne). A troubleshooting tool to help you diagnose NAT issues is planned for the future as are uPnP/IGD/NAT-PMP and IPv6 transport.
 
 If a firewall between you and the Internet blocks ZeroTier's UDP traffic, you will fall back to last-resort TCP tunneling to rootservers over port 443 (https impersonation). This will work almost anywhere but is *very slow* compared to UDP or direct peer to peer connectivity.
 

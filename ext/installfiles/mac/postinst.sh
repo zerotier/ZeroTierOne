@@ -43,4 +43,13 @@ ln -sf "/Library/Application Support/ZeroTier/One/zerotier-one" zerotier-idtool
 
 launchctl load /Library/LaunchDaemons/com.zerotier.one.plist >>/dev/null 2>&1
 
+sleep 1
+
+if [ -f /tmp/zt1-gui-restart.tmp ];
+	for u in `cat /tmp/zt1-gui-restart.tmp`; do
+		su $u -c '/Applications/ZeroTier\ One.app/Contents/MacOS/ZeroTier\ One &' >>/dev/null 2>&1 &
+	done
+fi
+rm -f /tmp/zt1-gui-restart.tmp
+
 exit 0

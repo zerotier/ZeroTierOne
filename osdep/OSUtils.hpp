@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2017  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifndef ZT_OSUTILS_HPP
@@ -43,6 +51,9 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <arpa/inet.h>
+#ifdef __LINUX__
+#include <sys/syscall.h>
+#endif
 #endif
 
 #include "../ext/json/json.hpp"
@@ -177,7 +188,6 @@ public:
 	 * @return Current time in milliseconds since epoch
 	 */
 	static inline uint64_t now()
-		throw()
 	{
 #ifdef __WINDOWS__
 		FILETIME ft;
@@ -190,32 +200,14 @@ public:
 		return ( ((tmp.QuadPart - 116444736000000000ULL) / 10000L) + st.wMilliseconds );
 #else
 		struct timeval tv;
+#ifdef __LINUX__
+		syscall(SYS_gettimeofday,&tv,0); /* fix for musl libc broken gettimeofday bug */
+#else
 		gettimeofday(&tv,(struct timezone *)0);
+#endif
 		return ( (1000ULL * (uint64_t)tv.tv_sec) + (uint64_t)(tv.tv_usec / 1000) );
 #endif
 	};
-
-	/**
-	 * @return Current time in seconds since epoch, to the highest available resolution
-	 */
-	static inline double nowf()
-		throw()
-	{
-#ifdef __WINDOWS__
-		FILETIME ft;
-		SYSTEMTIME st;
-		ULARGE_INTEGER tmp;
-		GetSystemTime(&st);
-		SystemTimeToFileTime(&st,&ft);
-		tmp.LowPart = ft.dwLowDateTime;
-		tmp.HighPart = ft.dwHighDateTime;
-		return (((double)(tmp.QuadPart - 116444736000000000ULL)) / 10000000.0);
-#else
-		struct timeval tv;
-		gettimeofday(&tv,(struct timezone *)0);
-		return ( ((double)tv.tv_sec) + (((double)tv.tv_usec) / 1000000.0) );
-#endif
-	}
 
 	/**
 	 * Read the full contents of a file into a string buffer

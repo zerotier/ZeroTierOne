@@ -1,7 +1,7 @@
 FROM alpine:latest
 MAINTAINER Adam Ierymenko <adam.ierymenko@zerotier.com>
 
-LABEL version="1.1.14"
+LABEL version="1.2.4"
 LABEL description="Containerized ZeroTier One for use on CoreOS or other Docker-only Linux hosts."
 
 # Uncomment to build in container
