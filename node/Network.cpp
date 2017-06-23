@@ -42,7 +42,6 @@
 #include "NetworkController.hpp"
 #include "Node.hpp"
 #include "Peer.hpp"
-#include "Cluster.hpp"
 
 // Uncomment to make the rules engine dump trace info to stdout
 //#define ZT_RULES_ENGINE_DEBUGGING 1

@@ -43,7 +43,6 @@
 #include "Peer.hpp"
 #include "SelfAwareness.hpp"
 #include "Packet.hpp"
-#include "Cluster.hpp"
 
 namespace ZeroTier {
 

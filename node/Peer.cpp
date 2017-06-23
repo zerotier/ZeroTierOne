@@ -32,7 +32,6 @@
 #include "Switch.hpp"
 #include "Network.hpp"
 #include "SelfAwareness.hpp"
-#include "Cluster.hpp"
 #include "Packet.hpp"
 
 namespace ZeroTier {

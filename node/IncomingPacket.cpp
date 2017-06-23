@@ -42,7 +42,6 @@
 #include "Salsa20.hpp"
 #include "SHA512.hpp"
 #include "World.hpp"
-#include "Cluster.hpp"
 #include "Node.hpp"
 #include "CertificateOfMembership.hpp"
 #include "CertificateOfRepresentation.hpp"

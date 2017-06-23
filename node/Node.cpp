@@ -45,7 +45,6 @@
 #include "Address.hpp"
 #include "Identity.hpp"
 #include "SelfAwareness.hpp"
-#include "Cluster.hpp"
 #include "Network.hpp"
 
 const struct sockaddr_storage ZT_SOCKADDR_NULL = {0};
