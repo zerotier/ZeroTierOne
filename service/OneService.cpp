@@ -736,57 +736,6 @@ public:
 			_controller = new EmbeddedNetworkController(_node,_controllerDbPath.c_str());
 			_node->setNetconfMaster((void *)_controller);
 
-/*
-#ifdef ZT_ENABLE_CLUSTER
-			if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S "cluster").c_str())) {
-				_clusterDefinition = new ClusterDefinition(_node->address(),(_homePath + ZT_PATH_SEPARATOR_S "cluster").c_str());
-				if (_clusterDefinition->size() > 0) {
-					std::vector<ClusterDefinition::MemberDefinition> members(_clusterDefinition->members());
-					for(std::vector<ClusterDefinition::MemberDefinition>::iterator m(members.begin());m!=members.end();++m) {
-						PhySocket *cs = _phy.udpBind(reinterpret_cast<const struct sockaddr *>(&(m->clusterEndpoint)));
-						if (cs) {
-							if (_clusterMessageSocket) {
-								_phy.close(_clusterMessageSocket,false);
-								_phy.close(cs,false);
-
-								Mutex::Lock _l(_termReason_m);
-								_termReason = ONE_UNRECOVERABLE_ERROR;
-								_fatalErrorMessage = "cluster: can't determine my cluster member ID: able to bind more than one cluster message socket IP/port!";
-								return _termReason;
-							}
-							_clusterMessageSocket = cs;
-							_clusterMemberId = m->id;
-						}
-					}
-
-					if (!_clusterMessageSocket) {
-						Mutex::Lock _l(_termReason_m);
-						_termReason = ONE_UNRECOVERABLE_ERROR;
-						_fatalErrorMessage = "cluster: can't determine my cluster member ID: unable to bind to any cluster message socket IP/port.";
-						return _termReason;
-					}
-
-					const ClusterDefinition::MemberDefinition &me = (*_clusterDefinition)[_clusterMemberId];
-					InetAddress endpoints[255];
-					unsigned int numEndpoints = 0;
-					for(std::vector<InetAddress>::const_iterator i(me.zeroTierEndpoints.begin());i!=me.zeroTierEndpoints.end();++i)
-						endpoints[numEndpoints++] = *i;
-
-					if (_node->clusterInit(_clusterMemberId,reinterpret_cast<const struct sockaddr_storage *>(endpoints),numEndpoints,me.x,me.y,me.z,&SclusterSendFunction,this,_clusterDefinition->geo().available() ? &SclusterGeoIpFunction : 0,this) == ZT_RESULT_OK) {
-						std::vector<ClusterDefinition::MemberDefinition> members(_clusterDefinition->members());
-						for(std::vector<ClusterDefinition::MemberDefinition>::iterator m(members.begin());m!=members.end();++m) {
-							if (m->id != _clusterMemberId)
-								_node->clusterAddMember(m->id);
-						}
-					}
-				} else {
-					delete _clusterDefinition;
-					_clusterDefinition = (ClusterDefinition *)0;
-				}
-			}
-#endif
-*/
-
 			// Join existing networks in networks.d
 			{
 				std::vector<std::string> networksDotD(OSUtils::listDirectory((_homePath + ZT_PATH_SEPARATOR_S "networks.d").c_str()));
@@ -810,10 +759,18 @@ public:
 			// Derive the cluster's shared secret backplane encryption key by hashing its shared secret identity
 			{
 				uint8_t tmp[64];
-				SHA512::hash(tmp,_node->identity().privateKeyPair().priv.data,ZT_C25519_PRIVATE_KEY_LEN);
+				uint8_t sk[ZT_C25519_PRIVATE_KEY_LEN + 4];
+				memcpy(sk,_node->identity().privateKeyPair().priv.data,ZT_C25519_PRIVATE_KEY_LEN);
+				sk[ZT_C25519_PRIVATE_KEY_LEN] = 0xab;
+				sk[ZT_C25519_PRIVATE_KEY_LEN + 1] = 0xcd;
+				sk[ZT_C25519_PRIVATE_KEY_LEN + 2] = 0xef;
+				sk[ZT_C25519_PRIVATE_KEY_LEN + 3] = 0xab; // add an arbitrary nonce, just because
+				SHA512::hash(tmp,sk,ZT_C25519_PRIVATE_KEY_LEN + 4);
 				memcpy(_clusterKey,tmp,32);
 			}
-			_clusterMemberId = _node->prng();
+
+			// Assign a random non-zero cluster member ID to identify vs. other cluster members
+			Utils::getSecureRandom(&_clusterMemberId,sizeof(_clusterMemberId));
 			if (!_clusterMemberId) _clusterMemberId = 1;
 
 			// Main I/O loop
@@ -929,6 +886,7 @@ public:
 				if ((now - lastTcpCheck) >= ZT_TCP_CHECK_PERIOD) {
 					lastTcpCheck = now;
 
+					// Send status to active cluster links and close overflowed and dead ones
 					std::vector<PhySocket *> toClose;
 					std::vector<InetAddress> clusterLinksUp;
 					{
@@ -949,10 +907,11 @@ public:
 					for(std::vector<PhySocket *>::iterator s(toClose.begin());s!=toClose.end();++s)
 						_phy.close(*s,true);
 
+					// Attempt to connect to cluster links we don't have an active connection to
 					{
 						Mutex::Lock _l(_localConfig_m);
 						for(std::vector<InetAddress>::const_iterator ca(_clusterBackplaneAddresses.begin());ca!=_clusterBackplaneAddresses.end();++ca) {
-							if (std::find(clusterLinksUp.begin(),clusterLinksUp.end(),*ca) == clusterLinksUp.end()) {
+							if ( (std::find(clusterLinksUp.begin(),clusterLinksUp.end(),*ca) == clusterLinksUp.end()) && (!_binder.isBoundLocalInterfaceAddress(*ca)) ) {
 								TcpConnection *tc = new TcpConnection();
 								{
 									Mutex::Lock _l(_tcpConnections_m);
@@ -1637,6 +1596,16 @@ public:
 				const InetAddress nw(OSUtils::jsonString(amf[i],""));
 				if (nw)
 					_allowManagementFrom.push_back(nw);
+			}
+		}
+
+		json &cl = settings["cluster"];
+		_clusterBackplaneAddresses.clear();
+		if (cl.is_array()) {
+			for(unsigned long i=0;i<cl.size();++i) {
+				const InetAddress cip(OSUtils::jsonString(cl[i],""));
+				if ((cip.ss_family == AF_INET)||(cip.ss_family == AF_INET6))
+					_clusterBackplaneAddresses.push_back(cip);
 			}
 		}
 

@@ -65,9 +65,9 @@ ifeq ($(ZT_DEBUG),1)
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
 	override DEFS+=-D_FORTIFY_SOURCE=2
-	CFLAGS?=-O3 -fstack-protector
+	CFLAGS?=-Os -fstack-protector
 	override CFLAGS+=-Wall -Wno-deprecated -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	CXXFLAGS?=-O3 -fstack-protector
+	CXXFLAGS?=-Os -fstack-protector
 	override CXXFLAGS+=-Wall -Wno-deprecated -Wno-unused-result -Wreorder -fPIE -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	override LDFLAGS+=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
