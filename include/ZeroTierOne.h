@@ -46,6 +46,29 @@
 #include <sys/socket.h>
 #endif /* Windows or not */
 
+#if defined (_MSC_VER)
+#ifdef  ZT_EXPORT
+#define ZT_SDK_API __declspec(dllexport)
+#else
+#define ZT_SDK_API __declspec(dllimport)
+#ifdef _DEBUG
+#ifdef _WIN64 
+#pragma comment(lib, "ZeroTierOne_x64d.lib")
+#else
+#pragma comment(lib, "ZeroTierOne_x86d.lib")
+#endif
+#else
+#ifdef _WIN64 
+#pragma comment(lib, "ZeroTierOne_x64.lib")
+#else
+#pragma comment(lib, "ZeroTierOne_x86.lib")
+#endif
+#endif
+#endif
+#else
+#define ZT_SDK_API
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1468,7 +1491,7 @@ struct ZT_Node_Callbacks
  * @param now Current clock in milliseconds
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now);
 
 /**
  * Delete a node and free all resources it consumes
@@ -1478,7 +1501,7 @@ enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,const struct
  *
  * @param node Node to delete
  */
-void ZT_Node_delete(ZT_Node *node);
+ZT_SDK_API void ZT_Node_delete(ZT_Node *node);
 
 /**
  * Process a packet received from the physical wire
@@ -1493,7 +1516,7 @@ void ZT_Node_delete(ZT_Node *node);
  * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_processWirePacket(
+ZT_SDK_API enum ZT_ResultCode ZT_Node_processWirePacket(
 	ZT_Node *node,
 	void *tptr,
 	uint64_t now,
@@ -1519,7 +1542,7 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
  * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
+ZT_SDK_API enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	ZT_Node *node,
 	void *tptr,
 	uint64_t now,
@@ -1541,7 +1564,7 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
  * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,void *tptr,uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,void *tptr,uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
 
 /**
  * Join a network
@@ -1557,7 +1580,7 @@ enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,void *tptr,uint6
  * @param uptr An arbitrary pointer to associate with this network (default: NULL)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr,void *tptr);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr,void *tptr);
 
 /**
  * Leave a network
@@ -1574,7 +1597,7 @@ enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr,void *tpt
  * @param uptr Target pointer is set to uptr (if not NULL)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr,void *tptr);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr,void *tptr);
 
 /**
  * Subscribe to an Ethernet multicast group
@@ -1602,7 +1625,7 @@ enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr,void *t
  * @param multicastAdi Multicast ADI (least significant 32 bits only, use 0 if not needed)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node,void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node,void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 
 /**
  * Unsubscribe from an Ethernet multicast group (or all groups)
@@ -1618,7 +1641,7 @@ enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node,void *tptr,uint64_t 
  * @param multicastAdi Multicast ADI (least significant 32 bits only, use 0 if not needed)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 
 /**
  * Add or update a moon
@@ -1634,7 +1657,7 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint
  * @param len Length of moonWorld in bytes
  * @return Error if moon was invalid or failed to be added
  */
-enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,void *tptr,uint64_t moonWorldId,uint64_t moonSeed);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,void *tptr,uint64_t moonWorldId,uint64_t moonSeed);
 
 /**
  * Remove a moon (does nothing if not present)
@@ -1644,7 +1667,7 @@ enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,void *tptr,uint64_t moonWorldId,u
  * @param moonWorldId World ID of moon to remove
  * @return Error if anything bad happened
  */
-enum ZT_ResultCode ZT_Node_deorbit(ZT_Node *node,void *tptr,uint64_t moonWorldId);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_deorbit(ZT_Node *node,void *tptr,uint64_t moonWorldId);
 
 /**
  * Get this node's 40-bit ZeroTier address
@@ -1652,7 +1675,7 @@ enum ZT_ResultCode ZT_Node_deorbit(ZT_Node *node,void *tptr,uint64_t moonWorldId
  * @param node Node instance
  * @return ZeroTier address (least significant 40 bits of 64-bit int)
  */
-uint64_t ZT_Node_address(ZT_Node *node);
+ZT_SDK_API uint64_t ZT_Node_address(ZT_Node *node);
 
 /**
  * Get the status of this node
@@ -1660,7 +1683,7 @@ uint64_t ZT_Node_address(ZT_Node *node);
  * @param node Node instance
  * @param status Buffer to fill with current node status
  */
-void ZT_Node_status(ZT_Node *node,ZT_NodeStatus *status);
+ZT_SDK_API void ZT_Node_status(ZT_Node *node,ZT_NodeStatus *status);
 
 /**
  * Get a list of known peer nodes
@@ -1671,7 +1694,7 @@ void ZT_Node_status(ZT_Node *node,ZT_NodeStatus *status);
  * @param node Node instance
  * @return List of known peers or NULL on failure
  */
-ZT_PeerList *ZT_Node_peers(ZT_Node *node);
+ZT_SDK_API ZT_PeerList *ZT_Node_peers(ZT_Node *node);
 
 /**
  * Get the status of a virtual network
@@ -1683,7 +1706,7 @@ ZT_PeerList *ZT_Node_peers(ZT_Node *node);
  * @param nwid 64-bit network ID
  * @return Network configuration or NULL if we are not a member of this network
  */
-ZT_VirtualNetworkConfig *ZT_Node_networkConfig(ZT_Node *node,uint64_t nwid);
+ZT_SDK_API ZT_VirtualNetworkConfig *ZT_Node_networkConfig(ZT_Node *node,uint64_t nwid);
 
 /**
  * Enumerate and get status of all networks
@@ -1691,7 +1714,7 @@ ZT_VirtualNetworkConfig *ZT_Node_networkConfig(ZT_Node *node,uint64_t nwid);
  * @param node Node instance
  * @return List of networks or NULL on failure
  */
-ZT_VirtualNetworkList *ZT_Node_networks(ZT_Node *node);
+ZT_SDK_API ZT_VirtualNetworkList *ZT_Node_networks(ZT_Node *node);
 
 /**
  * Free a query result buffer
@@ -1701,7 +1724,7 @@ ZT_VirtualNetworkList *ZT_Node_networks(ZT_Node *node);
  * @param node Node instance
  * @param qr Query result buffer
  */
-void ZT_Node_freeQueryResult(ZT_Node *node,void *qr);
+ZT_SDK_API void ZT_Node_freeQueryResult(ZT_Node *node,void *qr);
 
 /**
  * Add a local interface address
@@ -1725,12 +1748,12 @@ void ZT_Node_freeQueryResult(ZT_Node *node,void *qr);
  * @param addr Local interface address
  * @return Boolean: non-zero if address was accepted and added
  */
-int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr);
+ZT_SDK_API int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr);
 
 /**
  * Clear local interface addresses
  */
-void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node);
+ZT_SDK_API void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node);
 
 /**
  * Send a VERB_USER_MESSAGE to another ZeroTier node
@@ -1746,7 +1769,7 @@ void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node);
  * @param len Length of data in bytes
  * @return Boolean: non-zero on success, zero on failure
  */
-int ZT_Node_sendUserMessage(ZT_Node *node,void *tptr,uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
+ZT_SDK_API int ZT_Node_sendUserMessage(ZT_Node *node,void *tptr,uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
 
 /**
  * Set a network configuration master instance for this node
@@ -1763,7 +1786,7 @@ int ZT_Node_sendUserMessage(ZT_Node *node,void *tptr,uint64_t dest,uint64_t type
  * @param networkConfigMasterInstance Instance of NetworkConfigMaster C++ class or NULL to disable
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkConfigMasterInstance);
+ZT_SDK_API void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkConfigMasterInstance);
 
 /**
  * Initialize cluster operation
@@ -1816,7 +1839,7 @@ void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkConfigMasterInstance);
  * @param addressToLocationFunctionArg First argument to addressToLocationFunction()
  * @return OK or UNSUPPORTED_OPERATION if this Node was not built with cluster support
  */
-enum ZT_ResultCode ZT_Node_clusterInit(
+ZT_SDK_API enum ZT_ResultCode ZT_Node_clusterInit(
 	ZT_Node *node,
 	unsigned int myId,
 	const struct sockaddr_storage *zeroTierPhysicalEndpoints,
@@ -1838,7 +1861,7 @@ enum ZT_ResultCode ZT_Node_clusterInit(
  * @param memberId Member ID (must be less than or equal to ZT_CLUSTER_MAX_MEMBERS)
  * @return OK or error if clustering is disabled, ID invalid, etc.
  */
-enum ZT_ResultCode ZT_Node_clusterAddMember(ZT_Node *node,unsigned int memberId);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_clusterAddMember(ZT_Node *node,unsigned int memberId);
 
 /**
  * Remove a member from this cluster
@@ -1848,7 +1871,7 @@ enum ZT_ResultCode ZT_Node_clusterAddMember(ZT_Node *node,unsigned int memberId)
  * @param node Node instance
  * @param memberId Member ID to remove (nothing happens if not present)
  */
-void ZT_Node_clusterRemoveMember(ZT_Node *node,unsigned int memberId);
+ZT_SDK_API void ZT_Node_clusterRemoveMember(ZT_Node *node,unsigned int memberId);
 
 /**
  * Handle an incoming cluster state message
@@ -1862,7 +1885,7 @@ void ZT_Node_clusterRemoveMember(ZT_Node *node,unsigned int memberId);
  * @param msg Cluster message
  * @param len Length of cluster message
  */
-void ZT_Node_clusterHandleIncomingMessage(ZT_Node *node,const void *msg,unsigned int len);
+ZT_SDK_API void ZT_Node_clusterHandleIncomingMessage(ZT_Node *node,const void *msg,unsigned int len);
 
 /**
  * Get the current status of the cluster from this node's point of view
@@ -1873,7 +1896,7 @@ void ZT_Node_clusterHandleIncomingMessage(ZT_Node *node,const void *msg,unsigned
  * @param node Node instance
  * @param cs Cluster status structure to fill with data
  */
-void ZT_Node_clusterStatus(ZT_Node *node,ZT_ClusterStatus *cs);
+ZT_SDK_API void ZT_Node_clusterStatus(ZT_Node *node,ZT_ClusterStatus *cs);
 
 /**
  * Set trusted paths
@@ -1896,7 +1919,7 @@ void ZT_Node_clusterStatus(ZT_Node *node,ZT_ClusterStatus *cs);
  * @param ids Array of [count] corresponding non-zero path IDs (zero path IDs are ignored)
  * @param count Number of trusted paths-- values greater than ZT_MAX_TRUSTED_PATHS are clipped
  */
-void ZT_Node_setTrustedPaths(ZT_Node *node,const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count);
+ZT_SDK_API void ZT_Node_setTrustedPaths(ZT_Node *node,const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count);
 
 /**
  * Get ZeroTier One version
@@ -1905,7 +1928,7 @@ void ZT_Node_setTrustedPaths(ZT_Node *node,const struct sockaddr_storage *networ
  * @param minor Result: minor version
  * @param revision Result: revision
  */
-void ZT_version(int *major,int *minor,int *revision);
+ZT_SDK_API void ZT_version(int *major,int *minor,int *revision);
 
 #ifdef __cplusplus
 }

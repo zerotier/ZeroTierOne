@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -288,7 +288,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_EXPORT;NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -304,7 +304,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_EXPORT;NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -320,7 +320,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_RULES_ENGINE_DEBUGGING;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_EXPORT;NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_RULES_ENGINE_DEBUGGING;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
@@ -338,7 +338,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NOMINMAX;STATICLIB;WIN32;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_EXPORT;NOMINMAX;STATICLIB;WIN32;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
@@ -358,7 +358,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>STATICLIB;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;ZT_SOFTWARE_UPDATE_DEFAULT="apply";ZT_BUILD_PLATFORM=2;ZT_BUILD_ARCHITECTURE=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_EXPORT;STATICLIB;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;ZT_SOFTWARE_UPDATE_DEFAULT="apply";ZT_BUILD_PLATFORM=2;ZT_BUILD_ARCHITECTURE=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
@@ -385,7 +385,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="apply";ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;ZT_BUILD_PLATFORM=2;ZT_BUILD_ARCHITECTURE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_EXPORT;STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="apply";ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;ZT_BUILD_PLATFORM=2;ZT_BUILD_ARCHITECTURE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
