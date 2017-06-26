@@ -46,6 +46,10 @@ ifeq ($(ZT_SYNOLOGY), 1)
 	DEFS+=-D__SYNOLOGY__
 endif
 
+ifeq ($(ZT_QNAP), 1)
+	DEFS+=-D__QNAP__
+endif
+
 ifeq ($(ZT_TRACE),1)
 	DEFS+=-DZT_TRACE
 endif
