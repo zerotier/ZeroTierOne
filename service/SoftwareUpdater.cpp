@@ -284,7 +284,7 @@ bool SoftwareUpdater::check(const uint64_t now)
 	if ((now - _lastCheckTime) >= ZT_SOFTWARE_UPDATE_CHECK_PERIOD) {
 		_lastCheckTime = now;
 		char tmp[512];
-		const unsigned int len = Utils::snprintf(tmp,sizeof(tmp),
+		const unsigned int len = Utils::ztsnprintf(tmp,sizeof(tmp),
 			"%c{\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR "\":%d,"
 			"\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR "\":%d,"
 			"\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION "\":%d,"

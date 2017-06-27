@@ -72,7 +72,7 @@ public:
 			return;
 
 		char myAddressStr[64];
-		Utils::snprintf(myAddressStr,sizeof(myAddressStr),"%.10llx",myAddress);
+		Utils::ztsnprintf(myAddressStr,sizeof(myAddressStr),"%.10llx",myAddress);
 
 		std::vector<std::string> lines(OSUtils::split(cf.c_str(),"\r\n","",""));
 		for(std::vector<std::string>::iterator l(lines.begin());l!=lines.end();++l) {

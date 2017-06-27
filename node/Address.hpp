@@ -144,7 +144,7 @@ public:
 	inline std::string toString() const
 	{
 		char buf[16];
-		Utils::snprintf(buf,sizeof(buf),"%.10llx",(unsigned long long)_a);
+		Utils::ztsnprintf(buf,sizeof(buf),"%.10llx",(unsigned long long)_a);
 		return std::string(buf);
 	};
 
@@ -154,7 +154,7 @@ public:
 	 */
 	inline void toString(char *buf,unsigned int len) const
 	{
-		Utils::snprintf(buf,len,"%.10llx",(unsigned long long)_a);
+		Utils::ztsnprintf(buf,len,"%.10llx",(unsigned long long)_a);
 	}
 
 	/**

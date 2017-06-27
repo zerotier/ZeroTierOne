@@ -260,9 +260,9 @@ static int cli(int argc,char **argv)
 				if (hd) {
 					char p[4096];
 #ifdef __APPLE__
-					Utils::snprintf(p,sizeof(p),"%s/Library/Application Support/ZeroTier/One/authtoken.secret",hd);
+					Utils::ztsnprintf(p,sizeof(p),"%s/Library/Application Support/ZeroTier/One/authtoken.secret",hd);
 #else
-					Utils::snprintf(p,sizeof(p),"%s/.zeroTierOneAuthToken",hd);
+					Utils::ztsnprintf(p,sizeof(p),"%s/.zeroTierOneAuthToken",hd);
 #endif
 					OSUtils::readFile(p,authToken);
 				}
@@ -278,7 +278,7 @@ static int cli(int argc,char **argv)
 	InetAddress addr;
 	{
 		char addrtmp[256];
-		Utils::snprintf(addrtmp,sizeof(addrtmp),"%s/%u",ip.c_str(),port);
+		Utils::ztsnprintf(addrtmp,sizeof(addrtmp),"%s/%u",ip.c_str(),port);
 		addr = InetAddress(addrtmp);
 	}
 
@@ -366,7 +366,7 @@ static int cli(int argc,char **argv)
 									std::string addr = path["address"];
 									const uint64_t now = OSUtils::now();
 									const double lq = (path.count("linkQuality")) ? (double)path["linkQuality"] : -1.0;
-									Utils::snprintf(tmp,sizeof(tmp),"%s;%llu;%llu;%1.2f",addr.c_str(),now - (uint64_t)path["lastSend"],now - (uint64_t)path["lastReceive"],lq);
+									Utils::ztsnprintf(tmp,sizeof(tmp),"%s;%llu;%llu;%1.2f",addr.c_str(),now - (uint64_t)path["lastSend"],now - (uint64_t)path["lastReceive"],lq);
 									bestPath = tmp;
 									break;
 								}
@@ -378,7 +378,7 @@ static int cli(int argc,char **argv)
 						int64_t vmin = p["versionMinor"];
 						int64_t vrev = p["versionRev"];
 						if (vmaj >= 0) {
-							Utils::snprintf(ver,sizeof(ver),"%lld.%lld.%lld",vmaj,vmin,vrev);
+							Utils::ztsnprintf(ver,sizeof(ver),"%lld.%lld.%lld",vmaj,vmin,vrev);
 						} else {
 							ver[0] = '-';
 							ver[1] = (char)0;
@@ -527,9 +527,9 @@ static int cli(int argc,char **argv)
 		const uint64_t seed = Utils::hexStrToU64(arg2.c_str());
 		if ((worldId)&&(seed)) {
 			char jsons[1024];
-			Utils::snprintf(jsons,sizeof(jsons),"{\"seed\":\"%s\"}",arg2.c_str());
+			Utils::ztsnprintf(jsons,sizeof(jsons),"{\"seed\":\"%s\"}",arg2.c_str());
 			char cl[128];
-			Utils::snprintf(cl,sizeof(cl),"%u",(unsigned int)strlen(jsons));
+			Utils::ztsnprintf(cl,sizeof(cl),"%u",(unsigned int)strlen(jsons));
 			requestHeaders["Content-Type"] = "application/json";
 			requestHeaders["Content-Length"] = cl;
 			unsigned int scode = Http::POST(
@@ -579,11 +579,11 @@ static int cli(int argc,char **argv)
 		if (eqidx != std::string::npos) {
 			if ((arg2.substr(0,eqidx) == "allowManaged")||(arg2.substr(0,eqidx) == "allowGlobal")||(arg2.substr(0,eqidx) == "allowDefault")) {
 				char jsons[1024];
-				Utils::snprintf(jsons,sizeof(jsons),"{\"%s\":%s}",
+				Utils::ztsnprintf(jsons,sizeof(jsons),"{\"%s\":%s}",
 					arg2.substr(0,eqidx).c_str(),
 					(((arg2.substr(eqidx,2) == "=t")||(arg2.substr(eqidx,2) == "=1")) ? "true" : "false"));
 				char cl[128];
-				Utils::snprintf(cl,sizeof(cl),"%u",(unsigned int)strlen(jsons));
+				Utils::ztsnprintf(cl,sizeof(cl),"%u",(unsigned int)strlen(jsons));
 				requestHeaders["Content-Type"] = "application/json";
 				requestHeaders["Content-Length"] = cl;
 				unsigned int scode = Http::POST(
@@ -864,7 +864,7 @@ static int idtool(int argc,char **argv)
 			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> wbuf;
 			w.serialize(wbuf);
 			char fn[128];
-			Utils::snprintf(fn,sizeof(fn),"%.16llx.moon",w.id());
+			Utils::ztsnprintf(fn,sizeof(fn),"%.16llx.moon",w.id());
 			OSUtils::writeFile(fn,wbuf.data(),wbuf.size());
 			printf("wrote %s (signed world with timestamp %llu)" ZT_EOL_S,fn,(unsigned long long)now);
 		}

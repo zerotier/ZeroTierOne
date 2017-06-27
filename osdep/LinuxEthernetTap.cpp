@@ -97,7 +97,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 	char procpath[128],nwids[32];
 	struct stat sbuf;
 
-	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",nwid);
+	Utils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",nwid);
 
 	Mutex::Lock _l(__tapCreateLock); // create only one tap at a time, globally
 
@@ -134,7 +134,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 	std::map<std::string,std::string>::const_iterator gdmEntry = globalDeviceMap.find(nwids);
 	if (gdmEntry != globalDeviceMap.end()) {
 		Utils::scopy(ifr.ifr_name,sizeof(ifr.ifr_name),gdmEntry->second.c_str());
-		Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
+		Utils::ztsnprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
 		recalledDevice = (stat(procpath,&sbuf) != 0);
 	}
 
@@ -142,8 +142,8 @@ LinuxEthernetTap::LinuxEthernetTap(
 #ifdef __SYNOLOGY__
 		int devno = 50;
 		do {
-			Utils::snprintf(ifr.ifr_name,sizeof(ifr.ifr_name),"eth%d",devno++);
-			Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
+			Utils::ztsnprintf(ifr.ifr_name,sizeof(ifr.ifr_name),"eth%d",devno++);
+			Utils::ztsnprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
 		} while (stat(procpath,&sbuf) == 0); // try zt#++ until we find one that does not exist
 #else
 		char devno = 0;
@@ -158,7 +158,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 			_base32_5_to_8(reinterpret_cast<const uint8_t *>(tmp2) + 5,tmp3 + 10);
 			tmp3[15] = (char)0;
 			memcpy(ifr.ifr_name,tmp3,16);
-			Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
+			Utils::ztsnprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
 		} while (stat(procpath,&sbuf) == 0);
 #endif
 	}

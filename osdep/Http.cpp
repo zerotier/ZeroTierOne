@@ -244,10 +244,10 @@ unsigned int Http::_do(
 
 		try {
 			char tmp[1024];
-			Utils::snprintf(tmp,sizeof(tmp),"%s %s HTTP/1.1\r\n",method,path);
+			Utils::ztsnprintf(tmp,sizeof(tmp),"%s %s HTTP/1.1\r\n",method,path);
 			handler.writeBuf.append(tmp);
 			for(std::map<std::string,std::string>::const_iterator h(requestHeaders.begin());h!=requestHeaders.end();++h) {
-				Utils::snprintf(tmp,sizeof(tmp),"%s: %s\r\n",h->first.c_str(),h->second.c_str());
+				Utils::ztsnprintf(tmp,sizeof(tmp),"%s: %s\r\n",h->first.c_str(),h->second.c_str());
 				handler.writeBuf.append(tmp);
 			}
 			handler.writeBuf.append("\r\n");

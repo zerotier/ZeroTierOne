@@ -742,7 +742,7 @@ void Node::postTrace(const char *module,unsigned int line,const char *fmt,...)
 	va_end(ap);
 	tmp2[sizeof(tmp2)-1] = (char)0;
 
-	Utils::snprintf(tmp1,sizeof(tmp1),"[%s] %s:%u %s",nowstr,module,line,tmp2);
+	Utils::ztsnprintf(tmp1,sizeof(tmp1),"[%s] %s:%u %s",nowstr,module,line,tmp2);
 	postEvent((void *)0,ZT_EVENT_TRACE,tmp1);
 }
 #endif // ZT_TRACE

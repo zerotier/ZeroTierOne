@@ -134,7 +134,7 @@ long OSUtils::cleanDirectory(const char *path,const uint64_t olderThan)
 					if (date.QuadPart > 0) {
 							date.QuadPart -= adjust.QuadPart;
 							if ((uint64_t)((date.QuadPart / 10000000) * 1000) < olderThan) {
-									Utils::snprintf(tmp, sizeof(tmp), "%s\\%s", path, ffd.cFileName);
+									Utils::ztsnprintf(tmp, sizeof(tmp), "%s\\%s", path, ffd.cFileName);
 									if (DeleteFileA(tmp))
 											++cleaned;
 							}
@@ -157,7 +157,7 @@ long OSUtils::cleanDirectory(const char *path,const uint64_t olderThan)
 			break;
 		if (dptr) {
 			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,".."))&&(dptr->d_type == DT_REG)) {
-				Utils::snprintf(tmp,sizeof(tmp),"%s/%s",path,dptr->d_name);
+				Utils::ztsnprintf(tmp,sizeof(tmp),"%s/%s",path,dptr->d_name);
 				if (stat(tmp,&st) == 0) {
 					uint64_t mt = (uint64_t)(st.st_mtime);
 					if ((mt > 0)&&((mt * 1000) < olderThan)) {
@@ -446,7 +446,7 @@ std::string OSUtils::jsonString(const nlohmann::json &jv,const char *dfl)
 			return jv;
 		} else if (jv.is_number()) {
 			char tmp[64];
-			Utils::snprintf(tmp,sizeof(tmp),"%llu",(uint64_t)jv);
+			Utils::ztsnprintf(tmp,sizeof(tmp),"%llu",(uint64_t)jv);
 			return tmp;
 		} else if (jv.is_boolean()) {
 			return ((bool)jv ? std::string("1") : std::string("0"));

@@ -178,7 +178,7 @@ public:
 	 */
 	inline void toString(char *buf,unsigned int len) const
 	{
-		Utils::snprintf(buf,len,"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)(*this)[0],(int)(*this)[1],(int)(*this)[2],(int)(*this)[3],(int)(*this)[4],(int)(*this)[5]);
+		Utils::ztsnprintf(buf,len,"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)(*this)[0],(int)(*this)[1],(int)(*this)[2],(int)(*this)[3],(int)(*this)[4],(int)(*this)[5]);
 	}
 
 	/**

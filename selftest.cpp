@@ -831,7 +831,7 @@ static int testOther()
 		memset(key, 0, sizeof(key));
 		memset(value, 0, sizeof(value));
 		for(unsigned int q=0;q<32;++q) {
-			Utils::snprintf(key[q],16,"%.8lx",(unsigned long)(rand() % 1000) + (q * 1000));
+			Utils::ztsnprintf(key[q],16,"%.8lx",(unsigned long)(rand() % 1000) + (q * 1000));
 			int r = rand() % 128;
 			for(int x=0;x<r;++x)
 				value[q][x] = ("0123456789\0\t\r\n= ")[rand() % 16];

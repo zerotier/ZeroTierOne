@@ -152,7 +152,7 @@ std::string InetAddress::toString() const
 	char buf[128];
 	switch(ss_family) {
 		case AF_INET:
-			Utils::snprintf(buf,sizeof(buf),"%d.%d.%d.%d/%d",
+			Utils::ztsnprintf(buf,sizeof(buf),"%d.%d.%d.%d/%d",
 					(int)(reinterpret_cast<const unsigned char *>(&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr)))[0],
 					(int)(reinterpret_cast<const unsigned char *>(&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr)))[1],
 					(int)(reinterpret_cast<const unsigned char *>(&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr)))[2],
@@ -161,7 +161,7 @@ std::string InetAddress::toString() const
 				);
 			return std::string(buf);
 		case AF_INET6:
-			Utils::snprintf(buf,sizeof(buf),"%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x/%d",
+			Utils::ztsnprintf(buf,sizeof(buf),"%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x/%d",
 					(int)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr[0]),
 					(int)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr[1]),
 					(int)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr[2]),
@@ -190,7 +190,7 @@ std::string InetAddress::toIpString() const
 	char buf[128];
 	switch(ss_family) {
 		case AF_INET:
-			Utils::snprintf(buf,sizeof(buf),"%d.%d.%d.%d",
+			Utils::ztsnprintf(buf,sizeof(buf),"%d.%d.%d.%d",
 					(int)(reinterpret_cast<const unsigned char *>(&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr)))[0],
 					(int)(reinterpret_cast<const unsigned char *>(&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr)))[1],
 					(int)(reinterpret_cast<const unsigned char *>(&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr)))[2],
@@ -198,7 +198,7 @@ std::string InetAddress::toIpString() const
 				);
 			return std::string(buf);
 		case AF_INET6:
-			Utils::snprintf(buf,sizeof(buf),"%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x",
+			Utils::ztsnprintf(buf,sizeof(buf),"%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x",
 					(int)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr[0]),
 					(int)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr[1]),
 					(int)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr[2]),

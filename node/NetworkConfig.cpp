@@ -94,7 +94,7 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 						if (ets.length() > 0)
 							ets.push_back(',');
 						char tmp2[16];
-						Utils::snprintf(tmp2,sizeof(tmp2),"%x",et);
+						Utils::ztsnprintf(tmp2,sizeof(tmp2),"%x",et);
 						ets.append(tmp2);
 					}
 					et = 0;

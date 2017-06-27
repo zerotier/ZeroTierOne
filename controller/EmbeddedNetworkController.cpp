@@ -122,12 +122,12 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 				break;
 			case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
 				r["type"] = "MATCH_MAC_SOURCE";
-				Utils::snprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)rule.v.mac[0],(unsigned int)rule.v.mac[1],(unsigned int)rule.v.mac[2],(unsigned int)rule.v.mac[3],(unsigned int)rule.v.mac[4],(unsigned int)rule.v.mac[5]);
+				Utils::ztsnprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)rule.v.mac[0],(unsigned int)rule.v.mac[1],(unsigned int)rule.v.mac[2],(unsigned int)rule.v.mac[3],(unsigned int)rule.v.mac[4],(unsigned int)rule.v.mac[5]);
 				r["mac"] = tmp;
 				break;
 			case ZT_NETWORK_RULE_MATCH_MAC_DEST:
 				r["type"] = "MATCH_MAC_DEST";
-				Utils::snprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)rule.v.mac[0],(unsigned int)rule.v.mac[1],(unsigned int)rule.v.mac[2],(unsigned int)rule.v.mac[3],(unsigned int)rule.v.mac[4],(unsigned int)rule.v.mac[5]);
+				Utils::ztsnprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)rule.v.mac[0],(unsigned int)rule.v.mac[1],(unsigned int)rule.v.mac[2],(unsigned int)rule.v.mac[3],(unsigned int)rule.v.mac[4],(unsigned int)rule.v.mac[5]);
 				r["mac"] = tmp;
 				break;
 			case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
@@ -179,7 +179,7 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 				break;
 			case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
 				r["type"] = "MATCH_CHARACTERISTICS";
-				Utils::snprintf(tmp,sizeof(tmp),"%.16llx",rule.v.characteristics);
+				Utils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",rule.v.characteristics);
 				r["mask"] = tmp;
 				break;
 			case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
@@ -514,7 +514,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 						_db.eachMember(nwid,[&responseBody](uint64_t networkId,uint64_t nodeId,const json &member) {
 							if ((member.is_object())&&(member.size() > 0)) {
 								char tmp[128];
-								Utils::snprintf(tmp,sizeof(tmp),"%s%.10llx\":%llu",(responseBody.length() > 1) ? ",\"" : "\"",(unsigned long long)nodeId,(unsigned long long)OSUtils::jsonInt(member["revision"],0));
+								Utils::ztsnprintf(tmp,sizeof(tmp),"%s%.10llx\":%llu",(responseBody.length() > 1) ? ",\"" : "\"",(unsigned long long)nodeId,(unsigned long long)OSUtils::jsonInt(member["revision"],0));
 								responseBody.append(tmp);
 							}
 						});
@@ -548,7 +548,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 			for(std::vector<uint64_t>::const_iterator i(networkIds.begin());i!=networkIds.end();++i) {
 				if (responseBody.length() > 1)
 					responseBody.push_back(',');
-				Utils::snprintf(tmp,sizeof(tmp),"\"%.16llx\"",(unsigned long long)*i);
+				Utils::ztsnprintf(tmp,sizeof(tmp),"\"%.16llx\"",(unsigned long long)*i);
 				responseBody.append(tmp);
 			}
 			responseBody.push_back(']');
@@ -562,7 +562,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 		// Controller status
 
 		char tmp[4096];
-		Utils::snprintf(tmp,sizeof(tmp),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now());
+		Utils::ztsnprintf(tmp,sizeof(tmp),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now());
 		responseBody = tmp;
 		responseContentType = "application/json";
 		return 200;
@@ -603,14 +603,14 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 		if ((path.size() >= 2)&&(path[1].length() == 16)) {
 			uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
 			char nwids[24];
-			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
+			Utils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
 
 			if (path.size() >= 3) {
 
 				if ((path.size() == 4)&&(path[2] == "member")&&(path[3].length() == 10)) {
 					uint64_t address = Utils::hexStrToU64(path[3].c_str());
 					char addrs[24];
-					Utils::snprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)address);
+					Utils::ztsnprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)address);
 
 					json member;
 					_db.getNetworkMember(nwid,address,member);
@@ -748,7 +748,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					if (!nwid)
 						return 503;
 				}
-				Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
+				Utils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
 
 				json network;
 				_db.getNetwork(nwid,network);
@@ -995,7 +995,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 		_queue.post(qe);
 
 		char tmp[64];
-		Utils::snprintf(tmp,sizeof(tmp),"{\"clock\":%llu,\"ping\":%s}",(unsigned long long)now,OSUtils::jsonDump(b).c_str());
+		Utils::ztsnprintf(tmp,sizeof(tmp),"{\"clock\":%llu,\"ping\":%s}",(unsigned long long)now,OSUtils::jsonDump(b).c_str());
 		responseBody = tmp;
 		responseContentType = "application/json";
 
@@ -1083,7 +1083,7 @@ void EmbeddedNetworkController::threadMain()
 						auto ms = this->_memberStatus.find(_MemberStatusKey(networkId,nodeId));
 						if (ms != _memberStatus.end())
 							lrt = ms->second.lastRequestTime;
-						Utils::snprintf(tmp,sizeof(tmp),"%s\"%.16llx-%.10llx\":%llu",
+						Utils::ztsnprintf(tmp,sizeof(tmp),"%s\"%.16llx-%.10llx\":%llu",
 							(first) ? "" : ",",
 							(unsigned long long)networkId,
 							(unsigned long long)nodeId,
@@ -1093,7 +1093,7 @@ void EmbeddedNetworkController::threadMain()
 					});
 				}
 				char tmp2[256];
-				Utils::snprintf(tmp2,sizeof(tmp2),"},\"clock\":%llu,\"startTime\":%llu}",(unsigned long long)now,(unsigned long long)_startTime);
+				Utils::ztsnprintf(tmp2,sizeof(tmp2),"},\"clock\":%llu,\"startTime\":%llu}",(unsigned long long)now,(unsigned long long)_startTime);
 				pong.append(tmp2);
 				_db.writeRaw("pong",pong);
 			}
@@ -1126,7 +1126,7 @@ void EmbeddedNetworkController::_request(
 		ms.lastRequestTime = now;
 	}
 
-	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",nwid);
+	Utils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",nwid);
 	if (!_db.getNetworkAndMember(nwid,identity.address().toInt(),network,member,ns)) {
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
 		return;

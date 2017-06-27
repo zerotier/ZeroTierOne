@@ -244,8 +244,7 @@ public:
 	 * @param ... Format arguments
 	 * @throws std::length_error buf[] too short (buf[] will still be left null-terminated)
 	 */
-	static unsigned int snprintf(char *buf,unsigned int len,const char *fmt,...)
-		throw(std::length_error);
+	static unsigned int ztsnprintf(char *buf,unsigned int len,const char *fmt,...);
 
 	/**
 	 * Count the number of bits set in an integer

@@ -336,7 +336,7 @@ OSXEthernetTap::OSXEthernetTap(
 	char devpath[64],ethaddr[64],mtustr[32],metstr[32],nwids[32];
 	struct stat stattmp;
 
-	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",nwid);
+	Utils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",nwid);
 
 	Mutex::Lock _gl(globalTapCreateLock);
 
@@ -391,13 +391,13 @@ OSXEthernetTap::OSXEthernetTap(
 	// Open the first unused tap device if we didn't recall a previous one.
 	if (!recalledDevice) {
 		for(int i=0;i<64;++i) {
-			Utils::snprintf(devpath,sizeof(devpath),"/dev/zt%d",i);
+			Utils::ztsnprintf(devpath,sizeof(devpath),"/dev/zt%d",i);
 			if (stat(devpath,&stattmp))
 				throw std::runtime_error("no more TAP devices available");
 			_fd = ::open(devpath,O_RDWR);
 			if (_fd > 0) {
 				char foo[16];
-				Utils::snprintf(foo,sizeof(foo),"zt%d",i);
+				Utils::ztsnprintf(foo,sizeof(foo),"zt%d",i);
 				_dev = foo;
 				break;
 			}
@@ -413,9 +413,9 @@ OSXEthernetTap::OSXEthernetTap(
 	}
 
 	// Configure MAC address and MTU, bring interface up
-	Utils::snprintf(ethaddr,sizeof(ethaddr),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
-	Utils::snprintf(mtustr,sizeof(mtustr),"%u",_mtu);
-	Utils::snprintf(metstr,sizeof(metstr),"%u",_metric);
+	Utils::ztsnprintf(ethaddr,sizeof(ethaddr),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
+	Utils::ztsnprintf(mtustr,sizeof(mtustr),"%u",_mtu);
+	Utils::ztsnprintf(metstr,sizeof(metstr),"%u",_metric);
 	long cpid = (long)vfork();
 	if (cpid == 0) {
 		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"lladdr",ethaddr,"mtu",mtustr,"metric",metstr,"up",(const char *)0);
@@ -636,7 +636,7 @@ void OSXEthernetTap::setMtu(unsigned int mtu)
 		long cpid = (long)vfork();
 		if (cpid == 0) {
 			char tmp[64];
-			Utils::snprintf(tmp,sizeof(tmp),"%u",mtu);
+			Utils::ztsnprintf(tmp,sizeof(tmp),"%u",mtu);
 			execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"mtu",tmp,(const char *)0);
 			_exit(-1);
 		} else if (cpid > 0) {

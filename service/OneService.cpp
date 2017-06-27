@@ -210,10 +210,10 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 		case ZT_NETWORK_TYPE_PUBLIC:                     ntype = "PUBLIC"; break;
 	}
 
-	Utils::snprintf(tmp,sizeof(tmp),"%.16llx",nc->nwid);
+	Utils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",nc->nwid);
 	nj["id"] = tmp;
 	nj["nwid"] = tmp;
-	Utils::snprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)((nc->mac >> 40) & 0xff),(unsigned int)((nc->mac >> 32) & 0xff),(unsigned int)((nc->mac >> 24) & 0xff),(unsigned int)((nc->mac >> 16) & 0xff),(unsigned int)((nc->mac >> 8) & 0xff),(unsigned int)(nc->mac & 0xff));
+	Utils::ztsnprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)((nc->mac >> 40) & 0xff),(unsigned int)((nc->mac >> 32) & 0xff),(unsigned int)((nc->mac >> 24) & 0xff),(unsigned int)((nc->mac >> 16) & 0xff),(unsigned int)((nc->mac >> 8) & 0xff),(unsigned int)(nc->mac & 0xff));
 	nj["mac"] = tmp;
 	nj["name"] = nc->name;
 	nj["status"] = nstatus;
@@ -260,12 +260,12 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 		case ZT_PEER_ROLE_PLANET: prole = "PLANET"; break;
 	}
 
-	Utils::snprintf(tmp,sizeof(tmp),"%.10llx",peer->address);
+	Utils::ztsnprintf(tmp,sizeof(tmp),"%.10llx",peer->address);
 	pj["address"] = tmp;
 	pj["versionMajor"] = peer->versionMajor;
 	pj["versionMinor"] = peer->versionMinor;
 	pj["versionRev"] = peer->versionRev;
-	Utils::snprintf(tmp,sizeof(tmp),"%d.%d.%d",peer->versionMajor,peer->versionMinor,peer->versionRev);
+	Utils::ztsnprintf(tmp,sizeof(tmp),"%d.%d.%d",peer->versionMajor,peer->versionMinor,peer->versionRev);
 	pj["version"] = tmp;
 	pj["latency"] = peer->latency;
 	pj["role"] = prole;
@@ -289,7 +289,7 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 static void _moonToJson(nlohmann::json &mj,const World &world)
 {
 	char tmp[64];
-	Utils::snprintf(tmp,sizeof(tmp),"%.16llx",world.id());
+	Utils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",world.id());
 	mj["id"] = tmp;
 	mj["timestamp"] = world.timestamp();
 	mj["signature"] = Utils::hex(world.signature().data,(unsigned int)world.signature().size());
@@ -687,7 +687,7 @@ public:
 
 			// Save primary port to a file so CLIs and GUIs can learn it easily
 			char portstr[64];
-			Utils::snprintf(portstr,sizeof(portstr),"%u",_ports[0]);
+			Utils::ztsnprintf(portstr,sizeof(portstr),"%u",_ports[0]);
 			OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S "zerotier-one.port").c_str(),std::string(portstr));
 
 			// Attempt to bind to a secondary port chosen from our ZeroTier address.
@@ -725,7 +725,7 @@ public:
 					}
 					if (_ports[2]) {
 						char uniqueName[64];
-						Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
+						Utils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
 						_portMapper = new PortMapper(_ports[2],uniqueName);
 					}
 				}
@@ -1069,7 +1069,7 @@ public:
 		n->second.settings = settings;
 
 		char nlcpath[4096];
-		Utils::snprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_networksPath.c_str(),nwid);
+		Utils::ztsnprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_networksPath.c_str(),nwid);
 		FILE *out = fopen(nlcpath,"w");
 		if (out) {
 			fprintf(out,"allowManaged=%d\n",(int)n->second.settings.allowManaged);
@@ -1188,7 +1188,7 @@ public:
 					ZT_NodeStatus status;
 					_node->status(&status);
 
-					Utils::snprintf(tmp,sizeof(tmp),"%.10llx",status.address);
+					Utils::ztsnprintf(tmp,sizeof(tmp),"%.10llx",status.address);
 					res["address"] = tmp;
 					res["publicIdentity"] = status.publicIdentity;
 					res["online"] = (bool)(status.online != 0);
@@ -1197,7 +1197,7 @@ public:
 					res["versionMinor"] = ZEROTIER_ONE_VERSION_MINOR;
 					res["versionRev"] = ZEROTIER_ONE_VERSION_REVISION;
 					res["versionBuild"] = ZEROTIER_ONE_VERSION_BUILD;
-					Utils::snprintf(tmp,sizeof(tmp),"%d.%d.%d",ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
+					Utils::ztsnprintf(tmp,sizeof(tmp),"%d.%d.%d",ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
 					res["version"] = tmp;
 					res["clock"] = OSUtils::now();
 
@@ -1373,7 +1373,7 @@ public:
 
 						if ((scode != 200)&&(seed != 0)) {
 							char tmp[64];
-							Utils::snprintf(tmp,sizeof(tmp),"%.16llx",id);
+							Utils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",id);
 							res["id"] = tmp;
 							res["roots"] = json::array();
 							res["timestamp"] = 0;
@@ -1617,7 +1617,7 @@ public:
 			std::string h = controllerDbHttpHost;
 			_controllerDbPath.append(h);
 			char dbp[128];
-			Utils::snprintf(dbp,sizeof(dbp),"%d",(int)controllerDbHttpPort);
+			Utils::ztsnprintf(dbp,sizeof(dbp),"%d",(int)controllerDbHttpPort);
 			_controllerDbPath.push_back(':');
 			_controllerDbPath.append(dbp);
 			if (controllerDbHttpPath.is_string()) {
@@ -1711,7 +1711,7 @@ public:
 		if (syncRoutes) {
 			char tapdev[64];
 #ifdef __WINDOWS__
-			Utils::snprintf(tapdev,sizeof(tapdev),"%.16llx",(unsigned long long)n.tap->luid().Value);
+			Utils::ztsnprintf(tapdev,sizeof(tapdev),"%.16llx",(unsigned long long)n.tap->luid().Value);
 #else
 			Utils::scopy(tapdev,sizeof(tapdev),n.tap->deviceName().c_str());
 #endif
@@ -1933,24 +1933,24 @@ public:
 		bool secure = false;
 		switch(type) {
 			case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
-				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.public",_homePath.c_str());
+				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.public",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_IDENTITY_SECRET:
-				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.secret",_homePath.c_str());
+				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.secret",_homePath.c_str());
 				secure = true;
 				break;
 			case ZT_STATE_OBJECT_PEER_IDENTITY:
-				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "iddb.d/%.10llx",_homePath.c_str(),(unsigned long long)id);
+				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "iddb.d/%.10llx",_homePath.c_str(),(unsigned long long)id);
 				break;
 			case ZT_STATE_OBJECT_NETWORK_CONFIG:
-				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d/%.16llx.conf",_homePath.c_str(),(unsigned long long)id);
+				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d/%.16llx.conf",_homePath.c_str(),(unsigned long long)id);
 				secure = true;
 				break;
 			case ZT_STATE_OBJECT_PLANET:
-				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
+				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_MOON:
-				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d/%.16llx.moon",_homePath.c_str(),(unsigned long long)id);
+				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d/%.16llx.moon",_homePath.c_str(),(unsigned long long)id);
 				break;
 			default:
 				p[0] = (char)0;
@@ -2022,7 +2022,7 @@ public:
 			&_nextBackgroundTaskDeadline);
 		if (ZT_ResultCode_isFatal(rc)) {
 			char tmp[256];
-			Utils::snprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket: %d",(int)rc);
+			Utils::ztsnprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket: %d",(int)rc);
 			Mutex::Lock _l(_termReason_m);
 			_termReason = ONE_UNRECOVERABLE_ERROR;
 			_fatalErrorMessage = tmp;
@@ -2235,7 +2235,7 @@ public:
 										&_nextBackgroundTaskDeadline);
 									if (ZT_ResultCode_isFatal(rc)) {
 										char tmp[256];
-										Utils::snprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket: %d",(int)rc);
+										Utils::ztsnprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket: %d",(int)rc);
 										Mutex::Lock _l(_termReason_m);
 										_termReason = ONE_UNRECOVERABLE_ERROR;
 										_fatalErrorMessage = tmp;
@@ -2402,7 +2402,7 @@ public:
 				if (!n.tap) {
 					try {
 						char friendlyName[128];
-						Utils::snprintf(friendlyName,sizeof(friendlyName),"ZeroTier One [%.16llx]",nwid);
+						Utils::ztsnprintf(friendlyName,sizeof(friendlyName),"ZeroTier One [%.16llx]",nwid);
 
 						n.tap = new EthernetTap(
 							_homePath.c_str(),
@@ -2416,7 +2416,7 @@ public:
 						*nuptr = (void *)&n;
 
 						char nlcpath[256];
-						Utils::snprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
+						Utils::ztsnprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
 						std::string nlcbuf;
 						if (OSUtils::readFile(nlcpath,nlcbuf)) {
 							Dictionary<4096> nc;
@@ -2502,7 +2502,7 @@ public:
 #endif
 					if (op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY) {
 						char nlcpath[256];
-						Utils::snprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
+						Utils::ztsnprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
 						OSUtils::rm(nlcpath);
 					}
 				} else {
@@ -2554,22 +2554,22 @@ public:
 		char p[4096];
 		switch(type) {
 			case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
-				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.public",_homePath.c_str());
+				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.public",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_IDENTITY_SECRET:
-				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.secret",_homePath.c_str());
+				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.secret",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_PEER_IDENTITY:
-				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "iddb.d/%.10llx",_homePath.c_str(),(unsigned long long)id);
+				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "iddb.d/%.10llx",_homePath.c_str(),(unsigned long long)id);
 				break;
 			case ZT_STATE_OBJECT_NETWORK_CONFIG:
-				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d/%.16llx.conf",_homePath.c_str(),(unsigned long long)id);
+				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d/%.16llx.conf",_homePath.c_str(),(unsigned long long)id);
 				break;
 			case ZT_STATE_OBJECT_PLANET:
-				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
+				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_MOON:
-				Utils::snprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d/%.16llx.moon",_homePath.c_str(),(unsigned long long)id);
+				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d/%.16llx.moon",_homePath.c_str(),(unsigned long long)id);
 				break;
 			default:
 				return -1;
@@ -2765,7 +2765,7 @@ public:
 			default: scodestr = "Error"; break;
 		}
 
-		Utils::snprintf(tmpn,sizeof(tmpn),"HTTP/1.1 %.3u %s\r\nCache-Control: no-cache\r\nPragma: no-cache\r\nContent-Type: %s\r\nContent-Length: %lu\r\nConnection: close\r\n\r\n",
+		Utils::ztsnprintf(tmpn,sizeof(tmpn),"HTTP/1.1 %.3u %s\r\nCache-Control: no-cache\r\nPragma: no-cache\r\nContent-Type: %s\r\nContent-Length: %lu\r\nConnection: close\r\n\r\n",
 			scode,
 			scodestr,
 			contentType.c_str(),

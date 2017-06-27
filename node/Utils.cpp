@@ -244,8 +244,7 @@ bool Utils::scopy(char *dest,unsigned int len,const char *src)
 	return true;
 }
 
-unsigned int Utils::snprintf(char *buf,unsigned int len,const char *fmt,...)
-	throw(std::length_error)
+unsigned int Utils::ztsnprintf(char *buf,unsigned int len,const char *fmt,...)
 {
 	va_list ap;
 
@@ -256,7 +255,7 @@ unsigned int Utils::snprintf(char *buf,unsigned int len,const char *fmt,...)
 	if ((n >= (int)len)||(n < 0)) {
 		if (len)
 			buf[len - 1] = (char)0;
-		throw std::length_error("buf[] overflow in Utils::snprintf");
+		throw std::length_error("buf[] overflow");
 	}
 
 	return (unsigned int)n;
