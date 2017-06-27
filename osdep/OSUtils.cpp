@@ -363,6 +363,24 @@ std::vector<std::string> OSUtils::split(const char *s,const char *const sep,cons
 
 std::string OSUtils::platformDefaultHomePath()
 {
+#ifdef __QNAP__
+	char *cmd = "/sbin/getcfg ZeroTier Install_Path -f /etc/config/qpkg.conf";    
+    char buf[128];
+    FILE *fp;
+    if ((fp = popen(cmd, "r")) == NULL) {
+        printf("Error opening pipe!\n");
+        return NULL;
+    }
+    while (fgets(buf, 128, fp) != NULL) { }
+    if(pclose(fp))  {
+        printf("Command not found or exited with error status\n");
+        return NULL;
+    }
+    std::string homeDir = std::string(buf);
+    homeDir.erase(std::remove(homeDir.begin(), homeDir.end(), '\n'), homeDir.end());
+    return homeDir;
+#endif
+
 #ifdef __UNIX_LIKE__
 
 #ifdef __APPLE__
