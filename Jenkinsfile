@@ -3,7 +3,7 @@
 node('master') {
     def changelog = getChangeLog currentBuild
 
-    slackSend "Building ${env.JOB_NAME} #${env.BUILD_NUMBER} \n Change Log: \n ${changelog}"
+    mattermostSend "Building ${env.JOB_NAME} #${env.BUILD_NUMBER} \n Change Log: \n ${changelog}"
 }
 
 parallel 'centos7': {
@@ -17,7 +17,7 @@ parallel 'centos7': {
         }
         catch (err) {
             currentBuild.result = "FAILURE"
-            slackSend color: '#ff0000', message: "${env.JOB_NAME} broken on Centos 7 (<${env.BUILD_URL}|Open>)"
+            mattermostSend color: '#ff0000', message: "${env.JOB_NAME} broken on Centos 7 (<${env.BUILD_URL}|Open>)"
 
             throw err
         }
@@ -33,7 +33,7 @@ parallel 'centos7': {
         }
         catch (err) {
             currentBuild.result = "FAILURE"
-            slackSend color: '#ff0000', message: "${env.JOB_NAME} broken on Android NDK (<${env.BUILD_URL}|Open>)"
+            mattermostSend color: '#ff0000', message: "${env.JOB_NAME} broken on Android NDK (<${env.BUILD_URL}|Open>)"
 
             throw err
         }
@@ -53,7 +53,7 @@ parallel 'centos7': {
         }
         catch (err) {
             currentBuild.result = "FAILURE"
-            slackSend color: '#ff0000', message: "${env.JOB_NAME} broken on macOS (<${env.BUILD_URL}|Open>)"
+            mattermostSend color: '#ff0000', message: "${env.JOB_NAME} broken on macOS (<${env.BUILD_URL}|Open>)"
 
             throw err
         }
@@ -72,11 +72,11 @@ msbuild windows\\ZeroTierOne.sln
         }
         catch (err) {
             currentBuild.result = "FAILURE"
-            slackSend color: '#ff0000', message: "${env.JOB_NAME} broken on Windows (<${env.BUILD_URL}|Open>)"
+            mattermostSend color: '#ff0000', message: "${env.JOB_NAME} broken on Windows (<${env.BUILD_URL}|Open>)"
 
             throw err
         }
     }
 }
 
-slackSend color: "#00ff00", message: "${env.JOB_NAME} #${env.BUILD_NUMBER} Complete (<${env.BUILD_URL}|Show More...>)"
+mattermostSend color: "#00ff00", message: "${env.JOB_NAME} #${env.BUILD_NUMBER} Complete (<${env.BUILD_URL}|Show More...>)"
