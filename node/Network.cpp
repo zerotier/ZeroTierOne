@@ -700,10 +700,13 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 		this->setConfiguration(tPtr,*nconf,false);
 		_lastConfigUpdate = 0; // still want to re-request since it's likely outdated
 	} else {
+		uint64_t tmp[2];
+		tmp[0] = nwid; tmp[1] = 0;
+
 		bool got = false;
 		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dict = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
 		try {
-			int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,nwid,dict->unsafeData(),ZT_NETWORKCONFIG_DICT_CAPACITY - 1);
+			int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp,dict->unsafeData(),ZT_NETWORKCONFIG_DICT_CAPACITY - 1);
 			if (n > 1) {
 				NetworkConfig *nconf = new NetworkConfig();
 				try {
@@ -719,7 +722,7 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 		delete dict;
 
 		if (!got)
-			RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,nwid,"\n",1);
+			RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp,"\n",1);
 	}
 
 	if (!_portInitialized) {
@@ -1185,8 +1188,11 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 		if (saveToDisk) {
 			Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *d = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
 			try {
-				if (nconf.toDictionary(*d,false))
-					RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,_id,d->data(),d->sizeBytes());
+				if (nconf.toDictionary(*d,false)) {
+					uint64_t tmp[2];
+					tmp[0] = _id; tmp[1] = 0;
+					RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp,d->data(),d->sizeBytes());
+				}
 			} catch ( ... ) {}
 			delete d;
 		}

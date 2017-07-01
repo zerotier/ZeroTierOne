@@ -194,6 +194,22 @@ public:
 	bool doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily);
 
 	/**
+	 * Write current peer state to external storage / cluster network
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 */
+	void writeState(void *tPtr,const uint64_t now);
+
+	/**
+	 * Apply a state update received from e.g. a remote cluster member
+	 *
+	 * @param data State update data
+	 * @param len Length of state update
+	 * @return True if state update was applied, false if ignored or invalid
+	 */
+	bool applyStateUpdate(const void *data,unsigned int len);
+
+	/**
 	 * Reset paths within a given IP scope and address family
 	 *
 	 * Resetting a path involves sending an ECHO to it and then deactivating
@@ -216,19 +232,6 @@ public:
 			_v6Path.p->sent(now);
 			_v6Path.lr = 0; // path will not be used unless it speaks again
 		}
-	}
-
-	/**
-	 * Indicate that the given address was provided by a cluster as a preferred destination
-	 *
-	 * @param addr Address cluster prefers that we use
-	 */
-	inline void setClusterPreferred(const InetAddress &addr)
-	{
-		if (addr.ss_family == AF_INET)
-			_v4ClusterPreferred = addr;
-		else if (addr.ss_family == AF_INET6)
-			_v6ClusterPreferred = addr;
 	}
 
 	/**
@@ -316,18 +319,6 @@ public:
 			_latency = (ol + std::min(l,(unsigned int)65535)) / 2;
 		else _latency = std::min(l,(unsigned int)65535);
 	}
-
-#ifdef ZT_ENABLE_CLUSTER
-	/**
-	 * @param now Current time
-	 * @return True if this peer has at least one active direct path that is not cluster-suboptimal
-	 */
-	inline bool hasLocalClusterOptimalPath(uint64_t now) const
-	{
-		Mutex::Lock _l(_paths_m);
-		return ( ((_v4Path.p)&&(_v4Path.p->alive(now))&&(!_v4Path.localClusterSuboptimal)) || ((_v6Path.p)&&(_v6Path.p->alive(now))&&(!_v6Path.localClusterSuboptimal)) );
-	}
-#endif
 
 	/**
 	 * @return 256-bit secret symmetric encryption key
@@ -449,21 +440,17 @@ public:
 private:
 	struct _PeerPath
 	{
-#ifdef ZT_ENABLE_CLUSTER
-		_PeerPath() : lr(0),p(),localClusterSuboptimal(false) {}
-#else
 		_PeerPath() : lr(0),p() {}
-#endif
 		uint64_t lr; // time of last valid ZeroTier packet
 		SharedPtr<Path> p;
-#ifdef ZT_ENABLE_CLUSTER
-		bool localClusterSuboptimal; // true if our cluster has determined that we should not be serving this peer
-#endif
 	};
 
 	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
 
 	const RuntimeEnvironment *RR;
+
+	uint64_t _lastWroteState;
+	uint64_t _lastReceivedStateTimestamp;
 
 	uint64_t _lastReceive; // direct or indirect
 	uint64_t _lastNontrivialReceive; // frames, things like netconf, etc.
@@ -482,9 +469,6 @@ private:
 	uint16_t _vMajor;
 	uint16_t _vMinor;
 	uint16_t _vRevision;
-
-	InetAddress _v4ClusterPreferred;
-	InetAddress _v6ClusterPreferred;
 
 	_PeerPath _v4Path; // IPv4 direct path
 	_PeerPath _v6Path; // IPv6 direct path

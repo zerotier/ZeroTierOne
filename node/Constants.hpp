@@ -216,7 +216,7 @@
 /**
  * How often Topology::clean() and Network::clean() and similar are called, in ms
  */
-#define ZT_HOUSEKEEPING_PERIOD 120000
+#define ZT_HOUSEKEEPING_PERIOD 10000
 
 /**
  * How long to remember peer records in RAM if they haven't been used

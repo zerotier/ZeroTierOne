@@ -69,7 +69,9 @@ Topology::Topology(const RuntimeEnvironment *renv,void *tPtr) :
 	_amRoot(false)
 {
 	uint8_t tmp[ZT_WORLD_MAX_SERIALIZED_LENGTH];
-	int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PLANET,0,tmp,sizeof(tmp));
+	uint64_t idtmp[2];
+	idtmp[0] = 0; idtmp[1] = 0;
+	int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PLANET,idtmp,tmp,sizeof(tmp));
 	if (n > 0) {
 		try {
 			World cachedPlanet;
@@ -159,7 +161,9 @@ void Topology::saveIdentity(void *tPtr,const Identity &id)
 {
 	if (id) {
 		const std::string tmp(id.toString(false));
-		RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_PEER_IDENTITY,id.address().toInt(),tmp.data(),(unsigned int)tmp.length());
+		uint64_t idtmp[2];
+		idtmp[0] = id.address().toInt(); idtmp[1] = 0;
+		RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_PEER_IDENTITY,idtmp,tmp.data(),(unsigned int)tmp.length());
 	}
 }
 
@@ -329,7 +333,9 @@ bool Topology::addWorld(void *tPtr,const World &newWorld,bool alwaysAcceptNew)
 	try {
 		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> sbuf;
 		existing->serialize(sbuf,false);
-		RR->node->stateObjectPut(tPtr,(existing->type() == World::TYPE_PLANET) ? ZT_STATE_OBJECT_PLANET : ZT_STATE_OBJECT_MOON,existing->id(),sbuf.data(),sbuf.size());
+		uint64_t idtmp[2];
+		idtmp[0] = existing->id(); idtmp[1] = 0;
+		RR->node->stateObjectPut(tPtr,(existing->type() == World::TYPE_PLANET) ? ZT_STATE_OBJECT_PLANET : ZT_STATE_OBJECT_MOON,idtmp,sbuf.data(),sbuf.size());
 	} catch ( ... ) {}
 
 	_memoizeUpstreams(tPtr);
@@ -340,7 +346,9 @@ bool Topology::addWorld(void *tPtr,const World &newWorld,bool alwaysAcceptNew)
 void Topology::addMoon(void *tPtr,const uint64_t id,const Address &seed)
 {
 	char tmp[ZT_WORLD_MAX_SERIALIZED_LENGTH];
-	int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_MOON,id,tmp,sizeof(tmp));
+	uint64_t idtmp[2];
+	idtmp[0] = id; idtmp[1] = 0;
+	int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_MOON,idtmp,tmp,sizeof(tmp));
 	if (n > 0) {
 		try {
 			World w;
@@ -369,7 +377,9 @@ void Topology::removeMoon(void *tPtr,const uint64_t id)
 		if (m->id() != id) {
 			nm.push_back(*m);
 		} else {
-			RR->node->stateObjectDelete(tPtr,ZT_STATE_OBJECT_MOON,id);
+			uint64_t idtmp[2];
+			idtmp[0] = id; idtmp[1] = 0;
+			RR->node->stateObjectDelete(tPtr,ZT_STATE_OBJECT_MOON,idtmp);
 		}
 	}
 	_moons.swap(nm);
@@ -384,7 +394,7 @@ void Topology::removeMoon(void *tPtr,const uint64_t id)
 	_memoizeUpstreams(tPtr);
 }
 
-void Topology::clean(uint64_t now)
+void Topology::doPeriodicTasks(void *tPtr,uint64_t now)
 {
 	{
 		Mutex::Lock _l1(_peers_m);
@@ -393,10 +403,14 @@ void Topology::clean(uint64_t now)
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p)) {
-			if ( (!(*p)->isAlive(now)) && (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),*a) == _upstreamAddresses.end()) )
+			if ( (!(*p)->isAlive(now)) && (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),*a) == _upstreamAddresses.end()) ) {
 				_peers.erase(*a);
+			} else {
+				(*p)->writeState(tPtr,now);
+			}
 		}
 	}
+
 	{
 		Mutex::Lock _l(_paths_m);
 		Hashtable< Path::HashKey,SharedPtr<Path> >::Iterator i(_paths);
@@ -412,7 +426,9 @@ void Topology::clean(uint64_t now)
 Identity Topology::_getIdentity(void *tPtr,const Address &zta)
 {
 	char tmp[512];
-	int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER_IDENTITY,zta.toInt(),tmp,sizeof(tmp) - 1);
+	uint64_t idtmp[2];
+	idtmp[0] = zta.toInt(); idtmp[1] = 0;
+	int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER_IDENTITY,idtmp,tmp,sizeof(tmp) - 1);
 	if (n > 0) {
 		tmp[n] = (char)0;
 		try {

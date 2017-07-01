@@ -308,7 +308,7 @@ public:
 	/**
 	 * Clean and flush database
 	 */
-	void clean(uint64_t now);
+	void doPeriodicTasks(void *tPtr,uint64_t now);
 
 	/**
 	 * @param now Current time

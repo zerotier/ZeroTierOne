@@ -76,22 +76,26 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 	memset(_expectingRepliesTo,0,sizeof(_expectingRepliesTo));
 	memset(_lastIdentityVerification,0,sizeof(_lastIdentityVerification));
 
+	uint64_t idtmp[2];
+	idtmp[0] = 0; idtmp[1] = 0;
 	char tmp[512];
 	std::string tmp2;
-	int n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,0,tmp,sizeof(tmp) - 1);
+	int n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,tmp,sizeof(tmp) - 1);
 	if (n > 0) {
 		tmp[n] = (char)0;
 		if (!RR->identity.fromString(tmp))
 			n = -1;
 	}
+
+	idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
 	if (n <= 0) {
 		RR->identity.generate();
 		tmp2 = RR->identity.toString(true);
-		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,RR->identity.address().toInt(),tmp2.data(),(unsigned int)tmp2.length());
+		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,tmp2.data(),(unsigned int)tmp2.length());
 		tmp2 = RR->identity.toString(false);
-		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,RR->identity.address().toInt(),tmp2.data(),(unsigned int)tmp2.length());
+		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,tmp2.data(),(unsigned int)tmp2.length());
 	} else {
-		n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,RR->identity.address().toInt(),tmp,sizeof(tmp) - 1);
+		n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,tmp,sizeof(tmp) - 1);
 		if (n > 0) {
 			tmp[n] = (char)0;
 			if (RR->identity.toString(false) != tmp)
@@ -99,7 +103,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 		}
 		if (n <= 0) {
 			tmp2 = RR->identity.toString(false);
-			stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,RR->identity.address().toInt(),tmp2.data(),(unsigned int)tmp2.length());
+			stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,tmp2.data(),(unsigned int)tmp2.length());
 		}
 	}
 
@@ -145,7 +149,7 @@ ZT_ResultCode Node::processStateUpdate(
 	ZT_ResultCode r = ZT_RESULT_OK_IGNORED;
 	switch(type) {
 
-		case ZT_STATE_OBJECT_PEER:
+		case ZT_STATE_OBJECT_PEER_STATE:
 			if (len) {
 			}
 			break;
@@ -380,9 +384,9 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,uint64_t now,volatile uint
 	}
 
 	if ((now - _lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
+		_lastHousekeepingRun = now;
 		try {
-			_lastHousekeepingRun = now;
-			RR->topology->clean(now);
+			RR->topology->doPeriodicTasks(tptr,now);
 			RR->sa->clean(now);
 			RR->mc->clean(now);
 		} catch ( ... ) {
@@ -443,7 +447,9 @@ ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 		_networks.erase(nwid);
 	}
 
-	RR->node->stateObjectDelete(tptr,ZT_STATE_OBJECT_NETWORK_CONFIG,nwid);
+	uint64_t tmp[2];
+	tmp[0] = nwid; tmp[1] = 0;
+	RR->node->stateObjectDelete(tptr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp);
 
 	return ZT_RESULT_OK;
 }

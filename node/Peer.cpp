@@ -38,6 +38,8 @@ namespace ZeroTier {
 
 Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
 	RR(renv),
+	_lastWroteState(0),
+	_lastReceivedStateTimestamp(0),
 	_lastReceive(0),
 	_lastNontrivialReceive(0),
 	_lastTriedMemorizedPath(0),
@@ -75,6 +77,7 @@ void Peer::received(
 {
 	const uint64_t now = RR->node->now();
 
+/*
 #ifdef ZT_ENABLE_CLUSTER
 	bool isClusterSuboptimalPath = false;
 	if ((RR->cluster)&&(hops == 0)) {
@@ -120,6 +123,7 @@ void Peer::received(
 		}
 	}
 #endif
+*/
 
 	_lastReceive = now;
 	switch (verb) {
@@ -143,6 +147,8 @@ void Peer::received(
 
 	if (hops == 0) {
 		bool pathAlreadyKnown = false;
+		bool newPathLearned = false;
+
 		{
 			Mutex::Lock _l(_paths_m);
 			if ((path->address().ss_family == AF_INET)&&(_v4Path.p)) {
@@ -152,9 +158,6 @@ void Peer::received(
 				const struct sockaddr_in *const ll = reinterpret_cast<const struct sockaddr_in *>(&(_v4Path.p->localAddress()));
 				if ((r->sin_addr.s_addr == l->sin_addr.s_addr)&&(r->sin_port == l->sin_port)&&(rl->sin_addr.s_addr == ll->sin_addr.s_addr)&&(rl->sin_port == ll->sin_port)) {
 					_v4Path.lr = now;
-#ifdef ZT_ENABLE_CLUSTER
-					_v4Path.localClusterSuboptimal = isClusterSuboptimalPath;
-#endif
 					pathAlreadyKnown = true;
 				}
 			} else if ((path->address().ss_family == AF_INET6)&&(_v6Path.p)) {
@@ -164,9 +167,6 @@ void Peer::received(
 				const struct sockaddr_in6 *const ll = reinterpret_cast<const struct sockaddr_in6 *>(&(_v6Path.p->localAddress()));
 				if ((!memcmp(r->sin6_addr.s6_addr,l->sin6_addr.s6_addr,16))&&(r->sin6_port == l->sin6_port)&&(!memcmp(rl->sin6_addr.s6_addr,ll->sin6_addr.s6_addr,16))&&(rl->sin6_port == ll->sin6_port)) {
 					_v6Path.lr = now;
-#ifdef ZT_ENABLE_CLUSTER
-					_v6Path.localClusterSuboptimal = isClusterSuboptimalPath;
-#endif
 					pathAlreadyKnown = true;
 				}
 			}
@@ -176,11 +176,11 @@ void Peer::received(
 			Mutex::Lock _l(_paths_m);
 			_PeerPath *potentialNewPeerPath = (_PeerPath *)0;
 			if (path->address().ss_family == AF_INET) {
-				if ( (!_v4Path.p) || (!_v4Path.p->alive(now)) || ((_v4Path.p->address() != _v4ClusterPreferred)&&(path->preferenceRank() >= _v4Path.p->preferenceRank())) ) {
+				if ( (!_v4Path.p) || (!_v4Path.p->alive(now)) || (path->preferenceRank() >= _v4Path.p->preferenceRank()) ) {
 					potentialNewPeerPath = &_v4Path;
 				}
 			} else if (path->address().ss_family == AF_INET6) {
-				if ( (!_v6Path.p) || (!_v6Path.p->alive(now)) || ((_v6Path.p->address() != _v6ClusterPreferred)&&(path->preferenceRank() >= _v6Path.p->preferenceRank())) ) {
+				if ( (!_v6Path.p) || (!_v6Path.p->alive(now)) || (path->preferenceRank() >= _v6Path.p->preferenceRank()) ) {
 					potentialNewPeerPath = &_v6Path;
 				}
 			}
@@ -188,11 +188,7 @@ void Peer::received(
 				if (verb == Packet::VERB_OK) {
 					potentialNewPeerPath->lr = now;
 					potentialNewPeerPath->p = path;
-#ifdef ZT_ENABLE_CLUSTER
-					potentialNewPeerPath->localClusterSuboptimal = isClusterSuboptimalPath;
-					if (RR->cluster)
-						RR->cluster->broadcastHavePeer(_id);
-#endif
+					newPathLearned = true;
 				} else {
 					TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),path->address().toString().c_str());
 					attemptToContactAt(tPtr,path->localAddress(),path->address(),now,true,path->nextOutgoingCounter());
@@ -200,15 +196,12 @@ void Peer::received(
 				}
 			}
 		}
+
+		if (newPathLearned)
+			writeState(tPtr,now);
 	} else if (this->trustEstablished(now)) {
 		// Send PUSH_DIRECT_PATHS if hops>0 (relayed) and we have a trust relationship (common network membership)
-#ifdef ZT_ENABLE_CLUSTER
-		// Cluster mode disables normal PUSH_DIRECT_PATHS in favor of cluster-based peer redirection
-		const bool haveCluster = (RR->cluster);
-#else
-		const bool haveCluster = false;
-#endif
-		if ( ((now - _lastDirectPathPushSent) >= ZT_DIRECT_PATH_PUSH_INTERVAL) && (!haveCluster) ) {
+		if ((now - _lastDirectPathPushSent) >= ZT_DIRECT_PATH_PUSH_INTERVAL) {
 			_lastDirectPathPushSent = now;
 
 			std::vector<InetAddress> pathsToPush;
@@ -436,6 +429,137 @@ bool Peer::doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily)
 		}
 	}
 
+	return false;
+}
+
+void Peer::writeState(void *tPtr,const uint64_t now)
+{
+	try {
+		Buffer<sizeof(Peer) + 32 + (sizeof(Path) * 2)> b;
+
+		b.append((uint8_t)1); // version
+		b.append(now);
+
+		_id.serialize(b);
+
+		{
+			Mutex::Lock _l(_paths_m);
+			unsigned int count = 0;
+			if (_v4Path.lr)
+				++count;
+			if (_v6Path.lr)
+				++count;
+			b.append((uint8_t)count);
+			if (_v4Path.lr) {
+				b.append(_v4Path.lr);
+				b.append(_v4Path.p->lastOut());
+				b.append(_v4Path.p->lastIn());
+				b.append(_v4Path.p->lastTrustEstablishedPacketReceived());
+				b.append((uint16_t)_v4Path.p->distance());
+				_v4Path.p->address().serialize(b);
+				_v4Path.p->localAddress().serialize(b);
+			}
+			if (_v6Path.lr) {
+				b.append(_v6Path.lr);
+				b.append(_v6Path.p->lastOut());
+				b.append(_v6Path.p->lastIn());
+				b.append(_v6Path.p->lastTrustEstablishedPacketReceived());
+				b.append((uint16_t)_v6Path.p->distance());
+				_v6Path.p->address().serialize(b);
+				_v6Path.p->localAddress().serialize(b);
+			}
+		}
+
+		b.append(_lastReceive);
+		b.append(_lastNontrivialReceive);
+		b.append(_lastTriedMemorizedPath);
+		b.append(_lastDirectPathPushSent);
+		b.append(_lastDirectPathPushReceive);
+		b.append(_lastCredentialRequestSent);
+		b.append(_lastWhoisRequestReceived);
+		b.append(_lastEchoRequestReceived);
+		b.append(_lastComRequestReceived);
+		b.append(_lastComRequestSent);
+		b.append(_lastCredentialsReceived);
+		b.append(_lastTrustEstablishedPacketReceived);
+
+		b.append(_vProto);
+		b.append(_vMajor);
+		b.append(_vMinor);
+		b.append(_vRevision);
+
+		b.append((uint16_t)0); // length of additional fields
+
+		uint64_t tmp[2];
+		tmp[0] = _id.address().toInt(); tmp[1] = 0;
+		RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_PEER_STATE,tmp,b.data(),b.size());
+
+		_lastWroteState = now;
+	} catch ( ... ) {} // sanity check, should not be possible
+}
+
+bool Peer::applyStateUpdate(const void *data,unsigned int len)
+{
+	try {
+		Buffer<sizeof(Peer) + 32 + (sizeof(Path) * 2)> b(data,len);
+		unsigned int ptr = 0;
+
+		if (b[ptr++] != 1)
+			return false;
+		const uint64_t ts = b.at<uint64_t>(ptr); ptr += 8;
+		if (ts <= _lastReceivedStateTimestamp)
+			return false;
+
+		const unsigned int pathCount = (unsigned int)b[ptr++];
+		{
+			Mutex::Lock _l(_paths_m);
+			for(unsigned int i=0;i<pathCount;++i) {
+				const uint64_t lr = b.at<uint64_t>(ptr); ptr += 8;
+				const uint64_t lastOut = b.at<uint64_t>(ptr); ptr += 8;
+				const uint64_t lastIn = b.at<uint64_t>(ptr); ptr += 8;
+				const uint64_t lastTrustEstablishedPacketReceived = b.at<uint64_t>(ptr); ptr += 8;
+				const unsigned int distance = b.at<uint16_t>(ptr); ptr += 2;
+				InetAddress addr,localAddr;
+				ptr += addr.deserialize(b,ptr);
+				ptr += localAddr.deserialize(b,ptr);
+				if (addr.ss_family == localAddr.ss_family) {
+					_PeerPath *p = (_PeerPath *)0;
+					switch(addr.ss_family) {
+						case AF_INET: p = &_v4Path; break;
+						case AF_INET6: p = &_v6Path; break;
+					}
+					if (p) {
+						if ( ((p->p->address() != addr)||(p->p->localAddress() != localAddr)) && (p->p->distance() > distance) )
+							p->p = RR->topology->getPath(localAddr,addr);
+						p->lr = lr;
+						p->p->updateFromRemoteState(lastOut,lastIn,lastTrustEstablishedPacketReceived);
+					}
+				}
+			}
+		}
+
+		_lastReceive = std::max(_lastReceive,b.at<uint64_t>(ptr)); ptr += 8;
+		_lastNontrivialReceive = std::max(_lastNontrivialReceive,b.at<uint64_t>(ptr)); ptr += 8;
+		_lastTriedMemorizedPath = std::max(_lastTriedMemorizedPath,b.at<uint64_t>(ptr)); ptr += 8;
+		_lastDirectPathPushSent = std::max(_lastDirectPathPushSent,b.at<uint64_t>(ptr)); ptr += 8;
+		_lastDirectPathPushReceive = std::max(_lastDirectPathPushReceive,b.at<uint64_t>(ptr)); ptr += 8;
+		_lastCredentialRequestSent = std::max(_lastCredentialRequestSent,b.at<uint64_t>(ptr)); ptr += 8;
+		_lastWhoisRequestReceived = std::max(_lastWhoisRequestReceived,b.at<uint64_t>(ptr)); ptr += 8;
+		_lastEchoRequestReceived = std::max(_lastEchoRequestReceived,b.at<uint64_t>(ptr)); ptr += 8;
+		_lastComRequestReceived = std::max(_lastComRequestReceived,b.at<uint64_t>(ptr)); ptr += 8;
+		_lastComRequestSent = std::max(_lastComRequestSent,b.at<uint64_t>(ptr)); ptr += 8;
+		_lastCredentialsReceived = std::max(_lastCredentialsReceived,b.at<uint64_t>(ptr)); ptr += 8;
+		_lastTrustEstablishedPacketReceived = std::max(_lastTrustEstablishedPacketReceived,b.at<uint64_t>(ptr)); ptr += 8;
+
+		_vProto = b.at<uint16_t>(ptr); ptr += 2;
+		_vMajor = b.at<uint16_t>(ptr); ptr += 2;
+		_vMinor = b.at<uint16_t>(ptr); ptr += 2;
+		_vRevision = b.at<uint16_t>(ptr); ptr += 2;
+
+		_lastReceivedStateTimestamp = ts;
+
+		return true;
+	} catch ( ... ) {} // ignore invalid state updates
 	return false;
 }
 

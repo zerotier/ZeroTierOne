@@ -1115,14 +1115,14 @@ enum ZT_StateObjectType
 	 * Canonical path: <HOME>/peers.d/<ADDRESS> (10-digit hex address)
 	 * Persistence: optional, can be purged at any time
 	 */
-	ZT_STATE_OBJECT_PEER = 3,
+	ZT_STATE_OBJECT_PEER_STATE = 3,
 
 	/**
 	 * The identity of a known peer
 	 *
 	 * Object ID: peer address
 	 * Canonical path: <HOME>/iddb.d/<ADDRESS> (10-digit hex address)
-	 * Persistence: optional, can be purged at any time, recommended ttl 30-60 days
+	 * Persistence: recommended, can be purged at any time, recommended ttl 30-60 days
 	 */
 	ZT_STATE_OBJECT_PEER_IDENTITY = 4,
 
@@ -1248,7 +1248,7 @@ typedef void (*ZT_StatePutFunction)(
 	void *,                                /* User ptr */
 	void *,                                /* Thread ptr */
 	enum ZT_StateObjectType,               /* State object type */
-	uint64_t,                              /* State object ID (if applicable) */
+	const uint64_t [2],                    /* State object ID (if applicable) */
 	const void *,                          /* State object data */
 	int);                                  /* Length of data or -1 to delete */
 
@@ -1264,7 +1264,7 @@ typedef int (*ZT_StateGetFunction)(
 	void *,                                /* User ptr */
 	void *,                                /* Thread ptr */
 	enum ZT_StateObjectType,               /* State object type */
-	uint64_t,                              /* State object ID (if applicable) */
+	const uint64_t [2],                    /* State object ID (if applicable) */
 	void *,                                /* Buffer to store state object data */
 	unsigned int);                         /* Length of data buffer in bytes */
 
