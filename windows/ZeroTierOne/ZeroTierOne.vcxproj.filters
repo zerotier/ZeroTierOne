@@ -168,9 +168,6 @@
     <ClCompile Include="..\..\node\Path.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\node\Cluster.cpp">
-      <Filter>Source Files\node</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ext\miniupnpc\connecthostport.c">
       <Filter>Source Files\ext\miniupnpc</Filter>
     </ClCompile>
