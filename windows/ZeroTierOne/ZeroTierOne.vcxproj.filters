@@ -401,9 +401,6 @@
     <ClInclude Include="..\..\node\BinarySemaphore.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\node\Cluster.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\node\Hashtable.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>

@@ -133,7 +133,6 @@
     <ClInclude Include="..\..\node\C25519.hpp" />
     <ClInclude Include="..\..\node\CertificateOfMembership.hpp" />
     <ClInclude Include="..\..\node\CertificateOfOwnership.hpp" />
-    <ClInclude Include="..\..\node\Cluster.hpp" />
     <ClInclude Include="..\..\node\CMWC4096.hpp" />
     <ClInclude Include="..\..\node\Constants.hpp" />
     <ClInclude Include="..\..\node\Credential.hpp" />
