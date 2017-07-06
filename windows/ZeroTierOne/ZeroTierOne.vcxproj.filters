@@ -168,9 +168,6 @@
     <ClCompile Include="..\..\node\Path.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\node\Cluster.cpp">
-      <Filter>Source Files\node</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ext\miniupnpc\connecthostport.c">
       <Filter>Source Files\ext\miniupnpc</Filter>
     </ClCompile>
@@ -402,9 +399,6 @@
       <Filter>Header Files\windows\ZeroTierOne</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\BinarySemaphore.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\node\Cluster.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\Hashtable.hpp">
