@@ -82,6 +82,13 @@ public:
 	SharedPtr<Peer> getPeer(void *tPtr,const Address &zta);
 
 	/**
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param zta ZeroTier address of peer
+	 * @return Identity or NULL identity if not found
+	 */
+	Identity getIdentity(void *tPtr,const Address &zta);
+
+	/**
 	 * Get a peer only if it is presently in memory (no disk cache)
 	 *
 	 * This also does not update the lastUsed() time for peers, which means
@@ -115,26 +122,6 @@ public:
 			p.setToUnsafe(new Path(l,r));
 		return p;
 	}
-
-	/**
-	 * Get the identity of a peer
-	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param zta ZeroTier address of peer
-	 * @return Identity or NULL Identity if not found
-	 */
-	Identity getIdentity(void *tPtr,const Address &zta);
-
-	/**
-	 * Cache an identity
-	 *
-	 * This is done automatically on addPeer(), and so is only useful for
-	 * cluster identity replication.
-	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param id Identity to cache
-	 */
-	void saveIdentity(void *tPtr,const Identity &id);
 
 	/**
 	 * Get the current best upstream peer

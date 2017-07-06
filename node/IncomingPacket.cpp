@@ -585,12 +585,6 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const Shar
 			} else {
 				// Request unknown WHOIS from upstream from us (if we have one)
 				RR->sw->requestWhois(tPtr,addr);
-#ifdef ZT_ENABLE_CLUSTER
-				// Distribute WHOIS queries across a cluster if we do not know the ID.
-				// This may result in duplicate OKs to the querying peer, which is fine.
-				if (RR->cluster)
-					RR->cluster->sendDistributedQuery(*this);
-#endif
 			}
 		}
 
@@ -1055,12 +1049,6 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr
 				outp.armor(peer->key(),true,_path->nextOutgoingCounter());
 				_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 			}
-
-			// If we are a member of a cluster, distribute this GATHER across it
-#ifdef ZT_ENABLE_CLUSTER
-			if ((RR->cluster)&&(gatheredLocally < gatherLimit))
-				RR->cluster->sendDistributedQuery(*this);
-#endif
 		}
 
 		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_MULTICAST_GATHER,0,Packet::VERB_NOP,trustEstablished);

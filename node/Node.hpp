@@ -85,7 +85,7 @@ public:
 	ZT_ResultCode processStateUpdate(
 		void *tptr,
 		ZT_StateObjectType type,
-		uint64_t id,
+		const uint64_t id[2],
 		const void *data,
 		unsigned int len);
 	ZT_ResultCode processWirePacket(

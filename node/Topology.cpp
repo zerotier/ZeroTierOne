@@ -108,8 +108,6 @@ SharedPtr<Peer> Topology::addPeer(void *tPtr,const SharedPtr<Peer> &peer)
 		np = hp;
 	}
 
-	saveIdentity(tPtr,np->identity());
-
 	return np;
 }
 
@@ -128,18 +126,20 @@ SharedPtr<Peer> Topology::getPeer(void *tPtr,const Address &zta)
 	}
 
 	try {
-		Identity id(_getIdentity(tPtr,zta));
-		if (id) {
-			SharedPtr<Peer> np(new Peer(RR,RR->identity,id));
-			{
-				Mutex::Lock _l(_peers_m);
-				SharedPtr<Peer> &ap = _peers[zta];
-				if (!ap)
-					ap.swap(np);
+		char buf[ZT_PEER_MAX_SERIALIZED_STATE_SIZE];
+		uint64_t idbuf[2]; idbuf[0] = zta.toInt(); idbuf[1] = 0;
+		int len = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER_STATE,idbuf,buf,(unsigned int)sizeof(buf));
+		if (len > 0) {
+			Mutex::Lock _l(_peers_m);
+			SharedPtr<Peer> &ap = _peers[zta];
+			if (ap)
 				return ap;
-			}
+			ap = Peer::createFromStateUpdate(RR,tPtr,buf,len);
+			if (!ap)
+				_peers.erase(zta);
+			return ap;
 		}
-	} catch ( ... ) {} // invalid identity on disk?
+	} catch ( ... ) {} // ignore invalid identities or other strage failures
 
 	return SharedPtr<Peer>();
 }
@@ -154,17 +154,7 @@ Identity Topology::getIdentity(void *tPtr,const Address &zta)
 		if (ap)
 			return (*ap)->identity();
 	}
-	return _getIdentity(tPtr,zta);
-}
-
-void Topology::saveIdentity(void *tPtr,const Identity &id)
-{
-	if (id) {
-		const std::string tmp(id.toString(false));
-		uint64_t idtmp[2];
-		idtmp[0] = id.address().toInt(); idtmp[1] = 0;
-		RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_PEER_IDENTITY,idtmp,tmp.data(),(unsigned int)tmp.length());
-	}
+	return Identity();
 }
 
 SharedPtr<Peer> Topology::getUpstreamPeer(const Address *avoid,unsigned int avoidCount,bool strictAvoid)
@@ -423,21 +413,6 @@ void Topology::doPeriodicTasks(void *tPtr,uint64_t now)
 	}
 }
 
-Identity Topology::_getIdentity(void *tPtr,const Address &zta)
-{
-	char tmp[512];
-	uint64_t idtmp[2];
-	idtmp[0] = zta.toInt(); idtmp[1] = 0;
-	int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER_IDENTITY,idtmp,tmp,sizeof(tmp) - 1);
-	if (n > 0) {
-		tmp[n] = (char)0;
-		try {
-			return Identity(tmp);
-		} catch ( ... ) {} // ignore invalid IDs
-	}
-	return Identity();
-}
-
 void Topology::_memoizeUpstreams(void *tPtr)
 {
 	// assumes _upstreams_m and _peers_m are locked
@@ -450,10 +425,8 @@ void Topology::_memoizeUpstreams(void *tPtr)
 		} else if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),i->identity.address()) == _upstreamAddresses.end()) {
 			_upstreamAddresses.push_back(i->identity.address());
 			SharedPtr<Peer> &hp = _peers[i->identity.address()];
-			if (!hp) {
+			if (!hp)
 				hp = new Peer(RR,RR->identity,i->identity);
-				saveIdentity(tPtr,i->identity);
-			}
 		}
 	}
 
@@ -464,10 +437,8 @@ void Topology::_memoizeUpstreams(void *tPtr)
 			} else if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),i->identity.address()) == _upstreamAddresses.end()) {
 				_upstreamAddresses.push_back(i->identity.address());
 				SharedPtr<Peer> &hp = _peers[i->identity.address()];
-				if (!hp) {
+				if (!hp)
 					hp = new Peer(RR,RR->identity,i->identity);
-					saveIdentity(tPtr,i->identity);
-				}
 			}
 		}
 	}

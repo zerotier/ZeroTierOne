@@ -51,6 +51,8 @@
 #include "Mutex.hpp"
 #include "NonCopyable.hpp"
 
+#define ZT_PEER_MAX_SERIALIZED_STATE_SIZE (sizeof(Peer) + 32 + (sizeof(Path) * 2))
+
 namespace ZeroTier {
 
 /**
@@ -194,9 +196,10 @@ public:
 	bool doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily);
 
 	/**
-	 * Write current peer state to external storage / cluster network
+	 * Write object state to external storage and/or cluster network
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param now Current time
 	 */
 	void writeState(void *tPtr,const uint64_t now);
 
@@ -436,6 +439,17 @@ public:
 		}
 		return false;
 	}
+
+	/**
+	 * Create a peer from a remote state update
+	 *
+	 * @param renv Runtime environment
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param data State update data
+	 * @param len State update length
+	 * @return Peer or NULL if data was invalid
+	 */
+	static SharedPtr<Peer> createFromStateUpdate(const RuntimeEnvironment *renv,void *tPtr,const void *data,unsigned int len);
 
 private:
 	struct _PeerPath

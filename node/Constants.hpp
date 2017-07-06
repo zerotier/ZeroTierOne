@@ -216,7 +216,12 @@
 /**
  * How often Topology::clean() and Network::clean() and similar are called, in ms
  */
-#define ZT_HOUSEKEEPING_PERIOD 10000
+#define ZT_HOUSEKEEPING_PERIOD 60000
+
+/**
+ * How often in ms to write peer state to storage and/or cluster (approximate)
+ */
+#define ZT_PEER_STATE_WRITE_PERIOD 10000
 
 /**
  * How long to remember peer records in RAM if they haven't been used
@@ -321,11 +326,6 @@
  * Paths are considered expired if they have not sent us a real packet in this long
  */
 #define ZT_PEER_PATH_EXPIRATION ((ZT_PEER_PING_PERIOD * 4) + 3000)
-
-/**
- * Send a full HELLO every this often (ms)
- */
-#define ZT_PEER_SEND_FULL_HELLO_EVERY (ZT_PEER_PING_PERIOD * 2)
 
 /**
  * How often to retry expired paths that we're still remembering

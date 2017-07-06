@@ -91,7 +91,10 @@ public:
 
 	~Identity()
 	{
-		delete _privateKey;
+		if (_privateKey) {
+			Utils::burn(_privateKey,sizeof(C25519::Private));
+			delete _privateKey;
+		}
 	}
 
 	inline Identity &operator=(const Identity &id)

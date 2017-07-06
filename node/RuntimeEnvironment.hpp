@@ -30,8 +30,8 @@
 #include <string>
 
 #include "Constants.hpp"
+#include "Utils.hpp"
 #include "Identity.hpp"
-#include "Mutex.hpp"
 
 namespace ZeroTier {
 
@@ -58,10 +58,13 @@ public:
 		,mc((Multicaster *)0)
 		,topology((Topology *)0)
 		,sa((SelfAwareness *)0)
-#ifdef ZT_ENABLE_CLUSTER
-		,cluster((Cluster *)0)
-#endif
 	{
+		Utils::getSecureRandom(&instanceId,sizeof(instanceId));
+	}
+
+	~RuntimeEnvironment()
+	{
+		Utils::burn(reinterpret_cast<void *>(const_cast<char *>(secretIdentityStr.data())),(unsigned int)secretIdentityStr.length());
 	}
 
 	// Node instance that owns this RuntimeEnvironment
@@ -87,9 +90,11 @@ public:
 	Multicaster *mc;
 	Topology *topology;
 	SelfAwareness *sa;
-#ifdef ZT_ENABLE_CLUSTER
-	Cluster *cluster;
-#endif
+
+	/**
+	 * A random integer identifying this run of ZeroTier
+	 */
+	uint32_t instanceId;
 };
 
 } // namespace ZeroTier

@@ -154,9 +154,6 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 // How often to check for local interface addresses
 #define ZT_LOCAL_INTERFACE_CHECK_INTERVAL 60000
 
-// Clean files from iddb.d that are older than this (60 days)
-#define ZT_IDDB_CLEANUP_AGE 5184000000ULL
-
 // Maximum write buffer size for outgoing TCP connections (sanity limit)
 #define ZT_TCP_MAX_WRITEQ_SIZE 33554432
 
@@ -414,7 +411,6 @@ public:
 	const std::string _homePath;
 	std::string _authToken;
 	std::string _controllerDbPath;
-	const std::string _iddbPath;
 	const std::string _networksPath;
 	const std::string _moonsPath;
 
@@ -513,7 +509,6 @@ public:
 	OneServiceImpl(const char *hp,unsigned int port) :
 		_homePath((hp) ? hp : ".")
 		,_controllerDbPath(_homePath + ZT_PATH_SEPARATOR_S "controller.d")
-		,_iddbPath(_homePath + ZT_PATH_SEPARATOR_S "iddb.d")
 		,_networksPath(_homePath + ZT_PATH_SEPARATOR_S "networks.d")
 		,_moonsPath(_homePath + ZT_PATH_SEPARATOR_S "moons.d")
 		,_controller((EmbeddedNetworkController *)0)
@@ -732,6 +727,9 @@ public:
 			}
 #endif
 
+			// Delete legacy iddb.d if present (cleanup)
+			OSUtils::rmDashRf((_homePath + ZT_PATH_SEPARATOR_S "iddb.d").c_str());
+
 			// Network controller is now enabled by default for desktop and server
 			_controller = new EmbeddedNetworkController(_node,_controllerDbPath.c_str());
 			_node->setNetconfMaster((void *)_controller);
@@ -781,7 +779,6 @@ public:
 			uint64_t lastBindRefresh = 0;
 			uint64_t lastUpdateCheck = clockShouldBe;
 			uint64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
-			uint64_t lastCleanedIddb = 0;
 			uint64_t lastTcpCheck = 0;
 			for(;;) {
 				_run_m.lock();
@@ -796,12 +793,6 @@ public:
 				}
 
 				const uint64_t now = OSUtils::now();
-
-				// Clean iddb.d on start and every 24 hours
-				if ((now - lastCleanedIddb) > 86400000) {
-					lastCleanedIddb = now;
-					OSUtils::cleanDirectory(_iddbPath.c_str(),now - ZT_IDDB_CLEANUP_AGE);
-				}
 
 				// Attempt to detect sleep/wake events by detecting delay overruns
 				bool restarted = false;
@@ -1027,7 +1018,7 @@ public:
 		return NULL;
 	}
 
-	virtual Node * getNode()
+	virtual Node *getNode()
 	{
 		return _node;
 	}
@@ -1903,27 +1894,16 @@ public:
 
 		char *const outdata = const_cast<char *>(tc->writeq.data()) + startpos;
 		encryptClusterMessage(outdata,mlen);
-	}
-
-	void replicateStateObjectToCluster(const ZT_StateObjectType type,const uint64_t id[2],const void *const data,const unsigned int len,const uint64_t everyoneBut)
-	{
-		std::vector<uint64_t> sentTo;
-		if (everyoneBut)
-			sentTo.push_back(everyoneBut);
-		Mutex::Lock _l(_tcpConnections_m);
-		for(std::vector<TcpConnection *>::const_iterator ci(_tcpConnections.begin());ci!=_tcpConnections.end();++ci) {
-			TcpConnection *const c = *ci;
-			if ((c->type == TcpConnection::TCP_CLUSTER_BACKPLANE)&&(c->clusterMemberId != 0)&&(std::find(sentTo.begin(),sentTo.end(),c->clusterMemberId) == sentTo.end())) {
-				sentTo.push_back(c->clusterMemberId);
-				replicateStateObject(type,id,data,len,c);
-			}
-		}
+		tc->writeq.append(outdata,mlen);
 	}
 
 	void writeStateObject(enum ZT_StateObjectType type,const uint64_t id[2],const void *data,int len)
 	{
-		char p[4096];
+		char buf[65535];
+		char p[1024];
+		FILE *f;
 		bool secure = false;
+
 		switch(type) {
 			case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
 				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.public",_homePath.c_str());
@@ -1932,13 +1912,14 @@ public:
 				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.secret",_homePath.c_str());
 				secure = true;
 				break;
-			case ZT_STATE_OBJECT_PEER_IDENTITY:
-				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "iddb.d/%.10llx",_homePath.c_str(),(unsigned long long)id[0]);
-				break;
+			//case ZT_STATE_OBJECT_PEER_STATE:
+			//	break;
 			case ZT_STATE_OBJECT_NETWORK_CONFIG:
 				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d/%.16llx.conf",_homePath.c_str(),(unsigned long long)id[0]);
 				secure = true;
 				break;
+			//case ZT_STATE_OBJECT_NETWORK_MEMBERSHIP:
+			//	break;
 			case ZT_STATE_OBJECT_PLANET:
 				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
 				break;
@@ -1949,17 +1930,30 @@ public:
 				p[0] = (char)0;
 				break;
 		}
+
 		if (p[0]) {
 			if (len >= 0) {
-				FILE *f = fopen(p,"w");
+				// Check to see if we've already written this first. This reduces
+				// redundant writes and I/O overhead on most platforms and has
+				// little effect on others.
+				f = fopen(p,"r");
+				bool redundant = false;
 				if (f) {
-					if (fwrite(data,len,1,f) != 1)
-						fprintf(stderr,"WARNING: unable to write to file: %s (I/O error)" ZT_EOL_S,p);
+					long l = (long)fread(buf,1,sizeof(buf),f);
 					fclose(f);
-					if (secure)
-						OSUtils::lockDownFile(p,false);
-				} else {
-					fprintf(stderr,"WARNING: unable to write to file: %s (unable to open)" ZT_EOL_S,p);
+					redundant = ((l == (long)len)&&(memcmp(data,buf,l) == 0));
+				}
+				if (!redundant) {
+					f = fopen(p,"w");
+					if (f) {
+						if (fwrite(data,len,1,f) != 1)
+							fprintf(stderr,"WARNING: unable to write to file: %s (I/O error)" ZT_EOL_S,p);
+						fclose(f);
+						if (secure)
+							OSUtils::lockDownFile(p,false);
+					} else {
+						fprintf(stderr,"WARNING: unable to write to file: %s (unable to open)" ZT_EOL_S,p);
+					}
 				}
 			} else {
 				OSUtils::rm(p);
@@ -2314,7 +2308,7 @@ public:
 									break;
 
 								case CLUSTER_MESSAGE_STATE_OBJECT:
-									if (mlen >= 42) { // type + object ID + [data]
+									if (mlen > 42) { // type + object ID + [data]
 										uint64_t objId[2];
 										objId[0] = (
 											((uint64_t)data[26] << 56) |
@@ -2336,10 +2330,8 @@ public:
 											((uint64_t)data[40] << 8) |
 											(uint64_t)data[41]
 										);
-										if (_node->processStateUpdate((void *)0,(ZT_StateObjectType)data[25],objId[0],data + 42,(unsigned int)(mlen - 42)) == ZT_RESULT_OK) {
+										if (_node->processStateUpdate((void *)0,(ZT_StateObjectType)data[25],objId,data + 42,(unsigned int)(mlen - 42)) == ZT_RESULT_OK)
 											writeStateObject((ZT_StateObjectType)data[25],objId,data + 42,(unsigned int)(mlen - 42));
-											replicateStateObjectToCluster((ZT_StateObjectType)data[25],objId,data + 42,(unsigned int)(mlen - 42),tc->clusterMemberId);
-										}
 									}
 									break;
 
@@ -2558,7 +2550,18 @@ public:
 	inline void nodeStatePutFunction(enum ZT_StateObjectType type,const uint64_t id[2],const void *data,int len)
 	{
 		writeStateObject(type,id,data,len);
-		replicateStateObjectToCluster(type,id,data,len,0);
+
+		std::vector<uint64_t> sentTo;
+		{
+			Mutex::Lock _l(_tcpConnections_m);
+			for(std::vector<TcpConnection *>::const_iterator ci(_tcpConnections.begin());ci!=_tcpConnections.end();++ci) {
+				TcpConnection *const c = *ci;
+				if ((c->type == TcpConnection::TCP_CLUSTER_BACKPLANE)&&(c->clusterMemberId != 0)&&(std::find(sentTo.begin(),sentTo.end(),c->clusterMemberId) == sentTo.end())) {
+					sentTo.push_back(c->clusterMemberId);
+					replicateStateObject(type,id,data,len,c);
+				}
+			}
+		}
 	}
 
 	inline int nodeStateGetFunction(enum ZT_StateObjectType type,const uint64_t id[2],void *data,unsigned int maxlen)
@@ -2570,9 +2573,6 @@ public:
 				break;
 			case ZT_STATE_OBJECT_IDENTITY_SECRET:
 				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.secret",_homePath.c_str());
-				break;
-			case ZT_STATE_OBJECT_PEER_IDENTITY:
-				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "iddb.d/%.10llx",_homePath.c_str(),(unsigned long long)id);
 				break;
 			case ZT_STATE_OBJECT_NETWORK_CONFIG:
 				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d/%.16llx.conf",_homePath.c_str(),(unsigned long long)id);

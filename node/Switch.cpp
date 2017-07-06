@@ -108,13 +108,7 @@ void Switch::onRemotePacket(void *tPtr,const InetAddress &localAddr,const InetAd
 				const Address destination(fragment.destination());
 
 				if (destination != RR->identity.address()) {
-#ifdef ZT_ENABLE_CLUSTER
-					const bool isClusterFrontplane = ((RR->cluster)&&(RR->cluster->isClusterPeerFrontplane(fromAddr)));
-#else
-					const bool isClusterFrontplane = false;
-#endif
-
-					if ( (!RR->topology->amRoot()) && (!path->trustEstablished(now)) && (!isClusterFrontplane) )
+					if ( (!RR->topology->amRoot()) && (!path->trustEstablished(now)) )
 						return;
 
 					if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
@@ -124,13 +118,6 @@ void Switch::onRemotePacket(void *tPtr,const InetAddress &localAddr,const InetAd
 						// It wouldn't hurt anything, just redundant and unnecessary.
 						SharedPtr<Peer> relayTo = RR->topology->getPeer(tPtr,destination);
 						if ((!relayTo)||(!relayTo->sendDirect(tPtr,fragment.data(),fragment.size(),now,false))) {
-#ifdef ZT_ENABLE_CLUSTER
-							if ((RR->cluster)&&(!isClusterFrontplane)) {
-								RR->cluster->relayViaCluster(Address(),destination,fragment.data(),fragment.size(),false);
-								return;
-							}
-#endif
-
 							// Don't know peer or no direct path -- so relay via someone upstream
 							relayTo = RR->topology->getUpstreamPeer();
 							if (relayTo)
@@ -197,13 +184,8 @@ void Switch::onRemotePacket(void *tPtr,const InetAddress &localAddr,const InetAd
 
 				//TRACE("<< %.16llx %s -> %s (size: %u)",(unsigned long long)packet->packetId(),source.toString().c_str(),destination.toString().c_str(),packet->size());
 
-#ifdef ZT_ENABLE_CLUSTER
-				if ( (source == RR->identity.address()) && ((!RR->cluster)||(!RR->cluster->isClusterPeerFrontplane(fromAddr))) )
-					return;
-#else
 				if (source == RR->identity.address())
 					return;
-#endif
 
 				if (destination != RR->identity.address()) {
 					if ( (!RR->topology->amRoot()) && (!path->trustEstablished(now)) && (source != RR->identity.address()) )
@@ -212,12 +194,7 @@ void Switch::onRemotePacket(void *tPtr,const InetAddress &localAddr,const InetAd
 					Packet packet(data,len);
 
 					if (packet.hops() < ZT_RELAY_MAX_HOPS) {
-#ifdef ZT_ENABLE_CLUSTER
-						if (source != RR->identity.address()) // don't increment hops for cluster frontplane relays
-							packet.incrementHops();
-#else
 						packet.incrementHops();
-#endif
 
 						SharedPtr<Peer> relayTo = RR->topology->getPeer(tPtr,destination);
 						if ((relayTo)&&(relayTo->sendDirect(tPtr,packet.data(),packet.size(),now,false))) {
@@ -277,12 +254,6 @@ void Switch::onRemotePacket(void *tPtr,const InetAddress &localAddr,const InetAd
 								}
 							}
 						} else {
-#ifdef ZT_ENABLE_CLUSTER
-							if ((RR->cluster)&&(source != RR->identity.address())) {
-								RR->cluster->relayViaCluster(source,destination,packet.data(),packet.size(),_shouldUnite(now,source,destination));
-								return;
-							}
-#endif
 							relayTo = RR->topology->getUpstreamPeer(&source,1,true);
 							if (relayTo)
 								relayTo->sendDirect(tPtr,packet.data(),packet.size(),now,true);
@@ -769,14 +740,6 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 	const uint64_t now = RR->node->now();
 	const Address destination(packet.destination());
 
-#ifdef ZT_ENABLE_CLUSTER
-	uint64_t clusterMostRecentTs = 0;
-	int clusterMostRecentMemberId = -1;
-	uint8_t clusterPeerSecret[ZT_PEER_SECRET_KEY_LENGTH];
-	if (RR->cluster)
-		clusterMostRecentMemberId = RR->cluster->checkSendViaCluster(destination,clusterMostRecentTs,clusterPeerSecret);
-#endif
-
 	const SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,destination));
 	if (peer) {
 		/* First get the best path, and if it's dead (and this is not a root)
@@ -788,74 +751,37 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 
 		viaPath = peer->getBestPath(now,false);
 		if ( (viaPath) && (!viaPath->alive(now)) && (!RR->topology->isUpstream(peer->identity())) ) {
-#ifdef ZT_ENABLE_CLUSTER
-			if ((clusterMostRecentMemberId < 0)||(viaPath->lastIn() > clusterMostRecentTs)) {
-#endif
-				if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) * 4,(uint64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL)) {
-					peer->attemptToContactAt(tPtr,viaPath->localAddress(),viaPath->address(),now,false,viaPath->nextOutgoingCounter());
-					viaPath->sent(now);
-				}
-#ifdef ZT_ENABLE_CLUSTER
+			if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) * 4,(uint64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL)) {
+				peer->attemptToContactAt(tPtr,viaPath->localAddress(),viaPath->address(),now,false,viaPath->nextOutgoingCounter());
+				viaPath->sent(now);
 			}
-#endif
 			viaPath.zero();
 		}
 
-#ifdef ZT_ENABLE_CLUSTER
-		if (clusterMostRecentMemberId >= 0) {
-			if ((viaPath)&&(viaPath->lastIn() < clusterMostRecentTs))
-				viaPath.zero();
-		} else if (!viaPath) {
-#else
 		if (!viaPath) {
-#endif
 			peer->tryMemorizedPath(tPtr,now); // periodically attempt memorized or statically defined paths, if any are known
 			const SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());
 			if ( (!relay) || (!(viaPath = relay->getBestPath(now,false))) ) {
 				if (!(viaPath = peer->getBestPath(now,true)))
 					return false;
 			}
-#ifdef ZT_ENABLE_CLUSTER
 		}
-#else
-		}
-#endif
 	} else {
-#ifdef ZT_ENABLE_CLUSTER
-		if (clusterMostRecentMemberId < 0) {
-#else
-			requestWhois(tPtr,destination);
-			return false; // if we are not in cluster mode, there is no way we can send without knowing the peer directly
-#endif
-#ifdef ZT_ENABLE_CLUSTER
-		}
-#endif
+		requestWhois(tPtr,destination);
+		return false; // if we are not in cluster mode, there is no way we can send without knowing the peer directly
 	}
 
 	unsigned int chunkSize = std::min(packet.size(),(unsigned int)ZT_UDP_DEFAULT_PAYLOAD_MTU);
 	packet.setFragmented(chunkSize < packet.size());
 
-#ifdef ZT_ENABLE_CLUSTER
-	const uint64_t trustedPathId = (viaPath) ? RR->topology->getOutboundPathTrust(viaPath->address()) : 0;
-	if (trustedPathId) {
-		packet.setTrusted(trustedPathId);
-	} else {
-		packet.armor((clusterMostRecentMemberId >= 0) ? clusterPeerSecret : peer->key(),encrypt,(viaPath) ? viaPath->nextOutgoingCounter() : 0);
-	}
-#else
 	const uint64_t trustedPathId = RR->topology->getOutboundPathTrust(viaPath->address());
 	if (trustedPathId) {
 		packet.setTrusted(trustedPathId);
 	} else {
 		packet.armor(peer->key(),encrypt,viaPath->nextOutgoingCounter());
 	}
-#endif
 
-#ifdef ZT_ENABLE_CLUSTER
-	if ( ((viaPath)&&(viaPath->send(RR,tPtr,packet.data(),chunkSize,now))) || ((clusterMostRecentMemberId >= 0)&&(RR->cluster->sendViaCluster(clusterMostRecentMemberId,destination,packet.data(),chunkSize))) ) {
-#else
 	if (viaPath->send(RR,tPtr,packet.data(),chunkSize,now)) {
-#endif
 		if (chunkSize < packet.size()) {
 			// Too big for one packet, fragment the rest
 			unsigned int fragStart = chunkSize;
@@ -868,14 +794,7 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 			for(unsigned int fno=1;fno<totalFragments;++fno) {
 				chunkSize = std::min(remaining,(unsigned int)(ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));
 				Packet::Fragment frag(packet,fragStart,chunkSize,fno,totalFragments);
-#ifdef ZT_ENABLE_CLUSTER
-				if (viaPath)
-					viaPath->send(RR,tPtr,frag.data(),frag.size(),now);
-				else if (clusterMostRecentMemberId >= 0)
-					RR->cluster->sendViaCluster(clusterMostRecentMemberId,destination,frag.data(),frag.size());
-#else
 				viaPath->send(RR,tPtr,frag.data(),frag.size(),now);
-#endif
 				fragStart += chunkSize;
 				remaining -= chunkSize;
 			}

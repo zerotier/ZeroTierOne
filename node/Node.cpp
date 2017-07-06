@@ -68,6 +68,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 		throw std::runtime_error("callbacks struct version mismatch");
 	memcpy(&_cb,callbacks,sizeof(ZT_Node_Callbacks));
 
+	// Initialize non-cryptographic PRNG from a good random source
 	Utils::getSecureRandom((void *)_prngState,sizeof(_prngState));
 
 	_online = false;
@@ -78,33 +79,34 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 
 	uint64_t idtmp[2];
 	idtmp[0] = 0; idtmp[1] = 0;
-	char tmp[512];
-	std::string tmp2;
+	char tmp[1024];
 	int n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,tmp,sizeof(tmp) - 1);
 	if (n > 0) {
 		tmp[n] = (char)0;
-		if (!RR->identity.fromString(tmp))
+		if (RR->identity.fromString(tmp)) {
+			RR->publicIdentityStr = RR->identity.toString(false);
+			RR->secretIdentityStr = RR->identity.toString(true);
+		} else {
 			n = -1;
+		}
 	}
 
 	idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
 	if (n <= 0) {
 		RR->identity.generate();
-		tmp2 = RR->identity.toString(true);
-		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,tmp2.data(),(unsigned int)tmp2.length());
-		tmp2 = RR->identity.toString(false);
-		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,tmp2.data(),(unsigned int)tmp2.length());
+		RR->publicIdentityStr = RR->identity.toString(false);
+		RR->secretIdentityStr = RR->identity.toString(true);
+		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,RR->secretIdentityStr.data(),(unsigned int)RR->secretIdentityStr.length());
+		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr.data(),(unsigned int)RR->publicIdentityStr.length());
 	} else {
 		n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,tmp,sizeof(tmp) - 1);
 		if (n > 0) {
 			tmp[n] = (char)0;
-			if (RR->identity.toString(false) != tmp)
+			if (RR->publicIdentityStr != tmp)
 				n = -1;
 		}
-		if (n <= 0) {
-			tmp2 = RR->identity.toString(false);
-			stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,tmp2.data(),(unsigned int)tmp2.length());
-		}
+		if (n <= 0)
+			stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr.data(),(unsigned int)RR->publicIdentityStr.length());
 	}
 
 	try {
@@ -125,24 +127,20 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 
 Node::~Node()
 {
-	Mutex::Lock _l(_networks_m);
-
-	_networks.clear(); // destroy all networks before shutdown
-
+	{
+		Mutex::Lock _l(_networks_m);
+		_networks.clear(); // destroy all networks before shutdown
+	}
 	delete RR->sa;
 	delete RR->topology;
 	delete RR->mc;
 	delete RR->sw;
-
-#ifdef ZT_ENABLE_CLUSTER
-	delete RR->cluster;
-#endif
 }
 
 ZT_ResultCode Node::processStateUpdate(
 	void *tptr,
 	ZT_StateObjectType type,
-	uint64_t id,
+	const uint64_t id[2],
 	const void *data,
 	unsigned int len)
 {
@@ -151,11 +149,12 @@ ZT_ResultCode Node::processStateUpdate(
 
 		case ZT_STATE_OBJECT_PEER_STATE:
 			if (len) {
-			}
-			break;
-
-		case ZT_STATE_OBJECT_PEER_IDENTITY:
-			if (len) {
+				const SharedPtr<Peer> p(RR->topology->getPeer(tptr,Address(id[0])));
+				if (p) {
+					r = (p->applyStateUpdate(data,len)) ? ZT_RESULT_OK : ZT_RESULT_OK_IGNORED;
+				} else {
+					r = (Peer::createFromStateUpdate(RR,tptr,data,len)) ? ZT_RESULT_OK : ZT_RESULT_OK_IGNORED;
+				}
 			}
 			break;
 
@@ -163,9 +162,9 @@ ZT_ResultCode Node::processStateUpdate(
 			if (len <= (ZT_NETWORKCONFIG_DICT_CAPACITY - 1)) {
 				if (len < 2) {
 					Mutex::Lock _l(_networks_m);
-					SharedPtr<Network> &nw = _networks[id];
+					SharedPtr<Network> &nw = _networks[id[0]];
 					if (!nw) {
-						nw = SharedPtr<Network>(new Network(RR,tptr,id,(void *)0,(const NetworkConfig *)0));
+						nw = SharedPtr<Network>(new Network(RR,tptr,id[0],(void *)0,(const NetworkConfig *)0));
 						r = ZT_RESULT_OK;
 					}
 				} else {
@@ -175,7 +174,7 @@ ZT_ResultCode Node::processStateUpdate(
 						try {
 							if (nconf->fromDictionary(*dict)) {
 								Mutex::Lock _l(_networks_m);
-								SharedPtr<Network> &nw = _networks[id];
+								SharedPtr<Network> &nw = _networks[id[0]];
 								if (nw) {
 									switch (nw->setConfiguration(tptr,*nconf,false)) {
 										default:
@@ -189,7 +188,7 @@ ZT_ResultCode Node::processStateUpdate(
 											break;
 									}
 								} else {
-									nw = SharedPtr<Network>(new Network(RR,tptr,id,(void *)0,nconf));
+									nw = SharedPtr<Network>(new Network(RR,tptr,id[0],(void *)0,nconf));
 								}
 							} else {
 								r = ZT_RESULT_ERROR_BAD_PARAMETER;
@@ -208,9 +207,14 @@ ZT_ResultCode Node::processStateUpdate(
 			}
 			break;
 
+		case ZT_STATE_OBJECT_NETWORK_MEMBERSHIP:
+			if (len) {
+			}
+			break;
+
 		case ZT_STATE_OBJECT_PLANET:
 		case ZT_STATE_OBJECT_MOON:
-			if (len <= ZT_WORLD_MAX_SERIALIZED_LENGTH) {
+			if ((len)&&(len <= ZT_WORLD_MAX_SERIALIZED_LENGTH)) {
 				World w;
 				try {
 					w.deserialize(Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH>(data,len));
@@ -395,18 +399,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,uint64_t now,volatile uint
 	}
 
 	try {
-#ifdef ZT_ENABLE_CLUSTER
-		// If clustering is enabled we have to call cluster->doPeriodicTasks() very often, so we override normal timer deadline behavior
-		if (RR->cluster) {
-			RR->sw->doTimerTasks(tptr,now);
-			RR->cluster->doPeriodicTasks();
-			*nextBackgroundTaskDeadline = now + ZT_CLUSTER_PERIODIC_TASK_PERIOD; // this is really short so just tick at this rate
-		} else {
-#endif
-			*nextBackgroundTaskDeadline = now + (uint64_t)std::max(std::min(timeUntilNextPingCheck,RR->sw->doTimerTasks(tptr,now)),(unsigned long)ZT_CORE_TIMER_TASK_GRANULARITY);
-#ifdef ZT_ENABLE_CLUSTER
-		}
-#endif
+		*nextBackgroundTaskDeadline = now + (uint64_t)std::max(std::min(timeUntilNextPingCheck,RR->sw->doTimerTasks(tptr,now)),(unsigned long)ZT_CORE_TIMER_TASK_GRANULARITY);
 	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}
@@ -619,76 +612,6 @@ void Node::setNetconfMaster(void *networkControllerInstance)
 	if (networkControllerInstance)
 		RR->localNetworkController->init(RR->identity,this);
 }
-
-/*
-ZT_ResultCode Node::clusterInit(
-	unsigned int myId,
-	const struct sockaddr_storage *zeroTierPhysicalEndpoints,
-	unsigned int numZeroTierPhysicalEndpoints,
-	int x,
-	int y,
-	int z,
-	void (*sendFunction)(void *,unsigned int,const void *,unsigned int),
-	void *sendFunctionArg,
-	int (*addressToLocationFunction)(void *,const struct sockaddr_storage *,int *,int *,int *),
-	void *addressToLocationFunctionArg)
-{
-#ifdef ZT_ENABLE_CLUSTER
-	if (RR->cluster)
-		return ZT_RESULT_ERROR_BAD_PARAMETER;
-
-	std::vector<InetAddress> eps;
-	for(unsigned int i=0;i<numZeroTierPhysicalEndpoints;++i)
-		eps.push_back(InetAddress(zeroTierPhysicalEndpoints[i]));
-	std::sort(eps.begin(),eps.end());
-	RR->cluster = new Cluster(RR,myId,eps,x,y,z,sendFunction,sendFunctionArg,addressToLocationFunction,addressToLocationFunctionArg);
-
-	return ZT_RESULT_OK;
-#else
-	return ZT_RESULT_ERROR_UNSUPPORTED_OPERATION;
-#endif
-}
-
-ZT_ResultCode Node::clusterAddMember(unsigned int memberId)
-{
-#ifdef ZT_ENABLE_CLUSTER
-	if (!RR->cluster)
-		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	RR->cluster->addMember((uint16_t)memberId);
-	return ZT_RESULT_OK;
-#else
-	return ZT_RESULT_ERROR_UNSUPPORTED_OPERATION;
-#endif
-}
-
-void Node::clusterRemoveMember(unsigned int memberId)
-{
-#ifdef ZT_ENABLE_CLUSTER
-	if (RR->cluster)
-		RR->cluster->removeMember((uint16_t)memberId);
-#endif
-}
-
-void Node::clusterHandleIncomingMessage(const void *msg,unsigned int len)
-{
-#ifdef ZT_ENABLE_CLUSTER
-	if (RR->cluster)
-		RR->cluster->handleIncomingStateMessage(msg,len);
-#endif
-}
-
-void Node::clusterStatus(ZT_ClusterStatus *cs)
-{
-	if (!cs)
-		return;
-#ifdef ZT_ENABLE_CLUSTER
-	if (RR->cluster)
-		RR->cluster->status(*cs);
-	else
-#endif
-	memset(cs,0,sizeof(ZT_ClusterStatus));
-}
-*/
 
 /****************************************************************************/
 /* Node methods used only within node/                                      */
@@ -918,7 +841,7 @@ enum ZT_ResultCode ZT_Node_processStateUpdate(
 	ZT_Node *node,
 	void *tptr,
 	ZT_StateObjectType type,
-	uint64_t id,
+	const uint64_t id[2],
 	const void *data,
 	unsigned int len)
 {

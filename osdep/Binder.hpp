@@ -180,7 +180,7 @@ public:
 		const unsigned long pid = (unsigned long)getpid();
 
 		// Get all device names
-		Utils::snprintf(fn,sizeof(fn),"/proc/%lu/net/dev",pid);
+		Utils::ztsnprintf(fn,sizeof(fn),"/proc/%lu/net/dev",pid);
 		FILE *procf = fopen(fn,"r");
 		if (procf) {
 			while (fgets(tmp,sizeof(tmp),procf)) {
@@ -196,7 +196,7 @@ public:
 		}
 
 		// Get IPv6 addresses (and any device names we don't already know)
-		Utils::snprintf(fn,sizeof(fn),"/proc/%lu/net/if_inet6",pid);
+		Utils::ztsnprintf(fn,sizeof(fn),"/proc/%lu/net/if_inet6",pid);
 		procf = fopen(fn,"r");
 		if (procf) {
 			while (fgets(tmp,sizeof(tmp),procf)) {

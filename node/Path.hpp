@@ -46,11 +46,6 @@
  */
 #define ZT_PATH_MAX_PREFERENCE_RANK ((ZT_INETADDRESS_MAX_SCOPE << 1) | 1)
 
-/**
- * Maximum distance for a path
- */
-#define ZT_PATH_DISTANCE_MAX 0xffff
-
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -125,7 +120,6 @@ public:
 		_incomingLinkQualitySlowLogCounter(-64), // discard first fast log
 		_incomingLinkQualityPreviousPacketCounter(0),
 		_outgoingPacketCounter(0),
-		_distance(ZT_PATH_DISTANCE_MAX),
 		_addr(),
 		_localAddress(),
 		_ipScope(InetAddress::IP_SCOPE_NONE)
@@ -143,7 +137,6 @@ public:
 		_incomingLinkQualitySlowLogCounter(-64), // discard first fast log
 		_incomingLinkQualityPreviousPacketCounter(0),
 		_outgoingPacketCounter(0),
-		_distance(ZT_PATH_DISTANCE_MAX),
 		_addr(addr),
 		_localAddress(localAddress),
 		_ipScope(addr.ipScope())
@@ -312,11 +305,6 @@ public:
 	inline uint64_t lastTrustEstablishedPacketReceived() const { return _lastTrustEstablishedPacketReceived; }
 
 	/**
-	 * @return Distance (higher is further)
-	 */
-	inline unsigned int distance() const { return _distance; }
-
-	/**
 	 * @param lo Last out send
 	 * @param li Last in send
 	 * @param lt Last trust established packet received
@@ -344,7 +332,6 @@ private:
 	volatile signed int _incomingLinkQualitySlowLogCounter;
 	volatile unsigned int _incomingLinkQualityPreviousPacketCounter;
 	volatile unsigned int _outgoingPacketCounter;
-	volatile unsigned int _distance;
 	InetAddress _addr;
 	InetAddress _localAddress;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often

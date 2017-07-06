@@ -146,8 +146,8 @@ void Peer::received(
 		path->updateLinkQuality((unsigned int)(packetId & 7));
 
 	if (hops == 0) {
+		// If this is a direct packet (no hops), update existing paths or learn new ones
 		bool pathAlreadyKnown = false;
-		bool newPathLearned = false;
 
 		{
 			Mutex::Lock _l(_paths_m);
@@ -188,7 +188,7 @@ void Peer::received(
 				if (verb == Packet::VERB_OK) {
 					potentialNewPeerPath->lr = now;
 					potentialNewPeerPath->p = path;
-					newPathLearned = true;
+					_lastWroteState = 0; // force state write now
 				} else {
 					TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),path->address().toString().c_str());
 					attemptToContactAt(tPtr,path->localAddress(),path->address(),now,true,path->nextOutgoingCounter());
@@ -196,9 +196,6 @@ void Peer::received(
 				}
 			}
 		}
-
-		if (newPathLearned)
-			writeState(tPtr,now);
 	} else if (this->trustEstablished(now)) {
 		// Send PUSH_DIRECT_PATHS if hops>0 (relayed) and we have a trust relationship (common network membership)
 		if ((now - _lastDirectPathPushSent) >= ZT_DIRECT_PATH_PUSH_INTERVAL) {
@@ -270,6 +267,9 @@ void Peer::received(
 			}
 		}
 	}
+
+	if ((now - _lastWroteState) > ZT_PEER_STATE_WRITE_PERIOD)
+		writeState(tPtr,now);
 }
 
 bool Peer::sendDirect(void *tPtr,const void *data,unsigned int len,uint64_t now,bool force)
@@ -435,7 +435,7 @@ bool Peer::doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily)
 void Peer::writeState(void *tPtr,const uint64_t now)
 {
 	try {
-		Buffer<sizeof(Peer) + 32 + (sizeof(Path) * 2)> b;
+		Buffer<ZT_PEER_MAX_SERIALIZED_STATE_SIZE> b;
 
 		b.append((uint8_t)1); // version
 		b.append(now);
@@ -455,7 +455,6 @@ void Peer::writeState(void *tPtr,const uint64_t now)
 				b.append(_v4Path.p->lastOut());
 				b.append(_v4Path.p->lastIn());
 				b.append(_v4Path.p->lastTrustEstablishedPacketReceived());
-				b.append((uint16_t)_v4Path.p->distance());
 				_v4Path.p->address().serialize(b);
 				_v4Path.p->localAddress().serialize(b);
 			}
@@ -464,29 +463,29 @@ void Peer::writeState(void *tPtr,const uint64_t now)
 				b.append(_v6Path.p->lastOut());
 				b.append(_v6Path.p->lastIn());
 				b.append(_v6Path.p->lastTrustEstablishedPacketReceived());
-				b.append((uint16_t)_v6Path.p->distance());
 				_v6Path.p->address().serialize(b);
 				_v6Path.p->localAddress().serialize(b);
 			}
 		}
 
-		b.append(_lastReceive);
-		b.append(_lastNontrivialReceive);
-		b.append(_lastTriedMemorizedPath);
-		b.append(_lastDirectPathPushSent);
-		b.append(_lastDirectPathPushReceive);
-		b.append(_lastCredentialRequestSent);
-		b.append(_lastWhoisRequestReceived);
-		b.append(_lastEchoRequestReceived);
-		b.append(_lastComRequestReceived);
-		b.append(_lastComRequestSent);
-		b.append(_lastCredentialsReceived);
-		b.append(_lastTrustEstablishedPacketReceived);
+		// Save space by sending these as time since now at 100ms resolution
+		b.append((uint16_t)(std::max(now - _lastReceive,(uint64_t)6553500) / 100));
+		b.append((uint16_t)(std::max(now - _lastNontrivialReceive,(uint64_t)6553500) / 100));
+		b.append((uint16_t)(std::max(now - _lastTriedMemorizedPath,(uint64_t)6553500) / 100));
+		b.append((uint16_t)(std::max(now - _lastDirectPathPushSent,(uint64_t)6553500) / 100));
+		b.append((uint16_t)(std::max(now - _lastDirectPathPushReceive,(uint64_t)6553500) / 100));
+		b.append((uint16_t)(std::max(now - _lastCredentialRequestSent,(uint64_t)6553500) / 100));
+		b.append((uint16_t)(std::max(now - _lastWhoisRequestReceived,(uint64_t)6553500) / 100));
+		b.append((uint16_t)(std::max(now - _lastEchoRequestReceived,(uint64_t)6553500) / 100));
+		b.append((uint16_t)(std::max(now - _lastComRequestReceived,(uint64_t)6553500) / 100));
+		b.append((uint16_t)(std::max(now - _lastComRequestSent,(uint64_t)6553500) / 100));
+		b.append((uint16_t)(std::max(now - _lastCredentialsReceived,(uint64_t)6553500) / 100));
+		b.append((uint16_t)(std::max(now - _lastTrustEstablishedPacketReceived,(uint64_t)6553500) / 100));
 
-		b.append(_vProto);
-		b.append(_vMajor);
-		b.append(_vMinor);
-		b.append(_vRevision);
+		b.append((uint8_t)_vProto);
+		b.append((uint8_t)_vMajor);
+		b.append((uint8_t)_vMinor);
+		b.append((uint16_t)_vRevision);
 
 		b.append((uint16_t)0); // length of additional fields
 
@@ -501,13 +500,18 @@ void Peer::writeState(void *tPtr,const uint64_t now)
 bool Peer::applyStateUpdate(const void *data,unsigned int len)
 {
 	try {
-		Buffer<sizeof(Peer) + 32 + (sizeof(Path) * 2)> b(data,len);
+		Buffer<ZT_PEER_MAX_SERIALIZED_STATE_SIZE> b(data,len);
 		unsigned int ptr = 0;
 
 		if (b[ptr++] != 1)
 			return false;
 		const uint64_t ts = b.at<uint64_t>(ptr); ptr += 8;
 		if (ts <= _lastReceivedStateTimestamp)
+			return false;
+
+		Identity id;
+		ptr += id.deserialize(b,ptr);
+		if (id != _id) // sanity check
 			return false;
 
 		const unsigned int pathCount = (unsigned int)b[ptr++];
@@ -518,7 +522,6 @@ bool Peer::applyStateUpdate(const void *data,unsigned int len)
 				const uint64_t lastOut = b.at<uint64_t>(ptr); ptr += 8;
 				const uint64_t lastIn = b.at<uint64_t>(ptr); ptr += 8;
 				const uint64_t lastTrustEstablishedPacketReceived = b.at<uint64_t>(ptr); ptr += 8;
-				const unsigned int distance = b.at<uint16_t>(ptr); ptr += 2;
 				InetAddress addr,localAddr;
 				ptr += addr.deserialize(b,ptr);
 				ptr += localAddr.deserialize(b,ptr);
@@ -529,8 +532,9 @@ bool Peer::applyStateUpdate(const void *data,unsigned int len)
 						case AF_INET6: p = &_v6Path; break;
 					}
 					if (p) {
-						if ( ((p->p->address() != addr)||(p->p->localAddress() != localAddr)) && (p->p->distance() > distance) )
+						if ( (!p->p) || ((p->p->address() != addr)||(p->p->localAddress() != localAddr)) ) {
 							p->p = RR->topology->getPath(localAddr,addr);
+						}
 						p->lr = lr;
 						p->p->updateFromRemoteState(lastOut,lastIn,lastTrustEstablishedPacketReceived);
 					}
@@ -538,22 +542,22 @@ bool Peer::applyStateUpdate(const void *data,unsigned int len)
 			}
 		}
 
-		_lastReceive = std::max(_lastReceive,b.at<uint64_t>(ptr)); ptr += 8;
-		_lastNontrivialReceive = std::max(_lastNontrivialReceive,b.at<uint64_t>(ptr)); ptr += 8;
-		_lastTriedMemorizedPath = std::max(_lastTriedMemorizedPath,b.at<uint64_t>(ptr)); ptr += 8;
-		_lastDirectPathPushSent = std::max(_lastDirectPathPushSent,b.at<uint64_t>(ptr)); ptr += 8;
-		_lastDirectPathPushReceive = std::max(_lastDirectPathPushReceive,b.at<uint64_t>(ptr)); ptr += 8;
-		_lastCredentialRequestSent = std::max(_lastCredentialRequestSent,b.at<uint64_t>(ptr)); ptr += 8;
-		_lastWhoisRequestReceived = std::max(_lastWhoisRequestReceived,b.at<uint64_t>(ptr)); ptr += 8;
-		_lastEchoRequestReceived = std::max(_lastEchoRequestReceived,b.at<uint64_t>(ptr)); ptr += 8;
-		_lastComRequestReceived = std::max(_lastComRequestReceived,b.at<uint64_t>(ptr)); ptr += 8;
-		_lastComRequestSent = std::max(_lastComRequestSent,b.at<uint64_t>(ptr)); ptr += 8;
-		_lastCredentialsReceived = std::max(_lastCredentialsReceived,b.at<uint64_t>(ptr)); ptr += 8;
-		_lastTrustEstablishedPacketReceived = std::max(_lastTrustEstablishedPacketReceived,b.at<uint64_t>(ptr)); ptr += 8;
+		_lastReceive = std::max(_lastReceive,ts - ((uint64_t)b.at<uint16_t>(ptr) * 100ULL)); ptr += 2;
+		_lastNontrivialReceive = std::max(_lastNontrivialReceive,ts - ((uint64_t)b.at<uint16_t>(ptr) * 100ULL)); ptr += 2;
+		_lastTriedMemorizedPath = std::max(_lastTriedMemorizedPath,ts - ((uint64_t)b.at<uint16_t>(ptr) * 100ULL)); ptr += 2;
+		_lastDirectPathPushSent = std::max(_lastDirectPathPushSent,ts - ((uint64_t)b.at<uint16_t>(ptr) * 100ULL)); ptr += 2;
+		_lastDirectPathPushReceive = std::max(_lastDirectPathPushReceive,ts - ((uint64_t)b.at<uint16_t>(ptr) * 100ULL)); ptr += 2;
+		_lastCredentialRequestSent = std::max(_lastCredentialRequestSent,ts - ((uint64_t)b.at<uint16_t>(ptr) * 100ULL)); ptr += 2;
+		_lastWhoisRequestReceived = std::max(_lastWhoisRequestReceived,ts - ((uint64_t)b.at<uint16_t>(ptr) * 100ULL)); ptr += 2;
+		_lastEchoRequestReceived = std::max(_lastEchoRequestReceived,ts - ((uint64_t)b.at<uint16_t>(ptr) * 100ULL)); ptr += 2;
+		_lastComRequestReceived = std::max(_lastComRequestReceived,ts - ((uint64_t)b.at<uint16_t>(ptr) * 100ULL)); ptr += 2;
+		_lastComRequestSent = std::max(_lastComRequestSent,ts - ((uint64_t)b.at<uint16_t>(ptr) * 100ULL)); ptr += 2;
+		_lastCredentialsReceived = std::max(_lastCredentialsReceived,ts - ((uint64_t)b.at<uint16_t>(ptr) * 100ULL)); ptr += 2;
+		_lastTrustEstablishedPacketReceived = std::max(_lastTrustEstablishedPacketReceived,ts - ((uint64_t)b.at<uint16_t>(ptr) * 100ULL)); ptr += 2;
 
-		_vProto = b.at<uint16_t>(ptr); ptr += 2;
-		_vMajor = b.at<uint16_t>(ptr); ptr += 2;
-		_vMinor = b.at<uint16_t>(ptr); ptr += 2;
+		_vProto = (uint16_t)b[ptr++];
+		_vMajor = (uint16_t)b[ptr++];
+		_vMinor = (uint16_t)b[ptr++];
 		_vRevision = b.at<uint16_t>(ptr); ptr += 2;
 
 		_lastReceivedStateTimestamp = ts;
@@ -561,6 +565,27 @@ bool Peer::applyStateUpdate(const void *data,unsigned int len)
 		return true;
 	} catch ( ... ) {} // ignore invalid state updates
 	return false;
+}
+
+SharedPtr<Peer> Peer::createFromStateUpdate(const RuntimeEnvironment *renv,void *tPtr,const void *data,unsigned int len)
+{
+	try {
+		Identity id;
+		{
+			Buffer<ZT_PEER_MAX_SERIALIZED_STATE_SIZE> b(data,len);
+			unsigned int ptr = 0;
+			if (b[ptr++] != 1)
+				return SharedPtr<Peer>();
+			ptr += 8; // skip TS, don't care
+			id.deserialize(b,ptr);
+		}
+		if (id) {
+			const SharedPtr<Peer> p(new Peer(renv,renv->identity,id));
+			if (p->applyStateUpdate(data,len))
+				return renv->topology->addPeer(tPtr,p);
+		}
+	} catch ( ... ) {}
+	return SharedPtr<Peer>();
 }
 
 } // namespace ZeroTier

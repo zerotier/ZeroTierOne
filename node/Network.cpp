@@ -1067,11 +1067,6 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 				return 0;
 			}
 
-#ifdef ZT_ENABLE_CLUSTER
-			if ((source)&&(RR->cluster))
-				RR->cluster->broadcastNetworkConfigChunk(chunk.field(start,chunk.size() - start),chunk.size() - start);
-#endif
-
 			// New properly verified chunks can be flooded "virally" through the network
 			if (fastPropagate) {
 				Address *a = (Address *)0;
@@ -1099,11 +1094,6 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 				if ((!c)||(_incomingConfigChunks[i].ts < c->ts))
 					c = &(_incomingConfigChunks[i]);
 			}
-
-#ifdef ZT_ENABLE_CLUSTER
-			if ((source)&&(RR->cluster))
-				RR->cluster->broadcastNetworkConfigChunk(chunk.field(start,chunk.size() - start),chunk.size() - start);
-#endif
 		} else {
 			TRACE("discarded single-chunk unsigned legacy config: this is only allowed if the sender is the controller itself");
 			return 0;

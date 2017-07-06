@@ -1072,9 +1072,9 @@ typedef struct
  * identity of a node and its address, the identity (public and secret)
  * must be saved at a minimum.
  *
- * The reference service implementation currently persists identity,
- * peer identities (for a period of time), planet, moons, and network
- * configurations. Other state is treated as ephemeral.
+ * State objects actually have two IDs (uint64_t[2]). If only one is
+ * listed the second ([1]) should be zero and is ignored in storage
+ * and replication.
  *
  * All state objects should be replicated in cluster mode. The reference
  * clustering implementation uses a rumor mill algorithm in which state
@@ -1118,22 +1118,25 @@ enum ZT_StateObjectType
 	ZT_STATE_OBJECT_PEER_STATE = 3,
 
 	/**
-	 * The identity of a known peer
-	 *
-	 * Object ID: peer address
-	 * Canonical path: <HOME>/iddb.d/<ADDRESS> (10-digit hex address)
-	 * Persistence: recommended, can be purged at any time, recommended ttl 30-60 days
-	 */
-	ZT_STATE_OBJECT_PEER_IDENTITY = 4,
-
-	/**
 	 * Network configuration
 	 *
 	 * Object ID: peer address
 	 * Canonical path: <HOME>/networks.d/<NETWORKID>.conf (16-digit hex ID)
 	 * Persistence: required if network memberships should persist
 	 */
-	ZT_STATE_OBJECT_NETWORK_CONFIG = 5,
+	ZT_STATE_OBJECT_NETWORK_CONFIG = 4,
+
+	/**
+	 * Network membership (network X peer intersection)
+	 *
+	 * If these are persisted they must be restored after peer states and
+	 * network configs. Otherwise they are ignored.
+	 *
+	 * Object ID: [0] network ID, [1] peer address
+	 * Canonical path: <HOME>/networks.d/<NETWORKID>/members.d/<ADDRESS>
+	 * Persistence: optional (not usually needed)
+	 */
+	ZT_STATE_OBJECT_NETWORK_MEMBERSHIP = 5,
 
 	/**
 	 * The planet (there is only one per... well... planet!)
@@ -1450,7 +1453,8 @@ void ZT_Node_delete(ZT_Node *node);
  *
  * Unless clustering is being implemented this function doesn't need to be
  * used after startup. It could be called in response to filesystem changes
- * to allow some degree of live configurability by filesystem observation.
+ * to allow some degree of live configurability by filesystem observation
+ * but this kind of thing is entirely optional.
  *
  * The return value of this function indicates whether the update was accepted
  * as new. A return value of ZT_RESULT_OK indicates that the node gleaned new
@@ -1468,7 +1472,7 @@ void ZT_Node_delete(ZT_Node *node);
  * @param node Node instance
  * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param type State object type
- * @param id State object ID
+ * @param id State object ID (if object type has only one ID, second should be zero)
  * @param data State object data
  * @param len Length of state object data in bytes
  * @return ZT_RESULT_OK if object was accepted or ZT_RESULT_OK_IGNORED if non-informative, error if object was invalid
@@ -1477,7 +1481,7 @@ enum ZT_ResultCode ZT_Node_processStateUpdate(
 	ZT_Node *node,
 	void *tptr,
 	ZT_StateObjectType type,
-	uint64_t id,
+	const uint64_t id[2],
 	const void *data,
 	unsigned int len);
 
