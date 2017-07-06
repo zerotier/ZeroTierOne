@@ -31,7 +31,6 @@ ONE_OBJS=\
 	osdep/ManagedRoute.o \
 	osdep/Http.o \
 	osdep/OSUtils.o \
-	service/ClusterGeoIpService.o \
 	service/SoftwareUpdater.o \
 	service/OneService.o
 

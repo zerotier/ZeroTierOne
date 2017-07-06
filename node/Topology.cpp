@@ -395,11 +395,8 @@ void Topology::doPeriodicTasks(void *tPtr,uint64_t now)
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p)) {
-			if ( (!(*p)->isAlive(now)) && (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),*a) == _upstreamAddresses.end()) ) {
+			if ( (!(*p)->isAlive(now)) && (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),*a) == _upstreamAddresses.end()) )
 				_peers.erase(*a);
-			} else {
-				(*p)->writeState(tPtr,now);
-			}
 		}
 	}
 

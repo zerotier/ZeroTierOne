@@ -284,18 +284,6 @@ public:
 	inline uint64_t lastTrustEstablishedPacketReceived() const { return _lastTrustEstablishedPacketReceived; }
 
 	/**
-	 * @param lo Last out send
-	 * @param li Last in send
-	 * @param lt Last trust established packet received
-	 */
-	inline void updateFromRemoteState(const uint64_t lo,const uint64_t li,const uint64_t lt)
-	{
-		_lastOut = lo;
-		_lastIn = li;
-		_lastTrustEstablishedPacketReceived = lt;
-	}
-
-	/**
 	 * Return and increment outgoing packet counter (used with Packet::armor())
 	 *
 	 * @return Next value that should be used for outgoing packet counter (only least significant 3 bits are used)

@@ -7,11 +7,6 @@ LIBS=
 include objects.mk
 ONE_OBJS+=osdep/BSDEthernetTap.o ext/http-parser/http_parser.o
 
-# Build with ZT_ENABLE_CLUSTER=1 to build with cluster support
-ifeq ($(ZT_ENABLE_CLUSTER),1)
-	DEFS+=-DZT_ENABLE_CLUSTER
-endif
-
 # "make debug" is a shortcut for this
 ifeq ($(ZT_DEBUG),1)
 	CFLAGS+=-Wall -Werror -g -pthread $(INCLUDES) $(DEFS)

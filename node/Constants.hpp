@@ -219,11 +219,6 @@
 #define ZT_HOUSEKEEPING_PERIOD 60000
 
 /**
- * How often in ms to write peer state to storage and/or cluster (approximate)
- */
-#define ZT_PEER_STATE_WRITE_PERIOD 10000
-
-/**
  * How long to remember peer records in RAM if they haven't been used
  */
 #define ZT_PEER_IN_MEMORY_EXPIRATION 600000

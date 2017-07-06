@@ -196,23 +196,6 @@ public:
 	bool doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily);
 
 	/**
-	 * Write object state to external storage and/or cluster network
-	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param now Current time
-	 */
-	void writeState(void *tPtr,const uint64_t now);
-
-	/**
-	 * Apply a state update received from e.g. a remote cluster member
-	 *
-	 * @param data State update data
-	 * @param len Length of state update
-	 * @return True if state update was applied, false if ignored or invalid
-	 */
-	bool applyStateUpdate(const void *data,unsigned int len);
-
-	/**
 	 * Reset paths within a given IP scope and address family
 	 *
 	 * Resetting a path involves sending an ECHO to it and then deactivating
@@ -440,17 +423,6 @@ public:
 		return false;
 	}
 
-	/**
-	 * Create a peer from a remote state update
-	 *
-	 * @param renv Runtime environment
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param data State update data
-	 * @param len State update length
-	 * @return Peer or NULL if data was invalid
-	 */
-	static SharedPtr<Peer> createFromStateUpdate(const RuntimeEnvironment *renv,void *tPtr,const void *data,unsigned int len);
-
 private:
 	struct _PeerPath
 	{
@@ -462,9 +434,6 @@ private:
 	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
 
 	const RuntimeEnvironment *RR;
-
-	uint64_t _lastWroteState;
-	uint64_t _lastReceivedStateTimestamp;
 
 	uint64_t _lastReceive; // direct or indirect
 	uint64_t _lastNontrivialReceive; // frames, things like netconf, etc.

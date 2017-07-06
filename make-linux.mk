@@ -38,10 +38,6 @@ endif
 # Trying to use dynamically linked libhttp-parser causes tons of compatibility problems.
 ONE_OBJS+=ext/http-parser/http_parser.o
 
-ifeq ($(ZT_ENABLE_CLUSTER),1)
-	DEFS+=-DZT_ENABLE_CLUSTER
-endif
-
 ifeq ($(ZT_SYNOLOGY), 1)
 	DEFS+=-D__SYNOLOGY__
 endif

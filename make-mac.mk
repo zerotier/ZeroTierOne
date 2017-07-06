@@ -33,10 +33,6 @@ else
 	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="\"download\""
 endif
 
-ifeq ($(ZT_ENABLE_CLUSTER),1)
-	DEFS+=-DZT_ENABLE_CLUSTER
-endif
-
 # Use fast ASM Salsa20/12 for x64 processors
 DEFS+=-DZT_USE_X64_ASM_SALSA2012
 CORE_OBJS+=ext/x64-salsa2012-asm/salsa2012.o
