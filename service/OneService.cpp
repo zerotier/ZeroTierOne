@@ -394,6 +394,8 @@ public:
 	Phy<OneServiceImpl *> _phy;
 	Node *_node;
 	SoftwareUpdater *_updater;
+	PhySocket *_localControlSocket4;
+	PhySocket *_localControlSocket6;
 	bool _updateAutoApply;
 	unsigned int _primaryPort;
 	volatile unsigned int _udpPortPickerCounter;
@@ -488,6 +490,8 @@ public:
 		,_phy(this,false,true)
 		,_node((Node *)0)
 		,_updater((SoftwareUpdater *)0)
+		,_localControlSocket4((PhySocket *)0)
+		,_localControlSocket6((PhySocket *)0)
 		,_updateAutoApply(false)
 		,_primaryPort(port)
 		,_udpPortPickerCounter(0)
@@ -513,6 +517,8 @@ public:
 	virtual ~OneServiceImpl()
 	{
 		_binder.closeAll(_phy);
+		_phy.close(_localControlSocket4);
+		_phy.close(_localControlSocket6);
 #ifdef ZT_USE_MINIUPNPC
 		delete _portMapper;
 #endif
@@ -650,6 +656,20 @@ public:
 				_termReason = ONE_UNRECOVERABLE_ERROR;
 				_fatalErrorMessage = "cannot bind to local control interface port";
 				return _termReason;
+			}
+
+			// Bind local control socket
+			{
+				struct sockaddr_in lo4;
+				memset(&lo4,0,sizeof(lo4));
+				lo4.sin_family = AF_INET;
+				lo4.sin_port = Utils::hton((uint16_t)_ports[0]);
+				_localControlSocket4 = _phy.tcpListen((const struct sockaddr *)&lo4);
+				struct sockaddr_in6 lo6;
+				memset(&lo6,0,sizeof(lo6));
+				lo6.sin6_family = AF_INET6;
+				lo6.sin6_port = lo4.sin_port;
+				_localControlSocket6 = _phy.tcpListen((const struct sockaddr *)&lo6);
 			}
 
 			// Save primary port to a file so CLIs and GUIs can learn it easily

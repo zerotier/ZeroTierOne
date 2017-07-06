@@ -170,11 +170,11 @@ void Peer::received(
 			Mutex::Lock _l(_paths_m);
 			_PeerPath *potentialNewPeerPath = (_PeerPath *)0;
 			if (path->address().ss_family == AF_INET) {
-				if ( (!_v4Path.p) || (!_v4Path.p->alive(now)) || (path->preferenceRank() >= _v4Path.p->preferenceRank()) ) {
+				if ( ( (!_v4Path.p) || (!_v4Path.p->alive(now)) || (path->preferenceRank() >= _v4Path.p->preferenceRank()) ) && ( (now - _v4Path.sticky) > ZT_PEER_PATH_EXPIRATION ) ) {
 					potentialNewPeerPath = &_v4Path;
 				}
 			} else if (path->address().ss_family == AF_INET6) {
-				if ( (!_v6Path.p) || (!_v6Path.p->alive(now)) || (path->preferenceRank() >= _v6Path.p->preferenceRank()) ) {
+				if ( ( (!_v6Path.p) || (!_v6Path.p->alive(now)) || (path->preferenceRank() >= _v6Path.p->preferenceRank()) ) && ( (now - _v6Path.sticky) > ZT_PEER_PATH_EXPIRATION ) ) {
 					potentialNewPeerPath = &_v6Path;
 				}
 			}
@@ -420,6 +420,20 @@ bool Peer::doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily)
 	}
 
 	return false;
+}
+
+void Peer::redirect(void *tPtr,const int64_t localSocket,const InetAddress &remoteAddress,const uint64_t now)
+{
+	Mutex::Lock _l(_paths_m);
+	SharedPtr<Path> p(RR->topology->getPath(localSocket,remoteAddress));
+	attemptToContactAt(tPtr,localSocket,remoteAddress,now,true,p->nextOutgoingCounter());
+	if (remoteAddress.ss_family == AF_INET) {
+		_v4Path.p = p;
+		_v4Path.sticky = now;
+	} else if (remoteAddress.ss_family == AF_INET6) {
+		_v6Path.p = p;
+		_v6Path.sticky = now;
+	}
 }
 
 } // namespace ZeroTier

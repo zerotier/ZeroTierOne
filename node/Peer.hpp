@@ -196,6 +196,20 @@ public:
 	bool doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily);
 
 	/**
+	 * Specify remote path for this peer and forget others
+	 *
+	 * This overrides normal path learning and tells this peer to be found
+	 * at this address, at least within the address's family. Other address
+	 * families are not modified.
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param localSocket Local socket as supplied by external code
+	 * @param remoteAddress Remote address
+	 * @param now Current time
+	 */
+	void redirect(void *tPtr,const int64_t localSocket,const InetAddress &remoteAddress,const uint64_t now);
+
+	/**
 	 * Reset paths within a given IP scope and address family
 	 *
 	 * Resetting a path involves sending an ECHO to it and then deactivating
@@ -426,8 +440,9 @@ public:
 private:
 	struct _PeerPath
 	{
-		_PeerPath() : lr(0),p() {}
+		_PeerPath() : lr(0),sticky(0),p() {}
 		uint64_t lr; // time of last valid ZeroTier packet
+		uint64_t sticky; // time last set as sticky
 		SharedPtr<Path> p;
 	};
 
