@@ -91,12 +91,8 @@ Topology::Topology(const RuntimeEnvironment *renv,void *tPtr) :
 SharedPtr<Peer> Topology::addPeer(void *tPtr,const SharedPtr<Peer> &peer)
 {
 #ifdef ZT_TRACE
-	if ((!peer)||(peer->address() == RR->identity.address())) {
-		if (!peer)
-			fprintf(stderr,"FATAL BUG: addPeer() caught attempt to add NULL peer" ZT_EOL_S);
-		else fprintf(stderr,"FATAL BUG: addPeer() caught attempt to add peer for self" ZT_EOL_S);
-		abort();
-	}
+	if ((!peer)||(peer->address() == RR->identity.address()))
+		return SharedPtr<Peer>();
 #endif
 
 	SharedPtr<Peer> np;

@@ -57,6 +57,7 @@ void CertificateOfMembership::setQualifier(uint64_t id,uint64_t value,uint64_t m
 
 std::string CertificateOfMembership::toString() const
 {
+	char tmp[ZT_NETWORK_COM_MAX_QUALIFIERS * 32];
 	std::string s;
 
 	s.append("1:"); // COM_UINT64_ED25519
@@ -69,7 +70,7 @@ std::string CertificateOfMembership::toString() const
 			buf[ptr++] = Utils::hton(_qualifiers[i].value);
 			buf[ptr++] = Utils::hton(_qualifiers[i].maxDelta);
 		}
-		s.append(Utils::hex(buf,ptr * sizeof(uint64_t)));
+		s.append(Utils::hex(buf,ptr * sizeof(uint64_t),tmp));
 		delete [] buf;
 	} catch ( ... ) {
 		delete [] buf;
@@ -78,11 +79,11 @@ std::string CertificateOfMembership::toString() const
 
 	s.push_back(':');
 
-	s.append(_signedBy.toString());
+	s.append(_signedBy.toString(tmp));
 
 	if (_signedBy) {
 		s.push_back(':');
-		s.append(Utils::hex(_signature.data,(unsigned int)_signature.size()));
+		s.append(Utils::hex(_signature.data,(unsigned int)_signature.size(),tmp));
 	}
 
 	return s;

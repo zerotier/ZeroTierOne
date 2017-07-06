@@ -260,9 +260,9 @@ static int cli(int argc,char **argv)
 				if (hd) {
 					char p[4096];
 #ifdef __APPLE__
-					Utils::ztsnprintf(p,sizeof(p),"%s/Library/Application Support/ZeroTier/One/authtoken.secret",hd);
+					OSUtils::ztsnprintf(p,sizeof(p),"%s/Library/Application Support/ZeroTier/One/authtoken.secret",hd);
 #else
-					Utils::ztsnprintf(p,sizeof(p),"%s/.zeroTierOneAuthToken",hd);
+					OSUtils::ztsnprintf(p,sizeof(p),"%s/.zeroTierOneAuthToken",hd);
 #endif
 					OSUtils::readFile(p,authToken);
 				}
@@ -278,7 +278,7 @@ static int cli(int argc,char **argv)
 	InetAddress addr;
 	{
 		char addrtmp[256];
-		Utils::ztsnprintf(addrtmp,sizeof(addrtmp),"%s/%u",ip.c_str(),port);
+		OSUtils::ztsnprintf(addrtmp,sizeof(addrtmp),"%s/%u",ip.c_str(),port);
 		addr = InetAddress(addrtmp);
 	}
 
@@ -366,7 +366,7 @@ static int cli(int argc,char **argv)
 									std::string addr = path["address"];
 									const uint64_t now = OSUtils::now();
 									const double lq = (path.count("linkQuality")) ? (double)path["linkQuality"] : -1.0;
-									Utils::ztsnprintf(tmp,sizeof(tmp),"%s;%llu;%llu;%1.2f",addr.c_str(),now - (uint64_t)path["lastSend"],now - (uint64_t)path["lastReceive"],lq);
+									OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s;%llu;%llu;%1.2f",addr.c_str(),now - (uint64_t)path["lastSend"],now - (uint64_t)path["lastReceive"],lq);
 									bestPath = tmp;
 									break;
 								}
@@ -378,7 +378,7 @@ static int cli(int argc,char **argv)
 						int64_t vmin = p["versionMinor"];
 						int64_t vrev = p["versionRev"];
 						if (vmaj >= 0) {
-							Utils::ztsnprintf(ver,sizeof(ver),"%lld.%lld.%lld",vmaj,vmin,vrev);
+							OSUtils::ztsnprintf(ver,sizeof(ver),"%lld.%lld.%lld",vmaj,vmin,vrev);
 						} else {
 							ver[0] = '-';
 							ver[1] = (char)0;
@@ -527,9 +527,9 @@ static int cli(int argc,char **argv)
 		const uint64_t seed = Utils::hexStrToU64(arg2.c_str());
 		if ((worldId)&&(seed)) {
 			char jsons[1024];
-			Utils::ztsnprintf(jsons,sizeof(jsons),"{\"seed\":\"%s\"}",arg2.c_str());
+			OSUtils::ztsnprintf(jsons,sizeof(jsons),"{\"seed\":\"%s\"}",arg2.c_str());
 			char cl[128];
-			Utils::ztsnprintf(cl,sizeof(cl),"%u",(unsigned int)strlen(jsons));
+			OSUtils::ztsnprintf(cl,sizeof(cl),"%u",(unsigned int)strlen(jsons));
 			requestHeaders["Content-Type"] = "application/json";
 			requestHeaders["Content-Length"] = cl;
 			unsigned int scode = Http::POST(
@@ -579,11 +579,11 @@ static int cli(int argc,char **argv)
 		if (eqidx != std::string::npos) {
 			if ((arg2.substr(0,eqidx) == "allowManaged")||(arg2.substr(0,eqidx) == "allowGlobal")||(arg2.substr(0,eqidx) == "allowDefault")) {
 				char jsons[1024];
-				Utils::ztsnprintf(jsons,sizeof(jsons),"{\"%s\":%s}",
+				OSUtils::ztsnprintf(jsons,sizeof(jsons),"{\"%s\":%s}",
 					arg2.substr(0,eqidx).c_str(),
 					(((arg2.substr(eqidx,2) == "=t")||(arg2.substr(eqidx,2) == "=1")) ? "true" : "false"));
 				char cl[128];
-				Utils::ztsnprintf(cl,sizeof(cl),"%u",(unsigned int)strlen(jsons));
+				OSUtils::ztsnprintf(cl,sizeof(cl),"%u",(unsigned int)strlen(jsons));
 				requestHeaders["Content-Type"] = "application/json";
 				requestHeaders["Content-Length"] = cl;
 				unsigned int scode = Http::POST(
@@ -648,7 +648,7 @@ static Identity getIdFromArg(char *arg)
 	} else { // identity is to be read from a file
 		std::string idser;
 		if (OSUtils::readFile(arg,idser)) {
-			if (id.fromString(idser))
+			if (id.fromString(idser.c_str()))
 				return id;
 		}
 	}
@@ -689,14 +689,15 @@ static int idtool(int argc,char **argv)
 			}
 		}
 
-		std::string idser = id.toString(true);
+		char idtmp[1024];
+		std::string idser = id.toString(true,idtmp);
 		if (argc >= 3) {
 			if (!OSUtils::writeFile(argv[2],idser)) {
 				fprintf(stderr,"Error writing to %s" ZT_EOL_S,argv[2]);
 				return 1;
 			} else printf("%s written" ZT_EOL_S,argv[2]);
 			if (argc >= 4) {
-				idser = id.toString(false);
+				idser = id.toString(false,idtmp);
 				if (!OSUtils::writeFile(argv[3],idser)) {
 					fprintf(stderr,"Error writing to %s" ZT_EOL_S,argv[3]);
 					return 1;
@@ -731,7 +732,8 @@ static int idtool(int argc,char **argv)
 			return 1;
 		}
 
-		printf("%s",id.toString(false).c_str());
+		char idtmp[1024];
+		printf("%s",id.toString(false,idtmp));
 	} else if (!strcmp(argv[1],"sign")) {
 		if (argc < 4) {
 			idtoolPrintHelp(stdout,argv[0]);
@@ -755,7 +757,8 @@ static int idtool(int argc,char **argv)
 			return 1;
 		}
 		C25519::Signature signature = id.sign(inf.data(),(unsigned int)inf.length());
-		printf("%s",Utils::hex(signature.data,(unsigned int)signature.size()).c_str());
+		char hexbuf[1024];
+		printf("%s",Utils::hex(signature.data,(unsigned int)signature.size(),hexbuf));
 	} else if (!strcmp(argv[1],"verify")) {
 		if (argc < 4) {
 			idtoolPrintHelp(stdout,argv[0]);
@@ -774,7 +777,8 @@ static int idtool(int argc,char **argv)
 			return 1;
 		}
 
-		std::string signature(Utils::unhex(argv[4]));
+		char buf[4096];
+		std::string signature(buf,Utils::unhex(argv[4],buf,(unsigned int)sizeof(buf)));
 		if ((signature.length() > ZT_ADDRESS_LENGTH)&&(id.verify(inf.data(),(unsigned int)inf.length(),signature.data(),(unsigned int)signature.length()))) {
 			printf("%s signature valid" ZT_EOL_S,argv[3]);
 		} else {
@@ -793,14 +797,15 @@ static int idtool(int argc,char **argv)
 
 			C25519::Pair kp(C25519::generate());
 
+			char idtmp[4096];
 			nlohmann::json mj;
 			mj["objtype"] = "world";
 			mj["worldType"] = "moon";
-			mj["updatesMustBeSignedBy"] = mj["signingKey"] = Utils::hex(kp.pub.data,(unsigned int)kp.pub.size());
-			mj["signingKey_SECRET"] = Utils::hex(kp.priv.data,(unsigned int)kp.priv.size());
-			mj["id"] = id.address().toString();
+			mj["updatesMustBeSignedBy"] = mj["signingKey"] = Utils::hex(kp.pub.data,(unsigned int)kp.pub.size(),idtmp);
+			mj["signingKey_SECRET"] = Utils::hex(kp.priv.data,(unsigned int)kp.priv.size(),idtmp);
+			mj["id"] = id.address().toString(idtmp);
 			nlohmann::json seedj;
-			seedj["identity"] = id.toString(false);
+			seedj["identity"] = id.toString(false,idtmp);
 			seedj["stableEndpoints"] = nlohmann::json::array();
 			(mj["roots"] = nlohmann::json::array()).push_back(seedj);
 			std::string mjd(OSUtils::jsonDump(mj));
@@ -836,9 +841,9 @@ static int idtool(int argc,char **argv)
 
 			C25519::Pair signingKey;
 			C25519::Public updatesMustBeSignedBy;
-			Utils::unhex(OSUtils::jsonString(mj["signingKey"],""),signingKey.pub.data,(unsigned int)signingKey.pub.size());
-			Utils::unhex(OSUtils::jsonString(mj["signingKey_SECRET"],""),signingKey.priv.data,(unsigned int)signingKey.priv.size());
-			Utils::unhex(OSUtils::jsonString(mj["updatesMustBeSignedBy"],""),updatesMustBeSignedBy.data,(unsigned int)updatesMustBeSignedBy.size());
+			Utils::unhex(OSUtils::jsonString(mj["signingKey"],"").c_str(),signingKey.pub.data,(unsigned int)signingKey.pub.size());
+			Utils::unhex(OSUtils::jsonString(mj["signingKey_SECRET"],"").c_str(),signingKey.priv.data,(unsigned int)signingKey.priv.size());
+			Utils::unhex(OSUtils::jsonString(mj["updatesMustBeSignedBy"],"").c_str(),updatesMustBeSignedBy.data,(unsigned int)updatesMustBeSignedBy.size());
 
 			std::vector<World::Root> roots;
 			nlohmann::json &rootsj = mj["roots"];
@@ -847,11 +852,11 @@ static int idtool(int argc,char **argv)
 					nlohmann::json &r = rootsj[i];
 					if (r.is_object()) {
 						roots.push_back(World::Root());
-						roots.back().identity = Identity(OSUtils::jsonString(r["identity"],""));
+						roots.back().identity = Identity(OSUtils::jsonString(r["identity"],"").c_str());
 						nlohmann::json &stableEndpointsj = r["stableEndpoints"];
 						if (stableEndpointsj.is_array()) {
 							for(unsigned long k=0;k<(unsigned long)stableEndpointsj.size();++k)
-								roots.back().stableEndpoints.push_back(InetAddress(OSUtils::jsonString(stableEndpointsj[k],"")));
+								roots.back().stableEndpoints.push_back(InetAddress(OSUtils::jsonString(stableEndpointsj[k],"").c_str()));
 							std::sort(roots.back().stableEndpoints.begin(),roots.back().stableEndpoints.end());
 						}
 					}
@@ -864,7 +869,7 @@ static int idtool(int argc,char **argv)
 			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> wbuf;
 			w.serialize(wbuf);
 			char fn[128];
-			Utils::ztsnprintf(fn,sizeof(fn),"%.16llx.moon",w.id());
+			OSUtils::ztsnprintf(fn,sizeof(fn),"%.16llx.moon",w.id());
 			OSUtils::writeFile(fn,wbuf.data(),wbuf.size());
 			printf("wrote %s (signed world with timestamp %llu)" ZT_EOL_S,fn,(unsigned long long)now);
 		}

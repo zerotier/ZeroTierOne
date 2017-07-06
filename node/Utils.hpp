@@ -70,42 +70,144 @@ public:
 	static void burn(void *ptr,unsigned int len);
 
 	/**
-	 * Convert binary data to hexadecimal
-	 *
-	 * @param data Data to convert to hex
-	 * @param len Length of data
-	 * @return Hexadecimal string
+	 * @param n Number to convert
+	 * @param s Buffer, at least 24 bytes in size
+	 * @return String containing 'n' in base 10 form
 	 */
-	static std::string hex(const void *data,unsigned int len);
-	static inline std::string hex(const std::string &data) { return hex(data.data(),(unsigned int)data.length()); }
+	static char *decimal(unsigned long n,char s[24]);
 
-	/**
-	 * Convert hexadecimal to binary data
-	 *
-	 * This ignores all non-hex characters, just stepping over them and
-	 * continuing. Upper and lower case are supported for letters a-f.
-	 *
-	 * @param hex Hexadecimal ASCII code (non-hex chars are ignored, stops at zero or maxlen)
-	 * @param maxlen Maximum length of hex string buffer
-	 * @return Binary data
-	 */
-	static std::string unhex(const char *hex,unsigned int maxlen);
-	static inline std::string unhex(const std::string &hex) { return unhex(hex.c_str(),(unsigned int)hex.length()); }
+	static inline char *hex(uint64_t i,char *const s)
+	{
+		s[0] = HEXCHARS[(i >> 60) & 0xf];
+		s[1] = HEXCHARS[(i >> 56) & 0xf];
+		s[2] = HEXCHARS[(i >> 52) & 0xf];
+		s[3] = HEXCHARS[(i >> 48) & 0xf];
+		s[4] = HEXCHARS[(i >> 44) & 0xf];
+		s[5] = HEXCHARS[(i >> 40) & 0xf];
+		s[6] = HEXCHARS[(i >> 36) & 0xf];
+		s[7] = HEXCHARS[(i >> 32) & 0xf];
+		s[8] = HEXCHARS[(i >> 28) & 0xf];
+		s[9] = HEXCHARS[(i >> 24) & 0xf];
+		s[10] = HEXCHARS[(i >> 20) & 0xf];
+		s[11] = HEXCHARS[(i >> 16) & 0xf];
+		s[12] = HEXCHARS[(i >> 12) & 0xf];
+		s[13] = HEXCHARS[(i >> 8) & 0xf];
+		s[14] = HEXCHARS[(i >> 4) & 0xf];
+		s[15] = HEXCHARS[i & 0xf];
+		s[16] = (char)0;
+		return s;
+	}
 
-	/**
-	 * Convert hexadecimal to binary data
-	 *
-	 * This ignores all non-hex characters, just stepping over them and
-	 * continuing. Upper and lower case are supported for letters a-f.
-	 *
-	 * @param hex Hexadecimal ASCII
-	 * @param maxlen Maximum length of hex string buffer
-	 * @param buf Buffer to fill
-	 * @param len Length of buffer
-	 * @return Number of characters actually written
-	 */
-	static unsigned int unhex(const char *hex,unsigned int maxlen,void *buf,unsigned int len);
-	static inline unsigned int unhex(const std::string &hex,void *buf,unsigned int len) { return unhex(hex.c_str(),(unsigned int)hex.length(),buf,len); }
+	static inline char *hex10(uint64_t i,char *const s)
+	{
+		s[0] = HEXCHARS[(i >> 36) & 0xf];
+		s[1] = HEXCHARS[(i >> 32) & 0xf];
+		s[2] = HEXCHARS[(i >> 28) & 0xf];
+		s[3] = HEXCHARS[(i >> 24) & 0xf];
+		s[4] = HEXCHARS[(i >> 20) & 0xf];
+		s[5] = HEXCHARS[(i >> 16) & 0xf];
+		s[6] = HEXCHARS[(i >> 12) & 0xf];
+		s[7] = HEXCHARS[(i >> 8) & 0xf];
+		s[8] = HEXCHARS[(i >> 4) & 0xf];
+		s[9] = HEXCHARS[i & 0xf];
+		s[10] = (char)0;
+		return s;
+	}
+
+	static inline char *hex(uint16_t i,char *const s)
+	{
+		s[0] = HEXCHARS[(i >> 12) & 0xf];
+		s[1] = HEXCHARS[(i >> 8) & 0xf];
+		s[2] = HEXCHARS[(i >> 4) & 0xf];
+		s[3] = HEXCHARS[i & 0xf];
+		s[4] = (char)0;
+		return s;
+	}
+
+	static inline char *hex(uint8_t i,char *const s)
+	{
+		s[0] = HEXCHARS[(i >> 4) & 0xf];
+		s[1] = HEXCHARS[i & 0xf];
+		s[2] = (char)0;
+		return s;
+	}
+
+	static inline char *hex(const void *d,unsigned int l,char *s)
+	{
+		char *save = s;
+		for(unsigned int i=0;i<l;++i) {
+			unsigned int b = reinterpret_cast<const uint8_t *>(d)[i];
+			*(s++) = HEXCHARS[(b >> 4) & 0xf];
+			*(s++) = HEXCHARS[b & 0xf];
+		}
+		*s = (char)0;
+		return save;
+	}
+
+	static inline unsigned int unhex(const char *h,void *buf,unsigned int buflen)
+	{
+		unsigned int l = 0;
+		while (l < buflen) {
+			uint8_t hc = (uint8_t)*(h++);
+			if (!hc) break;
+
+			uint8_t c = 0;
+			if ((hc >= 48)&&(hc <= 57))
+				c = hc - 48;
+			else if ((hc >= 97)&&(hc <= 102))
+				c = hc - 87;
+			else if ((hc >= 65)&&(hc <= 70))
+				c = hc - 55;
+
+			hc = (uint8_t)*(h++);
+			if (!hc) break;
+
+			c <<= 4;
+			if ((hc >= 48)&&(hc <= 57))
+				c |= hc - 48;
+			else if ((hc >= 97)&&(hc <= 102))
+				c |= hc - 87;
+			else if ((hc >= 65)&&(hc <= 70))
+				c |= hc - 55;
+
+			reinterpret_cast<uint8_t *>(buf)[l++] = c;
+		}
+		return l;
+	}
+
+	static inline unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen)
+	{
+		unsigned int l = 0;
+		const char *hend = h + hlen;
+		while (l < buflen) {
+			if (h == hend) break;
+			uint8_t hc = (uint8_t)*(h++);
+			if (!hc) break;
+
+			uint8_t c = 0;
+			if ((hc >= 48)&&(hc <= 57))
+				c = hc - 48;
+			else if ((hc >= 97)&&(hc <= 102))
+				c = hc - 87;
+			else if ((hc >= 65)&&(hc <= 70))
+				c = hc - 55;
+
+			if (h == hend) break;
+			hc = (uint8_t)*(h++);
+			if (!hc) break;
+
+			c <<= 4;
+			if ((hc >= 48)&&(hc <= 57))
+				c |= hc - 48;
+			else if ((hc >= 97)&&(hc <= 102))
+				c |= hc - 87;
+			else if ((hc >= 65)&&(hc <= 70))
+				c |= hc - 55;
+
+			reinterpret_cast<uint8_t *>(buf)[l++] = c;
+		}
+		return l;
+	}
 
 	/**
 	 * Generate secure random bytes
@@ -231,20 +333,6 @@ public:
 	 * @return True on success, false on overflow (buffer will still be 0-terminated)
 	 */
 	static bool scopy(char *dest,unsigned int len,const char *src);
-
-	/**
-	 * Variant of snprintf that is portable and throws an exception
-	 *
-	 * This just wraps the local implementation whatever it's called, while
-	 * performing a few other checks and adding exceptions for overflow.
-	 *
-	 * @param buf Buffer to write to
-	 * @param len Length of buffer in bytes
-	 * @param fmt Format string
-	 * @param ... Format arguments
-	 * @throws std::length_error buf[] too short (buf[] will still be left null-terminated)
-	 */
-	static unsigned int ztsnprintf(char *buf,unsigned int len,const char *fmt,...);
 
 	/**
 	 * Count the number of bits set in an integer

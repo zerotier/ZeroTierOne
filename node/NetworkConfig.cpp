@@ -64,7 +64,8 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 				if (this->staticIps[i].ss_family == AF_INET) {
 					if (v4s.length() > 0)
 						v4s.push_back(',');
-					v4s.append(this->staticIps[i].toString());
+					char buf[64];
+					v4s.append(this->staticIps[i].toString(buf));
 				}
 			}
 			if (v4s.length() > 0) {
@@ -75,7 +76,8 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 				if (this->staticIps[i].ss_family == AF_INET6) {
 					if (v6s.length() > 0)
 						v6s.push_back(',');
-					v6s.append(this->staticIps[i].toString());
+					char buf[64];
+					v6s.append(this->staticIps[i].toString(buf));
 				}
 			}
 			if (v6s.length() > 0) {
@@ -94,8 +96,7 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 						if (ets.length() > 0)
 							ets.push_back(',');
 						char tmp2[16];
-						Utils::ztsnprintf(tmp2,sizeof(tmp2),"%x",et);
-						ets.append(tmp2);
+						ets.append(Utils::hex((uint16_t)et,tmp2));
 					}
 					et = 0;
 				}
@@ -114,7 +115,8 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 				if ((this->specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0) {
 					if (ab.length() > 0)
 						ab.push_back(',');
-					ab.append(Address(this->specialists[i]).toString().c_str());
+					char tmp2[16];
+					ab.append(Address(this->specialists[i]).toString(tmp2));
 				}
 			}
 			if (ab.length() > 0) {

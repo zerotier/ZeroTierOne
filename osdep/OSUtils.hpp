@@ -33,7 +33,6 @@
 #include <string.h>
 #include <time.h>
 
-#include <string>
 #include <stdexcept>
 #include <vector>
 #include <map>
@@ -66,6 +65,20 @@ namespace ZeroTier {
 class OSUtils
 {
 public:
+	/**
+	 * Variant of snprintf that is portable and throws an exception
+	 *
+	 * This just wraps the local implementation whatever it's called, while
+	 * performing a few other checks and adding exceptions for overflow.
+	 *
+	 * @param buf Buffer to write to
+	 * @param len Length of buffer in bytes
+	 * @param fmt Format string
+	 * @param ... Format arguments
+	 * @throws std::length_error buf[] too short (buf[] will still be left null-terminated)
+	 */
+	static unsigned int ztsnprintf(char *buf,unsigned int len,const char *fmt,...);
+
 #ifdef __UNIX_LIKE__
 	/**
 	 * Close STDOUT_FILENO and STDERR_FILENO and replace them with output to given path

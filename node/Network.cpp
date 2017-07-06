@@ -51,7 +51,7 @@ namespace ZeroTier {
 namespace {
 
 #ifdef ZT_RULES_ENGINE_DEBUGGING
-#define FILTER_TRACE(f,...) { Utils::ztsnprintf(dpbuf,sizeof(dpbuf),f,##__VA_ARGS__); dlog.push_back(std::string(dpbuf)); }
+#define FILTER_TRACE(f,...) { snprintf(dpbuf,sizeof(dpbuf),f,##__VA_ARGS__); dlog.push_back(std::string(dpbuf)); }
 static const char *_rtn(const ZT_VirtualNetworkRuleType rt)
 {
 	switch(rt) {
@@ -1257,7 +1257,17 @@ void Network::requestConfiguration(void *tPtr)
 			nconf->rules[13].t = (uint8_t)ZT_NETWORK_RULE_ACTION_DROP;
 
 			nconf->type = ZT_NETWORK_TYPE_PUBLIC;
-			Utils::ztsnprintf(nconf->name,sizeof(nconf->name),"adhoc-%.04x-%.04x",(int)startPortRange,(int)endPortRange);
+
+			nconf->name[0] = 'a';
+			nconf->name[1] = 'd';
+			nconf->name[2] = 'h';
+			nconf->name[3] = 'o';
+			nconf->name[4] = 'c';
+			nconf->name[5] = '-';
+			Utils::hex((uint16_t)startPortRange,nconf->name + 6);
+			nconf->name[10] = '-';
+			Utils::hex((uint16_t)endPortRange,nconf->name + 11);
+			nconf->name[15] = (char)0;
 
 			this->setConfiguration(tPtr,*nconf,false);
 			delete nconf;

@@ -484,7 +484,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 	char tag[24];
 
 	// We "tag" registry entries with the network ID to identify persistent devices
-	Utils::ztsnprintf(tag,sizeof(tag),"%.16llx",(unsigned long long)nwid);
+	OSUtils::ztsnprintf(tag,sizeof(tag),"%.16llx",(unsigned long long)nwid);
 
 	Mutex::Lock _l(_systemTapInitLock);
 
@@ -601,10 +601,10 @@ WindowsEthernetTap::WindowsEthernetTap(
 
 	if (_netCfgInstanceId.length() > 0) {
 		char tmps[64];
-		unsigned int tmpsl = Utils::ztsnprintf(tmps,sizeof(tmps),"%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",(unsigned int)mac[0],(unsigned int)mac[1],(unsigned int)mac[2],(unsigned int)mac[3],(unsigned int)mac[4],(unsigned int)mac[5]) + 1;
+		unsigned int tmpsl = OSUtils::ztsnprintf(tmps,sizeof(tmps),"%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",(unsigned int)mac[0],(unsigned int)mac[1],(unsigned int)mac[2],(unsigned int)mac[3],(unsigned int)mac[4],(unsigned int)mac[5]) + 1;
 		RegSetKeyValueA(nwAdapters,_mySubkeyName.c_str(),"NetworkAddress",REG_SZ,tmps,tmpsl);
 		RegSetKeyValueA(nwAdapters,_mySubkeyName.c_str(),"MAC",REG_SZ,tmps,tmpsl);
-		tmpsl = Utils::ztsnprintf(tmps, sizeof(tmps), "%d", mtu);
+		tmpsl = OSUtils::ztsnprintf(tmps, sizeof(tmps), "%d", mtu);
 		RegSetKeyValueA(nwAdapters,_mySubkeyName.c_str(),"MTU",REG_SZ,tmps,tmpsl);
 
 		DWORD tmp = 0;
@@ -879,7 +879,7 @@ void WindowsEthernetTap::setMtu(unsigned int mtu)
 		HKEY nwAdapters;
 		if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}", 0, KEY_READ | KEY_WRITE, &nwAdapters) == ERROR_SUCCESS) {
 			char tmps[64];
-			unsigned int tmpsl = Utils::ztsnprintf(tmps, sizeof(tmps), "%d", mtu);
+			unsigned int tmpsl = OSUtils::ztsnprintf(tmps, sizeof(tmps), "%d", mtu);
 			RegSetKeyValueA(nwAdapters, _mySubkeyName.c_str(), "MTU", REG_SZ, tmps, tmpsl);
 			RegCloseKey(nwAdapters);
 		}
@@ -902,7 +902,7 @@ void WindowsEthernetTap::threadMain()
 	HANDLE wait4[3];
 	OVERLAPPED tapOvlRead,tapOvlWrite;
 
-	Utils::ztsnprintf(tapPath,sizeof(tapPath),"\\\\.\\Global\\%s.tap",_netCfgInstanceId.c_str());
+	OSUtils::ztsnprintf(tapPath,sizeof(tapPath),"\\\\.\\Global\\%s.tap",_netCfgInstanceId.c_str());
 
 	try {
 		while (_run) {

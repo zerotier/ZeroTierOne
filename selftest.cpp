@@ -153,10 +153,11 @@ static int testCrypto()
 {
 	static unsigned char buf1[16384];
 	static unsigned char buf2[sizeof(buf1)],buf3[sizeof(buf1)];
+	static char hexbuf[1024];
 
 	for(int i=0;i<3;++i) {
 		Utils::getSecureRandom(buf1,64);
-		std::cout << "[crypto] getSecureRandom: " << Utils::hex(buf1,64) << std::endl;
+		std::cout << "[crypto] getSecureRandom: " << Utils::hex(buf1,64,hexbuf) << std::endl;
 	}
 
 	std::cout << "[crypto] Testing Salsa20... "; std::cout.flush();
@@ -213,7 +214,7 @@ static int testCrypto()
 		}
 		uint64_t end = OSUtils::now();
 		SHA512::hash(buf1,bb,1234567);
-		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second (" << Utils::hex(buf1,16) << ')' << std::endl;
+		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << std::endl;
 		::free((void *)bb);
 	}
 
@@ -265,7 +266,7 @@ static int testCrypto()
 		}
 		uint64_t end = OSUtils::now();
 		SHA512::hash(buf1,bb,1234567);
-		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second (" << Utils::hex(buf1,16) << ')' << std::endl;
+		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << std::endl;
 		::free((void *)bb);
 	}
 
@@ -427,6 +428,7 @@ static int testIdentity()
 {
 	Identity id;
 	Buffer<512> buf;
+	char buf2[1024];
 
 	std::cout << "[identity] Validate known-good identity... "; std::cout.flush();
 	if (!id.fromString(KNOWN_GOOD_IDENTITY)) {
@@ -459,7 +461,7 @@ static int testIdentity()
 		uint64_t genstart = OSUtils::now();
 		id.generate();
 		uint64_t genend = OSUtils::now();
-		std::cout << "(took " << (genend - genstart) << "ms): " << id.toString(true) << std::endl;
+		std::cout << "(took " << (genend - genstart) << "ms): " << id.toString(true,buf2) << std::endl;
 		std::cout << "[identity] Locally validate identity: ";
 		if (id.locallyValidate()) {
 			std::cout << "PASS" << std::endl;
@@ -499,7 +501,7 @@ static int testIdentity()
 
 	{
 		Identity id2;
-		id2.fromString(id.toString(true).c_str());
+		id2.fromString(id.toString(true,buf2));
 		std::cout << "[identity] Serialize and deserialize (ASCII w/private): ";
 		if ((id == id2)&&(id2.locallyValidate())) {
 			std::cout << "PASS" << std::endl;
@@ -511,7 +513,7 @@ static int testIdentity()
 
 	{
 		Identity id2;
-		id2.fromString(id.toString(false).c_str());
+		id2.fromString(id.toString(false,buf2));
 		std::cout << "[identity] Serialize and deserialize (ASCII no private): ";
 		if ((id == id2)&&(id2.locallyValidate())) {
 			std::cout << "PASS" << std::endl;
@@ -526,16 +528,18 @@ static int testIdentity()
 
 static int testCertificate()
 {
+	char buf[4096];
+
 	Identity authority;
 	std::cout << "[certificate] Generating identity to act as authority... "; std::cout.flush();
 	authority.generate();
-	std::cout << authority.address().toString() << std::endl;
+	std::cout << authority.address().toString(buf) << std::endl;
 
 	Identity idA,idB;
 	std::cout << "[certificate] Generating identities A and B... "; std::cout.flush();
 	idA.generate();
 	idB.generate();
-	std::cout << idA.address().toString() << ", " << idB.address().toString() << std::endl;
+	std::cout << idA.address().toString(buf) << ", " << idB.address().toString(buf) << std::endl;
 
 	std::cout << "[certificate] Generating certificates A and B...";
 	CertificateOfMembership cA(10000,100,1,idA.address());
@@ -641,6 +645,8 @@ static void _testExcept(int &depth)
 
 static int testOther()
 {
+	char buf[1024];
+
 	std::cout << "[other] Testing C++ exceptions... "; std::cout.flush();
 	int depth = 0;
 	try {
@@ -656,6 +662,13 @@ static int testOther()
 		std::cout << "ERROR (exception not std::runtime_error)" << std::endl;
 		return -1;
 	}
+
+	std::cout << "[other] Testing InetAddress encode/decode..."; std::cout.flush();
+	std::cout << " " << InetAddress("127.0.0.1/9993").toString(buf);
+	std::cout << " " << InetAddress("feed:dead:babe:dead:beef:f00d:1234:5678/12345").toString(buf);
+	std::cout << " " << InetAddress("0/9993").toString(buf);
+	std::cout << " " << InetAddress("").toString(buf);
+	std::cout << std::endl;
 
 #if 0
 	std::cout << "[other] Testing Hashtable... "; std::cout.flush();
@@ -831,7 +844,7 @@ static int testOther()
 		memset(key, 0, sizeof(key));
 		memset(value, 0, sizeof(value));
 		for(unsigned int q=0;q<32;++q) {
-			Utils::ztsnprintf(key[q],16,"%.8lx",(unsigned long)(rand() % 1000) + (q * 1000));
+			OSUtils::ztsnprintf(key[q],16,"%.8lx",(unsigned long)(rand() % 1000) + (q * 1000));
 			int r = rand() % 128;
 			for(int x=0;x<r;++x)
 				value[q][x] = ("0123456789\0\t\r\n= ")[rand() % 16];

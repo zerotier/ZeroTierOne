@@ -202,10 +202,10 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 		case ZT_NETWORK_TYPE_PUBLIC:                     ntype = "PUBLIC"; break;
 	}
 
-	Utils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",nc->nwid);
+	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",nc->nwid);
 	nj["id"] = tmp;
 	nj["nwid"] = tmp;
-	Utils::ztsnprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)((nc->mac >> 40) & 0xff),(unsigned int)((nc->mac >> 32) & 0xff),(unsigned int)((nc->mac >> 24) & 0xff),(unsigned int)((nc->mac >> 16) & 0xff),(unsigned int)((nc->mac >> 8) & 0xff),(unsigned int)(nc->mac & 0xff));
+	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)((nc->mac >> 40) & 0xff),(unsigned int)((nc->mac >> 32) & 0xff),(unsigned int)((nc->mac >> 24) & 0xff),(unsigned int)((nc->mac >> 16) & 0xff),(unsigned int)((nc->mac >> 8) & 0xff),(unsigned int)(nc->mac & 0xff));
 	nj["mac"] = tmp;
 	nj["name"] = nc->name;
 	nj["status"] = nstatus;
@@ -223,16 +223,16 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 
 	nlohmann::json aa = nlohmann::json::array();
 	for(unsigned int i=0;i<nc->assignedAddressCount;++i) {
-		aa.push_back(reinterpret_cast<const InetAddress *>(&(nc->assignedAddresses[i]))->toString());
+		aa.push_back(reinterpret_cast<const InetAddress *>(&(nc->assignedAddresses[i]))->toString(tmp));
 	}
 	nj["assignedAddresses"] = aa;
 
 	nlohmann::json ra = nlohmann::json::array();
 	for(unsigned int i=0;i<nc->routeCount;++i) {
 		nlohmann::json rj;
-		rj["target"] = reinterpret_cast<const InetAddress *>(&(nc->routes[i].target))->toString();
+		rj["target"] = reinterpret_cast<const InetAddress *>(&(nc->routes[i].target))->toString(tmp);
 		if (nc->routes[i].via.ss_family == nc->routes[i].target.ss_family)
-			rj["via"] = reinterpret_cast<const InetAddress *>(&(nc->routes[i].via))->toIpString();
+			rj["via"] = reinterpret_cast<const InetAddress *>(&(nc->routes[i].via))->toIpString(tmp);
 		else rj["via"] = nlohmann::json();
 		rj["flags"] = (int)nc->routes[i].flags;
 		rj["metric"] = (int)nc->routes[i].metric;
@@ -252,12 +252,12 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 		case ZT_PEER_ROLE_PLANET: prole = "PLANET"; break;
 	}
 
-	Utils::ztsnprintf(tmp,sizeof(tmp),"%.10llx",peer->address);
+	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.10llx",peer->address);
 	pj["address"] = tmp;
 	pj["versionMajor"] = peer->versionMajor;
 	pj["versionMinor"] = peer->versionMinor;
 	pj["versionRev"] = peer->versionRev;
-	Utils::ztsnprintf(tmp,sizeof(tmp),"%d.%d.%d",peer->versionMajor,peer->versionMinor,peer->versionRev);
+	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%d.%d.%d",peer->versionMajor,peer->versionMinor,peer->versionRev);
 	pj["version"] = tmp;
 	pj["latency"] = peer->latency;
 	pj["role"] = prole;
@@ -265,7 +265,7 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 	nlohmann::json pa = nlohmann::json::array();
 	for(unsigned int i=0;i<peer->pathCount;++i) {
 		nlohmann::json j;
-		j["address"] = reinterpret_cast<const InetAddress *>(&(peer->paths[i].address))->toString();
+		j["address"] = reinterpret_cast<const InetAddress *>(&(peer->paths[i].address))->toString(tmp);
 		j["lastSend"] = peer->paths[i].lastSend;
 		j["lastReceive"] = peer->paths[i].lastReceive;
 		j["trustedPathId"] = peer->paths[i].trustedPathId;
@@ -280,19 +280,19 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 
 static void _moonToJson(nlohmann::json &mj,const World &world)
 {
-	char tmp[64];
-	Utils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",world.id());
+	char tmp[4096];
+	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",world.id());
 	mj["id"] = tmp;
 	mj["timestamp"] = world.timestamp();
-	mj["signature"] = Utils::hex(world.signature().data,(unsigned int)world.signature().size());
-	mj["updatesMustBeSignedBy"] = Utils::hex(world.updatesMustBeSignedBy().data,(unsigned int)world.updatesMustBeSignedBy().size());
+	mj["signature"] = Utils::hex(world.signature().data,(unsigned int)world.signature().size(),tmp);
+	mj["updatesMustBeSignedBy"] = Utils::hex(world.updatesMustBeSignedBy().data,(unsigned int)world.updatesMustBeSignedBy().size(),tmp);
 	nlohmann::json ra = nlohmann::json::array();
 	for(std::vector<World::Root>::const_iterator r(world.roots().begin());r!=world.roots().end();++r) {
 		nlohmann::json rj;
-		rj["identity"] = r->identity.toString(false);
+		rj["identity"] = r->identity.toString(false,tmp);
 		nlohmann::json eps = nlohmann::json::array();
 		for(std::vector<InetAddress>::const_iterator a(r->stableEndpoints.begin());a!=r->stableEndpoints.end();++a)
-			eps.push_back(a->toString());
+			eps.push_back(a->toString(tmp));
 		rj["stableEndpoints"] = eps;
 		ra.push_back(rj);
 	}
@@ -613,7 +613,7 @@ public:
 				json &physical = _localConfig["physical"];
 				if (physical.is_object()) {
 					for(json::iterator phy(physical.begin());phy!=physical.end();++phy) {
-						InetAddress net(OSUtils::jsonString(phy.key(),""));
+						InetAddress net(OSUtils::jsonString(phy.key(),"").c_str());
 						if (net) {
 							if (phy.value().is_object()) {
 								uint64_t tpid;
@@ -674,7 +674,7 @@ public:
 
 			// Save primary port to a file so CLIs and GUIs can learn it easily
 			char portstr[64];
-			Utils::ztsnprintf(portstr,sizeof(portstr),"%u",_ports[0]);
+			OSUtils::ztsnprintf(portstr,sizeof(portstr),"%u",_ports[0]);
 			OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S "zerotier-one.port").c_str(),std::string(portstr));
 
 			// Attempt to bind to a secondary port chosen from our ZeroTier address.
@@ -712,7 +712,7 @@ public:
 					}
 					if (_ports[2]) {
 						char uniqueName[64];
-						Utils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
+						OSUtils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
 						_portMapper = new PortMapper(_ports[2],uniqueName);
 					}
 				}
@@ -982,7 +982,7 @@ public:
 		n->second.settings = settings;
 
 		char nlcpath[4096];
-		Utils::ztsnprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_networksPath.c_str(),nwid);
+		OSUtils::ztsnprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_networksPath.c_str(),nwid);
 		FILE *out = fopen(nlcpath,"w");
 		if (out) {
 			fprintf(out,"allowManaged=%d\n",(int)n->second.settings.allowManaged);
@@ -1101,7 +1101,7 @@ public:
 					ZT_NodeStatus status;
 					_node->status(&status);
 
-					Utils::ztsnprintf(tmp,sizeof(tmp),"%.10llx",status.address);
+					OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.10llx",status.address);
 					res["address"] = tmp;
 					res["publicIdentity"] = status.publicIdentity;
 					res["online"] = (bool)(status.online != 0);
@@ -1110,7 +1110,7 @@ public:
 					res["versionMinor"] = ZEROTIER_ONE_VERSION_MINOR;
 					res["versionRev"] = ZEROTIER_ONE_VERSION_REVISION;
 					res["versionBuild"] = ZEROTIER_ONE_VERSION_BUILD;
-					Utils::ztsnprintf(tmp,sizeof(tmp),"%d.%d.%d",ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
+					OSUtils::ztsnprintf(tmp,sizeof(tmp),"%d.%d.%d",ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
 					res["version"] = tmp;
 					res["clock"] = OSUtils::now();
 
@@ -1257,7 +1257,7 @@ public:
 
 						if ((scode != 200)&&(seed != 0)) {
 							char tmp[64];
-							Utils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",id);
+							OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",id);
 							res["id"] = tmp;
 							res["roots"] = json::array();
 							res["timestamp"] = 0;
@@ -1395,7 +1395,7 @@ public:
 						json &tryAddrs = v.value()["try"];
 						if (tryAddrs.is_array()) {
 							for(unsigned long i=0;i<tryAddrs.size();++i) {
-								const InetAddress ip(OSUtils::jsonString(tryAddrs[i],""));
+								const InetAddress ip(OSUtils::jsonString(tryAddrs[i],"").c_str());
 								if (ip.ss_family == AF_INET)
 									v4h.push_back(ip);
 								else if (ip.ss_family == AF_INET6)
@@ -1405,7 +1405,7 @@ public:
 						json &blAddrs = v.value()["blacklist"];
 						if (blAddrs.is_array()) {
 							for(unsigned long i=0;i<blAddrs.size();++i) {
-								const InetAddress ip(OSUtils::jsonString(tryAddrs[i],""));
+								const InetAddress ip(OSUtils::jsonString(tryAddrs[i],"").c_str());
 								if (ip.ss_family == AF_INET)
 									v4b.push_back(ip);
 								else if (ip.ss_family == AF_INET6)
@@ -1427,7 +1427,7 @@ public:
 		json &physical = lc["physical"];
 		if (physical.is_object()) {
 			for(json::iterator phy(physical.begin());phy!=physical.end();++phy) {
-				const InetAddress net(OSUtils::jsonString(phy.key(),""));
+				const InetAddress net(OSUtils::jsonString(phy.key(),"").c_str());
 				if ((net)&&(net.netmaskBits() > 0)) {
 					if (phy.value().is_object()) {
 						if (OSUtils::jsonBool(phy.value()["blacklist"],false)) {
@@ -1477,7 +1477,7 @@ public:
 		json &amf = settings["allowManagementFrom"];
 		if (amf.is_array()) {
 			for(unsigned long i=0;i<amf.size();++i) {
-				const InetAddress nw(OSUtils::jsonString(amf[i],""));
+				const InetAddress nw(OSUtils::jsonString(amf[i],"").c_str());
 				if (nw)
 					_allowManagementFrom.push_back(nw);
 			}
@@ -1491,7 +1491,7 @@ public:
 			std::string h = controllerDbHttpHost;
 			_controllerDbPath.append(h);
 			char dbp[128];
-			Utils::ztsnprintf(dbp,sizeof(dbp),"%d",(int)controllerDbHttpPort);
+			OSUtils::ztsnprintf(dbp,sizeof(dbp),"%d",(int)controllerDbHttpPort);
 			_controllerDbPath.push_back(':');
 			_controllerDbPath.append(dbp);
 			if (controllerDbHttpPath.is_string()) {
@@ -1550,6 +1550,8 @@ public:
 	// Apply or update managed IPs for a configured network (be sure n.tap exists)
 	void syncManagedStuff(NetworkState &n,bool syncIps,bool syncRoutes)
 	{
+		char ipbuf[64];
+
 		// assumes _nets_m is locked
 		if (syncIps) {
 			std::vector<InetAddress> newManagedIps;
@@ -1565,7 +1567,7 @@ public:
 			for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
 				if (std::find(newManagedIps.begin(),newManagedIps.end(),*ip) == newManagedIps.end()) {
 					if (!n.tap->removeIp(*ip))
-						fprintf(stderr,"ERROR: unable to remove ip address %s" ZT_EOL_S, ip->toString().c_str());
+						fprintf(stderr,"ERROR: unable to remove ip address %s" ZT_EOL_S, ip->toString(ipbuf));
 				}
 			}
 #ifdef __SYNOLOGY__
@@ -1575,7 +1577,7 @@ public:
 			for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
 				if (std::find(n.managedIps.begin(),n.managedIps.end(),*ip) == n.managedIps.end()) {
 					if (!n.tap->addIp(*ip))
-						fprintf(stderr,"ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString().c_str());
+						fprintf(stderr,"ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString(ipbuf));
 				}			
 			}
 #endif
@@ -1585,7 +1587,7 @@ public:
 		if (syncRoutes) {
 			char tapdev[64];
 #ifdef __WINDOWS__
-			Utils::ztsnprintf(tapdev,sizeof(tapdev),"%.16llx",(unsigned long long)n.tap->luid().Value);
+			OSUtils::ztsnprintf(tapdev,sizeof(tapdev),"%.16llx",(unsigned long long)n.tap->luid().Value);
 #else
 			Utils::scopy(tapdev,sizeof(tapdev),n.tap->deviceName().c_str());
 #endif
@@ -1670,7 +1672,7 @@ public:
 			&_nextBackgroundTaskDeadline);
 		if (ZT_ResultCode_isFatal(rc)) {
 			char tmp[256];
-			Utils::ztsnprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket: %d",(int)rc);
+			OSUtils::ztsnprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket: %d",(int)rc);
 			Mutex::Lock _l(_termReason_m);
 			_termReason = ONE_UNRECOVERABLE_ERROR;
 			_fatalErrorMessage = tmp;
@@ -1851,7 +1853,7 @@ public:
 										&_nextBackgroundTaskDeadline);
 									if (ZT_ResultCode_isFatal(rc)) {
 										char tmp[256];
-										Utils::ztsnprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket: %d",(int)rc);
+										OSUtils::ztsnprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket: %d",(int)rc);
 										Mutex::Lock _l(_termReason_m);
 										_termReason = ONE_UNRECOVERABLE_ERROR;
 										_fatalErrorMessage = tmp;
@@ -1919,7 +1921,7 @@ public:
 				if (!n.tap) {
 					try {
 						char friendlyName[128];
-						Utils::ztsnprintf(friendlyName,sizeof(friendlyName),"ZeroTier One [%.16llx]",nwid);
+						OSUtils::ztsnprintf(friendlyName,sizeof(friendlyName),"ZeroTier One [%.16llx]",nwid);
 
 						n.tap = new EthernetTap(
 							_homePath.c_str(),
@@ -1933,7 +1935,7 @@ public:
 						*nuptr = (void *)&n;
 
 						char nlcpath[256];
-						Utils::ztsnprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
+						OSUtils::ztsnprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
 						std::string nlcbuf;
 						if (OSUtils::readFile(nlcpath,nlcbuf)) {
 							Dictionary<4096> nc;
@@ -1954,7 +1956,7 @@ public:
 									while (true) {
 										size_t nextPos = addresses.find(',', pos);
 										std::string address = addresses.substr(pos, (nextPos == std::string::npos ? addresses.size() : nextPos) - pos);
-										n.settings.allowManagedWhitelist.push_back(InetAddress(address));
+										n.settings.allowManagedWhitelist.push_back(InetAddress(address.c_str()));
 										if (nextPos == std::string::npos) break;
 										pos = nextPos + 1;
 									}
@@ -2019,7 +2021,7 @@ public:
 #endif
 					if (op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY) {
 						char nlcpath[256];
-						Utils::ztsnprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
+						OSUtils::ztsnprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
 						OSUtils::rm(nlcpath);
 					}
 				} else {
@@ -2068,20 +2070,20 @@ public:
 
 		switch(type) {
 			case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
-				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.public",_homePath.c_str());
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.public",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_IDENTITY_SECRET:
-				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.secret",_homePath.c_str());
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.secret",_homePath.c_str());
 				secure = true;
 				break;
 			case ZT_STATE_OBJECT_PLANET:
-				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_MOON:
-				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d/%.16llx.moon",_homePath.c_str(),(unsigned long long)id[0]);
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d/%.16llx.moon",_homePath.c_str(),(unsigned long long)id[0]);
 				break;
 			case ZT_STATE_OBJECT_NETWORK_CONFIG:
-				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d/%.16llx.conf",_homePath.c_str(),(unsigned long long)id[0]);
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d/%.16llx.conf",_homePath.c_str(),(unsigned long long)id[0]);
 				secure = true;
 				break;
 			default:
@@ -2121,19 +2123,19 @@ public:
 		char p[4096];
 		switch(type) {
 			case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
-				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.public",_homePath.c_str());
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.public",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_IDENTITY_SECRET:
-				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.secret",_homePath.c_str());
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.secret",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_NETWORK_CONFIG:
-				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d/%.16llx.conf",_homePath.c_str(),(unsigned long long)id);
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d/%.16llx.conf",_homePath.c_str(),(unsigned long long)id);
 				break;
 			case ZT_STATE_OBJECT_PLANET:
-				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_MOON:
-				Utils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d/%.16llx.moon",_homePath.c_str(),(unsigned long long)id);
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d/%.16llx.moon",_homePath.c_str(),(unsigned long long)id);
 				break;
 			default:
 				return -1;
@@ -2322,7 +2324,7 @@ public:
 			default: scodestr = "Error"; break;
 		}
 
-		Utils::ztsnprintf(tmpn,sizeof(tmpn),"HTTP/1.1 %.3u %s\r\nCache-Control: no-cache\r\nPragma: no-cache\r\nContent-Type: %s\r\nContent-Length: %lu\r\nConnection: close\r\n\r\n",
+		OSUtils::ztsnprintf(tmpn,sizeof(tmpn),"HTTP/1.1 %.3u %s\r\nCache-Control: no-cache\r\nPragma: no-cache\r\nContent-Type: %s\r\nContent-Length: %lu\r\nConnection: close\r\n\r\n",
 			scode,
 			scodestr,
 			contentType.c_str(),

@@ -29,8 +29,6 @@
 
 #include <stdint.h>
 
-#include <string>
-
 #include "MAC.hpp"
 #include "InetAddress.hpp"
 
@@ -92,16 +90,6 @@ public:
 			return MulticastGroup(MAC(0x33,0x33,0xff,a[13],a[14],a[15]),0);
 		}
 		return MulticastGroup();
-	}
-
-	/**
-	 * @return Human readable string representing this group (MAC/ADI in hex)
-	 */
-	inline std::string toString() const
-	{
-		char buf[64];
-		Utils::ztsnprintf(buf,sizeof(buf),"%.2x%.2x%.2x%.2x%.2x%.2x/%.8lx",(unsigned int)_mac[0],(unsigned int)_mac[1],(unsigned int)_mac[2],(unsigned int)_mac[3],(unsigned int)_mac[4],(unsigned int)_mac[5],(unsigned long)_adi);
-		return std::string(buf);
 	}
 
 	/**

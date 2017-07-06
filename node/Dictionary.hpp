@@ -391,8 +391,7 @@ public:
 	inline bool add(const char *key,uint64_t value)
 	{
 		char tmp[32];
-		Utils::ztsnprintf(tmp,sizeof(tmp),"%llx",(unsigned long long)value);
-		return this->add(key,tmp,-1);
+		return this->add(key,Utils::hex(value,tmp),-1);
 	}
 
 	/** 
@@ -401,8 +400,7 @@ public:
 	inline bool add(const char *key,const Address &a)
 	{
 		char tmp[32];
-		Utils::ztsnprintf(tmp,sizeof(tmp),"%.10llx",(unsigned long long)a.toInt());
-		return this->add(key,tmp,-1);
+		return this->add(key,Utils::hex(a.toInt(),tmp),-1);
 	}
 
 	/**

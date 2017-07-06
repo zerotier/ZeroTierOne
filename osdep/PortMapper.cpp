@@ -205,7 +205,7 @@ public:
 					memset(externalip,0,sizeof(externalip));
 					memset(&urls,0,sizeof(urls));
 					memset(&data,0,sizeof(data));
-					Utils::ztsnprintf(inport,sizeof(inport),"%d",localPort);
+					OSUtils::ztsnprintf(inport,sizeof(inport),"%d",localPort);
 
 					if ((UPNP_GetValidIGD(devlist,&urls,&data,lanaddr,sizeof(lanaddr)))&&(lanaddr[0])) {
 #ifdef ZT_PORTMAPPER_TRACE
@@ -220,7 +220,7 @@ public:
 								int tryPort = (int)localPort + tries;
 								if (tryPort >= 65535)
 									tryPort = (tryPort - 65535) + 1025;
-								Utils::ztsnprintf(outport,sizeof(outport),"%u",tryPort);
+								OSUtils::ztsnprintf(outport,sizeof(outport),"%u",tryPort);
 
 								// First check and see if this port is already mapped to the
 								// same unique name. If so, keep this mapping and don't try

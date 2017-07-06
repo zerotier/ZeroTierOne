@@ -29,7 +29,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string>
 
 #include "Constants.hpp"
 #include "Array.hpp"
@@ -38,6 +37,8 @@
 #include "C25519.hpp"
 #include "Buffer.hpp"
 #include "SHA512.hpp"
+
+#define ZT_IDENTITY_STRING_BUFFER_LENGTH 384
 
 namespace ZeroTier {
 
@@ -66,16 +67,7 @@ public:
 	{
 	}
 
-	Identity(const char *str)
-		throw(std::invalid_argument) :
-		_privateKey((C25519::Private *)0)
-	{
-		if (!fromString(str))
-			throw std::invalid_argument(std::string("invalid string-serialized identity: ") + str);
-	}
-
-	Identity(const std::string &str)
-		throw(std::invalid_argument) :
+	Identity(const char *str) :
 		_privateKey((C25519::Private *)0)
 	{
 		if (!fromString(str))
@@ -277,9 +269,10 @@ public:
 	 * Serialize to a more human-friendly string
 	 *
 	 * @param includePrivate If true, include private key (if it exists)
+	 * @param buf Buffer to store string
 	 * @return ASCII string representation of identity
 	 */
-	std::string toString(bool includePrivate) const;
+	char *toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const;
 
 	/**
 	 * Deserialize a human-friendly string
@@ -291,7 +284,6 @@ public:
 	 * @return True if deserialization appears successful
 	 */
 	bool fromString(const char *str);
-	inline bool fromString(const std::string &str) { return fromString(str.c_str()); }
 
 	/**
 	 * @return C25519 public key

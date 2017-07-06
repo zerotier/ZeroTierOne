@@ -55,6 +55,27 @@ namespace ZeroTier {
 
 const char Utils::HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
 
+static unsigned long _Utils_itoa(unsigned long n,char *s)
+{
+	if (n == 0)
+		return 0;
+	unsigned long pos = _Utils_itoa(n / 10,s);
+	if (pos >= 22) // sanity check, should be impossible
+		pos = 22;
+	s[pos] = '0' + (char)(n % 10);
+	return pos + 1;
+}
+char *Utils::decimal(unsigned long n,char s[24])
+{
+	if (n == 0) {
+		s[0] = '0';
+		s[1] = (char)0;
+		return s;
+	}
+	s[_Utils_itoa(n,s)] = (char)0;
+	return s;
+}
+
 // Crazy hack to force memory to be securely zeroed in spite of the best efforts of optimizing compilers.
 static void _Utils_doBurn(volatile uint8_t *ptr,unsigned int len)
 {
@@ -63,82 +84,6 @@ static void _Utils_doBurn(volatile uint8_t *ptr,unsigned int len)
 }
 static void (*volatile _Utils_doBurn_ptr)(volatile uint8_t *,unsigned int) = _Utils_doBurn;
 void Utils::burn(void *ptr,unsigned int len) { (_Utils_doBurn_ptr)((volatile uint8_t *)ptr,len); }
-
-std::string Utils::hex(const void *data,unsigned int len)
-{
-	std::string r;
-	r.reserve(len * 2);
-	for(unsigned int i=0;i<len;++i) {
-		r.push_back(HEXCHARS[(((const unsigned char *)data)[i] & 0xf0) >> 4]);
-		r.push_back(HEXCHARS[((const unsigned char *)data)[i] & 0x0f]);
-	}
-	return r;
-}
-
-std::string Utils::unhex(const char *hex,unsigned int maxlen)
-{
-	int n = 1;
-	unsigned char c,b = 0;
-	const char *eof = hex + maxlen;
-	std::string r;
-
-	if (!maxlen)
-		return r;
-
-	while ((c = (unsigned char)*(hex++))) {
-		if ((c >= 48)&&(c <= 57)) { // 0..9
-			if ((n ^= 1))
-				r.push_back((char)(b | (c - 48)));
-			else b = (c - 48) << 4;
-		} else if ((c >= 65)&&(c <= 70)) { // A..F
-			if ((n ^= 1))
-				r.push_back((char)(b | (c - (65 - 10))));
-			else b = (c - (65 - 10)) << 4;
-		} else if ((c >= 97)&&(c <= 102)) { // a..f
-			if ((n ^= 1))
-				r.push_back((char)(b | (c - (97 - 10))));
-			else b = (c - (97 - 10)) << 4;
-		}
-		if (hex == eof)
-			break;
-	}
-
-	return r;
-}
-
-unsigned int Utils::unhex(const char *hex,unsigned int maxlen,void *buf,unsigned int len)
-{
-	int n = 1;
-	unsigned char c,b = 0;
-	unsigned int l = 0;
-	const char *eof = hex + maxlen;
-
-	if (!maxlen)
-		return 0;
-
-	while ((c = (unsigned char)*(hex++))) {
-		if ((c >= 48)&&(c <= 57)) { // 0..9
-			if ((n ^= 1)) {
-				if (l >= len) break;
-				((unsigned char *)buf)[l++] = (b | (c - 48));
-			} else b = (c - 48) << 4;
-		} else if ((c >= 65)&&(c <= 70)) { // A..F
-			if ((n ^= 1)) {
-				if (l >= len) break;
-				((unsigned char *)buf)[l++] = (b | (c - (65 - 10)));
-			} else b = (c - (65 - 10)) << 4;
-		} else if ((c >= 97)&&(c <= 102)) { // a..f
-			if ((n ^= 1)) {
-				if (l >= len) break;
-				((unsigned char *)buf)[l++] = (b | (c - (97 - 10)));
-			} else b = (c - (97 - 10)) << 4;
-		}
-		if (hex == eof)
-			break;
-	}
-
-	return l;
-}
 
 void Utils::getSecureRandom(void *buf,unsigned int bytes)
 {
@@ -242,23 +187,6 @@ bool Utils::scopy(char *dest,unsigned int len,const char *src)
 		}
 	}
 	return true;
-}
-
-unsigned int Utils::ztsnprintf(char *buf,unsigned int len,const char *fmt,...)
-{
-	va_list ap;
-
-	va_start(ap,fmt);
-	int n = (int)vsnprintf(buf,len,fmt,ap);
-	va_end(ap);
-
-	if ((n >= (int)len)||(n < 0)) {
-		if (len)
-			buf[len - 1] = (char)0;
-		throw std::length_error("buf[] overflow");
-	}
-
-	return (unsigned int)n;
 }
 
 } // namespace ZeroTier

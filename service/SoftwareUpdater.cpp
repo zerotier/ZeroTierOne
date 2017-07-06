@@ -284,7 +284,7 @@ bool SoftwareUpdater::check(const uint64_t now)
 	if ((now - _lastCheckTime) >= ZT_SOFTWARE_UPDATE_CHECK_PERIOD) {
 		_lastCheckTime = now;
 		char tmp[512];
-		const unsigned int len = Utils::ztsnprintf(tmp,sizeof(tmp),
+		const unsigned int len = OSUtils::ztsnprintf(tmp,sizeof(tmp),
 			"%c{\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR "\":%d,"
 			"\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR "\":%d,"
 			"\"" ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION "\":%d,"
@@ -321,7 +321,8 @@ bool SoftwareUpdater::check(const uint64_t now)
 				// (1) Check the hash itself to make sure the image is basically okay
 				uint8_t sha512[ZT_SHA512_DIGEST_LEN];
 				SHA512::hash(sha512,_download.data(),(unsigned int)_download.length());
-				if (Utils::hex(sha512,ZT_SHA512_DIGEST_LEN) == OSUtils::jsonString(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH],"")) {
+				char hexbuf[(ZT_SHA512_DIGEST_LEN * 2) + 2];
+				if (OSUtils::jsonString(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH],"") == Utils::hex(sha512,ZT_SHA512_DIGEST_LEN,hexbuf)) {
 					// (2) Check signature by signing authority
 					const std::string sig(OSUtils::jsonBinFromHex(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNATURE]));
 					if (Identity(ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY).verify(_download.data(),(unsigned int)_download.length(),sig.data(),(unsigned int)sig.length())) {

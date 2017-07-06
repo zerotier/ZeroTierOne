@@ -76,19 +76,19 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 			break;
 		case ZT_NETWORK_RULE_ACTION_TEE:
 			r["type"] = "ACTION_TEE";
-			r["address"] = Address(rule.v.fwd.address).toString();
+			r["address"] = Address(rule.v.fwd.address).toString(tmp);
 			r["flags"] = (unsigned int)rule.v.fwd.flags;
 			r["length"] = (unsigned int)rule.v.fwd.length;
 			break;
 		case ZT_NETWORK_RULE_ACTION_WATCH:
 			r["type"] = "ACTION_WATCH";
-			r["address"] = Address(rule.v.fwd.address).toString();
+			r["address"] = Address(rule.v.fwd.address).toString(tmp);
 			r["flags"] = (unsigned int)rule.v.fwd.flags;
 			r["length"] = (unsigned int)rule.v.fwd.length;
 			break;
 		case ZT_NETWORK_RULE_ACTION_REDIRECT:
 			r["type"] = "ACTION_REDIRECT";
-			r["address"] = Address(rule.v.fwd.address).toString();
+			r["address"] = Address(rule.v.fwd.address).toString(tmp);
 			r["flags"] = (unsigned int)rule.v.fwd.flags;
 			break;
 		case ZT_NETWORK_RULE_ACTION_BREAK:
@@ -102,11 +102,11 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 		switch(rt) {
 			case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 				r["type"] = "MATCH_SOURCE_ZEROTIER_ADDRESS";
-				r["zt"] = Address(rule.v.zt).toString();
+				r["zt"] = Address(rule.v.zt).toString(tmp);
 				break;
 			case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS:
 				r["type"] = "MATCH_DEST_ZEROTIER_ADDRESS";
-				r["zt"] = Address(rule.v.zt).toString();
+				r["zt"] = Address(rule.v.zt).toString(tmp);
 				break;
 			case ZT_NETWORK_RULE_MATCH_VLAN_ID:
 				r["type"] = "MATCH_VLAN_ID";
@@ -122,29 +122,29 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 				break;
 			case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
 				r["type"] = "MATCH_MAC_SOURCE";
-				Utils::ztsnprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)rule.v.mac[0],(unsigned int)rule.v.mac[1],(unsigned int)rule.v.mac[2],(unsigned int)rule.v.mac[3],(unsigned int)rule.v.mac[4],(unsigned int)rule.v.mac[5]);
+				OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)rule.v.mac[0],(unsigned int)rule.v.mac[1],(unsigned int)rule.v.mac[2],(unsigned int)rule.v.mac[3],(unsigned int)rule.v.mac[4],(unsigned int)rule.v.mac[5]);
 				r["mac"] = tmp;
 				break;
 			case ZT_NETWORK_RULE_MATCH_MAC_DEST:
 				r["type"] = "MATCH_MAC_DEST";
-				Utils::ztsnprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)rule.v.mac[0],(unsigned int)rule.v.mac[1],(unsigned int)rule.v.mac[2],(unsigned int)rule.v.mac[3],(unsigned int)rule.v.mac[4],(unsigned int)rule.v.mac[5]);
+				OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)rule.v.mac[0],(unsigned int)rule.v.mac[1],(unsigned int)rule.v.mac[2],(unsigned int)rule.v.mac[3],(unsigned int)rule.v.mac[4],(unsigned int)rule.v.mac[5]);
 				r["mac"] = tmp;
 				break;
 			case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
 				r["type"] = "MATCH_IPV4_SOURCE";
-				r["ip"] = InetAddress(&(rule.v.ipv4.ip),4,(unsigned int)rule.v.ipv4.mask).toString();
+				r["ip"] = InetAddress(&(rule.v.ipv4.ip),4,(unsigned int)rule.v.ipv4.mask).toString(tmp);
 				break;
 			case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
 				r["type"] = "MATCH_IPV4_DEST";
-				r["ip"] = InetAddress(&(rule.v.ipv4.ip),4,(unsigned int)rule.v.ipv4.mask).toString();
+				r["ip"] = InetAddress(&(rule.v.ipv4.ip),4,(unsigned int)rule.v.ipv4.mask).toString(tmp);
 				break;
 			case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
 				r["type"] = "MATCH_IPV6_SOURCE";
-				r["ip"] = InetAddress(rule.v.ipv6.ip,16,(unsigned int)rule.v.ipv6.mask).toString();
+				r["ip"] = InetAddress(rule.v.ipv6.ip,16,(unsigned int)rule.v.ipv6.mask).toString(tmp);
 				break;
 			case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
 				r["type"] = "MATCH_IPV6_DEST";
-				r["ip"] = InetAddress(rule.v.ipv6.ip,16,(unsigned int)rule.v.ipv6.mask).toString();
+				r["ip"] = InetAddress(rule.v.ipv6.ip,16,(unsigned int)rule.v.ipv6.mask).toString(tmp);
 				break;
 			case ZT_NETWORK_RULE_MATCH_IP_TOS:
 				r["type"] = "MATCH_IP_TOS";
@@ -179,7 +179,7 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 				break;
 			case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
 				r["type"] = "MATCH_CHARACTERISTICS";
-				Utils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",rule.v.characteristics);
+				OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",rule.v.characteristics);
 				r["mask"] = tmp;
 				break;
 			case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
@@ -312,28 +312,28 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 		return true;
 	} else if (t == "MATCH_IPV4_SOURCE") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_IPV4_SOURCE;
-		InetAddress ip(OSUtils::jsonString(r["ip"],"0.0.0.0"));
+		InetAddress ip(OSUtils::jsonString(r["ip"],"0.0.0.0").c_str());
 		rule.v.ipv4.ip = reinterpret_cast<struct sockaddr_in *>(&ip)->sin_addr.s_addr;
 		rule.v.ipv4.mask = Utils::ntoh(reinterpret_cast<struct sockaddr_in *>(&ip)->sin_port) & 0xff;
 		if (rule.v.ipv4.mask > 32) rule.v.ipv4.mask = 32;
 		return true;
 	} else if (t == "MATCH_IPV4_DEST") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_IPV4_DEST;
-		InetAddress ip(OSUtils::jsonString(r["ip"],"0.0.0.0"));
+		InetAddress ip(OSUtils::jsonString(r["ip"],"0.0.0.0").c_str());
 		rule.v.ipv4.ip = reinterpret_cast<struct sockaddr_in *>(&ip)->sin_addr.s_addr;
 		rule.v.ipv4.mask = Utils::ntoh(reinterpret_cast<struct sockaddr_in *>(&ip)->sin_port) & 0xff;
 		if (rule.v.ipv4.mask > 32) rule.v.ipv4.mask = 32;
 		return true;
 	} else if (t == "MATCH_IPV6_SOURCE") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_IPV6_SOURCE;
-		InetAddress ip(OSUtils::jsonString(r["ip"],"::0"));
+		InetAddress ip(OSUtils::jsonString(r["ip"],"::0").c_str());
 		memcpy(rule.v.ipv6.ip,reinterpret_cast<struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
 		rule.v.ipv6.mask = Utils::ntoh(reinterpret_cast<struct sockaddr_in6 *>(&ip)->sin6_port) & 0xff;
 		if (rule.v.ipv6.mask > 128) rule.v.ipv6.mask = 128;
 		return true;
 	} else if (t == "MATCH_IPV6_DEST") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_IPV6_DEST;
-		InetAddress ip(OSUtils::jsonString(r["ip"],"::0"));
+		InetAddress ip(OSUtils::jsonString(r["ip"],"::0").c_str());
 		memcpy(rule.v.ipv6.ip,reinterpret_cast<struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
 		rule.v.ipv6.mask = Utils::ntoh(reinterpret_cast<struct sockaddr_in6 *>(&ip)->sin6_port) & 0xff;
 		if (rule.v.ipv6.mask > 128) rule.v.ipv6.mask = 128;
@@ -514,7 +514,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 						_db.eachMember(nwid,[&responseBody](uint64_t networkId,uint64_t nodeId,const json &member) {
 							if ((member.is_object())&&(member.size() > 0)) {
 								char tmp[128];
-								Utils::ztsnprintf(tmp,sizeof(tmp),"%s%.10llx\":%llu",(responseBody.length() > 1) ? ",\"" : "\"",(unsigned long long)nodeId,(unsigned long long)OSUtils::jsonInt(member["revision"],0));
+								OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s%.10llx\":%llu",(responseBody.length() > 1) ? ",\"" : "\"",(unsigned long long)nodeId,(unsigned long long)OSUtils::jsonInt(member["revision"],0));
 								responseBody.append(tmp);
 							}
 						});
@@ -548,7 +548,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 			for(std::vector<uint64_t>::const_iterator i(networkIds.begin());i!=networkIds.end();++i) {
 				if (responseBody.length() > 1)
 					responseBody.push_back(',');
-				Utils::ztsnprintf(tmp,sizeof(tmp),"\"%.16llx\"",(unsigned long long)*i);
+				OSUtils::ztsnprintf(tmp,sizeof(tmp),"\"%.16llx\"",(unsigned long long)*i);
 				responseBody.append(tmp);
 			}
 			responseBody.push_back(']');
@@ -562,7 +562,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 		// Controller status
 
 		char tmp[4096];
-		Utils::ztsnprintf(tmp,sizeof(tmp),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now());
+		OSUtils::ztsnprintf(tmp,sizeof(tmp),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now());
 		responseBody = tmp;
 		responseContentType = "application/json";
 		return 200;
@@ -603,14 +603,14 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 		if ((path.size() >= 2)&&(path[1].length() == 16)) {
 			uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
 			char nwids[24];
-			Utils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
+			OSUtils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
 
 			if (path.size() >= 3) {
 
 				if ((path.size() == 4)&&(path[2] == "member")&&(path[3].length() == 10)) {
 					uint64_t address = Utils::hexStrToU64(path[3].c_str());
 					char addrs[24];
-					Utils::ztsnprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)address);
+					OSUtils::ztsnprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)address);
 
 					json member;
 					_db.getNetworkMember(nwid,address,member);
@@ -655,9 +655,10 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 								json mipa(json::array());
 								for(unsigned long i=0;i<ipa.size();++i) {
 									std::string ips = ipa[i];
-									InetAddress ip(ips);
+									InetAddress ip(ips.c_str());
 									if ((ip.ss_family == AF_INET)||(ip.ss_family == AF_INET6)) {
-										mipa.push_back(ip.toIpString());
+										char tmpip[64];
+										mipa.push_back(ip.toIpString(tmpip));
 									}
 								}
 								member["ipAssignments"] = mipa;
@@ -748,7 +749,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					if (!nwid)
 						return 503;
 				}
-				Utils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
+				OSUtils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
 
 				json network;
 				_db.getNetwork(nwid,network);
@@ -815,14 +816,15 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 									json &target = rt["target"];
 									json &via = rt["via"];
 									if (target.is_string()) {
-										InetAddress t(target.get<std::string>());
+										InetAddress t(target.get<std::string>().c_str());
 										InetAddress v;
-										if (via.is_string()) v.fromString(via.get<std::string>());
+										if (via.is_string()) v.fromString(via.get<std::string>().c_str());
 										if ( ((t.ss_family == AF_INET)||(t.ss_family == AF_INET6)) && (t.netmaskBitsValid()) ) {
 											json tmp;
-											tmp["target"] = t.toString();
+											char tmp2[64];
+											tmp["target"] = t.toString(tmp2);
 											if (v.ss_family == t.ss_family)
-												tmp["via"] = v.toIpString();
+												tmp["via"] = v.toIpString(tmp2);
 											else tmp["via"] = json();
 											nrts.push_back(tmp);
 										}
@@ -840,12 +842,13 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 							for(unsigned long i=0;i<ipp.size();++i) {
 								json &ip = ipp[i];
 								if ((ip.is_object())&&(ip.count("ipRangeStart"))&&(ip.count("ipRangeEnd"))) {
-									InetAddress f(OSUtils::jsonString(ip["ipRangeStart"],""));
-									InetAddress t(OSUtils::jsonString(ip["ipRangeEnd"],""));
+									InetAddress f(OSUtils::jsonString(ip["ipRangeStart"],"").c_str());
+									InetAddress t(OSUtils::jsonString(ip["ipRangeEnd"],"").c_str());
 									if ( ((f.ss_family == AF_INET)||(f.ss_family == AF_INET6)) && (f.ss_family == t.ss_family) ) {
 										json tmp = json::object();
-										tmp["ipRangeStart"] = f.toIpString();
-										tmp["ipRangeEnd"] = t.toIpString();
+										char tmp2[64];
+										tmp["ipRangeStart"] = f.toIpString(tmp2);
+										tmp["ipRangeEnd"] = t.toIpString(tmp2);
 										nipp.push_back(tmp);
 									}
 								}
@@ -995,7 +998,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 		_queue.post(qe);
 
 		char tmp[64];
-		Utils::ztsnprintf(tmp,sizeof(tmp),"{\"clock\":%llu,\"ping\":%s}",(unsigned long long)now,OSUtils::jsonDump(b).c_str());
+		OSUtils::ztsnprintf(tmp,sizeof(tmp),"{\"clock\":%llu,\"ping\":%s}",(unsigned long long)now,OSUtils::jsonDump(b).c_str());
 		responseBody = tmp;
 		responseContentType = "application/json";
 
@@ -1083,7 +1086,7 @@ void EmbeddedNetworkController::threadMain()
 						auto ms = this->_memberStatus.find(_MemberStatusKey(networkId,nodeId));
 						if (ms != _memberStatus.end())
 							lrt = ms->second.lastRequestTime;
-						Utils::ztsnprintf(tmp,sizeof(tmp),"%s\"%.16llx-%.10llx\":%llu",
+						OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s\"%.16llx-%.10llx\":%llu",
 							(first) ? "" : ",",
 							(unsigned long long)networkId,
 							(unsigned long long)nodeId,
@@ -1093,7 +1096,7 @@ void EmbeddedNetworkController::threadMain()
 					});
 				}
 				char tmp2[256];
-				Utils::ztsnprintf(tmp2,sizeof(tmp2),"},\"clock\":%llu,\"startTime\":%llu}",(unsigned long long)now,(unsigned long long)_startTime);
+				OSUtils::ztsnprintf(tmp2,sizeof(tmp2),"},\"clock\":%llu,\"startTime\":%llu}",(unsigned long long)now,(unsigned long long)_startTime);
 				pong.append(tmp2);
 				_db.writeRaw("pong",pong);
 			}
@@ -1126,7 +1129,7 @@ void EmbeddedNetworkController::_request(
 		ms.lastRequestTime = now;
 	}
 
-	Utils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",nwid);
+	OSUtils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",nwid);
 	if (!_db.getNetworkAndMember(nwid,identity.address().toInt(),network,member,ns)) {
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
 		return;
@@ -1152,13 +1155,15 @@ void EmbeddedNetworkController::_request(
 			}
 		} else {
 			// If we do not yet know this member's identity, learn it.
-			member["identity"] = identity.toString(false);
+			char idtmp[1024];
+			member["identity"] = identity.toString(false,idtmp);
 		}
 	}
 
 	// These are always the same, but make sure they are set
 	{
-		const std::string addrs(identity.address().toString());
+		char tmpid[128];
+		const std::string addrs(identity.address().toString(tmpid));
 		member["id"] = addrs;
 		member["address"] = addrs;
 		member["nwid"] = nwids;
@@ -1264,8 +1269,9 @@ void EmbeddedNetworkController::_request(
 
 				if (fromAddr)
 					ms.physicalAddr = fromAddr;
+				char tmpip[64];
 				if (ms.physicalAddr)
-					member["physicalAddr"] = ms.physicalAddr.toString();
+					member["physicalAddr"] = ms.physicalAddr.toString(tmpip);
 			}
 		}
 	} else {
@@ -1427,9 +1433,9 @@ void EmbeddedNetworkController::_request(
 			json &target = route["target"];
 			json &via = route["via"];
 			if (target.is_string()) {
-				const InetAddress t(target.get<std::string>());
+				const InetAddress t(target.get<std::string>().c_str());
 				InetAddress v;
-				if (via.is_string()) v.fromString(via.get<std::string>());
+				if (via.is_string()) v.fromString(via.get<std::string>().c_str());
 				if ((t.ss_family == AF_INET)||(t.ss_family == AF_INET6)) {
 					ZT_VirtualNetworkRoute *r = &(nc->routes[nc->routeCount]);
 					*(reinterpret_cast<InetAddress *>(&(r->target))) = t;
@@ -1462,7 +1468,7 @@ void EmbeddedNetworkController::_request(
 			if (!ipAssignments[i].is_string())
 				continue;
 			std::string ips = ipAssignments[i];
-			InetAddress ip(ips);
+			InetAddress ip(ips.c_str());
 
 			// IP assignments are only pushed if there is a corresponding local route. We also now get the netmask bits from
 			// this route, ignoring the netmask bits field of the assigned IP itself. Using that was worthless and a source
@@ -1492,8 +1498,8 @@ void EmbeddedNetworkController::_request(
 		for(unsigned long p=0;((p<ipAssignmentPools.size())&&(!haveManagedIpv6AutoAssignment));++p) {
 			json &pool = ipAssignmentPools[p];
 			if (pool.is_object()) {
-				InetAddress ipRangeStart(OSUtils::jsonString(pool["ipRangeStart"],""));
-				InetAddress ipRangeEnd(OSUtils::jsonString(pool["ipRangeEnd"],""));
+				InetAddress ipRangeStart(OSUtils::jsonString(pool["ipRangeStart"],"").c_str());
+				InetAddress ipRangeEnd(OSUtils::jsonString(pool["ipRangeEnd"],"").c_str());
 				if ( (ipRangeStart.ss_family == AF_INET6) && (ipRangeEnd.ss_family == AF_INET6) ) {
 					uint64_t s[2],e[2],x[2],xx[2];
 					memcpy(s,ipRangeStart.rawIpData(),16);
@@ -1534,7 +1540,8 @@ void EmbeddedNetworkController::_request(
 
 						// If it's routed, then try to claim and assign it and if successful end loop
 						if ( (routedNetmaskBits > 0) && (!std::binary_search(ns.allocatedIps.begin(),ns.allocatedIps.end(),ip6)) ) {
-							ipAssignments.push_back(ip6.toIpString());
+							char tmpip[64];
+							ipAssignments.push_back(ip6.toIpString(tmpip));
 							member["ipAssignments"] = ipAssignments;
 							ip6.setPort((unsigned int)routedNetmaskBits);
 							if (nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)
@@ -1552,8 +1559,8 @@ void EmbeddedNetworkController::_request(
 		for(unsigned long p=0;((p<ipAssignmentPools.size())&&(!haveManagedIpv4AutoAssignment));++p) {
 			json &pool = ipAssignmentPools[p];
 			if (pool.is_object()) {
-				InetAddress ipRangeStartIA(OSUtils::jsonString(pool["ipRangeStart"],""));
-				InetAddress ipRangeEndIA(OSUtils::jsonString(pool["ipRangeEnd"],""));
+				InetAddress ipRangeStartIA(OSUtils::jsonString(pool["ipRangeStart"],"").c_str());
+				InetAddress ipRangeEndIA(OSUtils::jsonString(pool["ipRangeEnd"],"").c_str());
 				if ( (ipRangeStartIA.ss_family == AF_INET) && (ipRangeEndIA.ss_family == AF_INET) ) {
 					uint32_t ipRangeStart = Utils::ntoh((uint32_t)(reinterpret_cast<struct sockaddr_in *>(&ipRangeStartIA)->sin_addr.s_addr));
 					uint32_t ipRangeEnd = Utils::ntoh((uint32_t)(reinterpret_cast<struct sockaddr_in *>(&ipRangeEndIA)->sin_addr.s_addr));
@@ -1586,7 +1593,8 @@ void EmbeddedNetworkController::_request(
 						// If it's routed, then try to claim and assign it and if successful end loop
 						const InetAddress ip4(Utils::hton(ip),0);
 						if ( (routedNetmaskBits > 0) && (!std::binary_search(ns.allocatedIps.begin(),ns.allocatedIps.end(),ip4)) ) {
-							ipAssignments.push_back(ip4.toIpString());
+							char tmpip[64];
+							ipAssignments.push_back(ip4.toIpString(tmpip));
 							member["ipAssignments"] = ipAssignments;
 							if (nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
 								struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc->staticIps[nc->staticIpCount++]));

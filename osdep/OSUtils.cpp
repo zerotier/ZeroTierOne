@@ -57,6 +57,23 @@
 
 namespace ZeroTier {
 
+unsigned int OSUtils::ztsnprintf(char *buf,unsigned int len,const char *fmt,...)
+{
+	va_list ap;
+
+	va_start(ap,fmt);
+	int n = (int)vsnprintf(buf,len,fmt,ap);
+	va_end(ap);
+
+	if ((n >= (int)len)||(n < 0)) {
+		if (len)
+			buf[len - 1] = (char)0;
+		throw std::length_error("buf[] overflow");
+	}
+
+	return (unsigned int)n;
+}
+
 #ifdef __UNIX_LIKE__
 bool OSUtils::redirectUnixOutputs(const char *stdoutPath,const char *stderrPath)
 	throw()
@@ -134,7 +151,7 @@ long OSUtils::cleanDirectory(const char *path,const uint64_t olderThan)
 					if (date.QuadPart > 0) {
 							date.QuadPart -= adjust.QuadPart;
 							if ((uint64_t)((date.QuadPart / 10000000) * 1000) < olderThan) {
-									Utils::ztsnprintf(tmp, sizeof(tmp), "%s\\%s", path, ffd.cFileName);
+									ztsnprintf(tmp, sizeof(tmp), "%s\\%s", path, ffd.cFileName);
 									if (DeleteFileA(tmp))
 											++cleaned;
 							}
@@ -157,7 +174,7 @@ long OSUtils::cleanDirectory(const char *path,const uint64_t olderThan)
 			break;
 		if (dptr) {
 			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,".."))&&(dptr->d_type == DT_REG)) {
-				Utils::ztsnprintf(tmp,sizeof(tmp),"%s/%s",path,dptr->d_name);
+				ztsnprintf(tmp,sizeof(tmp),"%s/%s",path,dptr->d_name);
 				if (stat(tmp,&st) == 0) {
 					uint64_t mt = (uint64_t)(st.st_mtime);
 					if ((mt > 0)&&((mt * 1000) < olderThan)) {
@@ -464,7 +481,7 @@ std::string OSUtils::jsonString(const nlohmann::json &jv,const char *dfl)
 			return jv;
 		} else if (jv.is_number()) {
 			char tmp[64];
-			Utils::ztsnprintf(tmp,sizeof(tmp),"%llu",(uint64_t)jv);
+			ztsnprintf(tmp,sizeof(tmp),"%llu",(uint64_t)jv);
 			return tmp;
 		} else if (jv.is_boolean()) {
 			return ((bool)jv ? std::string("1") : std::string("0"));
@@ -477,9 +494,10 @@ std::string OSUtils::jsonBinFromHex(const nlohmann::json &jv)
 {
 	std::string s(jsonString(jv,""));
 	if (s.length() > 0) {
-		char *buf = new char[(s.length() / 2) + 1];
+		unsigned int buflen = (s.length() / 2) + 1;
+		char *buf = new char[buflen];
 		try {
-			unsigned int l = Utils::unhex(s,buf,(unsigned int)s.length());
+			unsigned int l = Utils::unhex(s.c_str(),buf,buflen);
 			std::string b(buf,l);
 			delete [] buf;
 			return b;

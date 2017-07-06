@@ -136,19 +136,23 @@ bool Identity::locallyValidate() const
 		(digest[63] == addrb[4]));
 }
 
-std::string Identity::toString(bool includePrivate) const
+char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const
 {
-	std::string r;
-
-	r.append(_address.toString());
-	r.append(":0:"); // 0 == ZT_OBJECT_TYPE_IDENTITY
-	r.append(Utils::hex(_publicKey.data,(unsigned int)_publicKey.size()));
+	char *p = buf;
+	Utils::hex10(_address.toInt(),p);
+	p += 10;
+	*(p++) = ':';
+	*(p++) = '0';
+	*(p++) = ':';
+	Utils::hex(_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN,p);
+	p += ZT_C25519_PUBLIC_KEY_LEN * 2;
 	if ((_privateKey)&&(includePrivate)) {
-		r.push_back(':');
-		r.append(Utils::hex(_privateKey->data,(unsigned int)_privateKey->size()));
+		*(p++) = ':';
+		Utils::hex(_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN,p);
+		p += ZT_C25519_PRIVATE_KEY_LEN * 2;
 	}
-
-	return r;
+	*(p++) = (char)0;
+	return buf;
 }
 
 bool Identity::fromString(const char *str)
@@ -157,7 +161,7 @@ bool Identity::fromString(const char *str)
 		return false;
 
 	char *saveptr = (char *)0;
-	char tmp[1024];
+	char tmp[ZT_IDENTITY_STRING_BUFFER_LENGTH];
 	if (!Utils::scopy(tmp,sizeof(tmp),str))
 		return false;
 

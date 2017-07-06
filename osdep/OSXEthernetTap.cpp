@@ -336,7 +336,7 @@ OSXEthernetTap::OSXEthernetTap(
 	char devpath[64],ethaddr[64],mtustr[32],metstr[32],nwids[32];
 	struct stat stattmp;
 
-	Utils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",nwid);
+	OSUtils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",nwid);
 
 	Mutex::Lock _gl(globalTapCreateLock);
 
@@ -391,13 +391,13 @@ OSXEthernetTap::OSXEthernetTap(
 	// Open the first unused tap device if we didn't recall a previous one.
 	if (!recalledDevice) {
 		for(int i=0;i<64;++i) {
-			Utils::ztsnprintf(devpath,sizeof(devpath),"/dev/zt%d",i);
+			OSUtils::ztsnprintf(devpath,sizeof(devpath),"/dev/zt%d",i);
 			if (stat(devpath,&stattmp))
 				throw std::runtime_error("no more TAP devices available");
 			_fd = ::open(devpath,O_RDWR);
 			if (_fd > 0) {
 				char foo[16];
-				Utils::ztsnprintf(foo,sizeof(foo),"zt%d",i);
+				OSUtils::ztsnprintf(foo,sizeof(foo),"zt%d",i);
 				_dev = foo;
 				break;
 			}
@@ -413,9 +413,9 @@ OSXEthernetTap::OSXEthernetTap(
 	}
 
 	// Configure MAC address and MTU, bring interface up
-	Utils::ztsnprintf(ethaddr,sizeof(ethaddr),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
-	Utils::ztsnprintf(mtustr,sizeof(mtustr),"%u",_mtu);
-	Utils::ztsnprintf(metstr,sizeof(metstr),"%u",_metric);
+	OSUtils::ztsnprintf(ethaddr,sizeof(ethaddr),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
+	OSUtils::ztsnprintf(mtustr,sizeof(mtustr),"%u",_mtu);
+	OSUtils::ztsnprintf(metstr,sizeof(metstr),"%u",_metric);
 	long cpid = (long)vfork();
 	if (cpid == 0) {
 		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"lladdr",ethaddr,"mtu",mtustr,"metric",metstr,"up",(const char *)0);
@@ -499,7 +499,8 @@ bool OSXEthernetTap::addIp(const InetAddress &ip)
 
 	long cpid = (long)vfork();
 	if (cpid == 0) {
-		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toString().c_str(),"alias",(const char *)0);
+		char tmp[128];
+		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toString(tmp),"alias",(const char *)0);
 		::_exit(-1);
 	} else if (cpid > 0) {
 		int exitcode = -1;
@@ -519,7 +520,8 @@ bool OSXEthernetTap::removeIp(const InetAddress &ip)
 		if (*i == ip) {
 			long cpid = (long)vfork();
 			if (cpid == 0) {
-				execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toIpString().c_str(),"-alias",(const char *)0);
+				char tmp[128];
+				execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toIpString(tmp),"-alias",(const char *)0);
 				_exit(-1);
 			} else if (cpid > 0) {
 				int exitcode = -1;
@@ -636,7 +638,7 @@ void OSXEthernetTap::setMtu(unsigned int mtu)
 		long cpid = (long)vfork();
 		if (cpid == 0) {
 			char tmp[64];
-			Utils::ztsnprintf(tmp,sizeof(tmp),"%u",mtu);
+			OSUtils::ztsnprintf(tmp,sizeof(tmp),"%u",mtu);
 			execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"mtu",tmp,(const char *)0);
 			_exit(-1);
 		} else if (cpid > 0) {

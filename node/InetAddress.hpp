@@ -31,8 +31,6 @@
 #include <string.h>
 #include <stdint.h>
 
-#include <string>
-
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"
 #include "Utils.hpp"
@@ -85,25 +83,22 @@ struct InetAddress : public sockaddr_storage
 		IP_SCOPE_PRIVATE = 7        // 10.x.x.x, 192.168.x.x, etc.
 	};
 
-	InetAddress() throw() { memset(this,0,sizeof(InetAddress)); }
-	InetAddress(const InetAddress &a) throw() { memcpy(this,&a,sizeof(InetAddress)); }
-	InetAddress(const InetAddress *a) throw() { memcpy(this,a,sizeof(InetAddress)); }
-	InetAddress(const struct sockaddr_storage &ss) throw() { *this = ss; }
-	InetAddress(const struct sockaddr_storage *ss) throw() { *this = ss; }
-	InetAddress(const struct sockaddr &sa) throw() { *this = sa; }
-	InetAddress(const struct sockaddr *sa) throw() { *this = sa; }
-	InetAddress(const struct sockaddr_in &sa) throw() { *this = sa; }
-	InetAddress(const struct sockaddr_in *sa) throw() { *this = sa; }
-	InetAddress(const struct sockaddr_in6 &sa) throw() { *this = sa; }
-	InetAddress(const struct sockaddr_in6 *sa) throw() { *this = sa; }
-	InetAddress(const void *ipBytes,unsigned int ipLen,unsigned int port) throw() { this->set(ipBytes,ipLen,port); }
-	InetAddress(const uint32_t ipv4,unsigned int port) throw() { this->set(&ipv4,4,port); }
-	InetAddress(const std::string &ip,unsigned int port) throw() { this->set(ip,port); }
-	InetAddress(const std::string &ipSlashPort) throw() { this->fromString(ipSlashPort); }
-	InetAddress(const char *ipSlashPort) throw() { this->fromString(std::string(ipSlashPort)); }
+	InetAddress() { memset(this,0,sizeof(InetAddress)); }
+	InetAddress(const InetAddress &a) { memcpy(this,&a,sizeof(InetAddress)); }
+	InetAddress(const InetAddress *a) { memcpy(this,a,sizeof(InetAddress)); }
+	InetAddress(const struct sockaddr_storage &ss) { *this = ss; }
+	InetAddress(const struct sockaddr_storage *ss) { *this = ss; }
+	InetAddress(const struct sockaddr &sa) { *this = sa; }
+	InetAddress(const struct sockaddr *sa) { *this = sa; }
+	InetAddress(const struct sockaddr_in &sa) { *this = sa; }
+	InetAddress(const struct sockaddr_in *sa) { *this = sa; }
+	InetAddress(const struct sockaddr_in6 &sa) { *this = sa; }
+	InetAddress(const struct sockaddr_in6 *sa) { *this = sa; }
+	InetAddress(const void *ipBytes,unsigned int ipLen,unsigned int port) { this->set(ipBytes,ipLen,port); }
+	InetAddress(const uint32_t ipv4,unsigned int port) { this->set(&ipv4,4,port); }
+	InetAddress(const char *ipSlashPort) { this->fromString(ipSlashPort); }
 
 	inline InetAddress &operator=(const InetAddress &a)
-		throw()
 	{
 		if (&a != this)
 			memcpy(this,&a,sizeof(InetAddress));
@@ -111,7 +106,6 @@ struct InetAddress : public sockaddr_storage
 	}
 
 	inline InetAddress &operator=(const InetAddress *a)
-		throw()
 	{
 		if (a != this)
 			memcpy(this,a,sizeof(InetAddress));
@@ -119,7 +113,6 @@ struct InetAddress : public sockaddr_storage
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_storage &ss)
-		throw()
 	{
 		if (reinterpret_cast<const InetAddress *>(&ss) != this)
 			memcpy(this,&ss,sizeof(InetAddress));
@@ -127,7 +120,6 @@ struct InetAddress : public sockaddr_storage
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_storage *ss)
-		throw()
 	{
 		if (reinterpret_cast<const InetAddress *>(ss) != this)
 			memcpy(this,ss,sizeof(InetAddress));
@@ -135,7 +127,6 @@ struct InetAddress : public sockaddr_storage
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_in &sa)
-		throw()
 	{
 		if (reinterpret_cast<const InetAddress *>(&sa) != this) {
 			memset(this,0,sizeof(InetAddress));
@@ -145,7 +136,6 @@ struct InetAddress : public sockaddr_storage
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_in *sa)
-		throw()
 	{
 		if (reinterpret_cast<const InetAddress *>(sa) != this) {
 			memset(this,0,sizeof(InetAddress));
@@ -155,7 +145,6 @@ struct InetAddress : public sockaddr_storage
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_in6 &sa)
-		throw()
 	{
 		if (reinterpret_cast<const InetAddress *>(&sa) != this) {
 			memset(this,0,sizeof(InetAddress));
@@ -165,7 +154,6 @@ struct InetAddress : public sockaddr_storage
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_in6 *sa)
-		throw()
 	{
 		if (reinterpret_cast<const InetAddress *>(sa) != this) {
 			memset(this,0,sizeof(InetAddress));
@@ -175,7 +163,6 @@ struct InetAddress : public sockaddr_storage
 	}
 
 	inline InetAddress &operator=(const struct sockaddr &sa)
-		throw()
 	{
 		if (reinterpret_cast<const InetAddress *>(&sa) != this) {
 			memset(this,0,sizeof(InetAddress));
@@ -192,7 +179,6 @@ struct InetAddress : public sockaddr_storage
 	}
 
 	inline InetAddress &operator=(const struct sockaddr *sa)
-		throw()
 	{
 		if (reinterpret_cast<const InetAddress *>(sa) != this) {
 			memset(this,0,sizeof(InetAddress));
@@ -211,17 +197,7 @@ struct InetAddress : public sockaddr_storage
 	/**
 	 * @return IP scope classification (e.g. loopback, link-local, private, global)
 	 */
-	IpScope ipScope() const
-		throw();
-
-	/**
-	 * Set from a string-format IP and a port
-	 *
-	 * @param ip IP address in V4 or V6 ASCII notation
-	 * @param port Port or 0 for none
-	 */
-	void set(const std::string &ip,unsigned int port)
-		throw();
+	IpScope ipScope() const;
 
 	/**
 	 * Set from a raw IP and port number
@@ -230,8 +206,7 @@ struct InetAddress : public sockaddr_storage
 	 * @param ipLen Length of IP address: 4 or 16
 	 * @param port Port number or 0 for none
 	 */
-	void set(const void *ipBytes,unsigned int ipLen,unsigned int port)
-		throw();
+	void set(const void *ipBytes,unsigned int ipLen,unsigned int port);
 
 	/**
 	 * Set the port component
@@ -272,23 +247,23 @@ struct InetAddress : public sockaddr_storage
 	/**
 	 * @return ASCII IP/port format representation
 	 */
-	std::string toString() const;
+	char *toString(char buf[64]) const;
 
 	/**
 	 * @return IP portion only, in ASCII string format
 	 */
-	std::string toIpString() const;
+	char *toIpString(char buf[64]) const;
 
 	/**
-	 * @param ipSlashPort ASCII IP/port format notation
+	 * @param ipSlashPort IP/port (port is optional, will be 0 if not included)
+	 * @return True if address appeared to be valid
 	 */
-	void fromString(const std::string &ipSlashPort);
+	bool fromString(const char *ipSlashPort);
 
 	/**
 	 * @return Port or 0 if no port component defined
 	 */
 	inline unsigned int port() const
-		throw()
 	{
 		switch(ss_family) {
 			case AF_INET: return Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in *>(this)->sin_port));
@@ -306,7 +281,7 @@ struct InetAddress : public sockaddr_storage
 	 *
 	 * @return Netmask bits
 	 */
-	inline unsigned int netmaskBits() const throw() { return port(); }
+	inline unsigned int netmaskBits() const { return port(); }
 
 	/**
 	 * @return True if netmask bits is valid for the address type
@@ -329,7 +304,7 @@ struct InetAddress : public sockaddr_storage
 	 *
 	 * @return Gateway metric
 	 */
-	inline unsigned int metric() const throw() { return port(); }
+	inline unsigned int metric() const { return port(); }
 
 	/**
 	 * Construct a full netmask as an InetAddress
@@ -376,12 +351,12 @@ struct InetAddress : public sockaddr_storage
 	/**
 	 * @return True if this is an IPv4 address
 	 */
-	inline bool isV4() const throw() { return (ss_family == AF_INET); }
+	inline bool isV4() const { return (ss_family == AF_INET); }
 
 	/**
 	 * @return True if this is an IPv6 address
 	 */
-	inline bool isV6() const throw() { return (ss_family == AF_INET6); }
+	inline bool isV6() const { return (ss_family == AF_INET6); }
 
 	/**
 	 * @return pointer to raw address bytes or NULL if not available
@@ -454,7 +429,7 @@ struct InetAddress : public sockaddr_storage
 	/**
 	 * Set to null/zero
 	 */
-	inline void zero() throw() { memset(this,0,sizeof(InetAddress)); }
+	inline void zero() { memset(this,0,sizeof(InetAddress)); }
 
 	/**
 	 * Check whether this is a network/route rather than an IP assignment
@@ -464,8 +439,7 @@ struct InetAddress : public sockaddr_storage
 	 *
 	 * @return True if everything after netmask bits is zero
 	 */
-	bool isNetwork() const
-		throw();
+	bool isNetwork() const;
 
 	/**
 	 * @return 14-bit (0-16383) hash of this IP's first 24 or 48 bits (for V4 or V6) for rate limiting code, or 0 if non-IP
@@ -494,7 +468,7 @@ struct InetAddress : public sockaddr_storage
 	/**
 	 * @return True if address family is non-zero
 	 */
-	inline operator bool() const throw() { return (ss_family != 0); }
+	inline operator bool() const { return (ss_family != 0); }
 
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b) const
@@ -552,12 +526,12 @@ struct InetAddress : public sockaddr_storage
 		return (p - startAt);
 	}
 
-	bool operator==(const InetAddress &a) const throw();
-	bool operator<(const InetAddress &a) const throw();
-	inline bool operator!=(const InetAddress &a) const throw() { return !(*this == a); }
-	inline bool operator>(const InetAddress &a) const throw() { return (a < *this); }
-	inline bool operator<=(const InetAddress &a) const throw() { return !(a < *this); }
-	inline bool operator>=(const InetAddress &a) const throw() { return !(*this < a); }
+	bool operator==(const InetAddress &a) const;
+	bool operator<(const InetAddress &a) const;
+	inline bool operator!=(const InetAddress &a) const { return !(*this == a); }
+	inline bool operator>(const InetAddress &a) const { return (a < *this); }
+	inline bool operator<=(const InetAddress &a) const { return !(a < *this); }
+	inline bool operator>=(const InetAddress &a) const { return !(*this < a); }
 
 	/**
 	 * @param mac MAC address seed

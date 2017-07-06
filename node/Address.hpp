@@ -141,20 +141,9 @@ public:
 	/**
 	 * @return Hexadecimal string
 	 */
-	inline std::string toString() const
+	inline char *toString(char buf[11]) const
 	{
-		char buf[16];
-		Utils::ztsnprintf(buf,sizeof(buf),"%.10llx",(unsigned long long)_a);
-		return std::string(buf);
-	};
-
-	/**
-	 * @param buf Buffer to fill
-	 * @param len Length of buffer
-	 */
-	inline void toString(char *buf,unsigned int len) const
-	{
-		Utils::ztsnprintf(buf,len,"%.10llx",(unsigned long long)_a);
+		return Utils::hex10(_a,buf);
 	}
 
 	/**

@@ -97,7 +97,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 	char procpath[128],nwids[32];
 	struct stat sbuf;
 
-	Utils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",nwid);
+	OSUtils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",nwid);
 
 	Mutex::Lock _l(__tapCreateLock); // create only one tap at a time, globally
 
@@ -134,7 +134,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 	std::map<std::string,std::string>::const_iterator gdmEntry = globalDeviceMap.find(nwids);
 	if (gdmEntry != globalDeviceMap.end()) {
 		Utils::scopy(ifr.ifr_name,sizeof(ifr.ifr_name),gdmEntry->second.c_str());
-		Utils::ztsnprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
+		OSUtils::ztsnprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
 		recalledDevice = (stat(procpath,&sbuf) != 0);
 	}
 
@@ -142,8 +142,8 @@ LinuxEthernetTap::LinuxEthernetTap(
 #ifdef __SYNOLOGY__
 		int devno = 50;
 		do {
-			Utils::ztsnprintf(ifr.ifr_name,sizeof(ifr.ifr_name),"eth%d",devno++);
-			Utils::ztsnprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
+			OSUtils::ztsnprintf(ifr.ifr_name,sizeof(ifr.ifr_name),"eth%d",devno++);
+			OSUtils::ztsnprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
 		} while (stat(procpath,&sbuf) == 0); // try zt#++ until we find one that does not exist
 #else
 		char devno = 0;
@@ -158,7 +158,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 			_base32_5_to_8(reinterpret_cast<const uint8_t *>(tmp2) + 5,tmp3 + 10);
 			tmp3[15] = (char)0;
 			memcpy(ifr.ifr_name,tmp3,16);
-			Utils::ztsnprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
+			OSUtils::ztsnprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
 		} while (stat(procpath,&sbuf) == 0);
 #endif
 	}
@@ -264,7 +264,8 @@ static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
 	if (cpid == 0) {
 		OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
 		setenv("PATH", "/sbin:/bin:/usr/sbin:/usr/bin", 1);
-		::execlp("ip","ip","addr","del",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
+		char iptmp[128];
+		::execlp("ip","ip","addr","del",ip.toString(iptmp),"dev",_dev.c_str(),(const char *)0);
 		::_exit(-1);
 	} else {
 		int exitcode = -1;
@@ -296,25 +297,28 @@ bool LinuxEthernetTap::addIpSyn(std::vector<InetAddress> ips)
 		// Assemble and write contents of ifcfg-dev file
 		for(int i=0; i<(int)ips.size(); i++) {
 			if (ips[i].isV4()) {
+				char iptmp[64],iptmp2[64];
 				std::string numstr4 = ip4_tot > 1 ? std::to_string(ip4) : "";
-				cfg_contents += "\nIPADDR"+numstr4+"="+ips[i].toIpString()
-					+ "\nNETMASK"+numstr4+"="+ips[i].netmask().toIpString()+"\n";
+				cfg_contents += "\nIPADDR"+numstr4+"="+ips[i].toIpString(iptmp)
+					+ "\nNETMASK"+numstr4+"="+ips[i].netmask().toIpString(iptmp2)+"\n";
 				ip4++;
 			}
 			else {
+				char iptmp[64],iptmp2[64];
 				std::string numstr6 = ip6_tot > 1 ? std::to_string(ip6) : "";
-				cfg_contents += "\nIPV6ADDR"+numstr6+"="+ips[i].toIpString()
-					+ "\nNETMASK"+numstr6+"="+ips[i].netmask().toIpString()+"\n";
+				cfg_contents += "\nIPV6ADDR"+numstr6+"="+ips[i].toIpString(iptmp)
+					+ "\nNETMASK"+numstr6+"="+ips[i].netmask().toIpString(iptmp2)+"\n";
 				ip6++;
 			}
 		}
 		OSUtils::writeFile(filepath.c_str(), cfg_contents.c_str(), cfg_contents.length());
 		// Finaly, add IPs
 		for(int i=0; i<(int)ips.size(); i++){
+			char iptmp[128],iptmp2[128[;
 			if (ips[i].isV4())
-				::execlp("ip","ip","addr","add",ips[i].toString().c_str(),"broadcast",ips[i].broadcast().toIpString().c_str(),"dev",_dev.c_str(),(const char *)0);
+				::execlp("ip","ip","addr","add",ips[i].toString(iptmp),"broadcast",ips[i].broadcast().toIpString(iptmp2),"dev",_dev.c_str(),(const char *)0);
 			else
-				::execlp("ip","ip","addr","add",ips[i].toString().c_str(),"dev",_dev.c_str(),(const char *)0);			
+				::execlp("ip","ip","addr","add",ips[i].toString(iptmp),"dev",_dev.c_str(),(const char *)0);			
 		}
 		::_exit(-1);
 	} else if (cpid > 0) {
@@ -345,10 +349,11 @@ bool LinuxEthernetTap::addIp(const InetAddress &ip)
 	if (cpid == 0) {
 		OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
 		setenv("PATH", "/sbin:/bin:/usr/sbin:/usr/bin", 1);
+		char iptmp[128],iptmp2[128];
 		if (ip.isV4()) {
-			::execlp("ip","ip","addr","add",ip.toString().c_str(),"broadcast",ip.broadcast().toIpString().c_str(),"dev",_dev.c_str(),(const char *)0);
+			::execlp("ip","ip","addr","add",ip.toString(iptmp),"broadcast",ip.broadcast().toIpString(iptmp2),"dev",_dev.c_str(),(const char *)0);
 		} else {
-			::execlp("ip","ip","addr","add",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
+			::execlp("ip","ip","addr","add",ip.toString(iptmp),"dev",_dev.c_str(),(const char *)0);
 		}
 		::_exit(-1);
 	} else if (cpid > 0) {

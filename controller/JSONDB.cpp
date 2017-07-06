@@ -39,7 +39,7 @@ JSONDB::JSONDB(const std::string &basePath) :
 		std::size_t hnsep = hn.find_last_of(':');
 		if (hnsep != std::string::npos)
 			hn[hnsep] = '/';
-		_httpAddr.fromString(hn);
+		_httpAddr.fromString(hn.c_str());
 		if (hnend != std::string::npos)
 			_basePath = _basePath.substr(7 + hnend);
 		if (_basePath.length() == 0)
@@ -94,7 +94,7 @@ bool JSONDB::writeRaw(const std::string &n,const std::string &obj)
 		std::string body;
 		std::map<std::string,std::string> reqHeaders;
 		char tmp[64];
-		Utils::ztsnprintf(tmp,sizeof(tmp),"%lu",(unsigned long)obj.length());
+		OSUtils::ztsnprintf(tmp,sizeof(tmp),"%lu",(unsigned long)obj.length());
 		reqHeaders["Content-Length"] = tmp;
 		reqHeaders["Content-Type"] = "application/json";
 		const unsigned int sc = Http::PUT(0,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),reqHeaders,obj.data(),(unsigned long)obj.length(),headers,body);
@@ -164,7 +164,7 @@ bool JSONDB::getNetworkMember(const uint64_t networkId,const uint64_t nodeId,nlo
 void JSONDB::saveNetwork(const uint64_t networkId,const nlohmann::json &networkConfig)
 {
 	char n[64];
-	Utils::ztsnprintf(n,sizeof(n),"network/%.16llx",(unsigned long long)networkId);
+	OSUtils::ztsnprintf(n,sizeof(n),"network/%.16llx",(unsigned long long)networkId);
 	writeRaw(n,OSUtils::jsonDump(networkConfig));
 	{
 		Mutex::Lock _l(_networks_m);
@@ -176,7 +176,7 @@ void JSONDB::saveNetwork(const uint64_t networkId,const nlohmann::json &networkC
 void JSONDB::saveNetworkMember(const uint64_t networkId,const uint64_t nodeId,const nlohmann::json &memberConfig)
 {
 	char n[256];
-	Utils::ztsnprintf(n,sizeof(n),"network/%.16llx/member/%.10llx",(unsigned long long)networkId,(unsigned long long)nodeId);
+	OSUtils::ztsnprintf(n,sizeof(n),"network/%.16llx/member/%.10llx",(unsigned long long)networkId,(unsigned long long)nodeId);
 	writeRaw(n,OSUtils::jsonDump(memberConfig));
 	{
 		Mutex::Lock _l(_networks_m);
@@ -202,7 +202,7 @@ nlohmann::json JSONDB::eraseNetwork(const uint64_t networkId)
 	}
 
 	char n[256];
-	Utils::ztsnprintf(n,sizeof(n),"network/%.16llx",(unsigned long long)networkId);
+	OSUtils::ztsnprintf(n,sizeof(n),"network/%.16llx",(unsigned long long)networkId);
 
 	if (_httpAddr) {
 		// Deletion is currently done by Central in harnessed mode
@@ -229,7 +229,7 @@ nlohmann::json JSONDB::eraseNetwork(const uint64_t networkId)
 nlohmann::json JSONDB::eraseNetworkMember(const uint64_t networkId,const uint64_t nodeId,bool recomputeSummaryInfo)
 {
 	char n[256];
-	Utils::ztsnprintf(n,sizeof(n),"network/%.16llx/member/%.10llx",(unsigned long long)networkId,(unsigned long long)nodeId);
+	OSUtils::ztsnprintf(n,sizeof(n),"network/%.16llx/member/%.10llx",(unsigned long long)networkId,(unsigned long long)nodeId);
 
 	if (_httpAddr) {
 		// Deletion is currently done by the caller in Central harnessed mode
@@ -314,7 +314,7 @@ void JSONDB::threadMain()
 								const nlohmann::json &mips = member["ipAssignments"];
 								if (mips.is_array()) {
 									for(unsigned long i=0;i<mips.size();++i) {
-										InetAddress mip(OSUtils::jsonString(mips[i],""));
+										InetAddress mip(OSUtils::jsonString(mips[i],"").c_str());
 										if ((mip.ss_family == AF_INET)||(mip.ss_family == AF_INET6))
 											ns.allocatedIps.push_back(mip);
 									}

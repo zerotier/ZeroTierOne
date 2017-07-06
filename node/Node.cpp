@@ -82,8 +82,8 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 	if (n > 0) {
 		tmp[n] = (char)0;
 		if (RR->identity.fromString(tmp)) {
-			RR->publicIdentityStr = RR->identity.toString(false);
-			RR->secretIdentityStr = RR->identity.toString(true);
+			RR->identity.toString(false,RR->publicIdentityStr);
+			RR->identity.toString(true,RR->secretIdentityStr);
 		} else {
 			n = -1;
 		}
@@ -92,10 +92,10 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 	idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
 	if (n <= 0) {
 		RR->identity.generate();
-		RR->publicIdentityStr = RR->identity.toString(false);
-		RR->secretIdentityStr = RR->identity.toString(true);
-		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,RR->secretIdentityStr.data(),(unsigned int)RR->secretIdentityStr.length());
-		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr.data(),(unsigned int)RR->publicIdentityStr.length());
+		RR->identity.toString(false,RR->publicIdentityStr);
+		RR->identity.toString(true,RR->secretIdentityStr);
+		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,RR->secretIdentityStr,(unsigned int)strlen(RR->secretIdentityStr));
+		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 	} else {
 		n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,tmp,sizeof(tmp) - 1);
 		if (n > 0) {
@@ -104,7 +104,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 				n = -1;
 		}
 		if (n <= 0)
-			stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr.data(),(unsigned int)RR->publicIdentityStr.length());
+			stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 	}
 
 	try {
@@ -386,8 +386,8 @@ uint64_t Node::address() const
 void Node::status(ZT_NodeStatus *status) const
 {
 	status->address = RR->identity.address().toInt();
-	status->publicIdentity = RR->publicIdentityStr.c_str();
-	status->secretIdentity = RR->secretIdentityStr.c_str();
+	status->publicIdentity = RR->publicIdentityStr;
+	status->secretIdentity = RR->secretIdentityStr;
 	status->online = _online ? 1 : 0;
 }
 
@@ -543,39 +543,6 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,cons
 
 	return ( (_cb.pathCheckFunction) ? (_cb.pathCheckFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ztaddr.toInt(),localSocket,reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0) : true);
 }
-
-#ifdef ZT_TRACE
-void Node::postTrace(const char *module,unsigned int line,const char *fmt,...)
-{
-	static Mutex traceLock;
-
-	va_list ap;
-	char tmp1[1024],tmp2[1024],tmp3[256];
-
-	Mutex::Lock _l(traceLock);
-
-	time_t now = (time_t)(_now / 1000ULL);
-#ifdef __WINDOWS__
-	ctime_s(tmp3,sizeof(tmp3),&now);
-	char *nowstr = tmp3;
-#else
-	char *nowstr = ctime_r(&now,tmp3);
-#endif
-	unsigned long nowstrlen = (unsigned long)strlen(nowstr);
-	if (nowstr[nowstrlen-1] == '\n')
-		nowstr[--nowstrlen] = (char)0;
-	if (nowstr[nowstrlen-1] == '\r')
-		nowstr[--nowstrlen] = (char)0;
-
-	va_start(ap,fmt);
-	vsnprintf(tmp2,sizeof(tmp2),fmt,ap);
-	va_end(ap);
-	tmp2[sizeof(tmp2)-1] = (char)0;
-
-	Utils::ztsnprintf(tmp1,sizeof(tmp1),"[%s] %s:%u %s",nowstr,module,line,tmp2);
-	postEvent((void *)0,ZT_EVENT_TRACE,tmp1);
-}
-#endif // ZT_TRACE
 
 uint64_t Node::prng()
 {

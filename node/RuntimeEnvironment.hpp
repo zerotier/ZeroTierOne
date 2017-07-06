@@ -27,7 +27,7 @@
 #ifndef ZT_RUNTIMEENVIRONMENT_HPP
 #define ZT_RUNTIMEENVIRONMENT_HPP
 
-#include <string>
+#include <string.h>
 
 #include "Constants.hpp"
 #include "Utils.hpp"
@@ -60,11 +60,13 @@ public:
 		,sa((SelfAwareness *)0)
 	{
 		Utils::getSecureRandom(&instanceId,sizeof(instanceId));
+		memset(publicIdentityStr,0,sizeof(publicIdentityStr));
+		memset(secretIdentityStr,0,sizeof(secretIdentityStr));
 	}
 
 	~RuntimeEnvironment()
 	{
-		Utils::burn(reinterpret_cast<void *>(const_cast<char *>(secretIdentityStr.data())),(unsigned int)secretIdentityStr.length());
+		Utils::burn(secretIdentityStr,sizeof(secretIdentityStr));
 	}
 
 	/**
@@ -77,8 +79,8 @@ public:
 
 	// This node's identity
 	Identity identity;
-	std::string publicIdentityStr;
-	std::string secretIdentityStr;
+	char publicIdentityStr[ZT_IDENTITY_STRING_BUFFER_LENGTH];
+	char secretIdentityStr[ZT_IDENTITY_STRING_BUFFER_LENGTH];
 
 	// This is set externally to an instance of this base class
 	NetworkController *localNetworkController;

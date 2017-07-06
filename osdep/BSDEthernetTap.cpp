@@ -114,8 +114,8 @@ BSDEthernetTap::BSDEthernetTap(
 
 	std::vector<std::string> devFiles(OSUtils::listDirectory("/dev"));
 	for(int i=9993;i<(9993+128);++i) {
-		Utils::ztsnprintf(tmpdevname,sizeof(tmpdevname),"tap%d",i);
-		Utils::ztsnprintf(devpath,sizeof(devpath),"/dev/%s",tmpdevname);
+		OSUtils::ztsnprintf(tmpdevname,sizeof(tmpdevname),"tap%d",i);
+		OSUtils::ztsnprintf(devpath,sizeof(devpath),"/dev/%s",tmpdevname);
 		if (std::find(devFiles.begin(),devFiles.end(),std::string(tmpdevname)) == devFiles.end()) {
 			long cpid = (long)vfork();
 			if (cpid == 0) {
@@ -152,8 +152,8 @@ BSDEthernetTap::BSDEthernetTap(
 	/* Other BSDs like OpenBSD only have a limited number of tap devices that cannot be renamed */
 
 	for(int i=0;i<64;++i) {
-		Utils::ztsnprintf(tmpdevname,sizeof(tmpdevname),"tap%d",i);
-		Utils::ztsnprintf(devpath,sizeof(devpath),"/dev/%s",tmpdevname);
+		OSUtils::ztsnprintf(tmpdevname,sizeof(tmpdevname),"tap%d",i);
+		OSUtils::ztsnprintf(devpath,sizeof(devpath),"/dev/%s",tmpdevname);
 		_fd = ::open(devpath,O_RDWR);
 		if (_fd > 0) {
 			_dev = tmpdevname;
@@ -171,9 +171,9 @@ BSDEthernetTap::BSDEthernetTap(
 	}
 
 	// Configure MAC address and MTU, bring interface up
-	Utils::ztsnprintf(ethaddr,sizeof(ethaddr),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
-	Utils::ztsnprintf(mtustr,sizeof(mtustr),"%u",_mtu);
-	Utils::ztsnprintf(metstr,sizeof(metstr),"%u",_metric);
+	OSUtils::ztsnprintf(ethaddr,sizeof(ethaddr),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
+	OSUtils::ztsnprintf(mtustr,sizeof(mtustr),"%u",_mtu);
+	OSUtils::ztsnprintf(metstr,sizeof(metstr),"%u",_metric);
 	long cpid = (long)vfork();
 	if (cpid == 0) {
 		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"lladdr",ethaddr,"mtu",mtustr,"metric",metstr,"up",(const char *)0);
@@ -256,7 +256,8 @@ bool BSDEthernetTap::addIp(const InetAddress &ip)
 
 	long cpid = (long)vfork();
 	if (cpid == 0) {
-		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),ip.isV4() ? "inet" : "inet6",ip.toString().c_str(),"alias",(const char *)0);
+		char tmp[128];
+		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),ip.isV4() ? "inet" : "inet6",ip.toString(tmp),"alias",(const char *)0);
 		::_exit(-1);
 	} else if (cpid > 0) {
 		int exitcode = -1;
@@ -385,7 +386,7 @@ void BSDEthernetTap::setMtu(unsigned int mtu)
 		long cpid = (long)vfork();
 		if (cpid == 0) {
 			char tmp[64];
-			Utils::ztsnprintf(tmp,sizeof(tmp),"%u",mtu);
+			OSUtils::ztsnprintf(tmp,sizeof(tmp),"%u",mtu);
 			execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"mtu",tmp,(const char *)0);
 			_exit(-1);
 		} else if (cpid > 0) {
