@@ -1,7 +1,7 @@
 ﻿$packageName = 'zerotier-one'
 $installerType = 'msi'
-$url = 'https://download.zerotier.com/RELEASES/1.1.14/dist/ZeroTier%20One.msi'
-$url64 = 'https://download.zerotier.com/RELEASES/1.1.14/dist/ZeroTier%20One.msi'
+$url = 'https://download.zerotier.com/RELEASES/1.2.4/dist/ZeroTier%20One.msi'
+$url64 = 'https://download.zerotier.com/RELEASES/1.2.4/dist/ZeroTier%20One.msi'
 $silentArgs = '/quiet'
 $validExitCodes = @(0,3010)
 

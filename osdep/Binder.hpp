@@ -150,7 +150,7 @@ public:
 							case InetAddress::IP_SCOPE_GLOBAL:
 							case InetAddress::IP_SCOPE_SHARED:
 							case InetAddress::IP_SCOPE_PRIVATE:
-								for(int x=0;x<portCount;++x) {
+								for(int x=0;x<(int)portCount;++x) {
 									ip.setPort(ports[x]);
 									localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string()));
 								}
@@ -315,7 +315,7 @@ public:
 
 		// Default to binding to wildcard if we can't enumerate addresses
 		if (localIfAddrs.empty()) {
-			for(int x=0;x<portCount;++x) {
+			for(int x=0;x<(int)portCount;++x) {
 				localIfAddrs.insert(std::pair<InetAddress,std::string>(InetAddress((uint32_t)0,ports[x]),std::string()));
 				localIfAddrs.insert(std::pair<InetAddress,std::string>(InetAddress((const void *)"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,ports[x]),std::string()));
 			}

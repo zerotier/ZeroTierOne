@@ -363,7 +363,7 @@ struct TcpConnection
 	OneServiceImpl *parent;
 	PhySocket *sock;
 	InetAddress remoteAddr;
-	unsigned long lastReceive;
+	uint64_t lastReceive;
 
 	// Used for inbound HTTP connections
 	http_parser parser;

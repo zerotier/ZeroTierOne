@@ -722,20 +722,21 @@ bool WindowsEthernetTap::removeIp(const InetAddress &ip)
 							DeleteUnicastIpAddressEntry(&(ipt->Table[i]));
 							FreeMibTable(ipt);
 
-                            if (ip.isV4()) {
-                                std::vector<std::string> regIps(_getRegistryIPv4Value("IPAddress"));
-                                std::vector<std::string> regSubnetMasks(_getRegistryIPv4Value("SubnetMask"));
-                                std::string ipstr(ip.toIpString());
-                                for (std::vector<std::string>::iterator rip(regIps.begin()), rm(regSubnetMasks.begin()); ((rip != regIps.end()) && (rm != regSubnetMasks.end())); ++rip, ++rm) {
-                                    if (*rip == ipstr) {
-                                        regIps.erase(rip);
-                                        regSubnetMasks.erase(rm);
-                                        _setRegistryIPv4Value("IPAddress", regIps);
-                                        _setRegistryIPv4Value("SubnetMask", regSubnetMasks);
-                                        break;
-                                    }
-                                }
-                            }
+							if (ip.isV4()) {
+								std::vector<std::string> regIps(_getRegistryIPv4Value("IPAddress"));
+								std::vector<std::string> regSubnetMasks(_getRegistryIPv4Value("SubnetMask"));
+								char ipbuf[64];
+								std::string ipstr(ip.toIpString(ipbuf));
+								for (std::vector<std::string>::iterator rip(regIps.begin()), rm(regSubnetMasks.begin()); ((rip != regIps.end()) && (rm != regSubnetMasks.end())); ++rip, ++rm) {
+									if (*rip == ipstr) {
+										regIps.erase(rip);
+										regSubnetMasks.erase(rm);
+										_setRegistryIPv4Value("IPAddress", regIps);
+										_setRegistryIPv4Value("SubnetMask", regSubnetMasks);
+										break;
+									}
+								}
+							}
 
 							return true;
 						}
@@ -750,7 +751,7 @@ bool WindowsEthernetTap::removeIp(const InetAddress &ip)
 
 std::vector<InetAddress> WindowsEthernetTap::ips() const
 {
-	static const InetAddress linkLocalLoopback("fe80::1",64); // what is this and why does Windows assign it?
+	static const InetAddress linkLocalLoopback("fe80::1/64"); // what is this and why does Windows assign it?
 	std::vector<InetAddress> addrs;
 
 	if (!_initialized)
@@ -1226,18 +1227,18 @@ void WindowsEthernetTap::_syncIps()
 			CreateUnicastIpAddressEntry(&ipr);
 		}
 
-        if (aip->isV4())
-        {
-            std::string ipStr(aip->toIpString());
-            std::vector<std::string> regIps(_getRegistryIPv4Value("IPAddress"));
-            if (std::find(regIps.begin(), regIps.end(), ipStr) == regIps.end()) {
-                std::vector<std::string> regSubnetMasks(_getRegistryIPv4Value("SubnetMask"));
-                regIps.push_back(ipStr);
-                regSubnetMasks.push_back(aip->netmask().toIpString());
-                _setRegistryIPv4Value("IPAddress", regIps);
-                _setRegistryIPv4Value("SubnetMask", regSubnetMasks);
-            }
-        }
+		if (aip->isV4()) {
+			char ipbuf[64];
+			std::string ipStr(aip->toIpString(ipbuf));
+			std::vector<std::string> regIps(_getRegistryIPv4Value("IPAddress"));
+			if (std::find(regIps.begin(), regIps.end(), ipStr) == regIps.end()) {
+				std::vector<std::string> regSubnetMasks(_getRegistryIPv4Value("SubnetMask"));
+				regIps.push_back(ipStr);
+				regSubnetMasks.push_back(aip->netmask().toIpString(ipbuf));
+				_setRegistryIPv4Value("IPAddress", regIps);
+				_setRegistryIPv4Value("SubnetMask", regSubnetMasks);
+			}
+		}
 	}
 }
 
