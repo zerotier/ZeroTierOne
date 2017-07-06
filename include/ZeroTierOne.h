@@ -229,11 +229,6 @@ extern "C" {
  */
 #define ZT_RULE_PACKET_CHARACTERISTICS_TCP_FIN 0x0000000000000001ULL
 
-/**
- * A null/empty sockaddr (all zero) to signify an unspecified socket address
- */
-extern const struct sockaddr_storage ZT_SOCKADDR_NULL;
-
 /****************************************************************************/
 /* Structures and other types                                               */
 /****************************************************************************/
@@ -1067,21 +1062,6 @@ typedef struct
 
 /**
  * ZeroTier core state objects
- *
- * All of these objects can be persisted if desired. To preserve the
- * identity of a node and its address, the identity (public and secret)
- * must be saved at a minimum.
- *
- * State objects actually have two IDs (uint64_t[2]). If only one is
- * listed the second ([1]) should be zero and is ignored in storage
- * and replication.
- *
- * All state objects should be replicated in cluster mode. The reference
- * clustering implementation uses a rumor mill algorithm in which state
- * updates that are accepted with RESULT_OK (but not RESULT_OK_IGNORED)
- * are flooded to all connected cluster peers. This results in updates
- * being flooded across the cluster until all cluster members have the
- * latest.
  */
 enum ZT_StateObjectType
 {
@@ -1109,43 +1089,13 @@ enum ZT_StateObjectType
 	ZT_STATE_OBJECT_IDENTITY_SECRET = 2,
 
 	/**
-	 * A peer to which this node is communicating
-	 *
-	 * Object ID: peer address
-	 * Canonical path: <HOME>/peers.d/<ADDRESS> (10-digit hex address)
-	 * Persistence: optional, can be purged at any time
-	 */
-	ZT_STATE_OBJECT_PEER_STATE = 3,
-
-	/**
-	 * Network configuration
-	 *
-	 * Object ID: peer address
-	 * Canonical path: <HOME>/networks.d/<NETWORKID>.conf (16-digit hex ID)
-	 * Persistence: required if network memberships should persist
-	 */
-	ZT_STATE_OBJECT_NETWORK_CONFIG = 4,
-
-	/**
-	 * Network membership (network X peer intersection)
-	 *
-	 * If these are persisted they must be restored after peer states and
-	 * network configs. Otherwise they are ignored.
-	 *
-	 * Object ID: [0] network ID, [1] peer address
-	 * Canonical path: <HOME>/networks.d/<NETWORKID>/members.d/<ADDRESS>
-	 * Persistence: optional (not usually needed)
-	 */
-	ZT_STATE_OBJECT_NETWORK_MEMBERSHIP = 5,
-
-	/**
 	 * The planet (there is only one per... well... planet!)
 	 *
 	 * Object ID: world ID of planet, or 0 if unknown (first query)
 	 * Canonical path: <HOME>/planet
 	 * Persistence: recommended
 	 */
-	ZT_STATE_OBJECT_PLANET = 6,
+	ZT_STATE_OBJECT_PLANET = 3,
 
 	/**
 	 * A moon (federated root set)
@@ -1154,12 +1104,25 @@ enum ZT_StateObjectType
 	 * Canonical path: <HOME>/moons.d/<ID>.moon (16-digit hex ID)
 	 * Persistence: required if moon memberships should persist
 	 */
-	ZT_STATE_OBJECT_MOON = 7,
+	ZT_STATE_OBJECT_MOON = 4,
 
 	/**
-	 * IDs above this value will not be used by the core (and could be used as implementation-specific IDs)
+	 * Peer and related state
+	 *
+	 * Object ID: peer address
+	 * Canonical path: <HOME>/peers.d/<ID> (10-digit address
+	 * Persistence: optional, can be cleared at any time
 	 */
-	ZT_STATE_OBJECT__MAX_ID = 255
+	ZT_STATE_OBJECT_PEER = 5,
+
+	/**
+	 * Network configuration
+	 *
+	 * Object ID: peer address
+	 * Canonical path: <HOME>/networks.d/<NETWORKID>.conf (16-digit hex ID)
+	 * Persistence: required if network memberships should persist
+	 */
+	ZT_STATE_OBJECT_NETWORK_CONFIG = 6
 };
 
 /**
@@ -1277,17 +1240,15 @@ typedef int (*ZT_StateGetFunction)(
  * Parameters:
  *  (1) Node
  *  (2) User pointer
- *  (3) Local interface address
+ *  (3) Local socket or -1 for "all" or "any"
  *  (4) Remote address
  *  (5) Packet data
  *  (6) Packet length
  *  (7) Desired IP TTL or 0 to use default
  *
- * If there is only one local interface it is safe to ignore the local
- * interface address. Otherwise if running with multiple interfaces, the
- * correct local interface should be chosen by address unless NULL. If
- * the ss_family field is zero (NULL address), a random or preferred
- * default interface should be used.
+ * If there is only one local socket, the local socket can be ignored.
+ * If the local socket is -1, the packet should be sent out from all
+ * bound local sockets or a random bound local socket.
  *
  * If TTL is nonzero, packets should have their IP TTL value set to this
  * value if possible. If this is not possible it is acceptable to ignore
@@ -1301,7 +1262,7 @@ typedef int (*ZT_WirePacketSendFunction)(
 	ZT_Node *,                        /* Node */
 	void *,                           /* User ptr */
 	void *,                           /* Thread ptr */
-	const struct sockaddr_storage *,  /* Local address */
+	int64_t,                          /* Local socket */
 	const struct sockaddr_storage *,  /* Remote address */
 	const void *,                     /* Packet data */
 	unsigned int,                     /* Packet length */
@@ -1314,7 +1275,7 @@ typedef int (*ZT_WirePacketSendFunction)(
  *  (1) Node
  *  (2) User pointer
  *  (3) ZeroTier address or 0 for none/any
- *  (4) Local interface address
+ *  (4) Local socket or -1 if unknown
  *  (5) Remote address
  *
  * This function must return nonzero (true) if the path should be used.
@@ -1333,7 +1294,7 @@ typedef int (*ZT_PathCheckFunction)(
 	void *,                           /* User ptr */
 	void *,                           /* Thread ptr */
 	uint64_t,                         /* ZeroTier address */
-	const struct sockaddr_storage *,  /* Local address */
+	int64_t,                          /* Local socket or -1 if unknown */
 	const struct sockaddr_storage *); /* Remote address */
 
 /**
@@ -1442,56 +1403,12 @@ enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,const struct
 void ZT_Node_delete(ZT_Node *node);
 
 /**
- * Notify node of an update to a state object
- *
- * This can be called after node startup to restore cached state objects such
- * as network configurations for joined networks, planet, moons, etc. See
- * the documentation of ZT_StateObjectType for more information. It's okay
- * to call this for everything in the object store, but note that the node
- * will automatically query for some core objects like identities so supplying
- * these via this function is not necessary.
- *
- * Unless clustering is being implemented this function doesn't need to be
- * used after startup. It could be called in response to filesystem changes
- * to allow some degree of live configurability by filesystem observation
- * but this kind of thing is entirely optional.
- *
- * The return value of this function indicates whether the update was accepted
- * as new. A return value of ZT_RESULT_OK indicates that the node gleaned new
- * information from this update and that therefore (in cluster rumor mill mode)
- * this update should be distributed to other members of a cluster. A return
- * value of ZT_RESULT_OK_IGNORED indicates that the object did not provide any
- * new information and therefore should not be propagated in a cluster.
- *
- * If clustering isn't being implemented the return value of this function can
- * generally be ignored.
- *
- * ZT_RESULT_ERROR_BAD_PARAMETER can be returned if the parameter was invalid
- * or not applicable. Object stores may delete the object in this case.
- *
- * @param node Node instance
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param type State object type
- * @param id State object ID (if object type has only one ID, second should be zero)
- * @param data State object data
- * @param len Length of state object data in bytes
- * @return ZT_RESULT_OK if object was accepted or ZT_RESULT_OK_IGNORED if non-informative, error if object was invalid
- */
-enum ZT_ResultCode ZT_Node_processStateUpdate(
-	ZT_Node *node,
-	void *tptr,
-	ZT_StateObjectType type,
-	const uint64_t id[2],
-	const void *data,
-	unsigned int len);
-
-/**
  * Process a packet received from the physical wire
  *
  * @param node Node instance
  * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param now Current clock in milliseconds
- * @param localAddress Local address, or point to ZT_SOCKADDR_NULL if unspecified
+ * @param localSocket Local socket (you can use 0 if only one local socket is bound and ignore this)
  * @param remoteAddress Origin of packet
  * @param packetData Packet data
  * @param packetLength Packet length
@@ -1502,7 +1419,7 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
 	ZT_Node *node,
 	void *tptr,
 	uint64_t now,
-	const struct sockaddr_storage *localAddress,
+	int64_t localSocket,
 	const struct sockaddr_storage *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,

@@ -67,6 +67,11 @@ public:
 		Utils::burn(reinterpret_cast<void *>(const_cast<char *>(secretIdentityStr.data())),(unsigned int)secretIdentityStr.length());
 	}
 
+	/**
+	 * A random integer identifying this running instance in a cluster
+	 */
+	uint64_t instanceId;
+
 	// Node instance that owns this RuntimeEnvironment
 	Node *const node;
 
@@ -90,11 +95,6 @@ public:
 	Multicaster *mc;
 	Topology *topology;
 	SelfAwareness *sa;
-
-	/**
-	 * A random integer identifying this run of ZeroTier
-	 */
-	uint32_t instanceId;
 };
 
 } // namespace ZeroTier

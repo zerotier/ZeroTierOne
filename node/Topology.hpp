@@ -110,11 +110,11 @@ public:
 	/**
 	 * Get a Path object for a given local and remote physical address, creating if needed
 	 *
-	 * @param l Local address or NULL for 'any' or 'wildcard'
+	 * @param l Local socket
 	 * @param r Remote address
 	 * @return Pointer to canonicalized Path object
 	 */
-	inline SharedPtr<Path> getPath(const InetAddress &l,const InetAddress &r)
+	inline SharedPtr<Path> getPath(const int64_t l,const InetAddress &r)
 	{
 		Mutex::Lock _l(_paths_m);
 		SharedPtr<Path> &p = _paths[Path::HashKey(l,r)];

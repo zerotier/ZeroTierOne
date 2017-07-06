@@ -69,7 +69,7 @@ SelfAwareness::SelfAwareness(const RuntimeEnvironment *renv) :
 {
 }
 
-void SelfAwareness::iam(void *tPtr,const Address &reporter,const InetAddress &receivedOnLocalAddress,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now)
+void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now)
 {
 	const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
 
@@ -77,7 +77,7 @@ void SelfAwareness::iam(void *tPtr,const Address &reporter,const InetAddress &re
 		return;
 
 	Mutex::Lock _l(_phy_m);
-	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,receivedOnLocalAddress,reporterPhysicalAddress,scope)];
+	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,receivedOnLocalSocket,reporterPhysicalAddress,scope)];
 
 	if ( (trusted) && ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
 		// Changes to external surface reported by trusted peers causes path reset in this scope

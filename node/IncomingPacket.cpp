@@ -309,7 +309,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 		if (ptr < size()) {
 			ptr += externalSurfaceAddress.deserialize(*this,ptr);
 			if ((externalSurfaceAddress)&&(hops() == 0))
-				RR->sa->iam(tPtr,id.address(),_path->localAddress(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(id),now);
+				RR->sa->iam(tPtr,id.address(),_path->localSocket(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(id),now);
 		}
 
 		// Get primary planet world ID and world timestamp if present
@@ -495,7 +495,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 				peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
 
 				if ((externalSurfaceAddress)&&(hops() == 0))
-					RR->sa->iam(tPtr,peer->address(),_path->localAddress(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(peer->identity()),RR->node->now());
+					RR->sa->iam(tPtr,peer->address(),_path->localSocket(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(peer->identity()),RR->node->now());
 			}	break;
 
 			case Packet::VERB_WHOIS:
@@ -613,9 +613,9 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,void *tPtr,const
 				const unsigned int addrlen = (*this)[ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN];
 				if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
 					const InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
-					if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,with,_path->localAddress(),atAddr)) {
-						RR->node->putPacket(tPtr,_path->localAddress(),atAddr,"ABRE",4,2); // send low-TTL junk packet to 'open' local NAT(s) and stateful firewalls
-						rendezvousWith->attemptToContactAt(tPtr,_path->localAddress(),atAddr,RR->node->now(),false,0);
+					if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,with,_path->localSocket(),atAddr)) {
+						RR->node->putPacket(tPtr,_path->localSocket(),atAddr,"ABRE",4,2); // send low-TTL junk packet to 'open' local NAT(s) and stateful firewalls
+						rendezvousWith->attemptToContactAt(tPtr,_path->localSocket(),atAddr,RR->node->now(),false,0);
 						TRACE("RENDEZVOUS from %s says %s might be at %s, sent verification attempt",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
 					} else {
 						TRACE("RENDEZVOUS from %s says %s might be at %s, ignoring since path is not suitable",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
@@ -1197,7 +1197,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 					if (
 					    ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && // not being told to forget
 							(!( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) == 0) && (peer->hasActivePathTo(now,a)) )) && // not already known
-							(RR->node->shouldUsePathForZeroTierTraffic(tPtr,peer->address(),_path->localAddress(),a)) ) // should use path
+							(RR->node->shouldUsePathForZeroTierTraffic(tPtr,peer->address(),_path->localSocket(),a)) ) // should use path
 					{
 						//if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0)
 						//	peer->setClusterPreferred(a);
@@ -1214,7 +1214,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 					if (
 					    ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH) == 0) && // not being told to forget
 							(!( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) == 0) && (peer->hasActivePathTo(now,a)) )) && // not already known
-							(RR->node->shouldUsePathForZeroTierTraffic(tPtr,peer->address(),_path->localAddress(),a)) ) // should use path
+							(RR->node->shouldUsePathForZeroTierTraffic(tPtr,peer->address(),_path->localSocket(),a)) ) // should use path
 					{
 						//if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0)
 						//	peer->setClusterPreferred(a);

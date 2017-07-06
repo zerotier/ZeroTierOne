@@ -47,8 +47,6 @@
 #include "SelfAwareness.hpp"
 #include "Network.hpp"
 
-const struct sockaddr_storage ZT_SOCKADDR_NULL = {0};
-
 namespace ZeroTier {
 
 /****************************************************************************/
@@ -137,114 +135,17 @@ Node::~Node()
 	delete RR->sw;
 }
 
-ZT_ResultCode Node::processStateUpdate(
-	void *tptr,
-	ZT_StateObjectType type,
-	const uint64_t id[2],
-	const void *data,
-	unsigned int len)
-{
-	ZT_ResultCode r = ZT_RESULT_OK_IGNORED;
-	switch(type) {
-
-		case ZT_STATE_OBJECT_PEER_STATE:
-			if (len) {
-				const SharedPtr<Peer> p(RR->topology->getPeer(tptr,Address(id[0])));
-				if (p) {
-					r = (p->applyStateUpdate(data,len)) ? ZT_RESULT_OK : ZT_RESULT_OK_IGNORED;
-				} else {
-					r = (Peer::createFromStateUpdate(RR,tptr,data,len)) ? ZT_RESULT_OK : ZT_RESULT_OK_IGNORED;
-				}
-			}
-			break;
-
-		case ZT_STATE_OBJECT_NETWORK_CONFIG:
-			if (len <= (ZT_NETWORKCONFIG_DICT_CAPACITY - 1)) {
-				if (len < 2) {
-					Mutex::Lock _l(_networks_m);
-					SharedPtr<Network> &nw = _networks[id[0]];
-					if (!nw) {
-						nw = SharedPtr<Network>(new Network(RR,tptr,id[0],(void *)0,(const NetworkConfig *)0));
-						r = ZT_RESULT_OK;
-					}
-				} else {
-					Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dict = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>(reinterpret_cast<const char *>(data),len);
-					try {
-						NetworkConfig *nconf = new NetworkConfig();
-						try {
-							if (nconf->fromDictionary(*dict)) {
-								Mutex::Lock _l(_networks_m);
-								SharedPtr<Network> &nw = _networks[id[0]];
-								if (nw) {
-									switch (nw->setConfiguration(tptr,*nconf,false)) {
-										default:
-											r = ZT_RESULT_ERROR_BAD_PARAMETER;
-											break;
-										case 1:
-											r = ZT_RESULT_OK_IGNORED;
-											break;
-										case 2:
-											r = ZT_RESULT_OK;
-											break;
-									}
-								} else {
-									nw = SharedPtr<Network>(new Network(RR,tptr,id[0],(void *)0,nconf));
-								}
-							} else {
-								r = ZT_RESULT_ERROR_BAD_PARAMETER;
-							}
-						} catch ( ... ) {
-							r = ZT_RESULT_ERROR_BAD_PARAMETER;
-						}
-						delete nconf;
-					} catch ( ... ) {
-						r = ZT_RESULT_ERROR_BAD_PARAMETER;
-					}
-					delete dict;
-				}
-			} else {
-				r = ZT_RESULT_ERROR_BAD_PARAMETER;
-			}
-			break;
-
-		case ZT_STATE_OBJECT_NETWORK_MEMBERSHIP:
-			if (len) {
-			}
-			break;
-
-		case ZT_STATE_OBJECT_PLANET:
-		case ZT_STATE_OBJECT_MOON:
-			if ((len)&&(len <= ZT_WORLD_MAX_SERIALIZED_LENGTH)) {
-				World w;
-				try {
-					w.deserialize(Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH>(data,len));
-					if (( (w.type() == World::TYPE_MOON)&&(type == ZT_STATE_OBJECT_MOON) )||( (w.type() == World::TYPE_PLANET)&&(type == ZT_STATE_OBJECT_PLANET) )) {
-						r = (RR->topology->addWorld(tptr,w,false)) ? ZT_RESULT_OK : ZT_RESULT_OK_IGNORED;
-					}
-				} catch ( ... ) {
-					r = ZT_RESULT_ERROR_BAD_PARAMETER;
-				}
-			} else {
-				r = ZT_RESULT_ERROR_BAD_PARAMETER;
-			}
-			break;
-
-		default: break;
-	}
-	return r;
-}
-
 ZT_ResultCode Node::processWirePacket(
 	void *tptr,
 	uint64_t now,
-	const struct sockaddr_storage *localAddress,
+	int64_t localSocket,
 	const struct sockaddr_storage *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
 	volatile uint64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
-	RR->sw->onRemotePacket(tptr,*(reinterpret_cast<const InetAddress *>(localAddress)),*(reinterpret_cast<const InetAddress *>(remoteAddress)),packetData,packetLength);
+	RR->sw->onRemotePacket(tptr,localSocket,*(reinterpret_cast<const InetAddress *>(remoteAddress)),packetData,packetLength);
 	return ZT_RESULT_OK;
 }
 
@@ -317,7 +218,7 @@ public:
 			if ((!contacted)&&(_bestCurrentUpstream)) {
 				const SharedPtr<Path> up(_bestCurrentUpstream->getBestPath(_now,true));
 				if (up)
-					p->sendHELLO(_tPtr,up->localAddress(),up->address(),_now,up->nextOutgoingCounter());
+					p->sendHELLO(_tPtr,up->localSocket(),up->address(),_now,up->nextOutgoingCounter());
 			}
 
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
@@ -617,7 +518,7 @@ void Node::setNetconfMaster(void *networkControllerInstance)
 /* Node methods used only within node/                                      */
 /****************************************************************************/
 
-bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,const InetAddress &localAddress,const InetAddress &remoteAddress)
+bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,const int64_t localSocket,const InetAddress &remoteAddress)
 {
 	if (!Path::isAddressValidForPath(remoteAddress))
 		return false;
@@ -640,7 +541,7 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,cons
 		}
 	}
 
-	return ( (_cb.pathCheckFunction) ? (_cb.pathCheckFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ztaddr.toInt(),reinterpret_cast<const struct sockaddr_storage *>(&localAddress),reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0) : true);
+	return ( (_cb.pathCheckFunction) ? (_cb.pathCheckFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ztaddr.toInt(),localSocket,reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0) : true);
 }
 
 #ifdef ZT_TRACE
@@ -837,35 +738,18 @@ void ZT_Node_delete(ZT_Node *node)
 	} catch ( ... ) {}
 }
 
-enum ZT_ResultCode ZT_Node_processStateUpdate(
-	ZT_Node *node,
-	void *tptr,
-	ZT_StateObjectType type,
-	const uint64_t id[2],
-	const void *data,
-	unsigned int len)
-{
-	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processStateUpdate(tptr,type,id,data,len);
-	} catch (std::bad_alloc &exc) {
-		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
-	} catch ( ... ) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
-	}
-}
-
 enum ZT_ResultCode ZT_Node_processWirePacket(
 	ZT_Node *node,
 	void *tptr,
 	uint64_t now,
-	const struct sockaddr_storage *localAddress,
+	int64_t localSocket,
 	const struct sockaddr_storage *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
 	volatile uint64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(tptr,now,localAddress,remoteAddress,packetData,packetLength,nextBackgroundTaskDeadline);
+		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(tptr,now,localSocket,remoteAddress,packetData,packetLength,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {

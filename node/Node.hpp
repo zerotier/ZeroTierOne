@@ -82,16 +82,10 @@ public:
 
 	// Public API Functions ----------------------------------------------------
 
-	ZT_ResultCode processStateUpdate(
-		void *tptr,
-		ZT_StateObjectType type,
-		const uint64_t id[2],
-		const void *data,
-		unsigned int len);
 	ZT_ResultCode processWirePacket(
 		void *tptr,
 		uint64_t now,
-		const struct sockaddr_storage *localAddress,
+		int64_t localSocket,
 		const struct sockaddr_storage *remoteAddress,
 		const void *packetData,
 		unsigned int packetLength,
@@ -129,13 +123,13 @@ public:
 
 	inline uint64_t now() const throw() { return _now; }
 
-	inline bool putPacket(void *tPtr,const InetAddress &localAddress,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0)
+	inline bool putPacket(void *tPtr,const int64_t localSocket,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0)
 	{
 		return (_cb.wirePacketSendFunction(
 			reinterpret_cast<ZT_Node *>(this),
 			_uPtr,
 			tPtr,
-			reinterpret_cast<const struct sockaddr_storage *>(&localAddress),
+			localSocket,
 			reinterpret_cast<const struct sockaddr_storage *>(&addr),
 			data,
 			len,
@@ -205,7 +199,7 @@ public:
 	void postTrace(const char *module,unsigned int line,const char *fmt,...);
 #endif
 
-	bool shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,const InetAddress &localAddress,const InetAddress &remoteAddress);
+	bool shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,const int64_t localSocket,const InetAddress &remoteAddress);
 	inline bool externalPathLookup(void *tPtr,const Address &ztaddr,int family,InetAddress &addr) { return ( (_cb.pathLookupFunction) ? (_cb.pathLookupFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ztaddr.toInt(),family,reinterpret_cast<struct sockaddr_storage *>(&addr)) != 0) : false ); }
 
 	uint64_t prng();

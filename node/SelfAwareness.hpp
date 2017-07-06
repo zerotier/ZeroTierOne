@@ -55,7 +55,7 @@ public:
 	 * @param trusted True if this peer is trusted as an authority to inform us of external address changes
 	 * @param now Current time
 	 */
-	void iam(void *tPtr,const Address &reporter,const InetAddress &receivedOnLocalAddress,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now);
+	void iam(void *tPtr,const Address &reporter,const int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now);
 
 	/**
 	 * Clean up database periodically
@@ -75,15 +75,15 @@ private:
 	struct PhySurfaceKey
 	{
 		Address reporter;
-		InetAddress receivedOnLocalAddress;
+		int64_t receivedOnLocalSocket;
 		InetAddress reporterPhysicalAddress;
 		InetAddress::IpScope scope;
 
 		PhySurfaceKey() : reporter(),scope(InetAddress::IP_SCOPE_NONE) {}
-		PhySurfaceKey(const Address &r,const InetAddress &rol,const InetAddress &ra,InetAddress::IpScope s) : reporter(r),receivedOnLocalAddress(rol),reporterPhysicalAddress(ra),scope(s) {}
+		PhySurfaceKey(const Address &r,const int64_t rol,const InetAddress &ra,InetAddress::IpScope s) : reporter(r),receivedOnLocalSocket(rol),reporterPhysicalAddress(ra),scope(s) {}
 
-		inline unsigned long hashCode() const throw() { return ((unsigned long)reporter.toInt() + (unsigned long)scope); }
-		inline bool operator==(const PhySurfaceKey &k) const throw() { return ((reporter == k.reporter)&&(receivedOnLocalAddress == k.receivedOnLocalAddress)&&(reporterPhysicalAddress == k.reporterPhysicalAddress)&&(scope == k.scope)); }
+		inline unsigned long hashCode() const { return ((unsigned long)reporter.toInt() + (unsigned long)scope); }
+		inline bool operator==(const PhySurfaceKey &k) const { return ((reporter == k.reporter)&&(receivedOnLocalSocket == k.receivedOnLocalSocket)&&(reporterPhysicalAddress == k.reporterPhysicalAddress)&&(scope == k.scope)); }
 	};
 	struct PhySurfaceEntry
 	{

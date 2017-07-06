@@ -68,12 +68,12 @@ public:
 	 * Called when a packet is received from the real network
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param localAddr Local interface address
+	 * @param localSocket Local I/O socket as supplied by external code
 	 * @param fromAddr Internet IP address of origin
 	 * @param data Packet data
 	 * @param len Packet length
 	 */
-	void onRemotePacket(void *tPtr,const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len);
+	void onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddress &fromAddr,const void *data,unsigned int len);
 
 	/**
 	 * Called when a packet comes from a local Ethernet tap

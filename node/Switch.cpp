@@ -71,12 +71,12 @@ Switch::Switch(const RuntimeEnvironment *renv) :
 {
 }
 
-void Switch::onRemotePacket(void *tPtr,const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len)
+void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddress &fromAddr,const void *data,unsigned int len)
 {
 	try {
 		const uint64_t now = RR->node->now();
 
-		SharedPtr<Path> path(RR->topology->getPath(localAddr,fromAddr));
+		SharedPtr<Path> path(RR->topology->getPath(localSocket,fromAddr));
 		path->received(now);
 
 		if (len == 13) {
@@ -88,7 +88,7 @@ void Switch::onRemotePacket(void *tPtr,const InetAddress &localAddr,const InetAd
 			const Address beaconAddr(reinterpret_cast<const char *>(data) + 8,5);
 			if (beaconAddr == RR->identity.address())
 				return;
-			if (!RR->node->shouldUsePathForZeroTierTraffic(tPtr,beaconAddr,localAddr,fromAddr))
+			if (!RR->node->shouldUsePathForZeroTierTraffic(tPtr,beaconAddr,localSocket,fromAddr))
 				return;
 			const SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,beaconAddr));
 			if (peer) { // we'll only respond to beacons from known peers
@@ -752,7 +752,7 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 		viaPath = peer->getBestPath(now,false);
 		if ( (viaPath) && (!viaPath->alive(now)) && (!RR->topology->isUpstream(peer->identity())) ) {
 			if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) * 4,(uint64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL)) {
-				peer->attemptToContactAt(tPtr,viaPath->localAddress(),viaPath->address(),now,false,viaPath->nextOutgoingCounter());
+				peer->attemptToContactAt(tPtr,viaPath->localSocket(),viaPath->address(),now,false,viaPath->nextOutgoingCounter());
 				viaPath->sent(now);
 			}
 			viaPath.zero();

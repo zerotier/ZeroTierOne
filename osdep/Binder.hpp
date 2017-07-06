@@ -88,11 +88,7 @@ class Binder : NonCopyable
 private:
 	struct _Binding
 	{
-		_Binding() :
-			udpSock((PhySocket *)0),
-			tcpListenSock((PhySocket *)0),
-			address() {}
-
+		_Binding() : udpSock((PhySocket *)0),tcpListenSock((PhySocket *)0) {}
 		PhySocket *udpSock;
 		PhySocket *tcpListenSock;
 		InetAddress address;
@@ -374,93 +370,6 @@ public:
 	}
 
 	/**
-	 * Send a UDP packet from the specified local interface, or all
-	 *
-	 * Unfortunately even by examining the routing table there is no ultimately
-	 * robust way to tell where we might reach another host that works in all
-	 * environments. As a result, we send packets with null (wildcard) local
-	 * addresses from *every* bound interface.
-	 *
-	 * These are typically initial HELLOs, path probes, etc., since normal
-	 * conversations will have a local endpoint address. So the cost is low and
-	 * if the peer is not reachable via that route then the packet will go
-	 * nowhere and nothing will happen.
-	 *
-	 * It will of course only send via interface bindings of the same socket
-	 * family. No point in sending V4 via V6 or vice versa.
-	 *
-	 * In any case on most hosts there's only one or two interfaces that we
-	 * will use, so none of this is particularly costly.
-	 *
-	 * @param local Local interface address or null address for 'all'
-	 * @param remote Remote address
-	 * @param data Data to send
-	 * @param len Length of data
-	 * @param v4ttl If non-zero, send this packet with the specified IP TTL (IPv4 only)
-	 * @return -1 == local doesn't match any bound address, 0 == send failure, 1 == send successful
-	 */
-	template<typename PHY_HANDLER_TYPE>
-	inline int udpSend(Phy<PHY_HANDLER_TYPE> &phy,const InetAddress &local,const InetAddress &remote,const void *data,unsigned int len,unsigned int v4ttl = 0) const
-	{
-		PhySocket *s;
-		typename std::vector<_Binding>::const_iterator i;
-		int result;
-		Mutex::Lock _l(_lock);
-
-		if (remote.ss_family == AF_INET) {
-			if (local) {
-				for(i=_bindings.begin();i!=_bindings.end();++i) {
-					if (
-					     (i->address.ss_family == AF_INET) &&
-					     (reinterpret_cast<const struct sockaddr_in *>(&(i->address))->sin_port == reinterpret_cast<const struct sockaddr_in *>(&local)->sin_port) &&
-					     (reinterpret_cast<const struct sockaddr_in *>(&(i->address))->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in *>(&local)->sin_addr.s_addr)
-					   )
-					{
-						s = i->udpSock;
-						goto Binder_send_packet;
-					}
-				}
-			} else {
-				for(i=_bindings.begin();i!=_bindings.end();++i) {
-					if (i->address.ss_family == AF_INET) {
-						s = i->udpSock;
-						goto Binder_send_packet;
-					}
-				}
-			}
-		} else {
-			if (local) {
-				for(i=_bindings.begin();i!=_bindings.end();++i) {
-					if (
-					     (i->address.ss_family == AF_INET6) &&
-					     (reinterpret_cast<const struct sockaddr_in6 *>(&(i->address))->sin6_port == reinterpret_cast<const struct sockaddr_in6 *>(&local)->sin6_port) &&
-					     (!memcmp(reinterpret_cast<const struct sockaddr_in6 *>(&(i->address))->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&local)->sin6_addr.s6_addr,16))
-					   )
-					{
-						s = i->udpSock;
-						goto Binder_send_packet;
-					}
-				}
-			} else {
-				for(i=_bindings.begin();i!=_bindings.end();++i) {
-					if (i->address.ss_family == AF_INET6) {
-						s = i->udpSock;
-						goto Binder_send_packet;
-					}
-				}
-			}
-		}
-
-		return -1;
-
-Binder_send_packet:
-		if (v4ttl) phy.setIp4UdpTtl(s,v4ttl);
-		result = (int)phy.udpSend(s,reinterpret_cast<const struct sockaddr *>(&remote),data,len);
-		if (v4ttl) phy.setIp4UdpTtl(s,255);
-		return result;
-	}
-
-	/**
 	 * @return All currently bound local interface addresses
 	 */
 	inline std::vector<InetAddress> allBoundLocalInterfaceAddresses() const
@@ -470,6 +379,22 @@ Binder_send_packet:
 		for(std::vector<_Binding>::const_iterator b(_bindings.begin());b!=_bindings.end();++b)
 			aa.push_back(b->address);
 		return aa;
+	}
+
+	/**
+	 * Send from all bound UDP sockets
+	 */
+	template<typename PHY_HANDLER_TYPE>
+	inline bool udpSendAll(Phy<PHY_HANDLER_TYPE> &phy,const struct sockaddr_storage *addr,const void *data,unsigned int len,unsigned int ttl)
+	{
+		bool r = false;
+		Mutex::Lock _l(_lock);
+		for(std::vector<_Binding>::const_iterator b(_bindings.begin());b!=_bindings.end();++b) {
+			if (ttl) phy.setIp4UdpTtl(b->udpSock,ttl);
+			if (phy.udpSend(b->udpSock,(const struct sockaddr *)addr,data,len)) r = true;
+			if (ttl) phy.setIp4UdpTtl(b->udpSock,255);
+		}
+		return r;
 	}
 
 	/**

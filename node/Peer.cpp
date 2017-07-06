@@ -154,25 +154,21 @@ void Peer::received(
 			if ((path->address().ss_family == AF_INET)&&(_v4Path.p)) {
 				const struct sockaddr_in *const r = reinterpret_cast<const struct sockaddr_in *>(&(path->address()));
 				const struct sockaddr_in *const l = reinterpret_cast<const struct sockaddr_in *>(&(_v4Path.p->address()));
-				const struct sockaddr_in *const rl = reinterpret_cast<const struct sockaddr_in *>(&(path->localAddress()));
-				const struct sockaddr_in *const ll = reinterpret_cast<const struct sockaddr_in *>(&(_v4Path.p->localAddress()));
-				if ((r->sin_addr.s_addr == l->sin_addr.s_addr)&&(r->sin_port == l->sin_port)&&(rl->sin_addr.s_addr == ll->sin_addr.s_addr)&&(rl->sin_port == ll->sin_port)) {
+				if ((r->sin_addr.s_addr == l->sin_addr.s_addr)&&(r->sin_port == l->sin_port)&&(path->localSocket() == _v4Path.p->localSocket())) {
 					_v4Path.lr = now;
 					pathAlreadyKnown = true;
 				}
 			} else if ((path->address().ss_family == AF_INET6)&&(_v6Path.p)) {
 				const struct sockaddr_in6 *const r = reinterpret_cast<const struct sockaddr_in6 *>(&(path->address()));
 				const struct sockaddr_in6 *const l = reinterpret_cast<const struct sockaddr_in6 *>(&(_v6Path.p->address()));
-				const struct sockaddr_in6 *const rl = reinterpret_cast<const struct sockaddr_in6 *>(&(path->localAddress()));
-				const struct sockaddr_in6 *const ll = reinterpret_cast<const struct sockaddr_in6 *>(&(_v6Path.p->localAddress()));
-				if ((!memcmp(r->sin6_addr.s6_addr,l->sin6_addr.s6_addr,16))&&(r->sin6_port == l->sin6_port)&&(!memcmp(rl->sin6_addr.s6_addr,ll->sin6_addr.s6_addr,16))&&(rl->sin6_port == ll->sin6_port)) {
+				if ((!memcmp(r->sin6_addr.s6_addr,l->sin6_addr.s6_addr,16))&&(r->sin6_port == l->sin6_port)&&(path->localSocket() == _v6Path.p->localSocket())) {
 					_v6Path.lr = now;
 					pathAlreadyKnown = true;
 				}
 			}
 		}
 
-		if ( (!pathAlreadyKnown) && (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),path->localAddress(),path->address())) ) {
+		if ( (!pathAlreadyKnown) && (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),path->localSocket(),path->address())) ) {
 			Mutex::Lock _l(_paths_m);
 			_PeerPath *potentialNewPeerPath = (_PeerPath *)0;
 			if (path->address().ss_family == AF_INET) {
@@ -191,7 +187,7 @@ void Peer::received(
 					_lastWroteState = 0; // force state write now
 				} else {
 					TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),path->address().toString().c_str());
-					attemptToContactAt(tPtr,path->localAddress(),path->address(),now,true,path->nextOutgoingCounter());
+					attemptToContactAt(tPtr,path->localSocket(),path->address(),now,true,path->nextOutgoingCounter());
 					path->sent(now);
 				}
 			}
@@ -318,7 +314,7 @@ SharedPtr<Path> Peer::getBestPath(uint64_t now,bool includeExpired)
 	return SharedPtr<Path>();
 }
 
-void Peer::sendHELLO(void *tPtr,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int counter)
+void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,uint64_t now,unsigned int counter)
 {
 	Packet outp(_id.address(),RR->identity.address(),Packet::VERB_HELLO);
 
@@ -360,21 +356,21 @@ void Peer::sendHELLO(void *tPtr,const InetAddress &localAddr,const InetAddress &
 
 	if (atAddress) {
 		outp.armor(_key,false,counter); // false == don't encrypt full payload, but add MAC
-		RR->node->putPacket(tPtr,localAddr,atAddress,outp.data(),outp.size());
+		RR->node->putPacket(tPtr,localSocket,atAddress,outp.data(),outp.size());
 	} else {
 		RR->sw->send(tPtr,outp,false); // false == don't encrypt full payload, but add MAC
 	}
 }
 
-void Peer::attemptToContactAt(void *tPtr,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,bool sendFullHello,unsigned int counter)
+void Peer::attemptToContactAt(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,uint64_t now,bool sendFullHello,unsigned int counter)
 {
 	if ( (!sendFullHello) && (_vProto >= 5) && (!((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0))) ) {
 		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
 		RR->node->expectReplyTo(outp.packetId());
 		outp.armor(_key,true,counter);
-		RR->node->putPacket(tPtr,localAddr,atAddress,outp.data(),outp.size());
+		RR->node->putPacket(tPtr,localSocket,atAddress,outp.data(),outp.size());
 	} else {
-		sendHELLO(tPtr,localAddr,atAddress,now,counter);
+		sendHELLO(tPtr,localSocket,atAddress,now,counter);
 	}
 }
 
@@ -402,13 +398,13 @@ bool Peer::doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily)
 
 		if (v6lr > v4lr) {
 			if ( ((now - _v6Path.lr) >= ZT_PEER_PING_PERIOD) || (_v6Path.p->needsHeartbeat(now)) ) {
-				attemptToContactAt(tPtr,_v6Path.p->localAddress(),_v6Path.p->address(),now,false,_v6Path.p->nextOutgoingCounter());
+				attemptToContactAt(tPtr,_v6Path.p->localSocket(),_v6Path.p->address(),now,false,_v6Path.p->nextOutgoingCounter());
 				_v6Path.p->sent(now);
 				return true;
 			}
 		} else if (v4lr) {
 			if ( ((now - _v4Path.lr) >= ZT_PEER_PING_PERIOD) || (_v4Path.p->needsHeartbeat(now)) ) {
-				attemptToContactAt(tPtr,_v4Path.p->localAddress(),_v4Path.p->address(),now,false,_v4Path.p->nextOutgoingCounter());
+				attemptToContactAt(tPtr,_v4Path.p->localSocket(),_v4Path.p->address(),now,false,_v4Path.p->nextOutgoingCounter());
 				_v4Path.p->sent(now);
 				return true;
 			}
@@ -416,13 +412,13 @@ bool Peer::doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily)
 	} else {
 		if ( (inetAddressFamily == AF_INET) && ((now - _v4Path.lr) < ZT_PEER_PATH_EXPIRATION) ) {
 			if ( ((now - _v4Path.lr) >= ZT_PEER_PING_PERIOD) || (_v4Path.p->needsHeartbeat(now)) ) {
-				attemptToContactAt(tPtr,_v4Path.p->localAddress(),_v4Path.p->address(),now,false,_v4Path.p->nextOutgoingCounter());
+				attemptToContactAt(tPtr,_v4Path.p->localSocket(),_v4Path.p->address(),now,false,_v4Path.p->nextOutgoingCounter());
 				_v4Path.p->sent(now);
 				return true;
 			}
 		} else if ( (inetAddressFamily == AF_INET6) && ((now - _v6Path.lr) < ZT_PEER_PATH_EXPIRATION) ) {
 			if ( ((now - _v6Path.lr) >= ZT_PEER_PING_PERIOD) || (_v6Path.p->needsHeartbeat(now)) ) {
-				attemptToContactAt(tPtr,_v6Path.p->localAddress(),_v6Path.p->address(),now,false,_v6Path.p->nextOutgoingCounter());
+				attemptToContactAt(tPtr,_v6Path.p->localSocket(),_v6Path.p->address(),now,false,_v6Path.p->nextOutgoingCounter());
 				_v6Path.p->sent(now);
 				return true;
 			}
@@ -456,7 +452,6 @@ void Peer::writeState(void *tPtr,const uint64_t now)
 				b.append(_v4Path.p->lastIn());
 				b.append(_v4Path.p->lastTrustEstablishedPacketReceived());
 				_v4Path.p->address().serialize(b);
-				_v4Path.p->localAddress().serialize(b);
 			}
 			if (_v6Path.lr) {
 				b.append(_v6Path.lr);
@@ -464,7 +459,6 @@ void Peer::writeState(void *tPtr,const uint64_t now)
 				b.append(_v6Path.p->lastIn());
 				b.append(_v6Path.p->lastTrustEstablishedPacketReceived());
 				_v6Path.p->address().serialize(b);
-				_v6Path.p->localAddress().serialize(b);
 			}
 		}
 
@@ -491,7 +485,7 @@ void Peer::writeState(void *tPtr,const uint64_t now)
 
 		uint64_t tmp[2];
 		tmp[0] = _id.address().toInt(); tmp[1] = 0;
-		RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_PEER_STATE,tmp,b.data(),b.size());
+		//RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_PEER_STATE,tmp,b.data(),b.size());
 
 		_lastWroteState = now;
 	} catch ( ... ) {} // sanity check, should not be possible
@@ -522,22 +516,19 @@ bool Peer::applyStateUpdate(const void *data,unsigned int len)
 				const uint64_t lastOut = b.at<uint64_t>(ptr); ptr += 8;
 				const uint64_t lastIn = b.at<uint64_t>(ptr); ptr += 8;
 				const uint64_t lastTrustEstablishedPacketReceived = b.at<uint64_t>(ptr); ptr += 8;
-				InetAddress addr,localAddr;
+				InetAddress addr;
 				ptr += addr.deserialize(b,ptr);
-				ptr += localAddr.deserialize(b,ptr);
-				if (addr.ss_family == localAddr.ss_family) {
-					_PeerPath *p = (_PeerPath *)0;
-					switch(addr.ss_family) {
-						case AF_INET: p = &_v4Path; break;
-						case AF_INET6: p = &_v6Path; break;
+				_PeerPath *p = (_PeerPath *)0;
+				switch(addr.ss_family) {
+					case AF_INET: p = &_v4Path; break;
+					case AF_INET6: p = &_v6Path; break;
+				}
+				if (p) {
+					if ( (!p->p) || (p->p->address() != addr) ) {
+						p->p = RR->topology->getPath(-1,addr);
 					}
-					if (p) {
-						if ( (!p->p) || ((p->p->address() != addr)||(p->p->localAddress() != localAddr)) ) {
-							p->p = RR->topology->getPath(localAddr,addr);
-						}
-						p->lr = lr;
-						p->p->updateFromRemoteState(lastOut,lastIn,lastTrustEstablishedPacketReceived);
-					}
+					p->lr = lr;
+					p->p->updateFromRemoteState(lastOut,lastIn,lastTrustEstablishedPacketReceived);
 				}
 			}
 		}

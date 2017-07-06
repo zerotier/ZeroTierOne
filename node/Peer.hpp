@@ -154,12 +154,12 @@ public:
 	 * No statistics or sent times are updated here.
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param localAddr Local address
+	 * @param localSocket Local source socket
 	 * @param atAddress Destination address
 	 * @param now Current time
 	 * @param counter Outgoing packet counter
 	 */
-	void sendHELLO(void *tPtr,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int counter);
+	void sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,uint64_t now,unsigned int counter);
 
 	/**
 	 * Send ECHO (or HELLO for older peers) to this peer at the given address
@@ -167,13 +167,13 @@ public:
 	 * No statistics or sent times are updated here.
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param localAddr Local address
+	 * @param localSocket Local source socket
 	 * @param atAddress Destination address
 	 * @param now Current time
 	 * @param sendFullHello If true, always send a full HELLO instead of just an ECHO
 	 * @param counter Outgoing packet counter
 	 */
-	void attemptToContactAt(void *tPtr,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,bool sendFullHello,unsigned int counter);
+	void attemptToContactAt(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,uint64_t now,bool sendFullHello,unsigned int counter);
 
 	/**
 	 * Try a memorized or statically defined path if any are known
@@ -227,11 +227,11 @@ public:
 	{
 		Mutex::Lock _l(_paths_m);
 		if ((inetAddressFamily == AF_INET)&&(_v4Path.lr)&&(_v4Path.p->address().ipScope() == scope)) {
-			attemptToContactAt(tPtr,_v4Path.p->localAddress(),_v4Path.p->address(),now,false,_v4Path.p->nextOutgoingCounter());
+			attemptToContactAt(tPtr,_v4Path.p->localSocket(),_v4Path.p->address(),now,false,_v4Path.p->nextOutgoingCounter());
 			_v4Path.p->sent(now);
 			_v4Path.lr = 0; // path will not be used unless it speaks again
 		} else if ((inetAddressFamily == AF_INET6)&&(_v6Path.lr)&&(_v6Path.p->address().ipScope() == scope)) {
-			attemptToContactAt(tPtr,_v6Path.p->localAddress(),_v6Path.p->address(),now,false,_v6Path.p->nextOutgoingCounter());
+			attemptToContactAt(tPtr,_v6Path.p->localSocket(),_v6Path.p->address(),now,false,_v6Path.p->nextOutgoingCounter());
 			_v6Path.p->sent(now);
 			_v6Path.lr = 0; // path will not be used unless it speaks again
 		}

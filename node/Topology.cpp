@@ -125,10 +125,11 @@ SharedPtr<Peer> Topology::getPeer(void *tPtr,const Address &zta)
 			return *ap;
 	}
 
+	/*
 	try {
 		char buf[ZT_PEER_MAX_SERIALIZED_STATE_SIZE];
 		uint64_t idbuf[2]; idbuf[0] = zta.toInt(); idbuf[1] = 0;
-		int len = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER_STATE,idbuf,buf,(unsigned int)sizeof(buf));
+		int len = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER,idbuf,buf,(unsigned int)sizeof(buf));
 		if (len > 0) {
 			Mutex::Lock _l(_peers_m);
 			SharedPtr<Peer> &ap = _peers[zta];
@@ -140,6 +141,7 @@ SharedPtr<Peer> Topology::getPeer(void *tPtr,const Address &zta)
 			return ap;
 		}
 	} catch ( ... ) {} // ignore invalid identities or other strage failures
+	*/
 
 	return SharedPtr<Peer>();
 }
