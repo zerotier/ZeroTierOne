@@ -33,7 +33,7 @@ ZeroTier network controllers can easily be run in Docker or other container syst
 
 The controller API is hosted via the same JSON API endpoint that ZeroTier One uses for local control (usually at 127.0.0.1 port 9993). All controller options are routed under the `/controller` base path.
 
-The controller microservice does not implement any fine-grained access control (authentication is via authtoken.secret just like the regular JSON API) or other complex mangement features. It just takes network and network member configurations and reponds to controller queries. We have an enterprise product called [ZeroTier Central](https://my.zerotier.com/) that we host as a service (and that companies can license to self-host) that does this.
+The controller microservice does not implement any fine-grained access control (authentication is via authtoken.secret, simply append the value from authtoken.secret file, into a new querystring parameter named "auth" - for example `/controller/network?auth=6hdmozf8k5ds39kabcdefabc`) or other complex mangement features. It just takes network and network member configurations and reponds to controller queries. We have an enterprise product called [ZeroTier Central](https://my.zerotier.com/) that we host as a service (and that companies can license to self-host) that does this.
 
 All working network IDs on a controller must begin with the controller's ZeroTier address. The API will *allow* "foreign" networks to be added but the controller will have no way of doing anything with them since nobody will know to query it. (In the future we might support secondaries, which would make this relevant.)
 
@@ -68,6 +68,12 @@ This returns an array of 16-digit hexadecimal network IDs.
 By making queries to this path you can create, configure, and delete networks. DELETE is final, so don't do it unless you really mean it.
 
 When POSTing new networks take care that their IDs are not in use, otherwise you may overwrite an existing one. To create a new network with a random unused ID, POST to `/controller/network/##########______`. The #'s are the controller's 10-digit ZeroTier address and they're followed by six underscores. Check the `nwid` field of the returned JSON object for your network's newly allocated ID. Subsequent POSTs to this network must refer to its actual path.
+
+Example:
+
+`curl -X POST --header "X-ZT1-Auth: secret" -d '{"name":"my network"}' http://localhost:9993/controller/network/305f406058______`
+
+**Network object format:**
 
 | Field                 | Type          | Description                                       | Writable |
 | --------------------- | ------------- | ------------------------------------------------- | -------- |
