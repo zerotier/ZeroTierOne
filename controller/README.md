@@ -69,6 +69,12 @@ By making queries to this path you can create, configure, and delete networks. D
 
 When POSTing new networks take care that their IDs are not in use, otherwise you may overwrite an existing one. To create a new network with a random unused ID, POST to `/controller/network/##########______`. The #'s are the controller's 10-digit ZeroTier address and they're followed by six underscores. Check the `nwid` field of the returned JSON object for your network's newly allocated ID. Subsequent POSTs to this network must refer to its actual path.
 
+Example:
+
+`curl -X POST --header "X-ZT1-Auth: secret" -d '{"name":"my network"}' http://localhost:9993/controller/network/305f406058______`
+
+**Network object format:**
+
 | Field                 | Type          | Description                                       | Writable |
 | --------------------- | ------------- | ------------------------------------------------- | -------- |
 | id                    | string        | 16-digit network ID                               | no       |
