@@ -57,6 +57,35 @@
 
 namespace ZeroTier {
 
+static int _compareVersion(unsigned int maj1,unsigned int min1,unsigned int rev1,unsigned int b1,unsigned int maj2,unsigned int min2,unsigned int rev2,unsigned int b2)
+{
+	if (maj1 > maj2) {
+		return 1;
+	} else if (maj1 < maj2) {
+		return -1;
+	} else {
+		if (min1 > min2) {
+			return 1;
+		} else if (min1 < min2) {
+			return -1;
+		} else {
+			if (rev1 > rev2) {
+				return 1;
+			} else if (rev1 < rev2) {
+				return -1;
+			} else {
+				if (b1 > b2) {
+					return 1;
+				} else if (b1 < b2) {
+					return -1;
+				} else {
+					return 0;
+				}
+			}
+		}
+	}
+}
+
 SoftwareUpdater::SoftwareUpdater(Node &node,const std::string &homePath) :
 	_node(node),
 	_lastCheckTime(0),
@@ -170,7 +199,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 									const unsigned int dvMin = (unsigned int)OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR],0);
 									const unsigned int dvRev = (unsigned int)OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION],0);
 									const unsigned int dvBld = (unsigned int)OSUtils::jsonInt(d->second.meta[ZT_SOFTWARE_UPDATE_JSON_VERSION_BUILD],0);
-									if (Utils::compareVersion(dvMaj,dvMin,dvRev,dvBld,bestVMaj,bestVMin,bestVRev,bestVBld) > 0) {
+									if (_compareVersion(dvMaj,dvMin,dvRev,dvBld,bestVMaj,bestVMin,bestVRev,bestVBld) > 0) {
 										latest = &(d->second.meta);
 										bestVMaj = dvMaj;
 										bestVMin = dvMin;
@@ -194,7 +223,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 					} else { // VERB_LATEST
 
 						if ((origin == ZT_SOFTWARE_UPDATE_SERVICE)&&
-							  (Utils::compareVersion(rvMaj,rvMin,rvRev,rvBld,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION,ZEROTIER_ONE_VERSION_BUILD) > 0)&&
+							  (_compareVersion(rvMaj,rvMin,rvRev,rvBld,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION,ZEROTIER_ONE_VERSION_BUILD) > 0)&&
 							  (OSUtils::jsonString(req[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNED_BY],"") == ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY)) {
 							const unsigned long len = (unsigned long)OSUtils::jsonInt(req[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIZE],0);
 							const std::string hash = OSUtils::jsonBinFromHex(req[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH]);

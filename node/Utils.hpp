@@ -228,7 +228,6 @@ public:
 	 * @param saveptr Pointer to a char * for temporary reentrant storage
 	 */
 	static inline char *stok(char *str,const char *delim,char **saveptr)
-		throw()
 	{
 #ifdef __WINDOWS__
 		return strtok_s(str,delim,saveptr);
@@ -237,30 +236,11 @@ public:
 #endif
 	}
 
-	// String to number converters -- defined here to permit portability
-	// ifdefs for platforms that lack some of the strtoXX functions.
-	static inline unsigned int strToUInt(const char *s)
-		throw()
-	{
-		return (unsigned int)strtoul(s,(char **)0,10);
-	}
-	static inline int strToInt(const char *s)
-		throw()
-	{
-		return (int)strtol(s,(char **)0,10);
-	}
-	static inline unsigned long strToULong(const char *s)
-		throw()
-	{
-		return strtoul(s,(char **)0,10);
-	}
-	static inline long strToLong(const char *s)
-		throw()
-	{
-		return strtol(s,(char **)0,10);
-	}
+	static inline unsigned int strToUInt(const char *s) { return (unsigned int)strtoul(s,(char **)0,10); }
+	static inline int strToInt(const char *s) { return (int)strtol(s,(char **)0,10); }
+	static inline unsigned long strToULong(const char *s) { return strtoul(s,(char **)0,10); }
+	static inline long strToLong(const char *s) { return strtol(s,(char **)0,10); }
 	static inline unsigned long long strToU64(const char *s)
-		throw()
 	{
 #ifdef __WINDOWS__
 		return (unsigned long long)_strtoui64(s,(char **)0,10);
@@ -269,7 +249,6 @@ public:
 #endif
 	}
 	static inline long long strTo64(const char *s)
-		throw()
 	{
 #ifdef __WINDOWS__
 		return (long long)_strtoi64(s,(char **)0,10);
@@ -277,28 +256,11 @@ public:
 		return strtoll(s,(char **)0,10);
 #endif
 	}
-	static inline unsigned int hexStrToUInt(const char *s)
-		throw()
-	{
-		return (unsigned int)strtoul(s,(char **)0,16);
-	}
-	static inline int hexStrToInt(const char *s)
-		throw()
-	{
-		return (int)strtol(s,(char **)0,16);
-	}
-	static inline unsigned long hexStrToULong(const char *s)
-		throw()
-	{
-		return strtoul(s,(char **)0,16);
-	}
-	static inline long hexStrToLong(const char *s)
-		throw()
-	{
-		return strtol(s,(char **)0,16);
-	}
+	static inline unsigned int hexStrToUInt(const char *s) { return (unsigned int)strtoul(s,(char **)0,16); }
+	static inline int hexStrToInt(const char *s) { return (int)strtol(s,(char **)0,16); }
+	static inline unsigned long hexStrToULong(const char *s) { return strtoul(s,(char **)0,16); }
+	static inline long hexStrToLong(const char *s) { return strtol(s,(char **)0,16); }
 	static inline unsigned long long hexStrToU64(const char *s)
-		throw()
 	{
 #ifdef __WINDOWS__
 		return (unsigned long long)_strtoui64(s,(char **)0,16);
@@ -307,18 +269,12 @@ public:
 #endif
 	}
 	static inline long long hexStrTo64(const char *s)
-		throw()
 	{
 #ifdef __WINDOWS__
 		return (long long)_strtoi64(s,(char **)0,16);
 #else
 		return strtoll(s,(char **)0,16);
 #endif
-	}
-	static inline double strToDouble(const char *s)
-		throw()
-	{
-		return strtod(s,(char **)0);
 	}
 
 	/**
@@ -332,7 +288,23 @@ public:
 	 * @param src Source string (if NULL, dest will receive a zero-length string and true is returned)
 	 * @return True on success, false on overflow (buffer will still be 0-terminated)
 	 */
-	static bool scopy(char *dest,unsigned int len,const char *src);
+	static inline bool scopy(char *dest,unsigned int len,const char *src)
+	{
+		if (!len)
+			return false; // sanity check
+		if (!src) {
+			*dest = (char)0;
+			return true;
+		}
+		char *end = dest + len;
+		while ((*dest++ = *src++)) {
+			if (dest == end) {
+				*(--dest) = (char)0;
+				return false;
+			}
+		}
+		return true;
+	}
 
 	/**
 	 * Count the number of bits set in an integer
@@ -378,14 +350,13 @@ public:
 	}
 
 	// Byte swappers for big/little endian conversion
-	static inline uint8_t hton(uint8_t n) throw() { return n; }
-	static inline int8_t hton(int8_t n) throw() { return n; }
-	static inline uint16_t hton(uint16_t n) throw() { return htons(n); }
-	static inline int16_t hton(int16_t n) throw() { return (int16_t)htons((uint16_t)n); }
-	static inline uint32_t hton(uint32_t n) throw() { return htonl(n); }
-	static inline int32_t hton(int32_t n) throw() { return (int32_t)htonl((uint32_t)n); }
+	static inline uint8_t hton(uint8_t n) { return n; }
+	static inline int8_t hton(int8_t n) { return n; }
+	static inline uint16_t hton(uint16_t n) { return htons(n); }
+	static inline int16_t hton(int16_t n) { return (int16_t)htons((uint16_t)n); }
+	static inline uint32_t hton(uint32_t n) { return htonl(n); }
+	static inline int32_t hton(int32_t n) { return (int32_t)htonl((uint32_t)n); }
 	static inline uint64_t hton(uint64_t n)
-		throw()
 	{
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #if defined(__GNUC__) && (!defined(__OpenBSD__))
@@ -406,16 +377,15 @@ public:
 		return n;
 #endif
 	}
-	static inline int64_t hton(int64_t n) throw() { return (int64_t)hton((uint64_t)n); }
+	static inline int64_t hton(int64_t n) { return (int64_t)hton((uint64_t)n); }
 
-	static inline uint8_t ntoh(uint8_t n) throw() { return n; }
-	static inline int8_t ntoh(int8_t n) throw() { return n; }
-	static inline uint16_t ntoh(uint16_t n) throw() { return ntohs(n); }
-	static inline int16_t ntoh(int16_t n) throw() { return (int16_t)ntohs((uint16_t)n); }
-	static inline uint32_t ntoh(uint32_t n) throw() { return ntohl(n); }
-	static inline int32_t ntoh(int32_t n) throw() { return (int32_t)ntohl((uint32_t)n); }
+	static inline uint8_t ntoh(uint8_t n) { return n; }
+	static inline int8_t ntoh(int8_t n) { return n; }
+	static inline uint16_t ntoh(uint16_t n) { return ntohs(n); }
+	static inline int16_t ntoh(int16_t n) { return (int16_t)ntohs((uint16_t)n); }
+	static inline uint32_t ntoh(uint32_t n) { return ntohl(n); }
+	static inline int32_t ntoh(int32_t n) { return (int32_t)ntohl((uint32_t)n); }
 	static inline uint64_t ntoh(uint64_t n)
-		throw()
 	{
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #if defined(__GNUC__) && !defined(__OpenBSD__)
@@ -436,39 +406,7 @@ public:
 		return n;
 #endif
 	}
-	static inline int64_t ntoh(int64_t n) throw() { return (int64_t)ntoh((uint64_t)n); }
-
-	/**
-	 * Compare Peer version tuples
-	 *
-	 * @return -1, 0, or 1 based on whether first tuple is less than, equal to, or greater than second
-	 */
-	static inline int compareVersion(unsigned int maj1,unsigned int min1,unsigned int rev1,unsigned int b1,unsigned int maj2,unsigned int min2,unsigned int rev2,unsigned int b2)
-	{
-		if (maj1 > maj2)
-			return 1;
-		else if (maj1 < maj2)
-			return -1;
-		else {
-			if (min1 > min2)
-				return 1;
-			else if (min1 < min2)
-				return -1;
-			else {
-				if (rev1 > rev2)
-					return 1;
-				else if (rev1 < rev2)
-					return -1;
-				else {
-					if (b1 > b2)
-						return 1;
-					else if (b1 < b2)
-						return -1;
-					else return 0;
-				}
-			}
-		}
-	}
+	static inline int64_t ntoh(int64_t n) { return (int64_t)ntoh((uint64_t)n); }
 
 	/**
 	 * Hexadecimal characters 0-f

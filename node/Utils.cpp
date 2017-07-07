@@ -55,6 +55,15 @@ namespace ZeroTier {
 
 const char Utils::HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
 
+// Crazy hack to force memory to be securely zeroed in spite of the best efforts of optimizing compilers.
+static void _Utils_doBurn(volatile uint8_t *ptr,unsigned int len)
+{
+	volatile uint8_t *const end = ptr + len;
+	while (ptr != end) *(ptr++) = (uint8_t)0;
+}
+static void (*volatile _Utils_doBurn_ptr)(volatile uint8_t *,unsigned int) = _Utils_doBurn;
+void Utils::burn(void *ptr,unsigned int len) { (_Utils_doBurn_ptr)((volatile uint8_t *)ptr,len); }
+
 static unsigned long _Utils_itoa(unsigned long n,char *s)
 {
 	if (n == 0)
@@ -75,15 +84,6 @@ char *Utils::decimal(unsigned long n,char s[24])
 	s[_Utils_itoa(n,s)] = (char)0;
 	return s;
 }
-
-// Crazy hack to force memory to be securely zeroed in spite of the best efforts of optimizing compilers.
-static void _Utils_doBurn(volatile uint8_t *ptr,unsigned int len)
-{
-	volatile uint8_t *const end = ptr + len;
-	while (ptr != end) *(ptr++) = (uint8_t)0;
-}
-static void (*volatile _Utils_doBurn_ptr)(volatile uint8_t *,unsigned int) = _Utils_doBurn;
-void Utils::burn(void *ptr,unsigned int len) { (_Utils_doBurn_ptr)((volatile uint8_t *)ptr,len); }
 
 void Utils::getSecureRandom(void *buf,unsigned int bytes)
 {
@@ -169,24 +169,6 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	}
 
 #endif // __WINDOWS__ or not
-}
-
-bool Utils::scopy(char *dest,unsigned int len,const char *src)
-{
-	if (!len)
-		return false; // sanity check
-	if (!src) {
-		*dest = (char)0;
-		return true;
-	}
-	char *end = dest + len;
-	while ((*dest++ = *src++)) {
-		if (dest == end) {
-			*(--dest) = (char)0;
-			return false;
-		}
-	}
-	return true;
 }
 
 } // namespace ZeroTier
