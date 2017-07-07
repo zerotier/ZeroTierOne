@@ -33,6 +33,7 @@
 #include "Network.hpp"
 #include "SelfAwareness.hpp"
 #include "Packet.hpp"
+#include "Trace.hpp"
 
 namespace ZeroTier {
 
@@ -168,22 +169,25 @@ void Peer::received(
 
 		if ( (!pathAlreadyKnown) && (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),path->localSocket(),path->address())) ) {
 			Mutex::Lock _l(_paths_m);
-			_PeerPath *potentialNewPeerPath = (_PeerPath *)0;
+
+			_PeerPath *replacablePath = (_PeerPath *)0;
 			if (path->address().ss_family == AF_INET) {
 				if ( ( (!_v4Path.p) || (!_v4Path.p->alive(now)) || (path->preferenceRank() >= _v4Path.p->preferenceRank()) ) && ( (now - _v4Path.sticky) > ZT_PEER_PATH_EXPIRATION ) ) {
-					potentialNewPeerPath = &_v4Path;
+					replacablePath = &_v4Path;
 				}
 			} else if (path->address().ss_family == AF_INET6) {
 				if ( ( (!_v6Path.p) || (!_v6Path.p->alive(now)) || (path->preferenceRank() >= _v6Path.p->preferenceRank()) ) && ( (now - _v6Path.sticky) > ZT_PEER_PATH_EXPIRATION ) ) {
-					potentialNewPeerPath = &_v6Path;
+					replacablePath = &_v6Path;
 				}
 			}
-			if (potentialNewPeerPath) {
+
+			if (replacablePath) {
 				if (verb == Packet::VERB_OK) {
-					potentialNewPeerPath->lr = now;
-					potentialNewPeerPath->p = path;
+					RR->t->peerLearnedNewPath(*this,replacablePath->p,path,packetId);
+					replacablePath->lr = now;
+					replacablePath->p = path;
 				} else {
-					TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),path->address().toString().c_str());
+					RR->t->peerConfirmingUnknownPath(*this,path,packetId,verb);
 					attemptToContactAt(tPtr,path->localSocket(),path->address(),now,true,path->nextOutgoingCounter());
 					path->sent(now);
 				}
@@ -211,16 +215,6 @@ void Peer::received(
 			}
 
 			if (pathsToPush.size() > 0) {
-#ifdef ZT_TRACE
-				std::string ps;
-				for(std::vector<InetAddress>::const_iterator p(pathsToPush.begin());p!=pathsToPush.end();++p) {
-					if (ps.length() > 0)
-						ps.push_back(',');
-					ps.append(p->toString());
-				}
-				TRACE("pushing %u direct paths to %s: %s",(unsigned int)pathsToPush.size(),_id.address().toString().c_str(),ps.c_str());
-#endif
-
 				std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
 				while (p != pathsToPush.end()) {
 					Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
@@ -424,16 +418,27 @@ bool Peer::doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily)
 
 void Peer::redirect(void *tPtr,const int64_t localSocket,const InetAddress &remoteAddress,const uint64_t now)
 {
-	Mutex::Lock _l(_paths_m);
-	SharedPtr<Path> p(RR->topology->getPath(localSocket,remoteAddress));
-	attemptToContactAt(tPtr,localSocket,remoteAddress,now,true,p->nextOutgoingCounter());
-	if (remoteAddress.ss_family == AF_INET) {
-		_v4Path.p = p;
-		_v4Path.sticky = now;
-	} else if (remoteAddress.ss_family == AF_INET6) {
-		_v6Path.p = p;
-		_v6Path.sticky = now;
+	if ((remoteAddress.ss_family != AF_INET)&&(remoteAddress.ss_family != AF_INET6)) // sanity check
+		return;
+
+	SharedPtr<Path> op;
+	SharedPtr<Path> np(RR->topology->getPath(localSocket,remoteAddress));
+	attemptToContactAt(tPtr,localSocket,remoteAddress,now,true,np->nextOutgoingCounter());
+
+	{
+		Mutex::Lock _l(_paths_m);
+		if (remoteAddress.ss_family == AF_INET) {
+			op = _v4Path.p;
+			_v4Path.p = np;
+			_v4Path.sticky = now;
+		} else if (remoteAddress.ss_family == AF_INET6) {
+			op = _v6Path.p;
+			_v6Path.p = np;
+			_v6Path.sticky = now;
+		}
 	}
+
+	RR->t->peerRedirected(*this,op,np);
 }
 
 } // namespace ZeroTier

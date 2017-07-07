@@ -90,11 +90,6 @@ Topology::Topology(const RuntimeEnvironment *renv,void *tPtr) :
 
 SharedPtr<Peer> Topology::addPeer(void *tPtr,const SharedPtr<Peer> &peer)
 {
-#ifdef ZT_TRACE
-	if ((!peer)||(peer->address() == RR->identity.address()))
-		return SharedPtr<Peer>();
-#endif
-
 	SharedPtr<Peer> np;
 	{
 		Mutex::Lock _l(_peers_m);
@@ -103,16 +98,13 @@ SharedPtr<Peer> Topology::addPeer(void *tPtr,const SharedPtr<Peer> &peer)
 			hp = peer;
 		np = hp;
 	}
-
 	return np;
 }
 
 SharedPtr<Peer> Topology::getPeer(void *tPtr,const Address &zta)
 {
-	if (zta == RR->identity.address()) {
-		TRACE("BUG: ignored attempt to getPeer() for self, returned NULL");
+	if (zta == RR->identity.address())
 		return SharedPtr<Peer>();
-	}
 
 	{
 		Mutex::Lock _l(_peers_m);

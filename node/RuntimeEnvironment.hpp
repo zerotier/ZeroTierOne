@@ -42,7 +42,7 @@ class Node;
 class Multicaster;
 class NetworkController;
 class SelfAwareness;
-class Cluster;
+class Trace;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -93,6 +93,7 @@ public:
 	 * These are constant and never null after startup unless indicated.
 	 */
 
+	Trace *t;
 	Switch *sw;
 	Multicaster *mc;
 	Topology *topology;

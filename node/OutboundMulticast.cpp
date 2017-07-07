@@ -65,18 +65,6 @@ void OutboundMulticast::init(
 
 	if (gatherLimit) flags |= 0x02;
 
-	/*
-	TRACE(">>MC %.16llx INIT %.16llx/%s limit %u gatherLimit %u from %s to %s length %u",
-		(unsigned long long)this,
-		nwid,
-		dest.toString().c_str(),
-		limit,
-		gatherLimit,
-		(src) ? src.toString().c_str() : MAC(RR->identity.address(),nwid).toString().c_str(),
-		dest.toString().c_str(),
-		len);
-	*/
-
 	_packet.setSource(RR->identity.address());
 	_packet.setVerb(Packet::VERB_MULTICAST_FRAME);
 	_packet.append((uint64_t)nwid);
@@ -98,7 +86,6 @@ void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,void *tPtr,const A
 	const SharedPtr<Network> nw(RR->node->network(_nwid));
 	const Address toAddr2(toAddr);
 	if ((nw)&&(nw->filterOutgoingPacket(tPtr,true,RR->identity.address(),toAddr2,_macSrc,_macDest,_frameData,_frameLen,_etherType,0))) {
-		//TRACE(">>MC %.16llx -> %s",(unsigned long long)this,toAddr.toString().c_str());
 		_packet.newInitializationVector();
 		_packet.setDestination(toAddr2);
 		RR->node->expectReplyTo(_packet.packetId());

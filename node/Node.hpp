@@ -48,13 +48,6 @@
 #include "NetworkController.hpp"
 #include "Hashtable.hpp"
 
-#undef TRACE
-#ifdef ZT_TRACE
-#define TRACE(f,...) RR->node->postTrace(__FILE__,__LINE__,f,##__VA_ARGS__)
-#else
-#define TRACE(f,...) {}
-#endif
-
 // Bit mask for "expecting reply" hash
 #define ZT_EXPECTING_REPLIES_BUCKET_MASK1 255
 #define ZT_EXPECTING_REPLIES_BUCKET_MASK2 31

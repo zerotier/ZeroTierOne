@@ -46,6 +46,7 @@
 #include "Identity.hpp"
 #include "SelfAwareness.hpp"
 #include "Network.hpp"
+#include "Trace.hpp"
 
 namespace ZeroTier {
 
@@ -108,6 +109,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 	}
 
 	try {
+		RR->t = new Trace(RR);
 		RR->sw = new Switch(RR);
 		RR->mc = new Multicaster(RR);
 		RR->topology = new Topology(RR,tptr);
@@ -133,6 +135,7 @@ Node::~Node()
 	delete RR->topology;
 	delete RR->mc;
 	delete RR->sw;
+	delete RR->t;
 }
 
 ZT_ResultCode Node::processWirePacket(

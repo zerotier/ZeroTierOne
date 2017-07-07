@@ -39,6 +39,7 @@
 #include "Packet.hpp"
 #include "Peer.hpp"
 #include "Switch.hpp"
+#include "Trace.hpp"
 
 // Entry timeout -- make it fairly long since this is just to prevent stale buildup
 #define ZT_SELFAWARENESS_ENTRY_TIMEOUT 600000
@@ -81,7 +82,7 @@ void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receive
 
 	if ( (trusted) && ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
 		// Changes to external surface reported by trusted peers causes path reset in this scope
-		TRACE("physical address %s for scope %u as seen from %s(%s) differs from %s, resetting paths in scope",myPhysicalAddress.toString().c_str(),(unsigned int)scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str(),entry.mySurface.toString().c_str());
+		RR->t->resettingPathsInScope(reporter,reporterPhysicalAddress,myPhysicalAddress,scope);
 
 		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;

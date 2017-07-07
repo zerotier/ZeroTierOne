@@ -159,6 +159,8 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_REVISION "r"
 // address of member
 #define ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO "id"
+// remote trace target
+#define ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_TARGET "tt"
 // flags(hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_FLAGS "f"
 // integer(hex)
@@ -461,6 +463,11 @@ public:
 	 * Address of device to which this config is issued
 	 */
 	Address issuedTo;
+
+	/**
+	 * If non-NULL, remote traces related to this network are sent here
+	 */
+	Address remoteTraceTarget;
 
 	/**
 	 * Flags (64-bit)

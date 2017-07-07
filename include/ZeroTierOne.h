@@ -29,8 +29,8 @@
  * engine.
  */
 
-#ifndef ZT_ZEROTIERONE_H
-#define ZT_ZEROTIERONE_H
+#ifndef ZT_ZEROTIER_API_H
+#define ZT_ZEROTIER_API_H
 
 #include <stdint.h>
 
@@ -91,6 +91,11 @@ extern "C" {
  * Maximum MTU for ZeroTier virtual networks
  */
 #define ZT_MAX_MTU 10000
+
+/**
+ * Maximum size of a remote trace message's serialized Dictionary
+ */
+#define ZT_MAX_REMOTE_TRACE_SIZE 10000
 
 /**
  * Maximum length of network short name

@@ -43,25 +43,9 @@
 #include "Peer.hpp"
 #include "SelfAwareness.hpp"
 #include "Packet.hpp"
+#include "Trace.hpp"
 
 namespace ZeroTier {
-
-#ifdef ZT_TRACE
-static const char *etherTypeName(const unsigned int etherType)
-{
-	switch(etherType) {
-		case ZT_ETHERTYPE_IPV4:  return "IPV4";
-		case ZT_ETHERTYPE_ARP:   return "ARP";
-		case ZT_ETHERTYPE_RARP:  return "RARP";
-		case ZT_ETHERTYPE_ATALK: return "ATALK";
-		case ZT_ETHERTYPE_AARP:  return "AARP";
-		case ZT_ETHERTYPE_IPX_A: return "IPX_A";
-		case ZT_ETHERTYPE_IPX_B: return "IPX_B";
-		case ZT_ETHERTYPE_IPV6:  return "IPV6";
-	}
-	return "UNKNOWN";
-}
-#endif // ZT_TRACE
 
 Switch::Switch(const RuntimeEnvironment *renv) :
 	RR(renv),
@@ -123,8 +107,6 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 							if (relayTo)
 								relayTo->sendDirect(tPtr,fragment.data(),fragment.size(),now,true);
 						}
-					} else {
-						TRACE("dropped relay [fragment](%s) -> %s, max hops exceeded",fromAddr.toString().c_str(),destination.toString().c_str());
 					}
 				} else {
 					// Fragment looks like ours
@@ -143,7 +125,6 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 
 						if ((!rq->timestamp)||(rq->packetId != fragmentPacketId)) {
 							// No packet found, so we received a fragment without its head.
-							//TRACE("fragment (%u/%u) of %.16llx from %s",fragmentNumber + 1,totalFragments,fragmentPacketId,fromAddr.toString().c_str());
 
 							rq->timestamp = now;
 							rq->packetId = fragmentPacketId;
@@ -153,14 +134,12 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 							rq->complete = false;
 						} else if (!(rq->haveFragments & (1 << fragmentNumber))) {
 							// We have other fragments and maybe the head, so add this one and check
-							//TRACE("fragment (%u/%u) of %.16llx from %s",fragmentNumber + 1,totalFragments,fragmentPacketId,fromAddr.toString().c_str());
 
 							rq->frags[fragmentNumber - 1] = fragment;
 							rq->totalFragments = totalFragments;
 
 							if (Utils::countBits(rq->haveFragments |= (1 << fragmentNumber)) == totalFragments) {
 								// We have all fragments -- assemble and process full Packet
-								//TRACE("packet %.16llx is complete, assembling and processing...",fragmentPacketId);
 
 								for(unsigned int f=1;f<totalFragments;++f)
 									rq->frag0.append(rq->frags[f - 1].payload(),rq->frags[f - 1].payloadLength());
@@ -181,8 +160,6 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 
 				const Address destination(reinterpret_cast<const uint8_t *>(data) + 8,ZT_ADDRESS_LENGTH);
 				const Address source(reinterpret_cast<const uint8_t *>(data) + 13,ZT_ADDRESS_LENGTH);
-
-				//TRACE("<< %.16llx %s -> %s (size: %u)",(unsigned long long)packet->packetId(),source.toString().c_str(),destination.toString().c_str(),packet->size());
 
 				if (source == RR->identity.address())
 					return;
@@ -258,8 +235,6 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 							if (relayTo)
 								relayTo->sendDirect(tPtr,packet.data(),packet.size(),now,true);
 						}
-					} else {
-						TRACE("dropped relay %s(%s) -> %s, max hops exceeded",packet.source().toString().c_str(),fromAddr.toString().c_str(),destination.toString().c_str());
 					}
 				} else if ((reinterpret_cast<const uint8_t *>(data)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED) != 0) {
 					// Packet is the head of a fragmented packet series
@@ -280,7 +255,6 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 
 					if ((!rq->timestamp)||(rq->packetId != packetId)) {
 						// If we have no other fragments yet, create an entry and save the head
-						//TRACE("fragment (0/?) of %.16llx from %s",pid,fromAddr.toString().c_str());
 
 						rq->timestamp = now;
 						rq->packetId = packetId;
@@ -293,7 +267,6 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 
 						if ((rq->totalFragments > 1)&&(Utils::countBits(rq->haveFragments |= 1) == rq->totalFragments)) {
 							// We have all fragments -- assemble and process full Packet
-							//TRACE("packet %.16llx is complete, assembling and processing...",pid);
 
 							rq->frag0.init(data,len,path,now);
 							for(unsigned int f=1;f<rq->totalFragments;++f)
@@ -333,11 +306,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 				// --------------------------------------------------------------------
 			}
 		}
-	} catch (std::exception &ex) {
-		TRACE("dropped packet from %s: unexpected exception: %s",fromAddr.toString().c_str(),ex.what());
-	} catch ( ... ) {
-		TRACE("dropped packet from %s: unexpected exception: (unknown)",fromAddr.toString().c_str());
-	}
+	} catch ( ... ) {} // sanity check, should be caught elsewhere
 }
 
 void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
@@ -349,7 +318,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 	bool fromBridged;
 	if ((fromBridged = (from != network->mac()))) {
 		if (!network->config().permitsBridging(RR->identity.address())) {
-			TRACE("%.16llx: %s -> %s %s not forwarded, bridging disabled or this peer not a bridge",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+			RR->t->outgoingFrameDropped(network,from,to,etherType,vlanId,len,"not a bridge");
 			return;
 		}
 	}
@@ -371,7 +340,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 				multicastGroup = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(((const unsigned char *)data) + 24,4,0));
 			} else if (!network->config().enableBroadcast()) {
 				// Don't transmit broadcasts if this network doesn't want them
-				TRACE("%.16llx: dropped broadcast since ff:ff:ff:ff:ff:ff is not enabled",network->id());
+				RR->t->outgoingFrameDropped(network,from,to,etherType,vlanId,len,"broadcast disabled");
 				return;
 			}
 		} else if ((etherType == ZT_ETHERTYPE_IPV6)&&(len >= (40 + 8 + 16))) {
@@ -424,7 +393,6 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 
 				if ((v6EmbeddedAddress)&&(v6EmbeddedAddress != RR->identity.address())) {
 					const MAC peerMac(v6EmbeddedAddress,network->id());
-					TRACE("IPv6 NDP emulation: %.16llx: forging response for %s/%s",network->id(),v6EmbeddedAddress.toString().c_str(),peerMac.toString().c_str());
 
 					uint8_t adv[72];
 					adv[0] = 0x60; adv[1] = 0x00; adv[2] = 0x00; adv[3] = 0x00;
@@ -460,7 +428,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 
 		// Check this after NDP emulation, since that has to be allowed in exactly this case
 		if (network->config().multicastLimit == 0) {
-			TRACE("%.16llx: dropped multicast: not allowed on network",network->id());
+			RR->t->outgoingFrameDropped(network,from,to,etherType,vlanId,len,"multicast disabled");
 			return;
 		}
 
@@ -471,11 +439,9 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 		if (fromBridged)
 			network->learnBridgedMulticastGroup(tPtr,multicastGroup,RR->node->now());
 
-		//TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),multicastGroup.toString().c_str(),etherTypeName(etherType),len);
-
 		// First pass sets noTee to false, but noTee is set to true in OutboundMulticast to prevent duplicates.
 		if (!network->filterOutgoingPacket(tPtr,false,RR->identity.address(),Address(),from,to,(const uint8_t *)data,len,etherType,vlanId)) {
-			TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+			RR->t->outgoingFrameDropped(network,from,to,etherType,vlanId,len,"filter blocked");
 			return;
 		}
 
@@ -501,7 +467,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 		SharedPtr<Peer> toPeer(RR->topology->getPeer(tPtr,toZT));
 
 		if (!network->filterOutgoingPacket(tPtr,false,RR->identity.address(),toZT,from,to,(const uint8_t *)data,len,etherType,vlanId)) {
-			TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+			RR->t->outgoingFrameDropped(network,from,to,etherType,vlanId,len,"filter blocked");
 			return;
 		}
 
@@ -526,7 +492,6 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			send(tPtr,outp,true);
 		}
 
-		//TRACE("%.16llx: UNICAST: %s -> %s etherType==%s(%.4x) vlanId==%u len==%u fromBridged==%d includeCom==%d",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),etherType,vlanId,len,(int)fromBridged,(int)includeCom);
 	} else {
 		// Destination is bridged behind a remote peer
 
@@ -534,7 +499,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 		// for each ZT destination are also done below. This is the same rationale
 		// and design as for multicast.
 		if (!network->filterOutgoingPacket(tPtr,false,RR->identity.address(),Address(),from,to,(const uint8_t *)data,len,etherType,vlanId)) {
-			TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+			RR->t->outgoingFrameDropped(network,from,to,etherType,vlanId,len,"filter blocked");
 			return;
 		}
 
@@ -583,7 +548,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 					outp.compress();
 				send(tPtr,outp,true);
 			} else {
-				TRACE("%.16llx: %s -> %s %s packet not sent: filterOutgoingPacket() returned false",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+				RR->t->outgoingFrameDropped(network,from,to,etherType,vlanId,len,"filter blocked (bridge replication)");
 			}
 		}
 	}
@@ -591,11 +556,8 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 
 void Switch::send(void *tPtr,Packet &packet,bool encrypt)
 {
-	if (packet.destination() == RR->identity.address()) {
-		TRACE("BUG: caught attempt to send() to self, ignored");
+	if (packet.destination() == RR->identity.address())
 		return;
-	}
-
 	if (!_trySend(tPtr,packet,encrypt)) {
 		Mutex::Lock _l(_txQueue_m);
 		_txQueue.push_back(TXQueueEntry(packet.destination(),RR->node->now(),packet,encrypt));
@@ -604,13 +566,8 @@ void Switch::send(void *tPtr,Packet &packet,bool encrypt)
 
 void Switch::requestWhois(void *tPtr,const Address &addr)
 {
-#ifdef ZT_TRACE
-	if (addr == RR->identity.address()) {
-		fprintf(stderr,"FATAL BUG: Switch::requestWhois() caught attempt to WHOIS self" ZT_EOL_S);
-		abort();
-	}
-#endif
-
+	if (addr == RR->identity.address())
+		return;
 	bool inserted = false;
 	{
 		Mutex::Lock _l(_outstandingWhoisRequests_m);
@@ -670,12 +627,10 @@ unsigned long Switch::doTimerTasks(void *tPtr,uint64_t now)
 			const unsigned long since = (unsigned long)(now - r->lastSent);
 			if (since >= ZT_WHOIS_RETRY_DELAY) {
 				if (r->retries >= ZT_MAX_WHOIS_RETRIES) {
-					TRACE("WHOIS %s timed out",a->toString().c_str());
 					_outstandingWhoisRequests.erase(*a);
 				} else {
 					r->lastSent = now;
 					r->peersConsulted[r->retries] = _sendWhoisRequest(tPtr,*a,r->peersConsulted,(r->retries > 1) ? r->retries : 0);
-					TRACE("WHOIS %s (retry %u)",a->toString().c_str(),r->retries);
 					++r->retries;
 					nextDelay = std::min(nextDelay,(unsigned long)ZT_WHOIS_RETRY_DELAY);
 				}
@@ -691,7 +646,7 @@ unsigned long Switch::doTimerTasks(void *tPtr,uint64_t now)
 			if (_trySend(tPtr,txi->packet,txi->encrypt))
 				_txQueue.erase(txi++);
 			else if ((now - txi->creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
-				TRACE("TX %s -> %s timed out",txi->packet.source().toString().c_str(),txi->packet.destination().toString().c_str());
+				RR->t->txTimedOut(txi->dest);
 				_txQueue.erase(txi++);
 			} else ++txi;
 		}

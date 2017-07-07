@@ -33,6 +33,7 @@
 #include "Switch.hpp"
 #include "Packet.hpp"
 #include "Node.hpp"
+#include "Trace.hpp"
 
 #define ZT_CREDENTIAL_PUSH_EVERY (ZT_NETWORK_AUTOCONF_DELAY / 3)
 
@@ -128,27 +129,25 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 {
 	const uint64_t newts = com.timestamp();
 	if (newts <= _comRevocationThreshold) {
-		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx REJECTED (revoked)",com.issuedTo().toString().c_str(),com.networkId());
+		RR->t->credentialRejected(com,"revoked");
 		return ADD_REJECTED;
 	}
 
 	const uint64_t oldts = _com.timestamp();
 	if (newts < oldts) {
-		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx REJECTED (older than current)",com.issuedTo().toString().c_str(),com.networkId());
+		RR->t->credentialRejected(com,"old");
 		return ADD_REJECTED;
 	}
-	if ((newts == oldts)&&(_com == com)) {
-		TRACE("addCredential(CertificateOfMembership) for %s on %.16llx ACCEPTED (redundant)",com.issuedTo().toString().c_str(),com.networkId());
+	if ((newts == oldts)&&(_com == com))
 		return ADD_ACCEPTED_REDUNDANT;
-	}
 
 	switch(com.verify(RR,tPtr)) {
 		default:
-			TRACE("addCredential(CertificateOfMembership) for %s on %.16llx REJECTED (invalid signature or object)",com.issuedTo().toString().c_str(),com.networkId());
+			RR->t->credentialRejected(com,"invalid");
 			return ADD_REJECTED;
 		case 0:
-			TRACE("addCredential(CertificateOfMembership) for %s on %.16llx ACCEPTED (new)",com.issuedTo().toString().c_str(),com.networkId());
 			_com = com;
+			RR->t->credentialAccepted(com);
 			return ADD_ACCEPTED_NEW;
 		case 1:
 			return ADD_DEFERRED_FOR_WHOIS;
@@ -162,27 +161,25 @@ static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t,C> &remot
 	C *rc = remoteCreds.get(cred.id());
 	if (rc) {
 		if (rc->timestamp() > cred.timestamp()) {
-			TRACE("addCredential(type==%d) for %s on %.16llx REJECTED (older than credential we have)",(int)C::credentialType(),cred.issuedTo().toString().c_str(),cred.networkId());
+			RR->t->credentialRejected(cred,"old");
 			return Membership::ADD_REJECTED;
 		}
-		if (*rc == cred) {
-			//TRACE("addCredential(type==%d) for %s on %.16llx ACCEPTED (redundant)",(int)C::credentialType(),cred.issuedTo().toString().c_str(),cred.networkId());
+		if (*rc == cred)
 			return Membership::ADD_ACCEPTED_REDUNDANT;
-		}
 	}
 
 	const uint64_t *const rt = revocations.get(Membership::credentialKey(C::credentialType(),cred.id()));
 	if ((rt)&&(*rt >= cred.timestamp())) {
-		TRACE("addCredential(type==%d) for %s on %.16llx REJECTED (timestamp below revocation threshold)",(int)C::credentialType(),cred.issuedTo().toString().c_str(),cred.networkId());
+		RR->t->credentialRejected(cred,"revoked");
 		return Membership::ADD_REJECTED;
 	}
 
 	switch(cred.verify(RR,tPtr)) {
 		default:
-			TRACE("addCredential(type==%d) for %s on %.16llx REJECTED (invalid)",(int)C::credentialType(),cred.issuedTo().toString().c_str(),cred.networkId());
+			RR->t->credentialRejected(cred,"invalid");
 			return Membership::ADD_REJECTED;
 		case 0:
-			TRACE("addCredential(type==%d) for %s on %.16llx ACCEPTED (new)",(int)C::credentialType(),cred.issuedTo().toString().c_str(),cred.networkId());
+			RR->t->credentialAccepted(cred);
 			if (!rc)
 				rc = &(remoteCreds[cred.id()]);
 			*rc = cred;
@@ -201,12 +198,14 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	uint64_t *rt;
 	switch(rev.verify(RR,tPtr)) {
 		default:
+			RR->t->credentialRejected(rev,"invalid");
 			return ADD_REJECTED;
 		case 0: {
 			const Credential::Type ct = rev.type();
 			switch(ct) {
 				case Credential::CREDENTIAL_TYPE_COM:
 					if (rev.threshold() > _comRevocationThreshold) {
+						RR->t->credentialAccepted(rev);
 						_comRevocationThreshold = rev.threshold();
 						return ADD_ACCEPTED_NEW;
 					}
@@ -217,10 +216,12 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 					rt = &(_revocations[credentialKey(ct,rev.credentialId())]);
 					if (*rt < rev.threshold()) {
 						*rt = rev.threshold();
+						_comRevocationThreshold = rev.threshold();
 						return ADD_ACCEPTED_NEW;
 					}
 					return ADD_ACCEPTED_REDUNDANT;
 				default:
+					RR->t->credentialRejected(rev,"invalid");
 					return ADD_REJECTED;
 			}
 		}

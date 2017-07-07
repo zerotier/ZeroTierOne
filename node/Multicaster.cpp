@@ -139,8 +139,6 @@ restart_member_scan:
 	appendTo.setAt(totalAt,(uint32_t)totalKnown);
 	appendTo.setAt(addedAt,(uint16_t)added);
 
-	//TRACE("..MC Multicaster::gather() attached %u of %u peers for %.16llx/%s (2)",n,(unsigned int)(gs->second.members.size() - skipped),nwid,mg.toString().c_str());
-
 	return added;
 }
 
@@ -385,8 +383,6 @@ void Multicaster::_add(void *tPtr,uint64_t now,uint64_t nwid,const MulticastGrou
 	}
 
 	gs.members.push_back(MulticastGroupMember(member,now));
-
-	//TRACE("..MC %s joined multicast group %.16llx/%s via %s",member.toString().c_str(),nwid,mg.toString().c_str(),((learnedFrom) ? learnedFrom.toString().c_str() : "(direct)"));
 
 	for(std::list<OutboundMulticast>::iterator tx(gs.txQueue.begin());tx!=gs.txQueue.end();) {
 		if (tx->atLimit())

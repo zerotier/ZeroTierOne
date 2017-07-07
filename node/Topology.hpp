@@ -330,12 +330,6 @@ public:
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p)) {
-#ifdef ZT_TRACE
-			if (!(*p)) {
-				fprintf(stderr,"FATAL BUG: eachPeer() caught NULL peer for %s -- peer pointers in Topology should NEVER be NULL" ZT_EOL_S,a->toString().c_str());
-				abort();
-			}
-#endif
 			f(*this,*((const SharedPtr<Peer> *)p));
 		}
 	}
