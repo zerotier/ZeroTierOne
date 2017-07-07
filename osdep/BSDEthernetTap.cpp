@@ -227,7 +227,8 @@ static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
 {
 	long cpid = (long)vfork();
 	if (cpid == 0) {
-		execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"inet",ip.toIpString().c_str(),"-alias",(const char *)0);
+		char ipbuf[64];
+		execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"inet",ip.toIpString(ipbuf),"-alias",(const char *)0);
 		_exit(-1);
 	} else if (cpid > 0) {
 		int exitcode = -1;
