@@ -140,7 +140,6 @@ typedef struct poly1305_context {
 //////////////////////////////////////////////////////////////////////////////
 // 128-bit implementation for MSC and GCC from Poly1305-donna
 
-
 #if defined(_MSC_VER)
   #include <intrin.h>
 

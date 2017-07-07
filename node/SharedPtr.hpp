@@ -33,41 +33,19 @@
 namespace ZeroTier {
 
 /**
- * Simple reference counted pointer
+ * Simple zero-overhead introspective reference counted pointer
  *
  * This is an introspective shared pointer. Classes that need to be reference
  * counted must list this as a 'friend' and must have a private instance of
- * AtomicCounter called __refCount. They should also have private destructors,
- * since only this class should delete them.
- *
- * Because this is introspective, it is safe to apply to a naked pointer
- * multiple times provided there is always at least one holding SharedPtr.
- *
- * Once C++11 is ubiquitous, this and a few other things like Thread might get
- * torn out for their standard equivalents.
+ * AtomicCounter called __refCount.
  */
 template<typename T>
 class SharedPtr
 {
 public:
-	SharedPtr()
-		throw() :
-		_ptr((T *)0)
-	{
-	}
-
-	SharedPtr(T *obj)
-		throw() :
-		_ptr(obj)
-	{
-		++obj->__refCount;
-	}
-
-	SharedPtr(const SharedPtr &sp)
-		throw() :
-		_ptr(sp._getAndInc())
-	{
-	}
+	SharedPtr() : _ptr((T *)0) {}
+	SharedPtr(T *obj) : _ptr(obj) { ++obj->__refCount; }
+	SharedPtr(const SharedPtr &sp) : _ptr(sp._getAndInc()) {}
 
 	~SharedPtr()
 	{
@@ -110,21 +88,20 @@ public:
 	 * @param with Pointer to swap with
 	 */
 	inline void swap(SharedPtr &with)
-		throw()
 	{
 		T *tmp = _ptr;
 		_ptr = with._ptr;
 		with._ptr = tmp;
 	}
 
-	inline operator bool() const throw() { return (_ptr != (T *)0); }
-	inline T &operator*() const throw() { return *_ptr; }
-	inline T *operator->() const throw() { return _ptr; }
+	inline operator bool() const { return (_ptr != (T *)0); }
+	inline T &operator*() const { return *_ptr; }
+	inline T *operator->() const { return _ptr; }
 
 	/**
 	 * @return Raw pointer to held object
 	 */
-	inline T *ptr() const throw() { return _ptr; }
+	inline T *ptr() const { return _ptr; }
 
 	/**
 	 * Set this pointer to NULL
@@ -162,22 +139,20 @@ public:
 		}
 	}
 
-	inline bool operator==(const SharedPtr &sp) const throw() { return (_ptr == sp._ptr); }
-	inline bool operator!=(const SharedPtr &sp) const throw() { return (_ptr != sp._ptr); }
-	inline bool operator>(const SharedPtr &sp) const throw() { return (_ptr > sp._ptr); }
-	inline bool operator<(const SharedPtr &sp) const throw() { return (_ptr < sp._ptr); }
-	inline bool operator>=(const SharedPtr &sp) const throw() { return (_ptr >= sp._ptr); }
-	inline bool operator<=(const SharedPtr &sp) const throw() { return (_ptr <= sp._ptr); }
+	inline bool operator==(const SharedPtr &sp) const { return (_ptr == sp._ptr); }
+	inline bool operator!=(const SharedPtr &sp) const { return (_ptr != sp._ptr); }
+	inline bool operator>(const SharedPtr &sp) const { return (_ptr > sp._ptr); }
+	inline bool operator<(const SharedPtr &sp) const { return (_ptr < sp._ptr); }
+	inline bool operator>=(const SharedPtr &sp) const { return (_ptr >= sp._ptr); }
+	inline bool operator<=(const SharedPtr &sp) const { return (_ptr <= sp._ptr); }
 
 private:
 	inline T *_getAndInc() const
-		throw()
 	{
 		if (_ptr)
 			++_ptr->__refCount;
 		return _ptr;
 	}
-
 	T *_ptr;
 };
 

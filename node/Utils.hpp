@@ -76,7 +76,7 @@ public:
 	 */
 	static char *decimal(unsigned long n,char s[24]);
 
-	static inline char *hex(uint64_t i,char *const s)
+	static inline char *hex(uint64_t i,char s[17])
 	{
 		s[0] = HEXCHARS[(i >> 60) & 0xf];
 		s[1] = HEXCHARS[(i >> 56) & 0xf];
@@ -98,7 +98,7 @@ public:
 		return s;
 	}
 
-	static inline char *hex10(uint64_t i,char *const s)
+	static inline char *hex10(uint64_t i,char s[11])
 	{
 		s[0] = HEXCHARS[(i >> 36) & 0xf];
 		s[1] = HEXCHARS[(i >> 32) & 0xf];
@@ -114,7 +114,21 @@ public:
 		return s;
 	}
 
-	static inline char *hex(uint16_t i,char *const s)
+	static inline char *hex(uint32_t i,char s[9])
+	{
+		s[0] = HEXCHARS[(i >> 28) & 0xf];
+		s[1] = HEXCHARS[(i >> 24) & 0xf];
+		s[2] = HEXCHARS[(i >> 20) & 0xf];
+		s[3] = HEXCHARS[(i >> 16) & 0xf];
+		s[4] = HEXCHARS[(i >> 12) & 0xf];
+		s[5] = HEXCHARS[(i >> 8) & 0xf];
+		s[6] = HEXCHARS[(i >> 4) & 0xf];
+		s[7] = HEXCHARS[i & 0xf];
+		s[8] = (char)0;
+		return s;
+	}
+
+	static inline char *hex(uint16_t i,char s[5])
 	{
 		s[0] = HEXCHARS[(i >> 12) & 0xf];
 		s[1] = HEXCHARS[(i >> 8) & 0xf];
@@ -124,7 +138,7 @@ public:
 		return s;
 	}
 
-	static inline char *hex(uint8_t i,char *const s)
+	static inline char *hex(uint8_t i,char s[3])
 	{
 		s[0] = HEXCHARS[(i >> 4) & 0xf];
 		s[1] = HEXCHARS[i & 0xf];

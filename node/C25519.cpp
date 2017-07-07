@@ -268,9 +268,7 @@ static void recip(unsigned int out[32],const unsigned int z[32])
   /* 2^255 - 21 */ mult(out,t1,z11);
 }
 
-static inline int crypto_scalarmult(unsigned char *q,
-  const unsigned char *n,
-  const unsigned char *p)
+static inline int crypto_scalarmult(unsigned char *q,const unsigned char *n,const unsigned char *p)
 {
   unsigned int work[96];
   unsigned char e[32];
@@ -288,12 +286,24 @@ static inline int crypto_scalarmult(unsigned char *q,
   return 0;
 }
 
-static const unsigned char base[32] = {9};
-
-static inline int crypto_scalarmult_base(unsigned char *q,
-  const unsigned char *n)
+//static const unsigned char base[32] = {9};
+static inline int crypto_scalarmult_base(unsigned char *q,const unsigned char *n)
 {
-  return crypto_scalarmult(q,n,base);
+  //return crypto_scalarmult(q,n,base);
+  unsigned int work[96];
+  unsigned char e[32];
+  unsigned int i;
+  for (i = 0;i < 32;++i) e[i] = n[i];
+  e[0] &= 248;
+  e[31] &= 127;
+  e[31] |= 64;
+  for (i = 0;i < 32;++i) work[i] = 9;
+  mainloop(work,e);
+  recip(work + 32,work + 32);
+  mult(work + 64,work,work + 32);
+  freeze(work + 64);
+  for (i = 0;i < 32;++i) q[i] = work[64 + i];
+  return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -412,20 +422,6 @@ static inline void fe25519_pack(unsigned char r[32], const fe25519 *x)
   for(i=0;i<32;i++) 
     r[i] = y.v[i];
 }
-
-#if 0
-static int fe25519_iszero(const fe25519 *x)
-{
-  int i;
-  int r;
-  fe25519 t = *x;
-  fe25519_freeze(&t);
-  r = equal(t.v[0],0);
-  for(i=1;i<32;i++) 
-    r &= equal(t.v[i],0);
-  return r;
-}
-#endif
 
 static inline int fe25519_iseq_vartime(const fe25519 *x, const fe25519 *y)
 {
@@ -745,14 +741,6 @@ static inline void sc25519_from32bytes(sc25519 *r, const unsigned char x[32])
   barrett_reduce(r, t);
 }
 
-#if 0
-static void shortsc25519_from16bytes(shortsc25519 *r, const unsigned char x[16])
-{
-  int i;
-  for(i=0;i<16;i++) r->v[i] = x[i];
-}
-#endif
-
 static inline void sc25519_from64bytes(sc25519 *r, const unsigned char x[64])
 {
   int i;
@@ -761,55 +749,11 @@ static inline void sc25519_from64bytes(sc25519 *r, const unsigned char x[64])
   barrett_reduce(r, t);
 }
 
-#if 0
-static void sc25519_from_shortsc(sc25519 *r, const shortsc25519 *x)
-{
-  int i;
-  for(i=0;i<16;i++)
-    r->v[i] = x->v[i];
-  for(i=0;i<16;i++)
-    r->v[16+i] = 0;
-}
-#endif
-
 static inline void sc25519_to32bytes(unsigned char r[32], const sc25519 *x)
 {
   int i;
   for(i=0;i<32;i++) r[i] = x->v[i];
 }
-
-#if 0
-static int sc25519_iszero_vartime(const sc25519 *x)
-{
-  int i;
-  for(i=0;i<32;i++)
-    if(x->v[i] != 0) return 0;
-  return 1;
-}
-#endif
-
-#if 0
-static int sc25519_isshort_vartime(const sc25519 *x)
-{
-  int i;
-  for(i=31;i>15;i--)
-    if(x->v[i] != 0) return 0;
-  return 1;
-}
-#endif
-
-#if 0
-static int sc25519_lt_vartime(const sc25519 *x, const sc25519 *y)
-{
-  int i;
-  for(i=31;i>=0;i--)
-  {
-    if(x->v[i] < y->v[i]) return 1;
-    if(x->v[i] > y->v[i]) return 0;
-  }
-  return 0;
-}
-#endif
 
 static inline void sc25519_add(sc25519 *r, const sc25519 *x, const sc25519 *y)
 {
@@ -823,21 +767,6 @@ static inline void sc25519_add(sc25519 *r, const sc25519 *x, const sc25519 *y)
   }
   reduce_add_sub(r);
 }
-
-#if 0
-static void sc25519_sub_nored(sc25519 *r, const sc25519 *x, const sc25519 *y)
-{
-  crypto_uint32 b = 0;
-  crypto_uint32 t;
-  int i;
-  for(i=0;i<32;i++)
-  {
-    t = x->v[i] - y->v[i] - b;
-    r->v[i] = t & 255;
-    b = (t >> 8) & 1;
-  }
-}
-#endif
 
 static inline void sc25519_mul(sc25519 *r, const sc25519 *x, const sc25519 *y)
 {
@@ -859,15 +788,6 @@ static inline void sc25519_mul(sc25519 *r, const sc25519 *x, const sc25519 *y)
 
   barrett_reduce(r, t);
 }
-
-#if 0
-static void sc25519_mul_shortsc(sc25519 *r, const sc25519 *x, const shortsc25519 *y)
-{
-  sc25519 t;
-  sc25519_from_shortsc(&t, y);
-  sc25519_mul(r, x, &t);
-}
-#endif
 
 static inline void sc25519_window3(signed char r[85], const sc25519 *s)
 {
@@ -905,45 +825,6 @@ static inline void sc25519_window3(signed char r[85], const sc25519 *s)
   }
   r[84] += carry;
 }
-
-#if 0
-static void sc25519_window5(signed char r[51], const sc25519 *s)
-{
-  char carry;
-  int i;
-  for(i=0;i<6;i++)
-  {
-    r[8*i+0]  =  s->v[5*i+0]       & 31;
-    r[8*i+1]  = (s->v[5*i+0] >> 5) & 31;
-    r[8*i+1] ^= (s->v[5*i+1] << 3) & 31;
-    r[8*i+2]  = (s->v[5*i+1] >> 2) & 31;
-    r[8*i+3]  = (s->v[5*i+1] >> 7) & 31;
-    r[8*i+3] ^= (s->v[5*i+2] << 1) & 31;
-    r[8*i+4]  = (s->v[5*i+2] >> 4) & 31;
-    r[8*i+4] ^= (s->v[5*i+3] << 4) & 31;
-    r[8*i+5]  = (s->v[5*i+3] >> 1) & 31;
-    r[8*i+6]  = (s->v[5*i+3] >> 6) & 31;
-    r[8*i+6] ^= (s->v[5*i+4] << 2) & 31;
-    r[8*i+7]  = (s->v[5*i+4] >> 3) & 31;
-  }
-  r[8*i+0]  =  s->v[5*i+0]       & 31;
-  r[8*i+1]  = (s->v[5*i+0] >> 5) & 31;
-  r[8*i+1] ^= (s->v[5*i+1] << 3) & 31;
-  r[8*i+2]  = (s->v[5*i+1] >> 2) & 31;
-
-  /* Making it signed */
-  carry = 0;
-  for(i=0;i<50;i++)
-  {
-    r[i] += carry;
-    r[i+1] += r[i] >> 5;
-    r[i] &= 31;
-    carry = r[i] >> 4;
-    r[i] -= carry<<5;
-  }
-  r[50] += carry;
-}
-#endif
 
 static inline void sc25519_2interleave2(unsigned char r[127], const sc25519 *s1, const sc25519 *s2)
 {
@@ -2052,16 +1933,6 @@ static inline void ge25519_pack(unsigned char r[32], const ge25519_p3 *p)
   r[31] ^= fe25519_getparity(&tx) << 7;
 }
 
-#if 0
-static int ge25519_isneutral_vartime(const ge25519_p3 *p)
-{
-  int ret = 1;
-  if(!fe25519_iszero(&p->x)) ret = 0;
-  if(!fe25519_iseq_vartime(&p->y, &p->z)) ret = 0;
-  return ret;
-}
-#endif
-
 /* computes [s1]p1 + [s2]p2 */
 static void ge25519_double_scalarmult_vartime(ge25519_p3 *r, const ge25519_p3 *p1, const sc25519 *s1, const ge25519_p3 *p2, const sc25519 *s2)
 {
@@ -2136,131 +2007,6 @@ static inline void get_hram(unsigned char *hram, const unsigned char *sm, const 
   //crypto_hash_sha512(hram,playground,smlen);
   SHA512::hash(hram,playground,(unsigned int)smlen);
 }
-
-// This is the original sign and verify code -- the versions in sign() and
-// verify() below the fold are slightly modified in terms of how they behave
-// in relation to the message, but the algorithms are the same.
-
-#if 0
-int crypto_sign_keypair(
-    unsigned char *pk,
-    unsigned char *sk
-    )
-{
-  sc25519 scsk;
-  ge25519 gepk;
-  unsigned char extsk[64];
-  int i;
-
-  randombytes(sk, 32);
-  crypto_hash_sha512(extsk, sk, 32);
-  extsk[0] &= 248;
-  extsk[31] &= 127;
-  extsk[31] |= 64;
-
-  sc25519_from32bytes(&scsk,extsk);
-  
-  ge25519_scalarmult_base(&gepk, &scsk);
-  ge25519_pack(pk, &gepk);
-  for(i=0;i<32;i++)
-    sk[32 + i] = pk[i];
-  return 0;
-}
-
-static int crypto_sign(
-    unsigned char *sm,unsigned long long *smlen,
-    const unsigned char *m,unsigned long long mlen,
-    const unsigned char *sk
-    )
-{
-  sc25519 sck, scs, scsk;
-  ge25519 ger;
-  unsigned char r[32];
-  unsigned char s[32];
-  unsigned char extsk[64];
-  unsigned long long i;
-  unsigned char hmg[crypto_hash_sha512_BYTES];
-  unsigned char hram[crypto_hash_sha512_BYTES];
-
-  crypto_hash_sha512(extsk, sk, 32);
-  extsk[0] &= 248;
-  extsk[31] &= 127;
-  extsk[31] |= 64;
-
-  *smlen = mlen+64;
-  for(i=0;i<mlen;i++)
-    sm[64 + i] = m[i];
-  for(i=0;i<32;i++)
-    sm[32 + i] = extsk[32+i];
-
-  crypto_hash_sha512(hmg, sm+32, mlen+32); /* Generate k as h(extsk[32],...,extsk[63],m) */
-
-  /* Computation of R */
-  sc25519_from64bytes(&sck, hmg);
-  ge25519_scalarmult_base(&ger, &sck);
-  ge25519_pack(r, &ger);
-  
-  /* Computation of s */
-  for(i=0;i<32;i++)
-    sm[i] = r[i];
-
-  get_hram(hram, sm, sk+32, sm, mlen+64);
-
-  sc25519_from64bytes(&scs, hram);
-  sc25519_from32bytes(&scsk, extsk);
-  sc25519_mul(&scs, &scs, &scsk);
-  
-  sc25519_add(&scs, &scs, &sck);
-
-  sc25519_to32bytes(s,&scs); /* cat s */
-  for(i=0;i<32;i++)
-    sm[32 + i] = s[i]; 
-
-  return 0;
-}
-
-static int crypto_sign_open(
-    unsigned char *m,unsigned long long *mlen,
-    const unsigned char *sm,unsigned long long smlen,
-    const unsigned char *pk
-    )
-{
-  int i, ret;
-  unsigned char t2[32];
-  ge25519 get1, get2;
-  sc25519 schram, scs;
-  unsigned char hram[crypto_hash_sha512_BYTES];
-
-  *mlen = (unsigned long long) -1;
-  if (smlen < 64) return -1;
-
-  if (ge25519_unpackneg_vartime(&get1, pk)) return -1;
-
-  get_hram(hram,sm,pk,m,smlen);
-
-  sc25519_from64bytes(&schram, hram);
-
-  sc25519_from32bytes(&scs, sm+32);
-
-  ge25519_double_scalarmult_vartime(&get2, &get1, &schram, &ge25519_base, &scs);
-  ge25519_pack(t2, &get2);
-
-  ret = crypto_verify_32(sm, t2);
-
-  if (!ret)
-  {
-    for(i=0;i<smlen-64;i++)
-      m[i] = sm[i + 64];
-    *mlen = smlen-64;
-  }
-  else
-  {
-    for(i=0;i<smlen-64;i++)
-      m[i] = 0;
-  }
-  return ret;
-}
-#endif // 0
 
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
