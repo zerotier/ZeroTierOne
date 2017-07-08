@@ -310,7 +310,7 @@ namespace WinUI
             }
             catch (System.Net.WebException e)
             {
-								if (((HttpWebResponse)e.Response).StatusCode == HttpStatusCode.Unauthorized)
+								if ( e.Response != null && ((HttpWebResponse)e.Response).StatusCode == HttpStatusCode.Unauthorized)
 								{
 										APIHandler.initHandler(true);
 								}
