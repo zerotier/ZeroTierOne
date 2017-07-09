@@ -165,7 +165,7 @@ Getting /peer returns an array of peer objects for all current peers. See below 
 | versionRev            | integer       | Software revision of remote (if known)            | no       |
 | version               | string        | major.minor.revision                              | no       |
 | latency               | integer       | Latency in milliseconds if known                  | no       |
-| role                  | string        | LEAF, UPSTREAM, or ROOT                           | no       |
+| role                  | string        | LEAF, UPSTREAM, ROOT or PLANET                    | no       |
 | paths                 | [object]      | Currently active physical paths (see below)       | no       |
 
 Path objects:
