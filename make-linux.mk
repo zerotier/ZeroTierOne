@@ -55,6 +55,8 @@ ifeq ($(ZT_RULES_ENGINE_DEBUGGING),1)
 endif
 
 ifeq ($(ZT_DEBUG),1)
+
+ifeq ($(ZT_STATIC),1)
 	override CFLAGS+=-Wall -Wno-deprecated -Werror -g -pthread $(INCLUDES) $(DEFS)
 	override CXXFLAGS+=-Wall -Wno-deprecated -Werror -g -std=c++11 -pthread $(INCLUDES) $(DEFS)
 	override LDFLAGS+=
@@ -64,6 +66,19 @@ ifeq ($(ZT_DEBUG),1)
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
+	override CFLAGS+=-fPIC -Wall -Wno-deprecated -Werror -g -pthread $(INCLUDES) $(DEFS)
+	override CXXFLAGS+=-fPIC -Wall -Wno-deprecated -Werror -g -std=c++11 -pthread $(INCLUDES) $(DEFS)
+	override LDFLAGS+=
+	ZT_TRACE=1
+	STRIP?=echo
+	# The following line enables optimization for the crypto code, since
+	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
+node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-fPIC -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
+endif
+
+else
+
+ifeq ($(ZT_STATIC),1)
 	override DEFS+=-D_FORTIFY_SOURCE=2
 	CFLAGS?=-Os -fstack-protector
 	override CFLAGS+=-Wall -Wno-deprecated -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
@@ -72,6 +87,17 @@ else
 	override LDFLAGS+=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
 	STRIP+=--strip-all
+else
+	override DEFS+=-D_FORTIFY_SOURCE=2
+	CFLAGS?=-fPIC -Os -fstack-protector
+	override CFLAGS+=-fPIC -Wall -Wno-deprecated -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	CXXFLAGS?=-fPIC -Os -fstack-protector
+	override CXXFLAGS+=-fPIC -Wall -Wno-deprecated -Wno-unused-result -Wreorder -fPIE -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	override LDFLAGS+=-pie -Wl,-z,relro,-z,now
+	STRIP?=strip
+	STRIP+=--strip-all
+endif
+
 endif
 
 ifeq ($(ZT_TRACE),1)
@@ -233,6 +259,9 @@ libzerotiercore.a:	$(CORE_OBJS)
 	ranlib libzerotiercore.a
 
 core: libzerotiercore.a
+
+core-shared: $(CORE_OBJS)
+	$(CXX) $(CXXFLAGS) -shared -Wl,-rpath -Wl,dynamic $(CORE_OBJS) $(LIBS) -o libzerotiercore.so
 
 selftest:	$(CORE_OBJS) $(ONE_OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(CORE_OBJS) $(ONE_OBJS $(LDLIBS)
