@@ -310,10 +310,10 @@ namespace {
                 snprintf(p, sizeof(p), "planet");
                 break;
             case ZT_STATE_OBJECT_MOON:
-                snprintf(p, sizeof(p), "moons.d/%.16llx", (unsigned long long)id[0]);
+                snprintf(p, sizeof(p), "moons.d/%.16llx.moon", (unsigned long long)id[0]);
                 break;
             case ZT_STATE_OBJECT_NETWORK_CONFIG:
-                snprintf(p, sizeof(p), "networks.d/%.16llx", (unsigned long long)id[0]);
+                snprintf(p, sizeof(p), "networks.d/%.16llx.conf", (unsigned long long)id[0]);
                 break;
             case ZT_STATE_OBJECT_PEER:
                 snprintf(p, sizeof(p), "peers.d/%.10llx", (unsigned long long)id[0]);
@@ -394,10 +394,10 @@ namespace {
                 snprintf(p, sizeof(p), "planet");
                 break;
             case ZT_STATE_OBJECT_MOON:
-                snprintf(p, sizeof(p), "moons.d/%.16llx", (unsigned long long)id[0]);
+                snprintf(p, sizeof(p), "moons.d/%.16llx.moon", (unsigned long long)id[0]);
                 break;
             case ZT_STATE_OBJECT_NETWORK_CONFIG:
-                snprintf(p, sizeof(p), "networks.d/%.16llx", (unsigned long long)id[0]);
+                snprintf(p, sizeof(p), "networks.d/%.16llx.conf", (unsigned long long)id[0]);
                 break;
             case ZT_STATE_OBJECT_PEER:
                 snprintf(p, sizeof(p), "peers.d/%.10llx", (unsigned long long)id[0]);
