@@ -443,11 +443,22 @@ namespace {
 
         LOGV("Calling onDataStoreGet(%s, %p)", p, buffer);
 
-        return (int)env->CallLongMethod(
+        int retval = (int)env->CallLongMethod(
                 ref->dataStoreGetListener,
                 dataStoreGetCallbackMethod,
                 nameStr,
                 bufferObj);
+
+        LOGV("onDataStoreGet returned %d", retval);
+
+        if(retval > 0)
+        {
+            void *data = env->GetPrimitiveArrayCritical(bufferObj, NULL);
+            memcpy(buffer, data, retval);
+            env->ReleasePrimitiveArrayCritical(bufferObj, data, 0);
+        }
+
+        return retval;
     }
 
     int WirePacketSendFunction(ZT_Node *node,
@@ -459,7 +470,7 @@ namespace {
         unsigned int bufferSize,
         unsigned int ttl)
     {
-        LOGV("WirePacketSendFunction(%ld, %p, %p, %d)", localSocket, remoteAddress, buffer, bufferSize);
+        LOGV("WirePacketSendFunction(%lld, %p, %p, %d)", (long long)localSocket, remoteAddress, buffer, bufferSize);
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
 

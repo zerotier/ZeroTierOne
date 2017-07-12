@@ -173,12 +173,12 @@ public class Node {
      */
     public ResultCode processWirePacket(
         long now,
-        InetSocketAddress localAddress,
+        long localSocket,
         InetSocketAddress remoteAddress,
         byte[] packetData,
         long[] nextBackgroundTaskDeadline) {
         return processWirePacket(
-            nodeId, now, localAddress, remoteAddress, packetData, 
+            nodeId, now, localSocket, remoteAddress, packetData,
             nextBackgroundTaskDeadline);
     }
 
@@ -426,7 +426,7 @@ public class Node {
     private native ResultCode processWirePacket(
         long nodeId,
         long now,
-        InetSocketAddress localAddress,
+        long localSocket,
         InetSocketAddress remoteAddress,
         byte[] packetData,
         long[] nextBackgroundTaskDeadline);
