@@ -46,13 +46,9 @@ public interface DataStoreGetListener {
      *
      * @param name Name of the object in the data store
      * @param out_buffer buffer to put the object in
-     * @param bufferIndex index in the object to start reading
-     * @param out_objectSize long[1] to be set to the actual size of the object if it exists.
-     * @return the actual number of bytes read.
+     * @return size of the object
      */
     public long onDataStoreGet(
             String name,
-            byte[] out_buffer,
-            long bufferIndex,
-            long[] out_objectSize);
+            byte[] out_buffer);
 }
