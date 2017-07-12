@@ -90,9 +90,9 @@ ifeq ($(ZT_STATIC),1)
 else
 	override DEFS+=-D_FORTIFY_SOURCE=2
 	CFLAGS?=-fPIC -Os -fstack-protector
-	override CFLAGS+=-fPIC -Wall -Wno-deprecated -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	override CFLAGS+=-fPIC -Wall -Wno-deprecated -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	CXXFLAGS?=-fPIC -Os -fstack-protector
-	override CXXFLAGS+=-fPIC -Wall -Wno-deprecated -Wno-unused-result -Wreorder -fPIE -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	override CXXFLAGS+=-fPIC -Wall -Wno-deprecated -Wno-unused-result -Wreorder -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	override LDFLAGS+=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
 	STRIP+=--strip-all
