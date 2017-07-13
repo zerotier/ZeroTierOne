@@ -78,7 +78,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 
 	uint64_t idtmp[2];
 	idtmp[0] = 0; idtmp[1] = 0;
-	char tmp[1024];
+	char tmp[2048];
 	int n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,tmp,sizeof(tmp) - 1);
 	if (n > 0) {
 		tmp[n] = (char)0;
@@ -92,21 +92,18 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 
 	if (n <= 0) {
 		RR->identity.generate();
-		idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
 		RR->identity.toString(false,RR->publicIdentityStr);
 		RR->identity.toString(true,RR->secretIdentityStr);
+		idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
 		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,RR->secretIdentityStr,(unsigned int)strlen(RR->secretIdentityStr));
 		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 	} else {
 		idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
 		n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,tmp,sizeof(tmp) - 1);
-		if (n > 0) {
-			tmp[n] = (char)0;
-			if (RR->publicIdentityStr != tmp)
-				n = -1;
+		if ((n > 0)&&(n < sizeof(RR->publicIdentityStr))&&(n < sizeof(tmp))) {
+			if (memcmp(tmp,RR->publicIdentityStr,n))
+				stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 		}
-		if (n <= 0)
-			stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 	}
 
 	try {

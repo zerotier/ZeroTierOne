@@ -39,101 +39,6 @@
 
 namespace ZeroTier {
 
-// Defining ZT_TRACE causes debug tracing messages to be dumped to stderr
-#ifdef ZT_TRACE
-
-static const char *packetVerbString(Packet::Verb v)
-{
-	switch(v) {
-		case Packet::VERB_NOP: return "NOP";
-		case Packet::VERB_HELLO: return "HELLO";
-		case Packet::VERB_ERROR: return "ERROR";
-		case Packet::VERB_OK: return "OK";
-		case Packet::VERB_WHOIS: return "WHOIS";
-		case Packet::VERB_RENDEZVOUS: return "RENDEZVOUS";
-		case Packet::VERB_FRAME: return "FRAME";
-		case Packet::VERB_EXT_FRAME: return "EXT_FRAME";
-		case Packet::VERB_ECHO: return "ECHO";
-		case Packet::VERB_MULTICAST_LIKE: return "MULTICAST_LIKE";
-		case Packet::VERB_NETWORK_CREDENTIALS: return "NETWORK_CREDENTIALS";
-		case Packet::VERB_NETWORK_CONFIG_REQUEST: return "NETWORK_CONFIG_REQUEST";
-		case Packet::VERB_NETWORK_CONFIG: return "NETWORK_CONFIG";
-		case Packet::VERB_MULTICAST_GATHER: return "MULTICAST_GATHER";
-		case Packet::VERB_MULTICAST_FRAME: return "MULTICAST_FRAME";
-		case Packet::VERB_PUSH_DIRECT_PATHS: return "PUSH_DIRECT_PATHS";
-		case Packet::VERB_USER_MESSAGE: return "USER_MESSAGE";
-		case Packet::VERB_REMOTE_TRACE: return "REMOTE_TRACE";
-	}
-	return "(unknown)";
-}
-
-static const char *packetErrorString(Packet::ErrorCode e)
-{
-	switch(e) {
-		case Packet::ERROR_NONE: return "NONE";
-		case Packet::ERROR_INVALID_REQUEST: return "INVALID_REQUEST";
-		case Packet::ERROR_BAD_PROTOCOL_VERSION: return "BAD_PROTOCOL_VERSION";
-		case Packet::ERROR_OBJ_NOT_FOUND: return "OBJECT_NOT_FOUND";
-		case Packet::ERROR_IDENTITY_COLLISION: return "IDENTITY_COLLISION";
-		case Packet::ERROR_UNSUPPORTED_OPERATION: return "UNSUPPORTED_OPERATION";
-		case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE: return "NEED_MEMBERSHIP_CERTIFICATE";
-		case Packet::ERROR_NETWORK_ACCESS_DENIED_: return "NETWORK_ACCESS_DENIED";
-		case Packet::ERROR_UNWANTED_MULTICAST: return "UNWANTED_MULTICAST";
-	}
-	return "(unknown)";
-}
-
-#define TRprintf(f,...) { fprintf(stderr,(f),__VA_ARGS__); fflush(stderr); }
-
-#else
-
-#define TRprintf(f,...) 
-
-#endif // ZT_TRACE
-
-#define ZT_REMOTE_TRACE_FIELD__EVENT "E"
-#define ZT_REMOTE_TRACE_FIELD__PACKET_ID "pid"
-#define ZT_REMOTE_TRACE_FIELD__PACKET_VERB "pv"
-#define ZT_REMOTE_TRACE_FIELD__PACKET_TRUSTED_PATH_ID "ptpid"
-#define ZT_REMOTE_TRACE_FIELD__PACKET_TRUSTED_PATH_APPROVED "ptpok"
-#define ZT_REMOTE_TRACE_FIELD__PACKET_HOPS "phops"
-#define ZT_REMOTE_TRACE_FIELD__OLD_REMOTE_PHYADDR "oldrphy"
-#define ZT_REMOTE_TRACE_FIELD__REMOTE_ZTADDR "rzt"
-#define ZT_REMOTE_TRACE_FIELD__REMOTE_PHYADDR "rphy"
-#define ZT_REMOTE_TRACE_FIELD__LOCAL_ZTADDR "lzt"
-#define ZT_REMOTE_TRACE_FIELD__LOCAL_PHYADDR "lphy"
-#define ZT_REMOTE_TRACE_FIELD__LOCAL_SOCKET "ls"
-#define ZT_REMOTE_TRACE_FIELD__IP_SCOPE "ipsc"
-#define ZT_REMOTE_TRACE_FIELD__NETWORK_ID "nwid"
-#define ZT_REMOTE_TRACE_FIELD__SOURCE_MAC "seth"
-#define ZT_REMOTE_TRACE_FIELD__DEST_MAC "deth"
-#define ZT_REMOTE_TRACE_FIELD__ETHERTYPE "et"
-#define ZT_REMOTE_TRACE_FIELD__VLAN_ID "vlan"
-#define ZT_REMOTE_TRACE_FIELD__FRAME_LENGTH "fl"
-#define ZT_REMOTE_TRACE_FIELD__FRAME_DATA "fd"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TYPE "credtype"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ID "credid"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TIMESTAMP "credts"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_INFO "credinfo"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO "crediss"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_REVOCATION_TARGET "credRt"
-#define ZT_REMOTE_TRACE_FIELD__REASON "reason"
-
-#define ZT_REMOTE_TRACE_EVENT__RESETTING_PATHS_IN_SCOPE_S "1000"
-#define ZT_REMOTE_TRACE_EVENT__TX_TIMED_OUT_S "1001"
-#define ZT_REMOTE_TRACE_EVENT__PEER_CONFIRMING_UNKNOWN_PATH_S "1002"
-#define ZT_REMOTE_TRACE_EVENT__PEER_LEARNED_NEW_PATH_S "1003"
-#define ZT_REMOTE_TRACE_EVENT__PEER_REDIRECTED_S "1004"
-#define ZT_REMOTE_TRACE_EVENT__PACKET_MAC_FAILURE_S "1005"
-#define ZT_REMOTE_TRACE_EVENT__PACKET_INVALID_S "1006"
-#define ZT_REMOTE_TRACE_EVENT__DROPPED_HELLO_S "1006"
-
-#define ZT_REMOTE_TRACE_EVENT__OUTGOING_NETWORK_FRAME_DROPPED_S "2000"
-#define ZT_REMOTE_TRACE_EVENT__INCOMING_NETWORK_ACCESS_DENIED_S "2001"
-#define ZT_REMOTE_TRACE_EVENT__INCOMING_NETWORK_FRAME_DROPPED_S "2002"
-#define ZT_REMOTE_TRACE_EVENT__CREDENTIAL_REJECTED_S "2003"
-#define ZT_REMOTE_TRACE_EVENT__CREDENTIAL_ACCEPTED_S "2004"
-
 void Trace::resettingPathsInScope(void *const tPtr,const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,const InetAddress::IpScope scope)
 {
 	char tmp[128];
@@ -328,6 +233,7 @@ void Trace::credentialRejected(void *const tPtr,const CertificateOfMembership &c
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO,c.issuedTo());
 	if (reason)
 		d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
+	_send(tPtr,d,0);
 }
 
 void Trace::credentialRejected(void *const tPtr,const CertificateOfOwnership &c,const char *reason)
@@ -341,6 +247,7 @@ void Trace::credentialRejected(void *const tPtr,const CertificateOfOwnership &c,
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO,c.issuedTo());
 	if (reason)
 		d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
+	_send(tPtr,d,0);
 }
 
 void Trace::credentialRejected(void *const tPtr,const CertificateOfRepresentation &c,const char *reason)
@@ -352,6 +259,7 @@ void Trace::credentialRejected(void *const tPtr,const CertificateOfRepresentatio
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TIMESTAMP,c.timestamp());
 	if (reason)
 		d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
+	_send(tPtr,d,0);
 }
 
 void Trace::credentialRejected(void *const tPtr,const Capability &c,const char *reason)
@@ -365,6 +273,7 @@ void Trace::credentialRejected(void *const tPtr,const Capability &c,const char *
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO,c.issuedTo());
 	if (reason)
 		d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
+	_send(tPtr,d,0);
 }
 
 void Trace::credentialRejected(void *const tPtr,const Tag &c,const char *reason)
@@ -379,6 +288,7 @@ void Trace::credentialRejected(void *const tPtr,const Tag &c,const char *reason)
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_INFO,(uint64_t)c.value());
 	if (reason)
 		d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
+	_send(tPtr,d,0);
 }
 
 void Trace::credentialRejected(void *const tPtr,const Revocation &c,const char *reason)
@@ -391,6 +301,7 @@ void Trace::credentialRejected(void *const tPtr,const Revocation &c,const char *
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_REVOCATION_TARGET,c.target());
 	if (reason)
 		d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
+	_send(tPtr,d,0);
 }
 
 void Trace::credentialAccepted(void *const tPtr,const CertificateOfMembership &c)
@@ -402,6 +313,7 @@ void Trace::credentialAccepted(void *const tPtr,const CertificateOfMembership &c
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ID,(uint64_t)c.id());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TIMESTAMP,c.timestamp());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO,c.issuedTo());
+	_send(tPtr,d,0);
 }
 
 void Trace::credentialAccepted(void *const tPtr,const CertificateOfOwnership &c)
@@ -413,6 +325,7 @@ void Trace::credentialAccepted(void *const tPtr,const CertificateOfOwnership &c)
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ID,(uint64_t)c.id());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TIMESTAMP,c.timestamp());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO,c.issuedTo());
+	_send(tPtr,d,0);
 }
 
 void Trace::credentialAccepted(void *const tPtr,const CertificateOfRepresentation &c)
@@ -422,6 +335,7 @@ void Trace::credentialAccepted(void *const tPtr,const CertificateOfRepresentatio
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TYPE,(uint64_t)c.credentialType());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ID,(uint64_t)c.id());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TIMESTAMP,c.timestamp());
+	_send(tPtr,d,0);
 }
 
 void Trace::credentialAccepted(void *const tPtr,const Capability &c)
@@ -433,6 +347,7 @@ void Trace::credentialAccepted(void *const tPtr,const Capability &c)
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ID,(uint64_t)c.id());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TIMESTAMP,c.timestamp());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO,c.issuedTo());
+	_send(tPtr,d,0);
 }
 
 void Trace::credentialAccepted(void *const tPtr,const Tag &c)
@@ -445,6 +360,7 @@ void Trace::credentialAccepted(void *const tPtr,const Tag &c)
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TIMESTAMP,c.timestamp());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO,c.issuedTo());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_INFO,(uint64_t)c.value());
+	_send(tPtr,d,0);
 }
 
 void Trace::credentialAccepted(void *const tPtr,const Revocation &c)
@@ -455,10 +371,33 @@ void Trace::credentialAccepted(void *const tPtr,const Revocation &c)
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TYPE,(uint64_t)c.credentialType());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ID,(uint64_t)c.id());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_REVOCATION_TARGET,c.target());
+	_send(tPtr,d,0);
 }
 
 void Trace::_send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d)
 {
+#ifdef ZT_TRACE
+	unsigned int i = 0;
+	while (i < (unsigned int)(sizeof(_traceMsgBuf) - 1)) {
+		const char c = d.data()[i];
+		if (c == 0) {
+			break;
+		} else if (c == '\n') {
+			_traceMsgBuf[i++] = ' ';
+		} else if ((c >= 32)&&(c <= 126)) {
+			_traceMsgBuf[i++] = c;
+		} else {
+			if ((i + 3) < (unsigned int)(sizeof(_traceMsgBuf) - 1)) {
+				_traceMsgBuf[i++] = '\\';
+				Utils::hex((uint8_t)c,_traceMsgBuf + i);
+			}
+		}
+	}
+	_traceMsgBuf[i] = (char)0;
+	//printf("%s\n",_traceMsgBuf);
+	RR->node->postEvent(tPtr,ZT_EVENT_TRACE,_traceMsgBuf);
+#endif
+
 	const Address rtt(RR->node->remoteTraceTarget());
 	if (rtt) {
 		Packet outp(rtt,RR->identity.address(),Packet::VERB_REMOTE_TRACE);

@@ -150,8 +150,8 @@ public:
 	{
 		char *save = s;
 		for(unsigned int i=0;i<l;++i) {
-			unsigned int b = reinterpret_cast<const uint8_t *>(d)[i];
-			*(s++) = HEXCHARS[(b >> 4) & 0xf];
+			const unsigned int b = reinterpret_cast<const uint8_t *>(d)[i];
+			*(s++) = HEXCHARS[b >> 4];
 			*(s++) = HEXCHARS[b & 0xf];
 		}
 		*s = (char)0;
@@ -162,18 +162,18 @@ public:
 	{
 		unsigned int l = 0;
 		while (l < buflen) {
-			uint8_t hc = (uint8_t)*(h++);
+			uint8_t hc = *(reinterpret_cast<const uint8_t *>(h++));
 			if (!hc) break;
 
 			uint8_t c = 0;
-			if ((hc >= 48)&&(hc <= 57))
+			if ((hc >= 48)&&(hc <= 57)) // 0..9
 				c = hc - 48;
-			else if ((hc >= 97)&&(hc <= 102))
+			else if ((hc >= 97)&&(hc <= 102)) // a..f
 				c = hc - 87;
-			else if ((hc >= 65)&&(hc <= 70))
+			else if ((hc >= 65)&&(hc <= 70)) // A..F
 				c = hc - 55;
 
-			hc = (uint8_t)*(h++);
+			hc = *(reinterpret_cast<const uint8_t *>(h++));
 			if (!hc) break;
 
 			c <<= 4;
@@ -195,7 +195,7 @@ public:
 		const char *hend = h + hlen;
 		while (l < buflen) {
 			if (h == hend) break;
-			uint8_t hc = (uint8_t)*(h++);
+			uint8_t hc = *(reinterpret_cast<const uint8_t *>(h++));
 			if (!hc) break;
 
 			uint8_t c = 0;
@@ -207,7 +207,7 @@ public:
 				c = hc - 55;
 
 			if (h == hend) break;
-			hc = (uint8_t)*(h++);
+			hc = *(reinterpret_cast<const uint8_t *>(h++));
 			if (!hc) break;
 
 			c <<= 4;

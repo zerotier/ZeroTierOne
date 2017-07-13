@@ -58,6 +58,7 @@
 #include <utility>
 #include <map>
 #include <set>
+#include <atomic>
 
 #include "../node/NonCopyable.hpp"
 #include "../node/InetAddress.hpp"
@@ -69,6 +70,9 @@
 
 // Period between refreshes of bindings
 #define ZT_BINDER_REFRESH_PERIOD 30000
+
+// Max number of bindings
+#define ZT_BINDER_MAX_BINDINGS 128
 
 namespace ZeroTier {
 
@@ -95,7 +99,7 @@ private:
 	};
 
 public:
-	Binder() {}
+	Binder() : _bindingCount(0) {}
 
 	/**
 	 * Close all bound ports, should be called on shutdown
@@ -106,10 +110,11 @@ public:
 	void closeAll(Phy<PHY_HANDLER_TYPE> &phy)
 	{
 		Mutex::Lock _l(_lock);
-		for(std::vector<_Binding>::iterator b(_bindings.begin());b!=_bindings.end();++b) {
-			phy.close(b->udpSock,false);
-			phy.close(b->tcpListenSock,false);
+		for(unsigned int b=0,c=_bindingCount;b<c;++b) {
+			phy.close(_bindings[b].udpSock,false);
+			phy.close(_bindings[b].tcpListenSock,false);
 		}
+		_bindingCount = 0;
 	}
 
 	/**
@@ -321,27 +326,34 @@ public:
 			}
 		}
 
-		std::vector<_Binding> newBindings;
+		const unsigned int oldBindingCount = _bindingCount;
+		_bindingCount = 0;
 
 		// Save bindings that are still valid, close those that are not
-		for(std::vector<_Binding>::iterator b(_bindings.begin());b!=_bindings.end();++b) {
-			if (localIfAddrs.find(b->address) != localIfAddrs.end()) {
-				newBindings.push_back(*b);
+		for(unsigned int b=0;b<oldBindingCount;++b) {
+			if (localIfAddrs.find(_bindings[b].address) != localIfAddrs.end()) {
+				if (_bindingCount != b)
+					_bindings[(unsigned int)_bindingCount] = _bindings[b];
+				++_bindingCount;
 			} else {
-				phy.close(b->udpSock,false);
-				phy.close(b->tcpListenSock,false);
+				PhySocket *const udps = _bindings[b].udpSock;
+				PhySocket *const tcps = _bindings[b].tcpListenSock;
+				_bindings[b].udpSock = (PhySocket *)0;
+				_bindings[b].tcpListenSock = (PhySocket *)0;
+				phy.close(udps,false);
+				phy.close(tcps,false);
 			}
 		}
 
 		// Create new bindings for those not already bound
 		for(std::map<InetAddress,std::string>::const_iterator ii(localIfAddrs.begin());ii!=localIfAddrs.end();++ii) {
-			typename std::vector<_Binding>::const_iterator bi(newBindings.begin());
-			while (bi != newBindings.end()) {
-				if (bi->address == ii->first)
+			unsigned int bi = 0;
+			while (bi != _bindingCount) {
+				if (_bindings[bi].address == ii->first)
 					break;
 				++bi;
 			}
-			if (bi == newBindings.end()) {
+			if (bi == _bindingCount) {
 				udps = phy.udpBind(reinterpret_cast<const struct sockaddr *>(&(ii->first)),(void *)0,ZT_UDP_DESIRED_BUF_SIZE);
 				tcps = phy.tcpListen(reinterpret_cast<const struct sockaddr *>(&(ii->first)),(void *)0);
 				if ((udps)&&(tcps)) {
@@ -358,15 +370,18 @@ public:
 							setsockopt(fd,SOL_SOCKET,SO_BINDTODEVICE,tmp,strlen(tmp));
 					}
 #endif // __LINUX__
-					newBindings.push_back(_Binding());
-					newBindings.back().udpSock = udps;
-					newBindings.back().tcpListenSock = tcps;
-					newBindings.back().address = ii->first;
+					if (_bindingCount < ZT_BINDER_MAX_BINDINGS) {
+						_bindings[_bindingCount].udpSock = udps;
+						_bindings[_bindingCount].tcpListenSock = tcps;
+						_bindings[_bindingCount].address = ii->first;
+						++_bindingCount;
+					}
+				} else {
+					phy.close(udps,false);
+					phy.close(tcps,false);
 				}
 			}
 		}
-
-		_bindings.swap(newBindings);
 	}
 
 	/**
@@ -376,8 +391,8 @@ public:
 	{
 		std::vector<InetAddress> aa;
 		Mutex::Lock _l(_lock);
-		for(std::vector<_Binding>::const_iterator b(_bindings.begin());b!=_bindings.end();++b)
-			aa.push_back(b->address);
+		for(unsigned int b=0,c=_bindingCount;b<c;++b)
+			aa.push_back(_bindings[b].address);
 		return aa;
 	}
 
@@ -389,10 +404,10 @@ public:
 	{
 		bool r = false;
 		Mutex::Lock _l(_lock);
-		for(std::vector<_Binding>::const_iterator b(_bindings.begin());b!=_bindings.end();++b) {
-			if (ttl) phy.setIp4UdpTtl(b->udpSock,ttl);
-			if (phy.udpSend(b->udpSock,(const struct sockaddr *)addr,data,len)) r = true;
-			if (ttl) phy.setIp4UdpTtl(b->udpSock,255);
+		for(unsigned int b=0,c=_bindingCount;b<c;++b) {
+			if (ttl) phy.setIp4UdpTtl(_bindings[b].udpSock,ttl);
+			if (phy.udpSend(_bindings[b].udpSock,(const struct sockaddr *)addr,data,len)) r = true;
+			if (ttl) phy.setIp4UdpTtl(_bindings[b].udpSock,255);
 		}
 		return r;
 	}
@@ -404,15 +419,31 @@ public:
 	inline bool isBoundLocalInterfaceAddress(const InetAddress &addr) const
 	{
 		Mutex::Lock _l(_lock);
-		for(std::vector<_Binding>::const_iterator b(_bindings.begin());b!=_bindings.end();++b) {
-			if (b->address == addr)
+		for(unsigned int b=0;b<_bindingCount;++b) {
+			if (_bindings[b].address == addr)
 				return true;
 		}
 		return false;
 	}
 
+	/**
+	 * Quickly check that a UDP socket is valid
+	 *
+	 * @param udpSock UDP socket to check
+	 * @return True if socket is currently bound/allocated
+	 */
+	inline bool isUdpSocketValid(PhySocket *const udpSock)
+	{
+		for(unsigned int b=0,c=_bindingCount;b<c;++b) {
+			if (_bindings[b].udpSock == udpSock)
+				return (b < _bindingCount); // double check atomic which may have changed
+		}
+		return false;
+	}
+
 private:
-	std::vector<_Binding> _bindings;
+	_Binding _bindings[ZT_BINDER_MAX_BINDINGS];
+	std::atomic<unsigned int> _bindingCount;
 	Mutex _lock;
 };
 

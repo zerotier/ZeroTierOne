@@ -633,33 +633,25 @@ static int testPacket()
 	return 0;
 }
 
-static void _testExcept(int &depth)
-{
-	if (depth >= 16) {
-		throw std::runtime_error("LOL!");
-	} else {
-		++depth;
-		_testExcept(depth);
-	}
-}
-
 static int testOther()
 {
 	char buf[1024];
+	char buf2[4096];
+	char buf3[1024];
 
-	std::cout << "[other] Testing C++ exceptions... "; std::cout.flush();
-	int depth = 0;
-	try {
-		_testExcept(depth);
-	} catch (std::runtime_error &e) {
-		if (depth == 16) {
-			std::cout << "OK" << std::endl;
-		} else {
-			std::cout << "ERROR (depth not 16)" << std::endl;
-			return -1;
-		}
-	} catch ( ... ) {
-		std::cout << "ERROR (exception not std::runtime_error)" << std::endl;
+	std::cout << "[other] Testing hex/unhex... "; std::cout.flush();
+	Utils::getSecureRandom(buf,(unsigned int)sizeof(buf));
+	Utils::hex(buf,(unsigned int)sizeof(buf),buf2);
+	Utils::unhex(buf2,buf3,(unsigned int)sizeof(buf3));
+	if (memcmp(buf,buf3,sizeof(buf)) == 0) {
+		std::cout << "PASS" << std::endl;
+	} else {
+		std::cout << "FAIL!" << std::endl;
+		buf2[78] = 0;
+		std::cout << buf2 << std::endl;
+		Utils::hex(buf3,(unsigned int)sizeof(buf3),buf2);
+		buf2[78] = 0;
+		std::cout << buf2 << std::endl;
 		return -1;
 	}
 

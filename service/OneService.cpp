@@ -658,16 +658,18 @@ public:
 				return _termReason;
 			}
 
-			// Bind local control socket
+			// Bind TCP control socket to 127.0.0.1 and ::1 as well for loopback TCP control socket queries
 			{
 				struct sockaddr_in lo4;
 				memset(&lo4,0,sizeof(lo4));
 				lo4.sin_family = AF_INET;
+				lo4.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001);
 				lo4.sin_port = Utils::hton((uint16_t)_ports[0]);
 				_localControlSocket4 = _phy.tcpListen((const struct sockaddr *)&lo4);
 				struct sockaddr_in6 lo6;
 				memset(&lo6,0,sizeof(lo6));
 				lo6.sin6_family = AF_INET6;
+				lo6.sin6_addr.s6_addr[15] = 1;
 				lo6.sin6_port = lo4.sin_port;
 				_localControlSocket6 = _phy.tcpListen((const struct sockaddr *)&lo6);
 			}
@@ -1661,12 +1663,11 @@ public:
 	{
 		if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(from)->ipScope() == InetAddress::IP_SCOPE_GLOBAL))
 			_lastDirectReceiveFromGlobal = OSUtils::now();
-
 		const ZT_ResultCode rc = _node->processWirePacket(
 			(void *)0,
 			OSUtils::now(),
-			(int64_t)((uintptr_t)sock),
-			(const struct sockaddr_storage *)from, // Phy<> uses sockaddr_storage, so it'll always be that big
+			reinterpret_cast<int64_t>(sock),
+			reinterpret_cast<const struct sockaddr_storage *>(from), // Phy<> uses sockaddr_storage, so it'll always be that big
 			data,
 			len,
 			&_nextBackgroundTaskDeadline);
@@ -2200,7 +2201,7 @@ public:
 		// proxy fallback, which is slow.
 #endif // ZT_TCP_FALLBACK_RELAY
 
-		if ((localSocket != 0)&&(localSocket != -1)) {
+		if ((localSocket != -1)&&(localSocket != 0)&&(_binder.isUdpSocketValid((PhySocket *)((uintptr_t)localSocket)))) {
 			if ((ttl)&&(addr->ss_family == AF_INET)) _phy.setIp4UdpTtl((PhySocket *)((uintptr_t)localSocket),ttl);
 			const bool r = _phy.udpSend((PhySocket *)((uintptr_t)localSocket),(const struct sockaddr *)addr,data,len);
 			if ((ttl)&&(addr->ss_family == AF_INET)) _phy.setIp4UdpTtl((PhySocket *)((uintptr_t)localSocket),255);

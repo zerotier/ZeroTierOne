@@ -155,6 +155,10 @@ private:
 	void _send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d);
 	void _send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d,const uint64_t networkId);
 	void _send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d,const SharedPtr<Network> &network);
+
+#ifdef ZT_TRACE
+	char _traceMsgBuf[4096];
+#endif
 };
 
 } // namespace ZeroTier
