@@ -252,6 +252,9 @@
     <ClCompile Include="..\..\selftest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\node\Trace.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -496,6 +499,9 @@
     </ClInclude>
     <ClInclude Include="..\..\controller\JSONDB.hpp">
       <Filter>Header Files\controller</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\node\Trace.hpp">
+      <Filter>Header Files\node</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

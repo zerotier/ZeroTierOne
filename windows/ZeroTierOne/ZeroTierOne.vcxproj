@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -70,6 +70,7 @@
     <ClCompile Include="..\..\node\Switch.cpp" />
     <ClCompile Include="..\..\node\Tag.cpp" />
     <ClCompile Include="..\..\node\Topology.cpp" />
+    <ClCompile Include="..\..\node\Trace.cpp" />
     <ClCompile Include="..\..\node\Utils.cpp" />
     <ClCompile Include="..\..\one.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
@@ -163,6 +164,7 @@
     <ClInclude Include="..\..\node\SharedPtr.hpp" />
     <ClInclude Include="..\..\node\Switch.hpp" />
     <ClInclude Include="..\..\node\Topology.hpp" />
+    <ClInclude Include="..\..\node\Trace.hpp" />
     <ClInclude Include="..\..\node\Utils.hpp" />
     <ClInclude Include="..\..\node\World.hpp" />
     <ClInclude Include="..\..\osdep\Binder.hpp" />
