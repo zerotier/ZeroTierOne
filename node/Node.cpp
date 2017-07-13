@@ -117,6 +117,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 		delete RR->topology;
 		delete RR->mc;
 		delete RR->sw;
+		delete RR->t;
 		throw;
 	}
 

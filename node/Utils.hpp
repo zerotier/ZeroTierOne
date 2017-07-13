@@ -148,7 +148,7 @@ public:
 
 	static inline char *hex(const void *d,unsigned int l,char *s)
 	{
-		char *save = s;
+		char *const save = s;
 		for(unsigned int i=0;i<l;++i) {
 			const unsigned int b = reinterpret_cast<const uint8_t *>(d)[i];
 			*(s++) = HEXCHARS[b >> 4];

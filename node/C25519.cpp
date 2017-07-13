@@ -286,24 +286,10 @@ static inline int crypto_scalarmult(unsigned char *q,const unsigned char *n,cons
   return 0;
 }
 
-//static const unsigned char base[32] = {9};
+static const unsigned char base[32] = {9};
 static inline int crypto_scalarmult_base(unsigned char *q,const unsigned char *n)
 {
-  //return crypto_scalarmult(q,n,base);
-  unsigned int work[96];
-  unsigned char e[32];
-  unsigned int i;
-  for (i = 0;i < 32;++i) e[i] = n[i];
-  e[0] &= 248;
-  e[31] &= 127;
-  e[31] |= 64;
-  for (i = 0;i < 32;++i) work[i] = 9;
-  mainloop(work,e);
-  recip(work + 32,work + 32);
-  mult(work + 64,work,work + 32);
-  freeze(work + 64);
-  for (i = 0;i < 32;++i) q[i] = work[64 + i];
-  return 0;
+  return crypto_scalarmult(q,n,base);
 }
 
 //////////////////////////////////////////////////////////////////////////////
