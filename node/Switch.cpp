@@ -318,7 +318,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 	bool fromBridged;
 	if ((fromBridged = (from != network->mac()))) {
 		if (!network->config().permitsBridging(RR->identity.address())) {
-			RR->t->outgoingFrameDropped(network,from,to,etherType,vlanId,len,"not a bridge");
+			RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,"not a bridge");
 			return;
 		}
 	}
@@ -340,7 +340,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 				multicastGroup = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(((const unsigned char *)data) + 24,4,0));
 			} else if (!network->config().enableBroadcast()) {
 				// Don't transmit broadcasts if this network doesn't want them
-				RR->t->outgoingFrameDropped(network,from,to,etherType,vlanId,len,"broadcast disabled");
+				RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,"broadcast disabled");
 				return;
 			}
 		} else if ((etherType == ZT_ETHERTYPE_IPV6)&&(len >= (40 + 8 + 16))) {
@@ -428,7 +428,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 
 		// Check this after NDP emulation, since that has to be allowed in exactly this case
 		if (network->config().multicastLimit == 0) {
-			RR->t->outgoingFrameDropped(network,from,to,etherType,vlanId,len,"multicast disabled");
+			RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,"multicast disabled");
 			return;
 		}
 
@@ -441,7 +441,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 
 		// First pass sets noTee to false, but noTee is set to true in OutboundMulticast to prevent duplicates.
 		if (!network->filterOutgoingPacket(tPtr,false,RR->identity.address(),Address(),from,to,(const uint8_t *)data,len,etherType,vlanId)) {
-			RR->t->outgoingFrameDropped(network,from,to,etherType,vlanId,len,"filter blocked");
+			RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,"filter blocked");
 			return;
 		}
 
@@ -467,7 +467,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 		SharedPtr<Peer> toPeer(RR->topology->getPeer(tPtr,toZT));
 
 		if (!network->filterOutgoingPacket(tPtr,false,RR->identity.address(),toZT,from,to,(const uint8_t *)data,len,etherType,vlanId)) {
-			RR->t->outgoingFrameDropped(network,from,to,etherType,vlanId,len,"filter blocked");
+			RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,"filter blocked");
 			return;
 		}
 
@@ -499,7 +499,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 		// for each ZT destination are also done below. This is the same rationale
 		// and design as for multicast.
 		if (!network->filterOutgoingPacket(tPtr,false,RR->identity.address(),Address(),from,to,(const uint8_t *)data,len,etherType,vlanId)) {
-			RR->t->outgoingFrameDropped(network,from,to,etherType,vlanId,len,"filter blocked");
+			RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,"filter blocked");
 			return;
 		}
 
@@ -548,7 +548,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 					outp.compress();
 				send(tPtr,outp,true);
 			} else {
-				RR->t->outgoingFrameDropped(network,from,to,etherType,vlanId,len,"filter blocked (bridge replication)");
+				RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,"filter blocked (bridge replication)");
 			}
 		}
 	}
@@ -646,7 +646,7 @@ unsigned long Switch::doTimerTasks(void *tPtr,uint64_t now)
 			if (_trySend(tPtr,txi->packet,txi->encrypt))
 				_txQueue.erase(txi++);
 			else if ((now - txi->creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
-				RR->t->txTimedOut(txi->dest);
+				RR->t->txTimedOut(tPtr,txi->dest);
 				_txQueue.erase(txi++);
 			} else ++txi;
 		}

@@ -967,9 +967,8 @@ public:
 
 		/**
 		 * A trace for remote debugging or diagnostics:
-		 *   <[8] 64-bit instance ID>
-		 *   <[2] 16-bit length of Dictionary>
-		 *   <[...] dictionary containing trace information>
+		 *   <[...] null-terminated dictionary containing trace information>
+		 *  [<[...] additional null-terminated dictionaries>]
 		 *
 		 * This message contains a remote trace event. Remote trace events can
 		 * be sent to observers configured at the network level for those that

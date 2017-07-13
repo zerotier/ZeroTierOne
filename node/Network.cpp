@@ -648,7 +648,7 @@ bool Network::filterOutgoingPacket(
 
 		case DOZTFILTER_DROP:
 			if (_config.remoteTraceTarget)
-				RR->t->networkFilter(*this,rrl,(Trace::RuleResultLog *)0,(Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
+				RR->t->networkFilter(tPtr,*this,rrl,(Trace::RuleResultLog *)0,(Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
 			return false;
 
 		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztFinalDest will have been changed in _doZtFilter()
@@ -695,16 +695,16 @@ bool Network::filterOutgoingPacket(
 			RR->sw->send(tPtr,outp,true);
 
 			if (_config.remoteTraceTarget)
-				RR->t->networkFilter(*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
+				RR->t->networkFilter(tPtr,*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
 			return false; // DROP locally, since we redirected
 		} else {
 			if (_config.remoteTraceTarget)
-				RR->t->networkFilter(*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,1);
+				RR->t->networkFilter(tPtr,*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,1);
 			return true;
 		}
 	} else {
 		if (_config.remoteTraceTarget)
-			RR->t->networkFilter(*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
+			RR->t->networkFilter(tPtr,*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
 		return false;
 	}
 }
@@ -775,7 +775,7 @@ int Network::filterIncomingPacket(
 
 		case DOZTFILTER_DROP:
 			if (_config.remoteTraceTarget)
-				RR->t->networkFilter(*this,rrl,(Trace::RuleResultLog *)0,(Capability *)0,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,false,true,0);
+				RR->t->networkFilter(tPtr,*this,rrl,(Trace::RuleResultLog *)0,(Capability *)0,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,false,true,0);
 			return 0; // DROP
 
 		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztFinalDest will have been changed in _doZtFilter()
@@ -816,13 +816,13 @@ int Network::filterIncomingPacket(
 			RR->sw->send(tPtr,outp,true);
 
 			if (_config.remoteTraceTarget)
-				RR->t->networkFilter(*this,rrl,(c) ? &crrl : (Trace::RuleResultLog *)0,c,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,false,true,0);
+				RR->t->networkFilter(tPtr,*this,rrl,(c) ? &crrl : (Trace::RuleResultLog *)0,c,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,false,true,0);
 			return 0; // DROP locally, since we redirected
 		}
 	}
 
 	if (_config.remoteTraceTarget)
-		RR->t->networkFilter(*this,rrl,(c) ? &crrl : (Trace::RuleResultLog *)0,c,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,false,true,accept);
+		RR->t->networkFilter(tPtr,*this,rrl,(c) ? &crrl : (Trace::RuleResultLog *)0,c,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,false,true,accept);
 	return accept;
 }
 
@@ -1135,7 +1135,7 @@ void Network::requestConfiguration(void *tPtr)
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS,(uint64_t)0);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,(uint64_t)ZT_RULES_ENGINE_REVISION);
 
-	RR->t->networkConfigRequestSent(*this,ctrl);
+	RR->t->networkConfigRequestSent(tPtr,*this,ctrl);
 
 	if (ctrl == RR->identity.address()) {
 		if (RR->localNetworkController) {
@@ -1181,6 +1181,13 @@ bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 		}
 	} catch ( ... ) {}
 	return false;
+}
+
+bool Network::recentlyAssociatedWith(const Address &addr)
+{
+	Mutex::Lock _l(_lock);
+	const Membership *m = _memberships.get(addr);
+	return ((m)&&(m->recentlyAssociated(RR->node->now())));
 }
 
 void Network::clean()

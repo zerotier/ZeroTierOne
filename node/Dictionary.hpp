@@ -289,6 +289,21 @@ public:
 	}
 
 	/**
+	 * Get an unsigned int64 stored as hex in the dictionary
+	 *
+	 * @param key Key to look up
+	 * @param dfl Default value or 0 if unspecified
+	 * @return Decoded hex UInt value or 'dfl' if not found
+	 */
+	inline int64_t getI(const char *key,int64_t dfl = 0) const
+	{
+		char tmp[128];
+		if (this->get(key,tmp,sizeof(tmp)) >= 1)
+			return Utils::hexStrTo64(tmp);
+		return dfl;
+	}
+
+	/**
 	 * Add a new key=value pair
 	 *
 	 * If the key is already present this will append another, but the first
@@ -392,6 +407,20 @@ public:
 	{
 		char tmp[32];
 		return this->add(key,Utils::hex(value,tmp),-1);
+	}
+
+	/** 
+	 * Add a 64-bit integer (unsigned) as a hex value
+	 */
+	inline bool add(const char *key,int64_t value)
+	{
+		char tmp[32];
+		if (value >= 0) {
+			return this->add(key,Utils::hex((uint64_t)value,tmp),-1);
+		} else {
+			tmp[0] = '-';
+			return this->add(key,Utils::hex((uint64_t)(value * -1),tmp+1),-1);
+		}
 	}
 
 	/** 

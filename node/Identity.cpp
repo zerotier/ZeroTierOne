@@ -151,7 +151,7 @@ char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_
 		Utils::hex(_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN,p);
 		p += ZT_C25519_PRIVATE_KEY_LEN * 2;
 	}
-	*(p++) = (char)0;
+	*p = (char)0;
 	return buf;
 }
 

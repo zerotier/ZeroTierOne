@@ -110,6 +110,11 @@ public:
 		return nconf.com.agreesWith(_com);
 	}
 
+	inline bool recentlyAssociated(const uint64_t now) const
+	{
+		return ((_com)&&((now - _com.timestamp()) < ZT_PEER_ACTIVITY_TIMEOUT));
+	}
+
 	/**
 	 * Check whether the peer represented by this Membership owns a given resource
 	 *

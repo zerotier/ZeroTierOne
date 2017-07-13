@@ -39,6 +39,7 @@
 #include "Packet.hpp"
 #include "Credential.hpp"
 #include "InetAddress.hpp"
+#include "Dictionary.hpp"
 
 namespace ZeroTier {
 
@@ -100,25 +101,25 @@ public:
 
 	Trace(const RuntimeEnvironment *renv) : RR(renv) {}
 
-	void resettingPathsInScope(const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,const InetAddress::IpScope scope);
-	void txTimedOut(const Address &destination);
+	void resettingPathsInScope(void *const tPtr,const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,const InetAddress::IpScope scope);
+	void txTimedOut(void *const tPtr,const Address &destination);
 
-	void peerConfirmingUnknownPath(Peer &peer,const SharedPtr<Path> &path,const uint64_t packetId,const Packet::Verb verb);
-	void peerLearnedNewPath(Peer &peer,const SharedPtr<Path> &oldPath,const SharedPtr<Path> &newPath,const uint64_t packetId);
-	void peerRedirected(Peer &peer,const SharedPtr<Path> &oldPath,const SharedPtr<Path> &newPath);
+	void peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &path,const uint64_t packetId,const Packet::Verb verb);
+	void peerLearnedNewPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &oldPath,const SharedPtr<Path> &newPath,const uint64_t packetId);
+	void peerRedirected(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &oldPath,const SharedPtr<Path> &newPath);
 
-	void outgoingFrameDropped(const SharedPtr<Network> &network,const MAC &sourceMac,const MAC &destMac,const unsigned int etherType,const unsigned int vlanId,const unsigned int frameLen,const char *reason);
+	void incomingPacketTrustedPath(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const uint64_t trustedPathId,bool approved);
+	void incomingPacketMessageAuthenticationFailure(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const unsigned int hops);
+	void incomingPacketInvalid(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const unsigned int hops,const Packet::Verb verb,const char *reason);
+	void incomingPacketDroppedHELLO(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const char *reason);
 
-	void incomingPacketTrustedPath(const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const uint64_t trustedPathId,bool approved);
-	void incomingPacketMessageAuthenticationFailure(const SharedPtr<Path> &path,const uint64_t packetId,const Address &source);
-	void incomingPacketInvalid(const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const Packet::Verb verb,const char *reason);
-	void incomingPacketDroppedHELLO(const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const char *reason);
+	void outgoingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network> &network,const MAC &sourceMac,const MAC &destMac,const unsigned int etherType,const unsigned int vlanId,const unsigned int frameLen,const char *reason);
+	void incomingNetworkAccessDenied(void *const tPtr,const SharedPtr<Network> &network,const SharedPtr<Path> &path,const uint64_t packetId,const unsigned int packetLength,const Address &source,const Packet::Verb verb,bool credentialsRequested);
+	void incomingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network> &network,const SharedPtr<Path> &path,const uint64_t packetId,const unsigned int packetLength,const Address &source,const Packet::Verb verb,const MAC &sourceMac,const MAC &destMac);
 
-	void networkAccessDenied(const SharedPtr<Network> &network,const SharedPtr<Path> &path,const uint64_t packetId,const unsigned int packetLength,const Address &source,const Packet::Verb verb,bool credentialsRequested);
-	void networkFrameDropped(const SharedPtr<Network> &network,const SharedPtr<Path> &path,const uint64_t packetId,const unsigned int packetLength,const Address &source,const Packet::Verb verb,const MAC &sourceMac,const MAC &destMac);
-
-	void networkConfigRequestSent(const Network &network,const Address &controller);
+	void networkConfigRequestSent(void *const tPtr,const Network &network,const Address &controller);
 	void networkFilter(
+		void *const tPtr,
 		const Network &network,
 		const RuleResultLog &primaryRuleSetLog,
 		const RuleResultLog *const matchingCapabilityRuleSetLog,
@@ -135,21 +136,25 @@ public:
 		const bool inbound,
 		const int accept);
 
-	void credentialRejected(const CertificateOfMembership &c,const char *reason);
-	void credentialRejected(const CertificateOfOwnership &c,const char *reason);
-	void credentialRejected(const CertificateOfRepresentation &c,const char *reason);
-	void credentialRejected(const Capability &c,const char *reason);
-	void credentialRejected(const Tag &c,const char *reason);
-	void credentialRejected(const Revocation &c,const char *reason);
-	void credentialAccepted(const CertificateOfMembership &c);
-	void credentialAccepted(const CertificateOfOwnership &c);
-	void credentialAccepted(const CertificateOfRepresentation &c);
-	void credentialAccepted(const Capability &c);
-	void credentialAccepted(const Tag &c);
-	void credentialAccepted(const Revocation &c);
+	void credentialRejected(void *const tPtr,const CertificateOfMembership &c,const char *reason);
+	void credentialRejected(void *const tPtr,const CertificateOfOwnership &c,const char *reason);
+	void credentialRejected(void *const tPtr,const CertificateOfRepresentation &c,const char *reason);
+	void credentialRejected(void *const tPtr,const Capability &c,const char *reason);
+	void credentialRejected(void *const tPtr,const Tag &c,const char *reason);
+	void credentialRejected(void *const tPtr,const Revocation &c,const char *reason);
+	void credentialAccepted(void *const tPtr,const CertificateOfMembership &c);
+	void credentialAccepted(void *const tPtr,const CertificateOfOwnership &c);
+	void credentialAccepted(void *const tPtr,const CertificateOfRepresentation &c);
+	void credentialAccepted(void *const tPtr,const Capability &c);
+	void credentialAccepted(void *const tPtr,const Tag &c);
+	void credentialAccepted(void *const tPtr,const Revocation &c);
 
 private:
 	const RuntimeEnvironment *const RR;
+
+	void _send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d);
+	void _send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d,const uint64_t networkId);
+	void _send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d,const SharedPtr<Network> &network);
 };
 
 } // namespace ZeroTier

@@ -249,6 +249,19 @@ public:
 	bool gate(void *tPtr,const SharedPtr<Peer> &peer);
 
 	/**
+	 * Check whether a given peer has recently had an association with this network
+	 *
+	 * This checks whether a peer has communicated with us recently about this
+	 * network and has possessed a valid certificate of membership. This may return
+	 * true even if the peer has been offline for a while or no longer has a valid
+	 * certificate of membership but had one recently.
+	 *
+	 * @param addr Peer address
+	 * @return True if peer has recently associated
+	 */
+	bool recentlyAssociatedWith(const Address &addr);
+
+	/**
 	 * Do periodic cleanup and housekeeping tasks
 	 */
 	void clean();

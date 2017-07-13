@@ -72,7 +72,8 @@ void Peer::received(
 	const Packet::Verb verb,
 	const uint64_t inRePacketId,
 	const Packet::Verb inReVerb,
-	const bool trustEstablished)
+	const bool trustEstablished,
+	const uint64_t networkId)
 {
 	const uint64_t now = RR->node->now();
 
@@ -183,11 +184,11 @@ void Peer::received(
 
 			if (replacablePath) {
 				if (verb == Packet::VERB_OK) {
-					RR->t->peerLearnedNewPath(*this,replacablePath->p,path,packetId);
+					RR->t->peerLearnedNewPath(tPtr,networkId,*this,replacablePath->p,path,packetId);
 					replacablePath->lr = now;
 					replacablePath->p = path;
 				} else {
-					RR->t->peerConfirmingUnknownPath(*this,path,packetId,verb);
+					RR->t->peerConfirmingUnknownPath(tPtr,networkId,*this,path,packetId,verb);
 					attemptToContactAt(tPtr,path->localSocket(),path->address(),now,true,path->nextOutgoingCounter());
 					path->sent(now);
 				}
@@ -438,7 +439,7 @@ void Peer::redirect(void *tPtr,const int64_t localSocket,const InetAddress &remo
 		}
 	}
 
-	RR->t->peerRedirected(*this,op,np);
+	RR->t->peerRedirected(tPtr,0,*this,op,np);
 }
 
 } // namespace ZeroTier
