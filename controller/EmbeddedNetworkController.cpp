@@ -621,6 +621,15 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						if (b.count("activeBridge")) member["activeBridge"] = OSUtils::jsonBool(b["activeBridge"],false);
 						if (b.count("noAutoAssignIps")) member["noAutoAssignIps"] = OSUtils::jsonBool(b["noAutoAssignIps"],false);
 
+						if (b.count("remoteTraceTarget")) {
+							const std::string rtt(OSUtils::jsonString(b["remoteTraceTarget"],""));
+							if (rtt.length() == 10) {
+								member["remoteTraceTarget"] = rtt;
+							} else {
+								member["remoteTraceTarget"] = json();
+							}
+						}
+
 						if (b.count("authorized")) {
 							const bool newAuth = OSUtils::jsonBool(b["authorized"],false);
 							if (newAuth != OSUtils::jsonBool(member["authorized"],false)) {
@@ -763,6 +772,15 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					if (b.count("allowPassiveBridging")) network["allowPassiveBridging"] = OSUtils::jsonBool(b["allowPassiveBridging"],false);
 					if (b.count("multicastLimit")) network["multicastLimit"] = OSUtils::jsonInt(b["multicastLimit"],32ULL);
 					if (b.count("mtu")) network["mtu"] = std::max(std::min((unsigned int)OSUtils::jsonInt(b["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
+
+					if (b.count("remoteTraceTarget")) {
+						const std::string rtt(OSUtils::jsonString(b["remoteTraceTarget"],""));
+						if (rtt.length() == 10) {
+							network["remoteTraceTarget"] = rtt;
+						} else {
+							network["remoteTraceTarget"] = json();
+						}
+					}
 
 					if (b.count("v4AssignMode")) {
 						json nv4m;
@@ -1063,6 +1081,55 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 	} // else 404
 
 	return 404;
+}
+
+void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
+{
+	// Convert Dictionary into JSON object
+	json d;
+	char *saveptr = (char *)0;
+	for(char *l=Utils::stok(rt.data,"\n",&saveptr);(l);l=Utils::stok((char *)0,"\n",&saveptr)) {
+		char *eq = strchr(l,'=');
+		if (eq > l) {
+			std::string k(l,(unsigned long)(eq - l));
+			std::string v;
+			++eq;
+			while (*eq) {
+				if (*eq == '\\') {
+					++eq;
+					if (*eq) {
+						switch(*eq) {
+							case 'r':
+								v.push_back('\r');
+								break;
+							case 'n':
+								v.push_back('\n');
+								break;
+							case '0':
+								v.push_back((char)0);
+								break;
+							case 'e':
+								v.push_back('=');
+								break;
+							default:
+								v.push_back(*eq);
+								break;
+						}
+						++eq;
+					}
+				} else {
+					v.push_back(*(eq++));
+				}
+			}
+			if (v.length() > 0)
+				d[k] = v;
+		}
+	}
+
+	char p[128];
+	OSUtils::ztsnprintf(p,sizeof(p),"trace/%.10llx_%.16llx.json",rt.origin,OSUtils::now());
+	_db.writeRaw(p,OSUtils::jsonDump(d));
+	//fprintf(stdout,"%s\n",OSUtils::jsonDump(d).c_str()); fflush(stdout);
 }
 
 void EmbeddedNetworkController::threadMain()

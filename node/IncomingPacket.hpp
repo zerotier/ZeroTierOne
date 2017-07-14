@@ -139,6 +139,7 @@ private:
 	bool _doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
 	bool _doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
 	bool _doUSER_MESSAGE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+	bool _doREMOTE_TRACE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
 
 	void _sendErrorNeedCredentials(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer,const uint64_t nwid);
 

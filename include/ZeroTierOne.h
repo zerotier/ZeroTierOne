@@ -470,8 +470,51 @@ enum ZT_Event
 	 *
 	 * Meta-data: ZT_UserMessage structure
 	 */
-	ZT_EVENT_USER_MESSAGE = 6
+	ZT_EVENT_USER_MESSAGE = 6,
+
+	/**
+	 * Remote trace received
+	 *
+	 * These are generated when a VERB_REMOTE_TRACE is received. Note
+	 * that any node can fling one of these at us. It is your responsibility
+	 * to filter and determine if it's worth paying attention to. If it's
+	 * not just drop it. Most nodes that are not active controllers ignore
+	 * these, and controllers only save them if they pertain to networks
+	 * with remote tracing enabled.
+	 *
+	 * Meta-data: ZT_RemoteTrace structure
+	 */
+	ZT_EVENT_REMOTE_TRACE = 7
 };
+
+/**
+ * Payload of REMOTE_TRACE event
+ */
+typedef struct
+{
+	/**
+	 * ZeroTier address of sender
+	 */
+	uint64_t origin;
+
+	/**
+	 * Null-terminated Dictionary containing key/value pairs sent by origin
+	 *
+	 * This *should* be a dictionary, but the implementation only checks
+	 * that it is a valid non-empty C-style null-terminated string. Be very
+	 * careful to use a well-tested parser to parse this as it represents
+	 * data received from a potentially un-trusted peer on the network.
+	 * Invalid payloads should be dropped.
+	 *
+	 * The contents of data[] may be modified.
+	 */
+	char *data;
+
+	/**
+	 * Length of dict[] in bytes, including terminating null
+	 */
+	unsigned int len;
+} ZT_RemoteTrace;
 
 /**
  * User message used with ZT_EVENT_USER_MESSAGE

@@ -1192,7 +1192,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 bool IncomingPacket::_doUSER_MESSAGE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
-		if (size() >= (ZT_PACKET_IDX_PAYLOAD + 8)) {
+		if (likely(size() >= (ZT_PACKET_IDX_PAYLOAD + 8))) {
 			ZT_UserMessage um;
 			um.origin = peer->address().toInt();
 			um.typeId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);
@@ -1203,6 +1203,31 @@ bool IncomingPacket::_doUSER_MESSAGE(const RuntimeEnvironment *RR,void *tPtr,con
 		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_USER_MESSAGE,0,Packet::VERB_NOP,false,0);
 	} catch ( ... ) {
 		RR->t->incomingPacketInvalid(tPtr,_path,packetId(),source(),hops(),Packet::VERB_USER_MESSAGE,"unexpected exception");
+	}
+	return true;
+}
+
+bool IncomingPacket::_doREMOTE_TRACE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
+{
+	ZT_RemoteTrace rt;
+	try {
+		const char *ptr = reinterpret_cast<const char *>(data()) + ZT_PACKET_IDX_PAYLOAD;
+		const char *const eof = reinterpret_cast<const char *>(data()) + size();
+		rt.origin = peer->address().toInt();
+		rt.data = const_cast<char *>(ptr); // start of first string
+		while (ptr < eof) {
+			if (!*ptr) { // end of string
+				rt.len = (unsigned int)(ptr - rt.data);
+				if ((rt.len > 0)&&(rt.len <= ZT_MAX_REMOTE_TRACE_SIZE))
+					RR->node->postEvent(tPtr,ZT_EVENT_REMOTE_TRACE,&rt);
+				rt.data = const_cast<char *>(++ptr); // start of next string, if any
+			} else {
+				++ptr;
+			}
+		}
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_REMOTE_TRACE,0,Packet::VERB_NOP,false,0);
+	} catch ( ... ) {
+		RR->t->incomingPacketInvalid(tPtr,_path,packetId(),source(),hops(),Packet::VERB_REMOTE_TRACE,"unexpected exception");
 	}
 	return true;
 }

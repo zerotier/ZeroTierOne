@@ -90,6 +90,8 @@ public:
 		std::string &responseBody,
 		std::string &responseContentType);
 
+	void handleRemoteTrace(const ZT_RemoteTrace &rt);
+
 	void threadMain()
 		throw();
 
@@ -142,6 +144,7 @@ private:
 		if (!member.count("vRev")) member["vRev"] = -1;
 		if (!member.count("vProto")) member["vProto"] = -1;
 		if (!member.count("physicalAddr")) member["physicalAddr"] = nlohmann::json();
+		if (!member.count("remoteTraceTarget")) member["remoteTraceTarget"] = nlohmann::json();
 		member["objtype"] = "member";
 	}
 	inline void _initNetwork(nlohmann::json &network)
@@ -159,6 +162,7 @@ private:
 		if (!network.count("routes")) network["routes"] = nlohmann::json::array();
 		if (!network.count("ipAssignmentPools")) network["ipAssignmentPools"] = nlohmann::json::array();
 		if (!network.count("mtu")) network["mtu"] = ZT_DEFAULT_MTU;
+		if (!network.count("remoteTraceTarget")) network["remoteTraceTarget"] = nlohmann::json();
 		if (!network.count("rules")) {
 			// If unspecified, rules are set to allow anything and behave like a flat L2 segment
 			network["rules"] = {{
