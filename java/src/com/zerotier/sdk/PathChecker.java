@@ -26,10 +26,10 @@ public interface PathChecker {
      * such as network containers or embedded.
      *
      * @param ztAddress ZeroTier address or 0 for none/any
-     * @param localAddress Local interface address
+     * @param localSocket Local interface socket.  -1 if unspecified
      * @param remoteAddress remote address
      */
-    boolean onPathCheck(long ztAddress, InetSocketAddress localAddress, InetSocketAddress remoteAddress);
+    boolean onPathCheck(long ztAddress, long localSocket, InetSocketAddress remoteAddress);
 
     /**
      * Function to get physical addresses for ZeroTier peers

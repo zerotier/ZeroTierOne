@@ -32,7 +32,7 @@
 #include <assert.h>
 
 namespace ZeroTier {
-
+    
 uint16_t calc_checksum (uint16_t *addr, int len)
 {
     int count = len;
@@ -193,7 +193,7 @@ sockaddr_storage NeighborDiscovery::processIncomingND(const uint8_t *nd, unsigne
     assert(sizeof(_neighbor_advertisement) == 32);
 
     const uint64_t now = OSUtils::now();
-    sockaddr_storage ip = ZT_SOCKADDR_NULL;
+    sockaddr_storage ip = {0};
 
     if (len >= sizeof(_neighbor_solicitation) && nd[0] == 0x87) {
         // respond to Neighbor Solicitation request for local address

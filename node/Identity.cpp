@@ -151,50 +151,64 @@ char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_
 		Utils::hex(_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN,p);
 		p += ZT_C25519_PRIVATE_KEY_LEN * 2;
 	}
-	*(p++) = (char)0;
+	*p = (char)0;
 	return buf;
 }
 
 bool Identity::fromString(const char *str)
 {
-	if (!str)
+	if (!str) {
+		_address.zero();
 		return false;
-
-	char *saveptr = (char *)0;
+	}
 	char tmp[ZT_IDENTITY_STRING_BUFFER_LENGTH];
-	if (!Utils::scopy(tmp,sizeof(tmp),str))
+	if (!Utils::scopy(tmp,sizeof(tmp),str)) {
+		_address.zero();
 		return false;
+	}
 
 	delete _privateKey;
 	_privateKey = (C25519::Private *)0;
 
 	int fno = 0;
+	char *saveptr = (char *)0;
 	for(char *f=Utils::stok(tmp,":",&saveptr);(f);f=Utils::stok((char *)0,":",&saveptr)) {
 		switch(fno++) {
 			case 0:
 				_address = Address(Utils::hexStrToU64(f));
-				if (_address.isReserved())
+				if (_address.isReserved()) {
+					_address.zero();
 					return false;
+				}
 				break;
 			case 1:
-				if ((f[0] != '0')||(f[1]))
+				if ((f[0] != '0')||(f[1])) {
+					_address.zero();
 					return false;
+				}
 				break;
 			case 2:
-				if (Utils::unhex(f,_publicKey.data,(unsigned int)_publicKey.size()) != _publicKey.size())
+				if (Utils::unhex(f,_publicKey.data,(unsigned int)_publicKey.size()) != _publicKey.size()) {
+					_address.zero();
 					return false;
+				}
 				break;
 			case 3:
 				_privateKey = new C25519::Private();
-				if (Utils::unhex(f,_privateKey->data,(unsigned int)_privateKey->size()) != _privateKey->size())
+				if (Utils::unhex(f,_privateKey->data,(unsigned int)_privateKey->size()) != _privateKey->size()) {
+					_address.zero();
 					return false;
+				}
 				break;
 			default:
+				_address.zero();
 				return false;
 		}
 	}
-	if (fno < 3)
+	if (fno < 3) {
+		_address.zero();
 		return false;
+	}
 
 	return true;
 }

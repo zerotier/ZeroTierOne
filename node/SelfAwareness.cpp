@@ -82,7 +82,7 @@ void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receive
 
 	if ( (trusted) && ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
 		// Changes to external surface reported by trusted peers causes path reset in this scope
-		RR->t->resettingPathsInScope(reporter,reporterPhysicalAddress,myPhysicalAddress,scope);
+		RR->t->resettingPathsInScope(tPtr,reporter,reporterPhysicalAddress,myPhysicalAddress,scope);
 
 		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;

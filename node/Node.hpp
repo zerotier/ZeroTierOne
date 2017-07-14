@@ -257,6 +257,8 @@ public:
 	virtual void ncSendRevocation(const Address &destination,const Revocation &rev);
 	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode);
 
+	inline const Address &remoteTraceTarget() const { return _remoteTraceTarget; }
+
 private:
 	RuntimeEnvironment _RR;
 	RuntimeEnvironment *RR;
@@ -278,6 +280,7 @@ private:
 
 	Mutex _backgroundTasksLock;
 
+	Address _remoteTraceTarget;
 	uint64_t _now;
 	uint64_t _lastPingCheck;
 	uint64_t _lastHousekeepingRun;

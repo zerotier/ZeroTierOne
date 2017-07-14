@@ -78,7 +78,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 
 	uint64_t idtmp[2];
 	idtmp[0] = 0; idtmp[1] = 0;
-	char tmp[1024];
+	char tmp[2048];
 	int n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,tmp,sizeof(tmp) - 1);
 	if (n > 0) {
 		tmp[n] = (char)0;
@@ -90,22 +90,20 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 		}
 	}
 
-	idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
 	if (n <= 0) {
 		RR->identity.generate();
 		RR->identity.toString(false,RR->publicIdentityStr);
 		RR->identity.toString(true,RR->secretIdentityStr);
+		idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
 		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,RR->secretIdentityStr,(unsigned int)strlen(RR->secretIdentityStr));
 		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 	} else {
+		idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
 		n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,tmp,sizeof(tmp) - 1);
-		if (n > 0) {
-			tmp[n] = (char)0;
-			if (RR->publicIdentityStr != tmp)
-				n = -1;
+		if ((n > 0)&&(n < sizeof(RR->publicIdentityStr))&&(n < sizeof(tmp))) {
+			if (memcmp(tmp,RR->publicIdentityStr,n))
+				stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 		}
-		if (n <= 0)
-			stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 	}
 
 	try {
@@ -119,6 +117,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 		delete RR->topology;
 		delete RR->mc;
 		delete RR->sw;
+		delete RR->t;
 		throw;
 	}
 
@@ -201,7 +200,7 @@ public:
 				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)upstreamStableEndpoints->size();++k) {
 					const InetAddress &addr = (*upstreamStableEndpoints)[ptr++ % upstreamStableEndpoints->size()];
 					if (addr.ss_family == AF_INET) {
-						p->sendHELLO(_tPtr,InetAddress(),addr,_now,0);
+						p->sendHELLO(_tPtr,-1,addr,_now,0);
 						contacted = true;
 						break;
 					}
@@ -211,7 +210,7 @@ public:
 				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)upstreamStableEndpoints->size();++k) {
 					const InetAddress &addr = (*upstreamStableEndpoints)[ptr++ % upstreamStableEndpoints->size()];
 					if (addr.ss_family == AF_INET6) {
-						p->sendHELLO(_tPtr,InetAddress(),addr,_now,0);
+						p->sendHELLO(_tPtr,-1,addr,_now,0);
 						contacted = true;
 						break;
 					}

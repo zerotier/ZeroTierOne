@@ -129,13 +129,13 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 {
 	const uint64_t newts = com.timestamp();
 	if (newts <= _comRevocationThreshold) {
-		RR->t->credentialRejected(com,"revoked");
+		RR->t->credentialRejected(tPtr,com,"revoked");
 		return ADD_REJECTED;
 	}
 
 	const uint64_t oldts = _com.timestamp();
 	if (newts < oldts) {
-		RR->t->credentialRejected(com,"old");
+		RR->t->credentialRejected(tPtr,com,"old");
 		return ADD_REJECTED;
 	}
 	if ((newts == oldts)&&(_com == com))
@@ -143,11 +143,11 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 
 	switch(com.verify(RR,tPtr)) {
 		default:
-			RR->t->credentialRejected(com,"invalid");
+			RR->t->credentialRejected(tPtr,com,"invalid");
 			return ADD_REJECTED;
 		case 0:
 			_com = com;
-			RR->t->credentialAccepted(com);
+			RR->t->credentialAccepted(tPtr,com);
 			return ADD_ACCEPTED_NEW;
 		case 1:
 			return ADD_DEFERRED_FOR_WHOIS;
@@ -161,7 +161,7 @@ static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t,C> &remot
 	C *rc = remoteCreds.get(cred.id());
 	if (rc) {
 		if (rc->timestamp() > cred.timestamp()) {
-			RR->t->credentialRejected(cred,"old");
+			RR->t->credentialRejected(tPtr,cred,"old");
 			return Membership::ADD_REJECTED;
 		}
 		if (*rc == cred)
@@ -170,16 +170,16 @@ static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t,C> &remot
 
 	const uint64_t *const rt = revocations.get(Membership::credentialKey(C::credentialType(),cred.id()));
 	if ((rt)&&(*rt >= cred.timestamp())) {
-		RR->t->credentialRejected(cred,"revoked");
+		RR->t->credentialRejected(tPtr,cred,"revoked");
 		return Membership::ADD_REJECTED;
 	}
 
 	switch(cred.verify(RR,tPtr)) {
 		default:
-			RR->t->credentialRejected(cred,"invalid");
+			RR->t->credentialRejected(tPtr,cred,"invalid");
 			return Membership::ADD_REJECTED;
 		case 0:
-			RR->t->credentialAccepted(cred);
+			RR->t->credentialAccepted(tPtr,cred);
 			if (!rc)
 				rc = &(remoteCreds[cred.id()]);
 			*rc = cred;
@@ -198,14 +198,14 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	uint64_t *rt;
 	switch(rev.verify(RR,tPtr)) {
 		default:
-			RR->t->credentialRejected(rev,"invalid");
+			RR->t->credentialRejected(tPtr,rev,"invalid");
 			return ADD_REJECTED;
 		case 0: {
 			const Credential::Type ct = rev.type();
 			switch(ct) {
 				case Credential::CREDENTIAL_TYPE_COM:
 					if (rev.threshold() > _comRevocationThreshold) {
-						RR->t->credentialAccepted(rev);
+						RR->t->credentialAccepted(tPtr,rev);
 						_comRevocationThreshold = rev.threshold();
 						return ADD_ACCEPTED_NEW;
 					}
@@ -221,7 +221,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 					}
 					return ADD_ACCEPTED_REDUNDANT;
 				default:
-					RR->t->credentialRejected(rev,"invalid");
+					RR->t->credentialRejected(tPtr,rev,"invalid");
 					return ADD_REJECTED;
 			}
 		}

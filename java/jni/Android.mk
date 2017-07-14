@@ -34,6 +34,7 @@ LOCAL_SRC_FILES := \
 	$(ZT1)/node/Switch.cpp \
 	$(ZT1)/node/Tag.cpp \
 	$(ZT1)/node/Topology.cpp \
+	$(ZT1)/node/Trace.cpp \
 	$(ZT1)/node/Utils.cpp
 
 

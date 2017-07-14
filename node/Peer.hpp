@@ -102,6 +102,7 @@ public:
 	 * @param inRePacketId Packet ID in reply to (default: none)
 	 * @param inReVerb Verb in reply to (for OK/ERROR, default: VERB_NOP)
 	 * @param trustEstablished If true, some form of non-trivial trust (like allowed in network) has been established
+	 * @param networkId Network ID if this pertains to a network, or 0 otherwise
 	 */
 	void received(
 		void *tPtr,
@@ -111,7 +112,8 @@ public:
 		const Packet::Verb verb,
 		const uint64_t inRePacketId,
 		const Packet::Verb inReVerb,
-		const bool trustEstablished);
+		const bool trustEstablished,
+		const uint64_t networkId);
 
 	/**
 	 * @param now Current time
