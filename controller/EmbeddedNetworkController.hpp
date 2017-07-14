@@ -27,6 +27,7 @@
 #include <set>
 #include <list>
 #include <thread>
+#include <unordered_map>
 
 #include "../node/Constants.hpp"
 
@@ -218,6 +219,7 @@ private:
 
 	NetworkController::Sender *_sender;
 	Identity _signingId;
+	std::string _signingIdAddressString;
 
 	struct _MemberStatusKey
 	{

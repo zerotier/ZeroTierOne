@@ -453,6 +453,8 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 {
 	this->_sender = sender;
 	this->_signingId = signingId;
+	char tmp[64];
+	this->_signingIdAddressString = signingId.address().toString(tmp);
 }
 
 void EmbeddedNetworkController::request(
@@ -1085,51 +1087,80 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 
 void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 {
-	// Convert Dictionary into JSON object
-	json d;
-	char *saveptr = (char *)0;
-	for(char *l=Utils::stok(rt.data,"\n",&saveptr);(l);l=Utils::stok((char *)0,"\n",&saveptr)) {
-		char *eq = strchr(l,'=');
-		if (eq > l) {
-			std::string k(l,(unsigned long)(eq - l));
-			std::string v;
-			++eq;
-			while (*eq) {
-				if (*eq == '\\') {
-					++eq;
-					if (*eq) {
-						switch(*eq) {
-							case 'r':
-								v.push_back('\r');
-								break;
-							case 'n':
-								v.push_back('\n');
-								break;
-							case '0':
-								v.push_back((char)0);
-								break;
-							case 'e':
-								v.push_back('=');
-								break;
-							default:
-								v.push_back(*eq);
-								break;
-						}
-						++eq;
-					}
-				} else {
-					v.push_back(*(eq++));
-				}
-			}
-			if (v.length() > 0)
-				d[k] = v;
-		}
-	}
+	try {
+		std::vector<uint64_t> nw4m(_db.networksForMember(rt.origin));
+		if (nw4m.empty()) // ignore these for unknown members
+			return;
 
-	char p[128];
-	OSUtils::ztsnprintf(p,sizeof(p),"trace/%.10llx_%.16llx.json",rt.origin,OSUtils::now());
-	_db.writeRaw(p,OSUtils::jsonDump(d));
-	//fprintf(stdout,"%s\n",OSUtils::jsonDump(d).c_str()); fflush(stdout);
+		// Convert Dictionary into JSON object
+		json d;
+		char *saveptr = (char *)0;
+		for(char *l=Utils::stok(rt.data,"\n",&saveptr);(l);l=Utils::stok((char *)0,"\n",&saveptr)) {
+			char *eq = strchr(l,'=');
+			if (eq > l) {
+				std::string k(l,(unsigned long)(eq - l));
+				std::string v;
+				++eq;
+				while (*eq) {
+					if (*eq == '\\') {
+						++eq;
+						if (*eq) {
+							switch(*eq) {
+								case 'r':
+									v.push_back('\r');
+									break;
+								case 'n':
+									v.push_back('\n');
+									break;
+								case '0':
+									v.push_back((char)0);
+									break;
+								case 'e':
+									v.push_back('=');
+									break;
+								default:
+									v.push_back(*eq);
+									break;
+							}
+							++eq;
+						}
+					} else {
+						v.push_back(*(eq++));
+					}
+				}
+				if (v.length() > 0)
+					d[k] = v;
+			}
+		}
+
+		bool accept = false;
+		for(std::vector<uint64_t>::const_iterator nwid(nw4m.begin());nwid!=nw4m.end();++nwid) {
+			json nconf;
+			if (_db.getNetwork(*nwid,nconf)) {
+				try {
+					if (OSUtils::jsonString(nconf["remoteTraceTarget"],"") == _signingIdAddressString) {
+						accept = true;
+						break;
+					}
+				} catch ( ... ) {} // ignore missing fields or other errors, drop trace message
+			}
+			if (_db.getNetworkMember(*nwid,rt.origin,nconf)) {
+				try {
+					if (OSUtils::jsonString(nconf["remoteTraceTarget"],"") == _signingIdAddressString) {
+						accept = true;
+						break;
+					}
+				} catch ( ... ) {} // ignore missing fields or other errors, drop trace message
+			}
+		}
+		if (accept) {
+			char p[128];
+			OSUtils::ztsnprintf(p,sizeof(p),"trace/%.10llx_%.16llx.json",rt.origin,OSUtils::now());
+			_db.writeRaw(p,OSUtils::jsonDump(d));
+		}
+	} catch ( ... ) {
+		// drop invalid trace messages if an error occurs
+	}
 }
 
 void EmbeddedNetworkController::threadMain()
@@ -1380,6 +1411,16 @@ void EmbeddedNetworkController::_request(
 	Utils::scopy(nc->name,sizeof(nc->name),OSUtils::jsonString(network["name"],"").c_str());
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
 	nc->multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
+
+	std::string rtt(OSUtils::jsonString(member["remoteTraceTarget"],""));
+	if (rtt.length() == 10) {
+		nc->remoteTraceTarget = Address(Utils::hexStrToU64(rtt.c_str()));
+	} else {
+		rtt = OSUtils::jsonString(network["remoteTraceTarget"],"");
+		if (rtt.length() == 10) {
+			nc->remoteTraceTarget = Address(Utils::hexStrToU64(rtt.c_str()));
+		}
+	}
 
 	for(std::vector<Address>::const_iterator ab(ns.activeBridges.begin());ab!=ns.activeBridges.end();++ab)
 		nc->addSpecialist(*ab,ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
