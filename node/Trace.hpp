@@ -93,7 +93,7 @@ public:
 		}
 
 		inline const uint8_t *data() const { return _l; }
-		inline unsigned int sizeBytes() const { return (unsigned int)sizeof(_l); }
+		inline unsigned int sizeBytes() const { return (ZT_MAX_NETWORK_RULES / 2); }
 
 	private:
 		uint8_t _l[ZT_MAX_NETWORK_RULES / 2];
@@ -115,7 +115,7 @@ public:
 
 	void outgoingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network> &network,const MAC &sourceMac,const MAC &destMac,const unsigned int etherType,const unsigned int vlanId,const unsigned int frameLen,const char *reason);
 	void incomingNetworkAccessDenied(void *const tPtr,const SharedPtr<Network> &network,const SharedPtr<Path> &path,const uint64_t packetId,const unsigned int packetLength,const Address &source,const Packet::Verb verb,bool credentialsRequested);
-	void incomingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network> &network,const SharedPtr<Path> &path,const uint64_t packetId,const unsigned int packetLength,const Address &source,const Packet::Verb verb,const MAC &sourceMac,const MAC &destMac);
+	void incomingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network> &network,const SharedPtr<Path> &path,const uint64_t packetId,const unsigned int packetLength,const Address &source,const Packet::Verb verb,const MAC &sourceMac,const MAC &destMac,const char *reason);
 
 	void networkConfigRequestSent(void *const tPtr,const Network &network,const Address &controller);
 	void networkFilter(
