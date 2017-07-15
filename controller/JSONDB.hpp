@@ -29,6 +29,7 @@
 #include <vector>
 #include <algorithm>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
@@ -129,6 +130,17 @@ public:
 		}
 	}
 
+	inline std::vector<uint64_t> networksForMember(const uint64_t nodeId)
+	{
+		Mutex::Lock _l(_networks_m);
+		std::unordered_map< uint64_t,std::unordered_set< uint64_t > >::const_iterator m(_members.find(nodeId));
+		if (m != _members.end()) {
+			return std::vector<uint64_t>(m->second.begin(),m->second.end());
+		} else {
+			return std::vector<uint64_t>();
+		}
+	}
+
 	void threadMain()
 		throw();
 
@@ -154,7 +166,8 @@ private:
 		std::unordered_map< uint64_t,std::vector<uint8_t> > members;
 	};
 
-	std::unordered_map<uint64_t,_NW> _networks;
+	std::unordered_map< uint64_t,_NW > _networks;
+	std::unordered_map< uint64_t,std::unordered_set< uint64_t > > _members;
 	Mutex _networks_m;
 };
 

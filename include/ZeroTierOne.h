@@ -272,12 +272,20 @@ extern "C" {
 #define ZT_REMOTE_TRACE_FIELD__LOCAL_SOCKET "ls"
 #define ZT_REMOTE_TRACE_FIELD__IP_SCOPE "ipsc"
 #define ZT_REMOTE_TRACE_FIELD__NETWORK_ID "nwid"
+#define ZT_REMOTE_TRACE_FIELD__SOURCE_ZTADDR "szt"
+#define ZT_REMOTE_TRACE_FIELD__DEST_ZTADDR "dzt"
 #define ZT_REMOTE_TRACE_FIELD__SOURCE_MAC "seth"
 #define ZT_REMOTE_TRACE_FIELD__DEST_MAC "deth"
 #define ZT_REMOTE_TRACE_FIELD__ETHERTYPE "et"
 #define ZT_REMOTE_TRACE_FIELD__VLAN_ID "vlan"
 #define ZT_REMOTE_TRACE_FIELD__FRAME_LENGTH "fl"
 #define ZT_REMOTE_TRACE_FIELD__FRAME_DATA "fd"
+#define ZT_REMOTE_TRACE_FIELD__FILTER_FLAG_NOTEE "ffnotee"
+#define ZT_REMOTE_TRACE_FIELD__FILTER_FLAG_INBOUND "ffdir"
+#define ZT_REMOTE_TRACE_FIELD__FILTER_RESULT "fresult"
+#define ZT_REMOTE_TRACE_FIELD__FILTER_BASE_RULE_LOG "frlog"
+#define ZT_REMOTE_TRACE_FIELD__FILTER_CAP_RULE_LOG "fclog"
+#define ZT_REMOTE_TRACE_FIELD__FILTER_CAP_ID "fcid"
 #define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TYPE "crtype"
 #define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ID "crid"
 #define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TIMESTAMP "crts"
@@ -285,6 +293,7 @@ extern "C" {
 #define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO "criss"
 #define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_REVOCATION_TARGET "crrevt"
 #define ZT_REMOTE_TRACE_FIELD__REASON "reason"
+#define ZT_REMOTE_TRACE_FIELD__NETWORK_CONTROLLER_ID "nwctrl"
 
 // Event types in remote traces
 #define ZT_REMOTE_TRACE_EVENT__RESETTING_PATHS_IN_SCOPE 0x1000
@@ -300,6 +309,8 @@ extern "C" {
 #define ZT_REMOTE_TRACE_EVENT__INCOMING_NETWORK_FRAME_DROPPED 0x2002
 #define ZT_REMOTE_TRACE_EVENT__CREDENTIAL_REJECTED 0x2003
 #define ZT_REMOTE_TRACE_EVENT__CREDENTIAL_ACCEPTED 0x2004
+#define ZT_REMOTE_TRACE_EVENT__NETWORK_CONFIG_REQUEST_SENT 0x2005
+#define ZT_REMOTE_TRACE_EVENT__NETWORK_FILTER_TRACE 0x2006
 
 // Event types in remote traces in hex string form
 #define ZT_REMOTE_TRACE_EVENT__RESETTING_PATHS_IN_SCOPE_S "1000"
@@ -315,6 +326,8 @@ extern "C" {
 #define ZT_REMOTE_TRACE_EVENT__INCOMING_NETWORK_FRAME_DROPPED_S "2002"
 #define ZT_REMOTE_TRACE_EVENT__CREDENTIAL_REJECTED_S "2003"
 #define ZT_REMOTE_TRACE_EVENT__CREDENTIAL_ACCEPTED_S "2004"
+#define ZT_REMOTE_TRACE_EVENT__NETWORK_CONFIG_REQUEST_SENT_S "2005"
+#define ZT_REMOTE_TRACE_EVENT__NETWORK_FILTER_TRACE_S "2006"
 
 /****************************************************************************/
 /* Structures and other types                                               */
@@ -470,8 +483,51 @@ enum ZT_Event
 	 *
 	 * Meta-data: ZT_UserMessage structure
 	 */
-	ZT_EVENT_USER_MESSAGE = 6
+	ZT_EVENT_USER_MESSAGE = 6,
+
+	/**
+	 * Remote trace received
+	 *
+	 * These are generated when a VERB_REMOTE_TRACE is received. Note
+	 * that any node can fling one of these at us. It is your responsibility
+	 * to filter and determine if it's worth paying attention to. If it's
+	 * not just drop it. Most nodes that are not active controllers ignore
+	 * these, and controllers only save them if they pertain to networks
+	 * with remote tracing enabled.
+	 *
+	 * Meta-data: ZT_RemoteTrace structure
+	 */
+	ZT_EVENT_REMOTE_TRACE = 7
 };
+
+/**
+ * Payload of REMOTE_TRACE event
+ */
+typedef struct
+{
+	/**
+	 * ZeroTier address of sender
+	 */
+	uint64_t origin;
+
+	/**
+	 * Null-terminated Dictionary containing key/value pairs sent by origin
+	 *
+	 * This *should* be a dictionary, but the implementation only checks
+	 * that it is a valid non-empty C-style null-terminated string. Be very
+	 * careful to use a well-tested parser to parse this as it represents
+	 * data received from a potentially un-trusted peer on the network.
+	 * Invalid payloads should be dropped.
+	 *
+	 * The contents of data[] may be modified.
+	 */
+	char *data;
+
+	/**
+	 * Length of dict[] in bytes, including terminating null
+	 */
+	unsigned int len;
+} ZT_RemoteTrace;
 
 /**
  * User message used with ZT_EVENT_USER_MESSAGE

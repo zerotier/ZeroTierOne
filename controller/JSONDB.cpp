@@ -181,6 +181,7 @@ void JSONDB::saveNetworkMember(const uint64_t networkId,const uint64_t nodeId,co
 	{
 		Mutex::Lock _l(_networks_m);
 		_networks[networkId].members[nodeId] = nlohmann::json::to_msgpack(memberConfig);
+		_members[nodeId].insert(networkId);
 	}
 	_recomputeSummaryInfo(networkId);
 }
@@ -244,6 +245,7 @@ nlohmann::json JSONDB::eraseNetworkMember(const uint64_t networkId,const uint64_
 
 	{
 		Mutex::Lock _l(_networks_m);
+		_members[nodeId].erase(networkId);
 		std::unordered_map<uint64_t,_NW>::iterator i(_networks.find(networkId));
 		if (i == _networks.end())
 			return _EMPTY_JSON;
@@ -367,8 +369,10 @@ bool JSONDB::_load(const std::string &p)
 							} else if ((id.length() == 10)&&(objtype == "member")) {
 								const uint64_t mid = Utils::hexStrToU64(id.c_str());
 								const uint64_t nwid = Utils::hexStrToU64(OSUtils::jsonString(j["nwid"],"0").c_str());
-								if ((mid)&&(nwid))
+								if ((mid)&&(nwid)) {
 									_networks[nwid].members[mid] = nlohmann::json::to_msgpack(j);
+									_members[mid].insert(nwid);
+								}
 							}
 						}
 					}
@@ -403,6 +407,7 @@ bool JSONDB::_load(const std::string &p)
 							if ((mid)&&(nwid)) {
 								Mutex::Lock _l(_networks_m);
 								_networks[nwid].members[mid] = nlohmann::json::to_msgpack(j);
+								_members[mid].insert(nwid);
 							}
 						}
 					} catch ( ... ) {}

@@ -683,19 +683,19 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const 
 							if (network->config().permitsBridging(peer->address())) {
 								network->learnBridgeRoute(from,peer->address());
 							} else {
-								RR->t->incomingNetworkFrameDropped(tPtr,network,_path,packetId(),size(),peer->address(),Packet::VERB_EXT_FRAME,from,to);
+								RR->t->incomingNetworkFrameDropped(tPtr,network,_path,packetId(),size(),peer->address(),Packet::VERB_EXT_FRAME,from,to,"bridging not allowed (remote)");
 								peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true,nwid); // trustEstablished because COM is okay
 								return true;
 							}
 						} else if (to != network->mac()) {
 							if (to.isMulticast()) {
 								if (network->config().multicastLimit == 0) {
-									RR->t->incomingNetworkFrameDropped(tPtr,network,_path,packetId(),size(),peer->address(),Packet::VERB_EXT_FRAME,from,to);
+									RR->t->incomingNetworkFrameDropped(tPtr,network,_path,packetId(),size(),peer->address(),Packet::VERB_EXT_FRAME,from,to,"multicast disabled");
 									peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true,nwid); // trustEstablished because COM is okay
 									return true;
 								}
 							} else if (!network->config().permitsBridging(RR->identity.address())) {
-								RR->t->incomingNetworkFrameDropped(tPtr,network,_path,packetId(),size(),peer->address(),Packet::VERB_EXT_FRAME,from,to);
+								RR->t->incomingNetworkFrameDropped(tPtr,network,_path,packetId(),size(),peer->address(),Packet::VERB_EXT_FRAME,from,to,"bridging not allowed (local)");
 								peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true,nwid); // trustEstablished because COM is okay
 								return true;
 							}
@@ -1065,7 +1065,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 			const unsigned int frameLen = size() - (offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME);
 
 			if (network->config().multicastLimit == 0) {
-				RR->t->incomingNetworkFrameDropped(tPtr,network,_path,packetId(),size(),peer->address(),Packet::VERB_MULTICAST_FRAME,from,to.mac());
+				RR->t->incomingNetworkFrameDropped(tPtr,network,_path,packetId(),size(),peer->address(),Packet::VERB_MULTICAST_FRAME,from,to.mac(),"multicast disabled");
 				peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,false,nwid);
 				return true;
 			}
@@ -1086,7 +1086,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 					if (network->config().permitsBridging(peer->address())) {
 						network->learnBridgeRoute(from,peer->address());
 					} else {
-						RR->t->incomingNetworkFrameDropped(tPtr,network,_path,packetId(),size(),peer->address(),Packet::VERB_MULTICAST_FRAME,from,to.mac());
+						RR->t->incomingNetworkFrameDropped(tPtr,network,_path,packetId(),size(),peer->address(),Packet::VERB_MULTICAST_FRAME,from,to.mac(),"bridging not allowed (remote)");
 						peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,true,nwid); // trustEstablished because COM is okay
 						return true;
 					}
@@ -1192,7 +1192,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 bool IncomingPacket::_doUSER_MESSAGE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
-		if (size() >= (ZT_PACKET_IDX_PAYLOAD + 8)) {
+		if (likely(size() >= (ZT_PACKET_IDX_PAYLOAD + 8))) {
 			ZT_UserMessage um;
 			um.origin = peer->address().toInt();
 			um.typeId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);
@@ -1203,6 +1203,31 @@ bool IncomingPacket::_doUSER_MESSAGE(const RuntimeEnvironment *RR,void *tPtr,con
 		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_USER_MESSAGE,0,Packet::VERB_NOP,false,0);
 	} catch ( ... ) {
 		RR->t->incomingPacketInvalid(tPtr,_path,packetId(),source(),hops(),Packet::VERB_USER_MESSAGE,"unexpected exception");
+	}
+	return true;
+}
+
+bool IncomingPacket::_doREMOTE_TRACE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
+{
+	ZT_RemoteTrace rt;
+	try {
+		const char *ptr = reinterpret_cast<const char *>(data()) + ZT_PACKET_IDX_PAYLOAD;
+		const char *const eof = reinterpret_cast<const char *>(data()) + size();
+		rt.origin = peer->address().toInt();
+		rt.data = const_cast<char *>(ptr); // start of first string
+		while (ptr < eof) {
+			if (!*ptr) { // end of string
+				rt.len = (unsigned int)(ptr - rt.data);
+				if ((rt.len > 0)&&(rt.len <= ZT_MAX_REMOTE_TRACE_SIZE))
+					RR->node->postEvent(tPtr,ZT_EVENT_REMOTE_TRACE,&rt);
+				rt.data = const_cast<char *>(++ptr); // start of next string, if any
+			} else {
+				++ptr;
+			}
+		}
+		peer->received(tPtr,_path,hops(),packetId(),Packet::VERB_REMOTE_TRACE,0,Packet::VERB_NOP,false,0);
+	} catch ( ... ) {
+		RR->t->incomingPacketInvalid(tPtr,_path,packetId(),source(),hops(),Packet::VERB_REMOTE_TRACE,"unexpected exception");
 	}
 	return true;
 }
