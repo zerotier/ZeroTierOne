@@ -60,7 +60,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 	try {
 		const uint64_t now = RR->node->now();
 
-		SharedPtr<Path> path(RR->topology->getPath(localSocket,fromAddr));
+		const SharedPtr<Path> path(RR->topology->getPath(localSocket,fromAddr));
 		path->received(now);
 
 		if (len == 13) {

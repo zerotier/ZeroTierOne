@@ -99,7 +99,6 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 				default: // ignore unknown verbs, but if they pass auth check they are "received"
 					peer->received(tPtr,_path,hops(),packetId(),v,0,Packet::VERB_NOP,false,0);
 					return true;
-
 				case Packet::VERB_HELLO:                      return _doHELLO(RR,tPtr,true);
 				case Packet::VERB_ERROR:                      return _doERROR(RR,tPtr,peer);
 				case Packet::VERB_OK:                         return _doOK(RR,tPtr,peer);
@@ -122,7 +121,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 			return false;
 		}
 	} catch ( ... ) {
-		RR->t->incomingPacketInvalid(tPtr,_path,packetId(),sourceAddress,hops(),verb(),"unexpected exception in tryDecode() (outer)");
+		RR->t->incomingPacketInvalid(tPtr,_path,packetId(),sourceAddress,hops(),verb(),"unexpected exception in tryDecode()");
 		return true;
 	}
 }
@@ -332,7 +331,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 			}
 		}
 
-		// Handle COR if present (older versions don't send this)
+		// Certificates of representation (if present)
 		if ((ptr + 2) <= size()) {
 			if (at<uint16_t>(ptr) > 0) {
 				CertificateOfRepresentation cor;
