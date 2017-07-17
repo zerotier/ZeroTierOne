@@ -110,11 +110,6 @@ public:
 		copyFrom(b,l);
 	}
 
-	Buffer(const std::string &s)
-	{
-		copyFrom(s.data(),s.length());
-	}
-
 	template<unsigned int C2>
 	inline Buffer &operator=(const Buffer<C2> &b)
 	{
@@ -288,17 +283,6 @@ public:
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
 		memcpy(_b + _l,b,l);
 		_l += l;
-	}
-
-	/**
-	 * Append a string
-	 *
-	 * @param s String to append
-	 * @throws std::out_of_range Attempt to append beyond capacity
-	 */
-	inline void append(const std::string &s)
-	{
-		append(s.data(),(unsigned int)s.length());
 	}
 
 	/**
