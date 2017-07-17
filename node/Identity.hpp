@@ -71,7 +71,7 @@ public:
 		_privateKey((C25519::Private *)0)
 	{
 		if (!fromString(str))
-			throw std::invalid_argument(std::string("invalid string-serialized identity: ") + str);
+			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 	}
 
 	template<unsigned int C>
@@ -121,7 +121,7 @@ public:
 	/**
 	 * @return True if this identity contains a private key
 	 */
-	inline bool hasPrivate() const throw() { return (_privateKey != (C25519::Private *)0); }
+	inline bool hasPrivate() const { return (_privateKey != (C25519::Private *)0); }
 
 	/**
 	 * Compute the SHA512 hash of our private key (if we have one)
@@ -145,11 +145,10 @@ public:
 	 * @param len Length of data
 	 */
 	inline C25519::Signature sign(const void *data,unsigned int len) const
-		throw(std::runtime_error)
 	{
 		if (_privateKey)
 			return C25519::sign(*_privateKey,_publicKey,data,len);
-		throw std::runtime_error("sign() requires a private key");
+		throw ZT_EXCEPTION_PRIVATE_KEY_REQUIRED;
 	}
 
 	/**
@@ -203,7 +202,7 @@ public:
 	/**
 	 * @return This identity's address
 	 */
-	inline const Address &address() const throw() { return _address; }
+	inline const Address &address() const { return _address; }
 
 	/**
 	 * Serialize this identity (binary)
@@ -248,7 +247,7 @@ public:
 		p += ZT_ADDRESS_LENGTH;
 
 		if (b[p++] != 0)
-			throw std::invalid_argument("unsupported identity type");
+			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 
 		memcpy(_publicKey.data,b.field(p,(unsigned int)_publicKey.size()),(unsigned int)_publicKey.size());
 		p += (unsigned int)_publicKey.size();
@@ -256,7 +255,7 @@ public:
 		unsigned int privateKeyLength = (unsigned int)b[p++];
 		if (privateKeyLength) {
 			if (privateKeyLength != ZT_C25519_PRIVATE_KEY_LEN)
-				throw std::invalid_argument("invalid private key");
+				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 			_privateKey = new C25519::Private();
 			memcpy(_privateKey->data,b.field(p,ZT_C25519_PRIVATE_KEY_LEN),ZT_C25519_PRIVATE_KEY_LEN);
 			p += ZT_C25519_PRIVATE_KEY_LEN;
@@ -306,14 +305,14 @@ public:
 	/**
 	 * @return True if this identity contains something
 	 */
-	inline operator bool() const throw() { return (_address); }
+	inline operator bool() const { return (_address); }
 
-	inline bool operator==(const Identity &id) const throw() { return ((_address == id._address)&&(_publicKey == id._publicKey)); }
-	inline bool operator<(const Identity &id) const throw() { return ((_address < id._address)||((_address == id._address)&&(_publicKey < id._publicKey))); }
-	inline bool operator!=(const Identity &id) const throw() { return !(*this == id); }
-	inline bool operator>(const Identity &id) const throw() { return (id < *this); }
-	inline bool operator<=(const Identity &id) const throw() { return !(id < *this); }
-	inline bool operator>=(const Identity &id) const throw() { return !(*this < id); }
+	inline bool operator==(const Identity &id) const { return ((_address == id._address)&&(_publicKey == id._publicKey)); }
+	inline bool operator<(const Identity &id) const { return ((_address < id._address)||((_address == id._address)&&(_publicKey < id._publicKey))); }
+	inline bool operator!=(const Identity &id) const { return !(*this == id); }
+	inline bool operator>(const Identity &id) const { return (id < *this); }
+	inline bool operator<=(const Identity &id) const { return !(id < *this); }
+	inline bool operator>=(const Identity &id) const { return !(*this < id); }
 
 private:
 	Address _address;

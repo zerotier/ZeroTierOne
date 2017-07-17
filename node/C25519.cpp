@@ -1998,7 +1998,6 @@ static inline void get_hram(unsigned char *hram, const unsigned char *sm, const 
 //////////////////////////////////////////////////////////////////////////////
 
 void C25519::agree(const C25519::Private &mine,const C25519::Public &their,void *keybuf,unsigned int keylen)
-  throw()
 {
 	unsigned char rawkey[32];
 	unsigned char digest[64];
@@ -2015,7 +2014,6 @@ void C25519::agree(const C25519::Private &mine,const C25519::Public &their,void 
 }
 
 void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPublic,const void *msg,unsigned int len,void *signature)
-  throw()
 {
   sc25519 sck, scs, scsk;
   ge25519 ger;
@@ -2065,7 +2063,6 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 }
 
 bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len,const void *signature)
-  throw()
 {
   unsigned char t2[32];
   ge25519 get1, get2;
@@ -2096,7 +2093,6 @@ bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len
 }
 
 void C25519::_calcPubDH(C25519::Pair &kp)
-  throw()
 {
   // First 32 bytes of pub and priv are the keys for ECDH key
   // agreement. This generates the public portion from the private.
@@ -2104,7 +2100,6 @@ void C25519::_calcPubDH(C25519::Pair &kp)
 }
 
 void C25519::_calcPubED(C25519::Pair &kp)
-  throw()
 {
   unsigned char extsk[64];
   sc25519 scsk;

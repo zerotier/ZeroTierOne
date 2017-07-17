@@ -168,14 +168,14 @@ public:
 				p += 2;
 				memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
 				p += ZT_C25519_SIGNATURE_LEN;
-			} else throw std::runtime_error("invalid signature");
+			} else throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 		} else {
 			p += 2 + b.template at<uint16_t>(p);
 		}
 
 		p += 2 + b.template at<uint16_t>(p);
 		if (p > b.size())
-			throw std::runtime_error("extended field overflow");
+			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
 
 		return (p - startAt);
 	}

@@ -27,7 +27,6 @@
 #ifndef ZT_ARRAY_HPP
 #define ZT_ARRAY_HPP
 
-#include <string>
 #include <algorithm>
 
 namespace ZeroTier {
@@ -39,23 +38,23 @@ template<typename T,std::size_t S>
 class Array
 {
 public:
-	Array() throw() {}
+	Array() {}
 
 	Array(const Array &a)
 	{
-		for(std::size_t i=0;i<S;++i)
+		for(unsigned long i=0;i<S;++i)
 			data[i] = a.data[i];
 	}
 
 	Array(const T *ptr)
 	{
-		for(std::size_t i=0;i<S;++i)
+		for(unsigned long i=0;i<S;++i)
 			data[i] = ptr[i];
 	}
 
 	inline Array &operator=(const Array &a)
 	{
-		for(std::size_t i=0;i<S;++i)
+		for(unsigned long i=0;i<S;++i)
 			data[i] = a.data[i];
 		return *this;
 	}
@@ -65,35 +64,38 @@ public:
 	typedef const T* const_pointer;
 	typedef T& reference;
 	typedef const T& const_reference;
+	typedef unsigned long size_type;
+	typedef long difference_type;
+
+	/*
 	typedef T* iterator;
 	typedef const T* const_iterator;
-	typedef std::size_t size_type;
-	typedef std::ptrdiff_t difference_type;
 	typedef std::reverse_iterator<iterator> reverse_iterator;
 	typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-	inline iterator begin() throw() { return data; }
-	inline iterator end() throw() { return &(data[S]); }
-	inline const_iterator begin() const throw() { return data; }
-	inline const_iterator end() const throw() { return &(data[S]); }
+	inline iterator begin() { return data; }
+	inline iterator end() { return &(data[S]); }
+	inline const_iterator begin() const { return data; }
+	inline const_iterator end() const { return &(data[S]); }
 
-	inline reverse_iterator rbegin() throw() { return reverse_iterator(begin()); }
-	inline reverse_iterator rend() throw() { return reverse_iterator(end()); }
-	inline const_reverse_iterator rbegin() const throw() { return const_reverse_iterator(begin()); }
-	inline const_reverse_iterator rend() const throw() { return const_reverse_iterator(end()); }
+	inline reverse_iterator rbegin() { return reverse_iterator(begin()); }
+	inline reverse_iterator rend() { return reverse_iterator(end()); }
+	inline const_reverse_iterator rbegin() const { return const_reverse_iterator(begin()); }
+	inline const_reverse_iterator rend() const { return const_reverse_iterator(end()); }
+	*/
 
-	inline std::size_t size() const throw() { return S; }
-	inline std::size_t max_size() const throw() { return S; }
+	inline unsigned long size() const { return S; }
+	inline unsigned long max_size() const { return S; }
 
-	inline reference operator[](const std::size_t n) throw() { return data[n]; }
-	inline const_reference operator[](const std::size_t n) const throw() { return data[n]; }
+	inline reference operator[](const std::size_t n) { return data[n]; }
+	inline const_reference operator[](const std::size_t n) const { return data[n]; }
 
-	inline reference front() throw() { return data[0]; }
-	inline const_reference front() const throw() { return data[0]; }
-	inline reference back() throw() { return data[S-1]; }
-	inline const_reference back() const throw() { return data[S-1]; }
+	inline reference front() { return data[0]; }
+	inline const_reference front() const { return data[0]; }
+	inline reference back() { return data[S-1]; }
+	inline const_reference back() const { return data[S-1]; }
 
-	inline bool operator==(const Array &k) const throw()
+	inline bool operator==(const Array &k) const
 	{
 		for(unsigned long i=0;i<S;++i) {
 			if (data[i] != k.data[i])
@@ -101,11 +103,11 @@ public:
 		}
 		return true;
 	}
-	inline bool operator<(const Array &k) const throw() { return std::lexicographical_compare(begin(),end(),k.begin(),k.end()); }
-	inline bool operator!=(const Array &k) const throw() { return !(*this == k); }
-	inline bool operator>(const Array &k) const throw() { return (k < *this); }
-	inline bool operator<=(const Array &k) const throw() { return !(k < *this); }
-	inline bool operator>=(const Array &k) const throw() { return !(*this < k); }
+	inline bool operator!=(const Array &k) const { return !(*this == k); }
+	inline bool operator<(const Array &k) const { return std::lexicographical_compare(data,data + S,k.data,k.data + S); }
+	inline bool operator>(const Array &k) const { return (k < *this); }
+	inline bool operator<=(const Array &k) const { return !(k < *this); }
+	inline bool operator>=(const Array &k) const { return !(*this < k); }
 
 	T data[S];
 };

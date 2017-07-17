@@ -424,8 +424,7 @@ public:
 		}
 
 		template<unsigned int C2>
-		Fragment(const Buffer<C2> &b)
-	 		throw(std::out_of_range) :
+		Fragment(const Buffer<C2> &b) :
 	 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
 		{
 		}
@@ -443,10 +442,8 @@ public:
 		 * @param fragLen Length of fragment in bytes
 		 * @param fragNo Which fragment (>= 1, since 0 is Packet with end chopped off)
 		 * @param fragTotal Total number of fragments (including 0)
-		 * @throws std::out_of_range Packet size would exceed buffer
 		 */
 		Fragment(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
-			throw(std::out_of_range)
 		{
 			init(p,fragStart,fragLen,fragNo,fragTotal);
 		}
@@ -459,13 +456,11 @@ public:
 		 * @param fragLen Length of fragment in bytes
 		 * @param fragNo Which fragment (>= 1, since 0 is Packet with end chopped off)
 		 * @param fragTotal Total number of fragments (including 0)
-		 * @throws std::out_of_range Packet size would exceed buffer
 		 */
 		inline void init(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
-			throw(std::out_of_range)
 		{
 			if ((fragStart + fragLen) > p.size())
-				throw std::out_of_range("Packet::Fragment: tried to construct fragment of packet past its length");
+				throw ZT_EXCEPTION_OUT_OF_BOUNDS;
 			setSize(fragLen + ZT_PROTO_MIN_FRAGMENT_LENGTH);
 
 			// NOTE: this copies both the IV/packet ID and the destination address.

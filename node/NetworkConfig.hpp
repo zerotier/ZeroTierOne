@@ -262,32 +262,32 @@ public:
 	/**
 	 * @return True if passive bridging is allowed (experimental)
 	 */
-	inline bool allowPassiveBridging() const throw() { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING) != 0); }
+	inline bool allowPassiveBridging() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING) != 0); }
 
 	/**
 	 * @return True if broadcast (ff:ff:ff:ff:ff:ff) address should work on this network
 	 */
-	inline bool enableBroadcast() const throw() { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
+	inline bool enableBroadcast() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
 
 	/**
 	 * @return True if IPv6 NDP emulation should be allowed for certain "magic" IPv6 address patterns
 	 */
-	inline bool ndpEmulation() const throw() { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
+	inline bool ndpEmulation() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
 
 	/**
 	 * @return True if frames should not be compressed
 	 */
-	inline bool disableCompression() const throw() { return ((this->flags & ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION) != 0); }
+	inline bool disableCompression() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION) != 0); }
 
 	/**
 	 * @return Network type is public (no access control)
 	 */
-	inline bool isPublic() const throw() { return (this->type == ZT_NETWORK_TYPE_PUBLIC); }
+	inline bool isPublic() const { return (this->type == ZT_NETWORK_TYPE_PUBLIC); }
 
 	/**
 	 * @return Network type is private (certificate access control)
 	 */
-	inline bool isPrivate() const throw() { return (this->type == ZT_NETWORK_TYPE_PRIVATE); }
+	inline bool isPrivate() const { return (this->type == ZT_NETWORK_TYPE_PRIVATE); }
 
 	/**
 	 * @return ZeroTier addresses of devices on this network designated as active bridges
@@ -361,7 +361,7 @@ public:
 	/**
 	 * @return True if this network config is non-NULL
 	 */
-	inline operator bool() const throw() { return (networkId != 0); }
+	inline operator bool() const { return (networkId != 0); }
 
 	inline bool operator==(const NetworkConfig &nc) const { return (memcmp(this,&nc,sizeof(NetworkConfig)) == 0); }
 	inline bool operator!=(const NetworkConfig &nc) const { return (!(*this == nc)); }

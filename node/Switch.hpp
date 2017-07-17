@@ -222,8 +222,8 @@ private:
 				y = a2.toInt();
 			}
 		}
-		inline unsigned long hashCode() const throw() { return ((unsigned long)x ^ (unsigned long)y); }
-		inline bool operator==(const _LastUniteKey &k) const throw() { return ((x == k.x)&&(y == k.y)); }
+		inline unsigned long hashCode() const { return ((unsigned long)x ^ (unsigned long)y); }
+		inline bool operator==(const _LastUniteKey &k) const { return ((x == k.x)&&(y == k.y)); }
 		uint64_t x,y;
 	};
 	Hashtable< _LastUniteKey,uint64_t > _lastUniteAttempt; // key is always sorted in ascending order, for set-like behavior

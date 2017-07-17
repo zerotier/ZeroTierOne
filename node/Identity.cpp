@@ -83,10 +83,9 @@ static inline void _computeMemoryHardHash(const void *publicKey,unsigned int pub
 // threshold value.
 struct _Identity_generate_cond
 {
-	_Identity_generate_cond() throw() {}
-	_Identity_generate_cond(unsigned char *sb,char *gm) throw() : digest(sb),genmem(gm) {}
+	_Identity_generate_cond() {}
+	_Identity_generate_cond(unsigned char *sb,char *gm) : digest(sb),genmem(gm) {}
 	inline bool operator()(const C25519::Pair &kp) const
-		throw()
 	{
 		_computeMemoryHardHash(kp.pub.data,(unsigned int)kp.pub.size(),digest,genmem);
 		return (digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN);

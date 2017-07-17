@@ -69,7 +69,6 @@ public:
 	 * Generate a C25519 elliptic curve key pair
 	 */
 	static inline Pair generate()
-		throw()
 	{
 		Pair kp;
 		Utils::getSecureRandom(kp.priv.data,(unsigned int)kp.priv.size());
@@ -93,7 +92,6 @@ public:
 	 */
 	template<typename F>
 	static inline Pair generateSatisfying(F cond)
-		throw()
 	{
 		Pair kp;
 		void *const priv = (void *)kp.priv.data;
@@ -118,13 +116,8 @@ public:
 	 * @param keybuf Buffer to fill
 	 * @param keylen Number of key bytes to generate
 	 */
-	static void agree(const Private &mine,const Public &their,void *keybuf,unsigned int keylen)
-		throw();
-	static inline void agree(const Pair &mine,const Public &their,void *keybuf,unsigned int keylen)
-		throw()
-	{
-		agree(mine.priv,their,keybuf,keylen);
-	}
+	static void agree(const Private &mine,const Public &their,void *keybuf,unsigned int keylen);
+	static inline void agree(const Pair &mine,const Public &their,void *keybuf,unsigned int keylen) { agree(mine.priv,their,keybuf,keylen); }
 
 	/**
 	 * Sign a message with a sender's key pair
@@ -145,13 +138,8 @@ public:
 	 * @param len Length of message in bytes
 	 * @param signature Buffer to fill with signature -- MUST be 96 bytes in length
 	 */
-	static void sign(const Private &myPrivate,const Public &myPublic,const void *msg,unsigned int len,void *signature)
-		throw();
-	static inline void sign(const Pair &mine,const void *msg,unsigned int len,void *signature)
-		throw()
-	{
-		sign(mine.priv,mine.pub,msg,len,signature);
-	}
+	static void sign(const Private &myPrivate,const Public &myPublic,const void *msg,unsigned int len,void *signature);
+	static inline void sign(const Pair &mine,const void *msg,unsigned int len,void *signature) { sign(mine.priv,mine.pub,msg,len,signature); }
 
 	/**
 	 * Sign a message with a sender's key pair
@@ -163,14 +151,12 @@ public:
 	 * @return Signature
 	 */
 	static inline Signature sign(const Private &myPrivate,const Public &myPublic,const void *msg,unsigned int len)
-		throw()
 	{
 		Signature sig;
 		sign(myPrivate,myPublic,msg,len,sig.data);
 		return sig;
 	}
 	static inline Signature sign(const Pair &mine,const void *msg,unsigned int len)
-		throw()
 	{
 		Signature sig;
 		sign(mine.priv,mine.pub,msg,len,sig.data);
@@ -186,8 +172,7 @@ public:
 	 * @param signature 96-byte signature
 	 * @return True if signature is valid and the message is authentic and unmodified
 	 */
-	static bool verify(const Public &their,const void *msg,unsigned int len,const void *signature)
-		throw();
+	static bool verify(const Public &their,const void *msg,unsigned int len,const void *signature);
 
 	/**
 	 * Verify a message's signature
@@ -199,7 +184,6 @@ public:
 	 * @return True if signature is valid and the message is authentic and unmodified
 	 */
 	static inline bool verify(const Public &their,const void *msg,unsigned int len,const Signature &signature)
-		throw()
 	{
 		return verify(their,msg,len,signature.data);
 	}
@@ -207,13 +191,11 @@ public:
 private:
 	// derive first 32 bytes of kp.pub from first 32 bytes of kp.priv
 	// this is the ECDH key
-	static void _calcPubDH(Pair &kp)
-		throw();
+	static void _calcPubDH(Pair &kp);
 
 	// derive 2nd 32 bytes of kp.pub from 2nd 32 bytes of kp.priv
 	// this is the Ed25519 sign/verify key
-	static void _calcPubED(Pair &kp)
-		throw();
+	static void _calcPubED(Pair &kp);
 };
 
 } // namespace ZeroTier
