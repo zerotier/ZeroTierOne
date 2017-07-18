@@ -105,8 +105,7 @@ private:
 		Identity identity;
 		Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> metaData;
 		enum {
-			RQENTRY_TYPE_REQUEST = 0,
-			RQENTRY_TYPE_PING = 1
+			RQENTRY_TYPE_REQUEST = 0
 		} type;
 	};
 
@@ -210,6 +209,7 @@ private:
 	volatile bool _running;
 	BlockingQueue<_RQEntry *> _queue;
 	std::vector<Thread> _threads;
+	volatile uint64_t _lastDumpedStatus;
 	Mutex _threads_m;
 
 	JSONDB _db;

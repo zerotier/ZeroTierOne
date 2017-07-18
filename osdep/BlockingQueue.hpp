@@ -30,6 +30,7 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
+#include <chrono>
 
 namespace ZeroTier {
 
@@ -58,10 +59,6 @@ public:
 		c.notify_all();
 	}
 
-	/**
-	 * @param value Value to set to next queue item if return value is true
-	 * @return False if stop() has been called, true otherwise
-	 */
 	inline bool get(T &value)
 	{
 		std::unique_lock<std::mutex> lock(m);
@@ -73,6 +70,29 @@ public:
 		value = q.front();
 		q.pop();
 		return true;
+	}
+
+	enum TimedWaitResult
+	{
+		OK,
+		TIMED_OUT,
+		STOP
+	};
+
+	inline TimedWaitResult get(T &value,const unsigned long ms)
+	{
+		const std::chrono::milliseconds ms2{ms};
+		std::unique_lock<std::mutex> lock(m);
+		if (!r) return STOP;
+		while (q.empty()) {
+			if (c.wait_for(lock,ms2) == std::cv_status::timeout)
+				return ((r) ? TIMED_OUT : STOP);
+			else if (!r)
+				return STOP;
+		}
+		value = q.front();
+		q.pop();
+		return OK;
 	}
 
 private:
