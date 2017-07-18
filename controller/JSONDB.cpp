@@ -334,6 +334,7 @@ void JSONDB::threadMain()
 						rawInputBuf.clear();
 					}
 				}
+				continue; // we only want to do the stuff below this every few dozen ms or so, so pause again
 			}
 		}
 #else

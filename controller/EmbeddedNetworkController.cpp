@@ -1087,6 +1087,9 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 
 void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 {
+	static volatile unsigned long idCounter = 0;
+
+	char id[128];
 	try {
 		std::vector<uint64_t> nw4m(_db.networksForMember(rt.origin));
 
@@ -1135,6 +1138,10 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 			}
 		}
 
+		OSUtils::ztsnprintf(id,sizeof(id),"%.10llx-%.10llx-%.16llx-%.8lx",_signingId.address().toInt(),rt.origin,OSUtils::now(),++idCounter);
+		d["id"] = id;
+		d["objtype"] = "trace";
+
 		bool accept = true;
 		/*
 		for(std::vector<uint64_t>::const_iterator nwid(nw4m.begin());nwid!=nw4m.end();++nwid) {
@@ -1159,7 +1166,7 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 		*/
 		if (accept) {
 			char p[128];
-			OSUtils::ztsnprintf(p,sizeof(p),"trace/%.10llx-%.10llx-%.16llx",_signingId.address().toInt(),rt.origin,OSUtils::now());
+			OSUtils::ztsnprintf(p,sizeof(p),"trace/%s",id);
 			_db.writeRaw(p,OSUtils::jsonDump(d));
 		}
 	} catch ( ... ) {
