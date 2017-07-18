@@ -145,12 +145,15 @@ public:
 		throw();
 
 private:
+	bool _add(const nlohmann::json &j);
 	bool _load(const std::string &p);
 	void _recomputeSummaryInfo(const uint64_t networkId);
 	std::string _genPath(const std::string &n,bool create);
 
 	std::string _basePath;
 	InetAddress _httpAddr;
+	int _rawInput,_rawOutput;
+	Mutex _rawLock;
 
 	Thread _summaryThread;
 	std::vector<uint64_t> _summaryThreadToDo;
