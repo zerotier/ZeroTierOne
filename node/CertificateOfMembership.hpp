@@ -305,14 +305,14 @@ public:
 		_signedBy.zero();
 
 		if (b[p++] != 1)
-			throw std::invalid_argument("invalid object");
+			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 
 		unsigned int numq = b.template at<uint16_t>(p); p += sizeof(uint16_t);
 		uint64_t lastId = 0;
 		for(unsigned int i=0;i<numq;++i) {
 			const uint64_t qid = b.template at<uint64_t>(p);
 			if (qid < lastId)
-				throw std::invalid_argument("qualifiers not sorted");
+				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_BAD_ENCODING;
 			else lastId = qid;
 			if (_qualifierCount < ZT_NETWORK_COM_MAX_QUALIFIERS) {
 				_qualifiers[_qualifierCount].id = qid;
@@ -321,7 +321,7 @@ public:
 				p += 24;
 				++_qualifierCount;
 			} else {
-				throw std::invalid_argument("too many qualifiers");
+				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
 			}
 		}
 
@@ -359,7 +359,7 @@ private:
 		uint64_t id;
 		uint64_t value;
 		uint64_t maxDelta;
-		inline bool operator<(const _Qualifier &q) const throw() { return (id < q.id); } // sort order
+		inline bool operator<(const _Qualifier &q) const { return (id < q.id); } // sort order
 	};
 
 	Address _signedBy;

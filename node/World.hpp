@@ -110,9 +110,9 @@ public:
 		Identity identity;
 		std::vector<InetAddress> stableEndpoints;
 
-		inline bool operator==(const Root &r) const throw() { return ((identity == r.identity)&&(stableEndpoints == r.stableEndpoints)); }
-		inline bool operator!=(const Root &r) const throw() { return (!(*this == r)); }
-		inline bool operator<(const Root &r) const throw() { return (identity < r.identity); } // for sorting
+		inline bool operator==(const Root &r) const { return ((identity == r.identity)&&(stableEndpoints == r.stableEndpoints)); }
+		inline bool operator!=(const Root &r) const { return (!(*this == r)); }
+		inline bool operator<(const Root &r) const { return (identity < r.identity); } // for sorting
 	};
 
 	/**
@@ -212,7 +212,7 @@ public:
 			case TYPE_PLANET: _type = TYPE_PLANET; break;
 			case TYPE_MOON: _type = TYPE_MOON; break;
 			default:
-				throw std::invalid_argument("invalid world type");
+				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 		}
 
 		_id = b.template at<uint64_t>(p); p += 8;
@@ -221,14 +221,14 @@ public:
 		memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
 		const unsigned int numRoots = (unsigned int)b[p++];
 		if (numRoots > ZT_WORLD_MAX_ROOTS)
-			throw std::invalid_argument("too many roots in World");
+			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
 		for(unsigned int k=0;k<numRoots;++k) {
 			_roots.push_back(Root());
 			Root &r = _roots.back();
 			p += r.identity.deserialize(b,p);
 			unsigned int numStableEndpoints = b[p++];
 			if (numStableEndpoints > ZT_WORLD_MAX_STABLE_ENDPOINTS_PER_ROOT)
-				throw std::invalid_argument("too many stable endpoints in World/Root");
+				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
 			for(unsigned int kk=0;kk<numStableEndpoints;++kk) {
 				r.stableEndpoints.push_back(InetAddress());
 				p += r.stableEndpoints.back().deserialize(b,p);

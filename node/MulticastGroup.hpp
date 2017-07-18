@@ -52,15 +52,13 @@ namespace ZeroTier {
 class MulticastGroup
 {
 public:
-	MulticastGroup()
-		throw() :
+	MulticastGroup() :
 		_mac(),
 		_adi(0)
 	{
 	}
 
-	MulticastGroup(const MAC &m,uint32_t a)
-		throw() :
+	MulticastGroup(const MAC &m,uint32_t a) :
 		_mac(m),
 		_adi(a)
 	{
@@ -73,7 +71,6 @@ public:
 	 * @return Multicat group for ARP/NDP
 	 */
 	static inline MulticastGroup deriveMulticastGroupForAddressResolution(const InetAddress &ip)
-		throw()
 	{
 		if (ip.isV4()) {
 			// IPv4 wants broadcast MACs, so we shove the V4 address itself into
@@ -95,18 +92,18 @@ public:
 	/**
 	 * @return Multicast address
 	 */
-	inline const MAC &mac() const throw() { return _mac; }
+	inline const MAC &mac() const { return _mac; }
 
 	/**
 	 * @return Additional distinguishing information
 	 */
-	inline uint32_t adi() const throw() { return _adi; }
+	inline uint32_t adi() const { return _adi; }
 
-	inline unsigned long hashCode() const throw() { return (_mac.hashCode() ^ (unsigned long)_adi); }
+	inline unsigned long hashCode() const { return (_mac.hashCode() ^ (unsigned long)_adi); }
 
-	inline bool operator==(const MulticastGroup &g) const throw() { return ((_mac == g._mac)&&(_adi == g._adi)); }
-	inline bool operator!=(const MulticastGroup &g) const throw() { return ((_mac != g._mac)||(_adi != g._adi)); }
-	inline bool operator<(const MulticastGroup &g) const throw()
+	inline bool operator==(const MulticastGroup &g) const { return ((_mac == g._mac)&&(_adi == g._adi)); }
+	inline bool operator!=(const MulticastGroup &g) const { return ((_mac != g._mac)||(_adi != g._adi)); }
+	inline bool operator<(const MulticastGroup &g) const
 	{
 		if (_mac < g._mac)
 			return true;
@@ -114,9 +111,9 @@ public:
 			return (_adi < g._adi);
 		return false;
 	}
-	inline bool operator>(const MulticastGroup &g) const throw() { return (g < *this); }
-	inline bool operator<=(const MulticastGroup &g) const throw() { return !(g < *this); }
-	inline bool operator>=(const MulticastGroup &g) const throw() { return !(*this < g); }
+	inline bool operator>(const MulticastGroup &g) const { return (g < *this); }
+	inline bool operator<=(const MulticastGroup &g) const { return !(g < *this); }
+	inline bool operator>=(const MulticastGroup &g) const { return !(*this < g); }
 
 private:
 	MAC _mac;

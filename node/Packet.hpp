@@ -424,8 +424,7 @@ public:
 		}
 
 		template<unsigned int C2>
-		Fragment(const Buffer<C2> &b)
-	 		throw(std::out_of_range) :
+		Fragment(const Buffer<C2> &b) :
 	 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
 		{
 		}
@@ -443,10 +442,8 @@ public:
 		 * @param fragLen Length of fragment in bytes
 		 * @param fragNo Which fragment (>= 1, since 0 is Packet with end chopped off)
 		 * @param fragTotal Total number of fragments (including 0)
-		 * @throws std::out_of_range Packet size would exceed buffer
 		 */
 		Fragment(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
-			throw(std::out_of_range)
 		{
 			init(p,fragStart,fragLen,fragNo,fragTotal);
 		}
@@ -459,13 +456,11 @@ public:
 		 * @param fragLen Length of fragment in bytes
 		 * @param fragNo Which fragment (>= 1, since 0 is Packet with end chopped off)
 		 * @param fragTotal Total number of fragments (including 0)
-		 * @throws std::out_of_range Packet size would exceed buffer
 		 */
 		inline void init(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
-			throw(std::out_of_range)
 		{
 			if ((fragStart + fragLen) > p.size())
-				throw std::out_of_range("Packet::Fragment: tried to construct fragment of packet past its length");
+				throw ZT_EXCEPTION_OUT_OF_BOUNDS;
 			setSize(fragLen + ZT_PROTO_MIN_FRAGMENT_LENGTH);
 
 			// NOTE: this copies both the IV/packet ID and the destination address.
@@ -940,10 +935,6 @@ public:
 		 * be used unless they are blacklisted explicitly or unless flag 0x01
 		 * is set.
 		 *
-		 * Only a subset of this functionality is currently implemented: basic
-		 * path pushing and learning. Blacklisting and trust are not fully
-		 * implemented yet (encryption is still always used).
-		 *
 		 * OK and ERROR are not generated.
 		 */
 		VERB_PUSH_DIRECT_PATHS = 0x10,
@@ -1273,12 +1264,6 @@ public:
 
 	/**
 	 * Encrypt/decrypt a separately armored portion of a packet
-	 *
-	 * This currently uses Salsa20/12, but any message that uses this should
-	 * incorporate a cipher selector to permit this to be changed later. To
-	 * ensure that key stream is not reused, the key is slightly altered for
-	 * this use case and the same initial 32 keystream bytes that are taken
-	 * for MAC in ordinary armor() are also skipped here.
 	 *
 	 * This is currently only used to mask portions of HELLO as an extra
 	 * security precation since most of that message is sent in the clear.

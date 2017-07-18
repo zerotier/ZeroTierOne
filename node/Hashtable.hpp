@@ -119,7 +119,7 @@ public:
 		_s(0)
 	{
 		if (!_t)
-			throw std::bad_alloc();
+			throw ZT_EXCEPTION_OUT_OF_MEMORY;
 		for(unsigned long i=0;i<bc;++i)
 			_t[i] = (_Bucket *)0;
 	}
@@ -130,7 +130,7 @@ public:
 		_s(ht._s)
 	{
 		if (!_t)
-			throw std::bad_alloc();
+			throw ZT_EXCEPTION_OUT_OF_MEMORY;
 		for(unsigned long i=0;i<_bc;++i)
 			_t[i] = (_Bucket *)0;
 		for(unsigned long i=0;i<_bc;++i) {
@@ -359,12 +359,12 @@ public:
 	/**
 	 * @return Number of entries
 	 */
-	inline unsigned long size() const throw() { return _s; }
+	inline unsigned long size() const { return _s; }
 
 	/**
 	 * @return True if table is empty
 	 */
-	inline bool empty() const throw() { return (_s == 0); }
+	inline bool empty() const { return (_s == 0); }
 
 private:
 	template<typename O>

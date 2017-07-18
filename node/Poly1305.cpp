@@ -121,7 +121,6 @@ static inline int crypto_onetimeauth(unsigned char *out,const unsigned char *in,
 }
 
 void Poly1305::compute(void *auth,const void *data,unsigned int len,const void *key)
-	throw()
 {
 	crypto_onetimeauth((unsigned char *)auth,(const unsigned char *)data,len,(const unsigned char *)key);
 }
@@ -623,7 +622,6 @@ poly1305_update(poly1305_context *ctx, const unsigned char *m, size_t bytes) {
 } // anonymous namespace
 
 void Poly1305::compute(void *auth,const void *data,unsigned int len,const void *key)
-  throw()
 {
   poly1305_context ctx;
   poly1305_init(&ctx,reinterpret_cast<const unsigned char *>(key));

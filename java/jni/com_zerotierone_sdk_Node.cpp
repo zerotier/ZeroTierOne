@@ -32,6 +32,8 @@
 #include <ZeroTierOne.h>
 #include "Mutex.hpp"
 
+#include "PortMapper.hpp"
+
 #include <map>
 #include <string>
 #include <assert.h>
@@ -58,6 +60,7 @@ namespace {
             , configListener(NULL)
             , pathChecker(NULL)
             , callbacks(NULL)
+            , portMapper(NULL)
         {
             callbacks = (ZT_Node_Callbacks*)malloc(sizeof(ZT_Node_Callbacks));
             memset(callbacks, 0, sizeof(ZT_Node_Callbacks));
@@ -78,6 +81,9 @@ namespace {
 
             free(callbacks);
             callbacks = NULL;
+
+            delete portMapper;
+            portMapper = NULL;
         }
 
         uint64_t id;
@@ -95,6 +101,8 @@ namespace {
         jobject pathChecker;
 
         ZT_Node_Callbacks *callbacks;
+
+        ZeroTier::PortMapper *portMapper;
     };
 
 
@@ -833,10 +841,16 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
         return resultObject;
     }
 
+    uint64_t nodeId = ZT_Node_address(node);
+    if (nodeId != 0) {
+        char uniqueName[64];
+        snprintf(uniqueName, sizeof(uniqueName), "ZeroTier Android/%.10llx@%u", (unsigned long long)nodeId, 9993);
+        ref->portMapper = new ZeroTier::PortMapper(9993, uniqueName);
+    }
+
     ZeroTier::Mutex::Lock lock(nodeMapMutex);
     ref->node = node;
     nodeMap.insert(std::make_pair(ref->id, ref));
-
 
     return resultObject;
 }

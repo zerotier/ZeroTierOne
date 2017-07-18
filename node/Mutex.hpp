@@ -41,7 +41,6 @@ class Mutex : NonCopyable
 {
 public:
 	Mutex()
-		throw()
 	{
 		pthread_mutex_init(&_mh,(const pthread_mutexattr_t *)0);
 	}
@@ -52,25 +51,21 @@ public:
 	}
 
 	inline void lock()
-		throw()
 	{
 		pthread_mutex_lock(&_mh);
 	}
 
 	inline void unlock()
-		throw()
 	{
 		pthread_mutex_unlock(&_mh);
 	}
 
 	inline void lock() const
-		throw()
 	{
 		(const_cast <Mutex *> (this))->lock();
 	}
 
 	inline void unlock() const
-		throw()
 	{
 		(const_cast <Mutex *> (this))->unlock();
 	}
@@ -81,15 +76,13 @@ public:
 	class Lock : NonCopyable
 	{
 	public:
-		Lock(Mutex &m)
-			throw() :
+		Lock(Mutex &m) :
 			_m(&m)
 		{
 			m.lock();
 		}
 
-		Lock(const Mutex &m)
-			throw() :
+		Lock(const Mutex &m) :
 			_m(const_cast<Mutex *>(&m))
 		{
 			_m->lock();
@@ -123,7 +116,6 @@ class Mutex : NonCopyable
 {
 public:
 	Mutex()
-		throw()
 	{
 		InitializeCriticalSection(&_cs);
 	}
@@ -134,25 +126,21 @@ public:
 	}
 
 	inline void lock()
-		throw()
 	{
 		EnterCriticalSection(&_cs);
 	}
 
 	inline void unlock()
-		throw()
 	{
 		LeaveCriticalSection(&_cs);
 	}
 
 	inline void lock() const
-		throw()
 	{
 		(const_cast <Mutex *> (this))->lock();
 	}
 
 	inline void unlock() const
-		throw()
 	{
 		(const_cast <Mutex *> (this))->unlock();
 	}
@@ -160,15 +148,13 @@ public:
 	class Lock : NonCopyable
 	{
 	public:
-		Lock(Mutex &m)
-			throw() :
+		Lock(Mutex &m) :
 			_m(&m)
 		{
 			m.lock();
 		}
 
-		Lock(const Mutex &m)
-			throw() :
+		Lock(const Mutex &m) :
 			_m(const_cast<Mutex *>(&m))
 		{
 			_m->lock();

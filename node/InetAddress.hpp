@@ -521,7 +521,7 @@ struct InetAddress : public sockaddr_storage
 				reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton(b.template at<uint16_t>(p)); p += 2;
 				break;
 			default:
-				throw std::invalid_argument("invalid serialized InetAddress");
+				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_BAD_ENCODING;
 		}
 		return (p - startAt);
 	}

@@ -64,7 +64,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 	_lastHousekeepingRun(0)
 {
 	if (callbacks->version != 0)
-		throw std::runtime_error("callbacks struct version mismatch");
+		throw ZT_EXCEPTION_INVALID_ARGUMENT;
 	memcpy(&_cb,callbacks,sizeof(ZT_Node_Callbacks));
 
 	// Initialize non-cryptographic PRNG from a good random source

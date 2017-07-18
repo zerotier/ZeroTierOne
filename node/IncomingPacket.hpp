@@ -118,7 +118,7 @@ public:
 	/**
 	 * @return Time of packet receipt / start of decode
 	 */
-	inline uint64_t receiveTime() const throw() { return _receiveTime; }
+	inline uint64_t receiveTime() const { return _receiveTime; }
 
 private:
 	// These are called internally to handle packet contents once it has

@@ -90,18 +90,18 @@ public:
 	/**
 	 * @return Multicast creation time
 	 */
-	inline uint64_t timestamp() const throw() { return _timestamp; }
+	inline uint64_t timestamp() const { return _timestamp; }
 
 	/**
 	 * @param now Current time
 	 * @return True if this multicast is expired (has exceeded transmit timeout)
 	 */
-	inline bool expired(uint64_t now) const throw() { return ((now - _timestamp) >= ZT_MULTICAST_TRANSMIT_TIMEOUT); }
+	inline bool expired(uint64_t now) const { return ((now - _timestamp) >= ZT_MULTICAST_TRANSMIT_TIMEOUT); }
 
 	/**
 	 * @return True if this outbound multicast has been sent to enough peers
 	 */
-	inline bool atLimit() const throw() { return (_alreadySentTo.size() >= _limit); }
+	inline bool atLimit() const { return (_alreadySentTo.size() >= _limit); }
 
 	/**
 	 * Just send without checking log

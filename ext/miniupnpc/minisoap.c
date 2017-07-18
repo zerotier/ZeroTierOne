@@ -26,6 +26,12 @@
 #define UPNP_VERSION_STRING "UPnP/1.1"
 #endif
 
+#ifdef __ANDROID__
+#define OS_STRING "Android"
+#define MINIUPNPC_VERSION_STRING "2.0"
+#define UPNP_VERSION_STRING "UPnP/1.1"
+#endif
+
 /* only for malloc */
 #include <stdlib.h>
 

@@ -1089,7 +1089,9 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 {
 	try {
 		std::vector<uint64_t> nw4m(_db.networksForMember(rt.origin));
-		if (nw4m.empty()) // ignore these for unknown members
+
+		// Ignore remote traces from members we don't know about
+		if (nw4m.empty())
 			return;
 
 		// Convert Dictionary into JSON object
@@ -1133,7 +1135,8 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 			}
 		}
 
-		bool accept = false;
+		bool accept = true;
+		/*
 		for(std::vector<uint64_t>::const_iterator nwid(nw4m.begin());nwid!=nw4m.end();++nwid) {
 			json nconf;
 			if (_db.getNetwork(*nwid,nconf)) {
@@ -1153,9 +1156,10 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 				} catch ( ... ) {} // ignore missing fields or other errors, drop trace message
 			}
 		}
+		*/
 		if (accept) {
 			char p[128];
-			OSUtils::ztsnprintf(p,sizeof(p),"trace/%.10llx_%.16llx.json",rt.origin,OSUtils::now());
+			OSUtils::ztsnprintf(p,sizeof(p),"trace/%.10llx-%.10llx-%.16llx",_signingId.address().toInt(),rt.origin,OSUtils::now());
 			_db.writeRaw(p,OSUtils::jsonDump(d));
 		}
 	} catch ( ... ) {
@@ -1419,6 +1423,8 @@ void EmbeddedNetworkController::_request(
 		rtt = OSUtils::jsonString(network["remoteTraceTarget"],"");
 		if (rtt.length() == 10) {
 			nc->remoteTraceTarget = Address(Utils::hexStrToU64(rtt.c_str()));
+		} else {
+			nc->remoteTraceTarget = _signingId.address();
 		}
 	}
 

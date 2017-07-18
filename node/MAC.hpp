@@ -191,7 +191,7 @@ public:
 	 * @param i Value from 0 to 5 (inclusive)
 	 * @return Byte at said position (address interpreted in big-endian order)
 	 */
-	inline unsigned char operator[](unsigned int i) const throw() { return (unsigned char)((_m >> (40 - (i * 8))) & 0xff); }
+	inline unsigned char operator[](unsigned int i) const { return (unsigned char)((_m >> (40 - (i * 8))) & 0xff); }
 
 	/**
 	 * @return 6, which is the number of bytes in a MAC, for container compliance

@@ -81,12 +81,12 @@ public:
 	/**
 	 * @return This peer's ZT address (short for identity().address())
 	 */
-	inline const Address &address() const throw() { return _id.address(); }
+	inline const Address &address() const { return _id.address(); }
 
 	/**
 	 * @return This peer's identity
 	 */
-	inline const Identity &identity() const throw() { return _id; }
+	inline const Identity &identity() const { return _id; }
 
 	/**
 	 * Log receipt of an authenticated packet

@@ -76,7 +76,7 @@ public:
 	/**
 	 * Compute primary controller device ID from network ID
 	 */
-	static inline Address controllerFor(uint64_t nwid) throw() { return Address(nwid >> 24); }
+	static inline Address controllerFor(uint64_t nwid) { return Address(nwid >> 24); }
 
 	/**
 	 * Construct a new network
@@ -98,7 +98,7 @@ public:
 	inline Address controller() const { return Address(_id >> 24); }
 	inline bool multicastEnabled() const { return (_config.multicastLimit > 0); }
 	inline bool hasConfig() const { return (_config); }
-	inline uint64_t lastConfigUpdate() const throw() { return _lastConfigUpdate; }
+	inline uint64_t lastConfigUpdate() const { return _lastConfigUpdate; }
 	inline ZT_VirtualNetworkStatus status() const { Mutex::Lock _l(_lock); return _status(); }
 	inline const NetworkConfig &config() const { return _config; }
 	inline const MAC &mac() const { return _mac; }

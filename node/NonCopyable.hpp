@@ -35,7 +35,7 @@ namespace ZeroTier {
 class NonCopyable
 {
 protected:
-	NonCopyable() throw() {}
+	NonCopyable() {}
 private:
 	NonCopyable(const NonCopyable&);
 	const NonCopyable& operator=(const NonCopyable&);
