@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#ifndef __WINDOWS__
+#ifndef _WIN32
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/time.h>
