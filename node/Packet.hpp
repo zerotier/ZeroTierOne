@@ -935,10 +935,6 @@ public:
 		 * be used unless they are blacklisted explicitly or unless flag 0x01
 		 * is set.
 		 *
-		 * Only a subset of this functionality is currently implemented: basic
-		 * path pushing and learning. Blacklisting and trust are not fully
-		 * implemented yet (encryption is still always used).
-		 *
 		 * OK and ERROR are not generated.
 		 */
 		VERB_PUSH_DIRECT_PATHS = 0x10,

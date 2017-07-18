@@ -140,7 +140,7 @@ void Trace::incomingNetworkAccessDenied(void *const tPtr,const SharedPtr<Network
 		d.add(ZT_REMOTE_TRACE_FIELD__LOCAL_SOCKET,path->localSocket());
 	}
 	d.add(ZT_REMOTE_TRACE_FIELD__NETWORK_ID,network->id());
-	_send(tPtr,d,network);
+	_send(tPtr,d,*network);
 }
 
 void Trace::incomingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network> &network,const SharedPtr<Path> &path,const uint64_t packetId,const unsigned int packetLength,const Address &source,const Packet::Verb verb,const MAC &sourceMac,const MAC &destMac,const char *reason)
@@ -161,7 +161,7 @@ void Trace::incomingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network
 	d.add(ZT_REMOTE_TRACE_FIELD__DEST_MAC,destMac.toInt());
 	if (reason)
 		d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
-	_send(tPtr,d,network);
+	_send(tPtr,d,*network);
 }
 
 void Trace::incomingPacketTrustedPath(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const uint64_t trustedPathId,bool approved)
@@ -218,7 +218,7 @@ void Trace::networkConfigRequestSent(void *const tPtr,const Network &network,con
 	d.add(ZT_REMOTE_TRACE_FIELD__EVENT,ZT_REMOTE_TRACE_EVENT__NETWORK_CONFIG_REQUEST_SENT_S);
 	d.add(ZT_REMOTE_TRACE_FIELD__NETWORK_ID,network.id());
 	d.add(ZT_REMOTE_TRACE_FIELD__NETWORK_CONTROLLER_ID,controller);
-	_send(tPtr,d,0);
+	_send(tPtr,d,network);
 }
 
 void Trace::networkFilter(
@@ -259,7 +259,7 @@ void Trace::networkFilter(
 	d.add(ZT_REMOTE_TRACE_FIELD__FRAME_LENGTH,(uint64_t)frameLen);
 	if (frameLen > 0)
 		d.add(ZT_REMOTE_TRACE_FIELD__FRAME_DATA,(const char *)frameData,(frameLen > 256) ? (int)256 : (int)frameLen);
-	_send(tPtr,d,network.id());
+	_send(tPtr,d,network);
 }
 
 void Trace::credentialRejected(void *const tPtr,const CertificateOfMembership &c,const char *reason)
@@ -273,7 +273,7 @@ void Trace::credentialRejected(void *const tPtr,const CertificateOfMembership &c
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO,c.issuedTo());
 	if (reason)
 		d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
-	_send(tPtr,d,0);
+	_send(tPtr,d,c.networkId());
 }
 
 void Trace::credentialRejected(void *const tPtr,const CertificateOfOwnership &c,const char *reason)
@@ -287,7 +287,7 @@ void Trace::credentialRejected(void *const tPtr,const CertificateOfOwnership &c,
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO,c.issuedTo());
 	if (reason)
 		d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
-	_send(tPtr,d,0);
+	_send(tPtr,d,c.networkId());
 }
 
 void Trace::credentialRejected(void *const tPtr,const CertificateOfRepresentation &c,const char *reason)
@@ -313,7 +313,7 @@ void Trace::credentialRejected(void *const tPtr,const Capability &c,const char *
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO,c.issuedTo());
 	if (reason)
 		d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
-	_send(tPtr,d,0);
+	_send(tPtr,d,c.networkId());
 }
 
 void Trace::credentialRejected(void *const tPtr,const Tag &c,const char *reason)
@@ -328,7 +328,7 @@ void Trace::credentialRejected(void *const tPtr,const Tag &c,const char *reason)
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_INFO,(uint64_t)c.value());
 	if (reason)
 		d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
-	_send(tPtr,d,0);
+	_send(tPtr,d,c.networkId());
 }
 
 void Trace::credentialRejected(void *const tPtr,const Revocation &c,const char *reason)
@@ -341,7 +341,7 @@ void Trace::credentialRejected(void *const tPtr,const Revocation &c,const char *
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_REVOCATION_TARGET,c.target());
 	if (reason)
 		d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
-	_send(tPtr,d,0);
+	_send(tPtr,d,c.networkId());
 }
 
 void Trace::credentialAccepted(void *const tPtr,const CertificateOfMembership &c)
@@ -353,7 +353,7 @@ void Trace::credentialAccepted(void *const tPtr,const CertificateOfMembership &c
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ID,(uint64_t)c.id());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TIMESTAMP,c.timestamp());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO,c.issuedTo());
-	_send(tPtr,d,0);
+	_send(tPtr,d,c.networkId());
 }
 
 void Trace::credentialAccepted(void *const tPtr,const CertificateOfOwnership &c)
@@ -365,7 +365,7 @@ void Trace::credentialAccepted(void *const tPtr,const CertificateOfOwnership &c)
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ID,(uint64_t)c.id());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TIMESTAMP,c.timestamp());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO,c.issuedTo());
-	_send(tPtr,d,0);
+	_send(tPtr,d,c.networkId());
 }
 
 void Trace::credentialAccepted(void *const tPtr,const CertificateOfRepresentation &c)
@@ -387,7 +387,7 @@ void Trace::credentialAccepted(void *const tPtr,const Capability &c)
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ID,(uint64_t)c.id());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TIMESTAMP,c.timestamp());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO,c.issuedTo());
-	_send(tPtr,d,0);
+	_send(tPtr,d,c.networkId());
 }
 
 void Trace::credentialAccepted(void *const tPtr,const Tag &c)
@@ -400,7 +400,7 @@ void Trace::credentialAccepted(void *const tPtr,const Tag &c)
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TIMESTAMP,c.timestamp());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO,c.issuedTo());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_INFO,(uint64_t)c.value());
-	_send(tPtr,d,0);
+	_send(tPtr,d,c.networkId());
 }
 
 void Trace::credentialAccepted(void *const tPtr,const Revocation &c)
@@ -411,7 +411,7 @@ void Trace::credentialAccepted(void *const tPtr,const Revocation &c)
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TYPE,(uint64_t)c.credentialType());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ID,(uint64_t)c.id());
 	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_REVOCATION_TARGET,c.target());
-	_send(tPtr,d,0);
+	_send(tPtr,d,c.networkId());
 }
 
 void Trace::_send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d)
@@ -434,7 +434,6 @@ void Trace::_send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d
 		}
 	}
 	_traceMsgBuf[i] = (char)0;
-	//printf("%s\n",_traceMsgBuf);
 	RR->node->postEvent(tPtr,ZT_EVENT_TRACE,_traceMsgBuf);
 #endif
 
@@ -461,11 +460,11 @@ void Trace::_send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d
 	}
 }
 
-void Trace::_send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d,const SharedPtr<Network> &network)
+void Trace::_send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d,const Network &network)
 {
 	_send(tPtr,d);
-	if ((network)&&(network->config().remoteTraceTarget)) {
-		Packet outp(network->config().remoteTraceTarget,RR->identity.address(),Packet::VERB_REMOTE_TRACE);
+	if (network.config().remoteTraceTarget) {
+		Packet outp(network.config().remoteTraceTarget,RR->identity.address(),Packet::VERB_REMOTE_TRACE);
 		outp.appendCString(d.data());
 		outp.compress();
 		RR->sw->send(tPtr,outp,true);

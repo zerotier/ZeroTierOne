@@ -115,6 +115,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 				case Packet::VERB_MULTICAST_FRAME:            return _doMULTICAST_FRAME(RR,tPtr,peer);
 				case Packet::VERB_PUSH_DIRECT_PATHS:          return _doPUSH_DIRECT_PATHS(RR,tPtr,peer);
 				case Packet::VERB_USER_MESSAGE:               return _doUSER_MESSAGE(RR,tPtr,peer);
+				case Packet::VERB_REMOTE_TRACE:               return _doREMOTE_TRACE(RR,tPtr,peer);
 			}
 		} else {
 			RR->sw->requestWhois(tPtr,sourceAddress);
@@ -1172,8 +1173,9 @@ bool IncomingPacket::_doREMOTE_TRACE(const RuntimeEnvironment *RR,void *tPtr,con
 	while (ptr < eof) {
 		if (!*ptr) { // end of string
 			rt.len = (unsigned int)(ptr - rt.data);
-			if ((rt.len > 0)&&(rt.len <= ZT_MAX_REMOTE_TRACE_SIZE))
+			if ((rt.len > 0)&&(rt.len <= ZT_MAX_REMOTE_TRACE_SIZE)) {
 				RR->node->postEvent(tPtr,ZT_EVENT_REMOTE_TRACE,&rt);
+			}
 			rt.data = const_cast<char *>(++ptr); // start of next string, if any
 		} else {
 			++ptr;
