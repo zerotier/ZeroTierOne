@@ -259,6 +259,7 @@ extern "C" {
 
 // Fields in remote trace dictionaries
 #define ZT_REMOTE_TRACE_FIELD__EVENT "event"
+#define ZT_REMOTE_TRACE_FIELD__NODE_ID "nodeId"
 #define ZT_REMOTE_TRACE_FIELD__PACKET_ID "packetId"
 #define ZT_REMOTE_TRACE_FIELD__PACKET_VERB "packetVerb"
 #define ZT_REMOTE_TRACE_FIELD__PACKET_TRUSTED_PATH_ID "packetTrustedPathId"

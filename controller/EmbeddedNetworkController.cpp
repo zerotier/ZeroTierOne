@@ -1075,7 +1075,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 {
 	static volatile unsigned long idCounter = 0;
-	char id[128];
+	char id[128],tmp[128];
 	std::string k,v;
 
 	try {
@@ -1116,9 +1116,12 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 			}
 		}
 
-		OSUtils::ztsnprintf(id,sizeof(id),"%.10llx-%.10llx-%.16llx-%.8lx",_signingId.address().toInt(),rt.origin,OSUtils::now(),++idCounter);
+		const uint64_t now = OSUtils::now();
+		OSUtils::ztsnprintf(id,sizeof(id),"%.10llx-%.10llx-%.16llx-%.8lx",_signingId.address().toInt(),rt.origin,now,++idCounter);
 		d["id"] = id;
 		d["objtype"] = "trace";
+		d["ts"] = now;
+		d["nodeId"] = Utils::hex10(rt.origin,tmp);
 
 		bool accept = true;
 		/*
