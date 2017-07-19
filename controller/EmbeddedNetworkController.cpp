@@ -1183,7 +1183,7 @@ void EmbeddedNetworkController::threadMain()
 						auto ms = this->_memberStatus.find(_MemberStatusKey(networkId,nodeId));
 						if (ms != _memberStatus.end())
 							lrt = ms->second.lastRequestTime;
-						OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s\"%.16llx\",%llu,%llu",
+						OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s\"%.16llx\",\"%.10llx\",%llu",
 							(first) ? "" : ",",
 							(unsigned long long)networkId,
 							(unsigned long long)nodeId,

@@ -120,6 +120,7 @@ bool JSONDB::writeRaw(const std::string &n,const std::string &obj)
 #ifndef __WINDOWS__
 		if (obj.length() > 0) {
 			Mutex::Lock _l(_rawLock);
+			//fprintf(stderr,"%s\n",obj.c_str());
 			if ((long)write(_rawOutput,obj.data(),obj.length()) == (long)obj.length()) {
 				if (write(_rawOutput,"\n",1) == 1)
 					return true;
