@@ -62,6 +62,17 @@ public:
 	JSONDB(const std::string &basePath);
 	~JSONDB();
 
+	/**
+	 * Write a JSON object to the data store
+	 *
+	 * It's important that obj contain a valid JSON object with no newlines (jsonDump with -1
+	 * for indentation), since newline-delimited JSON is what nodeJS's IPC speaks and this
+	 * is important in Central-harnessed mode.
+	 *
+	 * @param n Path name of object
+	 * @param obj Object in single-line no-CRs JSON object format (OSUtils::jsonDump(obj,-1))
+	 * @return True if write appears successful
+	 */
 	bool writeRaw(const std::string &n,const std::string &obj);
 
 	bool hasNetwork(const uint64_t networkId) const;
@@ -171,6 +182,7 @@ private:
 
 	std::unordered_map< uint64_t,_NW > _networks;
 	std::unordered_map< uint64_t,std::unordered_set< uint64_t > > _members;
+	bool _dataReady;
 	Mutex _networks_m;
 };
 

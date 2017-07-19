@@ -434,7 +434,7 @@ std::string OSUtils::platformDefaultHomePath()
 
 // Inline these massive JSON operations in one place only to reduce binary footprint and compile time
 nlohmann::json OSUtils::jsonParse(const std::string &buf) { return nlohmann::json::parse(buf.c_str()); }
-std::string OSUtils::jsonDump(const nlohmann::json &j) { return j.dump(1); }
+std::string OSUtils::jsonDump(const nlohmann::json &j,int indentation) { return j.dump(indentation); }
 
 uint64_t OSUtils::jsonInt(const nlohmann::json &jv,const uint64_t dfl)
 {

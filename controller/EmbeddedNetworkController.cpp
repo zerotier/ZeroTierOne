@@ -1145,7 +1145,7 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 		if (accept) {
 			char p[128];
 			OSUtils::ztsnprintf(p,sizeof(p),"trace/%s",id);
-			_db.writeRaw(p,OSUtils::jsonDump(d));
+			_db.writeRaw(p,OSUtils::jsonDump(d,-1));
 		}
 	} catch ( ... ) {
 		// drop invalid trace messages if an error occurs
@@ -1157,17 +1157,24 @@ void EmbeddedNetworkController::threadMain()
 {
 	char tmp[256];
 	_RQEntry *qe = (_RQEntry *)0;
-	while ((_running)&&(_queue.get(qe,1000) != BlockingQueue<_RQEntry *>::STOP)) {
+	while (_running) {
+		const BlockingQueue<_RQEntry *>::TimedWaitResult wr = _queue.get(qe,1000);
+		if ((wr == BlockingQueue<_RQEntry *>::STOP)||(!_running))
+			break;
+
 		try {
-			if (qe->type == _RQEntry::RQENTRY_TYPE_REQUEST)
+			if ((wr == BlockingQueue<_RQEntry *>::OK)&&(qe->type == _RQEntry::RQENTRY_TYPE_REQUEST)) {
 				_request(qe->nwid,qe->fromAddr,qe->requestPacketId,qe->identity,qe->metaData);
+				delete qe;
+			}
 
 			// Every 10s we update a 'status' containing member online state, etc.
 			const uint64_t now = OSUtils::now();
 			if ((now - _lastDumpedStatus) >= 10000) {
 				_lastDumpedStatus = now;
 				bool first = true;
-				std::string st("{\"id\":\"status\",\"objtype\":\"status\",\"memberStatus\":{");
+				OSUtils::ztsnprintf(tmp,sizeof(tmp),"{\"id\":\"%.10llx-status\",\"objtype\":\"status\",\"memberStatus\":[",_signingId.address().toInt());
+				std::string st(tmp);
 				{
 					Mutex::Lock _l(_memberStatus_m);
 					st.reserve(48 * (_memberStatus.size() + 1));
@@ -1176,7 +1183,7 @@ void EmbeddedNetworkController::threadMain()
 						auto ms = this->_memberStatus.find(_MemberStatusKey(networkId,nodeId));
 						if (ms != _memberStatus.end())
 							lrt = ms->second.lastRequestTime;
-						OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s\"%.16llx-%.10llx\":%llu",
+						OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s\"%.16llx\",%llu,%llu",
 							(first) ? "" : ",",
 							(unsigned long long)networkId,
 							(unsigned long long)nodeId,
@@ -1185,12 +1192,11 @@ void EmbeddedNetworkController::threadMain()
 						first = false;
 					});
 				}
-				OSUtils::ztsnprintf(tmp,sizeof(tmp),"},\"clock\":%llu,\"startTime\":%llu}",(unsigned long long)now,(unsigned long long)_startTime);
+				OSUtils::ztsnprintf(tmp,sizeof(tmp),"],\"clock\":%llu,\"startTime\":%llu,\"uptime\":%llu}",(unsigned long long)now,(unsigned long long)_startTime,(unsigned long long)(now - _startTime));
 				st.append(tmp);
 				_db.writeRaw("status",st);
 			}
 		} catch ( ... ) {}
-		delete qe;
 	}
 }
 

@@ -629,6 +629,14 @@ public:
 					}
 				}
 
+				// Allow controller DB path to be put somewhere else
+				json &settings = _localConfig["settings"];
+				if (settings.is_object()) {
+					const std::string cdbp(OSUtils::jsonString(settings["controllerDbPath"],""));
+					if (cdbp.length() > 0)
+						_controllerDbPath = cdbp;
+				}
+
 				// Set trusted paths if there are any
 				if (trustedPathCount)
 					_node->setTrustedPaths(reinterpret_cast<const struct sockaddr_storage *>(trustedPathNetworks),trustedPathIds,trustedPathCount);
@@ -1482,27 +1490,6 @@ public:
 				const InetAddress nw(OSUtils::jsonString(amf[i],"").c_str());
 				if (nw)
 					_allowManagementFrom.push_back(nw);
-			}
-		}
-
-		json &controllerDbHttpHost = settings["controllerDbHttpHost"];
-		json &controllerDbHttpPort = settings["controllerDbHttpPort"];
-		json &controllerDbHttpPath = settings["controllerDbHttpPath"];
-		if ((controllerDbHttpHost.is_string())&&(controllerDbHttpPort.is_number())) {
-			_controllerDbPath = "http://";
-			std::string h = controllerDbHttpHost;
-			_controllerDbPath.append(h);
-			char dbp[128];
-			OSUtils::ztsnprintf(dbp,sizeof(dbp),"%d",(int)controllerDbHttpPort);
-			_controllerDbPath.push_back(':');
-			_controllerDbPath.append(dbp);
-			if (controllerDbHttpPath.is_string()) {
-				std::string p = controllerDbHttpPath;
-				if ((p.length() == 0)||(p[0] != '/'))
-					_controllerDbPath.push_back('/');
-				_controllerDbPath.append(p);
-			} else {
-				_controllerDbPath.push_back('/');
 			}
 		}
 	}
