@@ -99,6 +99,9 @@ ifeq ($(CC_MACH),amd64)
 	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA2012=1
 endif
+ifeq ($(CC_MACH),powerpc64le)
+        ZT_ARCHITECTURE=2
+endif
 ifeq ($(CC_MACH),i386)
 	ZT_ARCHITECTURE=1
 endif
