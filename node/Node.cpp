@@ -250,20 +250,23 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,uint64_t now,volatile uint
 			_lastPingCheck = now;
 
 			// Get networks that need config without leaving mutex locked
-			std::vector< SharedPtr<Network> > needConfig;
 			{
-				Mutex::Lock _l(_networks_m);
-				Hashtable< uint64_t,SharedPtr<Network> >::Iterator i(_networks);
-				uint64_t *k = (uint64_t *)0;
-				SharedPtr<Network> *v = (SharedPtr<Network> *)0;
-				while (i.next(k,v)) {
-					if (((now - (*v)->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!(*v)->hasConfig()))
-						needConfig.push_back(*v);
-					(*v)->sendUpdatesToMembers(tptr);
+				std::vector< std::pair< SharedPtr<Network>,bool > > nwl;
+				{
+					Mutex::Lock _l(_networks_m);
+					nwl.reserve(_networks.size()+1);
+					Hashtable< uint64_t,SharedPtr<Network> >::Iterator i(_networks);
+					uint64_t *k = (uint64_t *)0;
+					SharedPtr<Network> *v = (SharedPtr<Network> *)0;
+					while (i.next(k,v))
+						nwl.push_back( std::pair< SharedPtr<Network>,bool >(*v,(((now - (*v)->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!(*v)->hasConfig()))) );
+				}
+				for(std::vector< std::pair< SharedPtr<Network>,bool > >::const_iterator n(nwl.begin());n!=nwl.end();++n) {
+					if (n->second)
+						n->first->requestConfiguration(tptr);
+					n->first->sendUpdatesToMembers(tptr);
 				}
 			}
-			for(std::vector< SharedPtr<Network> >::const_iterator n(needConfig.begin());n!=needConfig.end();++n)
-				(*n)->requestConfiguration(tptr);
 
 			// Do pings and keepalives
 			Hashtable< Address,std::vector<InetAddress> > upstreamsToContact;
