@@ -47,6 +47,15 @@ public:
 		_v = 0;
 	}
 
+	inline int load() const
+	{
+#ifdef __GNUC__
+		return __sync_or_and_fetch(&_v,0);
+#else
+		return _v.load();
+#endif
+	}
+
 	inline int operator++()
 	{
 #ifdef __GNUC__

@@ -169,25 +169,24 @@ private:
 		bool complete; // if true, packet is complete
 	};
 	RXQueueEntry _rxQueue[ZT_RX_QUEUE_SIZE];
-	Mutex _rxQueue_m;
+	AtomicCounter _rxQueuePtr;
 
-	/* Returns the matching or oldest entry. Caller must check timestamp and
-	 * packet ID to determine which. */
-	inline RXQueueEntry *_findRXQueueEntry(uint64_t now,uint64_t packetId)
+	// Returns matching or next available RX queue entry
+	inline RXQueueEntry *_findRXQueueEntry(uint64_t packetId)
 	{
-		RXQueueEntry *rq;
-		RXQueueEntry *oldest = &(_rxQueue[ZT_RX_QUEUE_SIZE - 1]);
-		unsigned long i = ZT_RX_QUEUE_SIZE;
-		while (i) {
-			rq = &(_rxQueue[--i]);
+		unsigned int ptr = static_cast<unsigned int>(_rxQueuePtr.load());
+		for(unsigned int k=0;k<ZT_RX_QUEUE_SIZE;++k) {
+			RXQueueEntry *rq = &(_rxQueue[--ptr % ZT_RX_QUEUE_SIZE]);
 			if ((rq->packetId == packetId)&&(rq->timestamp))
 				return rq;
-			if ((now - rq->timestamp) >= ZT_RX_QUEUE_EXPIRE)
-				rq->timestamp = 0;
-			if (rq->timestamp < oldest->timestamp)
-				oldest = rq;
 		}
-		return oldest;
+		return &(_rxQueue[static_cast<unsigned int>(++_rxQueuePtr) % ZT_RX_QUEUE_SIZE]);
+	}
+
+	// Returns next RX queue entry in ring buffer and increments ring counter
+	inline RXQueueEntry *_nextRXQueueEntry()
+	{
+		return &(_rxQueue[static_cast<unsigned int>(++_rxQueuePtr) % ZT_RX_QUEUE_SIZE]);
 	}
 
 	// ZeroTier-layer TX queue entry
