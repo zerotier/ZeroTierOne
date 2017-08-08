@@ -580,10 +580,11 @@ void Switch::doAnythingWaitingForPeer(void *tPtr,const SharedPtr<Peer> &peer)
 	}
 
 	// finish processing any packets waiting on peer's public key / identity
+	const uint64_t now = RR->node->now();
 	for(unsigned int ptr=0;ptr<ZT_RX_QUEUE_SIZE;++ptr) {
 		RXQueueEntry *const rq = &(_rxQueue[ptr]);
 		if ((rq->timestamp)&&(rq->complete)) {
-			if (rq->frag0.tryDecode(RR,tPtr))
+			if ((rq->frag0.tryDecode(RR,tPtr))||((now - rq->timestamp) > ZT_RECEIVE_QUEUE_TIMEOUT))
 				rq->timestamp = 0;
 		}
 	}
