@@ -129,7 +129,6 @@ private:
 	inline void _initMember(nlohmann::json &member)
 	{
 		if (!member.count("authorized")) member["authorized"] = false;
-		if (!member.count("authHistory")) member["authHistory"] = nlohmann::json::array();
  		if (!member.count("ipAssignments")) member["ipAssignments"] = nlohmann::json::array();
 		if (!member.count("activeBridge")) member["activeBridge"] = false;
 		if (!member.count("tags")) member["tags"] = nlohmann::json::array();
@@ -139,6 +138,8 @@ private:
 		if (!member.count("revision")) member["revision"] = 0ULL;
 		if (!member.count("lastDeauthorizedTime")) member["lastDeauthorizedTime"] = 0ULL;
 		if (!member.count("lastAuthorizedTime")) member["lastAuthorizedTime"] = 0ULL;
+		if (!member.count("lastAuthorizedCredentialType")) member["lastAuthorizedCredentialType"] = nlohmann::json();
+		if (!member.count("lastAuthorizedCredential")) member["lastAuthorizedCredential"] = nlohmann::json();
 		if (!member.count("vMajor")) member["vMajor"] = -1;
 		if (!member.count("vMinor")) member["vMinor"] = -1;
 		if (!member.count("vRev")) member["vRev"] = -1;
@@ -156,7 +157,7 @@ private:
 		if (!network.count("enableBroadcast")) network["enableBroadcast"] = true;
 		if (!network.count("v4AssignMode")) network["v4AssignMode"] = {{"zt",false}};
 		if (!network.count("v6AssignMode")) network["v6AssignMode"] = {{"rfc4193",false},{"zt",false},{"6plane",false}};
-		if (!network.count("authTokens")) network["authTokens"] = nlohmann::json::array();
+		if (!network.count("authTokens")) network["authTokens"] = {{}};
 		if (!network.count("capabilities")) network["capabilities"] = nlohmann::json::array();
 		if (!network.count("tags")) network["tags"] = nlohmann::json::array();
 		if (!network.count("routes")) network["routes"] = nlohmann::json::array();

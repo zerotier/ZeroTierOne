@@ -638,14 +638,10 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 							if (newAuth != OSUtils::jsonBool(member["authorized"],false)) {
 								member["authorized"] = newAuth;
 								member[((newAuth) ? "lastAuthorizedTime" : "lastDeauthorizedTime")] = now;
-
-								json ah;
-								ah["a"] = newAuth;
-								ah["by"] = "api";
-								ah["ts"] = now;
-								ah["ct"] = json();
-								ah["c"] = json();
-								member["authHistory"].push_back(ah);
+								if (newAuth) {
+									member["lastAuthorizedCredentialType"] = "api";
+									member["lastAuthorizedCredential"] = json();
+								}
 
 								// Member is being de-authorized, so spray Revocation objects to all online members
 								if (!newAuth) {
@@ -896,22 +892,15 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 					if (b.count("authTokens")) {
 						json &authTokens = b["authTokens"];
-						if (authTokens.is_array()) {
-							json nat = json::array();
-							for(unsigned long i=0;i<authTokens.size();++i) {
-								json &token = authTokens[i];
-								if (token.is_object()) {
-									std::string tstr = token["token"];
-									if (tstr.length() > 0) {
-										json t = json::object();
-										t["token"] = tstr;
-										t["expires"] = OSUtils::jsonInt(token["expires"],0ULL);
-										t["maxUsesPerMember"] = OSUtils::jsonInt(token["maxUsesPerMember"],0ULL);
-										nat.push_back(t);
-									}
-								}
+						if (authTokens.is_object()) {
+							json nat;
+							for(json::iterator t(authTokens.begin());t!=authTokens.end();++t) {
+								if ((t.value().is_number())&&(t.value() >= 0))
+									nat[t.key()] = t.value();
 							}
 							network["authTokens"] = nat;
+						} else {
+							network["authTokens"] = {{}};
 						}
 					}
 
@@ -1268,56 +1257,29 @@ void EmbeddedNetworkController::_request(
 	}
 
 	// Determine whether and how member is authorized
-	const char *authorizedBy = (const char *)0;
+	bool authorized = false;
 	bool autoAuthorized = false;
 	json autoAuthCredentialType,autoAuthCredential;
 	if (OSUtils::jsonBool(member["authorized"],false)) {
-		authorizedBy = "memberIsAuthorized";
+		authorized = true;
 	} else if (!OSUtils::jsonBool(network["private"],true)) {
-		authorizedBy = "networkIsPublic";
-		json &ahist = member["authHistory"];
-		if ((!ahist.is_array())||(ahist.size() == 0))
-			autoAuthorized = true;
+		authorized = true;
+		autoAuthorized = true;
+		autoAuthCredentialType = "public";
 	} else {
 		char presentedAuth[512];
 		if (metaData.get(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH,presentedAuth,sizeof(presentedAuth)) > 0) {
 			presentedAuth[511] = (char)0; // sanity check
-
-			// Check for bearer token presented by member
 			if ((strlen(presentedAuth) > 6)&&(!strncmp(presentedAuth,"token:",6))) {
 				const char *const presentedToken = presentedAuth + 6;
-
-				json &authTokens = network["authTokens"];
-				if (authTokens.is_array()) {
-					for(unsigned long i=0;i<authTokens.size();++i) {
-						json &token = authTokens[i];
-						if (token.is_object()) {
-							const uint64_t expires = OSUtils::jsonInt(token["expires"],0ULL);
-							const uint64_t maxUses = OSUtils::jsonInt(token["maxUsesPerMember"],0ULL);
-							std::string tstr = OSUtils::jsonString(token["token"],"");
-
-							if (((expires == 0ULL)||(expires > now))&&(tstr == presentedToken)) {
-								bool usable = (maxUses == 0);
-								if (!usable) {
-									uint64_t useCount = 0;
-									json &ahist = member["authHistory"];
-									if (ahist.is_array()) {
-										for(unsigned long j=0;j<ahist.size();++j) {
-											json &ah = ahist[j];
-											if ((OSUtils::jsonString(ah["ct"],"") == "token")&&(OSUtils::jsonString(ah["c"],"") == tstr)&&(OSUtils::jsonBool(ah["a"],false)))
-												++useCount;
-										}
-									}
-									usable = (useCount < maxUses);
-								}
-								if (usable) {
-									authorizedBy = "token";
-									autoAuthorized = true;
-									autoAuthCredentialType = "token";
-									autoAuthCredential = tstr;
-								}
-							}
-						}
+				json authTokens(network["authTokens"]);
+				json &tokenExpires = authTokens[presentedToken];
+				if (tokenExpires.is_number()) {
+					if ((tokenExpires == 0)||(tokenExpires > now)) {
+						authorized = true;
+						autoAuthorized = true;
+						autoAuthCredentialType = "token";
+						autoAuthCredential = presentedToken;
 					}
 				}
 			}
@@ -1325,23 +1287,16 @@ void EmbeddedNetworkController::_request(
 	}
 
 	// If we auto-authorized, update member record
-	if ((autoAuthorized)&&(authorizedBy)) {
+	if ((autoAuthorized)&&(authorized)) {
 		member["authorized"] = true;
 		member["lastAuthorizedTime"] = now;
-
-		json ah;
-		ah["a"] = true;
-		ah["by"] = authorizedBy;
-		ah["ts"] = now;
-		ah["ct"] = autoAuthCredentialType;
-		ah["c"] = autoAuthCredential;
-		member["authHistory"].push_back(ah);
-
+		member["lastAuthorizedCredentialType"] = autoAuthCredentialType;
+		member["lastAuthorizedCredential"] = autoAuthCredential;
 		json &revj = member["revision"];
 		member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 	}
 
-	if (authorizedBy) {
+	if (authorized) {
 		// Update version info and meta-data if authorized and if this is a genuine request
 		if (requestPacketId) {
 			const uint64_t vMajor = metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0);
