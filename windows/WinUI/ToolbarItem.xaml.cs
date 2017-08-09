@@ -44,6 +44,8 @@ namespace WinUI
 
         private ObservableCollection<MenuItem> _networkCollection = new ObservableCollection<MenuItem>();
 
+        private static Boolean shouldShowOnboardProcess = true;
+
         public ObservableCollection<MenuItem> NetworkCollection
         {
             get { return _networkCollection; }
@@ -79,7 +81,12 @@ namespace WinUI
         {
             if (networks != null)
             {
-                this.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                if (networks.Count > 0)
+                {
+                    shouldShowOnboardProcess = false;
+                }
+
+                Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                 {
                     NetworkCollection.Clear();
                     foreach (ZeroTierNetwork n in networks)
@@ -93,6 +100,13 @@ namespace WinUI
                         NetworkCollection.Add(item);
                     }
                 }));
+
+                if (shouldShowOnboardProcess)
+                {
+                    // TODO: Show onboarding process window (on main thread)
+
+                    shouldShowOnboardProcess = false;
+                }
             }
         }
 
@@ -194,6 +208,11 @@ namespace WinUI
             joinNetView = null;
         }
 
+        private void ToolbarItem_CentralClicked(object sender, System.EventArgs e)
+        {
+            Process.Start("https://my.zerotier.com");
+        }
+
         private void ToolbarItem_AboutClicked(object sender, System.EventArgs e)
         {
             if (aboutView == null)
@@ -267,7 +286,7 @@ namespace WinUI
         private void ToolbarItem_QuitClicked(object sender, System.EventArgs e)
         {
             NetworkMonitor.Instance.StopMonitor();
-            this.Close();
+            Close();
             Application.Current.Shutdown();
         }
 
@@ -281,11 +300,11 @@ namespace WinUI
                     ZeroTierNetwork network = item.DataContext as ZeroTierNetwork;
                     if (item.IsChecked)
                     {
-                        APIHandler.Instance.LeaveNetwork(this.Dispatcher, network.NetworkId);
+                        APIHandler.Instance.LeaveNetwork(Dispatcher, network.NetworkId);
                     }
                     else
                     {
-                        APIHandler.Instance.JoinNetwork(this.Dispatcher, network.NetworkId, network.AllowManaged, network.AllowGlobal, network.AllowDefault);
+                        APIHandler.Instance.JoinNetwork(Dispatcher, network.NetworkId, network.AllowManaged, network.AllowGlobal, network.AllowDefault);
                     }
                 }   
             }

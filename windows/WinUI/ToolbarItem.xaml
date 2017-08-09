@@ -41,6 +41,9 @@
 							</CollectionContainer>
 
 							<Separator/>
+							<MenuItem Header="ZeroTier Central"
+												Click="ToolbarItem_CentralClicked"/>
+								
 							<MenuItem Header="About..."
                                       Click="ToolbarItem_AboutClicked"/>
 							<MenuItem Header="Preferences..."
