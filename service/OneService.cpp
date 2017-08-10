@@ -925,29 +925,15 @@ public:
 		return _homePath;
 	}
 
-	virtual EthernetTap * getTap(uint64_t nwid)
+	std::vector<ZT_VirtualNetworkRoute> *getRoutes(uint64_t nwid)
 	{
 		Mutex::Lock _l(_nets_m);
-		std::map<uint64_t,NetworkState>::const_iterator n(_nets.find(nwid));
-		if (n == _nets.end())
-		return NULL;
-		return n->second.tap;
-	}
-
-	virtual EthernetTap *getTap(InetAddress &addr)
-	{
-		Mutex::Lock _l(_nets_m);
-		std::map<uint64_t,NetworkState>::iterator it;
-		for(it = _nets.begin(); it != _nets.end(); it++) {
-			if(it->second.tap) {
-				for(int j=0; j<it->second.tap->_ips.size(); j++) {
-					if(it->second.tap->_ips[j].isEqualPrefix(addr) || it->second.tap->_ips[j].ipsEqual(addr) || it->second.tap->_ips[j].containsAddress(addr)) {
-						return it->second.tap;
-					}
-				}
-			}
+		NetworkState &n = _nets[nwid];
+		std::vector<ZT_VirtualNetworkRoute> *routes = new std::vector<ZT_VirtualNetworkRoute>();
+		for(int i=0; i<ZT_MAX_NETWORK_ROUTES; i++) {
+			routes->push_back(n.config.routes[i]);
 		}
-		return NULL;
+		return routes;
 	}
 
 	virtual Node *getNode()
