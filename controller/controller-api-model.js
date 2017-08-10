@@ -27,18 +27,6 @@
 'use strict';
 
 /**
- * Goes through a rule set array and makes sure it's valid, returning a canonicalized version
- *
- * @param {array[object]} rules Array of ZeroTier rules
- * @return New array of canonicalized rules
- * @throws {Error} Rule set is invalid
- */
-function formatRuleSetArray(rules)
-{
-}
-exports.formatRuleSetArray = formatRuleSetArray;
-
-/**
  * @param {string} IP with optional /netmask|port section
  * @return 4, 6, or 0 if invalid
  */
@@ -103,6 +91,135 @@ function formatZeroTierIdentifier(x,l)
 };
 exports.formatZeroTierIdentifier = formatZeroTierIdentifier;
 
+/**
+ * Goes through a rule set array and makes sure it's valid, returning a canonicalized version
+ *
+ * @param {array[object]} rules Array of ZeroTier rules
+ * @return New array of canonicalized rules
+ * @throws {Error} Rule set is invalid
+ */
+function formatRuleSetArray(rules)
+{
+	let r = [];
+	if ((rules)&&(Array.isArray(rules))) {
+		for(let a=0;a<rules.length;++a) {
+			let rule = rules[a];
+			if (rule.type) {
+				let nr = null;
+				switch(rule.type) {
+					case 'ACTION_DROP':
+					case 'ACTION_ACCEPT':
+					case 'ACTION_BREAK':
+						break;
+					case 'ACTION_TEE':
+					case 'ACTION_WATCH':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.address = formatZeroTierIdentifier(rule.address,10);
+						nr.flags = parseInt(rule.flags)||0;
+						nr['length'] = parseInt(rule['length'])||0;
+						break;
+					case 'ACTION_REDIRECT':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.address = formatZeroTierIdentifier(rule.address,10);
+						nr.flags = parseInt(rule.flags)||0;
+						break;
+					case 'MATCH_SOURCE_ZEROTIER_ADDRESS':
+					case 'MATCH_DEST_ZEROTIER_ADDRESS':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.zt = formatZeroTierIdentifier(rule.zt,10);
+						break;
+					case 'MATCH_VLAN_ID':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.vlanId = parseInt(rule.vlanId)||0;
+						break;
+					case 'MATCH_VLAN_PCP':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.vlanPcp = parseInt(rule.vlanPcp)||0;
+						break;
+					case 'MATCH_VLAN_DEI':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.vlanDei = parseInt(rule.vlanDei)||0;
+						break;
+					case 'MATCH_MAC_SOURCE':
+					case 'MATCH_MAC_DEST':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.mac = formatZeroTierIdentifier(rule.mac,12);
+						nr.mac = (nr.mac.substr(0,2)+':'+nr.mac.substr(2,2)+':'+nr.mac.substr(4,2)+':'+nr.mac.substr(6,2)+':'+nr.mac.substr(8,2)+':'+nr.mac.substr(10,2));
+						break;
+					case 'MATCH_IPV4_SOURCE':
+					case 'MATCH_IPV4_DEST':
+						if (ipClassify(rule.ip) !== 4)
+							continue;
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.ip = rule.ip;
+						break;
+					case 'MATCH_IPV6_SOURCE':
+					case 'MATCH_IPV6_DEST':
+						if (ipClassify(rule.ip) !== 6)
+							continue;
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.ip = rule.ip;
+						break;
+					case 'MATCH_IP_TOS':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.mask = parseInt(rule.mask)||0;
+						nr.start = parseInt(rule.start)||0;
+						nr.end = parseInt(rule.end)||0;
+						break;
+					case 'MATCH_IP_PROTOCOL':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.ipProtocol = parseInt(rule.ipProtocol)||0;
+						break;
+					case 'MATCH_ETHERTYPE':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.etherType = parseInt(rule.etherType)||0;
+						break;
+					case 'MATCH_ICMP':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.icmpType = parseInt(rule.icmpType)||0;
+						nr.icmpCode = ('icmpCode' in rule) ? ((rule.icmpCode === null) ? null : (parseInt(rule.icmpCode)||0)) : null;
+						break;
+					case 'MATCH_IP_SOURCE_PORT_RANGE':
+					case 'MATCH_IP_DEST_PORT_RANGE':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.start = parseInt(rule.start)||0;
+						nr.end = parseInt(rule.end)||0;
+						break;
+					case 'MATCH_CHARACTERISTICS':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.mask = formatZeroTierIdentifier(rule.mask,16); // hex number, so this will work
+						break;
+					case 'MATCH_FRAME_SIZE_RANGE':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.start = parseInt(rule.start)||0;
+						nr.end = parseInt(rule.end)||0;
+						break;
+					case 'MATCH_RANDOM':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.probability = parseInt(rule.probability)||0;
+						break;
+					case 'MATCH_TAGS_DIFFERENCE':
+					case 'MATCH_TAGS_BITWISE_AND':
+					case 'MATCH_TAGS_BITWISE_OR':
+					case 'MATCH_TAGS_BITWISE_XOR':
+					case 'MATCH_TAGS_EQUAL':
+					case 'MATCH_TAG_SENDER':
+					case 'MATCH_TAG_RECEIVER':
+						nr = { 'type': rule['type'],'not': !!rule['not'],'or': !!rule['or'] };
+						nr.id = parseInt(rule.id)||0;
+						nr.value = parseInt(rule.value)||0;
+						break;
+					default:
+						continue;
+				}
+				r.push(nr);
+			}
+		}
+	}
+	return r;
+}
+exports.formatRuleSetArray = formatRuleSetArray;
+
 // Internal container classes
 class _V4AssignMode
 {
@@ -115,7 +232,7 @@ class _V4AssignMode
 };
 class _v6AssignMode
 {
-	get ['6plane'] { return (this._6plane)||false; }
+	get ['6plane']() { return (this._6plane)||false; }
 	set ['6plane'](b) { this._6plane = !!b; }
 	get zt() { return (this._zt)||false; }
 	set zt(b) { this._zt = !!b; }
@@ -192,7 +309,7 @@ class Network
 		return ca;
 	}
 
-	get ipAssignmentPools() return { this._ipAssignmentPools; }
+	get ipAssignmentPools() { return this._ipAssignmentPools; }
 	set ipAssignmentPools(ipp)
 	{
 		let pa = [];
@@ -218,7 +335,7 @@ class Network
 		return pa;
 	}
 
-	get multicastLimit() return { this._multicastLimit; }
+	get multicastLimit() { return this._multicastLimit; }
 	set multicastLimit(n)
 	{
 		try {
@@ -230,7 +347,7 @@ class Network
 		return this._multicastLimit;
 	}
 
-	get routes() return { this._routes; }
+	get routes() { return this._routes; }
 	set routes(r)
 	{
 		let ra = [];
@@ -254,7 +371,7 @@ class Network
 		return ra;
 	}
 
-	get tags() return { this._tags; }
+	get tags() { return this._tags; }
 	set tags(t)
 	{
 		let ta = [];
@@ -283,7 +400,7 @@ class Network
 		return ta;
 	}
 
-	get v4AssignMode() return { this._v4AssignMode; }
+	get v4AssignMode() { return this._v4AssignMode; }
 	set v4AssignMode(m)
 	{
 		if ((m)&&(typeof m === 'object')&&(!Array.isArray(m))) {
@@ -295,7 +412,7 @@ class Network
 		}
 	}
 
-	get v6AssignMode() return { this._v6AssignMode; }
+	get v6AssignMode() { return this._v6AssignMode; }
 	set v6AssignMode(m)
 	{
 		if ((m)&&(typeof m === 'object')&&(!Array.isArray(m))) {
@@ -495,6 +612,20 @@ class Member
 	get capabilities() { return this._capabilities; }
 	set capabilities(c)
 	{
+		let caps = {};
+		let ca = [];
+		if ((c)&&(Array.isArray(c))) {
+			for(let a=0;a<c.length;++a) {
+				let capId = parseInt(c[a])||0;
+				if ((capId >= 0)&&(capId <= 0xffffffff)&&(!caps[capId])) {
+					caps[capId] = true;
+					ca.push(capId);
+				}
+			}
+		}
+		ca.sort();
+		this._capabilities = ca;
+		return ca;
 	}
 
 	get identity() { return this._identity; }
@@ -508,6 +639,17 @@ class Member
 	get ipAssignments() { return this._ipAssignments; }
 	set ipAssignments(ipa)
 	{
+		let ips = {};
+		if ((ipa)&&(Array.isArray(ipa))) {
+			for(let a=0;a<ipa.length;++a) {
+				let ip = ipa[a];
+				if (ipClassify(ip) > 0)
+					ips[ip] = true;
+			}
+		}
+		this._ipAssignments = Object.keys(ips);
+		this._ipAssignments.sort();
+		return this._ipAssignments;
 	}
 
 	get noAutoAssignIps() { return this._noAutoAssignIps; }
@@ -516,6 +658,73 @@ class Member
 	get tags() { return this._tags; }
 	set tags(t)
 	{
+		let ta = [];
+		let pairs = {};
+		if ((t)&&(Array.isArray(t))) {
+			for(let a=0;a<t.length;++a) {
+				let tag = a[t];
+				if ((tag)&&(Array.isArray(tag))&&(tag.length === 2)) {
+					let tagId = parseInt(tag[0])||0;
+					let tagValue = parseInt(tag[1])||0;
+					let pk = tagId.toString()+'_'+tagValue.toString();
+					if ((tagId >= 0)&&(tagId <= 0xffffffff)&&(tagValue >= 0)&&(tagValue <= 0xffffffff)&&(!pairs[pk])) {
+						pairs[pk] = true;
+						ta.push([ tagId,tagValue ]);
+					}
+				}
+			}
+		}
+		ta.sort(function(a,b) {
+			return ((a[0] < b[0]) ? -1 : ((a[0] > b[0]) ? 1 : 0));
+		});
+		this._tags = ta;
+		return ta;
+	}
+
+	get creationTime() { return this.__creationTime; }
+	get lastAuthorizedTime() { return this.__lastAuthorizedTime; }
+	get lastAuthorizedCredentialType() { return this.__lastAuthorizedCredentialType; }
+	get lastAuthorizedCredential() { return this.__lastAuthorizedCredential; }
+	get lastDeauthorizedTime() { return this.__lastDeauthorizedTime; }
+	get physicalAddr() { return this.__physicalAddr; }
+	get revision() { return this.__revision; }
+	get vMajor() { return this.__vMajor; }
+	get vMinor() { return this.__vMinor; }
+	get vRev() { return this.__vRev; }
+	get vProto() { return this.__vProto; }
+
+	toJSONExcludeControllerGenerated()
+	{
+		return {
+			id: this.id,
+			nwid: this.nwid,
+			objtype: 'member',
+			address: this.id,
+			authorized: this.authorized,
+			activeBridge: this.activeBridge,
+			capabilities: this.capabilities,
+			identity: this.identity,
+			ipAssignments: this.ipAssignments,
+			noAutoAssignIps: this.noAutoAssignIps,
+			tags: this.tags
+		};
+	}
+
+	toJSON()
+	{
+		let j = this.toJSONExcludeControllerGenerated();
+		j.creationTime = this.creationTime;
+		j.lastAuthorizedTime = this.lastAuthorizedTime;
+		j.lastAuthorizedCredentialType = this.lastAuthorizedCredentialType;
+		j.lastAuthorizedCredential = this.lastAuthorizedCredential;
+		j.lastDeauthorizedTime = this.lastDeauthorizedTime;
+		j.physicalAddr = this.physicalAddr;
+		j.revision = this.revision;
+		j.vMajor = this.vMajor;
+		j.vMinor = this.vMinor;
+		j.vRev = this.vRev;
+		j.vProto = this.vProto;
+		return j;
 	}
 
 	clear()
@@ -541,6 +750,45 @@ class Member
 		this.__vMinor = 0;
 		this.__vRev = 0;
 		this.__vProto = 0;
+	}
+
+	patch(obj)
+	{
+		if (obj instanceof Member)
+			obj = obj.toJSON();
+		if ((obj)&&(typeof obj === 'object')&&(!Array.isArray(obj))) {
+			for(var k in obj) {
+				try {
+					switch(k) {
+						case 'id':
+						case 'nwid':
+						case 'authorized':
+						case 'activeBridge':
+						case 'capabilities':
+						case 'identity':
+						case 'ipAssignments':
+						case 'noAutoAssignIps':
+						case 'tags':
+							this[k] = obj[k];
+							break;
+
+						case 'creationTime':
+						case 'lastAuthorizedTime':
+						case 'lastAuthorizedCredentialType':
+						case 'lastAuthorizedCredential':
+						case 'lastDeauthorizedTime':
+						case 'physicalAddr':
+						case 'revision':
+						case 'vMajor':
+						case 'vMinor':
+						case 'vRev':
+						case 'vProto':
+							this['__'+k] = parseInt(obj[k])||0;
+							break;
+					}
+				} catch (e) {}
+			}
+		}
 	}
 };
 exports.Member = Member;
