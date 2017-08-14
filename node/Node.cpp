@@ -100,7 +100,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 	} else {
 		idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
 		n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,tmp,sizeof(tmp) - 1);
-		if ((n > 0)&&(n < sizeof(RR->publicIdentityStr))&&(n < sizeof(tmp))) {
+		if ((n > 0)&&(n < (int)sizeof(RR->publicIdentityStr))&&(n < (int)sizeof(tmp))) {
 			if (memcmp(tmp,RR->publicIdentityStr,n))
 				stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 		}

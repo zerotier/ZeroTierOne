@@ -227,7 +227,7 @@ public:
 							case InetAddress::IP_SCOPE_GLOBAL:
 							case InetAddress::IP_SCOPE_SHARED:
 							case InetAddress::IP_SCOPE_PRIVATE:
-								for(int x=0;x<portCount;++x) {
+								for(int x=0;x<(int)portCount;++x) {
 									ip.setPort(ports[x]);
 									localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string(devname)));
 								}
@@ -268,7 +268,7 @@ public:
 					case InetAddress::IP_SCOPE_GLOBAL:
 					case InetAddress::IP_SCOPE_SHARED:
 					case InetAddress::IP_SCOPE_PRIVATE:
-						for(int x=0;x<portCount;++x) {
+						for(int x=0;x<(int)portCount;++x) {
 							ip.setPort(ports[x]);
 							localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,ifname));
 						}
@@ -302,7 +302,7 @@ public:
 								case InetAddress::IP_SCOPE_GLOBAL:
 								case InetAddress::IP_SCOPE_SHARED:
 								case InetAddress::IP_SCOPE_PRIVATE:
-									for(int x=0;x<portCount;++x) {
+									for(int x=0;x<(int)portCount;++x) {
 										ip.setPort(ports[x]);
 										localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string(ifa->ifa_name)));
 									}
