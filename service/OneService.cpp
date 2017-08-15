@@ -99,8 +99,8 @@ namespace ZeroTier { typedef TestEthernetTap EthernetTap; }
 #include "../controller/EmbeddedNetworkController.hpp"
 #include "../node/Node.hpp"
 // Use the virtual netcon endpoint instead of a tun/tap port driver
-#include "../src/SocketTap.hpp"
-namespace ZeroTier { typedef SocketTap EthernetTap; }
+#include "../src/VirtualTap.hpp"
+namespace ZeroTier { typedef VirtualTap EthernetTap; }
 
 #else
 
