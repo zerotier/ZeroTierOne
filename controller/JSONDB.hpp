@@ -37,10 +37,11 @@
 #include "../node/Mutex.hpp"
 #include "../ext/json/json.hpp"
 #include "../osdep/OSUtils.hpp"
-#include "../osdep/Http.hpp"
 #include "../osdep/Thread.hpp"
 
 namespace ZeroTier {
+
+class EmbeddedNetworkController;
 
 /**
  * Hierarchical JSON store that persists into the filesystem or via HTTP
@@ -59,7 +60,7 @@ public:
 		uint64_t mostRecentDeauthTime;
 	};
 
-	JSONDB(const std::string &basePath);
+	JSONDB(const std::string &basePath,EmbeddedNetworkController *parent);
 	~JSONDB();
 
 	/**
@@ -161,8 +162,8 @@ private:
 	void _recomputeSummaryInfo(const uint64_t networkId);
 	std::string _genPath(const std::string &n,bool create);
 
+	EmbeddedNetworkController *const _parent;
 	std::string _basePath;
-	InetAddress _httpAddr;
 	int _rawInput,_rawOutput;
 	Mutex _rawLock;
 

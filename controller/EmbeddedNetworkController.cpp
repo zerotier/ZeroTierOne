@@ -35,6 +35,7 @@
 #include <memory>
 
 #include "../include/ZeroTierOne.h"
+#include "../version.h"
 #include "../node/Constants.hpp"
 
 #include "EmbeddedNetworkController.hpp"
@@ -430,7 +431,7 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPa
 	_startTime(OSUtils::now()),
 	_running(true),
 	_lastDumpedStatus(0),
-	_db(dbPath),
+	_db(dbPath,this),
 	_node(node)
 {
 }
@@ -720,14 +721,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						json &revj = member["revision"];
 						member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 						_db.saveNetworkMember(nwid,address,member);
-
-						// Push update to member if online
-						try {
-							Mutex::Lock _l(_memberStatus_m);
-							_MemberStatus &ms = _memberStatus[_MemberStatusKey(nwid,address)];
-							if ((ms.online(now))&&(ms.lastRequestMetaData))
-								request(nwid,InetAddress(),0,ms.identity,ms.lastRequestMetaData);
-						} catch ( ... ) {}
 					}
 
 					_addMemberNonPersistedFields(nwid,address,member,now);
@@ -980,13 +973,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					json &revj = network["revision"];
 					network["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 					_db.saveNetwork(nwid,network);
-
-					// Send an update to all members of the network that are online
-					Mutex::Lock _l(_memberStatus_m);
-					for(auto i=_memberStatus.begin();i!=_memberStatus.end();++i) {
-						if ((i->first.networkId == nwid)&&(i->second.online(now))&&(i->second.lastRequestMetaData))
-							request(nwid,InetAddress(),0,i->second.identity,i->second.lastRequestMetaData);
-					}
 				}
 
 				JSONDB::NetworkSummaryInfo ns;
@@ -1144,6 +1130,28 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 	}
 }
 
+void EmbeddedNetworkController::onNetworkUpdate(const uint64_t networkId)
+{
+	// Send an update to all members of the network that are online
+	const uint64_t now = OSUtils::now();
+	Mutex::Lock _l(_memberStatus_m);
+	for(auto i=_memberStatus.begin();i!=_memberStatus.end();++i) {
+		if ((i->first.networkId == networkId)&&(i->second.online(now))&&(i->second.lastRequestMetaData))
+			request(networkId,InetAddress(),0,i->second.identity,i->second.lastRequestMetaData);
+	}
+}
+
+void EmbeddedNetworkController::onNetworkMemberUpdate(const uint64_t networkId,const uint64_t memberId)
+{
+	// Push update to member if online
+	try {
+		Mutex::Lock _l(_memberStatus_m);
+		_MemberStatus &ms = _memberStatus[_MemberStatusKey(networkId,memberId)];
+		if ((ms.online(OSUtils::now()))&&(ms.lastRequestMetaData))
+			request(networkId,InetAddress(),0,ms.identity,ms.lastRequestMetaData);
+	} catch ( ... ) {}
+}
+
 void EmbeddedNetworkController::threadMain()
 	throw()
 {
@@ -1184,7 +1192,7 @@ void EmbeddedNetworkController::threadMain()
 						first = false;
 					});
 				}
-				OSUtils::ztsnprintf(tmp,sizeof(tmp),"],\"clock\":%llu,\"startTime\":%llu,\"uptime\":%llu}",(unsigned long long)now,(unsigned long long)_startTime,(unsigned long long)(now - _startTime));
+				OSUtils::ztsnprintf(tmp,sizeof(tmp),"],\"clock\":%llu,\"startTime\":%llu,\"uptime\":%llu,\"vMajor\":%d,\"vMinor\":%d,\"vRev\":%d}",(unsigned long long)now,(unsigned long long)_startTime,(unsigned long long)(now - _startTime),ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
 				st.append(tmp);
 				_db.writeRaw("status",st);
 			}

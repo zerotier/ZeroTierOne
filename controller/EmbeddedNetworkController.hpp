@@ -93,6 +93,10 @@ public:
 
 	void handleRemoteTrace(const ZT_RemoteTrace &rt);
 
+	// Called by JSONDB when networks and network members are changed
+	void onNetworkUpdate(const uint64_t networkId);
+	void onNetworkMemberUpdate(const uint64_t networkId,const uint64_t memberId);
+
 	void threadMain()
 		throw();
 
