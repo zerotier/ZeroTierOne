@@ -164,15 +164,11 @@ void JSONDB::saveNetwork(const uint64_t networkId,const nlohmann::json &networkC
 	char n[64];
 	OSUtils::ztsnprintf(n,sizeof(n),"network/%.16llx",(unsigned long long)networkId);
 	writeRaw(n,OSUtils::jsonDump(networkConfig,-1));
-	bool update;
 	{
 		Mutex::Lock _l(_networks_m);
 		_NW &nw = _networks[networkId];
-		update = !nw.config.empty();
 		nw.config = nlohmann::json::to_msgpack(networkConfig);
 	}
-	if (update)
-		_parent->onNetworkUpdate(networkId);
 	_recomputeSummaryInfo(networkId);
 }
 
@@ -181,16 +177,12 @@ void JSONDB::saveNetworkMember(const uint64_t networkId,const uint64_t nodeId,co
 	char n[256];
 	OSUtils::ztsnprintf(n,sizeof(n),"network/%.16llx/member/%.10llx",(unsigned long long)networkId,(unsigned long long)nodeId);
 	writeRaw(n,OSUtils::jsonDump(memberConfig,-1));
-	bool update;
 	{
 		Mutex::Lock _l(_networks_m);
 		std::vector<uint8_t> &m = _networks[networkId].members[nodeId];
-		update = !m.empty();
 		m = nlohmann::json::to_msgpack(memberConfig);
 		_members[nodeId].insert(networkId);
 	}
-	if (update)
-		_parent->onNetworkMemberUpdate(networkId,nodeId);
 	_recomputeSummaryInfo(networkId);
 }
 

@@ -721,6 +721,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						json &revj = member["revision"];
 						member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 						_db.saveNetworkMember(nwid,address,member);
+						onNetworkMemberUpdate(nwid,address);
 					}
 
 					_addMemberNonPersistedFields(nwid,address,member,now);
@@ -973,6 +974,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					json &revj = network["revision"];
 					network["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 					_db.saveNetwork(nwid,network);
+					onNetworkUpdate(nwid);
 				}
 
 				JSONDB::NetworkSummaryInfo ns;
