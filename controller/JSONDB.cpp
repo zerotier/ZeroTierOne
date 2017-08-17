@@ -294,9 +294,9 @@ void JSONDB::threadMain()
 
 							if (obj.is_array()) {
 								for(unsigned long i=0;i<obj.size();++i)
-									_add(obj[i]);
+									_addOrUpdate(obj[i]);
 							} else if (obj.is_object()) {
-								_add(obj);
+								_addOrUpdate(obj);
 							}
 						} catch ( ... ) {} // ignore malformed JSON
 
@@ -399,14 +399,14 @@ void JSONDB::threadMain()
 #endif
 }
 
-bool JSONDB::_add(const nlohmann::json &j)
+bool JSONDB::_addOrUpdate(const nlohmann::json &j)
 {
 	try {
 		if (j.is_object()) {
 			std::string id(OSUtils::jsonString(j["id"],"0"));
-			std::string objtype(OSUtils::jsonString(j["objtype"],""));
-
+			const std::string objtype(OSUtils::jsonString(j["objtype"],""));
 			if ((id.length() == 16)&&(objtype == "network")) {
+
 				const uint64_t nwid = Utils::hexStrToU64(id.c_str());
 				if (nwid) {
 					bool update;
@@ -421,23 +421,49 @@ bool JSONDB::_add(const nlohmann::json &j)
 					_recomputeSummaryInfo(nwid);
 					return true;
 				}
+
 			} else if ((id.length() == 10)&&(objtype == "member")) {
+
 				const uint64_t mid = Utils::hexStrToU64(id.c_str());
 				const uint64_t nwid = Utils::hexStrToU64(OSUtils::jsonString(j["nwid"],"0").c_str());
 				if ((mid)&&(nwid)) {
-					bool update;
+					bool update = false;
+					bool deauth = false;
 					{
 						Mutex::Lock _l(_networks_m);
 						std::vector<uint8_t> &m = _networks[nwid].members[mid];
-						update = !m.empty();
+						if (!m.empty()) {
+							update = true;
+							nlohmann::json oldm(nlohmann::json::from_msgpack(m));
+							deauth = ((OSUtils::jsonBool(oldm["authorized"],false))&&(!OSUtils::jsonBool(j["authorized"],false)));
+						}
 						m = nlohmann::json::to_msgpack(j);
 						_members[mid].insert(nwid);
 					}
-					if (update)
+					if (update) {
 						_parent->onNetworkMemberUpdate(nwid,mid);
+						if (deauth)
+							_parent->onNetworkMemberDeauthorize(nwid,mid);
+					}
 					_recomputeSummaryInfo(nwid);
 					return true;
 				}
+
+			} else if (objtype == "_delete") { // pseudo-object-type, only used in Central harnessed mode
+
+				const std::string deleteType(OSUtils::jsonString(j["deleteType"],""));
+				id = OSUtils::jsonString(j["deleteId"],"");
+				if ((deleteType == "network")&&(id.length() == 16)) {
+					eraseNetwork(Utils::hexStrToU64(id.c_str()));
+				} else if ((deleteType == "member")&&(id.length() == 10)) {
+					const std::string networkId(OSUtils::jsonString(j["deleteNetworkId"],""));
+					const uint64_t nwid = Utils::hexStrToU64(networkId.c_str());
+					const uint64_t mid = Utils::hexStrToU64(id.c_str());
+					if (networkId.length() == 16)
+						eraseNetworkMember(nwid,mid,true);
+					_parent->onNetworkMemberDeauthorize(nwid,mid);
+				}
+
 			}
 		}
 	} catch ( ... ) {}
@@ -455,7 +481,7 @@ bool JSONDB::_load(const std::string &p)
 			std::string buf;
 			if (OSUtils::readFile((p + ZT_PATH_SEPARATOR_S + *di).c_str(),buf)) {
 				try {
-					_add(OSUtils::jsonParse(buf));
+					_addOrUpdate(OSUtils::jsonParse(buf));
 				} catch ( ... ) {}
 			}
 		} else {

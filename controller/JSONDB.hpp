@@ -157,7 +157,7 @@ public:
 		throw();
 
 private:
-	bool _add(const nlohmann::json &j);
+	bool _addOrUpdate(const nlohmann::json &j);
 	bool _load(const std::string &p);
 	void _recomputeSummaryInfo(const uint64_t networkId);
 	std::string _genPath(const std::string &n,bool create);

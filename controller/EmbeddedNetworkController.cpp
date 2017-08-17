@@ -645,16 +645,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 								}
 
 								// Member is being de-authorized, so spray Revocation objects to all online members
-								if (!newAuth) {
-									Revocation rev((uint32_t)_node->prng(),nwid,0,now,ZT_REVOCATION_FLAG_FAST_PROPAGATE,Address(address),Revocation::CREDENTIAL_TYPE_COM);
-									rev.sign(_signingId);
-
-									Mutex::Lock _l(_memberStatus_m);
-									for(auto i=_memberStatus.begin();i!=_memberStatus.end();++i) {
-										if ((i->first.networkId == nwid)&&(i->second.online(now)))
-											_node->ncSendRevocation(Address(i->first.nodeId),rev);
-									}
-								}
+								if (!newAuth)
+									onNetworkMemberDeauthorize(nwid,address);
 							}
 						}
 
@@ -1152,6 +1144,20 @@ void EmbeddedNetworkController::onNetworkMemberUpdate(const uint64_t networkId,c
 		if ((ms.online(OSUtils::now()))&&(ms.lastRequestMetaData))
 			request(networkId,InetAddress(),0,ms.identity,ms.lastRequestMetaData);
 	} catch ( ... ) {}
+}
+
+void EmbeddedNetworkController::onNetworkMemberDeauthorize(const uint64_t networkId,const uint64_t memberId)
+{
+	const uint64_t now = OSUtils::now();
+	Revocation rev((uint32_t)_node->prng(),networkId,0,now,ZT_REVOCATION_FLAG_FAST_PROPAGATE,Address(memberId),Revocation::CREDENTIAL_TYPE_COM);
+	rev.sign(_signingId);
+	{
+		Mutex::Lock _l(_memberStatus_m);
+		for(auto i=_memberStatus.begin();i!=_memberStatus.end();++i) {
+			if ((i->first.networkId == networkId)&&(i->second.online(now)))
+				_node->ncSendRevocation(Address(i->first.nodeId),rev);
+		}
+	}
 }
 
 void EmbeddedNetworkController::threadMain()
