@@ -108,8 +108,7 @@ public:
 	void peerLearnedNewPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &oldPath,const SharedPtr<Path> &newPath,const uint64_t packetId);
 	void peerRedirected(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &oldPath,const SharedPtr<Path> &newPath);
 
-	void incomingPacketTrustedPath(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const uint64_t trustedPathId,bool approved);
-	void incomingPacketMessageAuthenticationFailure(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const unsigned int hops);
+	void incomingPacketMessageAuthenticationFailure(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const unsigned int hops,const char *reason);
 	void incomingPacketInvalid(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const unsigned int hops,const Packet::Verb verb,const char *reason);
 	void incomingPacketDroppedHELLO(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const char *reason);
 
@@ -142,12 +141,6 @@ public:
 	void credentialRejected(void *const tPtr,const Capability &c,const char *reason);
 	void credentialRejected(void *const tPtr,const Tag &c,const char *reason);
 	void credentialRejected(void *const tPtr,const Revocation &c,const char *reason);
-	void credentialAccepted(void *const tPtr,const CertificateOfMembership &c);
-	void credentialAccepted(void *const tPtr,const CertificateOfOwnership &c);
-	void credentialAccepted(void *const tPtr,const CertificateOfRepresentation &c);
-	void credentialAccepted(void *const tPtr,const Capability &c);
-	void credentialAccepted(void *const tPtr,const Tag &c);
-	void credentialAccepted(void *const tPtr,const Revocation &c);
 
 private:
 	const RuntimeEnvironment *const RR;

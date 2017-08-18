@@ -66,10 +66,9 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 			// packets are dropped on the floor.
 			const uint64_t tpid = trustedPathId();
 			if (RR->topology->shouldInboundPathBeTrusted(_path->address(),tpid)) {
-				RR->t->incomingPacketTrustedPath(tPtr,_path,packetId(),sourceAddress,tpid,true);
 				trusted = true;
 			} else {
-				RR->t->incomingPacketTrustedPath(tPtr,_path,packetId(),sourceAddress,tpid,false);
+				RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,packetId(),sourceAddress,hops(),"path not trusted");
 				return true;
 			}
 		} else if ((c == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)&&(verb() == Packet::VERB_HELLO)) {
@@ -81,7 +80,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 		if (peer) {
 			if (!trusted) {
 				if (!dearmor(peer->key())) {
-					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,packetId(),sourceAddress,hops());
+					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,packetId(),sourceAddress,hops(),"invalid MAC");
 					return true;
 				}
 			}
@@ -246,10 +245,10 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 						outp.armor(key,true,_path->nextOutgoingCounter());
 						_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 					} else {
-						RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,pid,fromAddress,hops());
+						RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,pid,fromAddress,hops(),"invalid MAC");
 					}
 				} else {
-					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,pid,fromAddress,hops());
+					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,pid,fromAddress,hops(),"invalid identity");
 				}
 
 				return true;
@@ -257,7 +256,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 				// Identity is the same as the one we already have -- check packet integrity
 
 				if (!dearmor(peer->key())) {
-					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,pid,fromAddress,hops());
+					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,pid,fromAddress,hops(),"invalid MAC");
 					return true;
 				}
 
@@ -282,7 +281,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 		// Check packet integrity and MAC (this is faster than locallyValidate() so do it first to filter out total crap)
 		SharedPtr<Peer> newPeer(new Peer(RR,RR->identity,id));
 		if (!dearmor(newPeer->key())) {
-			RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,pid,fromAddress,hops());
+			RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,pid,fromAddress,hops(),"invalid MAC");
 			return true;
 		}
 

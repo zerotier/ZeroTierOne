@@ -147,7 +147,6 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 			return ADD_REJECTED;
 		case 0:
 			_com = com;
-			RR->t->credentialAccepted(tPtr,com);
 			return ADD_ACCEPTED_NEW;
 		case 1:
 			return ADD_DEFERRED_FOR_WHOIS;
@@ -179,7 +178,6 @@ static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t,C> &remot
 			RR->t->credentialRejected(tPtr,cred,"invalid");
 			return Membership::ADD_REJECTED;
 		case 0:
-			RR->t->credentialAccepted(tPtr,cred);
 			if (!rc)
 				rc = &(remoteCreds[cred.id()]);
 			*rc = cred;
@@ -205,7 +203,6 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 			switch(ct) {
 				case Credential::CREDENTIAL_TYPE_COM:
 					if (rev.threshold() > _comRevocationThreshold) {
-						RR->t->credentialAccepted(tPtr,rev);
 						_comRevocationThreshold = rev.threshold();
 						return ADD_ACCEPTED_NEW;
 					}
