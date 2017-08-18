@@ -2142,19 +2142,30 @@ public:
 				const uint64_t now = OSUtils::now();
 				if (((now - _lastDirectReceiveFromGlobal) > ZT_TCP_FALLBACK_AFTER)&&((now - _lastRestart) > ZT_TCP_FALLBACK_AFTER)) {
 					if (_tcpFallbackTunnel) {
-						Mutex::Lock _l(_tcpFallbackTunnel->writeq_m);
-						if (_tcpFallbackTunnel->writeq.length() == 0)
-							_phy.setNotifyWritable(_tcpFallbackTunnel->sock,true);
-						const unsigned long mlen = len + 7;
-						_tcpFallbackTunnel->writeq.push_back((char)0x17);
-						_tcpFallbackTunnel->writeq.push_back((char)0x03);
-						_tcpFallbackTunnel->writeq.push_back((char)0x03); // fake TLS 1.2 header
-						_tcpFallbackTunnel->writeq.push_back((char)((mlen >> 8) & 0xff));
-						_tcpFallbackTunnel->writeq.push_back((char)(mlen & 0xff));
-						_tcpFallbackTunnel->writeq.push_back((char)4); // IPv4
-						_tcpFallbackTunnel->writeq.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_addr.s_addr))),4);
-						_tcpFallbackTunnel->writeq.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port))),2);
-						_tcpFallbackTunnel->writeq.append((const char *)data,len);
+						bool flushNow = false;
+						{
+							Mutex::Lock _l(_tcpFallbackTunnel->writeq_m);
+							if (_tcpFallbackTunnel->writeq.size() < (1024 * 64)) {
+								if (_tcpFallbackTunnel->writeq.length() == 0) {
+									_phy.setNotifyWritable(_tcpFallbackTunnel->sock,true);
+									flushNow = true;
+								}
+								const unsigned long mlen = len + 7;
+								_tcpFallbackTunnel->writeq.push_back((char)0x17);
+								_tcpFallbackTunnel->writeq.push_back((char)0x03);
+								_tcpFallbackTunnel->writeq.push_back((char)0x03); // fake TLS 1.2 header
+								_tcpFallbackTunnel->writeq.push_back((char)((mlen >> 8) & 0xff));
+								_tcpFallbackTunnel->writeq.push_back((char)(mlen & 0xff));
+								_tcpFallbackTunnel->writeq.push_back((char)4); // IPv4
+								_tcpFallbackTunnel->writeq.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_addr.s_addr))),4);
+								_tcpFallbackTunnel->writeq.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port))),2);
+								_tcpFallbackTunnel->writeq.append((const char *)data,len);
+							}
+						}
+						if (flushNow) {
+							void *tmpptr = (void *)_tcpFallbackTunnel;
+							phyOnTcpWritable(_tcpFallbackTunnel->sock,&tmpptr);
+						}
 					} else if (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2))) {
 						const InetAddress addr(ZT_TCP_FALLBACK_RELAY);
 						TcpConnection *tc = new TcpConnection();
