@@ -1391,7 +1391,7 @@ void EmbeddedNetworkController::_request(
 		if (rtt.length() == 10) {
 			nc->remoteTraceTarget = Address(Utils::hexStrToU64(rtt.c_str()));
 		} else {
-			nc->remoteTraceTarget = _signingId.address();
+			nc->remoteTraceTarget.zero();
 		}
 	}
 
