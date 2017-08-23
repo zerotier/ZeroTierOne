@@ -439,6 +439,90 @@ public:
 		return false;
 	}
 
+	/**
+	 * Serialize a peer for storage in local cache
+	 *
+	 * This does not serialize everything, just identity and addresses where the peer
+	 * may be reached.
+	 */
+	template<unsigned int C>
+	inline void serialize(Buffer<C> &b) const
+	{
+		b.append((uint8_t)0);
+
+		_id.serialize(b);
+
+		b.append(_lastReceive);
+		b.append(_lastNontrivialReceive);
+		b.append(_lastTriedMemorizedPath);
+		b.append(_lastDirectPathPushSent);
+		b.append(_lastDirectPathPushReceive);
+		b.append(_lastCredentialRequestSent);
+		b.append(_lastWhoisRequestReceived);
+		b.append(_lastEchoRequestReceived);
+		b.append(_lastComRequestReceived);
+		b.append(_lastComRequestSent);
+		b.append(_lastCredentialsReceived);
+		b.append(_lastTrustEstablishedPacketReceived);
+
+		b.append((uint16_t)_vProto);
+		b.append((uint16_t)_vMajor);
+		b.append((uint16_t)_vMinor);
+		b.append((uint16_t)_vRevision);
+
+		{
+			Mutex::Lock _l(_paths_m);
+			unsigned int pcount = 0;
+			if (_v4Path.p) ++pcount;
+			if (_v6Path.p) ++pcount;
+			b.append((uint8_t)pcount);
+			if (_v4Path.p) _v4Path.p->address().serialize(b);
+			if (_v6Path.p) _v6Path.p->address().serialize(b);
+		}
+
+		b.append((uint16_t)0);
+	}
+
+	template<unsigned int C>
+	inline static SharedPtr<Peer> deserializeFromCache(uint64_t now,void *tPtr,Buffer<C> &b,const RuntimeEnvironment *renv)
+	{
+		try {
+			unsigned int ptr = 0;
+			if (b[ptr++] != 0)
+				return SharedPtr<Peer>();
+
+			Identity id;
+			ptr += id.deserialize(b,ptr);
+			if (!id)
+				return SharedPtr<Peer>();
+
+			SharedPtr<Peer> p(new Peer(renv,renv->identity,id));
+
+			ptr += 12 * 8; // skip deserializing ephemeral state in this case
+
+			p->_vProto = b.template at<uint16_t>(ptr); ptr += 2;
+			p->_vMajor = b.template at<uint16_t>(ptr); ptr += 2;
+			p->_vMinor = b.template at<uint16_t>(ptr); ptr += 2;
+			p->_vRevision = b.template at<uint16_t>(ptr); ptr += 2;
+
+			const unsigned int pcount = (unsigned int)b[ptr++];
+			for(unsigned int i=0;i<pcount;++i) {
+				InetAddress inaddr;
+				try {
+					ptr += inaddr.deserialize(b,ptr);
+					if (inaddr)
+						p->attemptToContactAt(tPtr,-1,inaddr,now,true,0);
+				} catch ( ... ) {
+					break;
+				}
+			}
+
+			return p;
+		} catch ( ... ) {
+			return SharedPtr<Peer>();
+		}
+	}
+
 private:
 	struct _PeerPath
 	{

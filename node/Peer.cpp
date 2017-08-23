@@ -369,7 +369,7 @@ void Peer::tryMemorizedPath(void *tPtr,uint64_t now)
 		_lastTriedMemorizedPath = now;
 		InetAddress mp;
 		if (RR->node->externalPathLookup(tPtr,_id.address(),-1,mp))
-			attemptToContactAt(tPtr,InetAddress(),mp,now,true,0);
+			attemptToContactAt(tPtr,-1,mp,now,true,0);
 	}
 }
 

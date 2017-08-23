@@ -59,6 +59,7 @@ class Topology
 {
 public:
 	Topology(const RuntimeEnvironment *renv,void *tPtr);
+	~Topology();
 
 	/**
 	 * Add a peer to database
@@ -419,6 +420,7 @@ public:
 private:
 	Identity _getIdentity(void *tPtr,const Address &zta);
 	void _memoizeUpstreams(void *tPtr);
+	void _savePeer(void *tPtr,const SharedPtr<Peer> &peer);
 
 	const RuntimeEnvironment *const RR;
 
