@@ -620,8 +620,7 @@ unsigned long Switch::doTimerTasks(void *tPtr,uint64_t now)
 				_txQueue.erase(txi++);
 			} else if ((now - txi->creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
 				RR->t->txTimedOut(tPtr,txi->dest);
-				_txQueue.erase(txi);
-				++txi;
+				_txQueue.erase(txi++);
 			} else if (!RR->topology->getPeer(tPtr,txi->dest)) {
 				requestWhois(tPtr,now,txi->dest);
 				++txi;

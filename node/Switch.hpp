@@ -144,7 +144,7 @@ private:
 
 	const RuntimeEnvironment *const RR;
 	uint64_t _lastBeaconResponse;
-	uint64_t _lastCheckedQueues;
+	volatile uint64_t _lastCheckedQueues;
 
 	// Time we last sent a WHOIS request for each address
 	Hashtable< Address,uint64_t > _lastSentWhoisRequest;
