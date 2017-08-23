@@ -630,9 +630,9 @@ unsigned long Switch::doTimerTasks(void *tPtr,uint64_t now)
 	{	// Time out TX queue packets that never got WHOIS lookups or other info.
 		Mutex::Lock _l(_txQueue_m);
 		for(std::list< TXQueueEntry >::iterator txi(_txQueue.begin());txi!=_txQueue.end();) {
-			if (_trySend(tPtr,txi->packet,txi->encrypt))
+			if (_trySend(tPtr,txi->packet,txi->encrypt)) {
 				_txQueue.erase(txi++);
-			else if ((now - txi->creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
+			} else if ((now - txi->creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
 				RR->t->txTimedOut(tPtr,txi->dest);
 				_txQueue.erase(txi++);
 			} else ++txi;
