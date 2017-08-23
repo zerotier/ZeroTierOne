@@ -613,6 +613,7 @@ unsigned long Switch::doTimerTasks(void *tPtr,uint64_t now)
 		return (unsigned long)(ZT_WHOIS_RETRY_DELAY - timeSinceLastCheck);
 	_lastCheckedQueues = now;
 
+	std::vector<Address> needWhois;
 	{
 		Mutex::Lock _l(_txQueue_m);
 		for(std::list< TXQueueEntry >::iterator txi(_txQueue.begin());txi!=_txQueue.end();) {
@@ -621,14 +622,15 @@ unsigned long Switch::doTimerTasks(void *tPtr,uint64_t now)
 			} else if ((now - txi->creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
 				RR->t->txTimedOut(tPtr,txi->dest);
 				_txQueue.erase(txi++);
-			} else if (!RR->topology->getPeer(tPtr,txi->dest)) {
-				requestWhois(tPtr,now,txi->dest);
-				++txi;
 			} else {
+				if (!RR->topology->getPeer(tPtr,txi->dest))
+					needWhois.push_back(txi->dest);
 				++txi;
 			}
 		}
 	}
+	for(std::vector<Address>::const_iterator i(needWhois.begin());i!=needWhois.end();++i)
+		requestWhois(tPtr,now,*i);
 
 	for(unsigned int ptr=0;ptr<ZT_RX_QUEUE_SIZE;++ptr) {
 		RXQueueEntry *const rq = &(_rxQueue[ptr]);
