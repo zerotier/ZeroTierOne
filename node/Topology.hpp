@@ -127,19 +127,9 @@ public:
 	/**
 	 * Get the current best upstream peer
 	 *
-	 * @return Root server with lowest latency or NULL if none
+	 * @return Upstream or NULL if none available
 	 */
-	inline SharedPtr<Peer> getUpstreamPeer() { return getUpstreamPeer((const Address *)0,0,false); }
-
-	/**
-	 * Get the current best upstream peer, avoiding those in the supplied avoid list
-	 *
-	 * @param avoid Nodes to avoid
-	 * @param avoidCount Number of nodes to avoid
-	 * @param strictAvoid If false, consider avoided root servers anyway if no non-avoid root servers are available
-	 * @return Root server or NULL if none available
-	 */
-	SharedPtr<Peer> getUpstreamPeer(const Address *avoid,unsigned int avoidCount,bool strictAvoid);
+	SharedPtr<Peer> getUpstreamPeer();
 
 	/**
 	 * @param id Identity to check

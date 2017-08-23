@@ -154,13 +154,11 @@ Identity Topology::getIdentity(void *tPtr,const Address &zta)
 	return Identity();
 }
 
-SharedPtr<Peer> Topology::getUpstreamPeer(const Address *avoid,unsigned int avoidCount,bool strictAvoid)
+SharedPtr<Peer> Topology::getUpstreamPeer()
 {
 	const uint64_t now = RR->node->now();
-	unsigned int bestQualityOverall = ~((unsigned int)0);
-	unsigned int bestQualityNotAvoid = ~((unsigned int)0);
-	const SharedPtr<Peer> *bestOverall = (const SharedPtr<Peer> *)0;
-	const SharedPtr<Peer> *bestNotAvoid = (const SharedPtr<Peer> *)0;
+	unsigned int bestq = ~((unsigned int)0);
+	const SharedPtr<Peer> *best = (const SharedPtr<Peer> *)0;
 
 	Mutex::Lock _l1(_peers_m);
 	Mutex::Lock _l2(_upstreams_m);
@@ -168,32 +166,17 @@ SharedPtr<Peer> Topology::getUpstreamPeer(const Address *avoid,unsigned int avoi
 	for(std::vector<Address>::const_iterator a(_upstreamAddresses.begin());a!=_upstreamAddresses.end();++a) {
 		const SharedPtr<Peer> *p = _peers.get(*a);
 		if (p) {
-			bool avoiding = false;
-			for(unsigned int i=0;i<avoidCount;++i) {
-				if (avoid[i] == (*p)->address()) {
-					avoiding = true;
-					break;
-				}
-			}
 			const unsigned int q = (*p)->relayQuality(now);
-			if (q <= bestQualityOverall) {
-				bestQualityOverall = q;
-				bestOverall = &(*p);
-			}
-			if ((!avoiding)&&(q <= bestQualityNotAvoid)) {
-				bestQualityNotAvoid = q;
-				bestNotAvoid = &(*p);
+			if (q <= bestq) {
+				bestq = q;
+				best = p;
 			}
 		}
 	}
 
-	if (bestNotAvoid) {
-		return *bestNotAvoid;
-	} else if ((!strictAvoid)&&(bestOverall)) {
-		return *bestOverall;
-	}
-
-	return SharedPtr<Peer>();
+	if (!best)
+		return SharedPtr<Peer>();
+	return *best;
 }
 
 bool Topology::isUpstream(const Identity &id) const

@@ -229,19 +229,14 @@
 #define ZT_WHOIS_RETRY_DELAY 500
 
 /**
- * Maximum identity WHOIS retries (each attempt tries consulting a different peer)
- */
-#define ZT_MAX_WHOIS_RETRIES 5
-
-/**
  * Transmit queue entry timeout
  */
-#define ZT_TRANSMIT_QUEUE_TIMEOUT (ZT_WHOIS_RETRY_DELAY * (ZT_MAX_WHOIS_RETRIES + 1))
+#define ZT_TRANSMIT_QUEUE_TIMEOUT 5000
 
 /**
  * Receive queue entry timeout
  */
-#define ZT_RECEIVE_QUEUE_TIMEOUT (ZT_WHOIS_RETRY_DELAY * (ZT_MAX_WHOIS_RETRIES + 1))
+#define ZT_RECEIVE_QUEUE_TIMEOUT 5000
 
 /**
  * Maximum latency to allow for OK(HELLO) before packet is discarded

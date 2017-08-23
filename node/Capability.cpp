@@ -30,6 +30,7 @@
 #include "Topology.hpp"
 #include "Switch.hpp"
 #include "Network.hpp"
+#include "Node.hpp"
 
 namespace ZeroTier {
 
@@ -59,7 +60,7 @@ int Capability::verify(const RuntimeEnvironment *RR,void *tPtr) const
 				if (!id.verify(tmp.data(),tmp.size(),_custody[c].signature))
 					return -1;
 			} else {
-				RR->sw->requestWhois(tPtr,_custody[c].from);
+				RR->sw->requestWhois(tPtr,RR->node->now(),_custody[c].from);
 				return 1;
 			}
 		}

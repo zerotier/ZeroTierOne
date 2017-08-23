@@ -249,6 +249,19 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,uint64_t now,volatile uint
 		try {
 			_lastPingCheck = now;
 
+			// Do pings and keepalives
+			Hashtable< Address,std::vector<InetAddress> > upstreamsToContact;
+			RR->topology->getUpstreamsToContact(upstreamsToContact);
+			_PingPeersThatNeedPing pfunc(RR,tptr,upstreamsToContact,now);
+			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
+
+			// Run WHOIS to create Peer for any upstreams we could not contact (including pending moon seeds)
+			Hashtable< Address,std::vector<InetAddress> >::Iterator i(upstreamsToContact);
+			Address *upstreamAddress = (Address *)0;
+			std::vector<InetAddress> *upstreamStableEndpoints = (std::vector<InetAddress> *)0;
+			while (i.next(upstreamAddress,upstreamStableEndpoints))
+				RR->sw->requestWhois(tptr,now,*upstreamAddress);
+
 			// Get networks that need config without leaving mutex locked
 			{
 				std::vector< std::pair< SharedPtr<Network>,bool > > nwl;
@@ -267,19 +280,6 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,uint64_t now,volatile uint
 					n->first->sendUpdatesToMembers(tptr);
 				}
 			}
-
-			// Do pings and keepalives
-			Hashtable< Address,std::vector<InetAddress> > upstreamsToContact;
-			RR->topology->getUpstreamsToContact(upstreamsToContact);
-			_PingPeersThatNeedPing pfunc(RR,tptr,upstreamsToContact,now);
-			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
-
-			// Run WHOIS to create Peer for any upstreams we could not contact (including pending moon seeds)
-			Hashtable< Address,std::vector<InetAddress> >::Iterator i(upstreamsToContact);
-			Address *upstreamAddress = (Address *)0;
-			std::vector<InetAddress> *upstreamStableEndpoints = (std::vector<InetAddress> *)0;
-			while (i.next(upstreamAddress,upstreamStableEndpoints))
-				RR->sw->requestWhois(tptr,*upstreamAddress);
 
 			// Update online status, post status change as event
 			const bool oldOnline = _online;

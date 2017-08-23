@@ -29,6 +29,7 @@
 #include "Topology.hpp"
 #include "Switch.hpp"
 #include "Network.hpp"
+#include "Node.hpp"
 
 namespace ZeroTier {
 
@@ -223,7 +224,7 @@ int CertificateOfMembership::verify(const RuntimeEnvironment *RR,void *tPtr) con
 
 	const Identity id(RR->topology->getIdentity(tPtr,_signedBy));
 	if (!id) {
-		RR->sw->requestWhois(tPtr,_signedBy);
+		RR->sw->requestWhois(tPtr,RR->node->now(),_signedBy);
 		return 1;
 	}
 

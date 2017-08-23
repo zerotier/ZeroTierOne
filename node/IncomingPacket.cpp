@@ -115,7 +115,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 				case Packet::VERB_REMOTE_TRACE:               return _doREMOTE_TRACE(RR,tPtr,peer);
 			}
 		} else {
-			RR->sw->requestWhois(tPtr,sourceAddress);
+			RR->sw->requestWhois(tPtr,RR->node->now(),sourceAddress);
 			return false;
 		}
 	} catch ( ... ) {
@@ -556,7 +556,7 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const Shar
 			++count;
 		} else {
 			// Request unknown WHOIS from upstream from us (if we have one)
-			RR->sw->requestWhois(tPtr,addr);
+			RR->sw->requestWhois(tPtr,RR->node->now(),addr);
 		}
 	}
 

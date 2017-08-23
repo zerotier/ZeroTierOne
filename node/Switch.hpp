@@ -111,9 +111,10 @@ public:
 	 * Request WHOIS on a given address
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param now Current time
 	 * @param addr Address to look up
 	 */
-	void requestWhois(void *tPtr,const Address &addr);
+	void requestWhois(void *tPtr,const uint64_t now,const Address &addr);
 
 	/**
 	 * Run any processes that are waiting for this peer's identity
@@ -139,34 +140,27 @@ public:
 
 private:
 	bool _shouldUnite(const uint64_t now,const Address &source,const Address &destination);
-	Address _sendWhoisRequest(void *tPtr,const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
 	bool _trySend(void *tPtr,Packet &packet,bool encrypt); // packet is modified if return is true
 
 	const RuntimeEnvironment *const RR;
 	uint64_t _lastBeaconResponse;
+	uint64_t _lastCheckedQueues;
 
-	// Outstanding WHOIS requests and how many retries they've undergone
-	struct WhoisRequest
-	{
-		WhoisRequest() : lastSent(0),retries(0) {}
-		uint64_t lastSent;
-		Address peersConsulted[ZT_MAX_WHOIS_RETRIES]; // by retry
-		unsigned int retries; // 0..ZT_MAX_WHOIS_RETRIES
-	};
-	Hashtable< Address,WhoisRequest > _outstandingWhoisRequests;
-	Mutex _outstandingWhoisRequests_m;
+	// Time we last sent a WHOIS request for each address
+	Hashtable< Address,uint64_t > _lastSentWhoisRequest;
+	Mutex _lastSentWhoisRequest_m;
 
 	// Packets waiting for WHOIS replies or other decode info or missing fragments
 	struct RXQueueEntry
 	{
 		RXQueueEntry() : timestamp(0) {}
-		uint64_t timestamp; // 0 if entry is not in use
-		uint64_t packetId;
+		volatile uint64_t timestamp; // 0 if entry is not in use
+		volatile uint64_t packetId;
 		IncomingPacket frag0; // head of packet
 		Packet::Fragment frags[ZT_MAX_PACKET_FRAGMENTS - 1]; // later fragments (if any)
 		unsigned int totalFragments; // 0 if only frag0 received, waiting for frags
 		uint32_t haveFragments; // bit mask, LSB to MSB
-		bool complete; // if true, packet is complete
+		volatile bool complete; // if true, packet is complete
 	};
 	RXQueueEntry _rxQueue[ZT_RX_QUEUE_SIZE];
 	AtomicCounter _rxQueuePtr;
