@@ -174,19 +174,20 @@ private:
 	// Returns matching or next available RX queue entry
 	inline RXQueueEntry *_findRXQueueEntry(uint64_t packetId)
 	{
-		unsigned int ptr = static_cast<unsigned int>(_rxQueuePtr.load());
-		for(unsigned int k=0;k<ZT_RX_QUEUE_SIZE;++k) {
-			RXQueueEntry *rq = &(_rxQueue[--ptr % ZT_RX_QUEUE_SIZE]);
+		const unsigned int current = static_cast<unsigned int>(_rxQueuePtr.load());
+		for(unsigned int k=1;k<=ZT_RX_QUEUE_SIZE;++k) {
+			RXQueueEntry *rq = &(_rxQueue[(current - k) % ZT_RX_QUEUE_SIZE]);
 			if ((rq->packetId == packetId)&&(rq->timestamp))
 				return rq;
 		}
-		return &(_rxQueue[static_cast<unsigned int>(++_rxQueuePtr) % ZT_RX_QUEUE_SIZE]);
+		++_rxQueuePtr;
+		return &(_rxQueue[static_cast<unsigned int>(current) % ZT_RX_QUEUE_SIZE]);
 	}
 
-	// Returns next RX queue entry in ring buffer and increments ring counter
+	// Returns current entry in rx queue ring buffer and increments ring pointer
 	inline RXQueueEntry *_nextRXQueueEntry()
 	{
-		return &(_rxQueue[static_cast<unsigned int>(++_rxQueuePtr) % ZT_RX_QUEUE_SIZE]);
+		return &(_rxQueue[static_cast<unsigned int>((++_rxQueuePtr) - 1) % ZT_RX_QUEUE_SIZE]);
 	}
 
 	// ZeroTier-layer TX queue entry
