@@ -1728,9 +1728,10 @@ public:
 
 				case TcpConnection::TCP_UNCATEGORIZED_INCOMING:
 					switch(reinterpret_cast<uint8_t *>(data)[0]) {
-						// HTTP: GET, PUT, POST, HEAD
+						// HTTP: GET, PUT, POST, HEAD, DELETE
 						case 'G':
 						case 'P':
+						case 'D':
 						case 'H': {
 							// This is only allowed from IPs permitted to access the management
 							// backplane, which is just 127.0.0.1/::1 unless otherwise configured.
@@ -2313,7 +2314,7 @@ public:
 			fprintf(stderr,"WARNING: unexpected exception processing control HTTP request: %s" ZT_EOL_S,exc.what());
 			scode = 500;
 		} catch ( ... ) {
-			fprintf(stderr,"WARNING: unexpected exception processing control HTTP request: unknown exceptino" ZT_EOL_S);
+			fprintf(stderr,"WARNING: unexpected exception processing control HTTP request: unknown exception" ZT_EOL_S);
 			scode = 500;
 		}
 
