@@ -719,7 +719,7 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 			}
 		}
 	} else {
-		return false; // if we are not in cluster mode, there is no way we can send without knowing the peer directly
+		return false;
 	}
 
 	unsigned int chunkSize = std::min(packet.size(),(unsigned int)ZT_UDP_DEFAULT_PAYLOAD_MTU);
