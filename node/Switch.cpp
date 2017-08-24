@@ -544,11 +544,16 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 
 void Switch::send(void *tPtr,Packet &packet,bool encrypt)
 {
-	if (packet.destination() == RR->identity.address())
+	const Address dest(packet.destination());
+	if (dest == RR->identity.address())
 		return;
 	if (!_trySend(tPtr,packet,encrypt)) {
-		Mutex::Lock _l(_txQueue_m);
-		_txQueue.push_back(TXQueueEntry(packet.destination(),RR->node->now(),packet,encrypt));
+		{
+			Mutex::Lock _l(_txQueue_m);
+			_txQueue.push_back(TXQueueEntry(dest,RR->node->now(),packet,encrypt));
+		}
+		if (!RR->topology->getPeer(tPtr,dest))
+			requestWhois(tPtr,RR->node->now(),dest);
 	}
 }
 
@@ -714,7 +719,6 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 			}
 		}
 	} else {
-		requestWhois(tPtr,now,destination);
 		return false; // if we are not in cluster mode, there is no way we can send without knowing the peer directly
 	}
 
