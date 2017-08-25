@@ -93,6 +93,21 @@ extern "C" {
 #define ZT_MAX_MTU 10000
 
 /**
+ * Maximum physical UDP payload
+ */
+#define ZT_MAX_PHYSPAYLOAD 10100
+
+/**
+ * Headroom for max physical MTU
+ */
+#define ZT_MAX_HEADROOM 224
+
+/**
+ * Maximum physical MTU
+ */
+#define ZT_MAX_PHYSMTU (ZT_MAX_PHYSPAYLOAD + ZT_MAX_HEADROOM)
+
+/**
  * Maximum size of a remote trace message's serialized Dictionary
  */
 #define ZT_MAX_REMOTE_TRACE_SIZE 10000
