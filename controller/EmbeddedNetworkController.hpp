@@ -115,20 +115,7 @@ private:
 	};
 
 	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
-
-	inline void _startThreads()
-	{
-		Mutex::Lock _l(_threads_m);
-		if (_threads.size() == 0) {
-			long hwc = (long)std::thread::hardware_concurrency();
-			if (hwc < 1)
-				hwc = 1;
-			else if (hwc > 16)
-				hwc = 16;
-			for(long i=0;i<hwc;++i)
-				_threads.push_back(Thread::start(this));
-		}
-	}
+	void _startThreads();
 
 	// These init objects with default and static/informational fields
 	inline void _initMember(nlohmann::json &member)

@@ -434,6 +434,8 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPa
 	_db(dbPath,this),
 	_node(node)
 {
+	if ((dbPath[0] == '-')&&(dbPath[1] == 0))
+		_startThreads(); // start threads now in Central harnessed mode
 }
 
 EmbeddedNetworkController::~EmbeddedNetworkController()
@@ -1719,6 +1721,20 @@ void EmbeddedNetworkController::_request(
 	}
 
 	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),*(nc.get()),metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
+}
+
+void EmbeddedNetworkController::_startThreads()
+{
+	Mutex::Lock _l(_threads_m);
+	if (_threads.size() == 0) {
+		long hwc = (long)std::thread::hardware_concurrency();
+		if (hwc < 1)
+			hwc = 1;
+		else if (hwc > 16)
+			hwc = 16;
+		for(long i=0;i<hwc;++i)
+			_threads.push_back(Thread::start(this));
+	}
 }
 
 } // namespace ZeroTier
