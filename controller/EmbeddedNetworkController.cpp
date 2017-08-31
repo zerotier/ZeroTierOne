@@ -1242,7 +1242,7 @@ void EmbeddedNetworkController::_request(
 	_initMember(member);
 
 	{
-		std::string haveIdStr(OSUtils::jsonString(member["identity"],""));
+		const std::string haveIdStr(OSUtils::jsonString(member["identity"],""));
 		if (haveIdStr.length() > 0) {
 			// If we already know this member's identity perform a full compare. This prevents
 			// a "collision" from being able to auth onto our network in place of an already
@@ -1308,8 +1308,6 @@ void EmbeddedNetworkController::_request(
 		member["lastAuthorizedTime"] = now;
 		member["lastAuthorizedCredentialType"] = autoAuthCredentialType;
 		member["lastAuthorizedCredential"] = autoAuthCredential;
-		json &revj = member["revision"];
-		member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 	}
 
 	if (authorized) {
@@ -1338,6 +1336,7 @@ void EmbeddedNetworkController::_request(
 
 				if (fromAddr)
 					ms.physicalAddr = fromAddr;
+
 				char tmpip[64];
 				if (ms.physicalAddr)
 					member["physicalAddr"] = ms.physicalAddr.toString(tmpip);
@@ -1346,8 +1345,11 @@ void EmbeddedNetworkController::_request(
 	} else {
 		// If they are not authorized, STOP!
 		_removeMemberNonPersistedFields(member);
-		if (origMember != member)
+		if (origMember != member) {
+			json &revj = member["revision"];
+			member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 			_db.saveNetworkMember(nwid,identity.address().toInt(),member);
+		}
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
 		return;
 	}
@@ -1710,8 +1712,11 @@ void EmbeddedNetworkController::_request(
 	}
 
 	_removeMemberNonPersistedFields(member);
-	if (member != origMember)
+	if (member != origMember) {
+		json &revj = member["revision"];
+		member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
 		_db.saveNetworkMember(nwid,identity.address().toInt(),member);
+	}
 
 	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),*(nc.get()),metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
 }
