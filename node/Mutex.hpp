@@ -114,12 +114,12 @@ public:
 
 	inline void lock() const
 	{
-		(const_cast <Mutex *> (this))->lock();
+		pthread_mutex_lock(&((const_cast <Mutex *> (this))->_mh));
 	}
 
 	inline void unlock() const
 	{
-		(const_cast <Mutex *> (this))->unlock();
+		pthread_mutex_unlock(&((const_cast <Mutex *> (this))->_mh));
 	}
 
 	class Lock : NonCopyable
