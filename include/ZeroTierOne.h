@@ -93,6 +93,15 @@ extern "C" {
 #define ZT_MAX_MTU 10000
 
 /**
+ * Default payload MTU for UDP packets
+ *
+ * This is 1500 - IPv6 UDP overhead - PPPoE overhead and is safe for 99.9% of
+ * all Internet links.
+ */
+#define ZT_DEFAULT_PHYSMTU 1444
+#define ZT_UDP_DEFAULT_PAYLOAD_MTU 1444
+
+/**
  * Maximum physical UDP payload
  */
 #define ZT_MAX_PHYSPAYLOAD 10100
@@ -103,7 +112,7 @@ extern "C" {
 #define ZT_MAX_HEADROOM 224
 
 /**
- * Maximum physical MTU
+ * Maximum payload MTU for UDP packets
  */
 #define ZT_MAX_PHYSMTU (ZT_MAX_PHYSPAYLOAD + ZT_MAX_HEADROOM)
 

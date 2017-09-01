@@ -172,15 +172,6 @@
 #define ZT_ADDRESS_RESERVED_PREFIX 0xff
 
 /**
- * Default payload MTU for UDP packets
- *
- * In the future we might support UDP path MTU discovery, but for now we
- * set a maximum that is equal to 1500 minus 8 (for PPPoE overhead, common
- * in some markets) minus 48 (IPv6 UDP overhead).
- */
-#define ZT_UDP_DEFAULT_PAYLOAD_MTU 1444
-
-/**
  * Default MTU used for Ethernet tap device
  */
 #define ZT_DEFAULT_MTU 2800
