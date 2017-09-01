@@ -564,16 +564,14 @@ public:
 
 			// Read local configuration
 			{
-				uint64_t trustedPathIds[ZT_MAX_TRUSTED_PATHS];
-				InetAddress trustedPathNetworks[ZT_MAX_TRUSTED_PATHS];
-				unsigned int trustedPathCount = 0;
+				std::map<InetAddress,ZT_PhysicalPathConfiguration> ppc;
 
 				// LEGACY: support old "trustedpaths" flat file
 				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S "trustedpaths").c_str(),"r");
 				if (trustpaths) {
 					fprintf(stderr,"WARNING: 'trustedpaths' flat file format is deprecated in favor of path definitions in local.conf" ZT_EOL_S);
 					char buf[1024];
-					while ((fgets(buf,sizeof(buf),trustpaths))&&(trustedPathCount < ZT_MAX_TRUSTED_PATHS)) {
+					while (fgets(buf,sizeof(buf),trustpaths)) {
 						int fno = 0;
 						char *saveptr = (char *)0;
 						uint64_t trustedPathId = 0;
@@ -587,9 +585,8 @@ public:
 							++fno;
 						}
 						if ( (trustedPathId != 0) && ((trustedPathNetwork.ss_family == AF_INET)||(trustedPathNetwork.ss_family == AF_INET6)) && (trustedPathNetwork.ipScope() != InetAddress::IP_SCOPE_GLOBAL) && (trustedPathNetwork.netmaskBits() > 0) ) {
-							trustedPathIds[trustedPathCount] = trustedPathId;
-							trustedPathNetworks[trustedPathCount] = trustedPathNetwork;
-							++trustedPathCount;
+							ppc[trustedPathNetwork].trustedPathId = trustedPathId;
+							ppc[trustedPathNetwork].mtu = 0; // use default
 						}
 					}
 					fclose(trustpaths);
@@ -618,12 +615,10 @@ public:
 							if (phy.value().is_object()) {
 								uint64_t tpid;
 								if ((tpid = OSUtils::jsonInt(phy.value()["trustedPathId"],0ULL)) != 0ULL) {
-									if ( ((net.ss_family == AF_INET)||(net.ss_family == AF_INET6)) && (trustedPathCount < ZT_MAX_TRUSTED_PATHS) && (net.ipScope() != InetAddress::IP_SCOPE_GLOBAL) && (net.netmaskBits() > 0) ) {
-										trustedPathIds[trustedPathCount] = tpid;
-										trustedPathNetworks[trustedPathCount] = net;
-										++trustedPathCount;
-									}
+									if ((net.ss_family == AF_INET)||(net.ss_family == AF_INET6))
+										ppc[net].trustedPathId = tpid;
 								}
+								ppc[net].mtu = (int)OSUtils::jsonInt(phy.value()["mtu"],0ULL); // 0 means use default
 							}
 						}
 					}
@@ -638,8 +633,10 @@ public:
 				}
 
 				// Set trusted paths if there are any
-				if (trustedPathCount)
-					_node->setTrustedPaths(reinterpret_cast<const struct sockaddr_storage *>(trustedPathNetworks),trustedPathIds,trustedPathCount);
+				if (ppc.size() > 0) {
+					for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::iterator i(ppc.begin());i!=ppc.end();++i)
+						_node->setPhysicalPathConfiguration(reinterpret_cast<const struct sockaddr_storage *>(&(i->first)),&(i->second));
+				}
 			}
 
 			// Apply other runtime configuration from local.conf

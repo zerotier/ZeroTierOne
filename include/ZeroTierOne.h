@@ -93,13 +93,17 @@ extern "C" {
 #define ZT_MAX_MTU 10000
 
 /**
- * Default payload MTU for UDP packets
+ * Minimum UDP payload size allowed
+ */
+#define ZT_MIN_PHYSMTU 1400
+
+/**
+ * Default UDP payload size (physical path MTU) not including UDP and IP overhead
  *
  * This is 1500 - IPv6 UDP overhead - PPPoE overhead and is safe for 99.9% of
  * all Internet links.
  */
 #define ZT_DEFAULT_PHYSMTU 1444
-#define ZT_UDP_DEFAULT_PAYLOAD_MTU 1444
 
 /**
  * Maximum physical UDP payload
@@ -172,9 +176,9 @@ extern "C" {
 #define ZT_MAX_PEER_NETWORK_PATHS 4
 
 /**
- * Maximum number of trusted physical network paths
+ * Maximum number of path configurations that can be set
  */
-#define ZT_MAX_TRUSTED_PATHS 16
+#define ZT_MAX_CONFIGURABLE_PATHS 32
 
 /**
  * Maximum number of rules per capability
@@ -1059,11 +1063,6 @@ typedef struct
 	unsigned int mtu;
 
 	/**
-	 * Recommended MTU to avoid fragmentation at the physical layer (hint)
-	 */
-	unsigned int physicalMtu;
-
-	/**
 	 * If nonzero, the network this port belongs to indicates DHCP availability
 	 *
 	 * This is a suggestion. The underlying implementation is free to ignore it
@@ -1131,6 +1130,21 @@ typedef struct
 	ZT_VirtualNetworkConfig *networks;
 	unsigned long networkCount;
 } ZT_VirtualNetworkList;
+
+/**
+ * Physical path configuration
+ */
+typedef struct {
+	/**
+	 * If non-zero set this physical network path to be trusted to disable encryption and authentication
+	 */
+	uint64_t trustedPathId;
+
+	/**
+	 * Physical path MTU from ZT_MIN_PHYSMTU and ZT_MAX_PHYSMTU or <= 0 to use default
+	 */
+	int mtu;
+} ZT_PhysicalPathConfiguration;
 
 /**
  * Physical network path to a peer
@@ -1856,27 +1870,14 @@ ZT_SDK_API int ZT_Node_sendUserMessage(ZT_Node *node,void *tptr,uint64_t dest,ui
 ZT_SDK_API void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkConfigMasterInstance);
 
 /**
- * Set trusted paths
- *
- * A trusted path is a physical network (network/bits) over which both
- * encryption and authentication can be skipped to improve performance.
- * Each trusted path must have a non-zero unique ID that is the same across
- * all participating nodes.
- *
- * We don't recommend using trusted paths at all unless you really *need*
- * near-bare-metal performance. Even on a LAN authentication and encryption
- * are never a bad thing, and anything that introduces an "escape hatch"
- * for encryption should be treated with the utmost care.
- *
- * Calling with NULL pointers for networks and ids and a count of zero clears
- * all trusted paths.
+ * Set configuration for a given physical path
  *
  * @param node Node instance
- * @param networks Array of [count] networks
- * @param ids Array of [count] corresponding non-zero path IDs (zero path IDs are ignored)
- * @param count Number of trusted paths-- values greater than ZT_MAX_TRUSTED_PATHS are clipped
+ * @param pathNetwork Network/CIDR of path or NULL to clear the cache and reset all paths to default
+ * @param pathConfig Path configuration or NULL to erase this entry and therefore reset it to NULL
+ * @return OK or error code
  */
-ZT_SDK_API void ZT_Node_setTrustedPaths(ZT_Node *node,const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_setPhysicalPathConfiguration(ZT_Node *node,const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig);
 
 /**
  * Get ZeroTier One version

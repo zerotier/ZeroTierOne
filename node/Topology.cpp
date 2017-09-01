@@ -65,7 +65,7 @@ static const unsigned char ZT_DEFAULT_WORLD[ZT_DEFAULT_WORLD_LENGTH] = {0x01,0x0
 
 Topology::Topology(const RuntimeEnvironment *renv,void *tPtr) :
 	RR(renv),
-	_trustedPathCount(0),
+	_numConfiguredPhysicalPaths(0),
 	_amRoot(false)
 {
 	uint8_t tmp[ZT_WORLD_MAX_SERIALIZED_LENGTH];

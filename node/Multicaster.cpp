@@ -111,7 +111,7 @@ unsigned int Multicaster::gather(const Address &queryingPeer,uint64_t nwid,const
 		// Members are returned in random order so that repeated gather queries
 		// will return different subsets of a large multicast group.
 		k = 0;
-		while ((added < limit)&&(k < s->members.size())&&((appendTo.size() + ZT_ADDRESS_LENGTH) <= ZT_UDP_DEFAULT_PAYLOAD_MTU)) {
+		while ((added < limit)&&(k < s->members.size())&&((appendTo.size() + ZT_ADDRESS_LENGTH) <= ZT_PROTO_MAX_PACKET_LENGTH)) {
 			rptr = (unsigned int)RR->node->prng();
 
 restart_member_scan:

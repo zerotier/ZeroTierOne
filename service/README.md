@@ -14,7 +14,8 @@ Settings available in `local.conf` (this is not valid JSON, and JSON does not al
 	"physical": { /* Settings that apply to physical L2/L3 network paths. */
 		"NETWORK/bits": { /* Network e.g. 10.0.0.0/24 or fd00::/32 */
 			"blacklist": true|false, /* If true, blacklist this path for all ZeroTier traffic */
-			"trustedPathId": 0|!0 /* If present and nonzero, define this as a trusted path (see below) */
+			"trustedPathId": 0|!0, /* If present and nonzero, define this as a trusted path (see below) */
+			"mtu": 0|!0 /* if present and non-zero, set UDP maximum payload MTU for this path */
 		} /* ,... additional networks */
 	},
 	"virtual": { /* Settings applied to ZeroTier virtual network devices (VL1) */

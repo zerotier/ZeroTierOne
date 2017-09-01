@@ -561,9 +561,9 @@ uint64_t Node::prng()
 	return z + y;
 }
 
-void Node::setTrustedPaths(const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count)
+ZT_ResultCode Node::setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork, const ZT_PhysicalPathConfiguration *pathConfig)
 {
-	RR->topology->setTrustedPaths(reinterpret_cast<const InetAddress *>(networks),ids,count);
+	return ZT_RESULT_OK;
 }
 
 World Node::planet() const
@@ -815,7 +815,7 @@ enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,void *tptr,uint64_t moonWorldId,u
 	}
 }
 
-ZT_ResultCode ZT_Node_deorbit(ZT_Node *node,void *tptr,uint64_t moonWorldId)
+enum ZT_ResultCode ZT_Node_deorbit(ZT_Node *node,void *tptr,uint64_t moonWorldId)
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->deorbit(tptr,moonWorldId);
@@ -902,11 +902,13 @@ void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkControllerInstance)
 	} catch ( ... ) {}
 }
 
-void ZT_Node_setTrustedPaths(ZT_Node *node,const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count)
+enum ZT_ResultCode ZT_Node_setPhysicalPathConfiguration(ZT_Node *node,const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig)
 {
 	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->setTrustedPaths(networks,ids,count);
-	} catch ( ... ) {}
+		return reinterpret_cast<ZeroTier::Node *>(node)->setPhysicalPathConfiguration(pathNetwork,pathConfig);
+	} catch ( ... ) {
+		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+	}
 }
 
 void ZT_version(int *major,int *minor,int *revision)

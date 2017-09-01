@@ -340,6 +340,41 @@ public:
 	inline bool amRoot() const { return _amRoot; }
 
 	/**
+	 * Get info about a path
+	 *
+	 * The supplied result variables are not modified if no special config info is found.
+	 *
+	 * @param physicalAddress Physical endpoint address
+	 * @param mtu Variable set to MTU
+	 * @param trustedPathId Variable set to trusted path ID
+	 */
+	inline void getOutboundPathInfo(const InetAddress &physicalAddress,unsigned int &mtu,uint64_t &trustedPathId)
+	{
+		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
+			if (_physicalPathConfig[i].first.containsAddress(physicalAddress)) {
+				trustedPathId = _physicalPathConfig[i].second.trustedPathId;
+				mtu = _physicalPathConfig[i].second.mtu;
+				return;
+			}
+		}
+	}
+
+	/**
+	 * Get the payload MTU for an outbound physical path (returns default if not configured)
+	 *
+	 * @param physicalAddress Physical endpoint address
+	 * @return MTU
+	 */
+	inline unsigned int getOutboundPathMtu(const InetAddress &physicalAddress)
+	{
+		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
+			if (_physicalPathConfig[i].first.containsAddress(physicalAddress))
+				return _physicalPathConfig[i].second.mtu;
+		}
+		return ZT_DEFAULT_PHYSMTU;
+	}
+
+	/**
 	 * Get the outbound trusted path ID for a physical address, or 0 if none
 	 *
 	 * @param physicalAddress Physical address to which we are sending the packet
@@ -347,9 +382,9 @@ public:
 	 */
 	inline uint64_t getOutboundPathTrust(const InetAddress &physicalAddress)
 	{
-		for(unsigned int i=0;i<_trustedPathCount;++i) {
-			if (_trustedPathNetworks[i].containsAddress(physicalAddress))
-				return _trustedPathIds[i];
+		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
+			if (_physicalPathConfig[i].first.containsAddress(physicalAddress))
+				return _physicalPathConfig[i].second.trustedPathId;
 		}
 		return 0;
 	}
@@ -362,30 +397,48 @@ public:
 	 */
 	inline bool shouldInboundPathBeTrusted(const InetAddress &physicalAddress,const uint64_t trustedPathId)
 	{
-		for(unsigned int i=0;i<_trustedPathCount;++i) {
-			if ((_trustedPathIds[i] == trustedPathId)&&(_trustedPathNetworks[i].containsAddress(physicalAddress)))
+		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
+			if ((_physicalPathConfig[i].second.trustedPathId == trustedPathId)&&(_physicalPathConfig[i].first.containsAddress(physicalAddress)))
 				return true;
 		}
 		return false;
 	}
 
 	/**
-	 * Set trusted paths in this topology
-	 *
-	 * @param networks Array of networks (prefix/netmask bits)
-	 * @param ids Array of trusted path IDs
-	 * @param count Number of trusted paths (if larger than ZT_MAX_TRUSTED_PATHS overflow is ignored)
+	 * Set or clear physical path configuration (called via Node::setPhysicalPathConfiguration)
 	 */
-	inline void setTrustedPaths(const InetAddress *networks,const uint64_t *ids,unsigned int count)
+	inline void setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig)
 	{
-		if (count > ZT_MAX_TRUSTED_PATHS)
-			count = ZT_MAX_TRUSTED_PATHS;
-		Mutex::Lock _l(_trustedPaths_m);
-		for(unsigned int i=0;i<count;++i) {
-			_trustedPathIds[i] = ids[i];
-			_trustedPathNetworks[i] = networks[i];
+		if (!pathNetwork) {
+			_numConfiguredPhysicalPaths = 0;
+		} else {
+			std::map<InetAddress,ZT_PhysicalPathConfiguration> cpaths;
+			for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i)
+				cpaths[_physicalPathConfig[i].first] = _physicalPathConfig[i].second;
+
+			if (pathConfig) {
+				ZT_PhysicalPathConfiguration pc(*pathConfig);
+
+				if (pc.mtu <= 0)
+					pc.mtu = ZT_DEFAULT_PHYSMTU;
+				else if (pc.mtu < ZT_MIN_PHYSMTU)
+					pc.mtu = ZT_MIN_PHYSMTU;
+				else if (pc.mtu > ZT_MAX_PHYSMTU)
+					pc.mtu = ZT_MAX_PHYSMTU;
+
+				cpaths[*(reinterpret_cast<const InetAddress *>(pathNetwork))] = pc;
+			} else {
+				cpaths.erase(*(reinterpret_cast<const InetAddress *>(pathNetwork)));
+			}
+
+			unsigned int cnt = 0;
+			for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::const_iterator i(cpaths.begin());((i!=cpaths.end())&&(cnt<ZT_MAX_CONFIGURABLE_PATHS));++i) {
+				_physicalPathConfig[cnt].first = i->first;
+				_physicalPathConfig[cnt].second = i->second;
+				++cnt;
+			}
+			_numConfiguredPhysicalPaths = cnt;
 		}
-		_trustedPathCount = count;
 	}
 
 	/**
@@ -414,10 +467,8 @@ private:
 
 	const RuntimeEnvironment *const RR;
 
-	uint64_t _trustedPathIds[ZT_MAX_TRUSTED_PATHS];
-	InetAddress _trustedPathNetworks[ZT_MAX_TRUSTED_PATHS];
-	unsigned int _trustedPathCount;
-	Mutex _trustedPaths_m;
+	std::pair<InetAddress,ZT_PhysicalPathConfiguration> _physicalPathConfig[ZT_MAX_CONFIGURABLE_PATHS];
+	volatile unsigned int _numConfiguredPhysicalPaths;
 
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	Mutex _peers_m;

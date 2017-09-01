@@ -722,10 +722,13 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 		return false;
 	}
 
-	unsigned int chunkSize = std::min(packet.size(),(unsigned int)ZT_UDP_DEFAULT_PAYLOAD_MTU);
+	unsigned int mtu = ZT_DEFAULT_PHYSMTU;
+	uint64_t trustedPathId = 0;
+	RR->topology->getOutboundPathInfo(viaPath->address(),mtu,trustedPathId);
+
+	unsigned int chunkSize = std::min(packet.size(),mtu);
 	packet.setFragmented(chunkSize < packet.size());
 
-	const uint64_t trustedPathId = RR->topology->getOutboundPathTrust(viaPath->address());
 	if (trustedPathId) {
 		packet.setTrusted(trustedPathId);
 	} else {
@@ -737,13 +740,13 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 			// Too big for one packet, fragment the rest
 			unsigned int fragStart = chunkSize;
 			unsigned int remaining = packet.size() - chunkSize;
-			unsigned int fragsRemaining = (remaining / (ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));
-			if ((fragsRemaining * (ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH)) < remaining)
+			unsigned int fragsRemaining = (remaining / (mtu - ZT_PROTO_MIN_FRAGMENT_LENGTH));
+			if ((fragsRemaining * (mtu - ZT_PROTO_MIN_FRAGMENT_LENGTH)) < remaining)
 				++fragsRemaining;
 			const unsigned int totalFragments = fragsRemaining + 1;
 
 			for(unsigned int fno=1;fno<totalFragments;++fno) {
-				chunkSize = std::min(remaining,(unsigned int)(ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));
+				chunkSize = std::min(remaining,(unsigned int)(mtu - ZT_PROTO_MIN_FRAGMENT_LENGTH));
 				Packet::Fragment frag(packet,fragStart,chunkSize,fno,totalFragments);
 				viaPath->send(RR,tPtr,frag.data(),frag.size(),now);
 				fragStart += chunkSize;

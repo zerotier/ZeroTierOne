@@ -1346,7 +1346,6 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	ec->status = _status();
 	ec->type = (_config) ? (_config.isPrivate() ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC) : ZT_NETWORK_TYPE_PRIVATE;
 	ec->mtu = (_config) ? _config.mtu : ZT_DEFAULT_MTU;
-	ec->physicalMtu = ZT_UDP_DEFAULT_PAYLOAD_MTU - (ZT_PACKET_IDX_PAYLOAD + 16);
 	ec->dhcp = 0;
 	std::vector<Address> ab(_config.activeBridges());
 	ec->bridge = ((_config.allowPassiveBridging())||(std::find(ab.begin(),ab.end(),RR->identity.address()) != ab.end())) ? 1 : 0;
