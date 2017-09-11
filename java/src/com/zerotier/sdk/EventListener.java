@@ -24,7 +24,6 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
-
 package com.zerotier.sdk;
 
 import java.net.InetSocketAddress;
@@ -36,17 +35,18 @@ import java.lang.String;
 public interface EventListener {
     /**
      * Callback for events with no other associated metadata
-     * 
+     *
      * @param event {@link Event} enum
      */
-    public void onEvent(Event event);
-    
+    void onEvent(Event event);
+
     /**
      * Trace messages
-     * 
+     *
      * <p>These events are only generated if the underlying ZeroTierOne SDK is a TRACE-enabled build.</p>
      *
      * @param message the trace message
      */
-    public void onTrace(String message);
+    void onTrace(String message);
+
 }

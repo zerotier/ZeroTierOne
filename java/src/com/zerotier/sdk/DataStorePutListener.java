@@ -34,7 +34,7 @@ public interface DataStorePutListener {
      * <p>If secure is true, the file should be set readable and writable only
      * to the user running ZeroTier One. What this means is platform-specific.</p>
      *
-     * <p>Name semantics are the same as {@link DataStoreGetListener}. This must return 
+     * <p>Name semantics are the same as {@link DataStoreGetListener}. This must return
      * zero on success. You can return any OS-specific error code on failure, as these
      * may be visible in logs or error messages and might aid in debugging.</p>
      *
@@ -43,17 +43,13 @@ public interface DataStorePutListener {
      * @param secure set to user read/write only.
      * @return 0 on success.
      */
-    public int onDataStorePut(
-        String name,
-        byte[] buffer,
-        boolean secure);
+    int onDataStorePut(String name, byte[] buffer, boolean secure);
 
     /**
      * Function to delete an object from the data store
-     * 
+     *
      * @param name Object name
      * @return 0 on success.
      */
-    public int onDelete(
-        String name);
+    int onDelete(String name);
 }
