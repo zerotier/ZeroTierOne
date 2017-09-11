@@ -2,7 +2,6 @@
  * ZeroTier One - Network Virtualization Everywhere
  * Copyright (C) 2011-2017  ZeroTier, Inc.  https://www.zerotier.com/
  */
-
 package com.zerotier.sdk;
 
 import java.net.InetSocketAddress;

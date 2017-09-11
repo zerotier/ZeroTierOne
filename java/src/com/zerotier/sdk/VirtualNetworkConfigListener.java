@@ -24,10 +24,7 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
-
-
 package com.zerotier.sdk;
-
 
 public interface VirtualNetworkConfigListener {
     /**
@@ -53,8 +50,5 @@ public interface VirtualNetworkConfigListener {
      * @param config {@link VirtualNetworkConfig} object with the new configuration
      * @return 0 on success
      */
-    public int onNetworkConfigurationUpdated(
-            long nwid,
-            VirtualNetworkConfigOperation op,
-            VirtualNetworkConfig config);
+    int onNetworkConfigurationUpdated(long nwid, VirtualNetworkConfigOperation op, VirtualNetworkConfig config);
 }

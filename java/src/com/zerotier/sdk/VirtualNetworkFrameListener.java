@@ -24,25 +24,18 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
-
 package com.zerotier.sdk;
 
 public interface VirtualNetworkFrameListener {
     /**
      * Function to send a frame out to a virtual network port
-     * 
+     *
      * @param nwid ZeroTier One network ID
      * @param srcMac source MAC address
      * @param destMac destination MAC address
-     * @param ethertype
-     * @param vlanId
+     * @param ethertype ethertype
+     * @param vlanId vlan id
      * @param frameData data to send
      */
-    public void onVirtualNetworkFrame(
-                long nwid,
-                long srcMac,
-                long destMac,
-                long etherType,
-                long vlanId,
-                byte[] frameData);
+    void onVirtualNetworkFrame(long nwid, long srcMac, long destMac, long etherType, long vlanId, byte[] frameData);
 }
