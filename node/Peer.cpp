@@ -194,8 +194,12 @@ void Peer::received(
 				}
 			}
 		}
-	} else if (this->trustEstablished(now)) {
-		// Send PUSH_DIRECT_PATHS if hops>0 (relayed) and we have a trust relationship (common network membership)
+	}
+
+	// If we are being relayed or if we're using a global address, send PUSH_DIRECT_PATHS.
+	// In the global address case we push only configured direct paths to accomplish
+	// fall-forward to local backplane networks over e.g. LAN or Amazon VPC.
+	if ( ((hops > 0)||(path->ipScope() == InetAddress::IP_SCOPE_GLOBAL)) && (this->trustEstablished(now)) ) {
 		if ((now - _lastDirectPathPushSent) >= ZT_DIRECT_PATH_PUSH_INTERVAL) {
 			_lastDirectPathPushSent = now;
 
@@ -205,13 +209,15 @@ void Peer::received(
 			for(std::vector<InetAddress>::const_iterator i(dps.begin());i!=dps.end();++i)
 				pathsToPush.push_back(*i);
 
-			std::vector<InetAddress> sym(RR->sa->getSymmetricNatPredictions());
-			for(unsigned long i=0,added=0;i<sym.size();++i) {
-				InetAddress tmp(sym[(unsigned long)RR->node->prng() % sym.size()]);
-				if (std::find(pathsToPush.begin(),pathsToPush.end(),tmp) == pathsToPush.end()) {
-					pathsToPush.push_back(tmp);
-					if (++added >= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY)
-						break;
+			if (hops > 0) {
+				std::vector<InetAddress> sym(RR->sa->getSymmetricNatPredictions());
+				for(unsigned long i=0,added=0;i<sym.size();++i) {
+					InetAddress tmp(sym[(unsigned long)RR->node->prng() % sym.size()]);
+					if (std::find(pathsToPush.begin(),pathsToPush.end(),tmp) == pathsToPush.end()) {
+						pathsToPush.push_back(tmp);
+						if (++added >= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY)
+							break;
+					}
 				}
 			}
 
