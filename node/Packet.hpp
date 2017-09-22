@@ -225,12 +225,8 @@
 
 /**
  * Packet buffer size (can be changed)
- *
- * The current value is big enough for ZT_MAX_PACKET_FRAGMENTS, the pragmatic
- * packet fragment limit, times the default UDP MTU. Most packets won't be
- * this big.
  */
-#define ZT_PROTO_MAX_PACKET_LENGTH (ZT_MAX_PACKET_FRAGMENTS * ZT_UDP_DEFAULT_PAYLOAD_MTU)
+#define ZT_PROTO_MAX_PACKET_LENGTH (ZT_MAX_PACKET_FRAGMENTS * ZT_DEFAULT_PHYSMTU)
 
 /**
  * Minimum viable packet length (a.k.a. header length)

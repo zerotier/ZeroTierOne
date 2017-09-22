@@ -314,7 +314,7 @@ bool LinuxEthernetTap::addIpSyn(std::vector<InetAddress> ips)
 		OSUtils::writeFile(filepath.c_str(), cfg_contents.c_str(), cfg_contents.length());
 		// Finaly, add IPs
 		for(int i=0; i<(int)ips.size(); i++){
-			char iptmp[128],iptmp2[128[;
+			char iptmp[128],iptmp2[128];
 			if (ips[i].isV4())
 				::execlp("ip","ip","addr","add",ips[i].toString(iptmp),"broadcast",ips[i].broadcast().toIpString(iptmp2),"dev",_dev.c_str(),(const char *)0);
 			else

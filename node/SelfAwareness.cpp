@@ -147,13 +147,14 @@ std::vector<InetAddress> SelfAwareness::getSymmetricNatPredictions()
 	 * read or modify traffic, but they could gather meta-data for forensics
 	 * purpsoes or use this as a DOS attack vector. */
 
-	std::map< uint32_t,std::pair<uint64_t,unsigned int> > maxPortByIp;
+	std::map< uint32_t,unsigned int > maxPortByIp;
 	InetAddress theOneTrueSurface;
-	bool symmetric = false;
 	{
 		Mutex::Lock _l(_phy_m);
 
-		{	// First get IPs from only trusted peers, and perform basic NAT type characterization
+		// First check to see if this is a symmetric NAT and enumerate external IPs learned from trusted peers
+		bool symmetric = false;
+		{
 			Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
 			PhySurfaceKey *k = (PhySurfaceKey *)0;
 			PhySurfaceEntry *e = (PhySurfaceEntry *)0;
@@ -163,42 +164,47 @@ std::vector<InetAddress> SelfAwareness::getSymmetricNatPredictions()
 						theOneTrueSurface = e->mySurface;
 					else if (theOneTrueSurface != e->mySurface)
 						symmetric = true;
-					maxPortByIp[reinterpret_cast<const struct sockaddr_in *>(&(e->mySurface))->sin_addr.s_addr] = std::pair<uint64_t,unsigned int>(e->ts,e->mySurface.port());
+					maxPortByIp[reinterpret_cast<const struct sockaddr_in *>(&(e->mySurface))->sin_addr.s_addr] = e->mySurface.port();
 				}
 			}
 		}
+		if (!symmetric)
+			return std::vector<InetAddress>();
 
-		{	// Then find max port per IP from a trusted peer
+		{	// Then find the highest issued port per IP
 			Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
 			PhySurfaceKey *k = (PhySurfaceKey *)0;
 			PhySurfaceEntry *e = (PhySurfaceEntry *)0;
 			while (i.next(k,e)) {
 				if ((e->mySurface.ss_family == AF_INET)&&(e->mySurface.ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
-					std::map< uint32_t,std::pair<uint64_t,unsigned int> >::iterator mp(maxPortByIp.find(reinterpret_cast<const struct sockaddr_in *>(&(e->mySurface))->sin_addr.s_addr));
-					if ((mp != maxPortByIp.end())&&(mp->second.first < e->ts)) {
-						mp->second.first = e->ts;
-						mp->second.second = e->mySurface.port();
-					}
+					const unsigned int port = e->mySurface.port();
+					std::map< uint32_t,unsigned int >::iterator mp(maxPortByIp.find(reinterpret_cast<const struct sockaddr_in *>(&(e->mySurface))->sin_addr.s_addr));
+					if ((mp != maxPortByIp.end())&&(mp->second < port))
+						mp->second = port;
 				}
 			}
 		}
 	}
 
-	if (symmetric) {
-		std::vector<InetAddress> r;
-		for(unsigned int k=1;k<=3;++k) {
-			for(std::map< uint32_t,std::pair<uint64_t,unsigned int> >::iterator i(maxPortByIp.begin());i!=maxPortByIp.end();++i) {
-				unsigned int p = i->second.second + k;
-				if (p > 65535) p -= 64511;
-				InetAddress pred(&(i->first),4,p);
-				if (std::find(r.begin(),r.end(),pred) == r.end())
-					r.push_back(pred);
-			}
-		}
-		return r;
+	std::vector<InetAddress> r;
+
+	// Try next port up from max for each
+	for(std::map< uint32_t,unsigned int >::iterator i(maxPortByIp.begin());i!=maxPortByIp.end();++i) {
+		unsigned int p = i->second + 1;
+		if (p > 65535) p -= 64511;
+		const InetAddress pred(&(i->first),4,p);
+		if (std::find(r.begin(),r.end(),pred) == r.end())
+			r.push_back(pred);
 	}
 
-	return std::vector<InetAddress>();
+	// Try a random port for each -- there are only 65535 so eventually it should work
+	for(std::map< uint32_t,unsigned int >::iterator i(maxPortByIp.begin());i!=maxPortByIp.end();++i) {
+		const InetAddress pred(&(i->first),4,1024 + ((unsigned int)RR->node->prng() % 64511));
+		if (std::find(r.begin(),r.end(),pred) == r.end())
+			r.push_back(pred);
+	}
+
+	return r;
 }
 
 } // namespace ZeroTier

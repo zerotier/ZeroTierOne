@@ -29,75 +29,44 @@
 #endif
 
 #include "JSONDB.hpp"
-
-#define ZT_JSONDB_HTTP_TIMEOUT 60000
+#include "EmbeddedNetworkController.hpp"
 
 namespace ZeroTier {
 
 static const nlohmann::json _EMPTY_JSON(nlohmann::json::object());
-static const std::map<std::string,std::string> _ZT_JSONDB_GET_HEADERS;
 
-JSONDB::JSONDB(const std::string &basePath) :
+JSONDB::JSONDB(const std::string &basePath,EmbeddedNetworkController *parent) :
+	_parent(parent),
 	_basePath(basePath),
 	_rawInput(-1),
 	_rawOutput(-1),
 	_summaryThreadRun(true),
 	_dataReady(false)
 {
-	if ((_basePath.length() > 7)&&(_basePath.substr(0,7) == "http://")) {
-		// If base path is http:// we run in HTTP mode
-		// TODO: this doesn't yet support IPv6 since bracketed address notiation isn't supported.
-		// Typically it's just used with 127.0.0.1 anyway.
-		std::string hn = _basePath.substr(7);
-		std::size_t hnend = hn.find_first_of('/');
-		if (hnend != std::string::npos)
-			hn = hn.substr(0,hnend);
-		std::size_t hnsep = hn.find_last_of(':');
-		if (hnsep != std::string::npos)
-			hn[hnsep] = '/';
-		_httpAddr.fromString(hn.c_str());
-		if (hnend != std::string::npos)
-			_basePath = _basePath.substr(7 + hnend);
-		if (_basePath.length() == 0)
-			_basePath = "/";
-		if (_basePath[0] != '/')
-			_basePath = std::string("/") + _basePath;
 #ifndef __WINDOWS__
-	} else if (_basePath == "-") {
-		// If base path is "-" we run in stdin/stdout mode and expect our database to be populated on startup via stdin
-		// Not supported on Windows
+	if (_basePath == "-") {
+		// If base path is "-" we run in Central harnessed mode. We read pseudo-http-requests from stdin and write
+		// them to stdout.
 		_rawInput = STDIN_FILENO;
 		_rawOutput = STDOUT_FILENO;
 		fcntl(_rawInput,F_SETFL,O_NONBLOCK);
-#endif
 	} else {
+#endif
 		// Default mode of operation is to store files in the filesystem
 		OSUtils::mkdir(_basePath.c_str());
 		OSUtils::lockDownFile(_basePath.c_str(),true); // networks might contain auth tokens, etc., so restrict directory permissions
+#ifndef __WINDOWS__
 	}
+#endif
 
 	_networks_m.lock(); // locked until data is loaded, etc.
 
 	if (_rawInput < 0) {
-		unsigned int cnt = 0;
-		while (!_load(_basePath)) {
-			if ((++cnt & 7) == 0)
-				fprintf(stderr,"WARNING: controller still waiting to read '%s'..." ZT_EOL_S,_basePath.c_str());
-			Thread::sleep(250);
-		}
-
-		for(std::unordered_map<uint64_t,_NW>::iterator n(_networks.begin());n!=_networks.end();++n)
-			_summaryThreadToDo.push_back(n->first);
-
-		if (_summaryThreadToDo.size() > 0) {
-			_summaryThread = Thread::start(this);
-		} else {
-			_dataReady = true;
-			_networks_m.unlock();
-		}
+		_load(basePath);
+		_dataReady = true;
+		_networks_m.unlock();
 	} else {
-		// In IPC mode we wait for the first message to start, and we start
-		// this thread since this thread is responsible for reading from stdin.
+		// In harnessed mode we leave the lock locked and wait for our initial DB from Central.
 		_summaryThread = Thread::start(this);
 	}
 }
@@ -128,16 +97,6 @@ bool JSONDB::writeRaw(const std::string &n,const std::string &obj)
 		} else return true;
 #endif
 		return false;
-	} else if (_httpAddr) {
-		std::map<std::string,std::string> headers;
-		std::string body;
-		std::map<std::string,std::string> reqHeaders;
-		char tmp[64];
-		OSUtils::ztsnprintf(tmp,sizeof(tmp),"%lu",(unsigned long)obj.length());
-		reqHeaders["Content-Length"] = tmp;
-		reqHeaders["Content-Type"] = "application/json";
-		const unsigned int sc = Http::PUT(0,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),reqHeaders,obj.data(),(unsigned long)obj.length(),headers,body);
-		return (sc == 200);
 	} else {
 		const std::string path(_genPath(n,true));
 		if (!path.length())
@@ -207,7 +166,8 @@ void JSONDB::saveNetwork(const uint64_t networkId,const nlohmann::json &networkC
 	writeRaw(n,OSUtils::jsonDump(networkConfig,-1));
 	{
 		Mutex::Lock _l(_networks_m);
-		_networks[networkId].config = nlohmann::json::to_msgpack(networkConfig);
+		_NW &nw = _networks[networkId];
+		nw.config = nlohmann::json::to_msgpack(networkConfig);
 	}
 	_recomputeSummaryInfo(networkId);
 }
@@ -219,7 +179,8 @@ void JSONDB::saveNetworkMember(const uint64_t networkId,const uint64_t nodeId,co
 	writeRaw(n,OSUtils::jsonDump(memberConfig,-1));
 	{
 		Mutex::Lock _l(_networks_m);
-		_networks[networkId].members[nodeId] = nlohmann::json::to_msgpack(memberConfig);
+		std::vector<uint8_t> &m = _networks[networkId].members[nodeId];
+		m = nlohmann::json::to_msgpack(memberConfig);
 		_members[nodeId].insert(networkId);
 	}
 	_recomputeSummaryInfo(networkId);
@@ -227,7 +188,10 @@ void JSONDB::saveNetworkMember(const uint64_t networkId,const uint64_t nodeId,co
 
 nlohmann::json JSONDB::eraseNetwork(const uint64_t networkId)
 {
-	if (!_httpAddr) { // Member deletion is done by Central in harnessed mode, and deleting the cache network entry also deletes all members
+	if (_rawOutput >= 0) {
+		// In harnessed mode, DB deletes occur in the Central database and we do
+		// not need to erase files.
+	} else {
 		std::vector<uint64_t> memberIds;
 		{
 			Mutex::Lock _l(_networks_m);
@@ -239,24 +203,15 @@ nlohmann::json JSONDB::eraseNetwork(const uint64_t networkId)
 		}
 		for(std::vector<uint64_t>::iterator m(memberIds.begin());m!=memberIds.end();++m)
 			eraseNetworkMember(networkId,*m,false);
-	}
 
-	char n[256];
-	OSUtils::ztsnprintf(n,sizeof(n),"network/%.16llx",(unsigned long long)networkId);
-
-	if (_rawOutput >= 0) {
-		// In harnessed mode, deletes occur in Central or other management
-		// software and do not need to be executed this way.
-	} else if (_httpAddr) {
-		std::map<std::string,std::string> headers;
-		std::string body;
-		Http::DEL(0,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),_ZT_JSONDB_GET_HEADERS,headers,body);
-	} else {
+		char n[256];
+		OSUtils::ztsnprintf(n,sizeof(n),"network/%.16llx",(unsigned long long)networkId);
 		const std::string path(_genPath(n,false));
 		if (path.length())
 			OSUtils::rm(path.c_str());
 	}
 
+	// This also erases all members from the memory cache
 	{
 		Mutex::Lock _l(_networks_m);
 		std::unordered_map<uint64_t,_NW>::iterator i(_networks.find(networkId));
@@ -270,17 +225,11 @@ nlohmann::json JSONDB::eraseNetwork(const uint64_t networkId)
 
 nlohmann::json JSONDB::eraseNetworkMember(const uint64_t networkId,const uint64_t nodeId,bool recomputeSummaryInfo)
 {
-	char n[256];
-	OSUtils::ztsnprintf(n,sizeof(n),"network/%.16llx/member/%.10llx",(unsigned long long)networkId,(unsigned long long)nodeId);
-
 	if (_rawOutput >= 0) {
-		// In harnessed mode, deletes occur in Central or other management
-		// software and do not need to be executed this way.
-	} else if (_httpAddr) {
-		std::map<std::string,std::string> headers;
-		std::string body;
-		Http::DEL(0,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),(_basePath+"/"+n).c_str(),_ZT_JSONDB_GET_HEADERS,headers,body);
+		// In harnessed mode, DB deletes occur in Central and we do not remove files.
 	} else {
+		char n[256];
+		OSUtils::ztsnprintf(n,sizeof(n),"network/%.16llx/member/%.10llx",(unsigned long long)networkId,(unsigned long long)nodeId);
 		const std::string path(_genPath(n,false));
 		if (path.length())
 			OSUtils::rm(path.c_str());
@@ -320,7 +269,6 @@ void JSONDB::threadMain()
 	while (_summaryThreadRun) {
 #ifndef __WINDOWS__
 		if (_rawInput < 0) {
-			// In HTTP and filesystem mode we just wait for summary to-do items
 			Thread::sleep(25);
 		} else {
 			// In IPC mode we wait but also select() on STDIN to read database updates
@@ -337,8 +285,8 @@ void JSONDB::threadMain()
 					} else if (rawInputBuf.length() > 0) {
 						try {
 							const nlohmann::json obj(OSUtils::jsonParse(rawInputBuf));
-
 							gotMessage = true;
+
 							if (!_dataReady) {
 								_dataReady = true;
 								_networks_m.unlock();
@@ -346,11 +294,12 @@ void JSONDB::threadMain()
 
 							if (obj.is_array()) {
 								for(unsigned long i=0;i<obj.size();++i)
-									_add(obj[i]);
+									_addOrUpdate(obj[i]);
 							} else if (obj.is_object()) {
-								_add(obj);
+								_addOrUpdate(obj);
 							}
 						} catch ( ... ) {} // ignore malformed JSON
+
 						rawInputBuf.clear();
 					}
 				}
@@ -369,7 +318,7 @@ void JSONDB::threadMain()
 			else _summaryThreadToDo.swap(todo);
 		}
 
-		if (!_dataReady) {
+		if (!_dataReady) { // sanity check
 			_dataReady = true;
 			_networks_m.unlock();
 		}
@@ -450,29 +399,71 @@ void JSONDB::threadMain()
 #endif
 }
 
-bool JSONDB::_add(const nlohmann::json &j)
+bool JSONDB::_addOrUpdate(const nlohmann::json &j)
 {
 	try {
 		if (j.is_object()) {
 			std::string id(OSUtils::jsonString(j["id"],"0"));
-			std::string objtype(OSUtils::jsonString(j["objtype"],""));
-
+			const std::string objtype(OSUtils::jsonString(j["objtype"],""));
 			if ((id.length() == 16)&&(objtype == "network")) {
+
 				const uint64_t nwid = Utils::hexStrToU64(id.c_str());
 				if (nwid) {
-					Mutex::Lock _l(_networks_m);
-					_networks[nwid].config = nlohmann::json::to_msgpack(j);
+					bool update;
+					{
+						Mutex::Lock _l(_networks_m);
+						_NW &nw = _networks[nwid];
+						update = !nw.config.empty();
+						nw.config = nlohmann::json::to_msgpack(j);
+					}
+					if (update)
+						_parent->onNetworkUpdate(nwid);
+					_recomputeSummaryInfo(nwid);
 					return true;
 				}
+
 			} else if ((id.length() == 10)&&(objtype == "member")) {
+
 				const uint64_t mid = Utils::hexStrToU64(id.c_str());
 				const uint64_t nwid = Utils::hexStrToU64(OSUtils::jsonString(j["nwid"],"0").c_str());
 				if ((mid)&&(nwid)) {
-					Mutex::Lock _l(_networks_m);
-					_networks[nwid].members[mid] = nlohmann::json::to_msgpack(j);
-					_members[mid].insert(nwid);
+					bool update = false;
+					bool deauth = false;
+					{
+						Mutex::Lock _l(_networks_m);
+						std::vector<uint8_t> &m = _networks[nwid].members[mid];
+						if (!m.empty()) {
+							update = true;
+							nlohmann::json oldm(nlohmann::json::from_msgpack(m));
+							deauth = ((OSUtils::jsonBool(oldm["authorized"],false))&&(!OSUtils::jsonBool(j["authorized"],false)));
+						}
+						m = nlohmann::json::to_msgpack(j);
+						_members[mid].insert(nwid);
+					}
+					if (update) {
+						_parent->onNetworkMemberUpdate(nwid,mid);
+						if (deauth)
+							_parent->onNetworkMemberDeauthorize(nwid,mid);
+					}
+					_recomputeSummaryInfo(nwid);
 					return true;
 				}
+
+			} else if (objtype == "_delete") { // pseudo-object-type, only used in Central harnessed mode
+
+				const std::string deleteType(OSUtils::jsonString(j["deleteType"],""));
+				id = OSUtils::jsonString(j["deleteId"],"");
+				if ((deleteType == "network")&&(id.length() == 16)) {
+					eraseNetwork(Utils::hexStrToU64(id.c_str()));
+				} else if ((deleteType == "member")&&(id.length() == 10)) {
+					const std::string networkId(OSUtils::jsonString(j["deleteNetworkId"],""));
+					const uint64_t nwid = Utils::hexStrToU64(networkId.c_str());
+					const uint64_t mid = Utils::hexStrToU64(id.c_str());
+					if (networkId.length() == 16)
+						eraseNetworkMember(nwid,mid,true);
+					_parent->onNetworkMemberDeauthorize(nwid,mid);
+				}
+
 			}
 		}
 	} catch ( ... ) {}
@@ -484,48 +475,21 @@ bool JSONDB::_load(const std::string &p)
 	// This is not used in stdin/stdout mode. Instead data is populated by
 	// sending it all to stdin.
 
-	if (_httpAddr) {
-		// In HTTP harnessed mode we download our entire working data set on startup.
-
-		std::string body;
-		std::map<std::string,std::string> headers;
-		const unsigned int sc = Http::GET(0,ZT_JSONDB_HTTP_TIMEOUT,reinterpret_cast<const struct sockaddr *>(&_httpAddr),_basePath.c_str(),_ZT_JSONDB_GET_HEADERS,headers,body);
-		if (sc == 200) {
-			try {
-				nlohmann::json dbImg(OSUtils::jsonParse(body));
-				std::string tmp;
-				if (dbImg.is_object()) {
-					Mutex::Lock _l(_networks_m);
-					for(nlohmann::json::iterator i(dbImg.begin());i!=dbImg.end();++i) {
-						try {
-							_add(i.value());
-						} catch ( ... ) {}
-					}
-					return true;
-				}
-			} catch ( ... ) {} // invalid JSON, so maybe incomplete request
-		}
-		return false;
-
-	} else {
-		// In regular mode we recursively read it from controller.d/ on disk
-
-		std::vector<std::string> dl(OSUtils::listDirectory(p.c_str(),true));
-		for(std::vector<std::string>::const_iterator di(dl.begin());di!=dl.end();++di) {
-			if ((di->length() > 5)&&(di->substr(di->length() - 5) == ".json")) {
-				std::string buf;
-				if (OSUtils::readFile((p + ZT_PATH_SEPARATOR_S + *di).c_str(),buf)) {
-					try {
-						_add(OSUtils::jsonParse(buf));
-					} catch ( ... ) {}
-				}
-			} else {
-				this->_load((p + ZT_PATH_SEPARATOR_S + *di));
+	std::vector<std::string> dl(OSUtils::listDirectory(p.c_str(),true));
+	for(std::vector<std::string>::const_iterator di(dl.begin());di!=dl.end();++di) {
+		if ((di->length() > 5)&&(di->substr(di->length() - 5) == ".json")) {
+			std::string buf;
+			if (OSUtils::readFile((p + ZT_PATH_SEPARATOR_S + *di).c_str(),buf)) {
+				try {
+					_addOrUpdate(OSUtils::jsonParse(buf));
+				} catch ( ... ) {}
 			}
+		} else {
+			this->_load((p + ZT_PATH_SEPARATOR_S + *di));
 		}
-		return true;
-
 	}
+
+	return true;
 }
 
 void JSONDB::_recomputeSummaryInfo(const uint64_t networkId)
@@ -543,23 +507,15 @@ std::string JSONDB::_genPath(const std::string &n,bool create)
 	if (pt.size() == 0)
 		return std::string();
 
-	char sep;
-	if (_httpAddr) {
-		sep = '/';
-		create = false;
-	} else {
-		sep = ZT_PATH_SEPARATOR;
-	}
-
 	std::string p(_basePath);
 	if (create) OSUtils::mkdir(p.c_str());
 	for(unsigned long i=0,j=(unsigned long)(pt.size()-1);i<j;++i) {
-		p.push_back(sep);
+		p.push_back(ZT_PATH_SEPARATOR);
 		p.append(pt[i]);
 		if (create) OSUtils::mkdir(p.c_str());
 	}
 
-	p.push_back(sep);
+	p.push_back(ZT_PATH_SEPARATOR);
 	p.append(pt[pt.size()-1]);
 	p.append(".json");
 

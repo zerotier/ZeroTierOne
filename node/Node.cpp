@@ -100,7 +100,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint6
 	} else {
 		idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
 		n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,tmp,sizeof(tmp) - 1);
-		if ((n > 0)&&(n < sizeof(RR->publicIdentityStr))&&(n < sizeof(tmp))) {
+		if ((n > 0)&&(n < (int)sizeof(RR->publicIdentityStr))&&(n < (int)sizeof(tmp))) {
 			if (memcmp(tmp,RR->publicIdentityStr,n))
 				stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 		}
@@ -249,6 +249,19 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,uint64_t now,volatile uint
 		try {
 			_lastPingCheck = now;
 
+			// Do pings and keepalives
+			Hashtable< Address,std::vector<InetAddress> > upstreamsToContact;
+			RR->topology->getUpstreamsToContact(upstreamsToContact);
+			_PingPeersThatNeedPing pfunc(RR,tptr,upstreamsToContact,now);
+			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
+
+			// Run WHOIS to create Peer for any upstreams we could not contact (including pending moon seeds)
+			Hashtable< Address,std::vector<InetAddress> >::Iterator i(upstreamsToContact);
+			Address *upstreamAddress = (Address *)0;
+			std::vector<InetAddress> *upstreamStableEndpoints = (std::vector<InetAddress> *)0;
+			while (i.next(upstreamAddress,upstreamStableEndpoints))
+				RR->sw->requestWhois(tptr,now,*upstreamAddress);
+
 			// Get networks that need config without leaving mutex locked
 			{
 				std::vector< std::pair< SharedPtr<Network>,bool > > nwl;
@@ -267,19 +280,6 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,uint64_t now,volatile uint
 					n->first->sendUpdatesToMembers(tptr);
 				}
 			}
-
-			// Do pings and keepalives
-			Hashtable< Address,std::vector<InetAddress> > upstreamsToContact;
-			RR->topology->getUpstreamsToContact(upstreamsToContact);
-			_PingPeersThatNeedPing pfunc(RR,tptr,upstreamsToContact,now);
-			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
-
-			// Run WHOIS to create Peer for any upstreams we could not contact (including pending moon seeds)
-			Hashtable< Address,std::vector<InetAddress> >::Iterator i(upstreamsToContact);
-			Address *upstreamAddress = (Address *)0;
-			std::vector<InetAddress> *upstreamStableEndpoints = (std::vector<InetAddress> *)0;
-			while (i.next(upstreamAddress,upstreamStableEndpoints))
-				RR->sw->requestWhois(tptr,*upstreamAddress);
 
 			// Update online status, post status change as event
 			const bool oldOnline = _online;
@@ -561,9 +561,9 @@ uint64_t Node::prng()
 	return z + y;
 }
 
-void Node::setTrustedPaths(const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count)
+ZT_ResultCode Node::setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork, const ZT_PhysicalPathConfiguration *pathConfig)
 {
-	RR->topology->setTrustedPaths(reinterpret_cast<const InetAddress *>(networks),ids,count);
+	return ZT_RESULT_OK;
 }
 
 World Node::planet() const
@@ -592,7 +592,7 @@ void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &de
 				const unsigned int totalSize = dconf->sizeBytes();
 				unsigned int chunkIndex = 0;
 				while (chunkIndex < totalSize) {
-					const unsigned int chunkLen = std::min(totalSize - chunkIndex,(unsigned int)(ZT_UDP_DEFAULT_PAYLOAD_MTU - (ZT_PACKET_IDX_PAYLOAD + 256)));
+					const unsigned int chunkLen = std::min(totalSize - chunkIndex,(unsigned int)(ZT_PROTO_MAX_PACKET_LENGTH - (ZT_PACKET_IDX_PAYLOAD + 256)));
 					Packet outp(destination,RR->identity.address(),(requestPacketId) ? Packet::VERB_OK : Packet::VERB_NETWORK_CONFIG);
 					if (requestPacketId) {
 						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
@@ -815,7 +815,7 @@ enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,void *tptr,uint64_t moonWorldId,u
 	}
 }
 
-ZT_ResultCode ZT_Node_deorbit(ZT_Node *node,void *tptr,uint64_t moonWorldId)
+enum ZT_ResultCode ZT_Node_deorbit(ZT_Node *node,void *tptr,uint64_t moonWorldId)
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->deorbit(tptr,moonWorldId);
@@ -902,11 +902,13 @@ void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkControllerInstance)
 	} catch ( ... ) {}
 }
 
-void ZT_Node_setTrustedPaths(ZT_Node *node,const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count)
+enum ZT_ResultCode ZT_Node_setPhysicalPathConfiguration(ZT_Node *node,const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig)
 {
 	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->setTrustedPaths(networks,ids,count);
-	} catch ( ... ) {}
+		return reinterpret_cast<ZeroTier::Node *>(node)->setPhysicalPathConfiguration(pathNetwork,pathConfig);
+	} catch ( ... ) {
+		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+	}
 }
 
 void ZT_version(int *major,int *minor,int *revision)

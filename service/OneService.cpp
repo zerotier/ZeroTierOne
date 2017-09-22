@@ -99,8 +99,8 @@ namespace ZeroTier { typedef TestEthernetTap EthernetTap; }
 #include "../controller/EmbeddedNetworkController.hpp"
 #include "../node/Node.hpp"
 // Use the virtual netcon endpoint instead of a tun/tap port driver
-#include "../src/SocketTap.hpp"
-namespace ZeroTier { typedef SocketTap EthernetTap; }
+#include "../src/VirtualTap.hpp"
+namespace ZeroTier { typedef VirtualTap EthernetTap; }
 
 #else
 
@@ -564,16 +564,14 @@ public:
 
 			// Read local configuration
 			{
-				uint64_t trustedPathIds[ZT_MAX_TRUSTED_PATHS];
-				InetAddress trustedPathNetworks[ZT_MAX_TRUSTED_PATHS];
-				unsigned int trustedPathCount = 0;
+				std::map<InetAddress,ZT_PhysicalPathConfiguration> ppc;
 
 				// LEGACY: support old "trustedpaths" flat file
 				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S "trustedpaths").c_str(),"r");
 				if (trustpaths) {
 					fprintf(stderr,"WARNING: 'trustedpaths' flat file format is deprecated in favor of path definitions in local.conf" ZT_EOL_S);
 					char buf[1024];
-					while ((fgets(buf,sizeof(buf),trustpaths))&&(trustedPathCount < ZT_MAX_TRUSTED_PATHS)) {
+					while (fgets(buf,sizeof(buf),trustpaths)) {
 						int fno = 0;
 						char *saveptr = (char *)0;
 						uint64_t trustedPathId = 0;
@@ -587,9 +585,8 @@ public:
 							++fno;
 						}
 						if ( (trustedPathId != 0) && ((trustedPathNetwork.ss_family == AF_INET)||(trustedPathNetwork.ss_family == AF_INET6)) && (trustedPathNetwork.ipScope() != InetAddress::IP_SCOPE_GLOBAL) && (trustedPathNetwork.netmaskBits() > 0) ) {
-							trustedPathIds[trustedPathCount] = trustedPathId;
-							trustedPathNetworks[trustedPathCount] = trustedPathNetwork;
-							++trustedPathCount;
+							ppc[trustedPathNetwork].trustedPathId = trustedPathId;
+							ppc[trustedPathNetwork].mtu = 0; // use default
 						}
 					}
 					fclose(trustpaths);
@@ -618,12 +615,10 @@ public:
 							if (phy.value().is_object()) {
 								uint64_t tpid;
 								if ((tpid = OSUtils::jsonInt(phy.value()["trustedPathId"],0ULL)) != 0ULL) {
-									if ( ((net.ss_family == AF_INET)||(net.ss_family == AF_INET6)) && (trustedPathCount < ZT_MAX_TRUSTED_PATHS) && (net.ipScope() != InetAddress::IP_SCOPE_GLOBAL) && (net.netmaskBits() > 0) ) {
-										trustedPathIds[trustedPathCount] = tpid;
-										trustedPathNetworks[trustedPathCount] = net;
-										++trustedPathCount;
-									}
+									if ((net.ss_family == AF_INET)||(net.ss_family == AF_INET6))
+										ppc[net].trustedPathId = tpid;
 								}
+								ppc[net].mtu = (int)OSUtils::jsonInt(phy.value()["mtu"],0ULL); // 0 means use default
 							}
 						}
 					}
@@ -638,8 +633,10 @@ public:
 				}
 
 				// Set trusted paths if there are any
-				if (trustedPathCount)
-					_node->setTrustedPaths(reinterpret_cast<const struct sockaddr_storage *>(trustedPathNetworks),trustedPathIds,trustedPathCount);
+				if (ppc.size() > 0) {
+					for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::iterator i(ppc.begin());i!=ppc.end();++i)
+						_node->setPhysicalPathConfiguration(reinterpret_cast<const struct sockaddr_storage *>(&(i->first)),&(i->second));
+				}
 			}
 
 			// Apply other runtime configuration from local.conf
@@ -925,29 +922,15 @@ public:
 		return _homePath;
 	}
 
-	virtual EthernetTap * getTap(uint64_t nwid)
+	std::vector<ZT_VirtualNetworkRoute> *getRoutes(uint64_t nwid)
 	{
 		Mutex::Lock _l(_nets_m);
-		std::map<uint64_t,NetworkState>::const_iterator n(_nets.find(nwid));
-		if (n == _nets.end())
-		return NULL;
-		return n->second.tap;
-	}
-
-	virtual EthernetTap *getTap(InetAddress &addr)
-	{
-		Mutex::Lock _l(_nets_m);
-		std::map<uint64_t,NetworkState>::iterator it;
-		for(it = _nets.begin(); it != _nets.end(); it++) {
-			if(it->second.tap) {
-				for(int j=0; j<it->second.tap->_ips.size(); j++) {
-					if(it->second.tap->_ips[j].isEqualPrefix(addr) || it->second.tap->_ips[j].ipsEqual(addr) || it->second.tap->_ips[j].containsAddress(addr)) {
-						return it->second.tap;
-					}
-				}
-			}
+		NetworkState &n = _nets[nwid];
+		std::vector<ZT_VirtualNetworkRoute> *routes = new std::vector<ZT_VirtualNetworkRoute>();
+		for(int i=0; i<ZT_MAX_NETWORK_ROUTES; i++) {
+			routes->push_back(n.config.routes[i]);
 		}
-		return NULL;
+		return routes;
 	}
 
 	virtual Node *getNode()
@@ -1742,9 +1725,10 @@ public:
 
 				case TcpConnection::TCP_UNCATEGORIZED_INCOMING:
 					switch(reinterpret_cast<uint8_t *>(data)[0]) {
-						// HTTP: GET, PUT, POST, HEAD
+						// HTTP: GET, PUT, POST, HEAD, DELETE
 						case 'G':
 						case 'P':
+						case 'D':
 						case 'H': {
 							// This is only allowed from IPs permitted to access the management
 							// backplane, which is just 127.0.0.1/::1 unless otherwise configured.
@@ -2061,6 +2045,8 @@ public:
 		char p[1024];
 		FILE *f;
 		bool secure = false;
+		char dirname[1024];
+		dirname[0] = 0;
 
 		switch(type) {
 			case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
@@ -2074,11 +2060,17 @@ public:
 				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_MOON:
-				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d/%.16llx.moon",_homePath.c_str(),(unsigned long long)id[0]);
+				OSUtils::ztsnprintf(dirname,sizeof(dirname),"%s" ZT_PATH_SEPARATOR_S "moons.d",_homePath.c_str());
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx.moon",dirname,(unsigned long long)id[0]);
 				break;
 			case ZT_STATE_OBJECT_NETWORK_CONFIG:
-				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d/%.16llx.conf",_homePath.c_str(),(unsigned long long)id[0]);
+				OSUtils::ztsnprintf(dirname,sizeof(dirname),"%s" ZT_PATH_SEPARATOR_S "networks.d",_homePath.c_str());
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx.conf",dirname,(unsigned long long)id[0]);
 				secure = true;
+				break;
+			case ZT_STATE_OBJECT_PEER:
+				OSUtils::ztsnprintf(dirname,sizeof(dirname),"%s" ZT_PATH_SEPARATOR_S "peers.d",_homePath.c_str());
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.10llx.peer",dirname,(unsigned long long)id[0]);
 				break;
 			default:
 				return;
@@ -2098,6 +2090,10 @@ public:
 			}
 
 			f = fopen(p,"w");
+			if ((!f)&&(dirname[0])) { // create subdirectory if it does not exist
+				OSUtils::mkdir(dirname);
+				f = fopen(p,"w");
+			}
 			if (f) {
 				if (fwrite(data,len,1,f) != 1)
 					fprintf(stderr,"WARNING: unable to write to file: %s (I/O error)" ZT_EOL_S,p);
@@ -2122,14 +2118,17 @@ public:
 			case ZT_STATE_OBJECT_IDENTITY_SECRET:
 				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.secret",_homePath.c_str());
 				break;
-			case ZT_STATE_OBJECT_NETWORK_CONFIG:
-				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d/%.16llx.conf",_homePath.c_str(),(unsigned long long)id);
-				break;
 			case ZT_STATE_OBJECT_PLANET:
 				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_MOON:
-				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d/%.16llx.moon",_homePath.c_str(),(unsigned long long)id);
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d" ZT_PATH_SEPARATOR_S "%.16llx.moon",_homePath.c_str(),(unsigned long long)id);
+				break;
+			case ZT_STATE_OBJECT_NETWORK_CONFIG:
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.conf",_homePath.c_str(),(unsigned long long)id);
+				break;
+			case ZT_STATE_OBJECT_PEER:
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "peers.d" ZT_PATH_SEPARATOR_S "%.10llx.peer",_homePath.c_str(),(unsigned long long)id[0]);
 				break;
 			default:
 				return -1;
@@ -2156,19 +2155,30 @@ public:
 				const uint64_t now = OSUtils::now();
 				if (((now - _lastDirectReceiveFromGlobal) > ZT_TCP_FALLBACK_AFTER)&&((now - _lastRestart) > ZT_TCP_FALLBACK_AFTER)) {
 					if (_tcpFallbackTunnel) {
-						Mutex::Lock _l(_tcpFallbackTunnel->writeq_m);
-						if (_tcpFallbackTunnel->writeq.length() == 0)
-							_phy.setNotifyWritable(_tcpFallbackTunnel->sock,true);
-						const unsigned long mlen = len + 7;
-						_tcpFallbackTunnel->writeq.push_back((char)0x17);
-						_tcpFallbackTunnel->writeq.push_back((char)0x03);
-						_tcpFallbackTunnel->writeq.push_back((char)0x03); // fake TLS 1.2 header
-						_tcpFallbackTunnel->writeq.push_back((char)((mlen >> 8) & 0xff));
-						_tcpFallbackTunnel->writeq.push_back((char)(mlen & 0xff));
-						_tcpFallbackTunnel->writeq.push_back((char)4); // IPv4
-						_tcpFallbackTunnel->writeq.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_addr.s_addr))),4);
-						_tcpFallbackTunnel->writeq.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port))),2);
-						_tcpFallbackTunnel->writeq.append((const char *)data,len);
+						bool flushNow = false;
+						{
+							Mutex::Lock _l(_tcpFallbackTunnel->writeq_m);
+							if (_tcpFallbackTunnel->writeq.size() < (1024 * 64)) {
+								if (_tcpFallbackTunnel->writeq.length() == 0) {
+									_phy.setNotifyWritable(_tcpFallbackTunnel->sock,true);
+									flushNow = true;
+								}
+								const unsigned long mlen = len + 7;
+								_tcpFallbackTunnel->writeq.push_back((char)0x17);
+								_tcpFallbackTunnel->writeq.push_back((char)0x03);
+								_tcpFallbackTunnel->writeq.push_back((char)0x03); // fake TLS 1.2 header
+								_tcpFallbackTunnel->writeq.push_back((char)((mlen >> 8) & 0xff));
+								_tcpFallbackTunnel->writeq.push_back((char)(mlen & 0xff));
+								_tcpFallbackTunnel->writeq.push_back((char)4); // IPv4
+								_tcpFallbackTunnel->writeq.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_addr.s_addr))),4);
+								_tcpFallbackTunnel->writeq.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port))),2);
+								_tcpFallbackTunnel->writeq.append((const char *)data,len);
+							}
+						}
+						if (flushNow) {
+							void *tmpptr = (void *)_tcpFallbackTunnel;
+							phyOnTcpWritable(_tcpFallbackTunnel->sock,&tmpptr);
+						}
 					} else if (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2))) {
 						const InetAddress addr(ZT_TCP_FALLBACK_RELAY);
 						TcpConnection *tc = new TcpConnection();
@@ -2301,7 +2311,7 @@ public:
 			fprintf(stderr,"WARNING: unexpected exception processing control HTTP request: %s" ZT_EOL_S,exc.what());
 			scode = 500;
 		} catch ( ... ) {
-			fprintf(stderr,"WARNING: unexpected exception processing control HTTP request: unknown exceptino" ZT_EOL_S);
+			fprintf(stderr,"WARNING: unexpected exception processing control HTTP request: unknown exception" ZT_EOL_S);
 			scode = 500;
 		}
 

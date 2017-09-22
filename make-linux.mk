@@ -99,6 +99,15 @@ ifeq ($(CC_MACH),amd64)
 	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA2012=1
 endif
+ifeq ($(CC_MACH),powerpc64le)
+	ZT_ARCHITECTURE=8
+endif
+ifeq ($(CC_MACH),ppc64le)
+	ZT_ARCHITECTURE=8
+endif
+ifeq ($(CC_MACH),ppc64el)
+	ZT_ARCHITECTURE=8
+endif
 ifeq ($(CC_MACH),i386)
 	ZT_ARCHITECTURE=1
 endif
@@ -210,12 +219,6 @@ endif
 
 all:	one
 
-#ext/x64-salsa2012-asm/salsa2012.o:
-#	$(CC) -c ext/x64-salsa2012-asm/salsa2012.s -o ext/x64-salsa2012-asm/salsa2012.o
-
-#ext/arm32-neon-salsa2012-asm/salsa2012.o:
-#	$(CC) -c ext/arm32-neon-salsa2012-asm/salsa2012.s -o ext/arm32-neon-salsa2012-asm/salsa2012.o
-
 one:	$(CORE_OBJS) $(ONE_OBJS) one.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LDLIBS)
 	$(STRIP) zerotier-one
@@ -251,6 +254,9 @@ clean: FORCE
 distclean:	clean
 
 realclean:	distclean
+
+official-static:	FORCE
+	make -j4 ZT_STATIC=1 LDLIBS=/usr/lib/libjemalloc.a all selftest
 
 debug:	FORCE
 	make ZT_DEBUG=1 one

@@ -172,15 +172,6 @@
 #define ZT_ADDRESS_RESERVED_PREFIX 0xff
 
 /**
- * Default payload MTU for UDP packets
- *
- * In the future we might support UDP path MTU discovery, but for now we
- * set a maximum that is equal to 1500 minus 8 (for PPPoE overhead, common
- * in some markets) minus 48 (IPv6 UDP overhead).
- */
-#define ZT_UDP_DEFAULT_PAYLOAD_MTU 1444
-
-/**
  * Default MTU used for Ethernet tap device
  */
 #define ZT_DEFAULT_MTU 2800
@@ -226,22 +217,17 @@
 /**
  * Delay between WHOIS retries in ms
  */
-#define ZT_WHOIS_RETRY_DELAY 1000
-
-/**
- * Maximum identity WHOIS retries (each attempt tries consulting a different peer)
- */
-#define ZT_MAX_WHOIS_RETRIES 4
+#define ZT_WHOIS_RETRY_DELAY 500
 
 /**
  * Transmit queue entry timeout
  */
-#define ZT_TRANSMIT_QUEUE_TIMEOUT (ZT_WHOIS_RETRY_DELAY * (ZT_MAX_WHOIS_RETRIES + 1))
+#define ZT_TRANSMIT_QUEUE_TIMEOUT 5000
 
 /**
  * Receive queue entry timeout
  */
-#define ZT_RECEIVE_QUEUE_TIMEOUT (ZT_WHOIS_RETRY_DELAY * (ZT_MAX_WHOIS_RETRIES + 1))
+#define ZT_RECEIVE_QUEUE_TIMEOUT 5000
 
 /**
  * Maximum latency to allow for OK(HELLO) before packet is discarded

@@ -35,8 +35,8 @@
 #ifdef ZT_SDK
 #include "../node/Node.hpp"
 // Use the virtual netcon endpoint instead of a tun/tap port driver
-#include "../src/SocketTap.hpp"
-namespace ZeroTier { typedef SocketTap EthernetTap; }
+#include "../src/VirtualTap.hpp"
+namespace ZeroTier { typedef VirtualTap EthernetTap; }
 #endif
 
 namespace ZeroTier {
@@ -150,10 +150,9 @@ public:
 	virtual void leave(const char *hp) = 0;
 	virtual void join(const char *hp) = 0;
 	virtual std::string givenHomePath() = 0;
-	virtual EthernetTap * getTap(uint64_t nwid) = 0;
-	virtual EthernetTap * getTap(InetAddress &addr) = 0;
 	virtual Node * getNode() = 0;
 	virtual void removeNets() = 0;
+	virtual std::vector<ZT_VirtualNetworkRoute> *getRoutes(uint64_t nwid) = 0;
 #endif
 
 	/**

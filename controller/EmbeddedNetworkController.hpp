@@ -93,6 +93,11 @@ public:
 
 	void handleRemoteTrace(const ZT_RemoteTrace &rt);
 
+	// Called on update via POST or by JSONDB on external update of network or network member records
+	void onNetworkUpdate(const uint64_t networkId);
+	void onNetworkMemberUpdate(const uint64_t networkId,const uint64_t memberId);
+	void onNetworkMemberDeauthorize(const uint64_t networkId,const uint64_t memberId);
+
 	void threadMain()
 		throw();
 
@@ -110,26 +115,12 @@ private:
 	};
 
 	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
-
-	inline void _startThreads()
-	{
-		Mutex::Lock _l(_threads_m);
-		if (_threads.size() == 0) {
-			long hwc = (long)std::thread::hardware_concurrency();
-			if (hwc < 1)
-				hwc = 1;
-			else if (hwc > 16)
-				hwc = 16;
-			for(long i=0;i<hwc;++i)
-				_threads.push_back(Thread::start(this));
-		}
-	}
+	void _startThreads();
 
 	// These init objects with default and static/informational fields
 	inline void _initMember(nlohmann::json &member)
 	{
 		if (!member.count("authorized")) member["authorized"] = false;
-		if (!member.count("authHistory")) member["authHistory"] = nlohmann::json::array();
  		if (!member.count("ipAssignments")) member["ipAssignments"] = nlohmann::json::array();
 		if (!member.count("activeBridge")) member["activeBridge"] = false;
 		if (!member.count("tags")) member["tags"] = nlohmann::json::array();
@@ -139,6 +130,8 @@ private:
 		if (!member.count("revision")) member["revision"] = 0ULL;
 		if (!member.count("lastDeauthorizedTime")) member["lastDeauthorizedTime"] = 0ULL;
 		if (!member.count("lastAuthorizedTime")) member["lastAuthorizedTime"] = 0ULL;
+		if (!member.count("lastAuthorizedCredentialType")) member["lastAuthorizedCredentialType"] = nlohmann::json();
+		if (!member.count("lastAuthorizedCredential")) member["lastAuthorizedCredential"] = nlohmann::json();
 		if (!member.count("vMajor")) member["vMajor"] = -1;
 		if (!member.count("vMinor")) member["vMinor"] = -1;
 		if (!member.count("vRev")) member["vRev"] = -1;
@@ -156,7 +149,7 @@ private:
 		if (!network.count("enableBroadcast")) network["enableBroadcast"] = true;
 		if (!network.count("v4AssignMode")) network["v4AssignMode"] = {{"zt",false}};
 		if (!network.count("v6AssignMode")) network["v6AssignMode"] = {{"rfc4193",false},{"zt",false},{"6plane",false}};
-		if (!network.count("authTokens")) network["authTokens"] = nlohmann::json::array();
+		if (!network.count("authTokens")) network["authTokens"] = {{}};
 		if (!network.count("capabilities")) network["capabilities"] = nlohmann::json::array();
 		if (!network.count("tags")) network["tags"] = nlohmann::json::array();
 		if (!network.count("routes")) network["routes"] = nlohmann::json::array();

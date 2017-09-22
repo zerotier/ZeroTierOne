@@ -65,7 +65,7 @@ static const unsigned char ZT_DEFAULT_WORLD[ZT_DEFAULT_WORLD_LENGTH] = {0x01,0x0
 
 Topology::Topology(const RuntimeEnvironment *renv,void *tPtr) :
 	RR(renv),
-	_trustedPathCount(0),
+	_numConfiguredPhysicalPaths(0),
 	_amRoot(false)
 {
 	uint8_t tmp[ZT_WORLD_MAX_SERIALIZED_LENGTH];
@@ -86,6 +86,15 @@ Topology::Topology(const RuntimeEnvironment *renv,void *tPtr) :
 		defaultPlanet.deserialize(wtmp,0); // throws on error, which would indicate a bad static variable up top
 	}
 	addWorld(tPtr,defaultPlanet,false);
+}
+
+Topology::~Topology()
+{
+	Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
+	Address *a = (Address *)0;
+	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+	while (i.next(a,p))
+		_savePeer((void *)0,*p);
 }
 
 SharedPtr<Peer> Topology::addPeer(void *tPtr,const SharedPtr<Peer> &peer)
@@ -113,23 +122,21 @@ SharedPtr<Peer> Topology::getPeer(void *tPtr,const Address &zta)
 			return *ap;
 	}
 
-	/*
 	try {
-		char buf[ZT_PEER_MAX_SERIALIZED_STATE_SIZE];
+		Buffer<ZT_PEER_MAX_SERIALIZED_STATE_SIZE> buf;
 		uint64_t idbuf[2]; idbuf[0] = zta.toInt(); idbuf[1] = 0;
-		int len = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER,idbuf,buf,(unsigned int)sizeof(buf));
+		int len = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER,idbuf,buf.unsafeData(),ZT_PEER_MAX_SERIALIZED_STATE_SIZE);
 		if (len > 0) {
 			Mutex::Lock _l(_peers_m);
 			SharedPtr<Peer> &ap = _peers[zta];
 			if (ap)
 				return ap;
-			ap = Peer::createFromStateUpdate(RR,tPtr,buf,len);
+			ap = Peer::deserializeFromCache(RR->node->now(),tPtr,buf,RR);
 			if (!ap)
 				_peers.erase(zta);
 			return ap;
 		}
 	} catch ( ... ) {} // ignore invalid identities or other strage failures
-	*/
 
 	return SharedPtr<Peer>();
 }
@@ -147,13 +154,11 @@ Identity Topology::getIdentity(void *tPtr,const Address &zta)
 	return Identity();
 }
 
-SharedPtr<Peer> Topology::getUpstreamPeer(const Address *avoid,unsigned int avoidCount,bool strictAvoid)
+SharedPtr<Peer> Topology::getUpstreamPeer()
 {
 	const uint64_t now = RR->node->now();
-	unsigned int bestQualityOverall = ~((unsigned int)0);
-	unsigned int bestQualityNotAvoid = ~((unsigned int)0);
-	const SharedPtr<Peer> *bestOverall = (const SharedPtr<Peer> *)0;
-	const SharedPtr<Peer> *bestNotAvoid = (const SharedPtr<Peer> *)0;
+	unsigned int bestq = ~((unsigned int)0);
+	const SharedPtr<Peer> *best = (const SharedPtr<Peer> *)0;
 
 	Mutex::Lock _l1(_peers_m);
 	Mutex::Lock _l2(_upstreams_m);
@@ -161,32 +166,17 @@ SharedPtr<Peer> Topology::getUpstreamPeer(const Address *avoid,unsigned int avoi
 	for(std::vector<Address>::const_iterator a(_upstreamAddresses.begin());a!=_upstreamAddresses.end();++a) {
 		const SharedPtr<Peer> *p = _peers.get(*a);
 		if (p) {
-			bool avoiding = false;
-			for(unsigned int i=0;i<avoidCount;++i) {
-				if (avoid[i] == (*p)->address()) {
-					avoiding = true;
-					break;
-				}
-			}
 			const unsigned int q = (*p)->relayQuality(now);
-			if (q <= bestQualityOverall) {
-				bestQualityOverall = q;
-				bestOverall = &(*p);
-			}
-			if ((!avoiding)&&(q <= bestQualityNotAvoid)) {
-				bestQualityNotAvoid = q;
-				bestNotAvoid = &(*p);
+			if (q <= bestq) {
+				bestq = q;
+				best = p;
 			}
 		}
 	}
 
-	if (bestNotAvoid) {
-		return *bestNotAvoid;
-	} else if ((!strictAvoid)&&(bestOverall)) {
-		return *bestOverall;
-	}
-
-	return SharedPtr<Peer>();
+	if (!best)
+		return SharedPtr<Peer>();
+	return *best;
 }
 
 bool Topology::isUpstream(const Identity &id) const
@@ -383,8 +373,10 @@ void Topology::doPeriodicTasks(void *tPtr,uint64_t now)
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p)) {
-			if ( (!(*p)->isAlive(now)) && (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),*a) == _upstreamAddresses.end()) )
+			if ( (!(*p)->isAlive(now)) && (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),*a) == _upstreamAddresses.end()) ) {
+				_savePeer(tPtr,*p);
 				_peers.erase(*a);
+			}
 		}
 	}
 
@@ -438,6 +430,16 @@ void Topology::_memoizeUpstreams(void *tPtr)
 			break;
 	}
 	_cor.sign(RR->identity,RR->node->now());
+}
+
+void Topology::_savePeer(void *tPtr,const SharedPtr<Peer> &peer)
+{
+	try {
+		Buffer<ZT_PEER_MAX_SERIALIZED_STATE_SIZE> buf;
+		peer->serialize(buf);
+		uint64_t tmpid[2]; tmpid[0] = peer->address().toInt(); tmpid[1] = 0;
+		RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_PEER,tmpid,buf.data(),buf.size());
+	} catch ( ... ) {} // sanity check, discard invalid entries
 }
 
 } // namespace ZeroTier

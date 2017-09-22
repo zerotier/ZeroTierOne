@@ -32,42 +32,36 @@
 
 #ifdef __UNIX_LIKE__
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <pthread.h>
 
 namespace ZeroTier {
 
+#if defined(__GNUC__) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+
+// Inline ticket lock on x64 systems with GCC and CLANG (Mac, Linux) -- this is really fast as long as locking durations are very short
 class Mutex : NonCopyable
 {
 public:
-	Mutex()
+	Mutex() :
+		nextTicket(0),
+		nowServing(0)
 	{
-		pthread_mutex_init(&_mh,(const pthread_mutexattr_t *)0);
-	}
-
-	~Mutex()
-	{
-		pthread_mutex_destroy(&_mh);
-	}
-
-	inline void lock()
-	{
-		pthread_mutex_lock(&_mh);
-	}
-
-	inline void unlock()
-	{
-		pthread_mutex_unlock(&_mh);
 	}
 
 	inline void lock() const
 	{
-		(const_cast <Mutex *> (this))->lock();
+		const uint16_t myTicket = __sync_fetch_and_add(&(const_cast<Mutex *>(this)->nextTicket),1); 
+		while (nowServing != myTicket) {
+			__asm__ __volatile__("rep;nop"::);
+			__asm__ __volatile__("":::"memory");
+		}   
 	}
 
 	inline void unlock() const
 	{
-		(const_cast <Mutex *> (this))->unlock();
+		++(const_cast<Mutex *>(this)->nowServing);
 	}
 
 	/**
@@ -98,8 +92,65 @@ public:
 	};
 
 private:
+	uint16_t nextTicket;
+	uint16_t nowServing;
+};
+
+#else
+
+// libpthread based mutex lock
+class Mutex : NonCopyable
+{
+public:
+	Mutex()
+	{
+		pthread_mutex_init(&_mh,(const pthread_mutexattr_t *)0);
+	}
+
+	~Mutex()
+	{
+		pthread_mutex_destroy(&_mh);
+	}
+
+	inline void lock() const
+	{
+		pthread_mutex_lock(&((const_cast <Mutex *> (this))->_mh));
+	}
+
+	inline void unlock() const
+	{
+		pthread_mutex_unlock(&((const_cast <Mutex *> (this))->_mh));
+	}
+
+	class Lock : NonCopyable
+	{
+	public:
+		Lock(Mutex &m) :
+			_m(&m)
+		{
+			m.lock();
+		}
+
+		Lock(const Mutex &m) :
+			_m(const_cast<Mutex *>(&m))
+		{
+			_m->lock();
+		}
+
+		~Lock()
+		{
+			_m->unlock();
+		}
+
+	private:
+		Mutex *const _m;
+	};
+
+private:
 	pthread_mutex_t _mh;
 };
+
+#endif
 
 } // namespace ZeroTier
 
@@ -112,6 +163,7 @@ private:
 
 namespace ZeroTier {
 
+// Windows critical section based lock
 class Mutex : NonCopyable
 {
 public:
@@ -123,16 +175,6 @@ public:
 	~Mutex()
 	{
 		DeleteCriticalSection(&_cs);
-	}
-
-	inline void lock()
-	{
-		EnterCriticalSection(&_cs);
-	}
-
-	inline void unlock()
-	{
-		LeaveCriticalSection(&_cs);
 	}
 
 	inline void lock() const
