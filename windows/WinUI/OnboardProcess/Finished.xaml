@@ -1,0 +1,27 @@
+﻿<UserControl x:Class="WinUI.OnboardProcess.Finished"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:WinUI.OnboardProcess"
+             mc:Ignorable="d" 
+             d:DesignHeight="300" d:DesignWidth="300">
+  <Grid VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="10">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto" />
+		</Grid.ColumnDefinitions>
+
+		<TextBlock Grid.Column="0" Grid.Row="0" Text="All Finished!"  HorizontalAlignment="Center"/>
+		<TextBlock Grid.Column="0" Grid.Row="1" HorizontalAlignment="Center" Text=""/>
+		<TextBlock Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="2" MaxWidth="270" HorizontalAlignment="Center" Margin="10" Text="You've now joined your first ZeroTier network.  Now go to add your other machines!" TextWrapping="Wrap"/>
+		<TextBlock Grid.Column="0" Grid.Row="3" HorizontalAlignment="Center" Text=""/>
+		<Button Grid.Column="0" Grid.Row="4" MaxWidth="100" Click="DoneButton_Click" Background="#FFFFB354" Margin="10">Done!</Button>
+	</Grid>
+</UserControl>

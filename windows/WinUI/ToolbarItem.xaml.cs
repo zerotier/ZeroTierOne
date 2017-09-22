@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -45,6 +46,9 @@ namespace WinUI
         private ObservableCollection<MenuItem> _networkCollection = new ObservableCollection<MenuItem>();
 
         private static Boolean shouldShowOnboardProcess = true;
+#if DEBUG
+        private static bool isFirstRun = true;
+#endif
 
         public ObservableCollection<MenuItem> NetworkCollection
         {
@@ -83,7 +87,19 @@ namespace WinUI
             {
                 if (networks.Count > 0)
                 {
+#if DEBUG
+                    if (isFirstRun)
+                    {
+                        shouldShowOnboardProcess = true;
+                        isFirstRun = false;
+                    }
+                    else
+                    {
+                        shouldShowOnboardProcess = false;
+                    } 
+#else
                     shouldShowOnboardProcess = false;
+#endif
                 }
 
                 Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
@@ -103,7 +119,12 @@ namespace WinUI
 
                 if (shouldShowOnboardProcess)
                 {
-                    // TODO: Show onboarding process window (on main thread)
+                    // TODO: Show onboarding process window (on main thread
+                    Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                    {
+                        PageSwitcher ps = new PageSwitcher();
+                        ps.Show();
+                    }));
 
                     shouldShowOnboardProcess = false;
                 }

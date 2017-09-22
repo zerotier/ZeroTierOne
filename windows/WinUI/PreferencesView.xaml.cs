@@ -22,7 +22,7 @@ namespace WinUI
     {
         public static string AppName = "ZeroTier One";
         private RegistryKey rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
-
+        private string AppLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
         public PreferencesView()
         {
             InitializeComponent();
@@ -30,21 +30,45 @@ namespace WinUI
 
             string keyValue = rk.GetValue(AppName) as string;
 
-            if (keyValue != null && keyValue.Equals(System.Reflection.Assembly.GetExecutingAssembly().Location))
+            if (keyValue != null && keyValue.Equals(AppLocation))
             {
                 startupCheckbox.IsChecked = true;
             }
+
+            CentralAPI api = CentralAPI.Instance;
+            CentralInstanceTextBox.Text = api.Central.ServerURL;
+            APIKeyTextBox.Text = api.Central.APIKey;
         }
 
-        private void startupCheckbox_Checked(object sender, RoutedEventArgs e)
+        private void OKButton_Clicked(object sender, RoutedEventArgs e)
         {
-            rk.SetValue(AppName, System.Reflection.Assembly.GetExecutingAssembly().Location);
-        }
+            CentralAPI api = CentralAPI.Instance;
 
-        private void startupCheckbox_Unchecked(object sender, RoutedEventArgs e)
-        {
-            rk.DeleteValue(AppName);
-        }
+            if (api.Central.ServerURL != CentralInstanceTextBox.Text ||
+                api.Central.APIKey != APIKeyTextBox.Text)
+            {
+                CentralServer newServer = new CentralServer();
+                newServer.ServerURL = CentralInstanceTextBox.Text;
+                newServer.APIKey = APIKeyTextBox.Text;
 
+                api.Central = newServer;
+            }
+
+            if (startupCheckbox.IsChecked.HasValue && (bool)startupCheckbox.IsChecked)
+            {
+                rk.SetValue(AppName, AppLocation);
+            }
+            else
+            {
+                string keyValue = rk.GetValue(AppName) as string;
+
+                if (keyValue != null && keyValue.Equals(AppLocation))
+                {
+                    rk.DeleteValue(AppName);
+                }
+            }
+
+            Close();
+        }
     }
 }

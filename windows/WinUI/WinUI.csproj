@@ -80,6 +80,7 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Deployment" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
     <Reference Include="System.Printing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
@@ -104,13 +105,42 @@
     <Compile Include="AboutView.xaml.cs">
       <DependentUpon>AboutView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="CentralAPI.cs" />
+    <Compile Include="CentralLogin.cs" />
+    <Compile Include="CentralNetwork.cs" />
+    <Compile Include="CentralServer.cs" />
+    <Compile Include="CentralToken.cs" />
+    <Compile Include="CentralUser.cs" />
+    <Compile Include="ISwitchable.cs" />
     <Compile Include="JoinNetworkView.xaml.cs">
       <DependentUpon>JoinNetworkView.xaml</DependentUpon>
     </Compile>
     <Compile Include="NetworkMonitor.cs" />
+    <Compile Include="NetworkNameGenerator.cs" />
     <Compile Include="NetworkRoute.cs" />
     <Compile Include="NetworksPage.xaml.cs">
       <DependentUpon>NetworksPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="OnboardProcess\CreateAccount.xaml.cs">
+      <DependentUpon>CreateAccount.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="OnboardProcess\CreateOrJoin.xaml.cs">
+      <DependentUpon>CreateOrJoin.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="OnboardProcess\EnterToken.xaml.cs">
+      <DependentUpon>EnterToken.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="OnboardProcess\Finished.xaml.cs">
+      <DependentUpon>Finished.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="OnboardProcess\LogIn.xaml.cs">
+      <DependentUpon>LogIn.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="OnboardProcess\RegisterOrLogIn.xaml.cs">
+      <DependentUpon>RegisterOrLogIn.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="PageSwitcher.xaml.cs">
+      <DependentUpon>PageSwitcher.xaml</DependentUpon>
     </Compile>
     <Compile Include="PeersPage.xaml.cs">
       <DependentUpon>PeersPage.xaml</DependentUpon>
@@ -118,6 +148,7 @@
     <Compile Include="PreferencesView.xaml.cs">
       <DependentUpon>PreferencesView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Switcher.cs" />
     <Compile Include="ToolbarItem.xaml.cs">
       <DependentUpon>ToolbarItem.xaml</DependentUpon>
     </Compile>
@@ -128,6 +159,10 @@
     <Page Include="AboutView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Done.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="JoinNetworkView.xaml">
       <SubType>Designer</SubType>
@@ -151,6 +186,34 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="NetworksPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="OnboardProcess\CreateAccount.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="OnboardProcess\CreateOrJoin.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="OnboardProcess\EnterToken.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="OnboardProcess\Finished.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="OnboardProcess\LogIn.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="OnboardProcess\RegisterOrLogIn.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="PageSwitcher.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

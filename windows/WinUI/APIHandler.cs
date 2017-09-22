@@ -26,6 +26,8 @@ namespace WinUI
         public delegate void NetworkListCallback(List<ZeroTierNetwork> networks);
         public delegate void StatusCallback(ZeroTierStatus status);
 
+        private string ZeroTierAddress = "";
+
         public static APIHandler Instance
         {
             get
@@ -170,6 +172,11 @@ namespace WinUI
 												try
 												{
 														status = JsonConvert.DeserializeObject<ZeroTierStatus>(responseText);
+
+                            if (ZeroTierAddress != status.Address)
+                            {
+                                ZeroTierAddress = status.Address;
+                            }
 												}
 												catch (JsonReaderException e)
 												{
@@ -441,6 +448,11 @@ namespace WinUI
 										cb(null);
 								}
             }
+        }
+
+        public string NodeAddress()
+        {
+            return ZeroTierAddress;
         }
     }
 }
