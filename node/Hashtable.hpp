@@ -27,6 +27,8 @@
 #ifndef ZT_HASHTABLE_HPP
 #define ZT_HASHTABLE_HPP
 
+#include "Constants.hpp"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
