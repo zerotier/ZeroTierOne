@@ -563,6 +563,7 @@ uint64_t Node::prng()
 
 ZT_ResultCode Node::setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork, const ZT_PhysicalPathConfiguration *pathConfig)
 {
+	RR->topology->setPhysicalPathConfiguration(pathNetwork,pathConfig);
 	return ZT_RESULT_OK;
 }
 

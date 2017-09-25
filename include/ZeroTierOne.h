@@ -804,6 +804,21 @@ typedef struct
 		} ipv4;
 
 		/**
+		 * Integer range match in packet payload
+		 *
+		 * This allows matching of ranges of integers up to 64 bits wide where
+		 * the range is +/- INT32_MAX. It's packed this way so it fits in 16
+		 * bytes and doesn't enlarge the overall size of this union.
+		 */
+		struct {
+			uint64_t start; // integer range start
+			int32_t delta; // +/- offset from start of integer range end
+			uint16_t idx; // index in packet of integer
+			uint8_t bits; // number of bits in integer (range: 1-64)
+			uint8_t endian; // endianness of integer in packet (0 == big, 1 == little)
+		} intRange;
+
+		/**
 		 * Packet characteristic flags being matched
 		 */
 		uint64_t characteristics;
