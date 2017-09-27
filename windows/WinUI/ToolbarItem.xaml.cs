@@ -108,7 +108,7 @@ namespace WinUI
                     foreach (ZeroTierNetwork n in networks)
                     {
                         MenuItem item = new MenuItem();
-                        item.Header = n.Title;
+                        item.Header = n.Title.Replace("_", "__");
                         item.DataContext = n;
                         item.IsChecked = n.IsConnected;
                         item.Click += ToolbarItem_NetworkClicked;
