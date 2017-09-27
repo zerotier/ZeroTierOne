@@ -177,6 +177,16 @@ public:
 		DeleteCriticalSection(&_cs);
 	}
 
+	inline void lock()
+	{
+		EnterCriticalSection(&_cs);
+	}
+
+	inline void unlock()
+	{
+		LeaveCriticalSection(&_cs);
+	}
+
 	inline void lock() const
 	{
 		(const_cast <Mutex *> (this))->lock();
