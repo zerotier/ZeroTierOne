@@ -127,6 +127,7 @@ SharedPtr<Peer> Topology::getPeer(void *tPtr,const Address &zta)
 		uint64_t idbuf[2]; idbuf[0] = zta.toInt(); idbuf[1] = 0;
 		int len = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER,idbuf,buf.unsafeData(),ZT_PEER_MAX_SERIALIZED_STATE_SIZE);
 		if (len > 0) {
+			buf.setSize(len);
 			Mutex::Lock _l(_peers_m);
 			SharedPtr<Peer> &ap = _peers[zta];
 			if (ap)
