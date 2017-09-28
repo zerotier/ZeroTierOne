@@ -135,7 +135,7 @@ SharedPtr<Peer> Topology::getPeer(void *tPtr,const Address &zta)
 			ap = Peer::deserializeFromCache(RR->node->now(),tPtr,buf,RR);
 			if (!ap)
 				_peers.erase(zta);
-			return ap;
+			return SharedPtr<Peer>();
 		}
 	} catch ( ... ) {} // ignore invalid identities or other strage failures
 
