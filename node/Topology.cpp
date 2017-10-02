@@ -133,8 +133,9 @@ SharedPtr<Peer> Topology::getPeer(void *tPtr,const Address &zta)
 			if (ap)
 				return ap;
 			ap = Peer::deserializeFromCache(RR->node->now(),tPtr,buf,RR);
-			if (!ap)
+			if (!ap) {
 				_peers.erase(zta);
+			}
 			return SharedPtr<Peer>();
 		}
 	} catch ( ... ) {} // ignore invalid identities or other strage failures
@@ -157,7 +158,7 @@ Identity Topology::getIdentity(void *tPtr,const Address &zta)
 
 SharedPtr<Peer> Topology::getUpstreamPeer()
 {
-	const uint64_t now = RR->node->now();
+	const int64_t now = RR->node->now();
 	unsigned int bestq = ~((unsigned int)0);
 	const SharedPtr<Peer> *best = (const SharedPtr<Peer> *)0;
 
@@ -365,7 +366,7 @@ void Topology::removeMoon(void *tPtr,const uint64_t id)
 	_memoizeUpstreams(tPtr);
 }
 
-void Topology::doPeriodicTasks(void *tPtr,uint64_t now)
+void Topology::doPeriodicTasks(void *tPtr,int64_t now)
 {
 	{
 		Mutex::Lock _l1(_peers_m);

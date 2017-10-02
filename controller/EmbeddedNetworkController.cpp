@@ -535,7 +535,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 			} else {
 				// Get network
 
-				const uint64_t now = OSUtils::now();
+				const int64_t now = OSUtils::now();
 				JSONDB::NetworkSummaryInfo ns;
 				_db.getNetworkSummaryInfo(nwid,ns);
 				_addNetworkNonPersistedFields(network,now,ns);
@@ -602,7 +602,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 		responseContentType = "application/json";
 		return 400;
 	}
-	const uint64_t now = OSUtils::now();
+	const int64_t now = OSUtils::now();
 
 	if (path[0] == "network") {
 
@@ -1087,7 +1087,7 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 			}
 		}
 
-		const uint64_t now = OSUtils::now();
+		const int64_t now = OSUtils::now();
 		OSUtils::ztsnprintf(id,sizeof(id),"%.10llx-%.10llx-%.16llx-%.8lx",_signingId.address().toInt(),rt.origin,now,++idCounter);
 		d["id"] = id;
 		d["objtype"] = "trace";
@@ -1129,7 +1129,7 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 void EmbeddedNetworkController::onNetworkUpdate(const uint64_t networkId)
 {
 	// Send an update to all members of the network that are online
-	const uint64_t now = OSUtils::now();
+	const int64_t now = OSUtils::now();
 	Mutex::Lock _l(_memberStatus_m);
 	for(auto i=_memberStatus.begin();i!=_memberStatus.end();++i) {
 		if ((i->first.networkId == networkId)&&(i->second.online(now))&&(i->second.lastRequestMetaData))
@@ -1150,7 +1150,7 @@ void EmbeddedNetworkController::onNetworkMemberUpdate(const uint64_t networkId,c
 
 void EmbeddedNetworkController::onNetworkMemberDeauthorize(const uint64_t networkId,const uint64_t memberId)
 {
-	const uint64_t now = OSUtils::now();
+	const int64_t now = OSUtils::now();
 	Revocation rev((uint32_t)_node->prng(),networkId,0,now,ZT_REVOCATION_FLAG_FAST_PROPAGATE,Address(memberId),Revocation::CREDENTIAL_TYPE_COM);
 	rev.sign(_signingId);
 	{
@@ -1224,7 +1224,7 @@ void EmbeddedNetworkController::_request(
 	if (((!_signingId)||(!_signingId.hasPrivate()))||(_signingId.address().toInt() != (nwid >> 24))||(!_sender))
 		return;
 
-	const uint64_t now = OSUtils::now();
+	const int64_t now = OSUtils::now();
 
 	if (requestPacketId) {
 		Mutex::Lock _l(_memberStatus_m);
@@ -1360,7 +1360,7 @@ void EmbeddedNetworkController::_request(
 	// If we made it this far, they are authorized.
 	// -------------------------------------------------------------------------
 
-	uint64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
+	int64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
 	if (now > ns.mostRecentDeauthTime) {
 		// If we recently de-authorized a member, shrink credential TTL/max delta to
 		// be below the threshold required to exclude it. Cap this to a min/max to

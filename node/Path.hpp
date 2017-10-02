@@ -179,14 +179,14 @@ public:
 	 * @param now Current time
 	 * @return True if transport reported success
 	 */
-	bool send(const RuntimeEnvironment *RR,void *tPtr,const void *data,unsigned int len,uint64_t now);
+	bool send(const RuntimeEnvironment *RR,void *tPtr,const void *data,unsigned int len,int64_t now);
 
 	/**
 	 * Manually update last sent time
 	 *
 	 * @param t Time of send
 	 */
-	inline void sent(const uint64_t t) { _lastOut = t; }
+	inline void sent(const int64_t t) { _lastOut = t; }
 
 	/**
 	 * @return Local socket as specified by external code
@@ -206,7 +206,7 @@ public:
 	/**
 	 * @return True if path has received a trust established packet (e.g. common network membership) in the past ZT_TRUST_EXPIRATION ms
 	 */
-	inline bool trustEstablished(const uint64_t now) const { return ((now - _lastTrustEstablishedPacketReceived) < ZT_TRUST_EXPIRATION); }
+	inline bool trustEstablished(const int64_t now) const { return ((now - _lastTrustEstablishedPacketReceived) < ZT_TRUST_EXPIRATION); }
 
 	/**
 	 * @return Preference rank, higher == better
@@ -261,27 +261,27 @@ public:
 	/**
 	 * @return True if path appears alive
 	 */
-	inline bool alive(const uint64_t now) const { return ((now - _lastIn) <= ZT_PATH_ALIVE_TIMEOUT); }
+	inline bool alive(const int64_t now) const { return ((now - _lastIn) <= ZT_PATH_ALIVE_TIMEOUT); }
 
 	/**
 	 * @return True if this path needs a heartbeat
 	 */
-	inline bool needsHeartbeat(const uint64_t now) const { return ((now - _lastOut) >= ZT_PATH_HEARTBEAT_PERIOD); }
+	inline bool needsHeartbeat(const int64_t now) const { return ((now - _lastOut) >= ZT_PATH_HEARTBEAT_PERIOD); }
 
 	/**
 	 * @return Last time we sent something
 	 */
-	inline uint64_t lastOut() const { return _lastOut; }
+	inline int64_t lastOut() const { return _lastOut; }
 
 	/**
 	 * @return Last time we received anything
 	 */
-	inline uint64_t lastIn() const { return _lastIn; }
+	inline int64_t lastIn() const { return _lastIn; }
 
 	/**
 	 * @return Time last trust-established packet was received
 	 */
-	inline uint64_t lastTrustEstablishedPacketReceived() const { return _lastTrustEstablishedPacketReceived; }
+	inline int64_t lastTrustEstablishedPacketReceived() const { return _lastTrustEstablishedPacketReceived; }
 
 	/**
 	 * Return and increment outgoing packet counter (used with Packet::armor())
@@ -291,9 +291,9 @@ public:
 	inline unsigned int nextOutgoingCounter() { return _outgoingPacketCounter++; }
 
 private:
-	volatile uint64_t _lastOut;
-	volatile uint64_t _lastIn;
-	volatile uint64_t _lastTrustEstablishedPacketReceived;
+	volatile int64_t _lastOut;
+	volatile int64_t _lastIn;
+	volatile int64_t _lastTrustEstablishedPacketReceived;
 	volatile uint64_t _incomingLinkQualityFastLog;
 	int64_t _localSocket;
 	volatile unsigned long _incomingLinkQualitySlowLogPtr;

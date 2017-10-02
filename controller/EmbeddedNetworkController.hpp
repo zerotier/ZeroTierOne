@@ -166,7 +166,7 @@ private:
 		}
 		network["objtype"] = "network";
 	}
-	inline void _addNetworkNonPersistedFields(nlohmann::json &network,uint64_t now,const JSONDB::NetworkSummaryInfo &ns)
+	inline void _addNetworkNonPersistedFields(nlohmann::json &network,int64_t now,const JSONDB::NetworkSummaryInfo &ns)
 	{
 		network["clock"] = now;
 		network["authorizedMemberCount"] = ns.authorizedMemberCount;
@@ -182,7 +182,7 @@ private:
 		// legacy fields
 		network.erase("lastModified");
 	}
-	inline void _addMemberNonPersistedFields(uint64_t nwid,uint64_t nodeId,nlohmann::json &member,uint64_t now)
+	inline void _addMemberNonPersistedFields(uint64_t nwid,uint64_t nodeId,nlohmann::json &member,int64_t now)
 	{
 		member["clock"] = now;
 		Mutex::Lock _l(_memberStatus_m);
@@ -197,7 +197,7 @@ private:
 		member.erase("lastRequestMetaData");
 	}
 
-	const uint64_t _startTime;
+	const int64_t _startTime;
 
 	volatile bool _running;
 	BlockingQueue<_RQEntry *> _queue;
@@ -230,7 +230,7 @@ private:
 		Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> lastRequestMetaData;
 		Identity identity;
 		InetAddress physicalAddr; // last known physical address
-		inline bool online(const uint64_t now) const { return ((now - lastRequestTime) < (ZT_NETWORK_AUTOCONF_DELAY * 2)); }
+		inline bool online(const int64_t now) const { return ((now - lastRequestTime) < (ZT_NETWORK_AUTOCONF_DELAY * 2)); }
 	};
 	struct _MemberStatusHash
 	{

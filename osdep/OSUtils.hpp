@@ -200,7 +200,7 @@ public:
 	/**
 	 * @return Current time in milliseconds since epoch
 	 */
-	static inline uint64_t now()
+	static inline int64_t now()
 	{
 #ifdef __WINDOWS__
 		FILETIME ft;
@@ -210,7 +210,7 @@ public:
 		SystemTimeToFileTime(&st,&ft);
 		tmp.LowPart = ft.dwLowDateTime;
 		tmp.HighPart = ft.dwHighDateTime;
-		return ( ((tmp.QuadPart - 116444736000000000ULL) / 10000L) + st.wMilliseconds );
+		return (int64_t)( ((tmp.QuadPart - 116444736000000000LL) / 10000L) + st.wMilliseconds );
 #else
 		struct timeval tv;
 #ifdef __LINUX__
@@ -218,7 +218,7 @@ public:
 #else
 		gettimeofday(&tv,(struct timezone *)0);
 #endif
-		return ( (1000ULL * (uint64_t)tv.tv_sec) + (uint64_t)(tv.tv_usec / 1000) );
+		return ( (1000LL * (int64_t)tv.tv_sec) + (int64_t)(tv.tv_usec / 1000) );
 #endif
 	};
 

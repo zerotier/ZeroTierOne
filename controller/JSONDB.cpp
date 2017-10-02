@@ -323,7 +323,7 @@ void JSONDB::threadMain()
 			_networks_m.unlock();
 		}
 
-		const uint64_t now = OSUtils::now();
+		const int64_t now = OSUtils::now();
 		try {
 			Mutex::Lock _l(_networks_m);
 			for(std::vector<uint64_t>::iterator ii(todo.begin());ii!=todo.end();++ii) {
@@ -373,7 +373,7 @@ void JSONDB::threadMain()
 								} catch ( ... ) {}
 							} else {
 								try {
-									ns.mostRecentDeauthTime = std::max(ns.mostRecentDeauthTime,OSUtils::jsonInt(member["lastDeauthorizedTime"],0ULL));
+									ns.mostRecentDeauthTime = std::max(ns.mostRecentDeauthTime,(int64_t)OSUtils::jsonInt(member["lastDeauthorizedTime"],0LL));
 								} catch ( ... ) {}
 							}
 							++ns.totalMemberCount;

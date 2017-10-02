@@ -120,7 +120,7 @@ public:
 	 * @param addr Remote address
 	 * @return True if we have an active path to this destination
 	 */
-	inline bool hasActivePathTo(uint64_t now,const InetAddress &addr) const
+	inline bool hasActivePathTo(int64_t now,const InetAddress &addr) const
 	{
 		Mutex::Lock _l(_paths_m);
 		return ( ((addr.ss_family == AF_INET)&&(_v4Path.p)&&(_v4Path.p->address() == addr)&&(_v4Path.p->alive(now))) || ((addr.ss_family == AF_INET6)&&(_v6Path.p)&&(_v6Path.p->address() == addr)&&(_v6Path.p->alive(now))) );
@@ -136,7 +136,7 @@ public:
 	 * @param force If true, send even if path is not alive
 	 * @return True if we actually sent something
 	 */
-	bool sendDirect(void *tPtr,const void *data,unsigned int len,uint64_t now,bool force);
+	bool sendDirect(void *tPtr,const void *data,unsigned int len,int64_t now,bool force);
 
 	/**
 	 * Get the best current direct path
@@ -148,7 +148,7 @@ public:
 	 * @param includeExpired If true, include even expired paths
 	 * @return Best current path or NULL if none
 	 */
-	SharedPtr<Path> getBestPath(uint64_t now,bool includeExpired);
+	SharedPtr<Path> getBestPath(int64_t now,bool includeExpired);
 
 	/**
 	 * Send a HELLO to this peer at a specified physical address
@@ -161,7 +161,7 @@ public:
 	 * @param now Current time
 	 * @param counter Outgoing packet counter
 	 */
-	void sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,uint64_t now,unsigned int counter);
+	void sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now,unsigned int counter);
 
 	/**
 	 * Send ECHO (or HELLO for older peers) to this peer at the given address
@@ -175,7 +175,7 @@ public:
 	 * @param sendFullHello If true, always send a full HELLO instead of just an ECHO
 	 * @param counter Outgoing packet counter
 	 */
-	void attemptToContactAt(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,uint64_t now,bool sendFullHello,unsigned int counter);
+	void attemptToContactAt(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now,bool sendFullHello,unsigned int counter);
 
 	/**
 	 * Try a memorized or statically defined path if any are known
@@ -185,7 +185,7 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 */
-	void tryMemorizedPath(void *tPtr,uint64_t now);
+	void tryMemorizedPath(void *tPtr,int64_t now);
 
 	/**
 	 * Send pings or keepalives depending on configured timeouts
@@ -195,7 +195,7 @@ public:
 	 * @param inetAddressFamily Keep this address family alive, or -1 for any
 	 * @return True if we have at least one direct path of the given family (or any if family is -1)
 	 */
-	bool doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily);
+	bool doPingAndKeepalive(void *tPtr,int64_t now,int inetAddressFamily);
 
 	/**
 	 * Specify remote path for this peer and forget others
@@ -209,7 +209,7 @@ public:
 	 * @param remoteAddress Remote address
 	 * @param now Current time
 	 */
-	void redirect(void *tPtr,const int64_t localSocket,const InetAddress &remoteAddress,const uint64_t now);
+	void redirect(void *tPtr,const int64_t localSocket,const InetAddress &remoteAddress,const int64_t now);
 
 	/**
 	 * Reset paths within a given IP scope and address family
@@ -222,7 +222,7 @@ public:
 	 * @param inetAddressFamily Family e.g. AF_INET
 	 * @param now Current time
 	 */
-	inline void resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,uint64_t now)
+	inline void resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,int64_t now)
 	{
 		Mutex::Lock _l(_paths_m);
 		if ((inetAddressFamily == AF_INET)&&(_v4Path.lr)&&(_v4Path.p->address().ipScope() == scope)) {
@@ -243,7 +243,7 @@ public:
 	 * @param v4 Result parameter to receive active IPv4 address, if any
 	 * @param v6 Result parameter to receive active IPv6 address, if any
 	 */
-	inline void getRendezvousAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
+	inline void getRendezvousAddresses(int64_t now,InetAddress &v4,InetAddress &v6) const
 	{
 		Mutex::Lock _l(_paths_m);
 		if (((now - _v4Path.lr) < ZT_PEER_PATH_EXPIRATION)&&(_v4Path.p->alive(now)))
@@ -256,7 +256,7 @@ public:
 	 * @param now Current time
 	 * @return All known paths to this peer
 	 */
-	inline std::vector< SharedPtr<Path> > paths(const uint64_t now) const
+	inline std::vector< SharedPtr<Path> > paths(const int64_t now) const
 	{
 		std::vector< SharedPtr<Path> > pp;
 		Mutex::Lock _l(_paths_m);
@@ -270,17 +270,17 @@ public:
 	/**
 	 * @return Time of last receive of anything, whether direct or relayed
 	 */
-	inline uint64_t lastReceive() const { return _lastReceive; }
+	inline int64_t lastReceive() const { return _lastReceive; }
 
 	/**
 	 * @return True if we've heard from this peer in less than ZT_PEER_ACTIVITY_TIMEOUT
 	 */
-	inline bool isAlive(const uint64_t now) const { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
+	inline bool isAlive(const int64_t now) const { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return True if this peer has sent us real network traffic recently
 	 */
-	inline uint64_t isActive(uint64_t now) const { return ((now - _lastNontrivialReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
+	inline int64_t isActive(int64_t now) const { return ((now - _lastNontrivialReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Latency in milliseconds or 0 if unknown
@@ -298,7 +298,7 @@ public:
 	 *
 	 * @return Relay quality score computed from latency and other factors, lower is better
 	 */
-	inline unsigned int relayQuality(const uint64_t now) const
+	inline unsigned int relayQuality(const int64_t now) const
 	{
 		const uint64_t tsr = now - _lastReceive;
 		if (tsr >= ZT_PEER_ACTIVITY_TIMEOUT)
@@ -353,12 +353,12 @@ public:
 	/**
 	 * @return True if peer has received a trust established packet (e.g. common network membership) in the past ZT_TRUST_EXPIRATION ms
 	 */
-	inline bool trustEstablished(const uint64_t now) const { return ((now - _lastTrustEstablishedPacketReceived) < ZT_TRUST_EXPIRATION); }
+	inline bool trustEstablished(const int64_t now) const { return ((now - _lastTrustEstablishedPacketReceived) < ZT_TRUST_EXPIRATION); }
 
 	/**
 	 * Rate limit gate for VERB_PUSH_DIRECT_PATHS
 	 */
-	inline bool rateGatePushDirectPaths(const uint64_t now)
+	inline bool rateGatePushDirectPaths(const int64_t now)
 	{
 		if ((now - _lastDirectPathPushReceive) <= ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME)
 			++_directPathPushCutoffCount;
@@ -370,7 +370,7 @@ public:
 	/**
 	 * Rate limit gate for VERB_NETWORK_CREDENTIALS
 	 */
-	inline bool rateGateCredentialsReceived(const uint64_t now)
+	inline bool rateGateCredentialsReceived(const int64_t now)
 	{
 		if ((now - _lastCredentialsReceived) <= ZT_PEER_CREDENTIALS_CUTOFF_TIME)
 			++_credentialsCutoffCount;
@@ -382,7 +382,7 @@ public:
 	/**
 	 * Rate limit gate for sending of ERROR_NEED_MEMBERSHIP_CERTIFICATE
 	 */
-	inline bool rateGateRequestCredentials(const uint64_t now)
+	inline bool rateGateRequestCredentials(const int64_t now)
 	{
 		if ((now - _lastCredentialRequestSent) >= ZT_PEER_GENERAL_RATE_LIMIT) {
 			_lastCredentialRequestSent = now;
@@ -394,7 +394,7 @@ public:
 	/**
 	 * Rate limit gate for inbound WHOIS requests
 	 */
-	inline bool rateGateInboundWhoisRequest(const uint64_t now)
+	inline bool rateGateInboundWhoisRequest(const int64_t now)
 	{
 		if ((now - _lastWhoisRequestReceived) >= ZT_PEER_WHOIS_RATE_LIMIT) {
 			_lastWhoisRequestReceived = now;
@@ -406,7 +406,7 @@ public:
 	/**
 	 * Rate limit gate for inbound ECHO requests
 	 */
-	inline bool rateGateEchoRequest(const uint64_t now)
+	inline bool rateGateEchoRequest(const int64_t now)
 	{
 		if ((now - _lastEchoRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
 			_lastEchoRequestReceived = now;
@@ -418,7 +418,7 @@ public:
 	/**
 	 * Rate gate incoming requests for network COM
 	 */
-	inline bool rateGateIncomingComRequest(const uint64_t now)
+	inline bool rateGateIncomingComRequest(const int64_t now)
 	{
 		if ((now - _lastComRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
 			_lastComRequestReceived = now;
@@ -430,7 +430,7 @@ public:
 	/**
 	 * Rate gate outgoing requests for network COM
 	 */
-	inline bool rateGateOutgoingComRequest(const uint64_t now)
+	inline bool rateGateOutgoingComRequest(const int64_t now)
 	{
 		if ((now - _lastComRequestSent) >= ZT_PEER_GENERAL_RATE_LIMIT) {
 			_lastComRequestSent = now;
@@ -484,7 +484,7 @@ public:
 	}
 
 	template<unsigned int C>
-	inline static SharedPtr<Peer> deserializeFromCache(uint64_t now,void *tPtr,Buffer<C> &b,const RuntimeEnvironment *renv)
+	inline static SharedPtr<Peer> deserializeFromCache(int64_t now,void *tPtr,Buffer<C> &b,const RuntimeEnvironment *renv)
 	{
 		try {
 			unsigned int ptr = 0;
@@ -527,8 +527,8 @@ private:
 	struct _PeerPath
 	{
 		_PeerPath() : lr(0),sticky(0),p() {}
-		uint64_t lr; // time of last valid ZeroTier packet
-		uint64_t sticky; // time last set as sticky
+		int64_t lr; // time of last valid ZeroTier packet
+		int64_t sticky; // time last set as sticky
 		SharedPtr<Path> p;
 	};
 
@@ -536,18 +536,18 @@ private:
 
 	const RuntimeEnvironment *RR;
 
-	uint64_t _lastReceive; // direct or indirect
-	uint64_t _lastNontrivialReceive; // frames, things like netconf, etc.
-	uint64_t _lastTriedMemorizedPath;
-	uint64_t _lastDirectPathPushSent;
-	uint64_t _lastDirectPathPushReceive;
-	uint64_t _lastCredentialRequestSent;
-	uint64_t _lastWhoisRequestReceived;
-	uint64_t _lastEchoRequestReceived;
-	uint64_t _lastComRequestReceived;
-	uint64_t _lastComRequestSent;
-	uint64_t _lastCredentialsReceived;
-	uint64_t _lastTrustEstablishedPacketReceived;
+	int64_t _lastReceive; // direct or indirect
+	int64_t _lastNontrivialReceive; // frames, things like netconf, etc.
+	int64_t _lastTriedMemorizedPath;
+	int64_t _lastDirectPathPushSent;
+	int64_t _lastDirectPathPushReceive;
+	int64_t _lastCredentialRequestSent;
+	int64_t _lastWhoisRequestReceived;
+	int64_t _lastEchoRequestReceived;
+	int64_t _lastComRequestReceived;
+	int64_t _lastComRequestSent;
+	int64_t _lastCredentialsReceived;
+	int64_t _lastTrustEstablishedPacketReceived;
 
 	uint16_t _vProto;
 	uint16_t _vMajor;

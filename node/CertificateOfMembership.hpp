@@ -176,7 +176,7 @@ public:
 	/**
 	 * @return Timestamp for this cert and maximum delta for timestamp
 	 */
-	inline uint64_t timestamp() const
+	inline int64_t timestamp() const
 	{
 		for(unsigned int i=0;i<_qualifierCount;++i) {
 			if (_qualifiers[i].id == COM_RESERVED_ID_TIMESTAMP)

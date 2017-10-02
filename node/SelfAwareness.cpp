@@ -49,7 +49,7 @@ namespace ZeroTier {
 class _ResetWithinScope
 {
 public:
-	_ResetWithinScope(void *tPtr,uint64_t now,int inetAddressFamily,InetAddress::IpScope scope) :
+	_ResetWithinScope(void *tPtr,int64_t now,int inetAddressFamily,InetAddress::IpScope scope) :
 		_now(now),
 		_tPtr(tPtr),
 		_family(inetAddressFamily),
@@ -70,7 +70,7 @@ SelfAwareness::SelfAwareness(const RuntimeEnvironment *renv) :
 {
 }
 
-void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now)
+void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,int64_t now)
 {
 	const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
 
@@ -112,7 +112,7 @@ void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receive
 	}
 }
 
-void SelfAwareness::clean(uint64_t now)
+void SelfAwareness::clean(int64_t now)
 {
 	Mutex::Lock _l(_phy_m);
 	Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);

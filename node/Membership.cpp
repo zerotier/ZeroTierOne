@@ -51,7 +51,7 @@ Membership::Membership() :
 	resetPushState();
 }
 
-void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex,const bool force)
+void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex,const bool force)
 {
 	bool sendCom = ( (nconf.com) && ( ((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) );
 
@@ -127,13 +127,13 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const u
 
 Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const CertificateOfMembership &com)
 {
-	const uint64_t newts = com.timestamp();
+	const int64_t newts = com.timestamp();
 	if (newts <= _comRevocationThreshold) {
 		RR->t->credentialRejected(tPtr,com,"revoked");
 		return ADD_REJECTED;
 	}
 
-	const uint64_t oldts = _com.timestamp();
+	const int64_t oldts = _com.timestamp();
 	if (newts < oldts) {
 		RR->t->credentialRejected(tPtr,com,"old");
 		return ADD_REJECTED;
@@ -227,7 +227,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	}
 }
 
-void Membership::clean(const uint64_t now,const NetworkConfig &nconf)
+void Membership::clean(const int64_t now,const NetworkConfig &nconf)
 {
 	_cleanCredImpl<Tag>(nconf,_remoteTags);
 	_cleanCredImpl<Capability>(nconf,_remoteCaps);

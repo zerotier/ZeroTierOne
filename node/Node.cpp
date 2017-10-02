@@ -54,7 +54,7 @@ namespace ZeroTier {
 /* Public Node interface (C++, exposed via CAPI bindings)                   */
 /****************************************************************************/
 
-Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now) :
+Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64_t now) :
 	_RR(this),
 	RR(&_RR),
 	_uPtr(uptr),
@@ -139,12 +139,12 @@ Node::~Node()
 
 ZT_ResultCode Node::processWirePacket(
 	void *tptr,
-	uint64_t now,
+	int64_t now,
 	int64_t localSocket,
 	const struct sockaddr_storage *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
-	volatile uint64_t *nextBackgroundTaskDeadline)
+	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
 	RR->sw->onRemotePacket(tptr,localSocket,*(reinterpret_cast<const InetAddress *>(remoteAddress)),packetData,packetLength);
@@ -153,7 +153,7 @@ ZT_ResultCode Node::processWirePacket(
 
 ZT_ResultCode Node::processVirtualNetworkFrame(
 	void *tptr,
-	uint64_t now,
+	int64_t now,
 	uint64_t nwid,
 	uint64_t sourceMac,
 	uint64_t destMac,
@@ -161,7 +161,7 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	unsigned int vlanId,
 	const void *frameData,
 	unsigned int frameLength,
-	volatile uint64_t *nextBackgroundTaskDeadline)
+	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
 	SharedPtr<Network> nw(this->network(nwid));
@@ -175,7 +175,7 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 class _PingPeersThatNeedPing
 {
 public:
-	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,void *tPtr,Hashtable< Address,std::vector<InetAddress> > &upstreamsToContact,uint64_t now) :
+	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,void *tPtr,Hashtable< Address,std::vector<InetAddress> > &upstreamsToContact,int64_t now) :
 		lastReceiveFromUpstream(0),
 		RR(renv),
 		_tPtr(tPtr),
@@ -185,7 +185,7 @@ public:
 	{
 	}
 
-	uint64_t lastReceiveFromUpstream; // tracks last time we got a packet from an 'upstream' peer like a root or a relay
+	int64_t lastReceiveFromUpstream; // tracks last time we got a packet from an 'upstream' peer like a root or a relay
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
@@ -234,17 +234,17 @@ private:
 	const RuntimeEnvironment *RR;
 	void *_tPtr;
 	Hashtable< Address,std::vector<InetAddress> > &_upstreamsToContact;
-	const uint64_t _now;
+	const int64_t _now;
 	const SharedPtr<Peer> _bestCurrentUpstream;
 };
 
-ZT_ResultCode Node::processBackgroundTasks(void *tptr,uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline)
+ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
 	Mutex::Lock bl(_backgroundTasksLock);
 
 	unsigned long timeUntilNextPingCheck = ZT_PING_CHECK_INVERVAL;
-	const uint64_t timeSinceLastPingCheck = now - _lastPingCheck;
+	const int64_t timeSinceLastPingCheck = now - _lastPingCheck;
 	if (timeSinceLastPingCheck >= ZT_PING_CHECK_INVERVAL) {
 		try {
 			_lastPingCheck = now;
@@ -305,7 +305,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,uint64_t now,volatile uint
 	}
 
 	try {
-		*nextBackgroundTaskDeadline = now + (uint64_t)std::max(std::min(timeUntilNextPingCheck,RR->sw->doTimerTasks(tptr,now)),(unsigned long)ZT_CORE_TIMER_TASK_GRANULARITY);
+		*nextBackgroundTaskDeadline = now + (int64_t)std::max(std::min(timeUntilNextPingCheck,RR->sw->doTimerTasks(tptr,now)),(unsigned long)ZT_CORE_TIMER_TASK_GRANULARITY);
 	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}
@@ -689,7 +689,7 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 
 extern "C" {
 
-enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now)
+enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64_t now)
 {
 	*node = (ZT_Node *)0;
 	try {
@@ -714,12 +714,12 @@ void ZT_Node_delete(ZT_Node *node)
 enum ZT_ResultCode ZT_Node_processWirePacket(
 	ZT_Node *node,
 	void *tptr,
-	uint64_t now,
+	int64_t now,
 	int64_t localSocket,
 	const struct sockaddr_storage *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
-	volatile uint64_t *nextBackgroundTaskDeadline)
+	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(tptr,now,localSocket,remoteAddress,packetData,packetLength,nextBackgroundTaskDeadline);
@@ -733,7 +733,7 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
 enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	ZT_Node *node,
 	void *tptr,
-	uint64_t now,
+	int64_t now,
 	uint64_t nwid,
 	uint64_t sourceMac,
 	uint64_t destMac,
@@ -741,7 +741,7 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	unsigned int vlanId,
 	const void *frameData,
 	unsigned int frameLength,
-	volatile uint64_t *nextBackgroundTaskDeadline)
+	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->processVirtualNetworkFrame(tptr,now,nwid,sourceMac,destMac,etherType,vlanId,frameData,frameLength,nextBackgroundTaskDeadline);
@@ -752,7 +752,7 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	}
 }
 
-enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,void *tptr,uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline)
+enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,void *tptr,int64_t now,volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->processBackgroundTasks(tptr,now,nextBackgroundTaskDeadline);

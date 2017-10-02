@@ -77,7 +77,7 @@ public:
 	 * @param now Current time
 	 * @throws std::out_of_range Range error processing packet
 	 */
-	IncomingPacket(const void *data,unsigned int len,const SharedPtr<Path> &path,uint64_t now) :
+	IncomingPacket(const void *data,unsigned int len,const SharedPtr<Path> &path,int64_t now) :
 		Packet(data,len),
 		_receiveTime(now),
 		_path(path)
@@ -93,7 +93,7 @@ public:
 	 * @param now Current time
 	 * @throws std::out_of_range Range error processing packet
 	 */
-	inline void init(const void *data,unsigned int len,const SharedPtr<Path> &path,uint64_t now)
+	inline void init(const void *data,unsigned int len,const SharedPtr<Path> &path,int64_t now)
 	{
 		copyFrom(data,len);
 		_receiveTime = now;

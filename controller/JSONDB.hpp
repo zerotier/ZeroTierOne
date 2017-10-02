@@ -57,7 +57,7 @@ public:
 		unsigned long authorizedMemberCount;
 		unsigned long activeMemberCount;
 		unsigned long totalMemberCount;
-		uint64_t mostRecentDeauthTime;
+		int64_t mostRecentDeauthTime;
 	};
 
 	JSONDB(const std::string &basePath,EmbeddedNetworkController *parent);

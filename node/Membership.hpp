@@ -80,7 +80,7 @@ public:
 	 * @param localCapabilityIndex Index of local capability to include (in nconf.capabilities[]) or -1 if none
 	 * @param force If true, send objects regardless of last push time
 	 */
-	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const uint64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex,const bool force);
+	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex,const bool force);
 
 	/**
 	 * Check whether we should push MULTICAST_LIKEs to this peer, and update last sent time if true
@@ -88,7 +88,7 @@ public:
 	 * @param now Current time
 	 * @return True if we should update multicasts
 	 */
-	inline bool multicastLikeGate(const uint64_t now)
+	inline bool multicastLikeGate(const int64_t now)
 	{
 		if ((now - _lastUpdatedMulticast) >= ZT_MULTICAST_ANNOUNCE_PERIOD) {
 			_lastUpdatedMulticast = now;
@@ -110,7 +110,7 @@ public:
 		return nconf.com.agreesWith(_com);
 	}
 
-	inline bool recentlyAssociated(const uint64_t now) const
+	inline bool recentlyAssociated(const int64_t now) const
 	{
 		return ((_com)&&((now - _com.timestamp()) < ZT_PEER_ACTIVITY_TIMEOUT));
 	}
@@ -180,7 +180,7 @@ public:
 	 * @param now Current time
 	 * @param nconf Current network configuration
 	 */
-	void clean(const uint64_t now,const NetworkConfig &nconf);
+	void clean(const int64_t now,const NetworkConfig &nconf);
 
 	/**
 	 * Reset last pushed time for local credentials
@@ -223,13 +223,13 @@ private:
 	}
 
 	// Last time we pushed MULTICAST_LIKE(s)
-	uint64_t _lastUpdatedMulticast;
+	int64_t _lastUpdatedMulticast;
 
 	// Last time we pushed our COM to this peer
-	uint64_t _lastPushedCom;
+	int64_t _lastPushedCom;
 
 	// Revocation threshold for COM or 0 if none
-	uint64_t _comRevocationThreshold;
+	int64_t _comRevocationThreshold;
 
 	// Remote member's latest network COM
 	CertificateOfMembership _com;

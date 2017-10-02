@@ -1587,7 +1587,7 @@ struct ZT_Node_Callbacks
  * @param now Current clock in milliseconds
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64_t now);
 
 /**
  * Delete a node and free all resources it consumes
@@ -1615,12 +1615,12 @@ ZT_SDK_API void ZT_Node_delete(ZT_Node *node);
 ZT_SDK_API enum ZT_ResultCode ZT_Node_processWirePacket(
 	ZT_Node *node,
 	void *tptr,
-	uint64_t now,
+	int64_t now,
 	int64_t localSocket,
 	const struct sockaddr_storage *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
-	volatile uint64_t *nextBackgroundTaskDeadline);
+	volatile int64_t *nextBackgroundTaskDeadline);
 
 /**
  * Process a frame from a virtual network port (tap)
@@ -1641,7 +1641,7 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processWirePacket(
 ZT_SDK_API enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	ZT_Node *node,
 	void *tptr,
-	uint64_t now,
+	int64_t now,
 	uint64_t nwid,
 	uint64_t sourceMac,
 	uint64_t destMac,
@@ -1649,7 +1649,7 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	unsigned int vlanId,
 	const void *frameData,
 	unsigned int frameLength,
-	volatile uint64_t *nextBackgroundTaskDeadline);
+	volatile int64_t *nextBackgroundTaskDeadline);
 
 /**
  * Perform periodic background operations
@@ -1660,7 +1660,7 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
  * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,void *tptr,uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,void *tptr,int64_t now,volatile int64_t *nextBackgroundTaskDeadline);
 
 /**
  * Join a network

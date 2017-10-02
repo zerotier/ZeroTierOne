@@ -303,7 +303,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 	}
 }
 
-bool SoftwareUpdater::check(const uint64_t now)
+bool SoftwareUpdater::check(const int64_t now)
 {
 	if ((now - _lastCheckTime) >= ZT_SOFTWARE_UPDATE_CHECK_PERIOD) {
 		_lastCheckTime = now;

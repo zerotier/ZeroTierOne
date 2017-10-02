@@ -98,7 +98,7 @@ public:
 	 * @param mg Multicast group
 	 * @param member New member address
 	 */
-	inline void add(void *tPtr,uint64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &member)
+	inline void add(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &member)
 	{
 		Mutex::Lock _l(_groups_m);
 		_add(tPtr,now,nwid,mg,_groups[Multicaster::Key(nwid,mg)],member);
@@ -117,7 +117,7 @@ public:
 	 * @param count Number of addresses
 	 * @param totalKnown Total number of known addresses as reported by peer
 	 */
-	void addMultiple(void *tPtr,uint64_t now,uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,unsigned int totalKnown);
+	void addMultiple(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,unsigned int totalKnown);
 
 	/**
 	 * Remove a multicast group member (if present)
@@ -174,7 +174,7 @@ public:
 	void send(
 		void *tPtr,
 		unsigned int limit,
-		uint64_t now,
+		int64_t now,
 		uint64_t nwid,
 		bool disableCompression,
 		const std::vector<Address> &alwaysSendTo,
@@ -190,7 +190,7 @@ public:
 	 * @param RR Runtime environment
 	 * @param now Current time
 	 */
-	void clean(uint64_t now);
+	void clean(int64_t now);
 
 	/**
 	 * Add an authorization credential
@@ -212,7 +212,7 @@ public:
 	 * @param now Current time
 	 * @return True if GATHER and LIKE should be allowed
 	 */
-	bool cacheAuthorized(const Address &a,const uint64_t nwid,const uint64_t now) const
+	bool cacheAuthorized(const Address &a,const uint64_t nwid,const int64_t now) const
 	{
 		Mutex::Lock _l(_gatherAuth_m);
 		const uint64_t *p = _gatherAuth.get(_GatherAuthKey(nwid,a));
@@ -220,7 +220,7 @@ public:
 	}
 
 private:
-	void _add(void *tPtr,uint64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &member);
+	void _add(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &member);
 
 	const RuntimeEnvironment *RR;
 

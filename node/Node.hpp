@@ -64,7 +64,7 @@ class World;
 class Node : public NetworkController::Sender
 {
 public:
-	Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,uint64_t now);
+	Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64_t now);
 	virtual ~Node();
 
 	// Get rid of alignment warnings on 32-bit Windows and possibly improve performance
@@ -77,15 +77,15 @@ public:
 
 	ZT_ResultCode processWirePacket(
 		void *tptr,
-		uint64_t now,
+		int64_t now,
 		int64_t localSocket,
 		const struct sockaddr_storage *remoteAddress,
 		const void *packetData,
 		unsigned int packetLength,
-		volatile uint64_t *nextBackgroundTaskDeadline);
+		volatile int64_t *nextBackgroundTaskDeadline);
 	ZT_ResultCode processVirtualNetworkFrame(
 		void *tptr,
-		uint64_t now,
+		int64_t now,
 		uint64_t nwid,
 		uint64_t sourceMac,
 		uint64_t destMac,
@@ -93,8 +93,8 @@ public:
 		unsigned int vlanId,
 		const void *frameData,
 		unsigned int frameLength,
-		volatile uint64_t *nextBackgroundTaskDeadline);
-	ZT_ResultCode processBackgroundTasks(void *tptr,uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
+		volatile int64_t *nextBackgroundTaskDeadline);
+	ZT_ResultCode processBackgroundTasks(void *tptr,int64_t now,volatile int64_t *nextBackgroundTaskDeadline);
 	ZT_ResultCode join(uint64_t nwid,void *uptr,void *tptr);
 	ZT_ResultCode leave(uint64_t nwid,void **uptr,void *tptr);
 	ZT_ResultCode multicastSubscribe(void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
@@ -114,7 +114,7 @@ public:
 
 	// Internal functions ------------------------------------------------------
 
-	inline uint64_t now() const { return _now; }
+	inline int64_t now() const { return _now; }
 
 	inline bool putPacket(void *tPtr,const int64_t localSocket,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0)
 	{
@@ -243,7 +243,7 @@ public:
 	 * @param from Source address of packet
 	 * @return True if within rate limits
 	 */
-	inline bool rateGateIdentityVerification(const uint64_t now,const InetAddress &from)
+	inline bool rateGateIdentityVerification(const int64_t now,const InetAddress &from)
 	{
 		unsigned long iph = from.rateGateHash();
 		if ((now - _lastIdentityVerification[iph]) >= ZT_IDENTITY_VALIDATION_SOURCE_RATE_LIMIT) {
@@ -270,7 +270,7 @@ private:
 	uint32_t _expectingRepliesTo[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1][ZT_EXPECTING_REPLIES_BUCKET_MASK2 + 1];
 
 	// Time of last identity verification indexed by InetAddress.rateGateHash() -- used in IncomingPacket::_doHELLO() via rateGateIdentityVerification()
-	uint64_t _lastIdentityVerification[16384];
+	int64_t _lastIdentityVerification[16384];
 
 	Hashtable< uint64_t,SharedPtr<Network> > _networks;
 	Mutex _networks_m;
@@ -281,10 +281,10 @@ private:
 	Mutex _backgroundTasksLock;
 
 	Address _remoteTraceTarget;
-	uint64_t _now;
-	uint64_t _lastPingCheck;
-	uint64_t _lastHousekeepingRun;
-	volatile uint64_t _prngState[2];
+	int64_t _now;
+	int64_t _lastPingCheck;
+	int64_t _lastHousekeepingRun;
+	volatile int64_t _prngState[2];
 	bool _online;
 };
 

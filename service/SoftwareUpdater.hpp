@@ -167,7 +167,7 @@ public:
 	 *
 	 * @return True if we've downloaded and verified an update
 	 */
-	bool check(const uint64_t now);
+	bool check(const int64_t now);
 
 	/**
 	 * @return Meta-data for downloaded update or NULL if none

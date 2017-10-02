@@ -85,7 +85,7 @@ public:
 	inline uint32_t id() const { return _id; }
 	inline uint32_t credentialId() const { return _credentialId; }
 	inline uint64_t networkId() const { return _networkId; }
-	inline uint64_t threshold() const { return _threshold; }
+	inline int64_t threshold() const { return _threshold; }
 	inline const Address &target() const { return _target; }
 	inline const Address &signer() const { return _signedBy; }
 	inline Credential::Type type() const { return _type; }
@@ -184,7 +184,7 @@ private:
 	uint32_t _id;
 	uint32_t _credentialId;
 	uint64_t _networkId;
-	uint64_t _threshold;
+	int64_t _threshold;
 	uint64_t _flags;
 	Address _target;
 	Address _signedBy;

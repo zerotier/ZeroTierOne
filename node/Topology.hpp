@@ -286,13 +286,13 @@ public:
 	/**
 	 * Clean and flush database
 	 */
-	void doPeriodicTasks(void *tPtr,uint64_t now);
+	void doPeriodicTasks(void *tPtr,int64_t now);
 
 	/**
 	 * @param now Current time
 	 * @return Number of peers with active direct paths
 	 */
-	inline unsigned long countActive(uint64_t now) const
+	inline unsigned long countActive(int64_t now) const
 	{
 		unsigned long cnt = 0;
 		Mutex::Lock _l(_peers_m);

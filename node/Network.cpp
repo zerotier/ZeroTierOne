@@ -592,7 +592,7 @@ bool Network::filterOutgoingPacket(
 	const unsigned int etherType,
 	const unsigned int vlanId)
 {
-	const uint64_t now = RR->node->now();
+	const int64_t now = RR->node->now();
 	Address ztFinalDest(ztDest);
 	int localCapabilityIndex = -1;
 	int accept = 0;
@@ -1164,7 +1164,7 @@ void Network::requestConfiguration(void *tPtr)
 
 bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 {
-	const uint64_t now = RR->node->now();
+	const int64_t now = RR->node->now();
 	Mutex::Lock _l(_lock);
 	try {
 		if (_config) {
@@ -1192,7 +1192,7 @@ bool Network::recentlyAssociatedWith(const Address &addr)
 
 void Network::clean()
 {
-	const uint64_t now = RR->node->now();
+	const int64_t now = RR->node->now();
 	Mutex::Lock _l(_lock);
 
 	if (_destroyed)
@@ -1257,7 +1257,7 @@ void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 	}
 }
 
-void Network::learnBridgedMulticastGroup(void *tPtr,const MulticastGroup &mg,uint64_t now)
+void Network::learnBridgedMulticastGroup(void *tPtr,const MulticastGroup &mg,int64_t now)
 {
 	Mutex::Lock _l(_lock);
 	const unsigned long tmp = (unsigned long)_multicastGroupsBehindMe.size();
@@ -1377,7 +1377,7 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMulticastGroup)
 {
 	// Assumes _lock is locked
-	const uint64_t now = RR->node->now();
+	const int64_t now = RR->node->now();
 
 	std::vector<MulticastGroup> groups;
 	if (newMulticastGroup)

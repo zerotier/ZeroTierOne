@@ -114,7 +114,7 @@ public:
 	 * @param now Current time
 	 * @param addr Address to look up
 	 */
-	void requestWhois(void *tPtr,const uint64_t now,const Address &addr);
+	void requestWhois(void *tPtr,const int64_t now,const Address &addr);
 
 	/**
 	 * Run any processes that are waiting for this peer's identity
@@ -136,25 +136,25 @@ public:
 	 * @param now Current time
 	 * @return Number of milliseconds until doTimerTasks() should be run again
 	 */
-	unsigned long doTimerTasks(void *tPtr,uint64_t now);
+	unsigned long doTimerTasks(void *tPtr,int64_t now);
 
 private:
-	bool _shouldUnite(const uint64_t now,const Address &source,const Address &destination);
+	bool _shouldUnite(const int64_t now,const Address &source,const Address &destination);
 	bool _trySend(void *tPtr,Packet &packet,bool encrypt); // packet is modified if return is true
 
 	const RuntimeEnvironment *const RR;
-	uint64_t _lastBeaconResponse;
-	volatile uint64_t _lastCheckedQueues;
+	int64_t _lastBeaconResponse;
+	volatile int64_t _lastCheckedQueues;
 
 	// Time we last sent a WHOIS request for each address
-	Hashtable< Address,uint64_t > _lastSentWhoisRequest;
+	Hashtable< Address,int64_t > _lastSentWhoisRequest;
 	Mutex _lastSentWhoisRequest_m;
 
 	// Packets waiting for WHOIS replies or other decode info or missing fragments
 	struct RXQueueEntry
 	{
 		RXQueueEntry() : timestamp(0) {}
-		volatile uint64_t timestamp; // 0 if entry is not in use
+		volatile int64_t timestamp; // 0 if entry is not in use
 		volatile uint64_t packetId;
 		IncomingPacket frag0; // head of packet
 		Packet::Fragment frags[ZT_MAX_PACKET_FRAGMENTS - 1]; // later fragments (if any)

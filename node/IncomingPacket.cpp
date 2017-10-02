@@ -169,7 +169,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 			// Peers can send this in response to frames if they do not have a recent enough COM from us
 			networkId = at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD);
 			const SharedPtr<Network> network(RR->node->network(networkId));
-			const uint64_t now = RR->node->now();
+			const int64_t now = RR->node->now();
 			if ( (network) && (network->config().com) && (peer->rateGateIncomingComRequest(now)) )
 				network->pushCredentialsNow(tPtr,peer->address(),now);
 		}	break;
@@ -202,7 +202,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 
 bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool alreadyAuthenticated)
 {
-	const uint64_t now = RR->node->now();
+	const int64_t now = RR->node->now();
 
 	const uint64_t pid = packetId();
 	const Address fromAddress(source());
@@ -210,7 +210,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 	const unsigned int vMajor = (*this)[ZT_PROTO_VERB_HELLO_IDX_MAJOR_VERSION];
 	const unsigned int vMinor = (*this)[ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION];
 	const unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO_IDX_REVISION);
-	const uint64_t timestamp = at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
+	const int64_t timestamp = at<int64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
 	Identity id;
 	unsigned int ptr = ZT_PROTO_VERB_HELLO_IDX_IDENTITY + id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
 
@@ -725,7 +725,7 @@ bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,void *tPtr,const Share
 
 bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
-	const uint64_t now = RR->node->now();
+	const int64_t now = RR->node->now();
 
 	uint64_t authOnNetwork[256]; // cache for approved network IDs
 	unsigned int authOnNetworkCount = 0;
@@ -1082,7 +1082,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 
 bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
-	const uint64_t now = RR->node->now();
+	const int64_t now = RR->node->now();
 
 	// First, subject this to a rate limit
 	if (!peer->rateGatePushDirectPaths(now)) {
@@ -1186,7 +1186,7 @@ bool IncomingPacket::_doREMOTE_TRACE(const RuntimeEnvironment *RR,void *tPtr,con
 
 void IncomingPacket::_sendErrorNeedCredentials(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer,const uint64_t nwid)
 {
-	const uint64_t now = RR->node->now();
+	const int64_t now = RR->node->now();
 	if (peer->rateGateOutgoingComRequest(now)) {
 		Packet outp(source(),RR->identity.address(),Packet::VERB_ERROR);
 		outp.append((uint8_t)verb());

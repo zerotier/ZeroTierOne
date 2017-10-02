@@ -305,7 +305,7 @@ public:
 	 * @param mg Multicast group
 	 * @param now Current time
 	 */
-	void learnBridgedMulticastGroup(void *tPtr,const MulticastGroup &mg,uint64_t now);
+	void learnBridgedMulticastGroup(void *tPtr,const MulticastGroup &mg,int64_t now);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
@@ -357,7 +357,7 @@ public:
 	 * @param to Destination peer address
 	 * @param now Current time
 	 */
-	inline void pushCredentialsNow(void *tPtr,const Address &to,const uint64_t now)
+	inline void pushCredentialsNow(void *tPtr,const Address &to,const int64_t now)
 	{
 		Mutex::Lock _l(_lock);
 		_membership(to).pushCredentials(RR,tPtr,now,to,_config,-1,true);

@@ -55,14 +55,14 @@ public:
 	 * @param trusted True if this peer is trusted as an authority to inform us of external address changes
 	 * @param now Current time
 	 */
-	void iam(void *tPtr,const Address &reporter,const int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now);
+	void iam(void *tPtr,const Address &reporter,const int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,int64_t now);
 
 	/**
 	 * Clean up database periodically
 	 *
 	 * @param now Current time
 	 */
-	void clean(uint64_t now);
+	void clean(int64_t now);
 
 	/**
 	 * If we appear to be behind a symmetric NAT, get predictions for possible external endpoints

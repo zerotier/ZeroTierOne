@@ -276,6 +276,10 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 		pa.push_back(j);
 	}
 	pj["paths"] = pa;
+
+	if (peer->address == 0xda6c71a1ad) {
+		fprintf(stdout, "%s\n", pj.dump(2).c_str());
+	}
 }
 
 static void _moonToJson(nlohmann::json &mj,const World &world)
@@ -436,7 +440,7 @@ public:
 	uint64_t _lastRestart;
 
 	// Deadline for the next background task service function
-	volatile uint64_t _nextBackgroundTaskDeadline;
+	volatile int64_t _nextBackgroundTaskDeadline;
 
 	// Configured networks
 	struct NetworkState
@@ -755,12 +759,12 @@ public:
 
 			// Main I/O loop
 			_nextBackgroundTaskDeadline = 0;
-			uint64_t clockShouldBe = OSUtils::now();
+			int64_t clockShouldBe = OSUtils::now();
 			_lastRestart = clockShouldBe;
-			uint64_t lastTapMulticastGroupCheck = 0;
-			uint64_t lastBindRefresh = 0;
-			uint64_t lastUpdateCheck = clockShouldBe;
-			uint64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
+			int64_t lastTapMulticastGroupCheck = 0;
+			int64_t lastBindRefresh = 0;
+			int64_t lastUpdateCheck = clockShouldBe;
+			int64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
 			for(;;) {
 				_run_m.lock();
 				if (!_run) {
@@ -773,7 +777,7 @@ public:
 					_run_m.unlock();
 				}
 
-				const uint64_t now = OSUtils::now();
+				const int64_t now = OSUtils::now();
 
 				// Attempt to detect sleep/wake events by detecting delay overruns
 				bool restarted = false;
@@ -809,7 +813,7 @@ public:
 				}
 
 				// Run background task processor in core if it's time to do so
-				uint64_t dl = _nextBackgroundTaskDeadline;
+				int64_t dl = _nextBackgroundTaskDeadline;
 				if (dl <= now) {
 					_node->processBackgroundTasks((void *)0,now,&_nextBackgroundTaskDeadline);
 					dl = _nextBackgroundTaskDeadline;
@@ -2152,7 +2156,7 @@ public:
 				// Engage TCP tunnel fallback if we haven't received anything valid from a global
 				// IP address in ZT_TCP_FALLBACK_AFTER milliseconds. If we do start getting
 				// valid direct traffic we'll stop using it and close the socket after a while.
-				const uint64_t now = OSUtils::now();
+				const int64_t now = OSUtils::now();
 				if (((now - _lastDirectReceiveFromGlobal) > ZT_TCP_FALLBACK_AFTER)&&((now - _lastRestart) > ZT_TCP_FALLBACK_AFTER)) {
 					if (_tcpFallbackTunnel) {
 						bool flushNow = false;

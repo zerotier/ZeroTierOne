@@ -34,6 +34,7 @@
 #include "SelfAwareness.hpp"
 #include "Packet.hpp"
 #include "Trace.hpp"
+#include "InetAddress.hpp"
 
 namespace ZeroTier {
 
@@ -75,7 +76,7 @@ void Peer::received(
 	const bool trustEstablished,
 	const uint64_t networkId)
 {
-	const uint64_t now = RR->node->now();
+	const int64_t now = RR->node->now();
 
 /*
 #ifdef ZT_ENABLE_CLUSTER
@@ -263,14 +264,14 @@ void Peer::received(
 	}
 }
 
-bool Peer::sendDirect(void *tPtr,const void *data,unsigned int len,uint64_t now,bool force)
+bool Peer::sendDirect(void *tPtr,const void *data,unsigned int len,int64_t now,bool force)
 {
 	Mutex::Lock _l(_paths_m);
 
-	uint64_t v6lr = 0;
+	int64_t v6lr = 0;
 	if ( ((now - _v6Path.lr) < ZT_PEER_PATH_EXPIRATION) && (_v6Path.p) )
 		v6lr = _v6Path.p->lastIn();
-	uint64_t v4lr = 0;
+	int64_t v4lr = 0;
 	if ( ((now - _v4Path.lr) < ZT_PEER_PATH_EXPIRATION) && (_v4Path.p) )
 		v4lr = _v4Path.p->lastIn();
 
@@ -289,16 +290,18 @@ bool Peer::sendDirect(void *tPtr,const void *data,unsigned int len,uint64_t now,
 	return false;
 }
 
-SharedPtr<Path> Peer::getBestPath(uint64_t now,bool includeExpired)
+SharedPtr<Path> Peer::getBestPath(int64_t now,bool includeExpired)
 {
 	Mutex::Lock _l(_paths_m);
 
-	uint64_t v6lr = 0;
-	if ( ( includeExpired || ((now - _v6Path.lr) < ZT_PEER_PATH_EXPIRATION) ) && (_v6Path.p) )
+	int64_t v6lr = 0;
+	if ((includeExpired || ((now - _v6Path.lr) < ZT_PEER_PATH_EXPIRATION)) && (_v6Path.p)) {
 		v6lr = _v6Path.p->lastIn();
-	uint64_t v4lr = 0;
-	if ( ( includeExpired || ((now - _v4Path.lr) < ZT_PEER_PATH_EXPIRATION) ) && (_v4Path.p) )
+	}
+	int64_t v4lr = 0;
+	if ((includeExpired || ((now - _v4Path.lr) < ZT_PEER_PATH_EXPIRATION)) && (_v4Path.p)) {
 		v4lr = _v4Path.p->lastIn();
+	}
 
 	if (v6lr > v4lr) {
 		return _v6Path.p;
@@ -309,7 +312,7 @@ SharedPtr<Path> Peer::getBestPath(uint64_t now,bool includeExpired)
 	return SharedPtr<Path>();
 }
 
-void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,uint64_t now,unsigned int counter)
+void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now,unsigned int counter)
 {
 	Packet outp(_id.address(),RR->identity.address(),Packet::VERB_HELLO);
 
@@ -357,7 +360,7 @@ void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atA
 	}
 }
 
-void Peer::attemptToContactAt(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,uint64_t now,bool sendFullHello,unsigned int counter)
+void Peer::attemptToContactAt(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now,bool sendFullHello,unsigned int counter)
 {
 	if ( (!sendFullHello) && (_vProto >= 5) && (!((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0))) ) {
 		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
@@ -369,7 +372,7 @@ void Peer::attemptToContactAt(void *tPtr,const int64_t localSocket,const InetAdd
 	}
 }
 
-void Peer::tryMemorizedPath(void *tPtr,uint64_t now)
+void Peer::tryMemorizedPath(void *tPtr,int64_t now)
 {
 	if ((now - _lastTriedMemorizedPath) >= ZT_TRY_MEMORIZED_PATH_INTERVAL) {
 		_lastTriedMemorizedPath = now;
@@ -379,15 +382,15 @@ void Peer::tryMemorizedPath(void *tPtr,uint64_t now)
 	}
 }
 
-bool Peer::doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily)
+bool Peer::doPingAndKeepalive(void *tPtr,int64_t now,int inetAddressFamily)
 {
 	Mutex::Lock _l(_paths_m);
 
 	if (inetAddressFamily < 0) {
-		uint64_t v6lr = 0;
+		int64_t v6lr = 0;
 		if ( ((now - _v6Path.lr) < ZT_PEER_PATH_EXPIRATION) && (_v6Path.p) )
 			v6lr = _v6Path.p->lastIn();
-		uint64_t v4lr = 0;
+		int64_t v4lr = 0;
 		if ( ((now - _v4Path.lr) < ZT_PEER_PATH_EXPIRATION) && (_v4Path.p) )
 			v4lr = _v4Path.p->lastIn();
 
@@ -423,7 +426,7 @@ bool Peer::doPingAndKeepalive(void *tPtr,uint64_t now,int inetAddressFamily)
 	return false;
 }
 
-void Peer::redirect(void *tPtr,const int64_t localSocket,const InetAddress &remoteAddress,const uint64_t now)
+void Peer::redirect(void *tPtr,const int64_t localSocket,const InetAddress &remoteAddress,const int64_t now)
 {
 	if ((remoteAddress.ss_family != AF_INET)&&(remoteAddress.ss_family != AF_INET6)) // sanity check
 		return;

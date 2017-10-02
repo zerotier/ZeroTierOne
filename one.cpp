@@ -364,9 +364,9 @@ static int cli(int argc,char **argv)
 								if (path["preferred"]) {
 									char tmp[256];
 									std::string addr = path["address"];
-									const uint64_t now = OSUtils::now();
+									const int64_t now = OSUtils::now();
 									const double lq = (path.count("linkQuality")) ? (double)path["linkQuality"] : -1.0;
-									OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s;%llu;%llu;%1.2f",addr.c_str(),now - (uint64_t)path["lastSend"],now - (uint64_t)path["lastReceive"],lq);
+									OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s;%lld;%lld;%1.2f",addr.c_str(),now - (int64_t)path["lastSend"],now - (int64_t)path["lastReceive"],lq);
 									bestPath = tmp;
 									break;
 								}
@@ -864,7 +864,7 @@ static int idtool(int argc,char **argv)
 			}
 			std::sort(roots.begin(),roots.end());
 
-			const uint64_t now = OSUtils::now();
+			const int64_t now = OSUtils::now();
 			World w(World::make(t,id,now,updatesMustBeSignedBy,roots,signingKey));
 			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> wbuf;
 			w.serialize(wbuf);

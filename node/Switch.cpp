@@ -57,7 +57,7 @@ Switch::Switch(const RuntimeEnvironment *renv) :
 void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddress &fromAddr,const void *data,unsigned int len)
 {
 	try {
-		const uint64_t now = RR->node->now();
+		const int64_t now = RR->node->now();
 
 		const SharedPtr<Path> path(RR->topology->getPath(localSocket,fromAddr));
 		path->received(now);
@@ -557,14 +557,14 @@ void Switch::send(void *tPtr,Packet &packet,bool encrypt)
 	}
 }
 
-void Switch::requestWhois(void *tPtr,const uint64_t now,const Address &addr)
+void Switch::requestWhois(void *tPtr,const int64_t now,const Address &addr)
 {
 	if (addr == RR->identity.address())
 		return;
 
 	{
 		Mutex::Lock _l(_lastSentWhoisRequest_m);
-		uint64_t &last = _lastSentWhoisRequest[addr];
+		int64_t &last = _lastSentWhoisRequest[addr];
 		if ((now - last) < ZT_WHOIS_RETRY_DELAY)
 			return;
 		else last = now;
@@ -586,7 +586,7 @@ void Switch::doAnythingWaitingForPeer(void *tPtr,const SharedPtr<Peer> &peer)
 		_lastSentWhoisRequest.erase(peer->address());
 	}
 
-	const uint64_t now = RR->node->now();
+	const int64_t now = RR->node->now();
 	for(unsigned int ptr=0;ptr<ZT_RX_QUEUE_SIZE;++ptr) {
 		RXQueueEntry *const rq = &(_rxQueue[ptr]);
 		if ((rq->timestamp)&&(rq->complete)) {
@@ -611,7 +611,7 @@ void Switch::doAnythingWaitingForPeer(void *tPtr,const SharedPtr<Peer> &peer)
 	}
 }
 
-unsigned long Switch::doTimerTasks(void *tPtr,uint64_t now)
+unsigned long Switch::doTimerTasks(void *tPtr,int64_t now)
 {
 	const uint64_t timeSinceLastCheck = now - _lastCheckedQueues;
 	if (timeSinceLastCheck < ZT_WHOIS_RETRY_DELAY)
@@ -663,9 +663,9 @@ unsigned long Switch::doTimerTasks(void *tPtr,uint64_t now)
 
 	{
 		Mutex::Lock _l(_lastSentWhoisRequest_m);
-		Hashtable< Address,uint64_t >::Iterator i(_lastSentWhoisRequest);
+		Hashtable< Address,int64_t >::Iterator i(_lastSentWhoisRequest);
 		Address *a = (Address *)0;
-		uint64_t *ts = (uint64_t *)0;
+		int64_t *ts = (int64_t *)0;
 		while (i.next(a,ts)) {
 			if ((now - *ts) > (ZT_WHOIS_RETRY_DELAY * 2))
 				_lastSentWhoisRequest.erase(*a);
@@ -675,7 +675,7 @@ unsigned long Switch::doTimerTasks(void *tPtr,uint64_t now)
 	return ZT_WHOIS_RETRY_DELAY;
 }
 
-bool Switch::_shouldUnite(const uint64_t now,const Address &source,const Address &destination)
+bool Switch::_shouldUnite(const int64_t now,const Address &source,const Address &destination)
 {
 	Mutex::Lock _l(_lastUniteAttempt_m);
 	uint64_t &ts = _lastUniteAttempt[_LastUniteKey(source,destination)];
@@ -689,7 +689,7 @@ bool Switch::_shouldUnite(const uint64_t now,const Address &source,const Address
 bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 {
 	SharedPtr<Path> viaPath;
-	const uint64_t now = RR->node->now();
+	const int64_t now = RR->node->now();
 	const Address destination(packet.destination());
 
 	const SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,destination));
@@ -703,7 +703,7 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 
 		viaPath = peer->getBestPath(now,false);
 		if ( (viaPath) && (!viaPath->alive(now)) && (!RR->topology->isUpstream(peer->identity())) ) {
-			if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) * 4,(uint64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL)) {
+			if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) * 4,(int64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL)) {
 				peer->attemptToContactAt(tPtr,viaPath->localSocket(),viaPath->address(),now,false,viaPath->nextOutgoingCounter());
 				viaPath->sent(now);
 			}

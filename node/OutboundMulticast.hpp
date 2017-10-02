@@ -96,7 +96,7 @@ public:
 	 * @param now Current time
 	 * @return True if this multicast is expired (has exceeded transmit timeout)
 	 */
-	inline bool expired(uint64_t now) const { return ((now - _timestamp) >= ZT_MULTICAST_TRANSMIT_TIMEOUT); }
+	inline bool expired(int64_t now) const { return ((now - _timestamp) >= ZT_MULTICAST_TRANSMIT_TIMEOUT); }
 
 	/**
 	 * @return True if this outbound multicast has been sent to enough peers

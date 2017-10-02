@@ -51,7 +51,7 @@ Multicaster::~Multicaster()
 {
 }
 
-void Multicaster::addMultiple(void *tPtr,uint64_t now,uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,unsigned int totalKnown)
+void Multicaster::addMultiple(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,unsigned int totalKnown)
 {
 	const unsigned char *p = (const unsigned char *)addresses;
 	const unsigned char *e = p + (5 * count);
@@ -160,7 +160,7 @@ std::vector<Address> Multicaster::getMembers(uint64_t nwid,const MulticastGroup 
 void Multicaster::send(
 	void *tPtr,
 	unsigned int limit,
-	uint64_t now,
+	int64_t now,
 	uint64_t nwid,
 	bool disableCompression,
 	const std::vector<Address> &alwaysSendTo,
@@ -309,7 +309,7 @@ void Multicaster::send(
 		delete [] indexes;
 }
 
-void Multicaster::clean(uint64_t now)
+void Multicaster::clean(int64_t now)
 {
 	{
 		Mutex::Lock _l(_groups_m);
@@ -367,7 +367,7 @@ void Multicaster::addCredential(void *tPtr,const CertificateOfMembership &com,bo
 	}
 }
 
-void Multicaster::_add(void *tPtr,uint64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &member)
+void Multicaster::_add(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &member)
 {
 	// assumes _groups_m is locked
 
