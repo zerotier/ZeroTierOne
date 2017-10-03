@@ -156,6 +156,9 @@ jobject createEvent(JNIEnv *env, ZT_Event event)
         break;
     case ZT_EVENT_USER_MESSAGE:
         break;
+    case ZT_EVENT_REMOTE_TRACE:
+    default:
+        break;
     }
 
     jfieldID enumField = lookup.findStaticField(eventClass, fieldName.c_str(), "Lcom/zerotier/sdk/Event;");

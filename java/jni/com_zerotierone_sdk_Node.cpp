@@ -86,7 +86,7 @@ namespace {
             portMapper = NULL;
         }
 
-        uint64_t id;
+        int64_t id;
 
         JavaVM *jvm;
 
@@ -292,6 +292,8 @@ namespace {
             }
                 break;
             case ZT_EVENT_USER_MESSAGE:
+            case ZT_EVENT_REMOTE_TRACE:
+            default:
                 break;
         }
     }
@@ -665,11 +667,11 @@ namespace {
         return true;
     }
 
-    typedef std::map<uint64_t, JniRef*> NodeMap;
+    typedef std::map<int64_t, JniRef*> NodeMap;
     static NodeMap nodeMap;
     ZeroTier::Mutex nodeMapMutex;
 
-    ZT_Node* findNode(uint64_t nodeId)
+    ZT_Node* findNode(int64_t nodeId)
     {
         ZeroTier::Mutex::Lock lock(nodeMapMutex);
         NodeMap::iterator found = nodeMap.find(nodeId);
@@ -707,7 +709,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
 
     ZT_Node *node;
     JniRef *ref = new JniRef;
-    ref->id = (uint64_t)now;
+    ref->id = (int64_t)now;
     env->GetJavaVM(&ref->jvm);
 
     jclass cls = env->GetObjectClass(obj);
@@ -825,7 +827,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
         ref,
         NULL,
         ref->callbacks,
-        (uint64_t)now);
+        (int64_t)now);
 
     if(rc != ZT_RESULT_OK)
     {
@@ -864,7 +866,7 @@ JNIEXPORT void JNICALL Java_com_zerotier_sdk_Node_node_1delete(
     JNIEnv *env, jobject obj, jlong id)
 {
     LOGV("Destroying ZT_Node struct");
-    uint64_t nodeId = (uint64_t)id;
+    int64_t nodeId = (int64_t)id;
 
     NodeMap::iterator found;
     {
@@ -905,7 +907,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
     jbyteArray in_frameData,
     jlongArray out_nextBackgroundTaskDeadline)
 {
-    uint64_t nodeId = (uint64_t) id;
+    int64_t nodeId = (int64_t) id;
 
     ZT_Node *node = findNode(nodeId);
     if(node == NULL)
@@ -921,7 +923,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
         return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
     }
 
-    uint64_t now = (uint64_t)in_now;
+    int64_t now = (int64_t)in_now;
     uint64_t nwid = (uint64_t)in_nwid;
     uint64_t sourceMac = (uint64_t)in_sourceMac;
     uint64_t destMac = (uint64_t)in_destMac;
@@ -934,7 +936,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
     memcpy(localData, frameData, frameLength);
     env->ReleasePrimitiveArrayCritical(in_frameData, frameData, 0);
 
-    uint64_t nextBackgroundTaskDeadline = 0;
+    int64_t nextBackgroundTaskDeadline = 0;
 
     ZT_ResultCode rc = ZT_Node_processVirtualNetworkFrame(
         node,
@@ -970,7 +972,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
     jbyteArray in_packetData,
     jlongArray out_nextBackgroundTaskDeadline)
 {
-    uint64_t nodeId = (uint64_t) id;
+    int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
     if(node == NULL)
     {
@@ -986,7 +988,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
         return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
     }
 
-    uint64_t now = (uint64_t)in_now;
+    int64_t now = (int64_t)in_now;
 
     // get the java.net.InetSocketAddress class and getAddress() method
     jclass inetAddressClass = lookup.findClass("java/net/InetAddress");
@@ -1092,7 +1094,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
     memcpy(localData, packetData, packetLength);
     env->ReleasePrimitiveArrayCritical(in_packetData, packetData, 0);
 
-    uint64_t nextBackgroundTaskDeadline = 0;
+    int64_t nextBackgroundTaskDeadline = 0;
 
     ZT_ResultCode rc = ZT_Node_processWirePacket(
         node,
@@ -1128,7 +1130,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processBackgroundTasks(
     jlong in_now,
     jlongArray out_nextBackgroundTaskDeadline)
 {
-    uint64_t nodeId = (uint64_t) id;
+    int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
     if(node == NULL)
     {
@@ -1142,8 +1144,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processBackgroundTasks(
         return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
     }
 
-    uint64_t now = (uint64_t)in_now;
-    uint64_t nextBackgroundTaskDeadline = 0;
+    int64_t now = (int64_t)in_now;
+    int64_t nextBackgroundTaskDeadline = 0;
 
     ZT_ResultCode rc = ZT_Node_processBackgroundTasks(node, NULL, now, &nextBackgroundTaskDeadline);
 
@@ -1162,7 +1164,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processBackgroundTasks(
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_join(
     JNIEnv *env, jobject obj, jlong id, jlong in_nwid)
 {
-    uint64_t nodeId = (uint64_t) id;
+    int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
     if(node == NULL)
     {
@@ -1185,7 +1187,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_join(
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_leave(
     JNIEnv *env, jobject obj, jlong id, jlong in_nwid)
 {
-    uint64_t nodeId = (uint64_t) id;
+    int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
     if(node == NULL)
     {
@@ -1212,7 +1214,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_multicastSubscribe(
     jlong in_multicastGroup,
     jlong in_multicastAdi)
 {
-    uint64_t nodeId = (uint64_t) id;
+    int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
     if(node == NULL)
     {
@@ -1242,7 +1244,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_multicastUnsubscribe(
     jlong in_multicastGroup,
     jlong in_multicastAdi)
 {
-    uint64_t nodeId = (uint64_t) id;
+    int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
     if(node == NULL)
     {
@@ -1271,7 +1273,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_orbit(
     jlong in_moonWorldId,
     jlong in_moonSeed)
 {
-    uint64_t nodeId = (uint64_t)id;
+    int64_t nodeId = (int64_t)id;
     ZT_Node *node = findNode(nodeId);
     if(node == NULL)
     {
@@ -1295,7 +1297,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_deorbit(
     jlong id,
     jlong in_moonWorldId)
 {
-    uint64_t nodeId = (uint64_t)id;
+    int64_t nodeId = (int64_t)id;
     ZT_Node *node = findNode(nodeId);
     if(node == NULL)
     {
@@ -1316,7 +1318,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_deorbit(
 JNIEXPORT jlong JNICALL Java_com_zerotier_sdk_Node_address(
     JNIEnv *env , jobject obj, jlong id)
 {
-    uint64_t nodeId = (uint64_t) id;
+    int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
     if(node == NULL)
     {
@@ -1336,7 +1338,7 @@ JNIEXPORT jlong JNICALL Java_com_zerotier_sdk_Node_address(
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_status
    (JNIEnv *env, jobject obj, jlong id)
 {
-    uint64_t nodeId = (uint64_t) id;
+    int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
     if(node == NULL)
     {
@@ -1428,7 +1430,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_status
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_networkConfig(
     JNIEnv *env, jobject obj, jlong id, jlong nwid)
 {
-    uint64_t nodeId = (uint64_t) id;
+    int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
     if(node == NULL)
     {
@@ -1470,7 +1472,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_version(
 JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_peers(
     JNIEnv *env, jobject obj, jlong id)
 {
-    uint64_t nodeId = (uint64_t) id;
+    int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
     if(node == NULL)
     {
@@ -1539,7 +1541,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_peers(
 JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_networks(
     JNIEnv *env, jobject obj, jlong id)
 {
-    uint64_t nodeId = (uint64_t) id;
+    int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
     if(node == NULL)
     {
