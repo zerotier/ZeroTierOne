@@ -72,7 +72,7 @@ public:
 		memset(this,0,sizeof(CertificateOfOwnership));
 	}
 
-	CertificateOfOwnership(const uint64_t nwid,const uint64_t ts,const Address &issuedTo,const uint32_t id) :
+	CertificateOfOwnership(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id) :
 		_networkId(nwid),
 		_ts(ts),
 		_flags(0),
@@ -85,7 +85,7 @@ public:
 	}
 
 	inline uint64_t networkId() const { return _networkId; }
-	inline uint64_t timestamp() const { return _ts; }
+	inline int64_t timestamp() const { return _ts; }
 	inline uint32_t id() const { return _id; }
 	inline unsigned int thingCount() const { return (unsigned int)_thingCount; }
 
@@ -231,7 +231,7 @@ private:
 	bool _owns(const Thing &t,const void *v,unsigned int l) const;
 
 	uint64_t _networkId;
-	uint64_t _ts;
+	int64_t _ts;
 	uint64_t _flags;
 	uint32_t _id;
 	uint16_t _thingCount;

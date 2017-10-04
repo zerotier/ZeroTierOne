@@ -85,7 +85,7 @@ public:
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	Capability(uint32_t id,uint64_t nwid,uint64_t ts,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
+	Capability(uint32_t id,uint64_t nwid,int64_t ts,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
 	{
 		memset(this,0,sizeof(Capability));
 		_nwid = nwid;
@@ -120,7 +120,7 @@ public:
 	/**
 	 * @return Timestamp
 	 */
-	inline uint64_t timestamp() const { return _ts; }
+	inline int64_t timestamp() const { return _ts; }
 
 	/**
 	 * @return Last 'to' address in chain of custody
@@ -460,7 +460,7 @@ public:
 
 private:
 	uint64_t _nwid;
-	uint64_t _ts;
+	int64_t _ts;
 	uint32_t _id;
 
 	unsigned int _maxCustodyChainLength;

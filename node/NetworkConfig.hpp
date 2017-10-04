@@ -418,12 +418,12 @@ public:
 	/**
 	 * Controller-side time of config generation/issue
 	 */
-	uint64_t timestamp;
+	int64_t timestamp;
 
 	/**
 	 * Max difference between timestamp and tag/capability timestamp
 	 */
-	uint64_t credentialTimeMaxDelta;
+	int64_t credentialTimeMaxDelta;
 
 	/**
 	 * Controller-side revision counter for this configuration

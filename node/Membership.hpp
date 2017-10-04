@@ -202,9 +202,9 @@ private:
 	template<typename C>
 	inline bool _isCredentialTimestampValid(const NetworkConfig &nconf,const C &remoteCredential) const
 	{
-		const uint64_t ts = remoteCredential.timestamp();
+		const int64_t ts = remoteCredential.timestamp();
 		if (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts)) <= nconf.credentialTimeMaxDelta) {
-			const uint64_t *threshold = _revocations.get(credentialKey(C::credentialType(),remoteCredential.id()));
+			const int64_t *threshold = _revocations.get(credentialKey(C::credentialType(),remoteCredential.id()));
 			return ((!threshold)||(ts > *threshold));
 		}
 		return false;
@@ -235,7 +235,7 @@ private:
 	CertificateOfMembership _com;
 
 	// Revocations by credentialKey()
-	Hashtable< uint64_t,uint64_t > _revocations;
+	Hashtable< uint64_t,int64_t > _revocations;
 
 	// Remote credentials that we have received from this member (and that are valid)
 	Hashtable< uint32_t,Tag > _remoteTags;

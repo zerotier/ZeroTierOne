@@ -155,7 +155,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 
 // Template out addCredential() for many cred types to avoid copypasta
 template<typename C>
-static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t,C> &remoteCreds,const Hashtable<uint64_t,uint64_t> &revocations,const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const C &cred)
+static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t,C> &remoteCreds,const Hashtable<uint64_t,int64_t> &revocations,const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const C &cred)
 {
 	C *rc = remoteCreds.get(cred.id());
 	if (rc) {
@@ -167,7 +167,7 @@ static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t,C> &remot
 			return Membership::ADD_ACCEPTED_REDUNDANT;
 	}
 
-	const uint64_t *const rt = revocations.get(Membership::credentialKey(C::credentialType(),cred.id()));
+	const int64_t *const rt = revocations.get(Membership::credentialKey(C::credentialType(),cred.id()));
 	if ((rt)&&(*rt >= cred.timestamp())) {
 		RR->t->credentialRejected(tPtr,cred,"revoked");
 		return Membership::ADD_REJECTED;
@@ -193,7 +193,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 
 Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Revocation &rev)
 {
-	uint64_t *rt;
+	int64_t *rt;
 	switch(rev.verify(RR,tPtr)) {
 		default:
 			RR->t->credentialRejected(tPtr,rev,"invalid");

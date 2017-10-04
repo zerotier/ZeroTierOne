@@ -77,7 +77,7 @@ public:
 	 * @param id Tag ID
 	 * @param value Tag value
 	 */
-	Tag(const uint64_t nwid,const uint64_t ts,const Address &issuedTo,const uint32_t id,const uint32_t value) :
+	Tag(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id,const uint32_t value) :
 		_id(id),
 		_value(value),
 		_networkId(nwid),
@@ -90,7 +90,7 @@ public:
 	inline uint32_t id() const { return _id; }
 	inline const uint32_t &value() const { return _value; }
 	inline uint64_t networkId() const { return _networkId; }
-	inline uint64_t timestamp() const { return _ts; }
+	inline int64_t timestamp() const { return _ts; }
 	inline const Address &issuedTo() const { return _issuedTo; }
 	inline const Address &signedBy() const { return _signedBy; }
 
@@ -199,7 +199,7 @@ private:
 	uint32_t _id;
 	uint32_t _value;
 	uint64_t _networkId;
-	uint64_t _ts;
+	int64_t _ts;
 	Address _issuedTo;
 	Address _signedBy;
 	C25519::Signature _signature;
