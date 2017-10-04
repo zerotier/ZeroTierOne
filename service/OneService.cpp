@@ -276,10 +276,6 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 		pa.push_back(j);
 	}
 	pj["paths"] = pa;
-
-	if (peer->address == 0xda6c71a1ad) {
-		fprintf(stdout, "%s\n", pj.dump(2).c_str());
-	}
 }
 
 static void _moonToJson(nlohmann::json &mj,const World &world)
