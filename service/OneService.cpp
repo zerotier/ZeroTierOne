@@ -264,10 +264,12 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 
 	nlohmann::json pa = nlohmann::json::array();
 	for(unsigned int i=0;i<peer->pathCount;++i) {
+		int64_t lastSend = peer->paths[i].lastSend;
+		int64_t lastReceive = peer->paths[i].lastReceive;
 		nlohmann::json j;
 		j["address"] = reinterpret_cast<const InetAddress *>(&(peer->paths[i].address))->toString(tmp);
-		j["lastSend"] = peer->paths[i].lastSend;
-		j["lastReceive"] = peer->paths[i].lastReceive;
+		j["lastSend"] = (lastSend < 0) ? 0 : lastSend;
+		j["lastReceive"] = (lastReceive < 0) ? 0 : lastReceive;
 		j["trustedPathId"] = peer->paths[i].trustedPathId;
 		j["linkQuality"] = (double)peer->paths[i].linkQuality / (double)ZT_PATH_LINK_QUALITY_MAX;
 		j["active"] = (bool)(peer->paths[i].expired == 0);
