@@ -90,8 +90,10 @@ public:
 	// Not available on *nix platforms
 	static inline void cancelIO(const Thread &t)
 	{
+#if !defined(__MINGW32__) && !defined(__MINGW64__) // CancelSynchronousIo not available in MSYS2
 		if (t._th != NULL)
 			CancelSynchronousIo(t._th);
+#endif
 	}
 
 	inline operator bool() const { return (_th != NULL); }
