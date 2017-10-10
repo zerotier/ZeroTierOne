@@ -1989,7 +1989,7 @@ public:
 					*nuptr = (void *)0;
 					delete n.tap;
 					_nets.erase(nwid);
-#ifdef __WINDOWS__
+#if defined(__WINDOWS__) && !defined(ZT_SDK)
 					if ((op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY)&&(winInstanceId.length() > 0))
 						WindowsEthernetTap::deletePersistentTapDevice(winInstanceId.c_str());
 #endif
