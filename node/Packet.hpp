@@ -67,7 +67,6 @@
  *   + Multipart network configurations for large network configs
  *   + Tags and Capabilities
  *   + Inline push of CertificateOfMembership deprecated
- *   + Certificates of representation for federation and mesh
  * 9 - 1.2.0 ... CURRENT
  *   + In-band encoding of packet counter for link quality measurement
  */
@@ -550,8 +549,6 @@ public:
 		 *   [<[8] 64-bit world ID of moon>]
 		 *   [<[8] 64-bit timestamp of moon>]
 		 *   [... additional moon type/ID/timestamp tuples ...]
-		 *   <[2] 16-bit length of certificate of representation>
-		 *   [... certificate of representation ...]
 		 *
 		 * HELLO is sent in the clear as it is how peers share their identity
 		 * public keys. A few additional fields are sent in the clear too, but
@@ -573,8 +570,6 @@ public:
 		 *   <[...] physical destination address of packet>
 		 *   <[2] 16-bit length of world update(s) or 0 if none>
 		 *   [[...] updates to planets and/or moons]
-		 *   <[2] 16-bit length of certificate of representation>
-		 *   [... certificate of representation ...]
 		 *
 		 * With the exception of the timestamp, the other fields pertain to the
 		 * respondent who is sending OK and are not echoes.
@@ -680,7 +675,7 @@ public:
 		 *   0x5 - REDIRECTed inbound frame
 		 *   0x6 - WATCHed inbound frame
 		 *   0x7 - (reserved for future use)
-		 *   
+		 *
 		 * An extended frame carries full MAC addressing, making it a
 		 * superset of VERB_FRAME. It is used for bridged traffic,
 		 * redirected or observed traffic via rules, and can in theory
@@ -762,7 +757,7 @@ public:
 		 *
 		 * It would be valid and correct as of 1.2.0 to use NETWORK_CONFIG always,
 		 * but OK(NTEWORK_CONFIG_REQUEST) should be sent for compatibility.
-		 * 
+		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit length of network configuration dictionary chunk>
