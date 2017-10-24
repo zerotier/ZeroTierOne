@@ -52,13 +52,13 @@
 #else
 #define ZT_SDK_API __declspec(dllimport)
 #ifdef _DEBUG
-#ifdef _WIN64 
+#ifdef _WIN64
 #pragma comment(lib, "ZeroTierOne_x64d.lib")
 #else
 #pragma comment(lib, "ZeroTierOne_x86d.lib")
 #endif
 #else
-#ifdef _WIN64 
+#ifdef _WIN64
 #pragma comment(lib, "ZeroTierOne_x64.lib")
 #else
 #pragma comment(lib, "ZeroTierOne_x86.lib")
@@ -750,6 +750,7 @@ enum ZT_VirtualNetworkRuleType
 	ZT_NETWORK_RULE_MATCH_TAGS_EQUAL = 48,
 	ZT_NETWORK_RULE_MATCH_TAG_SENDER = 49,
 	ZT_NETWORK_RULE_MATCH_TAG_RECEIVER = 50,
+	ZT_NETWORK_RULE_MATCH_INTEGER_RANGE = 51,
 
 	/**
 	 * Maximum ID allowed for a MATCH entry in the rules table
@@ -770,7 +771,7 @@ enum ZT_VirtualNetworkRuleType
  */
 typedef struct
 {
-	/** 
+	/**
 	 * Type and flags
 	 *
 	 * Bits are: NOTTTTTT
@@ -812,10 +813,9 @@ typedef struct
 		 */
 		struct {
 			uint64_t start; // integer range start
-			int32_t delta; // +/- offset from start of integer range end
+			uint32_t end; // end of integer range (relative to start, inclusive, 0 for equality w/start)
 			uint16_t idx; // index in packet of integer
-			uint8_t bits; // number of bits in integer (range: 1-64)
-			uint8_t endian; // endianness of integer in packet (0 == big, 1 == little)
+			uint8_t format; // bits in integer (range 1-64, ((format&63)+1)) and endianness (MSB 1 for little, 0 for big)
 		} intRange;
 
 		/**

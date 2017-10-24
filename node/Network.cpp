@@ -493,6 +493,35 @@ static _doZtFilterResult _doZtFilter(
 					}
 				}
 			}	break;
+			case ZT_NETWORK_RULE_MATCH_INTEGER_RANGE: {
+				uint64_t integer = 0;
+				const unsigned int bits = (rules[rn].v.intRange.format & 63) + 1;
+				const unsigned int bytes = ((bits + 8 - 1) / 8); // integer ceiling of division by 8
+				if ((rules[rn].v.intRange.format & 0x80) == 0) {
+					// Big-endian
+					unsigned int idx = rules[rn].v.intRange.idx + (8 - bytes);
+					const unsigned int eof = idx + bytes;
+					if (eof <= frameLen) {
+						while (idx < eof) {
+							integer <<= 8;
+							integer |= frameData[idx++];
+						}
+					}
+					integer &= 0xffffffffffffffffULL >> (64 - bits);
+				} else {
+					// Little-endian
+					unsigned int idx = rules[rn].v.intRange.idx;
+					const unsigned int eof = idx + bytes;
+					if (eof <= frameLen) {
+						while (idx < eof) {
+							integer >>= 8;
+							integer |= ((uint64_t)frameData[idx++]) << 56;
+						}
+					}
+					integer >>= (64 - bits);
+				}
+				thisRuleMatches = (uint8_t)((integer >= rules[rn].v.intRange.start)&&(integer <= (rules[rn].v.intRange.start + (uint64_t)rules[rn].v.intRange.end)));
+			}	break;
 
 			// The result of an unsupported MATCH is configurable at the network
 			// level via a flag.

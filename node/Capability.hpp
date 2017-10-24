@@ -278,6 +278,13 @@ public:
 					b.append((uint32_t)rules[i].v.tag.id);
 					b.append((uint32_t)rules[i].v.tag.value);
 					break;
+				case ZT_NETWORK_RULE_MATCH_INTEGER_RANGE:
+					b.append((uint8_t)19);
+					b.append((uint64_t)rules[i].v.intRange.start);
+					b.append((uint64_t)(rules[i].v.intRange.start + (uint64_t)rules[i].v.intRange.end)); // more future-proof
+					b.append((uint16_t)rules[i].v.intRange.idx);
+					b.append((uint8_t)rules[i].v.intRange.format);
+					break;
 			}
 		}
 	}
@@ -365,6 +372,12 @@ public:
 				case ZT_NETWORK_RULE_MATCH_TAG_RECEIVER:
 					rules[ruleCount].v.tag.id = b.template at<uint32_t>(p);
 					rules[ruleCount].v.tag.value = b.template at<uint32_t>(p + 4);
+					break;
+				case ZT_NETWORK_RULE_MATCH_INTEGER_RANGE:
+					rules[ruleCount].v.intRange.start = b.template at<uint64_t>(p);
+					rules[ruleCount].v.intRange.end = (uint32_t)(b.template at<uint64_t>(p + 8) - rules[ruleCount].v.intRange.start);
+					rules[ruleCount].v.intRange.idx = b.template at<uint16_t>(p + 16);
+					rules[ruleCount].v.intRange.format = (uint8_t)b[p + 18];
 					break;
 			}
 			p += fieldLen;

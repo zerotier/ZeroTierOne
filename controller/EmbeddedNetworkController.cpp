@@ -227,6 +227,16 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 				r["id"] = rule.v.tag.id;
 				r["value"] = rule.v.tag.value;
 				break;
+			case ZT_NETWORK_RULE_MATCH_INTEGER_RANGE:
+				r["type"] = "INTEGER_RANGE";
+				OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",rule.v.intRange.start);
+				r["start"] = tmp;
+				OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",rule.v.intRange.start + (uint64_t)rule.v.intRange.end);
+				r["end"] = tmp;
+				r["idx"] = rule.v.intRange.idx;
+				r["little"] = ((rule.v.intRange.format & 0x80) != 0);
+				r["bits"] = (rule.v.intRange.format & 63) + 1;
+				break;
 			default:
 				break;
 		}
@@ -417,7 +427,26 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 	} else if (t == "MATCH_TAG_RECEIVER") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_TAG_RECEIVER;
 		tag = true;
+	} else if (t == "INTEGER_RANGE") {
+		json &s = r["start"];
+		if (s.is_string()) {
+			std::string tmp = s;
+			rule.v.intRange.start = Utils::hexStrToU64(tmp.c_str());
+		} else {
+			rule.v.intRange.start = OSUtils::jsonInt(s,0ULL);
+		}
+		json &e = r["end"];
+		if (e.is_string()) {
+			std::string tmp = e;
+			rule.v.intRange.end = (uint32_t)(Utils::hexStrToU64(tmp.c_str()) - rule.v.intRange.start);
+		} else {
+			rule.v.intRange.end = (uint32_t)(OSUtils::jsonInt(e,0ULL) - rule.v.intRange.start);
+		}
+		rule.v.intRange.idx = (uint16_t)OSUtils::jsonInt(r["idx"],0ULL);
+		rule.v.intRange.format = (OSUtils::jsonBool(r["little"],false)) ? 0x80 : 0x00;
+		rule.v.intRange.format |= (uint8_t)((OSUtils::jsonInt(r["bits"],1ULL) - 1) & 63);
 	}
+
 	if (tag) {
 		rule.v.tag.id = (uint32_t)(OSUtils::jsonInt(r["id"],0ULL) & 0xffffffffULL);
 		rule.v.tag.value = (uint32_t)(OSUtils::jsonInt(r["value"],0ULL) & 0xffffffffULL);
