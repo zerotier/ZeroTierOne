@@ -472,6 +472,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 	_nwid(nwid),
 	_mtu(mtu),
 	_tap(INVALID_HANDLE_VALUE),
+	_friendlyName(friendlyName),
 	_injectSemaphore(INVALID_HANDLE_VALUE),
 	_pathToHelpers(hp),
 	_run(true),
@@ -1029,6 +1030,8 @@ void WindowsEthernetTap::threadMain()
 			ULONGLONG timeOfLastBorkCheck = GetTickCount64();
 			_initialized = true;
 			unsigned int oldmtu = _mtu;
+
+			setFriendlyName(_friendlyName.c_str());
 
 			while (_run) {
 				DWORD waitResult = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,2500,TRUE);

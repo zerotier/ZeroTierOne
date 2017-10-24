@@ -143,6 +143,8 @@ private:
 	std::string _deviceInstanceId;
 	std::string _mySubkeyName;
 
+	std::string _friendlyName;
+
 	std::vector<InetAddress> _assignedIps; // IPs assigned with addIp
 	Mutex _assignedIps_m;
 
