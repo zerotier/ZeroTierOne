@@ -381,7 +381,7 @@ std::vector<std::string> OSUtils::split(const char *s,const char *const sep,cons
 std::string OSUtils::platformDefaultHomePath()
 {
 #ifdef __QNAP__
-	char *cmd = "/sbin/getcfg ZeroTier Install_Path -f /etc/config/qpkg.conf";    
+	char *cmd = "/sbin/getcfg ZeroTier Install_Path -f /etc/config/qpkg.conf";
     char buf[128];
     FILE *fp;
     if ((fp = popen(cmd, "r")) == NULL) {
@@ -494,7 +494,7 @@ std::string OSUtils::jsonBinFromHex(const nlohmann::json &jv)
 {
 	std::string s(jsonString(jv,""));
 	if (s.length() > 0) {
-		unsigned int buflen = (s.length() / 2) + 1;
+		unsigned int buflen = (unsigned int)((s.length() / 2) + 1);
 		char *buf = new char[buflen];
 		try {
 			unsigned int l = Utils::unhex(s.c_str(),buf,buflen);
