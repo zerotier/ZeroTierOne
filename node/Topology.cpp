@@ -425,13 +425,6 @@ void Topology::_memoizeUpstreams(void *tPtr)
 	}
 
 	std::sort(_upstreamAddresses.begin(),_upstreamAddresses.end());
-
-	_cor.clear();
-	for(std::vector<Address>::const_iterator a(_upstreamAddresses.begin());a!=_upstreamAddresses.end();++a) {
-		if (!_cor.addRepresentative(*a))
-			break;
-	}
-	_cor.sign(RR->identity,RR->node->now());
 }
 
 void Topology::_savePeer(void *tPtr,const SharedPtr<Peer> &peer)

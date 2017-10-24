@@ -44,7 +44,6 @@
 #include "World.hpp"
 #include "Node.hpp"
 #include "CertificateOfMembership.hpp"
-#include "CertificateOfRepresentation.hpp"
 #include "Capability.hpp"
 #include "Tag.hpp"
 #include "Revocation.hpp"
@@ -328,15 +327,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 				ptr += 16;
 			}
 		}
-
-		// Certificates of representation (if present)
-		if ((ptr + 2) <= size()) {
-			if (at<uint16_t>(ptr) > 0) {
-				CertificateOfRepresentation cor;
-				ptr += 2;
-				ptr += cor.deserialize(*this,ptr);
-			} else ptr += 2;
-		}
 	}
 
 	// Send OK(HELLO) with an echo of the packet's timestamp and some of the same
@@ -401,11 +391,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 	}
 	outp.setAt<uint16_t>(worldUpdateSizeAt,(uint16_t)(outp.size() - (worldUpdateSizeAt + 2)));
 
-	const unsigned int corSizeAt = outp.size();
-	outp.addSize(2);
-	RR->topology->appendCertificateOfRepresentation(outp);
-	outp.setAt(corSizeAt,(uint16_t)(outp.size() - (corSizeAt + 2)));
-
 	outp.armor(peer->key(),true,_path->nextOutgoingCounter());
 	_path->send(RR,tPtr,outp.data(),outp.size(),now);
 
@@ -458,15 +443,6 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 				} else {
 					ptr += worldsLen;
 				}
-			}
-
-			// Handle certificate of representation if present
-			if ((ptr + 2) <= size()) {
-				if (at<uint16_t>(ptr) > 0) {
-					CertificateOfRepresentation cor;
-					ptr += 2;
-					ptr += cor.deserialize(*this,ptr);
-				} else ptr += 2;
 			}
 
 			if (!hops())

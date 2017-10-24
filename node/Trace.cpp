@@ -32,7 +32,6 @@
 #include "Dictionary.hpp"
 #include "CertificateOfMembership.hpp"
 #include "CertificateOfOwnership.hpp"
-#include "CertificateOfRepresentation.hpp"
 #include "Tag.hpp"
 #include "Capability.hpp"
 #include "Revocation.hpp"
@@ -285,18 +284,6 @@ void Trace::credentialRejected(void *const tPtr,const CertificateOfOwnership &c,
 	if (reason)
 		d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
 	_send(tPtr,d,c.networkId());
-}
-
-void Trace::credentialRejected(void *const tPtr,const CertificateOfRepresentation &c,const char *reason)
-{
-	Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
-	d.add(ZT_REMOTE_TRACE_FIELD__EVENT,ZT_REMOTE_TRACE_EVENT__CREDENTIAL_REJECTED_S);
-	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TYPE,(uint64_t)c.credentialType());
-	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ID,(uint64_t)c.id());
-	d.add(ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TIMESTAMP,c.timestamp());
-	if (reason)
-		d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
-	_send(tPtr,d,0);
 }
 
 void Trace::credentialRejected(void *const tPtr,const Capability &c,const char *reason)

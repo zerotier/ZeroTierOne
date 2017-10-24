@@ -56,7 +56,6 @@ public:
 		CREDENTIAL_TYPE_CAPABILITY = 2,
 		CREDENTIAL_TYPE_TAG = 3,
 		CREDENTIAL_TYPE_COO = 4,        // CertificateOfOwnership
-		CREDENTIAL_TYPE_COR = 5,        // CertificateOfRepresentation
 		CREDENTIAL_TYPE_REVOCATION = 6
 	};
 };

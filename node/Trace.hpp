@@ -53,7 +53,6 @@ class NetworkConfig;
 class MAC;
 class CertificateOfMembership;
 class CertificateOfOwnership;
-class CertificateOfRepresentation;
 class Revocation;
 class Tag;
 class Capability;
@@ -137,7 +136,6 @@ public:
 
 	void credentialRejected(void *const tPtr,const CertificateOfMembership &c,const char *reason);
 	void credentialRejected(void *const tPtr,const CertificateOfOwnership &c,const char *reason);
-	void credentialRejected(void *const tPtr,const CertificateOfRepresentation &c,const char *reason);
 	void credentialRejected(void *const tPtr,const Capability &c,const char *reason);
 	void credentialRejected(void *const tPtr,const Tag &c,const char *reason);
 	void credentialRejected(void *const tPtr,const Revocation &c,const char *reason);

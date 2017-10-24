@@ -46,7 +46,6 @@
 #include "InetAddress.hpp"
 #include "Hashtable.hpp"
 #include "World.hpp"
-#include "CertificateOfRepresentation.hpp"
 
 namespace ZeroTier {
 
@@ -441,25 +440,6 @@ public:
 		}
 	}
 
-	/**
-	 * @return Current certificate of representation (copy)
-	 */
-	inline CertificateOfRepresentation certificateOfRepresentation() const
-	{
-		Mutex::Lock _l(_upstreams_m);
-		return _cor;
-	}
-
-	/**
-	 * @param buf Buffer to receive COR
-	 */
-	template<unsigned int C>
-	void appendCertificateOfRepresentation(Buffer<C> &buf)
-	{
-		Mutex::Lock _l(_upstreams_m);
-		_cor.serialize(buf);
-	}
-
 private:
 	Identity _getIdentity(void *tPtr,const Address &zta);
 	void _memoizeUpstreams(void *tPtr);
@@ -480,7 +460,6 @@ private:
 	std::vector<World> _moons;
 	std::vector< std::pair<uint64_t,Address> > _moonSeeds;
 	std::vector<Address> _upstreamAddresses;
-	CertificateOfRepresentation _cor;
 	bool _amRoot;
 	Mutex _upstreams_m; // locks worlds, upstream info, moon info, etc.
 };

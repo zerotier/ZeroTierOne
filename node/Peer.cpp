@@ -343,11 +343,6 @@ void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atA
 		outp.append((uint64_t)0);
 	}
 
-	const unsigned int corSizeAt = outp.size();
-	outp.addSize(2);
-	RR->topology->appendCertificateOfRepresentation(outp);
-	outp.setAt(corSizeAt,(uint16_t)(outp.size() - (corSizeAt + 2)));
-
 	outp.cryptField(_key,startCryptedPortionAt,outp.size() - startCryptedPortionAt);
 
 	RR->node->expectReplyTo(outp.packetId());
