@@ -190,11 +190,6 @@
 #define ZT_RX_QUEUE_SIZE 64
 
 /**
- * RX queue entries older than this do not "exist"
- */
-#define ZT_RX_QUEUE_EXPIRE 4000
-
-/**
  * Length of secret key in bytes -- 256-bit -- do not change
  */
 #define ZT_PEER_SECRET_KEY_LENGTH 32
@@ -208,11 +203,6 @@
  * How often Topology::clean() and Network::clean() and similar are called, in ms
  */
 #define ZT_HOUSEKEEPING_PERIOD 60000
-
-/**
- * How long to remember peer records in RAM if they haven't been used
- */
-#define ZT_PEER_IN_MEMORY_EXPIRATION 600000
 
 /**
  * Delay between WHOIS retries in ms
@@ -232,7 +222,7 @@
 /**
  * Maximum latency to allow for OK(HELLO) before packet is discarded
  */
-#define ZT_HELLO_MAX_ALLOWABLE_LATENCY 60000
+#define ZT_HELLO_MAX_ALLOWABLE_LATENCY 120000
 
 /**
  * Maximum number of ZT hops allowed (this is not IP hops/TTL)
@@ -240,11 +230,6 @@
  * The protocol allows up to 7, but we limit it to something smaller.
  */
 #define ZT_RELAY_MAX_HOPS 3
-
-/**
- * Maximum number of upstreams to use (far more than we should ever need)
- */
-#define ZT_MAX_UPSTREAMS 64
 
 /**
  * Expire time for multicast 'likes' and indirect multicast memberships in ms
