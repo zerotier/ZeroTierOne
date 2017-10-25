@@ -281,12 +281,17 @@ public:
 	/**
 	 * @return Path quality -- lower is better
 	 */
-	inline int quality(const int64_t now) const
+	inline long quality(const int64_t now) const
 	{
-		const int l = (int)_latency;
-		const int age = (int)std::min((now - _lastIn),(int64_t)(ZT_PATH_HEARTBEAT_PERIOD * 10)); // set an upper sanity limit to avoid overflow
-		return (((age < (ZT_PATH_HEARTBEAT_PERIOD + 5000)) ? l : (l + 0xffff + age)) * (int)((ZT_INETADDRESS_MAX_SCOPE - _ipScope) + 1));
+		const int l = (long)_latency;
+		const int age = (long)std::min((now - _lastIn),(int64_t)(ZT_PATH_HEARTBEAT_PERIOD * 10)); // set an upper sanity limit to avoid overflow
+		return (((age < (ZT_PATH_HEARTBEAT_PERIOD + 5000)) ? l : (l + 0xffff + age)) * (long)((ZT_INETADDRESS_MAX_SCOPE - _ipScope) + 1));
 	}
+
+	/**
+	 * @return True if this path is alive (receiving heartbeats)
+	 */
+	inline bool alive(const int64_t now) const { return ((now - _lastIn) < (ZT_PATH_HEARTBEAT_PERIOD + 5000)); }
 
 	/**
 	 * @return True if this path needs a heartbeat

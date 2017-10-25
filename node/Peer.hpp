@@ -219,11 +219,11 @@ public:
 	 * Process a cluster redirect sent by this peer
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param localSocket Local socket as supplied by external code
+	 * @param originatingPath Path from which redirect originated
 	 * @param remoteAddress Remote address
 	 * @param now Current time
 	 */
-	void clusterRedirect(void *tPtr,const int64_t localSocket,const InetAddress &remoteAddress,const int64_t now);
+	void clusterRedirect(void *tPtr,const SharedPtr<Path> &originatingPath,const InetAddress &remoteAddress,const int64_t now);
 
 	/**
 	 * Reset paths within a given IP scope and address family
@@ -498,7 +498,7 @@ private:
 		_PeerPath() : lr(0),p(),priority(1) {}
 		int64_t lr; // time of last valid ZeroTier packet
 		SharedPtr<Path> p;
-		int priority; // >= 1, higher is better
+		long priority; // >= 1, higher is better
 	};
 
 	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
