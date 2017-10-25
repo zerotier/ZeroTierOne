@@ -128,16 +128,12 @@
     <ClInclude Include="..\..\node\Address.hpp" />
     <ClInclude Include="..\..\node\Array.hpp" />
     <ClInclude Include="..\..\node\AtomicCounter.hpp" />
-    <ClInclude Include="..\..\node\BandwidthAccount.hpp" />
-    <ClInclude Include="..\..\node\BinarySemaphore.hpp" />
     <ClInclude Include="..\..\node\Buffer.hpp" />
     <ClInclude Include="..\..\node\C25519.hpp" />
     <ClInclude Include="..\..\node\CertificateOfMembership.hpp" />
     <ClInclude Include="..\..\node\CertificateOfOwnership.hpp" />
-    <ClInclude Include="..\..\node\CMWC4096.hpp" />
     <ClInclude Include="..\..\node\Constants.hpp" />
     <ClInclude Include="..\..\node\Credential.hpp" />
-    <ClInclude Include="..\..\node\DeferredPackets.hpp" />
     <ClInclude Include="..\..\node\Dictionary.hpp" />
     <ClInclude Include="..\..\node\Hashtable.hpp" />
     <ClInclude Include="..\..\node\Identity.hpp" />

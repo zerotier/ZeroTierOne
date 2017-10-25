@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="10.9" version="12.5.1" Modules="enterprise" RootPath="." Language="en" Id="{DC564647-6BF0-4550-87F4-89C938D0159C}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="10.9" version="14.3" Modules="enterprise" RootPath="." Language="en" Id="{DC564647-6BF0-4550-87F4-89C938D0159C}">
   <COMPONENT cid="caphyon.advinst.msicomp.ProjectOptionsComponent">
-    <ROW Name="HiddenItems" Value="UpdaterComponent;SerValComponent;AutorunComponent;MultipleInstancesComponent;MsiJavaComponent;MsiRegsComponent;MsiExtComponent;MsiAssemblyComponent;MsiDriverPackagesComponent;AnalyticsComponent;ActSyncAppComponent;MsiMergeModsComponent;MsiThemeComponent;BackgroundImagesComponent;DictionaryComponent;ScheduledTasksComponent;CPLAppletComponent;GameUxComponent;UserAccountsComponent;MsiClassComponent;WebApplicationsComponent;MsiOdbcDataSrcComponent;SqlConnectionComponent;SharePointSlnComponent;SilverlightSlnComponent;MsiAppSearchComponent"/>
+    <ROW Name="HiddenItems" Value="UpdaterComponent;SerValComponent;AutorunComponent;MultipleInstancesComponent;MsiJavaComponent;MsiRegsComponent;MsiExtComponent;MsiAssemblyComponent;MsiDriverPackagesComponent;AnalyticsComponent;ActSyncAppComponent;MsiMergeModsComponent;MsiThemeComponent;BackgroundImagesComponent;DictionaryComponent;ScheduledTasksComponent;CPLAppletComponent;GameUxComponent;UserAccountsComponent;MsiClassComponent;WebApplicationsComponent;MsiOdbcDataSrcComponent;SqlConnectionComponent;SharePointSlnComponent;SilverlightSlnComponent;MsiAppSearchComponent;AppXAppDetailsComponent;AppXCapabilitiesComponent;AppXDependenciesComponent;AppXProductDetailsComponent;AppXVisualAssetsComponent;AppXAppDeclarationsComponent;AppXUriRulesComponent"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiPropsComponent">
     <ROW Property="AI_BITMAP_DISPLAY_MODE" Value="0"/>
@@ -27,22 +27,26 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{0AF2DC73-6629-41A1-B0C6-B110582FEE29} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{ED5B4816-F9B1-473E-AFB8-7A174E5C1C5D} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
-    <ROW Property="ProductVersion" Value="1.2.4" Type="32"/>
+    <ROW Property="ProductVersion" Value="1.2.5" Type="32"/>
     <ROW Property="REBOOT" MultiBuildValue="DefaultBuild:ReallySuppress"/>
     <ROW Property="RUNAPPLICATION" Value="1" Type="4"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="UpgradeCode" Value="{B0E2A5F3-88B6-4E77-B922-CB4739B4C4C8}"/>
     <ROW Property="WindowsType9X" MultiBuildValue="DefaultBuild:Windows 9x/ME#ExeBuild:Windows 9x/ME" ValueLocId="-"/>
     <ROW Property="WindowsType9XDisplay" MultiBuildValue="DefaultBuild:Windows 9x/ME#ExeBuild:Windows 9x/ME" ValueLocId="-"/>
-    <ROW Property="WindowsTypeNT" MultiBuildValue="DefaultBuild:Windows 2000, Windows 2000 Service Pack 1, Windows 2000 Service Pack 2, Windows 2000 Service Pack 3, Windows 2000 Service Pack 4, Windows XP x86, Windows XP x86 Service Pack 1, Windows XP x86 Service Pack 2, Windows XP x86 Service Pack 3, Windows Server 2003 x86, Windows Server 2003 x86 Service Pack 1, Windows Server 2003 x86 Service Pack 2" ValueLocId="-"/>
+    <ROW Property="WindowsTypeNT" MultiBuildValue="DefaultBuild:Windows XP SP3 x86, Windows Server 2003 SP2 x86" ValueLocId="-"/>
     <ROW Property="WindowsTypeNT40" MultiBuildValue="DefaultBuild:Windows NT 4.0#ExeBuild:Windows NT 4.0" ValueLocId="-"/>
     <ROW Property="WindowsTypeNT40Display" MultiBuildValue="DefaultBuild:Windows NT 4.0#ExeBuild:Windows NT 4.0" ValueLocId="-"/>
-    <ROW Property="WindowsTypeNT64" MultiBuildValue="DefaultBuild:Windows XP x64, Windows XP x64 Service Pack 1, Windows XP x64 Service Pack 2, Windows Server 2003 x64, Windows Server 2003 x64 Service Pack 1, Windows Server 2003 x64 Service Pack 2" ValueLocId="-"/>
-    <ROW Property="WindowsTypeNT64Display" MultiBuildValue="DefaultBuild:Windows XP x64, Windows Server 2003 x64" ValueLocId="-"/>
-    <ROW Property="WindowsTypeNTDisplay" MultiBuildValue="DefaultBuild:Windows 2000, Windows XP x86, Windows Server 2003 x86" ValueLocId="-"/>
+    <ROW Property="WindowsTypeNT50" MultiBuildValue="DefaultBuild:Windows 2000#ExeBuild:Windows 2000" ValueLocId="-"/>
+    <ROW Property="WindowsTypeNT50Display" MultiBuildValue="DefaultBuild:Windows 2000#ExeBuild:Windows 2000" ValueLocId="-"/>
+    <ROW Property="WindowsTypeNT5X" MultiBuildValue="DefaultBuild:Windows XP/2003 RTM, Windows XP/2003 SP1, Windows XP SP2 x86#ExeBuild:Windows XP/2003 RTM, Windows XP/2003 SP1, Windows XP SP2 x86" ValueLocId="-"/>
+    <ROW Property="WindowsTypeNT5XDisplay" MultiBuildValue="DefaultBuild:Windows XP/2003 RTM, Windows XP/2003 SP1, Windows XP SP2 x86#ExeBuild:Windows XP/2003 RTM, Windows XP/2003 SP1, Windows XP SP2 x86" ValueLocId="-"/>
+    <ROW Property="WindowsTypeNT64" MultiBuildValue="DefaultBuild:Windows XP SP2 x64, Windows Server 2003 SP2 x64" ValueLocId="-"/>
+    <ROW Property="WindowsTypeNT64Display" MultiBuildValue="DefaultBuild:Windows XP SP2 x64, Windows Server 2003 SP2 x64" ValueLocId="-"/>
+    <ROW Property="WindowsTypeNTDisplay" MultiBuildValue="DefaultBuild:Windows XP SP3 x86, Windows Server 2003 SP2 x86" ValueLocId="-"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiDirsComponent">
     <ROW Directory="APPDIR" Directory_Parent="TARGETDIR" DefaultDir="APPDIR:." IsPseudoRoot="1" DirectoryOptions="2"/>
@@ -60,7 +64,7 @@
     <ROW Directory="x86_Dir" Directory_Parent="tapwindows_Dir" DefaultDir="x86"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{BEF49A0A-3D61-4162-8934-88473D8A6F3D}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{ECF0BCD7-41FD-47A7-92C5-CB77454433F2}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{020DCABD-5D56-49B9-AF48-F07F0B55E590}" Directory_="APPDIR" Attributes="4" KeyPath="NoModify" Options="1"/>
     <ROW Component="AI_ExePath" ComponentId="{8E02B36C-7A19-429B-A93E-77A9261AC918}" Directory_="APPDIR" Attributes="4" KeyPath="AI_ExePath"/>
     <ROW Component="Hardcodet.Wpf.TaskbarNotification.dll" ComponentId="{BEA825AF-2555-44AF-BE40-47FFC16DCBA6}" Directory_="APPDIR" Attributes="0" KeyPath="Hardcodet.Wpf.TaskbarNotification.dll"/>
@@ -105,12 +109,14 @@
     <ROW PersistentRow="segoeuiz.ttf" Type="0" Condition="1"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BootstrOptComponent">
-    <ROW BootstrOptKey="GlobalOptions" GeneralOptions="qh" DownloadFolder="[AppDataFolder][|Manufacturer]\[|ProductName]\prerequisites" EulaPathLocId="*" IntroTextPathLocId="*"/>
+    <ROW BootstrOptKey="GlobalOptions" GeneralOptions="qh" DownloadFolder="[AppDataFolder][|Manufacturer]\[|ProductName]\prerequisites"/>
+  </COMPONENT>
+  <COMPONENT cid="caphyon.advinst.msicomp.BootstrapperUISequenceComponent">
+    <ROW Action="AI_DetectSoftware" Sequence="101"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BuildComponent">
     <ROW BuildKey="DefaultBuild" BuildName="MSI" BuildOrder="1" BuildType="1" PackageFolder="..\..\.." PackageFileName="ZeroTier One" Languages="en" InstallationType="4" ExtUI="true" UseLargeSchema="true"/>
     <ROW BuildKey="ExeBuild" BuildName="update" BuildOrder="2" BuildType="1" PackageFolder="..\..\.." PackageFileName="ZeroTier One" Languages="en" InstallationType="2" CabsLocation="1" CompressCabs="false" UseLzma="true" LzmaMethod="2" LzmaCompressionLevel="4" PackageType="1" FilesInsideExe="true" ExeIconPath="..\..\..\artwork\ZeroTierIcon.ico" ExtractionFolder="[AppDataFolder][|Manufacturer]\[|ProductName] [|ProductVersion]\install" MsiCmdLine="/qn" UseLargeSchema="true" ExeName="zt1_update_2_1,2_[|ProductVersion]_0"/>
-    <ATTRIBUTE name="CurrentBuild" value="DefaultBuild"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.CacheComponent">
     <ATTRIBUTE name="Enable" value="false"/>
@@ -148,28 +154,29 @@
     <ROW Fragment="WelcomeDlg.aip" Path="&lt;AI_THEMES&gt;classic\fragments\WelcomeDlg.aip"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiActionTextComponent">
-    <ROW Action="AI_AiBackupImmediate" Description="Preparing backup operation" Template="Path: [1]" DescriptionLocId="ActionText.Description.AI_AiBackupImmediate" TemplateLocId="ActionText.Template.AI_AiBackupImmediate"/>
-    <ROW Action="AI_AiBackupRollback" Description="Rollback backup" Template="Path: [1]" DescriptionLocId="ActionText.Description.AI_AiBackupRollback" TemplateLocId="ActionText.Template.AI_AiBackupRollback"/>
-    <ROW Action="AI_AiRestoreDeferred" Description="Executing restore operation" Template="Path: [1]" DescriptionLocId="ActionText.Description.AI_AiRestoreDeferred" TemplateLocId="ActionText.Template.AI_AiRestoreDeferred"/>
-    <ROW Action="AI_AiRestoreRollback" Description="Rollback restore" Template="Path: [1]" DescriptionLocId="ActionText.Description.AI_AiRestoreRollback" TemplateLocId="ActionText.Template.AI_AiRestoreRollback"/>
+    <ROW Action="AI_AiBackupImmediate" Description="Preparing backup operation" DescriptionLocId="ActionText.Description.AI_AiBackupImmediate" Template="Path: [1]" TemplateLocId="ActionText.Template.AI_AiBackupImmediate"/>
+    <ROW Action="AI_AiBackupRollback" Description="Rollback backup" DescriptionLocId="ActionText.Description.AI_AiBackupRollback" Template="Path: [1]" TemplateLocId="ActionText.Template.AI_AiBackupRollback"/>
+    <ROW Action="AI_AiRestoreDeferred" Description="Executing restore operation" DescriptionLocId="ActionText.Description.AI_AiRestoreDeferred" Template="Path: [1]" TemplateLocId="ActionText.Template.AI_AiRestoreDeferred"/>
+    <ROW Action="AI_AiRestoreDeferredImpersonate" Description="Executing restore operation" DescriptionLocId="ActionText.Description.AI_AiRestoreDeferred" Template="Path: [1]" TemplateLocId="ActionText.Template.AI_AiRestoreDeferred"/>
+    <ROW Action="AI_AiRestoreRollback" Description="Rollback restore" DescriptionLocId="ActionText.Description.AI_AiRestoreRollback" Template="Path: [1]" TemplateLocId="ActionText.Template.AI_AiRestoreRollback"/>
     <ROW Action="AI_DeleteLzma" Description="Deleting files extracted from archive" DescriptionLocId="ActionText.Description.AI_DeleteLzma" TemplateLocId="-"/>
     <ROW Action="AI_DeleteRLzma" Description="Deleting files extracted from archive" DescriptionLocId="ActionText.Description.AI_DeleteLzma" TemplateLocId="-"/>
     <ROW Action="AI_ExtractFiles" Description="Extracting files from archive" DescriptionLocId="ActionText.Description.AI_ExtractLzma" TemplateLocId="-"/>
     <ROW Action="AI_ExtractLzma" Description="Extracting files from archive" DescriptionLocId="ActionText.Description.AI_ExtractLzma" TemplateLocId="-"/>
-    <ROW Action="AI_FwConfig" Description="Executing Windows Firewall configurations" Template="Configuring Windows Firewall rule: &quot;[1]&quot;" DescriptionLocId="ActionText.Description.AI_FwConfig" TemplateLocId="ActionText.Template.AI_FwConfig"/>
+    <ROW Action="AI_FwConfig" Description="Executing Windows Firewall configurations" DescriptionLocId="ActionText.Description.AI_FwConfig" Template="Configuring Windows Firewall rule: &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_FwConfig"/>
     <ROW Action="AI_FwInstall" Description="Generating actions to configure Windows Firewall" DescriptionLocId="ActionText.Description.AI_FwInstall"/>
-    <ROW Action="AI_FwRemove" Description="Executing Windows Firewall configurations" Template="Configuring Windows Firewall rule:  &quot;[1]&quot;" DescriptionLocId="ActionText.Description.AI_FwRemove" TemplateLocId="ActionText.Template.AI_FwRemove"/>
-    <ROW Action="AI_FwRollback" Description="Rolling back Windows Firewall configurations." Template="Rolling back Windows Firewall configurations." DescriptionLocId="ActionText.Description.AI_FwRollback" TemplateLocId="ActionText.Template.AI_FwRollback"/>
+    <ROW Action="AI_FwRemove" Description="Executing Windows Firewall configurations" DescriptionLocId="ActionText.Description.AI_FwRemove" Template="Configuring Windows Firewall rule:  &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_FwRemove"/>
+    <ROW Action="AI_FwRollback" Description="Rolling back Windows Firewall configurations." DescriptionLocId="ActionText.Description.AI_FwRollback" Template="Rolling back Windows Firewall configurations." TemplateLocId="ActionText.Template.AI_FwRollback"/>
     <ROW Action="AI_FwUninstall" Description="Generating actions to configure Windows Firewall" DescriptionLocId="ActionText.Description.AI_FwUninstall"/>
-    <ROW Action="AI_TxtUpdaterCommit" Description="Commit text file changes. " Template="Commit text file changes." DescriptionLocId="ActionText.Description.AI_TxtUpdaterCommit" TemplateLocId="ActionText.Template.AI_TxtUpdaterCommit"/>
-    <ROW Action="AI_TxtUpdaterConfig" Description="Executing text file updates" Template="Updating text file: &quot;[1]&quot;" DescriptionLocId="ActionText.Description.AI_TxtUpdaterConfig" TemplateLocId="ActionText.Template.AI_TxtUpdaterConfig"/>
+    <ROW Action="AI_TxtUpdaterCommit" Description="Commit text file changes. " DescriptionLocId="ActionText.Description.AI_TxtUpdaterCommit" Template="Commit text file changes." TemplateLocId="ActionText.Template.AI_TxtUpdaterCommit"/>
+    <ROW Action="AI_TxtUpdaterConfig" Description="Executing text file updates" DescriptionLocId="ActionText.Description.AI_TxtUpdaterConfig" Template="Updating text file: &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_TxtUpdaterConfig"/>
     <ROW Action="AI_TxtUpdaterInstall" Description="Generating actions to configure text files updates" DescriptionLocId="ActionText.Description.AI_TxtUpdaterInstall"/>
-    <ROW Action="AI_TxtUpdaterRollback" Description="Rolling back text file changes. " Template="Rolling back text file changes." DescriptionLocId="ActionText.Description.AI_TxtUpdaterRollback" TemplateLocId="ActionText.Template.AI_TxtUpdaterRollback"/>
-    <ROW Action="AI_XmlCommit" Description="Committing XML file configurations." Template="Committing XML file configurations." DescriptionLocId="ActionText.Description.AI_XmlCommit" TemplateLocId="ActionText.Template.AI_XmlCommit"/>
-    <ROW Action="AI_XmlConfig" Description="Executing XML file configurations" Template="Configuring XML file: &quot;[1]&quot;" DescriptionLocId="ActionText.Description.AI_XmlConfig" TemplateLocId="ActionText.Template.AI_XmlConfig"/>
+    <ROW Action="AI_TxtUpdaterRollback" Description="Rolling back text file changes. " DescriptionLocId="ActionText.Description.AI_TxtUpdaterRollback" Template="Rolling back text file changes." TemplateLocId="ActionText.Template.AI_TxtUpdaterRollback"/>
+    <ROW Action="AI_XmlCommit" Description="Committing XML file configurations." DescriptionLocId="ActionText.Description.AI_XmlCommit" Template="Committing XML file configurations." TemplateLocId="ActionText.Template.AI_XmlCommit"/>
+    <ROW Action="AI_XmlConfig" Description="Executing XML file configurations" DescriptionLocId="ActionText.Description.AI_XmlConfig" Template="Configuring XML file: &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_XmlConfig"/>
     <ROW Action="AI_XmlInstall" Description="Generating actions to configure XML files" DescriptionLocId="ActionText.Description.AI_XmlInstall"/>
-    <ROW Action="AI_XmlRemove" Description="Executing XML file configurations" Template="Configuring XML file: &quot;[1]&quot;" DescriptionLocId="ActionText.Description.AI_XmlRemove" TemplateLocId="ActionText.Template.AI_XmlRemove"/>
-    <ROW Action="AI_XmlRollback" Description="Rolling back XML file configurations." Template="Rolling back XML file configurations." DescriptionLocId="ActionText.Description.AI_XmlRollback" TemplateLocId="ActionText.Template.AI_XmlRollback"/>
+    <ROW Action="AI_XmlRemove" Description="Executing XML file configurations" DescriptionLocId="ActionText.Description.AI_XmlRemove" Template="Configuring XML file: &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_XmlRemove"/>
+    <ROW Action="AI_XmlRollback" Description="Rolling back XML file configurations." DescriptionLocId="ActionText.Description.AI_XmlRollback" Template="Rolling back XML file configurations." TemplateLocId="ActionText.Template.AI_XmlRollback"/>
     <ROW Action="AI_XmlUninstall" Description="Generating actions to configure XML files" DescriptionLocId="ActionText.Description.AI_XmlUninstall"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiAppSearchComponent">
@@ -232,6 +239,7 @@
     <ROW Action="AI_AiBackupImmediate" Type="1" Source="ResourceCleaner.dll" Target="OnAiBackupImmediate"/>
     <ROW Action="AI_AiBackupRollback" Type="11521" Source="ResourceCleaner.dll" Target="OnAiBackupRollback"/>
     <ROW Action="AI_AiRestoreDeferred" Type="11265" Source="ResourceCleaner.dll" Target="OnAiRestoreDeferred"/>
+    <ROW Action="AI_AiRestoreDeferredImpersonate" Type="9217" Source="ResourceCleaner.dll" Target="OnAiRestoreDeferredImpersonate"/>
     <ROW Action="AI_AiRestoreRollback" Type="11521" Source="ResourceCleaner.dll" Target="OnAiRestoreRollback" WithoutSeq="true"/>
     <ROW Action="AI_BACKUP_AI_SETUPEXEPATH" Type="51" Source="AI_SETUPEXEPATH_ORIGINAL" Target="[AI_SETUPEXEPATH]"/>
     <ROW Action="AI_CommitChainers" Type="11841" Source="chainersupport.dll" Target="CommitChainedPackages" WithoutSeq="true"/>
@@ -249,6 +257,7 @@
     <ROW Action="AI_DetectSoftware" Type="257" Source="SoftwareDetector.dll" Target="OnDetectSoftware"/>
     <ROW Action="AI_DoRemoveExternalUIStub" Type="3585" Source="ExternalUICleaner.dll" Target="DoRemoveExternalUIStub" WithoutSeq="true"/>
     <ROW Action="AI_DpiContentScale" Type="1" Source="aicustact.dll" Target="DpiContentScale"/>
+    <ROW Action="AI_EnableDebugLog" Type="321" Source="aicustact.dll" Target="EnableDebugLog"/>
     <ROW Action="AI_EstimateExtractFiles" Type="1" Source="Prereq.dll" Target="EstimateExtractFiles"/>
     <ROW Action="AI_ExtractCadLzma" Type="51" Source="AI_ExtractLzma" Target="[AI_SETUPEXEPATH]"/>
     <ROW Action="AI_ExtractFiles" Type="1025" Source="Prereq.dll" Target="ExtractSourceFiles" AdditionalSeq="AI_DATA_SETTER_4"/>
@@ -308,14 +317,14 @@
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
     <ROW Action="AI_STORE_LOCATION" Condition="(Not Installed) OR REINSTALL" Sequence="1503"/>
     <ROW Action="AI_PREPARE_UPGRADE" Condition="AI_UPGRADE=&quot;No&quot; AND (Not Installed)" Sequence="1399"/>
-    <ROW Action="AI_ResolveKnownFolders" Sequence="51"/>
+    <ROW Action="AI_ResolveKnownFolders" Sequence="52"/>
     <ROW Action="AI_XmlInstall" Condition="(REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5103"/>
     <ROW Action="AI_DATA_SETTER" Condition="(REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5102"/>
     <ROW Action="AI_XmlUninstall" Condition="(REMOVE)" Sequence="3102"/>
     <ROW Action="AI_DATA_SETTER_1" Condition="(REMOVE)" Sequence="3101"/>
     <ROW Action="InstallFinalize" Sequence="6597" SeqType="0" MsiKey="InstallFinalize"/>
     <ROW Action="AI_RemoveExternalUIStub" Condition="(REMOVE=&quot;ALL&quot;) AND ((VersionNT &gt; 500) OR((VersionNT = 500) AND (ServicePackLevel &gt;= 4)))" Sequence="1502"/>
-    <ROW Action="AI_GetArpIconPath" Sequence="1401"/>
+    <ROW Action="AI_GetArpIconPath" Sequence="1402"/>
     <ROW Action="TapDeviceRemove32" Condition="( Installed AND ( REMOVE = &quot;ALL&quot; OR AI_INSTALL_MODE = &quot;Remove&quot; ) AND NOT UPGRADINGPRODUCTCODE ) AND ( NOT VersionNT64 )" Sequence="1603"/>
     <ROW Action="TapDeviceRemove64" Condition="( Installed AND ( REMOVE = &quot;ALL&quot; OR AI_INSTALL_MODE = &quot;Remove&quot; ) AND NOT UPGRADINGPRODUCTCODE ) AND ( VersionNT64 )" Sequence="1604"/>
     <ROW Action="AI_PrepareChainers" Condition="VersionMsi &gt;= &quot;4.05&quot;" Sequence="5851"/>
@@ -333,29 +342,34 @@
     <ROW Action="AI_FindExeLzma" Condition="SETUPEXEDIR=&quot;&quot; AND Installed AND (REMOVE&lt;&gt;&quot;ALL&quot;) AND (AI_INSTALL_MODE&lt;&gt;&quot;Remove&quot;) AND (NOT PATCH)" Sequence="196" Builds="ExeBuild"/>
     <ROW Action="AI_ExtractLzma" Condition="SETUPEXEDIR=&quot;&quot; AND Installed AND (REMOVE&lt;&gt;&quot;ALL&quot;) AND (AI_INSTALL_MODE&lt;&gt;&quot;Remove&quot;) AND (NOT PATCH)" Sequence="1549" Builds="ExeBuild"/>
     <ROW Action="AI_DeleteRLzma" Condition="SETUPEXEDIR=&quot;&quot; AND Installed AND (REMOVE&lt;&gt;&quot;ALL&quot;) AND (AI_INSTALL_MODE&lt;&gt;&quot;Remove&quot;) AND (NOT PATCH)" Sequence="1548" Builds="ExeBuild"/>
-    <ROW Action="AI_DeleteLzma" Condition="SETUPEXEDIR=&quot;&quot; AND Installed AND (REMOVE&lt;&gt;&quot;ALL&quot;) AND (AI_INSTALL_MODE&lt;&gt;&quot;Remove&quot;) AND (NOT PATCH)" Sequence="6595" Builds="ExeBuild"/>
+    <ROW Action="AI_DeleteLzma" Condition="SETUPEXEDIR=&quot;&quot; AND Installed AND (REMOVE&lt;&gt;&quot;ALL&quot;) AND (AI_INSTALL_MODE&lt;&gt;&quot;Remove&quot;) AND (NOT PATCH)" Sequence="6594" Builds="ExeBuild"/>
     <ROW Action="AI_ExtractFiles" Sequence="3998" Builds="ExeBuild"/>
     <ROW Action="AI_DATA_SETTER_4" Sequence="3997"/>
     <ROW Action="AI_EstimateExtractFiles" Sequence="3999" Builds="ExeBuild"/>
     <ROW Action="TerminateUI" Sequence="1602"/>
     <ROW Action="AI_DATA_SETTER_6" Sequence="1601"/>
-    <ROW Action="AI_AiBackupImmediate" Sequence="1001"/>
+    <ROW Action="AI_AiBackupImmediate" Sequence="1401"/>
     <ROW Action="AI_AiBackupRollback" Sequence="1501"/>
-    <ROW Action="AI_AiRestoreDeferred" Sequence="6596"/>
+    <ROW Action="AI_AiRestoreDeferred" Sequence="6595"/>
+    <ROW Action="AI_EnableDebugLog" Sequence="51"/>
+    <ROW Action="AI_AiRestoreDeferredImpersonate" Sequence="6596"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
-    <ROW Action="AI_ResolveKnownFolders" Sequence="52"/>
-    <ROW Action="AI_DpiContentScale" Sequence="51"/>
+    <ROW Action="AI_ResolveKnownFolders" Sequence="53"/>
+    <ROW Action="AI_DpiContentScale" Sequence="52"/>
     <ROW Action="AI_BACKUP_AI_SETUPEXEPATH" Sequence="99"/>
     <ROW Action="AI_RESTORE_AI_SETUPEXEPATH" Condition="AI_SETUPEXEPATH_ORIGINAL" Sequence="102"/>
     <ROW Action="ExecuteAction" Sequence="1299" SeqType="0" MsiKey="ExecuteAction"/>
     <ROW Action="AI_DetectSoftware" Sequence="101"/>
+    <ROW Action="AI_EnableDebugLog" Sequence="51"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiLaunchConditionsComponent">
-    <ROW Condition="( Version9X OR ( NOT VersionNT64 ) OR ( VersionNT64 AND ((VersionNT64 &lt;&gt; 502) OR (((VersionNT64 = 502) AND (ServicePackLevel &gt;= 1)) OR (MsiNTProductType &lt;&gt; 1))) AND ((VersionNT64 &lt;&gt; 502) OR (((VersionNT64 = 502) AND (ServicePackLevel &lt;&gt; 1)) OR (MsiNTProductType &lt;&gt; 1))) AND ((VersionNT64 &lt;&gt; 502) OR (((VersionNT64 = 502) AND (ServicePackLevel &lt;&gt; 2)) OR (MsiNTProductType &lt;&gt; 1))) AND ((VersionNT64 &lt;&gt; 502) OR ((VersionNT64 = 502) AND ((MsiNTProductType = 1) OR (ServicePackLevel &gt;= 1)))) AND ((VersionNT64 &lt;&gt; 502) OR ((VersionNT64 = 502) AND ((MsiNTProductType = 1) OR (ServicePackLevel &lt;&gt; 1)))) AND ((VersionNT64 &lt;&gt; 502) OR ((VersionNT64 = 502) AND ((MsiNTProductType = 1) OR (ServicePackLevel &lt;&gt; 2)))) ) )" Description="[ProductName] cannot be installed on the following Windows versions: [WindowsTypeNT64Display]" DescriptionLocId="AI.LaunchCondition.NoSpecificNT64" IsPredefined="true" Builds="DefaultBuild"/>
-    <ROW Condition="( Version9X OR VersionNT64 OR ( VersionNT AND ((VersionNT &lt;&gt; 500) OR ((VersionNT = 500) AND (ServicePackLevel &gt;= 1))) AND ((VersionNT &lt;&gt; 500) OR ((VersionNT = 500) AND (ServicePackLevel &lt;&gt; 1))) AND ((VersionNT &lt;&gt; 500) OR ((VersionNT = 500) AND (ServicePackLevel &lt;&gt; 2))) AND ((VersionNT &lt;&gt; 500) OR ((VersionNT = 500) AND (ServicePackLevel &lt;&gt; 3))) AND ((VersionNT &lt;&gt; 500) OR ((VersionNT = 500) AND (ServicePackLevel &lt;&gt; 4))) AND (((VersionNT &lt;&gt; 501) OR ((VersionNT = 501) AND (ServicePackLevel &gt;= 1))) OR VersionNT64) AND (((VersionNT &lt;&gt; 501) OR ((VersionNT = 501) AND (ServicePackLevel &lt;&gt; 1))) OR VersionNT64) AND (((VersionNT &lt;&gt; 501) OR ((VersionNT = 501) AND (ServicePackLevel &lt;&gt; 2))) OR VersionNT64) AND (((VersionNT &lt;&gt; 501) OR ((VersionNT = 501) AND (ServicePackLevel &lt;&gt; 3))) OR VersionNT64) AND (((VersionNT &lt;&gt; 502) OR ((VersionNT = 502) AND (ServicePackLevel &gt;= 1))) OR VersionNT64) AND (((VersionNT &lt;&gt; 502) OR ((VersionNT = 502) AND (ServicePackLevel &lt;&gt; 1))) OR VersionNT64) AND (((VersionNT &lt;&gt; 502) OR ((VersionNT = 502) AND (ServicePackLevel &lt;&gt; 2))) OR VersionNT64) ) )" Description="[ProductName] cannot be installed on the following Windows versions: [WindowsTypeNTDisplay]" DescriptionLocId="AI.LaunchCondition.NoSpecificNT" IsPredefined="true" Builds="DefaultBuild"/>
-    <ROW Condition="(VersionNT &lt;&gt; 400)" Description="[ProductName] cannot be installed on the following Windows versions: [WindowsTypeNT40Display]." DescriptionLocId="AI.LaunchCondition.NoNT40" IsPredefined="true" Builds="DefaultBuild;ExeBuild"/>
+    <ROW Condition="( Version9X OR ( NOT VersionNT64 ) OR ( VersionNT64 AND ((VersionNT64 &lt;&gt; 502) OR (ServicePackLevel &lt;&gt; 2) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 502) OR (ServicePackLevel &lt;&gt; 2) OR (MsiNTProductType = 1)) ) )" Description="[ProductName] cannot be installed on the following Windows versions: [WindowsTypeNT64Display]." DescriptionLocId="AI.LaunchCondition.NoSpecificNT64" IsPredefined="true" Builds="DefaultBuild"/>
+    <ROW Condition="( Version9X OR VersionNT64 OR ( VersionNT AND ((VersionNT &lt;&gt; 501) OR (ServicePackLevel &lt;&gt; 3)) AND ((VersionNT &lt;&gt; 502) OR (ServicePackLevel &lt;&gt; 2)) ) )" Description="[ProductName] cannot be installed on the following Windows versions: [WindowsTypeNTDisplay]." DescriptionLocId="AI.LaunchCondition.NoSpecificNT" IsPredefined="true" Builds="DefaultBuild"/>
+    <ROW Condition="(VersionNT &lt;&gt; 400)" Description="[ProductName] cannot be installed on [WindowsTypeNT40Display]." DescriptionLocId="AI.LaunchCondition.NoNT40" IsPredefined="true" Builds="DefaultBuild;ExeBuild"/>
+    <ROW Condition="(VersionNT &lt;&gt; 500)" Description="[ProductName] cannot be installed on [WindowsTypeNT50Display]." DescriptionLocId="AI.LaunchCondition.NoNT50" IsPredefined="true" Builds="DefaultBuild;ExeBuild"/>
+    <ROW Condition="(VersionNT64 OR ((VersionNT &lt;&gt; 501) OR (ServicePackLevel = 3))) AND ((VersionNT &lt;&gt; 502) OR (ServicePackLevel = 2))" Description="[ProductName] cannot be installed on [WindowsTypeNT5XDisplay]." DescriptionLocId="AI.LaunchCondition.NoNT5X" IsPredefined="true" Builds="DefaultBuild;ExeBuild"/>
     <ROW Condition="AI_DETECTED_DOTNET_VERSION &gt;= AI_REQUIRED_DOTNET_VERSION" Description="[ProductName] cannot be installed on systems with .NET Framework version lower than [AI_REQUIRED_DOTNET_DISPLAY]." DescriptionLocId="AI.LaunchCondition.DotNET" IsPredefined="true" Builds="DefaultBuild"/>
     <ROW Condition="Privileged" Description="[ProductName] requires administrative privileges to install." DescriptionLocId="AI.LaunchCondition.Privileged" IsPredefined="true" Builds="DefaultBuild"/>
     <ROW Condition="SETUPEXEDIR OR (REMOVE=&quot;ALL&quot;)" Description="This package can only be run from a bootstrapper." DescriptionLocId="AI.LaunchCondition.RequireBootstrapper" IsPredefined="true" Builds="ExeBuild"/>
@@ -382,8 +396,8 @@
     <ROW Registry="Publisher" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="Publisher" Value="[Manufacturer]" Component_="AI_CustomARPName"/>
     <ROW Registry="URLInfoAbout" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="URLInfoAbout" Value="[ARPURLINFOABOUT]" Component_="AI_CustomARPName"/>
     <ROW Registry="URLUpdateInfo" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="URLUpdateInfo" Value="[ARPURLUPDATEINFO]" Component_="AI_CustomARPName"/>
-    <ROW Registry="UninstallPath" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="UninstallPath" Value="[AI_UNINSTALLER] /x [ProductCode]" Component_="AI_CustomARPName"/>
-    <ROW Registry="UninstallString" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="UninstallString" Value="[AI_UNINSTALLER] /x [ProductCode]" Component_="AI_CustomARPName"/>
+    <ROW Registry="UninstallPath" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="UninstallPath" Value="[AI_UNINSTALLER] /x [ProductCode] AI_UNINSTALLER_CTP=1" Component_="AI_CustomARPName"/>
+    <ROW Registry="UninstallString" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="UninstallString" Value="[AI_UNINSTALLER] /x [ProductCode] AI_UNINSTALLER_CTP=1" Component_="AI_CustomARPName"/>
     <ROW Registry="Version" Root="-1" Key="Software\[Manufacturer]\[ProductName]" Name="Version" Value="[ProductVersion]" Component_="ProductInformation"/>
     <ROW Registry="VersionMajor" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="VersionMajor" Value="#0" Component_="AI_CustomARPName"/>
     <ROW Registry="VersionMinor" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="VersionMinor" Value="#7" Component_="AI_CustomARPName"/>
@@ -432,7 +446,7 @@
     <ROW XmlAttribute="xsischemaLocation" XmlElement="swidsoftware_identification_tag" Name="xsi:schemaLocation" Flags="14" Order="3" Value="http://standards.iso.org/iso/19770/-2/2008/schema.xsd software_identification_tag.xsd"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlElementComponent">
-    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Condition="1" Order="2" Flags="14" Text="4"/>
+    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Condition="1" Order="2" Flags="14" Text="5"/>
     <ROW XmlElement="swidentitlement_required_indicator" ParentElement="swidsoftware_identification_tag" Name="swid:entitlement_required_indicator" Condition="1" Order="0" Flags="14" Text="false"/>
     <ROW XmlElement="swidmajor" ParentElement="swidnumeric" Name="swid:major" Condition="1" Order="0" Flags="14" Text="1"/>
     <ROW XmlElement="swidminor" ParentElement="swidnumeric" Name="swid:minor" Condition="1" Order="1" Flags="14" Text="2"/>

@@ -293,9 +293,6 @@
     <ClInclude Include="..\..\node\AtomicCounter.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\node\BandwidthAccount.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\node\Buffer.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
@@ -303,9 +300,6 @@
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\CertificateOfMembership.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\node\CMWC4096.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\Constants.hpp">
@@ -401,13 +395,7 @@
     <ClInclude Include="ZeroTierOneService.h">
       <Filter>Header Files\windows\ZeroTierOne</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\node\BinarySemaphore.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\node\Hashtable.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\node\DeferredPackets.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\World.hpp">
