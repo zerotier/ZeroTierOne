@@ -100,6 +100,7 @@ public:
 		_incomingLinkQualitySlowLogCounter(-64), // discard first fast log
 		_incomingLinkQualityPreviousPacketCounter(0),
 		_outgoingPacketCounter(0),
+		_latency(0xffff),
 		_addr(),
 		_ipScope(InetAddress::IP_SCOPE_NONE)
 	{
@@ -117,6 +118,7 @@ public:
 		_incomingLinkQualitySlowLogCounter(-64), // discard first fast log
 		_incomingLinkQualityPreviousPacketCounter(0),
 		_outgoingPacketCounter(0),
+		_latency(0xffff),
 		_addr(addr),
 		_ipScope(addr.ipScope())
 	{
@@ -189,6 +191,19 @@ public:
 	inline void sent(const int64_t t) { _lastOut = t; }
 
 	/**
+	 * Update path latency with a new measurement
+	 *
+	 * @param l Measured latency
+	 */
+	inline void updateLatency(const unsigned int l)
+	{
+		unsigned int pl = _latency;
+		if (pl < 0xffff)
+			_latency = (pl + l) / 2;
+		else _latency = l;
+	}
+
+	/**
 	 * @return Local socket as specified by external code
 	 */
 	inline const int64_t localSocket() const { return _localSocket; }
@@ -259,9 +274,19 @@ public:
 	}
 
 	/**
-	 * @return True if path appears alive
+	 * @return Latency or 0xffff if unknown
 	 */
-	inline bool alive(const int64_t now) const { return ((now - _lastIn) <= ZT_PATH_ALIVE_TIMEOUT); }
+	inline unsigned int latency() const { return _latency; }
+
+	/**
+	 * @return Path quality -- lower is better
+	 */
+	inline int quality(const int64_t now) const
+	{
+		const int l = (int)_latency;
+		const int age = (int)std::min((now - _lastIn),(int64_t)(ZT_PATH_HEARTBEAT_PERIOD * 10)); // set an upper sanity limit to avoid overflow
+		return (((age < (ZT_PATH_HEARTBEAT_PERIOD + 5000)) ? l : (l + 0xffff + age)) * (int)((ZT_INETADDRESS_MAX_SCOPE - _ipScope) + 1));
+	}
 
 	/**
 	 * @return True if this path needs a heartbeat
@@ -300,6 +325,7 @@ private:
 	volatile signed int _incomingLinkQualitySlowLogCounter;
 	volatile unsigned int _incomingLinkQualityPreviousPacketCounter;
 	volatile unsigned int _outgoingPacketCounter;
+	volatile unsigned int _latency;
 	InetAddress _addr;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often
 	volatile uint8_t _incomingLinkQualitySlowLog[32];

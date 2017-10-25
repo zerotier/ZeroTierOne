@@ -431,7 +431,7 @@ void Topology::_savePeer(void *tPtr,const SharedPtr<Peer> &peer)
 {
 	try {
 		Buffer<ZT_PEER_MAX_SERIALIZED_STATE_SIZE> buf;
-		peer->serialize(buf);
+		peer->serializeForCache(buf);
 		uint64_t tmpid[2]; tmpid[0] = peer->address().toInt(); tmpid[1] = 0;
 		RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_PEER,tmpid,buf.data(),buf.size());
 	} catch ( ... ) {} // sanity check, discard invalid entries

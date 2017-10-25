@@ -169,68 +169,22 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 
 					if (packet.hops() < ZT_RELAY_MAX_HOPS) {
 						packet.incrementHops();
-
 						SharedPtr<Peer> relayTo = RR->topology->getPeer(tPtr,destination);
 						if ((relayTo)&&(relayTo->sendDirect(tPtr,packet.data(),packet.size(),now,false))) {
-							if ((source != RR->identity.address())&&(_shouldUnite(now,source,destination))) { // don't send RENDEZVOUS for cluster frontplane relays
-								const InetAddress *hintToSource = (InetAddress *)0;
-								const InetAddress *hintToDest = (InetAddress *)0;
-
-								InetAddress destV4,destV6;
-								InetAddress sourceV4,sourceV6;
-								relayTo->getRendezvousAddresses(now,destV4,destV6);
-
+							if ((source != RR->identity.address())&&(_shouldUnite(now,source,destination))) {
 								const SharedPtr<Peer> sourcePeer(RR->topology->getPeer(tPtr,source));
-								if (sourcePeer) {
-									sourcePeer->getRendezvousAddresses(now,sourceV4,sourceV6);
-									if ((destV6)&&(sourceV6)) {
-										hintToSource = &destV6;
-										hintToDest = &sourceV6;
-									} else if ((destV4)&&(sourceV4)) {
-										hintToSource = &destV4;
-										hintToDest = &sourceV4;
-									}
-
-									if ((hintToSource)&&(hintToDest)) {
-										unsigned int alt = (unsigned int)RR->node->prng() & 1; // randomize which hint we send first for obscure NAT-t reasons
-										const unsigned int completed = alt + 2;
-										while (alt != completed) {
-											if ((alt & 1) == 0) {
-												Packet outp(source,RR->identity.address(),Packet::VERB_RENDEZVOUS);
-												outp.append((uint8_t)0);
-												destination.appendTo(outp);
-												outp.append((uint16_t)hintToSource->port());
-												if (hintToSource->ss_family == AF_INET6) {
-													outp.append((uint8_t)16);
-													outp.append(hintToSource->rawIpData(),16);
-												} else {
-													outp.append((uint8_t)4);
-													outp.append(hintToSource->rawIpData(),4);
-												}
-												send(tPtr,outp,true);
-											} else {
-												Packet outp(destination,RR->identity.address(),Packet::VERB_RENDEZVOUS);
-												outp.append((uint8_t)0);
-												source.appendTo(outp);
-												outp.append((uint16_t)hintToDest->port());
-												if (hintToDest->ss_family == AF_INET6) {
-													outp.append((uint8_t)16);
-													outp.append(hintToDest->rawIpData(),16);
-												} else {
-													outp.append((uint8_t)4);
-													outp.append(hintToDest->rawIpData(),4);
-												}
-												send(tPtr,outp,true);
-											}
-											++alt;
-										}
-									}
-								}
+								if (sourcePeer)
+									relayTo->introduce(tPtr,now,sourcePeer);
 							}
 						} else {
 							relayTo = RR->topology->getUpstreamPeer();
-							if ((relayTo)&&(relayTo->address() != source))
-								relayTo->sendDirect(tPtr,packet.data(),packet.size(),now,true);
+							if ((relayTo)&&(relayTo->address() != source)) {
+								if (relayTo->sendDirect(tPtr,packet.data(),packet.size(),now,true)) {
+									const SharedPtr<Peer> sourcePeer(RR->topology->getPeer(tPtr,source));
+									if (sourcePeer)
+										relayTo->introduce(tPtr,now,sourcePeer);
+								}
+							}
 						}
 					}
 				} else if ((reinterpret_cast<const uint8_t *>(data)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED) != 0) {
@@ -694,22 +648,7 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 
 	const SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,destination));
 	if (peer) {
-		/* First get the best path, and if it's dead (and this is not a root)
-		 * we attempt to re-activate that path but this packet will flow
-		 * upstream. If the path comes back alive, it will be used in the future.
-		 * For roots we don't do the alive check since roots are not required
-		 * to send heartbeats "down" and because we have to at least try to
-		 * go somewhere. */
-
 		viaPath = peer->getBestPath(now,false);
-		if ( (viaPath) && (!viaPath->alive(now)) && (!RR->topology->isUpstream(peer->identity())) ) {
-			if ((now - viaPath->lastOut()) > std::max((now - viaPath->lastIn()) * 4,(int64_t)ZT_PATH_MIN_REACTIVATE_INTERVAL)) {
-				peer->attemptToContactAt(tPtr,viaPath->localSocket(),viaPath->address(),now,false,viaPath->nextOutgoingCounter());
-				viaPath->sent(now);
-			}
-			viaPath.zero();
-		}
-
 		if (!viaPath) {
 			peer->tryMemorizedPath(tPtr,now); // periodically attempt memorized or statically defined paths, if any are known
 			const SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());

@@ -446,7 +446,8 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 			}
 
 			if (!hops())
-				peer->addDirectLatencyMeasurment((unsigned int)latency);
+				_path->updateLatency((unsigned int)latency);
+
 			peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
 
 			if ((externalSurfaceAddress)&&(hops() == 0))
@@ -1091,7 +1092,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 						(RR->node->shouldUsePathForZeroTierTraffic(tPtr,peer->address(),_path->localSocket(),a)) ) // should use path
 				{
 					if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0) {
-						peer->redirect(tPtr,_path->localSocket(),a,now);
+						peer->clusterRedirect(tPtr,_path->localSocket(),a,now);
 					} else if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 						peer->attemptToContactAt(tPtr,InetAddress(),a,now,false,0);
 					}
@@ -1105,7 +1106,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 						(RR->node->shouldUsePathForZeroTierTraffic(tPtr,peer->address(),_path->localSocket(),a)) ) // should use path
 				{
 					if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0) {
-						peer->redirect(tPtr,_path->localSocket(),a,now);
+						peer->clusterRedirect(tPtr,_path->localSocket(),a,now);
 					} else if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 						peer->attemptToContactAt(tPtr,InetAddress(),a,now,false,0);
 					}

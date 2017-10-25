@@ -300,7 +300,7 @@ public:
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p)) {
 			const SharedPtr<Path> pp((*p)->getBestPath(now,false));
-			if ((pp)&&(pp->alive(now)))
+			if (pp)
 				++cnt;
 		}
 		return cnt;

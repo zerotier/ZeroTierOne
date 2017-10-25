@@ -92,16 +92,13 @@ void Trace::peerLearnedNewPath(void *const tPtr,const uint64_t networkId,Peer &p
 	_send(tPtr,d,networkId);
 }
 
-void Trace::peerRedirected(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &oldPath,const SharedPtr<Path> &newPath)
+void Trace::peerRedirected(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath)
 {
 	char tmp[128];
 	Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
 	d.add(ZT_REMOTE_TRACE_FIELD__EVENT,ZT_REMOTE_TRACE_EVENT__PEER_REDIRECTED_S);
 	d.add(ZT_REMOTE_TRACE_FIELD__NETWORK_ID,networkId);
 	d.add(ZT_REMOTE_TRACE_FIELD__REMOTE_ZTADDR,peer.address());
-	if (oldPath) {
-		d.add(ZT_REMOTE_TRACE_FIELD__OLD_REMOTE_PHYADDR,oldPath->address().toString(tmp));
-	}
 	if (newPath) {
 		d.add(ZT_REMOTE_TRACE_FIELD__REMOTE_PHYADDR,newPath->address().toString(tmp));
 		d.add(ZT_REMOTE_TRACE_FIELD__LOCAL_SOCKET,newPath->localSocket());

@@ -273,29 +273,27 @@ InetAddress InetAddress::network() const
 	return r;
 }
 
-#ifdef ZT_SDK
-	bool InetAddress::isEqualPrefix(const InetAddress &addr) const
-	{
-		if (addr.ss_family == ss_family) {
-			switch(ss_family) {
-				case AF_INET6: {
-					const InetAddress mask(netmask());
-					InetAddress addr_mask(addr.netmask());
-					const uint8_t *n = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr_mask)->sin6_addr.s6_addr);
-					const uint8_t *m = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&mask)->sin6_addr.s6_addr);
-					const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr)->sin6_addr.s6_addr);
-					const uint8_t *b = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
-					for(unsigned int i=0;i<16;++i) {
-						if ((a[i] & m[i]) != (b[i] & n[i]))
-							return false;
-					}
-					return true;
+bool InetAddress::isEqualPrefix(const InetAddress &addr) const
+{
+	if (addr.ss_family == ss_family) {
+		switch(ss_family) {
+			case AF_INET6: {
+				const InetAddress mask(netmask());
+				InetAddress addr_mask(addr.netmask());
+				const uint8_t *n = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr_mask)->sin6_addr.s6_addr);
+				const uint8_t *m = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&mask)->sin6_addr.s6_addr);
+				const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr)->sin6_addr.s6_addr);
+				const uint8_t *b = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+				for(unsigned int i=0;i<16;++i) {
+					if ((a[i] & m[i]) != (b[i] & n[i]))
+						return false;
 				}
+				return true;
 			}
 		}
-		return false;
 	}
-#endif
+	return false;
+}
 	
 bool InetAddress::containsAddress(const InetAddress &addr) const
 {

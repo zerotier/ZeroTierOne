@@ -191,12 +191,13 @@ public:
 	{
 		const std::vector<InetAddress> *const upstreamStableEndpoints = _upstreamsToContact.get(p->address());
 		if (upstreamStableEndpoints) {
-			bool contacted = false;
-
 			// Upstreams must be pinged constantly over both IPv4 and IPv6 to allow
 			// them to perform three way handshake introductions for both stacks.
 
-			if (!p->doPingAndKeepalive(_tPtr,_now,AF_INET)) {
+			const unsigned int sent = p->doPingAndKeepalive(_tPtr,_now);
+			bool contacted = (sent != 0);
+
+			if ((sent & 0x1) == 0) { // bit 0x1 == IPv4 sent
 				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)upstreamStableEndpoints->size();++k) {
 					const InetAddress &addr = (*upstreamStableEndpoints)[ptr++ % upstreamStableEndpoints->size()];
 					if (addr.ss_family == AF_INET) {
@@ -205,8 +206,9 @@ public:
 						break;
 					}
 				}
-			} else contacted = true;
-			if (!p->doPingAndKeepalive(_tPtr,_now,AF_INET6)) {
+			}
+
+			if ((sent & 0x2) == 0) { // bit 0x2 == IPv6 sent
 				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)upstreamStableEndpoints->size();++k) {
 					const InetAddress &addr = (*upstreamStableEndpoints)[ptr++ % upstreamStableEndpoints->size()];
 					if (addr.ss_family == AF_INET6) {
@@ -215,8 +217,10 @@ public:
 						break;
 					}
 				}
-			} else contacted = true;
+			}
 
+			// If we have no memoized addresses for this upstream peer, attempt to contact
+			// it indirectly so we will be introduced.
 			if ((!contacted)&&(_bestCurrentUpstream)) {
 				const SharedPtr<Path> up(_bestCurrentUpstream->getBestPath(_now,true));
 				if (up)
@@ -224,9 +228,11 @@ public:
 			}
 
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
-			_upstreamsToContact.erase(p->address()); // erase from upstreams to contact so that we can WHOIS those that remain
+
+			_upstreamsToContact.erase(p->address()); // after this we'll WHOIS all upstreams that remain
 		} else if (p->isActive(_now)) {
-			p->doPingAndKeepalive(_tPtr,_now,-1);
+			// Regular non-upstream nodes get pinged if they appear active.
+			p->doPingAndKeepalive(_tPtr,_now);
 		}
 	}
 
@@ -420,7 +426,7 @@ ZT_PeerList *Node::peers() const
 			p->versionMinor = -1;
 			p->versionRev = -1;
 		}
-		p->latency = pi->second->latency();
+		p->latency = pi->second->latency(_now);
 		p->role = RR->topology->role(pi->second->identity().address());
 
 		std::vector< SharedPtr<Path> > paths(pi->second->paths(_now));

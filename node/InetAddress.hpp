@@ -330,7 +330,6 @@ struct InetAddress : public sockaddr_storage
 	 */
 	InetAddress network() const;
 
-#ifdef ZT_SDK
 	/**
 	 * Test whether this IPv6 prefix matches the prefix of a given IPv6 address
 	 *
@@ -338,8 +337,7 @@ struct InetAddress : public sockaddr_storage
 	 * @return True if this IPv6 prefix matches the prefix of a given IPv6 address
 	 */
 	bool isEqualPrefix(const InetAddress &addr) const;
-#endif
-	
+
 	/**
 	 * Test whether this IP/netmask contains this address
 	 *

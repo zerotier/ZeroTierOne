@@ -53,6 +53,15 @@
 
 #define ZT_PEER_MAX_SERIALIZED_STATE_SIZE (sizeof(Peer) + 32 + (sizeof(Path) * 2))
 
+/**
+ * Maximum number of direct paths to a peer
+ *
+ * This can be increased. You'll want about 2X the number of physical links
+ * you are ever likely to want to bundle/trunk since there is likely to be
+ * a path for every protocol (IPv4, IPv6, etc.).
+ */
+#define ZT_PEER_MAX_PATHS 16
+
 namespace ZeroTier {
 
 /**
@@ -116,6 +125,8 @@ public:
 		const uint64_t networkId);
 
 	/**
+	 * Check whether we have an active path to this peer via the given address
+	 *
 	 * @param now Current time
 	 * @param addr Remote address
 	 * @return True if we have an active path to this destination
@@ -123,7 +134,13 @@ public:
 	inline bool hasActivePathTo(int64_t now,const InetAddress &addr) const
 	{
 		Mutex::Lock _l(_paths_m);
-		return ( ((addr.ss_family == AF_INET)&&(_v4Path.p)&&(_v4Path.p->address() == addr)&&(_v4Path.p->alive(now))) || ((addr.ss_family == AF_INET6)&&(_v6Path.p)&&(_v6Path.p->address() == addr)&&(_v6Path.p->alive(now))) );
+		for(unsigned int i=0;i<ZT_PEER_MAX_PATHS;++i) {
+			if (_paths[i].p) {
+				if (((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION)&&(_paths[i].p->address() == addr))
+					return true;
+			} else break;
+		}
+		return false;
 	}
 
 	/**
@@ -136,19 +153,27 @@ public:
 	 * @param force If true, send even if path is not alive
 	 * @return True if we actually sent something
 	 */
-	bool sendDirect(void *tPtr,const void *data,unsigned int len,int64_t now,bool force);
+	inline bool sendDirect(void *tPtr,const void *data,unsigned int len,int64_t now,bool force)
+	{
+		SharedPtr<Path> bp(getBestPath(now,force));
+		if (bp)
+			return bp->send(RR,tPtr,data,len,now);
+		return false;
+	}
 
 	/**
 	 * Get the best current direct path
-	 *
-	 * This does not check Path::alive(), but does return the most recently
-	 * active path and does check expiration (which is a longer timeout).
 	 *
 	 * @param now Current time
 	 * @param includeExpired If true, include even expired paths
 	 * @return Best current path or NULL if none
 	 */
-	SharedPtr<Path> getBestPath(int64_t now,bool includeExpired);
+	SharedPtr<Path> getBestPath(int64_t now,bool includeExpired) const;
+
+	/**
+	 * Send VERB_RENDEZVOUS to this and another peer via the best common IP scope and path
+	 */
+	void introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &other) const;
 
 	/**
 	 * Send a HELLO to this peer at a specified physical address
@@ -190,67 +215,39 @@ public:
 	/**
 	 * Send pings or keepalives depending on configured timeouts
 	 *
+	 * This also cleans up some internal data structures. It's called periodically from Node.
+	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 * @param inetAddressFamily Keep this address family alive, or -1 for any
-	 * @return True if we have at least one direct path of the given family (or any if family is -1)
+	 * @return 0 if nothing sent or bit mask: bit 0x1 if IPv4 sent, bit 0x2 if IPv6 sent (0x3 means both sent)
 	 */
-	bool doPingAndKeepalive(void *tPtr,int64_t now,int inetAddressFamily);
+	unsigned int doPingAndKeepalive(void *tPtr,int64_t now);
 
 	/**
-	 * Specify remote path for this peer and forget others
-	 *
-	 * This overrides normal path learning and tells this peer to be found
-	 * at this address, at least within the address's family. Other address
-	 * families are not modified.
+	 * Process a cluster redirect sent by this peer
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param localSocket Local socket as supplied by external code
 	 * @param remoteAddress Remote address
 	 * @param now Current time
 	 */
-	void redirect(void *tPtr,const int64_t localSocket,const InetAddress &remoteAddress,const int64_t now);
+	void clusterRedirect(void *tPtr,const int64_t localSocket,const InetAddress &remoteAddress,const int64_t now);
 
 	/**
 	 * Reset paths within a given IP scope and address family
 	 *
 	 * Resetting a path involves sending an ECHO to it and then deactivating
-	 * it until or unless it responds.
+	 * it until or unless it responds. This is done when we detect a change
+	 * to our external IP or another system change that might invalidate
+	 * many or all current paths.
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param scope IP scope
 	 * @param inetAddressFamily Family e.g. AF_INET
 	 * @param now Current time
 	 */
-	inline void resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,int64_t now)
-	{
-		Mutex::Lock _l(_paths_m);
-		if ((inetAddressFamily == AF_INET)&&(_v4Path.lr)&&(_v4Path.p->address().ipScope() == scope)) {
-			attemptToContactAt(tPtr,_v4Path.p->localSocket(),_v4Path.p->address(),now,false,_v4Path.p->nextOutgoingCounter());
-			_v4Path.p->sent(now);
-			_v4Path.lr = 0; // path will not be used unless it speaks again
-		} else if ((inetAddressFamily == AF_INET6)&&(_v6Path.lr)&&(_v6Path.p->address().ipScope() == scope)) {
-			attemptToContactAt(tPtr,_v6Path.p->localSocket(),_v6Path.p->address(),now,false,_v6Path.p->nextOutgoingCounter());
-			_v6Path.p->sent(now);
-			_v6Path.lr = 0; // path will not be used unless it speaks again
-		}
-	}
-
-	/**
-	 * Fill parameters with V4 and V6 addresses if known and alive
-	 *
-	 * @param now Current time
-	 * @param v4 Result parameter to receive active IPv4 address, if any
-	 * @param v6 Result parameter to receive active IPv6 address, if any
-	 */
-	inline void getRendezvousAddresses(int64_t now,InetAddress &v4,InetAddress &v6) const
-	{
-		Mutex::Lock _l(_paths_m);
-		if (((now - _v4Path.lr) < ZT_PEER_PATH_EXPIRATION)&&(_v4Path.p->alive(now)))
-			v4 = _v4Path.p->address();
-		if (((now - _v6Path.lr) < ZT_PEER_PATH_EXPIRATION)&&(_v6Path.p->alive(now)))
-			v6 = _v6Path.p->address();
-	}
+	void resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,int64_t now);
 
 	/**
 	 * @param now Current time
@@ -260,10 +257,10 @@ public:
 	{
 		std::vector< SharedPtr<Path> > pp;
 		Mutex::Lock _l(_paths_m);
-		if (((now - _v4Path.lr) < ZT_PEER_PATH_EXPIRATION)&&(_v4Path.p->alive(now)))
-			pp.push_back(_v4Path.p);
-		if (((now - _v6Path.lr) < ZT_PEER_PATH_EXPIRATION)&&(_v6Path.p->alive(now)))
-			pp.push_back(_v6Path.p);
+		for(unsigned int i=0;i<ZT_PEER_MAX_PATHS;++i) {
+			if (!_paths[i].p) break;
+			pp.push_back(_paths[i].p);
+		}
 		return pp;
 	}
 
@@ -283,9 +280,13 @@ public:
 	inline int64_t isActive(int64_t now) const { return ((now - _lastNontrivialReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
-	 * @return Latency in milliseconds or 0 if unknown
+	 * @return Latency in milliseconds of best path or 0xffff if unknown / no paths
 	 */
-	inline unsigned int latency() const { return _latency; }
+	inline unsigned int latency(const int64_t now) const
+	{
+		SharedPtr<Path> bp(getBestPath(now,false));
+		return ((bp) ? bp->latency() : 0xffff);
+	}
 
 	/**
 	 * This computes a quality score for relays and root servers
@@ -303,23 +304,10 @@ public:
 		const uint64_t tsr = now - _lastReceive;
 		if (tsr >= ZT_PEER_ACTIVITY_TIMEOUT)
 			return (~(unsigned int)0);
-		unsigned int l = _latency;
+		unsigned int l = latency(now);
 		if (!l)
 			l = 0xffff;
 		return (l * (((unsigned int)tsr / (ZT_PEER_PING_PERIOD + 1000)) + 1));
-	}
-
-	/**
-	 * Update latency with a new direct measurment
-	 *
-	 * @param l Direct latency measurment in ms
-	 */
-	inline void addDirectLatencyMeasurment(unsigned int l)
-	{
-		unsigned int ol = _latency;
-		if ((ol > 0)&&(ol < 10000))
-			_latency = (ol + std::min(l,(unsigned int)65535)) / 2;
-		else _latency = std::min(l,(unsigned int)65535);
 	}
 
 	/**
@@ -442,28 +430,14 @@ public:
 	/**
 	 * Serialize a peer for storage in local cache
 	 *
-	 * This does not serialize everything, just identity and addresses where the peer
-	 * may be reached.
+	 * This does not serialize everything, just non-ephemeral information.
 	 */
 	template<unsigned int C>
-	inline void serialize(Buffer<C> &b) const
+	inline void serializeForCache(Buffer<C> &b) const
 	{
-		b.append((uint8_t)0);
+		b.append((uint8_t)1);
 
 		_id.serialize(b);
-
-		b.append(_lastReceive);
-		b.append(_lastNontrivialReceive);
-		b.append(_lastTriedMemorizedPath);
-		b.append(_lastDirectPathPushSent);
-		b.append(_lastDirectPathPushReceive);
-		b.append(_lastCredentialRequestSent);
-		b.append(_lastWhoisRequestReceived);
-		b.append(_lastEchoRequestReceived);
-		b.append(_lastComRequestReceived);
-		b.append(_lastComRequestSent);
-		b.append(_lastCredentialsReceived);
-		b.append(_lastTrustEstablishedPacketReceived);
 
 		b.append((uint16_t)_vProto);
 		b.append((uint16_t)_vMajor);
@@ -472,15 +446,16 @@ public:
 
 		{
 			Mutex::Lock _l(_paths_m);
-			unsigned int pcount = 0;
-			if (_v4Path.p) ++pcount;
-			if (_v6Path.p) ++pcount;
-			b.append((uint8_t)pcount);
-			if (_v4Path.p) _v4Path.p->address().serialize(b);
-			if (_v6Path.p) _v6Path.p->address().serialize(b);
+			unsigned int pc = 0;
+			for(unsigned int i=0;i<ZT_PEER_MAX_PATHS;++i) {
+				if (_paths[i].p)
+					++pc;
+				else break;
+			}
+			b.append((uint16_t)pc);
+			for(unsigned int i=0;i<pc;++i)
+				_paths[i].p->address().serialize(b);
 		}
-
-		b.append((uint16_t)0);
 	}
 
 	template<unsigned int C>
@@ -488,7 +463,7 @@ public:
 	{
 		try {
 			unsigned int ptr = 0;
-			if (b[ptr++] != 0)
+			if (b[ptr++] != 1)
 				return SharedPtr<Peer>();
 
 			Identity id;
@@ -498,15 +473,16 @@ public:
 
 			SharedPtr<Peer> p(new Peer(renv,renv->identity,id));
 
-			ptr += 12 * 8; // skip deserializing ephemeral state in this case
-
 			p->_vProto = b.template at<uint16_t>(ptr); ptr += 2;
 			p->_vMajor = b.template at<uint16_t>(ptr); ptr += 2;
 			p->_vMinor = b.template at<uint16_t>(ptr); ptr += 2;
 			p->_vRevision = b.template at<uint16_t>(ptr); ptr += 2;
 
-			const unsigned int pcount = (unsigned int)b[ptr++];
-			for(unsigned int i=0;i<pcount;++i) {
+			// When we deserialize from the cache we don't actually restore paths. We
+			// just try them and then re-learn them if they happen to still be up.
+			// Paths are fairly ephemeral in the real world in most cases.
+			const unsigned int tryPathCount = b.template at<uint16_t>(ptr); ptr += 2;
+			for(unsigned int i=0;i<tryPathCount;++i) {
 				InetAddress inaddr;
 				try {
 					ptr += inaddr.deserialize(b,ptr);
@@ -526,10 +502,10 @@ public:
 private:
 	struct _PeerPath
 	{
-		_PeerPath() : lr(0),sticky(0),p() {}
+		_PeerPath() : lr(0),p(),priority(1) {}
 		int64_t lr; // time of last valid ZeroTier packet
-		int64_t sticky; // time last set as sticky
 		SharedPtr<Path> p;
+		int priority; // >= 1, higher is better
 	};
 
 	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
@@ -548,19 +524,18 @@ private:
 	int64_t _lastComRequestSent;
 	int64_t _lastCredentialsReceived;
 	int64_t _lastTrustEstablishedPacketReceived;
+	int64_t _lastSentFullHello;
 
 	uint16_t _vProto;
 	uint16_t _vMajor;
 	uint16_t _vMinor;
 	uint16_t _vRevision;
 
-	_PeerPath _v4Path; // IPv4 direct path
-	_PeerPath _v6Path; // IPv6 direct path
+	_PeerPath _paths[ZT_PEER_MAX_PATHS];
 	Mutex _paths_m;
 
 	Identity _id;
 
-	unsigned int _latency;
 	unsigned int _directPathPushCutoffCount;
 	unsigned int _credentialsCutoffCount;
 

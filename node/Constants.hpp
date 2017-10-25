@@ -269,16 +269,6 @@
 #define ZT_PATH_HEARTBEAT_PERIOD 14000
 
 /**
- * Paths are considered inactive if they have not received traffic in this long
- */
-#define ZT_PATH_ALIVE_TIMEOUT 45000
-
-/**
- * Minimum time between attempts to check dead paths to see if they can be re-awakened
- */
-#define ZT_PATH_MIN_REACTIVATE_INTERVAL 2500
-
-/**
  * Do not accept HELLOs over a given path more often than this
  */
 #define ZT_PATH_HELLO_RATE_LIMIT 1000
