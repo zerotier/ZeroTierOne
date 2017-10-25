@@ -405,6 +405,26 @@ struct InetAddress : public sockaddr_storage
 		return false;
 	}
 
+	/**
+	 * Performs an IP-only comparison or, if that is impossible, a memcmp()
+	 *
+	 * This version compares only the first 64 bits of IPv6 addresses.
+	 *
+	 * @param a InetAddress to compare again
+	 * @return True if only IP portions are equal (false for non-IP or null addresses)
+	 */
+	inline bool ipsEqual2(const InetAddress &a) const
+	{
+		if (ss_family == a.ss_family) {
+			if (ss_family == AF_INET)
+				return (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_addr.s_addr);
+			if (ss_family == AF_INET6)
+				return (memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,8) == 0);
+			return (memcmp(this,&a,sizeof(InetAddress)) == 0);
+		}
+		return false;
+	}
+
 	inline unsigned long hashCode() const
 	{
 		if (ss_family == AF_INET) {
