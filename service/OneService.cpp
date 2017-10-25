@@ -762,6 +762,7 @@ public:
 			int64_t lastTapMulticastGroupCheck = 0;
 			int64_t lastBindRefresh = 0;
 			int64_t lastUpdateCheck = clockShouldBe;
+			int64_t lastCleanedPeersDb = 0;
 			int64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
 			for(;;) {
 				_run_m.lock();
@@ -854,6 +855,12 @@ public:
 					std::vector<InetAddress> boundAddrs(_binder.allBoundLocalInterfaceAddresses());
 					for(std::vector<InetAddress>::const_iterator i(boundAddrs.begin());i!=boundAddrs.end();++i)
 						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*i)));
+				}
+
+				// Clean peers.d periodically
+				if ((now - lastCleanedPeersDb) >= 3600000) {
+					lastCleanedPeersDb = now;
+					OSUtils::cleanDirectory((_homePath + ZT_PATH_SEPARATOR_S "peers.d").c_str(),now - 2592000000LL); // delete older than 30 days
 				}
 
 				const unsigned long delay = (dl > now) ? (unsigned long)(dl - now) : 100;

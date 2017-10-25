@@ -133,7 +133,7 @@ std::vector<std::string> OSUtils::listDirectory(const char *path,bool includeDir
 	return r;
 }
 
-long OSUtils::cleanDirectory(const char *path,const uint64_t olderThan)
+long OSUtils::cleanDirectory(const char *path,const int64_t olderThan)
 {
 	long cleaned = 0;
 
@@ -150,7 +150,7 @@ long OSUtils::cleanDirectory(const char *path,const uint64_t olderThan)
 					date.LowPart = ffd.ftLastWriteTime.dwLowDateTime;
 					if (date.QuadPart > 0) {
 							date.QuadPart -= adjust.QuadPart;
-							if ((uint64_t)((date.QuadPart / 10000000) * 1000) < olderThan) {
+							if ((int64_t)((date.QuadPart / 10000000) * 1000) < olderThan) {
 									ztsnprintf(tmp, sizeof(tmp), "%s\\%s", path, ffd.cFileName);
 									if (DeleteFileA(tmp))
 											++cleaned;
@@ -176,7 +176,7 @@ long OSUtils::cleanDirectory(const char *path,const uint64_t olderThan)
 			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,".."))&&(dptr->d_type == DT_REG)) {
 				ztsnprintf(tmp,sizeof(tmp),"%s/%s",path,dptr->d_name);
 				if (stat(tmp,&st) == 0) {
-					uint64_t mt = (uint64_t)(st.st_mtime);
+					int64_t mt = (int64_t)(st.st_mtime);
 					if ((mt > 0)&&((mt * 1000) < olderThan)) {
 						if (unlink(tmp) == 0)
 							++cleaned;
