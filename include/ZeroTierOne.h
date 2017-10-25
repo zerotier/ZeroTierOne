@@ -173,7 +173,7 @@ extern "C" {
 /**
  * Maximum number of direct network paths to a given peer
  */
-#define ZT_MAX_PEER_NETWORK_PATHS 4
+#define ZT_MAX_PEER_NETWORK_PATHS 16
 
 /**
  * Maximum number of path configurations that can be set
@@ -1228,9 +1228,9 @@ typedef struct
 	int versionRev;
 
 	/**
-	 * Last measured latency in milliseconds or zero if unknown
+	 * Last measured latency in milliseconds or -1 if unknown
 	 */
-	unsigned int latency;
+	int latency;
 
 	/**
 	 * What trust hierarchy role does this device have?

@@ -427,6 +427,8 @@ ZT_PeerList *Node::peers() const
 			p->versionRev = -1;
 		}
 		p->latency = pi->second->latency(_now);
+		if (p->latency >= 0xffff)
+			p->latency = -1;
 		p->role = RR->topology->role(pi->second->identity().address());
 
 		std::vector< SharedPtr<Path> > paths(pi->second->paths(_now));

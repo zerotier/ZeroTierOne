@@ -153,7 +153,7 @@ void Peer::received(
 		unsigned int worstQualityPath = 0;
 		int worstQuality = 0;
 		bool havePath = false;
-		for(unsigned int p=0;p<ZT_PEER_MAX_PATHS;++p) {
+		for(unsigned int p=0;p<ZT_MAX_PEER_NETWORK_PATHS;++p) {
 			if (_paths[p].p) {
 				if (_paths[p].p == path) {
 					_paths[p].lr = now;
@@ -257,13 +257,13 @@ SharedPtr<Path> Peer::getBestPath(int64_t now,bool includeExpired) const
 {
 	Mutex::Lock _l(_paths_m);
 
-	unsigned int bestPath = ZT_PEER_MAX_PATHS;
+	unsigned int bestPath = ZT_MAX_PEER_NETWORK_PATHS;
 	int bestPathQuality = 2147483647; // INT_MAX
-	for(unsigned int i=0;i<ZT_PEER_MAX_PATHS;++i) {
+	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {
 			if ((includeExpired)||((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION)) {
 				const int q = _paths[i].p->quality(now) / _paths[i].priority;
-				if (q < bestPathQuality) {
+				if (q <= bestPathQuality) {
 					bestPathQuality = q;
 					bestPath = i;
 				}
@@ -271,7 +271,7 @@ SharedPtr<Path> Peer::getBestPath(int64_t now,bool includeExpired) const
 		} else break;
 	}
 
-	if (bestPath != ZT_PEER_MAX_PATHS)
+	if (bestPath != ZT_MAX_PEER_NETWORK_PATHS)
 		return _paths[bestPath].p;
 	return SharedPtr<Path>();
 }
@@ -287,31 +287,31 @@ void Peer::introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &o
 	int theirBestV4QualityByScope[ZT_INETADDRESS_MAX_SCOPE+1];
 	int theirBestV6QualityByScope[ZT_INETADDRESS_MAX_SCOPE+1];
 	for(int i=0;i<=ZT_INETADDRESS_MAX_SCOPE;++i) {
-		myBestV4ByScope[i] = ZT_PEER_MAX_PATHS;
-		myBestV6ByScope[i] = ZT_PEER_MAX_PATHS;
+		myBestV4ByScope[i] = ZT_MAX_PEER_NETWORK_PATHS;
+		myBestV6ByScope[i] = ZT_MAX_PEER_NETWORK_PATHS;
 		myBestV4QualityByScope[i] = 2147483647;
 		myBestV6QualityByScope[i] = 2147483647;
-		theirBestV4ByScope[i] = ZT_PEER_MAX_PATHS;
-		theirBestV6ByScope[i] = ZT_PEER_MAX_PATHS;
+		theirBestV4ByScope[i] = ZT_MAX_PEER_NETWORK_PATHS;
+		theirBestV6ByScope[i] = ZT_MAX_PEER_NETWORK_PATHS;
 		theirBestV4QualityByScope[i] = 2147483647;
 		theirBestV6QualityByScope[i] = 2147483647;
 	}
 
 	Mutex::Lock _l1(_paths_m);
 
-	for(unsigned int i=0;i<ZT_PEER_MAX_PATHS;++i) {
+	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {
 			const int q = _paths[i].p->quality(now) / _paths[i].priority;
 			const unsigned int s = (unsigned int)_paths[i].p->ipScope();
 			switch(_paths[i].p->address().ss_family) {
 				case AF_INET:
-					if (q < myBestV4QualityByScope[s]) {
+					if (q <= myBestV4QualityByScope[s]) {
 						myBestV4QualityByScope[s] = q;
 						myBestV4ByScope[s] = i;
 					}
 					break;
 				case AF_INET6:
-					if (q < myBestV6QualityByScope[s]) {
+					if (q <= myBestV6QualityByScope[s]) {
 						myBestV6QualityByScope[s] = q;
 						myBestV6ByScope[s] = i;
 					}
@@ -322,19 +322,19 @@ void Peer::introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &o
 
 	Mutex::Lock _l2(other->_paths_m);
 
-	for(unsigned int i=0;i<ZT_PEER_MAX_PATHS;++i) {
+	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (other->_paths[i].p) {
 			const int q = other->_paths[i].p->quality(now) / other->_paths[i].priority;
 			const unsigned int s = (unsigned int)other->_paths[i].p->ipScope();
 			switch(other->_paths[i].p->address().ss_family) {
 				case AF_INET:
-					if (q < theirBestV4QualityByScope[s]) {
+					if (q <= theirBestV4QualityByScope[s]) {
 						theirBestV4QualityByScope[s] = q;
 						theirBestV4ByScope[s] = i;
 					}
 					break;
 				case AF_INET6:
-					if (q < theirBestV6QualityByScope[s]) {
+					if (q <= theirBestV6QualityByScope[s]) {
 						theirBestV6QualityByScope[s] = q;
 						theirBestV6ByScope[s] = i;
 					}
@@ -343,23 +343,23 @@ void Peer::introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &o
 		} else break;
 	}
 
-	unsigned int mine = ZT_PEER_MAX_PATHS;
-	unsigned int theirs = ZT_PEER_MAX_PATHS;
+	unsigned int mine = ZT_MAX_PEER_NETWORK_PATHS;
+	unsigned int theirs = ZT_MAX_PEER_NETWORK_PATHS;
 
 	for(int s=ZT_INETADDRESS_MAX_SCOPE;s>=0;--s) {
-		if ((myBestV6ByScope[s] != ZT_PEER_MAX_PATHS)&&(theirBestV6ByScope[s] != ZT_PEER_MAX_PATHS)) {
+		if ((myBestV6ByScope[s] != ZT_MAX_PEER_NETWORK_PATHS)&&(theirBestV6ByScope[s] != ZT_MAX_PEER_NETWORK_PATHS)) {
 			mine = myBestV6ByScope[s];
 			theirs = theirBestV6ByScope[s];
 			break;
 		}
-		if ((myBestV4ByScope[s] != ZT_PEER_MAX_PATHS)&&(theirBestV4ByScope[s] != ZT_PEER_MAX_PATHS)) {
+		if ((myBestV4ByScope[s] != ZT_MAX_PEER_NETWORK_PATHS)&&(theirBestV4ByScope[s] != ZT_MAX_PEER_NETWORK_PATHS)) {
 			mine = myBestV4ByScope[s];
 			theirs = theirBestV4ByScope[s];
 			break;
 		}
 	}
 
-	if (mine != ZT_PEER_MAX_PATHS) {
+	if (mine != ZT_MAX_PEER_NETWORK_PATHS) {
 		unsigned int alt = (unsigned int)RR->node->prng() & 1; // randomize which hint we send first for black magickal NAT-t reasons
 		const unsigned int completed = alt + 2;
 		while (alt != completed) {
@@ -472,7 +472,7 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 	_lastSentFullHello = now;
 
 	unsigned int j = 0;
-	for(unsigned int i=0;i<ZT_PEER_MAX_PATHS;++i) {
+	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (!_paths[i].p) break;
 		if ((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION) {
 			if ((sendFullHello)||(_paths[i].p->needsHeartbeat(now))) {
@@ -485,7 +485,7 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 			++j;
 		}
 	}
-	while(j < ZT_PEER_MAX_PATHS) {
+	while(j < ZT_MAX_PEER_NETWORK_PATHS) {
 		_paths[j].lr = 0;
 		_paths[j].p.zero();
 		_paths[j].priority = 1;
@@ -504,7 +504,7 @@ void Peer::clusterRedirect(void *tPtr,const int64_t localSocket,const InetAddres
 		Mutex::Lock _l(_paths_m);
 		int worstQuality = 0;
 		unsigned int worstQualityPath = 0;
-		for(unsigned int i=0;i<ZT_PEER_MAX_PATHS;++i) {
+		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 			if (_paths[i].p) {
 				if (_paths[i].p == np) { // <-- where's my Fields Medal?
 					_paths[i].lr = now; // consider this a "receive"
@@ -530,7 +530,7 @@ void Peer::clusterRedirect(void *tPtr,const int64_t localSocket,const InetAddres
 void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,int64_t now)
 {
 	Mutex::Lock _l(_paths_m);
-	for(unsigned int i=0;i<ZT_PEER_MAX_PATHS;++i) {
+	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {
 			if ((_paths[i].p->address().ss_family == inetAddressFamily)&&(_paths[i].p->ipScope() == scope)) {
 				attemptToContactAt(tPtr,_paths[i].p->localSocket(),_paths[i].p->address(),now,false,_paths[i].p->nextOutgoingCounter());

@@ -53,15 +53,6 @@
 
 #define ZT_PEER_MAX_SERIALIZED_STATE_SIZE (sizeof(Peer) + 32 + (sizeof(Path) * 2))
 
-/**
- * Maximum number of direct paths to a peer
- *
- * This can be increased. You'll want about 2X the number of physical links
- * you are ever likely to want to bundle/trunk since there is likely to be
- * a path for every protocol (IPv4, IPv6, etc.).
- */
-#define ZT_PEER_MAX_PATHS 16
-
 namespace ZeroTier {
 
 /**
@@ -134,7 +125,7 @@ public:
 	inline bool hasActivePathTo(int64_t now,const InetAddress &addr) const
 	{
 		Mutex::Lock _l(_paths_m);
-		for(unsigned int i=0;i<ZT_PEER_MAX_PATHS;++i) {
+		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 			if (_paths[i].p) {
 				if (((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION)&&(_paths[i].p->address() == addr))
 					return true;
@@ -257,7 +248,7 @@ public:
 	{
 		std::vector< SharedPtr<Path> > pp;
 		Mutex::Lock _l(_paths_m);
-		for(unsigned int i=0;i<ZT_PEER_MAX_PATHS;++i) {
+		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 			if (!_paths[i].p) break;
 			pp.push_back(_paths[i].p);
 		}
@@ -285,7 +276,9 @@ public:
 	inline unsigned int latency(const int64_t now) const
 	{
 		SharedPtr<Path> bp(getBestPath(now,false));
-		return ((bp) ? bp->latency() : 0xffff);
+		if (bp)
+			return bp->latency();
+		return 0xffff;
 	}
 
 	/**
@@ -447,7 +440,7 @@ public:
 		{
 			Mutex::Lock _l(_paths_m);
 			unsigned int pc = 0;
-			for(unsigned int i=0;i<ZT_PEER_MAX_PATHS;++i) {
+			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 				if (_paths[i].p)
 					++pc;
 				else break;
@@ -531,7 +524,7 @@ private:
 	uint16_t _vMinor;
 	uint16_t _vRevision;
 
-	_PeerPath _paths[ZT_PEER_MAX_PATHS];
+	_PeerPath _paths[ZT_MAX_PEER_NETWORK_PATHS];
 	Mutex _paths_m;
 
 	Identity _id;
