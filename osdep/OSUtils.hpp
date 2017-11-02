@@ -278,6 +278,7 @@ public:
 	static nlohmann::json jsonParse(const std::string &buf);
 	static std::string jsonDump(const nlohmann::json &j,int indentation = 1);
 	static uint64_t jsonInt(const nlohmann::json &jv,const uint64_t dfl);
+	static uint64_t jsonIntHex(const nlohmann::json &jv,const uint64_t dfl);
 	static bool jsonBool(const nlohmann::json &jv,const bool dfl);
 	static std::string jsonString(const nlohmann::json &jv,const char *dfl);
 	static std::string jsonBinFromHex(const nlohmann::json &jv);

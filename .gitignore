@@ -112,3 +112,7 @@ build/
 !default.perspectivev3
 *.xccheckout
 xcuserdata/
+ext/librethinkdbxx/build
+.vscode
+__pycache__
+*~

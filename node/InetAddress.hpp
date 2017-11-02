@@ -83,6 +83,13 @@ struct InetAddress : public sockaddr_storage
 		IP_SCOPE_PRIVATE = 7        // 10.x.x.x, 192.168.x.x, etc.
 	};
 
+	// Can be used with the unordered maps and sets in c++11. We don't use C++11 in the core
+	// but this is safe to put here.
+	struct Hasher
+	{
+		inline std::size_t operator()(const InetAddress &a) const { return (std::size_t)a.hashCode(); }
+	};
+
 	InetAddress() { memset(this,0,sizeof(InetAddress)); }
 	InetAddress(const InetAddress &a) { memcpy(this,&a,sizeof(InetAddress)); }
 	InetAddress(const InetAddress *a) { memcpy(this,a,sizeof(InetAddress)); }

@@ -451,6 +451,21 @@ uint64_t OSUtils::jsonInt(const nlohmann::json &jv,const uint64_t dfl)
 	return dfl;
 }
 
+uint64_t OSUtils::jsonIntHex(const nlohmann::json &jv,const uint64_t dfl)
+{
+	try {
+		if (jv.is_number()) {
+			return (uint64_t)jv;
+		} else if (jv.is_string()) {
+			std::string s = jv;
+			return Utils::hexStrToU64(s.c_str());
+		} else if (jv.is_boolean()) {
+			return ((bool)jv ? 1ULL : 0ULL);
+		}
+	} catch ( ... ) {}
+	return dfl;
+}
+
 bool OSUtils::jsonBool(const nlohmann::json &jv,const bool dfl)
 {
 	try {
