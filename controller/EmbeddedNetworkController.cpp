@@ -1064,7 +1064,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 
 void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 {
-	/*
 	static volatile unsigned long idCounter = 0;
 	char id[128],tmp[128];
 	std::string k,v;
@@ -1107,10 +1106,10 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 		d["objtype"] = "trace";
 		d["ts"] = now;
 		d["nodeId"] = Utils::hex10(rt.origin,tmp);
+		_db.save(d);
 	} catch ( ... ) {
 		// drop invalid trace messages if an error occurs
 	}
-	*/
 }
 
 void EmbeddedNetworkController::onNetworkUpdate(const uint64_t networkId)

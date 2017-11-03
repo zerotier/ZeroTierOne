@@ -164,6 +164,9 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddres
 					const std::string tmp = (*config)["id"];
 					deleteId.append(tmp);
 					table = "Member";
+				} else if (objtype == "trace") {
+					record = *config;
+					table = "RemoteTrace";
 				} else {
 					continue;
 				}
@@ -451,6 +454,21 @@ void RethinkDB::_memberChanged(nlohmann::json &old,nlohmann::json &member)
 			}
 
 			_controller->onNetworkMemberUpdate(networkId,memberId);
+		}
+	} else if (memberId) {
+		if (nw) {
+			std::lock_guard<std::mutex> l(nw->lock);
+			nw->members.erase(memberId);
+		}
+		if (networkId) {
+			std::lock_guard<std::mutex> l(_networks_l);
+			auto er = _networkByMember.equal_range(memberId);
+			for(auto i=er.first;i!=er.second;++i) {
+				if (i->second == networkId) {
+					_networkByMember.erase(i);
+					break;
+				}
+			}
 		}
 	}
 

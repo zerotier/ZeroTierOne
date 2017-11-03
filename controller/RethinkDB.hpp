@@ -132,6 +132,7 @@ private:
 	std::thread _membersDbWatcher;
 
 	std::unordered_map< uint64_t,std::shared_ptr<_Network> > _networks;
+	std::unordered_multimap< uint64_t,uint64_t > _networkByMember;
 	mutable std::mutex _networks_l;
 
 	BlockingQueue< std::unique_ptr<nlohmann::json> > _commitQueue;

@@ -19,8 +19,6 @@
 #ifndef ZT_SQLITENETWORKCONTROLLER_HPP
 #define ZT_SQLITENETWORKCONTROLLER_HPP
 
-#define ZT_CONTROLLER_USE_RETHINKDB
-
 #include <stdint.h>
 
 #include <string>
