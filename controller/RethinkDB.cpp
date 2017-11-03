@@ -132,7 +132,7 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddres
 	for(int t=0;t<ZT_CONTROLLER_RETHINKDB_COMMIT_THREADS;++t) {
 		_commitThread[t] = std::thread([this]() {
 			std::unique_ptr<R::Connection> rdb;
-			std::unique_ptr<nlohmann::json> config;
+			nlohmann::json *config = (nlohmann::json *)0;
 			while ((this->_commitQueue.get(config))&&(_run == 1)) {
 				if (!config)
 					continue;
@@ -219,7 +219,7 @@ RethinkDB::~RethinkDB()
 	_networksDbWatcher.join();
 }
 
-inline bool RethinkDB::get(const uint64_t networkId,nlohmann::json &network)
+bool RethinkDB::get(const uint64_t networkId,nlohmann::json &network)
 {
 	waitForReady();
 
@@ -238,7 +238,7 @@ inline bool RethinkDB::get(const uint64_t networkId,nlohmann::json &network)
 	return true;
 }
 
-inline bool RethinkDB::get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member)
+bool RethinkDB::get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member)
 {
 	waitForReady();
 
@@ -261,7 +261,7 @@ inline bool RethinkDB::get(const uint64_t networkId,nlohmann::json &network,cons
 	return true;
 }
 
-inline bool RethinkDB::get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member,NetworkSummaryInfo &info)
+bool RethinkDB::get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member,NetworkSummaryInfo &info)
 {
 	waitForReady();
 
@@ -285,7 +285,7 @@ inline bool RethinkDB::get(const uint64_t networkId,nlohmann::json &network,cons
 	return true;
 }
 
-inline bool RethinkDB::get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohmann::json> &members)
+bool RethinkDB::get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohmann::json> &members)
 {
 	waitForReady();
 
@@ -306,7 +306,7 @@ inline bool RethinkDB::get(const uint64_t networkId,nlohmann::json &network,std:
 	return true;
 }
 
-inline bool RethinkDB::summary(const uint64_t networkId,NetworkSummaryInfo &info)
+bool RethinkDB::summary(const uint64_t networkId,NetworkSummaryInfo &info)
 {
 	waitForReady();
 
@@ -337,7 +337,7 @@ void RethinkDB::networks(std::vector<uint64_t> &networks)
 void RethinkDB::save(const nlohmann::json &record)
 {
 	waitForReady();
-	_commitQueue.post(std::unique_ptr<nlohmann::json>(new nlohmann::json(record)));
+	_commitQueue.post(new nlohmann::json(record));
 }
 
 void RethinkDB::eraseNetwork(const uint64_t networkId)
@@ -345,23 +345,23 @@ void RethinkDB::eraseNetwork(const uint64_t networkId)
 	char tmp2[24];
 	waitForReady();
 	Utils::hex(networkId,tmp2);
-	json tmp;
-	tmp["id"] = tmp2;
-	tmp["objtype"] = "delete_network"; // pseudo-type, tells thread to delete network
-	_commitQueue.post(std::unique_ptr<nlohmann::json>(new nlohmann::json(tmp)));
+	json *tmp = new json();
+	(*tmp)["id"] = tmp2;
+	(*tmp)["objtype"] = "delete_network"; // pseudo-type, tells thread to delete network
+	_commitQueue.post(tmp);
 }
 
 void RethinkDB::eraseMember(const uint64_t networkId,const uint64_t memberId)
 {
 	char tmp2[24];
-	json tmp;
+	json *tmp = new json();
 	waitForReady();
 	Utils::hex(networkId,tmp2);
-	tmp["nwid"] = tmp2;
+	(*tmp)["nwid"] = tmp2;
 	Utils::hex10(memberId,tmp2);
-	tmp["id"] = tmp2;
-	tmp["objtype"] = "delete_member"; // pseudo-type, tells thread to delete network
-	_commitQueue.post(std::unique_ptr<nlohmann::json>(new nlohmann::json(tmp)));
+	(*tmp)["id"] = tmp2;
+	(*tmp)["objtype"] = "delete_member"; // pseudo-type, tells thread to delete network
+	_commitQueue.post(tmp);
 }
 
 void RethinkDB::_memberChanged(nlohmann::json &old,nlohmann::json &member)
@@ -510,15 +510,5 @@ void RethinkDB::_networkChanged(nlohmann::json &old,nlohmann::json &network)
 }
 
 } // namespace ZeroTier
-
-/*
-int main(int argc,char **argv)
-{
-	ZeroTier::RethinkDB db(ZeroTier::Address(0x8056c2e21cULL),"10.6.6.188",28015,"ztc","");
-	db.waitForReady();
-	printf("ready.\n");
-	pause();
-}
-*/
 
 #endif // ZT_CONTROLLER_USE_RETHINKDB

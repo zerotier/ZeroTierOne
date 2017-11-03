@@ -11,6 +11,7 @@
 .Apple*
 Thumbs.db
 @eaDir
+._*
 
 # Windows build droppings
 /windows/ZeroTierOne.sdf

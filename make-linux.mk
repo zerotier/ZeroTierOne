@@ -18,20 +18,20 @@ ONE_OBJS+=osdep/LinuxEthernetTap.o
 # Auto-detect miniupnpc and nat-pmp as well and use system libs if present,
 # otherwise build into binary as done on Mac and Windows.
 ONE_OBJS+=osdep/PortMapper.o
-DEFS+=-DZT_USE_MINIUPNPC
+override DEFS+=-DZT_USE_MINIUPNPC
 MINIUPNPC_IS_NEW_ENOUGH=$(shell grep -sqr '.*define.*MINIUPNPC_VERSION.*"2.."' /usr/include/miniupnpc/miniupnpc.h && echo 1)
 ifeq ($(MINIUPNPC_IS_NEW_ENOUGH),1)
-	DEFS+=-DZT_USE_SYSTEM_MINIUPNPC
+	override DEFS+=-DZT_USE_SYSTEM_MINIUPNPC
 	LDLIBS+=-lminiupnpc
 else
-	DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING=\"Linux\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
+	override DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING=\"Linux\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
 	ONE_OBJS+=ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o
 endif
 ifeq ($(wildcard /usr/include/natpmp.h),)
 	ONE_OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o
 else
 	LDLIBS+=-lnatpmp
-	DEFS+=-DZT_USE_SYSTEM_NATPMP
+	override DEFS+=-DZT_USE_SYSTEM_NATPMP
 endif
 
 # Use bundled http-parser since distribution versions are NOT API-stable or compatible!
@@ -39,19 +39,19 @@ endif
 ONE_OBJS+=ext/http-parser/http_parser.o
 
 ifeq ($(ZT_SYNOLOGY), 1)
-	DEFS+=-D__SYNOLOGY__
+	override DEFS+=-D__SYNOLOGY__
 endif
 
 ifeq ($(ZT_QNAP), 1)
-	DEFS+=-D__QNAP__
+	override DEFS+=-D__QNAP__
 endif
 
 ifeq ($(ZT_TRACE),1)
-	DEFS+=-DZT_TRACE
+	override DEFS+=-DZT_TRACE
 endif
 
 ifeq ($(ZT_RULES_ENGINE_DEBUGGING),1)
-	DEFS+=-DZT_RULES_ENGINE_DEBUGGING
+	override DEFS+=-DZT_RULES_ENGINE_DEBUGGING
 endif
 
 ifeq ($(ZT_DEBUG),1)
@@ -195,6 +195,9 @@ endif
 # Disable software updates by default on Linux since that is normally done with package management
 override DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""
 
+# This forces libstdc++ not to include these abominations, especially mt and pool
+override DEFS+=-D_MT_ALLOCATOR_H -D_POOL_ALLOCATOR_H -D_EXTPTR_ALLOCATOR_H -D_DEBUG_ALLOCATOR_H
+
 # Static builds, which are currently done for a number of Linux targets
 ifeq ($(ZT_STATIC),1)
 	override LDFLAGS+=-static
@@ -262,6 +265,10 @@ realclean:	distclean
 
 official-static:	FORCE
 	make -j4 ZT_STATIC=1 LDLIBS=/usr/lib/libjemalloc.a all selftest
+
+central-controller:	FORCE
+	cd ext/librethinkdbxx ; make
+	make LDLIBS="-ljemalloc ext/librethinkdbxx/build/librethinkdb++.a" DEFS="-DZT_CONTROLLER_USE_RETHINKDB" one
 
 debug:	FORCE
 	make ZT_DEBUG=1 one

@@ -28,6 +28,7 @@
 #include <list>
 #include <thread>
 #include <unordered_map>
+#include <atomic>
 
 #include "../node/Constants.hpp"
 #include "../node/NetworkController.hpp"
@@ -239,7 +240,7 @@ private:
 	std::string _signingIdAddressString;
 	NetworkController::Sender *_sender;
 	ControllerDB _db;
-	BlockingQueue< std::unique_ptr<_RQEntry> > _queue;
+	BlockingQueue< _RQEntry * > _queue;
 	std::vector<std::thread> _threads;
 	std::mutex _threads_l;
 	std::unordered_map< _MemberStatusKey,_MemberStatus,_MemberStatusHash > _memberStatus;

@@ -496,7 +496,7 @@ void EmbeddedNetworkController::request(
 	qe->identity = identity;
 	qe->metaData = metaData;
 	qe->type = _RQEntry::RQENTRY_TYPE_REQUEST;
-	_queue.post(std::unique_ptr<_RQEntry>(qe));
+	_queue.post(qe);
 }
 
 unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
@@ -1720,7 +1720,7 @@ void EmbeddedNetworkController::_startThreads()
 	for(long t=0;t<hwc;++t) {
 		_threads.emplace_back([this]() {
 			for(;;) {
-				std::unique_ptr<_RQEntry> qe;
+				_RQEntry *qe = (_RQEntry *)0;
 				if (_queue.get(qe))
 					break;
 				try {

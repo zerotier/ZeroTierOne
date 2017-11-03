@@ -33,6 +33,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <atomic>
 
 #include "../ext/json/json.hpp"
 
@@ -135,7 +136,7 @@ private:
 	std::unordered_multimap< uint64_t,uint64_t > _networkByMember;
 	mutable std::mutex _networks_l;
 
-	BlockingQueue< std::unique_ptr<nlohmann::json> > _commitQueue;
+	BlockingQueue< nlohmann::json * > _commitQueue;
 	std::thread _commitThread[ZT_CONTROLLER_RETHINKDB_COMMIT_THREADS];
 
 	mutable std::mutex _readyLock; // locked until ready
