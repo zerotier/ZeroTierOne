@@ -457,8 +457,7 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPa
 	_startTime(OSUtils::now()),
 	_node(node),
 	_path(dbPath),
-	_sender((NetworkController::Sender *)0),
-	_db(this,_signingId.address(),dbPath)
+	_sender((NetworkController::Sender *)0)
 {
 }
 
@@ -476,7 +475,8 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 	_signingId = signingId;
 	_sender = sender;
 	_signingIdAddressString = signingId.address().toString(tmp);
-	_db.waitForReady();
+	_db.reset(new ControllerDB(this,_signingId.address(),_path.c_str()));
+	_db->waitForReady();
 }
 
 void EmbeddedNetworkController::request(
@@ -507,12 +507,15 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 	std::string &responseBody,
 	std::string &responseContentType)
 {
+	if (!_db)
+		return 500;
+
 	if ((path.size() > 0)&&(path[0] == "network")) {
 
 		if ((path.size() >= 2)&&(path[1].length() == 16)) {
 			const uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
 			json network;
-			if (!_db.get(nwid,network))
+			if (!_db->get(nwid,network))
 				return 404;
 
 			if (path.size() >= 3) {
@@ -524,7 +527,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 
 						const uint64_t address = Utils::hexStrToU64(path[3].c_str());
 						json member;
-						if (!_db.get(nwid,network,address,member))
+						if (!_db->get(nwid,network,address,member))
 							return 404;
 						_addMemberNonPersistedFields(nwid,address,member,OSUtils::now());
 						responseBody = OSUtils::jsonDump(member);
@@ -535,7 +538,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 
 						responseBody = "{";
 						std::vector<json> members;
-						if (_db.get(nwid,network,members)) {
+						if (_db->get(nwid,network,members)) {
 							responseBody.reserve((members.size() + 2) * 32);
 							std::string mid;
 							for(auto member=members.begin();member!=members.end();++member) {
@@ -558,7 +561,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 
 				const int64_t now = OSUtils::now();
 				ControllerDB::NetworkSummaryInfo ns;
-				_db.summary(nwid,ns);
+				_db->summary(nwid,ns);
 				_addNetworkNonPersistedFields(nwid,network,now,ns);
 				responseBody = OSUtils::jsonDump(network);
 				responseContentType = "application/json";
@@ -569,7 +572,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 			// List networks
 
 			std::vector<uint64_t> networkIds;
-			_db.networks(networkIds);
+			_db->networks(networkIds);
 			char tmp[64];
 			responseBody = "[";
 			responseBody.reserve((networkIds.size() + 1) * 24);
@@ -608,6 +611,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 	std::string &responseBody,
 	std::string &responseContentType)
 {
+	if (!_db)
+		return 500;
 	if (path.empty())
 		return 404;
 
@@ -641,7 +646,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					OSUtils::ztsnprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)address);
 
 					json member,network;
-					_db.get(nwid,network,address,member);
+					_db->get(nwid,network,address,member);
 					json origMember(member); // for detecting changes
 					_initMember(member);
 
@@ -732,7 +737,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					if (member != origMember) {
 						json &revj = member["revision"];
 						member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-						_db.save(member);
+						_db->save(member);
 					}
 
 					_addMemberNonPersistedFields(nwid,address,member,now);
@@ -754,7 +759,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						Utils::getSecureRandom(&nwidPostfix,sizeof(nwidPostfix));
 						uint64_t tryNwid = nwidPrefix | (nwidPostfix & 0xffffffULL);
 						if ((tryNwid & 0xffffffULL) == 0ULL) tryNwid |= 1ULL;
-						if (!_db.hasNetwork(tryNwid)) {
+						if (!_db->hasNetwork(tryNwid)) {
 							nwid = tryNwid;
 							break;
 						}
@@ -765,7 +770,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 				OSUtils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
 
 				json network;
-				_db.get(nwid,network);
+				_db->get(nwid,network);
 				json origNetwork(network); // for detecting changes
 				_initNetwork(network);
 
@@ -984,11 +989,11 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 				if (network != origNetwork) {
 					json &revj = network["revision"];
 					network["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-					_db.save(network);
+					_db->save(network);
 				}
 
 				ControllerDB::NetworkSummaryInfo ns;
-				_db.summary(nwid,ns);
+				_db->summary(nwid,ns);
 				_addNetworkNonPersistedFields(nwid,network,now,ns);
 
 				responseBody = OSUtils::jsonDump(network);
@@ -1011,6 +1016,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 	std::string &responseBody,
 	std::string &responseContentType)
 {
+	if (!_db)
+		return 500;
 	if (path.empty())
 		return 404;
 
@@ -1022,7 +1029,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 					const uint64_t address = Utils::hexStrToU64(path[3].c_str());
 
 					json network,member;
-					_db.get(nwid,network,address,member);
+					_db->get(nwid,network,address,member);
 
 					{
 						std::lock_guard<std::mutex> l(_memberStatus_l);
@@ -1037,8 +1044,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 				}
 			} else {
 				json network;
-				_db.get(nwid,network);
-				_db.eraseNetwork(nwid);
+				_db->get(nwid,network);
+				_db->eraseNetwork(nwid);
 
 				{
 					std::lock_guard<std::mutex> l(_memberStatus_l);
@@ -1067,6 +1074,9 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 	static volatile unsigned long idCounter = 0;
 	char id[128],tmp[128];
 	std::string k,v;
+
+	if (!_db)
+		return;
 
 	try {
 		// Convert Dictionary into JSON object
@@ -1106,7 +1116,7 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 		d["objtype"] = "trace";
 		d["ts"] = now;
 		d["nodeId"] = Utils::hex10(rt.origin,tmp);
-		_db.save(d);
+		_db->save(d);
 	} catch ( ... ) {
 		// drop invalid trace messages if an error occurs
 	}
@@ -1159,6 +1169,9 @@ void EmbeddedNetworkController::_request(
 	ControllerDB::NetworkSummaryInfo ns;
 	json network,member,origMember;
 
+	if (!_db)
+		return;
+
 	if (((!_signingId)||(!_signingId.hasPrivate()))||(_signingId.address().toInt() != (nwid >> 24))||(!_sender))
 		return;
 
@@ -1173,7 +1186,7 @@ void EmbeddedNetworkController::_request(
 	}
 
 	OSUtils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",nwid);
-	if (!_db.get(nwid,network,identity.address().toInt(),member,ns)) {
+	if (!_db->get(nwid,network,identity.address().toInt(),member,ns)) {
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
 		return;
 	}
@@ -1288,7 +1301,7 @@ void EmbeddedNetworkController::_request(
 		if (origMember != member) {
 			json &revj = member["revision"];
 			member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-			_db.save(member);
+			_db->save(member);
 		}
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
 		return;
@@ -1655,61 +1668,11 @@ void EmbeddedNetworkController::_request(
 	if (member != origMember) {
 		json &revj = member["revision"];
 		member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-		_db.save(member);
+		_db->save(member);
 	}
 
 	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),*(nc.get()),metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
 }
-
-/*
-void EmbeddedNetworkController::threadMain()
-	throw()
-{
-	char tmp[256];
-	_RQEntry *qe = (_RQEntry *)0;
-	while (_running) {
-		const BlockingQueue<_RQEntry *>::TimedWaitResult wr = _queue.get(qe,1000);
-		if ((wr == BlockingQueue<_RQEntry *>::STOP)||(!_running))
-			break;
-
-		try {
-			if ((wr == BlockingQueue<_RQEntry *>::OK)&&(qe->type == _RQEntry::RQENTRY_TYPE_REQUEST)) {
-				_request(qe->nwid,qe->fromAddr,qe->requestPacketId,qe->identity,qe->metaData);
-				delete qe;
-			}
-
-			// Every 10s we update a 'status' containing member online state, etc.
-			const uint64_t now = OSUtils::now();
-			if ((now - _lastDumpedStatus) >= 10000) {
-				_lastDumpedStatus = now;
-				bool first = true;
-				OSUtils::ztsnprintf(tmp,sizeof(tmp),"{\"id\":\"%.10llx-status\",\"objtype\":\"status\",\"memberStatus\":[",_signingId.address().toInt());
-				std::string st(tmp);
-				{
-					Mutex::Lock _l(_memberStatus_m);
-					st.reserve(48 * (_memberStatus.size() + 1));
-					_db.eachId([this,&st,&now,&first,&tmp](uint64_t networkId,uint64_t nodeId) {
-						uint64_t lrt = 0ULL;
-						auto ms = this->_memberStatus.find(_MemberStatusKey(networkId,nodeId));
-						if (ms != _memberStatus.end())
-							lrt = ms->second.lastRequestTime;
-						OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s\"%.16llx\",\"%.10llx\",%llu",
-							(first) ? "" : ",",
-							(unsigned long long)networkId,
-							(unsigned long long)nodeId,
-							(unsigned long long)lrt);
-						st.append(tmp);
-						first = false;
-					});
-				}
-				OSUtils::ztsnprintf(tmp,sizeof(tmp),"],\"clock\":%llu,\"startTime\":%llu,\"uptime\":%llu,\"vMajor\":%d,\"vMinor\":%d,\"vRev\":%d}",(unsigned long long)now,(unsigned long long)_startTime,(unsigned long long)(now - _startTime),ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
-				st.append(tmp);
-				_db.writeRaw("status",st);
-			}
-		} catch ( ... ) {}
-	}
-}
-*/
 
 void EmbeddedNetworkController::_startThreads()
 {

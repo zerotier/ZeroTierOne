@@ -867,10 +867,14 @@ public:
 				clockShouldBe = now + (uint64_t)delay;
 				_phy.poll(delay);
 			}
+		} catch (std::exception &e) {
+			Mutex::Lock _l(_termReason_m);
+			_termReason = ONE_UNRECOVERABLE_ERROR;
+			_fatalErrorMessage = std::string("unexpected exception in main thread: ")+e.what();
 		} catch ( ... ) {
 			Mutex::Lock _l(_termReason_m);
 			_termReason = ONE_UNRECOVERABLE_ERROR;
-			_fatalErrorMessage = "unexpected exception in main thread";
+			_fatalErrorMessage = "unexpected exception in main thread: unknown exception";
 		}
 
 		try {

@@ -139,6 +139,8 @@ private:
 	BlockingQueue< nlohmann::json * > _commitQueue;
 	std::thread _commitThread[ZT_CONTROLLER_RETHINKDB_COMMIT_THREADS];
 
+	std::thread _heartbeatThread;
+
 	mutable std::mutex _readyLock; // locked until ready
 	std::atomic<int> _ready;
 	std::atomic<int> _run;

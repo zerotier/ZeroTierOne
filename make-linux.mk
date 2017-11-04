@@ -268,7 +268,7 @@ official-static:	FORCE
 
 central-controller:	FORCE
 	cd ext/librethinkdbxx ; make
-	make LDLIBS="-ljemalloc ext/librethinkdbxx/build/librethinkdb++.a" DEFS="-DZT_CONTROLLER_USE_RETHINKDB" one
+	make -j4 LDLIBS="ext/librethinkdbxx/build/librethinkdb++.a" DEFS="-DZT_CONTROLLER_USE_RETHINKDB" one
 
 debug:	FORCE
 	make ZT_DEBUG=1 one

@@ -239,7 +239,7 @@ private:
 	Identity _signingId;
 	std::string _signingIdAddressString;
 	NetworkController::Sender *_sender;
-	ControllerDB _db;
+	std::unique_ptr<ControllerDB> _db;
 	BlockingQueue< _RQEntry * > _queue;
 	std::vector<std::thread> _threads;
 	std::mutex _threads_l;
