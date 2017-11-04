@@ -101,6 +101,8 @@ std::unique_ptr<Connection> connect(std::string host, int port, std::string auth
 Connection::Connection(ConnectionPrivate *dd) : d(dd) { }
 Connection::~Connection() {
     // close();
+    if (d->guarded_sockfd >= 0)
+        ::close(d->guarded_sockfd);
 }
 
 size_t ReadLock::recv_some(char* buf, size_t size, double wait) {
@@ -128,7 +130,7 @@ size_t ReadLock::recv_some(char* buf, size_t size, double wait) {
     }
 
     ssize_t numbytes = ::recv(conn->guarded_sockfd, buf, size, 0);
-    if (numbytes == -1) throw Error::from_errno("recv");
+    if (numbytes <= 0) throw Error::from_errno("recv");
     if (debug_net > 1) {
         fprintf(stderr, "<< %s\n", write_datum(std::string(buf, numbytes)).c_str());
     }
@@ -190,6 +192,7 @@ void Connection::close() {
     if (ret == -1) {
         throw Error::from_errno("close");
     }
+    d->guarded_sockfd = -1;
 }
 
 Response ConnectionPrivate::wait_for_response(uint64_t token_want, double wait) {

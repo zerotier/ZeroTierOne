@@ -1185,8 +1185,9 @@ void EmbeddedNetworkController::_request(
 		ms.lastRequestTime = now;
 	}
 
-	OSUtils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",nwid);
-	if (!_db->get(nwid,network,identity.address().toInt(),member,ns)) {
+	Utils::hex(nwid,nwids);
+	_db->get(nwid,network,identity.address().toInt(),member,ns);
+	if ((!network.is_object())||(network.size() == 0)) {
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
 		return;
 	}
@@ -1684,11 +1685,13 @@ void EmbeddedNetworkController::_startThreads()
 		_threads.emplace_back([this]() {
 			for(;;) {
 				_RQEntry *qe = (_RQEntry *)0;
-				if (_queue.get(qe))
+				if (!_queue.get(qe))
 					break;
 				try {
-					if (qe)
+					if (qe) {
 						_request(qe->nwid,qe->fromAddr,qe->requestPacketId,qe->identity,qe->metaData);
+						delete qe;
+					}
 				} catch (std::exception &e) {
 					fprintf(stderr,"ERROR: exception in controller request handling thread: %s" ZT_EOL_S,e.what());
 				} catch ( ... ) {

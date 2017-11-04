@@ -21,9 +21,11 @@ CursorPrivate::CursorPrivate(uint64_t token_, Connection *conn_, Datum&& datum)
 Cursor::Cursor(CursorPrivate *dd) : d(dd) {}
 
 Cursor::~Cursor() {
-    if (d && d->conn) {
-        close();
-    }
+    try {
+        if (d && d->conn) {
+            close();
+        }
+    } catch ( ... ) {}
 }
 
 Datum& Cursor::next(double wait) const {
