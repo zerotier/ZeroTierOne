@@ -99,7 +99,7 @@ namespace ZeroTier { typedef TestEthernetTap EthernetTap; }
 #include "../controller/EmbeddedNetworkController.hpp"
 #include "../node/Node.hpp"
 // Use the virtual netcon endpoint instead of a tun/tap port driver
-#include "../src/VirtualTap.hpp"
+#include "../include/VirtualTap.h"
 namespace ZeroTier { typedef VirtualTap EthernetTap; }
 
 #else
@@ -916,14 +916,14 @@ public:
 	}
 
 #ifdef ZT_SDK
-	virtual void leave(const char *hp)
+	virtual void leave(const uint64_t hp)
 	{
-		_node->leave(Utils::hexStrToU64(hp),NULL,NULL);
+		_node->leave(hp, NULL, NULL);
 	}
 
-	virtual void join(const char *hp)
+	virtual void join(const uint64_t hp)
 	{
-		_node->join(Utils::hexStrToU64(hp),NULL,NULL);
+		_node->join(hp, NULL, NULL);
 	}
 
 	virtual std::string givenHomePath()
