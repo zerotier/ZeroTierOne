@@ -32,11 +32,9 @@ DB::DB(EmbeddedNetworkController *const nc,const Address &myAddress,const char *
 	_myAddress(myAddress),
 	_path((path) ? path : "")
 {
-	{
-		char tmp[32];
-		_myAddress.toString(tmp);
-		_myAddressStr = tmp;
-	}
+	char tmp[32];
+	_myAddress.toString(tmp);
+	_myAddressStr = tmp;
 }
 
 DB::~DB()
