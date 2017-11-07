@@ -45,13 +45,18 @@
 
 #ifdef ZT_CONTROLLER_USE_RETHINKDB
 #include "RethinkDB.hpp"
+#else
+#include "FileDB.hpp"
 #endif
 
 namespace ZeroTier {
 
 #ifdef ZT_CONTROLLER_USE_RETHINKDB
 typedef RethinkDB ControllerDB;
+#else
+typedef FileDB ControllerDB;
 #endif
+
 class Node;
 
 class EmbeddedNetworkController : public NetworkController

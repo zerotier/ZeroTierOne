@@ -101,7 +101,6 @@ public:
 	 * @return True if delete was successful
 	 */
 	static inline bool rm(const char *path)
-		throw()
 	{
 #ifdef __WINDOWS__
 		return (DeleteFileA(path) != FALSE);
@@ -109,7 +108,7 @@ public:
 		return (unlink(path) == 0);
 #endif
 	}
-	static inline bool rm(const std::string &path) throw() { return rm(path.c_str()); }
+	static inline bool rm(const std::string &path) { return rm(path.c_str()); }
 
 	static inline bool mkdir(const char *path)
 	{
@@ -123,7 +122,17 @@ public:
 		return true;
 #endif
 	}
-	static inline bool mkdir(const std::string &path) throw() { return OSUtils::mkdir(path.c_str()); }
+	static inline bool mkdir(const std::string &path) { return OSUtils::mkdir(path.c_str()); }
+
+	static inline bool rename(const char *o,const char *n)
+	{
+#ifdef __WINDOWS__
+		DeleteFileA(n);
+		return (::rename(o,n) == 0);
+#else
+		return (::rename(o,n) == 0);
+#endif
+	}
 
 	/**
 	 * List a directory's contents

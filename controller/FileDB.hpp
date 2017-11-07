@@ -16,27 +16,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define ZT_CONTROLLER_USE_RETHINKDB
-
-#ifdef ZT_CONTROLLER_USE_RETHINKDB
-
-#ifndef ZT_CONTROLLER_RETHINKDB_HPP
-#define ZT_CONTROLLER_RETHINKDB_HPP
+#ifndef ZT_CONTROLLER_FILEDB_HPP
+#define ZT_CONTROLLER_FILEDB_HPP
 
 #include "DB.hpp"
-
-#define ZT_CONTROLLER_RETHINKDB_COMMIT_THREADS 2
 
 namespace ZeroTier
 {
 
-class RethinkDB : public DB
+class FileDB : public DB
 {
 public:
-	RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddress,const char *path);
-	virtual ~RethinkDB();
+	FileDB(EmbeddedNetworkController *const nc,const Address &myAddress,const char *path);
+	virtual ~FileDB();
 
-	virtual void waitForReady() const;
+	virtual bool waitForReady();
 
 	virtual void save(const nlohmann::json &record);
 
@@ -45,29 +39,9 @@ public:
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId);
 
 protected:
-	std::string _host;
-	std::string _db;
-	std::string _auth;
-	int _port;
-
-	void *_networksDbWatcherConnection;
-	void *_membersDbWatcherConnection;
-	std::thread _networksDbWatcher;
-	std::thread _membersDbWatcher;
-
-	BlockingQueue< nlohmann::json * > _commitQueue;
-	std::thread _commitThread[ZT_CONTROLLER_RETHINKDB_COMMIT_THREADS];
-
-	std::thread _heartbeatThread;
-
-	mutable std::mutex _readyLock; // locked until ready
-	std::atomic<int> _ready;
-	std::atomic<int> _run;
-	mutable volatile bool _waitNoticePrinted;
+	std::string _networksPath;
 };
 
 } // namespace ZeroTier
 
 #endif
-
-#endif // ZT_CONTROLLER_USE_RETHINKDB

@@ -28,6 +28,8 @@ CORE_OBJS=\
 
 ONE_OBJS=\
 	controller/EmbeddedNetworkController.o \
+	controller/DB.o \
+	controller/FileDB.o \
 	controller/RethinkDB.o \
 	osdep/ManagedRoute.o \
 	osdep/Http.o \
