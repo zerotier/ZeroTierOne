@@ -237,9 +237,6 @@
     <ClCompile Include="..\..\controller\EmbeddedNetworkController.cpp">
       <Filter>Source Files\controller</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\controller\JSONDB.cpp">
-      <Filter>Source Files\controller</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\service\SoftwareUpdater.cpp">
       <Filter>Source Files\service</Filter>
     </ClCompile>
@@ -254,6 +251,15 @@
     </ClCompile>
     <ClCompile Include="..\..\node\Trace.cpp">
       <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\controller\DB.cpp">
+      <Filter>Source Files\controller</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\controller\FileDB.cpp">
+      <Filter>Source Files\controller</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\controller\RethinkDB.cpp">
+      <Filter>Source Files\controller</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -485,11 +491,17 @@
     <ClInclude Include="..\..\controller\EmbeddedNetworkController.hpp">
       <Filter>Header Files\controller</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\controller\JSONDB.hpp">
-      <Filter>Header Files\controller</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\node\Trace.hpp">
       <Filter>Header Files\node</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\controller\DB.hpp">
+      <Filter>Header Files\controller</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\controller\FileDB.hpp">
+      <Filter>Header Files\controller</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\controller\RethinkDB.hpp">
+      <Filter>Header Files\controller</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
