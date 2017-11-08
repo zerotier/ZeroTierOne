@@ -16,8 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define ZT_CONTROLLER_USE_RETHINKDB
-
 #ifdef ZT_CONTROLLER_USE_RETHINKDB
 
 #ifndef ZT_CONTROLLER_RETHINKDB_HPP
