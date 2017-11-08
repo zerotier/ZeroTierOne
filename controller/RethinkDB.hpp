@@ -34,7 +34,7 @@ public:
 	RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddress,const char *path);
 	virtual ~RethinkDB();
 
-	virtual void waitForReady() const;
+	virtual void waitForReady();
 
 	virtual void save(const nlohmann::json &record);
 

@@ -253,7 +253,7 @@ RethinkDB::~RethinkDB()
 	_heartbeatThread.join();
 }
 
-void RethinkDB::waitForReady() const
+void RethinkDB::waitForReady()
 {
 	while (_ready > 0) {
 		if (!_waitNoticePrinted) {
