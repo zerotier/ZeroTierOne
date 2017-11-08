@@ -34,13 +34,15 @@ public:
 	RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddress,const char *path);
 	virtual ~RethinkDB();
 
-	virtual void waitForReady();
+	virtual bool waitForReady();
 
-	virtual void save(const nlohmann::json &record);
+	virtual void save(nlohmann::json *orig,nlohmann::json &record);
 
 	virtual void eraseNetwork(const uint64_t networkId);
 
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId);
+
+	virtual void nodeIsOnline(const uint64_t memberId);
 
 protected:
 	std::string _host;
@@ -55,6 +57,10 @@ protected:
 
 	BlockingQueue< nlohmann::json * > _commitQueue;
 	std::thread _commitThread[ZT_CONTROLLER_RETHINKDB_COMMIT_THREADS];
+
+	std::unordered_map< uint64_t,int64_t > _lastOnline;
+	mutable std::mutex _lastOnline_l;
+	std::thread _onlineNotificationThread;
 
 	std::thread _heartbeatThread;
 

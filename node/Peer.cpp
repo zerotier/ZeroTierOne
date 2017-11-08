@@ -78,54 +78,6 @@ void Peer::received(
 {
 	const int64_t now = RR->node->now();
 
-/*
-#ifdef ZT_ENABLE_CLUSTER
-	bool isClusterSuboptimalPath = false;
-	if ((RR->cluster)&&(hops == 0)) {
-		// Note: findBetterEndpoint() is first since we still want to check
-		// for a better endpoint even if we don't actually send a redirect.
-		InetAddress redirectTo;
-		if ( (verb != Packet::VERB_OK) && (verb != Packet::VERB_ERROR) && (verb != Packet::VERB_RENDEZVOUS) && (verb != Packet::VERB_PUSH_DIRECT_PATHS) && (RR->cluster->findBetterEndpoint(redirectTo,_id.address(),path->address(),false)) ) {
-			if (_vProto >= 5) {
-				// For newer peers we can send a more idiomatic verb: PUSH_DIRECT_PATHS.
-				Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
-				outp.append((uint16_t)1); // count == 1
-				outp.append((uint8_t)ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT); // flags: cluster redirect
-				outp.append((uint16_t)0); // no extensions
-				if (redirectTo.ss_family == AF_INET) {
-					outp.append((uint8_t)4);
-					outp.append((uint8_t)6);
-					outp.append(redirectTo.rawIpData(),4);
-				} else {
-					outp.append((uint8_t)6);
-					outp.append((uint8_t)18);
-					outp.append(redirectTo.rawIpData(),16);
-				}
-				outp.append((uint16_t)redirectTo.port());
-				outp.armor(_key,true,path->nextOutgoingCounter());
-				path->send(RR,tPtr,outp.data(),outp.size(),now);
-			} else {
-				// For older peers we use RENDEZVOUS to coax them into contacting us elsewhere.
-				Packet outp(_id.address(),RR->identity.address(),Packet::VERB_RENDEZVOUS);
-				outp.append((uint8_t)0); // no flags
-				RR->identity.address().appendTo(outp);
-				outp.append((uint16_t)redirectTo.port());
-				if (redirectTo.ss_family == AF_INET) {
-					outp.append((uint8_t)4);
-					outp.append(redirectTo.rawIpData(),4);
-				} else {
-					outp.append((uint8_t)16);
-					outp.append(redirectTo.rawIpData(),16);
-				}
-				outp.armor(_key,true,path->nextOutgoingCounter());
-				path->send(RR,tPtr,outp.data(),outp.size(),now);
-			}
-			isClusterSuboptimalPath = true;
-		}
-	}
-#endif
-*/
-
 	_lastReceive = now;
 	switch (verb) {
 		case Packet::VERB_FRAME:
@@ -163,6 +115,7 @@ void Peer::received(
 			}
 		}
 
+		bool attemptToContact = false;
 		if ((!havePath)&&(RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),path->localSocket(),path->address()))) {
 			Mutex::Lock _l(_paths_m);
 
@@ -201,12 +154,16 @@ void Peer::received(
 						_paths[replacePath].p = path;
 						_paths[replacePath].priority = 1;
 					} else {
-						attemptToContactAt(tPtr,path->localSocket(),path->address(),now,true,path->nextOutgoingCounter());
-						path->sent(now);
-						RR->t->peerConfirmingUnknownPath(tPtr,networkId,*this,path,packetId,verb);
+						attemptToContact = true;
 					}
 				}
 			}
+		}
+
+		if (attemptToContact) {
+			attemptToContactAt(tPtr,path->localSocket(),path->address(),now,true,path->nextOutgoingCounter());
+			path->sent(now);
+			RR->t->peerConfirmingUnknownPath(tPtr,networkId,*this,path,packetId,verb);
 		}
 	}
 

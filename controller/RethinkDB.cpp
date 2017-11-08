@@ -215,6 +215,47 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddres
 		});
 	}
 
+	_onlineNotificationThread = std::thread([this]() {
+		try {
+			std::unique_ptr<R::Connection> rdb;
+			while (_run == 1) {
+				try {
+					if (!rdb)
+						rdb = R::connect(this->_host,this->_port,this->_auth);
+					if (rdb) {
+						std::lock_guard<std::mutex> l(_lastOnline_l);
+						R::Array batch;
+						R::Object tmpobj;
+						for(auto i=_lastOnline.begin();i!=_lastOnline.end();++i) {
+							char nodeId[16];
+							Utils::hex10(i->first,nodeId);
+							tmpobj["id"] = nodeId;
+							tmpobj["ts"] = i->second;
+							batch.emplace_back(tmpobj);
+							if (batch.size() >= 256) {
+								R::db(this->_db).table("NodeLastOnline").insert(R::args(batch),R::optargs("conflict","update")).run(*rdb);
+								batch.clear();
+							}
+						}
+						if (batch.size() > 0)
+							R::db(this->_db).table("NodeLastOnline").insert(R::args(batch),R::optargs("conflict","update")).run(*rdb);
+						_lastOnline.clear();
+					}
+				} catch (std::exception &e) {
+					fprintf(stderr,"ERROR: controller RethinkDB (node status update): %s" ZT_EOL_S,e.what());
+					rdb.reset();
+				} catch (R::Error &e) {
+					fprintf(stderr,"ERROR: controller RethinkDB (node status update): %s" ZT_EOL_S,e.message.c_str());
+					rdb.reset();
+				} catch ( ... ) {
+					fprintf(stderr,"ERROR: controller RethinkDB (node status update): unknown exception" ZT_EOL_S);
+					rdb.reset();
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(250));
+			}
+		} catch ( ... ) {}
+	});
+
 	_heartbeatThread = std::thread([this]() {
 		try {
 			char tmp[1024];
@@ -251,9 +292,10 @@ RethinkDB::~RethinkDB()
 	_membersDbWatcher.join();
 	_networksDbWatcher.join();
 	_heartbeatThread.join();
+	_onlineNotificationThread.join();
 }
 
-void RethinkDB::waitForReady()
+bool RethinkDB::waitForReady()
 {
 	while (_ready > 0) {
 		if (!_waitNoticePrinted) {
@@ -263,12 +305,32 @@ void RethinkDB::waitForReady()
 		_readyLock.lock();
 		_readyLock.unlock();
 	}
+	return true;
 }
 
-void RethinkDB::save(const nlohmann::json &record)
+void RethinkDB::save(nlohmann::json *orig,nlohmann::json &record)
 {
+	if (!record.is_object()) // sanity check
+		return;
 	waitForReady();
-	_commitQueue.post(new nlohmann::json(record));
+	if (orig) {
+		if (*orig != record) {
+			nlohmann::json *q = new nlohmann::json();
+			try {
+				record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1;
+				for(auto kv=record.begin();kv!=record.end();++kv) {
+					if ((kv.key() == "id")||(kv.key() == "nwid")||(kv.key() == "objtype")||((*q)[kv.key()] != kv.value()))
+						(*q)[kv.key()] = kv.value();
+				}
+			} catch ( ... ) {
+				delete q;
+				throw;
+			}
+		}
+	} else {
+		record["revision"] = 1;
+		_commitQueue.post(new nlohmann::json(record));
+	}
 }
 
 void RethinkDB::eraseNetwork(const uint64_t networkId)
@@ -293,6 +355,12 @@ void RethinkDB::eraseMember(const uint64_t networkId,const uint64_t memberId)
 	(*tmp)["id"] = tmp2;
 	(*tmp)["objtype"] = "_delete_member"; // pseudo-type, tells thread to delete network
 	_commitQueue.post(tmp);
+}
+
+void RethinkDB::nodeIsOnline(const uint64_t memberId)
+{
+	std::lock_guard<std::mutex> l(_lastOnline_l);
+	_lastOnline[memberId] = OSUtils::now();
 }
 
 } // namespace ZeroTier

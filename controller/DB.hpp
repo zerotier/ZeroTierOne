@@ -78,11 +78,13 @@ public:
 
 	void networks(std::vector<uint64_t> &networks);
 
-	virtual void save(const nlohmann::json &record) = 0;
+	virtual void save(nlohmann::json *orig,nlohmann::json &record) = 0;
 
 	virtual void eraseNetwork(const uint64_t networkId) = 0;
 
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId) = 0;
+
+	virtual void nodeIsOnline(const uint64_t memberId) = 0;
 
 protected:
 	struct _Network

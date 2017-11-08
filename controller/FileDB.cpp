@@ -69,7 +69,7 @@ bool FileDB::waitForReady()
 	return true;
 }
 
-void FileDB::save(const nlohmann::json &record)
+void FileDB::save(nlohmann::json *orig,nlohmann::json &record)
 {
 	char p1[16384],p2[16384];
 	try {
@@ -124,6 +124,11 @@ void FileDB::eraseNetwork(const uint64_t networkId)
 
 void FileDB::eraseMember(const uint64_t networkId,const uint64_t memberId)
 {
+}
+
+void FileDB::nodeIsOnline(const uint64_t memberId)
+{
+	// Nothing to do here right now in the filesystem store mode since we can just get this from the peer list
 }
 
 } // namespace ZeroTier

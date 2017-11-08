@@ -734,12 +734,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					member["nwid"] = nwids;
 
 					_removeMemberNonPersistedFields(member);
-					if (member != origMember) {
-						json &revj = member["revision"];
-						member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-						_db->save(member);
-					}
-
+					_db->save(&origMember,member);
 					_addMemberNonPersistedFields(nwid,address,member,now);
 					responseBody = OSUtils::jsonDump(member);
 					responseContentType = "application/json";
@@ -986,12 +981,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 				network["nwid"] = nwids; // legacy
 
 				_removeNetworkNonPersistedFields(network);
-				if (network != origNetwork) {
-					json &revj = network["revision"];
-					network["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-					_db->save(network);
-				}
-
+				_db->save(&origNetwork,network);
 				ControllerDB::NetworkSummaryInfo ns;
 				_db->summary(nwid,ns);
 				_addNetworkNonPersistedFields(nwid,network,now,ns);
@@ -1116,7 +1106,7 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 		d["objtype"] = "trace";
 		d["ts"] = now;
 		d["nodeId"] = Utils::hex10(rt.origin,tmp);
-		_db->save(d);
+		_db->save((nlohmann::json *)0,d);
 	} catch ( ... ) {
 		// drop invalid trace messages if an error occurs
 	}
@@ -1184,6 +1174,8 @@ void EmbeddedNetworkController::_request(
 			return;
 		ms.lastRequestTime = now;
 	}
+
+	_db->nodeIsOnline(identity.address().toInt());
 
 	Utils::hex(nwid,nwids);
 	_db->get(nwid,network,identity.address().toInt(),member,ns);
@@ -1299,11 +1291,7 @@ void EmbeddedNetworkController::_request(
 	} else {
 		// If they are not authorized, STOP!
 		_removeMemberNonPersistedFields(member);
-		if (origMember != member) {
-			json &revj = member["revision"];
-			member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-			_db->save(member);
-		}
+		_db->save(&origMember,member);
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
 		return;
 	}
@@ -1666,12 +1654,7 @@ void EmbeddedNetworkController::_request(
 	}
 
 	_removeMemberNonPersistedFields(member);
-	if (member != origMember) {
-		json &revj = member["revision"];
-		member["revision"] = (revj.is_number() ? ((uint64_t)revj + 1ULL) : 1ULL);
-		_db->save(member);
-	}
-
+	_db->save(&origMember,member);
 	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),*(nc.get()),metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
 }
 
