@@ -1175,7 +1175,7 @@ void EmbeddedNetworkController::_request(
 		ms.lastRequestTime = now;
 	}
 
-	_db->nodeIsOnline(identity.address().toInt());
+	_db->nodeIsOnline(nwid,identity.address().toInt());
 
 	Utils::hex(nwid,nwids);
 	_db->get(nwid,network,identity.address().toInt(),member,ns);

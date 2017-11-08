@@ -227,18 +227,18 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddres
 						R::Array batch;
 						R::Object tmpobj;
 						for(auto i=_lastOnline.begin();i!=_lastOnline.end();++i) {
-							char nodeId[16];
-							Utils::hex10(i->first,nodeId);
-							tmpobj["id"] = nodeId;
+							char tmp[64];
+							OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx-%.10llx",i->first.first,i->first.second);
+							tmpobj["id"] = tmp;
 							tmpobj["ts"] = i->second;
 							batch.emplace_back(tmpobj);
 							if (batch.size() >= 256) {
-								R::db(this->_db).table("NodeLastOnline").insert(R::args(batch),R::optargs("conflict","update")).run(*rdb);
+								R::db(this->_db).table("MemberLastRequest",R::optargs("read_mode","outdated")).insert(R::args(batch),R::optargs("conflict","update")).run(*rdb);
 								batch.clear();
 							}
 						}
 						if (batch.size() > 0)
-							R::db(this->_db).table("NodeLastOnline").insert(R::args(batch),R::optargs("conflict","update")).run(*rdb);
+							R::db(this->_db).table("MemberLastRequest",R::optargs("read_mode","outdated")).insert(R::args(batch),R::optargs("conflict","update")).run(*rdb);
 						_lastOnline.clear();
 					}
 				} catch (std::exception &e) {
@@ -357,10 +357,10 @@ void RethinkDB::eraseMember(const uint64_t networkId,const uint64_t memberId)
 	_commitQueue.post(tmp);
 }
 
-void RethinkDB::nodeIsOnline(const uint64_t memberId)
+void RethinkDB::nodeIsOnline(const uint64_t networkId,const uint64_t memberId)
 {
 	std::lock_guard<std::mutex> l(_lastOnline_l);
-	_lastOnline[memberId] = OSUtils::now();
+	_lastOnline[std::pair<uint64_t,uint64_t>(networkId,memberId)] = OSUtils::now();
 }
 
 } // namespace ZeroTier

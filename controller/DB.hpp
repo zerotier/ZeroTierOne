@@ -84,7 +84,7 @@ public:
 
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId) = 0;
 
-	virtual void nodeIsOnline(const uint64_t memberId) = 0;
+	virtual void nodeIsOnline(const uint64_t networkId,const uint64_t memberId) = 0;
 
 protected:
 	struct _Network

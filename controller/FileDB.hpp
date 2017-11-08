@@ -38,7 +38,7 @@ public:
 
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId);
 
-	virtual void nodeIsOnline(const uint64_t memberId);
+	virtual void nodeIsOnline(const uint64_t networkId,const uint64_t memberId);
 
 protected:
 	std::string _networksPath;
