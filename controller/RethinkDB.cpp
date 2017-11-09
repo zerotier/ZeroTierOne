@@ -233,12 +233,12 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddres
 							tmpobj["ts"] = i->second;
 							batch.emplace_back(tmpobj);
 							if (batch.size() >= 256) {
-								R::db(this->_db).table("MemberLastRequest",R::optargs("read_mode","outdated")).insert(R::args(batch),R::optargs("conflict","update")).run(*rdb);
+								R::db(this->_db).table("MemberLastRequest",R::optargs("read_mode","outdated")).insert(batch,R::optargs("conflict","update")).run(*rdb);
 								batch.clear();
 							}
 						}
 						if (batch.size() > 0)
-							R::db(this->_db).table("MemberLastRequest",R::optargs("read_mode","outdated")).insert(R::args(batch),R::optargs("conflict","update")).run(*rdb);
+							R::db(this->_db).table("MemberLastRequest",R::optargs("read_mode","outdated")).insert(batch,R::optargs("conflict","update")).run(*rdb);
 						_lastOnline.clear();
 					}
 				} catch (std::exception &e) {

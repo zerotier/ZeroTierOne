@@ -28,6 +28,12 @@
 namespace ZeroTier
 {
 
+/**
+ * A controller database driver that talks to RethinkDB
+ *
+ * This is for use with ZeroTier Central. Others are free to build and use it
+ * but be aware that we might change it at any time.
+ */
 class RethinkDB : public DB
 {
 public:
