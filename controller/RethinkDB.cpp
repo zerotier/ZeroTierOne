@@ -227,10 +227,11 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddres
 						R::Array batch;
 						R::Object tmpobj;
 						for(auto i=_lastOnline.begin();i!=_lastOnline.end();++i) {
-							char tmp[64];
+							char tmp[64],tmp2[64];
 							OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx-%.10llx",i->first.first,i->first.second);
 							tmpobj["id"] = tmp;
-							tmpobj["ts"] = i->second;
+							tmpobj["ts"] = i->second.first;
+							tmpobj["phy"] = i->second.second.toIpString(tmp2);
 							batch.emplace_back(tmpobj);
 							if (batch.size() >= 256) {
 								R::db(this->_db).table("MemberLastRequest",R::optargs("read_mode","outdated")).insert(batch,R::optargs("conflict","update")).run(*rdb);
@@ -357,10 +358,13 @@ void RethinkDB::eraseMember(const uint64_t networkId,const uint64_t memberId)
 	_commitQueue.post(tmp);
 }
 
-void RethinkDB::nodeIsOnline(const uint64_t networkId,const uint64_t memberId)
+void RethinkDB::nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress)
 {
 	std::lock_guard<std::mutex> l(_lastOnline_l);
-	_lastOnline[std::pair<uint64_t,uint64_t>(networkId,memberId)] = OSUtils::now();
+	std::pair<int64_t,InetAddress> &i = _lastOnline[std::pair<uint64_t,uint64_t>(networkId,memberId)];
+	i.first = OSUtils::now();
+	if (physicalAddress)
+		i.second = physicalAddress;
 }
 
 } // namespace ZeroTier

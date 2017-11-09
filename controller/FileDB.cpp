@@ -126,7 +126,7 @@ void FileDB::eraseMember(const uint64_t networkId,const uint64_t memberId)
 {
 }
 
-void FileDB::nodeIsOnline(const uint64_t networkId,const uint64_t memberId)
+void FileDB::nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress)
 {
 	// Nothing to do here right now in the filesystem store mode since we can just get this from the peer list
 }

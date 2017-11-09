@@ -48,7 +48,7 @@ public:
 
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId);
 
-	virtual void nodeIsOnline(const uint64_t networkId,const uint64_t memberId);
+	virtual void nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress);
 
 protected:
 	struct _PairHasher
@@ -69,7 +69,7 @@ protected:
 	BlockingQueue< nlohmann::json * > _commitQueue;
 	std::thread _commitThread[ZT_CONTROLLER_RETHINKDB_COMMIT_THREADS];
 
-	std::unordered_map< std::pair<uint64_t,uint64_t>,int64_t,_PairHasher > _lastOnline;
+	std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > _lastOnline;
 	mutable std::mutex _lastOnline_l;
 	std::thread _onlineNotificationThread;
 
