@@ -43,19 +43,13 @@
 
 #include "../ext/json/json.hpp"
 
+#include "DB.hpp"
+#include "FileDB.hpp"
 #ifdef ZT_CONTROLLER_USE_RETHINKDB
 #include "RethinkDB.hpp"
-#else
-#include "FileDB.hpp"
 #endif
 
 namespace ZeroTier {
-
-#ifdef ZT_CONTROLLER_USE_RETHINKDB
-typedef RethinkDB ControllerDB;
-#else
-typedef FileDB ControllerDB;
-#endif
 
 class Node;
 
@@ -130,7 +124,6 @@ private:
 		if (!member.count("vMinor")) member["vMinor"] = -1;
 		if (!member.count("vRev")) member["vRev"] = -1;
 		if (!member.count("vProto")) member["vProto"] = -1;
-		if (!member.count("physicalAddr")) member["physicalAddr"] = nlohmann::json();
 		if (!member.count("remoteTraceTarget")) member["remoteTraceTarget"] = nlohmann::json();
 		member["objtype"] = "member";
 	}
@@ -160,42 +153,18 @@ private:
 		}
 		network["objtype"] = "network";
 	}
-	inline void _addNetworkNonPersistedFields(const uint64_t nwid,nlohmann::json &network,int64_t now,const ControllerDB::NetworkSummaryInfo &ns)
-	{
-		network["clock"] = now;
-		network["authorizedMemberCount"] = ns.authorizedMemberCount;
-		network["totalMemberCount"] = ns.totalMemberCount;
-		{
-			std::lock_guard<std::mutex> l(_memberStatus_l);
-			unsigned long ac = 0;
-			for(auto ms=_memberStatus.begin();ms!=_memberStatus.end();++ms) {
-				if ((ms->first.networkId == nwid)&&(ms->second.online(now)))
-					++ac;
-			}
-			network["activeMemberCount"] = ac;
-		}
-	}
-	inline void _removeNetworkNonPersistedFields(nlohmann::json &network)
+	inline void _cleanNetwork(nlohmann::json &network)
 	{
 		network.erase("clock");
 		network.erase("authorizedMemberCount");
 		network.erase("activeMemberCount");
 		network.erase("totalMemberCount");
-		// legacy fields
 		network.erase("lastModified");
 	}
-	inline void _addMemberNonPersistedFields(uint64_t nwid,uint64_t nodeId,nlohmann::json &member,int64_t now)
-	{
-		member["clock"] = now;
-		{
-			std::lock_guard<std::mutex> l(_memberStatus_l);
-			member["online"] = _memberStatus[_MemberStatusKey(nwid,nodeId)].online(now);
-		}
-	}
-	inline void _removeMemberNonPersistedFields(nlohmann::json &member)
+	inline void _cleanMember(nlohmann::json &member)
 	{
 		member.erase("clock");
-		// legacy fields
+		member.erase("physicalAddr");
 		member.erase("recentLog");
 		member.erase("lastModified");
 		member.erase("lastRequestMetaData");
@@ -244,7 +213,7 @@ private:
 	Identity _signingId;
 	std::string _signingIdAddressString;
 	NetworkController::Sender *_sender;
-	std::unique_ptr<ControllerDB> _db;
+	std::unique_ptr<DB> _db;
 	BlockingQueue< _RQEntry * > _queue;
 	std::vector<std::thread> _threads;
 	std::mutex _threads_l;

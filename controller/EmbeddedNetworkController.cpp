@@ -475,7 +475,12 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 	_signingId = signingId;
 	_sender = sender;
 	_signingIdAddressString = signingId.address().toString(tmp);
-	_db.reset(new ControllerDB(this,_signingId.address(),_path.c_str()));
+#ifdef ZT_CONTROLLER_USE_RETHINKDB
+	if ((_path.length() > 10)&&(_path.substr(0,10) == "rethinkdb:"))
+		_db.reset(new RethinkDB(this,_signingId.address(),_path.c_str()));
+	else // else use FileDB after endif
+#endif
+	_db.reset(new FileDB(this,_signingId.address(),_path.c_str()));
 	_db->waitForReady();
 }
 
@@ -529,7 +534,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 						json member;
 						if (!_db->get(nwid,network,address,member))
 							return 404;
-						_addMemberNonPersistedFields(nwid,address,member,OSUtils::now());
 						responseBody = OSUtils::jsonDump(member);
 						responseContentType = "application/json";
 
@@ -559,10 +563,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 			} else {
 				// Get network
 
-				const int64_t now = OSUtils::now();
-				ControllerDB::NetworkSummaryInfo ns;
-				_db->summary(nwid,ns);
-				_addNetworkNonPersistedFields(nwid,network,now,ns);
 				responseBody = OSUtils::jsonDump(network);
 				responseContentType = "application/json";
 				return 200;
@@ -733,9 +733,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					member["address"] = addrs; // legacy
 					member["nwid"] = nwids;
 
-					_removeMemberNonPersistedFields(member);
+					_cleanMember(member);
 					_db->save(&origMember,member);
-					_addMemberNonPersistedFields(nwid,address,member,now);
 					responseBody = OSUtils::jsonDump(member);
 					responseContentType = "application/json";
 
@@ -980,11 +979,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 				network["id"] = nwids;
 				network["nwid"] = nwids; // legacy
 
-				_removeNetworkNonPersistedFields(network);
+				_cleanNetwork(network);
 				_db->save(&origNetwork,network);
-				ControllerDB::NetworkSummaryInfo ns;
-				_db->summary(nwid,ns);
-				_addNetworkNonPersistedFields(nwid,network,now,ns);
 
 				responseBody = OSUtils::jsonDump(network);
 				responseContentType = "application/json";
@@ -1156,7 +1152,7 @@ void EmbeddedNetworkController::_request(
 	const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData)
 {
 	char nwids[24];
-	ControllerDB::NetworkSummaryInfo ns;
+	DB::NetworkSummaryInfo ns;
 	json network,member,origMember;
 
 	if (!_db)
@@ -1282,15 +1278,11 @@ void EmbeddedNetworkController::_request(
 
 				if (fromAddr)
 					ms.physicalAddr = fromAddr;
-
-				char tmpip[64];
-				if (ms.physicalAddr)
-					member["physicalAddr"] = ms.physicalAddr.toString(tmpip);
 			}
 		}
 	} else {
 		// If they are not authorized, STOP!
-		_removeMemberNonPersistedFields(member);
+		_cleanMember(member);
 		_db->save(&origMember,member);
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
 		return;
@@ -1653,7 +1645,7 @@ void EmbeddedNetworkController::_request(
 		return;
 	}
 
-	_removeMemberNonPersistedFields(member);
+	_cleanMember(member);
 	_db->save(&origMember,member);
 	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),*(nc.get()),metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
 }

@@ -79,7 +79,6 @@ Example:
 | --------------------- | ------------- | ------------------------------------------------- | -------- |
 | id                    | string        | 16-digit network ID                               | no       |
 | nwid                  | string        | 16-digit network ID (old, but still around)       | no       |
-| clock                 | integer       | Current clock, ms since epoch                     | no       |
 | name                  | string        | A short name for this network                     | YES      |
 | private               | boolean       | Is access control enabled?                        | YES      |
 | enableBroadcast       | boolean       | Ethernet ff:ff:ff:ff:ff:ff allowed?               | YES      |
@@ -89,9 +88,6 @@ Example:
 | multicastLimit        | integer       | Maximum recipients for a multicast packet         | YES      |
 | creationTime          | integer       | Time network was first created                    | no       |
 | revision              | integer       | Network config revision counter                   | no       |
-| authorizedMemberCount | integer       | Number of authorized members (for private nets)   | no       |
-| activeMemberCount     | integer       | Number of members that appear to be online        | no       |
-| totalMemberCount      | integer       | Total known members of this network               | no       |
 | routes                | array[object] | Managed IPv4 and IPv6 routes; see below           | YES      |
 | ipAssignmentPools     | array[object] | IP auto-assign ranges; see below                  | YES      |
 | rules                 | array[object] | Traffic rules; see below                          | YES      |
@@ -191,7 +187,7 @@ The entry types and their additional fields are:
 | `MATCH_TAGS_SAMENESS`           | Match if both sides' tags differ by no more than value            | `id`,`value`   |
 | `MATCH_TAGS_BITWISE_AND`        | Match if both sides' tags AND to value                            | `id`,`value`   |
 | `MATCH_TAGS_BITWISE_OR`         | Match if both sides' tags OR to value                             | `id`,`value`   |
-| `MATCH_TAGS_BITWISE_XOR`        | Match if both sides` tags XOR to value                            | `id`,`value`   |
+| `MATCH_TAGS_BITWISE_XOR`        | Match if both sides' tags XOR to value                            | `id`,`value`   |
 
 Important notes about rules engine behavior:
 
@@ -227,9 +223,7 @@ This returns an object containing all currently online members and the most rece
 | id                    | string        | Member's 10-digit ZeroTier address                | no       |
 | address               | string        | Member's 10-digit ZeroTier address                | no       |
 | nwid                  | string        | 16-digit network ID                               | no       |
-| clock                 | integer       | Current clock, ms since epoch                     | no       |
 | authorized            | boolean       | Is member authorized? (for private networks)      | YES      |
-| authHistory           | array[object] | History of auth changes, latest at end            | no       |
 | activeBridge          | boolean       | Member is able to bridge to other Ethernet nets   | YES      |
 | identity              | string        | Member's public ZeroTier identity (if known)      | no       |
 | ipAssignments         | array[string] | Managed IP address assignments                    | YES      |
@@ -238,7 +232,6 @@ This returns an object containing all currently online members and the most rece
 | vMinor                | integer       | Most recently known minor version                 | no       |
 | vRev                  | integer       | Most recently known revision                      | no       |
 | vProto                | integer       | Most recently known protocl version               | no       |
-| physicalAddr          | string        | Last known physical IP/port or null if none       | no       |
 
 Note that managed IP assignments are only used if they fall within a managed route. Otherwise they are ignored.
 
