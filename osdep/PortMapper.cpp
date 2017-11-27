@@ -123,6 +123,7 @@ public:
 
 					if (initnatpmp(&natpmp,0,0) != 0) {
 						mode = 1;
+						closenatpmp(&natpmp);
 #ifdef ZT_PORTMAPPER_TRACE
                         PM_TRACE("PortMapper: NAT-PMP: init failed, switching to UPnP mode" ZT_EOL_S);
 #endif
