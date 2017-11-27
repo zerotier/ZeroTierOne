@@ -1411,7 +1411,7 @@ public:
 						json &blAddrs = v.value()["blacklist"];
 						if (blAddrs.is_array()) {
 							for(unsigned long i=0;i<blAddrs.size();++i) {
-								const InetAddress ip(OSUtils::jsonString(tryAddrs[i],"").c_str());
+								const InetAddress ip(OSUtils::jsonString(blAddrs[i],"").c_str());
 								if (ip.ss_family == AF_INET)
 									v4b.push_back(ip);
 								else if (ip.ss_family == AF_INET6)
