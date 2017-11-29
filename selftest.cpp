@@ -60,8 +60,6 @@
 #include "osdep/PortMapper.hpp"
 #include "osdep/Thread.hpp"
 
-#include "controller/JSONDB.hpp"
-
 #ifdef ZT_USE_X64_ASM_SALSA2012
 #include "ext/x64-salsa2012-asm/salsa2012.h"
 #endif
