@@ -200,6 +200,29 @@ public:
 
 	inline unsigned long hashCode() const { return (unsigned long)_m; }
 
+	inline char *toString(char buf[18]) const
+	{
+		buf[0] = Utils::HEXCHARS[(_m >> 44) & 0xf];
+		buf[1] = Utils::HEXCHARS[(_m >> 40) & 0xf];
+		buf[2] = ':';
+		buf[3] = Utils::HEXCHARS[(_m >> 36) & 0xf];
+		buf[4] = Utils::HEXCHARS[(_m >> 32) & 0xf];
+		buf[5] = ':';
+		buf[6] = Utils::HEXCHARS[(_m >> 28) & 0xf];
+		buf[7] = Utils::HEXCHARS[(_m >> 24) & 0xf];
+		buf[8] = ':';
+		buf[9] = Utils::HEXCHARS[(_m >> 20) & 0xf];
+		buf[10] = Utils::HEXCHARS[(_m >> 16) & 0xf];
+		buf[11] = ':';
+		buf[12] = Utils::HEXCHARS[(_m >> 12) & 0xf];
+		buf[13] = Utils::HEXCHARS[(_m >> 8) & 0xf];
+		buf[14] = ':';
+		buf[15] = Utils::HEXCHARS[(_m >> 4) & 0xf];
+		buf[16] = Utils::HEXCHARS[_m & 0xf];
+		buf[17] = (char)0;
+		return buf;
+	}
+
 	inline MAC &operator=(const MAC &m)
 	{
 		_m = m._m;

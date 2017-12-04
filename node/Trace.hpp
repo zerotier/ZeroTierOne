@@ -40,6 +40,8 @@
 #include "Credential.hpp"
 #include "InetAddress.hpp"
 #include "Dictionary.hpp"
+#include "Mutex.hpp"
+#include "Hashtable.hpp"
 
 namespace ZeroTier {
 
@@ -63,6 +65,18 @@ class Capability;
 class Trace
 {
 public:
+	/**
+	 * Trace verbosity level
+	 */
+	enum Level
+	{
+		NORMAL = 0,
+		VERBOSE = 10,
+		RULES = 15,
+		DEBUG = 20,
+		INSANE = 30
+	};
+
 	/**
 	 * Filter rule evaluation result log
 	 *
@@ -98,13 +112,16 @@ public:
 		uint8_t _l[ZT_MAX_NETWORK_RULES / 2];
 	};
 
-	Trace(const RuntimeEnvironment *renv) : RR(renv) {}
+	Trace(const RuntimeEnvironment *renv) :
+		RR(renv),
+		_byNet(8)
+	{
+	}
 
 	void resettingPathsInScope(void *const tPtr,const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,const InetAddress::IpScope scope);
-	void txTimedOut(void *const tPtr,const Address &destination);
 
 	void peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &path,const uint64_t packetId,const Packet::Verb verb);
-	void peerLearnedNewPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &oldPath,const SharedPtr<Path> &newPath,const uint64_t packetId);
+	void peerLearnedNewPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath,const uint64_t packetId);
 	void peerRedirected(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath);
 
 	void incomingPacketMessageAuthenticationFailure(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const unsigned int hops,const char *reason);
@@ -140,16 +157,18 @@ public:
 	void credentialRejected(void *const tPtr,const Tag &c,const char *reason);
 	void credentialRejected(void *const tPtr,const Revocation &c,const char *reason);
 
+	void updateMemoizedSettings();
+
 private:
 	const RuntimeEnvironment *const RR;
 
-	void _send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d);
-	void _send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d,const uint64_t networkId);
-	void _send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d,const Network &network);
+	void _send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d,const Address &dest);
+	void _spamToAllNetworks(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d,const Level level);
 
-#ifdef ZT_TRACE
-	char _traceMsgBuf[4096];
-#endif
+	Address _globalTarget;
+	Trace::Level _globalLevel;
+	Hashtable< uint64_t,std::pair< Address,Trace::Level > > _byNet;
+	Mutex _byNet_m;
 };
 
 } // namespace ZeroTier

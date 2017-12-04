@@ -579,7 +579,6 @@ unsigned long Switch::doTimerTasks(void *tPtr,int64_t now)
 			if (_trySend(tPtr,txi->packet,txi->encrypt)) {
 				_txQueue.erase(txi++);
 			} else if ((now - txi->creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
-				RR->t->txTimedOut(tPtr,txi->dest);
 				_txQueue.erase(txi++);
 			} else {
 				if (!RR->topology->getPeer(tPtr,txi->dest))

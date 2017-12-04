@@ -256,6 +256,24 @@ public:
 	inline const V *get(const K &k) const { return const_cast<Hashtable *>(this)->get(k); }
 
 	/**
+	 * @param k Key
+	 * @param v Value to fill with result
+	 * @return True if value was found and set (if false, v is not modified)
+	 */
+	inline bool get(const K &k,V &v) const
+	{
+		_Bucket *b = _t[_hc(k) % _bc];
+		while (b) {
+			if (b->k == k) {
+				v = b->v;
+				return true;
+			}
+			b = b->next;
+		}
+		return false;
+	}
+
+	/**
 	 * @param k Key to check
 	 * @return True if key is present
 	 */

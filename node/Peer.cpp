@@ -149,7 +149,7 @@ void Peer::received(
 
 				if (replacePath != ZT_MAX_PEER_NETWORK_PATHS) {
 					if (verb == Packet::VERB_OK) {
-						RR->t->peerLearnedNewPath(tPtr,networkId,*this,_paths[replacePath].p,path,packetId);
+						RR->t->peerLearnedNewPath(tPtr,networkId,*this,path,packetId);
 						_paths[replacePath].lr = now;
 						_paths[replacePath].p = path;
 						_paths[replacePath].priority = 1;

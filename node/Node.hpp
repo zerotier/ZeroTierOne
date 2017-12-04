@@ -258,6 +258,7 @@ public:
 	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode);
 
 	inline const Address &remoteTraceTarget() const { return _remoteTraceTarget; }
+	inline Trace::Level remoteTraceLevel() const { return _remoteTraceLevel; }
 
 private:
 	RuntimeEnvironment _RR;
@@ -281,9 +282,12 @@ private:
 	Mutex _backgroundTasksLock;
 
 	Address _remoteTraceTarget;
+	enum Trace::Level _remoteTraceLevel;
+
 	int64_t _now;
 	int64_t _lastPingCheck;
 	int64_t _lastHousekeepingRun;
+	int64_t _lastMemoizedTraceSettings;
 	volatile int64_t _prngState[2];
 	bool _online;
 };

@@ -49,6 +49,7 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REVISION,this->revision)) return false;
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,this->issuedTo.toString(tmp2))) return false;
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_TARGET,this->remoteTraceTarget.toString(tmp2))) return false;
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_LEVEL,(uint64_t)this->remoteTraceLevel)) return false;
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,this->flags)) return false;
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,(uint64_t)this->multicastLimit)) return false;
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint64_t)this->type)) return false;
@@ -220,6 +221,7 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 			return false;
 		}
 		this->remoteTraceTarget = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_TARGET);
+		this->remoteTraceLevel = (Trace::Level)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_LEVEL);
 		this->multicastLimit = (unsigned int)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,0);
 		d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name,sizeof(this->name));
 

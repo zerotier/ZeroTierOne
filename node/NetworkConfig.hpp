@@ -49,6 +49,7 @@
 #include "Dictionary.hpp"
 #include "Identity.hpp"
 #include "Utils.hpp"
+#include "Trace.hpp"
 
 /**
  * Default maximum time delta for COMs, tags, and capabilities
@@ -161,6 +162,8 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO "id"
 // remote trace target
 #define ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_TARGET "tt"
+// remote trace level
+#define ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_LEVEL "tl"
 // flags(hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_FLAGS "f"
 // integer(hex)
@@ -189,8 +192,6 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_TAGS "TAG"
 // tags (binary blobs)
 #define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP "COO"
-// curve25519 signature
-#define ZT_NETWORKCONFIG_DICT_KEY_SIGNATURE "C25519"
 
 // Legacy fields -- these are obsoleted but are included when older clients query
 
@@ -444,6 +445,11 @@ public:
 	 * Flags (64-bit)
 	 */
 	uint64_t flags;
+
+	/**
+	 * Remote trace level
+	 */
+	Trace::Level remoteTraceLevel;
 
 	/**
 	 * Network MTU

@@ -61,7 +61,8 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 	_networks(8),
 	_now(now),
 	_lastPingCheck(0),
-	_lastHousekeepingRun(0)
+	_lastHousekeepingRun(0),
+	_lastMemoizedTraceSettings(0)
 {
 	if (callbacks->version != 0)
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
@@ -297,6 +298,11 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 		}
 	} else {
 		timeUntilNextPingCheck -= (unsigned long)timeSinceLastPingCheck;
+	}
+
+	if ((now - _lastMemoizedTraceSettings) >= 10000) {
+		_lastMemoizedTraceSettings = now;
+		RR->t->updateMemoizedSettings();
 	}
 
 	if ((now - _lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
