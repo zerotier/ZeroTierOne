@@ -160,7 +160,9 @@ void Trace::peerRedirected(void *const tPtr,const uint64_t networkId,Peer &peer,
 
 void Trace::outgoingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network> &network,const MAC &sourceMac,const MAC &destMac,const unsigned int etherType,const unsigned int vlanId,const unsigned int frameLen,const char *reason)
 {
+#ifdef ZT_TRACE
 	char tmp[128],tmp2[128];
+#endif
 	if (!network) return; // sanity check
 
 	ZT_LOCAL_TRACE(tPtr,RR,"%.16llx DROP frame %s -> %s etherType %.4x size %u (%s)",network->id(),sourceMac.toString(tmp),destMac.toString(tmp2),etherType,frameLen,(reason) ? reason : "unknown reason");
