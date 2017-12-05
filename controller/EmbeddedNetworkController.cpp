@@ -662,6 +662,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 								member["remoteTraceTarget"] = json();
 							}
 						}
+						if (b.count("remoteTraceLevel")) member["remoteTraceLevel"] = OSUtils::jsonInt(b["remoteTraceLevel"],0ULL);
 
 						if (b.count("authorized")) {
 							const bool newAuth = OSUtils::jsonBool(b["authorized"],false);
@@ -784,6 +785,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 							network["remoteTraceTarget"] = json();
 						}
 					}
+					if (b.count("remoteTraceLevel")) network["remoteTraceLevel"] = OSUtils::jsonInt(b["remoteTraceLevel"],0ULL);
 
 					if (b.count("v4AssignMode")) {
 						json nv4m;
@@ -1322,6 +1324,7 @@ void EmbeddedNetworkController::_request(
 	std::string rtt(OSUtils::jsonString(member["remoteTraceTarget"],""));
 	if (rtt.length() == 10) {
 		nc->remoteTraceTarget = Address(Utils::hexStrToU64(rtt.c_str()));
+		nc->remoteTraceLevel = (Trace::Level)OSUtils::jsonInt(member["remoteTraceLevel"],0ULL);
 	} else {
 		rtt = OSUtils::jsonString(network["remoteTraceTarget"],"");
 		if (rtt.length() == 10) {
@@ -1329,6 +1332,7 @@ void EmbeddedNetworkController::_request(
 		} else {
 			nc->remoteTraceTarget.zero();
 		}
+		nc->remoteTraceLevel = (Trace::Level)OSUtils::jsonInt(network["remoteTraceLevel"],0ULL);
 	}
 
 	for(std::vector<Address>::const_iterator ab(ns.activeBridges.begin());ab!=ns.activeBridges.end();++ab)

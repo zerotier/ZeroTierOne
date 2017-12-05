@@ -125,6 +125,7 @@ private:
 		if (!member.count("vRev")) member["vRev"] = -1;
 		if (!member.count("vProto")) member["vProto"] = -1;
 		if (!member.count("remoteTraceTarget")) member["remoteTraceTarget"] = nlohmann::json();
+		if (!member.count("removeTraceLevel")) member["remoteTraceLevel"] = 0;
 		member["objtype"] = "member";
 	}
 	inline void _initNetwork(nlohmann::json &network)
@@ -143,6 +144,7 @@ private:
 		if (!network.count("ipAssignmentPools")) network["ipAssignmentPools"] = nlohmann::json::array();
 		if (!network.count("mtu")) network["mtu"] = ZT_DEFAULT_MTU;
 		if (!network.count("remoteTraceTarget")) network["remoteTraceTarget"] = nlohmann::json();
+		if (!network.count("removeTraceLevel")) network["remoteTraceLevel"] = 0;
 		if (!network.count("rules")) {
 			// If unspecified, rules are set to allow anything and behave like a flat L2 segment
 			network["rules"] = {{
