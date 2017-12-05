@@ -27,6 +27,9 @@ FileDB::FileDB(EmbeddedNetworkController *const nc,const Address &myAddress,cons
 {
 	OSUtils::mkdir(_path.c_str());
 	OSUtils::lockDownFile(_path.c_str(),true);
+	OSUtils::mkdir((_path + ZT_PATH_SEPARATOR + "network").c_str());
+	OSUtils::mkdir((_path + ZT_PATH_SEPARATOR + "network" + ZT_PATH_SEPARATOR_S + "member").c_str());
+	OSUtils::mkdir((_path + ZT_PATH_SEPARATOR + "trace").c_str());
 
 	std::vector<std::string> networks(OSUtils::listDirectory(_networksPath.c_str(),false));
 	std::string buf;
@@ -106,8 +109,10 @@ void FileDB::save(nlohmann::json *orig,nlohmann::json &record)
 			}
 		} else if (objtype == "trace") {
 			const std::string id = rec["id"];
-			OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "trace" ZT_PATH_SEPARATOR_S "%s.json",_path.c_str(),id.c_str());
-			OSUtils::writeFile(p1,OSUtils::jsonDump(rec,-1));
+			if (id.length() > 0) {
+				OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "trace" ZT_PATH_SEPARATOR_S "%s.json",_path.c_str(),id.c_str());
+				OSUtils::writeFile(p1,OSUtils::jsonDump(rec,-1));
+			}
 		}
 	} catch ( ... ) {} // drop invalid records missing fields
 }

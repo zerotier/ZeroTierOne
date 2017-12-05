@@ -1,7 +1,7 @@
 Network Controller Microservice
 ======
 
-Every ZeroTier virtual network has a *network controller*. This is our reference implementation and is the same one we use to power our own hosted services at [my.zerotier.com](https://my.zerotier.com/). Network controllers act as configuration servers and certificate authorities for the members of networks. Controllers are located on the network by simply parsing out the first 10 digits of a network's 16-digit network ID: these are the address of the controller.
+Every ZeroTier virtual network has a *network controller*. This is our reference controller implementation and is the same one we use to power our own hosted services at [my.zerotier.com](https://my.zerotier.com/). Network controllers act as configuration servers and certificate authorities for the members of networks. Controllers are located on the network by simply parsing out the first 10 digits of a network's 16-digit network ID: these are the address of the controller.
 
 As of ZeroTier One version 1.2.0 this code is included in normal builds for desktop, laptop, and server (Linux, etc.) targets, allowing any device to create virtual networks without having to be rebuilt from source with special flags to enable this feature. While this does offer a convenient way to create ad-hoc networks or experiment, we recommend running a dedicated controller somewhere secure and stable for any "serious" use case.
 
@@ -28,6 +28,12 @@ Since ZeroTier nodes are mobile and do not need static IPs, implementing high av
 ### Dockerizing Controllers
 
 ZeroTier network controllers can easily be run in Docker or other container systems. Since containers do not need to actually join networks, extra privilege options like "--device=/dev/net/tun --privileged" are not needed. You'll just need to map the local JSON API port of the running controller and allow it to access the Internet (over UDP/9993 at a minimum) so things can reach and query it.
+
+### About the RethinkDB Connector
+
+The default controller stores its data in the filesystem. There is also a direct RethinkDB connector that can be built on Linux with `make central-controller`.
+
+This is designed for use with ZeroTier Central. You are free to build it and use it but don't be surprised if it changes without warning. It shouldn't be considered stable for external use.
 
 ### Network Controller API
 

@@ -1097,7 +1097,7 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 		}
 
 		const int64_t now = OSUtils::now();
-		OSUtils::ztsnprintf(id,sizeof(id),"%.10llx-%.10llx-%.16llx-%.8lx",_signingId.address().toInt(),rt.origin,now,++idCounter);
+		OSUtils::ztsnprintf(id,sizeof(id),"%.10llx-%.16llx-%.10llx-%.4x",_signingId.address().toInt(),now,rt.origin,(unsigned int)(idCounter++ & 0xffff));
 		d["id"] = id;
 		d["objtype"] = "trace";
 		d["ts"] = now;
