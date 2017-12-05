@@ -275,17 +275,18 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddres
 									std::lock_guard<std::mutex> l2(i->second->lock);
 									tmpobj["authorizedMemberCount"] = i->second->authorizedMembers.size();
 									tmpobj["totalMemberCount"] = i->second->members.size();
-									unsigned long activeMemberCount = 0;
+									unsigned long onlineMemberCount = 0;
 									for(auto m=i->second->members.begin();m!=i->second->members.end();++m) {
 										auto lo = lastOnlineCumulative.find(std::pair<uint64_t,uint64_t>(i->first,m->first));
 										if (lo != lastOnlineCumulative.end()) {
 											if ((now - lo->second) <= (ZT_NETWORK_AUTOCONF_DELAY * 2))
-												++activeMemberCount;
+												++onlineMemberCount;
 											else lastOnlineCumulative.erase(lo);
 										}
 									}
-									tmpobj["activeMemberCount"] = activeMemberCount;
+									tmpobj["onlineMemberCount"] = onlineMemberCount;
 									tmpobj["bridgeCount"] = i->second->activeBridgeMembers.size();
+									tmpobj["ts"] = now;
 								}
 								batch.emplace_back(tmpobj);
 								if (batch.size() >= 1024) {
