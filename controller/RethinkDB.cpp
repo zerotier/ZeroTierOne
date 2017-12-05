@@ -66,7 +66,7 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddres
 							if ((tmp["type"] == "state")&&(tmp["state"] == "ready")) {
 								if (--this->_ready == 0) {
 									if (_waitNoticePrinted)
-										fprintf(stderr,"NOTICE: controller RethinkDB data download complete." ZT_EOL_S);
+										fprintf(stderr,"NOTICE: %.10llx controller RethinkDB data download complete." ZT_EOL_S,(unsigned long long)_myAddress.toInt());
 									this->_readyLock.unlock();
 								}
 							} else {
@@ -82,11 +82,11 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddres
 						}
 					}
 				} catch (std::exception &e) {
-					fprintf(stderr,"ERROR: controller RethinkDB (member change stream): %s" ZT_EOL_S,e.what());
+					fprintf(stderr,"ERROR: %.10llx controller RethinkDB (member change stream): %s" ZT_EOL_S,(unsigned long long)_myAddress.toInt(),e.what());
 				} catch (R::Error &e) {
-					fprintf(stderr,"ERROR: controller RethinkDB (member change stream): %s" ZT_EOL_S,e.message.c_str());
+					fprintf(stderr,"ERROR: %.10llx controller RethinkDB (member change stream): %s" ZT_EOL_S,(unsigned long long)_myAddress.toInt(),e.message.c_str());
 				} catch ( ... ) {
-					fprintf(stderr,"ERROR: controller RethinkDB (member change stream): unknown exception" ZT_EOL_S);
+					fprintf(stderr,"ERROR: %.10llx controller RethinkDB (member change stream): unknown exception" ZT_EOL_S,(unsigned long long)_myAddress.toInt());
 				}
 				std::this_thread::sleep_for(std::chrono::milliseconds(250));
 			}
@@ -107,7 +107,7 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddres
 							if ((tmp["type"] == "state")&&(tmp["state"] == "ready")) {
 								if (--this->_ready == 0) {
 									if (_waitNoticePrinted)
-										fprintf(stderr,"NOTICE: controller RethinkDB data download complete." ZT_EOL_S);
+										fprintf(stderr,"NOTICE: %.10llx controller RethinkDB data download complete." ZT_EOL_S,(unsigned long long)_myAddress.toInt());
 									this->_readyLock.unlock();
 								}
 							} else {
@@ -123,11 +123,11 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddres
 						}
 					}
 				} catch (std::exception &e) {
-					fprintf(stderr,"ERROR: controller RethinkDB (network change stream): %s" ZT_EOL_S,e.what());
+					fprintf(stderr,"ERROR: %.10llx controller RethinkDB (network change stream): %s" ZT_EOL_S,(unsigned long long)_myAddress.toInt(),e.what());
 				} catch (R::Error &e) {
-					fprintf(stderr,"ERROR: controller RethinkDB (network change stream): %s" ZT_EOL_S,e.message.c_str());
+					fprintf(stderr,"ERROR: %.10llx controller RethinkDB (network change stream): %s" ZT_EOL_S,(unsigned long long)_myAddress.toInt(),e.message.c_str());
 				} catch ( ... ) {
-					fprintf(stderr,"ERROR: controller RethinkDB (network change stream): unknown exception" ZT_EOL_S);
+					fprintf(stderr,"ERROR: %.10llx controller RethinkDB (network change stream): unknown exception" ZT_EOL_S,(unsigned long long)_myAddress.toInt());
 				}
 				std::this_thread::sleep_for(std::chrono::milliseconds(250));
 			}
@@ -198,16 +198,16 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddres
 								}
 								break;
 							} else {
-								fprintf(stderr,"ERROR: controller RethinkDB (insert/update): connect failed (will retry)" ZT_EOL_S);
+								fprintf(stderr,"ERROR: %.10llx controller RethinkDB (insert/update): connect failed (will retry)" ZT_EOL_S,(unsigned long long)_myAddress.toInt());
 							}
 						} catch (std::exception &e) {
-							fprintf(stderr,"ERROR: controller RethinkDB (insert/update): %s" ZT_EOL_S,e.what());
+							fprintf(stderr,"ERROR: %.10llx controller RethinkDB (insert/update): %s" ZT_EOL_S,(unsigned long long)_myAddress.toInt(),e.what());
 							rdb.reset();
 						} catch (R::Error &e) {
-							fprintf(stderr,"ERROR: controller RethinkDB (insert/update): %s" ZT_EOL_S,e.message.c_str());
+							fprintf(stderr,"ERROR: %.10llx controller RethinkDB (insert/update): %s" ZT_EOL_S,(unsigned long long)_myAddress.toInt(),e.message.c_str());
 							rdb.reset();
 						} catch ( ... ) {
-							fprintf(stderr,"ERROR: controller RethinkDB (insert/update): unknown exception" ZT_EOL_S);
+							fprintf(stderr,"ERROR: %.10llx controller RethinkDB (insert/update): unknown exception" ZT_EOL_S,(unsigned long long)_myAddress.toInt());
 							rdb.reset();
 						}
 						std::this_thread::sleep_for(std::chrono::milliseconds(250));
@@ -301,13 +301,13 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddres
 						}
 					}
 				} catch (std::exception &e) {
-					fprintf(stderr,"ERROR: controller RethinkDB (node status update): %s" ZT_EOL_S,e.what());
+					fprintf(stderr,"ERROR: %.10llx controller RethinkDB (node status update): %s" ZT_EOL_S,(unsigned long long)_myAddress.toInt(),e.what());
 					rdb.reset();
 				} catch (R::Error &e) {
-					fprintf(stderr,"ERROR: controller RethinkDB (node status update): %s" ZT_EOL_S,e.message.c_str());
+					fprintf(stderr,"ERROR: %.10llx controller RethinkDB (node status update): %s" ZT_EOL_S,(unsigned long long)_myAddress.toInt(),e.message.c_str());
 					rdb.reset();
 				} catch ( ... ) {
-					fprintf(stderr,"ERROR: controller RethinkDB (node status update): unknown exception" ZT_EOL_S);
+					fprintf(stderr,"ERROR: %.10llx controller RethinkDB (node status update): unknown exception" ZT_EOL_S,(unsigned long long)_myAddress.toInt());
 					rdb.reset();
 				}
 				std::this_thread::sleep_for(std::chrono::milliseconds(250));
@@ -359,7 +359,7 @@ bool RethinkDB::waitForReady()
 	while (_ready > 0) {
 		if (!_waitNoticePrinted) {
 			_waitNoticePrinted = true;
-			fprintf(stderr,"NOTICE: controller RethinkDB waiting for initial data download..." ZT_EOL_S);
+			fprintf(stderr,"NOTICE: %.10llx controller RethinkDB waiting for initial data download..." ZT_EOL_S,(unsigned long long)_myAddress.toInt());
 		}
 		_readyLock.lock();
 		_readyLock.unlock();

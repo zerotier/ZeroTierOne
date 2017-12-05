@@ -24,7 +24,7 @@
  * of your own application.
  */
 
-#define ZT_TRACE
+//#define ZT_TRACE
 
 #include <stdio.h>
 
