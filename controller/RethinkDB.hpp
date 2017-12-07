@@ -37,7 +37,7 @@ namespace ZeroTier
 class RethinkDB : public DB
 {
 public:
-	RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddress,const char *path);
+	RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path);
 	virtual ~RethinkDB();
 
 	virtual bool waitForReady();

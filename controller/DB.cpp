@@ -27,9 +27,10 @@ using json = nlohmann::json;
 
 namespace ZeroTier {
 
-DB::DB(EmbeddedNetworkController *const nc,const Address &myAddress,const char *path) :
+DB::DB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path) :
 	_controller(nc),
-	_myAddress(myAddress),
+	_myId(myId),
+	_myAddress(myId.address()),
 	_path((path) ? path : "")
 {
 	char tmp[32];

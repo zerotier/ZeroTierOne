@@ -21,8 +21,8 @@
 namespace ZeroTier
 {
 
-FileDB::FileDB(EmbeddedNetworkController *const nc,const Address &myAddress,const char *path) :
-	DB(nc,myAddress,path),
+FileDB::FileDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path) :
+	DB(nc,myId,path),
 	_networksPath(_path + ZT_PATH_SEPARATOR_S + "network")
 {
 	OSUtils::mkdir(_path.c_str());

@@ -18,6 +18,8 @@
 
 #ifdef ZT_CONTROLLER_USE_RETHINKDB
 
+#include <unistd.h>
+
 #include "RethinkDB.hpp"
 #include "EmbeddedNetworkController.hpp"
 
@@ -34,8 +36,8 @@ using json = nlohmann::json;
 
 namespace ZeroTier {
 
-RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddress,const char *path) :
-	DB(nc,myAddress,path),
+RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path) :
+	DB(nc,myId,path),
 	_ready(2), // two tables need to be synchronized before we're ready, so this is ready when it reaches 0
 	_run(1),
 	_waitNoticePrinted(false)
@@ -317,16 +319,44 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Address &myAddres
 
 	_heartbeatThread = std::thread([this]() {
 		try {
-			char tmp[1024];
+			R::Object controllerRecord;
 			std::unique_ptr<R::Connection> rdb;
+
+			{
+				char publicId[1024];
+				char secretId[1024];
+				char hostname[1024];
+				this->_myId.toString(publicId,false);
+				this->_myId.toString(secretId,true);
+				if (gethostname(hostname,sizeof(hostname)) != 0) {
+					hostname[0] = (char)0;
+				} else {
+					for(int i=0;i<sizeof(hostname);++i) {
+						if ((hostname[i] == '.')||(hostname[i] == 0)) {
+							hostname[i] = (char)0;
+							break;
+						}
+					}
+				}
+				controllerRecord["id"] = this->_myAddressStr.c_str();
+				controllerRecord["publicIdentity"] = publicId;
+				controllerRecord["secretIdentity"] = secretId;
+				if (hostname[0])
+					controllerRecord["clusterHost"] = hostname;
+				controllerRecord["vMajor"] = ZEROTIER_ONE_VERSION_MAJOR;
+				controllerRecord["vMinor"] = ZEROTIER_ONE_VERSION_MINOR;
+				controllerRecord["vRev"] = ZEROTIER_ONE_VERSION_REVISION;
+				controllerRecord["vBuild"] = ZEROTIER_ONE_VERSION_BUILD;
+			}
+
 			while (_run == 1) {
 				try {
 					if (!rdb)
 						rdb = R::connect(this->_host,this->_port,this->_auth);
 					if (rdb) {
-						OSUtils::ztsnprintf(tmp,sizeof(tmp),"{\"id\":\"%s\",\"lastAlive\":%lld,\"version\":\"%d.%d.%d\"}",this->_myAddressStr.c_str(),(long long)OSUtils::now(),ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
+						controllerRecord["lastAlive"] = OSUtils::now();
 						//printf("HEARTBEAT: %s" ZT_EOL_S,tmp);
-						R::db(this->_db).table("Controller").update(R::Datum::from_json(tmp)).run(*rdb);
+						R::db(this->_db).table("Controller",R::optargs("read_mode","outdated")).insert(controllerRecord,R::optargs("conflict","update")).run(*rdb);
 					}
 				} catch ( ... ) {
 					rdb.reset();

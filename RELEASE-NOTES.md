@@ -1,6 +1,19 @@
 ZeroTier Release Notes
 ======
 
+# 2017-12-XX -- Version 1.2.6
+
+ * Network Hypervisor
+   * We've made some improvements to dead path detection and path selection. These also include changes under the hood to prepare for multi-path trunking and faster fail-over support.
+ * Platform-Specific Changes
+   * MacOS
+     * Installer now loads the kernel extension right away so that High Sierra users will see the prompt to authorize it. This is done in the "Security & Privacy" preference pane and must be done driectly on the console (not via remote desktop).
+   * Windows
+     * The Windows installer should now install the driver without requiring a special prompt in most cases. This should make it easier for our packages to be accepted into and updated in the Chocolatey repository and should make it easier to perform remote installs.
+     * The Windows official packages are now signed with an EV certificate (with hardware key) from DigiCert.
+     * The Windows UI now contains a preview of features to more deeply integrate it with ZeroTier Central. You can enter a ZeroTier Central API key and join networks, etc. from the UI itself. We'll be expanding this in the future and possibly changing it, so this is just a test to see how users respond.
+     * The `zerotier-idtool` command should now work on Windows.
+
 # 2017-04-20 -- Version 1.2.4
 
  * Managed routes are now only bifurcated for the default route. This is a change in behavior, though few people will probably notice. Bifurcating all managed routes was causing more trouble than it was worth for most users.

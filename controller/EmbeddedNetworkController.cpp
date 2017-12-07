@@ -477,10 +477,10 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 	_signingIdAddressString = signingId.address().toString(tmp);
 #ifdef ZT_CONTROLLER_USE_RETHINKDB
 	if ((_path.length() > 10)&&(_path.substr(0,10) == "rethinkdb:"))
-		_db.reset(new RethinkDB(this,_signingId.address(),_path.c_str()));
+		_db.reset(new RethinkDB(this,_signingId,_path.c_str()));
 	else // else use FileDB after endif
 #endif
-	_db.reset(new FileDB(this,_signingId.address(),_path.c_str()));
+		_db.reset(new FileDB(this,_signingId,_path.c_str()));
 	_db->waitForReady();
 }
 

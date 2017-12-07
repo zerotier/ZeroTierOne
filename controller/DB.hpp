@@ -20,7 +20,7 @@
 #define ZT_CONTROLLER_DB_HPP
 
 #include "../node/Constants.hpp"
-#include "../node/Address.hpp"
+#include "../node/Identity.hpp"
 #include "../node/InetAddress.hpp"
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/BlockingQueue.hpp"
@@ -58,7 +58,7 @@ public:
 		int64_t mostRecentDeauthTime;
 	};
 
-	DB(EmbeddedNetworkController *const nc,const Address &myAddress,const char *path);
+	DB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path);
 	virtual ~DB();
 
 	virtual bool waitForReady() = 0;
@@ -104,6 +104,7 @@ protected:
 	void _fillSummaryInfo(const std::shared_ptr<_Network> &nw,NetworkSummaryInfo &info);
 
 	EmbeddedNetworkController *const _controller;
+	const Identity _myId;
 	const Address _myAddress;
 	const std::string _path;
 	std::string _myAddressStr;
