@@ -240,7 +240,8 @@ zerotier-idtool: one
 
 zerotier-cli: one
 
-libzerotiercore.a:	$(CORE_OBJS)
+libzerotiercore.a:	FORCE
+	make CFLAGS="-Os -fstack-protector -fPIC" CXXFLAGS="-Os -std=c++11 -fstack-protector -fPIC" $(CORE_OBJS)
 	ar rcs libzerotiercore.a $(CORE_OBJS)
 	ranlib libzerotiercore.a
 
