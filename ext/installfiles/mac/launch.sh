@@ -1,7 +1,3 @@
 #!/bin/bash
-
-zthome="/Library/Application Support/ZeroTier/One"
-export PATH="$zthome:/bin:/usr/bin:/sbin:/usr/sbin"
-
-# Launch ZeroTier One (not as daemon... launchd monitors it)
+export PATH="/Library/Application Support/ZeroTier/One:/bin:/usr/bin:/sbin:/usr/sbin"
 exec zerotier-one

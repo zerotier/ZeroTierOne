@@ -613,6 +613,12 @@
 			</dict>
 			<key>PAYLOAD_TYPE</key>
 			<integer>0</integer>
+			<key>SHOW_INVISIBLE</key>
+			<false/>
+			<key>SPLIT_FORKS</key>
+			<true/>
+			<key>TREAT_MISSING_FILES_AS_WARNING</key>
+			<false/>
 			<key>VERSION</key>
 			<integer>3</integer>
 		</dict>
@@ -641,12 +647,24 @@
 			<integer>1</integer>
 			<key>CONCLUSION_ACTION</key>
 			<integer>0</integer>
+			<key>FOLLOW_SYMBOLIC_LINKS</key>
+			<false/>
 			<key>IDENTIFIER</key>
 			<string>com.zerotier.pkg.ZeroTierOne</string>
+			<key>LOCATION</key>
+			<integer>0</integer>
+			<key>NAME</key>
+			<string></string>
 			<key>OVERWRITE_PERMISSIONS</key>
 			<false/>
+			<key>PAYLOAD_SIZE</key>
+			<integer>-1</integer>
+			<key>RELOCATABLE</key>
+			<false/>
+			<key>USE_HFS+_COMPRESSION</key>
+			<false/>
 			<key>VERSION</key>
-			<string>1.2.4</string>
+			<string>1.2.6</string>
 		</dict>
 		<key>PROJECT_COMMENTS</key>
 		<dict>
@@ -862,6 +880,8 @@
 			</array>
 			<key>NAME</key>
 			<string>ZeroTier One</string>
+			<key>PAYLOAD_ONLY</key>
+			<false/>
 		</dict>
 	</dict>
 	<key>TYPE</key>
