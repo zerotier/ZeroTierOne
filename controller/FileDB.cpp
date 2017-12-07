@@ -28,7 +28,6 @@ FileDB::FileDB(EmbeddedNetworkController *const nc,const Identity &myId,const ch
 	OSUtils::mkdir(_path.c_str());
 	OSUtils::lockDownFile(_path.c_str(),true);
 	OSUtils::mkdir((_path + ZT_PATH_SEPARATOR + "network").c_str());
-	OSUtils::mkdir((_path + ZT_PATH_SEPARATOR + "network" + ZT_PATH_SEPARATOR_S + "member").c_str());
 	OSUtils::mkdir((_path + ZT_PATH_SEPARATOR + "trace").c_str());
 
 	std::vector<std::string> networks(OSUtils::listDirectory(_networksPath.c_str(),false));
@@ -74,7 +73,7 @@ bool FileDB::waitForReady()
 
 void FileDB::save(nlohmann::json *orig,nlohmann::json &record)
 {
-	char p1[16384],p2[16384];
+	char p1[4096],p2[4096],pb[4096];
 	try {
 		nlohmann::json rec(record);
 		const std::string objtype = rec["objtype"];
@@ -99,10 +98,14 @@ void FileDB::save(nlohmann::json *orig,nlohmann::json &record)
 				nlohmann::json network,old;
 				get(nwid,network,id,old);
 
-				OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.16llx" ZT_PATH_SEPARATOR_S "member" ZT_PATH_SEPARATOR_S "%.10llx.json.new",_networksPath.c_str(),nwid);
-				OSUtils::ztsnprintf(p2,sizeof(p2),"%s" ZT_PATH_SEPARATOR_S "%.16llx" ZT_PATH_SEPARATOR_S "member" ZT_PATH_SEPARATOR_S "%.10llx.json",_networksPath.c_str(),nwid);
-				if (!OSUtils::writeFile(p1,OSUtils::jsonDump(rec,-1)))
-					fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
+				OSUtils::ztsnprintf(pb,sizeof(pb),"%s" ZT_PATH_SEPARATOR_S "%.16llx" ZT_PATH_SEPARATOR_S "member",_networksPath.c_str(),(unsigned long long)nwid);
+				OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.10llx.json.new",pb,(unsigned long long)id);
+				OSUtils::ztsnprintf(p2,sizeof(p2),"%s" ZT_PATH_SEPARATOR_S "%.10llx.json",pb,(unsigned long long)id);
+				if (!OSUtils::writeFile(p1,OSUtils::jsonDump(rec,-1))) {
+					OSUtils::mkdir(pb);
+					if (!OSUtils::writeFile(p1,OSUtils::jsonDump(rec,-1)))
+						fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
+				}
 				OSUtils::rename(p1,p2);
 
 				_memberChanged(old,rec,true);
