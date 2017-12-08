@@ -1351,7 +1351,7 @@ int main(int argc,char **argv)
 					if (argv[i][2]) {
 						printHelp(argv[0],stdout);
 						return 0;
-					} else return idtool(argc,argv);
+					} else return idtool(argc-1,argv+1);
 
 				case 'q': // Invoke cli personality
 					if (argv[i][2]) {
