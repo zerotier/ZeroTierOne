@@ -324,10 +324,10 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,co
 
 			{
 				char publicId[1024];
-				char secretId[1024];
+				//char secretId[1024];
 				char hostname[1024];
 				this->_myId.toString(false,publicId);
-				this->_myId.toString(true,secretId);
+				//this->_myId.toString(true,secretId);
 				if (gethostname(hostname,sizeof(hostname)) != 0) {
 					hostname[0] = (char)0;
 				} else {
@@ -340,7 +340,7 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,co
 				}
 				controllerRecord["id"] = this->_myAddressStr.c_str();
 				controllerRecord["publicIdentity"] = publicId;
-				controllerRecord["secretIdentity"] = secretId;
+				//controllerRecord["secretIdentity"] = secretId;
 				if (hostname[0])
 					controllerRecord["clusterHost"] = hostname;
 				controllerRecord["vMajor"] = ZEROTIER_ONE_VERSION_MAJOR;
