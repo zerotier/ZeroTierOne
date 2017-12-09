@@ -43,9 +43,9 @@ static const char *_timestr()
 {
 	time_t t = time(0);
 	char *ts = ctime(&t);
-	if (!ts)
-		return "error";
 	char *p = ts;
+	if (!p)
+		return "";
 	while (*p) {
 		if (*p == '\n') {
 			*p = (char)0;
@@ -165,10 +165,10 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,co
 					if (!config)
 						continue;
 					json record;
-					const std::string objtype = (*config)["objtype"];
-					const char *table;
+					const char *table = (const char *)0;
 					std::string deleteId;
 					try {
+						const std::string objtype = (*config)["objtype"];
 						if (objtype == "member") {
 							const std::string nwid = (*config)["nwid"];
 							const std::string id = (*config)["id"];
@@ -196,15 +196,20 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,co
 							const std::string tmp = (*config)["id"];
 							deleteId.append(tmp);
 							table = "Member";
-						} else {
-							delete config;
-							continue;
 						}
-						delete config;
+					} catch (std::exception &e) {
+						fprintf(stderr,"[%s] ERROR: %.10llx controller RethinkDB (insert/update record creation): %s" ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt(),e.what());
+						table = (const char *)0;
+					} catch (R::Error &e) {
+						fprintf(stderr,"[%s] ERROR: %.10llx controller RethinkDB (insert/update record creation): %s" ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt(),e.message.c_str());
+						table = (const char *)0;
 					} catch ( ... ) {
-						delete config;
-						continue;
+						fprintf(stderr,"[%s] ERROR: %.10llx controller RethinkDB (insert/update record creation): unknown exception" ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt());
+						table = (const char *)0;
 					}
+					delete config;
+					if (!table)
+						continue;
 
 					while (_run == 1) {
 						try {
@@ -221,6 +226,7 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,co
 								break;
 							} else {
 								fprintf(stderr,"[%s] ERROR: %.10llx controller RethinkDB (insert/update): connect failed (will retry)" ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt());
+								rdb.reset();
 							}
 						} catch (std::exception &e) {
 							fprintf(stderr,"[%s] ERROR: %.10llx controller RethinkDB (insert/update): %s" ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt(),e.what());
@@ -235,7 +241,13 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,co
 						std::this_thread::sleep_for(std::chrono::milliseconds(250));
 					}
 				}
-			} catch ( ... ) {}
+			} catch (std::exception &e) {
+				fprintf(stderr,"[%s] ERROR: %.10llx controller RethinkDB (insert/update outer loop): %s" ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt(),e.what());
+			} catch (R::Error &e) {
+				fprintf(stderr,"[%s] ERROR: %.10llx controller RethinkDB (insert/update outer loop): %s" ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt(),e.message.c_str());
+			} catch ( ... ) {
+				fprintf(stderr,"[%s] ERROR: %.10llx controller RethinkDB (insert/update outer loop): unknown exception" ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt());
+			}
 		});
 	}
 
@@ -431,6 +443,7 @@ void RethinkDB::save(nlohmann::json *orig,nlohmann::json &record)
 					if ((kv.key() == "id")||(kv.key() == "nwid")||(kv.key() == "objtype")||((*q)[kv.key()] != kv.value()))
 						(*q)[kv.key()] = kv.value();
 				}
+				_commitQueue.post(new nlohmann::json(record));
 			} catch ( ... ) {
 				delete q;
 				throw;
