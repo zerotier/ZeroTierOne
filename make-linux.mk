@@ -55,6 +55,10 @@ ifeq ($(ZT_RULES_ENGINE_DEBUGGING),1)
 	override DEFS+=-DZT_RULES_ENGINE_DEBUGGING
 endif
 
+# Build with address sanitization library for advanced debugging (clang)
+ifeq ($(ZT_SANITIZE),1)
+	SANFLAGS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
+endif
 ifeq ($(ZT_DEBUG),1)
 	override CFLAGS+=-Wall -Wno-deprecated -Werror -g -pthread $(INCLUDES) $(DEFS)
 	override CXXFLAGS+=-Wall -Wno-deprecated -Werror -g -std=c++11 -pthread $(INCLUDES) $(DEFS)

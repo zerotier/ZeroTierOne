@@ -7,6 +7,10 @@ LIBS=
 include objects.mk
 ONE_OBJS+=osdep/BSDEthernetTap.o ext/http-parser/http_parser.o
 
+# Build with address sanitization library for advanced debugging (clang)
+ifeq ($(ZT_SANITIZE),1)
+	SANFLAGS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
+endif
 # "make debug" is a shortcut for this
 ifeq ($(ZT_DEBUG),1)
 	CFLAGS+=-Wall -Werror -g -pthread $(INCLUDES) $(DEFS)
