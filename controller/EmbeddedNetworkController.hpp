@@ -198,7 +198,6 @@ private:
 		int vMajor,vMinor,vRev,vProto;
 		Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> lastRequestMetaData;
 		Identity identity;
-		InetAddress physicalAddr; // last known physical address
 		inline bool online(const int64_t now) const { return ((now - lastRequestTime) < (ZT_NETWORK_AUTOCONF_DELAY * 2)); }
 	};
 	struct _MemberStatusHash

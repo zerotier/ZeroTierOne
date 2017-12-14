@@ -1277,9 +1277,6 @@ void EmbeddedNetworkController::_request(
 				ms.vProto = (int)vProto;
 				ms.lastRequestMetaData = metaData;
 				ms.identity = identity;
-
-				if (fromAddr)
-					ms.physicalAddr = fromAddr;
 			}
 		}
 	} else {
