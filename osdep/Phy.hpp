@@ -965,7 +965,7 @@ public:
 
 				case ZT_PHY_SOCKET_UDP:
 					if (FD_ISSET(s->sock,&rfds)) {
-						for(;;) {
+						for(int k=0;k<1024;++k) {
 							memset(&ss,0,sizeof(ss));
 							socklen_t slen = sizeof(ss);
 							long n = (long)::recvfrom(s->sock,buf,sizeof(buf),0,(struct sockaddr *)&ss,&slen);
