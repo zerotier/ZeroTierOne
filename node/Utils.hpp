@@ -48,27 +48,31 @@ static inline void ZT_FAST_MEMCPY(void *a,const void *b,unsigned long k)
 	char *aa = reinterpret_cast<char *>(a);
 	const char *bb = reinterpret_cast<const char *>(b);
 	while (likely(k >= 128)) {
-		__m128i t1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
-		__m128i t2 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
-		__m128i t3 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
-		__m128i t4 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t1); aa += 16;
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t2); aa += 16;
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t3); aa += 16;
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t4); aa += 16;
-		__m128i t5 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
-		__m128i t6 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
-		__m128i t7 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
-		__m128i t8 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t5); aa += 16;
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t6); aa += 16;
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t7); aa += 16;
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t8); aa += 16;
+		__m128 t1 = _mm_loadu_ps(reinterpret_cast<const float *>(bb));
+		__m128 t2 = _mm_loadu_ps(reinterpret_cast<const float *>(bb + 16));
+		__m128 t3 = _mm_loadu_ps(reinterpret_cast<const float *>(bb + 32));
+		__m128 t4 = _mm_loadu_ps(reinterpret_cast<const float *>(bb + 48));
+		_mm_storeu_ps(reinterpret_cast<float *>(aa),t1);
+		_mm_storeu_ps(reinterpret_cast<float *>(aa + 16),t2);
+		_mm_storeu_ps(reinterpret_cast<float *>(aa + 32),t3);
+		_mm_storeu_ps(reinterpret_cast<float *>(aa + 48),t4);
+		t1 = _mm_loadu_ps(reinterpret_cast<const float *>(bb + 64));
+		t2 = _mm_loadu_ps(reinterpret_cast<const float *>(bb + 80));
+		t3 = _mm_loadu_ps(reinterpret_cast<const float *>(bb + 96));
+		t4 = _mm_loadu_ps(reinterpret_cast<const float *>(bb + 112));
+		_mm_storeu_ps(reinterpret_cast<float *>(aa + 64),t1);
+		_mm_storeu_ps(reinterpret_cast<float *>(aa + 80),t2);
+		_mm_storeu_ps(reinterpret_cast<float *>(aa + 96),t3);
+		_mm_storeu_ps(reinterpret_cast<float *>(aa + 112),t4);
+		bb += 128;
+		aa += 128;
 		k -= 128;
 	}
 	while (likely(k >= 16)) {
-		__m128i t1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t1); aa += 16;
+		__m128 t1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb));
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t1);
+		bb += 16;
+		aa += 16;
 		k -= 16;
 	}
 	for(unsigned long i=0;i<k;++i)
