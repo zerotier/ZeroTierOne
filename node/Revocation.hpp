@@ -166,7 +166,7 @@ public:
 		if (b[p++] == 1) {
 			if (b.template at<uint16_t>(p) == ZT_C25519_SIGNATURE_LEN) {
 				p += 2;
-				memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
+				ZT_FAST_MEMCPY(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
 				p += ZT_C25519_SIGNATURE_LEN;
 			} else throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 		} else {

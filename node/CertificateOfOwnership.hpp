@@ -115,11 +115,11 @@ public:
 		if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) return;
 		if (ip.ss_family == AF_INET) {
 			_thingTypes[_thingCount] = THING_IPV4_ADDRESS;
-			memcpy(_thingValues[_thingCount],&(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),4);
+			ZT_FAST_MEMCPY(_thingValues[_thingCount],&(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),4);
 			++_thingCount;
 		} else if (ip.ss_family == AF_INET6) {
 			_thingTypes[_thingCount] = THING_IPV6_ADDRESS;
-			memcpy(_thingValues[_thingCount],reinterpret_cast<const struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
+			ZT_FAST_MEMCPY(_thingValues[_thingCount],reinterpret_cast<const struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
 			++_thingCount;
 		}
 	}
@@ -198,7 +198,7 @@ public:
 		for(unsigned int i=0,j=_thingCount;i<j;++i) {
 			if (i < ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) {
 				_thingTypes[i] = (uint8_t)b[p++];
-				memcpy(_thingValues[i],b.field(p,ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE),ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE);
+				ZT_FAST_MEMCPY(_thingValues[i],b.field(p,ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE),ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE);
 				p += ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE;
 			}
 		}
@@ -209,7 +209,7 @@ public:
 			if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN)
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 			p += 2;
-			memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
+			ZT_FAST_MEMCPY(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
 		} else {
 			p += 2 + b.template at<uint16_t>(p);
 		}

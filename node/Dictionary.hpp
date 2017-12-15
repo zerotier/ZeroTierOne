@@ -81,7 +81,7 @@ public:
 		if (s) {
 			if (len > (C-1))
 				len = C-1;
-			memcpy(_d,s,len);
+			ZT_FAST_MEMCPY(_d,s,len);
 			_d[len] = (char)0;
 		} else {
 			_d[0] = (char)0;

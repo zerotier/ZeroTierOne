@@ -333,14 +333,14 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 	} else if (t == "MATCH_IPV6_SOURCE") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_IPV6_SOURCE;
 		InetAddress ip(OSUtils::jsonString(r["ip"],"::0").c_str());
-		memcpy(rule.v.ipv6.ip,reinterpret_cast<struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
+		ZT_FAST_MEMCPY(rule.v.ipv6.ip,reinterpret_cast<struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
 		rule.v.ipv6.mask = Utils::ntoh(reinterpret_cast<struct sockaddr_in6 *>(&ip)->sin6_port) & 0xff;
 		if (rule.v.ipv6.mask > 128) rule.v.ipv6.mask = 128;
 		return true;
 	} else if (t == "MATCH_IPV6_DEST") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_IPV6_DEST;
 		InetAddress ip(OSUtils::jsonString(r["ip"],"::0").c_str());
-		memcpy(rule.v.ipv6.ip,reinterpret_cast<struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
+		ZT_FAST_MEMCPY(rule.v.ipv6.ip,reinterpret_cast<struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
 		rule.v.ipv6.mask = Utils::ntoh(reinterpret_cast<struct sockaddr_in6 *>(&ip)->sin6_port) & 0xff;
 		if (rule.v.ipv6.mask > 128) rule.v.ipv6.mask = 128;
 		return true;
@@ -1520,8 +1520,8 @@ void EmbeddedNetworkController::_request(
 				InetAddress ipRangeEnd(OSUtils::jsonString(pool["ipRangeEnd"],"").c_str());
 				if ( (ipRangeStart.ss_family == AF_INET6) && (ipRangeEnd.ss_family == AF_INET6) ) {
 					uint64_t s[2],e[2],x[2],xx[2];
-					memcpy(s,ipRangeStart.rawIpData(),16);
-					memcpy(e,ipRangeEnd.rawIpData(),16);
+					ZT_FAST_MEMCPY(s,ipRangeStart.rawIpData(),16);
+					ZT_FAST_MEMCPY(e,ipRangeEnd.rawIpData(),16);
 					s[0] = Utils::ntoh(s[0]);
 					s[1] = Utils::ntoh(s[1]);
 					e[0] = Utils::ntoh(e[0]);

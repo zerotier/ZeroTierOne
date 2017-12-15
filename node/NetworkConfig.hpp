@@ -234,12 +234,12 @@ public:
 
 	NetworkConfig(const NetworkConfig &nc)
 	{
-		memcpy(this,&nc,sizeof(NetworkConfig));
+		ZT_FAST_MEMCPY(this,&nc,sizeof(NetworkConfig));
 	}
 
 	inline NetworkConfig &operator=(const NetworkConfig &nc)
 	{
-		memcpy(this,&nc,sizeof(NetworkConfig));
+		ZT_FAST_MEMCPY(this,&nc,sizeof(NetworkConfig));
 		return *this;
 	}
 

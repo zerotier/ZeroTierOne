@@ -660,6 +660,50 @@ static int testOther()
 	std::cout << " " << InetAddress("").toString(buf);
 	std::cout << std::endl;
 
+	std::cout << "[other] Benchmarking memcpy... "; std::cout.flush();
+	{
+		unsigned char *bb = (unsigned char *)::malloc(1234567);
+		unsigned char *cc = (unsigned char *)::malloc(1234567);
+		for(unsigned int i=0;i<1234567;++i)
+			bb[i] = (unsigned char)i;
+		double bytes = 0.0;
+		uint64_t start = OSUtils::now();
+		for(unsigned int i=0;i<20000;++i) {
+			++bb[i];
+			++bb[i+1];
+			memcpy(cc,bb,1234567);
+			bytes += 1234567.0;
+		}
+		if (cc[0] != bb[0])
+			abort();
+		uint64_t end = OSUtils::now();
+		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second" << std::endl;
+		::free((void *)bb);
+		::free((void *)cc);
+	}
+
+	std::cout << "[other] Benchmarking ZT_FAST_MEMCPY... "; std::cout.flush();
+	{
+		unsigned char *bb = (unsigned char *)::malloc(1234567);
+		unsigned char *cc = (unsigned char *)::malloc(1234567);
+		for(unsigned int i=0;i<1234567;++i)
+			bb[i] = (unsigned char)i;
+		double bytes = 0.0;
+		uint64_t start = OSUtils::now();
+		for(unsigned int i=0;i<20000;++i) {
+			++bb[0];
+			++bb[1234566];
+			ZT_FAST_MEMCPY(cc,bb,1234567);
+			bytes += 1234567.0;
+		}
+		if (cc[0] != bb[0])
+			abort();
+		uint64_t end = OSUtils::now();
+		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second" << std::endl;
+		::free((void *)bb);
+		::free((void *)cc);
+	}
+
 #if 0
 	std::cout << "[other] Testing Hashtable... "; std::cout.flush();
 	{

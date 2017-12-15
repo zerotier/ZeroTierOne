@@ -116,9 +116,9 @@ public:
 		if (unlikely(b._l > C))
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
 		if (C2 == C) {
-			memcpy(this,&b,sizeof(Buffer<C>));
+			ZT_FAST_MEMCPY(this,&b,sizeof(Buffer<C>));
 		} else {
-			memcpy(_b,b._b,_l = b._l);
+			ZT_FAST_MEMCPY(_b,b._b,_l = b._l);
 		}
 		return *this;
 	}
@@ -127,7 +127,7 @@ public:
 	{
 		if (unlikely(l > C))
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
-		memcpy(_b,b,l);
+		ZT_FAST_MEMCPY(_b,b,l);
 		_l = l;
 	}
 
@@ -281,7 +281,7 @@ public:
 	{
 		if (unlikely((_l + l) > C))
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
-		memcpy(_b + _l,b,l);
+		ZT_FAST_MEMCPY(_b + _l,b,l);
 		_l += l;
 	}
 

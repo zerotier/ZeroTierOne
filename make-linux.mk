@@ -66,9 +66,9 @@ ifeq ($(ZT_DEBUG),1)
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
 	override DEFS+=-D_FORTIFY_SOURCE=2
-	CFLAGS?=-Os -fstack-protector
+	CFLAGS?=-O3 -fstack-protector
 	override CFLAGS+=-Wall -Wno-deprecated -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	CXXFLAGS?=-Os -fstack-protector
+	CXXFLAGS?=-O3 -fstack-protector
 	override CXXFLAGS+=-Wall -Wno-deprecated -Wno-unused-result -Wreorder -fPIE -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	override LDFLAGS+=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
@@ -241,7 +241,7 @@ zerotier-idtool: one
 zerotier-cli: one
 
 libzerotiercore.a:	FORCE
-	make CFLAGS="-Os -fstack-protector -fPIC" CXXFLAGS="-Os -std=c++11 -fstack-protector -fPIC" $(CORE_OBJS)
+	make CFLAGS="-O3 -fstack-protector -fPIC" CXXFLAGS="-O3 -std=c++11 -fstack-protector -fPIC" $(CORE_OBJS)
 	ar rcs libzerotiercore.a $(CORE_OBJS)
 	ranlib libzerotiercore.a
 

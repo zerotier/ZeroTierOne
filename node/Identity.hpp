@@ -249,7 +249,7 @@ public:
 		if (b[p++] != 0)
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 
-		memcpy(_publicKey.data,b.field(p,(unsigned int)_publicKey.size()),(unsigned int)_publicKey.size());
+		ZT_FAST_MEMCPY(_publicKey.data,b.field(p,(unsigned int)_publicKey.size()),(unsigned int)_publicKey.size());
 		p += (unsigned int)_publicKey.size();
 
 		unsigned int privateKeyLength = (unsigned int)b[p++];
@@ -257,7 +257,7 @@ public:
 			if (privateKeyLength != ZT_C25519_PRIVATE_KEY_LEN)
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 			_privateKey = new C25519::Private();
-			memcpy(_privateKey->data,b.field(p,ZT_C25519_PRIVATE_KEY_LEN),ZT_C25519_PRIVATE_KEY_LEN);
+			ZT_FAST_MEMCPY(_privateKey->data,b.field(p,ZT_C25519_PRIVATE_KEY_LEN),ZT_C25519_PRIVATE_KEY_LEN);
 			p += ZT_C25519_PRIVATE_KEY_LEN;
 		}
 

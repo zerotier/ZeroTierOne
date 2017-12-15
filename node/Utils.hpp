@@ -40,6 +40,44 @@
 
 #include "Constants.hpp"
 
+// So it's 2017 and this still helps on most Linux versions. It shouldn't but it does. Go figure.
+#if defined(__LINUX__) && ((defined(_MSC_VER) || defined(__GNUC__)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64)))
+#include <emmintrin.h>
+static inline void ZT_FAST_MEMCPY(void *a,const void *b,unsigned long k)
+{
+	char *aa = reinterpret_cast<char *>(a);
+	const char *bb = reinterpret_cast<const char *>(b);
+	while (likely(k >= 128)) {
+		__m128i t1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
+		__m128i t2 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
+		__m128i t3 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
+		__m128i t4 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t1); aa += 16;
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t2); aa += 16;
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t3); aa += 16;
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t4); aa += 16;
+		__m128i t5 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
+		__m128i t6 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
+		__m128i t7 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
+		__m128i t8 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t5); aa += 16;
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t6); aa += 16;
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t7); aa += 16;
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t8); aa += 16;
+		k -= 128;
+	}
+	while (likely(k >= 16)) {
+		__m128i t1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb)); bb += 16;
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t1); aa += 16;
+		k -= 16;
+	}
+	for(unsigned long i=0;i<k;++i)
+		aa[i] = bb[i];
+}
+#else
+#define ZT_FAST_MEMCPY(a,b,c) memcpy(a,b,c)
+#endif
+
 namespace ZeroTier {
 
 /**
