@@ -480,9 +480,8 @@ bool ManagedRoute::sync()
 	// Detect routes previously applied by ZT that don't exist in the system's route list. Re-apply these.
 	// NOTE: The following block was added in reaction to the macOS High Sierra 10.13.2 disappearing 
 	// route issue. This comment should be removed once we're sure this block doesn't have any side-effects.
-	bool found;
+	bool found = false;
 	std::vector<_RTE> currRoutes(_getRTEs(_target,false));
-	found = false;
 	for(std::vector<_RTE>::iterator r(currRoutes.begin());r!=currRoutes.end();++r) {
 		if(_target == r->target) {
 			found = true;
