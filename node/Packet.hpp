@@ -734,7 +734,7 @@ public:
 		 * Credentials can be for any number of networks.
 		 *
 		 * The use of a zero byte to terminate the COM section is for legacy
-		 * backward compatiblity. Newer fields are prefixed with a length.
+		 * backward compatibility. Newer fields are prefixed with a length.
 		 *
 		 * OK/ERROR are not generated.
 		 */

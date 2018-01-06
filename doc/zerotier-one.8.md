@@ -28,7 +28,7 @@ The first time the service is started in a fresh working directory, it generates
    Display ZeroTier One version.
 
  * `-U`:
-   Skip privilege check and allow to be run by non-privileged user. This is typically used when **zerotier-one** is built with the network controller option included. In this case the ZeroTier service might only be acting as a network controller and might never actually join networks, in which case it does not require elevated system permissions.
+   Skip privilege check and allow one to be run by non-privileged user. This is typically used when **zerotier-one** is built with the network controller option included. In this case the ZeroTier service might only be acting as a network controller and might never actually join networks, in which case it does not require elevated system permissions.
 
  * `-p<port>`:
    Specify a different primary port. If this is not given the default is 9993. If zero is given a random port is chosen each time.

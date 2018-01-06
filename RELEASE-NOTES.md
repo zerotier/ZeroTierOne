@@ -23,7 +23,7 @@ ZeroTier Release Notes
     * Fixed a very very rare thread deadlock that seemed to only manifest on some systems
  * Platform-Specific Changes
     * MacOS
-        * Installer now loads the kernel extension right away so that High Sierra users will see the prompt to authorize it. This is done in the "Security & Privacy" preference pane and must be done driectly on the console (not via remote desktop).
+        * Installer now loads the kernel extension right away so that High Sierra users will see the prompt to authorize it. This is done in the "Security & Privacy" preference pane and must be done directly on the console (not via remote desktop).
         * About dialog in UI now actually contains something useful.
     * Windows
         * The Windows installer should now install the driver without requiring a special prompt in most cases. This should make it easier for our packages to be accepted into and updated in the Chocolatey repository and should make it easier to perform remote installs.

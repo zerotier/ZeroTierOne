@@ -1003,7 +1003,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
         inetAddressClass, "getAddress", "()[B");
     if(getAddressMethod == NULL)
     {
-        // cant find InetAddress.getAddres()
+        // can't find InetAddress.getAddres()
         return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
     }
 

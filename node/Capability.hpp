@@ -52,7 +52,7 @@ class RuntimeEnvironment;
  * (1) Evaluates its capabilities in ascending order of ID to determine
  *     which capability allows it to transmit this packet.
  * (2) If it has not done so lately, it then sends this capability to the
- *     receving peer ("presents" it).
+ *     receiving peer ("presents" it).
  * (3) The sender then sends the packet.
  *
  * On the receiving side the receiver evaluates the capabilities presented
