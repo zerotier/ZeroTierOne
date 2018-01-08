@@ -1609,12 +1609,14 @@ public:
 				bool haveRoute = false;
 
 				// Ignore routes implied by local managed IPs since adding the IP adds the route
+				/*
 				for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
 					if ((target->netmaskBits() == ip->netmaskBits())&&(target->containsAddress(*ip))) {
 						haveRoute = true;
 						break;
 					}
 				}
+				*/
 				if (haveRoute)
 					continue;
 
