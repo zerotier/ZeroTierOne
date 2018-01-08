@@ -40,7 +40,6 @@
 #include "Utils.hpp"
 #include "InetAddress.hpp"
 #include "Topology.hpp"
-#include "Array.hpp"
 #include "Network.hpp"
 #include "SharedPtr.hpp"
 #include "IncomingPacket.hpp"

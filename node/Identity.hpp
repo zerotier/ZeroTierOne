@@ -31,7 +31,6 @@
 #include <stdlib.h>
 
 #include "Constants.hpp"
-#include "Array.hpp"
 #include "Utils.hpp"
 #include "Address.hpp"
 #include "C25519.hpp"
