@@ -202,7 +202,7 @@ public:
 				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)upstreamStableEndpoints->size();++k) {
 					const InetAddress &addr = (*upstreamStableEndpoints)[ptr++ % upstreamStableEndpoints->size()];
 					if (addr.ss_family == AF_INET) {
-						p->sendHELLO(_tPtr,-1,addr,_now,0);
+						p->sendHELLO(_tPtr,-1,addr,_now);
 						contacted = true;
 						break;
 					}
@@ -213,7 +213,7 @@ public:
 				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)upstreamStableEndpoints->size();++k) {
 					const InetAddress &addr = (*upstreamStableEndpoints)[ptr++ % upstreamStableEndpoints->size()];
 					if (addr.ss_family == AF_INET6) {
-						p->sendHELLO(_tPtr,-1,addr,_now,0);
+						p->sendHELLO(_tPtr,-1,addr,_now);
 						contacted = true;
 						break;
 					}
@@ -225,7 +225,7 @@ public:
 			if ((!contacted)&&(_bestCurrentUpstream)) {
 				const SharedPtr<Path> up(_bestCurrentUpstream->getBestPath(_now,true));
 				if (up)
-					p->sendHELLO(_tPtr,up->localSocket(),up->address(),_now,up->nextOutgoingCounter());
+					p->sendHELLO(_tPtr,up->localSocket(),up->address(),_now);
 			}
 
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
@@ -445,7 +445,6 @@ ZT_PeerList *Node::peers() const
 			p->paths[p->pathCount].lastSend = (*path)->lastOut();
 			p->paths[p->pathCount].lastReceive = (*path)->lastIn();
 			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
-			p->paths[p->pathCount].linkQuality = (int)(*path)->linkQuality();
 			p->paths[p->pathCount].expired = 0;
 			p->paths[p->pathCount].preferred = ((*path) == bestp) ? 1 : 0;
 			++p->pathCount;

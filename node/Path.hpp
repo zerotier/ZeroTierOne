@@ -94,36 +94,22 @@ public:
 		_lastOut(0),
 		_lastIn(0),
 		_lastTrustEstablishedPacketReceived(0),
-		_incomingLinkQualityFastLog(0xffffffffffffffffULL),
 		_localSocket(-1),
-		_incomingLinkQualitySlowLogPtr(0),
-		_incomingLinkQualitySlowLogCounter(-64), // discard first fast log
-		_incomingLinkQualityPreviousPacketCounter(0),
-		_outgoingPacketCounter(0),
 		_latency(0xffff),
 		_addr(),
 		_ipScope(InetAddress::IP_SCOPE_NONE)
 	{
-		for(int i=0;i<(int)sizeof(_incomingLinkQualitySlowLog);++i)
-			_incomingLinkQualitySlowLog[i] = ZT_PATH_LINK_QUALITY_MAX;
 	}
 
 	Path(const int64_t localSocket,const InetAddress &addr) :
 		_lastOut(0),
 		_lastIn(0),
 		_lastTrustEstablishedPacketReceived(0),
-		_incomingLinkQualityFastLog(0xffffffffffffffffULL),
 		_localSocket(localSocket),
-		_incomingLinkQualitySlowLogPtr(0),
-		_incomingLinkQualitySlowLogCounter(-64), // discard first fast log
-		_incomingLinkQualityPreviousPacketCounter(0),
-		_outgoingPacketCounter(0),
 		_latency(0xffff),
 		_addr(addr),
 		_ipScope(addr.ipScope())
 	{
-		for(int i=0;i<(int)sizeof(_incomingLinkQualitySlowLog);++i)
-			_incomingLinkQualitySlowLog[i] = ZT_PATH_LINK_QUALITY_MAX;
 	}
 
 	/**
@@ -132,39 +118,6 @@ public:
 	 * @param t Time of receive
 	 */
 	inline void received(const uint64_t t) { _lastIn = t; }
-
-	/**
-	 * Update link quality using a counter from an incoming packet (or packet head in fragmented case)
-	 *
-	 * @param counter Packet link quality counter (range 0 to 7, must not have other bits set)
-	 */
-	inline void updateLinkQuality(const unsigned int counter)
-	{
-		const unsigned int prev = _incomingLinkQualityPreviousPacketCounter;
-		_incomingLinkQualityPreviousPacketCounter = counter;
-		const uint64_t fl = (_incomingLinkQualityFastLog = ((_incomingLinkQualityFastLog << 1) | (uint64_t)(prev == ((counter - 1) & 0x7))));
-		if (++_incomingLinkQualitySlowLogCounter >= 64) {
-			_incomingLinkQualitySlowLogCounter = 0;
-			_incomingLinkQualitySlowLog[_incomingLinkQualitySlowLogPtr++ % sizeof(_incomingLinkQualitySlowLog)] = (uint8_t)Utils::countBits(fl);
-		}
-	}
-
-	/**
-	 * @return Link quality from 0 (min) to 255 (max)
-	 */
-	inline unsigned int linkQuality() const
-	{
-		unsigned long slsize = _incomingLinkQualitySlowLogPtr;
-		if (slsize > (unsigned long)sizeof(_incomingLinkQualitySlowLog))
-			slsize = (unsigned long)sizeof(_incomingLinkQualitySlowLog);
-		else if (!slsize)
-			return 255; // ZT_PATH_LINK_QUALITY_MAX
-		unsigned long lq = 0;
-		for(unsigned long i=0;i<slsize;++i)
-			lq += (unsigned long)_incomingLinkQualitySlowLog[i] * 4;
-		lq /= slsize;
-		return (unsigned int)((lq >= 255) ? 255 : lq);
-	}
 
 	/**
 	 * Set time last trusted packet was received (done in Peer::received())
@@ -313,27 +266,14 @@ public:
 	 */
 	inline int64_t lastTrustEstablishedPacketReceived() const { return _lastTrustEstablishedPacketReceived; }
 
-	/**
-	 * Return and increment outgoing packet counter (used with Packet::armor())
-	 *
-	 * @return Next value that should be used for outgoing packet counter (only least significant 3 bits are used)
-	 */
-	inline unsigned int nextOutgoingCounter() { return _outgoingPacketCounter++; }
-
 private:
 	volatile int64_t _lastOut;
 	volatile int64_t _lastIn;
 	volatile int64_t _lastTrustEstablishedPacketReceived;
-	volatile uint64_t _incomingLinkQualityFastLog;
 	int64_t _localSocket;
-	volatile unsigned long _incomingLinkQualitySlowLogPtr;
-	volatile signed int _incomingLinkQualitySlowLogCounter;
-	volatile unsigned int _incomingLinkQualityPreviousPacketCounter;
-	volatile unsigned int _outgoingPacketCounter;
 	volatile unsigned int _latency;
 	InetAddress _addr;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often
-	volatile uint8_t _incomingLinkQualitySlowLog[32];
 	AtomicCounter __refCount;
 };
 

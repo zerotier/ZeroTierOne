@@ -241,7 +241,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 						outp.append((uint8_t)Packet::VERB_HELLO);
 						outp.append((uint64_t)pid);
 						outp.append((uint8_t)Packet::ERROR_IDENTITY_COLLISION);
-						outp.armor(key,true,_path->nextOutgoingCounter());
+						outp.armor(key,true);
 						_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 					} else {
 						RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,pid,fromAddress,hops(),"invalid MAC");
@@ -391,7 +391,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 	}
 	outp.setAt<uint16_t>(worldUpdateSizeAt,(uint16_t)(outp.size() - (worldUpdateSizeAt + 2)));
 
-	outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+	outp.armor(peer->key(),true);
 	_path->send(RR,tPtr,outp.data(),outp.size(),now);
 
 	peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision); // important for this to go first so received() knows the version
@@ -538,7 +538,7 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const Shar
 	}
 
 	if (count > 0) {
-		outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+		outp.armor(peer->key(),true);
 		_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 	}
 
@@ -560,7 +560,7 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,void *tPtr,const
 				if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,with,_path->localSocket(),atAddr)) {
 					const uint64_t junk = RR->node->prng();
 					RR->node->putPacket(tPtr,_path->localSocket(),atAddr,&junk,4,2); // send low-TTL junk packet to 'open' local NAT(s) and stateful firewalls
-					rendezvousWith->attemptToContactAt(tPtr,_path->localSocket(),atAddr,RR->node->now(),false,0);
+					rendezvousWith->attemptToContactAt(tPtr,_path->localSocket(),atAddr,RR->node->now(),false);
 				}
 			}
 		}
@@ -669,7 +669,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const 
 			outp.append((uint8_t)Packet::VERB_EXT_FRAME);
 			outp.append((uint64_t)packetId());
 			outp.append((uint64_t)nwid);
-			outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+			outp.armor(peer->key(),true);
 			_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 		}
 
@@ -692,7 +692,7 @@ bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,void *tPtr,const Share
 	outp.append((uint64_t)pid);
 	if (size() > ZT_PACKET_IDX_PAYLOAD)
 		outp.append(reinterpret_cast<const unsigned char *>(data()) + ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD);
-	outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+	outp.armor(peer->key(),true);
 	_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 
 	peer->received(tPtr,_path,hops(),pid,Packet::VERB_ECHO,0,Packet::VERB_NOP,false,0);
@@ -885,7 +885,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,void
 		outp.append(requestPacketId);
 		outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
 		outp.append(nwid);
-		outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+		outp.armor(peer->key(),true);
 		_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 	}
 
@@ -905,7 +905,7 @@ bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,void *tPtr,c
 			outp.append((uint64_t)packetId());
 			outp.append((uint64_t)network->id());
 			outp.append((uint64_t)configUpdateId);
-			outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+			outp.armor(peer->key(),true);
 			_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 		}
 	}
@@ -948,7 +948,7 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr
 		outp.append((uint32_t)mg.adi());
 		const unsigned int gatheredLocally = RR->mc->gather(peer->address(),nwid,mg,outp,gatherLimit);
 		if (gatheredLocally > 0) {
-			outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+			outp.armor(peer->key(),true);
 			_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 		}
 	}
@@ -1043,7 +1043,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 			outp.append((uint32_t)to.adi());
 			outp.append((unsigned char)0x02); // flag 0x02 = contains gather results
 			if (RR->mc->gather(peer->address(),nwid,to,outp,gatherLimit)) {
-				outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+				outp.armor(peer->key(),true);
 				_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 			}
 		}
@@ -1094,7 +1094,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 					if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0) {
 						peer->clusterRedirect(tPtr,_path,a,now);
 					} else if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
-						peer->attemptToContactAt(tPtr,InetAddress(),a,now,false,0);
+						peer->attemptToContactAt(tPtr,InetAddress(),a,now,false);
 					}
 				}
 			}	break;
@@ -1108,7 +1108,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 					if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0) {
 						peer->clusterRedirect(tPtr,_path,a,now);
 					} else if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
-						peer->attemptToContactAt(tPtr,InetAddress(),a,now,false,0);
+						peer->attemptToContactAt(tPtr,InetAddress(),a,now,false);
 					}
 				}
 			}	break;
@@ -1170,7 +1170,7 @@ void IncomingPacket::_sendErrorNeedCredentials(const RuntimeEnvironment *RR,void
 		outp.append(packetId());
 		outp.append((uint8_t)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
 		outp.append(nwid);
-		outp.armor(peer->key(),true,_path->nextOutgoingCounter());
+		outp.armor(peer->key(),true);
 		_path->send(RR,tPtr,outp.data(),outp.size(),now);
 	}
 }

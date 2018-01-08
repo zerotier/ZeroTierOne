@@ -1061,18 +1061,16 @@ static inline int LZ4_decompress_safe(const char* source, char* dest, int compre
 
 const unsigned char Packet::ZERO_KEY[32] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
-void Packet::armor(const void *key,bool encryptPayload,unsigned int counter)
+void Packet::armor(const void *key,bool encryptPayload)
 {
 	uint8_t mangledKey[32];
 	uint8_t *const data = reinterpret_cast<uint8_t *>(unsafeData());
-
-	// Mask least significant 3 bits of packet ID with counter to embed packet send counter for QoS use
-	data[7] = (data[7] & 0xf8) | (uint8_t)(counter & 0x07);
 
 	// Set flag now, since it affects key mangle function
 	setCipher(encryptPayload ? ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 : ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE);
 
 	_salsa20MangleKey((const unsigned char *)key,mangledKey);
+
 	if (ZT_HAS_FAST_CRYPTO()) {
 		const unsigned int encryptLen = (encryptPayload) ? (size() - ZT_PACKET_IDX_VERB) : 0;
 		uint64_t keyStream[(ZT_PROTO_MAX_PACKET_LENGTH + 64 + 8) / 8];

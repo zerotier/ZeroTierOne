@@ -175,9 +175,8 @@ public:
 	 * @param localSocket Local source socket
 	 * @param atAddress Destination address
 	 * @param now Current time
-	 * @param counter Outgoing packet counter
 	 */
-	void sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now,unsigned int counter);
+	void sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now);
 
 	/**
 	 * Send ECHO (or HELLO for older peers) to this peer at the given address
@@ -189,9 +188,8 @@ public:
 	 * @param atAddress Destination address
 	 * @param now Current time
 	 * @param sendFullHello If true, always send a full HELLO instead of just an ECHO
-	 * @param counter Outgoing packet counter
 	 */
-	void attemptToContactAt(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now,bool sendFullHello,unsigned int counter);
+	void attemptToContactAt(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now,bool sendFullHello);
 
 	/**
 	 * Try a memorized or statically defined path if any are known
@@ -480,7 +478,7 @@ public:
 				try {
 					ptr += inaddr.deserialize(b,ptr);
 					if (inaddr)
-						p->attemptToContactAt(tPtr,-1,inaddr,now,true,0);
+						p->attemptToContactAt(tPtr,-1,inaddr,now,true);
 				} catch ( ... ) {
 					break;
 				}

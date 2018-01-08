@@ -365,8 +365,7 @@ static int cli(int argc,char **argv)
 									char tmp[256];
 									std::string addr = path["address"];
 									const int64_t now = OSUtils::now();
-									const double lq = (path.count("linkQuality")) ? (double)path["linkQuality"] : -1.0;
-									OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s;%lld;%lld;%1.2f",addr.c_str(),now - (int64_t)path["lastSend"],now - (int64_t)path["lastReceive"],lq);
+									OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s;%lld;%lld",addr.c_str(),now - (int64_t)path["lastSend"],now - (int64_t)path["lastReceive"]);
 									bestPath = tmp;
 									break;
 								}

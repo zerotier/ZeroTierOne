@@ -78,7 +78,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 				if ((now - _lastBeaconResponse) >= 2500) { // limit rate of responses
 					_lastBeaconResponse = now;
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
-					outp.armor(peer->key(),true,path->nextOutgoingCounter());
+					outp.armor(peer->key(),true);
 					path->send(RR,tPtr,outp.data(),outp.size(),now);
 				}
 			}
@@ -670,7 +670,7 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 	if (trustedPathId) {
 		packet.setTrusted(trustedPathId);
 	} else {
-		packet.armor(peer->key(),encrypt,viaPath->nextOutgoingCounter());
+		packet.armor(peer->key(),encrypt);
 	}
 
 	if (viaPath->send(RR,tPtr,packet.data(),chunkSize,now)) {

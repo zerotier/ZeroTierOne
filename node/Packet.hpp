@@ -68,7 +68,6 @@
  *   + Tags and Capabilities
  *   + Inline push of CertificateOfMembership deprecated
  * 9 - 1.2.0 ... CURRENT
- *   + In-band encoding of packet counter for link quality measurement
  */
 #define ZT_PROTO_VERSION 9
 
@@ -1203,11 +1202,6 @@ public:
 	inline uint64_t packetId() const { return at<uint64_t>(ZT_PACKET_IDX_IV); }
 
 	/**
-	 * @return Value of link quality counter extracted from this packet's ID, range 0 to 7 (3 bits)
-	 */
-	inline unsigned int linkQualityCounter() const { return (unsigned int)(reinterpret_cast<const uint8_t *>(data())[7] & 0x07); }
-
-	/**
 	 * Set packet verb
 	 *
 	 * This also has the side-effect of clearing any verb flags, such as
@@ -1237,9 +1231,8 @@ public:
 	 *
 	 * @param key 32-byte key
 	 * @param encryptPayload If true, encrypt packet payload, else just MAC
-	 * @param counter Packet send counter for destination peer -- only least significant 3 bits are used
 	 */
-	void armor(const void *key,bool encryptPayload,unsigned int counter);
+	void armor(const void *key,bool encryptPayload);
 
 	/**
 	 * Verify and (if encrypted) decrypt packet

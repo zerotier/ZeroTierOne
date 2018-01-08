@@ -1184,11 +1184,6 @@ typedef struct
 	uint64_t trustedPathId;
 
 	/**
-	 * Path link quality from 0 to 255 (always 255 if peer does not support)
-	 */
-	int linkQuality;
-
-	/**
 	 * Is path expired?
 	 */
 	int expired;

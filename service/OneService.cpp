@@ -271,7 +271,6 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 		j["lastSend"] = (lastSend < 0) ? 0 : lastSend;
 		j["lastReceive"] = (lastReceive < 0) ? 0 : lastReceive;
 		j["trustedPathId"] = peer->paths[i].trustedPathId;
-		j["linkQuality"] = (double)peer->paths[i].linkQuality / (double)ZT_PATH_LINK_QUALITY_MAX;
 		j["active"] = (bool)(peer->paths[i].expired == 0);
 		j["expired"] = (bool)(peer->paths[i].expired != 0);
 		j["preferred"] = (bool)(peer->paths[i].preferred != 0);
