@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2017  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -93,7 +93,7 @@ using namespace ZeroTier;
 static OneService *volatile zt1Service = (OneService *)0;
 
 #define PROGRAM_NAME "ZeroTier One"
-#define COPYRIGHT_NOTICE "Copyright (c) 2011-2017 ZeroTier, Inc."
+#define COPYRIGHT_NOTICE "Copyright (c) 2011-2018 ZeroTier, Inc."
 #define LICENSE_GRANT \
 	"This is free software: you may copy, modify, and/or distribute this" ZT_EOL_S \
 	"work under the terms of the GNU General Public License, version 3 or" ZT_EOL_S \
