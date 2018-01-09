@@ -72,7 +72,7 @@
 #define ZT_BINDER_REFRESH_PERIOD 30000
 
 // Max number of bindings
-#define ZT_BINDER_MAX_BINDINGS 128
+#define ZT_BINDER_MAX_BINDINGS 256
 
 namespace ZeroTier {
 

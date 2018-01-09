@@ -585,7 +585,7 @@ public:
 							} else break;
 							++fno;
 						}
-						if ( (trustedPathId != 0) && ((trustedPathNetwork.ss_family == AF_INET)||(trustedPathNetwork.ss_family == AF_INET6)) && (trustedPathNetwork.ipScope() != InetAddress::IP_SCOPE_GLOBAL) && (trustedPathNetwork.netmaskBits() > 0) ) {
+						if ( (trustedPathId != 0) && ((trustedPathNetwork.ss_family == AF_INET)||(trustedPathNetwork.ss_family == AF_INET6)) && (trustedPathNetwork.netmaskBits() > 0) ) {
 							ppc[trustedPathNetwork].trustedPathId = trustedPathId;
 							ppc[trustedPathNetwork].mtu = 0; // use default
 						}
