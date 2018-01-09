@@ -40,8 +40,9 @@
 
 #include "Constants.hpp"
 
-// So it's 2017 and this still helps on most Linux versions. It shouldn't but it does. Go figure.
-#if defined(__LINUX__) && ((defined(_MSC_VER) || defined(__GNUC__)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64)))
+#ifdef __LINUX__
+
+#if (defined(_MSC_VER) || defined(__GNUC__)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 #include <emmintrin.h>
 static inline void ZT_FAST_MEMCPY(void *a,const void *b,unsigned long k)
 {
@@ -70,6 +71,10 @@ static inline void ZT_FAST_MEMCPY(void *a,const void *b,unsigned long k)
 	for(unsigned long i=0;i<k;++i)
 		aa[i] = bb[i];
 }
+#else
+#define ZT_FAST_MEMCPY(a,b,c) memcpy(a,b,c)
+#endif
+
 #else
 #define ZT_FAST_MEMCPY(a,b,c) memcpy(a,b,c)
 #endif
