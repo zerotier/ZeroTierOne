@@ -477,31 +477,6 @@ bool ManagedRoute::sync()
 		}
 	}
 
-	// Detect routes previously applied by ZT that don't exist in the system's route list. Re-apply these.
-	// NOTE: The following block was added in reaction to the macOS High Sierra 10.13.2 disappearing 
-	// route issue. This comment should be removed once we're sure this block doesn't have any side-effects.
-	/*
-
-	// Commented out temporarily to test more generalized fix
-
-	bool found = false;
-	std::vector<_RTE> currRoutes(_getRTEs(_target,false));
-	for(std::vector<_RTE>::iterator r(currRoutes.begin());r!=currRoutes.end();++r) {
-		if(_target == r->target) {
-			found = true;
-			break;
-		}
-	}
-	if (!found) {
-		// erase _applied enteries
-		std::map<InetAddress, bool>::iterator rt;
-		rt = _applied.find(leftt);
-		_applied.erase(rt, _applied.end());
-		rt = _applied.find(rightt);
-		_applied.erase(rt, _applied.end());
-	}
-	*/
-
 	if (!_applied.count(leftt)) {
 		_applied[leftt] = false; // not ifscoped
 		_routeCmd("add",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);

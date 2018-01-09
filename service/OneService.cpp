@@ -1609,6 +1609,7 @@ public:
 				bool haveRoute = false;
 
 				// Ignore routes implied by local managed IPs since adding the IP adds the route
+				// Commented out to fix ticket #600 (disappearing routes on macOS). Remove this block when we're sure there's no side effects
 				/*
 				for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
 					if ((target->netmaskBits() == ip->netmaskBits())&&(target->containsAddress(*ip))) {
@@ -2278,6 +2279,8 @@ public:
 						return 0;
 				}
 			}
+		}
+		if (gbl) {
 			for(std::vector<InetAddress>::const_iterator a(gbl->begin());a!=gbl->end();++a) {
 				if (a->containsAddress(*reinterpret_cast<const InetAddress *>(remoteAddr)))
 					return 0;
