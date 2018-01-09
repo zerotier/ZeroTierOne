@@ -648,7 +648,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					json member,network;
 					_db->get(nwid,network,address,member);
 					json origMember(member); // for detecting changes
-					_initMember(member);
+					DB::initMember(member);
 
 					try {
 						if (b.count("activeBridge")) member["activeBridge"] = OSUtils::jsonBool(b["activeBridge"],false);
@@ -734,7 +734,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					member["address"] = addrs; // legacy
 					member["nwid"] = nwids;
 
-					_cleanMember(member);
+					DB::cleanMember(member);
 					_db->save(&origMember,member);
 					responseBody = OSUtils::jsonDump(member);
 					responseContentType = "application/json";
@@ -767,7 +767,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 				json network;
 				_db->get(nwid,network);
 				json origNetwork(network); // for detecting changes
-				_initNetwork(network);
+				DB::initNetwork(network);
 
 				try {
 					if (b.count("name")) network["name"] = OSUtils::jsonString(b["name"],"");
@@ -981,7 +981,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 				network["id"] = nwids;
 				network["nwid"] = nwids; // legacy
 
-				_cleanNetwork(network);
+				DB::cleanNetwork(network);
 				_db->save(&origNetwork,network);
 
 				responseBody = OSUtils::jsonDump(network);
@@ -1183,7 +1183,7 @@ void EmbeddedNetworkController::_request(
 	}
 	origMember = member;
 	const bool newMember = ((!member.is_object())||(member.size() == 0));
-	_initMember(member);
+	DB::initMember(member);
 
 	{
 		const std::string haveIdStr(OSUtils::jsonString(member["identity"],""));
@@ -1281,7 +1281,7 @@ void EmbeddedNetworkController::_request(
 		}
 	} else {
 		// If they are not authorized, STOP!
-		_cleanMember(member);
+		DB::cleanMember(member);
 		_db->save(&origMember,member);
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
 		return;
@@ -1646,7 +1646,7 @@ void EmbeddedNetworkController::_request(
 		return;
 	}
 
-	_cleanMember(member);
+	DB::cleanMember(member);
 	_db->save(&origMember,member);
 	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),*(nc.get()),metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
 }
