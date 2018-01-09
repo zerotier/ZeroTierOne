@@ -2279,6 +2279,8 @@ public:
 						return 0;
 				}
 			}
+		}
+		if (gbl) {
 			for(std::vector<InetAddress>::const_iterator a(gbl->begin());a!=gbl->end();++a) {
 				if (a->containsAddress(*reinterpret_cast<const InetAddress *>(remoteAddr)))
 					return 0;
