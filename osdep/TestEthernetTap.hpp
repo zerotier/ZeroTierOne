@@ -43,6 +43,7 @@
 #include "../node/MulticastGroup.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/Utils.hpp"
+#include "../osdep/OSUtils.hpp"
 
 namespace ZeroTier {
 
@@ -66,7 +67,7 @@ public:
 		_enabled(true)
 	{
 		char tmp[32];
-		Utils::snprintf(tmp,sizeof(tmp),"%.16llx",(unsigned long long)_nwid);
+		OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",(unsigned long long)_nwid);
 		_dev.append(tmp);
 #ifdef ZT_TEST_TAP_REPORT_TO
 		_reportTo.fromString(ZT_TEST_TAP_REPORT_TO);

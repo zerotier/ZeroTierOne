@@ -58,6 +58,26 @@ public:
 		int64_t mostRecentDeauthTime;
 	};
 
+	/**
+	 * Ensure that all network fields are present
+	 */
+	static void initNetwork(nlohmann::json &network);
+
+	/**
+	 * Ensure that all member fields are present
+	 */
+	static void initMember(nlohmann::json &member);
+
+	/**
+	 * Remove old and temporary network fields
+	 */
+	static void cleanNetwork(nlohmann::json &network);
+
+	/**
+	 * Remove old and temporary member fields
+	 */
+	static void cleanMember(nlohmann::json &member);
+
 	DB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path);
 	virtual ~DB();
 

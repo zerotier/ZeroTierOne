@@ -27,6 +27,76 @@ using json = nlohmann::json;
 
 namespace ZeroTier {
 
+void DB::initNetwork(nlohmann::json &network)
+{
+	if (!network.count("private")) network["private"] = true;
+	if (!network.count("creationTime")) network["creationTime"] = OSUtils::now();
+	if (!network.count("name")) network["name"] = "";
+	if (!network.count("multicastLimit")) network["multicastLimit"] = (uint64_t)32;
+	if (!network.count("enableBroadcast")) network["enableBroadcast"] = true;
+	if (!network.count("v4AssignMode")) network["v4AssignMode"] = {{"zt",false}};
+	if (!network.count("v6AssignMode")) network["v6AssignMode"] = {{"rfc4193",false},{"zt",false},{"6plane",false}};
+	if (!network.count("authTokens")) network["authTokens"] = {{}};
+	if (!network.count("capabilities")) network["capabilities"] = nlohmann::json::array();
+	if (!network.count("tags")) network["tags"] = nlohmann::json::array();
+	if (!network.count("routes")) network["routes"] = nlohmann::json::array();
+	if (!network.count("ipAssignmentPools")) network["ipAssignmentPools"] = nlohmann::json::array();
+	if (!network.count("anchors")) network["anchors"] = nlohmann::json::array();
+	if (!network.count("mtu")) network["mtu"] = ZT_DEFAULT_MTU;
+	if (!network.count("remoteTraceTarget")) network["remoteTraceTarget"] = nlohmann::json();
+	if (!network.count("removeTraceLevel")) network["remoteTraceLevel"] = 0;
+	if (!network.count("rules")) {
+		// If unspecified, rules are set to allow anything and behave like a flat L2 segment
+		network["rules"] = {{
+			{ "not",false },
+			{ "or", false },
+			{ "type","ACTION_ACCEPT" }
+		}};
+	}
+	network["objtype"] = "network";
+}
+
+void DB::initMember(nlohmann::json &member)
+{
+	if (!member.count("authorized")) member["authorized"] = false;
+	if (!member.count("ipAssignments")) member["ipAssignments"] = nlohmann::json::array();
+	if (!member.count("activeBridge")) member["activeBridge"] = false;
+	if (!member.count("tags")) member["tags"] = nlohmann::json::array();
+	if (!member.count("capabilities")) member["capabilities"] = nlohmann::json::array();
+	if (!member.count("creationTime")) member["creationTime"] = OSUtils::now();
+	if (!member.count("noAutoAssignIps")) member["noAutoAssignIps"] = false;
+	if (!member.count("revision")) member["revision"] = 0ULL;
+	if (!member.count("lastDeauthorizedTime")) member["lastDeauthorizedTime"] = 0ULL;
+	if (!member.count("lastAuthorizedTime")) member["lastAuthorizedTime"] = 0ULL;
+	if (!member.count("lastAuthorizedCredentialType")) member["lastAuthorizedCredentialType"] = nlohmann::json();
+	if (!member.count("lastAuthorizedCredential")) member["lastAuthorizedCredential"] = nlohmann::json();
+	if (!member.count("vMajor")) member["vMajor"] = -1;
+	if (!member.count("vMinor")) member["vMinor"] = -1;
+	if (!member.count("vRev")) member["vRev"] = -1;
+	if (!member.count("vProto")) member["vProto"] = -1;
+	if (!member.count("remoteTraceTarget")) member["remoteTraceTarget"] = nlohmann::json();
+	if (!member.count("removeTraceLevel")) member["remoteTraceLevel"] = 0;
+	member["objtype"] = "member";
+}
+
+void DB::cleanNetwork(nlohmann::json &network)
+{
+	network.erase("clock");
+	network.erase("authorizedMemberCount");
+	network.erase("activeMemberCount");
+	network.erase("totalMemberCount");
+	network.erase("lastModified");
+}
+
+void DB::cleanMember(nlohmann::json &member)
+{
+	member.erase("clock");
+	member.erase("physicalAddr");
+	member.erase("recentLog");
+	member.erase("lastModified");
+	member.erase("lastRequestMetaData");
+}
+
 DB::DB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path) :
 	_controller(nc),
 	_myId(myId),
