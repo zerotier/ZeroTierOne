@@ -23,12 +23,13 @@ namespace ZeroTier
 
 FileDB::FileDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path) :
 	DB(nc,myId,path),
-	_networksPath(_path + ZT_PATH_SEPARATOR_S + "network")
+	_networksPath(_path + ZT_PATH_SEPARATOR_S + "network"),
+	_tracePath(_path + ZT_PATH_SEPARATOR_S + "trace")
 {
 	OSUtils::mkdir(_path.c_str());
 	OSUtils::lockDownFile(_path.c_str(),true);
-	OSUtils::mkdir((_path + ZT_PATH_SEPARATOR + "network").c_str());
-	OSUtils::mkdir((_path + ZT_PATH_SEPARATOR + "trace").c_str());
+	OSUtils::mkdir(_networksPath.c_str());
+	OSUtils::mkdir(_tracePath.c_str());
 
 	std::vector<std::string> networks(OSUtils::listDirectory(_networksPath.c_str(),false));
 	std::string buf;
@@ -120,7 +121,7 @@ void FileDB::save(nlohmann::json *orig,nlohmann::json &record)
 		} else if (objtype == "trace") {
 			const std::string id = record["id"];
 			if (id.length() > 0) {
-				OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "trace" ZT_PATH_SEPARATOR_S "%s.json",_path.c_str(),id.c_str());
+				OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%s.json",_tracePath.c_str(),id.c_str());
 				OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1));
 			}
 		}
