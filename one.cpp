@@ -607,6 +607,43 @@ static int cli(int argc,char **argv)
 			cliPrintHelp(argv[0],stderr);
 			return 2;
 		}
+	} else if (command == "get") {
+		if (arg1.length() != 16) {
+			cliPrintHelp(argv[0],stderr);
+			return 2;
+		}
+		char jsons[1024], cl[128];
+		OSUtils::ztsnprintf(cl,sizeof(cl),"%u",(unsigned int)strlen(jsons));
+		requestHeaders["Content-Type"] = "application/json";
+		requestHeaders["Content-Length"] = cl;
+		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/network",requestHeaders,responseHeaders,responseBody);
+
+		nlohmann::json j;
+		try {
+			j = OSUtils::jsonParse(responseBody);
+		} catch (std::exception &exc) {
+			printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
+			return 1;
+		} catch ( ... ) {
+			printf("%u %s invalid JSON response (unknown exception)" ZT_EOL_S,scode,command.c_str());
+			return 1;
+		}
+		if (j.is_array()) {
+			for(unsigned long i=0;i<j.size();++i) {
+				nlohmann::json &n = j[i];
+				if (n.is_object()) {
+					if (n["id"] == arg1) {
+						printf("%s\n", OSUtils::jsonString(n[arg2],"-").c_str());
+					}
+				}
+			}
+		}
+		if (scode == 200) {
+			return 0;
+		} else {
+			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			return 1;
+		}
 	} else {
 		cliPrintHelp(argv[0],stderr);
 		return 0;
