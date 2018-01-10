@@ -48,7 +48,7 @@
 using json = nlohmann::json;
 
 // API version reported via JSON control plane
-#define ZT_NETCONF_CONTROLLER_API_VERSION 3
+#define ZT_NETCONF_CONTROLLER_API_VERSION 4
 
 // Min duration between requests for an address/nwid combo to prevent floods
 #define ZT_NETCONF_MIN_REQUEST_PERIOD 1000
