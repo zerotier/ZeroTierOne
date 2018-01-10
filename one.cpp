@@ -131,6 +131,7 @@ static void cliPrintHelp(const char *pn,FILE *out)
 	fprintf(out,"  join <network>          - Join a network" ZT_EOL_S);
 	fprintf(out,"  leave <network>         - Leave a network" ZT_EOL_S);
 	fprintf(out,"  set <network> <setting> - Set a network setting" ZT_EOL_S);
+	fprintf(out,"  get <network> <setting> - Get a network setting" ZT_EOL_S);
 	fprintf(out,"  listmoons               - List moons (federated root sets)" ZT_EOL_S);
 	fprintf(out,"  orbit <world ID> <seed> - Join a moon via any member root" ZT_EOL_S);
 	fprintf(out,"  deorbit <world ID>      - Leave a moon" ZT_EOL_S);
