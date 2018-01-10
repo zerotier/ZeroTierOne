@@ -72,7 +72,7 @@ void Trace::resettingPathsInScope(void *const tPtr,const Address &reporter,const
 
 	if (_globalTarget)
 		_send(tPtr,d,_globalTarget);
-	_spamToAllNetworks(tPtr,d,Trace::NORMAL);
+	_spamToAllNetworks(tPtr,d,Trace::LEVEL_NORMAL);
 }
 
 void Trace::peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &path,const uint64_t packetId,const Packet::Verb verb)
@@ -170,7 +170,7 @@ void Trace::outgoingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network
 	std::pair<Address,Trace::Level> byn;
 	{ Mutex::Lock l(_byNet_m); _byNet.get(network->id(),byn); }
 
-	if ( ((_globalTarget)&&((int)_globalLevel >= (int)Trace::VERBOSE)) || ((byn.first)&&((int)byn.second >= (int)Trace::VERBOSE)) ) {
+	if ( ((_globalTarget)&&((int)_globalLevel >= (int)Trace::LEVEL_VERBOSE)) || ((byn.first)&&((int)byn.second >= (int)Trace::LEVEL_VERBOSE)) ) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
 		d.add(ZT_REMOTE_TRACE_FIELD__EVENT,ZT_REMOTE_TRACE_EVENT__OUTGOING_NETWORK_FRAME_DROPPED_S);
 		d.add(ZT_REMOTE_TRACE_FIELD__NETWORK_ID,network->id());
@@ -182,9 +182,9 @@ void Trace::outgoingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network
 		if (reason)
 			d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
 
-		if ((_globalTarget)&&((int)_globalLevel >= (int)Trace::VERBOSE))
+		if ((_globalTarget)&&((int)_globalLevel >= (int)Trace::LEVEL_VERBOSE))
 			_send(tPtr,d,_globalTarget);
-		if ((byn.first)&&((int)byn.second >= (int)Trace::VERBOSE))
+		if ((byn.first)&&((int)byn.second >= (int)Trace::LEVEL_VERBOSE))
 			_send(tPtr,d,byn.first);
 	}
 }
@@ -199,7 +199,7 @@ void Trace::incomingNetworkAccessDenied(void *const tPtr,const SharedPtr<Network
 	std::pair<Address,Trace::Level> byn;
 	{ Mutex::Lock l(_byNet_m); _byNet.get(network->id(),byn); }
 
-	if ( ((_globalTarget)&&((int)_globalLevel >= (int)Trace::VERBOSE)) || ((byn.first)&&((int)byn.second >= (int)Trace::VERBOSE)) ) {
+	if ( ((_globalTarget)&&((int)_globalLevel >= (int)Trace::LEVEL_VERBOSE)) || ((byn.first)&&((int)byn.second >= (int)Trace::LEVEL_VERBOSE)) ) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
 		d.add(ZT_REMOTE_TRACE_FIELD__EVENT,ZT_REMOTE_TRACE_EVENT__INCOMING_NETWORK_ACCESS_DENIED_S);
 		d.add(ZT_REMOTE_TRACE_FIELD__PACKET_ID,packetId);
@@ -211,9 +211,9 @@ void Trace::incomingNetworkAccessDenied(void *const tPtr,const SharedPtr<Network
 		}
 		d.add(ZT_REMOTE_TRACE_FIELD__NETWORK_ID,network->id());
 
-		if ((_globalTarget)&&((int)_globalLevel >= (int)Trace::VERBOSE))
+		if ((_globalTarget)&&((int)_globalLevel >= (int)Trace::LEVEL_VERBOSE))
 			_send(tPtr,d,_globalTarget);
-		if ((byn.first)&&((int)byn.second >= (int)Trace::VERBOSE))
+		if ((byn.first)&&((int)byn.second >= (int)Trace::LEVEL_VERBOSE))
 			_send(tPtr,d,byn.first);
 	}
 }
@@ -228,7 +228,7 @@ void Trace::incomingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network
 	std::pair<Address,Trace::Level> byn;
 	{ Mutex::Lock l(_byNet_m); _byNet.get(network->id(),byn); }
 
-	if ( ((_globalTarget)&&((int)_globalLevel >= (int)Trace::VERBOSE)) || ((byn.first)&&((int)byn.second >= (int)Trace::VERBOSE)) ) {
+	if ( ((_globalTarget)&&((int)_globalLevel >= (int)Trace::LEVEL_VERBOSE)) || ((byn.first)&&((int)byn.second >= (int)Trace::LEVEL_VERBOSE)) ) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
 		d.add(ZT_REMOTE_TRACE_FIELD__EVENT,ZT_REMOTE_TRACE_EVENT__INCOMING_NETWORK_FRAME_DROPPED_S);
 		d.add(ZT_REMOTE_TRACE_FIELD__PACKET_ID,packetId);
@@ -244,9 +244,9 @@ void Trace::incomingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network
 		if (reason)
 			d.add(ZT_REMOTE_TRACE_FIELD__REASON,reason);
 
-		if ((_globalTarget)&&((int)_globalLevel >= (int)Trace::VERBOSE))
+		if ((_globalTarget)&&((int)_globalLevel >= (int)Trace::LEVEL_VERBOSE))
 			_send(tPtr,d,_globalTarget);
-		if ((byn.first)&&((int)byn.second >= (int)Trace::VERBOSE))
+		if ((byn.first)&&((int)byn.second >= (int)Trace::LEVEL_VERBOSE))
 			_send(tPtr,d,byn.first);
 	}
 }
@@ -257,7 +257,7 @@ void Trace::incomingPacketMessageAuthenticationFailure(void *const tPtr,const Sh
 
 	ZT_LOCAL_TRACE(tPtr,RR,"MAC failed for packet %.16llx from %.10llx(%s)",packetId,source.toInt(),(path) ? path->address().toString(tmp) : "???");
 
-	if ((_globalTarget)&&((int)_globalLevel >= Trace::DEBUG)) {
+	if ((_globalTarget)&&((int)_globalLevel >= Trace::LEVEL_DEBUG)) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
 		d.add(ZT_REMOTE_TRACE_FIELD__EVENT,ZT_REMOTE_TRACE_EVENT__PACKET_MAC_FAILURE_S);
 		d.add(ZT_REMOTE_TRACE_FIELD__PACKET_ID,packetId);
@@ -280,7 +280,7 @@ void Trace::incomingPacketInvalid(void *const tPtr,const SharedPtr<Path> &path,c
 
 	ZT_LOCAL_TRACE(tPtr,RR,"INVALID packet %.16llx from %.10llx(%s) (%s)",packetId,source.toInt(),(path) ? path->address().toString(tmp) : "???",(reason) ? reason : "unknown reason");
 
-	if ((_globalTarget)&&((int)_globalLevel >= Trace::DEBUG)) {
+	if ((_globalTarget)&&((int)_globalLevel >= Trace::LEVEL_DEBUG)) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
 		d.add(ZT_REMOTE_TRACE_FIELD__EVENT,ZT_REMOTE_TRACE_EVENT__PACKET_INVALID_S);
 		d.add(ZT_REMOTE_TRACE_FIELD__PACKET_ID,packetId);
@@ -304,7 +304,7 @@ void Trace::incomingPacketDroppedHELLO(void *const tPtr,const SharedPtr<Path> &p
 
 	ZT_LOCAL_TRACE(tPtr,RR,"DROPPED HELLO from %.10llx(%s) (%s)",source.toInt(),(path) ? path->address().toString(tmp) : "???",(reason) ? reason : "???");
 
-	if ((_globalTarget)&&((int)_globalLevel >= Trace::DEBUG)) {
+	if ((_globalTarget)&&((int)_globalLevel >= Trace::LEVEL_DEBUG)) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
 		d.add(ZT_REMOTE_TRACE_FIELD__EVENT,ZT_REMOTE_TRACE_EVENT__PACKET_INVALID_S);
 		d.add(ZT_REMOTE_TRACE_FIELD__PACKET_ID,packetId);
@@ -323,7 +323,7 @@ void Trace::incomingPacketDroppedHELLO(void *const tPtr,const SharedPtr<Path> &p
 void Trace::networkConfigRequestSent(void *const tPtr,const Network &network,const Address &controller)
 {
 	ZT_LOCAL_TRACE(tPtr,RR,"requesting configuration for network %.16llx",network.id());
-	if ((_globalTarget)&&((int)_globalLevel >= Trace::DEBUG)) {
+	if ((_globalTarget)&&((int)_globalLevel >= Trace::LEVEL_DEBUG)) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
 		d.add(ZT_REMOTE_TRACE_FIELD__EVENT,ZT_REMOTE_TRACE_EVENT__NETWORK_CONFIG_REQUEST_SENT_S);
 		d.add(ZT_REMOTE_TRACE_FIELD__NETWORK_ID,network.id());
@@ -353,7 +353,7 @@ void Trace::networkFilter(
 	std::pair<Address,Trace::Level> byn;
 	{ Mutex::Lock l(_byNet_m); _byNet.get(network.id(),byn); }
 
-	if ( ((_globalTarget)&&((int)_globalLevel >= (int)Trace::RULES)) || ((byn.first)&&((int)byn.second >= (int)Trace::RULES)) ) {
+	if ( ((_globalTarget)&&((int)_globalLevel >= (int)Trace::LEVEL_RULES)) || ((byn.first)&&((int)byn.second >= (int)Trace::LEVEL_RULES)) ) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
 		d.add(ZT_REMOTE_TRACE_FIELD__EVENT,ZT_REMOTE_TRACE_EVENT__NETWORK_FILTER_TRACE_S);
 		d.add(ZT_REMOTE_TRACE_FIELD__NETWORK_ID,network.id());
@@ -375,9 +375,9 @@ void Trace::networkFilter(
 		if (frameLen > 0)
 			d.add(ZT_REMOTE_TRACE_FIELD__FRAME_DATA,(const char *)frameData,(frameLen > 256) ? (int)256 : (int)frameLen);
 
-		if ((_globalTarget)&&((int)_globalLevel >= (int)Trace::RULES))
+		if ((_globalTarget)&&((int)_globalLevel >= (int)Trace::LEVEL_RULES))
 			_send(tPtr,d,_globalTarget);
-		if ((byn.first)&&((int)byn.second >= (int)Trace::RULES))
+		if ((byn.first)&&((int)byn.second >= (int)Trace::LEVEL_RULES))
 			_send(tPtr,d,byn.first);
 	}
 }
