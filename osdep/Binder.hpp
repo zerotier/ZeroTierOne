@@ -137,6 +137,7 @@ public:
 		std::map<InetAddress,std::string> localIfAddrs;
 		PhySocket *udps,*tcps;
 		Mutex::Lock _l(_lock);
+		bool interfacesEnumerated = true;
 
 #ifdef __WINDOWS__
 
@@ -167,6 +168,9 @@ public:
 				a = a->Next;
 			}
 		}
+		else {
+			interfacesEnumerated = false;
+		}
 
 #else // not __WINDOWS__
 
@@ -194,6 +198,9 @@ public:
 				}
 			}
 			fclose(procf);
+		}
+		else {
+			interfacesEnumerated = false;
 		}
 
 		// Get IPv6 addresses (and any device names we don't already know)
@@ -314,12 +321,15 @@ public:
 				}
 				freeifaddrs(ifatbl);
 			}
+			else {
+				interfacesEnumerated = false;
+			}
 		}
 
 #endif
 
 		// Default to binding to wildcard if we can't enumerate addresses
-		if (localIfAddrs.empty()) {
+		if (!interfacesEnumerated && localIfAddrs.empty()) {
 			for(int x=0;x<(int)portCount;++x) {
 				localIfAddrs.insert(std::pair<InetAddress,std::string>(InetAddress((uint32_t)0,ports[x]),std::string()));
 				localIfAddrs.insert(std::pair<InetAddress,std::string>(InetAddress((const void *)"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,ports[x]),std::string()));

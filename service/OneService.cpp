@@ -398,6 +398,7 @@ public:
 	PhySocket *_localControlSocket4;
 	PhySocket *_localControlSocket6;
 	bool _updateAutoApply;
+	bool _allowTcpFallbackRelay;
 	unsigned int _primaryPort;
 	volatile unsigned int _udpPortPickerCounter;
 
@@ -1125,6 +1126,7 @@ public:
 					}
 					json &settings = res["config"]["settings"];
 					settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
+					settings["allowTcpFallbackRelay"] = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],_allowTcpFallbackRelay);
 #ifdef ZT_USE_MINIUPNPC
 					settings["portMappingEnabled"] = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 #else
@@ -1452,6 +1454,7 @@ public:
 		json &settings = lc["settings"];
 
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
+		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 
 #ifndef ZT_SDK
@@ -2161,63 +2164,66 @@ public:
 	inline int nodeWirePacketSendFunction(const int64_t localSocket,const struct sockaddr_storage *addr,const void *data,unsigned int len,unsigned int ttl)
 	{
 #ifdef ZT_TCP_FALLBACK_RELAY
-		if (addr->ss_family == AF_INET) {
-			// TCP fallback tunnel support, currently IPv4 only
-			if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(addr)->ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
-				// Engage TCP tunnel fallback if we haven't received anything valid from a global
-				// IP address in ZT_TCP_FALLBACK_AFTER milliseconds. If we do start getting
-				// valid direct traffic we'll stop using it and close the socket after a while.
-				const int64_t now = OSUtils::now();
-				if (((now - _lastDirectReceiveFromGlobal) > ZT_TCP_FALLBACK_AFTER)&&((now - _lastRestart) > ZT_TCP_FALLBACK_AFTER)) {
-					if (_tcpFallbackTunnel) {
-						bool flushNow = false;
-						{
-							Mutex::Lock _l(_tcpFallbackTunnel->writeq_m);
-							if (_tcpFallbackTunnel->writeq.size() < (1024 * 64)) {
-								if (_tcpFallbackTunnel->writeq.length() == 0) {
-									_phy.setNotifyWritable(_tcpFallbackTunnel->sock,true);
-									flushNow = true;
+		if(_allowTcpFallbackRelay) {
+			if (addr->ss_family == AF_INET) {
+				// TCP fallback tunnel support, currently IPv4 only
+				if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(addr)->ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
+					// Engage TCP tunnel fallback if we haven't received anything valid from a global
+					// IP address in ZT_TCP_FALLBACK_AFTER milliseconds. If we do start getting
+					// valid direct traffic we'll stop using it and close the socket after a while.
+					const int64_t now = OSUtils::now();
+					if (((now - _lastDirectReceiveFromGlobal) > ZT_TCP_FALLBACK_AFTER)&&((now - _lastRestart) > ZT_TCP_FALLBACK_AFTER)) {
+						if (_tcpFallbackTunnel) {
+							bool flushNow = false;
+							{
+								Mutex::Lock _l(_tcpFallbackTunnel->writeq_m);
+								if (_tcpFallbackTunnel->writeq.size() < (1024 * 64)) {
+									if (_tcpFallbackTunnel->writeq.length() == 0) {
+										_phy.setNotifyWritable(_tcpFallbackTunnel->sock,true);
+										flushNow = true;
+									}
+									const unsigned long mlen = len + 7;
+									_tcpFallbackTunnel->writeq.push_back((char)0x17);
+									_tcpFallbackTunnel->writeq.push_back((char)0x03);
+									_tcpFallbackTunnel->writeq.push_back((char)0x03); // fake TLS 1.2 header
+									_tcpFallbackTunnel->writeq.push_back((char)((mlen >> 8) & 0xff));
+									_tcpFallbackTunnel->writeq.push_back((char)(mlen & 0xff));
+									_tcpFallbackTunnel->writeq.push_back((char)4); // IPv4
+									_tcpFallbackTunnel->writeq.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_addr.s_addr))),4);
+									_tcpFallbackTunnel->writeq.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port))),2);
+									_tcpFallbackTunnel->writeq.append((const char *)data,len);
 								}
-								const unsigned long mlen = len + 7;
-								_tcpFallbackTunnel->writeq.push_back((char)0x17);
-								_tcpFallbackTunnel->writeq.push_back((char)0x03);
-								_tcpFallbackTunnel->writeq.push_back((char)0x03); // fake TLS 1.2 header
-								_tcpFallbackTunnel->writeq.push_back((char)((mlen >> 8) & 0xff));
-								_tcpFallbackTunnel->writeq.push_back((char)(mlen & 0xff));
-								_tcpFallbackTunnel->writeq.push_back((char)4); // IPv4
-								_tcpFallbackTunnel->writeq.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_addr.s_addr))),4);
-								_tcpFallbackTunnel->writeq.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port))),2);
-								_tcpFallbackTunnel->writeq.append((const char *)data,len);
 							}
+							if (flushNow) {
+								void *tmpptr = (void *)_tcpFallbackTunnel;
+								phyOnTcpWritable(_tcpFallbackTunnel->sock,&tmpptr);
+							}
+						} else if (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2))) {
+							const InetAddress addr(ZT_TCP_FALLBACK_RELAY);
+							TcpConnection *tc = new TcpConnection();
+							{
+								Mutex::Lock _l(_tcpConnections_m);
+								_tcpConnections.push_back(tc);
+							}
+							tc->type = TcpConnection::TCP_TUNNEL_OUTGOING;
+							tc->remoteAddr = addr;
+							tc->lastReceive = OSUtils::now();
+							tc->parent = this;
+							tc->sock = (PhySocket *)0; // set in connect handler
+							tc->messageSize = 0;
+							bool connected = false;
+							_phy.tcpConnect(reinterpret_cast<const struct sockaddr *>(&addr),connected,(void *)tc,true);
 						}
-						if (flushNow) {
-							void *tmpptr = (void *)_tcpFallbackTunnel;
-							phyOnTcpWritable(_tcpFallbackTunnel->sock,&tmpptr);
-						}
-					} else if (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2))) {
-						const InetAddress addr(ZT_TCP_FALLBACK_RELAY);
-						TcpConnection *tc = new TcpConnection();
-						{
-							Mutex::Lock _l(_tcpConnections_m);
-							_tcpConnections.push_back(tc);
-						}
-						tc->type = TcpConnection::TCP_TUNNEL_OUTGOING;
-						tc->remoteAddr = addr;
-						tc->lastReceive = OSUtils::now();
-						tc->parent = this;
-						tc->sock = (PhySocket *)0; // set in connect handler
-						tc->messageSize = 0;
-						bool connected = false;
-						_phy.tcpConnect(reinterpret_cast<const struct sockaddr *>(&addr),connected,(void *)tc,true);
 					}
+					_lastSendToGlobalV4 = now;
 				}
-				_lastSendToGlobalV4 = now;
 			}
 		}
+#endif // ZT_TCP_FALLBACK_RELAY
+
 		// Even when relaying we still send via UDP. This way if UDP starts
 		// working we can instantly "fail forward" to it and stop using TCP
 		// proxy fallback, which is slow.
-#endif // ZT_TCP_FALLBACK_RELAY
 
 		if ((localSocket != -1)&&(localSocket != 0)&&(_binder.isUdpSocketValid((PhySocket *)((uintptr_t)localSocket)))) {
 			if ((ttl)&&(addr->ss_family == AF_INET)) _phy.setIp4UdpTtl((PhySocket *)((uintptr_t)localSocket),ttl);
@@ -2286,7 +2292,6 @@ public:
 					return 0;
 			}
 		}
-
 		return 1;
 	}
 
