@@ -70,11 +70,11 @@ public:
 	 */
 	enum Level
 	{
-		NORMAL = 0,
-		VERBOSE = 10,
-		RULES = 15,
-		DEBUG = 20,
-		INSANE = 30
+		LEVEL_NORMAL = 0,
+		LEVEL_VERBOSE = 10,
+		LEVEL_RULES = 15,
+		LEVEL_DEBUG = 20,
+		LEVEL_INSANE = 30
 	};
 
 	/**
