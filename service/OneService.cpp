@@ -825,7 +825,24 @@ public:
 				// Sync multicast group memberships
 				if ((now - lastTapMulticastGroupCheck) >= ZT_TAP_CHECK_MULTICAST_INTERVAL) {
 					lastTapMulticastGroupCheck = now;
-					Mutex::Lock _l(_nets_m);
+					std::vector< std::pair< uint64_t,std::pair< std::vector<MulticastGroup>,std::vector<MulticastGroup> > > > mgChanges;
+					{
+						Mutex::Lock _l(_nets_m);
+						mgChanges.reserve(_nets.size() + 1);
+						for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
+							if (n->second.tap) {
+								mgChanges.push_back(std::pair< uint64_t,std::pair< std::vector<MulticastGroup>,std::vector<MulticastGroup> > >(n->first,std::pair< std::vector<MulticastGroup>,std::vector<MulticastGroup> >()));
+								n->second.tap->scanMulticastGroups(mgChanges.back().second.first,mgChanges.back().second.second);
+							}
+						}
+					}
+					for(std::vector< std::pair< uint64_t,std::pair< std::vector<MulticastGroup>,std::vector<MulticastGroup> > > >::iterator c(mgChanges.begin());c!=mgChanges.end();++c) {
+						for(std::vector<MulticastGroup>::iterator m(c->second.first.begin());m!=c->second.first.end();++m)
+							_node->multicastSubscribe((void *)0,c->first,m->mac().toInt(),m->adi());
+						for(std::vector<MulticastGroup>::iterator m(c->second.second.begin());m!=c->second.second.end();++m)
+							_node->multicastUnsubscribe(c->first,m->mac().toInt(),m->adi());
+					}
+					/*
 					for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
 						if (n->second.tap) {
 							std::vector<MulticastGroup> added,removed;
@@ -836,6 +853,7 @@ public:
 								_node->multicastUnsubscribe(n->first,m->mac().toInt(),m->adi());
 						}
 					}
+					*/
 				}
 
 				// Sync information about physical network interfaces

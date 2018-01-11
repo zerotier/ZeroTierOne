@@ -38,7 +38,8 @@
 
 namespace ZeroTier {
 
-#if defined(__GNUC__) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+//#if defined(__GNUC__) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#if 0
 
 // Inline ticket lock on x64 systems with GCC and CLANG (Mac, Linux) -- this is really fast as long as locking durations are very short
 class Mutex : NonCopyable

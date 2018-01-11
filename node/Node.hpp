@@ -284,7 +284,7 @@ private:
 	Address _remoteTraceTarget;
 	enum Trace::Level _remoteTraceLevel;
 
-	int64_t _now;
+	volatile int64_t _now;
 	int64_t _lastPingCheck;
 	int64_t _lastHousekeepingRun;
 	int64_t _lastMemoizedTraceSettings;

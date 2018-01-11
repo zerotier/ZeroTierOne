@@ -162,8 +162,8 @@ SharedPtr<Peer> Topology::getUpstreamPeer()
 	unsigned int bestq = ~((unsigned int)0);
 	const SharedPtr<Peer> *best = (const SharedPtr<Peer> *)0;
 
-	Mutex::Lock _l1(_peers_m);
-	Mutex::Lock _l2(_upstreams_m);
+	Mutex::Lock _l2(_peers_m);
+	Mutex::Lock _l1(_upstreams_m);
 
 	for(std::vector<Address>::const_iterator a(_upstreamAddresses.begin());a!=_upstreamAddresses.end();++a) {
 		const SharedPtr<Peer> *p = _peers.get(*a);
@@ -252,8 +252,8 @@ bool Topology::addWorld(void *tPtr,const World &newWorld,bool alwaysAcceptNew)
 	if ((newWorld.type() != World::TYPE_PLANET)&&(newWorld.type() != World::TYPE_MOON))
 		return false;
 
-	Mutex::Lock _l1(_upstreams_m);
 	Mutex::Lock _l2(_peers_m);
+	Mutex::Lock _l1(_upstreams_m);
 
 	World *existing = (World *)0;
 	switch(newWorld.type()) {
@@ -341,8 +341,8 @@ void Topology::addMoon(void *tPtr,const uint64_t id,const Address &seed)
 
 void Topology::removeMoon(void *tPtr,const uint64_t id)
 {
-	Mutex::Lock _l1(_upstreams_m);
 	Mutex::Lock _l2(_peers_m);
+	Mutex::Lock _l1(_upstreams_m);
 
 	std::vector<World> nm;
 	for(std::vector<World>::const_iterator m(_moons.begin());m!=_moons.end();++m) {
