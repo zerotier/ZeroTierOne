@@ -842,18 +842,6 @@ public:
 						for(std::vector<MulticastGroup>::iterator m(c->second.second.begin());m!=c->second.second.end();++m)
 							_node->multicastUnsubscribe(c->first,m->mac().toInt(),m->adi());
 					}
-					/*
-					for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
-						if (n->second.tap) {
-							std::vector<MulticastGroup> added,removed;
-							n->second.tap->scanMulticastGroups(added,removed);
-							for(std::vector<MulticastGroup>::iterator m(added.begin());m!=added.end();++m)
-								_node->multicastSubscribe((void *)0,n->first,m->mac().toInt(),m->adi());
-							for(std::vector<MulticastGroup>::iterator m(removed.begin());m!=removed.end();++m)
-								_node->multicastUnsubscribe(n->first,m->mac().toInt(),m->adi());
-						}
-					}
-					*/
 				}
 
 				// Sync information about physical network interfaces
