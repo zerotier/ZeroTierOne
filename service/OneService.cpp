@@ -480,7 +480,7 @@ public:
 	// HashiCorp Vault Settings
 	bool _vaultEnabled;
 	std::string _vaultURL;
-	std::string _vaultKey;
+	std::string _vaultToken;
 	std::string _vaultPath; // defaults to cubbyhole/zerotier/identity.secret for per-access key storage
 
 	// Set to false to force service to stop
@@ -517,7 +517,7 @@ public:
 #endif
 		,_vaultEnabled(false)
 		,_vaultURL()
-		,_vaultKey()
+		,_vaultToken()
 		,_vaultPath("cubbyhole/zerotier/identity.secret")
 		,_run(true)
 	{
@@ -1530,15 +1530,15 @@ public:
 			if (!url.empty())
 				_vaultURL = url;
 
-			const std::string key(OSUtils::jsonString(vault["vaultKey"], "").c_str());
-			if (!key.empty())
-				_vaultKey = key;
+			const std::string token(OSUtils::jsonString(vault["vaultToken"], "").c_str());
+			if (!token.empty())
+				_vaultToken = token;
 
 			const std::string path(OSUtils::jsonString(vault["vaultPath"], "").c_str());
 			if (!path.empty())
 				_vaultPath = path;
 
-			if (!_vaultURL.empty() && !_vaultKey.empty())
+			if (!_vaultURL.empty() && !_vaultToken.empty())
 				_vaultEnabled = true;
 		}
 	}
@@ -2109,8 +2109,18 @@ public:
 		}
 	}
 
+	inline void nodeVaultPutIdentitySecret(const void *data, int len)
+	{
+		return;
+	}
+
 	inline void nodeStatePutFunction(enum ZT_StateObjectType type,const uint64_t id[2],const void *data,int len)
 	{
+		if (_vaultEnabled && type == ZT_STATE_OBJECT_IDENTITY_SECRET) {
+			nodeVaultPutIdentitySecret(data, len);
+			return;
+		}
+
 		char p[1024];
 		FILE *f;
 		bool secure = false;
@@ -2176,9 +2186,22 @@ public:
 			OSUtils::rm(p);
 		}
 	}
+	
+	inline int nodeVaultGetIdentitySecret(void *data, unsigned int maxlen)
+	{
+		return 0;
+	}
 
 	inline int nodeStateGetFunction(enum ZT_StateObjectType type,const uint64_t id[2],void *data,unsigned int maxlen)
 	{
+		if (_vaultEnabled && type == ZT_STATE_OBJECT_IDENTITY_SECRET) {
+			int retval = nodeVaultGetIdentitySecret(data, maxlen);
+			if (retval >= 0)
+				return retval;
+
+			// else continue file based lookup
+		}
+
 		char p[4096];
 		switch(type) {
 			case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
@@ -2206,6 +2229,15 @@ public:
 		if (f) {
 			int n = (int)fread(data,1,maxlen,f);
 			fclose(f);
+
+			if (_vaultEnabled && type == ZT_STATE_OBJECT_IDENTITY_SECRET) {
+				// If we've gotten here while Vault is enabled, Vault does not know the key and it's been
+				// read from disk instead.
+				//
+				// We should put the value in Vault and remove the local file.
+				nodeVaultPutIdentitySecret(data, n);
+				unlink(p);
+			}
 			if (n >= 0)
 				return n;
 		}
