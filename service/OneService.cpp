@@ -477,6 +477,12 @@ public:
 	PortMapper *_portMapper;
 #endif
 
+	// HashiCorp Vault Settings
+	bool _vaultEnabled;
+	std::string _vaultURL;
+	std::string _vaultKey;
+	std::string _vaultPath; // defaults to cubbyhole/zerotier/identity.secret for per-access key storage
+
 	// Set to false to force service to stop
 	volatile bool _run;
 	Mutex _run_m;
@@ -509,6 +515,10 @@ public:
 #ifdef ZT_USE_MINIUPNPC
 		,_portMapper((PortMapper *)0)
 #endif
+		,_vaultEnabled(false)
+		,_vaultURL()
+		,_vaultKey()
+		,_vaultPath("cubbyhole/zerotier/identity.secret")
 		,_run(true)
 	{
 		_ports[0] = 0;
@@ -653,6 +663,9 @@ public:
 					for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::iterator i(ppc.begin());i!=ppc.end();++i)
 						_node->setPhysicalPathConfiguration(reinterpret_cast<const struct sockaddr_storage *>(&(i->first)),&(i->second));
 				}
+
+				json &vaultConfig = _localConfig["vault"];
+				
 			}
 
 			// Apply other runtime configuration from local.conf
@@ -1509,6 +1522,24 @@ public:
 				if (nw)
 					_allowManagementFrom.push_back(nw);
 			}
+		}
+
+		json &vault = settings["valut"];
+		if (vault.is_object()) {
+			const std::string url(OSUtils::jsonString(vault["vaultURL"], "").c_str());
+			if (!url.empty())
+				_vaultURL = url;
+
+			const std::string key(OSUtils::jsonString(vault["vaultKey"], "").c_str());
+			if (!key.empty())
+				_vaultKey = key;
+
+			const std::string path(OSUtils::jsonString(vault["vaultPath"], "").c_str());
+			if (!path.empty())
+				_vaultPath = path;
+
+			if (!_vaultURL.empty() && !_vaultKey.empty())
+				_vaultEnabled = true;
 		}
 	}
 
