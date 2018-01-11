@@ -1,18 +1,37 @@
 ZeroTier Release Notes
 ======
 
-# 2017-12-XX -- Version 1.2.6
+# 2018-01-XX -- Version 1.2.6
 
- * Network Hypervisor
-   * We've made some improvements to dead path detection and path selection. These also include changes under the hood to prepare for multi-path trunking and faster fail-over support.
+ * Features and Core Improvements
+    * Path selection has been overhauled to improve path stability, simplify code, and prepare for multi-path and trunking in the next major release.
+    * This version introduces remote tracing for remote diagnostics. Network controllers can set a node (usually the controller itself) to receive remote tracing events from all members of the network or from select members. Events are only sent if they pertain to a given network for security reasons. These can be used to help remotely diagnose problems. In the future we'll be refining and enhancing this feature.
+    * Documentation fixes in network controller.
+    * Performance improvements in crypto and memory operations.
+    * Multithreaded performance improvements throughout the code base, including the use of an inline lightweight spinlock for low-contention resources.
+ * Bug fixes
+    * Disappearing routes on Mac (GitHub issue #600)
+    * Route flapping and path instability in some dual-stack V4/V6 networks
+    * Blacklist (in local.conf) doesn't work reliably (GitHub issue #656)
+    * Connection instabilities due to unsigned integer overflows in timing comparisons under high load on some multi-core systems
+    * Binaries don't run on some 32-bit ARM chips (build problem)
+    * ARM NEON crypto code crashes (build problem)
+    * Fixed some lock ordering issues revealed by "valgrind" tool
+    * The "zerotier-idtool" command could not be accessed from "zerotier-one" via command line switch
+    * Leaking UDP sockets on some platforms when NAT-PMP is enabled
+    * Fixed a very very rare thread deadlock that seemed to only manifest on some systems
  * Platform-Specific Changes
-   * MacOS
-     * Installer now loads the kernel extension right away so that High Sierra users will see the prompt to authorize it. This is done in the "Security & Privacy" preference pane and must be done driectly on the console (not via remote desktop).
-   * Windows
-     * The Windows installer should now install the driver without requiring a special prompt in most cases. This should make it easier for our packages to be accepted into and updated in the Chocolatey repository and should make it easier to perform remote installs.
-     * The Windows official packages are now signed with an EV certificate (with hardware key) from DigiCert.
-     * The Windows UI now contains a preview of features to more deeply integrate it with ZeroTier Central. You can enter a ZeroTier Central API key and join networks, etc. from the UI itself. We'll be expanding this in the future and possibly changing it, so this is just a test to see how users respond.
-     * The `zerotier-idtool` command should now work on Windows.
+    * MacOS
+        * Installer now loads the kernel extension right away so that High Sierra users will see the prompt to authorize it. This is done in the "Security & Privacy" preference pane and must be done driectly on the console (not via remote desktop).
+        * About dialog in UI now actually contains something useful.
+    * Windows
+        * The Windows installer should now install the driver without requiring a special prompt in most cases. This should make it easier for our packages to be accepted into and updated in the Chocolatey repository and should make it easier to perform remote installs.
+        * The Windows official packages are now signed with an EV certificate (with hardware key) from DigiCert for better security and fewer warnings in some cases.
+        * The Windows UI now contains a preview of features to more deeply integrate it with ZeroTier Central. You can enter a ZeroTier Central API key and join networks, etc. from the UI itself. We'll be expanding this in the future and possibly changing it, so this is just a test to see how users respond.
+        * The `zerotier-idtool` command should now work on Windows.
+        * Hopefully we've fixed all instances of the "Windows package will not uninstall" problem on Windows 10.
+    * Linux
+        * Devices are now named deterministically from a base32-encoded packed version of the network ID for newly joined networks. This makes device names longer but also makes them globally unique and canonical. Now a given network will always have the same device name on every Linux system. This makes a lot of devops, deployment, and scripting tasks easier since you can hard code device names by network and they will always work in things like iptables rules and routes. (It's been this way on FreeBSD since the beginning.)
 
 # 2017-04-20 -- Version 1.2.4
 
