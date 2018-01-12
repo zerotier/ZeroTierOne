@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="10.9" version="14.3" Modules="enterprise" RootPath="." Language="en" Id="{DC564647-6BF0-4550-87F4-89C938D0159C}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="10.9" version="14.5.2" Modules="enterprise" RootPath="." Language="en" Id="{DC564647-6BF0-4550-87F4-89C938D0159C}">
   <COMPONENT cid="caphyon.advinst.msicomp.ProjectOptionsComponent">
     <ROW Name="HiddenItems" Value="UpdaterComponent;SerValComponent;AutorunComponent;MultipleInstancesComponent;MsiJavaComponent;MsiRegsComponent;MsiExtComponent;MsiAssemblyComponent;MsiDriverPackagesComponent;AnalyticsComponent;ActSyncAppComponent;MsiMergeModsComponent;MsiThemeComponent;BackgroundImagesComponent;DictionaryComponent;ScheduledTasksComponent;CPLAppletComponent;GameUxComponent;UserAccountsComponent;MsiClassComponent;WebApplicationsComponent;MsiOdbcDataSrcComponent;SqlConnectionComponent;SharePointSlnComponent;SilverlightSlnComponent;MsiAppSearchComponent;AppXAppDetailsComponent;AppXCapabilitiesComponent;AppXDependenciesComponent;AppXProductDetailsComponent;AppXVisualAssetsComponent;AppXAppDeclarationsComponent;AppXUriRulesComponent"/>
   </COMPONENT>
@@ -18,7 +18,7 @@
     <ROW Property="ARPCONTACT" Value="contact@zerotier.com"/>
     <ROW Property="ARPHELPLINK" Value="https://www.zerotier.com/"/>
     <ROW Property="ARPNOMODIFY" MultiBuildValue="DefaultBuild:1"/>
-    <ROW Property="ARPNOREPAIR" Value="1"/>
+    <ROW Property="ARPNOREPAIR" Value="1" MultiBuildValue="ExeBuild:1"/>
     <ROW Property="ARPPRODUCTICON" Value="ZeroTierIcon.exe" Type="8"/>
     <ROW Property="ARPSYSTEMCOMPONENT" Value="1"/>
     <ROW Property="ARPURLINFOABOUT" Value="https://www.zerotier.com/"/>
@@ -27,7 +27,7 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{ED5B4816-F9B1-473E-AFB8-7A174E5C1C5D} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{B9BAD6A1-261E-4377-92EF-9133EF99234E} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
     <ROW Property="ProductVersion" Value="1.2.5" Type="32"/>
@@ -122,8 +122,8 @@
     <ATTRIBUTE name="Enable" value="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.ChainedPackageComponent">
-    <ROW ChainedPackage="ZeroTierOne_NDIS6_x64.msi" Order="1" Options="108" InstallCondition="(VersionNT64)" RemoveCondition="((REMOVE=&quot;ALL&quot;) AND (NOT UPGRADINGPRODUCTCODE) AND (VersionNT64))"/>
-    <ROW ChainedPackage="ZeroTierOne_NDIS6_x86.msi" Order="2" Options="108" InstallCondition="(NOT VersionNT64)" RemoveCondition="((REMOVE=&quot;ALL&quot;) AND (NOT UPGRADINGPRODUCTCODE) AND (NOT VersionNT64))"/>
+    <ROW ChainedPackage="ZeroTierOne_NDIS6_x64.msi" Order="1" Options="108" InstallCondition="(VersionNT64)" MaintenanceCondition="UILevel = 5" RemoveCondition="((REMOVE=&quot;ALL&quot;) AND (NOT UPGRADINGPRODUCTCODE) AND (VersionNT64))"/>
+    <ROW ChainedPackage="ZeroTierOne_NDIS6_x86.msi" Order="2" Options="108" InstallCondition="(NOT VersionNT64)" MaintenanceCondition="UILevel = 5" RemoveCondition="((REMOVE=&quot;ALL&quot;) AND (NOT UPGRADINGPRODUCTCODE) AND (NOT VersionNT64))"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.ChainedPackageFileComponent">
     <ROW FileId="ZeroTierOne_NDIS6_x64.msi" ChainedPackage="ZeroTierOne_NDIS6_x64.msi" Options="1" TargetPath="ZeroTierOne_NDIS6_x64.msi" Content="..\..\bin\tap-windows-ndis6\x64\ZeroTierOne_NDIS6_x64.msi"/>
@@ -139,6 +139,8 @@
   <COMPONENT cid="caphyon.advinst.msicomp.FirewallExceptionComponent">
     <ROW FirewallException="ZeroTierOneControl" DisplayName="ZeroTier One TCP/9993" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="1" Profiles="7" Port="9993" Protocol="TCP"/>
     <ROW FirewallException="ZeroTierOneUDP9993" DisplayName="ZeroTier One UDP/9993" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="1" Profiles="7" Port="9993" Protocol="UDP"/>
+    <ROW FirewallException="ZeroTierOnex64Binary" DisplayName="ZeroTier One x64 Binary" Enabled="1" Scope="*" Condition="((?zerotierone_x64.exe=2) AND ($zerotierone_x64.exe=3))" Profiles="0" AppPath="[#zerotierone_x64.exe]" Port="*" Protocol="ANY"/>
+    <ROW FirewallException="ZeroTierOnex86Binary" DisplayName="ZeroTier One x86 Binary" Enabled="1" Scope="*" Condition="((?zerotierone_x86.exe=2) AND ($zerotierone_x86.exe=3))" Profiles="0" AppPath="[#zerotierone_x86.exe]" Port="*" Protocol="ANY"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FragmentComponent">
     <ROW Fragment="CommonUI.aip" Path="&lt;AI_FRAGS&gt;CommonUI.aip"/>
@@ -435,9 +437,12 @@
   <COMPONENT cid="caphyon.advinst.msicomp.TxtUpdateComponent">
     <ROW Name="Append/Create" TxtUpdateSet="zerotiercli.bat" FindPattern="@ECHO OFF&#13;&#10;if [\[][#zerotierone_x64.exe][\]] == [\[][\]] (&#13;&#10;&#9;[#zerotierone_x86.exe] -q %*&#13;&#10;) else (&#13;&#10;&#9;[#zerotierone_x64.exe] -q %*&#13;&#10;)&#13;&#10;" Options="160" Order="0" FileEncoding="0"/>
     <ROW Name="Replace" TxtUpdateSet="zerotiercli.bat" FindPattern="YourFindText" ReplacePattern="YourReplaceText" Options="2" Order="1" FileEncoding="-1"/>
+    <ROW Name="Append/Create" TxtUpdateSet="zerotiercli1.bat" FindPattern="@ECHO OFF&#13;&#10;if [\[][#zerotierone_x64.exe][\]] == [\[][\]] (&#13;&#10;&#9;[#zerotierone_x86.exe] -i %*&#13;&#10;) else (&#13;&#10;&#9;[#zerotierone_x64.exe] -i %*&#13;&#10;)&#13;&#10;" Options="160" Order="0" FileEncoding="0"/>
+    <ROW Name="Replace" TxtUpdateSet="zerotiercli1.bat" FindPattern="YourFindText" ReplacePattern="YourReplaceText" Options="2" Order="1" FileEncoding="-1"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.TxtUpdateSetComponent">
-    <ROW Key="zerotiercli.bat" Component="zerotierone_x64.exe" FileName="zerotier-cli.bat" Directory="APPDIR" Options="17"/>
+    <ROW Key="zerotiercli.bat" Component="regid.201001.com.zerotier" FileName="zerotier-cli.bat" Directory="APPDIR" Options="17"/>
+    <ROW Key="zerotiercli1.bat" Component="regid.201001.com.zerotier" FileName="zerotier-idtool.bat" Directory="APPDIR" Options="17"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlAttributeComponent">
     <ROW XmlAttribute="xmlnsds" XmlElement="swidsoftware_identification_tag" Name="xmlns:ds" Flags="14" Order="0" Value="http://www.w3.org/2000/09/xmldsig#"/>
