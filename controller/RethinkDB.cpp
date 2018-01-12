@@ -280,7 +280,7 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,co
 							tmpobj["ts"] = i->second.first;
 							tmpobj["phy"] = i->second.second.toIpString(tmp2);
 							batch.emplace_back(tmpobj);
-							if (batch.size() >= 1024) {
+							if (batch.size() >= 256) {
 								R::db(this->_db).table("MemberStatus",R::optargs("read_mode","outdated")).insert(batch,R::optargs("conflict","update")).run(*rdb);
 								batch.clear();
 							}
