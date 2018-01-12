@@ -1,8 +1,8 @@
-/* $Id: miniupnpcmodule.c,v 1.29 2015/10/26 17:01:30 nanard Exp $*/
+/* $Id: miniupnpcmodule.c,v 1.31 2017/11/02 15:37:28 nanard Exp $*/
 /* Project : miniupnp
  * Author : Thomas BERNARD
  * website : http://miniupnp.tuxfamily.org/
- * copyright (c) 2007-2014 Thomas Bernard
+ * copyright (c) 2007-2016 Thomas Bernard
  * This software is subjet to the conditions detailed in the
  * provided LICENCE file. */
 #include <Python.h>
@@ -11,6 +11,10 @@
 #include "miniupnpc.h"
 #include "upnpcommands.h"
 #include "upnperrors.h"
+
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
 
 /* for compatibility with Python < 2.4 */
 #ifndef Py_RETURN_NONE
@@ -303,7 +307,7 @@ UPnP_addportmapping(UPnPObject *self, PyObject *args)
 	const char * remoteHost;
 	const char * leaseDuration = "0";
 	int r;
-	if (!PyArg_ParseTuple(args, "HssHss", &ePort, &proto,
+	if (!PyArg_ParseTuple(args, "HssHzz", &ePort, &proto,
 	                                     &host, &iPort, &desc, &remoteHost))
         return NULL;
 Py_BEGIN_ALLOW_THREADS
@@ -345,7 +349,7 @@ UPnP_addanyportmapping(UPnPObject *self, PyObject *args)
 	const char * remoteHost;
 	const char * leaseDuration = "0";
 	int r;
-	if (!PyArg_ParseTuple(args, "HssHss", &ePort, &proto, &host, &iPort, &desc, &remoteHost))
+	if (!PyArg_ParseTuple(args, "HssHzz", &ePort, &proto, &host, &iPort, &desc, &remoteHost))
         return NULL;
 Py_BEGIN_ALLOW_THREADS
 	sprintf(extPort, "%hu", ePort);
@@ -669,6 +673,10 @@ initminiupnpc(void)
     PyObject* m;
 
 #ifdef _WIN32
+    /* initialize Winsock. */
+    WSADATA wsaData;
+    int nResult = WSAStartup(MAKEWORD(2,2), &wsaData);
+
     UPnPType.tp_new = PyType_GenericNew;
 #endif
     if (PyType_Ready(&UPnPType) < 0)

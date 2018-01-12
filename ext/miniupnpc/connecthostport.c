@@ -1,7 +1,7 @@
-/* $Id: connecthostport.c,v 1.16 2016/12/16 08:57:53 nanard Exp $ */
+/* $Id: connecthostport.c,v 1.17 2017/04/21 09:58:30 nanard Exp $ */
 /* Project : miniupnp
  * Author : Thomas Bernard
- * Copyright (c) 2010-2016 Thomas Bernard
+ * Copyright (c) 2010-2017 Thomas Bernard
  * This software is subject to the conditions detailed in the
  * LICENCE file provided in this distribution. */
 
@@ -36,15 +36,13 @@
 /* defining MINIUPNPC_IGNORE_EINTR enable the ignore of interruptions
  * during the connect() call */
 #define MINIUPNPC_IGNORE_EINTR
-#ifndef USE_GETHOSTBYNAME
 #include <sys/socket.h>
 #include <sys/select.h>
-#endif /* #ifndef USE_GETHOSTBYNAME */
 #endif /* #else _WIN32 */
 
 /* definition of PRINT_SOCKET_ERROR */
 #ifdef _WIN32
-#define PRINT_SOCKET_ERROR(x)    printf("Socket error: %s, %d\n", x, WSAGetLastError());
+#define PRINT_SOCKET_ERROR(x)    fprintf(stderr, "Socket error: %s, %d\n", x, WSAGetLastError());
 #else
 #define PRINT_SOCKET_ERROR(x) perror(x)
 #endif

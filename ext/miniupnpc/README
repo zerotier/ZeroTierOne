@@ -1,9 +1,8 @@
 Project: miniupnp
-Project web page: http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
+Project web page: http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
 github: https://github.com/miniupnp/miniupnp
-freecode: http://freecode.com/projects/miniupnp
 Author: Thomas Bernard
-Copyright (c) 2005-2016 Thomas Bernard
+Copyright (c) 2005-2017 Thomas Bernard
 This software is subject to the conditions detailed in the
 LICENSE file provided within this distribution.
 
@@ -58,7 +57,7 @@ If you are using libminiupnpc in your application, please
 send me an email !
 
 For any question, you can use the web forum :
-http://miniupnp.tuxfamily.org/forum/
+https://miniupnp.tuxfamily.org/forum/
 
 Bugs should be reported on github :
 https://github.com/miniupnp/miniupnp/issues
