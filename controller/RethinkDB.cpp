@@ -212,6 +212,7 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,co
 					delete config;
 					if (!table)
 						continue;
+					const std::string jdump(OSUtils::jsonDump(record,-1));
 
 					while (_run == 1) {
 						try {
@@ -223,7 +224,7 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,co
 									R::db(this->_db).table(table).get(deleteId).delete_().run(*rdb);
 								} else {
 									//printf("UPSERT: %s" ZT_EOL_S,record.dump().c_str());
-									R::db(this->_db).table(table).insert(R::Datum::from_json(OSUtils::jsonDump(record,-1)),R::optargs("conflict","update","return_changes",false)).run(*rdb);
+									R::db(this->_db).table(table).insert(R::Datum::from_json(jdump),R::optargs("conflict","update","return_changes",false)).run(*rdb);
 								}
 								break;
 							} else {
@@ -231,13 +232,13 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,co
 								rdb.reset();
 							}
 						} catch (std::exception &e) {
-							fprintf(stderr,"[%s] ERROR: %.10llx controller RethinkDB (insert/update): %s" ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt(),e.what());
+							fprintf(stderr,"[%s] ERROR: %.10llx controller RethinkDB (insert/update): %s [%s]" ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt(),e.what(),jdump.c_str());
 							rdb.reset();
 						} catch (R::Error &e) {
-							fprintf(stderr,"[%s] ERROR: %.10llx controller RethinkDB (insert/update): %s" ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt(),e.message.c_str());
+							fprintf(stderr,"[%s] ERROR: %.10llx controller RethinkDB (insert/update): %s [%s]" ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt(),e.message.c_str(),jdump.c_str());
 							rdb.reset();
 						} catch ( ... ) {
-							fprintf(stderr,"[%s] ERROR: %.10llx controller RethinkDB (insert/update): unknown exception" ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt());
+							fprintf(stderr,"[%s] ERROR: %.10llx controller RethinkDB (insert/update): unknown exception [%s]" ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt(),jdump.c_str());
 							rdb.reset();
 						}
 						std::this_thread::sleep_for(std::chrono::milliseconds(250));
@@ -280,7 +281,7 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,co
 							tmpobj["ts"] = i->second.first;
 							tmpobj["phy"] = i->second.second.toIpString(tmp2);
 							batch.emplace_back(tmpobj);
-							if (batch.size() >= 256) {
+							if (batch.size() >= 1024) {
 								R::db(this->_db).table("MemberStatus",R::optargs("read_mode","outdated")).insert(batch,R::optargs("conflict","update")).run(*rdb);
 								batch.clear();
 							}

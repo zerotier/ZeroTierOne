@@ -53,6 +53,9 @@ using json = nlohmann::json;
 // Min duration between requests for an address/nwid combo to prevent floods
 #define ZT_NETCONF_MIN_REQUEST_PERIOD 1000
 
+// Global maximum size of arrays in JSON objects
+#define ZT_CONTROLLER_MAX_ARRAY_SIZE 16384
+
 namespace ZeroTier {
 
 namespace {
@@ -686,6 +689,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 									if ((ip.ss_family == AF_INET)||(ip.ss_family == AF_INET6)) {
 										char tmpip[64];
 										mipa.push_back(ip.toIpString(tmpip));
+										if (mipa.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
+											break;
 									}
 								}
 								member["ipAssignments"] = mipa;
@@ -707,6 +712,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 									ta.push_back(t->first);
 									ta.push_back(t->second);
 									mtagsa.push_back(ta);
+									if (mtagsa.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
+										break;
 								}
 								member["tags"] = mtagsa;
 							}
@@ -718,6 +725,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 								json mcaps = json::array();
 								for(unsigned long i=0;i<capabilities.size();++i) {
 									mcaps.push_back(OSUtils::jsonInt(capabilities[i],0ULL));
+									if (mcaps.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
+										break;
 								}
 								std::sort(mcaps.begin(),mcaps.end());
 								mcaps.erase(std::unique(mcaps.begin(),mcaps.end()),mcaps.end());
@@ -850,6 +859,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 												tmp["via"] = v.toIpString(tmp2);
 											else tmp["via"] = json();
 											nrts.push_back(tmp);
+											if (nrts.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
+												break;
 										}
 									}
 								}
@@ -873,6 +884,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 										tmp["ipRangeStart"] = f.toIpString(tmp2);
 										tmp["ipRangeEnd"] = t.toIpString(tmp2);
 										nipp.push_back(tmp);
+										if (nipp.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
+											break;
 									}
 								}
 							}
@@ -888,8 +901,11 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 								json &rule = rules[i];
 								if (rule.is_object()) {
 									ZT_VirtualNetworkRule ztr;
-									if (_parseRule(rule,ztr))
+									if (_parseRule(rule,ztr)) {
 										nrules.push_back(_renderRule(ztr));
+										if (nrules.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
+											break;
+									}
 								}
 							}
 							network["rules"] = nrules;
@@ -929,8 +945,11 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 											json &rule = rules[i];
 											if (rule.is_object()) {
 												ZT_VirtualNetworkRule ztr;
-												if (_parseRule(rule,ztr))
+												if (_parseRule(rule,ztr)) {
 													nrules.push_back(_renderRule(ztr));
+													if (nrules.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
+														break;
+												}
 											}
 										}
 									}
@@ -941,8 +960,11 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 							}
 
 							json ncapsa = json::array();
-							for(std::map< uint64_t,json >::iterator c(ncaps.begin());c!=ncaps.end();++c)
+							for(std::map< uint64_t,json >::iterator c(ncaps.begin());c!=ncaps.end();++c) {
 								ncapsa.push_back(c->second);
+								if (ncapsa.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
+									break;
+							}
 							network["capabilities"] = ncapsa;
 						}
 					}
@@ -966,8 +988,11 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 							}
 
 							json ntagsa = json::array();
-							for(std::map< uint64_t,json >::iterator t(ntags.begin());t!=ntags.end();++t)
+							for(std::map< uint64_t,json >::iterator t(ntags.begin());t!=ntags.end();++t) {
 								ntagsa.push_back(t->second);
+								if (ntagsa.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
+									break;
+							}
 							network["tags"] = ntagsa;
 						}
 					}
@@ -1304,7 +1329,7 @@ void EmbeddedNetworkController::_request(
 		}
 	}
 
-	std::auto_ptr<NetworkConfig> nc(new NetworkConfig());
+	std::unique_ptr<NetworkConfig> nc(new NetworkConfig());
 
 	nc->networkId = nwid;
 	nc->type = OSUtils::jsonBool(network["private"],true) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
@@ -1483,29 +1508,29 @@ void EmbeddedNetworkController::_request(
 	json ipAssignments = member["ipAssignments"]; // we want to make a copy
 	if (ipAssignments.is_array()) {
 		for(unsigned long i=0;i<ipAssignments.size();++i) {
-			if (!ipAssignments[i].is_string())
-				continue;
-			std::string ips = ipAssignments[i];
-			InetAddress ip(ips.c_str());
+			if (ipAssignments[i].is_string()) {
+				const std::string ips = ipAssignments[i];
+				InetAddress ip(ips.c_str());
 
-			// IP assignments are only pushed if there is a corresponding local route. We also now get the netmask bits from
-			// this route, ignoring the netmask bits field of the assigned IP itself. Using that was worthless and a source
-			// of user error / poor UX.
-			int routedNetmaskBits = 0;
-			for(unsigned int rk=0;rk<nc->routeCount;++rk) {
-				if ( (!nc->routes[rk].via.ss_family) && (reinterpret_cast<const InetAddress *>(&(nc->routes[rk].target))->containsAddress(ip)) )
-					routedNetmaskBits = reinterpret_cast<const InetAddress *>(&(nc->routes[rk].target))->netmaskBits();
-			}
-
-			if (routedNetmaskBits > 0) {
-				if (nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
-					ip.setPort(routedNetmaskBits);
-					nc->staticIps[nc->staticIpCount++] = ip;
+				// IP assignments are only pushed if there is a corresponding local route. We also now get the netmask bits from
+				// this route, ignoring the netmask bits field of the assigned IP itself. Using that was worthless and a source
+				// of user error / poor UX.
+				int routedNetmaskBits = -1;
+				for(unsigned int rk=0;rk<nc->routeCount;++rk) {
+					if ( (!nc->routes[rk].via.ss_family) && (reinterpret_cast<const InetAddress *>(&(nc->routes[rk].target))->containsAddress(ip)) )
+						routedNetmaskBits = reinterpret_cast<const InetAddress *>(&(nc->routes[rk].target))->netmaskBits();
 				}
-				if (ip.ss_family == AF_INET)
-					haveManagedIpv4AutoAssignment = true;
-				else if (ip.ss_family == AF_INET6)
-					haveManagedIpv6AutoAssignment = true;
+
+				if (routedNetmaskBits >= 0) {
+					if (nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
+						ip.setPort(routedNetmaskBits);
+						nc->staticIps[nc->staticIpCount++] = ip;
+					}
+					if (ip.ss_family == AF_INET)
+						haveManagedIpv4AutoAssignment = true;
+					else if (ip.ss_family == AF_INET6)
+						haveManagedIpv6AutoAssignment = true;
+				}
 			}
 		}
 	} else {
@@ -1559,13 +1584,16 @@ void EmbeddedNetworkController::_request(
 						// If it's routed, then try to claim and assign it and if successful end loop
 						if ( (routedNetmaskBits > 0) && (!std::binary_search(ns.allocatedIps.begin(),ns.allocatedIps.end(),ip6)) ) {
 							char tmpip[64];
-							ipAssignments.push_back(ip6.toIpString(tmpip));
-							member["ipAssignments"] = ipAssignments;
-							ip6.setPort((unsigned int)routedNetmaskBits);
-							if (nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)
-								nc->staticIps[nc->staticIpCount++] = ip6;
-							haveManagedIpv6AutoAssignment = true;
-							break;
+							const std::string ipStr(ip6.toIpString(tmpip));
+							if (std::find(ipAssignments.begin(),ipAssignments.end(),ipStr) == ipAssignments.end()) {
+								ipAssignments.push_back(ipStr);
+								member["ipAssignments"] = ipAssignments;
+								ip6.setPort((unsigned int)routedNetmaskBits);
+								if (nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)
+									nc->staticIps[nc->staticIpCount++] = ip6;
+								haveManagedIpv6AutoAssignment = true;
+								break;
+							}
 						}
 					}
 				}
@@ -1612,16 +1640,19 @@ void EmbeddedNetworkController::_request(
 						const InetAddress ip4(Utils::hton(ip),0);
 						if ( (routedNetmaskBits > 0) && (!std::binary_search(ns.allocatedIps.begin(),ns.allocatedIps.end(),ip4)) ) {
 							char tmpip[64];
-							ipAssignments.push_back(ip4.toIpString(tmpip));
-							member["ipAssignments"] = ipAssignments;
-							if (nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
-								struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc->staticIps[nc->staticIpCount++]));
-								v4ip->sin_family = AF_INET;
-								v4ip->sin_port = Utils::hton((uint16_t)routedNetmaskBits);
-								v4ip->sin_addr.s_addr = Utils::hton(ip);
+							const std::string ipStr(ip4.toIpString(tmpip));
+							if (std::find(ipAssignments.begin(),ipAssignments.end(),ipStr) == ipAssignments.end()) {
+								ipAssignments.push_back(ipStr);
+								member["ipAssignments"] = ipAssignments;
+								if (nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES) {
+									struct sockaddr_in *const v4ip = reinterpret_cast<struct sockaddr_in *>(&(nc->staticIps[nc->staticIpCount++]));
+									v4ip->sin_family = AF_INET;
+									v4ip->sin_port = Utils::hton((uint16_t)routedNetmaskBits);
+									v4ip->sin_addr.s_addr = Utils::hton(ip);
+								}
+								haveManagedIpv4AutoAssignment = true;
+								break;
 							}
-							haveManagedIpv4AutoAssignment = true;
-							break;
 						}
 					}
 				}

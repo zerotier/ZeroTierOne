@@ -373,8 +373,10 @@ void DB::_fillSummaryInfo(const std::shared_ptr<_Network> &nw,NetworkSummaryInfo
 {
 	for(auto ab=nw->activeBridgeMembers.begin();ab!=nw->activeBridgeMembers.end();++ab)
 		info.activeBridges.push_back(Address(*ab));
+	std::sort(info.activeBridges.begin(),info.activeBridges.end());
 	for(auto ip=nw->allocatedIps.begin();ip!=nw->allocatedIps.end();++ip)
 		info.allocatedIps.push_back(*ip);
+	std::sort(info.allocatedIps.begin(),info.allocatedIps.end());
 	info.authorizedMemberCount = (unsigned long)nw->authorizedMembers.size();
 	info.totalMemberCount = (unsigned long)nw->members.size();
 	info.mostRecentDeauthTime = nw->mostRecentDeauthTime;

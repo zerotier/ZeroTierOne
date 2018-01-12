@@ -23,7 +23,7 @@
 
 #include "DB.hpp"
 
-#define ZT_CONTROLLER_RETHINKDB_COMMIT_THREADS 8
+#define ZT_CONTROLLER_RETHINKDB_COMMIT_THREADS 4
 
 namespace ZeroTier
 {
