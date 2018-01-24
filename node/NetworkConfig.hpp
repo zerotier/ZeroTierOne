@@ -305,13 +305,13 @@ public:
 	}
 
 	/**
-	 * @return ZeroTier addresses of anchors that are also multicast replicators
+	 * @return ZeroTier addresses of multicast replicators
 	 */
 	inline std::vector<Address> multicastReplicators() const
 	{
 		std::vector<Address> r;
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if (((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR) != 0)&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0))
+			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0)
 				r.push_back(Address(specialists[i]));
 		}
 		return r;
