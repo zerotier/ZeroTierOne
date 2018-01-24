@@ -93,14 +93,19 @@
 #define ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION 0x0000000000000010ULL
 
 /**
- * Device is an active bridge
+ * Device can bridge to other Ethernet networks and gets unknown recipient multicasts
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE 0x0000020000000000ULL
 
 /**
- * Anchors are stable devices on this network that can cache multicast info, etc.
+ * Anchors are stable devices on this network that can act like roots when none are up
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR 0x0000040000000000ULL
+
+/**
+ * Designated multicast replicators replicate multicast in place of sender-side replication
+ */
+#define ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR 0x0000080000000000ULL
 
 namespace ZeroTier {
 
@@ -312,16 +317,16 @@ public:
 	}
 
 	/**
-	 * @param a Address to check
-	 * @return True if address is an anchor
+	 * @return ZeroTier addresses of "anchor" devices on this network
 	 */
-	inline bool isAnchor(const Address &a) const
+	inline std::vector<Address> multicastReplicators() const
 	{
+		std::vector<Address> r;
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((a == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR) != 0))
-				return true;
+			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0)
+				r.push_back(Address(specialists[i]));
 		}
-		return false;
+		return r;
 	}
 
 	/**
