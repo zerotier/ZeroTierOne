@@ -227,21 +227,9 @@ namespace ZeroTier {
 class NetworkConfig
 {
 public:
-	NetworkConfig()
-	{
-		memset(this,0,sizeof(NetworkConfig));
-	}
-
-	NetworkConfig(const NetworkConfig &nc)
-	{
-		ZT_FAST_MEMCPY(this,&nc,sizeof(NetworkConfig));
-	}
-
-	inline NetworkConfig &operator=(const NetworkConfig &nc)
-	{
-		ZT_FAST_MEMCPY(this,&nc,sizeof(NetworkConfig));
-		return *this;
-	}
+	NetworkConfig() { memset(this,0,sizeof(NetworkConfig)); }
+	NetworkConfig(const NetworkConfig &nc) { ZT_FAST_MEMCPY(this,&nc,sizeof(NetworkConfig)); }
+	inline NetworkConfig &operator=(const NetworkConfig &nc) { ZT_FAST_MEMCPY(this,&nc,sizeof(NetworkConfig)); return *this; }
 
 	/**
 	 * Write this network config to a dictionary for transport
@@ -317,13 +305,13 @@ public:
 	}
 
 	/**
-	 * @return ZeroTier addresses of "anchor" devices on this network
+	 * @return ZeroTier addresses of anchors that are also multicast replicators
 	 */
 	inline std::vector<Address> multicastReplicators() const
 	{
 		std::vector<Address> r;
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0)
+			if (((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR) != 0)&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0))
 				r.push_back(Address(specialists[i]));
 		}
 		return r;
