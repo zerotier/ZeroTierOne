@@ -107,18 +107,36 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 		}
 	}
 
+	char *m = (char *)0;
 	try {
-		RR->t = new Trace(RR);
-		RR->sw = new Switch(RR);
-		RR->mc = new Multicaster(RR);
-		RR->topology = new Topology(RR,tptr);
-		RR->sa = new SelfAwareness(RR);
+		const unsigned long ts = sizeof(Trace) + (((sizeof(Trace) & 0xf) != 0) ? (16 - (sizeof(Trace) & 0xf)) : 0);
+		const unsigned long sws = sizeof(Switch) + (((sizeof(Switch) & 0xf) != 0) ? (16 - (sizeof(Switch) & 0xf)) : 0);
+		const unsigned long mcs = sizeof(Multicaster) + (((sizeof(Multicaster) & 0xf) != 0) ? (16 - (sizeof(Multicaster) & 0xf)) : 0);
+		const unsigned long topologys = sizeof(Topology) + (((sizeof(Topology) & 0xf) != 0) ? (16 - (sizeof(Topology) & 0xf)) : 0);
+		const unsigned long sas = sizeof(SelfAwareness) + (((sizeof(SelfAwareness) & 0xf) != 0) ? (16 - (sizeof(SelfAwareness) & 0xf)) : 0);
+
+		m = reinterpret_cast<char *>(::malloc(16 + ts + sws + mcs + topologys + sas));
+		if (!m)
+			throw std::bad_alloc();
+		RR->rtmem = m;
+		while (((uintptr_t)m & 0xf) != 0) ++m;
+
+		RR->t = new (m) Trace(RR);
+		m += ts;
+		RR->sw = new (m) Switch(RR);
+		m += sws;
+		RR->mc = new (m) Multicaster(RR);
+		m += mcs;
+		RR->topology = new (m) Topology(RR,tptr);
+		m += topologys;
+		RR->sa = new (m) SelfAwareness(RR);
 	} catch ( ... ) {
-		delete RR->sa;
-		delete RR->topology;
-		delete RR->mc;
-		delete RR->sw;
-		delete RR->t;
+		if (RR->sa) RR->sa->~SelfAwareness();
+		if (RR->topology) RR->topology->~Topology();
+		if (RR->mc) RR->mc->~Multicaster();
+		if (RR->sw) RR->sw->~Switch();
+		if (RR->t) RR->t->~Trace();
+		::free(m);
 		throw;
 	}
 
@@ -131,11 +149,12 @@ Node::~Node()
 		Mutex::Lock _l(_networks_m);
 		_networks.clear(); // destroy all networks before shutdown
 	}
-	delete RR->sa;
-	delete RR->topology;
-	delete RR->mc;
-	delete RR->sw;
-	delete RR->t;
+	if (RR->sa) RR->sa->~SelfAwareness();
+	if (RR->topology) RR->topology->~Topology();
+	if (RR->mc) RR->mc->~Multicaster();
+	if (RR->sw) RR->sw->~Switch();
+	if (RR->t) RR->t->~Trace();
+	::free(RR->rtmem);
 }
 
 ZT_ResultCode Node::processWirePacket(
@@ -263,7 +282,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 			}
 
 			// Get peers we should stay connected to according to network configs
-			// Also get networks and whether they need config
+			// Also get networks and whether they need config so we only have to do one pass over networks
 			std::vector< std::pair< SharedPtr<Network>,bool > > networkConfigNeeded;
 			{
 				Mutex::Lock l(_networks_m);
@@ -308,7 +327,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 		timeUntilNextPingCheck -= (unsigned long)timeSinceLastPingCheck;
 	}
 
-	if ((now - _lastMemoizedTraceSettings) >= 10000) {
+	if ((now - _lastMemoizedTraceSettings) >= (ZT_HOUSEKEEPING_PERIOD / 4)) {
 		_lastMemoizedTraceSettings = now;
 		RR->t->updateMemoizedSettings();
 	}

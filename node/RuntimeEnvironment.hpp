@@ -53,6 +53,7 @@ public:
 	RuntimeEnvironment(Node *n) :
 		node(n)
 		,localNetworkController((NetworkController *)0)
+		,rtmem((void *)0)
 		,sw((Switch *)0)
 		,mc((Multicaster *)0)
 		,topology((Topology *)0)
@@ -72,6 +73,9 @@ public:
 
 	// This is set externally to an instance of this base class
 	NetworkController *localNetworkController;
+
+	// Memory actually occupied by Trace, Switch, etc.
+	void *rtmem;
 
 	/* Order matters a bit here. These are constructed in this order
 	 * and then deleted in the opposite order on Node exit. The order ensures
