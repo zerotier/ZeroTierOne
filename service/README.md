@@ -32,13 +32,12 @@ Settings available in `local.conf` (this is not valid JSON, and JSON does not al
 		"softwareUpdateDist": true|false, /* If true, distribute software updates (only really useful to ZeroTier, Inc. itself, default is false) */
 		"interfacePrefixBlacklist": [ "XXX",... ], /* Array of interface name prefixes (e.g. eth for eth#) to blacklist for ZT traffic */
 		"allowManagementFrom": "NETWORK/bits"|null, /* If non-NULL, allow JSON/HTTP management from this IP network. Default is 127.0.0.1 only. */
-		"bindToWildcard": true|false /* If true, bind to wildcard e.g. 0.0.0.0 instead of per interface */
+		"bind": [ "ip",... ] /* If present and non-null, bind to these IPs instead of to each interface (wildcard IP allowed) */
 	}
 }
 ```
 
  * **trustedPathId**: A trusted path is a physical network over which encryption and authentication are not required. This provides a performance boost but sacrifices all ZeroTier's security features when communicating over this path. Only use this if you know what you are doing and really need the performance! To set up a trusted path, all devices using it *MUST* have the *same trusted path ID* for the same network. Trusted path IDs are arbitrary positive non-zero integers. For example a group of devices on a LAN with IPs in 10.0.0.0/24 could use it as a fast trusted path if they all had the same trusted path ID of "25" defined for that network.
- * **relayPolicy**: Under what circumstances should this device relay traffic for other devices? The default is TRUSTED, meaning that we'll only relay for devices we know to be members of a network we have joined. NEVER is the default on mobile devices (iOS/Android) and tells us to never relay traffic. ALWAYS is usually only set for upstreams and roots, allowing them to act as promiscuous relays for anyone who desires it.
 
 An example `local.conf`:
 

@@ -126,20 +126,20 @@ public:
 	 * @param phy Physical interface
 	 * @param ports Ports to bind on all interfaces
 	 * @param portCount Number of ports
-	 * @param bindtoWildcard If true, bind wildcard instead of per-interface IPs
+	 * @param explicitBind If present, override interface IP detection and bind to these (if possible)
 	 * @param ifChecker Interface checker function to see if an interface should be used
 	 * @tparam PHY_HANDLER_TYPE Type for Phy<> template
 	 * @tparam INTERFACE_CHECKER Type for class containing shouldBindInterface() method
 	 */
 	template<typename PHY_HANDLER_TYPE,typename INTERFACE_CHECKER>
-	void refresh(Phy<PHY_HANDLER_TYPE> &phy,unsigned int *ports,unsigned int portCount,bool bindToWildcard,INTERFACE_CHECKER &ifChecker)
+	void refresh(Phy<PHY_HANDLER_TYPE> &phy,unsigned int *ports,unsigned int portCount,const std::vector<InetAddress> explicitBind,INTERFACE_CHECKER &ifChecker)
 	{
 		std::map<InetAddress,std::string> localIfAddrs;
 		PhySocket *udps,*tcps;
 		Mutex::Lock _l(_lock);
 		bool interfacesEnumerated = true;
 
-		if (!bindToWildcard) {
+		if (explicitBind.empty()) {
 #ifdef __WINDOWS__
 
 			char aabuf[32768];
@@ -328,6 +328,9 @@ public:
 			}
 
 #endif
+		} else {
+			for(std::vector<InetAddress>::const_iterator i(explicitBind.begin());i!=explicitBind.end();++i)
+				localIfAddrs.insert(std::pair<InetAddress,std::string>(*i,std::string()));
 		}
 
 		// Default to binding to wildcard if we can't enumerate addresses
