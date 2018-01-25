@@ -52,16 +52,14 @@ class RuntimeEnvironment
 public:
 	RuntimeEnvironment(Node *n) :
 		node(n)
-		,identity()
 		,localNetworkController((NetworkController *)0)
 		,sw((Switch *)0)
 		,mc((Multicaster *)0)
 		,topology((Topology *)0)
 		,sa((SelfAwareness *)0)
 	{
-		Utils::getSecureRandom(&instanceId,sizeof(instanceId));
-		memset(publicIdentityStr,0,sizeof(publicIdentityStr));
-		memset(secretIdentityStr,0,sizeof(secretIdentityStr));
+		publicIdentityStr[0] = (char)0;
+		secretIdentityStr[0] = (char)0;
 	}
 
 	~RuntimeEnvironment()
@@ -69,35 +67,28 @@ public:
 		Utils::burn(secretIdentityStr,sizeof(secretIdentityStr));
 	}
 
-	/**
-	 * A random integer identifying this running instance in a cluster
-	 */
-	uint64_t instanceId;
-
 	// Node instance that owns this RuntimeEnvironment
 	Node *const node;
-
-	// This node's identity
-	Identity identity;
-	char publicIdentityStr[ZT_IDENTITY_STRING_BUFFER_LENGTH];
-	char secretIdentityStr[ZT_IDENTITY_STRING_BUFFER_LENGTH];
 
 	// This is set externally to an instance of this base class
 	NetworkController *localNetworkController;
 
-	/*
-	 * Order matters a bit here. These are constructed in this order
+	/* Order matters a bit here. These are constructed in this order
 	 * and then deleted in the opposite order on Node exit. The order ensures
 	 * that things that are needed are there before they're needed.
 	 *
-	 * These are constant and never null after startup unless indicated.
-	 */
+	 * These are constant and never null after startup unless indicated. */
 
 	Trace *t;
 	Switch *sw;
 	Multicaster *mc;
 	Topology *topology;
 	SelfAwareness *sa;
+
+	// This node's identity and string representations thereof
+	Identity identity;
+	char publicIdentityStr[ZT_IDENTITY_STRING_BUFFER_LENGTH];
+	char secretIdentityStr[ZT_IDENTITY_STRING_BUFFER_LENGTH];
 };
 
 } // namespace ZeroTier

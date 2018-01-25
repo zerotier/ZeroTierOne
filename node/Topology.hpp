@@ -336,7 +336,7 @@ public:
 	/**
 	 * @return True if I am a root server in a planet or moon
 	 */
-	inline bool amRoot() const { return _amRoot; }
+	inline bool amUpstream() const { return _amUpstream; }
 
 	/**
 	 * Get info about a path
@@ -460,7 +460,7 @@ private:
 	std::vector<World> _moons;
 	std::vector< std::pair<uint64_t,Address> > _moonSeeds;
 	std::vector<Address> _upstreamAddresses;
-	bool _amRoot;
+	bool _amUpstream;
 	Mutex _upstreams_m; // locks worlds, upstream info, moon info, etc.
 };
 

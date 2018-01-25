@@ -91,7 +91,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 				const Address destination(fragment.destination());
 
 				if (destination != RR->identity.address()) {
-					if ( (!RR->topology->amRoot()) && (!path->trustEstablished(now)) )
+					if ( (!RR->topology->amUpstream()) && (!path->trustEstablished(now)) )
 						return;
 
 					if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
@@ -162,7 +162,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 					return;
 
 				if (destination != RR->identity.address()) {
-					if ( (!RR->topology->amRoot()) && (!path->trustEstablished(now)) && (source != RR->identity.address()) )
+					if ( (!RR->topology->amUpstream()) && (!path->trustEstablished(now)) && (source != RR->identity.address()) )
 						return;
 
 					Packet packet(data,len);

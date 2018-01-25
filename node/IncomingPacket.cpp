@@ -514,7 +514,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 
 bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
-	if ((!RR->topology->amRoot())&&(!peer->rateGateInboundWhoisRequest(RR->node->now())))
+	if ((!RR->topology->amUpstream())&&(!peer->rateGateInboundWhoisRequest(RR->node->now())))
 		return true;
 
 	Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);

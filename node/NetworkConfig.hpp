@@ -47,6 +47,7 @@
 #include "Capability.hpp"
 #include "Tag.hpp"
 #include "Dictionary.hpp"
+#include "Hashtable.hpp"
 #include "Identity.hpp"
 #include "Utils.hpp"
 #include "Trace.hpp"
@@ -318,6 +319,18 @@ public:
 	}
 
 	/**
+	 * Add addresses that we should attempt to stay connected to to a set
+	 */
+	inline void getAlwaysContactAddresses(Hashtable< Address,std::vector<InetAddress> > &a) const
+	{
+		for(unsigned int i=0;i<specialistCount;++i) {
+			if ((specialists[i] & (ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR | ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR)) != 0) {
+				a[Address(specialists[i])];
+			}
+		}
+	}
+
+	/**
 	 * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
 	 * @return True if this network allows bridging
 	 */
@@ -332,11 +345,7 @@ public:
 		return false;
 	}
 
-	/**
-	 * @return True if this network config is non-NULL
-	 */
 	inline operator bool() const { return (networkId != 0); }
-
 	inline bool operator==(const NetworkConfig &nc) const { return (memcmp(this,&nc,sizeof(NetworkConfig)) == 0); }
 	inline bool operator!=(const NetworkConfig &nc) const { return (!(*this == nc)); }
 

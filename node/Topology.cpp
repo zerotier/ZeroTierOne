@@ -66,7 +66,7 @@ static const unsigned char ZT_DEFAULT_WORLD[ZT_DEFAULT_WORLD_LENGTH] = {0x01,0x0
 Topology::Topology(const RuntimeEnvironment *renv,void *tPtr) :
 	RR(renv),
 	_numConfiguredPhysicalPaths(0),
-	_amRoot(false)
+	_amUpstream(false)
 {
 	uint8_t tmp[ZT_WORLD_MAX_SERIALIZED_LENGTH];
 	uint64_t idtmp[2];
@@ -398,11 +398,11 @@ void Topology::_memoizeUpstreams(void *tPtr)
 {
 	// assumes _upstreams_m and _peers_m are locked
 	_upstreamAddresses.clear();
-	_amRoot = false;
+	_amUpstream = false;
 
 	for(std::vector<World::Root>::const_iterator i(_planet.roots().begin());i!=_planet.roots().end();++i) {
 		if (i->identity == RR->identity) {
-			_amRoot = true;
+			_amUpstream = true;
 		} else if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),i->identity.address()) == _upstreamAddresses.end()) {
 			_upstreamAddresses.push_back(i->identity.address());
 			SharedPtr<Peer> &hp = _peers[i->identity.address()];
@@ -414,7 +414,7 @@ void Topology::_memoizeUpstreams(void *tPtr)
 	for(std::vector<World>::const_iterator m(_moons.begin());m!=_moons.end();++m) {
 		for(std::vector<World::Root>::const_iterator i(m->roots().begin());i!=m->roots().end();++i) {
 			if (i->identity == RR->identity) {
-				_amRoot = true;
+				_amUpstream = true;
 			} else if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),i->identity.address()) == _upstreamAddresses.end()) {
 				_upstreamAddresses.push_back(i->identity.address());
 				SharedPtr<Peer> &hp = _peers[i->identity.address()];
