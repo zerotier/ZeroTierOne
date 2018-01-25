@@ -292,9 +292,6 @@ public:
 		return r;
 	}
 
-	/**
-	 * @return ZeroTier addresses of "anchor" devices on this network
-	 */
 	inline std::vector<Address> anchors() const
 	{
 		std::vector<Address> r;
@@ -305,9 +302,6 @@ public:
 		return r;
 	}
 
-	/**
-	 * @return ZeroTier addresses of multicast replicators
-	 */
 	inline std::vector<Address> multicastReplicators() const
 	{
 		std::vector<Address> r;
@@ -318,10 +312,17 @@ public:
 		return r;
 	}
 
-	/**
-	 * Add addresses that we should attempt to stay connected to to a set
-	 */
-	inline void getAlwaysContactAddresses(Hashtable< Address,std::vector<InetAddress> > &a) const
+	inline std::vector<Address> alwaysContactAddresses() const
+	{
+		std::vector<Address> r;
+		for(unsigned int i=0;i<specialistCount;++i) {
+			if ((specialists[i] & (ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR | ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR)) != 0)
+				r.push_back(Address(specialists[i]));
+		}
+		return r;
+	}
+
+	inline void alwaysContactAddresses(Hashtable< Address,std::vector<InetAddress> > &a) const
 	{
 		for(unsigned int i=0;i<specialistCount;++i) {
 			if ((specialists[i] & (ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR | ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR)) != 0) {

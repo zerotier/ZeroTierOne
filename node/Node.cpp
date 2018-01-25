@@ -290,7 +290,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 				uint64_t *nwid = (uint64_t *)0;
 				SharedPtr<Network> *network = (SharedPtr<Network> *)0;
 				while (i.next(nwid,network)) {
-					(*network)->config().getAlwaysContactAddresses(alwaysContact);
+					(*network)->config().alwaysContactAddresses(alwaysContact);
 					networkConfigNeeded.push_back( std::pair< SharedPtr<Network>,bool >(*network,(((now - (*network)->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!(*network)->hasConfig()))) );
 				}
 			}

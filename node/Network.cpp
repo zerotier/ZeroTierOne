@@ -44,6 +44,8 @@
 #include "Peer.hpp"
 #include "Trace.hpp"
 
+#include <set>
+
 namespace ZeroTier {
 
 namespace {
@@ -1413,15 +1415,24 @@ void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMu
 		groups.push_back(*newMulticastGroup);
 	else groups = _allMulticastGroups();
 
+	std::vector<Address> alwaysAnnounceTo;
+
 	if ((newMulticastGroup)||((now - _lastAnnouncedMulticastGroupsUpstream) >= ZT_MULTICAST_ANNOUNCE_PERIOD)) {
 		if (!newMulticastGroup)
 			_lastAnnouncedMulticastGroupsUpstream = now;
 
-		// Announce multicast groups to upstream peers (roots, etc.) and also send
-		// them our COM so that MULTICAST_GATHER can be authenticated properly.
+		alwaysAnnounceTo = _config.alwaysContactAddresses();
+		if (std::find(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end(),controller()) == alwaysAnnounceTo.end())
+			alwaysAnnounceTo.push_back(controller());
 		const std::vector<Address> upstreams(RR->topology->upstreamAddresses());
 		for(std::vector<Address>::const_iterator a(upstreams.begin());a!=upstreams.end();++a) {
-			if (_config.com) {
+			if (std::find(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end(),*a) == alwaysAnnounceTo.end())
+				alwaysAnnounceTo.push_back(*a);
+		}
+		std::sort(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end());
+
+		for(std::vector<Address>::const_iterator a(alwaysAnnounceTo.begin());a!=alwaysAnnounceTo.end();++a) {
+			if ( (_config.com) && (!_memberships.contains(*a)) ) { // push COM to non-members so they can do multicast request auth
 				Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 				_config.com.serialize(outp);
 				outp.append((uint8_t)0x00);
@@ -1433,38 +1444,15 @@ void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMu
 			}
 			_announceMulticastGroupsTo(tPtr,*a,groups);
 		}
-
-		// Also announce to controller, and send COM to simplify and generalize behavior even though in theory it does not need it
-		const Address c(controller());
-		if ( (std::find(upstreams.begin(),upstreams.end(),c) == upstreams.end()) && (!_memberships.contains(c)) ) {
-			if (_config.com) {
-				Packet outp(c,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
-				_config.com.serialize(outp);
-				outp.append((uint8_t)0x00);
-				outp.append((uint16_t)0); // no capabilities
-				outp.append((uint16_t)0); // no tags
-				outp.append((uint16_t)0); // no revocations
-				outp.append((uint16_t)0); // no certificates of ownership
-				RR->sw->send(tPtr,outp,true);
-			}
-			_announceMulticastGroupsTo(tPtr,c,groups);
-		}
 	}
 
-	// Make sure that all "network anchors" have Membership records so we will
-	// push multicasts to them.
-	const std::vector<Address> anchors(_config.anchors());
-	for(std::vector<Address>::const_iterator a(anchors.begin());a!=anchors.end();++a)
-		_membership(*a);
-
-	// Send credentials and multicast LIKEs to members, upstreams, and controller
 	{
 		Address *a = (Address *)0;
 		Membership *m = (Membership *)0;
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
 			m->pushCredentials(RR,tPtr,now,*a,_config,-1,false);
-			if ( ( m->multicastLikeGate(now) || (newMulticastGroup) ) && (m->isAllowedOnNetwork(_config)) )
+			if ( ( m->multicastLikeGate(now) || (newMulticastGroup) ) && (m->isAllowedOnNetwork(_config)) && (!std::binary_search(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end(),*a)) )
 				_announceMulticastGroupsTo(tPtr,*a,groups);
 		}
 	}
