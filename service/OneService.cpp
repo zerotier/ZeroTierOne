@@ -565,6 +565,7 @@ public:
 			}
 
 			// Read local configuration
+			bool bindToWildcard = false;
 			{
 				std::map<InetAddress,ZT_PhysicalPathConfiguration> ppc;
 
@@ -626,12 +627,15 @@ public:
 					}
 				}
 
-				// Allow controller DB path to be put somewhere else
 				json &settings = _localConfig["settings"];
 				if (settings.is_object()) {
+					// Allow controller DB path to be put somewhere else
 					const std::string cdbp(OSUtils::jsonString(settings["controllerDbPath"],""));
 					if (cdbp.length() > 0)
 						_controllerDbPath = cdbp;
+
+					// Bind to wildcard instead of to specific interfaces (disables full tunnel capability)
+					bindToWildcard = OSUtils::jsonBool(settings["bindToWildcard"],false);
 				}
 
 				// Set trusted paths if there are any
@@ -801,7 +805,7 @@ public:
 						if (_ports[i])
 							p[pc++] = _ports[i];
 					}
-					_binder.refresh(_phy,p,pc,*this);
+					_binder.refresh(_phy,p,pc,bindToWildcard,*this);
 					{
 						Mutex::Lock _l(_nets_m);
 						for(std::map<uint64_t,NetworkState>::iterator n(_nets.begin());n!=_nets.end();++n) {

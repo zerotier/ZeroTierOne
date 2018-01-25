@@ -125,184 +125,32 @@ public:
 	 *
 	 * @param phy Physical interface
 	 * @param ports Ports to bind on all interfaces
-	 * @param ignoreInterfacesByName Ignore these interfaces by name
-	 * @param ignoreInterfacesByNamePrefix Ignore these interfaces by name-prefix (starts-with, e.g. zt ignores zt*)
-	 * @param ignoreInterfacesByAddress Ignore these interfaces by address
+	 * @param portCount Number of ports
+	 * @param bindtoWildcard If true, bind wildcard instead of per-interface IPs
+	 * @param ifChecker Interface checker function to see if an interface should be used
 	 * @tparam PHY_HANDLER_TYPE Type for Phy<> template
 	 * @tparam INTERFACE_CHECKER Type for class containing shouldBindInterface() method
 	 */
 	template<typename PHY_HANDLER_TYPE,typename INTERFACE_CHECKER>
-	void refresh(Phy<PHY_HANDLER_TYPE> &phy,unsigned int *ports,unsigned int portCount,INTERFACE_CHECKER &ifChecker)
+	void refresh(Phy<PHY_HANDLER_TYPE> &phy,unsigned int *ports,unsigned int portCount,bool bindToWildcard,INTERFACE_CHECKER &ifChecker)
 	{
 		std::map<InetAddress,std::string> localIfAddrs;
 		PhySocket *udps,*tcps;
 		Mutex::Lock _l(_lock);
 		bool interfacesEnumerated = true;
 
+		if (!bindToWildcard) {
 #ifdef __WINDOWS__
 
-		char aabuf[32768];
-		ULONG aalen = sizeof(aabuf);
-		if (GetAdaptersAddresses(AF_UNSPEC,GAA_FLAG_SKIP_ANYCAST|GAA_FLAG_SKIP_MULTICAST|GAA_FLAG_SKIP_DNS_SERVER,(void *)0,reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf),&aalen) == NO_ERROR) {
-			PIP_ADAPTER_ADDRESSES a = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf);
-			while (a) {
-				PIP_ADAPTER_UNICAST_ADDRESS ua = a->FirstUnicastAddress;
-				while (ua) {
-					InetAddress ip(ua->Address.lpSockaddr);
-					if (ifChecker.shouldBindInterface("",ip)) {
-						switch(ip.ipScope()) {
-							default: break;
-							case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
-							case InetAddress::IP_SCOPE_GLOBAL:
-							case InetAddress::IP_SCOPE_SHARED:
-							case InetAddress::IP_SCOPE_PRIVATE:
-								for(int x=0;x<(int)portCount;++x) {
-									ip.setPort(ports[x]);
-									localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string()));
-								}
-								break;
-						}
-					}
-					ua = ua->Next;
-				}
-				a = a->Next;
-			}
-		}
-		else {
-			interfacesEnumerated = false;
-		}
-
-#else // not __WINDOWS__
-
-		/* On Linux we use an alternative method if available since getifaddrs()
-		 * gets very slow when there are lots of network namespaces. This won't
-		 * work unless /proc/PID/net/if_inet6 exists and it may not on some
-		 * embedded systems, so revert to getifaddrs() there. */
-
-#ifdef __LINUX__
-		char fn[256],tmp[256];
-		std::set<std::string> ifnames;
-		const unsigned long pid = (unsigned long)getpid();
-
-		// Get all device names
-		OSUtils::ztsnprintf(fn,sizeof(fn),"/proc/%lu/net/dev",pid);
-		FILE *procf = fopen(fn,"r");
-		if (procf) {
-			while (fgets(tmp,sizeof(tmp),procf)) {
-				tmp[255] = 0;
-				char *saveptr = (char *)0;
-				for(char *f=Utils::stok(tmp," \t\r\n:|",&saveptr);(f);f=Utils::stok((char *)0," \t\r\n:|",&saveptr)) {
-					if ((strcmp(f,"Inter-") != 0)&&(strcmp(f,"face") != 0)&&(f[0] != 0))
-						ifnames.insert(f);
-					break; // we only want the first field
-				}
-			}
-			fclose(procf);
-		}
-		else {
-			interfacesEnumerated = false;
-		}
-
-		// Get IPv6 addresses (and any device names we don't already know)
-		OSUtils::ztsnprintf(fn,sizeof(fn),"/proc/%lu/net/if_inet6",pid);
-		procf = fopen(fn,"r");
-		if (procf) {
-			while (fgets(tmp,sizeof(tmp),procf)) {
-				tmp[255] = 0;
-				char *saveptr = (char *)0;
-				unsigned char ipbits[16];
-				memset(ipbits,0,sizeof(ipbits));
-				char *devname = (char *)0;
-				int n = 0;
-				for(char *f=Utils::stok(tmp," \t\r\n",&saveptr);(f);f=Utils::stok((char *)0," \t\r\n",&saveptr)) {
-					switch(n++) {
-						case 0: // IP in hex
-							Utils::unhex(f,32,ipbits,16);
-							break;
-						case 5: // device name
-							devname = f;
-							break;
-					}
-				}
-				if (devname) {
-					ifnames.insert(devname);
-					InetAddress ip(ipbits,16,0);
-					if (ifChecker.shouldBindInterface(devname,ip)) {
-						switch(ip.ipScope()) {
-							default: break;
-							case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
-							case InetAddress::IP_SCOPE_GLOBAL:
-							case InetAddress::IP_SCOPE_SHARED:
-							case InetAddress::IP_SCOPE_PRIVATE:
-								for(int x=0;x<(int)portCount;++x) {
-									ip.setPort(ports[x]);
-									localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string(devname)));
-								}
-								break;
-						}
-					}
-				}
-			}
-			fclose(procf);
-		}
-
-		// Get IPv4 addresses for each device
-		if (ifnames.size() > 0) {
-			const int controlfd = (int)socket(AF_INET,SOCK_DGRAM,0);
-			struct ifconf configuration;
-			configuration.ifc_len = 0;
-			configuration.ifc_buf = nullptr;
-
-			if (controlfd < 0) goto ip4_address_error;
-			if (ioctl(controlfd, SIOCGIFCONF, &configuration) < 0) goto ip4_address_error;
-			configuration.ifc_buf = (char*)malloc(configuration.ifc_len);
-			if (ioctl(controlfd, SIOCGIFCONF, &configuration) < 0) goto ip4_address_error;
-
-			for (int i=0; i < (int)(configuration.ifc_len / sizeof(ifreq)); i ++) {
-				struct ifreq& request = configuration.ifc_req[i];
-				struct sockaddr* addr = &request.ifr_ifru.ifru_addr;
-				if (addr->sa_family != AF_INET) continue;
-				std::string ifname = request.ifr_ifrn.ifrn_name;
-				// name can either be just interface name or interface name followed by ':' and arbitrary label
-				if (ifname.find(':') != std::string::npos)
-					ifname = ifname.substr(0, ifname.find(':'));
-
-				InetAddress ip(&(((struct sockaddr_in *)addr)->sin_addr),4,0);
-				if (ifChecker.shouldBindInterface(ifname.c_str(), ip)) {
-					switch(ip.ipScope()) {
-					default: break;
-					case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
-					case InetAddress::IP_SCOPE_GLOBAL:
-					case InetAddress::IP_SCOPE_SHARED:
-					case InetAddress::IP_SCOPE_PRIVATE:
-						for(int x=0;x<(int)portCount;++x) {
-							ip.setPort(ports[x]);
-							localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,ifname));
-						}
-						break;
-					}
-				}
-			}
-
-		ip4_address_error:
-			free(configuration.ifc_buf);
-			if (controlfd > 0) close(controlfd);
-		}
-
-		const bool gotViaProc = (localIfAddrs.size() > 0);
-#else
-		const bool gotViaProc = false;
-#endif
-
-		if (!gotViaProc) {
-			struct ifaddrs *ifatbl = (struct ifaddrs *)0;
-			struct ifaddrs *ifa;
-			if ((getifaddrs(&ifatbl) == 0)&&(ifatbl)) {
-				ifa = ifatbl;
-				while (ifa) {
-					if ((ifa->ifa_name)&&(ifa->ifa_addr)) {
-						InetAddress ip = *(ifa->ifa_addr);
-						if (ifChecker.shouldBindInterface(ifa->ifa_name,ip)) {
+			char aabuf[32768];
+			ULONG aalen = sizeof(aabuf);
+			if (GetAdaptersAddresses(AF_UNSPEC,GAA_FLAG_SKIP_ANYCAST|GAA_FLAG_SKIP_MULTICAST|GAA_FLAG_SKIP_DNS_SERVER,(void *)0,reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf),&aalen) == NO_ERROR) {
+				PIP_ADAPTER_ADDRESSES a = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf);
+				while (a) {
+					PIP_ADAPTER_UNICAST_ADDRESS ua = a->FirstUnicastAddress;
+					while (ua) {
+						InetAddress ip(ua->Address.lpSockaddr);
+						if (ifChecker.shouldBindInterface("",ip)) {
 							switch(ip.ipScope()) {
 								default: break;
 								case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
@@ -311,22 +159,176 @@ public:
 								case InetAddress::IP_SCOPE_PRIVATE:
 									for(int x=0;x<(int)portCount;++x) {
 										ip.setPort(ports[x]);
-										localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string(ifa->ifa_name)));
+										localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string()));
+									}
+									break;
+							}
+						}
+						ua = ua->Next;
+					}
+					a = a->Next;
+				}
+			}
+			else {
+				interfacesEnumerated = false;
+			}
+
+#else // not __WINDOWS__
+
+			/* On Linux we use an alternative method if available since getifaddrs()
+			 * gets very slow when there are lots of network namespaces. This won't
+			 * work unless /proc/PID/net/if_inet6 exists and it may not on some
+			 * embedded systems, so revert to getifaddrs() there. */
+
+#ifdef __LINUX__
+			char fn[256],tmp[256];
+			std::set<std::string> ifnames;
+			const unsigned long pid = (unsigned long)getpid();
+
+			// Get all device names
+			OSUtils::ztsnprintf(fn,sizeof(fn),"/proc/%lu/net/dev",pid);
+			FILE *procf = fopen(fn,"r");
+			if (procf) {
+				while (fgets(tmp,sizeof(tmp),procf)) {
+					tmp[255] = 0;
+					char *saveptr = (char *)0;
+					for(char *f=Utils::stok(tmp," \t\r\n:|",&saveptr);(f);f=Utils::stok((char *)0," \t\r\n:|",&saveptr)) {
+						if ((strcmp(f,"Inter-") != 0)&&(strcmp(f,"face") != 0)&&(f[0] != 0))
+							ifnames.insert(f);
+						break; // we only want the first field
+					}
+				}
+				fclose(procf);
+			}
+			else {
+				interfacesEnumerated = false;
+			}
+
+			// Get IPv6 addresses (and any device names we don't already know)
+			OSUtils::ztsnprintf(fn,sizeof(fn),"/proc/%lu/net/if_inet6",pid);
+			procf = fopen(fn,"r");
+			if (procf) {
+				while (fgets(tmp,sizeof(tmp),procf)) {
+					tmp[255] = 0;
+					char *saveptr = (char *)0;
+					unsigned char ipbits[16];
+					memset(ipbits,0,sizeof(ipbits));
+					char *devname = (char *)0;
+					int n = 0;
+					for(char *f=Utils::stok(tmp," \t\r\n",&saveptr);(f);f=Utils::stok((char *)0," \t\r\n",&saveptr)) {
+						switch(n++) {
+							case 0: // IP in hex
+								Utils::unhex(f,32,ipbits,16);
+								break;
+							case 5: // device name
+								devname = f;
+								break;
+						}
+					}
+					if (devname) {
+						ifnames.insert(devname);
+						InetAddress ip(ipbits,16,0);
+						if (ifChecker.shouldBindInterface(devname,ip)) {
+							switch(ip.ipScope()) {
+								default: break;
+								case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
+								case InetAddress::IP_SCOPE_GLOBAL:
+								case InetAddress::IP_SCOPE_SHARED:
+								case InetAddress::IP_SCOPE_PRIVATE:
+									for(int x=0;x<(int)portCount;++x) {
+										ip.setPort(ports[x]);
+										localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string(devname)));
 									}
 									break;
 							}
 						}
 					}
-					ifa = ifa->ifa_next;
 				}
-				freeifaddrs(ifatbl);
+				fclose(procf);
 			}
-			else {
-				interfacesEnumerated = false;
+
+			// Get IPv4 addresses for each device
+			if (ifnames.size() > 0) {
+				const int controlfd = (int)socket(AF_INET,SOCK_DGRAM,0);
+				struct ifconf configuration;
+				configuration.ifc_len = 0;
+				configuration.ifc_buf = nullptr;
+
+				if (controlfd < 0) goto ip4_address_error;
+				if (ioctl(controlfd, SIOCGIFCONF, &configuration) < 0) goto ip4_address_error;
+				configuration.ifc_buf = (char*)malloc(configuration.ifc_len);
+				if (ioctl(controlfd, SIOCGIFCONF, &configuration) < 0) goto ip4_address_error;
+
+				for (int i=0; i < (int)(configuration.ifc_len / sizeof(ifreq)); i ++) {
+					struct ifreq& request = configuration.ifc_req[i];
+					struct sockaddr* addr = &request.ifr_ifru.ifru_addr;
+					if (addr->sa_family != AF_INET) continue;
+					std::string ifname = request.ifr_ifrn.ifrn_name;
+					// name can either be just interface name or interface name followed by ':' and arbitrary label
+					if (ifname.find(':') != std::string::npos)
+						ifname = ifname.substr(0, ifname.find(':'));
+
+					InetAddress ip(&(((struct sockaddr_in *)addr)->sin_addr),4,0);
+					if (ifChecker.shouldBindInterface(ifname.c_str(), ip)) {
+						switch(ip.ipScope()) {
+						default: break;
+						case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
+						case InetAddress::IP_SCOPE_GLOBAL:
+						case InetAddress::IP_SCOPE_SHARED:
+						case InetAddress::IP_SCOPE_PRIVATE:
+							for(int x=0;x<(int)portCount;++x) {
+								ip.setPort(ports[x]);
+								localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,ifname));
+							}
+							break;
+						}
+					}
+				}
+
+			ip4_address_error:
+				free(configuration.ifc_buf);
+				if (controlfd > 0) close(controlfd);
 			}
-		}
+
+			const bool gotViaProc = (localIfAddrs.size() > 0);
+#else
+			const bool gotViaProc = false;
+#endif
+
+			if (!gotViaProc) {
+				struct ifaddrs *ifatbl = (struct ifaddrs *)0;
+				struct ifaddrs *ifa;
+				if ((getifaddrs(&ifatbl) == 0)&&(ifatbl)) {
+					ifa = ifatbl;
+					while (ifa) {
+						if ((ifa->ifa_name)&&(ifa->ifa_addr)) {
+							InetAddress ip = *(ifa->ifa_addr);
+							if (ifChecker.shouldBindInterface(ifa->ifa_name,ip)) {
+								switch(ip.ipScope()) {
+									default: break;
+									case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
+									case InetAddress::IP_SCOPE_GLOBAL:
+									case InetAddress::IP_SCOPE_SHARED:
+									case InetAddress::IP_SCOPE_PRIVATE:
+										for(int x=0;x<(int)portCount;++x) {
+											ip.setPort(ports[x]);
+											localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string(ifa->ifa_name)));
+										}
+										break;
+								}
+							}
+						}
+						ifa = ifa->ifa_next;
+					}
+					freeifaddrs(ifatbl);
+				}
+				else {
+					interfacesEnumerated = false;
+				}
+			}
 
 #endif
+		}
 
 		// Default to binding to wildcard if we can't enumerate addresses
 		if (!interfacesEnumerated && localIfAddrs.empty()) {
