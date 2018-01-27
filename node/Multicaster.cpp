@@ -345,6 +345,9 @@ void Multicaster::send(
 				data,
 				len);
 
+			if (origin)
+				out.logAsSent(origin);
+
 			unsigned int count = 0;
 
 			for(unsigned int i=0;i<activeBridgeCount;++i) {

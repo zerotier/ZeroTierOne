@@ -126,6 +126,16 @@ public:
 	}
 
 	/**
+	 * Log an address as having been used so we will not send there in the future
+	 *
+	 * @param toAddr Address to log as sent
+	 */
+	inline void logAsSent(const Address &toAddr)
+	{
+		_alreadySentTo.push_back(toAddr);
+	}
+
+	/**
 	 * Try to send this to a given peer if it hasn't been sent to them already
 	 *
 	 * @param RR Runtime environment
