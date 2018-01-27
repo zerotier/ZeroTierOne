@@ -132,6 +132,7 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 * @param network Network
+	 * @param origin Origin of multicast (to not return to sender) or NULL if none
 	 * @param mg Multicast group
 	 * @param src Source Ethernet MAC address or NULL to skip in packet and compute from ZT address (non-bridged mode)
 	 * @param etherType Ethernet frame type
@@ -142,6 +143,7 @@ public:
 		void *tPtr,
 		int64_t now,
 		const SharedPtr<Network> &network,
+		const Address &origin,
 		const MulticastGroup &mg,
 		const MAC &src,
 		unsigned int etherType,

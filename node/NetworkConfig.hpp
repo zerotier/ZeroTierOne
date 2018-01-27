@@ -322,6 +322,16 @@ public:
 		return r;
 	}
 
+	inline unsigned int multicastReplicators(Address mr[ZT_MAX_NETWORK_SPECIALISTS]) const
+	{
+		unsigned int c = 0;
+		for(unsigned int i=0;i<specialistCount;++i) {
+			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0)
+				mr[c++] = specialists[i];
+		}
+		return c;
+	}
+
 	inline std::vector<Address> alwaysContactAddresses() const
 	{
 		std::vector<Address> r;

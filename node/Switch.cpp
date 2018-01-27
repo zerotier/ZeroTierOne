@@ -391,7 +391,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			tPtr,
 			RR->node->now(),
 			network,
-//			network->config().activeBridges(),
+			Address(),
 			multicastGroup,
 			(fromBridged) ? from : MAC(),
 			etherType,
