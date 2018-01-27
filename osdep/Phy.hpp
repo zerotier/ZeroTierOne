@@ -688,25 +688,26 @@ public:
 	 * until one works.
 	 *
 	 * @param sock Socket
-	 * @param bufferSize Desired buffer sizes
+	 * @param receiveBufferSize Desired size of receive buffer
+	 * @param sendBufferSize Desired size of send buffer
 	 */
-	inline void setBufferSizes(const PhySocket *sock,int bufferSize)
+	inline void setBufferSizes(const PhySocket *sock,int receiveBufferSize,int sendBufferSize)
 	{
 		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
-		if (bufferSize > 0) {
-			int bs = bufferSize;
-			while (bs >= 65536) {
-				int tmpbs = bs;
+		if (receiveBufferSize > 0) {
+			while (receiveBufferSize > 0) {
+				int tmpbs = receiveBufferSize;
 				if (::setsockopt(sws.sock,SOL_SOCKET,SO_RCVBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
 					break;
-				bs -= 16384;
+				receiveBufferSize -= 16384;
 			}
-			bs = bufferSize;
-			while (bs >= 65536) {
-				int tmpbs = bs;
+		}
+		if (sendBufferSize > 0) {
+			while (sendBufferSize > 0) {
+				int tmpbs = sendBufferSize;
 				if (::setsockopt(sws.sock,SOL_SOCKET,SO_SNDBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
 					break;
-				bs -= 16384;
+				sendBufferSize -= 16384;
 			}
 		}
 	}

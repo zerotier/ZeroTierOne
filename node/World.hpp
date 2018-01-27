@@ -240,10 +240,8 @@ public:
 		return (p - startAt);
 	}
 
-	inline bool operator==(const World &w) const { return ((_id == w._id)&&(_ts == w._ts)&&(_updatesMustBeSignedBy == w._updatesMustBeSignedBy)&&(_signature == w._signature)&&(_roots == w._roots)&&(_type == w._type)); }
+	inline bool operator==(const World &w) const { return ((_id == w._id)&&(_ts == w._ts)&&(memcmp(_updatesMustBeSignedBy.data,w._updatesMustBeSignedBy.data,ZT_C25519_PUBLIC_KEY_LEN) == 0)&&(memcmp(_signature.data,w._signature.data,ZT_C25519_SIGNATURE_LEN) == 0)&&(_roots == w._roots)&&(_type == w._type)); }
 	inline bool operator!=(const World &w) const { return (!(*this == w)); }
-
-	inline bool operator<(const World &w) const { return (((int)_type < (int)w._type) ? true : ((_type == w._type) ? (_id < w._id) : false)); }
 
 	/**
 	 * Create a World object signed with a key pair

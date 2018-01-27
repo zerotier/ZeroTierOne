@@ -321,10 +321,10 @@ static int testCrypto()
 	std::cout << "[crypto] Testing C25519 and Ed25519 against test vectors... "; std::cout.flush();
 	for(int k=0;k<ZT_NUM_C25519_TEST_VECTORS;++k) {
 		C25519::Pair p1,p2;
-		memcpy(p1.pub.data,C25519_TEST_VECTORS[k].pub1,p1.pub.size());
-		memcpy(p1.priv.data,C25519_TEST_VECTORS[k].priv1,p1.priv.size());
-		memcpy(p2.pub.data,C25519_TEST_VECTORS[k].pub2,p2.pub.size());
-		memcpy(p2.priv.data,C25519_TEST_VECTORS[k].priv2,p2.priv.size());
+		memcpy(p1.pub.data,C25519_TEST_VECTORS[k].pub1,ZT_C25519_PUBLIC_KEY_LEN);
+		memcpy(p1.priv.data,C25519_TEST_VECTORS[k].priv1,ZT_C25519_PRIVATE_KEY_LEN);
+		memcpy(p2.pub.data,C25519_TEST_VECTORS[k].pub2,ZT_C25519_PUBLIC_KEY_LEN);
+		memcpy(p2.priv.data,C25519_TEST_VECTORS[k].priv2,ZT_C25519_PRIVATE_KEY_LEN);
 		C25519::agree(p1,p2.pub,buf1,64);
 		C25519::agree(p2,p1.pub,buf2,64);
 		if (memcmp(buf1,buf2,64)) {
@@ -410,7 +410,7 @@ static int testCrypto()
 		}
 		for(unsigned int k=0;k<64;++k) {
 			C25519::Signature sig2(sig);
-			sig2.data[rand() % sig2.size()] ^= (unsigned char)(1 << (rand() & 7));
+			sig2.data[rand() % ZT_C25519_SIGNATURE_LEN] ^= (unsigned char)(1 << (rand() & 7));
 			if (C25519::verify(p1.pub,buf1,sizeof(buf1),sig2)) {
 				std::cout << "FAIL (5)" << std::endl;
 				return -1;

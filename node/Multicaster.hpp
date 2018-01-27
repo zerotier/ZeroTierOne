@@ -42,7 +42,6 @@
 #include "OutboundMulticast.hpp"
 #include "Utils.hpp"
 #include "Mutex.hpp"
-#include "NonCopyable.hpp"
 
 namespace ZeroTier {
 
@@ -53,39 +52,8 @@ class Packet;
 /**
  * Database of known multicast peers within a network
  */
-class Multicaster : NonCopyable
+class Multicaster
 {
-private:
-	struct Key
-	{
-		Key() : nwid(0),mg() {}
-		Key(uint64_t n,const MulticastGroup &g) : nwid(n),mg(g) {}
-
-		uint64_t nwid;
-		MulticastGroup mg;
-
-		inline bool operator==(const Key &k) const { return ((nwid == k.nwid)&&(mg == k.mg)); }
-		inline unsigned long hashCode() const { return (mg.hashCode() ^ (unsigned long)(nwid ^ (nwid >> 32))); }
-	};
-
-	struct MulticastGroupMember
-	{
-		MulticastGroupMember() {}
-		MulticastGroupMember(const Address &a,uint64_t ts) : address(a),timestamp(ts) {}
-
-		Address address;
-		uint64_t timestamp; // time of last notification
-	};
-
-	struct MulticastGroupStatus
-	{
-		MulticastGroupStatus() : lastExplicitGather(0) {}
-
-		uint64_t lastExplicitGather;
-		std::list<OutboundMulticast> txQueue; // pending outbound multicasts
-		std::vector<MulticastGroupMember> members; // members of this group
-	};
-
 public:
 	Multicaster(const RuntimeEnvironment *renv);
 	~Multicaster();
@@ -220,9 +188,39 @@ public:
 	}
 
 private:
+	struct Key
+	{
+		Key() : nwid(0),mg() {}
+		Key(uint64_t n,const MulticastGroup &g) : nwid(n),mg(g) {}
+
+		uint64_t nwid;
+		MulticastGroup mg;
+
+		inline bool operator==(const Key &k) const { return ((nwid == k.nwid)&&(mg == k.mg)); }
+		inline unsigned long hashCode() const { return (mg.hashCode() ^ (unsigned long)(nwid ^ (nwid >> 32))); }
+	};
+
+	struct MulticastGroupMember
+	{
+		MulticastGroupMember() {}
+		MulticastGroupMember(const Address &a,uint64_t ts) : address(a),timestamp(ts) {}
+
+		Address address;
+		uint64_t timestamp; // time of last notification
+	};
+
+	struct MulticastGroupStatus
+	{
+		MulticastGroupStatus() : lastExplicitGather(0) {}
+
+		uint64_t lastExplicitGather;
+		std::list<OutboundMulticast> txQueue; // pending outbound multicasts
+		std::vector<MulticastGroupMember> members; // members of this group
+	};
+
 	void _add(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &member);
 
-	const RuntimeEnvironment *RR;
+	const RuntimeEnvironment *const RR;
 
 	Hashtable<Multicaster::Key,MulticastGroupStatus> _groups;
 	Mutex _groups_m;

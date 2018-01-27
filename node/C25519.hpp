@@ -27,7 +27,6 @@
 #ifndef ZT_C25519_HPP
 #define ZT_C25519_HPP
 
-#include "Array.hpp"
 #include "Utils.hpp"
 
 namespace ZeroTier {
@@ -42,28 +41,10 @@ namespace ZeroTier {
 class C25519
 {
 public:
-	/**
-	 * Public key (both crypto and signing)
-	 */
-	typedef Array<unsigned char,ZT_C25519_PUBLIC_KEY_LEN> Public; // crypto key, signing key (both 32 bytes)
-
-	/**
-	 * Private key (both crypto and signing)
-	 */
-	typedef Array<unsigned char,ZT_C25519_PRIVATE_KEY_LEN> Private; // crypto key, signing key (both 32 bytes)
-
-	/**
-	 * Message signature
-	 */
-	typedef Array<unsigned char,ZT_C25519_SIGNATURE_LEN> Signature;
-
-	/**
-	 * Public/private key pair
-	 */
-	typedef struct {
-		Public pub;
-		Private priv;
-	} Pair;
+	struct Public { uint8_t data[ZT_C25519_PUBLIC_KEY_LEN]; };
+	struct Private { uint8_t data[ZT_C25519_PRIVATE_KEY_LEN]; };
+	struct Signature { uint8_t data[ZT_C25519_SIGNATURE_LEN]; };
+	struct Pair { Public pub; Private priv; };
 
 	/**
 	 * Generate a C25519 elliptic curve key pair
@@ -71,7 +52,7 @@ public:
 	static inline Pair generate()
 	{
 		Pair kp;
-		Utils::getSecureRandom(kp.priv.data,(unsigned int)kp.priv.size());
+		Utils::getSecureRandom(kp.priv.data,ZT_C25519_PRIVATE_KEY_LEN);
 		_calcPubDH(kp);
 		_calcPubED(kp);
 		return kp;
@@ -95,7 +76,7 @@ public:
 	{
 		Pair kp;
 		void *const priv = (void *)kp.priv.data;
-		Utils::getSecureRandom(priv,(unsigned int)kp.priv.size());
+		Utils::getSecureRandom(priv,ZT_C25519_PRIVATE_KEY_LEN);
 		_calcPubED(kp); // do Ed25519 key -- bytes 32-63 of pub and priv
 		do {
 			++(((uint64_t *)priv)[1]);

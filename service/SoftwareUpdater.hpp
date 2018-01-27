@@ -33,11 +33,11 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <array>
 
 #include "../include/ZeroTierOne.h"
 
 #include "../node/Identity.hpp"
-#include "../node/Array.hpp"
 #include "../node/Packet.hpp"
 
 #include "../ext/json/json.hpp"
@@ -202,13 +202,13 @@ private:
 		nlohmann::json meta;
 		std::string bin;
 	};
-	std::map< Array<uint8_t,16>,_D > _dist; // key is first 16 bytes of hash
+	std::map< std::array<uint8_t,16>,_D > _dist; // key is first 16 bytes of hash
 
 	nlohmann::json _latestMeta;
 	bool _latestValid;
 
 	std::string _download;
-	Array<uint8_t,16> _downloadHashPrefix;
+	std::array<uint8_t,16> _downloadHashPrefix;
 	unsigned long _downloadLength;
 };
 

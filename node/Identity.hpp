@@ -215,10 +215,10 @@ public:
 	{
 		_address.appendTo(b);
 		b.append((uint8_t)0); // C25519/Ed25519 identity type
-		b.append(_publicKey.data,(unsigned int)_publicKey.size());
+		b.append(_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN);
 		if ((_privateKey)&&(includePrivate)) {
-			b.append((unsigned char)_privateKey->size());
-			b.append(_privateKey->data,(unsigned int)_privateKey->size());
+			b.append((unsigned char)ZT_C25519_PRIVATE_KEY_LEN);
+			b.append(_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN);
 		} else b.append((unsigned char)0);
 	}
 
@@ -248,8 +248,8 @@ public:
 		if (b[p++] != 0)
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 
-		ZT_FAST_MEMCPY(_publicKey.data,b.field(p,(unsigned int)_publicKey.size()),(unsigned int)_publicKey.size());
-		p += (unsigned int)_publicKey.size();
+		ZT_FAST_MEMCPY(_publicKey.data,b.field(p,ZT_C25519_PUBLIC_KEY_LEN),ZT_C25519_PUBLIC_KEY_LEN);
+		p += ZT_C25519_PUBLIC_KEY_LEN;
 
 		unsigned int privateKeyLength = (unsigned int)b[p++];
 		if (privateKeyLength) {
@@ -306,8 +306,8 @@ public:
 	 */
 	inline operator bool() const { return (_address); }
 
-	inline bool operator==(const Identity &id) const { return ((_address == id._address)&&(_publicKey == id._publicKey)); }
-	inline bool operator<(const Identity &id) const { return ((_address < id._address)||((_address == id._address)&&(_publicKey < id._publicKey))); }
+	inline bool operator==(const Identity &id) const { return ((_address == id._address)&&(memcmp(_publicKey.data,id._publicKey.data,ZT_C25519_PUBLIC_KEY_LEN) == 0)); }
+	inline bool operator<(const Identity &id) const { return ((_address < id._address)||((_address == id._address)&&(memcmp(_publicKey.data,id._publicKey.data,ZT_C25519_PUBLIC_KEY_LEN) < 0))); }
 	inline bool operator!=(const Identity &id) const { return !(*this == id); }
 	inline bool operator>(const Identity &id) const { return (id < *this); }
 	inline bool operator<=(const Identity &id) const { return !(id < *this); }

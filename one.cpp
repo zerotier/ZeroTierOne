@@ -795,7 +795,7 @@ static int idtool(int argc,char **argv)
 		}
 		C25519::Signature signature = id.sign(inf.data(),(unsigned int)inf.length());
 		char hexbuf[1024];
-		printf("%s",Utils::hex(signature.data,(unsigned int)signature.size(),hexbuf));
+		printf("%s",Utils::hex(signature.data,ZT_C25519_SIGNATURE_LEN,hexbuf));
 	} else if (!strcmp(argv[1],"verify")) {
 		if (argc < 4) {
 			idtoolPrintHelp(stdout,argv[0]);
@@ -838,8 +838,8 @@ static int idtool(int argc,char **argv)
 			nlohmann::json mj;
 			mj["objtype"] = "world";
 			mj["worldType"] = "moon";
-			mj["updatesMustBeSignedBy"] = mj["signingKey"] = Utils::hex(kp.pub.data,(unsigned int)kp.pub.size(),idtmp);
-			mj["signingKey_SECRET"] = Utils::hex(kp.priv.data,(unsigned int)kp.priv.size(),idtmp);
+			mj["updatesMustBeSignedBy"] = mj["signingKey"] = Utils::hex(kp.pub.data,ZT_C25519_PUBLIC_KEY_LEN,idtmp);
+			mj["signingKey_SECRET"] = Utils::hex(kp.priv.data,ZT_C25519_PRIVATE_KEY_LEN,idtmp);
 			mj["id"] = id.address().toString(idtmp);
 			nlohmann::json seedj;
 			seedj["identity"] = id.toString(false,idtmp);
@@ -878,9 +878,9 @@ static int idtool(int argc,char **argv)
 
 			C25519::Pair signingKey;
 			C25519::Public updatesMustBeSignedBy;
-			Utils::unhex(OSUtils::jsonString(mj["signingKey"],"").c_str(),signingKey.pub.data,(unsigned int)signingKey.pub.size());
-			Utils::unhex(OSUtils::jsonString(mj["signingKey_SECRET"],"").c_str(),signingKey.priv.data,(unsigned int)signingKey.priv.size());
-			Utils::unhex(OSUtils::jsonString(mj["updatesMustBeSignedBy"],"").c_str(),updatesMustBeSignedBy.data,(unsigned int)updatesMustBeSignedBy.size());
+			Utils::unhex(OSUtils::jsonString(mj["signingKey"],"").c_str(),signingKey.pub.data,ZT_C25519_PUBLIC_KEY_LEN);
+			Utils::unhex(OSUtils::jsonString(mj["signingKey_SECRET"],"").c_str(),signingKey.priv.data,ZT_C25519_PRIVATE_KEY_LEN);
+			Utils::unhex(OSUtils::jsonString(mj["updatesMustBeSignedBy"],"").c_str(),updatesMustBeSignedBy.data,ZT_C25519_PUBLIC_KEY_LEN);
 
 			std::vector<World::Root> roots;
 			nlohmann::json &rootsj = mj["roots"];

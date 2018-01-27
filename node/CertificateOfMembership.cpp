@@ -84,7 +84,7 @@ std::string CertificateOfMembership::toString() const
 
 	if (_signedBy) {
 		s.push_back(':');
-		s.append(Utils::hex(_signature.data,(unsigned int)_signature.size(),tmp));
+		s.append(Utils::hex(_signature.data,ZT_C25519_SIGNATURE_LEN,tmp));
 	}
 
 	return s;
@@ -94,7 +94,7 @@ void CertificateOfMembership::fromString(const char *s)
 {
 	_qualifierCount = 0;
 	_signedBy.zero();
-	memset(_signature.data,0,_signature.size());
+	memset(_signature.data,0,ZT_C25519_SIGNATURE_LEN);
 
 	if (!*s)
 		return;
@@ -145,7 +145,7 @@ void CertificateOfMembership::fromString(const char *s)
 				colonAt = 0;
 				while ((s[colonAt])&&(s[colonAt] != ':')) ++colonAt;
 				if (colonAt) {
-					if (Utils::unhex(s,colonAt,_signature.data,(unsigned int)_signature.size()) != _signature.size())
+					if (Utils::unhex(s,colonAt,_signature.data,ZT_C25519_SIGNATURE_LEN) != ZT_C25519_SIGNATURE_LEN)
 						_signedBy.zero();
 				} else {
 					_signedBy.zero();

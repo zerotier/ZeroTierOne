@@ -142,7 +142,7 @@ public:
 		_qualifiers[2].value = issuedTo.toInt();
 		_qualifiers[2].maxDelta = 0xffffffffffffffffULL;
 		_qualifierCount = 3;
-		memset(_signature.data,0,_signature.size());
+		memset(_signature.data,0,ZT_C25519_SIGNATURE_LEN);
 	}
 
 	inline CertificateOfMembership &operator=(const CertificateOfMembership &c)
@@ -293,7 +293,7 @@ public:
 		}
 		_signedBy.appendTo(b);
 		if (_signedBy)
-			b.append(_signature.data,(unsigned int)_signature.size());
+			b.append(_signature.data,ZT_C25519_SIGNATURE_LEN);
 	}
 
 	template<unsigned int C>
@@ -329,8 +329,8 @@ public:
 		p += ZT_ADDRESS_LENGTH;
 
 		if (_signedBy) {
-			ZT_FAST_MEMCPY(_signature.data,b.field(p,(unsigned int)_signature.size()),_signature.size());
-			p += (unsigned int)_signature.size();
+			ZT_FAST_MEMCPY(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
+			p += ZT_C25519_SIGNATURE_LEN;
 		}
 
 		return (p - startAt);
@@ -348,7 +348,7 @@ public:
 			if ((a.id != b.id)||(a.value != b.value)||(a.maxDelta != b.maxDelta))
 				return false;
 		}
-		return (_signature == c._signature);
+		return (memcmp(_signature.data,c._signature.data,ZT_C25519_SIGNATURE_LEN) == 0);
 	}
 	inline bool operator!=(const CertificateOfMembership &c) const { return (!(*this == c)); }
 
