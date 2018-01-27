@@ -69,11 +69,6 @@
 #define ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA 185000ULL
 
 /**
- * Flag: allow passive bridging (experimental)
- */
-#define ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING 0x0000000000000001ULL
-
-/**
  * Flag: enable broadcast
  */
 #define ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST 0x0000000000000002ULL
@@ -197,8 +192,6 @@ namespace ZeroTier {
 // Legacy fields -- these are obsoleted but are included when older clients query
 
 // boolean (now a flag)
-#define ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING_OLD "pb"
-// boolean (now a flag)
 #define ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST_OLD "eb"
 // IP/bits[,IP/bits,...]
 // Note that IPs that end in all zeroes are routes with no assignment in them.
@@ -250,11 +243,6 @@ public:
 	bool fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d);
 
 	/**
-	 * @return True if passive bridging is allowed (experimental)
-	 */
-	inline bool allowPassiveBridging() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING) != 0); }
-
-	/**
 	 * @return True if broadcast (ff:ff:ff:ff:ff:ff) address should work on this network
 	 */
 	inline bool enableBroadcast() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
@@ -302,6 +290,15 @@ public:
 		return c;
 	}
 
+	inline bool isActiveBridge(const Address &a) const
+	{
+		for(unsigned int i=0;i<specialistCount;++i) {
+			if (((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)&&(a == specialists[i]))
+				return true;
+		}
+		return false;
+	}
+
 	inline std::vector<Address> anchors() const
 	{
 		std::vector<Address> r;
@@ -330,6 +327,15 @@ public:
 				mr[c++] = specialists[i];
 		}
 		return c;
+	}
+
+	inline bool isMulticastReplicator(const Address &a) const
+	{
+		for(unsigned int i=0;i<specialistCount;++i) {
+			if (((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0)&&(a == specialists[i]))
+				return true;
+		}
+		return false;
 	}
 
 	inline std::vector<Address> alwaysContactAddresses() const
@@ -367,8 +373,6 @@ public:
 	 */
 	inline bool permitsBridging(const Address &fromPeer) const
 	{
-		if ((flags & ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING) != 0)
-			return true;
 		for(unsigned int i=0;i<specialistCount;++i) {
 			if ((fromPeer == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
 				return true;

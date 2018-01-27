@@ -1379,7 +1379,7 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	ec->mtu = (_config) ? _config.mtu : ZT_DEFAULT_MTU;
 	ec->dhcp = 0;
 	std::vector<Address> ab(_config.activeBridges());
-	ec->bridge = ((_config.allowPassiveBridging())||(std::find(ab.begin(),ab.end(),RR->identity.address()) != ab.end())) ? 1 : 0;
+	ec->bridge = (std::find(ab.begin(),ab.end(),RR->identity.address()) != ab.end()) ? 1 : 0;
 	ec->broadcastEnabled = (_config) ? (_config.enableBroadcast() ? 1 : 0) : 0;
 	ec->portError = _portError;
 	ec->netconfRevision = (_config) ? (unsigned long)_config.revision : 0;

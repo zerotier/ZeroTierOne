@@ -174,8 +174,12 @@ void Multicaster::send(
 	// If we're in hub-and-spoke designated multicast replication mode, see if we
 	// have a multicast replicator active. If so, pick the best and send it
 	// there. If we are a multicast replicator or if none are alive, fall back
-	// to sender replication.
-	{
+	// to sender replication. Note that bridges do not do this since this would
+	// break bridge route learning. This is sort of an edge case limitation of
+	// the current protocol and could be fixed, but fixing it would add more
+	// complexity than the fix is probably worth. Bridges are generally high
+	// bandwidth nodes.
+	if (!network->config().isActiveBridge(RR->identity.address())) {
 		Address multicastReplicators[ZT_MAX_NETWORK_SPECIALISTS];
 		const unsigned int multicastReplicatorCount = network->config().multicastReplicators(multicastReplicators);
 		if (multicastReplicatorCount) {
@@ -197,7 +201,7 @@ void Multicaster::send(
 				if (bestMulticastReplicator) {
 					Packet outp(bestMulticastReplicator->address(),RR->identity.address(),Packet::VERB_MULTICAST_FRAME);
 					outp.append((uint64_t)network->id());
-					outp.append((uint8_t)0x04); // includes source MAC
+					outp.append((uint8_t)0x0c); // includes source MAC | please replicate
 					((src) ? src : MAC(RR->identity.address(),network->id())).appendTo(outp);
 					mg.mac().appendTo(outp);
 					outp.append((uint32_t)mg.adi());

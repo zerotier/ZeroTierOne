@@ -58,7 +58,6 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 
 #ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 		if (includeLegacy) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING_OLD,this->allowPassiveBridging())) return false;
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST_OLD,this->enableBroadcast())) return false;
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE_OLD,this->isPrivate())) return false;
 
@@ -236,8 +235,6 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 			char tmp2[1024];
 
 			// Decode legacy fields if version is old
-			if (d.getB(ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING_OLD))
-				this->flags |= ZT_NETWORKCONFIG_FLAG_ALLOW_PASSIVE_BRIDGING;
 			if (d.getB(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST_OLD))
 				this->flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
 			this->flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION; // always enable for old-style netconf

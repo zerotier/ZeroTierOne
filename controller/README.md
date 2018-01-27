@@ -88,7 +88,6 @@ Example:
 | creationTime          | integer       | Time network record was created (ms since epoch)  | no       |
 | private               | boolean       | Is access control enabled?                        | YES      |
 | enableBroadcast       | boolean       | Ethernet ff:ff:ff:ff:ff:ff allowed?               | YES      |
-| allowPassiveBridging  | boolean       | Allow any member to bridge (very experimental)    | YES      |
 | v4AssignMode          | object        | IPv4 management and assign options (see below)    | YES      |
 | v6AssignMode          | object        | IPv6 management and assign options (see below)    | YES      |
 | mtu                   | integer       | Network MTU (default: 2800)                       | YES      |

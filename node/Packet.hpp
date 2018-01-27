@@ -871,6 +871,7 @@ public:
 		 *   0x01 - Network certificate of membership attached (DEPRECATED)
 		 *   0x02 - Implicit gather limit field is present
 		 *   0x04 - Source MAC is specified -- otherwise it's computed from sender
+		 *   0x08 - Please replicate (sent to multicast replicators)
 		 *
 		 * OK and ERROR responses are optional. OK may be generated if there are
 		 * implicit gather results or if the recipient wants to send its own
