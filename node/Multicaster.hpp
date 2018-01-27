@@ -42,12 +42,14 @@
 #include "OutboundMulticast.hpp"
 #include "Utils.hpp"
 #include "Mutex.hpp"
+#include "SharedPtr.hpp"
 
 namespace ZeroTier {
 
 class RuntimeEnvironment;
 class CertificateOfMembership;
 class Packet;
+class Network;
 
 /**
  * Database of known multicast peers within a network
@@ -128,11 +130,8 @@ public:
 	 * Send a multicast
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param limit Multicast limit
 	 * @param now Current time
-	 * @param nwid Network ID
-	 * @param disableCompression Disable packet payload compression?
-	 * @param alwaysSendTo Send to these peers first and even if not included in subscriber list
+	 * @param network Network
 	 * @param mg Multicast group
 	 * @param src Source Ethernet MAC address or NULL to skip in packet and compute from ZT address (non-bridged mode)
 	 * @param etherType Ethernet frame type
@@ -141,11 +140,8 @@ public:
 	 */
 	void send(
 		void *tPtr,
-		unsigned int limit,
 		int64_t now,
-		uint64_t nwid,
-		bool disableCompression,
-		const std::vector<Address> &alwaysSendTo,
+		const SharedPtr<Network> &network,
 		const MulticastGroup &mg,
 		const MAC &src,
 		unsigned int etherType,

@@ -389,11 +389,9 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 
 		RR->mc->send(
 			tPtr,
-			network->config().multicastLimit,
 			RR->node->now(),
-			network->id(),
-			network->config().disableCompression(),
-			network->config().activeBridges(),
+			network,
+//			network->config().activeBridges(),
 			multicastGroup,
 			(fromBridged) ? from : MAC(),
 			etherType,

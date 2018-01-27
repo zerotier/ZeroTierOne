@@ -292,6 +292,16 @@ public:
 		return r;
 	}
 
+	inline unsigned int activeBridges(Address ab[ZT_MAX_NETWORK_SPECIALISTS]) const
+	{
+		unsigned int c = 0;
+		for(unsigned int i=0;i<specialistCount;++i) {
+			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)
+				ab[c++] = specialists[i];
+		}
+		return c;
+	}
+
 	inline std::vector<Address> anchors() const
 	{
 		std::vector<Address> r;
@@ -320,6 +330,16 @@ public:
 				r.push_back(Address(specialists[i]));
 		}
 		return r;
+	}
+
+	inline unsigned int alwaysContactAddresses(Address ac[ZT_MAX_NETWORK_SPECIALISTS]) const
+	{
+		unsigned int c = 0;
+		for(unsigned int i=0;i<specialistCount;++i) {
+			if ((specialists[i] & (ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR | ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR)) != 0)
+				ac[c++] = specialists[i];
+		}
+		return c;
 	}
 
 	inline void alwaysContactAddresses(Hashtable< Address,std::vector<InetAddress> > &a) const
