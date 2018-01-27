@@ -38,7 +38,6 @@
 #include <stdexcept>
 
 #include "Constants.hpp"
-#include "NonCopyable.hpp"
 #include "Hashtable.hpp"
 #include "Address.hpp"
 #include "Mutex.hpp"
@@ -63,7 +62,7 @@ class Peer;
 /**
  * A virtual LAN
  */
-class Network : NonCopyable
+class Network
 {
 	friend class SharedPtr<Network>;
 

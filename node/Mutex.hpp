@@ -28,7 +28,6 @@
 #define ZT_MUTEX_HPP
 
 #include "Constants.hpp"
-#include "NonCopyable.hpp"
 
 #ifdef __UNIX_LIKE__
 
@@ -41,7 +40,7 @@ namespace ZeroTier {
 #if defined(__GNUC__) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 
 // Inline ticket lock on x64 systems with GCC and CLANG (Mac, Linux) -- this is really fast as long as locking durations are very short
-class Mutex : NonCopyable
+class Mutex
 {
 public:
 	Mutex() :
@@ -67,7 +66,7 @@ public:
 	/**
 	 * Uses C++ contexts and constructor/destructor to lock/unlock automatically
 	 */
-	class Lock : NonCopyable
+	class Lock
 	{
 	public:
 		Lock(Mutex &m) :
@@ -92,6 +91,9 @@ public:
 	};
 
 private:
+	Mutex(const Mutex &) {}
+	const Mutex &operator=(const Mutex &) { return *this; }
+
 	uint16_t nextTicket;
 	uint16_t nowServing;
 };
@@ -99,7 +101,7 @@ private:
 #else
 
 // libpthread based mutex lock
-class Mutex : NonCopyable
+class Mutex
 {
 public:
 	Mutex()
@@ -122,7 +124,7 @@ public:
 		pthread_mutex_unlock(&((const_cast <Mutex *> (this))->_mh));
 	}
 
-	class Lock : NonCopyable
+	class Lock
 	{
 	public:
 		Lock(Mutex &m) :
@@ -147,6 +149,9 @@ public:
 	};
 
 private:
+	Mutex(const Mutex &) {}
+	const Mutex &operator=(const Mutex &) { return *this; }
+
 	pthread_mutex_t _mh;
 };
 
@@ -164,7 +169,7 @@ private:
 namespace ZeroTier {
 
 // Windows critical section based lock
-class Mutex : NonCopyable
+class Mutex
 {
 public:
 	Mutex()
@@ -197,7 +202,7 @@ public:
 		(const_cast <Mutex *> (this))->unlock();
 	}
 
-	class Lock : NonCopyable
+	class Lock
 	{
 	public:
 		Lock(Mutex &m) :
@@ -222,6 +227,9 @@ public:
 	};
 
 private:
+	Mutex(const Mutex &) {}
+	const Mutex &operator=(const Mutex &) { return *this; }
+
 	CRITICAL_SECTION _cs;
 };
 

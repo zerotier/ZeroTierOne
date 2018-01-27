@@ -34,7 +34,6 @@
 #include "../node/Utils.hpp"
 #include "../node/SharedPtr.hpp"
 #include "../node/AtomicCounter.hpp"
-#include "../node/NonCopyable.hpp"
 
 #include <stdexcept>
 #include <vector>
@@ -45,7 +44,7 @@ namespace ZeroTier {
 /**
  * A ZT-managed route that used C++ RAII semantics to automatically clean itself up on deallocate
  */
-class ManagedRoute : NonCopyable
+class ManagedRoute
 {
 	friend class SharedPtr<ManagedRoute>;
 
@@ -91,6 +90,9 @@ public:
 	inline const char *device() const { return _device; }
 
 private:
+	ManagedRoute(const ManagedRoute &) {}
+	inline ManagedRoute &operator=(const ManagedRoute &) { return *this; }
+
 	InetAddress _target;
 	InetAddress _via;
 	InetAddress _systemVia; // for route overrides

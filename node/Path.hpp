@@ -38,7 +38,6 @@
 #include "InetAddress.hpp"
 #include "SharedPtr.hpp"
 #include "AtomicCounter.hpp"
-#include "NonCopyable.hpp"
 #include "Utils.hpp"
 
 /**
@@ -53,7 +52,7 @@ class RuntimeEnvironment;
 /**
  * A path across the physical network
  */
-class Path : NonCopyable
+class Path
 {
 	friend class SharedPtr<Path>;
 

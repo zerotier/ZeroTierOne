@@ -49,7 +49,6 @@
 #include "AtomicCounter.hpp"
 #include "Hashtable.hpp"
 #include "Mutex.hpp"
-#include "NonCopyable.hpp"
 
 #define ZT_PEER_MAX_SERIALIZED_STATE_SIZE (sizeof(Peer) + 32 + (sizeof(Path) * 2))
 
@@ -58,7 +57,7 @@ namespace ZeroTier {
 /**
  * Peer on P2P Network (virtual layer 1)
  */
-class Peer : NonCopyable
+class Peer
 {
 	friend class SharedPtr<Peer>;
 

@@ -35,7 +35,6 @@
 #include "Constants.hpp"
 #include "Mutex.hpp"
 #include "MAC.hpp"
-#include "NonCopyable.hpp"
 #include "Packet.hpp"
 #include "Utils.hpp"
 #include "InetAddress.hpp"
@@ -58,7 +57,7 @@ class Peer;
  * packets from tap devices, and this sends them where they need to go and
  * wraps/unwraps accordingly. It also handles queues and timeouts and such.
  */
-class Switch : NonCopyable
+class Switch
 {
 public:
 	Switch(const RuntimeEnvironment *renv);

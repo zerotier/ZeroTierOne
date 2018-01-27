@@ -60,7 +60,6 @@
 #include <set>
 #include <atomic>
 
-#include "../node/NonCopyable.hpp"
 #include "../node/InetAddress.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/Utils.hpp"
@@ -87,7 +86,7 @@ namespace ZeroTier {
  * On OSes that do not support local port enumeration or where this is not
  * meaningful, this degrades to binding to wildcard.
  */
-class Binder : NonCopyable
+class Binder
 {
 private:
 	struct _Binding

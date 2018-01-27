@@ -35,7 +35,6 @@
 #include "../node/Utils.hpp"
 #include "../node/Address.hpp"
 #include "../node/InetAddress.hpp"
-#include "../node/NonCopyable.hpp"
 
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Thread.hpp"
