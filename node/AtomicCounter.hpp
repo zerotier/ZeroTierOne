@@ -28,7 +28,6 @@
 #define ZT_ATOMICCOUNTER_HPP
 
 #include "Constants.hpp"
-#include "NonCopyable.hpp"
 
 #ifndef __GNUC__
 #include <atomic>
@@ -39,13 +38,10 @@ namespace ZeroTier {
 /**
  * Simple atomic counter supporting increment and decrement
  */
-class AtomicCounter : NonCopyable
+class AtomicCounter
 {
 public:
-	AtomicCounter()
-	{
-		_v = 0;
-	}
+	AtomicCounter() { _v = 0; }
 
 	inline int load() const
 	{
@@ -75,6 +71,9 @@ public:
 	}
 
 private:
+	AtomicCounter(const AtomicCounter &) {}
+	const AtomicCounter &operator=(const AtomicCounter &) { return *this; }
+
 #ifdef __GNUC__
 	int _v;
 #else
