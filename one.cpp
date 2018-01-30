@@ -1029,7 +1029,7 @@ static void dropPrivileges(const char *procName,const std::string &homeDir)
 	// Change ownership of our home directory if everything looks good (does nothing if already chown'd)
 	_recursiveChown(homeDir.c_str(),targetUser->pw_uid,targetUser->pw_gid);
 
-	if (_setCapabilities((1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW) | (1 << CAP_SETUID) | (1 << CAP_SETGID)) < 0) {
+	if (_setCapabilities((1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW) | (1 << CAP_SETUID) | (1 << CAP_SETGID) | (1 << CAP_NET_BIND_SERVICE)) < 0) {
 		_notDropping(procName,homeDir);
 		return;
 	}
@@ -1053,7 +1053,7 @@ static void dropPrivileges(const char *procName,const std::string &homeDir)
 		exit(1);
 	}
 
-	if (_setCapabilities((1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW)) < 0) {
+	if (_setCapabilities((1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW) | (1 << CAP_NET_BIND_SERVICE)) < 0) {
 		fprintf(stderr,"%s: FATAL: unable to drop capabilities after relinquishing root" ZT_EOL_S,procName);
 		exit(1);
 	}
