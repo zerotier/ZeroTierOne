@@ -293,9 +293,6 @@
     <ClInclude Include="..\..\node\Address.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\node\Array.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\node\AtomicCounter.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
@@ -345,9 +342,6 @@
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\Node.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\node\NonCopyable.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\OutboundMulticast.hpp">

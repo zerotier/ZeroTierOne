@@ -130,7 +130,6 @@
     <ClInclude Include="..\..\ext\x64-salsa2012-asm\salsa2012.h" />
     <ClInclude Include="..\..\include\ZeroTierOne.h" />
     <ClInclude Include="..\..\node\Address.hpp" />
-    <ClInclude Include="..\..\node\Array.hpp" />
     <ClInclude Include="..\..\node\AtomicCounter.hpp" />
     <ClInclude Include="..\..\node\Buffer.hpp" />
     <ClInclude Include="..\..\node\C25519.hpp" />
@@ -151,7 +150,6 @@
     <ClInclude Include="..\..\node\NetworkConfig.hpp" />
     <ClInclude Include="..\..\node\NetworkController.hpp" />
     <ClInclude Include="..\..\node\Node.hpp" />
-    <ClInclude Include="..\..\node\NonCopyable.hpp" />
     <ClInclude Include="..\..\node\OutboundMulticast.hpp" />
     <ClInclude Include="..\..\node\Packet.hpp" />
     <ClInclude Include="..\..\node\Path.hpp" />

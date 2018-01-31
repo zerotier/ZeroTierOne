@@ -38,7 +38,6 @@
 
 #include "../node/Constants.hpp"
 #include "../node/Mutex.hpp"
-#include "../node/Array.hpp"
 #include "../node/MulticastGroup.hpp"
 #include "../node/InetAddress.hpp"
 #include "../osdep/Thread.hpp"
@@ -150,7 +149,12 @@ private:
 
 	std::vector<MulticastGroup> _multicastGroups;
 
-	std::queue< std::pair< Array<char,ZT_MAX_MTU + 32>,unsigned int > > _injectPending;
+	struct _InjectPending
+	{
+		unsigned int len;
+		char data[ZT_MAX_MTU + 32];
+	};
+	std::queue<_InjectPending> _injectPending;
 	Mutex _injectPending_m;
 
 	std::string _pathToHelpers;

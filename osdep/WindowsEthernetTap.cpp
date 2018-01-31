@@ -795,8 +795,9 @@ void WindowsEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherTyp
 		return;
 
 	Mutex::Lock _l(_injectPending_m);
-	_injectPending.push( std::pair<Array<char,ZT_MAX_MTU + 32>,unsigned int>(Array<char,ZT_MAX_MTU + 32>(),len + 14) );
-	char *d = _injectPending.back().first.data;
+	_injectPending.emplace();
+	_injectPending.back().len = len + 14;
+	char *const d = _injectPending.back().data;
 	to.copyTo(d,6);
 	from.copyTo(d + 6,6);
 	d[12] = (char)((etherType >> 8) & 0xff);
@@ -1100,7 +1101,7 @@ void WindowsEthernetTap::threadMain()
 				} else _injectPending_m.lock();
 
 				if (!_injectPending.empty()) {
-					WriteFile(_tap,_injectPending.front().first.data,_injectPending.front().second,NULL,&tapOvlWrite);
+					WriteFile(_tap,_injectPending.front().data,_injectPending.front().len,NULL,&tapOvlWrite);
 					writeInProgress = true;
 				}
 
