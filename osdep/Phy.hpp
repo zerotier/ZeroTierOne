@@ -816,7 +816,7 @@ public:
 	 * @param sock Stream connection socket
 	 * @param notifyWritable Want writable notifications?
 	 */
-	inline const void setNotifyWritable(PhySocket *sock,bool notifyWritable)
+	inline void setNotifyWritable(PhySocket *sock,bool notifyWritable)
 	{
 		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
 		if (notifyWritable) {
@@ -836,7 +836,7 @@ public:
 	 * @param sock Socket to modify
 	 * @param notifyReadable True if socket should be monitored for readability
 	 */
-	inline const void setNotifyReadable(PhySocket *sock,bool notifyReadable)
+	inline void setNotifyReadable(PhySocket *sock,bool notifyReadable)
 	{
 		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
 		if (notifyReadable) {

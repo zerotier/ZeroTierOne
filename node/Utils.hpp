@@ -41,8 +41,8 @@
 #include "Constants.hpp"
 
 #ifdef __LINUX__
-
-#if (defined(_MSC_VER) || defined(__GNUC__)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+//#if (defined(_MSC_VER) || defined(__GNUC__)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#if 0
 #include <emmintrin.h>
 static inline void ZT_FAST_MEMCPY(void *a,const void *b,unsigned long k)
 {
@@ -62,8 +62,8 @@ static inline void ZT_FAST_MEMCPY(void *a,const void *b,unsigned long k)
 		k -= 64;
 	}
 	while (k >= 16) {
-		__m128 t1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(bb));
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(aa),t1);
+		__m128 t1 = _mm_loadu_ps(reinterpret_cast<const float *>(bb));
+		_mm_storeu_ps(reinterpret_cast<float *>(aa),t1);
 		bb += 16;
 		aa += 16;
 		k -= 16;
@@ -74,7 +74,6 @@ static inline void ZT_FAST_MEMCPY(void *a,const void *b,unsigned long k)
 #else
 #define ZT_FAST_MEMCPY(a,b,c) memcpy(a,b,c)
 #endif
-
 #else
 #define ZT_FAST_MEMCPY(a,b,c) memcpy(a,b,c)
 #endif

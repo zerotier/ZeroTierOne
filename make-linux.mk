@@ -73,7 +73,7 @@ else
 	CFLAGS?=-O3 -fstack-protector
 	override CFLAGS+=-Wall -Wno-deprecated -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	CXXFLAGS?=-O3 -fstack-protector
-	override CXXFLAGS+=-Wall -Wno-deprecated -Wno-unused-result -Wreorder -fPIE -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	override CXXFLAGS+=-Wall -Wno-deprecated -fPIE -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	override LDFLAGS+=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
 	STRIP+=--strip-all

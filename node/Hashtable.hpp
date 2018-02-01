@@ -105,7 +105,7 @@ public:
 		Hashtable *_ht;
 		_Bucket *_b;
 	};
-	friend class Hashtable::Iterator;
+	//friend class Hashtable<K,V>::Iterator;
 
 	/**
 	 * @param bc Initial capacity in buckets (default: 64, must be nonzero)

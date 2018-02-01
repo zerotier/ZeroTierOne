@@ -158,7 +158,7 @@ public:
 	/**
 	 * @return Local socket as specified by external code
 	 */
-	inline const int64_t localSocket() const { return _localSocket; }
+	inline int64_t localSocket() const { return _localSocket; }
 
 	/**
 	 * @return Physical address
