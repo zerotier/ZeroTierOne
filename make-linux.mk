@@ -71,7 +71,6 @@ ifeq ($(ZT_DEBUG),1)
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
-	override DEFS+=-D_FORTIFY_SOURCE=2
 	CFLAGS?=-O3 -fstack-protector
 	override CFLAGS+=-Wall -Wno-deprecated -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	CXXFLAGS?=-O3 -fstack-protector
@@ -210,6 +209,12 @@ ifeq ($(ZT_STATIC),1)
 	override LDFLAGS+=-static
 endif
 
+# For building an official semi-static binary on CentOS 7
+ifeq ($(ZT_OFFICIAL),1)
+	CORE_OBJS+=ext/misc/linux-old-glibc-compat.o
+	override LDFLAGS+=-Wl,--wrap=memcpy -static-libstdc++
+endif
+
 # ARM32 hell -- use conservative CFLAGS
 ifeq ($(ZT_ARCHITECTURE),3)
 	ifeq ($(shell if [ -e /usr/bin/dpkg ]; then dpkg --print-architecture; fi),armel)
@@ -254,7 +259,7 @@ libzerotiercore.a:	FORCE
 core: libzerotiercore.a
 
 selftest:	$(CORE_OBJS) $(ONE_OBJS) selftest.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(CORE_OBJS) $(ONE_OBJS $(LDLIBS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(CORE_OBJS) $(ONE_OBJS) $(LDLIBS)
 	$(STRIP) zerotier-selftest
 
 zerotier-selftest: selftest
@@ -265,7 +270,7 @@ manpages:	FORCE
 doc:	manpages
 
 clean: FORCE
-	rm -rf *.a *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one doc/node_modules
+	rm -rf *.a *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one doc/node_modules ext/misc/*.o
 
 distclean:	clean
 

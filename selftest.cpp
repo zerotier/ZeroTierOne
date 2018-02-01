@@ -660,6 +660,7 @@ static int testOther()
 	std::cout << " " << InetAddress("").toString(buf);
 	std::cout << std::endl;
 
+#if 0
 	std::cout << "[other] Benchmarking memcpy... "; std::cout.flush();
 	{
 		unsigned char *bb = (unsigned char *)::malloc(1234567);
@@ -681,6 +682,7 @@ static int testOther()
 		::free((void *)bb);
 		::free((void *)cc);
 	}
+#endif
 
 	std::cout << "[other] Benchmarking ZT_FAST_MEMCPY... "; std::cout.flush();
 	{
