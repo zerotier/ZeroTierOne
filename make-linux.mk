@@ -276,12 +276,12 @@ distclean:	clean
 
 realclean:	distclean
 
-official-static:	FORCE
-	make -j4 ZT_STATIC=1 LDLIBS=/usr/lib/libjemalloc.a all selftest
+official:	FORCE
+	make -j4 ZT_OFFICIAL=1 all
 
 central-controller:	FORCE
 	cd ext/librethinkdbxx ; make
-	make -j8 LDLIBS="ext/librethinkdbxx/build/librethinkdb++.a" DEFS="-DZT_CONTROLLER_USE_RETHINKDB" one
+	make -j4 LDLIBS="ext/librethinkdbxx/build/librethinkdb++.a" DEFS="-DZT_CONTROLLER_USE_RETHINKDB" ZT_OFFICIAL=1 one
 
 debug:	FORCE
 	make ZT_DEBUG=1 one
