@@ -51,6 +51,7 @@
 #define ZT_SDK_API __declspec(dllexport)
 #else
 #define ZT_SDK_API __declspec(dllimport)
+#if !defined(ZT_SDK)
 #ifdef _DEBUG
 #ifdef _WIN64
 #pragma comment(lib, "ZeroTierOne_x64d.lib")
@@ -62,6 +63,7 @@
 #pragma comment(lib, "ZeroTierOne_x64.lib")
 #else
 #pragma comment(lib, "ZeroTierOne_x86.lib")
+#endif
 #endif
 #endif
 #endif
