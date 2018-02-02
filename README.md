@@ -17,7 +17,7 @@ For testing purposes we provide a public virtual network called *Earth* with net
 
     sudo zerotier-cli join 8056c2e21c000001
 
-Now wait about 30 seconds and check your system with `ip addr list` or `ifconfig`. You'll see a new interface whose name starts with *zt* and it should quickly get an IPv4 and an IPv6 address. Once you see it get an IP, try pinging `earth.zerotier.net` at `29.209.112.93`. If you've joined Earth from more than one system, try pinging your other machine. If you don't want to belong to a giant Ethernet party line anymore, just type:
+Now wait about 30 seconds and check your system with `ip addr list` or `ifconfig`. You'll see a new interface whose name starts with *zt* and it should quickly get an IPv4 and an IPv6 address. Once you see it get an IP, try pinging `earth.zerotier.net`. If you've joined Earth from more than one system, try pinging your other machine. If you don't want to belong to a giant Ethernet party line anymore, just type:
 
     sudo zerotier-cli leave 8056c2e21c000001
 
