@@ -27,6 +27,7 @@
 //#define ZT_TRACE
 
 #include <stdio.h>
+#include <stdarg.h>
 
 #include "Trace.hpp"
 #include "RuntimeEnvironment.hpp"
