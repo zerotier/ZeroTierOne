@@ -1593,7 +1593,7 @@ public:
 
 		if (syncRoutes) {
 			char tapdev[64];
-#ifdef __WINDOWS__
+#if defined(__WINDOWS__) && !defined(ZT_SDK)
 			OSUtils::ztsnprintf(tapdev,sizeof(tapdev),"%.16llx",(unsigned long long)n.tap->luid().Value);
 #else
 			Utils::scopy(tapdev,sizeof(tapdev),n.tap->deviceName().c_str());
@@ -1998,7 +1998,7 @@ public:
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
 				ZT_FAST_MEMCPY(&(n.config),nwc,sizeof(ZT_VirtualNetworkConfig));
 				if (n.tap) { // sanity check
-#ifdef __WINDOWS__
+#if defined(__WINDOWS__) && !defined(ZT_SDK)
 					// wait for up to 5 seconds for the WindowsEthernetTap to actually be initialized
 					// 
 					// without WindowsEthernetTap::isInitialized() returning true, the won't actually
@@ -2019,7 +2019,7 @@ public:
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN:
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY:
 				if (n.tap) { // sanity check
-#ifdef __WINDOWS__
+#if defined(__WINDOWS__) && !defined(ZT_SDK)
 					std::string winInstanceId(n.tap->instanceId());
 #endif
 					*nuptr = (void *)0;
