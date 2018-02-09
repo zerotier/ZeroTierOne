@@ -62,40 +62,24 @@ template<unsigned int C>
 class Dictionary
 {
 public:
-	Dictionary()
-	{
-		_d[0] = (char)0;
-	}
-
-	Dictionary(const char *s)
-	{
-		if (s) {
-			Utils::scopy(_d,sizeof(_d),s);
-		} else {
-			_d[0] = (char)0;
-		}
-	}
-
+	Dictionary() { memset(_d,0,sizeof(_d)); }
+	Dictionary(const char *s) { this->load(s); }
 	Dictionary(const char *s,unsigned int len)
 	{
-		if (s) {
-			if (len > (C-1))
-				len = C-1;
-			ZT_FAST_MEMCPY(_d,s,len);
-			_d[len] = (char)0;
-		} else {
-			_d[0] = (char)0;
+		for(unsigned int i=0;i<C;++i) {
+			if ((s)&&(i < len)) {
+				if (!(_d[i] = *s))
+					s = (const char *)0;
+				else ++s;
+			} else _d[i] = (char)0;
 		}
+		_d[C - 1] = (char)0;
 	}
-
-	Dictionary(const Dictionary &d)
-	{
-		Utils::scopy(_d,sizeof(_d),d._d);
-	}
+	Dictionary(const Dictionary &d) { memcpy(_d,d._d,C); }
 
 	inline Dictionary &operator=(const Dictionary &d)
 	{
-		Utils::scopy(_d,sizeof(_d),d._d);
+		memcpy(_d,d._d,C);
 		return *this;
 	}
 
@@ -109,12 +93,15 @@ public:
 	 */
 	inline bool load(const char *s)
 	{
-		if (s) {
-			return Utils::scopy(_d,sizeof(_d),s);
-		} else {
-			_d[0] = (char)0;
-			return true;
+		for(unsigned int i=0;i<C;++i) {
+			if (s) {
+				if (!(_d[i] = *s))
+					s = (const char *)0;
+				else ++s;
+			} else _d[i] = (char)0;
 		}
+		_d[C - 1] = (char)0;
+		return (!s);
 	}
 
 	/**
@@ -122,7 +109,7 @@ public:
 	 */
 	inline void clear()
 	{
-		_d[0] = (char)0;
+		memset(_d,0,sizeof(_d));
 	}
 
 	/**
