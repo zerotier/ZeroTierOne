@@ -120,6 +120,11 @@ namespace {
         JNIEnv *env = NULL;
         ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
 
+        if (ref->configListener == NULL) {
+            LOGE("configListener is NULL");
+            return -1;
+        }
+
         jclass configListenerClass = env->GetObjectClass(ref->configListener);
         if(configListenerClass == NULL)
         {
@@ -169,13 +174,19 @@ namespace {
         unsigned int frameLength)
     {
         LOGV("VirtualNetworkFrameFunctionCallback");
+#ifndef NDEBUG
         unsigned char* local = (unsigned char*)frameData;
         LOGV("Type Bytes: 0x%02x%02x", local[12], local[13]);
+#endif
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
         JNIEnv *env = NULL;
         ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
 
+        if (ref->frameListener == NULL) {
+            LOGE("frameListener is NULL");
+            return;
+        }
 
         jclass frameListenerClass = env->GetObjectClass(ref->frameListener);
         if(env->ExceptionCheck() || frameListenerClass == NULL)
@@ -228,6 +239,10 @@ namespace {
         JNIEnv *env = NULL;
         ref->jvm->GetEnv((void **) &env, JNI_VERSION_1_6);
 
+        if (ref->eventListener == NULL) {
+            LOGE("eventListener is NULL");
+            return;
+        }
 
         jclass eventListenerClass = env->GetObjectClass(ref->eventListener);
         if (eventListenerClass == NULL) {
@@ -332,9 +347,18 @@ namespace {
                 return;
         }
 
+        if (strlen(p) < 1) {
+            return;
+        }
+
         JniRef *ref = (JniRef*)userData;
         JNIEnv *env = NULL;
         ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+
+        if (ref->dataStorePutListener == NULL) {
+            LOGE("dataStorePutListener is NULL");
+            return;
+        }
 
         jclass dataStorePutClass = env->GetObjectClass(ref->dataStorePutListener);
         if (dataStorePutClass == NULL)
@@ -416,9 +440,18 @@ namespace {
                 return -1;
         }
 
+        if (strlen(p) < 1) {
+            return -1;
+        }
+
         JniRef *ref = (JniRef*)userData;
         JNIEnv *env = NULL;
         ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+
+        if (ref->dataStoreGetListener == NULL) {
+            LOGE("dataStoreGetListener is NULL");
+            return -2;
+        }
 
         jclass dataStoreGetClass = env->GetObjectClass(ref->dataStoreGetListener);
         if(dataStoreGetClass == NULL)
@@ -487,6 +520,10 @@ namespace {
         JNIEnv *env = NULL;
         ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
 
+        if (ref->packetSender == NULL) {
+            LOGE("packetSender is NULL");
+            return -1;
+        }
 
         jclass packetSenderClass = env->GetObjectClass(ref->packetSender);
         if(packetSenderClass == NULL)
