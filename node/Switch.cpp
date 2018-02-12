@@ -50,6 +50,7 @@ namespace ZeroTier {
 Switch::Switch(const RuntimeEnvironment *renv) :
 	RR(renv),
 	_lastBeaconResponse(0),
+	_lastCheckedQueues(0),
 	_lastUniteAttempt(8) // only really used on root servers and upstreams, and it'll grow there just fine
 {
 }
