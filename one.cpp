@@ -299,7 +299,7 @@ static int cli(int argc,char **argv)
 			responseHeaders,
 			responseBody);
 		if (scode == 200) {
-			printf("%s",cliFixJsonCRs(responseBody).c_str());
+			printf("%s", cliFixJsonCRs(responseBody).c_str());
 			return 0;
 		} else {
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
@@ -307,6 +307,11 @@ static int cli(int argc,char **argv)
 		}
 	} else if ((command == "info")||(command == "status")) {
 		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/status",requestHeaders,responseHeaders,responseBody);
+
+		if (scode == 0) {
+			printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
+			return 1;
+		}
 
 		nlohmann::json j;
 		try {
@@ -337,6 +342,11 @@ static int cli(int argc,char **argv)
 		}
 	} else if (command == "listpeers") {
 		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/peer",requestHeaders,responseHeaders,responseBody);
+
+		if (scode == 0) {
+			printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
+			return 1;
+		}
 
 		nlohmann::json j;
 		try {
@@ -399,6 +409,11 @@ static int cli(int argc,char **argv)
 		}
 	} else if (command == "listnetworks") {
 		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/network",requestHeaders,responseHeaders,responseBody);
+
+		if (scode == 0) {
+			printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
+			return 1;
+		}
 
 		nlohmann::json j;
 		try {
@@ -503,6 +518,11 @@ static int cli(int argc,char **argv)
 		}
 	} else if (command == "listmoons") {
 		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/moon",requestHeaders,responseHeaders,responseBody);
+
+		if (scode == 0) {
+			printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
+			return 1;
+		}
 
 		nlohmann::json j;
 		try {
@@ -618,6 +638,11 @@ static int cli(int argc,char **argv)
 		requestHeaders["Content-Type"] = "application/json";
 		requestHeaders["Content-Length"] = cl;
 		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/network",requestHeaders,responseHeaders,responseBody);
+
+		if (scode == 0) {
+			printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
+			return 1;
+		}
 
 		nlohmann::json j;
 		try {
