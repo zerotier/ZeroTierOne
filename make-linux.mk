@@ -88,6 +88,11 @@ ifeq ($(ZT_USE_TEST_TAP),1)
 	override DEFS+=-DZT_USE_TEST_TAP
 endif
 
+ifeq ($(ZT_VAULT_SUPPORT),1)
+	override DEFS+=-DZT_VAULT_SUPPORT=1
+	override LDLIBS+=-lcurl
+endif
+
 # Uncomment for gprof profile build
 #CFLAGS=-Wall -g -pg -pthread $(INCLUDES) $(DEFS)
 #CXXFLAGS=-Wall -g -pg -pthread $(INCLUDES) $(DEFS)
