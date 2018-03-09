@@ -63,6 +63,11 @@ ifeq ($(ZT_TRACE),1)
 	DEFS+=-DZT_TRACE
 endif
 
+ifeq ($(ZT_VAULT_SUPPORT),1)
+	DEFS+=-DZT_VAULT_SUPPORT=1
+	LIBS+=-lcurl
+endif
+
 CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++ 
 
 all: one macui
@@ -70,7 +75,7 @@ all: one macui
 ext/x64-salsa2012-asm/salsa2012.o:
 	$(CC) $(CFLAGS) -c ext/x64-salsa2012-asm/salsa2012.s -o ext/x64-salsa2012-asm/salsa2012.o
 
-one:	$(CORE_OBJS) $(ONE_OBJS) one.o
+one:	$(CORE_OBJS) $(ONE_OBJS) one.o 
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool

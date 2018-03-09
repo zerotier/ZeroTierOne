@@ -531,10 +531,12 @@ public:
 #ifdef ZT_USE_MINIUPNPC
 		,_portMapper((PortMapper *)0)
 #endif
+#ifdef ZT_VAULT_SUPPORT
 		,_vaultEnabled(false)
 		,_vaultURL()
 		,_vaultToken()
 		,_vaultPath("cubbyhole/zerotier")
+#endif
 		,_run(true)
 	{
 		_ports[0] = 0;
@@ -551,6 +553,10 @@ public:
 		_binder.closeAll(_phy);
 		_phy.close(_localControlSocket4);
 		_phy.close(_localControlSocket6);
+#if ZT_VAULT_SUPPORT
+		curl_global_cleanup();
+#endif
+
 #ifdef ZT_USE_MINIUPNPC
 		delete _portMapper;
 #endif
@@ -1541,6 +1547,7 @@ public:
 			}
 		}
 
+#if ZT_VAULT_SUPPORT
 		json &vault = settings["vault"];
 		if (vault.is_object()) {
 			const std::string url(OSUtils::jsonString(vault["vaultURL"], "").c_str());
@@ -1579,6 +1586,7 @@ public:
 		if (!_vaultURL.empty() && !_vaultToken.empty()) {
 			_vaultEnabled = true;
 		}
+#endif
 	}
 
 	// Checks if a managed IP or route target is allowed
