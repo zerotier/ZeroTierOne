@@ -1164,9 +1164,9 @@ void Network::requestConfiguration(void *tPtr)
 			nconf->issuedTo = RR->identity.address();
 			nconf->flags = ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
 			nconf->mtu = ZT_DEFAULT_MTU;
-			nconf->multicastLimit = 0;
+			nconf->multicastLimit = 1024;
 			nconf->staticIpCount = 2;
-			nconf->ruleCount = 14;
+			nconf->ruleCount = 1;
 			nconf->staticIps[0] = InetAddress::makeIpv66plane(_id,myAddress);
 			nconf->staticIps[1].set(ipv4,4,8);
 
