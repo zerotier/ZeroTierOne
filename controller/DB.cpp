@@ -41,7 +41,6 @@ void DB::initNetwork(nlohmann::json &network)
 	if (!network.count("tags")) network["tags"] = nlohmann::json::array();
 	if (!network.count("routes")) network["routes"] = nlohmann::json::array();
 	if (!network.count("ipAssignmentPools")) network["ipAssignmentPools"] = nlohmann::json::array();
-	//if (!network.count("anchors")) network["anchors"] = nlohmann::json::array();
 	if (!network.count("mtu")) network["mtu"] = ZT_DEFAULT_MTU;
 	if (!network.count("remoteTraceTarget")) network["remoteTraceTarget"] = nlohmann::json();
 	if (!network.count("removeTraceLevel")) network["remoteTraceLevel"] = 0;
