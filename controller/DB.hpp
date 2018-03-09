@@ -119,8 +119,8 @@ protected:
 		std::mutex lock;
 	};
 
-	void _memberChanged(nlohmann::json &old,nlohmann::json &member,bool push);
-	void _networkChanged(nlohmann::json &old,nlohmann::json &network,bool push);
+	void _memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool push);
+	void _networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool push);
 	void _fillSummaryInfo(const std::shared_ptr<_Network> &nw,NetworkSummaryInfo &info);
 
 	EmbeddedNetworkController *const _controller;
