@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2015  ZeroTier, Inc.
+ * Copyright (C) 2011-2018  ZeroTier, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -97,10 +97,11 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,co
 								try {
 									json &ov = tmp["old_val"];
 									json &nv = tmp["new_val"];
-									if (ov.is_object()||nv.is_object()) {
-										//if (nv.is_object()) printf("MEMBER: %s" ZT_EOL_S,nv.dump().c_str());
-										this->_memberChanged(ov,nv,(this->_ready <= 0));
-									}
+									json oldConfig,newConfig;
+									if (ov.is_object()) oldConfig = ov["config"];
+									if (nv.is_object()) newConfig = nv["config"];
+									if (oldConfig.is_object()||newConfig.is_object())
+										this->_memberChanged(oldConfig,newConfig,(this->_ready <= 0));
 								} catch ( ... ) {} // ignore bad records
 							}
 						}
@@ -138,10 +139,11 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,co
 								try {
 									json &ov = tmp["old_val"];
 									json &nv = tmp["new_val"];
-									if (ov.is_object()||nv.is_object()) {
-										//if (nv.is_object()) printf("NETWORK: %s" ZT_EOL_S,nv.dump().c_str());
-										this->_networkChanged(ov,nv,(this->_ready <= 0));
-									}
+									json oldConfig,newConfig;
+									if (ov.is_object()) oldConfig = ov["config"];
+									if (nv.is_object()) newConfig = nv["config"];
+									if (oldConfig.is_object()||newConfig.is_object())
+										this->_networkChanged(oldConfig,newConfig,(this->_ready <= 0));
 								} catch ( ... ) {} // ignore bad records
 							}
 						}

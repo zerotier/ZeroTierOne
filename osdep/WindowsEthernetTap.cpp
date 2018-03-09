@@ -841,7 +841,7 @@ void WindowsEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,
 	// pretty much anything work... IPv4, IPv6, IPX, oldskool Netbios, who knows...
 	unsigned char mcastbuf[TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS_OUTPUT_BUF_SIZE];
 	DWORD bytesReturned = 0;
-	if (DeviceIoControl(t,TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS,(LPVOID)0,0,(LPVOID)mcastbuf,sizeof(mcastbuf),&bytesReturned,NULL)) {
+	if (DeviceIoControl(t,TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS,(LPVOID)mcastbuf,sizeof(mcastbuf),(LPVOID)mcastbuf,sizeof(mcastbuf),&bytesReturned,NULL)) {
 		if ((bytesReturned > 0)&&(bytesReturned <= TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS_OUTPUT_BUF_SIZE)) { // sanity check
 			MAC mac;
 			DWORD i = 0;

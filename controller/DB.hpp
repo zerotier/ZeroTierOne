@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2015  ZeroTier, Inc.
+ * Copyright (C) 2011-2018  ZeroTier, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -119,8 +119,8 @@ protected:
 		std::mutex lock;
 	};
 
-	void _memberChanged(nlohmann::json &old,nlohmann::json &member,bool push);
-	void _networkChanged(nlohmann::json &old,nlohmann::json &network,bool push);
+	void _memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool push);
+	void _networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool push);
 	void _fillSummaryInfo(const std::shared_ptr<_Network> &nw,NetworkSummaryInfo &info);
 
 	EmbeddedNetworkController *const _controller;

@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2015  ZeroTier, Inc.
+ * Copyright (C) 2011-2018  ZeroTier, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,7 +41,6 @@ void DB::initNetwork(nlohmann::json &network)
 	if (!network.count("tags")) network["tags"] = nlohmann::json::array();
 	if (!network.count("routes")) network["routes"] = nlohmann::json::array();
 	if (!network.count("ipAssignmentPools")) network["ipAssignmentPools"] = nlohmann::json::array();
-	//if (!network.count("anchors")) network["anchors"] = nlohmann::json::array();
 	if (!network.count("mtu")) network["mtu"] = ZT_DEFAULT_MTU;
 	if (!network.count("remoteTraceTarget")) network["remoteTraceTarget"] = nlohmann::json();
 	if (!network.count("removeTraceLevel")) network["remoteTraceLevel"] = 0;
@@ -222,7 +221,7 @@ void DB::networks(std::vector<uint64_t> &networks)
 		networks.push_back(n->first);
 }
 
-void DB::_memberChanged(nlohmann::json &old,nlohmann::json &member,bool push)
+void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool push)
 {
 	uint64_t memberId = 0;
 	uint64_t networkId = 0;
@@ -230,6 +229,102 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &member,bool push)
 	bool wasAuth = false;
 	std::shared_ptr<_Network> nw;
 
+	if (old.is_object()) {
+		memberId = OSUtils::jsonIntHex(old["id"],0ULL);
+		networkId = OSUtils::jsonIntHex(old["nwid"],0ULL);
+		if ((memberId)&&(networkId)) {
+			{
+				std::lock_guard<std::mutex> l(_networks_l);
+				auto nw2 = _networks.find(networkId);
+				if (nw2 != _networks.end())
+					nw = nw2->second;
+			}
+			if (nw) {
+				std::lock_guard<std::mutex> l(nw->lock);
+				if (OSUtils::jsonBool(old["activeBridge"],false))
+					nw->activeBridgeMembers.erase(memberId);
+				wasAuth = OSUtils::jsonBool(old["authorized"],false);
+				if (wasAuth)
+					nw->authorizedMembers.erase(memberId);
+				json &ips = old["ipAssignments"];
+				if (ips.is_array()) {
+					for(unsigned long i=0;i<ips.size();++i) {
+						json &ipj = ips[i];
+						if (ipj.is_string()) {
+							const std::string ips = ipj;
+							InetAddress ipa(ips.c_str());
+							ipa.setPort(0);
+							nw->allocatedIps.erase(ipa);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (memberConfig.is_object()) {
+		if (!nw) {
+			memberId = OSUtils::jsonIntHex(memberConfig["id"],0ULL);
+			networkId = OSUtils::jsonIntHex(memberConfig["nwid"],0ULL);
+			if ((!memberId)||(!networkId))
+				return;
+			std::lock_guard<std::mutex> l(_networks_l);
+			std::shared_ptr<_Network> &nw2 = _networks[networkId];
+			if (!nw2)
+				nw2.reset(new _Network);
+			nw = nw2;
+		}
+
+		{
+			std::lock_guard<std::mutex> l(nw->lock);
+
+			nw->members[memberId] = memberConfig;
+
+			if (OSUtils::jsonBool(memberConfig["activeBridge"],false))
+				nw->activeBridgeMembers.insert(memberId);
+			isAuth = OSUtils::jsonBool(memberConfig["authorized"],false);
+			if (isAuth)
+				nw->authorizedMembers.insert(memberId);
+			json &ips = memberConfig["ipAssignments"];
+			if (ips.is_array()) {
+				for(unsigned long i=0;i<ips.size();++i) {
+					json &ipj = ips[i];
+					if (ipj.is_string()) {
+						const std::string ips = ipj;
+						InetAddress ipa(ips.c_str());
+						ipa.setPort(0);
+						nw->allocatedIps.insert(ipa);
+					}
+				}
+			}
+
+			if (!isAuth) {
+				const int64_t ldt = (int64_t)OSUtils::jsonInt(memberConfig["lastDeauthorizedTime"],0ULL);
+				if (ldt > nw->mostRecentDeauthTime)
+					nw->mostRecentDeauthTime = ldt;
+			}
+		}
+
+		if (push)
+			_controller->onNetworkMemberUpdate(networkId,memberId);
+	} else if (memberId) {
+		if (nw) {
+			std::lock_guard<std::mutex> l(nw->lock);
+			nw->members.erase(memberId);
+		}
+		if (networkId) {
+			std::lock_guard<std::mutex> l(_networks_l);
+			auto er = _networkByMember.equal_range(memberId);
+			for(auto i=er.first;i!=er.second;++i) {
+				if (i->second == networkId) {
+					_networkByMember.erase(i);
+					break;
+				}
+			}
+		}
+	}
+
+	/*
 	if (old.is_object()) {
 		json &config = old["config"];
 		if (config.is_object()) {
@@ -330,16 +425,46 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &member,bool push)
 			}
 		}
 	}
+	*/
 
 	if ((push)&&((wasAuth)&&(!isAuth)&&(networkId)&&(memberId)))
 		_controller->onNetworkMemberDeauthorize(networkId,memberId);
 }
 
-void DB::_networkChanged(nlohmann::json &old,nlohmann::json &network,bool push)
+void DB::_networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool push)
 {
+	if (networkConfig.is_object()) {
+		const std::string ids = networkConfig["id"];
+		const uint64_t id = Utils::hexStrToU64(ids.c_str());
+		if (id) {
+			std::shared_ptr<_Network> nw;
+			{
+				std::lock_guard<std::mutex> l(_networks_l);
+				std::shared_ptr<_Network> &nw2 = _networks[id];
+				if (!nw2)
+					nw2.reset(new _Network);
+				nw = nw2;
+			}
+			{
+				std::lock_guard<std::mutex> l2(nw->lock);
+				nw->config = networkConfig;
+			}
+			if (push)
+				_controller->onNetworkUpdate(id);
+		}
+	} else if (old.is_object()) {
+		const std::string ids = old["id"];
+		const uint64_t id = Utils::hexStrToU64(ids.c_str());
+		if (id) {
+			std::lock_guard<std::mutex> l(_networks_l);
+			_networks.erase(id);
+		}
+	}
+
+	/*
 	if (network.is_object()) {
 		json &config = network["config"];
-		if (config.is_object()) {
+		if (networkConfig.is_object()) {
 			const std::string ids = config["id"];
 			const uint64_t id = Utils::hexStrToU64(ids.c_str());
 			if (id) {
@@ -367,6 +492,7 @@ void DB::_networkChanged(nlohmann::json &old,nlohmann::json &network,bool push)
 			_networks.erase(id);
 		}
 	}
+	*/
 }
 
 void DB::_fillSummaryInfo(const std::shared_ptr<_Network> &nw,NetworkSummaryInfo &info)
