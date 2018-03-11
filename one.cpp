@@ -443,7 +443,7 @@ static int cli(int argc,char **argv)
 		}
 	} else if (command == "join") {
 		if (arg1.length() != 16) {
-			cliPrintHelp(argv[0],stderr);
+                        printf("invalid network id" ZT_EOL_S);
 			return 2;
 		}
 		requestHeaders["Content-Type"] = "application/json";
@@ -471,7 +471,7 @@ static int cli(int argc,char **argv)
 		}
 	} else if (command == "leave") {
 		if (arg1.length() != 16) {
-			cliPrintHelp(argv[0],stderr);
+                        printf("invalid network id" ZT_EOL_S);
 			return 2;
 		}
 		unsigned int scode = Http::DEL(
@@ -564,7 +564,7 @@ static int cli(int argc,char **argv)
 		}
 	} else if (command == "set") {
 		if (arg1.length() != 16) {
-			cliPrintHelp(argv[0],stderr);
+                        printf("invalid network id" ZT_EOL_S);
 			return 2;
 		}
 		std::size_t eqidx = arg2.find('=');
