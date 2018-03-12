@@ -376,11 +376,11 @@ static int testCrypto()
 	C25519::Pair bp[8];
 	for(int k=0;k<8;++k)
 		bp[k] = C25519::generate();
-	const uint64_t st = OSUtils::now();
+	uint64_t st = OSUtils::now();
 	for(unsigned int k=0;k<50;++k) {
 		C25519::agree(bp[~k & 7],bp[k & 7].pub,buf1,64);
 	}
-	const uint64_t et = OSUtils::now();
+	uint64_t et = OSUtils::now();
 	std::cout << ((double)(et - st) / 50.0) << "ms per agreement." << std::endl;
 
 	std::cout << "[crypto] Testing Ed25519 ECC signatures... "; std::cout.flush();
@@ -418,6 +418,15 @@ static int testCrypto()
 		}
 	}
 	std::cout << "PASS" << std::endl;
+
+	std::cout << "[crypto] Benchmarking Ed25519 ECC signatures... "; std::cout.flush();
+	st = OSUtils::now();
+	for(int k=0;k<1000;++k) {
+		C25519::Signature sig;
+		C25519::sign(didntSign.priv,didntSign.pub,buf1,sizeof(buf1),sig.data);
+	}
+	et = OSUtils::now();
+	std::cout << ((double)(et - st) / 50.0) << "ms per signature." << std::endl;
 
 	return 0;
 }
