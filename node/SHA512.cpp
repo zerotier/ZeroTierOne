@@ -28,6 +28,20 @@ void SHA512::hash(void *digest,const void *data,unsigned int len)
 }
 #endif
 
+#ifdef ZT_USE_LIBCRYPTO
+#include <openssl/sha.h>
+#define ZT_HAVE_NATIVE_SHA512
+namespace ZeroTier {
+void SHA512::hash(void *digest,const void *data,unsigned int len)
+{
+	SHA512_CTX ctx;
+	SHA512_Init(&ctx);
+	SHA512_Update(&ctx,data,len);
+	SHA512_Final(reinterpret_cast<unsigned char *>(digest),&ctx);
+}
+}
+#endif
+
 #ifndef ZT_HAVE_NATIVE_SHA512
 
 namespace ZeroTier {
