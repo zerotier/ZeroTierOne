@@ -357,4 +357,11 @@ void SHA512::hash(void *digest,const void *data,unsigned int len)
 
 } // namespace ZeroTier
 
-#endif
+#endif // !ZT_HAVE_NATIVE_SHA512
+
+// Internally re-export to included C code, which includes some fast crypto code ported in on some platforms.
+// This eliminates the need to link against a third party SHA512() from this code
+extern "C" void ZT_sha512internal(void *digest,const void *data,unsigned int len)
+{
+	ZeroTier::SHA512::hash(digest,data,len);
+}

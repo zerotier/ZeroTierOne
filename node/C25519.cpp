@@ -295,16 +295,56 @@ int crypto_scalarmult_base(unsigned char *q,const unsigned char *n)
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-// This is the Ed25519 stuff from SUPERCOP:
-// http://bench.cr.yp.to/supercop.html
-
-// Also public domain, newer version than the Ed25519 found in NaCl
+// Ed25519 ref from: http://bench.cr.yp.to/supercop.html
 
 typedef struct
 {
 	crypto_uint32 v[32];
 }
 fe25519;
+
+typedef struct
+{
+	crypto_uint32 v[32];
+}
+sc25519;
+
+typedef struct
+{
+	crypto_uint32 v[16];
+}
+shortsc25519;
+
+typedef struct
+{
+	fe25519 x;
+	fe25519 y;
+	fe25519 z;
+	fe25519 t;
+} ge25519;
+
+#define ge25519_p3 ge25519
+
+typedef struct
+{
+	fe25519 x;
+	fe25519 z;
+	fe25519 y;
+	fe25519 t;
+} ge25519_p1p1;
+
+typedef struct
+{
+	fe25519 x;
+	fe25519 y;
+	fe25519 z;
+} ge25519_p2;
+
+typedef struct
+{
+	fe25519 x;
+	fe25519 y;
+} ge25519_aff;
 
 static void fe25519_sub(fe25519 *r, const fe25519 *x, const fe25519 *y);
 
@@ -619,18 +659,6 @@ void fe25519_pow2523(fe25519 *r, const fe25519 *x)
 	/* 2^252 - 3 */ fe25519_mul(r,&t,x);
 }
 
-typedef struct
-{
-	crypto_uint32 v[32];
-}
-sc25519;
-
-typedef struct
-{
-	crypto_uint32 v[16];
-}
-shortsc25519;
-
 static const crypto_uint32 m[32] = {0xED, 0xD3, 0xF5, 0x5C, 0x1A, 0x63, 0x12, 0x58, 0xD6, 0x9C, 0xF7, 0xA2, 0xDE, 0xF9, 0xDE, 0x14,
 																		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10};
 
@@ -827,14 +855,6 @@ void sc25519_2interleave2(unsigned char r[127], const sc25519 *s1, const sc25519
 	r[126] = ((s1->v[31] >> 4) & 3) ^ (((s2->v[31] >> 4) & 3) << 2);
 }
 
-typedef struct
-{
-	fe25519 x;
-	fe25519 y;
-	fe25519 z;
-	fe25519 t;
-} ge25519;
-
 /* d */
 static const fe25519 ge25519_ecd = {{0xA3, 0x78, 0x59, 0x13, 0xCA, 0x4D, 0xEB, 0x75, 0xAB, 0xD8, 0x41, 0x41, 0x4D, 0x0A, 0x70, 0x00,
 											0x98, 0xE8, 0x79, 0x77, 0x79, 0x40, 0xC7, 0x8C, 0x73, 0xFE, 0x6F, 0x2B, 0xEE, 0x6C, 0x03, 0x52}};
@@ -844,30 +864,6 @@ static const fe25519 ge25519_ec2d = {{0x59, 0xF1, 0xB2, 0x26, 0x94, 0x9B, 0xD6, 
 /* sqrt(-1) */
 static const fe25519 ge25519_sqrtm1 = {{0xB0, 0xA0, 0x0E, 0x4A, 0x27, 0x1B, 0xEE, 0xC4, 0x78, 0xE4, 0x2F, 0xAD, 0x06, 0x18, 0x43, 0x2F,
 												 0xA7, 0xD7, 0xFB, 0x3D, 0x99, 0x00, 0x4D, 0x2B, 0x0B, 0xDF, 0xC1, 0x4F, 0x80, 0x24, 0x83, 0x2B}};
-
-#define ge25519_p3 ge25519
-
-typedef struct
-{
-	fe25519 x;
-	fe25519 z;
-	fe25519 y;
-	fe25519 t;
-} ge25519_p1p1;
-
-typedef struct
-{
-	fe25519 x;
-	fe25519 y;
-	fe25519 z;
-} ge25519_p2;
-
-typedef struct
-{
-	fe25519 x;
-	fe25519 y;
-} ge25519_aff;
-
 
 /* Packed coordinates of the base point */
 static const ge25519 ge25519_base = {{{0x1A, 0xD5, 0x25, 0x8F, 0x60, 0x2D, 0x56, 0xC9, 0xB2, 0xA7, 0x25, 0x95, 0x60, 0xC7, 0x2C, 0x69,
@@ -1999,6 +1995,10 @@ void get_hram(unsigned char *hram, const unsigned char *sm, const unsigned char 
 
 } // anonymous namespace
 
+#ifdef ZT_USE_FAST_X64_ED25519
+extern "C" void ed25519_amd64_asm_sign(const unsigned char *sk,const unsigned char *pk,const unsigned char *m,const unsigned int mlen,unsigned char *sig);
+#endif
+
 namespace ZeroTier {
 
 void C25519::agree(const C25519::Private &mine,const C25519::Public &their,void *keybuf,unsigned int keylen)
@@ -2019,6 +2019,9 @@ void C25519::agree(const C25519::Private &mine,const C25519::Public &their,void 
 
 void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPublic,const void *msg,unsigned int len,void *signature)
 {
+#ifdef ZT_USE_FAST_X64_ED25519
+	ed25519_amd64_asm_sign(myPrivate.data + 32,myPublic.data + 32,(const unsigned char *)msg,len,(unsigned char *)signature);
+#else
 	sc25519 sck, scs, scsk;
 	ge25519 ger;
 	unsigned char r[32];
@@ -2063,6 +2066,7 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 	sc25519_to32bytes(s,&scs); /* cat s */
 	for(unsigned int i=0;i<32;i++)
 		sig[32 + i] = s[i];
+#endif
 }
 
 bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len,const void *signature)
