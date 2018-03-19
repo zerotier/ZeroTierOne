@@ -381,7 +381,7 @@ std::vector<std::string> OSUtils::split(const char *s,const char *const sep,cons
 std::string OSUtils::platformDefaultHomePath()
 {
 #ifdef __QNAP__
-	char *cmd = "/sbin/getcfg ZeroTier Install_Path -f /etc/config/qpkg.conf";
+	char *cmd = "/sbin/getcfg zerotier Install_Path -f /etc/config/qpkg.conf";
     char buf[128];
     FILE *fp;
     if ((fp = popen(cmd, "r")) == NULL) {

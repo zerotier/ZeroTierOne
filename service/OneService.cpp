@@ -2276,7 +2276,7 @@ public:
 			// Check to see if we've already written this first. This reduces
 			// redundant writes and I/O overhead on most platforms and has
 			// little effect on others.
-			f = fopen(p,"r");
+			f = fopen(p,"rb");
 			if (f) {
 				char buf[65535];
 				long l = (long)fread(buf,1,sizeof(buf),f);
@@ -2285,10 +2285,10 @@ public:
 					return;
 			}
 
-			f = fopen(p,"w");
+			f = fopen(p,"wb");
 			if ((!f)&&(dirname[0])) { // create subdirectory if it does not exist
 				OSUtils::mkdir(dirname);
-				f = fopen(p,"w");
+				f = fopen(p,"wb");
 			}
 			if (f) {
 				if (fwrite(data,len,1,f) != 1)
@@ -2417,7 +2417,7 @@ public:
 			default:
 				return -1;
 		}
-		FILE *f = fopen(p,"r");
+		FILE *f = fopen(p,"rb");
 		if (f) {
 			int n = (int)fread(data,1,maxlen,f);
 			fclose(f);

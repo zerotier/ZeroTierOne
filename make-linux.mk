@@ -64,7 +64,6 @@ endif
 ifeq ($(ZT_DEBUG),1)
 	override CFLAGS+=-Wall -Wno-deprecated -Werror -g -pthread $(INCLUDES) $(DEFS)
 	override CXXFLAGS+=-Wall -Wno-deprecated -Werror -g -std=c++11 -pthread $(INCLUDES) $(DEFS)
-	override LDFLAGS+=
 	ZT_TRACE=1
 	STRIP?=echo
 	# The following line enables optimization for the crypto code, since
@@ -72,10 +71,9 @@ ifeq ($(ZT_DEBUG),1)
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
 	CFLAGS?=-O3 -fstack-protector
-	override CFLAGS+=-Wall -Wno-deprecated -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	override CFLAGS+=-Wall -Wno-deprecated -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	CXXFLAGS?=-O3 -fstack-protector
-	override CXXFLAGS+=-Wall -Wno-deprecated -fPIE -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	override LDFLAGS+=-pie -Wl,-z,relro,-z,now
+	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	STRIP?=strip
 	STRIP+=--strip-all
 endif
@@ -104,11 +102,11 @@ CC_MACH=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
 ZT_ARCHITECTURE=999
 ifeq ($(CC_MACH),x86_64)
 	ZT_ARCHITECTURE=2
-	ZT_USE_X64_ASM_SALSA2012=1
+	ZT_USE_X64_ASM_CRYPTO=1
 endif
 ifeq ($(CC_MACH),amd64)
 	ZT_ARCHITECTURE=2
-	ZT_USE_X64_ASM_SALSA2012=1
+	ZT_USE_X64_ASM_CRYPTO=1
 endif
 ifeq ($(CC_MACH),powerpc64le)
 	ZT_ARCHITECTURE=8
@@ -134,42 +132,42 @@ endif
 ifeq ($(CC_MACH),arm)
 	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
-	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
 endif
 ifeq ($(CC_MACH),armel)
 	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
-	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
 endif
 ifeq ($(CC_MACH),armhf)
 	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
-	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
 endif
 ifeq ($(CC_MACH),armv6)
 	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
-	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
 endif
 ifeq ($(CC_MACH),armv6zk)
 	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
-	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
 endif
 ifeq ($(CC_MACH),armv6kz)
 	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
-	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
 endif
 ifeq ($(CC_MACH),armv7)
 	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
-	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
 endif
 ifeq ($(CC_MACH),armv7l)
 	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
-	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
 endif
 ifeq ($(CC_MACH),arm64)
 	ZT_ARCHITECTURE=4
@@ -225,7 +223,7 @@ ifeq ($(ZT_ARCHITECTURE),3)
 	ifeq ($(shell if [ -e /usr/bin/dpkg ]; then dpkg --print-architecture; fi),armel)
 		override CFLAGS+=-march=armv5 -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
 		override CXXFLAGS+=-march=armv5 -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
-		ZT_USE_ARM32_NEON_ASM_SALSA2012=0
+		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
 	else
 		override CFLAGS+=-march=armv5 -mno-unaligned-access -marm
 		override CXXFLAGS+=-march=armv5 -mno-unaligned-access -marm
@@ -233,11 +231,11 @@ ifeq ($(ZT_ARCHITECTURE),3)
 endif
 
 # Build faster crypto on some targets
-ifeq ($(ZT_USE_X64_ASM_SALSA2012),1)
-	override DEFS+=-DZT_USE_X64_ASM_SALSA2012
-	override CORE_OBJS+=ext/x64-salsa2012-asm/salsa2012.o
+ifeq ($(ZT_USE_X64_ASM_CRYPTO),1)
+	override DEFS+=-DZT_USE_X64_ASM_SALSA2012 -DZT_USE_FAST_X64_ED25519
+	override CORE_OBJS+=ext/x64-salsa2012-asm/salsa2012.o ext/ed25519-amd64-asm/choose_t.o ext/ed25519-amd64-asm/consts.o ext/ed25519-amd64-asm/fe25519_add.o ext/ed25519-amd64-asm/fe25519_freeze.o ext/ed25519-amd64-asm/fe25519_mul.o ext/ed25519-amd64-asm/fe25519_square.o ext/ed25519-amd64-asm/fe25519_sub.o ext/ed25519-amd64-asm/ge25519_add_p1p1.o ext/ed25519-amd64-asm/ge25519_dbl_p1p1.o ext/ed25519-amd64-asm/ge25519_nielsadd2.o ext/ed25519-amd64-asm/ge25519_nielsadd_p1p1.o ext/ed25519-amd64-asm/ge25519_p1p1_to_p2.o ext/ed25519-amd64-asm/ge25519_p1p1_to_p3.o ext/ed25519-amd64-asm/ge25519_pnielsadd_p1p1.o ext/ed25519-amd64-asm/heap_rootreplaced.o ext/ed25519-amd64-asm/heap_rootreplaced_1limb.o ext/ed25519-amd64-asm/heap_rootreplaced_2limbs.o ext/ed25519-amd64-asm/heap_rootreplaced_3limbs.o ext/ed25519-amd64-asm/sc25519_add.o ext/ed25519-amd64-asm/sc25519_barrett.o ext/ed25519-amd64-asm/sc25519_lt.o ext/ed25519-amd64-asm/sc25519_sub_nored.o ext/ed25519-amd64-asm/ull4_mul.o ext/ed25519-amd64-asm/fe25519_getparity.o ext/ed25519-amd64-asm/fe25519_invert.o ext/ed25519-amd64-asm/fe25519_iseq.o ext/ed25519-amd64-asm/fe25519_iszero.o ext/ed25519-amd64-asm/fe25519_neg.o ext/ed25519-amd64-asm/fe25519_pack.o ext/ed25519-amd64-asm/fe25519_pow2523.o ext/ed25519-amd64-asm/fe25519_setint.o ext/ed25519-amd64-asm/fe25519_unpack.o ext/ed25519-amd64-asm/ge25519_add.o ext/ed25519-amd64-asm/ge25519_base.o ext/ed25519-amd64-asm/ge25519_double.o ext/ed25519-amd64-asm/ge25519_double_scalarmult.o ext/ed25519-amd64-asm/ge25519_isneutral.o ext/ed25519-amd64-asm/ge25519_multi_scalarmult.o ext/ed25519-amd64-asm/ge25519_pack.o ext/ed25519-amd64-asm/ge25519_scalarmult_base.o ext/ed25519-amd64-asm/ge25519_unpackneg.o ext/ed25519-amd64-asm/hram.o ext/ed25519-amd64-asm/index_heap.o ext/ed25519-amd64-asm/sc25519_from32bytes.o ext/ed25519-amd64-asm/sc25519_from64bytes.o ext/ed25519-amd64-asm/sc25519_from_shortsc.o ext/ed25519-amd64-asm/sc25519_iszero.o ext/ed25519-amd64-asm/sc25519_mul.o ext/ed25519-amd64-asm/sc25519_mul_shortsc.o ext/ed25519-amd64-asm/sc25519_slide.o ext/ed25519-amd64-asm/sc25519_to32bytes.o ext/ed25519-amd64-asm/sc25519_window4.o ext/ed25519-amd64-asm/sign.o
 endif
-ifeq ($(ZT_USE_ARM32_NEON_ASM_SALSA2012),1)
+ifeq ($(ZT_USE_ARM32_NEON_ASM_CRYPTO),1)
 	override DEFS+=-DZT_USE_ARM32_NEON_ASM_SALSA2012
 	override CORE_OBJS+=ext/arm32-neon-salsa2012-asm/salsa2012.o
 endif
