@@ -1144,8 +1144,10 @@ void Network::requestConfiguration(void *tPtr)
 				this->setNotFound();
 			}
 		} else if ((_id & 0xff) == 0x01) {
-			// ffAA__________01
+			// ffAAaaaaaaaaaa01 -- where AA is the IPv4 /8 to use and aaaaaaaaaa is the anchor node for multicast gather and replication
 			const uint64_t myAddress = RR->identity.address().toInt();
+			const uint64_t networkHub = (_id >> 8) & 0xffffffffffULL;
+
 			uint8_t ipv4[4];
 			ipv4[0] = (uint8_t)((_id >> 48) & 0xff);
 			ipv4[1] = (uint8_t)((myAddress >> 16) & 0xff);
@@ -1165,8 +1167,13 @@ void Network::requestConfiguration(void *tPtr)
 			nconf->flags = ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
 			nconf->mtu = ZT_DEFAULT_MTU;
 			nconf->multicastLimit = 1024;
+			nconf->specialistCount = (networkHub == 0) ? 0 : 1;
 			nconf->staticIpCount = 2;
 			nconf->ruleCount = 1;
+
+			if (networkHub != 0)
+				nconf->specialists[0] = networkHub;
+
 			nconf->staticIps[0] = InetAddress::makeIpv66plane(_id,myAddress);
 			nconf->staticIps[1].set(ipv4,4,8);
 
