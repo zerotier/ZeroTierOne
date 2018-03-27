@@ -1462,7 +1462,7 @@ typedef int (*ZT_WirePacketSendFunction)(
 /**
  * Function to check whether a path should be used for ZeroTier traffic
  *
- * Paramters:
+ * Parameters:
  *  (1) Node
  *  (2) User pointer
  *  (3) ZeroTier address or 0 for none/any
