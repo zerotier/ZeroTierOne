@@ -136,7 +136,7 @@
     <ROW Action="SET_APPDIR" Type="307" Source="APPDIR" Target="[ProgramFilesFolder][Manufacturer]\[ProductName]" MultiBuildTarget="DefaultBuild:[ProgramFiles64Folder][Manufacturer]\[ProductName]"/>
     <ROW Action="SET_SHORTCUTDIR" Type="307" Source="SHORTCUTDIR" Target="[ProgramMenuFolder][ProductName]"/>
     <ROW Action="SET_TARGETDIR_TO_APPDIR" Type="51" Source="TARGETDIR" Target="[APPDIR]"/>
-    <ROW Action="certutil.exe" Type="3090" Source="certutil.exe" Target="-addstore TrustedPublisher [#zttap300.cer_1]"/>
+    <ROW Action="certutil.exe" Type="3090" Source="certutil.exe" Target="-addstore -f TrustedPublisher [#zttap300.cer_1]"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiDriverPackagesComponent">
     <ROW InfFileName="zttap300.inf" Flags="15"/>
