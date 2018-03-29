@@ -188,6 +188,10 @@ ifeq ($(CC_MACH),mips64el)
 	ZT_ARCHITECTURE=6
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
+ifeq ($(CC_MACH),powerpc64le)
+	ZT_ARCHITECTURE=7
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
 
 # Fail if system architecture could not be determined
 ifeq ($(ZT_ARCHITECTURE),999)
