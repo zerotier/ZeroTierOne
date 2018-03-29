@@ -62,7 +62,7 @@ InetAddress::IpScope InetAddress::ipScope() const
 				case 0x37: return IP_SCOPE_PSEUDOPRIVATE;                             // 55.0.0.0/8 (US DoD)
 				case 0x38: return IP_SCOPE_PSEUDOPRIVATE;                             // 56.0.0.0/8 (US Postal Service)
 				case 0x64:
-					if ((ip & 0xffc00000) == 0x64400000) return IP_SCOPE_SHARED;        // 100.64.0.0/10
+					if ((ip & 0xffc00000) == 0x64400000) return IP_SCOPE_PRIVATE;       // 100.64.0.0/10
 					break;
 				case 0x7f: return IP_SCOPE_LOOPBACK;                                  // 127.0.0.0/8
 				case 0xa9:
@@ -294,7 +294,7 @@ bool InetAddress::isEqualPrefix(const InetAddress &addr) const
 	}
 	return false;
 }
-	
+
 bool InetAddress::containsAddress(const InetAddress &addr) const
 {
 	if (addr.ss_family == ss_family) {
