@@ -79,7 +79,7 @@ struct InetAddress : public sockaddr_storage
 		IP_SCOPE_PSEUDOPRIVATE = 3, // 28.x.x.x, etc. -- unofficially unrouted IPv4 blocks often "bogarted"
 		IP_SCOPE_GLOBAL = 4,        // globally routable IP address (all others)
 		IP_SCOPE_LINK_LOCAL = 5,    // 169.254.x.x, IPv6 LL
-		IP_SCOPE_SHARED = 6,        // 100.64.0.0/10, shared space for e.g. carrier-grade NAT
+		IP_SCOPE_SHARED = 6,        // currently unused, formerly used for carrier-grade NAT ranges
 		IP_SCOPE_PRIVATE = 7        // 10.x.x.x, 192.168.x.x, etc.
 	};
 
