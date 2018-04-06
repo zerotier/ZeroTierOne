@@ -119,7 +119,7 @@ public:
 		Mutex::Lock _l(_paths_m);
 		SharedPtr<Path> &p = _paths[Path::HashKey(l,r)];
 		if (!p)
-			p.setToUnsafe(new Path(l,r));
+			p.set(new Path(l,r));
 		return p;
 	}
 

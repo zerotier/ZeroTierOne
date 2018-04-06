@@ -388,7 +388,7 @@ void Topology::doPeriodicTasks(void *tPtr,int64_t now)
 		Path::HashKey *k = (Path::HashKey *)0;
 		SharedPtr<Path> *p = (SharedPtr<Path> *)0;
 		while (i.next(k,p)) {
-			if (p->reclaimIfWeak())
+			if (p->references() <= 1)
 				_paths.erase(*k);
 		}
 	}
