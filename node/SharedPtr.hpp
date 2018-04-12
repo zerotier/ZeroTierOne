@@ -76,8 +76,9 @@ public:
 	 *
 	 * @param ptr Naked pointer to assign
 	 */
-	inline void setToUnsafe(T *ptr)
+	inline void set(T *ptr)
 	{
+		zero();
 		++ptr->__refCount;
 		_ptr = ptr;
 	}
@@ -116,27 +117,13 @@ public:
 	}
 
 	/**
-	 * Set this pointer to NULL if this is the only pointer holding the object
-	 *
-	 * @return True if object was deleted and SharedPtr is now NULL (or was already NULL)
+	 * @return Number of references according to this object's ref count or 0 if NULL
 	 */
-	inline bool reclaimIfWeak()
+	inline int references()
 	{
-		if (_ptr) {
-			if (++_ptr->__refCount <= 2) {
-				if (--_ptr->__refCount <= 1) {
-					delete _ptr;
-					_ptr = (T *)0;
-					return true;
-				} else {
-					return false;
-				}
-			} else {
-				return false;
-			}
-		} else {
-			return true;
-		}
+		if (_ptr)
+			return _ptr->__refCount.load();
+		return 0;
 	}
 
 	inline bool operator==(const SharedPtr &sp) const { return (_ptr == sp._ptr); }
