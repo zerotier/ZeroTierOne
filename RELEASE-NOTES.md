@@ -1,13 +1,13 @@
 ZeroTier Release Notes
 ======
 
-# 2018-04-12 -- Version 1.2.6
+# 2018-04-16 -- Version 1.2.6
 
  * Features and Core Improvements
     * Path selection has been overhauled to improve path stability, simplify code, and prepare for multi-path and trunking in the next major release.
     * This version introduces remote tracing for remote diagnostics. Network controllers can set a node (usually the controller itself) to receive remote tracing events from all members of the network or from select members. Events are only sent if they pertain to a given network for security reasons.
     * Multicast replication can now be done by designated multicast replicators on a network (flagged as such at the controller) rather than by the sender. Most users won't want this, but it's useful for specialized use cases on hub-and-spoke networks and for low-power devices.
-    * Cryptographic performance improvements.
+    * Cryptographic performance improvements on several platforms.
     * Multithreaded performance improvements throughout the code base, including the use of an inline lightweight spinlock for low-contention resources.
  * Bugs fixed
     * Disappearing routes on Mac (GitHub issue #600)
