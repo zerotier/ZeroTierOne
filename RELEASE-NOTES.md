@@ -1,7 +1,7 @@
 ZeroTier Release Notes
 ======
 
-# 2018-04-16 -- Version 1.2.6
+# 2018-04-17 -- Version 1.2.6
 
  * Features and Core Improvements
     * Path selection has been overhauled to improve path stability, simplify code, and prepare for multi-path and trunking in the next major release.
