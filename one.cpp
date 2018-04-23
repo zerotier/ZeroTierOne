@@ -822,7 +822,7 @@ static int idtool(int argc,char **argv)
 		char hexbuf[1024];
 		printf("%s",Utils::hex(signature.data,ZT_C25519_SIGNATURE_LEN,hexbuf));
 	} else if (!strcmp(argv[1],"verify")) {
-		if (argc < 4) {
+		if (argc < 5) {
 			idtoolPrintHelp(stdout,argv[0]);
 			return 1;
 		}
@@ -844,8 +844,19 @@ static int idtool(int argc,char **argv)
 		if ((signature.length() > ZT_ADDRESS_LENGTH)&&(id.verify(inf.data(),(unsigned int)inf.length(),signature.data(),(unsigned int)signature.length()))) {
 			printf("%s signature valid" ZT_EOL_S,argv[3]);
 		} else {
-			fprintf(stderr,"%s signature check FAILED" ZT_EOL_S,argv[3]);
-			return 1;
+			signature.clear();
+			if (OSUtils::readFile(argv[4],signature)) {
+				signature.assign(buf,Utils::unhex(signature.c_str(),buf,(unsigned int)sizeof(buf)));
+				if ((signature.length() > ZT_ADDRESS_LENGTH)&&(id.verify(inf.data(),(unsigned int)inf.length(),signature.data(),(unsigned int)signature.length()))) {
+					printf("%s signature valid" ZT_EOL_S,argv[3]);
+				} else {
+					fprintf(stderr,"%s signature check FAILED" ZT_EOL_S,argv[3]);
+					return 1;
+				}
+			} else {
+				fprintf(stderr,"%s signature check FAILED" ZT_EOL_S,argv[3]);
+				return 1;
+			}
 		}
 	} else if (!strcmp(argv[1],"initmoon")) {
 		if (argc < 3) {
