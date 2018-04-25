@@ -71,15 +71,11 @@ ifeq ($(ZT_DEBUG),1)
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
-	CFLAGS?=-O3 -fstack-protector
+	CFLAGS?=-O3 -fstack-protector -fPIE
 	override CFLAGS+=-Wall -Wno-deprecated -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	CXXFLAGS?=-O3 -fstack-protector
+	CXXFLAGS?=-O3 -fstack-protector -fPIE
 	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	ifneq ($(ZT_USE_X64_ASM_ED25519),1)
-		override CFLAGS+=-fPIE
-		override CXXFLAGS+=-fPIE
-		LDFLAGS=-pie -Wl,-z,relro,-z,now
-	endif
+	LDFLAGS=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
 	STRIP+=--strip-all
 endif
@@ -104,10 +100,12 @@ ZT_ARCHITECTURE=999
 ifeq ($(CC_MACH),x86_64)
 	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA=1
+	ZT_USE_X64_ASM_ED25519=1
 endif
 ifeq ($(CC_MACH),amd64)
 	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA=1
+	ZT_USE_X64_ASM_ED25519=1
 endif
 ifeq ($(CC_MACH),powerpc64le)
 	ZT_ARCHITECTURE=8
