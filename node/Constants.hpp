@@ -80,7 +80,7 @@
 #endif
 #endif
 
-#if defined(__FreeBSD__) || defined(__OpenBSD__)
+#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
 #ifndef __UNIX_LIKE__
 #define __UNIX_LIKE__
 #endif
@@ -132,6 +132,10 @@
 
 #ifndef __BYTE_ORDER
 #include <endian.h>
+#endif
+
+#ifdef __NetBSD__
+#define RTF_MULTICAST   0x20000000
 #endif
 
 #if (defined(__GNUC__) && (__GNUC__ >= 3)) || (defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 800)) || defined(__clang__)
