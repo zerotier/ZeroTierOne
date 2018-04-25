@@ -34,12 +34,12 @@ public enum PeerRole {
     PEER_ROLE_LEAF,
 
     /**
-     * relay node
+     * moon root
      */
-    PEER_ROLE_RELAY,
+    PEER_ROLE_MOON,
 
     /**
-     * root server
+     * planetary root
      */
-    PEER_ROLE_ROOT
+    PEER_ROLE_PLANET
 }

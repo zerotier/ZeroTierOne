@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #include <stdio.h>
@@ -25,6 +33,7 @@
 #include "../version.h"
 
 #include "Constants.hpp"
+#include "SharedPtr.hpp"
 #include "Node.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "NetworkController.hpp"
@@ -36,10 +45,8 @@
 #include "Address.hpp"
 #include "Identity.hpp"
 #include "SelfAwareness.hpp"
-#include "Cluster.hpp"
-#include "DeferredPackets.hpp"
-
-const struct sockaddr_storage ZT_SOCKADDR_NULL = {0};
+#include "Network.hpp"
+#include "Trace.hpp"
 
 namespace ZeroTier {
 
@@ -47,112 +54,126 @@ namespace ZeroTier {
 /* Public Node interface (C++, exposed via CAPI bindings)                   */
 /****************************************************************************/
 
-Node::Node(
-	uint64_t now,
-	void *uptr,
-	ZT_DataStoreGetFunction dataStoreGetFunction,
-	ZT_DataStorePutFunction dataStorePutFunction,
-	ZT_WirePacketSendFunction wirePacketSendFunction,
-	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
-	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT_PathCheckFunction pathCheckFunction,
-	ZT_EventCallback eventCallback) :
+Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64_t now) :
 	_RR(this),
 	RR(&_RR),
 	_uPtr(uptr),
-	_dataStoreGetFunction(dataStoreGetFunction),
-	_dataStorePutFunction(dataStorePutFunction),
-	_wirePacketSendFunction(wirePacketSendFunction),
-	_virtualNetworkFrameFunction(virtualNetworkFrameFunction),
-	_virtualNetworkConfigFunction(virtualNetworkConfigFunction),
-	_pathCheckFunction(pathCheckFunction),
-	_eventCallback(eventCallback),
-	_networks(),
-	_networks_m(),
-	_prngStreamPtr(0),
+	_networks(8),
 	_now(now),
 	_lastPingCheck(0),
-	_lastHousekeepingRun(0)
+	_lastHousekeepingRun(0),
+	_lastMemoizedTraceSettings(0)
 {
+	if (callbacks->version != 0)
+		throw ZT_EXCEPTION_INVALID_ARGUMENT;
+	ZT_FAST_MEMCPY(&_cb,callbacks,sizeof(ZT_Node_Callbacks));
+
+	// Initialize non-cryptographic PRNG from a good random source
+	Utils::getSecureRandom((void *)_prngState,sizeof(_prngState));
+
 	_online = false;
 
-	// Use Salsa20 alone as a high-quality non-crypto PRNG
-	{
-		char foo[32];
-		Utils::getSecureRandom(foo,32);
-		_prng.init(foo,256,foo);
-		memset(_prngStream,0,sizeof(_prngStream));
-		_prng.encrypt12(_prngStream,_prngStream,sizeof(_prngStream));
-	}
+	memset(_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
+	memset(_expectingRepliesTo,0,sizeof(_expectingRepliesTo));
+	memset(_lastIdentityVerification,0,sizeof(_lastIdentityVerification));
 
-	{
-		std::string idtmp(dataStoreGet("identity.secret"));
-		if ((!idtmp.length())||(!RR->identity.fromString(idtmp))||(!RR->identity.hasPrivate())) {
-			TRACE("identity.secret not found, generating...");
-			RR->identity.generate();
-			idtmp = RR->identity.toString(true);
-			if (!dataStorePut("identity.secret",idtmp,true))
-				throw std::runtime_error("unable to write identity.secret");
-		}
-		RR->publicIdentityStr = RR->identity.toString(false);
-		RR->secretIdentityStr = RR->identity.toString(true);
-		idtmp = dataStoreGet("identity.public");
-		if (idtmp != RR->publicIdentityStr) {
-			if (!dataStorePut("identity.public",RR->publicIdentityStr,false))
-				throw std::runtime_error("unable to write identity.public");
+	uint64_t idtmp[2];
+	idtmp[0] = 0; idtmp[1] = 0;
+	char tmp[2048];
+	int n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,tmp,sizeof(tmp) - 1);
+	if (n > 0) {
+		tmp[n] = (char)0;
+		if (RR->identity.fromString(tmp)) {
+			RR->identity.toString(false,RR->publicIdentityStr);
+			RR->identity.toString(true,RR->secretIdentityStr);
+		} else {
+			n = -1;
 		}
 	}
 
+	if (n <= 0) {
+		RR->identity.generate();
+		RR->identity.toString(false,RR->publicIdentityStr);
+		RR->identity.toString(true,RR->secretIdentityStr);
+		idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
+		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,RR->secretIdentityStr,(unsigned int)strlen(RR->secretIdentityStr));
+		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
+	} else {
+		idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
+		n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,tmp,sizeof(tmp) - 1);
+		if ((n > 0)&&(n < (int)sizeof(RR->publicIdentityStr))&&(n < (int)sizeof(tmp))) {
+			if (memcmp(tmp,RR->publicIdentityStr,n))
+				stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
+		}
+	}
+
+	char *m = (char *)0;
 	try {
-		RR->sw = new Switch(RR);
-		RR->mc = new Multicaster(RR);
-		RR->topology = new Topology(RR);
-		RR->sa = new SelfAwareness(RR);
-		RR->dp = new DeferredPackets(RR);
+		const unsigned long ts = sizeof(Trace) + (((sizeof(Trace) & 0xf) != 0) ? (16 - (sizeof(Trace) & 0xf)) : 0);
+		const unsigned long sws = sizeof(Switch) + (((sizeof(Switch) & 0xf) != 0) ? (16 - (sizeof(Switch) & 0xf)) : 0);
+		const unsigned long mcs = sizeof(Multicaster) + (((sizeof(Multicaster) & 0xf) != 0) ? (16 - (sizeof(Multicaster) & 0xf)) : 0);
+		const unsigned long topologys = sizeof(Topology) + (((sizeof(Topology) & 0xf) != 0) ? (16 - (sizeof(Topology) & 0xf)) : 0);
+		const unsigned long sas = sizeof(SelfAwareness) + (((sizeof(SelfAwareness) & 0xf) != 0) ? (16 - (sizeof(SelfAwareness) & 0xf)) : 0);
+
+		m = reinterpret_cast<char *>(::malloc(16 + ts + sws + mcs + topologys + sas));
+		if (!m)
+			throw std::bad_alloc();
+		RR->rtmem = m;
+		while (((uintptr_t)m & 0xf) != 0) ++m;
+
+		RR->t = new (m) Trace(RR);
+		m += ts;
+		RR->sw = new (m) Switch(RR);
+		m += sws;
+		RR->mc = new (m) Multicaster(RR);
+		m += mcs;
+		RR->topology = new (m) Topology(RR,tptr);
+		m += topologys;
+		RR->sa = new (m) SelfAwareness(RR);
 	} catch ( ... ) {
-		delete RR->dp;
-		delete RR->sa;
-		delete RR->topology;
-		delete RR->mc;
-		delete RR->sw;
+		if (RR->sa) RR->sa->~SelfAwareness();
+		if (RR->topology) RR->topology->~Topology();
+		if (RR->mc) RR->mc->~Multicaster();
+		if (RR->sw) RR->sw->~Switch();
+		if (RR->t) RR->t->~Trace();
+		::free(m);
 		throw;
 	}
 
-	postEvent(ZT_EVENT_UP);
+	postEvent(tptr,ZT_EVENT_UP);
 }
 
 Node::~Node()
 {
-	Mutex::Lock _l(_networks_m);
-
-	_networks.clear(); // ensure that networks are destroyed before shutdow
-
-	RR->dpEnabled = 0;
-	delete RR->dp;
-	delete RR->sa;
-	delete RR->topology;
-	delete RR->mc;
-	delete RR->sw;
-#ifdef ZT_ENABLE_CLUSTER
-	delete RR->cluster;
-#endif
+	{
+		Mutex::Lock _l(_networks_m);
+		_networks.clear(); // destroy all networks before shutdown
+	}
+	if (RR->sa) RR->sa->~SelfAwareness();
+	if (RR->topology) RR->topology->~Topology();
+	if (RR->mc) RR->mc->~Multicaster();
+	if (RR->sw) RR->sw->~Switch();
+	if (RR->t) RR->t->~Trace();
+	::free(RR->rtmem);
 }
 
 ZT_ResultCode Node::processWirePacket(
-	uint64_t now,
-	const struct sockaddr_storage *localAddress,
+	void *tptr,
+	int64_t now,
+	int64_t localSocket,
 	const struct sockaddr_storage *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
-	volatile uint64_t *nextBackgroundTaskDeadline)
+	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
-	RR->sw->onRemotePacket(*(reinterpret_cast<const InetAddress *>(localAddress)),*(reinterpret_cast<const InetAddress *>(remoteAddress)),packetData,packetLength);
+	RR->sw->onRemotePacket(tptr,localSocket,*(reinterpret_cast<const InetAddress *>(remoteAddress)),packetData,packetLength);
 	return ZT_RESULT_OK;
 }
 
 ZT_ResultCode Node::processVirtualNetworkFrame(
-	uint64_t now,
+	void *tptr,
+	int64_t now,
 	uint64_t nwid,
 	uint64_t sourceMac,
 	uint64_t destMac,
@@ -160,157 +181,145 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	unsigned int vlanId,
 	const void *frameData,
 	unsigned int frameLength,
-	volatile uint64_t *nextBackgroundTaskDeadline)
+	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
 	SharedPtr<Network> nw(this->network(nwid));
 	if (nw) {
-		RR->sw->onLocalEthernet(nw,MAC(sourceMac),MAC(destMac),etherType,vlanId,frameData,frameLength);
+		RR->sw->onLocalEthernet(tptr,nw,MAC(sourceMac),MAC(destMac),etherType,vlanId,frameData,frameLength);
 		return ZT_RESULT_OK;
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
+// Closure used to ping upstream and active/online peers
 class _PingPeersThatNeedPing
 {
 public:
-	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now,const std::vector<NetworkConfig::Relay> &relays) :
-		lastReceiveFromUpstream(0),
+	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,void *tPtr,Hashtable< Address,std::vector<InetAddress> > &alwaysContact,int64_t now) :
 		RR(renv),
+		_tPtr(tPtr),
+		_alwaysContact(alwaysContact),
 		_now(now),
-		_relays(relays),
-		_world(RR->topology->world())
+		_bestCurrentUpstream(RR->topology->getUpstreamPeer())
 	{
 	}
 
-	uint64_t lastReceiveFromUpstream; // tracks last time we got a packet from an 'upstream' peer like a root or a relay
-
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		bool upstream = false;
-		InetAddress stableEndpoint4,stableEndpoint6;
+		const std::vector<InetAddress> *const alwaysContactEndpoints = _alwaysContact.get(p->address());
+		if (alwaysContactEndpoints) {
+			const unsigned int sent = p->doPingAndKeepalive(_tPtr,_now);
+			bool contacted = (sent != 0);
 
-		// If this is a world root, pick (if possible) both an IPv4 and an IPv6 stable endpoint to use if link isn't currently alive.
-		for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
-			if (r->identity == p->identity()) {
-				upstream = true;
-				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)r->stableEndpoints.size();++k) {
-					const InetAddress &addr = r->stableEndpoints[ptr++ % r->stableEndpoints.size()];
-					if (!stableEndpoint4) {
-						if (addr.ss_family == AF_INET)
-							stableEndpoint4 = addr;
-					}
-					if (!stableEndpoint6) {
-						if (addr.ss_family == AF_INET6)
-							stableEndpoint6 = addr;
+			if ((sent & 0x1) == 0) { // bit 0x1 == IPv4 sent
+				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)alwaysContactEndpoints->size();++k) {
+					const InetAddress &addr = (*alwaysContactEndpoints)[ptr++ % alwaysContactEndpoints->size()];
+					if (addr.ss_family == AF_INET) {
+						p->sendHELLO(_tPtr,-1,addr,_now);
+						contacted = true;
+						break;
 					}
 				}
-				break;
 			}
-		}
 
-		if (!upstream) {
-			// If I am a root server, only ping other root servers -- roots don't ping "down"
-			// since that would just be a waste of bandwidth and could potentially cause route
-			// flapping in Cluster mode.
-			if (RR->topology->amRoot())
-				return;
-
-			// Check for network preferred relays, also considered 'upstream' and thus always
-			// pinged to keep links up. If they have stable addresses we will try them there.
-			for(std::vector<NetworkConfig::Relay>::const_iterator r(_relays.begin());r!=_relays.end();++r) {
-				if (r->address == p->address()) {
-					stableEndpoint4 = r->phy4;
-					stableEndpoint6 = r->phy6;
-					upstream = true;
-					break;
-				}
-			}
-		}
-
-		if (upstream) {
-			// "Upstream" devices are roots and relays and get special treatment -- they stay alive
-			// forever and we try to keep (if available) both IPv4 and IPv6 channels open to them.
-			bool needToContactIndirect = true;
-			if (p->doPingAndKeepalive(_now,AF_INET)) {
-				needToContactIndirect = false;
-			} else {
-				if (stableEndpoint4) {
-					needToContactIndirect = false;
-					p->sendHELLO(InetAddress(),stableEndpoint4,_now);
-				}
-			}
-			if (p->doPingAndKeepalive(_now,AF_INET6)) {
-				needToContactIndirect = false;
-			} else {
-				if (stableEndpoint6) {
-					needToContactIndirect = false;
-					p->sendHELLO(InetAddress(),stableEndpoint6,_now);
+			if ((sent & 0x2) == 0) { // bit 0x2 == IPv6 sent
+				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)alwaysContactEndpoints->size();++k) {
+					const InetAddress &addr = (*alwaysContactEndpoints)[ptr++ % alwaysContactEndpoints->size()];
+					if (addr.ss_family == AF_INET6) {
+						p->sendHELLO(_tPtr,-1,addr,_now);
+						contacted = true;
+						break;
+					}
 				}
 			}
 
-			if (needToContactIndirect) {
-				// If this is an upstream and we have no stable endpoint for either IPv4 or IPv6,
-				// send a NOP indirectly if possible to see if we can get to this peer in any
-				// way whatsoever. This will e.g. find network preferred relays that lack
-				// stable endpoints by using root servers.
-				Packet outp(p->address(),RR->identity.address(),Packet::VERB_NOP);
-				RR->sw->send(outp,true,0);
+			if ((!contacted)&&(_bestCurrentUpstream)) {
+				const SharedPtr<Path> up(_bestCurrentUpstream->getBestPath(_now,true));
+				if (up)
+					p->sendHELLO(_tPtr,up->localSocket(),up->address(),_now);
 			}
 
-			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
-		} else if (p->activelyTransferringFrames(_now)) {
-			// Normal nodes get their preferred link kept alive if the node has generated frame traffic recently
-			p->doPingAndKeepalive(_now,0);
+			_alwaysContact.erase(p->address()); // after this we'll WHOIS all upstreams that remain
+		} else if (p->isActive(_now)) {
+			p->doPingAndKeepalive(_tPtr,_now);
 		}
 	}
 
 private:
 	const RuntimeEnvironment *RR;
-	uint64_t _now;
-	const std::vector<NetworkConfig::Relay> &_relays;
-	World _world;
+	void *_tPtr;
+	Hashtable< Address,std::vector<InetAddress> > &_alwaysContact;
+	const int64_t _now;
+	const SharedPtr<Peer> _bestCurrentUpstream;
 };
 
-ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline)
+ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
 	Mutex::Lock bl(_backgroundTasksLock);
 
 	unsigned long timeUntilNextPingCheck = ZT_PING_CHECK_INVERVAL;
-	const uint64_t timeSinceLastPingCheck = now - _lastPingCheck;
+	const int64_t timeSinceLastPingCheck = now - _lastPingCheck;
 	if (timeSinceLastPingCheck >= ZT_PING_CHECK_INVERVAL) {
 		try {
 			_lastPingCheck = now;
 
-			// Get relays and networks that need config without leaving the mutex locked
-			std::vector< NetworkConfig::Relay > networkRelays;
-			std::vector< SharedPtr<Network> > needConfig;
+			// Get designated VL1 upstreams
+			Hashtable< Address,std::vector<InetAddress> > alwaysContact;
+			RR->topology->getUpstreamsToContact(alwaysContact);
+
+			// Check last receive time on designated upstreams to see if we seem to be online
+			int64_t lastReceivedFromUpstream = 0;
 			{
-				Mutex::Lock _l(_networks_m);
-				for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
-					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!n->second->hasConfig())) {
-						needConfig.push_back(n->second);
-					}
-					if (n->second->hasConfig()) {
-						std::vector<NetworkConfig::Relay> r(n->second->config().relays());
-						networkRelays.insert(networkRelays.end(),r.begin(),r.end());
-					}
+				Hashtable< Address,std::vector<InetAddress> >::Iterator i(alwaysContact);
+				Address *upstreamAddress = (Address *)0;
+				std::vector<InetAddress> *upstreamStableEndpoints = (std::vector<InetAddress> *)0;
+				while (i.next(upstreamAddress,upstreamStableEndpoints)) {
+					SharedPtr<Peer> p(RR->topology->getPeerNoCache(*upstreamAddress));
+					if (p)
+						lastReceivedFromUpstream = std::max(p->lastReceive(),lastReceivedFromUpstream);
 				}
 			}
 
-			// Request updated configuration for networks that need it
-			for(std::vector< SharedPtr<Network> >::const_iterator n(needConfig.begin());n!=needConfig.end();++n)
-				(*n)->requestConfiguration();
+			// Get peers we should stay connected to according to network configs
+			// Also get networks and whether they need config so we only have to do one pass over networks
+			std::vector< std::pair< SharedPtr<Network>,bool > > networkConfigNeeded;
+			{
+				Mutex::Lock l(_networks_m);
+				Hashtable< uint64_t,SharedPtr<Network> >::Iterator i(_networks);
+				uint64_t *nwid = (uint64_t *)0;
+				SharedPtr<Network> *network = (SharedPtr<Network> *)0;
+				while (i.next(nwid,network)) {
+					(*network)->config().alwaysContactAddresses(alwaysContact);
+					networkConfigNeeded.push_back( std::pair< SharedPtr<Network>,bool >(*network,(((now - (*network)->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!(*network)->hasConfig()))) );
+				}
+			}
 
-			// Do pings and keepalives
-			_PingPeersThatNeedPing pfunc(RR,now,networkRelays);
+			// Ping active peers, upstreams, and others that we should always contact
+			_PingPeersThatNeedPing pfunc(RR,tptr,alwaysContact,now);
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
+
+			// Run WHOIS to create Peer for alwaysContact addresses that could not be contacted
+			{
+				Hashtable< Address,std::vector<InetAddress> >::Iterator i(alwaysContact);
+				Address *upstreamAddress = (Address *)0;
+				std::vector<InetAddress> *upstreamStableEndpoints = (std::vector<InetAddress> *)0;
+				while (i.next(upstreamAddress,upstreamStableEndpoints))
+					RR->sw->requestWhois(tptr,now,*upstreamAddress);
+			}
+
+			// Refresh network config or broadcast network updates to members as needed
+			for(std::vector< std::pair< SharedPtr<Network>,bool > >::const_iterator n(networkConfigNeeded.begin());n!=networkConfigNeeded.end();++n) {
+				if (n->second)
+					n->first->requestConfiguration(tptr);
+				n->first->sendUpdatesToMembers(tptr);
+			}
 
 			// Update online status, post status change as event
 			const bool oldOnline = _online;
-			_online = (((now - pfunc.lastReceiveFromUpstream) < ZT_PEER_ACTIVITY_TIMEOUT)||(RR->topology->amRoot()));
+			_online = (((now - lastReceivedFromUpstream) < ZT_PEER_ACTIVITY_TIMEOUT)||(RR->topology->amUpstream()));
 			if (oldOnline != _online)
-				postEvent(_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
+				postEvent(tptr,_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
 		} catch ( ... ) {
 			return ZT_RESULT_FATAL_ERROR_INTERNAL;
 		}
@@ -318,10 +327,15 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 		timeUntilNextPingCheck -= (unsigned long)timeSinceLastPingCheck;
 	}
 
+	if ((now - _lastMemoizedTraceSettings) >= (ZT_HOUSEKEEPING_PERIOD / 4)) {
+		_lastMemoizedTraceSettings = now;
+		RR->t->updateMemoizedSettings();
+	}
+
 	if ((now - _lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
+		_lastHousekeepingRun = now;
 		try {
-			_lastHousekeepingRun = now;
-			RR->topology->clean(now);
+			RR->topology->doPeriodicTasks(tptr,now);
 			RR->sa->clean(now);
 			RR->mc->clean(now);
 		} catch ( ... ) {
@@ -330,18 +344,7 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 	}
 
 	try {
-#ifdef ZT_ENABLE_CLUSTER
-		// If clustering is enabled we have to call cluster->doPeriodicTasks() very often, so we override normal timer deadline behavior
-		if (RR->cluster) {
-			RR->sw->doTimerTasks(now);
-			RR->cluster->doPeriodicTasks();
-			*nextBackgroundTaskDeadline = now + ZT_CLUSTER_PERIODIC_TASK_PERIOD; // this is really short so just tick at this rate
-		} else {
-#endif
-			*nextBackgroundTaskDeadline = now + (uint64_t)std::max(std::min(timeUntilNextPingCheck,RR->sw->doTimerTasks(now)),(unsigned long)ZT_CORE_TIMER_TASK_GRANULARITY);
-#ifdef ZT_ENABLE_CLUSTER
-		}
-#endif
+		*nextBackgroundTaskDeadline = now + (int64_t)std::max(std::min(timeUntilNextPingCheck,RR->sw->doTimerTasks(tptr,now)),(unsigned long)ZT_CORE_TIMER_TASK_GRANULARITY);
 	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}
@@ -349,38 +352,51 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::join(uint64_t nwid,void *uptr)
+ZT_ResultCode Node::join(uint64_t nwid,void *uptr,void *tptr)
 {
 	Mutex::Lock _l(_networks_m);
-	SharedPtr<Network> nw = _network(nwid);
-	if(!nw)
-		_networks.push_back(std::pair< uint64_t,SharedPtr<Network> >(nwid,SharedPtr<Network>(new Network(RR,nwid,uptr))));
-	std::sort(_networks.begin(),_networks.end()); // will sort by nwid since it's the first in a pair<>
+	SharedPtr<Network> &nw = _networks[nwid];
+	if (!nw)
+		nw = SharedPtr<Network>(new Network(RR,tptr,nwid,uptr,(const NetworkConfig *)0));
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::leave(uint64_t nwid,void **uptr)
+ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 {
-	std::vector< std::pair< uint64_t,SharedPtr<Network> > > newn;
-	Mutex::Lock _l(_networks_m);
-	for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
-		if (n->first != nwid)
-			newn.push_back(*n);
-		else {
-			if (uptr)
-				*uptr = n->second->userPtr();
-			n->second->destroy();
-		}
+	ZT_VirtualNetworkConfig ctmp;
+	void **nUserPtr = (void **)0;
+	{
+		Mutex::Lock _l(_networks_m);
+		SharedPtr<Network> *nw = _networks.get(nwid);
+		if (!nw)
+			return ZT_RESULT_OK;
+		if (uptr)
+			*uptr = (*nw)->userPtr();
+		(*nw)->externalConfig(&ctmp);
+		(*nw)->destroy();
+		nUserPtr = (*nw)->userPtr();
 	}
-	_networks.swap(newn);
+
+	if (nUserPtr)
+		RR->node->configureVirtualNetworkPort(tptr,nwid,nUserPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
+
+	{
+		Mutex::Lock _l(_networks_m);
+		_networks.erase(nwid);
+	}
+
+	uint64_t tmp[2];
+	tmp[0] = nwid; tmp[1] = 0;
+	RR->node->stateObjectDelete(tptr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp);
+
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
+ZT_ResultCode Node::multicastSubscribe(void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
 {
 	SharedPtr<Network> nw(this->network(nwid));
 	if (nw) {
-		nw->multicastSubscribe(MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
+		nw->multicastSubscribe(tptr,MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
 		return ZT_RESULT_OK;
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
@@ -394,6 +410,18 @@ ZT_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,u
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
+ZT_ResultCode Node::orbit(void *tptr,uint64_t moonWorldId,uint64_t moonSeed)
+{
+	RR->topology->addMoon(tptr,moonWorldId,Address(moonSeed));
+	return ZT_RESULT_OK;
+}
+
+ZT_ResultCode Node::deorbit(void *tptr,uint64_t moonWorldId)
+{
+	RR->topology->removeMoon(tptr,moonWorldId);
+	return ZT_RESULT_OK;
+}
+
 uint64_t Node::address() const
 {
 	return RR->identity.address().toInt();
@@ -402,10 +430,8 @@ uint64_t Node::address() const
 void Node::status(ZT_NodeStatus *status) const
 {
 	status->address = RR->identity.address().toInt();
-	status->worldId = RR->topology->worldId();
-	status->worldTimestamp = RR->topology->worldTimestamp();
-	status->publicIdentity = RR->publicIdentityStr.c_str();
-	status->secretIdentity = RR->secretIdentityStr.c_str();
+	status->publicIdentity = RR->publicIdentityStr;
+	status->secretIdentity = RR->secretIdentityStr;
 	status->online = _online ? 1 : 0;
 }
 
@@ -424,8 +450,6 @@ ZT_PeerList *Node::peers() const
 	for(std::vector< std::pair< Address,SharedPtr<Peer> > >::iterator pi(peers.begin());pi!=peers.end();++pi) {
 		ZT_Peer *p = &(pl->peers[pl->peerCount++]);
 		p->address = pi->second->address().toInt();
-		p->lastUnicastFrame = pi->second->lastUnicastFrame();
-		p->lastMulticastFrame = pi->second->lastMulticastFrame();
 		if (pi->second->remoteVersionKnown()) {
 			p->versionMajor = pi->second->remoteVersionMajor();
 			p->versionMinor = pi->second->remoteVersionMinor();
@@ -435,19 +459,21 @@ ZT_PeerList *Node::peers() const
 			p->versionMinor = -1;
 			p->versionRev = -1;
 		}
-		p->latency = pi->second->latency();
-		p->role = RR->topology->isRoot(pi->second->identity()) ? ZT_PEER_ROLE_ROOT : ZT_PEER_ROLE_LEAF;
+		p->latency = pi->second->latency(_now);
+		if (p->latency >= 0xffff)
+			p->latency = -1;
+		p->role = RR->topology->role(pi->second->identity().address());
 
-		std::vector<Path> paths(pi->second->paths());
-		Path *bestPath = pi->second->getBestPath(_now);
+		std::vector< SharedPtr<Path> > paths(pi->second->paths(_now));
+		SharedPtr<Path> bestp(pi->second->getBestPath(_now,false));
 		p->pathCount = 0;
-		for(std::vector<Path>::iterator path(paths.begin());path!=paths.end();++path) {
-			memcpy(&(p->paths[p->pathCount].address),&(path->address()),sizeof(struct sockaddr_storage));
-			p->paths[p->pathCount].lastSend = path->lastSend();
-			p->paths[p->pathCount].lastReceive = path->lastReceived();
-			p->paths[p->pathCount].active = path->active(_now) ? 1 : 0;
-			p->paths[p->pathCount].preferred = ((bestPath)&&(*path == *bestPath)) ? 1 : 0;
-			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust(path->address());
+		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
+			ZT_FAST_MEMCPY(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
+			p->paths[p->pathCount].lastSend = (*path)->lastOut();
+			p->paths[p->pathCount].lastReceive = (*path)->lastIn();
+			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
+			p->paths[p->pathCount].expired = 0;
+			p->paths[p->pathCount].preferred = ((*path) == bestp) ? 1 : 0;
 			++p->pathCount;
 		}
 	}
@@ -458,10 +484,10 @@ ZT_PeerList *Node::peers() const
 ZT_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid) const
 {
 	Mutex::Lock _l(_networks_m);
-	SharedPtr<Network> nw = _network(nwid);
-	if(nw) {
+	const SharedPtr<Network> *nw = _networks.get(nwid);
+	if (nw) {
 		ZT_VirtualNetworkConfig *nc = (ZT_VirtualNetworkConfig *)::malloc(sizeof(ZT_VirtualNetworkConfig));
-		nw->externalConfig(nc);
+		(*nw)->externalConfig(nc);
 		return nc;
 	}
 	return (ZT_VirtualNetworkConfig *)0;
@@ -478,8 +504,11 @@ ZT_VirtualNetworkList *Node::networks() const
 	nl->networks = (ZT_VirtualNetworkConfig *)(buf + sizeof(ZT_VirtualNetworkList));
 
 	nl->networkCount = 0;
-	for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n)
-		n->second->externalConfig(&(nl->networks[nl->networkCount++]));
+	Hashtable< uint64_t,SharedPtr<Network> >::Iterator i(*const_cast< Hashtable< uint64_t,SharedPtr<Network> > *>(&_networks));
+	uint64_t *k = (uint64_t *)0;
+	SharedPtr<Network> *v = (SharedPtr<Network> *)0;
+	while (i.next(k,v))
+		(*v)->externalConfig(&(nl->networks[nl->networkCount++]));
 
 	return nl;
 }
@@ -508,247 +537,188 @@ void Node::clearLocalInterfaceAddresses()
 	_directPaths.clear();
 }
 
+int Node::sendUserMessage(void *tptr,uint64_t dest,uint64_t typeId,const void *data,unsigned int len)
+{
+	try {
+		if (RR->identity.address().toInt() != dest) {
+			Packet outp(Address(dest),RR->identity.address(),Packet::VERB_USER_MESSAGE);
+			outp.append(typeId);
+			outp.append(data,len);
+			outp.compress();
+			RR->sw->send(tptr,outp,true);
+			return 1;
+		}
+	} catch ( ... ) {}
+	return 0;
+}
+
 void Node::setNetconfMaster(void *networkControllerInstance)
 {
 	RR->localNetworkController = reinterpret_cast<NetworkController *>(networkControllerInstance);
-}
-
-ZT_ResultCode Node::circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *))
-{
-	if (test->hopCount > 0) {
-		try {
-			Packet outp(Address(),RR->identity.address(),Packet::VERB_CIRCUIT_TEST);
-			RR->identity.address().appendTo(outp);
-			outp.append((uint16_t)((test->reportAtEveryHop != 0) ? 0x03 : 0x02));
-			outp.append((uint64_t)test->timestamp);
-			outp.append((uint64_t)test->testId);
-			outp.append((uint16_t)0); // originator credential length, updated later
-			if (test->credentialNetworkId) {
-				outp.append((uint8_t)0x01);
-				outp.append((uint64_t)test->credentialNetworkId);
-				outp.setAt<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 23,(uint16_t)9);
-			}
-			outp.append((uint16_t)0);
-			C25519::Signature sig(RR->identity.sign(reinterpret_cast<const char *>(outp.data()) + ZT_PACKET_IDX_PAYLOAD,outp.size() - ZT_PACKET_IDX_PAYLOAD));
-			outp.append((uint16_t)sig.size());
-			outp.append(sig.data,(unsigned int)sig.size());
-			outp.append((uint16_t)0); // originator doesn't need an extra credential, since it's the originator
-			for(unsigned int h=1;h<test->hopCount;++h) {
-				outp.append((uint8_t)0);
-				outp.append((uint8_t)(test->hops[h].breadth & 0xff));
-				for(unsigned int a=0;a<test->hops[h].breadth;++a)
-					Address(test->hops[h].addresses[a]).appendTo(outp);
-			}
-
-			for(unsigned int a=0;a<test->hops[0].breadth;++a) {
-				outp.newInitializationVector();
-				outp.setDestination(Address(test->hops[0].addresses[a]));
-				RR->sw->send(outp,true,0);
-			}
-		} catch ( ... ) {
-			return ZT_RESULT_FATAL_ERROR_INTERNAL; // probably indicates FIFO too big for packet
-		}
-	}
-
-	{
-		test->_internalPtr = reinterpret_cast<void *>(reportCallback);
-		Mutex::Lock _l(_circuitTests_m);
-		if (std::find(_circuitTests.begin(),_circuitTests.end(),test) == _circuitTests.end())
-			_circuitTests.push_back(test);
-	}
-
-	return ZT_RESULT_OK;
-}
-
-void Node::circuitTestEnd(ZT_CircuitTest *test)
-{
-	Mutex::Lock _l(_circuitTests_m);
-	for(;;) {
-		std::vector< ZT_CircuitTest * >::iterator ct(std::find(_circuitTests.begin(),_circuitTests.end(),test));
-		if (ct == _circuitTests.end())
-			break;
-		else _circuitTests.erase(ct);
-	}
-}
-
-ZT_ResultCode Node::clusterInit(
-	unsigned int myId,
-	const struct sockaddr_storage *zeroTierPhysicalEndpoints,
-	unsigned int numZeroTierPhysicalEndpoints,
-	int x,
-	int y,
-	int z,
-	void (*sendFunction)(void *,unsigned int,const void *,unsigned int),
-	void *sendFunctionArg,
-	int (*addressToLocationFunction)(void *,const struct sockaddr_storage *,int *,int *,int *),
-	void *addressToLocationFunctionArg)
-{
-#ifdef ZT_ENABLE_CLUSTER
-	if (RR->cluster)
-		return ZT_RESULT_ERROR_BAD_PARAMETER;
-
-	std::vector<InetAddress> eps;
-	for(unsigned int i=0;i<numZeroTierPhysicalEndpoints;++i)
-		eps.push_back(InetAddress(zeroTierPhysicalEndpoints[i]));
-	std::sort(eps.begin(),eps.end());
-	RR->cluster = new Cluster(RR,myId,eps,x,y,z,sendFunction,sendFunctionArg,addressToLocationFunction,addressToLocationFunctionArg);
-
-	return ZT_RESULT_OK;
-#else
-	return ZT_RESULT_ERROR_UNSUPPORTED_OPERATION;
-#endif
-}
-
-ZT_ResultCode Node::clusterAddMember(unsigned int memberId)
-{
-#ifdef ZT_ENABLE_CLUSTER
-	if (!RR->cluster)
-		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	RR->cluster->addMember((uint16_t)memberId);
-	return ZT_RESULT_OK;
-#else
-	return ZT_RESULT_ERROR_UNSUPPORTED_OPERATION;
-#endif
-}
-
-void Node::clusterRemoveMember(unsigned int memberId)
-{
-#ifdef ZT_ENABLE_CLUSTER
-	if (RR->cluster)
-		RR->cluster->removeMember((uint16_t)memberId);
-#endif
-}
-
-void Node::clusterHandleIncomingMessage(const void *msg,unsigned int len)
-{
-#ifdef ZT_ENABLE_CLUSTER
-	if (RR->cluster)
-		RR->cluster->handleIncomingStateMessage(msg,len);
-#endif
-}
-
-void Node::clusterStatus(ZT_ClusterStatus *cs)
-{
-	if (!cs)
-		return;
-#ifdef ZT_ENABLE_CLUSTER
-	if (RR->cluster)
-		RR->cluster->status(*cs);
-	else
-#endif
-	memset(cs,0,sizeof(ZT_ClusterStatus));
-}
-
-void Node::backgroundThreadMain()
-{
-	++RR->dpEnabled;
-	for(;;) {
-		try {
-			if (RR->dp->process() < 0)
-				break;
-		} catch ( ... ) {} // sanity check -- should not throw
-	}
-	--RR->dpEnabled;
+	if (networkControllerInstance)
+		RR->localNetworkController->init(RR->identity,this);
 }
 
 /****************************************************************************/
 /* Node methods used only within node/                                      */
 /****************************************************************************/
 
-std::string Node::dataStoreGet(const char *name)
-{
-	char buf[1024];
-	std::string r;
-	unsigned long olen = 0;
-	do {
-		long n = _dataStoreGetFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,name,buf,sizeof(buf),(unsigned long)r.length(),&olen);
-		if (n <= 0)
-			return std::string();
-		r.append(buf,n);
-	} while (r.length() < olen);
-	return r;
-}
-
-bool Node::shouldUsePathForZeroTierTraffic(const InetAddress &localAddress,const InetAddress &remoteAddress)
+bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,const int64_t localSocket,const InetAddress &remoteAddress)
 {
 	if (!Path::isAddressValidForPath(remoteAddress))
 		return false;
 
+	if (RR->topology->isProhibitedEndpoint(ztaddr,remoteAddress))
+		return false;
+
 	{
 		Mutex::Lock _l(_networks_m);
-		for(std::vector< std::pair< uint64_t, SharedPtr<Network> > >::const_iterator i=_networks.begin();i!=_networks.end();++i) {
-			if (i->second->hasConfig()) {
-				for(unsigned int k=0;k<i->second->config().staticIpCount;++k) {
-					if (i->second->config().staticIps[k].containsAddress(remoteAddress))
+		Hashtable< uint64_t,SharedPtr<Network> >::Iterator i(_networks);
+		uint64_t *k = (uint64_t *)0;
+		SharedPtr<Network> *v = (SharedPtr<Network> *)0;
+		while (i.next(k,v)) {
+			if ((*v)->hasConfig()) {
+				for(unsigned int k=0;k<(*v)->config().staticIpCount;++k) {
+					if ((*v)->config().staticIps[k].containsAddress(remoteAddress))
 						return false;
 				}
 			}
 		}
 	}
 
-	if (_pathCheckFunction)
-		return (_pathCheckFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,reinterpret_cast<const struct sockaddr_storage *>(&localAddress),reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0);
-	else return true;
+	return ( (_cb.pathCheckFunction) ? (_cb.pathCheckFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ztaddr.toInt(),localSocket,reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0) : true);
 }
-
-#ifdef ZT_TRACE
-void Node::postTrace(const char *module,unsigned int line,const char *fmt,...)
-{
-	static Mutex traceLock;
-
-	va_list ap;
-	char tmp1[1024],tmp2[1024],tmp3[256];
-
-	Mutex::Lock _l(traceLock);
-
-	time_t now = (time_t)(_now / 1000ULL);
-#ifdef __WINDOWS__
-	ctime_s(tmp3,sizeof(tmp3),&now);
-	char *nowstr = tmp3;
-#else
-	char *nowstr = ctime_r(&now,tmp3);
-#endif
-	unsigned long nowstrlen = (unsigned long)strlen(nowstr);
-	if (nowstr[nowstrlen-1] == '\n')
-		nowstr[--nowstrlen] = (char)0;
-	if (nowstr[nowstrlen-1] == '\r')
-		nowstr[--nowstrlen] = (char)0;
-
-	va_start(ap,fmt);
-	vsnprintf(tmp2,sizeof(tmp2),fmt,ap);
-	va_end(ap);
-	tmp2[sizeof(tmp2)-1] = (char)0;
-
-	Utils::snprintf(tmp1,sizeof(tmp1),"[%s] %s:%u %s",nowstr,module,line,tmp2);
-	postEvent(ZT_EVENT_TRACE,tmp1);
-}
-#endif // ZT_TRACE
 
 uint64_t Node::prng()
 {
-	unsigned int p = (++_prngStreamPtr % (sizeof(_prngStream) / sizeof(uint64_t)));
-	if (!p)
-		_prng.encrypt12(_prngStream,_prngStream,sizeof(_prngStream));
-	return _prngStream[p];
+	// https://en.wikipedia.org/wiki/Xorshift#xorshift.2B
+	uint64_t x = _prngState[0];
+	const uint64_t y = _prngState[1];
+	_prngState[0] = y;
+	x ^= x << 23;
+	const uint64_t z = x ^ y ^ (x >> 17) ^ (y >> 26);
+	_prngState[1] = z;
+	return z + y;
 }
 
-void Node::postCircuitTestReport(const ZT_CircuitTestReport *report)
+ZT_ResultCode Node::setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork, const ZT_PhysicalPathConfiguration *pathConfig)
 {
-	std::vector< ZT_CircuitTest * > toNotify;
-	{
-		Mutex::Lock _l(_circuitTests_m);
-		for(std::vector< ZT_CircuitTest * >::iterator i(_circuitTests.begin());i!=_circuitTests.end();++i) {
-			if ((*i)->testId == report->testId)
-				toNotify.push_back(*i);
+	RR->topology->setPhysicalPathConfiguration(pathNetwork,pathConfig);
+	return ZT_RESULT_OK;
+}
+
+World Node::planet() const
+{
+	return RR->topology->planet();
+}
+
+std::vector<World> Node::moons() const
+{
+	return RR->topology->moons();
+}
+
+void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig)
+{
+	if (destination == RR->identity.address()) {
+		SharedPtr<Network> n(network(nwid));
+		if (!n) return;
+		n->setConfiguration((void *)0,nc,true);
+	} else {
+		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+		try {
+			if (nc.toDictionary(*dconf,sendLegacyFormatConfig)) {
+				uint64_t configUpdateId = prng();
+				if (!configUpdateId) ++configUpdateId;
+
+				const unsigned int totalSize = dconf->sizeBytes();
+				unsigned int chunkIndex = 0;
+				while (chunkIndex < totalSize) {
+					const unsigned int chunkLen = std::min(totalSize - chunkIndex,(unsigned int)(ZT_PROTO_MAX_PACKET_LENGTH - (ZT_PACKET_IDX_PAYLOAD + 256)));
+					Packet outp(destination,RR->identity.address(),(requestPacketId) ? Packet::VERB_OK : Packet::VERB_NETWORK_CONFIG);
+					if (requestPacketId) {
+						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+						outp.append(requestPacketId);
+					}
+
+					const unsigned int sigStart = outp.size();
+					outp.append(nwid);
+					outp.append((uint16_t)chunkLen);
+					outp.append((const void *)(dconf->data() + chunkIndex),chunkLen);
+
+					outp.append((uint8_t)0); // no flags
+					outp.append((uint64_t)configUpdateId);
+					outp.append((uint32_t)totalSize);
+					outp.append((uint32_t)chunkIndex);
+
+					C25519::Signature sig(RR->identity.sign(reinterpret_cast<const uint8_t *>(outp.data()) + sigStart,outp.size() - sigStart));
+					outp.append((uint8_t)1);
+					outp.append((uint16_t)ZT_C25519_SIGNATURE_LEN);
+					outp.append(sig.data,ZT_C25519_SIGNATURE_LEN);
+
+					outp.compress();
+					RR->sw->send((void *)0,outp,true);
+					chunkIndex += chunkLen;
+				}
+			}
+			delete dconf;
+		} catch ( ... ) {
+			delete dconf;
+			throw;
 		}
 	}
-	for(std::vector< ZT_CircuitTest * >::iterator i(toNotify.begin());i!=toNotify.end();++i)
-		(reinterpret_cast<void (*)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *)>((*i)->_internalPtr))(reinterpret_cast<ZT_Node *>(this),*i,report);
 }
 
-void Node::setTrustedPaths(const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count)
+void Node::ncSendRevocation(const Address &destination,const Revocation &rev)
 {
-	RR->topology->setTrustedPaths(reinterpret_cast<const InetAddress *>(networks),ids,count);
+	if (destination == RR->identity.address()) {
+		SharedPtr<Network> n(network(rev.networkId()));
+		if (!n) return;
+		n->addCredential((void *)0,RR->identity.address(),rev);
+	} else {
+		Packet outp(destination,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
+		outp.append((uint8_t)0x00);
+		outp.append((uint16_t)0);
+		outp.append((uint16_t)0);
+		outp.append((uint16_t)1);
+		rev.serialize(outp);
+		outp.append((uint16_t)0);
+		RR->sw->send((void *)0,outp,true);
+	}
+}
+
+void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode)
+{
+	if (destination == RR->identity.address()) {
+		SharedPtr<Network> n(network(nwid));
+		if (!n) return;
+		switch(errorCode) {
+			case NetworkController::NC_ERROR_OBJECT_NOT_FOUND:
+			case NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR:
+				n->setNotFound();
+				break;
+			case NetworkController::NC_ERROR_ACCESS_DENIED:
+				n->setAccessDenied();
+				break;
+
+			default: break;
+		}
+	} else if (requestPacketId) {
+		Packet outp(destination,RR->identity.address(),Packet::VERB_ERROR);
+		outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+		outp.append(requestPacketId);
+		switch(errorCode) {
+			//case NetworkController::NC_ERROR_OBJECT_NOT_FOUND:
+			//case NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR:
+			default:
+				outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
+				break;
+			case NetworkController::NC_ERROR_ACCESS_DENIED:
+				outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
+				break;
+		}
+		outp.append(nwid);
+		RR->sw->send((void *)0,outp,true);
+	} // else we can't send an ERROR() in response to nothing, so discard
 }
 
 } // namespace ZeroTier
@@ -759,21 +729,11 @@ void Node::setTrustedPaths(const struct sockaddr_storage *networks,const uint64_
 
 extern "C" {
 
-enum ZT_ResultCode ZT_Node_new(
-	ZT_Node **node,
-	void *uptr,
-	uint64_t now,
-	ZT_DataStoreGetFunction dataStoreGetFunction,
-	ZT_DataStorePutFunction dataStorePutFunction,
-	ZT_WirePacketSendFunction wirePacketSendFunction,
-	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
-	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT_PathCheckFunction pathCheckFunction,
-	ZT_EventCallback eventCallback)
+enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64_t now)
 {
 	*node = (ZT_Node *)0;
 	try {
-		*node = reinterpret_cast<ZT_Node *>(new ZeroTier::Node(now,uptr,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigFunction,pathCheckFunction,eventCallback));
+		*node = reinterpret_cast<ZT_Node *>(new ZeroTier::Node(uptr,tptr,callbacks,now));
 		return ZT_RESULT_OK;
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
@@ -793,15 +753,16 @@ void ZT_Node_delete(ZT_Node *node)
 
 enum ZT_ResultCode ZT_Node_processWirePacket(
 	ZT_Node *node,
-	uint64_t now,
-	const struct sockaddr_storage *localAddress,
+	void *tptr,
+	int64_t now,
+	int64_t localSocket,
 	const struct sockaddr_storage *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
-	volatile uint64_t *nextBackgroundTaskDeadline)
+	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(now,localAddress,remoteAddress,packetData,packetLength,nextBackgroundTaskDeadline);
+		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(tptr,now,localSocket,remoteAddress,packetData,packetLength,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
@@ -811,7 +772,8 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
 
 enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	ZT_Node *node,
-	uint64_t now,
+	void *tptr,
+	int64_t now,
 	uint64_t nwid,
 	uint64_t sourceMac,
 	uint64_t destMac,
@@ -819,10 +781,10 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	unsigned int vlanId,
 	const void *frameData,
 	unsigned int frameLength,
-	volatile uint64_t *nextBackgroundTaskDeadline)
+	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processVirtualNetworkFrame(now,nwid,sourceMac,destMac,etherType,vlanId,frameData,frameLength,nextBackgroundTaskDeadline);
+		return reinterpret_cast<ZeroTier::Node *>(node)->processVirtualNetworkFrame(tptr,now,nwid,sourceMac,destMac,etherType,vlanId,frameData,frameLength,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
@@ -830,10 +792,10 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	}
 }
 
-enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline)
+enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,void *tptr,int64_t now,volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processBackgroundTasks(now,nextBackgroundTaskDeadline);
+		return reinterpret_cast<ZeroTier::Node *>(node)->processBackgroundTasks(tptr,now,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
@@ -841,10 +803,10 @@ enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,uint64_t now,vol
 	}
 }
 
-enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr)
+enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr,void *tptr)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->join(nwid,uptr);
+		return reinterpret_cast<ZeroTier::Node *>(node)->join(nwid,uptr,tptr);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
@@ -852,10 +814,10 @@ enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr)
 	}
 }
 
-enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr)
+enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr,void *tptr)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->leave(nwid,uptr);
+		return reinterpret_cast<ZeroTier::Node *>(node)->leave(nwid,uptr,tptr);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
@@ -863,10 +825,10 @@ enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr)
 	}
 }
 
-enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
+enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node,void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->multicastSubscribe(nwid,multicastGroup,multicastAdi);
+		return reinterpret_cast<ZeroTier::Node *>(node)->multicastSubscribe(tptr,nwid,multicastGroup,multicastAdi);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
@@ -880,6 +842,24 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint
 		return reinterpret_cast<ZeroTier::Node *>(node)->multicastUnsubscribe(nwid,multicastGroup,multicastAdi);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
+	} catch ( ... ) {
+		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+	}
+}
+
+enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,void *tptr,uint64_t moonWorldId,uint64_t moonSeed)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->orbit(tptr,moonWorldId,moonSeed);
+	} catch ( ... ) {
+		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+	}
+}
+
+enum ZT_ResultCode ZT_Node_deorbit(ZT_Node *node,void *tptr,uint64_t moonWorldId)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->deorbit(tptr,moonWorldId);
 	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}
@@ -947,6 +927,15 @@ void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node)
 	} catch ( ... ) {}
 }
 
+int ZT_Node_sendUserMessage(ZT_Node *node,void *tptr,uint64_t dest,uint64_t typeId,const void *data,unsigned int len)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->sendUserMessage(tptr,dest,typeId,data,len);
+	} catch ( ... ) {
+		return 0;
+	}
+}
+
 void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkControllerInstance)
 {
 	try {
@@ -954,84 +943,13 @@ void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkControllerInstance)
 	} catch ( ... ) {}
 }
 
-enum ZT_ResultCode ZT_Node_circuitTestBegin(ZT_Node *node,ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *))
+enum ZT_ResultCode ZT_Node_setPhysicalPathConfiguration(ZT_Node *node,const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->circuitTestBegin(test,reportCallback);
+		return reinterpret_cast<ZeroTier::Node *>(node)->setPhysicalPathConfiguration(pathNetwork,pathConfig);
 	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}
-}
-
-void ZT_Node_circuitTestEnd(ZT_Node *node,ZT_CircuitTest *test)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->circuitTestEnd(test);
-	} catch ( ... ) {}
-}
-
-enum ZT_ResultCode ZT_Node_clusterInit(
-	ZT_Node *node,
-	unsigned int myId,
-	const struct sockaddr_storage *zeroTierPhysicalEndpoints,
-	unsigned int numZeroTierPhysicalEndpoints,
-	int x,
-	int y,
-	int z,
-	void (*sendFunction)(void *,unsigned int,const void *,unsigned int),
-	void *sendFunctionArg,
-	int (*addressToLocationFunction)(void *,const struct sockaddr_storage *,int *,int *,int *),
-	void *addressToLocationFunctionArg)
-{
-	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->clusterInit(myId,zeroTierPhysicalEndpoints,numZeroTierPhysicalEndpoints,x,y,z,sendFunction,sendFunctionArg,addressToLocationFunction,addressToLocationFunctionArg);
-	} catch ( ... ) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
-	}
-}
-
-enum ZT_ResultCode ZT_Node_clusterAddMember(ZT_Node *node,unsigned int memberId)
-{
-	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->clusterAddMember(memberId);
-	} catch ( ... ) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
-	}
-}
-
-void ZT_Node_clusterRemoveMember(ZT_Node *node,unsigned int memberId)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->clusterRemoveMember(memberId);
-	} catch ( ... ) {}
-}
-
-void ZT_Node_clusterHandleIncomingMessage(ZT_Node *node,const void *msg,unsigned int len)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->clusterHandleIncomingMessage(msg,len);
-	} catch ( ... ) {}
-}
-
-void ZT_Node_clusterStatus(ZT_Node *node,ZT_ClusterStatus *cs)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->clusterStatus(cs);
-	} catch ( ... ) {}
-}
-
-void ZT_Node_setTrustedPaths(ZT_Node *node,const struct sockaddr_storage *networks,const uint64_t *ids,unsigned int count)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->setTrustedPaths(networks,ids,count);
-	} catch ( ... ) {}
-}
-
-void ZT_Node_backgroundThreadMain(ZT_Node *node)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->backgroundThreadMain();
-	} catch ( ... ) {}
 }
 
 void ZT_version(int *major,int *minor,int *revision)

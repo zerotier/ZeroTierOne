@@ -37,13 +37,13 @@ public interface PacketSender {
      * on failure. Note that success does not (of course) guarantee packet
      * delivery. It only means that the packet appears to have been sent.</p>
      *
-     * @param localAddr {@link InetSocketAddress} to send from.  Set to null if not specified.
+     * @param localSocket socket file descriptor to send from.  Set to -1 if not specified.
      * @param remoteAddr {@link InetSocketAddress} to send to
      * @param packetData data to send
      * @return 0 on success, any error code on failure.
      */
     public int onSendPacketRequested(
-            InetSocketAddress localAddr,
+            long localSocket,
             InetSocketAddress remoteAddr,
             byte[] packetData,
             int ttl);

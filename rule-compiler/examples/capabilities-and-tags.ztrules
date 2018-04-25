@@ -1,0 +1,40 @@
+# This is a default rule set that allows IPv4 and IPv6 traffic.
+# You can edit as needed. If your rule set gets large we recommend
+# cutting and pasting it somewhere to keep a backup.
+
+# Drop all Ethernet frame types that are not IPv4 or IPv6
+drop
+	not ethertype 0x0800 # IPv4
+	not ethertype 0x0806 # IPv4 ARP
+	not ethertype 0x86dd # IPv6
+;
+
+# Capability: outgoing SSH
+cap ssh
+	id 1000
+	accept
+		ipprotocol tcp
+		dport 22
+	;
+;
+
+# A tag indicating which department people belong to
+tag department
+	id 1000
+	enum 100 sales
+	enum 200 marketing
+	enum 300 accounting
+	enum 400 engineering
+;
+
+# Accept all traffic between members of the same department
+accept
+	tdiff department 0
+;
+
+# You can insert other drop, tee, etc. rules here. This rule
+# set ends with a blanket accept, making it permissive by
+# default.
+
+accept;
+

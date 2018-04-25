@@ -15,6 +15,7 @@ The version must be incremented in all of the following files:
     /ext/installfiles/mac/ZeroTier One.pkgproj
     /ext/installfiles/windows/chocolatey/zerotier-one.nuspec
     /ext/installfiles/windows/ZeroTier One.aip
+    /windows/WinUI/AboutView.xaml
 
 The final .AIP file can only be edited on Windows with [Advanced Installer Enterprise](http://www.advancedinstaller.com/). In addition to incrementing the version be sure that a new product code is generated. (The "upgrade code" GUID on the other hand must never change.)
 
@@ -30,22 +31,7 @@ You will need [Packages](http://s.sudre.free.fr/Software/Packages/about.html) an
 
 ## Linux
 
-Mount the GPG key for *contact@zerotier.com* and then on an x86_64 box with a recent version of Docker and an Internet connection run:
-
-    make distclean
-    cd linux-build-farm
-    ./build.sh
-
-This will build i386 and x86_64 packages. Now ssh into our build Raspberry Pi and type `make debian` there to build the Raspbian armhf package. Copy it to `debian-jessie/` inside `linux-build-farm` so that it will be included in the repositories we generate. Now generate the YUM and APT repos:
-
-    rm -rf ~/.aptly*
-    rm -rf /tmp/zt-rpm-repo
-    ./make-apt-repos.sh
-    ./make-rpm-repos.sh
-
-This will require the passphrase for *contact@zerotier.com*.
-
-The contents of ~/.aptly/public must be published as `debian/` on `download.zerotier.com`. The contents of /tmp/zt-rpm-repo are published as `redhat/` on same.
+See `LinuxBuild` environment on `linux-build` VM and use: `chroots/mount-build.sh`, `chroots/build.sh`, and the scripts in `build/` to make APT and RPM repositories.
 
 ## Windows
 

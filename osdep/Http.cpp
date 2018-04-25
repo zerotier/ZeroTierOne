@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #include <stdio.h>
@@ -104,12 +112,12 @@ struct HttpPhyHandler
 
 	inline void phyOnTcpWritable(PhySocket *sock,void **uptr)
 	{
-		if (writePtr < writeSize) {
-			long n = phy->streamSend(sock,writeBuf + writePtr,writeSize - writePtr,true);
+		if (writePtr < (unsigned long)writeBuf.length()) {
+			long n = phy->streamSend(sock,writeBuf.data() + writePtr,(unsigned long)writeBuf.length() - writePtr,true);
 			if (n > 0)
 				writePtr += n;
 		}
-		if (writePtr >= writeSize)
+		if (writePtr >= (unsigned long)writeBuf.length())
 			phy->setNotifyWritable(sock,false);
 	}
 
@@ -127,8 +135,7 @@ struct HttpPhyHandler
 	unsigned long messageSize;
 	unsigned long writePtr;
 	uint64_t lastActivity;
-	unsigned long writeSize;
-	char writeBuf[32768];
+	std::string writeBuf;
 
 	unsigned long maxResponseSize;
 	std::map<std::string,std::string> *responseHeaders;
@@ -236,24 +243,26 @@ unsigned int Http::_do(
 		handler.lastActivity = OSUtils::now();
 
 		try {
-			handler.writeSize = Utils::snprintf(handler.writeBuf,sizeof(handler.writeBuf),"%s %s HTTP/1.1\r\n",method,path);
-			for(std::map<std::string,std::string>::const_iterator h(requestHeaders.begin());h!=requestHeaders.end();++h)
-				handler.writeSize += Utils::snprintf(handler.writeBuf + handler.writeSize,sizeof(handler.writeBuf) - handler.writeSize,"%s: %s\r\n",h->first.c_str(),h->second.c_str());
-			handler.writeSize += Utils::snprintf(handler.writeBuf + handler.writeSize,sizeof(handler.writeBuf) - handler.writeSize,"\r\n");
-			if ((requestBody)&&(requestBodyLength)) {
-				if ((handler.writeSize + requestBodyLength) > sizeof(handler.writeBuf)) {
-					responseBody = "request too large";
-					return 0;
-				}
-				memcpy(handler.writeBuf + handler.writeSize,requestBody,requestBodyLength);
-				handler.writeSize += requestBodyLength;
+			char tmp[1024];
+			OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s %s HTTP/1.1\r\n",method,path);
+			handler.writeBuf.append(tmp);
+			for(std::map<std::string,std::string>::const_iterator h(requestHeaders.begin());h!=requestHeaders.end();++h) {
+				OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s: %s\r\n",h->first.c_str(),h->second.c_str());
+				handler.writeBuf.append(tmp);
 			}
+			handler.writeBuf.append("\r\n");
+			if ((requestBody)&&(requestBodyLength))
+				handler.writeBuf.append((const char *)requestBody,requestBodyLength);
 		} catch ( ... ) {
 			responseBody = "request too large";
 			return 0;
 		}
 
-		handler.maxResponseSize = maxResponseSize;
+		if (maxResponseSize) {
+			handler.maxResponseSize = maxResponseSize;
+		} else {
+			handler.maxResponseSize = 2147483647;
+		}
 		handler.responseHeaders = &responseHeaders;
 		handler.responseBody = &responseBody;
 		handler.error = false;

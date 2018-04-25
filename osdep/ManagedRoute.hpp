@@ -1,3 +1,29 @@
+/*
+ * ZeroTier One - Network Virtualization Everywhere
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
+ */
+
 #ifndef ZT_MANAGEDROUTE_HPP
 #define ZT_MANAGEDROUTE_HPP
 
@@ -6,9 +32,12 @@
 
 #include "../node/InetAddress.hpp"
 #include "../node/Utils.hpp"
+#include "../node/SharedPtr.hpp"
+#include "../node/AtomicCounter.hpp"
 
 #include <stdexcept>
 #include <vector>
+#include <map>
 
 namespace ZeroTier {
 
@@ -17,56 +46,24 @@ namespace ZeroTier {
  */
 class ManagedRoute
 {
+	friend class SharedPtr<ManagedRoute>;
+
 public:
-	ManagedRoute()
+	ManagedRoute(const InetAddress &target,const InetAddress &via,const char *device)
 	{
-		_device[0] = (char)0;
+		_target = target;
+		_via = via;
+		if (via.ss_family == AF_INET)
+			_via.setPort(32);
+		else if (via.ss_family == AF_INET6)
+			_via.setPort(128);
+		Utils::scopy(_device,sizeof(_device),device);
 		_systemDevice[0] = (char)0;
-		_applied = false;
 	}
 
 	~ManagedRoute()
 	{
 		this->remove();
-	}
-
-	ManagedRoute(const ManagedRoute &r)
-	{
-		_applied = false;
-		*this = r;
-	}
-
-	inline ManagedRoute &operator=(const ManagedRoute &r)
-	{
-		if ((!_applied)&&(!r._applied)) {
-			memcpy(this,&r,sizeof(ManagedRoute)); // InetAddress is memcpy'able
-		} else {
-			fprintf(stderr,"Applied ManagedRoute isn't copyable!\n");
-			abort();
-		}
-		return *this;
-	}
-
-	/**
-	 * Initialize object and set route
-	 *
-	 * Note: on Windows, use the interface NET_LUID in hexadecimal as the
-	 * "device name."
-	 *
-	 * @param target Route target (e.g. 0.0.0.0/0 for default)
-	 * @param via Route next L3 hop or NULL InetAddress if local in which case it will be routed via device
-	 * @param device Name or hex LUID of ZeroTier device (e.g. zt#)
-	 * @return True if route was successfully set
-	 */
-	inline bool set(const InetAddress &target,const InetAddress &via,const char *device)
-	{
-		if ((!via)&&(!device[0]))
-			return false;
-		this->remove();
-		_target = target;
-		_via = via;
-		Utils::scopy(_device,sizeof(_device),device);
-		return this->sync();
 	}
 
 	/**
@@ -93,13 +90,17 @@ public:
 	inline const char *device() const { return _device; }
 
 private:
+	ManagedRoute(const ManagedRoute &) {}
+	inline ManagedRoute &operator=(const ManagedRoute &) { return *this; }
 
 	InetAddress _target;
 	InetAddress _via;
 	InetAddress _systemVia; // for route overrides
+	std::map<InetAddress,bool> _applied; // routes currently applied
 	char _device[128];
 	char _systemDevice[128]; // for route overrides
-	bool _applied;
+
+	AtomicCounter __refCount;
 };
 
 } // namespace ZeroTier

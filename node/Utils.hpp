@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifndef ZT_UTILS_HPP
@@ -31,6 +39,44 @@
 #include <map>
 
 #include "Constants.hpp"
+
+#ifdef __LINUX__
+//#if (defined(_MSC_VER) || defined(__GNUC__)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#if 0
+#include <emmintrin.h>
+static inline void ZT_FAST_MEMCPY(void *a,const void *b,unsigned long k)
+{
+	char *aa = reinterpret_cast<char *>(a);
+	const char *bb = reinterpret_cast<const char *>(b);
+	while (k >= 64) {
+		__m128 t1 = _mm_loadu_ps(reinterpret_cast<const float *>(bb));
+		__m128 t2 = _mm_loadu_ps(reinterpret_cast<const float *>(bb + 16));
+		__m128 t3 = _mm_loadu_ps(reinterpret_cast<const float *>(bb + 32));
+		__m128 t4 = _mm_loadu_ps(reinterpret_cast<const float *>(bb + 48));
+		_mm_storeu_ps(reinterpret_cast<float *>(aa),t1);
+		_mm_storeu_ps(reinterpret_cast<float *>(aa + 16),t2);
+		_mm_storeu_ps(reinterpret_cast<float *>(aa + 32),t3);
+		_mm_storeu_ps(reinterpret_cast<float *>(aa + 48),t4);
+		bb += 64;
+		aa += 64;
+		k -= 64;
+	}
+	while (k >= 16) {
+		__m128 t1 = _mm_loadu_ps(reinterpret_cast<const float *>(bb));
+		_mm_storeu_ps(reinterpret_cast<float *>(aa),t1);
+		bb += 16;
+		aa += 16;
+		k -= 16;
+	}
+	for(unsigned long i=0;i<k;++i)
+		aa[i] = bb[i];
+}
+#else
+#define ZT_FAST_MEMCPY(a,b,c) memcpy(a,b,c)
+#endif
+#else
+#define ZT_FAST_MEMCPY(a,b,c) memcpy(a,b,c)
+#endif
 
 namespace ZeroTier {
 
@@ -59,46 +105,161 @@ public:
 	/**
 	 * Securely zero memory, avoiding compiler optimizations and such
 	 */
-	static void burn(void *ptr,unsigned int len)
-		throw();
+	static void burn(void *ptr,unsigned int len);
 
 	/**
-	 * Convert binary data to hexadecimal
-	 *
-	 * @param data Data to convert to hex
-	 * @param len Length of data
-	 * @return Hexadecimal string
+	 * @param n Number to convert
+	 * @param s Buffer, at least 24 bytes in size
+	 * @return String containing 'n' in base 10 form
 	 */
-	static std::string hex(const void *data,unsigned int len);
-	static inline std::string hex(const std::string &data) { return hex(data.data(),(unsigned int)data.length()); }
+	static char *decimal(unsigned long n,char s[24]);
 
-	/**
-	 * Convert hexadecimal to binary data
-	 *
-	 * This ignores all non-hex characters, just stepping over them and
-	 * continuing. Upper and lower case are supported for letters a-f.
-	 *
-	 * @param hex Hexadecimal ASCII code (non-hex chars are ignored, stops at zero or maxlen)
-	 * @param maxlen Maximum length of hex string buffer
-	 * @return Binary data
-	 */
-	static std::string unhex(const char *hex,unsigned int maxlen);
-	static inline std::string unhex(const std::string &hex) { return unhex(hex.c_str(),(unsigned int)hex.length()); }
+	static inline char *hex(uint64_t i,char s[17])
+	{
+		s[0] = HEXCHARS[(i >> 60) & 0xf];
+		s[1] = HEXCHARS[(i >> 56) & 0xf];
+		s[2] = HEXCHARS[(i >> 52) & 0xf];
+		s[3] = HEXCHARS[(i >> 48) & 0xf];
+		s[4] = HEXCHARS[(i >> 44) & 0xf];
+		s[5] = HEXCHARS[(i >> 40) & 0xf];
+		s[6] = HEXCHARS[(i >> 36) & 0xf];
+		s[7] = HEXCHARS[(i >> 32) & 0xf];
+		s[8] = HEXCHARS[(i >> 28) & 0xf];
+		s[9] = HEXCHARS[(i >> 24) & 0xf];
+		s[10] = HEXCHARS[(i >> 20) & 0xf];
+		s[11] = HEXCHARS[(i >> 16) & 0xf];
+		s[12] = HEXCHARS[(i >> 12) & 0xf];
+		s[13] = HEXCHARS[(i >> 8) & 0xf];
+		s[14] = HEXCHARS[(i >> 4) & 0xf];
+		s[15] = HEXCHARS[i & 0xf];
+		s[16] = (char)0;
+		return s;
+	}
 
-	/**
-	 * Convert hexadecimal to binary data
-	 *
-	 * This ignores all non-hex characters, just stepping over them and
-	 * continuing. Upper and lower case are supported for letters a-f.
-	 *
-	 * @param hex Hexadecimal ASCII
-	 * @param maxlen Maximum length of hex string buffer
-	 * @param buf Buffer to fill
-	 * @param len Length of buffer
-	 * @return Number of characters actually written
-	 */
-	static unsigned int unhex(const char *hex,unsigned int maxlen,void *buf,unsigned int len);
-	static inline unsigned int unhex(const std::string &hex,void *buf,unsigned int len) { return unhex(hex.c_str(),(unsigned int)hex.length(),buf,len); }
+	static inline char *hex10(uint64_t i,char s[11])
+	{
+		s[0] = HEXCHARS[(i >> 36) & 0xf];
+		s[1] = HEXCHARS[(i >> 32) & 0xf];
+		s[2] = HEXCHARS[(i >> 28) & 0xf];
+		s[3] = HEXCHARS[(i >> 24) & 0xf];
+		s[4] = HEXCHARS[(i >> 20) & 0xf];
+		s[5] = HEXCHARS[(i >> 16) & 0xf];
+		s[6] = HEXCHARS[(i >> 12) & 0xf];
+		s[7] = HEXCHARS[(i >> 8) & 0xf];
+		s[8] = HEXCHARS[(i >> 4) & 0xf];
+		s[9] = HEXCHARS[i & 0xf];
+		s[10] = (char)0;
+		return s;
+	}
+
+	static inline char *hex(uint32_t i,char s[9])
+	{
+		s[0] = HEXCHARS[(i >> 28) & 0xf];
+		s[1] = HEXCHARS[(i >> 24) & 0xf];
+		s[2] = HEXCHARS[(i >> 20) & 0xf];
+		s[3] = HEXCHARS[(i >> 16) & 0xf];
+		s[4] = HEXCHARS[(i >> 12) & 0xf];
+		s[5] = HEXCHARS[(i >> 8) & 0xf];
+		s[6] = HEXCHARS[(i >> 4) & 0xf];
+		s[7] = HEXCHARS[i & 0xf];
+		s[8] = (char)0;
+		return s;
+	}
+
+	static inline char *hex(uint16_t i,char s[5])
+	{
+		s[0] = HEXCHARS[(i >> 12) & 0xf];
+		s[1] = HEXCHARS[(i >> 8) & 0xf];
+		s[2] = HEXCHARS[(i >> 4) & 0xf];
+		s[3] = HEXCHARS[i & 0xf];
+		s[4] = (char)0;
+		return s;
+	}
+
+	static inline char *hex(uint8_t i,char s[3])
+	{
+		s[0] = HEXCHARS[(i >> 4) & 0xf];
+		s[1] = HEXCHARS[i & 0xf];
+		s[2] = (char)0;
+		return s;
+	}
+
+	static inline char *hex(const void *d,unsigned int l,char *s)
+	{
+		char *const save = s;
+		for(unsigned int i=0;i<l;++i) {
+			const unsigned int b = reinterpret_cast<const uint8_t *>(d)[i];
+			*(s++) = HEXCHARS[b >> 4];
+			*(s++) = HEXCHARS[b & 0xf];
+		}
+		*s = (char)0;
+		return save;
+	}
+
+	static inline unsigned int unhex(const char *h,void *buf,unsigned int buflen)
+	{
+		unsigned int l = 0;
+		while (l < buflen) {
+			uint8_t hc = *(reinterpret_cast<const uint8_t *>(h++));
+			if (!hc) break;
+
+			uint8_t c = 0;
+			if ((hc >= 48)&&(hc <= 57)) // 0..9
+				c = hc - 48;
+			else if ((hc >= 97)&&(hc <= 102)) // a..f
+				c = hc - 87;
+			else if ((hc >= 65)&&(hc <= 70)) // A..F
+				c = hc - 55;
+
+			hc = *(reinterpret_cast<const uint8_t *>(h++));
+			if (!hc) break;
+
+			c <<= 4;
+			if ((hc >= 48)&&(hc <= 57))
+				c |= hc - 48;
+			else if ((hc >= 97)&&(hc <= 102))
+				c |= hc - 87;
+			else if ((hc >= 65)&&(hc <= 70))
+				c |= hc - 55;
+
+			reinterpret_cast<uint8_t *>(buf)[l++] = c;
+		}
+		return l;
+	}
+
+	static inline unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen)
+	{
+		unsigned int l = 0;
+		const char *hend = h + hlen;
+		while (l < buflen) {
+			if (h == hend) break;
+			uint8_t hc = *(reinterpret_cast<const uint8_t *>(h++));
+			if (!hc) break;
+
+			uint8_t c = 0;
+			if ((hc >= 48)&&(hc <= 57))
+				c = hc - 48;
+			else if ((hc >= 97)&&(hc <= 102))
+				c = hc - 87;
+			else if ((hc >= 65)&&(hc <= 70))
+				c = hc - 55;
+
+			if (h == hend) break;
+			hc = *(reinterpret_cast<const uint8_t *>(h++));
+			if (!hc) break;
+
+			c <<= 4;
+			if ((hc >= 48)&&(hc <= 57))
+				c |= hc - 48;
+			else if ((hc >= 97)&&(hc <= 102))
+				c |= hc - 87;
+			else if ((hc >= 65)&&(hc <= 70))
+				c |= hc - 55;
+
+			reinterpret_cast<uint8_t *>(buf)[l++] = c;
+		}
+		return l;
+	}
 
 	/**
 	 * Generate secure random bytes
@@ -112,17 +273,6 @@ public:
 	static void getSecureRandom(void *buf,unsigned int bytes);
 
 	/**
-	 * Split a string by delimiter, with optional escape and quote characters
-	 *
-	 * @param s String to split
-	 * @param sep One or more separators
-	 * @param esc Zero or more escape characters
-	 * @param quot Zero or more quote characters
-	 * @return Vector of tokens
-	 */
-	static std::vector<std::string> split(const char *s,const char *const sep,const char *esc,const char *quot);
-
-	/**
 	 * Tokenize a string (alias for strtok_r or strtok_s depending on platform)
 	 *
 	 * @param str String to split
@@ -130,7 +280,6 @@ public:
 	 * @param saveptr Pointer to a char * for temporary reentrant storage
 	 */
 	static inline char *stok(char *str,const char *delim,char **saveptr)
-		throw()
 	{
 #ifdef __WINDOWS__
 		return strtok_s(str,delim,saveptr);
@@ -139,30 +288,11 @@ public:
 #endif
 	}
 
-	// String to number converters -- defined here to permit portability
-	// ifdefs for platforms that lack some of the strtoXX functions.
-	static inline unsigned int strToUInt(const char *s)
-		throw()
-	{
-		return (unsigned int)strtoul(s,(char **)0,10);
-	}
-	static inline int strToInt(const char *s)
-		throw()
-	{
-		return (int)strtol(s,(char **)0,10);
-	}
-	static inline unsigned long strToULong(const char *s)
-		throw()
-	{
-		return strtoul(s,(char **)0,10);
-	}
-	static inline long strToLong(const char *s)
-		throw()
-	{
-		return strtol(s,(char **)0,10);
-	}
+	static inline unsigned int strToUInt(const char *s) { return (unsigned int)strtoul(s,(char **)0,10); }
+	static inline int strToInt(const char *s) { return (int)strtol(s,(char **)0,10); }
+	static inline unsigned long strToULong(const char *s) { return strtoul(s,(char **)0,10); }
+	static inline long strToLong(const char *s) { return strtol(s,(char **)0,10); }
 	static inline unsigned long long strToU64(const char *s)
-		throw()
 	{
 #ifdef __WINDOWS__
 		return (unsigned long long)_strtoui64(s,(char **)0,10);
@@ -171,7 +301,6 @@ public:
 #endif
 	}
 	static inline long long strTo64(const char *s)
-		throw()
 	{
 #ifdef __WINDOWS__
 		return (long long)_strtoi64(s,(char **)0,10);
@@ -179,28 +308,11 @@ public:
 		return strtoll(s,(char **)0,10);
 #endif
 	}
-	static inline unsigned int hexStrToUInt(const char *s)
-		throw()
-	{
-		return (unsigned int)strtoul(s,(char **)0,16);
-	}
-	static inline int hexStrToInt(const char *s)
-		throw()
-	{
-		return (int)strtol(s,(char **)0,16);
-	}
-	static inline unsigned long hexStrToULong(const char *s)
-		throw()
-	{
-		return strtoul(s,(char **)0,16);
-	}
-	static inline long hexStrToLong(const char *s)
-		throw()
-	{
-		return strtol(s,(char **)0,16);
-	}
+	static inline unsigned int hexStrToUInt(const char *s) { return (unsigned int)strtoul(s,(char **)0,16); }
+	static inline int hexStrToInt(const char *s) { return (int)strtol(s,(char **)0,16); }
+	static inline unsigned long hexStrToULong(const char *s) { return strtoul(s,(char **)0,16); }
+	static inline long hexStrToLong(const char *s) { return strtol(s,(char **)0,16); }
 	static inline unsigned long long hexStrToU64(const char *s)
-		throw()
 	{
 #ifdef __WINDOWS__
 		return (unsigned long long)_strtoui64(s,(char **)0,16);
@@ -209,18 +321,12 @@ public:
 #endif
 	}
 	static inline long long hexStrTo64(const char *s)
-		throw()
 	{
 #ifdef __WINDOWS__
 		return (long long)_strtoi64(s,(char **)0,16);
 #else
 		return strtoll(s,(char **)0,16);
 #endif
-	}
-	static inline double strToDouble(const char *s)
-		throw()
-	{
-		return strtod(s,(char **)0);
 	}
 
 	/**
@@ -234,22 +340,23 @@ public:
 	 * @param src Source string (if NULL, dest will receive a zero-length string and true is returned)
 	 * @return True on success, false on overflow (buffer will still be 0-terminated)
 	 */
-	static bool scopy(char *dest,unsigned int len,const char *src);
-
-	/**
-	 * Variant of snprintf that is portable and throws an exception
-	 *
-	 * This just wraps the local implementation whatever it's called, while
-	 * performing a few other checks and adding exceptions for overflow.
-	 *
-	 * @param buf Buffer to write to
-	 * @param len Length of buffer in bytes
-	 * @param fmt Format string
-	 * @param ... Format arguments
-	 * @throws std::length_error buf[] too short (buf[] will still be left null-terminated)
-	 */
-	static unsigned int snprintf(char *buf,unsigned int len,const char *fmt,...)
-		throw(std::length_error);
+	static inline bool scopy(char *dest,unsigned int len,const char *src)
+	{
+		if (!len)
+			return false; // sanity check
+		if (!src) {
+			*dest = (char)0;
+			return true;
+		}
+		char *end = dest + len;
+		while ((*dest++ = *src++)) {
+			if (dest == end) {
+				*(--dest) = (char)0;
+				return false;
+			}
+		}
+		return true;
+	}
 
 	/**
 	 * Count the number of bits set in an integer
@@ -262,6 +369,20 @@ public:
 		v = v - ((v >> 1) & (uint32_t)0x55555555);
 		v = (v & (uint32_t)0x33333333) + ((v >> 2) & (uint32_t)0x33333333);
 		return ((((v + (v >> 4)) & (uint32_t)0xF0F0F0F) * (uint32_t)0x1010101) >> 24);
+	}
+
+	/**
+	 * Count the number of bits set in an integer
+	 *
+	 * @param v 64-bit integer
+	 * @return Number of bits set in this integer (0-64)
+	 */
+	static inline uint64_t countBits(uint64_t v)
+	{
+		v = v - ((v >> 1) & (uint64_t)~(uint64_t)0/3);
+		v = (v & (uint64_t)~(uint64_t)0/15*3) + ((v >> 2) & (uint64_t)~(uint64_t)0/15*3);
+		v = (v + (v >> 4)) & (uint64_t)~(uint64_t)0/255*15;
+		return (uint64_t)(v * ((uint64_t)~(uint64_t)0/255)) >> 56;
 	}
 
 	/**
@@ -281,14 +402,13 @@ public:
 	}
 
 	// Byte swappers for big/little endian conversion
-	static inline uint8_t hton(uint8_t n) throw() { return n; }
-	static inline int8_t hton(int8_t n) throw() { return n; }
-	static inline uint16_t hton(uint16_t n) throw() { return htons(n); }
-	static inline int16_t hton(int16_t n) throw() { return (int16_t)htons((uint16_t)n); }
-	static inline uint32_t hton(uint32_t n) throw() { return htonl(n); }
-	static inline int32_t hton(int32_t n) throw() { return (int32_t)htonl((uint32_t)n); }
+	static inline uint8_t hton(uint8_t n) { return n; }
+	static inline int8_t hton(int8_t n) { return n; }
+	static inline uint16_t hton(uint16_t n) { return htons(n); }
+	static inline int16_t hton(int16_t n) { return (int16_t)htons((uint16_t)n); }
+	static inline uint32_t hton(uint32_t n) { return htonl(n); }
+	static inline int32_t hton(int32_t n) { return (int32_t)htonl((uint32_t)n); }
 	static inline uint64_t hton(uint64_t n)
-		throw()
 	{
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #if defined(__GNUC__) && (!defined(__OpenBSD__))
@@ -309,16 +429,15 @@ public:
 		return n;
 #endif
 	}
-	static inline int64_t hton(int64_t n) throw() { return (int64_t)hton((uint64_t)n); }
+	static inline int64_t hton(int64_t n) { return (int64_t)hton((uint64_t)n); }
 
-	static inline uint8_t ntoh(uint8_t n) throw() { return n; }
-	static inline int8_t ntoh(int8_t n) throw() { return n; }
-	static inline uint16_t ntoh(uint16_t n) throw() { return ntohs(n); }
-	static inline int16_t ntoh(int16_t n) throw() { return (int16_t)ntohs((uint16_t)n); }
-	static inline uint32_t ntoh(uint32_t n) throw() { return ntohl(n); }
-	static inline int32_t ntoh(int32_t n) throw() { return (int32_t)ntohl((uint32_t)n); }
+	static inline uint8_t ntoh(uint8_t n) { return n; }
+	static inline int8_t ntoh(int8_t n) { return n; }
+	static inline uint16_t ntoh(uint16_t n) { return ntohs(n); }
+	static inline int16_t ntoh(int16_t n) { return (int16_t)ntohs((uint16_t)n); }
+	static inline uint32_t ntoh(uint32_t n) { return ntohl(n); }
+	static inline int32_t ntoh(int32_t n) { return (int32_t)ntohl((uint32_t)n); }
 	static inline uint64_t ntoh(uint64_t n)
-		throw()
 	{
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #if defined(__GNUC__) && !defined(__OpenBSD__)
@@ -339,34 +458,7 @@ public:
 		return n;
 #endif
 	}
-	static inline int64_t ntoh(int64_t n) throw() { return (int64_t)ntoh((uint64_t)n); }
-
-	/**
-	 * Compare Peer version tuples
-	 *
-	 * @return -1, 0, or 1 based on whether first tuple is less than, equal to, or greater than second
-	 */
-	static inline int compareVersion(unsigned int maj1,unsigned int min1,unsigned int rev1,unsigned int maj2,unsigned int min2,unsigned int rev2)
-		throw()
-	{
-		if (maj1 > maj2)
-			return 1;
-		else if (maj1 < maj2)
-			return -1;
-		else {
-			if (min1 > min2)
-				return 1;
-			else if (min1 < min2)
-				return -1;
-			else {
-				if (rev1 > rev2)
-					return 1;
-				else if (rev1 < rev2)
-					return -1;
-				else return 0;
-			}
-		}
-	}
+	static inline int64_t ntoh(int64_t n) { return (int64_t)ntoh((uint64_t)n); }
 
 	/**
 	 * Hexadecimal characters 0-f

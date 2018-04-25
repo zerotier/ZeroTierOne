@@ -74,6 +74,7 @@ public class Node {
     private final EventListener eventListener;
     private final VirtualNetworkFrameListener frameListener;
     private final VirtualNetworkConfigListener configListener;
+    private final PathChecker pathChecker;
     
     /**
      * Create a new ZeroTier One node
@@ -88,6 +89,7 @@ public class Node {
      * @param eventListener User written instance of the {@link EventListener} interface to receive status updates and non-fatal error notices.  This instance must be unique per Node object.
      * @param frameListener 
      * @param configListener User written instance of the {@link VirtualNetworkConfigListener} interface to be called when virtual LANs are created, deleted, or their config parameters change.  This instance must be unique per Node object.
+     * @param pathChecker User written instance of the {@link PathChecker} interface. Not required and can be null.
      */
 	public Node(long now,
                 DataStoreGetListener getListener,
@@ -95,7 +97,8 @@ public class Node {
                 PacketSender sender,
                 EventListener eventListener,
                 VirtualNetworkFrameListener frameListener,
-                VirtualNetworkConfigListener configListener) throws NodeException
+                VirtualNetworkConfigListener configListener,
+                PathChecker pathChecker) throws NodeException
 	{
         this.nodeId = now;
 
@@ -105,6 +108,7 @@ public class Node {
         this.eventListener = eventListener;
         this.frameListener = frameListener;
         this.configListener = configListener;
+        this.pathChecker = pathChecker;
 
         ResultCode rc = node_init(now);
         if(rc != ResultCode.RESULT_OK)
@@ -169,12 +173,12 @@ public class Node {
      */
     public ResultCode processWirePacket(
         long now,
-        InetSocketAddress localAddress,
+        long localSocket,
         InetSocketAddress remoteAddress,
         byte[] packetData,
         long[] nextBackgroundTaskDeadline) {
         return processWirePacket(
-            nodeId, now, localAddress, remoteAddress, packetData, 
+            nodeId, now, localSocket, remoteAddress, packetData,
             nextBackgroundTaskDeadline);
     }
 
@@ -319,6 +323,34 @@ public class Node {
     }
 
     /**
+     * Add or update a moon
+     *
+     * Moons are persisted in the data store in moons.d/, so this can persist
+     * across invocations if the contents of moon.d are scanned and orbit is
+     * called for each on startup.
+     *
+     * @param moonWorldId Moon's world ID
+     * @param moonSeed If non-zero, the ZeroTier address of any member of the moon to query for moon definition
+     * @return Error if moon was invalid or failed to be added
+     */
+    public ResultCode orbit(
+            long moonWorldId,
+            long moonSeed) {
+        return orbit(nodeId, moonWorldId, moonSeed);
+    }
+
+    /**
+     * Remove a moon (does nothing if not present)
+     *
+     * @param moonWorldId World ID of moon to remove
+     * @return Error if anything bad happened
+     */
+    public ResultCode deorbit(
+            long moonWorldId) {
+        return deorbit(nodeId, moonWorldId);
+    }
+
+    /**
      * Get this node's 40-bit ZeroTier address
      *
      * @return ZeroTier address (least significant 40 bits of 64-bit int)
@@ -394,7 +426,7 @@ public class Node {
     private native ResultCode processWirePacket(
         long nodeId,
         long now,
-        InetSocketAddress localAddress,
+        long localSocket,
         InetSocketAddress remoteAddress,
         byte[] packetData,
         long[] nextBackgroundTaskDeadline);
@@ -419,6 +451,15 @@ public class Node {
         long nwid,
         long multicastGroup,
         long multicastAdi);
+
+    private native ResultCode orbit(
+            long nodeId,
+            long moonWorldId,
+            long moonSeed);
+
+    private native ResultCode deorbit(
+            long nodeId,
+            long moonWorldId);
 
     private native long address(long nodeId);
 

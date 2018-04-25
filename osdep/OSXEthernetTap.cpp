@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #include <stdint.h>
@@ -314,7 +322,7 @@ OSXEthernetTap::OSXEthernetTap(
 	unsigned int metric,
 	uint64_t nwid,
 	const char *friendlyName,
-	void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *data,unsigned int len),
+	void (*handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *data,unsigned int len),
 	void *arg) :
 	_handler(handler),
 	_arg(arg),
@@ -328,10 +336,7 @@ OSXEthernetTap::OSXEthernetTap(
 	char devpath[64],ethaddr[64],mtustr[32],metstr[32],nwids[32];
 	struct stat stattmp;
 
-	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",nwid);
-
-	if (mtu > 2800)
-		throw std::runtime_error("max tap MTU is 2800");
+	OSUtils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",nwid);
 
 	Mutex::Lock _gl(globalTapCreateLock);
 
@@ -352,20 +357,33 @@ OSXEthernetTap::OSXEthernetTap(
 	}
 
 	// Try to reopen the last device we had, if we had one and it's still unused.
+	std::map<std::string,std::string> globalDeviceMap;
+	FILE *devmapf = fopen((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),"r");
+	if (devmapf) {
+		char buf[256];
+		while (fgets(buf,sizeof(buf),devmapf)) {
+			char *x = (char *)0;
+			char *y = (char *)0;
+			char *saveptr = (char *)0;
+			for(char *f=Utils::stok(buf,"\r\n=",&saveptr);(f);f=Utils::stok((char *)0,"\r\n=",&saveptr)) {
+				if (!x) x = f;
+				else if (!y) y = f;
+				else break;
+			}
+			if ((x)&&(y)&&(x[0])&&(y[0]))
+				globalDeviceMap[x] = y;
+		}
+		fclose(devmapf);
+	}
 	bool recalledDevice = false;
-	std::string devmapbuf;
-	Dictionary<8194> devmap;
-	if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),devmapbuf)) {
-		devmap.load(devmapbuf.c_str());
-		char desiredDevice[128];
-		if (devmap.get(nwids,desiredDevice,sizeof(desiredDevice)) > 0) {
-			Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",desiredDevice);
-			if (stat(devpath,&stattmp) == 0) {
-				_fd = ::open(devpath,O_RDWR);
-				if (_fd > 0) {
-					_dev = desiredDevice;
-					recalledDevice = true;
-				}
+	std::map<std::string,std::string>::const_iterator gdmEntry = globalDeviceMap.find(nwids);
+	if (gdmEntry != globalDeviceMap.end()) {
+		std::string devpath("/dev/"); devpath.append(gdmEntry->second);
+		if (stat(devpath.c_str(),&stattmp) == 0) {
+			_fd = ::open(devpath.c_str(),O_RDWR);
+			if (_fd > 0) {
+				_dev = gdmEntry->second;
+				recalledDevice = true;
 			}
 		}
 	}
@@ -373,13 +391,13 @@ OSXEthernetTap::OSXEthernetTap(
 	// Open the first unused tap device if we didn't recall a previous one.
 	if (!recalledDevice) {
 		for(int i=0;i<64;++i) {
-			Utils::snprintf(devpath,sizeof(devpath),"/dev/zt%d",i);
+			OSUtils::ztsnprintf(devpath,sizeof(devpath),"/dev/zt%d",i);
 			if (stat(devpath,&stattmp))
 				throw std::runtime_error("no more TAP devices available");
 			_fd = ::open(devpath,O_RDWR);
 			if (_fd > 0) {
 				char foo[16];
-				Utils::snprintf(foo,sizeof(foo),"zt%d",i);
+				OSUtils::ztsnprintf(foo,sizeof(foo),"zt%d",i);
 				_dev = foo;
 				break;
 			}
@@ -395,9 +413,9 @@ OSXEthernetTap::OSXEthernetTap(
 	}
 
 	// Configure MAC address and MTU, bring interface up
-	Utils::snprintf(ethaddr,sizeof(ethaddr),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
-	Utils::snprintf(mtustr,sizeof(mtustr),"%u",_mtu);
-	Utils::snprintf(metstr,sizeof(metstr),"%u",_metric);
+	OSUtils::ztsnprintf(ethaddr,sizeof(ethaddr),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
+	OSUtils::ztsnprintf(mtustr,sizeof(mtustr),"%u",_mtu);
+	OSUtils::ztsnprintf(metstr,sizeof(metstr),"%u",_metric);
 	long cpid = (long)vfork();
 	if (cpid == 0) {
 		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"lladdr",ethaddr,"mtu",mtustr,"metric",metstr,"up",(const char *)0);
@@ -420,9 +438,16 @@ OSXEthernetTap::OSXEthernetTap(
 
 	++globalTapsRunning;
 
-	devmap.erase(nwids);
-	devmap.add(nwids,_dev.c_str());
-	OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),(const void *)devmap.data(),devmap.sizeBytes());
+	globalDeviceMap[nwids] = _dev;
+	devmapf = fopen((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),"w");
+	if (devmapf) {
+		gdmEntry = globalDeviceMap.begin();
+		while (gdmEntry != globalDeviceMap.end()) {
+			fprintf(devmapf,"%s=%s\n",gdmEntry->first.c_str(),gdmEntry->second.c_str());
+			++gdmEntry;
+		}
+		fclose(devmapf);
+	}
 
 	_thread = Thread::start(this);
 }
@@ -474,7 +499,8 @@ bool OSXEthernetTap::addIp(const InetAddress &ip)
 
 	long cpid = (long)vfork();
 	if (cpid == 0) {
-		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toString().c_str(),"alias",(const char *)0);
+		char tmp[128];
+		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toString(tmp),"alias",(const char *)0);
 		::_exit(-1);
 	} else if (cpid > 0) {
 		int exitcode = -1;
@@ -494,7 +520,8 @@ bool OSXEthernetTap::removeIp(const InetAddress &ip)
 		if (*i == ip) {
 			long cpid = (long)vfork();
 			if (cpid == 0) {
-				execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toIpString().c_str(),"-alias",(const char *)0);
+				char tmp[128];
+				execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toIpString(tmp),"-alias",(const char *)0);
 				_exit(-1);
 			} else if (cpid > 0) {
 				int exitcode = -1;
@@ -546,7 +573,7 @@ std::vector<InetAddress> OSXEthernetTap::ips() const
 
 void OSXEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	char putBuf[4096];
+	char putBuf[ZT_MAX_MTU + 64];
 	if ((_fd > 0)&&(len <= _mtu)&&(_enabled)) {
 		to.copyTo(putBuf,6);
 		from.copyTo(putBuf + 6,6);
@@ -604,13 +631,30 @@ void OSXEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std:
 	_multicastGroups.swap(newGroups);
 }
 
+void OSXEthernetTap::setMtu(unsigned int mtu)
+{
+	if (mtu != _mtu) {
+		_mtu = mtu;
+		long cpid = (long)vfork();
+		if (cpid == 0) {
+			char tmp[64];
+			OSUtils::ztsnprintf(tmp,sizeof(tmp),"%u",mtu);
+			execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"mtu",tmp,(const char *)0);
+			_exit(-1);
+		} else if (cpid > 0) {
+			int exitcode = -1;
+			waitpid(cpid,&exitcode,0);
+		}
+	}
+}
+
 void OSXEthernetTap::threadMain()
 	throw()
 {
 	fd_set readfds,nullfds;
 	MAC to,from;
 	int n,nfds,r;
-	char getBuf[8194];
+	char getBuf[ZT_MAX_MTU + 64];
 
 	Thread::sleep(500);
 
@@ -646,7 +690,7 @@ void OSXEthernetTap::threadMain()
 						from.setTo(getBuf + 6,6);
 						unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
 						// TODO: VLAN support
-						_handler(_arg,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
+						_handler(_arg,(void *)0,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
 					}
 
 					r = 0;

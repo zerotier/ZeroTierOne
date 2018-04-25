@@ -1,4 +1,4 @@
-/* $Id: receivedata.c,v 1.7 2015/11/09 21:51:41 nanard Exp $ */
+/* $Id: receivedata.c,v 1.8 2017/04/21 10:16:45 nanard Exp $ */
 /* Project : miniupnp
  * Website : http://miniupnp.free.fr/
  * Author : Thomas Bernard
@@ -28,7 +28,7 @@
 #endif /* _WIN32 */
 
 #ifdef _WIN32
-#define PRINT_SOCKET_ERROR(x)    printf("Socket error: %s, %d\n", x, WSAGetLastError());
+#define PRINT_SOCKET_ERROR(x)    fprintf(stderr, "Socket error: %s, %d\n", x, WSAGetLastError());
 #else
 #define PRINT_SOCKET_ERROR(x) perror(x)
 #endif

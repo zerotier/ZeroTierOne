@@ -1,0 +1,17 @@
+CC=gcc
+CXX=g++
+
+#ARCH_FLAGS=-arch x86_64 -arch i386 -arch ppc
+
+DEFS=-DHAS_DEV_URANDOM
+CXXDEFS=-DBOOST_DISABLE_ASSERTS -DBOOST_NO_TYPEID -DNDEBUG
+
+CFLAGS=-mmacosx-version-min=10.4 -std=c99 -O6 -ftree-vectorize -Wall $(DEFS) $(ARCH_FLAGS)
+CXXFLAGS=-mmacosx-version-min=10.4 -Drestrict=__restrict__ -O6 -ftree-vectorize -Wall $(DEFS) $(CXXDEFS) $(ARCH_FLAGS)
+
+LDFLAGS=-mmacosx-version-min=10.4 $(ARCH_FLAGS)
+DLLFLAGS=$(ARCH_FLAGS) -shared
+DLLEXT=dylib
+
+LIBANODE_LIBS=-lcrypto -lpthread -lresolv
+LIBSPARK_LIBS=-lz

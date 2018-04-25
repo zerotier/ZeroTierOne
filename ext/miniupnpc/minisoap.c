@@ -1,5 +1,4 @@
-#define _CRT_SECURE_NO_WARNINGS
-/* $Id: minisoap.c,v 1.24 2015/10/26 17:05:07 nanard Exp $ */
+/* $Id: minisoap.c,v 1.25 2017/04/21 10:03:24 nanard Exp $ */
 /* Project : miniupnp
  * Author : Thomas Bernard
  * Copyright (c) 2005-2015 Thomas Bernard
@@ -20,8 +19,15 @@
 #include <sys/socket.h>
 #endif
 #include "minisoap.h"
+
 #ifdef _WIN32
 #define OS_STRING "Win32"
+#define MINIUPNPC_VERSION_STRING "2.0"
+#define UPNP_VERSION_STRING "UPnP/1.1"
+#endif
+
+#ifdef __ANDROID__
+#define OS_STRING "Android"
 #define MINIUPNPC_VERSION_STRING "2.0"
 #define UPNP_VERSION_STRING "UPnP/1.1"
 #endif
@@ -30,7 +36,7 @@
 #include <stdlib.h>
 
 #ifdef _WIN32
-#define PRINT_SOCKET_ERROR(x)    printf("Socket error: %s, %d\n", x, WSAGetLastError());
+#define PRINT_SOCKET_ERROR(x)    fprintf(stderr, "Socket error: %s, %d\n", x, WSAGetLastError());
 #else
 #define PRINT_SOCKET_ERROR(x) perror(x)
 #endif
@@ -124,3 +130,5 @@ int soapPostSubmit(int fd,
 #endif
 	return httpWrite(fd, body, bodysize, headerbuf, headerssize);
 }
+
+

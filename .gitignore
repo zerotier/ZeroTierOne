@@ -9,6 +9,8 @@
 .DS_Store
 .Apple*
 Thumbs.db
+@eaDir
+._*
 
 # Windows build droppings
 /windows/ZeroTierOne.sdf
@@ -25,10 +27,20 @@ Thumbs.db
 /windows/Release
 /windows/WebUIWrapper/bin
 /windows/WebUIWrapper/obj
+/windows/lib
 /ext/installfiles/windows/ZeroTier One-SetupFiles
 /ext/installfiles/windows/Prerequisites
 /ext/installfiles/windows/*-cache
 /ZeroTier One.msi
+/windows/.vs
+*.vcxproj.backup
+/windows/TapDriver6/Win7Debug
+/windows/TapDriver6/win7Release
+/windows/*.db
+/windows/*.opendb
+enc_temp_folder
+/windows/copyutil/bin
+/windows/copyutil/obj
 
 # *nix/Mac build droppings
 /build-*
@@ -49,7 +61,7 @@ zt1-src.tar.gz
 *.pid
 *.pkg
 *.o
-*.a
+/*.a
 *.dylib
 *.so
 *.so.*
@@ -59,16 +71,15 @@ zt1-src.tar.gz
 *.rpm
 *.autosave
 *.tmp
-doc/*.1
-doc/*.2
-doc/*.8
 .depend
 node_modules
+zt1_update_*
 debian/files
 debian/zerotier-one
 debian/zerotier-one*.debhelper
 debian/*.log
 debian/zerotier-one.substvars
+root-watcher/config.json
 
 # Java/Android/JNI build droppings
 java/obj/
@@ -83,3 +94,25 @@ windows/WinUI/obj/
 windows/WinUI/bin/
 windows/ZeroTierOne/Debug/
 /ext/installfiles/windows/chocolatey/zerotier-one/*.nupkg
+
+# Miscellaneous mac/Xcode droppings
+.DS_Store
+.Trashes
+*.swp
+*~.nib
+DerivedData/
+build/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+!default.pbxuser
+!default.mode1v3
+!default.mode2v3
+!default.perspectivev3
+*.xccheckout
+xcuserdata/
+ext/librethinkdbxx/build
+.vscode
+__pycache__
+*~

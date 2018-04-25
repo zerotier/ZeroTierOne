@@ -1,5 +1,0 @@
-NewInternalPort=12345
-NewInternalClient=192.168.10.110
-NewEnabled=1
-NewPortMappingDescription=libminiupnpc
-NewLeaseDuration=0

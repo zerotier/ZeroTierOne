@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #include <stdio.h>
@@ -23,6 +31,7 @@
 #include <sys/stat.h>
 
 #include "../node/Constants.hpp"
+#include "../node/Utils.hpp"
 
 #ifdef __UNIX_LIKE__
 #include <unistd.h>
@@ -48,6 +57,23 @@
 
 namespace ZeroTier {
 
+unsigned int OSUtils::ztsnprintf(char *buf,unsigned int len,const char *fmt,...)
+{
+	va_list ap;
+
+	va_start(ap,fmt);
+	int n = (int)vsnprintf(buf,len,fmt,ap);
+	va_end(ap);
+
+	if ((n >= (int)len)||(n < 0)) {
+		if (len)
+			buf[len - 1] = (char)0;
+		throw std::length_error("buf[] overflow");
+	}
+
+	return (unsigned int)n;
+}
+
 #ifdef __UNIX_LIKE__
 bool OSUtils::redirectUnixOutputs(const char *stdoutPath,const char *stderrPath)
 	throw()
@@ -72,7 +98,7 @@ bool OSUtils::redirectUnixOutputs(const char *stdoutPath,const char *stderrPath)
 }
 #endif // __UNIX_LIKE__
 
-std::vector<std::string> OSUtils::listDirectory(const char *path)
+std::vector<std::string> OSUtils::listDirectory(const char *path,bool includeDirectories)
 {
 	std::vector<std::string> r;
 
@@ -81,7 +107,7 @@ std::vector<std::string> OSUtils::listDirectory(const char *path)
 	WIN32_FIND_DATAA ffd;
 	if ((hFind = FindFirstFileA((std::string(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
 		do {
-			if ((strcmp(ffd.cFileName,"."))&&(strcmp(ffd.cFileName,".."))&&((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0))
+			if ( (strcmp(ffd.cFileName,".")) && (strcmp(ffd.cFileName,"..")) && (((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)||(((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)&&(includeDirectories))) )
 				r.push_back(std::string(ffd.cFileName));
 		} while (FindNextFileA(hFind,&ffd));
 		FindClose(hFind);
@@ -97,7 +123,7 @@ std::vector<std::string> OSUtils::listDirectory(const char *path)
 		if (readdir_r(d,&de,&dptr))
 			break;
 		if (dptr) {
-			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,".."))&&(dptr->d_type != DT_DIR))
+			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,".."))&&((dptr->d_type != DT_DIR)||(includeDirectories)))
 				r.push_back(std::string(dptr->d_name));
 		} else break;
 	}
@@ -105,6 +131,111 @@ std::vector<std::string> OSUtils::listDirectory(const char *path)
 #endif
 
 	return r;
+}
+
+long OSUtils::cleanDirectory(const char *path,const int64_t olderThan)
+{
+	long cleaned = 0;
+
+#ifdef __WINDOWS__
+	HANDLE hFind;
+	WIN32_FIND_DATAA ffd;
+	LARGE_INTEGER date,adjust;
+	adjust.QuadPart = 11644473600000 * 10000;
+	char tmp[4096];
+	if ((hFind = FindFirstFileA((std::string(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
+		do {
+			if ((strcmp(ffd.cFileName,"."))&&(strcmp(ffd.cFileName,".."))&&((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)) {
+					date.HighPart = ffd.ftLastWriteTime.dwHighDateTime;
+					date.LowPart = ffd.ftLastWriteTime.dwLowDateTime;
+					if (date.QuadPart > 0) {
+							date.QuadPart -= adjust.QuadPart;
+							if ((int64_t)((date.QuadPart / 10000000) * 1000) < olderThan) {
+									ztsnprintf(tmp, sizeof(tmp), "%s\\%s", path, ffd.cFileName);
+									if (DeleteFileA(tmp))
+											++cleaned;
+							}
+					}
+			}
+		} while (FindNextFileA(hFind,&ffd));
+		FindClose(hFind);
+	}
+#else
+	struct dirent de;
+	struct dirent *dptr;
+	struct stat st;
+	char tmp[4096];
+	DIR *d = opendir(path);
+	if (!d)
+		return -1;
+	dptr = (struct dirent *)0;
+	for(;;) {
+		if (readdir_r(d,&de,&dptr))
+			break;
+		if (dptr) {
+			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,".."))&&(dptr->d_type == DT_REG)) {
+				ztsnprintf(tmp,sizeof(tmp),"%s/%s",path,dptr->d_name);
+				if (stat(tmp,&st) == 0) {
+					int64_t mt = (int64_t)(st.st_mtime);
+					if ((mt > 0)&&((mt * 1000) < olderThan)) {
+						if (unlink(tmp) == 0)
+							++cleaned;
+					}
+				}
+			}
+		} else break;
+	}
+	closedir(d);
+#endif
+
+	return cleaned;
+}
+
+bool OSUtils::rmDashRf(const char *path)
+{
+#ifdef __WINDOWS__
+	HANDLE hFind;
+	WIN32_FIND_DATAA ffd;
+	if ((hFind = FindFirstFileA((std::string(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
+		do {
+			if ((strcmp(ffd.cFileName,".") != 0)&&(strcmp(ffd.cFileName,"..") != 0)) {
+				if ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+					if (DeleteFileA((std::string(path) + ZT_PATH_SEPARATOR_S + ffd.cFileName).c_str()) == FALSE)
+						return false;
+				} else {
+					if (!rmDashRf((std::string(path) + ZT_PATH_SEPARATOR_S + ffd.cFileName).c_str()))
+						return false;
+				}
+			}
+		} while (FindNextFileA(hFind,&ffd));
+		FindClose(hFind);
+	}
+	return (RemoveDirectoryA(path) != FALSE);
+#else
+	struct dirent de;
+	struct dirent *dptr;
+	DIR *d = opendir(path);
+	if (!d)
+		return true;
+	dptr = (struct dirent *)0;
+	for(;;) {
+		if (readdir_r(d,&de,&dptr) != 0)
+			break;
+		if (!dptr)
+			break;
+		if ((strcmp(dptr->d_name,".") != 0)&&(strcmp(dptr->d_name,"..") != 0)&&(strlen(dptr->d_name) > 0)) {
+			std::string p(path);
+			p.push_back(ZT_PATH_SEPARATOR);
+			p.append(dptr->d_name);
+			if (unlink(p.c_str()) != 0) { // unlink first will remove symlinks instead of recursing them
+				if (!rmDashRf(p.c_str()))
+					return false;
+			}
+		}
+	}
+	closedir(d);
+	return (rmdir(path) == 0);
+#endif
 }
 
 void OSUtils::lockDownFile(const char *path,bool isDir)
@@ -171,37 +302,9 @@ int64_t OSUtils::getFileSize(const char *path)
 	return -1;
 }
 
-std::vector<InetAddress> OSUtils::resolve(const char *name)
-{
-	std::vector<InetAddress> r;
-	std::vector<InetAddress>::iterator i;
-	InetAddress tmp;
-	struct addrinfo *ai = (struct addrinfo *)0,*p;
-	if (!getaddrinfo(name,(const char *)0,(const struct addrinfo *)0,&ai)) {
-		try {
-			p = ai;
-			while (p) {
-				if ((p->ai_addr)&&((p->ai_addr->sa_family == AF_INET)||(p->ai_addr->sa_family == AF_INET6))) {
-					tmp = *(p->ai_addr);
-					for(i=r.begin();i!=r.end();++i) {
-						if (i->ipsEqual(tmp))
-							goto skip_add_inetaddr;
-					}
-					r.push_back(tmp);
-				}
-skip_add_inetaddr:
-				p = p->ai_next;
-			}
-		} catch ( ... ) {}
-		freeaddrinfo(ai);
-	}
-	std::sort(r.begin(),r.end());
-	return r;
-}
-
 bool OSUtils::readFile(const char *path,std::string &buf)
 {
-	char tmp[1024];
+	char tmp[16384];
 	FILE *f = fopen(path,"rb");
 	if (f) {
 		for(;;) {
@@ -231,8 +334,70 @@ bool OSUtils::writeFile(const char *path,const void *buf,unsigned int len)
 	return false;
 }
 
+std::vector<std::string> OSUtils::split(const char *s,const char *const sep,const char *esc,const char *quot)
+{
+	std::vector<std::string> fields;
+	std::string buf;
+
+	if (!esc)
+		esc = "";
+	if (!quot)
+		quot = "";
+
+	bool escapeState = false;
+	char quoteState = 0;
+	while (*s) {
+		if (escapeState) {
+			escapeState = false;
+			buf.push_back(*s);
+		} else if (quoteState) {
+			if (*s == quoteState) {
+				quoteState = 0;
+				fields.push_back(buf);
+				buf.clear();
+			} else buf.push_back(*s);
+		} else {
+			const char *quotTmp;
+			if (strchr(esc,*s))
+				escapeState = true;
+			else if ((buf.size() <= 0)&&((quotTmp = strchr(quot,*s))))
+				quoteState = *quotTmp;
+			else if (strchr(sep,*s)) {
+				if (buf.size() > 0) {
+					fields.push_back(buf);
+					buf.clear();
+				} // else skip runs of seperators
+			} else buf.push_back(*s);
+		}
+		++s;
+	}
+
+	if (buf.size())
+		fields.push_back(buf);
+
+	return fields;
+}
+
 std::string OSUtils::platformDefaultHomePath()
 {
+#ifdef __QNAP__
+	char *cmd = "/sbin/getcfg zerotier Install_Path -f /etc/config/qpkg.conf";
+    char buf[128];
+    FILE *fp;
+    if ((fp = popen(cmd, "r")) == NULL) {
+        printf("Error opening pipe!\n");
+        return NULL;
+    }
+    while (fgets(buf, 128, fp) != NULL) { }
+    if(pclose(fp))  {
+        printf("Command not found or exited with error status\n");
+        return NULL;
+    }
+    std::string homeDir = std::string(buf);
+    homeDir.erase(std::remove(homeDir.begin(), homeDir.end(), '\n'), homeDir.end());
+    return homeDir;
+#endif
+
 #ifdef __UNIX_LIKE__
 
 #ifdef __APPLE__
@@ -265,6 +430,97 @@ std::string OSUtils::platformDefaultHomePath()
 #endif
 
 #endif // __UNIX_LIKE__ or not...
+}
+
+// Inline these massive JSON operations in one place only to reduce binary footprint and compile time
+nlohmann::json OSUtils::jsonParse(const std::string &buf) { return nlohmann::json::parse(buf.c_str()); }
+std::string OSUtils::jsonDump(const nlohmann::json &j,int indentation) { return j.dump(indentation); }
+
+uint64_t OSUtils::jsonInt(const nlohmann::json &jv,const uint64_t dfl)
+{
+	try {
+		if (jv.is_number()) {
+			return (uint64_t)jv;
+		} else if (jv.is_string()) {
+			std::string s = jv;
+			return Utils::strToU64(s.c_str());
+		} else if (jv.is_boolean()) {
+			return ((bool)jv ? 1ULL : 0ULL);
+		}
+	} catch ( ... ) {}
+	return dfl;
+}
+
+uint64_t OSUtils::jsonIntHex(const nlohmann::json &jv,const uint64_t dfl)
+{
+	try {
+		if (jv.is_number()) {
+			return (uint64_t)jv;
+		} else if (jv.is_string()) {
+			std::string s = jv;
+			return Utils::hexStrToU64(s.c_str());
+		} else if (jv.is_boolean()) {
+			return ((bool)jv ? 1ULL : 0ULL);
+		}
+	} catch ( ... ) {}
+	return dfl;
+}
+
+bool OSUtils::jsonBool(const nlohmann::json &jv,const bool dfl)
+{
+	try {
+		if (jv.is_boolean()) {
+			return (bool)jv;
+		} else if (jv.is_number()) {
+			return ((uint64_t)jv > 0ULL);
+		} else if (jv.is_string()) {
+			std::string s = jv;
+			if (s.length() > 0) {
+				switch(s[0]) {
+					case 't':
+					case 'T':
+					case '1':
+						return true;
+				}
+			}
+			return false;
+		}
+	} catch ( ... ) {}
+	return dfl;
+}
+
+std::string OSUtils::jsonString(const nlohmann::json &jv,const char *dfl)
+{
+	try {
+		if (jv.is_string()) {
+			return jv;
+		} else if (jv.is_number()) {
+			char tmp[64];
+			ztsnprintf(tmp,sizeof(tmp),"%llu",(uint64_t)jv);
+			return tmp;
+		} else if (jv.is_boolean()) {
+			return ((bool)jv ? std::string("1") : std::string("0"));
+		}
+	} catch ( ... ) {}
+	return std::string((dfl) ? dfl : "");
+}
+
+std::string OSUtils::jsonBinFromHex(const nlohmann::json &jv)
+{
+	std::string s(jsonString(jv,""));
+	if (s.length() > 0) {
+		unsigned int buflen = (unsigned int)((s.length() / 2) + 1);
+		char *buf = new char[buflen];
+		try {
+			unsigned int l = Utils::unhex(s.c_str(),buf,buflen);
+			std::string b(buf,l);
+			delete [] buf;
+			return b;
+		} catch ( ... ) {
+			delete [] buf;
+		}
+	}
+	return std::string();
 }
 
 // Used to convert HTTP header names to ASCII lower case

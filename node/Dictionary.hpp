@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifndef ZT_DICTIONARY_HPP
@@ -54,34 +62,28 @@ template<unsigned int C>
 class Dictionary
 {
 public:
-	Dictionary()
-	{
-		_d[0] = (char)0;
-	}
-
-	Dictionary(const char *s)
-	{
-		Utils::scopy(_d,sizeof(_d),s);
-	}
-
+	Dictionary() { memset(_d,0,sizeof(_d)); }
+	Dictionary(const char *s) { this->load(s); }
 	Dictionary(const char *s,unsigned int len)
 	{
-		if (len > (C-1))
-			len = C-1;
-		memcpy(_d,s,len);
-		_d[len] = (char)0;
+		for(unsigned int i=0;i<C;++i) {
+			if ((s)&&(i < len)) {
+				if (!(_d[i] = *s))
+					s = (const char *)0;
+				else ++s;
+			} else _d[i] = (char)0;
+		}
+		_d[C - 1] = (char)0;
 	}
-
-	Dictionary(const Dictionary &d)
-	{
-		Utils::scopy(_d,sizeof(_d),d._d);
-	}
+	Dictionary(const Dictionary &d) { memcpy(_d,d._d,C); }
 
 	inline Dictionary &operator=(const Dictionary &d)
 	{
-		Utils::scopy(_d,sizeof(_d),d._d);
+		memcpy(_d,d._d,C);
 		return *this;
 	}
+
+	inline operator bool() const { return (_d[0] != 0); }
 
 	/**
 	 * Load a dictionary from a C-string
@@ -91,7 +93,15 @@ public:
 	 */
 	inline bool load(const char *s)
 	{
-		return Utils::scopy(_d,sizeof(_d),s);
+		for(unsigned int i=0;i<C;++i) {
+			if (s) {
+				if (!(_d[i] = *s))
+					s = (const char *)0;
+				else ++s;
+			} else _d[i] = (char)0;
+		}
+		_d[C - 1] = (char)0;
+		return (!s);
 	}
 
 	/**
@@ -99,7 +109,7 @@ public:
 	 */
 	inline void clear()
 	{
-		_d[0] = (char)0;
+		memset(_d,0,sizeof(_d));
 	}
 
 	/**
@@ -163,12 +173,12 @@ public:
 				j = 0;
 				esc = false;
 				++p;
-				while ((*p != 0)&&(*p != '\r')&&(*p != '\n')) {
+				while ((*p != 0)&&(*p != 13)&&(*p != 10)) {
 					if (esc) {
 						esc = false;
 						switch(*p) {
-							case 'r': dest[j++] = '\r'; break;
-							case 'n': dest[j++] = '\n'; break;
+							case 'r': dest[j++] = 13; break;
+							case 'n': dest[j++] = 10; break;
 							case '0': dest[j++] = (char)0; break;
 							case 'e': dest[j++] = '='; break;
 							default: dest[j++] = *p; break;
@@ -194,7 +204,7 @@ public:
 				dest[j] = (char)0;
 				return j;
 			} else {
-				while ((*p)&&(*p != '\r')&&(*p != '\n')) {
+				while ((*p)&&(*p != 13)&&(*p != 10)) {
 					if (++p == eof) {
 						dest[0] = (char)0;
 						return -1;
@@ -266,6 +276,21 @@ public:
 	}
 
 	/**
+	 * Get an unsigned int64 stored as hex in the dictionary
+	 *
+	 * @param key Key to look up
+	 * @param dfl Default value or 0 if unspecified
+	 * @return Decoded hex UInt value or 'dfl' if not found
+	 */
+	inline int64_t getI(const char *key,int64_t dfl = 0) const
+	{
+		char tmp[128];
+		if (this->get(key,tmp,sizeof(tmp)) >= 1)
+			return Utils::hexStrTo64(tmp);
+		return dfl;
+	}
+
+	/**
 	 * Add a new key=value pair
 	 *
 	 * If the key is already present this will append another, but the first
@@ -286,7 +311,7 @@ public:
 				unsigned int j = i;
 
 				if (j > 0) {
-					_d[j++] = '\n';
+					_d[j++] = (char)10;
 					if (j == C) {
 						_d[i] = (char)0;
 						return false;
@@ -313,8 +338,8 @@ public:
 				while ( ((vlen < 0)&&(*p)) || (k < vlen) ) {
 					switch(*p) {
 						case 0:
-						case '\r':
-						case '\n':
+						case 13:
+						case 10:
 						case '\\':
 						case '=':
 							_d[j++] = '\\';
@@ -324,8 +349,8 @@ public:
 							}
 							switch(*p) {
 								case 0: _d[j++] = '0'; break;
-								case '\r': _d[j++] = 'r'; break;
-								case '\n': _d[j++] = 'n'; break;
+								case 13: _d[j++] = 'r'; break;
+								case 10: _d[j++] = 'n'; break;
 								case '\\': _d[j++] = '\\'; break;
 								case '=': _d[j++] = 'e'; break;
 							}
@@ -368,8 +393,21 @@ public:
 	inline bool add(const char *key,uint64_t value)
 	{
 		char tmp[32];
-		Utils::snprintf(tmp,sizeof(tmp),"%llx",(unsigned long long)value);
-		return this->add(key,tmp,-1);
+		return this->add(key,Utils::hex(value,tmp),-1);
+	}
+
+	/** 
+	 * Add a 64-bit integer (unsigned) as a hex value
+	 */
+	inline bool add(const char *key,int64_t value)
+	{
+		char tmp[32];
+		if (value >= 0) {
+			return this->add(key,Utils::hex((uint64_t)value,tmp),-1);
+		} else {
+			tmp[0] = '-';
+			return this->add(key,Utils::hex((uint64_t)(value * -1),tmp+1),-1);
+		}
 	}
 
 	/** 
@@ -378,8 +416,7 @@ public:
 	inline bool add(const char *key,const Address &a)
 	{
 		char tmp[32];
-		Utils::snprintf(tmp,sizeof(tmp),"%.10llx",(unsigned long long)a.toInt());
-		return this->add(key,tmp,-1);
+		return this->add(key,Utils::hex(a.toInt(),tmp),-1);
 	}
 
 	/**
@@ -404,54 +441,12 @@ public:
 	}
 
 	/**
-	 * Erase a key from this dictionary
-	 *
-	 * Use this before add() to ensure that a key is replaced if it might
-	 * already be present.
-	 *
-	 * @param key Key to erase
-	 * @return True if key was found and erased
-	 */
-	inline bool erase(const char *key)
-	{
-		char d2[C];
-		char *saveptr = (char *)0;
-		unsigned int d2ptr = 0;
-		bool found = false;
-		for(char *f=Utils::stok(_d,"\r\n",&saveptr);(f);f=Utils::stok((char *)0,"\r\n",&saveptr)) {
-			if (*f) {
-				const char *p = f;
-				const char *k = key;
-				while ((*k)&&(*p)) {
-					if (*k != *p)
-						break;
-					++k;
-					++p;
-				}
-				if (*k) {
-					p = f;
-					while (*p)
-						d2[d2ptr++] = *(p++);
-					d2[d2ptr++] = '\n';
-				} else {
-					found = true;
-				}
-			}
-		}
-		d2[d2ptr++] = (char)0;
-		memcpy(_d,d2,d2ptr);
-		return found;
-	}
-
-	/**
-	 * @return Dictionary data as a 0-terminated C-string
-	 */
-	inline const char *data() const { return _d; }
-
-	/**
 	 * @return Value of C template parameter
 	 */
 	inline unsigned int capacity() const { return C; }
+
+	inline const char *data() const { return _d; }
+	inline char *unsafeData() { return _d; }
 
 private:
 	char _d[C];

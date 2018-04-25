@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #include <stdio.h>
@@ -45,8 +53,8 @@ static inline void _computeMemoryHardHash(const void *publicKey,unsigned int pub
 	// ordinary Salsa20 is randomly seekable. This is good for a cipher
 	// but is not what we want for sequential memory-harndess.
 	memset(genmem,0,ZT_IDENTITY_GEN_MEMORY);
-	Salsa20 s20(digest,256,(char *)digest + 32);
-	s20.encrypt20((char *)genmem,(char *)genmem,64);
+	Salsa20 s20(digest,(char *)digest + 32);
+	s20.crypt20((char *)genmem,(char *)genmem,64);
 	for(unsigned long i=64;i<ZT_IDENTITY_GEN_MEMORY;i+=64) {
 		unsigned long k = i - 64;
 		*((uint64_t *)((char *)genmem + i)) = *((uint64_t *)((char *)genmem + k));
@@ -57,7 +65,7 @@ static inline void _computeMemoryHardHash(const void *publicKey,unsigned int pub
 		*((uint64_t *)((char *)genmem + i + 40)) = *((uint64_t *)((char *)genmem + k + 40));
 		*((uint64_t *)((char *)genmem + i + 48)) = *((uint64_t *)((char *)genmem + k + 48));
 		*((uint64_t *)((char *)genmem + i + 56)) = *((uint64_t *)((char *)genmem + k + 56));
-		s20.encrypt20((char *)genmem + i,(char *)genmem + i,64);
+		s20.crypt20((char *)genmem + i,(char *)genmem + i,64);
 	}
 
 	// Render final digest using genmem as a lookup table
@@ -67,7 +75,7 @@ static inline void _computeMemoryHardHash(const void *publicKey,unsigned int pub
 		uint64_t tmp = ((uint64_t *)genmem)[idx2];
 		((uint64_t *)genmem)[idx2] = ((uint64_t *)digest)[idx1];
 		((uint64_t *)digest)[idx1] = tmp;
-		s20.encrypt20(digest,digest,64);
+		s20.crypt20(digest,digest,64);
 	}
 }
 
@@ -75,12 +83,11 @@ static inline void _computeMemoryHardHash(const void *publicKey,unsigned int pub
 // threshold value.
 struct _Identity_generate_cond
 {
-	_Identity_generate_cond() throw() {}
-	_Identity_generate_cond(unsigned char *sb,char *gm) throw() : digest(sb),genmem(gm) {}
+	_Identity_generate_cond() {}
+	_Identity_generate_cond(unsigned char *sb,char *gm) : digest(sb),genmem(gm) {}
 	inline bool operator()(const C25519::Pair &kp) const
-		throw()
 	{
-		_computeMemoryHardHash(kp.pub.data,(unsigned int)kp.pub.size(),digest,genmem);
+		_computeMemoryHardHash(kp.pub.data,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
 		return (digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN);
 	}
 	unsigned char *digest;
@@ -113,7 +120,7 @@ bool Identity::locallyValidate() const
 
 	unsigned char digest[64];
 	char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];
-	_computeMemoryHardHash(_publicKey.data,(unsigned int)_publicKey.size(),digest,genmem);
+	_computeMemoryHardHash(_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
 	delete [] genmem;
 
 	unsigned char addrb[5];
@@ -128,61 +135,79 @@ bool Identity::locallyValidate() const
 		(digest[63] == addrb[4]));
 }
 
-std::string Identity::toString(bool includePrivate) const
+char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const
 {
-	std::string r;
-
-	r.append(_address.toString());
-	r.append(":0:"); // 0 == IDENTITY_TYPE_C25519
-	r.append(Utils::hex(_publicKey.data,(unsigned int)_publicKey.size()));
+	char *p = buf;
+	Utils::hex10(_address.toInt(),p);
+	p += 10;
+	*(p++) = ':';
+	*(p++) = '0';
+	*(p++) = ':';
+	Utils::hex(_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN,p);
+	p += ZT_C25519_PUBLIC_KEY_LEN * 2;
 	if ((_privateKey)&&(includePrivate)) {
-		r.push_back(':');
-		r.append(Utils::hex(_privateKey->data,(unsigned int)_privateKey->size()));
+		*(p++) = ':';
+		Utils::hex(_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN,p);
+		p += ZT_C25519_PRIVATE_KEY_LEN * 2;
 	}
-
-	return r;
+	*p = (char)0;
+	return buf;
 }
 
 bool Identity::fromString(const char *str)
 {
-	if (!str)
+	if (!str) {
+		_address.zero();
 		return false;
-
-	char *saveptr = (char *)0;
-	char tmp[1024];
-	if (!Utils::scopy(tmp,sizeof(tmp),str))
+	}
+	char tmp[ZT_IDENTITY_STRING_BUFFER_LENGTH];
+	if (!Utils::scopy(tmp,sizeof(tmp),str)) {
+		_address.zero();
 		return false;
+	}
 
 	delete _privateKey;
 	_privateKey = (C25519::Private *)0;
 
 	int fno = 0;
+	char *saveptr = (char *)0;
 	for(char *f=Utils::stok(tmp,":",&saveptr);(f);f=Utils::stok((char *)0,":",&saveptr)) {
 		switch(fno++) {
 			case 0:
-				_address = Address(f);
-				if (_address.isReserved())
+				_address = Address(Utils::hexStrToU64(f));
+				if (_address.isReserved()) {
+					_address.zero();
 					return false;
+				}
 				break;
 			case 1:
-				if ((f[0] != '0')||(f[1]))
+				if ((f[0] != '0')||(f[1])) {
+					_address.zero();
 					return false;
+				}
 				break;
 			case 2:
-				if (Utils::unhex(f,_publicKey.data,(unsigned int)_publicKey.size()) != _publicKey.size())
+				if (Utils::unhex(f,_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN) != ZT_C25519_PUBLIC_KEY_LEN) {
+					_address.zero();
 					return false;
+				}
 				break;
 			case 3:
 				_privateKey = new C25519::Private();
-				if (Utils::unhex(f,_privateKey->data,(unsigned int)_privateKey->size()) != _privateKey->size())
+				if (Utils::unhex(f,_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN) != ZT_C25519_PRIVATE_KEY_LEN) {
+					_address.zero();
 					return false;
+				}
 				break;
 			default:
+				_address.zero();
 				return false;
 		}
 	}
-	if (fno < 3)
+	if (fno < 3) {
+		_address.zero();
 		return false;
+	}
 
 	return true;
 }

@@ -1,11 +1,9 @@
-/* $Id: connecthostport.c,v 1.15 2015/10/09 16:26:19 nanard Exp $ */
+/* $Id: connecthostport.c,v 1.17 2017/04/21 09:58:30 nanard Exp $ */
 /* Project : miniupnp
  * Author : Thomas Bernard
- * Copyright (c) 2010-2015 Thomas Bernard
+ * Copyright (c) 2010-2017 Thomas Bernard
  * This software is subject to the conditions detailed in the
  * LICENCE file provided in this distribution. */
-
-#define _CRT_SECURE_NO_WARNINGS
 
 /* use getaddrinfo() or gethostbyname()
  * uncomment the following line in order to use gethostbyname() */
@@ -38,15 +36,13 @@
 /* defining MINIUPNPC_IGNORE_EINTR enable the ignore of interruptions
  * during the connect() call */
 #define MINIUPNPC_IGNORE_EINTR
-#ifndef USE_GETHOSTBYNAME
 #include <sys/socket.h>
 #include <sys/select.h>
-#endif /* #ifndef USE_GETHOSTBYNAME */
 #endif /* #else _WIN32 */
 
 /* definition of PRINT_SOCKET_ERROR */
 #ifdef _WIN32
-#define PRINT_SOCKET_ERROR(x)    printf("Socket error: %s, %d\n", x, WSAGetLastError());
+#define PRINT_SOCKET_ERROR(x)    fprintf(stderr, "Socket error: %s, %d\n", x, WSAGetLastError());
 #else
 #define PRINT_SOCKET_ERROR(x) perror(x)
 #endif
@@ -102,13 +98,13 @@ int connecthostport(const char * host, unsigned short port,
 	timeout.tv_usec = 0;
 	if(setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(struct timeval)) < 0)
 	{
-		PRINT_SOCKET_ERROR("setsockopt");
+		PRINT_SOCKET_ERROR("setsockopt SO_RCVTIMEO");
 	}
 	timeout.tv_sec = 3;
 	timeout.tv_usec = 0;
 	if(setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(struct timeval)) < 0)
 	{
-		PRINT_SOCKET_ERROR("setsockopt");
+		PRINT_SOCKET_ERROR("setsockopt SO_SNDTIMEO");
 	}
 #endif /* #ifdef MINIUPNPC_SET_SOCKET_TIMEOUT */
 	dest.sin_family = AF_INET;

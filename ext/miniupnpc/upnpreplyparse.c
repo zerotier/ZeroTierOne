@@ -1,8 +1,8 @@
-#define _CRT_SECURE_NO_WARNINGS
-/* $Id: upnpreplyparse.c,v 1.19 2015/07/15 10:29:11 nanard Exp $ */
-/* MiniUPnP project
+/* $Id: upnpreplyparse.c,v 1.20 2017/12/12 11:26:25 nanard Exp $ */
+/* vim: tabstop=4 shiftwidth=4 noexpandtab
+ * MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
- * (c) 2006-2015 Thomas Bernard
+ * (c) 2006-2017 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -27,12 +27,12 @@ NameValueParserStartElt(void * d, const char * name, int l)
 }
 
 static void
-NameValueParserEndElt(void * d, const char * name, int l)
+NameValueParserEndElt(void * d, const char * name, int namelen)
 {
     struct NameValueParserData * data = (struct NameValueParserData *)d;
     struct NameValue * nv;
 	(void)name;
-	(void)l;
+	(void)namelen;
 	if(!data->topelt)
 		return;
 	if(strcmp(data->curelt, "NewPortListing") != 0)
@@ -105,9 +105,7 @@ ParseNameValue(const char * buffer, int bufsize,
                struct NameValueParserData * data)
 {
 	struct xmlparser parser;
-	data->l_head = NULL;
-	data->portListing = NULL;
-	data->portListingLength = 0;
+	memset(data, 0, sizeof(struct NameValueParserData));
 	/* init xmlparser object */
 	parser.xmlstart = buffer;
 	parser.xmlsize = bufsize;

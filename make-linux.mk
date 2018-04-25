@@ -1,118 +1,91 @@
-#
-# Makefile for ZeroTier One on Linux
-#
-# This is confirmed to work on distributions newer than CentOS 6 (the
-# one used for reference builds) and on 32 and 64 bit x86 and ARM
-# machines. It should also work on other 'normal' machines and recent
-# distributions. Editing might be required for tiny devices or weird
-# distros.
-#
-# Targets
-#   one: zerotier-one and symlinks (cli and idtool)
-#   manpages: builds manpages, requires 'ronn' or nodeJS (will use either)
-#   all: builds 'one' and 'manpages'
-#   selftest: zerotier-selftest
-#   debug: builds 'one' and 'selftest' with tracing and debug flags
-#   clean: removes all built files, objects, other trash
-#   distclean: removes a few other things that might be present
-#   debian: build DEB packages; deb dev tools must be present
-#   redhat: build RPM packages; rpm dev tools must be present
-#
-
 # Automagically pick clang or gcc, with preference for clang
 # This is only done if we have not overridden these with an environment or CLI variable
 ifeq ($(origin CC),default)
-	CC=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
+	CC:=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
+	CC:=$(shell if [ -e /opt/intel/bin/icc ]; then echo /opt/intel/bin/icc -ipo -ansi-alias; else echo $(CC); fi)
 endif
 ifeq ($(origin CXX),default)
-	CXX=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
+	CXX:=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
+	CXX:=$(shell if [ -e /opt/intel/bin/icc ]; then echo /opt/intel/bin/icc -ipo -ansi-alias; else echo $(CXX); fi)
 endif
 
-#UNAME_M=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
-
 INCLUDES?=
-DEFS?=-D_FORTIFY_SOURCE=2
+DEFS?=
 LDLIBS?=
 DESTDIR?=
 
+
 include objects.mk
+ONE_OBJS+=osdep/LinuxEthernetTap.o
 
-# On Linux we auto-detect the presence of some libraries and if present we
-# link against the system version. This works with our package build images.
-ifeq ($(wildcard /usr/include/lz4.h),)
-	OBJS+=ext/lz4/lz4.o
+# Auto-detect miniupnpc and nat-pmp as well and use system libs if present,
+# otherwise build into binary as done on Mac and Windows.
+ONE_OBJS+=osdep/PortMapper.o
+override DEFS+=-DZT_USE_MINIUPNPC
+MINIUPNPC_IS_NEW_ENOUGH=$(shell grep -sqr '.*define.*MINIUPNPC_VERSION.*"2..*"' /usr/include/miniupnpc/miniupnpc.h && echo 1)
+#MINIUPNPC_IS_NEW_ENOUGH=$(shell grep -sqr '.*define.*MINIUPNPC_VERSION.*"2.."' /usr/include/miniupnpc/miniupnpc.h && echo 1)
+ifeq ($(MINIUPNPC_IS_NEW_ENOUGH),1)
+	override DEFS+=-DZT_USE_SYSTEM_MINIUPNPC
+	LDLIBS+=-lminiupnpc
 else
-	LDLIBS+=-llz4
-	DEFS+=-DZT_USE_SYSTEM_LZ4
+	override DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING=\"Linux\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
+	ONE_OBJS+=ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o
 endif
-ifeq ($(wildcard /usr/include/http_parser.h),)
-	OBJS+=ext/http-parser/http_parser.o
+ifeq ($(wildcard /usr/include/natpmp.h),)
+	ONE_OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o
 else
-	LDLIBS+=-lhttp_parser
-	DEFS+=-DZT_USE_SYSTEM_HTTP_PARSER
-endif
-ifeq ($(wildcard /usr/include/json-parser/json.h),)
-	OBJS+=ext/json-parser/json.o
-else
-	LDLIBS+=-ljsonparser
-	DEFS+=-DZT_USE_SYSTEM_JSON_PARSER
+	LDLIBS+=-lnatpmp
+	override DEFS+=-DZT_USE_SYSTEM_NATPMP
 endif
 
-ifeq ($(ZT_USE_MINIUPNPC),1)
-	OBJS+=osdep/PortMapper.o
+# Use bundled http-parser since distribution versions are NOT API-stable or compatible!
+# Trying to use dynamically linked libhttp-parser causes tons of compatibility problems.
+ONE_OBJS+=ext/http-parser/http_parser.o
 
-	DEFS+=-DZT_USE_MINIUPNPC
-
-	# Auto-detect libminiupnpc at least v2.0
-	MINIUPNPC_IS_NEW_ENOUGH=$(shell grep -sqr '.*define.*MINIUPNPC_VERSION.*"2.."' /usr/include/miniupnpc/miniupnpc.h && echo 1)
-	ifeq ($(MINIUPNPC_IS_NEW_ENOUGH),1)
-		DEFS+=-DZT_USE_SYSTEM_MINIUPNPC
-		LDLIBS+=-lminiupnpc
-	else
-		DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING=\"Linux\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
-		OBJS+=ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o
-	endif
-
-	# Auto-detect libnatpmp
-	ifeq ($(wildcard /usr/include/natpmp.h),)
-		OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o
-	else
-		LDLIBS+=-lnatpmp
-		DEFS+=-DZT_USE_SYSTEM_NATPMP
-	endif
+ifeq ($(ZT_SYNOLOGY), 1)
+	override DEFS+=-D__SYNOLOGY__
 endif
 
-ifeq ($(ZT_ENABLE_NETWORK_CONTROLLER),1)
-	DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER
-	LDLIBS+=-L/usr/local/lib -lsqlite3
-	OBJS+=controller/SqliteNetworkController.o
-endif
-
-ifeq ($(ZT_ENABLE_CLUSTER),1)
-	DEFS+=-DZT_ENABLE_CLUSTER
+ifeq ($(ZT_QNAP), 1)
+	override DEFS+=-D__QNAP__
 endif
 
 ifeq ($(ZT_TRACE),1)
-	DEFS+=-DZT_TRACE
+	override DEFS+=-DZT_TRACE
 endif
 
+ifeq ($(ZT_RULES_ENGINE_DEBUGGING),1)
+	override DEFS+=-DZT_RULES_ENGINE_DEBUGGING
+endif
+
+# Build with address sanitization library for advanced debugging (clang)
+ifeq ($(ZT_SANITIZE),1)
+	SANFLAGS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
+endif
 ifeq ($(ZT_DEBUG),1)
-	DEFS+=-DZT_TRACE
-	override CFLAGS+=-Wall -g -O -pthread $(INCLUDES) $(DEFS)
-	override CXXFLAGS+=-Wall -g -O -pthread $(INCLUDES) $(DEFS)
-	LDFLAGS=
+	override CFLAGS+=-Wall -Wno-deprecated -Werror -g -pthread $(INCLUDES) $(DEFS)
+	override CXXFLAGS+=-Wall -Wno-deprecated -Werror -g -std=c++11 -pthread $(INCLUDES) $(DEFS)
+	ZT_TRACE=1
 	STRIP?=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
-ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
+node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
-	CFLAGS?=-O3 -fstack-protector-strong
-	override CFLAGS+=-Wall -fPIE -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	CXXFLAGS?=-O3 -fstack-protector-strong
-	override CXXFLAGS+=-Wall -Wno-unused-result -Wreorder -fPIE -fno-rtti -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	CFLAGS?=-O3 -fstack-protector -fPIE
+	override CFLAGS+=-Wall -Wno-deprecated -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	CXXFLAGS?=-O3 -fstack-protector -fPIE
+	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
 	STRIP+=--strip-all
+endif
+
+ifeq ($(ZT_TRACE),1)
+	override DEFS+=-DZT_TRACE
+endif
+
+ifeq ($(ZT_USE_TEST_TAP),1)
+	override DEFS+=-DZT_USE_TEST_TAP
 endif
 
 # Uncomment for gprof profile build
@@ -121,17 +94,190 @@ endif
 #LDFLAGS=
 #STRIP=echo
 
-all:	one manpages
+# Determine system build architecture from compiler target
+CC_MACH=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
+ZT_ARCHITECTURE=999
+ifeq ($(CC_MACH),x86_64)
+	ZT_ARCHITECTURE=2
+	ZT_USE_X64_ASM_SALSA=1
+	ZT_USE_X64_ASM_ED25519=1
+endif
+ifeq ($(CC_MACH),amd64)
+	ZT_ARCHITECTURE=2
+	ZT_USE_X64_ASM_SALSA=1
+	ZT_USE_X64_ASM_ED25519=1
+endif
+ifeq ($(CC_MACH),powerpc64le)
+	ZT_ARCHITECTURE=8
+endif
+ifeq ($(CC_MACH),ppc64le)
+	ZT_ARCHITECTURE=8
+endif
+ifeq ($(CC_MACH),ppc64el)
+	ZT_ARCHITECTURE=8
+endif
+ifeq ($(CC_MACH),i386)
+	ZT_ARCHITECTURE=1
+endif
+ifeq ($(CC_MACH),i486)
+	ZT_ARCHITECTURE=1
+endif
+ifeq ($(CC_MACH),i586)
+	ZT_ARCHITECTURE=1
+endif
+ifeq ($(CC_MACH),i686)
+	ZT_ARCHITECTURE=1
+endif
+ifeq ($(CC_MACH),arm)
+	ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+endif
+ifeq ($(CC_MACH),armel)
+	ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+endif
+ifeq ($(CC_MACH),armhf)
+	ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+endif
+ifeq ($(CC_MACH),armv6)
+	ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+endif
+ifeq ($(CC_MACH),armv6zk)
+	ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+endif
+ifeq ($(CC_MACH),armv6kz)
+	ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+endif
+ifeq ($(CC_MACH),armv7)
+	ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+endif
+ifeq ($(CC_MACH),armv7l)
+	ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+endif
+ifeq ($(CC_MACH),armv7l)
+        ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
+endif
+ifeq ($(CC_MACH),arm64)
+	ZT_ARCHITECTURE=4
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
+ifeq ($(CC_MACH),aarch64)
+	ZT_ARCHITECTURE=4
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
+ifeq ($(CC_MACH),mipsel)
+	ZT_ARCHITECTURE=5
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
+ifeq ($(CC_MACH),mips)
+	ZT_ARCHITECTURE=5
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
+ifeq ($(CC_MACH),mips64)
+	ZT_ARCHITECTURE=6
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
+ifeq ($(CC_MACH),mips64el)
+	ZT_ARCHITECTURE=6
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
+ifeq ($(CC_MACH),powerpc64le)
+	ZT_ARCHITECTURE=7
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
 
-one:	$(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o $(LDLIBS)
+# Fail if system architecture could not be determined
+ifeq ($(ZT_ARCHITECTURE),999)
+ERR=$(error FATAL: architecture could not be determined from $(CC) -dumpmachine: $CC_MACH)
+.PHONY: err
+err: ; $(ERR)
+endif
+
+# Disable software updates by default on Linux since that is normally done with package management
+override DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""
+
+# This forces libstdc++ not to include these abominations, especially mt and pool
+override DEFS+=-D_MT_ALLOCATOR_H -D_POOL_ALLOCATOR_H -D_EXTPTR_ALLOCATOR_H -D_DEBUG_ALLOCATOR_H
+
+# Static builds, which are currently done for a number of Linux targets
+ifeq ($(ZT_STATIC),1)
+	override LDFLAGS+=-static
+endif
+
+# For building an official semi-static binary on CentOS 7
+ifeq ($(ZT_OFFICIAL),1)
+	CORE_OBJS+=ext/misc/linux-old-glibc-compat.o
+	override LDFLAGS+=-Wl,--wrap=memcpy -static-libstdc++
+endif
+
+# ARM32 hell -- use conservative CFLAGS
+ifeq ($(ZT_ARCHITECTURE),3)
+	ifeq ($(shell if [ -e /usr/bin/dpkg ]; then dpkg --print-architecture; fi),armel)
+		override CFLAGS+=-march=armv5 -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
+		override CXXFLAGS+=-march=armv5 -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
+		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
+	else
+		override CFLAGS+=-march=armv5 -mno-unaligned-access -marm
+		override CXXFLAGS+=-march=armv5 -mno-unaligned-access -marm
+	endif
+endif
+
+# Build faster crypto on some targets
+ifeq ($(ZT_USE_X64_ASM_SALSA),1)
+	override DEFS+=-DZT_USE_X64_ASM_SALSA2012
+	override CORE_OBJS+=ext/x64-salsa2012-asm/salsa2012.o
+endif
+ifeq ($(ZT_USE_X64_ASM_ED25519),1)
+	override DEFS+=-DZT_USE_FAST_X64_ED25519
+	override CORE_OBJS+=ext/ed25519-amd64-asm/choose_t.o ext/ed25519-amd64-asm/consts.o ext/ed25519-amd64-asm/fe25519_add.o ext/ed25519-amd64-asm/fe25519_freeze.o ext/ed25519-amd64-asm/fe25519_mul.o ext/ed25519-amd64-asm/fe25519_square.o ext/ed25519-amd64-asm/fe25519_sub.o ext/ed25519-amd64-asm/ge25519_add_p1p1.o ext/ed25519-amd64-asm/ge25519_dbl_p1p1.o ext/ed25519-amd64-asm/ge25519_nielsadd2.o ext/ed25519-amd64-asm/ge25519_nielsadd_p1p1.o ext/ed25519-amd64-asm/ge25519_p1p1_to_p2.o ext/ed25519-amd64-asm/ge25519_p1p1_to_p3.o ext/ed25519-amd64-asm/ge25519_pnielsadd_p1p1.o ext/ed25519-amd64-asm/heap_rootreplaced.o ext/ed25519-amd64-asm/heap_rootreplaced_1limb.o ext/ed25519-amd64-asm/heap_rootreplaced_2limbs.o ext/ed25519-amd64-asm/heap_rootreplaced_3limbs.o ext/ed25519-amd64-asm/sc25519_add.o ext/ed25519-amd64-asm/sc25519_barrett.o ext/ed25519-amd64-asm/sc25519_lt.o ext/ed25519-amd64-asm/sc25519_sub_nored.o ext/ed25519-amd64-asm/ull4_mul.o ext/ed25519-amd64-asm/fe25519_getparity.o ext/ed25519-amd64-asm/fe25519_invert.o ext/ed25519-amd64-asm/fe25519_iseq.o ext/ed25519-amd64-asm/fe25519_iszero.o ext/ed25519-amd64-asm/fe25519_neg.o ext/ed25519-amd64-asm/fe25519_pack.o ext/ed25519-amd64-asm/fe25519_pow2523.o ext/ed25519-amd64-asm/fe25519_setint.o ext/ed25519-amd64-asm/fe25519_unpack.o ext/ed25519-amd64-asm/ge25519_add.o ext/ed25519-amd64-asm/ge25519_base.o ext/ed25519-amd64-asm/ge25519_double.o ext/ed25519-amd64-asm/ge25519_double_scalarmult.o ext/ed25519-amd64-asm/ge25519_isneutral.o ext/ed25519-amd64-asm/ge25519_multi_scalarmult.o ext/ed25519-amd64-asm/ge25519_pack.o ext/ed25519-amd64-asm/ge25519_scalarmult_base.o ext/ed25519-amd64-asm/ge25519_unpackneg.o ext/ed25519-amd64-asm/hram.o ext/ed25519-amd64-asm/index_heap.o ext/ed25519-amd64-asm/sc25519_from32bytes.o ext/ed25519-amd64-asm/sc25519_from64bytes.o ext/ed25519-amd64-asm/sc25519_from_shortsc.o ext/ed25519-amd64-asm/sc25519_iszero.o ext/ed25519-amd64-asm/sc25519_mul.o ext/ed25519-amd64-asm/sc25519_mul_shortsc.o ext/ed25519-amd64-asm/sc25519_slide.o ext/ed25519-amd64-asm/sc25519_to32bytes.o ext/ed25519-amd64-asm/sc25519_window4.o ext/ed25519-amd64-asm/sign.o
+endif
+ifeq ($(ZT_USE_ARM32_NEON_ASM_CRYPTO),1)
+	override DEFS+=-DZT_USE_ARM32_NEON_ASM_SALSA2012
+	override CORE_OBJS+=ext/arm32-neon-salsa2012-asm/salsa2012.o
+endif
+
+all:	one
+
+one:	$(CORE_OBJS) $(ONE_OBJS) one.o
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LDLIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
 
-selftest:	$(OBJS) selftest.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LDLIBS)
+zerotier-one: one
+
+zerotier-idtool: one
+
+zerotier-cli: one
+
+libzerotiercore.a:	FORCE
+	make CFLAGS="-O3 -fstack-protector -fPIC" CXXFLAGS="-O3 -std=c++11 -fstack-protector -fPIC" $(CORE_OBJS)
+	ar rcs libzerotiercore.a $(CORE_OBJS)
+	ranlib libzerotiercore.a
+
+core: libzerotiercore.a
+
+selftest:	$(CORE_OBJS) $(ONE_OBJS) selftest.o
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(CORE_OBJS) $(ONE_OBJS) $(LDLIBS)
 	$(STRIP) zerotier-selftest
+
+zerotier-selftest: selftest
 
 manpages:	FORCE
 	cd doc ; ./build.sh
@@ -139,15 +285,18 @@ manpages:	FORCE
 doc:	manpages
 
 clean: FORCE
-	rm -rf *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend doc/*.1 doc/*.2 doc/*.8 debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one
+	rm -rf *.a *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one doc/node_modules ext/misc/*.o
 
 distclean:	clean
-	rm -rf doc/node_modules
-	find linux-build-farm -type f -name '*.deb' -print0 | xargs -0 rm -fv
-	find linux-build-farm -type f -name '*.rpm' -print0 | xargs -0 rm -fv
-	find linux-build-farm -type f -name 'zt1-src.tar.gz' | xargs rm -fv
 
 realclean:	distclean
+
+official:	FORCE
+	make -j4 ZT_OFFICIAL=1 all
+
+central-controller:	FORCE
+	cd ext/librethinkdbxx ; make
+	make -j4 LDLIBS="ext/librethinkdbxx/build/librethinkdb++.a" DEFS="-DZT_CONTROLLER_USE_RETHINKDB" ZT_OFFICIAL=1 ZT_USE_X64_ASM_ED25519=1 one
 
 debug:	FORCE
 	make ZT_DEBUG=1 one
@@ -201,10 +350,10 @@ uninstall:	FORCE
 
 # These are just for convenience for building Linux packages
 
-debian:	distclean
-	debuild -I -i -us -uc
+debian:	FORCE
+	debuild -I -i -us -uc -nc -b
 
-redhat:	distclean
+redhat:	FORCE
 	rpmbuild -ba zerotier-one.spec
 
 FORCE:

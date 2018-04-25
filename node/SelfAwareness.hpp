@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifndef ZT_SELFAWARENESS_HPP
@@ -36,7 +44,6 @@ class SelfAwareness
 {
 public:
 	SelfAwareness(const RuntimeEnvironment *renv);
-	~SelfAwareness();
 
 	/**
 	 * Called when a trusted remote peer informs us of our external network address
@@ -48,14 +55,14 @@ public:
 	 * @param trusted True if this peer is trusted as an authority to inform us of external address changes
 	 * @param now Current time
 	 */
-	void iam(const Address &reporter,const InetAddress &receivedOnLocalAddress,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now);
+	void iam(void *tPtr,const Address &reporter,const int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,int64_t now);
 
 	/**
 	 * Clean up database periodically
 	 *
 	 * @param now Current time
 	 */
-	void clean(uint64_t now);
+	void clean(int64_t now);
 
 	/**
 	 * If we appear to be behind a symmetric NAT, get predictions for possible external endpoints
@@ -68,23 +75,24 @@ private:
 	struct PhySurfaceKey
 	{
 		Address reporter;
-		InetAddress receivedOnLocalAddress;
+		int64_t receivedOnLocalSocket;
 		InetAddress reporterPhysicalAddress;
 		InetAddress::IpScope scope;
 
 		PhySurfaceKey() : reporter(),scope(InetAddress::IP_SCOPE_NONE) {}
-		PhySurfaceKey(const Address &r,const InetAddress &rol,const InetAddress &ra,InetAddress::IpScope s) : reporter(r),receivedOnLocalAddress(rol),reporterPhysicalAddress(ra),scope(s) {}
+		PhySurfaceKey(const Address &r,const int64_t rol,const InetAddress &ra,InetAddress::IpScope s) : reporter(r),receivedOnLocalSocket(rol),reporterPhysicalAddress(ra),scope(s) {}
 
-		inline unsigned long hashCode() const throw() { return ((unsigned long)reporter.toInt() + (unsigned long)scope); }
-		inline bool operator==(const PhySurfaceKey &k) const throw() { return ((reporter == k.reporter)&&(receivedOnLocalAddress == k.receivedOnLocalAddress)&&(reporterPhysicalAddress == k.reporterPhysicalAddress)&&(scope == k.scope)); }
+		inline unsigned long hashCode() const { return ((unsigned long)reporter.toInt() + (unsigned long)scope); }
+		inline bool operator==(const PhySurfaceKey &k) const { return ((reporter == k.reporter)&&(receivedOnLocalSocket == k.receivedOnLocalSocket)&&(reporterPhysicalAddress == k.reporterPhysicalAddress)&&(scope == k.scope)); }
 	};
 	struct PhySurfaceEntry
 	{
 		InetAddress mySurface;
 		uint64_t ts;
+		bool trusted;
 
-		PhySurfaceEntry() : mySurface(),ts(0) {}
-		PhySurfaceEntry(const InetAddress &a,const uint64_t t) : mySurface(a),ts(t) {}
+		PhySurfaceEntry() : mySurface(),ts(0),trusted(false) {}
+		PhySurfaceEntry(const InetAddress &a,const uint64_t t) : mySurface(a),ts(t),trusted(false) {}
 	};
 
 	const RuntimeEnvironment *RR;

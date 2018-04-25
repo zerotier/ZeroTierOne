@@ -1,0 +1,11 @@
+sudo: required
+dist: trusty
+
+python:
+  - "3.4.3"
+
+addons:
+  rethinkdb: "2.3"
+
+script:
+  - make test

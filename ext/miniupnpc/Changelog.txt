@@ -1,5 +1,19 @@
-$Id: Changelog.txt,v 1.223 2016/04/19 21:06:20 nanard Exp $
+$Id: Changelog.txt,v 1.229 2017/12/12 11:26:25 nanard Exp $
 miniUPnP client Changelog.
+
+2017/12/11:
+  Fix buffer over run in minixml.c
+  Fix uninitialized variable access in upnpreplyparse.c
+
+2017/05/05:
+  Fix CVE-2017-8798   Thanks to tin/Team OSTStrom
+
+2016/11/11:
+  check strlen before memcmp in XML parsing portlistingparse.c
+  fix build under SOLARIS and CYGWIN
+
+2016/10/11:
+  Add python 3 compatibility to IGD test
 
 VERSION 2.0 : released 2016/04/19
 

@@ -5,6 +5,7 @@ using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using Hardcodet.Wpf.TaskbarNotification;
 
 namespace WinUI
 {
@@ -13,5 +14,12 @@ namespace WinUI
     /// </summary>
     public partial class App : Application
     {
+        private TaskbarIcon tb;
+
+        private void InitApplication()
+        {
+            tb = (TaskbarIcon)FindResource("NotifyIcon");
+            tb.Visibility = Visibility.Visible;
+        }
     }
 }

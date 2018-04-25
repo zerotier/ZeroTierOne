@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #include "../version.h"
@@ -24,181 +32,354 @@
 #include "Switch.hpp"
 #include "Network.hpp"
 #include "SelfAwareness.hpp"
-#include "Cluster.hpp"
 #include "Packet.hpp"
-
-#include <algorithm>
-
-#define ZT_PEER_PATH_SORT_INTERVAL 5000
+#include "Trace.hpp"
+#include "InetAddress.hpp"
 
 namespace ZeroTier {
 
-// Used to send varying values for NAT keepalive
-static uint32_t _natKeepaliveBuf = 0;
-
 Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
 	RR(renv),
-	_lastUsed(0),
 	_lastReceive(0),
-	_lastUnicastFrame(0),
-	_lastMulticastFrame(0),
-	_lastAnnouncedTo(0),
+	_lastNontrivialReceive(0),
+	_lastTriedMemorizedPath(0),
 	_lastDirectPathPushSent(0),
 	_lastDirectPathPushReceive(0),
-	_lastPathSort(0),
+	_lastCredentialRequestSent(0),
+	_lastWhoisRequestReceived(0),
+	_lastEchoRequestReceived(0),
+	_lastComRequestReceived(0),
+	_lastComRequestSent(0),
+	_lastCredentialsReceived(0),
+	_lastTrustEstablishedPacketReceived(0),
+	_lastSentFullHello(0),
 	_vProto(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
 	_id(peerIdentity),
-	_numPaths(0),
-	_latency(0),
 	_directPathPushCutoffCount(0),
-	_networkComs(4),
-	_lastPushedComs(4)
+	_credentialsCutoffCount(0)
 {
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))
-		throw std::runtime_error("new peer identity key agreement failed");
+		throw ZT_EXCEPTION_INVALID_ARGUMENT;
 }
 
 void Peer::received(
-	const InetAddress &localAddr,
-	const InetAddress &remoteAddr,
-	unsigned int hops,
-	uint64_t packetId,
-	Packet::Verb verb,
-	uint64_t inRePacketId,
-	Packet::Verb inReVerb)
+	void *tPtr,
+	const SharedPtr<Path> &path,
+	const unsigned int hops,
+	const uint64_t packetId,
+	const Packet::Verb verb,
+	const uint64_t inRePacketId,
+	const Packet::Verb inReVerb,
+	const bool trustEstablished,
+	const uint64_t networkId)
 {
-#ifdef ZT_ENABLE_CLUSTER
-	bool suboptimalPath = false;
-	if ((RR->cluster)&&(hops == 0)) {
-		// Note: findBetterEndpoint() is first since we still want to check
-		// for a better endpoint even if we don't actually send a redirect.
-		InetAddress redirectTo;
-		if ( (verb != Packet::VERB_OK) && (verb != Packet::VERB_ERROR) && (verb != Packet::VERB_RENDEZVOUS) && (verb != Packet::VERB_PUSH_DIRECT_PATHS) && (RR->cluster->findBetterEndpoint(redirectTo,_id.address(),remoteAddr,false)) ) {
-			if (_vProto >= 5) {
-				// For newer peers we can send a more idiomatic verb: PUSH_DIRECT_PATHS.
-				Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
-				outp.append((uint16_t)1); // count == 1
-				outp.append((uint8_t)ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT); // flags: cluster redirect
-				outp.append((uint16_t)0); // no extensions
-				if (redirectTo.ss_family == AF_INET) {
-					outp.append((uint8_t)4);
-					outp.append((uint8_t)6);
-					outp.append(redirectTo.rawIpData(),4);
-				} else {
-					outp.append((uint8_t)6);
-					outp.append((uint8_t)18);
-					outp.append(redirectTo.rawIpData(),16);
-				}
-				outp.append((uint16_t)redirectTo.port());
-				outp.armor(_key,true);
-				RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
-			} else {
-				// For older peers we use RENDEZVOUS to coax them into contacting us elsewhere.
-				Packet outp(_id.address(),RR->identity.address(),Packet::VERB_RENDEZVOUS);
-				outp.append((uint8_t)0); // no flags
-				RR->identity.address().appendTo(outp);
-				outp.append((uint16_t)redirectTo.port());
-				if (redirectTo.ss_family == AF_INET) {
-					outp.append((uint8_t)4);
-					outp.append(redirectTo.rawIpData(),4);
-				} else {
-					outp.append((uint8_t)16);
-					outp.append(redirectTo.rawIpData(),16);
-				}
-				outp.armor(_key,true);
-				RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
-			}
-			suboptimalPath = true;
-		}
-	}
-#endif
+	const int64_t now = RR->node->now();
 
-	const uint64_t now = RR->node->now();
 	_lastReceive = now;
-	if ((verb == Packet::VERB_FRAME)||(verb == Packet::VERB_EXT_FRAME))
-		_lastUnicastFrame = now;
-	else if (verb == Packet::VERB_MULTICAST_FRAME)
-		_lastMulticastFrame = now;
+	switch (verb) {
+		case Packet::VERB_FRAME:
+		case Packet::VERB_EXT_FRAME:
+		case Packet::VERB_NETWORK_CONFIG_REQUEST:
+		case Packet::VERB_NETWORK_CONFIG:
+		case Packet::VERB_MULTICAST_FRAME:
+			_lastNontrivialReceive = now;
+			break;
+		default: break;
+	}
+
+	if (trustEstablished) {
+		_lastTrustEstablishedPacketReceived = now;
+		path->trustedPacketReceived(now);
+	}
 
 	if (hops == 0) {
-		bool pathIsConfirmed = false;
-		unsigned int np = _numPaths;
-		for(unsigned int p=0;p<np;++p) {
-			if ((_paths[p].address() == remoteAddr)&&(_paths[p].localAddress() == localAddr)) {
-				_paths[p].received(now);
-#ifdef ZT_ENABLE_CLUSTER
-				_paths[p].setClusterSuboptimal(suboptimalPath);
-#endif
-				pathIsConfirmed = true;
-				break;
+		// If this is a direct packet (no hops), update existing paths or learn new ones
+
+		bool havePath = false;
+		{
+			Mutex::Lock _l(_paths_m);
+			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+				if (_paths[i].p) {
+					if (_paths[i].p == path) {
+						_paths[i].lr = now;
+						havePath = true;
+						break;
+					}
+				} else break;
 			}
 		}
 
-		if ((!pathIsConfirmed)&&(RR->node->shouldUsePathForZeroTierTraffic(localAddr,remoteAddr))) {
-			if (verb == Packet::VERB_OK) {
+		bool attemptToContact = false;
+		if ((!havePath)&&(RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),path->localSocket(),path->address()))) {
+			Mutex::Lock _l(_paths_m);
 
-				Path *slot = (Path *)0;
-				if (np < ZT_MAX_PEER_NETWORK_PATHS) {
-					slot = &(_paths[np++]);
-				} else {
-					uint64_t slotWorstScore = 0xffffffffffffffffULL;
-					for(unsigned int p=0;p<ZT_MAX_PEER_NETWORK_PATHS;++p) {
-						if (!_paths[p].active(now)) {
-							slot = &(_paths[p]);
-							break;
-						} else {
-							const uint64_t score = _paths[p].score();
-							if (score <= slotWorstScore) {
-								slotWorstScore = score;
-								slot = &(_paths[p]);
-							}
+			// Paths are redunant if they duplicate an alive path to the same IP or
+			// with the same local socket and address family.
+			bool redundant = false;
+			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+				if (_paths[i].p) {
+					if ( (_paths[i].p->alive(now)) && ( ((_paths[i].p->localSocket() == path->localSocket())&&(_paths[i].p->address().ss_family == path->address().ss_family)) || (_paths[i].p->address().ipsEqual2(path->address())) ) )  {
+						redundant = true;
+						break;
+					}
+				} else break;
+			}
+
+			if (!redundant) {
+				unsigned int replacePath = ZT_MAX_PEER_NETWORK_PATHS;
+				int replacePathQuality = 0;
+				for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+					if (_paths[i].p) {
+						const int q = _paths[i].p->quality(now);
+						if (q > replacePathQuality) {
+							replacePathQuality = q;
+							replacePath = i;
 						}
+					} else {
+						replacePath = i;
+						break;
 					}
 				}
-				if (slot) {
-					*slot = Path(localAddr,remoteAddr);
-					slot->received(now);
-#ifdef ZT_ENABLE_CLUSTER
-					slot->setClusterSuboptimal(suboptimalPath);
-#endif
-					_numPaths = np;
+
+				if (replacePath != ZT_MAX_PEER_NETWORK_PATHS) {
+					if (verb == Packet::VERB_OK) {
+						RR->t->peerLearnedNewPath(tPtr,networkId,*this,path,packetId);
+						_paths[replacePath].lr = now;
+						_paths[replacePath].p = path;
+						_paths[replacePath].priority = 1;
+					} else {
+						attemptToContact = true;
+					}
 				}
-
-#ifdef ZT_ENABLE_CLUSTER
-				if (RR->cluster)
-					RR->cluster->broadcastHavePeer(_id);
-#endif
-
-			} else {
-
-				TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
-
-				if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
-					Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
-					outp.armor(_key,true);
-					RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
-				} else {
-					sendHELLO(localAddr,remoteAddr,now);
-				}
-
 			}
+		}
+
+		if (attemptToContact) {
+			attemptToContactAt(tPtr,path->localSocket(),path->address(),now,true);
+			path->sent(now);
+			RR->t->peerConfirmingUnknownPath(tPtr,networkId,*this,path,packetId,verb);
 		}
 	}
 
-	if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
-		_lastAnnouncedTo = now;
-		const std::vector< SharedPtr<Network> > networks(RR->node->allNetworks());
-		for(std::vector< SharedPtr<Network> >::const_iterator n(networks.begin());n!=networks.end();++n)
-			(*n)->tryAnnounceMulticastGroupsTo(SharedPtr<Peer>(this));
+	// If we have a trust relationship periodically push a message enumerating
+	// all known external addresses for ourselves. We now do this even if we
+	// have a current path since we'll want to use new ones too.
+	if (this->trustEstablished(now)) {
+		if ((now - _lastDirectPathPushSent) >= ZT_DIRECT_PATH_PUSH_INTERVAL) {
+			_lastDirectPathPushSent = now;
+
+			std::vector<InetAddress> pathsToPush;
+
+			std::vector<InetAddress> dps(RR->node->directPaths());
+			for(std::vector<InetAddress>::const_iterator i(dps.begin());i!=dps.end();++i)
+				pathsToPush.push_back(*i);
+
+			// Do symmetric NAT prediction if we are communicating indirectly.
+			if (hops > 0) {
+				std::vector<InetAddress> sym(RR->sa->getSymmetricNatPredictions());
+				for(unsigned long i=0,added=0;i<sym.size();++i) {
+					InetAddress tmp(sym[(unsigned long)RR->node->prng() % sym.size()]);
+					if (std::find(pathsToPush.begin(),pathsToPush.end(),tmp) == pathsToPush.end()) {
+						pathsToPush.push_back(tmp);
+						if (++added >= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY)
+							break;
+					}
+				}
+			}
+
+			if (pathsToPush.size() > 0) {
+				std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
+				while (p != pathsToPush.end()) {
+					Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
+					outp.addSize(2); // leave room for count
+
+					unsigned int count = 0;
+					while ((p != pathsToPush.end())&&((outp.size() + 24) < 1200)) {
+						uint8_t addressType = 4;
+						switch(p->ss_family) {
+							case AF_INET:
+								break;
+							case AF_INET6:
+								addressType = 6;
+								break;
+							default: // we currently only push IP addresses
+								++p;
+								continue;
+						}
+
+						outp.append((uint8_t)0); // no flags
+						outp.append((uint16_t)0); // no extensions
+						outp.append(addressType);
+						outp.append((uint8_t)((addressType == 4) ? 6 : 18));
+						outp.append(p->rawIpData(),((addressType == 4) ? 4 : 16));
+						outp.append((uint16_t)p->port());
+
+						++count;
+						++p;
+					}
+
+					if (count) {
+						outp.setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
+						outp.armor(_key,true);
+						path->send(RR,tPtr,outp.data(),outp.size(),now);
+					}
+				}
+			}
+		}
 	}
 }
 
-void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int ttl)
+SharedPtr<Path> Peer::getBestPath(int64_t now,bool includeExpired) const
+{
+	Mutex::Lock _l(_paths_m);
+
+	unsigned int bestPath = ZT_MAX_PEER_NETWORK_PATHS;
+	long bestPathQuality = 2147483647;
+	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+		if (_paths[i].p) {
+			if ((includeExpired)||((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION)) {
+				const long q = _paths[i].p->quality(now) / _paths[i].priority;
+				if (q <= bestPathQuality) {
+					bestPathQuality = q;
+					bestPath = i;
+				}
+			}
+		} else break;
+	}
+
+	if (bestPath != ZT_MAX_PEER_NETWORK_PATHS)
+		return _paths[bestPath].p;
+	return SharedPtr<Path>();
+}
+
+void Peer::introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &other) const
+{
+	unsigned int myBestV4ByScope[ZT_INETADDRESS_MAX_SCOPE+1];
+	unsigned int myBestV6ByScope[ZT_INETADDRESS_MAX_SCOPE+1];
+	long myBestV4QualityByScope[ZT_INETADDRESS_MAX_SCOPE+1];
+	long myBestV6QualityByScope[ZT_INETADDRESS_MAX_SCOPE+1];
+	unsigned int theirBestV4ByScope[ZT_INETADDRESS_MAX_SCOPE+1];
+	unsigned int theirBestV6ByScope[ZT_INETADDRESS_MAX_SCOPE+1];
+	long theirBestV4QualityByScope[ZT_INETADDRESS_MAX_SCOPE+1];
+	long theirBestV6QualityByScope[ZT_INETADDRESS_MAX_SCOPE+1];
+	for(int i=0;i<=ZT_INETADDRESS_MAX_SCOPE;++i) {
+		myBestV4ByScope[i] = ZT_MAX_PEER_NETWORK_PATHS;
+		myBestV6ByScope[i] = ZT_MAX_PEER_NETWORK_PATHS;
+		myBestV4QualityByScope[i] = 2147483647;
+		myBestV6QualityByScope[i] = 2147483647;
+		theirBestV4ByScope[i] = ZT_MAX_PEER_NETWORK_PATHS;
+		theirBestV6ByScope[i] = ZT_MAX_PEER_NETWORK_PATHS;
+		theirBestV4QualityByScope[i] = 2147483647;
+		theirBestV6QualityByScope[i] = 2147483647;
+	}
+
+	Mutex::Lock _l1(_paths_m);
+
+	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+		if (_paths[i].p) {
+			const long q = _paths[i].p->quality(now) / _paths[i].priority;
+			const unsigned int s = (unsigned int)_paths[i].p->ipScope();
+			switch(_paths[i].p->address().ss_family) {
+				case AF_INET:
+					if (q <= myBestV4QualityByScope[s]) {
+						myBestV4QualityByScope[s] = q;
+						myBestV4ByScope[s] = i;
+					}
+					break;
+				case AF_INET6:
+					if (q <= myBestV6QualityByScope[s]) {
+						myBestV6QualityByScope[s] = q;
+						myBestV6ByScope[s] = i;
+					}
+					break;
+			}
+		} else break;
+	}
+
+	Mutex::Lock _l2(other->_paths_m);
+
+	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+		if (other->_paths[i].p) {
+			const long q = other->_paths[i].p->quality(now) / other->_paths[i].priority;
+			const unsigned int s = (unsigned int)other->_paths[i].p->ipScope();
+			switch(other->_paths[i].p->address().ss_family) {
+				case AF_INET:
+					if (q <= theirBestV4QualityByScope[s]) {
+						theirBestV4QualityByScope[s] = q;
+						theirBestV4ByScope[s] = i;
+					}
+					break;
+				case AF_INET6:
+					if (q <= theirBestV6QualityByScope[s]) {
+						theirBestV6QualityByScope[s] = q;
+						theirBestV6ByScope[s] = i;
+					}
+					break;
+			}
+		} else break;
+	}
+
+	unsigned int mine = ZT_MAX_PEER_NETWORK_PATHS;
+	unsigned int theirs = ZT_MAX_PEER_NETWORK_PATHS;
+
+	for(int s=ZT_INETADDRESS_MAX_SCOPE;s>=0;--s) {
+		if ((myBestV6ByScope[s] != ZT_MAX_PEER_NETWORK_PATHS)&&(theirBestV6ByScope[s] != ZT_MAX_PEER_NETWORK_PATHS)) {
+			mine = myBestV6ByScope[s];
+			theirs = theirBestV6ByScope[s];
+			break;
+		}
+		if ((myBestV4ByScope[s] != ZT_MAX_PEER_NETWORK_PATHS)&&(theirBestV4ByScope[s] != ZT_MAX_PEER_NETWORK_PATHS)) {
+			mine = myBestV4ByScope[s];
+			theirs = theirBestV4ByScope[s];
+			break;
+		}
+	}
+
+	if (mine != ZT_MAX_PEER_NETWORK_PATHS) {
+		unsigned int alt = (unsigned int)RR->node->prng() & 1; // randomize which hint we send first for black magickal NAT-t reasons
+		const unsigned int completed = alt + 2;
+		while (alt != completed) {
+			if ((alt & 1) == 0) {
+				Packet outp(_id.address(),RR->identity.address(),Packet::VERB_RENDEZVOUS);
+				outp.append((uint8_t)0);
+				other->_id.address().appendTo(outp);
+				outp.append((uint16_t)other->_paths[theirs].p->address().port());
+				if (other->_paths[theirs].p->address().ss_family == AF_INET6) {
+					outp.append((uint8_t)16);
+					outp.append(other->_paths[theirs].p->address().rawIpData(),16);
+				} else {
+					outp.append((uint8_t)4);
+					outp.append(other->_paths[theirs].p->address().rawIpData(),4);
+				}
+				outp.armor(_key,true);
+				_paths[mine].p->send(RR,tPtr,outp.data(),outp.size(),now);
+			} else {
+				Packet outp(other->_id.address(),RR->identity.address(),Packet::VERB_RENDEZVOUS);
+				outp.append((uint8_t)0);
+				_id.address().appendTo(outp);
+				outp.append((uint16_t)_paths[mine].p->address().port());
+				if (_paths[mine].p->address().ss_family == AF_INET6) {
+					outp.append((uint8_t)16);
+					outp.append(_paths[mine].p->address().rawIpData(),16);
+				} else {
+					outp.append((uint8_t)4);
+					outp.append(_paths[mine].p->address().rawIpData(),4);
+				}
+				outp.armor(other->_key,true);
+				other->_paths[theirs].p->send(RR,tPtr,outp.data(),outp.size(),now);
+			}
+			++alt;
+		}
+	}
+}
+
+void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now)
 {
 	Packet outp(_id.address(),RR->identity.address(),Packet::VERB_HELLO);
+
 	outp.append((unsigned char)ZT_PROTO_VERSION);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
@@ -206,353 +387,167 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 	outp.append(now);
 	RR->identity.serialize(outp,false);
 	atAddress.serialize(outp);
-	outp.append((uint64_t)RR->topology->worldId());
-	outp.append((uint64_t)RR->topology->worldTimestamp());
 
-	outp.armor(_key,false); // HELLO is sent in the clear
-	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size(),ttl);
-}
+	outp.append((uint64_t)RR->topology->planetWorldId());
+	outp.append((uint64_t)RR->topology->planetWorldTimestamp());
 
-bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
-{
-	Path *p = (Path *)0;
+	const unsigned int startCryptedPortionAt = outp.size();
 
-	if (inetAddressFamily != 0) {
-		p = _getBestPath(now,inetAddressFamily);
+	std::vector<World> moons(RR->topology->moons());
+	std::vector<uint64_t> moonsWanted(RR->topology->moonsWanted());
+	outp.append((uint16_t)(moons.size() + moonsWanted.size()));
+	for(std::vector<World>::const_iterator m(moons.begin());m!=moons.end();++m) {
+		outp.append((uint8_t)m->type());
+		outp.append((uint64_t)m->id());
+		outp.append((uint64_t)m->timestamp());
+	}
+	for(std::vector<uint64_t>::const_iterator m(moonsWanted.begin());m!=moonsWanted.end();++m) {
+		outp.append((uint8_t)World::TYPE_MOON);
+		outp.append(*m);
+		outp.append((uint64_t)0);
+	}
+
+	outp.cryptField(_key,startCryptedPortionAt,outp.size() - startCryptedPortionAt);
+
+	RR->node->expectReplyTo(outp.packetId());
+
+	if (atAddress) {
+		outp.armor(_key,false); // false == don't encrypt full payload, but add MAC
+		RR->node->putPacket(tPtr,localSocket,atAddress,outp.data(),outp.size());
 	} else {
-		p = _getBestPath(now);
+		RR->sw->send(tPtr,outp,false); // false == don't encrypt full payload, but add MAC
 	}
-
-	if (p) {
-		if ((now - p->lastReceived()) >= ZT_PEER_DIRECT_PING_DELAY) {
-			//TRACE("PING %s(%s) after %llums/%llums send/receive inactivity",_id.address().toString().c_str(),p->address().toString().c_str(),now - p->lastSend(),now - p->lastReceived());
-			sendHELLO(p->localAddress(),p->address(),now);
-			p->sent(now);
-			p->pinged(now);
-		} else if ( ((now - std::max(p->lastSend(),p->lastKeepalive())) >= ZT_NAT_KEEPALIVE_DELAY) && (!p->reliable()) ) {
-			//TRACE("NAT keepalive %s(%s) after %llums/%llums send/receive inactivity",_id.address().toString().c_str(),p->address().toString().c_str(),now - p->lastSend(),now - p->lastReceived());
-			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
-			RR->node->putPacket(p->localAddress(),p->address(),&_natKeepaliveBuf,sizeof(_natKeepaliveBuf));
-			p->sentKeepalive(now);
-		} else {
-			//TRACE("no PING or NAT keepalive: addr==%s reliable==%d %llums/%llums send/receive inactivity",p->address().toString().c_str(),(int)p->reliable(),now - p->lastSend(),now - p->lastReceived());
-		}
-		return true;
-	}
-
-	return false;
 }
 
-bool Peer::pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAddress,uint64_t now,bool force,bool includePrivatePaths)
+void Peer::attemptToContactAt(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now,bool sendFullHello)
 {
-#ifdef ZT_ENABLE_CLUSTER
-	// Cluster mode disables normal PUSH_DIRECT_PATHS in favor of cluster-based peer redirection
-	if (RR->cluster)
-		return false;
-#endif
+	if ( (!sendFullHello) && (_vProto >= 5) && (!((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0))) ) {
+		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
+		RR->node->expectReplyTo(outp.packetId());
+		outp.armor(_key,true);
+		RR->node->putPacket(tPtr,localSocket,atAddress,outp.data(),outp.size());
+	} else {
+		sendHELLO(tPtr,localSocket,atAddress,now);
+	}
+}
 
-	if (!force) {
-		if ((now - _lastDirectPathPushSent) < ZT_DIRECT_PATH_PUSH_INTERVAL)
-			return false;
-		else _lastDirectPathPushSent = now;
+void Peer::tryMemorizedPath(void *tPtr,int64_t now)
+{
+	if ((now - _lastTriedMemorizedPath) >= ZT_TRY_MEMORIZED_PATH_INTERVAL) {
+		_lastTriedMemorizedPath = now;
+		InetAddress mp;
+		if (RR->node->externalPathLookup(tPtr,_id.address(),-1,mp))
+			attemptToContactAt(tPtr,-1,mp,now,true);
+	}
+}
+
+unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
+{
+	unsigned int sent = 0;
+
+	Mutex::Lock _l(_paths_m);
+
+	const bool sendFullHello = ((now - _lastSentFullHello) >= ZT_PEER_PING_PERIOD);
+	_lastSentFullHello = now;
+
+	// Right now we only keep pinging links that have the maximum priority. The
+	// priority is used to track cluster redirections, meaning that when a cluster
+	// redirects us its redirect target links override all other links and we
+	// let those old links expire.
+	long maxPriority = 0;
+	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+		if (_paths[i].p)
+			maxPriority = std::max(_paths[i].priority,maxPriority);
+		else break;
 	}
 
-	std::vector<InetAddress> pathsToPush;
-
-	std::vector<InetAddress> dps(RR->node->directPaths());
-	for(std::vector<InetAddress>::const_iterator i(dps.begin());i!=dps.end();++i) {
-		if ((includePrivatePaths)||(i->ipScope() == InetAddress::IP_SCOPE_GLOBAL))
-			pathsToPush.push_back(*i);
-	}
-
-	std::vector<InetAddress> sym(RR->sa->getSymmetricNatPredictions());
-	for(unsigned long i=0,added=0;i<sym.size();++i) {
-		InetAddress tmp(sym[(unsigned long)RR->node->prng() % sym.size()]);
-		if (std::find(pathsToPush.begin(),pathsToPush.end(),tmp) == pathsToPush.end()) {
-			pathsToPush.push_back(tmp);
-			if (++added >= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY)
-				break;
-		}
-	}
-	if (pathsToPush.empty())
-		return false;
-
-#ifdef ZT_TRACE
-	{
-		std::string ps;
-		for(std::vector<InetAddress>::const_iterator p(pathsToPush.begin());p!=pathsToPush.end();++p) {
-			if (ps.length() > 0)
-				ps.push_back(',');
-			ps.append(p->toString());
-		}
-		TRACE("pushing %u direct paths to %s: %s",(unsigned int)pathsToPush.size(),_id.address().toString().c_str(),ps.c_str());
-	}
-#endif
-
-	std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
-	while (p != pathsToPush.end()) {
-		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
-		outp.addSize(2); // leave room for count
-
-		unsigned int count = 0;
-		while ((p != pathsToPush.end())&&((outp.size() + 24) < 1200)) {
-			uint8_t addressType = 4;
-			switch(p->ss_family) {
-				case AF_INET:
-					break;
-				case AF_INET6:
-					addressType = 6;
-					break;
-				default: // we currently only push IP addresses
-					++p;
-					continue;
+	unsigned int j = 0;
+	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+		if (_paths[i].p) {
+			// Clean expired and reduced priority paths
+			if ( ((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION) && (_paths[i].priority == maxPriority) ) {
+				if ((sendFullHello)||(_paths[i].p->needsHeartbeat(now))) {
+					attemptToContactAt(tPtr,_paths[i].p->localSocket(),_paths[i].p->address(),now,sendFullHello);
+					_paths[i].p->sent(now);
+					sent |= (_paths[i].p->address().ss_family == AF_INET) ? 0x1 : 0x2;
+				}
+				if (i != j)
+					_paths[j] = _paths[i];
+				++j;
 			}
-
-			outp.append((uint8_t)0); // no flags
-			outp.append((uint16_t)0); // no extensions
-			outp.append(addressType);
-			outp.append((uint8_t)((addressType == 4) ? 6 : 18));
-			outp.append(p->rawIpData(),((addressType == 4) ? 4 : 16));
-			outp.append((uint16_t)p->port());
-
-			++count;
-			++p;
-		}
-
-		if (count) {
-			outp.setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
-			outp.armor(_key,true);
-			RR->node->putPacket(localAddr,toAddress,outp.data(),outp.size(),0);
-		}
+		} else break;
+	}
+	while(j < ZT_MAX_PEER_NETWORK_PATHS) {
+		_paths[j].lr = 0;
+		_paths[j].p.zero();
+		_paths[j].priority = 1;
+		++j;
 	}
 
-	return true;
+	return sent;
 }
 
-bool Peer::resetWithinScope(InetAddress::IpScope scope,uint64_t now)
+void Peer::clusterRedirect(void *tPtr,const SharedPtr<Path> &originatingPath,const InetAddress &remoteAddress,const int64_t now)
 {
-	unsigned int np = _numPaths;
-	unsigned int x = 0;
-	unsigned int y = 0;
-	while (x < np) {
-		if (_paths[x].address().ipScope() == scope) {
-			// Resetting a path means sending a HELLO and then forgetting it. If we
-			// get OK(HELLO) then it will be re-learned.
-			sendHELLO(_paths[x].localAddress(),_paths[x].address(),now);
-		} else {
-			_paths[y++] = _paths[x];
+	SharedPtr<Path> np(RR->topology->getPath(originatingPath->localSocket(),remoteAddress));
+	RR->t->peerRedirected(tPtr,0,*this,np);
+
+	attemptToContactAt(tPtr,originatingPath->localSocket(),remoteAddress,now,true);
+
+	{
+		Mutex::Lock _l(_paths_m);
+
+		// New priority is higher than the priority of the originating path (if known)
+		long newPriority = 1;
+		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+			if (_paths[i].p) {
+				if (_paths[i].p == originatingPath) {
+					newPriority = _paths[i].priority;
+					break;
+				}
+			} else break;
 		}
-		++x;
-	}
-	_numPaths = y;
-	return (y < np);
-}
+		newPriority += 2;
 
-void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
-{
-	uint64_t bestV4 = 0,bestV6 = 0;
-	for(unsigned int p=0,np=_numPaths;p<np;++p) {
-		if (_paths[p].active(now)) {
-			uint64_t lr = _paths[p].lastReceived();
-			if (lr) {
-				if (_paths[p].address().isV4()) {
-					if (lr >= bestV4) {
-						bestV4 = lr;
-						v4 = _paths[p].address();
-					}
-				} else if (_paths[p].address().isV6()) {
-					if (lr >= bestV6) {
-						bestV6 = lr;
-						v6 = _paths[p].address();
-					}
+		// Erase any paths with lower priority than this one or that are duplicate
+		// IPs and add this path.
+		unsigned int j = 0;
+		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+			if (_paths[i].p) {
+				if ((_paths[i].priority >= newPriority)&&(!_paths[i].p->address().ipsEqual2(remoteAddress))) {
+					if (i != j)
+						_paths[j] = _paths[i];
+					++j;
 				}
 			}
 		}
-	}
-}
-
-bool Peer::networkMembershipCertificatesAgree(uint64_t nwid,const CertificateOfMembership &com) const
-{
-	Mutex::Lock _l(_networkComs_m);
-	const _NetworkCom *ourCom = _networkComs.get(nwid);
-	if (ourCom)
-		return ourCom->com.agreesWith(com);
-	return false;
-}
-
-bool Peer::validateAndSetNetworkMembershipCertificate(uint64_t nwid,const CertificateOfMembership &com)
-{
-	// Sanity checks
-	if ((!com)||(com.issuedTo() != _id.address()))
-		return false;
-
-	// Return true if we already have this *exact* COM
-	{
-		Mutex::Lock _l(_networkComs_m);
-		_NetworkCom *ourCom = _networkComs.get(nwid);
-		if ((ourCom)&&(ourCom->com == com))
-			return true;
-	}
-
-	// Check signature, log and return if cert is invalid
-	if (com.signedBy() != Network::controllerFor(nwid)) {
-		TRACE("rejected network membership certificate for %.16llx signed by %s: signer not a controller of this network",(unsigned long long)nwid,com.signedBy().toString().c_str());
-		return false; // invalid signer
-	}
-
-	if (com.signedBy() == RR->identity.address()) {
-
-		// We are the controller: RR->identity.address() == controller() == cert.signedBy()
-		// So, verify that we signed th cert ourself
-		if (!com.verify(RR->identity)) {
-			TRACE("rejected network membership certificate for %.16llx self signed by %s: signature check failed",(unsigned long long)nwid,com.signedBy().toString().c_str());
-			return false; // invalid signature
-		}
-
-	} else {
-
-		SharedPtr<Peer> signer(RR->topology->getPeer(com.signedBy()));
-
-		if (!signer) {
-			// This would be rather odd, since this is our controller... could happen
-			// if we get packets before we've gotten config.
-			RR->sw->requestWhois(com.signedBy());
-			return false; // signer unknown
-		}
-
-		if (!com.verify(signer->identity())) {
-			TRACE("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)nwid,com.signedBy().toString().c_str());
-			return false; // invalid signature
-		}
-	}
-
-	// If we made it past all those checks, add or update cert in our cert info store
-	{
-		Mutex::Lock _l(_networkComs_m);
-		_networkComs.set(nwid,_NetworkCom(RR->node->now(),com));
-	}
-
-	return true;
-}
-
-bool Peer::needsOurNetworkMembershipCertificate(uint64_t nwid,uint64_t now,bool updateLastPushedTime)
-{
-	Mutex::Lock _l(_networkComs_m);
-	uint64_t &lastPushed = _lastPushedComs[nwid];
-	const uint64_t tmp = lastPushed;
-	if (updateLastPushedTime)
-		lastPushed = now;
-	return ((now - tmp) >= (ZT_NETWORK_AUTOCONF_DELAY / 3));
-}
-
-void Peer::clean(uint64_t now)
-{
-	{
-		unsigned int np = _numPaths;
-		unsigned int x = 0;
-		unsigned int y = 0;
-		while (x < np) {
-			if (_paths[x].active(now))
-				_paths[y++] = _paths[x];
-			++x;
-		}
-		_numPaths = y;
-	}
-
-	{
-		Mutex::Lock _l(_networkComs_m);
-		{
-			uint64_t *k = (uint64_t *)0;
-			_NetworkCom *v = (_NetworkCom *)0;
-			Hashtable< uint64_t,_NetworkCom >::Iterator i(_networkComs);
-			while (i.next(k,v)) {
-				if ( (!RR->node->belongsToNetwork(*k)) && ((now - v->ts) >= ZT_PEER_NETWORK_COM_EXPIRATION) )
-					_networkComs.erase(*k);
-			}
-		}
-		{
-			uint64_t *k = (uint64_t *)0;
-			uint64_t *v = (uint64_t *)0;
-			Hashtable< uint64_t,uint64_t >::Iterator i(_lastPushedComs);
-			while (i.next(k,v)) {
-				if ((now - *v) > (ZT_NETWORK_AUTOCONF_DELAY * 2))
-					_lastPushedComs.erase(*k);
+		if (j < ZT_MAX_PEER_NETWORK_PATHS) {
+			_paths[j].lr = now;
+			_paths[j].p = np;
+			_paths[j].priority = newPriority;
+			++j;
+			while (j < ZT_MAX_PEER_NETWORK_PATHS) {
+				_paths[j].lr = 0;
+				_paths[j].p.zero();
+				_paths[j].priority = 1;
+				++j;
 			}
 		}
 	}
 }
 
-void Peer::_doDeadPathDetection(Path &p,const uint64_t now)
+void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,int64_t now)
 {
-	/* Dead path detection: if we have sent something to this peer and have not
-	 * yet received a reply, double check this path. The majority of outbound
-	 * packets including Ethernet frames do generate some kind of reply either
-	 * immediately or at some point in the near future. This will occasionally
-	 * (every NO_ANSWER_TIMEOUT ms) check paths unnecessarily if traffic that
-	 * does not generate a response is being sent such as multicast announcements
-	 * or frames belonging to unidirectional UDP protocols, but the cost is very
-	 * tiny and the benefit in reliability is very large. This takes care of many
-	 * failure modes including crap NATs that forget links and spurious changes
-	 * to physical network topology that cannot be otherwise detected.
-	 *
-	 * Each time we do this we increment a probation counter in the path. This
-	 * counter is reset on any packet receive over this path. If it reaches the
-	 * MAX_PROBATION threshold the path is considred dead. */
-
-	if (
-	     (p.lastSend() > p.lastReceived()) &&
-			 ((p.lastSend() - p.lastReceived()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) &&
-			 ((now - p.lastPing()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) &&
-			 (!p.isClusterSuboptimal()) &&
-			 (!RR->topology->amRoot())
-		 ) {
-		TRACE("%s(%s) does not seem to be answering in a timely manner, checking if dead (probation == %u)",_id.address().toString().c_str(),p.address().toString().c_str(),p.probation());
-
-		if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
-			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
-			outp.armor(_key,true);
-			p.send(RR,outp.data(),outp.size(),now);
-			p.pinged(now);
-		} else {
-			sendHELLO(p.localAddress(),p.address(),now);
-			p.sent(now);
-			p.pinged(now);
-		}
-
-		p.increaseProbation();
+	Mutex::Lock _l(_paths_m);
+	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+		if (_paths[i].p) {
+			if ((_paths[i].p->address().ss_family == inetAddressFamily)&&(_paths[i].p->ipScope() == scope)) {
+				attemptToContactAt(tPtr,_paths[i].p->localSocket(),_paths[i].p->address(),now,false);
+				_paths[i].p->sent(now);
+				_paths[i].lr = 0; // path will not be used unless it speaks again
+			}
+		} else break;
 	}
-}
-
-Path *Peer::_getBestPath(const uint64_t now)
-{
-	Path *bestPath = (Path *)0;
-	uint64_t bestPathScore = 0;
-	for(unsigned int i=0;i<_numPaths;++i) {
-		const uint64_t score = _paths[i].score();
-		if ((score >= bestPathScore)&&(_paths[i].active(now))) {
-			bestPathScore = score;
-			bestPath = &(_paths[i]);
-		}
-	}
-	if (bestPath)
-		_doDeadPathDetection(*bestPath,now);
-	return bestPath;
-}
-
-Path *Peer::_getBestPath(const uint64_t now,int inetAddressFamily)
-{
-	Path *bestPath = (Path *)0;
-	uint64_t bestPathScore = 0;
-	for(unsigned int i=0;i<_numPaths;++i) {
-		const uint64_t score = _paths[i].score();
-		if (((int)_paths[i].address().ss_family == inetAddressFamily)&&(score >= bestPathScore)&&(_paths[i].active(now))) {
-			bestPathScore = score;
-			bestPath = &(_paths[i]);
-		}
-	}
-	if (bestPath)
-		_doDeadPathDetection(*bestPath,now);
-	return bestPath;
 }
 
 } // namespace ZeroTier

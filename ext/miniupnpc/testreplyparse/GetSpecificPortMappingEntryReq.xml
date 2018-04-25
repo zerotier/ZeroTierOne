@@ -1,3 +1,0 @@
-<?xml version="1.0"?>
-<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:GetSpecificPortMappingEntry xmlns:u="urn:schemas-upnp-org:service:WANIPConnection:1"><NewRemoteHost></NewRemoteHost><NewExternalPort>12345</NewExternalPort><NewProtocol>UDP</NewProtocol></u:GetSpecificPortMappingEntry></s:Body></s:Envelope>
-

@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifndef ZT_WINDOWSETHERNETTAP_HPP
@@ -30,7 +38,6 @@
 
 #include "../node/Constants.hpp"
 #include "../node/Mutex.hpp"
-#include "../node/Array.hpp"
 #include "../node/MulticastGroup.hpp"
 #include "../node/InetAddress.hpp"
 #include "../osdep/Thread.hpp"
@@ -87,7 +94,7 @@ public:
 		unsigned int metric,
 		uint64_t nwid,
 		const char *friendlyName,
-		void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
+		void (*handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 		void *arg);
 
 	~WindowsEthernetTap();
@@ -101,6 +108,7 @@ public:
 	std::string deviceName() const;
 	void setFriendlyName(const char *friendlyName);
 	void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
+	void setMtu(unsigned int mtu);
 
 	inline const NET_LUID &luid() const { return _deviceLuid; }
 	inline const GUID &guid() const { return _deviceGuid; }
@@ -110,16 +118,19 @@ public:
 	void threadMain()
 		throw();
 
+    bool isInitialized() const { return _initialized; };
+
 private:
 	NET_IFINDEX _getDeviceIndex(); // throws on failure
 	std::vector<std::string> _getRegistryIPv4Value(const char *regKey);
 	void _setRegistryIPv4Value(const char *regKey,const std::vector<std::string> &value);
 	void _syncIps();
 
-	void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
+	void (*_handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
 	MAC _mac;
 	uint64_t _nwid;
+	volatile unsigned int _mtu;
 	Thread _thread;
 
 	volatile HANDLE _tap;
@@ -129,13 +140,21 @@ private:
 	NET_LUID _deviceLuid;
 	std::string _netCfgInstanceId;
 	std::string _deviceInstanceId;
+	std::string _mySubkeyName;
+
+	std::string _friendlyName;
 
 	std::vector<InetAddress> _assignedIps; // IPs assigned with addIp
 	Mutex _assignedIps_m;
 
 	std::vector<MulticastGroup> _multicastGroups;
 
-	std::queue< std::pair< Array<char,ZT_IF_MTU + 32>,unsigned int > > _injectPending;
+	struct _InjectPending
+	{
+		unsigned int len;
+		char data[ZT_MAX_MTU + 32];
+	};
+	std::queue<_InjectPending> _injectPending;
 	Mutex _injectPending_m;
 
 	std::string _pathToHelpers;

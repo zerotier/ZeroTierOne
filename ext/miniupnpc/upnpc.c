@@ -1,7 +1,7 @@
-/* $Id: upnpc.c,v 1.114 2016/01/22 15:04:23 nanard Exp $ */
+/* $Id: upnpc.c,v 1.117 2017/05/26 15:26:55 nanard Exp $ */
 /* Project : miniupnp
  * Author : Thomas Bernard
- * Copyright (c) 2005-2016 Thomas Bernard
+ * Copyright (c) 2005-2017 Thomas Bernard
  * This software is subject to the conditions detailed in the
  * LICENCE file provided in this distribution. */
 
@@ -242,7 +242,7 @@ static void NewListRedirections(struct UPNPUrls * urls,
  * 2 - get extenal ip address
  * 3 - Add port mapping
  * 4 - get this port mapping from the IGD */
-static void SetRedirectAndTest(struct UPNPUrls * urls,
+static int SetRedirectAndTest(struct UPNPUrls * urls,
 			       struct IGDdatas * data,
 			       const char * iaddr,
 			       const char * iport,
@@ -262,13 +262,13 @@ static void SetRedirectAndTest(struct UPNPUrls * urls,
 	if(!iaddr || !iport || !eport || !proto)
 	{
 		fprintf(stderr, "Wrong arguments\n");
-		return;
+		return -1;
 	}
 	proto = protofix(proto);
 	if(!proto)
 	{
 		fprintf(stderr, "invalid protocol\n");
-		return;
+		return -1;
 	}
 
 	r = UPNP_GetExternalIPAddress(urls->controlURL,
@@ -292,9 +292,11 @@ static void SetRedirectAndTest(struct UPNPUrls * urls,
 		r = UPNP_AddPortMapping(urls->controlURL, data->first.servicetype,
 					eport, iport, iaddr, description,
 					proto, 0, leaseDuration);
-		if(r!=UPNPCOMMAND_SUCCESS)
+		if(r!=UPNPCOMMAND_SUCCESS) {
 			printf("AddPortMapping(%s, %s, %s) failed with code %d (%s)\n",
 			       eport, iport, iaddr, r, strupnperror(r));
+			return -2;
+	}
 	}
 
 	r = UPNP_GetSpecificPortMappingEntry(urls->controlURL,
@@ -302,17 +304,19 @@ static void SetRedirectAndTest(struct UPNPUrls * urls,
 					     eport, proto, NULL/*remoteHost*/,
 					     intClient, intPort, NULL/*desc*/,
 					     NULL/*enabled*/, duration);
-	if(r!=UPNPCOMMAND_SUCCESS)
+	if(r!=UPNPCOMMAND_SUCCESS) {
 		printf("GetSpecificPortMappingEntry() failed with code %d (%s)\n",
 		       r, strupnperror(r));
-	else {
+		return -2;
+	} else {
 		printf("InternalIP:Port = %s:%s\n", intClient, intPort);
 		printf("external %s:%s %s is redirected to internal %s:%s (duration=%s)\n",
 		       externalIPAddress, eport, proto, intClient, intPort, duration);
 	}
+	return 0;
 }
 
-static void
+static int
 RemoveRedirect(struct UPNPUrls * urls,
                struct IGDdatas * data,
                const char * eport,
@@ -323,19 +327,25 @@ RemoveRedirect(struct UPNPUrls * urls,
 	if(!proto || !eport)
 	{
 		fprintf(stderr, "invalid arguments\n");
-		return;
+		return -1;
 	}
 	proto = protofix(proto);
 	if(!proto)
 	{
 		fprintf(stderr, "protocol invalid\n");
-		return;
+		return -1;
 	}
 	r = UPNP_DeletePortMapping(urls->controlURL, data->first.servicetype, eport, proto, remoteHost);
-	printf("UPNP_DeletePortMapping() returned : %d\n", r);
+	if(r!=UPNPCOMMAND_SUCCESS) {
+		printf("UPNP_DeletePortMapping() failed with code : %d\n", r);
+		return -2;
+	}else {
+		printf("UPNP_DeletePortMapping() returned : %d\n", r);
+	}
+	return 0;
 }
 
-static void
+static int
 RemoveRedirectRange(struct UPNPUrls * urls,
 		    struct IGDdatas * data,
 		    const char * ePortStart, char const * ePortEnd,
@@ -349,16 +359,22 @@ RemoveRedirectRange(struct UPNPUrls * urls,
 	if(!proto || !ePortStart || !ePortEnd)
 	{
 		fprintf(stderr, "invalid arguments\n");
-		return;
+		return -1;
 	}
 	proto = protofix(proto);
 	if(!proto)
 	{
 		fprintf(stderr, "protocol invalid\n");
-		return;
+		return -1;
 	}
 	r = UPNP_DeletePortMappingRange(urls->controlURL, data->first.servicetype, ePortStart, ePortEnd, proto, manage);
-	printf("UPNP_DeletePortMappingRange() returned : %d\n", r);
+	if(r!=UPNPCOMMAND_SUCCESS) {
+		printf("UPNP_DeletePortMappingRange() failed with code : %d\n", r);
+		return -2;
+	}else {
+		printf("UPNP_DeletePortMappingRange() returned : %d\n", r);
+	}
+	return 0;
 }
 
 /* IGD:2, functions for service WANIPv6FirewallControl:1 */
@@ -562,8 +578,8 @@ int main(int argc, char ** argv)
 	}
 #endif
     printf("upnpc : miniupnpc library test client, version %s.\n", MINIUPNPC_VERSION_STRING);
-	printf(" (c) 2005-2016 Thomas Bernard.\n");
-    printf("Go to http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/\n"
+	printf(" (c) 2005-2017 Thomas Bernard.\n");
+    printf("Go to http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/\n"
 	       "for more information.\n");
 	/* command line processing */
 	for(i=1; i<argc; i++)
@@ -711,29 +727,33 @@ int main(int argc, char ** argv)
 				NewListRedirections(&urls, &data);
 				break;
 			case 'a':
-				SetRedirectAndTest(&urls, &data,
+				if (SetRedirectAndTest(&urls, &data,
 						   commandargv[0], commandargv[1],
 						   commandargv[2], commandargv[3],
 						   (commandargc > 4)?commandargv[4]:"0",
-						   description, 0);
+						   description, 0) < 0)
+					retcode = 2;
 				break;
 			case 'd':
-				RemoveRedirect(&urls, &data, commandargv[0], commandargv[1],
-				               commandargc > 2 ? commandargv[2] : NULL);
+				if (RemoveRedirect(&urls, &data, commandargv[0], commandargv[1],
+				               commandargc > 2 ? commandargv[2] : NULL) < 0)
+					retcode = 2;
 				break;
 			case 'n':	/* aNy */
-				SetRedirectAndTest(&urls, &data,
+				if (SetRedirectAndTest(&urls, &data,
 						   commandargv[0], commandargv[1],
 						   commandargv[2], commandargv[3],
 						   (commandargc > 4)?commandargv[4]:"0",
-						   description, 1);
+						   description, 1) < 0)
+					retcode = 2;
 				break;
 			case 'N':
 				if (commandargc < 3)
 					fprintf(stderr, "too few arguments\n");
 
-				RemoveRedirectRange(&urls, &data, commandargv[0], commandargv[1], commandargv[2],
-						    commandargc > 3 ? commandargv[3] : NULL);
+				if (RemoveRedirectRange(&urls, &data, commandargv[0], commandargv[1], commandargv[2],
+						    commandargc > 3 ? commandargv[3] : NULL) < 0)
+					retcode = 2;
 				break;
 			case 's':
 				GetConnectionStatus(&urls, &data);
@@ -749,17 +769,19 @@ int main(int argc, char ** argv)
 						break;
 					} else if(is_int(commandargv[i+1])){
 						/* 2nd parameter is an integer : <port> <external_port> <protocol> */
-						SetRedirectAndTest(&urls, &data,
+						if (SetRedirectAndTest(&urls, &data,
 								   lanaddr, commandargv[i],
 								   commandargv[i+1], commandargv[i+2], "0",
-								   description, 0);
+								   description, 0) < 0)
+							retcode = 2;
 						i+=3;	/* 3 parameters parsed */
 					} else {
 						/* 2nd parameter not an integer : <port> <protocol> */
-						SetRedirectAndTest(&urls, &data,
+						if (SetRedirectAndTest(&urls, &data,
 								   lanaddr, commandargv[i],
 								   commandargv[i], commandargv[i+1], "0",
-								   description, 0);
+								   description, 0) < 0)
+							retcode = 2;
 						i+=2;	/* 2 parameters parsed */
 					}
 				}

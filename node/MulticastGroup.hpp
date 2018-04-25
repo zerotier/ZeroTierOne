@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,14 +14,20 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifndef ZT_MULTICASTGROUP_HPP
 #define ZT_MULTICASTGROUP_HPP
 
 #include <stdint.h>
-
-#include <string>
 
 #include "MAC.hpp"
 #include "InetAddress.hpp"
@@ -46,28 +52,16 @@ namespace ZeroTier {
 class MulticastGroup
 {
 public:
-	MulticastGroup()
-		throw() :
+	MulticastGroup() :
 		_mac(),
 		_adi(0)
 	{
 	}
 
-	MulticastGroup(const MAC &m,uint32_t a)
-		throw() :
+	MulticastGroup(const MAC &m,uint32_t a) :
 		_mac(m),
 		_adi(a)
 	{
-	}
-
-	MulticastGroup(const char *s)
-	{
-		fromString(s);
-	}
-
-	MulticastGroup(const std::string &s)
-	{
-		fromString(s.c_str());
 	}
 
 	/**
@@ -77,7 +71,6 @@ public:
 	 * @return Multicat group for ARP/NDP
 	 */
 	static inline MulticastGroup deriveMulticastGroupForAddressResolution(const InetAddress &ip)
-		throw()
 	{
 		if (ip.isV4()) {
 			// IPv4 wants broadcast MACs, so we shove the V4 address itself into
@@ -97,46 +90,20 @@ public:
 	}
 
 	/**
-	 * @return Human readable string representing this group (MAC/ADI in hex)
-	 */
-	inline std::string toString() const
-	{
-		char buf[64];
-		Utils::snprintf(buf,sizeof(buf),"%.2x%.2x%.2x%.2x%.2x%.2x/%.8lx",(unsigned int)_mac[0],(unsigned int)_mac[1],(unsigned int)_mac[2],(unsigned int)_mac[3],(unsigned int)_mac[4],(unsigned int)_mac[5],(unsigned long)_adi);
-		return std::string(buf);
-	}
-
-	/**
-	 * Parse a human-readable multicast group
-	 *
-	 * @param s Multicast group in hex MAC/ADI format
-	 */
-	inline void fromString(const char *s)
-	{
-		char hex[17];
-		unsigned int hexlen = 0;
-		while ((*s)&&(*s != '/')&&(hexlen < (sizeof(hex) - 1)))
-			hex[hexlen++] = *s;
-		hex[hexlen] = (char)0;
-		_mac.fromString(hex);
-		_adi = (*s == '/') ? (uint32_t)Utils::hexStrToULong(s + 1) : (uint32_t)0;
-	}
-
-	/**
 	 * @return Multicast address
 	 */
-	inline const MAC &mac() const throw() { return _mac; }
+	inline const MAC &mac() const { return _mac; }
 
 	/**
 	 * @return Additional distinguishing information
 	 */
-	inline uint32_t adi() const throw() { return _adi; }
+	inline uint32_t adi() const { return _adi; }
 
-	inline unsigned long hashCode() const throw() { return (_mac.hashCode() ^ (unsigned long)_adi); }
+	inline unsigned long hashCode() const { return (_mac.hashCode() ^ (unsigned long)_adi); }
 
-	inline bool operator==(const MulticastGroup &g) const throw() { return ((_mac == g._mac)&&(_adi == g._adi)); }
-	inline bool operator!=(const MulticastGroup &g) const throw() { return ((_mac != g._mac)||(_adi != g._adi)); }
-	inline bool operator<(const MulticastGroup &g) const throw()
+	inline bool operator==(const MulticastGroup &g) const { return ((_mac == g._mac)&&(_adi == g._adi)); }
+	inline bool operator!=(const MulticastGroup &g) const { return ((_mac != g._mac)||(_adi != g._adi)); }
+	inline bool operator<(const MulticastGroup &g) const
 	{
 		if (_mac < g._mac)
 			return true;
@@ -144,9 +111,9 @@ public:
 			return (_adi < g._adi);
 		return false;
 	}
-	inline bool operator>(const MulticastGroup &g) const throw() { return (g < *this); }
-	inline bool operator<=(const MulticastGroup &g) const throw() { return !(g < *this); }
-	inline bool operator>=(const MulticastGroup &g) const throw() { return !(*this < g); }
+	inline bool operator>(const MulticastGroup &g) const { return (g < *this); }
+	inline bool operator<=(const MulticastGroup &g) const { return !(g < *this); }
+	inline bool operator>=(const MulticastGroup &g) const { return !(*this < g); }
 
 private:
 	MAC _mac;

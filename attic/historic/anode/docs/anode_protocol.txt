@@ -1,0 +1,764 @@
+*****************************************************************************
+Anode Protocol Specification Draft
+Version 0.8
+
+(c)2009-2010 Adam Ierymenko
+*****************************************************************************
+
+Table of Contents
+
+*****************************************************************************
+
+1. Introduction
+
+Anode provides three components that work together to provide a global,
+secure, and mobile addressing system for computer networks:
+
+1) An addressing system based on public key cryptography enabling network
+   devices or applications to assign themselves secure, unique, and globally
+   reachable network addresses in a flat address space.
+
+2) A system enabling network participants holding global addresses to locate
+   one another on local or global networks with "zero configuration."
+
+3) A communications protocol for communication between addressed network
+   participants that requires no special operating system support and no
+   changes to existing network infrastructure.
+
+Using Anode, both fixed and mobile applications and devices can communicate
+directly as if they were all connected to the same VPN. Anode restores the
+original vision of the Internet as a "flat" network where anything can talk
+to anything, and adds the added benefits of address mobility and strong
+protection against address spoofing and other protocol level attacks.
+
+1.1. Design Philosophy
+
+Anode's design philosophy is the classical "KISS" principle: "Keep It Simple
+Stupid." Anode's design principles are:
+
+#1: Do not try to solve too many problems at once, and stay in scope.
+
+Anode does not attempt to solve too many problems at once. It attempts to
+solve the problems of mobile addressing, address portability, and "flat"
+addressing in the presence of NAT or other barriers.
+
+It does not attempt to duplicate the full functionality of SSL, X.509, SSH,
+XMPP, an enterprise service bus, a pub/sub architecture, BitTorrent, etc. All
+of those protocols and services can be used over Anode if their functionality
+is desired.
+
+#2: Avoid state management.
+
+State multiplies the complexity and failure modes of network protocols. State
+also tends to get in the way of the achievement of new features implicitly
+(see principle #4). Avoid state whenever possible.
+
+#3: Avoid algorithm and dependency bloat.
+
+Anode uses only elliptic curve Diffie-Hellman (EC-DH) and AES-256. No other
+cryptographic algorithms or hash functions are presently necessary. This
+yields implementations compact enough for embedded devices.
+
+Anode also requires few or no dependencies, depending on whether the two
+needed cryptographic algorithms are obtained through a library or included.
+No other protocols or libraries are required in an implementation.
+
+#4: Achieve features implicitly.
+
+Use a simple stateless design that allows features to be achieved implicitly
+rather than specified explicitly. For example, Anode can do multi-homing and
+could be used to build a mesh network, but neither of these features is
+explicitly specified.
+
+*****************************************************************************
+
+2. Core Concepts and Algorithms
+
+This section describes addresses, zones, common algorithms, and other core
+concepts.
+
+2.1. Zones
+
+A zone is a 32-bit integer encoded into every Anode address. Zones serve to
+assist in the location of peers by address on global IP networks. They are
+not presently significant for local communications, though they could be
+used to partition addresses into groups or link them with configuration
+options.
+
+Each zone has a corresponding zone file which can be fetched in a number of
+ways (see below). A zone file is a flat text format dictionary of the format
+"key=value" separated by carriage returns. Line feeds are ignored, and any
+character may be escaped with a backslash (\) character. Blank lines are
+ignored.
+
+The following entries must appear in a zone file:
+
+n=<zone name>
+d=<zone description>
+c=<zone contact, e-mail address of zone administrator>
+r=<zone revision, monotonically increasing integer with each edit>
+ttl=<seconds before zone file should be re-checked for changes>
+
+Additional fields may appear as well, including fields specific to special
+applications or protocols supported within the zone. Some of these are
+defined in this document.
+
+Zone file fetching mechanisms are described below. Multiple mechanisms are
+specified to enable fallback in the event that one mechanism is not available.
+
+2.1.1. Zone File Retrieval
+
+Zone files are retrieved via HTTP, with the HTTP address being formed in one
+of two ways.
+
+The preferred DNS method:
+
+To fetch a zone file via DNS, use the zone ID to generate a host name and URI
+of the form:
+
+  http://a--XXXXXXXX.net/z
+
+The XXXXXXXX field is the zone ID in hexadecimal.
+
+The fallback IP method:
+
+For fallback in the absence of DNS, the zone ID can be used directly as an
+IPv4 or IPv4-mapped-to-IPv6 IP address. A URI is generated of the form:
+
+  http://ip_address/z
+
+Support for this method requires that a zone ID be chosen to correspond to a
+permanent IPv4 (preferably mappable to IPv6 space as well) IP address.
+
+2.1.2. Zone ID Reservation
+
+By convention, a zone ID is considered reserved when a domain of the form
+"a--XXXXXXXX.net" (where XXXXXXXX is the ID in hex) is registered.
+
+It is recommended that this be done even for zone IDs not used for global
+address location in order to globally reserve them.
+
+2.2. Addresses
+
+Anode addresses are binary strings containing a 32-bit zone ID, a public key,
+and possibly other fields. Only one address type is presently defined:
+
+|---------------------------------------------------------------------------|
+| Name         | Type ID | Elliptic Curve Parameters         | Total Length |
+|---------------------------------------------------------------------------|
+| ANODE-256-40 | 1       | NIST-P-256                        | 40           |
+|---------------------------------------------------------------------------|
+
+|---------------------------------------------------------------------------|
+| Name         | Binary Layout                                              |
+|---------------------------------------------------------------------------|
+| ANODE-256-40 | <type[1]><zone[4]><unused[2]><public key[33]>              |
+|---------------------------------------------------------------------------|
+
+The public key is a "compressed" form elliptic curve public key as described
+in RFC5480.
+
+The unused section of the address must be zero. These bytes are reserved for
+future use.
+
+2.2.1. ASCII Format For Addresses
+
+Addresses are encoded in ASCII using base-32, which provides a quotable and
+printable encoding that is of manageable length and is case-insensitive. For
+example, an ANODE-256-40 address is 64 characters long in base-32 encoding.
+
+2.3. Relaying
+
+An Anode peer may optionally relay packets to any other reachable peer.
+Relaying is accomplished by sending a packet to a peer with the recipient set
+to the final recipient. The receiving peer will, if relaying is allowed and if
+it knows of or can reach the recipient, forward the packet.
+
+No error is returned if relaying fails, so relay paths are treated as possible
+paths for communication until a return is received in the same way as direct
+paths.
+
+Relaying can be used by peers to send messages indirectly, locate one
+another, and determine network location information to facilitate the
+establishment of direct communications.
+
+Peers may refuse to relay or may limit the transmission rate at which packets
+can be relayed.
+
+2.3.1. Zone Relays
+
+If a zone's addresses are globally reachable on global IP networks, it must
+have one or more zone relays. These must have globally reachable public
+static IP addresses.
+
+Zone relays are specified in the zone file in the following format:
+
+  zr.<address checksum>=<ip>[,<ip>]:<udp port>:<tcp port>:<anode addresses>
+
+The address checksum is the sum of the bytes in the Anode address modulus
+the number of "zr" entries, in hexadecimal. For example, if a zone had four
+global relays its zone file could contain the lines:
+
+  zr.0=1.2.3.4:4343:4344:klj4j3...
+  zr.1=2.3.4.5:4343:4344:00194j...
+  zr.2=3.4.5.6:4343:4344:1j42zz...
+  zr.3=4.5.6.7:4343:4344:z94j1q...
+
+The relay would be chosen by taking the sum of the bytes in the address
+modulo 4. For example, if the bytes of an address sum to 5081 then relay
+zr.1 would be used to communicate with that address.
+
+If more than one IP address is listed for a given relay, the peer must choose
+at random from among the addresses of the desired type (IPv4 or IPv6).
+
+Each relay must have one Anode address for every address type supported within
+the zone. (At present there is only one address type defined.)
+
+Peers should prefer UDP and fall back to TCP only if UDP is not available.
+
+To make itself available, a peer must make itself known to its designated zone
+relay. This is accomplished by sending a PING message.
+
+2.4. Key Agreement and Derivation
+
+Key agreement is performed using elliptic curve Diffie-Hellman. This yields
+a raw key whose size depends on the elliptic curve parameters in use.
+
+The following algorithm is used to derive a key of any length from a raw
+key generated through key agreement:
+
+1) Zero the derived key buffer.
+2) Determine the largest of the original raw key or the derived key.
+3) Loop from 0 to the largest length determined in step 2, XOR each byte of
+   the derived key buffer with the corresponding byte of the original key
+   buffer with each index being modulus the length of the respective buffer.
+
+2.5. Message Authentication
+
+For message authentication, CMAC-AES (with AES-256) is used. This is also
+known in some literature as OMAC1-AES. The key is derived from key agreement
+between the key pair of the sending peer and the address of the recipient.
+
+2.6. AES-DIGEST
+
+To maintain cryptographic algorithm frugality, a cryptographic hash function
+is constructed from the AES-256 cipher. This hash function uses the common
+Davis-Meyer construction with Merkle-Damgård length padding.
+
+It is described by the following pseudocode:
+
+  byte previous_digest[16] 
+  byte digest[16] = { 0,0,... } 
+  byte block[32] = { 0,0,... } 
+  integer block_counter = 0 
+
+  ; digest message 
+  for each byte b of message 
+    block[block_counter] = b 
+    block_counter = block_counter + 1 
+    if block_counter == 32 then 
+      block_counter = 0 
+      save digest[] in previous_digest[] 
+      encrypt digest[] with aes-256 using block[] as 256-bit aes-256 key 
+      xor digest[] with previous_digest[] 
+    end if 
+  next 
+
+  ; append end marker, do final block 
+  block[block_counter] = 0x80 
+  block_counter = block_counter + 1 
+  zero rest of block[] from block_counter to 15 
+  save digest[] in previous_digest[] 
+  encrypt digest[] with aes-256 using block[] as 256-bit aes-256 key 
+  xor digest[] with previous_digest[] 
+
+  ; Merkle-Damgård length padding 
+  zero first 8 bytes of block[] 
+  fill last 8 bytes of block[] w/64-bit length in big-endian order 
+  save digest[] in previous_digest[] 
+  encrypt digest[] with aes-256 using block[] as 256-bit aes-128 key 
+  xor digest[] with previous_digest[] 
+
+  ; digest[] now contains 128-bit message digest 
+
+2.7. Short Address Identifiers (Address IDs)
+
+A short 8-byte version of the Anode address is used in the protocol to reduce
+transmission overhead when both sides are already aware of the other's full
+address.
+
+The short address identifier is formed by computing the AES-DIGEST of the
+full address and then XORing the first 8 bytes of the digest with the last
+8 bytes to yield an 8-byte shortened digest.
+
+2.8. DNS Resolution of Anode Addresses
+
+Anode addresses can be saved in DNS TXT records in the following format:
+
+anode:<address in base32 ASCII encoding>
+
+This permits Anode addresses to be resolved from normal DNS host name.
+
+2.9. Packet Transmission Mechanisms
+
+2.9.1. UDP Transmission
+
+The recommended method of sending Anode packets is UDP. Each packet is simply
+sent as a UDP packet.
+
+2.9.2. TCP Transmission
+
+To send packets over TCP, each packet is prefixed by its size as a 16-bit
+integer.
+
+2.9.3. HTTP Transmission
+
+Anode packets may be submitted in HTTP POST transactions for transport over
+networks where HTTP is the only available protocol.
+
+Anode packets are simply prefixed with a 16-byte packet size and concatenated
+together just as they are in a TCP stream. One or more packets may be sent
+with each HTTP POST transaction for improved performance.
+
+Since this method is intended for use in "hostile" or highly restricted
+circumstances, no additional details such as special headers or MIME types
+are specified to allow maximum flexibility. Peers should ignore anything
+other than the payload.
+
+2.10. Endpoints
+
+An endpoint indicates a place where Anode packets may be sent. The following
+endpoint types are specified:
+
+|---------------------------------------------------------------------------|
+| Endpoint Type | Description   | Address Format                            |
+|---------------------------------------------------------------------------|
+| 0x00          | Unspecified   | (none)                                    |
+| 0x01          | Ethernet      | <mac[6]>                                  |
+| 0x02          | UDP/IPv4      | <ip[4]><port[2]>                          |
+| 0x03          | TCP/IPv4      | <ip[4]><port[2]>                          |
+| 0x04          | UDP/IPv6      | <ip[16]><port[2]>                         |
+| 0x05          | TCP/IPv6      | <ip[16]><port[2]>                         |
+| 0x06          | HTTP          | <null-terminated full URI>                |
+|---------------------------------------------------------------------------|
+
+Endpoints are encoded by beginning with a single byte indicating the endpoint
+type followed by the address information required for the given type.
+
+Note that IP ports bear no relationship to Anode protocol ports.
+
+2.11. Notes
+
+All integers in the protocol are transmitted in network (big endian) byte
+order.
+
+*****************************************************************************
+
+3. Common Packet Format
+
+A common header is used for all Anode packets:
+
+|---------------------------------------------------------------------------|
+| Field                    | Length | Description                           |
+|---------------------------------------------------------------------------|
+| Hop Count                | 1      | 8-bit hop count (not included in MAC) |
+| Flags                    | 1      | 8-bit flags                           |
+| MAC                      | 8      | 8 byte shortened CMAC-AES of packet   |
+| Sender Address           | ?      | Full address or short ID of sender    |
+| Recipient Address        | ?      | Full address or short ID of recipient |
+| Peer IDs                 | 1      | Two 4-bit peer IDs: sender, recipient |
+| Message Type             | 1      | 8-bit message type                    |
+| Message                  | ?      | Message payload                       |
+|---------------------------------------------------------------------------|
+
+3.1. Hop Count
+
+The hop count begins at zero and must be incremented by each peer that relays
+the packet to another peer. The hop count must not wrap to zero at 255.
+
+Because the hop count is modified in transit, it is not included in MAC
+calculation or authentication.
+
+The hop count is used to prioritize endpoints that are direct over endpoints
+that involve relaying, or to prioritize closer routes over more distant
+ones.
+
+3.2. Flags and Flag Behavior
+
+|---------------------------------------------------------------------------|
+| Flag  | Description                                                       |
+|---------------------------------------------------------------------------|
+| 0x01  | Sender address fully specified                                    |
+| 0x02  | Recipient address fully specified                                 |
+| 0x04  | Authentication error response                                     |
+|---------------------------------------------------------------------------|
+
+If flag 0x01 is set, then the sender address will be the full address rather
+than a short address identifier. The length of the address can be determined
+from the first byte of the address, which always specifies the address type.
+Flag 0x02 has the same meaning for the recipient address.
+
+A peer must send fully specified sender addresses until it receives a response
+from the recipient. At this point the sender may assume that the recipient
+knows its address and use short a short sender address instead. This
+assumption should time out, with a recommended timeout of 60 seconds.
+
+There is presently no need to send fully specified recipient addresses, but
+the flag is present in case it is needed and must be honored.
+
+Flag 0x04 indicates that this is an error response containing a failed
+authentication error. Since authentication failed, this packet may not have
+a valid MAC. Packets with this flag must never have any effect other than
+to inform of an error. This error, since it is unauthenticated, must never
+have any side effects such as terminating a connection.
+
+3.3. MAC
+
+The MAC is calculated as follows:
+
+1) Temporarily set the 64-bit/8-byte MAC field in the packet to the packet's
+   size as a 64-bit big-endian integer.
+2) Calculate the MAC for the entire packet (excluding the first byte) using
+   the key agreed upon between the sender and the recipient, resulting in a
+   16 byte full CMAC-AES MAC.
+3) Derive the 8 byte packet MAC by XORing the first 8 bytes of the full 16
+   byte CMAC-AES MAC with the last 8 bytes. Place this into the packet's MAC
+   field.
+
+3.4. Peer IDs
+
+Peer IDs provide a method for up to 15 different peers to share an address,
+each with a unique ID allowing packets to be routed to them individually.
+
+A peer ID of zero indicates "any" or "unspecified." Real peers must have a
+nonzero peer ID. In the normal single peer per address case, any peer ID may
+be used. If multiple peers are to share an address, some implementation-
+dependent method must be used to ensure that each peer has a unique peer ID.
+
+Relaying peers must follow these rules based on the recipient peer ID when
+relaying messages:
+
+ - IF the peer ID is zero or if the peer ID is not known, the message must
+   be forwarded to a random endpoint for the given recipient address.
+ - IF the peer ID is nonzero and matches one or more known endpoints for the
+   given recipient address and peer ID, the message must only be sent to
+   a matching endpoint.
+
+A receiving peer should process any message that it receives regardless of
+whether its recipient peer ID is correct. The peer ID is primarily for relays.
+
+Peers should typically send messages with a nonzero recipient peer ID when
+responding to or involved in a conversation with a specific peer (e.g. a
+streaming connection), and send zero recipient peer IDs otherwise.
+
+3.5. Short Address Conflict Disambiguation
+
+In the unlikely event of two Anode addresses with the same short identifier,
+the recipient should use MAC validation to disambiguate. The peer ID must not
+be relied upon for this purpose.
+
+*****************************************************************************
+
+4. Basic Signaling and Transport Protocol
+
+4.1. Message Types
+
+|---------------------------------------------------------------------------|
+| Type        | ID   | Description                                          |
+|---------------------------------------------------------------------------|
+| ERROR       | 0x00 | Error response                                       |
+| PING        | 0x01 | Echo request                                         |
+| PONG        | 0x02 | Echo response                                        |
+| EPC_REQ     | 0x03 | Endpoint check request                               |
+| EPC         | 0x04 | Endpoint check response                              |
+| EPI         | 0x05 | Endpoint information                                 |
+| NAT_T       | 0x06 | NAT traversal message                                |
+| NETID_REQ   | 0x07 | Request network address identification and/or test   |
+| NETID       | 0x08 | Response to network address identification request   |
+| DGRAM       | 0x09 | Simple UDP-like datagram                             |
+|---------------------------------------------------------------------------|
+
+4.2. Message Details
+
+4.2.1. ERROR
+
+|---------------------------------------------------------------------------|
+| Field             | Length | Description                                  |
+|---------------------------------------------------------------------------|
+| Error Code        | 2      | 16-bit error code                            |
+| Error Arguments   | ?      | Error arguments, depending on error type     |
+|---------------------------------------------------------------------------|
+
+Error arguments are empty unless otherwise stated below.
+
+Error codes:
+
+|---------------------------------------------------------------------------|
+| Error Code | Description                                                  |
+|---------------------------------------------------------------------------|
+| 0x01       | Message not valid                                            |
+| 0x02       | Message authentication or decryption failed                  |
+| 0x03       | Relaying and related features not authorized                 |
+| 0x04       | Relay recipient not reachable                                |
+|---------------------------------------------------------------------------|
+
+Generation of errors is optional. A peer may choose to ignore invalid
+messages or to throttle the sending of errors.
+
+4.2.2. PING
+
+(Payload unspecified.)
+
+Request echo of payload as PONG message.
+
+4.2.3. PONG
+
+(Payload unspecified.)
+
+Echoed payload of received PING message.
+
+4.2.4. EPC_REQ
+
+|---------------------------------------------------------------------------|
+| Field             | Length | Description                                  |
+|---------------------------------------------------------------------------|
+| Request ID        | 4      | 32-bit request ID                            |
+|---------------------------------------------------------------------------|
+
+Request echo of request ID in EPC message, used to check and learn endpoints.
+
+To learn a network endpoint for a peer, CHECK_REQ is sent. If CHECK is
+returned with a valid request ID, the endpoint is considered valid.
+
+4.2.5. EPC
+
+|---------------------------------------------------------------------------|
+| Field             | Length | Description                                  |
+|---------------------------------------------------------------------------|
+| Request ID        | 4      | 32-bit request ID echoed back                |
+|---------------------------------------------------------------------------|
+
+Response to EPC_REQ containing request ID.
+
+4.2.6. EPI
+
+|---------------------------------------------------------------------------|
+| Field             | Length | Description                                  |
+|---------------------------------------------------------------------------|
+| Flags             | 1      | 8-bit flags                                  |
+| Endpoint          | ?      | Endpoint type and address                    |
+| NAT-T mode        | 1      | 8-bit NAT traversal mode                     |
+| NAT-T options     | ?      | Options related to specified NAT-T mode      |
+|---------------------------------------------------------------------------|
+
+EPI stands for EndPoint Identification, and is sent to notify another peer of
+a network endpoint where the sending peer is reachable.
+
+If the receiving peer is interested in communicating with the sending peer,
+the receiving peer must send EPC_REQ to the sending peer at the specified
+endpoint to check the validity of that endpoint. The endpoint is learned if a
+valid EPC is returned.
+
+If the endpoint in EPI is unspecified, the actual source of the EPI message
+is the endpoint. This allows EPI messages to be broadcast on a local LAN
+segment to advertise the presence of an address on a local network. EPI
+broadcasts on local IP networks must be made to UDP port 8737.
+
+Usually EPI is sent via relays (usually zone relays) to inform a peer of an
+endpoint for direct communication.
+
+There are presently no flags, so flags must be zero.
+
+4.2.7. NAT_T
+
+|---------------------------------------------------------------------------|
+| Field             | Length | Description                                  |
+|---------------------------------------------------------------------------|
+| NAT-T mode        | 1      | 8-bit NAT traversal mode                     |
+| NAT-T options     | ?      | Options related to specified NAT-T mode      |
+|---------------------------------------------------------------------------|
+
+NAT_T is used to send messages specific to certain NAT traversal modes.
+
+4.2.8. NETID_REQ
+
+|---------------------------------------------------------------------------|
+| Field             | Length | Description                                  |
+|---------------------------------------------------------------------------|
+| Request ID        | 4      | 32-bit request ID                            |
+| Endpoint          | ?      | Endpoint type and address information        |
+|---------------------------------------------------------------------------|
+
+When a NETID_REQ message is received, the recipient attempts to echo it back
+as a NETID message to the specified endpoint address. If the endpoint is
+unspecified, the recipient must fill it in with the actual origin of the
+NETID_REQ message. This allows a peer to cooperate with another peer (usually
+a zone relay) to empirically determine its externally visible network
+address information.
+
+A peer may ignore NETID_REQ or respond with an error if it does not allow
+relaying.
+
+4.2.9. NETID
+
+|---------------------------------------------------------------------------|
+| Field             | Length | Description                                  |
+|---------------------------------------------------------------------------|
+| Request ID        | 4      | 32-bit request ID echoed back                |
+| Endpoint Type     | 1      | 8-bit endpoint type                          |
+| Endpoint Address  | ?      | Endpoint Address (size depends on type)      |
+|---------------------------------------------------------------------------|
+
+NETID is sent in response to NETID_REQ to the specified endpoint address. It
+always contains the endpoint address to which it was sent.
+
+4.2.10. DGRAM
+
+|---------------------------------------------------------------------------|
+| Field             | Length | Description                                  |
+|---------------------------------------------------------------------------|
+| Source Port       | 2      | 16-bit source port                           |
+| Destination Port  | 2      | 16-bit destination port                      |
+| Payload           | ?      | Datagram packet payload                      |
+|---------------------------------------------------------------------------|
+
+A datagram is a UDP-like message without flow control or delivery assurance.
+
+*****************************************************************************
+
+5. Stream Protocol
+
+The stream protocol is very similar to TCP, though it omits some features
+that are not required since they are taken care of by the encapsulating
+protocol. SCTP was also an inspiration in the design.
+
+5.1. Message Types
+
+|---------------------------------------------------------------------------|
+| Type      | ID | Description                                              |
+|---------------------------------------------------------------------------|
+| S_OPEN    | 20 | Initiate a streaming connection (like TCP SYN)           |
+| S_CLOSE   | 21 | Terminate a streaming connection (like TCP RST/FIN)      |
+| S_DATA    | 22 | Data packet                                              |
+| S_ACK     | 23 | Acknowedge receipt of one or more data packets           |
+| S_DACK    | 24 | Combination of DATA and ACK                              |
+|---------------------------------------------------------------------------|
+
+5.2. Message Details
+
+5.2.1. S_OPEN
+
+|---------------------------------------------------------------------------|
+| Field             | Length | Description                                  |
+|---------------------------------------------------------------------------|
+| Sender Link ID    | 2      | 16-bit sender link ID                        |
+| Destination Port  | 2      | 16-bit destination port                      |
+| Window Size       | 2      | 16-bit window size in 1024-byte increments   |
+| Init. Seq. Number | 4      | 32-bit initial sequence number               |
+| Flags             | 1      | 8-bit flags                                  |
+|---------------------------------------------------------------------------|
+
+The OPEN message corresponds to TCP SYN, and initiates a connection. It
+specifies the initial window size for the sender and the sender's initial
+sequence number, which should be randomly chosen to prevent replay attacks.
+
+If OPEN is successful, the recipient sends its own OPEN to establish the
+connetion. If OPEN is unsuccessful, CLOSE is sent with its initial and current
+sequence numbers equal and an appropriate reason such as "connection refused."
+
+The sender link ID must be unique for a given recipient.
+
+If flag 01 is set, the sender link ID is actually a source port where the
+sender might be listening for connections as well. This exactly duplicates
+the behavior of standard TCP. Otherwise, the sender link ID is simply an
+arbitrary number that the sender uses to identify the connection with this
+recipient and there is no port of origin. Ports of origin are optional for
+Anode streaming connections to permit greater scalability.
+
+5.2.2. S_CLOSE
+
+|---------------------------------------------------------------------------|
+| Field             | Length | Description                                  |
+|---------------------------------------------------------------------------|
+| Sender Link ID    | 2      | 16-bit sender link ID                        |
+| Destination Port  | 2      | 16-bit destination port                      |
+| Flags             | 1      | 8-bit flags                                  |
+| Reason            | 1      | 8-bit close reason                           |
+| Init. Seq. Number | 4      | 32-bit initial sequence number               |
+| Sequence Number   | 4      | 32-bit current sequence number               |
+|---------------------------------------------------------------------------|
+
+The CLOSE message serves a function similar to TCP FIN. The initial sequence
+number is the original starting sequence number sent with S_OPEN, while the
+current sequence number is the sequence number corresponding to the close
+and must be ACKed to complete the close operation. The use of the initial
+sequence number helps to serve as a key to prevent replay attacks.
+
+CLOSE is also used to indicate a failed OPEN attempt. In this case the current
+sequence number will be equal to the initial sequence number and no ACK will
+be expected.
+
+There are currently no flags, so flags must be zero.
+
+The reason field describes the reason for the close:
+
+|---------------------------------------------------------------------------|
+| Reason Code | Description                                                 |
+|---------------------------------------------------------------------------|
+| 00          | Application closed connection                               |
+| 01          | Connection refused                                          |
+| 02          | Protocol error                                              |
+| 03          | Timed out                                                   |
+|---------------------------------------------------------------------------|
+
+Established connections will usually be closed with reason 00, while reason
+01 is usually provided if an OPEN is received but the port is not bound.
+
+5.2.3. S_DATA
+
+|---------------------------------------------------------------------------|
+| Field             | Length | Description                                  |
+|---------------------------------------------------------------------------|
+| Sender Link ID    | 2      | 16-bit sender link ID                        |
+| Destination Port  | 2      | 16-bit destination port                      |
+| Sequence Number   | 4      | 32-bit sequence number                       |
+| Payload           | ?      | Data payload                                 |
+|---------------------------------------------------------------------------|
+
+The DATA message carries a packet of data, with the sequence number
+determining order. The sequence number is monotonically incremented with
+each data packet, and wraps at the maximum value of an unsigned 32-bit
+integer.
+
+5.2.4. S_ACK
+
+|---------------------------------------------------------------------------|
+| Field             | Length | Description                                  |
+|---------------------------------------------------------------------------|
+| Sender Link ID    | 2      | 16-bit sender link ID                        |
+| Destination Port  | 2      | 16-bit destination port                      |
+| Window Size       | 2      | 16-bit window size in 1024-byte increments   |
+| Acknowledgements  | ?      | One or more acknowledgements (see below)     |
+|---------------------------------------------------------------------------|
+
+Each acknowledgement is a 32-bit integer followed by an 8-bit integer (5 bytes
+total). The 32-bit integer is the first sequence number to acknowledge, and
+the 8-bit integer is the number of sequential following sequence numbers to
+acknowledge. For example "1, 4" would acknowledge sequence numbers 1, 2, 3,
+and 4.
+
+5.2.5. S_DACK
+
+|---------------------------------------------------------------------------|
+| Field             | Length | Description                                  |
+|---------------------------------------------------------------------------|
+| Sender Link ID    | 2      | 16-bit sender link ID                        |
+| Destination Port  | 2      | 16-bit destination port                      |
+| Window Size       | 2      | 16-bit window size in 1024-byte increments   |
+| Num. Acks         | 1      | 8-bit number of acknowledgements             |
+| Acknowledgements  | ?      | One or more acknowledgements                 |
+| Payload           | ?      | Data payload                                 |
+|---------------------------------------------------------------------------|
+
+The DACK message combines ACK and DATA, allowing two peers that are both
+transmitting data to efficiently ACK without a separate packet.

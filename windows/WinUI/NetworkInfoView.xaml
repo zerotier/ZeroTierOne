@@ -26,6 +26,9 @@
                 <RowDefinition Height="auto"/>
                 <RowDefinition Height="auto"/>
                 <RowDefinition Height="auto"/>
+                <RowDefinition Height="auto"/>
+                <RowDefinition Height="auto"/>
+                <RowDefinition Height="auto"/>
             </Grid.RowDefinitions>
 
             <Grid Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="3">
@@ -48,8 +51,11 @@
             <TextBlock TextWrapping="Wrap" Text="Bridging" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="7" Foreground="#FF000000"/>
             <TextBlock TextWrapping="Wrap" Text="Device" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="8" Foreground="#FF000000"/>
             <TextBlock TextWrapping="Wrap" Text="Managed IPs" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="9" Foreground="#FF000000"/>
+            <TextBlock TextWrapping="Wrap" Text="Allow Global IP" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="10" Foreground="#FF000000"/>
+            <TextBlock TextWrapping="Wrap" Text="Allow Managed IP" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="11" Foreground="#FF000000"/>
+            <TextBlock TextWrapping="Wrap" Text="Allow Default Route" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="12" Foreground="#FF000000"/>
             
-            <Rectangle Grid.Column="2" Grid.Row="2" Grid.RowSpan="8" Fill="#FFEEEEEE"/>
+            <Rectangle Grid.Column="2" Grid.Row="2" Grid.RowSpan="11" Fill="#FFEEEEEE"/>
 
             <TextBlock x:Name="networkStatus" FontFamily="Lucida Console" TextWrapping="Wrap" HorizontalAlignment="Right" Text="OK" TextAlignment="Right"  Grid.Column="2" Grid.Row="2" Foreground="#FF000000"/>
             <TextBlock x:Name="networkType" FontFamily="Lucida Console" TextWrapping="Wrap" Text="PUBLIC" HorizontalAlignment="Right"  Grid.Column="2" Grid.Row="3" Foreground="#FF000000"/>
@@ -58,15 +64,21 @@
             <TextBlock x:Name="broadcastEnabled" FontFamily="Lucida Console" TextWrapping="Wrap" Text="ENABLED" HorizontalAlignment="Right"  Grid.Column="2" Grid.Row="6" Foreground="#FF000000"/>
             <TextBlock x:Name="bridgingEnabled" FontFamily="Lucida Console" TextWrapping="Wrap" Text="DISABLED" HorizontalAlignment="Right"  Grid.Column="2" Grid.Row="7" Background="#FFEEEEEE" Foreground="#FF000000"/>
             <TextBlock x:Name="deviceName" FontFamily="Lucida Console" TextWrapping="Wrap" HorizontalAlignment="Right"  Grid.Column="2" Grid.Row="8" Foreground="#FF000000"><Span><Run Text="ethernet_32771"/></Span></TextBlock>
-            <TextBlock x:Name="managedIps" TextWrapping="Wrap" FontFamily="Lucida Console" HorizontalAlignment="Right" TextAlignment="Right"  Grid.Column="2" Grid.Row="9" Foreground="#FF000000"><Span><Run Text="28.2.169.248/7 "/></Span><LineBreak/><Span><Run Text="fd80:56c2:e21c:0000:0199:9383:4a02:a9f8/88"/></Span></TextBlock>
-
-            <Separator Grid.Column="0" Grid.Row="10" Grid.ColumnSpan="3"/>
+            <TextBox x:Name="managedIps" TextWrapping="Wrap" FontFamily="Lucida Console" HorizontalAlignment="Right" TextAlignment="Right"  Grid.Column="2" Grid.Row="9" Foreground="#FF000000" IsReadOnly="True" BorderThickness="0" Background="#FFEEEEEE" Text="28.2.169.248/7&#x0a;fd80:56c2:e21c:0000:0199:9383:4a02:a9f8/88"/>
+            <CheckBox x:Name="allowGlobal" HorizontalAlignment="Right" Grid.Column="2" Grid.Row="10" />
+            <CheckBox x:Name="allowManaged" HorizontalAlignment="Right" Grid.Column="2" Grid.Row="11" />
+            <CheckBox x:Name="allowDefault" HorizontalAlignment="Right" Grid.Column="2" Grid.Row="12" />
             
-            <Grid Grid.Column="0" Grid.Row="11" Grid.ColumnSpan="3" Background="GhostWhite">
+            <Separator Grid.Column="0" Grid.Row="13" Grid.ColumnSpan="3"/>
+            
+            <Grid Grid.Column="0" Grid.Row="14" Grid.ColumnSpan="3" Background="GhostWhite">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="auto"/>
                 </Grid.ColumnDefinitions>
-                <Button x:Name="leaveButton" Content="Leave" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="75" Background="#FFFFB354" Click="leaveButton_Click"/>
+                <Button x:Name="deleteButton" Grid.Column="0" Content="Delete" HorizontalAlignment="Left" VerticalAlignment="Center" Width="75" Background="#FFFFB354" Click="deleteButton_Click"/>
+                <CheckBox x:Name="connectedCheckBox" Grid.Column="2" Content="Connected" HorizontalAlignment="Right" VerticalAlignment="Center" Checked="connectedCheckBox_Checked" Unchecked="connectedCheckbox_Unchecked"/>
             </Grid>
         </Grid>
     </Border>

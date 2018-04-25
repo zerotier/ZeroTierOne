@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifndef ZT_HTTP_HPP
@@ -124,6 +132,39 @@ public:
 	{
 		return _do(
 			"POST",
+			maxResponseSize,
+			timeout,
+			remoteAddress,
+			path,
+			requestHeaders,
+			postData,
+			postDataLength,
+			responseHeaders,
+			responseBody);
+	}
+
+	/**
+	 * Make HTTP PUT request
+	 *
+	 * It is the responsibility of the caller to set all headers. With PUT, the
+	 * Content-Length and Content-Type headers must be set or the PUT will not
+	 * work.
+	 *
+	 * @return HTTP status code or 0 on error (responseBody will contain error message)
+	 */
+	static inline unsigned int PUT(
+		unsigned long maxResponseSize,
+		unsigned long timeout,
+		const struct sockaddr *remoteAddress,
+		const char *path,
+		const std::map<std::string,std::string> &requestHeaders,
+		const void *postData,
+		unsigned long postDataLength,
+		std::map<std::string,std::string> &responseHeaders,
+		std::string &responseBody)
+	{
+		return _do(
+			"PUT",
 			maxResponseSize,
 			timeout,
 			remoteAddress,

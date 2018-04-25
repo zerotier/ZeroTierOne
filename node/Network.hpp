@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifndef ZT_NETWORK_HPP
@@ -30,7 +38,6 @@
 #include <stdexcept>
 
 #include "Constants.hpp"
-#include "NonCopyable.hpp"
 #include "Hashtable.hpp"
 #include "Address.hpp"
 #include "Mutex.hpp"
@@ -40,22 +47,24 @@
 #include "MAC.hpp"
 #include "Dictionary.hpp"
 #include "Multicaster.hpp"
+#include "Membership.hpp"
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
+
+#define ZT_NETWORK_MAX_INCOMING_UPDATES 3
+#define ZT_NETWORK_MAX_UPDATE_CHUNKS ((ZT_NETWORKCONFIG_DICT_CAPACITY / 1024) + 1)
 
 namespace ZeroTier {
 
 class RuntimeEnvironment;
 class Peer;
-class _MulticastAnnounceAll;
 
 /**
  * A virtual LAN
  */
-class Network : NonCopyable
+class Network
 {
 	friend class SharedPtr<Network>;
-	friend class _MulticastAnnounceAll; // internal function object
 
 public:
 	/**
@@ -64,56 +73,102 @@ public:
 	static const MulticastGroup BROADCAST;
 
 	/**
+	 * Compute primary controller device ID from network ID
+	 */
+	static inline Address controllerFor(uint64_t nwid) { return Address(nwid >> 24); }
+
+	/**
 	 * Construct a new network
 	 *
 	 * Note that init() should be called immediately after the network is
 	 * constructed to actually configure the port.
 	 *
 	 * @param renv Runtime environment
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param nwid Network ID
 	 * @param uptr Arbitrary pointer used by externally-facing API (for user use)
+	 * @param nconf Network config, if known
 	 */
-	Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr);
+	Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *uptr,const NetworkConfig *nconf);
 
 	~Network();
 
-	/**
-	 * @return Network ID
-	 */
-	inline uint64_t id() const throw() { return _id; }
+	inline uint64_t id() const { return _id; }
+	inline Address controller() const { return Address(_id >> 24); }
+	inline bool multicastEnabled() const { return (_config.multicastLimit > 0); }
+	inline bool hasConfig() const { return (_config); }
+	inline uint64_t lastConfigUpdate() const { return _lastConfigUpdate; }
+	inline ZT_VirtualNetworkStatus status() const { Mutex::Lock _l(_lock); return _status(); }
+	inline const NetworkConfig &config() const { return _config; }
+	inline const MAC &mac() const { return _mac; }
 
 	/**
-	 * @return Address of network's controller (most significant 40 bits of ID)
+	 * Apply filters to an outgoing packet
+	 *
+	 * This applies filters from our network config and, if that doesn't match,
+	 * our capabilities in ascending order of capability ID. Additional actions
+	 * such as TEE may be taken, and credentials may be pushed, so this is not
+	 * side-effect-free. It's basically step one in sending something over VL2.
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param noTee If true, do not TEE anything anywhere (for two-pass filtering as done with multicast and bridging)
+	 * @param ztSource Source ZeroTier address
+	 * @param ztDest Destination ZeroTier address
+	 * @param macSource Ethernet layer source address
+	 * @param macDest Ethernet layer destination address
+	 * @param frameData Ethernet frame data
+	 * @param frameLen Ethernet frame payload length
+	 * @param etherType 16-bit ethernet type ID
+	 * @param vlanId 16-bit VLAN ID
+	 * @return True if packet should be sent, false if dropped or redirected
 	 */
-	inline Address controller() const throw() { return Address(_id >> 24); }
+	bool filterOutgoingPacket(
+		void *tPtr,
+		const bool noTee,
+		const Address &ztSource,
+		const Address &ztDest,
+		const MAC &macSource,
+		const MAC &macDest,
+		const uint8_t *frameData,
+		const unsigned int frameLen,
+		const unsigned int etherType,
+		const unsigned int vlanId);
 
 	/**
-	 * @param nwid Network ID
-	 * @return Address of network's controller
+	 * Apply filters to an incoming packet
+	 *
+	 * This applies filters from our network config and, if that doesn't match,
+	 * the peer's capabilities in ascending order of capability ID. If there is
+	 * a match certain actions may be taken such as sending a copy of the packet
+	 * to a TEE or REDIRECT target.
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param sourcePeer Source Peer
+	 * @param ztDest Destination ZeroTier address
+	 * @param macSource Ethernet layer source address
+	 * @param macDest Ethernet layer destination address
+	 * @param frameData Ethernet frame data
+	 * @param frameLen Ethernet frame payload length
+	 * @param etherType 16-bit ethernet type ID
+	 * @param vlanId 16-bit VLAN ID
+	 * @return 0 == drop, 1 == accept, 2 == accept even if bridged
 	 */
-	static inline Address controllerFor(uint64_t nwid) throw() { return Address(nwid >> 24); }
+	int filterIncomingPacket(
+		void *tPtr,
+		const SharedPtr<Peer> &sourcePeer,
+		const Address &ztDest,
+		const MAC &macSource,
+		const MAC &macDest,
+		const uint8_t *frameData,
+		const unsigned int frameLen,
+		const unsigned int etherType,
+		const unsigned int vlanId);
 
 	/**
-	 * @return Multicast group memberships for this network's port (local, not learned via bridging)
-	 */
-	inline std::vector<MulticastGroup> multicastGroups() const
-	{
-		Mutex::Lock _l(_lock);
-		return _myMulticastGroups;
-	}
-
-	/**
-	 * @return All multicast groups including learned groups that are behind any bridges we're attached to
-	 */
-	inline std::vector<MulticastGroup> allMulticastGroups() const
-	{
-		Mutex::Lock _l(_lock);
-		return _allMulticastGroups();
-	}
-
-	/**
+	 * Check whether we are subscribed to a multicast group
+	 *
 	 * @param mg Multicast group
-	 * @param includeBridgedGroups If true, also include any groups we've learned via bridging
+	 * @param includeBridgedGroups If true, also check groups we've learned via bridging
 	 * @return True if this network endpoint / peer is a member
 	 */
 	bool subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const;
@@ -121,9 +176,10 @@ public:
 	/**
 	 * Subscribe to a multicast group
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param mg New multicast group
 	 */
-	void multicastSubscribe(const MulticastGroup &mg);
+	void multicastSubscribe(void *tPtr,const MulticastGroup &mg);
 
 	/**
 	 * Unsubscribe from a multicast group
@@ -133,29 +189,30 @@ public:
 	void multicastUnsubscribe(const MulticastGroup &mg);
 
 	/**
-	 * Announce multicast groups to a peer if that peer is authorized on this network
+	 * Handle an inbound network config chunk
 	 *
-	 * @param peer Peer to try to announce multicast groups to
-	 * @return True if peer was authorized and groups were announced
+	 * This is called from IncomingPacket to handle incoming network config
+	 * chunks via OK(NETWORK_CONFIG_REQUEST) or NETWORK_CONFIG. It verifies
+	 * each chunk and once assembled applies the configuration.
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param packetId Packet ID or 0 if none (e.g. via cluster path)
+	 * @param source Address of sender of chunk or NULL if none (e.g. via cluster path)
+	 * @param chunk Buffer containing chunk
+	 * @param ptr Index of chunk and related fields in packet
+	 * @return Update ID if update was fully assembled and accepted or 0 otherwise
 	 */
-	bool tryAnnounceMulticastGroupsTo(const SharedPtr<Peer> &peer);
+	uint64_t handleConfigChunk(void *tPtr,const uint64_t packetId,const Address &source,const Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &chunk,unsigned int ptr);
 
 	/**
-	 * Apply a NetworkConfig to this network
+	 * Set network configuration
 	 *
-	 * @param conf Configuration in NetworkConfig form
-	 * @return True if configuration was accepted
-	 */
-	bool applyConfiguration(const NetworkConfig &conf);
-
-	/**
-	 * Set or update this network's configuration
-	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param nconf Network configuration
-	 * @param saveToDisk IF true (default), write config to disk
-	 * @return 0 -- rejected, 1 -- accepted but not new, 2 -- accepted new config
+	 * @param saveToDisk Save to disk? Used during loading, should usually be true otherwise.
+	 * @return 0 == bad, 1 == accepted but duplicate/unchanged, 2 == accepted and new
 	 */
-	int setConfiguration(const NetworkConfig &nconf,bool saveToDisk);
+	int setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToDisk);
 
 	/**
 	 * Set netconf failure to 'access denied' -- called in IncomingPacket when controller reports this
@@ -167,7 +224,7 @@ public:
 	}
 
 	/**
-	 * Set netconf failure to 'not found' -- called by PacketDecider when controller reports this
+	 * Set netconf failure to 'not found' -- called by IncomingPacket when controller reports this
 	 */
 	inline void setNotFound()
 	{
@@ -177,76 +234,47 @@ public:
 
 	/**
 	 * Causes this network to request an updated configuration from its master node now
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
-	void requestConfiguration();
+	void requestConfiguration(void *tPtr);
 
 	/**
+	 * Determine whether this peer is permitted to communicate on this network
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param peer Peer to check
-	 * @return True if peer is allowed to communicate on this network
 	 */
-	inline bool isAllowed(const SharedPtr<Peer> &peer) const
-	{
-		Mutex::Lock _l(_lock);
-		return _isAllowed(peer);
-	}
+	bool gate(void *tPtr,const SharedPtr<Peer> &peer);
 
 	/**
-	 * Perform cleanup and possibly save state
+	 * Check whether a given peer has recently had an association with this network
+	 *
+	 * This checks whether a peer has communicated with us recently about this
+	 * network and has possessed a valid certificate of membership. This may return
+	 * true even if the peer has been offline for a while or no longer has a valid
+	 * certificate of membership but had one recently.
+	 *
+	 * @param addr Peer address
+	 * @return True if peer has recently associated
+	 */
+	bool recentlyAssociatedWith(const Address &addr);
+
+	/**
+	 * Do periodic cleanup and housekeeping tasks
 	 */
 	void clean();
 
 	/**
-	 * @return Time of last updated configuration or 0 if none
-	 */
-	inline uint64_t lastConfigUpdate() const throw() { return _lastConfigUpdate; }
-
-	/**
-	 * @return Status of this network
-	 */
-	inline ZT_VirtualNetworkStatus status() const
-	{
-		Mutex::Lock _l(_lock);
-		return _status();
-	}
-
-	/**
-	 * @param ec Buffer to fill with externally-visible network configuration
-	 */
-	inline void externalConfig(ZT_VirtualNetworkConfig *ec) const
-	{
-		Mutex::Lock _l(_lock);
-		_externalConfig(ec);
-	}
-
-	/**
-	 * Get current network config
+	 * Push state to members such as multicast group memberships and latest COM (if needed)
 	 *
-	 * This returns a const reference to the network config in place, which is safe
-	 * to concurrently access but *may* change during access. Normally this isn't a
-	 * problem, but if it is use configCopy().
-	 *
-	 * @return Network configuration (may be a null config if we don't have one yet)
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
-	inline const NetworkConfig &config() const { return _config; }
-
-	/**
-	 * @return A thread-safe copy of our NetworkConfig instead of a const reference
-	 */
-	inline NetworkConfig configCopy() const
+	inline void sendUpdatesToMembers(void *tPtr)
 	{
 		Mutex::Lock _l(_lock);
-		return _config;
+		_sendUpdatesToMembers(tPtr,(const MulticastGroup *)0);
 	}
-
-	/**
-	 * @return True if this network has a valid config
-	 */
-	inline bool hasConfig() const { return (_config); }
-
-	/**
-	 * @return Ethernet MAC address for this network's local interface
-	 */
-	inline const MAC &mac() const throw() { return _mac; }
 
 	/**
 	 * Find the node on this network that has this MAC behind it (if any)
@@ -258,9 +286,7 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 		const Address *const br = _remoteBridgeRoutes.get(mac);
-		if (br)
-			return *br;
-		return Address();
+		return ((br) ? *br : Address());
 	}
 
 	/**
@@ -274,54 +300,128 @@ public:
 	/**
 	 * Learn a multicast group that is bridged to our tap device
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param mg Multicast group
 	 * @param now Current time
 	 */
-	void learnBridgedMulticastGroup(const MulticastGroup &mg,uint64_t now);
+	void learnBridgedMulticastGroup(void *tPtr,const MulticastGroup &mg,int64_t now);
+
+	/**
+	 * Validate a credential and learn it if it passes certificate and other checks
+	 */
+	Membership::AddCredentialResult addCredential(void *tPtr,const CertificateOfMembership &com);
+
+	/**
+	 * Validate a credential and learn it if it passes certificate and other checks
+	 */
+	inline Membership::AddCredentialResult addCredential(void *tPtr,const Capability &cap)
+	{
+		if (cap.networkId() != _id)
+			return Membership::ADD_REJECTED;
+		Mutex::Lock _l(_lock);
+		return _membership(cap.issuedTo()).addCredential(RR,tPtr,_config,cap);
+	}
+
+	/**
+	 * Validate a credential and learn it if it passes certificate and other checks
+	 */
+	inline Membership::AddCredentialResult addCredential(void *tPtr,const Tag &tag)
+	{
+		if (tag.networkId() != _id)
+			return Membership::ADD_REJECTED;
+		Mutex::Lock _l(_lock);
+		return _membership(tag.issuedTo()).addCredential(RR,tPtr,_config,tag);
+	}
+
+	/**
+	 * Validate a credential and learn it if it passes certificate and other checks
+	 */
+	Membership::AddCredentialResult addCredential(void *tPtr,const Address &sentFrom,const Revocation &rev);
+
+	/**
+	 * Validate a credential and learn it if it passes certificate and other checks
+	 */
+	inline Membership::AddCredentialResult addCredential(void *tPtr,const CertificateOfOwnership &coo)
+	{
+		if (coo.networkId() != _id)
+			return Membership::ADD_REJECTED;
+		Mutex::Lock _l(_lock);
+		return _membership(coo.issuedTo()).addCredential(RR,tPtr,_config,coo);
+	}
+
+	/**
+	 * Force push credentials (COM, etc.) to a peer now
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param to Destination peer address
+	 * @param now Current time
+	 */
+	inline void pushCredentialsNow(void *tPtr,const Address &to,const int64_t now)
+	{
+		Mutex::Lock _l(_lock);
+		_membership(to).pushCredentials(RR,tPtr,now,to,_config,-1,true);
+	}
 
 	/**
 	 * Destroy this network
 	 *
-	 * This causes the network to disable itself, destroy its tap device, and on
-	 * delete to delete all trace of itself on disk and remove any persistent tap
-	 * device instances. Call this when a network is being removed from the system.
+	 * This sets the network to completely remove itself on delete. This also prevents the
+	 * call of the normal port shutdown event on delete.
 	 */
 	void destroy();
 
 	/**
-	 * @return Pointer to user PTR (modifiable user ptr used in API)
+	 * Get this network's config for export via the ZT core API
+	 *
+	 * @param ec Buffer to fill with externally-visible network configuration
 	 */
-	inline void **userPtr() throw() { return &_uPtr; }
+	inline void externalConfig(ZT_VirtualNetworkConfig *ec) const
+	{
+		Mutex::Lock _l(_lock);
+		_externalConfig(ec);
+	}
 
-	inline bool operator==(const Network &n) const throw() { return (_id == n._id); }
-	inline bool operator!=(const Network &n) const throw() { return (_id != n._id); }
-	inline bool operator<(const Network &n) const throw() { return (_id < n._id); }
-	inline bool operator>(const Network &n) const throw() { return (_id > n._id); }
-	inline bool operator<=(const Network &n) const throw() { return (_id <= n._id); }
-	inline bool operator>=(const Network &n) const throw() { return (_id >= n._id); }
+	/**
+	 * @return Externally usable pointer-to-pointer exported via the core API
+	 */
+	inline void **userPtr() { return &_uPtr; }
 
 private:
 	ZT_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
-	bool _isAllowed(const SharedPtr<Peer> &peer) const;
-	void _announceMulticastGroups();
-	void _announceMulticastGroupsTo(const SharedPtr<Peer> &peer,const std::vector<MulticastGroup> &allMulticastGroups) const;
+	bool _gate(const SharedPtr<Peer> &peer);
+	void _sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMulticastGroup);
+	void _announceMulticastGroupsTo(void *tPtr,const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups);
 	std::vector<MulticastGroup> _allMulticastGroups() const;
+	Membership &_membership(const Address &a);
 
-	const RuntimeEnvironment *RR;
+	const RuntimeEnvironment *const RR;
 	void *_uPtr;
-	uint64_t _id;
+	const uint64_t _id;
+	uint64_t _lastAnnouncedMulticastGroupsUpstream;
 	MAC _mac; // local MAC address
-	volatile bool _portInitialized;
+	bool _portInitialized;
 
 	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to (according to tap)
 	Hashtable< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
 	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
 
 	NetworkConfig _config;
-	volatile uint64_t _lastConfigUpdate;
+	uint64_t _lastConfigUpdate;
 
-	volatile bool _destroyed;
+	struct _IncomingConfigChunk
+	{
+		_IncomingConfigChunk() { memset(this,0,sizeof(_IncomingConfigChunk)); }
+		uint64_t ts;
+		uint64_t updateId;
+		uint64_t haveChunkIds[ZT_NETWORK_MAX_UPDATE_CHUNKS];
+		unsigned long haveChunks;
+		unsigned long haveBytes;
+		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> data;
+	};
+	_IncomingConfigChunk _incomingConfigChunks[ZT_NETWORK_MAX_INCOMING_UPDATES];
+
+	bool _destroyed;
 
 	enum {
 		NETCONF_FAILURE_NONE,
@@ -329,7 +429,9 @@ private:
 		NETCONF_FAILURE_NOT_FOUND,
 		NETCONF_FAILURE_INIT_FAILED
 	} _netconfFailure;
-	volatile int _portError; // return value from port config callback
+	int _portError; // return value from port config callback
+
+	Hashtable<Address,Membership> _memberships;
 
 	Mutex _lock;
 

@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifndef ZT_N_SWITCH_HPP
@@ -27,12 +35,10 @@
 #include "Constants.hpp"
 #include "Mutex.hpp"
 #include "MAC.hpp"
-#include "NonCopyable.hpp"
 #include "Packet.hpp"
 #include "Utils.hpp"
 #include "InetAddress.hpp"
 #include "Topology.hpp"
-#include "Array.hpp"
 #include "Network.hpp"
 #include "SharedPtr.hpp"
 #include "IncomingPacket.hpp"
@@ -51,25 +57,26 @@ class Peer;
  * packets from tap devices, and this sends them where they need to go and
  * wraps/unwraps accordingly. It also handles queues and timeouts and such.
  */
-class Switch : NonCopyable
+class Switch
 {
 public:
 	Switch(const RuntimeEnvironment *renv);
-	~Switch();
 
 	/**
 	 * Called when a packet is received from the real network
 	 *
-	 * @param localAddr Local interface address
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param localSocket Local I/O socket as supplied by external code
 	 * @param fromAddr Internet IP address of origin
 	 * @param data Packet data
 	 * @param len Packet length
 	 */
-	void onRemotePacket(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len);
+	void onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddress &fromAddr,const void *data,unsigned int len);
 
 	/**
 	 * Called when a packet comes from a local Ethernet tap
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param network Which network's TAP did this packet come from?
 	 * @param from Originating MAC address
 	 * @param to Destination MAC address
@@ -78,7 +85,7 @@ public:
 	 * @param data Ethernet payload
 	 * @param len Frame length
 	 */
-	void onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
+	void onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
 
 	/**
 	 * Send a packet to a ZeroTier address (destination in packet)
@@ -92,51 +99,30 @@ public:
 	 * Needless to say, the packet's source must be this node. Otherwise it
 	 * won't be encrypted right. (This is not used for relaying.)
 	 *
-	 * The network ID should only be specified for frames and other actual
-	 * network traffic. Other traffic such as controller requests and regular
-	 * protocol messages should specify zero.
-	 *
-	 * @param packet Packet to send
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param packet Packet to send (buffer may be modified)
 	 * @param encrypt Encrypt packet payload? (always true except for HELLO)
-	 * @param nwid Related network ID or 0 if message is not in-network traffic
 	 */
-	void send(const Packet &packet,bool encrypt,uint64_t nwid);
-
-	/**
-	 * Send RENDEZVOUS to two peers to permit them to directly connect
-	 *
-	 * This only works if both peers are known, with known working direct
-	 * links to this peer. The best link for each peer is sent to the other.
-	 *
-	 * @param p1 One of two peers (order doesn't matter)
-	 * @param p2 Second of pair
-	 */
-	bool unite(const Address &p1,const Address &p2);
-
-	/**
-	 * Attempt NAT traversal to peer at a given physical address
-	 *
-	 * @param peer Peer to contact
-	 * @param localAddr Local interface address
-	 * @param atAddr Address of peer
-	 */
-	void rendezvous(const SharedPtr<Peer> &peer,const InetAddress &localAddr,const InetAddress &atAddr);
+	void send(void *tPtr,Packet &packet,bool encrypt);
 
 	/**
 	 * Request WHOIS on a given address
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param now Current time
 	 * @param addr Address to look up
 	 */
-	void requestWhois(const Address &addr);
+	void requestWhois(void *tPtr,const int64_t now,const Address &addr);
 
 	/**
 	 * Run any processes that are waiting for this peer's identity
 	 *
 	 * Called when we learn of a peer's identity from HELLO, OK(WHOIS), etc.
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param peer New peer
 	 */
-	void doAnythingWaitingForPeer(const SharedPtr<Peer> &peer);
+	void doAnythingWaitingForPeer(void *tPtr,const SharedPtr<Peer> &peer);
 
 	/**
 	 * Perform retries and other periodic timer tasks
@@ -144,77 +130,70 @@ public:
 	 * This can return a very long delay if there are no pending timer
 	 * tasks. The caller should cap this comparatively vs. other values.
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 * @return Number of milliseconds until doTimerTasks() should be run again
 	 */
-	unsigned long doTimerTasks(uint64_t now);
+	unsigned long doTimerTasks(void *tPtr,int64_t now);
 
 private:
-	Address _sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
-	bool _trySend(const Packet &packet,bool encrypt,uint64_t nwid);
+	bool _shouldUnite(const int64_t now,const Address &source,const Address &destination);
+	bool _trySend(void *tPtr,Packet &packet,bool encrypt); // packet is modified if return is true
 
 	const RuntimeEnvironment *const RR;
-	uint64_t _lastBeaconResponse;
+	int64_t _lastBeaconResponse;
+	volatile int64_t _lastCheckedQueues;
 
-	// Outstanding WHOIS requests and how many retries they've undergone
-	struct WhoisRequest
-	{
-		WhoisRequest() : lastSent(0),retries(0) {}
-		uint64_t lastSent;
-		Address peersConsulted[ZT_MAX_WHOIS_RETRIES]; // by retry
-		unsigned int retries; // 0..ZT_MAX_WHOIS_RETRIES
-	};
-	Hashtable< Address,WhoisRequest > _outstandingWhoisRequests;
-	Mutex _outstandingWhoisRequests_m;
+	// Time we last sent a WHOIS request for each address
+	Hashtable< Address,int64_t > _lastSentWhoisRequest;
+	Mutex _lastSentWhoisRequest_m;
 
 	// Packets waiting for WHOIS replies or other decode info or missing fragments
 	struct RXQueueEntry
 	{
 		RXQueueEntry() : timestamp(0) {}
-		uint64_t timestamp; // 0 if entry is not in use
-		uint64_t packetId;
+		volatile int64_t timestamp; // 0 if entry is not in use
+		volatile uint64_t packetId;
 		IncomingPacket frag0; // head of packet
 		Packet::Fragment frags[ZT_MAX_PACKET_FRAGMENTS - 1]; // later fragments (if any)
 		unsigned int totalFragments; // 0 if only frag0 received, waiting for frags
 		uint32_t haveFragments; // bit mask, LSB to MSB
-		bool complete; // if true, packet is complete
+		volatile bool complete; // if true, packet is complete
 	};
 	RXQueueEntry _rxQueue[ZT_RX_QUEUE_SIZE];
-	Mutex _rxQueue_m;
+	AtomicCounter _rxQueuePtr;
 
-	/* Returns the matching or oldest entry. Caller must check timestamp and
-	 * packet ID to determine which. */
-	inline RXQueueEntry *_findRXQueueEntry(uint64_t now,uint64_t packetId)
+	// Returns matching or next available RX queue entry
+	inline RXQueueEntry *_findRXQueueEntry(uint64_t packetId)
 	{
-		RXQueueEntry *rq;
-		RXQueueEntry *oldest = &(_rxQueue[ZT_RX_QUEUE_SIZE - 1]);
-		unsigned long i = ZT_RX_QUEUE_SIZE;
-		while (i) {
-			rq = &(_rxQueue[--i]);
+		const unsigned int current = static_cast<unsigned int>(_rxQueuePtr.load());
+		for(unsigned int k=1;k<=ZT_RX_QUEUE_SIZE;++k) {
+			RXQueueEntry *rq = &(_rxQueue[(current - k) % ZT_RX_QUEUE_SIZE]);
 			if ((rq->packetId == packetId)&&(rq->timestamp))
 				return rq;
-			if ((now - rq->timestamp) >= ZT_RX_QUEUE_EXPIRE)
-				rq->timestamp = 0;
-			if (rq->timestamp < oldest->timestamp)
-				oldest = rq;
 		}
-		return oldest;
+		++_rxQueuePtr;
+		return &(_rxQueue[static_cast<unsigned int>(current) % ZT_RX_QUEUE_SIZE]);
+	}
+
+	// Returns current entry in rx queue ring buffer and increments ring pointer
+	inline RXQueueEntry *_nextRXQueueEntry()
+	{
+		return &(_rxQueue[static_cast<unsigned int>((++_rxQueuePtr) - 1) % ZT_RX_QUEUE_SIZE]);
 	}
 
 	// ZeroTier-layer TX queue entry
 	struct TXQueueEntry
 	{
 		TXQueueEntry() {}
-		TXQueueEntry(Address d,uint64_t ct,const Packet &p,bool enc,uint64_t nw) :
+		TXQueueEntry(Address d,uint64_t ct,const Packet &p,bool enc) :
 			dest(d),
 			creationTime(ct),
-			nwid(nw),
 			packet(p),
 			encrypt(enc) {}
 
 		Address dest;
 		uint64_t creationTime;
-		uint64_t nwid;
 		Packet packet; // unencrypted/unMAC'd packet -- this is done at send time
 		bool encrypt;
 	};
@@ -235,32 +214,12 @@ private:
 				y = a2.toInt();
 			}
 		}
-		inline unsigned long hashCode() const throw() { return ((unsigned long)x ^ (unsigned long)y); }
-		inline bool operator==(const _LastUniteKey &k) const throw() { return ((x == k.x)&&(y == k.y)); }
+		inline unsigned long hashCode() const { return ((unsigned long)x ^ (unsigned long)y); }
+		inline bool operator==(const _LastUniteKey &k) const { return ((x == k.x)&&(y == k.y)); }
 		uint64_t x,y;
 	};
 	Hashtable< _LastUniteKey,uint64_t > _lastUniteAttempt; // key is always sorted in ascending order, for set-like behavior
 	Mutex _lastUniteAttempt_m;
-
-	// Active attempts to contact remote peers, including state of multi-phase NAT traversal
-	struct ContactQueueEntry
-	{
-		ContactQueueEntry() {}
-		ContactQueueEntry(const SharedPtr<Peer> &p,uint64_t ft,const InetAddress &laddr,const InetAddress &a) :
-			peer(p),
-			fireAtTime(ft),
-			inaddr(a),
-			localAddr(laddr),
-			strategyIteration(0) {}
-
-		SharedPtr<Peer> peer;
-		uint64_t fireAtTime;
-		InetAddress inaddr;
-		InetAddress localAddr;
-		unsigned int strategyIteration;
-	};
-	std::list<ContactQueueEntry> _contactQueue;
-	Mutex _contactQueue_m;
 };
 
 } // namespace ZeroTier

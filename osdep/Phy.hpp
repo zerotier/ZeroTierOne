@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifndef ZT_PHY_HPP
@@ -680,25 +688,26 @@ public:
 	 * until one works.
 	 *
 	 * @param sock Socket
-	 * @param bufferSize Desired buffer sizes
+	 * @param receiveBufferSize Desired size of receive buffer
+	 * @param sendBufferSize Desired size of send buffer
 	 */
-	inline void setBufferSizes(const PhySocket *sock,int bufferSize)
+	inline void setBufferSizes(const PhySocket *sock,int receiveBufferSize,int sendBufferSize)
 	{
 		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
-		if (bufferSize > 0) {
-			int bs = bufferSize;
-			while (bs >= 65536) {
-				int tmpbs = bs;
+		if (receiveBufferSize > 0) {
+			while (receiveBufferSize > 0) {
+				int tmpbs = receiveBufferSize;
 				if (::setsockopt(sws.sock,SOL_SOCKET,SO_RCVBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
 					break;
-				bs -= 16384;
+				receiveBufferSize -= 16384;
 			}
-			bs = bufferSize;
-			while (bs >= 65536) {
-				int tmpbs = bs;
+		}
+		if (sendBufferSize > 0) {
+			while (sendBufferSize > 0) {
+				int tmpbs = sendBufferSize;
 				if (::setsockopt(sws.sock,SOL_SOCKET,SO_SNDBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
 					break;
-				bs -= 16384;
+				sendBufferSize -= 16384;
 			}
 		}
 	}
@@ -807,7 +816,7 @@ public:
 	 * @param sock Stream connection socket
 	 * @param notifyWritable Want writable notifications?
 	 */
-	inline const void setNotifyWritable(PhySocket *sock,bool notifyWritable)
+	inline void setNotifyWritable(PhySocket *sock,bool notifyWritable)
 	{
 		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
 		if (notifyWritable) {
@@ -827,7 +836,7 @@ public:
 	 * @param sock Socket to modify
 	 * @param notifyReadable True if socket should be monitored for readability
 	 */
-	inline const void setNotifyReadable(PhySocket *sock,bool notifyReadable)
+	inline void setNotifyReadable(PhySocket *sock,bool notifyReadable)
 	{
 		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
 		if (notifyReadable) {
@@ -957,7 +966,7 @@ public:
 
 				case ZT_PHY_SOCKET_UDP:
 					if (FD_ISSET(s->sock,&rfds)) {
-						for(;;) {
+						for(int k=0;k<1024;++k) {
 							memset(&ss,0,sizeof(ss));
 							socklen_t slen = sizeof(ss);
 							long n = (long)::recvfrom(s->sock,buf,sizeof(buf),0,(struct sockaddr *)&ss,&slen);

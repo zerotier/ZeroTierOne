@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #include "Path.hpp"
@@ -22,10 +30,10 @@
 
 namespace ZeroTier {
 
-bool Path::send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
+bool Path::send(const RuntimeEnvironment *RR,void *tPtr,const void *data,unsigned int len,int64_t now)
 {
-	if (RR->node->putPacket(_localAddress,address(),data,len)) {
-		sent(now);
+	if (RR->node->putPacket(tPtr,_localSocket,_addr,data,len)) {
+		_lastOut = now;
 		return true;
 	}
 	return false;

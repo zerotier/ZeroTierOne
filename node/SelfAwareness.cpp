@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #include <stdio.h>
@@ -31,43 +39,38 @@
 #include "Packet.hpp"
 #include "Peer.hpp"
 #include "Switch.hpp"
+#include "Trace.hpp"
 
 // Entry timeout -- make it fairly long since this is just to prevent stale buildup
-#define ZT_SELFAWARENESS_ENTRY_TIMEOUT 3600000
+#define ZT_SELFAWARENESS_ENTRY_TIMEOUT 600000
 
 namespace ZeroTier {
 
 class _ResetWithinScope
 {
 public:
-	_ResetWithinScope(uint64_t now,InetAddress::IpScope scope) :
+	_ResetWithinScope(void *tPtr,int64_t now,int inetAddressFamily,InetAddress::IpScope scope) :
 		_now(now),
+		_tPtr(tPtr),
+		_family(inetAddressFamily),
 		_scope(scope) {}
 
-	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
-	{
-		if (p->resetWithinScope(_scope,_now))
-			peersReset.push_back(p);
-	}
-
-	std::vector< SharedPtr<Peer> > peersReset;
+	inline void operator()(Topology &t,const SharedPtr<Peer> &p) { p->resetWithinScope(_tPtr,_scope,_family,_now); }
 
 private:
 	uint64_t _now;
+	void *_tPtr;
+	int _family;
 	InetAddress::IpScope _scope;
 };
 
 SelfAwareness::SelfAwareness(const RuntimeEnvironment *renv) :
 	RR(renv),
-	_phy(32)
+	_phy(128)
 {
 }
 
-SelfAwareness::~SelfAwareness()
-{
-}
-
-void SelfAwareness::iam(const Address &reporter,const InetAddress &receivedOnLocalAddress,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now)
+void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,int64_t now)
 {
 	const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
 
@@ -75,13 +78,15 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &receivedOnLoc
 		return;
 
 	Mutex::Lock _l(_phy_m);
-	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,receivedOnLocalAddress,reporterPhysicalAddress,scope)];
+	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,receivedOnLocalSocket,reporterPhysicalAddress,scope)];
 
 	if ( (trusted) && ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
 		// Changes to external surface reported by trusted peers causes path reset in this scope
+		RR->t->resettingPathsInScope(tPtr,reporter,reporterPhysicalAddress,myPhysicalAddress,scope);
+
 		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;
-		TRACE("physical address %s for scope %u as seen from %s(%s) differs from %s, resetting paths in scope",myPhysicalAddress.toString().c_str(),(unsigned int)scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str(),entry.mySurface.toString().c_str());
+		entry.trusted = trusted;
 
 		// Erase all entries in this scope that were not reported from this remote address to prevent 'thrashing'
 		// due to multiple reports of endpoint change.
@@ -96,27 +101,18 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &receivedOnLoc
 			}
 		}
 
-		// Reset all paths within this scope
-		_ResetWithinScope rset(now,(InetAddress::IpScope)scope);
+		// Reset all paths within this scope and address family
+		_ResetWithinScope rset(tPtr,now,myPhysicalAddress.ss_family,(InetAddress::IpScope)scope);
 		RR->topology->eachPeer<_ResetWithinScope &>(rset);
-
-		// Send a NOP to all peers for whom we forgot a path. This will cause direct
-		// links to be re-established if possible, possibly using a root server or some
-		// other relay.
-		for(std::vector< SharedPtr<Peer> >::const_iterator p(rset.peersReset.begin());p!=rset.peersReset.end();++p) {
-			if ((*p)->activelyTransferringFrames(now)) {
-				Packet outp((*p)->address(),RR->identity.address(),Packet::VERB_NOP);
-				RR->sw->send(outp,true,0);
-			}
-		}
 	} else {
 		// Otherwise just update DB to use to determine external surface info
 		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;
+		entry.trusted = trusted;
 	}
 }
 
-void SelfAwareness::clean(uint64_t now)
+void SelfAwareness::clean(int64_t now)
 {
 	Mutex::Lock _l(_phy_m);
 	Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
@@ -133,55 +129,82 @@ std::vector<InetAddress> SelfAwareness::getSymmetricNatPredictions()
 	/* This is based on ideas and strategies found here:
 	 * https://tools.ietf.org/html/draft-takeda-symmetric-nat-traversal-00
 	 *
-	 * In short: a great many symmetric NATs allocate ports sequentially.
-	 * This is common on enterprise and carrier grade NATs as well as consumer
-	 * devices. This code generates a list of "you might try this" addresses by
-	 * extrapolating likely port assignments from currently known external
-	 * global IPv4 surfaces. These can then be included in a PUSH_DIRECT_PATHS
-	 * message to another peer, causing it to possibly try these addresses and
-	 * bust our local symmetric NAT. It works often enough to be worth the
-	 * extra bit of code and does no harm in cases where it fails. */
+	 * For each IP address reported by a trusted (upstream) peer, we find
+	 * the external port most recently reported by ANY peer for that IP.
+	 *
+	 * We only do any of this for global IPv4 addresses since private IPs
+	 * and IPv6 are not going to have symmetric NAT.
+	 *
+	 * SECURITY NOTE:
+	 *
+	 * We never use IPs reported by non-trusted peers, since this could lead
+	 * to a minor vulnerability whereby a peer could poison our cache with
+	 * bad external surface reports via OK(HELLO) and then possibly coax us
+	 * into suggesting their IP to other peers via PUSH_DIRECT_PATHS. This
+	 * in turn could allow them to MITM flows.
+	 *
+	 * Since flows are encrypted and authenticated they could not actually
+	 * read or modify traffic, but they could gather meta-data for forensics
+	 * purpsoes or use this as a DOS attack vector. */
 
-	// Gather unique surfaces indexed by local received-on address and flag
-	// us as behind a symmetric NAT if there is more than one.
-	std::map< InetAddress,std::set<InetAddress> > surfaces;
-	bool symmetric = false;
+	std::map< uint32_t,unsigned int > maxPortByIp;
+	InetAddress theOneTrueSurface;
 	{
 		Mutex::Lock _l(_phy_m);
-		Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
-		PhySurfaceKey *k = (PhySurfaceKey *)0;
-		PhySurfaceEntry *e = (PhySurfaceEntry *)0;
-		while (i.next(k,e)) {
-			if ((e->mySurface.ss_family == AF_INET)&&(e->mySurface.ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
-				std::set<InetAddress> &s = surfaces[k->receivedOnLocalAddress];
-				s.insert(e->mySurface);
-				symmetric = symmetric||(s.size() > 1);
-			}
-		}
-	}
 
-	// If we appear to be symmetrically NATed, generate and return extrapolations
-	// of those surfaces. Since PUSH_DIRECT_PATHS is sent multiple times, we
-	// probabilistically generate extrapolations of anywhere from +1 to +5 to
-	// increase the odds that it will work "eventually".
-	if (symmetric) {
-		std::vector<InetAddress> r;
-		for(std::map< InetAddress,std::set<InetAddress> >::iterator si(surfaces.begin());si!=surfaces.end();++si) {
-			for(std::set<InetAddress>::iterator i(si->second.begin());i!=si->second.end();++i) {
-				InetAddress ipp(*i);
-				unsigned int p = ipp.port() + 1 + ((unsigned int)RR->node->prng() & 3);
-				if (p >= 65535)
-					p -= 64510; // NATs seldom use ports <=1024 so wrap to 1025
-				ipp.setPort(p);
-				if ((si->second.count(ipp) == 0)&&(std::find(r.begin(),r.end(),ipp) == r.end())) {
-					r.push_back(ipp);
+		// First check to see if this is a symmetric NAT and enumerate external IPs learned from trusted peers
+		bool symmetric = false;
+		{
+			Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
+			PhySurfaceKey *k = (PhySurfaceKey *)0;
+			PhySurfaceEntry *e = (PhySurfaceEntry *)0;
+			while (i.next(k,e)) {
+				if ((e->trusted)&&(e->mySurface.ss_family == AF_INET)&&(e->mySurface.ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
+					if (!theOneTrueSurface)
+						theOneTrueSurface = e->mySurface;
+					else if (theOneTrueSurface != e->mySurface)
+						symmetric = true;
+					maxPortByIp[reinterpret_cast<const struct sockaddr_in *>(&(e->mySurface))->sin_addr.s_addr] = e->mySurface.port();
 				}
 			}
 		}
-		return r;
+		if (!symmetric)
+			return std::vector<InetAddress>();
+
+		{	// Then find the highest issued port per IP
+			Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
+			PhySurfaceKey *k = (PhySurfaceKey *)0;
+			PhySurfaceEntry *e = (PhySurfaceEntry *)0;
+			while (i.next(k,e)) {
+				if ((e->mySurface.ss_family == AF_INET)&&(e->mySurface.ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
+					const unsigned int port = e->mySurface.port();
+					std::map< uint32_t,unsigned int >::iterator mp(maxPortByIp.find(reinterpret_cast<const struct sockaddr_in *>(&(e->mySurface))->sin_addr.s_addr));
+					if ((mp != maxPortByIp.end())&&(mp->second < port))
+						mp->second = port;
+				}
+			}
+		}
 	}
 
-	return std::vector<InetAddress>();
+	std::vector<InetAddress> r;
+
+	// Try next port up from max for each
+	for(std::map< uint32_t,unsigned int >::iterator i(maxPortByIp.begin());i!=maxPortByIp.end();++i) {
+		unsigned int p = i->second + 1;
+		if (p > 65535) p -= 64511;
+		const InetAddress pred(&(i->first),4,p);
+		if (std::find(r.begin(),r.end(),pred) == r.end())
+			r.push_back(pred);
+	}
+
+	// Try a random port for each -- there are only 65535 so eventually it should work
+	for(std::map< uint32_t,unsigned int >::iterator i(maxPortByIp.begin());i!=maxPortByIp.end();++i) {
+		const InetAddress pred(&(i->first),4,1024 + ((unsigned int)RR->node->prng() % 64511));
+		if (std::find(r.begin(),r.end(),pred) == r.end())
+			r.push_back(pred);
+	}
+
+	return r;
 }
 
 } // namespace ZeroTier

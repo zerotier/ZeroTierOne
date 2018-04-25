@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #include <stdio.h>
@@ -25,6 +33,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <thread>
 
 #include "node/Constants.hpp"
 #include "node/Hashtable.hpp"
@@ -48,14 +57,15 @@
 
 #include "osdep/OSUtils.hpp"
 #include "osdep/Phy.hpp"
-#include "osdep/Http.hpp"
-#include "osdep/BackgroundResolver.hpp"
 #include "osdep/PortMapper.hpp"
 #include "osdep/Thread.hpp"
 
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-#include "controller/SqliteNetworkController.hpp"
-#endif // ZT_ENABLE_NETWORK_CONTROLLER
+#ifdef ZT_USE_X64_ASM_SALSA2012
+#include "ext/x64-salsa2012-asm/salsa2012.h"
+#endif
+#ifdef ZT_USE_ARM32_NEON_ASM_SALSA2012
+#include "ext/arm32-neon-salsa2012-asm/salsa2012.h"
+#endif
 
 #ifdef __WINDOWS__
 #include <tchar.h>
@@ -137,16 +147,15 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 
 //////////////////////////////////////////////////////////////////////////////
 
-static unsigned char fuzzbuf[1048576];
-
 static int testCrypto()
 {
-	unsigned char buf1[16384];
-	unsigned char buf2[sizeof(buf1)],buf3[sizeof(buf1)];
+	static unsigned char buf1[16384];
+	static unsigned char buf2[sizeof(buf1)],buf3[sizeof(buf1)];
+	static char hexbuf[1024];
 
 	for(int i=0;i<3;++i) {
 		Utils::getSecureRandom(buf1,64);
-		std::cout << "[crypto] getSecureRandom: " << Utils::hex(buf1,64) << std::endl;
+		std::cout << "[crypto] getSecureRandom: " << Utils::hex(buf1,64,hexbuf) << std::endl;
 	}
 
 	std::cout << "[crypto] Testing Salsa20... "; std::cout.flush();
@@ -156,27 +165,27 @@ static int testCrypto()
 		memset(buf2,0,sizeof(buf2));
 		memset(buf3,0,sizeof(buf3));
 		Salsa20 s20;
-		s20.init("12345678123456781234567812345678",256,"12345678");
-		s20.encrypt20(buf1,buf2,sizeof(buf1));
-		s20.init("12345678123456781234567812345678",256,"12345678");
-		s20.decrypt20(buf2,buf3,sizeof(buf2));
+		s20.init("12345678123456781234567812345678","12345678");
+		s20.crypt20(buf1,buf2,sizeof(buf1));
+		s20.init("12345678123456781234567812345678","12345678");
+		s20.crypt20(buf2,buf3,sizeof(buf2));
 		if (memcmp(buf1,buf3,sizeof(buf1))) {
 			std::cout << "FAIL (encrypt/decrypt test)" << std::endl;
 			return -1;
 		}
 	}
-	Salsa20 s20(s20TV0Key,256,s20TV0Iv);
+	Salsa20 s20(s20TV0Key,s20TV0Iv);
 	memset(buf1,0,sizeof(buf1));
 	memset(buf2,0,sizeof(buf2));
-	s20.encrypt20(buf1,buf2,64);
+	s20.crypt20(buf1,buf2,64);
 	if (memcmp(buf2,s20TV0Ks,64)) {
 		std::cout << "FAIL (test vector 0)" << std::endl;
 		return -1;
 	}
-	s20.init(s2012TV0Key,256,s2012TV0Iv);
+	s20.init(s2012TV0Key,s2012TV0Iv);
 	memset(buf1,0,sizeof(buf1));
 	memset(buf2,0,sizeof(buf2));
-	s20.encrypt12(buf1,buf2,64);
+	s20.crypt12(buf1,buf2,64);
 	if (memcmp(buf2,s2012TV0Ks,64)) {
 		std::cout << "FAIL (test vector 1)" << std::endl;
 		return -1;
@@ -194,34 +203,68 @@ static int testCrypto()
 		unsigned char *bb = (unsigned char *)::malloc(1234567);
 		for(unsigned int i=0;i<1234567;++i)
 			bb[i] = (unsigned char)i;
-		Salsa20 s20(s20TV0Key,256,s20TV0Iv);
-		double bytes = 0.0;
+		Salsa20 s20(s20TV0Key,s20TV0Iv);
+		long double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
-			s20.encrypt12(bb,bb,1234567);
+			s20.crypt12(bb,bb,1234567);
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
 		SHA512::hash(buf1,bb,1234567);
-		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16) << ')' << std::endl;
+		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << std::endl;
 		::free((void *)bb);
 	}
+
+#ifdef ZT_USE_X64_ASM_SALSA2012
+	std::cout << "[crypto] Benchmarking Salsa20/12 fast x64 ASM... "; std::cout.flush();
+	{
+		unsigned char *bb = (unsigned char *)::malloc(1234567);
+		double bytes = 0.0;
+		uint64_t start = OSUtils::now();
+		for(unsigned int i=0;i<200;++i) {
+			zt_salsa2012_amd64_xmm6(bb,1234567,s20TV0Iv,s20TV0Key);
+			bytes += 1234567.0;
+		}
+		uint64_t end = OSUtils::now();
+		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1024.0)) << " MiB/second" << std::endl;
+		::free((void *)bb);
+	}
+#endif
+
+#ifdef ZT_USE_ARM32_NEON_ASM_SALSA2012
+	if (zt_arm_has_neon()) {
+		std::cout << "[crypto] Benchmarking Salsa20/12 fast arm32/neon ASM... "; std::cout.flush();
+		{
+			unsigned char *bb = (unsigned char *)::malloc(1234567);
+			double bytes = 0.0;
+			uint64_t start = OSUtils::now();
+			for(unsigned int i=0;i<200;++i) {
+				zt_salsa2012_armneon3_xor(bb,(const unsigned char *)0,1234567,s20TV0Iv,s20TV0Key);
+				bytes += 1234567.0;
+			}
+			uint64_t end = OSUtils::now();
+			std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1024.0)) << " MiB/second" << std::endl;
+			::free((void *)bb);
+		}
+	}
+#endif
 
 	std::cout << "[crypto] Benchmarking Salsa20/20... "; std::cout.flush();
 	{
 		unsigned char *bb = (unsigned char *)::malloc(1234567);
 		for(unsigned int i=0;i<1234567;++i)
 			bb[i] = (unsigned char)i;
-		Salsa20 s20(s20TV0Key,256,s20TV0Iv);
-		double bytes = 0.0;
+		Salsa20 s20(s20TV0Key,s20TV0Iv);
+		long double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
-			s20.encrypt20(bb,bb,1234567);
+			s20.crypt20(bb,bb,1234567);
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
 		SHA512::hash(buf1,bb,1234567);
-		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16) << ')' << std::endl;
+		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << std::endl;
 		::free((void *)bb);
 	}
 
@@ -251,14 +294,14 @@ static int testCrypto()
 		unsigned char *bb = (unsigned char *)::malloc(1234567);
 		for(unsigned int i=0;i<1234567;++i)
 			bb[i] = (unsigned char)i;
-		double bytes = 0.0;
+		long double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
 			Poly1305::compute(buf1,bb,1234567,poly1305TV0Key);
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
-		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl;
+		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1000.0)) << " MiB/second" << std::endl;
 		::free((void *)bb);
 	}
 
@@ -278,10 +321,10 @@ static int testCrypto()
 	std::cout << "[crypto] Testing C25519 and Ed25519 against test vectors... "; std::cout.flush();
 	for(int k=0;k<ZT_NUM_C25519_TEST_VECTORS;++k) {
 		C25519::Pair p1,p2;
-		memcpy(p1.pub.data,C25519_TEST_VECTORS[k].pub1,p1.pub.size());
-		memcpy(p1.priv.data,C25519_TEST_VECTORS[k].priv1,p1.priv.size());
-		memcpy(p2.pub.data,C25519_TEST_VECTORS[k].pub2,p2.pub.size());
-		memcpy(p2.priv.data,C25519_TEST_VECTORS[k].priv2,p2.priv.size());
+		memcpy(p1.pub.data,C25519_TEST_VECTORS[k].pub1,ZT_C25519_PUBLIC_KEY_LEN);
+		memcpy(p1.priv.data,C25519_TEST_VECTORS[k].priv1,ZT_C25519_PRIVATE_KEY_LEN);
+		memcpy(p2.pub.data,C25519_TEST_VECTORS[k].pub2,ZT_C25519_PUBLIC_KEY_LEN);
+		memcpy(p2.priv.data,C25519_TEST_VECTORS[k].priv2,ZT_C25519_PRIVATE_KEY_LEN);
 		C25519::agree(p1,p2.pub,buf1,64);
 		C25519::agree(p2,p1.pub,buf2,64);
 		if (memcmp(buf1,buf2,64)) {
@@ -329,6 +372,17 @@ static int testCrypto()
 	}
 	std::cout << "PASS" << std::endl;
 
+	std::cout << "[crypto] Benchmarking C25519 ECC key agreement... "; std::cout.flush();
+	C25519::Pair bp[8];
+	for(int k=0;k<8;++k)
+		bp[k] = C25519::generate();
+	uint64_t st = OSUtils::now();
+	for(unsigned int k=0;k<50;++k) {
+		C25519::agree(bp[~k & 7],bp[k & 7].pub,buf1,64);
+	}
+	uint64_t et = OSUtils::now();
+	std::cout << ((double)(et - st) / 50.0) << "ms per agreement." << std::endl;
+
 	std::cout << "[crypto] Testing Ed25519 ECC signatures... "; std::cout.flush();
 	C25519::Pair didntSign = C25519::generate();
 	for(unsigned int i=0;i<10;++i) {
@@ -356,7 +410,7 @@ static int testCrypto()
 		}
 		for(unsigned int k=0;k<64;++k) {
 			C25519::Signature sig2(sig);
-			sig2.data[rand() % sig2.size()] ^= (unsigned char)(1 << (rand() & 7));
+			sig2.data[rand() % ZT_C25519_SIGNATURE_LEN] ^= (unsigned char)(1 << (rand() & 7));
 			if (C25519::verify(p1.pub,buf1,sizeof(buf1),sig2)) {
 				std::cout << "FAIL (5)" << std::endl;
 				return -1;
@@ -365,6 +419,15 @@ static int testCrypto()
 	}
 	std::cout << "PASS" << std::endl;
 
+	std::cout << "[crypto] Benchmarking Ed25519 ECC signatures... "; std::cout.flush();
+	st = OSUtils::now();
+	for(int k=0;k<1000;++k) {
+		C25519::Signature sig;
+		C25519::sign(didntSign.priv,didntSign.pub,buf1,sizeof(buf1),sig.data);
+	}
+	et = OSUtils::now();
+	std::cout << ((double)(et - st) / 50.0) << "ms per signature." << std::endl;
+
 	return 0;
 }
 
@@ -372,17 +435,22 @@ static int testIdentity()
 {
 	Identity id;
 	Buffer<512> buf;
+	char buf2[1024];
 
 	std::cout << "[identity] Validate known-good identity... "; std::cout.flush();
 	if (!id.fromString(KNOWN_GOOD_IDENTITY)) {
 		std::cout << "FAIL (1)" << std::endl;
 		return -1;
 	}
-	if (!id.locallyValidate()) {
-		std::cout << "FAIL (2)" << std::endl;
-		return -1;
+	const uint64_t vst = OSUtils::now();
+	for(int k=0;k<10;++k) {
+		if (!id.locallyValidate()) {
+			std::cout << "FAIL (2)" << std::endl;
+			return -1;
+		}
 	}
-	std::cout << "PASS" << std::endl;
+	const uint64_t vet = OSUtils::now();
+	std::cout << "PASS (" << ((double)(vet - vst) / 10.0) << "ms per validation)" << std::endl;
 
 	std::cout << "[identity] Validate known-bad identity... "; std::cout.flush();
 	if (!id.fromString(KNOWN_BAD_IDENTITY)) {
@@ -400,7 +468,7 @@ static int testIdentity()
 		uint64_t genstart = OSUtils::now();
 		id.generate();
 		uint64_t genend = OSUtils::now();
-		std::cout << "(took " << (genend - genstart) << "ms): " << id.toString(true) << std::endl;
+		std::cout << "(took " << (genend - genstart) << "ms): " << id.toString(true,buf2) << std::endl;
 		std::cout << "[identity] Locally validate identity: ";
 		if (id.locallyValidate()) {
 			std::cout << "PASS" << std::endl;
@@ -440,7 +508,7 @@ static int testIdentity()
 
 	{
 		Identity id2;
-		id2.fromString(id.toString(true).c_str());
+		id2.fromString(id.toString(true,buf2));
 		std::cout << "[identity] Serialize and deserialize (ASCII w/private): ";
 		if ((id == id2)&&(id2.locallyValidate())) {
 			std::cout << "PASS" << std::endl;
@@ -452,7 +520,7 @@ static int testIdentity()
 
 	{
 		Identity id2;
-		id2.fromString(id.toString(false).c_str());
+		id2.fromString(id.toString(false,buf2));
 		std::cout << "[identity] Serialize and deserialize (ASCII no private): ";
 		if ((id == id2)&&(id2.locallyValidate())) {
 			std::cout << "PASS" << std::endl;
@@ -467,16 +535,18 @@ static int testIdentity()
 
 static int testCertificate()
 {
+	char buf[4096];
+
 	Identity authority;
 	std::cout << "[certificate] Generating identity to act as authority... "; std::cout.flush();
 	authority.generate();
-	std::cout << authority.address().toString() << std::endl;
+	std::cout << authority.address().toString(buf) << std::endl;
 
 	Identity idA,idB;
 	std::cout << "[certificate] Generating identities A and B... "; std::cout.flush();
 	idA.generate();
 	idB.generate();
-	std::cout << idA.address().toString() << ", " << idB.address().toString() << std::endl;
+	std::cout << idA.address().toString(buf) << ", " << idB.address().toString(buf) << std::endl;
 
 	std::cout << "[certificate] Generating certificates A and B...";
 	CertificateOfMembership cA(10000,100,1,idA.address());
@@ -504,19 +574,6 @@ static int testCertificate()
 		std::cout << "FAIL" << std::endl;
 		return -1;
 	}
-
-	std::cout << "[certificate] Testing string serialization... ";
-	CertificateOfMembership copyA(cA.toString());
-	CertificateOfMembership copyB(cB.toString());
-	if (copyA != cA) {
-		std::cout << "FAIL" << std::endl;
-		return -1;
-	}
-	if (copyB != cB) {
-		std::cout << "FAIL" << std::endl;
-		return -1;
-	}
-	std::cout << "PASS" << std::endl;
 
 	std::cout << "[certificate] Generating two certificates that should not agree...";
 	cA = CertificateOfMembership(10000,100,1,idA.address());
@@ -585,6 +642,80 @@ static int testPacket()
 
 static int testOther()
 {
+	char buf[1024];
+	char buf2[4096];
+	char buf3[1024];
+
+	std::cout << "[other] Testing hex/unhex... "; std::cout.flush();
+	Utils::getSecureRandom(buf,(unsigned int)sizeof(buf));
+	Utils::hex(buf,(unsigned int)sizeof(buf),buf2);
+	Utils::unhex(buf2,buf3,(unsigned int)sizeof(buf3));
+	if (memcmp(buf,buf3,sizeof(buf)) == 0) {
+		std::cout << "PASS" << std::endl;
+	} else {
+		std::cout << "FAIL!" << std::endl;
+		buf2[78] = 0;
+		std::cout << buf2 << std::endl;
+		Utils::hex(buf3,(unsigned int)sizeof(buf3),buf2);
+		buf2[78] = 0;
+		std::cout << buf2 << std::endl;
+		return -1;
+	}
+
+	std::cout << "[other] Testing InetAddress encode/decode..."; std::cout.flush();
+	std::cout << " " << InetAddress("127.0.0.1/9993").toString(buf);
+	std::cout << " " << InetAddress("feed:dead:babe:dead:beef:f00d:1234:5678/12345").toString(buf);
+	std::cout << " " << InetAddress("0/9993").toString(buf);
+	std::cout << " " << InetAddress("").toString(buf);
+	std::cout << std::endl;
+
+#if 0
+	std::cout << "[other] Benchmarking memcpy... "; std::cout.flush();
+	{
+		unsigned char *bb = (unsigned char *)::malloc(1234567);
+		unsigned char *cc = (unsigned char *)::malloc(1234567);
+		for(unsigned int i=0;i<1234567;++i)
+			bb[i] = (unsigned char)i;
+		double bytes = 0.0;
+		uint64_t start = OSUtils::now();
+		for(unsigned int i=0;i<20000;++i) {
+			++bb[i];
+			++bb[i+1];
+			memcpy(cc,bb,1234567);
+			bytes += 1234567.0;
+		}
+		if (cc[0] != bb[0])
+			abort();
+		uint64_t end = OSUtils::now();
+		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second" << std::endl;
+		::free((void *)bb);
+		::free((void *)cc);
+	}
+#endif
+
+	std::cout << "[other] Benchmarking ZT_FAST_MEMCPY... "; std::cout.flush();
+	{
+		unsigned char *bb = (unsigned char *)::malloc(1234567);
+		unsigned char *cc = (unsigned char *)::malloc(1234567);
+		for(unsigned int i=0;i<1234567;++i)
+			bb[i] = (unsigned char)i;
+		double bytes = 0.0;
+		uint64_t start = OSUtils::now();
+		for(unsigned int i=0;i<20000;++i) {
+			++bb[0];
+			++bb[1234566];
+			ZT_FAST_MEMCPY(cc,bb,1234567);
+			bytes += 1234567.0;
+		}
+		if (cc[0] != bb[0])
+			abort();
+		uint64_t end = OSUtils::now();
+		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second" << std::endl;
+		::free((void *)bb);
+		::free((void *)cc);
+	}
+
+#if 0
 	std::cout << "[other] Testing Hashtable... "; std::cout.flush();
 	{
 		Hashtable<uint64_t,std::string> ht;
@@ -748,42 +879,29 @@ static int testOther()
 		}
 	}
 	std::cout << "PASS" << std::endl;
-
-	std::cout << "[other] Testing hex encode/decode... "; std::cout.flush();
-	for(unsigned int k=0;k<1000;++k) {
-		unsigned int flen = (rand() % 8194) + 1;
-		for(unsigned int i=0;i<flen;++i)
-			fuzzbuf[i] = (unsigned char)(rand() & 0xff);
-		std::string dec = Utils::unhex(Utils::hex(fuzzbuf,flen).c_str());
-		if ((dec.length() != flen)||(memcmp(dec.data(),fuzzbuf,dec.length()))) {
-			std::cout << "FAILED!" << std::endl;
-			std::cout << Utils::hex(fuzzbuf,flen) << std::endl;
-			std::cout << Utils::hex(dec.data(),(unsigned int)dec.length()) << std::endl;
-			return -1;
-		}
-	}
-	std::cout << "PASS" << std::endl;
+#endif
 
 	std::cout << "[other] Testing/fuzzing Dictionary... "; std::cout.flush();
 	for(int k=0;k<1000;++k) {
-		Dictionary<8194> test;
+		Dictionary<8194> *test = new Dictionary<8194>();
 		char key[32][16];
 		char value[32][128];
+		memset(key, 0, sizeof(key));
+		memset(value, 0, sizeof(value));
 		for(unsigned int q=0;q<32;++q) {
-			Utils::snprintf(key[q],16,"%.8lx",(unsigned long)rand());
+			Utils::hex((uint32_t)((rand() % 1000) + (q * 1000)),key[q]);
 			int r = rand() % 128;
 			for(int x=0;x<r;++x)
 				value[q][x] = ("0123456789\0\t\r\n= ")[rand() % 16];
 			value[q][r] = (char)0;
-			test.add(key[q],value[q],r);
+			test->add(key[q],value[q],r);
 		}
 		for(unsigned int q=0;q<1024;++q) {
-			//int r = rand() % 128;
-			int r = 31;
+			int r = rand() % 32;
 			char tmp[128];
-			if (test.get(key[r],tmp,sizeof(tmp)) >= 0) {
+			if (test->get(key[r],tmp,sizeof(tmp)) >= 0) {
 				if (strcmp(value[r],tmp)) {
-					std::cout << "FAILED (invalid value)!" << std::endl;
+					std::cout << "FAILED (invalid value '" << value[r] << "' != '" << tmp << "')!" << std::endl;
 					return -1;
 				}
 			} else {
@@ -791,36 +909,27 @@ static int testOther()
 				return -1;
 			}
 		}
-		for(unsigned int q=0;q<31;++q) {
-			char tmp[128];
-			test.erase(key[q]);
-			if (test.get(key[q],tmp,sizeof(tmp)) >= 0) {
-				std::cout << "FAILED (key should have been erased)!" << std::endl;
-				return -1;
-			}
-			if (test.get(key[q+1],tmp,sizeof(tmp)) < 0) {
-				std::cout << "FAILED (key should NOT have been erased)!" << std::endl;
-				return -1;
-			}
-		}
+		delete test;
 	}
 	int foo = 0;
 	volatile int *volatile bar = &foo; // force compiler not to optimize out test.get() below
 	for(int k=0;k<200;++k) {
 		int r = rand() % 8194;
-		unsigned char tmp[8194];
+		unsigned char *tmp = new unsigned char[8194];
 		for(int q=0;q<r;++q)
 			tmp[q] = (unsigned char)((rand() % 254) + 1); // don't put nulls since those will always just terminate scan
 		tmp[r] = (r % 32) ? (char)(rand() & 0xff) : (char)0; // every 32nd iteration don't terminate the string maybe...
-		Dictionary<8194> test((const char *)tmp);
+		Dictionary<8194> *test = new Dictionary<8194>((const char *)tmp);
 		for(unsigned int q=0;q<100;++q) {
 			char tmp[128];
 			for(unsigned int x=0;x<128;++x)
 				tmp[x] = (char)(rand() & 0xff);
 			tmp[127] = (char)0;
 			char value[8194];
-			*bar += test.get(tmp,value,sizeof(value));
+			*bar += test->get(tmp,value,sizeof(value));
 		}
+		delete test;
+		delete[] tmp;
 	}
 	std::cout << "PASS (junk value to prevent optimization-out of test: " << foo << ")" << std::endl;
 
@@ -975,70 +1084,8 @@ static int testPhy()
 	return 0;
 }
 
-static int testResolver()
-{
-	std::cout << "[resolver] Testing BackgroundResolver..."; std::cout.flush();
-
-	BackgroundResolver r("tcp-fallback.zerotier.com");
-	r.resolveNow();
-	r.wait();
-
-	std::vector<InetAddress> ips(r.get());
-	for(std::vector<InetAddress>::const_iterator ip(ips.begin());ip!=ips.end();++ip) {
-		std::cout << ' ' << ip->toString();
-	}
-	std::cout << std::endl;
-
-	return 0;
-}
-
-/*
-static int testHttp()
-{
-	std::map<std::string,std::string> requestHeaders,responseHeaders;
-	std::string responseBody;
-
-	InetAddress downloadZerotierDotCom;
-	std::vector<InetAddress> rr(OSUtils::resolve("download.zerotier.com"));
-	if (rr.empty()) {
-		std::cout << "[http] Resolve of download.zerotier.com failed, skipping." << std::endl;
-		return 0;
-	} else {
-		for(std::vector<InetAddress>::iterator r(rr.begin());r!=rr.end();++r) {
-			std::cout << "[http] download.zerotier.com: " << r->toString() << std::endl;
-			if (r->isV4())
-				downloadZerotierDotCom = *r;
-		}
-	}
-	downloadZerotierDotCom.setPort(80);
-
-	std::cout << "[http] GET http://download.zerotier.com/dev/1k @" << downloadZerotierDotCom.toString() << " ... "; std::cout.flush();
-	requestHeaders["Host"] = "download.zerotier.com";
-	unsigned int sc = Http::GET(1024 * 1024 * 16,60000,reinterpret_cast<const struct sockaddr *>(&downloadZerotierDotCom),"/dev/1k",requestHeaders,responseHeaders,responseBody);
-	std::cout << sc << " " << responseBody.length() << " bytes ";
-	if (sc == 0)
-		std::cout << "ERROR: " << responseBody << std::endl;
-	else std::cout << "DONE" << std::endl;
-
-	std::cout << "[http] GET http://download.zerotier.com/dev/4m @" << downloadZerotierDotCom.toString() << " ... "; std::cout.flush();
-	requestHeaders["Host"] = "download.zerotier.com";
-	sc = Http::GET(1024 * 1024 * 16,60000,reinterpret_cast<const struct sockaddr *>(&downloadZerotierDotCom),"/dev/4m",requestHeaders,responseHeaders,responseBody);
-	std::cout << sc << " " << responseBody.length() << " bytes ";
-	if (sc == 0)
-		std::cout << "ERROR: " << responseBody << std::endl;
-	else std::cout << "DONE" << std::endl;
-
-	downloadZerotierDotCom = InetAddress("1.0.0.1/1234");
-	std::cout << "[http] GET @" << downloadZerotierDotCom.toString() << " ... "; std::cout.flush();
-	sc = Http::GET(1024 * 1024 * 16,2500,reinterpret_cast<const struct sockaddr *>(&downloadZerotierDotCom),"/dev/4m",requestHeaders,responseHeaders,responseBody);
-	std::cout << sc << " (should be 0, time out)" << std::endl;
-
-	return 0;
-}
-*/
-
 #ifdef __WINDOWS__
-int _tmain(int argc, _TCHAR* argv[])
+int __cdecl _tmain(int argc, _TCHAR* argv[])
 #else
 int main(int argc,char **argv)
 #endif
@@ -1088,6 +1135,8 @@ int main(int argc,char **argv)
 	*/
 
 	std::cout << "[info] sizeof(void *) == " << sizeof(void *) << std::endl;
+	std::cout << "[info] OSUtils::now() == " << OSUtils::now() << std::endl;
+	std::cout << "[info] hardware concurrency == " << std::thread::hardware_concurrency() << std::endl;
 	std::cout << "[info] sizeof(NetworkConfig) == " << sizeof(ZeroTier::NetworkConfig) << std::endl;
 
 	srand((unsigned int)time(0));
@@ -1099,8 +1148,6 @@ int main(int argc,char **argv)
 	r |= testIdentity();
 	r |= testCertificate();
 	r |= testPhy();
-	r |= testResolver();
-	//r |= testHttp();
 	//*/
 
 	if (r)

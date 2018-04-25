@@ -1,0 +1,29 @@
+﻿<UserControl x:Class="WinUI.OnboardProcess.EnterToken"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:WinUI.OnboardProcess"
+             mc:Ignorable="d" 
+             d:DesignHeight="300" d:DesignWidth="300">
+  <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="10">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="*"/>
+		</Grid.ColumnDefinitions>
+		<TextBlock Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2" Margin="10" TextWrapping="Wrap" HorizontalAlignment="Center" Text="Your API Token can be found or created on https://my.zerotier.com"/>
+		<TextBlock Grid.Column="0" Grid.Row="1" Text="API Token:" Margin="10"/>
+		<TextBox x:Name="APITokenInput" Grid.Column="1" Grid.Row="1" Margin="10"/>
+
+		<Button Grid.Column="1" Grid.Row="2" Background="#FFFFB354" Content="Next" HorizontalAlignment="Right" Click="Next_Click" Margin="10"/>
+		<Label Grid.Row="3"/>
+		<Button Grid.Column="0" Grid.Row="4" Background="#FFFFB354" Content="Go Back" Click="BackButton_Click" />
+	</Grid>
+</UserControl>

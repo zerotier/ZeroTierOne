@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifndef ZT_IDENTITY_HPP
@@ -21,15 +29,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string>
 
 #include "Constants.hpp"
-#include "Array.hpp"
 #include "Utils.hpp"
 #include "Address.hpp"
 #include "C25519.hpp"
 #include "Buffer.hpp"
 #include "SHA512.hpp"
+
+#define ZT_IDENTITY_STRING_BUFFER_LENGTH 384
 
 namespace ZeroTier {
 
@@ -46,14 +54,6 @@ namespace ZeroTier {
 class Identity
 {
 public:
-	/**
-	 * Identity types
-	 */
-	enum Type
-	{
-		IDENTITY_TYPE_C25519 = 0
-	};
-
 	Identity() :
 		_privateKey((C25519::Private *)0)
 	{
@@ -66,20 +66,11 @@ public:
 	{
 	}
 
-	Identity(const char *str)
-		throw(std::invalid_argument) :
+	Identity(const char *str) :
 		_privateKey((C25519::Private *)0)
 	{
 		if (!fromString(str))
-			throw std::invalid_argument(std::string("invalid string-serialized identity: ") + str);
-	}
-
-	Identity(const std::string &str)
-		throw(std::invalid_argument) :
-		_privateKey((C25519::Private *)0)
-	{
-		if (!fromString(str))
-			throw std::invalid_argument(std::string("invalid string-serialized identity: ") + str);
+			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 	}
 
 	template<unsigned int C>
@@ -91,7 +82,10 @@ public:
 
 	~Identity()
 	{
-		delete _privateKey;
+		if (_privateKey) {
+			Utils::burn(_privateKey,sizeof(C25519::Private));
+			delete _privateKey;
+		}
 	}
 
 	inline Identity &operator=(const Identity &id)
@@ -126,7 +120,7 @@ public:
 	/**
 	 * @return True if this identity contains a private key
 	 */
-	inline bool hasPrivate() const throw() { return (_privateKey != (C25519::Private *)0); }
+	inline bool hasPrivate() const { return (_privateKey != (C25519::Private *)0); }
 
 	/**
 	 * Compute the SHA512 hash of our private key (if we have one)
@@ -150,11 +144,10 @@ public:
 	 * @param len Length of data
 	 */
 	inline C25519::Signature sign(const void *data,unsigned int len) const
-		throw(std::runtime_error)
 	{
 		if (_privateKey)
 			return C25519::sign(*_privateKey,_publicKey,data,len);
-		throw std::runtime_error("sign() requires a private key");
+		throw ZT_EXCEPTION_PRIVATE_KEY_REQUIRED;
 	}
 
 	/**
@@ -206,14 +199,9 @@ public:
 	}
 
 	/**
-	 * @return Identity type
-	 */
-	inline Type type() const throw() { return IDENTITY_TYPE_C25519; }
-
-	/**
 	 * @return This identity's address
 	 */
-	inline const Address &address() const throw() { return _address; }
+	inline const Address &address() const { return _address; }
 
 	/**
 	 * Serialize this identity (binary)
@@ -226,11 +214,11 @@ public:
 	inline void serialize(Buffer<C> &b,bool includePrivate = false) const
 	{
 		_address.appendTo(b);
-		b.append((unsigned char)IDENTITY_TYPE_C25519);
-		b.append(_publicKey.data,(unsigned int)_publicKey.size());
+		b.append((uint8_t)0); // C25519/Ed25519 identity type
+		b.append(_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN);
 		if ((_privateKey)&&(includePrivate)) {
-			b.append((unsigned char)_privateKey->size());
-			b.append(_privateKey->data,(unsigned int)_privateKey->size());
+			b.append((unsigned char)ZT_C25519_PRIVATE_KEY_LEN);
+			b.append(_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN);
 		} else b.append((unsigned char)0);
 	}
 
@@ -257,18 +245,18 @@ public:
 		_address.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 		p += ZT_ADDRESS_LENGTH;
 
-		if (b[p++] != IDENTITY_TYPE_C25519)
-			throw std::invalid_argument("unsupported identity type");
+		if (b[p++] != 0)
+			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 
-		memcpy(_publicKey.data,b.field(p,(unsigned int)_publicKey.size()),(unsigned int)_publicKey.size());
-		p += (unsigned int)_publicKey.size();
+		ZT_FAST_MEMCPY(_publicKey.data,b.field(p,ZT_C25519_PUBLIC_KEY_LEN),ZT_C25519_PUBLIC_KEY_LEN);
+		p += ZT_C25519_PUBLIC_KEY_LEN;
 
 		unsigned int privateKeyLength = (unsigned int)b[p++];
 		if (privateKeyLength) {
 			if (privateKeyLength != ZT_C25519_PRIVATE_KEY_LEN)
-				throw std::invalid_argument("invalid private key");
+				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 			_privateKey = new C25519::Private();
-			memcpy(_privateKey->data,b.field(p,ZT_C25519_PRIVATE_KEY_LEN),ZT_C25519_PRIVATE_KEY_LEN);
+			ZT_FAST_MEMCPY(_privateKey->data,b.field(p,ZT_C25519_PRIVATE_KEY_LEN),ZT_C25519_PRIVATE_KEY_LEN);
 			p += ZT_C25519_PRIVATE_KEY_LEN;
 		}
 
@@ -279,9 +267,10 @@ public:
 	 * Serialize to a more human-friendly string
 	 *
 	 * @param includePrivate If true, include private key (if it exists)
+	 * @param buf Buffer to store string
 	 * @return ASCII string representation of identity
 	 */
-	std::string toString(bool includePrivate) const;
+	char *toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const;
 
 	/**
 	 * Deserialize a human-friendly string
@@ -293,19 +282,36 @@ public:
 	 * @return True if deserialization appears successful
 	 */
 	bool fromString(const char *str);
-	inline bool fromString(const std::string &str) { return fromString(str.c_str()); }
+
+	/**
+	 * @return C25519 public key
+	 */
+	inline const C25519::Public &publicKey() const { return _publicKey; }
+
+	/**
+	 * @return C25519 key pair (only returns valid pair if private key is present in this Identity object)
+	 */
+	inline const C25519::Pair privateKeyPair() const
+	{
+		C25519::Pair pair;
+		pair.pub = _publicKey;
+		if (_privateKey)
+			pair.priv = *_privateKey;
+		else memset(pair.priv.data,0,ZT_C25519_PRIVATE_KEY_LEN);
+		return pair;
+	}
 
 	/**
 	 * @return True if this identity contains something
 	 */
-	inline operator bool() const throw() { return (_address); }
+	inline operator bool() const { return (_address); }
 
-	inline bool operator==(const Identity &id) const throw() { return ((_address == id._address)&&(_publicKey == id._publicKey)); }
-	inline bool operator<(const Identity &id) const throw() { return ((_address < id._address)||((_address == id._address)&&(_publicKey < id._publicKey))); }
-	inline bool operator!=(const Identity &id) const throw() { return !(*this == id); }
-	inline bool operator>(const Identity &id) const throw() { return (id < *this); }
-	inline bool operator<=(const Identity &id) const throw() { return !(id < *this); }
-	inline bool operator>=(const Identity &id) const throw() { return !(*this < id); }
+	inline bool operator==(const Identity &id) const { return ((_address == id._address)&&(memcmp(_publicKey.data,id._publicKey.data,ZT_C25519_PUBLIC_KEY_LEN) == 0)); }
+	inline bool operator<(const Identity &id) const { return ((_address < id._address)||((_address == id._address)&&(memcmp(_publicKey.data,id._publicKey.data,ZT_C25519_PUBLIC_KEY_LEN) < 0))); }
+	inline bool operator!=(const Identity &id) const { return !(*this == id); }
+	inline bool operator>(const Identity &id) const { return (id < *this); }
+	inline bool operator<=(const Identity &id) const { return !(id < *this); }
+	inline bool operator>=(const Identity &id) const { return !(*this < id); }
 
 private:
 	Address _address;

@@ -1,11 +1,11 @@
-#define _CRT_SECURE_NO_WARNINGS
-/* $Id: minixml.c,v 1.11 2014/02/03 15:54:12 nanard Exp $ */
-/* minixml.c : the minimum size a xml parser can be ! */
+/* $Id: minixml.c,v 1.12 2017/12/12 11:17:40 nanard Exp $ */
+/* vim: tabstop=4 shiftwidth=4 noexpandtab
+ * minixml.c : the minimum size a xml parser can be ! */
 /* Project : miniupnp
  * webpage: http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
  * Author : Thomas Bernard
 
-Copyright (c) 2005-2014, Thomas BERNARD
+Copyright (c) 2005-2017, Thomas BERNARD
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -162,7 +162,8 @@ static void parseelt(struct xmlparser * p)
 						if (p->xml >= p->xmlend)
 							return;
 					}
-					if(memcmp(p->xml, "<![CDATA[", 9) == 0)
+					/* CDATA are at least 9 + 3 characters long : <![CDATA[ ]]> */
+					if((p->xmlend >= (p->xml + (9 + 3))) && (memcmp(p->xml, "<![CDATA[", 9) == 0))
 					{
 						/* CDATA handling */
 						p->xml += 9;
