@@ -1,9 +1,16 @@
 [Unit]
 Description=ZeroTier One
+Documentation=https://www.zerotier.com/manual.shtml
 After=network.target
+Before=ssh.service docker.service
 
 [Service]
 ExecStart=/usr/sbin/zerotier-one
+ExecStartPost=/bin/bash -c '\
+until [ "`find /var/lib/zerotier-one/networks.d -type f -name "????????????????.conf" | \
+wc -l`" == "`find /sys/devices/virtual/net -type d -name "zt*" | wc -l`" ]; do \
+sleep 0.5; \
+done; echo "ZeroTier One networks are online";'
 Restart=always
 KillMode=process
 
