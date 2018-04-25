@@ -14,22 +14,22 @@
 					<Setter Property="Cursor" Value="Hand" />
 				</Style>
 			</RichTextBox.Resources>
-			<FlowDocument>
-				<Paragraph TextAlignment="Center">
-					<Run Text="ZeroTier One"/>
-				</Paragraph>
-				<Paragraph TextAlignment="Center">
-					<Run FontSize="14" Text="Version 1.2.4"/>
-					<LineBreak/>
-					<Run FontSize="14" Text="(c) 2011-2017 ZeroTier, Inc."/>
-					<LineBreak/>
-					<Run FontSize="14" Text="www.zerotier.com"/>
-				</Paragraph>
-				<Paragraph TextAlignment="Center">
-					<Run FontSize="14" Text="ZeroTier One allows your computer to join virtual networks. Just select &quot;join&quot; and enter a network's 16-digit ID. Each network appears on your computer as a new network port."/>
-				</Paragraph>
-			</FlowDocument>
-		</RichTextBox>
+            <FlowDocument>
+                <Paragraph TextAlignment="Center">
+                    <Run Text="ZeroTier One"/>
+                </Paragraph>
+                <Paragraph TextAlignment="Center">
+                    <Run FontSize="14" Text="Version 1.2.6"/>
+                    <LineBreak/>
+                    <Run FontSize="14" Text="(c) 2011-2017 ZeroTier, Inc."/>
+                    <LineBreak/>
+                    <Run FontSize="14" Text="www.zerotier.com"/>
+                </Paragraph>
+                <Paragraph TextAlignment="Center">
+                    <Run FontSize="14" Text="ZeroTier One allows your computer to join virtual networks. Just select &quot;join&quot; and enter a network's 16-digit ID. Each network appears on your computer as a new network port."/>
+                </Paragraph>
+            </FlowDocument>
+        </RichTextBox>
 
 	</Grid>
 </Window>

@@ -126,6 +126,10 @@ namespace ZeroTier { typedef WindowsEthernetTap EthernetTap; }
 #include "../osdep/BSDEthernetTap.hpp"
 namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #endif // __FreeBSD__
+#ifdef __NetBSD__
+#include "../osdep/NetBSDEthernetTap.hpp"
+namespace ZeroTier { typedef NetBSDEthernetTap EthernetTap; }
+#endif // __NetBSD__
 #ifdef __OpenBSD__
 #include "../osdep/BSDEthernetTap.hpp"
 namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
@@ -2671,7 +2675,22 @@ public:
 					return false;
 			}
 		}
-
+		{
+			// Check global blacklists
+			const std::vector<InetAddress> *gbl = (const std::vector<InetAddress> *)0;
+			if (ifaddr.ss_family == AF_INET) {
+				gbl = &_globalV4Blacklist;
+			} else if (ifaddr.ss_family == AF_INET6) {
+				gbl = &_globalV6Blacklist;
+			}
+			if (gbl) {
+				Mutex::Lock _l(_localConfig_m);
+				for(std::vector<InetAddress>::const_iterator a(gbl->begin());a!=gbl->end();++a) {
+					if (a->containsAddress(ifaddr))
+						return false;
+				}
+			}
+		}
 		{
 			Mutex::Lock _l(_nets_m);
 			for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {

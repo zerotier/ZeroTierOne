@@ -185,7 +185,7 @@ xor  %r11,%r11
 movq   24(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU3
-mulq  crypto_sign_ed25519_amd64_64_MU3
+mulq  crypto_sign_ed25519_amd64_64_MU3(%rip)
 
 # qhasm: q23 = rax
 # asm 1: mov  <rax=int64#7,>q23=int64#10
@@ -203,7 +203,7 @@ mov  %rdx,%r13
 movq   24(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU4
-mulq  crypto_sign_ed25519_amd64_64_MU4
+mulq  crypto_sign_ed25519_amd64_64_MU4(%rip)
 
 # qhasm: q24 = rax
 # asm 1: mov  <rax=int64#7,>q24=int64#12
@@ -226,7 +226,7 @@ adc %rdx,%r8
 movq   32(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU2
-mulq  crypto_sign_ed25519_amd64_64_MU2
+mulq  crypto_sign_ed25519_amd64_64_MU2(%rip)
 
 # qhasm: carry? q23 += rax
 # asm 1: add  <rax=int64#7,<q23=int64#10
@@ -249,7 +249,7 @@ adc %rdx,%r13
 movq   32(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU3
-mulq  crypto_sign_ed25519_amd64_64_MU3
+mulq  crypto_sign_ed25519_amd64_64_MU3(%rip)
 
 # qhasm: carry? q24 += rax
 # asm 1: add  <rax=int64#7,<q24=int64#12
@@ -282,7 +282,7 @@ adc %rdx,%r13
 movq   32(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU4
-mulq  crypto_sign_ed25519_amd64_64_MU4
+mulq  crypto_sign_ed25519_amd64_64_MU4(%rip)
 
 # qhasm: carry? q30 += rax 
 # asm 1: add  <rax=int64#7,<q30=int64#5
@@ -310,7 +310,7 @@ adc %rdx,%r9
 movq   40(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU1
-mulq  crypto_sign_ed25519_amd64_64_MU1
+mulq  crypto_sign_ed25519_amd64_64_MU1(%rip)
 
 # qhasm: carry? q23 += rax
 # asm 1: add  <rax=int64#7,<q23=int64#10
@@ -333,7 +333,7 @@ adc %rdx,%r13
 movq   40(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU2
-mulq  crypto_sign_ed25519_amd64_64_MU2
+mulq  crypto_sign_ed25519_amd64_64_MU2(%rip)
 
 # qhasm: carry? q24 += rax
 # asm 1: add  <rax=int64#7,<q24=int64#12
@@ -366,7 +366,7 @@ adc %rdx,%r13
 movq   40(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU3
-mulq  crypto_sign_ed25519_amd64_64_MU3
+mulq  crypto_sign_ed25519_amd64_64_MU3(%rip)
 
 # qhasm: carry? q30 += rax
 # asm 1: add  <rax=int64#7,<q30=int64#5
@@ -399,7 +399,7 @@ adc %rdx,%r13
 movq   40(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU4
-mulq  crypto_sign_ed25519_amd64_64_MU4
+mulq  crypto_sign_ed25519_amd64_64_MU4(%rip)
 
 # qhasm: carry? q31 += rax 
 # asm 1: add  <rax=int64#7,<q31=int64#6
@@ -427,7 +427,7 @@ adc %rdx,%r10
 movq   48(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU0
-mulq  crypto_sign_ed25519_amd64_64_MU0
+mulq  crypto_sign_ed25519_amd64_64_MU0(%rip)
 
 # qhasm: carry? q23 += rax
 # asm 1: add  <rax=int64#7,<q23=int64#10
@@ -450,7 +450,7 @@ adc %rdx,%r12
 movq   48(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU1
-mulq  crypto_sign_ed25519_amd64_64_MU1
+mulq  crypto_sign_ed25519_amd64_64_MU1(%rip)
 
 # qhasm: carry? q24 += rax
 # asm 1: add  <rax=int64#7,<q24=int64#12
@@ -483,7 +483,7 @@ adc %rdx,%r12
 movq   48(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU2
-mulq  crypto_sign_ed25519_amd64_64_MU2
+mulq  crypto_sign_ed25519_amd64_64_MU2(%rip)
 
 # qhasm: carry? q30 += rax
 # asm 1: add  <rax=int64#7,<q30=int64#5
@@ -516,7 +516,7 @@ adc %rdx,%r12
 movq   48(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU3
-mulq  crypto_sign_ed25519_amd64_64_MU3
+mulq  crypto_sign_ed25519_amd64_64_MU3(%rip)
 
 # qhasm: carry? q31 += rax
 # asm 1: add  <rax=int64#7,<q31=int64#6
@@ -549,7 +549,7 @@ adc %rdx,%r12
 movq   48(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU4
-mulq  crypto_sign_ed25519_amd64_64_MU4
+mulq  crypto_sign_ed25519_amd64_64_MU4(%rip)
 
 # qhasm: carry? q32 += rax 
 # asm 1: add  <rax=int64#7,<q32=int64#8
@@ -577,7 +577,7 @@ adc %rdx,%r11
 movq   56(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU0
-mulq  crypto_sign_ed25519_amd64_64_MU0
+mulq  crypto_sign_ed25519_amd64_64_MU0(%rip)
 
 # qhasm: carry? q24 += rax
 # asm 1: add  <rax=int64#7,<q24=int64#12
@@ -602,7 +602,7 @@ adc %rdx,%r12
 movq   56(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU1
-mulq  crypto_sign_ed25519_amd64_64_MU1
+mulq  crypto_sign_ed25519_amd64_64_MU1(%rip)
 
 # qhasm: carry? q30 += rax
 # asm 1: add  <rax=int64#7,<q30=int64#5
@@ -640,7 +640,7 @@ movq %r8,56(%rsp)
 movq   56(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU2
-mulq  crypto_sign_ed25519_amd64_64_MU2
+mulq  crypto_sign_ed25519_amd64_64_MU2(%rip)
 
 # qhasm: carry? q31 += rax
 # asm 1: add  <rax=int64#7,<q31=int64#6
@@ -678,7 +678,7 @@ movq %r9,64(%rsp)
 movq   56(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU3
-mulq  crypto_sign_ed25519_amd64_64_MU3
+mulq  crypto_sign_ed25519_amd64_64_MU3(%rip)
 
 # qhasm: carry? q32 += rax
 # asm 1: add  <rax=int64#7,<q32=int64#8
@@ -716,7 +716,7 @@ movq %r10,72(%rsp)
 movq   56(%rsi),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_MU4
-mulq  crypto_sign_ed25519_amd64_64_MU4
+mulq  crypto_sign_ed25519_amd64_64_MU4(%rip)
 
 # qhasm: carry? q33 += rax 
 # asm 1: add  <rax=int64#7,<q33=int64#9
@@ -744,7 +744,7 @@ movq %r11,80(%rsp)
 movq 56(%rsp),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER0
-mulq  crypto_sign_ed25519_amd64_64_ORDER0
+mulq  crypto_sign_ed25519_amd64_64_ORDER0(%rip)
 
 # qhasm: r20 = rax
 # asm 1: mov  <rax=int64#7,>r20=int64#5
@@ -762,7 +762,7 @@ mov  %rdx,%r9
 movq 56(%rsp),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER1
-mulq  crypto_sign_ed25519_amd64_64_ORDER1
+mulq  crypto_sign_ed25519_amd64_64_ORDER1(%rip)
 
 # qhasm: r21 = rax
 # asm 1: mov  <rax=int64#7,>r21=int64#8
@@ -790,7 +790,7 @@ adc %rdx,%r9
 movq 56(%rsp),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER2
-mulq  crypto_sign_ed25519_amd64_64_ORDER2
+mulq  crypto_sign_ed25519_amd64_64_ORDER2(%rip)
 
 # qhasm: r22 = rax
 # asm 1: mov  <rax=int64#7,>r22=int64#9
@@ -818,7 +818,7 @@ adc %rdx,%r9
 movq 56(%rsp),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER3
-mulq  crypto_sign_ed25519_amd64_64_ORDER3
+mulq  crypto_sign_ed25519_amd64_64_ORDER3(%rip)
 
 # qhasm: free rdx
 
@@ -838,7 +838,7 @@ add  %r9,%r12
 movq 64(%rsp),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER0
-mulq  crypto_sign_ed25519_amd64_64_ORDER0
+mulq  crypto_sign_ed25519_amd64_64_ORDER0(%rip)
 
 # qhasm: carry? r21 += rax
 # asm 1: add  <rax=int64#7,<r21=int64#8
@@ -861,7 +861,7 @@ adc %rdx,%r9
 movq 64(%rsp),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER1
-mulq  crypto_sign_ed25519_amd64_64_ORDER1
+mulq  crypto_sign_ed25519_amd64_64_ORDER1(%rip)
 
 # qhasm: carry? r22 += rax
 # asm 1: add  <rax=int64#7,<r22=int64#9
@@ -894,7 +894,7 @@ adc %rdx,%rcx
 movq 64(%rsp),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER2
-mulq  crypto_sign_ed25519_amd64_64_ORDER2
+mulq  crypto_sign_ed25519_amd64_64_ORDER2(%rip)
 
 # qhasm: free rdx
 
@@ -914,7 +914,7 @@ add  %rcx,%r12
 movq 72(%rsp),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER0
-mulq  crypto_sign_ed25519_amd64_64_ORDER0
+mulq  crypto_sign_ed25519_amd64_64_ORDER0(%rip)
 
 # qhasm: carry? r22 += rax
 # asm 1: add  <rax=int64#7,<r22=int64#9
@@ -937,7 +937,7 @@ adc %rdx,%rcx
 movq 72(%rsp),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER1
-mulq  crypto_sign_ed25519_amd64_64_ORDER1
+mulq  crypto_sign_ed25519_amd64_64_ORDER1(%rip)
 
 # qhasm: free rdx
 
@@ -957,7 +957,7 @@ add  %rcx,%r12
 movq 80(%rsp),%rax
 
 # qhasm: (uint128) rdx rax = rax * *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER0
-mulq  crypto_sign_ed25519_amd64_64_ORDER0
+mulq  crypto_sign_ed25519_amd64_64_ORDER0(%rip)
 
 # qhasm: free rdx
 
@@ -1029,22 +1029,22 @@ mov  %rsi,%r11
 # qhasm: carry? t0 -= *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER0
 # asm 1: sub  crypto_sign_ed25519_amd64_64_ORDER0,<t0=int64#4
 # asm 2: sub  crypto_sign_ed25519_amd64_64_ORDER0,<t0=%rcx
-sub  crypto_sign_ed25519_amd64_64_ORDER0,%rcx
+sub  crypto_sign_ed25519_amd64_64_ORDER0(%rip),%rcx
 
 # qhasm: carry? t1 -= *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER1 - carry
 # asm 1: sbb  crypto_sign_ed25519_amd64_64_ORDER1,<t1=int64#6
 # asm 2: sbb  crypto_sign_ed25519_amd64_64_ORDER1,<t1=%r9
-sbb  crypto_sign_ed25519_amd64_64_ORDER1,%r9
+sbb  crypto_sign_ed25519_amd64_64_ORDER1(%rip),%r9
 
 # qhasm: carry? t2 -= *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER2 - carry
 # asm 1: sbb  crypto_sign_ed25519_amd64_64_ORDER2,<t2=int64#8
 # asm 2: sbb  crypto_sign_ed25519_amd64_64_ORDER2,<t2=%r10
-sbb  crypto_sign_ed25519_amd64_64_ORDER2,%r10
+sbb  crypto_sign_ed25519_amd64_64_ORDER2(%rip),%r10
 
 # qhasm: unsigned<? t3 -= *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER3 - carry
 # asm 1: sbb  crypto_sign_ed25519_amd64_64_ORDER3,<t3=int64#9
 # asm 2: sbb  crypto_sign_ed25519_amd64_64_ORDER3,<t3=%r11
-sbb  crypto_sign_ed25519_amd64_64_ORDER3,%r11
+sbb  crypto_sign_ed25519_amd64_64_ORDER3(%rip),%r11
 
 # qhasm: r0 = t0 if !unsigned<
 # asm 1: cmovae <t0=int64#4,<r0=int64#3
@@ -1089,22 +1089,22 @@ mov  %rsi,%r11
 # qhasm: carry? t0 -= *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER0
 # asm 1: sub  crypto_sign_ed25519_amd64_64_ORDER0,<t0=int64#4
 # asm 2: sub  crypto_sign_ed25519_amd64_64_ORDER0,<t0=%rcx
-sub  crypto_sign_ed25519_amd64_64_ORDER0,%rcx
+sub  crypto_sign_ed25519_amd64_64_ORDER0(%rip),%rcx
 
 # qhasm: carry? t1 -= *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER1 - carry
 # asm 1: sbb  crypto_sign_ed25519_amd64_64_ORDER1,<t1=int64#6
 # asm 2: sbb  crypto_sign_ed25519_amd64_64_ORDER1,<t1=%r9
-sbb  crypto_sign_ed25519_amd64_64_ORDER1,%r9
+sbb  crypto_sign_ed25519_amd64_64_ORDER1(%rip),%r9
 
 # qhasm: carry? t2 -= *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER2 - carry
 # asm 1: sbb  crypto_sign_ed25519_amd64_64_ORDER2,<t2=int64#8
 # asm 2: sbb  crypto_sign_ed25519_amd64_64_ORDER2,<t2=%r10
-sbb  crypto_sign_ed25519_amd64_64_ORDER2,%r10
+sbb  crypto_sign_ed25519_amd64_64_ORDER2(%rip),%r10
 
 # qhasm: unsigned<? t3 -= *(uint64 *) &crypto_sign_ed25519_amd64_64_ORDER3 - carry
 # asm 1: sbb  crypto_sign_ed25519_amd64_64_ORDER3,<t3=int64#9
 # asm 2: sbb  crypto_sign_ed25519_amd64_64_ORDER3,<t3=%r11
-sbb  crypto_sign_ed25519_amd64_64_ORDER3,%r11
+sbb  crypto_sign_ed25519_amd64_64_ORDER3(%rip),%r11
 
 # qhasm: r0 = t0 if !unsigned<
 # asm 1: cmovae <t0=int64#4,<r0=int64#3

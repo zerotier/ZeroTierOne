@@ -27,10 +27,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{55D53581-CA17-434D-9012-4416F141C331} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{BCCDCFD7-34FA-473E-9E50-20314D1017F6} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
-    <ROW Property="ProductVersion" Value="1.2.5" Type="32"/>
+    <ROW Property="ProductVersion" Value="1.2.6" Type="32"/>
     <ROW Property="REBOOT" MultiBuildValue="DefaultBuild:ReallySuppress"/>
     <ROW Property="RUNAPPLICATION" Value="1" Type="4"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
@@ -64,7 +64,7 @@
     <ROW Directory="x86_Dir" Directory_Parent="tapwindows_Dir" DefaultDir="x86"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{ECF0BCD7-41FD-47A7-92C5-CB77454433F2}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{A4BB4E68-0DD2-4052-BE60-CDCCB9BAC409}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{020DCABD-5D56-49B9-AF48-F07F0B55E590}" Directory_="APPDIR" Attributes="4" KeyPath="NoModify" Options="1"/>
     <ROW Component="AI_ExePath" ComponentId="{8E02B36C-7A19-429B-A93E-77A9261AC918}" Directory_="APPDIR" Attributes="4" KeyPath="AI_ExePath"/>
     <ROW Component="Hardcodet.Wpf.TaskbarNotification.dll" ComponentId="{BEA825AF-2555-44AF-BE40-47FFC16DCBA6}" Directory_="APPDIR" Attributes="0" KeyPath="Hardcodet.Wpf.TaskbarNotification.dll"/>
@@ -123,8 +123,8 @@
     <ATTRIBUTE name="Enable" value="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.ChainedPackageComponent">
-    <ROW ChainedPackage="ZeroTierOne_NDIS6_x64.msi" Order="1" Options="108" InstallCondition="(NOT Installed) AND VersionNT64" MaintenanceCondition="FALSE" RemoveCondition="REMOVE=&quot;ALL&quot; AND VersionNT64"/>
-    <ROW ChainedPackage="ZeroTierOne_NDIS6_x86.msi" Order="2" Options="108" InstallCondition="(NOT Installed) AND (NOT VersionNT64)" MaintenanceCondition="FALSE" RemoveCondition="REMOVE=&quot;ALL&quot; AND (NOT VersionNT64)"/>
+    <ROW ChainedPackage="ZeroTierOne_NDIS6_x64.msi" Order="1" Options="110" InstallCondition="(NOT Installed) AND VersionNT64" MaintenanceCondition="FALSE" RemoveCondition="REMOVE=&quot;ALL&quot; AND VersionNT64"/>
+    <ROW ChainedPackage="ZeroTierOne_NDIS6_x86.msi" Order="2" Options="110" InstallCondition="(NOT Installed) AND (NOT VersionNT64)" MaintenanceCondition="FALSE" RemoveCondition="REMOVE=&quot;ALL&quot; AND (NOT VersionNT64)"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.ChainedPackageFileComponent">
     <ROW FileId="ZeroTierOne_NDIS6_x64.msi" ChainedPackage="ZeroTierOne_NDIS6_x64.msi" Options="1" TargetPath="ZeroTierOne_NDIS6_x64.msi" Content="..\..\bin\tap-windows-ndis6\x64\ZeroTierOne_NDIS6_x64.msi"/>
@@ -411,14 +411,6 @@
     <ROW Registry="VersionMajor" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="VersionMajor" Value="#0" Component_="AI_CustomARPName"/>
     <ROW Registry="VersionMinor" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="VersionMinor" Value="#7" Component_="AI_CustomARPName"/>
   </COMPONENT>
-  <COMPONENT cid="caphyon.advinst.msicomp.MsiRemoveFileComponent">
-    <ROW FileKey="devcon.log" Component_="ProductInformation" FileName="devcon.log" DirProperty="One_Dir" InstallMode="3"/>
-    <ROW FileKey="devcon_x64.exe" Component_="ProductInformation" FileName="devcon_x64.exe" DirProperty="One_Dir" InstallMode="3"/>
-    <ROW FileKey="devcon_x86.exe" Component_="ProductInformation" FileName="devcon_x86.exe" DirProperty="One_Dir" InstallMode="3"/>
-    <ROW FileKey="node.log" Component_="ProductInformation" FileName="node.log" DirProperty="One_Dir" InstallMode="3"/>
-    <ROW FileKey="node.log.old" Component_="ProductInformation" FileName="node.log.old" DirProperty="One_Dir" InstallMode="3"/>
-    <ROW FileKey="roottopology" Component_="ProductInformation" FileName="root-topology" DirProperty="One_Dir" InstallMode="3"/>
-  </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServCtrlComponent">
     <ROW ServiceControl="zerotierone_x64.exe" Name="ZeroTierOneService" Event="163" Wait="1" Component_="zerotierone_x64.exe"/>
     <ROW ServiceControl="zerotierone_x86.exe" Name="ZeroTierOneService" Event="163" Wait="1" Component_="zerotierone_x86.exe"/>
@@ -462,7 +454,7 @@
     <ROW XmlAttribute="xsischemaLocation" XmlElement="swidsoftware_identification_tag" Name="xsi:schemaLocation" Flags="14" Order="3" Value="http://standards.iso.org/iso/19770/-2/2008/schema.xsd software_identification_tag.xsd"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlElementComponent">
-    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Condition="1" Order="2" Flags="14" Text="5"/>
+    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Condition="1" Order="2" Flags="14" Text="6"/>
     <ROW XmlElement="swidentitlement_required_indicator" ParentElement="swidsoftware_identification_tag" Name="swid:entitlement_required_indicator" Condition="1" Order="0" Flags="14" Text="false"/>
     <ROW XmlElement="swidmajor" ParentElement="swidnumeric" Name="swid:major" Condition="1" Order="0" Flags="14" Text="1"/>
     <ROW XmlElement="swidminor" ParentElement="swidnumeric" Name="swid:minor" Condition="1" Order="1" Flags="14" Text="2"/>

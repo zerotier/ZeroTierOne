@@ -14,6 +14,7 @@ DEFS?=
 LDLIBS?=
 DESTDIR?=
 
+
 include objects.mk
 ONE_OBJS+=osdep/LinuxEthernetTap.o
 
@@ -70,10 +71,11 @@ ifeq ($(ZT_DEBUG),1)
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
-	CFLAGS?=-O3 -fstack-protector
+	CFLAGS?=-O3 -fstack-protector -fPIE
 	override CFLAGS+=-Wall -Wno-deprecated -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	CXXFLAGS?=-O3 -fstack-protector
+	CXXFLAGS?=-O3 -fstack-protector -fPIE
 	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	LDFLAGS=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
 	STRIP+=--strip-all
 endif
@@ -102,11 +104,13 @@ CC_MACH=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
 ZT_ARCHITECTURE=999
 ifeq ($(CC_MACH),x86_64)
 	ZT_ARCHITECTURE=2
-	ZT_USE_X64_ASM_CRYPTO=1
+	ZT_USE_X64_ASM_SALSA=1
+	ZT_USE_X64_ASM_ED25519=1
 endif
 ifeq ($(CC_MACH),amd64)
 	ZT_ARCHITECTURE=2
-	ZT_USE_X64_ASM_CRYPTO=1
+	ZT_USE_X64_ASM_SALSA=1
+	ZT_USE_X64_ASM_ED25519=1
 endif
 ifeq ($(CC_MACH),powerpc64le)
 	ZT_ARCHITECTURE=8
@@ -168,6 +172,11 @@ ifeq ($(CC_MACH),armv7l)
 	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+endif
+ifeq ($(CC_MACH),armv7l)
+        ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),arm64)
 	ZT_ARCHITECTURE=4
@@ -235,9 +244,13 @@ ifeq ($(ZT_ARCHITECTURE),3)
 endif
 
 # Build faster crypto on some targets
-ifeq ($(ZT_USE_X64_ASM_CRYPTO),1)
-	override DEFS+=-DZT_USE_X64_ASM_SALSA2012 -DZT_USE_FAST_X64_ED25519
-	override CORE_OBJS+=ext/x64-salsa2012-asm/salsa2012.o ext/ed25519-amd64-asm/choose_t.o ext/ed25519-amd64-asm/consts.o ext/ed25519-amd64-asm/fe25519_add.o ext/ed25519-amd64-asm/fe25519_freeze.o ext/ed25519-amd64-asm/fe25519_mul.o ext/ed25519-amd64-asm/fe25519_square.o ext/ed25519-amd64-asm/fe25519_sub.o ext/ed25519-amd64-asm/ge25519_add_p1p1.o ext/ed25519-amd64-asm/ge25519_dbl_p1p1.o ext/ed25519-amd64-asm/ge25519_nielsadd2.o ext/ed25519-amd64-asm/ge25519_nielsadd_p1p1.o ext/ed25519-amd64-asm/ge25519_p1p1_to_p2.o ext/ed25519-amd64-asm/ge25519_p1p1_to_p3.o ext/ed25519-amd64-asm/ge25519_pnielsadd_p1p1.o ext/ed25519-amd64-asm/heap_rootreplaced.o ext/ed25519-amd64-asm/heap_rootreplaced_1limb.o ext/ed25519-amd64-asm/heap_rootreplaced_2limbs.o ext/ed25519-amd64-asm/heap_rootreplaced_3limbs.o ext/ed25519-amd64-asm/sc25519_add.o ext/ed25519-amd64-asm/sc25519_barrett.o ext/ed25519-amd64-asm/sc25519_lt.o ext/ed25519-amd64-asm/sc25519_sub_nored.o ext/ed25519-amd64-asm/ull4_mul.o ext/ed25519-amd64-asm/fe25519_getparity.o ext/ed25519-amd64-asm/fe25519_invert.o ext/ed25519-amd64-asm/fe25519_iseq.o ext/ed25519-amd64-asm/fe25519_iszero.o ext/ed25519-amd64-asm/fe25519_neg.o ext/ed25519-amd64-asm/fe25519_pack.o ext/ed25519-amd64-asm/fe25519_pow2523.o ext/ed25519-amd64-asm/fe25519_setint.o ext/ed25519-amd64-asm/fe25519_unpack.o ext/ed25519-amd64-asm/ge25519_add.o ext/ed25519-amd64-asm/ge25519_base.o ext/ed25519-amd64-asm/ge25519_double.o ext/ed25519-amd64-asm/ge25519_double_scalarmult.o ext/ed25519-amd64-asm/ge25519_isneutral.o ext/ed25519-amd64-asm/ge25519_multi_scalarmult.o ext/ed25519-amd64-asm/ge25519_pack.o ext/ed25519-amd64-asm/ge25519_scalarmult_base.o ext/ed25519-amd64-asm/ge25519_unpackneg.o ext/ed25519-amd64-asm/hram.o ext/ed25519-amd64-asm/index_heap.o ext/ed25519-amd64-asm/sc25519_from32bytes.o ext/ed25519-amd64-asm/sc25519_from64bytes.o ext/ed25519-amd64-asm/sc25519_from_shortsc.o ext/ed25519-amd64-asm/sc25519_iszero.o ext/ed25519-amd64-asm/sc25519_mul.o ext/ed25519-amd64-asm/sc25519_mul_shortsc.o ext/ed25519-amd64-asm/sc25519_slide.o ext/ed25519-amd64-asm/sc25519_to32bytes.o ext/ed25519-amd64-asm/sc25519_window4.o ext/ed25519-amd64-asm/sign.o
+ifeq ($(ZT_USE_X64_ASM_SALSA),1)
+	override DEFS+=-DZT_USE_X64_ASM_SALSA2012
+	override CORE_OBJS+=ext/x64-salsa2012-asm/salsa2012.o
+endif
+ifeq ($(ZT_USE_X64_ASM_ED25519),1)
+	override DEFS+=-DZT_USE_FAST_X64_ED25519
+	override CORE_OBJS+=ext/ed25519-amd64-asm/choose_t.o ext/ed25519-amd64-asm/consts.o ext/ed25519-amd64-asm/fe25519_add.o ext/ed25519-amd64-asm/fe25519_freeze.o ext/ed25519-amd64-asm/fe25519_mul.o ext/ed25519-amd64-asm/fe25519_square.o ext/ed25519-amd64-asm/fe25519_sub.o ext/ed25519-amd64-asm/ge25519_add_p1p1.o ext/ed25519-amd64-asm/ge25519_dbl_p1p1.o ext/ed25519-amd64-asm/ge25519_nielsadd2.o ext/ed25519-amd64-asm/ge25519_nielsadd_p1p1.o ext/ed25519-amd64-asm/ge25519_p1p1_to_p2.o ext/ed25519-amd64-asm/ge25519_p1p1_to_p3.o ext/ed25519-amd64-asm/ge25519_pnielsadd_p1p1.o ext/ed25519-amd64-asm/heap_rootreplaced.o ext/ed25519-amd64-asm/heap_rootreplaced_1limb.o ext/ed25519-amd64-asm/heap_rootreplaced_2limbs.o ext/ed25519-amd64-asm/heap_rootreplaced_3limbs.o ext/ed25519-amd64-asm/sc25519_add.o ext/ed25519-amd64-asm/sc25519_barrett.o ext/ed25519-amd64-asm/sc25519_lt.o ext/ed25519-amd64-asm/sc25519_sub_nored.o ext/ed25519-amd64-asm/ull4_mul.o ext/ed25519-amd64-asm/fe25519_getparity.o ext/ed25519-amd64-asm/fe25519_invert.o ext/ed25519-amd64-asm/fe25519_iseq.o ext/ed25519-amd64-asm/fe25519_iszero.o ext/ed25519-amd64-asm/fe25519_neg.o ext/ed25519-amd64-asm/fe25519_pack.o ext/ed25519-amd64-asm/fe25519_pow2523.o ext/ed25519-amd64-asm/fe25519_setint.o ext/ed25519-amd64-asm/fe25519_unpack.o ext/ed25519-amd64-asm/ge25519_add.o ext/ed25519-amd64-asm/ge25519_base.o ext/ed25519-amd64-asm/ge25519_double.o ext/ed25519-amd64-asm/ge25519_double_scalarmult.o ext/ed25519-amd64-asm/ge25519_isneutral.o ext/ed25519-amd64-asm/ge25519_multi_scalarmult.o ext/ed25519-amd64-asm/ge25519_pack.o ext/ed25519-amd64-asm/ge25519_scalarmult_base.o ext/ed25519-amd64-asm/ge25519_unpackneg.o ext/ed25519-amd64-asm/hram.o ext/ed25519-amd64-asm/index_heap.o ext/ed25519-amd64-asm/sc25519_from32bytes.o ext/ed25519-amd64-asm/sc25519_from64bytes.o ext/ed25519-amd64-asm/sc25519_from_shortsc.o ext/ed25519-amd64-asm/sc25519_iszero.o ext/ed25519-amd64-asm/sc25519_mul.o ext/ed25519-amd64-asm/sc25519_mul_shortsc.o ext/ed25519-amd64-asm/sc25519_slide.o ext/ed25519-amd64-asm/sc25519_to32bytes.o ext/ed25519-amd64-asm/sc25519_window4.o ext/ed25519-amd64-asm/sign.o
 endif
 ifeq ($(ZT_USE_ARM32_NEON_ASM_CRYPTO),1)
 	override DEFS+=-DZT_USE_ARM32_NEON_ASM_SALSA2012
@@ -288,7 +301,7 @@ official:	FORCE
 
 central-controller:	FORCE
 	cd ext/librethinkdbxx ; make
-	make -j4 LDLIBS="ext/librethinkdbxx/build/librethinkdb++.a" DEFS="-DZT_CONTROLLER_USE_RETHINKDB" ZT_OFFICIAL=1 one
+	make -j4 LDLIBS="ext/librethinkdbxx/build/librethinkdb++.a" DEFS="-DZT_CONTROLLER_USE_RETHINKDB" ZT_OFFICIAL=1 ZT_USE_X64_ASM_ED25519=1 one
 
 debug:	FORCE
 	make ZT_DEBUG=1 one

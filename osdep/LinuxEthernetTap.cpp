@@ -146,18 +146,21 @@ LinuxEthernetTap::LinuxEthernetTap(
 			OSUtils::ztsnprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
 		} while (stat(procpath,&sbuf) == 0); // try zt#++ until we find one that does not exist
 #else
-		char devno = 0;
+		uint64_t trial = 0; // incremented in the very unlikely event of a name collision with another network
 		do {
-			uint64_t tmp2[2];
-			tmp2[0] = Utils::hton(nwid);
-			tmp2[1] = 0;
-			char tmp3[17];
+			const uint64_t nwid40 = (nwid ^ (nwid >> 24)) + trial++;
+			uint8_t tmp2[5];
+			char tmp3[11];
+			tmp2[0] = (uint8_t)((nwid40 >> 32) & 0xff);
+			tmp2[1] = (uint8_t)((nwid40 >> 24) & 0xff);
+			tmp2[2] = (uint8_t)((nwid40 >> 16) & 0xff);
+			tmp2[3] = (uint8_t)((nwid40 >> 8) & 0xff);
+			tmp2[4] = (uint8_t)(nwid40 & 0xff);
 			tmp3[0] = 'z';
-			tmp3[1] = 't' + (devno++);
-			_base32_5_to_8(reinterpret_cast<const uint8_t *>(tmp2),tmp3 + 2);
-			_base32_5_to_8(reinterpret_cast<const uint8_t *>(tmp2) + 5,tmp3 + 10);
-			tmp3[15] = (char)0;
-			memcpy(ifr.ifr_name,tmp3,16);
+			tmp3[1] = 't';
+			_base32_5_to_8(tmp2,tmp3 + 2);
+			tmp3[10] = (char)0;
+			memcpy(ifr.ifr_name,tmp3,11);
 			OSUtils::ztsnprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
 		} while (stat(procpath,&sbuf) == 0);
 #endif
@@ -286,7 +289,7 @@ bool LinuxEthernetTap::addIpSyn(std::vector<InetAddress> ips)
 	if (cpid == 0) {
 		OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
 		setenv("PATH", "/sbin:/bin:/usr/sbin:/usr/bin", 1);
-		// We must know if there is at least (one) of each protocol version so we 
+		// We must know if there is at least (one) of each protocol version so we
 		// can properly enumerate address/netmask combinations in the ifcfg-dev file
 		for(int i=0; i<(int)ips.size(); i++) {
 			if (ips[i].isV4())
@@ -318,7 +321,7 @@ bool LinuxEthernetTap::addIpSyn(std::vector<InetAddress> ips)
 			if (ips[i].isV4())
 				::execlp("ip","ip","addr","add",ips[i].toString(iptmp),"broadcast",ips[i].broadcast().toIpString(iptmp2),"dev",_dev.c_str(),(const char *)0);
 			else
-				::execlp("ip","ip","addr","add",ips[i].toString(iptmp),"dev",_dev.c_str(),(const char *)0);			
+				::execlp("ip","ip","addr","add",ips[i].toString(iptmp),"dev",_dev.c_str(),(const char *)0);
 		}
 		::_exit(-1);
 	} else if (cpid > 0) {

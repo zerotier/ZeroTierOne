@@ -1,29 +1,19 @@
 ZeroTier - A Planetary Ethernet Switch
 ======
 
-ZeroTier is an enterprise Ethernet switch for planet Earth.
+ZeroTier is a smart programmable Ethernet switch for planet Earth.
 
-It erases the LAN/WAN distinction and makes VPNs, tunnels, proxies, and other kludges arising from the inflexible nature of physical networks obsolete. Everything is encrypted end-to-end and traffic takes the most direct (peer to peer) path available.
+It replaces the physical LAN/WAN boundary with a virtual one, allowing devices of any type at any location to be managed as if they all reside in the same cloud region or data center. All traffic is encrypted end-to-end and takes the most direct path available for minimum latency and maximum performance. The goals and design of ZeroTier are inspired by among other things the original [Google BeyondCorp](https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/43231.pdf) paper and the [Jericho Forum](https://en.wikipedia.org/wiki/Jericho_Forum).
 
 Visit [ZeroTier's site](https://www.zerotier.com/?pk_campaign=github_ZeroTierOne) for more information and [pre-built binary packages](https://www.zerotier.com/download.shtml?pk_campaign=github_ZeroTierOne). Apps for Android and iOS are available for free in the Google Play and Apple app stores.
 
 ### Getting Started
 
-ZeroTier's basic operation is easy to understand. Devices have 10-digit *ZeroTier addresses* like `89e92ceee5` and networks have 16-digit network IDs like `8056c2e21c000001`. All it takes for a device to join a network is its 16-digit ID, and all it takes for a network to authorize a device is its 10-digit address. Everything else is automatic.
+Everything in the ZeroTier world is controlled by two types of identifier: 40-bit/10-digit *ZeroTier addresses* and 64-bit/16-digit *network IDs*. A ZeroTier address identifies a node or "device" (laptop, phone, server, VM, app, etc.) while a network ID identifies a virtual Ethernet network that can be joined by devices.
 
-A "device" in our terminology is any "unit of compute" capable of talking to a network: desktops, laptops, phones, servers, VMs/VPSes, containers, and even user-space applications via our [SDK](https://github.com/zerotier/ZeroTierSDK).
+Another way of thinking about it is that ZeroTier addresses are port numbers on a giant planetary-sized smart switch while network IDs are VLANs to which these ports can be assigned. For more details read about VL1 and VL2 in [the ZeroTier manual](https://www.zerotier.com/manual.shtml).
 
-For testing purposes we provide a public virtual network called *Earth* with network ID `8056c2e21c000001`. You can join it with:
-
-    sudo zerotier-cli join 8056c2e21c000001
-
-Now wait about 30 seconds and check your system with `ip addr list` or `ifconfig`. You'll see a new interface whose name starts with *zt* and it should quickly get an IPv4 and an IPv6 address. Once you see it get an IP, try pinging `earth.zerotier.net` at `29.209.112.93`. If you've joined Earth from more than one system, try pinging your other machine. If you don't want to belong to a giant Ethernet party line anymore, just type:
-
-    sudo zerotier-cli leave 8056c2e21c000001
-
-The *zt* interface will disappear. You're no longer on the network.
-
-To create networks of your own, you'll need a network controller. ZeroTier One (for desktops and servers) includes controller functionality in its default build that can be configured via its JSON API (see [README.md in controller/](controller/)). ZeroTier provides a hosted solution with a nice web UI and SaaS add-ons at [my.zerotier.com](https://my.zerotier.com/?pk_campaign=github_ZeroTierOne). Basic controller functionality is free for up to 100 devices.
+*Network controllers* are ZeroTier nodes that act as access control certificate authorities and configuration managers for virtual networks. The first 40 bits (or 10 digits) of a network ID is the ZeroTier address of its controller. You can create networks with our [hosted controllers](https://my.zerotier.com/) and web UI/API or [host your own](controller/) if you don't mind posting some JSON configuration info or writing a script to do so.
 
 ### Project Layout
 
@@ -56,10 +46,9 @@ To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU 
    - Linux makefiles automatically detect and prefer clang/clang++ if present as it produces smaller and slightly faster binaries in most cases. You can override by supplying CC and CXX variables on the make command line.
    - CentOS 7 ships with a version of GCC/G++ that is too old, but a new enough version of CLANG can be found in the *epel* repositories. Type `yum install epel-release` and then `yum install clang` to build there.
  - **Windows**
-   - Windows 7 or newer (and equivalent server versions) are supported. This *may* work on Vista but you're on your own there. Windows XP is not supported since it lacks many important network API functions.
-   - We build with Visual Studio 2015. Older versions may not work with the solution file and project files we ship and may not have new enough C++11 support.
-   - Pre-built signed Windows drivers are included in `ext/bin/tap-windows-ndis6`. The MSI files found there will install them on 32-bit and 64-bit systems. (These are included in our multi-architecture installer as chained MSIs.)
-   - Windows builds are more painful in general than other platforms and are for the adventurous.
+   - Windows 7 or newer is supported. This *may* work on Vista but isn't officially supported there. It will not work on Windows XP.
+   - We build with Visual Studio 2015. Older versions may not work. Clang or MinGW will also probably work but may require some makefile hacking.
+   - Pre-built signed Windows drivers are included in `ext/bin/tap-windows-ndis6`. The MSI files found there will install them on 32-bit and 64-bit systems. We don't recommend trying to build Windows drivers from scratch unless you know what you're doing. One does not simply "build" a Windows driver.
  - **FreeBSD**
    - Tested most recently on FreeBSD-11. Older versions may work but we're not sure.
    - GCC/G++ 4.9 and gmake are required. These can be installed from packages or ports. Type `gmake` to build.

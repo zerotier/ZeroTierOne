@@ -1,38 +1,40 @@
 ZeroTier Release Notes
 ======
 
-# 2018-01-XX -- Version 1.2.6
+# 2018-04-17 -- Version 1.2.6
 
  * Features and Core Improvements
     * Path selection has been overhauled to improve path stability, simplify code, and prepare for multi-path and trunking in the next major release.
-    * This version introduces remote tracing for remote diagnostics. Network controllers can set a node (usually the controller itself) to receive remote tracing events from all members of the network or from select members. Events are only sent if they pertain to a given network for security reasons. These can be used to help remotely diagnose problems. In the future we'll be refining and enhancing this feature.
-    * Multicast replication can now be done by designated multicast replicators on a network (flagged as such at the controller) rather than by the sender. This offers a hub-and-spoke multicast replication topology that may be faster or more bandwidth efficient in certain cases. It's also attractive for use on networks with low powered devices that need to send multicast or where there are very large numbers of multicast recipients.
-    * Documentation fixes in network controller.
-    * Performance improvements in crypto and memory operations.
+    * This version introduces remote tracing for remote diagnostics. Network controllers can set a node (usually the controller itself) to receive remote tracing events from all members of the network or from select members. Events are only sent if they pertain to a given network for security reasons.
+    * Multicast replication can now be done by designated multicast replicators on a network (flagged as such at the controller) rather than by the sender. Most users won't want this, but it's useful for specialized use cases on hub-and-spoke networks and for low-power devices.
+    * Cryptographic performance improvements on several platforms.
     * Multithreaded performance improvements throughout the code base, including the use of an inline lightweight spinlock for low-contention resources.
- * Bug fixes
+ * Bugs fixed
     * Disappearing routes on Mac (GitHub issue #600)
     * Route flapping and path instability in some dual-stack V4/V6 networks
     * Blacklist (in local.conf) doesn't work reliably (GitHub issue #656)
-    * Connection instabilities due to unsigned integer overflows in timing comparisons under high load on some multi-core systems
-    * Binaries don't run on some 32-bit ARM chips (build problem)
+    * Connection instabilities due to unsigned integer overflows in timing comparisons (use int64_t instead of uint64_t)
+    * Binaries don't run on some older or lower-end 32-bit ARM chips (build problem)
     * ARM NEON crypto code crashes (build problem)
     * Fixed some lock ordering issues revealed by "valgrind" tool
     * The "zerotier-idtool" command could not be accessed from "zerotier-one" via command line switch
-    * Leaking UDP sockets on some platforms when NAT-PMP is enabled
-    * Fixed a very very rare thread deadlock that seemed to only manifest on some systems
+    * Leaking sockets on some platforms when uPnP/NAT-PMP is enabled
+    * Fixed two very rare multithreading issues that were only observed on certain systems
  * Platform-Specific Changes
     * MacOS
-        * Installer now loads the kernel extension right away so that High Sierra users will see the prompt to authorize it. This is done in the "Security & Privacy" preference pane and must be done driectly on the console (not via remote desktop).
-        * About dialog in UI now actually contains something useful.
+        * Installer now loads the kernel extension right away so that High Sierra users will see the prompt to authorize it. This is done in the "Security & Privacy" preference pane and must be done driectly on the console (not via remote desktop). On High Sierra and newer kexts must be authorized at the console via security settings system preferences pane.
     * Windows
-        * The Windows installer should now install the driver without requiring a special prompt in most cases. This should make it easier for our packages to be accepted into and updated in the Chocolatey repository and should make it easier to perform remote installs.
-        * The Windows official packages are now signed with an EV certificate (with hardware key) from DigiCert for better security and fewer warnings in some cases.
-        * The Windows UI now contains a preview of features to more deeply integrate it with ZeroTier Central. You can enter a ZeroTier Central API key and join networks, etc. from the UI itself. We'll be expanding this in the future and possibly changing it, so this is just a test to see how users respond.
-        * The `zerotier-idtool` command should now work on Windows.
-        * Hopefully we've fixed all instances of the "Windows package will not uninstall" problem on Windows 10.
+        * The Windows installer should now install the driver without requiring a special prompt in most cases. This should make it easier for our packages to be accepted into and updated in the Chocolatey repository and should make it easier to perform remote installs across groups of machines using IT management and provisioning tools.
+        * The Windows official packages are now signed with an EV certificate (with hardware key).
+        * The Windows UI can now log into ZeroTier Central and join networks via the Central API.
+        * The `zerotier-idtool` command should now work on Windows without ugly hacks.
+        * Upgraded the installer version.
+        * Made a few changes to hopefully fix sporadic "will not uninstall" problems, though we cannot duplicate these issues ourselves.
     * Linux
-        * Devices are now named deterministically from a base32-encoded packed version of the network ID for newly joined networks. This makes device names longer but also makes them globally unique and canonical. Now a given network will always have the same device name on every Linux system. This makes a lot of devops, deployment, and scripting tasks easier since you can hard code device names by network and they will always work in things like iptables rules and routes. (It's been this way on FreeBSD since the beginning.)
+        * Device names are now generated deterministically based on network IDs for all newly joined networks.
+    * Android
+        * Multicast now works on Android in most cases! Android apps can send and receive multicast and subscribe to multicast group IPs. Note that in some cases the app must bind to the specific correct interface for this to work.
+        * IPv6 can be disabled in UI for cases where it causes problems.
 
 # 2017-04-20 -- Version 1.2.4
 

@@ -22,3 +22,7 @@ ifeq ($(OSTYPE),OpenBSD)
 	ZT_BUILD_PLATFORM=9
 	include make-bsd.mk
 endif
+
+ifeq ($(OSTYPE),NetBSD)
+	include make-netbsd.mk
+endif
