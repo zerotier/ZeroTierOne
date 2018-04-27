@@ -1,6 +1,14 @@
 ZeroTier Release Notes
 ======
 
+# 2018-04-27 -- Version 1.2.8
+
+ * Linux version once again builds with PIE (position independent executable) flags
+ * Fixed bug in zerotier-idtool file sign and verify
+ * Fixed minor OSX app typo
+ * Merged alpha NetBSD support (mostly untested, so YMMV)
+ * Merged several minor typo and one-liner bug fixes
+
 # 2018-04-17 -- Version 1.2.6
 
  * Features and Core Improvements

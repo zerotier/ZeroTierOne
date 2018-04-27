@@ -1,5 +1,5 @@
 Name:           zerotier-one
-Version:        1.2.6
+Version:        1.2.8
 Release:        1%{?dist}
 Summary:        ZeroTier One network virtualization service
 
