@@ -353,6 +353,9 @@ uninstall:	FORCE
 debian:	FORCE
 	debuild -I -i -us -uc -nc -b
 
+debian-clean: FORCE
+        rm -rf debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one
+
 redhat:	FORCE
 	rpmbuild -ba zerotier-one.spec
 
