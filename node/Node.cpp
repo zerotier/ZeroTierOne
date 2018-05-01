@@ -234,7 +234,7 @@ public:
 			}
 
 			if ((!contacted)&&(_bestCurrentUpstream)) {
-				const SharedPtr<Path> up(_bestCurrentUpstream->getBestPath(_now,true));
+				const SharedPtr<Path> up(_bestCurrentUpstream->getAppropriatePath(_now,true));
 				if (up)
 					p->sendHELLO(_tPtr,up->localSocket(),up->address(),_now);
 			}
@@ -465,7 +465,7 @@ ZT_PeerList *Node::peers() const
 		p->role = RR->topology->role(pi->second->identity().address());
 
 		std::vector< SharedPtr<Path> > paths(pi->second->paths(_now));
-		SharedPtr<Path> bestp(pi->second->getBestPath(_now,false));
+		SharedPtr<Path> bestp(pi->second->getAppropriatePath(_now,false));
 		p->pathCount = 0;
 		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
 			ZT_FAST_MEMCPY(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));

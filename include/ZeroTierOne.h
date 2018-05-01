@@ -423,6 +423,42 @@ enum ZT_ResultCode
 #define ZT_ResultCode_isFatal(x) ((((int)(x)) >= 100)&&(((int)(x)) < 1000))
 
 /**
+ * The multipath algorithm in use by this node.
+ */
+enum ZT_MultipathMode
+{
+	/**
+	 * No active multipath.
+	 *
+	 * Traffic is merely sent over the strongest path. That being
+	 * said, this mode will automatically failover in the event that a link goes down.
+	 */
+	ZT_MULTIPATH_NONE = 0,
+
+	/**
+	 * Traffic is randomly distributed among all active paths.
+	 *
+	 * Will cease sending traffic over links that appear to be stale.
+	 */
+	ZT_MULTIPATH_RANDOM = 1,
+
+	/**
+	 * Traffic is allocated across all active paths in proportion to their strength and
+	 * reliability.
+	 *
+	 * Will cease sending traffic over links that appear to be stale.
+	 */
+	ZT_MULTIPATH_PROPORTIONALLY_BALANCED = 2,
+
+	/**
+	 * Traffic is allocated across a user-defined interface/allocation
+	 *
+	 * Will cease sending traffic over links that appear to be stale.
+	 */
+	ZT_MULTIPATH_MANUALLY_BALANCED = 3
+};
+
+/**
  * Status codes sent to status update callback when things happen
  */
 enum ZT_Event

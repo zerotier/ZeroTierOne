@@ -106,6 +106,26 @@ void Trace::peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,
 	}
 }
 
+void Trace::peerLinkNowRedundant(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath)
+{
+	ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx on network %.16llx is fully redundant",peer.address().toInt(),networkId);
+}
+
+void Trace::peerLinkNoLongerRedundant(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath)
+{
+	ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx on network %.16llx is no longer redundant",peer.address().toInt(),networkId);
+}
+
+void Trace::peerLinkBalanced(void *const tPtr,const uint64_t networkId,Peer &peer)
+{
+	ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx on network %.16llx is balanced",peer.address().toInt(),networkId);
+}
+
+void Trace::peerLinkImbalanced(void *const tPtr,const uint64_t networkId,Peer &peer)
+{
+	ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx on network %.16llx is unbalanced",peer.address().toInt(),networkId);
+}
+
 void Trace::peerLearnedNewPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath,const uint64_t packetId)
 {
 	char tmp[128];

@@ -37,6 +37,7 @@
 
 #include "../version.h"
 #include "../include/ZeroTierOne.h"
+#include "../include/ZeroTierDebug.h"
 
 #include "../node/Constants.hpp"
 #include "../node/Mutex.hpp"
@@ -417,6 +418,7 @@ public:
 	PhySocket *_localControlSocket6;
 	bool _updateAutoApply;
 	bool _allowTcpFallbackRelay;
+	unsigned int _multipathMode;
 	unsigned int _primaryPort;
 	volatile unsigned int _udpPortPickerCounter;
 
@@ -454,6 +456,9 @@ public:
 
 	// Last potential sleep/wake event
 	uint64_t _lastRestart;
+
+	// Last time link throughput was tested
+	uint64_t _lastLinkSpeedTest;
 
 	// Deadline for the next background task service function
 	volatile int64_t _nextBackgroundTaskDeadline;
@@ -818,6 +823,7 @@ public:
 			_lastRestart = clockShouldBe;
 			int64_t lastTapMulticastGroupCheck = 0;
 			int64_t lastBindRefresh = 0;
+			int64_t lastMultipathModeUpdate = 0;
 			int64_t lastUpdateCheck = clockShouldBe;
 			int64_t lastCleanedPeersDb = 0;
 			int64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
@@ -849,8 +855,9 @@ public:
 						_updater->apply();
 				}
 
-				// Refresh bindings in case device's interfaces have changed, and also sync routes to update any shadow routes (e.g. shadow default)
-				if (((now - lastBindRefresh) >= ZT_BINDER_REFRESH_PERIOD)||(restarted)) {
+				// Refresh bindings
+				int interfaceRefreshPeriod = _multipathMode ? ZT_MULTIPATH_BINDER_REFRESH_PERIOD : ZT_BINDER_REFRESH_PERIOD;
+				if (((now - lastBindRefresh) >= interfaceRefreshPeriod)||(restarted)) {
 					lastBindRefresh = now;
 					unsigned int p[3];
 					unsigned int pc = 0;
@@ -864,6 +871,34 @@ public:
 						for(std::map<uint64_t,NetworkState>::iterator n(_nets.begin());n!=_nets.end();++n) {
 							if (n->second.tap)
 								syncManagedStuff(n->second,false,true);
+						}
+					}
+				}
+				// Update multipath mode (if needed)
+				if (((now - lastMultipathModeUpdate) >= interfaceRefreshPeriod)||(restarted)) {
+					lastMultipathModeUpdate = now;
+					_node->setMultipathMode(_multipathMode);
+				}
+
+				// Test link speeds
+				// TODO: This logic should eventually find its way into the core or as part of a passive
+				// measure within the protocol.
+				if (_multipathMode && ((now - _lastLinkSpeedTest) >= ZT_LINK_SPEED_TEST_INTERVAL)) {
+					_phy.refresh_link_speed_records();
+					_lastLinkSpeedTest = now;
+					// Generate random data to fill UDP packet
+					uint64_t pktBuf[ZT_LINK_TEST_DATAGRAM_SZ / sizeof(uint64_t)];
+					Utils::getSecureRandom(pktBuf, ZT_LINK_TEST_DATAGRAM_SZ);
+					ZT_PeerList *pl = _node->peers();
+					// get bindings (specifically just the sockets)
+					std::vector<PhySocket*> sockets = _binder.getBoundSockets();
+					// interfaces
+					for (int i=0; i<ZT_BINDER_MAX_BINDINGS; i++) {
+						for(int j=0;j<pl->peerCount;++j) {
+							for (int k=0; k<(ZT_MAX_PEER_NETWORK_PATHS/4); k++) {
+								Utils::getSecureRandom(pktBuf, 8); // generate one random integer for unique id
+								_phy.test_link_speed(sockets[i], (struct sockaddr*)&(pl->peers[j].paths[k].address), pktBuf, ZT_LINK_TEST_DATAGRAM_SZ);
+							}
 						}
 					}
 				}
@@ -1190,6 +1225,7 @@ public:
 					json &settings = res["config"]["settings"];
 					settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 					settings["allowTcpFallbackRelay"] = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],_allowTcpFallbackRelay);
+					settings["multipathMode"] = OSUtils::jsonInt(settings["multipathMode"],_multipathMode);
 #ifdef ZT_USE_MINIUPNPC
 					settings["portMappingEnabled"] = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 #else
@@ -1518,6 +1554,11 @@ public:
 
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
+		_multipathMode = OSUtils::jsonInt(settings["multipathMode"],0);
+		if (_multipathMode != 0 && _allowTcpFallbackRelay) {
+			fprintf(stderr,"WARNING: multipathMode cannot be used with allowTcpFallbackRelay. Disabling allowTcpFallbackRelay");
+			_allowTcpFallbackRelay = false;
+		}
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 
 		json &ignoreIfs = settings["interfacePrefixBlacklist"];
@@ -1758,6 +1799,15 @@ public:
 
 	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
 	{
+		if (_multipathMode) {
+			// Handle link test packets (should eventually be moved into the protocol itself)
+			if (len == ZT_LINK_TEST_DATAGRAM_SZ) {
+				_phy.respond_to_link_test(sock, from, data, len);
+			}
+			if (len == ZT_LINK_TEST_DATAGRAM_RESPONSE_SZ) {
+				_phy.handle_link_test_response(sock, from, data, len);
+			}
+		}
 		if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(from)->ipScope() == InetAddress::IP_SCOPE_GLOBAL))
 			_lastDirectReceiveFromGlobal = OSUtils::now();
 		const ZT_ResultCode rc = _node->processWirePacket(
@@ -2007,7 +2057,7 @@ public:
 	inline void phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN) {}
 	inline void phyOnUnixClose(PhySocket *sock,void **uptr) {}
 	inline void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
-	inline void phyOnUnixWritable(PhySocket *sock,void **uptr,bool lwip_invoked) {}
+	inline void phyOnUnixWritable(PhySocket *sock,void **uptr) {}
 
 	inline int nodeVirtualNetworkConfigFunction(uint64_t nwid,void **nuptr,enum ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nwc)
 	{

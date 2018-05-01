@@ -388,6 +388,7 @@ public:
 						_bindings[_bindingCount].udpSock = udps;
 						_bindings[_bindingCount].tcpListenSock = tcps;
 						_bindings[_bindingCount].address = ii->first;
+						phy.setIfName(udps, (char*)ii->second.c_str(), ii->second.length());
 						++_bindingCount;
 					}
 				} else {
@@ -453,6 +454,20 @@ public:
 				return (b < _bindingCount); // double check atomic which may have changed
 		}
 		return false;
+	}
+
+	/**
+	 * Get a list of socket pointers for all bindings.
+	 * 
+	 * @return A list of socket pointers for current bindings
+	 */
+	inline std::vector<PhySocket*> getBoundSockets()
+	{
+		std::vector<PhySocket*> sockets;
+		for (int i=0; i<ZT_BINDER_MAX_BINDINGS; i++) {
+			sockets.push_back(_bindings[i].udpSock);
+		}
+		return sockets;
 	}
 
 private:

@@ -299,7 +299,7 @@ public:
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p)) {
-			const SharedPtr<Path> pp((*p)->getBestPath(now,false));
+			const SharedPtr<Path> pp((*p)->getAppropriatePath(now,false));
 			if (pp)
 				++cnt;
 		}

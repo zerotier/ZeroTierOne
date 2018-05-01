@@ -646,12 +646,12 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 
 	const SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,destination));
 	if (peer) {
-		viaPath = peer->getBestPath(now,false);
+		viaPath = peer->getAppropriatePath(now,false);
 		if (!viaPath) {
 			peer->tryMemorizedPath(tPtr,now); // periodically attempt memorized or statically defined paths, if any are known
 			const SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());
-			if ( (!relay) || (!(viaPath = relay->getBestPath(now,false))) ) {
-				if (!(viaPath = peer->getBestPath(now,true)))
+			if ( (!relay) || (!(viaPath = relay->getAppropriatePath(now,false))) ) {
+				if (!(viaPath = peer->getAppropriatePath(now,true)))
 					return false;
 			}
 		}

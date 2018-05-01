@@ -80,6 +80,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 			if (!trusted) {
 				if (!dearmor(peer->key())) {
 					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,packetId(),sourceAddress,hops(),"invalid MAC");
+					_path->recordPacket(false);
 					return true;
 				}
 			}
@@ -88,6 +89,8 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 				RR->t->incomingPacketInvalid(tPtr,_path,packetId(),sourceAddress,hops(),Packet::VERB_NOP,"LZ4 decompression failed");
 				return true;
 			}
+
+			_path->recordPacket(true);
 
 			const Packet::Verb v = verb();
 			switch(v) {
@@ -446,7 +449,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 			}
 
 			if (!hops())
-				_path->updateLatency((unsigned int)latency);
+				_path->updateLatency((unsigned int)latency, RR->node->now());
 
 			peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
 

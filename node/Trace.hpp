@@ -121,6 +121,12 @@ public:
 	void resettingPathsInScope(void *const tPtr,const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,const InetAddress::IpScope scope);
 
 	void peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &path,const uint64_t packetId,const Packet::Verb verb);
+
+	void peerLinkNowRedundant(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath);
+	void peerLinkNoLongerRedundant(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath);
+	void peerLinkBalanced(void *const tPtr,const uint64_t networkId,Peer &peer);
+	void peerLinkImbalanced(void *const tPtr,const uint64_t networkId,Peer &peer);
+
 	void peerLearnedNewPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath,const uint64_t packetId);
 	void peerRedirected(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath);
 

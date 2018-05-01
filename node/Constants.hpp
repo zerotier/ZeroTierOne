@@ -268,6 +268,98 @@
 #define ZT_PING_CHECK_INVERVAL 5000
 
 /**
+ * Length of interface name
+ */
+#define ZT_PATH_INTERFACE_NAME_SZ 16
+
+/**
+ * How frequently to check for changes to the system's network interfaces. When
+ * the service decides to use this constant it's because we want to react more
+ * quickly to new interfaces that pop up or go down.
+ */
+#define ZT_MULTIPATH_BINDER_REFRESH_PERIOD 5000
+
+/**
+ * Path choice history window size. This is used to keep track of which paths were
+ * previously selected so that we can maintain a target allocation over time.
+ */
+#define ZT_MULTIPATH_PROPORTION_WIN_SZ 128
+
+/**
+ * Threshold for flow to be considered balanced.
+ */
+#define ZT_MULTIPATH_FLOW_BALANCE_THESHOLD 0.80
+
+/**
+ * Number of samples to consider when computing path statistics
+ */
+#define ZT_PATH_QUALITY_METRIC_WIN_SZ 128
+
+/**
+ * How often important path metrics are sampled (in ms). These metrics are later used
+ * for path quality estimates
+ */
+#define ZT_PATH_QUALITY_SAMPLE_INTERVAL 100
+
+/**
+ * How often new path quality estimates are computed
+ */
+#define ZT_PATH_QUALITY_ESTIMATE_INTERVAL 100
+
+/**
+ * How often we will sample packet latency. Should be at least greater than ZT_PING_CHECK_INVERVAL
+ * since we will record a 0 bit/s measurement if no valid latency measurement was made within this
+ * window of time.
+ */
+#define ZT_PATH_LATENCY_SAMPLE_INTERVAL ZT_PING_CHECK_INVERVAL * 2
+
+/**
+ * Interval used for rate-limiting the computation of path quality estimates. Set at 0
+ * to compute as new packets arrive with no delay.
+ */
+#define ZT_PATH_QUALITY_COMPUTE_INTERVAL 0
+
+/**
+ * Path error rate history window size. This is used to keep track of packet error
+ * measurements over a path's medium-term history.
+ */
+#define ZT_PATH_ERROR_HIST_WIN_SZ 10
+
+/**
+ * The number of packet error measurements in each sample
+ */
+#define ZT_PATH_ERROR_SAMPLE_WIN_SZ 1024
+
+/**
+ * How often a peer will prune its own paths. Pruning is important when multipath is
+ * enabled because we want to prevent the allocation algorithms from sending anything
+ * out on known dead paths. Additionally, quickly marking paths as dead helps when
+ * a new path is learned and needs to replace an older path.
+ */
+#define ZT_CLOSED_PATH_PRUNING_INTERVAL 1000
+
+/**
+ * Datagram used to test link throughput. Contents are random.
+ */
+#define ZT_LINK_TEST_DATAGRAM_SZ 1024
+
+/**
+ * Size of datagram expected as a reply to a link speed test
+ */
+#define ZT_LINK_TEST_DATAGRAM_RESPONSE_SZ 8
+
+/**
+ * Time before a link test datagram is considered lost. Any corresponding
+ * timing records that would have been used to compute a RTT are purged.
+ */
+#define ZT_LINK_TEST_TIMEOUT 10000
+
+/**
+ * How often the service tests the link throughput.
+ */
+#define ZT_LINK_SPEED_TEST_INTERVAL 1000
+
+/**
  * How frequently to send heartbeats over in-use paths
  */
 #define ZT_PATH_HEARTBEAT_PERIOD 14000

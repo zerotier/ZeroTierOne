@@ -260,6 +260,9 @@ public:
 	inline const Address &remoteTraceTarget() const { return _remoteTraceTarget; }
 	inline Trace::Level remoteTraceLevel() const { return _remoteTraceLevel; }
 
+	inline void setMultipathMode(uint8_t mode) { _multipathMode = mode; }
+	inline uint8_t getMultipathMode() { return _multipathMode; }
+
 private:
 	RuntimeEnvironment _RR;
 	RuntimeEnvironment *RR;
@@ -283,6 +286,8 @@ private:
 
 	Address _remoteTraceTarget;
 	enum Trace::Level _remoteTraceLevel;
+
+	uint8_t _multipathMode;
 
 	volatile int64_t _now;
 	int64_t _lastPingCheck;

@@ -190,7 +190,7 @@ void Multicaster::send(
 				for(unsigned int i=0;i<multicastReplicatorCount;++i) {
 					const SharedPtr<Peer> p(RR->topology->getPeerNoCache(multicastReplicators[i]));
 					if ((p)&&(p->isAlive(now))) {
-						const SharedPtr<Path> pp(p->getBestPath(now,false));
+						const SharedPtr<Path> pp(p->getAppropriatePath(now,false));
 						if ((pp)&&(pp->latency() < bestMulticastReplicatorLatency)) {
 							bestMulticastReplicatorLatency = pp->latency();
 							bestMulticastReplicatorPath = pp;

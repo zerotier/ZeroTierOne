@@ -65,7 +65,13 @@ private:
 	Peer() {} // disabled to prevent bugs -- should not be constructed uninitialized
 
 public:
-	~Peer() { Utils::burn(_key,sizeof(_key)); }
+	~Peer() {
+		Utils::burn(_key,sizeof(_key));
+		delete _pathChoiceHist;
+		delete _flowBalanceHist;
+		_pathChoiceHist = NULL;
+		_flowBalanceHist = NULL;
+	}
 
 	/**
 	 * Construct a new peer
@@ -145,20 +151,20 @@ public:
 	 */
 	inline bool sendDirect(void *tPtr,const void *data,unsigned int len,int64_t now,bool force)
 	{
-		SharedPtr<Path> bp(getBestPath(now,force));
+		SharedPtr<Path> bp(getAppropriatePath(now,force));
 		if (bp)
 			return bp->send(RR,tPtr,data,len,now);
 		return false;
 	}
 
 	/**
-	 * Get the best current direct path
+	 * Get the most appropriate direct path based on current multipath configuration
 	 *
 	 * @param now Current time
 	 * @param includeExpired If true, include even expired paths
 	 * @return Best current path or NULL if none
 	 */
-	SharedPtr<Path> getBestPath(int64_t now,bool includeExpired) const;
+	SharedPtr<Path> getAppropriatePath(int64_t now, bool includeExpired);
 
 	/**
 	 * Send VERB_RENDEZVOUS to this and another peer via the best common IP scope and path
@@ -211,6 +217,16 @@ public:
 	 * @return 0 if nothing sent or bit mask: bit 0x1 if IPv4 sent, bit 0x2 if IPv6 sent (0x3 means both sent)
 	 */
 	unsigned int doPingAndKeepalive(void *tPtr,int64_t now);
+
+	/**
+	 * Clear paths whose localSocket(s) are in a CLOSED state or have an otherwise INVALID state.
+	 * This should be called frequently so that we can detect and remove unproductive or invalid paths.
+	 *
+	 * Under the hood this is done periodically based on ZT_CLOSED_PATH_PRUNING_INTERVAL.
+	 *
+	 * @return Number of paths that were pruned this round
+	 */
+	unsigned int prunePaths();
 
 	/**
 	 * Process a cluster redirect sent by this peer
@@ -270,9 +286,9 @@ public:
 	/**
 	 * @return Latency in milliseconds of best path or 0xffff if unknown / no paths
 	 */
-	inline unsigned int latency(const int64_t now) const
+	inline unsigned int latency(const int64_t now)
 	{
-		SharedPtr<Path> bp(getBestPath(now,false));
+		SharedPtr<Path> bp(getAppropriatePath(now,false));
 		if (bp)
 			return bp->latency();
 		return 0xffff;
@@ -289,7 +305,7 @@ public:
 	 *
 	 * @return Relay quality score computed from latency and other factors, lower is better
 	 */
-	inline unsigned int relayQuality(const int64_t now) const
+	inline unsigned int relayQuality(const int64_t now)
 	{
 		const uint64_t tsr = now - _lastReceive;
 		if (tsr >= ZT_PEER_ACTIVITY_TIMEOUT)
@@ -515,6 +531,7 @@ private:
 	int64_t _lastCredentialsReceived;
 	int64_t _lastTrustEstablishedPacketReceived;
 	int64_t _lastSentFullHello;
+	int64_t _lastPathPrune;
 
 	uint16_t _vProto;
 	uint16_t _vMajor;
@@ -530,6 +547,13 @@ private:
 	unsigned int _credentialsCutoffCount;
 
 	AtomicCounter __refCount;
+
+	RingBuffer<int> *_pathChoiceHist;
+	RingBuffer<float> *_flowBalanceHist;
+
+	bool _linkBalanceStatus;
+	bool _linkRedundancyStatus;
+
 };
 
 } // namespace ZeroTier
