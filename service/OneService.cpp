@@ -591,10 +591,9 @@ public:
 			}
 
 			// Read local configuration
+			std::map<InetAddress,ZT_PhysicalPathConfiguration> ppc;
 			std::vector<InetAddress> explicitBind;
 			{
-				std::map<InetAddress,ZT_PhysicalPathConfiguration> ppc;
-
 				// LEGACY: support old "trustedpaths" flat file
 				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S "trustedpaths").c_str(),"r");
 				if (trustpaths) {
@@ -673,12 +672,6 @@ public:
 						}
 					}
 				}
-
-				// Set trusted paths if there are any
-				if (ppc.size() > 0) {
-					for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::iterator i(ppc.begin());i!=ppc.end();++i)
-						_node->setPhysicalPathConfiguration(reinterpret_cast<const struct sockaddr_storage *>(&(i->first)),&(i->second));
-				}
 			}
 
 			// Apply other runtime configuration from local.conf
@@ -697,6 +690,16 @@ public:
 				cb.pathLookupFunction = SnodePathLookupFunction;
 				_node = new Node(this, (void *)0, &cb, OSUtils::now());
 			}
+
+			// Apply software update specific configuration from local.conf
+			applySoftwareUpdateLocalConfig();
+
+			// Set trusted paths if there are any
+			if (ppc.size() > 0) {
+				for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::iterator i(ppc.begin());i!=ppc.end();++i)
+					_node->setPhysicalPathConfiguration(reinterpret_cast<const struct sockaddr_storage *>(&(i->first)),&(i->second));
+			}
+			ppc.clear();
 
 			// Make sure we can use the primary port, and hunt for one if configured to do so
 			const int portTrials = (_primaryPort == 0) ? 256 : 1; // if port is 0, pick random
@@ -1517,22 +1520,6 @@ public:
 		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 
-#ifndef ZT_SDK
-		const std::string up(OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT));
-		const bool udist = OSUtils::jsonBool(settings["softwareUpdateDist"],false);
-		if (((up == "apply")||(up == "download"))||(udist)) {
-			if (!_updater)
-				_updater = new SoftwareUpdater(*_node,_homePath);
-			_updateAutoApply = (up == "apply");
-			_updater->setUpdateDistribution(udist);
-			_updater->setChannel(OSUtils::jsonString(settings["softwareUpdateChannel"],ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL));
-		} else {
-			delete _updater;
-			_updater = (SoftwareUpdater *)0;
-			_updateAutoApply = false;
-		}
-#endif
-
 		json &ignoreIfs = settings["interfacePrefixBlacklist"];
 		if (ignoreIfs.is_array()) {
 			for(unsigned long i=0;i<ignoreIfs.size();++i) {
@@ -1593,6 +1580,27 @@ public:
 #endif
 	}
 
+	void applySoftwareUpdateLocalConfig()
+	{
+#ifndef ZT_SDK
+		json lc(_localConfig);
+		json &settings = lc["settings"];
+		const std::string up(OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT));
+		const bool udist = OSUtils::jsonBool(settings["softwareUpdateDist"],false);
+		if (((up == "apply")||(up == "download"))||(udist)) {
+			if (!_updater)
+				_updater = new SoftwareUpdater(*_node,_homePath);
+			_updateAutoApply = (up == "apply");
+			_updater->setUpdateDistribution(udist);
+			_updater->setChannel(OSUtils::jsonString(settings["softwareUpdateChannel"],ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL));
+		} else {
+			delete _updater;
+			_updater = (SoftwareUpdater *)0;
+			_updateAutoApply = false;
+		}
+#endif
+	}
+	
 	// Checks if a managed IP or route target is allowed
 	bool checkIfManagedIsAllowed(const NetworkState &n,const InetAddress &target)
 	{
