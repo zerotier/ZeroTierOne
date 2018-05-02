@@ -226,34 +226,34 @@ public:
 	/**
 	 * @return The arithmetic mean of the contents of the buffer
 	 */
-	T mean()
+	float mean()
 	{
 		size_t iterator = begin;
-		T mean = 0;
-		for (int i=0; i<size; i++) {
+		float mean = 0;
+		for (size_t i=0; i<size; i++) {
 			iterator = (iterator + size - 1) % size;
 			mean += *(buf + iterator);
 		}
-		return count() ? mean / (T)count() : 0;
+		return count() ? mean / (float)count() : 0;
 	}
 
 	/**
 	 * @return The sample standard deviation of the contents of the ring buffer
 	 */
-	T stddev()
+	float stddev()
 	{
 		size_t iterator = begin;
-		T cached_mean = mean();
+		float cached_mean = mean();
 		if (size) {
 			T sum_of_squared_deviations = 0;
-			for (int i=0; i<size; i++) {
+			for (size_t i=0; i<size; i++) {
 				iterator = (iterator + size - 1) % size;
-				T deviation = (buf[i] - cached_mean);
-				T sdev = deviation*deviation;
+				float deviation = (buf[i] - cached_mean);
+				float sdev = deviation*deviation;
 				sum_of_squared_deviations += sdev;
 			}
-			T variance = sum_of_squared_deviations / (size - 1);
-			T sd = sqrt(variance);
+			float variance = sum_of_squared_deviations / (size - 1);
+			float sd = sqrt(variance);
 			return sd;
 		}
 		return 0;
@@ -266,7 +266,7 @@ public:
 	{
 		size_t iterator = begin;
 		size_t zeros = 0;
-		for (int i=0; i<size; i++) {
+		for (size_t i=0; i<size; i++) {
 			iterator = (iterator + size - 1) % size;
 			if (*(buf + iterator) == 0) {
 				zeros++;
@@ -283,7 +283,7 @@ public:
 	{
 		size_t iterator = begin;
 		size_t count = 0;
-		for (int i=0; i<size; i++) {
+		for (size_t i=0; i<size; i++) {
 			iterator = (iterator + size - 1) % size;
 			if (*(buf + iterator) == value) {
 				count++;
@@ -298,7 +298,7 @@ public:
 	void dump()
 	{
 		size_t iterator = begin;
-		for (int i=0; i<size; i++) {
+		for (size_t i=0; i<size; i++) {
 			iterator = (iterator + size - 1) % size;
 			if (typeid(T) == typeid(int)) {
 				// DEBUG_INFO("buf[%2zu]=%2d", iterator, (int)*(buf + iterator));

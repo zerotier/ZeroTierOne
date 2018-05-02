@@ -303,11 +303,11 @@ public:
 	 */
 	inline float computeQuality(const int64_t now)
 	{
-		float latency_contrib    = _meanLatency ? 1.0 / _meanLatency : 0;
-		float jitter_contrib     = _jitter ? 1.0 / _jitter : 0;
+		float latency_contrib    = _meanLatency ? (float)1.0 / _meanLatency : 0;
+		float jitter_contrib     = _jitter ? (float)1.0 / _jitter : 0;
 		float throughput_contrib = _meanThroughput ? _meanThroughput / 1000000 : 0; // in Mbps
 		float age_contrib        = _meanAge > 0 ? (float)sqrt(_meanAge) : 1;
-		float error_contrib      = 1.0 - _meanPacketErrorRatio;
+		float error_contrib      = (float)1.0 - _meanPacketErrorRatio;
 		float sum = (latency_contrib + jitter_contrib + throughput_contrib + error_contrib) / age_contrib;
 		_lastComputedQuality = sum * (long)((_ipScope) + 1);
 		return _lastComputedQuality;

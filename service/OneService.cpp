@@ -879,7 +879,6 @@ public:
 					lastMultipathModeUpdate = now;
 					_node->setMultipathMode(_multipathMode);
 				}
-
 				// Test link speeds
 				// TODO: This logic should eventually find its way into the core or as part of a passive
 				// measure within the protocol.
@@ -894,7 +893,7 @@ public:
 					std::vector<PhySocket*> sockets = _binder.getBoundSockets();
 					// interfaces
 					for (int i=0; i<ZT_BINDER_MAX_BINDINGS; i++) {
-						for(int j=0;j<pl->peerCount;++j) {
+						for(size_t j=0;j<pl->peerCount;++j) {
 							for (int k=0; k<(ZT_MAX_PEER_NETWORK_PATHS/4); k++) {
 								Utils::getSecureRandom(pktBuf, 8); // generate one random integer for unique id
 								_phy.test_link_speed(sockets[i], (struct sockaddr*)&(pl->peers[j].paths[k].address), pktBuf, ZT_LINK_TEST_DATAGRAM_SZ);
@@ -1554,7 +1553,7 @@ public:
 
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
-		_multipathMode = OSUtils::jsonInt(settings["multipathMode"],0);
+		_multipathMode = (unsigned int)OSUtils::jsonInt(settings["multipathMode"],0);
 		if (_multipathMode != 0 && _allowTcpFallbackRelay) {
 			fprintf(stderr,"WARNING: multipathMode cannot be used with allowTcpFallbackRelay. Disabling allowTcpFallbackRelay");
 			_allowTcpFallbackRelay = false;

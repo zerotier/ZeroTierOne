@@ -365,7 +365,7 @@ public:
 		uint64_t egress_time = OSUtils::now();
 		PhySocketImpl *sws = (reinterpret_cast<PhySocketImpl *>(s));
 #if defined(_WIN32) || defined(_WIN64)
-		return ((long)::sendto(sws->sock,reinterpret_cast<const char *>(data),len,0,to,(to->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)) == (long)len);
+		int w = ::sendto(sws->sock,reinterpret_cast<const char *>(data),len,0,to,(to->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))
 #else
 		int w = ::sendto(sws->sock,data,len,0,to,(to->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in));
 #endif
@@ -380,7 +380,7 @@ public:
 	 */
 	inline void refresh_link_speed_records()
 	{
-		for(int i=0;i<link_test_records.size();i++) {
+		for(size_t i=0;i<link_test_records.size();i++) {
 			if(OSUtils::now() - link_test_records[i]->egress_time > ZT_LINK_TEST_TIMEOUT) {
 				PhySocketImpl *sws = (reinterpret_cast<PhySocketImpl *>(link_test_records[i]->s));
 				if (sws) {
@@ -404,7 +404,7 @@ public:
 		PhySocketImpl *sws = (reinterpret_cast<PhySocketImpl *>(s));
 		uint64_t *id = (uint64_t*)data;
 #if defined(_WIN32) || defined(_WIN64)
-		return ((long)::sendto(sws->sock,reinterpret_cast<const char *>(data),len,0,from,(from->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)) == (long)len);
+		int w = ::sendto(sws->sock,reinterpret_cast<const char *>(id),sizeof(id[0]),0,from,(from->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in));
 #else
 		int w = ::sendto(sws->sock,id,sizeof(id[0]),0,from,(from->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in));
 #endif
@@ -424,12 +424,12 @@ public:
 	 */
 	inline bool handle_link_test_response(PhySocket *s,const struct sockaddr *from,void *data,unsigned long len) {
 		uint64_t *id = (uint64_t*)data;
-		for(int i=0;i<link_test_records.size();i++) {
+		for(size_t i=0;i<link_test_records.size();i++) {
 			if(link_test_records[i]->id == id[0]) {
 				float rtt  = (OSUtils::now()-link_test_records[i]->egress_time) / (float)1000; // s
 				uint32_t sz   = (link_test_records[i]->length) * 8; // bits
-				float transit_time = rtt / 2.0;
-				int64_t raw = sz / transit_time;
+				float transit_time = rtt / (float)2.0;
+				uint64_t raw = (uint64_t)(sz / transit_time);
 				PhySocketImpl *sws = (reinterpret_cast<PhySocketImpl *>(s));
 				if (sws) {
 					sws->throughput = raw;

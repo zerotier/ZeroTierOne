@@ -320,12 +320,12 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 		Utils::getSecureRandom(&r, 1);
 		if (numAlivePaths > 0) {
 			// pick a random out of the set deemed "alive"
-			int rf = (float)(r %= numAlivePaths);
+			int rf = r % numAlivePaths;
 			return _paths[alivePaths[rf]].p;
 		}
 		else if(numStalePaths > 0) {
 			// resort to trying any non-expired path
-			int rf = (float)(r %= numStalePaths);
+			int rf = r % numStalePaths;
 			return _paths[stalePaths[rf]].p;
 		}
 	}
@@ -366,11 +366,9 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 				// Compute quality here, going forward we will use lastComputedQuality()
 				currQuality = _paths[i].p->computeQuality(now);
 				if (!_paths[i].p->stale(now)) {
-					alivePaths[i] = currQuality;
 					numAlivePaths++;
 				}
 				else {
-					stalePaths[i] = currQuality;
 					numStalePaths++;
 				}
 				if (currQuality > maxQuality) {
@@ -412,10 +410,10 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 		// randomly selected for the next packet. If however the path
 		// needs to contribute more to the flow, we should record
 		float imbalance = 0;
-		float qualityScalingFactor = 1.0 / totalRelativeQuality;
+		float qualityScalingFactor = (float)1.0 / totalRelativeQuality;
 		for(uint16_t i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 			// Out of the last N packets to this peer, how many were sent by this path?
-			int numPktSentWithinWin = (int)_pathChoiceHist->countValue((float)i);
+			int numPktSentWithinWin = (int)_pathChoiceHist->countValue(i);
 			// Compute traffic allocation for each path in the flow
 			if (_paths[i].p && _paths[i].p->isValidState()) {
 				// Allocation
@@ -442,7 +440,7 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 		}
 
 		// Compute and record current flow balance
-		float balance = 1.0 - imbalance;
+		float balance = (float)1.0 - imbalance;
 		if (balance >= ZT_MULTIPATH_FLOW_BALANCE_THESHOLD) {
 			if (!_linkBalanceStatus) {
 				_linkBalanceStatus = true;
