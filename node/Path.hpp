@@ -433,6 +433,22 @@ public:
 	}
 
 	/**
+	 * @param buf Buffer to store resultant string
+	 * @return Description of path, in ASCII string format
+	 */
+	inline char *toString(char *buf) {
+		sprintf(buf,"%6s, q=%8.3f, %5.3f Mb/s, j=%8.2f, ml=%8.2f, meanAge=%8.2f, addr=%45s",
+			getName(),
+			lastComputedQuality(),
+			(float)meanThroughput() / (float)1000000,
+			jitter(),
+			meanLatency(),
+			meanAge(),
+			getAddressString());
+		return buf;
+	}
+
+	/**
 	 * Record whether a packet is considered invalid by MAC/compression/cipher checks. This
 	 * could be an indication of a bit error. This function will keep a running counter of
 	 * up to a given window size and with each counter overflow it will compute a mean error rate

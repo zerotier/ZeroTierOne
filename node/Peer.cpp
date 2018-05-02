@@ -100,14 +100,17 @@ void Peer::received(
 		path->trustedPacketReceived(now);
 	}
 
-	if (RR->node->getMultipathMode() != ZT_MULTIPATH_NONE) {
-		if ((now - _lastPathPrune) > ZT_CLOSED_PATH_PRUNING_INTERVAL) {
-			_lastPathPrune = now;
-			prunePaths();
-		}
-		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-			if (_paths[i].p) {
-				_paths[i].p->measureLink(now);
+	{
+		Mutex::Lock _l(_paths_m);
+		if (RR->node->getMultipathMode() != ZT_MULTIPATH_NONE) {
+			if ((now - _lastPathPrune) > ZT_CLOSED_PATH_PRUNING_INTERVAL) {
+				_lastPathPrune = now;
+				prunePaths();
+			}
+			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+				if (_paths[i].p) {
+					_paths[i].p->measureLink(now);
+				}
 			}
 		}
 	}
@@ -386,9 +389,9 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 		if (bestPath == ZT_MAX_PEER_NETWORK_PATHS || (numAlivePaths == 0 && numStalePaths == 0)) {
 			return SharedPtr<Path>();
 		} if (numAlivePaths == 1) {
-			return _paths[bestPath].p;
+			//return _paths[bestPath].p;
 		} if (numStalePaths == 1) {
-			return _paths[bestPath].p;
+			//return _paths[bestPath].p;
 		}
 
 		// Relative quality
@@ -725,7 +728,6 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 
 unsigned int Peer::prunePaths()
 {
-	Mutex::Lock _l(_paths_m);
 	unsigned int pruned = 0;
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {

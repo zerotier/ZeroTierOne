@@ -293,7 +293,7 @@
 /**
  * Number of samples to consider when computing path statistics
  */
-#define ZT_PATH_QUALITY_METRIC_WIN_SZ 128
+#define ZT_PATH_QUALITY_METRIC_WIN_SZ 64
 
 /**
  * How often important path metrics are sampled (in ms). These metrics are later used
@@ -311,7 +311,7 @@
  * since we will record a 0 bit/s measurement if no valid latency measurement was made within this
  * window of time.
  */
-#define ZT_PATH_LATENCY_SAMPLE_INTERVAL ZT_PING_CHECK_INVERVAL * 2
+#define ZT_PATH_LATENCY_SAMPLE_INTERVAL ZT_MULTIPATH_PEER_PING_PERIOD * 2
 
 /**
  * Interval used for rate-limiting the computation of path quality estimates. Set at 0
@@ -373,6 +373,13 @@
  * Delay between full-fledge pings of directly connected peers
  */
 #define ZT_PEER_PING_PERIOD 60000
+
+/**
+ * Delay between full-fledge pings of directly connected peers.
+ * With multipath bonding enabled ping peers more often to measure
+ * packet loss and latency.
+ */
+#define ZT_MULTIPATH_PEER_PING_PERIOD 5000
 
 /**
  * Paths are considered expired if they have not sent us a real packet in this long

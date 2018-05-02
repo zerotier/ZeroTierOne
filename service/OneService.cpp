@@ -162,6 +162,7 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 
 // How often to check for local interface addresses
 #define ZT_LOCAL_INTERFACE_CHECK_INTERVAL 60000
+#define ZT_MULTIPATH_LOCAL_INTERFACE_CHECK_INTERVAL 5000
 
 // Maximum write buffer size for outgoing TCP connections (sanity limit)
 #define ZT_TCP_MAX_WRITEQ_SIZE 33554432
@@ -856,6 +857,7 @@ public:
 				}
 
 				// Refresh bindings
+				// Do this more frequently when multipath bonding is enabled
 				int interfaceRefreshPeriod = _multipathMode ? ZT_MULTIPATH_BINDER_REFRESH_PERIOD : ZT_BINDER_REFRESH_PERIOD;
 				if (((now - lastBindRefresh) >= interfaceRefreshPeriod)||(restarted)) {
 					lastBindRefresh = now;
@@ -889,9 +891,7 @@ public:
 					uint64_t pktBuf[ZT_LINK_TEST_DATAGRAM_SZ / sizeof(uint64_t)];
 					Utils::getSecureRandom(pktBuf, ZT_LINK_TEST_DATAGRAM_SZ);
 					ZT_PeerList *pl = _node->peers();
-					// get bindings (specifically just the sockets)
 					std::vector<PhySocket*> sockets = _binder.getBoundSockets();
-					// interfaces
 					for (int i=0; i<ZT_BINDER_MAX_BINDINGS; i++) {
 						for(size_t j=0;j<pl->peerCount;++j) {
 							for (int k=0; k<(ZT_MAX_PEER_NETWORK_PATHS/4); k++) {
@@ -936,7 +936,8 @@ public:
 				}
 
 				// Sync information about physical network interfaces
-				if ((now - lastLocalInterfaceAddressCheck) >= ZT_LOCAL_INTERFACE_CHECK_INTERVAL) {
+				int interfaceAddressCheckInterval = _multipathMode ? ZT_MULTIPATH_LOCAL_INTERFACE_CHECK_INTERVAL : ZT_LOCAL_INTERFACE_CHECK_INTERVAL;
+				if ((now - lastLocalInterfaceAddressCheck) >= interfaceAddressCheckInterval) {
 					lastLocalInterfaceAddressCheck = now;
 
 					_node->clearLocalInterfaceAddresses();
