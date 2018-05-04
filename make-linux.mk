@@ -77,6 +77,7 @@ ifeq ($(ZT_QNAP), 1)
 endif
 
 ifeq ($(ZT_SYNOLOGY), 1)
+	override CFLAGS+=-fPIC
 	override CXXFLAGS+=-fPIC
         override DEFS+=-D__SYNOLOGY__
 endif
