@@ -1083,8 +1083,8 @@ public:
 			/*
 			fprintf(stderr, "path = %s\n", path.c_str());
 			fprintf(stderr, "headers.size=%d\n", headers.size());
-			std::map<std::string, std::string>::const_iterator it(headers.begin());		
-			while(it != headers.end()) {	
+			std::map<std::string, std::string>::const_iterator it(headers.begin());
+			while(it != headers.end()) {
 				fprintf(stderr,"header[%s] = %s\n", (it->first).c_str(), (it->second).c_str());
 				it++;
 			}
@@ -1092,7 +1092,7 @@ public:
 			// parse out url args
 			int synotoken_pos = path.find("SynoToken");
 			int argpos = path.find("?");
-			if(synotoken_pos != std::string::npos && argpos != std::string::npos) {	
+			if(synotoken_pos != std::string::npos && argpos != std::string::npos) {
 				std::string cookie = path.substr(argpos+1, synotoken_pos-(argpos+1));
 				std::string synotoken = path.substr(synotoken_pos);
 				std::string cookie_val = cookie.substr(cookie.find("=")+1);
@@ -1589,7 +1589,7 @@ public:
 				if (std::find(n.managedIps.begin(),n.managedIps.end(),*ip) == n.managedIps.end()) {
 					if (!n.tap->addIp(*ip))
 						fprintf(stderr,"ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString(ipbuf));
-				}			
+				}
 			}
 #endif
 			n.managedIps.swap(newManagedIps);
@@ -2004,7 +2004,7 @@ public:
 				if (n.tap) { // sanity check
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
 					// wait for up to 5 seconds for the WindowsEthernetTap to actually be initialized
-					// 
+					//
 					// without WindowsEthernetTap::isInitialized() returning true, the won't actually
 					// be online yet and setting managed routes on it will fail.
 					const int MAX_SLEEP_COUNT = 500;
@@ -2164,10 +2164,10 @@ public:
 				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
 				break;
 			case ZT_STATE_OBJECT_MOON:
-				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d" ZT_PATH_SEPARATOR_S "%.16llx.moon",_homePath.c_str(),(unsigned long long)id);
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d" ZT_PATH_SEPARATOR_S "%.16llx.moon",_homePath.c_str(),(unsigned long long)id[0]);
 				break;
 			case ZT_STATE_OBJECT_NETWORK_CONFIG:
-				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.conf",_homePath.c_str(),(unsigned long long)id);
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.conf",_homePath.c_str(),(unsigned long long)id[0]);
 				break;
 			case ZT_STATE_OBJECT_PEER:
 				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "peers.d" ZT_PATH_SEPARATOR_S "%.10llx.peer",_homePath.c_str(),(unsigned long long)id[0]);
