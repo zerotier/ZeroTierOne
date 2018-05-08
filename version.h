@@ -40,7 +40,7 @@
 /**
  * Revision
  */
-#define ZEROTIER_ONE_VERSION_REVISION 8
+#define ZEROTIER_ONE_VERSION_REVISION 10
 
 /**
  * Build version
