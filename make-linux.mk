@@ -42,14 +42,6 @@ endif
 # Trying to use dynamically linked libhttp-parser causes tons of compatibility problems.
 ONE_OBJS+=ext/http-parser/http_parser.o
 
-ifeq ($(ZT_SYNOLOGY), 1)
-	override DEFS+=-D__SYNOLOGY__
-endif
-
-ifeq ($(ZT_QNAP), 1)
-	override DEFS+=-D__QNAP__
-endif
-
 ifeq ($(ZT_TRACE),1)
 	override DEFS+=-DZT_TRACE
 endif
@@ -78,6 +70,16 @@ else
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
 	STRIP+=--strip-all
+endif
+
+ifeq ($(ZT_QNAP), 1)
+        override DEFS+=-D__QNAP__
+endif
+
+ifeq ($(ZT_SYNOLOGY), 1)
+	override CFLAGS+=-fPIC
+	override CXXFLAGS+=-fPIC
+        override DEFS+=-D__SYNOLOGY__
 endif
 
 ifeq ($(ZT_TRACE),1)
