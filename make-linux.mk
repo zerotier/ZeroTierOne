@@ -79,7 +79,7 @@ endif
 ifeq ($(ZT_SYNOLOGY), 1)
 	override CFLAGS+=-fPIC
 	override CXXFLAGS+=-fPIC
-        override DEFS+=-D__SYNOLOGY__
+	override DEFS+=-D__SYNOLOGY__
 endif
 
 ifeq ($(ZT_TRACE),1)
@@ -111,6 +111,12 @@ ifeq ($(CC_MACH),amd64)
 endif
 ifeq ($(CC_MACH),powerpc64le)
 	ZT_ARCHITECTURE=8
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
+ifeq ($(CC_MACH),powerpc)
+	ZT_ARCHITECTURE=8
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+	override DEFS+=-DZT_NO_CAPABILITIES
 endif
 ifeq ($(CC_MACH),ppc64le)
 	ZT_ARCHITECTURE=8
@@ -197,10 +203,6 @@ ifeq ($(CC_MACH),mips64)
 endif
 ifeq ($(CC_MACH),mips64el)
 	ZT_ARCHITECTURE=6
-	override DEFS+=-DZT_NO_TYPE_PUNNING
-endif
-ifeq ($(CC_MACH),powerpc64le)
-	ZT_ARCHITECTURE=7
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 
