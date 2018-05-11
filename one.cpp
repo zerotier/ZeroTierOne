@@ -972,7 +972,7 @@ static void _sighandlerQuit(int sig)
 #endif
 
 // Drop privileges on Linux, if supported by libc etc. and "zerotier-one" user exists on system
-#ifdef __LINUX__
+#if defined(__LINUX__) && !defined(ZT_NO_CAPABILITIES)
 #ifndef PR_CAP_AMBIENT
 #define PR_CAP_AMBIENT 47
 #define PR_CAP_AMBIENT_IS_SET 1
