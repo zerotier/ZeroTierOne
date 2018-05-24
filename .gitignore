@@ -4,6 +4,7 @@
 /zerotier-cli
 /zerotier-selftest
 /zerotier
+/nltest
 
 # OS-created garbage files from various platforms
 .DS_Store

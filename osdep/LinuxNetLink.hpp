@@ -79,19 +79,19 @@ public:
     RouteList getIPV4Routes() const;
     RouteList getIPV6Routes() const;
 
-    void addInterface(const char *iface);
+    void addInterface(const char *iface, unsigned int mtu);
 
     void addAddress(const InetAddress &addr, const char *iface);
 
     void threadMain() throw();
 private:
-    void _processMessage();
-    void _routeAdded();
-    void _routeDeleted();
-    void _linkAdded();
-    void _linkDeleted();
-    void _ipAddressAdded();
-    void _ipAddressDeleted();
+    void _processMessage(struct nlmsghdr *nlp, int nll);
+    void _routeAdded(struct nlmsghdr *nlp);
+    void _routeDeleted(struct nlmsghdr *nlp);
+    void _linkAdded(struct nlmsghdr *nlp);
+    void _linkDeleted(struct nlmsghdr *nlp);
+    void _ipAddressAdded(struct nlmsghdr *nlp);
+    void _ipAddressDeleted(struct nlmsghdr *nlp);
 
 
     void _requestIPv4Routes();
@@ -103,29 +103,11 @@ private:
     RouteList _routes_ipv4;
     RouteList _routes_ipv6;
 
+    uint32_t _seq;
+
     // socket communication vars;
     int _fd;
     struct sockaddr_nl _la;
-    struct sockaddr_nl _pa;
-    struct msghdr _msg;
-    struct iovec _iov;
-    int _rtn;
-    char _buf[8192];
-
-    // RTNETLINK message pointers & lengths
-    // used for processing messages
-    struct nlmsghdr *_nlp;
-    int _nll;
-
-    struct rtmsg *_rtp;
-    int _rtl;
-    struct rtattr *_rtap;
-    
-    struct ifinfomsg *_ifip;
-    int _ifil;
-
-    struct ifaddrmsg *_ifap;
-    int _ifal;
 };    
 
 }
