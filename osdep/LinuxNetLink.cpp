@@ -311,6 +311,7 @@ void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
 void LinuxNetLink::_linkAdded(struct nlmsghdr *nlp)
 {
 	char mac[18] = {0};
+	char mac_bin[6] = {0};
 	unsigned int mtu = 0;
 	char ifname[IFNAMSIZ] = {0};
 
@@ -327,6 +328,7 @@ void LinuxNetLink::_linkAdded(struct nlmsghdr *nlp)
 			ptr2 = (unsigned char*)RTA_DATA(rtap);
 			snprintf(mac, 20, "%02x:%02x:%02x:%02x:%02x:%02x",
 				ptr2[0], ptr2[1], ptr2[2], ptr2[3], ptr2[4], ptr2[5]);
+			memcpy(mac_bin, ptr, 6);
 			break;
 		case IFLA_IFNAME:
 			ptr = (const char*)RTA_DATA(rtap);
@@ -342,6 +344,7 @@ void LinuxNetLink::_linkAdded(struct nlmsghdr *nlp)
 	entry.index = ifip->ifi_index;
 	memcpy(entry.ifacename, ifname, sizeof(ifname));
 	memcpy(entry.mac, mac, sizeof(mac));
+	memcpy(entry.mac_bin, mac_bin, 6);
 	entry.mtu = mtu;
 
 	fprintf(stderr, "Link Added: %s mac: %s, mtu: %d\n", ifname, mac, mtu);

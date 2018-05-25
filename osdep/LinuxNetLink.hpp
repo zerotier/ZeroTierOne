@@ -105,6 +105,7 @@ private:
         int index;
         char ifacename[IFNAMSIZ];
         char mac[18];
+        char mac_bin[6];
         unsigned int mtu;
     };
     Hashtable<int, iface_entry> _interfaces;
