@@ -33,27 +33,22 @@
 #include <asm/types.h>
 #include <linux/rtnetlink.h>
 #include <sys/socket.h>
-
+#include <linux/if.h>
 
 #include "../node/InetAddress.hpp"
 #include "Thread.hpp"
+#include "../node/Hashtable.hpp"
 
 
 namespace ZeroTier {
 
 struct route_entry {
-    InetAddress target;
-    InetAddress via;
-    const char *iface;
+	InetAddress target;
+	InetAddress via;
+	int if_index;
+	char iface[IFNAMSIZ];
 };
-
 typedef std::vector<route_entry> RouteList;
-
-struct nl_req {
-    struct nlmsghdr nl;
-    struct rtmsg rt;
-    char buf[8192];
-};
 
 /**
  * Interface with Linux's RTNETLINK 
@@ -93,17 +88,26 @@ private:
     void _ipAddressAdded(struct nlmsghdr *nlp);
     void _ipAddressDeleted(struct nlmsghdr *nlp);
 
-
+    void _requestInterfaceList();
     void _requestIPv4Routes();
     void _requestIPv6Routes();
 
 
     Thread _t;
     bool _running;
+
     RouteList _routes_ipv4;
     RouteList _routes_ipv6;
 
     uint32_t _seq;
+
+    struct iface_entry {
+        int index;
+        char ifacename[IFNAMSIZ];
+        char mac[18];
+        unsigned int mtu;
+    };
+    Hashtable<int, iface_entry> _interfaces;
 
     // socket communication vars;
     int _fd;

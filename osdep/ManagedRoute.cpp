@@ -54,6 +54,7 @@
 #include <asm/types.h>
 #include <linux/rtnetlink.h>
 #include <sys/socket.h>
+#include "../osdep/LinuxNetLink.hpp"
 #endif
 #ifdef __BSD__
 #include <net/if_dl.h>
@@ -284,44 +285,14 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 #ifdef __LINUX__ // ----------------------------------------------------------
 #define ZT_ROUTING_SUPPORT_FOUND 1
 
-static bool _hasRoute(const InetAddress &target, const InetAddress &via, const char *localInterface)
-{
-	if (target.ss_family == AF_INET) {
-		int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
-
-		char *buf;
-		int nll;
-		struct rtmsg *rtp;
-		int rtl;
-		struct rtattr *rtap;
-
-		struct sockaddr_nl la;
-		bzero(&la, sizeof(la));
-		la.nl_family = AF_NETLINK;
-		la.nl_pad = 0;
-		la.nl_pid = (uint32_t)((ptrdiff_t)&target % getpid());
-		la.nl_groups = 0;
-		int rtn = bind(fd, (struct sockaddr*)&la, sizeof(la));
-
-
-
-		close(fd);
-		return false;
-	} else {
-
-		return false;
-	}
-}
-
-
 static void _routeCmd(const char *op, const InetAddress &target, const InetAddress &via, const char *localInterface) 
 {
-	bool hasRoute = _hasRoute(target, via, localInterface);
-	if (hasRoute && (strcmp(op, "add") == 0 || strcmp(op, "replace") == 0)) {
-		return;
-	} else if (!hasRoute && (strcmp(op, "remove") == 0 || strcmp(op, "del") == 0)) {
-		return;
+	if ((strcmp(op, "add") == 0 || strcmp(op, "replace") == 0)) {
+		LinuxNetLink::getInstance().addRoute(target, via, localInterface);
+	} else if ((strcmp(op, "remove") == 0 || strcmp(op, "del") == 0)) {
+		LinuxNetLink::getInstance().delRoute(target, via, localInterface);
 	}
+	return;
 
 	char targetStr[64] = {0};
 	char viaStr[64] = {0};
