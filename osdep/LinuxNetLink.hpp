@@ -36,6 +36,7 @@
 #include <linux/if.h>
 
 #include "../node/InetAddress.hpp"
+#include "../node/MAC.hpp"
 #include "Thread.hpp"
 #include "../node/Hashtable.hpp"
 
@@ -74,9 +75,11 @@ public:
     RouteList getIPV4Routes() const;
     RouteList getIPV6Routes() const;
 
-    void addInterface(const char *iface, unsigned int mtu);
+    // void addInterface(const char *iface, unsigned int mtu, const MAC &mac);
+    // void removeInterface(const char *iface);
 
     void addAddress(const InetAddress &addr, const char *iface);
+    void removeAddress(const InetAddress &addr, const char *iface);
 
     void threadMain() throw();
 private:

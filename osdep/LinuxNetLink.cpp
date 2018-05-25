@@ -27,6 +27,8 @@
 #include "LinuxNetLink.hpp"
 
 #include <unistd.h>
+#include <linux/if_tun.h>
+
 
 namespace ZeroTier {
 
@@ -40,6 +42,12 @@ struct nl_if_req {
     struct nlmsghdr nl;
     struct ifinfomsg ifa;
     char buf[8192];
+};
+
+struct nl_adr_req {
+	struct nlmsghdr nl;
+	struct ifaddrmsg ifa;
+	char buf[8192];
 };
 
 LinuxNetLink::LinuxNetLink()
@@ -528,7 +536,7 @@ void LinuxNetLink::addRoute(const InetAddress &target, const InetAddress &via, c
 	}
 
 	req.nl.nlmsg_len = NLMSG_LENGTH(rtl);
-	req.nl.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE;
+	req.nl.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL;
 	req.nl.nlmsg_type = RTM_NEWROUTE;
 	req.nl.nlmsg_pid = 0;
 	req.nl.nlmsg_seq = ++_seq;
@@ -637,12 +645,68 @@ void LinuxNetLink::delRoute(const InetAddress &target, const InetAddress &via, c
 	sendmsg(_fd, &msg, 0);
 }
 
-void LinuxNetLink::addInterface(const char *iface, unsigned int mtu)
+// void LinuxNetLink::addInterface(const char *iface, unsigned int mtu, const MAC &mac)
+// {
+// 	int rtl = sizeof(struct ifinfomsg);
+// 	struct nl_if_req req;
+// 	bzero(&req, sizeof(nl_if_req));
+
+// 	struct rtattr *rtap = (struct rtattr *)req.buf;
+// 	rtap->rta_type = IFLA_IFNAME;
+// 	rtap->rta_len =  sizeof(struct rtattr)+strlen(iface)+1;
+// 	rtl += rtap->rta_len;
+
+// 	rtap = (struct rtattr*)(((char*)rtap)+rtap->rta_len);
+// 	rtap->rta_type = IFLA_MTU;
+// 	rtap->rta_len = sizeof(struct rtattr)+sizeof(unsigned int);
+// 	rtl += rtap->rta_len;
+
+// 	rtap = (struct rtattr*)(((char*)rtap)+rtap->rta_len);
+// 	rtap->rta_type = IFLA_ADDRESS;
+// 	rtap->rta_len = sizeof(struct rtattr)+6;
+// 	mac.copyTo(((char*)rtap)+sizeof(struct rtattr), 6);
+// 	rtl += rtap->rta_len;
+
+// 	IFLA_LINKINFO;
+// 	req.nl.nlmsg_len = NLMSG_LENGTH(rtl);
+// 	req.nl.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL;
+// 	req.nl.nlmsg_type = RTM_NEWLINK;
+// 	req.nl.nlmsg_pid = 0;
+// 	req.nl.nlmsg_seq = ++_seq;
+
+// 	req.ifa.ifi_family = AF_UNSPEC;
+// 	req.ifa.ifi_type = 0; // TODO figure this one out
+// 	req.ifa.ifi_index = 0;
+// 	req.ifa.ifi_flags = IFF_UP;
+
+// 	struct sockaddr_nl pa;
+// 	bzero(&pa, sizeof(pa));
+// 	pa.nl_family = AF_NETLINK;
+
+// 	struct msghdr msg;
+// 	bzero(&msg, sizeof(msg));
+// 	msg.msg_name = (void*)&pa;
+// 	msg.msg_namelen = sizeof(pa);
+
+// 	struct iovec iov;
+// 	iov.iov_base = (void*)&req.nl;
+// 	iov.iov_len = req.nl.nlmsg_len;
+// 	msg.msg_iov = &iov;
+// 	msg.msg_iovlen = 1;
+// 	sendmsg(_fd, &msg, 0);
+// }
+
+// void LinuxNetLink::removeInterface(const char *iface)
+// {
+
+// }
+
+void LinuxNetLink::addAddress(const InetAddress &addr, const char *iface)
 {
 
 }
 
-void LinuxNetLink::addAddress(const InetAddress &addr, const char *iface)
+void LinuxNetLink::removeAddress(const InetAddress &addr, const char *iface)
 {
 
 }
