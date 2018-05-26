@@ -226,12 +226,16 @@ function _cleanMac(m)
 {
 	m = m.toLowerCase();
 	var m2 = '';
+	let charcount = 0;
 	for(let i=0;((i<m.length)&&(m2.length<17));++i) {
 		let c = m.charAt(i);
 		if ("0123456789abcdef".indexOf(c) >= 0) {
 			m2 += c;
-			if ((m2.length > 0)&&(m2.length !== 17)&&((m2.length & 1) === 0))
+			charcount++;
+			if ((m2.length > 0)&&(m2.length !== 17)&&(charcount >= 2) ) {
 				m2 += ':';
+				charcount=0;
+			}
 		}
 	}
 	return m2;
