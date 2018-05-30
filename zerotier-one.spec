@@ -1,5 +1,5 @@
 Name:           zerotier-one
-Version:        1.2.8
+Version:        1.2.10
 Release:        1%{?dist}
 Summary:        ZeroTier One network virtualization service
 
@@ -110,8 +110,8 @@ case "$1" in
     chkconfig --add zerotier-one
   ;;
   2)
-    chkconfig --del newservice
-    chkconfig --add newservice
+    chkconfig --del zerotier-one
+    chkconfig --add zerotier-one
   ;;
 esac
 %endif
@@ -145,6 +145,12 @@ esac
 %endif
 
 %changelog
+* Tue May 08 2018 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.2.10-0.1
+- see https://github.com/zerotier/ZeroTierOne for release notes
+
+* Thu May 03 2018 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.2.8-0.1
+- see https://github.com/zerotier/ZeroTierOne for release notes
+
 * Mon Apr 24 2017 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.2.2-0.1
 - see https://github.com/zerotier/ZeroTierOne for release notes
 

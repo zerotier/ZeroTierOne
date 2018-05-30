@@ -1,6 +1,12 @@
 ZeroTier Release Notes
 ======
 
+# 2018-05-08 -- Version 1.2.10
+
+ * Fix bug loading `moons.d/` files for federated root operation.
+ * Fix compile problem with ZT_DEBUG on some versions of `clang`
+ * Fix slow network startup bug related to loading of `networks.d/` cache files
+
 # 2018-04-27 -- Version 1.2.8
 
  * Linux version once again builds with PIE (position independent executable) flags
