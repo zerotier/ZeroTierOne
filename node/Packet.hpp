@@ -419,7 +419,7 @@ public:
 
 		template<unsigned int C2>
 		Fragment(const Buffer<C2> &b) :
-	 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
+			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
 		{
 		}
 
@@ -930,7 +930,53 @@ public:
 		 */
 		VERB_PUSH_DIRECT_PATHS = 0x10,
 
-		// 0x11, 0x12 -- deprecated
+		// 0x11 -- deprecated
+
+		/**
+		 * An acknowledgement of receipt of a series of recent packets from another
+		 * peer. This is used to calculate relative throughput values and to detect
+		 * packet loss. Only VERB_FRAME and VERB_EXT_FRAME packets are counted.
+		 *
+		 * ACK response format:
+		 *  <[4] 32-bit number of bytes received since last ACK>
+		 *
+		 * Upon receipt of this packet, the local peer will verify that the correct
+		 * number of bytes were received by the remote peer. If these values do
+		 * not agree that could be an indicator of packet loss.
+		 *
+		 * Additionally, the local peer knows the interval of time that has
+		 * elapsed since the last received ACK. With this information it can compute
+		 * a rough estimate of the current throughput.
+		 *
+		 * This is sent at a maximum rate of once per every ZT_PATH_ACK_INTERVAL
+		 */
+		VERB_ACK = 0x12,
+
+		/**
+		 * A packet containing timing measurements useful for estimating path quality.
+		 * Composed of a list of <packet ID:internal sojourn time> pairs for an
+		 * arbitrary set of recent packets. This is used to sample for latency and
+		 * packet delay variance (PDV, "jitter").
+		 *
+		 * QoS record format:
+		 *
+		 *  <[8] 64-bit packet ID of previously-received packet>
+		 *  <[1] 8-bit packet sojourn time>
+		 *  <...repeat until end of max 1400 byte packet...>
+		 *
+		 * The number of possible records per QoS packet is: (1400 * 8) / 72 = 155
+		 * This packet should be sent very rarely (every few seconds) as it can be
+		 * somewhat large if the connection is saturated. Future versions might use
+		 * a bloom table to probablistically determine these values in a vastly
+		 * more space-efficient manner.
+		 *
+		 * Note: The 'internal packet sojourn time' is a slight misnomer as it is a
+		 * measure of the amount of time between when a packet was received and the
+		 * egress time of its tracking QoS packet.
+		 *
+		 * This is sent at a maximum rate of once per every ZT_PATH_QOS_INTERVAL
+		 */
+		VERB_QOS_MEASUREMENT = 0x13,
 
 		/**
 		 * A message with arbitrary user-definable content:
@@ -999,7 +1045,7 @@ public:
 
 	template<unsigned int C2>
 	Packet(const Buffer<C2> &b) :
- 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
+		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
 	{
 	}
 

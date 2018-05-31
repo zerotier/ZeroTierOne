@@ -268,11 +268,6 @@
 #define ZT_PING_CHECK_INVERVAL 5000
 
 /**
- * Length of interface name
- */
-#define ZT_PATH_INTERFACE_NAME_SZ 16
-
-/**
  * How frequently to check for changes to the system's network interfaces. When
  * the service decides to use this constant it's because we want to react more
  * quickly to new interfaces that pop up or go down.
@@ -286,27 +281,6 @@
 #define ZT_MULTIPATH_PROPORTION_WIN_SZ 128
 
 /**
- * Threshold for flow to be considered balanced.
- */
-#define ZT_MULTIPATH_FLOW_BALANCE_THESHOLD 0.80
-
-/**
- * Number of samples to consider when computing path statistics
- */
-#define ZT_PATH_QUALITY_METRIC_WIN_SZ 64
-
-/**
- * How often important path metrics are sampled (in ms). These metrics are later used
- * for path quality estimates
- */
-#define ZT_PATH_QUALITY_SAMPLE_INTERVAL 100
-
-/**
- * How often new path quality estimates are computed
- */
-#define ZT_PATH_QUALITY_ESTIMATE_INTERVAL 100
-
-/**
  * How often we will sample packet latency. Should be at least greater than ZT_PING_CHECK_INVERVAL
  * since we will record a 0 bit/s measurement if no valid latency measurement was made within this
  * window of time.
@@ -317,47 +291,85 @@
  * Interval used for rate-limiting the computation of path quality estimates. Set at 0
  * to compute as new packets arrive with no delay.
  */
-#define ZT_PATH_QUALITY_COMPUTE_INTERVAL 0
+#define ZT_PATH_QUALITY_COMPUTE_INTERVAL 1000
 
 /**
- * Path error rate history window size. This is used to keep track of packet error
- * measurements over a path's medium-term history.
+ * Number of samples to consider when computing real-time path statistics
  */
-#define ZT_PATH_ERROR_HIST_WIN_SZ 10
+#define ZT_PATH_QUALITY_METRIC_REALTIME_CONSIDERATION_WIN_SZ 128
 
 /**
- * The number of packet error measurements in each sample
+ * Number of samples to consider when computing performing long-term path quality analysis.
+ * By default this value is set to ZT_PATH_QUALITY_METRIC_REALTIME_CONSIDERATION_WIN_SZ but can
+ * be set to any value greater than that to observe longer-term path quality behavior.
  */
-#define ZT_PATH_ERROR_SAMPLE_WIN_SZ 1024
+#define ZT_PATH_QUALITY_METRIC_WIN_SZ ZT_PATH_QUALITY_METRIC_REALTIME_CONSIDERATION_WIN_SZ
 
 /**
- * How often a peer will prune its own paths. Pruning is important when multipath is
- * enabled because we want to prevent the allocation algorithms from sending anything
- * out on known dead paths. Additionally, quickly marking paths as dead helps when
- * a new path is learned and needs to replace an older path.
+ * Maximum acceptable Packet Delay Variance (PDV) over a path
  */
-#define ZT_CLOSED_PATH_PRUNING_INTERVAL 1000
+#define ZT_PATH_MAX_PDV 1000
 
 /**
- * Datagram used to test link throughput. Contents are random.
+ * Maximum acceptable time interval between expectation and receipt of at least one ACK over a path
  */
-#define ZT_LINK_TEST_DATAGRAM_SZ 1024
+#define ZT_PATH_MAX_AGE 30000
 
 /**
- * Size of datagram expected as a reply to a link speed test
+ * Maximum acceptable mean latency over a path
  */
-#define ZT_LINK_TEST_DATAGRAM_RESPONSE_SZ 8
+#define ZT_PATH_MAX_MEAN_LATENCY 1000
 
 /**
- * Time before a link test datagram is considered lost. Any corresponding
- * timing records that would have been used to compute a RTT are purged.
+ * How much each factor contributes to the "stability" score of a path
  */
-#define ZT_LINK_TEST_TIMEOUT 10000
+#define ZT_PATH_CONTRIB_PDV                    1.0 / 3.0
+#define ZT_PATH_CONTRIB_LATENCY                1.0 / 3.0
+#define ZT_PATH_CONTRIB_THROUGHPUT_DISTURBANCE 1.0 / 3.0
 
 /**
- * How often the service tests the link throughput.
+ * How much each factor contributes to the "quality" score of a path
  */
-#define ZT_LINK_SPEED_TEST_INTERVAL 1000
+#define ZT_PATH_CONTRIB_STABILITY  0.75 / 3.0
+#define ZT_PATH_CONTRIB_THROUGHPUT 1.50 / 3.0
+#define ZT_PATH_CONTRIB_SCOPE      0.75 / 3.0
+
+/**
+ * Min and max acceptable sizes for a VERB_QOS_MEASUREMENT packet
+ */
+#define ZT_PATH_MIN_QOS_PACKET_SZ 8 + 1
+#define ZT_PATH_MAX_QOS_PACKET_SZ 1400
+
+/**
+ * How many ID:sojourn time pairs in a single QoS packet
+ */
+#define ZT_PATH_QOS_TABLE_SIZE (ZT_PATH_MAX_QOS_PACKET_SZ * 8) / (64 + 8)
+
+/**
+ * How often the service tests the path throughput
+ */
+#define ZT_PATH_THROUGHPUT_MEASUREMENT_INTERVAL ZT_PATH_ACK_INTERVAL * 8
+
+/**
+ * Minimum amount of time between each ACK packet
+ */
+#define ZT_PATH_ACK_INTERVAL 250
+
+/**
+ * How often a QoS packet is sent
+ */
+#define ZT_PATH_QOS_INTERVAL 1000
+
+/**
+ * How often an aggregate link statistics report is emitted into this tracing system
+ */
+#define ZT_PATH_AGGREGATE_STATS_REPORT_INTERVAL 60000
+
+/**
+ * How much an aggregate link's component paths can vary from their target allocation
+ * before the link is considered to be in a state of imbalance.
+ */
+#define ZT_PATH_IMBALANCE_THRESHOLD 0.20
 
 /**
  * How frequently to send heartbeats over in-use paths

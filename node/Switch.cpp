@@ -666,6 +666,8 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 	unsigned int chunkSize = std::min(packet.size(),mtu);
 	packet.setFragmented(chunkSize < packet.size());
 
+	peer->recordOutgoingPacket(viaPath, packet.packetId(), packet.payloadLength(), packet.verb(), now);
+
 	if (trustedPathId) {
 		packet.setTrusted(trustedPathId);
 	} else {

@@ -43,7 +43,10 @@ ONE_OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o ext/miniupnpc/connec
 
 # Build with address sanitization library for advanced debugging (clang)
 ifeq ($(ZT_SANITIZE),1)
-	SANFLAGS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
+	DEFS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
+endif
+ifeq ($(ZT_DEBUG_TRACE),1)
+	DEFS+=-DZT_DEBUG_TRACE
 endif
 # Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)

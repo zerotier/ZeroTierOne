@@ -456,20 +456,6 @@ public:
 		return false;
 	}
 
-	/**
-	 * Get a list of socket pointers for all bindings.
-	 * 
-	 * @return A list of socket pointers for current bindings
-	 */
-	inline std::vector<PhySocket*> getBoundSockets()
-	{
-		std::vector<PhySocket*> sockets;
-		for (int i=0; i<ZT_BINDER_MAX_BINDINGS; i++) {
-			sockets.push_back(_bindings[i].udpSock);
-		}
-		return sockets;
-	}
-
 private:
 	_Binding _bindings[ZT_BINDER_MAX_BINDINGS];
 	std::atomic<unsigned int> _bindingCount;

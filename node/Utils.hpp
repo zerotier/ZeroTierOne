@@ -261,6 +261,14 @@ public:
 		return l;
 	}
 
+	static inline float normalize(float value, int64_t bigMin, int64_t bigMax, int32_t targetMin, int32_t targetMax)
+	{
+	    int64_t bigSpan = bigMax - bigMin;
+	    int64_t smallSpan = targetMax - targetMin;
+	    float valueScaled = (value - (float)bigMin) / (float)bigSpan;
+	    return (float)targetMin + valueScaled * (float)smallSpan;
+	}
+
 	/**
 	 * Generate secure random bytes
 	 *

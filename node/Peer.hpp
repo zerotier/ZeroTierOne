@@ -68,9 +68,7 @@ public:
 	~Peer() {
 		Utils::burn(_key,sizeof(_key));
 		delete _pathChoiceHist;
-		delete _flowBalanceHist;
 		_pathChoiceHist = NULL;
-		_flowBalanceHist = NULL;
 	}
 
 	/**
@@ -114,6 +112,7 @@ public:
 		const SharedPtr<Path> &path,
 		const unsigned int hops,
 		const uint64_t packetId,
+		const unsigned int payloadLength,
 		const Packet::Verb verb,
 		const uint64_t inRePacketId,
 		const Packet::Verb inReVerb,
@@ -158,13 +157,86 @@ public:
 	}
 
 	/**
-	 * Get the most appropriate direct path based on current multipath configuration
+	 * Record statistics on outgoing packets
+	 *
+	 * @param path Path over which packet was sent
+	 * @param id Packet ID
+	 * @param len Length of packet payload
+	 * @param verb Packet verb
+	 * @param now Current time
+	 */
+	void recordOutgoingPacket(const SharedPtr<Path> &path, const uint64_t packetId, uint16_t payloadLength, const Packet::Verb verb, int64_t now);
+
+	/**
+	 * Record statistics on incoming packets
+	 *
+	 * @param path Path over which packet was sent
+	 * @param id Packet ID
+	 * @param len Length of packet payload
+	 * @param verb Packet verb
+	 * @param now Current time
+	 */
+	void recordIncomingPacket(void *tPtr, const SharedPtr<Path> &path, const uint64_t packetId, uint16_t payloadLength, const Packet::Verb verb, int64_t now);
+
+	/**
+	 * Send an ACK to peer for the most recent packets received
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param localSocket Raw socket the ACK packet will be sent over
+	 * @param atAddress Destination for the ACK packet
+	 * @param now Current time
+	 */
+	void sendACK(void *tPtr, const SharedPtr<Path> &path, const int64_t localSocket,const InetAddress &atAddress,int64_t now);
+
+	/**
+	 * Send a QoS packet to peer so that it can evaluate the quality of this link
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param localSocket Raw socket the QoS packet will be sent over
+	 * @param atAddress Destination for the QoS packet
+	 * @param now Current time
+	 */
+	void sendQOS_MEASUREMENT(void *tPtr, const SharedPtr<Path> &path, const int64_t localSocket,const InetAddress &atAddress,int64_t now);
+
+	/**
+	 * @return The relative quality values for each path
+	 */
+	float computeAggregateLinkRelativeQuality(int64_t now);
+
+	/**
+	 * @return The aggregate link Packet Delay Variance (PDV)
+	 */
+	float computeAggregateLinkPacketDelayVariance();
+
+	/**
+	 * @return The aggregate link mean latenct
+	 */
+	float computeAggregateLinkMeanLatency();
+
+	/**
+	 * @return The number of currently alive "physical" paths in the aggregate link
+	 */
+	int aggregateLinkPhysicalPathCount();
+
+	/**
+	 * @return The number of currently alive "logical" paths in the aggregate link
+	 */
+	int aggregateLinkLogicalPathCount();
+
+	/**
+	 * Get the most appropriate direct path based on current multipath and QoS configuration
 	 *
 	 * @param now Current time
 	 * @param includeExpired If true, include even expired paths
 	 * @return Best current path or NULL if none
 	 */
 	SharedPtr<Path> getAppropriatePath(int64_t now, bool includeExpired);
+
+	/**
+	 * Generate a human-readable string of interface names making up the aggregate link, also include
+	 * moving allocation and IP version number for each (for tracing)
+	 */
+	char *interfaceListStr();
 
 	/**
 	 * Send VERB_RENDEZVOUS to this and another peer via the best common IP scope and path
@@ -549,11 +621,12 @@ private:
 	AtomicCounter __refCount;
 
 	RingBuffer<int> *_pathChoiceHist;
-	RingBuffer<float> *_flowBalanceHist;
 
-	bool _linkBalanceStatus;
-	bool _linkRedundancyStatus;
+	bool _linkIsBalanced;
+	bool _linkIsRedundant;
+	uint64_t _lastAggregateStatsReport;
 
+	char _interfaceListStr[256]; // 16 characters * 16 paths in a link
 };
 
 } // namespace ZeroTier

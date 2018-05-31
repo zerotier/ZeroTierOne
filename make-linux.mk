@@ -45,6 +45,9 @@ ONE_OBJS+=ext/http-parser/http_parser.o
 ifeq ($(ZT_TRACE),1)
 	override DEFS+=-DZT_TRACE
 endif
+ifeq ($(ZT_DEBUG_TRACE),1)
+	DEFS+=-DZT_DEBUG_TRACE
+endif
 
 ifeq ($(ZT_RULES_ENGINE_DEBUGGING),1)
 	override DEFS+=-DZT_RULES_ENGINE_DEBUGGING

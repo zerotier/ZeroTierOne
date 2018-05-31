@@ -86,7 +86,7 @@
 		#include <android/log.h>
 		#define ZT_LOG_TAG "ZTSDK"
 #endif
-#if defined(ZT_TRACE)
+#if defined(ZT_DEBUG_TRACE)
 	#if ZT_MSG_INFO == true
 		#if defined(__ANDROID__)
 			#define DEBUG_INFO(fmt, args...) ((void)__android_log_print(ANDROID_LOG_VERBOSE, ZT_LOG_TAG, \

@@ -173,6 +173,11 @@ public:
 	}
 
 	/**
+	 * @return The most recently pushed element on the buffer
+	 */
+	T get_most_recent() { return *(buf + end); }
+
+	/**
 	 * @param dest Destination buffer
 	 * @param n Size (in terms of number of elements) of the destination buffer
 	 * @return Number of elements read from the buffer
@@ -218,10 +223,7 @@ public:
 	/**
 	 * @return The number of slots that are unused in the buffer
 	 */
-	size_t getFree()
-	{
-		return size - count();
-	}
+	size_t getFree() { return size - count(); }
 
 	/**
 	 * @return The arithmetic mean of the contents of the buffer
@@ -229,45 +231,67 @@ public:
 	float mean()
 	{
 		size_t iterator = begin;
-		float mean = 0;
-		for (size_t i=0; i<size; i++) {
-			iterator = (iterator + size - 1) % size;
-			mean += *(buf + iterator);
+		float subtotal = 0;
+		size_t curr_cnt = count();
+		for (size_t i=0; i<curr_cnt; i++) {
+			iterator = (iterator + size - 1) % curr_cnt;
+			subtotal += (float)*(buf + iterator);
 		}
-		return count() ? mean / (float)count() : 0;
+		return curr_cnt ? subtotal / (float)curr_cnt : 0;
 	}
 
 	/**
-	 * @return The sample standard deviation of the contents of the ring buffer
+	 * @return The arithmetic mean of the most recent 'n' elements of the buffer
 	 */
-	float stddev()
+	float mean(size_t n)
+	{
+		n = n < size ? n : size;
+		size_t iterator = begin;
+		float subtotal = 0;
+		size_t curr_cnt = count();
+		for (size_t i=0; i<n; i++) {
+			iterator = (iterator + size - 1) % curr_cnt;
+			subtotal += (float)*(buf + iterator);
+		}
+		return curr_cnt ? subtotal / (float)curr_cnt : 0;
+	}
+
+	/**
+	 * @return The sample standard deviation of element values
+	 */
+	float stddev() { return sqrt(variance()); }
+
+	/**
+	 * @return The variance of element values
+	 */
+	float variance()
 	{
 		size_t iterator = begin;
 		float cached_mean = mean();
+		size_t curr_cnt = count();
 		if (size) {
 			T sum_of_squared_deviations = 0;
-			for (size_t i=0; i<size; i++) {
-				iterator = (iterator + size - 1) % size;
+			for (size_t i=0; i<curr_cnt; i++) {
+				iterator = (iterator + size - 1) % curr_cnt;
 				float deviation = (buf[i] - cached_mean);
-				float sdev = deviation*deviation;
-				sum_of_squared_deviations += sdev;
+				sum_of_squared_deviations += (deviation*deviation);
 			}
-			float variance = sum_of_squared_deviations / (size - 1);
-			float sd = sqrt(variance);
-			return sd;
+			float variance = (float)sum_of_squared_deviations / (float)(size - 1);
+			return variance;
 		}
 		return 0;
 	}
 
 	/**
-	 * @return The number of elements of zero value, O(n)
+	 * @return The number of elements of zero value
 	 */
 	size_t zeroCount()
 	{
 		size_t iterator = begin;
 		size_t zeros = 0;
-		for (size_t i=0; i<size; i++) {
-			iterator = (iterator + size - 1) % size;
+		size_t curr_cnt = count();
+		for (size_t i=0; i<curr_cnt; i++) {
+			iterator = (iterator + size - 1) % curr_cnt;
 			if (*(buf + iterator) == 0) {
 				zeros++;
 			}
@@ -282,14 +306,15 @@ public:
 	size_t countValue(T value)
 	{
 		size_t iterator = begin;
-		size_t count = 0;
-		for (size_t i=0; i<size; i++) {
-			iterator = (iterator + size - 1) % size;
+		size_t cnt = 0;
+		size_t curr_cnt = count();
+		for (size_t i=0; i<curr_cnt; i++) {
+			iterator = (iterator + size - 1) % curr_cnt;
 			if (*(buf + iterator) == value) {
-				count++;
+				cnt++;
 			}
 		}
-		return count;
+		return cnt;
 	}
 
 	/**
@@ -301,10 +326,10 @@ public:
 		for (size_t i=0; i<size; i++) {
 			iterator = (iterator + size - 1) % size;
 			if (typeid(T) == typeid(int)) {
-				// DEBUG_INFO("buf[%2zu]=%2d", iterator, (int)*(buf + iterator));
+				 //DEBUG_INFO("buf[%2zu]=%2d", iterator, (int)*(buf + iterator));
 			}
 			else {
-				// DEBUG_INFO("buf[%2zu]=%2f", iterator, (float)*(buf + iterator));
+				 //DEBUG_INFO("buf[%2zu]=%2f", iterator, (float)*(buf + iterator));
 			}
 		}
 	}

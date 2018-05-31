@@ -37,7 +37,6 @@
 
 #include "../version.h"
 #include "../include/ZeroTierOne.h"
-#include "../include/ZeroTierDebug.h"
 
 #include "../node/Constants.hpp"
 #include "../node/Mutex.hpp"
@@ -458,9 +457,6 @@ public:
 	// Last potential sleep/wake event
 	uint64_t _lastRestart;
 
-	// Last time link throughput was tested
-	uint64_t _lastLinkSpeedTest;
-
 	// Deadline for the next background task service function
 	volatile int64_t _nextBackgroundTaskDeadline;
 
@@ -880,26 +876,6 @@ public:
 				if (((now - lastMultipathModeUpdate) >= interfaceRefreshPeriod)||(restarted)) {
 					lastMultipathModeUpdate = now;
 					_node->setMultipathMode(_multipathMode);
-				}
-				// Test link speeds
-				// TODO: This logic should eventually find its way into the core or as part of a passive
-				// measure within the protocol.
-				if (_multipathMode && ((now - _lastLinkSpeedTest) >= ZT_LINK_SPEED_TEST_INTERVAL)) {
-					_phy.refresh_link_speed_records();
-					_lastLinkSpeedTest = now;
-					// Generate random data to fill UDP packet
-					uint64_t pktBuf[ZT_LINK_TEST_DATAGRAM_SZ / sizeof(uint64_t)];
-					Utils::getSecureRandom(pktBuf, ZT_LINK_TEST_DATAGRAM_SZ);
-					ZT_PeerList *pl = _node->peers();
-					std::vector<PhySocket*> sockets = _binder.getBoundSockets();
-					for (int i=0; i<ZT_BINDER_MAX_BINDINGS; i++) {
-						for(size_t j=0;j<pl->peerCount;++j) {
-							for (int k=0; k<(ZT_MAX_PEER_NETWORK_PATHS/4); k++) {
-								Utils::getSecureRandom(pktBuf, 8); // generate one random integer for unique id
-								_phy.test_link_speed(sockets[i], (struct sockaddr*)&(pl->peers[j].paths[k].address), pktBuf, ZT_LINK_TEST_DATAGRAM_SZ);
-							}
-						}
-					}
 				}
 
 				// Run background task processor in core if it's time to do so
@@ -1799,15 +1775,6 @@ public:
 
 	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
 	{
-		if (_multipathMode) {
-			// Handle link test packets (should eventually be moved into the protocol itself)
-			if (len == ZT_LINK_TEST_DATAGRAM_SZ) {
-				_phy.respond_to_link_test(sock, from, data, len);
-			}
-			if (len == ZT_LINK_TEST_DATAGRAM_RESPONSE_SZ) {
-				_phy.handle_link_test_response(sock, from, data, len);
-			}
-		}
 		if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(from)->ipScope() == InetAddress::IP_SCOPE_GLOBAL))
 			_lastDirectReceiveFromGlobal = OSUtils::now();
 		const ZT_ResultCode rc = _node->processWirePacket(
