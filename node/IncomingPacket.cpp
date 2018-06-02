@@ -206,43 +206,45 @@ bool IncomingPacket::_doACK(const RuntimeEnvironment *RR,void *tPtr,const Shared
 {
 	/* Dissect incoming ACK packet. From this we can estimate current throughput of the path, establish known
 	 * maximums and detect packet loss. */
-
-	if (RR->node->getMultipathMode() != ZT_MULTIPATH_NONE) {
+	if (peer->localMultipathSupport()) {
 		int32_t ackedBytes;
-		memcpy(&ackedBytes, payload(), sizeof(int32_t));
+		if (payloadLength() != sizeof(ackedBytes)) {
+			return true; // ignore
+		}
+		memcpy(&ackedBytes, payload(), sizeof(ackedBytes));
 		_path->receivedAck(RR->node->now(), Utils::ntoh(ackedBytes));
+		peer->inferRemoteMultipathEnabled();
 	}
 
 	return true;
 }
-
 bool IncomingPacket::_doQOS_MEASUREMENT(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
-
 	/* Dissect incoming QoS packet. From this we can compute latency values and their variance.
 	 * The latency variance is used as a measure of "jitter". */
-
-	if (RR->node->getMultipathMode() != ZT_MULTIPATH_NONE) {
-		if (payloadLength() < ZT_PATH_MAX_QOS_PACKET_SZ && payloadLength() > ZT_PATH_MIN_QOS_PACKET_SZ) {
-			const int64_t now = RR->node->now();
-			uint64_t rx_id[ZT_PATH_QOS_TABLE_SIZE];
-			uint8_t rx_ts[ZT_PATH_QOS_TABLE_SIZE];
-			char *begin = (char *)payload();
-			char *ptr = begin;
-			int count = 0;
-			int len = payloadLength();
-			// Read packet IDs and latency compensation intervals for each packet tracked by thie QoS packet
-			while (ptr < (begin + len)) {
-				memcpy((void*)&rx_id[count], ptr, sizeof(uint64_t));
-				rx_id[count] = Utils::ntoh(rx_id[count]);
-				ptr+=sizeof(uint64_t);
-				memcpy((void*)&rx_ts[count], ptr, sizeof(uint8_t));
-				ptr+=sizeof(uint8_t);
-				count++;
-			}
-			_path->receivedQoS(now, count, rx_id, rx_ts);
+	if (peer->localMultipathSupport()) {
+		if (payloadLength() > ZT_PATH_MAX_QOS_PACKET_SZ || payloadLength() < ZT_PATH_MIN_QOS_PACKET_SZ) {
+			return true; // ignore
 		}
+		const int64_t now = RR->node->now();
+		uint64_t rx_id[ZT_PATH_QOS_TABLE_SIZE];
+		uint16_t rx_ts[ZT_PATH_QOS_TABLE_SIZE];
+		char *begin = (char *)payload();
+		char *ptr = begin;
+		int count = 0;
+		int len = payloadLength();
+		// Read packet IDs and latency compensation intervals for each packet tracked by thie QoS packet
+		while (ptr < (begin + len) && (count < ZT_PATH_QOS_TABLE_SIZE)) {
+			memcpy((void*)&rx_id[count], ptr, sizeof(uint64_t));
+			ptr+=sizeof(uint64_t);
+			memcpy((void*)&rx_ts[count], ptr, sizeof(uint16_t));
+			ptr+=sizeof(uint16_t);
+			count++;
+		}
+		_path->receivedQoS(now, count, rx_id, rx_ts);
+		peer->inferRemoteMultipathEnabled();
 	}
+
 	return true;
 }
 

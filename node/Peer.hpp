@@ -27,18 +27,13 @@
 #ifndef ZT_PEER_HPP
 #define ZT_PEER_HPP
 
-#include <stdint.h>
-
-#include "Constants.hpp"
-
-#include <algorithm>
-#include <utility>
 #include <vector>
-#include <stdexcept>
 
 #include "../include/ZeroTierOne.h"
 
+#include "Constants.hpp"
 #include "RuntimeEnvironment.hpp"
+#include "Node.hpp"
 #include "Path.hpp"
 #include "Address.hpp"
 #include "Utils.hpp"
@@ -417,6 +412,29 @@ public:
 	inline bool remoteVersionKnown() const { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
 
 	/**
+	 * Record that the remote peer does have multipath enabled. As is evident by the receipt of a VERB_ACK
+	 * or a VERB_QOS_MEASUREMENT packet at some point in the past. Until this flag is set, the local client
+	 * shall assume that multipath is not enabled and should only use classical Protocol 9 logic.
+	 */
+	inline void inferRemoteMultipathEnabled() { _remotePeerMultipathEnabled = true; }
+
+	/**
+	 * @return Whether the local client supports and is configured to use multipath
+	 */
+	inline bool localMultipathSupport() { return ((RR->node->getMultipathMode() != ZT_MULTIPATH_NONE) && (ZT_PROTO_VERSION > 9)); }
+
+	/**
+	 * @return Whether the remote peer supports and is configured to use multipath
+	 */
+	inline bool remoteMultipathSupport() { return (_remotePeerMultipathEnabled && (_vProto > 9)); }
+
+	/**
+	 * @return Whether this client can use multipath to communicate with this peer. True if both peers are using
+	 * the correct protocol and if both peers have multipath enabled. False if otherwise.
+	 */
+	inline bool canUseMultipath() { return (localMultipathSupport() && remoteMultipathSupport()); }
+
+	/**
 	 * @return True if peer has received a trust established packet (e.g. common network membership) in the past ZT_TRUST_EXPIRATION ms
 	 */
 	inline bool trustEstablished(const int64_t now) const { return ((now - _lastTrustEstablishedPacketReceived) < ZT_TRUST_EXPIRATION); }
@@ -624,6 +642,8 @@ private:
 
 	bool _linkIsBalanced;
 	bool _linkIsRedundant;
+	bool _remotePeerMultipathEnabled;
+
 	uint64_t _lastAggregateStatsReport;
 
 	char _interfaceListStr[256]; // 16 characters * 16 paths in a link

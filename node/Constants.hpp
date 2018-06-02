@@ -335,6 +335,11 @@
 #define ZT_PATH_CONTRIB_SCOPE      0.75 / 3.0
 
 /**
+ * How often a QoS packet is sent
+ */
+#define ZT_PATH_QOS_INTERVAL 3000
+
+/**
  * Min and max acceptable sizes for a VERB_QOS_MEASUREMENT packet
  */
 #define ZT_PATH_MIN_QOS_PACKET_SZ 8 + 1
@@ -343,7 +348,22 @@
 /**
  * How many ID:sojourn time pairs in a single QoS packet
  */
-#define ZT_PATH_QOS_TABLE_SIZE (ZT_PATH_MAX_QOS_PACKET_SZ * 8) / (64 + 8)
+#define ZT_PATH_QOS_TABLE_SIZE (ZT_PATH_MAX_QOS_PACKET_SZ * 8) / (64 + 16)
+
+/**
+ * Maximum number of outgoing packets we monitor for QoS information
+ */
+#define ZT_PATH_MAX_OUTSTANDING_QOS_RECORDS 128
+
+/**
+ * How often we check the age of QoS records
+ */
+#define ZT_PATH_QOS_RECORD_PURGE_INTERVAL 1000
+
+/**
+ * Timeout for QoS records
+ */
+#define ZT_PATH_QOS_TIMEOUT ZT_PATH_QOS_INTERVAL * 2
 
 /**
  * How often the service tests the path throughput
@@ -354,11 +374,6 @@
  * Minimum amount of time between each ACK packet
  */
 #define ZT_PATH_ACK_INTERVAL 250
-
-/**
- * How often a QoS packet is sent
- */
-#define ZT_PATH_QOS_INTERVAL 1000
 
 /**
  * How often an aggregate link statistics report is emitted into this tracing system

@@ -40,6 +40,7 @@
 #include "AtomicCounter.hpp"
 #include "Utils.hpp"
 #include "RingBuffer.hpp"
+#include "Packet.hpp"
 
 #include "../osdep/Phy.hpp"
 
@@ -105,9 +106,11 @@ public:
 		_lastAck(0),
 		_lastThroughputEstimation(0),
 		_lastQoSMeasurement(0),
+		_lastQoSRecordPurge(0),
 		_unackedBytes(0),
 		_expectingAckAsOf(0),
 		_packetsReceivedSinceLastAck(0),
+		_packetsReceivedSinceLastQoS(0),
 		_meanThroughput(0.0),
 		_maxLifetimeThroughput(0),
 		_bytesAckedSinceLastThroughputEstimation(0),
@@ -133,9 +136,11 @@ public:
 		_lastAck(0),
 		_lastThroughputEstimation(0),
 		_lastQoSMeasurement(0),
+		_lastQoSRecordPurge(0),
 		_unackedBytes(0),
 		_expectingAckAsOf(0),
 		_packetsReceivedSinceLastAck(0),
+		_packetsReceivedSinceLastQoS(0),
 		_meanThroughput(0.0),
 		_maxLifetimeThroughput(0),
 		_bytesAckedSinceLastThroughputEstimation(0),
@@ -147,6 +152,7 @@ public:
 		_lastComputedRelativeQuality(0)
 	{
 		prepareBuffers();
+		_phy->getIfName((PhySocket *)((uintptr_t)_localSocket), _ifname, 16);
 	}
 
 	~Path()
@@ -295,17 +301,52 @@ public:
 	}
 
 	/**
-	 * Take note that we're expecting a VERB_ACK on this path as of a specific time
+	 * Record statistics on outgoing packets. Used later to estimate QoS metrics.
 	 *
 	 * @param now Current time
-	 * @param packetId ID of the packet
-	 * @param payloadLength Number of bytes we're is expecting a reply to
+	 * @param packetId ID of packet
+	 * @param payloadLength Length of payload
+	 * @param verb Packet verb
 	 */
-	inline void expectingAck(int64_t now, int64_t packetId, uint16_t payloadLength)
+	inline void recordOutgoingPacket(int64_t now, int64_t packetId, uint16_t payloadLength, Packet::Verb verb)
 	{
-		_expectingAckAsOf = ackAge(now) > ZT_PATH_ACK_INTERVAL ? _expectingAckAsOf : now;
-		_unackedBytes += payloadLength;
-		_outgoingPacketRecords[packetId] = now;
+		Mutex::Lock _l(_statistics_m);
+		if (verb == Packet::VERB_FRAME || verb == Packet::VERB_EXT_FRAME) {
+			if (packetId % 2 == 0) { // even -> use for ACK
+				_unackedBytes += payloadLength;
+				// Take note that we're expecting a VERB_ACK on this path as of a specific time
+				_expectingAckAsOf = ackAge(now) > ZT_PATH_ACK_INTERVAL ? _expectingAckAsOf : now;
+			}
+			else { // odd -> use for QoS
+				if (_outQoSRecords.size() < ZT_PATH_MAX_OUTSTANDING_QOS_RECORDS) {
+					_outQoSRecords[packetId] = now;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Record statistics on incoming packets. Used later to estimate QoS metrics.
+	 *
+	 * @param now Current time
+	 * @param packetId ID of packet
+	 * @param payloadLength Length of payload
+	 * @param verb Packet verb
+	 */
+	inline void recordIncomingPacket(int64_t now, int64_t packetId, uint16_t payloadLength, Packet::Verb verb)
+	{
+		Mutex::Lock _l(_statistics_m);
+		if (verb == Packet::VERB_FRAME || verb == Packet::VERB_EXT_FRAME) {
+			if (packetId % 2 == 0) { // even -> use for ACK
+				_inACKRecords[packetId] = payloadLength;
+				_packetsReceivedSinceLastAck++;
+			}
+			else { // odd -> use for QoS
+				_inQoSRecords[packetId] = now;
+				_packetsReceivedSinceLastQoS++;
+			}
+			_packetValiditySamples->push(true);
+		}
 	}
 
 	/**
@@ -335,9 +376,12 @@ public:
 	 */
 	inline int32_t bytesToAck()
 	{
+		Mutex::Lock _l(_statistics_m);
 		int32_t bytesToAck = 0;
-		for (int i=0; i<_packetsReceivedSinceLastAck; i++) {
-			bytesToAck += _recorded_len[i];
+		std::map<uint64_t,uint16_t>::iterator it = _inACKRecords.begin();
+		while (it != _inACKRecords.end()) {
+			bytesToAck += it->second;
+			it++;
 		}
 		return bytesToAck;
 	}
@@ -357,9 +401,8 @@ public:
 	 */
 	inline void sentAck(int64_t now)
 	{
-		memset(_recorded_id, 0, sizeof(_recorded_id));
-		memset(_recorded_ts, 0, sizeof(_recorded_ts));
-		memset(_recorded_len, 0, sizeof(_recorded_len));
+		Mutex::Lock _l(_statistics_m);
+		_inACKRecords.clear();
 		_packetsReceivedSinceLastAck = 0;
 		_lastAck = now;
 	}
@@ -373,17 +416,19 @@ public:
 	 * @param rx_id table of packet IDs
 	 * @param rx_ts table of holding times
 	 */
-	inline void receivedQoS(int64_t now, int count, uint64_t *rx_id, uint8_t *rx_ts)
+	inline void receivedQoS(int64_t now, int count, uint64_t *rx_id, uint16_t *rx_ts)
 	{
+		Mutex::Lock _l(_statistics_m);
 		// Look up egress times and compute latency values for each record
+		std::map<uint64_t,uint64_t>::iterator it;
 		for (int j=0; j<count; j++) {
-			std::map<uint64_t,uint64_t>::iterator it = _outgoingPacketRecords.find(rx_id[j]);
-			if (it != _outgoingPacketRecords.end()) {
+			it = _outQoSRecords.find(rx_id[j]);
+			if (it != _outQoSRecords.end()) {
 				uint16_t rtt = (uint16_t)(now - it->second);
 				uint16_t rtt_compensated = rtt - rx_ts[j];
 				float latency = rtt_compensated / 2.0;
 				updateLatency(latency, now);
-				_outgoingPacketRecords.erase(it);
+				_outQoSRecords.erase(it);
 			}
 		}
 	}
@@ -397,15 +442,20 @@ public:
 	 */
 	inline int32_t generateQoSPacket(int64_t now, char *qosBuffer)
 	{
+		Mutex::Lock _l(_statistics_m);
 		int32_t len = 0;
-		for (int i=0; i<_packetsReceivedSinceLastAck; i++) {
-			uint64_t id = _recorded_id[i];
+		std::map<uint64_t,uint64_t>::iterator it = _inQoSRecords.begin();
+		int i=0;
+		while (i<_packetsReceivedSinceLastQoS && it != _inQoSRecords.end()) {
+			uint64_t id = it->first;
 			memcpy(qosBuffer, &id, sizeof(uint64_t));
 			qosBuffer+=sizeof(uint64_t);
-			uint8_t holdingTime = (uint8_t)(now - _recorded_ts[i]);
-			memcpy(qosBuffer, &holdingTime, sizeof(uint8_t));
-			qosBuffer+=sizeof(uint8_t);
-			len+=sizeof(uint64_t)+sizeof(uint8_t);
+			uint16_t holdingTime = (now - it->second);
+			memcpy(qosBuffer, &holdingTime, sizeof(uint16_t));
+			qosBuffer+=sizeof(uint16_t);
+			len+=sizeof(uint64_t)+sizeof(uint16_t);
+			_inQoSRecords.erase(it++);
+			i++;
 		}
 		return len;
 	}
@@ -415,22 +465,9 @@ public:
 	 *
 	 * @param Current time
 	 */
-	inline void sentQoS(int64_t now) { _lastQoSMeasurement = now; }
-
-	/**
-	 * Record statistics on incoming packets. Used later to estimate QoS.
-	 *
-	 * @param now Current time
-	 * @param packetId
-	 * @param payloadLength
-	 */
-	inline void recordIncomingPacket(int64_t now, int64_t packetId, int32_t payloadLength)
-	{
-		_recorded_ts[_packetsReceivedSinceLastAck] = now;
-		_recorded_id[_packetsReceivedSinceLastAck] = packetId;
-		_recorded_len[_packetsReceivedSinceLastAck] = payloadLength;
-		_packetsReceivedSinceLastAck++;
-		_packetValiditySamples->push(true);
+	inline void sentQoS(int64_t now) {
+		_packetsReceivedSinceLastQoS = 0;
+		_lastQoSMeasurement = now;
 	}
 
 	/**
@@ -447,8 +484,8 @@ public:
 	 * @return Whether a QoS (VERB_QOS_MEASUREMENT) packet needs to be emitted at this time
 	 */
 	inline bool needsToSendQoS(int64_t now) {
-		return ((_packetsReceivedSinceLastAck >= ZT_PATH_QOS_TABLE_SIZE) ||
-			((now - _lastQoSMeasurement) > ZT_PATH_QOS_INTERVAL)) && _packetsReceivedSinceLastAck;
+		return ((_packetsReceivedSinceLastQoS >= ZT_PATH_QOS_TABLE_SIZE) ||
+			((now - _lastQoSMeasurement) > ZT_PATH_QOS_INTERVAL)) && _packetsReceivedSinceLastQoS;
 	}
 
 	/**
@@ -523,15 +560,16 @@ public:
 	inline char *getAddressString() { return _addrString; }
 
 	/**
-	 * Compute and cache stability and performance metrics. The resultant stability coefficint is a measure of how "well behaved"
+	 * Compute and cache stability and performance metrics. The resultant stability coefficient is a measure of how "well behaved"
 	 * this path is. This figure is substantially different from (but required for the estimation of the path's overall "quality".
 	 *
 	 * @param now Current time
 	 */
 	inline void processBackgroundPathMeasurements(int64_t now, const int64_t peerId) {
+		Mutex::Lock _l(_statistics_m);
+		// Compute path stability
 		if (now - _lastPathQualityComputeTime > ZT_PATH_QUALITY_COMPUTE_INTERVAL) {
 			_lastPathQualityComputeTime = now;
-			_phy->getIfName((PhySocket *)((uintptr_t)_localSocket), _ifname, 16);
 			address().toString(_addrString);
 			_meanThroughput = _throughputSamples->mean();
 			_meanLatency = _latencySamples->mean();
@@ -555,6 +593,17 @@ public:
 			_lastComputedStability = pdv_contrib + latency_contrib + throughput_disturbance_contrib;
 			_lastComputedStability *= 1 - _packetErrorRatio;
 			_qualitySamples->push(_lastComputedStability);
+		}
+		// Prevent QoS records from sticking around for too long
+		if (now - _lastQoSRecordPurge > ZT_PATH_QOS_RECORD_PURGE_INTERVAL)
+		{
+			std::map<uint64_t,uint64_t>::iterator it = _outQoSRecords.begin();
+			while (it != _outQoSRecords.end()) {
+				// Time since egress of tracked packet
+				if ((now - it->second) >= ZT_PATH_QOS_TIMEOUT) {
+					_outQoSRecords.erase(it++);
+				} else { it++; }
+			}
 		}
 	}
 
@@ -592,13 +641,12 @@ public:
 		_qualitySamples = new RingBuffer<float>(ZT_PATH_QUALITY_METRIC_WIN_SZ);
 		_packetValiditySamples = new RingBuffer<bool>(ZT_PATH_QUALITY_METRIC_WIN_SZ);
 		memset(_ifname, 0, 16);
-		memset(_recorded_id, 0, sizeof(_recorded_id));
-		memset(_recorded_ts, 0, sizeof(_recorded_ts));
-		memset(_recorded_len, 0, sizeof(_recorded_len));
 		memset(_addrString, 0, sizeof(_addrString));
 	}
 
 private:
+	Mutex _statistics_m;
+
 	volatile int64_t _lastOut;
 	volatile int64_t _lastIn;
 	volatile int64_t _lastTrustEstablishedPacketReceived;
@@ -609,19 +657,19 @@ private:
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often
 	AtomicCounter __refCount;
 
-	uint64_t _recorded_id[ZT_PATH_QOS_TABLE_SIZE];
-	uint64_t _recorded_ts[ZT_PATH_QOS_TABLE_SIZE];
-	uint16_t _recorded_len[ZT_PATH_QOS_TABLE_SIZE];
-
-	std::map<uint64_t, uint64_t> _outgoingPacketRecords;
+	std::map<uint64_t, uint64_t> _outQoSRecords; // id:egress_time
+	std::map<uint64_t, uint64_t> _inQoSRecords; // id:now
+	std::map<uint64_t, uint16_t> _inACKRecords; // id:len
 
 	int64_t _lastAck;
 	int64_t _lastThroughputEstimation;
 	int64_t _lastQoSMeasurement;
+	int64_t _lastQoSRecordPurge;
 
 	int64_t _unackedBytes;
 	int64_t _expectingAckAsOf;
 	int16_t _packetsReceivedSinceLastAck;
+	int16_t _packetsReceivedSinceLastQoS;
 
 	float _meanThroughput;
 	uint64_t _maxLifetimeThroughput;
