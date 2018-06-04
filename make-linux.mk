@@ -19,7 +19,7 @@ include objects.mk
 ONE_OBJS+=osdep/LinuxEthernetTap.o
 ONE_OBJS+=osdep/LinuxNetLink.o
 
-NLTEST_OBJS+=osdep/LinuxNetLink.o
+NLTEST_OBJS+=osdep/LinuxNetLink.o node/InetAddress.o node/Utils.o node/Salsa20.o
 NLTEST_OBJS+=nltest.o
 
 # Auto-detect miniupnpc and nat-pmp as well and use system libs if present,

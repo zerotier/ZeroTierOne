@@ -1631,6 +1631,17 @@ public:
 			for(unsigned int i=0;i<n.config.routeCount;++i) {
 				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
 				const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
+				InetAddress *src = NULL;
+				for (unsigned int j=0; j<n.config.assignedAddressCount; ++j) {
+					const InetAddress *const tmp = reinterpret_cast<const InetAddress *>(&(n.config.assignedAddresses[j]));
+					if (target->isV4() && tmp->isV4()) {
+						src = reinterpret_cast<InetAddress *>(&(n.config.assignedAddresses[j]));
+						break;
+					} else if (target->isV6() && tmp->isV6()) {
+						src = reinterpret_cast<InetAddress *>(&(n.config.assignedAddresses[j]));
+						break;
+					}
+				}
 
 				if ( (!checkIfManagedIsAllowed(n,*target)) || ((via->ss_family == target->ss_family)&&(matchIpOnly(myIps,*via))) )
 					continue;
@@ -1662,7 +1673,7 @@ public:
 					continue;
 
 				// Add and apply new routes
-				n.managedRoutes.push_back(SharedPtr<ManagedRoute>(new ManagedRoute(*target,*via,tapdev)));
+				n.managedRoutes.push_back(SharedPtr<ManagedRoute>(new ManagedRoute(*target,*via,*src,tapdev)));
 				if (!n.managedRoutes.back()->sync())
 					n.managedRoutes.pop_back();
 			}

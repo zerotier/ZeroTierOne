@@ -285,21 +285,23 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 #ifdef __LINUX__ // ----------------------------------------------------------
 #define ZT_ROUTING_SUPPORT_FOUND 1
 
-static void _routeCmd(const char *op, const InetAddress &target, const InetAddress &via, const char *localInterface) 
+static void _routeCmd(const char *op, const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *localInterface) 
 {
-	if ((strcmp(op, "add") == 0 || strcmp(op, "replace") == 0)) {
-		LinuxNetLink::getInstance().addRoute(target, via, localInterface);
-	} else if ((strcmp(op, "remove") == 0 || strcmp(op, "del") == 0)) {
-		LinuxNetLink::getInstance().delRoute(target, via, localInterface);
-	}
-	return;
-
 	char targetStr[64] = {0};
 	char viaStr[64] = {0};
 	InetAddress nmsk = target.netmask();
 	char nmskStr[64] = {0};
 	fprintf(stderr, "Received Route Cmd: %s target: %s via: %s netmask: %s localInterface: %s\n", op, target.toString(targetStr), via.toString(viaStr), nmsk.toString(nmskStr), localInterface);
 
+
+	if ((strcmp(op, "add") == 0 || strcmp(op, "replace") == 0)) {
+		LinuxNetLink::getInstance().addRoute(target, via, src, localInterface);
+	} else if ((strcmp(op, "remove") == 0 || strcmp(op, "del") == 0)) {
+		LinuxNetLink::getInstance().delRoute(target, via, src, localInterface);
+	}
+	return;
+
+	
 	int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);;
 	struct rtentry route = {0};
 
@@ -600,11 +602,11 @@ bool ManagedRoute::sync()
 
 	if (!_applied.count(leftt)) {
 		_applied[leftt] = false; // boolean unused
-		_routeCmd("replace",leftt,_via,(_via) ? (const char *)0 : _device);
+		_routeCmd("replace",leftt,_via,_src,_device);
 	}
 	if ((rightt)&&(!_applied.count(rightt))) {
 		_applied[rightt] = false; // boolean unused
-		_routeCmd("replace",rightt,_via,(_via) ? (const char *)0 : _device);
+		_routeCmd("replace",rightt,_via,_src,_device);
 	}
 
 #endif // __LINUX__ ----------------------------------------------------------
@@ -651,7 +653,7 @@ void ManagedRoute::remove()
 #endif // __BSD__ ------------------------------------------------------------
 
 #ifdef __LINUX__ // ----------------------------------------------------------
-		_routeCmd("del",r->first,_via,(_via) ? (const char *)0 : _device);
+		_routeCmd("del",r->first,_via,_src,_device);
 #endif // __LINUX__ ----------------------------------------------------------
 
 #ifdef __WINDOWS__ // --------------------------------------------------------

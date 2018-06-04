@@ -56,6 +56,7 @@
 #include "../node/Dictionary.hpp"
 #include "OSUtils.hpp"
 #include "LinuxEthernetTap.hpp"
+#include "LinuxNetLink.hpp"
 
 // ff:ff:ff:ff:ff:ff with no ADI
 static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
@@ -97,6 +98,9 @@ LinuxEthernetTap::LinuxEthernetTap(
 	char procpath[128],nwids[32];
 	struct stat sbuf;
 
+	// ensure netlink connection is started
+	(void)LinuxNetLink::getInstance();
+	
 	OSUtils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",nwid);
 
 	Mutex::Lock _l(__tapCreateLock); // create only one tap at a time, globally
@@ -263,18 +267,8 @@ bool LinuxEthernetTap::enabled() const
 
 static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
 {
-	long cpid = (long)vfork();
-	if (cpid == 0) {
-		OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
-		setenv("PATH", "/sbin:/bin:/usr/sbin:/usr/bin", 1);
-		char iptmp[128];
-		::execlp("ip","ip","addr","del",ip.toString(iptmp),"dev",_dev.c_str(),(const char *)0);
-		::_exit(-1);
-	} else {
-		int exitcode = -1;
-		::waitpid(cpid,&exitcode,0);
-		return (exitcode == 0);
-	}
+	LinuxNetLink::getInstance().removeAddress(ip, _dev.c_str());
+	return true;
 }
 
 #ifdef __SYNOLOGY__
@@ -285,49 +279,32 @@ bool LinuxEthernetTap::addIpSyn(std::vector<InetAddress> ips)
 	std::string cfg_contents = "DEVICE="+_dev+"\nBOOTPROTO=static";
 	int ip4=0,ip6=0,ip4_tot=0,ip6_tot=0;
 
-	long cpid = (long)vfork();
-	if (cpid == 0) {
-		OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
-		setenv("PATH", "/sbin:/bin:/usr/sbin:/usr/bin", 1);
-		// We must know if there is at least (one) of each protocol version so we
-		// can properly enumerate address/netmask combinations in the ifcfg-dev file
-		for(int i=0; i<(int)ips.size(); i++) {
-			if (ips[i].isV4())
-				ip4_tot++;
-			else
-				ip6_tot++;
+	for(int i=0; i<(int)ips.size(); i++) {
+		if (ips[i].isV4())
+			ip4_tot++;
+		else
+			ip6_tot++;
+	}
+	// Assemble and write contents of ifcfg-dev file
+	for(int i=0; i<(int)ips.size(); i++) {
+		if (ips[i].isV4()) {
+			char iptmp[64],iptmp2[64];
+			std::string numstr4 = ip4_tot > 1 ? std::to_string(ip4) : "";
+			cfg_contents += "\nIPADDR"+numstr4+"="+ips[i].toIpString(iptmp)
+				+ "\nNETMASK"+numstr4+"="+ips[i].netmask().toIpString(iptmp2)+"\n";
+			ip4++;
+		} else {
+			char iptmp[64],iptmp2[64];
+			std::string numstr6 = ip6_tot > 1 ? std::to_string(ip6) : "";
+			cfg_contents += "\nIPV6ADDR"+numstr6+"="+ips[i].toIpString(iptmp)
+				+ "\nNETMASK"+numstr6+"="+ips[i].netmask().toIpString(iptmp2)+"\n";
+			ip6++;
 		}
-		// Assemble and write contents of ifcfg-dev file
-		for(int i=0; i<(int)ips.size(); i++) {
-			if (ips[i].isV4()) {
-				char iptmp[64],iptmp2[64];
-				std::string numstr4 = ip4_tot > 1 ? std::to_string(ip4) : "";
-				cfg_contents += "\nIPADDR"+numstr4+"="+ips[i].toIpString(iptmp)
-					+ "\nNETMASK"+numstr4+"="+ips[i].netmask().toIpString(iptmp2)+"\n";
-				ip4++;
-			}
-			else {
-				char iptmp[64],iptmp2[64];
-				std::string numstr6 = ip6_tot > 1 ? std::to_string(ip6) : "";
-				cfg_contents += "\nIPV6ADDR"+numstr6+"="+ips[i].toIpString(iptmp)
-					+ "\nNETMASK"+numstr6+"="+ips[i].netmask().toIpString(iptmp2)+"\n";
-				ip6++;
-			}
-		}
-		OSUtils::writeFile(filepath.c_str(), cfg_contents.c_str(), cfg_contents.length());
-		// Finaly, add IPs
-		for(int i=0; i<(int)ips.size(); i++){
-			char iptmp[128],iptmp2[128];
-			if (ips[i].isV4())
-				::execlp("ip","ip","addr","add",ips[i].toString(iptmp),"broadcast",ips[i].broadcast().toIpString(iptmp2),"dev",_dev.c_str(),(const char *)0);
-			else
-				::execlp("ip","ip","addr","add",ips[i].toString(iptmp),"dev",_dev.c_str(),(const char *)0);
-		}
-		::_exit(-1);
-	} else if (cpid > 0) {
-		int exitcode = -1;
-		::waitpid(cpid,&exitcode,0);
-		return (exitcode == 0);
+	}
+	OSUtils::writeFile(filepath.c_str(), cfg_contents.c_str(), cfg_contents.length());
+	// Finaly, add IPs
+	for(int i=0; i<(int)ips.size(); i++){
+		LinuxNetLink::getInstance().addAddress(ips[i], _dev.c_str());
 	}
 	return true;
 }
@@ -348,24 +325,9 @@ bool LinuxEthernetTap::addIp(const InetAddress &ip)
 			___removeIp(_dev,*i);
 	}
 
-	long cpid = (long)vfork();
-	if (cpid == 0) {
-		OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
-		setenv("PATH", "/sbin:/bin:/usr/sbin:/usr/bin", 1);
-		char iptmp[128],iptmp2[128];
-		if (ip.isV4()) {
-			::execlp("ip","ip","addr","add",ip.toString(iptmp),"broadcast",ip.broadcast().toIpString(iptmp2),"dev",_dev.c_str(),(const char *)0);
-		} else {
-			::execlp("ip","ip","addr","add",ip.toString(iptmp),"dev",_dev.c_str(),(const char *)0);
-		}
-		::_exit(-1);
-	} else if (cpid > 0) {
-		int exitcode = -1;
-		::waitpid(cpid,&exitcode,0);
-		return (exitcode == 0);
-	}
+	LinuxNetLink::getInstance().addAddress(ip, _dev.c_str());
 
-	return false;
+	return true;
 }
 
 bool LinuxEthernetTap::removeIp(const InetAddress &ip)

@@ -54,39 +54,36 @@ LinuxNetLink::LinuxNetLink()
 	: _t()
 	, _running(false)
 	, _routes_ipv4()
+	, _rv4_m()
 	, _routes_ipv6()
+	, _rv6_m()
 	, _seq(0)
+	, _interfaces()
+	, _if_m()
 	, _fd(socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE))
 	, _la({0})
 {
 
 	// set socket timeout to 1 sec so we're not permablocking recv() calls
-	struct timeval tv;
-	tv.tv_sec = 1;
-	tv.tv_usec = 0;
-	if(setsockopt(_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)) != 0) {
-		fprintf(stderr, "setsockopt failed: %s\n", strerror(errno));
-	}
+	_setSocketTimeout(_fd, 1);
 
 	_la.nl_family = AF_NETLINK;
-	_la.nl_pid = getpid();
+	_la.nl_pid = getpid()+1;
 	_la.nl_groups = RTMGRP_LINK|RTMGRP_IPV4_IFADDR|RTMGRP_IPV6_IFADDR|RTMGRP_IPV4_ROUTE|RTMGRP_IPV6_ROUTE|RTMGRP_NOTIFY;
 	if (bind(_fd, (struct sockaddr*)&_la, sizeof(_la))) {
 		fprintf(stderr, "Error connecting to RTNETLINK: %s\n", strerror(errno));
 		::exit(1);
 	}
 
-	_running = true;
-	_t = Thread::start(this);
-
 	fprintf(stderr, "Requesting IPV4 Routes\n");
 	_requestIPv4Routes();
-	Thread::sleep(10);
 	fprintf(stderr, "Requesting IPV6 Routes\n");
 	_requestIPv6Routes();
-	Thread::sleep(10);
 	fprintf(stderr, "Requesting Interface List\n");
 	_requestInterfaceList();
+
+	_running = true;
+	_t = Thread::start(this);
 }
 
 LinuxNetLink::~LinuxNetLink()
@@ -97,7 +94,17 @@ LinuxNetLink::~LinuxNetLink()
 	::close(_fd);
 }
 
-void LinuxNetLink::threadMain() throw()
+void LinuxNetLink::_setSocketTimeout(int fd, int seconds) 
+{
+	struct timeval tv;
+	tv.tv_sec = seconds;
+	tv.tv_usec = 0;
+	if(setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)) != 0) {
+		fprintf(stderr, "setsockopt failed: %s\n", strerror(errno));
+	}
+}
+
+int LinuxNetLink::_doRecv(int fd)
 {
 	char buf[8192];
 	char *p = NULL;
@@ -106,26 +113,24 @@ void LinuxNetLink::threadMain() throw()
 	int rtn = 0;
 	p = buf;
 
-	while(_running) {
-		rtn = recv(_fd, p, sizeof(buf) - nll, 0);
+	while(true) {
+		rtn = recv(fd, p, sizeof(buf) - nll, 0);
 
 		if (rtn > 0) {
 			nlp = (struct nlmsghdr *)p;
 
 			if(nlp->nlmsg_type == NLMSG_ERROR && (nlp->nlmsg_flags & NLM_F_ACK) != NLM_F_ACK) {
-				fprintf(stderr, "NLMSG_ERROR\n");
 				struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(nlp);
 				if (err->error != 0) {
 					fprintf(stderr, "rtnetlink error: %s\n", strerror(-(err->error)));
 				}
 				p = buf;
 				nll = 0;
-				continue;
+				break;
 			}
 
 			if (nlp->nlmsg_type == NLMSG_NOOP) {
-				fprintf(stderr, "noop\n");
-				continue;
+				break;
 			}
 
 			if( (nlp->nlmsg_flags & NLM_F_MULTI) == NLM_F_MULTI || (nlp->nlmsg_type == NLMSG_DONE))
@@ -134,7 +139,7 @@ void LinuxNetLink::threadMain() throw()
 					_processMessage(nlp, nll);
 					p = buf;
 					nll = 0;
-					continue;
+					break;
 				}
 				p += rtn;
 				nll += rtn;
@@ -144,7 +149,7 @@ void LinuxNetLink::threadMain() throw()
 				fprintf(stderr, "NLMSG_OVERRUN: Data lost\n");
 				p = buf;
 				nll = 0;
-				continue;
+				break;
 			}
 			
 			nll += rtn;
@@ -152,8 +157,21 @@ void LinuxNetLink::threadMain() throw()
 			_processMessage(nlp, nll);
 			p = buf;
 			nll = 0;
+			break;
+		} else {
+			break;
 		}
-		else {
+	}
+	return rtn;
+}
+
+void LinuxNetLink::threadMain() throw()
+{
+	int rtn = 0;
+
+	while(_running) {
+		rtn = _doRecv(_fd);
+		if (rtn <= 0) {
 			Thread::sleep(100);
 			continue;
 		}
@@ -258,6 +276,7 @@ void LinuxNetLink::_routeAdded(struct nlmsghdr *nlp)
 {
 	char dsts[40] = {0};
 	char gws[40] = {0};
+	char srcs[40] = {0};
 	char ifs[16] = {0};
 	char ms[24] = {0};
 
@@ -272,6 +291,9 @@ void LinuxNetLink::_routeAdded(struct nlmsghdr *nlp)
 		case RTA_DST:
 			inet_ntop(rtp->rtm_family, RTA_DATA(rtap), dsts, rtp->rtm_family == AF_INET ? 24 : 40);
 			break;
+		case RTA_SRC:
+			inet_ntop(rtp->rtm_family, RTA_DATA(rtap), srcs, rtp->rtm_family == AF_INET ? 24: 40);
+			break;
 		case RTA_GATEWAY:
 			inet_ntop(rtp->rtm_family, RTA_DATA(rtap), gws, rtp->rtm_family == AF_INET ? 24 : 40);
 			break;
@@ -282,13 +304,14 @@ void LinuxNetLink::_routeAdded(struct nlmsghdr *nlp)
 	}
 	sprintf(ms, "%d", rtp->rtm_dst_len);
 
-	fprintf(stderr, "Route Added: dst %s/%s gw %s if %s\n", dsts, ms, gws, ifs);
+	fprintf(stderr, "Route Added: dst %s/%s gw %s src %s if %s\n", dsts, ms, gws, srcs, ifs);
 }
 
 void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
 {
 	char dsts[40] = {0};
 	char gws[40] = {0};
+	char srcs[40] = {0};
 	char ifs[16] = {0};
 	char ms[24] = {0};
 
@@ -303,6 +326,9 @@ void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
 		case RTA_DST:
 			inet_ntop(rtp->rtm_family, RTA_DATA(rtap), dsts, rtp->rtm_family == AF_INET ? 24 : 40);
 			break;
+		case RTA_SRC:
+			inet_ntop(rtp->rtm_family, RTA_DATA(rtap), srcs, rtp->rtm_family == AF_INET ? 24 : 40);
+			break;
 		case RTA_GATEWAY:
 			inet_ntop(rtp->rtm_family, RTA_DATA(rtap), gws, rtp->rtm_family == AF_INET ? 24 : 40);
 			break;
@@ -313,7 +339,7 @@ void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
 	}
 	sprintf(ms, "%d", rtp->rtm_dst_len);
 
-	fprintf(stderr, "Route Deleted: dst %s/%s gw %s if %s\n", dsts, ms, gws, ifs);
+	fprintf(stderr, "Route Deleted: dst %s/%s gw %s src %s if %s\n", dsts, ms, gws, srcs, ifs);
 }
 
 void LinuxNetLink::_linkAdded(struct nlmsghdr *nlp)
@@ -348,12 +374,15 @@ void LinuxNetLink::_linkAdded(struct nlmsghdr *nlp)
 		}
 	}
 
-	struct iface_entry &entry = _interfaces[ifip->ifi_index];
-	entry.index = ifip->ifi_index;
-	memcpy(entry.ifacename, ifname, sizeof(ifname));
-	memcpy(entry.mac, mac, sizeof(mac));
-	memcpy(entry.mac_bin, mac_bin, 6);
-	entry.mtu = mtu;
+	{
+		Mutex::Lock l(_if_m);
+		struct iface_entry &entry = _interfaces[ifip->ifi_index];
+		entry.index = ifip->ifi_index;
+		memcpy(entry.ifacename, ifname, sizeof(ifname));
+		memcpy(entry.mac, mac, sizeof(mac));
+		memcpy(entry.mac_bin, mac_bin, 6);
+		entry.mtu = mtu;
+	}
 
 	fprintf(stderr, "Link Added: %s mac: %s, mtu: %d\n", ifname, mac, mtu);
 }
@@ -389,13 +418,33 @@ void LinuxNetLink::_linkDeleted(struct nlmsghdr *nlp)
 	}
 
 	fprintf(stderr, "Link Deleted: %s mac: %s, mtu: %d\n", ifname, mac, mtu);
-	if(_interfaces.contains(ifip->ifi_index)) {
-		_interfaces.erase(ifip->ifi_index);
+	{
+		Mutex::Lock l(_if_m);
+		if(_interfaces.contains(ifip->ifi_index)) {
+			_interfaces.erase(ifip->ifi_index);
+		}
 	}
 }
 
 void LinuxNetLink::_requestIPv4Routes()
 {
+	int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (fd == -1) {
+		fprintf(stderr, "Error opening RTNETLINK socket: %s\n", strerror(errno));
+		return;
+	}
+
+	_setSocketTimeout(fd);
+
+	struct sockaddr_nl la;
+	la.nl_family = AF_NETLINK;
+	la.nl_pid = getpid();
+	la.nl_groups = RTMGRP_IPV4_ROUTE;
+	if(bind(fd, (struct sockaddr*)&la, sizeof(la))) {
+		fprintf(stderr, "Error binding RTNETLINK: %s\n", strerror(errno));
+		return;
+	}
+
 	struct nl_route_req req;
 	bzero(&req, sizeof(req));
 	req.nl.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
@@ -422,11 +471,32 @@ void LinuxNetLink::_requestIPv4Routes()
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 
-	sendmsg(_fd, &msg, 0);
+	sendmsg(fd, &msg, 0);
+
+	_doRecv(fd);
+
+	close(fd);
 }
 
 void LinuxNetLink::_requestIPv6Routes()
 {
+	int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (fd == -1) {
+		fprintf(stderr, "Error opening RTNETLINK socket: %s\n", strerror(errno));
+		return;
+	}
+
+	_setSocketTimeout(fd);
+
+	struct sockaddr_nl la;
+	la.nl_family = AF_NETLINK;
+	la.nl_pid = getpid();
+	la.nl_groups = RTMGRP_IPV6_ROUTE;
+	if(bind(fd, (struct sockaddr*)&la, sizeof(struct sockaddr_nl))) {
+		fprintf(stderr, "Error binding RTNETLINK: %s\n", strerror(errno));
+		return;
+	}
+
 	struct nl_route_req req;
 	bzero(&req, sizeof(req));
 	req.nl.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
@@ -453,11 +523,32 @@ void LinuxNetLink::_requestIPv6Routes()
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 
-	sendmsg(_fd, &msg, 0);
+	sendmsg(fd, &msg, 0);
+
+	_doRecv(fd);
+
+	close(fd);
 }
 
 void LinuxNetLink::_requestInterfaceList()
 {
+	int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (fd == -1) {
+		fprintf(stderr, "Error opening RTNETLINK socket: %s\n", strerror(errno));
+		return;
+	}
+
+	_setSocketTimeout(fd);
+
+	struct sockaddr_nl la;
+	la.nl_family = AF_NETLINK;
+	la.nl_pid = getpid();
+	la.nl_groups = RTMGRP_LINK;
+	if(bind(fd, (struct sockaddr*)&la, sizeof(struct sockaddr_nl))) {
+		fprintf(stderr, "Error binding RTNETLINK: %s\n", strerror(errno));
+		return;
+	}
+
 	struct nl_if_req req;
 	bzero(&req, sizeof(req));
 	req.nl.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
@@ -482,11 +573,43 @@ void LinuxNetLink::_requestInterfaceList()
 	iov.iov_len = req.nl.nlmsg_len;
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
-	sendmsg(_fd, &msg, 0);
+	sendmsg(fd, &msg, 0);
+
+	_doRecv(fd);
+
+	close(fd);
 }
 
-void LinuxNetLink::addRoute(const InetAddress &target, const InetAddress &via, const char *ifaceName)
+void LinuxNetLink::addRoute(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifaceName)
 {
+	int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (fd == -1) {
+		fprintf(stderr, "Error opening RTNETLINK socket: %s\n", strerror(errno));
+		return;
+	}
+
+	_setSocketTimeout(fd);
+
+	struct sockaddr_nl la;
+	bzero(&la, sizeof(la));
+	la.nl_family = AF_NETLINK;
+	la.nl_pid = getpid();
+
+	if(bind(fd, (struct sockaddr*)&la, sizeof(struct sockaddr_nl))) {
+		fprintf(stderr, "Error binding RTNETLINK: %s\n", strerror(errno));
+		return;
+	}
+
+	char  tmp[64];
+	char tmp2[64];
+	char tmp3[64];
+	fprintf(stderr, "Adding Route. target: %s via: %s src: %s iface: %s\n", target.toString(tmp), via.toString(tmp2), src.toString(tmp3), ifaceName);
+
+	if(!target) {
+		fprintf(stderr, "Uhhhh adding an empty route?!?!?");
+		return;
+	}
+
 	int rtl = sizeof(struct rtmsg);
 	struct nl_route_req req;
 	bzero(&req, sizeof(req));
@@ -494,49 +617,54 @@ void LinuxNetLink::addRoute(const InetAddress &target, const InetAddress &via, c
 	struct rtattr *rtap = (struct rtattr *)req.buf;
 	rtap->rta_type = RTA_DST;
 	if (target.isV4()) {
-		rtap->rta_len = sizeof(struct rtattr)+sizeof(struct in_addr);
-		memcpy((void*)((char*)rtap+sizeof(struct rtattr)), &((struct sockaddr_in*)&target)->sin_addr, sizeof(struct in_addr));
+		rtap->rta_len = RTA_LENGTH(sizeof(struct in_addr));
+		memcpy(RTA_DATA(rtap), &((struct sockaddr_in*)&target)->sin_addr, sizeof(struct in_addr));
 	} else {
-		rtap->rta_len = sizeof(struct rtattr)+sizeof(struct in6_addr);
-		memcpy((void*)((char*)rtap+sizeof(struct rtattr)), &((struct sockaddr_in6*)&target)->sin6_addr, sizeof(struct in6_addr));
+		rtap->rta_len = RTA_LENGTH(sizeof(struct in6_addr));
+		memcpy(RTA_DATA(rtap), &((struct sockaddr_in6*)&target)->sin6_addr, sizeof(struct in6_addr));
 	}
 	rtl += rtap->rta_len;
-
-	int interface_index = -1;
-	if (ifaceName != NULL) {
-		Hashtable<int, iface_entry>::Iterator iter(_interfaces);
-		int *k = NULL;
-		iface_entry *v = NULL;
-		while(iter.next(k, v)) {
-			if(strcmp(ifaceName, v->ifacename) == 0) {
-				interface_index = v->index;
-				break;
-			}
-		}
-		if (interface_index != -1) {
-			rtap = (struct rtattr *) (((char*)rtap) + rtap->rta_len);
-			rtap->rta_type = RTA_OIF;
-			rtap->rta_len = sizeof(struct rtattr)+sizeof(int);
-			memcpy(((char*)rtap)+sizeof(rtattr), &interface_index, sizeof(int));
-			rtl += rtap->rta_len;
-		}
-	}
 
 	if(via) {
 		rtap = (struct rtattr *)(((char*)rtap)+rtap->rta_len);
 		rtap->rta_type = RTA_GATEWAY;
 		if(via.isV4()) {
-			rtap->rta_len = sizeof(struct rtattr)+sizeof(struct in_addr);
-			memcpy((char*)rtap+sizeof(struct rtattr), &((struct sockaddr_in*)&via)->sin_addr, sizeof(struct in_addr));
+			rtap->rta_len = RTA_LENGTH(sizeof(struct in_addr));
+			memcpy(RTA_DATA(rtap), &((struct sockaddr_in*)&via)->sin_addr, sizeof(struct in_addr));
 		} else {
-			rtap->rta_len = sizeof(struct rtattr)+sizeof(struct in6_addr);
-			memcpy((char*)rtap+sizeof(struct rtattr), &((struct sockaddr_in6*)&via)->sin6_addr, sizeof(struct in6_addr));
+			rtap->rta_len = RTA_LENGTH(sizeof(struct in6_addr));
+			memcpy(RTA_DATA(rtap), &((struct sockaddr_in6*)&via)->sin6_addr, sizeof(struct in6_addr));
 		}
 		rtl += rtap->rta_len;
+	} else if (src) {
+		rtap = (struct rtattr *)(((char*)rtap)+rtap->rta_len);
+		rtap->rta_type = RTA_SRC;
+		if(src.isV4()) {
+			rtap->rta_len = RTA_LENGTH(sizeof(struct in_addr));
+			memcpy(RTA_DATA(rtap), &((struct sockaddr_in*)&src)->sin_addr, sizeof(struct in_addr));
+			
+		} else {
+			rtap->rta_len = RTA_LENGTH(sizeof(struct in6_addr));
+			memcpy(RTA_DATA(rtap), &((struct sockaddr_in6*)&src)->sin6_addr, sizeof(struct in6_addr));
+		}
+		req.rt.rtm_src_len = src.netmaskBits();
 	}
 
+	if (ifaceName != NULL) {
+		int interface_index = _indexForInterface(ifaceName);
+		if (interface_index != -1) {
+			rtap = (struct rtattr *) (((char*)rtap) + rtap->rta_len);
+			rtap->rta_type = RTA_OIF;
+			rtap->rta_len = RTA_LENGTH(sizeof(int));
+			memcpy(RTA_DATA(rtap), &interface_index, sizeof(int));
+			rtl += rtap->rta_len;
+		}
+	}
+
+	
+
 	req.nl.nlmsg_len = NLMSG_LENGTH(rtl);
-	req.nl.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL;
+	req.nl.nlmsg_flags = NLM_F_REQUEST | NLM_F_EXCL | NLM_F_CREATE | NLM_F_ACK;
 	req.nl.nlmsg_type = RTM_NEWROUTE;
 	req.nl.nlmsg_pid = 0;
 	req.nl.nlmsg_seq = ++_seq;
@@ -546,6 +674,7 @@ void LinuxNetLink::addRoute(const InetAddress &target, const InetAddress &via, c
 	req.rt.rtm_scope = RT_SCOPE_UNIVERSE;
 	req.rt.rtm_type = RTN_UNICAST;
 	req.rt.rtm_dst_len = target.netmaskBits();
+	req.rt.rtm_flags = 0;
 
 	struct sockaddr_nl pa;
 	bzero(&pa, sizeof(pa));
@@ -562,11 +691,41 @@ void LinuxNetLink::addRoute(const InetAddress &target, const InetAddress &via, c
 	iov.iov_len = req.nl.nlmsg_len;
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
-	sendmsg(_fd, &msg, 0);
+	sendmsg(fd, &msg, 0);
+
+	_doRecv(fd);
+
+	close(fd);
 }
 
-void LinuxNetLink::delRoute(const InetAddress &target, const InetAddress &via, const char *ifaceName)
+void LinuxNetLink::delRoute(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifaceName)
 {
+	int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (fd == -1) {
+		fprintf(stderr, "Error opening RTNETLINK socket: %s\n", strerror(errno));
+		return;
+	}
+
+	_setSocketTimeout(fd);
+
+	struct sockaddr_nl la;
+	la.nl_family = AF_NETLINK;
+	la.nl_pid = getpid();
+
+	if(bind(fd, (struct sockaddr*)&la, sizeof(struct sockaddr_nl))) {
+		fprintf(stderr, "Error binding RTNETLINK: %s\n", strerror(errno));
+		return;
+	}
+	char  tmp[64];
+	char tmp2[64];
+	char tmp3[64];
+	fprintf(stderr, "Removing Route. target: %s via: %s src: %s iface: %s\n", target.toString(tmp), via.toString(tmp2), src.toString(tmp3), ifaceName);
+	
+	if(!target) {
+		fprintf(stderr, "Uhhhh deleting an empty route?!?!?");
+		return;
+	}
+
 	int rtl = sizeof(struct rtmsg);
 	struct nl_route_req req;
 	bzero(&req, sizeof(req));
@@ -574,46 +733,51 @@ void LinuxNetLink::delRoute(const InetAddress &target, const InetAddress &via, c
 	struct rtattr *rtap = (struct rtattr *)req.buf;
 	rtap->rta_type = RTA_DST;
 	if (target.isV4()) {
-		rtap->rta_len = sizeof(struct rtattr)+sizeof(struct in_addr);
-		memcpy((void*)((char*)rtap+sizeof(struct rtattr)), &((struct sockaddr_in*)&target)->sin_addr, sizeof(struct in_addr));
+		rtap->rta_len = RTA_LENGTH(sizeof(struct in_addr));
+		memcpy(RTA_DATA(rtap), &((struct sockaddr_in*)&target)->sin_addr, sizeof(struct in_addr));
 	} else {
-		rtap->rta_len = sizeof(struct rtattr)+sizeof(struct in6_addr);
-		memcpy((void*)((char*)rtap+sizeof(struct rtattr)), &((struct sockaddr_in6*)&target)->sin6_addr, sizeof(struct in6_addr));
+		rtap->rta_len = RTA_LENGTH(sizeof(struct in6_addr));
+		memcpy(RTA_DATA(rtap), &((struct sockaddr_in6*)&target)->sin6_addr, sizeof(struct in6_addr));
 	}
 	rtl += rtap->rta_len;
-
-	int interface_index = -1;
-	if (ifaceName != NULL) {
-		Hashtable<int, iface_entry>::Iterator iter(_interfaces);
-		int *k = NULL;
-		iface_entry *v = NULL;
-		while(iter.next(k, v)) {
-			if(strcmp(ifaceName, v->ifacename) == 0) {
-				interface_index = v->index;
-				break;
-			}
-		}
-		if (interface_index != -1) {
-			rtap = (struct rtattr *) (((char*)rtap) + rtap->rta_len);
-			rtap->rta_type = RTA_OIF;
-			rtap->rta_len = sizeof(struct rtattr)+sizeof(int);
-			memcpy(((char*)rtap)+sizeof(rtattr), &interface_index, sizeof(int));
-			rtl += rtap->rta_len;
-		}
-	}
 
 	if(via) {
 		rtap = (struct rtattr *)(((char*)rtap)+rtap->rta_len);
 		rtap->rta_type = RTA_GATEWAY;
 		if(via.isV4()) {
-			rtap->rta_len = sizeof(struct rtattr)+sizeof(struct in_addr);
-			memcpy((char*)rtap+sizeof(struct rtattr), &((struct sockaddr_in*)&via)->sin_addr, sizeof(struct in_addr));
+			rtap->rta_len = RTA_LENGTH(sizeof(struct in_addr));
+			memcpy(RTA_DATA(rtap), &((struct sockaddr_in*)&via)->sin_addr, sizeof(struct in_addr));
 		} else {
-			rtap->rta_len = sizeof(struct rtattr)+sizeof(struct in6_addr);
-			memcpy((char*)rtap+sizeof(struct rtattr), &((struct sockaddr_in6*)&via)->sin6_addr, sizeof(struct in6_addr));
+			rtap->rta_len = RTA_LENGTH(sizeof(struct in6_addr));
+			memcpy(RTA_DATA(rtap), &((struct sockaddr_in6*)&via)->sin6_addr, sizeof(struct in6_addr));
 		}
 		rtl += rtap->rta_len;
+	} else if (src) {
+		rtap = (struct rtattr *)(((char*)rtap)+rtap->rta_len);
+		rtap->rta_type = RTA_SRC;
+		if(src.isV4()) {
+			rtap->rta_len = RTA_LENGTH(sizeof(struct in_addr));
+			memcpy(RTA_DATA(rtap), &((struct sockaddr_in*)&src)->sin_addr, sizeof(struct in_addr));
+			
+		} else {
+			rtap->rta_len = RTA_LENGTH(sizeof(struct in6_addr));
+			memcpy(RTA_DATA(rtap), &((struct sockaddr_in6*)&src)->sin6_addr, sizeof(struct in6_addr));
+		}
+		req.rt.rtm_src_len = src.netmaskBits();
 	}
+
+	if (ifaceName != NULL) {
+		int interface_index = _indexForInterface(ifaceName);
+		if (interface_index != -1) {
+			rtap = (struct rtattr *) (((char*)rtap) + rtap->rta_len);
+			rtap->rta_type = RTA_OIF;
+			rtap->rta_len = RTA_LENGTH(sizeof(int));
+			memcpy(RTA_DATA(rtap), &interface_index, sizeof(int));
+			rtl += rtap->rta_len;
+		}
+	}
+
+	
 
 	req.nl.nlmsg_len = NLMSG_LENGTH(rtl);
 	req.nl.nlmsg_flags = NLM_F_REQUEST;
@@ -626,6 +790,7 @@ void LinuxNetLink::delRoute(const InetAddress &target, const InetAddress &via, c
 	req.rt.rtm_scope = RT_SCOPE_UNIVERSE;
 	req.rt.rtm_type = RTN_UNICAST;
 	req.rt.rtm_dst_len = target.netmaskBits();
+	req.rt.rtm_flags = 0;
 
 	struct sockaddr_nl pa;
 	bzero(&pa, sizeof(pa));
@@ -642,73 +807,226 @@ void LinuxNetLink::delRoute(const InetAddress &target, const InetAddress &via, c
 	iov.iov_len = req.nl.nlmsg_len;
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
-	sendmsg(_fd, &msg, 0);
+	sendmsg(fd, &msg, 0);
+
+	_doRecv(fd);
+
+	close(fd);
 }
-
-// void LinuxNetLink::addInterface(const char *iface, unsigned int mtu, const MAC &mac)
-// {
-// 	int rtl = sizeof(struct ifinfomsg);
-// 	struct nl_if_req req;
-// 	bzero(&req, sizeof(nl_if_req));
-
-// 	struct rtattr *rtap = (struct rtattr *)req.buf;
-// 	rtap->rta_type = IFLA_IFNAME;
-// 	rtap->rta_len =  sizeof(struct rtattr)+strlen(iface)+1;
-// 	rtl += rtap->rta_len;
-
-// 	rtap = (struct rtattr*)(((char*)rtap)+rtap->rta_len);
-// 	rtap->rta_type = IFLA_MTU;
-// 	rtap->rta_len = sizeof(struct rtattr)+sizeof(unsigned int);
-// 	rtl += rtap->rta_len;
-
-// 	rtap = (struct rtattr*)(((char*)rtap)+rtap->rta_len);
-// 	rtap->rta_type = IFLA_ADDRESS;
-// 	rtap->rta_len = sizeof(struct rtattr)+6;
-// 	mac.copyTo(((char*)rtap)+sizeof(struct rtattr), 6);
-// 	rtl += rtap->rta_len;
-
-// 	IFLA_LINKINFO;
-// 	req.nl.nlmsg_len = NLMSG_LENGTH(rtl);
-// 	req.nl.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL;
-// 	req.nl.nlmsg_type = RTM_NEWLINK;
-// 	req.nl.nlmsg_pid = 0;
-// 	req.nl.nlmsg_seq = ++_seq;
-
-// 	req.ifa.ifi_family = AF_UNSPEC;
-// 	req.ifa.ifi_type = 0; // TODO figure this one out
-// 	req.ifa.ifi_index = 0;
-// 	req.ifa.ifi_flags = IFF_UP;
-
-// 	struct sockaddr_nl pa;
-// 	bzero(&pa, sizeof(pa));
-// 	pa.nl_family = AF_NETLINK;
-
-// 	struct msghdr msg;
-// 	bzero(&msg, sizeof(msg));
-// 	msg.msg_name = (void*)&pa;
-// 	msg.msg_namelen = sizeof(pa);
-
-// 	struct iovec iov;
-// 	iov.iov_base = (void*)&req.nl;
-// 	iov.iov_len = req.nl.nlmsg_len;
-// 	msg.msg_iov = &iov;
-// 	msg.msg_iovlen = 1;
-// 	sendmsg(_fd, &msg, 0);
-// }
-
-// void LinuxNetLink::removeInterface(const char *iface)
-// {
-
-// }
 
 void LinuxNetLink::addAddress(const InetAddress &addr, const char *iface)
 {
+	int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (fd == -1) {
+		fprintf(stderr, "Error opening RTNETLINK socket: %s\n", strerror(errno));
+		return;
+	}
 
+	_setSocketTimeout(fd);
+
+	struct sockaddr_nl la;
+	la.nl_family = AF_NETLINK;
+	la.nl_pid = getpid();
+	if (addr.isV4()) {
+		la.nl_groups = RTMGRP_IPV4_IFADDR;
+	} else {
+		la.nl_groups = RTMGRP_IPV6_IFADDR;
+	}
+	if(bind(fd, (struct sockaddr*)&la, sizeof(struct sockaddr_nl))) {
+		fprintf(stderr, "Error binding RTNETLINK: %s\n", strerror(errno));
+		return;
+	}
+
+	char tmp[128];
+	fprintf(stderr, "Adding IP address %s to interface %s", addr.toString(tmp), iface);
+	int interface_index = _indexForInterface(iface);
+
+	if (interface_index == -1) {
+		fprintf(stderr, "Unable to find index for interface %s\n", iface);
+		return;
+	}
+	
+	int rtl = sizeof(struct ifaddrmsg);
+	struct nl_adr_req req;
+	bzero(&req, sizeof(struct nl_adr_req));
+
+	struct rtattr *rtap = (struct rtattr *)req.buf;;
+	if(addr.isV4()) {
+		struct sockaddr_in *addr_v4 = (struct sockaddr_in*)&addr;
+		rtap->rta_type = IFA_ADDRESS;
+		rtap->rta_len = RTA_LENGTH(sizeof(struct in_addr));
+		memcpy(RTA_DATA(rtap), &addr_v4->sin_addr, sizeof(struct in_addr));
+		rtl += rtap->rta_len;
+
+		rtap = (struct rtattr*)(((char*)rtap) + rtap->rta_len);
+		rtap->rta_type = IFA_LOCAL;
+		rtap->rta_len = RTA_LENGTH(sizeof(struct in_addr));
+		memcpy(RTA_DATA(rtap), &addr_v4->sin_addr, sizeof(struct in_addr));
+		rtl += rtap->rta_len;
+
+		InetAddress broadcast = addr.broadcast();
+		if(broadcast) {
+			rtap = (struct rtattr*)(((char*)rtap)+rtap->rta_len);
+			struct sockaddr_in *bcast = (struct sockaddr_in*)&broadcast;
+			rtap->rta_type = IFA_BROADCAST;
+			rtap->rta_len = RTA_LENGTH(sizeof(struct in_addr));
+			memcpy(RTA_DATA(rtap), &bcast->sin_addr, sizeof(struct in_addr));
+			rtl += rtap->rta_len;
+		}
+	} else { //V6
+		rtap->rta_type = IFA_ADDRESS;
+		struct sockaddr_in6 *addr_v6 = (struct sockaddr_in6*)&addr;
+		rtap->rta_len = RTA_LENGTH(sizeof(struct in6_addr));
+		memcpy(RTA_DATA(rtap), &addr_v6->sin6_addr, sizeof(struct in6_addr));
+		rtl += rtap->rta_len;
+	}
+
+	if (iface) {
+		rtap = (struct rtattr*)(((char*)rtap)+rtap->rta_len);
+		rtap->rta_type = IFA_LABEL;
+		rtap->rta_len = RTA_LENGTH(strlen(iface));
+		memcpy(RTA_DATA(rtap), iface, strlen(iface));
+		rtl += rtap->rta_len;
+	}
+
+	req.nl.nlmsg_len = NLMSG_LENGTH(rtl);
+	req.nl.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL;
+	req.nl.nlmsg_type = RTM_NEWADDR;
+	req.nl.nlmsg_pid = 0;
+	req.nl.nlmsg_seq = ++_seq;
+	req.ifa.ifa_family = addr.ss_family;
+	req.ifa.ifa_prefixlen = addr.port();
+	req.ifa.ifa_flags = IFA_F_PERMANENT;
+	req.ifa.ifa_scope = 0;
+	req.ifa.ifa_index = interface_index;
+
+	struct sockaddr_nl pa;
+	bzero(&pa, sizeof(sockaddr_nl));
+	pa.nl_family = AF_NETLINK;
+
+	struct msghdr msg;
+	bzero(&msg, sizeof(msg));
+	msg.msg_name = (void*)&pa;
+	msg.msg_namelen = sizeof(pa);
+
+	struct iovec iov;
+	iov.iov_base = (void*)&req.nl;
+	iov.iov_len = req.nl.nlmsg_len;
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	sendmsg(fd, &msg, 0);
+
+	_doRecv(fd);
+
+	close(fd);
 }
 
 void LinuxNetLink::removeAddress(const InetAddress &addr, const char *iface)
 {
+	int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (fd == -1) {
+		fprintf(stderr, "Error opening RTNETLINK socket: %s\n", strerror(errno));
+		return;
+	}
 
+	_setSocketTimeout(fd);
+
+	struct sockaddr_nl la;
+	la.nl_family = AF_NETLINK;
+	la.nl_pid = getpid();
+	if (addr.isV4()) {
+		la.nl_groups = RTMGRP_IPV4_IFADDR;
+	} else {
+		la.nl_groups = RTMGRP_IPV6_IFADDR;
+	}
+	if(bind(fd, (struct sockaddr*)&la, sizeof(struct sockaddr_nl))) {
+		fprintf(stderr, "Error binding RTNETLINK: %s\n", strerror(errno));
+		return;
+	}
+
+	char tmp[128];
+	fprintf(stderr, "Removing IP address %s from interface %s", addr.toString(tmp), iface);
+
+	int interface_index = _indexForInterface(iface);
+
+	if (interface_index == -1) {
+		fprintf(stderr, "Unable to find index for interface %s\n", iface);
+		return;
+	}
+	
+	int rtl = sizeof(struct ifaddrmsg);
+	struct nl_adr_req req;
+	bzero(&req, sizeof(struct nl_adr_req));
+
+	struct rtattr *rtap = (struct rtattr *)req.buf;
+	if(addr.isV4()) {
+		struct sockaddr_in *addr_v4 = (struct sockaddr_in*)&addr;
+		rtap->rta_type = IFA_ADDRESS;
+		rtap->rta_len = RTA_LENGTH(sizeof(struct in_addr));
+		memcpy(RTA_DATA(rtap), &addr_v4->sin_addr, sizeof(struct in_addr));
+		rtl += rtap->rta_len;
+
+		rtap = (struct rtattr*)(((char*)rtap) + rtap->rta_len);
+		rtap->rta_type = IFA_LOCAL;
+		rtap->rta_len = RTA_LENGTH(sizeof(struct in_addr));
+		memcpy(RTA_DATA(rtap), &addr_v4->sin_addr, sizeof(struct in_addr));
+		rtl += rtap->rta_len;
+
+		InetAddress broadcast = addr.broadcast();
+		if(broadcast) {
+			rtap = (struct rtattr*)(((char*)rtap)+rtap->rta_len);
+			struct sockaddr_in *bcast = (struct sockaddr_in*)&broadcast;
+			rtap->rta_type = IFA_BROADCAST;
+			rtap->rta_len = RTA_LENGTH(sizeof(struct in_addr));
+			memcpy(RTA_DATA(rtap), &bcast->sin_addr, sizeof(struct in_addr));
+			rtl += rtap->rta_len;
+		}
+	} else { //V6
+		rtap->rta_type = IFA_ADDRESS;
+		struct sockaddr_in6 *addr_v6 = (struct sockaddr_in6*)&addr;
+		rtap->rta_len = RTA_LENGTH(sizeof(struct in6_addr));
+		memcpy(RTA_DATA(rtap), &addr_v6->sin6_addr, sizeof(struct in6_addr));
+		rtl += rtap->rta_len;
+	}
+
+	if (iface) {
+		rtap = (struct rtattr*)(((char*)rtap)+rtap->rta_len);
+		rtap->rta_type = IFA_LABEL;
+		rtap->rta_len = RTA_LENGTH(strlen(iface));
+		memcpy(RTA_DATA(rtap), iface, strlen(iface));
+		rtl += rtap->rta_len;
+	}
+
+	req.nl.nlmsg_len = NLMSG_LENGTH(rtl);
+	req.nl.nlmsg_flags = NLM_F_REQUEST;
+	req.nl.nlmsg_type = RTM_DELADDR;
+	req.nl.nlmsg_pid = 0;
+	req.nl.nlmsg_seq = ++_seq;
+	req.ifa.ifa_family = addr.ss_family;
+	req.ifa.ifa_prefixlen = addr.port();
+	req.ifa.ifa_flags = IFA_F_PERMANENT;
+	req.ifa.ifa_scope = 0;
+	req.ifa.ifa_index = interface_index;
+
+	struct sockaddr_nl pa;
+	bzero(&pa, sizeof(sockaddr_nl));
+	pa.nl_family = AF_NETLINK;
+
+	struct msghdr msg;
+	bzero(&msg, sizeof(msg));
+	msg.msg_name = (void*)&pa;
+	msg.msg_namelen = sizeof(pa);
+
+	struct iovec iov;
+	iov.iov_base = (void*)&req.nl;
+	iov.iov_len = req.nl.nlmsg_len;
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	sendmsg(fd, &msg, 0);
+
+	_doRecv(fd);
+
+	close(fd);
 }
 
 RouteList LinuxNetLink::getIPV4Routes() const 
@@ -719,6 +1037,22 @@ RouteList LinuxNetLink::getIPV4Routes() const
 RouteList LinuxNetLink::getIPV6Routes() const
 {
 	return _routes_ipv6;
+}
+
+int LinuxNetLink::_indexForInterface(const char *iface)
+{
+	Mutex::Lock l(_if_m);
+	int interface_index = -1;
+	Hashtable<int, iface_entry>::Iterator iter(_interfaces);
+	int *k = NULL;
+	iface_entry *v = NULL;
+	while(iter.next(k,v)) {
+		if(strcmp(iface, v->ifacename) == 0) {
+			interface_index = v->index;
+			break;
+		}
+	}
+	return interface_index;
 }
 
 } // namespace ZeroTier

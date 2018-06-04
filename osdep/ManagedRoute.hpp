@@ -49,14 +49,20 @@ class ManagedRoute
 	friend class SharedPtr<ManagedRoute>;
 
 public:
-	ManagedRoute(const InetAddress &target,const InetAddress &via,const char *device)
+	ManagedRoute(const InetAddress &target,const InetAddress &via,const InetAddress &src,const char *device)
 	{
 		_target = target;
 		_via = via;
+		_src = src;
 		if (via.ss_family == AF_INET)
 			_via.setPort(32);
 		else if (via.ss_family == AF_INET6)
 			_via.setPort(128);
+		if (src.ss_family == AF_INET) {
+			_src.setPort(32);
+		} else if (src.ss_family == AF_INET6) {
+			_src.setPort(128);
+		}
 		Utils::scopy(_device,sizeof(_device),device);
 		_systemDevice[0] = (char)0;
 	}
@@ -87,6 +93,7 @@ public:
 
 	inline const InetAddress &target() const { return _target; }
 	inline const InetAddress &via() const { return _via; }
+	inline const InetAddress &src() const { return _src; }
 	inline const char *device() const { return _device; }
 
 private:
@@ -95,6 +102,7 @@ private:
 
 	InetAddress _target;
 	InetAddress _via;
+	InetAddress _src;
 	InetAddress _systemVia; // for route overrides
 	std::map<InetAddress,bool> _applied; // routes currently applied
 	char _device[128];

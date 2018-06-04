@@ -39,6 +39,7 @@
 #include "../node/MAC.hpp"
 #include "Thread.hpp"
 #include "../node/Hashtable.hpp"
+#include "../node/Mutex.hpp"
 
 
 namespace ZeroTier {
@@ -70,19 +71,18 @@ public:
     LinuxNetLink(LinuxNetLink const&) = delete;
     void operator=(LinuxNetLink const&) = delete;
 
-    void addRoute(const InetAddress &target, const InetAddress &via, const char *ifaceName);
-    void delRoute(const InetAddress &target, const InetAddress &via, const char *ifaceName);
+    void addRoute(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifaceName);
+    void delRoute(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifaceName);
     RouteList getIPV4Routes() const;
     RouteList getIPV6Routes() const;
-
-    // void addInterface(const char *iface, unsigned int mtu, const MAC &mac);
-    // void removeInterface(const char *iface);
 
     void addAddress(const InetAddress &addr, const char *iface);
     void removeAddress(const InetAddress &addr, const char *iface);
 
     void threadMain() throw();
 private:
+    int _doRecv(int fd);
+
     void _processMessage(struct nlmsghdr *nlp, int nll);
     void _routeAdded(struct nlmsghdr *nlp);
     void _routeDeleted(struct nlmsghdr *nlp);
@@ -95,12 +95,17 @@ private:
     void _requestIPv4Routes();
     void _requestIPv6Routes();
 
+    int _indexForInterface(const char *iface);
+
+    void _setSocketTimeout(int fd, int seconds = 1);
 
     Thread _t;
     bool _running;
 
     RouteList _routes_ipv4;
+    Mutex _rv4_m;
     RouteList _routes_ipv6;
+    Mutex _rv6_m;
 
     uint32_t _seq;
 
@@ -112,6 +117,7 @@ private:
         unsigned int mtu;
     };
     Hashtable<int, iface_entry> _interfaces;
+    Mutex _if_m;
 
     // socket communication vars;
     int _fd;
