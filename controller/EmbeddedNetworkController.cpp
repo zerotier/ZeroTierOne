@@ -551,7 +551,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 							for(auto member=members.begin();member!=members.end();++member) {
 								mid = (*member)["id"];
 								char tmp[128];
-								OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s\"%s\":%llu",(responseBody.length() > 1) ? ",\"" : "\"",mid.c_str(),(unsigned long long)OSUtils::jsonInt((*member)["revision"],0));
+								OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s\"%s\":%llu",(responseBody.length() > 1) ? "," : "",mid.c_str(),(unsigned long long)OSUtils::jsonInt((*member)["revision"],0));
 								responseBody.append(tmp);
 							}
 						}
