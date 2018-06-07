@@ -204,6 +204,8 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 
 bool IncomingPacket::_doACK(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
+	if (!peer->rateGateACK(RR->node->now()))
+		return true;
 	/* Dissect incoming ACK packet. From this we can estimate current throughput of the path, establish known
 	 * maximums and detect packet loss. */
 	if (peer->localMultipathSupport()) {
@@ -220,6 +222,8 @@ bool IncomingPacket::_doACK(const RuntimeEnvironment *RR,void *tPtr,const Shared
 }
 bool IncomingPacket::_doQOS_MEASUREMENT(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
+	if (!peer->rateGateQoS(RR->node->now()))
+		return true;
 	/* Dissect incoming QoS packet. From this we can compute latency values and their variance.
 	 * The latency variance is used as a measure of "jitter". */
 	if (peer->localMultipathSupport()) {
