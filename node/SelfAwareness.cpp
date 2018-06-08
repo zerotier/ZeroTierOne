@@ -145,7 +145,7 @@ std::vector<InetAddress> SelfAwareness::getSymmetricNatPredictions()
 	 *
 	 * Since flows are encrypted and authenticated they could not actually
 	 * read or modify traffic, but they could gather meta-data for forensics
-	 * purpsoes or use this as a DOS attack vector. */
+	 * purposes or use this as a DOS attack vector. */
 
 	std::map< uint32_t,unsigned int > maxPortByIp;
 	InetAddress theOneTrueSurface;

@@ -366,7 +366,7 @@ std::vector<std::string> OSUtils::split(const char *s,const char *const sep,cons
 				if (buf.size() > 0) {
 					fields.push_back(buf);
 					buf.clear();
-				} // else skip runs of seperators
+				} // else skip runs of separators
 			} else buf.push_back(*s);
 		}
 		++s;

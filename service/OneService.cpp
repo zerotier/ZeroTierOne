@@ -422,7 +422,7 @@ public:
 	unsigned int _primaryPort;
 	volatile unsigned int _udpPortPickerCounter;
 
-	// Local configuration and memo-ized information from it
+	// Local configuration and memoized information from it
 	json _localConfig;
 	Hashtable< uint64_t,std::vector<InetAddress> > _v4Hints;
 	Hashtable< uint64_t,std::vector<InetAddress> > _v6Hints;
@@ -438,7 +438,7 @@ public:
 	 * To attempt to handle NAT/gateway craziness we use three local UDP ports:
 	 *
 	 * [0] is the normal/default port, usually 9993
-	 * [1] is a port dervied from our ZeroTier address
+	 * [1] is a port derived from our ZeroTier address
 	 * [2] is a port computed from the normal/default for use with uPnP/NAT-PMP mappings
 	 *
 	 * [2] exists because on some gateways trying to do regular NAT-t interferes
@@ -1130,16 +1130,7 @@ public:
 #ifdef __SYNOLOGY__
 		// Authenticate via Synology's built-in cgi script
 		if (!isAuth) {
-			/*
-			fprintf(stderr, "path = %s\n", path.c_str());
-			fprintf(stderr, "headers.size=%d\n", headers.size());
-			std::map<std::string, std::string>::const_iterator it(headers.begin());
-			while(it != headers.end()) {
-				fprintf(stderr,"header[%s] = %s\n", (it->first).c_str(), (it->second).c_str());
-				it++;
-			}
-			*/
-			// parse out url args
+			// Parse out url args
 			int synotoken_pos = path.find("SynoToken");
 			int argpos = path.find("?");
 			if(synotoken_pos != std::string::npos && argpos != std::string::npos) {
@@ -1152,10 +1143,7 @@ public:
 				setenv("HTTP_COOKIE", cookie_val.c_str(), true);
 				setenv("HTTP_X_SYNO_TOKEN", synotoken_val.c_str(), true);
 				setenv("REMOTE_ADDR", ah2->second.c_str(),true);
-					//fprintf(stderr, "HTTP_COOKIE: %s\n",std::getenv ("HTTP_COOKIE"));
-					//fprintf(stderr, "HTTP_X_SYNO_TOKEN: %s\n",std::getenv ("HTTP_X_SYNO_TOKEN"));
-					//fprintf(stderr, "REMOTE_ADDR: %s\n",std::getenv ("REMOTE_ADDR"));
-				// check synology web auth
+				// Check Synology web auth
 				char user[256], buf[1024];
 				FILE *fp = NULL;
 				bzero(user, 256);

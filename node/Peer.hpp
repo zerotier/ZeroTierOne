@@ -204,7 +204,7 @@ public:
 	float computeAggregateLinkPacketDelayVariance();
 
 	/**
-	 * @return The aggregate link mean latenct
+	 * @return The aggregate link mean latency
 	 */
 	float computeAggregateLinkMeanLatency();
 

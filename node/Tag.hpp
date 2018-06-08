@@ -58,7 +58,7 @@ class RuntimeEnvironment;
  * values.
  *
  * Unlike capabilities tags are signed only by the issuer and are never
- * transferrable.
+ * transferable.
  */
 class Tag : public Credential
 {

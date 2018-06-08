@@ -5,7 +5,7 @@
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your oion) any later version.
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -62,23 +62,23 @@ InetAddress::IpScope InetAddress::ipScope() const
 				case 0x37: return IP_SCOPE_PSEUDOPRIVATE;                             // 55.0.0.0/8 (US DoD)
 				case 0x38: return IP_SCOPE_PSEUDOPRIVATE;                             // 56.0.0.0/8 (US Postal Service)
 				case 0x64:
-					if ((ip & 0xffc00000) == 0x64400000) return IP_SCOPE_PRIVATE;       // 100.64.0.0/10
+					if ((ip & 0xffc00000) == 0x64400000) return IP_SCOPE_PRIVATE;     // 100.64.0.0/10
 					break;
 				case 0x7f: return IP_SCOPE_LOOPBACK;                                  // 127.0.0.0/8
 				case 0xa9:
-					if ((ip & 0xffff0000) == 0xa9fe0000) return IP_SCOPE_LINK_LOCAL;    // 169.254.0.0/16
+					if ((ip & 0xffff0000) == 0xa9fe0000) return IP_SCOPE_LINK_LOCAL;  // 169.254.0.0/16
 					break;
 				case 0xac:
-					if ((ip & 0xfff00000) == 0xac100000) return IP_SCOPE_PRIVATE;       // 172.16.0.0/12
+					if ((ip & 0xfff00000) == 0xac100000) return IP_SCOPE_PRIVATE;     // 172.16.0.0/12
 					break;
 				case 0xc0:
-					if ((ip & 0xffff0000) == 0xc0a80000) return IP_SCOPE_PRIVATE;				// 192.168.0.0/16
+					if ((ip & 0xffff0000) == 0xc0a80000) return IP_SCOPE_PRIVATE;     // 192.168.0.0/16
 					break;
 				case 0xff: return IP_SCOPE_NONE;                                      // 255.0.0.0/8 (broadcast, or unused/unusable)
 			}
 			switch(ip >> 28) {
-				case 0xe: return IP_SCOPE_MULTICAST;                              // 224.0.0.0/4
-				case 0xf: return IP_SCOPE_PSEUDOPRIVATE;                          // 240.0.0.0/4 ("reserved," usually unusable)
+				case 0xe: return IP_SCOPE_MULTICAST;                                  // 224.0.0.0/4
+				case 0xf: return IP_SCOPE_PSEUDOPRIVATE;                              // 240.0.0.0/4 ("reserved," usually unusable)
 			}
 			return IP_SCOPE_GLOBAL;
 		}	break;
@@ -86,21 +86,21 @@ InetAddress::IpScope InetAddress::ipScope() const
 		case AF_INET6: {
 			const unsigned char *ip = reinterpret_cast<const unsigned char *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
 			if ((ip[0] & 0xf0) == 0xf0) {
-				if (ip[0] == 0xff) return IP_SCOPE_MULTICAST;                              // ff00::/8
+				if (ip[0] == 0xff) return IP_SCOPE_MULTICAST;                        // ff00::/8
 				if ((ip[0] == 0xfe)&&((ip[1] & 0xc0) == 0x80)) {
 					unsigned int k = 2;
 					while ((!ip[k])&&(k < 15)) ++k;
 					if ((k == 15)&&(ip[15] == 0x01))
-						return IP_SCOPE_LOOPBACK;                                              // fe80::1/128
-					else return IP_SCOPE_LINK_LOCAL;                                         // fe80::/10
+						return IP_SCOPE_LOOPBACK;                                    // fe80::1/128
+					else return IP_SCOPE_LINK_LOCAL;                                 // fe80::/10
 				}
-				if ((ip[0] & 0xfe) == 0xfc) return IP_SCOPE_PRIVATE;                       // fc00::/7
+				if ((ip[0] & 0xfe) == 0xfc) return IP_SCOPE_PRIVATE;                 // fc00::/7
 			}
 			unsigned int k = 0;
 			while ((!ip[k])&&(k < 15)) ++k;
 			if (k == 15) { // all 0's except last byte
-				if (ip[15] == 0x01) return IP_SCOPE_LOOPBACK;                              // ::1/128
-				if (ip[15] == 0x00) return IP_SCOPE_NONE;                                  // ::/128
+				if (ip[15] == 0x01) return IP_SCOPE_LOOPBACK;                        // ::1/128
+				if (ip[15] == 0x00) return IP_SCOPE_NONE;                            // ::/128
 			}
 			return IP_SCOPE_GLOBAL;
 		}	break;

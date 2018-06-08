@@ -411,7 +411,7 @@ enum ZT_ResultCode
 	ZT_RESULT_ERROR_UNSUPPORTED_OPERATION = 1001,
 
 	/**
-	 * The requestion operation was given a bad parameter or was called in an invalid state
+	 * The requested operation was given a bad parameter or was called in an invalid state
 	 */
 	ZT_RESULT_ERROR_BAD_PARAMETER = 1002
 };
@@ -1498,7 +1498,7 @@ typedef int (*ZT_WirePacketSendFunction)(
 /**
  * Function to check whether a path should be used for ZeroTier traffic
  *
- * Paramters:
+ * Parameters:
  *  (1) Node
  *  (2) User pointer
  *  (3) ZeroTier address or 0 for none/any
@@ -1531,7 +1531,7 @@ typedef int (*ZT_PathCheckFunction)(
  *  (1) Node
  *  (2) User pointer
  *  (3) ZeroTier address (least significant 40 bits)
- *  (4) Desried address family or -1 for any
+ *  (4) Desired address family or -1 for any
  *  (5) Buffer to fill with result
  *
  * If provided this function will be occasionally called to get physical
@@ -1696,7 +1696,7 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,void 
  * Join a network
  *
  * This may generate calls to the port config callback before it returns,
- * or these may be deffered if a netconf is not available yet.
+ * or these may be differed if a netconf is not available yet.
  *
  * If we are already a member of the network, nothing is done and OK is
  * returned.

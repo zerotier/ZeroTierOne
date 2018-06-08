@@ -237,7 +237,7 @@ bool IncomingPacket::_doQOS_MEASUREMENT(const RuntimeEnvironment *RR,void *tPtr,
 		char *ptr = begin;
 		int count = 0;
 		int len = payloadLength();
-		// Read packet IDs and latency compensation intervals for each packet tracked by thie QoS packet
+		// Read packet IDs and latency compensation intervals for each packet tracked by this QoS packet
 		while (ptr < (begin + len) && (count < ZT_PATH_QOS_TABLE_SIZE)) {
 			memcpy((void*)&rx_id[count], ptr, sizeof(uint64_t));
 			ptr+=sizeof(uint64_t);

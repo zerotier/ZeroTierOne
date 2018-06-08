@@ -71,7 +71,7 @@ public:
 	static std::string destroyAllPersistentTapDevices();
 
 	/**
-	 * Uninstall a specific persistent tap device by instance ID
+	 * Uninstalls a specific persistent tap device by instance ID
 	 *
 	 * @param instanceId Device instance ID
 	 * @return Empty string on success, otherwise an error message

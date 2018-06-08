@@ -140,7 +140,7 @@ void Peer::received(
 		if ((!havePath)&&(RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),path->localSocket(),path->address()))) {
 			Mutex::Lock _l(_paths_m);
 
-			// Paths are redunant if they duplicate an alive path to the same IP or
+			// Paths are redundant if they duplicate an alive path to the same IP or
 			// with the same local socket and address family.
 			bool redundant = false;
 			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {

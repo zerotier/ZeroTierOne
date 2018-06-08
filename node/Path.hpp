@@ -353,7 +353,7 @@ public:
 	 * Record that we've received a VERB_ACK on this path, also compute throughput if required.
 	 *
 	 * @param now Current time
-	 * @param ackedBytes Number of bytes awknowledged by other peer
+	 * @param ackedBytes Number of bytes acknowledged by other peer
 	 */
 	inline void receivedAck(int64_t now, int32_t ackedBytes)
 	{
@@ -387,7 +387,7 @@ public:
 	}
 
 	/**
-	 * @return Number of bytes thusfar sent that have not been awknowledged by the remote peer
+	 * @return Number of bytes thus far sent that have not been acknowledged by the remote peer
 	 */
 	inline int64_t unackedSentBytes()
 	{
@@ -529,7 +529,7 @@ public:
 	inline char *getName() { return _ifname; }
 
 	/**
-	 * @return Packet delay varience
+	 * @return Packet delay variance
 	 */
 	inline float packetDelayVariance() { return _packetDelayVariance; }
 

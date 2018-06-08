@@ -275,13 +275,13 @@
 #define ZT_MULTIPATH_BINDER_REFRESH_PERIOD 5000
 
 /**
- * Time horizon for VERB_QOS_MEASUREMENT and VERB_ACK packet processesing cutoff
+ * Time horizon for VERB_QOS_MEASUREMENT and VERB_ACK packet processing cutoff
  */
 #define ZT_PATH_QOS_ACK_CUTOFF_TIME 30000
 
 /**
  * Maximum number of VERB_QOS_MEASUREMENT and VERB_ACK packets allowed to be
- * processesed within cutoff time. Separate totals are kept for each type but
+ * processed within cutoff time. Separate totals are kept for each type but
  * the limit is the same for both.
  *
  * This limits how often this peer will compute statistical estimates

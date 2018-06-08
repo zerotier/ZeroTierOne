@@ -14,7 +14,7 @@
 #define XOR(v,w) ((v) ^ (w))
 #define PLUS(v,w) ((uint32_t)((v) + (w)))
 
-// Set up laod/store macros with appropriate endianness (we don't use these in SSE mode)
+// Set up load/store macros with appropriate endianness (we don't use these in SSE mode)
 #ifndef ZT_SALSA20_SSE
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN

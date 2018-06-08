@@ -438,6 +438,6 @@ private:
 	AtomicCounter __refCount;
 };
 
-} // naemspace ZeroTier
+} // namespace ZeroTier
 
 #endif
