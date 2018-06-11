@@ -100,7 +100,9 @@ void LinuxNetLink::_setSocketTimeout(int fd, int seconds)
 	tv.tv_sec = seconds;
 	tv.tv_usec = 0;
 	if(setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)) != 0) {
+#ifdef ZT_TRACE
 		fprintf(stderr, "setsockopt failed: %s\n", strerror(errno));
+#endif
 	}
 }
 
@@ -122,7 +124,9 @@ int LinuxNetLink::_doRecv(int fd)
 			if(nlp->nlmsg_type == NLMSG_ERROR && (nlp->nlmsg_flags & NLM_F_ACK) != NLM_F_ACK) {
 				struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(nlp);
 				if (err->error != 0) {
+#ifdef ZT_TRACE
 					fprintf(stderr, "rtnetlink error: %s\n", strerror(-(err->error)));
+#endif
 				}
 				p = buf;
 				nll = 0;
@@ -146,7 +150,9 @@ int LinuxNetLink::_doRecv(int fd)
 			}
 
 			if (nlp->nlmsg_type == NLMSG_OVERRUN) {
+#ifdef ZT_TRACE
 				fprintf(stderr, "NLMSG_OVERRUN: Data lost\n");
+#endif
 				p = buf;
 				nll = 0;
 				break;
@@ -203,7 +209,7 @@ void LinuxNetLink::_processMessage(struct nlmsghdr *nlp, int nll)
 			_routeDeleted(nlp);
 			break;
 		default:
-			fprintf(stderr, "ignore msgtype %d...\n", nlp->nlmsg_type);
+			break;
 		}
 	}
 }
@@ -236,8 +242,9 @@ void LinuxNetLink::_ipAddressAdded(struct nlmsghdr *nlp)
 			break;
 		}
 	}
-
-	fprintf(stderr, "Added IP Address %s local: %s label: %s broadcast: %s\n", addr, local, label, bcast);
+#ifdef ZT_TRACE
+	fprintf(stderr,"Added IP Address %s local: %s label: %s broadcast: %s\n", addr, local, label, bcast);
+#endif
 }
 
 void LinuxNetLink::_ipAddressDeleted(struct nlmsghdr *nlp)
@@ -268,8 +275,9 @@ void LinuxNetLink::_ipAddressDeleted(struct nlmsghdr *nlp)
 			break;
 		}
 	}
-
+#ifdef ZT_TRACE
 	fprintf(stderr, "Removed IP Address %s local: %s label: %s broadcast: %s\n", addr, local, label, bcast);
+#endif
 }
 
 void LinuxNetLink::_routeAdded(struct nlmsghdr *nlp)
@@ -303,8 +311,9 @@ void LinuxNetLink::_routeAdded(struct nlmsghdr *nlp)
 		}
 	}
 	sprintf(ms, "%d", rtp->rtm_dst_len);
-
+#ifdef ZT_TRACE
 	fprintf(stderr, "Route Added: dst %s/%s gw %s src %s if %s\n", dsts, ms, gws, srcs, ifs);
+#endif
 }
 
 void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
@@ -339,7 +348,9 @@ void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
 	}
 	sprintf(ms, "%d", rtp->rtm_dst_len);
 
+#ifdef ZT_TRACE
 	fprintf(stderr, "Route Deleted: dst %s/%s gw %s src %s if %s\n", dsts, ms, gws, srcs, ifs);
+#endif
 }
 
 void LinuxNetLink::_linkAdded(struct nlmsghdr *nlp)
@@ -383,8 +394,9 @@ void LinuxNetLink::_linkAdded(struct nlmsghdr *nlp)
 		memcpy(entry.mac_bin, mac_bin, 6);
 		entry.mtu = mtu;
 	}
-
+#ifdef ZT_TRACE
 	fprintf(stderr, "Link Added: %s mac: %s, mtu: %d\n", ifname, mac, mtu);
+#endif
 }
 
 void LinuxNetLink::_linkDeleted(struct nlmsghdr *nlp)
@@ -416,8 +428,9 @@ void LinuxNetLink::_linkDeleted(struct nlmsghdr *nlp)
 			break;
 		}
 	}
-
+#ifdef ZT_TRACE
 	fprintf(stderr, "Link Deleted: %s mac: %s, mtu: %d\n", ifname, mac, mtu);
+#endif
 	{
 		Mutex::Lock l(_if_m);
 		if(_interfaces.contains(ifip->ifi_index)) {
@@ -600,13 +613,17 @@ void LinuxNetLink::addRoute(const InetAddress &target, const InetAddress &via, c
 		return;
 	}
 
+#ifdef ZT_TRACE
 	char  tmp[64];
 	char tmp2[64];
 	char tmp3[64];
 	fprintf(stderr, "Adding Route. target: %s via: %s src: %s iface: %s\n", target.toString(tmp), via.toString(tmp2), src.toString(tmp3), ifaceName);
+#endif
 
 	if(!target) {
+#ifdef ZT_TRACE
 		fprintf(stderr, "Uhhhh adding an empty route?!?!?");
+#endif
 		return;
 	}
 
@@ -716,13 +733,17 @@ void LinuxNetLink::delRoute(const InetAddress &target, const InetAddress &via, c
 		fprintf(stderr, "Error binding RTNETLINK: %s\n", strerror(errno));
 		return;
 	}
+#ifdef ZT_TRACE
 	char  tmp[64];
 	char tmp2[64];
 	char tmp3[64];
 	fprintf(stderr, "Removing Route. target: %s via: %s src: %s iface: %s\n", target.toString(tmp), via.toString(tmp2), src.toString(tmp3), ifaceName);
-	
+#endif
+
 	if(!target) {
+#ifdef ZT_TRACE
 		fprintf(stderr, "Uhhhh deleting an empty route?!?!?");
+#endif
 		return;
 	}
 
@@ -836,9 +857,10 @@ void LinuxNetLink::addAddress(const InetAddress &addr, const char *iface)
 		fprintf(stderr, "Error binding RTNETLINK: %s\n", strerror(errno));
 		return;
 	}
-
+#ifdef ZT_TRACE
 	char tmp[128];
 	fprintf(stderr, "Adding IP address %s to interface %s", addr.toString(tmp), iface);
+#endif
 	int interface_index = _indexForInterface(iface);
 
 	if (interface_index == -1) {
@@ -943,10 +965,10 @@ void LinuxNetLink::removeAddress(const InetAddress &addr, const char *iface)
 		fprintf(stderr, "Error binding RTNETLINK: %s\n", strerror(errno));
 		return;
 	}
-
+#ifdef ZT_TRACE
 	char tmp[128];
 	fprintf(stderr, "Removing IP address %s from interface %s", addr.toString(tmp), iface);
-
+#endif
 	int interface_index = _indexForInterface(iface);
 
 	if (interface_index == -1) {
