@@ -24,7 +24,6 @@
  * of your own application.
  */
 
-
 #include "../version.h"
 #include "Constants.hpp"
 #include "Peer.hpp"
@@ -55,6 +54,8 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastCredentialsReceived(0),
 	_lastTrustEstablishedPacketReceived(0),
 	_lastSentFullHello(0),
+	_lastACKWindowReset(0),
+	_lastQoSWindowReset(0),
 	_vProto(0),
 	_vMajor(0),
 	_vMinor(0),

@@ -566,9 +566,9 @@ public:
 	 * @param now Current time
 	 */
 	inline void processBackgroundPathMeasurements(int64_t now, const int64_t peerId) {
-		Mutex::Lock _l(_statistics_m);
 		// Compute path stability
 		if (now - _lastPathQualityComputeTime > ZT_PATH_QUALITY_COMPUTE_INTERVAL) {
+			Mutex::Lock _l(_statistics_m);
 			_lastPathQualityComputeTime = now;
 			address().toString(_addrString);
 			_meanThroughput = _throughputSamples->mean();
@@ -593,10 +593,8 @@ public:
 			_lastComputedStability = pdv_contrib + latency_contrib + throughput_disturbance_contrib;
 			_lastComputedStability *= 1 - _packetErrorRatio;
 			_qualitySamples->push(_lastComputedStability);
-		}
-		// Prevent QoS records from sticking around for too long
-		if (now - _lastQoSRecordPurge > ZT_PATH_QOS_RECORD_PURGE_INTERVAL)
-		{
+
+			// Prevent QoS records from sticking around for too long
 			std::map<uint64_t,uint64_t>::iterator it = _outQoSRecords.begin();
 			while (it != _outQoSRecords.end()) {
 				// Time since egress of tracked packet

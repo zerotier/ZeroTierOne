@@ -289,7 +289,7 @@
  * CUTOFF_LIMIT times per CUTOFF_TIME milliseconds per peer to prevent
  * this from being useful for DOS amplification attacks.
  */
-#define ZT_PATH_QOS_ACK_CUTOFF_LIMIT 16
+#define ZT_PATH_QOS_ACK_CUTOFF_LIMIT 128
 
 /**
  * Path choice history window size. This is used to keep track of which paths were
@@ -371,11 +371,6 @@
  * Maximum number of outgoing packets we monitor for QoS information
  */
 #define ZT_PATH_MAX_OUTSTANDING_QOS_RECORDS 128
-
-/**
- * How often we check the age of QoS records
- */
-#define ZT_PATH_QOS_RECORD_PURGE_INTERVAL 1000
 
 /**
  * Timeout for QoS records

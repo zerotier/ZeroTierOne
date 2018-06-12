@@ -524,27 +524,31 @@ public:
 	}
 
 	/**
-	 * Rate limit gate for VERB_QOS_MEASUREMENT
-	 */
-	inline bool rateGateQoS(const int64_t now)
-	{
-		if ((now - _lastQoSReceive) <= ZT_PATH_QOS_ACK_CUTOFF_TIME)
-			++_QoSCutoffCount;
-		else _QoSCutoffCount = 0;
-		_lastQoSReceive = now;
-		return (_QoSCutoffCount < ZT_PATH_QOS_ACK_CUTOFF_LIMIT);
-	}
-
-	/**
 	 * Rate limit gate for VERB_ACK
 	 */
 	inline bool rateGateACK(const int64_t now)
 	{
-		if ((now - _lastACKReceive) <= ZT_PATH_QOS_ACK_CUTOFF_TIME)
+		if ((now - _lastACKWindowReset) >= ZT_PATH_QOS_ACK_CUTOFF_TIME) {
+			_lastACKWindowReset = now;
+			_ACKCutoffCount = 0;
+		} else {
 			++_ACKCutoffCount;
-		else _ACKCutoffCount = 0;
-		_lastACKReceive = now;
+		}
 		return (_ACKCutoffCount < ZT_PATH_QOS_ACK_CUTOFF_LIMIT);
+	}
+
+	/**
+	 * Rate limit gate for VERB_QOS_MEASUREMENT
+	 */
+	inline bool rateGateQoS(const int64_t now)
+	{
+		if ((now - _lastQoSWindowReset) >= ZT_PATH_QOS_ACK_CUTOFF_TIME) {
+			_lastQoSWindowReset = now;
+			_QoSCutoffCount = 0;
+		} else {
+			++_QoSCutoffCount;
+		}
+		return (_QoSCutoffCount < ZT_PATH_QOS_ACK_CUTOFF_LIMIT);
 	}
 
 	/**
@@ -644,10 +648,10 @@ private:
 	int64_t _lastComRequestSent;
 	int64_t _lastCredentialsReceived;
 	int64_t _lastTrustEstablishedPacketReceived;
-	int64_t _lastQoSReceive;
-	int64_t _lastACKReceive;
 	int64_t _lastSentFullHello;
 	int64_t _lastPathPrune;
+	int64_t _lastACKWindowReset;
+	int64_t _lastQoSWindowReset;
 
 	uint16_t _vProto;
 	uint16_t _vMajor;
