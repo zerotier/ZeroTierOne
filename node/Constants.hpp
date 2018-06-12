@@ -305,8 +305,7 @@
 #define ZT_PATH_LATENCY_SAMPLE_INTERVAL ZT_MULTIPATH_PEER_PING_PERIOD * 2
 
 /**
- * Interval used for rate-limiting the computation of path quality estimates. Set at 0
- * to compute as new packets arrive with no delay.
+ * Interval used for rate-limiting the computation of path quality estimates.
  */
 #define ZT_PATH_QUALITY_COMPUTE_INTERVAL 1000
 

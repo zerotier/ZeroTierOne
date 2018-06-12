@@ -119,7 +119,8 @@ public:
 		_packetErrorRatio(0.0),
 		_packetLossRatio(0),
 		_lastComputedStability(0.0),
-		_lastComputedRelativeQuality(0)
+		_lastComputedRelativeQuality(0),
+		_lastAllocation(0.0)
 	{
 		prepareBuffers();
 	}
@@ -149,7 +150,8 @@ public:
 		_packetErrorRatio(0.0),
 		_packetLossRatio(0),
 		_lastComputedStability(0.0),
-		_lastComputedRelativeQuality(0)
+		_lastComputedRelativeQuality(0),
+		_lastAllocation(0.0)
 	{
 		prepareBuffers();
 		_phy->getIfName((PhySocket *)((uintptr_t)_localSocket), _ifname, 16);
@@ -519,6 +521,18 @@ public:
 	inline float relativeQuality() { return _lastComputedRelativeQuality; }
 
 	/**
+	 * Assign a new allocation value for this path in the aggregate link
+	 *
+	 * @param allocation Percentage of traffic to be sent over this path to a peer
+	 */
+	inline void updateComponentAllocationOfAggregateLink(float allocation) { _lastAllocation = allocation; }
+
+	/**
+	 * @return Percentage of traffic allocated to this path in the aggregate link
+	 */
+	inline float allocation() { return _lastAllocation; }
+
+	/**
 	 * @return Stability estimates can become expensive to compute, we cache the most recent result.
 	 */
 	inline float lastComputedStability() { return _lastComputedStability; }
@@ -682,6 +696,7 @@ private:
 	// cached estimates
 	float _lastComputedStability;
 	float _lastComputedRelativeQuality;
+	float _lastAllocation;
 
 	// cached human-readable strings for tracing purposes
 	char _ifname[16];

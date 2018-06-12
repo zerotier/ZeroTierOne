@@ -66,7 +66,8 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_linkIsBalanced(false),
 	_linkIsRedundant(false),
 	_remotePeerMultipathEnabled(false),
-	_lastAggregateStatsReport(0)
+	_lastAggregateStatsReport(0),
+	_lastAggregateAllocation(0)
 {
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
@@ -289,7 +290,7 @@ void Peer::recordIncomingPacket(void *tPtr, const SharedPtr<Path> &path, const u
 	}
 }
 
-float Peer::computeAggregateLinkRelativeQuality(int64_t now)
+void Peer::computeAggregateProportionalAllocation(int64_t now)
 {
 	float maxStability = 0;
 	float totalRelativeQuality = 0;
@@ -326,7 +327,12 @@ float Peer::computeAggregateLinkRelativeQuality(int64_t now)
 			_paths[i].p->updateRelativeQuality(relQuality);
 		}
 	}
-	return (float)1.0 / totalRelativeQuality; // Used later to convert relative quantities into flow allocations
+	// Convert set of relative performances into an allocation set
+	for(uint16_t i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+		if (_paths[i].p) {
+			_paths[i].p->updateComponentAllocationOfAggregateLink(_paths[i].p->relativeQuality() / totalRelativeQuality);
+		}
+	}
 }
 
 float Peer::computeAggregateLinkPacketDelayVariance()
@@ -453,8 +459,6 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 	 * Proportionally allocate traffic according to dynamic path quality measurements
 	 */
 	if (RR->node->getMultipathMode() == ZT_MULTIPATH_PROPORTIONALLY_BALANCED) {
-		float alloc[ZT_MAX_PEER_NETWORK_PATHS];
-		memset(&alloc, 0, sizeof(alloc));
 		int numAlivePaths = 0;
 		int numStalePaths = 0;
 		int alivePaths[ZT_MAX_PEER_NETWORK_PATHS];
@@ -476,21 +480,14 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 				bestPath = i;
 			}
 		}
-
-				// Compare paths to each-other
-		float qualityScalingFactor = computeAggregateLinkRelativeQuality(now);
-
+		if ((now - _lastAggregateAllocation) >= ZT_PATH_QUALITY_COMPUTE_INTERVAL) {
+			_lastAggregateAllocation = now;
+			computeAggregateProportionalAllocation(now);
+		}
 		if (numAlivePaths == 0 && numStalePaths == 0) {
 			return SharedPtr<Path>();
 		} if (numAlivePaths == 1 || numStalePaths == 1) {
 			return _paths[bestPath].p;
-		}
-
-		// Convert set of relative performances into an allocation set
-		for(uint16_t i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-			if (_paths[i].p) {
-				alloc[i] = _paths[i].p->relativeQuality() * qualityScalingFactor;
-			}
 		}
 		// Randomly choose path according to their allocations
 		unsigned int r;
@@ -498,12 +495,12 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 		float rf = (float)(r %= 100) / 100;
 		for(int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 			if (_paths[i].p) {
-				if (rf < alloc[i]) {
+				if (rf < _paths[i].p->allocation()) {
 					bestPath = i;
 					_pathChoiceHist->push(bestPath); // Record which path we chose
 					break;
 				}
-				rf -= alloc[i];
+				rf -= _paths[i].p->allocation();
 			}
 		}
 		if (bestPath < ZT_MAX_PEER_NETWORK_PATHS) {

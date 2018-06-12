@@ -194,9 +194,11 @@ public:
 	void sendQOS_MEASUREMENT(void *tPtr, const SharedPtr<Path> &path, const int64_t localSocket,const InetAddress &atAddress,int64_t now);
 
 	/**
-	 * @return The relative quality values for each path
+	 * Compute relative quality values and allocations for the components of the aggregate link
+	 *
+	 * @param now Current time
 	 */
-	float computeAggregateLinkRelativeQuality(int64_t now);
+	void computeAggregateProportionalAllocation(int64_t now);
 
 	/**
 	 * @return The aggregate link Packet Delay Variance (PDV)
@@ -677,6 +679,7 @@ private:
 	bool _remotePeerMultipathEnabled;
 
 	uint64_t _lastAggregateStatsReport;
+	uint64_t _lastAggregateAllocation;
 
 	char _interfaceListStr[256]; // 16 characters * 16 paths in a link
 };
