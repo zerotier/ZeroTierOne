@@ -503,6 +503,9 @@ void Switch::send(void *tPtr,Packet &packet,bool encrypt)
 	if (!_trySend(tPtr,packet,encrypt)) {
 		{
 			Mutex::Lock _l(_txQueue_m);
+			if (_txQueue.size() >= ZT_TX_QUEUE_SIZE) {
+				_txQueue.pop_front();
+			}
 			_txQueue.push_back(TXQueueEntry(dest,RR->node->now(),packet,encrypt));
 		}
 		if (!RR->topology->getPeer(tPtr,dest))
