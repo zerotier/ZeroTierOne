@@ -678,8 +678,8 @@ private:
 	bool _linkIsRedundant;
 	bool _remotePeerMultipathEnabled;
 
-	uint64_t _lastAggregateStatsReport;
-	uint64_t _lastAggregateAllocation;
+	int64_t _lastAggregateStatsReport;
+	int64_t _lastAggregateAllocation;
 
 	char _interfaceListStr[256]; // 16 characters * 16 paths in a link
 };

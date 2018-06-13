@@ -161,11 +161,9 @@ public:
 	{
 		delete _throughputSamples;
 		delete _latencySamples;
-		delete _qualitySamples;
 		delete _packetValiditySamples;
 		_throughputSamples = NULL;
 		_latencySamples = NULL;
-		_qualitySamples = NULL;
 		_packetValiditySamples = NULL;
 	}
 
@@ -580,7 +578,6 @@ public:
 	 * @param now Current time
 	 */
 	inline void processBackgroundPathMeasurements(int64_t now, const int64_t peerId) {
-		// Compute path stability
 		if (now - _lastPathQualityComputeTime > ZT_PATH_QUALITY_COMPUTE_INTERVAL) {
 			Mutex::Lock _l(_statistics_m);
 			_lastPathQualityComputeTime = now;
@@ -606,8 +603,6 @@ public:
 			// Compute the quality product
 			_lastComputedStability = pdv_contrib + latency_contrib + throughput_disturbance_contrib;
 			_lastComputedStability *= 1 - _packetErrorRatio;
-			_qualitySamples->push(_lastComputedStability);
-
 			// Prevent QoS records from sticking around for too long
 			std::map<uint64_t,uint64_t>::iterator it = _outQoSRecords.begin();
 			while (it != _outQoSRecords.end()) {
@@ -650,7 +645,6 @@ public:
 	inline void prepareBuffers() {
 		_throughputSamples = new RingBuffer<uint64_t>(ZT_PATH_QUALITY_METRIC_WIN_SZ);
 		_latencySamples = new RingBuffer<uint32_t>(ZT_PATH_QUALITY_METRIC_WIN_SZ);
-		_qualitySamples = new RingBuffer<float>(ZT_PATH_QUALITY_METRIC_WIN_SZ);
 		_packetValiditySamples = new RingBuffer<bool>(ZT_PATH_QUALITY_METRIC_WIN_SZ);
 		memset(_ifname, 0, 16);
 		memset(_addrString, 0, sizeof(_addrString));
@@ -704,7 +698,6 @@ private:
 
 	RingBuffer<uint64_t> *_throughputSamples;
 	RingBuffer<uint32_t> *_latencySamples;
-	RingBuffer<float> *_qualitySamples;
 	RingBuffer<bool> *_packetValiditySamples;
 };
 

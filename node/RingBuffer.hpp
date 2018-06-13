@@ -37,7 +37,7 @@
 namespace ZeroTier {
 
 /**
- * A revolving (ring) buffer. 
+ * A circular buffer
  *
  * For fast handling of continuously-evolving variables (such as path quality metrics).
  * Using this, we can maintain longer sliding historical windows for important path 
@@ -169,7 +169,12 @@ public:
 		if (count() == size) {
 			consume(1);
 		}
-		write(&value, 1);
+		const size_t first_chunk = std::min((size_t)1, size - end);
+		*(buf + end) = value;
+		end = (end + first_chunk) % size;
+		if (begin == end) {
+			wrap = true;
+		}
 	}
 
 	/**
