@@ -349,12 +349,14 @@ float Peer::computeAggregateLinkPacketDelayVariance()
 float Peer::computeAggregateLinkMeanLatency()
 {
 	float ml = 0.0;
+	int pathCount = 0;
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {
+			pathCount++;
 			ml += _paths[i].p->relativeQuality() * _paths[i].p->meanLatency();
 		}
 	}
-	return ml;
+	return ml / pathCount;
 }
 
 int Peer::aggregateLinkPhysicalPathCount()
