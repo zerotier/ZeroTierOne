@@ -116,7 +116,7 @@ void Peer::received(
 			}
 			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 				if (_paths[i].p) {
-					_paths[i].p->processBackgroundPathMeasurements(now, _id.address().toInt());
+					_paths[i].p->processBackgroundPathMeasurements(now);
 				}
 			}
 		}
@@ -415,7 +415,7 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {
-			_paths[i].p->processBackgroundPathMeasurements(now, _id.address().toInt());
+			_paths[i].p->processBackgroundPathMeasurements(now);
 		}
 	}
 

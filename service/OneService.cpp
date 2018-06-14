@@ -298,6 +298,39 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 	pj["paths"] = pa;
 }
 
+static void _peerAggregateLinkToJson(nlohmann::json &pj,const ZT_Peer *peer)
+{
+	char tmp[256];
+	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.10llx",peer->address);
+	pj["aggregateLinkLatency"] = peer->latency;
+
+	nlohmann::json pa = nlohmann::json::array();
+	for(unsigned int i=0;i<peer->pathCount;++i) {
+		//int64_t lastSend = peer->paths[i].lastSend;
+		//int64_t lastReceive = peer->paths[i].lastReceive;
+		nlohmann::json j;
+		j["address"] = reinterpret_cast<const InetAddress *>(&(peer->paths[i].address))->toString(tmp);
+		//j["lastSend"] = (lastSend < 0) ? 0 : lastSend;
+		//j["lastReceive"] = (lastReceive < 0) ? 0 : lastReceive;
+		//j["trustedPathId"] = peer->paths[i].trustedPathId;
+		//j["active"] = (bool)(peer->paths[i].expired == 0);
+		//j["expired"] = (bool)(peer->paths[i].expired != 0);
+		//j["preferred"] = (bool)(peer->paths[i].preferred != 0);
+		j["latency"] = peer->paths[i].latency;
+		//j["packetDelayVariance"] = peer->paths[i].packetDelayVariance;
+		//j["throughputDisturbCoeff"] = peer->paths[i].throughputDisturbCoeff;
+		//j["packetErrorRatio"] = peer->paths[i].packetErrorRatio;
+		//j["packetLossRatio"] = peer->paths[i].packetLossRatio;
+		j["stability"] = peer->paths[i].stability;
+		j["throughput"] = peer->paths[i].throughput;
+		//j["maxThroughput"] = peer->paths[i].maxThroughput;
+		j["allocation"] = peer->paths[i].allocation;
+		j["ifname"] = peer->paths[i].ifname;
+		pa.push_back(j);
+	}
+	pj["paths"] = pa;
+}
+
 static void _moonToJson(nlohmann::json &mj,const World &world)
 {
 	char tmp[4096];
@@ -1189,7 +1222,23 @@ public:
 					json &settings = res["config"]["settings"];
 					settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 					settings["allowTcpFallbackRelay"] = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],_allowTcpFallbackRelay);
-					settings["multipathMode"] = OSUtils::jsonInt(settings["multipathMode"],_multipathMode);
+
+					if (_multipathMode) {
+						json &multipathConfig = res["multipath"];
+						ZT_PeerList *pl = _node->peers();
+						char peerAddrStr[256];
+						if (pl) {
+							for(unsigned long i=0;i<pl->peerCount;++i) {
+								if (pl->peers[i].role == ZT_PEER_ROLE_LEAF) {
+									nlohmann::json pj;
+									_peerAggregateLinkToJson(pj,&(pl->peers[i]));
+									OSUtils::ztsnprintf(peerAddrStr,sizeof(peerAddrStr),"%.10llx",pl->peers[i].address);
+									multipathConfig[peerAddrStr] = (pj);
+								}
+							}
+						}
+					}
+
 #ifdef ZT_USE_MINIUPNPC
 					settings["portMappingEnabled"] = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 #else

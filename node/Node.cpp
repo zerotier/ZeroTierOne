@@ -474,6 +474,17 @@ ZT_PeerList *Node::peers() const
 			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
 			p->paths[p->pathCount].expired = 0;
 			p->paths[p->pathCount].preferred = ((*path) == bestp) ? 1 : 0;
+			p->paths[p->pathCount].latency = (*path)->latency();
+			p->paths[p->pathCount].packetDelayVariance = (*path)->packetDelayVariance();
+			p->paths[p->pathCount].throughputDisturbCoeff = (*path)->throughputDisturbanceCoefficient();
+			p->paths[p->pathCount].packetErrorRatio = (*path)->packetErrorRatio();
+			p->paths[p->pathCount].packetLossRatio = (*path)->packetLossRatio();
+			p->paths[p->pathCount].stability = (*path)->lastComputedStability();
+			p->paths[p->pathCount].throughput = (*path)->meanThroughput();
+			p->paths[p->pathCount].maxThroughput = (*path)->maxLifetimeThroughput();
+			p->paths[p->pathCount].allocation = (*path)->allocation();
+			p->paths[p->pathCount].ifname = (*path)->getName();
+
 			++p->pathCount;
 		}
 	}

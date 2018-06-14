@@ -111,15 +111,16 @@ public:
 		_expectingAckAsOf(0),
 		_packetsReceivedSinceLastAck(0),
 		_packetsReceivedSinceLastQoS(0),
-		_meanThroughput(0.0),
 		_maxLifetimeThroughput(0),
+		_lastComputedMeanThroughput(0),
 		_bytesAckedSinceLastThroughputEstimation(0),
-		_meanLatency(0.0),
-		_packetDelayVariance(0.0),
-		_packetErrorRatio(0.0),
-		_packetLossRatio(0),
+		_lastComputedMeanLatency(0.0),
+		_lastComputedPacketDelayVariance(0.0),
+		_lastComputedPacketErrorRatio(0.0),
+		_lastComputedPacketLossRatio(0),
 		_lastComputedStability(0.0),
 		_lastComputedRelativeQuality(0),
+		_lastComputedThroughputDistCoeff(0.0),
 		_lastAllocation(0.0)
 	{
 		prepareBuffers();
@@ -142,15 +143,16 @@ public:
 		_expectingAckAsOf(0),
 		_packetsReceivedSinceLastAck(0),
 		_packetsReceivedSinceLastQoS(0),
-		_meanThroughput(0.0),
 		_maxLifetimeThroughput(0),
+		_lastComputedMeanThroughput(0),
 		_bytesAckedSinceLastThroughputEstimation(0),
-		_meanLatency(0.0),
-		_packetDelayVariance(0.0),
-		_packetErrorRatio(0.0),
-		_packetLossRatio(0),
+		_lastComputedMeanLatency(0.0),
+		_lastComputedPacketDelayVariance(0.0),
+		_lastComputedPacketErrorRatio(0.0),
+		_lastComputedPacketLossRatio(0),
 		_lastComputedStability(0.0),
 		_lastComputedRelativeQuality(0),
+		_lastComputedThroughputDistCoeff(0.0),
 		_lastAllocation(0.0)
 	{
 		prepareBuffers();
@@ -162,9 +164,11 @@ public:
 		delete _throughputSamples;
 		delete _latencySamples;
 		delete _packetValiditySamples;
+		delete _throughputDisturbanceSamples;
 		_throughputSamples = NULL;
 		_latencySamples = NULL;
 		_packetValiditySamples = NULL;
+		_throughputDisturbanceSamples = NULL;
 	}
 
 	/**
@@ -311,7 +315,7 @@ public:
 	inline void recordOutgoingPacket(int64_t now, int64_t packetId, uint16_t payloadLength, Packet::Verb verb)
 	{
 		Mutex::Lock _l(_statistics_m);
-		if (verb == Packet::VERB_FRAME || verb == Packet::VERB_EXT_FRAME) {
+		if (verb != Packet::VERB_ACK && verb != Packet::VERB_QOS_MEASUREMENT) {
 			if (packetId % 2 == 0) { // even -> use for ACK
 				_unackedBytes += payloadLength;
 				// Take note that we're expecting a VERB_ACK on this path as of a specific time
@@ -336,7 +340,7 @@ public:
 	inline void recordIncomingPacket(int64_t now, int64_t packetId, uint16_t payloadLength, Packet::Verb verb)
 	{
 		Mutex::Lock _l(_statistics_m);
-		if (verb == Packet::VERB_FRAME || verb == Packet::VERB_EXT_FRAME) {
+		if (verb != Packet::VERB_ACK && verb != Packet::VERB_QOS_MEASUREMENT) {
 			if (packetId % 2 == 0) { // even -> use for ACK
 				_inACKRecords[packetId] = payloadLength;
 				_packetsReceivedSinceLastAck++;
@@ -497,14 +501,14 @@ public:
 	inline int64_t ackAge(int64_t now) { return _expectingAckAsOf ? now - _expectingAckAsOf : 0; }
 
 	/**
-	 * The maximum observed throughput for this path
+	 * The maximum observed throughput (in bits/s) for this path
 	 */
 	inline uint64_t maxLifetimeThroughput() { return _maxLifetimeThroughput; }
 
 	/**
 	 * @return The mean throughput (in bits/s) of this link
 	 */
-	inline float meanThroughput() { return _meanThroughput; }
+	inline uint64_t meanThroughput() { return _lastComputedMeanThroughput; }
 
 	/**
 	 * Assign a new relative quality value for this path in the aggregate link
@@ -543,22 +547,22 @@ public:
 	/**
 	 * @return Packet delay variance
 	 */
-	inline float packetDelayVariance() { return _packetDelayVariance; }
+	inline float packetDelayVariance() { return _lastComputedPacketDelayVariance; }
 
 	/**
 	 * @return Previously-computed mean latency
 	 */
-	inline float meanLatency() { return _meanLatency; }
+	inline float meanLatency() { return _lastComputedMeanLatency; }
 
 	/**
 	 * @return Packet loss rate (PLR)
 	 */
-	inline float packetLossRatio() { return _packetLossRatio; }
+	inline float packetLossRatio() { return _lastComputedPacketLossRatio; }
 
 	/**
 	 * @return Packet error ratio (PER)
 	 */
-	inline float packetErrorRatio() { return _packetErrorRatio; }
+	inline float packetErrorRatio() { return _lastComputedPacketErrorRatio; }
 
 	/**
 	 * Record an invalid incoming packet. This packet failed MAC/compression/cipher checks and will now
@@ -572,37 +576,45 @@ public:
 	inline char *getAddressString() { return _addrString; }
 
 	/**
+	 * @return The current throughput disturbance coefficient
+	 */
+	inline float throughputDisturbanceCoefficient() { return _lastComputedThroughputDistCoeff; }
+
+	/**
 	 * Compute and cache stability and performance metrics. The resultant stability coefficient is a measure of how "well behaved"
 	 * this path is. This figure is substantially different from (but required for the estimation of the path's overall "quality".
 	 *
 	 * @param now Current time
 	 */
-	inline void processBackgroundPathMeasurements(int64_t now, const int64_t peerId) {
+	inline void processBackgroundPathMeasurements(int64_t now) {
 		if (now - _lastPathQualityComputeTime > ZT_PATH_QUALITY_COMPUTE_INTERVAL) {
 			Mutex::Lock _l(_statistics_m);
 			_lastPathQualityComputeTime = now;
 			address().toString(_addrString);
-			_meanThroughput = _throughputSamples->mean();
-			_meanLatency = _latencySamples->mean();
-			_packetDelayVariance = _latencySamples->stddev(); // Similar to "jitter" (SEE: RFC 3393, RFC 4689)
+			_lastComputedMeanLatency = _latencySamples->mean();
+			_lastComputedPacketDelayVariance = _latencySamples->stddev(); // Similar to "jitter" (SEE: RFC 3393, RFC 4689)
+			_lastComputedMeanThroughput = (uint64_t)_throughputSamples->mean();
 			// If no packet validity samples, assume PER==0
-			_packetErrorRatio = 1 - (_packetValiditySamples->count() ? _packetValiditySamples->mean() : 1);
+			_lastComputedPacketErrorRatio = 1 - (_packetValiditySamples->count() ? _packetValiditySamples->mean() : 1);
 			// Compute path stability
 			// Normalize measurements with wildly different ranges into a reasonable range
-			float normalized_pdv = Utils::normalize(_packetDelayVariance, 0, ZT_PATH_MAX_PDV, 0, 10);
-			float normalized_la = Utils::normalize(_meanLatency, 0, ZT_PATH_MAX_MEAN_LATENCY, 0, 10);
+			float normalized_pdv = Utils::normalize(_lastComputedPacketDelayVariance, 0, ZT_PATH_MAX_PDV, 0, 10);
+			float normalized_la = Utils::normalize(_lastComputedMeanLatency, 0, ZT_PATH_MAX_MEAN_LATENCY, 0, 10);
 			float throughput_cv = _throughputSamples->mean() > 0 ? _throughputSamples->stddev() / _throughputSamples->mean() : 1;
 			// Form an exponential cutoff and apply contribution weights
 			float pdv_contrib = exp((-1)*normalized_pdv) * ZT_PATH_CONTRIB_PDV;
 			float latency_contrib = exp((-1)*normalized_la) * ZT_PATH_CONTRIB_LATENCY;
+			// Throughput Disturbance Coefficient
 			float throughput_disturbance_contrib = exp((-1)*throughput_cv) * ZT_PATH_CONTRIB_THROUGHPUT_DISTURBANCE;
+			_throughputDisturbanceSamples->push(throughput_cv);
+			_lastComputedThroughputDistCoeff = _throughputDisturbanceSamples->mean();
 			// Obey user-defined ignored contributions
 			pdv_contrib = ZT_PATH_CONTRIB_PDV > 0.0 ? pdv_contrib : 1;
 			latency_contrib = ZT_PATH_CONTRIB_LATENCY > 0.0 ? latency_contrib : 1;
 			throughput_disturbance_contrib = ZT_PATH_CONTRIB_THROUGHPUT_DISTURBANCE > 0.0 ? throughput_disturbance_contrib : 1;
-			// Compute the quality product
+			// Stability
 			_lastComputedStability = pdv_contrib + latency_contrib + throughput_disturbance_contrib;
-			_lastComputedStability *= 1 - _packetErrorRatio;
+			_lastComputedStability *= 1 - _lastComputedPacketErrorRatio;
 			// Prevent QoS records from sticking around for too long
 			std::map<uint64_t,uint64_t>::iterator it = _outQoSRecords.begin();
 			while (it != _outQoSRecords.end()) {
@@ -646,6 +658,7 @@ public:
 		_throughputSamples = new RingBuffer<uint64_t>(ZT_PATH_QUALITY_METRIC_WIN_SZ);
 		_latencySamples = new RingBuffer<uint32_t>(ZT_PATH_QUALITY_METRIC_WIN_SZ);
 		_packetValiditySamples = new RingBuffer<bool>(ZT_PATH_QUALITY_METRIC_WIN_SZ);
+		_throughputDisturbanceSamples = new RingBuffer<float>(ZT_PATH_QUALITY_METRIC_WIN_SZ);
 		memset(_ifname, 0, 16);
 		memset(_addrString, 0, sizeof(_addrString));
 	}
@@ -677,19 +690,20 @@ private:
 	int16_t _packetsReceivedSinceLastAck;
 	int16_t _packetsReceivedSinceLastQoS;
 
-	float _meanThroughput;
 	uint64_t _maxLifetimeThroughput;
+	uint64_t _lastComputedMeanThroughput;
 	uint64_t _bytesAckedSinceLastThroughputEstimation;
 
-	volatile float _meanLatency;
-	float _packetDelayVariance;
+	float _lastComputedMeanLatency;
+	float _lastComputedPacketDelayVariance;
 
-	float _packetErrorRatio;
-	float _packetLossRatio;
+	float _lastComputedPacketErrorRatio;
+	float _lastComputedPacketLossRatio;
 
 	// cached estimates
 	float _lastComputedStability;
 	float _lastComputedRelativeQuality;
+	float _lastComputedThroughputDistCoeff;
 	float _lastAllocation;
 
 	// cached human-readable strings for tracing purposes
@@ -699,6 +713,7 @@ private:
 	RingBuffer<uint64_t> *_throughputSamples;
 	RingBuffer<uint32_t> *_latencySamples;
 	RingBuffer<bool> *_packetValiditySamples;
+	RingBuffer<float> *_throughputDisturbanceSamples;
 };
 
 } // namespace ZeroTier

@@ -353,14 +353,18 @@ public:
 	inline int64_t isActive(int64_t now) const { return ((now - _lastNontrivialReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
-	 * @return Latency in milliseconds of best path or 0xffff if unknown / no paths
+	 * @return Latency in milliseconds of best/aggregate path or 0xffff if unknown / no paths
 	 */
 	inline unsigned int latency(const int64_t now)
 	{
-		SharedPtr<Path> bp(getAppropriatePath(now,false));
-		if (bp)
-			return bp->latency();
-		return 0xffff;
+		if (RR->node->getMultipathMode()) {
+			return (int)computeAggregateLinkMeanLatency();
+		} else {
+			SharedPtr<Path> bp(getAppropriatePath(now,false));
+			if (bp)
+				return bp->latency();
+			return 0xffff;
+		}
 	}
 
 	/**

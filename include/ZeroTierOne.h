@@ -449,13 +449,6 @@ enum ZT_MultipathMode
 	 * Will cease sending traffic over links that appear to be stale.
 	 */
 	ZT_MULTIPATH_PROPORTIONALLY_BALANCED = 2,
-
-	/**
-	 * Traffic is allocated across a user-defined interface/allocation
-	 *
-	 * Will cease sending traffic over links that appear to be stale.
-	 */
-	ZT_MULTIPATH_MANUALLY_BALANCED = 3
 };
 
 /**
@@ -1220,6 +1213,56 @@ typedef struct
 	 * Is this a trusted path? If so this will be its nonzero ID.
 	 */
 	uint64_t trustedPathId;
+
+	/**
+	 * One-way latency
+	 */
+	float latency;
+
+	/**
+	 * How much latency varies over time
+	 */
+	float packetDelayVariance;
+
+	/**
+	 * How much observed throughput varies over time
+	 */
+	float throughputDisturbCoeff;
+
+	/**
+	 * Packet Error Ratio (PER)
+	 */
+	float packetErrorRatio;
+
+	/**
+	 * Packet Loss Ratio (PLR)
+	 */
+	float packetLossRatio;
+
+	/**
+	 * Stability of the path
+	 */
+	float stability;
+
+	/**
+	 * Current throughput (moving average)
+	 */
+	uint64_t throughput;
+
+	/**
+	 * Maximum observed throughput for this path
+	 */
+	uint64_t maxThroughput;
+
+	/**
+	 * Percentage of traffic allocated to this path
+	 */
+	float allocation;
+
+	/**
+	 * Name of physical interface (for monitoring)
+	 */
+	char *ifname;
 
 	/**
 	 * Is path expired?
