@@ -91,6 +91,8 @@ void FileDB::save(nlohmann::json *orig,nlohmann::json &record)
 				nlohmann::json old;
 				get(nwid,old);
 
+				OSUtils::ztsnprintf(pb,sizeof(pb),"%s" ZT_PATH_SEPARATOR_S "%.10llx",_networksPath.c_str(),(unsigned long long)nwid);
+				OSUtils::mkdir(pb);
 				OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json.new",_networksPath.c_str(),nwid);
 				OSUtils::ztsnprintf(p2,sizeof(p2),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json",_networksPath.c_str(),nwid);
 				if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
