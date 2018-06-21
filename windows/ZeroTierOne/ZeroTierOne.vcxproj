@@ -48,7 +48,12 @@
     <ClCompile Include="..\..\ext\miniupnpc\upnpdev.c" />
     <ClCompile Include="..\..\ext\miniupnpc\upnperrors.c" />
     <ClCompile Include="..\..\ext\miniupnpc\upnpreplyparse.c" />
-    <ClCompile Include="..\..\node\C25519.cpp" />
+    <ClCompile Include="..\..\node\C25519.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Default</BasicRuntimeChecks>
+      <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
+    </ClCompile>
     <ClCompile Include="..\..\node\Capability.cpp" />
     <ClCompile Include="..\..\node\CertificateOfMembership.cpp" />
     <ClCompile Include="..\..\node\CertificateOfOwnership.cpp" />
@@ -64,7 +69,12 @@
     <ClCompile Include="..\..\node\Packet.cpp" />
     <ClCompile Include="..\..\node\Path.cpp" />
     <ClCompile Include="..\..\node\Peer.cpp" />
-    <ClCompile Include="..\..\node\Poly1305.cpp" />
+    <ClCompile Include="..\..\node\Poly1305.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Default</BasicRuntimeChecks>
+      <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
+    </ClCompile>
     <ClCompile Include="..\..\node\Revocation.cpp" />
     <ClCompile Include="..\..\node\Salsa20.cpp" />
     <ClCompile Include="..\..\node\SelfAwareness.cpp" />
