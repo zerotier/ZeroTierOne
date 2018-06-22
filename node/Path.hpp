@@ -121,7 +121,7 @@ public:
 		_lastComputedStability(0.0),
 		_lastComputedRelativeQuality(0),
 		_lastComputedThroughputDistCoeff(0.0),
-		_lastAllocation(0.0)
+		_lastAllocation(0)
 	{
 		prepareBuffers();
 	}
@@ -153,7 +153,7 @@ public:
 		_lastComputedStability(0.0),
 		_lastComputedRelativeQuality(0),
 		_lastComputedThroughputDistCoeff(0.0),
-		_lastAllocation(0.0)
+		_lastAllocation(0)
 	{
 		prepareBuffers();
 		_phy->getIfName((PhySocket *)((uintptr_t)_localSocket), _ifname, 16);
@@ -316,12 +316,10 @@ public:
 	{
 		Mutex::Lock _l(_statistics_m);
 		if (verb != Packet::VERB_ACK && verb != Packet::VERB_QOS_MEASUREMENT) {
-			if (packetId % 2 == 0) { // even -> use for ACK
+			if ((packetId & (ZT_PATH_QOS_ACK_PROTOCOL_DIVISOR - 1)) == 0) {
 				_unackedBytes += payloadLength;
 				// Take note that we're expecting a VERB_ACK on this path as of a specific time
 				_expectingAckAsOf = ackAge(now) > ZT_PATH_ACK_INTERVAL ? _expectingAckAsOf : now;
-			}
-			else { // odd -> use for QoS
 				if (_outQoSRecords.size() < ZT_PATH_MAX_OUTSTANDING_QOS_RECORDS) {
 					_outQoSRecords[packetId] = now;
 				}
@@ -341,11 +339,9 @@ public:
 	{
 		Mutex::Lock _l(_statistics_m);
 		if (verb != Packet::VERB_ACK && verb != Packet::VERB_QOS_MEASUREMENT) {
-			if (packetId % 2 == 0) { // even -> use for ACK
+			if ((packetId & (ZT_PATH_QOS_ACK_PROTOCOL_DIVISOR - 1)) == 0) {
 				_inACKRecords[packetId] = payloadLength;
 				_packetsReceivedSinceLastAck++;
-			}
-			else { // odd -> use for QoS
 				_inQoSRecords[packetId] = now;
 				_packetsReceivedSinceLastQoS++;
 			}
@@ -527,12 +523,12 @@ public:
 	 *
 	 * @param allocation Percentage of traffic to be sent over this path to a peer
 	 */
-	inline void updateComponentAllocationOfAggregateLink(float allocation) { _lastAllocation = allocation; }
+	inline void updateComponentAllocationOfAggregateLink(unsigned char allocation) { _lastAllocation = allocation; }
 
 	/**
 	 * @return Percentage of traffic allocated to this path in the aggregate link
 	 */
-	inline float allocation() { return _lastAllocation; }
+	inline unsigned char allocation() { return _lastAllocation; }
 
 	/**
 	 * @return Stability estimates can become expensive to compute, we cache the most recent result.
@@ -704,7 +700,9 @@ private:
 	float _lastComputedStability;
 	float _lastComputedRelativeQuality;
 	float _lastComputedThroughputDistCoeff;
-	float _lastAllocation;
+	unsigned char _lastAllocation;
+
+
 
 	// cached human-readable strings for tracing purposes
 	char _ifname[16];

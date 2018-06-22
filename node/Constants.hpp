@@ -275,6 +275,19 @@
 #define ZT_MULTIPATH_BINDER_REFRESH_PERIOD 5000
 
 /**
+ * Packets are only used for QoS/ACK statistical sampling if their packet ID is divisible by
+ * this integer. This is to provide a mechanism for both peers to agree on which packets need
+ * special treatment without having to exchange information. Changing this value would be
+ * a breaking change and would necessitate a protocol version upgrade. Since each incoming and
+ * outgoing packet ID is checked against this value its evaluation is of the form:
+ * (id & (divisor - 1)) == 0, thus the divisor must be a power of 2.
+ *
+ * This value is set at (16) so that given a normally-distributed RNG output we will sample
+ * 1/16th (or ~6.25%) of packets.
+ */
+#define ZT_PATH_QOS_ACK_PROTOCOL_DIVISOR 0x10
+
+/**
  * Time horizon for VERB_QOS_MEASUREMENT and VERB_ACK packet processing cutoff
  */
 #define ZT_PATH_QOS_ACK_CUTOFF_TIME 30000
@@ -384,7 +397,7 @@
 /**
  * Minimum amount of time between each ACK packet
  */
-#define ZT_PATH_ACK_INTERVAL 250
+#define ZT_PATH_ACK_INTERVAL 1000
 
 /**
  * How often an aggregate link statistics report is emitted into this tracing system

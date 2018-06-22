@@ -1229,7 +1229,7 @@ public:
 						char peerAddrStr[256];
 						if (pl) {
 							for(unsigned long i=0;i<pl->peerCount;++i) {
-								if (pl->peers[i].role == ZT_PEER_ROLE_LEAF) {
+								if (pl->peers[i].hadAggregateLink) {
 									nlohmann::json pj;
 									_peerAggregateLinkToJson(pj,&(pl->peers[i]));
 									OSUtils::ztsnprintf(peerAddrStr,sizeof(peerAddrStr),"%.10llx",pl->peers[i].address);

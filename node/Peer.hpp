@@ -203,12 +203,12 @@ public:
 	/**
 	 * @return The aggregate link Packet Delay Variance (PDV)
 	 */
-	float computeAggregateLinkPacketDelayVariance();
+	int computeAggregateLinkPacketDelayVariance();
 
 	/**
 	 * @return The aggregate link mean latency
 	 */
-	float computeAggregateLinkMeanLatency();
+	int computeAggregateLinkMeanLatency();
 
 	/**
 	 * @return The number of currently alive "physical" paths in the aggregate link
@@ -357,7 +357,7 @@ public:
 	 */
 	inline unsigned int latency(const int64_t now)
 	{
-		if (RR->node->getMultipathMode()) {
+		if (_canUseMultipath) {
 			return (int)computeAggregateLinkMeanLatency();
 		} else {
 			SharedPtr<Path> bp(getAppropriatePath(now,false));
@@ -418,6 +418,14 @@ public:
 	inline bool remoteVersionKnown() const { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
 
 	/**
+	 * Periodically update known multipath activation constraints. This is done so that we know when and when
+	 * not to use multipath logic. Doing this once every few seconds is sufficient.
+	 *
+	 * @param now Current time
+	 */
+	inline void processBackgroundPeerTasks(int64_t now);
+
+	/**
 	 * Record that the remote peer does have multipath enabled. As is evident by the receipt of a VERB_ACK
 	 * or a VERB_QOS_MEASUREMENT packet at some point in the past. Until this flag is set, the local client
 	 * shall assume that multipath is not enabled and should only use classical Protocol 9 logic.
@@ -427,18 +435,18 @@ public:
 	/**
 	 * @return Whether the local client supports and is configured to use multipath
 	 */
-	inline bool localMultipathSupport() { return ((RR->node->getMultipathMode() != ZT_MULTIPATH_NONE) && (ZT_PROTO_VERSION > 9)); }
+	inline bool localMultipathSupport() { return _localMultipathSupported; }
 
 	/**
 	 * @return Whether the remote peer supports and is configured to use multipath
 	 */
-	inline bool remoteMultipathSupport() { return (_remotePeerMultipathEnabled && (_vProto > 9)); }
+	inline bool remoteMultipathSupport() { return _remoteMultipathSupported; }
 
 	/**
 	 * @return Whether this client can use multipath to communicate with this peer. True if both peers are using
 	 * the correct protocol and if both peers have multipath enabled. False if otherwise.
 	 */
-	inline bool canUseMultipath() { return (localMultipathSupport() && remoteMultipathSupport()); }
+	inline bool canUseMultipath() { return _canUseMultipath; }
 
 	/**
 	 * @return True if peer has received a trust established packet (e.g. common network membership) in the past ZT_TRUST_EXPIRATION ms
@@ -558,6 +566,13 @@ public:
 	}
 
 	/**
+	 * @return Whether this peer is reachable via an aggregate link
+	 */
+	inline bool hasAggregateLink() {
+		return _localMultipathSupported && _remoteMultipathSupported && _remotePeerMultipathEnabled;
+	}
+
+	/**
 	 * Serialize a peer for storage in local cache
 	 *
 	 * This does not serialize everything, just non-ephemeral information.
@@ -658,6 +673,15 @@ private:
 	int64_t _lastPathPrune;
 	int64_t _lastACKWindowReset;
 	int64_t _lastQoSWindowReset;
+	int64_t _lastMultipathCompatibilityCheck;
+
+	unsigned char _freeRandomByte;
+
+	int _uniqueAlivePathCount;
+
+	bool _localMultipathSupported;
+	bool _remoteMultipathSupported;
+	bool _canUseMultipath;
 
 	uint16_t _vProto;
 	uint16_t _vMajor;

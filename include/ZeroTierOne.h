@@ -1316,6 +1316,11 @@ typedef struct
 	unsigned int pathCount;
 
 	/**
+	 * Whether this peer was ever reachable via an aggregate link
+	 */
+	bool hadAggregateLink;
+
+	/**
 	 * Known network paths to peer
 	 */
 	ZT_PeerPhysicalPath paths[ZT_MAX_PEER_NETWORK_PATHS];
