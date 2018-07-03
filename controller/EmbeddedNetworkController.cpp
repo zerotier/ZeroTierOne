@@ -504,6 +504,8 @@ void EmbeddedNetworkController::request(
 	qe->identity = identity;
 	qe->metaData = metaData;
 	qe->type = _RQEntry::RQENTRY_TYPE_REQUEST;
+	char buf[1024];
+	printf("!!! %.16llx %.16llx %s\n",nwid,requestPacketId,fromAddr.toString(buf));
 	_queue.post(qe);
 }
 
