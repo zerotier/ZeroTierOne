@@ -288,11 +288,11 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 		::close(STDERR_FILENO);
 		char ipbuf[64],ipbuf2[64];
 		if (via) {
-			::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"via",via.toIpString(ipbuf2),(const char *)0);
-			::execl(ZT_LINUX_IP_COMMAND_2,ZT_LINUX_IP_COMMAND_2,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"via",via.toIpString(ipbuf2),(const char *)0);
+			::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"via",via.toIpString(ipbuf2),"metric",ZT_IF_METRIC_STRING,(const char *)0);
+			::execl(ZT_LINUX_IP_COMMAND_2,ZT_LINUX_IP_COMMAND_2,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"via",via.toIpString(ipbuf2),"metric",ZT_IF_METRIC_STRING,(const char *)0);
 		} else if ((localInterface)&&(localInterface[0])) {
-			::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"dev",localInterface,(const char *)0);
-			::execl(ZT_LINUX_IP_COMMAND_2,ZT_LINUX_IP_COMMAND_2,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"dev",localInterface,(const char *)0);
+			::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"dev",localInterface,"metric",ZT_IF_METRIC_STRING,(const char *)0);
+			::execl(ZT_LINUX_IP_COMMAND_2,ZT_LINUX_IP_COMMAND_2,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"dev",localInterface,"metric",ZT_IF_METRIC_STRING,(const char *)0);
 		}
 		::_exit(-1);
 	}

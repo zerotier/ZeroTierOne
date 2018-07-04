@@ -460,4 +460,10 @@
 #define ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN 202
 #define ZT_EXCEPTION_INVALID_SERIALIZED_DATA_BAD_ENCODING 203
 
+// Interface and route metric for ZeroTier taps -- this ensures that
+// if we are on WiFi and also bridged via ZeroTier to the same LAN
+// traffic will (if the OS is sane) prefer WiFi.
+#define ZT_IF_METRIC 5000
+#define ZT_IF_METRIC_STRING "5000"
+
 #endif

@@ -137,10 +137,6 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #define ZT_MAX_HTTP_MESSAGE_SIZE (1024 * 1024 * 64)
 #define ZT_MAX_HTTP_CONNECTIONS 65536
 
-// Interface metric for ZeroTier taps -- this ensures that if we are on WiFi and also
-// bridged via ZeroTier to the same LAN traffic will (if the OS is sane) prefer WiFi.
-#define ZT_IF_METRIC 5000
-
 // How often to check for new multicast subscriptions on a tap device
 #define ZT_TAP_CHECK_MULTICAST_INTERVAL 5000
 

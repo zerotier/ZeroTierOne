@@ -362,6 +362,36 @@ bool LinuxEthernetTap::addIp(const InetAddress &ip)
 	} else if (cpid > 0) {
 		int exitcode = -1;
 		::waitpid(cpid,&exitcode,0);
+		if (exitcode != 0) {
+			return 0;
+		}
+	}
+
+	// create new route with correct metric
+	cpid = (long)vfork();
+	if (cpid == 0) {
+		OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
+		setenv("PATH", "/sbin:/bin:/usr/sbin:/usr/bin", 1);
+		char iptmp[128];
+		::execlp("ip","ip","route","add",ip.network().toString(iptmp),"dev",_dev.c_str(),"metric",ZT_IF_METRIC_STRING,(const char )0);
+	} else {
+		int exitcode = -1;
+		::waitpid(cpid,&exitcode,0);
+		if (exitcode != 0) {
+			return 0;
+		}
+	}
+
+	// remove automatically created route
+	cpid = (long)vfork();
+	if (cpid == 0) {
+		OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
+		setenv("PATH", "/sbin:/bin:/usr/sbin:/usr/bin", 1);
+		char iptmp[128];
+		::execlp("ip","ip","route","del",ip.network().toString(iptmp),"dev",_dev.c_str(),"proto","kernel",(const char )0);
+	} else {
+		int exitcode = -1;
+		::waitpid(cpid,&exitcode,0);
 		return (exitcode == 0);
 	}
 
