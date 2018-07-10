@@ -85,7 +85,8 @@ void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,void *tPtr,const A
 {
 	const SharedPtr<Network> nw(RR->node->network(_nwid));
 	const Address toAddr2(toAddr);
-	if ((nw)&&(nw->filterOutgoingPacket(tPtr,true,RR->identity.address(),toAddr2,_macSrc,_macDest,_frameData,_frameLen,_etherType,0))) {
+	uint8_t QoSBucket = 255; // Dummy value
+	if ((nw)&&(nw->filterOutgoingPacket(tPtr,true,RR->identity.address(),toAddr2,_macSrc,_macDest,_frameData,_frameLen,_etherType,0,QoSBucket))) {
 		_packet.newInitializationVector();
 		_packet.setDestination(toAddr2);
 		RR->node->expectReplyTo(_packet.packetId());

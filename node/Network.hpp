@@ -132,7 +132,8 @@ public:
 		const uint8_t *frameData,
 		const unsigned int frameLen,
 		const unsigned int etherType,
-		const unsigned int vlanId);
+		const unsigned int vlanId,
+		uint8_t &qosBucket);
 
 	/**
 	 * Apply filters to an incoming packet
@@ -296,6 +297,13 @@ public:
 	 * @param addr Bridge this MAC is reachable behind
 	 */
 	void learnBridgeRoute(const MAC &mac,const Address &addr);
+
+	/**
+	 * Whether QoS is in effect for this network
+	 */
+	bool QoSEnabled() {
+		return false;
+	}
 
 	/**
 	 * Learn a multicast group that is bridged to our tap device

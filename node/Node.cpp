@@ -368,6 +368,7 @@ ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 	{
 		Mutex::Lock _l(_networks_m);
 		SharedPtr<Network> *nw = _networks.get(nwid);
+		RR->sw->removeNetworkQoSControlBlock(nwid);
 		if (!nw)
 			return ZT_RESULT_OK;
 		if (uptr)
