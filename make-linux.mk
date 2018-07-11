@@ -46,11 +46,15 @@ endif
 # Trying to use dynamically linked libhttp-parser causes tons of compatibility problems.
 ONE_OBJS+=ext/http-parser/http_parser.o
 
-ifeq ($(ZT_TRACE),1)
-	override DEFS+=-DZT_TRACE
+# Build with address sanitization library for advanced debugging (clang)
+ifeq ($(ZT_SANITIZE),1)
+	DEFS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
 endif
 ifeq ($(ZT_DEBUG_TRACE),1)
 	DEFS+=-DZT_DEBUG_TRACE
+endif
+ifeq ($(ZT_TRACE),1)
+	DEFS+=-DZT_TRACE
 endif
 
 ifeq ($(ZT_RULES_ENGINE_DEBUGGING),1)
