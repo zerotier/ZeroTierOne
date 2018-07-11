@@ -745,6 +745,11 @@ enum ZT_VirtualNetworkRuleType
 	ZT_NETWORK_RULE_ACTION_BREAK = 5,
 
 	/**
+	 * Place a matching frame in the specified QoS bucket
+	 */
+	ZT_NETWORK_RULE_ACTION_PRIORITY = 6,
+
+	/**
 	 * Maximum ID for an ACTION, anything higher is a MATCH
 	 */
 	ZT_NETWORK_RULE_ACTION__MAX_ID = 15,
@@ -934,6 +939,11 @@ typedef struct
 			uint32_t flags;
 			uint16_t length;
 		} fwd;
+
+		/**
+		 * Quality of Service (QoS) bucket we want a frame to be placed in
+		 */
+		uint8_t qosBucket;
 	} v;
 } ZT_VirtualNetworkRule;
 

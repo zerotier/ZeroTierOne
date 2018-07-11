@@ -65,7 +65,8 @@ const OPEN_BLOCK_KEYWORDS = {
 	'tee': true,
 	'watch': true,
 	'redirect': true,
-	'break': true
+	'break': true,
+	'priority': true
 };
 
 // Reserved words that can't be used as tag, capability, or rule set names
@@ -81,6 +82,7 @@ const RESERVED_WORDS = {
 	'watch': true,
 	'redirect': true,
 	'break': true,
+	'priority': true,
 
 	'ztsrc': true,
 	'ztdest': true,
@@ -131,6 +133,7 @@ const KEYWORD_TO_API_MAP = {
 	'watch': 'ACTION_WATCH',
 	'redirect': 'ACTION_REDIRECT',
 	'break': 'ACTION_BREAK',
+	'priority': 'ACTION_PRIORITY',
 
 	'ztsrc': 'MATCH_SOURCE_ZEROTIER_ADDRESS',
 	'ztdest': 'MATCH_DEST_ZEROTIER_ADDRESS',

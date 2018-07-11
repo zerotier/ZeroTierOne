@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "../include/ZeroTierDebug.h"
+
 #include "Constants.hpp"
 #include "../version.h"
 #include "Network.hpp"
@@ -107,7 +109,7 @@ static _doZtFilterResult _doZtFilter(
 	Address &cc, // MUTABLE -- set to TEE destination if TEE action is taken or left alone otherwise
 	unsigned int &ccLength, // MUTABLE -- set to length of packet payload to TEE
 	bool &ccWatch, // MUTABLE -- set to true for WATCH target as opposed to normal TEE
-	uint8_t &qosBucket) // MUTABLE -- set to the value of the argument provided to the matching action
+	uint8_t &qosBucket) // MUTABLE -- set to the value of the argument provided to PRIORITY
 {
 	// Set to true if we are a TEE/REDIRECT/WATCH target
 	bool superAccept = false;
@@ -125,6 +127,10 @@ static _doZtFilterResult _doZtFilter(
 		if ((unsigned int)rt <= (unsigned int)ZT_NETWORK_RULE_ACTION__MAX_ID) {
 			if (thisSetMatches) {
 				switch(rt) {
+					case ZT_NETWORK_RULE_ACTION_PRIORITY:
+						qosBucket = (rules[rn].v.qosBucket >= 0 || rules[rn].v.qosBucket <= 8) ? rules[rn].v.qosBucket : 4; // 4 = default bucket (no priority)
+						return DOZTFILTER_ACCEPT;
+
 					case ZT_NETWORK_RULE_ACTION_DROP:
 						return DOZTFILTER_DROP;
 
