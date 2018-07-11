@@ -31,6 +31,7 @@ public:
 	virtual ~FileDB();
 
 	virtual bool waitForReady();
+	virtual bool isReady();
 	virtual void save(nlohmann::json *orig,nlohmann::json &record);
 	virtual void eraseNetwork(const uint64_t networkId);
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId);

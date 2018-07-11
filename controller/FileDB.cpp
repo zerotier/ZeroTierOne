@@ -63,14 +63,10 @@ FileDB::FileDB(EmbeddedNetworkController *const nc,const Identity &myId,const ch
 	}
 }
 
-FileDB::~FileDB()
-{
-}
+FileDB::~FileDB() {}
 
-bool FileDB::waitForReady()
-{
-	return true;
-}
+bool FileDB::waitForReady() { return true; }
+bool FileDB::isReady() { return true; }
 
 void FileDB::save(nlohmann::json *orig,nlohmann::json &record)
 {

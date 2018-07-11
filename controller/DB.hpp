@@ -82,6 +82,7 @@ public:
 	virtual ~DB();
 
 	virtual bool waitForReady() = 0;
+	virtual bool isReady() = 0;
 
 	inline bool hasNetwork(const uint64_t networkId) const
 	{
