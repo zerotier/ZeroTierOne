@@ -159,6 +159,7 @@ private:
 		unsigned int totalFragments; // 0 if only frag0 received, waiting for frags
 		uint32_t haveFragments; // bit mask, LSB to MSB
 		volatile bool complete; // if true, packet is complete
+		Mutex lock;
 	};
 	RXQueueEntry _rxQueue[ZT_RX_QUEUE_SIZE];
 	AtomicCounter _rxQueuePtr;

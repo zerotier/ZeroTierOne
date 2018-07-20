@@ -382,8 +382,6 @@ void Topology::doPeriodicTasks(void *tPtr,int64_t now)
 		}
 	}
 
-	// Temporarily disable path cleanup to test hypothesis about periodic threading issues as reported by Keysight.
-/*
 	{
 		Mutex::Lock _l(_paths_m);
 		Hashtable< Path::HashKey,SharedPtr<Path> >::Iterator i(_paths);
@@ -394,7 +392,6 @@ void Topology::doPeriodicTasks(void *tPtr,int64_t now)
 				_paths.erase(*k);
 		}
 	}
-*/
 }
 
 void Topology::_memoizeUpstreams(void *tPtr)

@@ -121,6 +121,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 						// seeing a Packet::Fragment?
 
 						RXQueueEntry *const rq = _findRXQueueEntry(fragmentPacketId);
+						Mutex::Lock rql(rq->lock);
 						if (rq->packetId != fragmentPacketId) {
 							// No packet found, so we received a fragment without its head.
 
@@ -203,6 +204,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 					);
 
 					RXQueueEntry *const rq = _findRXQueueEntry(packetId);
+					Mutex::Lock rql(rq->lock);
 					if (rq->packetId != packetId) {
 						// If we have no other fragments yet, create an entry and save the head
 
@@ -237,6 +239,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 					IncomingPacket packet(data,len,path,now);
 					if (!packet.tryDecode(RR,tPtr)) {
 						RXQueueEntry *const rq = _nextRXQueueEntry();
+						Mutex::Lock rql(rq->lock);
 						rq->timestamp = now;
 						rq->packetId = packet.packetId();
 						rq->frag0 = packet;
@@ -545,6 +548,7 @@ void Switch::doAnythingWaitingForPeer(void *tPtr,const SharedPtr<Peer> &peer)
 	const int64_t now = RR->node->now();
 	for(unsigned int ptr=0;ptr<ZT_RX_QUEUE_SIZE;++ptr) {
 		RXQueueEntry *const rq = &(_rxQueue[ptr]);
+		Mutex::Lock rql(rq->lock);
 		if ((rq->timestamp)&&(rq->complete)) {
 			if ((rq->frag0.tryDecode(RR,tPtr))||((now - rq->timestamp) > ZT_RECEIVE_QUEUE_TIMEOUT))
 				rq->timestamp = 0;
@@ -594,6 +598,7 @@ unsigned long Switch::doTimerTasks(void *tPtr,int64_t now)
 
 	for(unsigned int ptr=0;ptr<ZT_RX_QUEUE_SIZE;++ptr) {
 		RXQueueEntry *const rq = &(_rxQueue[ptr]);
+		Mutex::Lock rql(rq->lock);
 		if ((rq->timestamp)&&(rq->complete)) {
 			if ((rq->frag0.tryDecode(RR,tPtr))||((now - rq->timestamp) > ZT_RECEIVE_QUEUE_TIMEOUT)) {
 				rq->timestamp = 0;

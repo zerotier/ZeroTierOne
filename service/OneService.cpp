@@ -1063,6 +1063,8 @@ public:
 					else urlArgs[a->substr(0,eqpos)] = a->substr(eqpos + 1);
 				}
 			}
+		} else {
+			return 404;
 		}
 
 		bool isAuth = false;
