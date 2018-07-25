@@ -81,7 +81,7 @@ int main(int argc,char **argv)
 	std::vector<World::Root> roots;
 
 	const uint64_t id = ZT_WORLD_ID_EARTH;
-	const uint64_t ts = 1452708876314ULL; // January 13th, 2016
+	const uint64_t ts = 1532555817048ULL; // July 25th, 2018
 
 	// Alice
 	roots.push_back(World::Root());
@@ -92,8 +92,8 @@ int main(int argc,char **argv)
 	roots.back().stableEndpoints.push_back(InetAddress("2c0f:f850:154:197::33/9993")); // Johannesburg
 	roots.back().stableEndpoints.push_back(InetAddress("159.203.97.171/9993")); // New York
 	roots.back().stableEndpoints.push_back(InetAddress("2604:a880:800:a1::54:6001/9993")); // New York
-	roots.back().stableEndpoints.push_back(InetAddress("169.57.143.104/9993")); // Sao Paolo
-	roots.back().stableEndpoints.push_back(InetAddress("2607:f0d0:1d01:57::2/9993")); // Sao Paolo
+	roots.back().stableEndpoints.push_back(InetAddress("131.255.6.16/9993")); // Buenos Aires
+	roots.back().stableEndpoints.push_back(InetAddress("2803:eb80:0:e::2/9993")); // Buenos Aires
 	roots.back().stableEndpoints.push_back(InetAddress("107.170.197.14/9993")); // San Francisco
 	roots.back().stableEndpoints.push_back(InetAddress("2604:a880:1:20::200:e001/9993")); // San Francisco
 	roots.back().stableEndpoints.push_back(InetAddress("128.199.197.217/9993")); // Singapore
