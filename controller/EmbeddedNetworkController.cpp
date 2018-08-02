@@ -1042,6 +1042,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 
 					json network,member;
 					_db->get(nwid,network,address,member);
+                                        _db->eraseMember(nwid, address);
 
 					{
 						std::lock_guard<std::mutex> l(_memberStatus_l);

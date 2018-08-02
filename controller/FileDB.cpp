@@ -134,12 +134,24 @@ void FileDB::eraseNetwork(const uint64_t networkId)
 	get(networkId,network);
 	char p[16384];
 	OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json",_networksPath.c_str(),networkId);
-	OSUtils::rm(p);
+
+	if (OSUtils::fileExists(p,false)){
+	  OSUtils::rm(p);
+        }
 	_networkChanged(network,nullJson,true);
 }
 
 void FileDB::eraseMember(const uint64_t networkId,const uint64_t memberId)
 {
+	nlohmann::json network,member,nullJson;
+	get(networkId,network);
+        get(memberId,member);
+	char p[16384];
+	OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx" ZT_PATH_SEPARATOR_S "member" ZT_PATH_SEPARATOR_S "%.10llx.json",_networksPath.c_str(),networkId,memberId);
+	if (OSUtils::fileExists(p,false)){
+	    OSUtils::rm(p);
+	}
+	_memberChanged(member,nullJson,true);
 }
 
 void FileDB::nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress)
