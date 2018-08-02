@@ -1646,7 +1646,7 @@ public:
 				}
 				if (haveRoute)
 					continue;
-
+#ifndef ZT_SDK
 				// If we've already applied this route, just sync it and continue
 				for(std::list< SharedPtr<ManagedRoute> >::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();++mr) {
 					if ( ((*mr)->target() == *target) && ( ((via->ss_family == target->ss_family)&&((*mr)->via().ipsEqual(*via))) || (tapdev == (*mr)->device()) ) ) {
@@ -1662,6 +1662,7 @@ public:
 				n.managedRoutes.push_back(SharedPtr<ManagedRoute>(new ManagedRoute(*target,*via,tapdev)));
 				if (!n.managedRoutes.back()->sync())
 					n.managedRoutes.pop_back();
+#endif
 			}
 		}
 	}
