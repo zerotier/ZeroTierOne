@@ -29,7 +29,7 @@
 
 #include <vector>
 
-#include <bits/sockaddr.h>
+#include <sys/socket.h>
 #include <asm/types.h>
 #include <linux/rtnetlink.h>
 #include <sys/socket.h>

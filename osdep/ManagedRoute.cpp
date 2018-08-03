@@ -47,10 +47,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <net/route.h>
-#include <net/if.h>
 #ifdef __LINUX__
 #include <sys/ioctl.h>
-#include <bits/sockaddr.h>
 #include <asm/types.h>
 #include <linux/rtnetlink.h>
 #include <sys/socket.h>
@@ -59,6 +57,7 @@
 #ifdef __BSD__
 #include <net/if_dl.h>
 #include <sys/sysctl.h>
+#include <net/if.h>
 #endif
 #include <ifaddrs.h>
 #endif
