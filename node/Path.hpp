@@ -44,6 +44,8 @@
 
 #include "../osdep/Phy.hpp"
 
+#include "../include/ZeroTierDebug.h"
+
 /**
  * Maximum return value of preferenceRank()
  */
@@ -314,6 +316,7 @@ public:
 	 */
 	inline void recordOutgoingPacket(int64_t now, int64_t packetId, uint16_t payloadLength, Packet::Verb verb)
 	{
+		DEBUG_INFO("");
 		Mutex::Lock _l(_statistics_m);
 		if (verb != Packet::VERB_ACK && verb != Packet::VERB_QOS_MEASUREMENT) {
 			if ((packetId & (ZT_PATH_QOS_ACK_PROTOCOL_DIVISOR - 1)) == 0) {
@@ -337,6 +340,7 @@ public:
 	 */
 	inline void recordIncomingPacket(int64_t now, int64_t packetId, uint16_t payloadLength, Packet::Verb verb)
 	{
+		DEBUG_INFO("");
 		Mutex::Lock _l(_statistics_m);
 		if (verb != Packet::VERB_ACK && verb != Packet::VERB_QOS_MEASUREMENT) {
 			if ((packetId & (ZT_PATH_QOS_ACK_PROTOCOL_DIVISOR - 1)) == 0) {
@@ -357,6 +361,7 @@ public:
 	 */
 	inline void receivedAck(int64_t now, int32_t ackedBytes)
 	{
+		DEBUG_INFO("");
 		_expectingAckAsOf = 0;
 		_unackedBytes = (ackedBytes > _unackedBytes) ? 0 : _unackedBytes - ackedBytes;
 		int64_t timeSinceThroughputEstimate = (now - _lastThroughputEstimation);
@@ -401,6 +406,7 @@ public:
 	 */
 	inline void sentAck(int64_t now)
 	{
+		DEBUG_INFO("");
 		Mutex::Lock _l(_statistics_m);
 		_inACKRecords.clear();
 		_packetsReceivedSinceLastAck = 0;
@@ -418,6 +424,7 @@ public:
 	 */
 	inline void receivedQoS(int64_t now, int count, uint64_t *rx_id, uint16_t *rx_ts)
 	{
+		DEBUG_INFO("");
 		Mutex::Lock _l(_statistics_m);
 		// Look up egress times and compute latency values for each record
 		std::map<uint64_t,uint64_t>::iterator it;
@@ -442,6 +449,7 @@ public:
 	 */
 	inline int32_t generateQoSPacket(int64_t now, char *qosBuffer)
 	{
+		DEBUG_INFO("");
 		Mutex::Lock _l(_statistics_m);
 		int32_t len = 0;
 		std::map<uint64_t,uint64_t>::iterator it = _inQoSRecords.begin();
@@ -466,6 +474,7 @@ public:
 	 * @param Current time
 	 */
 	inline void sentQoS(int64_t now) {
+		DEBUG_INFO("");
 		_packetsReceivedSinceLastQoS = 0;
 		_lastQoSMeasurement = now;
 	}
@@ -584,6 +593,7 @@ public:
 	 */
 	inline void processBackgroundPathMeasurements(int64_t now) {
 		if (now - _lastPathQualityComputeTime > ZT_PATH_QUALITY_COMPUTE_INTERVAL) {
+			DEBUG_INFO("");
 			Mutex::Lock _l(_statistics_m);
 			_lastPathQualityComputeTime = now;
 			address().toString(_addrString);

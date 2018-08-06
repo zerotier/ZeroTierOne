@@ -37,6 +37,8 @@
 #include "RingBuffer.hpp"
 #include "Utils.hpp"
 
+#include "../include/ZeroTierDebug.h"
+
 namespace ZeroTier {
 
 Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
@@ -681,6 +683,8 @@ inline void Peer::processBackgroundPeerTasks(int64_t now)
 		_localMultipathSupported = ((RR->node->getMultipathMode() != ZT_MULTIPATH_NONE) && (ZT_PROTO_VERSION > 9));
 		_remoteMultipathSupported = _vProto > 9;
 		// If both peers support multipath and more than one path exist, we can use multipath logic
+		DEBUG_INFO("from=%llx, _localMultipathSupported=%d, _remoteMultipathSupported=%d, (_uniqueAlivePathCount > 1)=%d", 
+			this->_id.address().toInt(), _localMultipathSupported, _remoteMultipathSupported, (_uniqueAlivePathCount > 1));
 		_canUseMultipath = _localMultipathSupported && _remoteMultipathSupported && (_uniqueAlivePathCount > 1);
 	}
 }
