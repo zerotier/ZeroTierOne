@@ -66,6 +66,8 @@ LinuxNetLink::LinuxNetLink()
 
 	// set socket timeout to 1 sec so we're not permablocking recv() calls
 	_setSocketTimeout(_fd, 1);
+	int yes=1;
+	setsockopt(_fd,SOL_SOCKET,SO_REUSEADDR,(char*)&yes,sizeof(yes));
 
 	_la.nl_family = AF_NETLINK;
 	_la.nl_pid = getpid()+1;
@@ -442,6 +444,8 @@ void LinuxNetLink::_linkDeleted(struct nlmsghdr *nlp)
 void LinuxNetLink::_requestIPv4Routes()
 {
 	int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	int yes=1;
+	setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,(char*)&yes,sizeof(yes));
 	if (fd == -1) {
 		fprintf(stderr, "Error opening RTNETLINK socket: %s\n", strerror(errno));
 		return;
@@ -494,6 +498,8 @@ void LinuxNetLink::_requestIPv4Routes()
 void LinuxNetLink::_requestIPv6Routes()
 {
 	int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	int yes=1;
+	setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,(char*)&yes,sizeof(yes));
 	if (fd == -1) {
 		fprintf(stderr, "Error opening RTNETLINK socket: %s\n", strerror(errno));
 		return;
@@ -546,6 +552,8 @@ void LinuxNetLink::_requestIPv6Routes()
 void LinuxNetLink::_requestInterfaceList()
 {
 	int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	int yes=1;
+	setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,(char*)&yes,sizeof(yes));
 	if (fd == -1) {
 		fprintf(stderr, "Error opening RTNETLINK socket: %s\n", strerror(errno));
 		return;
@@ -596,6 +604,8 @@ void LinuxNetLink::_requestInterfaceList()
 void LinuxNetLink::addRoute(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifaceName)
 {
 	int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	int yes=1;
+	setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,(char*)&yes,sizeof(yes));
 	if (fd == -1) {
 		fprintf(stderr, "Error opening RTNETLINK socket: %s\n", strerror(errno));
 		return;
@@ -718,6 +728,8 @@ void LinuxNetLink::addRoute(const InetAddress &target, const InetAddress &via, c
 void LinuxNetLink::delRoute(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifaceName)
 {
 	int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	int yes=1;
+	setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,(char*)&yes,sizeof(yes));
 	if (fd == -1) {
 		fprintf(stderr, "Error opening RTNETLINK socket: %s\n", strerror(errno));
 		return;
@@ -838,6 +850,8 @@ void LinuxNetLink::delRoute(const InetAddress &target, const InetAddress &via, c
 void LinuxNetLink::addAddress(const InetAddress &addr, const char *iface)
 {
 	int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	int yes=1;
+	setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,(char*)&yes,sizeof(yes));
 	if (fd == -1) {
 		fprintf(stderr, "Error opening RTNETLINK socket: %s\n", strerror(errno));
 		return;
@@ -946,6 +960,8 @@ void LinuxNetLink::addAddress(const InetAddress &addr, const char *iface)
 void LinuxNetLink::removeAddress(const InetAddress &addr, const char *iface)
 {
 	int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	int yes=1;
+	setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,(char*)&yes,sizeof(yes));
 	if (fd == -1) {
 		fprintf(stderr, "Error opening RTNETLINK socket: %s\n", strerror(errno));
 		return;
