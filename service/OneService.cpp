@@ -306,18 +306,18 @@ static void _peerAggregateLinkToJson(nlohmann::json &pj,const ZT_Peer *peer)
 
 	nlohmann::json pa = nlohmann::json::array();
 	for(unsigned int i=0;i<peer->pathCount;++i) {
-		//int64_t lastSend = peer->paths[i].lastSend;
-		//int64_t lastReceive = peer->paths[i].lastReceive;
+		int64_t lastSend = peer->paths[i].lastSend;
+		int64_t lastReceive = peer->paths[i].lastReceive;
 		nlohmann::json j;
 		j["address"] = reinterpret_cast<const InetAddress *>(&(peer->paths[i].address))->toString(tmp);
-		//j["lastSend"] = (lastSend < 0) ? 0 : lastSend;
-		//j["lastReceive"] = (lastReceive < 0) ? 0 : lastReceive;
+		j["lastSend"] = (lastSend < 0) ? 0 : lastSend;
+		j["lastReceive"] = (lastReceive < 0) ? 0 : lastReceive;
 		//j["trustedPathId"] = peer->paths[i].trustedPathId;
 		//j["active"] = (bool)(peer->paths[i].expired == 0);
 		//j["expired"] = (bool)(peer->paths[i].expired != 0);
 		//j["preferred"] = (bool)(peer->paths[i].preferred != 0);
 		j["latency"] = peer->paths[i].latency;
-		//j["packetDelayVariance"] = peer->paths[i].packetDelayVariance;
+		j["pdv"] = peer->paths[i].packetDelayVariance;
 		//j["throughputDisturbCoeff"] = peer->paths[i].throughputDisturbCoeff;
 		//j["packetErrorRatio"] = peer->paths[i].packetErrorRatio;
 		//j["packetLossRatio"] = peer->paths[i].packetLossRatio;
