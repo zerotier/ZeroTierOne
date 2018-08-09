@@ -43,7 +43,10 @@
 							<Separator/>
 							<MenuItem Header="ZeroTier Central"
 												Click="ToolbarItem_CentralClicked"/>
-								
+							<MenuItem Header="Create and Join Network"
+												Click="ToolbarItem_NewNetwork"
+												x:Name="newNetworkItem"/>
+							<Separator/>
 							<MenuItem Header="About..."
                                       Click="ToolbarItem_AboutClicked"/>
 							<MenuItem Header="Preferences..."

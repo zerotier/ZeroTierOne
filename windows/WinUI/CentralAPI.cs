@@ -207,7 +207,7 @@ namespace WinUI
 
         public async Task<CentralNetwork> CreateNewNetwork()
         {
-            string networkURL = Central.ServerURL + "/api/network/";
+            string networkURL = Central.ServerURL + "/api/network?easy=1";
             CentralNetwork network = new CentralNetwork();
             network.Config = new CentralNetwork.CentralNetworkConfig();
             network.Config.Name = NetworkNameGenerator.GenerateName();
