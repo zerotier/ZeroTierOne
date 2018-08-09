@@ -283,6 +283,39 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 	pj["paths"] = pa;
 }
 
+static void _peerAggregateLinkToJson(nlohmann::json &pj,const ZT_Peer *peer)
+{
+	char tmp[256];
+	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.10llx",peer->address);
+	pj["aggregateLinkLatency"] = peer->latency;
+
+	nlohmann::json pa = nlohmann::json::array();
+	for(unsigned int i=0;i<peer->pathCount;++i) {
+		int64_t lastSend = peer->paths[i].lastSend;
+		int64_t lastReceive = peer->paths[i].lastReceive;
+		nlohmann::json j;
+		j["address"] = reinterpret_cast<const InetAddress *>(&(peer->paths[i].address))->toString(tmp);
+		j["lastSend"] = (lastSend < 0) ? 0 : lastSend;
+		j["lastReceive"] = (lastReceive < 0) ? 0 : lastReceive;
+		//j["trustedPathId"] = peer->paths[i].trustedPathId;
+		//j["active"] = (bool)(peer->paths[i].expired == 0);
+		//j["expired"] = (bool)(peer->paths[i].expired != 0);
+		//j["preferred"] = (bool)(peer->paths[i].preferred != 0);
+		j["latency"] = peer->paths[i].latency;
+		j["pdv"] = peer->paths[i].packetDelayVariance;
+		//j["throughputDisturbCoeff"] = peer->paths[i].throughputDisturbCoeff;
+		//j["packetErrorRatio"] = peer->paths[i].packetErrorRatio;
+		//j["packetLossRatio"] = peer->paths[i].packetLossRatio;
+		j["stability"] = peer->paths[i].stability;
+		j["throughput"] = peer->paths[i].throughput;
+		//j["maxThroughput"] = peer->paths[i].maxThroughput;
+		j["allocation"] = peer->paths[i].allocation;
+		j["ifname"] = peer->paths[i].ifname;
+		pa.push_back(j);
+	}
+	pj["paths"] = pa;
+}
+
 static void _moonToJson(nlohmann::json &mj,const World &world)
 {
 	char tmp[4096];
@@ -403,6 +436,7 @@ public:
 	PhySocket *_localControlSocket6;
 	bool _updateAutoApply;
 	bool _allowTcpFallbackRelay;
+	unsigned int _multipathMode;
 	unsigned int _primaryPort;
 	volatile unsigned int _udpPortPickerCounter;
 
@@ -780,6 +814,7 @@ public:
 			int64_t lastTapMulticastGroupCheck = 0;
 			int64_t lastBindRefresh = 0;
 			int64_t lastUpdateCheck = clockShouldBe;
+			int64_t lastMultipathModeUpdate = 0;
 			int64_t lastCleanedPeersDb = 0;
 			int64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
 			for(;;) {
@@ -811,7 +846,7 @@ public:
 				}
 
 				// Refresh bindings in case device's interfaces have changed, and also sync routes to update any shadow routes (e.g. shadow default)
-				if (((now - lastBindRefresh) >= ZT_BINDER_REFRESH_PERIOD)||(restarted)) {
+				if (((now - lastBindRefresh) >= (_multipathMode ? ZT_BINDER_REFRESH_PERIOD / 8 : ZT_BINDER_REFRESH_PERIOD))||(restarted)) {
 					lastBindRefresh = now;
 					unsigned int p[3];
 					unsigned int pc = 0;
@@ -827,6 +862,11 @@ public:
 								syncManagedStuff(n->second,false,true);
 						}
 					}
+				}
+				// Update multipath mode (if needed)
+				if (((now - lastMultipathModeUpdate) >= ZT_BINDER_REFRESH_PERIOD / 8)||(restarted)) {
+					lastMultipathModeUpdate = now;
+					_node->setMultipathMode(_multipathMode);
 				}
 
 				// Run background task processor in core if it's time to do so
@@ -863,7 +903,7 @@ public:
 				}
 
 				// Sync information about physical network interfaces
-				if ((now - lastLocalInterfaceAddressCheck) >= ZT_LOCAL_INTERFACE_CHECK_INTERVAL) {
+				if ((now - lastLocalInterfaceAddressCheck) >= (_multipathMode ? ZT_LOCAL_INTERFACE_CHECK_INTERVAL / 8 : ZT_LOCAL_INTERFACE_CHECK_INTERVAL)) {
 					lastLocalInterfaceAddressCheck = now;
 
 					_node->clearLocalInterfaceAddresses();
@@ -1082,16 +1122,6 @@ public:
 #ifdef __SYNOLOGY__
 		// Authenticate via Synology's built-in cgi script
 		if (!isAuth) {
-			/*
-			fprintf(stderr, "path = %s\n", path.c_str());
-			fprintf(stderr, "headers.size=%d\n", headers.size());
-			std::map<std::string, std::string>::const_iterator it(headers.begin());
-			while(it != headers.end()) {
-				fprintf(stderr,"header[%s] = %s\n", (it->first).c_str(), (it->second).c_str());
-				it++;
-			}
-			*/
-			// parse out url args
 			int synotoken_pos = path.find("SynoToken");
 			int argpos = path.find("?");
 			if(synotoken_pos != std::string::npos && argpos != std::string::npos) {
@@ -1104,10 +1134,6 @@ public:
 				setenv("HTTP_COOKIE", cookie_val.c_str(), true);
 				setenv("HTTP_X_SYNO_TOKEN", synotoken_val.c_str(), true);
 				setenv("REMOTE_ADDR", ah2->second.c_str(),true);
-					//fprintf(stderr, "HTTP_COOKIE: %s\n",std::getenv ("HTTP_COOKIE"));
-					//fprintf(stderr, "HTTP_X_SYNO_TOKEN: %s\n",std::getenv ("HTTP_X_SYNO_TOKEN"));
-					//fprintf(stderr, "REMOTE_ADDR: %s\n",std::getenv ("REMOTE_ADDR"));
-				// check synology web auth
 				char user[256], buf[1024];
 				FILE *fp = NULL;
 				bzero(user, 256);
@@ -1153,6 +1179,23 @@ public:
 					json &settings = res["config"]["settings"];
 					settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 					settings["allowTcpFallbackRelay"] = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],_allowTcpFallbackRelay);
+
+					if (_multipathMode) {
+						json &multipathConfig = res["multipath"];
+						ZT_PeerList *pl = _node->peers();
+						char peerAddrStr[256];
+						if (pl) {
+							for(unsigned long i=0;i<pl->peerCount;++i) {
+								if (pl->peers[i].hadAggregateLink) {
+									nlohmann::json pj;
+									_peerAggregateLinkToJson(pj,&(pl->peers[i]));
+									OSUtils::ztsnprintf(peerAddrStr,sizeof(peerAddrStr),"%.10llx",pl->peers[i].address);
+									multipathConfig[peerAddrStr] = (pj);
+								}
+							}
+						}
+					}
+
 #ifdef ZT_USE_MINIUPNPC
 					settings["portMappingEnabled"] = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 #else
@@ -1481,6 +1524,11 @@ public:
 
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
+		_multipathMode = (unsigned int)OSUtils::jsonInt(settings["multipathMode"],0);
+		if (_multipathMode != 0 && _allowTcpFallbackRelay) {
+			fprintf(stderr,"WARNING: multipathMode cannot be used with allowTcpFallbackRelay. Disabling allowTcpFallbackRelay");
+			_allowTcpFallbackRelay = false;
+		}
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 
 #ifndef ZT_SDK
