@@ -81,6 +81,12 @@
 #include "../ext/http-parser/http_parser.h"
 #endif
 
+#if ZT_VAULT_SUPPORT
+extern "C" {
+#include <curl/curl.h>
+}
+#endif
+
 #include "../ext/json/json.hpp"
 
 using json = nlohmann::json;
@@ -161,6 +167,14 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 
 // TCP activity timeout
 #define ZT_TCP_ACTIVITY_TIMEOUT 60000
+
+#if ZT_VAULT_SUPPORT
+size_t curlResponseWrite(void *ptr, size_t size, size_t nmemb, std::string *data)
+{
+	data->append((char*)ptr, size * nmemb);
+	return size * nmemb;
+}
+#endif
 
 namespace ZeroTier {
 
@@ -515,6 +529,14 @@ public:
 	PortMapper *_portMapper;
 #endif
 
+	// HashiCorp Vault Settings
+#if ZT_VAULT_SUPPORT
+	bool _vaultEnabled;
+	std::string _vaultURL;
+	std::string _vaultToken;
+	std::string _vaultPath; // defaults to cubbyhole/zerotier/identity.secret for per-access key storage
+#endif
+
 	// Set to false to force service to stop
 	volatile bool _run;
 	Mutex _run_m;
@@ -547,11 +569,20 @@ public:
 #ifdef ZT_USE_MINIUPNPC
 		,_portMapper((PortMapper *)0)
 #endif
+#ifdef ZT_VAULT_SUPPORT
+		,_vaultEnabled(false)
+		,_vaultURL()
+		,_vaultToken()
+		,_vaultPath("cubbyhole/zerotier")
+#endif
 		,_run(true)
 	{
 		_ports[0] = 0;
 		_ports[1] = 0;
 		_ports[2] = 0;
+#if ZT_VAULT_SUPPORT
+		curl_global_init(CURL_GLOBAL_DEFAULT);
+#endif
 	}
 
 	virtual ~OneServiceImpl()
@@ -559,6 +590,10 @@ public:
 		_binder.closeAll(_phy);
 		_phy.close(_localControlSocket4);
 		_phy.close(_localControlSocket6);
+#if ZT_VAULT_SUPPORT
+		curl_global_cleanup();
+#endif
+
 #ifdef ZT_USE_MINIUPNPC
 		delete _portMapper;
 #endif
@@ -1566,6 +1601,47 @@ public:
 		}
 	}
 
+#if ZT_VAULT_SUPPORT
+		json &vault = settings["vault"];
+		if (vault.is_object()) {
+			const std::string url(OSUtils::jsonString(vault["vaultURL"], "").c_str());
+			if (!url.empty()) {
+				_vaultURL = url;
+			}
+
+			const std::string token(OSUtils::jsonString(vault["vaultToken"], "").c_str());
+			if (!token.empty()) {
+				_vaultToken = token;
+			}
+
+			const std::string path(OSUtils::jsonString(vault["vaultPath"], "").c_str());
+			if (!path.empty()) {
+				_vaultPath = path;
+			}
+		}
+
+		// also check environment variables for values.  Environment variables
+		// will override local.conf variables
+		const std::string envURL(getenv("VAULT_ADDR"));
+		if (!envURL.empty()) {
+			_vaultURL = envURL;
+		}
+
+		const std::string envToken(getenv("VAULT_TOKEN"));
+		if (!envToken.empty()) {
+			_vaultToken = envToken;
+		}
+
+		const std::string envPath(getenv("VAULT_PATH"));
+		if (!envPath.empty()) {
+			_vaultPath = envPath;
+		}
+
+		if (!_vaultURL.empty() && !_vaultToken.empty()) {
+			_vaultEnabled = true;
+		}
+#endif
+
 	// Checks if a managed IP or route target is allowed
 	bool checkIfManagedIsAllowed(const NetworkState &n,const InetAddress &target)
 	{
@@ -2142,8 +2218,88 @@ public:
 		}
 	}
 
+#if ZT_VAULT_SUPPORT
+	inline bool nodeVaultPutIdentity(enum ZT_StateObjectType type, const void *data, int len)
+	{
+		bool retval = false;
+		if (type != ZT_STATE_OBJECT_IDENTITY_PUBLIC && type != ZT_STATE_OBJECT_IDENTITY_SECRET) {
+			return retval;
+		}
+
+		CURL *curl = curl_easy_init();
+		if (curl) {
+			char token[512] = { 0 };
+			snprintf(token, sizeof(token), "X-Vault-Token: %s", _vaultToken.c_str());
+
+			struct curl_slist *chunk = NULL;
+			chunk = curl_slist_append(chunk, token);
+
+
+			char content_type[512] = { 0 };
+			snprintf(content_type, sizeof(content_type), "Content-Type: application/json");
+
+			chunk = curl_slist_append(chunk, content_type);
+
+			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+
+			char url[2048] = { 0 };
+			snprintf(url, sizeof(url), "%s/v1/%s", _vaultURL.c_str(), _vaultPath.c_str());
+
+			curl_easy_setopt(curl, CURLOPT_URL, url);
+
+			json d = json::object();
+			if (type == ZT_STATE_OBJECT_IDENTITY_PUBLIC) {
+				std::string key((const char*)data, len);
+				d["public"] = key;
+			}
+			else if (type == ZT_STATE_OBJECT_IDENTITY_SECRET) {
+				std::string key((const char*)data, len);
+				d["secret"] = key;
+			}
+
+			if (!d.empty()) {
+				std::string post = d.dump();
+
+				if (!post.empty()) {
+					curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post.c_str());
+					curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, post.length());
+
+#ifndef NDEBUG
+					curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+#endif
+
+					CURLcode res = curl_easy_perform(curl);
+					if (res == CURLE_OK) {
+						long response_code = 0;
+						curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+						if (response_code == 200 || response_code == 204) {
+							retval = true;
+						}
+					}
+				}
+			}
+
+			curl_easy_cleanup(curl);
+			curl = NULL;
+			curl_slist_free_all(chunk);
+			chunk = NULL;
+		}
+
+		return retval;
+	}
+#endif
+
 	inline void nodeStatePutFunction(enum ZT_StateObjectType type,const uint64_t id[2],const void *data,int len)
 	{
+#if ZT_VAULT_SUPPORT
+		if (_vaultEnabled && (type == ZT_STATE_OBJECT_IDENTITY_SECRET || type == ZT_STATE_OBJECT_IDENTITY_PUBLIC)) {
+			if (nodeVaultPutIdentity(type, data, len)) {
+				// value successfully written to Vault
+				return;
+			}
+			// else fallback to disk
+		}
+#endif
 		char p[1024];
 		FILE *f;
 		bool secure = false;
@@ -2210,8 +2366,93 @@ public:
 		}
 	}
 
+#if ZT_VAULT_SUPPORT
+	inline int nodeVaultGetIdentity(enum ZT_StateObjectType type, void *data, unsigned int maxlen)
+	{
+		if (type != ZT_STATE_OBJECT_IDENTITY_SECRET && type != ZT_STATE_OBJECT_IDENTITY_PUBLIC) {
+			return -1;
+		}
+
+		int ret = -1;
+		CURL *curl = curl_easy_init();
+		if (curl) {
+			char token[512] = { 0 };
+			snprintf(token, sizeof(token), "X-Vault-Token: %s", _vaultToken.c_str());
+
+			struct curl_slist *chunk = NULL;
+			chunk = curl_slist_append(chunk, token);
+			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+
+			char url[2048] = { 0 };
+			snprintf(url, sizeof(url), "%s/v1/%s", _vaultURL.c_str(), _vaultPath.c_str());
+
+			curl_easy_setopt(curl, CURLOPT_URL, url);
+
+			std::string response;
+			std::string res_headers;
+
+			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &curlResponseWrite);
+			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+			curl_easy_setopt(curl, CURLOPT_HEADERDATA, &res_headers);
+
+#ifndef NDEBUG
+			curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+#endif
+
+			CURLcode res = curl_easy_perform(curl);
+
+			if (res == CURLE_OK) {
+				long response_code = 0;
+				curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+				if (response_code == 200) {
+					try {
+						json payload = json::parse(response);
+						if (!payload["data"].is_null()) {
+							json &d = payload["data"];
+							if (type == ZT_STATE_OBJECT_IDENTITY_SECRET) {
+								std::string secret = OSUtils::jsonString(d["secret"],"");
+
+								if (!secret.empty()) {
+									ret = (int)secret.length();
+									memcpy(data, secret.c_str(), ret);
+								}
+							}
+							else if (type == ZT_STATE_OBJECT_IDENTITY_PUBLIC) {
+								std::string pub = OSUtils::jsonString(d["public"],"");
+
+								if (!pub.empty()) {
+									ret = (int)pub.length();
+									memcpy(data, pub.c_str(), ret);
+								}
+							}
+						}
+					}
+					catch (...) {
+						ret = -1;
+					}
+				}
+			}
+
+			curl_easy_cleanup(curl);
+			curl = NULL;
+			curl_slist_free_all(chunk);
+			chunk = NULL;
+		}
+		return ret;
+	}
+#endif
+
 	inline int nodeStateGetFunction(enum ZT_StateObjectType type,const uint64_t id[2],void *data,unsigned int maxlen)
 	{
+#if ZT_VAULT_SUPPORT
+		if (_vaultEnabled && (type == ZT_STATE_OBJECT_IDENTITY_SECRET || type == ZT_STATE_OBJECT_IDENTITY_PUBLIC) ) {
+			int retval = nodeVaultGetIdentity(type, data, maxlen);
+			if (retval >= 0)
+				return retval;
+
+			// else continue file based lookup
+		}
+#endif
 		char p[4096];
 		switch(type) {
 			case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
@@ -2239,6 +2480,17 @@ public:
 		if (f) {
 			int n = (int)fread(data,1,maxlen,f);
 			fclose(f);
+#if ZT_VAULT_SUPPORT
+			if (_vaultEnabled && (type == ZT_STATE_OBJECT_IDENTITY_SECRET || type == ZT_STATE_OBJECT_IDENTITY_PUBLIC)) {
+				// If we've gotten here while Vault is enabled, Vault does not know the key and it's been
+				// read from disk instead.
+				//
+				// We should put the value in Vault and remove the local file.
+				if (nodeVaultPutIdentity(type, data, n)) {
+					unlink(p);
+				}
+			}
+#endif
 			if (n >= 0)
 				return n;
 		}
