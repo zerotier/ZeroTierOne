@@ -44,8 +44,8 @@
 
 #include "DB.hpp"
 #include "FileDB.hpp"
-#ifdef ZT_CONTROLLER_USE_RETHINKDB
-#include "RethinkDB.hpp"
+#ifdef ZT_CONTROLLER_USE_LIBPQ
+#include "PostgreSQL.hpp"
 #endif
 
 namespace ZeroTier {

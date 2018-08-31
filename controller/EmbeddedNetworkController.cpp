@@ -478,9 +478,9 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 	_signingId = signingId;
 	_sender = sender;
 	_signingIdAddressString = signingId.address().toString(tmp);
-#ifdef ZT_CONTROLLER_USE_RETHINKDB
-	if ((_path.length() > 10)&&(_path.substr(0,10) == "rethinkdb:"))
-		_db.reset(new RethinkDB(this,_signingId,_path.c_str()));
+#ifdef ZT_CONTROLLER_USE_LIBPQ
+	if ((_path.length() > 9)&&(_path.substr(0,9) == "postgres:"))
+		_db.reset(new PostgreSQL(this,_signingId,_path.substr(9).c_str()));
 	else // else use FileDB after endif
 #endif
 		_db.reset(new FileDB(this,_signingId,_path.c_str()));

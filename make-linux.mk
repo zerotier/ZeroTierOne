@@ -300,8 +300,7 @@ official:	FORCE
 	make -j4 ZT_OFFICIAL=1 all
 
 central-controller:	FORCE
-	cd ext/librethinkdbxx ; make
-	make -j4 LDLIBS="ext/librethinkdbxx/build/librethinkdb++.a" DEFS="-DZT_CONTROLLER_USE_RETHINKDB" ZT_OFFICIAL=1 ZT_USE_X64_ASM_ED25519=1 one
+	make -j4 LDLIBS="-L/usr/pgsql-10/lib/ -lpq" CXXFLAGS="-I/usr/pgsql-10/include -fPIC" DEFS="-DZT_CONTROLLER_USE_LIBPQ" ZT_OFFICIAL=1 ZT_USE_X64_ASM_ED25519=1 one
 
 debug:	FORCE
 	make ZT_DEBUG=1 one

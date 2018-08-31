@@ -88,7 +88,7 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,co
 							if (_run != 1) break;
 							json tmp(json::parse(cur.next().as_json()));
 							if ((tmp["type"] == "state")&&(tmp["state"] == "ready")) {
-								if (--this->_ready == 0) {
+								if (++this->_ready == 2) {
 									if (_waitNoticePrinted)
 										fprintf(stderr,"[%s] NOTICE: %.10llx controller RethinkDB data download complete." ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt());
 									this->_readyLock.unlock();
