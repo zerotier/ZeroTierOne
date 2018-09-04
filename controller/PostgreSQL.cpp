@@ -199,6 +199,7 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 		config["tags"] = json::parse(PQgetvalue(res, i, 13));
 		config["v4AssignMode"] = json::parse(PQgetvalue(res, i, 14));
 		config["v6AssignMode"] = json::parse(PQgetvalue(res, i, 15));
+		config["objtype"] = "network";
 		
 		_networkChanged(empty, config, false);
 	}
@@ -207,7 +208,7 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 
 	if (++this->_ready == 2) {
 		if (_waitNoticePrinted) {
-			fprintf(stderr,"[%s] NOTICE: %.10llx controller RethinkDB data download complete." ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt());
+			fprintf(stderr,"[%s] NOTICE: %.10llx controller PostgreSQL data download complete." ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt());
 		}
 		_readyLock.unlock();
 	}
@@ -215,11 +216,99 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 
 void PostgreSQL::initializeMembers(PGconn *conn)
 {
-	// TODO: do stuff here
+	if (PQstatus(conn) != CONNECTION_OK) {
+		fprintf(stderr, "Bad Database Connection: %s", PQerrorMessage(conn));
+		exit(1);
+	}
+
+	const char *params[1] = {
+		_myAddressStr.c_str()
+	};
+
+	PGresult *res = PQexecParams(conn,
+		"SELECT m.id, m.network_id, m.active_bridge, m.authorized, m.capabilities, EXTRACT(EPOCH FROM m.creation_time AT TIME ZONE 'UTC')*1000, m.identity, "
+		"	EXTRACT(EPOCH FROM m.last_authorized_time AT TIME ZONE 'UTC')*1000, "
+		"	EXTRACT(EPOCH FROM m.last_deauthorized_time AT TIME ZONE 'UTC')*1000, "
+		"	m.remote_trace_level, m.remote_trace_target, m.tags, m.v_major, m.v_minor, m.v_rev, m.v_proto, "
+		"	m.no_auto_assign_ips, m.revision "
+		"FROM ztc_member m "
+		"INNER JOIN ztc_network n "
+		"	ON n.id = m.network_id "
+		"WHERE n.controller_id = $1 AND m.deleted = false",
+		1,
+		NULL,
+		params,
+		NULL,
+		NULL,
+		0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		fprintf(stderr, "Member Initialization Failed: %s", PQerrorMessage(conn));
+		PQclear(res);
+		exit(1);
+	}
+
+	int numRows = PQntuples(res);
+	for (int i = 0; i < numRows; ++i) {
+		json empty;
+		json config;
+
+		std::string memberId(PQgetvalue(res, i, 0));
+		std::string networkId(PQgetvalue(res, i, 1));
+		config["id"] = memberId;
+		config["nwid"] = networkId;
+		config["activeBridge"] = (strcmp(PQgetvalue(res, i, 3), "true") == 0);
+		config["authorized"] = (strcmp(PQgetvalue(res, i, 4), "true") == 0);
+		config["capabilities"] = json::parse(PQgetvalue(res, i, 5));
+		config["creationTime"] = std::stoull(PQgetvalue(res, i, 6));
+		config["identity"] = PQgetvalue(res, i, 7);
+		config["lastAuthorizedTime"] = std::stoull(PQgetvalue(res, i, 8));
+		config["lastDeauthorizedTime"] = std::stoull(PQgetvalue(res, i, 9));
+		config["remoteTraceLevel"] = std::stoi(PQgetvalue(res, i, 10));
+		config["remoteTraceTarget"] = PQgetvalue(res, i, 11);
+		config["tags"] = json::parse(PQgetvalue(res, i, 12));
+		config["vMajor"] = std::stoi(PQgetvalue(res, i, 13));
+		config["vMinor"] = std::stoi(PQgetvalue(res, i, 14));
+		config["vRev"] = std::stoi(PQgetvalue(res, i, 15));
+		config["vProto"] = std::stoi(PQgetvalue(res, i, 16));
+		config["noAutoAssignIps"] = (strcmp(PQgetvalue(res, i, 17), "true") == 0);
+		config["revision"] = std::stoull(PQgetvalue(res, i, 18));
+		config["objtype"] = "member";
+		config["ipAssignments"] = json::array();
+		const char *p2[2] = {
+			memberId.c_str(),
+			networkId.c_str()
+		};
+
+		PGresult *r2 = PQexecParams(conn,
+			"SELECT address FROM ztc_member_ip_assignment WHERE member_id = $1 AND network_id = $2",
+			2,
+			NULL,
+			p2,
+			NULL,
+			NULL,
+			0);
+
+		if (PQresultStatus(r2) != PGRES_TUPLES_OK) {
+			fprintf(stderr, "Member Initialization Failed: %s", PQerrorMessage(conn));
+			PQclear(r2);
+			PQclear(res);
+			exit(1);
+		}
+
+		int n = PQntuples(r2);
+		for (int j = 0; j < n; ++j) {
+			config["ipAssignments"].push_back(PQgetvalue(r2, j, 0));
+		}
+
+		_memberChanged(empty, config, false);
+	}
+
+	PQclear(res);
 
 	if (++this->_ready == 2) {
 		if (_waitNoticePrinted) {
-			fprintf(stderr,"[%s] NOTICE: %.10llx controller RethinkDB data download complete." ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt());
+			fprintf(stderr,"[%s] NOTICE: %.10llx controller PostgreSQL data download complete." ZT_EOL_S,_timestr(),(unsigned long long)_myAddress.toInt());
 		}
 		_readyLock.unlock();
 	}
