@@ -586,13 +586,12 @@ void PostgreSQL::commitThread()
 			if (!(*config)["remoteTraceTarget"].is_null()) {
 				target = (*config)["remoteTraceTarget"];
 			}
-			const char *values[20] = {
+			const char *values[19] = {
 				memberId.c_str(),
 				networkId.c_str(),
 				((*config)["activeBridge"] ? "true" : "false"),
 				((*config)["authorized"] ? "true" : "false"),
 				OSUtils::jsonDump((*config)["capabilities"], -1).c_str(),
-				std::to_string((long long)(*config)["creationTime"]).c_str(),
 				name.c_str(),
 				description.c_str(),
 				identity.c_str(),
@@ -610,14 +609,14 @@ void PostgreSQL::commitThread()
 			};
 
 			PGresult *res = PQexecParams(conn,
-				"INSERT INTO ztc_member (id, network_id, active_bridge, authorized, capabilities, creation_time, "
+				"INSERT INTO ztc_member (id, network_id, active_bridge, authorized, capabilities, "
 				"name, description, identity, last_authorized_time, last_deauthorized_time, no_auto_assign_ips, "
 				"remote_trace_level, remote_trace_target, revision, tags, v_major, v_minor, v_rev, v_proto) "
-				"VALUES ($1, $2, $3, $4, $5, TO_TIMESTAMP($6::double precision/1000), $7, $8, $9, "
-				"TO_TIMESTAMP($10::double precision/1000), TO_TIMESTAMP($11::double precision/1000), "
-				"$12, $13, $14, $15, $16, $17, $18, $19, $20) ON CONFLICT (network_id, id) DO UPDATE SET "
+				"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, "
+				"TO_TIMESTAMP($9::double precision/1000), TO_TIMESTAMP($10::double precision/1000), "
+				"$11, $12, $13, $14, $15, $16, $17, $18, $19) ON CONFLICT (network_id, id) DO UPDATE SET "
 				"active_bridge = EXCLUDED.active_bridge, authorized = EXCDLUDED.authorized, capabilities = EXCLUDED.capabilities, "
-				"creation_time = EXCLUDED.creation_time, name = EXCLUDED.name, description = EXCLUDED.description, "
+				"name = EXCLUDED.name, description = EXCLUDED.description, "
 				"identity = EXCLUDED.identity, last_authorized_time = EXCLUDED.last_authorized_time, "
 				"last_deauthorized_time = EXCLUDED.last_deauthorized_time, no_auto_assign_ips = EXCLUDED.no_auto_assign_ips, "
 				"remote_trace_level = EXCLUDED.remote_trace_level, remote_trace_target = EXCLUDED.remote_trace_target, "
