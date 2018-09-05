@@ -184,16 +184,19 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 		for (int i = 0; i < numRows; ++i) {
 			json empty;
 			json config;
+
+			fprintf(stderr, "Network Private? %s\n", PQgetvalue(res, i, 8));
+
 			config["id"] = PQgetvalue(res, i, 0);
 			config["nwid"] = PQgetvalue(res, i, 0);
 			config["creationTime"] = std::stoull(PQgetvalue(res, i, 1));
 			config["capabilities"] = json::parse(PQgetvalue(res, i, 2));
-			config["enableBroadcast"] = (strcmp(PQgetvalue(res, i, 3),"true")==0);
+			config["enableBroadcast"] = (strcmp(PQgetvalue(res, i, 3),"t")==0);
 			config["lastModified"] = std::stoull(PQgetvalue(res, i, 4));
 			config["mtu"] = std::stoi(PQgetvalue(res, i, 5));
 			config["multicastLimit"] = std::stoi(PQgetvalue(res, i, 6));
 			config["name"] = PQgetvalue(res, i, 7);
-			config["private"] = (strcmp(PQgetvalue(res, i, 8),"true")==0);
+			config["private"] = (strcmp(PQgetvalue(res, i, 8),"t")==0);
 			config["remoteTraceLevel"] = std::stoi(PQgetvalue(res, i, 9));
 			config["remoteTraceTarget"] = PQgetvalue(res, i, 10);
 			config["revision"] = std::stoull(PQgetvalue(res, i, 11));
@@ -331,8 +334,8 @@ void PostgreSQL::initializeMembers(PGconn *conn)
 			fprintf(stderr, "Creation Time %s\n", ctime.c_str());
 			config["id"] = memberId;
 			config["nwid"] = networkId;
-			config["activeBridge"] = (strcmp(PQgetvalue(res, i, 2), "true") == 0);
-			config["authorized"] = (strcmp(PQgetvalue(res, i, 3), "true") == 0);
+			config["activeBridge"] = (strcmp(PQgetvalue(res, i, 2), "t") == 0);
+			config["authorized"] = (strcmp(PQgetvalue(res, i, 3), "t") == 0);
 			config["capabilities"] = json::parse(PQgetvalue(res, i, 4));
 			config["creationTime"] = std::stoull(PQgetvalue(res, i, 5));
 			config["identity"] = PQgetvalue(res, i, 6);
@@ -345,7 +348,7 @@ void PostgreSQL::initializeMembers(PGconn *conn)
 			config["vMinor"] = std::stoi(PQgetvalue(res, i, 13));
 			config["vRev"] = std::stoi(PQgetvalue(res, i, 14));
 			config["vProto"] = std::stoi(PQgetvalue(res, i, 15));
-			config["noAutoAssignIps"] = (strcmp(PQgetvalue(res, i, 16), "true") == 0);
+			config["noAutoAssignIps"] = (strcmp(PQgetvalue(res, i, 16), "t") == 0);
 			config["revision"] = std::stoull(PQgetvalue(res, i, 17));
 			config["objtype"] = "member";
 			config["ipAssignments"] = json::array();
@@ -1011,12 +1014,20 @@ void PostgreSQL::onlineNotificationThread()
 		}
 
 		for (auto i=lastOnline.begin(); i != lastOnline.end(); ++i) {
-			lastOnlineCumulative[i->first] = i->second.first;
+			uint64_t nwid_i = i->first.first;
 			char nwidTmp[64];
 			char memTmp[64];
 			char ipTmp[64];
-			OSUtils::ztsnprintf(nwidTmp,sizeof(nwidTmp), "%.16llx", i->first.first);
+			OSUtils::ztsnprintf(nwidTmp,sizeof(nwidTmp), "%.16llx", nwid_i);
 			OSUtils::ztsnprintf(memTmp,sizeof(memTmp), "%.10llx", i->first.second);
+			auto found = _networks.find(nwid_i);
+			if (found == _networks.end()) {
+				fprintf(stderr, "Network %s not found.\n", nwidTmp);
+				continue;
+			}
+
+			lastOnlineCumulative[i->first] = i->second.first;
+			
 
 			std::string networkId(nwidTmp);
 			std::string memberId(memTmp);
@@ -1043,8 +1054,8 @@ void PostgreSQL::onlineNotificationThread()
 			if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 				fprintf(stderr, "Error on Member Status upsert: %s\n", PQresultErrorMessage(res));
 				PQclear(res);
-				PQexec(conn, "ROLLBACK");
-				exit(1);
+				PQclear(PQexec(conn, "ROLLBACK"));
+				continue;
 			}
 
 			PQclear(res);
