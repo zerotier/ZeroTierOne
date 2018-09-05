@@ -184,6 +184,7 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 		for (int i = 0; i < numRows; ++i) {
 			json empty;
 			json config;
+			config["id"] = PQgetvalue(res, i, 0);
 			config["nwid"] = PQgetvalue(res, i, 0);
 			config["creationTime"] = std::stoull(PQgetvalue(res, i, 1));
 			config["capabilities"] = json::parse(PQgetvalue(res, i, 2));
@@ -252,7 +253,7 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 				std::string addr = PQgetvalue(r2, j, 0);
 				std::string bits = PQgetvalue(r2, j, 1);
 				std::string via = PQgetvalue(r2, j, 2);
-
+				fprintf(stderr, "via: %s", via.c_str());
 				json route;
 				route["target"] = addr + "/" + bits;
 
@@ -325,24 +326,27 @@ void PostgreSQL::initializeMembers(PGconn *conn)
 
 			std::string memberId(PQgetvalue(res, i, 0));
 			std::string networkId(PQgetvalue(res, i, 1));
+			fprintf(stderr, "Initializing %s-%s\n", networkId.c_str(), memberId.c_str());
+			std::string ctime = PQgetvalue(res, i, 5);
+			fprintf(stderr, "Creation Time %s\n", ctime.c_str());
 			config["id"] = memberId;
 			config["nwid"] = networkId;
-			config["activeBridge"] = (strcmp(PQgetvalue(res, i, 3), "true") == 0);
-			config["authorized"] = (strcmp(PQgetvalue(res, i, 4), "true") == 0);
-			config["capabilities"] = json::parse(PQgetvalue(res, i, 5));
-			config["creationTime"] = std::stoull(PQgetvalue(res, i, 6));
-			config["identity"] = PQgetvalue(res, i, 7);
-			config["lastAuthorizedTime"] = std::stoull(PQgetvalue(res, i, 8));
-			config["lastDeauthorizedTime"] = std::stoull(PQgetvalue(res, i, 9));
-			config["remoteTraceLevel"] = std::stoi(PQgetvalue(res, i, 10));
-			config["remoteTraceTarget"] = PQgetvalue(res, i, 11);
-			config["tags"] = json::parse(PQgetvalue(res, i, 12));
-			config["vMajor"] = std::stoi(PQgetvalue(res, i, 13));
-			config["vMinor"] = std::stoi(PQgetvalue(res, i, 14));
-			config["vRev"] = std::stoi(PQgetvalue(res, i, 15));
-			config["vProto"] = std::stoi(PQgetvalue(res, i, 16));
-			config["noAutoAssignIps"] = (strcmp(PQgetvalue(res, i, 17), "true") == 0);
-			config["revision"] = std::stoull(PQgetvalue(res, i, 18));
+			config["activeBridge"] = (strcmp(PQgetvalue(res, i, 2), "true") == 0);
+			config["authorized"] = (strcmp(PQgetvalue(res, i, 3), "true") == 0);
+			config["capabilities"] = json::parse(PQgetvalue(res, i, 4));
+			config["creationTime"] = std::stoull(PQgetvalue(res, i, 5));
+			config["identity"] = PQgetvalue(res, i, 6);
+			config["lastAuthorizedTime"] = std::stoull(PQgetvalue(res, i, 7));
+			config["lastDeauthorizedTime"] = std::stoull(PQgetvalue(res, i, 8));
+			config["remoteTraceLevel"] = std::stoi(PQgetvalue(res, i, 9));
+			config["remoteTraceTarget"] = PQgetvalue(res, i, 10);
+			config["tags"] = json::parse(PQgetvalue(res, i, 11));
+			config["vMajor"] = std::stoi(PQgetvalue(res, i, 12));
+			config["vMinor"] = std::stoi(PQgetvalue(res, i, 13));
+			config["vRev"] = std::stoi(PQgetvalue(res, i, 14));
+			config["vProto"] = std::stoi(PQgetvalue(res, i, 15));
+			config["noAutoAssignIps"] = (strcmp(PQgetvalue(res, i, 16), "true") == 0);
+			config["revision"] = std::stoull(PQgetvalue(res, i, 17));
 			config["objtype"] = "member";
 			config["ipAssignments"] = json::array();
 			const char *p2[2] = {
@@ -596,8 +600,6 @@ void PostgreSQL::commitThread()
 				try {
 					std::string memberId = (*config)["id"];
 					std::string networkId = (*config)["nwid"];
-					std::string name = (*config)["name"];
-					std::string description = (*config)["description"];
 					std::string identity = (*config)["identity"];
 					std::string target = "NULL";
 					if (!(*config)["remoteTraceTarget"].is_null()) {
@@ -609,8 +611,6 @@ void PostgreSQL::commitThread()
 						((*config)["activeBridge"] ? "true" : "false"),
 						((*config)["authorized"] ? "true" : "false"),
 						OSUtils::jsonDump((*config)["capabilities"], -1).c_str(),
-						name.c_str(),
-						description.c_str(),
 						identity.c_str(),
 						std::to_string((long long)(*config)["lastAuthorizedTime"]).c_str(),
 						std::to_string((long long)(*config)["lastDeauthorizedTime"]).c_str(),
@@ -627,19 +627,18 @@ void PostgreSQL::commitThread()
 
 					PGresult *res = PQexecParams(conn,
 						"INSERT INTO ztc_member (id, network_id, active_bridge, authorized, capabilities, "
-						"name, description, identity, last_authorized_time, last_deauthorized_time, no_auto_assign_ips, "
+						"identity, last_authorized_time, last_deauthorized_time, no_auto_assign_ips, "
 						"remote_trace_level, remote_trace_target, revision, tags, v_major, v_minor, v_rev, v_proto) "
-						"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, "
-						"TO_TIMESTAMP($9::double precision/1000), TO_TIMESTAMP($10::double precision/1000), "
-						"$11, $12, $13, $14, $15, $16, $17, $18, $19) ON CONFLICT (network_id, id) DO UPDATE SET "
-						"active_bridge = EXCLUDED.active_bridge, authorized = EXCDLUDED.authorized, capabilities = EXCLUDED.capabilities, "
-						"name = EXCLUDED.name, description = EXCLUDED.description, "
+						"VALUES ($1, $2, $3, $4, $5, $6, "
+						"TO_TIMESTAMP($7::double precision/1000), TO_TIMESTAMP($8::double precision/1000), "
+						"$9, $10, $11, $12, $13, $14, $15, $16, $17) ON CONFLICT (network_id, id) DO UPDATE SET "
+						"active_bridge = EXCLUDED.active_bridge, authorized = EXCLUDED.authorized, capabilities = EXCLUDED.capabilities, "
 						"identity = EXCLUDED.identity, last_authorized_time = EXCLUDED.last_authorized_time, "
 						"last_deauthorized_time = EXCLUDED.last_deauthorized_time, no_auto_assign_ips = EXCLUDED.no_auto_assign_ips, "
 						"remote_trace_level = EXCLUDED.remote_trace_level, remote_trace_target = EXCLUDED.remote_trace_target, "
 						"revision = EXCLUDED.revision+1, tags = EXCLUDED.tags, v_major = EXCLUDED.v_major, "
 						"v_minor = EXCLUDED.v_minor, v_rev = EXCLUDED.v_rev, v_proto = EXCLUDED.v_proto",
-						20,
+						17,
 						NULL,
 						values,
 						NULL,
@@ -648,6 +647,7 @@ void PostgreSQL::commitThread()
 					
 					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 						fprintf(stderr, "ERROR: Error updating member: %s\n", PQresultErrorMessage(res));
+						fprintf(stderr, "%s", OSUtils::jsonDump(*config, 2).c_str());
 						PQclear(res);
 						continue;
 					}
@@ -1026,14 +1026,14 @@ void PostgreSQL::onlineNotificationThread()
 			const char *values[4] = {
 				networkId.c_str(),
 				memberId.c_str(),
+				(ipAddr.empty() ? NULL : ipAddr.c_str()),
 				std::to_string(ts).c_str(),
-				ipAddr.c_str()
 			};
 
 			res = PQexecParams(conn,
-				"INSERT INTO ztc_member_status (network_id, member_id, address, last_updated) VALUES ($1, $2, $3, $4)"
+				"INSERT INTO ztc_member_status (network_id, member_id, address, last_updated) VALUES ($1, $2, $3, TO_TIMESTAMP($4::double precision/1000)) "
 				"ON CONFLICT (network_id, member_id) DO UPDATE SET address = EXCLUDED.address, last_updated = EXCLUDED.last_updated",
-				8,       // number of parameters
+				4,       // number of parameters
 				NULL,    // oid field.   ignore
 				values,  // values for substitution
 				NULL, // lengths in bytes of each value
@@ -1095,7 +1095,7 @@ void PostgreSQL::onlineNotificationThread()
 
 			int nCount = 0;
 			if (!networks.empty()) {
-				fprintf(stderr, "Network update");
+				fprintf(stderr, "Network update\n");
 				res = PQexec(conn, "BEGIN");
 				if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 					fprintf(stderr, "ERROR: Error on BEGIN command (onlineNotificationThread): %s\n", PQresultErrorMessage(res));
@@ -1109,6 +1109,7 @@ void PostgreSQL::onlineNotificationThread()
 				Utils::hex(i->first, tmp);
 
 				std::string networkId(tmp);
+				fprintf(stderr, "Updating network status for network: %s\n", networkId.c_str());
 				uint64_t authMemberCount = 0;
 				uint64_t totalMemberCount = 0;
 				uint64_t onlineMemberCount = 0;
@@ -1141,9 +1142,9 @@ void PostgreSQL::onlineNotificationThread()
 				};
 
 				res = PQexecParams(conn, "INSERT INTO ztc_network_status (network_id, bridge_count, authorized_member_count, "
-					"online_member_count, total_member_count, last_modified) VALUES ($1, $2, $3, $4, $5, $6) "
+					"online_member_count, total_member_count, last_modified) VALUES ($1, $2, $3, $4, $5, TO_TIMESTAMP($6::double precision/1000)) "
 					"ON CONFLICT (network_id) DO UPDATE SET bridge_count = EXCLUDED.bridge_count, "
-					"authorized_member_count = EXCLUDED.authorized_member_count, online_member_count = EXCDLUDED.online_member_count, "
+					"authorized_member_count = EXCLUDED.authorized_member_count, online_member_count = EXCLUDED.online_member_count, "
 					"total_member_count = EXCLUDED.total_member_count, last_modified = EXCLUDED.last_modified",
 					6,
 					NULL,
@@ -1153,7 +1154,7 @@ void PostgreSQL::onlineNotificationThread()
 					0);
 				
 				if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-					fprintf(stderr, "ERROR: Error on Network Satus upsert (onlineNotificationThread): %s\n", PQresultErrorMessage(res));
+					fprintf(stderr, "ERROR: Error on Network Status upsert (onlineNotificationThread): %s\n", PQresultErrorMessage(res));
 					PQclear(res);
 					PQexec(conn, "ROLLBACK");
 					exit(1);
