@@ -701,7 +701,187 @@ void PostgreSQL::commitThread()
 
 			PQclear(res);
 		} else if (objtype == "network") {
+			std::string id = (*config)["id"];
+			std::string controllerId = _myAddressStr.c_str();
+			std::string name = (*config)["name"];
+			std::string remoteTraceTarget("NULL");
+			if (!(*config)["remoteTraceTarget"].is_null()) {
+				remoteTraceTarget = (*config)["remoteTraceTarget"];
+			}
+			std::string rulesSource = (*config)["rulesSource"];
+			const char *values[16] = {
+				id.c_str(),
+				controllerId.c_str(),
+				OSUtils::jsonDump((*config)["capabilitles"], -1).c_str(),
+				((*config)["enableBroadcast"] ? "true" : "false"),
+				std::to_string(OSUtils::now()).c_str(),
+				std::to_string((int)(*config)["mtu"]).c_str(),
+				std::to_string((int)(*config)["multicastLimit"]).c_str(),
+				name.c_str(),
+				((*config)["private"] ? "true" : "false"),
+				std::to_string((int)(*config)["remoteTraceLevel"]).c_str(),
+				(remoteTraceTarget == "NULL" ? NULL : remoteTraceTarget.c_str()),
+				OSUtils::jsonDump((*config)["rules"], -1).c_str(),
+				rulesSource.c_str(),
+				OSUtils::jsonDump((*config)["tags"], -1).c_str(),
+				OSUtils::jsonDump((*config)["v4AssignMode"],-1).c_str(),
+				OSUtils::jsonDump((*config)["v6AssignMode"], -1).c_str(),
+			};
 
+			PGresult *res = PQexecParams(conn,
+				"UPDATE ztc_network SET controller_id = $2, capabilities = $3, enable_broadcast = $4, "
+				"last_updated = $5, mtu = $6, multicast_limit = $7, name = $8, private = $9, "
+				"remote_trace_level = $10, remote_trace_target = $11, rules = $12, rules_source = $13, "
+				"tags = $14, v4_assign_mode = $15, v6_assign_mode = $16 "
+				"WHERE id = $1",
+				16,
+				NULL,
+				values,
+				NULL,
+				NULL,
+				0);
+			
+			if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+				fprintf(stderr, "ERROR: Error updating network record: %s\n", PQresultErrorMessage(res));
+				PQclear(res);
+				continue;
+			}
+
+			PQclear(res);
+
+			res = PQexec(conn, "BEGIN");
+			if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+				fprintf(stderr, "ERROR: Error beginnning transaction: %s\n", PQresultErrorMessage(res));
+				PQclear(res);
+				continue;
+			}
+
+			PQclear(res);
+
+			const char *params[1] = {
+				id.c_str()
+			};
+			res = PQexecParams(conn, 
+				"DELETE FROM ztc_network_assignment_pool WHERE network_id = $1",
+				1,
+				NULL,
+				params,
+				NULL,
+				NULL,
+				0);
+			if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+				fprintf(stderr, "ERROR: Error updating assignment pool: %s\n", PQresultErrorMessage(res));
+				PQclear(res);
+				PQclear(PQexec(conn, "ROLLBACK"));
+				continue;
+			}
+
+			PQclear(res);
+
+			auto pool = (*config)["ipAssignmentPools"];
+			bool err = false;
+			for (auto i = pool.begin(); i != pool.end(); ++i) {
+				std::string start = (*i)["ipRangeStart"];
+				std::string end = (*i)["ipRangeEnd"];
+				const char *p[3] = {
+					id.c_str(),
+					start.c_str(),
+					end.c_str()
+				};
+
+				res = PQexecParams(conn,
+					"INSERT INTO ztc_network_assignment_pool (network_id, ip_range_start, ip_range_end) "
+					"VALUES ($1, $2, $3)",
+					3,
+					NULL,
+					p,
+					NULL,
+					NULL,
+					0);
+				if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+					fprintf(stderr, "ERROR: Error updating assignment pool: %s\n", PQresultErrorMessage(res));
+					PQclear(res);
+					err = true;
+					break;
+				}
+				PQclear(res);
+			}
+			if (err) {
+				PQclear(PQexec(conn, "ROLLBACK"));
+				continue;
+			}
+
+			res = PQexecParams(conn, 
+				"DELETE FROM ztc_network_route WHERE network_id = $1",
+				1,
+				NULL,
+				params,
+				NULL,
+				NULL,
+				0);
+
+			if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+				fprintf(stderr, "ERROR: Error updating routes: %s\n", PQresultErrorMessage(res));
+				PQclear(res);
+				PQclear(PQexec(conn, "ROLLBACK"));
+				continue;
+			}
+
+
+			auto routes = (*config)["routes"];
+			err = false;
+			for (auto i = routes.begin(); i != routes.end(); ++i) {
+				std::string t = (*i)["target"];
+				std::vector<std::string> target;
+				std::istringstream f(t);
+				std::string s;
+				while(std::getline(f, s, '/')) {
+					target.push_back(s);
+				}
+				if (target.empty() || target.size() != 2) {
+					continue;
+				}
+				std::string targetAddr = target[0];
+				std::string targetBits = target[1];
+				std::string via = "NULL";
+				if (!(*i)["via"].is_null()) {
+					via = (*i)["via"];
+				}
+
+				const char *p[4] = {
+					id.c_str(),
+					targetAddr.c_str(),
+					targetBits.c_str(),
+					(via == "NULL" ? NULL : via.c_str()),
+				};
+
+				res = PQexecParams(conn,
+					"INSERT INTO ztc_network_route (network_id, address, bits, via) VALUES ($1, $2, $3, $4)",
+					4,
+					NULL,
+					p,
+					NULL,
+					NULL,
+					0);
+
+				if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+					fprintf(stderr, "ERROR: Error updating routes: %s\n", PQresultErrorMessage(res));
+					PQclear(res);
+					err = true;
+					break;
+				}
+				PQclear(res);
+			}
+			if (err) {
+				PQclear(PQexec(conn, "ROLLBAcK"));
+				continue;
+			}
+
+			res = PQexec(conn, "COMMIT");
+			if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+				fprintf(stderr, "ERROR: Error committing network update: %s\n", PQresultErrorMessage(res));
+			}
+			PQclear(res);
 		} else if (objtype == "trace") {
 			fprintf(stderr, "ERROR: Trace not yet implemented");
 		} else if (objtype == "_delete_network") {
@@ -747,6 +927,8 @@ void PostgreSQL::commitThread()
 			}
 
 			PQclear(res);
+		} else {
+			fprintf(stderr, "ERROR: unknown objtype");
 		}
 
 		delete config;
