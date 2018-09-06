@@ -185,8 +185,6 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 			json empty;
 			json config;
 
-			fprintf(stderr, "Network Private? %s\n", PQgetvalue(res, i, 8));
-
 			config["id"] = PQgetvalue(res, i, 0);
 			config["nwid"] = PQgetvalue(res, i, 0);
 			config["creationTime"] = std::stoull(PQgetvalue(res, i, 1));
@@ -329,9 +327,7 @@ void PostgreSQL::initializeMembers(PGconn *conn)
 
 			std::string memberId(PQgetvalue(res, i, 0));
 			std::string networkId(PQgetvalue(res, i, 1));
-			fprintf(stderr, "Initializing %s-%s\n", networkId.c_str(), memberId.c_str());
 			std::string ctime = PQgetvalue(res, i, 5);
-			fprintf(stderr, "Creation Time %s\n", ctime.c_str());
 			config["id"] = memberId;
 			config["nwid"] = networkId;
 			config["activeBridge"] = (strcmp(PQgetvalue(res, i, 2), "t") == 0);
@@ -1002,16 +998,13 @@ void PostgreSQL::onlineNotificationThread()
 		PGresult *res = NULL;
 		int qCount = 0;
 
-		if (!lastOnline.empty()) {
-			fprintf(stderr, "Last Online Update\n");
-			res = PQexec(conn, "BEGIN");
-			if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-				fprintf(stderr, "ERROR: Error on BEGIN command (onlineNotificationThread): %s\n", PQresultErrorMessage(res));
-				PQclear(res);
-				exit(1);
-			}
+		res = PQexec(conn, "BEGIN");
+		if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+			fprintf(stderr, "ERROR: Error on BEGIN command (onlineNotificationThread): %s\n", PQresultErrorMessage(res));
 			PQclear(res);
+			exit(1);
 		}
+		PQclear(res);
 
 		for (auto i=lastOnline.begin(); i != lastOnline.end(); ++i) {
 			uint64_t nwid_i = i->first.first;
@@ -1020,10 +1013,10 @@ void PostgreSQL::onlineNotificationThread()
 			char ipTmp[64];
 			OSUtils::ztsnprintf(nwidTmp,sizeof(nwidTmp), "%.16llx", nwid_i);
 			OSUtils::ztsnprintf(memTmp,sizeof(memTmp), "%.10llx", i->first.second);
+
 			auto found = _networks.find(nwid_i);
 			if (found == _networks.end()) {
-				fprintf(stderr, "Network %s not found.\n", nwidTmp);
-				continue;
+				continue; // skip members trying to join non-existant networks
 			}
 
 			lastOnlineCumulative[i->first] = i->second.first;
@@ -1080,17 +1073,14 @@ void PostgreSQL::onlineNotificationThread()
 				qCount = 0;
 			}
 		}
-		if (qCount > 0) {
-			fprintf(stderr, "qCount is %d\n", qCount);
-			res = PQexec(conn, "COMMIT");
-			if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-				fprintf(stderr, "ERROR: Error on commit (onlineNotificationThread): %s\n", PQresultErrorMessage(res));
-				PQclear(res);
-				PQexec(conn, "ROLLBACK");
-				exit(1);
-			}
+		res = PQexec(conn, "COMMIT");
+		if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+			fprintf(stderr, "ERROR: Error on commit (onlineNotificationThread): %s\n", PQresultErrorMessage(res));
 			PQclear(res);
+			PQexec(conn, "ROLLBACK");
+			exit(1);
 		}
+		PQclear(res);
 
 		const int64_t now = OSUtils::now();
 		if ((now - lastUpdatedNetworkStatus) > 10000) {
@@ -1105,22 +1095,19 @@ void PostgreSQL::onlineNotificationThread()
 			}
 
 			int nCount = 0;
-			if (!networks.empty()) {
-				fprintf(stderr, "Network update\n");
-				res = PQexec(conn, "BEGIN");
-				if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-					fprintf(stderr, "ERROR: Error on BEGIN command (onlineNotificationThread): %s\n", PQresultErrorMessage(res));
-					PQclear(res);
-					exit(1);
-				}
+
+			res = PQexec(conn, "BEGIN");
+			if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+				fprintf(stderr, "ERROR: Error on BEGIN command (onlineNotificationThread): %s\n", PQresultErrorMessage(res));
 				PQclear(res);
+				exit(1);
 			}
+			PQclear(res);
 			for (auto i = networks.begin(); i != networks.end(); ++i) {
 				char tmp[64];
 				Utils::hex(i->first, tmp);
 
 				std::string networkId(tmp);
-				fprintf(stderr, "Updating network status for network: %s\n", networkId.c_str());
 				uint64_t authMemberCount = 0;
 				uint64_t totalMemberCount = 0;
 				uint64_t onlineMemberCount = 0;
@@ -1190,16 +1177,12 @@ void PostgreSQL::onlineNotificationThread()
 					nCount = 0;
 				}
 			}
-
-			if (nCount > 0) {
-				fprintf(stderr, "nCount is %d\n", nCount);
-				res = PQexec(conn, "COMMIT");
-				if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-					fprintf(stderr, "ERROR: Error on COMMIT (onlineNotificationThread): %s\n", PQresultErrorMessage(res));
-					PQclear(res);
-					PQexec(conn, "ROLLBACK");
-					exit(1);
-				}
+			res = PQexec(conn, "COMMIT");
+			if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+				fprintf(stderr, "ERROR: Error on COMMIT (onlineNotificationThread): %s\n", PQresultErrorMessage(res));
+				PQclear(res);
+				PQexec(conn, "ROLLBACK");
+				exit(1);
 			}
 		}
 
