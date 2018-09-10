@@ -452,6 +452,8 @@ public:
 	bool _allowTcpFallbackRelay;
 	unsigned int _multipathMode;
 	unsigned int _primaryPort;
+	unsigned int _secondaryPort;
+	unsigned int _tertiaryPort;
 	volatile unsigned int _udpPortPickerCounter;
 
 	// Local configuration and memo-ized information from it
@@ -470,7 +472,7 @@ public:
 	 * To attempt to handle NAT/gateway craziness we use three local UDP ports:
 	 *
 	 * [0] is the normal/default port, usually 9993
-	 * [1] is a port dervied from our ZeroTier address
+	 * [1] is a port derived from our ZeroTier address
 	 * [2] is a port computed from the normal/default for use with uPnP/NAT-PMP mappings
 	 *
 	 * [2] exists because on some gateways trying to do regular NAT-t interferes
@@ -777,7 +779,7 @@ public:
 			// This exists because there are buggy NATs out there that fail if more
 			// than one device behind the same NAT tries to use the same internal
 			// private address port number. Buggy NATs are a running theme.
-			_ports[1] = 20000 + ((unsigned int)_node->address() % 45500);
+			_ports[1] = (_secondaryPort == 0) ? 20000 + ((unsigned int)_node->address() % 45500) : _secondaryPort;
 			for(int i=0;;++i) {
 				if (i > 1000) {
 					_ports[1] = 0;
@@ -795,7 +797,7 @@ public:
 				// use the other two ports for that because some NATs do really funky
 				// stuff with ports that are explicitly mapped that breaks things.
 				if (_ports[1]) {
-					_ports[2] = _ports[1];
+					_ports[2] = (_tertiaryPort == 0) ? _ports[1] : _tertiaryPort;
 					for(int i=0;;++i) {
 						if (i > 1000) {
 							_ports[2] = 0;
@@ -1559,9 +1561,14 @@ public:
 
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
+		_secondaryPort = (unsigned int)OSUtils::jsonInt(settings["secondaryPort"],0);
+		_tertiaryPort = (unsigned int)OSUtils::jsonInt(settings["tertiaryPort"],0);
+		if (_secondaryPort != 0 || _tertiaryPort != 0) {
+			fprintf(stderr,"WARNING: using manually-specified ports. This can cause NAT issues." ZT_EOL_S);
+		}
 		_multipathMode = (unsigned int)OSUtils::jsonInt(settings["multipathMode"],0);
 		if (_multipathMode != 0 && _allowTcpFallbackRelay) {
-			fprintf(stderr,"WARNING: multipathMode cannot be used with allowTcpFallbackRelay. Disabling allowTcpFallbackRelay");
+			fprintf(stderr,"WARNING: multipathMode cannot be used with allowTcpFallbackRelay. Disabling allowTcpFallbackRelay" ZT_EOL_S);
 			_allowTcpFallbackRelay = false;
 		}
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
