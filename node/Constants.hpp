@@ -276,6 +276,11 @@
 #define ZT_PING_CHECK_INVERVAL 5000
 
 /**
+ * How often the local.conf file is checked for changes
+ */
+#define ZT_LOCAL_CONF_FILE_CHECK_INTERVAL 10000
+
+/**
  * How frequently to check for changes to the system's network interfaces. When
  * the service decides to use this constant it's because we want to react more
  * quickly to new interfaces that pop up or go down.

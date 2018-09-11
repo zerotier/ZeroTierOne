@@ -67,9 +67,12 @@
 #include <ShlObj.h>
 #include <netioapi.h>
 #include <iphlpapi.h>
+#include <unistd.h>
+#define stat _stat
 #else
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <ifaddrs.h>
@@ -468,6 +471,8 @@ public:
 	std::vector< std::string > _interfacePrefixBlacklist;
 	Mutex _localConfig_m;
 
+	std::vector<InetAddress> explicitBind;
+
 	/*
 	 * To attempt to handle NAT/gateway craziness we use three local UDP ports:
 	 *
@@ -639,98 +644,8 @@ public:
 				_node = new Node(this,(void *)0,&cb,OSUtils::now());
 			}
 
-			// Read local configuration
-			std::vector<InetAddress> explicitBind;
-			{
-				std::map<InetAddress,ZT_PhysicalPathConfiguration> ppc;
-
-				// LEGACY: support old "trustedpaths" flat file
-				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S "trustedpaths").c_str(),"r");
-				if (trustpaths) {
-					fprintf(stderr,"WARNING: 'trustedpaths' flat file format is deprecated in favor of path definitions in local.conf" ZT_EOL_S);
-					char buf[1024];
-					while (fgets(buf,sizeof(buf),trustpaths)) {
-						int fno = 0;
-						char *saveptr = (char *)0;
-						uint64_t trustedPathId = 0;
-						InetAddress trustedPathNetwork;
-						for(char *f=Utils::stok(buf,"=\r\n \t",&saveptr);(f);f=Utils::stok((char *)0,"=\r\n \t",&saveptr)) {
-							if (fno == 0) {
-								trustedPathId = Utils::hexStrToU64(f);
-							} else if (fno == 1) {
-								trustedPathNetwork = InetAddress(f);
-							} else break;
-							++fno;
-						}
-						if ( (trustedPathId != 0) && ((trustedPathNetwork.ss_family == AF_INET)||(trustedPathNetwork.ss_family == AF_INET6)) && (trustedPathNetwork.netmaskBits() > 0) ) {
-							ppc[trustedPathNetwork].trustedPathId = trustedPathId;
-							ppc[trustedPathNetwork].mtu = 0; // use default
-						}
-					}
-					fclose(trustpaths);
-				}
-
-				// Read local config file
-				Mutex::Lock _l2(_localConfig_m);
-				std::string lcbuf;
-				if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S "local.conf").c_str(),lcbuf)) {
-					try {
-						_localConfig = OSUtils::jsonParse(lcbuf);
-						if (!_localConfig.is_object()) {
-							fprintf(stderr,"WARNING: unable to parse local.conf (root element is not a JSON object)" ZT_EOL_S);
-						}
-					} catch ( ... ) {
-						fprintf(stderr,"WARNING: unable to parse local.conf (invalid JSON)" ZT_EOL_S);
-					}
-				}
-
-				// Get any trusted paths in local.conf (we'll parse the rest of physical[] elsewhere)
-				json &physical = _localConfig["physical"];
-				if (physical.is_object()) {
-					for(json::iterator phy(physical.begin());phy!=physical.end();++phy) {
-						InetAddress net(OSUtils::jsonString(phy.key(),"").c_str());
-						if (net) {
-							if (phy.value().is_object()) {
-								uint64_t tpid;
-								if ((tpid = OSUtils::jsonInt(phy.value()["trustedPathId"],0ULL)) != 0ULL) {
-									if ((net.ss_family == AF_INET)||(net.ss_family == AF_INET6))
-										ppc[net].trustedPathId = tpid;
-								}
-								ppc[net].mtu = (int)OSUtils::jsonInt(phy.value()["mtu"],0ULL); // 0 means use default
-							}
-						}
-					}
-				}
-
-				json &settings = _localConfig["settings"];
-				if (settings.is_object()) {
-					// Allow controller DB path to be put somewhere else
-					const std::string cdbp(OSUtils::jsonString(settings["controllerDbPath"],""));
-					if (cdbp.length() > 0)
-						_controllerDbPath = cdbp;
-
-					// Bind to wildcard instead of to specific interfaces (disables full tunnel capability)
-					json &bind = settings["bind"];
-					if (bind.is_array()) {
-						for(unsigned long i=0;i<bind.size();++i) {
-							const std::string ips(OSUtils::jsonString(bind[i],""));
-							if (ips.length() > 0) {
-								InetAddress ip(ips.c_str());
-								if ((ip.ss_family == AF_INET)||(ip.ss_family == AF_INET6))
-									explicitBind.push_back(ip);
-							}
-						}
-					}
-				}
-
-				// Set trusted paths if there are any
-				if (ppc.size() > 0) {
-					for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::iterator i(ppc.begin());i!=ppc.end();++i)
-						_node->setPhysicalPathConfiguration(reinterpret_cast<const struct sockaddr_storage *>(&(i->first)),&(i->second));
-				}
-			}
-
-			// Apply other runtime configuration from local.conf
+			// local.conf
+			readLocalSettings();
 			applyLocalConfig();
 
 			// Make sure we can use the primary port, and hunt for one if configured to do so
@@ -854,6 +769,7 @@ public:
 			int64_t lastMultipathModeUpdate = 0;
 			int64_t lastCleanedPeersDb = 0;
 			int64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
+			int64_t lastLocalConfFileCheck = OSUtils::now();
 			for(;;) {
 				_run_m.lock();
 				if (!_run) {
@@ -880,6 +796,19 @@ public:
 					lastUpdateCheck = now;
 					if (_updater->check(now) && _updateAutoApply)
 						_updater->apply();
+				}
+
+				// Reload local.conf if anything changed recently
+				if ((now - lastLocalConfFileCheck) >= ZT_LOCAL_CONF_FILE_CHECK_INTERVAL) {
+					lastLocalConfFileCheck = now;
+					struct stat result;
+					if(stat((_homePath + ZT_PATH_SEPARATOR_S "local.conf").c_str(), &result)==0) {
+						int64_t mod_time = result.st_mtime * 1000;
+						if ((now - mod_time) <= ZT_LOCAL_CONF_FILE_CHECK_INTERVAL) {
+							readLocalSettings();
+							applyLocalConfig();
+						}
+					}
 				}
 
 				// Refresh bindings in case device's interfaces have changed, and also sync routes to update any shadow routes (e.g. shadow default)
@@ -997,6 +926,97 @@ public:
 		_node = (Node *)0;
 
 		return _termReason;
+	}
+
+	void readLocalSettings()
+	{		
+		// Read local configuration
+		std::map<InetAddress,ZT_PhysicalPathConfiguration> ppc;
+
+		// LEGACY: support old "trustedpaths" flat file
+		FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S "trustedpaths").c_str(),"r");
+		if (trustpaths) {
+			fprintf(stderr,"WARNING: 'trustedpaths' flat file format is deprecated in favor of path definitions in local.conf" ZT_EOL_S);
+			char buf[1024];
+			while (fgets(buf,sizeof(buf),trustpaths)) {
+				int fno = 0;
+				char *saveptr = (char *)0;
+				uint64_t trustedPathId = 0;
+				InetAddress trustedPathNetwork;
+				for(char *f=Utils::stok(buf,"=\r\n \t",&saveptr);(f);f=Utils::stok((char *)0,"=\r\n \t",&saveptr)) {
+					if (fno == 0) {
+						trustedPathId = Utils::hexStrToU64(f);
+					} else if (fno == 1) {
+						trustedPathNetwork = InetAddress(f);
+					} else break;
+					++fno;
+				}
+				if ( (trustedPathId != 0) && ((trustedPathNetwork.ss_family == AF_INET)||(trustedPathNetwork.ss_family == AF_INET6)) && (trustedPathNetwork.netmaskBits() > 0) ) {
+					ppc[trustedPathNetwork].trustedPathId = trustedPathId;
+					ppc[trustedPathNetwork].mtu = 0; // use default
+				}
+			}
+			fclose(trustpaths);
+		}
+
+		// Read local config file
+		Mutex::Lock _l2(_localConfig_m);
+		std::string lcbuf;
+		if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S "local.conf").c_str(),lcbuf)) {
+			try {
+				_localConfig = OSUtils::jsonParse(lcbuf);
+				if (!_localConfig.is_object()) {
+					fprintf(stderr,"WARNING: unable to parse local.conf (root element is not a JSON object)" ZT_EOL_S);
+				}
+			} catch ( ... ) {
+				fprintf(stderr,"WARNING: unable to parse local.conf (invalid JSON)" ZT_EOL_S);
+			}
+		}
+
+		// Get any trusted paths in local.conf (we'll parse the rest of physical[] elsewhere)
+		json &physical = _localConfig["physical"];
+		if (physical.is_object()) {
+			for(json::iterator phy(physical.begin());phy!=physical.end();++phy) {
+				InetAddress net(OSUtils::jsonString(phy.key(),"").c_str());
+				if (net) {
+					if (phy.value().is_object()) {
+						uint64_t tpid;
+						if ((tpid = OSUtils::jsonInt(phy.value()["trustedPathId"],0ULL)) != 0ULL) {
+							if ((net.ss_family == AF_INET)||(net.ss_family == AF_INET6))
+								ppc[net].trustedPathId = tpid;
+						}
+						ppc[net].mtu = (int)OSUtils::jsonInt(phy.value()["mtu"],0ULL); // 0 means use default
+					}
+				}
+			}
+		}
+
+		json &settings = _localConfig["settings"];
+		if (settings.is_object()) {
+			// Allow controller DB path to be put somewhere else
+			const std::string cdbp(OSUtils::jsonString(settings["controllerDbPath"],""));
+			if (cdbp.length() > 0)
+				_controllerDbPath = cdbp;
+
+			// Bind to wildcard instead of to specific interfaces (disables full tunnel capability)
+			json &bind = settings["bind"];
+			if (bind.is_array()) {
+				for(unsigned long i=0;i<bind.size();++i) {
+					const std::string ips(OSUtils::jsonString(bind[i],""));
+					if (ips.length() > 0) {
+						InetAddress ip(ips.c_str());
+						if ((ip.ss_family == AF_INET)||(ip.ss_family == AF_INET6))
+							explicitBind.push_back(ip);
+					}
+				}
+			}
+		}
+
+		// Set trusted paths if there are any
+		if (ppc.size() > 0) {
+			for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::iterator i(ppc.begin());i!=ppc.end();++i)
+				_node->setPhysicalPathConfiguration(reinterpret_cast<const struct sockaddr_storage *>(&(i->first)),&(i->second));
+		}
 	}
 
 	virtual ReasonForTermination reasonForTermination() const
