@@ -41,6 +41,7 @@ public:
 	virtual ~RethinkDB();
 
 	virtual bool waitForReady();
+	virtual bool isReady();
 	virtual void save(nlohmann::json *orig,nlohmann::json &record);
 	virtual void eraseNetwork(const uint64_t networkId);
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId);
@@ -72,8 +73,7 @@ protected:
 	std::thread _heartbeatThread;
 
 	mutable std::mutex _readyLock; // locked until ready
-	std::atomic<int> _ready;
-	std::atomic<int> _run;
+	std::atomic<int> _ready,_connected,_run;
 	mutable volatile bool _waitNoticePrinted;
 };
 

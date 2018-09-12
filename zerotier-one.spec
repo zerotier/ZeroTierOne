@@ -1,5 +1,5 @@
 Name:           zerotier-one
-Version:        1.2.10
+Version:        1.2.12
 Release:        1%{?dist}
 Summary:        ZeroTier One network virtualization service
 
@@ -33,13 +33,13 @@ Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %description
 ZeroTier is a software defined networking layer for Earth.
 
-It can be used for on-premise network virtualization, as a peer to peer VPN 
-for mobile teams, for hybrid or multi-data-center cloud deployments, or just 
+It can be used for on-premise network virtualization, as a peer to peer VPN
+for mobile teams, for hybrid or multi-data-center cloud deployments, or just
 about anywhere else secure software defined virtual networking is useful.
 
-ZeroTier One is our OS-level client service. It allows Mac, Linux, Windows, 
-FreeBSD, and soon other types of clients to join ZeroTier virtual networks 
-like conventional VPNs or VLANs. It can run on native systems, VMs, or 
+ZeroTier One is our OS-level client service. It allows Mac, Linux, Windows,
+FreeBSD, and soon other types of clients to join ZeroTier virtual networks
+like conventional VPNs or VLANs. It can run on native systems, VMs, or
 containers (Docker, OpenVZ, etc.).
 
 %prep

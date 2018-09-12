@@ -46,18 +46,13 @@
 #include <sys/wait.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#ifndef ZT_SDK
 #include <net/route.h>
-#ifdef __LINUX__
-#include <sys/ioctl.h>
-#include <asm/types.h>
-#include <linux/rtnetlink.h>
-#include <sys/socket.h>
-#include "../osdep/LinuxNetLink.hpp"
 #endif
+#include <net/if.h>
 #ifdef __BSD__
 #include <net/if_dl.h>
 #include <sys/sysctl.h>
-#include <net/if.h>
 #endif
 #include <ifaddrs.h>
 #endif
@@ -116,6 +111,7 @@ struct _RTE
 #ifdef __BSD__ // ------------------------------------------------------------
 #define ZT_ROUTING_SUPPORT_FOUND 1
 
+#ifndef ZT_SDK
 static std::vector<_RTE> _getRTEs(const InetAddress &target,bool contains)
 {
 	std::vector<_RTE> rtes;
@@ -250,9 +246,11 @@ static std::vector<_RTE> _getRTEs(const InetAddress &target,bool contains)
 
 	return rtes;
 }
+#endif
 
 static void _routeCmd(const char *op,const InetAddress &target,const InetAddress &via,const char *ifscope,const char *localInterface)
 {
+	//char f1[1024],f2[1024]; printf("%s %s %s %s %s\n",op,target.toString(f1),via.toString(f2),ifscope,localInterface);
 	long p = (long)fork();
 	if (p > 0) {
 		int exitcode = -1;
@@ -284,126 +282,26 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 #ifdef __LINUX__ // ----------------------------------------------------------
 #define ZT_ROUTING_SUPPORT_FOUND 1
 
-static void _routeCmd(const char *op, const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *localInterface) 
+static void _routeCmd(const char *op,const InetAddress &target,const InetAddress &via,const char *localInterface)
 {
-	char targetStr[64] = {0};
-	char viaStr[64] = {0};
-	InetAddress nmsk = target.netmask();
-	char nmskStr[64] = {0};
-	fprintf(stderr, "Received Route Cmd: %s target: %s via: %s netmask: %s localInterface: %s\n", op, target.toString(targetStr), via.toString(viaStr), nmsk.toString(nmskStr), localInterface);
-
-
-	if ((strcmp(op, "add") == 0 || strcmp(op, "replace") == 0)) {
-		LinuxNetLink::getInstance().addRoute(target, via, src, localInterface);
-	} else if ((strcmp(op, "remove") == 0 || strcmp(op, "del") == 0)) {
-		LinuxNetLink::getInstance().delRoute(target, via, src, localInterface);
-	}
-	return;
-
-	
-	int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);;
-	struct rtentry route = {0};
-
-	if (target.ss_family == AF_INET) {
-		struct sockaddr_in *target_in = (struct sockaddr_in*)&target;
-		struct sockaddr_in *via_in = (struct sockaddr_in*)&via;
-		InetAddress netmask = target.netmask();
-		struct sockaddr_in *netmask_in = (struct sockaddr_in*)&netmask;
-
-		struct sockaddr_in *addr = NULL;
-
-		// set target
-		addr = (struct sockaddr_in *)&route.rt_dst;
-		addr->sin_family = AF_INET;
-		addr->sin_addr = target_in->sin_addr;
-
-		// set netmask
-		addr = (struct sockaddr_in *)&route.rt_genmask;
-		addr->sin_family = AF_INET;
-		addr->sin_addr = netmask_in->sin_addr;
-
-		route.rt_dev = const_cast<char*>(localInterface);
-
+	long p = (long)fork();
+	if (p > 0) {
+		int exitcode = -1;
+		::waitpid(p,&exitcode,0);
+	} else if (p == 0) {
+		::close(STDOUT_FILENO);
+		::close(STDERR_FILENO);
+		char ipbuf[64],ipbuf2[64];
 		if (via) {
-			// set the gateway
-			addr = (struct sockaddr_in *)&route.rt_gateway;
-			addr->sin_family = AF_INET;
-			addr->sin_addr = via_in->sin_addr;
-
-			route.rt_flags = RTF_UP | RTF_GATEWAY;
+			::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"via",via.toIpString(ipbuf2),(const char *)0);
+			::execl(ZT_LINUX_IP_COMMAND_2,ZT_LINUX_IP_COMMAND_2,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"via",via.toIpString(ipbuf2),(const char *)0);
 		} else if ((localInterface)&&(localInterface[0])) {
-			route.rt_flags = RTF_UP;//| RTF_HOST;
+			::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"dev",localInterface,(const char *)0);
+			::execl(ZT_LINUX_IP_COMMAND_2,ZT_LINUX_IP_COMMAND_2,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"dev",localInterface,(const char *)0);
 		}
+		::_exit(-1);
 	}
-	else if (target.ss_family == AF_INET6) 
-	{
-		struct sockaddr_in6 *addr = NULL;
-
-		// set target
-		addr = (struct sockaddr_in6 *)&route.rt_dst;
-		addr->sin6_family = AF_INET6;
-		memcpy(&addr->sin6_addr, &((struct sockaddr_in6*)&target)->sin6_addr, sizeof(struct in6_addr));
-
-		//set netmask
-		addr = (struct sockaddr_in6 *)&route.rt_genmask;
-		addr->sin6_family = AF_INET6;
-		InetAddress netmask = target.netmask();
-		memcpy(&addr->sin6_addr, &((struct sockaddr_in6*)&netmask)->sin6_addr, sizeof(struct in6_addr));
-
-		if (via) {
-			// set the gateway
-			addr = (struct sockaddr_in6*)&route.rt_gateway;
-			addr->sin6_family = AF_INET;
-			memcpy(&addr->sin6_addr, &((struct sockaddr_in6*)&via)->sin6_addr, sizeof(struct in6_addr));
-
-			route.rt_flags = RTF_UP | RTF_GATEWAY;
-		} else if ((localInterface)&&(localInterface[0])) {
-			route.rt_dev = const_cast<char*>(localInterface);
-			route.rt_flags = RTF_UP;
-		}
-	}
-
-	unsigned long ctl = -1;
-	if (strcmp(op, "add") == 0 || strcmp(op, "replace") == 0) {
-		ctl = SIOCADDRT;
-	} else if (strcmp(op, "remove") == 0 || strcmp(op, "del") == 0) {
-		ctl = SIOCDELRT;
-	} else {
-		close(fd);
-		return;
-	}
-
-	if ( ioctl(fd, ctl, &route)) {
-		fprintf(stderr, "Error adding route: %s\n", strerror(errno));
-		close(fd);
-		::exit(1);
-	}
-	close(fd);
 }
-
-// static void _routeCmd(const char *op,const InetAddress &target,const InetAddress &via,const char *localInterface)
-// {
-// 	// long p = (long)fork();
-// 	// if (p > 0) {
-// 	// 	int exitcode = -1;
-// 	// 	::waitpid(p,&exitcode,0);
-// 	// } else if (p == 0) {
-// 	// 	::close(STDOUT_FILENO);
-// 	// 	::close(STDERR_FILENO);
-// 		char ipbuf[64],ipbuf2[64];
-
-		
-
-// 		if (via) {
-// 			::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"via",via.toIpString(ipbuf2),(const char *)0);
-// 			::execl(ZT_LINUX_IP_COMMAND_2,ZT_LINUX_IP_COMMAND_2,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"via",via.toIpString(ipbuf2),(const char *)0);
-// 		} else if ((localInterface)&&(localInterface[0])) {
-// 			::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"dev",localInterface,(const char *)0);
-// 			::execl(ZT_LINUX_IP_COMMAND_2,ZT_LINUX_IP_COMMAND_2,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"dev",localInterface,(const char *)0);
-// 		}
-// 	// 	::_exit(-1);
-// 	// }
-// }
 
 #endif // __LINUX__ ----------------------------------------------------------
 
@@ -515,6 +413,7 @@ static bool _winHasRoute(const NET_LUID &interfaceLuid, const NET_IFINDEX &inter
  * Linux default route override implies asymmetric routes, which then
  * trigger Linux's "martian packet" filter. */
 
+#ifndef ZT_SDK
 bool ManagedRoute::sync()
 {
 #ifdef __WINDOWS__
@@ -601,11 +500,11 @@ bool ManagedRoute::sync()
 
 	if (!_applied.count(leftt)) {
 		_applied[leftt] = false; // boolean unused
-		_routeCmd("replace",leftt,_via,_src,_device);
+		_routeCmd("replace",leftt,_via,(_via) ? (const char *)0 : _device);
 	}
 	if ((rightt)&&(!_applied.count(rightt))) {
 		_applied[rightt] = false; // boolean unused
-		_routeCmd("replace",rightt,_via,_src,_device);
+		_routeCmd("replace",rightt,_via,(_via) ? (const char *)0 : _device);
 	}
 
 #endif // __LINUX__ ----------------------------------------------------------
@@ -625,6 +524,7 @@ bool ManagedRoute::sync()
 
 	return true;
 }
+#endif
 
 void ManagedRoute::remove()
 {
@@ -652,7 +552,7 @@ void ManagedRoute::remove()
 #endif // __BSD__ ------------------------------------------------------------
 
 #ifdef __LINUX__ // ----------------------------------------------------------
-		_routeCmd("del",r->first,_via,_src,_device);
+		_routeCmd("del",r->first,_via,(_via) ? (const char *)0 : _device);
 #endif // __LINUX__ ----------------------------------------------------------
 
 #ifdef __WINDOWS__ // --------------------------------------------------------

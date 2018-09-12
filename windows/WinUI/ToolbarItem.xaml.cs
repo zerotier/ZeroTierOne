@@ -120,17 +120,21 @@ namespace WinUI
                 if (shouldShowOnboardProcess)
                 {
                     // TODO: Show onboarding process window (on main thread
-                    Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        PageSwitcher ps = new PageSwitcher();
-                        ps.Show();
-                    }));
+                    showOnboardProcess();
 
                     shouldShowOnboardProcess = false;
                 }
             }
         }
 
+        private void showOnboardProcess()
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+            {
+                PageSwitcher ps = new PageSwitcher();
+                ps.Show();
+            }));
+        }
         private void updateStatus(ZeroTierStatus status) 
         {
             if (status != null)
@@ -141,6 +145,15 @@ namespace WinUI
                     nodeIdMenuItem.IsEnabled = true;
                     nodeId = status.Address;
                 }));
+            }
+
+            if (CentralAPI.Instance.HasAccessToken())
+            {
+                newNetworkItem.IsEnabled = true;
+            }
+            else
+            {
+                newNetworkItem.IsEnabled = false;
             }
         }
 
@@ -328,6 +341,25 @@ namespace WinUI
                         APIHandler.Instance.JoinNetwork(Dispatcher, network.NetworkId, network.AllowManaged, network.AllowGlobal, network.AllowDefault);
                     }
                 }   
+            }
+        }
+
+        private async void ToolbarItem_NewNetwork(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (CentralAPI.Instance.HasAccessToken())
+            {
+                CentralAPI api = CentralAPI.Instance;
+                CentralNetwork newNetwork = await api.CreateNewNetwork();
+
+                APIHandler handler = APIHandler.Instance;
+                handler.JoinNetwork(this.Dispatcher, newNetwork.Id);
+
+                string nodeId = APIHandler.Instance.NodeAddress();
+                bool authorized = await CentralAPI.Instance.AuthorizeNode(nodeId, newNetwork.Id);
+            }   
+            else
+            {
+                showOnboardProcess();
             }
         }
 

@@ -161,7 +161,6 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 
 // How often to check for local interface addresses
 #define ZT_LOCAL_INTERFACE_CHECK_INTERVAL 60000
-#define ZT_MULTIPATH_LOCAL_INTERFACE_CHECK_INTERVAL 5000
 
 // Maximum write buffer size for outgoing TCP connections (sanity limit)
 #define ZT_TCP_MAX_WRITEQ_SIZE 33554432
@@ -455,7 +454,7 @@ public:
 	unsigned int _primaryPort;
 	volatile unsigned int _udpPortPickerCounter;
 
-	// Local configuration and memoized information from it
+	// Local configuration and memo-ized information from it
 	json _localConfig;
 	Hashtable< uint64_t,std::vector<InetAddress> > _v4Hints;
 	Hashtable< uint64_t,std::vector<InetAddress> > _v6Hints;
@@ -471,7 +470,7 @@ public:
 	 * To attempt to handle NAT/gateway craziness we use three local UDP ports:
 	 *
 	 * [0] is the normal/default port, usually 9993
-	 * [1] is a port derived from our ZeroTier address
+	 * [1] is a port dervied from our ZeroTier address
 	 * [2] is a port computed from the normal/default for use with uPnP/NAT-PMP mappings
 	 *
 	 * [2] exists because on some gateways trying to do regular NAT-t interferes
@@ -581,7 +580,6 @@ public:
 		_ports[0] = 0;
 		_ports[1] = 0;
 		_ports[2] = 0;
-
 #if ZT_VAULT_SUPPORT
 		curl_global_init(CURL_GLOBAL_DEFAULT);
 #endif
@@ -625,10 +623,25 @@ public:
 				_authToken = _trimString(_authToken);
 			}
 
+			{
+				struct ZT_Node_Callbacks cb;
+				cb.version = 0;
+				cb.stateGetFunction = SnodeStateGetFunction;
+				cb.statePutFunction = SnodeStatePutFunction;
+				cb.wirePacketSendFunction = SnodeWirePacketSendFunction;
+				cb.virtualNetworkFrameFunction = SnodeVirtualNetworkFrameFunction;
+				cb.virtualNetworkConfigFunction = SnodeVirtualNetworkConfigFunction;
+				cb.eventCallback = SnodeEventCallback;
+				cb.pathCheckFunction = SnodePathCheckFunction;
+				cb.pathLookupFunction = SnodePathLookupFunction;
+				_node = new Node(this,(void *)0,&cb,OSUtils::now());
+			}
+
 			// Read local configuration
-			std::map<InetAddress,ZT_PhysicalPathConfiguration> ppc;
 			std::vector<InetAddress> explicitBind;
 			{
+				std::map<InetAddress,ZT_PhysicalPathConfiguration> ppc;
+
 				// LEGACY: support old "trustedpaths" flat file
 				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S "trustedpaths").c_str(),"r");
 				if (trustpaths) {
@@ -707,34 +720,16 @@ public:
 						}
 					}
 				}
+
+				// Set trusted paths if there are any
+				if (ppc.size() > 0) {
+					for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::iterator i(ppc.begin());i!=ppc.end();++i)
+						_node->setPhysicalPathConfiguration(reinterpret_cast<const struct sockaddr_storage *>(&(i->first)),&(i->second));
+				}
 			}
 
 			// Apply other runtime configuration from local.conf
 			applyLocalConfig();
-
-			{
-				struct ZT_Node_Callbacks cb;
-				cb.version = 0;
-				cb.stateGetFunction = SnodeStateGetFunction;
-				cb.statePutFunction = SnodeStatePutFunction;
-				cb.wirePacketSendFunction = SnodeWirePacketSendFunction;
-				cb.virtualNetworkFrameFunction = SnodeVirtualNetworkFrameFunction;
-				cb.virtualNetworkConfigFunction = SnodeVirtualNetworkConfigFunction;
-				cb.eventCallback = SnodeEventCallback;
-				cb.pathCheckFunction = SnodePathCheckFunction;
-				cb.pathLookupFunction = SnodePathLookupFunction;
-				_node = new Node(this, (void *)0, &cb, OSUtils::now());
-			}
-
-			// Apply software update specific configuration from local.conf
-			applySoftwareUpdateLocalConfig();
-
-			// Set trusted paths if there are any
-			if (ppc.size() > 0) {
-				for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::iterator i(ppc.begin());i!=ppc.end();++i)
-					_node->setPhysicalPathConfiguration(reinterpret_cast<const struct sockaddr_storage *>(&(i->first)),&(i->second));
-			}
-			ppc.clear();
 
 			// Make sure we can use the primary port, and hunt for one if configured to do so
 			const int portTrials = (_primaryPort == 0) ? 256 : 1; // if port is 0, pick random
@@ -853,8 +848,8 @@ public:
 			_lastRestart = clockShouldBe;
 			int64_t lastTapMulticastGroupCheck = 0;
 			int64_t lastBindRefresh = 0;
-			int64_t lastMultipathModeUpdate = 0;
 			int64_t lastUpdateCheck = clockShouldBe;
+			int64_t lastMultipathModeUpdate = 0;
 			int64_t lastCleanedPeersDb = 0;
 			int64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
 			for(;;) {
@@ -885,10 +880,8 @@ public:
 						_updater->apply();
 				}
 
-				// Refresh bindings
-				// Do this more frequently when multipath bonding is enabled
-				int interfaceRefreshPeriod = _multipathMode ? ZT_MULTIPATH_BINDER_REFRESH_PERIOD : ZT_BINDER_REFRESH_PERIOD;
-				if (((now - lastBindRefresh) >= interfaceRefreshPeriod)||(restarted)) {
+				// Refresh bindings in case device's interfaces have changed, and also sync routes to update any shadow routes (e.g. shadow default)
+				if (((now - lastBindRefresh) >= (_multipathMode ? ZT_BINDER_REFRESH_PERIOD / 8 : ZT_BINDER_REFRESH_PERIOD))||(restarted)) {
 					lastBindRefresh = now;
 					unsigned int p[3];
 					unsigned int pc = 0;
@@ -906,7 +899,7 @@ public:
 					}
 				}
 				// Update multipath mode (if needed)
-				if (((now - lastMultipathModeUpdate) >= interfaceRefreshPeriod)||(restarted)) {
+				if (((now - lastMultipathModeUpdate) >= ZT_BINDER_REFRESH_PERIOD / 8)||(restarted)) {
 					lastMultipathModeUpdate = now;
 					_node->setMultipathMode(_multipathMode);
 				}
@@ -945,8 +938,7 @@ public:
 				}
 
 				// Sync information about physical network interfaces
-				int interfaceAddressCheckInterval = _multipathMode ? ZT_MULTIPATH_LOCAL_INTERFACE_CHECK_INTERVAL : ZT_LOCAL_INTERFACE_CHECK_INTERVAL;
-				if ((now - lastLocalInterfaceAddressCheck) >= interfaceAddressCheckInterval) {
+				if ((now - lastLocalInterfaceAddressCheck) >= (_multipathMode ? ZT_LOCAL_INTERFACE_CHECK_INTERVAL / 8 : ZT_LOCAL_INTERFACE_CHECK_INTERVAL)) {
 					lastLocalInterfaceAddressCheck = now;
 
 					_node->clearLocalInterfaceAddresses();
@@ -1146,6 +1138,8 @@ public:
 					else urlArgs[a->substr(0,eqpos)] = a->substr(eqpos + 1);
 				}
 			}
+		} else {
+			return 404;
 		}
 
 		bool isAuth = false;
@@ -1163,7 +1157,6 @@ public:
 #ifdef __SYNOLOGY__
 		// Authenticate via Synology's built-in cgi script
 		if (!isAuth) {
-			// Parse out url args
 			int synotoken_pos = path.find("SynoToken");
 			int argpos = path.find("?");
 			if(synotoken_pos != std::string::npos && argpos != std::string::npos) {
@@ -1176,7 +1169,6 @@ public:
 				setenv("HTTP_COOKIE", cookie_val.c_str(), true);
 				setenv("HTTP_X_SYNO_TOKEN", synotoken_val.c_str(), true);
 				setenv("REMOTE_ADDR", ah2->second.c_str(),true);
-				// Check Synology web auth
 				char user[256], buf[1024];
 				FILE *fp = NULL;
 				bzero(user, 256);
@@ -1574,6 +1566,22 @@ public:
 		}
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 
+#ifndef ZT_SDK
+		const std::string up(OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT));
+		const bool udist = OSUtils::jsonBool(settings["softwareUpdateDist"],false);
+		if (((up == "apply")||(up == "download"))||(udist)) {
+			if (!_updater)
+				_updater = new SoftwareUpdater(*_node,_homePath);
+			_updateAutoApply = (up == "apply");
+			_updater->setUpdateDistribution(udist);
+			_updater->setChannel(OSUtils::jsonString(settings["softwareUpdateChannel"],ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL));
+		} else {
+			delete _updater;
+			_updater = (SoftwareUpdater *)0;
+			_updateAutoApply = false;
+		}
+#endif
+
 		json &ignoreIfs = settings["interfacePrefixBlacklist"];
 		if (ignoreIfs.is_array()) {
 			for(unsigned long i=0;i<ignoreIfs.size();++i) {
@@ -1591,6 +1599,7 @@ public:
 					_allowManagementFrom.push_back(nw);
 			}
 		}
+	}
 
 #if ZT_VAULT_SUPPORT
 		json &vault = settings["vault"];
@@ -1632,29 +1641,7 @@ public:
 			_vaultEnabled = true;
 		}
 #endif
-	}
 
-	void applySoftwareUpdateLocalConfig()
-	{
-#ifndef ZT_SDK
-		json lc(_localConfig);
-		json &settings = lc["settings"];
-		const std::string up(OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT));
-		const bool udist = OSUtils::jsonBool(settings["softwareUpdateDist"],false);
-		if (((up == "apply")||(up == "download"))||(udist)) {
-			if (!_updater)
-				_updater = new SoftwareUpdater(*_node,_homePath);
-			_updateAutoApply = (up == "apply");
-			_updater->setUpdateDistribution(udist);
-			_updater->setChannel(OSUtils::jsonString(settings["softwareUpdateChannel"],ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL));
-		} else {
-			delete _updater;
-			_updater = (SoftwareUpdater *)0;
-			_updateAutoApply = false;
-		}
-#endif
-	}
-	
 	// Checks if a managed IP or route target is allowed
 	bool checkIfManagedIsAllowed(const NetworkState &n,const InetAddress &target)
 	{
@@ -1747,12 +1734,10 @@ public:
 			// Nuke applied routes that are no longer in n.config.routes[] and/or are not allowed
 			for(std::list< SharedPtr<ManagedRoute> >::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();) {
 				bool haveRoute = false;
-
 				if ( (checkIfManagedIsAllowed(n,(*mr)->target())) && (((*mr)->via().ss_family != (*mr)->target().ss_family)||(!matchIpOnly(myIps,(*mr)->via()))) ) {
 					for(unsigned int i=0;i<n.config.routeCount;++i) {
 						const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
 						const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
-
 						if ( ((*mr)->target() == *target) && ( ((via->ss_family == target->ss_family)&&((*mr)->via().ipsEqual(*via))) || (strcmp(tapdev,(*mr)->device())==0) ) ) {
 							haveRoute = true;
 							break;
@@ -1770,6 +1755,7 @@ public:
 			for(unsigned int i=0;i<n.config.routeCount;++i) {
 				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
 				const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
+
 				InetAddress *src = NULL;
 				for (unsigned int j=0; j<n.config.assignedAddressCount; ++j) {
 					const InetAddress *const tmp = reinterpret_cast<const InetAddress *>(&(n.config.assignedAddresses[j]));
@@ -1788,18 +1774,15 @@ public:
 				bool haveRoute = false;
 
 				// Ignore routes implied by local managed IPs since adding the IP adds the route
-				// Commented out to fix ticket #600 (disappearing routes on macOS). Remove this block when we're sure there's no side effects
-				/*
 				for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
 					if ((target->netmaskBits() == ip->netmaskBits())&&(target->containsAddress(*ip))) {
 						haveRoute = true;
 						break;
 					}
 				}
-				*/
 				if (haveRoute)
 					continue;
-
+#ifndef ZT_SDK
 				// If we've already applied this route, just sync it and continue
 				for(std::list< SharedPtr<ManagedRoute> >::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();++mr) {
 					if ( ((*mr)->target() == *target) && ( ((via->ss_family == target->ss_family)&&((*mr)->via().ipsEqual(*via))) || (tapdev == (*mr)->device()) ) ) {
@@ -1815,6 +1798,7 @@ public:
 				n.managedRoutes.push_back(SharedPtr<ManagedRoute>(new ManagedRoute(*target,*via,*src,tapdev)));
 				if (!n.managedRoutes.back()->sync())
 					n.managedRoutes.pop_back();
+#endif
 			}
 		}
 	}
@@ -2316,7 +2300,6 @@ public:
 			// else fallback to disk
 		}
 #endif
-
 		char p[1024];
 		FILE *f;
 		bool secure = false;
@@ -2397,8 +2380,7 @@ public:
 			snprintf(token, sizeof(token), "X-Vault-Token: %s", _vaultToken.c_str());
 
 			struct curl_slist *chunk = NULL;
-		  chunk = curl_slist_append(chunk, token);
-			
+			chunk = curl_slist_append(chunk, token);
 			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
 
 			char url[2048] = { 0 };
@@ -2423,7 +2405,6 @@ public:
 				long response_code = 0;
 				curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
 				if (response_code == 200) {
-					
 					try {
 						json payload = json::parse(response);
 						if (!payload["data"].is_null()) {
@@ -2472,7 +2453,6 @@ public:
 			// else continue file based lookup
 		}
 #endif
-
 		char p[4096];
 		switch(type) {
 			case ZT_STATE_OBJECT_IDENTITY_PUBLIC:

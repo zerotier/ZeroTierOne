@@ -32,7 +32,8 @@ Settings available in `local.conf` (this is not valid JSON, and JSON does not al
 		"softwareUpdateDist": true|false, /* If true, distribute software updates (only really useful to ZeroTier, Inc. itself, default is false) */
 		"interfacePrefixBlacklist": [ "XXX",... ], /* Array of interface name prefixes (e.g. eth for eth#) to blacklist for ZT traffic */
 		"allowManagementFrom": "NETWORK/bits"|null, /* If non-NULL, allow JSON/HTTP management from this IP network. Default is 127.0.0.1 only. */
-		"bind": [ "ip",... ] /* If present and non-null, bind to these IPs instead of to each interface (wildcard IP allowed) */
+		"bind": [ "ip",... ], /* If present and non-null, bind to these IPs instead of to each interface (wildcard IP allowed) */
+		"allowTcpFallbackRelay": true|false /* Allow or disallow establishment of TCP relay connections (true by default) */
 	}
 }
 ```

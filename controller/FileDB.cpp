@@ -63,14 +63,10 @@ FileDB::FileDB(EmbeddedNetworkController *const nc,const Identity &myId,const ch
 	}
 }
 
-FileDB::~FileDB()
-{
-}
+FileDB::~FileDB() {}
 
-bool FileDB::waitForReady()
-{
-	return true;
-}
+bool FileDB::waitForReady() { return true; }
+bool FileDB::isReady() { return true; }
 
 void FileDB::save(nlohmann::json *orig,nlohmann::json &record)
 {
@@ -91,13 +87,15 @@ void FileDB::save(nlohmann::json *orig,nlohmann::json &record)
 				nlohmann::json old;
 				get(nwid,old);
 
-				OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json.new",_networksPath.c_str(),nwid);
-				OSUtils::ztsnprintf(p2,sizeof(p2),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json",_networksPath.c_str(),nwid);
-				if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
-					fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
-				OSUtils::rename(p1,p2);
+				if ((!old.is_object())||(old != record)) {
+					OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json.new",_networksPath.c_str(),nwid);
+					OSUtils::ztsnprintf(p2,sizeof(p2),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json",_networksPath.c_str(),nwid);
+					if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
+						fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
+					OSUtils::rename(p1,p2);
 
-				_networkChanged(old,record,true);
+					_networkChanged(old,record,true);
+				}
 			}
 		} else if (objtype == "member") {
 			const uint64_t id = OSUtils::jsonIntHex(record["id"],0ULL);
@@ -106,17 +104,21 @@ void FileDB::save(nlohmann::json *orig,nlohmann::json &record)
 				nlohmann::json network,old;
 				get(nwid,network,id,old);
 
-				OSUtils::ztsnprintf(pb,sizeof(pb),"%s" ZT_PATH_SEPARATOR_S "%.16llx" ZT_PATH_SEPARATOR_S "member",_networksPath.c_str(),(unsigned long long)nwid);
-				OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.10llx.json.new",pb,(unsigned long long)id);
-				OSUtils::ztsnprintf(p2,sizeof(p2),"%s" ZT_PATH_SEPARATOR_S "%.10llx.json",pb,(unsigned long long)id);
-				if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1))) {
-					OSUtils::mkdir(pb);
-					if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
-						fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
-				}
-				OSUtils::rename(p1,p2);
+				if ((!old.is_object())||(old != record)) {
+					OSUtils::ztsnprintf(pb,sizeof(pb),"%s" ZT_PATH_SEPARATOR_S "%.16llx" ZT_PATH_SEPARATOR_S "member",_networksPath.c_str(),(unsigned long long)nwid);
+					OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.10llx.json.new",pb,(unsigned long long)id);
+					if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1))) {
+						OSUtils::ztsnprintf(p2,sizeof(p2),"%s" ZT_PATH_SEPARATOR_S "%.16llx",_networksPath.c_str(),(unsigned long long)nwid);
+						OSUtils::mkdir(p2);
+						OSUtils::mkdir(pb);
+						if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
+							fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
+					}
+					OSUtils::ztsnprintf(p2,sizeof(p2),"%s" ZT_PATH_SEPARATOR_S "%.10llx.json",pb,(unsigned long long)id);
+					OSUtils::rename(p1,p2);
 
-				_memberChanged(old,record,true);
+					_memberChanged(old,record,true);
+				}
 			}
 		} else if (objtype == "trace") {
 			const std::string id = record["id"];

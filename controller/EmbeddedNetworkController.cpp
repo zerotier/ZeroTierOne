@@ -551,7 +551,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 							for(auto member=members.begin();member!=members.end();++member) {
 								mid = (*member)["id"];
 								char tmp[128];
-								OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s\"%s\":%llu",(responseBody.length() > 1) ? ",\"" : "\"",mid.c_str(),(unsigned long long)OSUtils::jsonInt((*member)["revision"],0));
+								OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s\"%s\":%llu",(responseBody.length() > 1) ? "," : "",mid.c_str(),(unsigned long long)OSUtils::jsonInt((*member)["revision"],0));
 								responseBody.append(tmp);
 							}
 						}
@@ -596,10 +596,11 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 		// Controller status
 
 		char tmp[4096];
-		OSUtils::ztsnprintf(tmp,sizeof(tmp),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now());
+		const bool dbOk = _db->isReady();
+		OSUtils::ztsnprintf(tmp,sizeof(tmp),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu,\n\t\"databaseReady\": %s\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now(),dbOk ? "true" : "false");
 		responseBody = tmp;
 		responseContentType = "application/json";
-		return 200;
+		return dbOk ? 200 : 503;
 
 	}
 

@@ -263,9 +263,13 @@ RethinkDB::RethinkDB(EmbeddedNetworkController *const nc,const Identity &myId,co
 			std::unique_ptr<R::Connection> rdb;
 			while (_run == 1) {
 				try {
-					if (!rdb)
+					if (!rdb) {
+						_connected = 0;
 						rdb = R::connect(this->_host,this->_port,this->_auth);
+					}
+
 					if (rdb) {
+						_connected = 1;
 						R::Array batch;
 						R::Object tmpobj;
 
@@ -432,6 +436,11 @@ bool RethinkDB::waitForReady()
 		_readyLock.unlock();
 	}
 	return true;
+}
+
+bool RethinkDB::isReady()
+{
+	return ((_ready)&&(_connected));
 }
 
 void RethinkDB::save(nlohmann::json *orig,nlohmann::json &record)

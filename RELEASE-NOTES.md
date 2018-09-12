@@ -1,6 +1,13 @@
 ZeroTier Release Notes
 ======
 
+# 2018-07-27 -- Version 1.2.12
+
+ * Fixed a bug that caused exits to take a long time on Mac due to huge numbers of redundant attempts to delete managed routes.
+ * Fixed a socket limit problem on Windows that caused the ZeroTier service to run out of sockets, causing the UI and CLI to be unable to access the API.
+ * Fixed a threading bug in the ZeroTier Core, albeit one that never manifested on the regular ZeroTier One service/client.
+ * Fixed a bug that could cause the service to crash if an authorized local client accessed an invalid URL via the control API. (Not exploitable since you needed admin access anyway.)
+
 # 2018-05-08 -- Version 1.2.10
 
  * Fix bug loading `moons.d/` files for federated root operation.
