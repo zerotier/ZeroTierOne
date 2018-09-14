@@ -1,15 +1,21 @@
-FROM alpine:latest
+FROM alpine:latest as builder
 MAINTAINER Adam Ierymenko <adam.ierymenko@zerotier.com>
 
-LABEL version="1.2.4"
-LABEL description="Containerized ZeroTier One for use on CoreOS or other Docker-only Linux hosts."
+ARG VERSION=1.2.12
+LABEL version=$VERSION
+LABEL description="Containerized ZeroTier One"
 
-# Uncomment to build in container
-#RUN apk add --update alpine-sdk linux-headers
+RUN apk add --update alpine-sdk linux-headers
+RUN git clone https://github.com/zerotier/ZeroTierOne.git
+WORKDIR ZeroTierOne
+RUN git checkout $VERSION
+RUN make
+
+FROM alpine:latest as final
 
 RUN apk add --update libgcc libstdc++
 
-ADD zerotier-one /
+COPY --from=builder /ZeroTierOne/zerotier-one /
 RUN chmod 0755 /zerotier-one
 RUN ln -sf /zerotier-one /zerotier-cli
 RUN mkdir -p /var/lib/zerotier-one
