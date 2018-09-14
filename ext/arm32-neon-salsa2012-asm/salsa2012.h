@@ -5,8 +5,10 @@
 #include <sys/auxv.h>
 #include <asm/hwcap.h>
 #define zt_arm_has_neon() ((getauxval(AT_HWCAP) & HWCAP_NEON) != 0)
-#else
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
 #define zt_arm_has_neon() (true)
+#else
+#define zt_arm_has_neon() (false)
 #endif
 
 #ifdef __cplusplus
