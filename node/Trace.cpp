@@ -40,6 +40,7 @@
 #include "Tag.hpp"
 #include "Capability.hpp"
 #include "Revocation.hpp"
+#include "../include/ZeroTierDebug.h"
 
 namespace ZeroTier {
 
