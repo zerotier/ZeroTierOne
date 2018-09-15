@@ -139,7 +139,7 @@ char *InetAddress::toString(char buf[64]) const
 
 char *InetAddress::toIpString(char buf[64]) const
 {
-	memset(buf,0,64);
+	buf[0] = (char)0;
 	switch(ss_family) {
 		case AF_INET: {
 			inet_ntop(AF_INET, &reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr, buf, INET_ADDRSTRLEN);
