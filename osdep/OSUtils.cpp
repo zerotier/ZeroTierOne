@@ -399,6 +399,10 @@ std::string OSUtils::platformDefaultHomePath()
     return homeDir;
 #endif
 
+#ifdef __SYNOLOGY__
+	return std::string("/var/packages/zerotier/target/var");
+#endif
+
     // Check for user-defined environment variable before using defaults
 #ifdef __WINDOWS__
 	DWORD bufferSize = 65535;
