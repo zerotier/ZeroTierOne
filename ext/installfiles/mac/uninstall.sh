@@ -27,7 +27,7 @@ kextunload '/Library/Application Support/ZeroTier/One/tap.kext' >>/dev/null 2>&1
 echo "Removing ZeroTier One files..."
 
 rm -rf '/Applications/ZeroTier One.app'
-rm -f '/usr/bin/zerotier-one' '/usr/bin/zerotier-idtool' '/usr/bin/zerotier-cli' '/Library/LaunchDaemons/com.zerotier.one.plist'
+rm -f '/usr/local/bin/zerotier-one' '/usr/local/bin/zerotier-idtool' '/usr/local/bin/zerotier-cli' '/Library/LaunchDaemons/com.zerotier.one.plist'
 
 cd '/Library/Application Support/ZeroTier/One'
 if [ "`pwd`" = '/Library/Application Support/ZeroTier/One' ]; then
