@@ -139,33 +139,15 @@ char *InetAddress::toString(char buf[64]) const
 
 char *InetAddress::toIpString(char buf[64]) const
 {
+	buf[0] = (char)0;
 	switch(ss_family) {
 		case AF_INET: {
-			const uint8_t *a = reinterpret_cast<const uint8_t *>(&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr));
-			char *p = buf;
-			for(int i=0;;++i) {
-				Utils::decimal((unsigned long)a[i],p);
-				if (i != 3) {
-					while (*p) ++p;
-					*(p++) = '.';
-				} else break;
-			}
-		}	break;
+			inet_ntop(AF_INET, &reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr, buf, INET_ADDRSTRLEN);
+ 		}	break;
 
 		case AF_INET6: {
-			uint16_t a[8];
-			ZT_FAST_MEMCPY(a,reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,16);
-			char *p = buf;
-			for(int i=0;i<8;++i) {
-				Utils::hex(Utils::ntoh(a[i]),p);
-				p[4] = (i == 7) ? (char)0 : ':';
-				p += 5;
-			}
+			inet_ntop(AF_INET6, reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr, buf, INET6_ADDRSTRLEN);
 		}	break;
-
-		default:
-			buf[0] = (char)0;
-			break;
 	}
 	return buf;
 }
@@ -191,28 +173,17 @@ bool InetAddress::fromString(const char *ipSlashPort)
 	}
 
 	if (strchr(buf,':')) {
-		uint16_t a[8];
-		unsigned int b = 0;
-		char *saveptr = (char *)0;
-		for(char *s=Utils::stok(buf,":",&saveptr);((s)&&(b<8));s=Utils::stok((char *)0,":",&saveptr))
-			a[b++] = Utils::hton((uint16_t)(Utils::hexStrToUInt(s) & 0xffff));
-
 		struct sockaddr_in6 *const in6 = reinterpret_cast<struct sockaddr_in6 *>(this);
+		inet_pton(AF_INET6, buf, &in6->sin6_addr.s6_addr);
 		in6->sin6_family = AF_INET6;
-		ZT_FAST_MEMCPY(in6->sin6_addr.s6_addr,a,16);
 		in6->sin6_port = Utils::hton((uint16_t)port);
+
 
 		return true;
 	} else if (strchr(buf,'.')) {
-		uint8_t a[4];
-		unsigned int b = 0;
-		char *saveptr = (char *)0;
-		for(char *s=Utils::stok(buf,".",&saveptr);((s)&&(b<4));s=Utils::stok((char *)0,".",&saveptr))
-			a[b++] = (uint8_t)(Utils::strToUInt(s) & 0xff);
-
 		struct sockaddr_in *const in = reinterpret_cast<struct sockaddr_in *>(this);
+		inet_pton(AF_INET, buf, &in->sin_addr.s_addr);
 		in->sin_family = AF_INET;
-		ZT_FAST_MEMCPY(&(in->sin_addr.s_addr),a,4);
 		in->sin_port = Utils::hton((uint16_t)port);
 
 		return true;
