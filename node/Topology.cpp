@@ -138,7 +138,7 @@ SharedPtr<Peer> Topology::getPeer(void *tPtr,const Address &zta)
 			}
 			return SharedPtr<Peer>();
 		}
-	} catch ( ... ) {} // ignore invalid identities or other strage failures
+	} catch ( ... ) {} // ignore invalid identities or other strange failures
 
 	return SharedPtr<Peer>();
 }

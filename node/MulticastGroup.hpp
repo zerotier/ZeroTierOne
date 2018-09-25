@@ -68,7 +68,7 @@ public:
 	 * Derive the multicast group used for address resolution (ARP/NDP) for an IP
 	 *
 	 * @param ip IP address (port field is ignored)
-	 * @return Multicat group for ARP/NDP
+	 * @return Multicast group for ARP/NDP
 	 */
 	static inline MulticastGroup deriveMulticastGroupForAddressResolution(const InetAddress &ip)
 	{

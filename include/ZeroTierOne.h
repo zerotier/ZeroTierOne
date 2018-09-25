@@ -411,7 +411,7 @@ enum ZT_ResultCode
 	ZT_RESULT_ERROR_UNSUPPORTED_OPERATION = 1001,
 
 	/**
-	 * The requestion operation was given a bad parameter or was called in an invalid state
+	 * The requested operation was given a bad parameter or was called in an invalid state
 	 */
 	ZT_RESULT_ERROR_BAD_PARAMETER = 1002
 };
@@ -421,6 +421,35 @@ enum ZT_ResultCode
  * @return True if result code indicates a fatal error
  */
 #define ZT_ResultCode_isFatal(x) ((((int)(x)) >= 100)&&(((int)(x)) < 1000))
+
+/**
+ * The multipath algorithm in use by this node.
+ */
+enum ZT_MultipathMode
+{
+	/**
+	 * No active multipath.
+	 *
+	 * Traffic is merely sent over the strongest path. That being
+	 * said, this mode will automatically failover in the event that a link goes down.
+	 */
+	ZT_MULTIPATH_NONE = 0,
+
+	/**
+	 * Traffic is randomly distributed among all active paths.
+	 *
+	 * Will cease sending traffic over links that appear to be stale.
+	 */
+	ZT_MULTIPATH_RANDOM = 1,
+
+	/**
+	 * Traffic is allocated across all active paths in proportion to their strength and
+	 * reliability.
+	 *
+	 * Will cease sending traffic over links that appear to be stale.
+	 */
+	ZT_MULTIPATH_PROPORTIONALLY_BALANCED = 2,
+};
 
 /**
  * Status codes sent to status update callback when things happen
@@ -716,6 +745,11 @@ enum ZT_VirtualNetworkRuleType
 	ZT_NETWORK_RULE_ACTION_BREAK = 5,
 
 	/**
+	 * Place a matching frame in the specified QoS bucket
+	 */
+	ZT_NETWORK_RULE_ACTION_PRIORITY = 6,
+
+	/**
 	 * Maximum ID for an ACTION, anything higher is a MATCH
 	 */
 	ZT_NETWORK_RULE_ACTION__MAX_ID = 15,
@@ -905,6 +939,11 @@ typedef struct
 			uint32_t flags;
 			uint16_t length;
 		} fwd;
+
+		/**
+		 * Quality of Service (QoS) bucket we want a frame to be placed in
+		 */
+		uint8_t qosBucket;
 	} v;
 } ZT_VirtualNetworkRule;
 
@@ -1186,6 +1225,56 @@ typedef struct
 	uint64_t trustedPathId;
 
 	/**
+	 * One-way latency
+	 */
+	float latency;
+
+	/**
+	 * How much latency varies over time
+	 */
+	float packetDelayVariance;
+
+	/**
+	 * How much observed throughput varies over time
+	 */
+	float throughputDisturbCoeff;
+
+	/**
+	 * Packet Error Ratio (PER)
+	 */
+	float packetErrorRatio;
+
+	/**
+	 * Packet Loss Ratio (PLR)
+	 */
+	float packetLossRatio;
+
+	/**
+	 * Stability of the path
+	 */
+	float stability;
+
+	/**
+	 * Current throughput (moving average)
+	 */
+	uint64_t throughput;
+
+	/**
+	 * Maximum observed throughput for this path
+	 */
+	uint64_t maxThroughput;
+
+	/**
+	 * Percentage of traffic allocated to this path
+	 */
+	float allocation;
+
+	/**
+	 * Name of physical interface (for monitoring)
+	 */
+	char *ifname;
+
+	/**
 	 * Is path expired?
 	 */
 	int expired;
@@ -1235,6 +1324,11 @@ typedef struct
 	 * Number of paths (size of paths[])
 	 */
 	unsigned int pathCount;
+
+	/**
+	 * Whether this peer was ever reachable via an aggregate link
+	 */
+	bool hadAggregateLink;
 
 	/**
 	 * Known network paths to peer
@@ -1462,7 +1556,7 @@ typedef int (*ZT_WirePacketSendFunction)(
 /**
  * Function to check whether a path should be used for ZeroTier traffic
  *
- * Paramters:
+ * Parameters:
  *  (1) Node
  *  (2) User pointer
  *  (3) ZeroTier address or 0 for none/any
@@ -1495,7 +1589,7 @@ typedef int (*ZT_PathCheckFunction)(
  *  (1) Node
  *  (2) User pointer
  *  (3) ZeroTier address (least significant 40 bits)
- *  (4) Desried address family or -1 for any
+ *  (4) Desired address family or -1 for any
  *  (5) Buffer to fill with result
  *
  * If provided this function will be occasionally called to get physical
@@ -1660,7 +1754,7 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,void 
  * Join a network
  *
  * This may generate calls to the port config callback before it returns,
- * or these may be deffered if a netconf is not available yet.
+ * or these may be differed if a netconf is not available yet.
  *
  * If we are already a member of the network, nothing is done and OK is
  * returned.

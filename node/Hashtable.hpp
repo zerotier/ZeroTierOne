@@ -399,6 +399,10 @@ private:
 	{
 		return ((unsigned long)i * (unsigned long)0x9e3779b1);
 	}
+	static inline unsigned long _hc(const int i)
+	{
+		return ((unsigned long)i * (unsigned long)0x9e3379b1);
+	}
 
 	inline void _grow()
 	{

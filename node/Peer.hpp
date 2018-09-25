@@ -27,18 +27,13 @@
 #ifndef ZT_PEER_HPP
 #define ZT_PEER_HPP
 
-#include <stdint.h>
-
-#include "Constants.hpp"
-
-#include <algorithm>
-#include <utility>
 #include <vector>
-#include <stdexcept>
 
 #include "../include/ZeroTierOne.h"
 
+#include "Constants.hpp"
 #include "RuntimeEnvironment.hpp"
+#include "Node.hpp"
 #include "Path.hpp"
 #include "Address.hpp"
 #include "Utils.hpp"
@@ -65,7 +60,11 @@ private:
 	Peer() {} // disabled to prevent bugs -- should not be constructed uninitialized
 
 public:
-	~Peer() { Utils::burn(_key,sizeof(_key)); }
+	~Peer() {
+		Utils::burn(_key,sizeof(_key));
+		delete _pathChoiceHist;
+		_pathChoiceHist = NULL;
+	}
 
 	/**
 	 * Construct a new peer
@@ -108,6 +107,7 @@ public:
 		const SharedPtr<Path> &path,
 		const unsigned int hops,
 		const uint64_t packetId,
+		const unsigned int payloadLength,
 		const Packet::Verb verb,
 		const uint64_t inRePacketId,
 		const Packet::Verb inReVerb,
@@ -145,20 +145,95 @@ public:
 	 */
 	inline bool sendDirect(void *tPtr,const void *data,unsigned int len,int64_t now,bool force)
 	{
-		SharedPtr<Path> bp(getBestPath(now,force));
+		SharedPtr<Path> bp(getAppropriatePath(now,force));
 		if (bp)
 			return bp->send(RR,tPtr,data,len,now);
 		return false;
 	}
 
 	/**
-	 * Get the best current direct path
+	 * Record statistics on outgoing packets
+	 *
+	 * @param path Path over which packet was sent
+	 * @param id Packet ID
+	 * @param len Length of packet payload
+	 * @param verb Packet verb
+	 * @param now Current time
+	 */
+	void recordOutgoingPacket(const SharedPtr<Path> &path, const uint64_t packetId, uint16_t payloadLength, const Packet::Verb verb, int64_t now);
+
+	/**
+	 * Record statistics on incoming packets
+	 *
+	 * @param path Path over which packet was sent
+	 * @param id Packet ID
+	 * @param len Length of packet payload
+	 * @param verb Packet verb
+	 * @param now Current time
+	 */
+	void recordIncomingPacket(void *tPtr, const SharedPtr<Path> &path, const uint64_t packetId, uint16_t payloadLength, const Packet::Verb verb, int64_t now);
+
+	/**
+	 * Send an ACK to peer for the most recent packets received
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param localSocket Raw socket the ACK packet will be sent over
+	 * @param atAddress Destination for the ACK packet
+	 * @param now Current time
+	 */
+	void sendACK(void *tPtr, const SharedPtr<Path> &path, const int64_t localSocket,const InetAddress &atAddress,int64_t now);
+
+	/**
+	 * Send a QoS packet to peer so that it can evaluate the quality of this link
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param localSocket Raw socket the QoS packet will be sent over
+	 * @param atAddress Destination for the QoS packet
+	 * @param now Current time
+	 */
+	void sendQOS_MEASUREMENT(void *tPtr, const SharedPtr<Path> &path, const int64_t localSocket,const InetAddress &atAddress,int64_t now);
+
+	/**
+	 * Compute relative quality values and allocations for the components of the aggregate link
+	 *
+	 * @param now Current time
+	 */
+	void computeAggregateProportionalAllocation(int64_t now);
+
+	/**
+	 * @return The aggregate link Packet Delay Variance (PDV)
+	 */
+	int computeAggregateLinkPacketDelayVariance();
+
+	/**
+	 * @return The aggregate link mean latency
+	 */
+	int computeAggregateLinkMeanLatency();
+
+	/**
+	 * @return The number of currently alive "physical" paths in the aggregate link
+	 */
+	int aggregateLinkPhysicalPathCount();
+
+	/**
+	 * @return The number of currently alive "logical" paths in the aggregate link
+	 */
+	int aggregateLinkLogicalPathCount();
+
+	/**
+	 * Get the most appropriate direct path based on current multipath and QoS configuration
 	 *
 	 * @param now Current time
 	 * @param includeExpired If true, include even expired paths
 	 * @return Best current path or NULL if none
 	 */
-	SharedPtr<Path> getBestPath(int64_t now,bool includeExpired) const;
+	SharedPtr<Path> getAppropriatePath(int64_t now, bool includeExpired);
+
+	/**
+	 * Generate a human-readable string of interface names making up the aggregate link, also include
+	 * moving allocation and IP version number for each (for tracing)
+	 */
+	char *interfaceListStr();
 
 	/**
 	 * Send VERB_RENDEZVOUS to this and another peer via the best common IP scope and path
@@ -211,6 +286,16 @@ public:
 	 * @return 0 if nothing sent or bit mask: bit 0x1 if IPv4 sent, bit 0x2 if IPv6 sent (0x3 means both sent)
 	 */
 	unsigned int doPingAndKeepalive(void *tPtr,int64_t now);
+
+	/**
+	 * Clear paths whose localSocket(s) are in a CLOSED state or have an otherwise INVALID state.
+	 * This should be called frequently so that we can detect and remove unproductive or invalid paths.
+	 *
+	 * Under the hood this is done periodically based on ZT_CLOSED_PATH_PRUNING_INTERVAL.
+	 *
+	 * @return Number of paths that were pruned this round
+	 */
+	unsigned int prunePaths();
 
 	/**
 	 * Process a cluster redirect sent by this peer
@@ -268,14 +353,18 @@ public:
 	inline int64_t isActive(int64_t now) const { return ((now - _lastNontrivialReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
-	 * @return Latency in milliseconds of best path or 0xffff if unknown / no paths
+	 * @return Latency in milliseconds of best/aggregate path or 0xffff if unknown / no paths
 	 */
-	inline unsigned int latency(const int64_t now) const
+	inline unsigned int latency(const int64_t now)
 	{
-		SharedPtr<Path> bp(getBestPath(now,false));
-		if (bp)
-			return bp->latency();
-		return 0xffff;
+		if (_canUseMultipath) {
+			return (int)computeAggregateLinkMeanLatency();
+		} else {
+			SharedPtr<Path> bp(getAppropriatePath(now,false));
+			if (bp)
+				return bp->latency();
+			return 0xffff;
+		}
 	}
 
 	/**
@@ -289,7 +378,7 @@ public:
 	 *
 	 * @return Relay quality score computed from latency and other factors, lower is better
 	 */
-	inline unsigned int relayQuality(const int64_t now) const
+	inline unsigned int relayQuality(const int64_t now)
 	{
 		const uint64_t tsr = now - _lastReceive;
 		if (tsr >= ZT_PEER_ACTIVITY_TIMEOUT)
@@ -327,6 +416,37 @@ public:
 	inline unsigned int remoteVersionRevision() const { return _vRevision; }
 
 	inline bool remoteVersionKnown() const { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
+
+	/**
+	 * Periodically update known multipath activation constraints. This is done so that we know when and when
+	 * not to use multipath logic. Doing this once every few seconds is sufficient.
+	 *
+	 * @param now Current time
+	 */
+	inline void processBackgroundPeerTasks(int64_t now);
+
+	/**
+	 * Record that the remote peer does have multipath enabled. As is evident by the receipt of a VERB_ACK
+	 * or a VERB_QOS_MEASUREMENT packet at some point in the past. Until this flag is set, the local client
+	 * shall assume that multipath is not enabled and should only use classical Protocol 9 logic.
+	 */
+	inline void inferRemoteMultipathEnabled() { _remotePeerMultipathEnabled = true; }
+
+	/**
+	 * @return Whether the local client supports and is configured to use multipath
+	 */
+	inline bool localMultipathSupport() { return _localMultipathSupported; }
+
+	/**
+	 * @return Whether the remote peer supports and is configured to use multipath
+	 */
+	inline bool remoteMultipathSupport() { return _remoteMultipathSupported; }
+
+	/**
+	 * @return Whether this client can use multipath to communicate with this peer. True if both peers are using
+	 * the correct protocol and if both peers have multipath enabled. False if otherwise.
+	 */
+	inline bool canUseMultipath() { return _canUseMultipath; }
 
 	/**
 	 * @return True if peer has received a trust established packet (e.g. common network membership) in the past ZT_TRUST_EXPIRATION ms
@@ -415,6 +535,41 @@ public:
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Rate limit gate for VERB_ACK
+	 */
+	inline bool rateGateACK(const int64_t now)
+	{
+		if ((now - _lastACKWindowReset) >= ZT_PATH_QOS_ACK_CUTOFF_TIME) {
+			_lastACKWindowReset = now;
+			_ACKCutoffCount = 0;
+		} else {
+			++_ACKCutoffCount;
+		}
+		return (_ACKCutoffCount < ZT_PATH_QOS_ACK_CUTOFF_LIMIT);
+	}
+
+	/**
+	 * Rate limit gate for VERB_QOS_MEASUREMENT
+	 */
+	inline bool rateGateQoS(const int64_t now)
+	{
+		if ((now - _lastQoSWindowReset) >= ZT_PATH_QOS_ACK_CUTOFF_TIME) {
+			_lastQoSWindowReset = now;
+			_QoSCutoffCount = 0;
+		} else {
+			++_QoSCutoffCount;
+		}
+		return (_QoSCutoffCount < ZT_PATH_QOS_ACK_CUTOFF_LIMIT);
+	}
+
+	/**
+	 * @return Whether this peer is reachable via an aggregate link
+	 */
+	inline bool hasAggregateLink() {
+		return _localMultipathSupported && _remoteMultipathSupported && _remotePeerMultipathEnabled;
 	}
 
 	/**
@@ -515,6 +670,18 @@ private:
 	int64_t _lastCredentialsReceived;
 	int64_t _lastTrustEstablishedPacketReceived;
 	int64_t _lastSentFullHello;
+	int64_t _lastPathPrune;
+	int64_t _lastACKWindowReset;
+	int64_t _lastQoSWindowReset;
+	int64_t _lastMultipathCompatibilityCheck;
+
+	unsigned char _freeRandomByte;
+
+	int _uniqueAlivePathCount;
+
+	bool _localMultipathSupported;
+	bool _remoteMultipathSupported;
+	bool _canUseMultipath;
 
 	uint16_t _vProto;
 	uint16_t _vMajor;
@@ -528,8 +695,21 @@ private:
 
 	unsigned int _directPathPushCutoffCount;
 	unsigned int _credentialsCutoffCount;
+	unsigned int _QoSCutoffCount;
+	unsigned int _ACKCutoffCount;
 
 	AtomicCounter __refCount;
+
+	RingBuffer<int> *_pathChoiceHist;
+
+	bool _linkIsBalanced;
+	bool _linkIsRedundant;
+	bool _remotePeerMultipathEnabled;
+
+	int64_t _lastAggregateStatsReport;
+	int64_t _lastAggregateAllocation;
+
+	char _interfaceListStr[256]; // 16 characters * 16 paths in a link
 };
 
 } // namespace ZeroTier

@@ -243,7 +243,7 @@ public:
 	 * Compare two certificates for parameter agreement
 	 *
 	 * This compares this certificate with the other and returns true if all
-	 * paramters in this cert are present in the other and if they agree to
+	 * parameters in this cert are present in the other and if they agree to
 	 * within this cert's max delta value for each given parameter.
 	 *
 	 * Tuples present in other but not in this cert are ignored, but any

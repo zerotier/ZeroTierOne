@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <sys/stat.h>
+#include <stdlib.h>
 
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
@@ -366,7 +367,7 @@ std::vector<std::string> OSUtils::split(const char *s,const char *const sep,cons
 				if (buf.size() > 0) {
 					fields.push_back(buf);
 					buf.clear();
-				} // else skip runs of seperators
+				} // else skip runs of separators
 			} else buf.push_back(*s);
 		}
 		++s;
@@ -398,6 +399,25 @@ std::string OSUtils::platformDefaultHomePath()
     return homeDir;
 #endif
 
+#ifdef __SYNOLOGY__
+	return std::string("/var/packages/zerotier/target/var");
+#endif
+
+    // Check for user-defined environment variable before using defaults
+#ifdef __WINDOWS__
+	DWORD bufferSize = 65535;
+	std::string userDefinedPath;
+	bufferSize = GetEnvironmentVariable("ZEROTIER_HOME", &userDefinedPath[0], bufferSize);
+	if (bufferSize) {
+		return userDefinedPath;
+	}
+#else
+	if(const char* userDefinedPath = getenv("ZEROTIER_HOME")) {
+		return std::string(userDefinedPath);
+	}
+#endif
+
+	// Finally, resort to using default paths if no user-defined path was provided
 #ifdef __UNIX_LIKE__
 
 #ifdef __APPLE__

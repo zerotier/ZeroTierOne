@@ -389,6 +389,7 @@ public:
 						_bindings[_bindingCount].udpSock = udps;
 						_bindings[_bindingCount].tcpListenSock = tcps;
 						_bindings[_bindingCount].address = ii->first;
+						phy.setIfName(udps, (char*)ii->second.c_str(), ii->second.length());
 						++_bindingCount;
 					}
 				} else {

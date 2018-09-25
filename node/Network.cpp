@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "../include/ZeroTierDebug.h"
+
 #include "Constants.hpp"
 #include "../version.h"
 #include "Network.hpp"
@@ -106,7 +108,8 @@ static _doZtFilterResult _doZtFilter(
 	const unsigned int ruleCount,
 	Address &cc, // MUTABLE -- set to TEE destination if TEE action is taken or left alone otherwise
 	unsigned int &ccLength, // MUTABLE -- set to length of packet payload to TEE
-	bool &ccWatch) // MUTABLE -- set to true for WATCH target as opposed to normal TEE
+	bool &ccWatch, // MUTABLE -- set to true for WATCH target as opposed to normal TEE
+	uint8_t &qosBucket) // MUTABLE -- set to the value of the argument provided to PRIORITY
 {
 	// Set to true if we are a TEE/REDIRECT/WATCH target
 	bool superAccept = false;
@@ -124,6 +127,10 @@ static _doZtFilterResult _doZtFilter(
 		if ((unsigned int)rt <= (unsigned int)ZT_NETWORK_RULE_ACTION__MAX_ID) {
 			if (thisSetMatches) {
 				switch(rt) {
+					case ZT_NETWORK_RULE_ACTION_PRIORITY:
+						qosBucket = (rules[rn].v.qosBucket >= 0 || rules[rn].v.qosBucket <= 8) ? rules[rn].v.qosBucket : 4; // 4 = default bucket (no priority)
+						return DOZTFILTER_ACCEPT;
+
 					case ZT_NETWORK_RULE_ACTION_DROP:
 						return DOZTFILTER_DROP;
 
@@ -621,7 +628,8 @@ bool Network::filterOutgoingPacket(
 	const uint8_t *frameData,
 	const unsigned int frameLen,
 	const unsigned int etherType,
-	const unsigned int vlanId)
+	const unsigned int vlanId,
+	uint8_t &qosBucket)
 {
 	const int64_t now = RR->node->now();
 	Address ztFinalDest(ztDest);
@@ -636,7 +644,7 @@ bool Network::filterOutgoingPacket(
 
 	Membership *const membership = (ztDest) ? _memberships.get(ztDest) : (Membership *)0;
 
-	switch(_doZtFilter(RR,rrl,_config,membership,false,ztSource,ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,cc,ccLength,ccWatch)) {
+	switch(_doZtFilter(RR,rrl,_config,membership,false,ztSource,ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,cc,ccLength,ccWatch,qosBucket)) {
 
 		case DOZTFILTER_NO_MATCH: {
 			for(unsigned int c=0;c<_config.capabilityCount;++c) {
@@ -644,7 +652,7 @@ bool Network::filterOutgoingPacket(
 				Address cc2;
 				unsigned int ccLength2 = 0;
 				bool ccWatch2 = false;
-				switch (_doZtFilter(RR,crrl,_config,membership,false,ztSource,ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.capabilities[c].rules(),_config.capabilities[c].ruleCount(),cc2,ccLength2,ccWatch2)) {
+				switch (_doZtFilter(RR,crrl,_config,membership,false,ztSource,ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.capabilities[c].rules(),_config.capabilities[c].ruleCount(),cc2,ccLength2,ccWatch2,qosBucket)) {
 					case DOZTFILTER_NO_MATCH:
 					case DOZTFILTER_DROP: // explicit DROP in a capability just terminates its evaluation and is an anti-pattern
 						break;
@@ -759,11 +767,13 @@ int Network::filterIncomingPacket(
 	bool ccWatch = false;
 	const Capability *c = (Capability *)0;
 
+	uint8_t qosBucket = 255; // For incoming packets this is a dummy value
+
 	Mutex::Lock _l(_lock);
 
 	Membership &membership = _membership(sourcePeer->address());
 
-	switch (_doZtFilter(RR,rrl,_config,&membership,true,sourcePeer->address(),ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,cc,ccLength,ccWatch)) {
+	switch (_doZtFilter(RR,rrl,_config,&membership,true,sourcePeer->address(),ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,cc,ccLength,ccWatch,qosBucket)) {
 
 		case DOZTFILTER_NO_MATCH: {
 			Membership::CapabilityIterator mci(membership,_config);
@@ -772,7 +782,7 @@ int Network::filterIncomingPacket(
 				Address cc2;
 				unsigned int ccLength2 = 0;
 				bool ccWatch2 = false;
-				switch(_doZtFilter(RR,crrl,_config,&membership,true,sourcePeer->address(),ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),cc2,ccLength2,ccWatch2)) {
+				switch(_doZtFilter(RR,crrl,_config,&membership,true,sourcePeer->address(),ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,c->rules(),c->ruleCount(),cc2,ccLength2,ccWatch2,qosBucket)) {
 					case DOZTFILTER_NO_MATCH:
 					case DOZTFILTER_DROP: // explicit DROP in a capability just terminates its evaluation and is an anti-pattern
 						break;

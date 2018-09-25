@@ -562,7 +562,7 @@ public:
 	char name[ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1];
 
 	/**
-	 * Certficiate of membership (for private networks)
+	 * Certificate of membership (for private networks)
 	 */
 	CertificateOfMembership com;
 };

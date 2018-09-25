@@ -123,6 +123,7 @@ endif
 ifeq ($(ZT_USE_ARM32_NEON_ASM_SALSA2012),1)
 	override DEFS+=-DZT_USE_ARM32_NEON_ASM_SALSA2012
 	override CORE_OBJS+=ext/arm32-neon-salsa2012-asm/salsa2012.o
+	override ASFLAGS+=-meabi=5
 endif
 
 override DEFS+=-DZT_BUILD_PLATFORM=$(ZT_BUILD_PLATFORM) -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""
@@ -159,7 +160,7 @@ clean:
 	rm -rf *.a *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o build-* zerotier-one zerotier-idtool zerotier-selftest zerotier-cli $(ONE_OBJS) $(CORE_OBJS)
 
 debug:	FORCE
-	gmake -j 4 ZT_DEBUG=1
+	$(MAKE) -j ZT_DEBUG=1
 
 install:	one
 	rm -f /usr/local/sbin/zerotier-one

@@ -276,6 +276,189 @@
 #define ZT_PING_CHECK_INVERVAL 5000
 
 /**
+ * How often the local.conf file is checked for changes
+ */
+#define ZT_LOCAL_CONF_FILE_CHECK_INTERVAL 10000
+
+/**
+ * How frequently to check for changes to the system's network interfaces. When
+ * the service decides to use this constant it's because we want to react more
+ * quickly to new interfaces that pop up or go down.
+ */
+#define ZT_MULTIPATH_BINDER_REFRESH_PERIOD 5000
+
+/**
+ * Packets are only used for QoS/ACK statistical sampling if their packet ID is divisible by
+ * this integer. This is to provide a mechanism for both peers to agree on which packets need
+ * special treatment without having to exchange information. Changing this value would be
+ * a breaking change and would necessitate a protocol version upgrade. Since each incoming and
+ * outgoing packet ID is checked against this value its evaluation is of the form:
+ * (id & (divisor - 1)) == 0, thus the divisor must be a power of 2.
+ *
+ * This value is set at (16) so that given a normally-distributed RNG output we will sample
+ * 1/16th (or ~6.25%) of packets.
+ */
+#define ZT_PATH_QOS_ACK_PROTOCOL_DIVISOR 0x10
+
+/**
+ * Time horizon for VERB_QOS_MEASUREMENT and VERB_ACK packet processing cutoff
+ */
+#define ZT_PATH_QOS_ACK_CUTOFF_TIME 30000
+
+/**
+ * Maximum number of VERB_QOS_MEASUREMENT and VERB_ACK packets allowed to be
+ * processed within cutoff time. Separate totals are kept for each type but
+ * the limit is the same for both.
+ *
+ * This limits how often this peer will compute statistical estimates
+ * of various QoS measures from a VERB_QOS_MEASUREMENT or VERB_ACK packets to
+ * CUTOFF_LIMIT times per CUTOFF_TIME milliseconds per peer to prevent
+ * this from being useful for DOS amplification attacks.
+ */
+#define ZT_PATH_QOS_ACK_CUTOFF_LIMIT 128
+
+/**
+ * Path choice history window size. This is used to keep track of which paths were
+ * previously selected so that we can maintain a target allocation over time.
+ */
+#define ZT_MULTIPATH_PROPORTION_WIN_SZ 128
+
+/**
+ * How often we will sample packet latency. Should be at least greater than ZT_PING_CHECK_INVERVAL
+ * since we will record a 0 bit/s measurement if no valid latency measurement was made within this
+ * window of time.
+ */
+#define ZT_PATH_LATENCY_SAMPLE_INTERVAL ZT_MULTIPATH_PEER_PING_PERIOD * 2
+
+/**
+ * Interval used for rate-limiting the computation of path quality estimates.
+ */
+#define ZT_PATH_QUALITY_COMPUTE_INTERVAL 1000
+
+/**
+ * Number of samples to consider when computing real-time path statistics
+ */
+#define ZT_PATH_QUALITY_METRIC_REALTIME_CONSIDERATION_WIN_SZ 128
+
+/**
+ * Number of samples to consider when computing performing long-term path quality analysis.
+ * By default this value is set to ZT_PATH_QUALITY_METRIC_REALTIME_CONSIDERATION_WIN_SZ but can
+ * be set to any value greater than that to observe longer-term path quality behavior.
+ */
+#define ZT_PATH_QUALITY_METRIC_WIN_SZ ZT_PATH_QUALITY_METRIC_REALTIME_CONSIDERATION_WIN_SZ
+
+/**
+ * Maximum acceptable Packet Delay Variance (PDV) over a path
+ */
+#define ZT_PATH_MAX_PDV 1000
+
+/**
+ * Maximum acceptable time interval between expectation and receipt of at least one ACK over a path
+ */
+#define ZT_PATH_MAX_AGE 30000
+
+/**
+ * Maximum acceptable mean latency over a path
+ */
+#define ZT_PATH_MAX_MEAN_LATENCY 1000
+
+/**
+ * How much each factor contributes to the "stability" score of a path
+ */
+#define ZT_PATH_CONTRIB_PDV                    1.0 / 3.0
+#define ZT_PATH_CONTRIB_LATENCY                1.0 / 3.0
+#define ZT_PATH_CONTRIB_THROUGHPUT_DISTURBANCE 1.0 / 3.0
+
+/**
+ * How much each factor contributes to the "quality" score of a path
+ */
+#define ZT_PATH_CONTRIB_STABILITY  0.75 / 3.0
+#define ZT_PATH_CONTRIB_THROUGHPUT 1.50 / 3.0
+#define ZT_PATH_CONTRIB_SCOPE      0.75 / 3.0
+
+/**
+ * How often a QoS packet is sent
+ */
+#define ZT_PATH_QOS_INTERVAL 3000
+
+/**
+ * Min and max acceptable sizes for a VERB_QOS_MEASUREMENT packet
+ */
+#define ZT_PATH_MIN_QOS_PACKET_SZ 8 + 1
+#define ZT_PATH_MAX_QOS_PACKET_SZ 1400
+
+/**
+ * How many ID:sojourn time pairs in a single QoS packet
+ */
+#define ZT_PATH_QOS_TABLE_SIZE (ZT_PATH_MAX_QOS_PACKET_SZ * 8) / (64 + 16)
+
+/**
+ * Maximum number of outgoing packets we monitor for QoS information
+ */
+#define ZT_PATH_MAX_OUTSTANDING_QOS_RECORDS 128
+
+/**
+ * Timeout for QoS records
+ */
+#define ZT_PATH_QOS_TIMEOUT ZT_PATH_QOS_INTERVAL * 2
+
+/**
+ * How often the service tests the path throughput
+ */
+#define ZT_PATH_THROUGHPUT_MEASUREMENT_INTERVAL ZT_PATH_ACK_INTERVAL * 8
+
+/**
+ * Minimum amount of time between each ACK packet
+ */
+#define ZT_PATH_ACK_INTERVAL 1000
+
+/**
+ * How often an aggregate link statistics report is emitted into this tracing system
+ */
+#define ZT_PATH_AGGREGATE_STATS_REPORT_INTERVAL 60000
+
+/**
+ * How much an aggregate link's component paths can vary from their target allocation
+ * before the link is considered to be in a state of imbalance.
+ */
+#define ZT_PATH_IMBALANCE_THRESHOLD 0.20
+
+/**
+ * Max allowable time spent in any queue
+ */
+#define ZT_QOS_TARGET 5 // ms
+
+/**
+ * Time period where the time spent in the queue by a packet should fall below
+ * target at least once
+ */
+#define ZT_QOS_INTERVAL 100 // ms
+
+/**
+ * The number of bytes that each queue is allowed to send during each DRR cycle.
+ * This approximates a single-byte-based fairness queuing scheme
+ */
+#define ZT_QOS_QUANTUM ZT_DEFAULT_MTU
+
+/**
+ * The maximum total number of packets that can be queued among all
+ * active/inactive, old/new queues
+ */
+#define ZT_QOS_MAX_ENQUEUED_PACKETS 1024
+
+/**
+ * Number of QoS queues (buckets)
+ */
+#define ZT_QOS_NUM_BUCKETS 9
+
+/**
+ * All unspecified traffic is put in this bucket. Anything in a bucket with a smaller
+ * value is de-prioritized. Anything in a bucket with a higher value is prioritized over
+ * other traffic.
+ */
+#define ZT_QOS_DEFAULT_BUCKET 0
+
+/**
  * How frequently to send heartbeats over in-use paths
  */
 #define ZT_PATH_HEARTBEAT_PERIOD 14000
@@ -289,6 +472,13 @@
  * Delay between full-fledge pings of directly connected peers
  */
 #define ZT_PEER_PING_PERIOD 60000
+
+/**
+ * Delay between full-fledge pings of directly connected peers.
+ * With multipath bonding enabled ping peers more often to measure
+ * packet loss and latency.
+ */
+#define ZT_MULTIPATH_PEER_PING_PERIOD 5000
 
 /**
  * Paths are considered expired if they have not sent us a real packet in this long

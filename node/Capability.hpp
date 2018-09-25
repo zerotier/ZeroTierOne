@@ -52,7 +52,7 @@ class RuntimeEnvironment;
  * (1) Evaluates its capabilities in ascending order of ID to determine
  *     which capability allows it to transmit this packet.
  * (2) If it has not done so lately, it then sends this capability to the
- *     receving peer ("presents" it).
+ *     receiving peer ("presents" it).
  * (3) The sender then sends the packet.
  *
  * On the receiving side the receiver evaluates the capabilities presented
@@ -64,7 +64,7 @@ class RuntimeEnvironment;
  *
  * Capabilities support a chain of custody. This is currently unused but
  * in the future would allow the publication of capabilities that can be
- * handed off between nodes. Limited transferrability of capabilities is
+ * handed off between nodes. Limited transferability of capabilities is
  * a feature of true capability based security.
  */
 class Capability : public Credential
@@ -81,7 +81,7 @@ public:
 	 * @param id Capability ID
 	 * @param nwid Network ID
 	 * @param ts Timestamp (at controller)
-	 * @param mccl Maximum custody chain length (1 to create non-transferrable capability)
+	 * @param mccl Maximum custody chain length (1 to create non-transferable capability)
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */

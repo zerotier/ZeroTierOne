@@ -43,7 +43,10 @@ ONE_OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o ext/miniupnpc/connec
 
 # Build with address sanitization library for advanced debugging (clang)
 ifeq ($(ZT_SANITIZE),1)
-	SANFLAGS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
+	DEFS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
+endif
+ifeq ($(ZT_DEBUG_TRACE),1)
+	DEFS+=-DZT_DEBUG_TRACE
 endif
 # Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)
@@ -63,6 +66,11 @@ ifeq ($(ZT_TRACE),1)
 	DEFS+=-DZT_TRACE
 endif
 
+ifeq ($(ZT_VAULT_SUPPORT),1)
+	DEFS+=-DZT_VAULT_SUPPORT=1
+	LIBS+=-lcurl
+endif
+
 CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++ 
 
 all: one macui
@@ -70,7 +78,7 @@ all: one macui
 ext/x64-salsa2012-asm/salsa2012.o:
 	$(CC) $(CFLAGS) -c ext/x64-salsa2012-asm/salsa2012.s -o ext/x64-salsa2012-asm/salsa2012.o
 
-one:	$(CORE_OBJS) $(ONE_OBJS) one.o
+one:	$(CORE_OBJS) $(ONE_OBJS) one.o 
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool

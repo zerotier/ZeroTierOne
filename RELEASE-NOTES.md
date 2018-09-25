@@ -43,7 +43,7 @@ ZeroTier Release Notes
     * Fixed two very rare multithreading issues that were only observed on certain systems
  * Platform-Specific Changes
     * MacOS
-        * Installer now loads the kernel extension right away so that High Sierra users will see the prompt to authorize it. This is done in the "Security & Privacy" preference pane and must be done driectly on the console (not via remote desktop). On High Sierra and newer kexts must be authorized at the console via security settings system preferences pane.
+        * Installer now loads the kernel extension right away so that High Sierra users will see the prompt to authorize it. This is done in the "Security & Privacy" preference pane and must be done directly on the console (not via remote desktop). On High Sierra and newer kexts must be authorized at the console via security settings system preferences pane.
     * Windows
         * The Windows installer should now install the driver without requiring a special prompt in most cases. This should make it easier for our packages to be accepted into and updated in the Chocolatey repository and should make it easier to perform remote installs across groups of machines using IT management and provisioning tools.
         * The Windows official packages are now signed with an EV certificate (with hardware key).
@@ -85,7 +85,7 @@ The largest new feature in 1.2.0, and the product of many months of work, is our
 
 Rules allow you to filter packets on your network and vector traffic to security observers. Security observation can be performed in-band using REDIRECT or out of band using TEE.
 
-Tags and capabilites provide advanced methods for implementing fine grained permission structures and micro-segmentation schemes without bloating the size and complexity of your rules table.
+Tags and capabilities provide advanced methods for implementing fine grained permission structures and micro-segmentation schemes without bloating the size and complexity of your rules table.
 
 See the [rules engine announcement blog post](https://www.zerotier.com/blog/?p=927) for an in-depth discussion of theory and implementation. The [manual](https://www.zerotier.com/manual.shtml) contains detailed information on rule, tag, and capability use, and the `rule-compiler/` subfolder of the ZeroTier source tree contains a JavaScript function to compile rules in our human-readable rule definition language into rules suitable for import into a network controller. (ZeroTier Central uses this same script to compile rules on [my.zerotier.com](https://my.zerotier.com/).)
 
@@ -168,7 +168,7 @@ A special kind of public network called an ad-hoc network may be accessed by joi
     | Start of port range (hex)
     Reserved ZeroTier address prefix indicating a controller-less network
 
-Ad-hoc networks are public (no access control) networks that have no network controller. Instead their configuration and other credentials are generated locally. Ad-hoc networks permit only IPv6 UDP and TCP unicast traffic (no multicast or broadcast) using 6plane format NDP-emulated IPv6 addresses. In addition an ad-hoc network ID encodes an IP port range. UDP packets and TCP SYN (connection open) packets are only allowed to desintation ports within the encoded range.
+Ad-hoc networks are public (no access control) networks that have no network controller. Instead their configuration and other credentials are generated locally. Ad-hoc networks permit only IPv6 UDP and TCP unicast traffic (no multicast or broadcast) using 6plane format NDP-emulated IPv6 addresses. In addition an ad-hoc network ID encodes an IP port range. UDP packets and TCP SYN (connection open) packets are only allowed to destination ports within the encoded range.
 
 For example `ff00160016000000` is an ad-hoc network allowing only SSH, while `ff0000ffff000000` is an ad-hoc network allowing any UDP or TCP port.
 
@@ -183,7 +183,7 @@ If you have data in an old SQLite3 controller we've included a NodeJS script in 
 ## Major Bug Fixes in 1.2.0
 
  * **The Windows HyperV 100% CPU bug is FINALLY DEAD**: This long-running problem turns out to have been an issue with Windows itself, but one we were triggering by placing invalid data into the Windows registry. Microsoft is aware of the issue but we've also fixed the triggering problem on our side. ZeroTier should now co-exist quite well with HyperV and should now be able to be bridged with a HyperV virtual switch.
- * **Segmenation faults on musl-libc based Linux systems**: Alpine Linux and some embedded Linux systems that use musl libc (a minimal libc) experienced segmentation faults. These were due to a smaller default stack size. A work-around that sets the stack size for new threads has been added.
+ * **Segmentation faults on musl-libc based Linux systems**: Alpine Linux and some embedded Linux systems that use musl libc (a minimal libc) experienced segmentation faults. These were due to a smaller default stack size. A work-around that sets the stack size for new threads has been added.
  * **Windows firewall blocks local JSON API**: On some Windows systems the firewall likes to block 127.0.0.1:9993 for mysterious reasons. This is now fixed in the installer via the addition of another firewall exemption rule.
  * **UI crash on embedded Windows due to missing fonts**: The MSI installer now ships fonts and will install them if they are not present, so this should be fixed.
 

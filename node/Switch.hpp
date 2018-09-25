@@ -59,6 +59,14 @@ class Peer;
  */
 class Switch
 {
+	struct ManagedQueue;
+	struct TXQueueEntry;
+
+	typedef struct {
+		TXQueueEntry *p;
+		bool ok_to_drop;
+	} dqr;
+
 public:
 	Switch(const RuntimeEnvironment *renv);
 
@@ -86,6 +94,62 @@ public:
 	 * @param len Frame length
 	 */
 	void onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
+
+	/**
+	 * Determines the next drop schedule for packets in the TX queue
+	 *
+	 * @param t Current time
+	 * @param count Number of packets dropped this round
+	 */
+	uint64_t control_law(uint64_t t, int count);
+
+	/**
+	 * Selects a packet eligible for transmission from a TX queue. According to the control law, multiple packets
+	 * may be intentionally dropped before a packet is returned to the AQM scheduler.
+	 *
+	 * @param q The TX queue that is being dequeued from
+	 * @param now Current time
+	 */
+	dqr dodequeue(ManagedQueue *q, uint64_t now);
+
+	/**
+	 * Presents a packet to the AQM scheduler.
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param network Network that the packet shall be sent over
+	 * @param packet Packet to be sent
+	 * @param encrypt Encrypt packet payload? (always true except for HELLO)
+	 * @param qosBucket Which bucket the rule-system determined this packet should fall into
+	 */
+	void aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &packet,bool encrypt,int qosBucket);
+
+	/**
+	 * Performs a single AQM cycle and dequeues and transmits all eligible packets on all networks
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 */
+	void aqm_dequeue(void *tPtr);
+
+	/**
+	 * Calls the dequeue mechanism and adjust queue state variables
+	 *
+	 * @param q The TX queue that is being dequeued from
+	 * @param isNew Whether or not this queue is in the NEW list
+	 * @param now Current time
+	 */
+	Switch::TXQueueEntry * CoDelDequeue(ManagedQueue *q, bool isNew, uint64_t now);
+
+	/**
+	 * Removes QoS Queues and flow state variables for a specific network. These queues are created
+	 * automatically upon the transmission of the first packet from this peer to another peer on the
+	 * given network.
+	 *
+	 * The reason for existence of queues and flow state variables specific to each network is so that
+	 * each network's QoS rules function independently.
+	 *
+	 * @param nwid Network ID
+	 */
+	void removeNetworkQoSControlBlock(uint64_t nwid);
 
 	/**
 	 * Send a packet to a ZeroTier address (destination in packet)
@@ -200,6 +264,7 @@ private:
 	};
 	std::list< TXQueueEntry > _txQueue;
 	Mutex _txQueue_m;
+	Mutex _aqm_m;
 
 	// Tracks sending of VERB_RENDEZVOUS to relaying peers
 	struct _LastUniteKey
@@ -221,6 +286,35 @@ private:
 	};
 	Hashtable< _LastUniteKey,uint64_t > _lastUniteAttempt; // key is always sorted in ascending order, for set-like behavior
 	Mutex _lastUniteAttempt_m;
+
+	// Queue with additional flow state variables
+	struct ManagedQueue
+	{
+		ManagedQueue(int id) :
+			id(id),
+			byteCredit(ZT_QOS_QUANTUM),
+			byteLength(0),
+			dropping(false)
+		{}
+		int id;
+		int byteCredit;
+		int byteLength;
+		uint64_t first_above_time;
+		uint32_t count;
+		uint64_t drop_next;
+		bool dropping;
+		uint64_t drop_next_time;
+		std::list< TXQueueEntry *> q;
+	};
+	// To implement fq_codel we need to maintain a queue of queues
+	struct NetworkQoSControlBlock
+	{
+		int _currEnqueuedPackets;
+		std::vector<ManagedQueue *> newQueues;
+		std::vector<ManagedQueue *> oldQueues;
+		std::vector<ManagedQueue *> inactiveQueues;
+	};
+	std::map<uint64_t,NetworkQoSControlBlock*> _netQueueControlBlock;
 };
 
 } // namespace ZeroTier

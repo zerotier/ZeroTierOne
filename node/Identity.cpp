@@ -50,8 +50,8 @@ static inline void _computeMemoryHardHash(const void *publicKey,unsigned int pub
 	SHA512::hash(digest,publicKey,publicKeyBytes);
 
 	// Initialize genmem[] using Salsa20 in a CBC-like configuration since
-	// ordinary Salsa20 is randomly seekable. This is good for a cipher
-	// but is not what we want for sequential memory-harndess.
+	// ordinary Salsa20 is randomly seek-able. This is good for a cipher
+	// but is not what we want for sequential memory-hardness.
 	memset(genmem,0,ZT_IDENTITY_GEN_MEMORY);
 	Salsa20 s20(digest,(char *)digest + 32);
 	s20.crypt20((char *)genmem,(char *)genmem,64);

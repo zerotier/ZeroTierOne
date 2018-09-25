@@ -152,12 +152,13 @@ private:
 		ZT_PHY_SOCKET_UNIX_LISTEN = 0x08
 	};
 
-	struct PhySocketImpl
-	{
+	struct PhySocketImpl {
+		PhySocketImpl() { memset(ifname, 0, sizeof(ifname)); }
 		PhySocketType type;
 		ZT_PHY_SOCKFD_TYPE sock;
 		void *uptr; // user-settable pointer
 		ZT_PHY_SOCKADDR_STORAGE_TYPE saddr; // remote for TCP_OUT and TCP_IN, local for TCP_LISTEN, RAW, and UDP
+		char ifname[16];
 	};
 
 	std::list<PhySocketImpl> _socks;
@@ -248,6 +249,70 @@ public:
 	 * @return Pointer to user object
 	 */
 	static inline void** getuptr(PhySocket *s) throw() { return &(reinterpret_cast<PhySocketImpl *>(s)->uptr); }
+
+	/**
+	 * @param s Socket object
+	 * @param nameBuf Buffer to store name of interface which this Socket object is bound to
+	 * @param buflen Length of buffer to copy name into
+	 */
+	static inline void getIfName(PhySocket *s, char *nameBuf, int buflen)
+	{
+		if (s) {
+			memcpy(nameBuf, reinterpret_cast<PhySocketImpl *>(s)->ifname, buflen);
+		}
+	}
+
+	/**
+	 * @param s Socket object
+	 * @param ifname Buffer containing name of interface that this Socket object is bound to
+	 * @param len Length of name of interface
+	 */
+	static inline void setIfName(PhySocket *s, char *ifname, int len)
+	{
+		if (s) {
+			memcpy(&(reinterpret_cast<PhySocketImpl *>(s)->ifname), ifname, len);
+		}
+	}
+
+	/**
+	 * Whether or not the socket object is in a closed state
+	 *
+	 * @param s Socket object
+	 * @return true if socket is closed, false if otherwise
+	 */
+	inline bool isClosed(PhySocket *s)
+	{
+		PhySocketImpl *sws = (reinterpret_cast<PhySocketImpl *>(s));
+		return sws->type == ZT_PHY_SOCKET_CLOSED;
+	}
+
+	/**
+	 * Get state of socket object
+	 *
+	 * @param s Socket object
+	 * @return State of socket
+	 */
+	inline int getState(PhySocket *s)
+	{
+		PhySocketImpl *sws = (reinterpret_cast<PhySocketImpl *>(s));
+		return sws->type;
+	}
+
+	/**
+	 * In the event that this socket is erased, we need a way to convey to the multipath logic
+	 * that this path is no longer valid.
+	 *
+	 * @param s Socket object
+	 * @return Whether the state of this socket is within an acceptable range of values
+	 */
+	inline bool isValidState(PhySocket *s)
+	{
+		if (s) {
+			PhySocketImpl *sws = (reinterpret_cast<PhySocketImpl *>(s));
+			return sws->type >= ZT_PHY_SOCKET_CLOSED && sws->type <= ZT_PHY_SOCKET_UNIX_LISTEN;
+		}
+		return false;
+	}
 
 	/**
 	 * Cause poll() to stop waiting immediately
@@ -985,7 +1050,7 @@ public:
 					ZT_PHY_SOCKFD_TYPE sock = s->sock; // if closed, s->sock becomes invalid as s is no longer dereferencable
 					if ((FD_ISSET(sock,&wfds))&&(FD_ISSET(sock,&_writefds))) {
 						try {
-							_handler->phyOnUnixWritable((PhySocket *)&(*s),&(s->uptr),false);
+							_handler->phyOnUnixWritable((PhySocket *)&(*s),&(s->uptr));
 						} catch ( ... ) {}
 					}
 					if (FD_ISSET(sock,&rfds)) {
