@@ -1081,7 +1081,7 @@ void PostgreSQL::onlineNotificationThread()
 				if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 					fprintf(stderr, "ERROR: Error on commit (onlineNotificationThread): %s\n", PQresultErrorMessage(res));
 					PQclear(res);
-					PQexec(conn, "ROLLBACK");
+					PQclear(PQexec(conn, "ROLLBACK"));
 					exit(1);
 				}
 				PQclear(res);
@@ -1100,7 +1100,7 @@ void PostgreSQL::onlineNotificationThread()
 		if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 			fprintf(stderr, "ERROR: Error on commit (onlineNotificationThread): %s\n", PQresultErrorMessage(res));
 			PQclear(res);
-			PQexec(conn, "ROLLBACK");
+			PQclear(PQexec(conn, "ROLLBACK"));
 			exit(1);
 		}
 		PQclear(res);
@@ -1181,7 +1181,7 @@ void PostgreSQL::onlineNotificationThread()
 				if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 					fprintf(stderr, "ERROR: Error on Network Status upsert (onlineNotificationThread): %s\n", PQresultErrorMessage(res));
 					PQclear(res);
-					PQexec(conn, "ROLLBACK");
+					PQclear(PQexec(conn, "ROLLBACK"));
 					exit(1);
 				}
 
@@ -1190,7 +1190,7 @@ void PostgreSQL::onlineNotificationThread()
 					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 						fprintf(stderr, "ERROR: Error on COMMIT (onlineNotificationThread): %s\n" , PQresultErrorMessage(res));
 						PQclear(res);
-						PQexec(conn, "ROLLBACK");
+						PQclear(PQexec(conn, "ROLLBACK"));
 						exit(1);
 					}
 
@@ -1208,7 +1208,7 @@ void PostgreSQL::onlineNotificationThread()
 			if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 				fprintf(stderr, "ERROR: Error on COMMIT (onlineNotificationThread): %s\n", PQresultErrorMessage(res));
 				PQclear(res);
-				PQexec(conn, "ROLLBACK");
+				PQclear(PQexec(conn, "ROLLBACK"));
 				exit(1);
 			}
 		}
@@ -1222,8 +1222,6 @@ void PostgreSQL::onlineNotificationThread()
 
 			queryBuilder << "NOTIFY controller, '" << networkId << ":" << membersStr << "'";
 			std::string query = queryBuilder.str();
-
-			fprintf(stderr, "%s\n", query.c_str());
 
 			PGresult *res = PQexec(conn,query.c_str());
 			if (PQresultStatus(res) != PGRES_COMMAND_OK) {
