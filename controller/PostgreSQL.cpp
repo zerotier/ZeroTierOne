@@ -23,6 +23,7 @@
 #include "../version.h"
 
 #include <libpq-fe.h>
+#include <sstream>
 
 using json = nlohmann::json;
 namespace {
@@ -200,6 +201,10 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 			json empty;
 			json config;
 
+			const char *nwidparam[1] = {
+				PQgetvalue(res, i, 0)
+			};
+
 			config["id"] = PQgetvalue(res, i, 0);
 			config["nwid"] = PQgetvalue(res, i, 0);
 			config["creationTime"] = std::stoull(PQgetvalue(res, i, 1));
@@ -225,7 +230,7 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 				"SELECT host(ip_range_start), host(ip_range_end) FROM ztc_network_assignment_pool WHERE network_id = $1",
 				1,
 				NULL,
-				params,
+				nwidparam,
 				NULL,
 				NULL,
 				0);
@@ -252,7 +257,7 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 				"SELECT host(address), bits, host(via) FROM ztc_network_route WHERE network_id = $1",
 				1,
 				NULL,
-				params,
+				nwidparam,
 				NULL,
 				NULL,
 				0);
@@ -284,6 +289,8 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 			PQclear(r2);
 			
 			_networkChanged(empty, config, false);
+
+			fprintf(stderr, "%s", OSUtils::jsonDump(config, 2).c_str());
 		}
 
 		PQclear(res);

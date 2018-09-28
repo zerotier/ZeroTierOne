@@ -22,6 +22,9 @@ ONE_OBJS+=osdep/LinuxNetLink.o
 NLTEST_OBJS+=osdep/LinuxNetLink.o node/InetAddress.o node/Utils.o node/Salsa20.o
 NLTEST_OBJS+=nltest.o
 
+# for central controller builds
+TIMESTAMP=$(shell date +"%Y%m%d%H%M")
+
 # Auto-detect miniupnpc and nat-pmp as well and use system libs if present,
 # otherwise build into binary as done on Mac and Windows.
 ONE_OBJS+=osdep/PortMapper.o
@@ -317,6 +320,9 @@ official:	FORCE
 
 central-controller:	FORCE
 	make -j4 LDLIBS="-L/usr/pgsql-10/lib/ -lpq" CXXFLAGS="-I/usr/pgsql-10/include -fPIC" DEFS="-DZT_CONTROLLER_USE_LIBPQ" ZT_OFFICIAL=1 ZT_USE_X64_ASM_ED25519=1 one
+
+central-controller-docker:	central-controller
+	docker build -t gcr.io/zerotier-central/ztcentral-controller:${TIMESTAMP} -f docker/Dockerfile . 
 
 debug:	FORCE
 	make ZT_DEBUG=1 one
