@@ -289,8 +289,6 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 			PQclear(r2);
 			
 			_networkChanged(empty, config, false);
-
-			fprintf(stderr, "%s", OSUtils::jsonDump(config, 2).c_str());
 		}
 
 		PQclear(res);
