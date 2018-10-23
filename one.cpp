@@ -633,10 +633,6 @@ static int cli(int argc,char **argv)
 			fprintf(stderr,"invalid network ID format, must be a 16-digit hexidecimal number\n");
 			return 2;
 		}
-		char jsons[1024], cl[128];
-		OSUtils::ztsnprintf(cl,sizeof(cl),"%u",(unsigned int)strlen(jsons));
-		requestHeaders["Content-Type"] = "application/json";
-		requestHeaders["Content-Length"] = cl;
 		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/network",requestHeaders,responseHeaders,responseBody);
 
 		if (scode == 0) {
