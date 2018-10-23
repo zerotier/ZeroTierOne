@@ -142,11 +142,19 @@ char *InetAddress::toIpString(char buf[64]) const
 	buf[0] = (char)0;
 	switch(ss_family) {
 		case AF_INET: {
+#ifdef _WIN32
+			inet_ntop(AF_INET, (void*)&reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr, buf, INET_ADDRSTRLEN);
+#else
 			inet_ntop(AF_INET, &reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr, buf, INET_ADDRSTRLEN);
+#endif
  		}	break;
 
 		case AF_INET6: {
+#ifdef _WIN32
+			inet_ntop(AF_INET6, (void*)reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr, buf, INET6_ADDRSTRLEN);
+#else
 			inet_ntop(AF_INET6, reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr, buf, INET6_ADDRSTRLEN);
+#endif
 		}	break;
 	}
 	return buf;

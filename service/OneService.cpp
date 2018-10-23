@@ -67,7 +67,7 @@
 #include <ShlObj.h>
 #include <netioapi.h>
 #include <iphlpapi.h>
-#include <unistd.h>
+//#include <unistd.h>
 #define stat _stat
 #else
 #include <sys/types.h>
