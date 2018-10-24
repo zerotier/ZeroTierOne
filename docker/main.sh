@@ -41,7 +41,7 @@ echo "{
 }    
 " > /var/lib/zerotier-one/local.conf
 
-# export ASAN_OPTIONS=detect_leaks=1
-# export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
-# export MSAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
+export GLIBCXX_FORCE_NEW=1
+export GLIBCPP_FORCE_NEW=1
+export LD_PRELOAD="/usr/lib64/libjemalloc.so"
 exec /usr/local/bin/zerotier-one /var/lib/zerotier-one

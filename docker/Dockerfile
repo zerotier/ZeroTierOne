@@ -7,7 +7,7 @@ RUN yum install -y https://download.postgresql.org/pub/repos/yum/10/redhat/rhel-
 RUN yum install -y postgresql10
 
 RUN yum -y install epel-release && yum -y update && yum clean all
-RUN yum -y install clang
+RUN yum -y install clang jemalloc jemalloc-devel
 
 
 ADD zerotier-one /usr/local/bin/zerotier-one
