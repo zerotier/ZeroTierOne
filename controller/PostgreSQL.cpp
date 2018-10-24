@@ -621,7 +621,7 @@ void PostgreSQL::commitThread()
 					std::string networkId = (*config)["nwid"];
 					std::string identity = (*config)["identity"];
 					std::string target = "NULL";
-					fprintf(stderr, "Updating Member %s-%s\n", networkId.c_str(), memberId.c_str());
+
 					if (!(*config)["remoteTraceTarget"].is_null()) {
 						target = (*config)["remoteTraceTarget"];
 					}
