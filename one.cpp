@@ -630,13 +630,9 @@ static int cli(int argc,char **argv)
 		}
 	} else if (command == "get") {
 		if (arg1.length() != 16) {
-			cliPrintHelp(argv[0],stderr);
+			fprintf(stderr,"invalid network ID format, must be a 16-digit hexidecimal number\n");
 			return 2;
 		}
-		char jsons[1024], cl[128];
-		OSUtils::ztsnprintf(cl,sizeof(cl),"%u",(unsigned int)strlen(jsons));
-		requestHeaders["Content-Type"] = "application/json";
-		requestHeaders["Content-Length"] = cl;
 		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/network",requestHeaders,responseHeaders,responseBody);
 
 		if (scode == 0) {
@@ -654,15 +650,20 @@ static int cli(int argc,char **argv)
 			printf("%u %s invalid JSON response (unknown exception)" ZT_EOL_S,scode,command.c_str());
 			return 1;
 		}
+		bool bNetworkFound = false;
 		if (j.is_array()) {
 			for(unsigned long i=0;i<j.size();++i) {
 				nlohmann::json &n = j[i];
 				if (n.is_object()) {
 					if (n["id"] == arg1) {
 						printf("%s\n", OSUtils::jsonString(n[arg2],"-").c_str());
+						bNetworkFound = true;
 					}
 				}
 			}
+		}
+		if (!bNetworkFound) {
+			fprintf(stderr,"unknown network ID, check that you are a member of the network\n");
 		}
 		if (scode == 200) {
 			return 0;
