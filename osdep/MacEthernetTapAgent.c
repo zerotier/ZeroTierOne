@@ -24,9 +24,38 @@
  * of your own application.
  */
 
-/* This is the agent program that is executed with setuid privileges to
- * actually manage feth pairs. Its execution in this manner allows ZT
- * itself to drop privileges on Mac. */
+/*
+ * This creates a pair of feth devices with the lower numbered device
+ * being the ZeroTier virtual interface and the other being the device
+ * used to actually read and write packets. The latter gets no IP config
+ * and is only used for I/O. The behavior of feth is similar to the
+ * veth pairs that exist on Linux.
+ * 
+ * The feth device has only existed since MacOS Sierra, but that's fairly
+ * long ago in Mac terms.
+ * 
+ * I/O with feth must be done using two different sockets. The BPF socket
+ * is used to receive packets, while an AF_NDRV (low-level network driver
+ * access) socket must be used to inject. AF_NDRV can't read IP frames
+ * since BSD doesn't forward packets out the NDRV tap if they've already
+ * been handled, and while BPF can inject its MTU for injected packets
+ * is limited to 2048. AF_NDRV packet injection is required to inject
+ * ZeroTier's large MTU frames.
+ * 
+ * Benchmarks show that this performs similarly to the old tap.kext driver,
+ * and a kext is no longer required. Splitting it off into an agent will
+ * also make it easier to have zerotier-one itself drop permissions.
+ * 
+ * All this stuff is basically undocumented. A lot of tracing through
+ * the Darwin/XNU kernel source was required to figure out how to make
+ * this actually work.
+ * 
+ * See also:
+ * 
+ * https://apple.stackexchange.com/questions/337715/fake-ethernet-interfaces-feth-if-fake-anyone-ever-seen-this
+ * https://opensource.apple.com/source/xnu/xnu-4570.41.2/bsd/net/if_fake.c.auto.html
+ * 
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,6 +109,7 @@ static unsigned char s_stdinReadBuf[262144] __attribute__ ((__aligned__(16)));
 static char s_deviceName[IFNAMSIZ];
 static char s_peerDeviceName[IFNAMSIZ];
 static int s_bpffd = -1;
+static int s_ndrvfd = -1;
 static pid_t s_parentPid;
 
 static void configureIpv6Parameters(const char *ifname,int performNUD,int acceptRouterAdverts)
@@ -154,6 +184,8 @@ static int run(const char *path,...)
 
 static void die()
 {
+	if (s_ndrvfd >= 0)
+		close(s_ndrvfd);
 	if (s_bpffd >= 0)
 		close(s_bpffd);
 	if (s_deviceName[0])
@@ -207,8 +239,8 @@ int main(int argc,char **argv)
 	const char *mtu = argv[3];
 	const char *metric = argv[4];
 
-	int ndrvSocket = socket(AF_NDRV,SOCK_RAW,0);
-	if (ndrvSocket < 0) {
+	s_ndrvfd = socket(AF_NDRV,SOCK_RAW,0);
+	if (s_ndrvfd < 0) {
 		fprintf(stderr,"E unable to open AF_NDRV socket\n");
 		return ZT_MACETHERNETTAPAGENT_EXIT_CODE_UNABLE_TO_CREATE;
 	}
@@ -239,11 +271,11 @@ int main(int argc,char **argv)
 	nd.snd_len = sizeof(struct sockaddr_ndrv);
 	nd.snd_family = AF_NDRV;
 	memcpy(nd.snd_name,s_peerDeviceName,sizeof(nd.snd_name));
-	if (bind(ndrvSocket,(struct sockaddr *)&nd,sizeof(nd)) != 0) {
+	if (bind(s_ndrvfd,(struct sockaddr *)&nd,sizeof(nd)) != 0) {
 		fprintf(stderr,"E unable to bind AF_NDRV socket\n");
 		return ZT_MACETHERNETTAPAGENT_EXIT_CODE_UNABLE_TO_CREATE;
 	}
-	if (connect(ndrvSocket,(struct sockaddr *)&nd,sizeof(nd)) != 0) {
+	if (connect(s_ndrvfd,(struct sockaddr *)&nd,sizeof(nd)) != 0) {
 		fprintf(stderr,"E unable to connect AF_NDRV socket\n");
 		return ZT_MACETHERNETTAPAGENT_EXIT_CODE_UNABLE_TO_CREATE;
 	}
@@ -291,7 +323,7 @@ int main(int argc,char **argv)
 	}
 
 	fcntl(STDIN_FILENO,F_SETFL,fcntl(STDIN_FILENO,F_GETFL)|O_NONBLOCK);
-	fcntl(ndrvSocket,F_SETFL,fcntl(ndrvSocket,F_GETFL)|O_NONBLOCK);
+	fcntl(s_ndrvfd,F_SETFL,fcntl(s_ndrvfd,F_GETFL)|O_NONBLOCK);
 	fcntl(s_bpffd,F_SETFL,fcntl(s_bpffd,F_GETFL)|O_NONBLOCK);
 
 	fprintf(stderr,"I %s %s %d.%d.%d.%d\n",s_deviceName,s_peerDeviceName,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION,ZEROTIER_ONE_VERSION_BUILD);
@@ -340,7 +372,7 @@ int main(int argc,char **argv)
 							switch(msg[0]) {
 								case ZT_MACETHERNETTAPAGENT_STDIN_CMD_PACKET:
 									if (len > 1) {
-										if (write(ndrvSocket,msg+1,len-1) < 0) {
+										if (write(s_ndrvfd,msg+1,len-1) < 0) {
 											fprintf(stderr,"E inject failed size==%ld errno==%d\n",len-1,errno);
 										}
 									}

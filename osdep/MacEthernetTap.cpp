@@ -111,6 +111,12 @@ MacEthernetTap::MacEthernetTap(
 		freeifaddrs(ifa);
 	}
 
+	std::string agentPath(homePath);
+	agentPath.push_back(ZT_PATH_SEPARATOR);
+	agentPath.append("MacEthernetTapAgent");
+	if (!OSUtils::fileExists(agentPath.c_str()))
+		throw std::runtime_error("MacEthernetTapAgent not installed in ZeroTier home");
+
 	Mutex::Lock _gl(globalTapCreateLock); // only make one at a time
 
 	unsigned int devNo = (nwid ^ (nwid >> 32) ^ (nwid >> 48)) % 5000;
@@ -123,22 +129,18 @@ MacEthernetTap::MacEthernetTap(
 	}
 	OSUtils::ztsnprintf(devnostr,sizeof(devnostr),"%u",devNo);
 
-	if (::pipe(_shutdownSignalPipe)) {
+	if (::pipe(_shutdownSignalPipe))
 		throw std::runtime_error("pipe creation failed");
-	}
 
 	int agentStdin[2];
 	int agentStdout[2];
 	int agentStderr[2];
-	if (::pipe(agentStdin)) {
+	if (::pipe(agentStdin))
 		throw std::runtime_error("pipe creation failed");
-	}
-	if (::pipe(agentStdout)) {
+	if (::pipe(agentStdout))
 		throw std::runtime_error("pipe creation failed");
-	}
-	if (::pipe(agentStderr)) {
+	if (::pipe(agentStderr))
 		throw std::runtime_error("pipe creation failed");
-	}
 	_agentStdin = agentStdin[1];
 	_agentStdout = agentStdout[0];
 	_agentStderr = agentStderr[0];
@@ -155,7 +157,7 @@ MacEthernetTap::MacEthernetTap(
 		::close(agentStdin[0]);
 		::close(agentStdout[1]);
 		::close(agentStderr[1]);
-		::execl(ZT_MACETHERNETTAPAGENT_DEFAULT_SYSTEM_PATH,ZT_MACETHERNETTAPAGENT_DEFAULT_SYSTEM_PATH,devnostr,ethaddr,mtustr,metricstr,(char *)0);
+		::execl(agentPath.c_str(),agentPath.c_str(),devnostr,ethaddr,mtustr,metricstr,(char *)0);
 		::exit(-1);
 	} else {
 		_agentPid = apid;
