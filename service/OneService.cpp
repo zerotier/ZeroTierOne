@@ -114,8 +114,8 @@ namespace ZeroTier { typedef VirtualTap EthernetTap; }
 #else
 
 #ifdef __APPLE__
-#include "../osdep/OSXEthernetTap.hpp"
-namespace ZeroTier { typedef OSXEthernetTap EthernetTap; }
+#include "../osdep/MacEthernetTap.hpp"
+namespace ZeroTier { typedef MacEthernetTap EthernetTap; }
 #endif // __APPLE__
 #ifdef __LINUX__
 #include "../osdep/LinuxEthernetTap.hpp"
