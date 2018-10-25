@@ -41,4 +41,7 @@ echo "{
 }    
 " > /var/lib/zerotier-one/local.conf
 
+export GLIBCXX_FORCE_NEW=1
+export GLIBCPP_FORCE_NEW=1
+export LD_PRELOAD="/usr/lib64/libjemalloc.so"
 exec /usr/local/bin/zerotier-one /var/lib/zerotier-one
