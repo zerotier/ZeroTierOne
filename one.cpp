@@ -58,8 +58,10 @@
 #include <sys/prctl.h>
 #include <sys/syscall.h>
 #include <sys/wait.h>
+#ifndef ZT_NO_CAPABILITIES
 #include <linux/capability.h>
 #include <linux/securebits.h>
+#endif
 #endif
 #endif
 
