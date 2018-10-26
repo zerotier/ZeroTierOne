@@ -336,6 +336,10 @@ int main(int argc,char **argv)
 		FD_SET(STDIN_FILENO,&rfds);
 		FD_SET(s_bpffd,&rfds);
 		if (select(s_bpffd+1,&rfds,&wfds,&efds,(struct timeval *)0) < 0) {
+			if ((errno == EAGAIN)||(errno == EINTR)) {
+				usleep(10);
+				continue;
+			}
 			return ZT_MACETHERNETTAPAGENT_EXIT_CODE_READ_ERROR;
 		}
 
