@@ -79,7 +79,7 @@ ext/x64-salsa2012-asm/salsa2012.o:
 	$(CC) $(CFLAGS) -c ext/x64-salsa2012-asm/salsa2012.s -o ext/x64-salsa2012-asm/salsa2012.o
 
 mac-agent: FORCE
-	$(CC) -O -s -o MacEthernetTapAgent osdep/MacEthernetTapAgent.c
+	$(CC) -Ofast -o MacEthernetTapAgent osdep/MacEthernetTapAgent.c
 	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) MacEthernetTapAgent
 
 one:	$(CORE_OBJS) $(ONE_OBJS) one.o mac-agent
@@ -137,12 +137,5 @@ clean:
 distclean:	clean
 
 realclean:	clean
-
-# For those building from source -- installs signed binary tap driver in system ZT home
-#install-mac-tap: FORCE
-#	mkdir -p /Library/Application\ Support/ZeroTier/One
-#	rm -rf /Library/Application\ Support/ZeroTier/One/tap.kext
-#	cp -R ext/bin/tap-mac/tap.kext /Library/Application\ Support/ZeroTier/One
-#	chown -R root:wheel /Library/Application\ Support/ZeroTier/One/tap.kext
 
 FORCE:
