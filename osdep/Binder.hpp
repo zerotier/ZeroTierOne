@@ -373,7 +373,7 @@ public:
 				tcps = phy.tcpListen(reinterpret_cast<const struct sockaddr *>(&(ii->first)),(void *)0);
 				if ((udps)&&(tcps)) {
 #ifdef __LINUX__
-					// Bind Linux sockets to their device so routes tha we manage do not override physical routes (wish all platforms had this!)
+					// Bind Linux sockets to their device so routes that we manage do not override physical routes (wish all platforms had this!)
 					if (ii->second.length() > 0) {
 						char tmp[256];
 						Utils::scopy(tmp,sizeof(tmp),ii->second.c_str());
