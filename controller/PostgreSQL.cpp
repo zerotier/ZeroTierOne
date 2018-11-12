@@ -213,17 +213,44 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 
 			config["id"] = PQgetvalue(res, i, 0);
 			config["nwid"] = PQgetvalue(res, i, 0);
-			config["creationTime"] = std::stoull(PQgetvalue(res, i, 1));
+			try {
+				config["creationTime"] = std::stoull(PQgetvalue(res, i, 1));
+			} catch (std::exception &e) {
+				config["creationTime"] = 0ULL;
+				//fprintf(stderr, "Error converting creation time: %s\n", PQgetvalue(res, i, 1));
+			}
 			config["capabilities"] = json::parse(PQgetvalue(res, i, 2));
 			config["enableBroadcast"] = (strcmp(PQgetvalue(res, i, 3),"t")==0);
-			config["lastModified"] = std::stoull(PQgetvalue(res, i, 4));
-			config["mtu"] = std::stoi(PQgetvalue(res, i, 5));
-			config["multicastLimit"] = std::stoi(PQgetvalue(res, i, 6));
+			try {
+				config["lastModified"] = std::stoull(PQgetvalue(res, i, 4));
+			} catch (std::exception &e) {
+				config["lastModified"] = 0ULL;
+				//fprintf(stderr, "Error converting last modified: %s\n", PQgetvalue(res, i, 4));
+			}
+			try {
+				config["mtu"] = std::stoi(PQgetvalue(res, i, 5));
+			} catch (std::exception &e) {
+				config["mtu"] = 2800;
+			}
+			try {
+				config["multicastLimit"] = std::stoi(PQgetvalue(res, i, 6));
+			} catch (std::exception &e) {
+				config["multicastLimit"] = 64;
+			}
 			config["name"] = PQgetvalue(res, i, 7);
 			config["private"] = (strcmp(PQgetvalue(res, i, 8),"t")==0);
-			config["remoteTraceLevel"] = std::stoi(PQgetvalue(res, i, 9));
+			try {
+				config["remoteTraceLevel"] = std::stoi(PQgetvalue(res, i, 9));
+			} catch (std::exception &e) {
+				config["remoteTraceLevel"] = 0;
+			}
 			config["remoteTraceTarget"] = PQgetvalue(res, i, 10);
-			config["revision"] = std::stoull(PQgetvalue(res, i, 11));
+			try {
+				config["revision"] = std::stoull(PQgetvalue(res, i, 11));
+			} catch (std::exception &e) {
+				config["revision"] = 0ULL;
+				//fprintf(stderr, "Error converting revision: %s\n", PQgetvalue(res, i, 11));
+			}
 			config["rules"] = json::parse(PQgetvalue(res, i, 12));
 			config["tags"] = json::parse(PQgetvalue(res, i, 13));
 			config["v4AssignMode"] = json::parse(PQgetvalue(res, i, 14));
@@ -358,19 +385,59 @@ void PostgreSQL::initializeMembers(PGconn *conn)
 			config["activeBridge"] = (strcmp(PQgetvalue(res, i, 2), "t") == 0);
 			config["authorized"] = (strcmp(PQgetvalue(res, i, 3), "t") == 0);
 			config["capabilities"] = json::parse(PQgetvalue(res, i, 4));
-			config["creationTime"] = std::stoull(PQgetvalue(res, i, 5));
+			try {
+				config["creationTime"] = std::stoull(PQgetvalue(res, i, 5));
+			} catch (std::exception &e) {
+				config["creationTime"] = 0ULL;
+				//fprintf(stderr, "Error upding creation time (member): %s\n", PQgetvalue(res, i, 5));
+			}
 			config["identity"] = PQgetvalue(res, i, 6);
-			config["lastAuthorizedTime"] = std::stoull(PQgetvalue(res, i, 7));
-			config["lastDeauthorizedTime"] = std::stoull(PQgetvalue(res, i, 8));
-			config["remoteTraceLevel"] = std::stoi(PQgetvalue(res, i, 9));
+			try {
+				config["lastAuthorizedTime"] = std::stoull(PQgetvalue(res, i, 7));
+			} catch(std::exception &e) {
+				config["lastAuthorizedTime"] = 0ULL;
+				//fprintf(stderr, "Error updating last auth time (member): %s\n", PQgetvalue(res, i, 7));
+			}
+			try {
+				config["lastDeauthorizedTime"] = std::stoull(PQgetvalue(res, i, 8));
+			} catch( std::exception &e) {
+				config["lastDeauthorizedTime"] = 0ULL;
+				//fprintf(stderr, "Error updating last deauth time (member): %s\n", PQgetvalue(res, i, 8));
+			}
+			try {
+				config["remoteTraceLevel"] = std::stoi(PQgetvalue(res, i, 9));
+			} catch (std::exception &e) {
+				config["remoteTraceLevel"] = 0;
+			}
 			config["remoteTraceTarget"] = PQgetvalue(res, i, 10);
 			config["tags"] = json::parse(PQgetvalue(res, i, 11));
-			config["vMajor"] = std::stoi(PQgetvalue(res, i, 12));
-			config["vMinor"] = std::stoi(PQgetvalue(res, i, 13));
-			config["vRev"] = std::stoi(PQgetvalue(res, i, 14));
-			config["vProto"] = std::stoi(PQgetvalue(res, i, 15));
+			try {
+				config["vMajor"] = std::stoi(PQgetvalue(res, i, 12));
+			} catch(std::exception &e) {
+				config["vMajor"] = -1;
+			}
+			try {
+				config["vMinor"] = std::stoi(PQgetvalue(res, i, 13));
+			} catch (std::exception &e) {
+				config["vMinor"] = -1;
+			}
+			try {
+				config["vRev"] = std::stoi(PQgetvalue(res, i, 14));
+			} catch (std::exception &e) {
+				config["vRev"] = -1;
+			}
+			try {
+				config["vProto"] = std::stoi(PQgetvalue(res, i, 15));
+			} catch (std::exception &e) {
+				config["vProto"] = -1;
+			}
 			config["noAutoAssignIps"] = (strcmp(PQgetvalue(res, i, 16), "t") == 0);
-			config["revision"] = std::stoull(PQgetvalue(res, i, 17));
+			try {
+				config["revision"] = std::stoull(PQgetvalue(res, i, 17));
+			} catch (std::exception &e) {
+				config["revision"] = 0ULL;
+				//fprintf(stderr, "Error updating revision (member): %s\n", PQgetvalue(res, i, 17));
+			}
 			config["objtype"] = "member";
 			config["ipAssignments"] = json::array();
 			const char *p2[2] = {
