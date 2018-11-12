@@ -2745,6 +2745,7 @@ public:
 #endif
 
 #ifdef __APPLE__
+		if ((ifname[0] == 'f')&&(ifname[1] == 'e')&&(ifname[2] == 't')&&(ifname[3] == 'h')) return false; // ... as is feth#
 		if ((ifname[0] == 'l')&&(ifname[1] == 'o')) return false; // loopback
 		if ((ifname[0] == 'z')&&(ifname[1] == 't')) return false; // sanity check: zt#
 		if ((ifname[0] == 't')&&(ifname[1] == 'u')&&(ifname[2] == 'n')) return false; // tun# is probably an OpenVPN tunnel or similar
