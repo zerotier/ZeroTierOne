@@ -174,6 +174,9 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 // TCP activity timeout
 #define ZT_TCP_ACTIVITY_TIMEOUT 60000
 
+// Number of receive path threads to start
+#define ZT_INCOMING_PACKET_THREAD_POOL_SIZE 8
+
 #if ZT_VAULT_SUPPORT
 size_t curlResponseWrite(void *ptr, size_t size, size_t nmemb, std::string *data)
 {
@@ -436,8 +439,6 @@ struct TcpConnection
 	std::string writeq;
 	Mutex writeq_m;
 };
-
-#define ZT_INCOMING_PACKET_THREAD_POOL_SIZE 8
 
 class OneServiceImpl : public OneService
 {
