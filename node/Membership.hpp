@@ -244,9 +244,9 @@ private:
 
 	// Time we last pushed our local credentials to this member
 	struct {
-		uint64_t tag[ZT_MAX_NETWORK_TAGS];
-		uint64_t cap[ZT_MAX_NETWORK_CAPABILITIES];
-		uint64_t coo[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
+		int64_t tag[ZT_MAX_NETWORK_TAGS];
+		int64_t cap[ZT_MAX_NETWORK_CAPABILITIES];
+		int64_t coo[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
 	} _localCredLastPushed;
 
 public:
