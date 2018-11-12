@@ -437,7 +437,7 @@ struct TcpConnection
 	Mutex writeq_m;
 };
 
-#define ZT_INCOMING_PACKET_THREAD_POOL_SIZE 4
+#define ZT_INCOMING_PACKET_THREAD_POOL_SIZE 8
 
 class OneServiceImpl : public OneService
 {
