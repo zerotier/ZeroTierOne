@@ -146,10 +146,13 @@ private:
 	Identity _signingId;
 	std::string _signingIdAddressString;
 	NetworkController::Sender *_sender;
+
 	std::unique_ptr<DB> _db;
 	BlockingQueue< _RQEntry * > _queue;
+
 	std::vector<std::thread> _threads;
 	std::mutex _threads_l;
+
 	std::unordered_map< _MemberStatusKey,_MemberStatus,_MemberStatusHash > _memberStatus;
 	std::mutex _memberStatus_l;
 };
