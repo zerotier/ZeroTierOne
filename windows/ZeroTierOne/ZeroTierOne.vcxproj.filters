@@ -497,6 +497,9 @@
     <ClInclude Include="..\..\controller\RethinkDB.hpp">
       <Filter>Header Files\controller</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\node\Membership.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ZeroTierOne.rc">
