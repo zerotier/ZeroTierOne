@@ -472,6 +472,7 @@ public:
 	unsigned int _tertiaryPort;
 	volatile unsigned int _udpPortPickerCounter;
 
+	unsigned long _incomingPacketConcurrency;
 	std::vector<OneServiceIncomingPacket *> _incomingPacketMemoryPool;
 	BlockingQueue<OneServiceIncomingPacket *> _incomingPacketQueue;
 	std::vector<std::thread> _incomingPacketThreads;
@@ -606,7 +607,8 @@ public:
 		_ports[1] = 0;
 		_ports[2] = 0;
 
-		for(long t=0;t<std::max((long)1,(long)std::thread::hardware_concurrency());++t) {
+		_incomingPacketConcurrency = std::max((unsigned long)1,std::min((unsigned long)16,(unsigned long)std::thread::hardware_concurrency()));
+		for(long t=0;t<_incomingPacketConcurrency;++t) {
 			_incomingPacketThreads.push_back(std::thread([this]() {
 				OneServiceIncomingPacket *pkt = nullptr;
 				for(;;) {
@@ -1918,7 +1920,7 @@ public:
 		pkt->size = (unsigned int)len;
 		ZT_FAST_MEMCPY(pkt->data,data,len);
 
-		_incomingPacketQueue.postWait(pkt,64);
+		_incomingPacketQueue.postLimit(pkt,16 * _incomingPacketConcurrency);
 	}
 
 	inline void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success)

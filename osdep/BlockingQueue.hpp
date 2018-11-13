@@ -54,20 +54,16 @@ public:
 		c.notify_one();
 	}
 
-	inline void postWait(T t,unsigned long maxQueueSize)
+	inline void postLimit(T t,const unsigned long limit)
 	{
+		std::unique_lock<std::mutex> lock(m);
 		for(;;) {
-			{
-				std::lock_guard<std::mutex> lock(m);
-				if (q.size() < maxQueueSize) {
-					q.push(t);
-					c.notify_one();
-					return;
-				}
-			}
-			if (!r)
+			if (q.size() < limit) {
+				q.push(t);
+				c.notify_one();
 				break;
-			Thread::sleep(1);
+			}
+			gc.wait(lock);
 		}
 	}
 
@@ -84,10 +80,14 @@ public:
 		if (!r) return false;
 		while (q.empty()) {
 			c.wait(lock);
-			if (!r) return false;
+			if (!r) {
+				gc.notify_all();
+				return false;
+			}
 		}
 		value = q.front();
 		q.pop();
+		gc.notify_all();
 		return true;
 	}
 
@@ -118,7 +118,7 @@ private:
 	volatile bool r;
 	std::queue<T> q;
 	mutable std::mutex m;
-	mutable std::condition_variable c;
+	mutable std::condition_variable c,gc;
 };
 
 } // namespace ZeroTier

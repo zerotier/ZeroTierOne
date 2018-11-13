@@ -104,8 +104,8 @@
 
 #define P_IFCONFIG "/sbin/ifconfig"
 
-static unsigned char s_pktReadBuf[524288] __attribute__ ((__aligned__(16)));
-static unsigned char s_stdinReadBuf[524288] __attribute__ ((__aligned__(16)));
+static unsigned char s_pktReadBuf[262144] __attribute__ ((__aligned__(16)));
+static unsigned char s_stdinReadBuf[262144] __attribute__ ((__aligned__(16)));
 static char s_deviceName[IFNAMSIZ];
 static char s_peerDeviceName[IFNAMSIZ];
 static int s_bpffd = -1;
@@ -322,9 +322,6 @@ int main(int argc,char **argv)
 		return ZT_MACETHERNETTAPAGENT_EXIT_CODE_UNABLE_TO_CREATE;
 	}
 
-	fcntl(s_ndrvfd,F_SETFL,fcntl(s_ndrvfd,F_GETFL)|O_NONBLOCK);
-	fcntl(s_bpffd,F_SETFL,fcntl(s_bpffd,F_GETFL)|O_NONBLOCK);
-
 	fprintf(stderr,"I %s %s %d.%d.%d.%d\n",s_deviceName,s_peerDeviceName,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION,ZEROTIER_ONE_VERSION_BUILD);
 
 	FD_ZERO(&rfds);
@@ -357,8 +354,6 @@ int main(int argc,char **argv)
 					}
 					p += BPF_WORDALIGN(h->bh_hdrlen + h->bh_caplen);
 				}
-			} else {
-				return ZT_MACETHERNETTAPAGENT_EXIT_CODE_READ_ERROR;
 			}
 		}
 
@@ -431,8 +426,6 @@ int main(int argc,char **argv)
 						break;
 					}
 				}
-			} else {
-				return ZT_MACETHERNETTAPAGENT_EXIT_CODE_READ_ERROR;
 			}
 		}
 	}

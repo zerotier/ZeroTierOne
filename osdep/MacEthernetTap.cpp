@@ -287,7 +287,9 @@ void MacEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,co
 		iov[1].iov_len = 15;
 		iov[2].iov_base = const_cast<void *>(data);
 		iov[2].iov_len = len;
+		_putLock.lock();
 		writev(_agentStdin,iov,3);
+		_putLock.unlock();
 	}
 }
 
@@ -396,8 +398,6 @@ void MacEthernetTap::threadMain()
 						break;
 					}
 				}
-			} else {
-				break;
 			}
 		}
 		if (FD_ISSET(_agentStderr,&readfds)) {
