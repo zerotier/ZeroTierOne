@@ -404,7 +404,7 @@ int main(int argc,char **argv)
 									}
 									args[argNo] = (char *)0;
 									if (argNo > 2) {
-										pid_t pid = vfork();
+										pid_t pid = fork();
 										if (pid < 0) {
 											return -1;
 										} else if (pid == 0) {
