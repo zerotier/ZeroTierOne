@@ -384,7 +384,11 @@ void PostgreSQL::initializeMembers(PGconn *conn)
 			config["nwid"] = networkId;
 			config["activeBridge"] = (strcmp(PQgetvalue(res, i, 2), "t") == 0);
 			config["authorized"] = (strcmp(PQgetvalue(res, i, 3), "t") == 0);
-			config["capabilities"] = json::parse(PQgetvalue(res, i, 4));
+			try {
+				config["capabilities"] = json::parse(PQgetvalue(res, i, 4));
+			} catch (std::exception &e) {
+				config["capabilities"] = json::array();
+			}
 			try {
 				config["creationTime"] = std::stoull(PQgetvalue(res, i, 5));
 			} catch (std::exception &e) {
@@ -410,7 +414,11 @@ void PostgreSQL::initializeMembers(PGconn *conn)
 				config["remoteTraceLevel"] = 0;
 			}
 			config["remoteTraceTarget"] = PQgetvalue(res, i, 10);
-			config["tags"] = json::parse(PQgetvalue(res, i, 11));
+			try {
+				config["tags"] = json::parse(PQgetvalue(res, i, 11));
+			} catch (std::exception &e) {
+				config["tags"] = json::array();
+			}
 			try {
 				config["vMajor"] = std::stoi(PQgetvalue(res, i, 12));
 			} catch(std::exception &e) {
