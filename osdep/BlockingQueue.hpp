@@ -63,6 +63,8 @@ public:
 				c.notify_one();
 				break;
 			}
+			if (!r)
+				break;
 			gc.wait(lock);
 		}
 	}
@@ -72,6 +74,7 @@ public:
 		std::lock_guard<std::mutex> lock(m);
 		r = false;
 		c.notify_all();
+		gc.notify_all();
 	}
 
 	inline bool get(T &value)
