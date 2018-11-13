@@ -104,8 +104,8 @@
 
 #define P_IFCONFIG "/sbin/ifconfig"
 
-static unsigned char s_pktReadBuf[262144] __attribute__ ((__aligned__(16)));
-static unsigned char s_stdinReadBuf[262144] __attribute__ ((__aligned__(16)));
+static unsigned char s_pktReadBuf[524288] __attribute__ ((__aligned__(16)));
+static unsigned char s_stdinReadBuf[524288] __attribute__ ((__aligned__(16)));
 static char s_deviceName[IFNAMSIZ];
 static char s_peerDeviceName[IFNAMSIZ];
 static int s_bpffd = -1;
@@ -175,7 +175,7 @@ static int run(const char *path,...)
 	} else if (pid == 0) {
 		dup2(STDERR_FILENO,STDOUT_FILENO);
 		execv(args[0],args);
-		exit(-1);
+		_exit(-1);
 	}
 	int rv = 0;
 	waitpid(pid,&rv,0);
@@ -322,7 +322,6 @@ int main(int argc,char **argv)
 		return ZT_MACETHERNETTAPAGENT_EXIT_CODE_UNABLE_TO_CREATE;
 	}
 
-	fcntl(STDIN_FILENO,F_SETFL,fcntl(STDIN_FILENO,F_GETFL)|O_NONBLOCK);
 	fcntl(s_ndrvfd,F_SETFL,fcntl(s_ndrvfd,F_GETFL)|O_NONBLOCK);
 	fcntl(s_bpffd,F_SETFL,fcntl(s_bpffd,F_GETFL)|O_NONBLOCK);
 
@@ -381,6 +380,7 @@ int main(int argc,char **argv)
 										}
 									}
 									break;
+
 								case ZT_MACETHERNETTAPAGENT_STDIN_CMD_IFCONFIG: {
 									char *args[16];
 									args[0] = P_IFCONFIG;
@@ -410,12 +410,13 @@ int main(int argc,char **argv)
 										} else if (pid == 0) {
 											dup2(STDERR_FILENO,STDOUT_FILENO);
 											execv(args[0],args);
-											exit(-1);
+											_exit(-1);
 										}
 										int rv = 0;
 										waitpid(pid,&rv,0);
 									}
 								}	break;
+
 								case ZT_MACETHERNETTAPAGENT_STDIN_CMD_EXIT:
 									return ZT_MACETHERNETTAPAGENT_EXIT_CODE_SUCCESS;
 							}

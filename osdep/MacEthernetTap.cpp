@@ -147,7 +147,7 @@ MacEthernetTap::MacEthernetTap(
 	_agentStdin2 = agentStdin[0];
 	_agentStdout2 = agentStdout[1];
 	_agentStderr2 = agentStderr[1];
-	long apid = (long)vfork();
+	long apid = (long)fork();
 	if (apid < 0) {
 		throw std::runtime_error("fork failed");
 	} else if (apid == 0) {
@@ -155,10 +155,13 @@ MacEthernetTap::MacEthernetTap(
 		::dup2(agentStdout[1],STDOUT_FILENO);
 		::dup2(agentStderr[1],STDERR_FILENO);
 		::close(agentStdin[0]);
+		::close(agentStdin[1]);
+		::close(agentStdout[0]);
 		::close(agentStdout[1]);
+		::close(agentStderr[0]);
 		::close(agentStderr[1]);
 		::execl(agentPath.c_str(),agentPath.c_str(),devnostr,ethaddr,mtustr,metricstr,(char *)0);
-		::exit(-1);
+		::_exit(-1);
 	} else {
 		_agentPid = apid;
 	}
@@ -356,8 +359,8 @@ void MacEthernetTap::threadMain()
 
 	const int nfds = std::max(std::max(_shutdownSignalPipe[0],_agentStdout),_agentStderr) + 1;
 	long agentReadPtr = 0;
-	fcntl(_agentStdout,F_SETFL,O_NONBLOCK);
-	fcntl(_agentStderr,F_SETFL,O_NONBLOCK);
+	fcntl(_agentStdout,F_SETFL,fcntl(_agentStdout,F_GETFL)|O_NONBLOCK);
+	fcntl(_agentStderr,F_SETFL,fcntl(_agentStderr,F_GETFL)|O_NONBLOCK);
 
 	FD_ZERO(&readfds);
 	FD_ZERO(&nullfds);
