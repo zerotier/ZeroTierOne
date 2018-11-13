@@ -32,6 +32,8 @@
 #include <condition_variable>
 #include <chrono>
 
+#include "Thread.hpp"
+
 namespace ZeroTier {
 
 /**
@@ -50,6 +52,23 @@ public:
 		std::lock_guard<std::mutex> lock(m);
 		q.push(t);
 		c.notify_one();
+	}
+
+	inline void postWait(T t,unsigned long maxQueueSize)
+	{
+		for(;;) {
+			{
+				std::lock_guard<std::mutex> lock(m);
+				if (q.size() < maxQueueSize) {
+					q.push(t);
+					c.notify_one();
+					return;
+				}
+			}
+			if (!r)
+				break;
+			Thread::sleep(1);
+		}
 	}
 
 	inline void stop(void)
@@ -98,8 +117,8 @@ public:
 private:
 	volatile bool r;
 	std::queue<T> q;
-	std::mutex m;
-	std::condition_variable c;
+	mutable std::mutex m;
+	mutable std::condition_variable c;
 };
 
 } // namespace ZeroTier
