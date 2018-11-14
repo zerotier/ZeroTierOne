@@ -360,7 +360,7 @@ void PostgreSQL::initializeMembers(pqxx::connection &conn)
 			"	EXTRACT(EPOCH FROM m.last_deauthorized_time AT TIME ZONE 'UTC')*1000 AS last_deauthorized_time, "
 			"	m.remote_trace_level AS remote_trace_level, m.remote_trace_target AS remote_trace_target, "
 			"   m.tags AS tags, m.v_major AS v_major, m.v_minor AS v_minor, m.v_rev AS v_rev, "
-			"   m.v_proto AS v_proto, m.no_auto_assign_ips AS no_auto_assign_ips, m.revision AS revision"
+			"   m.v_proto AS v_proto, m.no_auto_assign_ips AS no_auto_assign_ips, m.revision AS revision "
 			"FROM ztc_member m "
 			"INNER JOIN ztc_network n "
 			"	ON n.id = m.network_id "
@@ -484,13 +484,13 @@ void PostgreSQL::heartbeat()
 	const char *publicIdentity = publicId;
 	const char *hostname = hostnameTmp;
 
-	fprintf(stderr, "Heartbeat connection opening");
+	fprintf(stderr, "Heartbeat connection opening\n");
 	pqxx::connection conn(_connString);
 	if (!conn.is_open()) {
 		fprintf(stderr, "Connection to database failed: heartbeat\n");
 		exit(1);
 	}
-	fprintf(stderr, "Heartbeat connection opened");
+	fprintf(stderr, "Heartbeat connection opened\n");
 	conn.prepare("heartbeat", 
 		"INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build) " 
 		"VALUES ($1, $2, TO_TIMESTAMP($3::double precision/1000), $4, $5, $6, $7, $8) "
