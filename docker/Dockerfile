@@ -4,7 +4,7 @@ MAINTAINER Adam Ierymekno <adam.ierymenko@zerotier.com>, Grant Limberg <grant.li
 
 RUN yum update -y
 RUN yum install -y https://download.postgresql.org/pub/repos/yum/10/redhat/rhel-7-x86_64/pgdg-centos10-10-2.noarch.rpm
-RUN yum install -y postgresql10
+RUN yum install -y postgresql10 libpqxx-devel
 
 RUN yum -y install epel-release && yum -y update && yum clean all
 RUN yum -y install clang jemalloc jemalloc-devel

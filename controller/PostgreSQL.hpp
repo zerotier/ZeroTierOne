@@ -23,12 +23,16 @@
 
 #include "DB.hpp"
 
+#include <pqxx/pqxx>
+
 extern "C" {
     typedef struct pg_conn PGconn;
 }
 
 namespace ZeroTier
 {
+class _MemberNotificationReceiver;
+class _NetworkNotificationReceiver;
 
 /**
  * A controller database driver that talks to PostgreSQL
@@ -56,8 +60,8 @@ protected:
 	};
 
 private:
-    void initializeNetworks(PGconn *conn);
-    void initializeMembers(PGconn *conn);
+    void initializeNetworks(pqxx::connection &conn);
+    void initializeMembers(pqxx::connection &conn);
     void heartbeat();
     void membersDbWatcher();
     void networksDbWatcher();
@@ -81,6 +85,9 @@ private:
     mutable std::mutex _readyLock;
     std::atomic<int> _ready, _connected, _run;
     mutable volatile bool _waitNoticePrinted;
+
+    friend class _MemberNotificationReceiver;
+    friend class _NetworkNotificationReceiver;
 };
 
 }
