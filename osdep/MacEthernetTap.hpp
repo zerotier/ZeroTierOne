@@ -38,6 +38,7 @@
 #include "../node/MAC.hpp"
 #include "../node/InetAddress.hpp"
 #include "../node/MulticastGroup.hpp"
+#include "../node/Mutex.hpp"
 
 #include "Thread.hpp"
 
@@ -80,6 +81,7 @@ private:
 	std::string _homePath;
 	std::string _dev;
 	std::vector<MulticastGroup> _multicastGroups;
+	Mutex _putLock;
 	unsigned int _mtu;
 	unsigned int _metric;
 	int _shutdownSignalPipe[2];

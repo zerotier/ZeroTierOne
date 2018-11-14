@@ -175,7 +175,7 @@ static int run(const char *path,...)
 	} else if (pid == 0) {
 		dup2(STDERR_FILENO,STDOUT_FILENO);
 		execv(args[0],args);
-		exit(-1);
+		_exit(-1);
 	}
 	int rv = 0;
 	waitpid(pid,&rv,0);
@@ -322,10 +322,6 @@ int main(int argc,char **argv)
 		return ZT_MACETHERNETTAPAGENT_EXIT_CODE_UNABLE_TO_CREATE;
 	}
 
-	fcntl(STDIN_FILENO,F_SETFL,fcntl(STDIN_FILENO,F_GETFL)|O_NONBLOCK);
-	fcntl(s_ndrvfd,F_SETFL,fcntl(s_ndrvfd,F_GETFL)|O_NONBLOCK);
-	fcntl(s_bpffd,F_SETFL,fcntl(s_bpffd,F_GETFL)|O_NONBLOCK);
-
 	fprintf(stderr,"I %s %s %d.%d.%d.%d\n",s_deviceName,s_peerDeviceName,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION,ZEROTIER_ONE_VERSION_BUILD);
 
 	FD_ZERO(&rfds);
@@ -358,8 +354,6 @@ int main(int argc,char **argv)
 					}
 					p += BPF_WORDALIGN(h->bh_hdrlen + h->bh_caplen);
 				}
-			} else {
-				return ZT_MACETHERNETTAPAGENT_EXIT_CODE_READ_ERROR;
 			}
 		}
 
@@ -381,6 +375,7 @@ int main(int argc,char **argv)
 										}
 									}
 									break;
+
 								case ZT_MACETHERNETTAPAGENT_STDIN_CMD_IFCONFIG: {
 									char *args[16];
 									args[0] = P_IFCONFIG;
@@ -404,18 +399,19 @@ int main(int argc,char **argv)
 									}
 									args[argNo] = (char *)0;
 									if (argNo > 2) {
-										pid_t pid = vfork();
+										pid_t pid = fork();
 										if (pid < 0) {
 											return -1;
 										} else if (pid == 0) {
 											dup2(STDERR_FILENO,STDOUT_FILENO);
 											execv(args[0],args);
-											exit(-1);
+											_exit(-1);
 										}
 										int rv = 0;
 										waitpid(pid,&rv,0);
 									}
 								}	break;
+
 								case ZT_MACETHERNETTAPAGENT_STDIN_CMD_EXIT:
 									return ZT_MACETHERNETTAPAGENT_EXIT_CODE_SUCCESS;
 							}
@@ -430,8 +426,6 @@ int main(int argc,char **argv)
 						break;
 					}
 				}
-			} else {
-				return ZT_MACETHERNETTAPAGENT_EXIT_CODE_READ_ERROR;
 			}
 		}
 	}
