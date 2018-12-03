@@ -510,7 +510,7 @@ void PostgreSQL::heartbeat()
 	const char *publicIdentity = publicId;
 	const char *hostname = hostnameTmp;
 
-	PGconn *conn = PQconnectdb(_connString.c_str());
+	PGconn *conn = getPgConn();
 	if (PQstatus(conn) == CONNECTION_BAD) {
 		fprintf(stderr, "Connection to database failed: %s\n", PQerrorMessage(conn));
 		PQfinish(conn);
@@ -519,7 +519,7 @@ void PostgreSQL::heartbeat()
 	while (_run == 1) {
 		if(PQstatus(conn) != CONNECTION_OK) {
 			PQfinish(conn);
-			conn = PQconnectdb(_connString.c_str());
+			conn = getPgConn();
 		}
 		if (conn) {
 			std::string major = std::to_string(ZEROTIER_ONE_VERSION_MAJOR);
@@ -566,7 +566,7 @@ void PostgreSQL::heartbeat()
 
 void PostgreSQL::membersDbWatcher()
 {
-	PGconn *conn = PQconnectdb(_connString.c_str());
+	PGconn *conn = getPgConn(NO_OVERRIDE);
 	if (PQstatus(conn) == CONNECTION_BAD) {
 		fprintf(stderr, "Connection to database failed: %s\n", PQerrorMessage(conn));
 		PQfinish(conn);
@@ -619,7 +619,7 @@ void PostgreSQL::membersDbWatcher()
 
 void PostgreSQL::networksDbWatcher()
 {
-	PGconn *conn = PQconnectdb(_connString.c_str());
+	PGconn *conn = getPgConn(NO_OVERRIDE);
 	if (PQstatus(conn) == CONNECTION_BAD) {
 		fprintf(stderr, "Connection to database failed: %s\n", PQerrorMessage(conn));
 		PQfinish(conn);
@@ -670,7 +670,7 @@ void PostgreSQL::networksDbWatcher()
 
 void PostgreSQL::commitThread()
 {
-	PGconn *conn = PQconnectdb(_connString.c_str());
+	PGconn *conn = getPgConn();
 	if (PQstatus(conn) == CONNECTION_BAD) {
 		fprintf(stderr, "ERROR: Connection to database failed: %s\n", PQerrorMessage(conn));
 		PQfinish(conn);
@@ -1146,7 +1146,7 @@ void PostgreSQL::commitThread()
 
 void PostgreSQL::onlineNotificationThread()
 {
-	PGconn *conn = PQconnectdb(_connString.c_str());
+	PGconn *conn = getPgConn();
 	if (PQstatus(conn) == CONNECTION_BAD) {
 		fprintf(stderr, "Connection to database failed: %s\n", PQerrorMessage(conn));
 		PQfinish(conn);
@@ -1161,7 +1161,7 @@ void PostgreSQL::onlineNotificationThread()
 		if (PQstatus(conn) != CONNECTION_OK) {
 			fprintf(stderr, "ERROR: Online Notification thread lost connection to Postgres.");
 			PQfinish(conn);
-			conn = PQconnectdb(_connString.c_str());
+			conn = getPgConn();
 			continue;
 		}
 
@@ -1327,5 +1327,16 @@ void PostgreSQL::onlineNotificationThread()
 	fprintf(stderr, "%s: Fell out of run loop in onlineNotificationThread", _myAddressStr.c_str());
 	PQfinish(conn);
 	exit(5);
+}
+
+PGconn *PostgreSQL::getPgConn(OverrideMode m) {
+	if (m == ALLOW_PGBOUNCER_OVERRIDE) {
+		char *connStr = getenv("PGBOUNCER_CONNSTR");
+		if (connStr != NULL) {
+			return PQconnectdb(connStr);
+		}
+	}
+
+	return PQconnectdb(_connString.c_str());
 }
 #endif //ZT_CONTROLLER_USE_LIBPQ

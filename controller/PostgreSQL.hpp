@@ -64,6 +64,13 @@ private:
     void commitThread();
     void onlineNotificationThread();
 
+    enum OverrideMode {
+        ALLOW_PGBOUNCER_OVERRIDE = 0,
+        NO_OVERRIDE = 1
+    };
+
+    PGconn * getPgConn( OverrideMode m = ALLOW_PGBOUNCER_OVERRIDE );
+
     std::string _connString;
 
     BlockingQueue<nlohmann::json *> _commitQueue;
