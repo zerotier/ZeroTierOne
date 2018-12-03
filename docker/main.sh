@@ -28,11 +28,13 @@ ln -s $ZT_IDENTITY_PATH/identity.public identity.public
 ln -s $ZT_IDENTITY_PATH/identity.secret identity.secret
 popd
 
+DEFAULT_PORT=9993
+
 echo "{
     \"settings\": {
         \"portMappingEnabled\": true,
         \"softwareUpdate\": \"disable\",
-        \"interfadePrefixBlacklist\": [
+        \"interfacePrefixBlacklist\": [
             \"inot\",
             \"nat64\"
         ],
@@ -44,4 +46,4 @@ echo "{
 export GLIBCXX_FORCE_NEW=1
 export GLIBCPP_FORCE_NEW=1
 export LD_PRELOAD="/usr/lib64/libjemalloc.so"
-exec /usr/local/bin/zerotier-one /var/lib/zerotier-one
+exec /usr/local/bin/zerotier-one -p${ZT_CONTROLLER_PORT:-$DEFAULT_PORT} /var/lib/zerotier-one
