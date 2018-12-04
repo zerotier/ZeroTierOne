@@ -1333,6 +1333,7 @@ PGconn *PostgreSQL::getPgConn(OverrideMode m) {
 	if (m == ALLOW_PGBOUNCER_OVERRIDE) {
 		char *connStr = getenv("PGBOUNCER_CONNSTR");
 		if (connStr != NULL) {
+			fprintf(stderr, "PGBouncer Override\n");
 			return PQconnectdb(connStr);
 		}
 	}

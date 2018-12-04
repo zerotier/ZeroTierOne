@@ -38,7 +38,7 @@ echo "{
             \"inot\",
             \"nat64\"
         ],
-        \"controllerDbPath\": \"postgres:host=${ZT_DB_HOST} port=${ZT_DB_PORT} dbname=ztc user=${ZT_DB_USER} password=${ZT_DB_PASSWORD}\"
+        \"controllerDbPath\": \"postgres:host=${ZT_DB_HOST} port=${ZT_DB_PORT} dbname=ztc user=${ZT_DB_USER} password=${ZT_DB_PASSWORD} sslmode=require sslcert=${DB_CLIENT_CERT} sslkey=${DB_CLIENT_KEY} sslrootcert=${DB_SERVER_CA}\"
     }
 }    
 " > /var/lib/zerotier-one/local.conf
