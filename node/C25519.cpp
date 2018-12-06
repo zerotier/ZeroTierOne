@@ -15,6 +15,8 @@ Derived from public domain code by D. J. Bernstein.
 #include "C25519.hpp"
 #include "SHA512.hpp"
 #include "Buffer.hpp"
+#include "Hashtable.hpp"
+#include "Mutex.hpp"
 
 #ifdef __WINDOWS__
 #pragma warning(disable: 4146)
@@ -1996,10 +1998,27 @@ void get_hram(unsigned char *hram, const unsigned char *sm, const unsigned char 
 } // anonymous namespace
 
 #ifdef ZT_USE_FAST_X64_ED25519
-extern "C" void ed25519_amd64_asm_sign(const unsigned char *sk,const unsigned char *pk,const unsigned char *m,const unsigned int mlen,unsigned char *sig);
+extern "C" void ed25519_amd64_asm_sign(const unsigned char *sk,const unsigned char *pk,const unsigned char *digest,unsigned char *sig);
 #endif
 
 namespace ZeroTier {
+
+struct C25519CacheKey
+{
+	uint64_t messageDigest[4];
+	uint64_t publicKey[4];
+	inline unsigned long hashCode() const { return (unsigned long)(messageDigest[0] ^ publicKey[0]); }
+	inline bool operator==(const C25519CacheKey &k) const { return (memcmp(this,&k,sizeof(C25519CacheKey)) == 0); }
+	inline bool operator!=(const C25519CacheKey &k) const { return (memcmp(this,&k,sizeof(C25519CacheKey)) != 0); }
+};
+struct C25519CacheValue
+{
+	uint64_t signature[12];
+	uint64_t timestamp;
+};
+static uint64_t _ed25519TimestampCounter = 0;
+static Hashtable<C25519CacheKey,C25519CacheValue> _ed25519Cache;
+static Mutex _ed25519CacheLock;
 
 void C25519::agree(const C25519::Private &mine,const C25519::Public &their,void *keybuf,unsigned int keylen)
 {
@@ -2019,8 +2038,24 @@ void C25519::agree(const C25519::Private &mine,const C25519::Public &their,void 
 
 void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPublic,const void *msg,unsigned int len,void *signature)
 {
+	unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
+	SHA512::hash(digest,msg,len);
+
+	C25519CacheKey ck;
+	ZT_FAST_MEMCPY(ck.messageDigest,digest,32);
+	ZT_FAST_MEMCPY(ck.publicKey,myPublic.data + 32,32);
+	C25519CacheValue *cv = (C25519CacheValue *)0;
+	{
+		Mutex::Lock l(_ed25519CacheLock);
+		cv = _ed25519Cache.get(ck);
+	}
+	if (cv) {
+		ZT_FAST_MEMCPY(signature,cv->signature,ZT_C25519_SIGNATURE_LEN);
+		return;
+	}
+
 #ifdef ZT_USE_FAST_X64_ED25519
-	ed25519_amd64_asm_sign(myPrivate.data + 32,myPublic.data + 32,(const unsigned char *)msg,len,(unsigned char *)signature);
+	ed25519_amd64_asm_sign(myPrivate.data + 32,myPublic.data + 32,digest,(unsigned char *)signature);
 #else
 	sc25519 sck, scs, scsk;
 	ge25519 ger;
@@ -2030,9 +2065,6 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 	unsigned char hmg[crypto_hash_sha512_BYTES];
 	unsigned char hram[crypto_hash_sha512_BYTES];
 	unsigned char *sig = (unsigned char *)signature;
-	unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
-
-	SHA512::hash(digest,msg,len);
 
 	SHA512::hash(extsk,myPrivate.data + 32,32);
 	extsk[0] &= 248;
@@ -2067,22 +2099,60 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 	for(unsigned int i=0;i<32;i++)
 		sig[32 + i] = s[i];
 #endif
+
+/*
+	Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
+	Address *a = (Address *)0;
+	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+	while (i.next(a,p))
+		_savePeer((void *)0,*p);
+*/
+	C25519CacheValue cvn;
+	memcpy(cvn.signature,signature,ZT_C25519_SIGNATURE_LEN);
+	{
+		Mutex::Lock l(_ed25519CacheLock);
+
+		if (_ed25519Cache.size() > 1048576) {
+			const uint64_t before = _ed25519TimestampCounter - ((1048576 / 3) * 2);
+			Hashtable< C25519CacheKey,C25519CacheValue >::Iterator i(_ed25519Cache);
+			C25519CacheKey *ik = (C25519CacheKey *)0;
+			C25519CacheValue *iv = (C25519CacheValue *)0;
+			while (i.next(ik,iv)) {
+				if (iv->timestamp < before)
+					_ed25519Cache.erase(*ik);
+			}
+		}
+
+		cvn.timestamp = ++_ed25519TimestampCounter;
+		_ed25519Cache.set(ck,cvn);
+	}
 }
 
 bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len,const void *signature)
 {
+	const unsigned char *const sig = (const unsigned char *)signature;
+	unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
+	SHA512::hash(digest,msg,len);
+	if (!Utils::secureEq(sig + 64,digest,32))
+		return false;
+
+	C25519CacheKey ck;
+	ZT_FAST_MEMCPY(ck.messageDigest,digest,32);
+	ZT_FAST_MEMCPY(ck.publicKey,their.data + 32,32);
+	C25519CacheValue *cv = (C25519CacheValue *)0;
+	{
+		Mutex::Lock l(_ed25519CacheLock);
+		cv = _ed25519Cache.get(ck);
+	}
+	if (cv) {
+		return Utils::secureEq(cv->signature,signature,ZT_C25519_SIGNATURE_LEN);
+	}
+
 	unsigned char t2[32];
 	ge25519 get1, get2;
 	sc25519 schram, scs;
 	unsigned char hram[crypto_hash_sha512_BYTES];
 	unsigned char m[96];
-	unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
-	const unsigned char *sig = (const unsigned char *)signature;
-
-	// First check the message's integrity
-	SHA512::hash(digest,msg,len);
-	if (!Utils::secureEq(sig + 64,digest,32))
-		return false;
 
 	if (ge25519_unpackneg_vartime(&get1,their.data + 32))
 		return false;
