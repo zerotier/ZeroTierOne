@@ -2003,6 +2003,7 @@ extern "C" void ed25519_amd64_asm_sign(const unsigned char *sk,const unsigned ch
 
 namespace ZeroTier {
 
+#ifdef ZT_CONTROLLER
 struct C25519CacheKey
 {
 	uint64_t messageDigest[4];
@@ -2019,6 +2020,7 @@ struct C25519CacheValue
 static uint64_t _ed25519TimestampCounter = 0;
 static Hashtable<C25519CacheKey,C25519CacheValue> _ed25519Cache;
 static Mutex _ed25519CacheLock;
+#endif
 
 void C25519::agree(const C25519::Private &mine,const C25519::Public &their,void *keybuf,unsigned int keylen)
 {
@@ -2041,6 +2043,7 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 	unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
 	SHA512::hash(digest,msg,len);
 
+#ifdef ZT_CONTROLLER
 	C25519CacheKey ck;
 	ZT_FAST_MEMCPY(ck.messageDigest,digest,32);
 	ZT_FAST_MEMCPY(ck.publicKey,myPublic.data + 32,32);
@@ -2053,6 +2056,7 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 		ZT_FAST_MEMCPY(signature,cv->signature,ZT_C25519_SIGNATURE_LEN);
 		return;
 	}
+#endif
 
 #ifdef ZT_USE_FAST_X64_ED25519
 	ed25519_amd64_asm_sign(myPrivate.data + 32,myPublic.data + 32,digest,(unsigned char *)signature);
@@ -2100,13 +2104,7 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 		sig[32 + i] = s[i];
 #endif
 
-/*
-	Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
-	Address *a = (Address *)0;
-	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
-	while (i.next(a,p))
-		_savePeer((void *)0,*p);
-*/
+#ifdef ZT_CONTROLLER
 	C25519CacheValue cvn;
 	memcpy(cvn.signature,signature,ZT_C25519_SIGNATURE_LEN);
 	{
@@ -2126,6 +2124,7 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 		cvn.timestamp = ++_ed25519TimestampCounter;
 		_ed25519Cache.set(ck,cvn);
 	}
+#endif
 }
 
 bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len,const void *signature)
@@ -2136,6 +2135,7 @@ bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len
 	if (!Utils::secureEq(sig + 64,digest,32))
 		return false;
 
+#ifdef ZT_CONTROLLER
 	C25519CacheKey ck;
 	ZT_FAST_MEMCPY(ck.messageDigest,digest,32);
 	ZT_FAST_MEMCPY(ck.publicKey,their.data + 32,32);
@@ -2147,6 +2147,7 @@ bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len
 	if (cv) {
 		return Utils::secureEq(cv->signature,signature,ZT_C25519_SIGNATURE_LEN);
 	}
+#endif
 
 	unsigned char t2[32];
 	ge25519 get1, get2;
