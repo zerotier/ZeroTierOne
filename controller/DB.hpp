@@ -35,8 +35,6 @@
 
 #include "../ext/json/json.hpp"
 
-#define ZT_CONTROLLER_RETHINKDB_COMMIT_THREADS 2
-
 namespace ZeroTier
 {
 

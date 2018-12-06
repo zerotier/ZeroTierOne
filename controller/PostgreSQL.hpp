@@ -23,6 +23,8 @@
 
 #include "DB.hpp"
 
+#define ZT_CENTRAL_CONTROLLER_COMMIT_THREADS 4
+
 extern "C" {
     typedef struct pg_conn PGconn;
 }
@@ -79,7 +81,7 @@ private:
     std::thread _heartbeatThread;
     std::thread _membersDbWatcher;
     std::thread _networksDbWatcher;
-    std::thread _commitThread[ZT_CONTROLLER_RETHINKDB_COMMIT_THREADS];
+    std::thread _commitThread[ZT_CENTRAL_CONTROLLER_COMMIT_THREADS];
     std::thread _onlineNotificationThread;
 
 	std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > _lastOnline;

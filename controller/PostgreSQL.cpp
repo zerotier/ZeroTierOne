@@ -77,7 +77,7 @@ PostgreSQL::PostgreSQL(EmbeddedNetworkController *const nc, const Identity &myId
 	_heartbeatThread = std::thread(&PostgreSQL::heartbeat, this);
 	_membersDbWatcher = std::thread(&PostgreSQL::membersDbWatcher, this);
 	_networksDbWatcher = std::thread(&PostgreSQL::networksDbWatcher, this);
-	for (int i = 0; i < ZT_CONTROLLER_RETHINKDB_COMMIT_THREADS; ++i) {
+	for (int i = 0; i < ZT_CENTRAL_CONTROLLER_COMMIT_THREADS; ++i) {
 		_commitThread[i] = std::thread(&PostgreSQL::commitThread, this);
 	}
 	_onlineNotificationThread = std::thread(&PostgreSQL::onlineNotificationThread, this);
@@ -91,7 +91,7 @@ PostgreSQL::~PostgreSQL()
 	_heartbeatThread.join();
 	_membersDbWatcher.join();
 	_networksDbWatcher.join();
-	for (int i = 0; i < ZT_CONTROLLER_RETHINKDB_COMMIT_THREADS; ++i) {
+	for (int i = 0; i < ZT_CENTRAL_CONTROLLER_COMMIT_THREADS; ++i) {
 		_commitThread[i].join();
 	}
 	_onlineNotificationThread.join();
@@ -518,8 +518,9 @@ void PostgreSQL::heartbeat()
 	}
 	while (_run == 1) {
 		if(PQstatus(conn) != CONNECTION_OK) {
+			fprintf(stderr, "%s heartbeat thread lost connection to Database\n", _myAddressStr.c_str());
 			PQfinish(conn);
-			conn = getPgConn();
+			exit(6);
 		}
 		if (conn) {
 			std::string major = std::to_string(ZEROTIER_ONE_VERSION_MAJOR);
@@ -1161,8 +1162,7 @@ void PostgreSQL::onlineNotificationThread()
 		if (PQstatus(conn) != CONNECTION_OK) {
 			fprintf(stderr, "ERROR: Online Notification thread lost connection to Postgres.");
 			PQfinish(conn);
-			conn = getPgConn();
-			continue;
+			exit(5);
 		}
 
 		// map used to send notifications to front end
@@ -1326,7 +1326,6 @@ void PostgreSQL::onlineNotificationThread()
 	}
 	fprintf(stderr, "%s: Fell out of run loop in onlineNotificationThread", _myAddressStr.c_str());
 	PQfinish(conn);
-	exit(5);
 }
 
 PGconn *PostgreSQL::getPgConn(OverrideMode m) {
