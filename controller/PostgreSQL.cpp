@@ -616,6 +616,10 @@ void PostgreSQL::membersDbWatcher()
 	}
 	PQfinish(conn);
 	conn = NULL;
+	if (_run == 1) {
+		fprintf(stderr, "ERROR: %s membersDbWatcher should still be running! Exiting Controller.\n", _myAddressStr.c_str());
+		exit(9);
+	}
 }
 
 void PostgreSQL::networksDbWatcher()
@@ -667,6 +671,10 @@ void PostgreSQL::networksDbWatcher()
 	}
 	PQfinish(conn);
 	conn = NULL;
+	if (_run == 1) {
+		fprintf(stderr, "ERROR: %s networksDbWatcher should still be running! Exiting Controller.\n", _myAddressStr.c_str());
+		exit(8);
+	}
 }
 
 void PostgreSQL::commitThread()
@@ -1143,6 +1151,10 @@ void PostgreSQL::commitThread()
 	}
 
 	PQfinish(conn);
+	if (_run == 1) {
+		fprintf(stderr, "ERROR: %s commitThread should still be running! Exiting Controller.\n", _myAddressStr.c_str());
+		exit(7);
+	}
 }
 
 void PostgreSQL::onlineNotificationThread()
