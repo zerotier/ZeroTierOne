@@ -1324,9 +1324,10 @@ void PostgreSQL::onlineNotificationThread()
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(250));
 	}
-	fprintf(stderr, "%s: Fell out of run loop in onlineNotificationThread", _myAddressStr.c_str());
+	fprintf(stderr, "%s: Fell out of run loop in onlineNotificationThread\n", _myAddressStr.c_str());
 	PQfinish(conn);
-	if (_run != 0) {
+	if (_run == 1) {
+		fprintf(stderr, "ERROR: %s onlineNotificationThread should still be running! Exiting Controller.\n", _myAddressStr.c_str());
 		exit(6);
 	}
 }
