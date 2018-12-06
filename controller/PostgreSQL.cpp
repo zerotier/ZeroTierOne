@@ -1326,6 +1326,9 @@ void PostgreSQL::onlineNotificationThread()
 	}
 	fprintf(stderr, "%s: Fell out of run loop in onlineNotificationThread", _myAddressStr.c_str());
 	PQfinish(conn);
+	if (_run != 0) {
+		exit(6);
+	}
 }
 
 PGconn *PostgreSQL::getPgConn(OverrideMode m) {
