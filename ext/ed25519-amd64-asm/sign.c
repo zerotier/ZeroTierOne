@@ -124,17 +124,14 @@ void get_hram(unsigned char *hram, const unsigned char *sm, const unsigned char 
 
 extern void ZT_sha512internal(void *digest,const void *data,unsigned int len);
 
-extern void ed25519_amd64_asm_sign(const unsigned char *sk,const unsigned char *pk,const unsigned char *m,const unsigned int mlen,unsigned char *sig)
+extern void ed25519_amd64_asm_sign(const unsigned char *sk,const unsigned char *pk,const unsigned char *digest,unsigned char *sig)
 {
   unsigned char az[64];
   unsigned char nonce[64];
   unsigned char hram[64];
   sc25519 sck, scs, scsk;
   ge25519 ger;
-  unsigned char digest[64];
   unsigned int i;
-
-  ZT_sha512internal(digest,m,mlen);
 
   ZT_sha512internal(az,sk,32);
   az[0] &= 248;

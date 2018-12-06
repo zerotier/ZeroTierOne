@@ -444,14 +444,16 @@ void Multicaster::_add(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup
 	if (member == RR->identity.address())
 		return;
 
-	for(std::vector<MulticastGroupMember>::iterator m(gs.members.begin());m!=gs.members.end();++m) {
+	std::vector<MulticastGroupMember>::iterator m(std::lower_bound(gs.members.begin(),gs.members.end(),member));
+	if (m != gs.members.end()) {
 		if (m->address == member) {
 			m->timestamp = now;
 			return;
 		}
+		gs.members.insert(m,MulticastGroupMember(member,now));
+	} else {
+		gs.members.push_back(MulticastGroupMember(member,now));
 	}
-
-	gs.members.push_back(MulticastGroupMember(member,now));
 
 	for(std::list<OutboundMulticast>::iterator tx(gs.txQueue.begin());tx!=gs.txQueue.end();) {
 		if (tx->atLimit())
