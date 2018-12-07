@@ -13,4 +13,6 @@ CONTROLLERS=`kubectl get pods -o=name | grep controller | sed "s/^.\{4\}//" | cu
 for c in ${CONTROLLERS[@]}
 do
     kubectl set image deployment controller-${c} ztcentral-controller=gcr.io/zerotier-central/ztcentral-controller:${TAG}
+    echo "Sleeping for 1 minute"
+    sleep 60
 done
