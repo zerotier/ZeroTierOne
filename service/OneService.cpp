@@ -607,16 +607,13 @@ public:
 		_ports[1] = 0;
 		_ports[2] = 0;
 
+		_incomingPacketConcurrency = std::max((unsigned long)1,std::min((unsigned long)16,(unsigned long)std::thread::hardware_concurrency()));
 		char *envPool = std::getenv("INCOMING_PACKET_CONCURRENCY");
 		if (envPool != NULL) {
 			int tmp = atoi(envPool);
 			if (tmp > 0) {
 				_incomingPacketConcurrency = tmp;
-			} else {
-				_incomingPacketConcurrency = std::max((unsigned long)1,std::min((unsigned long)16,(unsigned long)std::thread::hardware_concurrency()));
 			}
-		} else {
-			_incomingPacketConcurrency = std::max((unsigned long)1,std::min((unsigned long)16,(unsigned long)std::thread::hardware_concurrency()));
 		}
 		for(long t=0;t<_incomingPacketConcurrency;++t) {
 			_incomingPacketThreads.push_back(std::thread([this]() {
