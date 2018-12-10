@@ -12,6 +12,10 @@ if [ -z "$ZT_DB_PORT" ]; then
     echo '*** FAILED: ZT_DB_PORT environment variable not defined'
     exit 1
 fi
+if [ -z "$ZT_DB_NAME" ]; then
+    echo '*** FAILED: ZT_DB_NAME environment variable not defined'
+    exit 1
+fi
 if [ -z "$ZT_DB_USER" ]; then
     echo '*** FAILED: ZT_DB_USER environment variable not defined'
     exit 1
@@ -38,7 +42,7 @@ echo "{
             \"inot\",
             \"nat64\"
         ],
-        \"controllerDbPath\": \"postgres:host=${ZT_DB_HOST} port=${ZT_DB_PORT} dbname=ztc user=${ZT_DB_USER} password=${ZT_DB_PASSWORD} sslmode=require sslcert=${DB_CLIENT_CERT} sslkey=${DB_CLIENT_KEY} sslrootcert=${DB_SERVER_CA}\"
+        \"controllerDbPath\": \"postgres:host=${ZT_DB_HOST} port=${ZT_DB_PORT} dbname=${ZT_DB_NAME} user=${ZT_DB_USER} password=${ZT_DB_PASSWORD} sslmode=prefer sslcert=${DB_CLIENT_CERT} sslkey=${DB_CLIENT_KEY} sslrootcert=${DB_SERVER_CA}\"
     }
 }    
 " > /var/lib/zerotier-one/local.conf

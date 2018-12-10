@@ -1349,7 +1349,10 @@ PGconn *PostgreSQL::getPgConn(OverrideMode m) {
 		char *connStr = getenv("PGBOUNCER_CONNSTR");
 		if (connStr != NULL) {
 			fprintf(stderr, "PGBouncer Override\n");
-			return PQconnectdb(connStr);
+			std::string conn(connStr);
+			conn += " application_name=controller-"; 
+			conn += _myAddressStr.c_str();
+			return PQconnectdb(conn.c_str());
 		}
 	}
 
