@@ -1035,10 +1035,12 @@ public:
 			try {
 				_localConfig = OSUtils::jsonParse(lcbuf);
 				if (!_localConfig.is_object()) {
-					fprintf(stderr,"WARNING: unable to parse local.conf (root element is not a JSON object)" ZT_EOL_S);
+					fprintf(stderr,"ERROR: unable to parse local.conf (root element is not a JSON object)" ZT_EOL_S);
+					exit(1);
 				}
 			} catch ( ... ) {
-				fprintf(stderr,"WARNING: unable to parse local.conf (invalid JSON)" ZT_EOL_S);
+				fprintf(stderr,"ERROR: unable to parse local.conf (invalid JSON)" ZT_EOL_S);
+				exit(1);
 			}
 		}
 
