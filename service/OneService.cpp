@@ -112,7 +112,7 @@ namespace ZeroTier { typedef TestEthernetTap EthernetTap; }
 #include "../controller/EmbeddedNetworkController.hpp"
 #include "../node/Node.hpp"
 // Use the virtual netcon endpoint instead of a tun/tap port driver
-#include "../include/VirtualTap.h"
+#include "../include/VirtualTap.hpp"
 namespace ZeroTier { typedef VirtualTap EthernetTap; }
 
 #else
@@ -142,7 +142,7 @@ namespace ZeroTier { typedef NetBSDEthernetTap EthernetTap; }
 namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #endif // __OpenBSD__
 
-#endif // ZT_SERVICE_NETCON
+#endif // ZT_SDK
 
 #endif // ZT_USE_TEST_TAP
 
@@ -158,7 +158,9 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #define ZT_TAP_CHECK_MULTICAST_INTERVAL 5000
 
 // TCP fallback relay (run by ZeroTier, Inc. -- this will eventually go away)
+#ifndef ZT_SDK
 #define ZT_TCP_FALLBACK_RELAY "204.80.128.1/443"
+#endif
 
 // Frequency at which we re-resolve the TCP fallback relay
 #define ZT_TCP_FALLBACK_RERESOLVE_DELAY 86400000
@@ -1112,43 +1114,25 @@ public:
 	}
 
 #ifdef ZT_SDK
-	virtual void leave(const uint64_t hp)
-	{
-		_node->leave(hp, NULL, NULL);
-	}
-
-	virtual void join(const uint64_t hp)
-	{
-		_node->join(hp, NULL, NULL);
-	}
-
 	virtual std::string givenHomePath()
 	{
 		return _homePath;
 	}
 
-	std::vector<ZT_VirtualNetworkRoute> *getRoutes(uint64_t nwid)
+	void getRoutes(uint64_t nwid, void *routeArray, unsigned int *numRoutes)
 	{
 		Mutex::Lock _l(_nets_m);
 		NetworkState &n = _nets[nwid];
-		std::vector<ZT_VirtualNetworkRoute> *routes = new std::vector<ZT_VirtualNetworkRoute>();
-		for(int i=0; i<ZT_MAX_NETWORK_ROUTES; i++) {
-			routes->push_back(n.config.routes[i]);
+		*numRoutes = *numRoutes < n.config.routeCount ? *numRoutes : n.config.routeCount;
+		for(unsigned int i=0; i<*numRoutes; i++) {
+			ZT_VirtualNetworkRoute *vnr = (ZT_VirtualNetworkRoute*)routeArray;
+			memcpy(&vnr[i], &(n.config.routes[i]), sizeof(ZT_VirtualNetworkRoute));
 		}
-		return routes;
 	}
 
 	virtual Node *getNode()
 	{
 		return _node;
-	}
-
-	virtual void removeNets()
-	{
-		Mutex::Lock _l(_nets_m);
-		std::map<uint64_t,NetworkState>::iterator i;
-		for(i = _nets.begin(); i != _nets.end(); i++)
-			delete i->second.tap;
 	}
 #endif // ZT_SDK
 
@@ -1962,6 +1946,13 @@ public:
 			_phy.close(sockN,false);
 			return;
 		} else {
+#ifdef ZT_SDK
+			// Immediately close new local connections. The intention is to prevent the backplane from being accessed when operating as libzt
+			if (!allowHttpBackplaneManagement && ((InetAddress*)from)->ipScope() == InetAddress::IP_SCOPE_LOOPBACK) {
+				_phy.close(sockN,false);
+				return;
+			}
+#endif
 			TcpConnection *tc = new TcpConnection();
 			{
 				Mutex::Lock _l(_tcpConnections_m);

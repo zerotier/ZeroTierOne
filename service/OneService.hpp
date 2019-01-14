@@ -30,16 +30,17 @@
 #include <string>
 #include <vector>
 
-#include "../node/InetAddress.hpp"
+namespace ZeroTier {
 
 #ifdef ZT_SDK
-#include "../node/Node.hpp"
-// Use the virtual netcon endpoint instead of a tun/tap port driver
-#include "../include/VirtualTap.h"
+class VirtualTap;
+// Use the virtual libzt endpoint instead of a tun/tap port driver
 namespace ZeroTier { typedef VirtualTap EthernetTap; }
 #endif
 
-namespace ZeroTier {
+// Forward declaration so we can avoid dragging everything in
+struct InetAddress;
+class Node;
 
 /**
  * Local service for ZeroTier One as system VPN/NFV provider
@@ -147,12 +148,18 @@ public:
 	virtual std::string portDeviceName(uint64_t nwid) const = 0;
 
 #ifdef ZT_SDK
-	virtual void leave(const uint64_t hp) = 0;
-	virtual void join(const uint64_t hp) = 0;
-	virtual std::string givenHomePath() = 0;
+	/**
+	 * Whether we allow access to the service via local HTTP requests (disabled by default in libzt)
+	 */
+	bool allowHttpBackplaneManagement = false;
+	/**
+	 * @return Reference to the Node
+	 */
 	virtual Node * getNode() = 0;
-	virtual void removeNets() = 0;
-	virtual std::vector<ZT_VirtualNetworkRoute> *getRoutes(uint64_t nwid) = 0;
+	/**
+	 * Fills out a structure with network-specific route information
+	 */
+	virtual void getRoutes(uint64_t nwid, void *routeArray, unsigned int *numRoutes) = 0;
 #endif
 
 	/**
