@@ -53,12 +53,12 @@ struct ifmaddrs {
 
 /*
  * Message format for use in obtaining information about multicast addresses
- * from the routing socket
+ * from the routing socket.
  */
 struct ifma_msghdr {
 	int	ifmam_msglen;	/* to skip over non-understood messages */
 	int	ifmam_version;	/* future binary compatibility */
-	int	ifmam_type;	/* message type */
+	int	ifmam_type;     /* message type */
 	int	ifmam_addrs;	/* like rtm_addrs */
 	int	ifmam_flags;	/* value of ifa_flags */
 	int	ifmam_index;	/* index for associated ifp */
