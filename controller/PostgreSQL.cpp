@@ -537,7 +537,8 @@ void PostgreSQL::heartbeat()
 			std::string rev = std::to_string(ZEROTIER_ONE_VERSION_REVISION);
 			std::string build = std::to_string(ZEROTIER_ONE_VERSION_BUILD);
 			std::string now = std::to_string(OSUtils::now());
-			const char *values[8] = {
+			std::string host_port = std::to_string(_listenPort);
+			const char *values[9] = {
 				controllerId,
 				hostname,
 				now.c_str(),
@@ -545,16 +546,17 @@ void PostgreSQL::heartbeat()
 				major.c_str(),
 				minor.c_str(),
 				rev.c_str(),
-				build.c_str()
+				build.c_str(),
+				host_port.c_str()
 			};
 
 			PGresult *res = PQexecParams(conn,
-				"INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build) " 
-				"VALUES ($1, $2, TO_TIMESTAMP($3::double precision/1000), $4, $5, $6, $7, $8) "
+				"INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port) " 
+				"VALUES ($1, $2, TO_TIMESTAMP($3::double precision/1000), $4, $5, $6, $7, $8, $9) "
 				"ON CONFLICT (id) DO UPDATE SET cluster_host = EXCLUDED.cluster_host, last_alive = EXCLUDED.last_alive, "
 				"public_identity = EXCLUDED.public_identity, v_major = EXCLUDED.v_major, v_minor = EXCLUDED.v_minor, "
-				"v_rev = EXCLUDED.v_rev, v_build = EXCLUDED.v_rev",
-				8,       // number of parameters
+				"v_rev = EXCLUDED.v_rev, v_build = EXCLUDED.v_rev, host_port = EXCLUDED.host_port",
+				9,       // number of parameters
 				NULL,    // oid field.   ignore
 				values,  // values for substitution
 				NULL, // lengths in bytes of each value
