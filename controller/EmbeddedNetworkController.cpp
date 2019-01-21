@@ -456,8 +456,9 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 
 } // anonymous namespace
 
-EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPath) :
+EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPath, int listenPort) :
 	_startTime(OSUtils::now()),
+	_listenPort(listenPort),
 	_node(node),
 	_path(dbPath),
 	_sender((NetworkController::Sender *)0)
@@ -480,7 +481,7 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 	_signingIdAddressString = signingId.address().toString(tmp);
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 	if ((_path.length() > 9)&&(_path.substr(0,9) == "postgres:"))
-		_db.reset(new PostgreSQL(this,_signingId,_path.substr(9).c_str()));
+		_db.reset(new PostgreSQL(this,_signingId,_path.substr(9).c_str(), _listenPort));
 	else // else use FileDB after endif
 #endif
 		_db.reset(new FileDB(this,_signingId,_path.c_str()));

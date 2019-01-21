@@ -59,7 +59,7 @@ public:
 	 * @param node Parent node
 	 * @param dbPath Database path (file path or database credentials)
 	 */
-	EmbeddedNetworkController(Node *node,const char *dbPath);
+	EmbeddedNetworkController(Node *node,const char *dbPath, int listenPort);
 	virtual ~EmbeddedNetworkController();
 
 	virtual void init(const Identity &signingId,Sender *sender);
@@ -141,6 +141,7 @@ private:
 	};
 
 	const int64_t _startTime;
+	int _listenPort;
 	Node *const _node;
 	std::string _path;
 	Identity _signingId;

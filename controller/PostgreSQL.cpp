@@ -64,12 +64,13 @@ std::string join(const std::vector<std::string> &elements, const char * const se
 
 using namespace ZeroTier;
 
-PostgreSQL::PostgreSQL(EmbeddedNetworkController *const nc, const Identity &myId, const char *path)
+PostgreSQL::PostgreSQL(EmbeddedNetworkController *const nc, const Identity &myId, const char *path, int listenPort)
     : DB(nc, myId, path)
     , _ready(0)
 	, _connected(1)
     , _run(1)
     , _waitNoticePrinted(false)
+	, _listenPort(listenPort)
 {
 	_connString = std::string(path) + " application_name=controller_" +_myAddressStr;
 

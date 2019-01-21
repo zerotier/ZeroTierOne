@@ -41,7 +41,7 @@ namespace ZeroTier
 class PostgreSQL : public DB
 {
 public:
-    PostgreSQL(EmbeddedNetworkController *const nc, const Identity &myId, const char *path);
+    PostgreSQL(EmbeddedNetworkController *const nc, const Identity &myId, const char *path, int listenPort);
     virtual ~PostgreSQL();
 
     virtual bool waitForReady();
@@ -90,6 +90,8 @@ private:
     mutable std::mutex _readyLock;
     std::atomic<int> _ready, _connected, _run;
     mutable volatile bool _waitNoticePrinted;
+
+    int _listenPort;
 };
 
 }
