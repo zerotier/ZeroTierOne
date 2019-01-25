@@ -532,7 +532,7 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 	TXQueueEntry *txEntry = new TXQueueEntry(dest,RR->node->now(),packet,encrypt);
 	
 	ManagedQueue *selectedQueue = nullptr;
-	for (int i=0; i<ZT_QOS_NUM_BUCKETS; i++) {
+	for (size_t i=0; i<ZT_QOS_NUM_BUCKETS; i++) {
 		if (i < nqcb->oldQueues.size()) { // search old queues first (I think this is best since old would imply most recent usage of the queue)
 			if (nqcb->oldQueues[i]->id == qosBucket) {
 				selectedQueue = nqcb->oldQueues[i];
@@ -568,7 +568,7 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 	{
 		// DEBUG_INFO("too many enqueued packets (%d), finding packet to drop", nqcb->_currEnqueuedPackets);
 		int maxQueueLength = 0;
-		for (int i=0; i<ZT_QOS_NUM_BUCKETS; i++) {
+		for (size_t i=0; i<ZT_QOS_NUM_BUCKETS; i++) {
 			if (i < nqcb->oldQueues.size()) {
 				if (nqcb->oldQueues[i]->byteLength > maxQueueLength) {
 					maxQueueLength = nqcb->oldQueues[i]->byteLength;
