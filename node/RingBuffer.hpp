@@ -72,6 +72,11 @@ public:
 		memset(buf, 0, sizeof(T) * size);
 	}
 
+	~RingBuffer()
+	{
+		delete [] buf;
+	}
+
 	/**
 	 * @return A pointer to the underlying buffer
 	 */
