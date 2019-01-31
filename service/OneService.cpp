@@ -625,6 +625,8 @@ public:
 						break;
 					if (!pkt)
 						break;
+					if (!_run)
+						break;
 
 					const ZT_ResultCode rc = _node->processWirePacket(nullptr,pkt->now,pkt->sock,&(pkt->from),pkt->data,pkt->size,&_nextBackgroundTaskDeadline);
 					{
