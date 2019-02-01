@@ -1521,12 +1521,9 @@ void EmbeddedNetworkController::_request(
 				const std::string ips = ipAssignments[i];
 				InetAddress ip(ips.c_str());
 
-				// IP assignments are only pushed if there is a corresponding local route. We also now get the netmask bits from
-				// this route, ignoring the netmask bits field of the assigned IP itself. Using that was worthless and a source
-				// of user error / poor UX.
 				int routedNetmaskBits = -1;
 				for(unsigned int rk=0;rk<nc->routeCount;++rk) {
-					if ( (!nc->routes[rk].via.ss_family) && (reinterpret_cast<const InetAddress *>(&(nc->routes[rk].target))->containsAddress(ip)) )
+					if (reinterpret_cast<const InetAddress *>(&(nc->routes[rk].target))->containsAddress(ip))
 						routedNetmaskBits = reinterpret_cast<const InetAddress *>(&(nc->routes[rk].target))->netmaskBits();
 				}
 
