@@ -1523,8 +1523,11 @@ void EmbeddedNetworkController::_request(
 
 				int routedNetmaskBits = -1;
 				for(unsigned int rk=0;rk<nc->routeCount;++rk) {
-					if (reinterpret_cast<const InetAddress *>(&(nc->routes[rk].target))->containsAddress(ip))
-						routedNetmaskBits = reinterpret_cast<const InetAddress *>(&(nc->routes[rk].target))->netmaskBits();
+					if (reinterpret_cast<const InetAddress *>(&(nc->routes[rk].target))->containsAddress(ip)) {
+						const int nb = (int)(reinterpret_cast<const InetAddress *>(&(nc->routes[rk].target))->netmaskBits());
+						if (nb > routedNetmaskBits)
+							routedNetmaskBits = nb;
+					}
 				}
 
 				if (routedNetmaskBits >= 0) {
