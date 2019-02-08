@@ -322,7 +322,7 @@ central-controller:	FORCE
 	make -j4 LDLIBS="-L/usr/pgsql-10/lib/ -lpq" CXXFLAGS="-I/usr/pgsql-10/include -fPIC" DEFS="-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER" ZT_OFFICIAL=1 ZT_USE_X64_ASM_ED25519=1 one
 
 central-controller-docker:	central-controller
-	docker build -t gcr.io/zerotier-central/ztcentral-controller:${TIMESTAMP} -f docker/Dockerfile . 
+	docker build -t docker.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f docker/Dockerfile . 
 
 debug:	FORCE
 	make ZT_DEBUG=1 one
