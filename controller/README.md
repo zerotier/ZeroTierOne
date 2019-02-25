@@ -208,14 +208,6 @@ Important notes about rules engine behavior:
 
 This returns a JSON object containing all member IDs as keys and their `memberRevisionCounter` values as values.
 
-#### `/controller/network/<network ID>/active`
-
- * Purpose: Get a set of all active members on this network
- * Methods: GET
- * Returns: { object }
-
-This returns an object containing all currently online members and the most recent `recentLog` entries for their last request.
-
 #### `/controller/network/<network ID>/member/<address>`
 
  * Purpose: Create, authorize, or remove a network member
