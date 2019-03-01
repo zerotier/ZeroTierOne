@@ -161,6 +161,7 @@ public:
 
 	~Path()
 	{
+#if ZT_PROTO_VERSION >= 10
 		delete _throughputSamples;
 		delete _latencySamples;
 		delete _packetValiditySamples;
@@ -169,6 +170,7 @@ public:
 		_latencySamples = NULL;
 		_packetValiditySamples = NULL;
 		_throughputDisturbanceSamples = NULL;
+#endif
 	}
 
 	/**
@@ -651,12 +653,14 @@ public:
 	 * Initialize statistical buffers
 	 */
 	inline void prepareBuffers() {
+#if ZT_PROTO_VERSION >= 10
 		_throughputSamples = new RingBuffer<uint64_t>(ZT_PATH_QUALITY_METRIC_WIN_SZ);
 		_latencySamples = new RingBuffer<uint32_t>(ZT_PATH_QUALITY_METRIC_WIN_SZ);
 		_packetValiditySamples = new RingBuffer<bool>(ZT_PATH_QUALITY_METRIC_WIN_SZ);
 		_throughputDisturbanceSamples = new RingBuffer<float>(ZT_PATH_QUALITY_METRIC_WIN_SZ);
 		memset(_ifname, 0, 16);
 		memset(_addrString, 0, sizeof(_addrString));
+#endif
 	}
 
 private:
@@ -701,8 +705,6 @@ private:
 	float _lastComputedRelativeQuality;
 	float _lastComputedThroughputDistCoeff;
 	unsigned char _lastAllocation;
-
-
 
 	// cached human-readable strings for tracing purposes
 	char _ifname[16];

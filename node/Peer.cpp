@@ -78,7 +78,9 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	Utils::getSecureRandom(&_freeRandomByte, 1);
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
+#if ZT_PROTO_VERSION >= 10
 	_pathChoiceHist = new RingBuffer<int>(ZT_MULTIPATH_PROPORTION_WIN_SZ);
+#endif
 }
 
 void Peer::received(
