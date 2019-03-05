@@ -32,6 +32,7 @@
 
 #include <libpq-fe.h>
 #include <sstream>
+#include <amqp.h>
 
 using json = nlohmann::json;
 namespace {
