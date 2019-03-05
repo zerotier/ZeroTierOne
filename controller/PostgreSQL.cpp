@@ -74,13 +74,14 @@ std::string join(const std::vector<std::string> &elements, const char * const se
 
 using namespace ZeroTier;
 
-PostgreSQL::PostgreSQL(EmbeddedNetworkController *const nc, const Identity &myId, const char *path, int listenPort)
+PostgreSQL::PostgreSQL(EmbeddedNetworkController *const nc, const Identity &myId, const char *path, int listenPort, mq_config *mqc)
     : DB(nc, myId, path)
     , _ready(0)
 	, _connected(1)
     , _run(1)
     , _waitNoticePrinted(false)
 	, _listenPort(listenPort)
+	, _mqc(mqc)
 {
 	_connString = std::string(path) + " application_name=controller_" +_myAddressStr;
 
@@ -601,6 +602,21 @@ void PostgreSQL::membersDbWatcher()
 
 	PQclear(res); res = NULL;
 
+	if (this->_mqc != NULL) {
+		_membersWatcher_RabbitMQ();
+	} else {
+		_membersWatcher_Postgres(conn);
+		PQfinish(conn);
+		conn = NULL;
+	}
+
+	if (_run == 1) {
+		fprintf(stderr, "ERROR: %s membersDbWatcher should still be running! Exiting Controller.\n", _myAddressStr.c_str());
+		exit(9);
+	}
+}
+
+void PostgreSQL::_membersWatcher_Postgres(PGconn *conn) {
 	while(_run == 1) {
 		if (PQstatus(conn) != CONNECTION_OK) {
 			fprintf(stderr, "ERROR: Member Watcher lost connection to Postgres.");
@@ -627,12 +643,10 @@ void PostgreSQL::membersDbWatcher()
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
-	PQfinish(conn);
-	conn = NULL;
-	if (_run == 1) {
-		fprintf(stderr, "ERROR: %s membersDbWatcher should still be running! Exiting Controller.\n", _myAddressStr.c_str());
-		exit(9);
-	}
+}
+
+void PostgreSQL::_membersWatcher_RabbitMQ() {
+
 }
 
 void PostgreSQL::networksDbWatcher()
@@ -658,6 +672,21 @@ void PostgreSQL::networksDbWatcher()
 
 	PQclear(res); res = NULL;
 
+	if (this->_mqc != NULL) {
+		_networksWatcher_RabbitMQ();
+	} else {
+		_networksWatcher_Postgres(conn);
+		PQfinish(conn);
+		conn = NULL;
+	}
+	
+	if (_run == 1) {
+		fprintf(stderr, "ERROR: %s networksDbWatcher should still be running! Exiting Controller.\n", _myAddressStr.c_str());
+		exit(8);
+	}
+}
+
+void PostgreSQL::_networksWatcher_Postgres(PGconn *conn) {
 	while(_run == 1) {
 		if (PQstatus(conn) != CONNECTION_OK) {
 			fprintf(stderr, "ERROR: Network Watcher lost connection to Postgres.");
@@ -682,12 +711,10 @@ void PostgreSQL::networksDbWatcher()
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
-	PQfinish(conn);
-	conn = NULL;
-	if (_run == 1) {
-		fprintf(stderr, "ERROR: %s networksDbWatcher should still be running! Exiting Controller.\n", _myAddressStr.c_str());
-		exit(8);
-	}
+}
+
+void PostgreSQL::_networksWatcher_RabbitMQ() {
+
 }
 
 void PostgreSQL::commitThread()
