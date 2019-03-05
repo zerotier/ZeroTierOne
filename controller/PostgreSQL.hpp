@@ -40,13 +40,7 @@ extern "C" {
 namespace ZeroTier
 {
 
-struct mq_config
-{
-    const char *host;
-    int port;
-    const char *username;
-    const char *password;
-};
+struct MQConfig;
 
 /**
  * A controller database driver that talks to PostgreSQL
@@ -57,7 +51,7 @@ struct mq_config
 class PostgreSQL : public DB
 {
 public:
-    PostgreSQL(EmbeddedNetworkController *const nc, const Identity &myId, const char *path, int listenPort, mq_config *mqc = NULL);
+    PostgreSQL(EmbeddedNetworkController *const nc, const Identity &myId, const char *path, int listenPort, MQConfig *mqc = NULL);
     virtual ~PostgreSQL();
 
     virtual bool waitForReady();
@@ -115,7 +109,7 @@ private:
 
     int _listenPort;
 
-    mq_config *_mqc;
+    MQConfig *_mqc;
 };
 
 }
