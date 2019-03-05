@@ -62,7 +62,9 @@ private:
 public:
 	~Peer() {
 		Utils::burn(_key,sizeof(_key));
+#if ZT_PROTO_VERSION >= 10
 		delete _pathChoiceHist;
+#endif
 		_pathChoiceHist = NULL;
 	}
 
