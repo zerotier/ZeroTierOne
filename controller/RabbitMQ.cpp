@@ -58,13 +58,13 @@ void RabbitMQ::init()
     _q = amqp_queue_declare(_conn, _channel, amqp_cstring_bytes(_qName), 0, 0, 0, 0, amqp_empty_table);
     r = amqp_get_rpc_reply(_conn);
     if (r.reply_type != AMQP_RESPONSE_NORMAL) {
-        throw std::runtime_error("Error declaring queue");
+        throw std::runtime_error("Error declaring queue " + std::string(_qName));
     }
 
     amqp_basic_consume(_conn, _channel, amqp_cstring_bytes(_qName), amqp_empty_bytes, 0, 1, 0, amqp_empty_table);
     r = amqp_get_rpc_reply(_conn);
     if (r.reply_type != AMQP_RESPONSE_NORMAL) {
-        throw std::runtime_error("Error conuming");
+        throw std::runtime_error("Error consuming queue " + std::string(_qName));
     }
     fprintf(stderr, "RabbitMQ Init OK %s\n", _qName);
 }
