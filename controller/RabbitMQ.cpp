@@ -48,13 +48,13 @@ void RabbitMQ::init()
     }
 
     static int chan = 0;
-    amqp_channel_open(_conn, ++chan);
+    _channel = ++chan;
+    amqp_channel_open(_conn, _channel);
     r = amqp_get_rpc_reply(_conn);
     if(r.reply_type != AMQP_RESPONSE_NORMAL) {
         throw std::runtime_error("Error opening communication channel");
     }
-    _channel = chan;
-
+    
     _q = amqp_queue_declare(_conn, _channel, amqp_cstring_bytes(_qName), 0, 0, 0, 0, amqp_empty_table);
     r = amqp_get_rpc_reply(_conn);
     if (r.reply_type != AMQP_RESPONSE_NORMAL) {
