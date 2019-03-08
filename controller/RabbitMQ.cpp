@@ -48,7 +48,10 @@ void RabbitMQ::init()
     }
 
     static int chan = 0;
-    _channel = ++chan;
+	{
+		Mutex::Lock l(_chan_m);
+    	_channel = ++chan;
+	}
     amqp_channel_open(_conn, _channel);
     r = amqp_get_rpc_reply(_conn);
     if(r.reply_type != AMQP_RESPONSE_NORMAL) {
