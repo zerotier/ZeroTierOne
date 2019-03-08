@@ -99,6 +99,7 @@ extern "C" {
 using json = nlohmann::json;
 
 #include "../controller/EmbeddedNetworkController.hpp"
+#include "../controller/RabbitMQ.hpp"
 
 #ifdef ZT_USE_TEST_TAP
 
@@ -569,6 +570,8 @@ public:
 	volatile bool _run;
 	Mutex _run_m;
 
+	MQConfig *_mqc;
+
 	// end member variables ----------------------------------------------------
 
 	OneServiceImpl(const char *hp,unsigned int port) :
@@ -604,6 +607,7 @@ public:
 		,_vaultPath("cubbyhole/zerotier")
 #endif
 		,_run(true)
+		,_mqc(NULL)
 	{
 		_ports[0] = 0;
 		_ports[1] = 0;
@@ -678,6 +682,7 @@ public:
 		delete _portMapper;
 #endif
 		delete _controller;
+		delete _mqc;
 	}
 
 	virtual ReasonForTermination run()
@@ -809,7 +814,7 @@ public:
 			OSUtils::rmDashRf((_homePath + ZT_PATH_SEPARATOR_S "iddb.d").c_str());
 
 			// Network controller is now enabled by default for desktop and server
-			_controller = new EmbeddedNetworkController(_node,_controllerDbPath.c_str(),_ports[0]);
+			_controller = new EmbeddedNetworkController(_node,_controllerDbPath.c_str(),_ports[0], _mqc);
 			_node->setNetconfMaster((void *)_controller);
 
 			// Join existing networks in networks.d
@@ -1072,6 +1077,16 @@ public:
 			const std::string cdbp(OSUtils::jsonString(settings["controllerDbPath"],""));
 			if (cdbp.length() > 0)
 				_controllerDbPath = cdbp;
+
+			json &rmq = settings["rabbitmq"];
+			if (rmq.is_object() && _mqc == NULL) {
+				fprintf(stderr, "Reading RabbitMQ Config\n");
+				_mqc = new MQConfig;
+				_mqc->port = rmq["port"];
+				_mqc->host = OSUtils::jsonString(rmq["host"], "").c_str();
+				_mqc->username = OSUtils::jsonString(rmq["username"], "").c_str();
+				_mqc->password = OSUtils::jsonString(rmq["password"], "").c_str();
+			}
 
 			// Bind to wildcard instead of to specific interfaces (disables full tunnel capability)
 			json &bind = settings["bind"];
