@@ -102,10 +102,11 @@ extern "C" {
 /**
  * Default UDP payload size (physical path MTU) not including UDP and IP overhead
  *
- * This is 1500 - IPv6 UDP overhead - PPPoE overhead and is safe for 99.9% of
- * all Internet links.
+ * This is small enough for PPPoE and for Google Cloud's bizarrely tiny MTUs.
+ * A 2800 byte payload still fits into two packets, so this should not impact
+ * real world throughput at all vs the previous default of 1444.
  */
-#define ZT_DEFAULT_PHYSMTU 1444
+#define ZT_DEFAULT_PHYSMTU 1432
 
 /**
  * Maximum physical UDP payload
