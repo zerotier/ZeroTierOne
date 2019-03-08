@@ -608,6 +608,7 @@ void PostgreSQL::membersDbWatcher()
 		fprintf(stderr, "ERROR: %s membersDbWatcher should still be running! Exiting Controller.\n", _myAddressStr.c_str());
 		exit(9);
 	}
+	fprintf(stderr, "Exited membersDbWatcher\n");
 }
 
 void PostgreSQL::_membersWatcher_Postgres(PGconn *conn) {
@@ -675,9 +676,13 @@ void PostgreSQL::_membersWatcher_RabbitMQ() {
 				_memberChanged(oldConfig,newConfig,(this->_ready>=2));
 			}
 		} catch (std::runtime_error &e) {
-			fprintf(stderr, "RABBITMQ ERROR: %s\n", e.what());
+			fprintf(stderr, "RABBITMQ ERROR member change: %s\n", e.what());
 			break;
-		} catch(...) {}
+		} catch(std::exception &e ) {
+			fprintf(stderr, "RABBITMQ ERROR member change: %s\n", e.what());
+		} catch(...) {
+			fprintf(stderr, "RABBITMQ ERROR member change: unknown error\n");
+        }
 	}
 }
 
@@ -706,6 +711,7 @@ void PostgreSQL::networksDbWatcher()
 		fprintf(stderr, "ERROR: %s networksDbWatcher should still be running! Exiting Controller.\n", _myAddressStr.c_str());
 		exit(8);
 	}
+	fprintf(stderr, "Exited membersDbWatcher\n");
 }
 
 void PostgreSQL::_networksWatcher_Postgres(PGconn *conn) {
@@ -773,7 +779,11 @@ void PostgreSQL::_networksWatcher_RabbitMQ() {
 		} catch (std::runtime_error &e) {
 			fprintf(stderr, "RABBITMQ ERROR: %s\n", e.what());
 			break;
-		} catch(...) {}
+		} catch (std::exception &e) {
+			fprintf(stderr, "RABBITMQ ERROR network watcher: %s\n", e.what());
+		} catch(...) {
+			fprintf(stderr, "RABBITMQ ERROR network watcher: unknown error\n");
+		}
 	}
 }
 
