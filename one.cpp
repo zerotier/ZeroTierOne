@@ -365,7 +365,7 @@ static int cli(int argc,char **argv)
 			if (json) {
 				printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
 			} else {
-				printf("200 listpeers <ztaddr> <path> <latency> <version> <role>" ZT_EOL_S);
+				printf("200 listpeers <ztaddr> <path;time in ms since last send;time in ms since last receive> <latency> <version> <role>" ZT_EOL_S);
 				if (j.is_array()) {
 					for(unsigned long k=0;k<j.size();++k) {
 						nlohmann::json &p = j[k];
