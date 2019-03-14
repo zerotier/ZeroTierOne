@@ -259,11 +259,6 @@
 #define ZT_MULTICAST_EXPLICIT_GATHER_DELAY (ZT_MULTICAST_LIKE_EXPIRE / 10)
 
 /**
- * Expiration for credentials presented for MULTICAST_LIKE or MULTICAST_GATHER (for non-network-members)
- */
-#define ZT_MULTICAST_CREDENTIAL_EXPIRATON ZT_MULTICAST_LIKE_EXPIRE
-
-/**
  * Timeout for outgoing multicasts
  *
  * This is how long we wait for explicit or implicit gather results.
@@ -328,7 +323,7 @@
  * since we will record a 0 bit/s measurement if no valid latency measurement was made within this
  * window of time.
  */
-#define ZT_PATH_LATENCY_SAMPLE_INTERVAL ZT_MULTIPATH_PEER_PING_PERIOD * 2
+#define ZT_PATH_LATENCY_SAMPLE_INTERVAL (ZT_MULTIPATH_PEER_PING_PERIOD * 2)
 
 /**
  * Interval used for rate-limiting the computation of path quality estimates.
@@ -365,16 +360,16 @@
 /**
  * How much each factor contributes to the "stability" score of a path
  */
-#define ZT_PATH_CONTRIB_PDV                    1.0 / 3.0
-#define ZT_PATH_CONTRIB_LATENCY                1.0 / 3.0
-#define ZT_PATH_CONTRIB_THROUGHPUT_DISTURBANCE 1.0 / 3.0
+#define ZT_PATH_CONTRIB_PDV                    (1.0 / 3.0)
+#define ZT_PATH_CONTRIB_LATENCY                (1.0 / 3.0)
+#define ZT_PATH_CONTRIB_THROUGHPUT_DISTURBANCE (1.0 / 3.0)
 
 /**
  * How much each factor contributes to the "quality" score of a path
  */
-#define ZT_PATH_CONTRIB_STABILITY  0.75 / 3.0
-#define ZT_PATH_CONTRIB_THROUGHPUT 1.50 / 3.0
-#define ZT_PATH_CONTRIB_SCOPE      0.75 / 3.0
+#define ZT_PATH_CONTRIB_STABILITY  (0.75 / 3.0)
+#define ZT_PATH_CONTRIB_THROUGHPUT (1.50 / 3.0)
+#define ZT_PATH_CONTRIB_SCOPE      (0.75 / 3.0)
 
 /**
  * How often a QoS packet is sent
@@ -390,7 +385,7 @@
 /**
  * How many ID:sojourn time pairs in a single QoS packet
  */
-#define ZT_PATH_QOS_TABLE_SIZE (ZT_PATH_MAX_QOS_PACKET_SZ * 8) / (64 + 16)
+#define ZT_PATH_QOS_TABLE_SIZE ((ZT_PATH_MAX_QOS_PACKET_SZ * 8) / (64 + 16))
 
 /**
  * Maximum number of outgoing packets we monitor for QoS information
@@ -400,12 +395,12 @@
 /**
  * Timeout for QoS records
  */
-#define ZT_PATH_QOS_TIMEOUT ZT_PATH_QOS_INTERVAL * 2
+#define ZT_PATH_QOS_TIMEOUT (ZT_PATH_QOS_INTERVAL * 2)
 
 /**
  * How often the service tests the path throughput
  */
-#define ZT_PATH_THROUGHPUT_MEASUREMENT_INTERVAL ZT_PATH_ACK_INTERVAL * 8
+#define ZT_PATH_THROUGHPUT_MEASUREMENT_INTERVAL (ZT_PATH_ACK_INTERVAL * 8)
 
 /**
  * Minimum amount of time between each ACK packet

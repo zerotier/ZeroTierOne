@@ -281,6 +281,19 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 				}
 			}
 
+			// Clean up any old local controller auth memorizations.
+			{
+				_localControllerAuthorizations_m.lock();
+				Hashtable< _LocalControllerAuth,int64_t >::Iterator i(_localControllerAuthorizations);
+				_LocalControllerAuth *k = (_LocalControllerAuth *)0;
+				int64_t *v = (int64_t *)0;
+				while (i.next(k,v)) {
+					if ((*v - now) > (ZT_NETWORK_AUTOCONF_DELAY * 3))
+						_localControllerAuthorizations.erase(*k);
+				}
+				_localControllerAuthorizations_m.unlock();
+			}
+
 			// Get peers we should stay connected to according to network configs
 			// Also get networks and whether they need config so we only have to do one pass over networks
 			std::vector< std::pair< SharedPtr<Network>,bool > > networkConfigNeeded;
