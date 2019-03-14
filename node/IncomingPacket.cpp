@@ -645,8 +645,6 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,void *tPtr,const Shar
 			_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
 			RR->t->incomingNetworkAccessDenied(tPtr,network,_path,packetId(),size(),peer->address(),Packet::VERB_FRAME,true);
 		}
-	} else {
-		_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
 	}
 
 	peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_FRAME,0,Packet::VERB_NOP,trustEstablished,nwid);
@@ -757,45 +755,10 @@ bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,void *tPtr,const Share
 bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	const int64_t now = RR->node->now();
-
-	uint64_t authOnNetwork[256]; // cache for approved network IDs
-	unsigned int authOnNetworkCount = 0;
-	SharedPtr<Network> network;
-	bool trustEstablished = false;
-
-	// Iterate through 18-byte network,MAC,ADI tuples
-	for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18) {
-		const uint64_t nwid = at<uint64_t>(ptr);
-
-		bool auth = false;
-		for(unsigned int i=0;i<authOnNetworkCount;++i) {
-			if (nwid == authOnNetwork[i]) {
-				auth = true;
-				break;
-			}
-		}
-		if (!auth) {
-			if ((!network)||(network->id() != nwid))
-				network = RR->node->network(nwid);
-			const bool authOnNet = ((network)&&(network->gate(tPtr,peer)));
-			if (!authOnNet)
-				_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
-			trustEstablished |= authOnNet;
-			if (authOnNet||RR->mc->cacheAuthorized(peer->address(),nwid,now)) {
-				auth = true;
-				if (authOnNetworkCount < 256) // sanity check, packets can't really be this big
-					authOnNetwork[authOnNetworkCount++] = nwid;
-			}
-		}
-
-		if (auth) {
-			const MulticastGroup group(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14));
-			RR->mc->add(tPtr,now,nwid,group,peer->address());
-		}
-	}
-
-	peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP,trustEstablished,(network) ? network->id() : 0);
-
+	// Packet contains a series of 18-byte network,MAC,ADI tuples
+	for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18)
+		RR->mc->add(tPtr,now,at<uint64_t>(ptr),MulticastGroup(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14)),peer->address());
+	peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP,false,0);
 	return true;
 }
 
@@ -828,7 +791,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,void *t
 					case Membership::ADD_DEFERRED_FOR_WHOIS:
 						return false;
 				}
-			} else RR->mc->addCredential(tPtr,com,false);
+			}
 		}
 	}
 	++p; // skip trailing 0 after COMs if present
@@ -982,18 +945,20 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr
 		try {
 			CertificateOfMembership com;
 			com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_GATHER_IDX_COM);
-			if (com) {
-				if (network)
-					network->addCredential(tPtr,com);
-				else RR->mc->addCredential(tPtr,com,false);
-			}
+			if ((com)&&(network))
+				network->addCredential(tPtr,com);
 		} catch ( ... ) {} // discard invalid COMs
 	}
 
-	const bool trustEstablished = ((network)&&(network->gate(tPtr,peer)));
-	if (!trustEstablished)
-		_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
-	if ( ( trustEstablished || RR->mc->cacheAuthorized(peer->address(),nwid,RR->node->now()) ) && (gatherLimit > 0) ) {
+	bool trustEstablished = false;
+	if (network) {
+		if (network->gate(tPtr,peer))
+			trustEstablished = true;
+		else _sendErrorNeedCredentials(RR,tPtr,peer,nwid);
+	}
+
+	const int64_t now = RR->node->now();
+	if ((gatherLimit > 0)&&((trustEstablished)||(RR->topology->amUpstream())||(RR->node->localControllerHasAuthorized(now,nwid,peer->address())))) {
 		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 		outp.append((unsigned char)Packet::VERB_MULTICAST_GATHER);
 		outp.append(packetId());
@@ -1003,7 +968,7 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr
 		const unsigned int gatheredLocally = RR->mc->gather(peer->address(),nwid,mg,outp,gatherLimit);
 		if (gatheredLocally > 0) {
 			outp.armor(peer->key(),true);
-			_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
+			_path->send(RR,tPtr,outp.data(),outp.size(),now);
 		}
 	}
 

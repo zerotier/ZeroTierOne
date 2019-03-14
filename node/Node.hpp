@@ -263,6 +263,16 @@ public:
 	inline void setMultipathMode(uint8_t mode) { _multipathMode = mode; }
 	inline uint8_t getMultipathMode() { return _multipathMode; }
 
+	inline bool localControllerHasAuthorized(const int64_t now,const uint64_t nwid,const Address &addr) const
+	{
+		_localControllerAuthorizations_m.lock();
+		const int64_t *const at = _localControllerAuthorizations.get(_LocalControllerAuth(nwid,addr));
+		_localControllerAuthorizations_m.unlock();
+		if (at)
+			return ((now - *at) < (ZT_NETWORK_AUTOCONF_DELAY * 3));
+		return false;
+	}
+
 private:
 	RuntimeEnvironment _RR;
 	RuntimeEnvironment *RR;
@@ -275,6 +285,19 @@ private:
 
 	// Time of last identity verification indexed by InetAddress.rateGateHash() -- used in IncomingPacket::_doHELLO() via rateGateIdentityVerification()
 	int64_t _lastIdentityVerification[16384];
+
+	// Map that remembers if we have recently sent a network config to someone
+	// querying us as a controller.
+	struct _LocalControllerAuth
+	{
+		uint64_t nwid,address;
+		_LocalControllerAuth(const uint64_t nwid_,const Address &address_) : nwid(nwid_),address(address_.toInt()) {}
+		inline unsigned long hashCode() const { return (unsigned long)(nwid ^ address); }
+		inline bool operator==(const _LocalControllerAuth &a) const { return ((a.nwid == nwid)&&(a.address == address)); }
+		inline bool operator!=(const _LocalControllerAuth &a) const { return ((a.nwid != nwid)||(a.address != address)); }
+	};
+	Hashtable< _LocalControllerAuth,int64_t > _localControllerAuthorizations;
+	Mutex _localControllerAuthorizations_m;
 
 	Hashtable< uint64_t,SharedPtr<Network> > _networks;
 	Mutex _networks_m;

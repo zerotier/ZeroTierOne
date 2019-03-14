@@ -502,7 +502,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 
 void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &packet,bool encrypt,int qosBucket)
 {
-	if(!network->QoSEnabled()) {
+	if(!network->qosEnabled()) {
 		send(tPtr, packet, encrypt);
 		return;
 	}

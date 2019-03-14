@@ -42,8 +42,7 @@ namespace ZeroTier {
 
 Multicaster::Multicaster(const RuntimeEnvironment *renv) :
 	RR(renv),
-	_groups(256),
-	_gatherAuth(256)
+	_groups(32)
 {
 }
 
@@ -414,25 +413,6 @@ void Multicaster::clean(int64_t now)
 				s->members.clear();
 			}
 		}
-	}
-
-	{
-		Mutex::Lock _l(_gatherAuth_m);
-		_GatherAuthKey *k = (_GatherAuthKey *)0;
-		uint64_t *ts = NULL;
-		Hashtable<_GatherAuthKey,uint64_t>::Iterator i(_gatherAuth);
-		while (i.next(k,ts)) {
-			if ((now - *ts) >= ZT_MULTICAST_CREDENTIAL_EXPIRATON)
-				_gatherAuth.erase(*k);
-		}
-	}
-}
-
-void Multicaster::addCredential(void *tPtr,const CertificateOfMembership &com,bool alreadyValidated)
-{
-	if ((alreadyValidated)||(com.verify(RR,tPtr) == 0)) {
-		Mutex::Lock _l(_gatherAuth_m);
-		_gatherAuth[_GatherAuthKey(com.networkId(),com.issuedTo())] = RR->node->now();
 	}
 }
 

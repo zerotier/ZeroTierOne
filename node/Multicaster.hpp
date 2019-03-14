@@ -158,33 +158,6 @@ public:
 	 */
 	void clean(int64_t now);
 
-	/**
-	 * Add an authorization credential
-	 *
-	 * The Multicaster keeps its own track of when valid credentials of network
-	 * membership are presented. This allows it to control MULTICAST_LIKE
-	 * GATHER authorization for networks this node does not belong to.
-	 *
-	 * @param com Certificate of membership
-	 * @param alreadyValidated If true, COM has already been checked and found to be valid and signed
-	 */
-	void addCredential(void *tPtr,const CertificateOfMembership &com,bool alreadyValidated);
-
-	/**
-	 * Check authorization for GATHER and LIKE for non-network-members
-	 *
-	 * @param a Address of peer
-	 * @param nwid Network ID
-	 * @param now Current time
-	 * @return True if GATHER and LIKE should be allowed
-	 */
-	bool cacheAuthorized(const Address &a,const uint64_t nwid,const int64_t now) const
-	{
-		Mutex::Lock _l(_gatherAuth_m);
-		const uint64_t *p = _gatherAuth.get(_GatherAuthKey(nwid,a));
-		return ((p)&&((now - *p) < ZT_MULTICAST_CREDENTIAL_EXPIRATON));
-	}
-
 private:
 	struct Key
 	{
@@ -226,18 +199,6 @@ private:
 
 	Hashtable<Multicaster::Key,MulticastGroupStatus> _groups;
 	Mutex _groups_m;
-
-	struct _GatherAuthKey
-	{
-		_GatherAuthKey() : member(0),networkId(0) {}
-		_GatherAuthKey(const uint64_t nwid,const Address &a) : member(a.toInt()),networkId(nwid) {}
-		inline unsigned long hashCode() const { return (unsigned long)(member ^ networkId); }
-		inline bool operator==(const _GatherAuthKey &k) const { return ((member == k.member)&&(networkId == k.networkId)); }
-		uint64_t member;
-		uint64_t networkId;
-	};
-	Hashtable< _GatherAuthKey,uint64_t > _gatherAuth;
-	Mutex _gatherAuth_m;
 };
 
 } // namespace ZeroTier

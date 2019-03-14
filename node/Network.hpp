@@ -291,19 +291,17 @@ public:
 	}
 
 	/**
+	 * @return True if QoS is in effect for this network
+	 */
+	inline bool qosEnabled() { return false; }
+
+	/**
 	 * Set a bridge route
 	 *
 	 * @param mac MAC address of destination
 	 * @param addr Bridge this MAC is reachable behind
 	 */
 	void learnBridgeRoute(const MAC &mac,const Address &addr);
-
-	/**
-	 * Whether QoS is in effect for this network
-	 */
-	bool QoSEnabled() {
-		return false;
-	}
 
 	/**
 	 * Learn a multicast group that is bridged to our tap device

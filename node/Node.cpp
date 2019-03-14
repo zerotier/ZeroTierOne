@@ -633,6 +633,10 @@ std::vector<World> Node::moons() const
 
 void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig)
 {
+	_localControllerAuthorizations_m.lock();
+	_localControllerAuthorizations[_LocalControllerAuth(nwid,destination)] = now();
+	_localControllerAuthorizations_m.unlock();
+
 	if (destination == RR->identity.address()) {
 		SharedPtr<Network> n(network(nwid));
 		if (!n) return;

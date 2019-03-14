@@ -1370,7 +1370,6 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Certific
 	const Membership::AddCredentialResult result = m.addCredential(RR,tPtr,_config,com);
 	if ((result == Membership::ADD_ACCEPTED_NEW)||(result == Membership::ADD_ACCEPTED_REDUNDANT)) {
 		m.pushCredentials(RR,tPtr,RR->node->now(),a,_config,-1,false);
-		RR->mc->addCredential(tPtr,com,true);
 	}
 	return result;
 }
