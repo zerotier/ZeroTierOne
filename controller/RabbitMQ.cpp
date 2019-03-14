@@ -1,5 +1,7 @@
 #include "RabbitMQ.hpp"
 
+#ifdef ZT_CONTROLLER_USE_LIBPQ
+
 #include <amqp.h>
 #include <amqp_tcp_socket.h>
 #include <stdexcept>
@@ -92,3 +94,5 @@ std::string RabbitMQ::consume()
 }
 
 }
+
+#endif // ZT_CONTROLLER_USE_LIBPQ
