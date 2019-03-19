@@ -76,6 +76,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 	memset(_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
 	memset(_expectingRepliesTo,0,sizeof(_expectingRepliesTo));
 	memset(_lastIdentityVerification,0,sizeof(_lastIdentityVerification));
+	memset((void *)(&_stats),0,sizeof(_stats));
 
 	uint64_t idtmp[2];
 	idtmp[0] = 0; idtmp[1] = 0;
@@ -267,6 +268,13 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 			// Get designated VL1 upstreams
 			Hashtable< Address,std::vector<InetAddress> > alwaysContact;
 			RR->topology->getUpstreamsToContact(alwaysContact);
+
+			// Uncomment to dump stats
+			for(unsigned int i=0;i<32;i++) {
+				if (_stats.inVerbCounts[i] > 0)
+					printf("%.2x\t%12lld %lld\n",i,(unsigned long long)_stats.inVerbCounts[i],(unsigned long long)_stats.inVerbBytes[i]);
+			}
+			printf("\n");
 
 			// Check last receive time on designated upstreams to see if we seem to be online
 			int64_t lastReceivedFromUpstream = 0;

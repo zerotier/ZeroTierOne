@@ -651,6 +651,24 @@ typedef struct
 } ZT_NodeStatus;
 
 /**
+ * Internal node statistics
+ * 
+ * This structure is subject to change between versions.
+ */
+typedef struct
+{
+	/**
+	 * Number of each protocol verb (possible verbs 0..31) received
+	 */
+	uint64_t inVerbCounts[32];
+
+	/**
+	 * Number of bytes for each protocol verb received
+	 */
+	uint64_t inVerbBytes[32];
+} ZT_NodeStatistics;
+
+/**
  * Virtual network status codes
  */
 enum ZT_VirtualNetworkStatus

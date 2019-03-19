@@ -631,7 +631,6 @@ bool Network::filterOutgoingPacket(
 	const unsigned int vlanId,
 	uint8_t &qosBucket)
 {
-	const int64_t now = RR->node->now();
 	Address ztFinalDest(ztDest);
 	int localCapabilityIndex = -1;
 	int accept = 0;
@@ -664,9 +663,6 @@ bool Network::filterOutgoingPacket(
 						accept = 1;
 
 						if ((!noTee)&&(cc2)) {
-							Membership &m2 = _membership(cc2);
-							m2.pushCredentials(RR,tPtr,now,cc2,_config,localCapabilityIndex,false);
-
 							Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 							outp.append(_id);
 							outp.append((uint8_t)(ccWatch2 ? 0x16 : 0x02));
@@ -701,13 +697,7 @@ bool Network::filterOutgoingPacket(
 	}
 
 	if (accept) {
-		if (membership)
-			membership->pushCredentials(RR,tPtr,now,ztDest,_config,localCapabilityIndex,false);
-
 		if ((!noTee)&&(cc)) {
-			Membership &m2 = _membership(cc);
-			m2.pushCredentials(RR,tPtr,now,cc,_config,localCapabilityIndex,false);
-
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
 			outp.append((uint8_t)(ccWatch ? 0x16 : 0x02));
@@ -720,9 +710,6 @@ bool Network::filterOutgoingPacket(
 		}
 
 		if ((ztDest != ztFinalDest)&&(ztFinalDest)) {
-			Membership &m2 = _membership(ztFinalDest);
-			m2.pushCredentials(RR,tPtr,now,ztFinalDest,_config,localCapabilityIndex,false);
-
 			Packet outp(ztFinalDest,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
 			outp.append((uint8_t)0x04);
@@ -797,8 +784,6 @@ int Network::filterIncomingPacket(
 
 				if (accept) {
 					if (cc2) {
-						_membership(cc2).pushCredentials(RR,tPtr,RR->node->now(),cc2,_config,-1,false);
-
 						Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 						outp.append(_id);
 						outp.append((uint8_t)(ccWatch2 ? 0x1c : 0x08));
@@ -830,8 +815,6 @@ int Network::filterIncomingPacket(
 
 	if (accept) {
 		if (cc) {
-			_membership(cc).pushCredentials(RR,tPtr,RR->node->now(),cc,_config,-1,false);
-
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
 			outp.append((uint8_t)(ccWatch ? 0x1c : 0x08));
@@ -844,8 +827,6 @@ int Network::filterIncomingPacket(
 		}
 
 		if ((ztDest != ztFinalDest)&&(ztFinalDest)) {
-			_membership(ztFinalDest).pushCredentials(RR,tPtr,RR->node->now(),ztFinalDest,_config,-1,false);
-
 			Packet outp(ztFinalDest,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
 			outp.append((uint8_t)0x0a);
@@ -1050,12 +1031,6 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 			_portInitialized = true;
 
 			_externalConfig(&ctmp);
-
-			Address *a = (Address *)0;
-			Membership *m = (Membership *)0;
-			Hashtable<Address,Membership>::Iterator i(_memberships);
-			while (i.next(a,m))
-				m->resetPushState();
 		}
 
 		_portError = RR->node->configureVirtualNetworkPort(tPtr,_id,&_uPtr,(oldPortInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
@@ -1267,7 +1242,6 @@ bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 				if (!m)
 					m = &(_membership(peer->address()));
 				if (m->multicastLikeGate(now)) {
-					m->pushCredentials(RR,tPtr,now,peer->address(),_config,-1,false);
 					_announceMulticastGroupsTo(tPtr,peer->address(),_allMulticastGroups());
 				}
 				return true;
@@ -1364,14 +1338,8 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Certific
 {
 	if (com.networkId() != _id)
 		return Membership::ADD_REJECTED;
-	const Address a(com.issuedTo());
 	Mutex::Lock _l(_lock);
-	Membership &m = _membership(a);
-	const Membership::AddCredentialResult result = m.addCredential(RR,tPtr,_config,com);
-	if ((result == Membership::ADD_ACCEPTED_NEW)||(result == Membership::ADD_ACCEPTED_REDUNDANT)) {
-		m.pushCredentials(RR,tPtr,RR->node->now(),a,_config,-1,false);
-	}
-	return result;
+	return _membership(com.issuedTo()).addCredential(RR,tPtr,_config,com);
 }
 
 Membership::AddCredentialResult Network::addCredential(void *tPtr,const Address &sentFrom,const Revocation &rev)
@@ -1494,7 +1462,8 @@ void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMu
 		std::sort(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end());
 
 		for(std::vector<Address>::const_iterator a(alwaysAnnounceTo.begin());a!=alwaysAnnounceTo.end();++a) {
-		 // push COM to non-members so they can do multicast request auth
+			/*
+			// push COM to non-members so they can do multicast request auth
 			if ( (_config.com) && (!_memberships.contains(*a)) && (*a != RR->identity.address()) ) {
 				Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 				_config.com.serialize(outp);
@@ -1505,6 +1474,7 @@ void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMu
 				outp.append((uint16_t)0); // no certificates of ownership
 				RR->sw->send(tPtr,outp,true);
 			}
+			*/
 			_announceMulticastGroupsTo(tPtr,*a,groups);
 		}
 	}
@@ -1514,7 +1484,6 @@ void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMu
 		Membership *m = (Membership *)0;
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
-			m->pushCredentials(RR,tPtr,now,*a,_config,-1,false);
 			if ( ( m->multicastLikeGate(now) || (newMulticastGroup) ) && (m->isAllowedOnNetwork(_config)) && (!std::binary_search(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end(),*a)) )
 				_announceMulticastGroupsTo(tPtr,*a,groups);
 		}

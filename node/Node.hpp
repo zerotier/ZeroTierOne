@@ -273,6 +273,12 @@ public:
 		return false;
 	}
 
+	inline void statsLogVerb(const unsigned int v,const unsigned int bytes)
+	{
+		++_stats.inVerbCounts[v];
+		_stats.inVerbBytes[v] += (uint64_t)bytes;
+	}
+
 private:
 	RuntimeEnvironment _RR;
 	RuntimeEnvironment *RR;
@@ -285,6 +291,9 @@ private:
 
 	// Time of last identity verification indexed by InetAddress.rateGateHash() -- used in IncomingPacket::_doHELLO() via rateGateIdentityVerification()
 	int64_t _lastIdentityVerification[16384];
+
+	// Statistics about stuff happening
+	volatile ZT_NodeStatistics _stats;
 
 	// Map that remembers if we have recently sent a network config to someone
 	// querying us as a controller.

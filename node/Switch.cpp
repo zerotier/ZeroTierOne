@@ -816,7 +816,6 @@ void Switch::doAnythingWaitingForPeer(void *tPtr,const SharedPtr<Peer> &peer)
 
 	{
 		Mutex::Lock _l(_txQueue_m);
-
 		for(std::list< TXQueueEntry >::iterator txi(_txQueue.begin());txi!=_txQueue.end();) {
 			if (txi->dest == peer->address()) {
 				if (_trySend(tPtr,txi->packet,txi->encrypt)) {

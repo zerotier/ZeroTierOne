@@ -365,7 +365,7 @@ public:
 	inline void pushCredentialsNow(void *tPtr,const Address &to,const int64_t now)
 	{
 		Mutex::Lock _l(_lock);
-		_membership(to).pushCredentials(RR,tPtr,now,to,_config,-1,true);
+		_membership(to).pushCredentials(RR,tPtr,now,to,_config,-1);
 	}
 
 	/**

@@ -187,19 +187,13 @@
 
 /**
  * Size of RX queue
- *
- * This is about 2mb, and can be decreased for small devices. A queue smaller
- * than about 4 is probably going to cause a lot of lost packets.
  */
-#define ZT_RX_QUEUE_SIZE 64
+#define ZT_RX_QUEUE_SIZE 32
 
 /**
  * Size of TX queue
- *
- * This is about 2mb, and can be decreased for small devices. A queue smaller
- * than about 4 is probably going to cause a lot of lost packets.
  */
-#define ZT_TX_QUEUE_SIZE 64
+#define ZT_TX_QUEUE_SIZE 32
 
 /**
  * Length of secret key in bytes -- 256-bit -- do not change

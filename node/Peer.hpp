@@ -514,30 +514,6 @@ public:
 	}
 
 	/**
-	 * Rate gate incoming requests for network COM
-	 */
-	inline bool rateGateIncomingComRequest(const int64_t now)
-	{
-		if ((now - _lastComRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
-			_lastComRequestReceived = now;
-			return true;
-		}
-		return false;
-	}
-
-	/**
-	 * Rate gate outgoing requests for network COM
-	 */
-	inline bool rateGateOutgoingComRequest(const int64_t now)
-	{
-		if ((now - _lastComRequestSent) >= ZT_PEER_GENERAL_RATE_LIMIT) {
-			_lastComRequestSent = now;
-			return true;
-		}
-		return false;
-	}
-
-	/**
 	 * Rate limit gate for VERB_ACK
 	 */
 	inline bool rateGateACK(const int64_t now)
@@ -665,8 +641,6 @@ private:
 	int64_t _lastCredentialRequestSent;
 	int64_t _lastWhoisRequestReceived;
 	int64_t _lastEchoRequestReceived;
-	int64_t _lastComRequestReceived;
-	int64_t _lastComRequestSent;
 	int64_t _lastCredentialsReceived;
 	int64_t _lastTrustEstablishedPacketReceived;
 	int64_t _lastSentFullHello;

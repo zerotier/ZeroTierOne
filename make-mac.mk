@@ -51,7 +51,7 @@ endif
 # Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)
 	ZT_TRACE=1
-	CFLAGS+=-Wall -Werror -g $(INCLUDES) $(DEFS)
+	CFLAGS+=-Wall -g $(INCLUDES) $(DEFS)
 	STRIP=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in heavy testing without it.

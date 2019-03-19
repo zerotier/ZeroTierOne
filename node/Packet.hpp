@@ -755,7 +755,7 @@ public:
 		 * For patches and other updates a NETWORK_CONFIG is sent instead.
 		 *
 		 * It would be valid and correct as of 1.2.0 to use NETWORK_CONFIG always,
-		 * but OK(NTEWORK_CONFIG_REQUEST) should be sent for compatibility.
+		 * but OK(NETWORK_CONFIG_REQUEST) should be sent for compatibility.
 		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
