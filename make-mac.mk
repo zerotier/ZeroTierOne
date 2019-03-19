@@ -21,6 +21,11 @@ DEFS+=-DZT_BUILD_PLATFORM=$(ZT_BUILD_PLATFORM) -DZT_BUILD_ARCHITECTURE=$(ZT_BUIL
 include objects.mk
 ONE_OBJS+=osdep/MacEthernetTap.o ext/http-parser/http_parser.o
 
+ifeq ($(ZT_CONTROLLER),1)
+	LIBS+=-lpq -lrabbitmq
+	DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER
+endif
+
 # Official releases are signed with our Apple cert and apply software updates by default
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="\"apply\""
@@ -58,7 +63,7 @@ ifeq ($(ZT_DEBUG),1)
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g $(INCLUDES) $(DEFS)
 else
 	CFLAGS?=-Ofast -fstack-protector-strong
-	CFLAGS+=$(ARCH_FLAGS) -Wall -Werror -flto -fPIE -mmacosx-version-min=10.7 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
+	CFLAGS+=$(ARCH_FLAGS) -Wall -flto -fPIE -mmacosx-version-min=10.7 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
 	STRIP=strip
 endif
 
@@ -90,6 +95,9 @@ one:	$(CORE_OBJS) $(ONE_OBJS) one.o mac-agent
 	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) zerotier-one
 
 zerotier-one: one
+
+central-controller:
+	make ZT_CONTROLLER=1 one
 
 zerotier-idtool: one
 
