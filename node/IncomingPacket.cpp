@@ -761,9 +761,24 @@ bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,void *tPtr,const Share
 bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	const int64_t now = RR->node->now();
+	bool authorized = false;
+	uint64_t lastNwid = 0;
+
 	// Packet contains a series of 18-byte network,MAC,ADI tuples
-	for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18)
-		RR->mc->add(tPtr,now,at<uint64_t>(ptr),MulticastGroup(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14)),peer->address());
+	for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18) {
+		const uint64_t nwid = at<uint64_t>(ptr);
+		if (nwid != lastNwid) {
+			lastNwid = nwid;
+			SharedPtr<Network> network(RR->node->network(nwid));
+			if (network)
+				authorized = network->gate(tPtr,peer);
+			if (!authorized)
+				authorized = ((RR->topology->amUpstream())||(RR->node->localControllerHasAuthorized(now,nwid,peer->address())));
+		}
+		if (authorized)
+			RR->mc->add(tPtr,now,nwid,MulticastGroup(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14)),peer->address());
+	}
+
 	peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP,false,0);
 	return true;
 }

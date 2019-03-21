@@ -196,7 +196,7 @@ private:
 	}
 
 	template<typename C>
-	void _cleanCredImpl(const NetworkConfig &nconf,Hashtable<uint32_t,C> &remoteCreds)
+	inline void _cleanCredImpl(const NetworkConfig &nconf,Hashtable<uint32_t,C> &remoteCreds)
 	{
 		uint32_t *k = (uint32_t *)0;
 		C *v = (C *)0;

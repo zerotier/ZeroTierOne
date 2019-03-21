@@ -2003,25 +2003,6 @@ extern "C" void ed25519_amd64_asm_sign(const unsigned char *sk,const unsigned ch
 
 namespace ZeroTier {
 
-#ifdef ZT_CONTROLLER
-struct C25519CacheKey
-{
-	uint64_t messageDigest[4];
-	uint64_t publicKey[4];
-	inline unsigned long hashCode() const { return (unsigned long)(messageDigest[0] ^ publicKey[0]); }
-	inline bool operator==(const C25519CacheKey &k) const { return (memcmp(this,&k,sizeof(C25519CacheKey)) == 0); }
-	inline bool operator!=(const C25519CacheKey &k) const { return (memcmp(this,&k,sizeof(C25519CacheKey)) != 0); }
-};
-struct C25519CacheValue
-{
-	uint64_t signature[12];
-	uint64_t timestamp;
-};
-static uint64_t _ed25519TimestampCounter = 0;
-static Hashtable<C25519CacheKey,C25519CacheValue> _ed25519Cache;
-static Mutex _ed25519CacheLock;
-#endif
-
 void C25519::agree(const C25519::Private &mine,const C25519::Public &their,void *keybuf,unsigned int keylen)
 {
 	unsigned char rawkey[32];
@@ -2042,21 +2023,6 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 {
 	unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
 	SHA512::hash(digest,msg,len);
-
-#ifdef ZT_CONTROLLER
-	C25519CacheKey ck;
-	ZT_FAST_MEMCPY(ck.messageDigest,digest,32);
-	ZT_FAST_MEMCPY(ck.publicKey,myPublic.data + 32,32);
-	C25519CacheValue *cv = (C25519CacheValue *)0;
-	{
-		Mutex::Lock l(_ed25519CacheLock);
-		cv = _ed25519Cache.get(ck);
-	}
-	if (cv) {
-		ZT_FAST_MEMCPY(signature,cv->signature,ZT_C25519_SIGNATURE_LEN);
-		return;
-	}
-#endif
 
 #ifdef ZT_USE_FAST_X64_ED25519
 	ed25519_amd64_asm_sign(myPrivate.data + 32,myPublic.data + 32,digest,(unsigned char *)signature);
@@ -2103,28 +2069,6 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 	for(unsigned int i=0;i<32;i++)
 		sig[32 + i] = s[i];
 #endif
-
-#ifdef ZT_CONTROLLER
-	C25519CacheValue cvn;
-	memcpy(cvn.signature,signature,ZT_C25519_SIGNATURE_LEN);
-	{
-		Mutex::Lock l(_ed25519CacheLock);
-
-		if (_ed25519Cache.size() > 1048576) {
-			const uint64_t before = _ed25519TimestampCounter - ((1048576 / 3) * 2);
-			Hashtable< C25519CacheKey,C25519CacheValue >::Iterator i(_ed25519Cache);
-			C25519CacheKey *ik = (C25519CacheKey *)0;
-			C25519CacheValue *iv = (C25519CacheValue *)0;
-			while (i.next(ik,iv)) {
-				if (iv->timestamp < before)
-					_ed25519Cache.erase(*ik);
-			}
-		}
-
-		cvn.timestamp = ++_ed25519TimestampCounter;
-		_ed25519Cache.set(ck,cvn);
-	}
-#endif
 }
 
 bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len,const void *signature)
@@ -2134,20 +2078,6 @@ bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len
 	SHA512::hash(digest,msg,len);
 	if (!Utils::secureEq(sig + 64,digest,32))
 		return false;
-
-#ifdef ZT_CONTROLLER
-	C25519CacheKey ck;
-	ZT_FAST_MEMCPY(ck.messageDigest,digest,32);
-	ZT_FAST_MEMCPY(ck.publicKey,their.data + 32,32);
-	C25519CacheValue *cv = (C25519CacheValue *)0;
-	{
-		Mutex::Lock l(_ed25519CacheLock);
-		cv = _ed25519Cache.get(ck);
-	}
-	if (cv) {
-		return Utils::secureEq(cv->signature,signature,ZT_C25519_SIGNATURE_LEN);
-	}
-#endif
 
 	unsigned char t2[32];
 	ge25519 get1, get2;
