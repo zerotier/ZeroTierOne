@@ -2,6 +2,7 @@
 
  * ZeroTier Core and ZeroTier One virtual networking service<br>
    Adam Ierymenko / adam.ierymenko@zerotier.com
+   Joseph Henry / joseph.henry@zerotier.com (QoS and multipath)
 
  * Java JNI Interface to enable Android application development, and Android app itself (code for that is elsewhere)<br>
    Grant Limberg / glimberg@gmail.com
@@ -44,13 +45,6 @@ ZeroTier includes the following third party code, either in ext/ or incorporated
    * Files: ext/json/*
    * Home page: https://github.com/nlohmann/json
    * License grant: MIT
-
- * TunTapOSX by Mattias Nissler
-
-   * Files: ext/tap-mac/tuntap/*
-   * Home page: http://tuntaposx.sourceforge.net/
-   * License grant: BSD attribution no-endorsement
-   * ZeroTier Modifications: change interface name to zt#, increase max MTU, increase max devices
 
  * tap-windows6 by the OpenVPN project
 
