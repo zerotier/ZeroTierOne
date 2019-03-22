@@ -76,7 +76,6 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	Utils::getSecureRandom(&_freeRandomByte, 1);
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
-	_pathChoiceHist = new RingBuffer<int>(ZT_MULTIPATH_PROPORTION_WIN_SZ);
 }
 
 void Peer::received(
@@ -471,7 +470,7 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 			if (_paths[i].p) {
 				if (rf < _paths[i].p->allocation()) {
 					bestPath = i;
-					_pathChoiceHist->push(bestPath); // Record which path we chose
+					_pathChoiceHist.push(bestPath); // Record which path we chose
 					break;
 				}
 				rf -= _paths[i].p->allocation();
@@ -500,7 +499,7 @@ char *Peer::interfaceListStr()
 			float targetAllocation = 1.0 / alivePathCount;
 			float currentAllocation = 1.0;
 			if (alivePathCount > 1) {
-				currentAllocation = (float)_pathChoiceHist->countValue(i) / (float)_pathChoiceHist->count();
+				currentAllocation = (float)_pathChoiceHist.countValue(i) / (float)_pathChoiceHist.count();
 				if (fabs(targetAllocation - currentAllocation) > ZT_PATH_IMBALANCE_THRESHOLD) {
 					imbalanced = true;
 				}

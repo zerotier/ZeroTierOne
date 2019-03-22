@@ -60,11 +60,7 @@ private:
 	Peer() {} // disabled to prevent bugs -- should not be constructed uninitialized
 
 public:
-	~Peer() {
-		Utils::burn(_key,sizeof(_key));
-		delete _pathChoiceHist;
-		_pathChoiceHist = NULL;
-	}
+	~Peer() { Utils::burn(_key,sizeof(_key)); }
 
 	/**
 	 * Construct a new peer
@@ -674,7 +670,7 @@ private:
 
 	AtomicCounter __refCount;
 
-	RingBuffer<int> *_pathChoiceHist;
+	RingBuffer<int,ZT_MULTIPATH_PROPORTION_WIN_SZ> _pathChoiceHist;
 
 	bool _linkIsBalanced;
 	bool _linkIsRedundant;

@@ -18,115 +18,6 @@ Public domain.
 
 namespace ZeroTier {
 
-#if 0
-
-// "Naive" implementation, which is slower... might still want this on some older
-// or weird platforms if the later versions have issues.
-
-static inline void add(unsigned int h[17],const unsigned int c[17])
-{
-  unsigned int j;
-  unsigned int u;
-  u = 0;
-  for (j = 0;j < 17;++j) { u += h[j] + c[j]; h[j] = u & 255; u >>= 8; }
-}
-
-static inline void squeeze(unsigned int h[17])
-{
-  unsigned int j;
-  unsigned int u;
-  u = 0;
-  for (j = 0;j < 16;++j) { u += h[j]; h[j] = u & 255; u >>= 8; }
-  u += h[16]; h[16] = u & 3;
-  u = 5 * (u >> 2);
-  for (j = 0;j < 16;++j) { u += h[j]; h[j] = u & 255; u >>= 8; }
-  u += h[16]; h[16] = u;
-}
-
-static const unsigned int minusp[17] = {
-  5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 252
-} ;
-
-static inline void freeze(unsigned int h[17])
-{
-  unsigned int horig[17];
-  unsigned int j;
-  unsigned int negative;
-  for (j = 0;j < 17;++j) horig[j] = h[j];
-  add(h,minusp);
-  negative = -(h[16] >> 7);
-  for (j = 0;j < 17;++j) h[j] ^= negative & (horig[j] ^ h[j]);
-}
-
-static inline void mulmod(unsigned int h[17],const unsigned int r[17])
-{
-  unsigned int hr[17];
-  unsigned int i;
-  unsigned int j;
-  unsigned int u;
-
-  for (i = 0;i < 17;++i) {
-    u = 0;
-    for (j = 0;j <= i;++j) u += h[j] * r[i - j];
-    for (j = i + 1;j < 17;++j) u += 320 * h[j] * r[i + 17 - j];
-    hr[i] = u;
-  }
-  for (i = 0;i < 17;++i) h[i] = hr[i];
-  squeeze(h);
-}
-
-static inline int crypto_onetimeauth(unsigned char *out,const unsigned char *in,unsigned long long inlen,const unsigned char *k)
-{
-  unsigned int j;
-  unsigned int r[17];
-  unsigned int h[17];
-  unsigned int c[17];
-
-  r[0] = k[0];
-  r[1] = k[1];
-  r[2] = k[2];
-  r[3] = k[3] & 15;
-  r[4] = k[4] & 252;
-  r[5] = k[5];
-  r[6] = k[6];
-  r[7] = k[7] & 15;
-  r[8] = k[8] & 252;
-  r[9] = k[9];
-  r[10] = k[10];
-  r[11] = k[11] & 15;
-  r[12] = k[12] & 252;
-  r[13] = k[13];
-  r[14] = k[14];
-  r[15] = k[15] & 15;
-  r[16] = 0;
-
-  for (j = 0;j < 17;++j) h[j] = 0;
-
-  while (inlen > 0) {
-    for (j = 0;j < 17;++j) c[j] = 0;
-    for (j = 0;(j < 16) && (j < inlen);++j) c[j] = in[j];
-    c[j] = 1;
-    in += j; inlen -= j;
-    add(h,c);
-    mulmod(h,r);
-  }
-
-  freeze(h);
-
-  for (j = 0;j < 16;++j) c[j] = k[j + 16];
-  c[16] = 0;
-  add(h,c);
-  for (j = 0;j < 16;++j) out[j] = h[j];
-  return 0;
-}
-
-void Poly1305::compute(void *auth,const void *data,unsigned int len,const void *key)
-{
-	crypto_onetimeauth((unsigned char *)auth,(const unsigned char *)data,len,(const unsigned char *)key);
-}
-
-#endif
-
 namespace {
 
 typedef struct poly1305_context {
@@ -215,8 +106,7 @@ static inline void U64TO8(unsigned char *p, unsigned long long v)
 #define U64TO8(p,v) ((*reinterpret_cast<unsigned long long *>(p)) = (v))
 #endif
 
-static inline void
-poly1305_init(poly1305_context *ctx, const unsigned char key[32]) {
+static inline void poly1305_init(poly1305_context *ctx, const unsigned char key[32]) {
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
   unsigned long long t0,t1;
 
@@ -241,8 +131,7 @@ poly1305_init(poly1305_context *ctx, const unsigned char key[32]) {
   st->final = 0;
 }
 
-static inline void
-poly1305_blocks(poly1305_state_internal_t *st, const unsigned char *m, size_t bytes) {
+static inline void poly1305_blocks(poly1305_state_internal_t *st, const unsigned char *m, size_t bytes) {
   const unsigned long long hibit = (st->final) ? 0 : ((unsigned long long)1 << 40); /* 1 << 128 */
   unsigned long long r0,r1,r2;
   unsigned long long s1,s2;
@@ -293,8 +182,7 @@ poly1305_blocks(poly1305_state_internal_t *st, const unsigned char *m, size_t by
   st->h[2] = h2;
 }
 
-static inline void
-poly1305_finish(poly1305_context *ctx, unsigned char mac[16]) {
+static inline void poly1305_finish(poly1305_context *ctx, unsigned char mac[16]) {
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
   unsigned long long h0,h1,h2,c;
   unsigned long long g0,g1,g2;
@@ -582,8 +470,7 @@ poly1305_finish(poly1305_context *ctx, unsigned char mac[16]) {
 
 #endif // MSC/GCC or not
 
-static inline void
-poly1305_update(poly1305_context *ctx, const unsigned char *m, size_t bytes) {
+static inline void poly1305_update(poly1305_context *ctx, const unsigned char *m, size_t bytes) {
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
   size_t i;
 
