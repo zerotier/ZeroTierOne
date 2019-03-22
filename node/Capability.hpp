@@ -94,7 +94,7 @@ public:
 		_maxCustodyChainLength = (mccl > 0) ? ((mccl < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) ? mccl : (unsigned int)ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) : 1;
 		_ruleCount = (ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES;
 		if (_ruleCount)
-			ZT_FAST_MEMCPY(_rules,rules,sizeof(ZT_VirtualNetworkRule) * _ruleCount);
+			memcpy(_rules,rules,sizeof(ZT_VirtualNetworkRule) * _ruleCount);
 	}
 
 	/**
@@ -320,16 +320,16 @@ public:
 					break;
 				case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_MAC_DEST:
-					ZT_FAST_MEMCPY(rules[ruleCount].v.mac,b.field(p,6),6);
+					memcpy(rules[ruleCount].v.mac,b.field(p,6),6);
 					break;
 				case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
-					ZT_FAST_MEMCPY(&(rules[ruleCount].v.ipv4.ip),b.field(p,4),4);
+					memcpy(&(rules[ruleCount].v.ipv4.ip),b.field(p,4),4);
 					rules[ruleCount].v.ipv4.mask = (uint8_t)b[p + 4];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
-					ZT_FAST_MEMCPY(rules[ruleCount].v.ipv6.ip,b.field(p,16),16);
+					memcpy(rules[ruleCount].v.ipv6.ip,b.field(p,16),16);
 					rules[ruleCount].v.ipv6.mask = (uint8_t)b[p + 16];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_TOS:
@@ -452,7 +452,7 @@ public:
 				if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN)
 					throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 				p += 2;
-				ZT_FAST_MEMCPY(_custody[i].signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
+				memcpy(_custody[i].signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
 			} else {
 				p += 2 + b.template at<uint16_t>(p);
 			}

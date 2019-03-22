@@ -257,23 +257,23 @@ static void LZ4_write32(void* memPtr, U32 value) { ((unalign*)memPtr)->u32 = val
 #else  /* safe and portable access through memcpy() */
 static inline U16 LZ4_read16(const void* memPtr)
 {
-	U16 val; ZT_FAST_MEMCPY(&val, memPtr, sizeof(val)); return val;
+	U16 val; memcpy(&val, memPtr, sizeof(val)); return val;
 }
 static inline U32 LZ4_read32(const void* memPtr)
 {
-	U32 val; ZT_FAST_MEMCPY(&val, memPtr, sizeof(val)); return val;
+	U32 val; memcpy(&val, memPtr, sizeof(val)); return val;
 }
 static inline reg_t LZ4_read_ARCH(const void* memPtr)
 {
-	reg_t val; ZT_FAST_MEMCPY(&val, memPtr, sizeof(val)); return val;
+	reg_t val; memcpy(&val, memPtr, sizeof(val)); return val;
 }
 static inline void LZ4_write16(void* memPtr, U16 value)
 {
-	ZT_FAST_MEMCPY(memPtr, &value, sizeof(value));
+	memcpy(memPtr, &value, sizeof(value));
 }
 static inline void LZ4_write32(void* memPtr, U32 value)
 {
-	ZT_FAST_MEMCPY(memPtr, &value, sizeof(value));
+	memcpy(memPtr, &value, sizeof(value));
 }
 #endif /* LZ4_FORCE_MEMORY_ACCESS */
 
@@ -300,7 +300,7 @@ static inline void LZ4_writeLE16(void* memPtr, U16 value)
 
 static inline void LZ4_copy8(void* dst, const void* src)
 {
-	ZT_FAST_MEMCPY(dst,src,8);
+	memcpy(dst,src,8);
 }
 
 static inline void LZ4_wildCopy(void* dstPtr, const void* srcPtr, void* dstEnd)
@@ -667,7 +667,7 @@ _last_literals:
 		} else {
 			*op++ = (BYTE)(lastRun<<ML_BITS);
 		}
-		ZT_FAST_MEMCPY(op, anchor, lastRun);
+		memcpy(op, anchor, lastRun);
 		op += lastRun;
 	}
 
@@ -784,7 +784,7 @@ FORCE_INLINE int LZ4_decompress_generic(
 				if ((!endOnInput) && (cpy != oend)) goto _output_error;	   /* Error : block decoding must stop exactly there */
 				if ((endOnInput) && ((ip+length != iend) || (cpy > oend))) goto _output_error;   /* Error : input must be consumed */
 			}
-			ZT_FAST_MEMCPY(op, ip, length);
+			memcpy(op, ip, length);
 			ip += length;
 			op += length;
 			break;	 /* Necessarily EOF, due to parsing restrictions */
@@ -823,14 +823,14 @@ FORCE_INLINE int LZ4_decompress_generic(
 				/* match encompass external dictionary and current block */
 				size_t const copySize = (size_t)(lowPrefix-match);
 				size_t const restSize = length - copySize;
-				ZT_FAST_MEMCPY(op, dictEnd - copySize, copySize);
+				memcpy(op, dictEnd - copySize, copySize);
 				op += copySize;
 				if (restSize > (size_t)(op-lowPrefix)) {  /* overlap copy */
 					BYTE* const endOfMatch = op + restSize;
 					const BYTE* copyFrom = lowPrefix;
 					while (op < endOfMatch) *op++ = *copyFrom++;
 				} else {
-					ZT_FAST_MEMCPY(op, lowPrefix, restSize);
+					memcpy(op, lowPrefix, restSize);
 					op += restSize;
 			}   }
 			continue;
@@ -845,7 +845,7 @@ FORCE_INLINE int LZ4_decompress_generic(
 			op[2] = match[2];
 			op[3] = match[3];
 			match += dec32table[offset];
-			ZT_FAST_MEMCPY(op+4, match, 4);
+			memcpy(op+4, match, 4);
 			match -= dec64;
 		} else { LZ4_copy8(op, match); match+=8; }
 		op += 8;
@@ -921,7 +921,7 @@ void Packet::armor(const void *key,bool encryptPayload)
 			s20.crypt12(payload,payload,payloadLen);
 		uint64_t mac[2];
 		Poly1305::compute(mac,payload,payloadLen,macKey);
-		ZT_FAST_MEMCPY(data + ZT_PACKET_IDX_MAC,mac,8);
+		memcpy(data + ZT_PACKET_IDX_MAC,mac,8);
 	}
 }
 
@@ -993,7 +993,7 @@ bool Packet::compress()
 		if ((cl > 0)&&(cl < pl)) {
 			data[ZT_PACKET_IDX_VERB] |= (char)ZT_PROTO_VERB_FLAG_COMPRESSED;
 			setSize((unsigned int)cl + ZT_PACKET_IDX_PAYLOAD);
-			ZT_FAST_MEMCPY(data + ZT_PACKET_IDX_PAYLOAD,buf,cl);
+			memcpy(data + ZT_PACKET_IDX_PAYLOAD,buf,cl);
 			return true;
 		}
 	}
@@ -1013,7 +1013,7 @@ bool Packet::uncompress()
 			int ucl = LZ4_decompress_safe((const char *)data + ZT_PACKET_IDX_PAYLOAD,buf,compLen,sizeof(buf));
 			if ((ucl > 0)&&(ucl <= (int)(capacity() - ZT_PACKET_IDX_PAYLOAD))) {
 				setSize((unsigned int)ucl + ZT_PACKET_IDX_PAYLOAD);
-				ZT_FAST_MEMCPY(data + ZT_PACKET_IDX_PAYLOAD,buf,ucl);
+				memcpy(data + ZT_PACKET_IDX_PAYLOAD,buf,ucl);
 			} else {
 				return false;
 			}

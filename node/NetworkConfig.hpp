@@ -222,8 +222,8 @@ class NetworkConfig
 {
 public:
 	NetworkConfig() { memset(this,0,sizeof(NetworkConfig)); }
-	NetworkConfig(const NetworkConfig &nc) { ZT_FAST_MEMCPY(this,&nc,sizeof(NetworkConfig)); }
-	inline NetworkConfig &operator=(const NetworkConfig &nc) { ZT_FAST_MEMCPY(this,&nc,sizeof(NetworkConfig)); return *this; }
+	NetworkConfig(const NetworkConfig &nc) { memcpy(this,&nc,sizeof(NetworkConfig)); }
+	inline NetworkConfig &operator=(const NetworkConfig &nc) { memcpy(this,&nc,sizeof(NetworkConfig)); return *this; }
 
 	/**
 	 * Write this network config to a dictionary for transport

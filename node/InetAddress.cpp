@@ -115,13 +115,13 @@ void InetAddress::set(const void *ipBytes,unsigned int ipLen,unsigned int port)
 	memset(this,0,sizeof(InetAddress));
 	if (ipLen == 4) {
 		uint32_t ipb[1];
-		ZT_FAST_MEMCPY(ipb,ipBytes,4);
+		memcpy(ipb,ipBytes,4);
 		ss_family = AF_INET;
 		reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr = ipb[0];
 		reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton((uint16_t)port);
 	} else if (ipLen == 16) {
 		ss_family = AF_INET6;
-		ZT_FAST_MEMCPY(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,ipBytes,16);
+		memcpy(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,ipBytes,16);
 		reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_port = Utils::hton((uint16_t)port);
 	}
 }
@@ -217,7 +217,7 @@ InetAddress InetAddress::netmask() const
 				nm[0] = 0;
 				nm[1] = 0;
 			}
-			ZT_FAST_MEMCPY(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,nm,16);
+			memcpy(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,nm,16);
 		}	break;
 	}
 	return r;
@@ -243,10 +243,10 @@ InetAddress InetAddress::network() const
 		case AF_INET6: {
 			uint64_t nm[2];
 			const unsigned int bits = netmaskBits();
-			ZT_FAST_MEMCPY(nm,reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,16);
+			memcpy(nm,reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,16);
 			nm[0] &= Utils::hton((uint64_t)((bits >= 64) ? 0xffffffffffffffffULL : (0xffffffffffffffffULL << (64 - bits))));
 			nm[1] &= Utils::hton((uint64_t)((bits <= 64) ? 0ULL : (0xffffffffffffffffULL << (128 - bits))));
-			ZT_FAST_MEMCPY(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,nm,16);
+			memcpy(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,nm,16);
 		}	break;
 	}
 	return r;

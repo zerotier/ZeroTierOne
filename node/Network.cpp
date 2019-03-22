@@ -976,7 +976,7 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 			return false;
 		c->haveChunkIds[c->haveChunks++] = chunkId;
 
-		ZT_FAST_MEMCPY(c->data.unsafeData() + chunkIndex,chunkData,chunkLen);
+		memcpy(c->data.unsafeData() + chunkIndex,chunkData,chunkLen);
 		c->haveBytes += chunkLen;
 
 		if (c->haveBytes == totalLength) {
@@ -1417,7 +1417,7 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	ec->assignedAddressCount = 0;
 	for(unsigned int i=0;i<ZT_MAX_ZT_ASSIGNED_ADDRESSES;++i) {
 		if (i < _config.staticIpCount) {
-			ZT_FAST_MEMCPY(&(ec->assignedAddresses[i]),&(_config.staticIps[i]),sizeof(struct sockaddr_storage));
+			memcpy(&(ec->assignedAddresses[i]),&(_config.staticIps[i]),sizeof(struct sockaddr_storage));
 			++ec->assignedAddressCount;
 		} else {
 			memset(&(ec->assignedAddresses[i]),0,sizeof(struct sockaddr_storage));
@@ -1427,7 +1427,7 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	ec->routeCount = 0;
 	for(unsigned int i=0;i<ZT_MAX_NETWORK_ROUTES;++i) {
 		if (i < _config.routeCount) {
-			ZT_FAST_MEMCPY(&(ec->routes[i]),&(_config.routes[i]),sizeof(ZT_VirtualNetworkRoute));
+			memcpy(&(ec->routes[i]),&(_config.routes[i]),sizeof(ZT_VirtualNetworkRoute));
 			++ec->routeCount;
 		} else {
 			memset(&(ec->routes[i]),0,sizeof(ZT_VirtualNetworkRoute));

@@ -77,10 +77,10 @@ public:
 				_k[1] = (uint64_t)reinterpret_cast<const struct sockaddr_in *>(&r)->sin_port;
 				_k[2] = (uint64_t)l;
 			} else if (r.ss_family == AF_INET6) {
-				ZT_FAST_MEMCPY(_k,reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,16);
+				memcpy(_k,reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,16);
 				_k[2] = ((uint64_t)reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_port << 32) ^ (uint64_t)l;
 			} else {
-				ZT_FAST_MEMCPY(_k,&r,std::min(sizeof(_k),sizeof(InetAddress)));
+				memcpy(_k,&r,std::min(sizeof(_k),sizeof(InetAddress)));
 				_k[2] += (uint64_t)l;
 			}
 		}

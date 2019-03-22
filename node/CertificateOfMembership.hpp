@@ -119,7 +119,7 @@ public:
 
 	CertificateOfMembership(const CertificateOfMembership &c)
 	{
-		ZT_FAST_MEMCPY(this,&c,sizeof(CertificateOfMembership));
+		memcpy(this,&c,sizeof(CertificateOfMembership));
 	}
 
 	/**
@@ -147,7 +147,7 @@ public:
 
 	inline CertificateOfMembership &operator=(const CertificateOfMembership &c)
 	{
-		ZT_FAST_MEMCPY(this,&c,sizeof(CertificateOfMembership));
+		memcpy(this,&c,sizeof(CertificateOfMembership));
 		return *this;
 	}
 
@@ -329,7 +329,7 @@ public:
 		p += ZT_ADDRESS_LENGTH;
 
 		if (_signedBy) {
-			ZT_FAST_MEMCPY(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
+			memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
 			p += ZT_C25519_SIGNATURE_LEN;
 		}
 

@@ -78,7 +78,7 @@ void OutboundMulticast::init(
 	if (!disableCompression)
 		_packet.compress();
 
-	ZT_FAST_MEMCPY(_frameData,payload,_frameLen);
+	memcpy(_frameData,payload,_frameLen);
 }
 
 void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,void *tPtr,const Address &toAddr)

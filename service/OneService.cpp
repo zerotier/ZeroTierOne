@@ -1926,9 +1926,9 @@ public:
 
 		pkt->now = now;
 		pkt->sock = reinterpret_cast<int64_t>(sock);
-		ZT_FAST_MEMCPY(&(pkt->from),from,sizeof(struct sockaddr_storage));
+		memcpy(&(pkt->from),from,sizeof(struct sockaddr_storage));
 		pkt->size = (unsigned int)len;
-		ZT_FAST_MEMCPY(pkt->data,data,len);
+		memcpy(pkt->data,data,len);
 
 		_incomingPacketQueue.postLimit(pkt,16 * _incomingPacketConcurrency);
 	}
@@ -2247,7 +2247,7 @@ public:
 				// After setting up tap, fall through to CONFIG_UPDATE since we also want to do this...
 
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
-				ZT_FAST_MEMCPY(&(n.config),nwc,sizeof(ZT_VirtualNetworkConfig));
+				memcpy(&(n.config),nwc,sizeof(ZT_VirtualNetworkConfig));
 				if (n.tap) { // sanity check
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
 					// wait for up to 5 seconds for the WindowsEthernetTap to actually be initialized
@@ -2754,7 +2754,7 @@ public:
 		else return 0;
 		const std::vector<InetAddress> *l = lh->get(ztaddr);
 		if ((l)&&(l->size() > 0)) {
-			ZT_FAST_MEMCPY(result,&((*l)[(unsigned long)_node->prng() % l->size()]),sizeof(struct sockaddr_storage));
+			memcpy(result,&((*l)[(unsigned long)_node->prng() % l->size()]),sizeof(struct sockaddr_storage));
 			return 1;
 		} else return 0;
 	}

@@ -44,44 +44,6 @@
 
 #include "Constants.hpp"
 
-#ifdef __LINUX__
-//#if (defined(_MSC_VER) || defined(__GNUC__)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
-#if 0
-#include <emmintrin.h>
-static inline void ZT_FAST_MEMCPY(void *a,const void *b,unsigned long k)
-{
-	char *aa = reinterpret_cast<char *>(a);
-	const char *bb = reinterpret_cast<const char *>(b);
-	while (k >= 64) {
-		__m128 t1 = _mm_loadu_ps(reinterpret_cast<const float *>(bb));
-		__m128 t2 = _mm_loadu_ps(reinterpret_cast<const float *>(bb + 16));
-		__m128 t3 = _mm_loadu_ps(reinterpret_cast<const float *>(bb + 32));
-		__m128 t4 = _mm_loadu_ps(reinterpret_cast<const float *>(bb + 48));
-		_mm_storeu_ps(reinterpret_cast<float *>(aa),t1);
-		_mm_storeu_ps(reinterpret_cast<float *>(aa + 16),t2);
-		_mm_storeu_ps(reinterpret_cast<float *>(aa + 32),t3);
-		_mm_storeu_ps(reinterpret_cast<float *>(aa + 48),t4);
-		bb += 64;
-		aa += 64;
-		k -= 64;
-	}
-	while (k >= 16) {
-		__m128 t1 = _mm_loadu_ps(reinterpret_cast<const float *>(bb));
-		_mm_storeu_ps(reinterpret_cast<float *>(aa),t1);
-		bb += 16;
-		aa += 16;
-		k -= 16;
-	}
-	for(unsigned long i=0;i<k;++i)
-		aa[i] = bb[i];
-}
-#else
-#define ZT_FAST_MEMCPY(a,b,c) memcpy(a,b,c)
-#endif
-#else
-#define ZT_FAST_MEMCPY(a,b,c) memcpy(a,b,c)
-#endif
-
 namespace ZeroTier {
 
 /**
