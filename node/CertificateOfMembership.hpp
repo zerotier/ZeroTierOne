@@ -112,14 +112,9 @@ public:
 	/**
 	 * Create an empty certificate of membership
 	 */
-	CertificateOfMembership()
+	CertificateOfMembership() :
+		_qualifierCount(0)
 	{
-		memset(this,0,sizeof(CertificateOfMembership));
-	}
-
-	CertificateOfMembership(const CertificateOfMembership &c)
-	{
-		memcpy(this,&c,sizeof(CertificateOfMembership));
 	}
 
 	/**
@@ -143,12 +138,6 @@ public:
 		_qualifiers[2].maxDelta = 0xffffffffffffffffULL;
 		_qualifierCount = 3;
 		memset(_signature.data,0,ZT_C25519_SIGNATURE_LEN);
-	}
-
-	inline CertificateOfMembership &operator=(const CertificateOfMembership &c)
-	{
-		memcpy(this,&c,sizeof(CertificateOfMembership));
-		return *this;
 	}
 
 	/**

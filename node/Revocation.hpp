@@ -58,9 +58,16 @@ class Revocation : public Credential
 public:
 	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_REVOCATION; }
 
-	Revocation()
+	Revocation() :
+		_id(0),
+		_credentialId(0),
+		_networkId(0),
+		_threshold(0),
+		_flags(0),
+		_target(),
+		_signedBy(),
+		_type(Credential::CREDENTIAL_TYPE_NULL)
 	{
-		memset(this,0,sizeof(Revocation));
 	}
 
 	/**
