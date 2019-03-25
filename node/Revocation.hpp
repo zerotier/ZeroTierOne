@@ -155,7 +155,7 @@ public:
 	template<unsigned int C>
 	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
 	{
-		memset(this,0,sizeof(Revocation));
+		*this = Revocation();
 
 		unsigned int p = startAt;
 
