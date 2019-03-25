@@ -194,7 +194,7 @@ public:
 	{
 		unsigned int p = startAt;
 
-		memset(this,0,sizeof(CertificateOfOwnership));
+		*this = CertificateOfOwnership();
 
 		_networkId = b.template at<uint64_t>(p); p += 8;
 		_ts = b.template at<uint64_t>(p); p += 8;
