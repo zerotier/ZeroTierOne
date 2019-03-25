@@ -68,6 +68,7 @@ public:
 		_signedBy(),
 		_type(Credential::CREDENTIAL_TYPE_NULL)
 	{
+		memset(_signature.data,0,sizeof(_signature.data));
 	}
 
 	/**
@@ -87,7 +88,10 @@ public:
 		_flags(fl),
 		_target(tgt),
 		_signedBy(),
-		_type(ct) {}
+		_type(ct)
+	{
+		memset(_signature.data,0,sizeof(_signature.data));
+	}
 
 	inline uint32_t id() const { return _id; }
 	inline uint32_t credentialId() const { return _credentialId; }
