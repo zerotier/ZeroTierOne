@@ -32,15 +32,15 @@
 namespace ZeroTier {
 
 struct nl_route_req {
-    struct nlmsghdr nl;
-    struct rtmsg rt;
-    char buf[8192];
+	struct nlmsghdr nl;
+	struct rtmsg rt;
+	char buf[8192];
 };
 
 struct nl_if_req {
-    struct nlmsghdr nl;
-    struct ifinfomsg ifa;
-    char buf[8192];
+	struct nlmsghdr nl;
+	struct ifinfomsg ifa;
+	char buf[8192];
 };
 
 struct nl_adr_req {
@@ -100,9 +100,10 @@ void LinuxNetLink::_setSocketTimeout(int fd, int seconds)
 	}
 }
 
+#define ZT_NL_BUF_SIZE 16384
 int LinuxNetLink::_doRecv(int fd)
 {
-	char *const buf = (char *)valloc(8192);
+	char *const buf = (char *)valloc(ZT_NL_BUF_SIZE);
 	if (!buf) {
 		fprintf(stderr,"malloc failed!\n");
 		::exit(1);
@@ -115,7 +116,7 @@ int LinuxNetLink::_doRecv(int fd)
 	p = buf;
 
 	for(;;) {
-		rtn = recv(fd, p, 8192 - nll, 0);
+		rtn = recv(fd, p, ZT_NL_BUF_SIZE - nll, 0);
 
 		if (rtn > 0) {
 			nlp = (struct nlmsghdr *)p;
@@ -377,8 +378,7 @@ void LinuxNetLink::_linkAdded(struct nlmsghdr *nlp)
 		switch(rtap->rta_type) {
 		case IFLA_ADDRESS:
 			ptr2 = (unsigned char*)RTA_DATA(rtap);
-			snprintf(mac, 20, "%02x:%02x:%02x:%02x:%02x:%02x",
-				ptr2[0], ptr2[1], ptr2[2], ptr2[3], ptr2[4], ptr2[5]);
+			snprintf(mac,18,"%02x:%02x:%02x:%02x:%02x:%02x",(unsigned int)ptr2[0],(unsigned int)ptr2[1],(unsigned int)ptr2[2],(unsigned int)ptr2[3],(unsigned int)ptr2[4],(unsigned int)ptr2[5]);
 			memcpy(mac_bin, ptr, 6);
 			break;
 		case IFLA_IFNAME:
