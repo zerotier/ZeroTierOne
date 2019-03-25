@@ -621,7 +621,7 @@ public:
 				_incomingPacketConcurrency = tmp;
 			}
 		}
-		for(long t=0;t<_incomingPacketConcurrency;++t) {
+		for(unsigned long t=0;t<_incomingPacketConcurrency;++t) {
 			_incomingPacketThreads.push_back(std::thread([this]() {
 				OneServiceIncomingPacket *pkt = nullptr;
 				for(;;) {

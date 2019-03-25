@@ -89,6 +89,7 @@ public:
 		_issuedTo(issuedTo),
 		_signedBy()
 	{
+		memset(_signature.data,0,sizeof(_signature.data));
 	}
 
 	inline uint32_t id() const { return _id; }

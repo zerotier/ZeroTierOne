@@ -79,6 +79,8 @@ public:
 		_maxCustodyChainLength(0),
 		_ruleCount(0)
 	{
+		memset(_rules,0,sizeof(_rules));
+		memset(_custody,0,sizeof(_custody));
 	}
 
 	/**
