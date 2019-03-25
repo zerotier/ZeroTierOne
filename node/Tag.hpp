@@ -71,6 +71,7 @@ public:
 		_networkId(0),
 		_ts(0)
 	{
+		memset(_signature.data,0,sizeof(_signature.data));
 	}
 
 	/**

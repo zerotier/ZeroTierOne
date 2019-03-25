@@ -76,6 +76,7 @@ public:
 	{
 		memset(_thingTypes,0,sizeof(_thingTypes));
 		memset(_thingValues,0,sizeof(_thingValues));
+		memset(_signature.data,0,sizeof(_signature.data));
 	}
 
 	CertificateOfOwnership(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id) :
@@ -88,6 +89,7 @@ public:
 	{
 		memset(_thingTypes,0,sizeof(_thingTypes));
 		memset(_thingValues,0,sizeof(_thingValues));
+		memset(_signature.data,0,sizeof(_signature.data));
 	}
 
 	inline uint64_t networkId() const { return _networkId; }
