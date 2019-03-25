@@ -221,9 +221,28 @@ namespace ZeroTier {
 class NetworkConfig
 {
 public:
-	NetworkConfig() { memset(this,0,sizeof(NetworkConfig)); }
-	NetworkConfig(const NetworkConfig &nc) { memcpy(this,&nc,sizeof(NetworkConfig)); }
-	inline NetworkConfig &operator=(const NetworkConfig &nc) { memcpy(this,&nc,sizeof(NetworkConfig)); return *this; }
+	NetworkConfig() :
+		networkId(0),
+		timestamp(0),
+		credentialTimeMaxDelta(0),
+		revision(0),
+		issuedTo(),
+		remoteTraceTarget(),
+		flags(0),
+		remoteTraceLevel(Trace::LEVEL_NORMAL),
+		mtu(0),
+		multicastLimit(0),
+		specialistCount(0),
+		routeCount(0),
+		staticIpCount(0),
+		ruleCount(0),
+		capabilityCount(0),
+		tagCount(0),
+		certificateOfOwnershipCount(0),
+		type(ZT_NETWORK_TYPE_PRIVATE)
+	{
+		name[0] = 0;
+	}
 
 	/**
 	 * Write this network config to a dictionary for transport
