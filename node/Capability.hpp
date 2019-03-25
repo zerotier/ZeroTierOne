@@ -72,9 +72,13 @@ class Capability : public Credential
 public:
 	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_CAPABILITY; }
 
-	Capability()
+	Capability() :
+		_nwid(0),
+		_ts(0),
+		_id(0),
+		_maxCustodyChainLength(0),
+		_ruleCount(0)
 	{
-		memset(this,0,sizeof(Capability));
 	}
 
 	/**
@@ -85,15 +89,14 @@ public:
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	Capability(uint32_t id,uint64_t nwid,int64_t ts,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
+	Capability(uint32_t id,uint64_t nwid,int64_t ts,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount) :
+		_nwid(nwid),
+		_ts(ts),
+		_id(id),
+		_maxCustodyChainLength((mccl > 0) ? ((mccl < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) ? mccl : (unsigned int)ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) : 1),
+		_ruleCount((ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES)
 	{
-		memset(this,0,sizeof(Capability));
-		_nwid = nwid;
-		_ts = ts;
-		_id = id;
-		_maxCustodyChainLength = (mccl > 0) ? ((mccl < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) ? mccl : (unsigned int)ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) : 1;
-		_ruleCount = (ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES;
-		if (_ruleCount)
+		if (_ruleCount > 0)
 			memcpy(_rules,rules,sizeof(ZT_VirtualNetworkRule) * _ruleCount);
 	}
 

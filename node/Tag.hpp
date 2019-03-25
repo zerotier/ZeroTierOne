@@ -65,9 +65,12 @@ class Tag : public Credential
 public:
 	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_TAG; }
 
-	Tag()
+	Tag() :
+		_id(0),
+		_value(0),
+		_networkId(0),
+		_ts(0)
 	{
-		memset(this,0,sizeof(Tag));
 	}
 
 	/**
