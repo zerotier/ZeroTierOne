@@ -124,6 +124,7 @@ void SelfAwareness::clean(int64_t now)
 	}
 }
 
+#if 0
 std::vector<InetAddress> SelfAwareness::getSymmetricNatPredictions()
 {
 	/* This is based on ideas and strategies found here:
@@ -206,5 +207,6 @@ std::vector<InetAddress> SelfAwareness::getSymmetricNatPredictions()
 
 	return r;
 }
+#endif
 
 } // namespace ZeroTier

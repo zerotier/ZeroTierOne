@@ -163,6 +163,7 @@ void Peer::received(
 					}
 				} else break;
 			}
+
 			// If the path isn't a duplicate of the same localSocket AND we haven't already determined a replacePath,
 			// then find the worst path and replace it.
 			if (!redundant && replacePath == ZT_MAX_PEER_NETWORK_PATHS) {
@@ -180,6 +181,7 @@ void Peer::received(
 					}
 				}
 			}
+
 			if (replacePath != ZT_MAX_PEER_NETWORK_PATHS) {
 				if (verb == Packet::VERB_OK) {
 					RR->t->peerLearnedNewPath(tPtr,networkId,*this,path,packetId);
@@ -203,15 +205,14 @@ void Peer::received(
 	// all known external addresses for ourselves. We now do this even if we
 	// have a current path since we'll want to use new ones too.
 	if (this->trustEstablished(now)) {
-		if ((now - _lastDirectPathPushSent) >= ZT_DIRECT_PATH_PUSH_INTERVAL) {
+		const uint64_t sinceLastPush = now - _lastDirectPathPushSent;
+		if (sinceLastPush >= ZT_DIRECT_PATH_PUSH_INTERVAL) {
 			_lastDirectPathPushSent = now;
 
-			std::vector<InetAddress> pathsToPush;
+			// Start with explicitly known direct endpoint paths.
+			std::vector<InetAddress> pathsToPush(RR->node->directPaths());
 
-			std::vector<InetAddress> dps(RR->node->directPaths());
-			for(std::vector<InetAddress>::const_iterator i(dps.begin());i!=dps.end();++i)
-				pathsToPush.push_back(*i);
-
+#if 0
 			// Do symmetric NAT prediction if we are communicating indirectly.
 			if (hops > 0) {
 				std::vector<InetAddress> sym(RR->sa->getSymmetricNatPredictions());
@@ -224,6 +225,7 @@ void Peer::received(
 					}
 				}
 			}
+#endif
 
 			if (pathsToPush.size() > 0) {
 				std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
@@ -258,6 +260,7 @@ void Peer::received(
 
 					if (count) {
 						outp.setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
+						outp.compress();
 						outp.armor(_key,true);
 						path->send(RR,tPtr,outp.data(),outp.size(),now);
 					}
