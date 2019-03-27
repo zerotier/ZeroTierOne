@@ -765,15 +765,12 @@ void sc25519_from64bytes(sc25519 *r, const unsigned char x[64])
 	barrett_reduce(r, t);
 }
 
-/*
 void sc25519_to32bytes(unsigned char r[32], const sc25519 *x)
 {
 	int i;
 	for(i=0;i<32;i++) r[i] = x->v[i];
 }
-*/
 
-/*
 void sc25519_add(sc25519 *r, const sc25519 *x, const sc25519 *y)
 {
 	int i, carry;
@@ -786,9 +783,7 @@ void sc25519_add(sc25519 *r, const sc25519 *x, const sc25519 *y)
 	}
 	reduce_add_sub(r);
 }
-*/
 
-/*
 void sc25519_mul(sc25519 *r, const sc25519 *x, const sc25519 *y)
 {
 	int i,j,carry;
@@ -808,7 +803,6 @@ void sc25519_mul(sc25519 *r, const sc25519 *x, const sc25519 *y)
 
 	barrett_reduce(r, t);
 }
-*/
 
 void sc25519_window3(signed char r[85], const sc25519 *s)
 {
