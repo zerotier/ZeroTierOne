@@ -362,7 +362,6 @@ void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
 
 void LinuxNetLink::_linkAdded(struct nlmsghdr *nlp)
 {
-	char mac[18] = {0};
 	char mac_bin[6] = {0};
 	unsigned int mtu = 0;
 	char ifname[IFNAMSIZ] = {0};
@@ -378,7 +377,6 @@ void LinuxNetLink::_linkAdded(struct nlmsghdr *nlp)
 		switch(rtap->rta_type) {
 		case IFLA_ADDRESS:
 			ptr2 = (unsigned char*)RTA_DATA(rtap);
-			snprintf(mac,18,"%02x:%02x:%02x:%02x:%02x:%02x",(unsigned int)ptr2[0],(unsigned int)ptr2[1],(unsigned int)ptr2[2],(unsigned int)ptr2[3],(unsigned int)ptr2[4],(unsigned int)ptr2[5]);
 			memcpy(mac_bin, ptr, 6);
 			break;
 		case IFLA_IFNAME:
@@ -400,15 +398,10 @@ void LinuxNetLink::_linkAdded(struct nlmsghdr *nlp)
 		memcpy(entry.mac_bin, mac_bin, 6);
 		entry.mtu = mtu;
 	}
-
-#ifdef ZT_TRACE
-	//fprintf(stderr, "Link Added: %s mac: %s, mtu: %d\n", ifname, mac, mtu);
-#endif
 }
 
 void LinuxNetLink::_linkDeleted(struct nlmsghdr *nlp)
 {
-	char mac[18] = {0};
 	unsigned int mtu = 0;
 	char ifname[40] = {0};
 
@@ -423,8 +416,6 @@ void LinuxNetLink::_linkDeleted(struct nlmsghdr *nlp)
 		switch(rtap->rta_type) {
 		case IFLA_ADDRESS:
 			ptr2 = (unsigned char*)RTA_DATA(rtap);
-			snprintf(mac, 20, "%02x:%02x:%02x:%02x:%02x:%02x",
-				ptr2[0], ptr2[1], ptr2[2], ptr2[3], ptr2[4], ptr2[5]);
 			break;
 		case IFLA_IFNAME:
 			ptr = (const char*)RTA_DATA(rtap);
@@ -435,10 +426,6 @@ void LinuxNetLink::_linkDeleted(struct nlmsghdr *nlp)
 			break;
 		}
 	}
-
-#ifdef ZT_TRACE
-	//fprintf(stderr, "Link Deleted: %s mac: %s, mtu: %d\n", ifname, mac, mtu);
-#endif
 
 	{
 		Mutex::Lock l(_if_m);
