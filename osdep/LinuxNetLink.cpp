@@ -362,7 +362,7 @@ void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
 
 void LinuxNetLink::_linkAdded(struct nlmsghdr *nlp)
 {
-	char mac_bin[6] = {0};
+	unsigned char mac_bin[6] = {0};
 	unsigned int mtu = 0;
 	char ifname[IFNAMSIZ] = {0};
 
@@ -370,17 +370,16 @@ void LinuxNetLink::_linkAdded(struct nlmsghdr *nlp)
 	struct rtattr *rtap = (struct rtattr *)IFLA_RTA(ifip);
 	int ifil = RTM_PAYLOAD(nlp);
 
-	const char *ptr;
-	unsigned char *ptr2;
+	const char *ptr = (const char *)0;
 	for(;RTA_OK(rtap, ifil);rtap=RTA_NEXT(rtap, ifil))
 	{
 		switch(rtap->rta_type) {
 		case IFLA_ADDRESS:
-			ptr2 = (unsigned char*)RTA_DATA(rtap);
+			ptr = (const char *)RTA_DATA(rtap);
 			memcpy(mac_bin, ptr, 6);
 			break;
 		case IFLA_IFNAME:
-			ptr = (const char*)RTA_DATA(rtap);
+			ptr = (const char *)RTA_DATA(rtap);
 			memcpy(ifname, ptr, strlen(ptr));
 			break;
 		case IFLA_MTU:
@@ -394,7 +393,7 @@ void LinuxNetLink::_linkAdded(struct nlmsghdr *nlp)
 		struct iface_entry &entry = _interfaces[ifip->ifi_index];
 		entry.index = ifip->ifi_index;
 		memcpy(entry.ifacename, ifname, sizeof(ifname));
-		memcpy(entry.mac, mac, sizeof(mac));
+		snprintf(entry.mac,sizeof(entry.mac),"%.02x:%.02x:%.02x:%.02x:%.02x:%.02x",(unsigned int)mac_bin[0],(unsigned int)mac_bin[1],(unsigned int)mac_bin[2],(unsigned int)mac_bin[3],(unsigned int)mac_bin[4],(unsigned int)mac_bin[5]);
 		memcpy(entry.mac_bin, mac_bin, 6);
 		entry.mtu = mtu;
 	}
@@ -409,14 +408,10 @@ void LinuxNetLink::_linkDeleted(struct nlmsghdr *nlp)
 	struct rtattr *rtap = (struct rtattr *)IFLA_RTA(ifip);
 	int ifil = RTM_PAYLOAD(nlp);
 
-	const char *ptr;
-	unsigned char *ptr2;
+	const char *ptr = (const char *)0;
 	for(;RTA_OK(rtap, ifil);rtap=RTA_NEXT(rtap, ifil))
 	{
 		switch(rtap->rta_type) {
-		case IFLA_ADDRESS:
-			ptr2 = (unsigned char*)RTA_DATA(rtap);
-			break;
 		case IFLA_IFNAME:
 			ptr = (const char*)RTA_DATA(rtap);
 			memcpy(ifname, ptr, strlen(ptr));
