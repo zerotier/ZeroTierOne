@@ -70,6 +70,7 @@ static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC
 namespace ZeroTier {
 
 static Mutex globalTapCreateLock;
+static bool globalTapInitialized = false;
 
 MacEthernetTap::MacEthernetTap(
 	const char *homePath,
@@ -100,17 +101,6 @@ MacEthernetTap::MacEthernetTap(
 	OSUtils::ztsnprintf(mtustr,sizeof(mtustr),"%u",mtu);
 	OSUtils::ztsnprintf(metricstr,sizeof(metricstr),"%u",metric);
 
-	struct ifaddrs *ifa = (struct ifaddrs *)0;
-	std::set<std::string> ifns;
-	if (!getifaddrs(&ifa)) {
-		struct ifaddrs *p = ifa;
-		while (p) {
-			ifns.insert(std::string(p->ifa_name));
-			p = p->ifa_next;
-		}
-		freeifaddrs(ifa);
-	}
-
 	std::string agentPath(homePath);
 	agentPath.push_back(ZT_PATH_SEPARATOR);
 	agentPath.append("MacEthernetTapAgent");
@@ -119,15 +109,62 @@ MacEthernetTap::MacEthernetTap(
 
 	Mutex::Lock _gl(globalTapCreateLock); // only make one at a time
 
-	unsigned int devNo = (nwid ^ (nwid >> 32) ^ (nwid >> 48)) % 5000;
-	for(int tries=0;tries<16;++tries) {
-		OSUtils::ztsnprintf(devstr,sizeof(devstr),"feth%u",devNo);
-		_dev = devstr;
-		if (!ifns.count(_dev))
-			break;
-		devNo = (devNo + 1) % 5000;
+	// Destroy all feth devices on first tap start in case ZeroTier did not exit cleanly last time.
+	// We leave interfaces less than feth100 alone in case something else is messing with feth devices.
+	if (!globalTapInitialized) {
+		globalTapInitialized = true;
+		struct ifaddrs *ifa = (struct ifaddrs *)0;
+		std::set<std::string> deleted;
+		if (!getifaddrs(&ifa)) {
+			struct ifaddrs *p = ifa;
+			while (p) {
+				if ((!strncmp(p->ifa_name,"feth",4))&&(strlen(p->ifa_name) >= 7)&&(deleted.count(std::string(p->ifa_name)) == 0)) {
+					deleted.insert(std::string(p->ifa_name));
+					const char *args[4];
+					args[0] = "/sbin/ifconfig";
+					args[1] = p->ifa_name;
+					args[2] = "destroy";
+					args[3] = (char *)0;
+					const pid_t pid = vfork();
+					if (pid == 0) {
+						execv(args[0],const_cast<char **>(args));
+						_exit(-1);
+					} else if (pid > 0) {
+						int rv = 0;
+						waitpid(pid,&rv,0);
+					}
+				}
+				p = p->ifa_next;
+			}
+			freeifaddrs(ifa);
+		}
 	}
-	OSUtils::ztsnprintf(devnostr,sizeof(devnostr),"%u",devNo);
+
+	unsigned int devNo = 100 + ((nwid ^ (nwid >> 32) ^ (nwid >> 48)) % 4900);
+	for(;;) {
+		OSUtils::ztsnprintf(devnostr,sizeof(devnostr),"%u",devNo);
+		OSUtils::ztsnprintf(devstr,sizeof(devstr),"feth%u",devNo);
+		bool duplicate = false;
+		struct ifaddrs *ifa = (struct ifaddrs *)0;
+		if (!getifaddrs(&ifa)) {
+			struct ifaddrs *p = ifa;
+			while (p) {
+				if (!strcmp(p->ifa_name,devstr)) {
+					duplicate = true;
+					break;
+				}
+				p = p->ifa_next;
+			}
+			freeifaddrs(ifa);
+		}
+		if (duplicate) {
+			devNo = (devNo + 1) % 5000;
+			if (devNo < 100)
+				devNo = 100;
+		} else {
+			break;
+		}
+	}
 
 	if (::pipe(_shutdownSignalPipe))
 		throw std::runtime_error("pipe creation failed");
@@ -208,8 +245,10 @@ bool MacEthernetTap::addIp(const InetAddress &ip)
 	cmd.push_back(0);
 
 	uint16_t l = (uint16_t)cmd.length();
+	_putLock.lock();
 	write(_agentStdin,&l,2);
 	write(_agentStdin,cmd.data(),cmd.length());
+	_putLock.unlock();
 
 	return true;
 }
@@ -231,8 +270,10 @@ bool MacEthernetTap::removeIp(const InetAddress &ip)
 	cmd.push_back(0);
 
 	uint16_t l = (uint16_t)cmd.length();
+	_putLock.lock();
 	write(_agentStdin,&l,2);
 	write(_agentStdin,cmd.data(),cmd.length());
+	_putLock.unlock();
 
 	return true;
 }
@@ -278,8 +319,8 @@ void MacEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,co
 		hdr[0] = ZT_MACETHERNETTAPAGENT_STDIN_CMD_PACKET;
 		to.copyTo(hdr + 1,6);
 		from.copyTo(hdr + 7,6);
-		hdr[13] = (char)((etherType >> 8) & 0xff);
-		hdr[14] = (char)(etherType & 0xff);
+		hdr[13] = (unsigned char)((etherType >> 8) & 0xff);
+		hdr[14] = (unsigned char)(etherType & 0xff);
 		l = (uint16_t)(len + 15);
 		iov[0].iov_base = &l;
 		iov[0].iov_len = 2;
@@ -336,28 +377,31 @@ void MacEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std:
 
 void MacEthernetTap::setMtu(unsigned int mtu)
 {
-	char tmp[16];
-	std::string cmd;
-	cmd.push_back((char)ZT_MACETHERNETTAPAGENT_STDIN_CMD_IFCONFIG);
-	cmd.append("mtu");
-	cmd.push_back(0);
-	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%u",mtu);
-	cmd.append(tmp);
-	cmd.push_back(0);
-	uint16_t l = (uint16_t)cmd.length();
-	write(_agentStdin,&l,2);
-	write(_agentStdin,cmd.data(),cmd.length());
-	_mtu = mtu;
+	if (_mtu != mtu) {
+		char tmp[16];
+		std::string cmd;
+		cmd.push_back((char)ZT_MACETHERNETTAPAGENT_STDIN_CMD_IFCONFIG);
+		cmd.append("mtu");
+		cmd.push_back(0);
+		OSUtils::ztsnprintf(tmp,sizeof(tmp),"%u",mtu);
+		cmd.append(tmp);
+		cmd.push_back(0);
+		uint16_t l = (uint16_t)cmd.length();
+		_putLock.lock();
+		write(_agentStdin,&l,2);
+		write(_agentStdin,cmd.data(),cmd.length());
+		_putLock.unlock();
+		_mtu = mtu;
+	}
 }
 
-#define ZT_MACETHERNETTAP_AGENT_READ_BUF_SIZE 1048576
+#define ZT_MACETHERNETTAP_AGENT_READ_BUF_SIZE 131072
 
 void MacEthernetTap::threadMain()
 	throw()
 {
-	char *const agentReadBuf = (char *)valloc(ZT_MACETHERNETTAP_AGENT_READ_BUF_SIZE);
-	if (!agentReadBuf)
-		return;
+	char agentReadBuf[ZT_MACETHERNETTAP_AGENT_READ_BUF_SIZE];
+	char agentStderrBuf[256];
 	fd_set readfds,nullfds;
 	MAC to,from;
 
@@ -375,9 +419,10 @@ void MacEthernetTap::threadMain()
 		FD_SET(_agentStdout,&readfds);
 		FD_SET(_agentStderr,&readfds);
 		select(nfds,&readfds,&nullfds,&nullfds,(struct timeval *)0);
-		if (FD_ISSET(_shutdownSignalPipe[0],&readfds)) {
+
+		if (FD_ISSET(_shutdownSignalPipe[0],&readfds))
 			break;
-		}
+
 		if (FD_ISSET(_agentStdout,&readfds)) {
 			long n = (long)read(_agentStdout,agentReadBuf + agentReadPtr,ZT_MACETHERNETTAP_AGENT_READ_BUF_SIZE - agentReadPtr);
 			if (n > 0) {
@@ -404,12 +449,16 @@ void MacEthernetTap::threadMain()
 				}
 			}
 		}
+
 		if (FD_ISSET(_agentStderr,&readfds)) {
-			read(_agentStderr,agentReadBuf,ZT_MACETHERNETTAP_AGENT_READ_BUF_SIZE);
+			read(_agentStderr,agentStderrBuf,sizeof(agentStderrBuf));
+			/*
+			const ssize_t n = read(_agentStderr,agentStderrBuf,sizeof(agentStderrBuf));
+			if (n > 0)
+				write(STDERR_FILENO,agentStderrBuf,(size_t)n);
+			*/
 		}
 	}
-
-	free(agentReadBuf);
 }
 
 } // namespace ZeroTier

@@ -104,8 +104,8 @@
 
 #define P_IFCONFIG "/sbin/ifconfig"
 
-static unsigned char s_pktReadBuf[1048576] __attribute__ ((__aligned__(16)));
-static unsigned char s_stdinReadBuf[1048576] __attribute__ ((__aligned__(16)));
+static unsigned char s_pktReadBuf[131072] __attribute__ ((__aligned__(16)));
+static unsigned char s_stdinReadBuf[131072] __attribute__ ((__aligned__(16)));
 static char s_deviceName[IFNAMSIZ];
 static char s_peerDeviceName[IFNAMSIZ];
 static int s_bpffd = -1;
@@ -247,10 +247,6 @@ int main(int argc,char **argv)
 
 	snprintf(s_deviceName,sizeof(s_deviceName),"feth%d",deviceNo);
 	snprintf(s_peerDeviceName,sizeof(s_peerDeviceName),"feth%d",deviceNo+5000);
-	run(P_IFCONFIG,s_peerDeviceName,"destroy",(char *)0);
-	usleep(10);
-	run(P_IFCONFIG,s_deviceName,"destroy",(char *)0);
-	usleep(10);
 	if (run(P_IFCONFIG,s_peerDeviceName,"create",(char *)0) != 0) {
 		fprintf(stderr,"E unable to create %s\n",s_deviceName);
 		return ZT_MACETHERNETTAPAGENT_EXIT_CODE_UNABLE_TO_CREATE;
@@ -264,7 +260,7 @@ int main(int argc,char **argv)
 	usleep(10);
 	run(P_IFCONFIG,s_peerDeviceName,"peer",s_deviceName,(char *)0);
 	usleep(10);
-	run(P_IFCONFIG,s_peerDeviceName,"mtu","10000","up",(char *)0);
+	run(P_IFCONFIG,s_peerDeviceName,"mtu","16370","up",(char *)0); /* 16370 is the largest MTU MacOS/Darwin seems to allow */
 	usleep(10);
 	run(P_IFCONFIG,s_deviceName,"mtu",mtu,"metric",metric,"up",(char *)0);
 	usleep(10);
