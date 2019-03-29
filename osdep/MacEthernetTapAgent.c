@@ -245,13 +245,17 @@ int main(int argc,char **argv)
 		return ZT_MACETHERNETTAPAGENT_EXIT_CODE_UNABLE_TO_CREATE;
 	}
 
+	snprintf(s_deviceName,sizeof(s_deviceName),"feth%d",deviceNo);
 	snprintf(s_peerDeviceName,sizeof(s_peerDeviceName),"feth%d",deviceNo+5000);
+	run(P_IFCONFIG,s_peerDeviceName,"destroy",(char *)0);
+	usleep(10);
+	run(P_IFCONFIG,s_deviceName,"destroy",(char *)0);
+	usleep(10);
 	if (run(P_IFCONFIG,s_peerDeviceName,"create",(char *)0) != 0) {
 		fprintf(stderr,"E unable to create %s\n",s_deviceName);
 		return ZT_MACETHERNETTAPAGENT_EXIT_CODE_UNABLE_TO_CREATE;
 	}
 	usleep(10);
-	snprintf(s_deviceName,sizeof(s_deviceName),"feth%d",deviceNo);
 	if (run(P_IFCONFIG,s_deviceName,"create",(char *)0) != 0) {
 		fprintf(stderr,"E unable to create %s\n",s_deviceName);
 		return ZT_MACETHERNETTAPAGENT_EXIT_CODE_UNABLE_TO_CREATE;
