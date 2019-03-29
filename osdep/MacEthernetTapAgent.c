@@ -104,8 +104,8 @@
 
 #define P_IFCONFIG "/sbin/ifconfig"
 
-static unsigned char s_pktReadBuf[262144] __attribute__ ((__aligned__(16)));
-static unsigned char s_stdinReadBuf[262144] __attribute__ ((__aligned__(16)));
+static unsigned char s_pktReadBuf[1048576] __attribute__ ((__aligned__(16)));
+static unsigned char s_stdinReadBuf[1048576] __attribute__ ((__aligned__(16)));
 static char s_deviceName[IFNAMSIZ];
 static char s_peerDeviceName[IFNAMSIZ];
 static int s_bpffd = -1;
@@ -418,6 +418,10 @@ int main(int argc,char **argv)
 
 								case ZT_MACETHERNETTAPAGENT_STDIN_CMD_EXIT:
 									return ZT_MACETHERNETTAPAGENT_EXIT_CODE_SUCCESS;
+
+								default:
+									fprintf(stderr,"E unrecognized message type over pipe from host process: %d (length: %d)\n",(int)msg[0],(int)len);
+									break;
 							}
 						}
 

@@ -350,10 +350,14 @@ void MacEthernetTap::setMtu(unsigned int mtu)
 	_mtu = mtu;
 }
 
+#define ZT_MACETHERNETTAP_AGENT_READ_BUF_SIZE 1048576
+
 void MacEthernetTap::threadMain()
 	throw()
 {
-	char agentReadBuf[262144];
+	char *const agentReadBuf = (char *)valloc(ZT_MACETHERNETTAP_AGENT_READ_BUF_SIZE);
+	if (!agentReadBuf)
+		return;
 	fd_set readfds,nullfds;
 	MAC to,from;
 
@@ -375,7 +379,7 @@ void MacEthernetTap::threadMain()
 			break;
 		}
 		if (FD_ISSET(_agentStdout,&readfds)) {
-			long n = (long)read(_agentStdout,agentReadBuf + agentReadPtr,sizeof(agentReadBuf) - agentReadPtr);
+			long n = (long)read(_agentStdout,agentReadBuf + agentReadPtr,ZT_MACETHERNETTAP_AGENT_READ_BUF_SIZE - agentReadPtr);
 			if (n > 0) {
 				agentReadPtr += n;
 				while (agentReadPtr >= 2) {
@@ -401,9 +405,11 @@ void MacEthernetTap::threadMain()
 			}
 		}
 		if (FD_ISSET(_agentStderr,&readfds)) {
-			read(_agentStderr,agentReadBuf,sizeof(agentReadBuf));
+			read(_agentStderr,agentReadBuf,ZT_MACETHERNETTAP_AGENT_READ_BUF_SIZE);
 		}
 	}
+
+	free(agentReadBuf);
 }
 
 } // namespace ZeroTier
