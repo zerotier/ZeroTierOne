@@ -1314,13 +1314,15 @@ void PostgreSQL::onlineNotificationThread()
 			if (found == _networks.end()) {
 				continue; // skip members trying to join non-existant networks
 			}
-
+			
+			std::string networkId(nwidTmp);
+			std::string memberId(memTmp);
+			
 			std::vector<std::string> &members = updateMap[networkId];
 			members.push_back(memberId);
 
 			lastOnlineCumulative[i->first] = i->second.first;
-			std::string networkId(nwidTmp);
-			std::string memberId(memTmp);
+			
 			
 			const char *qvals[2] = {
 				networkId.c_str(),
@@ -1356,7 +1358,13 @@ void PostgreSQL::onlineNotificationThread()
 					memberUpdate << ", ";
 				}
 
-				memberUpdate << "('" << networkId << "', '" << memberId << '", ' << ipAddr << "', TO_TIMESTAMP(" << timestamp << "::double precision/1000))";
+				memberUpdate << "('" << networkId << "', '" << memberId << "', ";
+				if (ipAddr.empty()) {
+					memberUpdate << "NULL, ";
+				} else {
+					memberUpdate << "'" << ipAddr << "', ";
+				}
+				memberUpdate << "TO_TIMESTAMP(" << timestamp << "::double precision/1000))";
 				memberAdded = true;
 			} else if (nrows > 1) {
 				fprintf(stderr, "nrows > 1?!?");
@@ -1369,7 +1377,7 @@ void PostgreSQL::onlineNotificationThread()
 
 		if (memberAdded) {
 			res = PQexec(conn, memberUpdate.str().c_str());
-			if (res != PGRES_COMMAND_OK) {
+			if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 				fprintf(stderr, "Multiple insert failed: %s", PQerrorMessage(conn));
 			}
 			PQclear(res);
@@ -1422,11 +1430,11 @@ void PostgreSQL::onlineNotificationThread()
 					}
 				}
 
-				char *nvals[1] = {
-					networkId.c_str();
+				const char *nvals[1] = {
+					networkId.c_str()
 				};
 
-				res = PQExecParams(conn,
+				res = PQexecParams(conn,
 					"SELECT id FROM ztc_network WHERE id = $1",
 					1,
 					NULL,
@@ -1473,8 +1481,8 @@ void PostgreSQL::onlineNotificationThread()
 					<< "authorized_member_count = EXCLUDED.authorized_member_count, online_member_count = EXCLUDED.online_member_count, "
 					<< "total_member_count = EXCLUDED.total_member_count, last_modified = EXCLUDED.last_modified";
 			if (networkAdded) {
-				res = PQExec(conn, networkUpdate.str().c_str());
-				if (res != PGRES_COMMAND_OK) {
+				res = PQexec(conn, networkUpdate.str().c_str());
+				if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 					fprintf(stderr, "Error during multiple network upsert: %s", PQresultErrorMessage(res));
 				}
 				PQclear(res);
