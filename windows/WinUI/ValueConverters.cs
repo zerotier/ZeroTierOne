@@ -28,17 +28,21 @@ namespace WinUI
 
     public class NumberToDateConverter : IValueConverter
     {
-
-        public static DateTimeOffset UnixTimeStampToDateTime(double timeStampMilliseconds)
+        static DateTime? _epoch;
+        static DateTime? Epoch
         {
-            // Java timestamp is milliseconds past epoch
-            return new DateTimeOffset(1970, 1, 1, 0, 0, 0, 0, TimeSpan.FromMilliseconds(timeStampMilliseconds));
+            get { return _epoch ?? (_epoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)); }
+        }
+        public static DateTime UnixTimeStampToDateTime(double timeStampMilliseconds)
+        {
+            return Epoch.Value.AddMilliseconds(timeStampMilliseconds);
+
         }
         public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
             ulong o = (ulong)value;
             var c = UnixTimeStampToDateTime((long)o);
-            var d = c.LocalDateTime;
+            var d = c.ToLocalTime();
             return $"{d.ToLongDateString()} - {d.ToLongTimeString()}";
         }
         public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
@@ -52,7 +56,7 @@ namespace WinUI
         public static string DoConvert(ulong o)
         {
             var c = NumberToDateConverter.UnixTimeStampToDateTime((long)o);
-            var d = c.LocalDateTime;
+            var d = c.ToLocalTime();
             var diff = DateTime.Now - d;
 
             StringBuilder sb = new StringBuilder();
