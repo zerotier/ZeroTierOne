@@ -59,7 +59,7 @@ namespace WinUI
         {
             String dataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\ZeroTier\\One";
             String dataFile = Path.Combine(dataPath, "networks.dat");
-            
+
             if (File.Exists(dataFile))
             {
                 List<ZeroTierNetwork> netList;
@@ -102,10 +102,10 @@ namespace WinUI
 
         private void apiNetworkCallback(List<ZeroTierNetwork> networks)
         {
-						if (networks == null)
-						{
-								return;
-						}
+            if (networks == null)
+            {
+                return;
+            }
 
             lock (_knownNetworks)
             {
@@ -156,7 +156,7 @@ namespace WinUI
             {
                 Console.WriteLine("Monitor Thread Exception: " + "\n" + e.StackTrace);
             }
-			Console.WriteLine("Monitor Thread Ended");
+            Console.WriteLine("Monitor Thread Ended");
         }
 
         public void SubscribeStatusUpdates(StatusCallback cb)
@@ -181,7 +181,7 @@ namespace WinUI
 
         public void RemoveNetwork(String networkID)
         {
-            lock(_knownNetworks)
+            lock (_knownNetworks)
             {
                 foreach (ZeroTierNetwork n in _knownNetworks)
                 {
@@ -199,5 +199,101 @@ namespace WinUI
         {
             runThread.Abort();
         }
+    }
+
+
+    class CentralNetworkMonitor
+    {
+        int POLL_INTERVAL = 5000;
+        public delegate void NetworkChangesCallback(List<CentralNetwork> networks);
+        private Thread runThread;
+        private NetworkChangesCallback _callback;
+        private List<CentralNetwork> _knownNetworks = new List<CentralNetwork>();
+
+        private static object syncRoot = new object();
+        #region Instance
+        private static CentralNetworkMonitor instance;
+        public static CentralNetworkMonitor Instance
+        {
+            get
+            {
+                if (instance == null)
+                {
+                    lock (syncRoot)
+                    {
+                        if (instance == null)
+                        {
+                            instance = new CentralNetworkMonitor();
+                        }
+                    }
+                }
+
+                return instance;
+            }
+        }
+        #endregion
+        private CentralNetworkMonitor()
+        {
+            runThread = new Thread(new ThreadStart(run));
+            runThread.Start();
+        }
+
+        ~CentralNetworkMonitor()
+        {
+            runThread.Interrupt();
+        }
+
+        private  void run()
+        {
+            try
+            {
+                while (runThread.IsAlive)
+                {
+                    lock (syncRoot)
+                    {
+                        UpdateList().ConfigureAwait(false);
+                        _callback?.Invoke(_knownNetworks);
+                        Thread.Sleep(POLL_INTERVAL);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Monitor Thread Exception: " + "\n" + e.StackTrace);
+            }
+            Console.WriteLine("Monitor Thread Ended");
+        }
+
+        private async Task UpdateList()
+        {
+            CentralAPI handler = CentralAPI.Instance;
+            var l = await handler.GetNetworkList();
+            foreach (var n in l)
+            {
+                var members = await handler.GetMembersList(n.Id);
+                n.Members.Clear();
+                foreach (var m in members)
+                    n.Members.Add(m);
+            }
+            _knownNetworks.Clear();
+            _knownNetworks.AddRange(l);
+
+        }
+
+        public void SubscribeNetworkUpdates(NetworkChangesCallback cb)
+        {
+            _callback += cb;
+        }
+
+        public void UnsubscribeNetworkUpdates(NetworkChangesCallback cb)
+        {
+            _callback -= cb;
+        }
+
+        public void StopMonitor()
+        {
+            runThread.Abort();
+        }
+
     }
 }

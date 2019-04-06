@@ -205,6 +205,32 @@ namespace WinUI
             return networkList;
         }
 
+        public async Task<List<CentralMember>> GetMembersList(string nid)
+        {
+            string networkURL = $"{Central.ServerURL}/api/network/{nid}/member";
+            HttpResponseMessage response = await client.GetAsync(networkURL);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // TODO:  Throw Error
+                return new List<CentralMember>();
+            }
+
+            string resContent = await response.Content.ReadAsStringAsync();
+            try
+            {
+                List<CentralMember> membersList = JsonConvert.DeserializeObject<List<CentralMember>>(resContent);
+                return membersList;
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine(e.Message);
+                return null;
+            }
+
+
+        }
+
         public async Task<CentralNetwork> CreateNewNetwork()
         {
             string networkURL = Central.ServerURL + "/api/network?easy=1";
