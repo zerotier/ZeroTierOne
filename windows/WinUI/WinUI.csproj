@@ -107,10 +107,14 @@
     </Compile>
     <Compile Include="CentralAPI.cs" />
     <Compile Include="CentralLogin.cs" />
+    <Compile Include="CentralMember.cs" />
     <Compile Include="CentralNetwork.cs" />
     <Compile Include="CentralServer.cs" />
     <Compile Include="CentralToken.cs" />
     <Compile Include="CentralUser.cs" />
+    <Compile Include="FloatingWindow.xaml.cs">
+      <DependentUpon>FloatingWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="ISwitchable.cs" />
     <Compile Include="JoinNetworkView.xaml.cs">
       <DependentUpon>JoinNetworkView.xaml</DependentUpon>
@@ -130,11 +134,16 @@
     <Compile Include="ToolbarItem.xaml.cs">
       <DependentUpon>ToolbarItem.xaml</DependentUpon>
     </Compile>
+    <Compile Include="ValueConverters.cs" />
     <Compile Include="ZeroTierPeerPhysicalPath.cs" />
     <Compile Include="ZeroTierPeer.cs" />
     <Compile Include="ZeroTierNetwork.cs" />
     <Compile Include="ZeroTierStatus.cs" />
     <Page Include="AboutView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="FloatingWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -260,7 +269,6 @@
     <None Include="Resources\ZeroTierIcon.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(MSBuildExtensionsPath)\Microsoft\Expression\Blend\.NETFramework\v4.5\Microsoft.Expression.Blend.WPF.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy "$(SolutionDir)\copyutil\bin\$(ConfigurationName)\copyutil.exe" "$(ProjectDir)\$(OutDir)\copyutil.exe"</PostBuildEvent>
   </PropertyGroup>
