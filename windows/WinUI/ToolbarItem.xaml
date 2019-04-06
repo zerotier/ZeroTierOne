@@ -30,6 +30,10 @@
                                       Click="ToolbarItem_NodeIDClicked"
                                       x:Name="nodeIdMenuItem"/>
 							<Separator/>
+              <MenuItem x:Name="ToolbarItem_FloatingWindow" 
+                        Header="Show floating window" 
+                        IsCheckable="True" Checked="ToolbarItem_FloatingWindow_Checked"/>
+              <Separator/>
 							<MenuItem Header="Join Network..."
                                       Click="ToolbarItem_JoinNetworkClicked"/>
 							<MenuItem Header="Show Networks..."

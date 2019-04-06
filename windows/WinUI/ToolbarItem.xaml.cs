@@ -41,6 +41,9 @@ namespace WinUI
         private AboutView aboutView = null;
         private PreferencesView prefsView = null;
 
+        private FloatingWindow floatingWindow = null;
+        private Point floatingWindowLocation = new Point(0, 0);
+
         private NetworkMonitor mon = NetworkMonitor.Instance;
 
         private ObservableCollection<MenuItem> _networkCollection = new ObservableCollection<MenuItem>();
@@ -98,7 +101,7 @@ namespace WinUI
             }
         }
 
-        private void updateStatus(ZeroTierStatus status) 
+        private void updateStatus(ZeroTierStatus status)
         {
             if (status != null)
             {
@@ -124,7 +127,7 @@ namespace WinUI
         {
             try
             {
-		            Clipboard.SetDataObject(nodeId);
+                Clipboard.SetDataObject(nodeId);
             }
             catch (ArgumentNullException)
             {
@@ -152,7 +155,7 @@ namespace WinUI
                 netListView.Top = netListLocation.Y;
                 netListNeedsMoving = false;
             }
-            
+
             netListView.Show();
 
             if (netListNeedsMoving)
@@ -289,7 +292,7 @@ namespace WinUI
 
         private void ToolbarItem_NetworkClicked(object sender, System.Windows.RoutedEventArgs e)
         {
-            if(sender.GetType() == typeof(MenuItem))
+            if (sender.GetType() == typeof(MenuItem))
             {
                 MenuItem item = e.Source as MenuItem;
                 if (item.DataContext != null)
@@ -303,7 +306,7 @@ namespace WinUI
                     {
                         APIHandler.Instance.JoinNetwork(Dispatcher, network.NetworkId, network.AllowManaged, network.AllowGlobal, network.AllowDefault);
                     }
-                }   
+                }
             }
         }
 
@@ -332,7 +335,7 @@ namespace WinUI
 
             double top = screenHeight - height - 40;
             double left = screenWidth - width - 20;
-            
+
             w.Top = top;
             w.Left = left;
         }
@@ -348,6 +351,32 @@ namespace WinUI
             aboutViewLocation.Y = 0;
             prefsViewLocation.X = 0;
             prefsViewLocation.Y = 0;
+        }
+
+        private void ToolbarItem_FloatingWindow_Checked(object sender, RoutedEventArgs e)
+        {
+            ShowOrHideFloatingWindow(ToolbarItem_FloatingWindow.IsChecked);
+        }
+        private void ShowOrHideFloatingWindow(bool show)
+        {
+            if (show)
+            {
+                if (floatingWindow == null)
+                    floatingWindow = new FloatingWindow();
+                if ((floatingWindowLocation.X > 0) || (floatingWindowLocation.Y > 0))
+                {
+                    floatingWindow.Left = floatingWindowLocation.X;
+                    floatingWindow.Top = floatingWindowLocation.Y;
+                }
+                floatingWindow.Show();
+            }
+            else
+            {
+                floatingWindowLocation.X = floatingWindow.Left;
+                floatingWindowLocation.Y = floatingWindow.Top;
+                floatingWindow.Close();
+            }
+
         }
     }
 }

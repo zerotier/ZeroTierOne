@@ -1,0 +1,42 @@
+﻿<Window x:Class="WinUI.FloatingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WinUI"
+        mc:Ignorable="d"
+        Title="FloatingWindow" Height="450" Width="300">
+  <Window.Resources>
+    <local:OnlinePresenceToColorConverter x:Key="OnlinePresenceToColorConverter"/>
+  </Window.Resources>
+  <Grid Margin="10">
+    <TreeView Name="treeViewer" >
+      <TreeView.ItemContainerStyle>
+        <Style TargetType="{x:Type TreeViewItem}">
+          <Setter Property="IsExpanded" Value="True"/>
+        </Style>
+      </TreeView.ItemContainerStyle>
+      <TreeView.Resources>
+        <HierarchicalDataTemplate 
+          DataType="{x:Type local:CentralNetwork}" ItemsSource="{Binding Members}">
+          <StackPanel Orientation="Horizontal">
+            <!-- <Image Source="/WpfTutorialSamples;component/Images/group.png" Margin="0,0,5,0" /> -->
+            <TextBlock Text="{Binding Config.Name}" />
+            <TextBlock Text=" [" Foreground="Blue" />
+            <TextBlock Text="{Binding Members.Count}" Foreground="Blue" />
+            <TextBlock Text="]" Foreground="Blue" />
+          </StackPanel>
+        </HierarchicalDataTemplate>
+        <DataTemplate DataType="{x:Type local:CentralMember}">
+          <StackPanel Orientation="Horizontal" >
+            <!-- <Image Source="/WpfTutorialSamples;component/Images/user.png" Margin="0,0,5,0" /> -->
+            <TextBlock Text="{Binding Name}" Foreground="{Binding Online, Converter={StaticResource OnlinePresenceToColorConverter}}"/>
+            <TextBlock Text=" (" Foreground="{Binding Online, Converter={StaticResource OnlinePresenceToColorConverter}}"/>
+            <TextBlock Text="{Binding PhysicalAddress}" Foreground="{Binding Online, Converter={StaticResource OnlinePresenceToColorConverter}}"/>
+            <TextBlock Text=")" Foreground="{Binding Online, Converter={StaticResource OnlinePresenceToColorConverter}}"/>
+          </StackPanel>
+        </DataTemplate>
+      </TreeView.Resources>
+    </TreeView>
+  </Grid>
+</Window>
