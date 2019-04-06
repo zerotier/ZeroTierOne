@@ -119,6 +119,9 @@
     <Compile Include="JoinNetworkView.xaml.cs">
       <DependentUpon>JoinNetworkView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="MembersView.xaml.cs">
+      <DependentUpon>MembersView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="NetworkMonitor.cs" />
     <Compile Include="NetworkNameGenerator.cs" />
     <Compile Include="NetworkRoute.cs" />
@@ -148,6 +151,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="JoinNetworkView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="MembersView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

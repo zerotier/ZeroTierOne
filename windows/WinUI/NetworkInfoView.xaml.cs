@@ -162,5 +162,12 @@ namespace WinUI
                 APIHandler.Instance.LeaveNetwork(this.Dispatcher, networkId.Text);
             }
         }
+
+        private void MembersButton_Click(object sender, RoutedEventArgs e)
+        {
+            MembersView v = new MembersView(network.NetworkId);
+            v.ShowDialog();
+            v.Activate();
+        }
     }
 }

@@ -78,7 +78,8 @@
                     <ColumnDefinition Width="auto"/>
                 </Grid.ColumnDefinitions>
                 <Button x:Name="deleteButton" Grid.Column="0" Content="Delete" HorizontalAlignment="Left" VerticalAlignment="Center" Width="75" Background="#FFFFB354" Click="deleteButton_Click"/>
-                <CheckBox x:Name="connectedCheckBox" Grid.Column="2" Content="Connected" HorizontalAlignment="Right" VerticalAlignment="Center" Checked="connectedCheckBox_Checked" Unchecked="connectedCheckbox_Unchecked"/>
+        <Button x:Name="membersButton" Grid.Column="1" Content="Members" HorizontalAlignment="Center" VerticalAlignment="Center" Width="75" Click="MembersButton_Click"/>
+        <CheckBox x:Name="connectedCheckBox" Grid.Column="2" Content="Connected" HorizontalAlignment="Right" VerticalAlignment="Center" Checked="connectedCheckBox_Checked" Unchecked="connectedCheckbox_Unchecked"/>
             </Grid>
         </Grid>
     </Border>
