@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -32,6 +33,12 @@ namespace WinUI
 
         [JsonProperty("config")]
         public CentralNetworkConfig Config { get; set; }
+
+        /// <summary>
+        /// Note: update me manually before binding
+        /// </summary>
+        public ObservableCollection<CentralMember> Members { get; }
+          = new ObservableCollection<CentralMember>();
 
         public class CentralNetworkConfig
         {
