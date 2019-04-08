@@ -55,5 +55,25 @@ namespace WinUI
             }));
         }
 
+        #region Custom window handling
+       
+        /// <summary>
+        /// CloseButton_Clicked
+        /// </summary>
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
+        /// <summary>
+        /// Minimized Button_Clicked
+        /// </summary>
+        private void MinimizeButton_Click(object sender, RoutedEventArgs e)
+        {
+            this.WindowState = WindowState.Minimized;
+        }
+      
+
+        #endregion
     }
 }

@@ -5,12 +5,56 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WinUI"
         mc:Ignorable="d"
-        Title="FloatingWindow" Height="450" Width="300">
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        BorderBrush="LightSteelBlue"
+        BorderThickness="3"
+        Title="ZeroTier" Height="400" Width="250">
+  <WindowChrome.WindowChrome>
+    <WindowChrome
+            ResizeBorderThickness="6"
+            CaptionHeight="20"
+            CornerRadius="15,15,10,10"
+            GlassFrameThickness="0">
+          </WindowChrome>
+  </WindowChrome.WindowChrome>
+  
   <Window.Resources>
     <local:OnlinePresenceToColorConverter x:Key="OnlinePresenceToColorConverter"/>
+    <local:OnlinePresenceToMembersListGlyphConverter x:Key="OnlinePresenceToMembersListGlyphConverter"/>
+    <local:OnlinePresenceToMembersListTextConverter x:Key="OnlinePresenceToMembersListTextConverter"/>
+    <local:OnlinePresenceToMembersListGlyphTextConverter x:Key="OnlinePresenceToMembersListGlyphTextConverter"/>
+    <local:IPListConverter x:Key="IPConverter"/>
   </Window.Resources>
-  <Grid Margin="10">
-    <TreeView Name="treeViewer" >
+
+  <DockPanel x:Name="RootWindow">
+    <DockPanel x:Name="TitleBar" DockPanel.Dock="Top" 
+               Background="LightSteelBlue" Height="20">
+      <Button x:Name="CloseButton" Click="CloseButton_Click" DockPanel.Dock="Right"
+               Background="Transparent" Margin="2" BorderBrush="Transparent"
+              WindowChrome.IsHitTestVisibleInChrome="True">
+        <Button.Content>
+          <TextBlock Text="&#xE894;" 
+                       FontFamily="Segoe MDL2 Assets"  FontSize="10">
+          </TextBlock>
+        </Button.Content>
+      </Button>
+      <Button x:Name="MinButton" Click="MinimizeButton_Click"
+               Background="Transparent" Margin="2" BorderBrush="Transparent"
+                    DockPanel.Dock="Right"
+              WindowChrome.IsHitTestVisibleInChrome="True">
+        <Button.Content>
+          <TextBlock Text="&#x1F5D5;"  
+                       FontSize="10">
+          </TextBlock>
+        </Button.Content>
+      </Button>
+
+      <TextBlock TextAlignment="Center" Margin="30,0,0,0">ZeroTier</TextBlock>
+    </DockPanel>
+
+    <TreeView Name="treeViewer" BorderThickness="0" Background="AliceBlue">
       <TreeView.ItemContainerStyle>
         <Style TargetType="{x:Type TreeViewItem}">
           <Setter Property="IsExpanded" Value="True"/>
@@ -22,21 +66,28 @@
           <StackPanel Orientation="Horizontal">
             <!-- <Image Source="/WpfTutorialSamples;component/Images/group.png" Margin="0,0,5,0" /> -->
             <TextBlock Text="{Binding Config.Name}" />
-            <TextBlock Text=" [" Foreground="Blue" />
-            <TextBlock Text="{Binding Members.Count}" Foreground="Blue" />
-            <TextBlock Text="]" Foreground="Blue" />
+            <TextBlock Text=" [" />
+            <TextBlock Text="{Binding OnlineMemberCount}"/>
+            <TextBlock Text="/" />
+            <TextBlock Text="{Binding Members.Count}"/>
+            <TextBlock Text="]"  />
           </StackPanel>
         </HierarchicalDataTemplate>
         <DataTemplate DataType="{x:Type local:CentralMember}">
-          <StackPanel Orientation="Horizontal" >
-            <!-- <Image Source="/WpfTutorialSamples;component/Images/user.png" Margin="0,0,5,0" /> -->
-            <TextBlock Text="{Binding Name}" Foreground="{Binding Online, Converter={StaticResource OnlinePresenceToColorConverter}}"/>
-            <TextBlock Text=" (" Foreground="{Binding Online, Converter={StaticResource OnlinePresenceToColorConverter}}"/>
-            <TextBlock Text="{Binding PhysicalAddress}" Foreground="{Binding Online, Converter={StaticResource OnlinePresenceToColorConverter}}"/>
-            <TextBlock Text=")" Foreground="{Binding Online, Converter={StaticResource OnlinePresenceToColorConverter}}"/>
+          <StackPanel Orientation="Horizontal" Margin="1">
+            <TextBlock Text="{Binding Online, Converter={StaticResource OnlinePresenceToMembersListGlyphTextConverter}}" 
+                       FontFamily="Segoe MDL2 Assets" Margin="0,1" 
+                       Foreground="{Binding Online, Converter={StaticResource OnlinePresenceToMembersListGlyphConverter}}"></TextBlock>
+            <TextBlock Text="{Binding Name}" Margin="3,0" 
+                       Foreground="{Binding Online, Converter={StaticResource OnlinePresenceToMembersListTextConverter}}" />
+            <TextBlock Text="-" Margin="3,0" 
+                       Foreground="{Binding Online, Converter={StaticResource OnlinePresenceToMembersListTextConverter}}" />
+            <TextBlock Text="{Binding Config.IpAssignments, Converter={StaticResource IPConverter}}" MinWidth="100"  Margin="3,0" 
+                       Foreground="{Binding Online, Converter={StaticResource OnlinePresenceToMembersListTextConverter}}"
+                       TextWrapping="NoWrap"/>
           </StackPanel>
         </DataTemplate>
       </TreeView.Resources>
     </TreeView>
-  </Grid>
+  </DockPanel>
 </Window>

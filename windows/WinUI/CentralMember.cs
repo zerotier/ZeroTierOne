@@ -100,7 +100,7 @@ namespace WinUI
         /// Most recent client-reported ZeroTier protocol version [ro]
         /// </summary>
         [JsonProperty("protocolVersion")]
-        public UInt64 protocolVersion { get; set; }
+        public int protocolVersion { get; set; }
         /// <summary>
         /// True if member supports circuit testing [ro]
         /// </summary>

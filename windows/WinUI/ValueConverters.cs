@@ -12,12 +12,13 @@ namespace WinUI
         public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
             List<string> o = value as List<string>;
-            if (o == null)
-                return null;
+            if ((o == null) || (o.Count ==0))
+                return "-";
 
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < o.Count; i++)
-                sb.AppendLine(o[i]);
+            sb.Append(o[0]);
+            for (int i = 1; i < o.Count; i++)
+                sb.Append($", {o[i]}");
             return sb.ToString();
         }
         public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
@@ -116,6 +117,39 @@ namespace WinUI
         {
             IfTrue = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Green);
             IfFalse = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Red);
+        }
+    }
+
+    public class OnlinePresenceToMembersListGlyphConverter : BoolToColorConverter
+    {
+        public OnlinePresenceToMembersListGlyphConverter()
+        {
+            IfTrue = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Green);
+            IfFalse = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DarkGray);
+        }
+    }
+
+    public class OnlinePresenceToMembersListGlyphTextConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            var oclass = (bool)value;
+            //return oclass ? "&#xe870;" : "&#xe871;";
+            
+            return oclass ? char.ConvertFromUtf32(0xE870) : char.ConvertFromUtf32(0xE871);
+        }
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class OnlinePresenceToMembersListTextConverter : BoolToColorConverter
+    {
+        public OnlinePresenceToMembersListTextConverter()
+        {
+            IfTrue = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Black);
+            IfFalse = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DarkGray);
         }
     }
 
