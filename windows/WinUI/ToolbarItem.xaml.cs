@@ -65,6 +65,7 @@ namespace WinUI
             mon.SubscribeStatusUpdates(updateStatus);
 
             SystemEvents.DisplaySettingsChanged += new EventHandler(SystemEvents_DisplaySettingsChanged);
+            ToolbarItem_FloatingWindow.IsChecked = true;
         }
 
         ~ToolbarItem()

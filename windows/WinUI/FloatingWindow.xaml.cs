@@ -21,12 +21,15 @@ namespace WinUI
     public partial class FloatingWindow : Window
     {
         bool registered = false;
+        bool initialized = false;
         public FloatingWindow()
         {
             InitializeComponent();
             this.Loaded += MyNetworksView_Loaded;
             this.Closing += FloatingWindow_Closing;
         }
+
+
 
         private void FloatingWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
@@ -45,18 +48,56 @@ namespace WinUI
                 registered = true;
             }
         }
+        bool Equal(List<CentralNetwork> list)
+        {
+            if (_datasource == null)
+                return false;
+            if (list.Count != _datasource.Count)
+                return false;
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (!list[i].Equals(_datasource[i]))
+                    return false;
 
+                if (list[i].Members.Count != _datasource[i].Members.Count)
+                    return false;
+
+                for (int j = 0; j < list[i].Members.Count; j++)
+                {
+                    if (!list[i].Members[j].Equals(_datasource[i].Members[j]))
+                        return false;
+                }
+            }
+            return true;
+        }
+        List<CentralNetwork> _datasource;
         void DoUpdate(List<CentralNetwork> list)
         {
+
+            if (Equal(list))
+                return;
+            if (_datasource == null)
+                _datasource = new List<CentralNetwork>();
             Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
             {
                 treeViewer.ItemsSource = null;
-                treeViewer.ItemsSource = list;
+                _datasource.Clear();
+                foreach (var n in list)
+                    _datasource.Add(CentralNetwork.CopyFrom(n));
+                foreach (var d in _datasource)
+                    foreach (var m in d.Members)
+                        CentralMemberVM.Populate(m);
+            
+                treeViewer.ItemsSource = _datasource;
+                ExpandFirstLevel();
+
             }));
         }
 
+
+
         #region Custom window handling
-       
+
         /// <summary>
         /// CloseButton_Clicked
         /// </summary>
@@ -72,8 +113,55 @@ namespace WinUI
         {
             this.WindowState = WindowState.Minimized;
         }
-      
+
 
         #endregion
+
+        public void ExpandFirstLevel()
+        {
+            for (int i = 0; i < treeViewer.Items.Count; i++)
+            {
+                var t = treeViewer.ItemContainerGenerator.ContainerFromIndex(i) as TreeViewItem;
+                t.IsExpanded = true;
+            }
+        }
+
+        private void Member_MouseRightButtonDown(object sender,
+            MouseButtonEventArgs e)
+        {
+            var item = (sender as TreeView).SelectedItem as CentralMember;
+
+            if (item != null)
+            {
+                var pMenu = (ContextMenu)Resources["itemMenu"];
+                pMenu.DataContext = item;
+                pMenu.IsOpen = true;
+            }
+        }
+
+        private void MenuItemCopyIP_Click(object sender, RoutedEventArgs e)
+        {
+            string ip = GetIP(sender);
+            if (ip != null)
+                Clipboard.SetText(ip);
+        }
+        string GetIP(object sender)
+        {
+            var item = ((sender as MenuItem).Parent as ContextMenu).DataContext as CentralMember;
+            if (item != null)
+                if ((item.Config.IpAssignments != null) &&
+                    (item.Config.IpAssignments.Count > 0))
+                    return item.Config.IpAssignments[0];
+            return null;
+        }
+        private void MenuItemPing_Click(object sender, RoutedEventArgs e)
+        {
+            string ip = GetIP(sender);
+            if (ip != null)
+            {
+                string cmd = $"-t {ip}";
+                System.Diagnostics.Process.Start("ping", cmd);
+            }
+        }
     }
 }

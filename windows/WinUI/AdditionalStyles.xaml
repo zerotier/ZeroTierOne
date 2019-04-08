@@ -1,0 +1,98 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:WinUI">
+
+  <Style x:Key="ExpandCollapseToggleStyle" TargetType="ToggleButton">
+    <Setter Property="Focusable" Value="False"/>
+  <Setter Property="Template">
+    <Setter.Value>
+      <ControlTemplate TargetType="ToggleButton">
+        <Grid
+          Width="15"
+          Height="13"
+          Background="Transparent">
+          <Path x:Name="ExpandPath"
+            HorizontalAlignment="Left" 
+            VerticalAlignment="Center" 
+            Margin="1,1,1,1"
+            Fill="{StaticResource GlyphBrush}"
+            Data="M 4 0 L 8 4 L 4 8 Z"/>
+        </Grid>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsChecked"
+               Value="True">
+            <Setter Property="Data"
+                TargetName="ExpandPath"
+                Value="M 0 4 L 8 4 L 4 8 Z"/>
+          </Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate>
+    </Setter.Value>
+  </Setter>
+  </Style>
+  
+  <Style x:Key="FloatingWindowTreeViewStyle" TargetType="{x:Type TreeViewItem}">
+     <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="{x:Type TreeViewItem}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition MinWidth="19" Width="Auto"/>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition/>
+            </Grid.RowDefinitions>
+
+            <ToggleButton x:Name="Expander" ClickMode="Press" 
+                          IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}" 
+                          Style="{StaticResource ExpandCollapseToggleStyle}"/>
+            <Border x:Name="Bd" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" Grid.Column="1" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
+              <ContentPresenter x:Name="PART_Header" ContentSource="Header" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+            </Border>
+            <ItemsPresenter x:Name="ItemsHost" Grid.ColumnSpan="2" Grid.Column="1" Grid.Row="1" 
+                            Margin="-12,0,0,0"/>
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsExpanded" Value="false">
+              <Setter Property="Visibility" TargetName="ItemsHost" Value="Collapsed"/>
+            </Trigger>
+            <Trigger Property="HasItems" Value="false">
+              <Setter Property="Visibility" TargetName="Expander" Value="Hidden"/>
+            </Trigger>
+            <Trigger Property="IsSelected" Value="true">
+              <Setter Property="Background" TargetName="Bd" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
+              <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}"/>
+            </Trigger>
+            <MultiTrigger>
+              <MultiTrigger.Conditions>
+                <Condition Property="IsSelected" Value="true"/>
+                <Condition Property="IsSelectionActive" Value="false"/>
+              </MultiTrigger.Conditions>
+              <Setter Property="Background" TargetName="Bd" Value="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"/>
+              <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"/>
+            </MultiTrigger>
+            <Trigger Property="IsEnabled" Value="false">
+              <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+    <Style.Triggers>
+      <Trigger Property="VirtualizingStackPanel.IsVirtualizing" Value="true">
+        <Setter Property="ItemsPanel">
+          <Setter.Value>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel/>
+            </ItemsPanelTemplate>
+          </Setter.Value>
+        </Setter>
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+
+</ResourceDictionary>

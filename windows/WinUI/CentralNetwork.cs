@@ -10,6 +10,21 @@ namespace WinUI
 {
     class CentralNetwork
     {
+        public static CentralNetwork CopyFrom(CentralNetwork c)
+        {
+            var t = (CentralNetwork)c.MemberwiseClone();
+            t.Config = new CentralNetworkConfig();
+            t.Config.Id = c.Config.Id;
+            t.Config.NetworkID = c.Config.NetworkID;
+            t.Config.Name = c.Config.Name;
+            if((c.Members != null) && (c.Members.Count>0))
+            {
+                t.Members = new ObservableCollection<CentralMember>();
+                foreach (var m in c.Members)
+                    t.Members.Add(CentralMember.CopyFrom(m));
+            }
+            return t;
+        }
         [JsonProperty("id")]
         public string Id { get; set; }
 
@@ -37,7 +52,7 @@ namespace WinUI
         /// <summary>
         /// Note: update me manually before binding
         /// </summary>
-        public ObservableCollection<CentralMember> Members { get; }
+        public ObservableCollection<CentralMember> Members { get; private set; }
           = new ObservableCollection<CentralMember>();
 
         public class CentralNetworkConfig
@@ -50,6 +65,20 @@ namespace WinUI
 
             [JsonProperty("name")]
             public string Name { get; set; }
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as CentralNetwork;
+            if (other == null)
+                return false;
+            return (Id == other.Id) && (Type == other.Type) && (Clock == other.Clock) && (RulesSource == other.RulesSource) &&
+                (Description == other.Description) && (OwnerID == other.OwnerID);
+        }
+        public override int GetHashCode()
+        {
+            return Id.GetHashCode() + Type.GetHashCode() + Clock.GetHashCode() + RulesSource.GetHashCode() +
+                Description.GetHashCode() + OwnerID.GetHashCode();
         }
     }
 }

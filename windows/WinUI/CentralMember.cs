@@ -7,8 +7,49 @@ using Newtonsoft.Json;
 
 namespace WinUI
 {
+    class CentralMemberVM
+    {
+        
+        public string Name { get; set; }
+        public string Value { get; set; }
+        public CentralMemberVM(string name, string value)
+        {
+            Name = name;
+            Value = value;
+        }
+        public static void Populate(CentralMember m)
+        {
+            if (m.Properties == null)
+                m.Properties = new List<CentralMemberVM>();
+            else
+                m.Properties.Clear();
+
+            Add(m, "NodeID", m.NodeId);
+            if(!string.IsNullOrEmpty(m.Description))
+                Add(m, "Description", m.Description);
+            if(!m.Online)
+                Add(m, "LastOnline", NumberToDifferenceConverter.DoConvert(m.LastOnline));
+            if(!string.IsNullOrEmpty(m.PhysicalAddress))
+                Add(m, "Address", m.PhysicalAddress);
+        }
+        public static void Add(CentralMember m, string name, string value)
+        {
+            m.Properties.Add(new CentralMemberVM(name, value));
+        }
+    }
     class CentralMember
-    {/// <summary>
+    { 
+        public static CentralMember CopyFrom(CentralMember c)
+        {
+            var o = (CentralMember)c.MemberwiseClone();
+            o.Config = CentralMemberConfig.CopyFrom(c.Config);
+            return o;
+        }
+        public List<CentralMemberVM> Properties
+        {
+            get; set;
+        }
+    /// <summary>
      /// Member record ID, which is formed from the network and node IDs [ro]
      /// </summary>
         [JsonProperty("id")]
@@ -122,6 +163,10 @@ namespace WinUI
         public class CentralMemberConfig
         {
 
+            public static CentralMemberConfig CopyFrom(CentralMemberConfig c)
+            {
+                return (CentralMemberConfig)c.MemberwiseClone();
+            }
             [JsonProperty("id")]
             public string Id { get; set; }
 
@@ -207,6 +252,32 @@ namespace WinUI
             /// </summary>
             [JsonProperty("revision")]
             public UInt64 Revision { get; set; }
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as CentralMember;
+            if (other == null)
+                return false;
+            if (!(Id.Equals(other.Id)))
+                return false;
+            if (!NetworkId.Equals(other.NetworkId))
+                return false;
+            if (!NodeId.Equals(other.NodeId))
+                return false;
+            if (!PhysicalAddress.Equals(other.PhysicalAddress))
+                return false;
+            if (Online != other.Online)
+                return false;
+            if (LastOnline != other.LastOnline)
+                return false;
+            return true;
+        }
+        public override int GetHashCode()
+        {
+            return Id.GetHashCode() + NetworkId.GetHashCode() +
+                NodeId.GetHashCode() + PhysicalAddress.GetHashCode() +
+                Online.GetHashCode() + LastOnline.GetHashCode();
         }
     }
 }

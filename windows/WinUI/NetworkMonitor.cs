@@ -277,7 +277,6 @@ namespace WinUI
             }
             _knownNetworks.Clear();
             _knownNetworks.AddRange(l);
-
         }
 
         public void SubscribeNetworkUpdates(NetworkChangesCallback cb)

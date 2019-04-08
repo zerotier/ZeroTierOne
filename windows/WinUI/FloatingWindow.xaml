@@ -10,7 +10,8 @@
         Background="Transparent"
         BorderBrush="LightSteelBlue"
         BorderThickness="3"
-        Title="ZeroTier" Height="400" Width="250">
+        Title="ZeroTier" Height="400" 
+        Width="300">
   <WindowChrome.WindowChrome>
     <WindowChrome
             ResizeBorderThickness="6"
@@ -21,14 +22,32 @@
   </WindowChrome.WindowChrome>
   
   <Window.Resources>
-    <local:OnlinePresenceToColorConverter x:Key="OnlinePresenceToColorConverter"/>
+ 
+    
+    <ResourceDictionary>
+      <ContextMenu x:Key="itemMenu">
+        <ContextMenu.Items>
+          <MenuItem Header="Copy IPv4" x:Name="MenuItemCopyIP" Click="MenuItemCopyIP_Click"></MenuItem>
+          <MenuItem Header="Ping" x:Name="MenuItemPing" Click="MenuItemPing_Click"></MenuItem>
+        </ContextMenu.Items>
+      </ContextMenu>
+      <local:OnlinePresenceToColorConverter x:Key="OnlinePresenceToColorConverter"/>
     <local:OnlinePresenceToMembersListGlyphConverter x:Key="OnlinePresenceToMembersListGlyphConverter"/>
     <local:OnlinePresenceToMembersListTextConverter x:Key="OnlinePresenceToMembersListTextConverter"/>
     <local:OnlinePresenceToMembersListGlyphTextConverter x:Key="OnlinePresenceToMembersListGlyphTextConverter"/>
     <local:IPListConverter x:Key="IPConverter"/>
+   
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="AdditionalStyles.xaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    
+      
+    </ResourceDictionary>
+   
   </Window.Resources>
 
-  <DockPanel x:Name="RootWindow">
+  <DockPanel x:Name="RootWindow" 
+             Opacity="0.96">
     <DockPanel x:Name="TitleBar" DockPanel.Dock="Top" 
                Background="LightSteelBlue" Height="20">
       <Button x:Name="CloseButton" Click="CloseButton_Click" DockPanel.Dock="Right"
@@ -54,18 +73,16 @@
       <TextBlock TextAlignment="Center" Margin="30,0,0,0">ZeroTier</TextBlock>
     </DockPanel>
 
-    <TreeView Name="treeViewer" BorderThickness="0" Background="AliceBlue">
-      <TreeView.ItemContainerStyle>
-        <Style TargetType="{x:Type TreeViewItem}">
-          <Setter Property="IsExpanded" Value="True"/>
-        </Style>
-      </TreeView.ItemContainerStyle>
+    <TreeView Name="treeViewer" BorderThickness="0" Background="AliceBlue"
+              ItemContainerStyle="{StaticResource FloatingWindowTreeViewStyle}"
+               MouseRightButtonUp="Member_MouseRightButtonDown">
+       
       <TreeView.Resources>
         <HierarchicalDataTemplate 
           DataType="{x:Type local:CentralNetwork}" ItemsSource="{Binding Members}">
           <StackPanel Orientation="Horizontal">
             <!-- <Image Source="/WpfTutorialSamples;component/Images/group.png" Margin="0,0,5,0" /> -->
-            <TextBlock Text="{Binding Config.Name}" />
+            <TextBlock Text="{Binding Config.Name}"/>
             <TextBlock Text=" [" />
             <TextBlock Text="{Binding OnlineMemberCount}"/>
             <TextBlock Text="/" />
@@ -73,7 +90,8 @@
             <TextBlock Text="]"  />
           </StackPanel>
         </HierarchicalDataTemplate>
-        <DataTemplate DataType="{x:Type local:CentralMember}">
+        <HierarchicalDataTemplate DataType="{x:Type local:CentralMember}" 
+                                  ItemsSource="{Binding Properties}">
           <StackPanel Orientation="Horizontal" Margin="1">
             <TextBlock Text="{Binding Online, Converter={StaticResource OnlinePresenceToMembersListGlyphTextConverter}}" 
                        FontFamily="Segoe MDL2 Assets" Margin="0,1" 
@@ -86,8 +104,17 @@
                        Foreground="{Binding Online, Converter={StaticResource OnlinePresenceToMembersListTextConverter}}"
                        TextWrapping="NoWrap"/>
           </StackPanel>
-        </DataTemplate>
+        </HierarchicalDataTemplate>
+        <HierarchicalDataTemplate DataType="{x:Type local:CentralMemberVM}">
+          <StackPanel Orientation="Horizontal" Margin="1">
+            <TextBlock Text="-" Margin="3,0" FontSize="11"/>
+            <TextBlock Text="{Binding Name}" Margin="3,0" FontSize="11"/>
+            <TextBlock Text="{Binding Value}" Margin="3,0" FontSize="11" />
+          </StackPanel>
+        </HierarchicalDataTemplate>
       </TreeView.Resources>
     </TreeView>
   </DockPanel>
+  
+  
 </Window>
