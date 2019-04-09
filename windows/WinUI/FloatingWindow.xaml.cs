@@ -21,15 +21,13 @@ namespace WinUI
     public partial class FloatingWindow : Window
     {
         bool registered = false;
-        bool initialized = false;
         public FloatingWindow()
         {
             InitializeComponent();
             this.Loaded += MyNetworksView_Loaded;
             this.Closing += FloatingWindow_Closing;
+            SetLoadingMessageVisibility(true);
         }
-
-
 
         private void FloatingWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
@@ -87,14 +85,21 @@ namespace WinUI
                 foreach (var d in _datasource)
                     foreach (var m in d.Members)
                         CentralMemberVM.Populate(m);
-            
+
                 treeViewer.ItemsSource = _datasource;
-                ExpandFirstLevel();
+                if (_datasource.Count > 0)
+                {
+                    SetLoadingMessageVisibility(false);
+                    ExpandFirstLevel();
+                }
 
             }));
         }
 
-
+        private void SetLoadingMessageVisibility(bool show)
+        {
+            LoadingMsg.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        }
 
         #region Custom window handling
 
@@ -103,7 +108,7 @@ namespace WinUI
         /// </summary>
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            Application.Current.Shutdown();
+            this.Close();
         }
 
         /// <summary>

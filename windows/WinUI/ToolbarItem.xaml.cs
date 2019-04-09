@@ -358,12 +358,15 @@ namespace WinUI
         {
             ShowOrHideFloatingWindow(ToolbarItem_FloatingWindow.IsChecked);
         }
-        private void ShowOrHideFloatingWindow(bool show)
+        public void ShowOrHideFloatingWindow(bool show)
         {
             if (show)
             {
                 if (floatingWindow == null)
+                {
                     floatingWindow = new FloatingWindow();
+                    floatingWindow.Closed += FloatingWindow_Closed;
+                }
                 if ((floatingWindowLocation.X > 0) || (floatingWindowLocation.Y > 0))
                 {
                     floatingWindow.Left = floatingWindowLocation.X;
@@ -377,7 +380,14 @@ namespace WinUI
                 floatingWindowLocation.Y = floatingWindow.Top;
                 floatingWindow.Close();
             }
+            ToolbarItem_FloatingWindow.IsChecked = show;
 
+        }
+
+        private void FloatingWindow_Closed(object sender, EventArgs e)
+        {
+            ToolbarItem_FloatingWindow.IsChecked = false;
+            floatingWindow = null;
         }
     }
 }
