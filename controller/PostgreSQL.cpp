@@ -666,6 +666,9 @@ void PostgreSQL::_membersWatcher_RabbitMQ() {
 		try {
 			std::string msg = rmq.consume();
 			// fprintf(stderr, "Got Member Update: %s\n", msg.c_str());
+			if (msg.empty()) {
+				continue;
+			}
 			json tmp(json::parse(msg));
 			json &ov = tmp["old_val"];
 			json &nv = tmp["new_val"];
@@ -766,6 +769,9 @@ void PostgreSQL::_networksWatcher_RabbitMQ() {
 	while (_run == 1) {
 		try {
 			std::string msg = rmq.consume();
+			if (msg.empty()) {
+				continue;
+			}
 			// fprintf(stderr, "Got network update: %s\n", msg.c_str());
 			json tmp(json::parse(msg));
 			json &ov = tmp["old_val"];

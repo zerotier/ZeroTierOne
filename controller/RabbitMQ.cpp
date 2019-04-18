@@ -80,9 +80,18 @@ std::string RabbitMQ::consume()
     amqp_envelope_t envelope;
     amqp_maybe_release_buffers(_conn);
 
-    res = amqp_consume_message(_conn, &envelope, NULL, 0);
+    struct timeval timeout;
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
+
+    res = amqp_consume_message(_conn, &envelope, &timeout, 0);
     if (res.reply_type != AMQP_RESPONSE_NORMAL) {
-        throw std::runtime_error("Error getting message");
+        if (res.reply_type == AMQP_RESPONSE_LIBRARY_EXCEPTION && res.library_error == AMQP_STATUS_TIMEOUT) {
+            // timeout waiting for message.  Return empty string
+            return "";
+        } else {
+            throw std::runtime_error("Error getting message");
+        }
     }
 
     std::string msg(
