@@ -872,8 +872,6 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
         return resultObject;
     }
 
-    uint64_t nodeId = ZT_Node_address(node);
-
     ZeroTier::Mutex::Lock lock(nodeMapMutex);
     ref->node = node;
     nodeMap.insert(std::make_pair(ref->id, ref));
