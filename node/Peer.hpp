@@ -419,7 +419,7 @@ public:
 	 *
 	 * @param now Current time
 	 */
-	inline void processBackgroundPeerTasks(int64_t now);
+	inline void processBackgroundPeerTasks(const int64_t now);
 
 	/**
 	 * Record that the remote peer does have multipath enabled. As is evident by the receipt of a VERB_ACK

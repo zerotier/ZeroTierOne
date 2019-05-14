@@ -650,10 +650,11 @@ void Peer::introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &o
 	}
 }
 
-inline void Peer::processBackgroundPeerTasks(int64_t now)
+inline void Peer::processBackgroundPeerTasks(const int64_t now)
 {
 	// Determine current multipath compatibility with other peer
 	if ((now - _lastMultipathCompatibilityCheck) >= ZT_PATH_QUALITY_COMPUTE_INTERVAL) {
+		//
 		// Cache number of available paths so that we can short-circuit multipath logic elsewhere
 		//
 		// We also take notice of duplicate paths (same IP only) because we may have
@@ -663,6 +664,7 @@ inline void Peer::processBackgroundPeerTasks(int64_t now)
 		//
 		// This is done to support the behavior of auto multipath enable/disable
 		// without user intervention.
+		//
 		int currAlivePathCount = 0;
 		int duplicatePathsFound = 0;
 		for (unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {

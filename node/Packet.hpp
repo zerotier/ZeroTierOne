@@ -45,31 +45,34 @@
 /**
  * Protocol version -- incremented only for major changes
  *
- * 1 - 0.2.0 ... 0.2.5
- * 2 - 0.3.0 ... 0.4.5
- *   + Added signature and originating peer to multicast frame
- *   + Double size of multicast frame bloom filter
- * 3 - 0.5.0 ... 0.6.0
- *   + Yet another multicast redesign
- *   + New crypto completely changes key agreement cipher
- * 4 - 0.6.0 ... 1.0.6
- *   + BREAKING CHANGE: New identity format based on hashcash design
- * 5 - 1.1.0 ... 1.1.5
- *   + Supports echo
- *   + Supports in-band world (root server definition) updates
- *   + Clustering! (Though this will work with protocol v4 clients.)
- *   + Otherwise backward compatible with protocol v4
- * 6 - 1.1.5 ... 1.1.10
- *   + Network configuration format revisions including binary values
- * 7 - 1.1.10 ... 1.1.17
- *   + Introduce trusted paths for local SDN use
- * 8 - 1.1.17 ... 1.2.0
- *   + Multipart network configurations for large network configs
- *   + Tags and Capabilities
- *   + Inline push of CertificateOfMembership deprecated
- * 9 - 1.2.0 ... CURRENT
+ * 1  - 0.2.0 ... 0.2.5
+ * 2  - 0.3.0 ... 0.4.5
+ *    + Added signature and originating peer to multicast frame
+ *    + Double size of multicast frame bloom filter
+ * 3  - 0.5.0 ... 0.6.0
+ *    + Yet another multicast redesign
+ *    + New crypto completely changes key agreement cipher
+ * 4  - 0.6.0 ... 1.0.6
+ *    + BREAKING CHANGE: New identity format based on hashcash design
+ * 5  - 1.1.0 ... 1.1.5
+ *    + Supports echo
+ *    + Supports in-band world (root server definition) updates
+ *    + Clustering! (Though this will work with protocol v4 clients.)
+ *    + Otherwise backward compatible with protocol v4
+ * 6  - 1.1.5 ... 1.1.10
+ *    + Network configuration format revisions including binary values
+ * 7  - 1.1.10 ... 1.1.17
+ *    + Introduce trusted paths for local SDN use
+ * 8  - 1.1.17 ... 1.2.0
+ *    + Multipart network configurations for large network configs
+ *    + Tags and Capabilities
+ *    + Inline push of CertificateOfMembership deprecated
+ * 9  - 1.2.0 ... 1.2.14
+ * 10 - 1.4.0 ... CURRENT
+ *    + Multipath capability and load balancing
+ *    + Certificates of Delegation (CoDs) for full root decentralization
  */
-#define ZT_PROTO_VERSION 9
+#define ZT_PROTO_VERSION 10
 
 /**
  * Minimum supported protocol version

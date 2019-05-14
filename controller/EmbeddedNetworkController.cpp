@@ -1620,7 +1620,7 @@ void EmbeddedNetworkController::_request(
 				if ( (ipRangeStartIA.ss_family == AF_INET) && (ipRangeEndIA.ss_family == AF_INET) ) {
 					uint32_t ipRangeStart = Utils::ntoh((uint32_t)(reinterpret_cast<struct sockaddr_in *>(&ipRangeStartIA)->sin_addr.s_addr));
 					uint32_t ipRangeEnd = Utils::ntoh((uint32_t)(reinterpret_cast<struct sockaddr_in *>(&ipRangeEndIA)->sin_addr.s_addr));
-					
+
 					if ((ipRangeEnd < ipRangeStart)||(ipRangeStart == 0))
 						continue;
 					uint32_t ipRangeLen = ipRangeEnd - ipRangeStart;
@@ -1671,7 +1671,7 @@ void EmbeddedNetworkController::_request(
 			}
 		}
 	}
-	
+
 	// Issue a certificate of ownership for all static IPs
 	if (nc->staticIpCount) {
 		nc->certificatesOfOwnership[0] = CertificateOfOwnership(nwid,now,identity.address(),1);
