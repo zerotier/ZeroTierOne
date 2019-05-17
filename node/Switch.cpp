@@ -425,7 +425,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			from.appendTo(outp);
 			outp.append((uint16_t)etherType);
 			outp.append(data,len);
-			if (!network->config().disableCompression() && !ZT_SDK)
+			if (!network->config().disableCompression())
 				outp.compress();
 			aqm_enqueue(tPtr,network,outp,true,qosBucket);
 		} else {
@@ -433,7 +433,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			outp.append(network->id());
 			outp.append((uint16_t)etherType);
 			outp.append(data,len);
-			if (!network->config().disableCompression() && !ZT_SDK)
+			if (!network->config().disableCompression())
 				outp.compress();
 			aqm_enqueue(tPtr,network,outp,true,qosBucket);
 		}
@@ -490,7 +490,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 				from.appendTo(outp);
 				outp.append((uint16_t)etherType);
 				outp.append(data,len);
-				if (!network->config().disableCompression() && !ZT_SDK)
+				if (!network->config().disableCompression())
 					outp.compress();
 				aqm_enqueue(tPtr,network,outp,true,qosBucket);
 			} else {

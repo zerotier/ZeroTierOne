@@ -482,7 +482,11 @@
 /**
  * Timeout for overall peer activity (measured from last receive)
  */
+#ifndef ZT_SDK
 #define ZT_PEER_ACTIVITY_TIMEOUT 500000
+#else
+#define ZT_PEER_ACTIVITY_TIMEOUT 30000
+#endif
 
 /**
  * General rate limit timeout for multiple packet types (HELLO, etc.)
