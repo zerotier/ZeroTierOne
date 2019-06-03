@@ -312,6 +312,7 @@ public:
 	/**
 	 * Print the contents of the buffer
 	 */
+	/*
 	inline void dump()
 	{
 		size_t iterator = begin;
@@ -325,6 +326,7 @@ public:
 			}
 		}
 	}
+	*/
 };
 
 } // namespace ZeroTier
