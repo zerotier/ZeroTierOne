@@ -274,7 +274,14 @@ public:
 	/**
 	 * @return True if frames should not be compressed
 	 */
-	inline bool disableCompression() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION) != 0); }
+	inline bool disableCompression() const
+	{
+#ifndef ZT_SDK
+		return ((this->flags & ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION) != 0);
+#else
+		return false; // Compression is disabled for SDK builds since it doesn't play nice with lwIP
+#endif
+	}
 
 	/**
 	 * @return Network type is public (no access control)

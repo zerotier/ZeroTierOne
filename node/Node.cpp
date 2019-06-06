@@ -340,7 +340,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 
 			// Update online status, post status change as event
 			const bool oldOnline = _online;
-			_online = (((now - lastReceivedFromUpstream) < (ZT_PEER_ACTIVITY_TIMEOUT / (ZT_SDK ? 16 : 1)))||(RR->topology->amUpstream()));
+			_online = (((now - lastReceivedFromUpstream) < ZT_PEER_ACTIVITY_TIMEOUT)||(RR->topology->amUpstream()));
 			if (oldOnline != _online)
 				postEvent(tptr,_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
 		} catch ( ... ) {
