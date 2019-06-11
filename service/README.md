@@ -25,7 +25,9 @@ Settings available in `local.conf` (this is not valid JSON, and JSON does not al
 		}
 	},
 	"settings": { /* Other global settings */
-		"primaryPort": 0-65535, /* If set, override default port of 9993 and any command line port */
+		"primaryPort": 1-65535, /* If set, override default port of 9993 and any command line port */
+		"secondaryPort": 1-65535, /* If set, override default random secondary port */
+		"tertiaryPort": 1-65535, /* If set, override default random tertiary port */
 		"portMappingEnabled": true|false, /* If true (the default), try to use uPnP or NAT-PMP to map ports */
 		"softwareUpdate": "apply"|"download"|"disable", /* Automatically apply updates, just download, or disable built-in software updates */
 		"softwareUpdateChannel": "release"|"beta", /* Software update channel */
@@ -33,7 +35,8 @@ Settings available in `local.conf` (this is not valid JSON, and JSON does not al
 		"interfacePrefixBlacklist": [ "XXX",... ], /* Array of interface name prefixes (e.g. eth for eth#) to blacklist for ZT traffic */
 		"allowManagementFrom": [ "NETWORK/bits", ...] |null, /* If non-NULL, allow JSON/HTTP management from this IP network. Default is 127.0.0.1 only. */
 		"bind": [ "ip",... ], /* If present and non-null, bind to these IPs instead of to each interface (wildcard IP allowed) */
-		"allowTcpFallbackRelay": true|false /* Allow or disallow establishment of TCP relay connections (true by default) */
+		"allowTcpFallbackRelay": true|false, /* Allow or disallow establishment of TCP relay connections (true by default) */
+		"multipathMode": 0|1|2 /* multipath mode: none (0), random (1), proportional (2) */
 	}
 }
 ```
