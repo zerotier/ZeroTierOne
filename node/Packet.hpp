@@ -70,7 +70,6 @@
  * 9  - 1.2.0 ... 1.2.14
  * 10 - 1.4.0 ... CURRENT
  *    + Multipath capability and load balancing
- *    + Certificates of Delegation (CoDs) for full root decentralization
  */
 #define ZT_PROTO_VERSION 10
 
