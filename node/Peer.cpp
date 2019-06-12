@@ -208,31 +208,12 @@ void Peer::received(
 		const uint64_t sinceLastPush = now - _lastDirectPathPushSent;
 		if (sinceLastPush >= ZT_DIRECT_PATH_PUSH_INTERVAL) {
 			_lastDirectPathPushSent = now;
-
-			// Start with explicitly known direct endpoint paths.
 			std::vector<InetAddress> pathsToPush(RR->node->directPaths());
-
-#if 0
-			// Do symmetric NAT prediction if we are communicating indirectly.
-			if (hops > 0) {
-				std::vector<InetAddress> sym(RR->sa->getSymmetricNatPredictions());
-				for(unsigned long i=0,added=0;i<sym.size();++i) {
-					InetAddress tmp(sym[(unsigned long)RR->node->prng() % sym.size()]);
-					if (std::find(pathsToPush.begin(),pathsToPush.end(),tmp) == pathsToPush.end()) {
-						pathsToPush.push_back(tmp);
-						if (++added >= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY)
-							break;
-					}
-				}
-			}
-#endif
-
 			if (pathsToPush.size() > 0) {
 				std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
 				while (p != pathsToPush.end()) {
 					Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
 					outp.addSize(2); // leave room for count
-
 					unsigned int count = 0;
 					while ((p != pathsToPush.end())&&((outp.size() + 24) < 1200)) {
 						uint8_t addressType = 4;
@@ -257,7 +238,6 @@ void Peer::received(
 						++count;
 						++p;
 					}
-
 					if (count) {
 						outp.setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
 						outp.compress();
