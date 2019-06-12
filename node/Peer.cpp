@@ -157,7 +157,7 @@ void Peer::received(
 						break;
 					}
 					// If the path is the same address and port, simply assume this is a replacement
-					if ( (_paths[i].p->address().ipsEqual2(path->address()) && (_paths[i].p->address().port() == path->address().port()))) {
+					if ( (_paths[i].p->address().ipsEqual2(path->address()))) {
 						replacePath = i;
 						break;
 					}
