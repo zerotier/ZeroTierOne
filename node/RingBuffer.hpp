@@ -268,7 +268,7 @@ public:
 		for (size_t i=0; i<curr_cnt; i++) {
 			iterator = (iterator + S - 1) % curr_cnt;
 			float deviation = (buf[i] - cached_mean);
-			sum_of_squared_deviations += (deviation*deviation);
+			sum_of_squared_deviations += (T)(deviation*deviation);
 		}
 		float variance = (float)sum_of_squared_deviations / (float)(S - 1);
 		return variance;

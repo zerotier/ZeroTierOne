@@ -351,7 +351,7 @@ public:
 		_unackedBytes = (ackedBytes > _unackedBytes) ? 0 : _unackedBytes - ackedBytes;
 		int64_t timeSinceThroughputEstimate = (now - _lastThroughputEstimation);
 		if (timeSinceThroughputEstimate >= ZT_PATH_THROUGHPUT_MEASUREMENT_INTERVAL) {
-			uint64_t throughput = (float)(_bytesAckedSinceLastThroughputEstimation * 8) / ((float)timeSinceThroughputEstimate / (float)1000);
+			uint64_t throughput = (uint64_t)((float)(_bytesAckedSinceLastThroughputEstimation * 8) / ((float)timeSinceThroughputEstimate / (float)1000));
 			_throughputSamples.push(throughput);
 			_maxLifetimeThroughput = throughput > _maxLifetimeThroughput ? throughput : _maxLifetimeThroughput;
 			_lastThroughputEstimation = now;
@@ -416,7 +416,7 @@ public:
 			if (it != _outQoSRecords.end()) {
 				uint16_t rtt = (uint16_t)(now - it->second);
 				uint16_t rtt_compensated = rtt - rx_ts[j];
-				float latency = rtt_compensated / 2.0;
+				uint16_t latency = rtt_compensated / 2;
 				updateLatency(latency, now);
 				_outQoSRecords.erase(it);
 			}

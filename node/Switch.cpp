@@ -601,7 +601,7 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 
 uint64_t Switch::control_law(uint64_t t, int count)
 {
-	return t + ZT_QOS_INTERVAL / sqrt(count);
+	return (uint64_t)(t + ZT_QOS_INTERVAL / sqrt(count));
 }
 
 Switch::dqr Switch::dodequeue(ManagedQueue *q, uint64_t now) 
