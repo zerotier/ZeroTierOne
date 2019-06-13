@@ -258,9 +258,6 @@
     <ClCompile Include="..\..\controller\FileDB.cpp">
       <Filter>Source Files\controller</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\controller\RethinkDB.cpp">
-      <Filter>Source Files\controller</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -492,9 +489,6 @@
       <Filter>Header Files\controller</Filter>
     </ClInclude>
     <ClInclude Include="..\..\controller\FileDB.hpp">
-      <Filter>Header Files\controller</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\controller\RethinkDB.hpp">
       <Filter>Header Files\controller</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\Membership.hpp">
