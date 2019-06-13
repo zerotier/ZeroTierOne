@@ -190,6 +190,8 @@ namespace ZeroTier {
 
 namespace {
 
+static const InetAddress NULL_INET_ADDR;
+
 // Fake TLS hello for TCP tunnel outgoing connections (TUNNELED mode)
 static const char ZT_TCP_TUNNEL_HELLO[9] = { 0x17,0x03,0x03,0x00,0x04,(char)ZEROTIER_ONE_VERSION_MAJOR,(char)ZEROTIER_ONE_VERSION_MINOR,(char)((ZEROTIER_ONE_VERSION_REVISION >> 8) & 0xff),(char)(ZEROTIER_ONE_VERSION_REVISION & 0xff) };
 
@@ -1855,7 +1857,7 @@ public:
 				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
 				const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
 
-				InetAddress *src = NULL;
+				const InetAddress *src = NULL;
 				for (unsigned int j=0; j<n.config.assignedAddressCount; ++j) {
 					const InetAddress *const tmp = reinterpret_cast<const InetAddress *>(&(n.config.assignedAddresses[j]));
 					if (target->isV4() && tmp->isV4()) {
@@ -1866,6 +1868,8 @@ public:
 						break;
 					}
 				}
+				if (!src)
+					src = &NULL_INET_ADDR;
 
 				if ( (!checkIfManagedIsAllowed(n,*target)) || ((via->ss_family == target->ss_family)&&(matchIpOnly(myIps,*via))) )
 					continue;
