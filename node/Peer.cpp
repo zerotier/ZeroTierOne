@@ -285,7 +285,7 @@ void Peer::computeAggregateProportionalAllocation(int64_t now)
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {
 			relStability[i] = _paths[i].p->lastComputedStability();
-			relThroughput[i] = _paths[i].p->maxLifetimeThroughput();
+			relThroughput[i] = (float)_paths[i].p->maxLifetimeThroughput();
 			maxStability = relStability[i] > maxStability ? relStability[i] : maxStability;
 			maxThroughput = relThroughput[i] > maxThroughput ? relThroughput[i] : maxThroughput;
 			maxScope = _paths[i].p->ipScope() > maxScope ? _paths[i].p->ipScope() : maxScope;
@@ -296,7 +296,7 @@ void Peer::computeAggregateProportionalAllocation(int64_t now)
 		if (_paths[i].p) {
 			relStability[i] /= maxStability ? maxStability : 1;
 			relThroughput[i] /= maxThroughput ? maxThroughput : 1;
-			float normalized_ma = Utils::normalize(_paths[i].p->ackAge(now), 0, ZT_PATH_MAX_AGE, 0, 10);
+			float normalized_ma = Utils::normalize((float)_paths[i].p->ackAge(now), 0, ZT_PATH_MAX_AGE, 0, 10);
 			float age_contrib = exp((-1)*normalized_ma);
 			float relScope = ((float)(_paths[i].p->ipScope()+1) / (maxScope + 1));
 			float relQuality =
@@ -314,7 +314,7 @@ void Peer::computeAggregateProportionalAllocation(int64_t now)
 	// Convert set of relative performances into an allocation set
 	for(uint16_t i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {
-			_paths[i].p->updateComponentAllocationOfAggregateLink((_paths[i].p->relativeQuality() / totalRelativeQuality) * 255);
+			_paths[i].p->updateComponentAllocationOfAggregateLink((unsigned char)((_paths[i].p->relativeQuality() / totalRelativeQuality) * 255));
 		}
 	}
 }
@@ -327,7 +327,7 @@ int Peer::computeAggregateLinkPacketDelayVariance()
 			pdv += _paths[i].p->relativeQuality() * _paths[i].p->packetDelayVariance();
 		}
 	}
-	return pdv;
+	return (int)pdv;
 }
 
 int Peer::computeAggregateLinkMeanLatency()
@@ -337,7 +337,7 @@ int Peer::computeAggregateLinkMeanLatency()
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {
 			pathCount++;
-			ml += _paths[i].p->relativeQuality() * _paths[i].p->meanLatency();
+			ml += (int)(_paths[i].p->relativeQuality() * _paths[i].p->meanLatency());
 		}
 	}
 	return ml / pathCount;
