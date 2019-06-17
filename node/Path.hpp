@@ -442,7 +442,7 @@ public:
 			uint64_t id = it->first;
 			memcpy(qosBuffer, &id, sizeof(uint64_t));
 			qosBuffer+=sizeof(uint64_t);
-			uint16_t holdingTime = (now - it->second);
+			uint16_t holdingTime = (uint16_t)(now - it->second);
 			memcpy(qosBuffer, &holdingTime, sizeof(uint16_t));
 			qosBuffer+=sizeof(uint16_t);
 			len+=sizeof(uint64_t)+sizeof(uint16_t);
@@ -594,11 +594,11 @@ public:
 			float throughput_cv = _throughputSamples.mean() > 0 ? _throughputSamples.stddev() / _throughputSamples.mean() : 1;
 
 			// Form an exponential cutoff and apply contribution weights
-			float pdv_contrib = exp((-1)*normalized_pdv) * ZT_PATH_CONTRIB_PDV;
-			float latency_contrib = exp((-1)*normalized_la) * ZT_PATH_CONTRIB_LATENCY;
+			float pdv_contrib = expf((-1.0f)*normalized_pdv) * (float)ZT_PATH_CONTRIB_PDV;
+			float latency_contrib = expf((-1.0f)*normalized_la) * (float)ZT_PATH_CONTRIB_LATENCY;
 
 			// Throughput Disturbance Coefficient
-			float throughput_disturbance_contrib = exp((-1)*throughput_cv) * ZT_PATH_CONTRIB_THROUGHPUT_DISTURBANCE;
+			float throughput_disturbance_contrib = expf((-1.0f)*throughput_cv) * (float)ZT_PATH_CONTRIB_THROUGHPUT_DISTURBANCE;
 			_throughputDisturbanceSamples.push(throughput_cv);
 			_lastComputedThroughputDistCoeff = _throughputDisturbanceSamples.mean();
 

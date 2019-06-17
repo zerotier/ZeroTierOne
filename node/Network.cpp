@@ -1036,7 +1036,7 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 		_portError = RR->node->configureVirtualNetworkPort(tPtr,_id,&_uPtr,(oldPortInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 
 		if (saveToDisk) {
-			Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *d = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+			Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *const d = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
 			try {
 				if (nconf.toDictionary(*d,false)) {
 					uint64_t tmp[2];
@@ -1493,25 +1493,27 @@ void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMu
 void Network::_announceMulticastGroupsTo(void *tPtr,const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups)
 {
 	// Assumes _lock is locked
-	Packet outp(peer,RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+	Packet *const outp = new Packet(peer,RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
 	for(std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {
-		if ((outp.size() + 24) >= ZT_PROTO_MAX_PACKET_LENGTH) {
-			outp.compress();
-			RR->sw->send(tPtr,outp,true);
-			outp.reset(peer,RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+		if ((outp->size() + 24) >= ZT_PROTO_MAX_PACKET_LENGTH) {
+			outp->compress();
+			RR->sw->send(tPtr,*outp,true);
+			outp->reset(peer,RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 		}
 
 		// network ID, MAC, ADI
-		outp.append((uint64_t)_id);
-		mg->mac().appendTo(outp);
-		outp.append((uint32_t)mg->adi());
+		outp->append((uint64_t)_id);
+		mg->mac().appendTo(*outp);
+		outp->append((uint32_t)mg->adi());
 	}
 
-	if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
-		outp.compress();
-		RR->sw->send(tPtr,outp,true);
+	if (outp->size() > ZT_PROTO_MIN_PACKET_LENGTH) {
+		outp->compress();
+		RR->sw->send(tPtr,*outp,true);
 	}
+
+	delete outp;
 }
 
 std::vector<MulticastGroup> Network::_allMulticastGroups() const

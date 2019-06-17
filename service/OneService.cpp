@@ -2449,17 +2449,22 @@ public:
 				return;
 		}
 
-		if (len >= 0) {
+		if ((len >= 0)&&(data)) {
 			// Check to see if we've already written this first. This reduces
 			// redundant writes and I/O overhead on most platforms and has
 			// little effect on others.
 			f = fopen(p,"rb");
 			if (f) {
-				char buf[65535];
-				long l = (long)fread(buf,1,sizeof(buf),f);
-				fclose(f);
-				if ((l == (long)len)&&(memcmp(data,buf,l) == 0))
-					return;
+				char *const buf = (char *)malloc(len*4);
+				if (buf) {
+					long l = (long)fread(buf,1,(size_t)(len*4),f);
+					fclose(f);
+					if ((l == (long)len)&&(memcmp(data,buf,l) == 0)) {
+						free(buf);
+						return;
+					}
+					free(buf);
+				}
 			}
 
 			f = fopen(p,"wb");
