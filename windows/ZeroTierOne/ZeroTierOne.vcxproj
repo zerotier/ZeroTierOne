@@ -30,6 +30,8 @@
     <ClCompile Include="..\..\controller\DB.cpp" />
     <ClCompile Include="..\..\controller\EmbeddedNetworkController.cpp" />
     <ClCompile Include="..\..\controller\FileDB.cpp" />
+    <ClCompile Include="..\..\controller\PostgreSQL.cpp" />
+    <ClCompile Include="..\..\controller\RabbitMQ.cpp" />
     <ClCompile Include="..\..\ext\http-parser\http_parser.c" />
     <ClCompile Include="..\..\ext\libnatpmp\getgateway.c" />
     <ClCompile Include="..\..\ext\libnatpmp\natpmp.c" />
@@ -114,6 +116,8 @@
     <ClInclude Include="..\..\controller\DB.hpp" />
     <ClInclude Include="..\..\controller\EmbeddedNetworkController.hpp" />
     <ClInclude Include="..\..\controller\FileDB.hpp" />
+    <ClInclude Include="..\..\controller\PostgreSQL.hpp" />
+    <ClInclude Include="..\..\controller\RabbitMQ.hpp" />
     <ClInclude Include="..\..\ext\http-parser\http_parser.h" />
     <ClInclude Include="..\..\ext\json\json.hpp" />
     <ClInclude Include="..\..\ext\libnatpmp\getgateway.h" />

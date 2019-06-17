@@ -300,13 +300,13 @@ void Peer::computeAggregateProportionalAllocation(int64_t now)
 			float age_contrib = exp((-1)*normalized_ma);
 			float relScope = ((float)(_paths[i].p->ipScope()+1) / (maxScope + 1));
 			float relQuality =
-				(relStability[i] * ZT_PATH_CONTRIB_STABILITY)
-				+ (fmax(1, relThroughput[i]) * ZT_PATH_CONTRIB_THROUGHPUT)
-				+ relScope * ZT_PATH_CONTRIB_SCOPE;
+				(relStability[i] * (float)ZT_PATH_CONTRIB_STABILITY)
+				+ (fmaxf(1.0f, relThroughput[i]) * (float)ZT_PATH_CONTRIB_THROUGHPUT)
+				+ relScope * (float)ZT_PATH_CONTRIB_SCOPE;
 			relQuality *= age_contrib;
 			// Arbitrary cutoffs
-			relQuality = relQuality > (1.00 / 100.0) ? relQuality : 0.0;
-			relQuality = relQuality < (99.0 / 100.0) ? relQuality : 1.0;
+			relQuality = relQuality > (1.00f / 100.0f) ? relQuality : 0.0f;
+			relQuality = relQuality < (99.0f / 100.0f) ? relQuality : 1.0f;
 			totalRelativeQuality += relQuality;
 			_paths[i].p->updateRelativeQuality(relQuality);
 		}
@@ -479,8 +479,8 @@ char *Peer::interfaceListStr()
 		if (_paths[i].p && _paths[i].p->alive(now)) {
 			int ipv = _paths[i].p->address().isV4();
 			// If this is acting as an aggregate link, check allocations
-			float targetAllocation = 1.0 / alivePathCount;
-			float currentAllocation = 1.0;
+			float targetAllocation = 1.0f / (float)alivePathCount;
+			float currentAllocation = 1.0f;
 			if (alivePathCount > 1) {
 				currentAllocation = (float)_pathChoiceHist.countValue(i) / (float)_pathChoiceHist.count();
 				if (fabs(targetAllocation - currentAllocation) > ZT_PATH_IMBALANCE_THRESHOLD) {
