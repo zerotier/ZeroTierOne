@@ -67,29 +67,18 @@ public:
 		THING_IPV6_ADDRESS = 3
 	};
 
-	CertificateOfOwnership() :
-		_networkId(0),
-		_ts(0),
-		_flags(0),
-		_id(0),
-		_thingCount(0)
+	CertificateOfOwnership()
 	{
-		memset(_thingTypes,0,sizeof(_thingTypes));
-		memset(_thingValues,0,sizeof(_thingValues));
-		memset(_signature.data,0,sizeof(_signature.data));
+		memset(reinterpret_cast<void *>(this),0,sizeof(CertificateOfOwnership));
 	}
 
-	CertificateOfOwnership(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id) :
-		_networkId(nwid),
-		_ts(ts),
-		_flags(0),
-		_id(id),
-		_thingCount(0),
-		_issuedTo(issuedTo)
+	CertificateOfOwnership(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id)
 	{
-		memset(_thingTypes,0,sizeof(_thingTypes));
-		memset(_thingValues,0,sizeof(_thingValues));
-		memset(_signature.data,0,sizeof(_signature.data));
+		memset(reinterpret_cast<void *>(this),0,sizeof(CertificateOfOwnership));
+		_networkId = nwid;
+		_ts = ts;
+		_id = id;
+		_issuedTo = issuedTo;
 	}
 
 	inline uint64_t networkId() const { return _networkId; }
