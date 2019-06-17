@@ -91,8 +91,8 @@ void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,void *tPtr,const A
 		_packet.setDestination(toAddr2);
 		RR->node->expectReplyTo(_packet.packetId());
 
-		Packet tmp(_packet); // make a copy of packet so as not to garble the original -- GitHub issue #461
-		RR->sw->send(tPtr,tmp,true);
+		_tmp = _packet;
+		RR->sw->send(tPtr,_tmp,true);
 	}
 }
 

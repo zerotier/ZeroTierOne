@@ -161,7 +161,7 @@ private:
 	unsigned int _limit;
 	unsigned int _frameLen;
 	unsigned int _etherType;
-	Packet _packet;
+	Packet _packet,_tmp;
 	std::vector<Address> _alreadySentTo;
 	uint8_t _frameData[ZT_MAX_MTU];
 };
