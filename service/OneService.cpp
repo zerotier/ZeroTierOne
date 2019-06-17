@@ -2449,7 +2449,7 @@ public:
 				return;
 		}
 
-		if (len >= 0) {
+		if ((len >= 0)&&(data)) {
 			// Check to see if we've already written this first. This reduces
 			// redundant writes and I/O overhead on most platforms and has
 			// little effect on others.
