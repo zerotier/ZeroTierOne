@@ -212,10 +212,10 @@ void Peer::received(
 			if (pathsToPush.size() > 0) {
 				std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
 				while (p != pathsToPush.end()) {
-					Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
-					outp.addSize(2); // leave room for count
+					Packet *outp = new Packet(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
+					outp->addSize(2); // leave room for count
 					unsigned int count = 0;
-					while ((p != pathsToPush.end())&&((outp.size() + 24) < 1200)) {
+					while ((p != pathsToPush.end())&&((outp->size() + 24) < 1200)) {
 						uint8_t addressType = 4;
 						switch(p->ss_family) {
 							case AF_INET:
@@ -228,22 +228,23 @@ void Peer::received(
 								continue;
 						}
 
-						outp.append((uint8_t)0); // no flags
-						outp.append((uint16_t)0); // no extensions
-						outp.append(addressType);
-						outp.append((uint8_t)((addressType == 4) ? 6 : 18));
-						outp.append(p->rawIpData(),((addressType == 4) ? 4 : 16));
-						outp.append((uint16_t)p->port());
+						outp->append((uint8_t)0); // no flags
+						outp->append((uint16_t)0); // no extensions
+						outp->append(addressType);
+						outp->append((uint8_t)((addressType == 4) ? 6 : 18));
+						outp->append(p->rawIpData(),((addressType == 4) ? 4 : 16));
+						outp->append((uint16_t)p->port());
 
 						++count;
 						++p;
 					}
 					if (count) {
-						outp.setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
-						outp.compress();
-						outp.armor(_key,true);
-						path->send(RR,tPtr,outp.data(),outp.size(),now);
+						outp->setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
+						outp->compress();
+						outp->armor(_key,true);
+						path->send(RR,tPtr,outp->data(),outp->size(),now);
 					}
+					delete outp;
 				}
 			}
 		}
