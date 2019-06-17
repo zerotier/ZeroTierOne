@@ -158,7 +158,9 @@ public:
 	{
 		memset(_ifname, 0, 16);
 		memset(_addrString, 0, sizeof(_addrString));
-		_phy->getIfName((PhySocket *)((uintptr_t)_localSocket), _ifname, 16);
+		if (_localSocket != -1) {
+			_phy->getIfName((PhySocket *) ((uintptr_t) _localSocket), _ifname, 16);
+		}
 	}
 
 	/**
