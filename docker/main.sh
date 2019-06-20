@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 if [ -z "$ZT_IDENTITY_PATH" ]; then
     echo '*** FAILED: ZT_IDENTITY_PATH environment variable is not defined'
