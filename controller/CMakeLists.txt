@@ -3,9 +3,6 @@ project(zt_controller)
 
 if(WIN32)
 	add_definitions(-DNOMINMAX)
-	if(CMAKE_BUILD_TYPE EQUAL "Debug")
-		
-	endif(CMAKE_BUILD_TYPE EQUAL "Debug")
 endif(WIN32)
 
 set(ctl_src
