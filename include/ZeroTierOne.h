@@ -46,28 +46,7 @@
 #include <sys/socket.h>
 #endif /* Windows or not */
 
-#if defined (_MSC_VER)
-#ifdef  ZT_EXPORT
-#define ZT_SDK_API __declspec(dllexport)
-#else
-#define ZT_SDK_API __declspec(dllimport)
-#if !defined(ZT_SDK)
-#ifdef _DEBUG
-#ifdef _WIN64
-#pragma comment(lib, "ZeroTierOne_x64d.lib")
-#else
-#pragma comment(lib, "ZeroTierOne_x86d.lib")
-#endif
-#else
-#ifdef _WIN64
-#pragma comment(lib, "ZeroTierOne_x64.lib")
-#else
-#pragma comment(lib, "ZeroTierOne_x86.lib")
-#endif
-#endif
-#endif
-#endif
-#else
+#ifndef ZT_SDK_API
 #define ZT_SDK_API
 #endif
 

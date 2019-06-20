@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd"
+[
+<!ENTITY date SYSTEM "man-date.ent" >
+]
+>
+<refentry lang="en">
+    <refentryinfo>
+        <productname>RabbitMQ C Client</productname>
+        <authorgroup>
+            <corpauthor>The RabbitMQ Team &lt;<ulink url="mailto:info@rabbitmq.com"><email>info@rabbitmq.com</email></ulink>&gt;</corpauthor>
+        </authorgroup>
+        <date>&date;</date>
+    </refentryinfo>
+
+    <refmeta>
+        <refentrytitle>amqp-get</refentrytitle>
+        <manvolnum>1</manvolnum>
+        <refmiscinfo class="manual">RabbitMQ C Client</refmiscinfo>
+    </refmeta>
+
+    <refnamediv>
+        <refname>amqp-get</refname>
+        <refpurpose>Get a message from a queue on an AMQP server</refpurpose>
+    </refnamediv>
+
+    <refsynopsisdiv>
+        <cmdsynopsis>
+            <command>amqp-get</command>
+            <arg choice="opt" rep="repeat">
+                <replaceable>OPTION</replaceable>
+            </arg>
+            <arg choice="req">-q <replaceable>queue name</replaceable></arg>
+        </cmdsynopsis>
+    </refsynopsisdiv>
+
+    <refsect1>
+        <title>Description</title>
+        <para>
+            <command>amqp-get</command> attempts to consume a single
+            message from a queue on an AMQP server, and exits.  Unless
+            the queue was empty, the body of the resulting message is
+            sent to standard output.
+        </para>
+    </refsect1>
+
+    <refsect1>
+        <title>Options</title>
+        <variablelist>
+            <varlistentry>
+                <term><option>-q</option></term>
+                <term><option>--queue</option>=<replaceable class="parameter">queue name</replaceable></term>
+                <listitem>
+                    <para>
+                        The name of the queue to consume messages
+                        from.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+
+    <refsect1>
+        <title>Exit Status</title>
+        <para>
+            If the queue is not empty, and a message is successfully
+            retrieved, the exit status is 0.  If an error occurs, the
+            exit status is 1.  If the queue is found to be empty, the
+            exit status is 2.
+        </para>
+    </refsect1>
+
+    <refsect1>
+        <title>Examples</title>
+        <variablelist>
+            <varlistentry>
+                <term>Get a message from the queue <quote><systemitem
+                class="resource">myqueue</systemitem></quote>, and
+                display its body on standard output:</term>
+                <listitem>
+                    <screen><prompt>$ </prompt><userinput>amqp-get -q myqueue</userinput></screen>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+
+    <refsect1>
+        <title>See also</title>
+        <para>
+            <citerefentry><refentrytitle>librabbitmq-tools</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+            describes connection-related options common to all the
+            RabbitMQ C Client tools.
+        </para>
+    </refsect1>
+</refentry>

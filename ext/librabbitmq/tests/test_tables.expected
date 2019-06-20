@@ -1,0 +1,90 @@
+AAAAAAAAAA
+F
+  longstr ->
+    S Here is a long string
+  signedint ->
+    I 12345
+  decimal ->
+    D 3:::123456
+  timestamp ->
+    T 109876543209876
+  table ->
+    F
+      one ->
+        I 54321
+      two ->
+        S A long string
+  byte ->
+    b -1
+  long ->
+    l 1234567890
+  short ->
+    s 655
+  bool ->
+    t true
+  binary ->
+    x 612062696e61727920737472696e67
+  void ->
+    V
+  array ->
+    A
+      I 54321
+      S A long string
+  float ->
+    f 3.14159
+  double ->
+    d 3.14159
+BBBBBBBBBB
+F
+  longstr ->
+    S Here is a long string
+  signedint ->
+    I 12345
+  decimal ->
+    D 3:::123456
+  timestamp ->
+    T 109876543209876
+  table ->
+    F
+      one ->
+        I 54321
+      two ->
+        S A long string
+  byte ->
+    b -1
+  long ->
+    l 1234567890
+  short ->
+    s 655
+  bool ->
+    t true
+  binary ->
+    x 612062696e61727920737472696e67
+  void ->
+    V
+  array ->
+    A
+      I 54321
+      S A long string
+  float ->
+    f 3.14159
+  double ->
+    d 3.14159
+----------
+F
+  aardvark ->
+    S first
+  beta ->
+    S second
+  decimal ->
+    D 2:::1234
+  middle ->
+    S third
+  number ->
+    I 1234
+  time ->
+    T 1234123412341234
+  wombat ->
+    S fourth
+  zebra ->
+    S last
