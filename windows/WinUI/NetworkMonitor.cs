@@ -58,7 +58,7 @@ namespace WinUI
         private void loadNetworks()
         {
             String dataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\ZeroTier\\One";
-            String dataFile = Path.Combine(dataPath, "networks.dat");
+            String dataFile = Path.Combine(dataPath, "networksv2.dat");
             
             if (File.Exists(dataFile))
             {

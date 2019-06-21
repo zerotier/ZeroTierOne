@@ -1,6 +1,6 @@
 # CMake build script for ZeroTier One
 
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.8)
 project (zerotier-one)
 
 option(BUILD_CENTRAL_CONTROLLER "Build ZeroTier Central Controller" OFF)
@@ -35,6 +35,8 @@ add_subdirectory(osdep)
 add_subdirectory(service)
 
 if(WIN32)
+	add_subdirectory("windows/WinUI")
+	add_subdirectory("windows/copyutil")
 	add_definitions(-DNOMINMAX)
 endif(WIN32)
 
