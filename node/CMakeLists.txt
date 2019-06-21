@@ -8,3 +8,14 @@ endif(WIN32)
 file(GLOB core_headers *.hpp)
 file(GLOB core_src *.cpp)
 add_library(${PROJECT_NAME} STATIC ${core_src} ${core_headers})
+
+if(UNIX) 
+	set_source_files_properties(
+		Salsa20.cpp
+		SHA512.cpp
+		C25519.cpp
+		Poly1305.cpp
+		PROPERTIES
+		COMPILE_FLAGS "-Wall -O3"
+	)
+endif(UNIX)

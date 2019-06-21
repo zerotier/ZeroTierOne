@@ -3,6 +3,21 @@
 cmake_minimum_required (VERSION 3.8)
 project (zerotier-one)
 
+# Set a default build type if none was specified
+set(default_build_type "Release")
+if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
+	set(default_build_type "Debug")
+endif()
+   
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+	message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
+	set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
+		STRING "Choose the type of build." FORCE)
+	# Set the possible values of build type for cmake-gui
+	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+		"Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
 option(BUILD_CENTRAL_CONTROLLER "Build ZeroTier Central Controller" OFF)
 
 if (BUILD_CENTRAL_CONTROLLER)
@@ -17,15 +32,33 @@ if (BUILD_CENTRAL_CONTROLLER)
 	add_subdirectory("ext/librabbitmq")
 endif(BUILD_CENTRAL_CONTROLLER)
 
-if(CMAKE_BUILD_TYPE EQUAL "Debug")
+
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	add_definitions(-DZT_TRACE)
-endif(CMAKE_BUILD_TYPE EQUAL "Debug")
+endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 if(WIN32)
 	add_definitions(-DNOMINMAX)
-	if(CMAKE_BUILD_TYPE EQUAL "Debug")
-		add_definitions(-DZT_WIN_RUN_IN_CONSOLE)
-	endif(CMAKE_BUILD_TYPE EQUAL "Debug")
+else(WIN32)
+	if(APPLE)
+
+	elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
+		message("Setting Linux Compiler Flags ${CMAKE_BUILD_TYPE}")
+		add_compile_options(
+			-Wall
+			-Wno-deprecated
+			$<$<CONFIG:Debug>:-g>
+			$<$<CONFIG:DEBUG>:-O0>
+			$<$<CONFIG:RELEASE>:-O3>
+			$<$<CONFIG:RELEASE>:-fstackprotector>
+			$<$<CONFIG:RELEASE>:-fPIE>
+			$<$<CONFIG:RELWITHDEBINFO>:-O3>
+			$<$<CONFIG:RELWITHDEBINFO>:-fstackprotector>
+			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
+			$<$<CONFIG:RELWITHDEBINFO>:-g>
+		)
+	endif(APPLE)
 endif(WIN32)
 
 
@@ -41,10 +74,10 @@ if(WIN32)
 endif(WIN32)
 
 set(libs
-	zt_controller
-	zt_core
-	zt_osdep
 	zt_service
+	zt_osdep
+	zt_core
+	zt_controller
 )
 
 set(src
@@ -70,6 +103,8 @@ if(WIN32)
 		"windows/ZeroTierOne/ServiceInstaller.h"
 		"windows/ZeroTierOne/ZeroTierOneService.h"
 	)
+else(WIN32)
+	set(libs ${libs} pthread)
 endif(WIN32)
 
 if(BUILD_CENTRAL_CONTROLLER)
