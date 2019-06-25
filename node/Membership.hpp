@@ -79,6 +79,14 @@ public:
 	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex);
 
 	/**
+	 * @return True if we haven't pushed credentials in a long time (to cause proactive credential push)
+	 */
+	inline bool shouldPushCredentials(const int64_t now) const
+	{
+		return ((now - _lastPushedCredentials) > ZT_PEER_ACTIVITY_TIMEOUT);
+	}
+
+	/**
 	 * Check whether we should push MULTICAST_LIKEs to this peer, and update last sent time if true
 	 *
 	 * @param now Current time
@@ -212,6 +220,9 @@ private:
 
 	// Revocation threshold for COM or 0 if none
 	int64_t _comRevocationThreshold;
+
+	// Time we last pushed credentials
+	int64_t _lastPushedCredentials;
 
 	// Remote member's latest network COM
 	CertificateOfMembership _com;

@@ -185,15 +185,12 @@ bool InetAddress::fromString(const char *ipSlashPort)
 		inet_pton(AF_INET6, buf, &in6->sin6_addr.s6_addr);
 		in6->sin6_family = AF_INET6;
 		in6->sin6_port = Utils::hton((uint16_t)port);
-
-
 		return true;
 	} else if (strchr(buf,'.')) {
 		struct sockaddr_in *const in = reinterpret_cast<struct sockaddr_in *>(this);
 		inet_pton(AF_INET, buf, &in->sin_addr.s_addr);
 		in->sin_family = AF_INET;
 		in->sin_port = Utils::hton((uint16_t)port);
-
 		return true;
 	} else {
 		return false;

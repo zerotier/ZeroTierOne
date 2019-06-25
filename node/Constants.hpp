@@ -530,14 +530,19 @@
 #define ZT_MAX_BRIDGE_ROUTES 67108864
 
 /**
- * If there is no known route, spam to up to this many active bridges
+ * If there is no known L2 bridging route, spam to up to this many active bridges
  */
 #define ZT_MAX_BRIDGE_SPAM 32
 
 /**
  * Interval between direct path pushes in milliseconds
  */
-#define ZT_DIRECT_PATH_PUSH_INTERVAL 120000
+#define ZT_DIRECT_PATH_PUSH_INTERVAL 15000
+
+/**
+ * Interval between direct path pushes in milliseconds if we already have a path
+ */
+#define ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH 120000
 
 /**
  * Time horizon for push direct paths cutoff

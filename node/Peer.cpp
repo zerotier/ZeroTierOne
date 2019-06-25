@@ -39,6 +39,8 @@
 
 namespace ZeroTier {
 
+static unsigned char s_freeRandomByteCounter = 0;
+
 Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
 	RR(renv),
 	_lastReceive(0),
@@ -55,7 +57,7 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastACKWindowReset(0),
 	_lastQoSWindowReset(0),
 	_lastMultipathCompatibilityCheck(0),
-	_freeRandomByte(0),
+	_freeRandomByte((unsigned char)((uintptr_t)this >> 4) ^ ++s_freeRandomByteCounter),
 	_uniqueAlivePathCount(0),
 	_localMultipathSupported(false),
 	_remoteMultipathSupported(false),
@@ -73,7 +75,6 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastAggregateStatsReport(0),
 	_lastAggregateAllocation(0)
 {
-	Utils::getSecureRandom(&_freeRandomByte, 1);
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
 }
@@ -101,7 +102,8 @@ void Peer::received(
 		case Packet::VERB_MULTICAST_FRAME:
 			_lastNontrivialReceive = now;
 			break;
-		default: break;
+		default:
+			break;
 	}
 
 	if (trustEstablished) {
@@ -202,17 +204,17 @@ void Peer::received(
 	}
 
 	// If we have a trust relationship periodically push a message enumerating
-	// all known external addresses for ourselves. We now do this even if we
-	// have a current path since we'll want to use new ones too.
+	// all known external addresses for ourselves. If we already have a path this
+	// is done less frequently.
 	if (this->trustEstablished(now)) {
-		const uint64_t sinceLastPush = now - _lastDirectPathPushSent;
-		if (sinceLastPush >= ZT_DIRECT_PATH_PUSH_INTERVAL) {
+		const int64_t sinceLastPush = now - _lastDirectPathPushSent;
+		if (sinceLastPush >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH : ZT_DIRECT_PATH_PUSH_INTERVAL)) {
 			_lastDirectPathPushSent = now;
 			std::vector<InetAddress> pathsToPush(RR->node->directPaths());
 			if (pathsToPush.size() > 0) {
 				std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
 				while (p != pathsToPush.end()) {
-					Packet *outp = new Packet(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
+					Packet *const outp = new Packet(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
 					outp->addSize(2); // leave room for count
 					unsigned int count = 0;
 					while ((p != pathsToPush.end())&&((outp->size() + 24) < 1200)) {
@@ -254,8 +256,7 @@ void Peer::received(
 void Peer::recordOutgoingPacket(const SharedPtr<Path> &path, const uint64_t packetId,
 	uint16_t payloadLength, const Packet::Verb verb, int64_t now)
 {
-	// Grab second byte from packetId to use as a source of entropy in the next path selection
-	_freeRandomByte = (packetId & 0xFF00) >> 8;
+	_freeRandomByte += (unsigned char)(packetId >> 8); // grab entropy to use in path selection logic for multipath
 	if (_canUseMultipath) {
 		path->recordOutgoingPacket(now, packetId, payloadLength, verb);
 	}

@@ -369,6 +369,21 @@ public:
 	}
 
 	/**
+	 * Push credentials if we haven't done so in a very long time
+	 * 
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param to Destination peer address
+	 * @param now Current time
+	 */
+	inline void pushCredentialsIfNeeded(void *tPtr,const Address &to,const int64_t now)
+	{
+		Mutex::Lock _l(_lock);
+		Membership &m = _membership(to);
+		if (m.shouldPushCredentials(now))
+			m.pushCredentials(RR,tPtr,now,to,_config,-1);
+	}
+
+	/**
 	 * Destroy this network
 	 *
 	 * This sets the network to completely remove itself on delete. This also prevents the
