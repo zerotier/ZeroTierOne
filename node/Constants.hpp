@@ -226,11 +226,6 @@
 #define ZT_RECEIVE_QUEUE_TIMEOUT 5000
 
 /**
- * Maximum latency to allow for OK(HELLO) before packet is discarded
- */
-#define ZT_HELLO_MAX_ALLOWABLE_LATENCY 120000
-
-/**
  * Maximum number of ZT hops allowed (this is not IP hops/TTL)
  *
  * The protocol allows up to 7, but we limit it to something smaller.
@@ -265,7 +260,7 @@
 #define ZT_PING_CHECK_INVERVAL 5000
 
 /**
- * How often the local.conf file is checked for changes
+ * How often the local.conf file is checked for changes (service, should be moved there)
  */
 #define ZT_LOCAL_CONF_FILE_CHECK_INTERVAL 10000
 
@@ -464,8 +459,11 @@
 
 /**
  * Delay between full-fledge pings of directly connected peers.
+ * 
  * With multipath bonding enabled ping peers more often to measure
- * packet loss and latency.
+ * packet loss and latency. This uses more bandwidth so is disabled
+ * by default to avoid increasing idle bandwidth use for regular
+ * links.
  */
 #define ZT_MULTIPATH_PEER_PING_PERIOD 5000
 

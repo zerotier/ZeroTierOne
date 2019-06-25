@@ -113,9 +113,7 @@ public:
 	 * Create an empty certificate of membership
 	 */
 	CertificateOfMembership() :
-		_qualifierCount(0)
-	{
-	}
+		_qualifierCount(0) {}
 
 	/**
 	 * Create from required fields common to all networks
