@@ -1,6 +1,17 @@
 ZeroTier Release Notes
 ======
 
+# 2019-??-?? -- Version 1.4.0 (currently in prerelease as 1.2.99)
+
+ * Added support for concurrent multipath (multiple paths at once) with traffic weighting by link quality and faster recovery from lost links.
+ * Added under-the-hood support for QoS (not yet exposed) that will eventually be configurable via our rules engine.
+ * Modified credential push and direct path push timings and algorithms to somewhat reduce "chattiness" of the protocol when idle. More radical background overhead reductions will have to wait for the 2.x line.
+ * Mac version no longer requires a kernel extension, instead making use of the [feth interfaces](https://apple.stackexchange.com/questions/337715/fake-ethernet-interfaces-feth-if-fake-anyone-ever-seen-this).
+ * Removed our beta/half-baked integration of Central with the Windows UI. We're going to do a whole new UI of some kind in the future at least for Windows and Mac.
+ * Fixed stack overflow issues on Linux versions using musl libc.
+ * Fixed some alignment problems reported on ARM and ARM64, but some reports we could not reproduce so please report any issues with exact chip, OS/distro, and ZeroTier version in use.
+ * Fixed numerous other small issues and bugs.
+
 # 2018-07-27 -- Version 1.2.12
 
  * Fixed a bug that caused exits to take a long time on Mac due to huge numbers of redundant attempts to delete managed routes.
