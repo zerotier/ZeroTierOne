@@ -852,7 +852,7 @@ void LinuxNetLink::addAddress(const InetAddress &addr, const char *iface)
 	int interface_index = _indexForInterface(iface);
 	for (int reps = 0; interface_index == -1 && reps < 10; ++reps) {
 		Thread::sleep(100);
-		interface_index == _indexForInterface(iface);
+		interface_index = _indexForInterface(iface);
 	}
 
 	if (interface_index == -1) {
