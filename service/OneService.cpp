@@ -475,6 +475,7 @@ public:
 	PhySocket *_localControlSocket6;
 	bool _updateAutoApply;
 	bool _allowTcpFallbackRelay;
+	bool _allowSecondaryPort;
 	unsigned int _multipathMode;
 	unsigned int _primaryPort;
 	unsigned int _secondaryPort;
@@ -722,16 +723,18 @@ public:
 			// This exists because there are buggy NATs out there that fail if more
 			// than one device behind the same NAT tries to use the same internal
 			// private address port number. Buggy NATs are a running theme.
-			_ports[1] = (_secondaryPort == 0) ? 20000 + ((unsigned int)_node->address() % 45500) : _secondaryPort;
-			for(int i=0;;++i) {
-				if (i > 1000) {
-					_ports[1] = 0;
-					break;
-				} else if (++_ports[1] >= 65536) {
-					_ports[1] = 20000;
+			if (_allowSecondaryPort) {
+				_ports[1] = (_secondaryPort == 0) ? 20000 + ((unsigned int)_node->address() % 45500) : _secondaryPort;
+				for(int i=0;;++i) {
+					if (i > 1000) {
+						_ports[1] = 0;
+						break;
+					} else if (++_ports[1] >= 65536) {
+						_ports[1] = 20000;
+					}
+					if (_trialBind(_ports[1]))
+						break;
 				}
-				if (_trialBind(_ports[1]))
-					break;
 			}
 
 #ifdef ZT_USE_MINIUPNPC
@@ -1603,6 +1606,7 @@ public:
 
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
+		_allowSecondaryPort = OSUtils::jsonBool(settings["allowSecondaryPort"],true);
 		_secondaryPort = (unsigned int)OSUtils::jsonInt(settings["secondaryPort"],0);
 		_tertiaryPort = (unsigned int)OSUtils::jsonInt(settings["tertiaryPort"],0);
 		if (_secondaryPort != 0 || _tertiaryPort != 0) {
