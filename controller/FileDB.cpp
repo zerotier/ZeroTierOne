@@ -32,7 +32,9 @@ namespace ZeroTier
 FileDB::FileDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path) :
 	DB(nc,myId,path),
 	_networksPath(_path + ZT_PATH_SEPARATOR_S + "network"),
-	_tracePath(_path + ZT_PATH_SEPARATOR_S + "trace")
+	_tracePath(_path + ZT_PATH_SEPARATOR_S + "trace"),
+	_onlineChanged(false),
+	_running(true)
 {
 	OSUtils::mkdir(_path.c_str());
 	OSUtils::lockDownFile(_path.c_str(),true);
@@ -69,9 +71,64 @@ FileDB::FileDB(EmbeddedNetworkController *const nc,const Identity &myId,const ch
 			} catch ( ... ) {}
 		}
 	}
+
+	_onlineUpdateThread = std::thread([this]() {
+		unsigned int cnt = 0;
+		while (this->_running) {
+			usleep(250);
+			if ((++cnt % 20) == 0) { // 5 seconds
+				std::lock_guard<std::mutex> l(this->_online_l);
+				if (!this->_running) return;
+				if (this->_onlineChanged) {
+					char p[4096],atmp[64];
+					for(auto nw=this->_online.begin();nw!=this->_online.end();++nw) {
+						OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx-online.json",_networksPath.c_str(),(unsigned long long)nw->first);
+						FILE *f = fopen(p,"wb");
+						if (f) {
+							fprintf(f,"{");
+							char *memberPrefix = "";
+							for(auto m=nw->second.begin();m!=nw->second.end();++m) {
+								fprintf(f,"%s\"%.10llx\":{" ZT_EOL_S,memberPrefix,(unsigned long long)m->first);
+								memberPrefix = ",";
+								InetAddress lastAddr;
+								char *timestampPrefix = " ";
+								int cnt = 0;
+								for(auto ts=m->second.rbegin();ts!=m->second.rend();++ts) {
+									if (cnt < 25) {
+										if (lastAddr != ts->second) {
+											lastAddr = ts->second;
+											fprintf(f,"%s\"%lld\":\"%s\"" ZT_EOL_S,timestampPrefix,(long long)ts->first,ts->second.toString(atmp));
+											timestampPrefix = ",";
+											++cnt;
+										} else {
+											m->second.erase(ts.base()); // erase previous entries for same IP/port
+										}
+									} else {
+										m->second.erase(ts.base()); // erase entries beyond the 25 max written to log
+									}
+								}
+								fprintf(f,"}");
+							}
+							fprintf(f,"}" ZT_EOL_S);
+							fclose(f);
+						}
+					}
+					this->_onlineChanged = false;
+				}
+			}
+		}
+	});
 }
 
-FileDB::~FileDB() {}
+FileDB::~FileDB()
+{
+	try {
+		_online_l.lock();
+		_running = false;
+		_online_l.unlock();
+		_onlineUpdateThread.join();
+	} catch ( ... ) {}
+}
 
 bool FileDB::waitForReady() { return true; }
 bool FileDB::isReady() { return true; }
@@ -94,14 +151,10 @@ void FileDB::save(nlohmann::json *orig,nlohmann::json &record)
 			if (nwid) {
 				nlohmann::json old;
 				get(nwid,old);
-
 				if ((!old.is_object())||(old != record)) {
-					OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json.new",_networksPath.c_str(),nwid);
-					OSUtils::ztsnprintf(p2,sizeof(p2),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json",_networksPath.c_str(),nwid);
+					OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json",_networksPath.c_str(),nwid);
 					if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
 						fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
-					OSUtils::rename(p1,p2);
-
 					_networkChanged(old,record,true);
 				}
 			}
@@ -111,10 +164,9 @@ void FileDB::save(nlohmann::json *orig,nlohmann::json &record)
 			if ((id)&&(nwid)) {
 				nlohmann::json network,old;
 				get(nwid,network,id,old);
-
 				if ((!old.is_object())||(old != record)) {
 					OSUtils::ztsnprintf(pb,sizeof(pb),"%s" ZT_PATH_SEPARATOR_S "%.16llx" ZT_PATH_SEPARATOR_S "member",_networksPath.c_str(),(unsigned long long)nwid);
-					OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.10llx.json.new",pb,(unsigned long long)id);
+					OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.10llx.json",pb,(unsigned long long)id);
 					if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1))) {
 						OSUtils::ztsnprintf(p2,sizeof(p2),"%s" ZT_PATH_SEPARATOR_S "%.16llx",_networksPath.c_str(),(unsigned long long)nwid);
 						OSUtils::mkdir(p2);
@@ -122,9 +174,6 @@ void FileDB::save(nlohmann::json *orig,nlohmann::json &record)
 						if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
 							fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
 					}
-					OSUtils::ztsnprintf(p2,sizeof(p2),"%s" ZT_PATH_SEPARATOR_S "%.10llx.json",pb,(unsigned long long)id);
-					OSUtils::rename(p1,p2);
-
 					_memberChanged(old,record,true);
 				}
 			}
@@ -144,29 +193,39 @@ void FileDB::eraseNetwork(const uint64_t networkId)
 	get(networkId,network);
 	char p[16384];
 	OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json",_networksPath.c_str(),networkId);
-
-	if (OSUtils::fileExists(p,false)){
-	  OSUtils::rm(p);
-        }
+	OSUtils::rm(p);
+	OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx-online.json",_networksPath.c_str(),networkId);
+	OSUtils::rm(p);
+	OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx" ZT_PATH_SEPARATOR_S "member",_networksPath.c_str(),(unsigned long long)networkId);
+	OSUtils::rmDashRf(p);
 	_networkChanged(network,nullJson,true);
+	std::lock_guard<std::mutex> l(this->_online_l);
+	this->_online.erase(networkId);
+	this->_onlineChanged = true;
 }
 
 void FileDB::eraseMember(const uint64_t networkId,const uint64_t memberId)
 {
 	nlohmann::json network,member,nullJson;
 	get(networkId,network);
-        get(memberId,member);
-	char p[16384];
+	get(memberId,member);
+	char p[4096];
 	OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx" ZT_PATH_SEPARATOR_S "member" ZT_PATH_SEPARATOR_S "%.10llx.json",_networksPath.c_str(),networkId,memberId);
-	if (OSUtils::fileExists(p,false)){
-	    OSUtils::rm(p);
-	}
+	OSUtils::rm(p);
 	_memberChanged(member,nullJson,true);
+	std::lock_guard<std::mutex> l(this->_online_l);
+	this->_online[networkId].erase(memberId);
+	this->_onlineChanged = true;
 }
 
 void FileDB::nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress)
 {
-	// Nothing to do here right now in the filesystem store mode since we can just get this from the peer list
+	char mid[32],atmp[64];
+	OSUtils::ztsnprintf(mid,sizeof(mid),"%.10llx",(unsigned long long)memberId);
+	physicalAddress.toString(atmp);
+	std::lock_guard<std::mutex> l(this->_online_l);
+	this->_online[networkId][memberId][OSUtils::now()] = physicalAddress;
+	this->_onlineChanged = true;
 }
 
 } // namespace ZeroTier
