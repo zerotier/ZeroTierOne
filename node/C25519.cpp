@@ -2687,7 +2687,7 @@ void ge25519_scalarmult_base(ge25519_p3 *r, const sc25519 *s)
 	}
 }
 
-void get_hram(unsigned char *hram, const unsigned char *sm, const unsigned char *pk, unsigned char *playground, unsigned long long smlen)
+void get_hram(unsigned char *hram, const unsigned char *sm, const unsigned char *pk, unsigned char *playground, unsigned long smlen)
 {
 	unsigned long long i;
 
@@ -2778,13 +2778,22 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 #endif
 }
 
-bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len,const void *signature)
+bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len,const void *signature,const unsigned int siglen)
 {
-	const unsigned char *const sig = (const unsigned char *)signature;
+	if (siglen < 64) return false;
+
+	const unsigned char *sig = (const unsigned char *)signature;
 	unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
+	unsigned char sigtmp[96];
 	SHA512::hash(digest,msg,len);
-	if (!Utils::secureEq(sig + 64,digest,32))
+
+	if ((siglen == 96)&&(!Utils::secureEq(sig+64,digest,32))) {
 		return false;
+	} else if (siglen == 64) {
+		memcpy(sigtmp,sig,64);
+		memcpy(sigtmp+64,digest,32);
+		sig = sigtmp;
+	}
 
 	unsigned char t2[32];
 	ge25519 get1, get2;

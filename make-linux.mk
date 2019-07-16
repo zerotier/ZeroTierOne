@@ -14,7 +14,6 @@ DEFS?=
 LDLIBS?=
 DESTDIR?=
 
-
 include objects.mk
 ONE_OBJS+=osdep/LinuxEthernetTap.o
 ONE_OBJS+=osdep/LinuxNetLink.o

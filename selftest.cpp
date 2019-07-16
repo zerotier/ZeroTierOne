@@ -50,6 +50,7 @@
 #include "node/Dictionary.hpp"
 #include "node/SHA512.hpp"
 #include "node/C25519.hpp"
+#include "node/ECC384.hpp"
 #include "node/Poly1305.hpp"
 #include "node/CertificateOfMembership.hpp"
 #include "node/Node.hpp"
@@ -305,18 +306,35 @@ static int testCrypto()
 		::free((void *)bb);
 	}
 
-	/*
-	for(unsigned int d=8;d<=10;++d) {
-		for(int k=0;k<8;++k) {
-			std::cout << "[crypto] computeSalsa2012Sha512ProofOfWork(" << d << ",\"foobarbaz\",9) == "; std::cout.flush();
-			unsigned char result[16];
-			uint64_t start = OSUtils::now();
-			IncomingPacket::computeSalsa2012Sha512ProofOfWork(d,"foobarbaz",9,result);
-			uint64_t end = OSUtils::now();
-			std::cout << Utils::hex(result,16) << " -- valid: " << IncomingPacket::testSalsa2012Sha512ProofOfWorkResult(d,"foobarbaz",9,result) << ", " << (end - start) << "ms" << std::endl;
+	std::cout << "[crypto] Testing ECC384 (NIST P-384)..." << std::endl;
+	{
+		uint8_t p384pub[ZT_ECC384_PUBLIC_KEY_SIZE],p384priv[ZT_ECC384_PRIVATE_KEY_SIZE],p384sig[ZT_ECC384_SIGNATURE_SIZE],p384hash[ZT_ECC384_SIGNATURE_HASH_SIZE];
+		char p384hex[256];
+		ECC384GenerateKey(p384pub,p384priv);
+		std::cout << "[crypto]   Public Key: " << Utils::hex(p384pub,sizeof(p384pub),p384hex) << std::endl;
+		Utils::getSecureRandom(p384hash,sizeof(p384hash));
+		ECC384ECDSASign(p384priv,p384hash,p384sig);
+		if (!ECC384ECDSAVerify(p384pub,p384hash,p384sig)) {
+			std::cout << "[crypto]   Signature: FAILED (verify good signature)" << std::endl;
+			return -1;
 		}
+		++p384sig[0];
+		if (ECC384ECDSAVerify(p384pub,p384hash,p384sig)) {
+			std::cout << "[crypto]   Signature: FAILED (verify bad signature)" << std::endl;
+			return -1;
+		}
+		--p384sig[0];
+		std::cout << "[crypto]   Signature: " << Utils::hex(p384sig,sizeof(p384sig),p384hex) << std::endl;
+		uint8_t p384pub2[ZT_ECC384_PUBLIC_KEY_SIZE],p384priv2[ZT_ECC384_PRIVATE_KEY_SIZE],p384sec[ZT_ECC384_SHARED_SECRET_SIZE],p384sec2[ZT_ECC384_SHARED_SECRET_SIZE];
+		ECC384GenerateKey(p384pub2,p384priv2);
+		ECC384ECDH(p384pub,p384priv2,p384sec);
+		ECC384ECDH(p384pub2,p384priv,p384sec2);
+		if (memcmp(p384sec,p384sec2,ZT_ECC384_SHARED_SECRET_SIZE)) {
+			std::cout << "[crypto]   ECDH Agree: FAILED (secrets do not match)" << std::endl;
+			return -1;
+		}
+		std::cout << "[crypto]   ECDH Agree: " << Utils::hex(p384sec,sizeof(p384sec),p384hex) << std::endl;
 	}
-	*/
 
 	std::cout << "[crypto] Testing C25519 and Ed25519 against test vectors... "; std::cout.flush();
 	for(int k=0;k<ZT_NUM_C25519_TEST_VECTORS;++k) {

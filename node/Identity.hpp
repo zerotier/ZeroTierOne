@@ -159,12 +159,7 @@ public:
 	 * @param siglen Length of signature in bytes
 	 * @return True if signature validates and data integrity checks
 	 */
-	inline bool verify(const void *data,unsigned int len,const void *signature,unsigned int siglen) const
-	{
-		if (siglen != ZT_C25519_SIGNATURE_LEN)
-			return false;
-		return C25519::verify(_publicKey,data,len,signature);
-	}
+	inline bool verify(const void *data,unsigned int len,const void *signature,unsigned int siglen) const { return C25519::verify(_publicKey,data,len,signature,siglen); }
 
 	/**
 	 * Verify a message signature against this identity
@@ -174,10 +169,7 @@ public:
 	 * @param signature Signature
 	 * @return True if signature validates and data integrity checks
 	 */
-	inline bool verify(const void *data,unsigned int len,const C25519::Signature &signature) const
-	{
-		return C25519::verify(_publicKey,data,len,signature);
-	}
+	inline bool verify(const void *data,unsigned int len,const C25519::Signature &signature) const { return C25519::verify(_publicKey,data,len,signature); }
 
 	/**
 	 * Shortcut method to perform key agreement with another identity
