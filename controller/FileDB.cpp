@@ -75,7 +75,7 @@ FileDB::FileDB(EmbeddedNetworkController *const nc,const Identity &myId,const ch
 	_onlineUpdateThread = std::thread([this]() {
 		unsigned int cnt = 0;
 		while (this->_running) {
-			usleep(250);
+			std::this_thread::sleep_for(std::chrono::microseconds(100));
 			if ((++cnt % 20) == 0) { // 5 seconds
 				std::lock_guard<std::mutex> l(this->_online_l);
 				if (!this->_running) return;
