@@ -11,6 +11,7 @@ ZeroTier Release Notes
  * Fixed stack overflow issues on Linux versions using musl libc.
  * Fixed some alignment problems reported on ARM and ARM64, but some reports we could not reproduce so please report any issues with exact chip, OS/distro, and ZeroTier version in use.
  * Fixed numerous other small issues and bugs.
+ * Windows now sets the adapter name such that it is consistent in both the Windows UI and command line utilities.
 
 # 2018-07-27 -- Version 1.2.12
 
