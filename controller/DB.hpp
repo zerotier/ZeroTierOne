@@ -40,6 +40,7 @@
 #include <unordered_set>
 #include <vector>
 #include <atomic>
+#include <mutex>
 
 #include "../ext/json/json.hpp"
 
