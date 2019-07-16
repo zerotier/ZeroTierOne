@@ -103,8 +103,6 @@ public:
 		std::string &responseBody,
 		std::string &responseContentType);
 
-	void handleRemoteTrace(const ZT_RemoteTrace &rt);
-
 	// Called on update via POST or by JSONDB on external update of network or network member records
 	void onNetworkUpdate(const uint64_t networkId);
 	void onNetworkMemberUpdate(const uint64_t networkId,const uint64_t memberId);

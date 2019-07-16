@@ -47,7 +47,6 @@ public:
 
 protected:
 	std::string _networksPath;
-	std::string _tracePath;
 	std::thread _onlineUpdateThread;
 	std::map< uint64_t,std::map<uint64_t,std::map<int64_t,InetAddress> > > _online;
 	std::mutex _online_l;

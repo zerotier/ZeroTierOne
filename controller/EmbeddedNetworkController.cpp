@@ -1093,59 +1093,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 	return 404;
 }
 
-void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
-{
-	static volatile unsigned long idCounter = 0;
-	char id[128],tmp[128];
-	std::string k,v;
-
-	if (!_db)
-		return;
-
-	try {
-		// Convert Dictionary into JSON object
-		json d;
-		char *saveptr = (char *)0;
-		for(char *l=Utils::stok(rt.data,"\n",&saveptr);(l);l=Utils::stok((char *)0,"\n",&saveptr)) {
-			char *eq = strchr(l,'=');
-			if (eq > l) {
-				k.assign(l,(unsigned long)(eq - l));
-				v.clear();
-				++eq;
-				while (*eq) {
-					if (*eq == '\\') {
-						++eq;
-						if (*eq) {
-							switch(*eq) {
-								case 'r': v.push_back('\r'); break;
-								case 'n': v.push_back('\n'); break;
-								case '0': v.push_back((char)0); break;
-								case 'e': v.push_back('='); break;
-								default: v.push_back(*eq); break;
-							}
-							++eq;
-						}
-					} else {
-						v.push_back(*(eq++));
-					}
-				}
-				if ((k.length() > 0)&&(v.length() > 0))
-					d[k] = v;
-			}
-		}
-
-		const int64_t now = OSUtils::now();
-		OSUtils::ztsnprintf(id,sizeof(id),"%.10llx-%.16llx-%.10llx-%.4x",_signingId.address().toInt(),now,rt.origin,(unsigned int)(idCounter++ & 0xffff));
-		d["id"] = id;
-		d["objtype"] = "trace";
-		d["ts"] = now;
-		d["nodeId"] = Utils::hex10(rt.origin,tmp);
-		_db->save((nlohmann::json *)0,d);
-	} catch ( ... ) {
-		// drop invalid trace messages if an error occurs
-	}
-}
-
 void EmbeddedNetworkController::onNetworkUpdate(const uint64_t networkId)
 {
 	// Send an update to all members of the network that are online

@@ -2266,9 +2266,7 @@ public:
 			}	break;
 
 			case ZT_EVENT_REMOTE_TRACE: {
-				const ZT_RemoteTrace *rt = reinterpret_cast<const ZT_RemoteTrace *>(metaData);
-				if ((rt)&&(rt->len > 0)&&(rt->len <= ZT_MAX_REMOTE_TRACE_SIZE)&&(rt->data))
-					_controller->handleRemoteTrace(*rt);
+				// TODO
 			}
 
 			default:

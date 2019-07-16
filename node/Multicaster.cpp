@@ -170,51 +170,6 @@ void Multicaster::send(
 	unsigned long idxbuf[4096];
 	unsigned long *indexes = idxbuf;
 
-	// If we're in hub-and-spoke designated multicast replication mode, see if we
-	// have a multicast replicator active. If so, pick the best and send it
-	// there. If we are a multicast replicator or if none are alive, fall back
-	// to sender replication. Note that bridges do not do this since this would
-	// break bridge route learning. This is sort of an edge case limitation of
-	// the current protocol and could be fixed, but fixing it would add more
-	// complexity than the fix is probably worth. Bridges are generally high
-	// bandwidth nodes.
-	if (!network->config().isActiveBridge(RR->identity.address())) {
-		Address multicastReplicators[ZT_MAX_NETWORK_SPECIALISTS];
-		const unsigned int multicastReplicatorCount = network->config().multicastReplicators(multicastReplicators);
-		if (multicastReplicatorCount) {
-			if (std::find(multicastReplicators,multicastReplicators + multicastReplicatorCount,RR->identity.address()) == (multicastReplicators + multicastReplicatorCount)) {
-				SharedPtr<Peer> bestMulticastReplicator;
-				SharedPtr<Path> bestMulticastReplicatorPath;
-				unsigned int bestMulticastReplicatorLatency = 0xffff;
-				for(unsigned int i=0;i<multicastReplicatorCount;++i) {
-					const SharedPtr<Peer> p(RR->topology->getPeerNoCache(multicastReplicators[i]));
-					if ((p)&&(p->isAlive(now))) {
-						const SharedPtr<Path> pp(p->getAppropriatePath(now,false));
-						if ((pp)&&(pp->latency() < bestMulticastReplicatorLatency)) {
-							bestMulticastReplicatorLatency = pp->latency();
-							bestMulticastReplicatorPath = pp;
-							bestMulticastReplicator = p;
-						}
-					}
-				}
-				if (bestMulticastReplicator) {
-					Packet outp(bestMulticastReplicator->address(),RR->identity.address(),Packet::VERB_MULTICAST_FRAME);
-					outp.append((uint64_t)network->id());
-					outp.append((uint8_t)0x0c); // includes source MAC | please replicate
-					((src) ? src : MAC(RR->identity.address(),network->id())).appendTo(outp);
-					mg.mac().appendTo(outp);
-					outp.append((uint32_t)mg.adi());
-					outp.append((uint16_t)etherType);
-					outp.append(data,len);
-					if (!network->config().disableCompression()) outp.compress();
-					outp.armor(bestMulticastReplicator->key(),true);
-					bestMulticastReplicatorPath->send(RR,tPtr,outp.data(),outp.size(),now);
-					return;
-				}
-			}
-		}
-	}
-
 	try {
 		Mutex::Lock _l(_groups_m);
 		MulticastGroupStatus &gs = _groups[Multicaster::Key(network->id(),mg)];

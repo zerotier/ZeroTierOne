@@ -1461,22 +1461,8 @@ void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMu
 		}
 		std::sort(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end());
 
-		for(std::vector<Address>::const_iterator a(alwaysAnnounceTo.begin());a!=alwaysAnnounceTo.end();++a) {
-			/*
-			// push COM to non-members so they can do multicast request auth
-			if ( (_config.com) && (!_memberships.contains(*a)) && (*a != RR->identity.address()) ) {
-				Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
-				_config.com.serialize(outp);
-				outp.append((uint8_t)0x00);
-				outp.append((uint16_t)0); // no capabilities
-				outp.append((uint16_t)0); // no tags
-				outp.append((uint16_t)0); // no revocations
-				outp.append((uint16_t)0); // no certificates of ownership
-				RR->sw->send(tPtr,outp,true);
-			}
-			*/
+		for(std::vector<Address>::const_iterator a(alwaysAnnounceTo.begin());a!=alwaysAnnounceTo.end();++a)
 			_announceMulticastGroupsTo(tPtr,*a,groups);
-		}
 	}
 
 	{

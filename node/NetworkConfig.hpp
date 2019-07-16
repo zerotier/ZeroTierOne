@@ -98,11 +98,6 @@
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR 0x0000040000000000ULL
 
-/**
- * Designated multicast replicators replicate multicast in place of sender-side replication
- */
-#define ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR 0x0000080000000000ULL
-
 namespace ZeroTier {
 
 // Dictionary capacity needed for max size network config
@@ -335,40 +330,11 @@ public:
 		return r;
 	}
 
-	inline std::vector<Address> multicastReplicators() const
-	{
-		std::vector<Address> r;
-		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0)
-				r.push_back(Address(specialists[i]));
-		}
-		return r;
-	}
-
-	inline unsigned int multicastReplicators(Address mr[ZT_MAX_NETWORK_SPECIALISTS]) const
-	{
-		unsigned int c = 0;
-		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0)
-				mr[c++] = specialists[i];
-		}
-		return c;
-	}
-
-	inline bool isMulticastReplicator(const Address &a) const
-	{
-		for(unsigned int i=0;i<specialistCount;++i) {
-			if (((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0)&&(a == specialists[i]))
-				return true;
-		}
-		return false;
-	}
-
 	inline std::vector<Address> alwaysContactAddresses() const
 	{
 		std::vector<Address> r;
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & (ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR | ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR)) != 0)
+			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR) != 0)
 				r.push_back(Address(specialists[i]));
 		}
 		return r;
@@ -378,7 +344,7 @@ public:
 	{
 		unsigned int c = 0;
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & (ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR | ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR)) != 0)
+			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR) != 0)
 				ac[c++] = specialists[i];
 		}
 		return c;
@@ -387,7 +353,7 @@ public:
 	inline void alwaysContactAddresses(Hashtable< Address,std::vector<InetAddress> > &a) const
 	{
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & (ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR | ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR)) != 0) {
+			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR) != 0) {
 				a[Address(specialists[i])];
 			}
 		}
