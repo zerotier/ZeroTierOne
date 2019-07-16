@@ -86,25 +86,26 @@ FileDB::FileDB(EmbeddedNetworkController *const nc,const Identity &myId,const ch
 						FILE *f = fopen(p,"wb");
 						if (f) {
 							fprintf(f,"{");
-							char *memberPrefix = "";
+							const char *memberPrefix = "";
 							for(auto m=nw->second.begin();m!=nw->second.end();++m) {
 								fprintf(f,"%s\"%.10llx\":{" ZT_EOL_S,memberPrefix,(unsigned long long)m->first);
 								memberPrefix = ",";
 								InetAddress lastAddr;
-								char *timestampPrefix = " ";
+								const char *timestampPrefix = " ";
 								int cnt = 0;
-								for(auto ts=m->second.rbegin();ts!=m->second.rend();++ts) {
+								for(auto ts=m->second.rbegin();ts!=m->second.rend();) {
 									if (cnt < 25) {
 										if (lastAddr != ts->second) {
 											lastAddr = ts->second;
 											fprintf(f,"%s\"%lld\":\"%s\"" ZT_EOL_S,timestampPrefix,(long long)ts->first,ts->second.toString(atmp));
 											timestampPrefix = ",";
 											++cnt;
+											++ts;
 										} else {
-											m->second.erase(ts.base()); // erase previous entries for same IP/port
+											ts = std::map<int64_t,InetAddress>::reverse_iterator(m->second.erase(std::next(ts).base()));
 										}
 									} else {
-										m->second.erase(ts.base()); // erase entries beyond the 25 max written to log
+										ts = std::map<int64_t,InetAddress>::reverse_iterator(m->second.erase(std::next(ts).base()));
 									}
 								}
 								fprintf(f,"}");
