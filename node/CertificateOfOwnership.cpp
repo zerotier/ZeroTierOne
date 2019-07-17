@@ -34,6 +34,32 @@
 
 namespace ZeroTier {
 
+void CertificateOfOwnership::addThing(const InetAddress &ip)
+{
+	if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) return;
+	if (ip.ss_family == AF_INET) {
+		_thingTypes[_thingCount] = THING_IPV4_ADDRESS;
+		memcpy(_thingValues[_thingCount],&(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),4);
+		++_thingCount;
+	} else if (ip.ss_family == AF_INET6) {
+		_thingTypes[_thingCount] = THING_IPV6_ADDRESS;
+		memcpy(_thingValues[_thingCount],reinterpret_cast<const struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
+		++_thingCount;
+	}
+}
+
+bool CertificateOfOwnership::sign(const Identity &signer)
+{
+	if (signer.hasPrivate()) {
+		Buffer<sizeof(CertificateOfOwnership) + 64> tmp;
+		_signedBy = signer.address();
+		this->serialize(tmp,true);
+		_signatureLength = signer.sign(tmp.data(),tmp.size(),_signature,sizeof(_signature));
+		return true;
+	}
+	return false;
+}
+
 int CertificateOfOwnership::verify(const RuntimeEnvironment *RR,void *tPtr) const
 {
 	if ((!_signedBy)||(_signedBy != Network::controllerFor(_networkId)))
@@ -46,7 +72,7 @@ int CertificateOfOwnership::verify(const RuntimeEnvironment *RR,void *tPtr) cons
 	try {
 		Buffer<(sizeof(CertificateOfOwnership) + 64)> tmp;
 		this->serialize(tmp,true);
-		return (id.verify(tmp.data(),tmp.size(),_signature) ? 0 : -1);
+		return (id.verify(tmp.data(),tmp.size(),_signature,_signatureLength) ? 0 : -1);
 	} catch ( ... ) {
 		return -1;
 	}

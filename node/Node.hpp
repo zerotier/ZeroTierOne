@@ -54,8 +54,6 @@
 
 namespace ZeroTier {
 
-class World;
-
 /**
  * Implementation of Node object as defined in CAPI
  *
@@ -99,8 +97,6 @@ public:
 	ZT_ResultCode leave(uint64_t nwid,void **uptr,void *tptr);
 	ZT_ResultCode multicastSubscribe(void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	ZT_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
-	ZT_ResultCode orbit(void *tptr,uint64_t moonWorldId,uint64_t moonSeed);
-	ZT_ResultCode deorbit(void *tptr,uint64_t moonWorldId);
 	uint64_t address() const;
 	void status(ZT_NodeStatus *status) const;
 	ZT_PeerList *peers() const;
@@ -193,9 +189,6 @@ public:
 
 	uint64_t prng();
 	ZT_ResultCode setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig);
-
-	World planet() const;
-	std::vector<World> moons() const;
 
 	inline const Identity &identity() const { return _RR.identity; }
 

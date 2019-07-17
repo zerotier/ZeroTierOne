@@ -69,9 +69,9 @@ public:
 		_id(0),
 		_value(0),
 		_networkId(0),
-		_ts(0)
+		_ts(0),
+		_signatureLength(0)
 	{
-		memset(_signature.data,0,sizeof(_signature.data));
 	}
 
 	/**
@@ -87,9 +87,9 @@ public:
 		_networkId(nwid),
 		_ts(ts),
 		_issuedTo(issuedTo),
-		_signedBy()
+		_signedBy(),
+		_signatureLength(0)
 	{
-		memset(_signature.data,0,sizeof(_signature.data));
 	}
 
 	inline uint32_t id() const { return _id; }
@@ -105,17 +105,7 @@ public:
 	 * @param signer Signing identity, must have private key
 	 * @return True if signature was successful
 	 */
-	inline bool sign(const Identity &signer)
-	{
-		if (signer.hasPrivate()) {
-			Buffer<sizeof(Tag) + 64> tmp;
-			_signedBy = signer.address();
-			this->serialize(tmp,true);
-			_signature = signer.sign(tmp.data(),tmp.size());
-			return true;
-		}
-		return false;
-	}
+	bool sign(const Identity &signer);
 
 	/**
 	 * Check this tag's signature
@@ -139,9 +129,9 @@ public:
 		_issuedTo.appendTo(b);
 		_signedBy.appendTo(b);
 		if (!forSign) {
-			b.append((uint8_t)1); // 1 == Ed25519
-			b.append((uint16_t)ZT_C25519_SIGNATURE_LEN); // length of signature
-			b.append(_signature.data,ZT_C25519_SIGNATURE_LEN);
+			b.append((uint8_t)1);
+			b.append((uint16_t)_signatureLength);
+			b.append(_signature,_signatureLength);
 		}
 
 		b.append((uint16_t)0); // length of additional fields, currently 0
@@ -165,10 +155,11 @@ public:
 		_issuedTo.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
 		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
 		if (b[p++] == 1) {
-			if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN)
+			_signatureLength = b.template at<uint16_t>(p);
+			if (_signatureLength > sizeof(_signature))
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 			p += 2;
-			memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
+			memcpy(_signature,b.field(p,_signatureLength),_signatureLength); p += _signatureLength;
 		} else {
 			p += 2 + b.template at<uint16_t>(p);
 		}
@@ -207,7 +198,8 @@ private:
 	int64_t _ts;
 	Address _issuedTo;
 	Address _signedBy;
-	C25519::Signature _signature;
+	unsigned int _signatureLength;
+	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
 };
 
 } // namespace ZeroTier

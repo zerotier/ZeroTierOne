@@ -98,7 +98,6 @@ public:
 	 * @param keylen Number of key bytes to generate
 	 */
 	static void agree(const Private &mine,const Public &their,void *keybuf,unsigned int keylen);
-	static inline void agree(const Pair &mine,const Public &their,void *keybuf,unsigned int keylen) { agree(mine.priv,their,keybuf,keylen); }
 
 	/**
 	 * Sign a message with a sender's key pair
@@ -120,7 +119,6 @@ public:
 	 * @param signature Buffer to fill with signature -- MUST be 96 bytes in length
 	 */
 	static void sign(const Private &myPrivate,const Public &myPublic,const void *msg,unsigned int len,void *signature);
-	static inline void sign(const Pair &mine,const void *msg,unsigned int len,void *signature) { sign(mine.priv,mine.pub,msg,len,signature); }
 
 	/**
 	 * Sign a message with a sender's key pair

@@ -614,6 +614,11 @@
 #define ZT_SUPPORT_OLD_STYLE_NETCONF 1
 
 /**
+ * Size of a buffer to store either a C25519 or an ECC P-384 signature
+ */
+#define ZT_SIGNATURE_BUFFER_SIZE 96
+
+/**
  * Desired buffer size for UDP sockets (used in service and osdep but defined here)
  */
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__))

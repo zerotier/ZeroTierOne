@@ -107,19 +107,7 @@ public:
 		return this->_owns(THING_MAC_ADDRESS,tmp,6);
 	}
 
-	inline void addThing(const InetAddress &ip)
-	{
-		if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) return;
-		if (ip.ss_family == AF_INET) {
-			_thingTypes[_thingCount] = THING_IPV4_ADDRESS;
-			memcpy(_thingValues[_thingCount],&(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),4);
-			++_thingCount;
-		} else if (ip.ss_family == AF_INET6) {
-			_thingTypes[_thingCount] = THING_IPV6_ADDRESS;
-			memcpy(_thingValues[_thingCount],reinterpret_cast<const struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
-			++_thingCount;
-		}
-	}
+	void addThing(const InetAddress &ip);
 
 	inline void addThing(const MAC &mac)
 	{
@@ -133,17 +121,7 @@ public:
 	 * @param signer Signing identity, must have private key
 	 * @return True if signature was successful
 	 */
-	inline bool sign(const Identity &signer)
-	{
-		if (signer.hasPrivate()) {
-			Buffer<sizeof(CertificateOfOwnership) + 64> tmp;
-			_signedBy = signer.address();
-			this->serialize(tmp,true);
-			_signature = signer.sign(tmp.data(),tmp.size());
-			return true;
-		}
-		return false;
-	}
+	bool sign(const Identity &signer);
 
 	/**
 	 * @param RR Runtime environment to allow identity lookup for signedBy
@@ -170,9 +148,9 @@ public:
 		_issuedTo.appendTo(b);
 		_signedBy.appendTo(b);
 		if (!forSign) {
-			b.append((uint8_t)1); // 1 == Ed25519
-			b.append((uint16_t)ZT_C25519_SIGNATURE_LEN); // length of signature
-			b.append(_signature.data,ZT_C25519_SIGNATURE_LEN);
+			b.append((uint8_t)1);
+			b.append((uint16_t)_signatureLength); // length of signature
+			b.append(_signature,_signatureLength);
 		}
 
 		b.append((uint16_t)0); // length of additional fields, currently 0
@@ -203,10 +181,11 @@ public:
 		_issuedTo.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
 		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
 		if (b[p++] == 1) {
-			if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN)
+			_signatureLength = b.template at<uint16_t>(p);
+			if (_signatureLength > sizeof(_signature))
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 			p += 2;
-			memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
+			memcpy(_signature,b.field(p,_signatureLength),_signatureLength); p += _signatureLength;
 		} else {
 			p += 2 + b.template at<uint16_t>(p);
 		}
@@ -236,7 +215,8 @@ private:
 	uint8_t _thingValues[ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS][ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE];
 	Address _issuedTo;
 	Address _signedBy;
-	C25519::Signature _signature;
+	unsigned int _signatureLength;
+	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
 };
 
 } // namespace ZeroTier

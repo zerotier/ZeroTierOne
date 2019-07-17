@@ -48,7 +48,6 @@
 #include "../node/InetAddress.hpp"
 #include "../node/MAC.hpp"
 #include "../node/Identity.hpp"
-#include "../node/World.hpp"
 #include "../node/Salsa20.hpp"
 #include "../node/Poly1305.hpp"
 #include "../node/SHA512.hpp"
@@ -344,28 +343,6 @@ static void _peerAggregateLinkToJson(nlohmann::json &pj,const ZT_Peer *peer)
 		pa.push_back(j);
 	}
 	pj["paths"] = pa;
-}
-
-static void _moonToJson(nlohmann::json &mj,const World &world)
-{
-	char tmp[4096];
-	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",world.id());
-	mj["id"] = tmp;
-	mj["timestamp"] = world.timestamp();
-	mj["signature"] = Utils::hex(world.signature().data,ZT_C25519_SIGNATURE_LEN,tmp);
-	mj["updatesMustBeSignedBy"] = Utils::hex(world.updatesMustBeSignedBy().data,ZT_C25519_PUBLIC_KEY_LEN,tmp);
-	nlohmann::json ra = nlohmann::json::array();
-	for(std::vector<World::Root>::const_iterator r(world.roots().begin());r!=world.roots().end();++r) {
-		nlohmann::json rj;
-		rj["identity"] = r->identity.toString(false,tmp);
-		nlohmann::json eps = nlohmann::json::array();
-		for(std::vector<InetAddress>::const_iterator a(r->stableEndpoints.begin());a!=r->stableEndpoints.end();++a)
-			eps.push_back(a->toString(tmp));
-		rj["stableEndpoints"] = eps;
-		ra.push_back(rj);
-	}
-	mj["roots"] = ra;
-	mj["waiting"] = false;
 }
 
 class OneServiceImpl;
@@ -777,16 +754,6 @@ public:
 					std::size_t dot = f->find_last_of('.');
 					if ((dot == 16)&&(f->substr(16) == ".conf"))
 						_node->join(Utils::hexStrToU64(f->substr(0,dot).c_str()),(void *)0,(void *)0);
-				}
-			}
-
-			// Orbit existing moons in moons.d
-			{
-				std::vector<std::string> moonsDotD(OSUtils::listDirectory((_homePath + ZT_PATH_SEPARATOR_S "moons.d").c_str()));
-				for(std::vector<std::string>::iterator f(moonsDotD.begin());f!=moonsDotD.end();++f) {
-					std::size_t dot = f->find_last_of('.');
-					if ((dot == 16)&&(f->substr(16) == ".moon"))
-						_node->orbit((void *)0,Utils::hexStrToU64(f->substr(0,dot).c_str()),0);
 				}
 			}
 
@@ -1287,37 +1254,8 @@ public:
 					settings["softwareUpdate"] = OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT);
 					settings["softwareUpdateChannel"] = OSUtils::jsonString(settings["softwareUpdateChannel"],ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL);
 #endif
-					const World planet(_node->planet());
-					res["planetWorldId"] = planet.id();
-					res["planetWorldTimestamp"] = planet.timestamp();
 
 					scode = 200;
-				} else if (ps[0] == "moon") {
-					std::vector<World> moons(_node->moons());
-					if (ps.size() == 1) {
-						// Return [array] of all moons
-
-						res = json::array();
-						for(std::vector<World>::const_iterator m(moons.begin());m!=moons.end();++m) {
-							json mj;
-							_moonToJson(mj,*m);
-							res.push_back(mj);
-						}
-
-						scode = 200;
-					} else {
-						// Return a single moon by ID
-
-						const uint64_t id = Utils::hexStrToU64(ps[1].c_str());
-						for(std::vector<World>::const_iterator m(moons.begin());m!=moons.end();++m) {
-							if (m->id() == id) {
-								_moonToJson(res,*m);
-								scode = 200;
-								break;
-							}
-						}
-
-					}
 				} else if (ps[0] == "network") {
 					ZT_VirtualNetworkList *nws = _node->networks();
 					if (nws) {
@@ -1390,44 +1328,7 @@ public:
 		} else if ((httpMethod == HTTP_POST)||(httpMethod == HTTP_PUT)) {
 			if (isAuth) {
 
-				if (ps[0] == "moon") {
-					if (ps.size() == 2) {
-
-						uint64_t seed = 0;
-						try {
-							json j(OSUtils::jsonParse(body));
-							if (j.is_object()) {
-								seed = Utils::hexStrToU64(OSUtils::jsonString(j["seed"],"0").c_str());
-							}
-						} catch ( ... ) {
-							// discard invalid JSON
-						}
-
-						std::vector<World> moons(_node->moons());
-						const uint64_t id = Utils::hexStrToU64(ps[1].c_str());
-						for(std::vector<World>::const_iterator m(moons.begin());m!=moons.end();++m) {
-							if (m->id() == id) {
-								_moonToJson(res,*m);
-								scode = 200;
-								break;
-							}
-						}
-
-						if ((scode != 200)&&(seed != 0)) {
-							char tmp[64];
-							OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",id);
-							res["id"] = tmp;
-							res["roots"] = json::array();
-							res["timestamp"] = 0;
-							res["signature"] = json();
-							res["updatesMustBeSignedBy"] = json();
-							res["waiting"] = true;
-							_node->orbit((void *)0,id,seed);
-							scode = 200;
-						}
-
-					} else scode = 404;
-				} else if (ps[0] == "network") {
+				if (ps[0] == "network") {
 					if (ps.size() == 2) {
 
 						uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
@@ -1474,13 +1375,7 @@ public:
 		} else if (httpMethod == HTTP_DELETE) {
 			if (isAuth) {
 
-				if (ps[0] == "moon") {
-					if (ps.size() == 2) {
-						_node->deorbit((void *)0,Utils::hexStrToU64(ps[1].c_str()));
-						res["result"] = true;
-						scode = 200;
-					} // else 404
-				} else if (ps[0] == "network") {
+				if (ps[0] == "network") {
 					ZT_VirtualNetworkList *nws = _node->networks();
 					if (nws) {
 						if (ps.size() == 2) {
@@ -2370,13 +2265,6 @@ public:
 				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.secret",_homePath.c_str());
 				secure = true;
 				break;
-			case ZT_STATE_OBJECT_PLANET:
-				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
-				break;
-			case ZT_STATE_OBJECT_MOON:
-				OSUtils::ztsnprintf(dirname,sizeof(dirname),"%s" ZT_PATH_SEPARATOR_S "moons.d",_homePath.c_str());
-				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx.moon",dirname,(unsigned long long)id[0]);
-				break;
 			case ZT_STATE_OBJECT_NETWORK_CONFIG:
 				OSUtils::ztsnprintf(dirname,sizeof(dirname),"%s" ZT_PATH_SEPARATOR_S "networks.d",_homePath.c_str());
 				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx.conf",dirname,(unsigned long long)id[0]);
@@ -2521,12 +2409,6 @@ public:
 				break;
 			case ZT_STATE_OBJECT_IDENTITY_SECRET:
 				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "identity.secret",_homePath.c_str());
-				break;
-			case ZT_STATE_OBJECT_PLANET:
-				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "planet",_homePath.c_str());
-				break;
-			case ZT_STATE_OBJECT_MOON:
-				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "moons.d" ZT_PATH_SEPARATOR_S "%.16llx.moon",_homePath.c_str(),(unsigned long long)id[0]);
 				break;
 			case ZT_STATE_OBJECT_NETWORK_CONFIG:
 				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.conf",_homePath.c_str(),(unsigned long long)id[0]);

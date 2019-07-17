@@ -43,7 +43,6 @@
 #include "SelfAwareness.hpp"
 #include "Salsa20.hpp"
 #include "SHA512.hpp"
-#include "World.hpp"
 #include "Node.hpp"
 #include "CertificateOfMembership.hpp"
 #include "Capability.hpp"
@@ -368,30 +367,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 			RR->sa->iam(tPtr,id.address(),_path->localSocket(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(id),now);
 	}
 
-	// Get primary planet world ID and world timestamp if present
-	uint64_t planetWorldId = 0;
-	uint64_t planetWorldTimestamp = 0;
-	if ((ptr + 16) <= size()) {
-		planetWorldId = at<uint64_t>(ptr); ptr += 8;
-		planetWorldTimestamp = at<uint64_t>(ptr); ptr += 8;
-	}
-
-	std::vector< std::pair<uint64_t,uint64_t> > moonIdsAndTimestamps;
-	if (ptr < size()) {
-		// Remainder of packet, if present, is encrypted
-		cryptField(peer->key(),ptr,size() - ptr);
-
-		// Get moon IDs and timestamps if present
-		if ((ptr + 2) <= size()) {
-			const unsigned int numMoons = at<uint16_t>(ptr); ptr += 2;
-			for(unsigned int i=0;i<numMoons;++i) {
-				if ((World::Type)(*this)[ptr++] == World::TYPE_MOON)
-					moonIdsAndTimestamps.push_back(std::pair<uint64_t,uint64_t>(at<uint64_t>(ptr),at<uint64_t>(ptr + 8)));
-				ptr += 16;
-			}
-		}
-	}
-
 	// Send OK(HELLO) with an echo of the packet's timestamp and some of the same
 	// information about us: version, sent-to address, etc.
 
@@ -435,25 +410,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 		tmpa.serialize(outp);
 	}
 
-	const unsigned int worldUpdateSizeAt = outp.size();
-	outp.addSize(2); // make room for 16-bit size field
-	if ((planetWorldId)&&(RR->topology->planetWorldTimestamp() > planetWorldTimestamp)&&(planetWorldId == RR->topology->planetWorldId())) {
-		RR->topology->planet().serialize(outp,false);
-	}
-	if (moonIdsAndTimestamps.size() > 0) {
-		std::vector<World> moons(RR->topology->moons());
-		for(std::vector<World>::const_iterator m(moons.begin());m!=moons.end();++m) {
-			for(std::vector< std::pair<uint64_t,uint64_t> >::const_iterator i(moonIdsAndTimestamps.begin());i!=moonIdsAndTimestamps.end();++i) {
-				if (i->first == m->id()) {
-					if (m->timestamp() > i->second)
-						m->serialize(outp,false);
-					break;
-				}
-			}
-		}
-	}
-	outp.setAt<uint16_t>(worldUpdateSizeAt,(uint16_t)(outp.size() - (worldUpdateSizeAt + 2)));
-
 	outp.armor(peer->key(),true);
 	_path->send(RR,tPtr,outp.data(),outp.size(),now);
 
@@ -489,22 +445,6 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 			// Get reported external surface address if present
 			if (ptr < size())
 				ptr += externalSurfaceAddress.deserialize(*this,ptr);
-
-			// Handle planet or moon updates if present
-			if ((ptr + 2) <= size()) {
-				const unsigned int worldsLen = at<uint16_t>(ptr); ptr += 2;
-				if (RR->topology->shouldAcceptWorldUpdateFrom(peer->address())) {
-					const unsigned int endOfWorlds = ptr + worldsLen;
-					while (ptr < endOfWorlds) {
-						World w;
-						ptr += w.deserialize(*this,ptr);
-						RR->topology->addWorld(tPtr,w,false);
-					}
-				} else {
-					ptr += worldsLen;
-				}
-			}
-
 			if (!hops()) {
 				_path->updateLatency((unsigned int)latency,RR->node->now());
 			}
@@ -575,8 +515,9 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 
 bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
-	if ((!RR->topology->amUpstream())&&(!peer->rateGateInboundWhoisRequest(RR->node->now())))
-		return true;
+	// TODO
+	//if ((!RR->topology->amUpstream())&&(!peer->rateGateInboundWhoisRequest(RR->node->now())))
+	//	return true;
 
 	Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 	outp.append((unsigned char)Packet::VERB_WHOIS);
@@ -772,8 +713,8 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,void *tPtr,c
 			SharedPtr<Network> network(RR->node->network(nwid));
 			if (network)
 				authorized = network->gate(tPtr,peer);
-			if (!authorized)
-				authorized = ((RR->topology->amUpstream())||(RR->node->localControllerHasAuthorized(now,nwid,peer->address())));
+			//if (!authorized)
+			//	authorized = ((RR->topology->amUpstream())||(RR->node->localControllerHasAuthorized(now,nwid,peer->address())));
 		}
 		if (authorized)
 			RR->mc->add(tPtr,now,nwid,MulticastGroup(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14)),peer->address());
@@ -982,7 +923,8 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr
 	}
 
 	const int64_t now = RR->node->now();
-	if ((gatherLimit > 0)&&((trustEstablished)||(RR->topology->amUpstream())||(RR->node->localControllerHasAuthorized(now,nwid,peer->address())))) {
+	//if ((gatherLimit > 0)&&((trustEstablished)||(RR->topology->amUpstream())||(RR->node->localControllerHasAuthorized(now,nwid,peer->address())))) {
+	if (gatherLimit) {
 		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 		outp.append((unsigned char)Packet::VERB_MULTICAST_GATHER);
 		outp.append(packetId());

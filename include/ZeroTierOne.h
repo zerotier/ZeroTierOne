@@ -1394,24 +1394,6 @@ enum ZT_StateObjectType
 	ZT_STATE_OBJECT_IDENTITY_SECRET = 2,
 
 	/**
-	 * The planet (there is only one per... well... planet!)
-	 *
-	 * Object ID: world ID of planet, or 0 if unknown (first query)
-	 * Canonical path: <HOME>/planet
-	 * Persistence: recommended
-	 */
-	ZT_STATE_OBJECT_PLANET = 3,
-
-	/**
-	 * A moon (federated root set)
-	 *
-	 * Object ID: world ID of moon
-	 * Canonical path: <HOME>/moons.d/<ID>.moon (16-digit hex ID)
-	 * Persistence: required if moon memberships should persist
-	 */
-	ZT_STATE_OBJECT_MOON = 4,
-
-	/**
 	 * Peer and related state
 	 *
 	 * Object ID: peer address
@@ -1846,32 +1828,6 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node,void *tpt
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
-
-/**
- * Add or update a moon
- *
- * Moons are persisted in the data store in moons.d/, so this can persist
- * across invocations if the contents of moon.d are scanned and orbit is
- * called for each on startup.
- *
- * @param node Node instance
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param moonWorldId Moon's world ID
- * @param moonSeed If non-zero, the ZeroTier address of any member of the moon to query for moon definition
- * @param len Length of moonWorld in bytes
- * @return Error if moon was invalid or failed to be added
- */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_orbit(ZT_Node *node,void *tptr,uint64_t moonWorldId,uint64_t moonSeed);
-
-/**
- * Remove a moon (does nothing if not present)
- *
- * @param node Node instance
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param moonWorldId World ID of moon to remove
- * @return Error if anything bad happened
- */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_deorbit(ZT_Node *node,void *tptr,uint64_t moonWorldId);
 
 /**
  * Get this node's 40-bit ZeroTier address

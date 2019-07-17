@@ -453,7 +453,7 @@ public:
 		out[6] = BASE32CHARS[(in[3] & 0x03) << 3 | (in[4] & 0xe0) >> 5];
 		out[7] = BASE32CHARS[(in[4] & 0x1f)];
 	}
-	
+
 	static inline void base328to5(const char *const in,uint8_t *const out)
 	{
 		out[0] = ((BASE32BITS[(unsigned int)in[0]]) << 3) | (BASE32BITS[(unsigned int)in[1]] & 0x1C) >> 2;
@@ -462,7 +462,7 @@ public:
 		out[3] = ((BASE32BITS[(unsigned int)in[4]] & 0x01) << 7) | (BASE32BITS[(unsigned int)in[5]]) << 2 | (BASE32BITS[(unsigned int)in[6]] & 0x18) >> 3;
 		out[4] = ((BASE32BITS[(unsigned int)in[6]] & 0x07) << 5) | (BASE32BITS[(unsigned int)in[7]]);
 	}
-	
+
 	/**
 	 * Hexadecimal characters 0-f
 	 */

@@ -84,7 +84,7 @@ std::string CertificateOfMembership::toString() const
 
 	if (_signedBy) {
 		s.push_back(':');
-		s.append(Utils::hex(_signature.data,ZT_C25519_SIGNATURE_LEN,tmp));
+		s.append(Utils::hex(_signature,_signatureLength,tmp));
 	}
 
 	return s;
@@ -92,9 +92,9 @@ std::string CertificateOfMembership::toString() const
 
 void CertificateOfMembership::fromString(const char *s)
 {
-	_qualifierCount = 0;
 	_signedBy.zero();
-	memset(_signature.data,0,ZT_C25519_SIGNATURE_LEN);
+	_qualifierCount = 0;
+	_signatureLength = 0;
 
 	if (!*s)
 		return;
@@ -145,8 +145,7 @@ void CertificateOfMembership::fromString(const char *s)
 				colonAt = 0;
 				while ((s[colonAt])&&(s[colonAt] != ':')) ++colonAt;
 				if (colonAt) {
-					if (Utils::unhex(s,colonAt,_signature.data,ZT_C25519_SIGNATURE_LEN) != ZT_C25519_SIGNATURE_LEN)
-						_signedBy.zero();
+					_signatureLength = Utils::unhex(s,colonAt,_signature,sizeof(_signature));
 				} else {
 					_signedBy.zero();
 				}
@@ -208,7 +207,7 @@ bool CertificateOfMembership::sign(const Identity &with)
 	}
 
 	try {
-		_signature = with.sign(buf,ptr * sizeof(uint64_t));
+		_signatureLength = with.sign(buf,ptr * sizeof(uint64_t),_signature,sizeof(_signature));
 		_signedBy = with.address();
 		return true;
 	} catch ( ... ) {
@@ -235,7 +234,7 @@ int CertificateOfMembership::verify(const RuntimeEnvironment *RR,void *tPtr) con
 		buf[ptr++] = Utils::hton(_qualifiers[i].value);
 		buf[ptr++] = Utils::hton(_qualifiers[i].maxDelta);
 	}
-	return (id.verify(buf,ptr * sizeof(uint64_t),_signature) ? 0 : -1);
+	return (id.verify(buf,ptr * sizeof(uint64_t),_signature,_signatureLength) ? 0 : -1);
 }
 
 } // namespace ZeroTier

@@ -367,8 +367,8 @@ static int testCrypto()
 		memcpy(p1.priv.data,C25519_TEST_VECTORS[k].priv1,ZT_C25519_PRIVATE_KEY_LEN);
 		memcpy(p2.pub.data,C25519_TEST_VECTORS[k].pub2,ZT_C25519_PUBLIC_KEY_LEN);
 		memcpy(p2.priv.data,C25519_TEST_VECTORS[k].priv2,ZT_C25519_PRIVATE_KEY_LEN);
-		C25519::agree(p1,p2.pub,buf1,64);
-		C25519::agree(p2,p1.pub,buf2,64);
+		C25519::agree(p1.priv,p2.pub,buf1,64);
+		C25519::agree(p2.priv,p1.pub,buf2,64);
 		if (memcmp(buf1,buf2,64)) {
 			std::cout << "FAIL (1)" << std::endl;
 			return -1;
@@ -398,9 +398,9 @@ static int testCrypto()
 		C25519::Pair p1 = C25519::generate();
 		C25519::Pair p2 = C25519::generate();
 		C25519::Pair p3 = C25519::generate();
-		C25519::agree(p1,p2.pub,buf1,64);
-		C25519::agree(p2,p1.pub,buf2,64);
-		C25519::agree(p3,p1.pub,buf3,64);
+		C25519::agree(p1.priv,p2.pub,buf1,64);
+		C25519::agree(p2.priv,p1.pub,buf2,64);
+		C25519::agree(p3.priv,p1.pub,buf3,64);
 		// p1<>p2 should equal p1<>p2
 		if (memcmp(buf1,buf2,64)) {
 			std::cout << "FAIL (1)" << std::endl;
@@ -420,7 +420,7 @@ static int testCrypto()
 		bp[k] = C25519::generate();
 	uint64_t st = OSUtils::now();
 	for(unsigned int k=0;k<50;++k) {
-		C25519::agree(bp[~k & 7],bp[k & 7].pub,buf1,64);
+		C25519::agree(bp[~k & 7].priv,bp[k & 7].pub,buf1,64);
 	}
 	uint64_t et = OSUtils::now();
 	std::cout << ((double)(et - st) / 50.0) << "ms per agreement." << std::endl;
@@ -508,7 +508,7 @@ static int testIdentity()
 	for(unsigned int k=0;k<4;++k) {
 		std::cout << "[identity] Generate identity... "; std::cout.flush();
 		uint64_t genstart = OSUtils::now();
-		id.generate();
+		id.generate(Identity::C25519);
 		uint64_t genend = OSUtils::now();
 		std::cout << "(took " << (genend - genstart) << "ms): " << id.toString(true,buf2) << std::endl;
 		std::cout << "[identity] Locally validate identity: ";
@@ -581,13 +581,13 @@ static int testCertificate()
 
 	Identity authority;
 	std::cout << "[certificate] Generating identity to act as authority... "; std::cout.flush();
-	authority.generate();
+	authority.generate(Identity::C25519);
 	std::cout << authority.address().toString(buf) << std::endl;
 
 	Identity idA,idB;
 	std::cout << "[certificate] Generating identities A and B... "; std::cout.flush();
-	idA.generate();
-	idB.generate();
+	idA.generate(Identity::C25519);
+	idB.generate(Identity::C25519);
 	std::cout << idA.address().toString(buf) << ", " << idB.address().toString(buf) << std::endl;
 
 	std::cout << "[certificate] Generating certificates A and B...";

@@ -34,6 +34,23 @@
 
 namespace ZeroTier {
 
+bool Capability::sign(const Identity &from,const Address &to)
+{
+	try {
+		for(unsigned int i=0;((i<_maxCustodyChainLength)&&(i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH));++i) {
+			if (!(_custody[i].to)) {
+				Buffer<(sizeof(Capability) * 2)> tmp;
+				this->serialize(tmp,true);
+				_custody[i].to = to;
+				_custody[i].from = from.address();
+				_custody[i].signatureLength = from.sign(tmp.data(),tmp.size(),_custody[i].signature,sizeof(_custody[i].signature));
+				return true;
+			}
+		}
+	} catch ( ... ) {}
+	return false;
+}
+
 int Capability::verify(const RuntimeEnvironment *RR,void *tPtr) const
 {
 	try {
@@ -57,7 +74,7 @@ int Capability::verify(const RuntimeEnvironment *RR,void *tPtr) const
 
 			const Identity id(RR->topology->getIdentity(tPtr,_custody[c].from));
 			if (id) {
-				if (!id.verify(tmp.data(),tmp.size(),_custody[c].signature))
+				if (!id.verify(tmp.data(),tmp.size(),_custody[c].signature,_custody[c].signatureLength))
 					return -1;
 			} else {
 				RR->sw->requestWhois(tPtr,RR->node->now(),_custody[c].from);

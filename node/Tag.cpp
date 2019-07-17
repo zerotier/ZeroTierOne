@@ -34,6 +34,18 @@
 
 namespace ZeroTier {
 
+bool Tag::sign(const Identity &signer)
+{
+	if (signer.hasPrivate()) {
+		Buffer<sizeof(Tag) + 64> tmp;
+		_signedBy = signer.address();
+		this->serialize(tmp,true);
+		_signatureLength = signer.sign(tmp.data(),tmp.size(),_signature,sizeof(_signature));
+		return true;
+	}
+	return false;
+}
+
 int Tag::verify(const RuntimeEnvironment *RR,void *tPtr) const
 {
 	if ((!_signedBy)||(_signedBy != Network::controllerFor(_networkId)))
@@ -46,7 +58,7 @@ int Tag::verify(const RuntimeEnvironment *RR,void *tPtr) const
 	try {
 		Buffer<(sizeof(Tag) * 2)> tmp;
 		this->serialize(tmp,true);
-		return (id.verify(tmp.data(),tmp.size(),_signature) ? 0 : -1);
+		return (id.verify(tmp.data(),tmp.size(),_signature,_signatureLength) ? 0 : -1);
 	} catch ( ... ) {
 		return -1;
 	}

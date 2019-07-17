@@ -45,7 +45,6 @@
 #include "Mutex.hpp"
 #include "InetAddress.hpp"
 #include "Hashtable.hpp"
-#include "World.hpp"
 
 namespace ZeroTier {
 
@@ -137,12 +136,6 @@ public:
 	bool isUpstream(const Identity &id) const;
 
 	/**
-	 * @param addr Address to check
-	 * @return True if we should accept a world update from this address
-	 */
-	bool shouldAcceptWorldUpdateFrom(const Address &addr) const;
-
-	/**
 	 * @param ztaddr ZeroTier address
 	 * @return Peer role for this device
 	 */
@@ -171,29 +164,6 @@ public:
 	 */
 	inline void getUpstreamsToContact(Hashtable< Address,std::vector<InetAddress> > &eps) const
 	{
-		Mutex::Lock _l(_upstreams_m);
-		for(std::vector<World::Root>::const_iterator i(_planet.roots().begin());i!=_planet.roots().end();++i) {
-			if (i->identity != RR->identity) {
-				std::vector<InetAddress> &ips = eps[i->identity.address()];
-				for(std::vector<InetAddress>::const_iterator j(i->stableEndpoints.begin());j!=i->stableEndpoints.end();++j) {
-					if (std::find(ips.begin(),ips.end(),*j) == ips.end())
-						ips.push_back(*j);
-				}
-			}
-		}
-		for(std::vector<World>::const_iterator m(_moons.begin());m!=_moons.end();++m) {
-			for(std::vector<World::Root>::const_iterator i(m->roots().begin());i!=m->roots().end();++i) {
-				if (i->identity != RR->identity) {
-					std::vector<InetAddress> &ips = eps[i->identity.address()];
-					for(std::vector<InetAddress>::const_iterator j(i->stableEndpoints.begin());j!=i->stableEndpoints.end();++j) {
-						if (std::find(ips.begin(),ips.end(),*j) == ips.end())
-							ips.push_back(*j);
-					}
-				}
-			}
-		}
-		for(std::vector< std::pair<uint64_t,Address> >::const_iterator m(_moonSeeds.begin());m!=_moonSeeds.end();++m)
-			eps[m->second];
 	}
 
 	/**
@@ -201,86 +171,8 @@ public:
 	 */
 	inline std::vector<Address> upstreamAddresses() const
 	{
-		Mutex::Lock _l(_upstreams_m);
-		return _upstreamAddresses;
+		return std::vector<Address>();
 	}
-
-	/**
-	 * @return Current moons
-	 */
-	inline std::vector<World> moons() const
-	{
-		Mutex::Lock _l(_upstreams_m);
-		return _moons;
-	}
-
-	/**
-	 * @return Moon IDs we are waiting for from seeds
-	 */
-	inline std::vector<uint64_t> moonsWanted() const
-	{
-		Mutex::Lock _l(_upstreams_m);
-		std::vector<uint64_t> mw;
-		for(std::vector< std::pair<uint64_t,Address> >::const_iterator s(_moonSeeds.begin());s!=_moonSeeds.end();++s) {
-			if (std::find(mw.begin(),mw.end(),s->first) == mw.end())
-				mw.push_back(s->first);
-		}
-		return mw;
-	}
-
-	/**
-	 * @return Current planet
-	 */
-	inline World planet() const
-	{
-		Mutex::Lock _l(_upstreams_m);
-		return _planet;
-	}
-
-	/**
-	 * @return Current planet's world ID
-	 */
-	inline uint64_t planetWorldId() const
-	{
-		return _planet.id(); // safe to read without lock, and used from within eachPeer() so don't lock
-	}
-
-	/**
-	 * @return Current planet's world timestamp
-	 */
-	inline uint64_t planetWorldTimestamp() const
-	{
-		return _planet.timestamp(); // safe to read without lock, and used from within eachPeer() so don't lock
-	}
-
-	/**
-	 * Validate new world and update if newer and signature is okay
-	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param newWorld A new or updated planet or moon to learn
-	 * @param alwaysAcceptNew If true, always accept new moons even if we're not waiting for one
-	 * @return True if it was valid and newer than current (or totally new for moons)
-	 */
-	bool addWorld(void *tPtr,const World &newWorld,bool alwaysAcceptNew);
-
-	/**
-	 * Add a moon
-	 *
-	 * This loads it from moons.d if present, and if not adds it to
-	 * a list of moons that we want to contact.
-	 *
-	 * @param id Moon ID
-	 * @param seed If non-NULL, an address of any member of the moon to contact
-	 */
-	void addMoon(void *tPtr,const uint64_t id,const Address &seed);
-
-	/**
-	 * Remove a moon
-	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param id Moon's world ID
-	 */
-	void removeMoon(void *tPtr,const uint64_t id);
 
 	/**
 	 * Clean and flush database
@@ -332,11 +224,6 @@ public:
 		Mutex::Lock _l(_peers_m);
 		return _peers.entries();
 	}
-
-	/**
-	 * @return True if I am a root server in a planet or moon
-	 */
-	inline bool amUpstream() const { return _amUpstream; }
 
 	/**
 	 * Get info about a path
@@ -455,13 +342,6 @@ private:
 
 	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
 	Mutex _paths_m;
-
-	World _planet;
-	std::vector<World> _moons;
-	std::vector< std::pair<uint64_t,Address> > _moonSeeds;
-	std::vector<Address> _upstreamAddresses;
-	bool _amUpstream;
-	Mutex _upstreams_m; // locks worlds, upstream info, moon info, etc.
 };
 
 } // namespace ZeroTier

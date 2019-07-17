@@ -35,13 +35,15 @@
 #include "Salsa20.hpp"
 #include "Utils.hpp"
 
+namespace ZeroTier {
+
+//////////////////////////////////////////////////////////////////////////////
+// This is the memory-hard hash used for type 0 identities' addresses
+
 // These can't be changed without a new identity type. They define the
 // parameters of the hashcash hashing/searching algorithm.
-
 #define ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN 17
 #define ZT_IDENTITY_GEN_MEMORY 2097152
-
-namespace ZeroTier {
 
 // A memory-hard composition of SHA-512 and Salsa20 for hashcash hashing
 static inline void _computeMemoryHardHash(const void *publicKey,unsigned int publicKeyBytes,void *digest,void *genmem)
@@ -94,23 +96,39 @@ struct _Identity_generate_cond
 	char *genmem;
 };
 
-void Identity::generate()
+//////////////////////////////////////////////////////////////////////////////
+
+void Identity::generate(const Type t)
 {
-	unsigned char digest[64];
-	char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];
+	uint8_t digest[64];
+	switch(t) {
+		case C25519: {
+			char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];
 
-	C25519::Pair kp;
-	do {
-		kp = C25519::generateSatisfying(_Identity_generate_cond(digest,genmem));
-		_address.setTo(digest + 59,ZT_ADDRESS_LENGTH); // last 5 bytes are address
-	} while (_address.isReserved());
+			C25519::Pair kp;
+			do {
+				kp = C25519::generateSatisfying(_Identity_generate_cond(digest,genmem));
+				_address.setTo(digest + 59,ZT_ADDRESS_LENGTH); // last 5 bytes are address
+			} while (_address.isReserved());
 
-	_publicKey = kp.pub;
-	if (!_privateKey)
-		_privateKey = new C25519::Private();
-	*_privateKey = kp.priv;
+			memcpy(_k.t0.pub.data,kp.pub.data,ZT_C25519_PUBLIC_KEY_LEN);
+			memcpy(_k.t0.priv.data,kp.priv.data,ZT_C25519_PRIVATE_KEY_LEN);
+			_type = C25519;
+			_hasPrivate = true;
+		
+			delete [] genmem;
+		}	break;
 
-	delete [] genmem;
+		case P384: {
+			do {
+				ECC384GenerateKey(_k.t1.pub,_k.t1.priv);
+				SHA512::hash(digest,_k.t1.pub,ZT_ECC384_PUBLIC_KEY_SIZE);
+				_address.setTo(digest + 59,ZT_ADDRESS_LENGTH);
+			} while (_address.isReserved());
+			_type = P384;
+			_hasPrivate = true;
+		}	break;
+	}
 }
 
 bool Identity::locallyValidate() const
@@ -118,40 +136,70 @@ bool Identity::locallyValidate() const
 	if (_address.isReserved())
 		return false;
 
-	unsigned char digest[64];
-	char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];
-	_computeMemoryHardHash(_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
-	delete [] genmem;
+	switch(_type) {
+		case C25519: {
+			unsigned char digest[64];
+			char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];
+			_computeMemoryHardHash(_k.t0.pub.data,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
+			delete [] genmem;
+			unsigned char addrb[5];
+			_address.copyTo(addrb,5);
+			return (
+				(digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN)&&
+				(digest[59] == addrb[0])&&
+				(digest[60] == addrb[1])&&
+				(digest[61] == addrb[2])&&
+				(digest[62] == addrb[3])&&
+				(digest[63] == addrb[4]));
+		}	break;
 
-	unsigned char addrb[5];
-	_address.copyTo(addrb,5);
+		case P384: {
+			return true;
+		}	break;
+	}
 
-	return (
-		(digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN)&&
-		(digest[59] == addrb[0])&&
-		(digest[60] == addrb[1])&&
-		(digest[61] == addrb[2])&&
-		(digest[62] == addrb[3])&&
-		(digest[63] == addrb[4]));
+	return false;
 }
 
 char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const
 {
-	char *p = buf;
-	Utils::hex10(_address.toInt(),p);
-	p += 10;
-	*(p++) = ':';
-	*(p++) = '0';
-	*(p++) = ':';
-	Utils::hex(_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN,p);
-	p += ZT_C25519_PUBLIC_KEY_LEN * 2;
-	if ((_privateKey)&&(includePrivate)) {
-		*(p++) = ':';
-		Utils::hex(_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN,p);
-		p += ZT_C25519_PRIVATE_KEY_LEN * 2;
+	switch(_type) {
+		case C25519: {
+			char *p = buf;
+			Utils::hex10(_address.toInt(),p);
+			p += 10;
+			*(p++) = ':';
+			*(p++) = '0';
+			*(p++) = ':';
+			Utils::hex(_k.t0.pub.data,ZT_C25519_PUBLIC_KEY_LEN,p);
+			p += ZT_C25519_PUBLIC_KEY_LEN * 2;
+			if ((_hasPrivate)&&(includePrivate)) {
+				*(p++) = ':';
+				Utils::hex(_k.t0.priv.data,ZT_C25519_PRIVATE_KEY_LEN,p);
+				p += ZT_C25519_PRIVATE_KEY_LEN * 2;
+			}
+			*p = (char)0;
+			return buf;
+		}
+
+		case P384: {
+			char *p = buf;
+			Utils::hex10(_address.toInt(),p);
+			p += 10;
+			*(p++) = ':';
+			*(p++) = '1';
+			*(p++) = ':';
+			Utils::hex(_k.t1.pub,ZT_ECC384_PUBLIC_KEY_SIZE,p);
+			p += ZT_ECC384_PUBLIC_KEY_SIZE * 2;
+			if ((_hasPrivate)&&(includePrivate)) {
+				*(p++) = ':';
+				Utils::hex(_k.t1.priv,ZT_ECC384_PRIVATE_KEY_SIZE,p);
+				p += ZT_ECC384_PRIVATE_KEY_SIZE * 2;
+			}
+			*p = (char)0;
+			return buf;
+		}	break;
 	}
-	*p = (char)0;
-	return buf;
 }
 
 bool Identity::fromString(const char *str)
@@ -166,8 +214,7 @@ bool Identity::fromString(const char *str)
 		return false;
 	}
 
-	delete _privateKey;
-	_privateKey = (C25519::Private *)0;
+	_hasPrivate = false;
 
 	int fno = 0;
 	char *saveptr = (char *)0;
@@ -181,22 +228,49 @@ bool Identity::fromString(const char *str)
 				}
 				break;
 			case 1:
-				if ((f[0] != '0')||(f[1])) {
+				if ((f[0] == '0')&&(!f[1])) {
+					_type = C25519;
+				} else if ((f[0] == '1')&&(!f[1])) {
+					_type = P384;
+				} else {
 					_address.zero();
 					return false;
 				}
 				break;
 			case 2:
-				if (Utils::unhex(f,_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN) != ZT_C25519_PUBLIC_KEY_LEN) {
-					_address.zero();
-					return false;
+				switch(_type) {
+					case C25519:
+						if (Utils::unhex(f,_k.t0.pub.data,ZT_C25519_PUBLIC_KEY_LEN) != ZT_C25519_PUBLIC_KEY_LEN) {
+							_address.zero();
+							return false;
+						}
+						break;
+					case P384:
+						if (Utils::unhex(f,_k.t1.pub,ZT_ECC384_PUBLIC_KEY_SIZE) != ZT_ECC384_PUBLIC_KEY_SIZE) {
+							_address.zero();
+							return false;
+						}
+						break;
 				}
 				break;
 			case 3:
-				_privateKey = new C25519::Private();
-				if (Utils::unhex(f,_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN) != ZT_C25519_PRIVATE_KEY_LEN) {
-					_address.zero();
-					return false;
+				switch(_type) {
+					case C25519:
+						if (Utils::unhex(f,_k.t0.priv.data,ZT_C25519_PRIVATE_KEY_LEN) != ZT_C25519_PRIVATE_KEY_LEN) {
+							_address.zero();
+							return false;
+						} else {
+							_hasPrivate = true;
+						}
+						break;
+					case P384:
+						if (Utils::unhex(f,_k.t1.priv,ZT_ECC384_PRIVATE_KEY_SIZE) != ZT_ECC384_PRIVATE_KEY_SIZE) {
+							_address.zero();
+							return false;
+						} else {
+							_hasPrivate = true;
+						}
+						break;
 				}
 				break;
 			default:

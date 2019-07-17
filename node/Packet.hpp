@@ -71,6 +71,7 @@
  * 10 - 1.4.0 ... CURRENT
  *    + Multipath capability and load balancing
  *    + Peer-to-peer multicast replication (optional)
+ *    + Old planet/moon stuff is DEAD!
  */
 #define ZT_PROTO_VERSION 10
 
@@ -532,22 +533,9 @@ public:
 		 *   <[8] timestamp for determining latency>
 		 *   <[...] binary serialized identity (see Identity)>
 		 *   <[...] physical destination address of packet>
-		 *   <[8] 64-bit world ID of current planet>
-		 *   <[8] 64-bit timestamp of current planet>
-		 *   [... remainder if packet is encrypted using cryptField() ...]
-		 *   <[2] 16-bit number of moons>
-		 *   [<[1] 8-bit type ID of moon>]
-		 *   [<[8] 64-bit world ID of moon>]
-		 *   [<[8] 64-bit timestamp of moon>]
-		 *   [... additional moon type/ID/timestamp tuples ...]
-		 *
+		 * 
 		 * HELLO is sent in the clear as it is how peers share their identity
-		 * public keys. A few additional fields are sent in the clear too, but
-		 * these are things that are public info or are easy to determine. As
-		 * of 1.2.0 we have added a few more fields, but since these could have
-		 * the potential to be sensitive we introduced the encryption of the
-		 * remainder of the packet. See cryptField(). Packet MAC is still
-		 * performed of course, so authentication occurs as normal.
+		 * public keys.
 		 *
 		 * Destination address is the actual wire address to which the packet
 		 * was sent. See InetAddress::serialize() for format.
@@ -559,14 +547,9 @@ public:
 		 *   <[1] software minor version>
 		 *   <[2] software revision>
 		 *   <[...] physical destination address of packet>
-		 *   <[2] 16-bit length of world update(s) or 0 if none>
-		 *   [[...] updates to planets and/or moons]
 		 *
 		 * With the exception of the timestamp, the other fields pertain to the
 		 * respondent who is sending OK and are not echoes.
-		 *
-		 * Note that OK is fully encrypted so no selective cryptField() of
-		 * potentially sensitive fields is needed.
 		 *
 		 * ERROR has no payload.
 		 */
@@ -1267,21 +1250,6 @@ public:
 	 * @return False if packet is invalid or failed MAC authenticity check
 	 */
 	bool dearmor(const void *key);
-
-	/**
-	 * Encrypt/decrypt a separately armored portion of a packet
-	 *
-	 * This is currently only used to mask portions of HELLO as an extra
-	 * security precaution since most of that message is sent in the clear.
-	 *
-	 * This must NEVER be used more than once in the same packet, as doing
-	 * so will result in re-use of the same key stream.
-	 *
-	 * @param key 32-byte key
-	 * @param start Start of encrypted portion
-	 * @param len Length of encrypted portion
-	 */
-	void cryptField(const void *key,unsigned int start,unsigned int len);
 
 	/**
 	 * Attempt to compress payload if not already (must be unencrypted)

@@ -113,7 +113,8 @@ public:
 	 * Create an empty certificate of membership
 	 */
 	CertificateOfMembership() :
-		_qualifierCount(0) {}
+		_qualifierCount(0),
+		_signatureLength(0) {}
 
 	/**
 	 * Create from required fields common to all networks
@@ -135,7 +136,7 @@ public:
 		_qualifiers[2].value = issuedTo.toInt();
 		_qualifiers[2].maxDelta = 0xffffffffffffffffULL;
 		_qualifierCount = 3;
-		memset(_signature.data,0,ZT_C25519_SIGNATURE_LEN);
+		_signatureLength = 0;
 	}
 
 	/**
@@ -279,8 +280,13 @@ public:
 			b.append(_qualifiers[i].maxDelta);
 		}
 		_signedBy.appendTo(b);
-		if (_signedBy)
-			b.append(_signature.data,ZT_C25519_SIGNATURE_LEN);
+		if ((_signedBy)&&(_signatureLength == 96)) {
+			// UGLY: Ed25519 signatures in ZT are 96 bytes (64 + 32 bytes of hash).
+			// P-384 signatures are also 96 bytes, praise the horned one. That means
+			// we don't need to include a length. If we ever do we will need a new
+			// serialized object version, but only for those with length != 96.
+			b.append(_signature,96);
+		}
 	}
 
 	template<unsigned int C>
@@ -288,8 +294,9 @@ public:
 	{
 		unsigned int p = startAt;
 
-		_qualifierCount = 0;
 		_signedBy.zero();
+		_qualifierCount = 0;
+		_signatureLength = 0;
 
 		if (b[p++] != 1)
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
@@ -316,8 +323,10 @@ public:
 		p += ZT_ADDRESS_LENGTH;
 
 		if (_signedBy) {
-			memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
-			p += ZT_C25519_SIGNATURE_LEN;
+			// See "UGLY" comment in serialize()...
+			_signatureLength = 96;
+			memcpy(_signature,b.field(p,96),96);
+			p += 96;
 		}
 
 		return (p - startAt);
@@ -329,13 +338,15 @@ public:
 			return false;
 		if (_qualifierCount != c._qualifierCount)
 			return false;
+		if (_signatureLength != c._signatureLength)
+			return false;
 		for(unsigned int i=0;i<_qualifierCount;++i) {
 			const _Qualifier &a = _qualifiers[i];
 			const _Qualifier &b = c._qualifiers[i];
 			if ((a.id != b.id)||(a.value != b.value)||(a.maxDelta != b.maxDelta))
 				return false;
 		}
-		return (memcmp(_signature.data,c._signature.data,ZT_C25519_SIGNATURE_LEN) == 0);
+		return (memcmp(_signature,c._signature,_signatureLength) == 0);
 	}
 	inline bool operator!=(const CertificateOfMembership &c) const { return (!(*this == c)); }
 
@@ -352,7 +363,8 @@ private:
 	Address _signedBy;
 	_Qualifier _qualifiers[ZT_NETWORK_COM_MAX_QUALIFIERS];
 	unsigned int _qualifierCount;
-	C25519::Signature _signature;
+	unsigned int _signatureLength;
+	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
 };
 
 } // namespace ZeroTier
