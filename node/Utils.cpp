@@ -55,9 +55,6 @@ namespace ZeroTier {
 
 const char Utils::HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
 
-const char Utils::BASE32CHARS[32] = { 'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','2','3','4','5','6','7' };
-const uint8_t Utils::BASE32BITS[256] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,26,27,28,29,30,31,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,0,0,0,0,0,0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
-
 // Crazy hack to force memory to be securely zeroed in spite of the best efforts of optimizing compilers.
 static void _Utils_doBurn(volatile uint8_t *ptr,unsigned int len)
 {
@@ -172,6 +169,77 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	}
 
 #endif // __WINDOWS__ or not
+}
+
+int Utils::b32d(const char *encoded, uint8_t *result, int bufSize)
+{
+  int buffer = 0;
+  int bitsLeft = 0;
+  int count = 0;
+  for (const uint8_t *ptr = (const uint8_t *)encoded;count<bufSize && *ptr; ++ptr) {
+    uint8_t ch = *ptr;
+    if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == '-' || ch == '.') {
+      continue;
+    }
+    buffer <<= 5;
+
+    if (ch == '0') {
+      ch = 'O';
+    } else if (ch == '1') {
+      ch = 'L';
+    } else if (ch == '8') {
+      ch = 'B';
+    }
+
+    if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')) {
+      ch = (ch & 0x1F) - 1;
+    } else if (ch >= '2' && ch <= '7') {
+      ch -= '2' - 26;
+    } else {
+      return -1;
+    }
+
+    buffer |= ch;
+    bitsLeft += 5;
+    if (bitsLeft >= 8) {
+      result[count++] = buffer >> (bitsLeft - 8);
+      bitsLeft -= 8;
+    }
+  }
+  if (count < bufSize)
+    result[count] = (uint8_t)0;
+  return count;
+}
+
+int Utils::b32e(const uint8_t *data,int length,char *result,int bufSize)
+{
+  if (length < 0 || length > (1 << 28))
+    return -1;
+  int count = 0;
+  if (length > 0) {
+    int buffer = data[0];
+    int next = 1;
+    int bitsLeft = 8;
+    while (count < bufSize && (bitsLeft > 0 || next < length)) {
+      if (bitsLeft < 5) {
+        if (next < length) {
+          buffer <<= 8;
+          buffer |= data[next++] & 0xFF;
+          bitsLeft += 8;
+        } else {
+          int pad = 5 - bitsLeft;
+          buffer <<= pad;
+          bitsLeft += pad;
+        }
+      }
+      int index = 0x1F & (buffer >> (bitsLeft - 5));
+      bitsLeft -= 5;
+      result[count++] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"[index];
+    }
+  }
+  if (count < bufSize)
+    result[count] = (char)0;
+  return count;
 }
 
 } // namespace ZeroTier

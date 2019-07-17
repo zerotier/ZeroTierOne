@@ -246,6 +246,9 @@ public:
 	 */
 	static void getSecureRandom(void *buf,unsigned int bytes);
 
+	static int Utils::b32d(const char *encoded, uint8_t *result, int bufSize);
+	static int Utils::b32e(const uint8_t *data,int length,char *result,int bufSize);
+
 	/**
 	 * Tokenize a string (alias for strtok_r or strtok_s depending on platform)
 	 *
@@ -442,35 +445,10 @@ public:
 	}
 	static inline int64_t ntoh(int64_t n) { return (int64_t)ntoh((uint64_t)n); }
 
-	static inline void base325to8(const uint8_t *const in,char *const out)
-	{
-		out[0] = BASE32CHARS[(in[0]) >> 3];
-		out[1] = BASE32CHARS[(in[0] & 0x07) << 2 | (in[1] & 0xc0) >> 6];
-		out[2] = BASE32CHARS[(in[1] & 0x3e) >> 1];
-		out[3] = BASE32CHARS[(in[1] & 0x01) << 4 | (in[2] & 0xf0) >> 4];
-		out[4] = BASE32CHARS[(in[2] & 0x0f) << 1 | (in[3] & 0x80) >> 7];
-		out[5] = BASE32CHARS[(in[3] & 0x7c) >> 2];
-		out[6] = BASE32CHARS[(in[3] & 0x03) << 3 | (in[4] & 0xe0) >> 5];
-		out[7] = BASE32CHARS[(in[4] & 0x1f)];
-	}
-
-	static inline void base328to5(const char *const in,uint8_t *const out)
-	{
-		out[0] = ((BASE32BITS[(unsigned int)in[0]]) << 3) | (BASE32BITS[(unsigned int)in[1]] & 0x1C) >> 2;
-		out[1] = ((BASE32BITS[(unsigned int)in[1]] & 0x03) << 6) | (BASE32BITS[(unsigned int)in[2]]) << 1 | (BASE32BITS[(unsigned int)in[3]] & 0x10) >> 4;
-		out[2] = ((BASE32BITS[(unsigned int)in[3]] & 0x0F) << 4) | (BASE32BITS[(unsigned int)in[4]] & 0x1E) >> 1;
-		out[3] = ((BASE32BITS[(unsigned int)in[4]] & 0x01) << 7) | (BASE32BITS[(unsigned int)in[5]]) << 2 | (BASE32BITS[(unsigned int)in[6]] & 0x18) >> 3;
-		out[4] = ((BASE32BITS[(unsigned int)in[6]] & 0x07) << 5) | (BASE32BITS[(unsigned int)in[7]]);
-	}
-
 	/**
 	 * Hexadecimal characters 0-f
 	 */
 	static const char HEXCHARS[16];
-
-private:
-	static const char BASE32CHARS[32];
-	static const uint8_t BASE32BITS[256];
 };
 
 } // namespace ZeroTier

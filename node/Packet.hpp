@@ -68,12 +68,13 @@
  *    + Tags and Capabilities
  *    + Inline push of CertificateOfMembership deprecated
  * 9  - 1.2.0 ... 1.2.14
- * 10 - 1.4.0 ... CURRENT
+ * 10 - 1.4.0 ... 1.6.0
  *    + Multipath capability and load balancing
+ * 11 - 1.6.0 ... CURRENT
  *    + Peer-to-peer multicast replication (optional)
  *    + Old planet/moon stuff is DEAD!
  */
-#define ZT_PROTO_VERSION 10
+#define ZT_PROTO_VERSION 11
 
 /**
  * Minimum supported protocol version
