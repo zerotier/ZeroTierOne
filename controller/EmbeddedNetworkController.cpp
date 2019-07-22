@@ -46,6 +46,11 @@
 #include "../version.h"
 
 #include "EmbeddedNetworkController.hpp"
+#include "LFDB.hpp"
+#include "FileDB.hpp"
+#ifdef ZT_CONTROLLER_USE_LIBPQ
+#include "PostgreSQL.hpp"
+#endif
 
 #include "../node/Node.hpp"
 #include "../node/CertificateOfMembership.hpp"
@@ -488,12 +493,49 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 	_signingId = signingId;
 	_sender = sender;
 	_signingIdAddressString = signingId.address().toString(tmp);
+
 #ifdef ZT_CONTROLLER_USE_LIBPQ
-	if ((_path.length() > 9)&&(_path.substr(0,9) == "postgres:"))
+	if ((_path.length() > 9)&&(_path.substr(0,9) == "postgres:")) {
 		_db.reset(new PostgreSQL(this,_signingId,_path.substr(9).c_str(), _listenPort, _mqc));
-	else // else use FileDB after endif
+	} else {
 #endif
+
+	std::string lfJSON;
+	OSUtils::readFile((_path + ZT_PATH_SEPARATOR_S "local.conf").c_str(),lfJSON);
+	if (lfJSON.length() > 0) {
+		nlohmann::json lfConfig(OSUtils::jsonParse(lfJSON));
+		nlohmann::json &settings = lfConfig["settings"];
+		if (settings.is_object()) {
+			nlohmann::json &controllerDb = lfConfig["controllerDb"];
+			if (controllerDb.is_object()) {
+				std::string type = controllerDb["type"];
+				if (type == "lf") {
+					std::string lfOwner = controllerDb["owner"];
+					std::string lfHost = controllerDb["host"];
+					int lfPort = controllerDb["port"];
+					bool storeOnlineState = controllerDb["storeOnlineState"];
+					if ((lfOwner.length())&&(lfHost.length())&&(lfPort > 0)&&(lfPort < 65536)) {
+						std::size_t pubHdrLoc = lfOwner.find("Public: ");
+						if ((pubHdrLoc > 0)&&((pubHdrLoc + 8) < lfOwner.length())) {
+							std::string lfOwnerPublic = lfOwner.substr(pubHdrLoc + 8);
+							std::size_t pubHdrEnd = lfOwnerPublic.find_first_of("\n\r\t ");
+							if (pubHdrEnd != std::string::npos) {
+								lfOwnerPublic = lfOwnerPublic.substr(0,pubHdrEnd);
+								_db.reset(new LFDB(this,_signingId,_path.c_str(),lfOwner.c_str(),lfOwnerPublic.c_str(),lfHost.c_str(),lfPort,storeOnlineState));
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if (!_db)
 		_db.reset(new FileDB(this,_signingId,_path.c_str()));
+
+#ifdef ZT_CONTROLLER_USE_LIBPQ
+	}
+#endif
+
 	_db->waitForReady();
 }
 

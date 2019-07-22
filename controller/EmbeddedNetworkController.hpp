@@ -51,10 +51,6 @@
 #include "../ext/json/json.hpp"
 
 #include "DB.hpp"
-#include "FileDB.hpp"
-#ifdef ZT_CONTROLLER_USE_LIBPQ
-#include "PostgreSQL.hpp"
-#endif
 
 namespace ZeroTier {
 
