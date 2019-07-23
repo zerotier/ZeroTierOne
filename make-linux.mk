@@ -96,6 +96,10 @@ ifeq ($(ZT_SYNOLOGY), 1)
 	override DEFS+=-D__SYNOLOGY__
 endif
 
+ifeq ($(ZT_DISABLE_COMPRESSION), 1)
+	override DEFS+=-DZT_DISABLE_COMPRESSION
+endif
+
 ifeq ($(ZT_TRACE),1)
 	override DEFS+=-DZT_TRACE
 endif
