@@ -108,7 +108,7 @@ LFDB::LFDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *
 					<< "\"MaskingKey\":\"" << controllerAddress << "\","
 					<< "\"Owners\":[\"" << _lfOwnerPublic << "\"]"
 				<< '}';
-			auto resp = htcli.Post("/query",query.str(),"application/json");
+			resp = htcli.Post("/query",query.str(),"application/json");
 			if (resp->status == 200) {
 				nlohmann::json results(OSUtils::jsonParse(resp->body));
 				if ((results.is_array())&&(results.size() > 0)) {
@@ -159,6 +159,7 @@ bool LFDB::waitForReady()
 	while (!_ready) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
+	return true;
 }
 
 bool LFDB::isReady()
