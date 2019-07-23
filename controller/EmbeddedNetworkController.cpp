@@ -501,12 +501,12 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 #endif
 
 	std::string lfJSON;
-	OSUtils::readFile((_path + ZT_PATH_SEPARATOR_S "local.conf").c_str(),lfJSON);
+	OSUtils::readFile((_path + ZT_PATH_SEPARATOR_S ".." ZT_PATH_SEPARATOR_S "local.conf").c_str(),lfJSON);
 	if (lfJSON.length() > 0) {
 		nlohmann::json lfConfig(OSUtils::jsonParse(lfJSON));
 		nlohmann::json &settings = lfConfig["settings"];
 		if (settings.is_object()) {
-			nlohmann::json &controllerDb = lfConfig["controllerDb"];
+			nlohmann::json &controllerDb = settings["controllerDb"];
 			if (controllerDb.is_object()) {
 				std::string type = controllerDb["type"];
 				if (type == "lf") {

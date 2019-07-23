@@ -73,14 +73,26 @@ protected:
 
 	struct _MemberState
 	{
+		_MemberState() :
+			lastOnlineAddress(),
+			lastOnlineTime(0),
+			recordTimestamp(0),
+			dirty(false),
+			lastOnlineDirty(false) {}
 		InetAddress lastOnlineAddress;
 		int64_t lastOnlineTime;
+		int64_t recordTimestamp;
 		bool dirty;
 		bool lastOnlineDirty;
 	};
 	struct _NetworkState
 	{
+		_NetworkState() :
+			members(),
+			recordTimestamp(0),
+			dirty(false) {}
 		std::unordered_map<uint64_t,_MemberState> members;
+		int64_t recordTimestamp;
 		bool dirty;
 	};
 	std::unordered_map<uint64_t,_NetworkState> _state;

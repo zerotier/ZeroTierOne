@@ -27,6 +27,7 @@
 #include "LFDB.hpp"
 
 #include <thread>
+#include <chrono>
 #include <iostream>
 #include <sstream>
 
@@ -53,30 +54,95 @@ LFDB::LFDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *
 		_myId.address().toString(controllerAddress);
 
 		httplib::Client htcli(_lfNodeHost.c_str(),_lfNodePort,600);
+		std::ostringstream query;
+		int64_t timeRangeStart = 0;
 		while (_running) {
-			std::ostringstream query;
+			query.clear();
 			query
 				<< '{'
 					<< "\"Ranges\":[{"
-						<< "\"Name\": \"com.zerotier.controller.lfdb:" << controllerAddress << "\""
+						<< "\"Name\": \"com.zerotier.controller.lfdb:" << controllerAddress << "/network\","
+						<< "\"Range\": [ 0,18446744073709551615 ]"
 					<< "}],"
+					<< "\"TimeRange\": [ " << timeRangeStart << ",18446744073709551615 ],"
 					<< "\"MaskingKey\":\"" << controllerAddress << "\","
-					<< "\"Owners\":[\"" << _lfOwnerPublic << "\"],"
-					<< "\"Open\":true"
+					<< "\"Owners\":[\"" << _lfOwnerPublic << "\"]"
 				<< '}';
 			auto resp = htcli.Post("/query",query.str(),"application/json");
 			if (resp->status == 200) {
-				fprintf(stderr,"%d %s\n",resp->status,resp->body.c_str());
+				nlohmann::json results(OSUtils::jsonParse(resp->body));
+				if ((results.is_array())&&(results.size() > 0)) {
+					for(std::size_t ri=0;ri<results.size();++ri) {
+						nlohmann::json &rset = results[ri];
+						if ((rset.is_array())&&(rset.size() > 0)) {
+							nlohmann::json &result = rset[0];
+							if (result.is_object()) {
+								nlohmann::json &record = result["Record"];
+								if (record.is_object()) {
+									int64_t ts = record["Timestamp"];
+									std::string value = result["Value"];
+									nlohmann::json network(OSUtils::jsonParse(value));
+									if (network.is_object()) {
+										std::string idstr = network["id"];
+									}
+								}
+							}
+						}
+					}
+				}
 			} else {
 				fprintf(stderr,"ERROR: LFDB: %d from node: %s" ZT_EOL_S,resp->status,resp->body.c_str());
 			}
 
+			query.clear();
+			query
+				<< '{'
+					<< "\"Ranges\":[{"
+						<< "\"Name\": \"com.zerotier.controller.lfdb:" << controllerAddress << "/network\","
+						<< "\"Range\": [ 0,18446744073709551615 ]"
+					<< "},{"
+						<< "\"Name\": \"com.zerotier.controller.lfdb:" << controllerAddress << "/network/member\","
+						<< "\"Range\": [ 0,18446744073709551615 ]"
+					<< "}],"
+					<< "\"TimeRange\": [ " << timeRangeStart << ",18446744073709551615 ],"
+					<< "\"MaskingKey\":\"" << controllerAddress << "\","
+					<< "\"Owners\":[\"" << _lfOwnerPublic << "\"]"
+				<< '}';
+			auto resp = htcli.Post("/query",query.str(),"application/json");
+			if (resp->status == 200) {
+				nlohmann::json results(OSUtils::jsonParse(resp->body));
+				if ((results.is_array())&&(results.size() > 0)) {
+					for(std::size_t ri=0;ri<results.size();++ri) {
+						nlohmann::json &rset = results[ri];
+						if ((rset.is_array())&&(rset.size() > 0)) {
+							nlohmann::json &result = rset[0];
+							if (result.is_object()) {
+								nlohmann::json &record = result["Record"];
+								if (record.is_object()) {
+									int64_t ts = record["Timestamp"];
+									std::string value = result["Value"];
+									nlohmann::json member(OSUtils::jsonParse(value));
+									if (member.is_object()) {
+										std::string nwidstr = member["nwid"];
+										std::string idstr = member["id"];
+									}
+								}
+							}
+						}
+					}
+				}
+			} else {
+				fprintf(stderr,"ERROR: LFDB: %d from node: %s" ZT_EOL_S,resp->status,resp->body.c_str());
+			}
+
+			timeRangeStart = time(nullptr) - 120; // start next query 2m before now to avoid losing updates
 			_ready = true;
 
-			for(int k=0;k<10;++k) {
+			// Delay 2s between queries, checking running flag every 100ms
+			for(int k=0;k<20;++k) {
 				if (!_running)
 					return;
-				usleep(100000);
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			}
 		}
 	});
@@ -90,8 +156,9 @@ LFDB::~LFDB()
 
 bool LFDB::waitForReady()
 {
-	while (!_ready)
-		usleep(10000);
+	while (!_ready) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
 }
 
 bool LFDB::isReady()
