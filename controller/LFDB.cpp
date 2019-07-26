@@ -57,7 +57,6 @@ LFDB::LFDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *
 		std::string membersSelectorName("com.zerotier.controller.lfdb:"); membersSelectorName.append(controllerAddress); membersSelectorName.append("/network/member");
 
 		httplib::Client htcli(_lfNodeHost.c_str(),_lfNodePort,600);
-		std::ostringstream query;
 		int64_t timeRangeStart = 0;
 		while (_running) {
 			{
@@ -66,129 +65,129 @@ LFDB::LFDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *
 					if (ns->second.dirty) {
 						nlohmann::json network;
 						if (get(ns->first,network)) {
-							nlohmann::json newrec;
-							newrec["Selectors"] = {{ { { "Name",networksSelectorName },{ "Ordinal",ns->first } } }};
+							nlohmann::json newrec,selector0;
+							selector0["Name"] = networksSelectorName;
+							selector0["Ordinal"] = ns->first;
+							newrec["Selectors"].push_back(selector0);
 							newrec["Value"] = network.dump();
 							newrec["OwnerPrivate"] = _lfOwnerPrivate;
 							newrec["MaskingKey"] = controllerAddress;
-							auto resp = htcli.Post("/make",newrec.dump(),"application/json");
-							if (resp->status == 200) {
-								ns->second.dirty = false;
+							newrec["PulseIfUnchanged"] = true;
+							printf("%s\n",newrec.dump().c_str());
+							auto resp = htcli.Post("/makerecord",newrec.dump(),"application/json");
+							if (resp) {
+								if (resp->status == 200) {
+									ns->second.dirty = false;
+									printf("SET network %.16llx %s\n",ns->first,resp->body.c_str());
+								} else {
+									fprintf(stderr,"ERROR: LFDB: %d from node (create/update network): %s" ZT_EOL_S,resp->status,resp->body.c_str());
+								}
 							} else {
-								fprintf(stderr,"ERROR: LFDB: %d from node (create/update network): %s" ZT_EOL_S,resp->status,resp->body.c_str());
+								fprintf(stderr,"ERROR: LFDB: node is offline" ZT_EOL_S);
 							}
 						}
 					}
 
 					for(auto ms=ns->second.members.begin();ms!=ns->second.members.end();++ms) {
-						if ((_storeOnlineState)&&(ms->second.lastOnlineDirty)) {
+						if ((_storeOnlineState)&&(ms->second.lastOnlineDirty)&&(ms->second.lastOnlineAddress)) {
+							char tmp[1024],tmp2[128];
+							OSUtils::ztsnprintf(tmp,sizeof(tmp),"com.zerotier.controller.lfdb:%s/network/%.16llx/online",controllerAddress,(unsigned long long)ns->first);
+							ms->second.lastOnlineAddress.toIpString(tmp2);
+							nlohmann::json newrec,selector0,selector1,selectors;
+							selector0["Name"] = tmp;
+							selector0["Ordinal"] = ms->first;
+							selector1["Name"] = tmp2;
+							selector1["Ordinal"] = 0;
+							selectors.push_back(selector0);
+							selectors.push_back(selector1);
+							newrec["Selectors"] = selectors;
+							newrec["Value"] = tmp2;
+							newrec["OwnerPrivate"] = _lfOwnerPrivate;
+							newrec["MaskingKey"] = controllerAddress;
+							newrec["Timestamp"] = ms->second.lastOnlineTime;
+							newrec["PulseIfUnchanged"] = true;
+							auto resp = htcli.Post("/makerecord",newrec.dump(),"application/json");
+							if (resp) {
+								if (resp->status == 200) {
+									ms->second.lastOnlineDirty = false;
+									printf("SET member online %.16llx %.10llx %s\n",ns->first,ms->first,resp->body.c_str());
+								} else {
+									fprintf(stderr,"ERROR: LFDB: %d from node (create/update member): %s" ZT_EOL_S,resp->status,resp->body.c_str());
+								}
+							} else {
+								fprintf(stderr,"ERROR: LFDB: node is offline" ZT_EOL_S);
+							}
 						}
 
 						if (ms->second.dirty) {
 							nlohmann::json network,member;
 							if (get(ns->first,network,ms->first,member)) {
-								nlohmann::json newrec;
-								newrec["Selectors"] = {{ { { "Name",networksSelectorName },{ "Ordinal",ns->first } },{ { "Name",membersSelectorName },{ "Ordinal",ms->first } } }};
+								nlohmann::json newrec,selector0,selector1,selectors;
+								selector0["Name"] = networksSelectorName;
+								selector0["Ordinal"] = ns->first;
+								selector1["Name"] = membersSelectorName;
+								selector1["Ordinal"] = ms->first;
+								selectors.push_back(selector0);
+								selectors.push_back(selector1);
+								newrec["Selectors"] = selectors;
 								newrec["Value"] = member.dump();
 								newrec["OwnerPrivate"] = _lfOwnerPrivate;
 								newrec["MaskingKey"] = controllerAddress;
-								auto resp = htcli.Post("/make",newrec.dump(),"application/json");
-								if (resp->status == 200) {
-									ms->second.dirty = false;
-								} else {
-									fprintf(stderr,"ERROR: LFDB: %d from node (create/update member): %s" ZT_EOL_S,resp->status,resp->body.c_str());
-								}
-							}
-						}
-					}
-				}
-			}
-
-			query.clear();
-			query
-				<< '{'
-					<< "\"Ranges\":[{"
-						<< "\"Name\":\"" << networksSelectorName << "\","
-						<< "\"Range\":[0,18446744073709551615]"
-					<< "}],"
-					<< "\"TimeRange\":[" << timeRangeStart << ",18446744073709551615],"
-					<< "\"MaskingKey\":\"" << controllerAddress << "\","
-					<< "\"Owners\":[\"" << _lfOwnerPublic << "\"]"
-				<< '}';
-			auto resp = htcli.Post("/query",query.str(),"application/json");
-			if (resp->status == 200) {
-				nlohmann::json results(OSUtils::jsonParse(resp->body));
-				if ((results.is_array())&&(results.size() > 0)) {
-					for(std::size_t ri=0;ri<results.size();++ri) {
-						nlohmann::json &rset = results[ri];
-						if ((rset.is_array())&&(rset.size() > 0)) {
-							nlohmann::json &result = rset[0];
-							if (result.is_object()) {
-								nlohmann::json &record = result["Record"];
-								if (record.is_object()) {
-									const std::string recordValue = result["Value"];
-									nlohmann::json network(OSUtils::jsonParse(recordValue));
-									if (network.is_object()) {
-										const std::string idstr = network["id"];
-										const uint64_t id = Utils::hexStrToU64(idstr.c_str());
-										if ((id >> 24) == controllerAddressInt) {
-											std::lock_guard<std::mutex> sl(_state_l);
-											_NetworkState &ns = _state[id];
-											if (!ns.dirty) {
-												nlohmann::json nullJson;
-												_networkChanged(nullJson,network,false);
-											}
-										}
+								newrec["PulseIfUnchanged"] = true;
+								auto resp = htcli.Post("/makerecord",newrec.dump(),"application/json");
+								if (resp) {
+									if (resp->status == 200) {
+										ms->second.dirty = false;
+										printf("SET member %.16llx %.10llx %s\n",ns->first,ms->first,resp->body.c_str());
+									} else {
+										fprintf(stderr,"ERROR: LFDB: %d from node (create/update member): %s" ZT_EOL_S,resp->status,resp->body.c_str());
 									}
+								} else {
+									fprintf(stderr,"ERROR: LFDB: node is offline" ZT_EOL_S);
 								}
 							}
 						}
 					}
 				}
-			} else {
-				fprintf(stderr,"ERROR: LFDB: %d from node: %s" ZT_EOL_S,resp->status,resp->body.c_str());
 			}
 
-			query.clear();
-			query
-				<< '{'
-					<< "\"Ranges\":[{"
-						<< "\"Name\":\"" << networksSelectorName << "\","
-						<< "\"Range\":[0,18446744073709551615]"
-					<< "},{"
-						<< "\"Name\":\"" << membersSelectorName << "\","
-						<< "\"Range\":[0,18446744073709551615]"
-					<< "}],"
-					<< "\"TimeRange\":[" << timeRangeStart << ",18446744073709551615],"
-					<< "\"MaskingKey\":\"" << controllerAddress << "\","
-					<< "\"Owners\":[\"" << _lfOwnerPublic << "\"]"
-				<< '}';
-			resp = htcli.Post("/query",query.str(),"application/json");
-			if (resp->status == 200) {
-				nlohmann::json results(OSUtils::jsonParse(resp->body));
-				if ((results.is_array())&&(results.size() > 0)) {
-					for(std::size_t ri=0;ri<results.size();++ri) {
-						nlohmann::json &rset = results[ri];
-						if ((rset.is_array())&&(rset.size() > 0)) {
-							nlohmann::json &result = rset[0];
-							if (result.is_object()) {
-								nlohmann::json &record = result["Record"];
-								if (record.is_object()) {
-									const std::string recordValue = result["Value"];
-									nlohmann::json member(OSUtils::jsonParse(recordValue));
-									if (member.is_object()) {
-										const std::string nwidstr = member["nwid"];
-										const std::string idstr = member["id"];
-										const uint64_t nwid = Utils::hexStrToU64(nwidstr.c_str());
-										const uint64_t id = Utils::hexStrToU64(idstr.c_str());
-										if ((id)&&((nwid >> 24) == controllerAddressInt)) {
-											std::lock_guard<std::mutex> sl(_state_l);
-											auto ns = _state.find(nwid);
-											if (ns != _state.end()) {
-												_MemberState &ms = ns->second.members[id];
-												if (!ms.dirty) {
-													nlohmann::json nullJson;
-													_memberChanged(nullJson,member,false);
+			{
+				std::ostringstream query;
+				query
+					<< '{'
+						<< "\"Ranges\":[{"
+							<< "\"Name\":\"" << networksSelectorName << "\","
+							<< "\"Range\":[0,18446744073709551615]"
+						<< "}],"
+						<< "\"TimeRange\":[" << timeRangeStart << ",18446744073709551615],"
+						<< "\"MaskingKey\":\"" << controllerAddress << "\","
+						<< "\"Owners\":[\"" << _lfOwnerPublic << "\"]"
+					<< '}';
+				auto resp = htcli.Post("/query",query.str(),"application/json");
+				if (resp) {
+					if (resp->status == 200) {
+						nlohmann::json results(OSUtils::jsonParse(resp->body));
+						if ((results.is_array())&&(results.size() > 0)) {
+							for(std::size_t ri=0;ri<results.size();++ri) {
+								nlohmann::json &rset = results[ri];
+								if ((rset.is_array())&&(rset.size() > 0)) {
+									nlohmann::json &result = rset[0];
+									if (result.is_object()) {
+										nlohmann::json &record = result["Record"];
+										if (record.is_object()) {
+											const std::string recordValue = result["Value"];
+											printf("GET network %s\n",recordValue.c_str());
+											nlohmann::json network(OSUtils::jsonParse(recordValue));
+											if (network.is_object()) {
+												const std::string idstr = network["id"];
+												const uint64_t id = Utils::hexStrToU64(idstr.c_str());
+												if ((id >> 24) == controllerAddressInt) {
+													std::lock_guard<std::mutex> sl(_state_l);
+													_NetworkState &ns = _state[id];
+													if (!ns.dirty) {
+														nlohmann::json nullJson;
+														_networkChanged(nullJson,network,false);
+													}
 												}
 											}
 										}
@@ -196,10 +195,72 @@ LFDB::LFDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *
 								}
 							}
 						}
+					} else {
+						fprintf(stderr,"ERROR: LFDB: %d from node: %s" ZT_EOL_S,resp->status,resp->body.c_str());
 					}
+				} else {
+					fprintf(stderr,"ERROR: LFDB: node is offline" ZT_EOL_S);
 				}
-			} else {
-				fprintf(stderr,"ERROR: LFDB: %d from node: %s" ZT_EOL_S,resp->status,resp->body.c_str());
+			}
+
+			{
+				std::ostringstream query;
+				query
+					<< '{'
+						<< "\"Ranges\":[{"
+							<< "\"Name\":\"" << networksSelectorName << "\","
+							<< "\"Range\":[0,18446744073709551615]"
+						<< "},{"
+							<< "\"Name\":\"" << membersSelectorName << "\","
+							<< "\"Range\":[0,18446744073709551615]"
+						<< "}],"
+						<< "\"TimeRange\":[" << timeRangeStart << ",18446744073709551615],"
+						<< "\"MaskingKey\":\"" << controllerAddress << "\","
+						<< "\"Owners\":[\"" << _lfOwnerPublic << "\"]"
+					<< '}';
+				auto resp = htcli.Post("/query",query.str(),"application/json");
+				if (resp) {
+					if (resp->status == 200) {
+						nlohmann::json results(OSUtils::jsonParse(resp->body));
+						if ((results.is_array())&&(results.size() > 0)) {
+							for(std::size_t ri=0;ri<results.size();++ri) {
+								nlohmann::json &rset = results[ri];
+								if ((rset.is_array())&&(rset.size() > 0)) {
+									nlohmann::json &result = rset[0];
+									if (result.is_object()) {
+										nlohmann::json &record = result["Record"];
+										if (record.is_object()) {
+											const std::string recordValue = result["Value"];
+											printf("GET member %s\n",recordValue.c_str());
+											nlohmann::json member(OSUtils::jsonParse(recordValue));
+											if (member.is_object()) {
+												const std::string nwidstr = member["nwid"];
+												const std::string idstr = member["id"];
+												const uint64_t nwid = Utils::hexStrToU64(nwidstr.c_str());
+												const uint64_t id = Utils::hexStrToU64(idstr.c_str());
+												if ((id)&&((nwid >> 24) == controllerAddressInt)) {
+													std::lock_guard<std::mutex> sl(_state_l);
+													auto ns = _state.find(nwid);
+													if (ns != _state.end()) {
+														_MemberState &ms = ns->second.members[id];
+														if (!ms.dirty) {
+															nlohmann::json nullJson;
+															_memberChanged(nullJson,member,false);
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					} else {
+						fprintf(stderr,"ERROR: LFDB: %d from node: %s" ZT_EOL_S,resp->status,resp->body.c_str());
+					}
+				} else {
+					fprintf(stderr,"ERROR: LFDB: node is offline" ZT_EOL_S);
+				}
 			}
 
 			timeRangeStart = time(nullptr) - 120; // start next query 2m before now to avoid losing updates
