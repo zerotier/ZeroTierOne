@@ -29,8 +29,8 @@
 namespace ZeroTier
 {
 
-FileDB::FileDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path) :
-	DB(nc,myId,path),
+FileDB::FileDB(const Identity &myId,const char *path) :
+	DB(myId,path),
 	_networksPath(_path + ZT_PATH_SEPARATOR_S + "network"),
 	_tracePath(_path + ZT_PATH_SEPARATOR_S + "trace"),
 	_onlineChanged(false),

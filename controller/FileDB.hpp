@@ -35,7 +35,7 @@ namespace ZeroTier
 class FileDB : public DB
 {
 public:
-	FileDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path);
+	FileDB(const Identity &myId,const char *path);
 	virtual ~FileDB();
 
 	virtual bool waitForReady();

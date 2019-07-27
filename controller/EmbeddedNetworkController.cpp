@@ -496,7 +496,7 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 	if ((_path.length() > 9)&&(_path.substr(0,9) == "postgres:")) {
-		_db.reset(new PostgreSQL(this,_signingId,_path.substr(9).c_str(), _listenPort, _mqc));
+		_db.reset(new PostgreSQL(_signingId,_path.substr(9).c_str(), _listenPort, _mqc));
 	} else {
 #endif
 
@@ -521,7 +521,7 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 							std::size_t pubHdrEnd = lfOwnerPublic.find_first_of("\n\r\t ");
 							if (pubHdrEnd != std::string::npos) {
 								lfOwnerPublic = lfOwnerPublic.substr(0,pubHdrEnd);
-								_db.reset(new LFDB(this,_signingId,_path.c_str(),lfOwner.c_str(),lfOwnerPublic.c_str(),lfHost.c_str(),lfPort,storeOnlineState));
+								_db.reset(new LFDB(_signingId,_path.c_str(),lfOwner.c_str(),lfOwnerPublic.c_str(),lfHost.c_str(),lfPort,storeOnlineState));
 							}
 						}
 					}
@@ -530,7 +530,9 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 		}
 	}
 	if (!_db)
-		_db.reset(new FileDB(this,_signingId,_path.c_str()));
+		_db.reset(new FileDB(_signingId,_path.c_str()));
+
+	_db->addListener(this);
 
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 	}
@@ -1188,7 +1190,7 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 	}
 }
 
-void EmbeddedNetworkController::onNetworkUpdate(const uint64_t networkId)
+void EmbeddedNetworkController::onNetworkUpdate(const uint64_t networkId,const nlohmann::json &network)
 {
 	// Send an update to all members of the network that are online
 	const int64_t now = OSUtils::now();
@@ -1199,7 +1201,7 @@ void EmbeddedNetworkController::onNetworkUpdate(const uint64_t networkId)
 	}
 }
 
-void EmbeddedNetworkController::onNetworkMemberUpdate(const uint64_t networkId,const uint64_t memberId)
+void EmbeddedNetworkController::onNetworkMemberUpdate(const uint64_t networkId,const uint64_t memberId,const nlohmann::json &member)
 {
 	// Push update to member if online
 	try {

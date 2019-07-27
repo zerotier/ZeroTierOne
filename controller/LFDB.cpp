@@ -37,9 +37,8 @@
 namespace ZeroTier
 {
 
-LFDB::LFDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path,const char *lfOwnerPrivate,const char *lfOwnerPublic,const char *lfNodeHost,int lfNodePort,bool storeOnlineState) :
-	DB(nc,myId,path),
-	_nc(nc),
+LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,const char *lfOwnerPublic,const char *lfNodeHost,int lfNodePort,bool storeOnlineState) :
+	DB(myId,path),
 	_myId(myId),
 	_lfOwnerPrivate((lfOwnerPrivate) ? lfOwnerPrivate : ""),
 	_lfOwnerPublic((lfOwnerPublic) ? lfOwnerPublic : ""),
@@ -54,7 +53,7 @@ LFDB::LFDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *
 		const uint64_t controllerAddressInt = _myId.address().toInt();
 		_myId.address().toString(controllerAddress);
 		std::string networksSelectorName("com.zerotier.controller.lfdb:"); networksSelectorName.append(controllerAddress); networksSelectorName.append("/network");
-		std::string membersSelectorName("com.zerotier.controller.lfdb:"); membersSelectorName.append(controllerAddress); membersSelectorName.append("/network/member");
+		std::string membersSelectorName("com.zerotier.controller.lfdb:"); membersSelectorName.append(controllerAddress); membersSelectorName.append("/member");
 
 		httplib::Client htcli(_lfNodeHost.c_str(),_lfNodePort,600);
 		int64_t timeRangeStart = 0;
@@ -90,10 +89,10 @@ LFDB::LFDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *
 
 					for(auto ms=ns->second.members.begin();ms!=ns->second.members.end();++ms) {
 						if ((_storeOnlineState)&&(ms->second.lastOnlineDirty)&&(ms->second.lastOnlineAddress)) {
+							nlohmann::json newrec,selector0,selector1,selectors,ip;
 							char tmp[1024],tmp2[128];
 							OSUtils::ztsnprintf(tmp,sizeof(tmp),"com.zerotier.controller.lfdb:%s/network/%.16llx/online",controllerAddress,(unsigned long long)ns->first);
 							ms->second.lastOnlineAddress.toIpString(tmp2);
-							nlohmann::json newrec,selector0,selector1,selectors;
 							selector0["Name"] = tmp;
 							selector0["Ordinal"] = ms->first;
 							selector1["Name"] = tmp2;
@@ -101,7 +100,21 @@ LFDB::LFDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *
 							selectors.push_back(selector0);
 							selectors.push_back(selector1);
 							newrec["Selectors"] = selectors;
-							newrec["Value"] = tmp2;
+							const uint8_t *const rawip = (const uint8_t *)ms->second.lastOnlineAddress.rawIpData();
+							switch(ms->second.lastOnlineAddress) {
+								case AF_INET:
+									for(int j=0;j<4;++j)
+										ip.push_back((unsigned int)rawip[j]);
+									break;
+								case AF_INET6:
+									for(int j=0;j<16;++j)
+										ip.push_back((unsigned int)rawip[j]);
+									break;
+								default:
+									ip = tmp2; // should never happen since only IP transport is currently supported
+									break;
+							}
+							newrec["Value"] = ip;
 							newrec["OwnerPrivate"] = _lfOwnerPrivate;
 							newrec["MaskingKey"] = controllerAddress;
 							newrec["Timestamp"] = ms->second.lastOnlineTime;
@@ -112,7 +125,7 @@ LFDB::LFDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *
 									ms->second.lastOnlineDirty = false;
 									printf("SET member online %.16llx %.10llx %s\n",ns->first,ms->first,resp->body.c_str());
 								} else {
-									fprintf(stderr,"ERROR: LFDB: %d from node (create/update member): %s" ZT_EOL_S,resp->status,resp->body.c_str());
+									fprintf(stderr,"ERROR: LFDB: %d from node (create/update member online status): %s" ZT_EOL_S,resp->status,resp->body.c_str());
 								}
 							} else {
 								fprintf(stderr,"ERROR: LFDB: node is offline" ZT_EOL_S);

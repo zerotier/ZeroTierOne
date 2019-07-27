@@ -58,7 +58,7 @@ class Node;
 
 struct MQConfig;
 
-class EmbeddedNetworkController : public NetworkController
+class EmbeddedNetworkController : public NetworkController,public DB::ChangeListener
 {
 public:
 	/**
@@ -101,10 +101,9 @@ public:
 
 	void handleRemoteTrace(const ZT_RemoteTrace &rt);
 
-	// Called on update via POST or by JSONDB on external update of network or network member records
-	void onNetworkUpdate(const uint64_t networkId);
-	void onNetworkMemberUpdate(const uint64_t networkId,const uint64_t memberId);
-	void onNetworkMemberDeauthorize(const uint64_t networkId,const uint64_t memberId);
+	virtual void onNetworkUpdate(const uint64_t networkId,const nlohmann::json &network);
+	virtual void onNetworkMemberUpdate(const uint64_t networkId,const uint64_t memberId,const nlohmann::json &member);
+	virtual void onNetworkMemberDeauthorize(const uint64_t networkId,const uint64_t memberId);
 
 private:
 	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);

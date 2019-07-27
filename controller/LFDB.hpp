@@ -43,7 +43,6 @@ class LFDB : public DB
 {
 public:
 	/**
-	 * @param nc Network controller
 	 * @param myId Identity of controller node (with secret)
 	 * @param path Base path for ZeroTier node itself
 	 * @param lfOwnerPrivate LF owner private in PEM format
@@ -52,7 +51,7 @@ public:
 	 * @param lfNodePort LF node http (not https) port
 	 * @param storeOnlineState If true, store online/offline state and IP info in LF (a lot of data, only for private networks!)
 	 */
-	LFDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path,const char *lfOwnerPrivate,const char *lfOwnerPublic,const char *lfNodeHost,int lfNodePort,bool storeOnlineState);
+	LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,const char *lfOwnerPublic,const char *lfNodeHost,int lfNodePort,bool storeOnlineState);
 	virtual ~LFDB();
 
 	virtual bool waitForReady();
@@ -63,7 +62,6 @@ public:
 	virtual void nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress);
 
 protected:
-	EmbeddedNetworkController *const _nc;
 	const Identity _myId;
 
 	std::string _lfOwnerPrivate,_lfOwnerPublic;
