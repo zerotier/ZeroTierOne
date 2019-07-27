@@ -55,6 +55,13 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 		std::string networksSelectorName("com.zerotier.controller.lfdb:"); networksSelectorName.append(controllerAddress); networksSelectorName.append("/network");
 		std::string membersSelectorName("com.zerotier.controller.lfdb:"); membersSelectorName.append(controllerAddress); membersSelectorName.append("/member");
 
+		// LF record masking key is the first 32 bytes of SHA512(controller private key) in hex,
+		// hiding record values from anything but the controller or someone who has its key.
+		uint8_t sha512pk[64];
+		_myId.sha512PrivateKey(sha512pk);
+		char maskingKey [128];
+		Utils::hex(sha512pk,32,maskingKey);
+
 		httplib::Client htcli(_lfNodeHost.c_str(),_lfNodePort,600);
 		int64_t timeRangeStart = 0;
 		while (_running) {
@@ -70,7 +77,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							newrec["Selectors"].push_back(selector0);
 							newrec["Value"] = network.dump();
 							newrec["OwnerPrivate"] = _lfOwnerPrivate;
-							newrec["MaskingKey"] = controllerAddress;
+							newrec["MaskingKey"] = maskingKey;
 							newrec["PulseIfUnchanged"] = true;
 							printf("%s\n",newrec.dump().c_str());
 							auto resp = htcli.Post("/makerecord",newrec.dump(),"application/json");
@@ -116,7 +123,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							}
 							newrec["Value"] = ip;
 							newrec["OwnerPrivate"] = _lfOwnerPrivate;
-							newrec["MaskingKey"] = controllerAddress;
+							newrec["MaskingKey"] = maskingKey;
 							newrec["Timestamp"] = ms->second.lastOnlineTime;
 							newrec["PulseIfUnchanged"] = true;
 							auto resp = htcli.Post("/makerecord",newrec.dump(),"application/json");
@@ -145,7 +152,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 								newrec["Selectors"] = selectors;
 								newrec["Value"] = member.dump();
 								newrec["OwnerPrivate"] = _lfOwnerPrivate;
-								newrec["MaskingKey"] = controllerAddress;
+								newrec["MaskingKey"] = maskingKey;
 								newrec["PulseIfUnchanged"] = true;
 								auto resp = htcli.Post("/makerecord",newrec.dump(),"application/json");
 								if (resp) {
@@ -173,7 +180,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							<< "\"Range\":[0,18446744073709551615]"
 						<< "}],"
 						<< "\"TimeRange\":[" << timeRangeStart << ",18446744073709551615],"
-						<< "\"MaskingKey\":\"" << controllerAddress << "\","
+						<< "\"MaskingKey\":\"" << maskingKey << "\","
 						<< "\"Owners\":[\"" << _lfOwnerPublic << "\"]"
 					<< '}';
 				auto resp = htcli.Post("/query",query.str(),"application/json");
@@ -228,7 +235,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							<< "\"Range\":[0,18446744073709551615]"
 						<< "}],"
 						<< "\"TimeRange\":[" << timeRangeStart << ",18446744073709551615],"
-						<< "\"MaskingKey\":\"" << controllerAddress << "\","
+						<< "\"MaskingKey\":\"" << maskingKey << "\","
 						<< "\"Owners\":[\"" << _lfOwnerPublic << "\"]"
 					<< '}';
 				auto resp = htcli.Post("/query",query.str(),"application/json");
