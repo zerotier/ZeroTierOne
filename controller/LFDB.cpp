@@ -79,7 +79,6 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							newrec["OwnerPrivate"] = _lfOwnerPrivate;
 							newrec["MaskingKey"] = maskingKey;
 							newrec["PulseIfUnchanged"] = true;
-							printf("%s\n",newrec.dump().c_str());
 							auto resp = htcli.Post("/makerecord",newrec.dump(),"application/json");
 							if (resp) {
 								if (resp->status == 200) {
