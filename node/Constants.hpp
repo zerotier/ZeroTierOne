@@ -72,14 +72,6 @@
 #include <machine/endian.h>
 #endif
 
-// Defined this macro to disable "type punning" on a number of targets that
-// have issues with unaligned memory access.
-#if defined(__arm__) || defined(__ARMEL__) || (defined(__APPLE__) && ( (defined(TARGET_OS_IPHONE) && (TARGET_OS_IPHONE != 0)) || (defined(TARGET_OS_WATCH) && (TARGET_OS_WATCH != 0)) || (defined(TARGET_IPHONE_SIMULATOR) && (TARGET_IPHONE_SIMULATOR != 0)) ) )
-#ifndef ZT_NO_TYPE_PUNNING
-#define ZT_NO_TYPE_PUNNING
-#endif
-#endif
-
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
 #ifndef __UNIX_LIKE__
 #define __UNIX_LIKE__
@@ -107,11 +99,21 @@
 #pragma warning(disable : 4101)
 #undef __UNIX_LIKE__
 #undef __BSD__
-#define ZT_PATH_SEPARATOR '\\'
-#define ZT_PATH_SEPARATOR_S "\\"
-#define ZT_EOL_S "\r\n"
 #include <WinSock2.h>
 #include <Windows.h>
+#endif
+
+#ifdef __NetBSD__
+#ifndef RTF_MULTICAST
+#define RTF_MULTICAST   0x20000000
+#endif
+#endif
+
+// Define ZT_NO_TYPE_PUNNING to disable reckless casts on anything other than x86/x64.
+#if (!(defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_AMD64) || defined(_M_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || defined(_X86_) || defined(__I86__) || defined(__INTEL__) || defined(__386)))
+#ifndef ZT_NO_TYPE_PUNNING
+#define ZT_NO_TYPE_PUNNING
+#endif
 #endif
 
 // Assume little endian if not defined
@@ -124,7 +126,11 @@
 #define __BYTE_ORDER 1234
 #endif
 
-#ifdef __UNIX_LIKE__
+#ifdef __WINDOWS__
+#define ZT_PATH_SEPARATOR '\\'
+#define ZT_PATH_SEPARATOR_S "\\"
+#define ZT_EOL_S "\r\n"
+#else
 #define ZT_PATH_SEPARATOR '/'
 #define ZT_PATH_SEPARATOR_S "/"
 #define ZT_EOL_S "\n"
@@ -132,10 +138,6 @@
 
 #ifndef __BYTE_ORDER
 #include <endian.h>
-#endif
-
-#ifdef __NetBSD__
-#define RTF_MULTICAST   0x20000000
 #endif
 
 #if (defined(__GNUC__) && (__GNUC__ >= 3)) || (defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 800)) || defined(__clang__)
@@ -627,16 +629,7 @@
  */
 #define ZT_THREAD_MIN_STACK_SIZE 1048576
 
-/* Ethernet frame types that might be relevant to us */
-#define ZT_ETHERTYPE_IPV4 0x0800
-#define ZT_ETHERTYPE_ARP 0x0806
-#define ZT_ETHERTYPE_RARP 0x8035
-#define ZT_ETHERTYPE_ATALK 0x809b
-#define ZT_ETHERTYPE_AARP 0x80f3
-#define ZT_ETHERTYPE_IPX_A 0x8137
-#define ZT_ETHERTYPE_IPX_B 0x8138
-#define ZT_ETHERTYPE_IPV6 0x86dd
-
+// Exceptions thrown in core ZT code
 #define ZT_EXCEPTION_OUT_OF_BOUNDS 100
 #define ZT_EXCEPTION_OUT_OF_MEMORY 101
 #define ZT_EXCEPTION_PRIVATE_KEY_REQUIRED 102
