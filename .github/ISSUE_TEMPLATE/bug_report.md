@@ -6,7 +6,7 @@ about: Create a report to help us improve
 **Alternative, faster ways to get help**
 If you have just started using ZeroTier, here are some places to get help:
 - my.zerotier.com has a _Community_ tab. It's a live chat with other users and the developers. 
-- [ZeroTier Knowledge Base](https://support.zerotier.com/knowledgebase.php?s=MQ__)
+- [ZeroTier Knowledge Base](https://zerotier.atlassian.net/wiki/spaces/SD/overview)
 - www.zerotier.com has a Contact Us button
 - email contact@zerotier.com
 

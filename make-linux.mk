@@ -283,19 +283,21 @@ ifeq ($(ZT_USE_ARM32_NEON_ASM_CRYPTO),1)
 	override CORE_OBJS+=ext/arm32-neon-salsa2012-asm/salsa2012.o
 endif
 
+.PHONY: all
 all:	one
 
-one:	$(CORE_OBJS) $(ONE_OBJS) one.o
+.PHONY: one
+one: zerotier-one zerotier-idtool zerotier-cli
+
+zerotier-one:	$(CORE_OBJS) $(ONE_OBJS) one.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LDLIBS)
 	$(STRIP) zerotier-one
+
+zerotier-idtool: zerotier-one
 	ln -sf zerotier-one zerotier-idtool
+
+zerotier-cli: zerotier-one
 	ln -sf zerotier-one zerotier-cli
-
-zerotier-one: one
-
-zerotier-idtool: one
-
-zerotier-cli: one
 
 libzerotiercore.a:	FORCE
 	make CFLAGS="-O3 -fstack-protector -fPIC" CXXFLAGS="-O3 -std=c++11 -fstack-protector -fPIC" $(CORE_OBJS)
