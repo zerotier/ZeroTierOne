@@ -65,3 +65,9 @@ ZeroTier includes the following third party code, either in ext/ or incorporated
    * Files: ext/libnatpmp/* ext/miniupnpc/*
    * Home page: http://miniupnp.free.fr/
    * License grant: BSD attribution no-endorsement
+
+ * cpp-httplib by yhirose
+
+   * Files: ext/cpp-httplib/*
+   * Home page: https://github.com/yhirose/cpp-httplib
+   * License grant: MIT
