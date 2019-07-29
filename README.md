@@ -1,62 +1,57 @@
-ZeroTier - A Planetary Ethernet Switch
+ZeroTier - Global Area Networking
 ======
 
-ZeroTier is a smart programmable Ethernet switch for planet Earth.
+ZeroTier is a smart programmable Ethernet switch for planet Earth. It allows networked devices and applications to be managed as if the entire world is one data center or cloud region.
 
 It replaces the physical LAN/WAN boundary with a virtual one, allowing devices of any type at any location to be managed as if they all reside in the same cloud region or data center. All traffic is encrypted end-to-end and takes the most direct path available for minimum latency and maximum performance. The goals and design of ZeroTier are inspired by among other things the original [Google BeyondCorp](https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/43231.pdf) paper and the [Jericho Forum](https://en.wikipedia.org/wiki/Jericho_Forum).
 
-Visit [ZeroTier's site](https://www.zerotier.com/?pk_campaign=github_ZeroTierOne) for more information and [pre-built binary packages](https://www.zerotier.com/download.shtml?pk_campaign=github_ZeroTierOne). Apps for Android and iOS are available for free in the Google Play and Apple app stores.
+Visit [ZeroTier's site](https://www.zerotier.com/) for more information and [pre-built binary packages](https://www.zerotier.com/download/). Apps for Android and iOS are available for free in the Google Play and Apple app stores.
 
 ### Getting Started
 
 Everything in the ZeroTier world is controlled by two types of identifier: 40-bit/10-digit *ZeroTier addresses* and 64-bit/16-digit *network IDs*. A ZeroTier address identifies a node or "device" (laptop, phone, server, VM, app, etc.) while a network ID identifies a virtual Ethernet network that can be joined by devices.
 
-Another way of thinking about it is that ZeroTier addresses are port numbers on a giant planetary-sized smart switch while network IDs are VLANs to which these ports can be assigned. For more details read about VL1 and VL2 in [the ZeroTier manual](https://www.zerotier.com/manual.shtml).
+Another way of thinking about it is that ZeroTier addresses are port numbers on a giant planetary-sized smart switch while network IDs are VLANs to which these ports can be assigned. For more details read about VL1 and VL2 in [the ZeroTier manual](https://www.zerotier.com/manual/).
 
 *Network controllers* are ZeroTier nodes that act as access control certificate authorities and configuration managers for virtual networks. The first 40 bits (or 10 digits) of a network ID is the ZeroTier address of its controller. You can create networks with our [hosted controllers](https://my.zerotier.com/) and web UI/API or [host your own](controller/) if you don't mind posting some JSON configuration info or writing a script to do so.
 
 ### Project Layout
+
+The base path contains the ZeroTier One service main entry point (`one.cpp`), self test code, makefiles, etc.
 
  - `artwork/`: icons, logos, etc.
  - `attic/`: old stuff and experimental code that we want to keep around for reference.
  - `controller/`: the reference network controller implementation, which is built and included by default on desktop and server build targets.
  - `debian/`: files for building Debian packages on Linux.
  - `doc/`: manual pages and other documentation.
+ - `docker/`: Dockerfile to build as a container for containerized Linux systems and Kubernetes clusters.
  - `ext/`: third party libraries, binaries that we ship for convenience on some platforms (Mac and Windows), and installation support files.
  - `include/`: include files for the ZeroTier core.
  - `java/`: a JNI wrapper used with our Android mobile app. (The whole Android app is not open source but may be made so in the future.)
  - `macui/`: a Macintosh menu-bar app for controlling ZeroTier One, written in Objective C.
  - `node/`: the ZeroTier virtual Ethernet switch core, which is designed to be entirely separate from the rest of the code and able to be built as a stand-alone OS-independent library. Note to developers: do not use C++11 features in here, since we want this to build on old embedded platforms that lack C++11 support. C++11 can be used elsewhere.
  - `osdep/`: code to support and integrate with OSes, including platform-specific stuff only built for certain targets.
+ - `rule-compiler/`: JavaScript rules language compiler for defining network-level rules.
  - `service/`: the ZeroTier One service, which wraps the ZeroTier core and provides VPN-like connectivity to virtual networks for desktops, laptops, servers, VMs, and containers.
- - `tcp-proxy/`: TCP proxy code run by ZeroTier, Inc. to provide TCP fallback (this will die soon!).
  - `windows/`: Visual Studio solution files, Windows service code for ZeroTier One, and the Windows task bar app UI.
-
-The base path contains the ZeroTier One service main entry point (`one.cpp`), self test code, makefiles, etc.
 
 ### Build and Platform Notes
 
 To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU make) is required and can be installed from packages or ports. For Windows there is a Visual Studio solution in `windows/'.
 
  - **Mac**
-   - Xcode command line tools for OSX 10.7 or newer are required.
-   - Tap device driver kext source is in `ext/tap-mac` and a signed pre-built binary can be found in `ext/bin/tap-mac`. You should not need to build it yourself. It's a fork of [tuntaposx](http://tuntaposx.sourceforge.net) with device names changed to `zt#`, support for a larger MTU, and tun functionality removed.
+   - Xcode command line tools for OSX 10.8 or newer are required.
  - **Linux**
-   - The minimum compiler versions required are GCC/G++ 4.9.3 or CLANG/CLANG++ 3.4.2.
+   - The minimum compiler versions required are GCC/G++ 4.9.3 or CLANG/CLANG++ 3.4.2. (Install `clang` on CentOS 7 as G++ is too old.)
    - Linux makefiles automatically detect and prefer clang/clang++ if present as it produces smaller and slightly faster binaries in most cases. You can override by supplying CC and CXX variables on the make command line.
-   - CentOS 7 ships with a version of GCC/G++ that is too old, but a new enough version of CLANG can be found in the *epel* repositories. Type `yum install epel-release` and then `yum install clang` to build there.
  - **Windows**
    - Windows 7 or newer is supported. This *may* work on Vista but isn't officially supported there. It will not work on Windows XP.
-   - We build with Visual Studio 2015. Older versions may not work. Clang or MinGW will also probably work but may require some makefile hacking.
-   - Pre-built signed Windows drivers are included in `ext/bin/tap-windows-ndis6`. The MSI files found there will install them on 32-bit and 64-bit systems. We don't recommend trying to build Windows drivers from scratch unless you know what you're doing. One does not simply "build" a Windows driver.
+   - We build with Visual Studio 2017. Older versions may not work. Clang or MinGW will also probably work but may require some makefile hacking.
  - **FreeBSD**
-   - Tested most recently on FreeBSD-11. Older versions may work but we're not sure.
-   - GCC/G++ 4.9 and gmake are required. These can be installed from packages or ports. Type `gmake` to build.
+   - GNU make is required. Type `gmake` to build.
  - **OpenBSD**
-   - There is a limit of four network memberships on OpenBSD as there are only four tap devices (`/dev/tap0` through `/dev/tap3`). We're not sure if this can be increased.
-   - OpenBSD lacks `getifmaddrs` (or any equivalent method) to get interface multicast memberships. As a result multicast will only work on OpenBSD for ARP and NDP (IP/MAC lookup) and not for other purposes.
-   - Only tested on OpenBSD 6.0. Older versions may not work.
-   - GCC/G++ 4.9 and gmake are required and can be installed using `pkg_add` or from ports. They get installed in `/usr/local/bin` as `egcc` and `eg++` and our makefile is pre-configured to use them on OpenBSD.
+   - There is a limit of four network memberships on OpenBSD as there are only four tap devices (`/dev/tap0` through `/dev/tap3`).
+   - GNU make is required. Type `gmake` to build.
 
 Typing `make selftest` will build a *zerotier-selftest* binary which unit tests various internals and reports on a few aspects of the build environment. It's a good idea to try this on novel platforms or architectures.
 

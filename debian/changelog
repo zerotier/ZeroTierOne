@@ -1,8 +1,8 @@
-zerotier-one (1.2.99) unstable; urgency=medium
+zerotier-one (1.4.0) unstable; urgency=medium
 
-  * 1.4.0pre release
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
 
- -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Thu, 27 Jun 2019 01:00:00 -0700
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Thu, 29 Jul 2019 01:00:00 -0700
 
 zerotier-one (1.2.12) unstable; urgency=medium
 
