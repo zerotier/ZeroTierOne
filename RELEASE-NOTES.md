@@ -11,7 +11,7 @@ ZeroTier Release Notes
 
 ### Minor Changes and Bug Fixes
 
- * Experimental DB driver for [LF](https://github.com/zerotier/lf) to store network controller data (LFDB.cpp / LFDB.hpp).
+ * Experimental controller DB driver for [LF](https://github.com/zerotier/lf) to store network controller data (LFDB.cpp / LFDB.hpp).
  * Modified credential push and direct path push timings and algorithms to somewhat reduce "chattiness" of the protocol when idle. More radical background overhead reductions will have to wait for the 2.x line.
  * Removed our beta/half-baked integration of Central with the Windows UI. We're going to do a whole new UI of some kind in the future at least for Windows and Mac.
  * Fixed stack overflow issues on Linux versions using musl libc.
