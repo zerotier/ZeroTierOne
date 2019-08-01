@@ -71,54 +71,6 @@ FileDB::FileDB(const Identity &myId,const char *path) :
 			} catch ( ... ) {}
 		}
 	}
-
-	_onlineUpdateThread = std::thread([this]() {
-		unsigned int cnt = 0;
-		while (this->_running) {
-			std::this_thread::sleep_for(std::chrono::microseconds(100));
-			if ((++cnt % 20) == 0) { // 5 seconds
-				std::lock_guard<std::mutex> l(this->_online_l);
-				if (!this->_running) return;
-				if (this->_onlineChanged) {
-					char p[4096],atmp[64];
-					for(auto nw=this->_online.begin();nw!=this->_online.end();++nw) {
-						OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx-online.json",_networksPath.c_str(),(unsigned long long)nw->first);
-						FILE *f = fopen(p,"wb");
-						if (f) {
-							fprintf(f,"{");
-							const char *memberPrefix = "";
-							for(auto m=nw->second.begin();m!=nw->second.end();++m) {
-								fprintf(f,"%s\"%.10llx\":{" ZT_EOL_S,memberPrefix,(unsigned long long)m->first);
-								memberPrefix = ",";
-								InetAddress lastAddr;
-								const char *timestampPrefix = " ";
-								int cnt = 0;
-								for(auto ts=m->second.rbegin();ts!=m->second.rend();) {
-									if (cnt < 25) {
-										if (lastAddr != ts->second) {
-											lastAddr = ts->second;
-											fprintf(f,"%s\"%lld\":\"%s\"" ZT_EOL_S,timestampPrefix,(long long)ts->first,ts->second.toString(atmp));
-											timestampPrefix = ",";
-											++cnt;
-											++ts;
-										} else {
-											ts = std::map<int64_t,InetAddress>::reverse_iterator(m->second.erase(std::next(ts).base()));
-										}
-									} else {
-										ts = std::map<int64_t,InetAddress>::reverse_iterator(m->second.erase(std::next(ts).base()));
-									}
-								}
-								fprintf(f,"}");
-							}
-							fprintf(f,"}" ZT_EOL_S);
-							fclose(f);
-						}
-					}
-					this->_onlineChanged = false;
-				}
-			}
-		}
-	});
 }
 
 FileDB::~FileDB()
@@ -194,8 +146,6 @@ void FileDB::eraseNetwork(const uint64_t networkId)
 	get(networkId,network);
 	char p[16384];
 	OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json",_networksPath.c_str(),networkId);
-	OSUtils::rm(p);
-	OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx-online.json",_networksPath.c_str(),networkId);
 	OSUtils::rm(p);
 	OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx" ZT_PATH_SEPARATOR_S "member",_networksPath.c_str(),(unsigned long long)networkId);
 	OSUtils::rmDashRf(p);
