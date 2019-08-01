@@ -57,7 +57,6 @@ InetAddress::IpScope InetAddress::ipScope() const
 				case 0x1c: return IP_SCOPE_PSEUDOPRIVATE;                          // 28.0.0.0/8 (US DSI-North)
 				case 0x1d: return IP_SCOPE_PSEUDOPRIVATE;                          // 29.0.0.0/8 (US DISA)
 				case 0x1e: return IP_SCOPE_PSEUDOPRIVATE;                          // 30.0.0.0/8 (US DISA)
-				case 0x2c: return IP_SCOPE_PSEUDOPRIVATE;                          // 44.0.0.0/8 (Amateur Radio)
 				case 0x33: return IP_SCOPE_PSEUDOPRIVATE;                          // 51.0.0.0/8 (UK Department of Social Security)
 				case 0x37: return IP_SCOPE_PSEUDOPRIVATE;                          // 55.0.0.0/8 (US DoD)
 				case 0x38: return IP_SCOPE_PSEUDOPRIVATE;                          // 56.0.0.0/8 (US Postal Service)
@@ -185,15 +184,12 @@ bool InetAddress::fromString(const char *ipSlashPort)
 		inet_pton(AF_INET6, buf, &in6->sin6_addr.s6_addr);
 		in6->sin6_family = AF_INET6;
 		in6->sin6_port = Utils::hton((uint16_t)port);
-
-
 		return true;
 	} else if (strchr(buf,'.')) {
 		struct sockaddr_in *const in = reinterpret_cast<struct sockaddr_in *>(this);
 		inet_pton(AF_INET, buf, &in->sin_addr.s_addr);
 		in->sin_family = AF_INET;
 		in->sin_port = Utils::hton((uint16_t)port);
-
 		return true;
 	} else {
 		return false;

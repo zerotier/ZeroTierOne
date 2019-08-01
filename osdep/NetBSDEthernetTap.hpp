@@ -39,10 +39,6 @@
 #include "../node/MAC.hpp"
 #include "Thread.hpp"
 
-
-
-
-
 namespace ZeroTier {
 
 class NetBSDEthernetTap

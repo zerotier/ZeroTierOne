@@ -417,6 +417,8 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			return;
 		}
 
+		network->pushCredentialsIfNeeded(tPtr,toZT,RR->node->now());
+
 		if (fromBridged) {
 			Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
@@ -437,7 +439,6 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 				outp.compress();
 			aqm_enqueue(tPtr,network,outp,true,qosBucket);
 		}
-
 	} else {
 		// Destination is bridged behind a remote peer
 

@@ -39,6 +39,8 @@
 using json = nlohmann::json;
 namespace {
 
+static const int DB_MINIMUM_VERSION = 5;
+
 static const char *_timestr()
 {
 	time_t t = time(0);
@@ -75,8 +77,8 @@ std::string join(const std::vector<std::string> &elements, const char * const se
 
 using namespace ZeroTier;
 
-PostgreSQL::PostgreSQL(EmbeddedNetworkController *const nc, const Identity &myId, const char *path, int listenPort, MQConfig *mqc)
-    : DB(nc, myId, path)
+PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, MQConfig *mqc)
+    : DB(myId, path)
     , _ready(0)
 	, _connected(1)
     , _run(1)
@@ -85,6 +87,36 @@ PostgreSQL::PostgreSQL(EmbeddedNetworkController *const nc, const Identity &myId
 	, _mqc(mqc)
 {
 	_connString = std::string(path) + " application_name=controller_" +_myAddressStr;
+
+	// Database Schema Version Check
+	PGconn *conn = getPgConn();
+	if (PQstatus(conn) != CONNECTION_OK) {
+		fprintf(stderr, "Bad Database Connection: %s", PQerrorMessage(conn));
+		exit(1);
+	}
+
+	PGresult *res = PQexec(conn, "SELECT version FROM ztc_database");
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		fprintf(stderr, "Error determining database version");
+		exit(1);
+	}
+
+	if (PQntuples(res) != 1) {
+		fprintf(stderr, "Invalid number of db version tuples returned.");
+		exit(1);
+	}
+
+	int dbVersion = std::stoi(PQgetvalue(res, 0, 0));
+
+	if (dbVersion < DB_MINIMUM_VERSION) {
+		fprintf(stderr, "Central database schema version too low.  This controller version requires a minimum schema version of %d. Please upgrade your Central instance", DB_MINIMUM_VERSION);
+		exit(1);
+	}
+
+	PQclear(res);
+	res = NULL;
+	PQfinish(conn);
+	conn = NULL;
 
 	_readyLock.lock();
 	_heartbeatThread = std::thread(&PostgreSQL::heartbeat, this);

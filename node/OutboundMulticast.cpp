@@ -84,13 +84,12 @@ void OutboundMulticast::init(
 void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,void *tPtr,const Address &toAddr)
 {
 	const SharedPtr<Network> nw(RR->node->network(_nwid));
-	const Address toAddr2(toAddr);
 	uint8_t QoSBucket = 255; // Dummy value
-	if ((nw)&&(nw->filterOutgoingPacket(tPtr,true,RR->identity.address(),toAddr2,_macSrc,_macDest,_frameData,_frameLen,_etherType,0,QoSBucket))) {
+	if ((nw)&&(nw->filterOutgoingPacket(tPtr,true,RR->identity.address(),toAddr,_macSrc,_macDest,_frameData,_frameLen,_etherType,0,QoSBucket))) {
+		nw->pushCredentialsIfNeeded(tPtr,toAddr,RR->node->now());
 		_packet.newInitializationVector();
-		_packet.setDestination(toAddr2);
+		_packet.setDestination(toAddr);
 		RR->node->expectReplyTo(_packet.packetId());
-
 		_tmp = _packet;
 		RR->sw->send(tPtr,_tmp,true);
 	}

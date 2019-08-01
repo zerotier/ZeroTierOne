@@ -61,11 +61,11 @@ int main(int argc,char **argv)
 		current = previous;
 		OSUtils::writeFile("previous.c25519",previous);
 		OSUtils::writeFile("current.c25519",current);
-		fprintf(stderr,"INFO: created initial world keys: previous.c25519 and current.c25519 (both initially the same)"ZT_EOL_S);
+		fprintf(stderr,"INFO: created initial world keys: previous.c25519 and current.c25519 (both initially the same)" ZT_EOL_S);
 	}
 
 	if ((previous.length() != (ZT_C25519_PUBLIC_KEY_LEN + ZT_C25519_PRIVATE_KEY_LEN))||(current.length() != (ZT_C25519_PUBLIC_KEY_LEN + ZT_C25519_PRIVATE_KEY_LEN))) {
-		fprintf(stderr,"FATAL: previous.c25519 or current.c25519 empty or invalid"ZT_EOL_S);
+		fprintf(stderr,"FATAL: previous.c25519 or current.c25519 empty or invalid" ZT_EOL_S);
 		return 1;
 	}
 	C25519::Pair previousKP;
@@ -81,7 +81,12 @@ int main(int argc,char **argv)
 	std::vector<World::Root> roots;
 
 	const uint64_t id = ZT_WORLD_ID_EARTH;
-	const uint64_t ts = 1532555817048ULL; // July 25th, 2018
+	const uint64_t ts = 1562631342273ULL; // July 8th, 2019
+
+	roots.push_back(World::Root());
+	roots.back().identity = Identity("3a46f1bf30:0:76e66fab33e28549a62ee2064d1843273c2c300ba45c3f20bef02dbad225723bb59a9bb4b13535730961aeecf5a163ace477cceb0727025b99ac14a5166a09a3");
+	roots.back().stableEndpoints.push_back(InetAddress("185.180.13.82/9993"));
+	roots.back().stableEndpoints.push_back(InetAddress("2a02:6ea0:c815::/9993"));
 
 	// Alice
 	roots.push_back(World::Root());
@@ -118,7 +123,7 @@ int main(int argc,char **argv)
 	// END WORLD DEFINITION
 	// =========================================================================
 
-	fprintf(stderr,"INFO: generating and signing id==%llu ts==%llu"ZT_EOL_S,(unsigned long long)id,(unsigned long long)ts);
+	fprintf(stderr,"INFO: generating and signing id==%llu ts==%llu" ZT_EOL_S,(unsigned long long)id,(unsigned long long)ts);
 
 	World nw = World::make(World::TYPE_PLANET,id,ts,currentKP.pub,roots,previousKP);
 
@@ -127,15 +132,15 @@ int main(int argc,char **argv)
 	World testw;
 	testw.deserialize(outtmp,0);
 	if (testw != nw) {
-		fprintf(stderr,"FATAL: serialization test failed!"ZT_EOL_S);
+		fprintf(stderr,"FATAL: serialization test failed!" ZT_EOL_S);
 		return 1;
 	}
 
 	OSUtils::writeFile("world.bin",std::string((const char *)outtmp.data(),outtmp.size()));
-	fprintf(stderr,"INFO: world.bin written with %u bytes of binary world data."ZT_EOL_S,outtmp.size());
+	fprintf(stderr,"INFO: world.bin written with %u bytes of binary world data." ZT_EOL_S,outtmp.size());
 
 	fprintf(stdout,ZT_EOL_S);
-	fprintf(stdout,"#define ZT_DEFAULT_WORLD_LENGTH %u"ZT_EOL_S,outtmp.size());
+	fprintf(stdout,"#define ZT_DEFAULT_WORLD_LENGTH %u" ZT_EOL_S,outtmp.size());
 	fprintf(stdout,"static const unsigned char ZT_DEFAULT_WORLD[ZT_DEFAULT_WORLD_LENGTH] = {");
 	for(unsigned int i=0;i<outtmp.size();++i) {
 		const unsigned char *d = (const unsigned char *)outtmp.data();
@@ -143,7 +148,7 @@ int main(int argc,char **argv)
 			fprintf(stdout,",");
 		fprintf(stdout,"0x%.2x",(unsigned int)d[i]);
 	}
-	fprintf(stdout,"};"ZT_EOL_S);
+	fprintf(stdout,"};" ZT_EOL_S);
 
 	return 0;
 }

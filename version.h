@@ -49,7 +49,7 @@
  * to force a minor update without an actual version number change. It's
  * not part of the actual release version number.
  */
-#define ZEROTIER_ONE_VERSION_BUILD 0
+#define ZEROTIER_ONE_VERSION_BUILD 1
 
 #ifndef ZT_BUILD_ARCHITECTURE
 #define ZT_BUILD_ARCHITECTURE 0

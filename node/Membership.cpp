@@ -40,6 +40,7 @@ namespace ZeroTier {
 Membership::Membership() :
 	_lastUpdatedMulticast(0),
 	_comRevocationThreshold(0),
+	_lastPushedCredentials(0),
 	_revocations(4),
 	_remoteTags(4),
 	_remoteCaps(4),
@@ -103,6 +104,8 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 		outp.compress();
 		RR->sw->send(tPtr,outp,true);
 	}
+
+	_lastPushedCredentials = now;
 }
 
 Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const CertificateOfMembership &com)

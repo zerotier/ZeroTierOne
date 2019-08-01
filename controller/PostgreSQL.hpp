@@ -51,7 +51,7 @@ struct MQConfig;
 class PostgreSQL : public DB
 {
 public:
-    PostgreSQL(EmbeddedNetworkController *const nc, const Identity &myId, const char *path, int listenPort, MQConfig *mqc = NULL);
+    PostgreSQL(const Identity &myId, const char *path, int listenPort, MQConfig *mqc = NULL);
     virtual ~PostgreSQL();
 
     virtual bool waitForReady();
@@ -78,7 +78,6 @@ private:
     void _networksWatcher_Postgres(PGconn *conn);
     void _networksWatcher_RabbitMQ();
 
-
     void commitThread();
     void onlineNotificationThread();
 
@@ -92,7 +91,6 @@ private:
     std::string _connString;
 
     BlockingQueue<nlohmann::json *> _commitQueue;
-
 
     std::thread _heartbeatThread;
     std::thread _membersDbWatcher;

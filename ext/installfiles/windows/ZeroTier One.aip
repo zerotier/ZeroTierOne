@@ -27,7 +27,7 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{B87100D2-6023-447A-A6D0-23A35A0C58F8} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{FF7D9C9B-E9F3-460A-8EA9-9074AF186E1E} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
     <ROW Property="ProductVersion" Value="1.4.0" Type="32"/>
@@ -64,7 +64,7 @@
     <ROW Directory="x86_Dir" Directory_Parent="tapwindows_Dir" DefaultDir="x86"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{9120F1FC-96D1-4099-8ABC-92A469A85B7E}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{3771DD83-BFE1-467A-88C3-DE78086A2B44}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{020DCABD-5D56-49B9-AF48-F07F0B55E590}" Directory_="APPDIR" Attributes="4" KeyPath="NoModify" Options="1"/>
     <ROW Component="AI_ExePath" ComponentId="{8E02B36C-7A19-429B-A93E-77A9261AC918}" Directory_="APPDIR" Attributes="4" KeyPath="AI_ExePath"/>
     <ROW Component="Hardcodet.Wpf.TaskbarNotification.dll" ComponentId="{BEA825AF-2555-44AF-BE40-47FFC16DCBA6}" Directory_="APPDIR" Attributes="0" KeyPath="Hardcodet.Wpf.TaskbarNotification.dll"/>
@@ -82,7 +82,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFeatsComponent">
     <ROW Feature="ZeroTierOne" Title="MainFeature" Description="ZeroTier One" Display="1" Level="1" Directory_="APPDIR" Attributes="0" Components="AI_CustomARPName AI_DisableModify AI_ExePath Hardcodet.Wpf.TaskbarNotification.dll Newtonsoft.Json.dll ProductInformation ZeroTierOne.exe copyutil.exe networks.d regid.201001.com.zerotier segoeui.ttf zerotierone_x64.exe zerotierone_x86.exe zttap300.cat_1"/>
-    <ROW Feature="zttap300" Feature_Parent="ZeroTierOne" Title="zttap300" Description="ZeroTier Virtual Network Port Driver" Display="1" Level="1" Directory_="APPDIR" Attributes="16" Components="AI_CustomARPName AI_DisableModify AI_ExePath zttap300.inf"/>
+    <ROW Feature="zttap300" Feature_Parent="ZeroTierOne" Title="zttap300" Description="ZeroTier Virtual Network Port Driver" Display="1" Level="1" Directory_="APPDIR" Attributes="16" Components="zttap300.inf"/>
     <ATTRIBUTE name="CurrentFeature" value="ZeroTierOne"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFilesComponent">
