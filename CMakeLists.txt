@@ -1,7 +1,6 @@
 # CMake build script for ZeroTier One
 
 cmake_minimum_required (VERSION 3.8)
-project (zerotier-one)
 
 # Set a default build type if none was specified
 set(default_build_type "Release")
@@ -32,7 +31,7 @@ if (BUILD_CENTRAL_CONTROLLER)
 	add_subdirectory("ext/librabbitmq")
 endif(BUILD_CENTRAL_CONTROLLER)
 
-
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X Deployment Version")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	add_definitions(-DZT_TRACE)
@@ -61,6 +60,7 @@ else(WIN32)
 	endif(APPLE)
 endif(WIN32)
 
+project(zerotier-one)
 
 add_subdirectory(node)
 add_subdirectory(controller)
