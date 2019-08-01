@@ -48,3 +48,5 @@ elseif(UNIX)
 endif(WIN32)
 
 add_library(${PROJECT_NAME} STATIC ${src} ${headers})
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
+

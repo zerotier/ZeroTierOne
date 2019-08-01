@@ -9,6 +9,7 @@ set(ctl_src
 	DB.cpp
 	EmbeddedNetworkController.cpp
 	FileDB.cpp
+	LFDB.cpp
 	RabbitMQ.cpp
 )
 
@@ -16,6 +17,7 @@ set(ctl_hdr
 	DB.hpp
 	EmbeddedNetworkController.hpp
 	FileDB.hpp
+	LFDB.hpp
 	RabbitMQ.hpp
 )
 
@@ -28,3 +30,5 @@ if(BUILD_CENTRAL_CONTROLLER)
 endif(BUILD_CENTRAL_CONTROLLER)
 
 add_library(${PROJECT_NAME} STATIC ${ctl_src} ${ctl_hdr})
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
+

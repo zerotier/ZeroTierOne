@@ -8,6 +8,7 @@ endif(WIN32)
 file(GLOB core_headers *.hpp)
 file(GLOB core_src *.cpp)
 add_library(${PROJECT_NAME} STATIC ${core_src} ${core_headers})
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
 
 if(UNIX) 
 	set_source_files_properties(
