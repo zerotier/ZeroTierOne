@@ -50,3 +50,8 @@ endif(WIN32)
 add_library(${PROJECT_NAME} STATIC ${src} ${headers})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
 
+if(APPLE)
+	add_executable(MacEthernetTapAgent MacEthernetTapAgent.c MacEthernetTapAgent.h)
+endif(APPLE)
+
+
