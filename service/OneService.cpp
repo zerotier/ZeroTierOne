@@ -994,15 +994,17 @@ public:
 		Mutex::Lock _l2(_localConfig_m);
 		std::string lcbuf;
 		if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S "local.conf").c_str(),lcbuf)) {
-			try {
-				_localConfig = OSUtils::jsonParse(lcbuf);
-				if (!_localConfig.is_object()) {
-					fprintf(stderr,"ERROR: unable to parse local.conf (root element is not a JSON object)" ZT_EOL_S);
+			if (lcbuf.length() > 0) {
+				try {
+					_localConfig = OSUtils::jsonParse(lcbuf);
+					if (!_localConfig.is_object()) {
+						fprintf(stderr,"ERROR: unable to parse local.conf (root element is not a JSON object)" ZT_EOL_S);
+						exit(1);
+					}
+				} catch ( ... ) {
+					fprintf(stderr,"ERROR: unable to parse local.conf (invalid JSON)" ZT_EOL_S);
 					exit(1);
 				}
-			} catch ( ... ) {
-				fprintf(stderr,"ERROR: unable to parse local.conf (invalid JSON)" ZT_EOL_S);
-				exit(1);
 			}
 		}
 
