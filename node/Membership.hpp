@@ -74,9 +74,8 @@ public:
 	 * @param now Current time
 	 * @param peerAddress Address of member peer (the one that this Membership describes)
 	 * @param nconf My network config
-	 * @param localCapabilityIndex Index of local capability to include (in nconf.capabilities[]) or -1 if none
 	 */
-	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex);
+	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf);
 
 	/**
 	 * @return True if we haven't pushed credentials in a long time (to cause proactive credential push)
