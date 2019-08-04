@@ -177,6 +177,9 @@ private:
 		MulticastGroupMember() {}
 		MulticastGroupMember(const Address &a,uint64_t ts) : address(a),timestamp(ts) {}
 
+		inline bool operator<(const MulticastGroupMember &a) const { return (address < a.address); }
+		inline bool operator==(const MulticastGroupMember &a) const { return (address == a.address); }
+		inline bool operator!=(const MulticastGroupMember &a) const { return (address != a.address); }
 		inline bool operator<(const Address &a) const { return (address < a); }
 		inline bool operator==(const Address &a) const { return (address == a); }
 		inline bool operator!=(const Address &a) const { return (address != a); }
