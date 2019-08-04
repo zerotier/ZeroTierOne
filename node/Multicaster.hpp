@@ -168,6 +168,7 @@ private:
 		MulticastGroup mg;
 
 		inline bool operator==(const Key &k) const { return ((nwid == k.nwid)&&(mg == k.mg)); }
+		inline bool operator!=(const Key &k) const { return ((nwid != k.nwid)||(mg != k.mg)); }
 		inline unsigned long hashCode() const { return (mg.hashCode() ^ (unsigned long)(nwid ^ (nwid >> 32))); }
 	};
 
