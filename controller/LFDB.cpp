@@ -64,7 +64,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 
 		httplib::Client htcli(_lfNodeHost.c_str(),_lfNodePort,600);
 		int64_t timeRangeStart = 0;
-		while (_running) {
+		while (_running.load()) {
 			{
 				std::lock_guard<std::mutex> sl(_state_l);
 				for(auto ns=_state.begin();ns!=_state.end();++ns) {
@@ -178,7 +178,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							<< "\"Name\":\"" << networksSelectorName << "\","
 							<< "\"Range\":[0,18446744073709551615]"
 						<< "}],"
-						<< "\"TimeRange\":[" << timeRangeStart << ",18446744073709551615],"
+						<< "\"TimeRange\":[" << timeRangeStart << ",9223372036854775807],"
 						<< "\"MaskingKey\":\"" << maskingKey << "\","
 						<< "\"Owners\":[\"" << _lfOwnerPublic << "\"]"
 					<< '}';
@@ -190,6 +190,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							for(std::size_t ri=0;ri<results.size();++ri) {
 								nlohmann::json &rset = results[ri];
 								if ((rset.is_array())&&(rset.size() > 0)) {
+
 									nlohmann::json &result = rset[0];
 									if (result.is_object()) {
 										nlohmann::json &record = result["Record"];
@@ -206,7 +207,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 													_NetworkState &ns = _state[id];
 													if (!ns.dirty) {
 														nlohmann::json oldNetwork;
-														if (get(id,oldNetwork)) {
+														if ((timeRangeStart > 0)&&(get(id,oldNetwork))) {
 															const uint64_t revision = network["revision"];
 															const uint64_t prevRevision = oldNetwork["revision"];
 															if (prevRevision < revision) {
@@ -222,6 +223,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 											}
 										}
 									}
+
 								}
 							}
 						}
@@ -244,7 +246,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							<< "\"Name\":\"" << membersSelectorName << "\","
 							<< "\"Range\":[0,18446744073709551615]"
 						<< "}],"
-						<< "\"TimeRange\":[" << timeRangeStart << ",18446744073709551615],"
+						<< "\"TimeRange\":[" << timeRangeStart << ",9223372036854775807],"
 						<< "\"MaskingKey\":\"" << maskingKey << "\","
 						<< "\"Owners\":[\"" << _lfOwnerPublic << "\"]"
 					<< '}';
@@ -256,6 +258,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							for(std::size_t ri=0;ri<results.size();++ri) {
 								nlohmann::json &rset = results[ri];
 								if ((rset.is_array())&&(rset.size() > 0)) {
+
 									nlohmann::json &result = rset[0];
 									if (result.is_object()) {
 										nlohmann::json &record = result["Record"];
@@ -274,7 +277,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 													auto ns = _state.find(nwid);
 													if ((ns == _state.end())||(!ns->second.members[id].dirty)) {
 														nlohmann::json network,oldMember;
-														if (get(nwid,network,id,oldMember)) {
+														if ((timeRangeStart > 0)&&(get(nwid,network,id,oldMember))) {
 															const uint64_t revision = member["revision"];
 															const uint64_t prevRevision = oldMember["revision"];
 															if (prevRevision < revision)
@@ -289,6 +292,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 											}
 										}
 									}
+
 								}
 							}
 						}
@@ -301,12 +305,12 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 			}
 
 			timeRangeStart = time(nullptr) - 120; // start next query 2m before now to avoid losing updates
-			_ready = true;
+			_ready.store(true);
 
-			for(int k=0;k<20;++k) { // 2s delay between queries for remotely modified networks or members
-				if (!_running)
+			for(int k=0;k<4;++k) { // 2s delay between queries for remotely modified networks or members
+				if (!_running.load())
 					return;
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				std::this_thread::sleep_for(std::chrono::milliseconds(500));
 			}
 		}
 	});
@@ -314,21 +318,21 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 
 LFDB::~LFDB()
 {
-	_running = false;
+	_running.store(false);
 	_syncThread.join();
 }
 
 bool LFDB::waitForReady()
 {
-	while (!_ready) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	while (!_ready.load()) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	}
 	return true;
 }
 
 bool LFDB::isReady()
 {
-	return (_ready);
+	return (_ready.load());
 }
 
 void LFDB::save(nlohmann::json *orig,nlohmann::json &record)
