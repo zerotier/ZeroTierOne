@@ -61,6 +61,7 @@ public:
 		virtual void onNetworkUpdate(uint64_t networkId,const nlohmann::json &network) {}
 		virtual void onNetworkMemberUpdate(uint64_t networkId,uint64_t memberId,const nlohmann::json &member) {}
 		virtual void onNetworkMemberDeauthorize(uint64_t networkId,uint64_t memberId) {}
+		virtual void onNetworkMemberOnline(uint64_t networkId,uint64_t memberId,const InetAddress &physicalAddress) {}
 	};
 
 	struct NetworkSummaryInfo

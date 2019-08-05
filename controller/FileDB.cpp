@@ -33,7 +33,6 @@ FileDB::FileDB(const Identity &myId,const char *path) :
 	DB(myId,path),
 	_networksPath(_path + ZT_PATH_SEPARATOR_S + "network"),
 	_tracePath(_path + ZT_PATH_SEPARATOR_S + "trace"),
-	_onlineChanged(false),
 	_running(true)
 {
 	OSUtils::mkdir(_path.c_str());
@@ -152,7 +151,6 @@ void FileDB::eraseNetwork(const uint64_t networkId)
 	_networkChanged(network,nullJson,true);
 	std::lock_guard<std::mutex> l(this->_online_l);
 	this->_online.erase(networkId);
-	this->_onlineChanged = true;
 }
 
 void FileDB::eraseMember(const uint64_t networkId,const uint64_t memberId)
@@ -166,7 +164,6 @@ void FileDB::eraseMember(const uint64_t networkId,const uint64_t memberId)
 	_memberChanged(member,nullJson,true);
 	std::lock_guard<std::mutex> l(this->_online_l);
 	this->_online[networkId].erase(memberId);
-	this->_onlineChanged = true;
 }
 
 void FileDB::nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress)
@@ -174,9 +171,15 @@ void FileDB::nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const
 	char mid[32],atmp[64];
 	OSUtils::ztsnprintf(mid,sizeof(mid),"%.10llx",(unsigned long long)memberId);
 	physicalAddress.toString(atmp);
-	std::lock_guard<std::mutex> l(this->_online_l);
-	this->_online[networkId][memberId][OSUtils::now()] = physicalAddress;
-	this->_onlineChanged = true;
+	{
+		std::lock_guard<std::mutex> l(this->_online_l);
+		this->_online[networkId][memberId][OSUtils::now()] = physicalAddress;
+	}
+	{
+		std::lock_guard<std::mutex> l2(_changeListeners_l);
+		for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i)
+			(*i)->onNetworkMemberOnline(networkId,memberId,physicalAddress);
+	}
 }
 
 } // namespace ZeroTier

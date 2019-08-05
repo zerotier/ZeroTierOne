@@ -51,7 +51,6 @@ protected:
 	std::thread _onlineUpdateThread;
 	std::map< uint64_t,std::map<uint64_t,std::map<int64_t,InetAddress> > > _online;
 	std::mutex _online_l;
-	bool _onlineChanged;
 	bool _running;
 };
 

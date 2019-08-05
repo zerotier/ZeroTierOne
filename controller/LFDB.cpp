@@ -384,16 +384,23 @@ void LFDB::eraseMember(const uint64_t networkId,const uint64_t memberId)
 
 void LFDB::nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress)
 {
-	std::lock_guard<std::mutex> l(_state_l);
-	auto nw = _state.find(networkId);
-	if (nw != _state.end()) {
-		auto m = nw->second.members.find(memberId);
-		if (m != nw->second.members.end()) {
-			m->second.lastOnlineTime = OSUtils::now();
-			if (physicalAddress)
-				m->second.lastOnlineAddress = physicalAddress;
-			m->second.lastOnlineDirty = true;
+	{
+		std::lock_guard<std::mutex> l(_state_l);
+		auto nw = _state.find(networkId);
+		if (nw != _state.end()) {
+			auto m = nw->second.members.find(memberId);
+			if (m != nw->second.members.end()) {
+				m->second.lastOnlineTime = OSUtils::now();
+				if (physicalAddress)
+					m->second.lastOnlineAddress = physicalAddress;
+				m->second.lastOnlineDirty = true;
+			}
 		}
+	}
+	{
+		std::lock_guard<std::mutex> l2(_changeListeners_l);
+		for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i)
+			(*i)->onNetworkMemberOnline(networkId,memberId,physicalAddress);
 	}
 }
 

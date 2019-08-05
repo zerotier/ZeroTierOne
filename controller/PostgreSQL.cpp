@@ -210,11 +210,18 @@ void PostgreSQL::eraseMember(const uint64_t networkId, const uint64_t memberId)
 
 void PostgreSQL::nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const InetAddress &physicalAddress)
 {
-	std::lock_guard<std::mutex> l(_lastOnline_l);
-	std::pair<int64_t, InetAddress> &i = _lastOnline[std::pair<uint64_t,uint64_t>(networkId, memberId)];
-	i.first = OSUtils::now();
-	if (physicalAddress) {
-		i.second = physicalAddress;
+	{
+		std::lock_guard<std::mutex> l(_lastOnline_l);
+		std::pair<int64_t, InetAddress> &i = _lastOnline[std::pair<uint64_t,uint64_t>(networkId, memberId)];
+		i.first = OSUtils::now();
+		if (physicalAddress) {
+			i.second = physicalAddress;
+		}
+	}
+	{
+		std::lock_guard<std::mutex> l2(_changeListeners_l);
+		for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i)
+			(*i)->onNetworkMemberOnline(networkId,memberId,physicalAddress);
 	}
 }
 
