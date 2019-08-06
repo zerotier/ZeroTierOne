@@ -23,16 +23,19 @@
  * directly against ZeroTier software without disclosing the source code
  * of your own application.
  */
+
 #ifndef ZT_CONTROLLER_RABBITMQ_HPP
 #define ZT_CONTROLLER_RABBITMQ_HPP
+
+#include "DB.hpp"
 
 namespace ZeroTier
 {
 struct MQConfig {
-    const char *host;
-    int port;
-    const char *username;
-    const char *password;
+	const char *host;
+	int port;
+	const char *username;
+	const char *password;
 };
 }
 
@@ -49,26 +52,25 @@ namespace ZeroTier
 
 class RabbitMQ {
 public:
-    RabbitMQ(MQConfig *cfg, const char *queueName);
-    ~RabbitMQ();
+	RabbitMQ(MQConfig *cfg, const char *queueName);
+	~RabbitMQ();
 
-    void init();
+	void init();
 
-    std::string consume();
+	std::string consume();
 
 private:
-    MQConfig *_mqc;
-    const char *_qName;
+	MQConfig *_mqc;
+	const char *_qName;
 
-    amqp_socket_t *_socket;
-    amqp_connection_state_t _conn;
-    amqp_queue_declare_ok_t *_q;
-    int _status;
+	amqp_socket_t *_socket;
+	amqp_connection_state_t _conn;
+	amqp_queue_declare_ok_t *_q;
+	int _status;
 
-    int _channel;
+	int _channel;
 
 	Mutex _chan_m;
-
 };
 
 }

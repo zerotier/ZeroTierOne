@@ -124,9 +124,9 @@ int LinuxNetLink::_doRecv(int fd)
 			if(nlp->nlmsg_type == NLMSG_ERROR && (nlp->nlmsg_flags & NLM_F_ACK) != NLM_F_ACK) {
 				struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(nlp);
 				if (err->error != 0) {
-//#ifdef ZT_TRACE
-					fprintf(stderr, "rtnetlink error: %s\n", strerror(-(err->error)));
-//#endif
+#ifdef ZT_TRACE
+					//fprintf(stderr, "rtnetlink error: %s\n", strerror(-(err->error)));
+#endif
 				}
 				p = buf;
 				nll = 0;

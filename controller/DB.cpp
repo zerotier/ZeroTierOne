@@ -104,20 +104,8 @@ void DB::cleanMember(nlohmann::json &member)
 	member.erase("lastRequestMetaData");
 }
 
-DB::DB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path) :
-	_controller(nc),
-	_myId(myId),
-	_myAddress(myId.address()),
-	_path((path) ? path : "")
-{
-	char tmp[32];
-	_myAddress.toString(tmp);
-	_myAddressStr = tmp;
-}
-
-DB::~DB()
-{
-}
+DB::DB() {}
+DB::~DB() {}
 
 bool DB::get(const uint64_t networkId,nlohmann::json &network)
 {
@@ -202,34 +190,15 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohma
 	return true;
 }
 
-bool DB::summary(const uint64_t networkId,NetworkSummaryInfo &info)
-{
-	waitForReady();
-	std::shared_ptr<_Network> nw;
-	{
-		std::lock_guard<std::mutex> l(_networks_l);
-		auto nwi = _networks.find(networkId);
-		if (nwi == _networks.end())
-			return false;
-		nw = nwi->second;
-	}
-	{
-		std::lock_guard<std::mutex> l2(nw->lock);
-		_fillSummaryInfo(nw,info);
-	}
-	return true;
-}
-
-void DB::networks(std::vector<uint64_t> &networks)
+void DB::networks(std::set<uint64_t> &networks)
 {
 	waitForReady();
 	std::lock_guard<std::mutex> l(_networks_l);
-	networks.reserve(_networks.size() + 1);
 	for(auto n=_networks.begin();n!=_networks.end();++n)
-		networks.push_back(n->first);
+		networks.insert(n->first);
 }
 
-void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool push)
+void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool notifyListeners)
 {
 	uint64_t memberId = 0;
 	uint64_t networkId = 0;
@@ -313,8 +282,12 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool pu
 			}
 		}
 
-		if (push)
-			_controller->onNetworkMemberUpdate(networkId,memberId);
+		if (notifyListeners) {
+			std::lock_guard<std::mutex> ll(_changeListeners_l);
+			for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i) {
+				(*i)->onNetworkMemberUpdate(this,networkId,memberId,memberConfig);
+			}
+		}
 	} else if (memberId) {
 		if (nw) {
 			std::lock_guard<std::mutex> l(nw->lock);
@@ -332,20 +305,24 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool pu
 		}
 	}
 
-	if ((push)&&((wasAuth)&&(!isAuth)&&(networkId)&&(memberId)))
-		_controller->onNetworkMemberDeauthorize(networkId,memberId);
+	if ((notifyListeners)&&((wasAuth)&&(!isAuth)&&(networkId)&&(memberId))) {
+		std::lock_guard<std::mutex> ll(_changeListeners_l);
+		for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i) {
+			(*i)->onNetworkMemberDeauthorize(this,networkId,memberId);
+		}
+	}
 }
 
-void DB::_networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool push)
+void DB::_networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool notifyListeners)
 {
 	if (networkConfig.is_object()) {
 		const std::string ids = networkConfig["id"];
-		const uint64_t id = Utils::hexStrToU64(ids.c_str());
-		if (id) {
+		const uint64_t networkId = Utils::hexStrToU64(ids.c_str());
+		if (networkId) {
 			std::shared_ptr<_Network> nw;
 			{
 				std::lock_guard<std::mutex> l(_networks_l);
-				std::shared_ptr<_Network> &nw2 = _networks[id];
+				std::shared_ptr<_Network> &nw2 = _networks[networkId];
 				if (!nw2)
 					nw2.reset(new _Network);
 				nw = nw2;
@@ -354,15 +331,19 @@ void DB::_networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool 
 				std::lock_guard<std::mutex> l2(nw->lock);
 				nw->config = networkConfig;
 			}
-			if (push)
-				_controller->onNetworkUpdate(id);
+			if (notifyListeners) {
+				std::lock_guard<std::mutex> ll(_changeListeners_l);
+				for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i) {
+					(*i)->onNetworkUpdate(this,networkId,networkConfig);
+				}
+			}
 		}
 	} else if (old.is_object()) {
 		const std::string ids = old["id"];
-		const uint64_t id = Utils::hexStrToU64(ids.c_str());
-		if (id) {
+		const uint64_t networkId = Utils::hexStrToU64(ids.c_str());
+		if (networkId) {
 			std::lock_guard<std::mutex> l(_networks_l);
-			_networks.erase(id);
+			_networks.erase(networkId);
 		}
 	}
 }

@@ -24,9 +24,11 @@
  * of your own application.
  */
 
+#include "PostgreSQL.hpp"
+
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 
-#include "PostgreSQL.hpp"
+#include "../node/Constants.hpp"
 #include "EmbeddedNetworkController.hpp"
 #include "RabbitMQ.hpp"
 #include "../version.h"
@@ -37,7 +39,10 @@
 #include <amqp_tcp_socket.h>
 
 using json = nlohmann::json;
+
 namespace {
+
+static const int DB_MINIMUM_VERSION = 5;
 
 static const char *_timestr()
 {
@@ -56,6 +61,7 @@ static const char *_timestr()
 	return ts;
 }
 
+/*
 std::string join(const std::vector<std::string> &elements, const char * const separator)
 {
 	switch(elements.size()) {
@@ -70,21 +76,56 @@ std::string join(const std::vector<std::string> &elements, const char * const se
 		return os.str();
 	}
 }
+*/
 
-}
+} // anonymous namespace
 
 using namespace ZeroTier;
 
-PostgreSQL::PostgreSQL(EmbeddedNetworkController *const nc, const Identity &myId, const char *path, int listenPort, MQConfig *mqc)
-    : DB(nc, myId, path)
-    , _ready(0)
+PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, MQConfig *mqc)
+	: DB()
+	, _myId(myId)
+	, _myAddress(myId.address())
+	, _ready(0)
 	, _connected(1)
-    , _run(1)
-    , _waitNoticePrinted(false)
+	, _run(1)
+	, _waitNoticePrinted(false)
 	, _listenPort(listenPort)
 	, _mqc(mqc)
 {
-	_connString = std::string(path) + " application_name=controller_" +_myAddressStr;
+	char myAddress[64];
+	_myAddressStr = myId.address().toString(myAddress);
+	_connString = std::string(path) + " application_name=controller_" + _myAddressStr;
+
+	// Database Schema Version Check
+	PGconn *conn = getPgConn();
+	if (PQstatus(conn) != CONNECTION_OK) {
+		fprintf(stderr, "Bad Database Connection: %s", PQerrorMessage(conn));
+		exit(1);
+	}
+
+	PGresult *res = PQexec(conn, "SELECT version FROM ztc_database");
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		fprintf(stderr, "Error determining database version");
+		exit(1);
+	}
+
+	if (PQntuples(res) != 1) {
+		fprintf(stderr, "Invalid number of db version tuples returned.");
+		exit(1);
+	}
+
+	int dbVersion = std::stoi(PQgetvalue(res, 0, 0));
+
+	if (dbVersion < DB_MINIMUM_VERSION) {
+		fprintf(stderr, "Central database schema version too low.  This controller version requires a minimum schema version of %d. Please upgrade your Central instance", DB_MINIMUM_VERSION);
+		exit(1);
+	}
+
+	PQclear(res);
+	res = NULL;
+	PQfinish(conn);
+	conn = NULL;
 
 	_readyLock.lock();
 	_heartbeatThread = std::thread(&PostgreSQL::heartbeat, this);
@@ -130,12 +171,38 @@ bool PostgreSQL::isReady()
 	return ((_ready == 2)&&(_connected));
 }
 
-void PostgreSQL::save(nlohmann::json *orig, nlohmann::json &record)
+bool PostgreSQL::save(nlohmann::json &record,bool notifyListeners)
 {
+	bool modified = false;
 	try {
-		if (!record.is_object()) {
-			return;
+		if (!record.is_object())
+			return false;
+		const std::string objtype = record["objtype"];
+		if (objtype == "network") {
+			const uint64_t nwid = OSUtils::jsonIntHex(record["id"],0ULL);
+			if (nwid) {
+				nlohmann::json old;
+				get(nwid,old);
+				if ((!old.is_object())||(old != record)) {
+					record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
+					_commitQueue.post(std::pair<nlohmann::json,bool>(record,notifyListeners));
+					modified = true;
+				}
+			}
+		} else if (objtype == "member") {
+			const uint64_t nwid = OSUtils::jsonIntHex(record["nwid"],0ULL);
+			const uint64_t id = OSUtils::jsonIntHex(record["id"],0ULL);
+			if ((id)&&(nwid)) {
+				nlohmann::json network,old;
+				get(nwid,network,id,old);
+				if ((!old.is_object())||(old != record)) {
+					record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
+					_commitQueue.post(std::pair<nlohmann::json,bool>(record,notifyListeners));
+					modified = true;
+				}
+			}
 		}
+		/*
 		waitForReady();
 		if (orig) {
 			if (*orig != record) {
@@ -146,11 +213,13 @@ void PostgreSQL::save(nlohmann::json *orig, nlohmann::json &record)
 			record["revision"] = 1;
 			_commitQueue.post(new nlohmann::json(record));
 		}
+		*/
 	} catch (std::exception &e) {
 		fprintf(stderr, "Error on PostgreSQL::save: %s\n", e.what());
 	} catch (...) {
 		fprintf(stderr, "Unknown error on PostgreSQL::save\n");
 	}
+	return modified;
 }
 
 void PostgreSQL::eraseNetwork(const uint64_t networkId)
@@ -158,21 +227,23 @@ void PostgreSQL::eraseNetwork(const uint64_t networkId)
 	char tmp2[24];
 	waitForReady();
 	Utils::hex(networkId, tmp2);
-	json *tmp = new json();
-	(*tmp)["id"] = tmp2;
-	(*tmp)["objtype"] = "_delete_network";
+	std::pair<nlohmann::json,bool> tmp;
+	tmp.first["id"] = tmp2;
+	tmp.first["objtype"] = "_delete_network";
+	tmp.second = true;
 	_commitQueue.post(tmp);
 }
 
 void PostgreSQL::eraseMember(const uint64_t networkId, const uint64_t memberId) 
 {
 	char tmp2[24];
-	json *tmp = new json();
+	std::pair<nlohmann::json,bool> tmp;
 	Utils::hex(networkId, tmp2);
-	(*tmp)["nwid"] = tmp2;
+	tmp.first["nwid"] = tmp2;
 	Utils::hex(memberId, tmp2);
-	(*tmp)["id"] = tmp2;
-	(*tmp)["objtype"] = "_delete_member";
+	tmp.first["id"] = tmp2;
+	tmp.first["objtype"] = "_delete_member";
+	tmp.second = true;
 	_commitQueue.post(tmp);
 }
 
@@ -563,8 +634,8 @@ void PostgreSQL::heartbeat()
 				"public_identity = EXCLUDED.public_identity, v_major = EXCLUDED.v_major, v_minor = EXCLUDED.v_minor, "
 				"v_rev = EXCLUDED.v_rev, v_build = EXCLUDED.v_rev, host_port = EXCLUDED.host_port, "
 				"use_rabbitmq = EXCLUDED.use_rabbitmq",
-				10,       // number of parameters
-				NULL,    // oid field.   ignore
+				10,	   // number of parameters
+				NULL,	// oid field.   ignore
 				values,  // values for substitution
 				NULL, // lengths in bytes of each value
 				NULL,  // binary?
@@ -685,7 +756,7 @@ void PostgreSQL::_membersWatcher_RabbitMQ() {
 			fprintf(stderr, "RABBITMQ ERROR member change: %s\n", e.what());
 		} catch(...) {
 			fprintf(stderr, "RABBITMQ ERROR member change: unknown error\n");
-        }
+		}
 	}
 }
 
@@ -802,18 +873,18 @@ void PostgreSQL::commitThread()
 		exit(1);
 	}
 
-	json *config = nullptr;
-	while(_commitQueue.get(config)&(_run == 1)) {
-		if (!config) {
+	std::pair<nlohmann::json,bool> qitem;
+	while(_commitQueue.get(qitem)&(_run == 1)) {
+		if (!qitem.first.is_object()) {
 			continue;
 		}
 		if (PQstatus(conn) == CONNECTION_BAD) {
 			fprintf(stderr, "ERROR: Connection to database failed: %s\n", PQerrorMessage(conn));
 			PQfinish(conn);
-			delete config;
 			exit(1);
 		}
-		try { 
+		try {
+			nlohmann::json *config = &(qitem.first);
 			const std::string objtype = (*config)["objtype"];
 			if (objtype == "member") {
 				try {
@@ -968,12 +1039,12 @@ void PostgreSQL::commitThread()
 						nlohmann::json memOrig;
 
 						nlohmann::json memNew(*config);
-						
+
 						get(nwidInt, nwOrig, memberidInt, memOrig);
 				
-						_memberChanged(memOrig, memNew, (this->_ready>=2));
+						_memberChanged(memOrig, memNew, qitem.second);
 					} else {
-						fprintf(stderr, "Can't notify of change.  Error parsing nwid or memberid: %lu-%lu\n", nwidInt, memberidInt);
+						fprintf(stderr, "Can't notify of change.  Error parsing nwid or memberid: %llu-%llu\n", (unsigned long long)nwidInt, (unsigned long long)memberidInt);
 					}
 
 				} catch (std::exception &e) {
@@ -1194,16 +1265,14 @@ void PostgreSQL::commitThread()
 
 						get(nwidInt, nwOrig);
 
-						_networkChanged(nwOrig, nwNew, true);
+						_networkChanged(nwOrig, nwNew, qitem.second);
 					} else {
-						fprintf(stderr, "Can't notify network changed: %lu\n", nwidInt);
+						fprintf(stderr, "Can't notify network changed: %llu\n", (unsigned long long)nwidInt);
 					}
 
 				} catch (std::exception &e) {
 					fprintf(stderr, "ERROR: Error updating member: %s\n", e.what());
 				}
-			} else if (objtype == "trace") {
-				fprintf(stderr, "ERROR: Trace not yet implemented");
 			} else if (objtype == "_delete_network") {
 				try {
 					std::string networkId = (*config)["nwid"];
@@ -1260,8 +1329,6 @@ void PostgreSQL::commitThread()
 		} catch (std::exception &e) {
 			fprintf(stderr, "ERROR: Error getting objtype: %s\n", e.what());
 		}
-		delete config;
-		config = nullptr;
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
@@ -1283,9 +1350,9 @@ void PostgreSQL::onlineNotificationThread()
 	}
 	_connected = 1;
 
-	int64_t	lastUpdatedNetworkStatus = 0;
+	//int64_t	lastUpdatedNetworkStatus = 0;
 	std::unordered_map< std::pair<uint64_t,uint64_t>,int64_t,_PairHasher > lastOnlineCumulative;
-	
+
 	while (_run == 1) {
 		if (PQstatus(conn) != CONNECTION_OK) {
 			fprintf(stderr, "ERROR: Online Notification thread lost connection to Postgres.");
@@ -1389,129 +1456,6 @@ void PostgreSQL::onlineNotificationThread()
 			PQclear(res);
 		}
 
-		const int64_t now = OSUtils::now();
-		if ((now - lastUpdatedNetworkStatus) > 10000) {
-			lastUpdatedNetworkStatus = now;
-
-			std::vector<std::pair<uint64_t, std::shared_ptr<_Network>>> networks;
-			{
-				std::lock_guard<std::mutex> l(_networks_l);
-				for (auto i = _networks.begin(); i != _networks.end(); ++i) {
-					networks.push_back(*i);
-				}
-			}
-
-			std::stringstream networkUpdate;
-			networkUpdate << "INSERT INTO ztc_network_status (network_id, bridge_count, authorized_member_count, online_member_count, total_member_count, last_modified) VALUES ";
-			bool nwFirstRun = true;
-			bool networkAdded = false;
-			for (auto i = networks.begin(); i != networks.end(); ++i) {
-				char tmp[64];
-				Utils::hex(i->first, tmp);
-
-				std::string networkId(tmp);
-
-				std::vector<std::string> &_notUsed = updateMap[networkId];
-				(void)_notUsed;
-
-				uint64_t authMemberCount = 0;
-				uint64_t totalMemberCount = 0;
-				uint64_t onlineMemberCount = 0;
-				uint64_t bridgeCount = 0;
-				uint64_t ts = now;
-				{
-					std::lock_guard<std::mutex> l2(i->second->lock);
-					authMemberCount = i->second->authorizedMembers.size();
-					totalMemberCount = i->second->members.size();
-					bridgeCount = i->second->activeBridgeMembers.size();
-					for (auto m=i->second->members.begin(); m != i->second->members.end(); ++m) {
-						auto lo = lastOnlineCumulative.find(std::pair<uint64_t,uint64_t>(i->first, m->first));
-						if (lo != lastOnlineCumulative.end()) {
-							if ((now - lo->second) <= (ZT_NETWORK_AUTOCONF_DELAY * 2)) {
-								++onlineMemberCount;
-							} else {
-								lastOnlineCumulative.erase(lo);
-							}
-						}
-					}
-				}
-
-				const char *nvals[1] = {
-					networkId.c_str()
-				};
-
-				res = PQexecParams(conn,
-					"SELECT id FROM ztc_network WHERE id = $1",
-					1,
-					NULL,
-					nvals,
-					NULL,
-					NULL,
-					0);
-
-				if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-					fprintf(stderr, "Network lookup failed: %s", PQerrorMessage(conn));
-					PQclear(res);
-					continue;
-				}
-
-				int nrows = PQntuples(res);
-				PQclear(res);
-
-				if (nrows == 1) {
-					std::string bc = std::to_string(bridgeCount);
-					std::string amc = std::to_string(authMemberCount);
-					std::string omc = std::to_string(onlineMemberCount);
-					std::string tmc = std::to_string(totalMemberCount);
-					std::string timestamp = std::to_string(ts);
-
-					if (nwFirstRun) {
-						nwFirstRun = false;
-					} else {
-						networkUpdate << ", ";
-					}
-
-					networkUpdate << "('" << networkId << "', " << bc << ", " << amc << ", " << omc << ", " << tmc << ", "
-							<< "TO_TIMESTAMP(" << timestamp << "::double precision/1000))";
-
-					networkAdded = true;
-
-				} else if (nrows > 1) {
-					fprintf(stderr, "Number of networks > 1?!?!?");
-					continue;
-				} else {
-					continue;
-				}
-			}
-			networkUpdate << " ON CONFLICT (network_id) DO UPDATE SET bridge_count = EXCLUDED.bridge_count, "
-					<< "authorized_member_count = EXCLUDED.authorized_member_count, online_member_count = EXCLUDED.online_member_count, "
-					<< "total_member_count = EXCLUDED.total_member_count, last_modified = EXCLUDED.last_modified";
-			if (networkAdded) {
-				res = PQexec(conn, networkUpdate.str().c_str());
-				if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-					fprintf(stderr, "Error during multiple network upsert: %s", PQresultErrorMessage(res));
-				}
-				PQclear(res);
-			}
-		}
-
-		// for (auto it = updateMap.begin(); it != updateMap.end(); ++it) {
-		// 	std::string networkId = it->first;
-		// 	std::vector<std::string> members = it->second;
-		// 	std::stringstream queryBuilder;
-
-		// 	std::string membersStr = ::join(members, ",");
-
-		// 	queryBuilder << "NOTIFY controller, '" << networkId << ":" << membersStr << "'";
-		// 	std::string query = queryBuilder.str();
-
-		// 	PGresult *res = PQexec(conn,query.c_str());
-		// 	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-		// 		fprintf(stderr, "ERROR: Error sending NOTIFY: %s\n", PQresultErrorMessage(res));
-		// 	}
-		// 	PQclear(res);
-		// }
-
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 	fprintf(stderr, "%s: Fell out of run loop in onlineNotificationThread\n", _myAddressStr.c_str());
@@ -1522,7 +1466,8 @@ void PostgreSQL::onlineNotificationThread()
 	}
 }
 
-PGconn *PostgreSQL::getPgConn(OverrideMode m) {
+PGconn *PostgreSQL::getPgConn(OverrideMode m)
+{
 	if (m == ALLOW_PGBOUNCER_OVERRIDE) {
 		char *connStr = getenv("PGBOUNCER_CONNSTR");
 		if (connStr != NULL) {
@@ -1536,4 +1481,5 @@ PGconn *PostgreSQL::getPgConn(OverrideMode m) {
 
 	return PQconnectdb(_connString.c_str());
 }
+
 #endif //ZT_CONTROLLER_USE_LIBPQ

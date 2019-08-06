@@ -271,10 +271,14 @@ public:
 	 */
 	inline bool disableCompression() const
 	{
-#ifndef ZT_SDK
+#ifndef ZT_DISABLE_COMPRESSION
 		return ((this->flags & ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION) != 0);
 #else
-		return false; // Compression is disabled for SDK builds since it doesn't play nice with lwIP
+		/* Compression is disabled for libzt builds since it causes non-obvious chaotic
+		interference with lwIP's TCP congestion algorithm. Compression is also disabled
+		for some NAS builds due to the usage of low-performance processors in certain
+		older and budget models. */
+		return false;
 #endif
 	}
 

@@ -165,6 +165,7 @@ MacEthernetTap::MacEthernetTap(
 			break;
 		}
 	}
+	_dev = devstr;
 
 	if (::pipe(_shutdownSignalPipe))
 		throw std::runtime_error("pipe creation failed");
@@ -285,7 +286,7 @@ std::vector<InetAddress> MacEthernetTap::ips() const
 	if (!getifaddrs(&ifa)) {
 		struct ifaddrs *p = ifa;
 		while (p) {
-			if ((!strcmp(p->ifa_name,_dev.c_str()))&&(p->ifa_addr)&&(p->ifa_netmask)&&(p->ifa_addr->sa_family == p->ifa_netmask->sa_family)) {
+			if ((p->ifa_name)&&(!strcmp(p->ifa_name,_dev.c_str()))&&(p->ifa_addr)) {
 				switch(p->ifa_addr->sa_family) {
 					case AF_INET: {
 						struct sockaddr_in *sin = (struct sockaddr_in *)p->ifa_addr;
@@ -361,7 +362,7 @@ void MacEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std:
 		newGroups.push_back(MulticastGroup::deriveMulticastGroupForAddressResolution(*ip));
 
 	std::sort(newGroups.begin(),newGroups.end());
-	std::unique(newGroups.begin(),newGroups.end());
+	newGroups.erase(std::unique(newGroups.begin(),newGroups.end()),newGroups.end());
 
 	for(std::vector<MulticastGroup>::iterator m(newGroups.begin());m!=newGroups.end();++m) {
 		if (!std::binary_search(_multicastGroups.begin(),_multicastGroups.end(),*m))
