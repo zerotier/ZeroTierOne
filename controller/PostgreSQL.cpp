@@ -1092,11 +1092,19 @@ void PostgreSQL::commitThread()
 					};
 
 					PGresult *res = PQexecParams(conn,
-						"UPDATE ztc_network SET controller_id = $2, capabilities = $3, enable_broadcast = $4, "
-						"last_updated = $5, mtu = $6, multicast_limit = $7, name = $8, private = $9, "
-						"remote_trace_level = $10, remote_trace_target = $11, rules = $12, rules_source = $13, "
-						"tags = $14, v4_assign_mode = $15, v6_assign_mode = $16 "
-						"WHERE id = $1",
+						"INSERT INTO ztc_network (id, controller_id, capabilities, enable_broadcast, "
+						"last_updated, mtu, multicast_limit, name, private, "
+						"remote_trace_level, remote_trace_target, rules, rules_source, "
+						"tags, v4_assign_mode, v6_assign_mode) VALUES ("
+						"$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) "
+						"ON CONFLICT (id) DO UPDATE set controller_id = EXCLUDED.controller_id, "
+						"capabilities = EXCLUDED.capabilities, enable_broadcast = EXCLUDED.enable_broadcast, "
+						"last_updated = EXCLUDED.last_updated, mtu = EXCLUDED.mtu, "
+						"multicast_limit = EXCLUDED.multicast_limit, name = EXCLUDED.name, "
+						"private = EXCLUDED.private, remote_trace_level = EXCLUDED.remote_trace_level, "
+						"remote_trace_target = EXCLUDED.remote_trace_target, rules = EXCLUDED.rules, "
+						"rules_source = EXCLUDED.rules_source, tags = EXCLUDED.tags, "
+						"v4_assign_mode = EXCLUDED.v4_assign_mode, v6_assign_mode = EXCLUDED.v6_assign_mode",
 						16,
 						NULL,
 						values,
