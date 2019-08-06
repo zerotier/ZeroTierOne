@@ -171,6 +171,7 @@ public:
 	 */
 	inline std::vector<Address> upstreamAddresses() const
 	{
+		// TODO
 		return std::vector<Address>();
 	}
 
@@ -293,39 +294,7 @@ public:
 	/**
 	 * Set or clear physical path configuration (called via Node::setPhysicalPathConfiguration)
 	 */
-	inline void setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig)
-	{
-		if (!pathNetwork) {
-			_numConfiguredPhysicalPaths = 0;
-		} else {
-			std::map<InetAddress,ZT_PhysicalPathConfiguration> cpaths;
-			for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i)
-				cpaths[_physicalPathConfig[i].first] = _physicalPathConfig[i].second;
-
-			if (pathConfig) {
-				ZT_PhysicalPathConfiguration pc(*pathConfig);
-
-				if (pc.mtu <= 0)
-					pc.mtu = ZT_DEFAULT_PHYSMTU;
-				else if (pc.mtu < ZT_MIN_PHYSMTU)
-					pc.mtu = ZT_MIN_PHYSMTU;
-				else if (pc.mtu > ZT_MAX_PHYSMTU)
-					pc.mtu = ZT_MAX_PHYSMTU;
-
-				cpaths[*(reinterpret_cast<const InetAddress *>(pathNetwork))] = pc;
-			} else {
-				cpaths.erase(*(reinterpret_cast<const InetAddress *>(pathNetwork)));
-			}
-
-			unsigned int cnt = 0;
-			for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::const_iterator i(cpaths.begin());((i!=cpaths.end())&&(cnt<ZT_MAX_CONFIGURABLE_PATHS));++i) {
-				_physicalPathConfig[cnt].first = i->first;
-				_physicalPathConfig[cnt].second = i->second;
-				++cnt;
-			}
-			_numConfiguredPhysicalPaths = cnt;
-		}
-	}
+	void setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig);
 
 private:
 	Identity _getIdentity(void *tPtr,const Address &zta);
@@ -335,7 +304,7 @@ private:
 	const RuntimeEnvironment *const RR;
 
 	std::pair<InetAddress,ZT_PhysicalPathConfiguration> _physicalPathConfig[ZT_MAX_CONFIGURABLE_PATHS];
-	volatile unsigned int _numConfiguredPhysicalPaths;
+	unsigned int _numConfiguredPhysicalPaths;
 
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	Mutex _peers_m;
