@@ -27,7 +27,7 @@
 #ifndef ZT_CONTROLLER_DB_HPP
 #define ZT_CONTROLLER_DB_HPP
 
-#define ZT_CONTROLLER_USE_LIBPQ
+//#define ZT_CONTROLLER_USE_LIBPQ
 
 #include "../node/Constants.hpp"
 #include "../node/Identity.hpp"
