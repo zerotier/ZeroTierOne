@@ -51,6 +51,7 @@
 #include "../ext/json/json.hpp"
 
 #include "DB.hpp"
+#include "DBMirrorSet.hpp"
 
 namespace ZeroTier {
 
@@ -153,7 +154,7 @@ private:
 	std::string _signingIdAddressString;
 	NetworkController::Sender *_sender;
 
-	std::unique_ptr<DB> _db;
+	DBMirrorSet _db;
 	BlockingQueue< _RQEntry * > _queue;
 
 	std::vector<std::thread> _threads;

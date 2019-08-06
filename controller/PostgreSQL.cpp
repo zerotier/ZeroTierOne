@@ -61,6 +61,7 @@ static const char *_timestr()
 	return ts;
 }
 
+/*
 std::string join(const std::vector<std::string> &elements, const char * const separator)
 {
 	switch(elements.size()) {
@@ -75,6 +76,7 @@ std::string join(const std::vector<std::string> &elements, const char * const se
 		return os.str();
 	}
 }
+*/
 
 } // anonymous namespace
 
@@ -174,7 +176,7 @@ bool PostgreSQL::save(nlohmann::json &record,bool notifyListeners)
 	bool modified = false;
 	try {
 		if (!record.is_object())
-			return;
+			return false;
 		const std::string objtype = record["objtype"];
 		if (objtype == "network") {
 			const uint64_t nwid = OSUtils::jsonIntHex(record["id"],0ULL);
@@ -1042,7 +1044,7 @@ void PostgreSQL::commitThread()
 				
 						_memberChanged(memOrig, memNew, qitem.second);
 					} else {
-						fprintf(stderr, "Can't notify of change.  Error parsing nwid or memberid: %lu-%lu\n", nwidInt, memberidInt);
+						fprintf(stderr, "Can't notify of change.  Error parsing nwid or memberid: %llu-%llu\n", (unsigned long long)nwidInt, (unsigned long long)memberidInt);
 					}
 
 				} catch (std::exception &e) {
@@ -1265,7 +1267,7 @@ void PostgreSQL::commitThread()
 
 						_networkChanged(nwOrig, nwNew, qitem.second);
 					} else {
-						fprintf(stderr, "Can't notify network changed: %lu\n", nwidInt);
+						fprintf(stderr, "Can't notify network changed: %llu\n", (unsigned long long)nwidInt);
 					}
 
 				} catch (std::exception &e) {
@@ -1348,7 +1350,7 @@ void PostgreSQL::onlineNotificationThread()
 	}
 	_connected = 1;
 
-	int64_t	lastUpdatedNetworkStatus = 0;
+	//int64_t	lastUpdatedNetworkStatus = 0;
 	std::unordered_map< std::pair<uint64_t,uint64_t>,int64_t,_PairHasher > lastOnlineCumulative;
 
 	while (_run == 1) {

@@ -28,6 +28,7 @@ CORE_OBJS=\
 
 ONE_OBJS=\
 	controller/EmbeddedNetworkController.o \
+	controller/DBMirrorSet.o \
 	controller/DB.o \
 	controller/FileDB.o \
 	controller/LFDB.o \

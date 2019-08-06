@@ -475,6 +475,7 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPa
 	_node(node),
 	_path(dbPath),
 	_sender((NetworkController::Sender *)0),
+	_db(this),
 	_mqc(mqc)
 {
 }
@@ -496,8 +497,12 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 	if ((_path.length() > 9)&&(_path.substr(0,9) == "postgres:")) {
-		_db.reset(new PostgreSQL(_signingId,_path.substr(9).c_str(), _listenPort, _mqc));
+		_db.addDB(std::shared_ptr<DB>(new PostgreSQL(_signingId,_path.substr(9).c_str(), _listenPort, _mqc)));
 	} else {
+#endif
+		_db.addDB(std::shared_ptr<DB>(new FileDB(_path.c_str())));
+#ifdef ZT_CONTROLLER_USE_LIBPQ
+	}
 #endif
 
 	std::string lfJSON;
@@ -521,7 +526,7 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 							std::size_t pubHdrEnd = lfOwnerPublic.find_first_of("\n\r\t ");
 							if (pubHdrEnd != std::string::npos) {
 								lfOwnerPublic = lfOwnerPublic.substr(0,pubHdrEnd);
-								_db.reset(new LFDB(_signingId,_path.c_str(),lfOwner.c_str(),lfOwnerPublic.c_str(),lfHost.c_str(),lfPort,storeOnlineState));
+								_db.addDB(std::shared_ptr<DB>(new LFDB(_signingId,_path.c_str(),lfOwner.c_str(),lfOwnerPublic.c_str(),lfHost.c_str(),lfPort,storeOnlineState)));
 							}
 						}
 					}
@@ -529,16 +534,8 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 			}
 		}
 	}
-	if (!_db)
-		_db.reset(new FileDB(_signingId,_path.c_str()));
 
-	_db->addListener(this);
-
-#ifdef ZT_CONTROLLER_USE_LIBPQ
-	}
-#endif
-
-	_db->waitForReady();
+	_db.waitForReady();
 }
 
 void EmbeddedNetworkController::request(
@@ -569,15 +566,12 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 	std::string &responseBody,
 	std::string &responseContentType)
 {
-	if (!_db)
-		return 500;
-
 	if ((path.size() > 0)&&(path[0] == "network")) {
 
 		if ((path.size() >= 2)&&(path[1].length() == 16)) {
 			const uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
 			json network;
-			if (!_db->get(nwid,network))
+			if (!_db.get(nwid,network))
 				return 404;
 
 			if (path.size() >= 3) {
@@ -589,7 +583,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 
 						const uint64_t address = Utils::hexStrToU64(path[3].c_str());
 						json member;
-						if (!_db->get(nwid,network,address,member))
+						if (!_db.get(nwid,network,address,member))
 							return 404;
 						responseBody = OSUtils::jsonDump(member);
 						responseContentType = "application/json";
@@ -599,7 +593,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 
 						responseBody = "{";
 						std::vector<json> members;
-						if (_db->get(nwid,network,members)) {
+						if (_db.get(nwid,network,members)) {
 							responseBody.reserve((members.size() + 2) * 32);
 							std::string mid;
 							for(auto member=members.begin();member!=members.end();++member) {
@@ -628,12 +622,12 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 		} else if (path.size() == 1) {
 			// List networks
 
-			std::vector<uint64_t> networkIds;
-			_db->networks(networkIds);
+			std::set<uint64_t> networkIds;
+			_db.networks(networkIds);
 			char tmp[64];
 			responseBody = "[";
 			responseBody.reserve((networkIds.size() + 1) * 24);
-			for(std::vector<uint64_t>::const_iterator i(networkIds.begin());i!=networkIds.end();++i) {
+			for(std::set<uint64_t>::const_iterator i(networkIds.begin());i!=networkIds.end();++i) {
 				if (responseBody.length() > 1)
 					responseBody.push_back(',');
 				OSUtils::ztsnprintf(tmp,sizeof(tmp),"\"%.16llx\"",(unsigned long long)*i);
@@ -650,7 +644,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 		// Controller status
 
 		char tmp[4096];
-		const bool dbOk = _db->isReady();
+		const bool dbOk = _db.isReady();
 		OSUtils::ztsnprintf(tmp,sizeof(tmp),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu,\n\t\"databaseReady\": %s\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now(),dbOk ? "true" : "false");
 		responseBody = tmp;
 		responseContentType = "application/json";
@@ -669,8 +663,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 	std::string &responseBody,
 	std::string &responseContentType)
 {
-	if (!_db)
-		return 500;
 	if (path.empty())
 		return 404;
 
@@ -704,7 +696,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					OSUtils::ztsnprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)address);
 
 					json member,network;
-					_db->get(nwid,network,address,member);
+					_db.get(nwid,network,address,member);
 					DB::initMember(member);
 
 					try {
@@ -798,7 +790,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					member["nwid"] = nwids;
 
 					DB::cleanMember(member);
-					_db->save(member);
+					_db.save(member,true);
 					responseBody = OSUtils::jsonDump(member);
 					responseContentType = "application/json";
 
@@ -817,7 +809,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						Utils::getSecureRandom(&nwidPostfix,sizeof(nwidPostfix));
 						uint64_t tryNwid = nwidPrefix | (nwidPostfix & 0xffffffULL);
 						if ((tryNwid & 0xffffffULL) == 0ULL) tryNwid |= 1ULL;
-						if (!_db->hasNetwork(tryNwid)) {
+						if (!_db.hasNetwork(tryNwid)) {
 							nwid = tryNwid;
 							break;
 						}
@@ -828,7 +820,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 				OSUtils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
 
 				json network;
-				_db->get(nwid,network);
+				_db.get(nwid,network);
 				DB::initNetwork(network);
 
 				try {
@@ -1059,7 +1051,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 				network["nwid"] = nwids; // legacy
 
 				DB::cleanNetwork(network);
-				_db->save(network);
+				_db.save(network,true);
 
 				responseBody = OSUtils::jsonDump(network);
 				responseContentType = "application/json";
@@ -1081,8 +1073,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 	std::string &responseBody,
 	std::string &responseContentType)
 {
-	if (!_db)
-		return 500;
 	if (path.empty())
 		return 404;
 
@@ -1094,8 +1084,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 					const uint64_t address = Utils::hexStrToU64(path[3].c_str());
 
 					json network,member;
-					_db->get(nwid,network,address,member);
-					_db->eraseMember(nwid, address);
+					_db.get(nwid,network,address,member);
+					_db.eraseMember(nwid, address);
 
 					{
 						std::lock_guard<std::mutex> l(_memberStatus_l);
@@ -1110,8 +1100,8 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 				}
 			} else {
 				json network;
-				_db->get(nwid,network);
-				_db->eraseNetwork(nwid);
+				_db.get(nwid,network);
+				_db.eraseNetwork(nwid);
 
 				{
 					std::lock_guard<std::mutex> l(_memberStatus_l);
@@ -1140,9 +1130,6 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 	static volatile unsigned long idCounter = 0;
 	char id[128],tmp[128];
 	std::string k,v;
-
-	if (!_db)
-		return;
 
 	try {
 		// Convert Dictionary into JSON object
@@ -1182,7 +1169,7 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 		d["objtype"] = "trace";
 		d["ts"] = now;
 		d["nodeId"] = Utils::hex10(rt.origin,tmp);
-		_db->save(d);
+		_db.save(d,true);
 	} catch ( ... ) {
 		// drop invalid trace messages if an error occurs
 	}
@@ -1235,9 +1222,6 @@ void EmbeddedNetworkController::_request(
 	DB::NetworkSummaryInfo ns;
 	json network,member;
 
-	if (!_db)
-		return;
-
 	if (((!_signingId)||(!_signingId.hasPrivate()))||(_signingId.address().toInt() != (nwid >> 24))||(!_sender))
 		return;
 
@@ -1251,10 +1235,10 @@ void EmbeddedNetworkController::_request(
 		ms.lastRequestTime = now;
 	}
 
-	_db->nodeIsOnline(nwid,identity.address().toInt(),fromAddr);
+	_db.nodeIsOnline(nwid,identity.address().toInt(),fromAddr);
 
 	Utils::hex(nwid,nwids);
-	_db->get(nwid,network,identity.address().toInt(),member,ns);
+	_db.get(nwid,network,identity.address().toInt(),member,ns);
 	if ((!network.is_object())||(network.size() == 0)) {
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
 		return;
@@ -1359,7 +1343,7 @@ void EmbeddedNetworkController::_request(
 	} else {
 		// If they are not authorized, STOP!
 		DB::cleanMember(member);
-		_db->save(member);
+		_db.save(member,true);
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
 		return;
 	}
@@ -1731,7 +1715,7 @@ void EmbeddedNetworkController::_request(
 	}
 
 	DB::cleanMember(member);
-	_db->save(member);
+	_db.save(member,true);
 	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),*(nc.get()),metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
 }
 
