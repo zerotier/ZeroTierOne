@@ -32,37 +32,48 @@
 #include <vector>
 #include <memory>
 #include <mutex>
+#include <set>
 
 namespace ZeroTier {
 
 class DBMirrorSet : public DB::ChangeListener
 {
 public:
-	DBMirrorSet();
+	DBMirrorSet(DB::ChangeListener *listener);
 	virtual ~DBMirrorSet();
+
+	bool hasNetwork(const uint64_t networkId) const;
+
+	bool get(const uint64_t networkId,nlohmann::json &network);
+	bool get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member);
+	bool get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member,DB::NetworkSummaryInfo &info);
+	bool get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohmann::json> &members);
+
+	void networks(std::set<uint64_t> &networks);
 
 	bool waitForReady();
 	bool isReady();
-	void save(nlohmann::json &record);
+	bool save(nlohmann::json &record,bool notifyListeners);
 	void eraseNetwork(const uint64_t networkId);
 	void eraseMember(const uint64_t networkId,const uint64_t memberId);
 	void nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress);
 
 	// These are called by various DB instances when changes occur.
-	virtual void onNetworkUpdate(const DB *db,uint64_t networkId,const nlohmann::json &network);
-	virtual void onNetworkMemberUpdate(const DB *db,uint64_t networkId,uint64_t memberId,const nlohmann::json &member);
-	virtual void onNetworkMemberDeauthorize(const DB *db,uint64_t networkId,uint64_t memberId);
-	virtual void onNetworkMemberOnline(const DB *db,uint64_t networkId,uint64_t memberId,const InetAddress &physicalAddress);
+	virtual void onNetworkUpdate(const void *db,uint64_t networkId,const nlohmann::json &network);
+	virtual void onNetworkMemberUpdate(const void *db,uint64_t networkId,uint64_t memberId,const nlohmann::json &member);
+	virtual void onNetworkMemberDeauthorize(const void *db,uint64_t networkId,uint64_t memberId);
 
 	inline void addDB(const std::shared_ptr<DB> &db)
 	{
+		db->addListener(this);
 		std::lock_guard<std::mutex> l(_dbs_l);
 		_dbs.push_back(db);
 	}
 
 private:
+	DB::ChangeListener *const _listener;
 	std::vector< std::shared_ptr< DB > > _dbs;
-	std::mutex _dbs_l;
+	mutable std::mutex _dbs_l;
 };
 
 } // namespace ZeroTier

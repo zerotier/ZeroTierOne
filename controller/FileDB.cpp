@@ -29,8 +29,9 @@
 namespace ZeroTier
 {
 
-FileDB::FileDB(const Identity &myId,const char *path) :
-	DB(myId,path),
+FileDB::FileDB(const char *path) :
+	DB(),
+	_path(path),
 	_networksPath(_path + ZT_PATH_SEPARATOR_S + "network"),
 	_tracePath(_path + ZT_PATH_SEPARATOR_S + "trace"),
 	_running(true)
@@ -85,9 +86,10 @@ FileDB::~FileDB()
 bool FileDB::waitForReady() { return true; }
 bool FileDB::isReady() { return true; }
 
-void FileDB::save(nlohmann::json &record)
+bool FileDB::save(nlohmann::json &record,bool notifyListeners)
 {
 	char p1[4096],p2[4096],pb[4096];
+	bool modified = false;
 	try {
 		const std::string objtype = record["objtype"];
 		if (objtype == "network") {
@@ -101,7 +103,8 @@ void FileDB::save(nlohmann::json &record)
 					OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json",_networksPath.c_str(),nwid);
 					if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
 						fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
-					_networkChanged(old,record,true);
+					_networkChanged(old,record,notifyListeners);
+					modified = true;
 				}
 			}
 
@@ -123,12 +126,14 @@ void FileDB::save(nlohmann::json &record)
 						if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
 							fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
 					}
-					_memberChanged(old,record,true);
+					_memberChanged(old,record,notifyListeners);
+					modified = true;
 				}
 			}
 
 		}
 	} catch ( ... ) {} // drop invalid records missing fields
+	return modified;
 }
 
 void FileDB::eraseNetwork(const uint64_t networkId)
@@ -163,15 +168,8 @@ void FileDB::nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const
 	char mid[32],atmp[64];
 	OSUtils::ztsnprintf(mid,sizeof(mid),"%.10llx",(unsigned long long)memberId);
 	physicalAddress.toString(atmp);
-	{
-		std::lock_guard<std::mutex> l(this->_online_l);
-		this->_online[networkId][memberId][OSUtils::now()] = physicalAddress;
-	}
-	{
-		std::lock_guard<std::mutex> l2(_changeListeners_l);
-		for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i)
-			(*i)->onNetworkMemberOnline(this,networkId,memberId,physicalAddress);
-	}
+	std::lock_guard<std::mutex> l(this->_online_l);
+	this->_online[networkId][memberId][OSUtils::now()] = physicalAddress;
 }
 
 } // namespace ZeroTier

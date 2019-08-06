@@ -43,6 +43,7 @@
 #include <vector>
 #include <atomic>
 #include <mutex>
+#include <set>
 
 #include "../ext/json/json.hpp"
 
@@ -60,10 +61,9 @@ public:
 	public:
 		ChangeListener() {}
 		virtual ~ChangeListener() {}
-		virtual void onNetworkUpdate(const DB *db,uint64_t networkId,const nlohmann::json &network) {}
-		virtual void onNetworkMemberUpdate(const DB *db,uint64_t networkId,uint64_t memberId,const nlohmann::json &member) {}
-		virtual void onNetworkMemberDeauthorize(const DB *db,uint64_t networkId,uint64_t memberId) {}
-		virtual void onNetworkMemberOnline(const DB *db,uint64_t networkId,uint64_t memberId,const InetAddress &physicalAddress) {}
+		virtual void onNetworkUpdate(const void *db,uint64_t networkId,const nlohmann::json &network) {}
+		virtual void onNetworkMemberUpdate(const void *db,uint64_t networkId,uint64_t memberId,const nlohmann::json &member) {}
+		virtual void onNetworkMemberDeauthorize(const void *db,uint64_t networkId,uint64_t memberId) {}
 	};
 
 	struct NetworkSummaryInfo
@@ -81,7 +81,7 @@ public:
 	static void cleanNetwork(nlohmann::json &network);
 	static void cleanMember(nlohmann::json &member);
 
-	DB(const Identity &myId,const char *path);
+	DB();
 	virtual ~DB();
 
 	virtual bool waitForReady() = 0;
@@ -98,10 +98,9 @@ public:
 	bool get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member,NetworkSummaryInfo &info);
 	bool get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohmann::json> &members);
 
-	bool summary(const uint64_t networkId,NetworkSummaryInfo &info);
-	void networks(std::vector<uint64_t> &networks);
+	void networks(std::set<uint64_t> &networks);
 
-	virtual void save(nlohmann::json &record) = 0;
+	virtual bool save(nlohmann::json &record,bool notifyListeners) = 0;
 
 	virtual void eraseNetwork(const uint64_t networkId) = 0;
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId) = 0;
@@ -127,14 +126,9 @@ protected:
 		std::mutex lock;
 	};
 
-	void _memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool initialized);
-	void _networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool initialized);
+	void _memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool notifyListeners);
+	void _networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool notifyListeners);
 	void _fillSummaryInfo(const std::shared_ptr<_Network> &nw,NetworkSummaryInfo &info);
-
-	const Identity _myId;
-	const Address _myAddress;
-	const std::string _path;
-	std::string _myAddressStr;
 
 	std::vector<DB::ChangeListener *> _changeListeners;
 	std::unordered_map< uint64_t,std::shared_ptr<_Network> > _networks;

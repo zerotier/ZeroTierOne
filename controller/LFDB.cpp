@@ -38,7 +38,7 @@ namespace ZeroTier
 {
 
 LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,const char *lfOwnerPublic,const char *lfNodeHost,int lfNodePort,bool storeOnlineState) :
-	DB(myId,path),
+	DB(),
 	_myId(myId),
 	_lfOwnerPrivate((lfOwnerPrivate) ? lfOwnerPrivate : ""),
 	_lfOwnerPublic((lfOwnerPublic) ? lfOwnerPublic : ""),
@@ -335,8 +335,9 @@ bool LFDB::isReady()
 	return (_ready.load());
 }
 
-void LFDB::save(nlohmann::json &record)
+bool LFDB::save(nlohmann::json &record,bool notifyListeners)
 {
+	bool modified = false;
 	const std::string objtype = record["objtype"];
 	if (objtype == "network") {
 		const uint64_t nwid = OSUtils::jsonIntHex(record["id"],0ULL);
@@ -345,11 +346,12 @@ void LFDB::save(nlohmann::json &record)
 			get(nwid,old);
 			if ((!old.is_object())||(old != record)) {
 				record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
-				_networkChanged(old,record,true);
+				_networkChanged(old,record,notifyListeners);
 				{
 					std::lock_guard<std::mutex> l(_state_l);
 					_state[nwid].dirty = true;
 				}
+				modified = true;
 			}
 		}
 	} else if (objtype == "member") {
@@ -360,14 +362,16 @@ void LFDB::save(nlohmann::json &record)
 			get(nwid,network,id,old);
 			if ((!old.is_object())||(old != record)) {
 				record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
-				_memberChanged(old,record,true);
+				_memberChanged(old,record,notifyListeners);
 				{
 					std::lock_guard<std::mutex> l(_state_l);
 					_state[nwid].members[id].dirty = true;
 				}
+				modified = true;
 			}
 		}
 	}
+	return modified;
 }
 
 void LFDB::eraseNetwork(const uint64_t networkId)
@@ -382,23 +386,16 @@ void LFDB::eraseMember(const uint64_t networkId,const uint64_t memberId)
 
 void LFDB::nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress)
 {
-	{
-		std::lock_guard<std::mutex> l(_state_l);
-		auto nw = _state.find(networkId);
-		if (nw != _state.end()) {
-			auto m = nw->second.members.find(memberId);
-			if (m != nw->second.members.end()) {
-				m->second.lastOnlineTime = OSUtils::now();
-				if (physicalAddress)
-					m->second.lastOnlineAddress = physicalAddress;
-				m->second.lastOnlineDirty = true;
-			}
+	std::lock_guard<std::mutex> l(_state_l);
+	auto nw = _state.find(networkId);
+	if (nw != _state.end()) {
+		auto m = nw->second.members.find(memberId);
+		if (m != nw->second.members.end()) {
+			m->second.lastOnlineTime = OSUtils::now();
+			if (physicalAddress)
+				m->second.lastOnlineAddress = physicalAddress;
+			m->second.lastOnlineDirty = true;
 		}
-	}
-	{
-		std::lock_guard<std::mutex> l2(_changeListeners_l);
-		for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i)
-			(*i)->onNetworkMemberOnline(this,networkId,memberId,physicalAddress);
 	}
 }
 

@@ -28,12 +28,72 @@
 
 namespace ZeroTier {
 
-DBMirrorSet::DBMirrorSet()
+DBMirrorSet::DBMirrorSet(DB::ChangeListener *listener) :
+	_listener(listener)
 {
 }
 
 DBMirrorSet::~DBMirrorSet()
 {
+}
+
+bool DBMirrorSet::hasNetwork(const uint64_t networkId) const
+{
+	std::lock_guard<std::mutex> l(_dbs_l);
+	for(auto d=_dbs.begin();d!=_dbs.end();++d) {
+		if ((*d)->hasNetwork(networkId))
+			return true;
+	}
+	return false;
+}
+
+bool DBMirrorSet::get(const uint64_t networkId,nlohmann::json &network)
+{
+	std::lock_guard<std::mutex> l(_dbs_l);
+	for(auto d=_dbs.begin();d!=_dbs.end();++d) {
+		if (get(networkId,network)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool DBMirrorSet::get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member)
+{
+	std::lock_guard<std::mutex> l(_dbs_l);
+	for(auto d=_dbs.begin();d!=_dbs.end();++d) {
+		if (get(networkId,network,memberId,member))
+			return true;
+	}
+	return false;
+}
+
+bool DBMirrorSet::get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member,DB::NetworkSummaryInfo &info)
+{
+	std::lock_guard<std::mutex> l(_dbs_l);
+	for(auto d=_dbs.begin();d!=_dbs.end();++d) {
+		if (get(networkId,network,memberId,member,info))
+			return true;
+	}
+	return false;
+}
+
+bool DBMirrorSet::get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohmann::json> &members)
+{
+	std::lock_guard<std::mutex> l(_dbs_l);
+	for(auto d=_dbs.begin();d!=_dbs.end();++d) {
+		if (get(networkId,network,members))
+			return true;
+	}
+	return false;
+}
+
+void DBMirrorSet::networks(std::set<uint64_t> &networks)
+{
+	std::lock_guard<std::mutex> l(_dbs_l);
+	for(auto d=_dbs.begin();d!=_dbs.end();++d) {
+		(*d)->networks(networks);
+	}
 }
 
 bool DBMirrorSet::waitForReady()
@@ -56,11 +116,21 @@ bool DBMirrorSet::isReady()
 	return true;
 }
 
-void DBMirrorSet::save(nlohmann::json &record)
+bool DBMirrorSet::save(nlohmann::json &record,bool notifyListeners)
 {
 	std::lock_guard<std::mutex> l(_dbs_l);
-	for(auto d=_dbs.begin();d!=_dbs.end();++d) {
-		(*d)->save(record);
+	if (notifyListeners) {
+		for(auto d=_dbs.begin();d!=_dbs.end();++d) {
+			if ((*d)->save(record,notifyListeners))
+				return true;
+		}
+		return false;
+	} else {
+		bool modified = false;
+		for(auto d=_dbs.begin();d!=_dbs.end();++d) {
+			modified |= (*d)->save(record,notifyListeners);
+		}
+		return modified;
 	}
 }
 
@@ -88,25 +158,39 @@ void DBMirrorSet::nodeIsOnline(const uint64_t networkId,const uint64_t memberId,
 	}
 }
 
-void DBMirrorSet::onNetworkUpdate(const DB *db,uint64_t networkId,const nlohmann::json &network)
+void DBMirrorSet::onNetworkUpdate(const void *db,uint64_t networkId,const nlohmann::json &network)
 {
+	bool modified = false;
+	nlohmann::json record(network);
 	std::lock_guard<std::mutex> l(_dbs_l);
 	for(auto d=_dbs.begin();d!=_dbs.end();++d) {
 		if (d->get() != db) {
+			modified |= (*d)->save(record,false);
 		}
+	}
+	if (modified) {
+		_listener->onNetworkUpdate(this,networkId,network);
 	}
 }
 
-void DBMirrorSet::onNetworkMemberUpdate(const DB *db,uint64_t networkId,uint64_t memberId,const nlohmann::json &member)
+void DBMirrorSet::onNetworkMemberUpdate(const void *db,uint64_t networkId,uint64_t memberId,const nlohmann::json &member)
 {
+	bool modified = false;
+	nlohmann::json record(member);
+	std::lock_guard<std::mutex> l(_dbs_l);
+	for(auto d=_dbs.begin();d!=_dbs.end();++d) {
+		if (d->get() != db) {
+			modified |= (*d)->save(record,false);
+		}
+	}
+	if (modified) {
+		_listener->onNetworkMemberUpdate(this,networkId,memberId,member);
+	}
 }
 
-void DBMirrorSet::onNetworkMemberDeauthorize(const DB *db,uint64_t networkId,uint64_t memberId)
+void DBMirrorSet::onNetworkMemberDeauthorize(const void *db,uint64_t networkId,uint64_t memberId)
 {
-}
-
-void DBMirrorSet::onNetworkMemberOnline(const DB *db,uint64_t networkId,uint64_t memberId,const InetAddress &physicalAddress)
-{
+	_listener->onNetworkMemberDeauthorize(this,networkId,memberId);
 }
 
 } // namespace ZeroTier
