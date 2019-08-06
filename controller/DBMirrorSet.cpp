@@ -51,7 +51,7 @@ bool DBMirrorSet::get(const uint64_t networkId,nlohmann::json &network)
 {
 	std::lock_guard<std::mutex> l(_dbs_l);
 	for(auto d=_dbs.begin();d!=_dbs.end();++d) {
-		if (get(networkId,network)) {
+		if ((*d)->get(networkId,network)) {
 			return true;
 		}
 	}
@@ -62,7 +62,7 @@ bool DBMirrorSet::get(const uint64_t networkId,nlohmann::json &network,const uin
 {
 	std::lock_guard<std::mutex> l(_dbs_l);
 	for(auto d=_dbs.begin();d!=_dbs.end();++d) {
-		if (get(networkId,network,memberId,member))
+		if ((*d)->get(networkId,network,memberId,member))
 			return true;
 	}
 	return false;
@@ -72,7 +72,7 @@ bool DBMirrorSet::get(const uint64_t networkId,nlohmann::json &network,const uin
 {
 	std::lock_guard<std::mutex> l(_dbs_l);
 	for(auto d=_dbs.begin();d!=_dbs.end();++d) {
-		if (get(networkId,network,memberId,member,info))
+		if ((*d)->get(networkId,network,memberId,member,info))
 			return true;
 	}
 	return false;
@@ -82,7 +82,7 @@ bool DBMirrorSet::get(const uint64_t networkId,nlohmann::json &network,std::vect
 {
 	std::lock_guard<std::mutex> l(_dbs_l);
 	for(auto d=_dbs.begin();d!=_dbs.end();++d) {
-		if (get(networkId,network,members))
+		if ((*d)->get(networkId,network,members))
 			return true;
 	}
 	return false;
@@ -118,16 +118,20 @@ bool DBMirrorSet::isReady()
 
 bool DBMirrorSet::save(nlohmann::json &record,bool notifyListeners)
 {
-	std::lock_guard<std::mutex> l(_dbs_l);
+	std::vector< std::shared_ptr<DB> > dbs;
+	{
+		std::lock_guard<std::mutex> l(_dbs_l);
+		dbs = _dbs;
+	}
 	if (notifyListeners) {
-		for(auto d=_dbs.begin();d!=_dbs.end();++d) {
+		for(auto d=dbs.begin();d!=dbs.end();++d) {
 			if ((*d)->save(record,notifyListeners))
 				return true;
 		}
 		return false;
 	} else {
 		bool modified = false;
-		for(auto d=_dbs.begin();d!=_dbs.end();++d) {
+		for(auto d=dbs.begin();d!=dbs.end();++d) {
 			modified |= (*d)->save(record,notifyListeners);
 		}
 		return modified;

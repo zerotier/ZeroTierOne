@@ -83,7 +83,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							if (resp) {
 								if (resp->status == 200) {
 									ns->second.dirty = false;
-									printf("SET network %.16llx %s\n",ns->first,resp->body.c_str());
+									//printf("SET network %.16llx %s\n",ns->first,resp->body.c_str());
 								} else {
 									fprintf(stderr,"ERROR: LFDB: %d from node (create/update network): %s" ZT_EOL_S,resp->status,resp->body.c_str());
 								}
@@ -129,7 +129,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							if (resp) {
 								if (resp->status == 200) {
 									ms->second.lastOnlineDirty = false;
-									printf("SET member online %.16llx %.10llx %s\n",ns->first,ms->first,resp->body.c_str());
+									//printf("SET member online %.16llx %.10llx %s\n",ns->first,ms->first,resp->body.c_str());
 								} else {
 									fprintf(stderr,"ERROR: LFDB: %d from node (create/update member online status): %s" ZT_EOL_S,resp->status,resp->body.c_str());
 								}
@@ -157,7 +157,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 								if (resp) {
 									if (resp->status == 200) {
 										ms->second.dirty = false;
-										printf("SET member %.16llx %.10llx %s\n",ns->first,ms->first,resp->body.c_str());
+										//printf("SET member %.16llx %.10llx %s\n",ns->first,ms->first,resp->body.c_str());
 									} else {
 										fprintf(stderr,"ERROR: LFDB: %d from node (create/update member): %s" ZT_EOL_S,resp->status,resp->body.c_str());
 									}
@@ -196,7 +196,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 										nlohmann::json &record = result["Record"];
 										if (record.is_object()) {
 											const std::string recordValue = result["Value"];
-											printf("GET network %s\n",recordValue.c_str());
+											//printf("GET network %s\n",recordValue.c_str());
 											nlohmann::json network(OSUtils::jsonParse(recordValue));
 											if (network.is_object()) {
 												const std::string idstr = network["id"];
@@ -264,7 +264,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 										nlohmann::json &record = result["Record"];
 										if (record.is_object()) {
 											const std::string recordValue = result["Value"];
-											printf("GET member %s\n",recordValue.c_str());
+											//printf("GET member %s\n",recordValue.c_str());
 											nlohmann::json member(OSUtils::jsonParse(recordValue));
 											if (member.is_object()) {
 												const std::string nwidstr = member["nwid"];
