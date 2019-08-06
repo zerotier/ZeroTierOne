@@ -27,6 +27,8 @@
 #ifndef ZT_CONTROLLER_RABBITMQ_HPP
 #define ZT_CONTROLLER_RABBITMQ_HPP
 
+#include "DB.hpp"
+
 namespace ZeroTier
 {
 struct MQConfig {

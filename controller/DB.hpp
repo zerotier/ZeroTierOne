@@ -27,6 +27,8 @@
 #ifndef ZT_CONTROLLER_DB_HPP
 #define ZT_CONTROLLER_DB_HPP
 
+#define ZT_CONTROLLER_USE_LIBPQ
+
 #include "../node/Constants.hpp"
 #include "../node/Identity.hpp"
 #include "../node/InetAddress.hpp"
@@ -99,7 +101,7 @@ public:
 	bool summary(const uint64_t networkId,NetworkSummaryInfo &info);
 	void networks(std::vector<uint64_t> &networks);
 
-	virtual void save(nlohmann::json *orig,nlohmann::json &record) = 0;
+	virtual void save(nlohmann::json &record) = 0;
 
 	virtual void eraseNetwork(const uint64_t networkId) = 0;
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId) = 0;

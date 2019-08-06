@@ -335,16 +335,8 @@ bool LFDB::isReady()
 	return (_ready.load());
 }
 
-void LFDB::save(nlohmann::json *orig,nlohmann::json &record)
+void LFDB::save(nlohmann::json &record)
 {
-	if (orig) {
-		if (*orig != record) {
-			record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1;
-		}
-	} else {
-		record["revision"] = 1;
-	}
-
 	const std::string objtype = record["objtype"];
 	if (objtype == "network") {
 		const uint64_t nwid = OSUtils::jsonIntHex(record["id"],0ULL);
@@ -352,6 +344,7 @@ void LFDB::save(nlohmann::json *orig,nlohmann::json &record)
 			nlohmann::json old;
 			get(nwid,old);
 			if ((!old.is_object())||(old != record)) {
+				record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
 				_networkChanged(old,record,true);
 				{
 					std::lock_guard<std::mutex> l(_state_l);
@@ -366,6 +359,7 @@ void LFDB::save(nlohmann::json *orig,nlohmann::json &record)
 			nlohmann::json network,old;
 			get(nwid,network,id,old);
 			if ((!old.is_object())||(old != record)) {
+				record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
 				_memberChanged(old,record,true);
 				{
 					std::lock_guard<std::mutex> l(_state_l);

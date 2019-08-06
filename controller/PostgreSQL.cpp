@@ -165,12 +165,35 @@ bool PostgreSQL::isReady()
 	return ((_ready == 2)&&(_connected));
 }
 
-void PostgreSQL::save(nlohmann::json *orig, nlohmann::json &record)
+void PostgreSQL::save(nlohmann::json &record)
 {
 	try {
-		if (!record.is_object()) {
+		if (!record.is_object())
 			return;
+		const std::string objtype = record["objtype"];
+		if (objtype == "network") {
+			const uint64_t nwid = OSUtils::jsonIntHex(record["id"],0ULL);
+			if (nwid) {
+				nlohmann::json old;
+				get(nwid,old);
+				if ((!old.is_object())||(old != record)) {
+					record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
+					_commitQueue.post(new nlohmann::json(record));
+				}
+			}
+		} else if (objtype == "member") {
+			const uint64_t nwid = OSUtils::jsonIntHex(record["nwid"],0ULL);
+			const uint64_t id = OSUtils::jsonIntHex(record["id"],0ULL);
+			if ((id)&&(nwid)) {
+				nlohmann::json network,old;
+				get(nwid,network,id,old);
+				if ((!old.is_object())||(old != record)) {
+					record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
+					_commitQueue.post(new nlohmann::json(record));
+				}
+			}
 		}
+		/*
 		waitForReady();
 		if (orig) {
 			if (*orig != record) {
@@ -181,6 +204,7 @@ void PostgreSQL::save(nlohmann::json *orig, nlohmann::json &record)
 			record["revision"] = 1;
 			_commitQueue.post(new nlohmann::json(record));
 		}
+		*/
 	} catch (std::exception &e) {
 		fprintf(stderr, "Error on PostgreSQL::save: %s\n", e.what());
 	} catch (...) {

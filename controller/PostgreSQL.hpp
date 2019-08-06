@@ -23,15 +23,13 @@
  * directly against ZeroTier software without disclosing the source code
  * of your own application.
  */
- 
-#define ZT_CONTROLLER_USE_LIBPQ
+
+#include "DB.hpp"
 
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 
 #ifndef ZT_CONTROLLER_LIBPQ_HPP
 #define ZT_CONTROLLER_LIBPQ_HPP
-
-#include "DB.hpp"
 
 #define ZT_CENTRAL_CONTROLLER_COMMIT_THREADS 4
 
@@ -57,7 +55,7 @@ public:
 
 	virtual bool waitForReady();
 	virtual bool isReady();
-	virtual void save(nlohmann::json *orig, nlohmann::json &record);
+	virtual void save(nlohmann::json &record);
 	virtual void eraseNetwork(const uint64_t networkId);
 	virtual void eraseMember(const uint64_t networkId, const uint64_t memberId);
 	virtual void nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const InetAddress &physicalAddress);

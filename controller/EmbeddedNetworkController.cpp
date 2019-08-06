@@ -705,7 +705,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 					json member,network;
 					_db->get(nwid,network,address,member);
-					json origMember(member); // for detecting changes
 					DB::initMember(member);
 
 					try {
@@ -799,7 +798,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					member["nwid"] = nwids;
 
 					DB::cleanMember(member);
-					_db->save(&origMember,member);
+					_db->save(member);
 					responseBody = OSUtils::jsonDump(member);
 					responseContentType = "application/json";
 
@@ -830,7 +829,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 				json network;
 				_db->get(nwid,network);
-				json origNetwork(network); // for detecting changes
 				DB::initNetwork(network);
 
 				try {
@@ -1061,7 +1059,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 				network["nwid"] = nwids; // legacy
 
 				DB::cleanNetwork(network);
-				_db->save(&origNetwork,network);
+				_db->save(network);
 
 				responseBody = OSUtils::jsonDump(network);
 				responseContentType = "application/json";
@@ -1184,7 +1182,7 @@ void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
 		d["objtype"] = "trace";
 		d["ts"] = now;
 		d["nodeId"] = Utils::hex10(rt.origin,tmp);
-		_db->save((nlohmann::json *)0,d);
+		_db->save(d);
 	} catch ( ... ) {
 		// drop invalid trace messages if an error occurs
 	}
@@ -1235,7 +1233,7 @@ void EmbeddedNetworkController::_request(
 {
 	char nwids[24];
 	DB::NetworkSummaryInfo ns;
-	json network,member,origMember;
+	json network,member;
 
 	if (!_db)
 		return;
@@ -1261,7 +1259,6 @@ void EmbeddedNetworkController::_request(
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
 		return;
 	}
-	origMember = member;
 	const bool newMember = ((!member.is_object())||(member.size() == 0));
 	DB::initMember(member);
 
@@ -1362,7 +1359,7 @@ void EmbeddedNetworkController::_request(
 	} else {
 		// If they are not authorized, STOP!
 		DB::cleanMember(member);
-		_db->save(&origMember,member);
+		_db->save(member);
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
 		return;
 	}
@@ -1734,7 +1731,7 @@ void EmbeddedNetworkController::_request(
 	}
 
 	DB::cleanMember(member);
-	_db->save(&origMember,member);
+	_db->save(member);
 	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),*(nc.get()),metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
 }
 
