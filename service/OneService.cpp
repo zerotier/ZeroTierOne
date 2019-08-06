@@ -273,6 +273,15 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 		ra.push_back(rj);
 	}
 	nj["routes"] = ra;
+
+	nlohmann::json mca = nlohmann::json::array();
+	for(unsigned int i=0;i<nc->multicastSubscriptionCount;++i) {
+		nlohmann::json m;
+		m["mac"] = MAC(nc->multicastSubscriptions[i].mac).toString(tmp);
+		m["adi"] = nc->multicastSubscriptions[i].adi;
+		mca.push_back(m);
+	}
+	nj["multicastSubscriptions"] = mca;
 }
 
 static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
