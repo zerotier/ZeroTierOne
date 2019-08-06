@@ -404,7 +404,7 @@ void LFDB::nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const I
 	{
 		std::lock_guard<std::mutex> l2(_changeListeners_l);
 		for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i)
-			(*i)->onNetworkMemberOnline(networkId,memberId,physicalAddress);
+			(*i)->onNetworkMemberOnline(this,networkId,memberId,physicalAddress);
 	}
 }
 

@@ -58,10 +58,10 @@ public:
 	public:
 		ChangeListener() {}
 		virtual ~ChangeListener() {}
-		virtual void onNetworkUpdate(uint64_t networkId,const nlohmann::json &network) {}
-		virtual void onNetworkMemberUpdate(uint64_t networkId,uint64_t memberId,const nlohmann::json &member) {}
-		virtual void onNetworkMemberDeauthorize(uint64_t networkId,uint64_t memberId) {}
-		virtual void onNetworkMemberOnline(uint64_t networkId,uint64_t memberId,const InetAddress &physicalAddress) {}
+		virtual void onNetworkUpdate(const DB *db,uint64_t networkId,const nlohmann::json &network) {}
+		virtual void onNetworkMemberUpdate(const DB *db,uint64_t networkId,uint64_t memberId,const nlohmann::json &member) {}
+		virtual void onNetworkMemberDeauthorize(const DB *db,uint64_t networkId,uint64_t memberId) {}
+		virtual void onNetworkMemberOnline(const DB *db,uint64_t networkId,uint64_t memberId,const InetAddress &physicalAddress) {}
 	};
 
 	struct NetworkSummaryInfo
@@ -95,12 +95,15 @@ public:
 	bool get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member);
 	bool get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member,NetworkSummaryInfo &info);
 	bool get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohmann::json> &members);
+
 	bool summary(const uint64_t networkId,NetworkSummaryInfo &info);
 	void networks(std::vector<uint64_t> &networks);
 
 	virtual void save(nlohmann::json *orig,nlohmann::json &record) = 0;
+
 	virtual void eraseNetwork(const uint64_t networkId) = 0;
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId) = 0;
+
 	virtual void nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress) = 0;
 
 	inline void addListener(DB::ChangeListener *const listener)

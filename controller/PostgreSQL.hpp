@@ -24,6 +24,8 @@
  * of your own application.
  */
  
+#define ZT_CONTROLLER_USE_LIBPQ
+
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 
 #ifndef ZT_CONTROLLER_LIBPQ_HPP
@@ -34,11 +36,10 @@
 #define ZT_CENTRAL_CONTROLLER_COMMIT_THREADS 4
 
 extern "C" {
-    typedef struct pg_conn PGconn;
+typedef struct pg_conn PGconn;
 }
 
-namespace ZeroTier
-{
+namespace ZeroTier {
 
 struct MQConfig;
 
@@ -51,66 +52,66 @@ struct MQConfig;
 class PostgreSQL : public DB
 {
 public:
-    PostgreSQL(const Identity &myId, const char *path, int listenPort, MQConfig *mqc = NULL);
-    virtual ~PostgreSQL();
+	PostgreSQL(const Identity &myId, const char *path, int listenPort, MQConfig *mqc = NULL);
+	virtual ~PostgreSQL();
 
-    virtual bool waitForReady();
-    virtual bool isReady();
-    virtual void save(nlohmann::json *orig, nlohmann::json &record);
-    virtual void eraseNetwork(const uint64_t networkId);
-    virtual void eraseMember(const uint64_t networkId, const uint64_t memberId);
-    virtual void nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const InetAddress &physicalAddress);
+	virtual bool waitForReady();
+	virtual bool isReady();
+	virtual void save(nlohmann::json *orig, nlohmann::json &record);
+	virtual void eraseNetwork(const uint64_t networkId);
+	virtual void eraseMember(const uint64_t networkId, const uint64_t memberId);
+	virtual void nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const InetAddress &physicalAddress);
 
 protected:
-    struct _PairHasher
+	struct _PairHasher
 	{
 		inline std::size_t operator()(const std::pair<uint64_t,uint64_t> &p) const { return (std::size_t)(p.first ^ p.second); }
 	};
 
 private:
-    void initializeNetworks(PGconn *conn);
-    void initializeMembers(PGconn *conn);
-    void heartbeat();
-    void membersDbWatcher();
-    void _membersWatcher_Postgres(PGconn *conn);
-    void _membersWatcher_RabbitMQ();
-    void networksDbWatcher();
-    void _networksWatcher_Postgres(PGconn *conn);
-    void _networksWatcher_RabbitMQ();
+	void initializeNetworks(PGconn *conn);
+	void initializeMembers(PGconn *conn);
+	void heartbeat();
+	void membersDbWatcher();
+	void _membersWatcher_Postgres(PGconn *conn);
+	void _membersWatcher_RabbitMQ();
+	void networksDbWatcher();
+	void _networksWatcher_Postgres(PGconn *conn);
+	void _networksWatcher_RabbitMQ();
 
-    void commitThread();
-    void onlineNotificationThread();
+	void commitThread();
+	void onlineNotificationThread();
 
-    enum OverrideMode {
-        ALLOW_PGBOUNCER_OVERRIDE = 0,
-        NO_OVERRIDE = 1
-    };
+	enum OverrideMode {
+		ALLOW_PGBOUNCER_OVERRIDE = 0,
+		NO_OVERRIDE = 1
+	};
 
-    PGconn * getPgConn( OverrideMode m = ALLOW_PGBOUNCER_OVERRIDE );
+	PGconn * getPgConn( OverrideMode m = ALLOW_PGBOUNCER_OVERRIDE );
 
-    std::string _connString;
+	std::string _connString;
 
-    BlockingQueue<nlohmann::json *> _commitQueue;
+	BlockingQueue<nlohmann::json *> _commitQueue;
 
-    std::thread _heartbeatThread;
-    std::thread _membersDbWatcher;
-    std::thread _networksDbWatcher;
-    std::thread _commitThread[ZT_CENTRAL_CONTROLLER_COMMIT_THREADS];
-    std::thread _onlineNotificationThread;
+	std::thread _heartbeatThread;
+	std::thread _membersDbWatcher;
+	std::thread _networksDbWatcher;
+	std::thread _commitThread[ZT_CENTRAL_CONTROLLER_COMMIT_THREADS];
+	std::thread _onlineNotificationThread;
 
 	std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > _lastOnline;
 
-    mutable std::mutex _lastOnline_l;
-    mutable std::mutex _readyLock;
-    std::atomic<int> _ready, _connected, _run;
-    mutable volatile bool _waitNoticePrinted;
+	mutable std::mutex _lastOnline_l;
+	mutable std::mutex _readyLock;
+	std::atomic<int> _ready, _connected, _run;
+	mutable volatile bool _waitNoticePrinted;
 
-    int _listenPort;
+	int _listenPort;
 
-    MQConfig *_mqc;
+	MQConfig *_mqc;
 };
 
-}
+} // namespace ZeroTier
 
 #endif // ZT_CONTROLLER_LIBPQ_HPP
 

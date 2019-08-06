@@ -101,9 +101,9 @@ public:
 
 	void handleRemoteTrace(const ZT_RemoteTrace &rt);
 
-	virtual void onNetworkUpdate(const uint64_t networkId,const nlohmann::json &network);
-	virtual void onNetworkMemberUpdate(const uint64_t networkId,const uint64_t memberId,const nlohmann::json &member);
-	virtual void onNetworkMemberDeauthorize(const uint64_t networkId,const uint64_t memberId);
+	virtual void onNetworkUpdate(const DB *db,uint64_t networkId,const nlohmann::json &network);
+	virtual void onNetworkMemberUpdate(const DB *db,uint64_t networkId,uint64_t memberId,const nlohmann::json &member);
+	virtual void onNetworkMemberDeauthorize(const DB *db,uint64_t networkId,uint64_t memberId);
 
 private:
 	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);

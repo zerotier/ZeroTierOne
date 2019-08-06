@@ -313,7 +313,7 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool in
 		if (initialized) {
 			std::lock_guard<std::mutex> ll(_changeListeners_l);
 			for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i) {
-				(*i)->onNetworkMemberUpdate(networkId,memberId,memberConfig);
+				(*i)->onNetworkMemberUpdate(this,networkId,memberId,memberConfig);
 			}
 		}
 	} else if (memberId) {
@@ -336,7 +336,7 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool in
 	if ((initialized)&&((wasAuth)&&(!isAuth)&&(networkId)&&(memberId))) {
 		std::lock_guard<std::mutex> ll(_changeListeners_l);
 		for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i) {
-			(*i)->onNetworkMemberDeauthorize(networkId,memberId);
+			(*i)->onNetworkMemberDeauthorize(this,networkId,memberId);
 		}
 	}
 }
@@ -362,7 +362,7 @@ void DB::_networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool 
 			if (initialized) {
 				std::lock_guard<std::mutex> ll(_changeListeners_l);
 				for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i) {
-					(*i)->onNetworkUpdate(networkId,networkConfig);
+					(*i)->onNetworkUpdate(this,networkId,networkConfig);
 				}
 			}
 		}

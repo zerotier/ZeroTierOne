@@ -24,9 +24,11 @@
  * of your own application.
  */
 
+#include "PostgreSQL.hpp"
+
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 
-#include "PostgreSQL.hpp"
+#include "../node/Constants.hpp"
 #include "EmbeddedNetworkController.hpp"
 #include "RabbitMQ.hpp"
 #include "../version.h"
@@ -37,6 +39,7 @@
 #include <amqp_tcp_socket.h>
 
 using json = nlohmann::json;
+
 namespace {
 
 static const int DB_MINIMUM_VERSION = 5;
@@ -73,16 +76,16 @@ std::string join(const std::vector<std::string> &elements, const char * const se
 	}
 }
 
-}
+} // anonymous namespace
 
 using namespace ZeroTier;
 
 PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, MQConfig *mqc)
-    : DB(myId, path)
-    , _ready(0)
+	: DB(myId, path)
+	, _ready(0)
 	, _connected(1)
-    , _run(1)
-    , _waitNoticePrinted(false)
+	, _run(1)
+	, _waitNoticePrinted(false)
 	, _listenPort(listenPort)
 	, _mqc(mqc)
 {
@@ -221,7 +224,7 @@ void PostgreSQL::nodeIsOnline(const uint64_t networkId, const uint64_t memberId,
 	{
 		std::lock_guard<std::mutex> l2(_changeListeners_l);
 		for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i)
-			(*i)->onNetworkMemberOnline(networkId,memberId,physicalAddress);
+			(*i)->onNetworkMemberOnline(this,networkId,memberId,physicalAddress);
 	}
 }
 
@@ -602,8 +605,8 @@ void PostgreSQL::heartbeat()
 				"public_identity = EXCLUDED.public_identity, v_major = EXCLUDED.v_major, v_minor = EXCLUDED.v_minor, "
 				"v_rev = EXCLUDED.v_rev, v_build = EXCLUDED.v_rev, host_port = EXCLUDED.host_port, "
 				"use_rabbitmq = EXCLUDED.use_rabbitmq",
-				10,       // number of parameters
-				NULL,    // oid field.   ignore
+				10,	   // number of parameters
+				NULL,	// oid field.   ignore
 				values,  // values for substitution
 				NULL, // lengths in bytes of each value
 				NULL,  // binary?
@@ -724,7 +727,7 @@ void PostgreSQL::_membersWatcher_RabbitMQ() {
 			fprintf(stderr, "RABBITMQ ERROR member change: %s\n", e.what());
 		} catch(...) {
 			fprintf(stderr, "RABBITMQ ERROR member change: unknown error\n");
-        }
+		}
 	}
 }
 
@@ -1324,7 +1327,7 @@ void PostgreSQL::onlineNotificationThread()
 
 	int64_t	lastUpdatedNetworkStatus = 0;
 	std::unordered_map< std::pair<uint64_t,uint64_t>,int64_t,_PairHasher > lastOnlineCumulative;
-	
+
 	while (_run == 1) {
 		if (PQstatus(conn) != CONNECTION_OK) {
 			fprintf(stderr, "ERROR: Online Notification thread lost connection to Postgres.");
@@ -1438,7 +1441,8 @@ void PostgreSQL::onlineNotificationThread()
 	}
 }
 
-PGconn *PostgreSQL::getPgConn(OverrideMode m) {
+PGconn *PostgreSQL::getPgConn(OverrideMode m)
+{
 	if (m == ALLOW_PGBOUNCER_OVERRIDE) {
 		char *connStr = getenv("PGBOUNCER_CONNSTR");
 		if (connStr != NULL) {
@@ -1452,4 +1456,5 @@ PGconn *PostgreSQL::getPgConn(OverrideMode m) {
 
 	return PQconnectdb(_connString.c_str());
 }
+
 #endif //ZT_CONTROLLER_USE_LIBPQ
