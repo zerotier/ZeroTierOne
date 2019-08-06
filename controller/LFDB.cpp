@@ -79,16 +79,22 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							newrec["OwnerPrivate"] = _lfOwnerPrivate;
 							newrec["MaskingKey"] = maskingKey;
 							newrec["PulseIfUnchanged"] = true;
-							auto resp = htcli.Post("/makerecord",newrec.dump(),"application/json");
-							if (resp) {
-								if (resp->status == 200) {
-									ns->second.dirty = false;
-									//printf("SET network %.16llx %s\n",ns->first,resp->body.c_str());
+							try {
+								auto resp = htcli.Post("/makerecord",newrec.dump(),"application/json");
+								if (resp) {
+									if (resp->status == 200) {
+										ns->second.dirty = false;
+										//printf("SET network %.16llx %s\n",ns->first,resp->body.c_str());
+									} else {
+										fprintf(stderr,"ERROR: LFDB: %d from node (create/update network): %s" ZT_EOL_S,resp->status,resp->body.c_str());
+									}
 								} else {
-									fprintf(stderr,"ERROR: LFDB: %d from node (create/update network): %s" ZT_EOL_S,resp->status,resp->body.c_str());
+									fprintf(stderr,"ERROR: LFDB: node is offline" ZT_EOL_S);
 								}
-							} else {
-								fprintf(stderr,"ERROR: LFDB: node is offline" ZT_EOL_S);
+							} catch (std::exception &e) {
+								fprintf(stderr,"ERROR: LFDB: unexpected exception querying node (create/update network): %s" ZT_EOL_S,e.what());
+							} catch ( ... ) {
+								fprintf(stderr,"ERROR: LFDB: unexpected exception querying node (create/update network): unknown exception" ZT_EOL_S);
 							}
 						}
 					}
@@ -125,16 +131,22 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							newrec["MaskingKey"] = maskingKey;
 							newrec["Timestamp"] = ms->second.lastOnlineTime;
 							newrec["PulseIfUnchanged"] = true;
-							auto resp = htcli.Post("/makerecord",newrec.dump(),"application/json");
-							if (resp) {
-								if (resp->status == 200) {
-									ms->second.lastOnlineDirty = false;
-									//printf("SET member online %.16llx %.10llx %s\n",ns->first,ms->first,resp->body.c_str());
+							try {
+								auto resp = htcli.Post("/makerecord",newrec.dump(),"application/json");
+								if (resp) {
+									if (resp->status == 200) {
+										ms->second.lastOnlineDirty = false;
+										//printf("SET member online %.16llx %.10llx %s\n",ns->first,ms->first,resp->body.c_str());
+									} else {
+										fprintf(stderr,"ERROR: LFDB: %d from node (create/update member online status): %s" ZT_EOL_S,resp->status,resp->body.c_str());
+									}
 								} else {
-									fprintf(stderr,"ERROR: LFDB: %d from node (create/update member online status): %s" ZT_EOL_S,resp->status,resp->body.c_str());
+									fprintf(stderr,"ERROR: LFDB: node is offline" ZT_EOL_S);
 								}
-							} else {
-								fprintf(stderr,"ERROR: LFDB: node is offline" ZT_EOL_S);
+							} catch (std::exception &e) {
+								fprintf(stderr,"ERROR: LFDB: unexpected exception querying node (create/update member online status): %s" ZT_EOL_S,e.what());
+							} catch ( ... ) {
+								fprintf(stderr,"ERROR: LFDB: unexpected exception querying node (create/update member online status): unknown exception" ZT_EOL_S);
 							}
 						}
 
@@ -153,16 +165,22 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 								newrec["OwnerPrivate"] = _lfOwnerPrivate;
 								newrec["MaskingKey"] = maskingKey;
 								newrec["PulseIfUnchanged"] = true;
-								auto resp = htcli.Post("/makerecord",newrec.dump(),"application/json");
-								if (resp) {
-									if (resp->status == 200) {
-										ms->second.dirty = false;
-										//printf("SET member %.16llx %.10llx %s\n",ns->first,ms->first,resp->body.c_str());
+								try {
+									auto resp = htcli.Post("/makerecord",newrec.dump(),"application/json");
+									if (resp) {
+										if (resp->status == 200) {
+											ms->second.dirty = false;
+											//printf("SET member %.16llx %.10llx %s\n",ns->first,ms->first,resp->body.c_str());
+										} else {
+											fprintf(stderr,"ERROR: LFDB: %d from node (create/update member): %s" ZT_EOL_S,resp->status,resp->body.c_str());
+										}
 									} else {
-										fprintf(stderr,"ERROR: LFDB: %d from node (create/update member): %s" ZT_EOL_S,resp->status,resp->body.c_str());
+										fprintf(stderr,"ERROR: LFDB: node is offline" ZT_EOL_S);
 									}
-								} else {
-									fprintf(stderr,"ERROR: LFDB: node is offline" ZT_EOL_S);
+								} catch (std::exception &e) {
+									fprintf(stderr,"ERROR: LFDB: unexpected exception querying node (create/update member): %s" ZT_EOL_S,e.what());
+								} catch ( ... ) {
+									fprintf(stderr,"ERROR: LFDB: unexpected exception querying node (create/update member): unknown exception" ZT_EOL_S);
 								}
 							}
 						}
@@ -170,7 +188,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 				}
 			}
 
-			{
+			try {
 				std::ostringstream query;
 				query
 					<< '{'
@@ -228,14 +246,18 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							}
 						}
 					} else {
-						fprintf(stderr,"ERROR: LFDB: %d from node: %s" ZT_EOL_S,resp->status,resp->body.c_str());
+						fprintf(stderr,"ERROR: LFDB: %d from node (check for network updates): %s" ZT_EOL_S,resp->status,resp->body.c_str());
 					}
 				} else {
 					fprintf(stderr,"ERROR: LFDB: node is offline" ZT_EOL_S);
 				}
+			} catch (std::exception &e) {
+				fprintf(stderr,"ERROR: LFDB: unexpected exception querying node (check for network updates): %s" ZT_EOL_S,e.what());
+			} catch ( ... ) {
+				fprintf(stderr,"ERROR: LFDB: unexpected exception querying node (check for network updates): unknown exception" ZT_EOL_S);
 			}
 
-			{
+			try {
 				std::ostringstream query;
 				query
 					<< '{'
@@ -297,11 +319,15 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							}
 						}
 					} else {
-						fprintf(stderr,"ERROR: LFDB: %d from node: %s" ZT_EOL_S,resp->status,resp->body.c_str());
+						fprintf(stderr,"ERROR: LFDB: %d from node (check for member updates): %s" ZT_EOL_S,resp->status,resp->body.c_str());
 					}
 				} else {
 					fprintf(stderr,"ERROR: LFDB: node is offline" ZT_EOL_S);
 				}
+			} catch (std::exception &e) {
+				fprintf(stderr,"ERROR: LFDB: unexpected exception querying node (check for member updates): %s" ZT_EOL_S,e.what());
+			} catch ( ... ) {
+				fprintf(stderr,"ERROR: LFDB: unexpected exception querying node (check for member updates): unknown exception" ZT_EOL_S);
 			}
 
 			timeRangeStart = time(nullptr) - 120; // start next query 2m before now to avoid losing updates

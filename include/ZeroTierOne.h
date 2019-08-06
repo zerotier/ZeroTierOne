@@ -199,6 +199,11 @@ extern "C" {
 #define ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH 7
 
 /**
+ * Maximum number of multicast groups a device / network interface can be subscribed to at once
+ */
+#define ZT_MAX_MULTICAST_SUBSCRIPTIONS 1024
+
+/**
  * Maximum value for link quality (min is 0)
  */
 #define ZT_PATH_LINK_QUALITY_MAX 0xff
@@ -1193,6 +1198,19 @@ typedef struct
 	 * Routes (excluding those implied by assigned addresses and their masks)
 	 */
 	ZT_VirtualNetworkRoute routes[ZT_MAX_NETWORK_ROUTES];
+
+	/**
+	 * Number of multicast groups subscribed
+	 */
+	unsigned int multicastSubscriptionCount;
+
+	/**
+	 * Multicast groups to which this network's device is subscribed
+	 */
+	struct {
+		uint64_t mac; /* MAC in lower 48 bits */
+		uint32_t adi; /* Additional distinguishing information, usually zero except for IPv4 ARP groups */
+	} multicastSubscriptions[ZT_MAX_MULTICAST_SUBSCRIPTIONS];
 } ZT_VirtualNetworkConfig;
 
 /**
