@@ -160,32 +160,26 @@ void DBMirrorSet::nodeIsOnline(const uint64_t networkId,const uint64_t memberId,
 
 void DBMirrorSet::onNetworkUpdate(const void *db,uint64_t networkId,const nlohmann::json &network)
 {
-	bool modified = false;
 	nlohmann::json record(network);
 	std::lock_guard<std::mutex> l(_dbs_l);
 	for(auto d=_dbs.begin();d!=_dbs.end();++d) {
 		if (d->get() != db) {
-			modified |= (*d)->save(record,false);
+			(*d)->save(record,false);
 		}
 	}
-	if (modified) {
-		_listener->onNetworkUpdate(this,networkId,network);
-	}
+	_listener->onNetworkUpdate(this,networkId,network);
 }
 
 void DBMirrorSet::onNetworkMemberUpdate(const void *db,uint64_t networkId,uint64_t memberId,const nlohmann::json &member)
 {
-	bool modified = false;
 	nlohmann::json record(member);
 	std::lock_guard<std::mutex> l(_dbs_l);
 	for(auto d=_dbs.begin();d!=_dbs.end();++d) {
 		if (d->get() != db) {
-			modified |= (*d)->save(record,false);
+			(*d)->save(record,false);
 		}
 	}
-	if (modified) {
-		_listener->onNetworkMemberUpdate(this,networkId,memberId,member);
-	}
+	_listener->onNetworkMemberUpdate(this,networkId,memberId,member);
 }
 
 void DBMirrorSet::onNetworkMemberDeauthorize(const void *db,uint64_t networkId,uint64_t memberId)
