@@ -100,29 +100,7 @@ using json = nlohmann::json;
 
 #include "../controller/EmbeddedNetworkController.hpp"
 #include "../controller/RabbitMQ.hpp"
-
-#ifdef ZT_USE_TEST_TAP
-
-#include "../osdep/TestEthernetTap.hpp"
-namespace ZeroTier { typedef TestEthernetTap EthernetTap; }
-
-#else
-
-#ifdef ZT_SDK
-
-#include "../controller/EmbeddedNetworkController.hpp"
-#include "../node/Node.hpp"
-// Use the virtual netcon endpoint instead of a tun/tap port driver
-#include "../include/VirtualTap.hpp"
-namespace ZeroTier { typedef VirtualTap EthernetTap; }
-
-#else
-
 #include "../osdep/EthernetTap.hpp"
-
-#endif // ZT_SDK
-
-#endif // ZT_USE_TEST_TAP
 
 #ifndef ZT_SOFTWARE_UPDATE_DEFAULT
 #define ZT_SOFTWARE_UPDATE_DEFAULT "disable"

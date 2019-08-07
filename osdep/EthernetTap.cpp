@@ -31,7 +31,6 @@
 #include <string.h>
 
 #ifdef __APPLE__
-#include <errno.h>
 #include <sys/sysctl.h>
 #include "MacEthernetTap.hpp"
 #include "MacKextEthernetTap.hpp"
@@ -57,6 +56,12 @@
 #include "BSDEthernetTap.hpp"
 #endif // __OpenBSD__
 
+#ifdef ZT_SDK
+#include "../controller/EmbeddedNetworkController.hpp"
+#include "../node/Node.hpp"
+#include "../include/VirtualTap.hpp"
+#endif
+
 namespace ZeroTier {
 
 std::shared_ptr<EthernetTap> EthernetTap::newInstance(
@@ -70,6 +75,11 @@ std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 	void (*handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 	void *arg)
 {
+
+#ifdef ZT_SDK
+	return std::shared_ptr<EthernetTap>(new VirtualTap(homePath,mac,mtu,metric,nwid,friendlyName,handler,arg));
+#else // not ZT_SDK
+
 #ifdef __APPLE__
 	char osrelease[256];
 	size_t size = sizeof(osrelease);
@@ -77,6 +87,7 @@ std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 		char *dotAt = strchr(osrelease,'.');
 		if (dotAt) {
 			*dotAt = (char)0;
+			printf("%s\n",osrelease);
 			// The "feth" virtual Ethernet device type appeared in Darwin 17.x.x. Older versions
 			// (Sierra and earlier) must use the a kernel extension.
 			if (strtol(osrelease,(char **)0,10) < 17) {
@@ -107,6 +118,8 @@ std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 #ifdef __OpenBSD__
 	return std::shared_ptr<EthernetTap>(new BSDEthernetTap(homePath,mac,mtu,metric,nwid,friendlyName,handler,arg));
 #endif // __OpenBSD__
+
+#endif // ZT_SDK?
 
 	return std::shared_ptr<EthernetTap>();
 }
