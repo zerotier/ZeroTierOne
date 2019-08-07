@@ -24,6 +24,17 @@
  * of your own application.
  */
 
+#include "../node/Constants.hpp"
+
+#ifdef __LINUX__
+
+#include "../node/Utils.hpp"
+#include "../node/Mutex.hpp"
+#include "../node/Dictionary.hpp"
+#include "OSUtils.hpp"
+#include "LinuxEthernetTap.hpp"
+#include "LinuxNetLink.hpp"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,14 +60,6 @@
 #include <algorithm>
 #include <utility>
 #include <string>
-
-#include "../node/Constants.hpp"
-#include "../node/Utils.hpp"
-#include "../node/Mutex.hpp"
-#include "../node/Dictionary.hpp"
-#include "OSUtils.hpp"
-#include "LinuxEthernetTap.hpp"
-#include "LinuxNetLink.hpp"
 
 // ff:ff:ff:ff:ff:ff with no ADI
 static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
@@ -519,3 +522,5 @@ void LinuxEthernetTap::threadMain()
 }
 
 } // namespace ZeroTier
+
+#endif // __LINUX__
