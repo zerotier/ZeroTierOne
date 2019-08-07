@@ -34,6 +34,7 @@ ONE_OBJS=\
 	controller/LFDB.o \
 	controller/PostgreSQL.o \
 	controller/RabbitMQ.o \
+	osdep/EthernetTap.o \
 	osdep/ManagedRoute.o \
 	osdep/Http.o \
 	osdep/OSUtils.o \
