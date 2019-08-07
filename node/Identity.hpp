@@ -57,8 +57,8 @@ class Identity
 public:
 	enum Type
 	{
-		C25519 = 0, // Curve25519 and Ed25519
-		P384 = 1    // NIST P-384 ECDH and ECDSA
+		C25519 = 0, // Curve25519 and Ed25519 (1.0 and 2.0, default)
+		P384 = 1    // NIST P-384 ECDH and ECDSA (2.0+ only)
 	};
 
 	Identity() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
@@ -122,6 +122,27 @@ public:
 					return true;
 				case P384:
 					SHA512::hash(sha,_k.t1.priv,ZT_ECC384_PRIVATE_KEY_SIZE);
+					return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Compute the SHA512 hash of our public key
+	 * 
+	 * @param sha Buffer to receive hash bytes
+	 * @return True on success, false if identity is empty or invalid
+	 */
+	inline bool sha512PublicKey(void *sha) const
+	{
+		if (_hasPrivate) {
+			switch(_type) {
+				case C25519:
+					SHA512::hash(sha,_k.t0.pub.data,ZT_C25519_PUBLIC_KEY_LEN);
+					return true;
+				case P384:
+					SHA512::hash(sha,_k.t1.pub,ZT_ECC384_PUBLIC_KEY_SIZE);
 					return true;
 			}
 		}

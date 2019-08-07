@@ -213,9 +213,11 @@ int Utils::b32d(const char *encoded, uint8_t *result, int bufSize)
 
 int Utils::b32e(const uint8_t *data,int length,char *result,int bufSize)
 {
-  if (length < 0 || length > (1 << 28))
+  if (length < 0 || length > (1 << 28)) {
+		result[0] = (char)0;
     return -1;
-  int count = 0;
+	}
+	int count = 0;
   if (length > 0) {
     int buffer = data[0];
     int next = 1;
@@ -237,9 +239,12 @@ int Utils::b32e(const uint8_t *data,int length,char *result,int bufSize)
       result[count++] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"[index];
     }
   }
-  if (count < bufSize)
-    result[count] = (char)0;
-  return count;
+  if (count < bufSize) {
+		result[count] = (char)0;
+		return count;
+	}
+	result[0] = (char)0;
+	return -1;
 }
 
 } // namespace ZeroTier

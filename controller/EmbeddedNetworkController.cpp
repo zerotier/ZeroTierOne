@@ -469,10 +469,11 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 
 } // anonymous namespace
 
-EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *dbPath, int listenPort, MQConfig *mqc) :
+EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *ztPath,const char *dbPath, int listenPort, MQConfig *mqc) :
 	_startTime(OSUtils::now()),
 	_listenPort(listenPort),
 	_node(node),
+	_ztPath(ztPath),
 	_path(dbPath),
 	_sender((NetworkController::Sender *)0),
 	_db(this),
@@ -506,7 +507,7 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 #endif
 
 	std::string lfJSON;
-	OSUtils::readFile((_path + ZT_PATH_SEPARATOR_S ".." ZT_PATH_SEPARATOR_S "local.conf").c_str(),lfJSON);
+	OSUtils::readFile((_ztPath + ZT_PATH_SEPARATOR_S "local.conf").c_str(),lfJSON);
 	if (lfJSON.length() > 0) {
 		nlohmann::json lfConfig(OSUtils::jsonParse(lfJSON));
 		nlohmann::json &settings = lfConfig["settings"];

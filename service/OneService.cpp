@@ -181,6 +181,9 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 // TCP activity timeout
 #define ZT_TCP_ACTIVITY_TIMEOUT 60000
 
+// How often local.conf is checked for changes
+#define ZT_LOCAL_CONF_FILE_CHECK_INTERVAL 10000
+
 #if ZT_VAULT_SUPPORT
 size_t curlResponseWrite(void *ptr, size_t size, size_t nmemb, std::string *data)
 {
@@ -753,7 +756,7 @@ public:
 			OSUtils::rmDashRf((_homePath + ZT_PATH_SEPARATOR_S "iddb.d").c_str());
 
 			// Network controller is now enabled by default for desktop and server
-			_controller = new EmbeddedNetworkController(_node,_controllerDbPath.c_str(),_ports[0], _mqc);
+			_controller = new EmbeddedNetworkController(_node,_homePath.c_str(),_controllerDbPath.c_str(),_ports[0], _mqc);
 			_node->setNetconfMaster((void *)_controller);
 
 			// Join existing networks in networks.d

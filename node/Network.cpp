@@ -399,9 +399,9 @@ static _doZtFilterResult _doZtFilter(
 					}
 					if (inbound) {
 						if (membership) {
-							if ((src)&&(membership->hasCertificateOfOwnershipFor<InetAddress>(nconf,src)))
+							if ((src)&&(membership->peerOwnsAddress<InetAddress>(nconf,src)))
 								ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_IP_AUTHENTICATED;
-							if (membership->hasCertificateOfOwnershipFor<MAC>(nconf,macSource))
+							if (membership->peerOwnsAddress<MAC>(nconf,macSource))
 								ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_MAC_AUTHENTICATED;
 						}
 					} else {

@@ -38,10 +38,6 @@
 #include <vector>
 #include <map>
 
-#if defined(__FreeBSD__)
-#include <sys/endian.h>
-#endif
-
 #include "Constants.hpp"
 
 namespace ZeroTier {

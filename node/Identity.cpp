@@ -122,6 +122,7 @@ void Identity::generate(const Type t)
 		case P384: {
 			do {
 				ECC384GenerateKey(_k.t1.pub,_k.t1.priv);
+				// TODO
 				SHA512::hash(digest,_k.t1.pub,ZT_ECC384_PUBLIC_KEY_SIZE);
 				_address.setTo(digest + 59,ZT_ADDRESS_LENGTH);
 			} while (_address.isReserved());

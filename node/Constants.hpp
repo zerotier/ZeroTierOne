@@ -60,8 +60,6 @@
 #endif
 
 #ifdef __APPLE__
-#define likely(x) __builtin_expect((x),1)
-#define unlikely(x) __builtin_expect((x),0)
 #include <TargetConditionals.h>
 #ifndef __UNIX_LIKE__
 #define __UNIX_LIKE__
@@ -79,7 +77,7 @@
 #ifndef __BSD__
 #define __BSD__
 #endif
-#include <machine/endian.h>
+#include <sys/endian.h>
 #ifndef __BYTE_ORDER
 #define __BYTE_ORDER _BYTE_ORDER
 #define __LITTLE_ENDIAN _LITTLE_ENDIAN
@@ -109,14 +107,14 @@
 #endif
 #endif
 
-// Define ZT_NO_TYPE_PUNNING to disable reckless casts on anything other than x86/x64.
+// Define ZT_NO_TYPE_PUNNING to disable reckless casts on anything other than x86 and x86_64.
 #if (!(defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_AMD64) || defined(_M_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || defined(_X86_) || defined(__I86__) || defined(__INTEL__) || defined(__386)))
 #ifndef ZT_NO_TYPE_PUNNING
 #define ZT_NO_TYPE_PUNNING
 #endif
 #endif
 
-// Assume little endian if not defined
+// Assume little endian if not defined on Mac and Windows as these don't run on any BE architectures.
 #if (defined(__APPLE__) || defined(__WINDOWS__)) && (!defined(__BYTE_ORDER))
 #undef __BYTE_ORDER
 #undef __LITTLE_ENDIAN
@@ -156,7 +154,7 @@
 #endif
 #endif
 
-#ifdef __WINDOWS__
+#if defined(__WINDOWS__) && !defined(__GNUC__) && !defined (__clang__) && !defined(__INTEL_COMPILER)
 #define ZT_PACKED_STRUCT(D) __pragma(pack(push,1)) D __pragma(pack(pop))
 #else
 #define ZT_PACKED_STRUCT(D) D __attribute__((packed))
@@ -178,7 +176,7 @@
 #define ZT_ADDRESS_RESERVED_PREFIX 0xff
 
 /**
- * Default MTU used for Ethernet tap device
+ * Default virtual network MTU (not physical)
  */
 #define ZT_DEFAULT_MTU 2800
 
@@ -188,17 +186,17 @@
 #define ZT_MAX_PACKET_FRAGMENTS 7
 
 /**
- * Size of RX queue
+ * Size of RX queue in packets
  */
 #define ZT_RX_QUEUE_SIZE 32
 
 /**
- * Size of TX queue
+ * Size of TX queue in packets
  */
 #define ZT_TX_QUEUE_SIZE 32
 
 /**
- * Length of secret key in bytes -- 256-bit -- do not change
+ * Length of peer shared secrets (256-bit, do not change)
  */
 #define ZT_PEER_SECRET_KEY_LENGTH 32
 
@@ -232,7 +230,7 @@
  *
  * The protocol allows up to 7, but we limit it to something smaller.
  */
-#define ZT_RELAY_MAX_HOPS 3
+#define ZT_RELAY_MAX_HOPS 4
 
 /**
  * Expire time for multicast 'likes' and indirect multicast memberships in ms
@@ -260,11 +258,6 @@
  * Delay between checks of peer pings, etc., and also related housekeeping tasks
  */
 #define ZT_PING_CHECK_INVERVAL 5000
-
-/**
- * How often the local.conf file is checked for changes (service, should be moved there)
- */
-#define ZT_LOCAL_CONF_FILE_CHECK_INTERVAL 10000
 
 /**
  * How frequently to check for changes to the system's network interfaces. When

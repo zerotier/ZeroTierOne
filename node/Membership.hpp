@@ -108,9 +108,9 @@ public:
 	 */
 	inline bool isAllowedOnNetwork(const NetworkConfig &nconf) const
 	{
-		if (nconf.isPublic()) return true;
-		if (_com.timestamp() <= _comRevocationThreshold) return false;
-		return nconf.com.agreesWith(_com);
+		if (nconf.isPublic()) return true; // public network
+		if (_com.timestamp() <= _comRevocationThreshold) return false; // COM has been revoked
+		return nconf.com.agreesWith(_com); // check timestamp agreement window
 	}
 
 	inline bool recentlyAssociated(const int64_t now) const
@@ -119,7 +119,7 @@ public:
 	}
 
 	/**
-	 * Check whether the peer represented by this Membership owns a given resource
+	 * Check whether the peer represented by this Membership owns a given address
 	 *
 	 * @tparam Type of resource: InetAddress or MAC
 	 * @param nconf Our network config
@@ -127,8 +127,10 @@ public:
 	 * @return True if this peer has a certificate of ownership for the given resource
 	 */
 	template<typename T>
-	inline bool hasCertificateOfOwnershipFor(const NetworkConfig &nconf,const T &r) const
+	inline bool peerOwnsAddress(const NetworkConfig &nconf,const T &r) const
 	{
+		if (_isUnspoofableAddress(nconf,r))
+			return true;
 		uint32_t *k = (uint32_t *)0;
 		CertificateOfOwnership *v = (CertificateOfOwnership *)0;
 		Hashtable< uint32_t,CertificateOfOwnership >::Iterator i(*(const_cast< Hashtable< uint32_t,CertificateOfOwnership> *>(&_remoteCoos)));
@@ -136,7 +138,7 @@ public:
 			if (_isCredentialTimestampValid(nconf,*v)&&(v->owns(r)))
 				return true;
 		}
-		return _isV6NDPEmulated(nconf,r);
+		return false;
 	}
 
 	/**
@@ -152,29 +154,10 @@ public:
 		return (((t)&&(_isCredentialTimestampValid(nconf,*t))) ? t : (Tag *)0);
 	}
 
-	/**
-	 * Validate and add a credential if signature is okay and it's otherwise good
-	 */
 	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const CertificateOfMembership &com);
-
-	/**
-	 * Validate and add a credential if signature is okay and it's otherwise good
-	 */
 	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Tag &tag);
-
-	/**
-	 * Validate and add a credential if signature is okay and it's otherwise good
-	 */
 	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Capability &cap);
-
-	/**
-	 * Validate and add a credential if signature is okay and it's otherwise good
-	 */
 	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const CertificateOfOwnership &coo);
-
-	/**
-	 * Validate and add a credential if signature is okay and it's otherwise good
-	 */
 	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Revocation &rev);
 
 	/**
@@ -186,20 +169,29 @@ public:
 	void clean(const int64_t now,const NetworkConfig &nconf);
 
 	/**
-	 * Generates a key for the internal use in indexing credentials by type and credential ID
+	 * Generates a key for internal use in indexing credentials by type and credential ID
 	 */
 	static uint64_t credentialKey(const Credential::Type &t,const uint32_t i) { return (((uint64_t)t << 32) | (uint64_t)i); }
 
 private:
-	inline bool _isV6NDPEmulated(const NetworkConfig &nconf,const MAC &m) const { return false; }
-	inline bool _isV6NDPEmulated(const NetworkConfig &nconf,const InetAddress &ip) const
+	// This returns true if a resource is an IPv6 NDP-emulated address. These embed the ZT
+	// address of the peer and therefore cannot be spoofed, causing peerOwnsAddress() to
+	// always return true for them. A certificate is not required for these.
+	inline bool _isUnspoofableAddress(const NetworkConfig &nconf,const MAC &m) const { return false; }
+	inline bool _isUnspoofableAddress(const NetworkConfig &nconf,const InetAddress &ip) const
 	{
-		if ((ip.isV6())&&(nconf.ndpEmulation())&&((InetAddress::makeIpv66plane(nconf.networkId,nconf.issuedTo.toInt()).ipsEqual(ip))||(InetAddress::makeIpv6rfc4193(nconf.networkId,nconf.issuedTo.toInt()).ipsEqual(ip)))) {
-			return true;
-		}
-		return false;
+		return (
+			(ip.ss_family == AF_INET6)&&
+			(nconf.ndpEmulation())&&
+			(
+				(InetAddress::makeIpv66plane(nconf.networkId,nconf.issuedTo.toInt()).ipsEqual(ip))||
+				(InetAddress::makeIpv6rfc4193(nconf.networkId,nconf.issuedTo.toInt()).ipsEqual(ip))
+			)
+		);
 	}
 
+	// This compares the remote credential's timestamp to the timestamp in our network config
+	// plus or minus the permitted maximum timestamp delta.
 	template<typename C>
 	inline bool _isCredentialTimestampValid(const NetworkConfig &nconf,const C &remoteCredential) const
 	{
