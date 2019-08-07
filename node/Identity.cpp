@@ -49,7 +49,7 @@ namespace ZeroTier {
 static inline void _computeMemoryHardHash(const void *publicKey,unsigned int publicKeyBytes,void *digest,void *genmem)
 {
 	// Digest publicKey[] to obtain initial digest
-	SHA512::hash(digest,publicKey,publicKeyBytes);
+	SHA512(digest,publicKey,publicKeyBytes);
 
 	// Initialize genmem[] using Salsa20 in a CBC-like configuration since
 	// ordinary Salsa20 is randomly seek-able. This is good for a cipher
@@ -123,7 +123,7 @@ void Identity::generate(const Type t)
 			do {
 				ECC384GenerateKey(_k.t1.pub,_k.t1.priv);
 				// TODO
-				SHA512::hash(digest,_k.t1.pub,ZT_ECC384_PUBLIC_KEY_SIZE);
+				SHA512(digest,_k.t1.pub,ZT_ECC384_PUBLIC_KEY_SIZE);
 				_address.setTo(digest + 59,ZT_ADDRESS_LENGTH);
 			} while (_address.isReserved());
 			_type = P384;

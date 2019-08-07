@@ -242,8 +242,8 @@ public:
 	 */
 	static void getSecureRandom(void *buf,unsigned int bytes);
 
-	static int Utils::b32d(const char *encoded, uint8_t *result, int bufSize);
-	static int Utils::b32e(const uint8_t *data,int length,char *result,int bufSize);
+	static int b32d(const char *encoded, uint8_t *result, int bufSize);
+	static int b32e(const uint8_t *data,int length,char *result,int bufSize);
 
 	/**
 	 * Tokenize a string (alias for strtok_r or strtok_s depending on platform)

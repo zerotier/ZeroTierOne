@@ -31,9 +31,14 @@
 #include "Identity.hpp"
 #include "InetAddress.hpp"
 #include "Utils.hpp"
+#include "Buffer.hpp"
+#include "SHA512.hpp"
 
 #include <algorithm>
 #include <vector>
+
+#define ZT_LOCATOR_MAX_PHYSICAL_ADDRESSES 255
+#define ZT_LOCATOR_MAX_VIRTUAL_ADDRESSES 255
 
 namespace ZeroTier {
 
@@ -48,22 +53,139 @@ namespace ZeroTier {
 class Locator
 {
 public:
-	Locator() :
-		_signatureLength(0) {}
+	Locator() : _signatureLength(0) {}
 
 	inline const std::vector<InetAddress> &phy() const { return _physical; }
 	inline const std::vector<Identity> &virt() const { return _virtual; }
 
+	inline void add(const InetAddress &ip)
+	{
+		if (_physical.size() < ZT_LOCATOR_MAX_PHYSICAL_ADDRESSES)
+			_physical.push_back(ip);
+	}
+	inline void add(const Identity &zt)
+	{
+		if (_virtual.size() < ZT_LOCATOR_MAX_VIRTUAL_ADDRESSES)
+			_virtual.push_back(zt);
+	}
+	inline void finish(const Identity &id,const int64_t ts)
+	{
+		_ts = ts;
+		_id = id;
+		std::sort(_physical.begin(),_physical.end());
+		_physical.erase(std::unique(_physical.begin(),_physical.end()),_physical.end());
+		std::sort(_virtual.begin(),_virtual.end());
+		_virtual.erase(std::unique(_virtual.begin(),_virtual.end()),_virtual.end());
+	}
+
 	inline bool sign(const Identity &signingId)
 	{
-		std::sort(_physical.begin(),_physical.end());
-		std::sort(_virtual.begin(),_virtual.end());
-		_id = signingId;
+		if (!signingId.hasPrivate())
+			return false;
+		if (signingId == _id) {
+			_signedBy.zero();
+		} else {
+			_signedBy = signingId;
+		}
+		Buffer<65536> *tmp = new Buffer<65536>();
+		try {
+			serialize(*tmp,true);
+			_signatureLength = signingId.sign(tmp->data(),tmp->size(),_signature,ZT_SIGNATURE_BUFFER_SIZE);
+			delete tmp;
+			return (_signatureLength > 0);
+		} catch ( ... ) {
+			delete tmp;
+			return false;
+		}
+	}
+
+	inline bool verify() const
+	{
+		if ((_signatureLength == 0)||(_signatureLength > sizeof(_signature)))
+			return false;
+		Buffer<16384> *tmp;
+		try {
+			tmp = new Buffer<16384>(); // 16384 would be huge
+			serialize(*tmp,true);
+			const bool ok = (_signedBy) ? _signedBy.verify(tmp->data(),tmp->size(),_signature,_signatureLength) : _id.verify(tmp->data(),tmp->size(),_signature,_signatureLength);
+			delete tmp;
+			return ok;
+		} catch ( ... ) {
+			delete tmp;
+			return false;
+		}
+	}
+
+	template<unsigned int C>
+	inline void serialize(Buffer<C> &b,const bool forSign = false) const
+	{
+		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+
+		b.append((uint8_t)0; // version/flags, currently 0
+		b.append((uint64_t)_ts);
+		_id.serialise(b,false);
+		if (_signedBy) {
+			b.append((uint8_t)1); // number of signers
+			_signedBy.serialize(b,false);
+		} else {
+			b.append((uint8_t)0); // signer is _id
+		}
+		b.append((uint8_t)_physical.size());
+		for(std::vector<InetAddress>::const_iterator i(_physical.begin());i!=_physical.end();++i)
+			i->serialize(b);
+		b.append((uint8_t)_virtual.size());
+		for(std::vector<Identity>::const_iterator i(_virtual.begin());i!=_virtual.end();++i)
+			i->serialize(b,false);
+		if (!forSign) {
+			b.append((uint16_t)_signatureLength);
+			b.append(_signature,_signatureLength);
+		}
+		b.append((uint16_t)0); // length of additional fields, currently 0
+
+		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+	}
+
+	template<unsigned int C>
+	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	{
+		unsigned int p = startAt;
+
+		if (b[p++] != 0)
+			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
+		_ts = (int64_t)b.template at<uint64_t>(p); p += 8;
+		p += _id.deserialize(b,p);
+		const unsigned int signerCount = b[p++];
+		if (signerCount > 1)
+			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
+		if (signerCount == 1) {
+			p += _signedBy.deserialize(b,p);
+		} else {
+			_signedBy.zero();
+		}
+		const unsigned int physicalCount = b[p++];
+		_physical.resize(physicalCount);
+		for(unsigned int i=0;i<physicalCount;++i)
+			p += _physical[i].deserialize(b,p);
+		const unsigned int virtualCount = b[p++];
+		_virtual.resize(virtualCount);
+		for(unsigned int i=0;i<virtualCount;++i)
+			p += _virtual[i].deserialize(b,p);
+		_signatureLen = b.template at<uint16_t>(p); p += 2;
+		if (_signatureLength > ZT_SIGNATURE_BUFFER_SIZE)
+			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
+		memcpy(_signature,b.field(p,_signatureLength),_signatureLength);
+		p += _signatureLength;
+		p += b.template at<uint16_t>(p); p += 2;
+		if (p > b.size())
+			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
+
+		return (p - startAt);
 	}
 
 private:
 	int64_t _ts;
 	Identity _id;
+	Identity _signedBy; // signed by _id if nil/zero
 	std::vector<InetAddress> _physical;
 	std::vector<Identity> _virtual;
 	unsigned int _signatureLength;

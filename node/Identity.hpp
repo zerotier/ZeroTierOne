@@ -75,6 +75,8 @@ public:
 
 	~Identity() { Utils::burn(reinterpret_cast<void *>(this),sizeof(Identity)); }
 
+	inline void zero() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
+
 	inline Identity &operator=(const Identity &id)
 	{
 		memcpy(reinterpret_cast<void *>(this),&id,sizeof(Identity));
@@ -118,10 +120,10 @@ public:
 		if (_hasPrivate) {
 			switch(_type) {
 				case C25519:
-					SHA512::hash(sha,_k.t0.priv.data,ZT_C25519_PRIVATE_KEY_LEN);
+					SHA512(sha,_k.t0.priv.data,ZT_C25519_PRIVATE_KEY_LEN);
 					return true;
 				case P384:
-					SHA512::hash(sha,_k.t1.priv,ZT_ECC384_PRIVATE_KEY_SIZE);
+					SHA512(sha,_k.t1.priv,ZT_ECC384_PRIVATE_KEY_SIZE);
 					return true;
 			}
 		}
@@ -139,10 +141,10 @@ public:
 		if (_hasPrivate) {
 			switch(_type) {
 				case C25519:
-					SHA512::hash(sha,_k.t0.pub.data,ZT_C25519_PUBLIC_KEY_LEN);
+					SHA512(sha,_k.t0.pub.data,ZT_C25519_PUBLIC_KEY_LEN);
 					return true;
 				case P384:
-					SHA512::hash(sha,_k.t1.pub,ZT_ECC384_PUBLIC_KEY_SIZE);
+					SHA512(sha,_k.t1.pub,ZT_ECC384_PUBLIC_KEY_SIZE);
 					return true;
 			}
 		}
@@ -175,7 +177,7 @@ public:
 			case P384:
 				if (siglen < ZT_ECC384_SIGNATURE_SIZE)
 					return 0;
-				SHA512::hash(h,data,len);
+				SHA512(h,data,len);
 				ECC384ECDSASign(_k.t1.priv,h,(uint8_t *)sig);
 				return ZT_ECC384_SIGNATURE_SIZE;
 		}
@@ -200,7 +202,7 @@ public:
 			case P384:
 				if (siglen != ZT_ECC384_SIGNATURE_SIZE)
 					return false;
-				SHA512::hash(h,data,len);
+				SHA512(h,data,len);
 				return ECC384ECDSAVerify(_k.t1.pub,h,(const uint8_t *)sig);
 		}
 		return false;
@@ -227,12 +229,12 @@ public:
 					return true;
 				case P384:
 					ECC384ECDH(id._k.t1.pub,_k.t1.priv,ecc384RawSecret);
-					SHA512::hash(h,ecc384RawSecret,sizeof(ecc384RawSecret));
+					SHA512(h,ecc384RawSecret,sizeof(ecc384RawSecret));
 					unsigned int hi = 0;
 					for(unsigned int i=0;i<klen;++i) {
 						if (hi == 64) {
 							hi = 0;
-							SHA512::hash(h,h,64);
+							SHA512(h,h,64);
 						}
 						((uint8_t *)key)[i] = h[hi++];
 					}
