@@ -75,7 +75,7 @@ public:
 
 	~Identity() { Utils::burn(reinterpret_cast<void *>(this),sizeof(Identity)); }
 
-	inline void zero() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
+	inline void zero() { Utils::burn(reinterpret_cast<void *>(this),sizeof(Identity)); }
 
 	inline Identity &operator=(const Identity &id)
 	{
@@ -165,21 +165,24 @@ public:
 	 */
 	inline unsigned int sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const
 	{
-		uint8_t h[64];
+		uint8_t h[48];
 		if (!_hasPrivate)
 			return 0;
 		switch(_type) {
+
 			case C25519:
 				if (siglen < ZT_C25519_SIGNATURE_LEN)
 					return 0;
 				C25519::sign(_k.t0.priv,_k.t0.pub,data,len,sig);
 				return ZT_C25519_SIGNATURE_LEN;
+
 			case P384:
 				if (siglen < ZT_ECC384_SIGNATURE_SIZE)
 					return 0;
-				SHA512(h,data,len);
+				SHA384(h,data,len);
 				ECC384ECDSASign(_k.t1.priv,h,(uint8_t *)sig);
 				return ZT_ECC384_SIGNATURE_SIZE;
+
 		}
 		return 0;
 	}
@@ -195,15 +198,18 @@ public:
 	 */
 	inline bool verify(const void *data,unsigned int len,const void *sig,unsigned int siglen) const
 	{
-		uint8_t h[64];
 		switch(_type) {
+
 			case C25519:
 				return C25519::verify(_k.t0.pub,data,len,sig,siglen);
+
 			case P384:
-				if (siglen != ZT_ECC384_SIGNATURE_SIZE)
-					return false;
-				SHA512(h,data,len);
-				return ECC384ECDSAVerify(_k.t1.pub,h,(const uint8_t *)sig);
+				if (siglen == ZT_ECC384_SIGNATURE_SIZE) {
+					uint8_t h[48];
+					SHA384(h,data,len);
+					return ECC384ECDSAVerify(_k.t1.pub,h,(const uint8_t *)sig);
+				}
+
 		}
 		return false;
 	}
@@ -221,24 +227,26 @@ public:
 	inline bool agree(const Identity &id,void *key,unsigned int klen) const
 	{
 		uint8_t ecc384RawSecret[ZT_ECC384_SHARED_SECRET_SIZE];
-		uint8_t h[64];
+		uint8_t h[48];
 		if (_hasPrivate) {
 			switch(_type) {
+
 				case C25519:
 					C25519::agree(_k.t0.priv,id._k.t0.pub,key,klen);
 					return true;
+
 				case P384:
 					ECC384ECDH(id._k.t1.pub,_k.t1.priv,ecc384RawSecret);
-					SHA512(h,ecc384RawSecret,sizeof(ecc384RawSecret));
-					unsigned int hi = 0;
-					for(unsigned int i=0;i<klen;++i) {
-						if (hi == 64) {
+					SHA384(h,ecc384RawSecret,sizeof(ecc384RawSecret));
+					for(unsigned int i=0,hi=0;i<klen;++i) {
+						if (hi == 48) {
 							hi = 0;
-							SHA512(h,h,64);
+							SHA384(h,h,48);
 						}
 						((uint8_t *)key)[i] = h[hi++];
 					}
 					return true;
+
 			}
 		}
 		return false;
@@ -261,6 +269,7 @@ public:
 	{
 		_address.appendTo(b);
 		switch(_type) {
+
 			case C25519:
 				b.append((uint8_t)C25519);
 				b.append(_k.t0.pub.data,ZT_C25519_PUBLIC_KEY_LEN);
@@ -271,6 +280,7 @@ public:
 					b.append((uint8_t)0);
 				}
 				break;
+
 			case P384:
 				b.append((uint8_t)P384);
 				b.append(_k.t1.pub,ZT_ECC384_PUBLIC_KEY_SIZE);
@@ -281,6 +291,7 @@ public:
 					b.append((uint8_t)0);
 				}
 				break;
+
 		}
 	}
 
@@ -308,6 +319,7 @@ public:
 
 		_type = (Type)b[p++];
 		switch(_type) {
+
 			case C25519:
 				memcpy(_k.t0.pub.data,b.field(p,ZT_C25519_PUBLIC_KEY_LEN),ZT_C25519_PUBLIC_KEY_LEN);
 				p += ZT_C25519_PUBLIC_KEY_LEN;
@@ -323,6 +335,7 @@ public:
 					_hasPrivate = false;
 				}
 				break;
+
 			case P384:
 				memcpy(_k.t0.pub.data,b.field(p,ZT_ECC384_PUBLIC_KEY_SIZE),ZT_ECC384_PUBLIC_KEY_SIZE);
 				p += ZT_ECC384_PUBLIC_KEY_SIZE;
@@ -338,8 +351,10 @@ public:
 					_hasPrivate = false;
 				}
 				break;
+
 			default:
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
+
 		}
 
 		return (p - startAt);

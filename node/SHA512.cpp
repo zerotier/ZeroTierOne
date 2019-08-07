@@ -14,8 +14,6 @@ Public domain.
 #include "SHA512.hpp"
 #include "Utils.hpp"
 
-#if 0
-
 #ifdef __APPLE__
 #include <CommonCrypto/CommonDigest.h>
 #define ZT_HAVE_NATIVE_SHA512
@@ -62,8 +60,6 @@ void SHA384(void *digest,const void *data,unsigned int len)
 }
 
 }
-#endif
-
 #endif
 
 #ifndef ZT_HAVE_NATIVE_SHA512
@@ -265,9 +261,5 @@ void SHA384(void *digest,const void *data,unsigned int len)
 
 #endif // !ZT_HAVE_NATIVE_SHA512
 
-// Internally re-export to included C code, which includes some fast crypto code ported in on some platforms.
-// This eliminates the need to link against a third party SHA512() from this code
-extern "C" void ZT_sha512internal(void *digest,const void *data,unsigned int len)
-{
-	ZeroTier::SHA512(digest,data,len);
-}
+extern "C" void ZT_sha512internal(void *digest,const void *data,unsigned int len) { ZeroTier::SHA512(digest,data,len); }
+extern "C" void ZT_sha384internal(void *digest,const void *data,unsigned int len) { ZeroTier::SHA384(digest,data,len); }
