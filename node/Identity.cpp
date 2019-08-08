@@ -37,8 +37,7 @@
 
 namespace ZeroTier {
 
-//////////////////////////////////////////////////////////////////////////////
-// This is the memory-hard hash used for type 0 identities' addresses
+namespace {
 
 // These can't be changed without a new identity type. They define the
 // parameters of the hashcash hashing/searching algorithm.
@@ -46,7 +45,7 @@ namespace ZeroTier {
 #define ZT_IDENTITY_GEN_MEMORY 2097152
 
 // A memory-hard composition of SHA-512 and Salsa20 for hashcash hashing
-static inline void _computeMemoryHardHash(const void *publicKey,unsigned int publicKeyBytes,void *digest,void *genmem)
+static void _computeMemoryHardHash(const void *publicKey,unsigned int publicKeyBytes,void *digest,void *genmem)
 {
 	// Digest publicKey[] to obtain initial digest
 	SHA512(digest,publicKey,publicKeyBytes);
@@ -96,73 +95,132 @@ struct _Identity_generate_cond
 	char *genmem;
 };
 
-//////////////////////////////////////////////////////////////////////////////
-// This is a memory-hard momentum-like hash used for type 1 addresses
-
-
-//////////////////////////////////////////////////////////////////////////////
+} // anonymous namespace
 
 void Identity::generate(const Type t)
 {
 	uint8_t digest[64];
+	char *const genmem = new char[ZT_IDENTITY_GEN_MEMORY];
 	switch(t) {
 		case C25519: {
-			char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];
-
 			C25519::Pair kp;
 			do {
 				kp = C25519::generateSatisfying(_Identity_generate_cond(digest,genmem));
 				_address.setTo(digest + 59,ZT_ADDRESS_LENGTH); // last 5 bytes are address
 			} while (_address.isReserved());
-
 			memcpy(_k.t0.pub.data,kp.pub.data,ZT_C25519_PUBLIC_KEY_LEN);
 			memcpy(_k.t0.priv.data,kp.priv.data,ZT_C25519_PRIVATE_KEY_LEN);
 			_type = C25519;
 			_hasPrivate = true;
-		
-			delete [] genmem;
 		}	break;
-
 		case P384: {
 			do {
 				ECC384GenerateKey(_k.t1.pub,_k.t1.priv);
-				// TODO
-				SHA512(digest,_k.t1.pub,ZT_ECC384_PUBLIC_KEY_SIZE);
+				_computeMemoryHardHash(_k.t1.pub,ZT_ECC384_PUBLIC_KEY_SIZE,digest,genmem);
+				if (digest[0] >= ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN)
+					continue;
 				_address.setTo(digest + 59,ZT_ADDRESS_LENGTH);
 			} while (_address.isReserved());
 			_type = P384;
 			_hasPrivate = true;
 		}	break;
 	}
+	delete [] genmem;
 }
 
 bool Identity::locallyValidate() const
 {
 	if (_address.isReserved())
 		return false;
-
-	switch(_type) {
-		case C25519: {
-			unsigned char digest[64];
-			char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];
-			_computeMemoryHardHash(_k.t0.pub.data,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
-			delete [] genmem;
-			unsigned char addrb[5];
-			_address.copyTo(addrb,5);
-			return (
-				(digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN)&&
-				(digest[59] == addrb[0])&&
-				(digest[60] == addrb[1])&&
-				(digest[61] == addrb[2])&&
-				(digest[62] == addrb[3])&&
-				(digest[63] == addrb[4]));
-		}	break;
-
-		case P384: {
-			return true;
-		}	break;
+	uint8_t digest[64];
+	char *genmem = nullptr;
+	try {
+		genmem = new char[ZT_IDENTITY_GEN_MEMORY];
+		switch(_type) {
+			case C25519:
+				_computeMemoryHardHash(_k.t0.pub.data,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
+				break;
+			case P384:
+				_computeMemoryHardHash(_k.t1.pub,ZT_ECC384_PUBLIC_KEY_SIZE,digest,genmem);
+				break;
+			default:
+				return false;
+		}
+		delete [] genmem;
+		unsigned char addrb[5];
+		_address.copyTo(addrb,5);
+		return (
+			(digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN)&&
+			(digest[59] == addrb[0])&&
+			(digest[60] == addrb[1])&&
+			(digest[61] == addrb[2])&&
+			(digest[62] == addrb[3])&&
+			(digest[63] == addrb[4]));
+	} catch ( ... ) {
+		if (genmem) delete [] genmem;
+		return false;
 	}
+}
 
+unsigned int Identity::sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const
+{
+	uint8_t h[48];
+	if (!_hasPrivate)
+		return 0;
+	switch(_type) {
+		case C25519:
+			if (siglen < ZT_C25519_SIGNATURE_LEN)
+				return 0;
+			C25519::sign(_k.t0.priv,_k.t0.pub,data,len,sig);
+			return ZT_C25519_SIGNATURE_LEN;
+		case P384:
+			if (siglen < ZT_ECC384_SIGNATURE_SIZE)
+				return 0;
+			SHA384(h,data,len);
+			ECC384ECDSASign(_k.t1.priv,h,(uint8_t *)sig);
+			return ZT_ECC384_SIGNATURE_SIZE;
+	}
+	return 0;
+}
+
+bool Identity::verify(const void *data,unsigned int len,const void *sig,unsigned int siglen) const
+{
+	switch(_type) {
+		case C25519:
+			return C25519::verify(_k.t0.pub,data,len,sig,siglen);
+		case P384:
+			if (siglen == ZT_ECC384_SIGNATURE_SIZE) {
+				uint8_t h[48];
+				SHA384(h,data,len);
+				return ECC384ECDSAVerify(_k.t1.pub,h,(const uint8_t *)sig);
+			}
+			break;
+	}
+	return false;
+}
+
+bool Identity::agree(const Identity &id,void *key,unsigned int klen) const
+{
+	uint8_t ecc384RawSecret[ZT_ECC384_SHARED_SECRET_SIZE];
+	uint8_t h[48];
+	if (_hasPrivate) {
+		switch(_type) {
+			case C25519:
+				C25519::agree(_k.t0.priv,id._k.t0.pub,key,klen);
+				return true;
+			case P384:
+				ECC384ECDH(id._k.t1.pub,_k.t1.priv,ecc384RawSecret);
+				SHA384(h,ecc384RawSecret,sizeof(ecc384RawSecret));
+				for(unsigned int i=0,hi=0;i<klen;++i) {
+					if (hi == 48) {
+						hi = 0;
+						SHA384(h,h,48);
+					}
+					((uint8_t *)key)[i] = h[hi++];
+				}
+				return true;
+		}
+	}
 	return false;
 }
 
@@ -186,7 +244,6 @@ char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_
 			*p = (char)0;
 			return buf;
 		}
-
 		case P384: {
 			char *p = buf;
 			Utils::hex10(_address.toInt(),p);
