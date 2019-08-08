@@ -116,6 +116,24 @@ public:
 		}
 	}
 
+	inline std::pair< Str,std::vector<Str> > makeTxtRecords(const uint8_t p384SigningKeyPrivate[ZT_ECC384_PUBLIC_KEY_SIZE],const uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE])
+	{
+		uint8_t s384[48],dnsSig[ZT_ECC384_SIGNATURE_SIZE];
+		char dnsSigTxtF0[64],dnsSigTxtF1[64],dnsSigTxtF2[64];
+
+		Buffer<16384> *tmp = new Buffer<16384>(); // 16384 would be huge
+		serialize(*tmp,false);
+		SHA384(s384,tmp->data(),tmp->size());
+		ECC384ECDSASign(p384SigningKeyPrivate,s384,dnsSig);
+
+		Utils::b32e(dnsSig,32,dnsSigTxtF0,sizeof(dnsSigTxtF0));
+		Utils::b32e(dnsSig+32,32,dnsSigTxtF0,sizeof(dnsSigTxtF0));
+		Utils::b32e(dnsSig+64,32,dnsSigTxtF0,sizeof(dnsSigTxtF0));
+		Str name;
+
+		delete tmp;
+	}
+
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,const bool forSign = false) const
 	{
