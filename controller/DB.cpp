@@ -52,6 +52,7 @@ void DB::initNetwork(nlohmann::json &network)
 	if (!network.count("mtu")) network["mtu"] = ZT_DEFAULT_MTU;
 	if (!network.count("remoteTraceTarget")) network["remoteTraceTarget"] = nlohmann::json();
 	if (!network.count("removeTraceLevel")) network["remoteTraceLevel"] = 0;
+	if (!network.count("rulesSource")) network["rulesSource"] = "";
 	if (!network.count("rules")) {
 		// If unspecified, rules are set to allow anything and behave like a flat L2 segment
 		network["rules"] = {{
