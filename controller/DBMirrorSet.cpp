@@ -79,6 +79,8 @@ DBMirrorSet::DBMirrorSet(DB::ChangeListener *listener) :
 
 DBMirrorSet::~DBMirrorSet()
 {
+	_running = false;
+	_syncCheckerThread.join();
 }
 
 bool DBMirrorSet::hasNetwork(const uint64_t networkId) const
