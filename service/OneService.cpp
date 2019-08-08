@@ -99,52 +99,7 @@ using json = nlohmann::json;
 
 #include "../controller/EmbeddedNetworkController.hpp"
 #include "../controller/RabbitMQ.hpp"
-
-#ifdef ZT_USE_TEST_TAP
-
-#include "../osdep/TestEthernetTap.hpp"
-namespace ZeroTier { typedef TestEthernetTap EthernetTap; }
-
-#else
-
-#ifdef ZT_SDK
-
-#include "../controller/EmbeddedNetworkController.hpp"
-#include "../node/Node.hpp"
-// Use the virtual netcon endpoint instead of a tun/tap port driver
-#include "../include/VirtualTap.hpp"
-namespace ZeroTier { typedef VirtualTap EthernetTap; }
-
-#else
-
-#ifdef __APPLE__
-#include "../osdep/MacEthernetTap.hpp"
-namespace ZeroTier { typedef MacEthernetTap EthernetTap; }
-#endif // __APPLE__
-#ifdef __LINUX__
-#include "../osdep/LinuxEthernetTap.hpp"
-namespace ZeroTier { typedef LinuxEthernetTap EthernetTap; }
-#endif // __LINUX__
-#ifdef __WINDOWS__
-#include "../osdep/WindowsEthernetTap.hpp"
-namespace ZeroTier { typedef WindowsEthernetTap EthernetTap; }
-#endif // __WINDOWS__
-#ifdef __FreeBSD__
-#include "../osdep/BSDEthernetTap.hpp"
-namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
-#endif // __FreeBSD__
-#ifdef __NetBSD__
-#include "../osdep/NetBSDEthernetTap.hpp"
-namespace ZeroTier { typedef NetBSDEthernetTap EthernetTap; }
-#endif // __NetBSD__
-#ifdef __OpenBSD__
-#include "../osdep/BSDEthernetTap.hpp"
-namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
-#endif // __OpenBSD__
-
-#endif // ZT_SDK
-
-#endif // ZT_USE_TEST_TAP
+#include "../osdep/EthernetTap.hpp"
 
 #ifndef ZT_SOFTWARE_UPDATE_DEFAULT
 #define ZT_SOFTWARE_UPDATE_DEFAULT "disable"
@@ -523,7 +478,7 @@ public:
 			settings.allowDefault = false;
 		}
 
-		EthernetTap *tap;
+		std::shared_ptr<EthernetTap> tap;
 		ZT_VirtualNetworkConfig config; // memcpy() of raw config from core
 		std::vector<InetAddress> managedIps;
 		std::list< SharedPtr<ManagedRoute> > managedRoutes;
@@ -925,8 +880,6 @@ public:
 
 		{
 			Mutex::Lock _l(_nets_m);
-			for(std::map<uint64_t,NetworkState>::iterator n(_nets.begin());n!=_nets.end();++n)
-				delete n->second.tap;
 			_nets.clear();
 		}
 
@@ -2040,7 +1993,8 @@ public:
 						char friendlyName[128];
 						OSUtils::ztsnprintf(friendlyName,sizeof(friendlyName),"ZeroTier One [%.16llx]",nwid);
 
-						n.tap = new EthernetTap(
+						n.tap = EthernetTap::newInstance(
+							nullptr,
 							_homePath.c_str(),
 							MAC(nwc->mac),
 							nwc->mtu,
@@ -2130,7 +2084,7 @@ public:
 					std::string winInstanceId(n.tap->instanceId());
 #endif
 					*nuptr = (void *)0;
-					delete n.tap;
+					n.tap.reset();
 					_nets.erase(nwid);
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
 					if ((op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY)&&(winInstanceId.length() > 0))

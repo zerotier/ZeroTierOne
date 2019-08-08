@@ -3,6 +3,7 @@
 export PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin
 
 OSX_RELEASE=`sw_vers -productVersion | cut -d . -f 1,2`
+DARWIN_MAJOR=`uname -r | cut -d . -f 1`
 
 launchctl unload /Library/LaunchDaemons/com.zerotier.one.plist >>/dev/null 2>&1
 sleep 0.5
@@ -43,9 +44,11 @@ rm -f zerotier-cli zerotier-idtool
 ln -sf "/Library/Application Support/ZeroTier/One/zerotier-one" zerotier-cli
 ln -sf "/Library/Application Support/ZeroTier/One/zerotier-one" zerotier-idtool
 
-cd "/Library/Application Support/ZeroTier/One"
-kextload -r . tap.kext >>/dev/null 2>&1 &
-disown %1
+if [ $DARWIN_MAJOR -le 16 ]; then
+	cd "/Library/Application Support/ZeroTier/One"
+	kextload -r . tap.kext >>/dev/null 2>&1 &
+	disown %1
+fi
 
 launchctl load /Library/LaunchDaemons/com.zerotier.one.plist >>/dev/null 2>&1
 
