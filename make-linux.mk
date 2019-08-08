@@ -401,4 +401,11 @@ debian-clean: FORCE
 redhat:	FORCE
 	rpmbuild -ba zerotier-one.spec
 
+# This installs the packages needed to build ZT locally on CentOS 7 and
+# is here largely for documentation purposes.
+centos-7-setup: FORCE
+	yum install -y gcc gcc-c++ make epel-release git
+	yum install -y centos-release-scl
+	yum install -y devtoolset-8-gcc devtoolset-8-gcc-c++
+
 FORCE:
