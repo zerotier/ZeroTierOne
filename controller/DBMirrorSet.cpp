@@ -50,27 +50,31 @@ DBMirrorSet::DBMirrorSet(DB::ChangeListener *listener) :
 
 			for(auto db=dbs.begin();db!=dbs.end();++db) {
 				(*db)->each([this,&dbs,&db](uint64_t networkId,const nlohmann::json &network,uint64_t memberId,const nlohmann::json &member) {
-					if (memberId == 0) {
-						for(auto db2=dbs.begin();db2!=dbs.end();++db2) {
-							if (db->get() != db2->get()) {
-								nlohmann::json nw2;
-								if ((!(*db2)->get(networkId,nw2))||(OSUtils::jsonInt(nw2["revision"],0) < OSUtils::jsonInt(network["revision"],0))) {
-									nw2 = network;
-									(*db2)->save(nw2,false);
+					try {
+						if (network.is_object()) {
+							if (memberId == 0) {
+								for(auto db2=dbs.begin();db2!=dbs.end();++db2) {
+									if (db->get() != db2->get()) {
+										nlohmann::json nw2;
+										if ((!(*db2)->get(networkId,nw2))||((nw2.is_object())&&(OSUtils::jsonInt(nw2["revision"],0) < OSUtils::jsonInt(network["revision"],0)))) {
+											nw2 = network;
+											(*db2)->save(nw2,false);
+										}
+									}
+								}
+							} else if (member.is_object()) {
+								for(auto db2=dbs.begin();db2!=dbs.end();++db2) {
+									if (db->get() != db2->get()) {
+										nlohmann::json nw2,m2;
+										if ((!(*db2)->get(networkId,nw2,memberId,m2))||((m2.is_object())&&(OSUtils::jsonInt(m2["revision"],0) < OSUtils::jsonInt(member["revision"],0)))) {
+											m2 = member;
+											(*db2)->save(m2,false);
+										}
+									}
 								}
 							}
 						}
-					} else {
-						for(auto db2=dbs.begin();db2!=dbs.end();++db2) {
-							if (db->get() != db2->get()) {
-								nlohmann::json nw2,m2;
-								if ((!(*db2)->get(networkId,nw2,memberId,m2))||(OSUtils::jsonInt(nw2["revision"],0) < OSUtils::jsonInt(network["revision"],0))) {
-									m2 = member;
-									(*db2)->save(m2,false);
-								}
-							}
-						}
-					}
+					} catch ( ... ) {} // skip entries that generate JSON errors
 				});
 			}
 		}
