@@ -220,20 +220,16 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 												const uint64_t id = Utils::hexStrToU64(idstr.c_str());
 												if ((id >> 24) == controllerAddressInt) { // sanity check
 
-													std::lock_guard<std::mutex> sl(_state_l);
-													_NetworkState &ns = _state[id];
-													if (!ns.dirty) {
-														nlohmann::json oldNetwork;
-														if ((timeRangeStart > 0)&&(get(id,oldNetwork))) {
-															const uint64_t revision = network["revision"];
-															const uint64_t prevRevision = oldNetwork["revision"];
-															if (prevRevision < revision) {
-																_networkChanged(oldNetwork,network,timeRangeStart > 0);
-															}
-														} else {
-															nlohmann::json nullJson;
-															_networkChanged(nullJson,network,timeRangeStart > 0);
+													nlohmann::json oldNetwork;
+													if ((timeRangeStart > 0)&&(get(id,oldNetwork))) {
+														const uint64_t revision = network["revision"];
+														const uint64_t prevRevision = oldNetwork["revision"];
+														if (prevRevision < revision) {
+															_networkChanged(oldNetwork,network,timeRangeStart > 0);
 														}
+													} else {
+														nlohmann::json nullJson;
+														_networkChanged(nullJson,network,timeRangeStart > 0);
 													}
 
 												}
@@ -294,17 +290,13 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 												const uint64_t id = Utils::hexStrToU64(idstr.c_str());
 												if ((id)&&((nwid >> 24) == controllerAddressInt)) { // sanity check
 
-													std::lock_guard<std::mutex> sl(_state_l);
-													auto ns = _state.find(nwid);
-													if ((ns == _state.end())||(!ns->second.members[id].dirty)) {
-														nlohmann::json network,oldMember;
-														if ((timeRangeStart > 0)&&(get(nwid,network,id,oldMember))) {
-															const uint64_t revision = member["revision"];
-															const uint64_t prevRevision = oldMember["revision"];
-															if (prevRevision < revision)
-																_memberChanged(oldMember,member,timeRangeStart > 0);
-														}
-													} else {
+													nlohmann::json network,oldMember;
+													if ((timeRangeStart > 0)&&(get(nwid,network,id,oldMember))) {
+														const uint64_t revision = member["revision"];
+														const uint64_t prevRevision = oldMember["revision"];
+														if (prevRevision < revision)
+															_memberChanged(oldMember,member,timeRangeStart > 0);
+													} else if (network.is_object()) {
 														nlohmann::json nullJson;
 														_memberChanged(nullJson,member,timeRangeStart > 0);
 													}
