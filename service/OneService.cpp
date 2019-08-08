@@ -101,6 +101,9 @@ using json = nlohmann::json;
 #include "../controller/EmbeddedNetworkController.hpp"
 #include "../controller/RabbitMQ.hpp"
 #include "../osdep/EthernetTap.hpp"
+#ifdef __WINDOWS__
+#include "../osdep/WindowsEthernetTap.hpp"
+#endif
 
 #ifndef ZT_SOFTWARE_UPDATE_DEFAULT
 #define ZT_SOFTWARE_UPDATE_DEFAULT "disable"
@@ -1741,7 +1744,7 @@ public:
 		if (syncRoutes) {
 			char tapdev[64];
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
-			OSUtils::ztsnprintf(tapdev,sizeof(tapdev),"%.16llx",(unsigned long long)n.tap->luid().Value);
+			OSUtils::ztsnprintf(tapdev,sizeof(tapdev),"%.16llx",(unsigned long long)((WindowsEthernetTap *)(n.tap.get()))->luid().Value);
 #else
 			Utils::scopy(tapdev,sizeof(tapdev),n.tap->deviceName().c_str());
 #endif
@@ -2167,7 +2170,7 @@ public:
 					// without WindowsEthernetTap::isInitialized() returning true, the won't actually
 					// be online yet and setting managed routes on it will fail.
 					const int MAX_SLEEP_COUNT = 500;
-					for (int i = 0; !n.tap->isInitialized() && i < MAX_SLEEP_COUNT; i++) {
+					for (int i = 0; !((WindowsEthernetTap *)(n.tap.get()))->isInitialized() && i < MAX_SLEEP_COUNT; i++) {
 						Sleep(10);
 					}
 #endif
@@ -2183,7 +2186,7 @@ public:
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY:
 				if (n.tap) { // sanity check
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
-					std::string winInstanceId(n.tap->instanceId());
+					std::string winInstanceId(((WindowsEthernetTap *)(n.tap.get()))->instanceId());
 #endif
 					*nuptr = (void *)0;
 					n.tap.reset();
