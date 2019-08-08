@@ -30,6 +30,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef ZT_SDK
+
+#include "../controller/EmbeddedNetworkController.hpp"
+#include "../node/Node.hpp"
+#include "../include/VirtualTap.hpp"
+
+#else
+
 #ifdef __APPLE__
 #include <sys/sysctl.h>
 #include "MacEthernetTap.hpp"
@@ -56,10 +64,6 @@
 #include "BSDEthernetTap.hpp"
 #endif // __OpenBSD__
 
-#ifdef ZT_SDK
-#include "../controller/EmbeddedNetworkController.hpp"
-#include "../node/Node.hpp"
-#include "../include/VirtualTap.hpp"
 #endif
 
 namespace ZeroTier {
@@ -77,7 +81,9 @@ std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 {
 
 #ifdef ZT_SDK
+
 	return std::shared_ptr<EthernetTap>(new VirtualTap(homePath,mac,mtu,metric,nwid,friendlyName,handler,arg));
+
 #else // not ZT_SDK
 
 #ifdef __APPLE__
