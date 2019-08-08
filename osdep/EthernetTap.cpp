@@ -87,7 +87,6 @@ std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 		char *dotAt = strchr(osrelease,'.');
 		if (dotAt) {
 			*dotAt = (char)0;
-			printf("%s\n",osrelease);
 			// The "feth" virtual Ethernet device type appeared in Darwin 17.x.x. Older versions
 			// (Sierra and earlier) must use the a kernel extension.
 			if (strtol(osrelease,(char **)0,10) < 17) {
