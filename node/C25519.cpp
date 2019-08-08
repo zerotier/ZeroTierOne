@@ -22,6 +22,10 @@ Derived from public domain code by D. J. Bernstein.
 #pragma warning(disable: 4146)
 #endif
 
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 namespace {
 
 #define crypto_int32 int32_t
