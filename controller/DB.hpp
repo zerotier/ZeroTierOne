@@ -100,6 +100,19 @@ public:
 
 	void networks(std::set<uint64_t> &networks);
 
+	template<typename F>
+	inline void each(F f)
+	{
+		nlohmann::json nullJson;
+		std::lock_guard<std::mutex> lck(_networks_l);
+		for(auto nw=_networks.begin();nw!=_networks.end();++nw) {
+			f(nw->first,nw->second->config,0,nullJson); // first provide network with 0 for member ID
+			for(auto m=nw->second->members.begin();m!=nw->second->members.end();++m) {
+				f(nw->first,nw->second->config,m->first,m->second);
+			}
+		}
+	}
+
 	virtual bool save(nlohmann::json &record,bool notifyListeners) = 0;
 
 	virtual void eraseNetwork(const uint64_t networkId) = 0;
@@ -114,7 +127,7 @@ public:
 	}
 
 protected:
-	inline bool _compareRecords(const nlohmann::json &a,const nlohmann::json &b)
+	static inline bool _compareRecords(const nlohmann::json &a,const nlohmann::json &b)
 	{
 		if (a.is_object() == b.is_object()) {
 			if (a.is_object()) {

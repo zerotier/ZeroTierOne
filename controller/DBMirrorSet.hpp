@@ -33,6 +33,7 @@
 #include <memory>
 #include <mutex>
 #include <set>
+#include <thread>
 
 namespace ZeroTier {
 
@@ -72,6 +73,8 @@ public:
 
 private:
 	DB::ChangeListener *const _listener;
+	std::atomic_bool _running;
+	std::thread _syncCheckerThread;
 	std::vector< std::shared_ptr< DB > > _dbs;
 	mutable std::mutex _dbs_l;
 };

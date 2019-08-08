@@ -296,7 +296,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 														const uint64_t prevRevision = oldMember["revision"];
 														if (prevRevision < revision)
 															_memberChanged(oldMember,member,timeRangeStart > 0);
-													} else if (network.is_object()) {
+													} else if (hasNetwork(nwid)) {
 														nlohmann::json nullJson;
 														_memberChanged(nullJson,member,timeRangeStart > 0);
 													}
