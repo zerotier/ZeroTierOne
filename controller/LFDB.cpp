@@ -53,7 +53,6 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 		const uint64_t controllerAddressInt = _myId.address().toInt();
 		_myId.address().toString(controllerAddress);
 		std::string networksSelectorName("com.zerotier.controller.lfdb:"); networksSelectorName.append(controllerAddress); networksSelectorName.append("/network");
-		std::string membersSelectorName("com.zerotier.controller.lfdb:"); membersSelectorName.append(controllerAddress); membersSelectorName.append("/member");
 
 		// LF record masking key is the first 32 bytes of SHA512(controller private key) in hex,
 		// hiding record values from anything but the controller or someone who has its key.
@@ -156,7 +155,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 								nlohmann::json newrec,selector0,selector1,selectors;
 								selector0["Name"] = networksSelectorName;
 								selector0["Ordinal"] = ns->first;
-								selector1["Name"] = membersSelectorName;
+								selector1["Name"] = "member";
 								selector1["Ordinal"] = ms->first;
 								selectors.push_back(selector0);
 								selectors.push_back(selector1);
@@ -190,16 +189,16 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 
 			try {
 				std::ostringstream query;
-				query
-					<< '{'
-						<< "\"Ranges\":[{"
-							<< "\"Name\":\"" << networksSelectorName << "\","
-							<< "\"Range\":[0,18446744073709551615]"
-						<< "}],"
-						<< "\"TimeRange\":[" << timeRangeStart << ",9223372036854775807],"
-						<< "\"MaskingKey\":\"" << maskingKey << "\","
-						<< "\"Owners\":[\"" << _lfOwnerPublic << "\"]"
-					<< '}';
+				query <<
+					"{"
+						"\"Ranges\":[{"
+							"\"Name\":\"" << networksSelectorName << "\","
+							"\"Range\":[0,18446744073709551615]"
+						"}],"
+						"\"TimeRange\":[" << timeRangeStart << ",9223372036854775807],"
+						"\"MaskingKey\":\"" << maskingKey << "\","
+						"\"Owners\":[\"" << _lfOwnerPublic << "\"]"
+					"}";
 				auto resp = htcli.Post("/query",query.str(),"application/json");
 				if (resp) {
 					if (resp->status == 200) {
@@ -259,19 +258,19 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 
 			try {
 				std::ostringstream query;
-				query
-					<< '{'
-						<< "\"Ranges\":[{"
-							<< "\"Name\":\"" << networksSelectorName << "\","
-							<< "\"Range\":[0,18446744073709551615]"
-						<< "},{"
-							<< "\"Name\":\"" << membersSelectorName << "\","
-							<< "\"Range\":[0,18446744073709551615]"
-						<< "}],"
-						<< "\"TimeRange\":[" << timeRangeStart << ",9223372036854775807],"
-						<< "\"MaskingKey\":\"" << maskingKey << "\","
-						<< "\"Owners\":[\"" << _lfOwnerPublic << "\"]"
-					<< '}';
+				query <<
+					"{"
+						"\"Ranges\":[{"
+							"\"Name\":\"" << networksSelectorName << "\","
+							"\"Range\":[0,18446744073709551615]"
+						"},{"
+							"\"Name\":\"member\","
+							"\"Range\":[0,18446744073709551615]"
+						"}],"
+						"\"TimeRange\":[" << timeRangeStart << ",9223372036854775807],"
+						"\"MaskingKey\":\"" << maskingKey << "\","
+						"\"Owners\":[\"" << _lfOwnerPublic << "\"]"
+					"}";
 				auto resp = htcli.Post("/query",query.str(),"application/json");
 				if (resp) {
 					if (resp->status == 200) {
