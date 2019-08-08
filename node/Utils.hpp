@@ -245,6 +245,10 @@ public:
 	static int b32d(const char *encoded, uint8_t *result, int bufSize);
 	static int b32e(const uint8_t *data,int length,char *result,int bufSize);
 
+	static inline unsigned int b64MaxEncodedSize(const unsigned int s) { return ((((s + 2) / 3) * 4) + 1); }
+	static unsigned int b64e(const uint8_t *in,unsigned int inlen,char *out,unsigned int outlen);
+	static unsigned int b64d(const char *in,uint8_t *out,unsigned int outlen);
+
 	/**
 	 * Tokenize a string (alias for strtok_r or strtok_s depending on platform)
 	 *

@@ -712,6 +712,46 @@ static int testOther()
 		return -1;
 	}
 
+	std::cout << "[other] Testing base32... "; std::cout.flush();
+	for(unsigned int i=1;i<1024;++i) {
+		Utils::getSecureRandom(buf,(unsigned int)sizeof(buf));
+		int l = Utils::b32e((const uint8_t *)buf,i,buf2,sizeof(buf2));
+		if (l <= 0) {
+			std::cout << "FAIL (encode returned 0)" << std::endl;
+			return -1;
+		}
+		int l2 = Utils::b32d(buf2,(uint8_t *)buf3,sizeof(buf3));
+		if (l2 != (int)i) {
+			std::cout << "FAIL (decode returned wrong count)" << std::endl;
+			return -1;
+		}
+		if (memcmp(buf,buf3,i) != 0) {
+			std::cout << "FAIL (decode result incorrect)" << std::endl;
+			return -1;
+		}
+	}
+	std::cout << "PASS" << std::endl;
+
+	std::cout << "[other] Testing base64... "; std::cout.flush();
+	for(unsigned int i=1;i<1024;++i) {
+		Utils::getSecureRandom(buf,(unsigned int)sizeof(buf));
+		unsigned int l = Utils::b64e((const uint8_t *)buf,i,buf2,sizeof(buf2));
+		if (l == 0) {
+			std::cout << "FAIL (encode returned 0)" << std::endl;
+			return -1;
+		}
+		unsigned int l2 = Utils::b64d(buf2,(uint8_t *)buf3,sizeof(buf3));
+		if (l2 != i) {
+			std::cout << "FAIL (decode returned wrong count)" << std::endl;
+			return -1;
+		}
+		if (memcmp(buf,buf3,i) != 0) {
+			std::cout << "FAIL (decode result incorrect)" << std::endl;
+			return -1;
+		}
+	}
+	std::cout << "PASS" << std::endl;
+
 	std::cout << "[other] Testing InetAddress encode/decode..."; std::cout.flush();
 	std::cout << " " << InetAddress("127.0.0.1/9993").toString(buf);
 	std::cout << " " << InetAddress("feed:dead:babe:dead:beef:f00d:1234:5678/12345").toString(buf);
