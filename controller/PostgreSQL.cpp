@@ -583,7 +583,7 @@ void PostgreSQL::heartbeat()
 	if (gethostname(hostnameTmp, sizeof(hostnameTmp))!= 0) {
 		hostnameTmp[0] = (char)0;
 	} else {
-		for (int i = 0; i < sizeof(hostnameTmp); ++i) {
+		for (int i = 0; i < (int)sizeof(hostnameTmp); ++i) {
 			if ((hostnameTmp[i] == '.')||(hostnameTmp[i] == 0)) {
 				hostnameTmp[i] = (char)0;
 				break;
