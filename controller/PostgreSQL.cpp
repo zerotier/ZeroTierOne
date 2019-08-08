@@ -1087,7 +1087,7 @@ void PostgreSQL::commitThread()
 						"last_modified, mtu, multicast_limit, name, private, "
 						"remote_trace_level, remote_trace_target, rules, rules_source, "
 						"tags, v4_assign_mode, v6_assign_mode) VALUES ("
-						"$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) "
+						"$1, $2, $3, $4, TO_TIMESTAMP($5::double precision/1000), $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) "
 						"ON CONFLICT (id) DO UPDATE set controller_id = EXCLUDED.controller_id, "
 						"capabilities = EXCLUDED.capabilities, enable_broadcast = EXCLUDED.enable_broadcast, "
 						"last_modified = EXCLUDED.last_modified, mtu = EXCLUDED.mtu, "
