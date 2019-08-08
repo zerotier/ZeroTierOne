@@ -96,7 +96,7 @@ bool FileDB::save(nlohmann::json &record,bool notifyListeners)
 			if (nwid) {
 				nlohmann::json old;
 				get(nwid,old);
-				if ((!old.is_object())||(old != record)) {
+				if ((!old.is_object())||(!_compareRecords(old,record))) {
 					record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
 					OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json",_networksPath.c_str(),nwid);
 					if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
@@ -113,7 +113,7 @@ bool FileDB::save(nlohmann::json &record,bool notifyListeners)
 			if ((id)&&(nwid)) {
 				nlohmann::json network,old;
 				get(nwid,network,id,old);
-				if ((!old.is_object())||(old != record)) {
+				if ((!old.is_object())||(!_compareRecords(old,record))) {
 					record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
 					OSUtils::ztsnprintf(pb,sizeof(pb),"%s" ZT_PATH_SEPARATOR_S "%.16llx" ZT_PATH_SEPARATOR_S "member",_networksPath.c_str(),(unsigned long long)nwid);
 					OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.10llx.json",pb,(unsigned long long)id);

@@ -114,6 +114,28 @@ public:
 	}
 
 protected:
+	inline bool _compareRecords(const nlohmann::json &a,const nlohmann::json &b)
+	{
+		if (a.is_object() == b.is_object()) {
+			if (a.is_object()) {
+				if (a.size() != b.size())
+					return false;
+				auto amap = a.get<nlohmann::json::object_t>();
+				auto bmap = b.get<nlohmann::json::object_t>();
+				for(auto ai=amap.begin();ai!=amap.end();++ai) {
+					if (ai->first != "revision") { // ignore revision, compare only non-revision-counter fields
+						auto bi = bmap.find(ai->first);
+						if ((bi == bmap.end())||(bi->second != ai->second))
+							return false;
+					}
+				}
+				return true;
+			}
+			return (a == b);
+		}
+		return false;
+	}
+
 	struct _Network
 	{
 		_Network() : mostRecentDeauthTime(0) {}

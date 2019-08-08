@@ -369,7 +369,7 @@ bool LFDB::save(nlohmann::json &record,bool notifyListeners)
 		if (nwid) {
 			nlohmann::json old;
 			get(nwid,old);
-			if ((!old.is_object())||(old != record)) {
+			if ((!old.is_object())||(!_compareRecords(old,record))) {
 				record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
 				_networkChanged(old,record,notifyListeners);
 				{
@@ -385,7 +385,7 @@ bool LFDB::save(nlohmann::json &record,bool notifyListeners)
 		if ((id)&&(nwid)) {
 			nlohmann::json network,old;
 			get(nwid,network,id,old);
-			if ((!old.is_object())||(old != record)) {
+			if ((!old.is_object())||(!_compareRecords(old,record))) {
 				record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
 				_memberChanged(old,record,notifyListeners);
 				{

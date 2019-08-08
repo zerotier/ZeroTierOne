@@ -28,6 +28,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\controller\DB.cpp" />
+    <ClCompile Include="..\..\controller\DBMirrorSet.cpp" />
     <ClCompile Include="..\..\controller\EmbeddedNetworkController.cpp" />
     <ClCompile Include="..\..\controller\FileDB.cpp" />
     <ClCompile Include="..\..\controller\LFDB.cpp" />
@@ -94,6 +95,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\osdep\EthernetTap.cpp" />
     <ClCompile Include="..\..\osdep\Http.cpp" />
     <ClCompile Include="..\..\osdep\ManagedRoute.cpp" />
     <ClCompile Include="..\..\osdep\OSUtils.cpp" />
@@ -115,6 +117,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\controller\DB.hpp" />
+    <ClInclude Include="..\..\controller\DBMirrorSet.hpp" />
     <ClInclude Include="..\..\controller\EmbeddedNetworkController.hpp" />
     <ClInclude Include="..\..\controller\FileDB.hpp" />
     <ClInclude Include="..\..\controller\LFDB.hpp" />
@@ -182,6 +185,7 @@
     <ClInclude Include="..\..\node\Utils.hpp" />
     <ClInclude Include="..\..\node\World.hpp" />
     <ClInclude Include="..\..\osdep\Binder.hpp" />
+    <ClInclude Include="..\..\osdep\EthernetTap.hpp" />
     <ClInclude Include="..\..\osdep\Http.hpp" />
     <ClInclude Include="..\..\osdep\ManagedRoute.hpp" />
     <ClInclude Include="..\..\osdep\OSUtils.hpp" />
