@@ -125,14 +125,14 @@ bool DBMirrorSet::save(nlohmann::json &record,bool notifyListeners)
 	}
 	if (notifyListeners) {
 		for(auto d=dbs.begin();d!=dbs.end();++d) {
-			if ((*d)->save(record,notifyListeners))
+			if ((*d)->save(record,true))
 				return true;
 		}
 		return false;
 	} else {
 		bool modified = false;
 		for(auto d=dbs.begin();d!=dbs.end();++d) {
-			modified |= (*d)->save(record,notifyListeners);
+			modified |= (*d)->save(record,false);
 		}
 		return modified;
 	}
