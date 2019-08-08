@@ -1047,7 +1047,10 @@ void PostgreSQL::commitThread()
 					if (!(*config)["remoteTraceTarget"].is_null()) {
 						remoteTraceTarget = (*config)["remoteTraceTarget"];
 					}
-					std::string rulesSource = (*config)["rulesSource"];
+					std::string rulesSource;
+					if ((*config)["rulesSource"].is_string()) {
+						rulesSource = (*config)["rulesSource"];
+					}
 					std::string caps = OSUtils::jsonDump((*config)["capabilitles"], -1);
 					std::string now = std::to_string(OSUtils::now());
 					std::string mtu = std::to_string((int)(*config)["mtu"]);
