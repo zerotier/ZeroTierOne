@@ -29,12 +29,62 @@
 namespace ZeroTier {
 
 DBMirrorSet::DBMirrorSet(DB::ChangeListener *listener) :
-	_listener(listener)
+	_listener(listener),
+	_running(true)
 {
+	_syncCheckerThread = std::thread([this]() {
+		for(;;) {
+			for(int i=0;i<120;++i) { // 1 minute delay between checks
+				if (!_running)
+					return;
+				std::this_thread::sleep_for(std::chrono::milliseconds(500));
+			}
+
+			std::vector< std::shared_ptr<DB> > dbs;
+			{
+				std::lock_guard<std::mutex> l(_dbs_l);
+				if (_dbs.size() <= 1)
+					continue; // no need to do this if there's only one DB, so skip the iteration
+				dbs = _dbs;
+			}
+
+			for(auto db=dbs.begin();db!=dbs.end();++db) {
+				(*db)->each([this,&dbs,&db](uint64_t networkId,const nlohmann::json &network,uint64_t memberId,const nlohmann::json &member) {
+					try {
+						if (network.is_object()) {
+							if (memberId == 0) {
+								for(auto db2=dbs.begin();db2!=dbs.end();++db2) {
+									if (db->get() != db2->get()) {
+										nlohmann::json nw2;
+										if ((!(*db2)->get(networkId,nw2))||((nw2.is_object())&&(OSUtils::jsonInt(nw2["revision"],0) < OSUtils::jsonInt(network["revision"],0)))) {
+											nw2 = network;
+											(*db2)->save(nw2,false);
+										}
+									}
+								}
+							} else if (member.is_object()) {
+								for(auto db2=dbs.begin();db2!=dbs.end();++db2) {
+									if (db->get() != db2->get()) {
+										nlohmann::json nw2,m2;
+										if ((!(*db2)->get(networkId,nw2,memberId,m2))||((m2.is_object())&&(OSUtils::jsonInt(m2["revision"],0) < OSUtils::jsonInt(member["revision"],0)))) {
+											m2 = member;
+											(*db2)->save(m2,false);
+										}
+									}
+								}
+							}
+						}
+					} catch ( ... ) {} // skip entries that generate JSON errors
+				});
+			}
+		}
+	});
 }
 
 DBMirrorSet::~DBMirrorSet()
 {
+	_running = false;
+	_syncCheckerThread.join();
 }
 
 bool DBMirrorSet::hasNetwork(const uint64_t networkId) const
