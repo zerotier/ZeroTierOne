@@ -1082,6 +1082,12 @@ void PostgreSQL::commitThread()
 						v6mode.c_str(),
 					};
 
+					// This ugly query exists because when we want to mirror networks to/from
+					// another data store (e.g. FileDB or LFDB) it is possible to get a network
+					// that doesn't exist in Central's database. This does an upsert and sets
+					// the owner_id to the "first" global admin in the user DB if the record
+					// did not previously exist. If the record already exists owner_id is left
+					// unchanged, so owner_id should be left out of the update clause.
 					PGresult *res = PQexecParams(conn,
 						"INSERT INTO ztc_network (id, creation_time, owner_id, controller_id, capabilities, enable_broadcast, "
 						"last_modified, mtu, multicast_limit, name, private, "
