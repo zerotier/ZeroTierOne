@@ -627,6 +627,9 @@
  */
 #define ZT_THREAD_MIN_STACK_SIZE 1048576
 
+#define ZT_CRYPTO_ALG_C25519 0
+#define ZT_CRYPTO_ALG_P384 1
+
 // Exceptions thrown in core ZT code
 #define ZT_EXCEPTION_OUT_OF_BOUNDS 100
 #define ZT_EXCEPTION_OUT_OF_MEMORY 101

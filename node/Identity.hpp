@@ -55,10 +55,13 @@ namespace ZeroTier {
 class Identity
 {
 public:
+	/**
+	 * Identity type -- numeric values of these enums are protocol constants
+	 */
 	enum Type
 	{
-		C25519 = 0, // Curve25519 and Ed25519 (1.0 and 2.0, default)
-		P384 = 1    // NIST P-384 ECDH and ECDSA (2.0+ only)
+		C25519 = ZT_CRYPTO_ALG_C25519, // Type 0 -- Curve25519 and Ed25519 (1.0 and 2.0, default)
+		P384 = ZT_CRYPTO_ALG_P384      // Type 1 -- NIST P-384 ECDH and ECDSA (2.0+ only)
 	};
 
 	Identity() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }

@@ -33,6 +33,7 @@
 #include "Utils.hpp"
 #include "Buffer.hpp"
 #include "SHA512.hpp"
+#include "Str.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -68,6 +69,7 @@ public:
 		if (_virtual.size() < ZT_LOCATOR_MAX_VIRTUAL_ADDRESSES)
 			_virtual.push_back(zt);
 	}
+
 	inline void finish(const Identity &id,const int64_t ts)
 	{
 		_ts = ts;
@@ -103,35 +105,75 @@ public:
 	{
 		if ((_signatureLength == 0)||(_signatureLength > sizeof(_signature)))
 			return false;
-		Buffer<16384> *tmp;
+		Buffer<65536> *tmp = nullptr;
 		try {
-			tmp = new Buffer<16384>(); // 16384 would be huge
+			tmp = new Buffer<65536>();
 			serialize(*tmp,true);
 			const bool ok = (_signedBy) ? _signedBy.verify(tmp->data(),tmp->size(),_signature,_signatureLength) : _id.verify(tmp->data(),tmp->size(),_signature,_signatureLength);
 			delete tmp;
 			return ok;
 		} catch ( ... ) {
-			delete tmp;
+			if (tmp) delete tmp;
 			return false;
 		}
 	}
 
-	inline std::pair< Str,std::vector<Str> > makeTxtRecords(const uint8_t p384SigningKeyPrivate[ZT_ECC384_PUBLIC_KEY_SIZE],const uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE])
+	inline std::vector<Str> makeTxtRecords(const uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE],const uint8_t p384SigningKeyPrivate[ZT_ECC384_PUBLIC_KEY_SIZE])
 	{
 		uint8_t s384[48],dnsSig[ZT_ECC384_SIGNATURE_SIZE];
-		char dnsSigTxtF0[64],dnsSigTxtF1[64],dnsSigTxtF2[64];
+		char enc[256];
 
-		Buffer<16384> *tmp = new Buffer<16384>(); // 16384 would be huge
+		Buffer<65536> *const tmp = new Buffer<65536>();
 		serialize(*tmp,false);
 		SHA384(s384,tmp->data(),tmp->size());
 		ECC384ECDSASign(p384SigningKeyPrivate,s384,dnsSig);
+		tmp->append(dnsSig,ZT_ECC384_SIGNATURE_SIZE);
 
-		Utils::b32e(dnsSig,32,dnsSigTxtF0,sizeof(dnsSigTxtF0));
-		Utils::b32e(dnsSig+32,32,dnsSigTxtF0,sizeof(dnsSigTxtF0));
-		Utils::b32e(dnsSig+64,32,dnsSigTxtF0,sizeof(dnsSigTxtF0));
-		Str name;
+		// Blob must be broken into multiple TXT records that must remain sortable so they are prefixed by a hex value.
+		// 186-byte chunks yield 248-byte base64 chunks which leaves some margin below the limit of 255.
+		std::vector<Str> txtRecords;
+		for(unsigned int p=0;p<tmp->size();p+=186) {
+			unsigned int rem = tmp->size() - p;
+			if (rem > 186) rem = 186;
+			Utils::b64e(((const uint8_t *)tmp->data()) + p,rem,enc,sizeof(enc));
+			txtRecords.push_back(Str());
+			txtRecords.back() << Utils::HEXCHARS[(p >> 4) & 0xf] << Utils::HEXCHARS[p & 0xf] << enc;
+		}
 
 		delete tmp;
+		return txtRecords;
+	}
+
+	template<typename I>
+	inline bool decodeTxtRecords(I start,I end,const uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE])
+	{
+		uint8_t dec[256],s384[48];
+		Buffer<65536> *tmp = nullptr;
+		try {
+			tmp = new Buffer<65536>();
+			while (start != end) {
+				tmp->append(dec,Utils::b64d(start->c_str(),dec,sizeof(dec)));
+				++start;
+			}
+
+			if (tmp->size() <= ZT_ECC384_SIGNATURE_SIZE) {
+				delete tmp;
+				return false;
+			}
+			SHA384(s384,tmp->data(),tmp->size() - ZT_ECC384_SIGNATURE_SIZE);
+			if (!ECC384ECDSAVerify(p384SigningKeyPublic,s384,((const uint8_t *)tmp->data()) + (tmp->size() - ZT_ECC384_SIGNATURE_SIZE))) {
+				delete tmp;
+				return false;
+			}
+
+			deserialize(*tmp,0);
+
+			delete tmp;
+			return verify();
+		} catch ( ... ) {
+			if (tmp) delete tmp;
+			return false;
+		}
 	}
 
 	template<unsigned int C>
@@ -139,11 +181,11 @@ public:
 	{
 		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
 
-		b.append((uint8_t)0; // version/flags, currently 0
+		b.append((uint8_t)0); // version/flags, currently 0
 		b.append((uint64_t)_ts);
 		_id.serialise(b,false);
 		if (_signedBy) {
-			b.append((uint8_t)1); // number of signers
+			b.append((uint8_t)1); // number of signers, current max is 1
 			_signedBy.serialize(b,false);
 		} else {
 			b.append((uint8_t)0); // signer is _id
