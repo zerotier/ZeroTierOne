@@ -1083,11 +1083,14 @@ void PostgreSQL::commitThread()
 					};
 
 					PGresult *res = PQexecParams(conn,
-						"INSERT INTO ztc_network (id, controller_id, capabilities, enable_broadcast, "
+						"INSERT INTO ztc_network (id, creation_time, owner_id, controller_id, capabilities, enable_broadcast, "
 						"last_modified, mtu, multicast_limit, name, private, "
 						"remote_trace_level, remote_trace_target, rules, rules_source, "
 						"tags, v4_assign_mode, v6_assign_mode) VALUES ("
-						"$1, $2, $3, $4, TO_TIMESTAMP($5::double precision/1000), $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) "
+						"$1, TO_TIMESTAMP($5::double precision/1000), "
+						"(SELECT user_id AS owner_id FROM ztc_global_permissions WHERE authorize = true AND del = true AND modify = true AND read = true LIMIT 1),"
+						"$2, $3, $4, TO_TIMESTAMP($5::double precision/1000), "
+						"$6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) "
 						"ON CONFLICT (id) DO UPDATE set controller_id = EXCLUDED.controller_id, "
 						"capabilities = EXCLUDED.capabilities, enable_broadcast = EXCLUDED.enable_broadcast, "
 						"last_modified = EXCLUDED.last_modified, mtu = EXCLUDED.mtu, "
