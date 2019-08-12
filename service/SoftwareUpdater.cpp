@@ -127,7 +127,7 @@ void SoftwareUpdater::setUpdateDistribution(bool distribute)
 						const std::string metaHash(OSUtils::jsonBinFromHex(d.meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH]));
 						if ((metaHash.length() == ZT_SHA512_DIGEST_LEN)&&(OSUtils::readFile(binPath.c_str(),d.bin))) {
 							std::array<uint8_t,ZT_SHA512_DIGEST_LEN> sha512;
-							SHA512::hash(sha512.data(),d.bin.data(),(unsigned int)d.bin.length());
+							SHA512(sha512.data(),d.bin.data(),(unsigned int)d.bin.length());
 							if (!memcmp(sha512.data(),metaHash.data(),ZT_SHA512_DIGEST_LEN)) { // double check that hash in JSON is correct
 								d.meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIZE] = d.bin.length(); // override with correct value -- setting this in meta json is optional
 								std::array<uint8_t,16> shakey;
@@ -347,7 +347,7 @@ bool SoftwareUpdater::check(const int64_t now)
 			try {
 				// (1) Check the hash itself to make sure the image is basically okay
 				uint8_t sha512[ZT_SHA512_DIGEST_LEN];
-				SHA512::hash(sha512,_download.data(),(unsigned int)_download.length());
+				SHA512(sha512,_download.data(),(unsigned int)_download.length());
 				char hexbuf[(ZT_SHA512_DIGEST_LEN * 2) + 2];
 				if (OSUtils::jsonString(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH],"") == Utils::hex(sha512,ZT_SHA512_DIGEST_LEN,hexbuf)) {
 					// (2) Check signature by signing authority

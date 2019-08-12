@@ -3,6 +3,7 @@ CORE_OBJS=\
 	node/Capability.o \
 	node/CertificateOfMembership.o \
 	node/CertificateOfOwnership.o \
+	node/ECC384.o \
 	node/Identity.o \
 	node/IncomingPacket.o \
 	node/InetAddress.o \

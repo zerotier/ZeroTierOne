@@ -64,6 +64,7 @@ class EmbeddedNetworkController : public NetworkController,public DB::ChangeList
 public:
 	/**
 	 * @param node Parent node
+	 * @param ztPath ZeroTier base path
 	 * @param dbPath Database path (file path or database credentials)
 	 */
 	EmbeddedNetworkController(Node *node,const char *ztPath,const char *dbPath, int listenPort, MQConfig *mqc = NULL);

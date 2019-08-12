@@ -98,7 +98,6 @@ public:
 	 * @param keylen Number of key bytes to generate
 	 */
 	static void agree(const Private &mine,const Public &their,void *keybuf,unsigned int keylen);
-	static inline void agree(const Pair &mine,const Public &their,void *keybuf,unsigned int keylen) { agree(mine.priv,their,keybuf,keylen); }
 
 	/**
 	 * Sign a message with a sender's key pair
@@ -120,11 +119,15 @@ public:
 	 * @param signature Buffer to fill with signature -- MUST be 96 bytes in length
 	 */
 	static void sign(const Private &myPrivate,const Public &myPublic,const void *msg,unsigned int len,void *signature);
-	static inline void sign(const Pair &mine,const void *msg,unsigned int len,void *signature) { sign(mine.priv,mine.pub,msg,len,signature); }
 
 	/**
 	 * Sign a message with a sender's key pair
 	 *
+	 * Note that this generates a 96-byte signature that contains an extra 32 bytes
+	 * of hash data. This data is included for historical reasons and is optional. The
+	 * verify function here will take the first 64 bytes only (normal ed25519 signature)
+	 * or a 96-byte length signature with the extra input hash data.
+	 * 
 	 * @param myPrivate My private key
 	 * @param myPublic My public key
 	 * @param msg Message to sign
@@ -150,10 +153,11 @@ public:
 	 * @param their Public key to verify against
 	 * @param msg Message to verify signature integrity against
 	 * @param len Length of message in bytes
-	 * @param signature 96-byte signature
+	 * @param signature Signature bytes
+	 * @param siglen Length of signature in bytes
 	 * @return True if signature is valid and the message is authentic and unmodified
 	 */
-	static bool verify(const Public &their,const void *msg,unsigned int len,const void *signature);
+	static bool verify(const Public &their,const void *msg,unsigned int len,const void *signature,const unsigned int siglen);
 
 	/**
 	 * Verify a message's signature
@@ -164,10 +168,7 @@ public:
 	 * @param signature 96-byte signature
 	 * @return True if signature is valid and the message is authentic and unmodified
 	 */
-	static inline bool verify(const Public &their,const void *msg,unsigned int len,const Signature &signature)
-	{
-		return verify(their,msg,len,signature.data);
-	}
+	static inline bool verify(const Public &their,const void *msg,unsigned int len,const Signature &signature) { return verify(their,msg,len,signature.data,96); }
 
 private:
 	// derive first 32 bytes of kp.pub from first 32 bytes of kp.priv

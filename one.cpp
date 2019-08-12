@@ -79,7 +79,6 @@
 #include "node/Utils.hpp"
 #include "node/NetworkController.hpp"
 #include "node/Buffer.hpp"
-#include "node/World.hpp"
 
 #include "osdep/OSUtils.hpp"
 #include "osdep/Http.hpp"
@@ -136,9 +135,6 @@ static void cliPrintHelp(const char *pn,FILE *out)
 	fprintf(out,"  leave <network>         - Leave a network" ZT_EOL_S);
 	fprintf(out,"  set <network> <setting> - Set a network setting" ZT_EOL_S);
 	fprintf(out,"  get <network> <setting> - Get a network setting" ZT_EOL_S);
-	fprintf(out,"  listmoons               - List moons (federated root sets)" ZT_EOL_S);
-	fprintf(out,"  orbit <world ID> <seed> - Join a moon via any member root" ZT_EOL_S);
-	fprintf(out,"  deorbit <world ID>      - Leave a moon" ZT_EOL_S);
 	fprintf(out,ZT_EOL_S"Available settings:" ZT_EOL_S);
 	fprintf(out,"  Settings to use with [get/set] may include property names from " ZT_EOL_S);
 	fprintf(out,"  the JSON output of \"zerotier-cli -j listnetworks\". Additionally, " ZT_EOL_S);
@@ -593,80 +589,6 @@ static int cli(int argc,char **argv)
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
 		}
-	} else if (command == "listmoons") {
-		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/moon",requestHeaders,responseHeaders,responseBody);
-
-		if (scode == 0) {
-			printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
-			return 1;
-		}
-
-		nlohmann::json j;
-		try {
-			j = OSUtils::jsonParse(responseBody);
-		} catch (std::exception &exc) {
-			printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
-			return 1;
-		} catch ( ... ) {
-			printf("%u %s invalid JSON response (unknown exception)" ZT_EOL_S,scode,command.c_str());
-			return 1;
-		}
-
-		if (scode == 200) {
-			printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
-			return 0;
-		} else {
-			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
-			return 1;
-		}
-	} else if (command == "orbit") {
-		const uint64_t worldId = Utils::hexStrToU64(arg1.c_str());
-		const uint64_t seed = Utils::hexStrToU64(arg2.c_str());
-		if ((worldId)&&(seed)) {
-			char jsons[1024];
-			OSUtils::ztsnprintf(jsons,sizeof(jsons),"{\"seed\":\"%s\"}",arg2.c_str());
-			char cl[128];
-			OSUtils::ztsnprintf(cl,sizeof(cl),"%u",(unsigned int)strlen(jsons));
-			requestHeaders["Content-Type"] = "application/json";
-			requestHeaders["Content-Length"] = cl;
-			unsigned int scode = Http::POST(
-				1024 * 1024 * 16,
-				60000,
-				(const struct sockaddr *)&addr,
-				(std::string("/moon/") + arg1).c_str(),
-				requestHeaders,
-				jsons,
-				(unsigned long)strlen(jsons),
-				responseHeaders,
-				responseBody);
-			if (scode == 200) {
-				printf("200 orbit OK" ZT_EOL_S);
-				return 0;
-			} else {
-				printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
-				return 1;
-			}
-		}
-	} else if (command == "deorbit") {
-		unsigned int scode = Http::DEL(
-			1024 * 1024 * 16,
-			60000,
-			(const struct sockaddr *)&addr,
-			(std::string("/moon/") + arg1).c_str(),
-			requestHeaders,
-			responseHeaders,
-			responseBody);
-		if (scode == 200) {
-			if (json) {
-				printf("%s",cliFixJsonCRs(responseBody).c_str());
-			} else {
-				printf("200 deorbit OK" ZT_EOL_S);
-			}
-			return 0;
-		} else {
-			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
-			return 1;
-		}
 	} else if (command == "set") {
 		if (arg1.length() != 16) {
 			fprintf(stderr,"invalid format: must be a 16-digit (network) ID\n");
@@ -829,8 +751,6 @@ static void idtoolPrintHelp(FILE *out,const char *pn)
 	fprintf(out,"  getpublic <identity.secret>" ZT_EOL_S);
 	fprintf(out,"  sign <identity.secret> <file>" ZT_EOL_S);
 	fprintf(out,"  verify <identity.secret/public> <file> <signature>" ZT_EOL_S);
-	fprintf(out,"  initmoon <identity.public of first seed>" ZT_EOL_S);
-	fprintf(out,"  genmoon <moon json>" ZT_EOL_S);
 }
 
 static Identity getIdFromArg(char *arg)
@@ -872,7 +792,7 @@ static int idtool(int argc,char **argv)
 
 		Identity id;
 		for(;;) {
-			id.generate();
+			id.generate(Identity::C25519);
 			if ((id.address().toInt() >> (40 - vanityBits)) == vanity) {
 				if (vanityBits > 0) {
 					fprintf(stderr,"vanity address: found %.10llx !\n",(unsigned long long)id.address().toInt());
@@ -950,9 +870,10 @@ static int idtool(int argc,char **argv)
 			fprintf(stderr,"%s is not readable" ZT_EOL_S,argv[3]);
 			return 1;
 		}
-		C25519::Signature signature = id.sign(inf.data(),(unsigned int)inf.length());
-		char hexbuf[1024];
-		printf("%s",Utils::hex(signature.data,ZT_C25519_SIGNATURE_LEN,hexbuf));
+		uint8_t signature[ZT_SIGNATURE_BUFFER_SIZE];
+		const unsigned int siglen = id.sign(inf.data(),(unsigned int)inf.length(),signature,sizeof(signature));
+		char hexbuf[256];
+		printf("%s",Utils::hex(signature,siglen,hexbuf));
 	} else if (!strcmp(argv[1],"verify")) {
 		if (argc < 5) {
 			idtoolPrintHelp(stdout,argv[0]);
@@ -989,94 +910,6 @@ static int idtool(int argc,char **argv)
 				fprintf(stderr,"%s signature check FAILED" ZT_EOL_S,argv[3]);
 				return 1;
 			}
-		}
-	} else if (!strcmp(argv[1],"initmoon")) {
-		if (argc < 3) {
-			idtoolPrintHelp(stdout,argv[0]);
-		} else {
-			const Identity id = getIdFromArg(argv[2]);
-			if (!id) {
-				fprintf(stderr,"%s is not a valid identity" ZT_EOL_S,argv[2]);
-				return 1;
-			}
-
-			C25519::Pair kp(C25519::generate());
-
-			char idtmp[4096];
-			nlohmann::json mj;
-			mj["objtype"] = "world";
-			mj["worldType"] = "moon";
-			mj["updatesMustBeSignedBy"] = mj["signingKey"] = Utils::hex(kp.pub.data,ZT_C25519_PUBLIC_KEY_LEN,idtmp);
-			mj["signingKey_SECRET"] = Utils::hex(kp.priv.data,ZT_C25519_PRIVATE_KEY_LEN,idtmp);
-			mj["id"] = id.address().toString(idtmp);
-			nlohmann::json seedj;
-			seedj["identity"] = id.toString(false,idtmp);
-			seedj["stableEndpoints"] = nlohmann::json::array();
-			(mj["roots"] = nlohmann::json::array()).push_back(seedj);
-			std::string mjd(OSUtils::jsonDump(mj));
-
-			printf("%s" ZT_EOL_S,mjd.c_str());
-		}
-	} else if (!strcmp(argv[1],"genmoon")) {
-		if (argc < 3) {
-			idtoolPrintHelp(stdout,argv[0]);
-		} else {
-			std::string buf;
-			if (!OSUtils::readFile(argv[2],buf)) {
-				fprintf(stderr,"cannot read %s" ZT_EOL_S,argv[2]);
-				return 1;
-			}
-			nlohmann::json mj(OSUtils::jsonParse(buf));
-
-			const uint64_t id = Utils::hexStrToU64(OSUtils::jsonString(mj["id"],"0").c_str());
-			if (!id) {
-				fprintf(stderr,"ID in %s is invalid" ZT_EOL_S,argv[2]);
-				return 1;
-			}
-
-			World::Type t;
-			if (mj["worldType"] == "moon") {
-				t = World::TYPE_MOON;
-			} else if (mj["worldType"] == "planet") {
-				t = World::TYPE_PLANET;
-			} else {
-				fprintf(stderr,"invalid worldType" ZT_EOL_S);
-				return 1;
-			}
-
-			C25519::Pair signingKey;
-			C25519::Public updatesMustBeSignedBy;
-			Utils::unhex(OSUtils::jsonString(mj["signingKey"],"").c_str(),signingKey.pub.data,ZT_C25519_PUBLIC_KEY_LEN);
-			Utils::unhex(OSUtils::jsonString(mj["signingKey_SECRET"],"").c_str(),signingKey.priv.data,ZT_C25519_PRIVATE_KEY_LEN);
-			Utils::unhex(OSUtils::jsonString(mj["updatesMustBeSignedBy"],"").c_str(),updatesMustBeSignedBy.data,ZT_C25519_PUBLIC_KEY_LEN);
-
-			std::vector<World::Root> roots;
-			nlohmann::json &rootsj = mj["roots"];
-			if (rootsj.is_array()) {
-				for(unsigned long i=0;i<(unsigned long)rootsj.size();++i) {
-					nlohmann::json &r = rootsj[i];
-					if (r.is_object()) {
-						roots.push_back(World::Root());
-						roots.back().identity = Identity(OSUtils::jsonString(r["identity"],"").c_str());
-						nlohmann::json &stableEndpointsj = r["stableEndpoints"];
-						if (stableEndpointsj.is_array()) {
-							for(unsigned long k=0;k<(unsigned long)stableEndpointsj.size();++k)
-								roots.back().stableEndpoints.push_back(InetAddress(OSUtils::jsonString(stableEndpointsj[k],"").c_str()));
-							std::sort(roots.back().stableEndpoints.begin(),roots.back().stableEndpoints.end());
-						}
-					}
-				}
-			}
-			std::sort(roots.begin(),roots.end());
-
-			const int64_t now = OSUtils::now();
-			World w(World::make(t,id,now,updatesMustBeSignedBy,roots,signingKey));
-			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> wbuf;
-			w.serialize(wbuf);
-			char fn[128];
-			OSUtils::ztsnprintf(fn,sizeof(fn),"%.16llx.moon",w.id());
-			OSUtils::writeFile(fn,wbuf.data(),wbuf.size());
-			printf("wrote %s (signed world with timestamp %llu)" ZT_EOL_S,fn,(unsigned long long)now);
 		}
 	} else {
 		idtoolPrintHelp(stdout,argv[0]);

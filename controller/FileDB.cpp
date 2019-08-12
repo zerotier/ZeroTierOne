@@ -33,13 +33,11 @@ FileDB::FileDB(const char *path) :
 	DB(),
 	_path(path),
 	_networksPath(_path + ZT_PATH_SEPARATOR_S + "network"),
-	_tracePath(_path + ZT_PATH_SEPARATOR_S + "trace"),
 	_running(true)
 {
 	OSUtils::mkdir(_path.c_str());
 	OSUtils::lockDownFile(_path.c_str(),true);
 	OSUtils::mkdir(_networksPath.c_str());
-	OSUtils::mkdir(_tracePath.c_str());
 
 	std::vector<std::string> networks(OSUtils::listDirectory(_networksPath.c_str(),false));
 	std::string buf;

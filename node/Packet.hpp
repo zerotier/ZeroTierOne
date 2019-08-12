@@ -68,10 +68,13 @@
  *    + Tags and Capabilities
  *    + Inline push of CertificateOfMembership deprecated
  * 9  - 1.2.0 ... 1.2.14
- * 10 - 1.4.0 ... CURRENT
+ * 10 - 1.4.0 ... 1.6.0
  *    + Multipath capability and load balancing
+ * 11 - 1.6.0 ... CURRENT
+ *    + Peer-to-peer multicast replication (optional)
+ *    + Old planet/moon stuff is DEAD!
  */
-#define ZT_PROTO_VERSION 10
+#define ZT_PROTO_VERSION 11
 
 /**
  * Minimum supported protocol version
@@ -309,17 +312,6 @@
 #define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI + 4)
 #define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_COM (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT + 4)
 
-// Note: COM, GATHER_LIMIT, and SOURCE_MAC are optional, and so are specified without size
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID + 8)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GATHER_LIMIT (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC + 6)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI + 4)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE + 2)
-
 #define ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_HELLO__OK__IDX_PROTOCOL_VERSION (ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP + 8)
 #define ZT_PROTO_VERB_HELLO__OK__IDX_MAJOR_VERSION (ZT_PROTO_VERB_HELLO__OK__IDX_PROTOCOL_VERSION + 1)
@@ -542,22 +534,9 @@ public:
 		 *   <[8] timestamp for determining latency>
 		 *   <[...] binary serialized identity (see Identity)>
 		 *   <[...] physical destination address of packet>
-		 *   <[8] 64-bit world ID of current planet>
-		 *   <[8] 64-bit timestamp of current planet>
-		 *   [... remainder if packet is encrypted using cryptField() ...]
-		 *   <[2] 16-bit number of moons>
-		 *   [<[1] 8-bit type ID of moon>]
-		 *   [<[8] 64-bit world ID of moon>]
-		 *   [<[8] 64-bit timestamp of moon>]
-		 *   [... additional moon type/ID/timestamp tuples ...]
-		 *
+		 * 
 		 * HELLO is sent in the clear as it is how peers share their identity
-		 * public keys. A few additional fields are sent in the clear too, but
-		 * these are things that are public info or are easy to determine. As
-		 * of 1.2.0 we have added a few more fields, but since these could have
-		 * the potential to be sensitive we introduced the encryption of the
-		 * remainder of the packet. See cryptField(). Packet MAC is still
-		 * performed of course, so authentication occurs as normal.
+		 * public keys.
 		 *
 		 * Destination address is the actual wire address to which the packet
 		 * was sent. See InetAddress::serialize() for format.
@@ -569,14 +548,9 @@ public:
 		 *   <[1] software minor version>
 		 *   <[2] software revision>
 		 *   <[...] physical destination address of packet>
-		 *   <[2] 16-bit length of world update(s) or 0 if none>
-		 *   [[...] updates to planets and/or moons]
 		 *
 		 * With the exception of the timestamp, the other fields pertain to the
 		 * respondent who is sending OK and are not echoes.
-		 *
-		 * Note that OK is fully encrypted so no selective cryptField() of
-		 * potentially sensitive fields is needed.
 		 *
 		 * ERROR has no payload.
 		 */
@@ -710,10 +684,6 @@ public:
 		 * controllers and root servers. In the current network, root servers
 		 * will provide the service of final multicast cache.
 		 *
-		 * VERB_NETWORK_CREDENTIALS should be pushed along with this, especially
-		 * if using upstream (e.g. root) nodes as multicast databases. This allows
-		 * GATHERs to be authenticated.
-		 *
 		 * OK/ERROR are not generated.
 		 */
 		VERB_MULTICAST_LIKE = 0x09,
@@ -832,18 +802,10 @@ public:
 		 *   [<[...] network certificate of membership>]
 		 *
 		 * Flags:
-		 *   0x01 - COM is attached
-		 *
-		 * This message asks a peer for additional known endpoints that have
-		 * LIKEd a given multicast group. It's sent when the sender wishes
-		 * to send multicast but does not have the desired number of recipient
-		 * peers.
-		 *
+		 *   0x01 - COM is attached (DEPRECATED)
+		 * 
 		 * More than one OK response can occur if the response is broken up across
 		 * multiple packets or if querying a clustered node.
-		 *
-		 * The COM should be included so that upstream nodes that are not
-		 * members of our network can validate our request.
 		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
@@ -864,6 +826,8 @@ public:
 		 *   <[1] flags>
 		 *  [<[4] 32-bit implicit gather limit>]
 		 *  [<[6] source MAC>]
+		 *  [<[2] number of explicitly specified recipients>]
+		 *  [<[...] series of 5-byte explicitly specified recipients>]
 		 *   <[6] destination MAC (multicast address)>
 		 *   <[4] 32-bit multicast ADI (multicast address extension)>
 		 *   <[2] 16-bit ethertype>
@@ -871,15 +835,12 @@ public:
 		 *
 		 * Flags:
 		 *   0x01 - Network certificate of membership attached (DEPRECATED)
-		 *   0x02 - Implicit gather limit field is present
+		 *   0x02 - Implicit gather limit field is present (DEPRECATED)
 		 *   0x04 - Source MAC is specified -- otherwise it's computed from sender
-		 *   0x08 - Please replicate (sent to multicast replicators)
-		 *
-		 * OK and ERROR responses are optional. OK may be generated if there are
-		 * implicit gather results or if the recipient wants to send its own
-		 * updated certificate of network membership to the sender. ERROR may be
-		 * generated if a certificate is needed or if multicasts to this group
-		 * are no longer wanted (multicast unsubscribe).
+		 *   0x08 - Explicit recipient list included for P2P/HS replication
+		 * 
+		 * Explicit recipient lists are used for peer to peer or hub and spoke
+		 * replication.
 		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
@@ -1004,10 +965,6 @@ public:
 		 * be sent to observers configured at the network level for those that
 		 * pertain directly to activity on a network, or to global observers if
 		 * locally configured.
-		 *
-		 * The instance ID is a random 64-bit value generated by each ZeroTier
-		 * node on startup. This is helpful in identifying traces from different
-		 * members of a cluster.
 		 */
 		VERB_REMOTE_TRACE = 0x15
 	};
@@ -1294,21 +1251,6 @@ public:
 	 * @return False if packet is invalid or failed MAC authenticity check
 	 */
 	bool dearmor(const void *key);
-
-	/**
-	 * Encrypt/decrypt a separately armored portion of a packet
-	 *
-	 * This is currently only used to mask portions of HELLO as an extra
-	 * security precaution since most of that message is sent in the clear.
-	 *
-	 * This must NEVER be used more than once in the same packet, as doing
-	 * so will result in re-use of the same key stream.
-	 *
-	 * @param key 32-byte key
-	 * @param start Start of encrypted portion
-	 * @param len Length of encrypted portion
-	 */
-	void cryptField(const void *key,unsigned int start,unsigned int len);
 
 	/**
 	 * Attempt to compress payload if not already (must be unencrypted)

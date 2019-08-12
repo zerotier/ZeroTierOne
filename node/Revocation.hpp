@@ -66,9 +66,9 @@ public:
 		_flags(0),
 		_target(),
 		_signedBy(),
-		_type(Credential::CREDENTIAL_TYPE_NULL)
+		_type(Credential::CREDENTIAL_TYPE_NULL),
+		_signatureLength(0)
 	{
-		memset(_signature.data,0,sizeof(_signature.data));
 	}
 
 	/**
@@ -88,9 +88,9 @@ public:
 		_flags(fl),
 		_target(tgt),
 		_signedBy(),
-		_type(ct)
+		_type(ct),
+		_signatureLength(0)
 	{
-		memset(_signature.data,0,sizeof(_signature.data));
 	}
 
 	inline uint32_t id() const { return _id; }
@@ -107,17 +107,7 @@ public:
 	 * @param signer Signing identity, must have private key
 	 * @return True if signature was successful
 	 */
-	inline bool sign(const Identity &signer)
-	{
-		if (signer.hasPrivate()) {
-			Buffer<sizeof(Revocation) + 64> tmp;
-			_signedBy = signer.address();
-			this->serialize(tmp,true);
-			_signature = signer.sign(tmp.data(),tmp.size());
-			return true;
-		}
-		return false;
-	}
+	bool sign(const Identity &signer);
 
 	/**
 	 * Verify this revocation's signature
@@ -145,9 +135,9 @@ public:
 		b.append((uint8_t)_type);
 
 		if (!forSign) {
-			b.append((uint8_t)1); // 1 == Ed25519 signature
-			b.append((uint16_t)ZT_C25519_SIGNATURE_LEN);
-			b.append(_signature.data,ZT_C25519_SIGNATURE_LEN);
+			b.append((uint8_t)1);
+			b.append((uint16_t)_signatureLength);
+			b.append(_signature,_signatureLength);
 		}
 
 		// This is the size of any additional fields, currently 0.
@@ -175,11 +165,10 @@ public:
 		_type = (Credential::Type)b[p++];
 
 		if (b[p++] == 1) {
-			if (b.template at<uint16_t>(p) == ZT_C25519_SIGNATURE_LEN) {
-				p += 2;
-				memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
-				p += ZT_C25519_SIGNATURE_LEN;
-			} else throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
+			_signatureLength = b.template at<uint16_t>(p);
+			if (_signatureLength > sizeof(_signature))
+				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
+			memcpy(_signature,b.field(p,_signatureLength),_signatureLength);
 		} else {
 			p += 2 + b.template at<uint16_t>(p);
 		}
@@ -200,7 +189,8 @@ private:
 	Address _target;
 	Address _signedBy;
 	Credential::Type _type;
-	C25519::Signature _signature;
+	unsigned int _signatureLength;
+	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
 };
 
 } // namespace ZeroTier

@@ -31,14 +31,9 @@
 
 namespace ZeroTier {
 
-/**
- * SHA-512 digest algorithm
- */
-class SHA512
-{
-public:
-	static void hash(void *digest,const void *data,unsigned int len);
-};
+void SHA512(void *digest,const void *data,unsigned int len);
+
+void SHA384(void *digest,const void *data,unsigned int len);
 
 } // namespace ZeroTier
 

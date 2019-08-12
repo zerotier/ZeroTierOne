@@ -540,7 +540,8 @@ public:
 	/**
 	 * @return Whether this peer is reachable via an aggregate link
 	 */
-	inline bool hasAggregateLink() {
+	inline bool hasAggregateLink()
+	{
 		return _localMultipathSupported && _remoteMultipathSupported && _remotePeerMultipathEnabled;
 	}
 

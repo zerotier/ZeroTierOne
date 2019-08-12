@@ -972,16 +972,6 @@ bool Packet::dearmor(const void *key)
 	}
 }
 
-void Packet::cryptField(const void *key,unsigned int start,unsigned int len)
-{
-	uint8_t *const data = reinterpret_cast<uint8_t *>(unsafeData());
-	uint8_t iv[8];
-	for(int i=0;i<8;++i) iv[i] = data[i];
-	iv[7] &= 0xf8; // mask off least significant 3 bits of packet ID / IV since this is unset when this function gets called
-	Salsa20 s20(key,iv);
-	s20.crypt12(data + start,data + start,len);
-}
-
 bool Packet::compress()
 {
 	char *const data = reinterpret_cast<char *>(unsafeData());

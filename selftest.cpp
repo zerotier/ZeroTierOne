@@ -50,6 +50,7 @@
 #include "node/Dictionary.hpp"
 #include "node/SHA512.hpp"
 #include "node/C25519.hpp"
+#include "node/ECC384.hpp"
 #include "node/Poly1305.hpp"
 #include "node/CertificateOfMembership.hpp"
 #include "node/Node.hpp"
@@ -78,6 +79,14 @@ using namespace ZeroTier;
 #define KNOWN_GOOD_IDENTITY "8e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
 #define KNOWN_BAD_IDENTITY "9e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
 
+// These were generated with some Go code using the NIST P-384 elliptic curve. There
+// are official P-384 test vectors but the format of these is funny and converting is
+// a pain, so this is easier. We assume the Go runtime's P-384 implementation is correct.
+#define ECC384_TEST_PUBLIC "02edbcbb1f239bbd9d3d7cef6b37a32669e94df42664fbac7640c22221a6a3df8c9681760f0e67abd45158b31563fb4971"
+#define ECC384_TEST_PRIVATE "62939b4a293cc68698c3d07fb7ff97a2fbc9368a1da5408e4913d41546cbb408fa8cb27fcc3f72f80d167bf0a4c329d3"
+#define ECC384_TEST_DH_SELF_AGREE "f696bd1bda5e528c1d56a36ed9bad784dd201b50c9d868b9529327ab17edc6ae895e7fd9461587f4c8472ef786f5870b"
+#define ECC384_TEST_SIG "98935f0a052cba3ad7d208de64e7772cbde6d91611d2ef03ba129f1498498c2d3650d9cfbb2beacb28e70b90439e018b52db46ecc7f6a95688003cdb4ffe04a1c74c3ffcb8c8704212f437facdb9172f608cb605c6ce37d6c9f00b233910290d"
+
 static const unsigned char s20TV0Key[32] = { 0x0f,0x62,0xb5,0x08,0x5b,0xae,0x01,0x54,0xa7,0xfa,0x4d,0xa0,0xf3,0x46,0x99,0xec,0x3f,0x92,0xe5,0x38,0x8b,0xde,0x31,0x84,0xd7,0x2a,0x7d,0xd0,0x23,0x76,0xc9,0x1c };
 static const unsigned char s20TV0Iv[8] = { 0x28,0x8f,0xf6,0x5d,0xc4,0x2b,0x92,0xf9 };
 static const unsigned char s20TV0Ks[64] = { 0x5e,0x5e,0x71,0xf9,0x01,0x99,0x34,0x03,0x04,0xab,0xb2,0x2a,0x37,0xb6,0x62,0x5b,0xf8,0x83,0xfb,0x89,0xce,0x3b,0x21,0xf5,0x4a,0x10,0xb8,0x10,0x66,0xef,0x87,0xda,0x30,0xb7,0x76,0x99,0xaa,0x73,0x79,0xda,0x59,0x5c,0x77,0xdd,0x59,0x54,0x2d,0xa2,0x08,0xe5,0x95,0x4f,0x89,0xe4,0x0e,0xb7,0xaa,0x80,0xa8,0x4a,0x61,0x76,0x66,0x3f };
@@ -96,6 +105,7 @@ static const unsigned char poly1305TV1Tag[16] = { 0xa6,0xf7,0x45,0x00,0x8f,0x81,
 
 static const char *sha512TV0Input = "supercalifragilisticexpealidocious";
 static const unsigned char sha512TV0Digest[64] = { 0x18,0x2a,0x85,0x59,0x69,0xe5,0xd3,0xe6,0xcb,0xf6,0x05,0x24,0xad,0xf2,0x88,0xd1,0xbb,0xf2,0x52,0x92,0x81,0x24,0x31,0xf6,0xd2,0x52,0xf1,0xdb,0xc1,0xcb,0x44,0xdf,0x21,0x57,0x3d,0xe1,0xb0,0x6b,0x68,0x75,0x95,0x9f,0x3b,0x6f,0x87,0xb1,0x13,0x81,0xd0,0xbc,0x79,0x2c,0x43,0x3a,0x13,0x55,0x3c,0xe0,0x84,0xc2,0x92,0x55,0x31,0x1c };
+static const unsigned char sha384TV0Digest[48] = { 0x71,0xe7,0x71,0x79,0xae,0xc3,0xf3,0x5f,0x93,0xea,0xe2,0x1d,0xe3,0x3f,0x24,0x6d,0xed,0x2a,0x59,0xae,0x22,0x45,0x27,0x6c,0x12,0x57,0xf3,0xbe,0xe6,0xce,0xe2,0x73,0xd8,0xad,0xaa,0x9b,0x99,0xa4,0x8a,0x1b,0x7a,0xb9,0x5d,0xfb,0x9c,0x1a,0x1c,0xf6 };
 
 struct C25519TestVector
 {
@@ -211,7 +221,7 @@ static int testCrypto()
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
-		SHA512::hash(buf1,bb,1234567);
+		SHA512(buf1,bb,1234567);
 		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << std::endl;
 		::free((void *)bb);
 	}
@@ -263,14 +273,21 @@ static int testCrypto()
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
-		SHA512::hash(buf1,bb,1234567);
+		SHA512(buf1,bb,1234567);
 		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << std::endl;
 		::free((void *)bb);
 	}
 
 	std::cout << "[crypto] Testing SHA-512... "; std::cout.flush();
-	SHA512::hash(buf1,sha512TV0Input,(unsigned int)strlen(sha512TV0Input));
+	SHA512(buf1,sha512TV0Input,(unsigned int)strlen(sha512TV0Input));
 	if (memcmp(buf1,sha512TV0Digest,64)) {
+		std::cout << "FAIL" << std::endl;
+		return -1;
+	}
+	std::cout << "PASS" << std::endl;
+	std::cout << "[crypto] Testing SHA-384... "; std::cout.flush();
+	SHA384(buf1,sha512TV0Input,(unsigned int)strlen(sha512TV0Input));
+	if (memcmp(buf1,sha384TV0Digest,48)) {
 		std::cout << "FAIL" << std::endl;
 		return -1;
 	}
@@ -305,18 +322,51 @@ static int testCrypto()
 		::free((void *)bb);
 	}
 
-	/*
-	for(unsigned int d=8;d<=10;++d) {
-		for(int k=0;k<8;++k) {
-			std::cout << "[crypto] computeSalsa2012Sha512ProofOfWork(" << d << ",\"foobarbaz\",9) == "; std::cout.flush();
-			unsigned char result[16];
-			uint64_t start = OSUtils::now();
-			IncomingPacket::computeSalsa2012Sha512ProofOfWork(d,"foobarbaz",9,result);
-			uint64_t end = OSUtils::now();
-			std::cout << Utils::hex(result,16) << " -- valid: " << IncomingPacket::testSalsa2012Sha512ProofOfWorkResult(d,"foobarbaz",9,result) << ", " << (end - start) << "ms" << std::endl;
+	std::cout << "[crypto] Testing ECC384 (NIST P-384)..." << std::endl;
+	{
+		uint8_t p384pub[ZT_ECC384_PUBLIC_KEY_SIZE],p384priv[ZT_ECC384_PRIVATE_KEY_SIZE],p384sig[ZT_ECC384_SIGNATURE_SIZE],p384hash[ZT_ECC384_SIGNATURE_HASH_SIZE];
+		char p384hex[256];
+		ECC384GenerateKey(p384pub,p384priv);
+		std::cout << "[crypto]   Public Key: " << Utils::hex(p384pub,sizeof(p384pub),p384hex) << std::endl;
+		Utils::getSecureRandom(p384hash,sizeof(p384hash));
+		ECC384ECDSASign(p384priv,p384hash,p384sig);
+		if (!ECC384ECDSAVerify(p384pub,p384hash,p384sig)) {
+			std::cout << "[crypto]   ECDSA Signature: FAILED (verify good signature)" << std::endl;
+			return -1;
 		}
+		++p384sig[0];
+		if (ECC384ECDSAVerify(p384pub,p384hash,p384sig)) {
+			std::cout << "[crypto]   ECDSA Signature: FAILED (verify bad signature)" << std::endl;
+			return -1;
+		}
+		--p384sig[0];
+		std::cout << "[crypto]   ECDSA Signature: " << Utils::hex(p384sig,sizeof(p384sig),p384hex) << std::endl;
+		uint8_t p384pub2[ZT_ECC384_PUBLIC_KEY_SIZE],p384priv2[ZT_ECC384_PRIVATE_KEY_SIZE],p384sec[ZT_ECC384_SHARED_SECRET_SIZE],p384sec2[ZT_ECC384_SHARED_SECRET_SIZE];
+		ECC384GenerateKey(p384pub2,p384priv2);
+		ECC384ECDH(p384pub,p384priv2,p384sec);
+		ECC384ECDH(p384pub2,p384priv,p384sec2);
+		if (memcmp(p384sec,p384sec2,ZT_ECC384_SHARED_SECRET_SIZE)) {
+			std::cout << "[crypto]   ECDH Agree: FAILED (secrets do not match)" << std::endl;
+			return -1;
+		}
+		std::cout << "[crypto]   ECDH Agree: " << Utils::hex(p384sec,sizeof(p384sec),p384hex) << std::endl;
+
+		Utils::unhex(ECC384_TEST_PUBLIC,p384pub,sizeof(p384pub));
+		Utils::unhex(ECC384_TEST_PRIVATE,p384priv,sizeof(p384priv));
+		ECC384ECDH(p384pub,p384priv,p384sec);
+		Utils::unhex(ECC384_TEST_DH_SELF_AGREE,p384sec2,sizeof(p384sec2));
+		if (memcmp(p384sec,p384sec2,ZT_ECC384_SHARED_SECRET_SIZE)) {
+			std::cout << "[crypto]   ECDH Test Vector: FAILED (secrets do not match)" << std::endl;
+			return -1;
+		}
+		std::cout << "[crypto]   ECDH Test Vector: PASS" << std::endl;
+		Utils::unhex(ECC384_TEST_SIG,p384sig,sizeof(p384sig));
+		if (!ECC384ECDSAVerify(p384pub,p384pub,p384sig)) {
+			std::cout << "[crypto]   ECDSA Test Vector: FAILED (verify failed)" << std::endl;
+			return -1;
+		}
+		std::cout << "[crypto]   ECDSA Test Vector: PASS" << std::endl;
 	}
-	*/
 
 	std::cout << "[crypto] Testing C25519 and Ed25519 against test vectors... "; std::cout.flush();
 	for(int k=0;k<ZT_NUM_C25519_TEST_VECTORS;++k) {
@@ -325,8 +375,8 @@ static int testCrypto()
 		memcpy(p1.priv.data,C25519_TEST_VECTORS[k].priv1,ZT_C25519_PRIVATE_KEY_LEN);
 		memcpy(p2.pub.data,C25519_TEST_VECTORS[k].pub2,ZT_C25519_PUBLIC_KEY_LEN);
 		memcpy(p2.priv.data,C25519_TEST_VECTORS[k].priv2,ZT_C25519_PRIVATE_KEY_LEN);
-		C25519::agree(p1,p2.pub,buf1,64);
-		C25519::agree(p2,p1.pub,buf2,64);
+		C25519::agree(p1.priv,p2.pub,buf1,64);
+		C25519::agree(p2.priv,p1.pub,buf2,64);
 		if (memcmp(buf1,buf2,64)) {
 			std::cout << "FAIL (1)" << std::endl;
 			return -1;
@@ -356,9 +406,9 @@ static int testCrypto()
 		C25519::Pair p1 = C25519::generate();
 		C25519::Pair p2 = C25519::generate();
 		C25519::Pair p3 = C25519::generate();
-		C25519::agree(p1,p2.pub,buf1,64);
-		C25519::agree(p2,p1.pub,buf2,64);
-		C25519::agree(p3,p1.pub,buf3,64);
+		C25519::agree(p1.priv,p2.pub,buf1,64);
+		C25519::agree(p2.priv,p1.pub,buf2,64);
+		C25519::agree(p3.priv,p1.pub,buf3,64);
 		// p1<>p2 should equal p1<>p2
 		if (memcmp(buf1,buf2,64)) {
 			std::cout << "FAIL (1)" << std::endl;
@@ -378,7 +428,7 @@ static int testCrypto()
 		bp[k] = C25519::generate();
 	uint64_t st = OSUtils::now();
 	for(unsigned int k=0;k<50;++k) {
-		C25519::agree(bp[~k & 7],bp[k & 7].pub,buf1,64);
+		C25519::agree(bp[~k & 7].priv,bp[k & 7].pub,buf1,64);
 	}
 	uint64_t et = OSUtils::now();
 	std::cout << ((double)(et - st) / 50.0) << "ms per agreement." << std::endl;
@@ -466,7 +516,7 @@ static int testIdentity()
 	for(unsigned int k=0;k<4;++k) {
 		std::cout << "[identity] Generate identity... "; std::cout.flush();
 		uint64_t genstart = OSUtils::now();
-		id.generate();
+		id.generate(Identity::C25519);
 		uint64_t genend = OSUtils::now();
 		std::cout << "(took " << (genend - genstart) << "ms): " << id.toString(true,buf2) << std::endl;
 		std::cout << "[identity] Locally validate identity: ";
@@ -539,13 +589,13 @@ static int testCertificate()
 
 	Identity authority;
 	std::cout << "[certificate] Generating identity to act as authority... "; std::cout.flush();
-	authority.generate();
+	authority.generate(Identity::C25519);
 	std::cout << authority.address().toString(buf) << std::endl;
 
 	Identity idA,idB;
 	std::cout << "[certificate] Generating identities A and B... "; std::cout.flush();
-	idA.generate();
-	idB.generate();
+	idA.generate(Identity::C25519);
+	idB.generate(Identity::C25519);
 	std::cout << idA.address().toString(buf) << ", " << idB.address().toString(buf) << std::endl;
 
 	std::cout << "[certificate] Generating certificates A and B...";
@@ -661,6 +711,46 @@ static int testOther()
 		std::cout << buf2 << std::endl;
 		return -1;
 	}
+
+	std::cout << "[other] Testing base32... "; std::cout.flush();
+	for(unsigned int i=1;i<1024;++i) {
+		Utils::getSecureRandom(buf,(unsigned int)sizeof(buf));
+		int l = Utils::b32e((const uint8_t *)buf,i,buf2,sizeof(buf2));
+		if (l <= 0) {
+			std::cout << "FAIL (encode returned 0)" << std::endl;
+			return -1;
+		}
+		int l2 = Utils::b32d(buf2,(uint8_t *)buf3,sizeof(buf3));
+		if (l2 != (int)i) {
+			std::cout << "FAIL (decode returned wrong count)" << std::endl;
+			return -1;
+		}
+		if (memcmp(buf,buf3,i) != 0) {
+			std::cout << "FAIL (decode result incorrect)" << std::endl;
+			return -1;
+		}
+	}
+	std::cout << "PASS" << std::endl;
+
+	std::cout << "[other] Testing base64... "; std::cout.flush();
+	for(unsigned int i=1;i<1024;++i) {
+		Utils::getSecureRandom(buf,(unsigned int)sizeof(buf));
+		unsigned int l = Utils::b64e((const uint8_t *)buf,i,buf2,sizeof(buf2));
+		if (l == 0) {
+			std::cout << "FAIL (encode returned 0)" << std::endl;
+			return -1;
+		}
+		unsigned int l2 = Utils::b64d(buf2,(uint8_t *)buf3,sizeof(buf3));
+		if (l2 != i) {
+			std::cout << "FAIL (decode returned wrong count)" << std::endl;
+			return -1;
+		}
+		if (memcmp(buf,buf3,i) != 0) {
+			std::cout << "FAIL (decode result incorrect)" << std::endl;
+			return -1;
+		}
+	}
+	std::cout << "PASS" << std::endl;
 
 	std::cout << "[other] Testing InetAddress encode/decode..."; std::cout.flush();
 	std::cout << " " << InetAddress("127.0.0.1/9993").toString(buf);

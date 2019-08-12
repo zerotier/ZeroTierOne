@@ -61,6 +61,7 @@
 #include <sys/un.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netinet/ip6.h>
 #include <netinet/tcp.h>
 
 #if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)

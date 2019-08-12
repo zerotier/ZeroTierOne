@@ -31,6 +31,7 @@
 
 #include "MAC.hpp"
 #include "InetAddress.hpp"
+#include "Utils.hpp"
 
 namespace ZeroTier {
 

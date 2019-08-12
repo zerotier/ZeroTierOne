@@ -154,22 +154,7 @@ public:
 	 * @param to Recipient of this signature
 	 * @return True if signature successful and chain of custody appended
 	 */
-	inline bool sign(const Identity &from,const Address &to)
-	{
-		try {
-			for(unsigned int i=0;((i<_maxCustodyChainLength)&&(i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH));++i) {
-				if (!(_custody[i].to)) {
-					Buffer<(sizeof(Capability) * 2)> tmp;
-					this->serialize(tmp,true);
-					_custody[i].to = to;
-					_custody[i].from = from.address();
-					_custody[i].signature = from.sign(tmp.data(),tmp.size());
-					return true;
-				}
-			}
-		} catch ( ... ) {}
-		return false;
-	}
+	bool sign(const Identity &from,const Address &to);
 
 	/**
 	 * Verify this capability's chain of custody and signatures
@@ -409,9 +394,9 @@ public:
 				if ((i < _maxCustodyChainLength)&&(i < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH)&&(_custody[i].to)) {
 					_custody[i].to.appendTo(b);
 					_custody[i].from.appendTo(b);
-					b.append((uint8_t)1); // 1 == Ed25519 signature
-					b.append((uint16_t)ZT_C25519_SIGNATURE_LEN); // length of signature
-					b.append(_custody[i].signature.data,ZT_C25519_SIGNATURE_LEN);
+					b.append((uint8_t)1);
+					b.append((uint16_t)_custody[i].signatureLength);
+					b.append(_custody[i].signature,_custody[i].signatureLength);
 				} else {
 					b.append((unsigned char)0,ZT_ADDRESS_LENGTH); // zero 'to' terminates chain
 					break;
@@ -454,10 +439,11 @@ public:
 			_custody[i].to = to;
 			_custody[i].from.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
 			if (b[p++] == 1) {
-				if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN)
+				_custody[i].signatureLength = b.template at<uint16_t>(p);
+				if (_custody[i].signatureLength > sizeof(_custody[i].signature))
 					throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 				p += 2;
-				memcpy(_custody[i].signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
+				memcpy(_custody[i].signature,b.field(p,_custody[i].signatureLength),_custody[i].signatureLength); p += _custody[i].signatureLength;
 			} else {
 				p += 2 + b.template at<uint16_t>(p);
 			}
@@ -489,7 +475,8 @@ private:
 	struct {
 		Address to;
 		Address from;
-		C25519::Signature signature;
+		unsigned int signatureLength;
+		uint8_t signature[ZT_SIGNATURE_BUFFER_SIZE];
 	} _custody[ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH];
 };
 
