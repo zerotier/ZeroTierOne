@@ -26,15 +26,26 @@
 
 #include "AES.hpp"
 
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#include <wmmintrin.h>
+#include <emmintrin.h>
+#include <smmintrin.h>
+#endif
+#ifdef _WIN32
+#include <intrin.h>
+#endif
+
 namespace ZeroTier {
 
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 
-#include <wmmintrin.h>
-#include <emmintrin.h>
-#include <smmintrin.h>
 static inline bool _zt_aesni_supported()
 {
+#ifdef WIN32
+	int regs[4];
+	__cpuid(regs, 1);
+	return (regs[2] >> 25) & 1;
+#else
 	uint32_t eax,ebx,ecx,edx;
 	__asm__ __volatile__ (
 		"cpuid"
@@ -42,6 +53,7 @@ static inline bool _zt_aesni_supported()
 		: "a"(1), "c"(0)
 	);
 	return ((ecx & (1 << 25)) != 0);
+#endif
 }
 const bool AES::HW_ACCEL = _zt_aesni_supported();
 
