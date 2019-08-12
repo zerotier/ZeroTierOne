@@ -14,10 +14,12 @@ parallel 'centos7': {
             checkout scm
 
 	        stage('Build Centos 7') {
-		sh '''rm -rf build/
+		sh '''. /opt/rh/devtoolset-8/enable
+              rm -rf build/
               mkdir build && cd build
-		      CC=clang CXX=clang++ cmake ..
+		      cmake ..
 		      make -j4
+              ./zerotier-selftest
 		'''
             }
         }
