@@ -243,7 +243,7 @@ char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_
 			}
 			*p = (char)0;
 			return buf;
-		}
+		} break;
 		case P384: {
 			char *p = buf;
 			Utils::hex10(_address.toInt(),p);
@@ -262,6 +262,7 @@ char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_
 			return buf;
 		}	break;
 	}
+	return nullptr;
 }
 
 bool Identity::fromString(const char *str)
