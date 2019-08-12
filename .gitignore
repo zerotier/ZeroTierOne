@@ -51,6 +51,7 @@ enc_temp_folder
 /world/mkworld
 /world/*.c25519
 zt1-src.tar.gz
+/MacEthernetTapAgent
 
 # Miscellaneous temporaries, build files, etc.
 *.log
@@ -117,3 +118,5 @@ ext/librethinkdbxx/build
 .vscode
 __pycache__
 *~
+attic/world/*.c25519
+attic/world/mkworld

@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -78,21 +78,20 @@ void OutboundMulticast::init(
 	if (!disableCompression)
 		_packet.compress();
 
-	ZT_FAST_MEMCPY(_frameData,payload,_frameLen);
+	memcpy(_frameData,payload,_frameLen);
 }
 
 void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,void *tPtr,const Address &toAddr)
 {
 	const SharedPtr<Network> nw(RR->node->network(_nwid));
-	const Address toAddr2(toAddr);
 	uint8_t QoSBucket = 255; // Dummy value
-	if ((nw)&&(nw->filterOutgoingPacket(tPtr,true,RR->identity.address(),toAddr2,_macSrc,_macDest,_frameData,_frameLen,_etherType,0,QoSBucket))) {
+	if ((nw)&&(nw->filterOutgoingPacket(tPtr,true,RR->identity.address(),toAddr,_macSrc,_macDest,_frameData,_frameLen,_etherType,0,QoSBucket))) {
+		nw->pushCredentialsIfNeeded(tPtr,toAddr,RR->node->now());
 		_packet.newInitializationVector();
-		_packet.setDestination(toAddr2);
+		_packet.setDestination(toAddr);
 		RR->node->expectReplyTo(_packet.packetId());
-
-		Packet tmp(_packet); // make a copy of packet so as not to garble the original -- GitHub issue #461
-		RR->sw->send(tPtr,tmp,true);
+		_tmp = _packet;
+		RR->sw->send(tPtr,_tmp,true);
 	}
 }
 

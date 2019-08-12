@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -47,35 +47,28 @@ namespace ZeroTier {
  * to reduce the complexity of code needed to interact with this type of buffer.
  */
 
-template <class T>
+template <class T,size_t S>
 class RingBuffer
 {
 private:
-	T * buf;
-	size_t size;
+	T buf[S];
 	size_t begin;
 	size_t end;
 	bool wrap;
 
 public:
-
-	/**
-	 * create a RingBuffer with space for up to size elements.
-	 */
-	explicit RingBuffer(size_t size)
-		: size(size),
+	RingBuffer() :
 		begin(0),
 		end(0),
 		wrap(false)
 	{
-		buf = new T[size];
-		memset(buf, 0, sizeof(T) * size);
+		memset(buf,0,sizeof(T)*S);
 	}
 
 	/**
 	 * @return A pointer to the underlying buffer
 	 */
-	T* get_buf()
+	inline T *get_buf()
 	{
 		return buf + begin;
 	}
@@ -85,17 +78,17 @@ public:
 	 * @param n Number of elements to copy in
 	 * @return Number of elements we copied in
 	 */
-	size_t produce(size_t n)
+	inline size_t produce(size_t n)
 	{
 		n = std::min(n, getFree());
 		if (n == 0) {
 			return n;
 		}
-		const size_t first_chunk = std::min(n, size - end);
-		end = (end + first_chunk) % size;
+		const size_t first_chunk = std::min(n, S - end);
+		end = (end + first_chunk) % S;
 		if (first_chunk < n) {
 			const size_t second_chunk = n - first_chunk;
-			end = (end + second_chunk) % size;
+			end = (end + second_chunk) % S;
 		}
 		if (begin == end) {
 			wrap = true;
@@ -107,17 +100,14 @@ public:
 	 * Fast erase, O(1). 
 	 * Merely reset the buffer pointer, doesn't erase contents
 	 */
-	void reset()
-	{
-		consume(count());
-	}
+	inline void reset() { consume(count()); }
 
 	/** 
 	 * adjust buffer index pointer as if we copied data out
 	 * @param n Number of elements we copied from the buffer
 	 * @return Number of elements actually available from the buffer
 	 */
-	size_t consume(size_t n)
+	inline size_t consume(size_t n)
 	{
 		n = std::min(n, count());
 		if (n == 0) {
@@ -126,11 +116,11 @@ public:
 		if (wrap) {
 			wrap = false;
 		}
-		const size_t first_chunk = std::min(n, size - begin);
-		begin = (begin + first_chunk) % size;
+		const size_t first_chunk = std::min(n, S - begin);
+		begin = (begin + first_chunk) % S;
 		if (first_chunk < n) {
 			const size_t second_chunk = n - first_chunk;
-			begin = (begin + second_chunk) % size;
+			begin = (begin + second_chunk) % S;
 		}
 		return n;
 	}
@@ -139,19 +129,19 @@ public:
 	 * @param data Buffer that is to be written to the ring
 	 * @param n Number of elements to write to the buffer
 	 */
-	size_t write(const T * data, size_t n)
+	inline size_t write(const T * data, size_t n)
 	{
 		n = std::min(n, getFree());
 		if (n == 0) {
 			return n;
 		}
-		const size_t first_chunk = std::min(n, size - end);
+		const size_t first_chunk = std::min(n, S - end);
 		memcpy(buf + end, data, first_chunk * sizeof(T));
-		end = (end + first_chunk) % size;
+		end = (end + first_chunk) % S;
 		if (first_chunk < n) {
 			const size_t second_chunk = n - first_chunk;
 			memcpy(buf + end, data + first_chunk, second_chunk * sizeof(T));
-			end = (end + second_chunk) % size;
+			end = (end + second_chunk) % S;
 		}
 		if (begin == end) {
 			wrap = true;
@@ -164,14 +154,14 @@ public:
 	 *
 	 * @param value A single value to be placed in the buffer
 	 */
-	void push(const T value)
+	inline void push(const T value)
 	{
-		if (count() == size) {
+		if (count() == S) {
 			consume(1);
 		}
-		const size_t first_chunk = std::min((size_t)1, size - end);
+		const size_t first_chunk = std::min((size_t)1, S - end);
 		*(buf + end) = value;
-		end = (end + first_chunk) % size;
+		end = (end + first_chunk) % S;
 		if (begin == end) {
 			wrap = true;
 		}
@@ -180,14 +170,14 @@ public:
 	/**
 	 * @return The most recently pushed element on the buffer
 	 */
-	T get_most_recent() { return *(buf + end); }
+	inline T get_most_recent() { return *(buf + end); }
 
 	/**
 	 * @param dest Destination buffer
 	 * @param n Size (in terms of number of elements) of the destination buffer
 	 * @return Number of elements read from the buffer
 	 */
-	size_t read(T * dest, size_t n)
+	inline size_t read(T *dest,size_t n)
 	{
 		n = std::min(n, count());
 		if (n == 0) {
@@ -196,13 +186,13 @@ public:
 		if (wrap) {
 			wrap = false;
 		}
-		const size_t first_chunk = std::min(n, size - begin);
+		const size_t first_chunk = std::min(n, S - begin);
 		memcpy(dest, buf + begin, first_chunk * sizeof(T));
-		begin = (begin + first_chunk) % size;
+		begin = (begin + first_chunk) % S;
 		if (first_chunk < n) {
 			const size_t second_chunk = n - first_chunk;
 			memcpy(dest + first_chunk, buf + begin, second_chunk * sizeof(T));
-			begin = (begin + second_chunk) % size;
+			begin = (begin + second_chunk) % S;
 		}
 		return n;
 	}
@@ -212,34 +202,34 @@ public:
 	 *
 	 * @return The number of elements in the buffer
 	 */
-	size_t count()
+	inline size_t count()
 	{
 		if (end == begin) {
-			return wrap ? size : 0;
+			return wrap ? S : 0;
 		}
 		else if (end > begin) {
 			return end - begin;
 		}
 		else {
-			return size + end - begin;
+			return S + end - begin;
 		}
 	}
 
 	/**
 	 * @return The number of slots that are unused in the buffer
 	 */
-	size_t getFree() { return size - count(); }
+	inline size_t getFree() { return S - count(); }
 
 	/**
 	 * @return The arithmetic mean of the contents of the buffer
 	 */
-	float mean()
+	inline float mean()
 	{
 		size_t iterator = begin;
 		float subtotal = 0;
 		size_t curr_cnt = count();
 		for (size_t i=0; i<curr_cnt; i++) {
-			iterator = (iterator + size - 1) % curr_cnt;
+			iterator = (iterator + S - 1) % curr_cnt;
 			subtotal += (float)*(buf + iterator);
 		}
 		return curr_cnt ? subtotal / (float)curr_cnt : 0;
@@ -248,14 +238,14 @@ public:
 	/**
 	 * @return The arithmetic mean of the most recent 'n' elements of the buffer
 	 */
-	float mean(size_t n)
+	inline float mean(size_t n)
 	{
-		n = n < size ? n : size;
+		n = n < S ? n : S;
 		size_t iterator = begin;
 		float subtotal = 0;
 		size_t curr_cnt = count();
 		for (size_t i=0; i<n; i++) {
-			iterator = (iterator + size - 1) % curr_cnt;
+			iterator = (iterator + S - 1) % curr_cnt;
 			subtotal += (float)*(buf + iterator);
 		}
 		return curr_cnt ? subtotal / (float)curr_cnt : 0;
@@ -264,39 +254,36 @@ public:
 	/**
 	 * @return The sample standard deviation of element values
 	 */
-	float stddev() { return sqrt(variance()); }
+	inline float stddev() { return sqrt(variance()); }
 
 	/**
 	 * @return The variance of element values
 	 */
-	float variance()
+	inline float variance()
 	{
 		size_t iterator = begin;
 		float cached_mean = mean();
 		size_t curr_cnt = count();
-		if (size) {
-			T sum_of_squared_deviations = 0;
-			for (size_t i=0; i<curr_cnt; i++) {
-				iterator = (iterator + size - 1) % curr_cnt;
-				float deviation = (buf[i] - cached_mean);
-				sum_of_squared_deviations += (deviation*deviation);
-			}
-			float variance = (float)sum_of_squared_deviations / (float)(size - 1);
-			return variance;
+		T sum_of_squared_deviations = 0;
+		for (size_t i=0; i<curr_cnt; i++) {
+			iterator = (iterator + S - 1) % curr_cnt;
+			float deviation = (buf[i] - cached_mean);
+			sum_of_squared_deviations += (T)(deviation*deviation);
 		}
-		return 0;
+		float variance = (float)sum_of_squared_deviations / (float)(S - 1);
+		return variance;
 	}
 
 	/**
 	 * @return The number of elements of zero value
 	 */
-	size_t zeroCount()
+	inline size_t zeroCount()
 	{
 		size_t iterator = begin;
 		size_t zeros = 0;
 		size_t curr_cnt = count();
 		for (size_t i=0; i<curr_cnt; i++) {
-			iterator = (iterator + size - 1) % curr_cnt;
+			iterator = (iterator + S - 1) % curr_cnt;
 			if (*(buf + iterator) == 0) {
 				zeros++;
 			}
@@ -308,13 +295,13 @@ public:
 	 * @param value Value to match against in buffer
 	 * @return The number of values held in the ring buffer which match a given value
 	 */
-	size_t countValue(T value)
+	inline size_t countValue(T value)
 	{
 		size_t iterator = begin;
 		size_t cnt = 0;
 		size_t curr_cnt = count();
 		for (size_t i=0; i<curr_cnt; i++) {
-			iterator = (iterator + size - 1) % curr_cnt;
+			iterator = (iterator + S - 1) % curr_cnt;
 			if (*(buf + iterator) == value) {
 				cnt++;
 			}
@@ -325,11 +312,12 @@ public:
 	/**
 	 * Print the contents of the buffer
 	 */
-	void dump()
+	/*
+	inline void dump()
 	{
 		size_t iterator = begin;
-		for (size_t i=0; i<size; i++) {
-			iterator = (iterator + size - 1) % size;
+		for (size_t i=0; i<S; i++) {
+			iterator = (iterator + S - 1) % S;
 			if (typeid(T) == typeid(int)) {
 				 //DEBUG_INFO("buf[%2zu]=%2d", iterator, (int)*(buf + iterator));
 			}
@@ -338,6 +326,7 @@ public:
 			}
 		}
 	}
+	*/
 };
 
 } // namespace ZeroTier

@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -42,8 +42,7 @@ namespace ZeroTier {
 
 Multicaster::Multicaster(const RuntimeEnvironment *renv) :
 	RR(renv),
-	_groups(256),
-	_gatherAuth(256)
+	_groups(32)
 {
 }
 
@@ -415,25 +414,6 @@ void Multicaster::clean(int64_t now)
 			}
 		}
 	}
-
-	{
-		Mutex::Lock _l(_gatherAuth_m);
-		_GatherAuthKey *k = (_GatherAuthKey *)0;
-		uint64_t *ts = NULL;
-		Hashtable<_GatherAuthKey,uint64_t>::Iterator i(_gatherAuth);
-		while (i.next(k,ts)) {
-			if ((now - *ts) >= ZT_MULTICAST_CREDENTIAL_EXPIRATON)
-				_gatherAuth.erase(*k);
-		}
-	}
-}
-
-void Multicaster::addCredential(void *tPtr,const CertificateOfMembership &com,bool alreadyValidated)
-{
-	if ((alreadyValidated)||(com.verify(RR,tPtr) == 0)) {
-		Mutex::Lock _l(_gatherAuth_m);
-		_gatherAuth[_GatherAuthKey(com.networkId(),com.issuedTo())] = RR->node->now();
-	}
 }
 
 void Multicaster::_add(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &member)
@@ -444,14 +424,16 @@ void Multicaster::_add(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup
 	if (member == RR->identity.address())
 		return;
 
-	for(std::vector<MulticastGroupMember>::iterator m(gs.members.begin());m!=gs.members.end();++m) {
+	std::vector<MulticastGroupMember>::iterator m(std::lower_bound(gs.members.begin(),gs.members.end(),member));
+	if (m != gs.members.end()) {
 		if (m->address == member) {
 			m->timestamp = now;
 			return;
 		}
+		gs.members.insert(m,MulticastGroupMember(member,now));
+	} else {
+		gs.members.push_back(MulticastGroupMember(member,now));
 	}
-
-	gs.members.push_back(MulticastGroupMember(member,now));
 
 	for(std::list<OutboundMulticast>::iterator tx(gs.txQueue.begin());tx!=gs.txQueue.end();) {
 		if (tx->atLimit())

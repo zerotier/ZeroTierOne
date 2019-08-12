@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -31,6 +31,8 @@
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
+
+#include "Thread.hpp"
 
 namespace ZeroTier {
 
@@ -52,11 +54,27 @@ public:
 		c.notify_one();
 	}
 
+	inline void postLimit(T t,const unsigned long limit)
+	{
+		std::unique_lock<std::mutex> lock(m);
+		for(;;) {
+			if (q.size() < limit) {
+				q.push(t);
+				c.notify_one();
+				break;
+			}
+			if (!r)
+				break;
+			gc.wait(lock);
+		}
+	}
+
 	inline void stop(void)
 	{
 		std::lock_guard<std::mutex> lock(m);
 		r = false;
 		c.notify_all();
+		gc.notify_all();
 	}
 
 	inline bool get(T &value)
@@ -65,10 +83,14 @@ public:
 		if (!r) return false;
 		while (q.empty()) {
 			c.wait(lock);
-			if (!r) return false;
+			if (!r) {
+				gc.notify_all();
+				return false;
+			}
 		}
 		value = q.front();
 		q.pop();
+		gc.notify_all();
 		return true;
 	}
 
@@ -98,8 +120,8 @@ public:
 private:
 	volatile bool r;
 	std::queue<T> q;
-	std::mutex m;
-	std::condition_variable c;
+	mutable std::mutex m;
+	mutable std::condition_variable c,gc;
 };
 
 } // namespace ZeroTier

@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -66,7 +66,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 {
 	if (callbacks->version != 0)
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
-	ZT_FAST_MEMCPY(&_cb,callbacks,sizeof(ZT_Node_Callbacks));
+	memcpy(&_cb,callbacks,sizeof(ZT_Node_Callbacks));
 
 	// Initialize non-cryptographic PRNG from a good random source
 	Utils::getSecureRandom((void *)_prngState,sizeof(_prngState));
@@ -76,6 +76,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 	memset(_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
 	memset(_expectingRepliesTo,0,sizeof(_expectingRepliesTo));
 	memset(_lastIdentityVerification,0,sizeof(_lastIdentityVerification));
+	memset((void *)(&_stats),0,sizeof(_stats));
 
 	uint64_t idtmp[2];
 	idtmp[0] = 0; idtmp[1] = 0;
@@ -268,6 +269,15 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 			Hashtable< Address,std::vector<InetAddress> > alwaysContact;
 			RR->topology->getUpstreamsToContact(alwaysContact);
 
+			// Uncomment to dump stats
+			/*
+			for(unsigned int i=0;i<32;i++) {
+				if (_stats.inVerbCounts[i] > 0)
+					printf("%.2x\t%12lld %lld\n",i,(unsigned long long)_stats.inVerbCounts[i],(unsigned long long)_stats.inVerbBytes[i]);
+			}
+			printf("\n");
+			*/
+
 			// Check last receive time on designated upstreams to see if we seem to be online
 			int64_t lastReceivedFromUpstream = 0;
 			{
@@ -279,6 +289,19 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 					if (p)
 						lastReceivedFromUpstream = std::max(p->lastReceive(),lastReceivedFromUpstream);
 				}
+			}
+
+			// Clean up any old local controller auth memorizations.
+			{
+				_localControllerAuthorizations_m.lock();
+				Hashtable< _LocalControllerAuth,int64_t >::Iterator i(_localControllerAuthorizations);
+				_LocalControllerAuth *k = (_LocalControllerAuth *)0;
+				int64_t *v = (int64_t *)0;
+				while (i.next(k,v)) {
+					if ((*v - now) > (ZT_NETWORK_AUTOCONF_DELAY * 3))
+						_localControllerAuthorizations.erase(*k);
+				}
+				_localControllerAuthorizations_m.unlock();
 			}
 
 			// Get peers we should stay connected to according to network configs
@@ -471,13 +494,13 @@ ZT_PeerList *Node::peers() const
 		p->hadAggregateLink |= pi->second->hasAggregateLink();
 		p->pathCount = 0;
 		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
-			ZT_FAST_MEMCPY(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
+			memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
 			p->paths[p->pathCount].lastSend = (*path)->lastOut();
 			p->paths[p->pathCount].lastReceive = (*path)->lastIn();
 			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
 			p->paths[p->pathCount].expired = 0;
 			p->paths[p->pathCount].preferred = ((*path) == bestp) ? 1 : 0;
-			p->paths[p->pathCount].latency = (*path)->latency();
+			p->paths[p->pathCount].latency = (float)(*path)->latency();
 			p->paths[p->pathCount].packetDelayVariance = (*path)->packetDelayVariance(); 
 			p->paths[p->pathCount].throughputDisturbCoeff = (*path)->throughputDisturbanceCoefficient();
 			p->paths[p->pathCount].packetErrorRatio = (*path)->packetErrorRatio();
@@ -633,6 +656,10 @@ std::vector<World> Node::moons() const
 
 void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig)
 {
+	_localControllerAuthorizations_m.lock();
+	_localControllerAuthorizations[_LocalControllerAuth(nwid,destination)] = now();
+	_localControllerAuthorizations_m.unlock();
+
 	if (destination == RR->identity.address()) {
 		SharedPtr<Network> n(network(nwid));
 		if (!n) return;

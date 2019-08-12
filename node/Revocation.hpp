@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -58,9 +58,17 @@ class Revocation : public Credential
 public:
 	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_REVOCATION; }
 
-	Revocation()
+	Revocation() :
+		_id(0),
+		_credentialId(0),
+		_networkId(0),
+		_threshold(0),
+		_flags(0),
+		_target(),
+		_signedBy(),
+		_type(Credential::CREDENTIAL_TYPE_NULL)
 	{
-		memset(this,0,sizeof(Revocation));
+		memset(_signature.data,0,sizeof(_signature.data));
 	}
 
 	/**
@@ -80,7 +88,10 @@ public:
 		_flags(fl),
 		_target(tgt),
 		_signedBy(),
-		_type(ct) {}
+		_type(ct)
+	{
+		memset(_signature.data,0,sizeof(_signature.data));
+	}
 
 	inline uint32_t id() const { return _id; }
 	inline uint32_t credentialId() const { return _credentialId; }
@@ -148,7 +159,7 @@ public:
 	template<unsigned int C>
 	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
 	{
-		memset(this,0,sizeof(Revocation));
+		*this = Revocation();
 
 		unsigned int p = startAt;
 
@@ -166,7 +177,7 @@ public:
 		if (b[p++] == 1) {
 			if (b.template at<uint16_t>(p) == ZT_C25519_SIGNATURE_LEN) {
 				p += 2;
-				ZT_FAST_MEMCPY(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
+				memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
 				p += ZT_C25519_SIGNATURE_LEN;
 			} else throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 		} else {

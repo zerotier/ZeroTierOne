@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -158,33 +158,6 @@ public:
 	 */
 	void clean(int64_t now);
 
-	/**
-	 * Add an authorization credential
-	 *
-	 * The Multicaster keeps its own track of when valid credentials of network
-	 * membership are presented. This allows it to control MULTICAST_LIKE
-	 * GATHER authorization for networks this node does not belong to.
-	 *
-	 * @param com Certificate of membership
-	 * @param alreadyValidated If true, COM has already been checked and found to be valid and signed
-	 */
-	void addCredential(void *tPtr,const CertificateOfMembership &com,bool alreadyValidated);
-
-	/**
-	 * Check authorization for GATHER and LIKE for non-network-members
-	 *
-	 * @param a Address of peer
-	 * @param nwid Network ID
-	 * @param now Current time
-	 * @return True if GATHER and LIKE should be allowed
-	 */
-	bool cacheAuthorized(const Address &a,const uint64_t nwid,const int64_t now) const
-	{
-		Mutex::Lock _l(_gatherAuth_m);
-		const uint64_t *p = _gatherAuth.get(_GatherAuthKey(nwid,a));
-		return ((p)&&((now - *p) < ZT_MULTICAST_CREDENTIAL_EXPIRATON));
-	}
-
 private:
 	struct Key
 	{
@@ -202,6 +175,10 @@ private:
 	{
 		MulticastGroupMember() {}
 		MulticastGroupMember(const Address &a,uint64_t ts) : address(a),timestamp(ts) {}
+
+		inline bool operator<(const Address &a) const { return (address < a); }
+		inline bool operator==(const Address &a) const { return (address == a); }
+		inline bool operator!=(const Address &a) const { return (address != a); }
 
 		Address address;
 		uint64_t timestamp; // time of last notification
@@ -222,18 +199,6 @@ private:
 
 	Hashtable<Multicaster::Key,MulticastGroupStatus> _groups;
 	Mutex _groups_m;
-
-	struct _GatherAuthKey
-	{
-		_GatherAuthKey() : member(0),networkId(0) {}
-		_GatherAuthKey(const uint64_t nwid,const Address &a) : member(a.toInt()),networkId(nwid) {}
-		inline unsigned long hashCode() const { return (unsigned long)(member ^ networkId); }
-		inline bool operator==(const _GatherAuthKey &k) const { return ((member == k.member)&&(networkId == k.networkId)); }
-		uint64_t member;
-		uint64_t networkId;
-	};
-	Hashtable< _GatherAuthKey,uint64_t > _gatherAuth;
-	Mutex _gatherAuth_m;
 };
 
 } // namespace ZeroTier

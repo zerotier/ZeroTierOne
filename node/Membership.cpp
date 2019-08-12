@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -35,61 +35,42 @@
 #include "Node.hpp"
 #include "Trace.hpp"
 
-#define ZT_CREDENTIAL_PUSH_EVERY (ZT_NETWORK_AUTOCONF_DELAY / 3)
-
 namespace ZeroTier {
 
 Membership::Membership() :
 	_lastUpdatedMulticast(0),
-	_lastPushedCom(0),
 	_comRevocationThreshold(0),
+	_lastPushedCredentials(0),
 	_revocations(4),
 	_remoteTags(4),
 	_remoteCaps(4),
 	_remoteCoos(4)
 {
-	resetPushState();
 }
 
-void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex,const bool force)
+void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex)
 {
-	bool sendCom = ( (nconf.com) && ( ((now - _lastPushedCom) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) );
-
-	const Capability *sendCap;
-	if (localCapabilityIndex >= 0) {
-		sendCap = &(nconf.capabilities[localCapabilityIndex]);
-		if ( ((now - _localCredLastPushed.cap[localCapabilityIndex]) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) )
-			_localCredLastPushed.cap[localCapabilityIndex] = now;
-		else sendCap = (const Capability *)0;
-	} else sendCap = (const Capability *)0;
+	const Capability *sendCap = (localCapabilityIndex >= 0) ? &(nconf.capabilities[localCapabilityIndex]) : (const Capability *)0;
 
 	const Tag *sendTags[ZT_MAX_NETWORK_TAGS];
 	unsigned int sendTagCount = 0;
-	for(unsigned int t=0;t<nconf.tagCount;++t) {
-		if ( ((now - _localCredLastPushed.tag[t]) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
-			_localCredLastPushed.tag[t] = now;
-			sendTags[sendTagCount++] = &(nconf.tags[t]);
-		}
-	}
+	for(unsigned int t=0;t<nconf.tagCount;++t)
+		sendTags[sendTagCount++] = &(nconf.tags[t]);
 
 	const CertificateOfOwnership *sendCoos[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
 	unsigned int sendCooCount = 0;
-	for(unsigned int c=0;c<nconf.certificateOfOwnershipCount;++c) {
-		if ( ((now - _localCredLastPushed.coo[c]) >= ZT_CREDENTIAL_PUSH_EVERY) || (force) ) {
-			_localCredLastPushed.coo[c] = now;
-			sendCoos[sendCooCount++] = &(nconf.certificatesOfOwnership[c]);
-		}
-	}
+	for(unsigned int c=0;c<nconf.certificateOfOwnershipCount;++c)
+		sendCoos[sendCooCount++] = &(nconf.certificatesOfOwnership[c]);
 
 	unsigned int tagPtr = 0;
 	unsigned int cooPtr = 0;
+	bool sendCom = (bool)(nconf.com);
 	while ((tagPtr < sendTagCount)||(cooPtr < sendCooCount)||(sendCom)||(sendCap)) {
 		Packet outp(peerAddress,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 
 		if (sendCom) {
 			sendCom = false;
 			nconf.com.serialize(outp);
-			_lastPushedCom = now;
 		}
 		outp.append((uint8_t)0x00);
 
@@ -123,6 +104,8 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 		outp.compress();
 		RR->sw->send(tPtr,outp,true);
 	}
+
+	_lastPushedCredentials = now;
 }
 
 Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const CertificateOfMembership &com)

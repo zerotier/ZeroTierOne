@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -54,28 +54,16 @@ public:
 	 * @param bits Raw address -- 5 bytes, big-endian byte order
 	 * @param len Length of array
 	 */
-	Address(const void *bits,unsigned int len)
-	{
-		setTo(bits,len);
-	}
+	Address(const void *bits,unsigned int len) { setTo(bits,len); }
 
-	inline Address &operator=(const Address &a)
-	{
-		_a = a._a;
-		return *this;
-	}
-
-	inline Address &operator=(const uint64_t a)
-	{
-		_a = (a & 0xffffffffffULL);
-		return *this;
-	}
+	inline Address &operator=(const Address &a) { _a = a._a; return *this; }
+	inline Address &operator=(const uint64_t a) { _a = (a & 0xffffffffffULL); return *this; }
 
 	/**
 	 * @param bits Raw address -- 5 bytes, big-endian byte order
 	 * @param len Length of array
 	 */
-	inline void setTo(const void *bits,unsigned int len)
+	inline void setTo(const void *bits,const unsigned int len)
 	{
 		if (len < ZT_ADDRESS_LENGTH) {
 			_a = 0;
@@ -94,7 +82,7 @@ public:
 	 * @param bits Buffer to hold 5-byte address in big-endian byte order
 	 * @param len Length of array
 	 */
-	inline void copyTo(void *bits,unsigned int len) const
+	inline void copyTo(void *const bits,const unsigned int len) const
 	{
 		if (len < ZT_ADDRESS_LENGTH)
 			return;
@@ -125,36 +113,22 @@ public:
 	/**
 	 * @return Integer containing address (0 to 2^40)
 	 */
-	inline uint64_t toInt() const
-	{
-		return _a;
-	}
+	inline uint64_t toInt() const { return _a; }
 
 	/**
 	 * @return Hash code for use with Hashtable
 	 */
-	inline unsigned long hashCode() const
-	{
-		return (unsigned long)_a;
-	}
+	inline unsigned long hashCode() const { return (unsigned long)_a; }
 
 	/**
 	 * @return Hexadecimal string
 	 */
-	inline char *toString(char buf[11]) const
-	{
-		return Utils::hex10(_a,buf);
-	}
+	inline char *toString(char buf[11]) const { return Utils::hex10(_a,buf); }
 
 	/**
 	 * @return True if this address is not zero
 	 */
 	inline operator bool() const { return (_a != 0); }
-
-	/**
-	 * Set to null/zero
-	 */
-	inline void zero() { _a = 0; }
 
 	/**
 	 * Check if this address is reserved
@@ -165,16 +139,15 @@ public:
 	 *
 	 * @return True if address is reserved and may not be used
 	 */
-	inline bool isReserved() const
-	{
-		return ((!_a)||((_a >> 32) == ZT_ADDRESS_RESERVED_PREFIX));
-	}
+	inline bool isReserved() const { return ((!_a)||((_a >> 32) == ZT_ADDRESS_RESERVED_PREFIX)); }
 
 	/**
 	 * @param i Value from 0 to 4 (inclusive)
 	 * @return Byte at said position (address interpreted in big-endian order)
 	 */
-	inline unsigned char operator[](unsigned int i) const { return (unsigned char)((_a >> (32 - (i * 8))) & 0xff); }
+	inline uint8_t operator[](unsigned int i) const { return (uint8_t)(_a >> (32 - (i * 8))); }
+
+	inline void zero() { _a = 0; }
 
 	inline bool operator==(const uint64_t &a) const { return (_a == (a & 0xffffffffffULL)); }
 	inline bool operator!=(const uint64_t &a) const { return (_a != (a & 0xffffffffffULL)); }

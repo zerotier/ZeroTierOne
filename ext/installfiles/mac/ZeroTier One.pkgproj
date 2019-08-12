@@ -109,9 +109,9 @@
 														<key>CHILDREN</key>
 														<array/>
 														<key>GID</key>
-														<integer>0</integer>
+														<integer>80</integer>
 														<key>PATH</key>
-														<string>../../bin/tap-mac/tap.kext</string>
+														<string>../../../MacEthernetTapAgent</string>
 														<key>PATH_TYPE</key>
 														<integer>1</integer>
 														<key>PERMISSIONS</key>
@@ -664,7 +664,7 @@
 			<key>USE_HFS+_COMPRESSION</key>
 			<false/>
 			<key>VERSION</key>
-			<string>1.2.12</string>
+			<string>1.4.0.1</string>
 		</dict>
 		<key>PROJECT_COMMENTS</key>
 		<dict>

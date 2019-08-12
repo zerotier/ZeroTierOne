@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -57,6 +57,8 @@
 #include "OSUtils.hpp"
 
 #include "..\windows\TapDriver6\tap-windows.h"
+
+#include <netcon.h>
 
 // Create a fake unused default route to force detection of network type on networks without gateways
 #define ZT_WINDOWS_CREATE_FAKE_DEFAULT_ROUTE
@@ -824,6 +826,61 @@ void WindowsEthernetTap::setFriendlyName(const char *dn)
 		RegSetKeyValueA(ifp,"Connection","Name",REG_SZ,(LPCVOID)dn,(DWORD)(strlen(dn)+1));
 		RegCloseKey(ifp);
 	}
+
+	HRESULT hr = CoInitialize(nullptr);
+	if (hr != S_OK) return;
+	CoInitializeSecurity(NULL, -1, NULL, NULL,
+		RPC_C_AUTHN_LEVEL_PKT,
+		RPC_C_IMP_LEVEL_IMPERSONATE,
+		NULL, EOAC_NONE, NULL);
+	if (hr != S_OK) return;
+
+	INetSharingManager *nsm;
+	hr = CoCreateInstance(__uuidof(NetSharingManager), NULL, CLSCTX_ALL, __uuidof(INetSharingManager), (void**)&nsm);
+	if (hr != S_OK)	return;
+
+	bool found = false;
+	INetSharingEveryConnectionCollection *nsecc = nullptr;
+	hr = nsm->get_EnumEveryConnection(&nsecc);
+	if (!nsecc) {
+		fprintf(stderr, "Failed to get NSM connections");
+		return;
+	}
+
+	IEnumVARIANT *ev = nullptr;
+	IUnknown *unk = nullptr;
+	hr = nsecc->get__NewEnum(&unk);
+	if (unk) {
+		hr = unk->QueryInterface(__uuidof(IEnumVARIANT), (void**)&ev);
+		unk->Release();
+	}
+	if (ev) {
+		VARIANT v;
+		VariantInit(&v);
+
+		while ((S_OK == ev->Next(1, &v, NULL)) && found == FALSE) {
+			if (V_VT(&v) == VT_UNKNOWN) {
+				INetConnection *nc = nullptr;
+				V_UNKNOWN(&v)->QueryInterface(__uuidof(INetConnection), (void**)&nc);
+				if (nc) {
+					NETCON_PROPERTIES *ncp = nullptr;
+					nc->GetProperties(&ncp);
+
+					GUID curId = ncp->guidId;
+					if (curId == _deviceGuid) {
+						wchar_t wtext[255];
+						mbstowcs(wtext, dn, strlen(dn)+1);
+						nc->Rename(wtext);
+						found = true;
+					}
+					nc->Release();
+				}
+			}
+			VariantClear(&v);
+		}
+		ev->Release();
+	}
+	nsecc->Release();
 }
 
 void WindowsEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed)

@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -63,13 +63,6 @@ public:
 	 * @param now Current time
 	 */
 	void clean(int64_t now);
-
-	/**
-	 * If we appear to be behind a symmetric NAT, get predictions for possible external endpoints
-	 *
-	 * @return Symmetric NAT predictions or empty vector if none
-	 */
-	std::vector<InetAddress> getSymmetricNatPredictions();
 
 private:
 	struct PhySurfaceKey

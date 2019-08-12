@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -60,11 +60,7 @@ private:
 	Peer() {} // disabled to prevent bugs -- should not be constructed uninitialized
 
 public:
-	~Peer() {
-		Utils::burn(_key,sizeof(_key));
-		delete _pathChoiceHist;
-		_pathChoiceHist = NULL;
-	}
+	~Peer() { Utils::burn(_key,sizeof(_key)); }
 
 	/**
 	 * Construct a new peer
@@ -423,7 +419,7 @@ public:
 	 *
 	 * @param now Current time
 	 */
-	inline void processBackgroundPeerTasks(int64_t now);
+	inline void processBackgroundPeerTasks(const int64_t now);
 
 	/**
 	 * Record that the remote peer does have multipath enabled. As is evident by the receipt of a VERB_ACK
@@ -508,30 +504,6 @@ public:
 	{
 		if ((now - _lastEchoRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
 			_lastEchoRequestReceived = now;
-			return true;
-		}
-		return false;
-	}
-
-	/**
-	 * Rate gate incoming requests for network COM
-	 */
-	inline bool rateGateIncomingComRequest(const int64_t now)
-	{
-		if ((now - _lastComRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
-			_lastComRequestReceived = now;
-			return true;
-		}
-		return false;
-	}
-
-	/**
-	 * Rate gate outgoing requests for network COM
-	 */
-	inline bool rateGateOutgoingComRequest(const int64_t now)
-	{
-		if ((now - _lastComRequestSent) >= ZT_PEER_GENERAL_RATE_LIMIT) {
-			_lastComRequestSent = now;
 			return true;
 		}
 		return false;
@@ -665,8 +637,6 @@ private:
 	int64_t _lastCredentialRequestSent;
 	int64_t _lastWhoisRequestReceived;
 	int64_t _lastEchoRequestReceived;
-	int64_t _lastComRequestReceived;
-	int64_t _lastComRequestSent;
 	int64_t _lastCredentialsReceived;
 	int64_t _lastTrustEstablishedPacketReceived;
 	int64_t _lastSentFullHello;
@@ -700,7 +670,7 @@ private:
 
 	AtomicCounter __refCount;
 
-	RingBuffer<int> *_pathChoiceHist;
+	RingBuffer<int,ZT_MULTIPATH_PROPORTION_WIN_SZ> _pathChoiceHist;
 
 	bool _linkIsBalanced;
 	bool _linkIsRedundant;

@@ -45,10 +45,6 @@ namespace WinUI
 
         private ObservableCollection<MenuItem> _networkCollection = new ObservableCollection<MenuItem>();
 
-        private static Boolean shouldShowOnboardProcess = true;
-#if DEBUG
-        private static bool isFirstRun = true;
-#endif
 
         public ObservableCollection<MenuItem> NetworkCollection
         {
@@ -85,23 +81,6 @@ namespace WinUI
         {
             if (networks != null)
             {
-                if (networks.Count > 0)
-                {
-#if DEBUG
-                    if (isFirstRun)
-                    {
-                        shouldShowOnboardProcess = true;
-                        isFirstRun = false;
-                    }
-                    else
-                    {
-                        shouldShowOnboardProcess = false;
-                    } 
-#else
-                    shouldShowOnboardProcess = false;
-#endif
-                }
-
                 Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                 {
                     NetworkCollection.Clear();
@@ -116,25 +95,9 @@ namespace WinUI
                         NetworkCollection.Add(item);
                     }
                 }));
-
-                if (shouldShowOnboardProcess)
-                {
-                    // TODO: Show onboarding process window (on main thread
-                    showOnboardProcess();
-
-                    shouldShowOnboardProcess = false;
-                }
             }
         }
 
-        private void showOnboardProcess()
-        {
-            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-            {
-                PageSwitcher ps = new PageSwitcher();
-                ps.Show();
-            }));
-        }
         private void updateStatus(ZeroTierStatus status) 
         {
             if (status != null)
@@ -144,16 +107,16 @@ namespace WinUI
                     nodeIdMenuItem.Header = "Node ID: " + status.Address;
                     nodeIdMenuItem.IsEnabled = true;
                     nodeId = status.Address;
-                }));
-            }
 
-            if (CentralAPI.Instance.HasAccessToken())
-            {
-                newNetworkItem.IsEnabled = true;
-            }
-            else
-            {
-                newNetworkItem.IsEnabled = false;
+                    if (CentralAPI.Instance.HasAccessToken())
+                    {
+                        newNetworkItem.IsEnabled = true;
+                    }
+                    else
+                    {
+                        newNetworkItem.IsEnabled = false;
+                    }
+                }));
             }
         }
 
@@ -356,10 +319,6 @@ namespace WinUI
 
                 string nodeId = APIHandler.Instance.NodeAddress();
                 bool authorized = await CentralAPI.Instance.AuthorizeNode(nodeId, newNetwork.Id);
-            }   
-            else
-            {
-                showOnboardProcess();
             }
         }
 

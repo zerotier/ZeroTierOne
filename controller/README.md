@@ -19,9 +19,9 @@ Since ZeroTier nodes are mobile and do not need static IPs, implementing high av
 
 ZeroTier network controllers can easily be run in Docker or other container systems. Since containers do not need to actually join networks, extra privilege options like "--device=/dev/net/tun --privileged" are not needed. You'll just need to map the local JSON API port of the running controller and allow it to access the Internet (over UDP/9993 at a minimum) so things can reach and query it.
 
-### RethinkDB Database Implementation
+### PostgreSQL Database Implementation
 
-The default controller stores its data in the filesystem in `controller.d` under ZeroTier's home folder. There's an alternative implementation that stores data in RethinkDB that can be built with `make central-controller`. Right now this is only guaranteed to build and run on Linux and is designed for use with [ZeroTier Central](https://my.zerotier.com/). You're welcome to use it but we don't "officially" support it for end-user use and it could change at any time.
+The default controller stores its data in the filesystem in `controller.d` under ZeroTier's home folder. There's an alternative implementation that stores data in PostgreSQL that can be built with `make central-controller`. Right now this is only guaranteed to build and run on Centos 7 Linux with PostgreSQL 10 installed via the [PostgreSQL Yum Repository](https://www.postgresql.org/download/linux/redhat/) and is designed for use with [ZeroTier Central](https://my.zerotier.com/). You're welcome to use it but we don't "officially" support it for end-user use and it could change at any time.
 
 ### Upgrading from Older (1.1.14 or earlier) Versions
 
@@ -207,14 +207,6 @@ Important notes about rules engine behavior:
  * Returns: { object }
 
 This returns a JSON object containing all member IDs as keys and their `memberRevisionCounter` values as values.
-
-#### `/controller/network/<network ID>/active`
-
- * Purpose: Get a set of all active members on this network
- * Methods: GET
- * Returns: { object }
-
-This returns an object containing all currently online members and the most recent `recentLog` entries for their last request.
 
 #### `/controller/network/<network ID>/member/<address>`
 

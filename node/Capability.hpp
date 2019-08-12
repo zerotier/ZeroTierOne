@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -72,9 +72,15 @@ class Capability : public Credential
 public:
 	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_CAPABILITY; }
 
-	Capability()
+	Capability() :
+		_nwid(0),
+		_ts(0),
+		_id(0),
+		_maxCustodyChainLength(0),
+		_ruleCount(0)
 	{
-		memset(this,0,sizeof(Capability));
+		memset(_rules,0,sizeof(_rules));
+		memset(_custody,0,sizeof(_custody));
 	}
 
 	/**
@@ -85,16 +91,15 @@ public:
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	Capability(uint32_t id,uint64_t nwid,int64_t ts,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
+	Capability(uint32_t id,uint64_t nwid,int64_t ts,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount) :
+		_nwid(nwid),
+		_ts(ts),
+		_id(id),
+		_maxCustodyChainLength((mccl > 0) ? ((mccl < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) ? mccl : (unsigned int)ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) : 1),
+		_ruleCount((ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES)
 	{
-		memset(this,0,sizeof(Capability));
-		_nwid = nwid;
-		_ts = ts;
-		_id = id;
-		_maxCustodyChainLength = (mccl > 0) ? ((mccl < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) ? mccl : (unsigned int)ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) : 1;
-		_ruleCount = (ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES;
-		if (_ruleCount)
-			ZT_FAST_MEMCPY(_rules,rules,sizeof(ZT_VirtualNetworkRule) * _ruleCount);
+		if (_ruleCount > 0)
+			memcpy(_rules,rules,sizeof(ZT_VirtualNetworkRule) * _ruleCount);
 	}
 
 	/**
@@ -320,16 +325,16 @@ public:
 					break;
 				case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_MAC_DEST:
-					ZT_FAST_MEMCPY(rules[ruleCount].v.mac,b.field(p,6),6);
+					memcpy(rules[ruleCount].v.mac,b.field(p,6),6);
 					break;
 				case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
-					ZT_FAST_MEMCPY(&(rules[ruleCount].v.ipv4.ip),b.field(p,4),4);
+					memcpy(&(rules[ruleCount].v.ipv4.ip),b.field(p,4),4);
 					rules[ruleCount].v.ipv4.mask = (uint8_t)b[p + 4];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
-					ZT_FAST_MEMCPY(rules[ruleCount].v.ipv6.ip,b.field(p,16),16);
+					memcpy(rules[ruleCount].v.ipv6.ip,b.field(p,16),16);
 					rules[ruleCount].v.ipv6.mask = (uint8_t)b[p + 16];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_TOS:
@@ -423,7 +428,7 @@ public:
 	template<unsigned int C>
 	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
 	{
-		memset(this,0,sizeof(Capability));
+		*this = Capability();
 
 		unsigned int p = startAt;
 
@@ -452,7 +457,7 @@ public:
 				if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN)
 					throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 				p += 2;
-				ZT_FAST_MEMCPY(_custody[i].signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
+				memcpy(_custody[i].signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
 			} else {
 				p += 2 + b.template at<uint16_t>(p);
 			}

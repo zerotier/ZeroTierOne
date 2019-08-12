@@ -82,6 +82,9 @@
     <Filter Include="Header Files\controller">
       <UniqueIdentifier>{7dc22e9c-f869-41e7-b43d-f07f5b94f6fb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\ext\cpp-httplib">
+      <UniqueIdentifier>{4dfde4c7-2950-40ee-92f2-05e0916d36c5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\service\OneService.cpp">
@@ -258,7 +261,13 @@
     <ClCompile Include="..\..\controller\FileDB.cpp">
       <Filter>Source Files\controller</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\controller\RethinkDB.cpp">
+    <ClCompile Include="..\..\controller\PostgreSQL.cpp">
+      <Filter>Source Files\controller</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\controller\RabbitMQ.cpp">
+      <Filter>Source Files\controller</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\controller\LFDB.cpp">
       <Filter>Source Files\controller</Filter>
     </ClCompile>
   </ItemGroup>
@@ -494,8 +503,20 @@
     <ClInclude Include="..\..\controller\FileDB.hpp">
       <Filter>Header Files\controller</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\controller\RethinkDB.hpp">
+    <ClInclude Include="..\..\node\Membership.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\controller\PostgreSQL.hpp">
       <Filter>Header Files\controller</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\controller\RabbitMQ.hpp">
+      <Filter>Header Files\controller</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\controller\LFDB.hpp">
+      <Filter>Header Files\controller</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\cpp-httplib\httplib.h">
+      <Filter>Header Files\ext\cpp-httplib</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

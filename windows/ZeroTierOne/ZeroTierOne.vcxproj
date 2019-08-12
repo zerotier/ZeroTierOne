@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -30,7 +30,9 @@
     <ClCompile Include="..\..\controller\DB.cpp" />
     <ClCompile Include="..\..\controller\EmbeddedNetworkController.cpp" />
     <ClCompile Include="..\..\controller\FileDB.cpp" />
-    <ClCompile Include="..\..\controller\RethinkDB.cpp" />
+    <ClCompile Include="..\..\controller\LFDB.cpp" />
+    <ClCompile Include="..\..\controller\PostgreSQL.cpp" />
+    <ClCompile Include="..\..\controller\RabbitMQ.cpp" />
     <ClCompile Include="..\..\ext\http-parser\http_parser.c" />
     <ClCompile Include="..\..\ext\libnatpmp\getgateway.c" />
     <ClCompile Include="..\..\ext\libnatpmp\natpmp.c" />
@@ -115,7 +117,10 @@
     <ClInclude Include="..\..\controller\DB.hpp" />
     <ClInclude Include="..\..\controller\EmbeddedNetworkController.hpp" />
     <ClInclude Include="..\..\controller\FileDB.hpp" />
-    <ClInclude Include="..\..\controller\RethinkDB.hpp" />
+    <ClInclude Include="..\..\controller\LFDB.hpp" />
+    <ClInclude Include="..\..\controller\PostgreSQL.hpp" />
+    <ClInclude Include="..\..\controller\RabbitMQ.hpp" />
+    <ClInclude Include="..\..\ext\cpp-httplib\httplib.h" />
     <ClInclude Include="..\..\ext\http-parser\http_parser.h" />
     <ClInclude Include="..\..\ext\json\json.hpp" />
     <ClInclude Include="..\..\ext\libnatpmp\getgateway.h" />
@@ -153,6 +158,7 @@
     <ClInclude Include="..\..\node\IncomingPacket.hpp" />
     <ClInclude Include="..\..\node\InetAddress.hpp" />
     <ClInclude Include="..\..\node\MAC.hpp" />
+    <ClInclude Include="..\..\node\Membership.hpp" />
     <ClInclude Include="..\..\node\Multicaster.hpp" />
     <ClInclude Include="..\..\node\MulticastGroup.hpp" />
     <ClInclude Include="..\..\node\Mutex.hpp" />
@@ -197,45 +203,48 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B00A4957-5977-4AC1-9EF4-571DC27EADA2}</ProjectGuid>
     <RootNamespace>ZeroTierOne</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
+    <UseOfMfc>Static</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
+    <UseOfMfc>Static</UseOfMfc>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -298,6 +307,9 @@
       </AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_EXPORT;FD_SETSIZE=1024;NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -314,6 +326,8 @@
       </AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_EXPORT;FD_SETSIZE=1024;NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -329,8 +343,10 @@
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_EXPORT;FD_SETSIZE=1024;NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_RULES_ENGINE_DEBUGGING;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -349,6 +365,8 @@
       <PreprocessorDefinitions>ZT_EXPORT;FD_SETSIZE=1024;NOMINMAX;STATICLIB;WIN32;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -359,7 +377,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level2</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -375,9 +393,15 @@
       <OmitFramePointers>true</OmitFramePointers>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
       <ControlFlowGuard>Guard</ControlFlowGuard>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <CompileAsManaged>false</CompileAsManaged>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -386,7 +410,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level2</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -404,9 +428,15 @@
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
       <CallingConvention>VectorCall</CallingConvention>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <CompileAsManaged>false</CompileAsManaged>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>

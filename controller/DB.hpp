@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,15 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifndef ZT_CONTROLLER_DB_HPP
@@ -32,15 +40,12 @@
 #include <unordered_set>
 #include <vector>
 #include <atomic>
+#include <mutex>
 
 #include "../ext/json/json.hpp"
 
-#define ZT_CONTROLLER_RETHINKDB_COMMIT_THREADS 2
-
 namespace ZeroTier
 {
-
-class EmbeddedNetworkController;
 
 /**
  * Base class with common infrastructure for all controller DB implementations
@@ -48,6 +53,16 @@ class EmbeddedNetworkController;
 class DB
 {
 public:
+	class ChangeListener
+	{
+	public:
+		ChangeListener() {}
+		virtual ~ChangeListener() {}
+		virtual void onNetworkUpdate(uint64_t networkId,const nlohmann::json &network) {}
+		virtual void onNetworkMemberUpdate(uint64_t networkId,uint64_t memberId,const nlohmann::json &member) {}
+		virtual void onNetworkMemberDeauthorize(uint64_t networkId,uint64_t memberId) {}
+	};
+
 	struct NetworkSummaryInfo
 	{
 		NetworkSummaryInfo() : authorizedMemberCount(0),totalMemberCount(0),mostRecentDeauthTime(0) {}
@@ -58,27 +73,12 @@ public:
 		int64_t mostRecentDeauthTime;
 	};
 
-	/**
-	 * Ensure that all network fields are present
-	 */
 	static void initNetwork(nlohmann::json &network);
-
-	/**
-	 * Ensure that all member fields are present
-	 */
 	static void initMember(nlohmann::json &member);
-
-	/**
-	 * Remove old and temporary network fields
-	 */
 	static void cleanNetwork(nlohmann::json &network);
-
-	/**
-	 * Remove old and temporary member fields
-	 */
 	static void cleanMember(nlohmann::json &member);
 
-	DB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path);
+	DB(const Identity &myId,const char *path);
 	virtual ~DB();
 
 	virtual bool waitForReady() = 0;
@@ -94,18 +94,19 @@ public:
 	bool get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member);
 	bool get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member,NetworkSummaryInfo &info);
 	bool get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohmann::json> &members);
-
 	bool summary(const uint64_t networkId,NetworkSummaryInfo &info);
-
 	void networks(std::vector<uint64_t> &networks);
 
 	virtual void save(nlohmann::json *orig,nlohmann::json &record) = 0;
-
 	virtual void eraseNetwork(const uint64_t networkId) = 0;
-
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId) = 0;
-
 	virtual void nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress) = 0;
+
+	inline void addListener(DB::ChangeListener *const listener)
+	{
+		std::lock_guard<std::mutex> l(_changeListeners_l);
+		_changeListeners.push_back(listener);
+	}
 
 protected:
 	struct _Network
@@ -120,18 +121,19 @@ protected:
 		std::mutex lock;
 	};
 
-	void _memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool push);
-	void _networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool push);
+	void _memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool initialized);
+	void _networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool initialized);
 	void _fillSummaryInfo(const std::shared_ptr<_Network> &nw,NetworkSummaryInfo &info);
 
-	EmbeddedNetworkController *const _controller;
 	const Identity _myId;
 	const Address _myAddress;
 	const std::string _path;
 	std::string _myAddressStr;
 
+	std::vector<DB::ChangeListener *> _changeListeners;
 	std::unordered_map< uint64_t,std::shared_ptr<_Network> > _networks;
 	std::unordered_multimap< uint64_t,uint64_t > _networkByMember;
+	mutable std::mutex _changeListeners_l;
 	mutable std::mutex _networks_l;
 };
 

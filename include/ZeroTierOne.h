@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -102,10 +102,11 @@ extern "C" {
 /**
  * Default UDP payload size (physical path MTU) not including UDP and IP overhead
  *
- * This is 1500 - IPv6 UDP overhead - PPPoE overhead and is safe for 99.9% of
- * all Internet links.
+ * This is small enough for PPPoE and for Google Cloud's bizarrely tiny MTUs.
+ * A 2800 byte payload still fits into two packets, so this should not impact
+ * real world throughput at all vs the previous default of 1444.
  */
-#define ZT_DEFAULT_PHYSMTU 1444
+#define ZT_DEFAULT_PHYSMTU 1432
 
 /**
  * Maximum physical UDP payload
@@ -650,6 +651,24 @@ typedef struct
 } ZT_NodeStatus;
 
 /**
+ * Internal node statistics
+ * 
+ * This structure is subject to change between versions.
+ */
+typedef struct
+{
+	/**
+	 * Number of each protocol verb (possible verbs 0..31) received
+	 */
+	uint64_t inVerbCounts[32];
+
+	/**
+	 * Number of bytes for each protocol verb received
+	 */
+	uint64_t inVerbBytes[32];
+} ZT_NodeStatistics;
+
+/**
  * Virtual network status codes
  */
 enum ZT_VirtualNetworkStatus
@@ -1077,7 +1096,8 @@ enum ZT_Architecture
 	ZT_ARCHITECTURE_SPARC64 = 12,
 	ZT_ARCHITECTURE_DOTNET_CLR = 13,
 	ZT_ARCHITECTURE_JAVA_JVM = 14,
-	ZT_ARCHITECTURE_WEB = 15
+	ZT_ARCHITECTURE_WEB = 15,
+	ZT_ARCHITECTURE_S390X = 16
 };
 
 /**

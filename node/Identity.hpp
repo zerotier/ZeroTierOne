@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -248,7 +248,7 @@ public:
 		if (b[p++] != 0)
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 
-		ZT_FAST_MEMCPY(_publicKey.data,b.field(p,ZT_C25519_PUBLIC_KEY_LEN),ZT_C25519_PUBLIC_KEY_LEN);
+		memcpy(_publicKey.data,b.field(p,ZT_C25519_PUBLIC_KEY_LEN),ZT_C25519_PUBLIC_KEY_LEN);
 		p += ZT_C25519_PUBLIC_KEY_LEN;
 
 		unsigned int privateKeyLength = (unsigned int)b[p++];
@@ -256,7 +256,7 @@ public:
 			if (privateKeyLength != ZT_C25519_PRIVATE_KEY_LEN)
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 			_privateKey = new C25519::Private();
-			ZT_FAST_MEMCPY(_privateKey->data,b.field(p,ZT_C25519_PRIVATE_KEY_LEN),ZT_C25519_PRIVATE_KEY_LEN);
+			memcpy(_privateKey->data,b.field(p,ZT_C25519_PRIVATE_KEY_LEN),ZT_C25519_PRIVATE_KEY_LEN);
 			p += ZT_C25519_PRIVATE_KEY_LEN;
 		}
 

@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -122,89 +122,6 @@ void SelfAwareness::clean(int64_t now)
 		if ((now - e->ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 			_phy.erase(*k);
 	}
-}
-
-std::vector<InetAddress> SelfAwareness::getSymmetricNatPredictions()
-{
-	/* This is based on ideas and strategies found here:
-	 * https://tools.ietf.org/html/draft-takeda-symmetric-nat-traversal-00
-	 *
-	 * For each IP address reported by a trusted (upstream) peer, we find
-	 * the external port most recently reported by ANY peer for that IP.
-	 *
-	 * We only do any of this for global IPv4 addresses since private IPs
-	 * and IPv6 are not going to have symmetric NAT.
-	 *
-	 * SECURITY NOTE:
-	 *
-	 * We never use IPs reported by non-trusted peers, since this could lead
-	 * to a minor vulnerability whereby a peer could poison our cache with
-	 * bad external surface reports via OK(HELLO) and then possibly coax us
-	 * into suggesting their IP to other peers via PUSH_DIRECT_PATHS. This
-	 * in turn could allow them to MITM flows.
-	 *
-	 * Since flows are encrypted and authenticated they could not actually
-	 * read or modify traffic, but they could gather meta-data for forensics
-	 * purposes or use this as a DOS attack vector. */
-
-	std::map< uint32_t,unsigned int > maxPortByIp;
-	InetAddress theOneTrueSurface;
-	{
-		Mutex::Lock _l(_phy_m);
-
-		// First check to see if this is a symmetric NAT and enumerate external IPs learned from trusted peers
-		bool symmetric = false;
-		{
-			Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
-			PhySurfaceKey *k = (PhySurfaceKey *)0;
-			PhySurfaceEntry *e = (PhySurfaceEntry *)0;
-			while (i.next(k,e)) {
-				if ((e->trusted)&&(e->mySurface.ss_family == AF_INET)&&(e->mySurface.ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
-					if (!theOneTrueSurface)
-						theOneTrueSurface = e->mySurface;
-					else if (theOneTrueSurface != e->mySurface)
-						symmetric = true;
-					maxPortByIp[reinterpret_cast<const struct sockaddr_in *>(&(e->mySurface))->sin_addr.s_addr] = e->mySurface.port();
-				}
-			}
-		}
-		if (!symmetric)
-			return std::vector<InetAddress>();
-
-		{	// Then find the highest issued port per IP
-			Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
-			PhySurfaceKey *k = (PhySurfaceKey *)0;
-			PhySurfaceEntry *e = (PhySurfaceEntry *)0;
-			while (i.next(k,e)) {
-				if ((e->mySurface.ss_family == AF_INET)&&(e->mySurface.ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
-					const unsigned int port = e->mySurface.port();
-					std::map< uint32_t,unsigned int >::iterator mp(maxPortByIp.find(reinterpret_cast<const struct sockaddr_in *>(&(e->mySurface))->sin_addr.s_addr));
-					if ((mp != maxPortByIp.end())&&(mp->second < port))
-						mp->second = port;
-				}
-			}
-		}
-	}
-
-	std::vector<InetAddress> r;
-
-	// Try next port up from max for each
-	for(std::map< uint32_t,unsigned int >::iterator i(maxPortByIp.begin());i!=maxPortByIp.end();++i) {
-		unsigned int p = i->second + 1;
-		if (p > 65535) p -= 64511;
-		const InetAddress pred(&(i->first),4,p);
-		if (std::find(r.begin(),r.end(),pred) == r.end())
-			r.push_back(pred);
-	}
-
-	// Try a random port for each -- there are only 65535 so eventually it should work
-	for(std::map< uint32_t,unsigned int >::iterator i(maxPortByIp.begin());i!=maxPortByIp.end();++i) {
-		const InetAddress pred(&(i->first),4,1024 + ((unsigned int)RR->node->prng() % 64511));
-		if (std::find(r.begin(),r.end(),pred) == r.end())
-			r.push_back(pred);
-	}
-
-	return r;
 }
 
 } // namespace ZeroTier

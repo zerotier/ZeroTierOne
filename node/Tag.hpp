@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -65,9 +65,13 @@ class Tag : public Credential
 public:
 	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_TAG; }
 
-	Tag()
+	Tag() :
+		_id(0),
+		_value(0),
+		_networkId(0),
+		_ts(0)
 	{
-		memset(this,0,sizeof(Tag));
+		memset(_signature.data,0,sizeof(_signature.data));
 	}
 
 	/**
@@ -85,6 +89,7 @@ public:
 		_issuedTo(issuedTo),
 		_signedBy()
 	{
+		memset(_signature.data,0,sizeof(_signature.data));
 	}
 
 	inline uint32_t id() const { return _id; }
@@ -149,7 +154,7 @@ public:
 	{
 		unsigned int p = startAt;
 
-		memset(this,0,sizeof(Tag));
+		*this = Tag();
 
 		_networkId = b.template at<uint64_t>(p); p += 8;
 		_ts = b.template at<uint64_t>(p); p += 8;
@@ -163,7 +168,7 @@ public:
 			if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN)
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 			p += 2;
-			ZT_FAST_MEMCPY(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
+			memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
 		} else {
 			p += 2 + b.template at<uint16_t>(p);
 		}

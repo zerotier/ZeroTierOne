@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -34,6 +34,9 @@
 #include <vector>
 #include <algorithm>
 #include <list>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 #include "../version.h"
 #include "../include/ZeroTierOne.h"
@@ -57,6 +60,7 @@
 #include "../osdep/PortMapper.hpp"
 #include "../osdep/Binder.hpp"
 #include "../osdep/ManagedRoute.hpp"
+#include "../osdep/BlockingQueue.hpp"
 
 #include "OneService.hpp"
 #include "SoftwareUpdater.hpp"
@@ -67,9 +71,12 @@
 #include <ShlObj.h>
 #include <netioapi.h>
 #include <iphlpapi.h>
+//#include <unistd.h>
+#define stat _stat
 #else
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <ifaddrs.h>
@@ -92,6 +99,7 @@ extern "C" {
 using json = nlohmann::json;
 
 #include "../controller/EmbeddedNetworkController.hpp"
+#include "../controller/RabbitMQ.hpp"
 
 #ifdef ZT_USE_TEST_TAP
 
@@ -105,14 +113,14 @@ namespace ZeroTier { typedef TestEthernetTap EthernetTap; }
 #include "../controller/EmbeddedNetworkController.hpp"
 #include "../node/Node.hpp"
 // Use the virtual netcon endpoint instead of a tun/tap port driver
-#include "../include/VirtualTap.h"
+#include "../include/VirtualTap.hpp"
 namespace ZeroTier { typedef VirtualTap EthernetTap; }
 
 #else
 
 #ifdef __APPLE__
-#include "../osdep/OSXEthernetTap.hpp"
-namespace ZeroTier { typedef OSXEthernetTap EthernetTap; }
+#include "../osdep/MacEthernetTap.hpp"
+namespace ZeroTier { typedef MacEthernetTap EthernetTap; }
 #endif // __APPLE__
 #ifdef __LINUX__
 #include "../osdep/LinuxEthernetTap.hpp"
@@ -135,9 +143,13 @@ namespace ZeroTier { typedef NetBSDEthernetTap EthernetTap; }
 namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #endif // __OpenBSD__
 
-#endif // ZT_SERVICE_NETCON
+#endif // ZT_SDK
 
 #endif // ZT_USE_TEST_TAP
+
+#ifndef ZT_SOFTWARE_UPDATE_DEFAULT
+#define ZT_SOFTWARE_UPDATE_DEFAULT "disable"
+#endif
 
 // Sanity limits for HTTP
 #define ZT_MAX_HTTP_MESSAGE_SIZE (1024 * 1024 * 64)
@@ -151,7 +163,9 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #define ZT_TAP_CHECK_MULTICAST_INTERVAL 5000
 
 // TCP fallback relay (run by ZeroTier, Inc. -- this will eventually go away)
+#ifndef ZT_SDK
 #define ZT_TCP_FALLBACK_RELAY "204.80.128.1/443"
+#endif
 
 // Frequency at which we re-resolve the TCP fallback relay
 #define ZT_TCP_FALLBACK_RERESOLVE_DELAY 86400000
@@ -179,6 +193,8 @@ size_t curlResponseWrite(void *ptr, size_t size, size_t nmemb, std::string *data
 namespace ZeroTier {
 
 namespace {
+
+static const InetAddress NULL_INET_ADDR;
 
 // Fake TLS hello for TCP tunnel outgoing connections (TUNNELED mode)
 static const char ZT_TCP_TUNNEL_HELLO[9] = { 0x17,0x03,0x03,0x00,0x04,(char)ZEROTIER_ONE_VERSION_MAJOR,(char)ZEROTIER_ONE_VERSION_MINOR,(char)((ZEROTIER_ONE_VERSION_REVISION >> 8) & 0xff),(char)(ZEROTIER_ONE_VERSION_REVISION & 0xff) };
@@ -431,6 +447,15 @@ struct TcpConnection
 	Mutex writeq_m;
 };
 
+struct OneServiceIncomingPacket
+{
+	uint64_t now;
+	int64_t sock;
+	struct sockaddr_storage from;
+	unsigned int size;
+	uint8_t data[ZT_MAX_MTU];
+};
+
 class OneServiceImpl : public OneService
 {
 public:
@@ -450,8 +475,11 @@ public:
 	PhySocket *_localControlSocket6;
 	bool _updateAutoApply;
 	bool _allowTcpFallbackRelay;
+	bool _allowSecondaryPort;
 	unsigned int _multipathMode;
 	unsigned int _primaryPort;
+	unsigned int _secondaryPort;
+	unsigned int _tertiaryPort;
 	volatile unsigned int _udpPortPickerCounter;
 
 	// Local configuration and memo-ized information from it
@@ -466,11 +494,13 @@ public:
 	std::vector< std::string > _interfacePrefixBlacklist;
 	Mutex _localConfig_m;
 
+	std::vector<InetAddress> explicitBind;
+
 	/*
 	 * To attempt to handle NAT/gateway craziness we use three local UDP ports:
 	 *
 	 * [0] is the normal/default port, usually 9993
-	 * [1] is a port dervied from our ZeroTier address
+	 * [1] is a port derived from our ZeroTier address
 	 * [2] is a port computed from the normal/default for use with uPnP/NAT-PMP mappings
 	 *
 	 * [2] exists because on some gateways trying to do regular NAT-t interferes
@@ -541,6 +571,8 @@ public:
 	volatile bool _run;
 	Mutex _run_m;
 
+	MQConfig *_mqc;
+
 	// end member variables ----------------------------------------------------
 
 	OneServiceImpl(const char *hp,unsigned int port) :
@@ -576,10 +608,12 @@ public:
 		,_vaultPath("cubbyhole/zerotier")
 #endif
 		,_run(true)
+		,_mqc(NULL)
 	{
 		_ports[0] = 0;
 		_ports[1] = 0;
 		_ports[2] = 0;
+
 #if ZT_VAULT_SUPPORT
 		curl_global_init(CURL_GLOBAL_DEFAULT);
 #endif
@@ -590,6 +624,7 @@ public:
 		_binder.closeAll(_phy);
 		_phy.close(_localControlSocket4);
 		_phy.close(_localControlSocket6);
+
 #if ZT_VAULT_SUPPORT
 		curl_global_cleanup();
 #endif
@@ -598,6 +633,7 @@ public:
 		delete _portMapper;
 #endif
 		delete _controller;
+		delete _mqc;
 	}
 
 	virtual ReasonForTermination run()
@@ -637,98 +673,8 @@ public:
 				_node = new Node(this,(void *)0,&cb,OSUtils::now());
 			}
 
-			// Read local configuration
-			std::vector<InetAddress> explicitBind;
-			{
-				std::map<InetAddress,ZT_PhysicalPathConfiguration> ppc;
-
-				// LEGACY: support old "trustedpaths" flat file
-				FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S "trustedpaths").c_str(),"r");
-				if (trustpaths) {
-					fprintf(stderr,"WARNING: 'trustedpaths' flat file format is deprecated in favor of path definitions in local.conf" ZT_EOL_S);
-					char buf[1024];
-					while (fgets(buf,sizeof(buf),trustpaths)) {
-						int fno = 0;
-						char *saveptr = (char *)0;
-						uint64_t trustedPathId = 0;
-						InetAddress trustedPathNetwork;
-						for(char *f=Utils::stok(buf,"=\r\n \t",&saveptr);(f);f=Utils::stok((char *)0,"=\r\n \t",&saveptr)) {
-							if (fno == 0) {
-								trustedPathId = Utils::hexStrToU64(f);
-							} else if (fno == 1) {
-								trustedPathNetwork = InetAddress(f);
-							} else break;
-							++fno;
-						}
-						if ( (trustedPathId != 0) && ((trustedPathNetwork.ss_family == AF_INET)||(trustedPathNetwork.ss_family == AF_INET6)) && (trustedPathNetwork.netmaskBits() > 0) ) {
-							ppc[trustedPathNetwork].trustedPathId = trustedPathId;
-							ppc[trustedPathNetwork].mtu = 0; // use default
-						}
-					}
-					fclose(trustpaths);
-				}
-
-				// Read local config file
-				Mutex::Lock _l2(_localConfig_m);
-				std::string lcbuf;
-				if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S "local.conf").c_str(),lcbuf)) {
-					try {
-						_localConfig = OSUtils::jsonParse(lcbuf);
-						if (!_localConfig.is_object()) {
-							fprintf(stderr,"WARNING: unable to parse local.conf (root element is not a JSON object)" ZT_EOL_S);
-						}
-					} catch ( ... ) {
-						fprintf(stderr,"WARNING: unable to parse local.conf (invalid JSON)" ZT_EOL_S);
-					}
-				}
-
-				// Get any trusted paths in local.conf (we'll parse the rest of physical[] elsewhere)
-				json &physical = _localConfig["physical"];
-				if (physical.is_object()) {
-					for(json::iterator phy(physical.begin());phy!=physical.end();++phy) {
-						InetAddress net(OSUtils::jsonString(phy.key(),"").c_str());
-						if (net) {
-							if (phy.value().is_object()) {
-								uint64_t tpid;
-								if ((tpid = OSUtils::jsonInt(phy.value()["trustedPathId"],0ULL)) != 0ULL) {
-									if ((net.ss_family == AF_INET)||(net.ss_family == AF_INET6))
-										ppc[net].trustedPathId = tpid;
-								}
-								ppc[net].mtu = (int)OSUtils::jsonInt(phy.value()["mtu"],0ULL); // 0 means use default
-							}
-						}
-					}
-				}
-
-				json &settings = _localConfig["settings"];
-				if (settings.is_object()) {
-					// Allow controller DB path to be put somewhere else
-					const std::string cdbp(OSUtils::jsonString(settings["controllerDbPath"],""));
-					if (cdbp.length() > 0)
-						_controllerDbPath = cdbp;
-
-					// Bind to wildcard instead of to specific interfaces (disables full tunnel capability)
-					json &bind = settings["bind"];
-					if (bind.is_array()) {
-						for(unsigned long i=0;i<bind.size();++i) {
-							const std::string ips(OSUtils::jsonString(bind[i],""));
-							if (ips.length() > 0) {
-								InetAddress ip(ips.c_str());
-								if ((ip.ss_family == AF_INET)||(ip.ss_family == AF_INET6))
-									explicitBind.push_back(ip);
-							}
-						}
-					}
-				}
-
-				// Set trusted paths if there are any
-				if (ppc.size() > 0) {
-					for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::iterator i(ppc.begin());i!=ppc.end();++i)
-						_node->setPhysicalPathConfiguration(reinterpret_cast<const struct sockaddr_storage *>(&(i->first)),&(i->second));
-				}
-			}
-
-			// Apply other runtime configuration from local.conf
+			// local.conf
+			readLocalSettings();
 			applyLocalConfig();
 
 			// Make sure we can use the primary port, and hunt for one if configured to do so
@@ -777,16 +723,18 @@ public:
 			// This exists because there are buggy NATs out there that fail if more
 			// than one device behind the same NAT tries to use the same internal
 			// private address port number. Buggy NATs are a running theme.
-			_ports[1] = 20000 + ((unsigned int)_node->address() % 45500);
-			for(int i=0;;++i) {
-				if (i > 1000) {
-					_ports[1] = 0;
-					break;
-				} else if (++_ports[1] >= 65536) {
-					_ports[1] = 20000;
+			if (_allowSecondaryPort) {
+				_ports[1] = (_secondaryPort == 0) ? 20000 + ((unsigned int)_node->address() % 45500) : _secondaryPort;
+				for(int i=0;;++i) {
+					if (i > 1000) {
+						_ports[1] = 0;
+						break;
+					} else if (++_ports[1] >= 65536) {
+						_ports[1] = 20000;
+					}
+					if (_trialBind(_ports[1]))
+						break;
 				}
-				if (_trialBind(_ports[1]))
-					break;
 			}
 
 #ifdef ZT_USE_MINIUPNPC
@@ -795,7 +743,7 @@ public:
 				// use the other two ports for that because some NATs do really funky
 				// stuff with ports that are explicitly mapped that breaks things.
 				if (_ports[1]) {
-					_ports[2] = _ports[1];
+					_ports[2] = (_tertiaryPort == 0) ? _ports[1] : _tertiaryPort;
 					for(int i=0;;++i) {
 						if (i > 1000) {
 							_ports[2] = 0;
@@ -819,7 +767,7 @@ public:
 			OSUtils::rmDashRf((_homePath + ZT_PATH_SEPARATOR_S "iddb.d").c_str());
 
 			// Network controller is now enabled by default for desktop and server
-			_controller = new EmbeddedNetworkController(_node,_controllerDbPath.c_str());
+			_controller = new EmbeddedNetworkController(_node,_controllerDbPath.c_str(),_ports[0], _mqc);
 			_node->setNetconfMaster((void *)_controller);
 
 			// Join existing networks in networks.d
@@ -852,6 +800,7 @@ public:
 			int64_t lastMultipathModeUpdate = 0;
 			int64_t lastCleanedPeersDb = 0;
 			int64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
+			int64_t lastLocalConfFileCheck = OSUtils::now();
 			for(;;) {
 				_run_m.lock();
 				if (!_run) {
@@ -878,6 +827,19 @@ public:
 					lastUpdateCheck = now;
 					if (_updater->check(now) && _updateAutoApply)
 						_updater->apply();
+				}
+
+				// Reload local.conf if anything changed recently
+				if ((now - lastLocalConfFileCheck) >= ZT_LOCAL_CONF_FILE_CHECK_INTERVAL) {
+					lastLocalConfFileCheck = now;
+					struct stat result;
+					if(stat((_homePath + ZT_PATH_SEPARATOR_S "local.conf").c_str(), &result)==0) {
+						int64_t mod_time = result.st_mtime * 1000;
+						if ((now - mod_time) <= ZT_LOCAL_CONF_FILE_CHECK_INTERVAL) {
+							readLocalSettings();
+							applyLocalConfig();
+						}
+					}
 				}
 
 				// Refresh bindings in case device's interfaces have changed, and also sync routes to update any shadow routes (e.g. shadow default)
@@ -997,6 +959,109 @@ public:
 		return _termReason;
 	}
 
+	void readLocalSettings()
+	{		
+		// Read local configuration
+		std::map<InetAddress,ZT_PhysicalPathConfiguration> ppc;
+
+		// LEGACY: support old "trustedpaths" flat file
+		FILE *trustpaths = fopen((_homePath + ZT_PATH_SEPARATOR_S "trustedpaths").c_str(),"r");
+		if (trustpaths) {
+			fprintf(stderr,"WARNING: 'trustedpaths' flat file format is deprecated in favor of path definitions in local.conf" ZT_EOL_S);
+			char buf[1024];
+			while (fgets(buf,sizeof(buf),trustpaths)) {
+				int fno = 0;
+				char *saveptr = (char *)0;
+				uint64_t trustedPathId = 0;
+				InetAddress trustedPathNetwork;
+				for(char *f=Utils::stok(buf,"=\r\n \t",&saveptr);(f);f=Utils::stok((char *)0,"=\r\n \t",&saveptr)) {
+					if (fno == 0) {
+						trustedPathId = Utils::hexStrToU64(f);
+					} else if (fno == 1) {
+						trustedPathNetwork = InetAddress(f);
+					} else break;
+					++fno;
+				}
+				if ( (trustedPathId != 0) && ((trustedPathNetwork.ss_family == AF_INET)||(trustedPathNetwork.ss_family == AF_INET6)) && (trustedPathNetwork.netmaskBits() > 0) ) {
+					ppc[trustedPathNetwork].trustedPathId = trustedPathId;
+					ppc[trustedPathNetwork].mtu = 0; // use default
+				}
+			}
+			fclose(trustpaths);
+		}
+
+		// Read local config file
+		Mutex::Lock _l2(_localConfig_m);
+		std::string lcbuf;
+		if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S "local.conf").c_str(),lcbuf)) {
+			try {
+				_localConfig = OSUtils::jsonParse(lcbuf);
+				if (!_localConfig.is_object()) {
+					fprintf(stderr,"ERROR: unable to parse local.conf (root element is not a JSON object)" ZT_EOL_S);
+					exit(1);
+				}
+			} catch ( ... ) {
+				fprintf(stderr,"ERROR: unable to parse local.conf (invalid JSON)" ZT_EOL_S);
+				exit(1);
+			}
+		}
+
+		// Get any trusted paths in local.conf (we'll parse the rest of physical[] elsewhere)
+		json &physical = _localConfig["physical"];
+		if (physical.is_object()) {
+			for(json::iterator phy(physical.begin());phy!=physical.end();++phy) {
+				InetAddress net(OSUtils::jsonString(phy.key(),"").c_str());
+				if (net) {
+					if (phy.value().is_object()) {
+						uint64_t tpid;
+						if ((tpid = OSUtils::jsonInt(phy.value()["trustedPathId"],0ULL)) != 0ULL) {
+							if ((net.ss_family == AF_INET)||(net.ss_family == AF_INET6))
+								ppc[net].trustedPathId = tpid;
+						}
+						ppc[net].mtu = (int)OSUtils::jsonInt(phy.value()["mtu"],0ULL); // 0 means use default
+					}
+				}
+			}
+		}
+
+		json &settings = _localConfig["settings"];
+		if (settings.is_object()) {
+			// Allow controller DB path to be put somewhere else
+			const std::string cdbp(OSUtils::jsonString(settings["controllerDbPath"],""));
+			if (cdbp.length() > 0)
+				_controllerDbPath = cdbp;
+
+			json &rmq = settings["rabbitmq"];
+			if (rmq.is_object() && _mqc == NULL) {
+				fprintf(stderr, "Reading RabbitMQ Config\n");
+				_mqc = new MQConfig;
+				_mqc->port = rmq["port"];
+				_mqc->host = OSUtils::jsonString(rmq["host"], "").c_str();
+				_mqc->username = OSUtils::jsonString(rmq["username"], "").c_str();
+				_mqc->password = OSUtils::jsonString(rmq["password"], "").c_str();
+			}
+
+			// Bind to wildcard instead of to specific interfaces (disables full tunnel capability)
+			json &bind = settings["bind"];
+			if (bind.is_array()) {
+				for(unsigned long i=0;i<bind.size();++i) {
+					const std::string ips(OSUtils::jsonString(bind[i],""));
+					if (ips.length() > 0) {
+						InetAddress ip(ips.c_str());
+						if ((ip.ss_family == AF_INET)||(ip.ss_family == AF_INET6))
+							explicitBind.push_back(ip);
+					}
+				}
+			}
+		}
+
+		// Set trusted paths if there are any
+		if (ppc.size() > 0) {
+			for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::iterator i(ppc.begin());i!=ppc.end();++i)
+				_node->setPhysicalPathConfiguration(reinterpret_cast<const struct sockaddr_storage *>(&(i->first)),&(i->second));
+		}
+	}
+
 	virtual ReasonForTermination reasonForTermination() const
 	{
 		Mutex::Lock _l(_termReason_m);
@@ -1019,43 +1084,25 @@ public:
 	}
 
 #ifdef ZT_SDK
-	virtual void leave(const uint64_t hp)
-	{
-		_node->leave(hp, NULL, NULL);
-	}
-
-	virtual void join(const uint64_t hp)
-	{
-		_node->join(hp, NULL, NULL);
-	}
-
 	virtual std::string givenHomePath()
 	{
 		return _homePath;
 	}
 
-	std::vector<ZT_VirtualNetworkRoute> *getRoutes(uint64_t nwid)
+	void getRoutes(uint64_t nwid, void *routeArray, unsigned int *numRoutes)
 	{
 		Mutex::Lock _l(_nets_m);
 		NetworkState &n = _nets[nwid];
-		std::vector<ZT_VirtualNetworkRoute> *routes = new std::vector<ZT_VirtualNetworkRoute>();
-		for(int i=0; i<ZT_MAX_NETWORK_ROUTES; i++) {
-			routes->push_back(n.config.routes[i]);
+		*numRoutes = *numRoutes < n.config.routeCount ? *numRoutes : n.config.routeCount;
+		for(unsigned int i=0; i<*numRoutes; i++) {
+			ZT_VirtualNetworkRoute *vnr = (ZT_VirtualNetworkRoute*)routeArray;
+			memcpy(&vnr[i], &(n.config.routes[i]), sizeof(ZT_VirtualNetworkRoute));
 		}
-		return routes;
 	}
 
 	virtual Node *getNode()
 	{
 		return _node;
-	}
-
-	virtual void removeNets()
-	{
-		Mutex::Lock _l(_nets_m);
-		std::map<uint64_t,NetworkState>::iterator i;
-		for(i = _nets.begin(); i != _nets.end(); i++)
-			delete i->second.tap;
 	}
 #endif // ZT_SDK
 
@@ -1559,9 +1606,15 @@ public:
 
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
+		_allowSecondaryPort = OSUtils::jsonBool(settings["allowSecondaryPort"],true);
+		_secondaryPort = (unsigned int)OSUtils::jsonInt(settings["secondaryPort"],0);
+		_tertiaryPort = (unsigned int)OSUtils::jsonInt(settings["tertiaryPort"],0);
+		if (_secondaryPort != 0 || _tertiaryPort != 0) {
+			fprintf(stderr,"WARNING: using manually-specified ports. This can cause NAT issues." ZT_EOL_S);
+		}
 		_multipathMode = (unsigned int)OSUtils::jsonInt(settings["multipathMode"],0);
 		if (_multipathMode != 0 && _allowTcpFallbackRelay) {
-			fprintf(stderr,"WARNING: multipathMode cannot be used with allowTcpFallbackRelay. Disabling allowTcpFallbackRelay");
+			fprintf(stderr,"WARNING: multipathMode cannot be used with allowTcpFallbackRelay. Disabling allowTcpFallbackRelay" ZT_EOL_S);
 			_allowTcpFallbackRelay = false;
 		}
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
@@ -1756,7 +1809,7 @@ public:
 				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
 				const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
 
-				InetAddress *src = NULL;
+				const InetAddress *src = NULL;
 				for (unsigned int j=0; j<n.config.assignedAddressCount; ++j) {
 					const InetAddress *const tmp = reinterpret_cast<const InetAddress *>(&(n.config.assignedAddresses[j]));
 					if (target->isV4() && tmp->isV4()) {
@@ -1767,6 +1820,8 @@ public:
 						break;
 					}
 				}
+				if (!src)
+					src = &NULL_INET_ADDR;
 
 				if ( (!checkIfManagedIsAllowed(n,*target)) || ((via->ss_family == target->ss_family)&&(matchIpOnly(myIps,*via))) )
 					continue;
@@ -1774,12 +1829,14 @@ public:
 				bool haveRoute = false;
 
 				// Ignore routes implied by local managed IPs since adding the IP adds the route
+#ifndef __APPLE__
 				for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
 					if ((target->netmaskBits() == ip->netmaskBits())&&(target->containsAddress(*ip))) {
 						haveRoute = true;
 						break;
 					}
 				}
+#endif
 				if (haveRoute)
 					continue;
 #ifndef ZT_SDK
@@ -1809,16 +1866,10 @@ public:
 
 	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
 	{
+		const uint64_t now = OSUtils::now();
 		if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(from)->ipScope() == InetAddress::IP_SCOPE_GLOBAL))
-			_lastDirectReceiveFromGlobal = OSUtils::now();
-		const ZT_ResultCode rc = _node->processWirePacket(
-			(void *)0,
-			OSUtils::now(),
-			reinterpret_cast<int64_t>(sock),
-			reinterpret_cast<const struct sockaddr_storage *>(from), // Phy<> uses sockaddr_storage, so it'll always be that big
-			data,
-			len,
-			&_nextBackgroundTaskDeadline);
+			_lastDirectReceiveFromGlobal = now;
+		const ZT_ResultCode rc = _node->processWirePacket(nullptr,now,reinterpret_cast<int64_t>(sock),reinterpret_cast<const struct sockaddr_storage *>(from),data,len,&_nextBackgroundTaskDeadline);
 		if (ZT_ResultCode_isFatal(rc)) {
 			char tmp[256];
 			OSUtils::ztsnprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket: %d",(int)rc);
@@ -1859,6 +1910,13 @@ public:
 			_phy.close(sockN,false);
 			return;
 		} else {
+#ifdef ZT_SDK
+			// Immediately close new local connections. The intention is to prevent the backplane from being accessed when operating as libzt
+			if (!allowHttpBackplaneManagement && ((InetAddress*)from)->ipScope() == InetAddress::IP_SCOPE_LOOPBACK) {
+				_phy.close(sockN,false);
+				return;
+			}
+#endif
 			TcpConnection *tc = new TcpConnection();
 			{
 				Mutex::Lock _l(_tcpConnections_m);
@@ -2136,7 +2194,7 @@ public:
 				// After setting up tap, fall through to CONFIG_UPDATE since we also want to do this...
 
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
-				ZT_FAST_MEMCPY(&(n.config),nwc,sizeof(ZT_VirtualNetworkConfig));
+				memcpy(&(n.config),nwc,sizeof(ZT_VirtualNetworkConfig));
 				if (n.tap) { // sanity check
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
 					// wait for up to 5 seconds for the WindowsEthernetTap to actually be initialized
@@ -2334,17 +2392,22 @@ public:
 				return;
 		}
 
-		if (len >= 0) {
+		if ((len >= 0)&&(data)) {
 			// Check to see if we've already written this first. This reduces
 			// redundant writes and I/O overhead on most platforms and has
 			// little effect on others.
 			f = fopen(p,"rb");
 			if (f) {
-				char buf[65535];
-				long l = (long)fread(buf,1,sizeof(buf),f);
-				fclose(f);
-				if ((l == (long)len)&&(memcmp(data,buf,l) == 0))
-					return;
+				char *const buf = (char *)malloc(len*4);
+				if (buf) {
+					long l = (long)fread(buf,1,(size_t)(len*4),f);
+					fclose(f);
+					if ((l == (long)len)&&(memcmp(data,buf,l) == 0)) {
+						free(buf);
+						return;
+					}
+					free(buf);
+				}
 			}
 
 			f = fopen(p,"wb");
@@ -2643,7 +2706,7 @@ public:
 		else return 0;
 		const std::vector<InetAddress> *l = lh->get(ztaddr);
 		if ((l)&&(l->size() > 0)) {
-			ZT_FAST_MEMCPY(result,&((*l)[(unsigned long)_node->prng() % l->size()]),sizeof(struct sockaddr_storage));
+			memcpy(result,&((*l)[(unsigned long)_node->prng() % l->size()]),sizeof(struct sockaddr_storage));
 			return 1;
 		} else return 0;
 	}
@@ -2716,6 +2779,7 @@ public:
 #endif
 
 #ifdef __APPLE__
+		if ((ifname[0] == 'f')&&(ifname[1] == 'e')&&(ifname[2] == 't')&&(ifname[3] == 'h')) return false; // ... as is feth#
 		if ((ifname[0] == 'l')&&(ifname[1] == 'o')) return false; // loopback
 		if ((ifname[0] == 'z')&&(ifname[1] == 't')) return false; // sanity check: zt#
 		if ((ifname[0] == 't')&&(ifname[1] == 'u')&&(ifname[2] == 'n')) return false; // tun# is probably an OpenVPN tunnel or similar

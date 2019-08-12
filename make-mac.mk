@@ -19,7 +19,12 @@ ZT_VERSION_BUILD=$(shell cat version.h | grep -F VERSION_BUILD | cut -d ' ' -f 3
 DEFS+=-DZT_BUILD_PLATFORM=$(ZT_BUILD_PLATFORM) -DZT_BUILD_ARCHITECTURE=$(ZT_BUILD_ARCHITECTURE)
 
 include objects.mk
-ONE_OBJS+=osdep/OSXEthernetTap.o ext/http-parser/http_parser.o
+ONE_OBJS+=osdep/MacEthernetTap.o ext/http-parser/http_parser.o
+
+ifeq ($(ZT_CONTROLLER),1)
+	LIBS+=-lpq -lrabbitmq
+	DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER
+endif
 
 # Official releases are signed with our Apple cert and apply software updates by default
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
@@ -51,14 +56,14 @@ endif
 # Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)
 	ZT_TRACE=1
-	CFLAGS+=-Wall -Werror -g $(INCLUDES) $(DEFS)
+	CFLAGS+=-Wall -g $(INCLUDES) $(DEFS)
 	STRIP=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in heavy testing without it.
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g $(INCLUDES) $(DEFS)
 else
 	CFLAGS?=-Ofast -fstack-protector-strong
-	CFLAGS+=$(ARCH_FLAGS) -Wall -Werror -flto -fPIE -mmacosx-version-min=10.7 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
+	CFLAGS+=$(ARCH_FLAGS) -Wall -flto -fPIE -mmacosx-version-min=10.7 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
 	STRIP=strip
 endif
 
@@ -78,7 +83,11 @@ all: one macui
 ext/x64-salsa2012-asm/salsa2012.o:
 	$(CC) $(CFLAGS) -c ext/x64-salsa2012-asm/salsa2012.s -o ext/x64-salsa2012-asm/salsa2012.o
 
-one:	$(CORE_OBJS) $(ONE_OBJS) one.o 
+mac-agent: FORCE
+	$(CC) -Ofast -o MacEthernetTapAgent osdep/MacEthernetTapAgent.c
+	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) MacEthernetTapAgent
+
+one:	$(CORE_OBJS) $(ONE_OBJS) one.o mac-agent
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
@@ -86,6 +95,9 @@ one:	$(CORE_OBJS) $(ONE_OBJS) one.o
 	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) zerotier-one
 
 zerotier-one: one
+
+central-controller:
+	make ZT_CONTROLLER=1 one
 
 zerotier-idtool: one
 
@@ -128,17 +140,10 @@ official: FORCE
 	make ZT_OFFICIAL_RELEASE=1 mac-dist-pkg
 
 clean:
-	rm -rf *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules macui/build zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_*
+	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules macui/build zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_*
 
 distclean:	clean
 
 realclean:	clean
-
-# For those building from source -- installs signed binary tap driver in system ZT home
-install-mac-tap: FORCE
-	mkdir -p /Library/Application\ Support/ZeroTier/One
-	rm -rf /Library/Application\ Support/ZeroTier/One/tap.kext
-	cp -R ext/bin/tap-mac/tap.kext /Library/Application\ Support/ZeroTier/One
-	chown -R root:wheel /Library/Application\ Support/ZeroTier/One/tap.kext
 
 FORCE:

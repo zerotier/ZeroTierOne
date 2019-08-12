@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -373,7 +373,7 @@ public:
 				tcps = phy.tcpListen(reinterpret_cast<const struct sockaddr *>(&(ii->first)),(void *)0);
 				if ((udps)&&(tcps)) {
 #ifdef __LINUX__
-					// Bind Linux sockets to their device so routes tha we manage do not override physical routes (wish all platforms had this!)
+					// Bind Linux sockets to their device so routes that we manage do not override physical routes (wish all platforms had this!)
 					if (ii->second.length() > 0) {
 						char tmp[256];
 						Utils::scopy(tmp,sizeof(tmp),ii->second.c_str());
@@ -389,7 +389,7 @@ public:
 						_bindings[_bindingCount].udpSock = udps;
 						_bindings[_bindingCount].tcpListenSock = tcps;
 						_bindings[_bindingCount].address = ii->first;
-						phy.setIfName(udps, (char*)ii->second.c_str(), ii->second.length());
+						phy.setIfName(udps,(char*)ii->second.c_str(),(int)ii->second.length());
 						++_bindingCount;
 					}
 				} else {

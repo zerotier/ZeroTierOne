@@ -30,7 +30,9 @@ ONE_OBJS=\
 	controller/EmbeddedNetworkController.o \
 	controller/DB.o \
 	controller/FileDB.o \
-	controller/RethinkDB.o \
+	controller/LFDB.o \
+	controller/PostgreSQL.o \
+	controller/RabbitMQ.o \
 	osdep/ManagedRoute.o \
 	osdep/Http.o \
 	osdep/OSUtils.o \

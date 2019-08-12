@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -221,9 +221,28 @@ namespace ZeroTier {
 class NetworkConfig
 {
 public:
-	NetworkConfig() { memset(this,0,sizeof(NetworkConfig)); }
-	NetworkConfig(const NetworkConfig &nc) { ZT_FAST_MEMCPY(this,&nc,sizeof(NetworkConfig)); }
-	inline NetworkConfig &operator=(const NetworkConfig &nc) { ZT_FAST_MEMCPY(this,&nc,sizeof(NetworkConfig)); return *this; }
+	NetworkConfig() :
+		networkId(0),
+		timestamp(0),
+		credentialTimeMaxDelta(0),
+		revision(0),
+		issuedTo(),
+		remoteTraceTarget(),
+		flags(0),
+		remoteTraceLevel(Trace::LEVEL_NORMAL),
+		mtu(0),
+		multicastLimit(0),
+		specialistCount(0),
+		routeCount(0),
+		staticIpCount(0),
+		ruleCount(0),
+		capabilityCount(0),
+		tagCount(0),
+		certificateOfOwnershipCount(0),
+		type(ZT_NETWORK_TYPE_PRIVATE)
+	{
+		name[0] = 0;
+	}
 
 	/**
 	 * Write this network config to a dictionary for transport
@@ -255,7 +274,18 @@ public:
 	/**
 	 * @return True if frames should not be compressed
 	 */
-	inline bool disableCompression() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION) != 0); }
+	inline bool disableCompression() const
+	{
+#ifndef ZT_DISABLE_COMPRESSION
+		return ((this->flags & ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION) != 0);
+#else
+		/* Compression is disabled for libzt builds since it causes non-obvious chaotic
+		interference with lwIP's TCP congestion algorithm. Compression is also disabled
+		for some NAS builds due to the usage of low-performance processors in certain
+		older and budget models. */
+		return false;
+#endif
+	}
 
 	/**
 	 * @return Network type is public (no access control)

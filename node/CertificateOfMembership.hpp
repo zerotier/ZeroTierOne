@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -112,15 +112,8 @@ public:
 	/**
 	 * Create an empty certificate of membership
 	 */
-	CertificateOfMembership()
-	{
-		memset(this,0,sizeof(CertificateOfMembership));
-	}
-
-	CertificateOfMembership(const CertificateOfMembership &c)
-	{
-		ZT_FAST_MEMCPY(this,&c,sizeof(CertificateOfMembership));
-	}
+	CertificateOfMembership() :
+		_qualifierCount(0) {}
 
 	/**
 	 * Create from required fields common to all networks
@@ -143,12 +136,6 @@ public:
 		_qualifiers[2].maxDelta = 0xffffffffffffffffULL;
 		_qualifierCount = 3;
 		memset(_signature.data,0,ZT_C25519_SIGNATURE_LEN);
-	}
-
-	inline CertificateOfMembership &operator=(const CertificateOfMembership &c)
-	{
-		ZT_FAST_MEMCPY(this,&c,sizeof(CertificateOfMembership));
-		return *this;
 	}
 
 	/**
@@ -329,7 +316,7 @@ public:
 		p += ZT_ADDRESS_LENGTH;
 
 		if (_signedBy) {
-			ZT_FAST_MEMCPY(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
+			memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
 			p += ZT_C25519_SIGNATURE_LEN;
 		}
 

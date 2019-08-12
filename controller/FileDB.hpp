@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,15 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #ifndef ZT_CONTROLLER_FILEDB_HPP
@@ -27,7 +35,7 @@ namespace ZeroTier
 class FileDB : public DB
 {
 public:
-	FileDB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path);
+	FileDB(const Identity &myId,const char *path);
 	virtual ~FileDB();
 
 	virtual bool waitForReady();
@@ -40,6 +48,11 @@ public:
 protected:
 	std::string _networksPath;
 	std::string _tracePath;
+	std::thread _onlineUpdateThread;
+	std::map< uint64_t,std::map<uint64_t,std::map<int64_t,InetAddress> > > _online;
+	std::mutex _online_l;
+	bool _onlineChanged;
+	bool _running;
 };
 
 } // namespace ZeroTier

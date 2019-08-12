@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -45,33 +45,31 @@
 /**
  * Protocol version -- incremented only for major changes
  *
- *  1 - 0.2.0 ... 0.2.5
- *  2 - 0.3.0 ... 0.4.5
+ * 1  - 0.2.0 ... 0.2.5
+ * 2  - 0.3.0 ... 0.4.5
  *    + Added signature and originating peer to multicast frame
  *    + Double size of multicast frame bloom filter
- *  3 - 0.5.0 ... 0.6.0
+ * 3  - 0.5.0 ... 0.6.0
  *    + Yet another multicast redesign
  *    + New crypto completely changes key agreement cipher
- *  4 - 0.6.0 ... 1.0.6
+ * 4  - 0.6.0 ... 1.0.6
  *    + BREAKING CHANGE: New identity format based on hashcash design
- *  5 - 1.1.0 ... 1.1.5
+ * 5  - 1.1.0 ... 1.1.5
  *    + Supports echo
  *    + Supports in-band world (root server definition) updates
  *    + Clustering! (Though this will work with protocol v4 clients.)
  *    + Otherwise backward compatible with protocol v4
- *  6 - 1.1.5 ... 1.1.10
+ * 6  - 1.1.5 ... 1.1.10
  *    + Network configuration format revisions including binary values
- *  7 - 1.1.10 ... 1.1.17
+ * 7  - 1.1.10 ... 1.1.17
  *    + Introduce trusted paths for local SDN use
- *  8 - 1.1.17 ... 1.2.0
+ * 8  - 1.1.17 ... 1.2.0
  *    + Multipart network configurations for large network configs
  *    + Tags and Capabilities
  *    + Inline push of CertificateOfMembership deprecated
- *  9 - 1.2.0 ... 1.4.0
- *    + Trace for remote debugging or diagnostics
+ * 9  - 1.2.0 ... 1.2.14
  * 10 - 1.4.0 ... CURRENT
- *    + Multipath support
- *    + Measurement of QoS metrics
+ *    + Multipath capability and load balancing
  */
 #define ZT_PROTO_VERSION 10
 
@@ -759,7 +757,7 @@ public:
 		 * For patches and other updates a NETWORK_CONFIG is sent instead.
 		 *
 		 * It would be valid and correct as of 1.2.0 to use NETWORK_CONFIG always,
-		 * but OK(NTEWORK_CONFIG_REQUEST) should be sent for compatibility.
+		 * but OK(NETWORK_CONFIG_REQUEST) should be sent for compatibility.
 		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>

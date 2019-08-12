@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -417,6 +417,8 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			return;
 		}
 
+		network->pushCredentialsIfNeeded(tPtr,toZT,RR->node->now());
+
 		if (fromBridged) {
 			Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
@@ -437,7 +439,6 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 				outp.compress();
 			aqm_enqueue(tPtr,network,outp,true,qosBucket);
 		}
-
 	} else {
 		// Destination is bridged behind a remote peer
 
@@ -502,7 +503,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 
 void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &packet,bool encrypt,int qosBucket)
 {
-	if(!network->QoSEnabled()) {
+	if(!network->qosEnabled()) {
 		send(tPtr, packet, encrypt);
 		return;
 	}
@@ -532,7 +533,7 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 	TXQueueEntry *txEntry = new TXQueueEntry(dest,RR->node->now(),packet,encrypt);
 	
 	ManagedQueue *selectedQueue = nullptr;
-	for (int i=0; i<ZT_QOS_NUM_BUCKETS; i++) {
+	for (size_t i=0; i<ZT_QOS_NUM_BUCKETS; i++) {
 		if (i < nqcb->oldQueues.size()) { // search old queues first (I think this is best since old would imply most recent usage of the queue)
 			if (nqcb->oldQueues[i]->id == qosBucket) {
 				selectedQueue = nqcb->oldQueues[i];
@@ -568,7 +569,7 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 	{
 		// DEBUG_INFO("too many enqueued packets (%d), finding packet to drop", nqcb->_currEnqueuedPackets);
 		int maxQueueLength = 0;
-		for (int i=0; i<ZT_QOS_NUM_BUCKETS; i++) {
+		for (size_t i=0; i<ZT_QOS_NUM_BUCKETS; i++) {
 			if (i < nqcb->oldQueues.size()) {
 				if (nqcb->oldQueues[i]->byteLength > maxQueueLength) {
 					maxQueueLength = nqcb->oldQueues[i]->byteLength;
@@ -601,7 +602,7 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 
 uint64_t Switch::control_law(uint64_t t, int count)
 {
-	return t + ZT_QOS_INTERVAL / sqrt(count);
+	return (uint64_t)(t + ZT_QOS_INTERVAL / sqrt(count));
 }
 
 Switch::dqr Switch::dodequeue(ManagedQueue *q, uint64_t now) 
@@ -816,7 +817,6 @@ void Switch::doAnythingWaitingForPeer(void *tPtr,const SharedPtr<Peer> &peer)
 
 	{
 		Mutex::Lock _l(_txQueue_m);
-
 		for(std::list< TXQueueEntry >::iterator txi(_txQueue.begin());txi!=_txQueue.end();) {
 			if (txi->dest == peer->address()) {
 				if (_trySend(tPtr,txi->packet,txi->encrypt)) {

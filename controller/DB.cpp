@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,15 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial closed-source software that incorporates or links
+ * directly against ZeroTier software without disclosing the source code
+ * of your own application.
  */
 
 #include "DB.hpp"
@@ -96,8 +104,7 @@ void DB::cleanMember(nlohmann::json &member)
 	member.erase("lastRequestMetaData");
 }
 
-DB::DB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path) :
-	_controller(nc),
+DB::DB(const Identity &myId,const char *path) :
 	_myId(myId),
 	_myAddress(myId.address()),
 	_path((path) ? path : "")
@@ -107,9 +114,7 @@ DB::DB(EmbeddedNetworkController *const nc,const Identity &myId,const char *path
 	_myAddressStr = tmp;
 }
 
-DB::~DB()
-{
-}
+DB::~DB() {}
 
 bool DB::get(const uint64_t networkId,nlohmann::json &network)
 {
@@ -221,7 +226,7 @@ void DB::networks(std::vector<uint64_t> &networks)
 		networks.push_back(n->first);
 }
 
-void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool push)
+void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool initialized)
 {
 	uint64_t memberId = 0;
 	uint64_t networkId = 0;
@@ -305,8 +310,12 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool pu
 			}
 		}
 
-		if (push)
-			_controller->onNetworkMemberUpdate(networkId,memberId);
+		if (initialized) {
+			std::lock_guard<std::mutex> ll(_changeListeners_l);
+			for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i) {
+				(*i)->onNetworkMemberUpdate(networkId,memberId,memberConfig);
+			}
+		}
 	} else if (memberId) {
 		if (nw) {
 			std::lock_guard<std::mutex> l(nw->lock);
@@ -324,20 +333,24 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool pu
 		}
 	}
 
-	if ((push)&&((wasAuth)&&(!isAuth)&&(networkId)&&(memberId)))
-		_controller->onNetworkMemberDeauthorize(networkId,memberId);
+	if ((initialized)&&((wasAuth)&&(!isAuth)&&(networkId)&&(memberId))) {
+		std::lock_guard<std::mutex> ll(_changeListeners_l);
+		for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i) {
+			(*i)->onNetworkMemberDeauthorize(networkId,memberId);
+		}
+	}
 }
 
-void DB::_networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool push)
+void DB::_networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool initialized)
 {
 	if (networkConfig.is_object()) {
 		const std::string ids = networkConfig["id"];
-		const uint64_t id = Utils::hexStrToU64(ids.c_str());
-		if (id) {
+		const uint64_t networkId = Utils::hexStrToU64(ids.c_str());
+		if (networkId) {
 			std::shared_ptr<_Network> nw;
 			{
 				std::lock_guard<std::mutex> l(_networks_l);
-				std::shared_ptr<_Network> &nw2 = _networks[id];
+				std::shared_ptr<_Network> &nw2 = _networks[networkId];
 				if (!nw2)
 					nw2.reset(new _Network);
 				nw = nw2;
@@ -346,15 +359,19 @@ void DB::_networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool 
 				std::lock_guard<std::mutex> l2(nw->lock);
 				nw->config = networkConfig;
 			}
-			if (push)
-				_controller->onNetworkUpdate(id);
+			if (initialized) {
+				std::lock_guard<std::mutex> ll(_changeListeners_l);
+				for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i) {
+					(*i)->onNetworkUpdate(networkId,networkConfig);
+				}
+			}
 		}
 	} else if (old.is_object()) {
 		const std::string ids = old["id"];
-		const uint64_t id = Utils::hexStrToU64(ids.c_str());
-		if (id) {
+		const uint64_t networkId = Utils::hexStrToU64(ids.c_str());
+		if (networkId) {
 			std::lock_guard<std::mutex> l(_networks_l);
-			_networks.erase(id);
+			_networks.erase(networkId);
 		}
 	}
 }

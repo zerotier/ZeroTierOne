@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -91,8 +91,8 @@ struct InetAddress : public sockaddr_storage
 	};
 
 	InetAddress() { memset(this,0,sizeof(InetAddress)); }
-	InetAddress(const InetAddress &a) { ZT_FAST_MEMCPY(this,&a,sizeof(InetAddress)); }
-	InetAddress(const InetAddress *a) { ZT_FAST_MEMCPY(this,a,sizeof(InetAddress)); }
+	InetAddress(const InetAddress &a) { memcpy(this,&a,sizeof(InetAddress)); }
+	InetAddress(const InetAddress *a) { memcpy(this,a,sizeof(InetAddress)); }
 	InetAddress(const struct sockaddr_storage &ss) { *this = ss; }
 	InetAddress(const struct sockaddr_storage *ss) { *this = ss; }
 	InetAddress(const struct sockaddr &sa) { *this = sa; }
@@ -108,28 +108,28 @@ struct InetAddress : public sockaddr_storage
 	inline InetAddress &operator=(const InetAddress &a)
 	{
 		if (&a != this)
-			ZT_FAST_MEMCPY(this,&a,sizeof(InetAddress));
+			memcpy(this,&a,sizeof(InetAddress));
 		return *this;
 	}
 
 	inline InetAddress &operator=(const InetAddress *a)
 	{
 		if (a != this)
-			ZT_FAST_MEMCPY(this,a,sizeof(InetAddress));
+			memcpy(this,a,sizeof(InetAddress));
 		return *this;
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_storage &ss)
 	{
 		if (reinterpret_cast<const InetAddress *>(&ss) != this)
-			ZT_FAST_MEMCPY(this,&ss,sizeof(InetAddress));
+			memcpy(this,&ss,sizeof(InetAddress));
 		return *this;
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_storage *ss)
 	{
 		if (reinterpret_cast<const InetAddress *>(ss) != this)
-			ZT_FAST_MEMCPY(this,ss,sizeof(InetAddress));
+			memcpy(this,ss,sizeof(InetAddress));
 		return *this;
 	}
 
@@ -137,7 +137,7 @@ struct InetAddress : public sockaddr_storage
 	{
 		if (reinterpret_cast<const InetAddress *>(&sa) != this) {
 			memset(this,0,sizeof(InetAddress));
-			ZT_FAST_MEMCPY(this,&sa,sizeof(struct sockaddr_in));
+			memcpy(this,&sa,sizeof(struct sockaddr_in));
 		}
 		return *this;
 	}
@@ -146,7 +146,7 @@ struct InetAddress : public sockaddr_storage
 	{
 		if (reinterpret_cast<const InetAddress *>(sa) != this) {
 			memset(this,0,sizeof(InetAddress));
-			ZT_FAST_MEMCPY(this,sa,sizeof(struct sockaddr_in));
+			memcpy(this,sa,sizeof(struct sockaddr_in));
 		}
 		return *this;
 	}
@@ -155,7 +155,7 @@ struct InetAddress : public sockaddr_storage
 	{
 		if (reinterpret_cast<const InetAddress *>(&sa) != this) {
 			memset(this,0,sizeof(InetAddress));
-			ZT_FAST_MEMCPY(this,&sa,sizeof(struct sockaddr_in6));
+			memcpy(this,&sa,sizeof(struct sockaddr_in6));
 		}
 		return *this;
 	}
@@ -164,7 +164,7 @@ struct InetAddress : public sockaddr_storage
 	{
 		if (reinterpret_cast<const InetAddress *>(sa) != this) {
 			memset(this,0,sizeof(InetAddress));
-			ZT_FAST_MEMCPY(this,sa,sizeof(struct sockaddr_in6));
+			memcpy(this,sa,sizeof(struct sockaddr_in6));
 		}
 		return *this;
 	}
@@ -175,10 +175,10 @@ struct InetAddress : public sockaddr_storage
 			memset(this,0,sizeof(InetAddress));
 			switch(sa.sa_family) {
 				case AF_INET:
-					ZT_FAST_MEMCPY(this,&sa,sizeof(struct sockaddr_in));
+					memcpy(this,&sa,sizeof(struct sockaddr_in));
 					break;
 				case AF_INET6:
-					ZT_FAST_MEMCPY(this,&sa,sizeof(struct sockaddr_in6));
+					memcpy(this,&sa,sizeof(struct sockaddr_in6));
 					break;
 			}
 		}
@@ -191,10 +191,10 @@ struct InetAddress : public sockaddr_storage
 			memset(this,0,sizeof(InetAddress));
 			switch(sa->sa_family) {
 				case AF_INET:
-					ZT_FAST_MEMCPY(this,sa,sizeof(struct sockaddr_in));
+					memcpy(this,sa,sizeof(struct sockaddr_in));
 					break;
 				case AF_INET6:
-					ZT_FAST_MEMCPY(this,sa,sizeof(struct sockaddr_in6));
+					memcpy(this,sa,sizeof(struct sockaddr_in6));
 					break;
 			}
 		}
@@ -388,7 +388,7 @@ struct InetAddress : public sockaddr_storage
 				break;
 			case AF_INET6:
 				r.ss_family = AF_INET6;
-				ZT_FAST_MEMCPY(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,16);
+				memcpy(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,16);
 				break;
 		}
 		return r;
@@ -537,12 +537,12 @@ struct InetAddress : public sockaddr_storage
 				return (unsigned int)(b.template at<uint16_t>(p) + 3); // other addresses begin with 16-bit non-inclusive length
 			case 0x04:
 				ss_family = AF_INET;
-				ZT_FAST_MEMCPY(&(reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr),b.field(p,4),4); p += 4;
+				memcpy(&(reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr),b.field(p,4),4); p += 4;
 				reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton(b.template at<uint16_t>(p)); p += 2;
 				break;
 			case 0x06:
 				ss_family = AF_INET6;
-				ZT_FAST_MEMCPY(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,b.field(p,16),16); p += 16;
+				memcpy(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,b.field(p,16),16); p += 16;
 				reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton(b.template at<uint16_t>(p)); p += 2;
 				break;
 			default:

@@ -67,7 +67,7 @@ namespace WinUI
                 UseCookies = true,
                 CookieContainer = cookieContainer
             };
-            
+
             client = new HttpClient(clientHandler);
 
             string centralConfigPath = CentralConfigFile();
