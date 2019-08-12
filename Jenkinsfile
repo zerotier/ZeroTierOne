@@ -19,6 +19,7 @@ parallel 'centos7': {
               mkdir build && cd build
 		      cmake ..
 		      make -j4
+              ./zerotier-selftest
 		'''
             }
         }
