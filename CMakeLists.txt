@@ -125,3 +125,7 @@ endif(BUILD_CENTRAL_CONTROLLER)
 
 add_executable(${PROJECT_NAME} ${src} ${headers})
 target_link_libraries(${PROJECT_NAME} ${libs})
+
+
+add_executable(zerotier-selftest selftest.cpp)
+target_link_libraries(zerotier-selftest ${libs})
