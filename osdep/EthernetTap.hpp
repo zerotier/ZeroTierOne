@@ -24,27 +24,25 @@
  * of your own application.
  */
 
-#ifndef ZT_LINUXETHERNETTAP_HPP
-#define ZT_LINUXETHERNETTAP_HPP
+#ifndef ZT_ETHERNETTAP_HPP
+#define ZT_ETHERNETTAP_HPP
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "../node/Constants.hpp"
+#include "../node/MAC.hpp"
+#include "../node/InetAddress.hpp"
+#include "../node/MulticastGroup.hpp"
 
 #include <string>
+#include <memory>
 #include <vector>
-#include <stdexcept>
-#include <atomic>
-
-#include "../node/MulticastGroup.hpp"
-#include "Thread.hpp"
-#include "EthernetTap.hpp"
 
 namespace ZeroTier {
 
-class LinuxEthernetTap : public EthernetTap
+class EthernetTap
 {
 public:
-	LinuxEthernetTap(
+	static std::shared_ptr<EthernetTap> newInstance(
+		const char *tapDeviceType, // OS-specific, NULL for default
 		const char *homePath,
 		const MAC &mac,
 		unsigned int mtu,
@@ -54,37 +52,19 @@ public:
 		void (*handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 		void *arg);
 
-	virtual ~LinuxEthernetTap();
+	EthernetTap();
+	virtual ~EthernetTap();
 
-	virtual void setEnabled(bool en);
-	virtual bool enabled() const;
-	virtual bool addIp(const InetAddress &ip);
-#ifdef __SYNOLOGY__
-	bool addIpSyn(std::vector<InetAddress> ips);
-#endif
-	virtual bool removeIp(const InetAddress &ip);
-	virtual std::vector<InetAddress> ips() const;
-	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
-	virtual std::string deviceName() const;
-	virtual void setFriendlyName(const char *friendlyName);
-	virtual void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
-	virtual void setMtu(unsigned int mtu);
-
-	void threadMain()
-		throw();
-
-private:
-	void (*_handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
-	void *_arg;
-	uint64_t _nwid;
-	Thread _thread;
-	std::string _homePath;
-	std::string _dev;
-	std::vector<MulticastGroup> _multicastGroups;
-	unsigned int _mtu;
-	int _fd;
-	int _shutdownSignalPipe[2];
-	std::atomic_bool _enabled;
+	virtual void setEnabled(bool en) = 0;
+	virtual bool enabled() const = 0;
+	virtual bool addIp(const InetAddress &ip) = 0;
+	virtual bool removeIp(const InetAddress &ip) = 0;
+	virtual std::vector<InetAddress> ips() const = 0;
+	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len) = 0;
+	virtual std::string deviceName() const = 0;
+	virtual void setFriendlyName(const char *friendlyName) = 0;
+	virtual void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed) = 0;
+	virtual void setMtu(unsigned int mtu) = 0;
 };
 
 } // namespace ZeroTier

@@ -41,10 +41,11 @@
 #include "../node/MulticastGroup.hpp"
 #include "../node/InetAddress.hpp"
 #include "../osdep/Thread.hpp"
+#include "EthernetTap.hpp"
 
 namespace ZeroTier {
 
-class WindowsEthernetTap
+class WindowsEthernetTap : public EthernetTap
 {
 public:
 	/**
@@ -97,18 +98,18 @@ public:
 		void (*handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 		void *arg);
 
-	~WindowsEthernetTap();
+	virtual ~WindowsEthernetTap();
 
-	void setEnabled(bool en);
-	bool enabled() const;
-	bool addIp(const InetAddress &ip);
-	bool removeIp(const InetAddress &ip);
-	std::vector<InetAddress> ips() const;
-	void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
-	std::string deviceName() const;
-	void setFriendlyName(const char *friendlyName);
-	void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
-	void setMtu(unsigned int mtu);
+	virtual void setEnabled(bool en);
+	virtual bool enabled() const;
+	virtual bool addIp(const InetAddress &ip);
+	virtual bool removeIp(const InetAddress &ip);
+	virtual std::vector<InetAddress> ips() const;
+	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
+	virtual std::string deviceName() const;
+	virtual void setFriendlyName(const char *friendlyName);
+	virtual void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
+	virtual void setMtu(unsigned int mtu);
 
 	inline const NET_LUID &luid() const { return _deviceLuid; }
 	inline const GUID &guid() const { return _deviceGuid; }
@@ -118,7 +119,7 @@ public:
 	void threadMain()
 		throw();
 
-    bool isInitialized() const { return _initialized; };
+	bool isInitialized() const { return _initialized; };
 
 private:
 	NET_IFINDEX _getDeviceIndex(); // throws on failure

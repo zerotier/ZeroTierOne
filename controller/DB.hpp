@@ -27,6 +27,8 @@
 #ifndef ZT_CONTROLLER_DB_HPP
 #define ZT_CONTROLLER_DB_HPP
 
+//#define ZT_CONTROLLER_USE_LIBPQ
+
 #include "../node/Constants.hpp"
 #include "../node/Identity.hpp"
 #include "../node/InetAddress.hpp"
@@ -41,6 +43,7 @@
 #include <vector>
 #include <atomic>
 #include <mutex>
+#include <set>
 
 #include "../ext/json/json.hpp"
 
@@ -58,9 +61,9 @@ public:
 	public:
 		ChangeListener() {}
 		virtual ~ChangeListener() {}
-		virtual void onNetworkUpdate(uint64_t networkId,const nlohmann::json &network) {}
-		virtual void onNetworkMemberUpdate(uint64_t networkId,uint64_t memberId,const nlohmann::json &member) {}
-		virtual void onNetworkMemberDeauthorize(uint64_t networkId,uint64_t memberId) {}
+		virtual void onNetworkUpdate(const void *db,uint64_t networkId,const nlohmann::json &network) {}
+		virtual void onNetworkMemberUpdate(const void *db,uint64_t networkId,uint64_t memberId,const nlohmann::json &member) {}
+		virtual void onNetworkMemberDeauthorize(const void *db,uint64_t networkId,uint64_t memberId) {}
 	};
 
 	struct NetworkSummaryInfo
@@ -78,7 +81,7 @@ public:
 	static void cleanNetwork(nlohmann::json &network);
 	static void cleanMember(nlohmann::json &member);
 
-	DB(const Identity &myId,const char *path);
+	DB();
 	virtual ~DB();
 
 	virtual bool waitForReady() = 0;
@@ -94,12 +97,27 @@ public:
 	bool get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member);
 	bool get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member,NetworkSummaryInfo &info);
 	bool get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohmann::json> &members);
-	bool summary(const uint64_t networkId,NetworkSummaryInfo &info);
-	void networks(std::vector<uint64_t> &networks);
 
-	virtual void save(nlohmann::json *orig,nlohmann::json &record) = 0;
+	void networks(std::set<uint64_t> &networks);
+
+	template<typename F>
+	inline void each(F f)
+	{
+		nlohmann::json nullJson;
+		std::lock_guard<std::mutex> lck(_networks_l);
+		for(auto nw=_networks.begin();nw!=_networks.end();++nw) {
+			f(nw->first,nw->second->config,0,nullJson); // first provide network with 0 for member ID
+			for(auto m=nw->second->members.begin();m!=nw->second->members.end();++m) {
+				f(nw->first,nw->second->config,m->first,m->second);
+			}
+		}
+	}
+
+	virtual bool save(nlohmann::json &record,bool notifyListeners) = 0;
+
 	virtual void eraseNetwork(const uint64_t networkId) = 0;
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId) = 0;
+
 	virtual void nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress) = 0;
 
 	inline void addListener(DB::ChangeListener *const listener)
@@ -109,6 +127,28 @@ public:
 	}
 
 protected:
+	static inline bool _compareRecords(const nlohmann::json &a,const nlohmann::json &b)
+	{
+		if (a.is_object() == b.is_object()) {
+			if (a.is_object()) {
+				if (a.size() != b.size())
+					return false;
+				auto amap = a.get<nlohmann::json::object_t>();
+				auto bmap = b.get<nlohmann::json::object_t>();
+				for(auto ai=amap.begin();ai!=amap.end();++ai) {
+					if (ai->first != "revision") { // ignore revision, compare only non-revision-counter fields
+						auto bi = bmap.find(ai->first);
+						if ((bi == bmap.end())||(bi->second != ai->second))
+							return false;
+					}
+				}
+				return true;
+			}
+			return (a == b);
+		}
+		return false;
+	}
+
 	struct _Network
 	{
 		_Network() : mostRecentDeauthTime(0) {}
@@ -121,14 +161,9 @@ protected:
 		std::mutex lock;
 	};
 
-	void _memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool initialized);
-	void _networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool initialized);
+	void _memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool notifyListeners);
+	void _networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool notifyListeners);
 	void _fillSummaryInfo(const std::shared_ptr<_Network> &nw,NetworkSummaryInfo &info);
-
-	const Identity _myId;
-	const Address _myAddress;
-	const std::string _path;
-	std::string _myAddressStr;
 
 	std::vector<DB::ChangeListener *> _changeListeners;
 	std::unordered_map< uint64_t,std::shared_ptr<_Network> > _networks;

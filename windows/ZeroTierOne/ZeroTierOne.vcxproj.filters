@@ -270,6 +270,12 @@
     <ClCompile Include="..\..\controller\LFDB.cpp">
       <Filter>Source Files\controller</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\controller\DBMirrorSet.cpp">
+      <Filter>Source Files\controller</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\osdep\EthernetTap.cpp">
+      <Filter>Source Files\osdep</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -517,6 +523,12 @@
     </ClInclude>
     <ClInclude Include="..\..\ext\cpp-httplib\httplib.h">
       <Filter>Header Files\ext\cpp-httplib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\controller\DBMirrorSet.hpp">
+      <Filter>Header Files\controller</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\osdep\EthernetTap.hpp">
+      <Filter>Header Files\osdep</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

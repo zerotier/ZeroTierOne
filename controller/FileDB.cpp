@@ -29,11 +29,11 @@
 namespace ZeroTier
 {
 
-FileDB::FileDB(const Identity &myId,const char *path) :
-	DB(myId,path),
+FileDB::FileDB(const char *path) :
+	DB(),
+	_path(path),
 	_networksPath(_path + ZT_PATH_SEPARATOR_S + "network"),
 	_tracePath(_path + ZT_PATH_SEPARATOR_S + "trace"),
-	_onlineChanged(false),
 	_running(true)
 {
 	OSUtils::mkdir(_path.c_str());
@@ -86,38 +86,37 @@ FileDB::~FileDB()
 bool FileDB::waitForReady() { return true; }
 bool FileDB::isReady() { return true; }
 
-void FileDB::save(nlohmann::json *orig,nlohmann::json &record)
+bool FileDB::save(nlohmann::json &record,bool notifyListeners)
 {
 	char p1[4096],p2[4096],pb[4096];
+	bool modified = false;
 	try {
-		if (orig) {
-			if (*orig != record) {
-				record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1;
-			}
-		} else {
-			record["revision"] = 1;
-		}
-
 		const std::string objtype = record["objtype"];
 		if (objtype == "network") {
+
 			const uint64_t nwid = OSUtils::jsonIntHex(record["id"],0ULL);
 			if (nwid) {
 				nlohmann::json old;
 				get(nwid,old);
-				if ((!old.is_object())||(old != record)) {
+				if ((!old.is_object())||(!_compareRecords(old,record))) {
+					record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
 					OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json",_networksPath.c_str(),nwid);
 					if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
 						fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
-					_networkChanged(old,record,true);
+					_networkChanged(old,record,notifyListeners);
+					modified = true;
 				}
 			}
+
 		} else if (objtype == "member") {
+
 			const uint64_t id = OSUtils::jsonIntHex(record["id"],0ULL);
 			const uint64_t nwid = OSUtils::jsonIntHex(record["nwid"],0ULL);
 			if ((id)&&(nwid)) {
 				nlohmann::json network,old;
 				get(nwid,network,id,old);
-				if ((!old.is_object())||(old != record)) {
+				if ((!old.is_object())||(!_compareRecords(old,record))) {
+					record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
 					OSUtils::ztsnprintf(pb,sizeof(pb),"%s" ZT_PATH_SEPARATOR_S "%.16llx" ZT_PATH_SEPARATOR_S "member",_networksPath.c_str(),(unsigned long long)nwid);
 					OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.10llx.json",pb,(unsigned long long)id);
 					if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1))) {
@@ -127,17 +126,14 @@ void FileDB::save(nlohmann::json *orig,nlohmann::json &record)
 						if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
 							fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
 					}
-					_memberChanged(old,record,true);
+					_memberChanged(old,record,notifyListeners);
+					modified = true;
 				}
 			}
-		} else if (objtype == "trace") {
-			const std::string id = record["id"];
-			if (id.length() > 0) {
-				OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%s.json",_tracePath.c_str(),id.c_str());
-				OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1));
-			}
+
 		}
 	} catch ( ... ) {} // drop invalid records missing fields
+	return modified;
 }
 
 void FileDB::eraseNetwork(const uint64_t networkId)
@@ -152,7 +148,6 @@ void FileDB::eraseNetwork(const uint64_t networkId)
 	_networkChanged(network,nullJson,true);
 	std::lock_guard<std::mutex> l(this->_online_l);
 	this->_online.erase(networkId);
-	this->_onlineChanged = true;
 }
 
 void FileDB::eraseMember(const uint64_t networkId,const uint64_t memberId)
@@ -166,7 +161,6 @@ void FileDB::eraseMember(const uint64_t networkId,const uint64_t memberId)
 	_memberChanged(member,nullJson,true);
 	std::lock_guard<std::mutex> l(this->_online_l);
 	this->_online[networkId].erase(memberId);
-	this->_onlineChanged = true;
 }
 
 void FileDB::nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress)
@@ -176,7 +170,6 @@ void FileDB::nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const
 	physicalAddress.toString(atmp);
 	std::lock_guard<std::mutex> l(this->_online_l);
 	this->_online[networkId][memberId][OSUtils::now()] = physicalAddress;
-	this->_onlineChanged = true;
 }
 
 } // namespace ZeroTier

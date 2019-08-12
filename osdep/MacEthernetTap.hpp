@@ -27,6 +27,14 @@
 #ifndef ZT_OSXETHERNETTAP_HPP
 #define ZT_OSXETHERNETTAP_HPP
 
+#include "../node/Constants.hpp"
+#include "../node/MAC.hpp"
+#include "../node/InetAddress.hpp"
+#include "../node/MulticastGroup.hpp"
+#include "../node/Mutex.hpp"
+#include "Thread.hpp"
+#include "EthernetTap.hpp"
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -34,17 +42,9 @@
 #include <string>
 #include <vector>
 
-#include "../node/Constants.hpp"
-#include "../node/MAC.hpp"
-#include "../node/InetAddress.hpp"
-#include "../node/MulticastGroup.hpp"
-#include "../node/Mutex.hpp"
-
-#include "Thread.hpp"
-
 namespace ZeroTier {
 
-class MacEthernetTap
+class MacEthernetTap : public EthernetTap
 {
 public:
 	MacEthernetTap(
@@ -57,18 +57,18 @@ public:
 		void (*handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 		void *arg);
 
-	~MacEthernetTap();
+	virtual ~MacEthernetTap();
 
-	void setEnabled(bool en);
-	bool enabled() const;
-	bool addIp(const InetAddress &ip);
-	bool removeIp(const InetAddress &ip);
-	std::vector<InetAddress> ips() const;
-	void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
-	std::string deviceName() const;
-	void setFriendlyName(const char *friendlyName);
-	void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
-	void setMtu(unsigned int mtu);
+	virtual void setEnabled(bool en);
+	virtual bool enabled() const;
+	virtual bool addIp(const InetAddress &ip);
+	virtual bool removeIp(const InetAddress &ip);
+	virtual std::vector<InetAddress> ips() const;
+	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
+	virtual std::string deviceName() const;
+	virtual void setFriendlyName(const char *friendlyName);
+	virtual void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
+	virtual void setMtu(unsigned int mtu);
 
 	void threadMain()
 		throw();

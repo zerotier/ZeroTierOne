@@ -100,52 +100,10 @@ using json = nlohmann::json;
 
 #include "../controller/EmbeddedNetworkController.hpp"
 #include "../controller/RabbitMQ.hpp"
-
-#ifdef ZT_USE_TEST_TAP
-
-#include "../osdep/TestEthernetTap.hpp"
-namespace ZeroTier { typedef TestEthernetTap EthernetTap; }
-
-#else
-
-#ifdef ZT_SDK
-
-#include "../controller/EmbeddedNetworkController.hpp"
-#include "../node/Node.hpp"
-// Use the virtual netcon endpoint instead of a tun/tap port driver
-#include "../include/VirtualTap.hpp"
-namespace ZeroTier { typedef VirtualTap EthernetTap; }
-
-#else
-
-#ifdef __APPLE__
-#include "../osdep/MacEthernetTap.hpp"
-namespace ZeroTier { typedef MacEthernetTap EthernetTap; }
-#endif // __APPLE__
-#ifdef __LINUX__
-#include "../osdep/LinuxEthernetTap.hpp"
-namespace ZeroTier { typedef LinuxEthernetTap EthernetTap; }
-#endif // __LINUX__
+#include "../osdep/EthernetTap.hpp"
 #ifdef __WINDOWS__
 #include "../osdep/WindowsEthernetTap.hpp"
-namespace ZeroTier { typedef WindowsEthernetTap EthernetTap; }
-#endif // __WINDOWS__
-#ifdef __FreeBSD__
-#include "../osdep/BSDEthernetTap.hpp"
-namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
-#endif // __FreeBSD__
-#ifdef __NetBSD__
-#include "../osdep/NetBSDEthernetTap.hpp"
-namespace ZeroTier { typedef NetBSDEthernetTap EthernetTap; }
-#endif // __NetBSD__
-#ifdef __OpenBSD__
-#include "../osdep/BSDEthernetTap.hpp"
-namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
-#endif // __OpenBSD__
-
-#endif // ZT_SDK
-
-#endif // ZT_USE_TEST_TAP
+#endif
 
 #ifndef ZT_SOFTWARE_UPDATE_DEFAULT
 #define ZT_SOFTWARE_UPDATE_DEFAULT "disable"
@@ -273,6 +231,15 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 		ra.push_back(rj);
 	}
 	nj["routes"] = ra;
+
+	nlohmann::json mca = nlohmann::json::array();
+	for(unsigned int i=0;i<nc->multicastSubscriptionCount;++i) {
+		nlohmann::json m;
+		m["mac"] = MAC(nc->multicastSubscriptions[i].mac).toString(tmp);
+		m["adi"] = nc->multicastSubscriptions[i].adi;
+		mca.push_back(m);
+	}
+	nj["multicastSubscriptions"] = mca;
 }
 
 static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
@@ -534,7 +501,7 @@ public:
 			settings.allowDefault = false;
 		}
 
-		EthernetTap *tap;
+		std::shared_ptr<EthernetTap> tap;
 		ZT_VirtualNetworkConfig config; // memcpy() of raw config from core
 		std::vector<InetAddress> managedIps;
 		std::list< SharedPtr<ManagedRoute> > managedRoutes;
@@ -767,7 +734,7 @@ public:
 			OSUtils::rmDashRf((_homePath + ZT_PATH_SEPARATOR_S "iddb.d").c_str());
 
 			// Network controller is now enabled by default for desktop and server
-			_controller = new EmbeddedNetworkController(_node,_controllerDbPath.c_str(),_ports[0], _mqc);
+			_controller = new EmbeddedNetworkController(_node,_homePath.c_str(),_controllerDbPath.c_str(),_ports[0], _mqc);
 			_node->setNetconfMaster((void *)_controller);
 
 			// Join existing networks in networks.d
@@ -946,8 +913,6 @@ public:
 
 		{
 			Mutex::Lock _l(_nets_m);
-			for(std::map<uint64_t,NetworkState>::iterator n(_nets.begin());n!=_nets.end();++n)
-				delete n->second.tap;
 			_nets.clear();
 		}
 
@@ -994,15 +959,17 @@ public:
 		Mutex::Lock _l2(_localConfig_m);
 		std::string lcbuf;
 		if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S "local.conf").c_str(),lcbuf)) {
-			try {
-				_localConfig = OSUtils::jsonParse(lcbuf);
-				if (!_localConfig.is_object()) {
-					fprintf(stderr,"ERROR: unable to parse local.conf (root element is not a JSON object)" ZT_EOL_S);
+			if (lcbuf.length() > 0) {
+				try {
+					_localConfig = OSUtils::jsonParse(lcbuf);
+					if (!_localConfig.is_object()) {
+						fprintf(stderr,"ERROR: unable to parse local.conf (root element is not a JSON object)" ZT_EOL_S);
+						exit(1);
+					}
+				} catch ( ... ) {
+					fprintf(stderr,"ERROR: unable to parse local.conf (invalid JSON)" ZT_EOL_S);
 					exit(1);
 				}
-			} catch ( ... ) {
-				fprintf(stderr,"ERROR: unable to parse local.conf (invalid JSON)" ZT_EOL_S);
-				exit(1);
 			}
 		}
 
@@ -1777,7 +1744,7 @@ public:
 		if (syncRoutes) {
 			char tapdev[64];
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
-			OSUtils::ztsnprintf(tapdev,sizeof(tapdev),"%.16llx",(unsigned long long)n.tap->luid().Value);
+			OSUtils::ztsnprintf(tapdev,sizeof(tapdev),"%.16llx",(unsigned long long)((WindowsEthernetTap *)(n.tap.get()))->luid().Value);
 #else
 			Utils::scopy(tapdev,sizeof(tapdev),n.tap->deviceName().c_str());
 #endif
@@ -2131,7 +2098,8 @@ public:
 						char friendlyName[128];
 						OSUtils::ztsnprintf(friendlyName,sizeof(friendlyName),"ZeroTier One [%.16llx]",nwid);
 
-						n.tap = new EthernetTap(
+						n.tap = EthernetTap::newInstance(
+							nullptr,
 							_homePath.c_str(),
 							MAC(nwc->mac),
 							nwc->mtu,
@@ -2202,7 +2170,7 @@ public:
 					// without WindowsEthernetTap::isInitialized() returning true, the won't actually
 					// be online yet and setting managed routes on it will fail.
 					const int MAX_SLEEP_COUNT = 500;
-					for (int i = 0; !n.tap->isInitialized() && i < MAX_SLEEP_COUNT; i++) {
+					for (int i = 0; !((WindowsEthernetTap *)(n.tap.get()))->isInitialized() && i < MAX_SLEEP_COUNT; i++) {
 						Sleep(10);
 					}
 #endif
@@ -2218,10 +2186,10 @@ public:
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY:
 				if (n.tap) { // sanity check
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
-					std::string winInstanceId(n.tap->instanceId());
+					std::string winInstanceId(((WindowsEthernetTap *)(n.tap.get()))->instanceId());
 #endif
 					*nuptr = (void *)0;
-					delete n.tap;
+					n.tap.reset();
 					_nets.erase(nwid);
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
 					if ((op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY)&&(winInstanceId.length() > 0))

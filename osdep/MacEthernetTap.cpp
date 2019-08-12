@@ -24,6 +24,17 @@
  * of your own application.
  */
 
+#include "../node/Constants.hpp"
+
+#ifdef __APPLE__
+
+#include "../node/Utils.hpp"
+#include "../node/Mutex.hpp"
+#include "../node/Dictionary.hpp"
+#include "OSUtils.hpp"
+#include "MacEthernetTap.hpp"
+#include "MacEthernetTapAgent.h"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,14 +67,6 @@
 #include <map>
 #include <set>
 #include <algorithm>
-
-#include "../node/Constants.hpp"
-#include "../node/Utils.hpp"
-#include "../node/Mutex.hpp"
-#include "../node/Dictionary.hpp"
-#include "OSUtils.hpp"
-#include "MacEthernetTap.hpp"
-#include "MacEthernetTapAgent.h"
 
 static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
 
@@ -463,3 +466,5 @@ void MacEthernetTap::threadMain()
 }
 
 } // namespace ZeroTier
+
+#endif // __APPLE__
