@@ -2,6 +2,13 @@
 
 cmake_minimum_required (VERSION 3.8)
 
+# ZeroTier One Version Config
+
+set(ZEROTIER_ONE_VERSION_MAJOR 1)
+set(ZEROTIER_ONE_VERSION_MINOR 4)
+set(ZEROTIER_ONE_VERSION_REVISION 2)
+set(ZEROTIER_ONE_VERSION_BUILD 0)
+
 # Set a default build type if none was specified
 set(default_build_type "Release")
 if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
@@ -78,6 +85,11 @@ set(libs
 	zt_osdep
 	zt_core
 	zt_controller
+)
+
+configure_file(
+	version.h.in
+	${CMAKE_SOURCE_DIR}/version.h
 )
 
 set(src
