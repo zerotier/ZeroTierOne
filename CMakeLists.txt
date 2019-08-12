@@ -2,6 +2,11 @@
 
 cmake_minimum_required (VERSION 3.8)
 
+if(WIN32)
+	# If building on Windows, set minimum target to Windows 7
+	set(CMAKE_SYSTEM_VERSION "7" CACHE STRING INTERNAL FORCE)
+endif(WIN32)
+
 # ZeroTier One Version Config
 
 set(ZEROTIER_ONE_VERSION_MAJOR 1)
