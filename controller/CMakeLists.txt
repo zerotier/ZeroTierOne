@@ -7,6 +7,7 @@ endif(WIN32)
 
 set(ctl_src
 	DB.cpp
+	DBMirrorSet.cpp
 	EmbeddedNetworkController.cpp
 	FileDB.cpp
 	LFDB.cpp
@@ -15,6 +16,7 @@ set(ctl_src
 
 set(ctl_hdr
 	DB.hpp
+	DBMirrorSet.hpp
 	EmbeddedNetworkController.hpp
 	FileDB.hpp
 	LFDB.hpp

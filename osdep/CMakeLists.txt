@@ -4,6 +4,7 @@ project(zt_osdep)
 set(src
 	Arp.cpp
 	Http.cpp
+	EthernetTap.cpp
 	ManagedRoute.cpp
 	NeighborDiscovery.cpp
 	OSUtils.cpp
@@ -14,6 +15,7 @@ set(headers
 	Arp.hpp
 	Binder.hpp
 	BlockingQueue.hpp
+	EthernetTap.hpp
 	Http.hpp
 	ManagedRoute.hpp
 	OSUtils.hpp
