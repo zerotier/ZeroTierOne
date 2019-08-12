@@ -1,0 +1,95 @@
+cmake_minimum_required (VERSION 2.8)
+project(zt_core)
+
+if(WIN32)
+	add_definitions(-DNOMINMAX)
+endif(WIN32)
+
+set(core_headers
+	Address.hpp
+	AES.hpp
+	AtomicCounter.hpp
+	Buffer.hpp
+	C25519.hpp
+	Capability.hpp
+	CertificateOfMembership.hpp
+	CertificateOfOwnership.hpp
+	Constants.hpp
+	Credential.hpp
+	Dictionary.hpp
+	ECC384.hpp
+	Hashtable.hpp
+	Identity.hpp
+	InetAddress.hpp
+	Locator.hpp
+	MAC.hpp
+	Membership.hpp
+	Multicaster.hpp
+	MulticastGroup.hpp
+	Mutex.hpp
+	Network.hpp
+	NetworkConfig.hpp
+	Node.hpp
+	OutboundMulticast.hpp
+	Packet.hpp
+	Path.hpp
+	Peer.hpp
+	Poly1305.hpp
+	RingBuffer.hpp
+	RuntimeEnvironment.hpp
+	Salsa20.hpp
+	SelfAwareness.hpp
+	SHA512.hpp
+	SharedPtr.hpp
+	Str.hpp
+	Switch.hpp
+	Tag.hpp
+	Topology.hpp
+	Trace.hpp
+	Utils.hpp
+)
+set(core_src
+	AES.cpp
+	C25519.cpp
+	Capability.cpp
+	CertificateOfMembership.cpp
+	CertificateOfOwnership.cpp
+	ECC384.cpp
+	Identity.cpp
+	IncomingPacket.cpp
+	InetAddress.cpp
+	Membership.cpp
+	Multicaster.cpp
+	Network.cpp
+	NetworkConfig.cpp
+	Node.cpp
+	OutboundMulticast.cpp
+	Packet.cpp
+	Path.cpp
+	Peer.cpp
+	Poly1305.cpp
+	Revocation.cpp
+	Salsa20.cpp
+	SelfAwareness.cpp
+	SHA512.cpp
+	Switch.cpp
+	Tag.cpp
+	Topology.cpp
+	Trace.cpp
+	Utils.cpp
+)
+add_library(${PROJECT_NAME} STATIC ${core_src} ${core_headers})
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
+
+if(UNIX) 
+	set_source_files_properties(
+		AES.cpp
+		ECC384.cpp
+		Salsa20.cpp
+		SHA512.cpp
+		C25519.cpp
+		Poly1305.cpp
+		PROPERTIES
+		COMPILE_FLAGS "-Wall -O3"
+	)
+endif(UNIX)

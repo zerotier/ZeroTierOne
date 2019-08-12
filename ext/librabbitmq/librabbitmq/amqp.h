@@ -219,9 +219,9 @@ AMQP_BEGIN_DECLS
  */
 
 #define AMQP_VERSION_MAJOR 0
-#define AMQP_VERSION_MINOR 10
+#define AMQP_VERSION_MINOR 9
 #define AMQP_VERSION_PATCH 0
-#define AMQP_VERSION_IS_RELEASE 0
+#define AMQP_VERSION_IS_RELEASE 1
 
 /**
  * \def AMQP_VERSION_CODE
@@ -328,16 +328,13 @@ char const *AMQP_CALL amqp_version(void);
 /**
  * \def AMQP_DEFAULT_MAX_CHANNELS
  *
- * Default maximum number of channels (2047, RabbitMQ default limit of 2048,
- * minus 1 for channel 0). RabbitMQ set a default limit of 2048 channels per
- * connection in v3.7.5 to prevent broken clients from leaking too many
- * channels.
+ * Default maximum number of channels (0, no limit)
  *
  * \sa amqp_login(), amqp_login_with_properties()
  *
  * \since v0.4.0
  */
-#define AMQP_DEFAULT_MAX_CHANNELS 2047
+#define AMQP_DEFAULT_MAX_CHANNELS 0
 
 /**
  * \def AMQP_DEFAULT_HEARTBEAT

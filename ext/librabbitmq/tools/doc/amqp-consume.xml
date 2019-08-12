@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd"
+[
+<!ENTITY date SYSTEM "man-date.ent" >
+]
+>
+<refentry lang="en">
+    <refentryinfo>
+        <productname>RabbitMQ C Client</productname>
+        <authorgroup>
+            <corpauthor>The RabbitMQ Team &lt;<ulink url="mailto:info@rabbitmq.com"><email>info@rabbitmq.com</email></ulink>&gt;</corpauthor>
+        </authorgroup>
+        <date>&date;</date>
+    </refentryinfo>
+
+    <refmeta>
+        <refentrytitle>amqp-consume</refentrytitle>
+        <manvolnum>1</manvolnum>
+        <refmiscinfo class="manual">RabbitMQ C Client</refmiscinfo>
+    </refmeta>
+
+    <refnamediv>
+        <refname>amqp-consume</refname>
+        <refpurpose>Consume messages from a queue on an AMQP server</refpurpose>
+    </refnamediv>
+
+    <refsynopsisdiv>
+        <cmdsynopsis>
+            <command>amqp-consume</command>
+            <arg choice="opt" rep="repeat">
+                <replaceable>OPTION</replaceable>
+            </arg>
+            <arg choice="req">
+                <replaceable>command</replaceable>
+            </arg>
+            <arg choice="opt" rep="repeat">
+                <replaceable>args</replaceable>
+            </arg>
+        </cmdsynopsis>
+    </refsynopsisdiv>
+
+    <refsect1>
+        <title>Description</title>
+        <para>
+            <command>amqp-consume</command> consumes messages from a
+            queue on an AMQP server.  For each message that arrives, a
+            receiving command is run, with the message body supplied
+            to it on standard input.
+        </para>
+        <para>
+            <command>amqp-consume</command> can consume from an
+            existing queue, or it can create a new queue.  It can
+            optionally bind the queue to an existing exchange.
+        </para>
+        <para>
+            By default, messages will be consumed with explicit
+            acknowledgements.  A message will only be acknowledged if
+            the receiving command exits successfully (i.e. with an
+            exit code of zero).  The AMQP <quote>no ack</quote> mode
+            (a.k.a. auto-ack mode) can be enable with the
+            <option>-A</option> option.
+        </para>
+    </refsect1>
+
+    <refsect1>
+        <title>Options</title>
+        <variablelist>
+            <varlistentry>
+                <term><option>-q</option></term>
+                <term><option>--queue</option>=<replaceable class="parameter">queue name</replaceable></term>
+                <listitem>
+                    <para>
+                        The name of the queue to consume messages
+                        from.
+                    </para>
+
+                    <para>
+                        If the <option>--queue</option> option is
+                        omitted, the AMQP server will assign a unique
+                        name to the queue, and that server-assigned
+                        name will be dixsplayed on stderr; this case
+                        implies that an exclusive queue should be
+                        declared.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><option>-e</option></term>
+                <term><option>--exchange</option>=<replaceable class="parameter">exchange name</replaceable></term>
+                <listitem>
+                    <para>
+                        Specifies that an exclusive queue should
+                        be declared, and bound to the given exchange.
+                        The specified exchange should already exist
+                        unless the <option>--exchange-type</option>
+                        option is used to request the creation of an
+                        exchange.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><option>-r</option></term>
+                <term><option>--routing-key</option>=<replaceable class="parameter">routing key</replaceable></term>
+                <listitem>
+                    <para>
+                        The routing key for binding.  If omitted, an
+                        empty routing key is assumed.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><option>-d</option></term>
+                <term><option>--declare</option></term>
+                <listitem>
+                    <para>
+                        Forces an exclusive queue to be declared,
+                        even when it otherwise would not be.  That is,
+                        when a queue name is specified with the
+                        <option>--queue</option> option, but no
+                        binding to an exchange is requested with the
+                        <option>--exchange</option> option.
+                        Note: this option is deprecated and may be
+                        removed in a future version, use the
+                        <option>--exclusive</option> option to
+                        explicitly declare an exclusive queue.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><option>-x</option></term>
+                <term><option>--exclusive</option></term>
+                <listitem>
+                    <para>
+                        Declared queues are non-exclusive by default,
+                        this option forces declaration of exclusive
+                        queues.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><option>-A</option></term>
+                <term><option>--no-ack</option>=<replaceable class="parameter">routing key</replaceable></term>
+                <listitem>
+                    <para>
+                        Enable <quote>no ack</quote> mode: The AMQP
+                        server will unconditionally acknowledge each
+                        message that is delivered, regardless of
+                        whether the target command exits successfully
+                        or not.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><option>-c</option></term>
+                <term><option>--count</option>=<replaceable class="parameter">limit</replaceable></term>
+                <listitem>
+                    <para>
+                        Stop consuming after the given number of
+                        messages have been received.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><option>-p</option></term>
+                <term><option>--prefetch-count</option>=<replaceable class="parameter">limit</replaceable></term>
+                <listitem>
+                    <para>
+                        Request the server to only send
+                        <replaceable class="parameter">limit</replaceable>
+                        messages at a time.
+                    </para>
+                    <para>
+                        If any value was passed to <option>--count</option>,
+                        the value passed to <option>--prefetch-count</option>
+                        should be smaller than that, or otherwise it will be
+                        ignored.
+                    </para>
+                    <para>
+                        If <option>-A</option>/<option>--no-ack</option> is
+                        passed, this option has no effect.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+
+    <refsect1>
+        <title>Examples</title>
+        <variablelist>
+            <varlistentry>
+                <term>Consume messages from an existing queue
+                <quote><systemitem
+                class="resource">myqueue</systemitem></quote>, and
+                output the message bodies on standard output via
+                <command>cat</command>:</term>
+                <listitem>
+                    <screen><prompt>$ </prompt><userinput>amqp-publish -q myqueue cat</userinput></screen>
+                </listitem>
+            </varlistentry>
+
+            <varlistentry>
+                <term>Bind a new exclusive queue to an
+                exchange <quote><systemitem
+                class="resource">myexch</systemitem></quote>, and send
+                each message body to the script
+                <filename>myscript</filename>, automatically
+                acknowledging them on the server:</term>
+                <listitem>
+                    <screen><prompt>$ </prompt><userinput>amqp-consume -A -e myexch ./myscript</userinput></screen>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+
+    <refsect1>
+        <title>See also</title>
+        <para>
+            <citerefentry><refentrytitle>librabbitmq-tools</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+            describes connection-related options common to all the
+            RabbitMQ C Client tools.
+        </para>
+    </refsect1>
+</refentry>

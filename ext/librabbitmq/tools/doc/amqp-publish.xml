@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd"
+[
+<!ENTITY date SYSTEM "man-date.ent" >
+]
+>
+<refentry lang="en">
+    <refentryinfo>
+        <productname>RabbitMQ C Client</productname>
+        <authorgroup>
+            <corpauthor>The RabbitMQ Team &lt;<ulink url="mailto:info@rabbitmq.com"><email>info@rabbitmq.com</email></ulink>&gt;</corpauthor>
+        </authorgroup>
+        <date>&date;</date>
+    </refentryinfo>
+
+    <refmeta>
+        <refentrytitle>amqp-publish</refentrytitle>
+        <manvolnum>1</manvolnum>
+        <refmiscinfo class="manual">RabbitMQ C Client</refmiscinfo>
+    </refmeta>
+
+    <refnamediv>
+        <refname>amqp-publish</refname>
+        <refpurpose>Publish a message on an AMQP server</refpurpose>
+    </refnamediv>
+
+    <refsynopsisdiv>
+        <cmdsynopsis>
+            <command>amqp-publish</command>
+            <arg choice="opt" rep="repeat">
+                <replaceable>OPTION</replaceable>
+            </arg>
+        </cmdsynopsis>
+    </refsynopsisdiv>
+
+    <refsect1>
+        <title>Description</title>
+        <para>
+            Publishes a message to an exchange on an AMQP server.
+            Options allow the various properties of the message and
+            parameters of the AMQP <function>basic.publish</function>
+            method to be specified.
+        </para>
+        <para>
+            By default, the message body is read from standard input.
+            Alternatively, the <option>-b</option> option allows the message
+            body to be provided as part of the command.
+        </para>
+    </refsect1>
+
+    <refsect1>
+        <title>Options</title>
+        <variablelist>
+            <varlistentry>
+                <term><option>-e</option></term>
+                <term><option>--exchange</option>=<replaceable class="parameter">exchange name</replaceable></term>
+                <listitem>
+                    <para>
+                        The name of the exchange to publish to.  If
+                        omitted, the default exchange (also known as
+                        the nameless exchange) is used.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><option>-r</option></term>
+                <term><option>--routing-key</option>=<replaceable class="parameter">routing key</replaceable></term>
+                <listitem>
+                    <para>
+                        The routing key to publish with.  If omitted,
+                        an empty routing key is assumed.  A routing
+                        key must be specified when publishing to the
+                        default exchange; in that case, accoding to
+                        the AMQP specification, the routing key
+                        corresponds to a queue name.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><option>-p</option></term>
+                <term><option>--persistent</option></term>
+                <listitem>
+                    <para>
+                        Use the persistent delivery mode.  Without
+                        this option, non-persistent delivery is used.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><option>-C</option></term>
+                <term><option>--content-type</option>=<replaceable class="parameter">MIME type</replaceable></term>
+                <listitem>
+                    <para>
+                        Specifies the content-type property for the
+                        message.  If omitted, the content-type
+                        property is not set on the message.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><option>-E</option></term>
+                <term><option>--content-encoding</option>=<replaceable class="parameter">content coding</replaceable></term>
+                <listitem>
+                    <para>
+                        Specifies the content-encoding property for
+                        the message.  If omitted, the content-encoding
+                        property is not set on the message.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><option>-b</option></term>
+                <term><option>--body</option>=<replaceable class="parameter">message body</replaceable></term>
+                <listitem>
+                    <para>
+                        Specifies the message body.  If omitted, the
+                        message body is read from standard input.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><option>-H</option></term>
+                <term><option>--header</option>=<replaceable class="parameter">header</replaceable></term>
+                <listitem>
+                    <para>
+                        Specifies an optional header in the form "key: value".
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+
+    <refsect1>
+        <title>Examples</title>
+        <variablelist>
+            <varlistentry>
+                <term>Send a short message, consisting of the word
+                <quote><literal>Hello</literal></quote> to the queue
+                <quote><systemitem
+                class="resource">myqueue</systemitem></quote> via the
+                default exchange:</term>
+                <listitem>
+                    <screen><prompt>$ </prompt><userinput>amqp-publish -r myqueue -b Hello</userinput></screen>
+                </listitem>
+            </varlistentry>
+
+            <varlistentry>
+                <term>Send some XML data from a file to the exchange
+                <quote><systemitem
+                class="resource">events</systemitem></quote>, with
+                persistent delivery mode, setting the content-type
+                property on the message to make the data format
+                explicit:</term>
+                <listitem>
+                    <screen><prompt>$ </prompt><userinput>amqp-publish -e events -p -C text/xml &lt;event.xml</userinput></screen>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+
+    <refsect1>
+        <title>See also</title>
+        <para>
+            <citerefentry><refentrytitle>librabbitmq-tools</refentrytitle><manvolnum>7</manvolnum></citerefentry>
+            describes connection-related options common to all the
+            RabbitMQ C Client tools.
+        </para>
+    </refsect1>
+</refentry>

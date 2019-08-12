@@ -14,7 +14,11 @@ parallel 'centos7': {
             checkout scm
 
 	        stage('Build Centos 7') {
-                sh 'make -f make-linux.mk'
+		sh '''rm -rf build/
+              mkdir build && cd build
+		      CC=clang CXX=clang++ cmake ..
+		      make -j4
+		'''
             }
         }
         catch (err) {
