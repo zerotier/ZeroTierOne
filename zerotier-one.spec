@@ -1,6 +1,6 @@
 Name:           zerotier-one
 Version:        1.4.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        ZeroTier One network virtualization service
 
 License:        GPLv3
@@ -14,7 +14,7 @@ BuildRequires:  systemd
 BuildRequires:  systemd
 %endif
 
-Requires:       iproute
+Requires:       iproute libstdc++
 
 %if 0%{?rhel} >= 7
 Requires:       systemd
