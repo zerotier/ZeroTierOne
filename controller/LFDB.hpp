@@ -43,7 +43,7 @@ class LFDB : public DB
 {
 public:
 	/**
-	 * @param myId Identity of controller node (with secret)
+	 * @param myId This controller's identity
 	 * @param path Base path for ZeroTier node itself
 	 * @param lfOwnerPrivate LF owner private in PEM format
 	 * @param lfOwnerPublic LF owner public in @base62 format
@@ -56,7 +56,7 @@ public:
 
 	virtual bool waitForReady();
 	virtual bool isReady();
-	virtual void save(nlohmann::json *orig,nlohmann::json &record);
+	virtual bool save(nlohmann::json &record,bool notifyListeners);
 	virtual void eraseNetwork(const uint64_t networkId);
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId);
 	virtual void nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress);

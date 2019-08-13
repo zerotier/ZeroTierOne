@@ -48,9 +48,12 @@ Membership::Membership() :
 {
 }
 
-void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf,int localCapabilityIndex)
+void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf)
 {
-	const Capability *sendCap = (localCapabilityIndex >= 0) ? &(nconf.capabilities[localCapabilityIndex]) : (const Capability *)0;
+	const Capability *sendCaps[ZT_MAX_NETWORK_CAPABILITIES];
+	unsigned int sendCapCount = 0;
+	for(unsigned int c=0;c<nconf.capabilityCount;++c)
+		sendCaps[sendCapCount++] = &(nconf.capabilities[c]);
 
 	const Tag *sendTags[ZT_MAX_NETWORK_TAGS];
 	unsigned int sendTagCount = 0;
@@ -62,10 +65,11 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 	for(unsigned int c=0;c<nconf.certificateOfOwnershipCount;++c)
 		sendCoos[sendCooCount++] = &(nconf.certificatesOfOwnership[c]);
 
+	unsigned int capPtr = 0;
 	unsigned int tagPtr = 0;
 	unsigned int cooPtr = 0;
 	bool sendCom = (bool)(nconf.com);
-	while ((tagPtr < sendTagCount)||(cooPtr < sendCooCount)||(sendCom)||(sendCap)) {
+	while ((capPtr < sendCapCount)||(tagPtr < sendTagCount)||(cooPtr < sendCooCount)||(sendCom)) {
 		Packet outp(peerAddress,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 
 		if (sendCom) {
@@ -74,11 +78,14 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 		}
 		outp.append((uint8_t)0x00);
 
-		if (sendCap) {
-			outp.append((uint16_t)1);
-			sendCap->serialize(outp);
-			sendCap = (const Capability *)0;
-		} else outp.append((uint16_t)0);
+		const unsigned int capCountAt = outp.size();
+		outp.addSize(2);
+		unsigned int thisPacketCapCount = 0;
+		while ((capPtr < sendCapCount)&&((outp.size() + sizeof(Capability) + 16) < ZT_PROTO_MAX_PACKET_LENGTH)) {
+			sendCaps[capPtr++]->serialize(outp);
+			++thisPacketCapCount;
+		}
+		outp.setAt(capCountAt,(uint16_t)thisPacketCapCount);
 
 		const unsigned int tagCountAt = outp.size();
 		outp.addSize(2);

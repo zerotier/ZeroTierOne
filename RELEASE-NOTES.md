@@ -1,6 +1,12 @@
 ZeroTier Release Notes
 ======
 
+# 2019-08-12 -- Version 1.4.2
+
+ * Fix high CPU use bug on some platforms
+ * Fix issues with PostgreSQL controller DB (only affects Central)
+ * Restore backward compatibility with MacOS versions prior to 10.13
+
 # 2019-07-29 -- Version 1.4.0
 
 ### Major Changes

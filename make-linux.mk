@@ -1,19 +1,18 @@
 # Automagically pick clang or gcc, with preference for clang
 # This is only done if we have not overridden these with an environment or CLI variable
 ifeq ($(origin CC),default)
-	CC:=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
-	CC:=$(shell if [ -e /opt/intel/bin/icc ]; then echo /opt/intel/bin/icc -ipo -ansi-alias; else echo $(CC); fi)
+        CC:=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
+        CC:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/gcc ]; then echo /opt/rh/devtoolset-8/root/usr/bin/gcc; else echo $(CC); fi)
 endif
 ifeq ($(origin CXX),default)
-	CXX:=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
-	CXX:=$(shell if [ -e /opt/intel/bin/icc ]; then echo /opt/intel/bin/icc -ipo -ansi-alias; else echo $(CXX); fi)
+        CXX:=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
+        CXX:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/g++ ]; then echo /opt/rh/devtoolset-8/root/usr/bin/g++; else echo $(CXX); fi)
 endif
 
 INCLUDES?=
 DEFS?=
 LDLIBS?=
 DESTDIR?=
-
 
 include objects.mk
 ONE_OBJS+=osdep/LinuxEthernetTap.o
@@ -401,5 +400,12 @@ debian-clean: FORCE
 
 redhat:	FORCE
 	rpmbuild -ba zerotier-one.spec
+
+# This installs the packages needed to build ZT locally on CentOS 7 and
+# is here largely for documentation purposes.
+centos-7-setup: FORCE
+	yum install -y gcc gcc-c++ make epel-release git
+	yum install -y centos-release-scl
+	yum install -y devtoolset-8-gcc devtoolset-8-gcc-c++
 
 FORCE:

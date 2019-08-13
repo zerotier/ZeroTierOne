@@ -51,6 +51,7 @@
 #include "../ext/json/json.hpp"
 
 #include "DB.hpp"
+#include "DBMirrorSet.hpp"
 
 namespace ZeroTier {
 
@@ -65,7 +66,7 @@ public:
 	 * @param node Parent node
 	 * @param dbPath Database path (file path or database credentials)
 	 */
-	EmbeddedNetworkController(Node *node,const char *dbPath, int listenPort, MQConfig *mqc = NULL);
+	EmbeddedNetworkController(Node *node,const char *ztPath,const char *dbPath, int listenPort, MQConfig *mqc = NULL);
 	virtual ~EmbeddedNetworkController();
 
 	virtual void init(const Identity &signingId,Sender *sender);
@@ -101,9 +102,9 @@ public:
 
 	void handleRemoteTrace(const ZT_RemoteTrace &rt);
 
-	virtual void onNetworkUpdate(const uint64_t networkId,const nlohmann::json &network);
-	virtual void onNetworkMemberUpdate(const uint64_t networkId,const uint64_t memberId,const nlohmann::json &member);
-	virtual void onNetworkMemberDeauthorize(const uint64_t networkId,const uint64_t memberId);
+	virtual void onNetworkUpdate(const void *db,uint64_t networkId,const nlohmann::json &network);
+	virtual void onNetworkMemberUpdate(const void *db,uint64_t networkId,uint64_t memberId,const nlohmann::json &member);
+	virtual void onNetworkMemberDeauthorize(const void *db,uint64_t networkId,uint64_t memberId);
 
 private:
 	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
@@ -148,12 +149,13 @@ private:
 	const int64_t _startTime;
 	int _listenPort;
 	Node *const _node;
+	std::string _ztPath;
 	std::string _path;
 	Identity _signingId;
 	std::string _signingIdAddressString;
 	NetworkController::Sender *_sender;
 
-	std::unique_ptr<DB> _db;
+	DBMirrorSet _db;
 	BlockingQueue< _RQEntry * > _queue;
 
 	std::vector<std::thread> _threads;

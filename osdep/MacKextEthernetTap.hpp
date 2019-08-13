@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (C) 2011-2018  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * --
  *
@@ -24,27 +24,30 @@
  * of your own application.
  */
 
-#ifndef ZT_LINUXETHERNETTAP_HPP
-#define ZT_LINUXETHERNETTAP_HPP
+#ifndef ZT_MacKextEthernetTap_HPP
+#define ZT_MacKextEthernetTap_HPP
 
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <stdexcept>
-#include <atomic>
 
+#include "../node/Constants.hpp"
+#include "../node/MAC.hpp"
+#include "../node/InetAddress.hpp"
 #include "../node/MulticastGroup.hpp"
+
 #include "Thread.hpp"
 #include "EthernetTap.hpp"
 
 namespace ZeroTier {
 
-class LinuxEthernetTap : public EthernetTap
+class MacKextEthernetTap : public EthernetTap
 {
 public:
-	LinuxEthernetTap(
+	MacKextEthernetTap(
 		const char *homePath,
 		const MAC &mac,
 		unsigned int mtu,
@@ -54,14 +57,11 @@ public:
 		void (*handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 		void *arg);
 
-	virtual ~LinuxEthernetTap();
+	virtual ~MacKextEthernetTap();
 
 	virtual void setEnabled(bool en);
 	virtual bool enabled() const;
 	virtual bool addIp(const InetAddress &ip);
-#ifdef __SYNOLOGY__
-	bool addIpSyn(std::vector<InetAddress> ips);
-#endif
 	virtual bool removeIp(const InetAddress &ip);
 	virtual std::vector<InetAddress> ips() const;
 	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
@@ -82,9 +82,10 @@ private:
 	std::string _dev;
 	std::vector<MulticastGroup> _multicastGroups;
 	unsigned int _mtu;
+	unsigned int _metric;
 	int _fd;
 	int _shutdownSignalPipe[2];
-	std::atomic_bool _enabled;
+	volatile bool _enabled;
 };
 
 } // namespace ZeroTier
