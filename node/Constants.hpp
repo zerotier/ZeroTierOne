@@ -547,6 +547,15 @@
 #define ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH 120000
 
 /**
+ * Interval between direct path pushes in milliseconds if we are currently in multipath
+ * mode. In this mode the distinction between ZT_DIRECT_PATH_PUSH_INTERVAL and
+ * ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH does not exist since we want to inform other
+ * peers of this peer's new link/address as soon as possible so that both peers can
+ * begin forming an aggregated link.
+ */
+#define ZT_DIRECT_PATH_PUSH_INTERVAL_MULTIPATH ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH / 16
+
+/**
  * Time horizon for push direct paths cutoff
  */
 #define ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME 30000

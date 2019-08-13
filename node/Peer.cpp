@@ -210,7 +210,8 @@ void Peer::received(
 	// is done less frequently.
 	if (this->trustEstablished(now)) {
 		const int64_t sinceLastPush = now - _lastDirectPathPushSent;
-		if (sinceLastPush >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH : ZT_DIRECT_PATH_PUSH_INTERVAL)) {
+		if (sinceLastPush >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH : ZT_DIRECT_PATH_PUSH_INTERVAL)
+			|| (_canUseMultipath && (sinceLastPush >= (ZT_DIRECT_PATH_PUSH_INTERVAL_MULTIPATH)))) {
 			_lastDirectPathPushSent = now;
 			std::vector<InetAddress> pathsToPush(RR->node->directPaths());
 			if (pathsToPush.size() > 0) {
