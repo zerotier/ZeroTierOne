@@ -401,7 +401,7 @@
 /**
  * How often an aggregate link statistics report is emitted into this tracing system
  */
-#define ZT_PATH_AGGREGATE_STATS_REPORT_INTERVAL 60000
+#define ZT_PATH_AGGREGATE_STATS_REPORT_INTERVAL 30000
 
 /**
  * How much an aggregate link's component paths can vary from their target allocation
@@ -467,7 +467,7 @@
  * by default to avoid increasing idle bandwidth use for regular
  * links.
  */
-#define ZT_MULTIPATH_PEER_PING_PERIOD 5000
+#define ZT_MULTIPATH_PEER_PING_PERIOD (ZT_PEER_PING_PERIOD / 10)
 
 /**
  * Paths are considered expired if they have not sent us a real packet in this long

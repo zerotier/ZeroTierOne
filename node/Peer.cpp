@@ -782,9 +782,6 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 	unsigned int sent = 0;
 	Mutex::Lock _l(_paths_m);
 
-	const bool sendFullHello = ((now - _lastSentFullHello) >= ZT_PEER_PING_PERIOD);
-	_lastSentFullHello = now;
-
 	processBackgroundPeerTasks(now);
 
 	// Emit traces regarding aggregate link status
@@ -814,6 +811,9 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 			maxPriority = std::max(_paths[i].priority,maxPriority);
 		else break;
 	}
+
+	const bool sendFullHello = ((now - _lastSentFullHello) >= ZT_PEER_PING_PERIOD);
+	_lastSentFullHello = now;
 
 	unsigned int j = 0;
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
