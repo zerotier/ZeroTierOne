@@ -1,3 +1,10 @@
+zerotier-one (1.4.2-2) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+  * This is a new build that fixes a binary build issue with containers and SELinux
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Thu, 04 Aug 2019 01:00:00 -0700
+
 zerotier-one (1.4.2) unstable; urgency=medium
 
   * See https://github.com/zerotier/ZeroTierOne for release notes.
