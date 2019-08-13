@@ -553,7 +553,7 @@
  * peers of this peer's new link/address as soon as possible so that both peers can
  * begin forming an aggregated link.
  */
-#define ZT_DIRECT_PATH_PUSH_INTERVAL_MULTIPATH ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH / 16
+#define ZT_DIRECT_PATH_PUSH_INTERVAL_MULTIPATH (ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH / 16)
 
 /**
  * Time horizon for push direct paths cutoff
