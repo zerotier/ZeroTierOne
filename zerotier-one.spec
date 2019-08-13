@@ -14,7 +14,7 @@ BuildRequires:  systemd
 BuildRequires:  systemd
 %endif
 
-Requires:       iproute
+Requires:       iproute libstdc++
 
 %if 0%{?rhel} >= 7
 Requires:       systemd
