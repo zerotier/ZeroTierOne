@@ -275,7 +275,7 @@ void Peer::recordIncomingPacket(void *tPtr, const SharedPtr<Path> &path, const u
 	}
 }
 
-void Peer::computeAggregateProportionalAllocation(int64_t now)
+void Peer::computeAggregateAllocation(int64_t now)
 {
 	float maxStability = 0;
 	float totalRelativeQuality = 0;
@@ -318,7 +318,13 @@ void Peer::computeAggregateProportionalAllocation(int64_t now)
 	// Convert set of relative performances into an allocation set
 	for(uint16_t i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {
-			_paths[i].p->updateComponentAllocationOfAggregateLink((unsigned char)((_paths[i].p->relativeQuality() / totalRelativeQuality) * 255));
+
+			if (RR->node->getMultipathMode() == ZT_MULTIPATH_RANDOM) {
+				_paths[i].p->updateComponentAllocationOfAggregateLink(((float)_pathChoiceHist.countValue(i) / (float)_pathChoiceHist.count()) * 255);
+			}
+			if (RR->node->getMultipathMode() == ZT_MULTIPATH_PROPORTIONALLY_BALANCED) {
+				_paths[i].p->updateComponentAllocationOfAggregateLink((unsigned char)((_paths[i].p->relativeQuality() / totalRelativeQuality) * 255));
+			}
 		}
 	}
 }
@@ -415,6 +421,7 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 	int numAlivePaths = 0;
 	int numStalePaths = 0;
 	if (RR->node->getMultipathMode() == ZT_MULTIPATH_RANDOM) {
+		computeAggregateAllocation(now); /* This call is algorithmically inert but gives us a value to show in the status output */
 		int alivePaths[ZT_MAX_PEER_NETWORK_PATHS];
 		int stalePaths[ZT_MAX_PEER_NETWORK_PATHS];
 		memset(&alivePaths, -1, sizeof(alivePaths));
@@ -434,6 +441,7 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 		unsigned int r = _freeRandomByte;
 		if (numAlivePaths > 0) {
 			int rf = r % numAlivePaths;
+			_pathChoiceHist.push(alivePaths[rf]); // Record which path we chose
 			return _paths[alivePaths[rf]].p;
 		}
 		else if(numStalePaths > 0) {
@@ -449,7 +457,7 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 	if (RR->node->getMultipathMode() == ZT_MULTIPATH_PROPORTIONALLY_BALANCED) {
 		if ((now - _lastAggregateAllocation) >= ZT_PATH_QUALITY_COMPUTE_INTERVAL) {
 			_lastAggregateAllocation = now;
-			computeAggregateProportionalAllocation(now);
+			computeAggregateAllocation(now);
 		}
 		// Randomly choose path according to their allocations
 		float rf = _freeRandomByte;

@@ -194,7 +194,7 @@ public:
 	 *
 	 * @param now Current time
 	 */
-	void computeAggregateProportionalAllocation(int64_t now);
+	void computeAggregateAllocation(int64_t now);
 
 	/**
 	 * @return The aggregate link Packet Delay Variance (PDV)
