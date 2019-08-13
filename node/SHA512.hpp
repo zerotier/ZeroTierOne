@@ -32,7 +32,6 @@
 namespace ZeroTier {
 
 void SHA512(void *digest,const void *data,unsigned int len);
-
 void SHA384(void *digest,const void *data,unsigned int len);
 
 } // namespace ZeroTier

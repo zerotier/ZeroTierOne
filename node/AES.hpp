@@ -108,13 +108,22 @@ public:
 		return false;
 	}
 
-	// These are public so the software mode can always be tested in self-test.
-	// Normally init(), encrypt(), etc. should be used and will choose accelerated
-	// or software mode depending on hardware capability.
+private:
 	void _initSW(const uint8_t key[32]);
 	void _encryptSW(const uint8_t in[16],uint8_t out[16]) const;
 
-private:
+	union {
+#ifdef ZT_AES_AESNI
+		struct {
+			__m128i k[15];
+			__m128i h,hh,hhh,hhhh;
+		} ni;
+#endif
+		struct {
+			uint32_t k[60];
+		} sw;
+	} _k;
+
 #ifdef ZT_AES_AESNI
 	static inline __m128i _init256_1(__m128i a,__m128i b)
 	{
@@ -723,16 +732,6 @@ private:
 		_icv_crypt_aesni(y,j,icv,icvsize);
 	}
 #endif
-
-	union {
-#ifdef ZT_AES_AESNI
-		struct {
-			__m128i k[15]; // AES-NI expanded key
-			__m128i h,hh,hhh,hhhh;
-		} ni;
-#endif
-		uint32_t sw[60]; // software mode expanded key
-	} _k;
 };
 
 } // namespace ZeroTier
