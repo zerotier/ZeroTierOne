@@ -230,6 +230,11 @@ void Multicaster::send(
 				}
 			}
 		} else {
+			if (gs.txQueue.size() >= ZT_TX_QUEUE_SIZE) {
+				RR->t->outgoingNetworkFrameDropped(tPtr,network,src,mg.mac(),etherType,0,len,"multicast TX queue is full");
+				return;
+			}
+
 			const unsigned int gatherLimit = (limit - (unsigned int)gs.members.size()) + 1;
 
 			if ((gs.members.empty())||((now - gs.lastExplicitGather) >= ZT_MULTICAST_EXPLICIT_GATHER_DELAY)) {
