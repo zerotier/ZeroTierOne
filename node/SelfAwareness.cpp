@@ -49,7 +49,7 @@ namespace ZeroTier {
 class _ResetWithinScope
 {
 public:
-	_ResetWithinScope(void *tPtr,int64_t now,int inetAddressFamily,InetAddress::IpScope scope) :
+	inline _ResetWithinScope(void *tPtr,int64_t now,int inetAddressFamily,InetAddress::IpScope scope) :
 		_now(now),
 		_tPtr(tPtr),
 		_family(inetAddressFamily),

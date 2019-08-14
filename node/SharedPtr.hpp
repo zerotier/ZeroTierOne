@@ -43,11 +43,11 @@ template<typename T>
 class SharedPtr
 {
 public:
-	SharedPtr() : _ptr((T *)0) {}
-	SharedPtr(T *obj) : _ptr(obj) { ++obj->__refCount; }
-	SharedPtr(const SharedPtr &sp) : _ptr(sp._getAndInc()) {}
+	inline SharedPtr() : _ptr((T *)0) {}
+	inline SharedPtr(T *obj) : _ptr(obj) { ++obj->__refCount; }
+	inline SharedPtr(const SharedPtr &sp) : _ptr(sp._getAndInc()) {}
 
-	~SharedPtr()
+	inline ~SharedPtr()
 	{
 		if (_ptr) {
 			if (--_ptr->__refCount <= 0)

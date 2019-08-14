@@ -78,6 +78,7 @@ public:
 	typedef int difference_type;
 	typedef std::reverse_iterator<iterator> reverse_iterator;
 	typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+
 	inline iterator begin() { return _b; }
 	inline iterator end() { return (_b + _l); }
 	inline const_iterator begin() const { return _b; }

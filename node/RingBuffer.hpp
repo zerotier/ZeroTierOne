@@ -57,7 +57,7 @@ private:
 	bool wrap;
 
 public:
-	RingBuffer() :
+	inline RingBuffer() :
 		begin(0),
 		end(0),
 		wrap(false)
