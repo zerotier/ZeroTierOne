@@ -103,7 +103,11 @@ void LinuxNetLink::_setSocketTimeout(int fd, int seconds)
 #define ZT_NL_BUF_SIZE 16384
 int LinuxNetLink::_doRecv(int fd)
 {
-	char *const buf = (char *)valloc(ZT_NL_BUF_SIZE);
+	char *buf = nullptr;
+	if (posix_memalign((void **)&buf,16,ZT_NL_BUF_SIZE) != 0) {
+		fprintf(stderr,"malloc failed!\n");
+		::exit(1);
+	}
 	if (!buf) {
 		fprintf(stderr,"malloc failed!\n");
 		::exit(1);
