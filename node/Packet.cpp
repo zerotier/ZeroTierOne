@@ -905,7 +905,7 @@ void Packet::armor(const void *key,bool encryptPayload)
 		ZT_FAST_SINGLE_PASS_SALSA2012(keyStream,encryptLen + 64,(data + ZT_PACKET_IDX_IV),mangledKey);
 		Salsa20::memxor(data + ZT_PACKET_IDX_VERB,reinterpret_cast<const uint8_t *>(keyStream + 8),encryptLen);
 		uint64_t mac[2];
-		Poly1305::compute(mac,data + ZT_PACKET_IDX_VERB,size() - ZT_PACKET_IDX_VERB,keyStream);
+		poly1305(mac,data + ZT_PACKET_IDX_VERB,size() - ZT_PACKET_IDX_VERB,keyStream);
 #ifdef ZT_NO_TYPE_PUNNING
 		memcpy(data + ZT_PACKET_IDX_MAC,mac,8);
 #else
@@ -920,7 +920,7 @@ void Packet::armor(const void *key,bool encryptPayload)
 		if (encryptPayload)
 			s20.crypt12(payload,payload,payloadLen);
 		uint64_t mac[2];
-		Poly1305::compute(mac,payload,payloadLen,macKey);
+		poly1305(mac,payload,payloadLen,macKey);
 		memcpy(data + ZT_PACKET_IDX_MAC,mac,8);
 	}
 }
@@ -939,7 +939,7 @@ bool Packet::dearmor(const void *key)
 			uint64_t keyStream[(ZT_PROTO_MAX_PACKET_LENGTH + 64 + 8) / 8];
 			ZT_FAST_SINGLE_PASS_SALSA2012(keyStream,((cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012) ? (payloadLen + 64) : 64),(data + ZT_PACKET_IDX_IV),mangledKey);
 			uint64_t mac[2];
-			Poly1305::compute(mac,payload,payloadLen,keyStream);
+			poly1305(mac,payload,payloadLen,keyStream);
 #ifdef ZT_NO_TYPE_PUNNING
 			if (!Utils::secureEq(mac,data + ZT_PACKET_IDX_MAC,8))
 				return false;
@@ -954,7 +954,7 @@ bool Packet::dearmor(const void *key)
 			uint64_t macKey[4];
 			s20.crypt12(ZERO_KEY,macKey,sizeof(macKey));
 			uint64_t mac[2];
-			Poly1305::compute(mac,payload,payloadLen,macKey);
+			poly1305(mac,payload,payloadLen,macKey);
 #ifdef ZT_NO_TYPE_PUNNING
 			if (!Utils::secureEq(mac,data + ZT_PACKET_IDX_MAC,8))
 				return false;

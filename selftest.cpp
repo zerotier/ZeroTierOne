@@ -294,12 +294,12 @@ static int testCrypto()
 	std::cout << "PASS" << std::endl;
 
 	std::cout << "[crypto] Testing Poly1305... "; std::cout.flush();
-	Poly1305::compute(buf1,poly1305TV0Input,sizeof(poly1305TV0Input),poly1305TV0Key);
+	poly1305(buf1,poly1305TV0Input,sizeof(poly1305TV0Input),poly1305TV0Key);
 	if (memcmp(buf1,poly1305TV0Tag,16)) {
 		std::cout << "FAIL (1)" << std::endl;
 		return -1;
 	}
-	Poly1305::compute(buf1,poly1305TV1Input,sizeof(poly1305TV1Input),poly1305TV1Key);
+	poly1305(buf1,poly1305TV1Input,sizeof(poly1305TV1Input),poly1305TV1Key);
 	if (memcmp(buf1,poly1305TV1Tag,16)) {
 		std::cout << "FAIL (2)" << std::endl;
 		return -1;
@@ -314,7 +314,7 @@ static int testCrypto()
 		long double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
-			Poly1305::compute(buf1,bb,1234567,poly1305TV0Key);
+			poly1305(buf1,bb,1234567,poly1305TV0Key);
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();

@@ -106,7 +106,8 @@ static inline void U64TO8(unsigned char *p, unsigned long long v)
 #define U64TO8(p,v) ((*reinterpret_cast<unsigned long long *>(p)) = (v))
 #endif
 
-static inline void poly1305_init(poly1305_context *ctx, const unsigned char key[32]) {
+static inline void poly1305_init(poly1305_context *ctx, const unsigned char key[32])
+{
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
   unsigned long long t0,t1;
 
@@ -131,7 +132,8 @@ static inline void poly1305_init(poly1305_context *ctx, const unsigned char key[
   st->final = 0;
 }
 
-static inline void poly1305_blocks(poly1305_state_internal_t *st, const unsigned char *m, size_t bytes) {
+static inline void poly1305_blocks(poly1305_state_internal_t *st, const unsigned char *m, size_t bytes)
+{
   const unsigned long long hibit = (st->final) ? 0 : ((unsigned long long)1 << 40); /* 1 << 128 */
   unsigned long long r0,r1,r2;
   unsigned long long s1,s2;
@@ -181,7 +183,8 @@ static inline void poly1305_blocks(poly1305_state_internal_t *st, const unsigned
   st->h[2] = h2;
 }
 
-static inline void poly1305_finish(poly1305_context *ctx, unsigned char mac[16]) {
+static inline void poly1305_finish(poly1305_context *ctx, unsigned char mac[16])
+{
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
   unsigned long long h0,h1,h2,c;
   unsigned long long g0,g1,g2;
@@ -505,7 +508,7 @@ static inline void poly1305_update(poly1305_context *ctx, const unsigned char *m
 
 } // anonymous namespace
 
-void Poly1305::compute(void *auth,const void *data,unsigned int len,const void *key)
+void poly1305(void *auth,const void *data,unsigned int len,const void *key)
 {
   poly1305_context ctx;
   poly1305_init(&ctx,reinterpret_cast<const unsigned char *>(key));
