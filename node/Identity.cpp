@@ -84,8 +84,8 @@ static void _computeMemoryHardHash(const void *publicKey,unsigned int publicKeyB
 // threshold value.
 struct _Identity_generate_cond
 {
-	_Identity_generate_cond() {}
-	_Identity_generate_cond(unsigned char *sb,char *gm) : digest(sb),genmem(gm) {}
+	inline _Identity_generate_cond() {}
+	inline _Identity_generate_cond(unsigned char *sb,char *gm) : digest(sb),genmem(gm) {}
 	inline bool operator()(const C25519::Pair &kp) const
 	{
 		_computeMemoryHardHash(kp.pub.data,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
