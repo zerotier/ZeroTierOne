@@ -112,7 +112,7 @@ public:
 	/**
 	 * Create an empty certificate of membership
 	 */
-	CertificateOfMembership() :
+	inline CertificateOfMembership() :
 		_qualifierCount(0),
 		_signatureLength(0) {}
 
@@ -124,7 +124,7 @@ public:
 	 * @param nwid Network ID
 	 * @param issuedTo Certificate recipient
 	 */
-	CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Address &issuedTo)
+	inline CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Address &issuedTo)
 	{
 		_qualifiers[0].id = COM_RESERVED_ID_TIMESTAMP;
 		_qualifiers[0].value = timestamp;
@@ -146,7 +146,7 @@ public:
 	 * @param startAt Position to start in buffer
 	 */
 	template<unsigned int C>
-	CertificateOfMembership(const Buffer<C> &b,unsigned int startAt = 0)
+	inline CertificateOfMembership(const Buffer<C> &b,unsigned int startAt = 0)
 	{
 		deserialize(b,startAt);
 	}

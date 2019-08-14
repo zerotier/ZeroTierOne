@@ -46,15 +46,15 @@ namespace ZeroTier {
 class Address
 {
 public:
-	Address() : _a(0) {}
-	Address(const Address &a) : _a(a._a) {}
-	Address(uint64_t a) : _a(a & 0xffffffffffULL) {}
+	inline Address() : _a(0) {}
+	inline Address(const Address &a) : _a(a._a) {}
+	inline Address(uint64_t a) : _a(a & 0xffffffffffULL) {}
 
 	/**
 	 * @param bits Raw address -- 5 bytes, big-endian byte order
 	 * @param len Length of array
 	 */
-	Address(const void *bits,unsigned int len) { setTo(bits,len); }
+	inline Address(const void *bits,unsigned int len) { setTo(bits,len); }
 
 	inline Address &operator=(const Address &a) { _a = a._a; return *this; }
 	inline Address &operator=(const uint64_t a) { _a = (a & 0xffffffffffULL); return *this; }

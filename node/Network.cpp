@@ -32,7 +32,6 @@
 #include "../include/ZeroTierDebug.h"
 
 #include "Constants.hpp"
-#include "../version.h"
 #include "Network.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "MAC.hpp"

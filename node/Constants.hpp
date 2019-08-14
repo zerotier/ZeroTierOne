@@ -29,6 +29,22 @@
 
 #include "../include/ZeroTierOne.h"
 
+#if __has_include("../version.h")
+#include "../version.h"
+#else /* dummy values for use inside IDEs, etc. */
+#define ZEROTIER_ONE_VERSION_MAJOR 255
+#define ZEROTIER_ONE_VERSION_MINOR 255
+#define ZEROTIER_ONE_VERSION_REVISION 255
+#define ZEROTIER_ONE_VERSION_BUILD 255
+#endif
+
+#ifndef ZT_BUILD_ARCHITECTURE
+#define ZT_BUILD_ARCHITECTURE 0
+#endif
+#ifndef ZT_BUILD_PLATFORM
+#define ZT_BUILD_PLATFORM 0
+#endif
+
 //
 // This include file also auto-detects and canonicalizes some environment
 // information defines:
@@ -602,11 +618,6 @@
  * How long is a path or peer considered to have a trust relationship with us (for e.g. relay policy) since last trusted established packet?
  */
 #define ZT_TRUST_EXPIRATION 600000
-
-/**
- * Enable support for older network configurations from older (pre-1.1.6) controllers
- */
-#define ZT_SUPPORT_OLD_STYLE_NETCONF 1
 
 /**
  * Size of a buffer to store either a C25519 or an ECC P-384 signature

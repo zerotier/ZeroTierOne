@@ -30,7 +30,6 @@
 
 #include <list>
 
-#include "../version.h"
 #include "../include/ZeroTierOne.h"
 
 #include "Constants.hpp"

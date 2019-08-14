@@ -30,7 +30,6 @@
 #include <stdint.h>
 
 #include "../node/Constants.hpp"
-#include "../version.h"
 
 #ifdef __WINDOWS__
 #include <WinSock2.h>

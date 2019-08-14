@@ -62,7 +62,7 @@ class Network;
 class IncomingPacket : public Packet
 {
 public:
-	IncomingPacket() :
+	inline IncomingPacket() :
 		Packet(),
 		_receiveTime(0)
 	{
@@ -77,7 +77,7 @@ public:
 	 * @param now Current time
 	 * @throws std::out_of_range Range error processing packet
 	 */
-	IncomingPacket(const void *data,unsigned int len,const SharedPtr<Path> &path,int64_t now) :
+	inline IncomingPacket(const void *data,unsigned int len,const SharedPtr<Path> &path,int64_t now) :
 		Packet(data,len),
 		_receiveTime(now),
 		_path(path)

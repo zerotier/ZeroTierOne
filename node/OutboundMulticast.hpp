@@ -56,7 +56,7 @@ public:
 	 *
 	 * It must be initialized with init().
 	 */
-	OutboundMulticast() {}
+	inline OutboundMulticast() {}
 
 	/**
 	 * Initialize outbound multicast

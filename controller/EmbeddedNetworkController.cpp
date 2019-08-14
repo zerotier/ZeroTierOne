@@ -42,8 +42,14 @@
 #include <thread>
 #include <memory>
 
+#include "../node/Constants.hpp"
+#include "../node/Node.hpp"
+#include "../node/CertificateOfMembership.hpp"
+#include "../node/NetworkConfig.hpp"
+#include "../node/Dictionary.hpp"
+#include "../node/MAC.hpp"
+
 #include "../include/ZeroTierOne.h"
-#include "../version.h"
 
 #include "EmbeddedNetworkController.hpp"
 #include "LFDB.hpp"
@@ -51,12 +57,6 @@
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 #include "PostgreSQL.hpp"
 #endif
-
-#include "../node/Node.hpp"
-#include "../node/CertificateOfMembership.hpp"
-#include "../node/NetworkConfig.hpp"
-#include "../node/Dictionary.hpp"
-#include "../node/MAC.hpp"
 
 using json = nlohmann::json;
 

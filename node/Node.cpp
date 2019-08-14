@@ -30,8 +30,6 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "../version.h"
-
 #include "Constants.hpp"
 #include "SharedPtr.hpp"
 #include "Node.hpp"
@@ -573,10 +571,6 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,cons
 {
 	if (!Path::isAddressValidForPath(remoteAddress))
 		return false;
-
-	if (RR->topology->isProhibitedEndpoint(ztaddr,remoteAddress))
-		return false;
-
 	{
 		Mutex::Lock _l(_networks_m);
 		Hashtable< uint64_t,SharedPtr<Network> >::Iterator i(_networks);
@@ -591,7 +585,6 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,cons
 			}
 		}
 	}
-
 	return ( (_cb.pathCheckFunction) ? (_cb.pathCheckFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ztaddr.toInt(),localSocket,reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0) : true);
 }
 

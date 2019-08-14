@@ -70,16 +70,19 @@
  * 9  - 1.2.0 ... 1.2.14
  * 10 - 1.4.0 ... 1.6.0
  *    + Multipath capability and load balancing
- * 11 - 1.6.0 ... CURRENT
+ * 11 - 2.0.0 ... CURRENT
  *    + Peer-to-peer multicast replication (optional)
  *    + Old planet/moon stuff is DEAD!
+ *    + AES256-GCM encryption is now the default
+ *    + NIST P-384 type identities now supported (25519 still default)
+ *    + Min proto version is now 8 (1.1.17 and newer)
  */
 #define ZT_PROTO_VERSION 11
 
 /**
  * Minimum supported protocol version
  */
-#define ZT_PROTO_VERSION_MIN 4
+#define ZT_PROTO_VERSION_MIN 8
 
 /**
  * Maximum hop count allowed by packet structure (3 bits, 0-7)
@@ -406,18 +409,18 @@ public:
 	class Fragment : public Buffer<ZT_PROTO_MAX_PACKET_LENGTH>
 	{
 	public:
-		Fragment() :
+		inline Fragment() :
 			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>()
 		{
 		}
 
 		template<unsigned int C2>
-		Fragment(const Buffer<C2> &b) :
+		inline Fragment(const Buffer<C2> &b) :
 			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
 		{
 		}
 
-		Fragment(const void *data,unsigned int len) :
+		inline Fragment(const void *data,unsigned int len) :
 			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(data,len)
 		{
 		}
@@ -431,7 +434,7 @@ public:
 		 * @param fragNo Which fragment (>= 1, since 0 is Packet with end chopped off)
 		 * @param fragTotal Total number of fragments (including 0)
 		 */
-		Fragment(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
+		inline Fragment(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
 		{
 			init(p,fragStart,fragLen,fragNo,fragTotal);
 		}
@@ -1003,12 +1006,12 @@ public:
 	};
 
 	template<unsigned int C2>
-	Packet(const Buffer<C2> &b) :
+	inline Packet(const Buffer<C2> &b) :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
 	{
 	}
 
-	Packet(const void *data,unsigned int len) :
+	inline Packet(const void *data,unsigned int len) :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(data,len)
 	{
 	}
@@ -1020,7 +1023,7 @@ public:
 	 * Use the header access methods (setDestination() and friends) to fill out
 	 * the header. Payload should be appended; initial size is header size.
 	 */
-	Packet() :
+	inline Packet() :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(ZT_PROTO_MIN_PACKET_LENGTH)
 	{
 		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
@@ -1036,7 +1039,7 @@ public:
 	 * @param prototype Prototype packet
 	 * @param dest Destination ZeroTier address for new packet
 	 */
-	Packet(const Packet &prototype,const Address &dest) :
+	inline Packet(const Packet &prototype,const Address &dest) :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(prototype)
 	{
 		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
@@ -1050,7 +1053,7 @@ public:
 	 * @param source Source ZT address
 	 * @param v Verb
 	 */
-	Packet(const Address &dest,const Address &source,const Verb v) :
+	inline Packet(const Address &dest,const Address &source,const Verb v) :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(ZT_PROTO_MIN_PACKET_LENGTH)
 	{
 		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);

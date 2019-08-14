@@ -64,19 +64,19 @@ public:
 		P384 = ZT_CRYPTO_ALG_P384      // Type 1 -- NIST P-384 ECDH and ECDSA (2.0+ only)
 	};
 
-	Identity() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
-	Identity(const Identity &id) { memcpy(reinterpret_cast<void *>(this),&id,sizeof(Identity)); }
+	inline Identity() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
+	inline Identity(const Identity &id) { memcpy(reinterpret_cast<void *>(this),&id,sizeof(Identity)); }
 
-	Identity(const char *str)
+	inline Identity(const char *str)
 	{
 		if (!fromString(str))
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 	}
 
 	template<unsigned int C>
-	Identity(const Buffer<C> &b,unsigned int startAt = 0) { deserialize(b,startAt); }
+	inline Identity(const Buffer<C> &b,unsigned int startAt = 0) { deserialize(b,startAt); }
 
-	~Identity() { Utils::burn(reinterpret_cast<void *>(this),sizeof(Identity)); }
+	inline ~Identity() { Utils::burn(reinterpret_cast<void *>(this),sizeof(Identity)); }
 
 	inline void zero() { Utils::burn(reinterpret_cast<void *>(this),sizeof(Identity)); }
 

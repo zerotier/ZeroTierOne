@@ -124,8 +124,8 @@ private:
 		} sw;
 	} _k;
 
-#ifdef ZT_AES_AESNI
-	static inline __m128i _init256_1(__m128i a,__m128i b)
+#ifdef ZT_AES_AESNI /********************************************************/
+	static inline __m128i _init256_1_aesni(__m128i a,__m128i b)
 	{
 		__m128i x,y;
 		b = _mm_shuffle_epi32(b,0xff);
@@ -138,7 +138,7 @@ private:
 		x = _mm_xor_si128(x,b);
 		return x;
 	}
-	static inline __m128i _init256_2(__m128i a,__m128i b)
+	static inline __m128i _init256_2_aesni(__m128i a,__m128i b)
 	{
 		__m128i x,y,z;
 		y = _mm_aeskeygenassist_si128(a,0x00);
@@ -154,23 +154,25 @@ private:
 	}
 	inline void _init_aesni(const uint8_t key[32])
 	{
+		/* Init AES itself */
 		__m128i t1,t2;
 		_k.ni.k[0] = t1 = _mm_loadu_si128((const __m128i *)key);
 		_k.ni.k[1] = t2 = _mm_loadu_si128((const __m128i *)(key+16));
-		_k.ni.k[2] = t1 = _init256_1(t1,_mm_aeskeygenassist_si128(t2,0x01));
-		_k.ni.k[3] = t2 = _init256_2(t1,t2);
-		_k.ni.k[4] = t1 = _init256_1(t1,_mm_aeskeygenassist_si128(t2,0x02));
-		_k.ni.k[5] = t2 = _init256_2(t1,t2);
-		_k.ni.k[6] = t1 = _init256_1(t1,_mm_aeskeygenassist_si128(t2,0x04));
-		_k.ni.k[7] = t2 = _init256_2(t1,t2);
-		_k.ni.k[8] = t1 = _init256_1(t1,_mm_aeskeygenassist_si128(t2,0x08));
-		_k.ni.k[9] = t2 = _init256_2(t1,t2);
-		_k.ni.k[10] = t1 = _init256_1(t1,_mm_aeskeygenassist_si128(t2,0x10));
-		_k.ni.k[11] = t2 = _init256_2(t1,t2);
-		_k.ni.k[12] = t1 = _init256_1(t1,_mm_aeskeygenassist_si128(t2,0x20));
-		_k.ni.k[13] = t2 = _init256_2(t1,t2);
-		_k.ni.k[14] = _init256_1(t1,_mm_aeskeygenassist_si128(t2,0x40));
+		_k.ni.k[2] = t1 = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x01));
+		_k.ni.k[3] = t2 = _init256_2_aesni(t1,t2);
+		_k.ni.k[4] = t1 = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x02));
+		_k.ni.k[5] = t2 = _init256_2_aesni(t1,t2);
+		_k.ni.k[6] = t1 = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x04));
+		_k.ni.k[7] = t2 = _init256_2_aesni(t1,t2);
+		_k.ni.k[8] = t1 = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x08));
+		_k.ni.k[9] = t2 = _init256_2_aesni(t1,t2);
+		_k.ni.k[10] = t1 = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x10));
+		_k.ni.k[11] = t2 = _init256_2_aesni(t1,t2);
+		_k.ni.k[12] = t1 = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x20));
+		_k.ni.k[13] = t2 = _init256_2_aesni(t1,t2);
+		_k.ni.k[14] = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x40));
 
+		/* Init GCM / GHASH */
 		__m128i h = _mm_xor_si128(_mm_setzero_si128(),_k.ni.k[0]);
 		h = _mm_aesenc_si128(h,_k.ni.k[1]);
 		h = _mm_aesenc_si128(h,_k.ni.k[2]);
@@ -357,7 +359,6 @@ private:
 		return x;
 	}
 	static inline void _htoun64_aesni(void *network,const uint64_t host) { *((uint64_t *)network) = Utils::hton(host); }
-	static inline void _htoun32_aesni(void *network,const uint64_t host) { *((uint32_t *)network) = Utils::hton(host); }
 
 	inline __m128i _create_j_aesni(const uint8_t *iv) const
 	{
@@ -731,7 +732,7 @@ private:
 		y = _icv_tailer_aesni(y,alen,len);
 		_icv_crypt_aesni(y,j,icv,icvsize);
 	}
-#endif
+#endif /* ZT_AES_AESNI ******************************************************/
 };
 
 } // namespace ZeroTier

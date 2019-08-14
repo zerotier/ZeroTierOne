@@ -696,6 +696,27 @@ static int testOther()
 	char buf2[4096];
 	char buf3[1024];
 
+	std::cout << "[other] Testing bit count... "; std::cout.flush();
+	uint32_t i32 = 0;
+	uint64_t i64 = 0;
+	for(int i=0;i<=32;++i) {
+		if ((int)Utils::countBits(i32) != i) {
+			std::cout << "FAIL!" << std::endl;
+			return -1;
+		}
+		i32 <<= 1;
+		i32 |= 1;
+	}
+	for(int i=0;i<=64;++i) {
+		if ((int)Utils::countBits(i64) != i) {
+			std::cout << "FAIL!" << std::endl;
+			return -1;
+		}
+		i64 <<= 1;
+		i64 |= 1;
+	}
+	std::cout << "PASS" << std::endl;
+
 	std::cout << "[other] Testing hex/unhex... "; std::cout.flush();
 	Utils::getSecureRandom(buf,(unsigned int)sizeof(buf));
 	Utils::hex(buf,(unsigned int)sizeof(buf),buf2);

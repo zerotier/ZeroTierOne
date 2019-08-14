@@ -46,30 +46,51 @@ namespace ZeroTier {
 /**
  * Signed information about a node's location on the network
  * 
- * A locator can be stored in DNS as a series of TXT records with a DNS name
- * that includes a public key that can be used to validate the locator's
- * signature. That way DNS records can't be spoofed even if no DNSSEC or
- * anything else is present to secure DNS.
+ * A locator is a signed record that contains information about where a node
+ * may be found. It can contain static physical addresses or virtual ZeroTier
+ * addresses of nodes that can forward to the target node. Locator records
+ * can be stored in signed DNS TXT record sets, in LF by roots, in caches,
+ * etc. Version 2.x nodes can sign their own locators. Roots can create
+ * signed locators using their own signature for version 1.x nodes. Locators
+ * signed by the node whose location they describe always take precedence
+ * over locators signed by other nodes.
  */
 class Locator
 {
 public:
-	Locator() : _signatureLength(0) {}
+	inline Locator() : _signatureLength(0) {}
+
+	inline const Identity &id() const { return _id; }
+	inline const Identity &signer() const { return ((_signedBy) ? _signedBy : _id); }
 
 	inline const std::vector<InetAddress> &phy() const { return _physical; }
 	inline const std::vector<Identity> &virt() const { return _virtual; }
 
+	/**
+	 * Add a physical address to this locator (call before finish() to build a new Locator)
+	 */
 	inline void add(const InetAddress &ip)
 	{
 		if (_physical.size() < ZT_LOCATOR_MAX_PHYSICAL_ADDRESSES)
 			_physical.push_back(ip);
 	}
+
+	/**
+	 * Add a forwarding ZeroTier node to this locator (call before finish() to build a new Locator)
+	 */
 	inline void add(const Identity &zt)
 	{
 		if (_virtual.size() < ZT_LOCATOR_MAX_VIRTUAL_ADDRESSES)
 			_virtual.push_back(zt);
 	}
 
+	/**
+	 * Method to be called after add() is called for each address or forwarding node
+	 * 
+	 * This sets timestamp and ID information and sorts and deduplicates target
+	 * lists but does not sign the locator. The sign() method should be used after
+	 * finish().
+	 */
 	inline void finish(const Identity &id,const int64_t ts)
 	{
 		_ts = ts;
@@ -80,6 +101,9 @@ public:
 		_virtual.erase(std::unique(_virtual.begin(),_virtual.end()),_virtual.end());
 	}
 
+	/**
+	 * Sign this locator (must be called after finish())
+	 */
 	inline bool sign(const Identity &signingId)
 	{
 		if (!signingId.hasPrivate())
@@ -101,6 +125,9 @@ public:
 		}
 	}
 
+	/**
+	 * Verify this locator's signature against its embedded signing identity
+	 */
 	inline bool verify() const
 	{
 		if ((_signatureLength == 0)||(_signatureLength > sizeof(_signature)))
@@ -118,6 +145,18 @@ public:
 		}
 	}
 
+	/**
+	 * Make DNS TXT records for this locator
+	 * 
+	 * DNS TXT records are signed by an entirely separate key that is added along
+	 * with DNS names to nodes to allow them to verify DNS results. It's separate
+	 * from the locator's signature so that a single DNS record can point to more
+	 * than one locator or be served by things like geo-aware DNS.
+	 * 
+	 * Right now only NIST P-384 is supported for signing DNS records. NIST EDDSA
+	 * is used here so that FIPS-only nodes can always use DNS to locate roots as
+	 * FIPS-only nodes may be required to disable non-FIPS algorithms.
+	 */
 	inline std::vector<Str> makeTxtRecords(const uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE],const uint8_t p384SigningKeyPrivate[ZT_ECC384_PUBLIC_KEY_SIZE])
 	{
 		uint8_t s384[48],dnsSig[ZT_ECC384_SIGNATURE_SIZE];
@@ -144,6 +183,19 @@ public:
 		return txtRecords;
 	}
 
+	/**
+	 * Decode TXT records
+	 * 
+	 * The supplied TXT records must be sorted in ascending natural sort order prior
+	 * to calling this method. The iterators supplied must be read iterators that
+	 * point to string objects supporting the c_str() method, which can be Str or
+	 * std::string.
+	 * 
+	 * This method checks the decoded locator's signature using the supplied DNS TXT
+	 * record signing public key. False is returned if the TXT records are invalid,
+	 * incomplete, or fail signature check. If true is returned this Locator object
+	 * now contains the contents of the supplied TXT records.
+	 */
 	template<typename I>
 	inline bool decodeTxtRecords(I start,I end,const uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE])
 	{
@@ -215,7 +267,7 @@ public:
 		_ts = (int64_t)b.template at<uint64_t>(p); p += 8;
 		p += _id.deserialize(b,p);
 		const unsigned int signerCount = b[p++];
-		if (signerCount > 1)
+		if (signerCount > 1) /* only one third party signer is currently supported */
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
 		if (signerCount == 1) {
 			p += _signedBy.deserialize(b,p);
@@ -241,6 +293,25 @@ public:
 
 		return (p - startAt);
 	}
+
+	inline operator bool() const { return (_id); }
+
+	inline bool operator==(const Locator &l) const { return ((_ts == l._ts)&&(_id == l._id)&&(_signedBy == l._signedBy)&&(_physical == l._physical)&&(_virtual == l._virtual)&&(_signatureLength == l._signatureLength)&&(memcmp(_signature,l._signature,_signatureLength) == 0)); }
+	inline bool operator!=(const Locator &l) const { return (!(*this == l)); }
+	inline bool operator<(const Locator &l) const
+	{
+		if (_id < l._id) return true;
+		if (_ts < l._ts) return true;
+		if (_signedBy < l._signedBy) return true;
+		if (_physical < l._physical) return true;
+		if (_virtual < l._virtual) return true;
+		return false;
+	}
+	inline bool operator>(const Locator &l) const { return (l < *this); }
+	inline bool operator<=(const Locator &l) const { return (!(l < *this)); }
+	inline bool operator>=(const Locator &l) const { return (!(*this < l)); }
+
+	inline unsigned long hashCode() const { return (unsigned long)(_id.address().toInt() ^ (uint64_t)_ts); }
 
 private:
 	int64_t _ts;

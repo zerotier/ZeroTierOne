@@ -38,7 +38,6 @@
 #include <mutex>
 #include <condition_variable>
 
-#include "../version.h"
 #include "../include/ZeroTierOne.h"
 
 #include "../node/Constants.hpp"

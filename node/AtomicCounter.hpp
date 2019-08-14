@@ -41,7 +41,7 @@ namespace ZeroTier {
 class AtomicCounter
 {
 public:
-	AtomicCounter() { _v = 0; }
+	inline AtomicCounter() { _v = 0; }
 
 	inline int load() const
 	{
@@ -71,7 +71,7 @@ public:
 	}
 
 private:
-	AtomicCounter(const AtomicCounter &) {}
+	inline AtomicCounter(const AtomicCounter &) {}
 	const AtomicCounter &operator=(const AtomicCounter &) { return *this; }
 
 #ifdef __GNUC__

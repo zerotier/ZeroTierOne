@@ -43,7 +43,7 @@ namespace ZeroTier {
 class Mutex
 {
 public:
-	Mutex() :
+	inline Mutex() :
 		nextTicket(0),
 		nowServing(0)
 	{
@@ -69,29 +69,15 @@ public:
 	class Lock
 	{
 	public:
-		Lock(Mutex &m) :
-			_m(&m)
-		{
-			m.lock();
-		}
-
-		Lock(const Mutex &m) :
-			_m(const_cast<Mutex *>(&m))
-		{
-			_m->lock();
-		}
-
-		~Lock()
-		{
-			_m->unlock();
-		}
-
+		inline Lock(Mutex &m) : _m(&m) { m.lock(); }
+		inline Lock(const Mutex &m) : _m(const_cast<Mutex *>(&m)) { _m->lock(); }
+		inline ~Lock() { _m->unlock(); }
 	private:
 		Mutex *const _m;
 	};
 
 private:
-	Mutex(const Mutex &) {}
+	inline Mutex(const Mutex &) {}
 	const Mutex &operator=(const Mutex &) { return *this; }
 
 	uint16_t nextTicket;
@@ -104,12 +90,12 @@ private:
 class Mutex
 {
 public:
-	Mutex()
+	inline Mutex()
 	{
 		pthread_mutex_init(&_mh,(const pthread_mutexattr_t *)0);
 	}
 
-	~Mutex()
+	inline ~Mutex()
 	{
 		pthread_mutex_destroy(&_mh);
 	}
@@ -127,19 +113,19 @@ public:
 	class Lock
 	{
 	public:
-		Lock(Mutex &m) :
+		inline Lock(Mutex &m) :
 			_m(&m)
 		{
 			m.lock();
 		}
 
-		Lock(const Mutex &m) :
+		inline Lock(const Mutex &m) :
 			_m(const_cast<Mutex *>(&m))
 		{
 			_m->lock();
 		}
 
-		~Lock()
+		inline ~Lock()
 		{
 			_m->unlock();
 		}
@@ -149,7 +135,7 @@ public:
 	};
 
 private:
-	Mutex(const Mutex &) {}
+	inline Mutex(const Mutex &) {}
 	const Mutex &operator=(const Mutex &) { return *this; }
 
 	pthread_mutex_t _mh;
@@ -172,12 +158,12 @@ namespace ZeroTier {
 class Mutex
 {
 public:
-	Mutex()
+	inline Mutex()
 	{
 		InitializeCriticalSection(&_cs);
 	}
 
-	~Mutex()
+	inline ~Mutex()
 	{
 		DeleteCriticalSection(&_cs);
 	}
@@ -205,19 +191,19 @@ public:
 	class Lock
 	{
 	public:
-		Lock(Mutex &m) :
+		inline Lock(Mutex &m) :
 			_m(&m)
 		{
 			m.lock();
 		}
 
-		Lock(const Mutex &m) :
+		inline Lock(const Mutex &m) :
 			_m(const_cast<Mutex *>(&m))
 		{
 			_m->lock();
 		}
 
-		~Lock()
+		inline ~Lock()
 		{
 			_m->unlock();
 		}
@@ -227,7 +213,7 @@ public:
 	};
 
 private:
-	Mutex(const Mutex &) {}
+	inline Mutex(const Mutex &) {}
 	const Mutex &operator=(const Mutex &) { return *this; }
 
 	CRITICAL_SECTION _cs;

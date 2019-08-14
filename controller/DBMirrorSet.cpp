@@ -49,7 +49,7 @@ DBMirrorSet::DBMirrorSet(DB::ChangeListener *listener) :
 			}
 
 			for(auto db=dbs.begin();db!=dbs.end();++db) {
-				(*db)->each([this,&dbs,&db](uint64_t networkId,const nlohmann::json &network,uint64_t memberId,const nlohmann::json &member) {
+				(*db)->each([&dbs,&db](uint64_t networkId,const nlohmann::json &network,uint64_t memberId,const nlohmann::json &member) {
 					try {
 						if (network.is_object()) {
 							if (memberId == 0) {

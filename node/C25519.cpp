@@ -392,63 +392,36 @@ static inline void fcontract(u8 *output, limb *input_limbs) {
   s32 input[10];
   s32 mask;
 
-  /* |input_limbs[i]| < 2^26, so it's valid to convert to an s32. */
   for (i = 0; i < 10; i++) {
     input[i] = input_limbs[i];
   }
-
   for (j = 0; j < 2; ++j) {
     for (i = 0; i < 9; ++i) {
       if ((i & 1) == 1) {
-        /* This calculation is a time-invariant way to make input[i]
-         * non-negative by borrowing from the next-larger limb. */
-        const s32 mask = input[i] >> 31;
-        const s32 carry = -((input[i] & mask) >> 25);
+        const s32 mm = input[i] >> 31;
+        const s32 carry = -((input[i] & mm) >> 25);
         input[i] = input[i] + (carry << 25);
         input[i+1] = input[i+1] - carry;
       } else {
-        const s32 mask = input[i] >> 31;
-        const s32 carry = -((input[i] & mask) >> 26);
+        const s32 mm = input[i] >> 31;
+        const s32 carry = -((input[i] & mm) >> 26);
         input[i] = input[i] + (carry << 26);
         input[i+1] = input[i+1] - carry;
       }
     }
-
-    /* There's no greater limb for input[9] to borrow from, but we can multiply
-     * by 19 and borrow from input[0], which is valid mod 2^255-19. */
     {
-      const s32 mask = input[9] >> 31;
-      const s32 carry = -((input[9] & mask) >> 25);
+      const s32 mm = input[9] >> 31;
+      const s32 carry = -((input[9] & mm) >> 25);
       input[9] = input[9] + (carry << 25);
       input[0] = input[0] - (carry * 19);
     }
-
-    /* After the first iteration, input[1..9] are non-negative and fit within
-     * 25 or 26 bits, depending on position. However, input[0] may be
-     * negative. */
   }
-
-  /* The first borrow-propagation pass above ended with every limb
-     except (possibly) input[0] non-negative.
-
-     If input[0] was negative after the first pass, then it was because of a
-     carry from input[9]. On entry, input[9] < 2^26 so the carry was, at most,
-     one, since (2**26-1) >> 25 = 1. Thus input[0] >= -19.
-
-     In the second pass, each limb is decreased by at most one. Thus the second
-     borrow-propagation pass could only have wrapped around to decrease
-     input[0] again if the first pass left input[0] negative *and* input[1]
-     through input[9] were all zero.  In that case, input[1] is now 2^25 - 1,
-     and this last borrow-propagation step will leave input[1] non-negative. */
   {
-    const s32 mask = input[0] >> 31;
-    const s32 carry = -((input[0] & mask) >> 26);
+    const s32 mm = input[0] >> 31;
+    const s32 carry = -((input[0] & mm) >> 26);
     input[0] = input[0] + (carry << 26);
     input[1] = input[1] - carry;
   }
-
-  /* All input[i] are now non-negative. However, there might be values between
-   * 2^25 and 2^26 in a limb which is, nominally, 25 bits wide. */
   for (j = 0; j < 2; j++) {
     for (i = 0; i < 9; i++) {
       if ((i & 1) == 1) {
@@ -461,24 +434,12 @@ static inline void fcontract(u8 *output, limb *input_limbs) {
         input[i+1] += carry;
       }
     }
-
     {
       const s32 carry = input[9] >> 25;
       input[9] &= 0x1ffffff;
       input[0] += 19*carry;
     }
   }
-
-  /* If the first carry-chain pass, just above, ended up with a carry from
-   * input[9], and that caused input[0] to be out-of-bounds, then input[0] was
-   * < 2^26 + 2*19, because the carry was, at most, two.
-   *
-   * If the second pass carried from input[9] again then input[0] is < 2*19 and
-   * the input[9] -> input[0] carry didn't push input[0] out of bounds. */
-
-  /* It still remains the case that input might be between 2^255-19 and 2^255.
-   * In this case, input[1..9] must take their maximum value and input[0] must
-   * be >= (2^255-19) & 0x3ffffff, which is 0x3ffffed. */
   mask = s32_gte(input[0], 0x3ffffed);
   for (i = 1; i < 10; i++) {
     if ((i & 1) == 1) {
@@ -487,11 +448,7 @@ static inline void fcontract(u8 *output, limb *input_limbs) {
       mask &= s32_eq(input[i], 0x3ffffff);
     }
   }
-
-  /* mask is either 0xffffffff (if input >= 2^255-19) and zero otherwise. Thus
-   * this conditionally subtracts 2^255-19. */
   input[0] -= mask & 0x3ffffed;
-
   for (i = 1; i < 10; i++) {
     if ((i & 1) == 1) {
       input[i] -= mask & 0x1ffffff;
@@ -834,12 +791,10 @@ static inline crypto_uint32 times38(crypto_uint32 a)
 
 static inline void reduce_add_sub(fe25519 *r)
 {
-	crypto_uint32 t;
 	int i,rep;
-
 	for(rep=0;rep<4;rep++)
 	{
-		t = r->v[31] >> 7;
+		crypto_uint32 t = r->v[31] >> 7;
 		r->v[31] &= 127;
 		t = times19(t);
 		r->v[0] += t;
@@ -854,12 +809,10 @@ static inline void reduce_add_sub(fe25519 *r)
 
 static inline void reduce_mul(fe25519 *r)
 {
-	crypto_uint32 t;
 	int i,rep;
-
 	for(rep=0;rep<2;rep++)
 	{
-		t = r->v[31] >> 7;
+		crypto_uint32 t = r->v[31] >> 7;
 		r->v[31] &= 127;
 		t = times19(t);
 		r->v[0] += t;
@@ -876,17 +829,17 @@ static inline void reduce_mul(fe25519 *r)
 static inline void fe25519_freeze(fe25519 *r)
 {
 	int i;
-	crypto_uint32 m = equal(r->v[31],127);
+	crypto_uint32 mm = equal(r->v[31],127);
 	for(i=30;i>0;i--)
-		m &= equal(r->v[i],255);
-	m &= ge(r->v[0],237);
+		mm &= equal(r->v[i],255);
+	mm &= ge(r->v[0],237);
 
-	m = -m;
+	mm = -mm;
 
-	r->v[31] -= m&127;
+	r->v[31] -= mm&127;
 	for(i=30;i>0;i--)
-		r->v[i] -= m&255;
-	r->v[0] -= m&237;
+		r->v[i] -= mm&255;
+	r->v[0] -= mm&237;
 }
 
 static inline void fe25519_unpack(fe25519 *r, const unsigned char x[32])
@@ -1157,9 +1110,7 @@ static inline void barrett_reduce(sc25519 *r, const crypto_uint32 x[64])
 	crypto_uint32 *q3 = q2 + 33;
 	crypto_uint32 r1[33];
 	crypto_uint32 r2[33];
-	crypto_uint32 carry;
 	crypto_uint32 pb = 0;
-	crypto_uint32 b;
 
 	for (i = 0;i < 66;++i) q2[i] = 0;
 	for (i = 0;i < 33;++i) r2[i] = 0;
@@ -1167,10 +1118,8 @@ static inline void barrett_reduce(sc25519 *r, const crypto_uint32 x[64])
 	for(i=0;i<33;i++)
 		for(j=0;j<33;j++)
 			if(i+j >= 31) q2[i+j] += mu[i]*x[j+31];
-	carry = q2[31] >> 8;
-	q2[32] += carry;
-	carry = q2[32] >> 8;
-	q2[33] += carry;
+	q2[32] += (q2[31] >> 8);
+	q2[33] += (q2[32] >> 8);
 
 	for(i=0;i<33;i++)r1[i] = x[i];
 	for(i=0;i<32;i++)
@@ -1179,15 +1128,14 @@ static inline void barrett_reduce(sc25519 *r, const crypto_uint32 x[64])
 
 	for(i=0;i<32;i++)
 	{
-		carry = r2[i] >> 8;
-		r2[i+1] += carry;
+		r2[i+1] += (r2[i] >> 8);
 		r2[i] &= 0xff;
 	}
 
 	for(i=0;i<32;i++)
 	{
 		pb += r2[i];
-		b = lt(r1[i],pb);
+		crypto_uint32 b = lt(r1[i],pb);
 		r->v[i] = r1[i]-pb+(b<<8);
 		pb = b;
 	}
@@ -1225,12 +1173,11 @@ static inline void sc25519_to32bytes(unsigned char r[32], const sc25519 *x)
 
 static inline void sc25519_add(sc25519 *r, const sc25519 *x, const sc25519 *y)
 {
-	int i, carry;
+	int i;
 	for(i=0;i<32;i++) r->v[i] = x->v[i] + y->v[i];
 	for(i=0;i<31;i++)
 	{
-		carry = r->v[i] >> 8;
-		r->v[i+1] += carry;
+		r->v[i+1] += (r->v[i] >> 8);
 		r->v[i] &= 0xff;
 	}
 	reduce_add_sub(r);
@@ -1238,7 +1185,7 @@ static inline void sc25519_add(sc25519 *r, const sc25519 *x, const sc25519 *y)
 
 static inline void sc25519_mul(sc25519 *r, const sc25519 *x, const sc25519 *y)
 {
-	int i,j,carry;
+	int i,j;
 	crypto_uint32 t[64];
 	for(i=0;i<64;i++)t[i] = 0;
 
@@ -1248,8 +1195,7 @@ static inline void sc25519_mul(sc25519 *r, const sc25519 *x, const sc25519 *y)
 
 	for(i=0;i<63;i++)
 	{
-		carry = t[i] >> 8;
-		t[i+1] += carry;
+		t[i+1] += (t[i] >> 8);
 		t[i] &= 0xff;
 	}
 

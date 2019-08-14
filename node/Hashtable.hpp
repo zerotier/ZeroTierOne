@@ -49,9 +49,9 @@ class Hashtable
 private:
 	struct _Bucket
 	{
-		_Bucket(const K &k,const V &v) : k(k),v(v) {}
-		_Bucket(const K &k) : k(k),v() {}
-		_Bucket(const _Bucket &b) : k(b.k),v(b.v) {}
+		inline _Bucket(const K &k,const V &v) : k(k),v(v) {}
+		inline _Bucket(const K &k) : k(k),v() {}
+		inline _Bucket(const _Bucket &b) : k(b.k),v(b.v) {}
 		inline _Bucket &operator=(const _Bucket &b) { k = b.k; v = b.v; return *this; }
 		K k;
 		V v;
@@ -72,7 +72,7 @@ public:
 		/**
 		 * @param ht Hash table to iterate over
 		 */
-		Iterator(Hashtable &ht) :
+		inline Iterator(Hashtable &ht) :
 			_idx(0),
 			_ht(&ht),
 			_b(ht._t[0])
@@ -110,7 +110,7 @@ public:
 	/**
 	 * @param bc Initial capacity in buckets (default: 64, must be nonzero)
 	 */
-	Hashtable(unsigned long bc = 64) :
+	inline Hashtable(unsigned long bc = 64) :
 		_t(reinterpret_cast<_Bucket **>(::malloc(sizeof(_Bucket *) * bc))),
 		_bc(bc),
 		_s(0)
@@ -121,7 +121,7 @@ public:
 			_t[i] = (_Bucket *)0;
 	}
 
-	Hashtable(const Hashtable<K,V> &ht) :
+	inline Hashtable(const Hashtable<K,V> &ht) :
 		_t(reinterpret_cast<_Bucket **>(::malloc(sizeof(_Bucket *) * ht._bc))),
 		_bc(ht._bc),
 		_s(ht._s)
@@ -141,7 +141,7 @@ public:
 		}
 	}
 
-	~Hashtable()
+	inline ~Hashtable()
 	{
 		this->clear();
 		::free(_t);

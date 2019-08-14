@@ -90,20 +90,20 @@ struct InetAddress : public sockaddr_storage
 		inline std::size_t operator()(const InetAddress &a) const { return (std::size_t)a.hashCode(); }
 	};
 
-	InetAddress() { memset(this,0,sizeof(InetAddress)); }
-	InetAddress(const InetAddress &a) { memcpy(this,&a,sizeof(InetAddress)); }
-	InetAddress(const InetAddress *a) { memcpy(this,a,sizeof(InetAddress)); }
-	InetAddress(const struct sockaddr_storage &ss) { *this = ss; }
-	InetAddress(const struct sockaddr_storage *ss) { *this = ss; }
-	InetAddress(const struct sockaddr &sa) { *this = sa; }
-	InetAddress(const struct sockaddr *sa) { *this = sa; }
-	InetAddress(const struct sockaddr_in &sa) { *this = sa; }
-	InetAddress(const struct sockaddr_in *sa) { *this = sa; }
-	InetAddress(const struct sockaddr_in6 &sa) { *this = sa; }
-	InetAddress(const struct sockaddr_in6 *sa) { *this = sa; }
-	InetAddress(const void *ipBytes,unsigned int ipLen,unsigned int port) { this->set(ipBytes,ipLen,port); }
-	InetAddress(const uint32_t ipv4,unsigned int port) { this->set(&ipv4,4,port); }
-	InetAddress(const char *ipSlashPort) { this->fromString(ipSlashPort); }
+	inline InetAddress() { memset(this,0,sizeof(InetAddress)); }
+	inline InetAddress(const InetAddress &a) { memcpy(this,&a,sizeof(InetAddress)); }
+	inline InetAddress(const InetAddress *a) { memcpy(this,a,sizeof(InetAddress)); }
+	inline InetAddress(const struct sockaddr_storage &ss) { *this = ss; }
+	inline InetAddress(const struct sockaddr_storage *ss) { *this = ss; }
+	inline InetAddress(const struct sockaddr &sa) { *this = sa; }
+	inline InetAddress(const struct sockaddr *sa) { *this = sa; }
+	inline InetAddress(const struct sockaddr_in &sa) { *this = sa; }
+	inline InetAddress(const struct sockaddr_in *sa) { *this = sa; }
+	inline InetAddress(const struct sockaddr_in6 &sa) { *this = sa; }
+	inline InetAddress(const struct sockaddr_in6 *sa) { *this = sa; }
+	inline InetAddress(const void *ipBytes,unsigned int ipLen,unsigned int port) { this->set(ipBytes,ipLen,port); }
+	inline InetAddress(const uint32_t ipv4,unsigned int port) { this->set(&ipv4,4,port); }
+	inline InetAddress(const char *ipSlashPort) { this->fromString(ipSlashPort); }
 
 	inline InetAddress &operator=(const InetAddress &a)
 	{

@@ -216,7 +216,7 @@ namespace ZeroTier {
 class NetworkConfig
 {
 public:
-	NetworkConfig() :
+	inline NetworkConfig() :
 		networkId(0),
 		timestamp(0),
 		credentialTimeMaxDelta(0),

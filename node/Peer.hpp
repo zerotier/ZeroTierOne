@@ -57,10 +57,10 @@ class Peer
 	friend class SharedPtr<Peer>;
 
 private:
-	Peer() {} // disabled to prevent bugs -- should not be constructed uninitialized
+	inline Peer() {} // disabled to prevent bugs -- should not be constructed uninitialized
 
 public:
-	~Peer() { Utils::burn(_key,sizeof(_key)); }
+	inline ~Peer() { Utils::burn(_key,sizeof(_key)); }
 
 	/**
 	 * Construct a new peer

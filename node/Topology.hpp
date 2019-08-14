@@ -56,8 +56,10 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
-	Topology(const RuntimeEnvironment *renv,void *tPtr);
-	~Topology();
+	inline Topology(const RuntimeEnvironment *renv,void *tPtr) :
+		RR(renv),
+		_numConfiguredPhysicalPaths(0) {}
+	inline ~Topology() {}
 
 	/**
 	 * Add a peer to database
@@ -69,7 +71,18 @@ public:
 	 * @param peer Peer to add
 	 * @return New or existing peer (should replace 'peer')
 	 */
-	SharedPtr<Peer> addPeer(void *tPtr,const SharedPtr<Peer> &peer);
+	inline SharedPtr<Peer> addPeer(void *tPtr,const SharedPtr<Peer> &peer)
+	{
+		SharedPtr<Peer> np;
+		{
+			Mutex::Lock _l(_peers_m);
+			SharedPtr<Peer> &hp = _peers[peer->address()];
+			if (!hp)
+				hp = peer;
+			np = hp;
+		}
+		return np;
+	}
 
 	/**
 	 * Get a peer from its address
@@ -78,15 +91,37 @@ public:
 	 * @param zta ZeroTier address of peer
 	 * @return Peer or NULL if not found
 	 */
-	SharedPtr<Peer> getPeer(void *tPtr,const Address &zta);
+	inline SharedPtr<Peer> getPeer(void *tPtr,const Address &zta) const
+	{
+		if (zta == RR->identity.address())
+			return SharedPtr<Peer>();
+		{
+			Mutex::Lock _l(_peers_m);
+			const SharedPtr<Peer> *const ap = _peers.get(zta);
+			if (ap)
+				return *ap;
+		}
+		return SharedPtr<Peer>();
+	}
 
 	/**
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param zta ZeroTier address of peer
 	 * @return Identity or NULL identity if not found
 	 */
-	Identity getIdentity(void *tPtr,const Address &zta);
-
+	inline Identity getIdentity(void *tPtr,const Address &zta)
+	{
+		if (zta == RR->identity.address()) {
+			return RR->identity;
+		} else {
+			Mutex::Lock _l(_peers_m);
+			const SharedPtr<Peer> *const ap = _peers.get(zta);
+			if (ap)
+				return (*ap)->identity();
+		}
+		return Identity();
+	}
+	
 	/**
 	 * Get a peer only if it is presently in memory (no disk cache)
 	 *
@@ -127,35 +162,20 @@ public:
 	 *
 	 * @return Upstream or NULL if none available
 	 */
-	SharedPtr<Peer> getUpstreamPeer();
+	inline SharedPtr<Peer> getUpstreamPeer() const
+	{
+		return SharedPtr<Peer>();
+	}
 
-	/**
-	 * @param id Identity to check
-	 * @return True if this is a root server or a network preferred relay from one of our networks
-	 */
-	bool isUpstream(const Identity &id) const;
-
-	/**
-	 * @param ztaddr ZeroTier address
-	 * @return Peer role for this device
-	 */
-	ZT_PeerRole role(const Address &ztaddr) const;
-
-	/**
-	 * Check for prohibited endpoints
-	 *
-	 * Right now this returns true if the designated ZT address is a root and if
-	 * the IP (IP only, not port) does not equal any of the IPs defined in the
-	 * current World. This is an extra little security feature in case root keys
-	 * get appropriated or something.
-	 *
-	 * Otherwise it returns false.
-	 *
-	 * @param ztaddr ZeroTier address
-	 * @param ipaddr IP address
-	 * @return True if this ZT/IP pair should not be allowed to be used
-	 */
-	bool isProhibitedEndpoint(const Address &ztaddr,const InetAddress &ipaddr) const;
+	inline bool isUpstream(const Identity &id) const
+	{
+		return false;
+	}
+	
+	inline ZT_PeerRole role(const Address &ztaddr) const
+	{
+		return ZT_PEER_ROLE_LEAF;
+	}
 
 	/**
 	 * Gets upstreams to contact and their stable endpoints (if known)
@@ -175,10 +195,30 @@ public:
 		return std::vector<Address>();
 	}
 
-	/**
-	 * Clean and flush database
-	 */
-	void doPeriodicTasks(void *tPtr,int64_t now);
+	inline void doPeriodicTasks(void *tPtr,int64_t now)
+	{
+		{
+			Mutex::Lock _l1(_peers_m);
+			Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
+			Address *a = (Address *)0;
+			SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+			while (i.next(a,p)) {
+				if (!(*p)->isAlive(now)) {
+					_peers.erase(*a);
+				}
+			}
+		}
+		{
+			Mutex::Lock _l(_paths_m);
+			Hashtable< Path::HashKey,SharedPtr<Path> >::Iterator i(_paths);
+			Path::HashKey *k = (Path::HashKey *)0;
+			SharedPtr<Path> *p = (SharedPtr<Path> *)0;
+			while (i.next(k,p)) {
+				if (p->references() <= 1)
+					_paths.erase(*k);
+			}
+		}
+	}
 
 	/**
 	 * @param now Current time
@@ -218,7 +258,7 @@ public:
 	}
 
 	/**
-	 * @return All currently active peers by address (unsorted)
+	 * @return All peers by address (unsorted)
 	 */
 	inline std::vector< std::pair< Address,SharedPtr<Peer> > > allPeers() const
 	{
@@ -294,21 +334,46 @@ public:
 	/**
 	 * Set or clear physical path configuration (called via Node::setPhysicalPathConfiguration)
 	 */
-	void setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig);
+	inline void setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig)
+	{
+		if (!pathNetwork) {
+			_numConfiguredPhysicalPaths = 0;
+		} else {
+			std::map<InetAddress,ZT_PhysicalPathConfiguration> cpaths;
+			for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i)
+				cpaths[_physicalPathConfig[i].first] = _physicalPathConfig[i].second;
+	
+			if (pathConfig) {
+				ZT_PhysicalPathConfiguration pc(*pathConfig);
+	
+				if (pc.mtu <= 0)
+					pc.mtu = ZT_DEFAULT_PHYSMTU;
+				else if (pc.mtu < ZT_MIN_PHYSMTU)
+					pc.mtu = ZT_MIN_PHYSMTU;
+				else if (pc.mtu > ZT_MAX_PHYSMTU)
+					pc.mtu = ZT_MAX_PHYSMTU;
+	
+				cpaths[*(reinterpret_cast<const InetAddress *>(pathNetwork))] = pc;
+			} else {
+				cpaths.erase(*(reinterpret_cast<const InetAddress *>(pathNetwork)));
+			}
+	
+			unsigned int cnt = 0;
+			for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::const_iterator i(cpaths.begin());((i!=cpaths.end())&&(cnt<ZT_MAX_CONFIGURABLE_PATHS));++i) {
+				_physicalPathConfig[cnt].first = i->first;
+				_physicalPathConfig[cnt].second = i->second;
+				++cnt;
+			}
+			_numConfiguredPhysicalPaths = cnt;
+		}
+	}
 
 private:
-	Identity _getIdentity(void *tPtr,const Address &zta);
-	void _memoizeUpstreams(void *tPtr);
-	void _savePeer(void *tPtr,const SharedPtr<Peer> &peer);
-
 	const RuntimeEnvironment *const RR;
-
 	std::pair<InetAddress,ZT_PhysicalPathConfiguration> _physicalPathConfig[ZT_MAX_CONFIGURABLE_PATHS];
 	unsigned int _numConfiguredPhysicalPaths;
-
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	Mutex _peers_m;
-
 	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
 	Mutex _paths_m;
 };

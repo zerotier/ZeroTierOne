@@ -24,7 +24,6 @@ CORE_OBJS=\
 	node/SHA512.o \
 	node/Switch.o \
 	node/Tag.o \
-	node/Topology.o \
 	node/Trace.o \
 	node/Utils.o
 

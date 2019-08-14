@@ -53,13 +53,13 @@ namespace ZeroTier {
 class MulticastGroup
 {
 public:
-	MulticastGroup() :
+	inline MulticastGroup() :
 		_mac(),
 		_adi(0)
 	{
 	}
 
-	MulticastGroup(const MAC &m,uint32_t a) :
+	inline MulticastGroup(const MAC &m,uint32_t a) :
 		_mac(m),
 		_adi(a)
 	{

@@ -338,28 +338,16 @@ public:
 	/**
 	 * Count the number of bits set in an integer
 	 *
-	 * @param v 32-bit integer
-	 * @return Number of bits set in this integer (0-32)
+	 * @param v Unsigned integer
+	 * @return Number of bits set in this integer (0-bits in integer)
 	 */
-	static inline uint32_t countBits(uint32_t v)
+	template<typename T>
+	static inline uint64_t countBits(T v)
 	{
-		v = v - ((v >> 1) & (uint32_t)0x55555555);
-		v = (v & (uint32_t)0x33333333) + ((v >> 2) & (uint32_t)0x33333333);
-		return ((((v + (v >> 4)) & (uint32_t)0xF0F0F0F) * (uint32_t)0x1010101) >> 24);
-	}
-
-	/**
-	 * Count the number of bits set in an integer
-	 *
-	 * @param v 64-bit integer
-	 * @return Number of bits set in this integer (0-64)
-	 */
-	static inline uint64_t countBits(uint64_t v)
-	{
-		v = v - ((v >> 1) & (uint64_t)~(uint64_t)0/3);
-		v = (v & (uint64_t)~(uint64_t)0/15*3) + ((v >> 2) & (uint64_t)~(uint64_t)0/15*3);
-		v = (v + (v >> 4)) & (uint64_t)~(uint64_t)0/255*15;
-		return (uint64_t)(v * ((uint64_t)~(uint64_t)0/255)) >> 56;
+		v = v - ((v >> 1) & (T)~(T)0/3);
+		v = (v & (T)~(T)0/15*3) + ((v >> 2) & (T)~(T)0/15*3);
+		v = (v + (v >> 4)) & (T)~(T)0/255*15;
+		return (T)(v * ((~((T)0))/((T)255))) >> ((sizeof(T) - 1) * 8);
 	}
 
 	/**

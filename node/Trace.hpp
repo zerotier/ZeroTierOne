@@ -89,7 +89,7 @@ public:
 	class RuleResultLog
 	{
 	public:
-		RuleResultLog() {}
+		inline RuleResultLog() {}
 
 		inline void log(const unsigned int rn,const uint8_t thisRuleMatches,const uint8_t thisSetMatches)
 		{
@@ -112,7 +112,7 @@ public:
 		uint8_t _l[ZT_MAX_NETWORK_RULES / 2];
 	};
 
-	Trace(const RuntimeEnvironment *renv) :
+	inline Trace(const RuntimeEnvironment *renv) :
 		RR(renv),
 		_byNet(8)
 	{

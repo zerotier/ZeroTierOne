@@ -65,7 +65,7 @@ class Tag : public Credential
 public:
 	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_TAG; }
 
-	Tag() :
+	inline Tag() :
 		_id(0),
 		_value(0),
 		_networkId(0),
@@ -81,7 +81,7 @@ public:
 	 * @param id Tag ID
 	 * @param value Tag value
 	 */
-	Tag(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id,const uint32_t value) :
+	inline Tag(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id,const uint32_t value) :
 		_id(id),
 		_value(value),
 		_networkId(nwid),

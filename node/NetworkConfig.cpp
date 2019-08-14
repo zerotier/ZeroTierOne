@@ -56,77 +56,6 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name)) return false;
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MTU,(uint64_t)this->mtu)) return false;
 
-#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
-		if (includeLegacy) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST_OLD,this->enableBroadcast())) return false;
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE_OLD,this->isPrivate())) return false;
-
-			std::string v4s;
-			for(unsigned int i=0;i<staticIpCount;++i) {
-				if (this->staticIps[i].ss_family == AF_INET) {
-					if (v4s.length() > 0)
-						v4s.push_back(',');
-					char buf[64];
-					v4s.append(this->staticIps[i].toString(buf));
-				}
-			}
-			if (v4s.length() > 0) {
-				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC_OLD,v4s.c_str())) return false;
-			}
-			std::string v6s;
-			for(unsigned int i=0;i<staticIpCount;++i) {
-				if (this->staticIps[i].ss_family == AF_INET6) {
-					if (v6s.length() > 0)
-						v6s.push_back(',');
-					char buf[64];
-					v6s.append(this->staticIps[i].toString(buf));
-				}
-			}
-			if (v6s.length() > 0) {
-				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC_OLD,v6s.c_str())) return false;
-			}
-
-			std::string ets;
-			unsigned int et = 0;
-			ZT_VirtualNetworkRuleType lastrt = ZT_NETWORK_RULE_ACTION_ACCEPT;
-			for(unsigned int i=0;i<ruleCount;++i) {
-				ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rules[i].t & 0x7f);
-				if (rt == ZT_NETWORK_RULE_MATCH_ETHERTYPE) {
-					et = rules[i].v.etherType;
-				} else if (rt == ZT_NETWORK_RULE_ACTION_ACCEPT) {
-					if (((int)lastrt < 32)||(lastrt == ZT_NETWORK_RULE_MATCH_ETHERTYPE)) {
-						if (ets.length() > 0)
-							ets.push_back(',');
-						char tmp2[16];
-						ets.append(Utils::hex((uint16_t)et,tmp2));
-					}
-					et = 0;
-				}
-				lastrt = rt;
-			}
-			if (ets.length() > 0) {
-				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES_OLD,ets.c_str())) return false;
-			}
-
-			if (this->com) {
-				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP_OLD,this->com.toString().c_str())) return false;
-			}
-
-			std::string ab;
-			for(unsigned int i=0;i<this->specialistCount;++i) {
-				if ((this->specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0) {
-					if (ab.length() > 0)
-						ab.push_back(',');
-					char tmp2[16];
-					ab.append(Address(this->specialists[i]).toString(tmp2));
-				}
-			}
-			if (ab.length() > 0) {
-				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES_OLD,ab.c_str())) return false;
-			}
-		}
-#endif // ZT_SUPPORT_OLD_STYLE_NETCONF
-
 		// Then add binary blobs
 
 		if (this->com) {
@@ -201,7 +130,7 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d)
 {
 	static const NetworkConfig NIL_NC;
-	Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY> *tmp = new Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+	Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY> *const tmp = new Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY>();
 
 	try {
 		*this = NIL_NC;
@@ -232,65 +161,8 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 			this->mtu = ZT_MAX_MTU;
 
 		if (d.getUI(ZT_NETWORKCONFIG_DICT_KEY_VERSION,0) < 6) {
-	#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
-			char tmp2[1024];
-
-			// Decode legacy fields if version is old
-			if (d.getB(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST_OLD))
-				this->flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
-			this->flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION; // always enable for old-style netconf
-			this->type = (d.getB(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE_OLD,true)) ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC;
-
-			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC_OLD,tmp2,sizeof(tmp2)) > 0) {
-				char *saveptr = (char *)0;
-				for(char *f=Utils::stok(tmp2,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
-					if (this->staticIpCount >= ZT_MAX_ZT_ASSIGNED_ADDRESSES) break;
-					InetAddress ip(f);
-					if (!ip.isNetwork())
-						this->staticIps[this->staticIpCount++] = ip;
-				}
-			}
-			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC_OLD,tmp2,sizeof(tmp2)) > 0) {
-				char *saveptr = (char *)0;
-				for(char *f=Utils::stok(tmp2,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
-					if (this->staticIpCount >= ZT_MAX_ZT_ASSIGNED_ADDRESSES) break;
-					InetAddress ip(f);
-					if (!ip.isNetwork())
-						this->staticIps[this->staticIpCount++] = ip;
-				}
-			}
-
-			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP_OLD,tmp2,sizeof(tmp2)) > 0) {
-				this->com.fromString(tmp2);
-			}
-
-			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES_OLD,tmp2,sizeof(tmp2)) > 0) {
-				char *saveptr = (char *)0;
-				for(char *f=Utils::stok(tmp2,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
-					unsigned int et = Utils::hexStrToUInt(f) & 0xffff;
-					if ((this->ruleCount + 2) > ZT_MAX_NETWORK_RULES) break;
-					if (et > 0) {
-						this->rules[this->ruleCount].t = (uint8_t)ZT_NETWORK_RULE_MATCH_ETHERTYPE;
-						this->rules[this->ruleCount].v.etherType = (uint16_t)et;
-						++this->ruleCount;
-					}
-					this->rules[this->ruleCount++].t = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
-				}
-			} else {
-				this->rules[0].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
-				this->ruleCount = 1;
-			}
-
-			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES_OLD,tmp2,sizeof(tmp2)) > 0) {
-				char *saveptr = (char *)0;
-				for(char *f=Utils::stok(tmp2,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
-					this->addSpecialist(Address(Utils::hexStrToU64(f)),ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
-				}
-			}
-	#else
 			delete tmp;
 			return false;
-	#endif // ZT_SUPPORT_OLD_STYLE_NETCONF
 		} else {
 			// Otherwise we can use the new fields
 			this->flags = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,0);
@@ -368,10 +240,6 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 				Capability::deserializeRules(*tmp,p,this->rules,this->ruleCount,ZT_MAX_NETWORK_RULES);
 			}
 		}
-
-		//printf("~~~\n%s\n~~~\n",d.data());
-		//dump();
-		//printf("~~~\n");
 
 		delete tmp;
 		return true;

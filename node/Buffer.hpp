@@ -87,12 +87,12 @@ public:
 	inline const_reverse_iterator rbegin() const { return const_reverse_iterator(begin()); }
 	inline const_reverse_iterator rend() const { return const_reverse_iterator(end()); }
 
-	Buffer() :
+	inline Buffer() :
 		_l(0)
 	{
 	}
 
-	Buffer(unsigned int l)
+	inline Buffer(const unsigned int l)
 	{
 		if (l > C)
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
@@ -100,12 +100,12 @@ public:
 	}
 
 	template<unsigned int C2>
-	Buffer(const Buffer<C2> &b)
+	inline Buffer(const Buffer<C2> &b)
 	{
 		*this = b;
 	}
 
-	Buffer(const void *b,unsigned int l)
+	inline Buffer(const void *b,unsigned int l)
 	{
 		copyFrom(b,l);
 	}

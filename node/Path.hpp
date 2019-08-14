@@ -68,9 +68,9 @@ public:
 	class HashKey
 	{
 	public:
-		HashKey() {}
+		inline HashKey() {}
 
-		HashKey(const int64_t l,const InetAddress &r)
+		inline HashKey(const int64_t l,const InetAddress &r)
 		{
 			if (r.ss_family == AF_INET) {
 				_k[0] = (uint64_t)reinterpret_cast<const struct sockaddr_in *>(&r)->sin_addr.s_addr;
@@ -94,7 +94,7 @@ public:
 		uint64_t _k[3];
 	};
 
-	Path() :
+	inline Path() :
 		_lastOut(0),
 		_lastIn(0),
 		_lastTrustEstablishedPacketReceived(0),
@@ -127,7 +127,7 @@ public:
 		memset(_addrString, 0, sizeof(_addrString));
 	}
 
-	Path(const int64_t localSocket,const InetAddress &addr) :
+	inline Path(const int64_t localSocket,const InetAddress &addr) :
 		_lastOut(0),
 		_lastIn(0),
 		_lastTrustEstablishedPacketReceived(0),

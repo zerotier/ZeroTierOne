@@ -24,7 +24,6 @@
  * of your own application.
  */
 
-#include "../version.h"
 #include "Constants.hpp"
 #include "Peer.hpp"
 #include "Node.hpp"

@@ -44,19 +44,19 @@ namespace ZeroTier {
 class MAC
 {
 public:
-	MAC() : _m(0ULL) {}
-	MAC(const MAC &m) : _m(m._m) {}
+	inline MAC() : _m(0ULL) {}
+	inline MAC(const MAC &m) : _m(m._m) {}
 
-	MAC(const unsigned char a,const unsigned char b,const unsigned char c,const unsigned char d,const unsigned char e,const unsigned char f) :
+	inline MAC(const unsigned char a,const unsigned char b,const unsigned char c,const unsigned char d,const unsigned char e,const unsigned char f) :
 		_m( ((((uint64_t)a) & 0xffULL) << 40) |
 		    ((((uint64_t)b) & 0xffULL) << 32) |
 		    ((((uint64_t)c) & 0xffULL) << 24) |
 		    ((((uint64_t)d) & 0xffULL) << 16) |
 		    ((((uint64_t)e) & 0xffULL) << 8) |
 		    (((uint64_t)f) & 0xffULL) ) {}
-	MAC(const void *bits,unsigned int len) { setTo(bits,len); }
-	MAC(const Address &ztaddr,uint64_t nwid) { fromAddress(ztaddr,nwid); }
-	MAC(const uint64_t m) : _m(m & 0xffffffffffffULL) {}
+	inline MAC(const void *bits,unsigned int len) { setTo(bits,len); }
+	inline MAC(const Address &ztaddr,uint64_t nwid) { fromAddress(ztaddr,nwid); }
+	inline MAC(const uint64_t m) : _m(m & 0xffffffffffffULL) {}
 
 	/**
 	 * @return MAC in 64-bit integer

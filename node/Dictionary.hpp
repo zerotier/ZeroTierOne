@@ -62,9 +62,9 @@ template<unsigned int C>
 class Dictionary
 {
 public:
-	Dictionary() { memset(_d,0,sizeof(_d)); }
-	Dictionary(const char *s) { this->load(s); }
-	Dictionary(const char *s,unsigned int len)
+	inline Dictionary() { memset(_d,0,sizeof(_d)); }
+	inline Dictionary(const char *s) { this->load(s); }
+	inline Dictionary(const char *s,unsigned int len)
 	{
 		for(unsigned int i=0;i<C;++i) {
 			if ((s)&&(i < len)) {
@@ -75,7 +75,7 @@ public:
 		}
 		_d[C - 1] = (char)0;
 	}
-	Dictionary(const Dictionary &d) { memcpy(_d,d._d,C); }
+	inline Dictionary(const Dictionary &d) { memcpy(_d,d._d,C); }
 
 	inline Dictionary &operator=(const Dictionary &d)
 	{
