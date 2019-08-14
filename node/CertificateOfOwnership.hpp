@@ -86,15 +86,14 @@ public:
 	inline uint64_t networkId() const { return _networkId; }
 	inline int64_t timestamp() const { return _ts; }
 	inline uint32_t id() const { return _id; }
-	inline unsigned int thingCount() const { return (unsigned int)_thingCount; }
+	inline const Address &issuedTo() const { return _issuedTo; }
 	inline const Address &signer() const { return _signedBy; }
 	inline const uint8_t *signature() const { return _signature; }
 	inline unsigned int signatureLength() const { return _signatureLength; }
 
+	inline unsigned int thingCount() const { return (unsigned int)_thingCount; }
 	inline Thing thingType(const unsigned int i) const { return (Thing)_thingTypes[i]; }
 	inline const uint8_t *thingValue(const unsigned int i) const { return _thingValues[i]; }
-
-	inline const Address &issuedTo() const { return _issuedTo; }
 
 	inline bool owns(const InetAddress &ip) const
 	{

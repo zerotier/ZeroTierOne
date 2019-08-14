@@ -400,17 +400,20 @@ uint64_t Utils::random()
 {
 	// https://en.wikipedia.org/wiki/Xorshift#xoshiro256**
 	static Mutex l;
-	static uint64_t s[4] = { Utils::getSecureRandom64(),Utils::getSecureRandom64(),Utils::getSecureRandom64(),Utils::getSecureRandom64() };
+	static uint64_t s0 = Utils::getSecureRandom64();
+	static uint64_t s1 = Utils::getSecureRandom64();
+	static uint64_t s2 = Utils::getSecureRandom64();
+	static uint64_t s3 = Utils::getSecureRandom64();
 
 	l.lock();
-	const uint64_t result = ROL64(s[1] * 5,7) * 9;
-	const uint64_t t = s[1] << 17;
-	s[2] ^= s[0];
-	s[3] ^= s[1];
-	s[1] ^= s[2];
-	s[0] ^= s[3];
-	s[2] ^= t;
-	s[3] = ROL64(s[3],45);
+	const uint64_t result = ROL64(s1 * 5,7) * 9;
+	const uint64_t t = s1 << 17;
+	s2 ^= s0;
+	s3 ^= s1;
+	s1 ^= s2;
+	s0 ^= s3;
+	s2 ^= t;
+	s3 = ROL64(s3,45);
 	l.unlock();
 
 	return result;
