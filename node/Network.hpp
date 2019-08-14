@@ -172,23 +172,44 @@ public:
 	 * @param includeBridgedGroups If true, also check groups we've learned via bridging
 	 * @return True if this network endpoint / peer is a member
 	 */
-	bool subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const;
-
+	inline bool subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const
+	{
+		Mutex::Lock _l(_lock);
+		if (std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg))
+			return true;
+		else if (includeBridgedGroups)
+			return _multicastGroupsBehindMe.contains(mg);
+		return false;
+	}
+	
 	/**
 	 * Subscribe to a multicast group
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param mg New multicast group
 	 */
-	void multicastSubscribe(void *tPtr,const MulticastGroup &mg);
-
+	inline void multicastSubscribe(void *tPtr,const MulticastGroup &mg)
+	{
+		Mutex::Lock _l(_lock);
+		if (!std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg)) {
+			_myMulticastGroups.insert(std::upper_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg),mg);
+			_sendUpdatesToMembers(tPtr,&mg);
+		}
+	}
+	
 	/**
 	 * Unsubscribe from a multicast group
 	 *
 	 * @param mg Multicast group
 	 */
-	void multicastUnsubscribe(const MulticastGroup &mg);
-
+	inline void multicastUnsubscribe(const MulticastGroup &mg)
+	{
+		Mutex::Lock _l(_lock);
+		std::vector<MulticastGroup>::iterator i(std::lower_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg));
+		if ( (i != _myMulticastGroups.end()) && (*i == mg) )
+			_myMulticastGroups.erase(i);
+	}
+	
 	/**
 	 * Handle an inbound network config chunk
 	 *
@@ -260,7 +281,7 @@ public:
 	 * @return True if peer has recently associated
 	 */
 	bool recentlyAssociatedWith(const Address &addr);
-
+	
 	/**
 	 * Do periodic cleanup and housekeeping tasks
 	 */
@@ -325,7 +346,7 @@ public:
 		if (cap.networkId() != _id)
 			return Membership::ADD_REJECTED;
 		Mutex::Lock _l(_lock);
-		return _membership(cap.issuedTo()).addCredential(RR,tPtr,_config,cap);
+		return _memberships[cap.issuedTo()].addCredential(RR,tPtr,_config,cap);
 	}
 
 	/**
@@ -336,7 +357,7 @@ public:
 		if (tag.networkId() != _id)
 			return Membership::ADD_REJECTED;
 		Mutex::Lock _l(_lock);
-		return _membership(tag.issuedTo()).addCredential(RR,tPtr,_config,tag);
+		return _memberships[tag.issuedTo()].addCredential(RR,tPtr,_config,tag);
 	}
 
 	/**
@@ -352,7 +373,7 @@ public:
 		if (coo.networkId() != _id)
 			return Membership::ADD_REJECTED;
 		Mutex::Lock _l(_lock);
-		return _membership(coo.issuedTo()).addCredential(RR,tPtr,_config,coo);
+		return _memberships[coo.issuedTo()].addCredential(RR,tPtr,_config,coo);
 	}
 
 	/**
@@ -365,7 +386,7 @@ public:
 	inline void pushCredentialsNow(void *tPtr,const Address &to,const int64_t now)
 	{
 		Mutex::Lock _l(_lock);
-		_membership(to).pushCredentials(RR,tPtr,now,to,_config);
+		_memberships[to].pushCredentials(RR,tPtr,now,to,_config);
 	}
 
 	/**
@@ -378,7 +399,7 @@ public:
 	inline void pushCredentialsIfNeeded(void *tPtr,const Address &to,const int64_t now)
 	{
 		Mutex::Lock _l(_lock);
-		Membership &m = _membership(to);
+		Membership &m = _memberships[to];
 		if (m.shouldPushCredentials(now))
 			m.pushCredentials(RR,tPtr,now,to,_config);
 	}
@@ -414,7 +435,6 @@ private:
 	void _sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMulticastGroup);
 	void _announceMulticastGroupsTo(void *tPtr,const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups);
 	std::vector<MulticastGroup> _allMulticastGroups() const;
-	Membership &_membership(const Address &a);
 
 	const RuntimeEnvironment *const RR;
 	void *_uPtr;

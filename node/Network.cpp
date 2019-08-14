@@ -757,7 +757,7 @@ int Network::filterIncomingPacket(
 
 	Mutex::Lock _l(_lock);
 
-	Membership &membership = _membership(sourcePeer->address());
+	Membership &membership = _memberships[sourcePeer->address()];
 
 	switch (_doZtFilter(RR,rrl,_config,&membership,true,sourcePeer->address(),ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,cc,ccLength,ccWatch,qosBucket)) {
 
@@ -845,33 +845,6 @@ int Network::filterIncomingPacket(
 	if (_config.remoteTraceTarget)
 		RR->t->networkFilter(tPtr,*this,rrl,(c) ? &crrl : (Trace::RuleResultLog *)0,c,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,false,true,accept);
 	return accept;
-}
-
-bool Network::subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const
-{
-	Mutex::Lock _l(_lock);
-	if (std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg))
-		return true;
-	else if (includeBridgedGroups)
-		return _multicastGroupsBehindMe.contains(mg);
-	return false;
-}
-
-void Network::multicastSubscribe(void *tPtr,const MulticastGroup &mg)
-{
-	Mutex::Lock _l(_lock);
-	if (!std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg)) {
-		_myMulticastGroups.insert(std::upper_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg),mg);
-		_sendUpdatesToMembers(tPtr,&mg);
-	}
-}
-
-void Network::multicastUnsubscribe(const MulticastGroup &mg)
-{
-	Mutex::Lock _l(_lock);
-	std::vector<MulticastGroup>::iterator i(std::lower_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg));
-	if ( (i != _myMulticastGroups.end()) && (*i == mg) )
-		_myMulticastGroups.erase(i);
 }
 
 uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Address &source,const Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &chunk,unsigned int ptr)
@@ -1239,10 +1212,9 @@ bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 			Membership *m = _memberships.get(peer->address());
 			if ( (_config.isPublic()) || ((m)&&(m->isAllowedOnNetwork(_config))) ) {
 				if (!m)
-					m = &(_membership(peer->address()));
-				if (m->multicastLikeGate(now)) {
+					m = &(_memberships[peer->address()]);
+				if (m->multicastLikeGate(now))
 					_announceMulticastGroupsTo(tPtr,peer->address(),_allMulticastGroups());
-				}
 				return true;
 			}
 		}
@@ -1324,21 +1296,12 @@ void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 	}
 }
 
-void Network::learnBridgedMulticastGroup(void *tPtr,const MulticastGroup &mg,int64_t now)
-{
-	Mutex::Lock _l(_lock);
-	const unsigned long tmp = (unsigned long)_multicastGroupsBehindMe.size();
-	_multicastGroupsBehindMe.set(mg,now);
-	if (tmp != _multicastGroupsBehindMe.size())
-		_sendUpdatesToMembers(tPtr,&mg);
-}
-
 Membership::AddCredentialResult Network::addCredential(void *tPtr,const CertificateOfMembership &com)
 {
 	if (com.networkId() != _id)
 		return Membership::ADD_REJECTED;
 	Mutex::Lock _l(_lock);
-	return _membership(com.issuedTo()).addCredential(RR,tPtr,_config,com);
+	return _memberships[com.issuedTo()].addCredential(RR,tPtr,_config,com);
 }
 
 Membership::AddCredentialResult Network::addCredential(void *tPtr,const Address &sentFrom,const Revocation &rev)
@@ -1347,7 +1310,7 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Address 
 		return Membership::ADD_REJECTED;
 
 	Mutex::Lock _l(_lock);
-	Membership &m = _membership(rev.target());
+	Membership &m = _memberships[rev.target()];
 
 	const Membership::AddCredentialResult result = m.addCredential(RR,tPtr,_config,rev);
 
@@ -1519,12 +1482,6 @@ std::vector<MulticastGroup> Network::_allMulticastGroups() const
 	std::sort(mgs.begin(),mgs.end());
 	mgs.erase(std::unique(mgs.begin(),mgs.end()),mgs.end());
 	return mgs;
-}
-
-Membership &Network::_membership(const Address &a)
-{
-	// assumes _lock is locked
-	return _memberships[a];
 }
 
 } // namespace ZeroTier
