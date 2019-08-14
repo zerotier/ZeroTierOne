@@ -1,7 +1,6 @@
 CORE_OBJS=\
 	node/AES.o \
 	node/C25519.o \
-	node/Capability.o \
 	node/Credential.o \
 	node/ECC384.o \
 	node/Identity.o \

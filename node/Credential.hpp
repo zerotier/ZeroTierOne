@@ -81,6 +81,7 @@ protected:
 	VerifyResult _verify(const RuntimeEnvironment *const RR,void *tPtr,const Revocation &credential) const;
 	VerifyResult _verify(const RuntimeEnvironment *const RR,void *tPtr,const Tag &credential) const;
 	VerifyResult _verify(const RuntimeEnvironment *const RR,void *tPtr,const CertificateOfOwnership &credential) const;
+	VerifyResult _verify(const RuntimeEnvironment *const RR,void *tPtr,const Capability &credential) const;
 };
 
 } // namespace ZeroTier

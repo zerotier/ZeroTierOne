@@ -177,10 +177,9 @@ public:
 	 * Verify this capability's chain of custody and signatures
 	 *
 	 * @param RR Runtime environment to provide for peer lookup, etc.
-	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or chain
 	 */
-	int verify(const RuntimeEnvironment *RR,void *tPtr) const;
-	
+	inline Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
+
 	template<unsigned int C>
 	static inline void serializeRules(Buffer<C> &b,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
 	{
