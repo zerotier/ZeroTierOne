@@ -49,6 +49,11 @@ class Utils
 {
 public:
 	/**
+	 * Hexadecimal characters 0-f
+	 */
+	static const char HEXCHARS[16];
+
+	/**
 	 * Perform a time-invariant binary comparison
 	 *
 	 * @param a First binary string
@@ -65,7 +70,7 @@ public:
 	}
 
 	/**
-	 * Securely zero memory, avoiding compiler optimizations and such
+	 * Zero memory, ensuring to avoid any compiler optimizations or other things that may stop this.
 	 */
 	static void burn(void *ptr,unsigned int len);
 
@@ -158,78 +163,8 @@ public:
 		return save;
 	}
 
-	static inline unsigned int unhex(const char *h,void *buf,unsigned int buflen)
-	{
-		unsigned int l = 0;
-		while (l < buflen) {
-			uint8_t hc = *(reinterpret_cast<const uint8_t *>(h++));
-			if (!hc) break;
-
-			uint8_t c = 0;
-			if ((hc >= 48)&&(hc <= 57)) // 0..9
-				c = hc - 48;
-			else if ((hc >= 97)&&(hc <= 102)) // a..f
-				c = hc - 87;
-			else if ((hc >= 65)&&(hc <= 70)) // A..F
-				c = hc - 55;
-
-			hc = *(reinterpret_cast<const uint8_t *>(h++));
-			if (!hc) break;
-
-			c <<= 4;
-			if ((hc >= 48)&&(hc <= 57))
-				c |= hc - 48;
-			else if ((hc >= 97)&&(hc <= 102))
-				c |= hc - 87;
-			else if ((hc >= 65)&&(hc <= 70))
-				c |= hc - 55;
-
-			reinterpret_cast<uint8_t *>(buf)[l++] = c;
-		}
-		return l;
-	}
-
-	static inline unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen)
-	{
-		unsigned int l = 0;
-		const char *hend = h + hlen;
-		while (l < buflen) {
-			if (h == hend) break;
-			uint8_t hc = *(reinterpret_cast<const uint8_t *>(h++));
-			if (!hc) break;
-
-			uint8_t c = 0;
-			if ((hc >= 48)&&(hc <= 57))
-				c = hc - 48;
-			else if ((hc >= 97)&&(hc <= 102))
-				c = hc - 87;
-			else if ((hc >= 65)&&(hc <= 70))
-				c = hc - 55;
-
-			if (h == hend) break;
-			hc = *(reinterpret_cast<const uint8_t *>(h++));
-			if (!hc) break;
-
-			c <<= 4;
-			if ((hc >= 48)&&(hc <= 57))
-				c |= hc - 48;
-			else if ((hc >= 97)&&(hc <= 102))
-				c |= hc - 87;
-			else if ((hc >= 65)&&(hc <= 70))
-				c |= hc - 55;
-
-			reinterpret_cast<uint8_t *>(buf)[l++] = c;
-		}
-		return l;
-	}
-
-	static inline float normalize(float value, int64_t bigMin, int64_t bigMax, int32_t targetMin, int32_t targetMax)
-	{
-		int64_t bigSpan = bigMax - bigMin;
-		int64_t smallSpan = targetMax - targetMin;
-		float valueScaled = (value - (float)bigMin) / (float)bigSpan;
-		return (float)targetMin + valueScaled * (float)smallSpan;
-	}
+	static unsigned int unhex(const char *h,void *buf,unsigned int buflen);
+	static unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen);
 
 	/**
 	 * Generate secure random bytes
@@ -242,12 +177,35 @@ public:
 	 */
 	static void getSecureRandom(void *buf,unsigned int bytes);
 
-	static int b32d(const char *encoded, uint8_t *result, int bufSize);
+	/**
+	 * Get a 64-bit unsigned secure random number
+	 */
+	static inline uint64_t getSecureRandom64()
+	{
+		uint64_t x;
+		getSecureRandom(&x,sizeof(x));
+		return x;
+	}
+
 	static int b32e(const uint8_t *data,int length,char *result,int bufSize);
+	static int b32d(const char *encoded, uint8_t *result, int bufSize);
 
 	static inline unsigned int b64MaxEncodedSize(const unsigned int s) { return ((((s + 2) / 3) * 4) + 1); }
 	static unsigned int b64e(const uint8_t *in,unsigned int inlen,char *out,unsigned int outlen);
 	static unsigned int b64d(const char *in,uint8_t *out,unsigned int outlen);
+
+	/**
+	 * Get a non-cryptographic random integer
+	 */
+	static uint64_t random();
+
+	static inline float normalize(float value, int64_t bigMin, int64_t bigMax, int32_t targetMin, int32_t targetMax)
+	{
+		int64_t bigSpan = bigMax - bigMin;
+		int64_t smallSpan = targetMax - targetMin;
+		float valueScaled = (value - (float)bigMin) / (float)bigSpan;
+		return (float)targetMin + valueScaled * (float)smallSpan;
+	}
 
 	/**
 	 * Tokenize a string (alias for strtok_r or strtok_s depending on platform)
@@ -350,23 +308,8 @@ public:
 		return (T)(v * ((~((T)0))/((T)255))) >> ((sizeof(T) - 1) * 8);
 	}
 
-	/**
-	 * Check if a memory buffer is all-zero
-	 *
-	 * @param p Memory to scan
-	 * @param len Length of memory
-	 * @return True if memory is all zero
-	 */
-	static inline bool isZero(const void *p,unsigned int len)
-	{
-		for(unsigned int i=0;i<len;++i) {
-			if (((const unsigned char *)p)[i])
-				return false;
-		}
-		return true;
-	}
-
 	// Byte swappers for big/little endian conversion
+#if __BYTE_ORDER == __LITTLE_ENDIAN
 	static inline uint8_t hton(uint8_t n) { return n; }
 	static inline int8_t hton(int8_t n) { return n; }
 	static inline uint16_t hton(uint16_t n) { return htons(n); }
@@ -375,7 +318,6 @@ public:
 	static inline int32_t hton(int32_t n) { return (int32_t)htonl((uint32_t)n); }
 	static inline uint64_t hton(uint64_t n)
 	{
-#if __BYTE_ORDER == __LITTLE_ENDIAN
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
 		return bswap64(n);
@@ -394,12 +336,14 @@ public:
 			((n & 0xFF00000000000000ULL) >> 56)
 		);
 #endif
-#else
-		return n;
-#endif
 	}
 	static inline int64_t hton(int64_t n) { return (int64_t)hton((uint64_t)n); }
+#else
+	template<typename T>
+	static inline T hton(T n) { return n; }
+#endif
 
+#if __BYTE_ORDER == __LITTLE_ENDIAN
 	static inline uint8_t ntoh(uint8_t n) { return n; }
 	static inline int8_t ntoh(int8_t n) { return n; }
 	static inline uint16_t ntoh(uint16_t n) { return ntohs(n); }
@@ -408,7 +352,6 @@ public:
 	static inline int32_t ntoh(int32_t n) { return (int32_t)ntohl((uint32_t)n); }
 	static inline uint64_t ntoh(uint64_t n)
 	{
-#if __BYTE_ORDER == __LITTLE_ENDIAN
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
 		return bswap64(n);
@@ -427,16 +370,12 @@ public:
 			((n & 0xFF00000000000000ULL) >> 56)
 		);
 #endif
-#else
-		return n;
-#endif
 	}
 	static inline int64_t ntoh(int64_t n) { return (int64_t)ntoh((uint64_t)n); }
-
-	/**
-	 * Hexadecimal characters 0-f
-	 */
-	static const char HEXCHARS[16];
+#else
+	template<typename T>
+	static inline T ntoh(T n) { return n; }
+#endif
 };
 
 } // namespace ZeroTier

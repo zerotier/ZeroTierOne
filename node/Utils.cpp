@@ -85,6 +85,71 @@ char *Utils::decimal(unsigned long n,char s[24])
 	return s;
 }
 
+unsigned int Utils::unhex(const char *h,void *buf,unsigned int buflen)
+{
+	unsigned int l = 0;
+	while (l < buflen) {
+		uint8_t hc = *(reinterpret_cast<const uint8_t *>(h++));
+		if (!hc) break;
+
+		uint8_t c = 0;
+		if ((hc >= 48)&&(hc <= 57)) // 0..9
+			c = hc - 48;
+		else if ((hc >= 97)&&(hc <= 102)) // a..f
+			c = hc - 87;
+		else if ((hc >= 65)&&(hc <= 70)) // A..F
+			c = hc - 55;
+
+		hc = *(reinterpret_cast<const uint8_t *>(h++));
+		if (!hc) break;
+
+		c <<= 4;
+		if ((hc >= 48)&&(hc <= 57))
+			c |= hc - 48;
+		else if ((hc >= 97)&&(hc <= 102))
+			c |= hc - 87;
+		else if ((hc >= 65)&&(hc <= 70))
+			c |= hc - 55;
+
+		reinterpret_cast<uint8_t *>(buf)[l++] = c;
+	}
+	return l;
+}
+
+unsigned int Utils::unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen)
+{
+	unsigned int l = 0;
+	const char *hend = h + hlen;
+	while (l < buflen) {
+		if (h == hend) break;
+		uint8_t hc = *(reinterpret_cast<const uint8_t *>(h++));
+		if (!hc) break;
+
+		uint8_t c = 0;
+		if ((hc >= 48)&&(hc <= 57))
+			c = hc - 48;
+		else if ((hc >= 97)&&(hc <= 102))
+			c = hc - 87;
+		else if ((hc >= 65)&&(hc <= 70))
+			c = hc - 55;
+
+		if (h == hend) break;
+		hc = *(reinterpret_cast<const uint8_t *>(h++));
+		if (!hc) break;
+
+		c <<= 4;
+		if ((hc >= 48)&&(hc <= 57))
+			c |= hc - 48;
+		else if ((hc >= 97)&&(hc <= 102))
+			c |= hc - 87;
+		else if ((hc >= 65)&&(hc <= 70))
+			c |= hc - 55;
+
+		reinterpret_cast<uint8_t *>(buf)[l++] = c;
+	}
+	return l;
+}
+
 void Utils::getSecureRandom(void *buf,unsigned int bytes)
 {
 	static Mutex globalLock;
@@ -105,8 +170,12 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	if (!s20Initialized) {
 		s20Initialized = true;
 		uint64_t s20Key[4];
-		s20Key[0] = (uint64_t)time(0); // system clock
+		s20Key[0] = (uint64_t)time(nullptr);
+#ifdef __WINDOWS__
 		s20Key[1] = (uint64_t)buf; // address of buf
+#else
+		s20Key[1] = (uint64_t)getpid();
+#endif
 		s20Key[2] = (uint64_t)s20Key; // address of s20Key[]
 		s20Key[3] = (uint64_t)&s20; // address of s20
 		s20.init(s20Key,s20Key);
@@ -171,6 +240,42 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 #endif // __WINDOWS__ or not
 }
 
+int Utils::b32e(const uint8_t *data,int length,char *result,int bufSize)
+{
+  if (length < 0 || length > (1 << 28)) {
+		result[0] = (char)0;
+    return -1;
+	}
+	int count = 0;
+  if (length > 0) {
+    int buffer = data[0];
+    int next = 1;
+    int bitsLeft = 8;
+    while (count < bufSize && (bitsLeft > 0 || next < length)) {
+      if (bitsLeft < 5) {
+        if (next < length) {
+          buffer <<= 8;
+          buffer |= data[next++] & 0xFF;
+          bitsLeft += 8;
+        } else {
+          int pad = 5 - bitsLeft;
+          buffer <<= pad;
+          bitsLeft += pad;
+        }
+      }
+      int index = 0x1F & (buffer >> (bitsLeft - 5));
+      bitsLeft -= 5;
+      result[count++] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"[index];
+    }
+  }
+  if (count < bufSize) {
+		result[count] = (char)0;
+		return count;
+	}
+	result[0] = (char)0;
+	return -1;
+}
+
 int Utils::b32d(const char *encoded,uint8_t *result,int bufSize)
 {
   int buffer = 0;
@@ -209,42 +314,6 @@ int Utils::b32d(const char *encoded,uint8_t *result,int bufSize)
   if (count < bufSize)
     result[count] = (uint8_t)0;
   return count;
-}
-
-int Utils::b32e(const uint8_t *data,int length,char *result,int bufSize)
-{
-  if (length < 0 || length > (1 << 28)) {
-		result[0] = (char)0;
-    return -1;
-	}
-	int count = 0;
-  if (length > 0) {
-    int buffer = data[0];
-    int next = 1;
-    int bitsLeft = 8;
-    while (count < bufSize && (bitsLeft > 0 || next < length)) {
-      if (bitsLeft < 5) {
-        if (next < length) {
-          buffer <<= 8;
-          buffer |= data[next++] & 0xFF;
-          bitsLeft += 8;
-        } else {
-          int pad = 5 - bitsLeft;
-          buffer <<= pad;
-          bitsLeft += pad;
-        }
-      }
-      int index = 0x1F & (buffer >> (bitsLeft - 5));
-      bitsLeft -= 5;
-      result[count++] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"[index];
-    }
-  }
-  if (count < bufSize) {
-		result[count] = (char)0;
-		return count;
-	}
-	result[0] = (char)0;
-	return -1;
 }
 
 unsigned int Utils::b64e(const uint8_t *in,unsigned int inlen,char *out,unsigned int outlen)
@@ -324,6 +393,27 @@ unsigned int Utils::b64d(const char *in,unsigned char *out,unsigned int outlen)
 		++i;
 	}
 	return j;
+}
+
+#define ROL64(x,k) (((x) << (k)) | ((x) >> (64 - (k))))
+uint64_t Utils::random()
+{
+	// https://en.wikipedia.org/wiki/Xorshift#xoshiro256**
+	static Mutex l;
+	static uint64_t s[4] = { Utils::getSecureRandom64(),Utils::getSecureRandom64(),Utils::getSecureRandom64(),Utils::getSecureRandom64() };
+
+	l.lock();
+	const uint64_t result = ROL64(s[1] * 5,7) * 9;
+	const uint64_t t = s[1] << 17;
+	s[2] ^= s[0];
+	s[3] ^= s[1];
+	s[1] ^= s[2];
+	s[0] ^= s[3];
+	s[2] ^= t;
+	s[3] = ROL64(s[3],45);
+	l.unlock();
+
+	return result;
 }
 
 } // namespace ZeroTier

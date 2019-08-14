@@ -194,7 +194,7 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 // those that need pinging.
 struct _PingPeersThatNeedPing
 {
-	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,void *tPtr,Hashtable< Address,std::vector<InetAddress> > &alwaysContact,int64_t now) :
+	inline _PingPeersThatNeedPing(const RuntimeEnvironment *renv,void *tPtr,Hashtable< Address,std::vector<InetAddress> > &alwaysContact,int64_t now) :
 		RR(renv),
 		_tPtr(tPtr),
 		_alwaysContact(alwaysContact),
@@ -284,7 +284,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 
 			// (1) Get peers we should remain connected to and (2) get networks that need config.
 			Hashtable< Address,std::vector<InetAddress> > alwaysContact;
-			RR->topology->getUpstreamsToContact(alwaysContact);
+			RR->topology->getAlwaysContact(alwaysContact);
 			std::vector< std::pair< SharedPtr<Network>,bool > > networkConfigNeeded;
 			{
 				Mutex::Lock l(_networks_m);

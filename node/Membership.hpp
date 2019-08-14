@@ -239,7 +239,7 @@ public:
 	class CapabilityIterator
 	{
 	public:
-		CapabilityIterator(Membership &m,const NetworkConfig &nconf) :
+		inline CapabilityIterator(Membership &m,const NetworkConfig &nconf) :
 			_hti(m._remoteCaps),
 			_k((uint32_t *)0),
 			_c((Capability *)0),

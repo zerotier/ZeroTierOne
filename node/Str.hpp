@@ -37,16 +37,22 @@
 
 namespace ZeroTier {
 
+/**
+ * A short non-allocating replacement for std::string
+ */
 class Str
 {
 public:
-	Str() { _l = 0; _s[0] = 0; }
-	Str(const Str &s)
+	typedef char * iterator;
+	typedef const char * const_iterator;
+
+	inline Str() { _l = 0; _s[0] = 0; }
+	inline Str(const Str &s)
 	{
 		_l = s._l;
 		memcpy(_s,s._s,_l+1);
 	}
-	Str(const char *s)
+	inline Str(const char *s)
 	{
 		_l = 0;
 		_s[0] = 0;
@@ -75,7 +81,11 @@ public:
 
 	inline void clear() { _l = 0; _s[0] = 0; }
 	inline const char *c_str() const { return _s; }
-	inline unsigned int length() const { return _l; }
+	inline unsigned int length() const { return (unsigned int)_l; }
+	inline iterator begin() { return (iterator)_s; }
+	inline iterator end() { return (iterator)(_s + (unsigned long)_l); }
+	inline const_iterator begin() const { return (const_iterator)_s; }
+	inline const_iterator end() const { return (const_iterator)(_s + (unsigned long)_l); }
 
 	inline Str &operator<<(const char *s)
 	{
@@ -83,8 +93,8 @@ public:
 			unsigned long l = _l;
 			while (*s) {
 				if (unlikely(l >= ZT_STR_CAPACITY)) {
-					_s[l] = 0;
-					_l = (uint8_t)l;
+					_s[ZT_STR_CAPACITY] = 0;
+					_l = ZT_STR_CAPACITY;
 					throw ZT_EXCEPTION_OUT_OF_BOUNDS;
 				}
 				_s[l++] = *s;
@@ -97,14 +107,12 @@ public:
 	inline Str &operator<<(const Str &s) { return ((*this) << s._s); }
 	inline Str &operator<<(const char c)
 	{
-		if (likely(c != 0)) {
-			if (unlikely(_l >= ZT_STR_CAPACITY)) {
-				_s[_l] = 0;
-				throw ZT_EXCEPTION_OUT_OF_BOUNDS;
-			}
-			_s[_l++] = c;
-			_s[_l] = 0;
+		if (unlikely(_l >= ZT_STR_CAPACITY)) {
+			_s[ZT_STR_CAPACITY] = 0;
+			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
 		}
+		_s[(unsigned long)(_l++)] = c;
+		_s[(unsigned long)_l] = 0;
 	}
 	inline Str &operator<<(const unsigned long n)
 	{

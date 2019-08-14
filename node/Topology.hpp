@@ -95,13 +95,9 @@ public:
 	{
 		if (zta == RR->identity.address())
 			return SharedPtr<Peer>();
-		{
-			Mutex::Lock _l(_peers_m);
-			const SharedPtr<Peer> *const ap = _peers.get(zta);
-			if (ap)
-				return *ap;
-		}
-		return SharedPtr<Peer>();
+		Mutex::Lock _l(_peers_m);
+		const SharedPtr<Peer> *const ap = _peers.get(zta);
+		return ((ap) ? *ap : SharedPtr<Peer>());
 	}
 
 	/**
@@ -121,7 +117,7 @@ public:
 		}
 		return Identity();
 	}
-	
+
 	/**
 	 * Get a peer only if it is presently in memory (no disk cache)
 	 *
@@ -157,38 +153,29 @@ public:
 		return p;
 	}
 
-	/**
-	 * Get the current best upstream peer
-	 *
-	 * @return Upstream or NULL if none available
-	 */
 	inline SharedPtr<Peer> getUpstreamPeer() const
 	{
+		// TODO
 		return SharedPtr<Peer>();
 	}
 
 	inline bool isUpstream(const Identity &id) const
 	{
+		// TODO
 		return false;
 	}
-	
+
 	inline ZT_PeerRole role(const Address &ztaddr) const
 	{
+		// TODO
 		return ZT_PEER_ROLE_LEAF;
 	}
 
-	/**
-	 * Gets upstreams to contact and their stable endpoints (if known)
-	 *
-	 * @param eps Hash table to fill with addresses and their stable endpoints
-	 */
-	inline void getUpstreamsToContact(Hashtable< Address,std::vector<InetAddress> > &eps) const
+	inline void getAlwaysContact(Hashtable< Address,std::vector<InetAddress> > &eps) const
 	{
+		// TODO
 	}
 
-	/**
-	 * @return Vector of active upstream addresses (including roots)
-	 */
 	inline std::vector<Address> upstreamAddresses() const
 	{
 		// TODO

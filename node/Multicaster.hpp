@@ -161,8 +161,8 @@ public:
 private:
 	struct Key
 	{
-		Key() : nwid(0),mg() {}
-		Key(uint64_t n,const MulticastGroup &g) : nwid(n),mg(g) {}
+		inline Key() : nwid(0),mg() {}
+		inline Key(uint64_t n,const MulticastGroup &g) : nwid(n),mg(g) {}
 
 		uint64_t nwid;
 		MulticastGroup mg;
@@ -174,8 +174,8 @@ private:
 
 	struct MulticastGroupMember
 	{
-		MulticastGroupMember() {}
-		MulticastGroupMember(const Address &a,uint64_t ts) : address(a),timestamp(ts) {}
+		inline MulticastGroupMember() {}
+		inline MulticastGroupMember(const Address &a,uint64_t ts) : address(a),timestamp(ts) {}
 
 		inline bool operator<(const MulticastGroupMember &a) const { return (address < a.address); }
 		inline bool operator==(const MulticastGroupMember &a) const { return (address == a.address); }
@@ -190,7 +190,7 @@ private:
 
 	struct MulticastGroupStatus
 	{
-		MulticastGroupStatus() : lastExplicitGather(0) {}
+		inline MulticastGroupStatus() : lastExplicitGather(0) {}
 
 		uint64_t lastExplicitGather;
 		std::list<OutboundMulticast> txQueue; // pending outbound multicasts

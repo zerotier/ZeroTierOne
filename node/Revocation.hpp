@@ -58,7 +58,7 @@ class Revocation : public Credential
 public:
 	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_REVOCATION; }
 
-	Revocation() :
+	inline Revocation() :
 		_id(0),
 		_credentialId(0),
 		_networkId(0),
@@ -80,7 +80,7 @@ public:
 	 * @param tgt Target node whose credential(s) are being revoked
 	 * @param ct Credential type being revoked
 	 */
-	Revocation(const uint32_t i,const uint64_t nwid,const uint32_t cid,const uint64_t thr,const uint64_t fl,const Address &tgt,const Credential::Type ct) :
+	inline Revocation(const uint32_t i,const uint64_t nwid,const uint32_t cid,const uint64_t thr,const uint64_t fl,const Address &tgt,const Credential::Type ct) :
 		_id(i),
 		_credentialId(cid),
 		_networkId(nwid),
