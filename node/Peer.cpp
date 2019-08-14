@@ -794,10 +794,10 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 			}
 		} if (alivePathCount < 2 && _linkIsRedundant) {
 			_linkIsRedundant = !_linkIsRedundant;
-			RR->t->peerLinkNoLongerRedundant(NULL,*this);
+			RR->t->peerLinkNoLongerAggregate(NULL,*this);
 		} if (alivePathCount > 1 && !_linkIsRedundant) {
 			_linkIsRedundant = !_linkIsRedundant;
-			RR->t->peerLinkNowRedundant(NULL,*this);
+			RR->t->peerLinkNoLongerAggregate(NULL,*this);
 		}
 	}
 

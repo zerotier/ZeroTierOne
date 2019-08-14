@@ -122,8 +122,8 @@ public:
 
 	void peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &path,const uint64_t packetId,const Packet::Verb verb);
 
-	void peerLinkNowRedundant(void *const tPtr,Peer &peer);
-	void peerLinkNoLongerRedundant(void *const tPtr,Peer &peer);
+	void peerLinkNowAggregate(void *const tPtr,Peer &peer);
+	void peerLinkNoLongerAggregate(void *const tPtr,Peer &peer);
 
 	void peerLinkAggregateStatistics(void *const tPtr,Peer &peer);
 
