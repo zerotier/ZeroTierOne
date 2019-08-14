@@ -166,8 +166,27 @@ public:
 	 * @param siglen Length of buffer
 	 * @return Number of bytes actually written to sig or 0 on error
 	 */
-	unsigned int sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const;
-
+	inline unsigned int sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const
+	{
+		uint8_t h[48];
+		if (!_hasPrivate)
+			return 0;
+		switch(_type) {
+			case C25519:
+				if (siglen < ZT_C25519_SIGNATURE_LEN)
+					return 0;
+				C25519::sign(_k.t0.priv,_k.t0.pub,data,len,sig);
+				return ZT_C25519_SIGNATURE_LEN;
+			case P384:
+				if (siglen < ZT_ECC384_SIGNATURE_SIZE)
+					return 0;
+				SHA384(h,data,len);
+				ECC384ECDSASign(_k.t1.priv,h,(uint8_t *)sig);
+				return ZT_ECC384_SIGNATURE_SIZE;
+		}
+		return 0;
+	}
+	
 	/**
 	 * Verify a message signature against this identity
 	 *
@@ -177,8 +196,22 @@ public:
 	 * @param siglen Length of signature in bytes
 	 * @return True if signature validates and data integrity checks
 	 */
-	bool verify(const void *data,unsigned int len,const void *sig,unsigned int siglen) const;
-
+	inline bool verify(const void *data,unsigned int len,const void *sig,unsigned int siglen) const
+	{
+		switch(_type) {
+			case C25519:
+				return C25519::verify(_k.t0.pub,data,len,sig,siglen);
+			case P384:
+				if (siglen == ZT_ECC384_SIGNATURE_SIZE) {
+					uint8_t h[48];
+					SHA384(h,data,len);
+					return ECC384ECDSAVerify(_k.t1.pub,h,(const uint8_t *)sig);
+				}
+				break;
+		}
+		return false;
+	}
+	
 	/**
 	 * Shortcut method to perform key agreement with another identity
 	 *
@@ -189,8 +222,31 @@ public:
 	 * @param klen Length of key in bytes
 	 * @return Was agreement successful?
 	 */
-	bool agree(const Identity &id,void *key,unsigned int klen) const;
-
+	inline bool agree(const Identity &id,void *key,unsigned int klen) const
+	{
+		uint8_t ecc384RawSecret[ZT_ECC384_SHARED_SECRET_SIZE];
+		uint8_t h[48];
+		if (_hasPrivate) {
+			switch(_type) {
+				case C25519:
+					C25519::agree(_k.t0.priv,id._k.t0.pub,key,klen);
+					return true;
+				case P384:
+					ECC384ECDH(id._k.t1.pub,_k.t1.priv,ecc384RawSecret);
+					SHA384(h,ecc384RawSecret,sizeof(ecc384RawSecret));
+					for(unsigned int i=0,hi=0;i<klen;++i) {
+						if (hi == 48) {
+							hi = 0;
+							SHA384(h,h,48);
+						}
+						((uint8_t *)key)[i] = h[hi++];
+					}
+					return true;
+			}
+		}
+		return false;
+	}
+	
 	/**
 	 * @return This identity's address
 	 */
