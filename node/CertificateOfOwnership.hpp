@@ -56,6 +56,8 @@ class RuntimeEnvironment;
  */
 class CertificateOfOwnership : public Credential
 {
+	friend class Credential;
+
 public:
 	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_COO; }
 
@@ -85,6 +87,9 @@ public:
 	inline int64_t timestamp() const { return _ts; }
 	inline uint32_t id() const { return _id; }
 	inline unsigned int thingCount() const { return (unsigned int)_thingCount; }
+	inline const Address &signer() const { return _signedBy; }
+	inline const uint8_t *signature() const { return _signature; }
+	inline unsigned int signatureLength() const { return _signatureLength; }
 
 	inline Thing thingType(const unsigned int i) const { return (Thing)_thingTypes[i]; }
 	inline const uint8_t *thingValue(const unsigned int i) const { return _thingValues[i]; }
@@ -107,8 +112,20 @@ public:
 		return this->_owns(THING_MAC_ADDRESS,tmp,6);
 	}
 
-	void addThing(const InetAddress &ip);
-
+	inline void addThing(const InetAddress &ip)
+	{
+		if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) return;
+		if (ip.ss_family == AF_INET) {
+			_thingTypes[_thingCount] = THING_IPV4_ADDRESS;
+			memcpy(_thingValues[_thingCount],&(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),4);
+			++_thingCount;
+		} else if (ip.ss_family == AF_INET6) {
+			_thingTypes[_thingCount] = THING_IPV6_ADDRESS;
+			memcpy(_thingValues[_thingCount],reinterpret_cast<const struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
+			++_thingCount;
+		}
+	}
+	
 	inline void addThing(const MAC &mac)
 	{
 		if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) return;
@@ -121,14 +138,19 @@ public:
 	 * @param signer Signing identity, must have private key
 	 * @return True if signature was successful
 	 */
-	bool sign(const Identity &signer);
+	inline bool sign(const Identity &signer)
+	{
+		if (signer.hasPrivate()) {
+			Buffer<sizeof(CertificateOfOwnership) + 64> tmp;
+			_signedBy = signer.address();
+			this->serialize(tmp,true);
+			_signatureLength = signer.sign(tmp.data(),tmp.size(),_signature,sizeof(_signature));
+			return true;
+		}
+		return false;
+	}
 
-	/**
-	 * @param RR Runtime environment to allow identity lookup for signedBy
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature
-	 */
-	int verify(const RuntimeEnvironment *RR,void *tPtr) const;
+	inline Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,const bool forSign = false) const
@@ -204,8 +226,23 @@ public:
 	inline bool operator!=(const CertificateOfOwnership &coo) const { return (memcmp(this,&coo,sizeof(CertificateOfOwnership)) != 0); }
 
 private:
-	bool _owns(const Thing &t,const void *v,unsigned int l) const;
-
+	inline bool _owns(const Thing &t,const void *v,unsigned int l) const
+	{
+		for(unsigned int i=0,j=_thingCount;i<j;++i) {
+			if (_thingTypes[i] == (uint8_t)t) {
+				unsigned int k = 0;
+				while (k < l) {
+					if (reinterpret_cast<const uint8_t *>(v)[k] != _thingValues[i][k])
+						break;
+					++k;
+				}
+				if (k == l)
+					return true;
+			}
+		}
+		return false;
+	}
+	
 	uint64_t _networkId;
 	int64_t _ts;
 	uint64_t _flags;

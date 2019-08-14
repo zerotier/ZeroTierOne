@@ -40,6 +40,13 @@
 
 namespace ZeroTier {
 
+class Capability;
+class Revocation;
+class Tag;
+class CertificateOfMembership;
+class CertificateOfOwnership;
+class RuntimeEnvironment;
+
 /**
  * Base class for credentials
  */
@@ -58,6 +65,22 @@ public:
 		CREDENTIAL_TYPE_COO = 4,        // CertificateOfOwnership
 		CREDENTIAL_TYPE_REVOCATION = 6
 	};
+
+	/**
+	 * Result of verify() operations
+	 */
+	enum VerifyResult
+	{
+		VERIFY_OK = 0,
+		VERIFY_BAD_SIGNATURE = 1,
+		VERIFY_NEED_IDENTITY = 2
+	};
+
+protected:
+	VerifyResult _verify(const RuntimeEnvironment *const RR,void *tPtr,const CertificateOfMembership &credential) const;
+	VerifyResult _verify(const RuntimeEnvironment *const RR,void *tPtr,const Revocation &credential) const;
+	VerifyResult _verify(const RuntimeEnvironment *const RR,void *tPtr,const Tag &credential) const;
+	VerifyResult _verify(const RuntimeEnvironment *const RR,void *tPtr,const CertificateOfOwnership &credential) const;
 };
 
 } // namespace ZeroTier

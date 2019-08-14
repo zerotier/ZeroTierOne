@@ -52,8 +52,7 @@ set(core_src
 	AES.cpp
 	C25519.cpp
 	Capability.cpp
-	CertificateOfMembership.cpp
-	CertificateOfOwnership.cpp
+	Credential.cpp
 	ECC384.cpp
 	Identity.cpp
 	IncomingPacket.cpp
@@ -68,13 +67,10 @@ set(core_src
 	Path.cpp
 	Peer.cpp
 	Poly1305.cpp
-	Revocation.cpp
 	Salsa20.cpp
 	SelfAwareness.cpp
 	SHA512.cpp
 	Switch.cpp
-	Tag.cpp
-	Topology.cpp
 	Trace.cpp
 	Utils.cpp
 )

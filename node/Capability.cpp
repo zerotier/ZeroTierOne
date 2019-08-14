@@ -34,23 +34,6 @@
 
 namespace ZeroTier {
 
-bool Capability::sign(const Identity &from,const Address &to)
-{
-	try {
-		for(unsigned int i=0;((i<_maxCustodyChainLength)&&(i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH));++i) {
-			if (!(_custody[i].to)) {
-				Buffer<(sizeof(Capability) * 2)> tmp;
-				this->serialize(tmp,true);
-				_custody[i].to = to;
-				_custody[i].from = from.address();
-				_custody[i].signatureLength = from.sign(tmp.data(),tmp.size(),_custody[i].signature,sizeof(_custody[i].signature));
-				return true;
-			}
-		}
-	} catch ( ... ) {}
-	return false;
-}
-
 int Capability::verify(const RuntimeEnvironment *RR,void *tPtr) const
 {
 	try {

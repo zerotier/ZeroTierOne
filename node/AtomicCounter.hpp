@@ -72,7 +72,7 @@ public:
 
 private:
 	inline AtomicCounter(const AtomicCounter &) {}
-	const AtomicCounter &operator=(const AtomicCounter &) { return *this; }
+	inline const AtomicCounter &operator=(const AtomicCounter &) { return *this; }
 
 #ifdef __GNUC__
 	int _v;

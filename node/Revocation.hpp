@@ -55,6 +55,8 @@ class RuntimeEnvironment;
  */
 class Revocation : public Credential
 {
+	friend class Credential;
+
 public:
 	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_REVOCATION; }
 
@@ -100,6 +102,8 @@ public:
 	inline const Address &target() const { return _target; }
 	inline const Address &signer() const { return _signedBy; }
 	inline Credential::Type type() const { return _type; }
+	inline const uint8_t *signature() const { return _signature; }
+	inline unsigned int signatureLength() const { return _signatureLength; }
 
 	inline bool fastPropagate() const { return ((_flags & ZT_REVOCATION_FLAG_FAST_PROPAGATE) != 0); }
 
@@ -107,16 +111,25 @@ public:
 	 * @param signer Signing identity, must have private key
 	 * @return True if signature was successful
 	 */
-	bool sign(const Identity &signer);
+	inline bool sign(const Identity &signer)
+	{
+		if (signer.hasPrivate()) {
+			Buffer<sizeof(Revocation) + 64> tmp;
+			_signedBy = signer.address();
+			this->serialize(tmp,true);
+			_signatureLength = signer.sign(tmp.data(),tmp.size(),_signature,sizeof(_signature));
+			return true;
+		}
+		return false;
+	}
 
 	/**
 	 * Verify this revocation's signature
 	 *
 	 * @param RR Runtime environment to provide for peer lookup, etc.
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or chain
 	 */
-	int verify(const RuntimeEnvironment *RR,void *tPtr) const;
+	inline Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,const bool forSign = false) const

@@ -132,13 +132,13 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 		return ADD_ACCEPTED_REDUNDANT;
 
 	switch(com.verify(RR,tPtr)) {
-		default:
-			RR->t->credentialRejected(tPtr,com,"invalid");
-			return ADD_REJECTED;
-		case 0:
+		case Credential::VERIFY_OK:
 			_com = com;
 			return ADD_ACCEPTED_NEW;
-		case 1:
+		case Credential::VERIFY_BAD_SIGNATURE:
+			RR->t->credentialRejected(tPtr,com,"invalid");
+			return ADD_REJECTED;
+		case Credential::VERIFY_NEED_IDENTITY:
 			return ADD_DEFERRED_FOR_WHOIS;
 	}
 }

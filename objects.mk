@@ -2,8 +2,7 @@ CORE_OBJS=\
 	node/AES.o \
 	node/C25519.o \
 	node/Capability.o \
-	node/CertificateOfMembership.o \
-	node/CertificateOfOwnership.o \
+	node/Credential.o \
 	node/ECC384.o \
 	node/Identity.o \
 	node/IncomingPacket.o \
@@ -18,12 +17,10 @@ CORE_OBJS=\
 	node/Path.o \
 	node/Peer.o \
 	node/Poly1305.o \
-	node/Revocation.o \
 	node/Salsa20.o \
 	node/SelfAwareness.o \
 	node/SHA512.o \
 	node/Switch.o \
-	node/Tag.o \
 	node/Trace.o \
 	node/Utils.o
 

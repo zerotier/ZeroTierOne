@@ -62,6 +62,8 @@ class RuntimeEnvironment;
  */
 class Tag : public Credential
 {
+	friend class Credential;
+
 public:
 	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_TAG; }
 
@@ -97,7 +99,9 @@ public:
 	inline uint64_t networkId() const { return _networkId; }
 	inline int64_t timestamp() const { return _ts; }
 	inline const Address &issuedTo() const { return _issuedTo; }
-	inline const Address &signedBy() const { return _signedBy; }
+	inline const Address &signer() const { return _signedBy; }
+	inline const uint8_t *signature() const { return _signature; }
+	inline unsigned int signatureLength() const { return _signatureLength; }
 
 	/**
 	 * Sign this tag
@@ -105,16 +109,25 @@ public:
 	 * @param signer Signing identity, must have private key
 	 * @return True if signature was successful
 	 */
-	bool sign(const Identity &signer);
-
+	inline bool sign(const Identity &signer)
+	{
+		if (signer.hasPrivate()) {
+			Buffer<sizeof(Tag) + 64> tmp;
+			_signedBy = signer.address();
+			this->serialize(tmp,true);
+			_signatureLength = signer.sign(tmp.data(),tmp.size(),_signature,sizeof(_signature));
+			return true;
+		}
+		return false;
+	}
+	
 	/**
 	 * Check this tag's signature
 	 *
 	 * @param RR Runtime environment to allow identity lookup for signedBy
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or tag
 	 */
-	int verify(const RuntimeEnvironment *RR,void *tPtr) const;
+	inline Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,const bool forSign = false) const

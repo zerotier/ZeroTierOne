@@ -79,6 +79,8 @@ class RuntimeEnvironment;
  */
 class CertificateOfMembership : public Credential
 {
+	friend class Credential;
+
 public:
 	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_COM; }
 
@@ -168,7 +170,7 @@ public:
 	{
 		for(unsigned int i=0;i<_qualifierCount;++i) {
 			if (_qualifiers[i].id == COM_RESERVED_ID_TIMESTAMP)
-				return _qualifiers[i].value;
+				return (int64_t)_qualifiers[i].value;
 		}
 		return 0;
 	}
@@ -206,26 +208,26 @@ public:
 	 * @param value Qualifier value
 	 * @param maxDelta Qualifier maximum allowed difference (absolute value of difference)
 	 */
-	void setQualifier(uint64_t id,uint64_t value,uint64_t maxDelta);
+	inline void setQualifier(uint64_t id,uint64_t value,uint64_t maxDelta)
+	{
+		_signedBy.zero();
+		for(unsigned int i=0;i<_qualifierCount;++i) {
+			if (_qualifiers[i].id == id) {
+				_qualifiers[i].value = value;
+				_qualifiers[i].maxDelta = maxDelta;
+				return;
+			}
+		}
+		if (_qualifierCount < ZT_NETWORK_COM_MAX_QUALIFIERS) {
+			_qualifiers[_qualifierCount].id = id;
+			_qualifiers[_qualifierCount].value = value;
+			_qualifiers[_qualifierCount].maxDelta = maxDelta;
+			++_qualifierCount;
+			std::sort(&(_qualifiers[0]),&(_qualifiers[_qualifierCount]));
+		}
+	}
+
 	inline void setQualifier(ReservedId id,uint64_t value,uint64_t maxDelta) { setQualifier((uint64_t)id,value,maxDelta); }
-
-#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
-	/**
-	 * @return String-serialized representation of this certificate
-	 */
-	std::string toString() const;
-
-	/**
-	 * Set this certificate equal to the hex-serialized string
-	 *
-	 * Invalid strings will result in invalid or undefined certificate
-	 * contents. These will subsequently fail validation and comparison.
-	 * Empty strings will result in an empty certificate.
-	 *
-	 * @param s String to deserialize
-	 */
-	void fromString(const char *s);
-#endif // ZT_SUPPORT_OLD_STYLE_NETCONF
 
 	/**
 	 * Compare two certificates for parameter agreement
@@ -240,7 +242,41 @@ public:
 	 * @param other Cert to compare with
 	 * @return True if certs agree and 'other' may be communicated with
 	 */
-	bool agreesWith(const CertificateOfMembership &other) const;
+	inline bool agreesWith(const CertificateOfMembership &other) const
+	{
+		unsigned int myidx = 0;
+		unsigned int otheridx = 0;
+	
+		if ((_qualifierCount == 0)||(other._qualifierCount == 0))
+			return false;
+	
+		while (myidx < _qualifierCount) {
+			// Fail if we're at the end of other, since this means the field is
+			// missing.
+			if (otheridx >= other._qualifierCount)
+				return false;
+	
+			// Seek to corresponding tuple in other, ignoring tuples that
+			// we may not have. If we run off the end of other, the tuple is
+			// missing. This works because tuples are sorted by ID.
+			while (other._qualifiers[otheridx].id != _qualifiers[myidx].id) {
+				++otheridx;
+				if (otheridx >= other._qualifierCount)
+					return false;
+			}
+	
+			// Compare to determine if the absolute value of the difference
+			// between these two parameters is within our maxDelta.
+			const uint64_t a = _qualifiers[myidx].value;
+			const uint64_t b = other._qualifiers[myidx].value;
+			if (((a >= b) ? (a - b) : (b - a)) > _qualifiers[myidx].maxDelta)
+				return false;
+	
+			++myidx;
+		}
+	
+		return true;
+	}
 
 	/**
 	 * Sign this certificate
@@ -248,16 +284,33 @@ public:
 	 * @param with Identity to sign with, must include private key
 	 * @return True if signature was successful
 	 */
-	bool sign(const Identity &with);
+	inline bool sign(const Identity &with)
+	{
+		uint64_t buf[ZT_NETWORK_COM_MAX_QUALIFIERS * 3];
+		unsigned int ptr = 0;
+		for(unsigned int i=0;i<_qualifierCount;++i) {
+			buf[ptr++] = Utils::hton(_qualifiers[i].id);
+			buf[ptr++] = Utils::hton(_qualifiers[i].value);
+			buf[ptr++] = Utils::hton(_qualifiers[i].maxDelta);
+		}
+	
+		try {
+			_signatureLength = with.sign(buf,ptr * sizeof(uint64_t),_signature,sizeof(_signature));
+			_signedBy = with.address();
+			return true;
+		} catch ( ... ) {
+			_signedBy.zero();
+			return false;
+		}
+	}
 
 	/**
 	 * Verify this COM and its signature
 	 *
 	 * @param RR Runtime environment for looking up peers
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or credential
 	 */
-	int verify(const RuntimeEnvironment *RR,void *tPtr) const;
+	inline Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
 	/**
 	 * @return True if signed

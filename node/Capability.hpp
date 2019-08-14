@@ -69,6 +69,8 @@ class RuntimeEnvironment;
  */
 class Capability : public Credential
 {
+	friend class Credential;
+
 public:
 	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_CAPABILITY; }
 
@@ -154,8 +156,23 @@ public:
 	 * @param to Recipient of this signature
 	 * @return True if signature successful and chain of custody appended
 	 */
-	bool sign(const Identity &from,const Address &to);
-
+	inline bool sign(const Identity &from,const Address &to)
+	{
+		try {
+			for(unsigned int i=0;((i<_maxCustodyChainLength)&&(i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH));++i) {
+				if (!(_custody[i].to)) {
+					Buffer<(sizeof(Capability) * 2)> tmp;
+					this->serialize(tmp,true);
+					_custody[i].to = to;
+					_custody[i].from = from.address();
+					_custody[i].signatureLength = from.sign(tmp.data(),tmp.size(),_custody[i].signature,sizeof(_custody[i].signature));
+					return true;
+				}
+			}
+		} catch ( ... ) {}
+		return false;
+	}
+	
 	/**
 	 * Verify this capability's chain of custody and signatures
 	 *
@@ -163,7 +180,7 @@ public:
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or chain
 	 */
 	int verify(const RuntimeEnvironment *RR,void *tPtr) const;
-
+	
 	template<unsigned int C>
 	static inline void serializeRules(Buffer<C> &b,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
 	{
