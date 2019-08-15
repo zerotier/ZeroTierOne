@@ -94,12 +94,12 @@
 #define ZT_PROTO_MAX_HOPS 7
 
 /**
- * Cipher suite: Poly1305/NONE
+ * NONE/Poly1305 (using Salsa20/12 to generate poly1305 key)
  */
 #define ZT_PROTO_CIPHER_SUITE__POLY1305_NONE 0
 
 /**
- * Cipher suite: Poly1305/Salsa2012
+ * Salsa2012/Poly1305
  */
 #define ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012 1
 
@@ -116,11 +116,9 @@
 #define ZT_PROTO_CIPHER_SUITE__NO_CRYPTO_TRUSTED_PATH 2
 
 /**
- * DEPRECATED payload encrypted flag, may be re-used in the future.
- *
- * This has been replaced by the three-bit cipher suite selection field.
+ * AES256/GCM
  */
-#define ZT_PROTO_FLAG_ENCRYPTED 0x80
+#define ZT_PROTO_CIPHER_SUITE__AES256_GCM 3
 
 /**
  * Header flag indicating that a packet is fragmented
@@ -134,11 +132,6 @@
  * Verb flag indicating payload is compressed with LZ4
  */
 #define ZT_PROTO_VERB_FLAG_COMPRESSED 0x80
-
-/**
- * PUSH_DIRECT_PATHS flag: forget path
- */
-#define ZT_PUSH_DIRECT_PATHS_FLAG_FORGET_PATH 0x01
 
 /**
  * PUSH_DIRECT_PATHS flag: cluster redirect
@@ -1098,10 +1091,6 @@ public:
 	{
 		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
 		b = (b & 0xc7) | (unsigned char)((c << 3) & 0x38); // bits: FFCCCHHH
-		// Set DEPRECATED "encrypted" flag -- used by pre-1.0.3 peers
-		if (c == ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012)
-			b |= ZT_PROTO_FLAG_ENCRYPTED;
-		else b &= (~ZT_PROTO_FLAG_ENCRYPTED);
 	}
 
 	/**
