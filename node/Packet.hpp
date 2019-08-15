@@ -94,26 +94,14 @@
 #define ZT_PROTO_MAX_HOPS 7
 
 /**
- * Cipher suite: Curve25519/Poly1305/Salsa20/12/NOCRYPT
- *
- * This specifies Poly1305 MAC using a 32-bit key derived from the first
- * 32 bytes of a Salsa20/12 keystream as in the Salsa20/12 cipher suite,
- * but the payload is not encrypted. This is currently only used to send
- * HELLO since that's the public key specification packet and must be
- * sent in the clear. Key agreement is performed using Curve25519 elliptic
- * curve Diffie-Hellman.
+ * Cipher suite: Poly1305/NONE
  */
-#define ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE 0
+#define ZT_PROTO_CIPHER_SUITE__POLY1305_NONE 0
 
 /**
- * Cipher suite: Curve25519/Poly1305/Salsa20/12
- *
- * This specifies Poly1305 using the first 32 bytes of a Salsa20/12 key
- * stream as its one-time-use key followed by payload encryption with
- * the remaining Salsa20/12 key stream. Key agreement is performed using
- * Curve25519 elliptic curve Diffie-Hellman.
+ * Cipher suite: Poly1305/Salsa2012
  */
-#define ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 1
+#define ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012 1
 
 /**
  * Cipher suite: NONE
@@ -146,69 +134,6 @@
  * Verb flag indicating payload is compressed with LZ4
  */
 #define ZT_PROTO_VERB_FLAG_COMPRESSED 0x80
-
-/**
- * Rounds used for Salsa20 encryption in ZT
- *
- * Discussion:
- *
- * DJB (Salsa20's designer) designed Salsa20 with a significant margin of 20
- * rounds, but has said repeatedly that 12 is likely sufficient. So far (as of
- * July 2015) there are no published attacks against 12 rounds, let alone 20.
- *
- * In cryptography, a "break" means something different from what it means in
- * common discussion. If a cipher is 256 bits strong and someone finds a way
- * to reduce key search to 254 bits, this constitutes a "break" in the academic
- * literature. 254 bits is still far beyond what can be leveraged to accomplish
- * a "break" as most people would understand it -- the actual decryption and
- * reading of traffic.
- *
- * Nevertheless, "attacks only get better" as cryptographers like to say. As
- * a result, they recommend not using anything that's shown any weakness even
- * if that weakness is so far only meaningful to academics. It may be a sign
- * of a deeper problem.
- *
- * So why choose a lower round count?
- *
- * Turns out the speed difference is nontrivial. On a Macbook Pro (Core i3) 20
- * rounds of SSE-optimized Salsa20 achieves ~508mb/sec/core, while 12 rounds
- * hits ~832mb/sec/core. ZeroTier is designed for multiple objectives:
- * security, simplicity, and performance. In this case a deference was made
- * for performance.
- *
- * Meta discussion:
- *
- * The cipher is not the thing you should be paranoid about.
- *
- * I'll qualify that. If the cipher is known to be weak, like RC4, or has a
- * key size that is too small, like DES, then yes you should worry about
- * the cipher.
- *
- * But if the cipher is strong and your adversary is anyone other than the
- * intelligence apparatus of a major superpower, you are fine in that
- * department.
- *
- * Go ahead. Search for the last ten vulnerabilities discovered in SSL. Not
- * a single one involved the breaking of a cipher. Now broaden your search.
- * Look for issues with SSH, IPSec, etc. The only cipher-related issues you
- * will find might involve the use of RC4 or MD5, algorithms with known
- * issues or small key/digest sizes. But even weak ciphers are difficult to
- * exploit in the real world -- you usually need a lot of data and a lot of
- * compute time. No, virtually EVERY security vulnerability you will find
- * involves a problem with the IMPLEMENTATION not with the cipher.
- *
- * A flaw in ZeroTier's protocol or code is incredibly, unbelievably
- * more likely than a flaw in Salsa20 or any other cipher or cryptographic
- * primitive it uses. We're talking odds of dying in a car wreck vs. odds of
- * being personally impacted on the head by a meteorite. Nobody without a
- * billion dollar budget is going to break into your network by actually
- * cracking Salsa20/12 (or even /8) in the field.
- *
- * So stop worrying about the cipher unless you are, say, the Kremlin and your
- * adversary is the NSA and the GCHQ. In that case... well that's above my
- * pay grade. I'll just say defense in depth.
- */
-#define ZT_PROTO_SALSA20_ROUNDS 12
 
 /**
  * PUSH_DIRECT_PATHS flag: forget path
@@ -1174,7 +1099,7 @@ public:
 		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
 		b = (b & 0xc7) | (unsigned char)((c << 3) & 0x38); // bits: FFCCCHHH
 		// Set DEPRECATED "encrypted" flag -- used by pre-1.0.3 peers
-		if (c == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
+		if (c == ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012)
 			b |= ZT_PROTO_FLAG_ENCRYPTED;
 		else b &= (~ZT_PROTO_FLAG_ENCRYPTED);
 	}

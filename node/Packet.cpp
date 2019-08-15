@@ -895,7 +895,7 @@ void Packet::armor(const void *key,bool encryptPayload)
 	uint8_t *const data = reinterpret_cast<uint8_t *>(unsafeData());
 
 	// Set flag now, since it affects key mangle function
-	setCipher(encryptPayload ? ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 : ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE);
+	setCipher(encryptPayload ? ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012 : ZT_PROTO_CIPHER_SUITE__POLY1305_NONE);
 
 	_salsa20MangleKey((const unsigned char *)key,mangledKey);
 
@@ -933,11 +933,11 @@ bool Packet::dearmor(const void *key)
 	unsigned char *const payload = data + ZT_PACKET_IDX_VERB;
 	const unsigned int cs = cipher();
 
-	if ((cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)||(cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)) {
+	if ((cs == ZT_PROTO_CIPHER_SUITE__POLY1305_NONE)||(cs == ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012)) {
 		_salsa20MangleKey((const unsigned char *)key,mangledKey);
 		if (ZT_HAS_FAST_CRYPTO()) {
 			uint64_t keyStream[(ZT_PROTO_MAX_PACKET_LENGTH + 64 + 8) / 8];
-			ZT_FAST_SINGLE_PASS_SALSA2012(keyStream,((cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012) ? (payloadLen + 64) : 64),(data + ZT_PACKET_IDX_IV),mangledKey);
+			ZT_FAST_SINGLE_PASS_SALSA2012(keyStream,((cs == ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012) ? (payloadLen + 64) : 64),(data + ZT_PACKET_IDX_IV),mangledKey);
 			uint64_t mac[2];
 			poly1305(mac,payload,payloadLen,keyStream);
 #ifdef ZT_NO_TYPE_PUNNING
@@ -947,7 +947,7 @@ bool Packet::dearmor(const void *key)
 			if ((*reinterpret_cast<const uint64_t *>(data + ZT_PACKET_IDX_MAC)) != mac[0]) // also secure, constant time
 				return false;
 #endif
-			if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
+			if (cs == ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012)
 				Salsa20::memxor(data + ZT_PACKET_IDX_VERB,reinterpret_cast<const uint8_t *>(keyStream + 8),payloadLen);
 		} else {
 			Salsa20 s20(mangledKey,data + ZT_PACKET_IDX_IV);
@@ -962,7 +962,7 @@ bool Packet::dearmor(const void *key)
 			if ((*reinterpret_cast<const uint64_t *>(data + ZT_PACKET_IDX_MAC)) != mac[0]) // also secure, constant time
 				return false;
 #endif
-			if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
+			if (cs == ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012)
 				s20.crypt12(payload,payload,payloadLen);
 		}
 
