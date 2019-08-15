@@ -63,7 +63,7 @@ ifeq ($(ZT_DEBUG),1)
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o node/AES.o: CFLAGS = -Wall -O2 -g -maes -mpclmul $(INCLUDES) $(DEFS)
 else
 	CFLAGS?=-Ofast -fstack-protector-strong
-	CFLAGS+=$(ARCH_FLAGS) -Wall -flto -fPIE -maes -msse -msse2 -mpclmul -mmacosx-version-min=10.9 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
+	CFLAGS+=$(ARCH_FLAGS) -Wall -flto -fPIE -maes -msse -msse2 -msse3 -mpclmul -mmacosx-version-min=10.9 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
 	STRIP=strip
 endif
 
