@@ -180,21 +180,14 @@ static int testCrypto()
 		std::cout << "[crypto] getSecureRandom: " << Utils::hex(buf1,64,hexbuf) << std::endl;
 	}
 
-	std::cout << "[crypto] Testing and benchmarking AES-256 and GCM..." << std::endl << "  AES-256 (ECB): "; std::cout.flush();
+	std::cout << "[crypto] Testing and benchmarking AES-256 and GCM..." << std::endl << "  AES-256 (test vectors): "; std::cout.flush();
 	AES tv(AES_TEST_VECTOR_0_KEY);
 	tv.encrypt(AES_TEST_VECTOR_0_IN,(uint8_t *)buf1);
 	if (memcmp(buf1,AES_TEST_VECTOR_0_OUT,16) != 0) {
 		std::cout << "  FAILED (test vector 0)" << std::endl;
 		return -1;
 	}
-	uint64_t start = OSUtils::now();
-	for(unsigned long i=0;i<20000000;++i) {
-		tv.encrypt((const uint8_t *)buf1,(uint8_t *)buf1);
-	}
-	uint64_t end = OSUtils::now();
-	*dummy = buf1[0]; // prevent optimization
-	std::cout << (20000000.0 / (long double)(end - start)) << " blocks/millisecond" << std::endl;
-	std::cout << "  AES-256 (GCM): "; std::cout.flush();
+	std::cout << "PASS" << std::endl << "  AES-256 GCM (test vectors, benchmark): "; std::cout.flush();
 	tv.gcmEncrypt((const uint8_t *)hexbuf,buf1,sizeof(buf1),nullptr,0,buf2,(uint8_t *)(hexbuf + 32),16);
 	if (!tv.gcmDecrypt((const uint8_t *)hexbuf,buf2,sizeof(buf2),nullptr,0,buf3,(const uint8_t *)(hexbuf + 32),16)) {
 		std::cout << "FAILED (encrypt/decrypt, auth tag mismatch)" << std::endl;
@@ -215,12 +208,12 @@ static int testCrypto()
 		return -1;
 	}
 	double gcmBytes = 0.0;
-	start = OSUtils::now();
+	int64_t start = OSUtils::now();
 	for(unsigned long i=0;i<150000;++i) {
 		tv.gcmEncrypt((const uint8_t *)hexbuf,buf1,sizeof(buf1),nullptr,0,buf2,(uint8_t *)(hexbuf + 32),16);
 		gcmBytes += (double)sizeof(buf1);
 	}
-	end = OSUtils::now();
+	int64_t end = OSUtils::now();
 	*dummy = buf1[0];
 	std::cout << ((gcmBytes / 1048576.0) / ((long double)(end - start) / 1000.0)) << " MiB/second" << std::endl;
 
