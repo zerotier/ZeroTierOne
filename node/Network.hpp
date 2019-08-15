@@ -193,10 +193,10 @@ public:
 		Mutex::Lock _l(_lock);
 		if (!std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg)) {
 			_myMulticastGroups.insert(std::upper_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg),mg);
-			_sendUpdatesToMembers(tPtr,&mg);
+			_sendUpdatesToMembers(tPtr);
 		}
 	}
-	
+
 	/**
 	 * Unsubscribe from a multicast group
 	 *
@@ -295,7 +295,7 @@ public:
 	inline void sendUpdatesToMembers(void *tPtr)
 	{
 		Mutex::Lock _l(_lock);
-		_sendUpdatesToMembers(tPtr,(const MulticastGroup *)0);
+		_sendUpdatesToMembers(tPtr);
 	}
 
 	/**
@@ -432,7 +432,7 @@ private:
 	ZT_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
 	bool _gate(const SharedPtr<Peer> &peer);
-	void _sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMulticastGroup);
+	void _sendUpdatesToMembers(void *tPtr);
 	void _announceMulticastGroupsTo(void *tPtr,const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups);
 	std::vector<MulticastGroup> _allMulticastGroups() const;
 

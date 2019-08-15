@@ -130,7 +130,7 @@ extern "C" {
 /**
  * Maximum number of multicast group subscriptions per network
  */
-#define ZT_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS 4096
+#define ZT_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS 2048
 
 /**
  * Rules engine revision ID, which specifies rules engine capabilities

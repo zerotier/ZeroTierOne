@@ -126,7 +126,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 		m += sws;
 		RR->mc = new (m) Multicaster(RR);
 		m += mcs;
-		RR->topology = new (m) Topology(RR,tptr);
+		RR->topology = new (m) Topology(RR,RR->identity);
 		m += topologys;
 		RR->sa = new (m) SelfAwareness(RR);
 	} catch ( ... ) {
@@ -190,6 +190,7 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
+/*
 // Function object used to traverse the peer list, check peer status, and ping
 // those that need pinging.
 struct _PingPeersThatNeedPing
@@ -254,6 +255,7 @@ struct _PingPeersThatNeedPing
 
 	bool online;
 };
+*/
 
 ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64_t *nextBackgroundTaskDeadline)
 {
@@ -282,6 +284,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 				_localControllerAuthorizations_m.unlock();
 			}
 
+/*
 			// (1) Get peers we should remain connected to and (2) get networks that need config.
 			Hashtable< Address,std::vector<InetAddress> > alwaysContact;
 			RR->topology->getAlwaysContact(alwaysContact);
@@ -322,6 +325,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 			_online = pfunc.online;
 			if (oldOnline != _online)
 				postEvent(tptr,_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
+*/
 		} catch ( ... ) {
 			return ZT_RESULT_FATAL_ERROR_INTERNAL;
 		}
@@ -337,7 +341,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 	if ((now - _lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
 		_lastHousekeepingRun = now;
 		try {
-			RR->topology->doPeriodicTasks(tptr,now);
+			RR->topology->doPeriodicTasks(now);
 			RR->sa->clean(now);
 			RR->mc->clean(now);
 		} catch ( ... ) {
@@ -454,7 +458,7 @@ ZT_PeerList *Node::peers() const
 		p->latency = pi->second->latency(_now);
 		if (p->latency >= 0xffff)
 			p->latency = -1;
-		p->role = RR->topology->role(pi->second->identity().address());
+		p->role = RR->topology->isRoot(pi->second->identity()) ? ZT_PEER_ROLE_PLANET : ZT_PEER_ROLE_LEAF;
 
 		std::vector< SharedPtr<Path> > paths(pi->second->paths(_now));
 		SharedPtr<Path> bestp(pi->second->getAppropriatePath(_now,false));

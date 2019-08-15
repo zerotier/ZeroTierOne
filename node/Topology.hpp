@@ -45,6 +45,7 @@
 #include "Mutex.hpp"
 #include "InetAddress.hpp"
 #include "Hashtable.hpp"
+#include "Root.hpp"
 
 namespace ZeroTier {
 
@@ -56,8 +57,9 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
-	inline Topology(const RuntimeEnvironment *renv,void *tPtr) :
+	inline Topology(const RuntimeEnvironment *renv,const Identity &myId) :
 		RR(renv),
+		_myIdentity(myId),
 		_numConfiguredPhysicalPaths(0) {}
 	inline ~Topology() {}
 
@@ -71,7 +73,7 @@ public:
 	 * @param peer Peer to add
 	 * @return New or existing peer (should replace 'peer')
 	 */
-	inline SharedPtr<Peer> addPeer(void *tPtr,const SharedPtr<Peer> &peer)
+	inline SharedPtr<Peer> add(const SharedPtr<Peer> &peer)
 	{
 		SharedPtr<Peer> np;
 		{
@@ -91,13 +93,28 @@ public:
 	 * @param zta ZeroTier address of peer
 	 * @return Peer or NULL if not found
 	 */
-	inline SharedPtr<Peer> getPeer(void *tPtr,const Address &zta) const
+	inline SharedPtr<Peer> get(const Address &zta)
 	{
-		if (zta == RR->identity.address())
+		if (zta == _myIdentity.address())
 			return SharedPtr<Peer>();
-		Mutex::Lock _l(_peers_m);
+
+		Mutex::Lock l1(_peers_m);
 		const SharedPtr<Peer> *const ap = _peers.get(zta);
-		return ((ap) ? *ap : SharedPtr<Peer>());
+		if (ap)
+			return *ap;
+
+		Mutex::Lock l2(_roots_m);
+		for(std::vector<Root>::const_iterator r(_roots.begin());r!=_roots.end();++r) {
+			if (r->address() == zta) {
+				try {
+					SharedPtr<Peer> rp(new Peer(RR,_myIdentity,r->id()));
+					_peers[zta] = rp;
+					return rp;
+				} catch ( ... ) {}
+			}
+		}
+
+		return SharedPtr<Peer>();
 	}
 
 	/**
@@ -107,8 +124,8 @@ public:
 	 */
 	inline Identity getIdentity(void *tPtr,const Address &zta)
 	{
-		if (zta == RR->identity.address()) {
-			return RR->identity;
+		if (zta == _myIdentity.address()) {
+			return _myIdentity;
 		} else {
 			Mutex::Lock _l(_peers_m);
 			const SharedPtr<Peer> *const ap = _peers.get(zta);
@@ -116,25 +133,6 @@ public:
 				return (*ap)->identity();
 		}
 		return Identity();
-	}
-
-	/**
-	 * Get a peer only if it is presently in memory (no disk cache)
-	 *
-	 * This also does not update the lastUsed() time for peers, which means
-	 * that it won't prevent them from falling out of RAM. This is currently
-	 * used in the Cluster code to update peer info without forcing all peers
-	 * across the entire cluster to remain in memory cache.
-	 *
-	 * @param zta ZeroTier address
-	 */
-	inline SharedPtr<Peer> getPeerNoCache(const Address &zta)
-	{
-		Mutex::Lock _l(_peers_m);
-		const SharedPtr<Peer> *const ap = _peers.get(zta);
-		if (ap)
-			return *ap;
-		return SharedPtr<Peer>();
 	}
 
 	/**
@@ -153,36 +151,24 @@ public:
 		return p;
 	}
 
-	inline SharedPtr<Peer> getUpstreamPeer() const
+	/**
+	 * @param id Identity to check
+	 * @return True if this identity corresponds to a root
+	 */
+	inline bool isRoot(const Identity &id) const
 	{
-		// TODO
-		return SharedPtr<Peer>();
-	}
-
-	inline bool isUpstream(const Identity &id) const
-	{
-		// TODO
+		Mutex::Lock l(_roots_m);
+		for(std::vector<Root>::const_iterator r(_roots.begin());r!=_roots.end();++r) {
+			if (r->is(id))
+				return true;
+		}
 		return false;
 	}
 
-	inline ZT_PeerRole role(const Address &ztaddr) const
-	{
-		// TODO
-		return ZT_PEER_ROLE_LEAF;
-	}
-
-	inline void getAlwaysContact(Hashtable< Address,std::vector<InetAddress> > &eps) const
-	{
-		// TODO
-	}
-
-	inline std::vector<Address> upstreamAddresses() const
-	{
-		// TODO
-		return std::vector<Address>();
-	}
-
-	inline void doPeriodicTasks(void *tPtr,int64_t now)
+	/**
+	 * Do periodic tasks such as database cleanup
+	 */
+	inline void doPeriodicTasks(int64_t now)
 	{
 		{
 			Mutex::Lock _l1(_peers_m);
@@ -357,11 +343,14 @@ public:
 
 private:
 	const RuntimeEnvironment *const RR;
+	const Identity _myIdentity;
 	std::pair<InetAddress,ZT_PhysicalPathConfiguration> _physicalPathConfig[ZT_MAX_CONFIGURABLE_PATHS];
 	unsigned int _numConfiguredPhysicalPaths;
+	std::vector<Root> _roots;
 	Hashtable< Address,SharedPtr<Peer> > _peers;
-	Mutex _peers_m;
 	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
+	Mutex _roots_m;
+	Mutex _peers_m;
 	Mutex _paths_m;
 };
 

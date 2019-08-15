@@ -58,10 +58,11 @@ namespace ZeroTier {
 class Locator
 {
 public:
-	inline Locator() : _signatureLength(0) {}
+	inline Locator() : _ts(0),_signatureLength(0) {}
 
 	inline const Identity &id() const { return _id; }
 	inline const Identity &signer() const { return ((_signedBy) ? _signedBy : _id); }
+	inline int64_t timestamp() const { return _ts; }
 
 	inline const std::vector<InetAddress> &phy() const { return _physical; }
 	inline const std::vector<Identity> &virt() const { return _virtual; }
@@ -186,10 +187,9 @@ public:
 	/**
 	 * Decode TXT records
 	 * 
-	 * The supplied TXT records must be sorted in ascending natural sort order prior
-	 * to calling this method. The iterators supplied must be read iterators that
-	 * point to string objects supporting the c_str() method, which can be Str or
-	 * std::string.
+	 * TXT records can be provided as an iterator over std::string, Str, or char *
+	 * values, and TXT records can be provided in any order. Any oversize or empty
+	 * entries will be ignored.
 	 * 
 	 * This method checks the decoded locator's signature using the supplied DNS TXT
 	 * record signing public key. False is returned if the TXT records are invalid,
@@ -202,11 +202,22 @@ public:
 		uint8_t dec[256],s384[48];
 		Buffer<65536> *tmp = nullptr;
 		try {
-			tmp = new Buffer<65536>();
+			std::vector<Str> txtRecords;
 			while (start != end) {
-				tmp->append(dec,Utils::b64d(start->c_str(),dec,sizeof(dec)));
+				try {
+					Str ts(start);
+					if (ts.length() > 2)
+						txtRecords.push_back(ts);
+				} catch ( ... ) {} // skip any records that trigger out of bounds exceptions
 				++start;
 			}
+			if (txtRecords.empty())
+				return false;
+			std::sort(txtRecords.begin(),txtRecords.end());
+
+			tmp = new Buffer<65536>();
+			for(std::vector<Str>::const_iterator i(txtRecords.begin());i!=txtRecords.end();++i)
+				tmp->append(dec,Utils::b64d(i->c_str() + 2,dec,sizeof(dec)));
 
 			if (tmp->size() <= ZT_ECC384_SIGNATURE_SIZE) {
 				delete tmp;
@@ -219,8 +230,8 @@ public:
 			}
 
 			deserialize(*tmp,0);
-
 			delete tmp;
+
 			return verify();
 		} catch ( ... ) {
 			if (tmp) delete tmp;
@@ -235,10 +246,10 @@ public:
 
 		b.append((uint8_t)0); // version/flags, currently 0
 		b.append((uint64_t)_ts);
-		_id.serialise(b,false);
+		_id.serialize(b,false);
 		if (_signedBy) {
 			b.append((uint8_t)1); // number of signers, current max is 1
-			_signedBy.serialize(b,false);
+			_signedBy.serialize(b,false); // be sure not to include private key!
 		} else {
 			b.append((uint8_t)0); // signer is _id
 		}
@@ -282,7 +293,7 @@ public:
 		_virtual.resize(virtualCount);
 		for(unsigned int i=0;i<virtualCount;++i)
 			p += _virtual[i].deserialize(b,p);
-		_signatureLen = b.template at<uint16_t>(p); p += 2;
+		_signatureLength = b.template at<uint16_t>(p); p += 2;
 		if (_signatureLength > ZT_SIGNATURE_BUFFER_SIZE)
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
 		memcpy(_signature,b.field(p,_signatureLength),_signatureLength);

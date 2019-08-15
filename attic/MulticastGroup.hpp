@@ -91,8 +91,40 @@ public:
 		return MulticastGroup();
 	}
 
+	/**
+	 * @return Multicast address
+	 */
 	inline const MAC &mac() const { return _mac; }
+
+	/**
+	 * @return Additional distinguishing information
+	 */
 	inline uint32_t adi() const { return _adi; }
+
+	/**
+	 * Compute a 32-bit randomized identifier for this group
+	 * 
+	 * This is a 32-bit fnv1a hash of the MAC and ADI. It's part of the protocol as it's
+	 * used to generate unique identifiers for multicast groups for multicast lookup, so
+	 * don't change it lightly.
+	 */
+	inline uint32_t id32() const
+	{
+		uint32_t h = 0x811c9dc5;
+		const uint64_t m = _mac.toInt();
+		const uint32_t p = 0x1000193;
+		h ^= (uint32_t)(m >> 40) & 0xff; h *= p;
+		h ^= (uint32_t)(m >> 32) & 0xff; h *= p;
+		h ^= (uint32_t)(m >> 24) & 0xff; h *= p;
+		h ^= (uint32_t)(m >> 16) & 0xff; h *= p;
+		h ^= (uint32_t)(m >> 8) & 0xff;  h *= p;
+		h ^= (uint32_t)m & 0xff;         h *= p;
+		h ^= _adi >> 24;                 h *= p;
+		h ^= (_adi >> 16) & 0xff;        h *= p;
+		h ^= (_adi >> 8) & 0xff;         h *= p;
+		h ^= _adi & 0xff;                h *= p;
+		return h;
+	}
 
 	inline unsigned long hashCode() const { return (_mac.hashCode() + (unsigned long)_adi); }
 

@@ -65,6 +65,11 @@ struct InetAddress : public sockaddr_storage
 	static const InetAddress LO6;
 
 	/**
+	 * Null address
+	 */
+	static const InetAddress NIL;
+
+	/**
 	 * IP address scope
 	 *
 	 * Note that these values are in ascending order of path preference and

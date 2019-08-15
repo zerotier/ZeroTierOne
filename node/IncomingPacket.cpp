@@ -75,7 +75,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 			return _doHELLO(RR,tPtr,false);
 		}
 
-		const SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,sourceAddress));
+		const SharedPtr<Peer> peer(RR->topology->get(sourceAddress));
 		if (peer) {
 			if (!trusted) {
 				if (!dearmor(peer->key())) {
@@ -170,7 +170,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 		case Packet::ERROR_IDENTITY_COLLISION:
 			// This is a trusted upstream telling us our 5-digit ID is taken. This
 			// causes the node to generate another.
-			if (RR->topology->isUpstream(peer->identity()))
+			if (RR->topology->isRoot(peer->identity()))
 				RR->node->postEvent(tPtr,ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION);
 			break;
 
@@ -283,7 +283,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 		return true;
 	}
 
-	SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,id.address()));
+	SharedPtr<Peer> peer(RR->topology->get(id.address()));
 	if (peer) {
 		// We already have an identity with this address -- check for collisions
 		if (!alreadyAuthenticated) {
@@ -351,7 +351,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 			return true;
 		}
 
-		peer = RR->topology->addPeer(tPtr,newPeer);
+		peer = RR->topology->add(newPeer);
 
 		// Continue at // VALID
 	}
@@ -363,7 +363,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 	if (ptr < size()) {
 		ptr += externalSurfaceAddress.deserialize(*this,ptr);
 		if ((externalSurfaceAddress)&&(hops() == 0))
-			RR->sa->iam(tPtr,id.address(),_path->localSocket(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(id),now);
+			RR->sa->iam(tPtr,id.address(),_path->localSocket(),_path->address(),externalSurfaceAddress,RR->topology->isRoot(id),now);
 	}
 
 	// Send OK(HELLO) with an echo of the packet's timestamp and some of the same
@@ -451,13 +451,13 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 			peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
 
 			if ((externalSurfaceAddress)&&(hops() == 0))
-				RR->sa->iam(tPtr,peer->address(),_path->localSocket(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(peer->identity()),RR->node->now());
+				RR->sa->iam(tPtr,peer->address(),_path->localSocket(),_path->address(),externalSurfaceAddress,RR->topology->isRoot(peer->identity()),RR->node->now());
 		}	break;
 
 		case Packet::VERB_WHOIS:
-			if (RR->topology->isUpstream(peer->identity())) {
+			if (RR->topology->isRoot(peer->identity())) {
 				const Identity id(*this,ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY);
-				RR->sw->doAnythingWaitingForPeer(tPtr,RR->topology->addPeer(tPtr,SharedPtr<Peer>(new Peer(RR,RR->identity,id))));
+				RR->sw->doAnythingWaitingForPeer(tPtr,RR->topology->add(SharedPtr<Peer>(new Peer(RR,RR->identity,id))));
 			}
 			break;
 
@@ -550,9 +550,9 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const Shar
 
 bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
-	if (RR->topology->isUpstream(peer->identity())) {
+	if (RR->topology->isRoot(peer->identity())) {
 		const Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-		const SharedPtr<Peer> rendezvousWith(RR->topology->getPeer(tPtr,with));
+		const SharedPtr<Peer> rendezvousWith(RR->topology->get(with));
 		if (rendezvousWith) {
 			const unsigned int port = at<uint16_t>(ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT);
 			const unsigned int addrlen = (*this)[ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN];
@@ -1021,7 +1021,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 			const bool amAnchor = (std::find(anchors.begin(),anchors.end(),RR->identity.address()) != anchors.end());
 
 			for(std::list<Address>::iterator ra(recipients.begin());ra!=recipients.end();) {
-				SharedPtr<Peer> recipient(RR->topology->getPeer(tPtr,*ra));
+				SharedPtr<Peer> recipient(RR->topology->get(*ra));
 				if ((recipient)&&((recipient->remoteVersionProtocol() < 10)||(amAnchor))) {
 					Packet outp(*ra,RR->identity.address(),Packet::VERB_MULTICAST_FRAME);
 					outp.append(field(ZT_PACKET_IDX_PAYLOAD,recipientsOffset - ZT_PACKET_IDX_PAYLOAD),recipientsOffset - ZT_PACKET_IDX_PAYLOAD);

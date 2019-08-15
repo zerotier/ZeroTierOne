@@ -38,6 +38,7 @@ namespace ZeroTier {
 
 const InetAddress InetAddress::LO4((const void *)("\x7f\x00\x00\x01"),4,0);
 const InetAddress InetAddress::LO6((const void *)("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"),16,0);
+const InetAddress InetAddress::NIL;
 
 InetAddress::IpScope InetAddress::ipScope() const
 {

@@ -33,6 +33,8 @@
 #include "MAC.hpp"
 #include "InetAddress.hpp"
 
+#include <string>
+
 #define ZT_STR_CAPACITY 254
 
 namespace ZeroTier {
@@ -58,6 +60,10 @@ public:
 		_s[0] = 0;
 		(*this) << s;
 	}
+	inline Str(const std::string &s)
+	{
+		*this = s;
+	}
 
 	inline Str &operator=(const Str &s)
 	{
@@ -71,6 +77,19 @@ public:
 		_s[0] = 0;
 		return ((*this) << s);
 	}
+	inline Str &operator=(const std::string &s)
+	{
+		if (s.length() > ZT_STR_CAPACITY) {
+			_l = 0;
+			_s[0] = 0;
+			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		} else {
+			_l = (uint8_t)s.length();
+			memcpy(_s,s.data(),s.length());
+			_s[s.length()] = 0;
+		}
+		return *this;
+	}
 
 	inline char operator[](const unsigned int i) const
 	{
@@ -82,6 +101,7 @@ public:
 	inline void clear() { _l = 0; _s[0] = 0; }
 	inline const char *c_str() const { return _s; }
 	inline unsigned int length() const { return (unsigned int)_l; }
+	inline bool empty() const { return (_l == 0); }
 	inline iterator begin() { return (iterator)_s; }
 	inline iterator end() { return (iterator)(_s + (unsigned long)_l); }
 	inline const_iterator begin() const { return (const_iterator)_s; }
@@ -113,6 +133,7 @@ public:
 		}
 		_s[(unsigned long)(_l++)] = c;
 		_s[(unsigned long)_l] = 0;
+		return *this;
 	}
 	inline Str &operator<<(const unsigned long n)
 	{
@@ -141,6 +162,8 @@ public:
 		char tmp[64];
 		return ((*this) << a.toString(tmp));
 	}
+
+	inline operator bool() const { return (_l != 0); }
 
 	inline bool operator==(const Str &s) const { return ((_l == s._l)&&(strcmp(_s,s._s) == 0)); }
 	inline bool operator!=(const Str &s) const { return ((_l != s._l)||(strcmp(_s,s._s) != 0)); }

@@ -243,10 +243,6 @@ void Multicaster::send(
 				Address explicitGatherPeers[16];
 				unsigned int numExplicitGatherPeers = 0;
 
-				SharedPtr<Peer> bestRoot(RR->topology->getUpstreamPeer());
-				if (bestRoot)
-					explicitGatherPeers[numExplicitGatherPeers++] = bestRoot->address();
-
 				explicitGatherPeers[numExplicitGatherPeers++] = network->controller();
 
 				Address ac[ZT_MAX_NETWORK_SPECIALISTS];

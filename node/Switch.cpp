@@ -73,7 +73,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 				return;
 			if (!RR->node->shouldUsePathForZeroTierTraffic(tPtr,beaconAddr,localSocket,fromAddr))
 				return;
-			const SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,beaconAddr));
+			const SharedPtr<Peer> peer(RR->topology->get(beaconAddr));
 			if (peer) { // we'll only respond to beacons from known peers
 				if ((now - _lastBeaconResponse) >= 2500) { // limit rate of responses
 					_lastBeaconResponse = now;
@@ -96,12 +96,13 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 
 						// Note: we don't bother initiating NAT-t for fragments, since heads will set that off.
 						// It wouldn't hurt anything, just redundant and unnecessary.
-						SharedPtr<Peer> relayTo = RR->topology->getPeer(tPtr,destination);
+						SharedPtr<Peer> relayTo = RR->topology->get(destination);
 						if ((!relayTo)||(!relayTo->sendDirect(tPtr,fragment.data(),fragment.size(),now,false))) {
 							// Don't know peer or no direct path -- so relay via someone upstream
-							relayTo = RR->topology->getUpstreamPeer();
-							if (relayTo)
-								relayTo->sendDirect(tPtr,fragment.data(),fragment.size(),now,true);
+							// TODO
+							//relayTo = RR->topology->getUpstreamPeer();
+							//if (relayTo)
+							//	relayTo->sendDirect(tPtr,fragment.data(),fragment.size(),now,true);
 						}
 					}
 				} else {
@@ -163,22 +164,25 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 					Packet packet(data,len);
 					if (packet.hops() < ZT_RELAY_MAX_HOPS) {
 						packet.incrementHops();
-						SharedPtr<Peer> relayTo = RR->topology->getPeer(tPtr,destination);
+						SharedPtr<Peer> relayTo = RR->topology->get(destination);
 						if ((relayTo)&&(relayTo->sendDirect(tPtr,packet.data(),packet.size(),now,false))) {
 							if ((source != RR->identity.address())&&(_shouldUnite(now,source,destination))) {
-								const SharedPtr<Peer> sourcePeer(RR->topology->getPeer(tPtr,source));
+								const SharedPtr<Peer> sourcePeer(RR->topology->get(source));
 								if (sourcePeer)
 									relayTo->introduce(tPtr,now,sourcePeer);
 							}
 						} else {
+							// TODO
+							/*
 							relayTo = RR->topology->getUpstreamPeer();
 							if ((relayTo)&&(relayTo->address() != source)) {
 								if (relayTo->sendDirect(tPtr,packet.data(),packet.size(),now,true)) {
-									const SharedPtr<Peer> sourcePeer(RR->topology->getPeer(tPtr,source));
+									const SharedPtr<Peer> sourcePeer(RR->topology->get(source));
 									if (sourcePeer)
 										relayTo->introduce(tPtr,now,sourcePeer);
 								}
 							}
+							*/
 						}
 					}
 				} else if ((reinterpret_cast<const uint8_t *>(data)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED) != 0) {
@@ -402,7 +406,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 		// Destination is another ZeroTier peer on the same network
 
 		Address toZT(to.toAddress(network->id())); // since in-network MACs are derived from addresses and network IDs, we can reverse this
-		SharedPtr<Peer> toPeer(RR->topology->getPeer(tPtr,toZT));
+		SharedPtr<Peer> toPeer(RR->topology->get(toZT));
 
 		if (!network->filterOutgoingPacket(tPtr,false,RR->identity.address(),toZT,from,to,(const uint8_t *)data,len,etherType,vlanId,qosBucket)) {
 			RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,"filter blocked");
@@ -763,7 +767,7 @@ void Switch::send(void *tPtr,Packet &packet,bool encrypt)
 			}
 			_txQueue.push_back(TXQueueEntry(dest,RR->node->now(),packet,encrypt));
 		}
-		if (!RR->topology->getPeer(tPtr,dest))
+		if (!RR->topology->get(dest))
 			requestWhois(tPtr,RR->node->now(),dest);
 	}
 }
@@ -781,6 +785,8 @@ void Switch::requestWhois(void *tPtr,const int64_t now,const Address &addr)
 		else last = now;
 	}
 
+	// TODO
+	/*
 	const SharedPtr<Peer> upstream(RR->topology->getUpstreamPeer());
 	if (upstream) {
 		Packet outp(upstream->address(),RR->identity.address(),Packet::VERB_WHOIS);
@@ -788,6 +794,7 @@ void Switch::requestWhois(void *tPtr,const int64_t now,const Address &addr)
 		RR->node->expectReplyTo(outp.packetId());
 		send(tPtr,outp,true);
 	}
+	*/
 }
 
 void Switch::doAnythingWaitingForPeer(void *tPtr,const SharedPtr<Peer> &peer)
@@ -840,7 +847,7 @@ unsigned long Switch::doTimerTasks(void *tPtr,int64_t now)
 			} else if ((now - txi->creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
 				_txQueue.erase(txi++);
 			} else {
-				if (!RR->topology->getPeer(tPtr,txi->dest))
+				if (!RR->topology->get(txi->dest))
 					needWhois.push_back(txi->dest);
 				++txi;
 			}
@@ -857,7 +864,7 @@ unsigned long Switch::doTimerTasks(void *tPtr,int64_t now)
 				rq->timestamp = 0;
 			} else {
 				const Address src(rq->frag0.source());
-				if (!RR->topology->getPeer(tPtr,src))
+				if (!RR->topology->get(src))
 					requestWhois(tPtr,now,src);
 			}
 		}
@@ -905,16 +912,19 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 	const int64_t now = RR->node->now();
 	const Address destination(packet.destination());
 
-	const SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,destination));
+	const SharedPtr<Peer> peer(RR->topology->get(destination));
 	if (peer) {
 		viaPath = peer->getAppropriatePath(now,false);
 		if (!viaPath) {
+			// TODO
+			/*
 			peer->tryMemorizedPath(tPtr,now); // periodically attempt memorized or statically defined paths, if any are known
 			const SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());
 			if ( (!relay) || (!(viaPath = relay->getAppropriatePath(now,false))) ) {
 				if (!(viaPath = peer->getAppropriatePath(now,true)))
 					return false;
 			}
+			*/
 		}
 	} else {
 		return false;

@@ -1246,15 +1246,12 @@ void Network::clean()
 				_multicastGroupsBehindMe.erase(*mg);
 		}
 	}
-
 	{
 		Address *a = (Address *)0;
 		Membership *m = (Membership *)0;
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
-			if (!RR->topology->getPeerNoCache(*a))
-				_memberships.erase(*a);
-			else m->clean(now,_config);
+			m->clean(now,_config);
 		}
 	}
 }
@@ -1403,42 +1400,17 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	}
 }
 
-void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMulticastGroup)
+void Network::_sendUpdatesToMembers(void *tPtr)
 {
 	// Assumes _lock is locked
-	const int64_t now = RR->node->now();
-
-	std::vector<MulticastGroup> groups;
-	if (newMulticastGroup)
-		groups.push_back(*newMulticastGroup);
-	else groups = _allMulticastGroups();
-
-	std::vector<Address> alwaysAnnounceTo;
-
-	if ((newMulticastGroup)||((now - _lastAnnouncedMulticastGroupsUpstream) >= ZT_MULTICAST_ANNOUNCE_PERIOD)) {
-		if (!newMulticastGroup)
-			_lastAnnouncedMulticastGroupsUpstream = now;
-
-		alwaysAnnounceTo = _config.alwaysContactAddresses();
-		if (std::find(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end(),controller()) == alwaysAnnounceTo.end())
-			alwaysAnnounceTo.push_back(controller());
-		const std::vector<Address> upstreams(RR->topology->upstreamAddresses());
-		for(std::vector<Address>::const_iterator a(upstreams.begin());a!=upstreams.end();++a) {
-			if (std::find(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end(),*a) == alwaysAnnounceTo.end())
-				alwaysAnnounceTo.push_back(*a);
-		}
-		std::sort(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end());
-
-		for(std::vector<Address>::const_iterator a(alwaysAnnounceTo.begin());a!=alwaysAnnounceTo.end();++a)
-			_announceMulticastGroupsTo(tPtr,*a,groups);
-	}
-
+	const std::vector<MulticastGroup> groups(_allMulticastGroups());
+	_announceMulticastGroupsTo(tPtr,controller(),groups);
 	{
 		Address *a = (Address *)0;
 		Membership *m = (Membership *)0;
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
-			if ( ( m->multicastLikeGate(now) || (newMulticastGroup) ) && (m->isAllowedOnNetwork(_config)) && (!std::binary_search(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end(),*a)) )
+			if (m->isAllowedOnNetwork(_config))
 				_announceMulticastGroupsTo(tPtr,*a,groups);
 		}
 	}
