@@ -71,66 +71,42 @@ else(WIN32)
 		add_compile_options(
 			-Wall
 			-Wno-deprecated
+			-maes
+			-mpclmul
+			-msse
+			-msse2
+			-msse3
+			-msse4.1
 			$<$<CONFIG:Debug>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
-			$<$<CONFIG:DEBUG>:-maes>
-			$<$<CONFIG:DEBUG>:-mpclmul>
-			$<$<CONFIG:DEBUG>:-msse>
-			$<$<CONFIG:DEBUG>:-msse2>
-			$<$<CONFIG:DEBUG>:-msse3>
-			$<$<CONFIG:DEBUG>:-msse4.1>
 			$<$<CONFIG:RELEASE>:-O3>
 			$<$<CONFIG:RELEASE>:-fstack-protector>
 			$<$<CONFIG:RELEASE>:-fPIE>
-			$<$<CONFIG:RELEASE>:-maes>
-			$<$<CONFIG:RELEASE>:-mpclmul>
-			$<$<CONFIG:RELEASE>:-msse>
-			$<$<CONFIG:RELEASE>:-msse2>
-			$<$<CONFIG:RELEASE>:-msse3>
-			$<$<CONFIG:RELEASE>:-msse4.1>
 			$<$<CONFIG:RELWITHDEBINFO>:-O3>
 			$<$<CONFIG:RELWITHDEBINFO>:-fstack-protector>
 			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-g>
-			$<$<CONFIG:RELWITHDEBINFO>:-maes>
-			$<$<CONFIG:RELWITHDEBINFO>:-mpclmul>
-			$<$<CONFIG:RELWITHDEBINFO>:-msse>
-			$<$<CONFIG:RELWITHDEBINFO>:-msse2>
-			$<$<CONFIG:RELWITHDEBINFO>:-msse3>
-			$<$<CONFIG:RELWITHDEBINFO>:-msse4.1>
 		)
 	elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
 		message("Setting Linux Compiler Flags ${CMAKE_BUILD_TYPE}")
 		add_compile_options(
 			-Wall
 			-Wno-deprecated
+			-maes
+			-mpclmul
+			-msse
+			-msse2
+			-msse3
+			-msse4.1
 			$<$<CONFIG:Debug>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
-			$<$<CONFIG:DEBUG>:-maes>
-			$<$<CONFIG:DEBUG>:-mpclmul>
-			$<$<CONFIG:DEBUG>:-msse>
-			$<$<CONFIG:DEBUG>:-msse2>
-			$<$<CONFIG:DEBUG>:-msse3>
-			$<$<CONFIG:DEBUG>:-msse4.1>
 			$<$<CONFIG:RELEASE>:-O3>
 			$<$<CONFIG:RELEASE>:-fstack-protector>
 			$<$<CONFIG:RELEASE>:-fPIE>
-			$<$<CONFIG:RELEASE>:-maes>
-			$<$<CONFIG:RELEASE>:-mpclmul>
-			$<$<CONFIG:RELEASE>:-msse>
-			$<$<CONFIG:RELEASE>:-msse2>
-			$<$<CONFIG:RELEASE>:-msse3>
-			$<$<CONFIG:RELEASE>:-msse4.1>
 			$<$<CONFIG:RELWITHDEBINFO>:-O3>
 			$<$<CONFIG:RELWITHDEBINFO>:-fstack-protector>
 			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-g>
-			$<$<CONFIG:RELWITHDEBINFO>:-maes>
-			$<$<CONFIG:RELWITHDEBINFO>:-mpclmul>
-			$<$<CONFIG:RELWITHDEBINFO>:-msse>
-			$<$<CONFIG:RELWITHDEBINFO>:-msse2>
-			$<$<CONFIG:RELWITHDEBINFO>:-msse3>
-			$<$<CONFIG:RELWITHDEBINFO>:-msse4.1>
 		)
 	endif(APPLE)
 endif(WIN32)
