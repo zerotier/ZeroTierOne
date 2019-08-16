@@ -32,13 +32,6 @@
 
 #include "Packet.hpp"
 
-#ifdef ZT_USE_X64_ASM_SALSA2012
-#include "../ext/x64-salsa2012-asm/salsa2012.h"
-#endif
-#ifdef ZT_USE_ARM32_NEON_ASM_SALSA2012
-#include "../ext/arm32-neon-salsa2012-asm/salsa2012.h"
-#endif
-
 #ifdef _MSC_VER
 #define FORCE_INLINE static __forceinline
 #include <intrin.h>
@@ -49,37 +42,6 @@
 #endif
 
 namespace ZeroTier {
-
-/************************************************************************** */
-
-/* Set up macros for fast single-pass ASM Salsa20/12 crypto, if we have it */
-
-// x64 SSE crypto
-#ifdef ZT_USE_X64_ASM_SALSA2012
-#define ZT_HAS_FAST_CRYPTO() (true)
-#define ZT_FAST_SINGLE_PASS_SALSA2012(b,l,n,k) zt_salsa2012_amd64_xmm6(reinterpret_cast<unsigned char *>(b),(l),reinterpret_cast<const unsigned char *>(n),reinterpret_cast<const unsigned char *>(k))
-#endif
-
-// ARM (32-bit) NEON crypto (must be detected)
-#ifdef ZT_USE_ARM32_NEON_ASM_SALSA2012
-class _FastCryptoChecker
-{
-public:
-	_FastCryptoChecker() : canHas(zt_arm_has_neon()) {}
-	bool canHas;
-};
-static const _FastCryptoChecker _ZT_FAST_CRYPTO_CHECK;
-#define ZT_HAS_FAST_CRYPTO() (_ZT_FAST_CRYPTO_CHECK.canHas)
-#define ZT_FAST_SINGLE_PASS_SALSA2012(b,l,n,k) zt_salsa2012_armneon3_xor(reinterpret_cast<unsigned char *>(b),(const unsigned char *)0,(l),reinterpret_cast<const unsigned char *>(n),reinterpret_cast<const unsigned char *>(k))
-#endif
-
-// No fast crypto available
-#ifndef ZT_HAS_FAST_CRYPTO
-#define ZT_HAS_FAST_CRYPTO() (false)
-#define ZT_FAST_SINGLE_PASS_SALSA2012(b,l,n,k) {}
-#endif
-
-/************************************************************************** */
 
 /* LZ4 is shipped encapsulated into Packet in an anonymous namespace.
  *
@@ -899,30 +861,16 @@ void Packet::armor(const void *key,bool encryptPayload)
 
 	_salsa20MangleKey((const unsigned char *)key,mangledKey);
 
-	if (ZT_HAS_FAST_CRYPTO()) {
-		const unsigned int encryptLen = (encryptPayload) ? (size() - ZT_PACKET_IDX_VERB) : 0;
-		uint64_t keyStream[(ZT_PROTO_MAX_PACKET_LENGTH + 64 + 8) / 8];
-		ZT_FAST_SINGLE_PASS_SALSA2012(keyStream,encryptLen + 64,(data + ZT_PACKET_IDX_IV),mangledKey);
-		Salsa20::memxor(data + ZT_PACKET_IDX_VERB,reinterpret_cast<const uint8_t *>(keyStream + 8),encryptLen);
-		uint64_t mac[2];
-		poly1305(mac,data + ZT_PACKET_IDX_VERB,size() - ZT_PACKET_IDX_VERB,keyStream);
-#ifdef ZT_NO_TYPE_PUNNING
-		memcpy(data + ZT_PACKET_IDX_MAC,mac,8);
-#else
-		(*reinterpret_cast<uint64_t *>(data + ZT_PACKET_IDX_MAC)) = mac[0];
-#endif
-	} else {
-		Salsa20 s20(mangledKey,data + ZT_PACKET_IDX_IV);
-		uint64_t macKey[4];
-		s20.crypt12(ZERO_KEY,macKey,sizeof(macKey));
-		uint8_t *const payload = data + ZT_PACKET_IDX_VERB;
-		const unsigned int payloadLen = size() - ZT_PACKET_IDX_VERB;
-		if (encryptPayload)
-			s20.crypt12(payload,payload,payloadLen);
-		uint64_t mac[2];
-		poly1305(mac,payload,payloadLen,macKey);
-		memcpy(data + ZT_PACKET_IDX_MAC,mac,8);
-	}
+	Salsa20 s20(mangledKey,data + ZT_PACKET_IDX_IV);
+	uint64_t macKey[4];
+	s20.crypt12(ZERO_KEY,macKey,sizeof(macKey));
+	uint8_t *const payload = data + ZT_PACKET_IDX_VERB;
+	const unsigned int payloadLen = size() - ZT_PACKET_IDX_VERB;
+	if (encryptPayload)
+		s20.crypt12(payload,payload,payloadLen);
+	uint64_t mac[2];
+	poly1305(mac,payload,payloadLen,macKey);
+	memcpy(data + ZT_PACKET_IDX_MAC,mac,8);
 }
 
 bool Packet::dearmor(const void *key)
@@ -935,37 +883,20 @@ bool Packet::dearmor(const void *key)
 
 	if ((cs == ZT_PROTO_CIPHER_SUITE__POLY1305_NONE)||(cs == ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012)) {
 		_salsa20MangleKey((const unsigned char *)key,mangledKey);
-		if (ZT_HAS_FAST_CRYPTO()) {
-			uint64_t keyStream[(ZT_PROTO_MAX_PACKET_LENGTH + 64 + 8) / 8];
-			ZT_FAST_SINGLE_PASS_SALSA2012(keyStream,((cs == ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012) ? (payloadLen + 64) : 64),(data + ZT_PACKET_IDX_IV),mangledKey);
-			uint64_t mac[2];
-			poly1305(mac,payload,payloadLen,keyStream);
+		Salsa20 s20(mangledKey,data + ZT_PACKET_IDX_IV);
+		uint64_t macKey[4];
+		s20.crypt12(ZERO_KEY,macKey,sizeof(macKey));
+		uint64_t mac[2];
+		poly1305(mac,payload,payloadLen,macKey);
 #ifdef ZT_NO_TYPE_PUNNING
-			if (!Utils::secureEq(mac,data + ZT_PACKET_IDX_MAC,8))
-				return false;
+		if (!Utils::secureEq(mac,data + ZT_PACKET_IDX_MAC,8))
+			return false;
 #else
-			if ((*reinterpret_cast<const uint64_t *>(data + ZT_PACKET_IDX_MAC)) != mac[0]) // also secure, constant time
-				return false;
+		if ((*reinterpret_cast<const uint64_t *>(data + ZT_PACKET_IDX_MAC)) != mac[0]) // also secure, constant time
+			return false;
 #endif
-			if (cs == ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012)
-				Salsa20::memxor(data + ZT_PACKET_IDX_VERB,reinterpret_cast<const uint8_t *>(keyStream + 8),payloadLen);
-		} else {
-			Salsa20 s20(mangledKey,data + ZT_PACKET_IDX_IV);
-			uint64_t macKey[4];
-			s20.crypt12(ZERO_KEY,macKey,sizeof(macKey));
-			uint64_t mac[2];
-			poly1305(mac,payload,payloadLen,macKey);
-#ifdef ZT_NO_TYPE_PUNNING
-			if (!Utils::secureEq(mac,data + ZT_PACKET_IDX_MAC,8))
-				return false;
-#else
-			if ((*reinterpret_cast<const uint64_t *>(data + ZT_PACKET_IDX_MAC)) != mac[0]) // also secure, constant time
-				return false;
-#endif
-			if (cs == ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012)
-				s20.crypt12(payload,payload,payloadLen);
-		}
-
+		if (cs == ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012)
+			s20.crypt12(payload,payload,payloadLen);
 		return true;
 	} else {
 		return false; // unrecognized cipher suite

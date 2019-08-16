@@ -209,13 +209,36 @@ static int testCrypto()
 	}
 	double gcmBytes = 0.0;
 	int64_t start = OSUtils::now();
-	for(unsigned long i=0;i<150000;++i) {
+	for(unsigned long i=0;i<100000;++i) {
 		tv.gcmEncrypt((const uint8_t *)hexbuf,buf1,sizeof(buf1),nullptr,0,buf2,(uint8_t *)(hexbuf + 32),16);
-		gcmBytes += (double)sizeof(buf1);
+		tv.gcmEncrypt((const uint8_t *)hexbuf,buf2,sizeof(buf2),nullptr,0,buf1,(uint8_t *)(hexbuf + 32),16);
+		gcmBytes += (double)(sizeof(buf1) * 2);
 	}
 	int64_t end = OSUtils::now();
 	*dummy = buf1[0];
-	std::cout << ((gcmBytes / 1048576.0) / ((long double)(end - start) / 1000.0)) << " MiB/second" << std::endl;
+	std::cout << ((gcmBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl << "  AES-256 ECB scramble (benchmark): "; std::cout.flush();
+	double ecbBytes = 0.0;
+	start = OSUtils::now();
+	for(unsigned long i=0;i<100000;++i) {
+		tv.ecbEncrypt(buf1,sizeof(buf1),buf2);
+		tv.ecbEncrypt(buf2,sizeof(buf1),buf1);
+		ecbBytes += (double)(sizeof(buf1) * 2);
+	}
+	end = OSUtils::now();
+	*dummy = buf1[0];
+	std::cout << ((ecbBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl << "  AES-256 GCM + ECB scramble (benchmark): "; std::cout.flush();
+	ecbBytes = 0.0;
+	start = OSUtils::now();
+	for(unsigned long i=0;i<100000;++i) {
+		tv.gcmEncrypt((const uint8_t *)hexbuf,buf1,sizeof(buf1),nullptr,0,buf2,(uint8_t *)(hexbuf + 32),16);
+		tv.ecbEncrypt(buf1,sizeof(buf1),buf2);
+		tv.gcmEncrypt((const uint8_t *)hexbuf,buf2,sizeof(buf2),nullptr,0,buf1,(uint8_t *)(hexbuf + 32),16);
+		tv.ecbEncrypt(buf2,sizeof(buf1),buf1);
+		ecbBytes += (double)(sizeof(buf1) * 2);
+	}
+	end = OSUtils::now();
+	*dummy = buf1[0];
+	std::cout << ((ecbBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl;
 
 	std::cout << "[crypto] Testing Salsa20... "; std::cout.flush();
 	for(unsigned int i=0;i<4;++i) {
@@ -274,42 +297,6 @@ static int testCrypto()
 		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << std::endl;
 		::free((void *)bb);
 	}
-
-#ifdef ZT_USE_X64_ASM_SALSA2012
-	std::cout << "[crypto] Benchmarking Salsa20/12 fast x64 ASM... "; std::cout.flush();
-	{
-		unsigned char *bb = (unsigned char *)::malloc(1234567);
-		double bytes = 0.0;
-		uint64_t start = OSUtils::now();
-		for(unsigned int i=0;i<200;++i) {
-			zt_salsa2012_amd64_xmm6(bb,1234567,s20TV0Iv,s20TV0Key);
-			bytes += 1234567.0;
-		}
-		uint64_t end = OSUtils::now();
-		*dummy = bb[0];
-		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl;
-		::free((void *)bb);
-	}
-#endif
-
-#ifdef ZT_USE_ARM32_NEON_ASM_SALSA2012
-	if (zt_arm_has_neon()) {
-		std::cout << "[crypto] Benchmarking Salsa20/12 fast arm32/neon ASM... "; std::cout.flush();
-		{
-			unsigned char *bb = (unsigned char *)::malloc(1234567);
-			double bytes = 0.0;
-			uint64_t start = OSUtils::now();
-			for(unsigned int i=0;i<200;++i) {
-				zt_salsa2012_armneon3_xor(bb,(const unsigned char *)0,1234567,s20TV0Iv,s20TV0Key);
-				bytes += 1234567.0;
-			}
-			uint64_t end = OSUtils::now();
-			*dummy = bb[0];
-			std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl;
-			::free((void *)bb);
-		}
-	}
-#endif
 
 	std::cout << "[crypto] Benchmarking Salsa20/20... "; std::cout.flush();
 	{
