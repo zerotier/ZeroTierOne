@@ -2,6 +2,13 @@
 
 cmake_minimum_required (VERSION 3.8)
 
+if(${CMAKE_VERSION} VERSION_LESS 3.15)
+    cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
+else()
+    cmake_policy(VERSION 3.15)
+endif()
+
+
 if(WIN32)
 	# If building on Windows, set minimum target to Windows 7
 	set(CMAKE_SYSTEM_VERSION "7" CACHE STRING INTERNAL FORCE)
@@ -9,10 +16,10 @@ endif(WIN32)
 
 # ZeroTier One Version Config
 
-set(ZEROTIER_ONE_VERSION_MAJOR 1)
-set(ZEROTIER_ONE_VERSION_MINOR 4)
-set(ZEROTIER_ONE_VERSION_REVISION 2)
-set(ZEROTIER_ONE_VERSION_BUILD 0)
+set(ZEROTIER_ONE_VERSION_MAJOR 1 CACHE INTERNAL "")
+set(ZEROTIER_ONE_VERSION_MINOR 4 CACHE INTERNAL "")
+set(ZEROTIER_ONE_VERSION_REVISION 2 CACHE INTERNAL "")
+set(ZEROTIER_ONE_VERSION_BUILD 0 CACHE INTERNAL "")
 
 # Set a default build type if none was specified
 set(default_build_type "Release")
@@ -30,6 +37,8 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 option(BUILD_CENTRAL_CONTROLLER "Build ZeroTier Central Controller" OFF)
+option(ZT_TRACE "Trace Messages" OFF)
+option(ZT_DEBUG_TRACE "Debug Trace Messages" OFF)
 
 if (BUILD_CENTRAL_CONTROLLER)
 	find_package(PostgreSQL REQUIRED)
@@ -49,6 +58,11 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	add_definitions(-DZT_TRACE)
 endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
+project(zerotier-one 
+	DESCRIPTION "ZeroTier One"
+	LANGUAGES CXX C)
+
+
 if(WIN32)
 	add_definitions(-DNOMINMAX)
 else(WIN32)
@@ -61,18 +75,41 @@ else(WIN32)
 			-Wno-deprecated
 			$<$<CONFIG:Debug>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
+			$<$<CONFIG:DEBUG>:-maes>
+			$<$<CONFIG:DEBUG>:-mpclmul>
+			$<$<CONFIG:DEBUG>:-msse>
+			$<$<CONFIG:DEBUG>:-msse2>
+			$<$<CONFIG:DEBUG>:-msse3>
+			$<$<CONFIG:DEBUG>:-msse4.1>
 			$<$<CONFIG:RELEASE>:-O3>
-			$<$<CONFIG:RELEASE>:-fstackprotector>
+			$<$<CONFIG:RELEASE>:-fstack-protector>
 			$<$<CONFIG:RELEASE>:-fPIE>
+			$<$<CONFIG:RELEASE>:-maes>
+			$<$<CONFIG:RELEASE>:-mpclmul>
+			$<$<CONFIG:RELEASE>:-msse>
+			$<$<CONFIG:RELEASE>:-msse2>
+			$<$<CONFIG:RELEASE>:-msse3>
+			$<$<CONFIG:RELEASE>:-msse4.1>
 			$<$<CONFIG:RELWITHDEBINFO>:-O3>
-			$<$<CONFIG:RELWITHDEBINFO>:-fstackprotector>
+			$<$<CONFIG:RELWITHDEBINFO>:-fstack-protector>
 			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-g>
+			$<$<CONFIG:RELWITHDEBINFO>:-maes>
+			$<$<CONFIG:RELWITHDEBINFO>:-mpclmul>
+			$<$<CONFIG:RELWITHDEBINFO>:-msse>
+			$<$<CONFIG:RELWITHDEBINFO>:-msse2>
+			$<$<CONFIG:RELWITHDEBINFO>:-msse3>
+			$<$<CONFIG:RELWITHDEBINFO>:-msse4.1>
 		)
 	endif(APPLE)
 endif(WIN32)
 
-project(zerotier-one)
+if(ZT_TRACE)
+	add_definitions(-DZT_TRACE)
+endif()
+if(ZT_DEBUG_TRACE)
+	add_definitions(-DZT_DEBUG_TRACE)
+endif()
 
 add_subdirectory(node)
 add_subdirectory(controller)
@@ -93,8 +130,8 @@ set(libs
 )
 
 configure_file(
-	version.h.in
-	${CMAKE_SOURCE_DIR}/version.h
+	${CMAKE_SOURCE_DIR}/version.h.in
+	${CMAKE_BINARY_DIR}/version.h
 )
 
 set(src
@@ -128,9 +165,10 @@ if(BUILD_CENTRAL_CONTROLLER)
 	set(libs ${libs} rabbitmq-static ${PostgreSQL_LIBRARIES})
 endif(BUILD_CENTRAL_CONTROLLER)
 
+
 add_executable(${PROJECT_NAME} ${src} ${headers})
 target_link_libraries(${PROJECT_NAME} ${libs})
-
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 
 add_executable(zerotier-selftest selftest.cpp)
 target_link_libraries(zerotier-selftest ${libs})
