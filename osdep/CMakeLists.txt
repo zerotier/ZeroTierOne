@@ -54,6 +54,7 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
 
 if(APPLE)
 	add_executable(MacEthernetTapAgent MacEthernetTapAgent.c MacEthernetTapAgent.h)
+	target_include_directories(MacEthernetTapAgent PRIVATE ${CMAKE_BINARY_DIR})
 endif(APPLE)
 
 
