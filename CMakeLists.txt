@@ -8,7 +8,6 @@ else()
     cmake_policy(VERSION 3.15)
 endif()
 
-
 if(WIN32)
 	# If building on Windows, set minimum target to Windows 7
 	set(CMAKE_SYSTEM_VERSION "7" CACHE STRING INTERNAL FORCE)
@@ -17,8 +16,8 @@ endif(WIN32)
 # ZeroTier One Version Config
 
 set(ZEROTIER_ONE_VERSION_MAJOR 1 CACHE INTERNAL "")
-set(ZEROTIER_ONE_VERSION_MINOR 4 CACHE INTERNAL "")
-set(ZEROTIER_ONE_VERSION_REVISION 2 CACHE INTERNAL "")
+set(ZEROTIER_ONE_VERSION_MINOR 9 CACHE INTERNAL "")
+set(ZEROTIER_ONE_VERSION_REVISION 0 CACHE INTERNAL "")
 set(ZEROTIER_ONE_VERSION_BUILD 0 CACHE INTERNAL "")
 
 # Set a default build type if none was specified
@@ -26,7 +25,7 @@ set(default_build_type "Release")
 if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
 	set(default_build_type "Debug")
 endif()
-   
+
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
 	set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
@@ -42,7 +41,6 @@ option(ZT_DEBUG_TRACE "Debug Trace Messages" OFF)
 
 if (BUILD_CENTRAL_CONTROLLER)
 	find_package(PostgreSQL REQUIRED)
-
 	set(ENABLE_SSL_SUPPORT OFF)
 	set(BUILD_SHARED_LIBS OFF)
 	set(BUILD_EXAMPLES OFF)
@@ -62,7 +60,6 @@ project(zerotier-one
 	DESCRIPTION "ZeroTier One"
 	LANGUAGES CXX C)
 
-
 if(WIN32)
 	add_definitions(-DNOMINMAX)
 else(WIN32)
@@ -76,14 +73,13 @@ else(WIN32)
 			-msse
 			-msse2
 			-msse3
-			-msse4.1
 			$<$<CONFIG:Debug>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
-			$<$<CONFIG:RELEASE>:-O3>
-			$<$<CONFIG:RELEASE>:-fstack-protector>
+			$<$<CONFIG:RELEASE>:-Ofast>
+			$<$<CONFIG:RELEASE>:-fstack-protector-strong>
 			$<$<CONFIG:RELEASE>:-fPIE>
-			$<$<CONFIG:RELWITHDEBINFO>:-O3>
-			$<$<CONFIG:RELWITHDEBINFO>:-fstack-protector>
+			$<$<CONFIG:RELWITHDEBINFO>:-Ofast>
+			$<$<CONFIG:RELWITHDEBINFO>:-fstack-protector-strong>
 			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-g>
 		)
@@ -97,7 +93,6 @@ else(WIN32)
 			-msse
 			-msse2
 			-msse3
-			-msse4.1
 			$<$<CONFIG:Debug>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
 			$<$<CONFIG:RELEASE>:-O3>
@@ -165,7 +160,7 @@ if(WIN32)
 		"windows/ZeroTierOne/ZeroTierOneService.h"
 	)
 else(WIN32)
-	set(libs ${libs} pthread)
+	set(libs ${libs} pthread resolv)
 endif(WIN32)
 
 if(BUILD_CENTRAL_CONTROLLER)

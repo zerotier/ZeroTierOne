@@ -199,14 +199,12 @@ public:
 	static int64_t getFileSize(const char *path);
 
 	/**
-	 * Get IP (v4 and/or v6) addresses for a given host
-	 *
-	 * This is a blocking resolver.
-	 *
-	 * @param name Host name
-	 * @return IP addresses in InetAddress sort order or empty vector if not found
+	 * Get full DNS TXT results
+	 * 
+	 * @param name DNS FQDN
+	 * @return TXT record result(s) or empty on error or not found
 	 */
-	static std::vector<InetAddress> resolve(const char *name);
+	static std::vector<std::string> resolveTxt(const char *name);
 
 	/**
 	 * @return Current time in milliseconds since epoch
