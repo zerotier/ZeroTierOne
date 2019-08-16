@@ -29,8 +29,8 @@
 
 #include "../include/ZeroTierOne.h"
 
-#if __has_include("../version.h")
-#include "../version.h"
+#if __has_include("version.h")
+#include "version.h"
 #else /* dummy values for use inside IDEs, etc. */
 #define ZEROTIER_ONE_VERSION_MAJOR 255
 #define ZEROTIER_ONE_VERSION_MINOR 255
