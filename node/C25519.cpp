@@ -2393,10 +2393,6 @@ static inline void get_hram(unsigned char *hram, const unsigned char *sm, const 
 
 } // anonymous namespace
 
-#ifdef ZT_USE_FAST_X64_ED25519
-extern "C" void ed25519_amd64_asm_sign(const unsigned char *sk,const unsigned char *pk,const unsigned char *digest,unsigned char *sig);
-#endif
-
 namespace ZeroTier {
 
 void C25519::agree(const C25519::Private &mine,const C25519::Public &their,void *keybuf,unsigned int keylen)
@@ -2420,9 +2416,6 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 	unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
 	SHA512(digest,msg,len);
 
-#ifdef ZT_USE_FAST_X64_ED25519
-	ed25519_amd64_asm_sign(myPrivate.data + 32,myPublic.data + 32,digest,(unsigned char *)signature);
-#else
 	sc25519 sck, scs, scsk;
 	ge25519 ger;
 	unsigned char r[32];
@@ -2464,7 +2457,6 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 	sc25519_to32bytes(s,&scs); /* cat s */
 	for(unsigned int i=0;i<32;i++)
 		sig[32 + i] = s[i];
-#endif
 }
 
 bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len,const void *signature,const unsigned int siglen)
