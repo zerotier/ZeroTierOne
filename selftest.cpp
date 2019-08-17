@@ -184,7 +184,12 @@ static int testCrypto()
 	AES tv(AES_TEST_VECTOR_0_KEY);
 	tv.encrypt(AES_TEST_VECTOR_0_IN,(uint8_t *)buf1);
 	if (memcmp(buf1,AES_TEST_VECTOR_0_OUT,16) != 0) {
-		std::cout << "  FAILED (test vector 0)" << std::endl;
+		std::cout << "FAILED (test vector 0 encrypt)" << std::endl;
+		return -1;
+	}
+	tv.decrypt((const uint8_t *)buf1,(uint8_t *)buf2);
+	if (memcmp(AES_TEST_VECTOR_0_IN,buf2,16) != 0) {
+		std::cout << "FAILED (test vector 0 decrypt)" << std::endl;
 		return -1;
 	}
 	std::cout << "PASS" << std::endl << "  AES-256 GCM (test vectors, benchmark): "; std::cout.flush();
@@ -220,8 +225,8 @@ static int testCrypto()
 	double ecbBytes = 0.0;
 	start = OSUtils::now();
 	for(unsigned long i=0;i<100000;++i) {
-		tv.ecbEncrypt(buf1,sizeof(buf1),buf2);
-		tv.ecbEncrypt(buf2,sizeof(buf1),buf1);
+		tv.ecbScramble(buf1,sizeof(buf1),buf2);
+		tv.ecbScramble(buf2,sizeof(buf1),buf1);
 		ecbBytes += (double)(sizeof(buf1) * 2);
 	}
 	end = OSUtils::now();
@@ -231,9 +236,9 @@ static int testCrypto()
 	start = OSUtils::now();
 	for(unsigned long i=0;i<100000;++i) {
 		tv.gcmEncrypt((const uint8_t *)hexbuf,buf1,sizeof(buf1),nullptr,0,buf2,(uint8_t *)(hexbuf + 32),16);
-		tv.ecbEncrypt(buf1,sizeof(buf1),buf2);
+		tv.ecbScramble(buf1,sizeof(buf1),buf2);
 		tv.gcmEncrypt((const uint8_t *)hexbuf,buf2,sizeof(buf2),nullptr,0,buf1,(uint8_t *)(hexbuf + 32),16);
-		tv.ecbEncrypt(buf2,sizeof(buf1),buf1);
+		tv.ecbScramble(buf2,sizeof(buf1),buf1);
 		ecbBytes += (double)(sizeof(buf1) * 2);
 	}
 	end = OSUtils::now();
