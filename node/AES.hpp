@@ -37,6 +37,26 @@
 #define ZT_AES_AESNI 1
 #endif
 
+#if defined(__arm__) || defined(__aarch32__) || defined(__arm64__) || defined(__aarch64__) || defined(_M_ARM)
+#if defined(_M_ARM64)
+#include <arm64intr.h>
+#include <arm64_neon.h>
+#ifndef ZT_AES_ARMNEON
+#define ZT_AES_ARMNEON 1
+#endif
+#endif
+#if defined(__ARM_NEON) || defined(__MSC_VER) || defined(_M_ARM)
+#include <armintr.h>
+#include <arm_neon.h>
+#ifndef ZT_AES_ARMNEON
+#define ZT_AES_ARMNEON 1
+#endif
+#endif
+#if defined(ZT_AES_ARMNEON) && defined(__GNUC__) && (defined(__ARM_ACL) || defined(__ARM_FEATURE_CRYPTO))
+#include <arm_acl.h>
+#endif
+#endif
+
 #define ZT_AES_KEY_SIZE 32
 #define ZT_AES_BLOCK_SIZE 16
 
@@ -66,6 +86,7 @@ public:
 			return;
 		}
 #endif
+
 		_initSW(key);
 	}
 
@@ -77,6 +98,7 @@ public:
 			return;
 		}
 #endif
+
 		_encryptSW(in,out);
 	}
 
@@ -88,6 +110,7 @@ public:
 			return;
 		}
 #endif
+
 		_decryptSW(in,out);
 	}
 
@@ -95,6 +118,7 @@ public:
 	{
 		if (inlen < 16)
 			return;
+
 #ifdef ZT_AES_AESNI
 		if (likely(HW_ACCEL)) {
 			const uint8_t *i = (const uint8_t *)in;
@@ -119,6 +143,7 @@ public:
 			return;
 		}
 #endif
+
 		const uint8_t *i = (const uint8_t *)in;
 		uint8_t *o = (uint8_t *)out;
 		while (inlen >= 16) {
@@ -163,7 +188,13 @@ private:
 	void _encryptSW(const uint8_t in[16],uint8_t out[16]) const;
 	void _decryptSW(const uint8_t in[16],uint8_t out[16]) const;
 
+	/**************************************************************************/
 	union {
+#ifdef ZT_AES_ARMNEON
+		struct {
+			uint32x4_t k[15];
+		} neon;
+#endif
 #ifdef ZT_AES_AESNI
 		struct {
 			__m128i k[28];
@@ -175,6 +206,90 @@ private:
 			uint32_t dk[60];
 		} sw;
 	} _k;
+	/**************************************************************************/
+
+#ifdef ZT_AES_ARMNEON /******************************************************/
+	static inline uint32x4_t *_aes_256_expAssist_armneon(uint32x4_t prev1,uint32x4_t prev2,uint32_t rcon)
+	{
+		uint32_t round1[4], round2[4], prv1[4], prv2[4];
+		vst1q_u32(prv1, prev1);
+		vst1q_u32(prv2, prev2);
+		round1[0] = sub_word(rot_word(prv2[3])) ^ rcon ^ prv1[0];
+		round1[1] = sub_word(rot_word(round1[0])) ^ rcon ^ prv1[1];
+		round1[2] = sub_word(rot_word(round1[1])) ^ rcon ^ prv1[2];
+		round1[3] = sub_word(rot_word(round1[2])) ^ rcon ^ prv1[3];
+		round2[0] = sub_word(rot_word(round1[3])) ^ rcon ^ prv2[0];
+		round2[1] = sub_word(rot_word(round2[0])) ^ rcon ^ prv2[1];
+		round2[2] = sub_word(rot_word(round2[1])) ^ rcon ^ prv2[2];
+		round2[3] = sub_word(rot_word(round2[2])) ^ rcon ^ prv2[3];
+		uint32x4_t expansion[2] = {vld1q_u3(round1), vld1q_u3(round2)};
+		return expansion;
+	}
+	inline void _init_armneon(uint8x16_t encKey)
+	{
+		uint32x4_t *schedule = _k.neon.k;
+		uint32x4_t *doubleRound = nullptr;
+		(*schedule)[0] = vld1q_u32(encKey);
+		(*schedule)[1] = vld1q_u32(encKey + 16);
+		doubleRound = _aes_256_expAssist_armneon((*schedule)[0], (*schedule)[1], 0x01);
+		(*schedule)[2] = doubleRound[0];
+		(*schedule)[3] = doubleRound[1];
+		doubleRound = _aes_256_expAssist_armneon((*schedule)[2], (*schedule)[3], 0x02);
+		(*schedule)[4] = doubleRound[0];
+		(*schedule)[5] = doubleRound[1];
+		doubleRound = _aes_256_expAssist_armneon((*schedule)[4], (*schedule)[5], 0x04);
+		(*schedule)[6] = doubleRound[0];
+		(*schedule)[7] = doubleRound[1];
+		doubleRound = _aes_256_expAssist_armneon((*schedule)[6], (*schedule)[7], 0x08);
+		(*schedule)[8] = doubleRound[0];
+		(*schedule)[9] = doubleRound[1];
+		doubleRound = _aes_256_expAssist_armneon((*schedule)[8], (*schedule)[9], 0x10);
+		(*schedule)[10] = doubleRound[0];
+		(*schedule)[11] = doubleRound[1];
+		doubleRound = _aes_256_expAssist_armneon((*schedule)[10], (*schedule)[11], 0x20);
+		(*schedule)[12] = doubleRound[0];
+		(*schedule)[13] = doubleRound[1];
+		doubleRound = _aes_256_expAssist_armneon((*schedule)[12], (*schedule)[13], 0x40);
+		(*schedule)[14] = doubleRound[0];
+	}
+
+	inline void _encrypt_armneon(uint8x16_t *data) const
+	{
+		*data = veorq_u8(*data, _k.neon.k[0]);
+		*data = vaesmcq_u8(vaeseq_u8(*data, (uint8x16_t)_k.neon.k[1]));
+		*data = vaesmcq_u8(vaeseq_u8(*data, (uint8x16_t)_k.neon.k[2]));
+		*data = vaesmcq_u8(vaeseq_u8(*data, (uint8x16_t)_k.neon.k[3]));
+		*data = vaesmcq_u8(vaeseq_u8(*data, (uint8x16_t)_k.neon.k[4]));
+		*data = vaesmcq_u8(vaeseq_u8(*data, (uint8x16_t)_k.neon.k[5]));
+		*data = vaesmcq_u8(vaeseq_u8(*data, (uint8x16_t)_k.neon.k[6]));
+		*data = vaesmcq_u8(vaeseq_u8(*data, (uint8x16_t)_k.neon.k[7]));
+		*data = vaesmcq_u8(vaeseq_u8(*data, (uint8x16_t)_k.neon.k[8]));
+		*data = vaesmcq_u8(vaeseq_u8(*data, (uint8x16_t)_k.neon.k[9]));
+		*data = vaesmcq_u8(vaeseq_u8(*data, (uint8x16_t)_k.neon.k[10]));
+		*data = vaesmcq_u8(vaeseq_u8(*data, (uint8x16_t)_k.neon.k[11]));
+		*data = vaesmcq_u8(vaeseq_u8(*data, (uint8x16_t)_k.neon.k[12]));
+		*data = vaesmcq_u8(vaeseq_u8(*data, (uint8x16_t)_k.neon.k[13]));
+		*data = vaeseq_u8(*data, _k.neon.k[14]);
+	}
+	inline void _decrypt_armneon(uint8x16_t *data) const
+	{
+		*data = veorq_u8(*data, _k.neon.k[14]);
+		*data = vaesimcq_u8(vaesdq_u8(*data, (uint8x16_t)_k.neon.k[13]));
+		*data = vaesimcq_u8(vaesdq_u8(*data, (uint8x16_t)_k.neon.k[12]));
+		*data = vaesimcq_u8(vaesdq_u8(*data, (uint8x16_t)_k.neon.k[11]));
+		*data = vaesimcq_u8(vaesdq_u8(*data, (uint8x16_t)_k.neon.k[10]));
+		*data = vaesimcq_u8(vaesdq_u8(*data, (uint8x16_t)_k.neon.k[9]));
+		*data = vaesimcq_u8(vaesdq_u8(*data, (uint8x16_t)_k.neon.k[8]));
+		*data = vaesimcq_u8(vaesdq_u8(*data, (uint8x16_t)_k.neon.k[7]));
+		*data = vaesimcq_u8(vaesdq_u8(*data, (uint8x16_t)_k.neon.k[6]));
+		*data = vaesimcq_u8(vaesdq_u8(*data, (uint8x16_t)_k.neon.k[5]));
+		*data = vaesimcq_u8(vaesdq_u8(*data, (uint8x16_t)_k.neon.k[4]));
+		*data = vaesimcq_u8(vaesdq_u8(*data, (uint8x16_t)_k.neon.k[3]));
+		*data = vaesimcq_u8(vaesdq_u8(*data, (uint8x16_t)_k.neon.k[2]));
+		*data = vaesimcq_u8(vaesdq_u8(*data, (uint8x16_t)_k.neon.k[1]));
+		*data = vaesdq_u8(*data, (uint8x16_t)_k.neon.k[0]);
+	}
+#endif /*********************************************************************/
 
 #ifdef ZT_AES_AESNI /********************************************************/
 	static inline __m128i _init256_1_aesni(__m128i a,__m128i b)
@@ -206,7 +321,6 @@ private:
 	}
 	inline void _init_aesni(const uint8_t key[32])
 	{
-		/* Init AES itself */
 		__m128i t1,t2;
 		_k.ni.k[0] = t1 = _mm_loadu_si128((const __m128i *)key);
 		_k.ni.k[1] = t2 = _mm_loadu_si128((const __m128i *)(key+16));
@@ -237,7 +351,6 @@ private:
 		_k.ni.k[26] = _mm_aesimc_si128(_k.ni.k[2]);
 		_k.ni.k[27] = _mm_aesimc_si128(_k.ni.k[1]);
 
-		/* Init GCM / GHASH */
 		__m128i h = _mm_xor_si128(_mm_setzero_si128(),_k.ni.k[0]);
 		h = _mm_aesenc_si128(h,_k.ni.k[1]);
 		h = _mm_aesenc_si128(h,_k.ni.k[2]);
