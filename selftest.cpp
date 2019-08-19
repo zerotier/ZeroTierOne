@@ -45,6 +45,7 @@
 #include "node/Packet.hpp"
 #include "node/Salsa20.hpp"
 #include "node/AES.hpp"
+#include "node/Locator.hpp"
 #include "node/MAC.hpp"
 #include "node/NetworkConfig.hpp"
 #include "node/Peer.hpp"
@@ -177,39 +178,39 @@ static int testCrypto()
 
 	for(int i=0;i<3;++i) {
 		Utils::getSecureRandom(buf1,64);
-		std::cout << "[crypto] getSecureRandom: " << Utils::hex(buf1,64,hexbuf) << std::endl;
+		std::cout << "[crypto] getSecureRandom: " << Utils::hex(buf1,64,hexbuf) << ZT_EOL_S;
 	}
 
-	std::cout << "[crypto] Testing and benchmarking AES-256 and GCM..." << std::endl << "  AES-256 (test vectors): "; std::cout.flush();
+	std::cout << "[crypto] Testing and benchmarking AES-256 and GCM..." ZT_EOL_S << "  AES-256 (test vectors): "; std::cout.flush();
 	AES tv(AES_TEST_VECTOR_0_KEY);
 	tv.encrypt(AES_TEST_VECTOR_0_IN,(uint8_t *)buf1);
 	if (memcmp(buf1,AES_TEST_VECTOR_0_OUT,16) != 0) {
-		std::cout << "FAILED (test vector 0 encrypt)" << std::endl;
+		std::cout << "FAILED (test vector 0 encrypt)" ZT_EOL_S;
 		return -1;
 	}
 	tv.decrypt((const uint8_t *)buf1,(uint8_t *)buf2);
 	if (memcmp(AES_TEST_VECTOR_0_IN,buf2,16) != 0) {
-		std::cout << "FAILED (test vector 0 decrypt)" << std::endl;
+		std::cout << "FAILED (test vector 0 decrypt)" ZT_EOL_S;
 		return -1;
 	}
-	std::cout << "PASS" << std::endl << "  AES-256 GCM (test vectors, benchmark): "; std::cout.flush();
+	std::cout << "PASS" ZT_EOL_S << "  AES-256 GCM (test vectors, benchmark): "; std::cout.flush();
 	tv.gcmEncrypt((const uint8_t *)hexbuf,buf1,sizeof(buf1),nullptr,0,buf2,(uint8_t *)(hexbuf + 32),16);
 	if (!tv.gcmDecrypt((const uint8_t *)hexbuf,buf2,sizeof(buf2),nullptr,0,buf3,(const uint8_t *)(hexbuf + 32),16)) {
-		std::cout << "FAILED (encrypt/decrypt, auth tag mismatch)" << std::endl;
+		std::cout << "FAILED (encrypt/decrypt, auth tag mismatch)" ZT_EOL_S;
 		return -1;
 	}
 	if (memcmp(buf1,buf3,sizeof(buf1)) != 0) {
-		std::cout << "FAILED (encrypt/decrypt, data mismatch)" << std::endl;
+		std::cout << "FAILED (encrypt/decrypt, data mismatch)" ZT_EOL_S;
 		return -1;
 	}
 	tv.init(AES_GCM_TEST_VECTOR_0_KEY);
 	tv.gcmEncrypt(AES_GCM_TEST_VECTOR_0_IV,AES_GCM_TEST_VECTOR_0_IN,sizeof(AES_GCM_TEST_VECTOR_0_IN),nullptr,0,(uint8_t *)buf1,(uint8_t *)buf2,16);
 	if (memcmp(buf2,AES_GCM_TEST_VECTOR_0_TAG,16) != 0) {
-		std::cout << "FAILED (test vector, tag mismatch) " << Utils::hex(buf2,16,hexbuf) << std::endl;
+		std::cout << "FAILED (test vector, tag mismatch) " << Utils::hex(buf2,16,hexbuf) << ZT_EOL_S;
 		return -1;
 	}
 	if (memcmp(buf1,AES_GCM_TEST_VECTOR_0_OUT,sizeof(AES_GCM_TEST_VECTOR_0_OUT)) != 0) {
-		std::cout << "FAILED (test vector, ciphertext mismatch) " << Utils::hex(buf2,16,hexbuf) << std::endl;
+		std::cout << "FAILED (test vector, ciphertext mismatch) " << Utils::hex(buf2,16,hexbuf) << ZT_EOL_S;
 		return -1;
 	}
 	double gcmBytes = 0.0;
@@ -221,12 +222,12 @@ static int testCrypto()
 	}
 	int64_t end = OSUtils::now();
 	*dummy = buf1[0];
-	std::cout << ((gcmBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl << "  AES scramble (benchmark): "; std::cout.flush();
+	std::cout << ((gcmBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" ZT_EOL_S << "  AES scramble (benchmark): "; std::cout.flush();
 	double ecbBytes = 0.0;
 	AES::scramble((const uint8_t *)hexbuf,buf1,sizeof(buf1),buf2);
 	AES::unscramble((const uint8_t *)hexbuf,buf2,sizeof(buf2),buf3);
 	if (memcmp(buf1,buf3,sizeof(buf1)) != 0) {
-		std::cout << "FAILED (scramble/unscramble did not generate identical data)" << std::endl;
+		std::cout << "FAILED (scramble/unscramble did not generate identical data)" ZT_EOL_S;
 		return -1;
 	}
 	start = OSUtils::now();
@@ -237,7 +238,7 @@ static int testCrypto()
 	}
 	end = OSUtils::now();
 	*dummy = buf1[0];
-	std::cout << ((ecbBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl << "  AES-256 GCM + scramble (benchmark): "; std::cout.flush();
+	std::cout << ((ecbBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" ZT_EOL_S << "  AES-256 GCM + scramble (benchmark): "; std::cout.flush();
 	ecbBytes = 0.0;
 	start = OSUtils::now();
 	for(unsigned long i=0;i<50000;++i) {
@@ -249,7 +250,7 @@ static int testCrypto()
 	}
 	end = OSUtils::now();
 	*dummy = buf1[0];
-	std::cout << ((ecbBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl;
+	std::cout << ((ecbBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" ZT_EOL_S;
 
 	std::cout << "[crypto] Testing Salsa20... "; std::cout.flush();
 	for(unsigned int i=0;i<4;++i) {
@@ -263,7 +264,7 @@ static int testCrypto()
 		s20.init("12345678123456781234567812345678","12345678");
 		s20.crypt20(buf2,buf3,sizeof(buf2));
 		if (memcmp(buf1,buf3,sizeof(buf1))) {
-			std::cout << "FAIL (encrypt/decrypt test)" << std::endl;
+			std::cout << "FAIL (encrypt/decrypt test)" ZT_EOL_S;
 			return -1;
 		}
 	}
@@ -272,7 +273,7 @@ static int testCrypto()
 	memset(buf2,0,sizeof(buf2));
 	s20.crypt20(buf1,buf2,64);
 	if (memcmp(buf2,s20TV0Ks,64)) {
-		std::cout << "FAIL (test vector 0)" << std::endl;
+		std::cout << "FAIL (test vector 0)" ZT_EOL_S;
 		return -1;
 	}
 	s20.init(s2012TV0Key,s2012TV0Iv);
@@ -280,15 +281,15 @@ static int testCrypto()
 	memset(buf2,0,sizeof(buf2));
 	s20.crypt12(buf1,buf2,64);
 	if (memcmp(buf2,s2012TV0Ks,64)) {
-		std::cout << "FAIL (test vector 1)" << std::endl;
+		std::cout << "FAIL (test vector 1)" ZT_EOL_S;
 		return -1;
 	}
-	std::cout << "PASS" << std::endl;
+	std::cout << "PASS" ZT_EOL_S;
 
 #ifdef ZT_SALSA20_SSE
-	std::cout << "[crypto] Salsa20 SSE: ENABLED" << std::endl;
+	std::cout << "[crypto] Salsa20 SSE: ENABLED" ZT_EOL_S;
 #else
-	std::cout << "[crypto] Salsa20 SSE: DISABLED" << std::endl;
+	std::cout << "[crypto] Salsa20 SSE: DISABLED" ZT_EOL_S;
 #endif
 
 	std::cout << "[crypto] Benchmarking Salsa20/12... "; std::cout.flush();
@@ -305,7 +306,7 @@ static int testCrypto()
 		}
 		end = OSUtils::now();
 		SHA512(buf1,bb,1234567);
-		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << std::endl;
+		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << ZT_EOL_S;
 		::free((void *)bb);
 	}
 
@@ -323,51 +324,51 @@ static int testCrypto()
 		}
 		uint64_t end = OSUtils::now();
 		SHA512(buf1,bb,1234567);
-		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << std::endl;
+		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << ZT_EOL_S;
 		::free((void *)bb);
 	}
 
 	std::cout << "[crypto] Testing SHA-512... "; std::cout.flush();
 	SHA512(buf1,sha512TV0Input,(unsigned int)strlen(sha512TV0Input));
 	if (memcmp(buf1,sha512TV0Digest,64)) {
-		std::cout << "FAIL" << std::endl;
+		std::cout << "FAIL" ZT_EOL_S;
 		return -1;
 	}
-	std::cout << "PASS" << std::endl;
+	std::cout << "PASS" ZT_EOL_S;
 	std::cout << "[crypto] Benchmarking SHA-512 (64 byte input)... "; std::cout.flush();
 	start = OSUtils::now();
 	for(unsigned int i=0;i<2000000;++i) {
 		SHA512(buf1,buf1,64);
 	}
 	end = OSUtils::now();
-	std::cout << (uint64_t)(2000000.0 / ((double)(end - start) / 1000.0)) << " hashes/second" << std::endl;
+	std::cout << (uint64_t)(2000000.0 / ((double)(end - start) / 1000.0)) << " hashes/second" ZT_EOL_S;
 	std::cout << "[crypto] Testing SHA-384... "; std::cout.flush();
 	SHA384(buf1,sha512TV0Input,(unsigned int)strlen(sha512TV0Input));
 	if (memcmp(buf1,sha384TV0Digest,48)) {
-		std::cout << "FAIL" << std::endl;
+		std::cout << "FAIL" ZT_EOL_S;
 		return -1;
 	}
-	std::cout << "PASS" << std::endl;
+	std::cout << "PASS" ZT_EOL_S;
 	std::cout << "[crypto] Benchmarking SHA-384 (48 byte input)... "; std::cout.flush();
 	start = OSUtils::now();
 	for(unsigned int i=0;i<2000000;++i) {
 		SHA384(buf1,buf1,48);
 	}
 	end = OSUtils::now();
-	std::cout << (uint64_t)(2000000.0 / ((double)(end - start) / 1000.0)) << " hashes/second" << std::endl;
+	std::cout << (uint64_t)(2000000.0 / ((double)(end - start) / 1000.0)) << " hashes/second" ZT_EOL_S;
 
 	std::cout << "[crypto] Testing Poly1305... "; std::cout.flush();
 	poly1305(buf1,poly1305TV0Input,sizeof(poly1305TV0Input),poly1305TV0Key);
 	if (memcmp(buf1,poly1305TV0Tag,16)) {
-		std::cout << "FAIL (1)" << std::endl;
+		std::cout << "FAIL (1)" ZT_EOL_S;
 		return -1;
 	}
 	poly1305(buf1,poly1305TV1Input,sizeof(poly1305TV1Input),poly1305TV1Key);
 	if (memcmp(buf1,poly1305TV1Tag,16)) {
-		std::cout << "FAIL (2)" << std::endl;
+		std::cout << "FAIL (2)" ZT_EOL_S;
 		return -1;
 	}
-	std::cout << "PASS" << std::endl;
+	std::cout << "PASS" ZT_EOL_S;
 
 	std::cout << "[crypto] Benchmarking Poly1305... "; std::cout.flush();
 	{
@@ -381,54 +382,54 @@ static int testCrypto()
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
-		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1000.0)) << " MiB/second" << std::endl;
+		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1000.0)) << " MiB/second" ZT_EOL_S;
 		::free((void *)bb);
 	}
 
-	std::cout << "[crypto] Testing ECC384 (NIST P-384)..." << std::endl;
+	std::cout << "[crypto] Testing ECC384 (NIST P-384)..." ZT_EOL_S;
 	{
 		uint8_t p384pub[ZT_ECC384_PUBLIC_KEY_SIZE],p384priv[ZT_ECC384_PRIVATE_KEY_SIZE],p384sig[ZT_ECC384_SIGNATURE_SIZE],p384hash[ZT_ECC384_SIGNATURE_HASH_SIZE];
 		char p384hex[256];
 		ECC384GenerateKey(p384pub,p384priv);
-		std::cout << "[crypto]   Public Key: " << Utils::hex(p384pub,sizeof(p384pub),p384hex) << std::endl;
+		std::cout << "[crypto]   Public Key: " << Utils::hex(p384pub,sizeof(p384pub),p384hex) << ZT_EOL_S;
 		Utils::getSecureRandom(p384hash,sizeof(p384hash));
 		ECC384ECDSASign(p384priv,p384hash,p384sig);
 		if (!ECC384ECDSAVerify(p384pub,p384hash,p384sig)) {
-			std::cout << "[crypto]   ECDSA Signature: FAILED (verify good signature)" << std::endl;
+			std::cout << "[crypto]   ECDSA Signature: FAILED (verify good signature)" ZT_EOL_S;
 			return -1;
 		}
 		++p384sig[0];
 		if (ECC384ECDSAVerify(p384pub,p384hash,p384sig)) {
-			std::cout << "[crypto]   ECDSA Signature: FAILED (verify bad signature)" << std::endl;
+			std::cout << "[crypto]   ECDSA Signature: FAILED (verify bad signature)" ZT_EOL_S;
 			return -1;
 		}
 		--p384sig[0];
-		std::cout << "[crypto]   ECDSA Signature: " << Utils::hex(p384sig,sizeof(p384sig),p384hex) << std::endl;
+		std::cout << "[crypto]   ECDSA Signature: " << Utils::hex(p384sig,sizeof(p384sig),p384hex) << ZT_EOL_S;
 		uint8_t p384pub2[ZT_ECC384_PUBLIC_KEY_SIZE],p384priv2[ZT_ECC384_PRIVATE_KEY_SIZE],p384sec[ZT_ECC384_SHARED_SECRET_SIZE],p384sec2[ZT_ECC384_SHARED_SECRET_SIZE];
 		ECC384GenerateKey(p384pub2,p384priv2);
 		ECC384ECDH(p384pub,p384priv2,p384sec);
 		ECC384ECDH(p384pub2,p384priv,p384sec2);
 		if (memcmp(p384sec,p384sec2,ZT_ECC384_SHARED_SECRET_SIZE)) {
-			std::cout << "[crypto]   ECDH Agree: FAILED (secrets do not match)" << std::endl;
+			std::cout << "[crypto]   ECDH Agree: FAILED (secrets do not match)" ZT_EOL_S;
 			return -1;
 		}
-		std::cout << "[crypto]   ECDH Agree: " << Utils::hex(p384sec,sizeof(p384sec),p384hex) << std::endl;
+		std::cout << "[crypto]   ECDH Agree: " << Utils::hex(p384sec,sizeof(p384sec),p384hex) << ZT_EOL_S;
 
 		Utils::unhex(ECC384_TEST_PUBLIC,p384pub,sizeof(p384pub));
 		Utils::unhex(ECC384_TEST_PRIVATE,p384priv,sizeof(p384priv));
 		ECC384ECDH(p384pub,p384priv,p384sec);
 		Utils::unhex(ECC384_TEST_DH_SELF_AGREE,p384sec2,sizeof(p384sec2));
 		if (memcmp(p384sec,p384sec2,ZT_ECC384_SHARED_SECRET_SIZE)) {
-			std::cout << "[crypto]   ECDH Test Vector: FAILED (secrets do not match)" << std::endl;
+			std::cout << "[crypto]   ECDH Test Vector: FAILED (secrets do not match)" ZT_EOL_S;
 			return -1;
 		}
-		std::cout << "[crypto]   ECDH Test Vector: PASS" << std::endl;
+		std::cout << "[crypto]   ECDH Test Vector: PASS" ZT_EOL_S;
 		Utils::unhex(ECC384_TEST_SIG,p384sig,sizeof(p384sig));
 		if (!ECC384ECDSAVerify(p384pub,p384pub,p384sig)) {
-			std::cout << "[crypto]   ECDSA Test Vector: FAILED (verify failed)" << std::endl;
+			std::cout << "[crypto]   ECDSA Test Vector: FAILED (verify failed)" ZT_EOL_S;
 			return -1;
 		}
-		std::cout << "[crypto]   ECDSA Test Vector: PASS" << std::endl;
+		std::cout << "[crypto]   ECDSA Test Vector: PASS" ZT_EOL_S;
 	}
 
 	std::cout << "[crypto] Testing C25519 and Ed25519 against test vectors... "; std::cout.flush();
@@ -441,25 +442,25 @@ static int testCrypto()
 		C25519::agree(p1.priv,p2.pub,buf1,64);
 		C25519::agree(p2.priv,p1.pub,buf2,64);
 		if (memcmp(buf1,buf2,64)) {
-			std::cout << "FAIL (1)" << std::endl;
+			std::cout << "FAIL (1)" ZT_EOL_S;
 			return -1;
 		}
 		if (memcmp(buf1,C25519_TEST_VECTORS[k].agreement,64)) {
-			std::cout << "FAIL (2)" << std::endl;
+			std::cout << "FAIL (2)" ZT_EOL_S;
 			return -1;
 		}
 		C25519::Signature sig1 = C25519::sign(p1,buf1,64);
 		if (memcmp(sig1.data,C25519_TEST_VECTORS[k].agreementSignedBy1,64)) {
-			std::cout << "FAIL (3)" << std::endl;
+			std::cout << "FAIL (3)" ZT_EOL_S;
 			return -1;
 		}
 		C25519::Signature sig2 = C25519::sign(p2,buf1,64);
 		if (memcmp(sig2.data,C25519_TEST_VECTORS[k].agreementSignedBy2,64)) {
-			std::cout << "FAIL (4)" << std::endl;
+			std::cout << "FAIL (4)" ZT_EOL_S;
 			return -1;
 		}
 	}
-	std::cout << "PASS" << std::endl;
+	std::cout << "PASS" ZT_EOL_S;
 
 	std::cout << "[crypto] Testing C25519 ECC key agreement... "; std::cout.flush();
 	for(unsigned int i=0;i<100;++i) {
@@ -474,16 +475,16 @@ static int testCrypto()
 		C25519::agree(p3.priv,p1.pub,buf3,64);
 		// p1<>p2 should equal p1<>p2
 		if (memcmp(buf1,buf2,64)) {
-			std::cout << "FAIL (1)" << std::endl;
+			std::cout << "FAIL (1)" ZT_EOL_S;
 			return -1;
 		}
 		// p2<>p1 should not equal p3<>p1
 		if (!memcmp(buf2,buf3,64)) {
-			std::cout << "FAIL (2)" << std::endl;
+			std::cout << "FAIL (2)" ZT_EOL_S;
 			return -1;
 		}
 	}
-	std::cout << "PASS" << std::endl;
+	std::cout << "PASS" ZT_EOL_S;
 
 	std::cout << "[crypto] Benchmarking C25519 ECC key agreement... "; std::cout.flush();
 	C25519::Pair bp[8];
@@ -494,7 +495,7 @@ static int testCrypto()
 		C25519::agree(bp[~k & 7].priv,bp[k & 7].pub,buf1,64);
 	}
 	uint64_t et = OSUtils::now();
-	std::cout << ((double)(et - st) / 50.0) << "ms per agreement." << std::endl;
+	std::cout << ((double)(et - st) / 50.0) << "ms per agreement." ZT_EOL_S;
 
 	std::cout << "[crypto] Testing Ed25519 ECC signatures... "; std::cout.flush();
 	C25519::Pair didntSign = C25519::generate();
@@ -504,33 +505,33 @@ static int testCrypto()
 			buf1[k] = (unsigned char)rand();
 		C25519::Signature sig = C25519::sign(p1,buf1,sizeof(buf1));
 		if (!C25519::verify(p1.pub,buf1,sizeof(buf1),sig)) {
-			std::cout << "FAIL (1)" << std::endl;
+			std::cout << "FAIL (1)" ZT_EOL_S;
 			return -1;
 		}
 		++buf1[17];
 		if (C25519::verify(p1.pub,buf1,sizeof(buf1),sig)) {
-			std::cout << "FAIL (2)" << std::endl;
+			std::cout << "FAIL (2)" ZT_EOL_S;
 			return -1;
 		}
 		--buf1[17];
 		if (!C25519::verify(p1.pub,buf1,sizeof(buf1),sig)) {
-			std::cout << "FAIL (3)" << std::endl;
+			std::cout << "FAIL (3)" ZT_EOL_S;
 			return -1;
 		}
 		if (C25519::verify(didntSign.pub,buf1,sizeof(buf1),sig)) {
-			std::cout << "FAIL (2)" << std::endl;
+			std::cout << "FAIL (2)" ZT_EOL_S;
 			return -1;
 		}
 		for(unsigned int k=0;k<64;++k) {
 			C25519::Signature sig2(sig);
 			sig2.data[rand() % ZT_C25519_SIGNATURE_LEN] ^= (unsigned char)(1 << (rand() & 7));
 			if (C25519::verify(p1.pub,buf1,sizeof(buf1),sig2)) {
-				std::cout << "FAIL (5)" << std::endl;
+				std::cout << "FAIL (5)" ZT_EOL_S;
 				return -1;
 			}
 		}
 	}
-	std::cout << "PASS" << std::endl;
+	std::cout << "PASS" ZT_EOL_S;
 
 	std::cout << "[crypto] Benchmarking Ed25519 ECC signatures... "; std::cout.flush();
 	st = OSUtils::now();
@@ -539,7 +540,7 @@ static int testCrypto()
 		C25519::sign(didntSign.priv,didntSign.pub,buf1,sizeof(buf1),sig.data);
 	}
 	et = OSUtils::now();
-	std::cout << ((double)(et - st) / 50.0) << "ms per signature." << std::endl;
+	std::cout << ((double)(et - st) / 50.0) << "ms per signature." ZT_EOL_S;
 
 	return 0;
 }
@@ -552,41 +553,41 @@ static int testIdentity()
 
 	std::cout << "[identity] Validate known-good identity... "; std::cout.flush();
 	if (!id.fromString(KNOWN_GOOD_IDENTITY)) {
-		std::cout << "FAIL (1)" << std::endl;
+		std::cout << "FAIL (1)" ZT_EOL_S;
 		return -1;
 	}
 	const uint64_t vst = OSUtils::now();
 	for(int k=0;k<10;++k) {
 		if (!id.locallyValidate()) {
-			std::cout << "FAIL (2)" << std::endl;
+			std::cout << "FAIL (2)" ZT_EOL_S;
 			return -1;
 		}
 	}
 	const uint64_t vet = OSUtils::now();
-	std::cout << "PASS (" << ((double)(vet - vst) / 10.0) << "ms per validation)" << std::endl;
+	std::cout << "PASS (" << ((double)(vet - vst) / 10.0) << "ms per validation)" ZT_EOL_S;
 
 	std::cout << "[identity] Validate known-bad identity... "; std::cout.flush();
 	if (!id.fromString(KNOWN_BAD_IDENTITY)) {
-		std::cout << "FAIL (1)" << std::endl;
+		std::cout << "FAIL (1)" ZT_EOL_S;
 		return -1;
 	}
 	if (id.locallyValidate()) {
-		std::cout << "FAIL (2)" << std::endl;
+		std::cout << "FAIL (2)" ZT_EOL_S;
 		return -1;
 	}
-	std::cout << "PASS (i.e. it failed)" << std::endl;
+	std::cout << "PASS (i.e. it failed)" ZT_EOL_S;
 
 	for(unsigned int k=0;k<4;++k) {
 		std::cout << "[identity] Generate identity... "; std::cout.flush();
 		uint64_t genstart = OSUtils::now();
 		id.generate(Identity::C25519);
 		uint64_t genend = OSUtils::now();
-		std::cout << "(took " << (genend - genstart) << "ms): " << id.toString(true,buf2) << std::endl;
+		std::cout << "(took " << (genend - genstart) << "ms): " << id.toString(true,buf2) << ZT_EOL_S;
 		std::cout << "[identity] Locally validate identity: ";
 		if (id.locallyValidate()) {
-			std::cout << "PASS" << std::endl;
+			std::cout << "PASS" ZT_EOL_S;
 		} else {
-			std::cout << "FAIL" << std::endl;
+			std::cout << "FAIL" ZT_EOL_S;
 			return -1;
 		}
 	}
@@ -598,9 +599,9 @@ static int testIdentity()
 		id2.deserialize(buf);
 		std::cout << "[identity] Serialize and deserialize (w/private): ";
 		if ((id == id2)&&(id2.locallyValidate())) {
-			std::cout << "PASS" << std::endl;
+			std::cout << "PASS" ZT_EOL_S;
 		} else {
-			std::cout << "FAIL" << std::endl;
+			std::cout << "FAIL" ZT_EOL_S;
 			return -1;
 		}
 	}
@@ -612,9 +613,9 @@ static int testIdentity()
 		id2.deserialize(buf);
 		std::cout << "[identity] Serialize and deserialize (no private): ";
 		if ((id == id2)&&(id2.locallyValidate())) {
-			std::cout << "PASS" << std::endl;
+			std::cout << "PASS" ZT_EOL_S;
 		} else {
-			std::cout << "FAIL" << std::endl;
+			std::cout << "FAIL" ZT_EOL_S;
 			return -1;
 		}
 	}
@@ -624,9 +625,9 @@ static int testIdentity()
 		id2.fromString(id.toString(true,buf2));
 		std::cout << "[identity] Serialize and deserialize (ASCII w/private): ";
 		if ((id == id2)&&(id2.locallyValidate())) {
-			std::cout << "PASS" << std::endl;
+			std::cout << "PASS" ZT_EOL_S;
 		} else {
-			std::cout << "FAIL" << std::endl;
+			std::cout << "FAIL" ZT_EOL_S;
 			return -1;
 		}
 	}
@@ -636,11 +637,36 @@ static int testIdentity()
 		id2.fromString(id.toString(false,buf2));
 		std::cout << "[identity] Serialize and deserialize (ASCII no private): ";
 		if ((id == id2)&&(id2.locallyValidate())) {
-			std::cout << "PASS" << std::endl;
+			std::cout << "PASS" ZT_EOL_S;
 		} else {
-			std::cout << "FAIL" << std::endl;
+			std::cout << "FAIL" ZT_EOL_S;
 			return -1;
 		}
+	}
+
+	try {
+		std::cout << "[identity] Testing Locator and DNS TXT encoding... "; std::cout.flush();
+		uint8_t dnsPub[ZT_ECC384_PUBLIC_KEY_SIZE],dnsPriv[ZT_ECC384_PRIVATE_KEY_SIZE];
+		ECC384GenerateKey(dnsPub,dnsPriv);
+		Locator l;
+		Identity ti;
+		ti.generate(Identity::C25519);
+		l.add(InetAddress("127.0.0.1/9993"));
+		l.add(InetAddress("cafe:babe:face:dbad:deca:f::1/9993"));
+		l.finish(ti,OSUtils::now());
+		l.sign(ti);
+		auto tr = l.makeTxtRecords(dnsPub,dnsPriv);
+		//for(auto i=tr.begin();i!=tr.end();++i)
+		//	std::cout << "  " << i->c_str() << ZT_EOL_S;
+		Locator l2;
+		if (!l2.decodeTxtRecords(tr.begin(),tr.end(),dnsPub)) {
+			std::cout << "FAILED (decode TXT records returned false)" ZT_EOL_S;
+			return -1;
+		}
+		std::cout << "OK" ZT_EOL_S;
+	} catch (int e) {
+		std::cout << "FAILED (threw integer exception " << e << ")" ZT_EOL_S;
+		return -1;
 	}
 
 	return 0;
@@ -653,57 +679,57 @@ static int testCertificate()
 	Identity authority;
 	std::cout << "[certificate] Generating identity to act as authority... "; std::cout.flush();
 	authority.generate(Identity::C25519);
-	std::cout << authority.address().toString(buf) << std::endl;
+	std::cout << authority.address().toString(buf) << ZT_EOL_S;
 
 	Identity idA,idB;
 	std::cout << "[certificate] Generating identities A and B... "; std::cout.flush();
 	idA.generate(Identity::C25519);
 	idB.generate(Identity::C25519);
-	std::cout << idA.address().toString(buf) << ", " << idB.address().toString(buf) << std::endl;
+	std::cout << idA.address().toString(buf) << ", " << idB.address().toString(buf) << ZT_EOL_S;
 
 	std::cout << "[certificate] Generating certificates A and B...";
 	CertificateOfMembership cA(10000,100,1,idA.address());
 	CertificateOfMembership cB(10099,100,1,idB.address());
-	std::cout << std::endl;
+	std::cout << ZT_EOL_S;
 
 	std::cout << "[certificate] Signing certificates A and B with authority...";
 	cA.sign(authority);
 	cB.sign(authority);
-	std::cout << std::endl;
+	std::cout << ZT_EOL_S;
 
-	//std::cout << "[certificate] A: " << cA.toString() << std::endl;
-	//std::cout << "[certificate] B: " << cB.toString() << std::endl;
+	//std::cout << "[certificate] A: " << cA.toString() << ZT_EOL_S;
+	//std::cout << "[certificate] B: " << cB.toString() << ZT_EOL_S;
 
 	std::cout << "[certificate] A agrees with B and B with A... ";
 	if (cA.agreesWith(cB))
 		std::cout << "yes, ";
 	else {
-		std::cout << "FAIL" << std::endl;
+		std::cout << "FAIL" ZT_EOL_S;
 		return -1;
 	}
 	if (cB.agreesWith(cA))
-		std::cout << "yes." << std::endl;
+		std::cout << "yes." ZT_EOL_S;
 	else {
-		std::cout << "FAIL" << std::endl;
+		std::cout << "FAIL" ZT_EOL_S;
 		return -1;
 	}
 
 	std::cout << "[certificate] Generating two certificates that should not agree...";
 	cA = CertificateOfMembership(10000,100,1,idA.address());
 	cB = CertificateOfMembership(10101,100,1,idB.address());
-	std::cout << std::endl;
+	std::cout << ZT_EOL_S;
 
 	std::cout << "[certificate] A agrees with B and B with A... ";
 	if (!cA.agreesWith(cB))
 		std::cout << "no, ";
 	else {
-		std::cout << "FAIL" << std::endl;
+		std::cout << "FAIL" ZT_EOL_S;
 		return -1;
 	}
 	if (!cB.agreesWith(cA))
-		std::cout << "no." << std::endl;
+		std::cout << "no." ZT_EOL_S;
 	else {
-		std::cout << "FAIL" << std::endl;
+		std::cout << "FAIL" ZT_EOL_S;
 		return -1;
 	}
 
@@ -729,7 +755,7 @@ static int testPacket()
 
 	b = a;
 	if (a != b) {
-		std::cout << "FAIL (assign)" << std::endl;
+		std::cout << "FAIL (assign)" ZT_EOL_S;
 		return -1;
 	}
 
@@ -739,17 +765,17 @@ static int testPacket()
 
 	std::cout << "(compressed: " << complen << ", decompressed: " << a.size() << ") ";
 	if (a != b) {
-		std::cout << "FAIL (compresssion)" << std::endl;
+		std::cout << "FAIL (compresssion)" ZT_EOL_S;
 		return -1;
 	}
 
 	a.armor(salsaKey,true);
 	if (!a.dearmor(salsaKey)) {
-		std::cout << "FAIL (encrypt-decrypt/verify)" << std::endl;
+		std::cout << "FAIL (encrypt-decrypt/verify)" ZT_EOL_S;
 		return -1;
 	}
 
-	std::cout << "PASS" << std::endl;
+	std::cout << "PASS" ZT_EOL_S;
 	return 0;
 }
 
@@ -759,12 +785,12 @@ static int testOther()
 	char buf2[4096];
 	char buf3[1024];
 
-	std::cout << "[other] Testing bit count... "; std::cout.flush();
+	std::cout << "[other] Testing bit counting functions... "; std::cout.flush();
 	uint32_t i32 = 0;
 	uint64_t i64 = 0;
 	for(int i=0;i<=32;++i) {
 		if ((int)Utils::countBits(i32) != i) {
-			std::cout << "FAIL!" << std::endl;
+			std::cout << "FAIL!" ZT_EOL_S;
 			return -1;
 		}
 		i32 <<= 1;
@@ -772,27 +798,27 @@ static int testOther()
 	}
 	for(int i=0;i<=64;++i) {
 		if ((int)Utils::countBits(i64) != i) {
-			std::cout << "FAIL!" << std::endl;
+			std::cout << "FAIL!" ZT_EOL_S;
 			return -1;
 		}
 		i64 <<= 1;
 		i64 |= 1;
 	}
-	std::cout << "PASS" << std::endl;
+	std::cout << "PASS" ZT_EOL_S;
 
 	std::cout << "[other] Testing hex/unhex... "; std::cout.flush();
 	Utils::getSecureRandom(buf,(unsigned int)sizeof(buf));
 	Utils::hex(buf,(unsigned int)sizeof(buf),buf2);
 	Utils::unhex(buf2,buf3,(unsigned int)sizeof(buf3));
 	if (memcmp(buf,buf3,sizeof(buf)) == 0) {
-		std::cout << "PASS" << std::endl;
+		std::cout << "PASS" ZT_EOL_S;
 	} else {
-		std::cout << "FAIL!" << std::endl;
+		std::cout << "FAIL!" ZT_EOL_S;
 		buf2[78] = 0;
-		std::cout << buf2 << std::endl;
+		std::cout << buf2 << ZT_EOL_S;
 		Utils::hex(buf3,(unsigned int)sizeof(buf3),buf2);
 		buf2[78] = 0;
-		std::cout << buf2 << std::endl;
+		std::cout << buf2 << ZT_EOL_S;
 		return -1;
 	}
 
@@ -801,47 +827,47 @@ static int testOther()
 		Utils::getSecureRandom(buf,(unsigned int)sizeof(buf));
 		int l = Utils::b32e((const uint8_t *)buf,i,buf2,sizeof(buf2));
 		if (l <= 0) {
-			std::cout << "FAIL (encode returned 0)" << std::endl;
+			std::cout << "FAIL (encode returned 0)" ZT_EOL_S;
 			return -1;
 		}
 		int l2 = Utils::b32d(buf2,(uint8_t *)buf3,sizeof(buf3));
 		if (l2 != (int)i) {
-			std::cout << "FAIL (decode returned wrong count)" << std::endl;
+			std::cout << "FAIL (decode returned wrong count)" ZT_EOL_S;
 			return -1;
 		}
 		if (memcmp(buf,buf3,i) != 0) {
-			std::cout << "FAIL (decode result incorrect)" << std::endl;
+			std::cout << "FAIL (decode result incorrect)" ZT_EOL_S;
 			return -1;
 		}
 	}
-	std::cout << "PASS" << std::endl;
+	std::cout << "PASS" ZT_EOL_S;
 
 	std::cout << "[other] Testing base64... "; std::cout.flush();
 	for(unsigned int i=1;i<1024;++i) {
 		Utils::getSecureRandom(buf,(unsigned int)sizeof(buf));
 		unsigned int l = Utils::b64e((const uint8_t *)buf,i,buf2,sizeof(buf2));
 		if (l == 0) {
-			std::cout << "FAIL (encode returned 0)" << std::endl;
+			std::cout << "FAIL (encode returned 0)" ZT_EOL_S;
 			return -1;
 		}
 		unsigned int l2 = Utils::b64d(buf2,(uint8_t *)buf3,sizeof(buf3));
 		if (l2 != i) {
-			std::cout << "FAIL (decode returned wrong count)" << std::endl;
+			std::cout << "FAIL (decode returned wrong count)" ZT_EOL_S;
 			return -1;
 		}
 		if (memcmp(buf,buf3,i) != 0) {
-			std::cout << "FAIL (decode result incorrect)" << std::endl;
+			std::cout << "FAIL (decode result incorrect)" ZT_EOL_S;
 			return -1;
 		}
 	}
-	std::cout << "PASS" << std::endl;
+	std::cout << "PASS" ZT_EOL_S;
 
 	std::cout << "[other] Testing InetAddress encode/decode..."; std::cout.flush();
 	std::cout << " " << InetAddress("127.0.0.1/9993").toString(buf);
 	std::cout << " " << InetAddress("feed:dead:babe:dead:beef:f00d:1234:5678/12345").toString(buf);
 	std::cout << " " << InetAddress("0/9993").toString(buf);
 	std::cout << " " << InetAddress("").toString(buf);
-	std::cout << std::endl;
+	std::cout << ZT_EOL_S;
 
 #if 0
 	std::cout << "[other] Testing Hashtable... "; std::cout.flush();
@@ -863,7 +889,7 @@ static int testOther()
 				ht.erase(0xffffffffffffffffULL);
 			}
 			if (ht.size() != ref.size()) {
-				std::cout << "FAILED! (size mismatch, original)" << std::endl;
+				std::cout << "FAILED! (size mismatch, original)" ZT_EOL_S;
 				return -1;
 			}
 			{
@@ -872,14 +898,14 @@ static int testOther()
 				std::string *v = (std::string *)0;
 				while(i.next(k,v)) {
 					if (ref.find(*k)->second != *v) {
-						std::cout << "FAILED! (data mismatch!)" << std::endl;
+						std::cout << "FAILED! (data mismatch!)" ZT_EOL_S;
 						return -1;
 					}
 				}
 			}
 			for(std::map<uint64_t,std::string>::const_iterator i(ref.begin());i!=ref.end();++i) {
 				if (ht[i->first] != i->second) {
-					std::cout << "FAILED! (data mismatch!)" << std::endl;
+					std::cout << "FAILED! (data mismatch!)" ZT_EOL_S;
 					return -1;
 				}
 			}
@@ -888,40 +914,40 @@ static int testOther()
 			ht2 = ht;
 			Hashtable<uint64_t,std::string> ht3(ht2);
 			if (ht2.size() != ref.size()) {
-				std::cout << "FAILED! (size mismatch, assigned)" << std::endl;
+				std::cout << "FAILED! (size mismatch, assigned)" ZT_EOL_S;
 				return -1;
 			}
 			if (ht3.size() != ref.size()) {
-				std::cout << "FAILED! (size mismatch, copied)" << std::endl;
+				std::cout << "FAILED! (size mismatch, copied)" ZT_EOL_S;
 				return -1;
 			}
 
 			for(std::map<uint64_t,std::string>::iterator i(ref.begin());i!=ref.end();++i) {
 				std::string *v = ht.get(i->first);
 				if (!v) {
-					std::cout << "FAILED! (key " << i->first << " not found, original)" << std::endl;
+					std::cout << "FAILED! (key " << i->first << " not found, original)" ZT_EOL_S;
 					return -1;
 				}
 				if (*v != i->second) {
-					std::cout << "FAILED! (key " << i->first << "  not equal, original)" << std::endl;
+					std::cout << "FAILED! (key " << i->first << "  not equal, original)" ZT_EOL_S;
 					return -1;
 				}
 				v = ht2.get(i->first);
 				if (!v) {
-					std::cout << "FAILED! (key " << i->first << "  not found, assigned)" << std::endl;
+					std::cout << "FAILED! (key " << i->first << "  not found, assigned)" ZT_EOL_S;
 					return -1;
 				}
 				if (*v != i->second) {
-					std::cout << "FAILED! (key " << i->first << "  not equal, assigned)" << std::endl;
+					std::cout << "FAILED! (key " << i->first << "  not equal, assigned)" ZT_EOL_S;
 					return -1;
 				}
 				v = ht3.get(i->first);
 				if (!v) {
-					std::cout << "FAILED! (key " << i->first << "  not found, copied)" << std::endl;
+					std::cout << "FAILED! (key " << i->first << "  not found, copied)" ZT_EOL_S;
 					return -1;
 				}
 				if (*v != i->second) {
-					std::cout << "FAILED! (key " << i->first << "  not equal, copied)" << std::endl;
+					std::cout << "FAILED! (key " << i->first << "  not equal, copied)" ZT_EOL_S;
 					return -1;
 				}
 			}
@@ -932,34 +958,34 @@ static int testOther()
 				unsigned long ic = 0;
 				while (i.next(k,v)) {
 					if (ref[*k] != *v) {
-						std::cout << "FAILED! (iterate)" << std::endl;
+						std::cout << "FAILED! (iterate)" ZT_EOL_S;
 						return -1;
 					}
 					++ic;
 				}
 				if (ic != ht.size()) {
-					std::cout << "FAILED! (iterate coverage)" << std::endl;
+					std::cout << "FAILED! (iterate coverage)" ZT_EOL_S;
 					return -1;
 				}
 			}
 			for(std::map<uint64_t,std::string>::iterator i(ref.begin());i!=ref.end();) {
 				if (!ht.get(i->first)) {
-					std::cout << "FAILED! (erase, check if exists)" << std::endl;
+					std::cout << "FAILED! (erase, check if exists)" ZT_EOL_S;
 					return -1;
 				}
 				ht.erase(i->first);
 				if (ht.get(i->first)) {
-					std::cout << "FAILED! (erase, check if erased)" << std::endl;
+					std::cout << "FAILED! (erase, check if erased)" ZT_EOL_S;
 					return -1;
 				}
 				ref.erase(i++);
 				if (ht.size() != ref.size()) {
-					std::cout << "FAILED! (erase, size)" << std::endl;
+					std::cout << "FAILED! (erase, size)" ZT_EOL_S;
 					return -1;
 				}
 			}
 			if (!ht.empty()) {
-				std::cout << "FAILED! (erase, empty)" << std::endl;
+				std::cout << "FAILED! (erase, empty)" ZT_EOL_S;
 				return -1;
 			}
 			for(int i=0;i<10000;++i) {
@@ -973,13 +999,13 @@ static int testOther()
 				ref[k] = v;
 			}
 			if (ht.size() != ref.size()) {
-				std::cout << "FAILED! (second populate)" << std::endl;
+				std::cout << "FAILED! (second populate)" ZT_EOL_S;
 				return -1;
 			}
 			ht.clear();
 			ref.clear();
 			if (ht.size() != ref.size()) {
-				std::cout << "FAILED! (clear)" << std::endl;
+				std::cout << "FAILED! (clear)" ZT_EOL_S;
 				return -1;
 			}
 			for(int i=0;i<10000;++i) {
@@ -1001,65 +1027,67 @@ static int testOther()
 			}
 			ref.clear();
 			if (ht.size() != ref.size()) {
-				std::cout << "FAILED! (clear by iterate, " << ht.size() << ")" << std::endl;
+				std::cout << "FAILED! (clear by iterate, " << ht.size() << ")" ZT_EOL_S;
 				return -1;
 			}
 		}
 	}
-	std::cout << "PASS" << std::endl;
+	std::cout << "PASS" ZT_EOL_S;
 #endif
 
-	std::cout << "[other] Testing/fuzzing Dictionary... "; std::cout.flush();
-	for(int k=0;k<1000;++k) {
-		Dictionary<8194> *test = new Dictionary<8194>();
-		char key[32][16];
-		char value[32][128];
-		memset(key, 0, sizeof(key));
-		memset(value, 0, sizeof(value));
-		for(unsigned int q=0;q<32;++q) {
-			Utils::hex((uint32_t)((rand() % 1000) + (q * 1000)),key[q]);
-			int r = rand() % 128;
-			for(int x=0;x<r;++x)
-				value[q][x] = ("0123456789\0\t\r\n= ")[rand() % 16];
-			value[q][r] = (char)0;
-			test->add(key[q],value[q],r);
-		}
-		for(unsigned int q=0;q<1024;++q) {
-			int r = rand() % 32;
-			char tmp[128];
-			if (test->get(key[r],tmp,sizeof(tmp)) >= 0) {
-				if (strcmp(value[r],tmp)) {
-					std::cout << "FAILED (invalid value '" << value[r] << "' != '" << tmp << "')!" << std::endl;
+	{
+		std::cout << "[other] Testing/fuzzing Dictionary... "; std::cout.flush();
+		for(int k=0;k<250;++k) {
+			Dictionary<8194> *test = new Dictionary<8194>();
+			char key[32][16];
+			char value[32][128];
+			memset(key, 0, sizeof(key));
+			memset(value, 0, sizeof(value));
+			for(unsigned int q=0;q<32;++q) {
+				Utils::hex((uint32_t)((rand() % 1000) + (q * 1000)),key[q]);
+				int r = rand() % 128;
+				for(int x=0;x<r;++x)
+					value[q][x] = ("0123456789\0\t\r\n= ")[rand() % 16];
+				value[q][r] = (char)0;
+				test->add(key[q],value[q],r);
+			}
+			for(unsigned int q=0;q<1024;++q) {
+				int r = rand() % 32;
+				char tmp[128];
+				if (test->get(key[r],tmp,sizeof(tmp)) >= 0) {
+					if (strcmp(value[r],tmp)) {
+						std::cout << "FAILED (invalid value '" << value[r] << "' != '" << tmp << "')!" ZT_EOL_S;
+						return -1;
+					}
+				} else {
+					std::cout << "FAILED (can't find key '" << key[r] << "')!" ZT_EOL_S;
 					return -1;
 				}
-			} else {
-				std::cout << "FAILED (can't find key '" << key[r] << "')!" << std::endl;
-				return -1;
 			}
+			delete test;
 		}
-		delete test;
-	}
-	int foo = 0;
-	volatile int *volatile bar = &foo; // force compiler not to optimize out test.get() below
-	for(int k=0;k<200;++k) {
-		int r = rand() % 8194;
-		unsigned char *tmp = new unsigned char[8194];
-		for(int q=0;q<r;++q)
-			tmp[q] = (unsigned char)((rand() % 254) + 1); // don't put nulls since those will always just terminate scan
-		tmp[r] = (r % 32) ? (char)(rand() & 0xff) : (char)0; // every 32nd iteration don't terminate the string maybe...
-		Dictionary<8194> *test = new Dictionary<8194>((const char *)tmp);
-		for(unsigned int q=0;q<100;++q) {
-			char tmp[128];
-			for(unsigned int x=0;x<128;++x)
-				tmp[x] = (char)(rand() & 0xff);
-			tmp[127] = (char)0;
-			char value[8194];
-			*bar += test->get(tmp,value,sizeof(value));
+		int foo = 0;
+		volatile int *volatile bar = &foo; // force compiler not to optimize out test.get() below
+		for(int k=0;k<200;++k) {
+			int r = rand() % 8194;
+			unsigned char *tmp = new unsigned char[8194];
+			for(int q=0;q<r;++q)
+				tmp[q] = (unsigned char)((rand() % 254) + 1); // don't put nulls since those will always just terminate scan
+			tmp[r] = (r % 32) ? (char)(rand() & 0xff) : (char)0; // every 32nd iteration don't terminate the string maybe...
+			Dictionary<8194> *test = new Dictionary<8194>((const char *)tmp);
+			for(unsigned int q=0;q<100;++q) {
+				char tmp[128];
+				for(unsigned int x=0;x<128;++x)
+					tmp[x] = (char)(rand() & 0xff);
+				tmp[127] = (char)0;
+				char value[8194];
+				*bar += test->get(tmp,value,sizeof(value));
+			}
+			delete test;
+			delete[] tmp;
 		}
-		delete test;
-		delete[] tmp;
+		std::cout << "PASS (junk value to prevent optimization-out of test: " << foo << ")" ZT_EOL_S;
 	}
-	std::cout << "PASS (junk value to prevent optimization-out of test: " << foo << ")" << std::endl;
 
 	return 0;
 }
@@ -1148,25 +1176,25 @@ static int testPhy()
 	bindaddr.sin_port = Utils::hton((uint16_t)60004);
 	bindaddr.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001);
 
-	std::cout << "[phy] Creating phy endpoint..." << std::endl;
+	std::cout << "[phy] Creating phy endpoint..." ZT_EOL_S;
 	TestPhyHandlers testPhyHandlers;
 	testPhyInstance = new Phy<TestPhyHandlers *>(&testPhyHandlers,false,true);
 
 	std::cout << "[phy] Binding UDP listen socket to 127.0.0.1/60002... ";
 	PhySocket *udpListenSock = testPhyInstance->udpBind((const struct sockaddr *)&bindaddr);
 	if (!udpListenSock) {
-		std::cout << "FAILED." << std::endl;
+		std::cout << "FAILED." ZT_EOL_S;
 		return -1;
 	}
-	std::cout << "OK" << std::endl;
+	std::cout << "OK" ZT_EOL_S;
 
 	std::cout << "[phy] Binding TCP listen socket to 127.0.0.1/60002... ";
 	PhySocket *tcpListenSock = testPhyInstance->tcpListen((const struct sockaddr *)&bindaddr);
 	if (!tcpListenSock) {
-		std::cout << "FAILED." << std::endl;
+		std::cout << "FAILED." ZT_EOL_S;
 		return -1;
 	}
-	std::cout << "OK" << std::endl;
+	std::cout << "OK" ZT_EOL_S;
 
 	unsigned long phyTestUdpPacketsSent = 0;
 	unsigned long phyTestTcpValidConnectionsAttempted = 0;
@@ -1177,13 +1205,13 @@ static int testPhy()
 	while ((OSUtils::now() < timeoutAt)&&(phyTestUdpPacketCount < ZT_TEST_PHY_NUM_UDP_PACKETS)) {
 		if (phyTestUdpPacketsSent < ZT_TEST_PHY_NUM_UDP_PACKETS) {
 			if (!testPhyInstance->udpSend(udpListenSock,(const struct sockaddr *)&bindaddr,udpTestPayload,sizeof(udpTestPayload))) {
-				std::cout << "FAILED." << std::endl;
+				std::cout << "FAILED." ZT_EOL_S;
 				return -1;
 			} else ++phyTestUdpPacketsSent;
 		}
 		testPhyInstance->poll(100);
 	}
-	std::cout << "got " << phyTestUdpPacketCount << " packets, OK" << std::endl;
+	std::cout << "got " << phyTestUdpPacketCount << " packets, OK" ZT_EOL_S;
 
 	std::cout << "[phy] Testing TCP... "; std::cout.flush();
 	timeoutAt = OSUtils::now() + ZT_TEST_PHY_TIMEOUT_MS;
@@ -1203,10 +1231,10 @@ static int testPhy()
 		testPhyInstance->poll(100);
 	}
 	if (phyTestTcpByteCount < (ZT_TEST_PHY_NUM_VALID_TCP_CONNECTS * ZT_TEST_PHY_TCP_MESSAGE_SIZE)) {
-		std::cout << "got " << phyTestTcpConnectSuccessCount << " connect successes, " << phyTestTcpConnectFailCount << " failures, and " << phyTestTcpByteCount << " bytes, FAILED." << std::endl;
+		std::cout << "got " << phyTestTcpConnectSuccessCount << " connect successes, " << phyTestTcpConnectFailCount << " failures, and " << phyTestTcpByteCount << " bytes, FAILED." ZT_EOL_S;
 		return -1;
 	} else {
-		std::cout << "got " << phyTestTcpConnectSuccessCount << " connect successes, " << phyTestTcpConnectFailCount << " failures, and " << phyTestTcpByteCount << " bytes, OK" << std::endl;
+		std::cout << "got " << phyTestTcpConnectSuccessCount << " connect successes, " << phyTestTcpConnectFailCount << " failures, and " << phyTestTcpByteCount << " bytes, OK" ZT_EOL_S;
 	}
 
 	return 0;
@@ -1262,10 +1290,10 @@ int main(int argc,char **argv)
 	exit(0);
 	*/
 
-	std::cout << "[info] sizeof(void *) == " << sizeof(void *) << std::endl;
-	std::cout << "[info] OSUtils::now() == " << OSUtils::now() << std::endl;
-	std::cout << "[info] hardware concurrency == " << std::thread::hardware_concurrency() << std::endl;
-	std::cout << "[info] sizeof(NetworkConfig) == " << sizeof(ZeroTier::NetworkConfig) << std::endl;
+	std::cout << "[info] sizeof(void *) == " << sizeof(void *) << ZT_EOL_S;
+	std::cout << "[info] OSUtils::now() == " << OSUtils::now() << ZT_EOL_S;
+	std::cout << "[info] hardware concurrency == " << std::thread::hardware_concurrency() << ZT_EOL_S;
+	std::cout << "[info] sizeof(NetworkConfig) == " << sizeof(ZeroTier::NetworkConfig) << ZT_EOL_S;
 
 	srand((unsigned int)time(0));
 
@@ -1279,12 +1307,12 @@ int main(int argc,char **argv)
 	//*/
 
 	if (r)
-		std::cout << std::endl << "SOMETHING FAILED!" << std::endl;
+		std::cout << ZT_EOL_S << "SOMETHING FAILED!" ZT_EOL_S;
 
 	/*
 #ifdef ZT_USE_MINIUPNPC
-	std::cout << std::endl;
-	std::cout << "[portmapper] Starting port mapper and waiting forever... use CTRL+C to exit. (enable ZT_PORTMAPPER_TRACE in PortMapper.cpp for output)" << std::endl;
+	std::cout << ZT_EOL_S;
+	std::cout << "[portmapper] Starting port mapper and waiting forever... use CTRL+C to exit. (enable ZT_PORTMAPPER_TRACE in PortMapper.cpp for output)" ZT_EOL_S;
 	PortMapper mapper(12345,"ZeroTier/__selftest");
 	Thread::sleep(0xffffffff);
 #endif

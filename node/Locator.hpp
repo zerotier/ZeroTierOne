@@ -161,7 +161,7 @@ public:
 	inline std::vector<Str> makeTxtRecords(const uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE],const uint8_t p384SigningKeyPrivate[ZT_ECC384_PUBLIC_KEY_SIZE])
 	{
 		uint8_t s384[48],dnsSig[ZT_ECC384_SIGNATURE_SIZE];
-		char enc[256];
+		char enc[512];
 
 		Buffer<65536> *const tmp = new Buffer<65536>();
 		serialize(*tmp,false);
@@ -172,12 +172,17 @@ public:
 		// Blob must be broken into multiple TXT records that must remain sortable so they are prefixed by a hex value.
 		// 186-byte chunks yield 248-byte base64 chunks which leaves some margin below the limit of 255.
 		std::vector<Str> txtRecords;
-		for(unsigned int p=0;p<tmp->size();p+=186) {
-			unsigned int rem = tmp->size() - p;
-			if (rem > 186) rem = 186;
-			Utils::b64e(((const uint8_t *)tmp->data()) + p,rem,enc,sizeof(enc));
+		unsigned int txtRecNo = 0;
+		for(unsigned int p=0;p<tmp->size();) {
+			unsigned int chunkSize = tmp->size() - p;
+			if (chunkSize > 186) chunkSize = 186;
+
+			Utils::b64e(((const uint8_t *)tmp->data()) + p,chunkSize,enc,sizeof(enc));
+			p += chunkSize;
+
 			txtRecords.push_back(Str());
-			txtRecords.back() << Utils::HEXCHARS[(p >> 4) & 0xf] << Utils::HEXCHARS[p & 0xf] << enc;
+			txtRecords.back() << Utils::HEXCHARS[(txtRecNo >> 4) & 0xf] << Utils::HEXCHARS[txtRecNo & 0xf] << enc;
+			++txtRecNo;
 		}
 
 		delete tmp;
@@ -199,15 +204,14 @@ public:
 	template<typename I>
 	inline bool decodeTxtRecords(I start,I end,const uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE])
 	{
-		uint8_t dec[256],s384[48];
+		uint8_t dec[512],s384[48];
 		Buffer<65536> *tmp = nullptr;
 		try {
 			std::vector<Str> txtRecords;
 			while (start != end) {
 				try {
-					Str ts(start);
-					if (ts.length() > 2)
-						txtRecords.push_back(ts);
+					if (start->length() > 2)
+						txtRecords.push_back(*start);
 				} catch ( ... ) {} // skip any records that trigger out of bounds exceptions
 				++start;
 			}
