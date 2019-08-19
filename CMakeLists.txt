@@ -73,6 +73,7 @@ else(WIN32)
 			-msse
 			-msse2
 			-msse3
+			-msse4.1
 			$<$<CONFIG:Debug>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
 			$<$<CONFIG:RELEASE>:-Ofast>
@@ -93,6 +94,7 @@ else(WIN32)
 			-msse
 			-msse2
 			-msse3
+			-msse4.1
 			$<$<CONFIG:Debug>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
 			$<$<CONFIG:RELEASE>:-O3>
