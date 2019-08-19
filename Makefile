@@ -6,7 +6,7 @@ CMAKE_OPTS := -DCMAKE_BUILD_TYPE=Release
 .PHONY: all
 
 all:
-	mkdir -p ${BUILDDIR} && cd ${BUILDDIR} && cmake .. ${CMAKE_OPTS} && $(MAKE)
+	mkdir -p ${BUILDDIR} && cd ${BUILDDIR} && cmake .. ${CMAKE_OPTS} && $(MAKE) -j$(shell getconf _NPROCESSORS_ONLN)
 
 clean:
 	rm -rf ${BUILDDIR}

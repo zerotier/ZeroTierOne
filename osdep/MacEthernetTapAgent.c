@@ -196,7 +196,6 @@ static void die()
 
 int main(int argc,char **argv)
 {
-	char buf[128];
 	struct ifreq ifr;
 	u_int fl;
 	fd_set rfds,wfds,efds;

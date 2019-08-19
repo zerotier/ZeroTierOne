@@ -214,7 +214,7 @@ static int testCrypto()
 	}
 	double gcmBytes = 0.0;
 	int64_t start = OSUtils::now();
-	for(unsigned long i=0;i<100000;++i) {
+	for(unsigned long i=0;i<50000;++i) {
 		tv.gcmEncrypt((const uint8_t *)hexbuf,buf1,sizeof(buf1),nullptr,0,buf2,(uint8_t *)(hexbuf + 32),16);
 		tv.gcmEncrypt((const uint8_t *)hexbuf,buf2,sizeof(buf2),nullptr,0,buf1,(uint8_t *)(hexbuf + 32),16);
 		gcmBytes += (double)(sizeof(buf1) * 2);
@@ -224,7 +224,7 @@ static int testCrypto()
 	std::cout << ((gcmBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl << "  AES-256 ECB scramble (benchmark): "; std::cout.flush();
 	double ecbBytes = 0.0;
 	start = OSUtils::now();
-	for(unsigned long i=0;i<100000;++i) {
+	for(unsigned long i=0;i<50000;++i) {
 		tv.ecbScramble(buf1,sizeof(buf1),buf2);
 		tv.ecbScramble(buf2,sizeof(buf1),buf1);
 		ecbBytes += (double)(sizeof(buf1) * 2);
@@ -234,7 +234,7 @@ static int testCrypto()
 	std::cout << ((ecbBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl << "  AES-256 GCM + ECB scramble (benchmark): "; std::cout.flush();
 	ecbBytes = 0.0;
 	start = OSUtils::now();
-	for(unsigned long i=0;i<100000;++i) {
+	for(unsigned long i=0;i<50000;++i) {
 		tv.gcmEncrypt((const uint8_t *)hexbuf,buf1,sizeof(buf1),nullptr,0,buf2,(uint8_t *)(hexbuf + 32),16);
 		tv.ecbScramble(buf1,sizeof(buf1),buf2);
 		tv.gcmEncrypt((const uint8_t *)hexbuf,buf2,sizeof(buf2),nullptr,0,buf1,(uint8_t *)(hexbuf + 32),16);
@@ -328,6 +328,13 @@ static int testCrypto()
 		return -1;
 	}
 	std::cout << "PASS" << std::endl;
+	std::cout << "[crypto] Benchmarking SHA-512 (64 byte input)... "; std::cout.flush();
+	start = OSUtils::now();
+	for(unsigned int i=0;i<2000000;++i) {
+		SHA512(buf1,buf1,64);
+	}
+	end = OSUtils::now();
+	std::cout << (uint64_t)(2000000.0 / ((double)(end - start) / 1000.0)) << " hashes/second" << std::endl;
 	std::cout << "[crypto] Testing SHA-384... "; std::cout.flush();
 	SHA384(buf1,sha512TV0Input,(unsigned int)strlen(sha512TV0Input));
 	if (memcmp(buf1,sha384TV0Digest,48)) {
