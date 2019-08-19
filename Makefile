@@ -5,8 +5,11 @@ CMAKE_OPTS := -DCMAKE_BUILD_TYPE=Release
 
 .PHONY: all
 
-all:
-	mkdir -p ${BUILDDIR} && cd ${BUILDDIR} && cmake .. ${CMAKE_OPTS} && $(MAKE) -j$(shell getconf _NPROCESSORS_ONLN)
+all:	setup
+	cd ${BUILDDIR} && $(MAKE) -j$(shell getconf _NPROCESSORS_ONLN)
+
+setup:
+	mkdir -p ${BUILDDIR} && cd ${BUILDDIR} && cmake .. ${CMAKE_OPTS}
 
 clean:
 	rm -rf ${BUILDDIR}
