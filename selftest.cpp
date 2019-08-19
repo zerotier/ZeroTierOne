@@ -221,24 +221,30 @@ static int testCrypto()
 	}
 	int64_t end = OSUtils::now();
 	*dummy = buf1[0];
-	std::cout << ((gcmBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl << "  AES-256 ECB scramble (benchmark): "; std::cout.flush();
+	std::cout << ((gcmBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl << "  AES scramble (benchmark): "; std::cout.flush();
 	double ecbBytes = 0.0;
+	AES::scramble((const uint8_t *)hexbuf,buf1,sizeof(buf1),buf2);
+	AES::unscramble((const uint8_t *)hexbuf,buf2,sizeof(buf2),buf3);
+	if (memcmp(buf1,buf3,sizeof(buf1)) != 0) {
+		std::cout << "FAILED (scramble/unscramble did not generate identical data)" << std::endl;
+		return -1;
+	}
 	start = OSUtils::now();
-	for(unsigned long i=0;i<50000;++i) {
-		tv.ecbScramble(buf1,sizeof(buf1),buf2);
-		tv.ecbScramble(buf2,sizeof(buf1),buf1);
+	for(unsigned long i=0;i<200000;++i) {
+		AES::scramble((const uint8_t *)hexbuf,buf1,sizeof(buf1),buf2);
+		AES::scramble((const uint8_t *)hexbuf,buf2,sizeof(buf1),buf1);
 		ecbBytes += (double)(sizeof(buf1) * 2);
 	}
 	end = OSUtils::now();
 	*dummy = buf1[0];
-	std::cout << ((ecbBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl << "  AES-256 GCM + ECB scramble (benchmark): "; std::cout.flush();
+	std::cout << ((ecbBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl << "  AES-256 GCM + scramble (benchmark): "; std::cout.flush();
 	ecbBytes = 0.0;
 	start = OSUtils::now();
 	for(unsigned long i=0;i<50000;++i) {
 		tv.gcmEncrypt((const uint8_t *)hexbuf,buf1,sizeof(buf1),nullptr,0,buf2,(uint8_t *)(hexbuf + 32),16);
-		tv.ecbScramble(buf1,sizeof(buf1),buf2);
+		AES::scramble((const uint8_t *)hexbuf,buf1,sizeof(buf1),buf2);
 		tv.gcmEncrypt((const uint8_t *)hexbuf,buf2,sizeof(buf2),nullptr,0,buf1,(uint8_t *)(hexbuf + 32),16);
-		tv.ecbScramble(buf2,sizeof(buf1),buf1);
+		AES::scramble((const uint8_t *)hexbuf,buf2,sizeof(buf1),buf1);
 		ecbBytes += (double)(sizeof(buf1) * 2);
 	}
 	end = OSUtils::now();
@@ -342,6 +348,13 @@ static int testCrypto()
 		return -1;
 	}
 	std::cout << "PASS" << std::endl;
+	std::cout << "[crypto] Benchmarking SHA-384 (48 byte input)... "; std::cout.flush();
+	start = OSUtils::now();
+	for(unsigned int i=0;i<2000000;++i) {
+		SHA384(buf1,buf1,48);
+	}
+	end = OSUtils::now();
+	std::cout << (uint64_t)(2000000.0 / ((double)(end - start) / 1000.0)) << " hashes/second" << std::endl;
 
 	std::cout << "[crypto] Testing Poly1305... "; std::cout.flush();
 	poly1305(buf1,poly1305TV0Input,sizeof(poly1305TV0Input),poly1305TV0Key);
