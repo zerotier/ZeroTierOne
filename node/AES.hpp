@@ -193,7 +193,7 @@ private:
 	/**************************************************************************/
 
 #ifdef ZT_AES_ARMNEON /******************************************************/
-	static inline uint32x4_t *_aes_256_expAssist_armneon(uint32x4_t prev1,uint32x4_t prev2,uint32_t rcon)
+	static inline void _aes_256_expAssist_armneon(uint32x4_t prev1,uint32x4_t prev2,uint32_t rcon,uint32x4_t *e1,uint32x4_t *e2)
 	{
 		uint32_t round1[4], round2[4], prv1[4], prv2[4];
 		vst1q_u32(prv1, prev1);
@@ -206,15 +206,32 @@ private:
 		round2[1] = sub_word(rot_word(round2[0])) ^ rcon ^ prv2[1];
 		round2[2] = sub_word(rot_word(round2[1])) ^ rcon ^ prv2[2];
 		round2[3] = sub_word(rot_word(round2[2])) ^ rcon ^ prv2[3];
-		uint32x4_t expansion[2] = {vld1q_u3(round1), vld1q_u3(round2)};
-		return expansion;
+		*e1 = vld1q_u3(round1);
+		*e2 = vld1q_u3(round2);
+		//uint32x4_t expansion[2] = {vld1q_u3(round1), vld1q_u3(round2)};
+		//return expansion;
 	}
 	inline void _init_armneon(uint8x16_t encKey)
 	{
 		uint32x4_t *schedule = _k.neon.k;
-		uint32x4_t *doubleRound = nullptr;
+		uint32x4_t e1,e2;
 		(*schedule)[0] = vld1q_u32(encKey);
 		(*schedule)[1] = vld1q_u32(encKey + 16);
+		_aes_256_expAssist_armneon((*schedule)[0],(*schedule)[1],0x01,&e1,&e2);
+		(*schedule)[2] = e1; (*schedule)[3] = e2;
+		_aes_256_expAssist_armneon((*schedule)[2],(*schedule)[3],0x01,&e1,&e2);
+		(*schedule)[4] = e1; (*schedule)[5] = e2;
+		_aes_256_expAssist_armneon((*schedule)[4],(*schedule)[5],0x01,&e1,&e2);
+		(*schedule)[6] = e1; (*schedule)[7] = e2;
+		_aes_256_expAssist_armneon((*schedule)[6],(*schedule)[7],0x01,&e1,&e2);
+		(*schedule)[8] = e1; (*schedule)[9] = e2;
+		_aes_256_expAssist_armneon((*schedule)[8],(*schedule)[9],0x01,&e1,&e2);
+		(*schedule)[10] = e1; (*schedule)[11] = e2;
+		_aes_256_expAssist_armneon((*schedule)[10],(*schedule)[11],0x01,&e1,&e2);
+		(*schedule)[12] = e1; (*schedule)[13] = e2;
+		_aes_256_expAssist_armneon((*schedule)[12],(*schedule)[13],0x01,&e1,&e2);
+		(*schedule)[14] = e1;
+		/*
 		doubleRound = _aes_256_expAssist_armneon((*schedule)[0], (*schedule)[1], 0x01);
 		(*schedule)[2] = doubleRound[0];
 		(*schedule)[3] = doubleRound[1];
@@ -235,6 +252,7 @@ private:
 		(*schedule)[13] = doubleRound[1];
 		doubleRound = _aes_256_expAssist_armneon((*schedule)[12], (*schedule)[13], 0x40);
 		(*schedule)[14] = doubleRound[0];
+		*/
 	}
 
 	inline void _encrypt_armneon(uint8x16_t *data) const
