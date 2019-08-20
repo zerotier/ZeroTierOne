@@ -28,6 +28,8 @@
 #define ZT_PEER_HPP
 
 #include <vector>
+#include <map>
+#include <queue>
 
 #include "../include/ZeroTierOne.h"
 
@@ -147,6 +149,8 @@ public:
 		return false;
 	}
 
+	void constructSetOfVirtualPaths();
+
 	/**
 	 * Record statistics on outgoing packets
 	 *
@@ -216,14 +220,17 @@ public:
 	 */
 	int aggregateLinkLogicalPathCount();
 
+	std::vector<SharedPtr<Path>> getAllPaths(int64_t now);
+
 	/**
 	 * Get the most appropriate direct path based on current multipath and QoS configuration
 	 *
 	 * @param now Current time
+	 * @param flowId Session-specific protocol flow identifier used for path allocation
 	 * @param includeExpired If true, include even expired paths
 	 * @return Best current path or NULL if none
 	 */
-	SharedPtr<Path> getAppropriatePath(int64_t now, bool includeExpired);
+	SharedPtr<Path> getAppropriatePath(int64_t now, bool includeExpired, int64_t flowId = -1);
 
 	/**
 	 * Generate a human-readable string of interface names making up the aggregate link, also include
@@ -680,6 +687,44 @@ private:
 	int64_t _lastAggregateAllocation;
 
 	char _interfaceListStr[256]; // 16 characters * 16 paths in a link
+
+	//
+	struct LinkPerformanceEntry
+	{
+		int64_t packetId;
+		struct VirtualPath *egressVirtualPath;
+		struct VirtualPath *ingressVirtualPath;
+	};
+
+	// Virtual paths
+	int _virtualPathCount;
+	Mutex _virtual_paths_m;
+	struct VirtualPath
+	{
+		SharedPtr<Path> p;
+		int64_t localSocket;
+		std::queue<struct LinkPerformanceEntry *> performanceEntries;
+	};
+	std::vector<struct VirtualPath*> _virtualPaths;
+
+	// Flows
+	struct Flow
+	{
+		Flow(int64_t fid, int64_t ls) :
+			flowId(fid),
+			lastSend(ls),
+			assignedPath(NULL)
+		{}
+
+		int64_t flowId;
+		int64_t bytesPerSecond;
+		int64_t lastSend;
+		struct VirtualPath *assignedPath;
+	};
+
+	std::map<int64_t, struct Flow *> _flows;
+
+	int16_t _roundRobinPathAssignmentIdx;
 };
 
 } // namespace ZeroTier

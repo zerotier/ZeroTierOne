@@ -267,6 +267,12 @@
 #define ZT_LOCAL_CONF_FILE_CHECK_INTERVAL 10000
 
 /**
+ * How long before we consider a flow to be dead and remove it from the balancing
+ * policy's list.
+ */
+#define ZT_MULTIPATH_FLOW_EXPIRATION 60000
+
+/**
  * How frequently to check for changes to the system's network interfaces. When
  * the service decides to use this constant it's because we want to react more
  * quickly to new interfaces that pop up or go down.

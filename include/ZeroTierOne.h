@@ -434,27 +434,49 @@ enum ZT_ResultCode
 enum ZT_MultipathMode
 {
 	/**
-	 * No active multipath.
-	 *
-	 * Traffic is merely sent over the strongest path. That being
-	 * said, this mode will automatically failover in the event that a link goes down.
+	 * No fault tolerance or balancing.
 	 */
 	ZT_MULTIPATH_NONE = 0,
 
 	/**
-	 * Traffic is randomly distributed among all active paths.
-	 *
-	 * Will cease sending traffic over links that appear to be stale.
+	 * Sends traffic out on all paths.
 	 */
-	ZT_MULTIPATH_RANDOM = 1,
+	ZT_MULTIPATH_BROADCAST = 1,
 
 	/**
-	 * Traffic is allocated across all active paths in proportion to their strength and
-	 * reliability.
-	 *
-	 * Will cease sending traffic over links that appear to be stale.
+	 * Sends traffic out on only one path at a time. Immediate fail-over.
 	 */
-	ZT_MULTIPATH_PROPORTIONALLY_BALANCED = 2,
+	ZT_MULTIPATH_ACTIVE_BACKUP= 2,
+
+	/**
+	 * Sends traffic out on all interfaces according to a uniform random distribution.
+	 */
+	ZT_MULTIPATH_BALANCE_RANDOM = 3,
+
+	/**
+	 * Stripes packets across all paths.
+	 */
+	ZT_MULTIPATH_BALANCE_RR_OPAQUE = 4,
+
+	/**
+	 * Balances flows across all paths.
+	 */
+	ZT_MULTIPATH_BALANCE_RR_FLOW = 5,
+
+	/**
+	 * Hashes flows across all paths.
+	 */
+	ZT_MULTIPATH_BALANCE_XOR_FLOW = 6,
+
+	/**
+	 * Balances traffic across all paths according to observed performance.
+	 */
+	ZT_MULTIPATH_BALANCE_DYNAMIC_OPAQUE = 7,
+
+	/**
+	 * Balances flows across all paths.
+	 */
+	ZT_MULTIPATH_BALANCE_DYNAMIC_FLOW = 8,
 };
 
 /**

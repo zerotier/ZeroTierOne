@@ -255,6 +255,35 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 	} catch ( ... ) {} // sanity check, should be caught elsewhere
 }
 
+// Returns true if packet appears valid; pos and proto will be set
+static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsigned int &pos,unsigned int &proto)
+{
+	if (frameLen < 40)
+		return false;
+	pos = 40;
+	proto = frameData[6];
+	while (pos <= frameLen) {
+		switch(proto) {
+			case 0: // hop-by-hop options
+			case 43: // routing
+			case 60: // destination options
+			case 135: // mobility options
+				if ((pos + 8) > frameLen)
+					return false; // invalid!
+				proto = frameData[pos];
+				pos += ((unsigned int)frameData[pos + 1] * 8) + 8;
+				break;
+
+			//case 44: // fragment -- we currently can't parse these and they are deprecated in IPv6 anyway
+			//case 50:
+			//case 51: // IPSec ESP and AH -- we have to stop here since this is encrypted stuff
+			default:
+				return true;
+		}
+	}
+	return false; // overflow == invalid
+}
+
 void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 {
 	if (!network->hasConfig())
@@ -271,6 +300,73 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 
 	uint8_t qosBucket = ZT_QOS_DEFAULT_BUCKET;
 
+	/* A pseudo-unique identifier used by the balancing and bonding policies to associate properties
+	 * of a specific protocol flow over time and to determine which virtual path this packet
+	 * shall be sent out on. This identifier consists of the source port and destination port
+	 * of the encapsulated frame.
+	 *
+	 * A flowId of -1 will indicate that whatever packet we are about transmit has no
+	 * preferred virtual path and will be sent out according to what the multipath logic
+	 * deems appropriate. An example of this would be an ICMP packet.
+	 */
+	int64_t flowId = -1;
+
+	if (etherType == ZT_ETHERTYPE_IPV4 && (len >= 20)) {
+		uint16_t srcPort = 0;
+		uint16_t dstPort = 0;
+		int8_t proto = (reinterpret_cast<const uint8_t *>(data)[9]);
+		const unsigned int headerLen = 4 * (reinterpret_cast<const uint8_t *>(data)[0] & 0xf);
+		switch(proto) {
+			case 0x01: // ICMP
+				flowId = 0x01;
+				break;
+			// All these start with 16-bit source and destination port in that order
+			case 0x06: // TCP
+			case 0x11: // UDP
+			case 0x84: // SCTP
+			case 0x88: // UDPLite
+				if (len > (headerLen + 4)) {
+					unsigned int pos = headerLen + 0;
+					srcPort = (reinterpret_cast<const uint8_t *>(data)[pos++]) << 8;
+					srcPort |= (reinterpret_cast<const uint8_t *>(data)[pos]);
+					pos++;
+					dstPort = (reinterpret_cast<const uint8_t *>(data)[pos++]) << 8;
+					dstPort |= (reinterpret_cast<const uint8_t *>(data)[pos]);
+					flowId = ((int64_t)srcPort << 48) | ((int64_t)dstPort << 32) | proto;
+				}
+				break;
+		}
+	}
+
+	if (etherType == ZT_ETHERTYPE_IPV6 && (len >= 40)) {
+		uint16_t srcPort = 0;
+		uint16_t dstPort = 0;
+		unsigned int pos;
+		unsigned int proto;
+		_ipv6GetPayload((const uint8_t *)data, len, pos, proto);
+		switch(proto) {
+			case 0x3A: // ICMPv6
+				flowId = 0x3A;
+				break;
+			// All these start with 16-bit source and destination port in that order
+			case 0x06: // TCP
+			case 0x11: // UDP
+			case 0x84: // SCTP
+			case 0x88: // UDPLite
+				if (len > (pos + 4)) {
+					srcPort = (reinterpret_cast<const uint8_t *>(data)[pos++]) << 8;
+					srcPort |= (reinterpret_cast<const uint8_t *>(data)[pos]);
+					pos++;
+					dstPort = (reinterpret_cast<const uint8_t *>(data)[pos++]) << 8;
+					dstPort |= (reinterpret_cast<const uint8_t *>(data)[pos]);
+					flowId = ((int64_t)srcPort << 48) | ((int64_t)dstPort << 32) | proto;
+				}
+				break;
+			default:
+				break;
+		}
+	}
+
 	if (to.isMulticast()) {
 		MulticastGroup multicastGroup(to,0);
 
@@ -280,7 +376,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 				 * otherwise a straightforward Ethernet switch emulation. Vanilla ARP
 				 * is dumb old broadcast and simply doesn't scale. ZeroTier multicast
 				 * groups have an additional field called ADI (additional distinguishing
-			   * information) which was added specifically for ARP though it could
+				 * information) which was added specifically for ARP though it could
 				 * be used for other things too. We then take ARP broadcasts and turn
 				 * them into multicasts by stuffing the IP address being queried into
 				 * the 32-bit ADI field. In practice this uses our multicast pub/sub
@@ -429,7 +525,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			outp.append(data,len);
 			if (!network->config().disableCompression())
 				outp.compress();
-			aqm_enqueue(tPtr,network,outp,true,qosBucket);
+			aqm_enqueue(tPtr,network,outp,true,qosBucket,flowId);
 		} else {
 			Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
 			outp.append(network->id());
@@ -437,7 +533,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			outp.append(data,len);
 			if (!network->config().disableCompression())
 				outp.compress();
-			aqm_enqueue(tPtr,network,outp,true,qosBucket);
+			aqm_enqueue(tPtr,network,outp,true,qosBucket,flowId);
 		}
 	} else {
 		// Destination is bridged behind a remote peer
@@ -493,7 +589,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 				outp.append(data,len);
 				if (!network->config().disableCompression())
 					outp.compress();
-				aqm_enqueue(tPtr,network,outp,true,qosBucket);
+				aqm_enqueue(tPtr,network,outp,true,qosBucket,flowId);
 			} else {
 				RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,"filter blocked (bridge replication)");
 			}
@@ -501,10 +597,10 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 	}
 }
 
-void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &packet,bool encrypt,int qosBucket)
+void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &packet,bool encrypt,int qosBucket,int64_t flowId)
 {
 	if(!network->qosEnabled()) {
-		send(tPtr, packet, encrypt);
+		send(tPtr, packet, encrypt, flowId);
 		return;
 	}
 	NetworkQoSControlBlock *nqcb = _netQueueControlBlock[network->id()];
@@ -518,11 +614,9 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 			nqcb->inactiveQueues.push_back(new ManagedQueue(i));
 		}
 	}
-
+	// Don't apply QoS scheduling to ZT protocol traffic
 	if (packet.verb() != Packet::VERB_FRAME && packet.verb() != Packet::VERB_EXT_FRAME) {
-		// DEBUG_INFO("skipping, no QoS for this packet, verb=%x", packet.verb());
-		// just send packet normally, no QoS for ZT protocol traffic
-		send(tPtr, packet, encrypt);
+		send(tPtr, packet, encrypt, flowId);
 	} 
 
 	_aqm_m.lock();
@@ -530,7 +624,7 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 	// Enqueue packet and move queue to appropriate list
 
 	const Address dest(packet.destination());
-	TXQueueEntry *txEntry = new TXQueueEntry(dest,RR->node->now(),packet,encrypt);
+	TXQueueEntry *txEntry = new TXQueueEntry(dest,RR->node->now(),packet,encrypt,flowId);
 	
 	ManagedQueue *selectedQueue = nullptr;
 	for (size_t i=0; i<ZT_QOS_NUM_BUCKETS; i++) {
@@ -702,7 +796,7 @@ void Switch::aqm_dequeue(void *tPtr)
 					queueAtFrontOfList->byteCredit -= len;
 					// Send the packet!
 					queueAtFrontOfList->q.pop_front();
-					send(tPtr, entryToEmit->packet, entryToEmit->encrypt);
+					send(tPtr, entryToEmit->packet, entryToEmit->encrypt, entryToEmit->flowId);
 					(*nqcb).second->_currEnqueuedPackets--;
 				}
 				if (queueAtFrontOfList) {
@@ -734,7 +828,7 @@ void Switch::aqm_dequeue(void *tPtr)
 					queueAtFrontOfList->byteLength -= len;
 					queueAtFrontOfList->byteCredit -= len;
 					queueAtFrontOfList->q.pop_front();
-					send(tPtr, entryToEmit->packet, entryToEmit->encrypt);
+					send(tPtr, entryToEmit->packet, entryToEmit->encrypt, entryToEmit->flowId);
 					(*nqcb).second->_currEnqueuedPackets--;
 				}
 				if (queueAtFrontOfList) {
@@ -758,18 +852,18 @@ void Switch::removeNetworkQoSControlBlock(uint64_t nwid)
 	}
 }
 
-void Switch::send(void *tPtr,Packet &packet,bool encrypt)
+void Switch::send(void *tPtr,Packet &packet,bool encrypt,int64_t flowId)
 {
 	const Address dest(packet.destination());
 	if (dest == RR->identity.address())
 		return;
-	if (!_trySend(tPtr,packet,encrypt)) {
+	if (!_trySend(tPtr,packet,encrypt,flowId)) {
 		{
 			Mutex::Lock _l(_txQueue_m);
 			if (_txQueue.size() >= ZT_TX_QUEUE_SIZE) {
 				_txQueue.pop_front();
 			}
-			_txQueue.push_back(TXQueueEntry(dest,RR->node->now(),packet,encrypt));
+			_txQueue.push_back(TXQueueEntry(dest,RR->node->now(),packet,encrypt,flowId));
 		}
 		if (!RR->topology->getPeer(tPtr,dest))
 			requestWhois(tPtr,RR->node->now(),dest);
@@ -791,10 +885,11 @@ void Switch::requestWhois(void *tPtr,const int64_t now,const Address &addr)
 
 	const SharedPtr<Peer> upstream(RR->topology->getUpstreamPeer());
 	if (upstream) {
+		int64_t flowId = -1;
 		Packet outp(upstream->address(),RR->identity.address(),Packet::VERB_WHOIS);
 		addr.appendTo(outp);
 		RR->node->expectReplyTo(outp.packetId());
-		send(tPtr,outp,true);
+		send(tPtr,outp,true,flowId);
 	}
 }
 
@@ -819,7 +914,7 @@ void Switch::doAnythingWaitingForPeer(void *tPtr,const SharedPtr<Peer> &peer)
 		Mutex::Lock _l(_txQueue_m);
 		for(std::list< TXQueueEntry >::iterator txi(_txQueue.begin());txi!=_txQueue.end();) {
 			if (txi->dest == peer->address()) {
-				if (_trySend(tPtr,txi->packet,txi->encrypt)) {
+				if (_trySend(tPtr,txi->packet,txi->encrypt,txi->flowId)) {
 					_txQueue.erase(txi++);
 				} else {
 					++txi;
@@ -843,7 +938,7 @@ unsigned long Switch::doTimerTasks(void *tPtr,int64_t now)
 		Mutex::Lock _l(_txQueue_m);
 
 		for(std::list< TXQueueEntry >::iterator txi(_txQueue.begin());txi!=_txQueue.end();) {
-			if (_trySend(tPtr,txi->packet,txi->encrypt)) {
+			if (_trySend(tPtr,txi->packet,txi->encrypt,txi->flowId)) {
 				_txQueue.erase(txi++);
 			} else if ((now - txi->creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
 				_txQueue.erase(txi++);
@@ -907,7 +1002,7 @@ bool Switch::_shouldUnite(const int64_t now,const Address &source,const Address 
 	return false;
 }
 
-bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
+bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt,int64_t flowId)
 {
 	SharedPtr<Path> viaPath;
 	const int64_t now = RR->node->now();
@@ -915,54 +1010,73 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 
 	const SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,destination));
 	if (peer) {
-		viaPath = peer->getAppropriatePath(now,false);
-		if (!viaPath) {
-			peer->tryMemorizedPath(tPtr,now); // periodically attempt memorized or statically defined paths, if any are known
-			const SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());
-			if ( (!relay) || (!(viaPath = relay->getAppropriatePath(now,false))) ) {
-				if (!(viaPath = peer->getAppropriatePath(now,true)))
-					return false;
+		if (RR->node->getMultipathMode() == ZT_MULTIPATH_BROADCAST) {
+			// Nothing here, we'll grab an entire set of paths to send out on below
+		}
+		else {
+			viaPath = peer->getAppropriatePath(now,false,flowId);
+			if (!viaPath) {
+				peer->tryMemorizedPath(tPtr,now); // periodically attempt memorized or statically defined paths, if any are known
+				const SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());
+				if ( (!relay) || (!(viaPath = relay->getAppropriatePath(now,false,flowId))) ) {
+					if (!(viaPath = peer->getAppropriatePath(now,true,flowId)))
+						return false;
+				}
 			}
 		}
 	} else {
 		return false;
 	}
 
-	unsigned int mtu = ZT_DEFAULT_PHYSMTU;
-	uint64_t trustedPathId = 0;
-	RR->topology->getOutboundPathInfo(viaPath->address(),mtu,trustedPathId);
-
-	unsigned int chunkSize = std::min(packet.size(),mtu);
-	packet.setFragmented(chunkSize < packet.size());
-
-	peer->recordOutgoingPacket(viaPath, packet.packetId(), packet.payloadLength(), packet.verb(), now);
-
-	if (trustedPathId) {
-		packet.setTrusted(trustedPathId);
-	} else {
-		packet.armor(peer->key(),encrypt);
-	}
-
-	if (viaPath->send(RR,tPtr,packet.data(),chunkSize,now)) {
-		if (chunkSize < packet.size()) {
-			// Too big for one packet, fragment the rest
-			unsigned int fragStart = chunkSize;
-			unsigned int remaining = packet.size() - chunkSize;
-			unsigned int fragsRemaining = (remaining / (mtu - ZT_PROTO_MIN_FRAGMENT_LENGTH));
-			if ((fragsRemaining * (mtu - ZT_PROTO_MIN_FRAGMENT_LENGTH)) < remaining)
-				++fragsRemaining;
-			const unsigned int totalFragments = fragsRemaining + 1;
-
-			for(unsigned int fno=1;fno<totalFragments;++fno) {
-				chunkSize = std::min(remaining,(unsigned int)(mtu - ZT_PROTO_MIN_FRAGMENT_LENGTH));
-				Packet::Fragment frag(packet,fragStart,chunkSize,fno,totalFragments);
-				viaPath->send(RR,tPtr,frag.data(),frag.size(),now);
-				fragStart += chunkSize;
-				remaining -= chunkSize;
-			}
+	// If sending on all paths, set viaPath to first path
+	int nextPathIdx = 0;
+	std::vector<SharedPtr<Path>> paths = peer->getAllPaths(now);
+	if (RR->node->getMultipathMode() == ZT_MULTIPATH_BROADCAST) {
+		if (paths.size()) {
+			viaPath = paths[nextPathIdx++];
 		}
 	}
 
+	while (viaPath) {
+		unsigned int mtu = ZT_DEFAULT_PHYSMTU;
+		uint64_t trustedPathId = 0;
+		RR->topology->getOutboundPathInfo(viaPath->address(),mtu,trustedPathId);
+		unsigned int chunkSize = std::min(packet.size(),mtu);
+		packet.setFragmented(chunkSize < packet.size());
+		peer->recordOutgoingPacket(viaPath, packet.packetId(), packet.payloadLength(), packet.verb(), now);
+
+		if (trustedPathId) {
+			packet.setTrusted(trustedPathId);
+		} else {
+			packet.armor(peer->key(),encrypt);
+		}
+
+		if (viaPath->send(RR,tPtr,packet.data(),chunkSize,now)) {
+			if (chunkSize < packet.size()) {
+				// Too big for one packet, fragment the rest
+				unsigned int fragStart = chunkSize;
+				unsigned int remaining = packet.size() - chunkSize;
+				unsigned int fragsRemaining = (remaining / (mtu - ZT_PROTO_MIN_FRAGMENT_LENGTH));
+				if ((fragsRemaining * (mtu - ZT_PROTO_MIN_FRAGMENT_LENGTH)) < remaining)
+					++fragsRemaining;
+				const unsigned int totalFragments = fragsRemaining + 1;
+
+				for(unsigned int fno=1;fno<totalFragments;++fno) {
+					chunkSize = std::min(remaining,(unsigned int)(mtu - ZT_PROTO_MIN_FRAGMENT_LENGTH));
+					Packet::Fragment frag(packet,fragStart,chunkSize,fno,totalFragments);
+					viaPath->send(RR,tPtr,frag.data(),frag.size(),now);
+					fragStart += chunkSize;
+					remaining -= chunkSize;
+				}
+			}
+		}
+		viaPath.zero();
+		if (RR->node->getMultipathMode() == ZT_MULTIPATH_BROADCAST) {
+			if (paths.size() > nextPathIdx) {
+				viaPath = paths[nextPathIdx++];
+			}
+		}
+	}
 	return true;
 }
 

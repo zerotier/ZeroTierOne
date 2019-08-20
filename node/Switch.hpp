@@ -131,7 +131,7 @@ public:
 	 * @param encrypt Encrypt packet payload? (always true except for HELLO)
 	 * @param qosBucket Which bucket the rule-system determined this packet should fall into
 	 */
-	void aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &packet,bool encrypt,int qosBucket);
+	void aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &packet,bool encrypt,int qosBucket,int64_t flowId = -1);
 
 	/**
 	 * Performs a single AQM cycle and dequeues and transmits all eligible packets on all networks
@@ -177,7 +177,7 @@ public:
 	 * @param packet Packet to send (buffer may be modified)
 	 * @param encrypt Encrypt packet payload? (always true except for HELLO)
 	 */
-	void send(void *tPtr,Packet &packet,bool encrypt);
+	void send(void *tPtr,Packet &packet,bool encrypt,int64_t flowId = -1);
 
 	/**
 	 * Request WHOIS on a given address
@@ -212,7 +212,7 @@ public:
 
 private:
 	bool _shouldUnite(const int64_t now,const Address &source,const Address &destination);
-	bool _trySend(void *tPtr,Packet &packet,bool encrypt); // packet is modified if return is true
+	bool _trySend(void *tPtr,Packet &packet,bool encrypt,int64_t flowId = -1); // packet is modified if return is true
 
 	const RuntimeEnvironment *const RR;
 	int64_t _lastBeaconResponse;
@@ -261,16 +261,18 @@ private:
 	struct TXQueueEntry
 	{
 		TXQueueEntry() {}
-		TXQueueEntry(Address d,uint64_t ct,const Packet &p,bool enc) :
+		TXQueueEntry(Address d,uint64_t ct,const Packet &p,bool enc,int64_t fid) :
 			dest(d),
 			creationTime(ct),
 			packet(p),
-			encrypt(enc) {}
+			encrypt(enc),
+			flowId(fid) {}
 
 		Address dest;
 		uint64_t creationTime;
 		Packet packet; // unencrypted/unMAC'd packet -- this is done at send time
 		bool encrypt;
+		int64_t flowId;
 	};
 	std::list< TXQueueEntry > _txQueue;
 	Mutex _txQueue_m;

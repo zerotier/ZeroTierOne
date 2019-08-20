@@ -109,10 +109,10 @@ void Trace::peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,
 
 void Trace::peerLinkNowAggregate(void *const tPtr,Peer &peer)
 {
-	if ((RR->node->getMultipathMode() == ZT_MULTIPATH_RANDOM)) {
+	if ((RR->node->getMultipathMode() == ZT_MULTIPATH_BALANCE_RANDOM)) {
 		ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx is now a randomly-distributed aggregate link",peer.address().toInt());
 	}
-	if ((RR->node->getMultipathMode() == ZT_MULTIPATH_PROPORTIONALLY_BALANCED)) {
+	if ((RR->node->getMultipathMode() == ZT_MULTIPATH_BALANCE_DYNAMIC_OPAQUE)) {
 		ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx is now a proportionally-balanced aggregate link",peer.address().toInt());
 	}
 }

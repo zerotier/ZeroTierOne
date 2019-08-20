@@ -75,7 +75,9 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_linkIsRedundant(false),
 	_remotePeerMultipathEnabled(false),
 	_lastAggregateStatsReport(0),
-	_lastAggregateAllocation(0)
+	_lastAggregateAllocation(0),
+	_virtualPathCount(0),
+	_roundRobinPathAssignmentIdx(0)
 {
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
@@ -195,6 +197,9 @@ void Peer::received(
 				} else {
 					attemptToContact = true;
 				}
+
+				// Every time we learn of new path, rebuild set of virtual paths
+				constructSetOfVirtualPaths();
 			}
 		}
 
@@ -250,6 +255,39 @@ void Peer::received(
 						path->send(RR,tPtr,outp->data(),outp->size(),now);
 					}
 					delete outp;
+				}
+			}
+		}
+	}
+}
+
+void Peer::constructSetOfVirtualPaths()
+{
+	if (!_remoteMultipathSupported) {
+		return;
+	}
+	Mutex::Lock _l(_virtual_paths_m);
+
+	int64_t now = RR->node->now();
+	_virtualPathCount = 0;
+	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+		if (_paths[i].p && _paths[i].p->alive(now)) {
+			for(unsigned int j=0;j<ZT_MAX_PEER_NETWORK_PATHS;++j) {
+				if (_paths[j].p && _paths[j].p->alive(now)) {
+					int64_t localSocket = _paths[j].p->localSocket();
+					bool foundVirtualPath = false;
+					for (int k=0; k<_virtualPaths.size(); k++) {
+						if (_virtualPaths[k]->localSocket == localSocket && _virtualPaths[k]->p == _paths[i].p) {
+							foundVirtualPath = true;
+						}
+					}
+					if (!foundVirtualPath)
+					{
+						VirtualPath *np = new VirtualPath;
+						np->p = _paths[i].p;
+						np->localSocket = localSocket;
+						_virtualPaths.push_back(np);
+					}
 				}
 			}
 		}
@@ -320,10 +358,10 @@ void Peer::computeAggregateAllocation(int64_t now)
 	for(uint16_t i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {
 
-			if (RR->node->getMultipathMode() == ZT_MULTIPATH_RANDOM) {
+			if (RR->node->getMultipathMode() == ZT_MULTIPATH_BALANCE_RANDOM) {
 				_paths[i].p->updateComponentAllocationOfAggregateLink(((float)_pathChoiceHist.countValue(i) / (float)_pathChoiceHist.count()) * 255);
 			}
-			if (RR->node->getMultipathMode() == ZT_MULTIPATH_PROPORTIONALLY_BALANCED) {
+			if (RR->node->getMultipathMode() == ZT_MULTIPATH_BALANCE_DYNAMIC_OPAQUE) {
 				_paths[i].p->updateComponentAllocationOfAggregateLink((unsigned char)((_paths[i].p->relativeQuality() / totalRelativeQuality) * 255));
 			}
 		}
@@ -382,9 +420,22 @@ int Peer::aggregateLinkLogicalPathCount()
 	return pathCount;
 }
 
-SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
+std::vector<SharedPtr<Path>> Peer::getAllPaths(int64_t now)
+{
+	Mutex::Lock _l(_virtual_paths_m); // FIXME: TX can now lock RX
+	std::vector<SharedPtr<Path>> paths;
+	for (int i=0; i<_virtualPaths.size(); i++) {
+		if (_virtualPaths[i]->p) {
+			paths.push_back(_virtualPaths[i]->p);
+		}
+	}
+	return paths;
+}
+
+SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired, int64_t flowId)
 {
 	Mutex::Lock _l(_paths_m);
+	SharedPtr<Path> selectedPath;
 	unsigned int bestPath = ZT_MAX_PEER_NETWORK_PATHS;
 
 	/**
@@ -410,52 +461,129 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 		return SharedPtr<Path>();
 	}
 
+	// Update path measurements
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {
 			_paths[i].p->processBackgroundPathMeasurements(now);
 		}
 	}
+	// Detect new flows and update existing records
+	if (_flows.count(flowId)) {
+		_flows[flowId]->lastSend = now;
+	}
+	else {
+		fprintf(stderr, "new flow %llx detected between this node and %llx (%lu active flow(s))\n",
+			flowId, this->_id.address().toInt(), (_flows.size()+1));
+		struct Flow *newFlow = new Flow(flowId, now);
+		_flows[flowId] = newFlow;
+		newFlow->assignedPath = nullptr;
+	}
+	// Construct set of virtual paths if needed
+	if (!_virtualPaths.size()) {
+		constructSetOfVirtualPaths();
+	}
+	if (!_virtualPaths.size()) {
+		fprintf(stderr, "no paths to send packet out on\n");
+		return SharedPtr<Path>();
+	}
 
 	/**
-	 * Randomly distribute traffic across all paths
+	 * Traffic is randomly distributed among all active paths.
 	 */
 	int numAlivePaths = 0;
 	int numStalePaths = 0;
-	if (RR->node->getMultipathMode() == ZT_MULTIPATH_RANDOM) {
-		computeAggregateAllocation(now); /* This call is algorithmically inert but gives us a value to show in the status output */
-		int alivePaths[ZT_MAX_PEER_NETWORK_PATHS];
-		int stalePaths[ZT_MAX_PEER_NETWORK_PATHS];
-		memset(&alivePaths, -1, sizeof(alivePaths));
-		memset(&stalePaths, -1, sizeof(stalePaths));
-		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-			if (_paths[i].p) {
-				if (_paths[i].p->alive(now)) {
-					alivePaths[numAlivePaths] = i;
-					numAlivePaths++;
-				}
-				else {
-					stalePaths[numStalePaths] = i;
-					numStalePaths++;
+	if (RR->node->getMultipathMode() == ZT_MULTIPATH_BALANCE_RANDOM) {
+		int sz = _virtualPaths.size();
+		if (sz) {
+			int idx = _freeRandomByte % sz;
+			_pathChoiceHist.push(idx);
+			char pathStr[128];
+			_virtualPaths[idx]->p->address().toString(pathStr);
+			fprintf(stderr, "sending out: (%llx), idx=%d: path=%s, localSocket=%lld\n",
+				this->_id.address().toInt(), idx, pathStr, _virtualPaths[idx]->localSocket);
+			return _virtualPaths[idx]->p;
+		}
+		// This call is algorithmically inert but gives us a value to show in the status output
+		computeAggregateAllocation(now);
+	}
+
+	/**
+	 * All traffic is sent on all paths.
+	 */
+	if (RR->node->getMultipathMode() == ZT_MULTIPATH_BROADCAST) {
+		// Not handled here. Handled in Switch.cpp
+	}
+
+	/**
+	 * Only one link is active. Fail-over is immediate.
+	 */
+	if (RR->node->getMultipathMode() == ZT_MULTIPATH_ACTIVE_BACKUP) {
+		// fprintf(stderr, "ZT_MULTIPATH_ACTIVE_BACKUP\n");
+	}
+
+	/**
+	 * Packets are striped across all available paths.
+	 */
+	if (RR->node->getMultipathMode() == ZT_MULTIPATH_BALANCE_RR_OPAQUE) {
+		// fprintf(stderr, "ZT_MULTIPATH_BALANCE_RR_OPAQUE\n");
+		int16_t previousIdx = _roundRobinPathAssignmentIdx;
+		if (_roundRobinPathAssignmentIdx < (_virtualPaths.size()-1)) {
+			_roundRobinPathAssignmentIdx++;
+		}
+		else {
+			_roundRobinPathAssignmentIdx = 0;
+		}
+		selectedPath = _virtualPaths[previousIdx]->p;
+		char pathStr[128];
+		selectedPath->address().toString(pathStr);
+		fprintf(stderr, "sending packet out on path %s at index %d\n",
+			pathStr, previousIdx);
+		return selectedPath;
+	}
+
+	/**
+	 * Flows are striped across all available paths.
+	 */
+	if (RR->node->getMultipathMode() == ZT_MULTIPATH_BALANCE_RR_FLOW) {
+		// fprintf(stderr, "ZT_MULTIPATH_BALANCE_RR_FLOW\n");
+	}
+
+	/**
+	 * Flows are hashed across all available paths.
+	 */
+	if (RR->node->getMultipathMode() == ZT_MULTIPATH_BALANCE_XOR_FLOW) {
+		// fprintf(stderr, "ZT_MULTIPATH_BALANCE_XOR_FLOW (%llx) \n", flowId);
+		char pathStr[128];
+		struct Flow *currFlow = NULL;
+		if (_flows.count(flowId)) {
+			currFlow = _flows[flowId];
+			if (!currFlow->assignedPath) {
+				int idx = abs((int)(currFlow->flowId % (_virtualPaths.size()-1)));
+				currFlow->assignedPath = _virtualPaths[idx];
+				_virtualPaths[idx]->p->address().toString(pathStr);
+				fprintf(stderr, "assigning flow %llx between this node and peer %llx to path %s at index %d\n",
+					currFlow->flowId, this->_id.address().toInt(), pathStr, idx);
+			}
+			else {
+				if (!currFlow->assignedPath->p->alive(now)) {
+					char newPathStr[128];
+					currFlow->assignedPath->p->address().toString(pathStr);
+					// Re-assign
+					int idx = abs((int)(currFlow->flowId % (_virtualPaths.size()-1)));
+					currFlow->assignedPath = _virtualPaths[idx];
+					_virtualPaths[idx]->p->address().toString(newPathStr);
+					fprintf(stderr, "path %s assigned to flow %llx between this node and %llx appears to be dead, reassigning to path %s\n",
+						pathStr, currFlow->flowId, this->_id.address().toInt(), newPathStr);
 				}
 			}
-		}
-		unsigned int r = _freeRandomByte;
-		if (numAlivePaths > 0) {
-			int rf = r % numAlivePaths;
-			_pathChoiceHist.push(alivePaths[rf]); // Record which path we chose
-			return _paths[alivePaths[rf]].p;
-		}
-		else if(numStalePaths > 0) {
-			// Resort to trying any non-expired path
-			int rf = r % numStalePaths;
-			return _paths[stalePaths[rf]].p;
+			return currFlow->assignedPath->p;
 		}
 	}
 
 	/**
-	 * Proportionally allocate traffic according to dynamic path quality measurements
+	 * Proportionally allocate traffic according to dynamic path quality measurements.
 	 */
-	if (RR->node->getMultipathMode() == ZT_MULTIPATH_PROPORTIONALLY_BALANCED) {
+	if (RR->node->getMultipathMode() == ZT_MULTIPATH_BALANCE_DYNAMIC_OPAQUE) {
 		if ((now - _lastAggregateAllocation) >= ZT_PATH_QUALITY_COMPUTE_INTERVAL) {
 			_lastAggregateAllocation = now;
 			computeAggregateAllocation(now);
@@ -476,6 +604,13 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 			return _paths[bestPath].p;
 		}
 	}
+
+	/**
+	 * Flows are dynamically allocated across paths in proportion to link strength and load.
+	 */
+	if (RR->node->getMultipathMode() == ZT_MULTIPATH_BALANCE_DYNAMIC_FLOW) {
+	}
+
 	return SharedPtr<Path>();
 }
 
@@ -676,9 +811,19 @@ inline void Peer::processBackgroundPeerTasks(const int64_t now)
 		_localMultipathSupported = ((RR->node->getMultipathMode() != ZT_MULTIPATH_NONE) && (ZT_PROTO_VERSION > 9));
 		_remoteMultipathSupported = _vProto > 9;
 		// If both peers support multipath and more than one path exist, we can use multipath logic
-		DEBUG_INFO("from=%llx, _localMultipathSupported=%d, _remoteMultipathSupported=%d, (_uniqueAlivePathCount > 1)=%d", 
-			this->_id.address().toInt(), _localMultipathSupported, _remoteMultipathSupported, (_uniqueAlivePathCount > 1));
 		_canUseMultipath = _localMultipathSupported && _remoteMultipathSupported && (_uniqueAlivePathCount > 1);
+	}
+
+	// Remove old flows
+	std::map<int64_t, struct Flow *>::iterator it = _flows.begin();
+	while (it != _flows.end()) {
+		if ((now - it->second->lastSend) > ZT_MULTIPATH_FLOW_EXPIRATION) {
+			fprintf(stderr, "forgetting flow %llx between this node and %llx (%lu active flow(s))\n",
+				it->first, this->_id.address().toInt(), _flows.size());
+			it = _flows.erase(it);
+		} else {
+			it++;
+		}
 	}
 }
 
