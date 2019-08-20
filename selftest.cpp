@@ -386,7 +386,41 @@ static int testCrypto()
 		::free((void *)bb);
 	}
 
-	std::cout << "[crypto] Testing ECC384 (NIST P-384)..." ZT_EOL_S;
+	std::cout << "[crypto] Testing C25519 and Ed25519... "; std::cout.flush();
+	for(int k=0;k<ZT_NUM_C25519_TEST_VECTORS;++k) {
+		uint8_t pub1[ZT_C25519_PUBLIC_KEY_LEN],pub2[ZT_C25519_PUBLIC_KEY_LEN],priv1[ZT_C25519_PRIVATE_KEY_LEN],priv2[ZT_C25519_PRIVATE_KEY_LEN];
+		memcpy(pub1,C25519_TEST_VECTORS[k].pub1,ZT_C25519_PUBLIC_KEY_LEN);
+		memcpy(priv1,C25519_TEST_VECTORS[k].priv1,ZT_C25519_PRIVATE_KEY_LEN);
+		memcpy(pub2,C25519_TEST_VECTORS[k].pub2,ZT_C25519_PUBLIC_KEY_LEN);
+		memcpy(priv2,C25519_TEST_VECTORS[k].priv2,ZT_C25519_PRIVATE_KEY_LEN);
+		uint8_t ag1[32],ag2[32];
+		C25519::agree(priv1,pub2,ag1);
+		C25519::agree(priv2,pub1,ag2);
+		if (memcmp(ag1,ag2,32) != 0) {
+			std::cout << "FAIL (1)" ZT_EOL_S;
+			return -1;
+		}
+		uint8_t ag1h[64];
+		SHA512(ag1h,ag1,32);
+		if (memcmp(ag1h,C25519_TEST_VECTORS[k].agreement,64) != 0) {
+			std::cout << "FAIL (2)" ZT_EOL_S;
+			return -1;
+		}
+		uint8_t sig1[ZT_C25519_SIGNATURE_LEN],sig2[ZT_C25519_SIGNATURE_LEN];
+		C25519::sign(priv1,pub1,ag1h,64,sig1);
+		C25519::sign(priv2,pub2,ag1h,64,sig2);
+		if (memcmp(sig1,C25519_TEST_VECTORS[k].agreementSignedBy1,64) != 0) {
+			std::cout << "FAIL (3)" ZT_EOL_S;
+			return -1;
+		}
+		if (memcmp(sig2,C25519_TEST_VECTORS[k].agreementSignedBy2,64) != 0) {
+			std::cout << "FAIL (4)" ZT_EOL_S;
+			return -1;
+		}
+	}
+	std::cout << "PASS" ZT_EOL_S;
+
+	std::cout << "[crypto] Testing NIST P-384..." ZT_EOL_S;
 	{
 		uint8_t p384pub[ZT_ECC384_PUBLIC_KEY_SIZE],p384priv[ZT_ECC384_PRIVATE_KEY_SIZE],p384sig[ZT_ECC384_SIGNATURE_SIZE],p384hash[ZT_ECC384_SIGNATURE_HASH_SIZE];
 		char p384hex[256];
@@ -432,116 +466,6 @@ static int testCrypto()
 		std::cout << "[crypto]   ECDSA Test Vector: PASS" ZT_EOL_S;
 	}
 
-	std::cout << "[crypto] Testing C25519 and Ed25519 against test vectors... "; std::cout.flush();
-	for(int k=0;k<ZT_NUM_C25519_TEST_VECTORS;++k) {
-		C25519::Pair p1,p2;
-		memcpy(p1.pub.data,C25519_TEST_VECTORS[k].pub1,ZT_C25519_PUBLIC_KEY_LEN);
-		memcpy(p1.priv.data,C25519_TEST_VECTORS[k].priv1,ZT_C25519_PRIVATE_KEY_LEN);
-		memcpy(p2.pub.data,C25519_TEST_VECTORS[k].pub2,ZT_C25519_PUBLIC_KEY_LEN);
-		memcpy(p2.priv.data,C25519_TEST_VECTORS[k].priv2,ZT_C25519_PRIVATE_KEY_LEN);
-		C25519::agree(p1.priv,p2.pub,buf1,64);
-		C25519::agree(p2.priv,p1.pub,buf2,64);
-		if (memcmp(buf1,buf2,64)) {
-			std::cout << "FAIL (1)" ZT_EOL_S;
-			return -1;
-		}
-		if (memcmp(buf1,C25519_TEST_VECTORS[k].agreement,64)) {
-			std::cout << "FAIL (2)" ZT_EOL_S;
-			return -1;
-		}
-		C25519::Signature sig1 = C25519::sign(p1,buf1,64);
-		if (memcmp(sig1.data,C25519_TEST_VECTORS[k].agreementSignedBy1,64)) {
-			std::cout << "FAIL (3)" ZT_EOL_S;
-			return -1;
-		}
-		C25519::Signature sig2 = C25519::sign(p2,buf1,64);
-		if (memcmp(sig2.data,C25519_TEST_VECTORS[k].agreementSignedBy2,64)) {
-			std::cout << "FAIL (4)" ZT_EOL_S;
-			return -1;
-		}
-	}
-	std::cout << "PASS" ZT_EOL_S;
-
-	std::cout << "[crypto] Testing C25519 ECC key agreement... "; std::cout.flush();
-	for(unsigned int i=0;i<100;++i) {
-		memset(buf1,64,sizeof(buf1));
-		memset(buf2,64,sizeof(buf2));
-		memset(buf3,64,sizeof(buf3));
-		C25519::Pair p1 = C25519::generate();
-		C25519::Pair p2 = C25519::generate();
-		C25519::Pair p3 = C25519::generate();
-		C25519::agree(p1.priv,p2.pub,buf1,64);
-		C25519::agree(p2.priv,p1.pub,buf2,64);
-		C25519::agree(p3.priv,p1.pub,buf3,64);
-		// p1<>p2 should equal p1<>p2
-		if (memcmp(buf1,buf2,64)) {
-			std::cout << "FAIL (1)" ZT_EOL_S;
-			return -1;
-		}
-		// p2<>p1 should not equal p3<>p1
-		if (!memcmp(buf2,buf3,64)) {
-			std::cout << "FAIL (2)" ZT_EOL_S;
-			return -1;
-		}
-	}
-	std::cout << "PASS" ZT_EOL_S;
-
-	std::cout << "[crypto] Benchmarking C25519 ECC key agreement... "; std::cout.flush();
-	C25519::Pair bp[8];
-	for(int k=0;k<8;++k)
-		bp[k] = C25519::generate();
-	uint64_t st = OSUtils::now();
-	for(unsigned int k=0;k<50;++k) {
-		C25519::agree(bp[~k & 7].priv,bp[k & 7].pub,buf1,64);
-	}
-	uint64_t et = OSUtils::now();
-	std::cout << ((double)(et - st) / 50.0) << "ms per agreement." ZT_EOL_S;
-
-	std::cout << "[crypto] Testing Ed25519 ECC signatures... "; std::cout.flush();
-	C25519::Pair didntSign = C25519::generate();
-	for(unsigned int i=0;i<10;++i) {
-		C25519::Pair p1 = C25519::generate();
-		for(unsigned int k=0;k<sizeof(buf1);++k)
-			buf1[k] = (unsigned char)rand();
-		C25519::Signature sig = C25519::sign(p1,buf1,sizeof(buf1));
-		if (!C25519::verify(p1.pub,buf1,sizeof(buf1),sig)) {
-			std::cout << "FAIL (1)" ZT_EOL_S;
-			return -1;
-		}
-		++buf1[17];
-		if (C25519::verify(p1.pub,buf1,sizeof(buf1),sig)) {
-			std::cout << "FAIL (2)" ZT_EOL_S;
-			return -1;
-		}
-		--buf1[17];
-		if (!C25519::verify(p1.pub,buf1,sizeof(buf1),sig)) {
-			std::cout << "FAIL (3)" ZT_EOL_S;
-			return -1;
-		}
-		if (C25519::verify(didntSign.pub,buf1,sizeof(buf1),sig)) {
-			std::cout << "FAIL (2)" ZT_EOL_S;
-			return -1;
-		}
-		for(unsigned int k=0;k<64;++k) {
-			C25519::Signature sig2(sig);
-			sig2.data[rand() % ZT_C25519_SIGNATURE_LEN] ^= (unsigned char)(1 << (rand() & 7));
-			if (C25519::verify(p1.pub,buf1,sizeof(buf1),sig2)) {
-				std::cout << "FAIL (5)" ZT_EOL_S;
-				return -1;
-			}
-		}
-	}
-	std::cout << "PASS" ZT_EOL_S;
-
-	std::cout << "[crypto] Benchmarking Ed25519 ECC signatures... "; std::cout.flush();
-	st = OSUtils::now();
-	for(int k=0;k<1000;++k) {
-		C25519::Signature sig;
-		C25519::sign(didntSign.priv,didntSign.pub,buf1,sizeof(buf1),sig.data);
-	}
-	et = OSUtils::now();
-	std::cout << ((double)(et - st) / 50.0) << "ms per signature." ZT_EOL_S;
-
 	return 0;
 }
 
@@ -577,18 +501,21 @@ static int testIdentity()
 	}
 	std::cout << "PASS (i.e. it failed)" ZT_EOL_S;
 
-	for(unsigned int k=0;k<4;++k) {
-		std::cout << "[identity] Generate identity... "; std::cout.flush();
-		uint64_t genstart = OSUtils::now();
-		id.generate(Identity::C25519);
-		uint64_t genend = OSUtils::now();
-		std::cout << "(took " << (genend - genstart) << "ms): " << id.toString(true,buf2) << ZT_EOL_S;
-		std::cout << "[identity] Locally validate identity: ";
-		if (id.locallyValidate()) {
-			std::cout << "PASS" ZT_EOL_S;
-		} else {
-			std::cout << "FAIL" ZT_EOL_S;
-			return -1;
+	static const Identity::Type idtypes[2] = { Identity::C25519,Identity::P384 };
+	for(unsigned int ti=0;ti<2;++ti) {
+		for(unsigned int k=0;k<2;++k) {
+			std::cout << "[identity] Generate identity (type " << (int)idtypes[ti] << ")... "; std::cout.flush();
+			uint64_t genstart = OSUtils::now();
+			id.generate(idtypes[ti]);
+			uint64_t genend = OSUtils::now();
+			std::cout << "(took " << (genend - genstart) << "ms): " << id.toString(true,buf2) << ZT_EOL_S;
+			std::cout << "[identity] Locally validate identity: ";
+			if (id.locallyValidate()) {
+				std::cout << "PASS" ZT_EOL_S;
+			} else {
+				std::cout << "FAIL" ZT_EOL_S;
+				return -1;
+			}
 		}
 	}
 

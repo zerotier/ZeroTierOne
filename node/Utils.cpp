@@ -154,9 +154,14 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 {
 	static Mutex globalLock;
 	static Salsa20 s20;
-	static bool s20Initialized = false;
-	static uint8_t randomBuf[65536];
+	static bool initialized = false;
+	static uint8_t randomBuf[131072];
 	static unsigned int randomPtr = sizeof(randomBuf);
+#ifdef __WINDOWS__
+	static HCRYPTPROV cryptProvider = NULL;
+#else
+	static int devURandomFd = -1;
+#endif
 
 	Mutex::Lock _l(globalLock);
 
@@ -167,8 +172,9 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	 * a bit of extra entropy and further randomizing the result,and comes
 	 * at almost no cost and with no real downside if the random source is
 	 * good. */
-	if (!s20Initialized) {
-		s20Initialized = true;
+	if (unlikely(!initialized)) {
+		initialized = true;
+
 		uint64_t s20Key[4];
 		s20Key[0] = (uint64_t)time(nullptr);
 #ifdef __WINDOWS__
@@ -179,60 +185,46 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 		s20Key[2] = (uint64_t)s20Key; // address of s20Key[]
 		s20Key[3] = (uint64_t)&s20; // address of s20
 		s20.init(s20Key,s20Key);
+
+#ifdef __WINDOWS__
+		if (!CryptAcquireContextA(&cryptProvider,NULL,NULL,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT|CRYPT_SILENT)) {
+			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
+			exit(1);
+		}
+#else
+		devURandomFd = ::open("/dev/urandom",O_RDONLY);
+		if (devURandomFd < 0) {
+			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
+			exit(1);
+		}
+#endif
 	}
 
 #ifdef __WINDOWS__
 
-	static HCRYPTPROV cryptProvider = NULL;
-
 	for(unsigned int i=0;i<bytes;++i) {
-		if (randomPtr >= sizeof(randomBuf)) {
-			if (cryptProvider == NULL) {
-				if (!CryptAcquireContextA(&cryptProvider,NULL,NULL,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT|CRYPT_SILENT)) {
-					fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
-					exit(1);
-				}
-			}
+		if (unlikely(randomPtr >= sizeof(randomBuf))) {
+			randomPtr = 0;
 			if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomBuf),(BYTE *)randomBuf)) {
 				fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
 				exit(1);
 			}
-			randomPtr = 0;
 			s20.crypt12(randomBuf,randomBuf,sizeof(randomBuf));
-			s20.init(randomBuf,randomBuf);
 		}
 		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
 	}
 
 #else // not __WINDOWS__
 
-	static int devURandomFd = -1;
-
-	if (devURandomFd < 0) {
-		devURandomFd = ::open("/dev/urandom",O_RDONLY);
-		if (devURandomFd < 0) {
-			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
-			exit(1);
-			return;
-		}
-	}
-
 	for(unsigned int i=0;i<bytes;++i) {
-		if (randomPtr >= sizeof(randomBuf)) {
-			for(;;) {
-				if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
-					::close(devURandomFd);
-					devURandomFd = ::open("/dev/urandom",O_RDONLY);
-					if (devURandomFd < 0) {
-						fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
-						exit(1);
-						return;
-					}
-				} else break;
-			}
+		if (unlikely(randomPtr >= sizeof(randomBuf))) {
 			randomPtr = 0;
+			if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
+				::close(devURandomFd);
+				fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\n");
+				exit(1);
+			}
 			s20.crypt12(randomBuf,randomBuf,sizeof(randomBuf));
-			s20.init(randomBuf,randomBuf);
 		}
 		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
 	}
@@ -265,7 +257,7 @@ int Utils::b32e(const uint8_t *data,int length,char *result,int bufSize)
       }
       int index = 0x1F & (buffer >> (bitsLeft - 5));
       bitsLeft -= 5;
-      result[count++] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"[index];
+      result[count++] = "abcdefghijklmnopqrstuvwxyZ234567"[index];
     }
   }
   if (count < bufSize) {
@@ -379,7 +371,7 @@ unsigned int Utils::b64d(const char *in,unsigned char *out,unsigned int outlen)
 					break;
 				case 1:
 					out[j++] |= (c >> 4) & 0x3;
-					out[j] = (c & 0xf) << 4; 
+					out[j] = (c & 0xf) << 4;
 					break;
 				case 2:
 					out[j++] |= (c >> 2) & 0xf;

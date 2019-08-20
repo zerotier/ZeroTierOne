@@ -34,6 +34,7 @@ namespace ZeroTier {
 #define ZT_C25519_PUBLIC_KEY_LEN 64
 #define ZT_C25519_PRIVATE_KEY_LEN 64
 #define ZT_C25519_SIGNATURE_LEN 96
+#define ZT_C25519_SHARED_KEY_LEN 32
 
 /**
  * A combined Curve25519 ECDH and Ed25519 signature engine
@@ -41,21 +42,14 @@ namespace ZeroTier {
 class C25519
 {
 public:
-	struct Public { uint8_t data[ZT_C25519_PUBLIC_KEY_LEN]; };
-	struct Private { uint8_t data[ZT_C25519_PRIVATE_KEY_LEN]; };
-	struct Signature { uint8_t data[ZT_C25519_SIGNATURE_LEN]; };
-	struct Pair { Public pub; Private priv; };
-
 	/**
 	 * Generate a C25519 elliptic curve key pair
 	 */
-	static inline Pair generate()
+	static inline void generate(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
 	{
-		Pair kp;
-		Utils::getSecureRandom(kp.priv.data,ZT_C25519_PRIVATE_KEY_LEN);
-		_calcPubDH(kp);
-		_calcPubED(kp);
-		return kp;
+		Utils::getSecureRandom(priv,ZT_C25519_PRIVATE_KEY_LEN);
+		_calcPubDH(pub,priv);
+		_calcPubED(pub,priv);
 	}
 
 	/**
@@ -72,18 +66,15 @@ public:
 	 * @tparam F Type of 'cond'
 	 */
 	template<typename F>
-	static inline Pair generateSatisfying(F cond)
+	static inline void generateSatisfying(F cond,uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
 	{
-		Pair kp;
-		void *const priv = (void *)kp.priv.data;
 		Utils::getSecureRandom(priv,ZT_C25519_PRIVATE_KEY_LEN);
-		_calcPubED(kp); // do Ed25519 key -- bytes 32-63 of pub and priv
+		_calcPubED(pub,priv); // do Ed25519 key -- bytes 32-63 of pub and priv
 		do {
 			++(((uint64_t *)priv)[1]);
 			--(((uint64_t *)priv)[2]);
-			_calcPubDH(kp); // keep regenerating bytes 0-31 until satisfied
-		} while (!cond(kp));
-		return kp;
+			_calcPubDH(pub,priv); // keep regenerating bytes 0-31 until satisfied
+		} while (!cond(pub));
 	}
 
 	/**
@@ -94,10 +85,9 @@ public:
 	 *
 	 * @param mine My private key
 	 * @param their Their public key
-	 * @param keybuf Buffer to fill
-	 * @param keylen Number of key bytes to generate
+	 * @param rawkey Buffer to receive raw (not hashed) agreed upon key
 	 */
-	static void agree(const Private &mine,const Public &their,void *keybuf,unsigned int keylen);
+	static void agree(const uint8_t mine[ZT_C25519_PRIVATE_KEY_LEN],const uint8_t their[ZT_C25519_PUBLIC_KEY_LEN],uint8_t rawkey[32]);
 
 	/**
 	 * Sign a message with a sender's key pair
@@ -118,34 +108,7 @@ public:
 	 * @param len Length of message in bytes
 	 * @param signature Buffer to fill with signature -- MUST be 96 bytes in length
 	 */
-	static void sign(const Private &myPrivate,const Public &myPublic,const void *msg,unsigned int len,void *signature);
-
-	/**
-	 * Sign a message with a sender's key pair
-	 *
-	 * Note that this generates a 96-byte signature that contains an extra 32 bytes
-	 * of hash data. This data is included for historical reasons and is optional. The
-	 * verify function here will take the first 64 bytes only (normal ed25519 signature)
-	 * or a 96-byte length signature with the extra input hash data.
-	 * 
-	 * @param myPrivate My private key
-	 * @param myPublic My public key
-	 * @param msg Message to sign
-	 * @param len Length of message in bytes
-	 * @return Signature
-	 */
-	static inline Signature sign(const Private &myPrivate,const Public &myPublic,const void *msg,unsigned int len)
-	{
-		Signature sig;
-		sign(myPrivate,myPublic,msg,len,sig.data);
-		return sig;
-	}
-	static inline Signature sign(const Pair &mine,const void *msg,unsigned int len)
-	{
-		Signature sig;
-		sign(mine.priv,mine.pub,msg,len,sig.data);
-		return sig;
-	}
+	static void sign(const uint8_t myPrivate[ZT_C25519_PRIVATE_KEY_LEN],const uint8_t myPublic[ZT_C25519_PUBLIC_KEY_LEN],const void *msg,unsigned int len,void *signature);
 
 	/**
 	 * Verify a message's signature
@@ -157,27 +120,16 @@ public:
 	 * @param siglen Length of signature in bytes
 	 * @return True if signature is valid and the message is authentic and unmodified
 	 */
-	static bool verify(const Public &their,const void *msg,unsigned int len,const void *signature,const unsigned int siglen);
-
-	/**
-	 * Verify a message's signature
-	 *
-	 * @param their Public key to verify against
-	 * @param msg Message to verify signature integrity against
-	 * @param len Length of message in bytes
-	 * @param signature 96-byte signature
-	 * @return True if signature is valid and the message is authentic and unmodified
-	 */
-	static inline bool verify(const Public &their,const void *msg,unsigned int len,const Signature &signature) { return verify(their,msg,len,signature.data,96); }
+	static bool verify(const uint8_t their[ZT_C25519_PUBLIC_KEY_LEN],const void *msg,unsigned int len,const void *signature,const unsigned int siglen);
 
 private:
 	// derive first 32 bytes of kp.pub from first 32 bytes of kp.priv
 	// this is the ECDH key
-	static void _calcPubDH(Pair &kp);
+	static void _calcPubDH(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],const uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN]);
 
 	// derive 2nd 32 bytes of kp.pub from 2nd 32 bytes of kp.priv
 	// this is the Ed25519 sign/verify key
-	static void _calcPubED(Pair &kp);
+	static void _calcPubED(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],const uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN]);
 };
 
 } // namespace ZeroTier

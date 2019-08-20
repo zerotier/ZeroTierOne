@@ -40,18 +40,18 @@ namespace ZeroTier {
 
 /**
  * A root entry pointing to a node capable of global identity lookup and indirect transit
- * 
+ *
  * Root entries point to DNS records that contain TXT entries that decode to Locator objects
  * pointing to actual root nodes. A default root identity and static addresses can also be
  * provided as fallback if DNS is not available.
- * 
+ *
  * Note that root identities can change if DNS returns a different result, but that DNS entries
  * are authenticated using their own signature scheme. This allows a root DNS name to serve
  * up different roots based on factors like location or relative load of different roots.
- * 
+ *
  * It's also possible to create a root with no DNS and no DNS validator public key. This root
  * will be a static entry pointing to a single root identity and set of physical addresses.
- * 
+ *
  * This object is thread-safe and may be concurrently accessed and updated.
  */
 class Root
@@ -62,7 +62,7 @@ public:
 
 	/**
 	 * Create a new root entry
-	 * 
+	 *
 	 * @param dn DNS name
 	 * @param dnspk DNS public key for record validation
 	 * @param dnspksize Size of DNS public key (currently always the size of a NIST P-384 point compressed public key)
@@ -129,7 +129,7 @@ public:
 	}
 
 	/**
-	 * @return DNS name for this root (or empty string if none)
+	 * @return DNS name for this root or empty string if static entry with no DNS
 	 */
 	inline const Str dnsName() const
 	{
@@ -138,7 +138,7 @@ public:
 	}
 
 	/**
-	 * @return Latest locator
+	 * @return Latest locator or NIL locator object if none
 	 */
 	inline Locator locator() const
 	{
@@ -147,28 +147,12 @@ public:
 	}
 
 	/**
-	 * @return Timestamp of latest retrieved locator
+	 * @return Timestamp of latest retrieved locator or 0 if none
 	 */
 	inline int64_t locatorTimestamp() const
 	{
 		Mutex::Lock l(_lock);
 		return _lastFetchedLocator.timestamp();
-	}
-
-	/**
-	 * Pick a random physical address
-	 * 
-	 * @return Physical address or InetAddress::NIL if none are available
-	 */
-	inline const InetAddress randomPhysicalAddress() const
-	{
-		Mutex::Lock l(_lock);
-		if (_lastFetchedLocator.phy().empty()) {
-			if (_defaultAddresses.empty())
-				return InetAddress::NIL;
-			return _defaultAddresses[(unsigned long)Utils::random() % (unsigned long)_defaultAddresses.size()];
-		}
-		return _lastFetchedLocator.phy()[(unsigned long)Utils::random() % (unsigned long)_lastFetchedLocator.phy().size()];
 	}
 
 	/**
@@ -197,7 +181,7 @@ public:
 			if (_dnsPublicKeySize != ZT_ECC384_PUBLIC_KEY_SIZE)
 				return false;
 			Locator loc;
-			if (!loc.decodeTxtRecords(start,end,_dnsPublicKey))
+			if (!loc.decodeTxtRecords(start,end,_dnsPublicKey)) // also does verify()
 				return false;
 			if ((loc.phy().size() > 0)&&(loc.timestamp() > _lastFetchedLocator.timestamp())) {
 				_lastFetchedLocator = loc;
@@ -206,6 +190,41 @@ public:
 			return false;
 		} catch ( ... ) {}
 		return false;
+	}
+
+	/**
+	 * Pick random IPv4 and IPv6 addresses for this root
+	 *
+	 * @param v4 Filled with V4 address or NIL if none found
+	 * @param v6 Filled with V6 address or NIL if none found
+	 */
+	inline void pickPhysical(InetAddress &v4,InetAddress &v6) const
+	{
+		v4.clear();
+		v6.clear();
+		std::vector<const InetAddress *> v4a,v6a;
+		Mutex::Lock l(_lock);
+		const std::vector<InetAddress> *const av = (_lastFetchedLocator) ? &(_lastFetchedLocator.phy()) : &_defaultAddresses;
+		for(std::vector<InetAddress>::const_iterator i(av->begin());i!=av->end();++i) {
+			switch(i->ss_family) {
+				case AF_INET:
+					v4a.push_back(&(*i));
+					break;
+				case AF_INET6:
+					v6a.push_back(&(*i));
+					break;
+			}
+		}
+		if (v4a.size() == 1) {
+			v4 = *v4a[0];
+		} else if (v4a.size() > 1) {
+			v4 = *v4a[(unsigned long)Utils::random() % (unsigned long)v4a.size()];
+		}
+		if (v6a.size() == 1) {
+			v6 = *v6a[0];
+		} else if (v6a.size() > 1) {
+			v6 = *v6a[(unsigned long)Utils::random() % (unsigned long)v6a.size()];
+		}
 	}
 
 private:

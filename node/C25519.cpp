@@ -2395,23 +2395,12 @@ static inline void get_hram(unsigned char *hram, const unsigned char *sm, const 
 
 namespace ZeroTier {
 
-void C25519::agree(const C25519::Private &mine,const C25519::Public &their,void *keybuf,unsigned int keylen)
+void C25519::agree(const uint8_t mine[ZT_C25519_PRIVATE_KEY_LEN],const uint8_t their[ZT_C25519_PUBLIC_KEY_LEN],uint8_t rawkey[32])
 {
-	unsigned char rawkey[32];
-	unsigned char digest[64];
-
-	crypto_scalarmult(rawkey,mine.data,their.data);
-	SHA512(digest,rawkey,32);
-	for(unsigned int i=0,k=0;i<keylen;) {
-		if (k == 64) {
-			k = 0;
-			SHA512(digest,digest,64);
-		}
-		((unsigned char *)keybuf)[i++] = digest[k++];
-	}
+	crypto_scalarmult(rawkey,mine,their);
 }
 
-void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPublic,const void *msg,unsigned int len,void *signature)
+void C25519::sign(const uint8_t myPrivate[ZT_C25519_PRIVATE_KEY_LEN],const uint8_t myPublic[ZT_C25519_PUBLIC_KEY_LEN],const void *msg,unsigned int len,void *signature)
 {
 	unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
 	SHA512(digest,msg,len);
@@ -2425,7 +2414,7 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 	unsigned char hram[crypto_hash_sha512_BYTES];
 	unsigned char *sig = (unsigned char *)signature;
 
-	SHA512(extsk,myPrivate.data + 32,32);
+	SHA512(extsk,myPrivate + 32,32);
 	extsk[0] &= 248;
 	extsk[31] &= 127;
 	extsk[31] |= 64;
@@ -2446,7 +2435,7 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 	for(unsigned int i=0;i<32;i++)
 		sig[i] = r[i];
 
-	get_hram(hram,sig,myPublic.data + 32,sig,96);
+	get_hram(hram,sig,myPublic + 32,sig,96);
 
 	sc25519_from64bytes(&scs, hram);
 	sc25519_from32bytes(&scsk, extsk);
@@ -2459,7 +2448,7 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 		sig[32 + i] = s[i];
 }
 
-bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len,const void *signature,const unsigned int siglen)
+bool C25519::verify(const uint8_t their[ZT_C25519_PUBLIC_KEY_LEN],const void *msg,unsigned int len,const void *signature,const unsigned int siglen)
 {
 	if (siglen < 64) return false;
 
@@ -2482,10 +2471,10 @@ bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len
 	unsigned char hram[crypto_hash_sha512_BYTES];
 	unsigned char m[96];
 
-	if (ge25519_unpackneg_vartime(&get1,their.data + 32))
+	if (ge25519_unpackneg_vartime(&get1,their + 32))
 		return false;
 
-	get_hram(hram,sig,their.data + 32,m,96);
+	get_hram(hram,sig,their + 32,m,96);
 
 	sc25519_from64bytes(&schram, hram);
 
@@ -2497,14 +2486,14 @@ bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len
 	return Utils::secureEq(sig,t2,32);
 }
 
-void C25519::_calcPubDH(C25519::Pair &kp)
+void C25519::_calcPubDH(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],const uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
 {
 	// First 32 bytes of pub and priv are the keys for ECDH key
 	// agreement. This generates the public portion from the private.
-	crypto_scalarmult_base(kp.pub.data,kp.priv.data);
+	crypto_scalarmult_base(pub,priv);
 }
 
-void C25519::_calcPubED(C25519::Pair &kp)
+void C25519::_calcPubED(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],const uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
 {
 	unsigned char extsk[64];
 	sc25519 scsk;
@@ -2512,13 +2501,14 @@ void C25519::_calcPubED(C25519::Pair &kp)
 
 	// Second 32 bytes of pub and priv are the keys for ed25519
 	// signing and verification.
-	SHA512(extsk,kp.priv.data + 32,32);
+	SHA512(extsk,priv + 32,32);
 	extsk[0] &= 248;
 	extsk[31] &= 127;
 	extsk[31] |= 64;
 	sc25519_from32bytes(&scsk,extsk);
 	ge25519_scalarmult_base(&gepk,&scsk);
-	ge25519_pack(kp.pub.data + 32,&gepk);
+	ge25519_pack(pub + 32,&gepk);
+
 	// In NaCl, the public key is crammed into the next 32 bytes
 	// of the private key for signing since both keys are required
 	// to sign. In this version we just get it from kp.pub, so we

@@ -213,9 +213,8 @@ namespace ZeroTier {
  * This is a memcpy()'able structure and is safe (in a crash sense) to modify
  * without locks.
  */
-class NetworkConfig
+struct NetworkConfig
 {
-public:
 	inline NetworkConfig() :
 		networkId(0),
 		timestamp(0),
@@ -278,7 +277,7 @@ public:
 		interference with lwIP's TCP congestion algorithm. Compression is also disabled
 		for some NAS builds due to the usage of low-performance processors in certain
 		older and budget models. */
-		return false;
+		return true;
 #endif
 	}
 

@@ -110,6 +110,8 @@ struct InetAddress : public sockaddr_storage
 	inline InetAddress(const uint32_t ipv4,unsigned int port) { this->set(&ipv4,4,port); }
 	inline InetAddress(const char *ipSlashPort) { this->fromString(ipSlashPort); }
 
+	inline void clear() { memset(this,0,sizeof(InetAddress)); }
+
 	inline InetAddress &operator=(const InetAddress &a)
 	{
 		if (&a != this)

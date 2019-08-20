@@ -14,49 +14,6 @@ Public domain.
 #include "SHA512.hpp"
 #include "Utils.hpp"
 
-#ifdef __APPLE__
-#include <CommonCrypto/CommonDigest.h>
-#define ZT_HAVE_NATIVE_SHA512
-namespace ZeroTier {
-void SHA512(void *digest,const void *data,unsigned int len)
-{
-	CC_SHA512_CTX ctx;
-	CC_SHA512_Init(&ctx);
-	CC_SHA512_Update(&ctx,data,len);
-	CC_SHA512_Final(reinterpret_cast<unsigned char *>(digest),&ctx);
-}
-void SHA384(void *digest,const void *data,unsigned int len)
-{
-	CC_SHA512_CTX ctx;
-	CC_SHA384_Init(&ctx);
-	CC_SHA384_Update(&ctx,data,len);
-	CC_SHA384_Final(reinterpret_cast<unsigned char *>(digest),&ctx);
-}
-}
-#endif
-
-#ifdef ZT_USE_LIBCRYPTO
-#include <openssl/sha.h>
-#define ZT_HAVE_NATIVE_SHA512
-namespace ZeroTier {
-void SHA512(void *digest,const void *data,unsigned int len)
-{
-	SHA512_CTX ctx;
-	SHA512_Init(&ctx);
-	SHA512_Update(&ctx,data,len);
-	SHA512_Final(reinterpret_cast<unsigned char *>(digest),&ctx);
-}
-void SHA384(void *digest,const void *data,unsigned int len)
-{
-	SHA512_CTX ctx;
-	SHA384_Init(&ctx);
-	SHA384_Update(&ctx,data,len);
-	SHA384_Final(reinterpret_cast<unsigned char *>(digest),&ctx);
-}
-}
-#endif
-
-// If a platform-native SHA512 isn't available we use this 64-bit C version.
 #ifndef ZT_HAVE_NATIVE_SHA512
 
 namespace ZeroTier {
@@ -255,6 +212,3 @@ void SHA384(void *digest,const void *data,unsigned int len)
 } // namespace ZeroTier
 
 #endif // !ZT_HAVE_NATIVE_SHA512
-
-extern "C" void ZT_sha512internal(void *digest,const void *data,unsigned int len) { ZeroTier::SHA512(digest,data,len); }
-extern "C" void ZT_sha384internal(void *digest,const void *data,unsigned int len) { ZeroTier::SHA384(digest,data,len); }

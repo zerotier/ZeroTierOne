@@ -74,7 +74,7 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastAggregateStatsReport(0),
 	_lastAggregateAllocation(0)
 {
-	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))
+	if (!myIdentity.agree(peerIdentity,_key))
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
 }
 

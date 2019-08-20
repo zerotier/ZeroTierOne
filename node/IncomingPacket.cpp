@@ -295,7 +295,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 					return true;
 
 				uint8_t key[ZT_PEER_SECRET_KEY_LENGTH];
-				if (RR->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
+				if (RR->identity.agree(id,key)) {
 					if (dearmor(key)) { // ensure packet is authentic, otherwise drop
 						RR->t->incomingPacketDroppedHELLO(tPtr,_path,pid,fromAddress,"address collision");
 						Packet outp(id.address(),RR->identity.address(),Packet::VERB_ERROR);

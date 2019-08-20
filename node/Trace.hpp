@@ -51,13 +51,13 @@ class Identity;
 class Peer;
 class Path;
 class Network;
-class NetworkConfig;
 class MAC;
 class CertificateOfMembership;
 class CertificateOfOwnership;
 class Revocation;
 class Tag;
 class Capability;
+struct NetworkConfig;
 
 /**
  * Remote tracing and trace logging handler
