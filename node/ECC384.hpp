@@ -63,7 +63,7 @@ namespace ZeroTier {
 
 /**
  * Generate a NIST P-384 key pair
- * 
+ *
  * @param pub Buffer to receive point compressed public key
  * @param priv Buffer to receiver private key
  */
@@ -71,10 +71,10 @@ void ECC384GenerateKey(uint8_t pub[ZT_ECC384_PUBLIC_KEY_SIZE],uint8_t priv[ZT_EC
 
 /**
  * Sign a hash with a NIST P-384 private key
- * 
- * The hash must be 48 bytes in size and is typically the first 48 bytes
- * of a SHA512 hash or something similar. Extra bytes of course are ignored.
- * 
+ *
+ * The hash must be 48 bytes in size. If it's longer only the first 48
+ * bytes are used.
+ *
  * @param priv Private key
  * @param hash 48-byte hash
  * @param sig Buffer to receive signature
@@ -83,7 +83,7 @@ void ECC384ECDSASign(const uint8_t priv[ZT_ECC384_PRIVATE_KEY_SIZE],const uint8_
 
 /**
  * Verify a signature
- * 
+ *
  * @param pub Public key
  * @param hash 48-byte hash (usually first 48 bytes of SHA512(msg))
  * @param sig Signature to check
@@ -93,10 +93,10 @@ bool ECC384ECDSAVerify(const uint8_t pub[ZT_ECC384_PUBLIC_KEY_SIZE],const uint8_
 
 /**
  * Perform ECDH key agreement
- * 
+ *
  * The secret generated here is the raw 48-byte result of ECDH.
  * It's typically hashed prior to use.
- * 
+ *
  * @param theirPub Remote public key
  * @param ourPriv Local private key
  * @param secret Buffer to receive 48-byte secret

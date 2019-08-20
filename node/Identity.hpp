@@ -218,31 +218,36 @@ public:
 		uint8_t rawkey[128];
 		uint8_t h[64];
 		if (_hasPrivate) {
-			switch(_type) {
-
-				case C25519:
+			if (_type == C25519) {
+				if ((id._type == C25519)||(id._type == P384)) {
+					// If we are a C25519 key we can agree with another C25519 key or with only the
+					// C25519 portion of a type 1 P-384 key.
 					C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
 					SHA512(h,rawkey,ZT_C25519_SHARED_KEY_LEN);
-					memcpy(key,h,32);
+					memcpy(key,h,ZT_PEER_SECRET_KEY_LENGTH);
 					return true;
-
-				case P384:
-					if (id._type == P384) {
-						// Perform key agreement over both curves for the same reason that C25519 public
-						// keys are included in P-384 signature inputs: to bind the keys together so
-						// that a type 1 identity with the same C25519 public key (and therefore address)
-						// but a different P-384 key will not work.
-						C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
-						ECC384ECDH(id._pub.p384,_priv.p384,rawkey + ZT_C25519_SHARED_KEY_LEN);
-						SHA384(h,rawkey,ZT_C25519_SHARED_KEY_LEN + ZT_ECC384_SHARED_SECRET_SIZE);
-						for(unsigned int i=0;i<32;++i)
-							key[i] = h[i];
-						for(unsigned int i=0;i<16;++i)
-							key[i] ^= h[32+i];
-						return true;
-					}
-					return false;
-
+				}
+			} else if (_type == P384) {
+				if (id._type == P384) {
+					// Perform key agreement over both curves for the same reason that C25519 public
+					// keys are included in P-384 signature inputs: to bind the keys together so
+					// that a type 1 identity with the same C25519 public key (and therefore address)
+					// but a different P-384 key will not work.
+					C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
+					ECC384ECDH(id._pub.p384,_priv.p384,rawkey + ZT_C25519_SHARED_KEY_LEN);
+					SHA384(h,rawkey,ZT_C25519_SHARED_KEY_LEN + ZT_ECC384_SHARED_SECRET_SIZE);
+					for(unsigned int i=0;i<32;++i)
+						key[i] = h[i];
+					for(unsigned int i=0;i<16;++i)
+						key[i] ^= h[32+i];
+					return true;
+				} else if (id._type == C25519) {
+					// If the other identity is a C25519 identity we can agree using only that type.
+					C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
+					SHA512(h,rawkey,ZT_C25519_SHARED_KEY_LEN);
+					memcpy(key,h,ZT_PEER_SECRET_KEY_LENGTH);
+					return true;
+				}
 			}
 		}
 		return false;

@@ -455,7 +455,7 @@ public:
 		 *   <[8] timestamp for determining latency>
 		 *   <[...] binary serialized identity (see Identity)>
 		 *   <[...] physical destination address of packet>
-		 * 
+		 *
 		 * HELLO is sent in the clear as it is how peers share their identity
 		 * public keys.
 		 *
@@ -724,7 +724,7 @@ public:
 		 *
 		 * Flags:
 		 *   0x01 - COM is attached (DEPRECATED)
-		 * 
+		 *
 		 * More than one OK response can occur if the response is broken up across
 		 * multiple packets or if querying a clustered node.
 		 *
@@ -759,7 +759,7 @@ public:
 		 *   0x02 - Implicit gather limit field is present (DEPRECATED)
 		 *   0x04 - Source MAC is specified -- otherwise it's computed from sender
 		 *   0x08 - Explicit recipient list included for P2P/HS replication
-		 * 
+		 *
 		 * Explicit recipient lists are used for peer to peer or hub and spoke
 		 * replication.
 		 *

@@ -155,6 +155,77 @@ public:
 #endif
 	}
 
+	/**
+	 * Encrypt with AES256-GCM-DDS
+	 *
+	 * DDS stands for Data Dependent Scramble and refers to our scheme for nonce
+	 * duplication resistance.
+	 *
+	 * @param iv IV (usually random)
+	 * @param in Input plaintext
+	 * @param inlen Length of plaintext
+	 * @param assoc Associated data that won't be encrypted
+	 * @param assoclen Length of associated data
+	 * @param out Output ciphertext buffer (must be at least inlen in size)
+	 * @param combinedTag Buffer to receive 128-bit encrypted combined IV and MAC
+	 */
+	inline void gcmDdsEncrypt(const uint64_t iv,const void *in,unsigned int inlen,const void *assoc,unsigned int assoclen,void *out,uint64_t combinedTag[2])
+	{
+		// Make 12-byte GCM IV (use combinedTag as tmp buffer)
+		combinedTag[0] = iv;
+		((uint8_t *)combinedTag)[8] = (uint8_t)(inlen >> 16);
+		((uint8_t *)combinedTag)[9] = (uint8_t)(inlen >> 8);
+		((uint8_t *)combinedTag)[10] = (uint8_t)inlen;
+		((uint8_t *)combinedTag)[11] = (uint8_t)assoclen;
+
+		// Encrypt data and store 64-bit tag/MAC code in second 64 bits of combinedTag.
+		gcmEncrypt((const uint8_t *)combinedTag,in,inlen,assoc,assoclen,out,((uint8_t *)&(combinedTag[1])),8);
+
+		// Encrypt combinedTag once to get scramble key
+		encrypt((const uint8_t *)combinedTag,(uint8_t *)combinedTag);
+
+		// Scramble ciphertext
+		scramble((const uint8_t *)combinedTag,out,inlen,out);
+
+		// Encrypt combinedTag again to get masked tag to include with message
+		encrypt((const uint8_t *)combinedTag,(uint8_t *)combinedTag);
+	}
+
+	/**
+	 * Decrypt with AES256-GCM-DDS
+	 *
+	 * @param combinedTag Encrypted combined tag
+	 * @param in Input ciphertext
+	 * @param inlen Length of ciphertext
+	 * @param assoc Associated data that wasn't encrypted
+	 * @param assoclen Length of associated data
+	 * @param out Output plaintext buffer (must be at least inlen in size)
+	 * @return True if GCM authentication check succeeded (if false, discard packet)
+	 */
+	inline bool gcmDdsDecrypt(const uint64_t combinedTag[2],const void *in,unsigned int inlen,const void *assoc,unsigned int assoclen,void *out)
+	{
+		uint64_t tmp[2],gcmIv[2];
+
+		// Decrypt combinedTag to get scramble key
+		decrypt((const uint8_t *)combinedTag,(uint8_t *)tmp);
+
+		// Unscramble ciphertext
+		unscramble((const uint8_t *)tmp,in,inlen,out);
+
+		// Decrypt combinedTag again to get original IV and AES-GCM MAC
+		decrypt((const uint8_t *)tmp,(uint8_t *)tmp);
+
+		// Make 12-byte GCM IV
+		gcmIv[0] = tmp[0];
+		((uint8_t *)gcmIv)[8] = (uint8_t)(inlen >> 16);
+		((uint8_t *)gcmIv)[9] = (uint8_t)(inlen >> 8);
+		((uint8_t *)gcmIv)[10] = (uint8_t)inlen;
+		((uint8_t *)gcmIv)[11] = (uint8_t)assoclen;
+
+		// Perform GCM decryption and authentication
+		return gcmDecrypt((const uint8_t *)gcmIv,out,inlen,assoc,assoclen,out,(const uint8_t *)&(tmp[1]),8);
+	}
+
 private:
 	static const uint32_t Te0[256];
 	static const uint32_t Te1[256];

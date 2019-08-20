@@ -41,7 +41,6 @@
 #include "NetworkController.hpp"
 #include "SelfAwareness.hpp"
 #include "Salsa20.hpp"
-#include "SHA512.hpp"
 #include "Node.hpp"
 #include "CertificateOfMembership.hpp"
 #include "Capability.hpp"
@@ -377,38 +376,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
 	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
-
-	if (protoVersion >= 5) {
-		_path->address().serialize(outp);
-	} else {
-		/* LEGACY COMPATIBILITY HACK:
-		 *
-		 * For a while now (since 1.0.3), ZeroTier has recognized changes in
-		 * its network environment empirically by examining its external network
-		 * address as reported by trusted peers. In versions prior to 1.1.0
-		 * (protocol version < 5), they did this by saving a snapshot of this
-		 * information (in SelfAwareness.hpp) keyed by reporting device ID and
-		 * address type.
-		 *
-		 * This causes problems when clustering is combined with symmetric NAT.
-		 * Symmetric NAT remaps ports, so different endpoints in a cluster will
-		 * report back different exterior addresses. Since the old code keys
-		 * this by device ID and not sending physical address and compares the
-		 * entire address including port, it constantly thinks its external
-		 * surface is changing and resets connections when talking to a cluster.
-		 *
-		 * In new code we key by sending physical address and device and we also
-		 * take the more conservative position of only interpreting changes in
-		 * IP address (neglecting port) as a change in network topology that
-		 * necessitates a reset. But we can make older clients work here by
-		 * nulling out the port field. Since this info is only used for empirical
-		 * detection of link changes, it doesn't break anything else.
-		 */
-		InetAddress tmpa(_path->address());
-		tmpa.setPort(0);
-		tmpa.serialize(outp);
-	}
-
+	_path->address().serialize(outp);
 	outp.armor(peer->key(),true);
 	_path->send(RR,tPtr,outp.data(),outp.size(),now);
 
