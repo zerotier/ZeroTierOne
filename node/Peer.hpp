@@ -725,6 +725,8 @@ private:
 	std::map<int64_t, struct Flow *> _flows;
 
 	int16_t _roundRobinPathAssignmentIdx;
+
+	SharedPtr<Path> _activeBackupPath;
 };
 
 } // namespace ZeroTier

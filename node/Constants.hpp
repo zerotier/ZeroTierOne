@@ -357,16 +357,29 @@
 /**
  * How much each factor contributes to the "stability" score of a path
  */
+
+#if 0
+#define ZT_PATH_CONTRIB_PDV                    (1.5 / 3.0)
+#define ZT_PATH_CONTRIB_LATENCY                (0.0 / 3.0)
+#define ZT_PATH_CONTRIB_THROUGHPUT_DISTURBANCE (1.5 / 3.0)
+#else
 #define ZT_PATH_CONTRIB_PDV                    (1.0 / 3.0)
 #define ZT_PATH_CONTRIB_LATENCY                (1.0 / 3.0)
 #define ZT_PATH_CONTRIB_THROUGHPUT_DISTURBANCE (1.0 / 3.0)
+#endif
 
 /**
  * How much each factor contributes to the "quality" score of a path
  */
+#if 0
+#define ZT_PATH_CONTRIB_STABILITY  (2.00 / 3.0)
+#define ZT_PATH_CONTRIB_THROUGHPUT (0.50 / 3.0)
+#define ZT_PATH_CONTRIB_SCOPE      (0.50 / 3.0)
+#else
 #define ZT_PATH_CONTRIB_STABILITY  (0.75 / 3.0)
 #define ZT_PATH_CONTRIB_THROUGHPUT (1.50 / 3.0)
 #define ZT_PATH_CONTRIB_SCOPE      (0.75 / 3.0)
+#endif
 
 /**
  * How often a QoS packet is sent
@@ -474,6 +487,11 @@
  * links.
  */
 #define ZT_MULTIPATH_PEER_PING_PERIOD (ZT_PEER_PING_PERIOD / 10)
+
+/**
+ * How long before we consider a path to be dead in rapid fail-over scenarios
+ */
+#define ZT_MULTIPATH_ACTIVE_BACKUP_RAPID_FAILOVER_PERIOD 1000
 
 /**
  * Paths are considered expired if they have not sent us a real packet in this long
