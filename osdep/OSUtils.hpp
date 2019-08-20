@@ -265,6 +265,28 @@ public:
 	static std::vector<std::string> split(const char *s,const char *const sep,const char *esc,const char *quot);
 
 	/**
+	 * Trim whitespace from beginning and end of string
+	 */
+	static inline std::string trimString(const std::string &s)
+	{
+		unsigned long end = (unsigned long)s.length();
+		while (end) {
+			char c = s[end - 1];
+			if ((c == ' ')||(c == '\r')||(c == '\n')||(!c)||(c == '\t'))
+				--end;
+			else break;
+		}
+		unsigned long start = 0;
+		while (start < end) {
+			char c = s[start];
+			if ((c == ' ')||(c == '\r')||(c == '\n')||(!c)||(c == '\t'))
+				++start;
+			else break;
+		}
+		return s.substr(start,end - start);
+	}
+
+	/**
 	 * Write a block of data to disk, replacing any current file contents
 	 *
 	 * @param path Path to write

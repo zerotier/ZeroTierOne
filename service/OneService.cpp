@@ -117,27 +117,6 @@ namespace ZeroTier {
 
 namespace {
 
-static const InetAddress NULL_INET_ADDR;
-
-static std::string _trimString(const std::string &s)
-{
-	unsigned long end = (unsigned long)s.length();
-	while (end) {
-		char c = s[end - 1];
-		if ((c == ' ')||(c == '\r')||(c == '\n')||(!c)||(c == '\t'))
-			--end;
-		else break;
-	}
-	unsigned long start = 0;
-	while (start < end) {
-		char c = s[start];
-		if ((c == ' ')||(c == '\r')||(c == '\n')||(!c)||(c == '\t'))
-			++start;
-		else break;
-	}
-	return s.substr(start,end - start);
-}
-
 static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,const std::string &portDeviceName,const OneService::NetworkSettings &localSettings)
 {
 	char tmp[256];
@@ -511,7 +490,7 @@ public:
 						OSUtils::lockDownFile(authTokenPath.c_str(),false);
 					}
 				}
-				_authToken = _trimString(_authToken);
+				_authToken = OSUtils::trimString(_authToken);
 			}
 
 			{
@@ -1504,7 +1483,7 @@ public:
 					}
 				}
 				if (!src)
-					src = &NULL_INET_ADDR;
+					src = &InetAddress::NIL;
 
 				if ( (!checkIfManagedIsAllowed(n,*target)) || ((via->ss_family == target->ss_family)&&(matchIpOnly(myIps,*via))) )
 					continue;
