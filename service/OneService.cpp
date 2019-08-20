@@ -61,7 +61,6 @@
 #include "../osdep/BlockingQueue.hpp"
 
 #include "OneService.hpp"
-#include "SoftwareUpdater.hpp"
 
 #ifdef __WINDOWS__
 #include <WinSock2.h>
@@ -95,10 +94,6 @@ using json = nlohmann::json;
 #include "../osdep/EthernetTap.hpp"
 #ifdef __WINDOWS__
 #include "../osdep/WindowsEthernetTap.hpp"
-#endif
-
-#ifndef ZT_SOFTWARE_UPDATE_DEFAULT
-#define ZT_SOFTWARE_UPDATE_DEFAULT "disable"
 #endif
 
 // Sanity limits for HTTP
@@ -380,7 +375,6 @@ public:
 	EmbeddedNetworkController *_controller;
 	Phy<OneServiceImpl *> _phy;
 	Node *_node;
-	SoftwareUpdater *_updater;
 	PhySocket *_localControlSocket4;
 	PhySocket *_localControlSocket6;
 	bool _updateAutoApply;
@@ -480,7 +474,6 @@ public:
 		,_controller((EmbeddedNetworkController *)0)
 		,_phy(this,false,true)
 		,_node((Node *)0)
-		,_updater((SoftwareUpdater *)0)
 		,_localControlSocket4((PhySocket *)0)
 		,_localControlSocket6((PhySocket *)0)
 		,_updateAutoApply(false)
@@ -691,13 +684,6 @@ public:
 					restarted = true;
 				}
 
-				// Check for updates (if enabled)
-				if ((_updater)&&((now - lastUpdateCheck) > 10000)) {
-					lastUpdateCheck = now;
-					if (_updater->check(now) && _updateAutoApply)
-						_updater->apply();
-				}
-
 				// Reload local.conf if anything changed recently
 				if ((now - lastLocalConfFileCheck) >= ZT_LOCAL_CONF_FILE_CHECK_INTERVAL) {
 					lastLocalConfFileCheck = now;
@@ -814,8 +800,6 @@ public:
 			_nets.clear();
 		}
 
-		delete _updater;
-		_updater = (SoftwareUpdater *)0;
 		delete _node;
 		_node = (Node *)0;
 
@@ -1146,10 +1130,6 @@ public:
 #else
 					settings["portMappingEnabled"] = false; // not supported in build
 #endif
-#ifndef ZT_SDK
-					settings["softwareUpdate"] = OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT);
-					settings["softwareUpdateChannel"] = OSUtils::jsonString(settings["softwareUpdateChannel"],ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL);
-#endif
 
 					scode = 200;
 				} else if (ps[0] == "network") {
@@ -1404,22 +1384,6 @@ public:
 		}
 		_multipathMode = (unsigned int)OSUtils::jsonInt(settings["multipathMode"],0);
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
-
-#ifndef ZT_SDK
-		const std::string up(OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT));
-		const bool udist = OSUtils::jsonBool(settings["softwareUpdateDist"],false);
-		if (((up == "apply")||(up == "download"))||(udist)) {
-			if (!_updater)
-				_updater = new SoftwareUpdater(*_node,_homePath);
-			_updateAutoApply = (up == "apply");
-			_updater->setUpdateDistribution(udist);
-			_updater->setChannel(OSUtils::jsonString(settings["softwareUpdateChannel"],ZT_SOFTWARE_UPDATE_DEFAULT_CHANNEL));
-		} else {
-			delete _updater;
-			_updater = (SoftwareUpdater *)0;
-			_updateAutoApply = false;
-		}
-#endif
 
 		json &ignoreIfs = settings["interfacePrefixBlacklist"];
 		if (ignoreIfs.is_array()) {
@@ -1904,13 +1868,6 @@ public:
 				if (metaData) {
 					::fprintf(stderr,"%s" ZT_EOL_S,(const char *)metaData);
 					::fflush(stderr);
-				}
-			}	break;
-
-			case ZT_EVENT_USER_MESSAGE: {
-				const ZT_UserMessage *um = reinterpret_cast<const ZT_UserMessage *>(metaData);
-				if ((um->typeId == ZT_SOFTWARE_UPDATE_USER_MESSAGE_TYPE)&&(_updater)) {
-					_updater->handleSoftwareUpdateUserMessage(um->origin,um->data,um->length);
 				}
 			}	break;
 
