@@ -86,12 +86,6 @@
 #include "../ext/http-parser/http_parser.h"
 #endif
 
-#if ZT_VAULT_SUPPORT
-extern "C" {
-#include <curl/curl.h>
-}
-#endif
-
 #include "../ext/json/json.hpp"
 
 using json = nlohmann::json;
@@ -118,45 +112,17 @@ using json = nlohmann::json;
 // How often to check for new multicast subscriptions on a tap device
 #define ZT_TAP_CHECK_MULTICAST_INTERVAL 5000
 
-// TCP fallback relay (run by ZeroTier, Inc. -- this will eventually go away)
-#ifndef ZT_SDK
-#define ZT_TCP_FALLBACK_RELAY "204.80.128.1/443"
-#endif
-
-// Frequency at which we re-resolve the TCP fallback relay
-#define ZT_TCP_FALLBACK_RERESOLVE_DELAY 86400000
-
-// Attempt to engage TCP fallback after this many ms of no reply to packets sent to global-scope IPs
-#define ZT_TCP_FALLBACK_AFTER 60000
-
 // How often to check for local interface addresses
 #define ZT_LOCAL_INTERFACE_CHECK_INTERVAL 60000
 
-// Maximum write buffer size for outgoing TCP connections (sanity limit)
-#define ZT_TCP_MAX_WRITEQ_SIZE 33554432
-
-// TCP activity timeout
-#define ZT_TCP_ACTIVITY_TIMEOUT 60000
-
 // How often local.conf is checked for changes
 #define ZT_LOCAL_CONF_FILE_CHECK_INTERVAL 10000
-
-#if ZT_VAULT_SUPPORT
-size_t curlResponseWrite(void *ptr, size_t size, size_t nmemb, std::string *data)
-{
-	data->append((char*)ptr, size * nmemb);
-	return size * nmemb;
-}
-#endif
 
 namespace ZeroTier {
 
 namespace {
 
 static const InetAddress NULL_INET_ADDR;
-
-// Fake TLS hello for TCP tunnel outgoing connections (TUNNELED mode)
-static const char ZT_TCP_TUNNEL_HELLO[9] = { 0x17,0x03,0x03,0x00,0x04,(char)ZEROTIER_ONE_VERSION_MAJOR,(char)ZEROTIER_ONE_VERSION_MINOR,(char)((ZEROTIER_ONE_VERSION_REVISION >> 8) & 0xff),(char)(ZEROTIER_ONE_VERSION_REVISION & 0xff) };
 
 static std::string _trimString(const std::string &s)
 {
@@ -370,8 +336,6 @@ struct TcpConnection
 	enum {
 		TCP_UNCATEGORIZED_INCOMING, // uncategorized incoming connection
 		TCP_HTTP_INCOMING,
-		TCP_HTTP_OUTGOING,
-		TCP_TUNNEL_OUTGOING // TUNNELED mode proxy outbound connection
 	} type;
 
 	OneServiceImpl *parent;
@@ -420,7 +384,6 @@ public:
 	PhySocket *_localControlSocket4;
 	PhySocket *_localControlSocket6;
 	bool _updateAutoApply;
-	bool _allowTcpFallbackRelay;
 	bool _allowSecondaryPort;
 	unsigned int _multipathMode;
 	unsigned int _primaryPort;
@@ -458,9 +421,6 @@ public:
 
 	// Time we last received a packet from a global address
 	uint64_t _lastDirectReceiveFromGlobal;
-#ifdef ZT_TCP_FALLBACK_RELAY
-	uint64_t _lastSendToGlobalV4;
-#endif
 
 	// Last potential sleep/wake event
 	uint64_t _lastRestart;
@@ -492,7 +452,6 @@ public:
 	// Active TCP/IP connections
 	std::vector< TcpConnection * > _tcpConnections;
 	Mutex _tcpConnections_m;
-	TcpConnection *_tcpFallbackTunnel;
 
 	// Termination status information
 	ReasonForTermination _termReason;
@@ -503,14 +462,6 @@ public:
 	bool _portMappingEnabled; // local.conf settings
 #ifdef ZT_USE_MINIUPNPC
 	PortMapper *_portMapper;
-#endif
-
-	// HashiCorp Vault Settings
-#if ZT_VAULT_SUPPORT
-	bool _vaultEnabled;
-	std::string _vaultURL;
-	std::string _vaultToken;
-	std::string _vaultPath; // defaults to cubbyhole/zerotier/identity.secret for per-access key storage
 #endif
 
 	// Set to false to force service to stop
@@ -536,22 +487,12 @@ public:
 		,_primaryPort(port)
 		,_udpPortPickerCounter(0)
 		,_lastDirectReceiveFromGlobal(0)
-#ifdef ZT_TCP_FALLBACK_RELAY
-		,_lastSendToGlobalV4(0)
-#endif
 		,_lastRestart(0)
 		,_nextBackgroundTaskDeadline(0)
-		,_tcpFallbackTunnel((TcpConnection *)0)
 		,_termReason(ONE_STILL_RUNNING)
 		,_portMappingEnabled(true)
 #ifdef ZT_USE_MINIUPNPC
 		,_portMapper((PortMapper *)0)
-#endif
-#ifdef ZT_VAULT_SUPPORT
-		,_vaultEnabled(false)
-		,_vaultURL()
-		,_vaultToken()
-		,_vaultPath("cubbyhole/zerotier")
 #endif
 		,_run(true)
 		,_mqc(NULL)
@@ -559,10 +500,6 @@ public:
 		_ports[0] = 0;
 		_ports[1] = 0;
 		_ports[2] = 0;
-
-#if ZT_VAULT_SUPPORT
-		curl_global_init(CURL_GLOBAL_DEFAULT);
-#endif
 	}
 
 	virtual ~OneServiceImpl()
@@ -570,10 +507,6 @@ public:
 		_binder.closeAll(_phy);
 		_phy.close(_localControlSocket4);
 		_phy.close(_localControlSocket6);
-
-#if ZT_VAULT_SUPPORT
-		curl_global_cleanup();
-#endif
 
 #ifdef ZT_USE_MINIUPNPC
 		delete _portMapper;
@@ -808,10 +741,6 @@ public:
 					_node->processBackgroundTasks((void *)0,now,&_nextBackgroundTaskDeadline);
 					dl = _nextBackgroundTaskDeadline;
 				}
-
-				// Close TCP fallback tunnel if we have direct UDP
-				if ((_tcpFallbackTunnel)&&((now - _lastDirectReceiveFromGlobal) < (ZT_TCP_FALLBACK_AFTER / 2)))
-					_phy.close(_tcpFallbackTunnel->sock);
 
 				// Sync multicast group memberships
 				if ((now - lastTapMulticastGroupCheck) >= ZT_TAP_CHECK_MULTICAST_INTERVAL) {
@@ -1181,7 +1110,6 @@ public:
 					res["address"] = tmp;
 					res["publicIdentity"] = status.publicIdentity;
 					res["online"] = (bool)(status.online != 0);
-					res["tcpFallbackActive"] = (_tcpFallbackTunnel != (TcpConnection *)0);
 					res["versionMajor"] = ZEROTIER_ONE_VERSION_MAJOR;
 					res["versionMinor"] = ZEROTIER_ONE_VERSION_MINOR;
 					res["versionRev"] = ZEROTIER_ONE_VERSION_REVISION;
@@ -1196,7 +1124,6 @@ public:
 					}
 					json &settings = res["config"]["settings"];
 					settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
-					settings["allowTcpFallbackRelay"] = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],_allowTcpFallbackRelay);
 
 					if (_multipathMode) {
 						json &multipathConfig = res["multipath"];
@@ -1469,7 +1396,6 @@ public:
 		json &settings = lc["settings"];
 
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
-		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
 		_allowSecondaryPort = OSUtils::jsonBool(settings["allowSecondaryPort"],true);
 		_secondaryPort = (unsigned int)OSUtils::jsonInt(settings["secondaryPort"],0);
 		_tertiaryPort = (unsigned int)OSUtils::jsonInt(settings["tertiaryPort"],0);
@@ -1477,10 +1403,6 @@ public:
 			fprintf(stderr,"WARNING: using manually-specified ports. This can cause NAT issues." ZT_EOL_S);
 		}
 		_multipathMode = (unsigned int)OSUtils::jsonInt(settings["multipathMode"],0);
-		if (_multipathMode != 0 && _allowTcpFallbackRelay) {
-			fprintf(stderr,"WARNING: multipathMode cannot be used with allowTcpFallbackRelay. Disabling allowTcpFallbackRelay" ZT_EOL_S);
-			_allowTcpFallbackRelay = false;
-		}
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 
 #ifndef ZT_SDK
@@ -1517,47 +1439,6 @@ public:
 			}
 		}
 	}
-
-#if ZT_VAULT_SUPPORT
-		json &vault = settings["vault"];
-		if (vault.is_object()) {
-			const std::string url(OSUtils::jsonString(vault["vaultURL"], "").c_str());
-			if (!url.empty()) {
-				_vaultURL = url;
-			}
-
-			const std::string token(OSUtils::jsonString(vault["vaultToken"], "").c_str());
-			if (!token.empty()) {
-				_vaultToken = token;
-			}
-
-			const std::string path(OSUtils::jsonString(vault["vaultPath"], "").c_str());
-			if (!path.empty()) {
-				_vaultPath = path;
-			}
-		}
-
-		// also check environment variables for values.  Environment variables
-		// will override local.conf variables
-		const std::string envURL(getenv("VAULT_ADDR"));
-		if (!envURL.empty()) {
-			_vaultURL = envURL;
-		}
-
-		const std::string envToken(getenv("VAULT_TOKEN"));
-		if (!envToken.empty()) {
-			_vaultToken = envToken;
-		}
-
-		const std::string envPath(getenv("VAULT_PATH"));
-		if (!envPath.empty()) {
-			_vaultPath = envPath;
-		}
-
-		if (!_vaultURL.empty() && !_vaultToken.empty()) {
-			_vaultEnabled = true;
-		}
-#endif
 
 	// Checks if a managed IP or route target is allowed
 	bool checkIfManagedIsAllowed(const NetworkState &n,const InetAddress &target)
@@ -1746,26 +1627,7 @@ public:
 
 	inline void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success)
 	{
-		if (!success) {
-			phyOnTcpClose(sock,uptr);
-			return;
-		}
-
-		TcpConnection *const tc = reinterpret_cast<TcpConnection *>(*uptr);
-		if (!tc) { // sanity check
-			_phy.close(sock,true);
-			return;
-		}
-		tc->sock = sock;
-
-		if (tc->type == TcpConnection::TCP_TUNNEL_OUTGOING) {
-			if (_tcpFallbackTunnel)
-				_phy.close(_tcpFallbackTunnel->sock);
-			_tcpFallbackTunnel = tc;
-			_phy.streamSend(sock,ZT_TCP_TUNNEL_HELLO,sizeof(ZT_TCP_TUNNEL_HELLO));
-		} else {
-			_phy.close(sock,true);
-		}
+		_phy.close(sock,true);
 	}
 
 	inline void phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
@@ -1804,9 +1666,6 @@ public:
 	{
 		TcpConnection *tc = (TcpConnection *)*uptr;
 		if (tc) {
-			if (tc == _tcpFallbackTunnel) {
-				_tcpFallbackTunnel = (TcpConnection *)0;
-			}
 			{
 				Mutex::Lock _l(_tcpConnections_m);
 				_tcpConnections.erase(std::remove(_tcpConnections.begin(),_tcpConnections.end(),tc),_tcpConnections.end());
@@ -1863,84 +1722,9 @@ public:
 					return;
 
 				case TcpConnection::TCP_HTTP_INCOMING:
-				case TcpConnection::TCP_HTTP_OUTGOING:
 					http_parser_execute(&(tc->parser),&HTTP_PARSER_SETTINGS,(const char *)data,len);
 					if ((tc->parser.upgrade)||(tc->parser.http_errno != HPE_OK))
 						_phy.close(sock);
-					return;
-
-				case TcpConnection::TCP_TUNNEL_OUTGOING:
-					tc->readq.append((const char *)data,len);
-					while (tc->readq.length() >= 5) {
-						const char *data = tc->readq.data();
-						const unsigned long mlen = ( ((((unsigned long)data[3]) & 0xff) << 8) | (((unsigned long)data[4]) & 0xff) );
-						if (tc->readq.length() >= (mlen + 5)) {
-							InetAddress from;
-
-						unsigned long plen = mlen; // payload length, modified if there's an IP header
-							data += 5; // skip forward past pseudo-TLS junk and mlen
-							if (plen == 4) {
-								// Hello message, which isn't sent by proxy and would be ignored by client
-							} else if (plen) {
-								// Messages should contain IPv4 or IPv6 source IP address data
-								switch(data[0]) {
-									case 4: // IPv4
-										if (plen >= 7) {
-											from.set((const void *)(data + 1),4,((((unsigned int)data[5]) & 0xff) << 8) | (((unsigned int)data[6]) & 0xff));
-											data += 7; // type + 4 byte IP + 2 byte port
-											plen -= 7;
-										} else {
-											_phy.close(sock);
-											return;
-										}
-										break;
-									case 6: // IPv6
-										if (plen >= 19) {
-											from.set((const void *)(data + 1),16,((((unsigned int)data[17]) & 0xff) << 8) | (((unsigned int)data[18]) & 0xff));
-											data += 19; // type + 16 byte IP + 2 byte port
-											plen -= 19;
-										} else {
-											_phy.close(sock);
-											return;
-										}
-										break;
-									case 0: // none/omitted
-										++data;
-										--plen;
-										break;
-									default: // invalid address type
-										_phy.close(sock);
-										return;
-								}
-
-								if (from) {
-									InetAddress fakeTcpLocalInterfaceAddress((uint32_t)0xffffffff,0xffff);
-									const ZT_ResultCode rc = _node->processWirePacket(
-										(void *)0,
-										OSUtils::now(),
-										-1,
-										reinterpret_cast<struct sockaddr_storage *>(&from),
-										data,
-										plen,
-										&_nextBackgroundTaskDeadline);
-									if (ZT_ResultCode_isFatal(rc)) {
-										char tmp[256];
-										OSUtils::ztsnprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket: %d",(int)rc);
-										Mutex::Lock _l(_termReason_m);
-										_termReason = ONE_UNRECOVERABLE_ERROR;
-										_fatalErrorMessage = tmp;
-										this->terminate();
-										_phy.close(sock);
-										return;
-									}
-								}
-							}
-
-							if (tc->readq.length() > (mlen + 5))
-								tc->readq.erase(tc->readq.begin(),tc->readq.begin() + (mlen + 5));
-							else tc->readq.clear();
-						} else break;
-					}
 					return;
 
 			}
@@ -2139,88 +1923,8 @@ public:
 		}
 	}
 
-#if ZT_VAULT_SUPPORT
-	inline bool nodeVaultPutIdentity(enum ZT_StateObjectType type, const void *data, int len)
-	{
-		bool retval = false;
-		if (type != ZT_STATE_OBJECT_IDENTITY_PUBLIC && type != ZT_STATE_OBJECT_IDENTITY_SECRET) {
-			return retval;
-		}
-
-		CURL *curl = curl_easy_init();
-		if (curl) {
-			char token[512] = { 0 };
-			snprintf(token, sizeof(token), "X-Vault-Token: %s", _vaultToken.c_str());
-
-			struct curl_slist *chunk = NULL;
-			chunk = curl_slist_append(chunk, token);
-
-
-			char content_type[512] = { 0 };
-			snprintf(content_type, sizeof(content_type), "Content-Type: application/json");
-
-			chunk = curl_slist_append(chunk, content_type);
-
-			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
-
-			char url[2048] = { 0 };
-			snprintf(url, sizeof(url), "%s/v1/%s", _vaultURL.c_str(), _vaultPath.c_str());
-
-			curl_easy_setopt(curl, CURLOPT_URL, url);
-
-			json d = json::object();
-			if (type == ZT_STATE_OBJECT_IDENTITY_PUBLIC) {
-				std::string key((const char*)data, len);
-				d["public"] = key;
-			}
-			else if (type == ZT_STATE_OBJECT_IDENTITY_SECRET) {
-				std::string key((const char*)data, len);
-				d["secret"] = key;
-			}
-
-			if (!d.empty()) {
-				std::string post = d.dump();
-
-				if (!post.empty()) {
-					curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post.c_str());
-					curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, post.length());
-
-#ifndef NDEBUG
-					curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-#endif
-
-					CURLcode res = curl_easy_perform(curl);
-					if (res == CURLE_OK) {
-						long response_code = 0;
-						curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-						if (response_code == 200 || response_code == 204) {
-							retval = true;
-						}
-					}
-				}
-			}
-
-			curl_easy_cleanup(curl);
-			curl = NULL;
-			curl_slist_free_all(chunk);
-			chunk = NULL;
-		}
-
-		return retval;
-	}
-#endif
-
 	inline void nodeStatePutFunction(enum ZT_StateObjectType type,const uint64_t id[2],const void *data,int len)
 	{
-#if ZT_VAULT_SUPPORT
-		if (_vaultEnabled && (type == ZT_STATE_OBJECT_IDENTITY_SECRET || type == ZT_STATE_OBJECT_IDENTITY_PUBLIC)) {
-			if (nodeVaultPutIdentity(type, data, len)) {
-				// value successfully written to Vault
-				return;
-			}
-			// else fallback to disk
-		}
-#endif
 		char p[1024];
 		FILE *f;
 		bool secure = false;
@@ -2285,93 +1989,8 @@ public:
 		}
 	}
 
-#if ZT_VAULT_SUPPORT
-	inline int nodeVaultGetIdentity(enum ZT_StateObjectType type, void *data, unsigned int maxlen)
-	{
-		if (type != ZT_STATE_OBJECT_IDENTITY_SECRET && type != ZT_STATE_OBJECT_IDENTITY_PUBLIC) {
-			return -1;
-		}
-
-		int ret = -1;
-		CURL *curl = curl_easy_init();
-		if (curl) {
-			char token[512] = { 0 };
-			snprintf(token, sizeof(token), "X-Vault-Token: %s", _vaultToken.c_str());
-
-			struct curl_slist *chunk = NULL;
-			chunk = curl_slist_append(chunk, token);
-			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
-
-			char url[2048] = { 0 };
-			snprintf(url, sizeof(url), "%s/v1/%s", _vaultURL.c_str(), _vaultPath.c_str());
-
-			curl_easy_setopt(curl, CURLOPT_URL, url);
-
-			std::string response;
-			std::string res_headers;
-
-			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &curlResponseWrite);
-			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-			curl_easy_setopt(curl, CURLOPT_HEADERDATA, &res_headers);
-
-#ifndef NDEBUG
-			curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-#endif
-
-			CURLcode res = curl_easy_perform(curl);
-
-			if (res == CURLE_OK) {
-				long response_code = 0;
-				curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-				if (response_code == 200) {
-					try {
-						json payload = json::parse(response);
-						if (!payload["data"].is_null()) {
-							json &d = payload["data"];
-							if (type == ZT_STATE_OBJECT_IDENTITY_SECRET) {
-								std::string secret = OSUtils::jsonString(d["secret"],"");
-
-								if (!secret.empty()) {
-									ret = (int)secret.length();
-									memcpy(data, secret.c_str(), ret);
-								}
-							}
-							else if (type == ZT_STATE_OBJECT_IDENTITY_PUBLIC) {
-								std::string pub = OSUtils::jsonString(d["public"],"");
-
-								if (!pub.empty()) {
-									ret = (int)pub.length();
-									memcpy(data, pub.c_str(), ret);
-								}
-							}
-						}
-					}
-					catch (...) {
-						ret = -1;
-					}
-				}
-			}
-
-			curl_easy_cleanup(curl);
-			curl = NULL;
-			curl_slist_free_all(chunk);
-			chunk = NULL;
-		}
-		return ret;
-	}
-#endif
-
 	inline int nodeStateGetFunction(enum ZT_StateObjectType type,const uint64_t id[2],void *data,unsigned int maxlen)
 	{
-#if ZT_VAULT_SUPPORT
-		if (_vaultEnabled && (type == ZT_STATE_OBJECT_IDENTITY_SECRET || type == ZT_STATE_OBJECT_IDENTITY_PUBLIC) ) {
-			int retval = nodeVaultGetIdentity(type, data, maxlen);
-			if (retval >= 0)
-				return retval;
-
-			// else continue file based lookup
-		}
-#endif
 		char p[4096];
 		switch(type) {
 			case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
@@ -2393,17 +2012,6 @@ public:
 		if (f) {
 			int n = (int)fread(data,1,maxlen,f);
 			fclose(f);
-#if ZT_VAULT_SUPPORT
-			if (_vaultEnabled && (type == ZT_STATE_OBJECT_IDENTITY_SECRET || type == ZT_STATE_OBJECT_IDENTITY_PUBLIC)) {
-				// If we've gotten here while Vault is enabled, Vault does not know the key and it's been
-				// read from disk instead.
-				//
-				// We should put the value in Vault and remove the local file.
-				if (nodeVaultPutIdentity(type, data, n)) {
-					unlink(p);
-				}
-			}
-#endif
 			if (n >= 0)
 				return n;
 		}
@@ -2412,68 +2020,6 @@ public:
 
 	inline int nodeWirePacketSendFunction(const int64_t localSocket,const struct sockaddr_storage *addr,const void *data,unsigned int len,unsigned int ttl)
 	{
-#ifdef ZT_TCP_FALLBACK_RELAY
-		if(_allowTcpFallbackRelay) {
-			if (addr->ss_family == AF_INET) {
-				// TCP fallback tunnel support, currently IPv4 only
-				if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(addr)->ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
-					// Engage TCP tunnel fallback if we haven't received anything valid from a global
-					// IP address in ZT_TCP_FALLBACK_AFTER milliseconds. If we do start getting
-					// valid direct traffic we'll stop using it and close the socket after a while.
-					const int64_t now = OSUtils::now();
-					if (((now - _lastDirectReceiveFromGlobal) > ZT_TCP_FALLBACK_AFTER)&&((now - _lastRestart) > ZT_TCP_FALLBACK_AFTER)) {
-						if (_tcpFallbackTunnel) {
-							bool flushNow = false;
-							{
-								Mutex::Lock _l(_tcpFallbackTunnel->writeq_m);
-								if (_tcpFallbackTunnel->writeq.size() < (1024 * 64)) {
-									if (_tcpFallbackTunnel->writeq.length() == 0) {
-										_phy.setNotifyWritable(_tcpFallbackTunnel->sock,true);
-										flushNow = true;
-									}
-									const unsigned long mlen = len + 7;
-									_tcpFallbackTunnel->writeq.push_back((char)0x17);
-									_tcpFallbackTunnel->writeq.push_back((char)0x03);
-									_tcpFallbackTunnel->writeq.push_back((char)0x03); // fake TLS 1.2 header
-									_tcpFallbackTunnel->writeq.push_back((char)((mlen >> 8) & 0xff));
-									_tcpFallbackTunnel->writeq.push_back((char)(mlen & 0xff));
-									_tcpFallbackTunnel->writeq.push_back((char)4); // IPv4
-									_tcpFallbackTunnel->writeq.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_addr.s_addr))),4);
-									_tcpFallbackTunnel->writeq.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port))),2);
-									_tcpFallbackTunnel->writeq.append((const char *)data,len);
-								}
-							}
-							if (flushNow) {
-								void *tmpptr = (void *)_tcpFallbackTunnel;
-								phyOnTcpWritable(_tcpFallbackTunnel->sock,&tmpptr);
-							}
-						} else if (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2))) {
-							const InetAddress addr(ZT_TCP_FALLBACK_RELAY);
-							TcpConnection *tc = new TcpConnection();
-							{
-								Mutex::Lock _l(_tcpConnections_m);
-								_tcpConnections.push_back(tc);
-							}
-							tc->type = TcpConnection::TCP_TUNNEL_OUTGOING;
-							tc->remoteAddr = addr;
-							tc->lastReceive = OSUtils::now();
-							tc->parent = this;
-							tc->sock = (PhySocket *)0; // set in connect handler
-							tc->messageSize = 0;
-							bool connected = false;
-							_phy.tcpConnect(reinterpret_cast<const struct sockaddr *>(&addr),connected,(void *)tc,true);
-						}
-					}
-					_lastSendToGlobalV4 = now;
-				}
-			}
-		}
-#endif // ZT_TCP_FALLBACK_RELAY
-
-		// Even when relaying we still send via UDP. This way if UDP starts
-		// working we can instantly "fail forward" to it and stop using TCP
-		// proxy fallback, which is slow.
-
 		if ((localSocket != -1)&&(localSocket != 0)&&(_binder.isUdpSocketValid((PhySocket *)((uintptr_t)localSocket)))) {
 			if ((ttl)&&(addr->ss_family == AF_INET)) _phy.setIp4UdpTtl((PhySocket *)((uintptr_t)localSocket),ttl);
 			const bool r = _phy.udpSend((PhySocket *)((uintptr_t)localSocket),(const struct sockaddr *)addr,data,len);

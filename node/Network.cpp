@@ -1256,43 +1256,6 @@ void Network::clean()
 	}
 }
 
-void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
-{
-	Mutex::Lock _l(_lock);
-	_remoteBridgeRoutes[mac] = addr;
-
-	// Anti-DOS circuit breaker to prevent nodes from spamming us with absurd numbers of bridge routes
-	while (_remoteBridgeRoutes.size() > ZT_MAX_BRIDGE_ROUTES) {
-		Hashtable< Address,unsigned long > counts;
-		Address maxAddr;
-		unsigned long maxCount = 0;
-
-		MAC *m = (MAC *)0;
-		Address *a = (Address *)0;
-
-		// Find the address responsible for the most entries
-		{
-			Hashtable<MAC,Address>::Iterator i(_remoteBridgeRoutes);
-			while (i.next(m,a)) {
-				const unsigned long c = ++counts[*a];
-				if (c > maxCount) {
-					maxCount = c;
-					maxAddr = *a;
-				}
-			}
-		}
-
-		// Kill this address from our table, since it's most likely spamming us
-		{
-			Hashtable<MAC,Address>::Iterator i(_remoteBridgeRoutes);
-			while (i.next(m,a)) {
-				if (*a == maxAddr)
-					_remoteBridgeRoutes.erase(*m);
-			}
-		}
-	}
-}
-
 Membership::AddCredentialResult Network::addCredential(void *tPtr,const CertificateOfMembership &com)
 {
 	if (com.networkId() != _id)
