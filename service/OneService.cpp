@@ -352,15 +352,6 @@ struct TcpConnection
 	Mutex writeq_m;
 };
 
-struct OneServiceIncomingPacket
-{
-	uint64_t now;
-	int64_t sock;
-	struct sockaddr_storage from;
-	unsigned int size;
-	uint8_t data[ZT_MAX_MTU];
-};
-
 class OneServiceImpl : public OneService
 {
 public:
@@ -383,7 +374,6 @@ public:
 	unsigned int _primaryPort;
 	unsigned int _secondaryPort;
 	unsigned int _tertiaryPort;
-	volatile unsigned int _udpPortPickerCounter;
 
 	// Local configuration and memo-ized information from it
 	json _localConfig;
@@ -397,7 +387,7 @@ public:
 	std::vector< std::string > _interfacePrefixBlacklist;
 	Mutex _localConfig_m;
 
-	std::vector<InetAddress> explicitBind;
+	std::vector<InetAddress> _explicitBind;
 
 	/*
 	 * To attempt to handle NAT/gateway craziness we use three local UDP ports:
@@ -454,9 +444,7 @@ public:
 
 	// uPnP/NAT-PMP port mapper if enabled
 	bool _portMappingEnabled; // local.conf settings
-#ifdef ZT_USE_MINIUPNPC
 	PortMapper *_portMapper;
-#endif
 
 	// Set to false to force service to stop
 	volatile bool _run;
@@ -478,15 +466,12 @@ public:
 		,_localControlSocket6((PhySocket *)0)
 		,_updateAutoApply(false)
 		,_primaryPort(port)
-		,_udpPortPickerCounter(0)
 		,_lastDirectReceiveFromGlobal(0)
 		,_lastRestart(0)
 		,_nextBackgroundTaskDeadline(0)
 		,_termReason(ONE_STILL_RUNNING)
 		,_portMappingEnabled(true)
-#ifdef ZT_USE_MINIUPNPC
 		,_portMapper((PortMapper *)0)
-#endif
 		,_run(true)
 		,_mqc(NULL)
 	{
@@ -501,9 +486,7 @@ public:
 		_phy.close(_localControlSocket4);
 		_phy.close(_localControlSocket6);
 
-#ifdef ZT_USE_MINIUPNPC
 		delete _portMapper;
-#endif
 		delete _controller;
 		delete _mqc;
 	}
@@ -609,7 +592,6 @@ public:
 				}
 			}
 
-#ifdef ZT_USE_MINIUPNPC
 			if (_portMappingEnabled) {
 				// If we're running uPnP/NAT-PMP, bind a *third* port for that. We can't
 				// use the other two ports for that because some NATs do really funky
@@ -633,7 +615,6 @@ public:
 					}
 				}
 			}
-#endif
 
 			// Delete legacy iddb.d if present (cleanup)
 			OSUtils::rmDashRf((_homePath + ZT_PATH_SEPARATOR_S "iddb.d").c_str());
@@ -658,7 +639,6 @@ public:
 			_lastRestart = clockShouldBe;
 			int64_t lastTapMulticastGroupCheck = 0;
 			int64_t lastBindRefresh = 0;
-			int64_t lastUpdateCheck = clockShouldBe;
 			int64_t lastMultipathModeUpdate = 0;
 			int64_t lastCleanedPeersDb = 0;
 			int64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
@@ -706,7 +686,7 @@ public:
 						if (_ports[i])
 							p[pc++] = _ports[i];
 					}
-					_binder.refresh(_phy,p,pc,explicitBind,*this);
+					_binder.refresh(_phy,p,pc,_explicitBind,*this);
 					{
 						Mutex::Lock _l(_nets_m);
 						for(std::map<uint64_t,NetworkState>::iterator n(_nets.begin());n!=_nets.end();++n) {
@@ -756,13 +736,11 @@ public:
 
 					_node->clearLocalInterfaceAddresses();
 
-#ifdef ZT_USE_MINIUPNPC
 					if (_portMapper) {
 						std::vector<InetAddress> mappedAddresses(_portMapper->get());
 						for(std::vector<InetAddress>::const_iterator ext(mappedAddresses.begin());ext!=mappedAddresses.end();++ext)
 							_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)));
 					}
-#endif
 
 					std::vector<InetAddress> boundAddrs(_binder.allBoundLocalInterfaceAddresses());
 					for(std::vector<InetAddress>::const_iterator i(boundAddrs.begin());i!=boundAddrs.end();++i)
@@ -898,7 +876,7 @@ public:
 					if (ips.length() > 0) {
 						InetAddress ip(ips.c_str());
 						if ((ip.ss_family == AF_INET)||(ip.ss_family == AF_INET6))
-							explicitBind.push_back(ip);
+							_explicitBind.push_back(ip);
 					}
 				}
 			}
@@ -1125,11 +1103,7 @@ public:
 						}
 					}
 
-#ifdef ZT_USE_MINIUPNPC
 					settings["portMappingEnabled"] = OSUtils::jsonBool(settings["portMappingEnabled"],true);
-#else
-					settings["portMappingEnabled"] = false; // not supported in build
-#endif
 
 					scode = 200;
 				} else if (ps[0] == "network") {

@@ -7,14 +7,11 @@ endif(WIN32)
 
 set(src
 	OneService.cpp
-	SoftwareUpdater.cpp
 )
 
 set(headers
 	OneService.hpp
-	SoftwareUpdater.hpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${src} ${headers})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
-

@@ -24,8 +24,6 @@
  * of your own application.
  */
 
-#ifdef ZT_USE_MINIUPNPC
-
 #ifndef ZT_PORTMAPPER_HPP
 #define ZT_PORTMAPPER_HPP
 
@@ -39,7 +37,7 @@
 /**
  * How frequently should we refresh our UPNP/NAT-PnP/whatever state?
  */
-#define ZT_PORTMAPPER_REFRESH_DELAY 300000
+#define ZT_PORTMAPPER_REFRESH_DELAY 120000
 
 namespace ZeroTier {
 
@@ -75,5 +73,3 @@ private:
 } // namespace ZeroTier
 
 #endif
-
-#endif // ZT_USE_MINIUPNPC

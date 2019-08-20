@@ -3,9 +3,9 @@
 cmake_minimum_required (VERSION 3.8)
 
 if(${CMAKE_VERSION} VERSION_LESS 3.15)
-    cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
+	cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
 else()
-    cmake_policy(VERSION 3.15)
+	cmake_policy(VERSION 3.15)
 endif()
 
 if(WIN32)
@@ -13,14 +13,17 @@ if(WIN32)
 	set(CMAKE_SYSTEM_VERSION "7" CACHE STRING INTERNAL FORCE)
 endif(WIN32)
 
+#
 # ZeroTier One Version Config
-
+#
 set(ZEROTIER_ONE_VERSION_MAJOR 1 CACHE INTERNAL "")
 set(ZEROTIER_ONE_VERSION_MINOR 9 CACHE INTERNAL "")
 set(ZEROTIER_ONE_VERSION_REVISION 0 CACHE INTERNAL "")
 set(ZEROTIER_ONE_VERSION_BUILD 0 CACHE INTERNAL "")
 
+#
 # Set a default build type if none was specified
+#
 set(default_build_type "Release")
 if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
 	set(default_build_type "Debug")
@@ -168,7 +171,6 @@ endif(WIN32)
 if(BUILD_CENTRAL_CONTROLLER)
 	set(libs ${libs} rabbitmq-static ${PostgreSQL_LIBRARIES})
 endif(BUILD_CENTRAL_CONTROLLER)
-
 
 add_executable(${PROJECT_NAME} ${src} ${headers})
 target_link_libraries(${PROJECT_NAME} ${libs})

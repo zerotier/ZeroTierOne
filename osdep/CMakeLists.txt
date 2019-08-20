@@ -9,6 +9,8 @@ set(src
 	NeighborDiscovery.cpp
 	OSUtils.cpp
 	PortMapper.cpp
+	PortMapper-miniupnpc.c
+	PortMapper-libnatpmp.c
 )
 
 set(headers
@@ -56,5 +58,3 @@ if(APPLE)
 	add_executable(MacEthernetTapAgent MacEthernetTapAgent.c MacEthernetTapAgent.h)
 	target_include_directories(MacEthernetTapAgent PRIVATE ${CMAKE_BINARY_DIR})
 endif(APPLE)
-
-

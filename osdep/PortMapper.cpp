@@ -24,8 +24,6 @@
  * of your own application.
  */
 
-#ifdef ZT_USE_MINIUPNPC
-
 // Uncomment to dump debug messages
 //#define ZT_PORTMAPPER_TRACE 1
 
@@ -125,7 +123,7 @@ public:
 						mode = 1;
 						closenatpmp(&natpmp);
 #ifdef ZT_PORTMAPPER_TRACE
-                        PM_TRACE("PortMapper: NAT-PMP: init failed, switching to UPnP mode" ZT_EOL_S);
+						PM_TRACE("PortMapper: NAT-PMP: init failed, switching to UPnP mode" ZT_EOL_S);
 #endif
 						break;
 					}
@@ -148,7 +146,7 @@ public:
 						publicAddress = InetAddress((uint32_t)response.pnu.publicaddress.addr.s_addr,0);
 					} else {
 #ifdef ZT_PORTMAPPER_TRACE
-                        PM_TRACE("PortMapper: NAT-PMP: request for external address failed, aborting..." ZT_EOL_S);
+						PM_TRACE("PortMapper: NAT-PMP: request for external address failed, aborting..." ZT_EOL_S);
 #endif
 						closenatpmp(&natpmp);
 						break;
@@ -170,8 +168,8 @@ public:
 					if (r == 0) {
 						publicAddress.setPort(response.pnu.newportmapping.mappedpublicport);
 #ifdef ZT_PORTMAPPER_TRACE
-                        char paddr[128];
-                        PM_TRACE("PortMapper: NAT-PMP: mapped %u to %s" ZT_EOL_S,(unsigned int)localPort,publicAddress.toString(paddr));
+						char paddr[128];
+						PM_TRACE("PortMapper: NAT-PMP: mapped %u to %s" ZT_EOL_S,(unsigned int)localPort,publicAddress.toString(paddr));
 #endif
 						Mutex::Lock sl(surface_l);
 						surface.clear();
@@ -188,7 +186,7 @@ public:
 				if (!natPmpSuccess) {
 					mode = 1;
 #ifdef ZT_PORTMAPPER_TRACE
-                    PM_TRACE("PortMapper: NAT-PMP: request failed, switching to UPnP mode" ZT_EOL_S);
+					PM_TRACE("PortMapper: NAT-PMP: request failed, switching to UPnP mode" ZT_EOL_S);
 #endif
 				}
 			}
@@ -213,7 +211,7 @@ public:
 					{
 						UPNPDev *dev = devlist;
 						while (dev) {
-                            PM_TRACE("PortMapper: found UPnP device at URL '%s': %s" ZT_EOL_S,dev->descURL,dev->st);
+							PM_TRACE("PortMapper: found UPnP device at URL '%s': %s" ZT_EOL_S,dev->descURL,dev->st);
 							dev = dev->pNext;
 						}
 					}
@@ -227,11 +225,11 @@ public:
 
 					if ((UPNP_GetValidIGD(devlist,&urls,&data,lanaddr,sizeof(lanaddr)))&&(lanaddr[0])) {
 #ifdef ZT_PORTMAPPER_TRACE
-                        PM_TRACE("PortMapper: UPnP: my LAN IP address: %s" ZT_EOL_S,lanaddr);
+						PM_TRACE("PortMapper: UPnP: my LAN IP address: %s" ZT_EOL_S,lanaddr);
 #endif
 						if ((UPNP_GetExternalIPAddress(urls.controlURL,data.first.servicetype,externalip) == UPNPCOMMAND_SUCCESS)&&(externalip[0])) {
 #ifdef ZT_PORTMAPPER_TRACE
-                            PM_TRACE("PortMapper: UPnP: my external IP address: %s" ZT_EOL_S,externalip);
+							PM_TRACE("PortMapper: UPnP: my external IP address: %s" ZT_EOL_S,externalip);
 #endif
 
 							for(int tries=0;tries<60;++tries) {
@@ -257,7 +255,7 @@ public:
 									memset(haveLeaseDuration,0,sizeof(haveLeaseDuration));
 									if ((UPNP_GetSpecificPortMappingEntry(urls.controlURL,data.first.servicetype,outport,"UDP",(const char *)0,haveIntClient,haveIntPort,haveDesc,haveEnabled,haveLeaseDuration) == UPNPCOMMAND_SUCCESS)&&(uniqueName == haveDesc)) {
 #ifdef ZT_PORTMAPPER_TRACE
-                                        PM_TRACE("PortMapper: UPnP: reusing previously reserved external port: %s" ZT_EOL_S,outport);
+										PM_TRACE("PortMapper: UPnP: reusing previously reserved external port: %s" ZT_EOL_S,outport);
 #endif
 										Mutex::Lock sl(surface_l);
 										surface.clear();
@@ -272,7 +270,7 @@ public:
 								int mapResult = 0;
 								if ((mapResult = UPNP_AddPortMapping(urls.controlURL,data.first.servicetype,outport,inport,lanaddr,uniqueName.c_str(),"UDP",(const char *)0,"0")) == UPNPCOMMAND_SUCCESS) {
 #ifdef ZT_PORTMAPPER_TRACE
-                                    PM_TRACE("PortMapper: UPnP: reserved external port: %s" ZT_EOL_S,outport);
+									PM_TRACE("PortMapper: UPnP: reserved external port: %s" ZT_EOL_S,outport);
 #endif
 									Mutex::Lock sl(surface_l);
 									surface.clear();
@@ -282,7 +280,7 @@ public:
 									break;
 								} else {
 #ifdef ZT_PORTMAPPER_TRACE
-                                    PM_TRACE("PortMapper: UPnP: UPNP_AddPortMapping(%s) failed: %d" ZT_EOL_S,outport,mapResult);
+									PM_TRACE("PortMapper: UPnP: UPNP_AddPortMapping(%s) failed: %d" ZT_EOL_S,outport,mapResult);
 #endif
 									Thread::sleep(1000);
 								}
@@ -291,13 +289,13 @@ public:
 						} else {
 							mode = 0;
 #ifdef ZT_PORTMAPPER_TRACE
-                            PM_TRACE("PortMapper: UPnP: UPNP_GetExternalIPAddress failed, returning to NAT-PMP mode" ZT_EOL_S);
+							PM_TRACE("PortMapper: UPnP: UPNP_GetExternalIPAddress failed, returning to NAT-PMP mode" ZT_EOL_S);
 #endif
 						}
 					} else {
 						mode = 0;
 #ifdef ZT_PORTMAPPER_TRACE
-                        PM_TRACE("PortMapper: UPnP: UPNP_GetValidIGD failed, returning to NAT-PMP mode" ZT_EOL_S);
+						PM_TRACE("PortMapper: UPnP: UPNP_GetValidIGD failed, returning to NAT-PMP mode" ZT_EOL_S);
 #endif
 					}
 
@@ -306,14 +304,14 @@ public:
 				} else {
 					mode = 0;
 #ifdef ZT_PORTMAPPER_TRACE
-                    PM_TRACE("PortMapper: upnpDiscover failed, returning to NAT-PMP mode: %d" ZT_EOL_S,upnpError);
+					PM_TRACE("PortMapper: upnpDiscover failed, returning to NAT-PMP mode: %d" ZT_EOL_S,upnpError);
 #endif
 				}
 			}
 			// ---------------------------------------------------------------------
 
 #ifdef ZT_PORTMAPPER_TRACE
-            PM_TRACE("UPNPClient: rescanning in %d ms" ZT_EOL_S,ZT_PORTMAPPER_REFRESH_DELAY);
+			PM_TRACE("UPNPClient: rescanning in %d ms" ZT_EOL_S,ZT_PORTMAPPER_REFRESH_DELAY);
 #endif
 			Thread::sleep(ZT_PORTMAPPER_REFRESH_DELAY);
 		}
@@ -347,5 +345,3 @@ std::vector<InetAddress> PortMapper::get() const
 }
 
 } // namespace ZeroTier
-
-#endif // ZT_USE_MINIUPNPC
