@@ -495,7 +495,6 @@ public:
 
 			{
 				struct ZT_Node_Callbacks cb;
-				cb.version = 0;
 				cb.stateGetFunction = SnodeStateGetFunction;
 				cb.statePutFunction = SnodeStatePutFunction;
 				cb.wirePacketSendFunction = SnodeWirePacketSendFunction;
@@ -764,7 +763,7 @@ public:
 	}
 
 	void readLocalSettings()
-	{		
+	{
 		// Read local configuration
 		std::map<InetAddress,ZT_PhysicalPathConfiguration> ppc;
 
@@ -1810,12 +1809,6 @@ public:
 	inline void nodeEventCallback(enum ZT_Event event,const void *metaData)
 	{
 		switch(event) {
-			case ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION: {
-				Mutex::Lock _l(_termReason_m);
-				_termReason = ONE_IDENTITY_COLLISION;
-				_fatalErrorMessage = "identity/address collision";
-				this->terminate();
-			}	break;
 
 			case ZT_EVENT_TRACE: {
 				if (metaData) {
@@ -1830,6 +1823,7 @@ public:
 
 			default:
 				break;
+
 		}
 	}
 

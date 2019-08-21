@@ -89,7 +89,6 @@ MacEthernetTap::MacEthernetTap(
 	_nwid(nwid),
 	_homePath(homePath),
 	_mtu(mtu),
-	_metric(metric),
 	_agentStdin(-1),
 	_agentStdout(-1),
 	_agentStderr(-1),

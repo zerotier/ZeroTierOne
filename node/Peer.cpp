@@ -51,7 +51,6 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastWhoisRequestReceived(0),
 	_lastEchoRequestReceived(0),
 	_lastCredentialsReceived(0),
-	_lastTrustEstablishedPacketReceived(0),
 	_lastSentFullHello(0),
 	_lastACKWindowReset(0),
 	_lastQoSWindowReset(0),
@@ -87,7 +86,6 @@ void Peer::received(
 	const Packet::Verb verb,
 	const uint64_t inRePacketId,
 	const Packet::Verb inReVerb,
-	const bool trustEstablished,
 	const uint64_t networkId)
 {
 	const int64_t now = RR->node->now();
@@ -103,11 +101,6 @@ void Peer::received(
 			break;
 		default:
 			break;
-	}
-
-	if (trustEstablished) {
-		_lastTrustEstablishedPacketReceived = now;
-		path->trustedPacketReceived(now);
 	}
 
 	{
@@ -202,51 +195,48 @@ void Peer::received(
 		}
 	}
 
-	// If we have a trust relationship periodically push a message enumerating
-	// all known external addresses for ourselves. If we already have a path this
-	// is done less frequently.
-	if (this->trustEstablished(now)) {
-		const int64_t sinceLastPush = now - _lastDirectPathPushSent;
-		if (sinceLastPush >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH : ZT_DIRECT_PATH_PUSH_INTERVAL)) {
-			_lastDirectPathPushSent = now;
-			std::vector<InetAddress> pathsToPush(RR->node->directPaths());
-			if (pathsToPush.size() > 0) {
-				std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
-				while (p != pathsToPush.end()) {
-					Packet *const outp = new Packet(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
-					outp->addSize(2); // leave room for count
-					unsigned int count = 0;
-					while ((p != pathsToPush.end())&&((outp->size() + 24) < 1200)) {
-						uint8_t addressType = 4;
-						switch(p->ss_family) {
-							case AF_INET:
-								break;
-							case AF_INET6:
-								addressType = 6;
-								break;
-							default: // we currently only push IP addresses
-								++p;
-								continue;
-						}
-
-						outp->append((uint8_t)0); // no flags
-						outp->append((uint16_t)0); // no extensions
-						outp->append(addressType);
-						outp->append((uint8_t)((addressType == 4) ? 6 : 18));
-						outp->append(p->rawIpData(),((addressType == 4) ? 4 : 16));
-						outp->append((uint16_t)p->port());
-
-						++count;
-						++p;
+	// Periodically push direct paths to the peer, doing so more often if we do not
+	// currently have a direct path.
+	const int64_t sinceLastPush = now - _lastDirectPathPushSent;
+	if (sinceLastPush >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH : ZT_DIRECT_PATH_PUSH_INTERVAL)) {
+		_lastDirectPathPushSent = now;
+		std::vector<InetAddress> pathsToPush(RR->node->directPaths());
+		if (pathsToPush.size() > 0) {
+			std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
+			while (p != pathsToPush.end()) {
+				Packet *const outp = new Packet(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
+				outp->addSize(2); // leave room for count
+				unsigned int count = 0;
+				while ((p != pathsToPush.end())&&((outp->size() + 24) < 1200)) {
+					uint8_t addressType = 4;
+					switch(p->ss_family) {
+						case AF_INET:
+							break;
+						case AF_INET6:
+							addressType = 6;
+							break;
+						default: // we currently only push IP addresses
+							++p;
+							continue;
 					}
-					if (count) {
-						outp->setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
-						outp->compress();
-						outp->armor(_key,true);
-						path->send(RR,tPtr,outp->data(),outp->size(),now);
-					}
-					delete outp;
+
+					outp->append((uint8_t)0); // no flags
+					outp->append((uint16_t)0); // no extensions
+					outp->append(addressType);
+					outp->append((uint8_t)((addressType == 4) ? 6 : 18));
+					outp->append(p->rawIpData(),((addressType == 4) ? 4 : 16));
+					outp->append((uint16_t)p->port());
+
+					++count;
+					++p;
 				}
+				if (count) {
+					outp->setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
+					outp->compress();
+					outp->armor(_key,true);
+					path->send(RR,tPtr,outp->data(),outp->size(),now);
+				}
+				delete outp;
 			}
 		}
 	}

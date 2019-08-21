@@ -34,7 +34,7 @@
 
 #include <stdint.h>
 
-// For the struct sockaddr_storage structure
+/* For struct sockaddr_storage, which is referenced here. */
 #if defined(_WIN32) || defined(_WIN64)
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -46,6 +46,8 @@
 #include <sys/socket.h>
 #endif /* Windows or not */
 
+/* This symbol may be defined in a build environment or before including this
+ * header if you need to prepend something to function specifications. */
 #ifndef ZT_SDK_API
 #define ZT_SDK_API
 #endif
@@ -113,24 +115,19 @@ extern "C" {
 #define ZT_MAX_NETWORK_SHORT_NAME_LENGTH 127
 
 /**
- * Maximum number of pushed routes on a network
+ * Maximum number of pushed routes on a network (via ZT in-band mechanisms)
  */
-#define ZT_MAX_NETWORK_ROUTES 32
+#define ZT_MAX_NETWORK_ROUTES 64
 
 /**
- * Maximum number of statically assigned IP addresses per network endpoint using ZT address management (not DHCP)
+ * Maximum number of statically assigned IP addresses (via ZT in-band mechanisms)
  */
-#define ZT_MAX_ZT_ASSIGNED_ADDRESSES 16
+#define ZT_MAX_ZT_ASSIGNED_ADDRESSES 32
 
 /**
- * Maximum number of "specialists" on a network -- bridges, relays, etc.
+ * Maximum number of "specialists" on a network -- bridges, anchors, etc.
  */
 #define ZT_MAX_NETWORK_SPECIALISTS 256
-
-/**
- * Maximum number of multicast group subscriptions per network
- */
-#define ZT_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS 2048
 
 /**
  * Rules engine revision ID, which specifies rules engine capabilities
@@ -143,12 +140,12 @@ extern "C" {
 #define ZT_MAX_NETWORK_RULES 1024
 
 /**
- * Maximum number of per-member capabilities per network
+ * Maximum number of capabilities per network per member
  */
 #define ZT_MAX_NETWORK_CAPABILITIES 128
 
 /**
- * Maximum number of per-member tags per network
+ * Maximum number of tags per network per member
  */
 #define ZT_MAX_NETWORK_TAGS 128
 
@@ -163,7 +160,7 @@ extern "C" {
 #define ZT_MAX_CONFIGURABLE_PATHS 32
 
 /**
- * Maximum number of rules per capability
+ * Maximum number of rules per capability object
  */
 #define ZT_MAX_CAPABILITY_RULES 64
 
@@ -178,14 +175,16 @@ extern "C" {
 #define ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH 7
 
 /**
- * Maximum number of multicast groups a device / network interface can be subscribed to at once
+ * Maximum number of multicast group subscriptions on a local virtual network interface
  */
 #define ZT_MAX_MULTICAST_SUBSCRIPTIONS 1024
 
 /**
  * Maximum value for link quality (min is 0)
  */
-#define ZT_PATH_LINK_QUALITY_MAX 0xff
+#define ZT_PATH_LINK_QUALITY_MAX 255
+
+/* Rule specification contants **********************************************/
 
 /**
  * Packet characteristics flag: packet direction, 1 if inbound 0 if outbound
@@ -271,6 +270,8 @@ extern "C" {
  * Packet characteristics flag: TCP FIN flag
  */
 #define ZT_RULE_PACKET_CHARACTERISTICS_TCP_FIN 0x0000000000000001ULL
+
+/****************************************************************************/
 
 // Fields in remote trace dictionaries
 #define ZT_REMOTE_TRACE_FIELD__EVENT "event"
@@ -402,6 +403,8 @@ enum ZT_ResultCode
 };
 
 /**
+ * Macro to check for a fatal error result code
+ *
  * @param x Result code
  * @return True if result code indicates a fatal error
  */
@@ -452,14 +455,21 @@ enum ZT_Event
 	ZT_EVENT_UP = 0,
 
 	/**
-	 * Node is offline -- network does not seem to be reachable by any available strategy
+	 * Node appears offline
+	 *
+	 * This indicates that the node doesn't seem to be able to reach anything,
+	 * or hasn't for a while. It's not a hard instantaneous thing.
 	 *
 	 * Meta-data: none
 	 */
 	ZT_EVENT_OFFLINE = 1,
 
 	/**
-	 * Node is online -- at least one upstream node appears reachable
+	 * Node appears online
+	 *
+	 * This indicates that the node was offline but now seems to be able to
+	 * reach something. Like OFFLINE it's not a hard instantaneous thing but
+	 * more of an indicator for UI reporting purposes.
 	 *
 	 * Meta-data: none
 	 */
@@ -469,49 +479,20 @@ enum ZT_Event
 	 * Node is shutting down
 	 *
 	 * This is generated within Node's destructor when it is being shut down.
-	 * It's done for convenience, since cleaning up other state in the event
-	 * handler may appear more idiomatic.
+	 * It's done for convenience in case you want to clean up anything during
+	 * node shutdown in your node event handler.
 	 *
 	 * Meta-data: none
 	 */
 	ZT_EVENT_DOWN = 3,
 
-	/**
-	 * Your identity has collided with another node's ZeroTier address
-	 *
-	 * This happens if two different public keys both hash (via the algorithm
-	 * in Identity::generate()) to the same 40-bit ZeroTier address.
-	 *
-	 * This is something you should "never" see, where "never" is defined as
-	 * once per 2^39 new node initializations / identity creations. If you do
-	 * see it, you're going to see it very soon after a node is first
-	 * initialized.
-	 *
-	 * This is reported as an event rather than a return code since it's
-	 * detected asynchronously via error messages from authoritative nodes.
-	 *
-	 * If this occurs, you must shut down and delete the node, delete the
-	 * identity.secret record/file from the data store, and restart to generate
-	 * a new identity. If you don't do this, you will not be able to communicate
-	 * with other nodes.
-	 *
-	 * We'd automate this process, but we don't think silently deleting
-	 * private keys or changing our address without telling the calling code
-	 * is good form. It violates the principle of least surprise.
-	 *
-	 * You can technically get away with not handling this, but we recommend
-	 * doing so in a mature reliable application. Besides, handling this
-	 * condition is a good way to make sure it never arises. It's like how
-	 * umbrellas prevent rain and smoke detectors prevent fires. They do, right?
-	 *
-	 * Meta-data: none
-	 */
-	ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION = 4,
+	// 4 once signaled identity collision but this is no longer an error
 
 	/**
 	 * Trace (debugging) message
 	 *
 	 * These events are only generated if this is a TRACE-enabled build.
+	 * This is for local debug traces, not remote trace diagnostics.
 	 *
 	 * Meta-data: C string, TRACE message
 	 */
@@ -521,7 +502,13 @@ enum ZT_Event
 	 * VERB_USER_MESSAGE received
 	 *
 	 * These are generated when a VERB_USER_MESSAGE packet is received via
-	 * ZeroTier VL1.
+	 * ZeroTier VL1. This can be used for below-VL2 in-band application
+	 * specific signaling over the ZeroTier protocol.
+	 *
+	 * It's up to you to ensure that you handle these in a way that does
+	 * not introduce a remote security vulnerability into your app! If
+	 * your USER_MESSAGE code has a buffer overflow or other vulnerability
+	 * then your app will be vulnerable and this is not ZT's fault. :)
 	 *
 	 * Meta-data: ZT_UserMessage structure
 	 */
@@ -530,12 +517,9 @@ enum ZT_Event
 	/**
 	 * Remote trace received
 	 *
-	 * These are generated when a VERB_REMOTE_TRACE is received. Note
-	 * that any node can fling one of these at us. It is your responsibility
-	 * to filter and determine if it's worth paying attention to. If it's
-	 * not just drop it. Most nodes that are not active controllers ignore
-	 * these, and controllers only save them if they pertain to networks
-	 * with remote tracing enabled.
+	 * NOTE: any node can fling a VERB_REMOTE_TRACE at you. It's up to you
+	 * to determine if you want to do anything with it or just silently
+	 * drop it on the floor. It's also up to you to handle these securely!
 	 *
 	 * Meta-data: ZT_RemoteTrace structure
 	 */
@@ -548,7 +532,7 @@ enum ZT_Event
 typedef struct
 {
 	/**
-	 * ZeroTier address of sender
+	 * ZeroTier address of sender (in least significant 40 bits only)
 	 */
 	uint64_t origin;
 
@@ -563,10 +547,10 @@ typedef struct
 	 *
 	 * The contents of data[] may be modified.
 	 */
-	char *data;
+	const char *data;
 
 	/**
-	 * Length of dict[] in bytes, including terminating null
+	 * Length of dict[] in bytes, INCLUDING terminating null
 	 */
 	unsigned int len;
 } ZT_RemoteTrace;
@@ -633,24 +617,6 @@ typedef struct
 	 */
 	int online;
 } ZT_NodeStatus;
-
-/**
- * Internal node statistics
- * 
- * This structure is subject to change between versions.
- */
-typedef struct
-{
-	/**
-	 * Number of each protocol verb (possible verbs 0..31) received
-	 */
-	uint64_t inVerbCounts[32];
-
-	/**
-	 * Number of bytes for each protocol verb received
-	 */
-	uint64_t inVerbBytes[32];
-} ZT_NodeStatistics;
 
 /**
  * Virtual network status codes
@@ -1082,6 +1048,29 @@ enum ZT_Architecture
 	ZT_ARCHITECTURE_JAVA_JVM = 14,
 	ZT_ARCHITECTURE_WEB = 15,
 	ZT_ARCHITECTURE_S390X = 16
+};
+
+/**
+ * DNS record types for reporting DNS results
+ *
+ * These integer IDs (other than end of results) are the same as the DNS protocol's
+ * internal IDs. Not all of these are used by ZeroTier, and not all DNS record types
+ * are listed here. These are just common ones that are used now or may be used in
+ * the future for some purpose.
+ */
+enum ZT_DNSRecordType
+{
+	ZT_DNS_RECORD__END_OF_RESULTS = 0,
+	ZT_DNS_RECORD_A = 1,
+	ZT_DNS_RECORD_NS = 2,
+	ZT_DNS_RECORD_CNAME = 5,
+	ZT_DNS_RECORD_PTR = 12,
+	ZT_DNS_RECORD_MX = 15,
+	ZT_DNS_RECORD_TXT = 16,
+	ZT_DNS_RECORD_AAAA = 28,
+	ZT_DNS_RECORD_LOC = 29,
+	ZT_DNS_RECORD_SRV = 33,
+	ZT_DNS_RECORD_DNAME = 39
 };
 
 /**
@@ -1604,6 +1593,50 @@ typedef int (*ZT_PathLookupFunction)(
 	int,                              /* Desired ss_family or -1 for any */
 	struct sockaddr_storage *);       /* Result buffer */
 
+/**
+ * Function to request an asynchronous DNS TXT lookup
+ *
+ * Parameters:
+ *  (1) Node
+ *  (2) User pointer
+ *  (3) Thread pointer
+ *  (4) Array of DNS record types we want
+ *  (5) Number of DNS record types in array
+ *  (6) DNS name to fetch
+ *  (7) DNS request ID to supply to ZT_Node_processDNSResult()
+ *
+ * DNS is not handled in the core because every platform and runtime
+ * typically has its own DNS functions or libraries and these may need
+ * to interface with OS or network services in your local environment.
+ * Instead this function and its result submission counterpart are
+ * provided so you can provide a DNS implementation.
+ *
+ * If this callback is set in your callback struct to a NULL value,
+ * DNS will not be available. The ZeroTier protocol is designed to
+ * work in the absence of DNS but you may not get optimal results. For
+ * example you may default to root servers that are not geographically
+ * optimal or your node may cease to function if a root server's IP
+ * changes and there's no way to signal this.
+ *
+ * This function requests resolution of a DNS record. The result
+ * submission method ZT_Node_processDNSResult() must be called at
+ * least once in response. See its documentation.
+ *
+ * Right now ZeroTier only requests resolution of TXT records, but
+ * it's possible that this will change in the future.
+ *
+ * It's safe to call processDNSResult() from within your handler
+ * for this function.
+ */
+typedef void (*ZT_DNSResolver)(
+	ZT_Node *,                        /* Node */
+	void *,                           /* User ptr */
+	void *,                           /* Thread ptr */
+	enum ZT_DNSRecordType *,          /* DNS record type(s) to fetch */
+	unsigned int,                     /* Number of DNS record type(s) */
+	const char *,                     /* DNS name to fetch */
+	uintptr_t);                       /* Request ID for returning results */
+
 /****************************************************************************/
 /* C Node API                                                               */
 /****************************************************************************/
@@ -1613,11 +1646,6 @@ typedef int (*ZT_PathLookupFunction)(
  */
 struct ZT_Node_Callbacks
 {
-	/**
-	 * Struct version -- must currently be 0
-	 */
-	long version;
-
 	/**
 	 * REQUIRED: Function to store and/or replicate state objects
 	 */
@@ -1647,6 +1675,11 @@ struct ZT_Node_Callbacks
 	 * REQUIRED: Function to be called to notify external code of important events
 	 */
 	ZT_EventCallback eventCallback;
+
+	/**
+	 * STRONGLY RECOMMENDED: Function to request a DNS lookup
+	 */
+	ZT_DNSResolver dnsResolver;
 
 	/**
 	 * OPTIONAL: Function to check whether a given physical path should be used
@@ -1747,7 +1780,62 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
  * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,void *tptr,int64_t now,volatile int64_t *nextBackgroundTaskDeadline);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(
+	ZT_Node *node,
+	void *tptr,
+	int64_t now,
+	volatile int64_t *nextBackgroundTaskDeadline);
+
+/**
+ * Submit the result(s) of a requested DNS query
+ *
+ * This MUST be called at least once after the node requsts DNS resolution.
+ * If there are no results or DNS is not implemented or available, just
+ * send one ZT_DNS_RECORD__END_OF_RESULTS to signal that no results were
+ * obtained.
+ *
+ * If result is non-NULL but resultLength is zero then result is assumed to
+ * be a C string terminated by a zero. Passing an unterminated string with a
+ * zero resultLength will result in a crash.
+ *
+ * The results of A and AAAA records can be returned as either strings or
+ * binary IP address bytes (network byte order). If the result is a string,
+ * resultLength must be 0 to signal that result is a C string. Otherwise for
+ * A resultLength must be 4 and for AAAA it must be 16 if the result is
+ * in binary format.
+ *
+ * The Node implementation makes an effort to ignore obviously invalid
+ * submissions like an AAAA record in bianry form with length 25, but this
+ * is not guaranteed. It's possible to crash your program by calling this
+ * with garbage inputs.
+ *
+ * Results may be submitted in any order and order should not be assumed
+ * to have any meaning.
+ *
+ * The ZT_DNS_RECORD__END_OF_RESULTS pseudo-response must be sent after all
+ * results have been submitted. The result and resultLength paramters are
+ * ignored for this type ID.
+ *
+ * It is safe to call this function from inside the DNS request callback,
+ * such as to return a locally cached result or a result from some kind
+ * of local database. It's also safe to call this function from threads
+ * other than the one that received the DNS request.
+ *
+ * @param node Node instance that requested DNS resolution
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
+ * @param dnsRequestID Request ID supplied to DNS request callback
+ * @param recordType Record type of this result
+ * @param result Result (content depends on record type)
+ * @param resultLength Length of result
+ * @param resultIsString If non-zero, IP results for A and AAAA records are being given as C strings not binary IPs
+ */
+ZT_SDK_API void ZT_Node_processDNSResult(
+	ZT_Node *node,
+	void *tptr,
+	uintptr_t dnsRequestID,
+	enum ZT_DNSRecordType recordType,
+	const void *result,
+	unsigned int resultLength);
 
 /**
  * Join a network

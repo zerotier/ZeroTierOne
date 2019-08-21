@@ -101,8 +101,6 @@ public:
 		std::string &responseBody,
 		std::string &responseContentType);
 
-	void handleRemoteTrace(const ZT_RemoteTrace &rt);
-
 	virtual void onNetworkUpdate(const void *db,uint64_t networkId,const nlohmann::json &network);
 	virtual void onNetworkMemberUpdate(const void *db,uint64_t networkId,uint64_t memberId,const nlohmann::json &member);
 	virtual void onNetworkMemberDeauthorize(const void *db,uint64_t networkId,uint64_t memberId);

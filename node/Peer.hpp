@@ -95,7 +95,6 @@ public:
 	 * @param verb Packet verb
 	 * @param inRePacketId Packet ID in reply to (default: none)
 	 * @param inReVerb Verb in reply to (for OK/ERROR, default: VERB_NOP)
-	 * @param trustEstablished If true, some form of non-trivial trust (like allowed in network) has been established
 	 * @param networkId Network ID if this pertains to a network, or 0 otherwise
 	 */
 	void received(
@@ -107,7 +106,6 @@ public:
 		const Packet::Verb verb,
 		const uint64_t inRePacketId,
 		const Packet::Verb inReVerb,
-		const bool trustEstablished,
 		const uint64_t networkId);
 
 	/**
@@ -445,11 +443,6 @@ public:
 	inline bool canUseMultipath() { return _canUseMultipath; }
 
 	/**
-	 * @return True if peer has received a trust established packet (e.g. common network membership) in the past ZT_TRUST_EXPIRATION ms
-	 */
-	inline bool trustEstablished(const int64_t now) const { return ((now - _lastTrustEstablishedPacketReceived) < ZT_TRUST_EXPIRATION); }
-
-	/**
 	 * Rate limit gate for VERB_PUSH_DIRECT_PATHS
 	 */
 	inline bool rateGatePushDirectPaths(const int64_t now)
@@ -567,7 +560,6 @@ private:
 	int64_t _lastWhoisRequestReceived;
 	int64_t _lastEchoRequestReceived;
 	int64_t _lastCredentialsReceived;
-	int64_t _lastTrustEstablishedPacketReceived;
 	int64_t _lastSentFullHello;
 	int64_t _lastPathPrune;
 	int64_t _lastACKWindowReset;

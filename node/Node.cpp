@@ -62,8 +62,6 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 	_lastHousekeepingRun(0),
 	_lastMemoizedTraceSettings(0)
 {
-	if (callbacks->version != 0)
-		throw ZT_EXCEPTION_INVALID_ARGUMENT;
 	memcpy(&_cb,callbacks,sizeof(ZT_Node_Callbacks));
 
 	// Initialize non-cryptographic PRNG from a good random source
@@ -74,7 +72,6 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 	memset(_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
 	memset(_expectingRepliesTo,0,sizeof(_expectingRepliesTo));
 	memset(_lastIdentityVerification,0,sizeof(_lastIdentityVerification));
-	memset((void *)(&_stats),0,sizeof(_stats));
 
 	uint64_t idtmp[2];
 	idtmp[0] = 0; idtmp[1] = 0;
@@ -472,7 +469,7 @@ ZT_PeerList *Node::peers() const
 			p->paths[p->pathCount].expired = 0;
 			p->paths[p->pathCount].preferred = ((*path) == bestp) ? 1 : 0;
 			p->paths[p->pathCount].latency = (float)(*path)->latency();
-			p->paths[p->pathCount].packetDelayVariance = (*path)->packetDelayVariance(); 
+			p->paths[p->pathCount].packetDelayVariance = (*path)->packetDelayVariance();
 			p->paths[p->pathCount].throughputDisturbCoeff = (*path)->throughputDisturbanceCoefficient();
 			p->paths[p->pathCount].packetErrorRatio = (*path)->packetErrorRatio();
 			p->paths[p->pathCount].packetLossRatio = (*path)->packetLossRatio();

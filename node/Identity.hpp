@@ -121,7 +121,7 @@ public:
 	 * @param sha Buffer to receive SHA512 (MUST be ZT_SHA512_DIGEST_LEN (64) bytes in length)
 	 * @return True on success, false if no private key
 	 */
-	inline bool sha512PrivateKey(void *sha) const
+	inline bool sha512PrivateKey(void *const sha) const
 	{
 		if (_hasPrivate) {
 			switch(_type) {
@@ -134,6 +134,29 @@ public:
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Compute a 128-bit short hash of this identity's public key
+	 *
+	 * This is the first 128 bits of a SHA384 hash and is the hash used
+	 * in VERB_WILL_RELAY to report reachability.
+	 *
+	 * @param h 128-bit buffer to receive hash (must be 16 bytes in size)
+	 */
+	inline void publicKeyHash128(void *const h) const
+	{
+		uint8_t tmp[48];
+		switch(_type) {
+			case C25519:
+				SHA384(tmp,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+				break;
+			case P384:
+				SHA384(tmp,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE);
+				break;
+		}
+		for(int i=0;i<16;++i)
+			((uint8_t *)h)[i] = tmp[i];
 	}
 
 	/**
@@ -173,6 +196,7 @@ public:
 				SHA384(h,h,48 + ZT_C25519_PUBLIC_KEY_LEN);
 				ECC384ECDSASign(_priv.p384,h,(uint8_t *)sig);
 				return ZT_ECC384_SIGNATURE_SIZE;
+
 		}
 		return 0;
 	}
@@ -236,10 +260,7 @@ public:
 					C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
 					ECC384ECDH(id._pub.p384,_priv.p384,rawkey + ZT_C25519_SHARED_KEY_LEN);
 					SHA384(h,rawkey,ZT_C25519_SHARED_KEY_LEN + ZT_ECC384_SHARED_SECRET_SIZE);
-					for(unsigned int i=0;i<32;++i)
-						key[i] = h[i];
-					for(unsigned int i=0;i<16;++i)
-						key[i] ^= h[32+i];
+					memcpy(key,h,ZT_PEER_SECRET_KEY_LENGTH);
 					return true;
 				} else if (id._type == C25519) {
 					// If the other identity is a C25519 identity we can agree using only that type.

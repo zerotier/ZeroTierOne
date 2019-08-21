@@ -67,6 +67,12 @@
 #include "Phy.hpp"
 #include "OSUtils.hpp"
 
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__))
+#define ZT_UDP_DESIRED_BUF_SIZE 1048576
+#else
+#define ZT_UDP_DESIRED_BUF_SIZE 131072
+#endif
+
 // Period between refreshes of bindings
 #define ZT_BINDER_REFRESH_PERIOD 30000
 

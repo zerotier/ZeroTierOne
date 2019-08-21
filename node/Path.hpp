@@ -97,7 +97,6 @@ public:
 	inline Path() :
 		_lastOut(0),
 		_lastIn(0),
-		_lastTrustEstablishedPacketReceived(0),
 		_lastPathQualityComputeTime(0),
 		_localSocket(-1),
 		_latency(0xffff),
@@ -130,7 +129,6 @@ public:
 	inline Path(const int64_t localSocket,const InetAddress &addr) :
 		_lastOut(0),
 		_lastIn(0),
-		_lastTrustEstablishedPacketReceived(0),
 		_lastPathQualityComputeTime(0),
 		_localSocket(localSocket),
 		_latency(0xffff),
@@ -169,11 +167,6 @@ public:
 	 * @param t Time of receive
 	 */
 	inline void received(const uint64_t t) { _lastIn = t; }
-
-	/**
-	 * Set time last trusted packet was received (done in Peer::received())
-	 */
-	inline void trustedPacketReceived(const uint64_t t) { _lastTrustEstablishedPacketReceived = t; }
 
 	/**
 	 * Send a packet via this path (last out time is also updated)
@@ -225,11 +218,6 @@ public:
 	 * @return IP scope -- faster shortcut for address().ipScope()
 	 */
 	inline InetAddress::IpScope ipScope() const { return _ipScope; }
-
-	/**
-	 * @return True if path has received a trust established packet (e.g. common network membership) in the past ZT_TRUST_EXPIRATION ms
-	 */
-	inline bool trustEstablished(const int64_t now) const { return ((now - _lastTrustEstablishedPacketReceived) < ZT_TRUST_EXPIRATION); }
 
 	/**
 	 * @return Preference rank, higher == better
@@ -642,17 +630,11 @@ public:
 	 */
 	inline int64_t lastIn() const { return _lastIn; }
 
-	/**
-	 * @return Time last trust-established packet was received
-	 */
-	inline int64_t lastTrustEstablishedPacketReceived() const { return _lastTrustEstablishedPacketReceived; }
-
 private:
 	Mutex _statistics_m;
 
 	volatile int64_t _lastOut;
 	volatile int64_t _lastIn;
-	volatile int64_t _lastTrustEstablishedPacketReceived;
 	volatile int64_t _lastPathQualityComputeTime;
 	int64_t _localSocket;
 	volatile unsigned int _latency;

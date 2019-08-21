@@ -74,8 +74,10 @@
  *    + Peer-to-peer multicast replication (optional)
  *    + Old planet/moon stuff is DEAD!
  *    + AES256-GCM encryption is now the default
- *    + NIST P-384 type identities now supported (25519 still default)
- *    + Min proto version is now 8 (1.1.17 and newer)
+ *    + NIST P-384 (type 1) identities now supported
+ *    + Minimum proto version is now 8 (1.1.17 and newer)
+ *    + WILL_RELAY allows mesh-like operation
+ *    + Ephemeral keys are now negotiated opportunistically
  */
 #define ZT_PROTO_VERSION 11
 
@@ -887,7 +889,81 @@ public:
 		 * pertain directly to activity on a network, or to global observers if
 		 * locally configured.
 		 */
-		VERB_REMOTE_TRACE = 0x15
+		VERB_REMOTE_TRACE = 0x15,
+
+		/**
+		 * A signed locator for this node:
+		 *   <[8] 64-bit flags>
+		 *   <[2] 16-bit length of locator>
+		 *   <[...] serialized locator>
+		 *
+		 * This message is sent in response to OK(HELLO) and can be pushed
+		 * opportunitistically. Its payload is a signed Locator object that
+		 * attests to where and how this Node may be reached. A locator can
+		 * contain static IPs/ports or other ZeroTier nodes that can be used
+		 * to reach this one.
+		 *
+		 * These Locator objects can be stored e.g. by roots in LF to publish
+		 * node reachability. Since they're signed any node can verify that
+		 * the originating node approves of their content.
+		 */
+		VERB_LOCATOR = 0x16,
+
+		/**
+		 * A list of peers this node will relay traffic to/from:
+		 *   <[2] 16-bit number of peers>
+		 *   <[16] 128-bit hash of node public key>
+		 *   <[2] 16-bit latency to node or 0 if unspecified>
+		 *   <[1] 8-bit number of network hops to node or 0 if unspecified>
+		 *   <[4] 32-bit max bandwidth in megabits or 0 if unspecified>
+		 *  [<[...] additional hash,latency,hops,bandwidth tuples>]
+		 *
+		 * This messages can be pushed to indicate that this peer is willing
+		 * to relay traffic to other peers. It contains a list of 128-bit
+		 * hashes (the first 128 bits of a SHA512) of identity public keys
+		 * of currently reachable and willing-to-relay-for nodes.
+		 *
+		 * This can be used to initiate mesh-like behavior in ZeroTier. The
+		 * peers for which this node is willing to relay are reported as
+		 * hashes of their identity public keys. This prevents this message
+		 * from revealing explicit information about linked peers. The
+		 * receiving peer can only "see" a will-relay entry if it knows the
+		 * identity of the peer it is trying to reach.
+		 */
+  	VERB_WILL_RELAY = 0x17,
+
+		/**
+		 * A push of one or more ephemeral key pairs:
+		 *   <[2] 8-bit length of random padding>
+		 *   <[...] random padding>
+		 *   <[1] 8-bit number of keys in message>
+		 *   <[1] 8-bit key type>
+		 *   <[4] 32-bit max key ttl in seconds or 0 for unspecified>
+		 *   <[4] 32-bit reserved field (currently always 0)>
+		 *   <[...] public key (length determined by type)>
+		 *  [<[...] additional keys as type, ttl, flags, key>]
+		 *
+		 * This verb is used to push ephemeral keys. A node replies to each
+		 * ephemeral key push with an OK message containing its own current
+		 * ephemeral keys that it wants to use for p2p communication.
+		 *
+		 * These are ephemeral public keys. Currently keys of type C25519
+		 * and P-384 are supported and both will be pushed.
+		 *
+		 * If more than one key is pushed, key agreement is performed using
+		 * all keys for which both peers pushed the same key type. The raw
+		 * results of these keys are then hashed together in order of key
+		 * type ID with SHA384 to yield a session key. If the desired session
+		 * key is shorter than 384 bits the first N bits are used.
+		 *
+		 * The random padding component can be used to ranomize the length
+		 * of these packets so adversaries can't easily selectively block
+		 * ephemeral key exchange by exploiting a fixed packet length.
+		 *
+		 * OK response payload:
+		 *   <[...] responder's keys, same format as verb payload>
+		 */
+		VERB_EPHEMERAL_KEY = 0x18
 	};
 
 	/**

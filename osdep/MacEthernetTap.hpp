@@ -83,7 +83,6 @@ private:
 	std::vector<MulticastGroup> _multicastGroups;
 	Mutex _putLock;
 	unsigned int _mtu;
-	unsigned int _metric;
 	int _shutdownSignalPipe[2];
 	int _agentStdin,_agentStdout,_agentStderr,_agentStdin2,_agentStdout2,_agentStderr2;
 	long _agentPid;

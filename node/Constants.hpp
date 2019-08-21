@@ -470,7 +470,7 @@
 
 /**
  * Delay between full-fledge pings of directly connected peers.
- * 
+ *
  * With multipath bonding enabled ping peers more often to measure
  * packet loss and latency. This uses more bandwidth so is disabled
  * by default to avoid increasing idle bandwidth use for regular
@@ -621,23 +621,17 @@
 
 /**
  * Size of a buffer to store either a C25519 or an ECC P-384 signature
+ *
+ * This must be large enough to hold all signature types.
  */
 #define ZT_SIGNATURE_BUFFER_SIZE 96
-
-/**
- * Desired buffer size for UDP sockets (used in service and osdep but defined here)
- */
-#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__))
-#define ZT_UDP_DESIRED_BUF_SIZE 1048576
-#else
-#define ZT_UDP_DESIRED_BUF_SIZE 131072
-#endif
 
 /**
  * Desired / recommended min stack size for threads (used on some platforms to reset thread stack size)
  */
 #define ZT_THREAD_MIN_STACK_SIZE 1048576
 
+// Internal cryptographic algorithm IDs
 #define ZT_CRYPTO_ALG_C25519 0
 #define ZT_CRYPTO_ALG_P384 1
 
