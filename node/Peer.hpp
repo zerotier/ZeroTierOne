@@ -29,8 +29,6 @@
 
 #include <vector>
 
-#include "../include/ZeroTierOne.h"
-
 #include "Constants.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Node.hpp"
@@ -95,7 +93,7 @@ public:
 	 * @param verb Packet verb
 	 * @param inRePacketId Packet ID in reply to (default: none)
 	 * @param inReVerb Verb in reply to (for OK/ERROR, default: VERB_NOP)
-	 * @param networkId Network ID if this pertains to a network, or 0 otherwise
+	 * @param networkId Network ID if this packet is related to a network, 0 otherwise
 	 */
 	void received(
 		void *tPtr,
@@ -247,39 +245,16 @@ public:
 	void sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now);
 
 	/**
-	 * Send ECHO (or HELLO for older peers) to this peer at the given address
-	 *
-	 * No statistics or sent times are updated here.
-	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param localSocket Local source socket
-	 * @param atAddress Destination address
-	 * @param now Current time
-	 * @param sendFullHello If true, always send a full HELLO instead of just an ECHO
-	 */
-	void attemptToContactAt(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now,bool sendFullHello);
-
-	/**
-	 * Try a memorized or statically defined path if any are known
-	 *
-	 * Under the hood this is done periodically based on ZT_TRY_MEMORIZED_PATH_INTERVAL.
-	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param now Current time
-	 */
-	void tryMemorizedPath(void *tPtr,int64_t now);
-
-	/**
-	 * Send pings or keepalives depending on configured timeouts
+	 * Send pings to active paths
 	 *
 	 * This also cleans up some internal data structures. It's called periodically from Node.
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
-	 * @param inetAddressFamily Keep this address family alive, or -1 for any
-	 * @return 0 if nothing sent or bit mask: bit 0x1 if IPv4 sent, bit 0x2 if IPv6 sent (0x3 means both sent)
+	 * @param v4SendCount Number of IPv4 packets sent (result parameter)
+	 * @param v6SendCount Number of IPv6 packets sent (result parameter)
 	 */
-	unsigned int doPingAndKeepalive(void *tPtr,int64_t now);
+	void ping(void *tPtr,int64_t now,unsigned int &v4SendCount,unsigned int &v6SendCount);
 
 	/**
 	 * Clear paths whose localSocket(s) are in a CLOSED state or have an otherwise INVALID state.
@@ -290,16 +265,6 @@ public:
 	 * @return Number of paths that were pruned this round
 	 */
 	unsigned int prunePaths();
-
-	/**
-	 * Process a cluster redirect sent by this peer
-	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param originatingPath Path from which redirect originated
-	 * @param remoteAddress Remote address
-	 * @param now Current time
-	 */
-	void clusterRedirect(void *tPtr,const SharedPtr<Path> &originatingPath,const InetAddress &remoteAddress,const int64_t now);
 
 	/**
 	 * Reset paths within a given IP scope and address family
@@ -340,11 +305,6 @@ public:
 	 * @return True if we've heard from this peer in less than ZT_PEER_ACTIVITY_TIMEOUT
 	 */
 	inline bool isAlive(const int64_t now) const { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
-
-	/**
-	 * @return True if this peer has sent us real network traffic recently
-	 */
-	inline int64_t isActive(int64_t now) const { return ((now - _lastNontrivialReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Latency in milliseconds of best/aggregate path or 0xffff if unknown / no paths
@@ -417,7 +377,7 @@ public:
 	 *
 	 * @param now Current time
 	 */
-	inline void processBackgroundPeerTasks(const int64_t now);
+	void processBackgroundPeerTasks(const int64_t now);
 
 	/**
 	 * Record that the remote peer does have multipath enabled. As is evident by the receipt of a VERB_ACK
@@ -541,10 +501,9 @@ public:
 private:
 	struct _PeerPath
 	{
-		_PeerPath() : lr(0),p(),priority(1) {}
+		_PeerPath() : lr(0),p() {}
 		int64_t lr; // time of last valid ZeroTier packet
 		SharedPtr<Path> p;
-		long priority; // >= 1, higher is better
 	};
 
 	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
@@ -552,15 +511,12 @@ private:
 	const RuntimeEnvironment *RR;
 
 	int64_t _lastReceive; // direct or indirect
-	int64_t _lastNontrivialReceive; // frames, things like netconf, etc.
-	int64_t _lastTriedMemorizedPath;
 	int64_t _lastDirectPathPushSent;
 	int64_t _lastDirectPathPushReceive;
 	int64_t _lastCredentialRequestSent;
 	int64_t _lastWhoisRequestReceived;
 	int64_t _lastEchoRequestReceived;
 	int64_t _lastCredentialsReceived;
-	int64_t _lastSentFullHello;
 	int64_t _lastPathPrune;
 	int64_t _lastACKWindowReset;
 	int64_t _lastQoSWindowReset;

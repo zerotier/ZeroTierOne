@@ -106,7 +106,7 @@ public:
 	int addLocalInterfaceAddress(const struct sockaddr_storage *addr);
 	void clearLocalInterfaceAddresses();
 	int sendUserMessage(void *tptr,uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
-	void setNetconfMaster(void *networkControllerInstance);
+	void setController(void *networkControllerInstance);
 
 	// Internal functions ------------------------------------------------------
 
@@ -187,7 +187,6 @@ public:
 	bool shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,const int64_t localSocket,const InetAddress &remoteAddress);
 	inline bool externalPathLookup(void *tPtr,const Address &ztaddr,int family,InetAddress &addr) { return ( (_cb.pathLookupFunction) ? (_cb.pathLookupFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ztaddr.toInt(),family,reinterpret_cast<struct sockaddr_storage *>(&addr)) != 0) : false ); }
 
-	uint64_t prng();
 	ZT_ResultCode setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig);
 
 	inline const Identity &identity() const { return _RR.identity; }
@@ -309,7 +308,6 @@ private:
 	int64_t _lastPingCheck;
 	int64_t _lastHousekeepingRun;
 	int64_t _lastMemoizedTraceSettings;
-	volatile int64_t _prngState[2];
 	bool _online;
 };
 

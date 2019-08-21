@@ -111,7 +111,7 @@ unsigned int Multicaster::gather(const Address &queryingPeer,uint64_t nwid,const
 		// will return different subsets of a large multicast group.
 		k = 0;
 		while ((added < limit)&&(k < s->members.size())&&((appendTo.size() + ZT_ADDRESS_LENGTH) <= ZT_PROTO_MAX_PACKET_LENGTH)) {
-			rptr = (unsigned int)RR->node->prng();
+			rptr = (unsigned int)Utils::random();
 
 restart_member_scan:
 			a = s->members[rptr % (unsigned int)s->members.size()].address.toInt();
@@ -183,7 +183,7 @@ void Multicaster::send(
 			for(unsigned long i=0;i<gs.members.size();++i)
 				indexes[i] = i;
 			for(unsigned long i=(unsigned long)gs.members.size()-1;i>0;--i) {
-				unsigned long j = (unsigned long)RR->node->prng() % (i + 1);
+				unsigned long j = (unsigned long)Utils::random() % (i + 1);
 				unsigned long tmp = indexes[j];
 				indexes[j] = indexes[i];
 				indexes[i] = tmp;
@@ -251,7 +251,7 @@ void Multicaster::send(
 				for(unsigned int i=0;i<accnt;++i)
 					shuffled[i] = i;
 				for(unsigned int i=0,k=accnt>>1;i<k;++i) {
-					const uint64_t x = RR->node->prng();
+					const uint64_t x = Utils::random();
 					const unsigned int x1 = shuffled[(unsigned int)x % accnt];
 					const unsigned int x2 = shuffled[(unsigned int)(x >> 32) % accnt];
 					const unsigned int tmp = shuffled[x1];

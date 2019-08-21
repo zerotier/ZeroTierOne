@@ -432,7 +432,7 @@ static _doZtFilterResult _doZtFilter(
 				thisRuleMatches = (uint8_t)((frameLen >= (unsigned int)rules[rn].v.frameSize[0])&&(frameLen <= (unsigned int)rules[rn].v.frameSize[1]));
 				break;
 			case ZT_NETWORK_RULE_MATCH_RANDOM:
-				thisRuleMatches = (uint8_t)((uint32_t)(RR->node->prng() & 0xffffffffULL) <= rules[rn].v.randomProbability);
+				thisRuleMatches = (uint8_t)((uint32_t)(Utils::random() & 0xffffffffULL) <= rules[rn].v.randomProbability);
 				break;
 			case ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE:
 			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
@@ -702,6 +702,9 @@ bool Network::filterOutgoingPacket(
 	}
 
 	if (accept) {
+		if (membership)
+			membership->logSentBytes(frameLen);
+
 		if ((!noTee)&&(cc)) {
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
@@ -820,6 +823,8 @@ int Network::filterIncomingPacket(
 	}
 
 	if (accept) {
+		membership.logReceivedBytes(frameLen);
+
 		if (cc) {
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);

@@ -215,13 +215,16 @@ public:
 	/**
 	 * Apply a function or function object to all peers
 	 *
+	 * This locks the peer map during execution, so calls to get() etc. during
+	 * eachPeer() will deadlock.
+	 *
 	 * @param f Function to apply
 	 * @tparam F Function or function object type
 	 */
 	template<typename F>
 	inline void eachPeer(F f)
 	{
-		Mutex::Lock _l(_peers_m);
+		Mutex::Lock l(_peers_m);
 		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
@@ -231,12 +234,51 @@ public:
 	}
 
 	/**
-	 * @return All peers by address (unsorted)
+	 * Apply a function or function object to all roots
+	 *
+	 * Arguments to the function are this topology object, the root in
+	 * question, and a pointer to the peer corresponding to it.
+	 *
+	 * This locks the root list during execution but other operations
+	 * are fine.
+	 *
+	 * @param f Function to apply
+	 * @tparam F function or function object type
 	 */
-	inline std::vector< std::pair< Address,SharedPtr<Peer> > > allPeers() const
+	template<typename F>
+	inline void eachRoot(F f) const
 	{
-		Mutex::Lock _l(_peers_m);
-		return _peers.entries();
+		Mutex::Lock l(_roots_m);
+		SharedPtr<Peer> rp;
+		for(std::vector<Root>::const_iterator i(_roots.begin());i!=_roots.end();++i) {
+			{
+				SharedPtr::Lock l2(_peers_m);
+				const SharedPtr<Peer> *const ap = _peers.get(i->address());
+				if (ap) {
+					rp = *ap;
+				} else {
+					rp.set(new Peer(RR,_myIdentity,i->id()));
+					_peers.set(rp->address(),rp);
+				}
+			}
+			f(*this,*i,rp);
+		}
+	}
+
+	/**
+	 * @param allPeers vector to fill with all current peers
+	 */
+	inline void getAllPeers(std::vector< SharedPtr<Peer> > &allPeers) const
+	{
+		Mutex::Lock l(_peers_m);
+		allPeers.clear();
+		allPeers.reserve(_peers.size());
+		Hashtable< Address,SharedPtr<Peer> >::Iterator i(*(const_cast<Hashtable< Address,SharedPtr<Peer> > *>(&_peers)));
+		Address *a = (Address *)0;
+		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+		while (i.next(a,p)) {
+			allPeers.push_back(*p);
+		}
 	}
 
 	/**
@@ -315,22 +357,22 @@ public:
 			std::map<InetAddress,ZT_PhysicalPathConfiguration> cpaths;
 			for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i)
 				cpaths[_physicalPathConfig[i].first] = _physicalPathConfig[i].second;
-	
+
 			if (pathConfig) {
 				ZT_PhysicalPathConfiguration pc(*pathConfig);
-	
+
 				if (pc.mtu <= 0)
 					pc.mtu = ZT_DEFAULT_PHYSMTU;
 				else if (pc.mtu < ZT_MIN_PHYSMTU)
 					pc.mtu = ZT_MIN_PHYSMTU;
 				else if (pc.mtu > ZT_MAX_PHYSMTU)
 					pc.mtu = ZT_MAX_PHYSMTU;
-	
+
 				cpaths[*(reinterpret_cast<const InetAddress *>(pathNetwork))] = pc;
 			} else {
 				cpaths.erase(*(reinterpret_cast<const InetAddress *>(pathNetwork)));
 			}
-	
+
 			unsigned int cnt = 0;
 			for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::const_iterator i(cpaths.begin());((i!=cpaths.end())&&(cnt<ZT_MAX_CONFIGURABLE_PATHS));++i) {
 				_physicalPathConfig[cnt].first = i->first;

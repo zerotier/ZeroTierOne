@@ -223,6 +223,7 @@ bool IncomingPacket::_doQOS_MEASUREMENT(const RuntimeEnvironment *RR,void *tPtr,
 {
 	if (!peer->rateGateQoS(RR->node->now()))
 		return true;
+
 	/* Dissect incoming QoS packet. From this we can compute latency values and their variance.
 	 * The latency variance is used as a measure of "jitter". */
 	if (peer->localMultipathSupport()) {
@@ -349,12 +350,14 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 
 	// VALID -- if we made it here, packet passed identity and authenticity checks!
 
-	// Get external surface address if present (was not in old versions)
-	InetAddress externalSurfaceAddress;
-	if (ptr < size()) {
-		ptr += externalSurfaceAddress.deserialize(*this,ptr);
-		if ((externalSurfaceAddress)&&(hops() == 0))
-			RR->sa->iam(tPtr,id.address(),_path->localSocket(),_path->address(),externalSurfaceAddress,RR->topology->isRoot(id),now);
+	// Get address to which this packet was sent to learn our external surface address if packet was direct.
+	if (hops() == 0) {
+		InetAddress externalSurfaceAddress;
+		if (ptr < size()) {
+			ptr += externalSurfaceAddress.deserialize(*this,ptr);
+			if ((externalSurfaceAddress)&&(hops() == 0))
+				RR->sa->iam(tPtr,id.address(),_path->localSocket(),_path->address(),externalSurfaceAddress,RR->topology->isRoot(id),now);
+		}
 	}
 
 	// Send OK(HELLO) with an echo of the packet's timestamp and some of the same
@@ -398,20 +401,17 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 			if (vProto < ZT_PROTO_VERSION_MIN)
 				return true;
 
-			InetAddress externalSurfaceAddress;
-			unsigned int ptr = ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2;
-
-			// Get reported external surface address if present
-			if (ptr < size())
-				ptr += externalSurfaceAddress.deserialize(*this,ptr);
-			if (!hops()) {
+			if (hops() == 0) {
 				_path->updateLatency((unsigned int)latency,RR->node->now());
+				if ((ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2) < size()) {
+					InetAddress externalSurfaceAddress;
+					externalSurfaceAddress.deserialize(*this,ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2);
+					if (externalSurfaceAddress)
+						RR->sa->iam(tPtr,peer->address(),_path->localSocket(),_path->address(),externalSurfaceAddress,RR->topology->isRoot(peer->identity()),RR->node->now());
+				}
 			}
 
 			peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
-
-			if ((externalSurfaceAddress)&&(hops() == 0))
-				RR->sa->iam(tPtr,peer->address(),_path->localSocket(),_path->address(),externalSurfaceAddress,RR->topology->isRoot(peer->identity()),RR->node->now());
 		}	break;
 
 		case Packet::VERB_WHOIS:
@@ -528,16 +528,14 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,void *tPtr,const
 			if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
 				InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
 				if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,with,_path->localSocket(),atAddr)) {
-					const uint64_t junk = RR->node->prng();
+					const uint64_t junk = Utils::random();
 					RR->node->putPacket(tPtr,_path->localSocket(),atAddr,&junk,4,2); // send low-TTL junk packet to 'open' local NAT(s) and stateful firewalls
-					rendezvousWith->attemptToContactAt(tPtr,_path->localSocket(),atAddr,RR->node->now(),false);
+					rendezvousWith->sendHELLO(tPtr,_path->localSocket(),atAddr,RR->node->now());
 				}
 			}
 		}
 	}
-
 	peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP,0);
-
 	return true;
 }
 
@@ -560,9 +558,7 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,void *tPtr,const Shar
 			return false;
 		}
 	}
-
 	peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_FRAME,0,Packet::VERB_NOP,nwid);
-
 	return true;
 }
 
@@ -1003,8 +999,6 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 	unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
 
 	while (count--) { // if ptr overflows Buffer will throw
-		// TODO: some flags are not yet implemented
-
 		unsigned int flags = (*this)[ptr++];
 		unsigned int extLen = at<uint16_t>(ptr); ptr += 2;
 		ptr += extLen; // unused right now
@@ -1014,26 +1008,20 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 		switch(addrType) {
 			case 4: {
 				const InetAddress a(field(ptr,4),4,at<uint16_t>(ptr + 4));
-				if ((!( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) == 0) && (peer->hasActivePathTo(now,a)) )) && // not already known
-				    (RR->node->shouldUsePathForZeroTierTraffic(tPtr,peer->address(),_path->localSocket(),a)) ) // should use path
+				if ((!peer->hasActivePathTo(now,a)) && // not already known
+				    (RR->node->shouldUsePathForZeroTierTraffic(tPtr,peer->address(),-1,a)) ) // should use path
 				{
-					if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0) {
-						peer->clusterRedirect(tPtr,_path,a,now);
-					} else if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
-						peer->attemptToContactAt(tPtr,InetAddress(),a,now,false);
-					}
+					if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY)
+						peer->sendHELLO(tPtr,-1,a,now);
 				}
 			}	break;
 			case 6: {
 				const InetAddress a(field(ptr,16),16,at<uint16_t>(ptr + 16));
-				if ((!( ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) == 0) && (peer->hasActivePathTo(now,a)) )) && // not already known
-				    (RR->node->shouldUsePathForZeroTierTraffic(tPtr,peer->address(),_path->localSocket(),a)) ) // should use path
+				if ((!peer->hasActivePathTo(now,a)) && // not already known
+				    (RR->node->shouldUsePathForZeroTierTraffic(tPtr,peer->address(),-1,a)) ) // should use path
 				{
-					if ((flags & ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT) != 0) {
-						peer->clusterRedirect(tPtr,_path,a,now);
-					} else if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
-						peer->attemptToContactAt(tPtr,InetAddress(),a,now,false);
-					}
+					if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY)
+						peer->sendHELLO(tPtr,-1,a,now);
 				}
 			}	break;
 		}

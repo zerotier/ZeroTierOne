@@ -599,7 +599,7 @@ public:
 
 			// Network controller is now enabled by default for desktop and server
 			_controller = new EmbeddedNetworkController(_node,_homePath.c_str(),_controllerDbPath.c_str(),_ports[0], _mqc);
-			_node->setNetconfMaster((void *)_controller);
+			_node->setController((void *)_controller);
 
 			// Join existing networks in networks.d
 			{

@@ -135,11 +135,6 @@
  */
 #define ZT_PROTO_VERB_FLAG_COMPRESSED 0x80
 
-/**
- * PUSH_DIRECT_PATHS flag: cluster redirect
- */
-#define ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT 0x02
-
 // Field indexes in packet header
 #define ZT_PACKET_IDX_IV 0
 #define ZT_PACKET_IDX_DEST 8
@@ -799,7 +794,6 @@ public:
 		 *
 		 * Path record flags:
 		 *   0x01 - Forget this path if currently known (not implemented yet)
-		 *   0x02 - Cluster redirect -- use this in preference to others
 		 *
 		 * The receiver may, upon receiving a push, attempt to establish a
 		 * direct link to one or more of the indicated addresses. It is the

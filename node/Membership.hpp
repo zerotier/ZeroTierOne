@@ -110,10 +110,10 @@ public:
 		return nconf.com.agreesWith(_com); // check timestamp agreement window
 	}
 
-	inline bool recentlyAssociated(const int64_t now) const
-	{
-		return ((_com)&&((now - _com.timestamp()) < ZT_PEER_ACTIVITY_TIMEOUT));
-	}
+	/**
+	 * @return True if this peer has sent us a valid certificate within ZT_PEER_ACTIVITY_TIMEOUT
+	 */
+	inline bool recentlyAssociated(const int64_t now) const { return ((_com)&&((now - _com.timestamp()) < ZT_PEER_ACTIVITY_TIMEOUT)); }
 
 	/**
 	 * Check whether the peer represented by this Membership owns a given address
@@ -170,6 +170,26 @@ public:
 	 */
 	static uint64_t credentialKey(const Credential::Type &t,const uint32_t i) { return (((uint64_t)t << 32) | (uint64_t)i); }
 
+	/**
+	 * @return Bytes received so far
+	 */
+	inline uint64_t receivedBytes() const { return _received; }
+
+	/**
+	 * @return Bytes sent so far
+	 */
+	inline uint64_t sentBytes() const { return _sent; }
+
+	/**
+	 * @param bytes Bytes received
+	 */
+	inline void logReceivedBytes(const unsigned int bytes) { _received = (uint64_t)bytes; }
+
+	/**
+	 * @param bytes Bytes sent
+	 */
+	inline void logSentBytes(const unsigned int bytes) { _sent = (uint64_t)bytes; }
+
 private:
 	// This returns true if a resource is an IPv6 NDP-emulated address. These embed the ZT
 	// address of the peer and therefore cannot be spoofed, causing peerOwnsAddress() to
@@ -220,6 +240,12 @@ private:
 
 	// Time we last pushed credentials
 	int64_t _lastPushedCredentials;
+
+	// Number of Ethernet frame bytes received
+	uint64_t _received;
+
+	// Number of Ethernet frame bytes sent
+	uint64_t _sent;
 
 	// Remote member's latest network COM
 	CertificateOfMembership _com;

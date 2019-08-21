@@ -51,14 +51,11 @@ namespace ZeroTier {
  *
  * It's also possible to create a root with no DNS and no DNS validator public key. This root
  * will be a static entry pointing to a single root identity and set of physical addresses.
- *
- * This object is thread-safe and may be concurrently accessed and updated.
  */
 class Root
 {
 public:
 	inline Root() : _dnsPublicKeySize(0) {}
-	inline Root(const Root &r) { *this = r; }
 
 	/**
 	 * Create a new root entry
@@ -83,25 +80,11 @@ public:
 		}
 	}
 
-	inline Root &operator=(const Root &r)
-	{
-		Mutex::Lock l(_lock);
-		Mutex::Lock rl(r._lock);
-		_defaultIdentity = r._defaultIdentity;
-		_defaultAddresses = r._defaultAddresses;
-		_dnsName = r._dnsName;
-		_lastFetchedLocator = r._lastFetchedLocator;
-		_dnsPublicKeySize = r._dnsPublicKeySize;
-		memcpy(_dnsPublicKey,r._dnsPublicKey,_dnsPublicKeySize);
-		return *this;
-	}
-
 	/**
 	 * @return Current identity (either default or latest locator)
 	 */
 	inline const Identity id() const
 	{
-		Mutex::Lock l(_lock);
 		if (_lastFetchedLocator.id())
 			return _lastFetchedLocator.id();
 		return _defaultIdentity;
@@ -113,7 +96,6 @@ public:
 	 */
 	inline bool is(const Identity &id) const
 	{
-		Mutex::Lock l(_lock);
 		return ((_lastFetchedLocator.id()) ? (id == _lastFetchedLocator.id()) : (id == _defaultIdentity));
 	}
 
@@ -122,7 +104,6 @@ public:
 	 */
 	inline const Address address() const
 	{
-		Mutex::Lock l(_lock);
 		if (_lastFetchedLocator.id())
 			return _lastFetchedLocator.id().address();
 		return _defaultIdentity.address();
@@ -133,7 +114,6 @@ public:
 	 */
 	inline const Str dnsName() const
 	{
-		Mutex::Lock l(_lock);
 		return _dnsName;
 	}
 
@@ -142,7 +122,6 @@ public:
 	 */
 	inline Locator locator() const
 	{
-		Mutex::Lock l(_lock);
 		return _lastFetchedLocator;
 	}
 
@@ -151,7 +130,6 @@ public:
 	 */
 	inline int64_t locatorTimestamp() const
 	{
-		Mutex::Lock l(_lock);
 		return _lastFetchedLocator.timestamp();
 	}
 
@@ -162,7 +140,6 @@ public:
 	{
 		if (!loc.verify())
 			return false;
-		Mutex::Lock l(_lock);
 		if ((loc.phy().size() > 0)&&(loc.timestamp() > _lastFetchedLocator.timestamp())) {
 			_lastFetchedLocator = loc;
 			return true;
@@ -177,7 +154,6 @@ public:
 	inline bool updateLocatorFromTxt(I start,I end)
 	{
 		try {
-			Mutex::Lock l(_lock);
 			if (_dnsPublicKeySize != ZT_ECC384_PUBLIC_KEY_SIZE)
 				return false;
 			Locator loc;
@@ -193,38 +169,25 @@ public:
 	}
 
 	/**
-	 * Pick random IPv4 and IPv6 addresses for this root
+	 * Pick a random physical IP for this root with the given address family
 	 *
-	 * @param v4 Filled with V4 address or NIL if none found
-	 * @param v6 Filled with V6 address or NIL if none found
+	 * @param addressFamily AF_INET or AF_INET6
+	 * @return Address or InetAddress::NIL if no addresses exist for the given family
 	 */
-	inline void pickPhysical(InetAddress &v4,InetAddress &v6) const
+	inline const InetAddress &pickPhysical(const int addressFamily) const
 	{
-		v4.clear();
-		v6.clear();
-		std::vector<const InetAddress *> v4a,v6a;
-		Mutex::Lock l(_lock);
+		std::vector<const InetAddress *> pickList;
 		const std::vector<InetAddress> *const av = (_lastFetchedLocator) ? &(_lastFetchedLocator.phy()) : &_defaultAddresses;
 		for(std::vector<InetAddress>::const_iterator i(av->begin());i!=av->end();++i) {
-			switch(i->ss_family) {
-				case AF_INET:
-					v4a.push_back(&(*i));
-					break;
-				case AF_INET6:
-					v6a.push_back(&(*i));
-					break;
+			if (addressFamily == (int)i->ss_family) {
+				pickList.push_back(&(*i));
 			}
 		}
-		if (v4a.size() == 1) {
-			v4 = *v4a[0];
-		} else if (v4a.size() > 1) {
-			v4 = *v4a[(unsigned long)Utils::random() % (unsigned long)v4a.size()];
-		}
-		if (v6a.size() == 1) {
-			v6 = *v6a[0];
-		} else if (v6a.size() > 1) {
-			v6 = *v6a[(unsigned long)Utils::random() % (unsigned long)v6a.size()];
-		}
+		if (pickList.size() == 1)
+			return *pickList[0];
+		else if (pickList.size() > 1)
+			return *pickList[(unsigned long)Utils::random() % (unsigned long)pickList.size()];
+		return InetAddress::NIL;
 	}
 
 private:
@@ -234,7 +197,6 @@ private:
 	Locator _lastFetchedLocator;
 	unsigned int _dnsPublicKeySize;
 	uint8_t _dnsPublicKey[ZT_ECC384_PUBLIC_KEY_SIZE];
-	Mutex _lock;
 };
 
 } // namespace ZeroTier

@@ -51,17 +51,14 @@ public:
 
 	inline void lock() const
 	{
-		const uint16_t myTicket = __sync_fetch_and_add(&(const_cast<Mutex *>(this)->nextTicket),1); 
+		const uint16_t myTicket = __sync_fetch_and_add(&(const_cast<Mutex *>(this)->nextTicket),1);
 		while (nowServing != myTicket) {
 			__asm__ __volatile__("rep;nop"::);
 			__asm__ __volatile__("":::"memory");
-		}   
+		}
 	}
 
-	inline void unlock() const
-	{
-		++(const_cast<Mutex *>(this)->nowServing);
-	}
+	inline void unlock() const { ++(const_cast<Mutex *>(this)->nowServing); }
 
 	/**
 	 * Uses C++ contexts and constructor/destructor to lock/unlock automatically

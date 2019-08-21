@@ -64,9 +64,6 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 {
 	memcpy(&_cb,callbacks,sizeof(ZT_Node_Callbacks));
 
-	// Initialize non-cryptographic PRNG from a good random source
-	Utils::getSecureRandom((void *)_prngState,sizeof(_prngState));
-
 	_online = false;
 
 	memset(_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
@@ -211,7 +208,7 @@ struct _PingPeersThatNeedPing
 			bool contacted = (sent != 0);
 
 			if ((sent & 0x1) == 0) { // bit 0x1 == IPv4 sent
-				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)alwaysContactEndpoints->size();++k) {
+				for(unsigned long k=0,ptr=(unsigned long)Utils::random();k<(unsigned long)alwaysContactEndpoints->size();++k) {
 					const InetAddress &addr = (*alwaysContactEndpoints)[ptr++ % alwaysContactEndpoints->size()];
 					if (addr.ss_family == AF_INET) {
 						p->sendHELLO(_tPtr,-1,addr,_now);
@@ -222,7 +219,7 @@ struct _PingPeersThatNeedPing
 			}
 
 			if ((sent & 0x2) == 0) { // bit 0x2 == IPv6 sent
-				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)alwaysContactEndpoints->size();++k) {
+				for(unsigned long k=0,ptr=(unsigned long)Utils::random();k<(unsigned long)alwaysContactEndpoints->size();++k) {
 					const InetAddress &addr = (*alwaysContactEndpoints)[ptr++ % alwaysContactEndpoints->size()];
 					if (addr.ss_family == AF_INET6) {
 						p->sendHELLO(_tPtr,-1,addr,_now);
@@ -427,10 +424,13 @@ void Node::status(ZT_NodeStatus *status) const
 	status->online = _online ? 1 : 0;
 }
 
+struct _sortPeerPtrsByAddress { inline bool cmp(const SharedPtr<Peer> &a,const SharedPtr<Peer> &b) const { return (a->address() < b->address()); } };
+
 ZT_PeerList *Node::peers() const
 {
-	std::vector< std::pair< Address,SharedPtr<Peer> > > peers(RR->topology->allPeers());
-	std::sort(peers.begin(),peers.end());
+	std::vector< SharedPtr<Peer> > peers;
+	RR->topology->getAllPeers(peers);
+	std::sort(peers.begin(),peers.end(),_sortPeerPtrsByAddress());
 
 	char *buf = (char *)::malloc(sizeof(ZT_PeerList) + (sizeof(ZT_Peer) * peers.size()));
 	if (!buf)
@@ -439,27 +439,27 @@ ZT_PeerList *Node::peers() const
 	pl->peers = (ZT_Peer *)(buf + sizeof(ZT_PeerList));
 
 	pl->peerCount = 0;
-	for(std::vector< std::pair< Address,SharedPtr<Peer> > >::iterator pi(peers.begin());pi!=peers.end();++pi) {
+	for(std::vector< SharedPtr<Peer> >::iterator pi(peers.begin());pi!=peers.end();++pi) {
 		ZT_Peer *p = &(pl->peers[pl->peerCount++]);
-		p->address = pi->second->address().toInt();
+		p->address = (*pi)->address().toInt();
 		p->hadAggregateLink = 0;
-		if (pi->second->remoteVersionKnown()) {
-			p->versionMajor = pi->second->remoteVersionMajor();
-			p->versionMinor = pi->second->remoteVersionMinor();
-			p->versionRev = pi->second->remoteVersionRevision();
+		if ((*pi)->remoteVersionKnown()) {
+			p->versionMajor = (*pi)->remoteVersionMajor();
+			p->versionMinor = (*pi)->remoteVersionMinor();
+			p->versionRev = (*pi)->remoteVersionRevision();
 		} else {
 			p->versionMajor = -1;
 			p->versionMinor = -1;
 			p->versionRev = -1;
 		}
-		p->latency = pi->second->latency(_now);
+		p->latency = (*pi)->latency(_now);
 		if (p->latency >= 0xffff)
 			p->latency = -1;
-		p->role = RR->topology->isRoot(pi->second->identity()) ? ZT_PEER_ROLE_PLANET : ZT_PEER_ROLE_LEAF;
+		p->role = RR->topology->isRoot((*pi)->identity()) ? ZT_PEER_ROLE_PLANET : ZT_PEER_ROLE_LEAF;
 
-		std::vector< SharedPtr<Path> > paths(pi->second->paths(_now));
-		SharedPtr<Path> bestp(pi->second->getAppropriatePath(_now,false));
-		p->hadAggregateLink |= pi->second->hasAggregateLink();
+		std::vector< SharedPtr<Path> > paths((*pi)->paths(_now));
+		SharedPtr<Path> bestp((*pi)->getAppropriatePath(_now,false));
+		p->hadAggregateLink |= (*pi)->hasAggregateLink();
 		p->pathCount = 0;
 		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
 			memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
@@ -557,7 +557,7 @@ int Node::sendUserMessage(void *tptr,uint64_t dest,uint64_t typeId,const void *d
 	return 0;
 }
 
-void Node::setNetconfMaster(void *networkControllerInstance)
+void Node::setController(void *networkControllerInstance)
 {
 	RR->localNetworkController = reinterpret_cast<NetworkController *>(networkControllerInstance);
 	if (networkControllerInstance)
@@ -589,18 +589,6 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,cons
 	return ( (_cb.pathCheckFunction) ? (_cb.pathCheckFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ztaddr.toInt(),localSocket,reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0) : true);
 }
 
-uint64_t Node::prng()
-{
-	// https://en.wikipedia.org/wiki/Xorshift#xorshift.2B
-	uint64_t x = _prngState[0];
-	const uint64_t y = _prngState[1];
-	_prngState[0] = y;
-	x ^= x << 23;
-	const uint64_t z = x ^ y ^ (x >> 17) ^ (y >> 26);
-	_prngState[1] = z;
-	return z + y;
-}
-
 ZT_ResultCode Node::setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork, const ZT_PhysicalPathConfiguration *pathConfig)
 {
 	RR->topology->setPhysicalPathConfiguration(pathNetwork,pathConfig);
@@ -621,7 +609,7 @@ void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &de
 		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
 		try {
 			if (nc.toDictionary(*dconf,sendLegacyFormatConfig)) {
-				uint64_t configUpdateId = prng();
+				uint64_t configUpdateId = Utils::random();
 				if (!configUpdateId) ++configUpdateId;
 
 				const unsigned int totalSize = dconf->sizeBytes();
@@ -913,10 +901,10 @@ int ZT_Node_sendUserMessage(ZT_Node *node,void *tptr,uint64_t dest,uint64_t type
 	}
 }
 
-void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkControllerInstance)
+void ZT_Node_setController(ZT_Node *node,void *networkControllerInstance)
 {
 	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->setNetconfMaster(networkControllerInstance);
+		reinterpret_cast<ZeroTier::Node *>(node)->setController(networkControllerInstance);
 	} catch ( ... ) {}
 }
 

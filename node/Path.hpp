@@ -279,9 +279,9 @@ public:
 	 */
 	inline long quality(const int64_t now) const
 	{
-		const int l = (long)_latency;
-		const int age = (long)std::min((now - _lastIn),(int64_t)(ZT_PATH_HEARTBEAT_PERIOD * 10)); // set an upper sanity limit to avoid overflow
-		return (((age < (ZT_PATH_HEARTBEAT_PERIOD + 5000)) ? l : (l + 0xffff + age)) * (long)((ZT_INETADDRESS_MAX_SCOPE - _ipScope) + 1));
+		const long l = (long)_latency;
+		const long age = (long)std::min((long)(now - _lastIn),(long)(ZT_PEER_PING_PERIOD * 10)); // set an upper sanity limit to avoid overflow
+		return ( ( (age < (ZT_PEER_PING_PERIOD + 5000)) ? l : (l + 65535 + age) ) * (long)((ZT_INETADDRESS_MAX_SCOPE - _ipScope) + 1));
 	}
 
 	/**
@@ -611,14 +611,9 @@ public:
 	}
 
 	/**
-	 * @return True if this path is alive (receiving heartbeats)
+	 * @return True if this path is alive (receiving data)
 	 */
-	inline bool alive(const int64_t now) const { return ((now - _lastIn) < (ZT_PATH_HEARTBEAT_PERIOD + 5000)); }
-
-	/**
-	 * @return True if this path needs a heartbeat
-	 */
-	inline bool needsHeartbeat(const int64_t now) const { return ((now - _lastOut) >= ZT_PATH_HEARTBEAT_PERIOD); }
+	inline bool alive(const int64_t now) const { return ((now - _lastIn) < ((ZT_PEER_PING_PERIOD * 2) + 5000)); }
 
 	/**
 	 * @return Last time we sent something

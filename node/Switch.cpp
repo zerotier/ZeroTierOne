@@ -470,7 +470,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 				while (numBridges < ZT_MAX_BRIDGE_SPAM) {
 					if (ab == activeBridges.end())
 						ab = activeBridges.begin();
-					if (((unsigned long)RR->node->prng() % (unsigned long)activeBridges.size()) == 0) {
+					if (((unsigned long)Utils::random() % (unsigned long)activeBridges.size()) == 0) {
 						bridges[numBridges++] = *ab;
 						++ab;
 					} else ++ab;
@@ -519,7 +519,7 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 		// DEBUG_INFO("skipping, no QoS for this packet, verb=%x", packet.verb());
 		// just send packet normally, no QoS for ZT protocol traffic
 		send(tPtr, packet, encrypt);
-	} 
+	}
 
 	_aqm_m.lock();
 
@@ -527,7 +527,7 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 
 	const Address dest(packet.destination());
 	TXQueueEntry *txEntry = new TXQueueEntry(dest,RR->node->now(),packet,encrypt);
-	
+
 	ManagedQueue *selectedQueue = nullptr;
 	for (size_t i=0; i<ZT_QOS_NUM_BUCKETS; i++) {
 		if (i < nqcb->oldQueues.size()) { // search old queues first (I think this is best since old would imply most recent usage of the queue)
@@ -601,7 +601,7 @@ uint64_t Switch::control_law(uint64_t t, int count)
 	return (uint64_t)(t + ZT_QOS_INTERVAL / sqrt(count));
 }
 
-Switch::dqr Switch::dodequeue(ManagedQueue *q, uint64_t now) 
+Switch::dqr Switch::dodequeue(ManagedQueue *q, uint64_t now)
 {
 	dqr r;
 	r.ok_to_drop = false;

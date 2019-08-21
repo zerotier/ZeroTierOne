@@ -2017,7 +2017,7 @@ ZT_SDK_API void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node);
 ZT_SDK_API int ZT_Node_sendUserMessage(ZT_Node *node,void *tptr,uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
 
 /**
- * Set a network configuration master instance for this node
+ * Set a network controller instance for this node
  *
  * Normal nodes should not need to use this. This is for nodes with
  * special compiled-in support for acting as network configuration
@@ -2031,7 +2031,7 @@ ZT_SDK_API int ZT_Node_sendUserMessage(ZT_Node *node,void *tptr,uint64_t dest,ui
  * @param networkConfigMasterInstance Instance of NetworkConfigMaster C++ class or NULL to disable
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkConfigMasterInstance);
+ZT_SDK_API void ZT_Node_setController(ZT_Node *node,void *networkConfigMasterInstance);
 
 /**
  * Set configuration for a given physical path

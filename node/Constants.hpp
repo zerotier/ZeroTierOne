@@ -319,13 +319,6 @@
 #define ZT_MULTIPATH_PROPORTION_WIN_SZ 128
 
 /**
- * How often we will sample packet latency. Should be at least greater than ZT_PING_CHECK_INVERVAL
- * since we will record a 0 bit/s measurement if no valid latency measurement was made within this
- * window of time.
- */
-#define ZT_PATH_LATENCY_SAMPLE_INTERVAL (ZT_MULTIPATH_PEER_PING_PERIOD * 2)
-
-/**
  * Interval used for rate-limiting the computation of path quality estimates.
  */
 #define ZT_PATH_QUALITY_COMPUTE_INTERVAL 1000
@@ -454,29 +447,19 @@
 #define ZT_QOS_DEFAULT_BUCKET 0
 
 /**
- * How frequently to send heartbeats over in-use paths
- */
-#define ZT_PATH_HEARTBEAT_PERIOD 14000
-
-/**
  * Do not accept HELLOs over a given path more often than this
  */
 #define ZT_PATH_HELLO_RATE_LIMIT 1000
 
 /**
  * Delay between full-fledge pings of directly connected peers
- */
-#define ZT_PEER_PING_PERIOD 60000
-
-/**
- * Delay between full-fledge pings of directly connected peers.
  *
- * With multipath bonding enabled ping peers more often to measure
- * packet loss and latency. This uses more bandwidth so is disabled
- * by default to avoid increasing idle bandwidth use for regular
- * links.
+ * See https://conferences.sigcomm.org/imc/2010/papers/p260.pdf for
+ * some real world data on NAT UDP timeouts. From the paper: "the
+ * lowest measured timeout when a binding has seen bidirectional
+ * traffic is 54 sec." We use 45 to be a bit under this.
  */
-#define ZT_MULTIPATH_PEER_PING_PERIOD 5000
+#define ZT_PEER_PING_PERIOD 45000
 
 /**
  * Paths are considered expired if they have not sent us a real packet in this long
@@ -523,11 +506,6 @@
  * to attempt NAT-t and gives each the other's corresponding IP:port pair.
  */
 #define ZT_MIN_UNITE_INTERVAL 30000
-
-/**
- * How often should peers try memorized or statically defined paths?
- */
-#define ZT_TRY_MEMORIZED_PATH_INTERVAL 30000
 
 /**
  * Sanity limit on maximum bridge routes
