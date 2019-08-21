@@ -492,26 +492,6 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired, int64
 	}
 
 	/**
-	 * Traffic is randomly distributed among all active paths.
-	 */
-	int numAlivePaths = 0;
-	int numStalePaths = 0;
-	if (RR->node->getMultipathMode() == ZT_MULTIPATH_BALANCE_RANDOM) {
-		int sz = _virtualPaths.size();
-		if (sz) {
-			int idx = _freeRandomByte % sz;
-			_pathChoiceHist.push(idx);
-			char pathStr[128];
-			_virtualPaths[idx]->p->address().toString(pathStr);
-			fprintf(stderr, "sending out: (%llx), idx=%d: path=%s, localSocket=%lld\n",
-				this->_id.address().toInt(), idx, pathStr, _virtualPaths[idx]->localSocket);
-			return _virtualPaths[idx]->p;
-		}
-		// This call is algorithmically inert but gives us a value to show in the status output
-		computeAggregateAllocation(now);
-	}
-
-	/**
 	 * All traffic is sent on all paths.
 	 */
 	if (RR->node->getMultipathMode() == ZT_MULTIPATH_BROADCAST) {
@@ -597,22 +577,63 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired, int64
 	}
 
 	/**
+	 * Traffic is randomly distributed among all active paths.
+	 */
+	if (RR->node->getMultipathMode() == ZT_MULTIPATH_BALANCE_RANDOM) {
+		int sz = _virtualPaths.size();
+		if (sz) {
+			int idx = _freeRandomByte % sz;
+			_pathChoiceHist.push(idx);
+			_virtualPaths[idx]->p->address().toString(curPathStr);
+			fprintf(stderr, "sending out: (%llx), idx=%d: path=%s, localSocket=%lld\n",
+				this->_id.address().toInt(), idx, curPathStr, _virtualPaths[idx]->localSocket);
+			return _virtualPaths[idx]->p;
+		}
+		// This call is algorithmically inert but gives us a value to show in the status output
+		computeAggregateAllocation(now);
+	}
+
+	/**
 	 * Packets are striped across all available paths.
 	 */
 	if (RR->node->getMultipathMode() == ZT_MULTIPATH_BALANCE_RR_OPAQUE) {
-		// fprintf(stderr, "ZT_MULTIPATH_BALANCE_RR_OPAQUE\n");
 		int16_t previousIdx = _roundRobinPathAssignmentIdx;
-		if (_roundRobinPathAssignmentIdx < (_virtualPaths.size()-1)) {
-			_roundRobinPathAssignmentIdx++;
+		int cycleCount = 0;
+		int minLastIn = 0;
+		int bestAlternativeIdx = -1;
+		while (cycleCount < ZT_MAX_PEER_NETWORK_PATHS) {
+			if (_roundRobinPathAssignmentIdx < (_virtualPaths.size()-1)) {
+				_roundRobinPathAssignmentIdx++;
+			}
+			else {
+				_roundRobinPathAssignmentIdx = 0;
+			}
+			cycleCount++;
+			if (_virtualPaths[_roundRobinPathAssignmentIdx]->p) {
+				uint64_t lastIn = _virtualPaths[_roundRobinPathAssignmentIdx]->p->lastIn();
+				if (bestAlternativeIdx == -1) {
+					minLastIn = lastIn; // Initialization
+					bestAlternativeIdx = 0;
+				}
+				if (lastIn < minLastIn) {
+					minLastIn = lastIn;
+					bestAlternativeIdx = _roundRobinPathAssignmentIdx;
+				}
+				if ((now - lastIn) < 5000) {
+					selectedPath = _virtualPaths[_roundRobinPathAssignmentIdx]->p;
+				}
+			}
 		}
-		else {
-			_roundRobinPathAssignmentIdx = 0;
+		// If we can't find an appropriate path, try the most recently active one
+		if (!selectedPath) {
+			_roundRobinPathAssignmentIdx = bestAlternativeIdx;
+			selectedPath = _virtualPaths[bestAlternativeIdx]->p;
+			selectedPath->address().toString(curPathStr);
+			fprintf(stderr, "could not find good path, settling for next best %s\n",curPathStr);
 		}
-		selectedPath = _virtualPaths[previousIdx]->p;
-		char pathStr[128];
-		selectedPath->address().toString(pathStr);
+		selectedPath->address().toString(curPathStr);
 		fprintf(stderr, "sending packet out on path %s at index %d\n",
-			pathStr, previousIdx);
+			curPathStr, _roundRobinPathAssignmentIdx);
 		return selectedPath;
 	}
 
