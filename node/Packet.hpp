@@ -901,7 +901,7 @@ public:
 		 * node reachability. Since they're signed any node can verify that
 		 * the originating node approves of their content.
 		 */
-		VERB_LOCATOR = 0x16,
+		VERB_SET_LOCATOR = 0x16,
 
 		/**
 		 * A list of peers this node will relay traffic to/from:

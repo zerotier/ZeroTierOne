@@ -115,6 +115,9 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 				case Packet::VERB_PUSH_DIRECT_PATHS:          r = _doPUSH_DIRECT_PATHS(RR,tPtr,peer); break;
 				case Packet::VERB_USER_MESSAGE:               r = _doUSER_MESSAGE(RR,tPtr,peer); break;
 				case Packet::VERB_REMOTE_TRACE:               r = _doREMOTE_TRACE(RR,tPtr,peer); break;
+				case Packet::VERB_SET_LOCATOR: break;
+				case Packet::VERB_WILL_RELAY: break;
+				case Packet::VERB_EPHEMERAL_KEY: break;
 			}
 			return r;
 		} else {
@@ -483,9 +486,8 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 
 bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
-	// TODO
-	//if ((!RR->topology->amUpstream())&&(!peer->rateGateInboundWhoisRequest(RR->node->now())))
-	//	return true;
+	if (!peer->rateGateInboundWhoisRequest(RR->node->now()))
+		return true;
 
 	Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 	outp.append((unsigned char)Packet::VERB_WHOIS);
