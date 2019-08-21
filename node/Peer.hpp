@@ -727,6 +727,7 @@ private:
 	int16_t _roundRobinPathAssignmentIdx;
 
 	SharedPtr<Path> _activeBackupPath;
+	int16_t _pathAssignmentIdx;
 };
 
 } // namespace ZeroTier

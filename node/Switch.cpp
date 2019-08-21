@@ -284,6 +284,14 @@ static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsig
 	return false; // overflow == invalid
 }
 
+bool Switch::isFlowAware()
+{
+	int mode = RR->node->getMultipathMode();
+	return (( mode == ZT_MULTIPATH_BALANCE_RR_FLOW)
+		|| (mode == ZT_MULTIPATH_BALANCE_XOR_FLOW)
+		|| (mode == ZT_MULTIPATH_BALANCE_DYNAMIC_FLOW));
+}
+
 void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 {
 	if (!network->hasConfig())
@@ -309,61 +317,64 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 	 * preferred virtual path and will be sent out according to what the multipath logic
 	 * deems appropriate. An example of this would be an ICMP packet.
 	 */
+
 	int64_t flowId = -1;
 
-	if (etherType == ZT_ETHERTYPE_IPV4 && (len >= 20)) {
-		uint16_t srcPort = 0;
-		uint16_t dstPort = 0;
-		int8_t proto = (reinterpret_cast<const uint8_t *>(data)[9]);
-		const unsigned int headerLen = 4 * (reinterpret_cast<const uint8_t *>(data)[0] & 0xf);
-		switch(proto) {
-			case 0x01: // ICMP
-				flowId = 0x01;
-				break;
-			// All these start with 16-bit source and destination port in that order
-			case 0x06: // TCP
-			case 0x11: // UDP
-			case 0x84: // SCTP
-			case 0x88: // UDPLite
-				if (len > (headerLen + 4)) {
-					unsigned int pos = headerLen + 0;
-					srcPort = (reinterpret_cast<const uint8_t *>(data)[pos++]) << 8;
-					srcPort |= (reinterpret_cast<const uint8_t *>(data)[pos]);
-					pos++;
-					dstPort = (reinterpret_cast<const uint8_t *>(data)[pos++]) << 8;
-					dstPort |= (reinterpret_cast<const uint8_t *>(data)[pos]);
-					flowId = ((int64_t)srcPort << 48) | ((int64_t)dstPort << 32) | proto;
-				}
-				break;
+	if (isFlowAware()) {
+		if (etherType == ZT_ETHERTYPE_IPV4 && (len >= 20)) {
+			uint16_t srcPort = 0;
+			uint16_t dstPort = 0;
+			int8_t proto = (reinterpret_cast<const uint8_t *>(data)[9]);
+			const unsigned int headerLen = 4 * (reinterpret_cast<const uint8_t *>(data)[0] & 0xf);
+			switch(proto) {
+				case 0x01: // ICMP
+					flowId = 0x01;
+					break;
+				// All these start with 16-bit source and destination port in that order
+				case 0x06: // TCP
+				case 0x11: // UDP
+				case 0x84: // SCTP
+				case 0x88: // UDPLite
+					if (len > (headerLen + 4)) {
+						unsigned int pos = headerLen + 0;
+						srcPort = (reinterpret_cast<const uint8_t *>(data)[pos++]) << 8;
+						srcPort |= (reinterpret_cast<const uint8_t *>(data)[pos]);
+						pos++;
+						dstPort = (reinterpret_cast<const uint8_t *>(data)[pos++]) << 8;
+						dstPort |= (reinterpret_cast<const uint8_t *>(data)[pos]);
+						flowId = ((int64_t)srcPort << 48) | ((int64_t)dstPort << 32) | proto;
+					}
+					break;
+			}
 		}
-	}
 
-	if (etherType == ZT_ETHERTYPE_IPV6 && (len >= 40)) {
-		uint16_t srcPort = 0;
-		uint16_t dstPort = 0;
-		unsigned int pos;
-		unsigned int proto;
-		_ipv6GetPayload((const uint8_t *)data, len, pos, proto);
-		switch(proto) {
-			case 0x3A: // ICMPv6
-				flowId = 0x3A;
-				break;
-			// All these start with 16-bit source and destination port in that order
-			case 0x06: // TCP
-			case 0x11: // UDP
-			case 0x84: // SCTP
-			case 0x88: // UDPLite
-				if (len > (pos + 4)) {
-					srcPort = (reinterpret_cast<const uint8_t *>(data)[pos++]) << 8;
-					srcPort |= (reinterpret_cast<const uint8_t *>(data)[pos]);
-					pos++;
-					dstPort = (reinterpret_cast<const uint8_t *>(data)[pos++]) << 8;
-					dstPort |= (reinterpret_cast<const uint8_t *>(data)[pos]);
-					flowId = ((int64_t)srcPort << 48) | ((int64_t)dstPort << 32) | proto;
-				}
-				break;
-			default:
-				break;
+		if (etherType == ZT_ETHERTYPE_IPV6 && (len >= 40)) {
+			uint16_t srcPort = 0;
+			uint16_t dstPort = 0;
+			unsigned int pos;
+			unsigned int proto;
+			_ipv6GetPayload((const uint8_t *)data, len, pos, proto);
+			switch(proto) {
+				case 0x3A: // ICMPv6
+					flowId = 0x3A;
+					break;
+				// All these start with 16-bit source and destination port in that order
+				case 0x06: // TCP
+				case 0x11: // UDP
+				case 0x84: // SCTP
+				case 0x88: // UDPLite
+					if (len > (pos + 4)) {
+						srcPort = (reinterpret_cast<const uint8_t *>(data)[pos++]) << 8;
+						srcPort |= (reinterpret_cast<const uint8_t *>(data)[pos]);
+						pos++;
+						dstPort = (reinterpret_cast<const uint8_t *>(data)[pos++]) << 8;
+						dstPort |= (reinterpret_cast<const uint8_t *>(data)[pos]);
+						flowId = ((int64_t)srcPort << 48) | ((int64_t)dstPort << 32) | proto;
+					}
+					break;
+				default:
+					break;
+			}
 		}
 	}
 

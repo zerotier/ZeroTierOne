@@ -491,7 +491,7 @@
 /**
  * How long before we consider a path to be dead in rapid fail-over scenarios
  */
-#define ZT_MULTIPATH_ACTIVE_BACKUP_RAPID_FAILOVER_PERIOD 1000
+#define ZT_MULTIPATH_ACTIVE_BACKUP_RAPID_FAILOVER_PERIOD 250
 
 /**
  * Paths are considered expired if they have not sent us a real packet in this long

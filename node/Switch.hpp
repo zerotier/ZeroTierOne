@@ -92,6 +92,11 @@ public:
 	void onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddress &fromAddr,const void *data,unsigned int len);
 
 	/**
+	 * Returns whether our bonding or balancing policy is aware of flows.
+	 */
+	bool isFlowAware();
+
+	/**
 	 * Called when a packet comes from a local Ethernet tap
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
