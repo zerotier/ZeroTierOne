@@ -246,16 +246,16 @@ public:
 	{
 		unsigned int myidx = 0;
 		unsigned int otheridx = 0;
-	
+
 		if ((_qualifierCount == 0)||(other._qualifierCount == 0))
 			return false;
-	
+
 		while (myidx < _qualifierCount) {
 			// Fail if we're at the end of other, since this means the field is
 			// missing.
 			if (otheridx >= other._qualifierCount)
 				return false;
-	
+
 			// Seek to corresponding tuple in other, ignoring tuples that
 			// we may not have. If we run off the end of other, the tuple is
 			// missing. This works because tuples are sorted by ID.
@@ -264,17 +264,17 @@ public:
 				if (otheridx >= other._qualifierCount)
 					return false;
 			}
-	
+
 			// Compare to determine if the absolute value of the difference
 			// between these two parameters is within our maxDelta.
 			const uint64_t a = _qualifiers[myidx].value;
 			const uint64_t b = other._qualifiers[myidx].value;
 			if (((a >= b) ? (a - b) : (b - a)) > _qualifiers[myidx].maxDelta)
 				return false;
-	
+
 			++myidx;
 		}
-	
+
 		return true;
 	}
 
@@ -293,7 +293,7 @@ public:
 			buf[ptr++] = Utils::hton(_qualifiers[i].value);
 			buf[ptr++] = Utils::hton(_qualifiers[i].maxDelta);
 		}
-	
+
 		try {
 			_signatureLength = with.sign(buf,ptr * sizeof(uint64_t),_signature,sizeof(_signature));
 			_signedBy = with.address();

@@ -98,7 +98,7 @@ public:
 	inline bool multicastEnabled() const { return (_config.multicastLimit > 0); }
 	inline bool hasConfig() const { return (_config); }
 	inline uint64_t lastConfigUpdate() const { return _lastConfigUpdate; }
-	inline ZT_VirtualNetworkStatus status() const { Mutex::Lock _l(_lock); return _status(); }
+	inline ZT_VirtualNetworkStatus status() const { return _status(); }
 	inline const NetworkConfig &config() const { return _config; }
 	inline const MAC &mac() const { return _mac; }
 
@@ -174,14 +174,14 @@ public:
 	 */
 	inline bool subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_myMulticastGroups_l);
 		if (std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg))
 			return true;
 		else if (includeBridgedGroups)
 			return _multicastGroupsBehindMe.contains(mg);
 		return false;
 	}
-	
+
 	/**
 	 * Subscribe to a multicast group
 	 *
@@ -190,10 +190,11 @@ public:
 	 */
 	inline void multicastSubscribe(void *tPtr,const MulticastGroup &mg)
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_myMulticastGroups_l);
 		if (!std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg)) {
 			_myMulticastGroups.insert(std::upper_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg),mg);
-			_sendUpdatesToMembers(tPtr);
+			Mutex::Lock l2(_memberships_l);
+			_announceMulticastGroups(tPtr);
 		}
 	}
 
@@ -204,12 +205,12 @@ public:
 	 */
 	inline void multicastUnsubscribe(const MulticastGroup &mg)
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_myMulticastGroups_l);
 		std::vector<MulticastGroup>::iterator i(std::lower_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg));
 		if ( (i != _myMulticastGroups.end()) && (*i == mg) )
 			_myMulticastGroups.erase(i);
 	}
-	
+
 	/**
 	 * Handle an inbound network config chunk
 	 *
@@ -239,20 +240,12 @@ public:
 	/**
 	 * Set netconf failure to 'access denied' -- called in IncomingPacket when controller reports this
 	 */
-	inline void setAccessDenied()
-	{
-		Mutex::Lock _l(_lock);
-		_netconfFailure = NETCONF_FAILURE_ACCESS_DENIED;
-	}
+	inline void setAccessDenied() { _netconfFailure = NETCONF_FAILURE_ACCESS_DENIED; }
 
 	/**
 	 * Set netconf failure to 'not found' -- called by IncomingPacket when controller reports this
 	 */
-	inline void setNotFound()
-	{
-		Mutex::Lock _l(_lock);
-		_netconfFailure = NETCONF_FAILURE_NOT_FOUND;
-	}
+	inline void setNotFound() { _netconfFailure = NETCONF_FAILURE_NOT_FOUND; }
 
 	/**
 	 * Causes this network to request an updated configuration from its master node now
@@ -281,7 +274,7 @@ public:
 	 * @return True if peer has recently associated
 	 */
 	bool recentlyAssociatedWith(const Address &addr);
-	
+
 	/**
 	 * Do periodic cleanup and housekeeping tasks
 	 */
@@ -294,8 +287,9 @@ public:
 	 */
 	inline void sendUpdatesToMembers(void *tPtr)
 	{
-		Mutex::Lock _l(_lock);
-		_sendUpdatesToMembers(tPtr);
+		Mutex::Lock _l(_myMulticastGroups_l);
+		Mutex::Lock _l2(_memberships_l);
+		_announceMulticastGroups(tPtr);
 	}
 
 	/**
@@ -306,7 +300,7 @@ public:
 	 */
 	inline Address findBridgeTo(const MAC &mac) const
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_remoteBridgeRoutes_l);
 		const Address *const br = _remoteBridgeRoutes.get(mac);
 		return ((br) ? *br : Address());
 	}
@@ -324,18 +318,18 @@ public:
 	 */
 	inline void learnBridgeRoute(const MAC &mac,const Address &addr)
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_remoteBridgeRoutes_l);
 		_remoteBridgeRoutes[mac] = addr;
-	
+
 		// Anti-DOS circuit breaker to prevent nodes from spamming us with absurd numbers of bridge routes
 		while (_remoteBridgeRoutes.size() > ZT_MAX_BRIDGE_ROUTES) {
 			Hashtable< Address,unsigned long > counts;
 			Address maxAddr;
 			unsigned long maxCount = 0;
-	
+
 			MAC *m = (MAC *)0;
 			Address *a = (Address *)0;
-	
+
 			// Find the address responsible for the most entries
 			{
 				Hashtable<MAC,Address>::Iterator i(_remoteBridgeRoutes);
@@ -347,7 +341,7 @@ public:
 					}
 				}
 			}
-	
+
 			// Kill this address from our table, since it's most likely spamming us
 			{
 				Hashtable<MAC,Address>::Iterator i(_remoteBridgeRoutes);
@@ -358,7 +352,7 @@ public:
 			}
 		}
 	}
-	
+
 	/**
 	 * Learn a multicast group that is bridged to our tap device
 	 *
@@ -368,7 +362,7 @@ public:
 	 */
 	inline void learnBridgedMulticastGroup(void *tPtr,const MulticastGroup &mg,int64_t now)
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_multicastGroupsBehindMe_l);
 		_multicastGroupsBehindMe.set(mg,now);
 	}
 
@@ -384,7 +378,7 @@ public:
 	{
 		if (cap.networkId() != _id)
 			return Membership::ADD_REJECTED;
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_memberships_l);
 		return _memberships[cap.issuedTo()].addCredential(RR,tPtr,_config,cap);
 	}
 
@@ -395,7 +389,7 @@ public:
 	{
 		if (tag.networkId() != _id)
 			return Membership::ADD_REJECTED;
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_memberships_l);
 		return _memberships[tag.issuedTo()].addCredential(RR,tPtr,_config,tag);
 	}
 
@@ -411,7 +405,7 @@ public:
 	{
 		if (coo.networkId() != _id)
 			return Membership::ADD_REJECTED;
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_memberships_l);
 		return _memberships[coo.issuedTo()].addCredential(RR,tPtr,_config,coo);
 	}
 
@@ -424,22 +418,23 @@ public:
 	 */
 	inline void pushCredentialsNow(void *tPtr,const Address &to,const int64_t now)
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_memberships_l);
 		_memberships[to].pushCredentials(RR,tPtr,now,to,_config);
 	}
 
 	/**
 	 * Push credentials if we haven't done so in a very long time
-	 * 
+	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param to Destination peer address
 	 * @param now Current time
 	 */
 	inline void pushCredentialsIfNeeded(void *tPtr,const Address &to,const int64_t now)
 	{
-		Mutex::Lock _l(_lock);
+		const int64_t tout = std::min(_config.credentialTimeMaxDelta,(int64_t)ZT_PEER_ACTIVITY_TIMEOUT);
+		Mutex::Lock _l(_memberships_l);
 		Membership &m = _memberships[to];
-		if (m.shouldPushCredentials(now))
+		if (((now - m.lastPushedCredentials()) + 5000) >= tout)
 			m.pushCredentials(RR,tPtr,now,to,_config);
 	}
 
@@ -449,7 +444,14 @@ public:
 	 * This sets the network to completely remove itself on delete. This also prevents the
 	 * call of the normal port shutdown event on delete.
 	 */
-	void destroy();
+	inline void destroy()
+	{
+		_memberships_l.lock();
+		_config_l.lock();
+		_destroyed = true;
+		_config_l.unlock();
+		_memberships_l.unlock();
+	}
 
 	/**
 	 * Get this network's config for export via the ZT core API
@@ -458,7 +460,7 @@ public:
 	 */
 	inline void externalConfig(ZT_VirtualNetworkConfig *ec) const
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_config_l);
 		_externalConfig(ec);
 	}
 
@@ -471,7 +473,7 @@ private:
 	ZT_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
 	bool _gate(const SharedPtr<Peer> &peer);
-	void _sendUpdatesToMembers(void *tPtr);
+	void _announceMulticastGroups(void *tPtr);
 	void _announceMulticastGroupsTo(void *tPtr,const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups);
 	std::vector<MulticastGroup> _allMulticastGroups() const;
 
@@ -501,9 +503,9 @@ private:
 	};
 	_IncomingConfigChunk _incomingConfigChunks[ZT_NETWORK_MAX_INCOMING_UPDATES];
 
-	bool _destroyed;
+	volatile bool _destroyed;
 
-	enum {
+	volatile enum {
 		NETCONF_FAILURE_NONE,
 		NETCONF_FAILURE_ACCESS_DENIED,
 		NETCONF_FAILURE_NOT_FOUND,
@@ -513,7 +515,11 @@ private:
 
 	Hashtable<Address,Membership> _memberships;
 
-	Mutex _lock;
+	Mutex _myMulticastGroups_l;
+	Mutex _multicastGroupsBehindMe_l;
+	Mutex _remoteBridgeRoutes_l;
+	Mutex _config_l;
+	Mutex _memberships_l;
 
 	AtomicCounter __refCount;
 };

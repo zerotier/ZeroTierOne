@@ -45,7 +45,7 @@ namespace ZeroTier {
 
 /**
  * Signed information about a node's location on the network
- * 
+ *
  * A locator is a signed record that contains information about where a node
  * may be found. It can contain static physical addresses or virtual ZeroTier
  * addresses of nodes that can forward to the target node. Locator records
@@ -87,7 +87,7 @@ public:
 
 	/**
 	 * Method to be called after add() is called for each address or forwarding node
-	 * 
+	 *
 	 * This sets timestamp and ID information and sorts and deduplicates target
 	 * lists but does not sign the locator. The sign() method should be used after
 	 * finish().
@@ -148,12 +148,12 @@ public:
 
 	/**
 	 * Make DNS TXT records for this locator
-	 * 
+	 *
 	 * DNS TXT records are signed by an entirely separate key that is added along
 	 * with DNS names to nodes to allow them to verify DNS results. It's separate
 	 * from the locator's signature so that a single DNS record can point to more
 	 * than one locator or be served by things like geo-aware DNS.
-	 * 
+	 *
 	 * Right now only NIST P-384 is supported for signing DNS records. NIST EDDSA
 	 * is used here so that FIPS-only nodes can always use DNS to locate roots as
 	 * FIPS-only nodes may be required to disable non-FIPS algorithms.
@@ -191,11 +191,11 @@ public:
 
 	/**
 	 * Decode TXT records
-	 * 
+	 *
 	 * TXT records can be provided as an iterator over std::string, Str, or char *
 	 * values, and TXT records can be provided in any order. Any oversize or empty
 	 * entries will be ignored.
-	 * 
+	 *
 	 * This method checks the decoded locator's signature using the supplied DNS TXT
 	 * record signing public key. False is returned if the TXT records are invalid,
 	 * incomplete, or fail signature check. If true is returned this Locator object
@@ -310,6 +310,8 @@ public:
 	}
 
 	inline operator bool() const { return (_id); }
+
+	inline bool addressesEqual(const Locator &l) const { return ((_physical == l._physical)&&(_virtual == l._virtual)); }
 
 	inline bool operator==(const Locator &l) const { return ((_ts == l._ts)&&(_id == l._id)&&(_signedBy == l._signedBy)&&(_physical == l._physical)&&(_virtual == l._virtual)&&(_signatureLength == l._signatureLength)&&(memcmp(_signature,l._signature,_signatureLength) == 0)); }
 	inline bool operator!=(const Locator &l) const { return (!(*this == l)); }

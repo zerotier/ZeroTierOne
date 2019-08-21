@@ -606,6 +606,11 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 
 Network::~Network()
 {
+	_memberships_l.lock();
+	_config_l.lock();
+	_config_l.unlock();
+	_memberships_l.unlock();
+
 	ZT_VirtualNetworkConfig ctmp;
 	_externalConfig(&ctmp);
 
@@ -638,7 +643,8 @@ bool Network::filterOutgoingPacket(
 	unsigned int ccLength = 0;
 	bool ccWatch = false;
 
-	Mutex::Lock _l(_lock);
+	Mutex::Lock l1(_memberships_l);
+	Mutex::Lock l2(_config_l);
 
 	Membership *const membership = (ztDest) ? _memberships.get(ztDest) : (Membership *)0;
 
@@ -755,7 +761,8 @@ int Network::filterIncomingPacket(
 
 	uint8_t qosBucket = 255; // For incoming packets this is a dummy value
 
-	Mutex::Lock _l(_lock);
+	Mutex::Lock l1(_memberships_l);
+	Mutex::Lock l2(_config_l);
 
 	Membership &membership = _memberships[sourcePeer->address()];
 
@@ -861,7 +868,7 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 	NetworkConfig *nc = (NetworkConfig *)0;
 	uint64_t configUpdateId;
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock l1(_config_l);
 
 		_IncomingConfigChunk *c = (_IncomingConfigChunk *)0;
 		uint64_t chunkId = 0;
@@ -907,6 +914,7 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 
 			// New properly verified chunks can be flooded "virally" through the network
 			if (fastPropagate) {
+				Mutex::Lock l2(_memberships_l);
 				Address *a = (Address *)0;
 				Membership *m = (Membership *)0;
 				Hashtable<Address,Membership>::Iterator i(_memberships);
@@ -993,7 +1001,7 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 		ZT_VirtualNetworkConfig ctmp;
 		bool oldPortInitialized;
 		{	// do things that require lock here, but unlock before calling callbacks
-			Mutex::Lock _l(_lock);
+			Mutex::Lock _l(_config_l);
 
 			_config = nconf;
 			_lastConfigUpdate = RR->node->now();
@@ -1206,15 +1214,17 @@ void Network::requestConfiguration(void *tPtr)
 bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 {
 	const int64_t now = RR->node->now();
-	Mutex::Lock _l(_lock);
+	Mutex::Lock l(_memberships_l);
 	try {
 		if (_config) {
 			Membership *m = _memberships.get(peer->address());
 			if ( (_config.isPublic()) || ((m)&&(m->isAllowedOnNetwork(_config))) ) {
 				if (!m)
 					m = &(_memberships[peer->address()]);
-				if (m->multicastLikeGate(now))
+				if (m->multicastLikeGate(now)) {
+					Mutex::Lock l2(_myMulticastGroups_l);
 					_announceMulticastGroupsTo(tPtr,peer->address(),_allMulticastGroups());
+				}
 				return true;
 			}
 		}
@@ -1224,7 +1234,7 @@ bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 
 bool Network::recentlyAssociatedWith(const Address &addr)
 {
-	Mutex::Lock _l(_lock);
+	Mutex::Lock _l(_memberships_l);
 	const Membership *m = _memberships.get(addr);
 	return ((m)&&(m->recentlyAssociated(RR->node->now())));
 }
@@ -1232,7 +1242,7 @@ bool Network::recentlyAssociatedWith(const Address &addr)
 void Network::clean()
 {
 	const int64_t now = RR->node->now();
-	Mutex::Lock _l(_lock);
+	Mutex::Lock _l(_memberships_l);
 
 	if (_destroyed)
 		return;
@@ -1260,7 +1270,7 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Certific
 {
 	if (com.networkId() != _id)
 		return Membership::ADD_REJECTED;
-	Mutex::Lock _l(_lock);
+	Mutex::Lock _l(_memberships_l);
 	return _memberships[com.issuedTo()].addCredential(RR,tPtr,_config,com);
 }
 
@@ -1269,7 +1279,7 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Address 
 	if (rev.networkId() != _id)
 		return Membership::ADD_REJECTED;
 
-	Mutex::Lock _l(_lock);
+	Mutex::Lock _l(_memberships_l);
 	Membership &m = _memberships[rev.target()];
 
 	const Membership::AddCredentialResult result = m.addCredential(RR,tPtr,_config,rev);
@@ -1295,15 +1305,8 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Address 
 	return result;
 }
 
-void Network::destroy()
-{
-	Mutex::Lock _l(_lock);
-	_destroyed = true;
-}
-
 ZT_VirtualNetworkStatus Network::_status() const
 {
-	// assumes _lock is locked
 	if (_portError)
 		return ZT_NETWORK_STATUS_PORT_ERROR;
 	switch(_netconfFailure) {
@@ -1320,7 +1323,7 @@ ZT_VirtualNetworkStatus Network::_status() const
 
 void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 {
-	// assumes _lock is locked
+	// assumes _config_l is locked
 	ec->nwid = _id;
 	ec->mac = _mac.toInt();
 	if (_config)
@@ -1363,9 +1366,9 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	}
 }
 
-void Network::_sendUpdatesToMembers(void *tPtr)
+void Network::_announceMulticastGroups(void *tPtr)
 {
-	// Assumes _lock is locked
+	// Assumes _myMulticastGroups_l and _memberships_l are locked
 	const std::vector<MulticastGroup> groups(_allMulticastGroups());
 	_announceMulticastGroupsTo(tPtr,controller(),groups);
 	{
@@ -1381,7 +1384,7 @@ void Network::_sendUpdatesToMembers(void *tPtr)
 
 void Network::_announceMulticastGroupsTo(void *tPtr,const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups)
 {
-	// Assumes _lock is locked
+	// Assumes _myMulticastGroups_l and _memberships_l are locked
 	Packet *const outp = new Packet(peer,RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
 	for(std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {

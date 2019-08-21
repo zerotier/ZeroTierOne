@@ -78,12 +78,9 @@ public:
 	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf);
 
 	/**
-	 * @return True if we haven't pushed credentials in a long time (to cause proactive credential push)
+	 * @return Time we last pushed credentials to this member
 	 */
-	inline bool shouldPushCredentials(const int64_t now) const
-	{
-		return ((now - _lastPushedCredentials) > ZT_PEER_ACTIVITY_TIMEOUT);
-	}
+	inline int64_t lastPushedCredentials() const { return _lastPushedCredentials; }
 
 	/**
 	 * Check whether we should push MULTICAST_LIKEs to this peer, and update last sent time if true

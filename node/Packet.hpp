@@ -914,9 +914,8 @@ public:
 		 *   <[2] 16-bit number of peers>
 		 *   <[16] 128-bit hash of node public key>
 		 *   <[2] 16-bit latency to node or 0 if unspecified>
-		 *   <[1] 8-bit number of network hops to node or 0 if unspecified>
 		 *   <[4] 32-bit max bandwidth in megabits or 0 if unspecified>
-		 *  [<[...] additional hash,latency,hops,bandwidth tuples>]
+		 *  [<[...] additional hash,latency,bandwidth tuples>]
 		 *
 		 * This messages can be pushed to indicate that this peer is willing
 		 * to relay traffic to other peers. It contains a list of 128-bit
