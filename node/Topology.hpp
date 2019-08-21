@@ -46,6 +46,7 @@
 #include "InetAddress.hpp"
 #include "Hashtable.hpp"
 #include "Root.hpp"
+#include "SharedPtr.hpp"
 
 namespace ZeroTier {
 
@@ -246,13 +247,13 @@ public:
 	 * @tparam F function or function object type
 	 */
 	template<typename F>
-	inline void eachRoot(F f) const
+	inline void eachRoot(F f)
 	{
 		Mutex::Lock l(_roots_m);
 		SharedPtr<Peer> rp;
 		for(std::vector<Root>::const_iterator i(_roots.begin());i!=_roots.end();++i) {
 			{
-				SharedPtr::Lock l2(_peers_m);
+				Mutex::Lock l2(_peers_m);
 				const SharedPtr<Peer> *const ap = _peers.get(i->address());
 				if (ap) {
 					rp = *ap;

@@ -1998,7 +1998,7 @@ public:
 	{
 		const Hashtable< uint64_t,std::vector<InetAddress> > *lh = (const Hashtable< uint64_t,std::vector<InetAddress> > *)0;
 		if (family < 0)
-			lh = (_node->prng() & 1) ? &_v4Hints : &_v6Hints;
+			lh = (Utils::random() & 1) ? &_v4Hints : &_v6Hints;
 		else if (family == AF_INET)
 			lh = &_v4Hints;
 		else if (family == AF_INET6)
@@ -2006,7 +2006,7 @@ public:
 		else return 0;
 		const std::vector<InetAddress> *l = lh->get(ztaddr);
 		if ((l)&&(l->size() > 0)) {
-			memcpy(result,&((*l)[(unsigned long)_node->prng() % l->size()]),sizeof(struct sockaddr_storage));
+			memcpy(result,&((*l)[(unsigned long)Utils::random() % l->size()]),sizeof(struct sockaddr_storage));
 			return 1;
 		} else return 0;
 	}

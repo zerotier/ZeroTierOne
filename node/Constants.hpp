@@ -462,11 +462,6 @@
 #define ZT_PEER_PING_PERIOD 45000
 
 /**
- * Paths are considered expired if they have not sent us a real packet in this long
- */
-#define ZT_PEER_PATH_EXPIRATION ((ZT_PEER_PING_PERIOD * 4) + 3000)
-
-/**
  * How often to retry expired paths that we're still remembering
  */
 #define ZT_PEER_EXPIRED_PATH_TRIAL_PERIOD (ZT_PEER_PING_PERIOD * 10)

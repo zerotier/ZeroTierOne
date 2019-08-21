@@ -999,7 +999,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 	unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
 
 	while (count--) { // if ptr overflows Buffer will throw
-		unsigned int flags = (*this)[ptr++];
+		/* unsigned int flags = (*this)[ptr++]; */ ++ptr;
 		unsigned int extLen = at<uint16_t>(ptr); ptr += 2;
 		ptr += extLen; // unused right now
 		unsigned int addrType = (*this)[ptr++];

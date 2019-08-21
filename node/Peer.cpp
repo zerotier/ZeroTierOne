@@ -38,8 +38,6 @@
 
 namespace ZeroTier {
 
-static unsigned char s_freeRandomByteCounter = 0;
-
 Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
 	RR(renv),
 	_lastReceive(0),
@@ -52,11 +50,11 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastACKWindowReset(0),
 	_lastQoSWindowReset(0),
 	_lastMultipathCompatibilityCheck(0),
-	_freeRandomByte((unsigned char)((uintptr_t)this >> 4) ^ ++s_freeRandomByteCounter),
 	_uniqueAlivePathCount(0),
 	_localMultipathSupported(false),
 	_remoteMultipathSupported(false),
 	_canUseMultipath(false),
+	_freeRandomByte((uint8_t)Utils::random()),
 	_vProto(0),
 	_vMajor(0),
 	_vMinor(0),
@@ -99,8 +97,8 @@ void Peer::received(
 				sendQOS_MEASUREMENT(tPtr, path, path->localSocket(), path->address(), now);
 			}
 			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-				if (_paths[i].p) {
-					_paths[i].p->processBackgroundPathMeasurements(now);
+				if (_paths[i]) {
+					_paths[i]->processBackgroundPathMeasurements(now);
 				}
 			}
 		}
@@ -112,9 +110,8 @@ void Peer::received(
 		{
 			Mutex::Lock _l(_paths_m);
 			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-				if (_paths[i].p) {
-					if (_paths[i].p == path) {
-						_paths[i].lr = now;
+				if (_paths[i]) {
+					if (_paths[i] == path) {
 						havePath = true;
 						break;
 					}
@@ -131,13 +128,13 @@ void Peer::received(
 			bool redundant = false;
 			unsigned int replacePath = ZT_MAX_PEER_NETWORK_PATHS;
 			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-				if (_paths[i].p) {
-					if ( (_paths[i].p->alive(now)) && ( ((_paths[i].p->localSocket() == path->localSocket())&&(_paths[i].p->address().ss_family == path->address().ss_family)) || (_paths[i].p->address().ipsEqual2(path->address())) ) ) {
+				if (_paths[i]) {
+					if ( (_paths[i]->alive(now)) && ( ((_paths[i]->localSocket() == path->localSocket())&&(_paths[i]->address().ss_family == path->address().ss_family)) || (_paths[i]->address().ipsEqual2(path->address())) ) ) {
 						redundant = true;
 						break;
 					}
 					// If the path is the same address and port, simply assume this is a replacement
-					if ( (_paths[i].p->address().ipsEqual2(path->address()))) {
+					if ( (_paths[i]->address().ipsEqual2(path->address()))) {
 						replacePath = i;
 						break;
 					}
@@ -149,8 +146,8 @@ void Peer::received(
 			if (!redundant && replacePath == ZT_MAX_PEER_NETWORK_PATHS) {
 				int replacePathQuality = 0;
 				for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-					if (_paths[i].p) {
-						const int q = _paths[i].p->quality(now);
+					if (_paths[i]) {
+						const int q = _paths[i]->quality(now);
 						if (q > replacePathQuality) {
 							replacePathQuality = q;
 							replacePath = i;
@@ -165,8 +162,7 @@ void Peer::received(
 			if (replacePath != ZT_MAX_PEER_NETWORK_PATHS) {
 				if (verb == Packet::VERB_OK) {
 					RR->t->peerLearnedNewPath(tPtr,networkId,*this,path,packetId);
-					_paths[replacePath].lr = now;
-					_paths[replacePath].p = path;
+					_paths[replacePath] = path;
 				} else {
 					attemptToContact = true;
 				}
@@ -259,22 +255,22 @@ void Peer::computeAggregateProportionalAllocation(int64_t now)
 	memset(&relThroughput, 0, sizeof(relThroughput));
 	// Survey all paths
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p) {
-			relStability[i] = _paths[i].p->lastComputedStability();
-			relThroughput[i] = (float)_paths[i].p->maxLifetimeThroughput();
+		if (_paths[i]) {
+			relStability[i] = _paths[i]->lastComputedStability();
+			relThroughput[i] = (float)_paths[i]->maxLifetimeThroughput();
 			maxStability = relStability[i] > maxStability ? relStability[i] : maxStability;
 			maxThroughput = relThroughput[i] > maxThroughput ? relThroughput[i] : maxThroughput;
-			maxScope = _paths[i].p->ipScope() > maxScope ? _paths[i].p->ipScope() : maxScope;
+			maxScope = _paths[i]->ipScope() > maxScope ? _paths[i]->ipScope() : maxScope;
 		}
 	}
 	// Convert to relative values
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p) {
+		if (_paths[i]) {
 			relStability[i] /= maxStability ? maxStability : 1;
 			relThroughput[i] /= maxThroughput ? maxThroughput : 1;
-			float normalized_ma = Utils::normalize((float)_paths[i].p->ackAge(now), 0, ZT_PATH_MAX_AGE, 0, 10);
+			float normalized_ma = Utils::normalize((float)_paths[i]->ackAge(now), 0, ZT_PATH_MAX_AGE, 0, 10);
 			float age_contrib = exp((-1)*normalized_ma);
-			float relScope = ((float)(_paths[i].p->ipScope()+1) / (maxScope + 1));
+			float relScope = ((float)(_paths[i]->ipScope()+1) / (maxScope + 1));
 			float relQuality =
 				(relStability[i] * (float)ZT_PATH_CONTRIB_STABILITY)
 				+ (fmaxf(1.0f, relThroughput[i]) * (float)ZT_PATH_CONTRIB_THROUGHPUT)
@@ -284,13 +280,13 @@ void Peer::computeAggregateProportionalAllocation(int64_t now)
 			relQuality = relQuality > (1.00f / 100.0f) ? relQuality : 0.0f;
 			relQuality = relQuality < (99.0f / 100.0f) ? relQuality : 1.0f;
 			totalRelativeQuality += relQuality;
-			_paths[i].p->updateRelativeQuality(relQuality);
+			_paths[i]->updateRelativeQuality(relQuality);
 		}
 	}
 	// Convert set of relative performances into an allocation set
 	for(uint16_t i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p) {
-			_paths[i].p->updateComponentAllocationOfAggregateLink((unsigned char)((_paths[i].p->relativeQuality() / totalRelativeQuality) * 255));
+		if (_paths[i]) {
+			_paths[i]->updateComponentAllocationOfAggregateLink((unsigned char)((_paths[i]->relativeQuality() / totalRelativeQuality) * 255));
 		}
 	}
 }
@@ -299,8 +295,8 @@ int Peer::computeAggregateLinkPacketDelayVariance()
 {
 	float pdv = 0.0;
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p) {
-			pdv += _paths[i].p->relativeQuality() * _paths[i].p->packetDelayVariance();
+		if (_paths[i]) {
+			pdv += _paths[i]->relativeQuality() * _paths[i]->packetDelayVariance();
 		}
 	}
 	return (int)pdv;
@@ -311,9 +307,9 @@ int Peer::computeAggregateLinkMeanLatency()
 	int ml = 0;
 	int pathCount = 0;
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p) {
+		if (_paths[i]) {
 			pathCount++;
-			ml += (int)(_paths[i].p->relativeQuality() * _paths[i].p->meanLatency());
+			ml += (int)(_paths[i]->relativeQuality() * _paths[i]->meanLatency());
 		}
 	}
 	return ml / pathCount;
@@ -325,9 +321,9 @@ int Peer::aggregateLinkPhysicalPathCount()
 	int pathCount = 0;
 	int64_t now = RR->node->now();
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p && _paths[i].p->alive(now)) {
-			if (!ifnamemap[_paths[i].p->getName()]) {
-				ifnamemap[_paths[i].p->getName()] = true;
+		if (_paths[i] && _paths[i]->alive(now)) {
+			if (!ifnamemap[_paths[i]->getName()]) {
+				ifnamemap[_paths[i]->getName()] = true;
 				pathCount++;
 			}
 		}
@@ -340,7 +336,7 @@ int Peer::aggregateLinkLogicalPathCount()
 	int pathCount = 0;
 	int64_t now = RR->node->now();
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p && _paths[i].p->alive(now)) {
+		if (_paths[i] && _paths[i]->alive(now)) {
 			pathCount++;
 		}
 	}
@@ -359,9 +355,9 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 	if (!_canUseMultipath) {
 		long bestPathQuality = 2147483647;
 		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-			if (_paths[i].p) {
-				if ((includeExpired)||((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION)) {
-					const long q = _paths[i].p->quality(now);
+			if (_paths[i]) {
+				if ((includeExpired)||(_paths[i]->alive(now))) {
+					const long q = _paths[i]->quality(now);
 					if (q <= bestPathQuality) {
 						bestPathQuality = q;
 						bestPath = i;
@@ -370,14 +366,14 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 			} else break;
 		}
 		if (bestPath != ZT_MAX_PEER_NETWORK_PATHS) {
-			return _paths[bestPath].p;
+			return _paths[bestPath];
 		}
 		return SharedPtr<Path>();
 	}
 
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p) {
-			_paths[i].p->processBackgroundPathMeasurements(now);
+		if (_paths[i]) {
+			_paths[i]->processBackgroundPathMeasurements(now);
 		}
 	}
 
@@ -392,8 +388,8 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 		memset(&alivePaths, -1, sizeof(alivePaths));
 		memset(&stalePaths, -1, sizeof(stalePaths));
 		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-			if (_paths[i].p) {
-				if (_paths[i].p->alive(now)) {
+			if (_paths[i]) {
+				if (_paths[i]->alive(now)) {
 					alivePaths[numAlivePaths] = i;
 					numAlivePaths++;
 				}
@@ -406,12 +402,12 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 		unsigned int r = _freeRandomByte;
 		if (numAlivePaths > 0) {
 			int rf = r % numAlivePaths;
-			return _paths[alivePaths[rf]].p;
+			return _paths[alivePaths[rf]];
 		}
 		else if(numStalePaths > 0) {
 			// Resort to trying any non-expired path
 			int rf = r % numStalePaths;
-			return _paths[stalePaths[rf]].p;
+			return _paths[stalePaths[rf]];
 		}
 	}
 
@@ -426,17 +422,17 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired)
 		// Randomly choose path according to their allocations
 		float rf = _freeRandomByte;
 		for(int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-			if (_paths[i].p) {
-				if (rf < _paths[i].p->allocation()) {
+			if (_paths[i]) {
+				if (rf < _paths[i]->allocation()) {
 					bestPath = i;
 					_pathChoiceHist.push(bestPath); // Record which path we chose
 					break;
 				}
-				rf -= _paths[i].p->allocation();
+				rf -= _paths[i]->allocation();
 			}
 		}
 		if (bestPath < ZT_MAX_PEER_NETWORK_PATHS) {
-			return _paths[bestPath].p;
+			return _paths[bestPath];
 		}
 	}
 	return SharedPtr<Path>();
@@ -452,8 +448,8 @@ char *Peer::interfaceListStr()
 	memset(_interfaceListStr, 0, sizeof(_interfaceListStr));
 	int alivePathCount = aggregateLinkLogicalPathCount();
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p && _paths[i].p->alive(now)) {
-			int ipv = _paths[i].p->address().isV4();
+		if (_paths[i] && _paths[i]->alive(now)) {
+			int ipv = _paths[i]->address().isV4();
 			// If this is acting as an aggregate link, check allocations
 			float targetAllocation = 1.0f / (float)alivePathCount;
 			float currentAllocation = 1.0f;
@@ -464,14 +460,14 @@ char *Peer::interfaceListStr()
 				}
 			}
 			char *ipvStr = ipv ? (char*)"ipv4" : (char*)"ipv6";
-			sprintf(tmp, "(%s, %s, %.3f)", _paths[i].p->getName(), ipvStr, currentAllocation);
+			sprintf(tmp, "(%s, %s, %.3f)", _paths[i]->getName(), ipvStr, currentAllocation);
 			// Prevent duplicates
-			if(ifnamemap[_paths[i].p->getName()] != ipv) {
+			if(ifnamemap[_paths[i]->getName()] != ipv) {
 				memcpy(ptr, tmp, strlen(tmp));
 				ptr += strlen(tmp);
 				*ptr = ' ';
 				ptr++;
-				ifnamemap[_paths[i].p->getName()] = ipv;
+				ifnamemap[_paths[i]->getName()] = ipv;
 			}
 		}
 	}
@@ -509,10 +505,10 @@ void Peer::introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &o
 	Mutex::Lock _l1(_paths_m);
 
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p) {
-			const long q = _paths[i].p->quality(now);
-			const unsigned int s = (unsigned int)_paths[i].p->ipScope();
-			switch(_paths[i].p->address().ss_family) {
+		if (_paths[i]) {
+			const long q = _paths[i]->quality(now);
+			const unsigned int s = (unsigned int)_paths[i]->ipScope();
+			switch(_paths[i]->address().ss_family) {
 				case AF_INET:
 					if (q <= myBestV4QualityByScope[s]) {
 						myBestV4QualityByScope[s] = q;
@@ -532,10 +528,10 @@ void Peer::introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &o
 	Mutex::Lock _l2(other->_paths_m);
 
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (other->_paths[i].p) {
-			const long q = other->_paths[i].p->quality(now);
-			const unsigned int s = (unsigned int)other->_paths[i].p->ipScope();
-			switch(other->_paths[i].p->address().ss_family) {
+		if (other->_paths[i]) {
+			const long q = other->_paths[i]->quality(now);
+			const unsigned int s = (unsigned int)other->_paths[i]->ipScope();
+			switch(other->_paths[i]->address().ss_family) {
 				case AF_INET:
 					if (q <= theirBestV4QualityByScope[s]) {
 						theirBestV4QualityByScope[s] = q;
@@ -576,30 +572,30 @@ void Peer::introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &o
 				Packet outp(_id.address(),RR->identity.address(),Packet::VERB_RENDEZVOUS);
 				outp.append((uint8_t)0);
 				other->_id.address().appendTo(outp);
-				outp.append((uint16_t)other->_paths[theirs].p->address().port());
-				if (other->_paths[theirs].p->address().ss_family == AF_INET6) {
+				outp.append((uint16_t)other->_paths[theirs]->address().port());
+				if (other->_paths[theirs]->address().ss_family == AF_INET6) {
 					outp.append((uint8_t)16);
-					outp.append(other->_paths[theirs].p->address().rawIpData(),16);
+					outp.append(other->_paths[theirs]->address().rawIpData(),16);
 				} else {
 					outp.append((uint8_t)4);
-					outp.append(other->_paths[theirs].p->address().rawIpData(),4);
+					outp.append(other->_paths[theirs]->address().rawIpData(),4);
 				}
 				outp.armor(_key,true);
-				_paths[mine].p->send(RR,tPtr,outp.data(),outp.size(),now);
+				_paths[mine]->send(RR,tPtr,outp.data(),outp.size(),now);
 			} else {
 				Packet outp(other->_id.address(),RR->identity.address(),Packet::VERB_RENDEZVOUS);
 				outp.append((uint8_t)0);
 				_id.address().appendTo(outp);
-				outp.append((uint16_t)_paths[mine].p->address().port());
-				if (_paths[mine].p->address().ss_family == AF_INET6) {
+				outp.append((uint16_t)_paths[mine]->address().port());
+				if (_paths[mine]->address().ss_family == AF_INET6) {
 					outp.append((uint8_t)16);
-					outp.append(_paths[mine].p->address().rawIpData(),16);
+					outp.append(_paths[mine]->address().rawIpData(),16);
 				} else {
 					outp.append((uint8_t)4);
-					outp.append(_paths[mine].p->address().rawIpData(),4);
+					outp.append(_paths[mine]->address().rawIpData(),4);
 				}
 				outp.armor(other->_key,true);
-				other->_paths[theirs].p->send(RR,tPtr,outp.data(),outp.size(),now);
+				other->_paths[theirs]->send(RR,tPtr,outp.data(),outp.size(),now);
 			}
 			++alt;
 		}
@@ -624,10 +620,10 @@ inline void Peer::processBackgroundPeerTasks(const int64_t now)
 		int currAlivePathCount = 0;
 		int duplicatePathsFound = 0;
 		for (unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-			if (_paths[i].p) {
+			if (_paths[i]) {
 				currAlivePathCount++;
 				for (unsigned int j=0;j<ZT_MAX_PEER_NETWORK_PATHS;++j) {
-					if (_paths[i].p && _paths[j].p && _paths[i].p->address().ipsEqual2(_paths[j].p->address()) && i != j) {
+					if (_paths[i] && _paths[j] && _paths[i]->address().ipsEqual2(_paths[j]->address()) && i != j) {
 						duplicatePathsFound+=1;
 						break;
 					}
@@ -721,13 +717,13 @@ void Peer::ping(void *tPtr,int64_t now,unsigned int &v4SendCount,unsigned int &v
 
 	unsigned int j = 0;
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if ((_paths[i].p)&&(_paths[i].p->alive(now))) {
-			sendHELLO(tPtr,_paths[i].p->localSocket(),_paths[i].p->address(),now);
+		if ((_paths[i])&&(_paths[i]->alive(now))) {
+			sendHELLO(tPtr,_paths[i]->localSocket(),_paths[i]->address(),now);
 
-			_paths[i].p->sent(now);
-			if (_paths[i].p->address().isV4())
+			_paths[i]->sent(now);
+			if (_paths[i]->address().isV4())
 				++v4SendCount;
-			else if (_paths[i].p->address().isV6())
+			else if (_paths[i]->address().isV6())
 				++v6SendCount;
 
 			if (i != j)
@@ -736,8 +732,7 @@ void Peer::ping(void *tPtr,int64_t now,unsigned int &v4SendCount,unsigned int &v
 		}
 	}
 	while(j < ZT_MAX_PEER_NETWORK_PATHS) {
-		_paths[j].lr = 0;
-		_paths[j].p.zero();
+		_paths[j].zero();
 		++j;
 	}
 }
@@ -746,11 +741,10 @@ void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddres
 {
 	Mutex::Lock _l(_paths_m);
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p) {
-			if ((_paths[i].p->address().ss_family == inetAddressFamily)&&(_paths[i].p->ipScope() == scope)) {
-				sendHELLO(tPtr,_paths[i].p->localSocket(),_paths[i].p->address(),now);
-				_paths[i].p->sent(now);
-				_paths[i].lr = 0; // path will not be used unless it speaks again
+		if (_paths[i]) {
+			if ((_paths[i]->address().ss_family == inetAddressFamily)&&(_paths[i]->ipScope() == scope)) {
+				sendHELLO(tPtr,_paths[i]->localSocket(),_paths[i]->address(),now);
+				_paths[i]->sent(now);
 			}
 		} else break;
 	}

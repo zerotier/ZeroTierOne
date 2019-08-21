@@ -117,8 +117,8 @@ public:
 	{
 		Mutex::Lock _l(_paths_m);
 		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-			if (_paths[i].p) {
-				if (((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION)&&(_paths[i].p->address() == addr))
+			if (_paths[i]) {
+				if ((_paths[i]->address() == addr)&&(_paths[i]->alive(now)))
 					return true;
 			} else break;
 		}
@@ -290,8 +290,8 @@ public:
 		std::vector< SharedPtr<Path> > pp;
 		Mutex::Lock _l(_paths_m);
 		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-			if (!_paths[i].p) break;
-			pp.push_back(_paths[i].p);
+			if (!_paths[i]) break;
+			pp.push_back(_paths[i]);
 		}
 		return pp;
 	}
@@ -499,13 +499,6 @@ public:
 	}
 
 private:
-	struct _PeerPath
-	{
-		_PeerPath() : lr(0),p() {}
-		int64_t lr; // time of last valid ZeroTier packet
-		SharedPtr<Path> p;
-	};
-
 	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
 
 	const RuntimeEnvironment *RR;
@@ -517,25 +510,23 @@ private:
 	int64_t _lastWhoisRequestReceived;
 	int64_t _lastEchoRequestReceived;
 	int64_t _lastCredentialsReceived;
-	int64_t _lastPathPrune;
 	int64_t _lastACKWindowReset;
 	int64_t _lastQoSWindowReset;
 	int64_t _lastMultipathCompatibilityCheck;
-
-	unsigned char _freeRandomByte;
 
 	int _uniqueAlivePathCount;
 
 	bool _localMultipathSupported;
 	bool _remoteMultipathSupported;
 	bool _canUseMultipath;
+	uint8_t _freeRandomByte;
 
 	uint16_t _vProto;
 	uint16_t _vMajor;
 	uint16_t _vMinor;
 	uint16_t _vRevision;
 
-	_PeerPath _paths[ZT_MAX_PEER_NETWORK_PATHS];
+	SharedPtr<Path> _paths[ZT_MAX_PEER_NETWORK_PATHS];
 	Mutex _paths_m;
 
 	Identity _id;

@@ -424,7 +424,7 @@ void Node::status(ZT_NodeStatus *status) const
 	status->online = _online ? 1 : 0;
 }
 
-struct _sortPeerPtrsByAddress { inline bool cmp(const SharedPtr<Peer> &a,const SharedPtr<Peer> &b) const { return (a->address() < b->address()); } };
+struct _sortPeerPtrsByAddress { inline bool operator()(const SharedPtr<Peer> &a,const SharedPtr<Peer> &b) const { return (a->address() < b->address()); } };
 
 ZT_PeerList *Node::peers() const
 {
