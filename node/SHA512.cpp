@@ -1,11 +1,4 @@
-// Code taken from NaCl by D. J. Bernstein and others
-// Public domain
-
-/*
-20080913
-D. J. Bernstein
-Public domain.
-*/
+// This code is public domain, taken from a PD crypto source file on GitHub.
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -14,191 +7,225 @@ Public domain.
 #include "SHA512.hpp"
 #include "Utils.hpp"
 
+#include <utility>
+#include <algorithm>
+
 #ifndef ZT_HAVE_NATIVE_SHA512
 
 namespace ZeroTier {
 
 namespace {
 
-static inline void sha512_encode(uint64_t input, uint8_t *output, uint32_t idx)
-{
-	output[idx + 0] = (uint8_t)(input >> 56);
-	output[idx + 1] = (uint8_t)(input >> 48);
-	output[idx + 2] = (uint8_t)(input >> 40);
-	output[idx + 3] = (uint8_t)(input >> 32);
-	output[idx + 4] = (uint8_t)(input >> 24);
-	output[idx + 5] = (uint8_t)(input >> 16);
-	output[idx + 6] = (uint8_t)(input >>  8);
-	output[idx + 7] = (uint8_t)(input >>  0);
-}
-static inline void sha512_decode(uint64_t *output, uint8_t *input, uint32_t idx)
-{
-	*output = ((uint64_t)input[idx + 0] << 56)
-		| ((uint64_t)input[idx + 1] << 48)
-		| ((uint64_t)input[idx + 2] << 40)
-		| ((uint64_t)input[idx + 3] << 32)
-		| ((uint64_t)input[idx + 4] << 24)
-		| ((uint64_t)input[idx + 5] << 16)
-		| ((uint64_t)input[idx + 6] <<  8)
-		| ((uint64_t)input[idx + 7] <<  0);
-}
-
-typedef struct sha512_ctx_tag {
-	uint32_t is_sha384;
-	uint8_t block[128];
-	uint64_t len[2];
-	uint64_t val[8];
-	uint8_t *payload_addr;
-	unsigned long payload_len;
-} sha512_ctx_t;
-
-#define LSR(x,n) (x >> n)
-#define ROR(x,n) (LSR(x,n) | (x << (64 - n)))
-
-#define MA(x,y,z) ((x & y) | (z & (x | y)))
-#define CH(x,y,z) (z ^ (x & (y ^ z)))
-#define GAMMA0(x) (ROR(x, 1) ^ ROR(x, 8) ^  LSR(x, 7))
-#define GAMMA1(x) (ROR(x,19) ^ ROR(x,61) ^  LSR(x, 6))
-#define SIGMA0(x) (ROR(x,28) ^ ROR(x,34) ^ ROR(x,39))
-#define SIGMA1(x) (ROR(x,14) ^ ROR(x,18) ^ ROR(x,41))
-
-#define INIT_COMPRESSOR() uint64_t tmp0 = 0, tmp1 = 0
-#define COMPRESS( a,  b,  c, d,  e,  f,  g,  h, x,  k)   \
-    tmp0 = h + SIGMA1(e) + CH(e,f,g) + k + x;              \
-    tmp1 = SIGMA0(a) + MA(a,b,c); d += tmp0; h = tmp0 + tmp1;
-
-static const uint8_t sha512_padding[128] = { 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
-static const uint64_t K[80] = {
-	0x428A2F98D728AE22ULL,  0x7137449123EF65CDULL, 0xB5C0FBCFEC4D3B2FULL,  0xE9B5DBA58189DBBCULL,
-	0x3956C25BF348B538ULL,  0x59F111F1B605D019ULL, 0x923F82A4AF194F9BULL,  0xAB1C5ED5DA6D8118ULL,
-	0xD807AA98A3030242ULL,  0x12835B0145706FBEULL, 0x243185BE4EE4B28CULL,  0x550C7DC3D5FFB4E2ULL,
-	0x72BE5D74F27B896FULL,  0x80DEB1FE3B1696B1ULL, 0x9BDC06A725C71235ULL,  0xC19BF174CF692694ULL,
-	0xE49B69C19EF14AD2ULL,  0xEFBE4786384F25E3ULL, 0x0FC19DC68B8CD5B5ULL,  0x240CA1CC77AC9C65ULL,
-	0x2DE92C6F592B0275ULL,  0x4A7484AA6EA6E483ULL, 0x5CB0A9DCBD41FBD4ULL,  0x76F988DA831153B5ULL,
-	0x983E5152EE66DFABULL,  0xA831C66D2DB43210ULL, 0xB00327C898FB213FULL,  0xBF597FC7BEEF0EE4ULL,
-	0xC6E00BF33DA88FC2ULL,  0xD5A79147930AA725ULL, 0x06CA6351E003826FULL,  0x142929670A0E6E70ULL,
-	0x27B70A8546D22FFCULL,  0x2E1B21385C26C926ULL, 0x4D2C6DFC5AC42AEDULL,  0x53380D139D95B3DFULL,
-	0x650A73548BAF63DEULL,  0x766A0ABB3C77B2A8ULL, 0x81C2C92E47EDAEE6ULL,  0x92722C851482353BULL,
-	0xA2BFE8A14CF10364ULL,  0xA81A664BBC423001ULL, 0xC24B8B70D0F89791ULL,  0xC76C51A30654BE30ULL,
-	0xD192E819D6EF5218ULL,  0xD69906245565A910ULL, 0xF40E35855771202AULL,  0x106AA07032BBD1B8ULL,
-	0x19A4C116B8D2D0C8ULL,  0x1E376C085141AB53ULL, 0x2748774CDF8EEB99ULL,  0x34B0BCB5E19B48A8ULL,
-	0x391C0CB3C5C95A63ULL,  0x4ED8AA4AE3418ACBULL, 0x5B9CCA4F7763E373ULL,  0x682E6FF3D6B2B8A3ULL,
-	0x748F82EE5DEFB2FCULL,  0x78A5636F43172F60ULL, 0x84C87814A1F0AB72ULL,  0x8CC702081A6439ECULL,
-	0x90BEFFFA23631E28ULL,  0xA4506CEBDE82BDE9ULL, 0xBEF9A3F7B2C67915ULL,  0xC67178F2E372532BULL,
-	0xCA273ECEEA26619CULL,  0xD186B8C721C0C207ULL, 0xEADA7DD6CDE0EB1EULL,  0xF57D4F7FEE6ED178ULL,
-	0x06F067AA72176FBAULL,  0x0A637DC5A2C898A6ULL, 0x113F9804BEF90DAEULL,  0x1B710B35131C471BULL,
-	0x28DB77F523047D84ULL,  0x32CAAB7B40C72493ULL, 0x3C9EBE0A15C9BEBCULL,  0x431D67C49C100D4CULL,
-	0x4CC5D4BECB3E42B6ULL,  0x597F299CFC657E2AULL, 0x5FCB6FAB3AD6FAECULL,  0x6C44198C4A475817ULL
+struct sha512_state {
+	uint64_t length,state[8];
+	unsigned long curlen;
+	uint8_t buf[128];
 };
 
-#define sha512_memcpy(s,d,l) memcpy((d),(s),(l))
-#define sha512_memclr(d,l) memset((d),0,(l))
+static const uint64_t K[80] = {
+	0x428a2f98d728ae22ULL,0x7137449123ef65cdULL,
+	0xb5c0fbcfec4d3b2fULL,0xe9b5dba58189dbbcULL,
+	0x3956c25bf348b538ULL,0x59f111f1b605d019ULL,
+	0x923f82a4af194f9bULL,0xab1c5ed5da6d8118ULL,
+	0xd807aa98a3030242ULL,0x12835b0145706fbeULL,
+	0x243185be4ee4b28cULL,0x550c7dc3d5ffb4e2ULL,
+	0x72be5d74f27b896fULL,0x80deb1fe3b1696b1ULL,
+	0x9bdc06a725c71235ULL,0xc19bf174cf692694ULL,
+	0xe49b69c19ef14ad2ULL,0xefbe4786384f25e3ULL,
+	0x0fc19dc68b8cd5b5ULL,0x240ca1cc77ac9c65ULL,
+	0x2de92c6f592b0275ULL,0x4a7484aa6ea6e483ULL,
+	0x5cb0a9dcbd41fbd4ULL,0x76f988da831153b5ULL,
+	0x983e5152ee66dfabULL,0xa831c66d2db43210ULL,
+	0xb00327c898fb213fULL,0xbf597fc7beef0ee4ULL,
+	0xc6e00bf33da88fc2ULL,0xd5a79147930aa725ULL,
+	0x06ca6351e003826fULL,0x142929670a0e6e70ULL,
+	0x27b70a8546d22ffcULL,0x2e1b21385c26c926ULL,
+	0x4d2c6dfc5ac42aedULL,0x53380d139d95b3dfULL,
+	0x650a73548baf63deULL,0x766a0abb3c77b2a8ULL,
+	0x81c2c92e47edaee6ULL,0x92722c851482353bULL,
+	0xa2bfe8a14cf10364ULL,0xa81a664bbc423001ULL,
+	0xc24b8b70d0f89791ULL,0xc76c51a30654be30ULL,
+	0xd192e819d6ef5218ULL,0xd69906245565a910ULL,
+	0xf40e35855771202aULL,0x106aa07032bbd1b8ULL,
+	0x19a4c116b8d2d0c8ULL,0x1e376c085141ab53ULL,
+	0x2748774cdf8eeb99ULL,0x34b0bcb5e19b48a8ULL,
+	0x391c0cb3c5c95a63ULL,0x4ed8aa4ae3418acbULL,
+	0x5b9cca4f7763e373ULL,0x682e6ff3d6b2b8a3ULL,
+	0x748f82ee5defb2fcULL,0x78a5636f43172f60ULL,
+	0x84c87814a1f0ab72ULL,0x8cc702081a6439ecULL,
+	0x90befffa23631e28ULL,0xa4506cebde82bde9ULL,
+	0xbef9a3f7b2c67915ULL,0xc67178f2e372532bULL,
+	0xca273eceea26619cULL,0xd186b8c721c0c207ULL,
+	0xeada7dd6cde0eb1eULL,0xf57d4f7fee6ed178ULL,
+	0x06f067aa72176fbaULL,0x0a637dc5a2c898a6ULL,
+	0x113f9804bef90daeULL,0x1b710b35131c471bULL,
+	0x28db77f523047d84ULL,0x32caab7b40c72493ULL,
+	0x3c9ebe0a15c9bebcULL,0x431d67c49c100d4cULL,
+	0x4cc5d4becb3e42b6ULL,0x597f299cfc657e2aULL,
+	0x5fcb6fab3ad6faecULL,0x6c44198c4a475817ULL
+};
 
-static inline void sha512_init_512(sha512_ctx_t *sha512_ctx, uint8_t *payload_addr, unsigned long payload_len)
-{
-	sha512_memclr((uint8_t *)sha512_ctx,sizeof(sha512_ctx_t));
-	sha512_ctx->val[0] = 0x6A09E667F3BCC908ULL;
-	sha512_ctx->val[1] = 0xBB67AE8584CAA73BULL;
-	sha512_ctx->val[2] = 0x3C6EF372FE94F82BULL;
-	sha512_ctx->val[3] = 0xA54FF53A5F1D36F1ULL;
-	sha512_ctx->val[4] = 0x510E527FADE682D1ULL;
-	sha512_ctx->val[5] = 0x9B05688C2B3E6C1FULL;
-	sha512_ctx->val[6] = 0x1F83D9ABFB41BD6BULL;
-	sha512_ctx->val[7] = 0x5BE0CD19137E2179ULL;
-	sha512_ctx->is_sha384 = 0;
-	sha512_ctx->payload_addr = payload_addr;
-	sha512_ctx->payload_len = (uint64_t)payload_len;
-	sha512_ctx->len[0] = payload_len << 3;
-	sha512_ctx->len[1] = payload_len >> 61;
-}
+#define STORE64H(x, y)                                                                     \
+   { (y)[0] = (unsigned char)(((x)>>56)&255); (y)[1] = (unsigned char)(((x)>>48)&255);     \
+     (y)[2] = (unsigned char)(((x)>>40)&255); (y)[3] = (unsigned char)(((x)>>32)&255);     \
+     (y)[4] = (unsigned char)(((x)>>24)&255); (y)[5] = (unsigned char)(((x)>>16)&255);     \
+     (y)[6] = (unsigned char)(((x)>>8)&255); (y)[7] = (unsigned char)((x)&255); }
 
-static inline void sha512_init_384(sha512_ctx_t *sha512_ctx, uint8_t *payload_addr, unsigned long payload_len)
-{
-	sha512_memclr((uint8_t *)sha512_ctx,sizeof(sha512_ctx_t));
-	sha512_ctx->val[0] = 0xCBBB9D5DC1059ED8ULL;
-	sha512_ctx->val[1] = 0x629A292A367CD507ULL;
-	sha512_ctx->val[2] = 0x9159015A3070DD17ULL;
-	sha512_ctx->val[3] = 0x152FECD8F70E5939ULL;
-	sha512_ctx->val[4] = 0x67332667FFC00B31ULL;
-	sha512_ctx->val[5] = 0x8EB44A8768581511ULL;
-	sha512_ctx->val[6] = 0xDB0C2E0D64F98FA7ULL;
-	sha512_ctx->val[7] = 0x47B5481DBEFA4FA4ULL;
-	sha512_ctx->is_sha384 = 1;
-	sha512_ctx->payload_addr = payload_addr;
-	sha512_ctx->payload_len = (uint64_t)payload_len;
-	sha512_ctx->len[0] = payload_len << 3;
-	sha512_ctx->len[1] = payload_len >> 61;
-}
+#define LOAD64H(x, y)                                                      \
+   { x = (((uint64_t)((y)[0] & 255))<<56)|(((uint64_t)((y)[1] & 255))<<48) | \
+         (((uint64_t)((y)[2] & 255))<<40)|(((uint64_t)((y)[3] & 255))<<32) | \
+         (((uint64_t)((y)[4] & 255))<<24)|(((uint64_t)((y)[5] & 255))<<16) | \
+         (((uint64_t)((y)[6] & 255))<<8)|(((uint64_t)((y)[7] & 255))); }
 
-static inline void sha512_hash_factory(sha512_ctx_t *ctx, uint8_t data[128])
+#define ROL64c(x,y) (((x)<<(y)) | ((x)>>(64-(y))))
+#define ROR64c(x,y) (((x)>>(y)) | ((x)<<(64-(y))))
+
+#define Ch(x,y,z)       (z ^ (x & (y ^ z)))
+#define Maj(x,y,z)      (((x | y) & z) | (x & y))
+#define S(x, n)         ROR64c(x, n)
+#define R(x, n)         ((x)>>(n))
+#define Sigma0(x)       (S(x, 28) ^ S(x, 34) ^ S(x, 39))
+#define Sigma1(x)       (S(x, 14) ^ S(x, 18) ^ S(x, 41))
+#define Gamma0(x)       (S(x, 1) ^ S(x, 8) ^ R(x, 7))
+#define Gamma1(x)       (S(x, 19) ^ S(x, 61) ^ R(x, 6))
+
+static ZT_ALWAYS_INLINE void sha512_compress(sha512_state *const md,uint8_t *const buf)
 {
-	uint32_t i = 0;
-	uint64_t W[80];
-	uint64_t v[8];
-	INIT_COMPRESSOR();
-	for(i = 0; i < 16; i++) { sha512_decode(&W[i], data, i << 3 ); }
-	for(; i < 80; i++) { W[i] = GAMMA1(W[i -  2]) + W[i -  7] + GAMMA0(W[i - 15]) + W[i - 16]; }
-	for (i = 0;i < 8; i++) { v[i] = ctx->val[i]; }
-	for(i = 0; i < 80;) {
-		COMPRESS(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], W[i], K[i] ); i++;
-		COMPRESS(v[7], v[0], v[1], v[2], v[3], v[4], v[5], v[6], W[i], K[i] ); i++;
-		COMPRESS(v[6], v[7], v[0], v[1], v[2], v[3], v[4], v[5], W[i], K[i] ); i++;
-		COMPRESS(v[5], v[6], v[7], v[0], v[1], v[2], v[3], v[4], W[i], K[i] ); i++;
-		COMPRESS(v[4], v[5], v[6], v[7], v[0], v[1], v[2], v[3], W[i], K[i] ); i++;
-		COMPRESS(v[3], v[4], v[5], v[6], v[7], v[0], v[1], v[2], W[i], K[i] ); i++;
-		COMPRESS(v[2], v[3], v[4], v[5], v[6], v[7], v[0], v[1], W[i], K[i] ); i++;
-		COMPRESS(v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[0], W[i], K[i] ); i++;
+	uint64_t S[8], W[80], t0, t1;
+	int i;
+
+	for (i = 0; i < 8; i++) {
+		S[i] = md->state[i];
 	}
-	for (i = 0; i < 8; i++) { ctx->val[i] += v[i]; }
-}
 
-static inline void sha512_stage1(sha512_ctx_t *sha512_ctx)
-{
-	while (sha512_ctx->payload_len >= 128) {
-		sha512_hash_factory(sha512_ctx, sha512_ctx->payload_addr);
-		sha512_ctx->payload_addr += 128;
-		sha512_ctx->payload_len -= 128;
+	for (i = 0; i < 16; i++) {
+		LOAD64H(W[i], buf + (8*i));
+	}
+
+	for (i = 16; i < 80; i++) {
+		W[i] = Gamma1(W[i - 2]) + W[i - 7] + Gamma0(W[i - 15]) + W[i - 16];
+	}
+
+#define RND(a,b,c,d,e,f,g,h,i) \
+	t0 = h + Sigma1(e) + Ch(e, f, g) + K[i] + W[i]; \
+	t1 = Sigma0(a) + Maj(a, b, c); \
+	d += t0; \
+	h  = t0 + t1;
+
+	for (i = 0; i < 80; i += 8) {
+		RND(S[0],S[1],S[2],S[3],S[4],S[5],S[6],S[7],i+0);
+		RND(S[7],S[0],S[1],S[2],S[3],S[4],S[5],S[6],i+1);
+		RND(S[6],S[7],S[0],S[1],S[2],S[3],S[4],S[5],i+2);
+		RND(S[5],S[6],S[7],S[0],S[1],S[2],S[3],S[4],i+3);
+		RND(S[4],S[5],S[6],S[7],S[0],S[1],S[2],S[3],i+4);
+		RND(S[3],S[4],S[5],S[6],S[7],S[0],S[1],S[2],i+5);
+		RND(S[2],S[3],S[4],S[5],S[6],S[7],S[0],S[1],i+6);
+		RND(S[1],S[2],S[3],S[4],S[5],S[6],S[7],S[0],i+7);
+	}
+
+
+	/* feedback */
+	for (i = 0; i < 8; i++) {
+		md->state[i] = md->state[i] + S[i];
 	}
 }
 
-static inline void sha512_stage2(sha512_ctx_t *sha512_ctx, uint8_t output[64])
+static ZT_ALWAYS_INLINE void sha384_init(sha512_state *const md)
 {
-	uint32_t block_pos = sha512_ctx->payload_len;
-	uint32_t padding_bytes = 0;
-	uint8_t temp_data[128] = {0};
-	uint8_t *temp_data_p = (uint8_t *)&temp_data[0];
-	uint8_t len_be[16] = {0};
-	uint8_t i = 0;
-	sha512_memcpy(sha512_ctx->payload_addr, temp_data_p, sha512_ctx->payload_len);
-	padding_bytes = 112 - block_pos;
-	temp_data_p += block_pos;
-	sha512_memcpy((uint8_t *)sha512_padding, temp_data_p, padding_bytes);
-	temp_data_p += padding_bytes;
-	sha512_encode(sha512_ctx->len[1], len_be, 0);
-	sha512_encode(sha512_ctx->len[0], len_be, 8);
-	sha512_memcpy(len_be, temp_data_p, 16);
-	sha512_hash_factory(sha512_ctx, temp_data);
-	for (i = 0; i < 6; i++) { sha512_encode(sha512_ctx->val[i], output, i * 8); }
-	for ( ;(i < 8) && (sha512_ctx->is_sha384 == 0); i++) { sha512_encode(sha512_ctx->val[i], output, i * 8); }
+	md->curlen = 0;
+	md->length = 0;
+	md->state[0] = 0xcbbb9d5dc1059ed8ULL;
+	md->state[1] = 0x629a292a367cd507ULL;
+	md->state[2] = 0x9159015a3070dd17ULL;
+	md->state[3] = 0x152fecd8f70e5939ULL;
+	md->state[4] = 0x67332667ffc00b31ULL;
+	md->state[5] = 0x8eb44a8768581511ULL;
+	md->state[6] = 0xdb0c2e0d64f98fa7ULL;
+	md->state[7] = 0x47b5481dbefa4fa4ULL;
+}
+
+static ZT_ALWAYS_INLINE void sha512_init(sha512_state *const md)
+{
+	md->curlen = 0;
+	md->length = 0;
+	md->state[0] = 0x6a09e667f3bcc908ULL;
+	md->state[1] = 0xbb67ae8584caa73bULL;
+	md->state[2] = 0x3c6ef372fe94f82bULL;
+	md->state[3] = 0xa54ff53a5f1d36f1ULL;
+	md->state[4] = 0x510e527fade682d1ULL;
+	md->state[5] = 0x9b05688c2b3e6c1fULL;
+	md->state[6] = 0x1f83d9abfb41bd6bULL;
+	md->state[7] = 0x5be0cd19137e2179ULL;
+}
+
+static ZT_ALWAYS_INLINE void sha512_process(sha512_state *const md,const uint8_t *in,unsigned long inlen)
+{
+	while (inlen > 0) {
+		if (md->curlen == 0 && inlen >= 128) {
+			sha512_compress(md,(uint8_t *)in);
+			md->length     += 128 * 8;
+			in             += 128;
+			inlen          -= 128;
+		} else {
+			unsigned long n = std::min(inlen,(128 - md->curlen));
+			memcpy(md->buf + md->curlen,in,n);
+			md->curlen += n;
+			in             += n;
+			inlen          -= n;
+			if (md->curlen == 128) {
+				sha512_compress(md,md->buf);
+				md->length += 8*128;
+				md->curlen = 0;
+			}
+		}
+	}
+}
+
+static ZT_ALWAYS_INLINE void sha512_done(sha512_state *const md,uint8_t *out)
+{
+	int i;
+
+	md->length += md->curlen * 8ULL;
+	md->buf[md->curlen++] = (uint8_t)0x80;
+
+	if (md->curlen > 112) {
+		while (md->curlen < 128) {
+			md->buf[md->curlen++] = (uint8_t)0;
+		}
+		sha512_compress(md, md->buf);
+		md->curlen = 0;
+	}
+
+	while (md->curlen < 120) {
+		md->buf[md->curlen++] = (uint8_t)0;
+	}
+
+	STORE64H(md->length, md->buf+120);
+	sha512_compress(md, md->buf);
+
+	for (i = 0; i < 8; i++) {
+		STORE64H(md->state[i], out+(8*i));
+	}
 }
 
 } // anonymous namespace
 
 void SHA512(void *digest,const void *data,unsigned int len)
 {
-	sha512_ctx_t h;
-	sha512_init_512(&h,(uint8_t *)data,len);
-	sha512_stage1(&h);
-	sha512_stage2(&h,(uint8_t *)digest);
+	sha512_state state;
+	sha512_init(&state);
+	sha512_process(&state,(uint8_t *)data,(unsigned long)len);
+	sha512_done(&state,(uint8_t *)digest);
 }
 
 void SHA384(void *digest,const void *data,unsigned int len)
 {
-	sha512_ctx_t h;
-	sha512_init_384(&h,(uint8_t *)data,len);
-	sha512_stage1(&h);
-	sha512_stage2(&h,(uint8_t *)digest);
+	uint8_t tmp[64];
+	sha512_state state;
+	sha384_init(&state);
+	sha512_process(&state,(uint8_t *)data,(unsigned long)len);
+	sha512_done(&state,tmp);
+	memcpy(digest,tmp,48);
 }
 
 } // namespace ZeroTier

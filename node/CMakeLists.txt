@@ -77,12 +77,11 @@ add_library(${PROJECT_NAME} STATIC ${core_src} ${core_headers})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 
-if(UNIX) 
+if(UNIX)
 	set_source_files_properties(
 		AES.cpp
-		ECC384.cpp
+#		ECC384.cpp
 		Salsa20.cpp
-		SHA512.cpp
 		C25519.cpp
 		Poly1305.cpp
 		PROPERTIES

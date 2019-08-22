@@ -36,7 +36,7 @@ namespace ZeroTier {
 namespace {
 
 #ifdef ZT_NO_TYPE_PUNNING
-static inline uint32_t GETU32(const void *in)
+static ZT_ALWAYS_INLINE uint32_t GETU32(const void *in)
 {
 	uint32_t v = ((const uint8_t *)in)[0];
 	v <<= 8;
@@ -47,7 +47,7 @@ static inline uint32_t GETU32(const void *in)
 	v |= ((const uint8_t *)in)[3];
 	return v;
 }
-static inline void PUTU32(void *out,const uint32_t v)
+static ZT_ALWAYS_INLINE void PUTU32(void *out,const uint32_t v)
 {
 	((uint8_t *)out)[0] = (uint8_t)(v >> 24);
 	((uint8_t *)out)[1] = (uint8_t)(v >> 16);
@@ -63,7 +63,7 @@ static inline void PUTU32(void *out,const uint32_t v)
 
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 
-static inline bool _zt_aesni_supported()
+static bool _zt_aesni_supported()
 {
 #ifdef __WINDOWS__
 	int regs[4];

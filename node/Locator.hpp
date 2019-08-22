@@ -160,14 +160,14 @@ public:
 	 */
 	inline std::vector<Str> makeTxtRecords(const uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE],const uint8_t p384SigningKeyPrivate[ZT_ECC384_PUBLIC_KEY_SIZE])
 	{
-		uint8_t s384[48],dnsSig[ZT_ECC384_SIGNATURE_SIZE];
-		char enc[512];
+		uint8_t s384[48];
+		char enc[256];
 
 		Buffer<65536> *const tmp = new Buffer<65536>();
 		serialize(*tmp,false);
 		SHA384(s384,tmp->data(),tmp->size());
-		ECC384ECDSASign(p384SigningKeyPrivate,s384,dnsSig);
-		tmp->append(dnsSig,ZT_ECC384_SIGNATURE_SIZE);
+		ECC384ECDSASign(p384SigningKeyPrivate,s384,((uint8_t *)tmp->unsafeData()) + tmp->size());
+		tmp->addSize(ZT_ECC384_SIGNATURE_SIZE);
 
 		// Blob must be broken into multiple TXT records that must remain sortable so they are prefixed by a hex value.
 		// 186-byte chunks yield 248-byte base64 chunks which leaves some margin below the limit of 255.
@@ -204,7 +204,7 @@ public:
 	template<typename I>
 	inline bool decodeTxtRecords(I start,I end,const uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE])
 	{
-		uint8_t dec[512],s384[48];
+		uint8_t dec[256],s384[48];
 		Buffer<65536> *tmp = nullptr;
 		try {
 			std::vector<Str> txtRecords;
