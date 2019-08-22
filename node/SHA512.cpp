@@ -92,16 +92,8 @@ static const uint64_t K[80] = {
 	0x4CC5D4BECB3E42B6ULL,  0x597F299CFC657E2AULL, 0x5FCB6FAB3AD6FAECULL,  0x6C44198C4A475817ULL
 };
 
-static inline void sha512_memcpy(uint8_t *src, uint8_t *dst, uint32_t size)
-{
-	uint32_t i = 0;
-	for (;i < size;i++) { *dst++ = *src++; }
-}
-static inline void sha512_memclr(uint8_t *dst, uint32_t size)
-{
-	uint32_t i = 0;
-	for (;i < size;i++) { *dst++ = 0; }
-}
+#define sha512_memcpy(s,d,l) memcpy((d),(s),(l))
+#define sha512_memclr(d,l) memset((d),0,(l))
 
 static inline void sha512_init_512(sha512_ctx_t *sha512_ctx, uint8_t *payload_addr, unsigned long payload_len)
 {
