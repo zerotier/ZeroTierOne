@@ -556,7 +556,6 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 	RR(renv),
 	_uPtr(uptr),
 	_id(nwid),
-	_lastAnnouncedMulticastGroupsUpstream(0),
 	_mac(renv->identity.address(),nwid),
 	_portInitialized(false),
 	_lastConfigUpdate(0),
@@ -1006,7 +1005,7 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 		ZT_VirtualNetworkConfig ctmp;
 		bool oldPortInitialized;
 		{	// do things that require lock here, but unlock before calling callbacks
-			Mutex::Lock _l(_config_l);
+			Mutex::Lock l1(_config_l);
 
 			_config = nconf;
 			_lastConfigUpdate = RR->node->now();
@@ -1237,30 +1236,14 @@ bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 	return false;
 }
 
-bool Network::recentlyAssociatedWith(const Address &addr)
-{
-	Mutex::Lock _l(_memberships_l);
-	const Membership *m = _memberships.get(addr);
-	return ((m)&&(m->recentlyAssociated(RR->node->now())));
-}
-
-void Network::clean()
+void Network::doPeriodicTasks(void *tPtr)
 {
 	const int64_t now = RR->node->now();
-	Mutex::Lock _l(_memberships_l);
+	Mutex::Lock l1(_memberships_l);
 
 	if (_destroyed)
 		return;
 
-	{
-		Hashtable< MulticastGroup,uint64_t >::Iterator i(_multicastGroupsBehindMe);
-		MulticastGroup *mg = (MulticastGroup *)0;
-		uint64_t *ts = (uint64_t *)0;
-		while (i.next(mg,ts)) {
-			if ((now - *ts) > (ZT_MULTICAST_LIKE_EXPIRE * 2))
-				_multicastGroupsBehindMe.erase(*mg);
-		}
-	}
 	{
 		Address *a = (Address *)0;
 		Membership *m = (Membership *)0;
@@ -1269,14 +1252,20 @@ void Network::clean()
 			m->clean(now,_config);
 		}
 	}
-}
 
-Membership::AddCredentialResult Network::addCredential(void *tPtr,const CertificateOfMembership &com)
-{
-	if (com.networkId() != _id)
-		return Membership::ADD_REJECTED;
-	Mutex::Lock _l(_memberships_l);
-	return _memberships[com.issuedTo()].addCredential(RR,tPtr,_config,com);
+	{
+		Mutex::Lock l2(_myMulticastGroups_l);
+
+		Hashtable< MulticastGroup,uint64_t >::Iterator i(_multicastGroupsBehindMe);
+		MulticastGroup *mg = (MulticastGroup *)0;
+		uint64_t *ts = (uint64_t *)0;
+		while (i.next(mg,ts)) {
+			if ((now - *ts) > (ZT_MULTICAST_LIKE_EXPIRE * 2))
+				_multicastGroupsBehindMe.erase(*mg);
+		}
+
+		_announceMulticastGroups(tPtr,false);
+	}
 }
 
 Membership::AddCredentialResult Network::addCredential(void *tPtr,const Address &sentFrom,const Revocation &rev)
@@ -1284,7 +1273,7 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Address 
 	if (rev.networkId() != _id)
 		return Membership::ADD_REJECTED;
 
-	Mutex::Lock _l(_memberships_l);
+	Mutex::Lock l1(_memberships_l);
 	Membership &m = _memberships[rev.target()];
 
 	const Membership::AddCredentialResult result = m.addCredential(RR,tPtr,_config,rev);
@@ -1371,9 +1360,10 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	}
 }
 
-void Network::_announceMulticastGroups(void *tPtr)
+void Network::_announceMulticastGroups(void *tPtr,bool force)
 {
 	// Assumes _myMulticastGroups_l and _memberships_l are locked
+	const int64_t now = RR->node->now();
 	const std::vector<MulticastGroup> groups(_allMulticastGroups());
 	_announceMulticastGroupsTo(tPtr,controller(),groups);
 	{
@@ -1381,7 +1371,10 @@ void Network::_announceMulticastGroups(void *tPtr)
 		Membership *m = (Membership *)0;
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
-			if (m->isAllowedOnNetwork(_config))
+			bool announce = m->multicastLikeGate(now); // force this to be called even if 'force' is true since it updates last push time
+			if ((!announce)&&(force))
+				announce = true;
+			if ((announce)&&(m->isAllowedOnNetwork(_config)))
 				_announceMulticastGroupsTo(tPtr,*a,groups);
 		}
 	}
@@ -1415,7 +1408,7 @@ void Network::_announceMulticastGroupsTo(void *tPtr,const Address &peer,const st
 
 std::vector<MulticastGroup> Network::_allMulticastGroups() const
 {
-	// Assumes _lock is locked
+	// Assumes _myMulticastGroups_l is locked
 	std::vector<MulticastGroup> mgs;
 	mgs.reserve(_myMulticastGroups.size() + _multicastGroupsBehindMe.size() + 1);
 	mgs.insert(mgs.end(),_myMulticastGroups.begin(),_myMulticastGroups.end());

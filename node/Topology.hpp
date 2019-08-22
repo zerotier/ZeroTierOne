@@ -177,7 +177,7 @@ public:
 			Address *a = (Address *)0;
 			SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 			while (i.next(a,p)) {
-				if (!(*p)->isAlive(now)) {
+				if (!(*p)->alive(now)) {
 					_peers.erase(*a);
 				}
 			}
@@ -230,15 +230,12 @@ public:
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p)) {
-			f(*this,*((const SharedPtr<Peer> *)p));
+			f(*((const SharedPtr<Peer> *)p));
 		}
 	}
 
 	/**
 	 * Apply a function or function object to all roots
-	 *
-	 * Arguments to the function are this topology object, the root in
-	 * question, and a pointer to the peer corresponding to it.
 	 *
 	 * This locks the root list during execution but other operations
 	 * are fine.
@@ -262,7 +259,7 @@ public:
 					_peers.set(rp->address(),rp);
 				}
 			}
-			f(*this,*i,rp);
+			f(*i,rp);
 		}
 	}
 

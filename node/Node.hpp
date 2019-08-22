@@ -170,8 +170,8 @@ public:
 
 	inline std::vector<InetAddress> directPaths() const
 	{
-		Mutex::Lock _l(_directPaths_m);
-		return _directPaths;
+		Mutex::Lock _l(_localInterfaceAddresses_m);
+		return _localInterfaceAddresses;
 	}
 
 	inline void postEvent(void *tPtr,ZT_Event ev,const void *md = (const void *)0) { _cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ev,md); }
@@ -249,9 +249,6 @@ public:
 	virtual void ncSendRevocation(const Address &destination,const Revocation &rev);
 	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode);
 
-	inline const Address &remoteTraceTarget() const { return _remoteTraceTarget; }
-	inline Trace::Level remoteTraceLevel() const { return _remoteTraceLevel; }
-
 	inline void setMultipathMode(uint8_t mode) { _multipathMode = mode; }
 	inline uint8_t getMultipathMode() { return _multipathMode; }
 
@@ -278,8 +275,11 @@ private:
 	// Time of last identity verification indexed by InetAddress.rateGateHash() -- used in IncomingPacket::_doHELLO() via rateGateIdentityVerification()
 	int64_t _lastIdentityVerification[16384];
 
-	// Map that remembers if we have recently sent a network config to someone
-	// querying us as a controller.
+	/* Map that remembers if we have recently sent a network config to someone
+	 * querying us as a controller. This is an optimization to allow network
+	 * controllers to know whether to treat things like multicast queries the
+	 * way authorized members would be treated without requiring an extra cert
+	 * validation. */
 	struct _LocalControllerAuth
 	{
 		uint64_t nwid,address;
@@ -291,21 +291,21 @@ private:
 	Hashtable< _LocalControllerAuth,int64_t > _localControllerAuthorizations;
 	Mutex _localControllerAuthorizations_m;
 
+	// Curreently joined networks
 	Hashtable< uint64_t,SharedPtr<Network> > _networks;
 	Mutex _networks_m;
 
-	std::vector<InetAddress> _directPaths;
-	Mutex _directPaths_m;
+	// Local interface addresses as reported by the code harnessing this Node
+	std::vector<InetAddress> _localInterfaceAddresses;
+	Mutex _localInterfaceAddresses_m;
 
+	// Lock to ensure processBackgroundTasks never gets run concurrently
 	Mutex _backgroundTasksLock;
-
-	Address _remoteTraceTarget;
-	enum Trace::Level _remoteTraceLevel;
 
 	uint8_t _multipathMode;
 
 	volatile int64_t _now;
-	int64_t _lastPingCheck;
+	int64_t _lastPing;
 	int64_t _lastHousekeepingRun;
 	int64_t _lastMemoizedTraceSettings;
 	bool _online;

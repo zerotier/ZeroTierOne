@@ -384,10 +384,13 @@ public:
 private:
 	template<typename O>
 	static inline unsigned long _hc(const O &obj) { return (unsigned long)obj.hashCode(); }
+
 	static inline unsigned long _hc(const uint64_t i) { return (unsigned long)(i ^ (i >> 32)); }
 	static inline unsigned long _hc(const uint32_t i) { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
 	static inline unsigned long _hc(const uint16_t i) { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
 	static inline unsigned long _hc(const int i) { return ((unsigned long)i * (unsigned long)0x9e3379b1); }
+	static inline unsigned long _hc(void *p) { return ((unsigned long)((uintptr_t)p) * (unsigned long)0x9e3779b1); }
+	static inline unsigned long _hc(const void *p) { return ((unsigned long)((uintptr_t)p) * (unsigned long)0x9e3779b1); }
 
 	inline void _grow()
 	{

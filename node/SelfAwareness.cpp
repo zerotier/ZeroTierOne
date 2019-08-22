@@ -55,7 +55,7 @@ public:
 		_family(inetAddressFamily),
 		_scope(scope) {}
 
-	inline void operator()(Topology &t,const SharedPtr<Peer> &p) { p->resetWithinScope(_tPtr,_scope,_family,_now); }
+	inline void operator()(const SharedPtr<Peer> &p) { p->resetWithinScope(_tPtr,_scope,_family,_now); }
 
 private:
 	uint64_t _now;

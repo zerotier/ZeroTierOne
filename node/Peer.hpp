@@ -257,16 +257,6 @@ public:
 	void ping(void *tPtr,int64_t now,unsigned int &v4SendCount,unsigned int &v6SendCount);
 
 	/**
-	 * Clear paths whose localSocket(s) are in a CLOSED state or have an otherwise INVALID state.
-	 * This should be called frequently so that we can detect and remove unproductive or invalid paths.
-	 *
-	 * Under the hood this is done periodically based on ZT_CLOSED_PATH_PRUNING_INTERVAL.
-	 *
-	 * @return Number of paths that were pruned this round
-	 */
-	unsigned int prunePaths();
-
-	/**
 	 * Reset paths within a given IP scope and address family
 	 *
 	 * Resetting a path involves sending an ECHO to it and then deactivating
@@ -304,7 +294,7 @@ public:
 	/**
 	 * @return True if we've heard from this peer in less than ZT_PEER_ACTIVITY_TIMEOUT
 	 */
-	inline bool isAlive(const int64_t now) const { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
+	inline bool alive(const int64_t now) const { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Latency in milliseconds of best/aggregate path or 0xffff if unknown / no paths

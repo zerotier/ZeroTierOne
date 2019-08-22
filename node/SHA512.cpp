@@ -49,7 +49,7 @@ typedef struct sha512_ctx_tag {
 	uint64_t len[2];
 	uint64_t val[8];
 	uint8_t *payload_addr;
-	uint64_t payload_len;
+	unsigned long payload_len;
 } sha512_ctx_t;
 
 #define LSR(x,n) (x >> n)
@@ -103,7 +103,7 @@ static inline void sha512_memclr(uint8_t *dst, uint32_t size)
 	for (;i < size;i++) { *dst++ = 0; }
 }
 
-static inline void sha512_init_512(sha512_ctx_t *sha512_ctx, uint8_t *payload_addr, uint64_t payload_len)
+static inline void sha512_init_512(sha512_ctx_t *sha512_ctx, uint8_t *payload_addr, unsigned long payload_len)
 {
 	sha512_memclr((uint8_t *)sha512_ctx,sizeof(sha512_ctx_t));
 	sha512_ctx->val[0] = 0x6A09E667F3BCC908ULL;
@@ -121,7 +121,7 @@ static inline void sha512_init_512(sha512_ctx_t *sha512_ctx, uint8_t *payload_ad
 	sha512_ctx->len[1] = payload_len >> 61;
 }
 
-static inline void sha512_init_384(sha512_ctx_t *sha512_ctx, uint8_t *payload_addr, uint64_t payload_len)
+static inline void sha512_init_384(sha512_ctx_t *sha512_ctx, uint8_t *payload_addr, unsigned long payload_len)
 {
 	sha512_memclr((uint8_t *)sha512_ctx,sizeof(sha512_ctx_t));
 	sha512_ctx->val[0] = 0xCBBB9D5DC1059ED8ULL;

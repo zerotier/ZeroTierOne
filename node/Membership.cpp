@@ -132,6 +132,9 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 		return ADD_ACCEPTED_REDUNDANT;
 
 	switch(com.verify(RR,tPtr)) {
+		default:
+			RR->t->credentialRejected(tPtr,com,"invalid");
+			return Membership::ADD_REJECTED;
 		case Credential::VERIFY_OK:
 			_com = com;
 			return ADD_ACCEPTED_NEW;

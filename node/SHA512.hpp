@@ -42,6 +42,8 @@
 
 namespace ZeroTier {
 
+#if 0
+
 #ifdef __APPLE__
 #define ZT_HAVE_NATIVE_SHA512 1
 static inline void SHA512(void *digest,const void *data,unsigned int len)
@@ -76,6 +78,8 @@ static inline void SHA384(void *digest,const void *data,unsigned int len)
 	SHA384_Update(&ctx,data,len);
 	SHA384_Final(reinterpret_cast<unsigned char *>(digest),&ctx);
 }
+#endif
+
 #endif
 
 #ifndef ZT_HAVE_NATIVE_SHA512

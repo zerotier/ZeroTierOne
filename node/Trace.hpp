@@ -73,8 +73,7 @@ public:
 		LEVEL_NORMAL = 0,
 		LEVEL_VERBOSE = 10,
 		LEVEL_RULES = 15,
-		LEVEL_DEBUG = 20,
-		LEVEL_INSANE = 30
+		LEVEL_DEBUG = 20
 	};
 
 	/**
@@ -119,25 +118,17 @@ public:
 	}
 
 	void resettingPathsInScope(void *const tPtr,const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,const InetAddress::IpScope scope);
-
 	void peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &path,const uint64_t packetId,const Packet::Verb verb);
-
 	void peerLinkNowRedundant(void *const tPtr,Peer &peer);
 	void peerLinkNoLongerRedundant(void *const tPtr,Peer &peer);
-
 	void peerLinkAggregateStatistics(void *const tPtr,Peer &peer);
-
 	void peerLearnedNewPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath,const uint64_t packetId);
-	void peerRedirected(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath);
-
 	void incomingPacketMessageAuthenticationFailure(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const unsigned int hops,const char *reason);
 	void incomingPacketInvalid(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const unsigned int hops,const Packet::Verb verb,const char *reason);
 	void incomingPacketDroppedHELLO(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const char *reason);
-
 	void outgoingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network> &network,const MAC &sourceMac,const MAC &destMac,const unsigned int etherType,const unsigned int vlanId,const unsigned int frameLen,const char *reason);
 	void incomingNetworkAccessDenied(void *const tPtr,const SharedPtr<Network> &network,const SharedPtr<Path> &path,const uint64_t packetId,const unsigned int packetLength,const Address &source,const Packet::Verb verb,bool credentialsRequested);
 	void incomingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network> &network,const SharedPtr<Path> &path,const uint64_t packetId,const unsigned int packetLength,const Address &source,const Packet::Verb verb,const MAC &sourceMac,const MAC &destMac,const char *reason);
-
 	void networkConfigRequestSent(void *const tPtr,const Network &network,const Address &controller);
 	void networkFilter(
 		void *const tPtr,
@@ -156,7 +147,6 @@ public:
 		const bool noTee,
 		const bool inbound,
 		const int accept);
-
 	void credentialRejected(void *const tPtr,const CertificateOfMembership &c,const char *reason);
 	void credentialRejected(void *const tPtr,const CertificateOfOwnership &c,const char *reason);
 	void credentialRejected(void *const tPtr,const Capability &c,const char *reason);
@@ -171,8 +161,6 @@ private:
 	void _send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d,const Address &dest);
 	void _spamToAllNetworks(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d,const Level level);
 
-	Address _globalTarget;
-	Trace::Level _globalLevel;
 	Hashtable< uint64_t,std::pair< Address,Trace::Level > > _byNet;
 	Mutex _byNet_m;
 };

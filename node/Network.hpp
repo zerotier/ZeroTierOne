@@ -172,9 +172,9 @@ public:
 	 * @param includeBridgedGroups If true, also check groups we've learned via bridging
 	 * @return True if this network endpoint / peer is a member
 	 */
-	inline bool subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const
+	inline bool subscribedToMulticastGroup(const MulticastGroup &mg,const bool includeBridgedGroups) const
 	{
-		Mutex::Lock _l(_myMulticastGroups_l);
+		Mutex::Lock l(_myMulticastGroups_l);
 		if (std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg))
 			return true;
 		else if (includeBridgedGroups)
@@ -190,11 +190,11 @@ public:
 	 */
 	inline void multicastSubscribe(void *tPtr,const MulticastGroup &mg)
 	{
-		Mutex::Lock _l(_myMulticastGroups_l);
+		Mutex::Lock l(_myMulticastGroups_l);
 		if (!std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg)) {
 			_myMulticastGroups.insert(std::upper_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg),mg);
 			Mutex::Lock l2(_memberships_l);
-			_announceMulticastGroups(tPtr);
+			_announceMulticastGroups(tPtr,true);
 		}
 	}
 
@@ -205,7 +205,7 @@ public:
 	 */
 	inline void multicastUnsubscribe(const MulticastGroup &mg)
 	{
-		Mutex::Lock _l(_myMulticastGroups_l);
+		Mutex::Lock l(_myMulticastGroups_l);
 		std::vector<MulticastGroup>::iterator i(std::lower_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg));
 		if ( (i != _myMulticastGroups.end()) && (*i == mg) )
 			_myMulticastGroups.erase(i);
@@ -263,34 +263,9 @@ public:
 	bool gate(void *tPtr,const SharedPtr<Peer> &peer);
 
 	/**
-	 * Check whether a given peer has recently had an association with this network
-	 *
-	 * This checks whether a peer has communicated with us recently about this
-	 * network and has possessed a valid certificate of membership. This may return
-	 * true even if the peer has been offline for a while or no longer has a valid
-	 * certificate of membership but had one recently.
-	 *
-	 * @param addr Peer address
-	 * @return True if peer has recently associated
-	 */
-	bool recentlyAssociatedWith(const Address &addr);
-
-	/**
 	 * Do periodic cleanup and housekeeping tasks
 	 */
-	void clean();
-
-	/**
-	 * Push state to members such as multicast group memberships and latest COM (if needed)
-	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 */
-	inline void sendUpdatesToMembers(void *tPtr)
-	{
-		Mutex::Lock _l(_myMulticastGroups_l);
-		Mutex::Lock _l2(_memberships_l);
-		_announceMulticastGroups(tPtr);
-	}
+	void doPeriodicTasks(void *tPtr);
 
 	/**
 	 * Find the node on this network that has this MAC behind it (if any)
@@ -362,14 +337,20 @@ public:
 	 */
 	inline void learnBridgedMulticastGroup(void *tPtr,const MulticastGroup &mg,int64_t now)
 	{
-		Mutex::Lock _l(_multicastGroupsBehindMe_l);
+		Mutex::Lock l(_myMulticastGroups_l);
 		_multicastGroupsBehindMe.set(mg,now);
 	}
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Membership::AddCredentialResult addCredential(void *tPtr,const CertificateOfMembership &com);
+	Membership::AddCredentialResult addCredential(void *tPtr,const CertificateOfMembership &com)
+	{
+		if (com.networkId() != _id)
+			return Membership::ADD_REJECTED;
+		Mutex::Lock _l(_memberships_l);
+		return _memberships[com.issuedTo()].addCredential(RR,tPtr,_config,com);
+	}
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
@@ -423,7 +404,7 @@ public:
 	}
 
 	/**
-	 * Push credentials if we haven't done so in a very long time
+	 * Push credentials if we haven't done so in a long time
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param to Destination peer address
@@ -473,14 +454,13 @@ private:
 	ZT_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
 	bool _gate(const SharedPtr<Peer> &peer);
-	void _announceMulticastGroups(void *tPtr);
+	void _announceMulticastGroups(void *tPtr,bool force);
 	void _announceMulticastGroupsTo(void *tPtr,const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups);
 	std::vector<MulticastGroup> _allMulticastGroups() const;
 
 	const RuntimeEnvironment *const RR;
 	void *_uPtr;
 	const uint64_t _id;
-	uint64_t _lastAnnouncedMulticastGroupsUpstream;
 	MAC _mac; // local MAC address
 	bool _portInitialized;
 
@@ -493,7 +473,7 @@ private:
 
 	struct _IncomingConfigChunk
 	{
-		_IncomingConfigChunk() { memset(this,0,sizeof(_IncomingConfigChunk)); }
+		_IncomingConfigChunk() : ts(0),updateId(0),haveChunks(0),haveBytes(0),data() {}
 		uint64_t ts;
 		uint64_t updateId;
 		uint64_t haveChunkIds[ZT_NETWORK_MAX_UPDATE_CHUNKS];
@@ -516,7 +496,6 @@ private:
 	Hashtable<Address,Membership> _memberships;
 
 	Mutex _myMulticastGroups_l;
-	Mutex _multicastGroupsBehindMe_l;
 	Mutex _remoteBridgeRoutes_l;
 	Mutex _config_l;
 	Mutex _memberships_l;
