@@ -4,11 +4,11 @@ MAINTAINER Adam Ierymekno <adam.ierymenko@zerotier.com>, Grant Limberg <grant.li
 
 RUN yum update -y
 RUN yum install -y https://download.postgresql.org/pub/repos/yum/10/redhat/rhel-7-x86_64/pgdg-centos10-10-2.noarch.rpm
-RUN yum install -y bash postgresql10 libpqxx-devel
+RUN yum install -y bash postgresql10 libpqxx-devel librabbitmq
+RUN yum clean all
 
-RUN yum -y install epel-release && yum -y update && yum clean all
-RUN yum -y install clang jemalloc jemalloc-devel
-
+#RUN yum -y install epel-release && yum -y update && yum clean all
+#RUN yum -y install clang jemalloc jemalloc-devel
 
 ADD zerotier-one /usr/local/bin/zerotier-one
 RUN chmod a+x /usr/local/bin/zerotier-one
