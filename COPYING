@@ -1,13 +1,8 @@
 ZeroTier One, an endpoint server for the ZeroTier virtual network layer.
 Copyright © 2011–2019 ZeroTier, Inc.
 
-ZeroTier One is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 3 of the License, or (at
-your option) any later version.
-
-See the file ‘LICENSE.GPL-3’ for the text of the GNU GPL version 3.
-If that file is not present, see <http://www.gnu.org/licenses/>.
+ZeroTier is released under the terms of the BSL version 1.1. See the
+file LICENSE.txt for details.
 
 ..
     Local variables:

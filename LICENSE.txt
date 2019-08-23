@@ -1,3 +1,5 @@
+-----------------------------------------------------------------------------
+
 Business Source License 1.1
 
 License text copyright (c) 2017 MariaDB Corporation Ab, All Rights Reserved.
@@ -8,7 +10,7 @@ License text copyright (c) 2017 MariaDB Corporation Ab, All Rights Reserved.
 Parameters
 
 Licensor:             ZeroTier, Inc.
-Licensed Work:        ZeroTier Network Virtualization Engine 2.0
+Licensed Work:        ZeroTier Network Virtualization Engine 1.4.4
                       The Licensed Work is (c)2019 ZeroTier, Inc.
 Additional Use Grant: You may make use of the Licensed Work, provided you
                       do not use it in any of the following ways:
@@ -64,8 +66,8 @@ Source license. However, the Licensed Work will eventually be made available
 under an Open Source License, as stated in this License.
 
 For more information on the use of the Business Source License for ZeroTier
-products, please visit the ZeroTier Business Source License FAQ at
-https://zerotier.com/bsl-license.
+products, please visit our pricing page which contains license details and
+and license FAQ: https://zerotier.com/pricing
 
 For more information on the use of the Business Source License generally,
 please visit the Adopting and Developing Business Source License FAQ at
@@ -116,6 +118,8 @@ AN "AS IS" BASIS. LICENSOR HEREBY DISCLAIMS ALL WARRANTIES AND CONDITIONS,
 EXPRESS OR IMPLIED, INCLUDING (WITHOUT LIMITATION) WARRANTIES OF
 MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AND
 TITLE.
+
+-----------------------------------------------------------------------------
 
 MariaDB hereby grants you permission to use this License’s text to license
 your works, and to refer to it using the trademark "Business Source License",
