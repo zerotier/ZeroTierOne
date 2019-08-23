@@ -145,7 +145,7 @@ esac
 %endif
 
 %changelog
-* Mon Aug 23 2019 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.4.4-0.1
+* Fri Aug 23 2019 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.4.4-0.1
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
 * Mon Aug 04 2019 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.4.2-0.1
