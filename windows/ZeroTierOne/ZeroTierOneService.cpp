@@ -13,6 +13,8 @@
 
 #pragma region Includes
 
+#if defined(_WIN32) || defined(_WIN64)
+
 #include <WinSock2.h>
 #include <Windows.h>
 #include <stdio.h>
@@ -150,3 +152,5 @@ void ZeroTierOneService::OnShutdown()
 	// stop thread on system shutdown (if it hasn't happened already)
 	OnStop();
 }
+
+#endif
