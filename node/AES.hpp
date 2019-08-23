@@ -1,28 +1,15 @@
 /*
- * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (c)2019 ZeroTier, Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Change Date: 2023-01-01
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * You can be released from the requirements of the license by purchasing
- * a commercial license. Buying such a license is mandatory as soon as you
- * develop commercial closed-source software that incorporates or links
- * directly against ZeroTier software without disclosing the source code
- * of your own application.
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
  */
+/****/
 
 #ifndef ZT_AES_HPP
 #define ZT_AES_HPP
@@ -462,21 +449,6 @@ private:
 		a = _mm_xor_si128(a, b);
 		return a;
 	}
-	/*static inline void _expand128_aesni(__m128i schedule[10],const void *const key)
-	{
-		__m128i t;
-		schedule[0] = t = _mm_loadu_si128((const __m128i *)key);
-		schedule[1] = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x01));
-		schedule[2] = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x02));
-		schedule[3] = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x04));
-		schedule[4] = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x08));
-		schedule[5] = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x10));
-		schedule[6] = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x20));
-		schedule[7] = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x40));
-		schedule[8] = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x80));
-		schedule[9] = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x1b));
-		schedule[10] = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x36));
-	}*/
 	static inline void _scramble_aesni(const uint8_t key[16],const uint8_t *in,uint8_t *out,unsigned int len)
 	{
 		__m128i t = _mm_loadu_si128((const __m128i *)key);
@@ -486,17 +458,28 @@ private:
 		__m128i k3 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x04));
 		__m128i k4 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x08));
 		__m128i k5 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x10));
+		__m128i k6 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x20));
+		__m128i k7 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x40));
+		__m128i k8 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x80));
+		__m128i k9 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x1b));
+		__m128i k10 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x36));
+		__m128i ctr = _mm_setzero_si128();
+		const __m128i one = _mm_set_epi32(0,0,0,1);
 
 		while (len >= 64) {
 			len -= 64;
 
-			__m128i d0 = _mm_loadu_si128((const __m128i *)in);
+			__m128i d0 = _mm_xor_si128(_mm_loadu_si128((const __m128i *)in),ctr);
+			ctr = _mm_add_epi64(ctr,one);
 			in += 16;
-			__m128i d1 = _mm_loadu_si128((const __m128i *)in);
+			__m128i d1 = _mm_xor_si128(_mm_loadu_si128((const __m128i *)in),ctr);
+			ctr = _mm_add_epi64(ctr,one);
 			in += 16;
-			__m128i d2 = _mm_loadu_si128((const __m128i *)in);
+			__m128i d2 = _mm_xor_si128(_mm_loadu_si128((const __m128i *)in),ctr);
+			ctr = _mm_add_epi64(ctr,one);
 			in += 16;
-			__m128i d3 = _mm_loadu_si128((const __m128i *)in);
+			__m128i d3 = _mm_xor_si128(_mm_loadu_si128((const __m128i *)in),ctr);
+			ctr = _mm_add_epi64(ctr,one);
 			in += 16;
 
 			d0 = _mm_xor_si128(d0,k0);
@@ -519,21 +502,42 @@ private:
 			d1 = _mm_aesenc_si128(d1,k4);
 			d2 = _mm_aesenc_si128(d2,k4);
 			d3 = _mm_aesenc_si128(d3,k4);
+			d0 = _mm_aesenc_si128(d0,k5);
+			d1 = _mm_aesenc_si128(d1,k5);
+			d2 = _mm_aesenc_si128(d2,k5);
+			d3 = _mm_aesenc_si128(d3,k5);
+			d0 = _mm_aesenc_si128(d0,k6);
+			d1 = _mm_aesenc_si128(d1,k6);
+			d2 = _mm_aesenc_si128(d2,k6);
+			d3 = _mm_aesenc_si128(d3,k6);
+			d0 = _mm_aesenc_si128(d0,k7);
+			d1 = _mm_aesenc_si128(d1,k7);
+			d2 = _mm_aesenc_si128(d2,k7);
+			d3 = _mm_aesenc_si128(d3,k7);
+			d0 = _mm_aesenc_si128(d0,k8);
+			d1 = _mm_aesenc_si128(d1,k8);
+			d2 = _mm_aesenc_si128(d2,k8);
+			d3 = _mm_aesenc_si128(d3,k8);
+			d0 = _mm_aesenc_si128(d0,k9);
+			d1 = _mm_aesenc_si128(d1,k9);
+			d2 = _mm_aesenc_si128(d2,k9);
+			d3 = _mm_aesenc_si128(d3,k9);
 
-			_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(d0,k5));
+			_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(d0,k10));
 			out += 16;
-			_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(d1,k5));
+			_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(d1,k10));
 			out += 16;
-			_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(d2,k5));
+			_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(d2,k10));
 			out += 16;
-			_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(d3,k5));
+			_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(d3,k10));
 			out += 16;
 		}
 
 		while (len >= 16) {
 			len -= 16;
 
-			__m128i d0 = _mm_loadu_si128((const __m128i *)in);
+			__m128i d0 = _mm_xor_si128(_mm_loadu_si128((const __m128i *)in),ctr);
+			ctr = _mm_add_epi64(ctr,one);
 			in += 16;
 
 			d0 = _mm_xor_si128(d0,k0);
@@ -541,20 +545,30 @@ private:
 			d0 = _mm_aesenc_si128(d0,k2);
 			d0 = _mm_aesenc_si128(d0,k3);
 			d0 = _mm_aesenc_si128(d0,k4);
+			d0 = _mm_aesenc_si128(d0,k5);
+			d0 = _mm_aesenc_si128(d0,k6);
+			d0 = _mm_aesenc_si128(d0,k7);
+			d0 = _mm_aesenc_si128(d0,k8);
+			d0 = _mm_aesenc_si128(d0,k9);
 
-			_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(d0,k5));
+			_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(d0,k10));
 			out += 16;
 		}
 
 		if (len) {
-			__m128i last = _mm_setzero_si128();
+			__m128i last = ctr;
 			last = _mm_xor_si128(last,k0);
 			last = _mm_aesenc_si128(last,k1);
 			last = _mm_aesenc_si128(last,k2);
 			last = _mm_aesenc_si128(last,k3);
 			last = _mm_aesenc_si128(last,k4);
+			last = _mm_aesenc_si128(last,k5);
+			last = _mm_aesenc_si128(last,k6);
+			last = _mm_aesenc_si128(last,k7);
+			last = _mm_aesenc_si128(last,k8);
+			last = _mm_aesenc_si128(last,k9);
 			uint8_t lpad[16];
-			_mm_storeu_si128((__m128i *)lpad,_mm_aesenclast_si128(last,k5));
+			_mm_storeu_si128((__m128i *)lpad,_mm_aesenclast_si128(last,k10));
 			for(unsigned int i=0;i<len;++i) {
 				out[i] = in[i] ^ lpad[i];
 			}
@@ -563,16 +577,28 @@ private:
 	static inline void _unscramble_aesni(const uint8_t key[16],const uint8_t *in,uint8_t *out,unsigned int len)
 	{
 		__m128i t = _mm_loadu_si128((const __m128i *)key);
-		__m128i dk5 = t; // k0
+		__m128i dk10 = t; // k0
 		__m128i k1 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x01));
 		__m128i k2 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x02));
 		__m128i k3 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x04));
 		__m128i k4 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x08));
-		__m128i dk0 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x10)); // k5
-		__m128i dk1 = _mm_aesimc_si128(k4);
-		__m128i dk2 = _mm_aesimc_si128(k3);
-		__m128i dk3 = _mm_aesimc_si128(k2);
-		__m128i dk4 = _mm_aesimc_si128(k1);
+		__m128i k5 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x10));
+		__m128i k6 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x20));
+		__m128i k7 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x40));
+		__m128i k8 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x80));
+		__m128i k9 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x1b));
+		__m128i dk0 = t = _assist128_aesni(t, _mm_aeskeygenassist_si128(t, 0x36)); // k10
+		__m128i dk1 = _mm_aesimc_si128(k9);
+		__m128i dk2 = _mm_aesimc_si128(k8);
+		__m128i dk3 = _mm_aesimc_si128(k7);
+		__m128i dk4 = _mm_aesimc_si128(k6);
+		__m128i dk5 = _mm_aesimc_si128(k5);
+		__m128i dk6 = _mm_aesimc_si128(k4);
+		__m128i dk7 = _mm_aesimc_si128(k3);
+		__m128i dk8 = _mm_aesimc_si128(k2);
+		__m128i dk9 = _mm_aesimc_si128(k1);
+		__m128i ctr = _mm_setzero_si128();
+		const __m128i one = _mm_set_epi32(0,0,0,1);
 
 		while (len >= 64) {
 			len -= 64;
@@ -606,14 +632,38 @@ private:
 			d1 = _mm_aesdec_si128(d1,dk4);
 			d2 = _mm_aesdec_si128(d2,dk4);
 			d3 = _mm_aesdec_si128(d3,dk4);
+			d0 = _mm_aesdec_si128(d0,dk5);
+			d1 = _mm_aesdec_si128(d1,dk5);
+			d2 = _mm_aesdec_si128(d2,dk5);
+			d3 = _mm_aesdec_si128(d3,dk5);
+			d0 = _mm_aesdec_si128(d0,dk6);
+			d1 = _mm_aesdec_si128(d1,dk6);
+			d2 = _mm_aesdec_si128(d2,dk6);
+			d3 = _mm_aesdec_si128(d3,dk6);
+			d0 = _mm_aesdec_si128(d0,dk7);
+			d1 = _mm_aesdec_si128(d1,dk7);
+			d2 = _mm_aesdec_si128(d2,dk7);
+			d3 = _mm_aesdec_si128(d3,dk7);
+			d0 = _mm_aesdec_si128(d0,dk8);
+			d1 = _mm_aesdec_si128(d1,dk8);
+			d2 = _mm_aesdec_si128(d2,dk8);
+			d3 = _mm_aesdec_si128(d3,dk8);
+			d0 = _mm_aesdec_si128(d0,dk9);
+			d1 = _mm_aesdec_si128(d1,dk9);
+			d2 = _mm_aesdec_si128(d2,dk9);
+			d3 = _mm_aesdec_si128(d3,dk9);
 
-			_mm_storeu_si128((__m128i *)out,_mm_aesdeclast_si128(d0,dk5));
+			_mm_storeu_si128((__m128i *)out,_mm_xor_si128(_mm_aesdeclast_si128(d0,dk10),ctr));
+			ctr = _mm_add_epi64(ctr,one);
 			out += 16;
-			_mm_storeu_si128((__m128i *)out,_mm_aesdeclast_si128(d1,dk5));
+			_mm_storeu_si128((__m128i *)out,_mm_xor_si128(_mm_aesdeclast_si128(d1,dk10),ctr));
+			ctr = _mm_add_epi64(ctr,one);
 			out += 16;
-			_mm_storeu_si128((__m128i *)out,_mm_aesdeclast_si128(d2,dk5));
+			_mm_storeu_si128((__m128i *)out,_mm_xor_si128(_mm_aesdeclast_si128(d2,dk10),ctr));
+			ctr = _mm_add_epi64(ctr,one);
 			out += 16;
-			_mm_storeu_si128((__m128i *)out,_mm_aesdeclast_si128(d3,dk5));
+			_mm_storeu_si128((__m128i *)out,_mm_xor_si128(_mm_aesdeclast_si128(d3,dk10),ctr));
+			ctr = _mm_add_epi64(ctr,one);
 			out += 16;
 		}
 
@@ -628,20 +678,31 @@ private:
 			d0 = _mm_aesdec_si128(d0,dk2);
 			d0 = _mm_aesdec_si128(d0,dk3);
 			d0 = _mm_aesdec_si128(d0,dk4);
+			d0 = _mm_aesdec_si128(d0,dk5);
+			d0 = _mm_aesdec_si128(d0,dk6);
+			d0 = _mm_aesdec_si128(d0,dk7);
+			d0 = _mm_aesdec_si128(d0,dk8);
+			d0 = _mm_aesdec_si128(d0,dk9);
 
-			_mm_storeu_si128((__m128i *)out,_mm_aesdeclast_si128(d0,dk5));
+			_mm_storeu_si128((__m128i *)out,_mm_xor_si128(_mm_aesdeclast_si128(d0,dk10),ctr));
+			ctr = _mm_add_epi64(ctr,one);
 			out += 16;
 		}
 
 		if (len) {
-			__m128i last = _mm_setzero_si128();
-			last = _mm_xor_si128(last,dk5); // k0
+			__m128i last = ctr;
+			last = _mm_xor_si128(last,dk10); // k0
 			last = _mm_aesenc_si128(last,k1);
 			last = _mm_aesenc_si128(last,k2);
 			last = _mm_aesenc_si128(last,k3);
 			last = _mm_aesenc_si128(last,k4);
+			last = _mm_aesenc_si128(last,k5);
+			last = _mm_aesenc_si128(last,k6);
+			last = _mm_aesenc_si128(last,k7);
+			last = _mm_aesenc_si128(last,k8);
+			last = _mm_aesenc_si128(last,k9);
 			uint8_t lpad[16];
-			_mm_storeu_si128((__m128i *)lpad,_mm_aesenclast_si128(last,dk0)); // k5
+			_mm_storeu_si128((__m128i *)lpad,_mm_aesenclast_si128(last,dk0)); // k10
 			for(unsigned int i=0;i<len;++i) {
 				out[i] = in[i] ^ lpad[i];
 			}
