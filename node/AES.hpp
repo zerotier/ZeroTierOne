@@ -352,7 +352,7 @@ private:
 #endif /*********************************************************************/
 
 #ifdef ZT_AES_AESNI /********************************************************/
-	static inline __m128i _init256_1_aesni(__m128i a,__m128i b)
+	static ZT_ALWAYS_INLINE __m128i _init256_1_aesni(__m128i a,__m128i b)
 	{
 		__m128i x,y;
 		b = _mm_shuffle_epi32(b,0xff);
@@ -365,7 +365,7 @@ private:
 		x = _mm_xor_si128(x,b);
 		return x;
 	}
-	static inline __m128i _init256_2_aesni(__m128i a,__m128i b)
+	static ZT_ALWAYS_INLINE __m128i _init256_2_aesni(__m128i a,__m128i b)
 	{
 		__m128i x,y,z;
 		y = _mm_aeskeygenassist_si128(a,0x00);
@@ -379,7 +379,7 @@ private:
 		x = _mm_xor_si128(x,z);
 		return x;
 	}
-	inline void _init_aesni(const uint8_t key[32])
+	ZT_ALWAYS_INLINE void _init_aesni(const uint8_t key[32])
 	{
 		__m128i t1,t2;
 		_k.ni.k[0] = t1 = _mm_loadu_si128((const __m128i *)key);
@@ -436,7 +436,7 @@ private:
 		_k.ni.hhhh = _swap128_aesni(hhhh);
 	}
 
-	static inline __m128i _assist128_aesni(__m128i a,__m128i b)
+	static ZT_ALWAYS_INLINE __m128i _assist128_aesni(__m128i a,__m128i b)
 	{
 		__m128i c;
 		b = _mm_shuffle_epi32(b ,0xff);
@@ -449,7 +449,7 @@ private:
 		a = _mm_xor_si128(a, b);
 		return a;
 	}
-	static inline void _scramble_aesni(const uint8_t key[16],const uint8_t *in,uint8_t *out,unsigned int len)
+	static ZT_ALWAYS_INLINE void _scramble_aesni(const uint8_t key[16],const uint8_t *in,uint8_t *out,unsigned int len)
 	{
 		__m128i t = _mm_loadu_si128((const __m128i *)key);
 		__m128i k0 = t;
@@ -574,7 +574,7 @@ private:
 			}
 		}
 	}
-	static inline void _unscramble_aesni(const uint8_t key[16],const uint8_t *in,uint8_t *out,unsigned int len)
+	static ZT_ALWAYS_INLINE void _unscramble_aesni(const uint8_t key[16],const uint8_t *in,uint8_t *out,unsigned int len)
 	{
 		__m128i t = _mm_loadu_si128((const __m128i *)key);
 		__m128i dk10 = t; // k0
@@ -709,7 +709,7 @@ private:
 		}
 	}
 
-	inline void _encrypt_aesni(const void *in,void *out) const
+	ZT_ALWAYS_INLINE void _encrypt_aesni(const void *in,void *out) const
 	{
 		__m128i tmp;
 		tmp = _mm_loadu_si128((const __m128i *)in);
@@ -729,7 +729,7 @@ private:
 		tmp = _mm_aesenc_si128(tmp,_k.ni.k[13]);
 		_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(tmp,_k.ni.k[14]));
 	}
-	inline void _decrypt_aesni(const void *in,void *out) const
+	ZT_ALWAYS_INLINE void _decrypt_aesni(const void *in,void *out) const
 	{
 		__m128i tmp;
 		tmp = _mm_loadu_si128((const __m128i *)in);
@@ -750,8 +750,8 @@ private:
 		_mm_storeu_si128((__m128i *)out,_mm_aesdeclast_si128(tmp,_k.ni.k[0]));
 	}
 
-	static inline __m128i _swap128_aesni(__m128i x) { return _mm_shuffle_epi8(x,_mm_set_epi8(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15)); }
-	static inline __m128i _mult_block_aesni(__m128i h,__m128i y)
+	static ZT_ALWAYS_INLINE __m128i _swap128_aesni(__m128i x) { return _mm_shuffle_epi8(x,_mm_set_epi8(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15)); }
+	static ZT_ALWAYS_INLINE __m128i _mult_block_aesni(__m128i h,__m128i y)
 	{
 		__m128i t1,t2,t3,t4,t5,t6;
 		y = _swap128_aesni(y);
@@ -792,7 +792,7 @@ private:
 		t4 = _mm_xor_si128(t4,t5);
 		return _swap128_aesni(t4);
 	}
-	static inline __m128i _mult4xor_aesni(__m128i h1,__m128i h2,__m128i h3,__m128i h4,__m128i d1,__m128i d2,__m128i d3,__m128i d4)
+	static ZT_ALWAYS_INLINE __m128i _mult4xor_aesni(__m128i h1,__m128i h2,__m128i h3,__m128i h4,__m128i d1,__m128i d2,__m128i d3,__m128i d4)
 	{
 		__m128i t0,t1,t2,t3,t4,t5,t6,t7,t8,t9;
 		d1 = _swap128_aesni(d1);
@@ -870,17 +870,17 @@ private:
 		t6 = _mm_xor_si128(t6,t3);
 		return _swap128_aesni(t6);
 	}
-	static inline __m128i _ghash_aesni(__m128i h,__m128i y,__m128i x) { return _mult_block_aesni(h,_mm_xor_si128(y,x)); }
-	static inline __m128i _increment_be_aesni(__m128i x)
+	static ZT_ALWAYS_INLINE __m128i _ghash_aesni(__m128i h,__m128i y,__m128i x) { return _mult_block_aesni(h,_mm_xor_si128(y,x)); }
+	static ZT_ALWAYS_INLINE __m128i _increment_be_aesni(__m128i x)
 	{
 		x = _swap128_aesni(x);
 		x = _mm_add_epi64(x,_mm_set_epi32(0,0,0,1));
 		x = _swap128_aesni(x);
 		return x;
 	}
-	static inline void _htoun64_aesni(void *network,const uint64_t host) { *((uint64_t *)network) = Utils::hton(host); }
+	static ZT_ALWAYS_INLINE void _htoun64_aesni(void *network,const uint64_t host) { *((uint64_t *)network) = Utils::hton(host); }
 
-	inline __m128i _create_j_aesni(const uint8_t *iv) const
+	ZT_ALWAYS_INLINE __m128i _create_j_aesni(const uint8_t *iv) const
 	{
 		uint8_t j[16];
 		*((uint64_t *)j) = *((const uint64_t *)iv);
@@ -891,7 +891,7 @@ private:
 		j[15] = 1;
 		return _mm_loadu_si128((__m128i *)j);
 	}
-	inline __m128i _icv_header_aesni(const void *assoc,unsigned int alen) const
+	ZT_ALWAYS_INLINE __m128i _icv_header_aesni(const void *assoc,unsigned int alen) const
 	{
 		unsigned int blocks,pblocks,rem,i;
 		__m128i h1,h2,h3,h4,d1,d2,d3,d4;
@@ -923,14 +923,14 @@ private:
 		}
 		return y;
 	}
-	inline __m128i _icv_tailer_aesni(__m128i y,size_t alen,size_t dlen) const
+	ZT_ALWAYS_INLINE __m128i _icv_tailer_aesni(__m128i y,size_t alen,size_t dlen) const
 	{
 		__m128i b;
 		_htoun64_aesni(&b, alen * 8);
 		_htoun64_aesni((uint8_t *)&b + sizeof(uint64_t), dlen * 8);
 		return _ghash_aesni(_k.ni.h, y, b);
 	}
-	inline void _icv_crypt_aesni(__m128i y,__m128i j,uint8_t *icv,unsigned int icvsize) const
+	ZT_ALWAYS_INLINE void _icv_crypt_aesni(__m128i y,__m128i j,uint8_t *icv,unsigned int icvsize) const
 	{
 		__m128i t,b;
 		t = _mm_xor_si128(j,_k.ni.k[0]);
@@ -953,7 +953,7 @@ private:
 		memcpy(icv,&b,icvsize);
 	}
 
-	inline __m128i _encrypt_gcm_rem_aesni(unsigned int rem,const void *in,void *out,__m128i cb,__m128i y) const
+	ZT_ALWAYS_INLINE __m128i _encrypt_gcm_rem_aesni(unsigned int rem,const void *in,void *out,__m128i cb,__m128i y) const
 	{
 		__m128i t,b;
 		memset(&b,0,sizeof(b));
@@ -978,7 +978,7 @@ private:
 		memset((u_char*)&b + rem,0,16 - rem);
 		return _ghash_aesni(_k.ni.h,y,b);
 	}
-	inline void _encrypt_gcm256_aesni(unsigned int len,const uint8_t *in,uint8_t *out,const uint8_t *iv,unsigned int alen,const uint8_t *assoc,uint8_t *icv,unsigned int icvsize) const
+	ZT_ALWAYS_INLINE void _encrypt_gcm256_aesni(unsigned int len,const uint8_t *in,uint8_t *out,const uint8_t *iv,unsigned int alen,const uint8_t *assoc,uint8_t *icv,unsigned int icvsize) const
 	{
 		__m128i j = _create_j_aesni(iv);
 		__m128i cb = _increment_be_aesni(j);
@@ -1129,7 +1129,7 @@ private:
 		y = _icv_tailer_aesni(y,alen,len);
 		_icv_crypt_aesni(y,j,icv,icvsize);
 	}
-	inline __m128i _decrypt_gcm_rem_aesni(unsigned int rem,const void *in,void *out,__m128i cb,__m128i y)
+	ZT_ALWAYS_INLINE __m128i _decrypt_gcm_rem_aesni(unsigned int rem,const void *in,void *out,__m128i cb,__m128i y)
 	{
 		__m128i t,b;
 		memset(&b,0,sizeof(b));
@@ -1154,7 +1154,7 @@ private:
 		memcpy(out,&b,rem);
 		return y;
 	}
-	inline void _decrypt_gcm256_aesni(unsigned int len,const uint8_t *in,uint8_t *out,const uint8_t *iv,unsigned int alen,const uint8_t *assoc,uint8_t *icv,unsigned int icvsize)
+	ZT_ALWAYS_INLINE void _decrypt_gcm256_aesni(unsigned int len,const uint8_t *in,uint8_t *out,const uint8_t *iv,unsigned int alen,const uint8_t *assoc,uint8_t *icv,unsigned int icvsize)
 	{
 		__m128i j = _create_j_aesni(iv);
 		__m128i cb = _increment_be_aesni(j);
