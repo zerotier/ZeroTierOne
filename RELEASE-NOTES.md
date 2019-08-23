@@ -1,6 +1,11 @@
 ZeroTier Release Notes
 ======
 
+# 2019-08-23 -- Version 1.4.4
+
+ * Change license to BSL 1.1, see LICENSE.txt
+ * Fix an issue with the "ipauth" rule and auto-generated unforgeable IPv6 addresses
+
 # 2019-08-12 -- Version 1.4.2
 
  * Fix high CPU use bug on some platforms

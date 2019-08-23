@@ -1,28 +1,15 @@
 /*
- * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (c)2019 ZeroTier, Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Change Date: 2023-01-01
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * You can be released from the requirements of the license by purchasing
- * a commercial license. Buying such a license is mandatory as soon as you
- * develop commercial closed-source software that incorporates or links
- * directly against ZeroTier software without disclosing the source code
- * of your own application.
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
  */
+/****/
 
 #include "NeighborDiscovery.hpp"
 #include "OSUtils.hpp"
@@ -32,7 +19,7 @@
 #include <assert.h>
 
 namespace ZeroTier {
-    
+
 uint16_t calc_checksum (uint16_t *addr, int len)
 {
     int count = len;
@@ -56,10 +43,10 @@ uint16_t calc_checksum (uint16_t *addr, int len)
     while (sum >> 16) {
         sum = (sum & 0xffff) + (sum >> 16);
     }
-    
+
     // Checksum is one's compliment of sum.
     answer = ~sum;
-    
+
     return (answer);
 }
 
@@ -78,14 +65,14 @@ struct _option {
     {
         memset(mac, 0, sizeof(mac));
     }
-    
+
     uint8_t type;
     uint8_t length;
     uint8_t mac[6];
 };
 
 struct _neighbor_solicitation {
-    _neighbor_solicitation() 
+    _neighbor_solicitation()
         : type(135)
         , code(0)
         , checksum(0)
