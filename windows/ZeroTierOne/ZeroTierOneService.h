@@ -13,6 +13,8 @@
 
 #pragma once
 
+#if defined(_WIN32) || defined(_WIN64)
+
 #include <stdio.h>
 
 #include "ServiceBase.h"
@@ -64,3 +66,5 @@ private:
 	ZeroTier::Mutex _lock;
 	ZeroTier::Thread _thread;
 };
+
+#endif
