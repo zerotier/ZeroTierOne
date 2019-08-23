@@ -11,6 +11,10 @@
  */
 /****/
 
+#include "../node/Constants.hpp"
+
+#ifdef __WINDOWS__
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -36,7 +40,6 @@
 #include <iostream>
 #include <set>
 
-#include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
 #include "../node/Mutex.hpp"
 
@@ -1291,3 +1294,5 @@ void WindowsEthernetTap::_syncIps()
 }
 
 } // namespace ZeroTier
+
+#endif

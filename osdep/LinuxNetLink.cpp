@@ -11,6 +11,10 @@
  */
 /****/
 
+#include "../node/Constants.hpp"
+
+#ifdef __LINUX__
+
 #include "LinuxNetLink.hpp"
 
 #include <unistd.h>
@@ -1066,3 +1070,5 @@ int LinuxNetLink::_indexForInterface(const char *iface)
 }
 
 } // namespace ZeroTier
+
+#endif

@@ -14,6 +14,10 @@
 #ifndef ZT_WINDOWSETHERNETTAP_HPP
 #define ZT_WINDOWSETHERNETTAP_HPP
 
+#include "../node/Constants.hpp"
+
+#ifdef __WINDOWS__
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -23,7 +27,6 @@
 #include <queue>
 #include <stdexcept>
 
-#include "../node/Constants.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/MulticastGroup.hpp"
 #include "../node/InetAddress.hpp"
@@ -153,5 +156,7 @@ private:
 };
 
 } // namespace ZeroTier
+
+#endif
 
 #endif
