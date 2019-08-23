@@ -184,14 +184,40 @@ private:
 	inline bool _isUnspoofableAddress(const NetworkConfig &nconf,const MAC &m) const { return false; }
 	inline bool _isUnspoofableAddress(const NetworkConfig &nconf,const InetAddress &ip) const
 	{
-		return (
-			(ip.ss_family == AF_INET6)&&
-			(nconf.ndpEmulation())&&
-			(
-				(InetAddress::makeIpv66plane(nconf.networkId,nconf.issuedTo.toInt()).ipsEqual(ip))||
-				(InetAddress::makeIpv6rfc4193(nconf.networkId,nconf.issuedTo.toInt()).ipsEqual(ip))
-			)
-		);
+		if ((ip.isV6())&&(nconf.ndpEmulation())) {
+			const InetAddress sixpl(InetAddress::makeIpv66plane(nconf.networkId,nconf.issuedTo.toInt()));
+			for(int i=0;i<nconf.staticIpCount;++i) {
+				if (nconf.staticIps[i].ipsEqual(sixpl)) {
+					bool prefixMatches = true;
+					for(int j=0;j<5;++j) { // check for match on /40
+						if ((((const struct sockaddr_in6 *)&ip)->sin6_addr.s6_addr)[j] != (((const struct sockaddr_in6 *)&sixpl)->sin6_addr.s6_addr)[j]) {
+							prefixMatches = false;
+							break;
+						}
+					}
+					if (prefixMatches)
+						return true;
+					break;
+				}
+			}
+
+			const InetAddress rfc4193(InetAddress::makeIpv6rfc4193(nconf.networkId,nconf.issuedTo.toInt()));
+			for(int i=0;i<nconf.staticIpCount;++i) {
+				if (nconf.staticIps[i].ipsEqual(rfc4193)) {
+					bool prefixMatches = true;
+					for(int j=0;j<11;++j) { // check for match on /88
+						if ((((const struct sockaddr_in6 *)&ip)->sin6_addr.s6_addr)[j] != (((const struct sockaddr_in6 *)&rfc4193)->sin6_addr.s6_addr)[j]) {
+							prefixMatches = false;
+							break;
+						}
+					}
+					if (prefixMatches)
+						return true;
+					break;
+				}
+			}
+		}
+		return false;
 	}
 
 	// This compares the remote credential's timestamp to the timestamp in our network config
