@@ -245,6 +245,7 @@ void Multicaster::send(
 
 				explicitGatherPeers[numExplicitGatherPeers++] = network->controller();
 
+				/*
 				Address ac[ZT_MAX_NETWORK_SPECIALISTS];
 				const unsigned int accnt = network->config().alwaysContactAddresses(ac);
 				unsigned int shuffled[ZT_MAX_NETWORK_SPECIALISTS];
@@ -263,7 +264,9 @@ void Multicaster::send(
 					if (numExplicitGatherPeers == 16)
 						break;
 				}
+				*/
 
+				/*
 				std::vector<Address> anchors(network->config().anchors());
 				for(std::vector<Address>::const_iterator a(anchors.begin());a!=anchors.end();++a) {
 					if (*a != RR->identity.address()) {
@@ -272,6 +275,7 @@ void Multicaster::send(
 							break;
 					}
 				}
+				*/
 
 				for(unsigned int k=0;k<numExplicitGatherPeers;++k) {
 					const CertificateOfMembership *com = (network) ? ((network->config().com) ? &(network->config().com) : (const CertificateOfMembership *)0) : (const CertificateOfMembership *)0;

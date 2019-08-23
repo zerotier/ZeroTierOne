@@ -342,6 +342,7 @@ static int testCrypto()
 	}
 	end = OSUtils::now();
 	std::cout << (uint64_t)(2000000.0 / ((double)(end - start) / 1000.0)) << " hashes/second" ZT_EOL_S;
+
 	std::cout << "[crypto] Testing SHA-384... "; std::cout.flush();
 	SHA384(buf1,sha512TV0Input,(unsigned int)strlen(sha512TV0Input));
 	if (memcmp(buf1,sha384TV0Digest,48)) {
@@ -356,6 +357,15 @@ static int testCrypto()
 	}
 	end = OSUtils::now();
 	std::cout << (uint64_t)(2000000.0 / ((double)(end - start) / 1000.0)) << " hashes/second" ZT_EOL_S;
+
+	std::cout << "[crypto] Benchmarking HMAC-SHA384 (2800 byte messages)... "; std::cout.flush();
+	start = OSUtils::now();
+	for(unsigned int i=0;i<200000;++i) {
+		HMACSHA384((const uint8_t *)hexbuf,buf1,2800,buf2);
+		hexbuf[0] = buf2[0]; // begone, optimizer!
+	}
+	end = OSUtils::now();
+	std::cout << (uint64_t)(((200000.0 * 2800.0) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" ZT_EOL_S;
 
 	std::cout << "[crypto] Testing Poly1305... "; std::cout.flush();
 	poly1305(buf1,poly1305TV0Input,sizeof(poly1305TV0Input),poly1305TV0Key);

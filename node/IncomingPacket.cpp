@@ -933,6 +933,8 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 		}
 
 		if (!recipients.empty()) {
+			// TODO
+			/*
 			const std::vector<Address> anchors = network->config().anchors();
 			const bool amAnchor = (std::find(anchors.begin(),anchors.end(),RR->identity.address()) != anchors.end());
 
@@ -959,6 +961,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 				outp.append(field(afterRecipientsOffset,size() - afterRecipientsOffset),size() - afterRecipientsOffset);
 				RR->sw->send(tPtr,outp,true);
 			}
+			*/
 		}
 
 		if (gatherLimit) { // DEPRECATED but still supported

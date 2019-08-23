@@ -228,6 +228,17 @@ void SHA384(void *digest,const void *data,unsigned int len)
 	memcpy(digest,tmp,48);
 }
 
+void SHA384ab(void *digest,const void *data0,unsigned int len0,const void *data1,unsigned int len1)
+{
+	uint8_t tmp[64];
+	sha512_state state;
+	sha384_init(&state);
+	sha512_process(&state,(uint8_t *)data0,(unsigned long)len0);
+	sha512_process(&state,(uint8_t *)data1,(unsigned long)len1);
+	sha512_done(&state,tmp);
+	memcpy(digest,tmp,48);
+}
+
 } // namespace ZeroTier
 
 #endif // !ZT_HAVE_NATIVE_SHA512
