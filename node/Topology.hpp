@@ -264,6 +264,57 @@ public:
 	}
 
 	/**
+	 * Get the best root, rescanning and re-ranking roots periodically
+	 *
+	 * @param now Current time
+	 * @return Best/fastest currently connected root or NULL if none
+	 */
+	inline SharedPtr<Peer> root(const int64_t now)
+	{
+		Mutex::Lock l(_bestRoot_m);
+		if ((!_bestRoot)||((now - _lastRankedBestRoot) >= ZT_FIND_BEST_ROOT_PERIOD)) {
+			_bestRoot.zero();
+			Mutex::Lock l2(_roots_m);
+			SharedPtr<Peer> rp;
+			long bestQuality = 2147483647;
+			for(std::vector<Root>::const_iterator i(_roots.begin());i!=_roots.end();++i) {
+				{
+					Mutex::Lock l2(_peers_m);
+					const SharedPtr<Peer> *const ap = _peers.get(i->address());
+					if (ap) {
+						rp = *ap;
+					} else {
+						rp.set(new Peer(RR,_myIdentity,i->id()));
+						_peers.set(rp->address(),rp);
+					}
+				}
+				SharedPtr<Path> path(rp->getAppropriatePath(now,false));
+				if (path) {
+					const long pq = path->quality(now);
+					if (pq < bestQuality) {
+						bestQuality = pq;
+						_bestRoot = rp;
+					}
+				}
+			}
+		}
+		return _bestRoot;
+	}
+
+	/**
+	 * Get the best relay to a given address, which may or may not be a root
+	 *
+	 * @param now Current time
+	 * @param toAddr Destination address
+	 * @return Best current relay or NULL if none
+	 */
+	inline SharedPtr<Peer> findRelayTo(const int64_t now,const Address &toAddr)
+	{
+		// TODO: in the future this will check 'mesh-like' relays and if enabled consult LF for other roots (for if this is a root)
+		return root(now);
+	}
+
+	/**
 	 * @param allPeers vector to fill with all current peers
 	 */
 	inline void getAllPeers(std::vector< SharedPtr<Peer> > &allPeers) const
@@ -387,9 +438,12 @@ private:
 	std::pair<InetAddress,ZT_PhysicalPathConfiguration> _physicalPathConfig[ZT_MAX_CONFIGURABLE_PATHS];
 	unsigned int _numConfiguredPhysicalPaths;
 	std::vector<Root> _roots;
+	SharedPtr<Peer> _bestRoot;
+	int64_t _lastRankedBestRoot;
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
 	Mutex _roots_m;
+	Mutex _bestRoot_m;
 	Mutex _peers_m;
 	Mutex _paths_m;
 };

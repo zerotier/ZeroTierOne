@@ -307,7 +307,7 @@ private:
 	volatile int64_t _now;
 	int64_t _lastPing;
 	int64_t _lastHousekeepingRun;
-	int64_t _lastMemoizedTraceSettings;
+	int64_t _lastNetworkHousekeepingRun;
 	bool _online;
 };
 

@@ -221,12 +221,25 @@
 /**
  * Minimum delay between timer task checks to prevent thrashing
  */
-#define ZT_CORE_TIMER_TASK_GRANULARITY 500
+#define ZT_MIN_TIMER_TASK_INTERVAL 500
 
 /**
- * How often Topology::clean() and Network::clean() and similar are called, in ms
+ * Maximum delay between timer task checks (should be a fraction of smallest housekeeping interval)
  */
-#define ZT_HOUSEKEEPING_PERIOD 60000
+#define ZT_MAX_TIMER_TASK_INTERVAL 3000
+
+/**
+ * How often most internal cleanup and housekeeping tasks are performed
+ */
+#define ZT_HOUSEKEEPING_PERIOD 120000
+
+/**
+ * How often network housekeeping is performed
+ *
+ * Note that this affects how frequently we re-request network configurations
+ * from network controllers if we haven't received one yet.
+ */
+#define ZT_NETWORK_HOUSEKEEPING_PERIOD 12000
 
 /**
  * Delay between WHOIS retries in ms
@@ -256,7 +269,7 @@
 #define ZT_MULTICAST_LIKE_EXPIRE 600000
 
 /**
- * Period for multicast LIKE announcements
+ * Period for multicast LIKE re-announcements to connected nodes
  */
 #define ZT_MULTICAST_ANNOUNCE_PERIOD 120000
 
@@ -459,11 +472,6 @@
 #define ZT_PEER_PING_PERIOD 45000
 
 /**
- * How often to retry expired paths that we're still remembering
- */
-#define ZT_PEER_EXPIRED_PATH_TRIAL_PERIOD (ZT_PEER_PING_PERIOD * 10)
-
-/**
  * Timeout for overall peer activity (measured from last receive)
  */
 #ifndef ZT_SDK
@@ -471,6 +479,11 @@
 #else
 #define ZT_PEER_ACTIVITY_TIMEOUT 30000
 #endif
+
+/**
+ * Rescan for best/fastest root every N milliseconds
+ */
+#define ZT_FIND_BEST_ROOT_PERIOD 2000
 
 /**
  * General rate limit timeout for multiple packet types (HELLO, etc.)
@@ -508,7 +521,7 @@
  * physical LAN has anywhere even close to this many nodes. Note that this
  * does not limit the size of ZT virtual LANs, only bridge routing.
  */
-#define ZT_MAX_BRIDGE_ROUTES 67108864
+#define ZT_MAX_BRIDGE_ROUTES 16777216
 
 /**
  * If there is no known L2 bridging route, spam to up to this many active bridges

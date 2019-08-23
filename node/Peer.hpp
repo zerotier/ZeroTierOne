@@ -481,6 +481,18 @@ public:
 	}
 
 	/**
+	 * Rate limit gate for trying externally defined or static path
+	 */
+	inline bool rateGateTryStaticPath(const int64_t now)
+	{
+		if ((now - _lastTriedStaticPath) >= ZT_PEER_PING_PERIOD) {
+			_lastTriedStaticPath = now;
+			return true;
+		}
+		return false;
+	}
+
+	/**
 	 * @return Whether this peer is reachable via an aggregate link
 	 */
 	inline bool hasAggregateLink()
@@ -503,6 +515,7 @@ private:
 	int64_t _lastACKWindowReset;
 	int64_t _lastQoSWindowReset;
 	int64_t _lastMultipathCompatibilityCheck;
+	int64_t _lastTriedStaticPath;
 
 	int _uniqueAlivePathCount;
 

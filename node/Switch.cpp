@@ -99,10 +99,9 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 						SharedPtr<Peer> relayTo = RR->topology->get(destination);
 						if ((!relayTo)||(!relayTo->sendDirect(tPtr,fragment.data(),fragment.size(),now,false))) {
 							// Don't know peer or no direct path -- so relay via someone upstream
-							// TODO
-							//relayTo = RR->topology->getUpstreamPeer();
-							//if (relayTo)
-							//	relayTo->sendDirect(tPtr,fragment.data(),fragment.size(),now,true);
+							relayTo = RR->topology->findRelayTo(now,destination);
+							if (relayTo)
+								relayTo->sendDirect(tPtr,fragment.data(),fragment.size(),now,true);
 						}
 					}
 				} else {
@@ -172,9 +171,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 									relayTo->introduce(tPtr,now,sourcePeer);
 							}
 						} else {
-							// TODO
-							/*
-							relayTo = RR->topology->getUpstreamPeer();
+							relayTo = RR->topology->findRelayTo(now,destination);
 							if ((relayTo)&&(relayTo->address() != source)) {
 								if (relayTo->sendDirect(tPtr,packet.data(),packet.size(),now,true)) {
 									const SharedPtr<Peer> sourcePeer(RR->topology->get(source));
@@ -182,7 +179,6 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 										relayTo->introduce(tPtr,now,sourcePeer);
 								}
 							}
-							*/
 						}
 					}
 				} else if ((reinterpret_cast<const uint8_t *>(data)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED) != 0) {
@@ -785,16 +781,13 @@ void Switch::requestWhois(void *tPtr,const int64_t now,const Address &addr)
 		else last = now;
 	}
 
-	// TODO
-	/*
-	const SharedPtr<Peer> upstream(RR->topology->getUpstreamPeer());
-	if (upstream) {
-		Packet outp(upstream->address(),RR->identity.address(),Packet::VERB_WHOIS);
+	const SharedPtr<Peer> root(RR->topology->root(now));
+	if (root) {
+		Packet outp(root->address(),RR->identity.address(),Packet::VERB_WHOIS);
 		addr.appendTo(outp);
 		RR->node->expectReplyTo(outp.packetId());
-		send(tPtr,outp,true);
+		root->sendDirect(tPtr,outp.data(),outp.size(),now,true);
 	}
-	*/
 }
 
 void Switch::doAnythingWaitingForPeer(void *tPtr,const SharedPtr<Peer> &peer)
@@ -916,15 +909,26 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 	if (peer) {
 		viaPath = peer->getAppropriatePath(now,false);
 		if (!viaPath) {
-			// TODO
-			/*
-			peer->tryMemorizedPath(tPtr,now); // periodically attempt memorized or statically defined paths, if any are known
-			const SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());
-			if ( (!relay) || (!(viaPath = relay->getAppropriatePath(now,false))) ) {
-				if (!(viaPath = peer->getAppropriatePath(now,true)))
+			if (peer->rateGateTryStaticPath(now)) {
+				InetAddress tryAddr;
+				bool gotPath = RR->node->externalPathLookup(tPtr,peer->address(),AF_INET6,tryAddr);
+				if ((gotPath)&&(tryAddr)) {
+					peer->sendHELLO(tPtr,-1,tryAddr,now);
+				} else {
+					gotPath = RR->node->externalPathLookup(tPtr,peer->address(),AF_INET,tryAddr);
+					if ((gotPath)&&(tryAddr))
+						peer->sendHELLO(tPtr,-1,tryAddr,now);
+				}
+			}
+
+			const SharedPtr<Peer> relay(RR->topology->findRelayTo(now,destination));
+			if (relay) {
+				viaPath = relay->getAppropriatePath(now,true);
+				if (!viaPath)
 					return false;
 			}
-			*/
+
+			return false;
 		}
 	} else {
 		return false;

@@ -50,6 +50,7 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastACKWindowReset(0),
 	_lastQoSWindowReset(0),
 	_lastMultipathCompatibilityCheck(0),
+	_lastTriedStaticPath(0),
 	_uniqueAlivePathCount(0),
 	_localMultipathSupported(false),
 	_remoteMultipathSupported(false),

@@ -230,6 +230,10 @@ public:
 	/**
 	 * Set network configuration
 	 *
+	 * This is normally called internally when a configuration is received
+	 * and fully assembled, but it can also be called on Node startup when
+	 * cached configurations are re-read from the data store.
+	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param nconf Network configuration
 	 * @param saveToDisk Save to disk? Used during loading, should usually be true otherwise.
@@ -248,13 +252,6 @@ public:
 	inline void setNotFound() { _netconfFailure = NETCONF_FAILURE_NOT_FOUND; }
 
 	/**
-	 * Causes this network to request an updated configuration from its master node now
-	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 */
-	void requestConfiguration(void *tPtr);
-
-	/**
 	 * Determine whether this peer is permitted to communicate on this network
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
@@ -265,7 +262,7 @@ public:
 	/**
 	 * Do periodic cleanup and housekeeping tasks
 	 */
-	void doPeriodicTasks(void *tPtr);
+	void doPeriodicTasks(void *tPtr,const int64_t now);
 
 	/**
 	 * Find the node on this network that has this MAC behind it (if any)
@@ -451,6 +448,7 @@ public:
 	inline void **userPtr() { return &_uPtr; }
 
 private:
+	void _requestConfiguration(void *tPtr);
 	ZT_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
 	bool _gate(const SharedPtr<Peer> &peer);

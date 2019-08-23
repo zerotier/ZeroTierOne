@@ -60,7 +60,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 	_now(now),
 	_lastPing(0),
 	_lastHousekeepingRun(0),
-	_lastMemoizedTraceSettings(0)
+	_lastNetworkHousekeepingRun(0)
 {
 	memcpy(&_cb,callbacks,sizeof(ZT_Node_Callbacks));
 
@@ -237,10 +237,13 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 	_now = now;
 	Mutex::Lock bl(_backgroundTasksLock);
 
-	unsigned long timeUntilNextPing = ZT_PEER_PING_PERIOD;
-	const int64_t timeSinceLastPing = now - _lastPing;
+	// Initialize these on first call so these things happen just a few seconds after
+	// startup, since right at startup things are likely to not be ready to communicate
+	// at all yet.
+	if (_lastNetworkHousekeepingRun <= 0) _lastNetworkHousekeepingRun = now - (ZT_NETWORK_HOUSEKEEPING_PERIOD / 3);
+	if (_lastHousekeepingRun <= 0) _lastHousekeepingRun = now;
 
-	if (timeSinceLastPing >= ZT_PEER_PING_PERIOD) {
+	if ((now - _lastPing) >= ZT_PEER_PING_PERIOD) {
 		_lastPing = now;
 		try {
 			_processBackgroundTasks_ping_eachRoot rf;
@@ -264,61 +267,17 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 		}
 	}
 
-	/*
-	if (timeSinceLastPingCheck >= ZT_PING_CHECK_INVERVAL) {
-		try {
-			_lastPingCheck = now;
-
-			// (1) Get peers we should remain connected to and (2) get networks that need config.
-			Hashtable< Address,std::vector<InetAddress> > alwaysContact;
-			RR->topology->getAlwaysContact(alwaysContact);
-			std::vector< std::pair< SharedPtr<Network>,bool > > networkConfigNeeded;
-			{
-				Mutex::Lock l(_networks_m);
-				Hashtable< uint64_t,SharedPtr<Network> >::Iterator i(_networks);
-				uint64_t *nwid = (uint64_t *)0;
-				SharedPtr<Network> *network = (SharedPtr<Network> *)0;
-				while (i.next(nwid,network)) {
-					(*network)->config().alwaysContactAddresses(alwaysContact);
-					networkConfigNeeded.push_back( std::pair< SharedPtr<Network>,bool >(*network,(((now - (*network)->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!(*network)->hasConfig()))) );
-				}
+	if ((now - _lastNetworkHousekeepingRun) >= ZT_NETWORK_HOUSEKEEPING_PERIOD) {
+		_lastHousekeepingRun = now;
+		{
+			Mutex::Lock l(_networks_m);
+			Hashtable< uint64_t,SharedPtr<Network> >::Iterator i(_networks);
+			uint64_t *nwid = (uint64_t *)0;
+			SharedPtr<Network> *network = (SharedPtr<Network> *)0;
+			while (i.next(nwid,network)) {
+				(*network)->doPeriodicTasks(tptr,now);
 			}
-
-			// Ping active peers, upstreams, and others that we should always contact
-			_PingPeersThatNeedPing pfunc(RR,tptr,alwaysContact,now);
-			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
-
-			// Run WHOIS to create Peer for alwaysContact addresses that could not be contacted
-			{
-				Hashtable< Address,std::vector<InetAddress> >::Iterator i(alwaysContact);
-				Address *upstreamAddress = (Address *)0;
-				std::vector<InetAddress> *upstreamStableEndpoints = (std::vector<InetAddress> *)0;
-				while (i.next(upstreamAddress,upstreamStableEndpoints))
-					RR->sw->requestWhois(tptr,now,*upstreamAddress);
-			}
-
-			// Refresh network config or broadcast network updates to members as needed
-			for(std::vector< std::pair< SharedPtr<Network>,bool > >::const_iterator n(networkConfigNeeded.begin());n!=networkConfigNeeded.end();++n) {
-				if (n->second)
-					n->first->requestConfiguration(tptr);
-				n->first->sendUpdatesToMembers(tptr);
-			}
-
-			// Update online status, post status change as event
-			const bool oldOnline = _online;
-			_online = pfunc.online;
-			if (oldOnline != _online)
-				postEvent(tptr,_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
-		} catch ( ... ) {
-			return ZT_RESULT_FATAL_ERROR_INTERNAL;
 		}
-	} else {
-		timeUntilNextPingCheck -= (unsigned long)timeSinceLastPingCheck;
-	}
-*/
-
-	if ((now - _lastMemoizedTraceSettings) >= (ZT_HOUSEKEEPING_PERIOD / 4)) {
-		_lastMemoizedTraceSettings = now;
 		RR->t->updateMemoizedSettings();
 	}
 
@@ -350,7 +309,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 	}
 
 	try {
-		*nextBackgroundTaskDeadline = now + (int64_t)std::max(std::min(timeUntilNextPing,RR->sw->doTimerTasks(tptr,now)),(unsigned long)ZT_CORE_TIMER_TASK_GRANULARITY);
+		*nextBackgroundTaskDeadline = now + (int64_t)std::max(std::min((unsigned long)ZT_MAX_TIMER_TASK_INTERVAL,RR->sw->doTimerTasks(tptr,now)),(unsigned long)ZT_MIN_TIMER_TASK_INTERVAL);
 	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}
