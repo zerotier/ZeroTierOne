@@ -14,6 +14,10 @@
 #ifndef ZT_LINUX_NETLINK_HPP
 #define ZT_LINUX_NETLINK_HPP
 
+#include "../node/Constants.hpp"
+
+#ifdef __LINUX__
+
 #include <vector>
 
 #include <sys/socket.h>
@@ -112,5 +116,7 @@ private:
 };
 
 }
+
+#endif
 
 #endif // ZT_LINUX_NETLINK_HPPS
