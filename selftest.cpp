@@ -148,11 +148,10 @@ static const uint8_t AES_TEST_VECTOR_0_KEY[32] = { 0x60,0x3d,0xeb,0x10,0x15,0xca
 static const uint8_t AES_TEST_VECTOR_0_IN[16] = { 0x6b,0xc1,0xbe,0xe2,0x2e,0x40,0x9f,0x96,0xe9,0x3d,0x7e,0x11,0x73,0x93,0x17,0x2a };
 static const uint8_t AES_TEST_VECTOR_0_OUT[16] = { 0xf3,0xee,0xd1,0xbd,0xb5,0xd2,0xa0,0x3c,0x06,0x4b,0x5a,0x7e,0x3d,0xb1,0x81,0xf8 };
 
-static const uint8_t AES_GCM_TEST_VECTOR_0_KEY[32] = { 0xfe,0xff,0xe9,0x92,0x86,0x65,0x73,0x1c,0x6d,0x6a,0x8f,0x94,0x67,0x30,0x83,0x08,0xfe,0xff,0xe9,0x92,0x86,0x65,0x73,0x1c,0x6d,0x6a,0x8f,0x94,0x67,0x30,0x83,0x08 };
-static const uint8_t AES_GCM_TEST_VECTOR_0_IV[12] = { 0xca,0xfe,0xba,0xbe,0xfa,0xce,0xdb,0xad,0xde,0xca,0xf8,0x88 };
-static const uint8_t AES_GCM_TEST_VECTOR_0_IN[64] = { 0xd9,0x31,0x32,0x25,0xf8,0x84,0x06,0xe5,0xa5,0x59,0x09,0xc5,0xaf,0xf5,0x26,0x9a,0x86,0xa7,0xa9,0x53,0x15,0x34,0xf7,0xda,0x2e,0x4c,0x30,0x3d,0x8a,0x31,0x8a,0x72,0x1c,0x3c,0x0c,0x95,0x95,0x68,0x09,0x53,0x2f,0xcf,0x0e,0x24,0x49,0xa6,0xb5,0x25,0xb1,0x6a,0xed,0xf5,0xaa,0x0d,0xe6,0x57,0xba,0x63,0x7b,0x39,0x1a,0xaf,0xd2,0x55 };
-static const uint8_t AES_GCM_TEST_VECTOR_0_OUT[64] = { 0x52,0x2d,0xc1,0xf0,0x99,0x56,0x7d,0x07,0xf4,0x7f,0x37,0xa3,0x2a,0x84,0x42,0x7d,0x64,0x3a,0x8c,0xdc,0xbf,0xe5,0xc0,0xc9,0x75,0x98,0xa2,0xbd,0x25,0x55,0xd1,0xaa,0x8c,0xb0,0x8e,0x48,0x59,0x0d,0xbb,0x3d,0xa7,0xb0,0x8b,0x10,0x56,0x82,0x88,0x38,0xc5,0xf6,0x1e,0x63,0x93,0xba,0x7a,0x0a,0xbc,0xc9,0xf6,0x62,0x89,0x80,0x15,0xad };
-static const uint8_t AES_GCM_TEST_VECTOR_0_TAG[16] = { 0xb0,0x94,0xda,0xc5,0xd9,0x34,0x71,0xbd,0xec,0x1a,0x50,0x22,0x70,0xe3,0xcc,0x6c };
+static const uint8_t AES_GMAC_VECTOR_0_KEY[32] = { 0xbb, 0x10, 0x10, 0x06, 0x4f, 0xb8, 0x35, 0x23, 0xea, 0x9d, 0xf3, 0x2b, 0xad, 0x9f, 0x1f, 0x2a, 0x4f, 0xce, 0xfc, 0x0f, 0x21, 0x07, 0xc0, 0xaa, 0xba, 0xd9, 0xb7, 0x56, 0xd8, 0x09, 0x21, 0x9d };
+static const uint8_t AES_GMAC_VECTOR_0_IV[12] = { 0x2f, 0x9a, 0xd0, 0x12, 0xad, 0xfc, 0x12, 0x73, 0x43, 0xfb, 0xe0, 0x56 };
+static const uint8_t AES_GMAC_VECTOR_0_IN[16] = { 0xdb, 0x98, 0xd9, 0x0d, 0x1b, 0x69, 0x5c, 0xdb, 0x74, 0x7a, 0x34, 0x3f, 0xbb, 0xc9, 0xf1, 0x41 };
+static const uint8_t AES_GMAC_VECTOR_0_OUT[16] = { 0xef, 0x06, 0xd5, 0x4d, 0xfd, 0x00, 0x02, 0x1d, 0x75, 0x27, 0xdf, 0xf2, 0x6f, 0xc9, 0xd4, 0x84 };
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -168,151 +167,127 @@ static int testCrypto()
 		std::cout << "[crypto] getSecureRandom: " << Utils::hex(buf1,64,hexbuf) << ZT_EOL_S;
 	}
 
-	std::cout << "[crypto] Testing and benchmarking AES-256 and GCM..." ZT_EOL_S << "  AES-256 (test vectors): "; std::cout.flush();
-	AES tv(AES_TEST_VECTOR_0_KEY);
-	tv.encrypt(AES_TEST_VECTOR_0_IN,(uint8_t *)buf1);
-	if (memcmp(buf1,AES_TEST_VECTOR_0_OUT,16) != 0) {
-		std::cout << "FAILED (test vector 0 encrypt)" ZT_EOL_S;
-		return -1;
-	}
-	tv.decrypt((const uint8_t *)buf1,(uint8_t *)buf2);
-	if (memcmp(AES_TEST_VECTOR_0_IN,buf2,16) != 0) {
-		std::cout << "FAILED (test vector 0 decrypt)" ZT_EOL_S;
-		return -1;
-	}
-	std::cout << "PASS" ZT_EOL_S << "  AES-256 GCM (test vectors, benchmark): "; std::cout.flush();
-	tv.gcmEncrypt((const uint8_t *)hexbuf,buf1,sizeof(buf1),nullptr,0,buf2,(uint8_t *)(hexbuf + 32),16);
-	if (!tv.gcmDecrypt((const uint8_t *)hexbuf,buf2,sizeof(buf2),nullptr,0,buf3,(const uint8_t *)(hexbuf + 32),16)) {
-		std::cout << "FAILED (encrypt/decrypt, auth tag mismatch)" ZT_EOL_S;
-		return -1;
-	}
-	if (memcmp(buf1,buf3,sizeof(buf1)) != 0) {
-		std::cout << "FAILED (encrypt/decrypt, data mismatch)" ZT_EOL_S;
-		return -1;
-	}
-	tv.init(AES_GCM_TEST_VECTOR_0_KEY);
-	tv.gcmEncrypt(AES_GCM_TEST_VECTOR_0_IV,AES_GCM_TEST_VECTOR_0_IN,sizeof(AES_GCM_TEST_VECTOR_0_IN),nullptr,0,(uint8_t *)buf1,(uint8_t *)buf2,16);
-	if (memcmp(buf2,AES_GCM_TEST_VECTOR_0_TAG,16) != 0) {
-		std::cout << "FAILED (test vector, tag mismatch) " << Utils::hex(buf2,16,hexbuf) << ZT_EOL_S;
-		return -1;
-	}
-	if (memcmp(buf1,AES_GCM_TEST_VECTOR_0_OUT,sizeof(AES_GCM_TEST_VECTOR_0_OUT)) != 0) {
-		std::cout << "FAILED (test vector, ciphertext mismatch) " << Utils::hex(buf2,16,hexbuf) << ZT_EOL_S;
-		return -1;
-	}
-	double gcmBytes = 0.0;
-	int64_t start = OSUtils::now();
-	for(unsigned long i=0;i<50000;++i) {
-		tv.gcmEncrypt((const uint8_t *)hexbuf,buf1,sizeof(buf1),nullptr,0,buf2,(uint8_t *)(hexbuf + 32),16);
-		tv.gcmEncrypt((const uint8_t *)hexbuf,buf2,sizeof(buf2),nullptr,0,buf1,(uint8_t *)(hexbuf + 32),16);
-		gcmBytes += (double)(sizeof(buf1) * 2);
-	}
-	int64_t end = OSUtils::now();
-	*dummy = buf1[0];
-	std::cout << ((gcmBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" ZT_EOL_S << "  AES scramble (benchmark): "; std::cout.flush();
-	double ecbBytes = 0.0;
-	AES::scramble((const uint8_t *)hexbuf,buf1,sizeof(buf1),buf2);
-	AES::unscramble((const uint8_t *)hexbuf,buf2,sizeof(buf2),buf3);
-	if (memcmp(buf1,buf3,sizeof(buf1)) != 0) {
-		std::cout << "FAILED (scramble/unscramble did not generate identical data)" ZT_EOL_S;
-		return -1;
-	}
-	start = OSUtils::now();
-	for(unsigned long i=0;i<200000;++i) {
-		AES::scramble((const uint8_t *)hexbuf,buf1,sizeof(buf1),buf2);
-		AES::scramble((const uint8_t *)hexbuf,buf2,sizeof(buf1),buf1);
-		ecbBytes += (double)(sizeof(buf1) * 2);
-	}
-	end = OSUtils::now();
-	*dummy = buf1[0];
-	std::cout << ((ecbBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" ZT_EOL_S << "  AES-256 GCM + scramble (benchmark): "; std::cout.flush();
-	ecbBytes = 0.0;
-	start = OSUtils::now();
-	for(unsigned long i=0;i<50000;++i) {
-		tv.gcmEncrypt((const uint8_t *)hexbuf,buf1,sizeof(buf1),nullptr,0,buf2,(uint8_t *)(hexbuf + 32),16);
-		AES::scramble((const uint8_t *)hexbuf,buf1,sizeof(buf1),buf2);
-		tv.gcmEncrypt((const uint8_t *)hexbuf,buf2,sizeof(buf2),nullptr,0,buf1,(uint8_t *)(hexbuf + 32),16);
-		AES::scramble((const uint8_t *)hexbuf,buf2,sizeof(buf1),buf1);
-		ecbBytes += (double)(sizeof(buf1) * 2);
-	}
-	end = OSUtils::now();
-	*dummy = buf1[0];
-	std::cout << ((ecbBytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" ZT_EOL_S;
-
-	std::cout << "[crypto] Testing Salsa20... "; std::cout.flush();
-	for(unsigned int i=0;i<4;++i) {
-		for(unsigned int k=0;k<sizeof(buf1);++k)
-			buf1[k] = (unsigned char)rand();
-		memset(buf2,0,sizeof(buf2));
-		memset(buf3,0,sizeof(buf3));
-		Salsa20 s20;
-		s20.init("12345678123456781234567812345678","12345678");
-		s20.crypt20(buf1,buf2,sizeof(buf1));
-		s20.init("12345678123456781234567812345678","12345678");
-		s20.crypt20(buf2,buf3,sizeof(buf2));
-		if (memcmp(buf1,buf3,sizeof(buf1))) {
-			std::cout << "FAIL (encrypt/decrypt test)" ZT_EOL_S;
+	{
+		std::cout << "[crypto] Testing and benchmarking AES-256 and GCM..." ZT_EOL_S << "  AES-256 (test vectors): "; std::cout.flush();
+		AES tv(AES_TEST_VECTOR_0_KEY);
+		tv.encrypt(AES_TEST_VECTOR_0_IN,(uint8_t *)buf1);
+		if (memcmp(buf1,AES_TEST_VECTOR_0_OUT,16) != 0) {
+			std::cout << "FAILED (test vector 0 encrypt)" ZT_EOL_S;
 			return -1;
 		}
-	}
-	Salsa20 s20(s20TV0Key,s20TV0Iv);
-	memset(buf1,0,sizeof(buf1));
-	memset(buf2,0,sizeof(buf2));
-	s20.crypt20(buf1,buf2,64);
-	if (memcmp(buf2,s20TV0Ks,64)) {
-		std::cout << "FAIL (test vector 0)" ZT_EOL_S;
-		return -1;
-	}
-	s20.init(s2012TV0Key,s2012TV0Iv);
-	memset(buf1,0,sizeof(buf1));
-	memset(buf2,0,sizeof(buf2));
-	s20.crypt12(buf1,buf2,64);
-	if (memcmp(buf2,s2012TV0Ks,64)) {
-		std::cout << "FAIL (test vector 1)" ZT_EOL_S;
-		return -1;
-	}
-	std::cout << "PASS" ZT_EOL_S;
-
-#ifdef ZT_SALSA20_SSE
-	std::cout << "[crypto] Salsa20 SSE: ENABLED" ZT_EOL_S;
-#else
-	std::cout << "[crypto] Salsa20 SSE: DISABLED" ZT_EOL_S;
-#endif
-
-	std::cout << "[crypto] Benchmarking Salsa20/12... "; std::cout.flush();
-	{
-		unsigned char *bb = (unsigned char *)::malloc(1234567);
-		for(unsigned int i=0;i<1234567;++i)
-			bb[i] = (unsigned char)i;
-		Salsa20 s20(s20TV0Key,s20TV0Iv);
-		long double bytes = 0.0;
+		std::cout << "OK" ZT_EOL_S << "  GMAC-AES-256 (test vectors): "; std::cout.flush();
+		tv.init(AES_GMAC_VECTOR_0_KEY);
+		tv.gmac(AES_GMAC_VECTOR_0_IV,AES_GMAC_VECTOR_0_IN,sizeof(AES_GMAC_VECTOR_0_IN),(uint8_t *)hexbuf);
+		if (memcmp(hexbuf,AES_GMAC_VECTOR_0_OUT,16) != 0) {
+			std::cout << "FAILED (test vector 0)" ZT_EOL_S;
+			return -1;
+		}
+		std::cout << "OK" ZT_EOL_S << "  GMAC-AES-256 (benchmark): "; std::cout.flush();
+		int64_t start = OSUtils::now();
+		for(unsigned long i=0;i<200000;++i) {
+			tv.gmac(AES_GMAC_VECTOR_0_IV,buf1,sizeof(buf1),(uint8_t *)hexbuf);
+			buf1[0] = hexbuf[0];
+		}
+		int64_t end = OSUtils::now();
+		*dummy = hexbuf[0];
+		std::cout << (((double)(200000 * sizeof(buf1)) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" ZT_EOL_S;
+		std::cout << "  AES-256-CTR (benchmark): "; std::cout.flush();
 		start = OSUtils::now();
-		for(unsigned int i=0;i<200;++i) {
-			s20.crypt12(bb,bb,1234567);
-			bytes += 1234567.0;
+		for(unsigned long i=0;i<200000;++i) {
+			tv.ctr((const uint8_t *)hexbuf,buf1,sizeof(buf1),buf2);
+			hexbuf[0] = buf2[0];
 		}
 		end = OSUtils::now();
-		SHA512(buf1,bb,1234567);
-		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << ZT_EOL_S;
-		::free((void *)bb);
+		*dummy = buf2[0];
+		std::cout << (((double)(200000 * sizeof(buf1)) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" ZT_EOL_S;
+		std::cout << "  GMAC-AES-256 and AES-256-CTR (benchmark): "; std::cout.flush();
+		start = OSUtils::now();
+		for(unsigned long i=0;i<200000;++i) {
+			tv.gmac(AES_GMAC_VECTOR_0_IV,buf1,sizeof(buf1),(uint8_t *)hexbuf);
+			tv.ctr((const uint8_t *)hexbuf,buf1,sizeof(buf1),buf2);
+			hexbuf[0] = buf2[0];
+		}
+		end = OSUtils::now();
+		*dummy = buf2[0];
+		std::cout << (((double)(200000 * sizeof(buf1)) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" ZT_EOL_S;
 	}
 
-	std::cout << "[crypto] Benchmarking Salsa20/20... "; std::cout.flush();
 	{
-		unsigned char *bb = (unsigned char *)::malloc(1234567);
-		for(unsigned int i=0;i<1234567;++i)
-			bb[i] = (unsigned char)i;
-		Salsa20 s20(s20TV0Key,s20TV0Iv);
-		long double bytes = 0.0;
-		uint64_t start = OSUtils::now();
-		for(unsigned int i=0;i<200;++i) {
-			s20.crypt20(bb,bb,1234567);
-			bytes += 1234567.0;
+		std::cout << "[crypto] Testing Salsa20... "; std::cout.flush();
+		for(unsigned int i=0;i<4;++i) {
+			for(unsigned int k=0;k<sizeof(buf1);++k)
+				buf1[k] = (unsigned char)rand();
+			memset(buf2,0,sizeof(buf2));
+			memset(buf3,0,sizeof(buf3));
+			Salsa20 s20;
+			s20.init("12345678123456781234567812345678","12345678");
+			s20.crypt20(buf1,buf2,sizeof(buf1));
+			s20.init("12345678123456781234567812345678","12345678");
+			s20.crypt20(buf2,buf3,sizeof(buf2));
+			if (memcmp(buf1,buf3,sizeof(buf1))) {
+				std::cout << "FAIL (encrypt/decrypt test)" ZT_EOL_S;
+				return -1;
+			}
 		}
-		uint64_t end = OSUtils::now();
-		SHA512(buf1,bb,1234567);
-		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << ZT_EOL_S;
-		::free((void *)bb);
+		Salsa20 s20(s20TV0Key,s20TV0Iv);
+		memset(buf1,0,sizeof(buf1));
+		memset(buf2,0,sizeof(buf2));
+		s20.crypt20(buf1,buf2,64);
+		if (memcmp(buf2,s20TV0Ks,64)) {
+			std::cout << "FAIL (test vector 0)" ZT_EOL_S;
+			return -1;
+		}
+		s20.init(s2012TV0Key,s2012TV0Iv);
+		memset(buf1,0,sizeof(buf1));
+		memset(buf2,0,sizeof(buf2));
+		s20.crypt12(buf1,buf2,64);
+		if (memcmp(buf2,s2012TV0Ks,64)) {
+			std::cout << "FAIL (test vector 1)" ZT_EOL_S;
+			return -1;
+		}
+		std::cout << "PASS" ZT_EOL_S;
+
+	#ifdef ZT_SALSA20_SSE
+		std::cout << "[crypto] Salsa20 SSE: ENABLED" ZT_EOL_S;
+	#else
+		std::cout << "[crypto] Salsa20 SSE: DISABLED" ZT_EOL_S;
+	#endif
+
+		std::cout << "[crypto] Benchmarking Salsa20/12... "; std::cout.flush();
+		{
+			unsigned char *bb = (unsigned char *)::malloc(1234567);
+			for(unsigned int i=0;i<1234567;++i)
+				bb[i] = (unsigned char)i;
+			Salsa20 s20(s20TV0Key,s20TV0Iv);
+			long double bytes = 0.0;
+			int64_t start = OSUtils::now();
+			for(unsigned int i=0;i<200;++i) {
+				s20.crypt12(bb,bb,1234567);
+				bytes += 1234567.0;
+			}
+			int64_t end = OSUtils::now();
+			SHA512(buf1,bb,1234567);
+			std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << ZT_EOL_S;
+			::free((void *)bb);
+		}
+
+		std::cout << "[crypto] Benchmarking Salsa20/20... "; std::cout.flush();
+		{
+			unsigned char *bb = (unsigned char *)::malloc(1234567);
+			for(unsigned int i=0;i<1234567;++i)
+				bb[i] = (unsigned char)i;
+			Salsa20 s20(s20TV0Key,s20TV0Iv);
+			long double bytes = 0.0;
+			int64_t start = OSUtils::now();
+			for(unsigned int i=0;i<200;++i) {
+				s20.crypt20(bb,bb,1234567);
+				bytes += 1234567.0;
+			}
+			int64_t end = OSUtils::now();
+			SHA512(buf1,bb,1234567);
+			std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << ZT_EOL_S;
+			::free((void *)bb);
+		}
 	}
 
 	std::cout << "[crypto] Testing SHA-512... "; std::cout.flush();
@@ -323,11 +298,11 @@ static int testCrypto()
 	}
 	std::cout << "PASS" ZT_EOL_S;
 	std::cout << "[crypto] Benchmarking SHA-512 (64 byte input)... "; std::cout.flush();
-	start = OSUtils::now();
+	int64_t start = OSUtils::now();
 	for(unsigned int i=0;i<2000000;++i) {
 		SHA512(buf1,buf1,64);
 	}
-	end = OSUtils::now();
+	int64_t end = OSUtils::now();
 	std::cout << (uint64_t)(2000000.0 / ((double)(end - start) / 1000.0)) << " hashes/second" ZT_EOL_S;
 
 	std::cout << "[crypto] Testing SHA-384... "; std::cout.flush();
