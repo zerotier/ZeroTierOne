@@ -141,13 +141,14 @@ public:
 		// the 64-bit supplied IV and the message size.
 #ifdef ZT_NO_TYPE_PUNNING
 		for(unsigned int i=0;i<8;++i) gmacIv[i] = iv[i];
-#else
-		*((uint64_t *)gmacIv) = *((const uint64_t *)iv);
-#endif
 		gmacIv[8] = (uint8_t)(len >> 24);
 		gmacIv[9] = (uint8_t)(len >> 16);
 		gmacIv[10] = (uint8_t)(len >> 8);
 		gmacIv[11] = (uint8_t)len;
+#else
+		*((uint64_t *)gmacIv) = *((const uint64_t *)iv);
+		*((uint32_t *)(gmacIv + 8)) = Utils::hton((uint32_t)len);
+#endif
 		gmac(gmacIv,in,len,ctrIv);
 
 		// (2) The first 64 bits of GMAC output are the auth tag. Create
@@ -197,13 +198,14 @@ public:
 		// GMAC IV built from the message IV and the message size.
 #ifdef ZT_NO_TYPE_PUNNING
 		for(unsigned int i=0;i<8;++i) gmacIv[i] = iv[i];
-#else
-		*((uint64_t *)gmacIv) = *((const uint64_t *)iv);
-#endif
 		gmacIv[8] = (uint8_t)(len >> 24);
 		gmacIv[9] = (uint8_t)(len >> 16);
 		gmacIv[10] = (uint8_t)(len >> 8);
 		gmacIv[11] = (uint8_t)len;
+#else
+		*((uint64_t *)gmacIv) = *((const uint64_t *)iv);
+		*((uint32_t *)(gmacIv + 8)) = Utils::hton((uint32_t)len);
+#endif
 		gmac(gmacIv,out,len,gmacOut);
 
 		// (4) Compare first 64 bits of GMAC output with tag.
@@ -671,17 +673,16 @@ private:
 
 	ZT_ALWAYS_INLINE void _gmac_aesni(const uint8_t iv[12],const uint8_t *in,const unsigned int len,uint8_t out[16]) const
 	{
-		__m128i h1 = _k.ni.hhhh;
-		__m128i h2 = _k.ni.hhh;
-		__m128i h3 = _k.ni.hh;
-		__m128i h4 = _k.ni.h;
-
-		__m128i y = _mm_setzero_si128();
 		const __m128i *ab = (const __m128i *)in;
 		unsigned int blocks = len / 16;
 		unsigned int pblocks = blocks - (blocks % 4);
 		unsigned int rem = len % 16;
 
+		__m128i h1 = _k.ni.hhhh;
+		__m128i h2 = _k.ni.hhh;
+		__m128i h3 = _k.ni.hh;
+		__m128i h4 = _k.ni.h;
+		__m128i y = _mm_setzero_si128();
 		for (unsigned int i=0;i<pblocks;i+=4) {
 			__m128i d1 = _mm_loadu_si128(ab + i + 0);
 			__m128i d2 = _mm_loadu_si128(ab + i + 1);
