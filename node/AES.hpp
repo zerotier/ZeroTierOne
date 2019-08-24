@@ -240,7 +240,7 @@ private:
 		} ni;
 #endif
 		struct {
-			uint32_t ek[60];
+			uint32_t ek[30];
 		} sw;
 	} _k;
 	/**************************************************************************/
@@ -423,7 +423,7 @@ private:
 
 	ZT_ALWAYS_INLINE void _crypt_ctr_aesni(const uint8_t iv[16],const uint8_t *in,unsigned int len,uint8_t *out) const
 	{
-		const uint64_t iv0 = *((const uint64_t *)iv);
+		const __m64 iv0 = (__m64)(*((const uint64_t *)iv));
 		uint64_t ctr = Utils::ntoh(*((const uint64_t *)(iv+8)));
 
 		const __m128i k0 = _k.ni.k[0];
@@ -443,10 +443,10 @@ private:
 		const __m128i k14 = _k.ni.k[14];
 
 		while (len >= 64) {
-			__m128i c0 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton(ctr),(__m64)iv0),k0);
-			__m128i c1 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton(ctr+1ULL),(__m64)iv0),k0);
-			__m128i c2 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton(ctr+2ULL),(__m64)iv0),k0);
-			__m128i c3 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton(ctr+3ULL),(__m64)iv0),k0);
+			__m128i c0 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton(ctr),iv0),k0);
+			__m128i c1 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton(ctr+1ULL),iv0),k0);
+			__m128i c2 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton(ctr+2ULL),iv0),k0);
+			__m128i c3 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton(ctr+3ULL),iv0),k0);
 			ctr += 4;
 			c0 = _mm_aesenc_si128(c0,k1);
 			c1 = _mm_aesenc_si128(c1,k1);
