@@ -90,13 +90,127 @@ public:
 #endif
 	}
 
-	inline void ctr(const uint8_t iv[16],const void *in,const unsigned int len,void *out) const
+	inline void ctr(const uint8_t iv[16],const void *in,unsigned int len,void *out) const
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(HW_ACCEL)) {
 			_crypt_ctr_aesni(iv,(const uint8_t *)in,len,(uint8_t *)out);
 			return;
 		}
+#endif
+
+		uint64_t ctr[2],cenc[2];
+		memcpy(ctr,iv,16);
+		uint64_t bctr = Utils::ntoh(ctr[1]);
+
+		const uint8_t *i = (const uint8_t *)in;
+		uint8_t *o = (uint8_t *)out;
+		while (len >= 16) {
+			_encryptSW((const uint8_t *)ctr,(uint8_t *)cenc);
+			ctr[1] = Utils::hton(++bctr);
+			for(unsigned int k=0;k<16;++k)
+				*(o++) = *(i++) ^ ((uint8_t *)cenc)[k];
+			len -= 16;
+		}
+
+		if (len) {
+			_encryptSW((const uint8_t *)ctr,(uint8_t *)cenc);
+			for(unsigned int k=0;k<len;++k)
+				*(o++) = *(i++) ^ ((uint8_t *)cenc)[k];
+		}
+	}
+
+	/**
+	 * Perform AES-256-GMAC-CTR encryption
+	 *
+	 * This mode combines the two standard modes AES256-GMAC and AES256-CTR to
+	 * yield a mode similar to AES256-GCM-SIV that is resistant to accidental
+	 * message IV duplication.
+	 *
+	 * @param iv 64-bit message IV
+	 * @param in Message plaintext
+	 * @param len Length of plaintext
+	 * @param out Output buffer to receive ciphertext
+	 * @param tag Output buffer to receive 64-bit authentication tag
+	 */
+	inline void ztGmacCtrEncrypt(const uint8_t iv[8],const void *in,unsigned int len,void *out,uint8_t tag[8])
+	{
+		uint8_t ctrIv[16],gmacIv[12];
+
+		// (1) Compute AES256-GMAC(in) using a 96-bit IV constructed from
+		// the 64-bit supplied IV and the message size.
+#ifdef ZT_NO_TYPE_PUNNING
+		for(unsigned int i=0;i<8;++i) gmacIv[i] = iv[i];
+#else
+		*((uint64_t *)gmacIv) = *((const uint64_t *)iv);
+#endif
+		gmacIv[8] = (uint8_t)(len >> 24);
+		gmacIv[9] = (uint8_t)(len >> 16);
+		gmacIv[10] = (uint8_t)(len >> 8);
+		gmacIv[11] = (uint8_t)len;
+		gmac(gmacIv,in,len,ctrIv);
+
+		// (2) The first 64 bits of GMAC output are the auth tag. Create
+		// a secret synthetic AES256-CTR IV by encrypting these and the
+		// original supplied IV.
+#ifdef ZT_NO_TYPE_PUNNING
+		for(unsigned int i=0;i<8;++i) tag[i] = ctrIv[i];
+		for(unsigned int i=0;i<8;++i) ctrIv[i+8] = iv[i];
+#else
+		*((uint64_t *)tag) = *((const uint64_t *)ctrIv);
+		*((uint64_t *)(ctrIv + 8)) = *((const uint64_t *)iv);
+#endif
+		encrypt(ctrIv,ctrIv);
+
+		// (3) Encrypt input using AES256-CTR
+		ctr(ctrIv,in,len,out);
+	}
+
+	/**
+	 * Decrypt a message encrypted with AES-256-GMAC-CTR and check its authenticity
+	 *
+	 * @param iv 64-bit message IV
+	 * @param in Message ciphertext
+	 * @param len Length of ciphertext
+	 * @param out Output buffer to receive plaintext
+	 * @param tag Authentication tag supplied with message
+	 * @return True if authentication tags match and message appears authentic
+	 */
+	inline bool ztGmacCtrDecrypt(const uint8_t iv[8],const void *in,unsigned int len,void *out,const uint8_t tag[8])
+	{
+		uint8_t ctrIv[16],gmacOut[16],gmacIv[12];
+
+		// (1) Re-create the original secret synthetic AES256-CTR IV.
+#ifdef ZT_NO_TYPE_PUNNING
+		for(unsigned int i=0;i<8;++i) ctrIv[i] = tag[i];
+		for(unsigned int i=0;i<8;++i) ctrIv[i+8] = iv[i];
+#else
+		*((uint64_t *)ctrIv) = *((const uint8_t *)tag);
+		*((uint64_t *)(ctrIv + 8)) = *((const uint64_t *)iv);
+#endif
+		encrypt(ctrIv,ctrIv);
+
+		// (2) Decrypt input using AES256-CTR
+		ctr(ctrIv,in,len,out);
+
+		// (3) Compute AES256-GMAC(out) using the re-created 96-bit
+		// GMAC IV built from the message IV and the message size.
+#ifdef ZT_NO_TYPE_PUNNING
+		for(unsigned int i=0;i<8;++i) gmacIv[i] = iv[i];
+#else
+		*((uint64_t *)gmacIv) = *((const uint64_t *)iv);
+#endif
+		gmacIv[8] = (uint8_t)(len >> 24);
+		gmacIv[9] = (uint8_t)(len >> 16);
+		gmacIv[10] = (uint8_t)(len >> 8);
+		gmacIv[11] = (uint8_t)len;
+		gmac(gmacIv,out,len,gmacOut);
+
+		// (4) Compare first 64 bits of GMAC output with tag.
+#ifdef ZT_NO_TYPE_PUNNING
+		return Utils::secureEq(gmacOut,tag,8);
+#else
+		return (*((const uint64_t *)gmacOut) == *((const uint64_t *)tag));
 #endif
 	}
 
@@ -561,11 +675,13 @@ private:
 		__m128i h2 = _k.ni.hhh;
 		__m128i h3 = _k.ni.hh;
 		__m128i h4 = _k.ni.h;
+
 		__m128i y = _mm_setzero_si128();
 		const __m128i *ab = (const __m128i *)in;
 		unsigned int blocks = len / 16;
 		unsigned int pblocks = blocks - (blocks % 4);
 		unsigned int rem = len % 16;
+
 		for (unsigned int i=0;i<pblocks;i+=4) {
 			__m128i d1 = _mm_loadu_si128(ab + i + 0);
 			__m128i d2 = _mm_loadu_si128(ab + i + 1);
@@ -574,8 +690,10 @@ private:
 			y = _mm_xor_si128(y,d1);
 			y = _mult4xor_aesni(h1,h2,h3,h4,y,d2,d3,d4);
 		}
+
 		for (unsigned int i=pblocks;i<blocks;++i)
 			y = _ghash_aesni(_k.ni.h,y,_mm_loadu_si128(ab + i));
+
 		if (rem) {
 			__m128i last = _mm_setzero_si128();
 			memcpy(&last,ab + blocks,rem);
