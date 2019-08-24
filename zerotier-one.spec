@@ -1,6 +1,6 @@
 Name:           zerotier-one
 Version:        1.4.4
-Release:        2%{?dist}
+Release:        1%{?dist}
 Summary:        ZeroTier One network virtualization service
 
 License:        ZeroTier BSL 1.1
