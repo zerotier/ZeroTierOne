@@ -468,7 +468,6 @@ private:
 
 		while (len >= 64) {
 			len -= 64;
-
 			__m128i d0 = _mm_xor_si128(_mm_loadu_si128((const __m128i *)in),ctr);
 			ctr = _mm_add_epi64(ctr,one);
 			in += 16;
@@ -481,7 +480,6 @@ private:
 			__m128i d3 = _mm_xor_si128(_mm_loadu_si128((const __m128i *)in),ctr);
 			ctr = _mm_add_epi64(ctr,one);
 			in += 16;
-
 			d0 = _mm_xor_si128(d0,k0);
 			d1 = _mm_xor_si128(d1,k0);
 			d2 = _mm_xor_si128(d2,k0);
@@ -522,7 +520,6 @@ private:
 			d1 = _mm_aesenc_si128(d1,k9);
 			d2 = _mm_aesenc_si128(d2,k9);
 			d3 = _mm_aesenc_si128(d3,k9);
-
 			_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(d0,k10));
 			out += 16;
 			_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(d1,k10));
@@ -535,11 +532,9 @@ private:
 
 		while (len >= 16) {
 			len -= 16;
-
 			__m128i d0 = _mm_xor_si128(_mm_loadu_si128((const __m128i *)in),ctr);
 			ctr = _mm_add_epi64(ctr,one);
 			in += 16;
-
 			d0 = _mm_xor_si128(d0,k0);
 			d0 = _mm_aesenc_si128(d0,k1);
 			d0 = _mm_aesenc_si128(d0,k2);
@@ -550,7 +545,6 @@ private:
 			d0 = _mm_aesenc_si128(d0,k7);
 			d0 = _mm_aesenc_si128(d0,k8);
 			d0 = _mm_aesenc_si128(d0,k9);
-
 			_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(d0,k10));
 			out += 16;
 		}
@@ -574,6 +568,7 @@ private:
 			}
 		}
 	}
+
 	static ZT_ALWAYS_INLINE void _unscramble_aesni(const uint8_t key[16],const uint8_t *in,uint8_t *out,unsigned int len)
 	{
 		__m128i t = _mm_loadu_si128((const __m128i *)key);
@@ -602,7 +597,6 @@ private:
 
 		while (len >= 64) {
 			len -= 64;
-
 			__m128i d0 = _mm_loadu_si128((const __m128i *)in);
 			in += 16;
 			__m128i d1 = _mm_loadu_si128((const __m128i *)in);
@@ -611,7 +605,6 @@ private:
 			in += 16;
 			__m128i d3 = _mm_loadu_si128((const __m128i *)in);
 			in += 16;
-
 			d0 = _mm_xor_si128(d0,dk0);
 			d1 = _mm_xor_si128(d1,dk0);
 			d2 = _mm_xor_si128(d2,dk0);
@@ -652,7 +645,6 @@ private:
 			d1 = _mm_aesdec_si128(d1,dk9);
 			d2 = _mm_aesdec_si128(d2,dk9);
 			d3 = _mm_aesdec_si128(d3,dk9);
-
 			_mm_storeu_si128((__m128i *)out,_mm_xor_si128(_mm_aesdeclast_si128(d0,dk10),ctr));
 			ctr = _mm_add_epi64(ctr,one);
 			out += 16;
@@ -669,10 +661,8 @@ private:
 
 		while (len >= 16) {
 			len -= 16;
-
 			__m128i d0 = _mm_loadu_si128((const __m128i *)in);
 			in += 16;
-
 			d0 = _mm_xor_si128(d0,dk0);
 			d0 = _mm_aesdec_si128(d0,dk1);
 			d0 = _mm_aesdec_si128(d0,dk2);
@@ -683,7 +673,6 @@ private:
 			d0 = _mm_aesdec_si128(d0,dk7);
 			d0 = _mm_aesdec_si128(d0,dk8);
 			d0 = _mm_aesdec_si128(d0,dk9);
-
 			_mm_storeu_si128((__m128i *)out,_mm_xor_si128(_mm_aesdeclast_si128(d0,dk10),ctr));
 			ctr = _mm_add_epi64(ctr,one);
 			out += 16;
@@ -729,6 +718,7 @@ private:
 		tmp = _mm_aesenc_si128(tmp,_k.ni.k[13]);
 		_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(tmp,_k.ni.k[14]));
 	}
+
 	ZT_ALWAYS_INLINE void _decrypt_aesni(const void *in,void *out) const
 	{
 		__m128i tmp;
@@ -879,8 +869,7 @@ private:
 		return x;
 	}
 	static ZT_ALWAYS_INLINE void _htoun64_aesni(void *network,const uint64_t host) { *((uint64_t *)network) = Utils::hton(host); }
-
-	ZT_ALWAYS_INLINE __m128i _create_j_aesni(const uint8_t *iv) const
+	static ZT_ALWAYS_INLINE __m128i _create_j_aesni(const uint8_t *iv)
 	{
 		uint8_t j[16];
 		*((uint64_t *)j) = *((const uint64_t *)iv);
@@ -927,8 +916,8 @@ private:
 	{
 		__m128i b;
 		_htoun64_aesni(&b, alen * 8);
-		_htoun64_aesni((uint8_t *)&b + sizeof(uint64_t), dlen * 8);
-		return _ghash_aesni(_k.ni.h, y, b);
+		_htoun64_aesni((uint8_t *)&b + sizeof(uint64_t),dlen * 8);
+		return _ghash_aesni(_k.ni.h,y,b);
 	}
 	ZT_ALWAYS_INLINE void _icv_crypt_aesni(__m128i y,__m128i j,uint8_t *icv,unsigned int icvsize) const
 	{
@@ -948,36 +937,11 @@ private:
 		t = _mm_aesenc_si128(t,_k.ni.k[12]);
 		t = _mm_aesenc_si128(t,_k.ni.k[13]);
 		t = _mm_aesenclast_si128(t,_k.ni.k[14]);
-		t = _mm_xor_si128(y, t);
-		_mm_storeu_si128(&b, t);
+		t = _mm_xor_si128(y,t);
+		_mm_storeu_si128(&b,t);
 		memcpy(icv,&b,icvsize);
 	}
 
-	ZT_ALWAYS_INLINE __m128i _encrypt_gcm_rem_aesni(unsigned int rem,const void *in,void *out,__m128i cb,__m128i y) const
-	{
-		__m128i t,b;
-		memset(&b,0,sizeof(b));
-		memcpy(&b,in,rem);
-		t = _mm_xor_si128(cb,_k.ni.k[0]);
-		t = _mm_aesenc_si128(t,_k.ni.k[1]);
-		t = _mm_aesenc_si128(t,_k.ni.k[2]);
-		t = _mm_aesenc_si128(t,_k.ni.k[3]);
-		t = _mm_aesenc_si128(t,_k.ni.k[4]);
-		t = _mm_aesenc_si128(t,_k.ni.k[5]);
-		t = _mm_aesenc_si128(t,_k.ni.k[6]);
-		t = _mm_aesenc_si128(t,_k.ni.k[7]);
-		t = _mm_aesenc_si128(t,_k.ni.k[8]);
-		t = _mm_aesenc_si128(t,_k.ni.k[9]);
-		t = _mm_aesenc_si128(t,_k.ni.k[10]);
-		t = _mm_aesenc_si128(t,_k.ni.k[11]);
-		t = _mm_aesenc_si128(t,_k.ni.k[12]);
-		t = _mm_aesenc_si128(t,_k.ni.k[13]);
-		t = _mm_aesenclast_si128(t,_k.ni.k[14]);
-		b = _mm_xor_si128(t,b);
-		memcpy(out,&b,rem);
-		memset((u_char*)&b + rem,0,16 - rem);
-		return _ghash_aesni(_k.ni.h,y,b);
-	}
 	ZT_ALWAYS_INLINE void _encrypt_gcm256_aesni(unsigned int len,const uint8_t *in,uint8_t *out,const uint8_t *iv,unsigned int alen,const uint8_t *assoc,uint8_t *icv,unsigned int icvsize) const
 	{
 		__m128i j = _create_j_aesni(iv);
@@ -989,16 +953,24 @@ private:
 		__m128i *bi = (__m128i *)in;
 		__m128i *bo = (__m128i *)out;
 
+		const __m128i k0 = _k.ni.k[0];
+		const __m128i k1 = _k.ni.k[1];
+		const __m128i k2 = _k.ni.k[2];
+		const __m128i k3 = _k.ni.k[3];
+		const __m128i k4 = _k.ni.k[4];
+		const __m128i k5 = _k.ni.k[5];
+		const __m128i k6 = _k.ni.k[6];
+		const __m128i k7 = _k.ni.k[7];
+		const __m128i k8 = _k.ni.k[8];
+		const __m128i k9 = _k.ni.k[9];
+		const __m128i k10 = _k.ni.k[10];
+		const __m128i k11 = _k.ni.k[11];
+		const __m128i k12 = _k.ni.k[12];
+		const __m128i k13 = _k.ni.k[13];
+		const __m128i k14 = _k.ni.k[14];
+
 		unsigned int i;
 		for (i=0;i<pblocks;i+=4) {
-			__m128i d1 = _mm_loadu_si128(bi + i + 0);
-			__m128i d2 = _mm_loadu_si128(bi + i + 1);
-			__m128i d3 = _mm_loadu_si128(bi + i + 2);
-			__m128i d4 = _mm_loadu_si128(bi + i + 3);
-			__m128i k0 = _k.ni.k[0];
-			__m128i k1 = _k.ni.k[1];
-			__m128i k2 = _k.ni.k[2];
-			__m128i k3 = _k.ni.k[3];
 			__m128i t1 = _mm_xor_si128(cb,k0);
 			cb = _increment_be_aesni(cb);
 			__m128i t2 = _mm_xor_si128(cb,k0);
@@ -1019,10 +991,6 @@ private:
 			t2 = _mm_aesenc_si128(t2,k3);
 			t3 = _mm_aesenc_si128(t3,k3);
 			t4 = _mm_aesenc_si128(t4,k3);
-			__m128i k4 = _k.ni.k[4];
-			__m128i k5 = _k.ni.k[5];
-			__m128i k6 = _k.ni.k[6];
-			__m128i k7 = _k.ni.k[7];
 			t1 = _mm_aesenc_si128(t1,k4);
 			t2 = _mm_aesenc_si128(t2,k4);
 			t3 = _mm_aesenc_si128(t3,k4);
@@ -1039,10 +1007,6 @@ private:
 			t2 = _mm_aesenc_si128(t2,k7);
 			t3 = _mm_aesenc_si128(t3,k7);
 			t4 = _mm_aesenc_si128(t4,k7);
-			__m128i k8 = _k.ni.k[8];
-			__m128i k9 = _k.ni.k[9];
-			__m128i k10 = _k.ni.k[10];
-			__m128i k11 = _k.ni.k[11];
 			t1 = _mm_aesenc_si128(t1,k8);
 			t2 = _mm_aesenc_si128(t2,k8);
 			t3 = _mm_aesenc_si128(t3,k8);
@@ -1059,9 +1023,6 @@ private:
 			t2 = _mm_aesenc_si128(t2,k11);
 			t3 = _mm_aesenc_si128(t3,k11);
 			t4 = _mm_aesenc_si128(t4,k11);
-			__m128i k12 = _k.ni.k[12];
-			__m128i k13 = _k.ni.k[13];
-			__m128i k14 = _k.ni.k[14];
 			t1 = _mm_aesenc_si128(t1,k12);
 			t2 = _mm_aesenc_si128(t2,k12);
 			t3 = _mm_aesenc_si128(t3,k12);
@@ -1074,10 +1035,10 @@ private:
 			t2 = _mm_aesenclast_si128(t2,k14);
 			t3 = _mm_aesenclast_si128(t3,k14);
 			t4 = _mm_aesenclast_si128(t4,k14);
-			t1 = _mm_xor_si128(t1,d1);
-			t2 = _mm_xor_si128(t2,d2);
-			t3 = _mm_xor_si128(t3,d3);
-			t4 = _mm_xor_si128(t4,d4);
+			t1 = _mm_xor_si128(t1,_mm_loadu_si128(bi + i + 0));
+			t2 = _mm_xor_si128(t2,_mm_loadu_si128(bi + i + 1));
+			t3 = _mm_xor_si128(t3,_mm_loadu_si128(bi + i + 2));
+			t4 = _mm_xor_si128(t4,_mm_loadu_si128(bi + i + 3));
 			y = _mm_xor_si128(y,t1);
 			y = _mult4xor_aesni(_k.ni.hhhh,_k.ni.hhh,_k.ni.hh,_k.ni.h,y,t2,t3,t4);
 			_mm_storeu_si128(bo + i + 0,t1);
@@ -1087,73 +1048,56 @@ private:
 		}
 
 		for (i=pblocks;i<blocks;++i) {
-			__m128i d1 = _mm_loadu_si128(bi + i);
-			__m128i k0 = _k.ni.k[0];
-			__m128i k1 = _k.ni.k[1];
-			__m128i k2 = _k.ni.k[2];
-			__m128i k3 = _k.ni.k[3];
 			__m128i t1 = _mm_xor_si128(cb,k0);
 			t1 = _mm_aesenc_si128(t1,k1);
 			t1 = _mm_aesenc_si128(t1,k2);
 			t1 = _mm_aesenc_si128(t1,k3);
-			__m128i k4 = _k.ni.k[4];
-			__m128i k5 = _k.ni.k[5];
-			__m128i k6 = _k.ni.k[6];
-			__m128i k7 = _k.ni.k[7];
 			t1 = _mm_aesenc_si128(t1,k4);
 			t1 = _mm_aesenc_si128(t1,k5);
 			t1 = _mm_aesenc_si128(t1,k6);
 			t1 = _mm_aesenc_si128(t1,k7);
-			__m128i k8 = _k.ni.k[8];
-			__m128i k9 = _k.ni.k[9];
-			__m128i k10 = _k.ni.k[10];
-			__m128i k11 = _k.ni.k[11];
 			t1 = _mm_aesenc_si128(t1,k8);
 			t1 = _mm_aesenc_si128(t1,k9);
 			t1 = _mm_aesenc_si128(t1,k10);
 			t1 = _mm_aesenc_si128(t1,k11);
-			__m128i k12 = _k.ni.k[12];
-			__m128i k13 = _k.ni.k[13];
-			__m128i k14 = _k.ni.k[14];
 			t1 = _mm_aesenc_si128(t1,k12);
 			t1 = _mm_aesenc_si128(t1,k13);
 			t1 = _mm_aesenclast_si128(t1,k14);
-			t1 = _mm_xor_si128(t1,d1);
+			t1 = _mm_xor_si128(t1,_mm_loadu_si128(bi + i));
 			_mm_storeu_si128(bo + i,t1);
 			y = _ghash_aesni(_k.ni.h,y,t1);
 			cb = _increment_be_aesni(cb);
 		}
 
-		if (rem)
-			y = _encrypt_gcm_rem_aesni(rem,bi + blocks,bo + blocks,cb,y);
+		if (rem) {
+			__m128i t,b;
+			memset(&b,0,sizeof(b));
+			memcpy(&b,bi + blocks,rem);
+			t = _mm_xor_si128(cb,k0);
+			t = _mm_aesenc_si128(t,k1);
+			t = _mm_aesenc_si128(t,k2);
+			t = _mm_aesenc_si128(t,k3);
+			t = _mm_aesenc_si128(t,k4);
+			t = _mm_aesenc_si128(t,k5);
+			t = _mm_aesenc_si128(t,k6);
+			t = _mm_aesenc_si128(t,k7);
+			t = _mm_aesenc_si128(t,k8);
+			t = _mm_aesenc_si128(t,k9);
+			t = _mm_aesenc_si128(t,k10);
+			t = _mm_aesenc_si128(t,k11);
+			t = _mm_aesenc_si128(t,k12);
+			t = _mm_aesenc_si128(t,k13);
+			t = _mm_aesenclast_si128(t,k14);
+			b = _mm_xor_si128(t,b);
+			memcpy(bo + blocks,&b,rem);
+			memset((u_char*)&b + rem,0,16 - rem);
+			y = _ghash_aesni(_k.ni.h,y,b);
+		}
+
 		y = _icv_tailer_aesni(y,alen,len);
 		_icv_crypt_aesni(y,j,icv,icvsize);
 	}
-	ZT_ALWAYS_INLINE __m128i _decrypt_gcm_rem_aesni(unsigned int rem,const void *in,void *out,__m128i cb,__m128i y)
-	{
-		__m128i t,b;
-		memset(&b,0,sizeof(b));
-		memcpy(&b,in,rem);
-		y = _ghash_aesni(_k.ni.h,y,b);
-		t = _mm_xor_si128(cb,_k.ni.k[0]);
-		t = _mm_aesenc_si128(t,_k.ni.k[1]);
-		t = _mm_aesenc_si128(t,_k.ni.k[2]);
-		t = _mm_aesenc_si128(t,_k.ni.k[3]);
-		t = _mm_aesenc_si128(t,_k.ni.k[4]);
-		t = _mm_aesenc_si128(t,_k.ni.k[5]);
-		t = _mm_aesenc_si128(t,_k.ni.k[6]);
-		t = _mm_aesenc_si128(t,_k.ni.k[7]);
-		t = _mm_aesenc_si128(t,_k.ni.k[8]);
-		t = _mm_aesenc_si128(t,_k.ni.k[9]);
-		t = _mm_aesenc_si128(t,_k.ni.k[10]);
-		t = _mm_aesenc_si128(t,_k.ni.k[11]);
-		t = _mm_aesenc_si128(t,_k.ni.k[12]);
-		t = _mm_aesenc_si128(t,_k.ni.k[13]);
-		t = _mm_aesenclast_si128(t,_k.ni.k[14]);
-		b = _mm_xor_si128(t,b);
-		memcpy(out,&b,rem);
-		return y;
-	}
+
 	ZT_ALWAYS_INLINE void _decrypt_gcm256_aesni(unsigned int len,const uint8_t *in,uint8_t *out,const uint8_t *iv,unsigned int alen,const uint8_t *assoc,uint8_t *icv,unsigned int icvsize)
 	{
 		__m128i j = _create_j_aesni(iv);
@@ -1165,19 +1109,25 @@ private:
 		__m128i *bi = (__m128i *)in;
 		__m128i *bo = (__m128i *)out;
 
+		const __m128i k0 = _k.ni.k[0];
+		const __m128i k1 = _k.ni.k[1];
+		const __m128i k2 = _k.ni.k[2];
+		const __m128i k3 = _k.ni.k[3];
+		const __m128i k4 = _k.ni.k[4];
+		const __m128i k5 = _k.ni.k[5];
+		const __m128i k6 = _k.ni.k[6];
+		const __m128i k7 = _k.ni.k[7];
+		const __m128i k8 = _k.ni.k[8];
+		const __m128i k9 = _k.ni.k[9];
+		const __m128i k10 = _k.ni.k[10];
+		const __m128i k11 = _k.ni.k[11];
+		const __m128i k12 = _k.ni.k[12];
+		const __m128i k13 = _k.ni.k[13];
+		const __m128i k14 = _k.ni.k[14];
+
 		unsigned int i;
 		for (i=0;i<pblocks;i+=4) {
-			__m128i d1 = _mm_loadu_si128(bi + i + 0);
-			__m128i d2 = _mm_loadu_si128(bi + i + 1);
-			__m128i d3 = _mm_loadu_si128(bi + i + 2);
-			__m128i d4 = _mm_loadu_si128(bi + i + 3);
-			y = _mm_xor_si128(y,d1);
-			y = _mult4xor_aesni(_k.ni.hhhh,_k.ni.hhh,_k.ni.hh,_k.ni.h,y,d2,d3,d4);
-			__m128i k0 = _k.ni.k[0];
-			__m128i k1 = _k.ni.k[1];
-			__m128i k2 = _k.ni.k[2];
-			__m128i k3 = _k.ni.k[3];
-				__m128i t1 = _mm_xor_si128(cb,k0);
+			__m128i t1 = _mm_xor_si128(cb,k0);
 			cb = _increment_be_aesni(cb);
 			__m128i t2 = _mm_xor_si128(cb,k0);
 			cb = _increment_be_aesni(cb);
@@ -1197,10 +1147,6 @@ private:
 			t2 = _mm_aesenc_si128(t2,k3);
 			t3 = _mm_aesenc_si128(t3,k3);
 			t4 = _mm_aesenc_si128(t4,k3);
-			__m128i k4 = _k.ni.k[4];
-			__m128i k5 = _k.ni.k[5];
-			__m128i k6 = _k.ni.k[6];
-			__m128i k7 = _k.ni.k[7];
 			t1 = _mm_aesenc_si128(t1,k4);
 			t2 = _mm_aesenc_si128(t2,k4);
 			t3 = _mm_aesenc_si128(t3,k4);
@@ -1217,10 +1163,6 @@ private:
 			t2 = _mm_aesenc_si128(t2,k7);
 			t3 = _mm_aesenc_si128(t3,k7);
 			t4 = _mm_aesenc_si128(t4,k7);
-			__m128i k8 = _k.ni.k[8];
-			__m128i k9 = _k.ni.k[9];
-			__m128i k10 = _k.ni.k[10];
-			__m128i k11 = _k.ni.k[11];
 			t1 = _mm_aesenc_si128(t1,k8);
 			t2 = _mm_aesenc_si128(t2,k8);
 			t3 = _mm_aesenc_si128(t3,k8);
@@ -1237,9 +1179,6 @@ private:
 			t2 = _mm_aesenc_si128(t2,k11);
 			t3 = _mm_aesenc_si128(t3,k11);
 			t4 = _mm_aesenc_si128(t4,k11);
-			__m128i k12 = _k.ni.k[12];
-			__m128i k13 = _k.ni.k[13];
-			__m128i k14 = _k.ni.k[14];
 			t1 = _mm_aesenc_si128(t1,k12);
 			t2 = _mm_aesenc_si128(t2,k12);
 			t3 = _mm_aesenc_si128(t3,k12);
@@ -1252,6 +1191,12 @@ private:
 			t2 = _mm_aesenclast_si128(t2,k14);
 			t3 = _mm_aesenclast_si128(t3,k14);
 			t4 = _mm_aesenclast_si128(t4,k14);
+			__m128i d1 = _mm_loadu_si128(bi + i + 0);
+			__m128i d2 = _mm_loadu_si128(bi + i + 1);
+			__m128i d3 = _mm_loadu_si128(bi + i + 2);
+			__m128i d4 = _mm_loadu_si128(bi + i + 3);
+			y = _mm_xor_si128(y,d1);
+			y = _mult4xor_aesni(_k.ni.hhhh,_k.ni.hhh,_k.ni.hh,_k.ni.h,y,d2,d3,d4);
 			t1 = _mm_xor_si128(t1,d1);
 			t2 = _mm_xor_si128(t2,d2);
 			t3 = _mm_xor_si128(t3,d3);
@@ -1263,45 +1208,52 @@ private:
 		}
 
 		for (i=pblocks;i<blocks;i++) {
-			__m128i d1 = _mm_loadu_si128(bi + i);
-			y = _ghash_aesni(_k.ni.h,y,d1);
-			__m128i k0 = _k.ni.k[0];
-			__m128i k1 = _k.ni.k[1];
-			__m128i k2 = _k.ni.k[2];
-			__m128i k3 = _k.ni.k[3];
 			__m128i t1 = _mm_xor_si128(cb,k0);
 			t1 = _mm_aesenc_si128(t1,k1);
 			t1 = _mm_aesenc_si128(t1,k2);
 			t1 = _mm_aesenc_si128(t1,k3);
-			__m128i k4 = _k.ni.k[4];
-			__m128i k5 = _k.ni.k[5];
-			__m128i k6 = _k.ni.k[6];
-			__m128i k7 = _k.ni.k[7];
 			t1 = _mm_aesenc_si128(t1,k4);
 			t1 = _mm_aesenc_si128(t1,k5);
 			t1 = _mm_aesenc_si128(t1,k6);
 			t1 = _mm_aesenc_si128(t1,k7);
-			__m128i k8 = _k.ni.k[8];
-			__m128i k9 = _k.ni.k[9];
-			__m128i k10 = _k.ni.k[10];
-			__m128i k11 = _k.ni.k[11];
 			t1 = _mm_aesenc_si128(t1,k8);
 			t1 = _mm_aesenc_si128(t1,k9);
 			t1 = _mm_aesenc_si128(t1,k10);
 			t1 = _mm_aesenc_si128(t1,k11);
-			__m128i k12 = _k.ni.k[12];
-			__m128i k13 = _k.ni.k[13];
-			__m128i k14 = _k.ni.k[14];
 			t1 = _mm_aesenc_si128(t1,k12);
 			t1 = _mm_aesenc_si128(t1,k13);
 			t1 = _mm_aesenclast_si128(t1,k14);
+			__m128i d1 = _mm_loadu_si128(bi + i);
+			y = _ghash_aesni(_k.ni.h,y,d1);
 			t1 = _mm_xor_si128(t1,d1);
 			_mm_storeu_si128(bo + i,t1);
 			cb = _increment_be_aesni(cb);
 		}
 
-		if (rem)
-			y = _decrypt_gcm_rem_aesni(rem,bi + blocks,bo + blocks,cb,y);
+		if (rem) {
+			__m128i t,b;
+			memset(&b,0,sizeof(b));
+			memcpy(&b,bi + blocks,rem);
+			y = _ghash_aesni(_k.ni.h,y,b);
+			t = _mm_xor_si128(cb,k0);
+			t = _mm_aesenc_si128(t,k1);
+			t = _mm_aesenc_si128(t,k2);
+			t = _mm_aesenc_si128(t,k3);
+			t = _mm_aesenc_si128(t,k4);
+			t = _mm_aesenc_si128(t,k5);
+			t = _mm_aesenc_si128(t,k6);
+			t = _mm_aesenc_si128(t,k7);
+			t = _mm_aesenc_si128(t,k8);
+			t = _mm_aesenc_si128(t,k9);
+			t = _mm_aesenc_si128(t,k10);
+			t = _mm_aesenc_si128(t,k11);
+			t = _mm_aesenc_si128(t,k12);
+			t = _mm_aesenc_si128(t,k13);
+			t = _mm_aesenclast_si128(t,k14);
+			b = _mm_xor_si128(t,b);
+			memcpy(bo + blocks,&b,rem);
+		}
+
 		y = _icv_tailer_aesni(y,alen,len);
 		_icv_crypt_aesni(y,j,icv,icvsize);
 	}
