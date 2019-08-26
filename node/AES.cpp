@@ -66,7 +66,7 @@ static bool _zt_aesni_supported()
 	return ((ecx & (1 << 25)) != 0);
 #endif
 }
-const bool AES::HW_ACCEL = _zt_aesni_supported();
+const bool AES::HW_ACCEL = false; //_zt_aesni_supported();
 
 #else
 
@@ -107,6 +107,11 @@ void AES::_initSW(const uint8_t key[32])
 		rk[15] = rk[7] ^ rk[14];
 		rk += 8;
 	}
+
+	uint64_t zero[2]; zero[0] = 0; zero[1] = 0;
+	_encryptSW((const uint8_t *)zero,(uint8_t *)_k.sw.h);
+	_k.sw.h[0] = Utils::ntoh(_k.sw.h[0]);
+	_k.sw.h[1] = Utils::ntoh(_k.sw.h[1]);
 }
 
 void AES::_encryptSW(const uint8_t in[16],uint8_t out[16]) const
@@ -181,6 +186,194 @@ void AES::_encryptSW(const uint8_t in[16],uint8_t out[16]) const
 	PUTU32(out + 8, s2);
 	s3 = (Te2[(t3 >> 24)] & 0xff000000) ^ (Te3[(t0 >> 16) & 0xff] & 0x00ff0000) ^ (Te0[(t1 >> 8) & 0xff] & 0x0000ff00) ^ (Te1[(t2) & 0xff] & 0x000000ff) ^ rk[3];
 	PUTU32(out + 12, s3);
+}
+
+#if (defined(__GNUC__) || defined(__clang)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64) || defined(__aarch64__))
+
+#if defined(__SIZEOF_INT128__)
+typedef unsigned __int128 uint128_t;
+#else
+typedef unsigned uint128_t __attribute__((mode(TI)));
+#endif
+
+static ZT_ALWAYS_INLINE void s_bmul64(const uint64_t x,const uint64_t y,uint64_t &r_high,uint64_t &r_low)
+{
+	static uint128_t m1 = (uint128_t)0x2108421084210842ULL << 64 | 0x1084210842108421ULL;
+	static uint128_t m2 = (uint128_t)0x4210842108421084ULL << 64 | 0x2108421084210842ULL;
+	static uint128_t m3 = (uint128_t)0x8421084210842108ULL << 64 | 0x4210842108421084ULL;
+	static uint128_t m4 = (uint128_t)0x0842108421084210ULL << 64 | 0x8421084210842108ULL;
+	static uint128_t m5 = (uint128_t)0x1084210842108421ULL << 64 | 0x0842108421084210ULL;
+	uint128_t x1 = x & m1;
+	uint128_t y1 = y & m1;
+	uint128_t x2 = x & m2;
+	uint128_t y2 = y & m2;
+	uint128_t x3 = x & m3;
+	uint128_t y3 = y & m3;
+	uint128_t x4 = x & m4;
+	uint128_t y4 = y & m4;
+	uint128_t x5 = x & m5;
+	uint128_t y5 = y & m5;
+	uint128_t z = (x1 * y1) ^ (x2 * y5) ^ (x3 * y4) ^ (x4 * y3) ^ (x5 * y2);
+	uint128_t r = z & m1;
+	z = (x1 * y2) ^ (x2 * y1) ^ (x3 * y5) ^ (x4 * y4) ^ (x5 * y3);
+	r |= z & m2;
+	z = (x1 * y3) ^ (x2 * y2) ^ (x3 * y1) ^ (x4 * y5) ^ (x5 * y4);
+	r |= z & m3;
+	z = (x1 * y4) ^ (x2 * y3) ^ (x3 * y2) ^ (x4 * y1) ^ (x5 * y5);
+	r |= z & m4;
+	z = (x1 * y5) ^ (x2 * y4) ^ (x3 * y3) ^ (x4 * y2) ^ (x5 * y1);
+	r |= z & m5;
+	r_high = (uint64_t)(r >> 64);
+	r_low = (uint64_t)r;
+}
+
+static ZT_ALWAYS_INLINE void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0, uint64_t &y1)
+{
+	uint64_t z2_low,z2_high,z0_low,z0_high,z1a_low,z1a_high;
+	uint64_t y_high = Utils::ntoh(y0);
+	uint64_t y_low = Utils::ntoh(y1);
+	s_bmul64(y_high,h_high,z2_high,z2_low);
+	s_bmul64(y_low,h_low,z0_high,z0_low);
+	s_bmul64(y_high ^ y_low,h_high ^ h_low,z1a_high,z1a_low);
+	z1a_high ^= z2_high ^ z0_high;
+	z1a_low ^= z2_low ^ z0_low;
+	uint128_t z_high = ((uint128_t)z2_high << 64) | (z2_low ^ z1a_high);
+	uint128_t z_low = (((uint128_t)z0_high << 64) | z0_low) ^ (((uint128_t)z1a_low) << 64);
+	z_high = (z_high << 1) | (z_low >> 127);
+	z_low <<= 1;
+	z_low ^= (z_low << 127) ^ (z_low << 126) ^ (z_low << 121);
+	z_high ^= z_low ^ (z_low >> 1) ^ (z_low >> 2) ^ (z_low >> 7);
+	y1 = Utils::hton((uint64_t)z_high);
+	y0 = Utils::hton((uint64_t)(z_high >> 64));
+}
+
+#else
+
+static ZT_ALWAYS_INLINE void s_bmul32(uint32_t x,uint32_t y,uint32_t &r_high,uint32_t &r_low)
+{
+	const uint32_t m1 = (uint32_t)0x11111111;
+	const uint32_t m2 = (uint32_t)0x22222222;
+	const uint32_t m4 = (uint32_t)0x44444444;
+	const uint32_t m8 = (uint32_t)0x88888888;
+	uint32_t x0 = x & m1;
+	uint32_t x1 = x & m2;
+	uint32_t x2 = x & m4;
+	uint32_t x3 = x & m8;
+	uint32_t y0 = y & m1;
+	uint32_t y1 = y & m2;
+	uint32_t y2 = y & m4;
+	uint32_t y3 = y & m8;
+	uint64_t z0 = ((uint64_t)x0 * y0) ^ ((uint64_t)x1 * y3) ^ ((uint64_t)x2 * y2) ^ ((uint64_t)x3 * y1);
+	uint64_t z1 = ((uint64_t)x0 * y1) ^ ((uint64_t)x1 * y0) ^ ((uint64_t)x2 * y3) ^ ((uint64_t)x3 * y2);
+	uint64_t z2 = ((uint64_t)x0 * y2) ^ ((uint64_t)x1 * y1) ^ ((uint64_t)x2 * y0) ^ ((uint64_t)x3 * y3);
+	uint64_t z3 = ((uint64_t)x0 * y3) ^ ((uint64_t)x1 * y2) ^ ((uint64_t)x2 * y1) ^ ((uint64_t)x3 * y0);
+	z0 &= ((uint64_t)m1 << 32) | m1;
+	z1 &= ((uint64_t)m2 << 32) | m2;
+	z2 &= ((uint64_t)m4 << 32) | m4;
+	z3 &= ((uint64_t)m8 << 32) | m8;
+	uint64_t z = z0 | z1 | z2 | z3;
+	r_high = (uint32_t)(z >> 32);
+	r_low = (uint32_t)z;
+}
+
+static ZT_ALWAYS_INLINE void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0,uint64_t &y1)
+{
+	uint32_t h_high_h = (uint32_t)(h_high >> 32);
+	uint32_t h_high_l = (uint32_t)h_high;
+	uint32_t h_low_h = (uint32_t)(h_low >> 32);
+	uint32_t h_low_l = (uint32_t)h_low;
+	uint32_t h_highXlow_h = h_high_h ^ h_low_h;
+	uint32_t h_highXlow_l = h_high_l ^ h_low_l;
+	uint64_t y_low = Utils::ntoh(y0);
+	uint64_t y_high = Utils::ntoh(y1);
+	uint32_t ci_low_h = (uint32_t)(y_high >> 32);
+	uint32_t ci_low_l = (uint32_t)y_high;
+	uint32_t ci_high_h = (uint32_t)(y_low >> 32);
+	uint32_t ci_high_l = (uint32_t)y_low;
+	uint32_t ci_highXlow_h = ci_high_h ^ ci_low_h;
+	uint32_t ci_highXlow_l = ci_high_l ^ ci_low_l;
+	uint32_t a_a_h,a_a_l,a_b_h,a_b_l,a_c_h,a_c_l;
+	s_bmul32(ci_high_h,h_high_h,a_a_h,a_a_l);
+	s_bmul32(ci_high_l,h_high_l,a_b_h,a_b_l);
+	s_bmul32(ci_high_h ^ ci_high_l,h_high_h ^ h_high_l,a_c_h,a_c_l);
+	a_c_h ^= a_a_h ^ a_b_h;
+	a_c_l ^= a_a_l ^ a_b_l;
+	a_a_l ^= a_c_h;
+	a_b_h ^= a_c_l;
+	uint32_t b_a_h,b_a_l,b_b_h,b_b_l,b_c_h,b_c_l;
+	s_bmul32(ci_low_h,h_low_h,b_a_h,b_a_l);
+	s_bmul32(ci_low_l,h_low_l,b_b_h,b_b_l);
+	s_bmul32(ci_low_h ^ ci_low_l,h_low_h ^ h_low_l,b_c_h,b_c_l);
+	b_c_h ^= b_a_h ^ b_b_h;
+	b_c_l ^= b_a_l ^ b_b_l;
+	b_a_l ^= b_c_h;
+	b_b_h ^= b_c_l;
+	uint32_t c_a_h,c_a_l,c_b_h,c_b_l,c_c_h,c_c_l;
+	s_bmul32(ci_highXlow_h,h_highXlow_h,c_a_h,c_a_l);
+	s_bmul32(ci_highXlow_l,h_highXlow_l,c_b_h,c_b_l);
+	s_bmul32(ci_highXlow_h ^ ci_highXlow_l, h_highXlow_h ^ h_highXlow_l,c_c_h,c_c_l);
+	c_c_h ^= c_a_h ^ c_b_h;
+	c_c_l ^= c_a_l ^ c_b_l;
+	c_a_l ^= c_c_h;
+	c_b_h ^= c_c_l;
+	c_a_h ^= b_a_h ^ a_a_h;
+	c_a_l ^= b_a_l ^ a_a_l;
+	c_b_h ^= b_b_h ^ a_b_h;
+	c_b_l ^= b_b_l ^ a_b_l;
+	uint64_t z_high_h = ((uint64_t)a_a_h << 32) | a_a_l;
+	uint64_t z_high_l = (((uint64_t)a_b_h << 32) | a_b_l) ^ (((uint64_t)c_a_h << 32) | c_a_l);
+	uint64_t z_low_h = (((uint64_t)b_a_h << 32) | b_a_l) ^ (((uint64_t)c_b_h << 32) | c_b_l);
+	uint64_t z_low_l = ((uint64_t)b_b_h << 32) | b_b_l;
+	z_high_h = z_high_h << 1 | z_high_l >> 63;
+	z_high_l = z_high_l << 1 | z_low_h >> 63;
+	z_low_h = z_low_h << 1 | z_low_l >> 63;
+	z_low_l <<= 1;
+	z_low_h ^= (z_low_l << 63) ^ (z_low_l << 62) ^ (z_low_l << 57);
+	z_high_h ^= z_low_h ^ (z_low_h >> 1) ^ (z_low_h >> 2) ^ (z_low_h >> 7);
+	z_high_l ^= z_low_l ^ (z_low_l >> 1) ^ (z_low_l >> 2) ^ (z_low_l >> 7) ^ (z_low_h << 63) ^ (z_low_h << 62) ^ (z_low_h << 57);
+	y0 = Utils::hton(z_high_h);
+	y1 = Utils::hton(z_high_l);
+}
+#endif
+
+void AES::_gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_t out[16]) const
+{
+	const uint64_t h0 = _k.sw.h[0];
+	const uint64_t h1 = _k.sw.h[1];
+	const uint64_t lpad = Utils::hton((uint64_t)len * 8);
+	uint64_t y0 = 0,y1 = 0;
+
+	while (len >= 16) {
+		y0 ^= *((const uint64_t *)in);
+		in += 8;
+		y1 ^= *((const uint64_t *)in);
+		in += 8;
+		s_gfmul(h0,h1,y0,y1);
+		len -= 16;
+	}
+
+	if (len) {
+		uint64_t last[2] = { 0,0 };
+		for(unsigned int i=0;i<len;++i)
+			((uint8_t *)last)[i] = in[i];
+		y0 ^= last[0];
+		y1 ^= last[1];
+		s_gfmul(h0,h1,y0,y1);
+	}
+
+	y0 ^= lpad;
+	s_gfmul(h0,h1,y0,y1);
+
+	uint64_t iv2[2];
+	for(unsigned int i=0;i<12;++i)
+		((uint8_t *)iv2)[i] = iv[i];
+	((uint8_t *)iv2)[12] = 0;
+	((uint8_t *)iv2)[13] = 0;
+	((uint8_t *)iv2)[14] = 0;
+	((uint8_t *)iv2)[15] = 1;
+	_encryptSW((const uint8_t *)iv2,(uint8_t *)iv2);
+	((uint64_t *)out)[0] = y0 ^ iv2[0];
+	((uint64_t *)out)[1] = y1 ^ iv2[1];
 }
 
 } // namespace ZeroTier

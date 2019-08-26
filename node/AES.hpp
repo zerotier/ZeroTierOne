@@ -104,6 +104,8 @@ public:
 			return;
 		}
 #endif
+
+		_gmacSW(iv,(const uint8_t *)in,len,out);
 	}
 
 	/**
@@ -261,6 +263,7 @@ private:
 
 	void _initSW(const uint8_t key[32]);
 	void _encryptSW(const uint8_t in[16],uint8_t out[16]) const;
+	void _gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_t out[16]) const;
 
 	/**************************************************************************/
 	union {
@@ -276,6 +279,7 @@ private:
 		} ni;
 #endif
 		struct {
+			uint64_t h[2];
 			uint32_t ek[30];
 		} sw;
 	} _k;
@@ -426,14 +430,16 @@ private:
 		h = _mm_aesenc_si128(h,_k.ni.k[12]);
 		h = _mm_aesenc_si128(h,_k.ni.k[13]);
 		h = _mm_aesenclast_si128(h,_k.ni.k[14]);
-		__m128i hswap = _swap128_aesni(h);
-		__m128i hh = _mult_block_aesni(hswap,h);
-		__m128i hhh = _mult_block_aesni(hswap,hh);
-		__m128i hhhh = _mult_block_aesni(hswap,hhh);
+
+		const __m128i shuf = _mm_set_epi8(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
+		__m128i hswap = _mm_shuffle_epi8(h,shuf);
+		__m128i hh = _mult_block_aesni(shuf,hswap,h);
+		__m128i hhh = _mult_block_aesni(shuf,hswap,hh);
+		__m128i hhhh = _mult_block_aesni(shuf,hswap,hhh);
 		_k.ni.h = hswap;
-		_k.ni.hh = _swap128_aesni(hh);
-		_k.ni.hhh = _swap128_aesni(hhh);
-		_k.ni.hhhh = _swap128_aesni(hhhh);
+		_k.ni.hh = _mm_shuffle_epi8(hh,shuf);
+		_k.ni.hhh = _mm_shuffle_epi8(hhh,shuf);
+		_k.ni.hhhh = _mm_shuffle_epi8(hhhh,shuf);
 	}
 
 	ZT_ALWAYS_INLINE void _encrypt_aesni(const void *in,void *out) const
@@ -587,10 +593,9 @@ private:
 		}
 	}
 
-	static ZT_ALWAYS_INLINE __m128i _swap128_aesni(__m128i x) { return _mm_shuffle_epi8(x,_mm_set_epi8(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15)); }
-	static ZT_ALWAYS_INLINE __m128i _mult_block_aesni(__m128i h,__m128i y)
+	static ZT_ALWAYS_INLINE __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i y)
 	{
-		y = _swap128_aesni(y);
+		y = _mm_shuffle_epi8(y,shuf);
 		__m128i t1 = _mm_clmulepi64_si128(h,y,0x00);
 		__m128i t2 = _mm_clmulepi64_si128(h,y,0x01);
 		__m128i t3 = _mm_clmulepi64_si128(h,y,0x10);
@@ -626,86 +631,9 @@ private:
 		t4 = _mm_xor_si128(t4,t2);
 		t4 = _mm_xor_si128(t4,t3);
 		t4 = _mm_xor_si128(t4,t5);
-		return _swap128_aesni(t4);
+		return _mm_shuffle_epi8(t4,shuf);
 	}
-	static ZT_ALWAYS_INLINE __m128i _mult4xor_aesni(__m128i h1,__m128i h2,__m128i h3,__m128i h4,__m128i d1,__m128i d2,__m128i d3,__m128i d4)
-	{
-		d1 = _swap128_aesni(d1);
-		d2 = _swap128_aesni(d2);
-		d3 = _swap128_aesni(d3);
-		d4 = _swap128_aesni(d4);
-		__m128i t0 = _mm_clmulepi64_si128(h1,d1,0x00);
-		__m128i t1 = _mm_clmulepi64_si128(h2,d2,0x00);
-		__m128i t2 = _mm_clmulepi64_si128(h3,d3,0x00);
-		__m128i t3 = _mm_clmulepi64_si128(h4,d4,0x00);
-		__m128i t8 = _mm_xor_si128(t0,t1);
-		t8 = _mm_xor_si128(t8,t2);
-		t8 = _mm_xor_si128(t8,t3);
-		__m128i t4 = _mm_clmulepi64_si128(h1,d1,0x11);
-		__m128i t5 = _mm_clmulepi64_si128(h2,d2,0x11);
-		__m128i t6 = _mm_clmulepi64_si128(h3,d3,0x11);
-		__m128i t7 = _mm_clmulepi64_si128(h4,d4,0x11);
-		__m128i t9 = _mm_xor_si128(t4,t5);
-		t9 = _mm_xor_si128(t9,t6);
-		t9 = _mm_xor_si128(t9,t7);
-		t0 = _mm_shuffle_epi32(h1,78);
-		t4 = _mm_shuffle_epi32(d1,78);
-		t0 = _mm_xor_si128(t0,h1);
-		t4 = _mm_xor_si128(t4,d1);
-		t1 = _mm_shuffle_epi32(h2,78);
-		t5 = _mm_shuffle_epi32(d2,78);
-		t1 = _mm_xor_si128(t1,h2);
-		t5 = _mm_xor_si128(t5,d2);
-		t2 = _mm_shuffle_epi32(h3,78);
-		t6 = _mm_shuffle_epi32(d3,78);
-		t2 = _mm_xor_si128(t2,h3);
-		t6 = _mm_xor_si128(t6,d3);
-		t3 = _mm_shuffle_epi32(h4,78);
-		t7 = _mm_shuffle_epi32(d4,78);
-		t3 = _mm_xor_si128(t3,h4);
-		t7 = _mm_xor_si128(t7,d4);
-		t0 = _mm_clmulepi64_si128(t0,t4,0x00);
-		t1 = _mm_clmulepi64_si128(t1,t5,0x00);
-		t2 = _mm_clmulepi64_si128(t2,t6,0x00);
-		t3 = _mm_clmulepi64_si128(t3,t7,0x00);
-		t0 = _mm_xor_si128(t0,t8);
-		t0 = _mm_xor_si128(t0,t9);
-		t0 = _mm_xor_si128(t1,t0);
-		t0 = _mm_xor_si128(t2,t0);
-		t0 = _mm_xor_si128(t3,t0);
-		t4 = _mm_slli_si128(t0,8);
-		t0 = _mm_srli_si128(t0,8);
-		t3 = _mm_xor_si128(t4,t8);
-		t6 = _mm_xor_si128(t0,t9);
-		t7 = _mm_srli_epi32(t3,31);
-		t8 = _mm_srli_epi32(t6,31);
-		t3 = _mm_slli_epi32(t3,1);
-		t6 = _mm_slli_epi32(t6,1);
-		t9 = _mm_srli_si128(t7,12);
-		t8 = _mm_slli_si128(t8,4);
-		t7 = _mm_slli_si128(t7,4);
-		t3 = _mm_or_si128(t3,t7);
-		t6 = _mm_or_si128(t6,t8);
-		t6 = _mm_or_si128(t6,t9);
-		t7 = _mm_slli_epi32(t3,31);
-		t8 = _mm_slli_epi32(t3,30);
-		t9 = _mm_slli_epi32(t3,25);
-		t7 = _mm_xor_si128(t7,t8);
-		t7 = _mm_xor_si128(t7,t9);
-		t8 = _mm_srli_si128(t7,4);
-		t7 = _mm_slli_si128(t7,12);
-		t3 = _mm_xor_si128(t3,t7);
-		t2 = _mm_srli_epi32(t3,1);
-		t4 = _mm_srli_epi32(t3,2);
-		t5 = _mm_srli_epi32(t3,7);
-		t2 = _mm_xor_si128(t2,t4);
-		t2 = _mm_xor_si128(t2,t5);
-		t2 = _mm_xor_si128(t2,t8);
-		t3 = _mm_xor_si128(t3,t2);
-		t6 = _mm_xor_si128(t6,t3);
-		return _swap128_aesni(t6);
-	}
-	static ZT_ALWAYS_INLINE __m128i _ghash_aesni(__m128i h,__m128i y,__m128i x) { return _mult_block_aesni(h,_mm_xor_si128(y,x)); }
+	static ZT_ALWAYS_INLINE __m128i _ghash_aesni(__m128i shuf,__m128i h,__m128i y,__m128i x) { return _mult_block_aesni(shuf,h,_mm_xor_si128(y,x)); }
 
 	ZT_ALWAYS_INLINE void _gmac_aesni(const uint8_t iv[12],const uint8_t *in,const unsigned int len,uint8_t out[16]) const
 	{
@@ -714,30 +642,100 @@ private:
 		unsigned int pblocks = blocks - (blocks % 4);
 		unsigned int rem = len % 16;
 
-		__m128i h1 = _k.ni.hhhh;
-		__m128i h2 = _k.ni.hhh;
-		__m128i h3 = _k.ni.hh;
-		__m128i h4 = _k.ni.h;
+		const __m128i h1 = _k.ni.hhhh;
+		const __m128i h2 = _k.ni.hhh;
+		const __m128i h3 = _k.ni.hh;
+		const __m128i h4 = _k.ni.h;
+		const __m128i shuf = _mm_set_epi8(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
 		__m128i y = _mm_setzero_si128();
-		for (unsigned int i=0;i<pblocks;i+=4) {
-			__m128i d1 = _mm_loadu_si128(ab + i + 0);
-			__m128i d2 = _mm_loadu_si128(ab + i + 1);
-			__m128i d3 = _mm_loadu_si128(ab + i + 2);
-			__m128i d4 = _mm_loadu_si128(ab + i + 3);
-			y = _mm_xor_si128(y,d1);
-			y = _mult4xor_aesni(h1,h2,h3,h4,y,d2,d3,d4);
+		unsigned int i = 0;
+		for (;i<pblocks;i+=4) {
+			__m128i d1 = _mm_shuffle_epi8(_mm_xor_si128(y,_mm_loadu_si128(ab + i + 0)),shuf);
+			__m128i d2 = _mm_shuffle_epi8(_mm_loadu_si128(ab + i + 1),shuf);
+			__m128i d3 = _mm_shuffle_epi8(_mm_loadu_si128(ab + i + 2),shuf);
+			__m128i d4 = _mm_shuffle_epi8(_mm_loadu_si128(ab + i + 3),shuf);
+			__m128i t0 = _mm_clmulepi64_si128(h1,d1,0x00);
+			__m128i t1 = _mm_clmulepi64_si128(h2,d2,0x00);
+			__m128i t2 = _mm_clmulepi64_si128(h3,d3,0x00);
+			__m128i t3 = _mm_clmulepi64_si128(h4,d4,0x00);
+			__m128i t8 = _mm_xor_si128(t0,t1);
+			t8 = _mm_xor_si128(t8,t2);
+			t8 = _mm_xor_si128(t8,t3);
+			__m128i t4 = _mm_clmulepi64_si128(h1,d1,0x11);
+			__m128i t5 = _mm_clmulepi64_si128(h2,d2,0x11);
+			__m128i t6 = _mm_clmulepi64_si128(h3,d3,0x11);
+			__m128i t7 = _mm_clmulepi64_si128(h4,d4,0x11);
+			__m128i t9 = _mm_xor_si128(t4,t5);
+			t9 = _mm_xor_si128(t9,t6);
+			t9 = _mm_xor_si128(t9,t7);
+			t0 = _mm_shuffle_epi32(h1,78);
+			t4 = _mm_shuffle_epi32(d1,78);
+			t0 = _mm_xor_si128(t0,h1);
+			t4 = _mm_xor_si128(t4,d1);
+			t1 = _mm_shuffle_epi32(h2,78);
+			t5 = _mm_shuffle_epi32(d2,78);
+			t1 = _mm_xor_si128(t1,h2);
+			t5 = _mm_xor_si128(t5,d2);
+			t2 = _mm_shuffle_epi32(h3,78);
+			t6 = _mm_shuffle_epi32(d3,78);
+			t2 = _mm_xor_si128(t2,h3);
+			t6 = _mm_xor_si128(t6,d3);
+			t3 = _mm_shuffle_epi32(h4,78);
+			t7 = _mm_shuffle_epi32(d4,78);
+			t3 = _mm_xor_si128(t3,h4);
+			t7 = _mm_xor_si128(t7,d4);
+			t0 = _mm_clmulepi64_si128(t0,t4,0x00);
+			t1 = _mm_clmulepi64_si128(t1,t5,0x00);
+			t2 = _mm_clmulepi64_si128(t2,t6,0x00);
+			t3 = _mm_clmulepi64_si128(t3,t7,0x00);
+			t0 = _mm_xor_si128(t0,t8);
+			t0 = _mm_xor_si128(t0,t9);
+			t0 = _mm_xor_si128(t1,t0);
+			t0 = _mm_xor_si128(t2,t0);
+			t0 = _mm_xor_si128(t3,t0);
+			t4 = _mm_slli_si128(t0,8);
+			t0 = _mm_srli_si128(t0,8);
+			t3 = _mm_xor_si128(t4,t8);
+			t6 = _mm_xor_si128(t0,t9);
+			t7 = _mm_srli_epi32(t3,31);
+			t8 = _mm_srli_epi32(t6,31);
+			t3 = _mm_slli_epi32(t3,1);
+			t6 = _mm_slli_epi32(t6,1);
+			t9 = _mm_srli_si128(t7,12);
+			t8 = _mm_slli_si128(t8,4);
+			t7 = _mm_slli_si128(t7,4);
+			t3 = _mm_or_si128(t3,t7);
+			t6 = _mm_or_si128(t6,t8);
+			t6 = _mm_or_si128(t6,t9);
+			t7 = _mm_slli_epi32(t3,31);
+			t8 = _mm_slli_epi32(t3,30);
+			t9 = _mm_slli_epi32(t3,25);
+			t7 = _mm_xor_si128(t7,t8);
+			t7 = _mm_xor_si128(t7,t9);
+			t8 = _mm_srli_si128(t7,4);
+			t7 = _mm_slli_si128(t7,12);
+			t3 = _mm_xor_si128(t3,t7);
+			t2 = _mm_srli_epi32(t3,1);
+			t4 = _mm_srli_epi32(t3,2);
+			t5 = _mm_srli_epi32(t3,7);
+			t2 = _mm_xor_si128(t2,t4);
+			t2 = _mm_xor_si128(t2,t5);
+			t2 = _mm_xor_si128(t2,t8);
+			t3 = _mm_xor_si128(t3,t2);
+			t6 = _mm_xor_si128(t6,t3);
+			y = _mm_shuffle_epi8(t6,shuf);
 		}
 
-		for (unsigned int i=pblocks;i<blocks;++i)
-			y = _ghash_aesni(_k.ni.h,y,_mm_loadu_si128(ab + i));
+		for (;i<blocks;++i)
+			y = _ghash_aesni(shuf,h4,y,_mm_loadu_si128(ab + i));
 
 		if (rem) {
 			__m128i last = _mm_setzero_si128();
 			memcpy(&last,ab + blocks,rem);
-			y = _ghash_aesni(_k.ni.h,y,last);
+			y = _ghash_aesni(shuf,h4,y,last);
 		}
 
-		y = _ghash_aesni(_k.ni.h,y,_mm_set_epi64((__m64)0LL,(__m64)Utils::hton((uint64_t)len * (uint64_t)8)));
+		y = _ghash_aesni(shuf,h4,y,_mm_set_epi64((__m64)0LL,(__m64)Utils::hton((uint64_t)len * (uint64_t)8)));
 
 		__m128i t = _mm_xor_si128(_mm_set_epi32(0x01000000,(int)*((const uint32_t *)(iv+8)),(int)*((const uint32_t *)(iv+4)),(int)*((const uint32_t *)(iv))),_k.ni.k[0]);
 		t = _mm_aesenc_si128(t,_k.ni.k[1]);
@@ -754,8 +752,7 @@ private:
 		t = _mm_aesenc_si128(t,_k.ni.k[12]);
 		t = _mm_aesenc_si128(t,_k.ni.k[13]);
 		t = _mm_aesenclast_si128(t,_k.ni.k[14]);
-		t = _mm_xor_si128(y,t);
-		_mm_storeu_si128((__m128i *)out,t);
+		_mm_storeu_si128((__m128i *)out,_mm_xor_si128(y,t));
 	}
 #endif /* ZT_AES_AESNI ******************************************************/
 };
