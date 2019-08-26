@@ -53,9 +53,11 @@ public:
 
 	inline AES() {}
 	inline AES(const uint8_t key[32]) { this->init(key); }
-
 	inline ~AES() { Utils::burn(&_k,sizeof(_k)); }
 
+	/**
+	 * Set (or re-set) this AES256 cipher's key
+	 */
 	inline void init(const uint8_t key[32])
 	{
 #ifdef ZT_AES_AESNI
@@ -68,6 +70,12 @@ public:
 		_initSW(key);
 	}
 
+	/**
+	 * Encrypt a single AES block (ECB mode)
+	 *
+	 * @param in Input block
+	 * @param out Output block (can be same as input)
+	 */
 	inline void encrypt(const uint8_t in[16],uint8_t out[16]) const
 	{
 #ifdef ZT_AES_AESNI
@@ -80,6 +88,14 @@ public:
 		_encryptSW(in,out);
 	}
 
+	/**
+	 * Compute GMAC-AES256 (GCM without ciphertext)
+	 *
+	 * @param iv 96-bit IV
+	 * @param in Input data
+	 * @param len Length of input
+	 * @param out 128-bit authorization tag from GMAC
+	 */
 	inline void gmac(const uint8_t iv[12],const void *in,const unsigned int len,uint8_t out[16]) const
 	{
 #ifdef ZT_AES_AESNI
@@ -90,6 +106,18 @@ public:
 #endif
 	}
 
+	/**
+	 * Encrypt or decrypt (they're the same) using AES256-CTR
+	 *
+	 * The counter here is a 128-bit big-endian that starts at the IV. The code only
+	 * increments the least significant 64 bits, making it only safe to use for a
+	 * maximum of 2^64-1 bytes (much larger than we ever do).
+	 *
+	 * @param iv 128-bit CTR IV
+	 * @param in Input plaintext or ciphertext
+	 * @param len Length of input
+	 * @param out Output plaintext or ciphertext
+	 */
 	inline void ctr(const uint8_t iv[16],const void *in,unsigned int len,void *out) const
 	{
 #ifdef ZT_AES_AESNI
@@ -133,11 +161,11 @@ public:
 	 * @param out Output buffer to receive ciphertext
 	 * @param tag Output buffer to receive 64-bit authentication tag
 	 */
-	inline void ztGmacCtrEncrypt(const uint8_t iv[8],const void *in,unsigned int len,void *out,uint8_t tag[8])
+	inline void ztGmacCtrEncrypt(const uint8_t iv[8],const void *in,unsigned int len,void *out,uint8_t tag[8]) const
 	{
 		uint8_t ctrIv[16],gmacIv[12];
 
-		// (1) Compute AES256-GMAC(in) using a 96-bit IV constructed from
+		// Compute AES256-GMAC(in) using a 96-bit IV constructed from
 		// the 64-bit supplied IV and the message size.
 #ifdef ZT_NO_TYPE_PUNNING
 		for(unsigned int i=0;i<8;++i) gmacIv[i] = iv[i];
@@ -151,9 +179,13 @@ public:
 #endif
 		gmac(gmacIv,in,len,ctrIv);
 
-		// (2) The first 64 bits of GMAC output are the auth tag. Create
-		// a secret synthetic AES256-CTR IV by encrypting these and the
-		// original supplied IV.
+		// Encrypt GMAC output because GMAC alone is not a PRF.
+		encrypt(ctrIv,ctrIv);
+
+		// Auth tag is the first 64 bits of AES(GMAC tag). CTR IV is this
+		// followed by the original 64-bit IV and then encrypted. This
+		// produces a secret, random, and one-time-use synthetic IV for
+		// CTR that is dependent on message content (via GMAC).
 #ifdef ZT_NO_TYPE_PUNNING
 		for(unsigned int i=0;i<8;++i) tag[i] = ctrIv[i];
 		for(unsigned int i=0;i<8;++i) ctrIv[i+8] = iv[i];
@@ -163,7 +195,7 @@ public:
 #endif
 		encrypt(ctrIv,ctrIv);
 
-		// (3) Encrypt input using AES256-CTR
+		// Encrypt input using AES256-CTR
 		ctr(ctrIv,in,len,out);
 	}
 
@@ -177,11 +209,11 @@ public:
 	 * @param tag Authentication tag supplied with message
 	 * @return True if authentication tags match and message appears authentic
 	 */
-	inline bool ztGmacCtrDecrypt(const uint8_t iv[8],const void *in,unsigned int len,void *out,const uint8_t tag[8])
+	inline bool ztGmacCtrDecrypt(const uint8_t iv[8],const void *in,unsigned int len,void *out,const uint8_t tag[8]) const
 	{
 		uint8_t ctrIv[16],gmacOut[16],gmacIv[12];
 
-		// (1) Re-create the original secret synthetic AES256-CTR IV.
+		// Re-create the original secret synthetic AES256-CTR IV.
 #ifdef ZT_NO_TYPE_PUNNING
 		for(unsigned int i=0;i<8;++i) ctrIv[i] = tag[i];
 		for(unsigned int i=0;i<8;++i) ctrIv[i+8] = iv[i];
@@ -191,10 +223,10 @@ public:
 #endif
 		encrypt(ctrIv,ctrIv);
 
-		// (2) Decrypt input using AES256-CTR
+		// Decrypt input using AES256-CTR and this synthetic IV.
 		ctr(ctrIv,in,len,out);
 
-		// (3) Compute AES256-GMAC(out) using the re-created 96-bit
+		// Compute AES256-GMAC(out) using the re-created 96-bit
 		// GMAC IV built from the message IV and the message size.
 #ifdef ZT_NO_TYPE_PUNNING
 		for(unsigned int i=0;i<8;++i) gmacIv[i] = iv[i];
@@ -208,7 +240,11 @@ public:
 #endif
 		gmac(gmacIv,out,len,gmacOut);
 
-		// (4) Compare first 64 bits of GMAC output with tag.
+		// Encrypt GMAC results to get the tag that would have
+		// resulted from this message plaintext.
+		encrypt(gmacOut,gmacOut);
+
+		// Compare authentication tags.
 #ifdef ZT_NO_TYPE_PUNNING
 		return Utils::secureEq(gmacOut,tag,8);
 #else
@@ -444,9 +480,9 @@ private:
 
 		while (len >= 64) {
 			__m128i c0 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton(ctr),iv0),k0);
-			__m128i c1 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton(ctr+1ULL),iv0),k0);
-			__m128i c2 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton(ctr+2ULL),iv0),k0);
-			__m128i c3 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton(ctr+3ULL),iv0),k0);
+			__m128i c1 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton((uint64_t)(ctr+1ULL)),iv0),k0);
+			__m128i c2 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton((uint64_t)(ctr+2ULL)),iv0),k0);
+			__m128i c3 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton((uint64_t)(ctr+3ULL)),iv0),k0);
 			ctr += 4;
 			c0 = _mm_aesenc_si128(c0,k1);
 			c1 = _mm_aesenc_si128(c1,k1);

@@ -228,7 +228,7 @@ void SHA384(void *digest,const void *data,unsigned int len)
 	memcpy(digest,tmp,48);
 }
 
-void SHA384ab(void *digest,const void *data0,unsigned int len0,const void *data1,unsigned int len1)
+void SHA384(void *digest,const void *data0,unsigned int len0,const void *data1,unsigned int len1)
 {
 	uint8_t tmp[64];
 	sha512_state state;

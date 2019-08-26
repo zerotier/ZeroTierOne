@@ -50,7 +50,7 @@ static inline void SHA384(void *digest,const void *data,unsigned int len)
 	CC_SHA384_Update(&ctx,data,len);
 	CC_SHA384_Final(reinterpret_cast<unsigned char *>(digest),&ctx);
 }
-static inline void SHA384ab(void *digest,const void *data0,unsigned int len0,const void *data1,unsigned int len1)
+static inline void SHA384(void *digest,const void *data0,unsigned int len0,const void *data1,unsigned int len1)
 {
 	CC_SHA512_CTX ctx;
 	CC_SHA384_Init(&ctx);
@@ -76,7 +76,7 @@ static inline void SHA384(void *digest,const void *data,unsigned int len)
 	SHA384_Update(&ctx,data,len);
 	SHA384_Final(reinterpret_cast<unsigned char *>(digest),&ctx);
 }
-static inline void SHA384ab(void *digest,const void *data0,unsigned int len0,const void *data1,unsigned int len1)
+static inline void SHA384(void *digest,const void *data0,unsigned int len0,const void *data1,unsigned int len1)
 {
 	SHA512_CTX ctx;
 	SHA384_Init(&ctx);
@@ -89,7 +89,7 @@ static inline void SHA384ab(void *digest,const void *data0,unsigned int len0,con
 #ifndef ZT_HAVE_NATIVE_SHA512
 void SHA512(void *digest,const void *data,unsigned int len);
 void SHA384(void *digest,const void *data,unsigned int len);
-void SHA384ab(void *digest,const void *data0,unsigned int len0,const void *data1,unsigned int len1);
+void SHA384(void *digest,const void *data0,unsigned int len0,const void *data1,unsigned int len1);
 #endif
 
 static inline void HMACSHA384(const uint8_t key[32],const void *msg,const unsigned int msglen,uint8_t mac[48])
@@ -121,7 +121,7 @@ static inline void HMACSHA384(const uint8_t key[32],const void *msg,const unsign
 	}
 #endif
 
-	SHA384ab(((uint8_t *)outer) + 128,kInPadded,128,msg,msglen); // H(input padded key | msg)
+	SHA384(((uint8_t *)outer) + 128,kInPadded,128,msg,msglen); // H(input padded key | msg)
 	SHA384(mac,outer,176); // H(output padded key | H(input padded key | msg))
 }
 

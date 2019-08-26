@@ -160,30 +160,26 @@ public:
 	 */
 	inline unsigned int sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const
 	{
-		uint8_t h[48 + ZT_C25519_PUBLIC_KEY_LEN];
-		if (!_hasPrivate)
-			return 0;
-		switch(_type) {
+		if (_hasPrivate) {
+			switch(_type) {
 
-			case C25519:
-				if (siglen < ZT_C25519_SIGNATURE_LEN)
-					return 0;
-				C25519::sign(_priv.c25519,_pub.c25519,data,len,sig);
-				return ZT_C25519_SIGNATURE_LEN;
+				case C25519:
+					if (siglen >= ZT_C25519_SIGNATURE_LEN) {
+						C25519::sign(_priv.c25519,_pub.c25519,data,len,sig);
+						return ZT_C25519_SIGNATURE_LEN;
+					}
 
-			case P384:
-				if (siglen < ZT_ECC384_SIGNATURE_SIZE)
-					return 0;
-				// Include C25519 public key in input for P-384 signature so the two keys are "bound
-				// together" and cannot be decoupled in the same identity. An identity can have the
-				// same C25519 key but a different P-384 key and have the same address, but this
-				// means its signatures and key agreements will be different.
-				SHA384(h,data,len);
-				memcpy(h + 48,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-				SHA384(h,h,48 + ZT_C25519_PUBLIC_KEY_LEN);
-				ECC384ECDSASign(_priv.p384,h,(uint8_t *)sig);
-				return ZT_ECC384_SIGNATURE_SIZE;
+				case P384:
+					if (siglen >= ZT_ECC384_SIGNATURE_SIZE) {
+						// Signature is a hash of the message followed by the c25519/ed25519 type 0
+						// identity public keys to ensure that the two public keys are not separable.
+						uint8_t h[48];
+						SHA384(h,data,len,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+						ECC384ECDSASign(_priv.p384,h,(uint8_t *)sig);
+						return ZT_ECC384_SIGNATURE_SIZE;
+					}
 
+			}
 		}
 		return 0;
 	}
@@ -204,10 +200,8 @@ public:
 				return C25519::verify(_pub.c25519,data,len,sig,siglen);
 			case P384:
 				if (siglen == ZT_ECC384_SIGNATURE_SIZE) {
-					uint8_t h[48 + ZT_C25519_PUBLIC_KEY_LEN];
-					SHA384(h,data,len);
-					memcpy(h + 48,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-					SHA384(h,h,48 + ZT_C25519_PUBLIC_KEY_LEN);
+					uint8_t h[48];
+					SHA384(h,data,len,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
 					return ECC384ECDSAVerify(_pub.p384,h,(const uint8_t *)sig);
 				}
 				break;
