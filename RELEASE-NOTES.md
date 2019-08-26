@@ -3,8 +3,9 @@ ZeroTier Release Notes
 
 # 2019-08-23 -- Version 1.4.4
 
- * Change license to BSL 1.1, see LICENSE.txt
+ * Change license from GPL3 to BSL 1.1, see LICENSE.txt
  * Fix an issue with the "ipauth" rule and auto-generated unforgeable IPv6 addresses
+ * Fix socket/bind errors setting IPs and routes on Linux
 
 # 2019-08-12 -- Version 1.4.2
 
