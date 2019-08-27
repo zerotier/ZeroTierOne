@@ -62,7 +62,7 @@ static bool _zt_aesni_supported()
 		: "=a"(eax),"=b"(ebx),"=c"(ecx),"=d"(edx)
 		: "a"(1),"c"(0)
 	);
-	return ((ecx & (1 << 25)) != 0);
+	return (((ecx & (1 << 25)) != 0) && ((ecx & (1 << 1)) != 0)); // check for both AES-NI and PCLMUL
 #endif
 }
 const bool AES::HW_ACCEL = _zt_aesni_supported();
