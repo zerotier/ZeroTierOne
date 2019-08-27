@@ -32,7 +32,6 @@ The base path contains the ZeroTier One service main entry point (`one.cpp`), se
  - `controller/`: the reference network controller implementation, which is built and included by default on desktop and server build targets.
  - `debian/`: files for building Debian packages on Linux.
  - `doc/`: manual pages and other documentation.
- - `docker/`: Dockerfile to build as a container for containerized Linux systems and Kubernetes clusters.
  - `ext/`: third party libraries, binaries that we ship for convenience on some platforms (Mac and Windows), and installation support files.
  - `include/`: include files for the ZeroTier core.
  - `java/`: a JNI wrapper used with our Android mobile app. (The whole Android app is not open source but may be made so in the future.)
