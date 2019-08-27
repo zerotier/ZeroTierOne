@@ -16,30 +16,10 @@
 namespace ZeroTier {
 
 namespace {
-//////////////////////////////////////////////////////////////////////////////
-// ecc.h from easy-ecc
-//////////////////////////////////////////////////////////////////////////////
 
-#define secp128r1 16
-#define secp192r1 24
-#define secp256r1 32
 #define secp384r1 48
-
-//#ifndef ECC_CURVE
-//	#define ECC_CURVE secp256r1
-//#endif
 #define ECC_CURVE secp384r1
-
-//#if (ECC_CURVE != secp128r1 && ECC_CURVE != secp192r1 && ECC_CURVE != secp256r1 && ECC_CURVE != secp384r1)
-//	#error "Must define ECC_CURVE to one of the available curves"
-//#endif
-
 #define ECC_BYTES ECC_CURVE
-
-//////////////////////////////////////////////////////////////////////////////
-// ecc.c from easy-ecc
-//////////////////////////////////////////////////////////////////////////////
-
 #define NUM_ECC_DIGITS (ECC_BYTES/8)
 #define MAX_TRIES 1024
 
