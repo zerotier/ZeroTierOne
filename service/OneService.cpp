@@ -1715,8 +1715,9 @@ public:
 				}
 			}
 #ifdef __SYNOLOGY__
-			if (!n.tap->addIpSyn(newManagedIps))
+			if (!n.tap->addIps(newManagedIps)) {
 				fprintf(stderr,"ERROR: unable to add ip addresses to ifcfg" ZT_EOL_S);
+			}
 #else
 			for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
 				if (std::find(n.managedIps.begin(),n.managedIps.end(),*ip) == n.managedIps.end()) {

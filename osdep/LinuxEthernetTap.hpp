@@ -46,9 +46,7 @@ public:
 	virtual void setEnabled(bool en);
 	virtual bool enabled() const;
 	virtual bool addIp(const InetAddress &ip);
-#ifdef __SYNOLOGY__
-	bool addIpSyn(std::vector<InetAddress> ips);
-#endif
+	virtual bool addIps(std::vector<InetAddress> ips);
 	virtual bool removeIp(const InetAddress &ip);
 	virtual std::vector<InetAddress> ips() const;
 	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
