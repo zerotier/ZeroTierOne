@@ -72,6 +72,7 @@ else(WIN32)
 		add_compile_options(
 			-Wall
 			-Wno-deprecated
+			-mmacosx-version-min=10.9
 			$<$<CONFIG:Debug>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
 			$<$<CONFIG:RELEASE>:-Ofast>
@@ -79,6 +80,9 @@ else(WIN32)
 			$<$<CONFIG:RELWITHDEBINFO>:-Ofast>
 			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-g>
+		)
+		add_link_options(
+			-mmacosx-version-min=10.9
 		)
 
 	elseif (
