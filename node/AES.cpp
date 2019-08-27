@@ -24,8 +24,6 @@
 
 namespace ZeroTier {
 
-namespace {
-
 #ifdef ZT_NO_TYPE_PUNNING
 static ZT_ALWAYS_INLINE uint32_t readuint32_t(const void *in)
 {
@@ -50,8 +48,6 @@ static ZT_ALWAYS_INLINE void writeuint32_t(void *out,const uint32_t v)
 #define writeuint32_t(o,v) (*((uint32_t *)(o)) = Utils::hton(v))
 #endif
 
-} // anonymous namespace
-
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 static bool _zt_aesni_supported()
 {
@@ -69,7 +65,7 @@ static bool _zt_aesni_supported()
 	return ((ecx & (1 << 25)) != 0);
 #endif
 }
-const bool AES::HW_ACCEL = false; //_zt_aesni_supported();
+const bool AES::HW_ACCEL = _zt_aesni_supported();
 #else
 const bool AES::HW_ACCEL = false;
 #endif
@@ -351,8 +347,7 @@ void AES::_gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_
 
 	if (len) {
 		uint64_t last[2] = { 0,0 };
-		for(unsigned int i=0;i<len;++i)
-			((uint8_t *)last)[i] = in[i];
+		for(unsigned int i=0;i<len;++i) ((uint8_t *)last)[i] = in[i];
 		y0 ^= last[0];
 		y1 ^= last[1];
 		s_gfmul(h0,h1,y0,y1);
@@ -362,8 +357,7 @@ void AES::_gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_
 	s_gfmul(h0,h1,y0,y1);
 
 	uint64_t iv2[2];
-	for(unsigned int i=0;i<12;++i)
-		((uint8_t *)iv2)[i] = iv[i];
+	for(unsigned int i=0;i<12;++i) ((uint8_t *)iv2)[i] = iv[i];
 	((uint8_t *)iv2)[12] = 0;
 	((uint8_t *)iv2)[13] = 0;
 	((uint8_t *)iv2)[14] = 0;
