@@ -69,7 +69,7 @@ static bool _zt_aesni_supported()
 	return ((ecx & (1 << 25)) != 0);
 #endif
 }
-const bool AES::HW_ACCEL = _zt_aesni_supported();
+const bool AES::HW_ACCEL = false; //_zt_aesni_supported();
 #else
 const bool AES::HW_ACCEL = false;
 #endif
@@ -116,20 +116,17 @@ void AES::_initSW(const uint8_t key[32])
 
 void AES::_encryptSW(const uint8_t in[16],uint8_t out[16]) const
 {
-	const uint32_t *rk = _k.sw.ek;
-	uint32_t s0, s1, s2, s3, t0, t1, t2, t3;
-
-	s0 = readuint32_t(in) ^ rk[0];
-	s1 = readuint32_t(in + 4) ^ rk[1];
-	s2 = readuint32_t(in + 8) ^ rk[2];
-	s3 = readuint32_t(in + 12) ^ rk[3];
-
-	t0 = Te0[s0 >> 24] ^ Te1[(s1 >> 16) & 0xff] ^ Te2[(s2 >> 8) & 0xff] ^ Te3[s3 & 0xff] ^ rk[ 4];
-	t1 = Te0[s1 >> 24] ^ Te1[(s2 >> 16) & 0xff] ^ Te2[(s3 >> 8) & 0xff] ^ Te3[s0 & 0xff] ^ rk[ 5];
-	t2 = Te0[s2 >> 24] ^ Te1[(s3 >> 16) & 0xff] ^ Te2[(s0 >> 8) & 0xff] ^ Te3[s1 & 0xff] ^ rk[ 6];
-	t3 = Te0[s3 >> 24] ^ Te1[(s0 >> 16) & 0xff] ^ Te2[(s1 >> 8) & 0xff] ^ Te3[s2 & 0xff] ^ rk[ 7];
-	s0 = Te0[t0 >> 24] ^ Te1[(t1 >> 16) & 0xff] ^ Te2[(t2 >> 8) & 0xff] ^ Te3[t3 & 0xff] ^ rk[ 8];
-	s1 = Te0[t1 >> 24] ^ Te1[(t2 >> 16) & 0xff] ^ Te2[(t3 >> 8) & 0xff] ^ Te3[t0 & 0xff] ^ rk[ 9];
+	const uint32_t *const rk = _k.sw.ek;
+	uint32_t s0 = readuint32_t(in) ^ rk[0];
+	uint32_t s1 = readuint32_t(in + 4) ^ rk[1];
+	uint32_t s2 = readuint32_t(in + 8) ^ rk[2];
+	uint32_t s3 = readuint32_t(in + 12) ^ rk[3];
+	uint32_t t0 = Te0[s0 >> 24] ^ Te1[(s1 >> 16) & 0xff] ^ Te2[(s2 >> 8) & 0xff] ^ Te3[s3 & 0xff] ^ rk[4];
+	uint32_t t1 = Te0[s1 >> 24] ^ Te1[(s2 >> 16) & 0xff] ^ Te2[(s3 >> 8) & 0xff] ^ Te3[s0 & 0xff] ^ rk[5];
+	uint32_t t2 = Te0[s2 >> 24] ^ Te1[(s3 >> 16) & 0xff] ^ Te2[(s0 >> 8) & 0xff] ^ Te3[s1 & 0xff] ^ rk[6];
+	uint32_t t3 = Te0[s3 >> 24] ^ Te1[(s0 >> 16) & 0xff] ^ Te2[(s1 >> 8) & 0xff] ^ Te3[s2 & 0xff] ^ rk[7];
+	s0 = Te0[t0 >> 24] ^ Te1[(t1 >> 16) & 0xff] ^ Te2[(t2 >> 8) & 0xff] ^ Te3[t3 & 0xff] ^ rk[8];
+	s1 = Te0[t1 >> 24] ^ Te1[(t2 >> 16) & 0xff] ^ Te2[(t3 >> 8) & 0xff] ^ Te3[t0 & 0xff] ^ rk[9];
 	s2 = Te0[t2 >> 24] ^ Te1[(t3 >> 16) & 0xff] ^ Te2[(t0 >> 8) & 0xff] ^ Te3[t1 & 0xff] ^ rk[10];
 	s3 = Te0[t3 >> 24] ^ Te1[(t0 >> 16) & 0xff] ^ Te2[(t1 >> 8) & 0xff] ^ Te3[t2 & 0xff] ^ rk[11];
 	t0 = Te0[s0 >> 24] ^ Te1[(s1 >> 16) & 0xff] ^ Te2[(s2 >> 8) & 0xff] ^ Te3[s3 & 0xff] ^ rk[12];
@@ -176,16 +173,10 @@ void AES::_encryptSW(const uint8_t in[16],uint8_t out[16]) const
 	t1 = Te0[s1 >> 24] ^ Te1[(s2 >> 16) & 0xff] ^ Te2[(s3 >> 8) & 0xff] ^ Te3[s0 & 0xff] ^ rk[53];
 	t2 = Te0[s2 >> 24] ^ Te1[(s3 >> 16) & 0xff] ^ Te2[(s0 >> 8) & 0xff] ^ Te3[s1 & 0xff] ^ rk[54];
 	t3 = Te0[s3 >> 24] ^ Te1[(s0 >> 16) & 0xff] ^ Te2[(s1 >> 8) & 0xff] ^ Te3[s2 & 0xff] ^ rk[55];
-	rk += 56;
-
-	s0 = (Te2[(t0 >> 24)] & 0xff000000) ^ (Te3[(t1 >> 16) & 0xff] & 0x00ff0000) ^ (Te0[(t2 >> 8) & 0xff] & 0x0000ff00) ^ (Te1[(t3) & 0xff] & 0x000000ff) ^ rk[0];
-	writeuint32_t(out, s0);
-	s1 = (Te2[(t1 >> 24)] & 0xff000000) ^ (Te3[(t2 >> 16) & 0xff] & 0x00ff0000) ^ (Te0[(t3 >> 8) & 0xff] & 0x0000ff00) ^ (Te1[(t0) & 0xff] & 0x000000ff) ^ rk[1];
-	writeuint32_t(out + 4, s1);
-	s2 = (Te2[(t2 >> 24)] & 0xff000000) ^ (Te3[(t3 >> 16) & 0xff] & 0x00ff0000) ^ (Te0[(t0 >> 8) & 0xff] & 0x0000ff00) ^ (Te1[(t1) & 0xff] & 0x000000ff) ^ rk[2];
-	writeuint32_t(out + 8, s2);
-	s3 = (Te2[(t3 >> 24)] & 0xff000000) ^ (Te3[(t0 >> 16) & 0xff] & 0x00ff0000) ^ (Te0[(t1 >> 8) & 0xff] & 0x0000ff00) ^ (Te1[(t2) & 0xff] & 0x000000ff) ^ rk[3];
-	writeuint32_t(out + 12, s3);
+	writeuint32_t(out,(Te2[(t0 >> 24)] & 0xff000000) ^ (Te3[(t1 >> 16) & 0xff] & 0x00ff0000) ^ (Te0[(t2 >> 8) & 0xff] & 0x0000ff00) ^ (Te1[(t3) & 0xff] & 0x000000ff) ^ rk[56]);
+	writeuint32_t(out + 4,(Te2[(t1 >> 24)] & 0xff000000) ^ (Te3[(t2 >> 16) & 0xff] & 0x00ff0000) ^ (Te0[(t3 >> 8) & 0xff] & 0x0000ff00) ^ (Te1[(t0) & 0xff] & 0x000000ff) ^ rk[57]);
+	writeuint32_t(out + 8,(Te2[(t2 >> 24)] & 0xff000000) ^ (Te3[(t3 >> 16) & 0xff] & 0x00ff0000) ^ (Te0[(t0 >> 8) & 0xff] & 0x0000ff00) ^ (Te1[(t1) & 0xff] & 0x000000ff) ^ rk[58]);
+	writeuint32_t(out + 12,(Te2[(t3 >> 24)] & 0xff000000) ^ (Te3[(t0 >> 16) & 0xff] & 0x00ff0000) ^ (Te0[(t1 >> 8) & 0xff] & 0x0000ff00) ^ (Te1[(t2) & 0xff] & 0x000000ff) ^ rk[59]);
 }
 
 #if (defined(__GNUC__) || defined(__clang)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64) || defined(__aarch64__))
@@ -334,6 +325,7 @@ static ZT_ALWAYS_INLINE void s_gfmul(const uint64_t h_high,const uint64_t h_low,
 	y0 = Utils::hton(z_high_h);
 	y1 = Utils::hton(z_high_l);
 }
+
 #endif
 
 void AES::_gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_t out[16]) const
@@ -344,10 +336,15 @@ void AES::_gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_
 	uint64_t y0 = 0,y1 = 0;
 
 	while (len >= 16) {
+#ifdef ZT_NO_TYPE_PUNNING
+		for(unsigned int i=0;i<8;++i) ((uint8_t *)&y0)[i] ^= *(in++);
+		for(unsigned int i=0;i<8;++i) ((uint8_t *)&y1)[i] ^= *(in++);
+#else
 		y0 ^= *((const uint64_t *)in);
 		in += 8;
 		y1 ^= *((const uint64_t *)in);
 		in += 8;
+#endif
 		s_gfmul(h0,h1,y0,y1);
 		len -= 16;
 	}
@@ -372,8 +369,13 @@ void AES::_gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_
 	((uint8_t *)iv2)[14] = 0;
 	((uint8_t *)iv2)[15] = 1;
 	_encryptSW((const uint8_t *)iv2,(uint8_t *)iv2);
+#ifdef ZT_NO_TYPE_PUNNING
+	for(unsigned int i=0;i<8;++i) out[i] = ((const uint8_t *)&y0)[i] ^ ((const uint8_t *)iv2)[i];
+	for(unsigned int i=8;i<16;++i) out[i] = ((const uint8_t *)&y1)[i-8] ^ ((const uint8_t *)iv2)[i];
+#else
 	((uint64_t *)out)[0] = y0 ^ iv2[0];
 	((uint64_t *)out)[1] = y1 ^ iv2[1];
+#endif
 }
 
 } // namespace ZeroTier

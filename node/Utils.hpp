@@ -48,7 +48,7 @@ public:
 	 * @param len Length of strings
 	 * @return True if strings are equal
 	 */
-	static inline bool secureEq(const void *a,const void *b,unsigned int len)
+	static ZT_ALWAYS_INLINE bool secureEq(const void *a,const void *b,unsigned int len)
 	{
 		uint8_t diff = 0;
 		for(unsigned int i=0;i<len;++i)
@@ -167,7 +167,7 @@ public:
 	/**
 	 * Get a 64-bit unsigned secure random number
 	 */
-	static inline uint64_t getSecureRandom64()
+	static ZT_ALWAYS_INLINE uint64_t getSecureRandom64()
 	{
 		uint64_t x;
 		getSecureRandom(&x,sizeof(x));
@@ -177,7 +177,7 @@ public:
 	static int b32e(const uint8_t *data,int length,char *result,int bufSize);
 	static int b32d(const char *encoded, uint8_t *result, int bufSize);
 
-	static inline unsigned int b64MaxEncodedSize(const unsigned int s) { return ((((s + 2) / 3) * 4) + 1); }
+	static ZT_ALWAYS_INLINE unsigned int b64MaxEncodedSize(const unsigned int s) { return ((((s + 2) / 3) * 4) + 1); }
 	static unsigned int b64e(const uint8_t *in,unsigned int inlen,char *out,unsigned int outlen);
 	static unsigned int b64d(const char *in,uint8_t *out,unsigned int outlen);
 
@@ -186,7 +186,7 @@ public:
 	 */
 	static uint64_t random();
 
-	static inline float normalize(float value, int64_t bigMin, int64_t bigMax, int32_t targetMin, int32_t targetMax)
+	static ZT_ALWAYS_INLINE float normalize(float value, int64_t bigMin, int64_t bigMax, int32_t targetMin, int32_t targetMax)
 	{
 		int64_t bigSpan = bigMax - bigMin;
 		int64_t smallSpan = targetMax - targetMin;
@@ -201,7 +201,7 @@ public:
 	 * @param delim Delimiters
 	 * @param saveptr Pointer to a char * for temporary reentrant storage
 	 */
-	static inline char *stok(char *str,const char *delim,char **saveptr)
+	static ZT_ALWAYS_INLINE char *stok(char *str,const char *delim,char **saveptr)
 	{
 #ifdef __WINDOWS__
 		return strtok_s(str,delim,saveptr);
@@ -210,11 +210,11 @@ public:
 #endif
 	}
 
-	static inline unsigned int strToUInt(const char *s) { return (unsigned int)strtoul(s,(char **)0,10); }
-	static inline int strToInt(const char *s) { return (int)strtol(s,(char **)0,10); }
-	static inline unsigned long strToULong(const char *s) { return strtoul(s,(char **)0,10); }
-	static inline long strToLong(const char *s) { return strtol(s,(char **)0,10); }
-	static inline unsigned long long strToU64(const char *s)
+	static ZT_ALWAYS_INLINE unsigned int strToUInt(const char *s) { return (unsigned int)strtoul(s,(char **)0,10); }
+	static ZT_ALWAYS_INLINE int strToInt(const char *s) { return (int)strtol(s,(char **)0,10); }
+	static ZT_ALWAYS_INLINE unsigned long strToULong(const char *s) { return strtoul(s,(char **)0,10); }
+	static ZT_ALWAYS_INLINE long strToLong(const char *s) { return strtol(s,(char **)0,10); }
+	static ZT_ALWAYS_INLINE unsigned long long strToU64(const char *s)
 	{
 #ifdef __WINDOWS__
 		return (unsigned long long)_strtoui64(s,(char **)0,10);
@@ -222,7 +222,7 @@ public:
 		return strtoull(s,(char **)0,10);
 #endif
 	}
-	static inline long long strTo64(const char *s)
+	static ZT_ALWAYS_INLINE long long strTo64(const char *s)
 	{
 #ifdef __WINDOWS__
 		return (long long)_strtoi64(s,(char **)0,10);
@@ -230,11 +230,11 @@ public:
 		return strtoll(s,(char **)0,10);
 #endif
 	}
-	static inline unsigned int hexStrToUInt(const char *s) { return (unsigned int)strtoul(s,(char **)0,16); }
-	static inline int hexStrToInt(const char *s) { return (int)strtol(s,(char **)0,16); }
-	static inline unsigned long hexStrToULong(const char *s) { return strtoul(s,(char **)0,16); }
-	static inline long hexStrToLong(const char *s) { return strtol(s,(char **)0,16); }
-	static inline unsigned long long hexStrToU64(const char *s)
+	static ZT_ALWAYS_INLINE unsigned int hexStrToUInt(const char *s) { return (unsigned int)strtoul(s,(char **)0,16); }
+	static ZT_ALWAYS_INLINE int hexStrToInt(const char *s) { return (int)strtol(s,(char **)0,16); }
+	static ZT_ALWAYS_INLINE unsigned long hexStrToULong(const char *s) { return strtoul(s,(char **)0,16); }
+	static ZT_ALWAYS_INLINE long hexStrToLong(const char *s) { return strtol(s,(char **)0,16); }
+	static ZT_ALWAYS_INLINE unsigned long long hexStrToU64(const char *s)
 	{
 #ifdef __WINDOWS__
 		return (unsigned long long)_strtoui64(s,(char **)0,16);
@@ -242,7 +242,7 @@ public:
 		return strtoull(s,(char **)0,16);
 #endif
 	}
-	static inline long long hexStrTo64(const char *s)
+	static ZT_ALWAYS_INLINE long long hexStrTo64(const char *s)
 	{
 #ifdef __WINDOWS__
 		return (long long)_strtoi64(s,(char **)0,16);
@@ -262,7 +262,7 @@ public:
 	 * @param src Source string (if NULL, dest will receive a zero-length string and true is returned)
 	 * @return True on success, false on overflow (buffer will still be 0-terminated)
 	 */
-	static inline bool scopy(char *dest,unsigned int len,const char *src)
+	static ZT_ALWAYS_INLINE bool scopy(char *dest,unsigned int len,const char *src)
 	{
 		if (!len)
 			return false; // sanity check
@@ -287,7 +287,7 @@ public:
 	 * @return Number of bits set in this integer (0-bits in integer)
 	 */
 	template<typename T>
-	static inline uint64_t countBits(T v)
+	static ZT_ALWAYS_INLINE uint64_t countBits(T v)
 	{
 		v = v - ((v >> 1) & (T)~(T)0/3);
 		v = (v & (T)~(T)0/15*3) + ((v >> 2) & (T)~(T)0/15*3);
@@ -297,13 +297,24 @@ public:
 
 	// Byte swappers for big/little endian conversion
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-	static inline uint8_t hton(uint8_t n) { return n; }
-	static inline int8_t hton(int8_t n) { return n; }
-	static inline uint16_t hton(uint16_t n) { return htons(n); }
-	static inline int16_t hton(int16_t n) { return (int16_t)htons((uint16_t)n); }
-	static inline uint32_t hton(uint32_t n) { return htonl(n); }
-	static inline int32_t hton(int32_t n) { return (int32_t)htonl((uint32_t)n); }
-	static inline uint64_t hton(uint64_t n)
+	static ZT_ALWAYS_INLINE uint8_t hton(uint8_t n) { return n; }
+	static ZT_ALWAYS_INLINE int8_t hton(int8_t n) { return n; }
+	static ZT_ALWAYS_INLINE uint16_t hton(uint16_t n) { return htons(n); }
+	static ZT_ALWAYS_INLINE int16_t hton(int16_t n) { return (int16_t)Utils::hton((uint16_t)n); }
+	static ZT_ALWAYS_INLINE uint32_t hton(uint32_t n)
+	{
+#if defined(__GNUC__)
+#if defined(__FreeBSD__)
+		return htonl(n);
+#elif (!defined(__OpenBSD__))
+		return __builtin_bswap32(n);
+#endif
+#else
+		return htonl(n);
+#endif
+	}
+	static ZT_ALWAYS_INLINE int32_t hton(int32_t n) { return (int32_t)Utils::hton((uint32_t)n); }
+	static ZT_ALWAYS_INLINE uint64_t hton(uint64_t n)
 	{
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
@@ -324,20 +335,31 @@ public:
 		);
 #endif
 	}
-	static inline int64_t hton(int64_t n) { return (int64_t)hton((uint64_t)n); }
+	static ZT_ALWAYS_INLINE int64_t hton(int64_t n) { return (int64_t)hton((uint64_t)n); }
 #else
 	template<typename T>
-	static inline T hton(T n) { return n; }
+	static ZT_ALWAYS_INLINE T hton(T n) { return n; }
 #endif
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-	static inline uint8_t ntoh(uint8_t n) { return n; }
-	static inline int8_t ntoh(int8_t n) { return n; }
-	static inline uint16_t ntoh(uint16_t n) { return ntohs(n); }
-	static inline int16_t ntoh(int16_t n) { return (int16_t)ntohs((uint16_t)n); }
-	static inline uint32_t ntoh(uint32_t n) { return ntohl(n); }
-	static inline int32_t ntoh(int32_t n) { return (int32_t)ntohl((uint32_t)n); }
-	static inline uint64_t ntoh(uint64_t n)
+	static ZT_ALWAYS_INLINE uint8_t ntoh(uint8_t n) { return n; }
+	static ZT_ALWAYS_INLINE int8_t ntoh(int8_t n) { return n; }
+	static ZT_ALWAYS_INLINE uint16_t ntoh(uint16_t n) { return ntohs(n); }
+	static ZT_ALWAYS_INLINE int16_t ntoh(int16_t n) { return (int16_t)Utils::ntoh((uint16_t)n); }
+	static ZT_ALWAYS_INLINE uint32_t ntoh(uint32_t n)
+	{
+#if defined(__GNUC__)
+#if defined(__FreeBSD__)
+		return ntohl(n);
+#elif (!defined(__OpenBSD__))
+		return __builtin_bswap32(n);
+#endif
+#else
+		return ntohl(n);
+#endif
+	}
+	static ZT_ALWAYS_INLINE int32_t ntoh(int32_t n) { return (int32_t)Utils::ntoh((uint32_t)n); }
+	static ZT_ALWAYS_INLINE uint64_t ntoh(uint64_t n)
 	{
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
@@ -358,10 +380,10 @@ public:
 		);
 #endif
 	}
-	static inline int64_t ntoh(int64_t n) { return (int64_t)ntoh((uint64_t)n); }
+	static ZT_ALWAYS_INLINE int64_t ntoh(int64_t n) { return (int64_t)ntoh((uint64_t)n); }
 #else
 	template<typename T>
-	static inline T ntoh(T n) { return n; }
+	static ZT_ALWAYS_INLINE T ntoh(T n) { return n; }
 #endif
 };
 
