@@ -1118,7 +1118,7 @@ static int testPhy()
 	unsigned long phyTestTcpInvalidConnectionsAttempted = 0;
 
 	std::cout << "[phy] Testing UDP send/receive... "; std::cout.flush();
-	uint64_t timeoutAt = OSUtils::now() + ZT_TEST_PHY_TIMEOUT_MS;
+	int64_t timeoutAt = OSUtils::now() + ZT_TEST_PHY_TIMEOUT_MS;
 	while ((OSUtils::now() < timeoutAt)&&(phyTestUdpPacketCount < ZT_TEST_PHY_NUM_UDP_PACKETS)) {
 		if (phyTestUdpPacketsSent < ZT_TEST_PHY_NUM_UDP_PACKETS) {
 			if (!testPhyInstance->udpSend(udpListenSock,(const struct sockaddr *)&bindaddr,udpTestPayload,sizeof(udpTestPayload))) {
