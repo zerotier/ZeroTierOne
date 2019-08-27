@@ -331,9 +331,8 @@ realclean:	distclean
 official:	FORCE
 	make -j4 ZT_OFFICIAL=1 all
 
-#docker:	FORCE
-#	make clean ; make -j4 one
-#	docker build -f docker/Dockerfile .
+docker:	FORCE
+	docker build -f ext/installfiles/linux/zerotier-containerized/Dockerfile -t zerotier-containerized .
 
 central-controller:	FORCE
 	make -j4 LDLIBS="-L/usr/pgsql-10/lib/ -lpq -Lext/librabbitmq/centos_x64/lib/ -lrabbitmq" CXXFLAGS="-I/usr/pgsql-10/include -I./ext/librabbitmq/centos_x64/include -fPIC" DEFS="-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER" ZT_OFFICIAL=1 ZT_USE_X64_ASM_ED25519=1 one
