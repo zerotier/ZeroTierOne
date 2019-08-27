@@ -59,7 +59,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	add_definitions(-DZT_TRACE)
 endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
-project(zerotier-one 
+project(zerotier-one
 	DESCRIPTION "ZeroTier One"
 	LANGUAGES CXX C)
 
@@ -67,49 +67,61 @@ if(WIN32)
 	add_definitions(-DNOMINMAX)
 else(WIN32)
 	if(APPLE)
+
 		message("Setting macOS Compiler Flags ${CMAKE_BUILD_TYPE}")
 		add_compile_options(
 			-Wall
 			-Wno-deprecated
-			-maes
-			-mpclmul
-			-msse
-			-msse2
-			-msse3
-			-msse4.1
 			$<$<CONFIG:Debug>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
 			$<$<CONFIG:RELEASE>:-Ofast>
-			$<$<CONFIG:RELEASE>:-fstack-protector-strong>
 			$<$<CONFIG:RELEASE>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-Ofast>
-			$<$<CONFIG:RELWITHDEBINFO>:-fstack-protector-strong>
 			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-g>
 		)
-	elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
-		message("Setting Linux Compiler Flags ${CMAKE_BUILD_TYPE}")
+
+	elseif (
+		CMAKE_SYSTEM_NAME MATCHES "Linux" OR
+		CMAKE_SYSTEM_NAME MATCHES "FreeBSD" OR
+		CMAKE_SYSTEM_NAME MATCHES "OpenBSD" OR
+		CMAKE_SYSTEM_NAME MATCHES "NetBSD"
+	)
+
+		message("Setting Linux/BSD Compiler Flags (${CMAKE_BUILD_TYPE})")
 		add_compile_options(
 			-Wall
 			-Wno-deprecated
-			-maes
-			-mpclmul
-			-msse
-			-msse2
-			-msse3
-			-msse4.1
 			$<$<CONFIG:Debug>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
 			$<$<CONFIG:RELEASE>:-O3>
-			$<$<CONFIG:RELEASE>:-fstack-protector>
 			$<$<CONFIG:RELEASE>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-O3>
-			$<$<CONFIG:RELWITHDEBINFO>:-fstack-protector>
 			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-g>
 		)
+
 	endif(APPLE)
 endif(WIN32)
+
+if (
+	CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR
+	CMAKE_SYSTEM_PROCESSOR MATCHES "amd64" OR
+	CMAKE_SYSTEM_PROCESSOR MATCHES "i386" OR
+	CMAKE_SYSTEM_PROCESSOR MATCHES "i486" OR
+	CMAKE_SYSTEM_PROCESSOR MATCHES "i586" OR
+	CMAKE_SYSTEM_PROCESSOR MATCHES "i686"
+)
+	message("Adding SSE and AES-NI flags for processor ${CMAKE_SYSTEM_PROCESSOR}")
+	add_compile_options(
+		-maes
+		-mpclmul
+		-msse
+		-msse2
+		-msse3
+		-msse4.1
+	)
+endif()
 
 if(ZT_TRACE)
 	add_definitions(-DZT_TRACE)
