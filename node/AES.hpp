@@ -175,7 +175,6 @@ public:
 		for(unsigned int i=4;i<8;++i) ctrIv[i] ^= iv[i - 4];
 		for(unsigned int i=8;i<16;++i) ctrIv[i] = iv[i - 4];
 		encrypt(ctrIv,ctrIv);
-
 		ctr(ctrIv,in,len,out);
 	}
 
@@ -198,7 +197,6 @@ public:
 		for(unsigned int i=4;i<8;++i) ctrIv[i] ^= iv[i - 4];
 		for(unsigned int i=8;i<16;++i) ctrIv[i] = iv[i - 4];
 		encrypt(ctrIv,ctrIv);
-
 		ctr(ctrIv,in,len,out);
 
 		gmac(iv,out,len,gmacOut);
