@@ -24,17 +24,6 @@
 #define ZT_AES_AESNI 1
 #endif
 
-#if defined(_M_ARM64) || defined(__aarch64__) || defined(__aarch64) || defined(__AARCH64__)
-#include <arm64intr.h>
-#include <arm64_neon.h>
-#ifndef ZT_AES_ARMNEON
-#define ZT_AES_ARMNEON 1
-#endif
-#if defined(__GNUC__) && !defined(__apple_build_version__) && (defined(__ARM_ACLE) || defined(__ARM_FEATURE_CRYPTO))
-#include <arm_acle.h>
-#endif
-#endif
-
 #define ZT_AES_KEY_SIZE 32
 #define ZT_AES_BLOCK_SIZE 16
 
@@ -165,98 +154,56 @@ public:
 	 *
 	 * This mode combines the two standard modes AES256-GMAC and AES256-CTR to
 	 * yield a mode similar to AES256-GCM-SIV that is resistant to accidental
-	 * message IV duplication.
+	 * message IV duplication. This is good because ZeroTier is stateless and
+	 * uses a small (64-bit) IV to reduce bandwidth overhead.
 	 *
-	 * @param iv 64-bit message IV
+	 * @param iv 96-bit message IV
 	 * @param in Message plaintext
 	 * @param len Length of plaintext
 	 * @param out Output buffer to receive ciphertext
 	 * @param tag Output buffer to receive 64-bit authentication tag
 	 */
-	inline void ztGmacCtrEncrypt(const uint8_t iv[8],const void *in,unsigned int len,void *out,uint8_t tag[8]) const
+	inline void ztGmacCtrEncrypt(const uint8_t iv[12],const void *in,unsigned int len,void *out,uint8_t tag[8]) const
 	{
-		uint8_t ctrIv[16],gmacIv[12];
+		uint8_t ctrIv[16];
 
-		// Compute AES256-GMAC(in) using a 96-bit IV constructed from
-		// the 64-bit supplied IV and the message size.
-#ifdef ZT_NO_TYPE_PUNNING
-		for(unsigned int i=0;i<8;++i) gmacIv[i] = iv[i];
-		gmacIv[8] = (uint8_t)(len >> 24);
-		gmacIv[9] = (uint8_t)(len >> 16);
-		gmacIv[10] = (uint8_t)(len >> 8);
-		gmacIv[11] = (uint8_t)len;
-#else
-		*((uint64_t *)gmacIv) = *((const uint64_t *)iv);
-		*((uint32_t *)(gmacIv + 8)) = Utils::hton((uint32_t)len);
-#endif
-		gmac(gmacIv,in,len,ctrIv);
-
-		// Encrypt GMAC output because GMAC alone is not a PRF.
+		gmac(iv,in,len,ctrIv);
 		encrypt(ctrIv,ctrIv);
 
-		// Auth tag is the first 64 bits of AES(GMAC tag). CTR IV is this
-		// followed by the original 64-bit IV and then encrypted. This
-		// produces a secret, random, and one-time-use synthetic IV for
-		// CTR that is dependent on message content (via GMAC).
-#ifdef ZT_NO_TYPE_PUNNING
 		for(unsigned int i=0;i<8;++i) tag[i] = ctrIv[i];
-		for(unsigned int i=0;i<8;++i) ctrIv[i+8] = iv[i];
-#else
-		*((uint64_t *)tag) = *((const uint64_t *)ctrIv);
-		*((uint64_t *)(ctrIv + 8)) = *((const uint64_t *)iv);
-#endif
+
+		for(unsigned int i=4;i<8;++i) ctrIv[i] ^= iv[i - 4];
+		for(unsigned int i=8;i<16;++i) ctrIv[i] = iv[i - 4];
 		encrypt(ctrIv,ctrIv);
 
-		// Encrypt input using AES256-CTR
 		ctr(ctrIv,in,len,out);
 	}
 
 	/**
 	 * Decrypt a message encrypted with AES-256-GMAC-CTR and check its authenticity
 	 *
-	 * @param iv 64-bit message IV
+	 * @param iv 96-bit message IV
 	 * @param in Message ciphertext
 	 * @param len Length of ciphertext
 	 * @param out Output buffer to receive plaintext
 	 * @param tag Authentication tag supplied with message
 	 * @return True if authentication tags match and message appears authentic
 	 */
-	inline bool ztGmacCtrDecrypt(const uint8_t iv[8],const void *in,unsigned int len,void *out,const uint8_t tag[8]) const
+	inline bool ztGmacCtrDecrypt(const uint8_t iv[12],const void *in,unsigned int len,void *out,const uint8_t tag[8]) const
 	{
-		uint8_t ctrIv[16],gmacOut[16],gmacIv[12];
+		uint8_t ctrIv[16],gmacOut[16];
 
-		// Re-create the original secret synthetic AES256-CTR IV.
-#ifdef ZT_NO_TYPE_PUNNING
 		for(unsigned int i=0;i<8;++i) ctrIv[i] = tag[i];
-		for(unsigned int i=0;i<8;++i) ctrIv[i+8] = iv[i];
-#else
-		*((uint64_t *)ctrIv) = *((const uint8_t *)tag);
-		*((uint64_t *)(ctrIv + 8)) = *((const uint64_t *)iv);
-#endif
+
+		for(unsigned int i=4;i<8;++i) ctrIv[i] ^= iv[i - 4];
+		for(unsigned int i=8;i<16;++i) ctrIv[i] = iv[i - 4];
 		encrypt(ctrIv,ctrIv);
 
-		// Decrypt input using AES256-CTR and this synthetic IV.
 		ctr(ctrIv,in,len,out);
 
-		// Compute AES256-GMAC(out) using the re-created 96-bit
-		// GMAC IV built from the message IV and the message size.
-#ifdef ZT_NO_TYPE_PUNNING
-		for(unsigned int i=0;i<8;++i) gmacIv[i] = iv[i];
-		gmacIv[8] = (uint8_t)(len >> 24);
-		gmacIv[9] = (uint8_t)(len >> 16);
-		gmacIv[10] = (uint8_t)(len >> 8);
-		gmacIv[11] = (uint8_t)len;
-#else
-		*((uint64_t *)gmacIv) = *((const uint64_t *)iv);
-		*((uint32_t *)(gmacIv + 8)) = Utils::hton((uint32_t)len);
-#endif
-		gmac(gmacIv,out,len,gmacOut);
-
-		// Encrypt GMAC results to get the tag that would have
-		// resulted from this message plaintext.
+		gmac(iv,out,len,gmacOut);
 		encrypt(gmacOut,gmacOut);
 
-		// Compare authentication tags.
 #ifdef ZT_NO_TYPE_PUNNING
 		return Utils::secureEq(gmacOut,tag,8);
 #else

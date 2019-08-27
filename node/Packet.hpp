@@ -584,11 +584,6 @@ public:
 		 *   <[4] multicast additional distinguishing information (ADI)>
 		 *   [... additional tuples of network/address/adi ...]
 		 *
-		 * LIKEs may be sent to any peer, though a good implementation should
-		 * restrict them to peers on the same network they're for and to network
-		 * controllers and root servers. In the current network, root servers
-		 * will provide the service of final multicast cache.
-		 *
 		 * OK/ERROR are not generated.
 		 */
 		VERB_MULTICAST_LIKE = 0x09,
