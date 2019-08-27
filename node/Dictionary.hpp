@@ -49,9 +49,9 @@ template<unsigned int C>
 class Dictionary
 {
 public:
-	inline Dictionary() { memset(_d,0,sizeof(_d)); }
-	inline Dictionary(const char *s) { this->load(s); }
-	inline Dictionary(const char *s,unsigned int len)
+	ZT_ALWAYS_INLINE Dictionary() { memset(_d,0,sizeof(_d)); }
+	ZT_ALWAYS_INLINE Dictionary(const char *s) { this->load(s); }
+	ZT_ALWAYS_INLINE Dictionary(const char *s,unsigned int len)
 	{
 		for(unsigned int i=0;i<C;++i) {
 			if ((s)&&(i < len)) {
@@ -62,15 +62,15 @@ public:
 		}
 		_d[C - 1] = (char)0;
 	}
-	inline Dictionary(const Dictionary &d) { memcpy(_d,d._d,C); }
+	ZT_ALWAYS_INLINE Dictionary(const Dictionary &d) { memcpy(_d,d._d,C); }
 
-	inline Dictionary &operator=(const Dictionary &d)
+	ZT_ALWAYS_INLINE Dictionary &operator=(const Dictionary &d)
 	{
 		memcpy(_d,d._d,C);
 		return *this;
 	}
 
-	inline operator bool() const { return (_d[0] != 0); }
+	ZT_ALWAYS_INLINE operator bool() const { return (_d[0] != 0); }
 
 	/**
 	 * Load a dictionary from a C-string
@@ -78,7 +78,7 @@ public:
 	 * @param s Dictionary in string form
 	 * @return False if 's' was longer than our capacity
 	 */
-	inline bool load(const char *s)
+	ZT_ALWAYS_INLINE bool load(const char *s)
 	{
 		for(unsigned int i=0;i<C;++i) {
 			if (s) {
@@ -94,15 +94,12 @@ public:
 	/**
 	 * Delete all entries
 	 */
-	inline void clear()
-	{
-		memset(_d,0,sizeof(_d));
-	}
+	ZT_ALWAYS_INLINE void clear() { memset(_d,0,sizeof(_d)); }
 
 	/**
 	 * @return Size of dictionary in bytes not including terminating NULL
 	 */
-	inline unsigned int sizeBytes() const
+	ZT_ALWAYS_INLINE unsigned int sizeBytes() const
 	{
 		for(unsigned int i=0;i<C;++i) {
 			if (!_d[i])
@@ -430,10 +427,10 @@ public:
 	/**
 	 * @return Value of C template parameter
 	 */
-	inline unsigned int capacity() const { return C; }
+	ZT_ALWAYS_INLINE unsigned int capacity() const { return C; }
 
-	inline const char *data() const { return _d; }
-	inline char *unsafeData() { return _d; }
+	ZT_ALWAYS_INLINE const char *data() const { return _d; }
+	ZT_ALWAYS_INLINE char *unsafeData() { return _d; }
 
 private:
 	char _d[C];

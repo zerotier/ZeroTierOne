@@ -60,12 +60,12 @@ public:
 	/**
 	 * @return This peer's ZT address (short for identity().address())
 	 */
-	inline const Address &address() const { return _id.address(); }
+	ZT_ALWAYS_INLINE const Address &address() const { return _id.address(); }
 
 	/**
 	 * @return This peer's identity
 	 */
-	inline const Identity &identity() const { return _id; }
+	ZT_ALWAYS_INLINE const Identity &identity() const { return _id; }
 
 	/**
 	 * Log receipt of an authenticated packet
@@ -122,7 +122,7 @@ public:
 	 * @param force If true, send even if path is not alive
 	 * @return True if we actually sent something
 	 */
-	inline bool sendDirect(void *tPtr,const void *data,unsigned int len,int64_t now,bool force)
+	ZT_ALWAYS_INLINE bool sendDirect(void *tPtr,const void *data,unsigned int len,int64_t now,bool force)
 	{
 		SharedPtr<Path> bp(getAppropriatePath(now,force));
 		if (bp)
@@ -276,17 +276,17 @@ public:
 	/**
 	 * @return Time of last receive of anything, whether direct or relayed
 	 */
-	inline int64_t lastReceive() const { return _lastReceive; }
+	ZT_ALWAYS_INLINE int64_t lastReceive() const { return _lastReceive; }
 
 	/**
 	 * @return True if we've heard from this peer in less than ZT_PEER_ACTIVITY_TIMEOUT
 	 */
-	inline bool alive(const int64_t now) const { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
+	ZT_ALWAYS_INLINE bool alive(const int64_t now) const { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Latency in milliseconds of best/aggregate path or 0xffff if unknown / no paths
 	 */
-	inline unsigned int latency(const int64_t now)
+	ZT_ALWAYS_INLINE unsigned int latency(const int64_t now)
 	{
 		if (_canUseMultipath) {
 			return (int)computeAggregateLinkMeanLatency();
@@ -309,7 +309,7 @@ public:
 	 *
 	 * @return Relay quality score computed from latency and other factors, lower is better
 	 */
-	inline unsigned int relayQuality(const int64_t now)
+	ZT_ALWAYS_INLINE unsigned int relayQuality(const int64_t now)
 	{
 		const uint64_t tsr = now - _lastReceive;
 		if (tsr >= ZT_PEER_ACTIVITY_TIMEOUT)
@@ -323,7 +323,7 @@ public:
 	/**
 	 * @return 256-bit secret symmetric encryption key
 	 */
-	inline const unsigned char *key() const { return _key; }
+	ZT_ALWAYS_INLINE const unsigned char *key() const { return _key; }
 
 	/**
 	 * Set the currently known remote version of this peer's client
@@ -333,7 +333,7 @@ public:
 	 * @param vmin Minor version
 	 * @param vrev Revision
 	 */
-	inline void setRemoteVersion(unsigned int vproto,unsigned int vmaj,unsigned int vmin,unsigned int vrev)
+	ZT_ALWAYS_INLINE void setRemoteVersion(unsigned int vproto,unsigned int vmaj,unsigned int vmin,unsigned int vrev)
 	{
 		_vProto = (uint16_t)vproto;
 		_vMajor = (uint16_t)vmaj;
@@ -341,12 +341,11 @@ public:
 		_vRevision = (uint16_t)vrev;
 	}
 
-	inline unsigned int remoteVersionProtocol() const { return _vProto; }
-	inline unsigned int remoteVersionMajor() const { return _vMajor; }
-	inline unsigned int remoteVersionMinor() const { return _vMinor; }
-	inline unsigned int remoteVersionRevision() const { return _vRevision; }
-
-	inline bool remoteVersionKnown() const { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
+	ZT_ALWAYS_INLINE unsigned int remoteVersionProtocol() const { return _vProto; }
+	ZT_ALWAYS_INLINE unsigned int remoteVersionMajor() const { return _vMajor; }
+	ZT_ALWAYS_INLINE unsigned int remoteVersionMinor() const { return _vMinor; }
+	ZT_ALWAYS_INLINE unsigned int remoteVersionRevision() const { return _vRevision; }
+	ZT_ALWAYS_INLINE bool remoteVersionKnown() const { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
 
 	/**
 	 * Periodically update known multipath activation constraints. This is done so that we know when and when
@@ -382,7 +381,7 @@ public:
 	/**
 	 * Rate limit gate for VERB_PUSH_DIRECT_PATHS
 	 */
-	inline bool rateGatePushDirectPaths(const int64_t now)
+	ZT_ALWAYS_INLINE bool rateGatePushDirectPaths(const int64_t now)
 	{
 		if ((now - _lastDirectPathPushReceive) <= ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME)
 			++_directPathPushCutoffCount;
@@ -394,7 +393,7 @@ public:
 	/**
 	 * Rate limit gate for VERB_NETWORK_CREDENTIALS
 	 */
-	inline bool rateGateCredentialsReceived(const int64_t now)
+	ZT_ALWAYS_INLINE bool rateGateCredentialsReceived(const int64_t now)
 	{
 		if ((now - _lastCredentialsReceived) <= ZT_PEER_CREDENTIALS_CUTOFF_TIME)
 			++_credentialsCutoffCount;
@@ -406,7 +405,7 @@ public:
 	/**
 	 * Rate limit gate for sending of ERROR_NEED_MEMBERSHIP_CERTIFICATE
 	 */
-	inline bool rateGateRequestCredentials(const int64_t now)
+	ZT_ALWAYS_INLINE bool rateGateRequestCredentials(const int64_t now)
 	{
 		if ((now - _lastCredentialRequestSent) >= ZT_PEER_GENERAL_RATE_LIMIT) {
 			_lastCredentialRequestSent = now;
@@ -418,7 +417,7 @@ public:
 	/**
 	 * Rate limit gate for inbound WHOIS requests
 	 */
-	inline bool rateGateInboundWhoisRequest(const int64_t now)
+	ZT_ALWAYS_INLINE bool rateGateInboundWhoisRequest(const int64_t now)
 	{
 		if ((now - _lastWhoisRequestReceived) >= ZT_PEER_WHOIS_RATE_LIMIT) {
 			_lastWhoisRequestReceived = now;
@@ -430,7 +429,7 @@ public:
 	/**
 	 * Rate limit gate for inbound ECHO requests
 	 */
-	inline bool rateGateEchoRequest(const int64_t now)
+	ZT_ALWAYS_INLINE bool rateGateEchoRequest(const int64_t now)
 	{
 		if ((now - _lastEchoRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
 			_lastEchoRequestReceived = now;
@@ -442,7 +441,7 @@ public:
 	/**
 	 * Rate limit gate for VERB_ACK
 	 */
-	inline bool rateGateACK(const int64_t now)
+	ZT_ALWAYS_INLINE bool rateGateACK(const int64_t now)
 	{
 		if ((now - _lastACKWindowReset) >= ZT_PATH_QOS_ACK_CUTOFF_TIME) {
 			_lastACKWindowReset = now;
@@ -456,7 +455,7 @@ public:
 	/**
 	 * Rate limit gate for VERB_QOS_MEASUREMENT
 	 */
-	inline bool rateGateQoS(const int64_t now)
+	ZT_ALWAYS_INLINE bool rateGateQoS(const int64_t now)
 	{
 		if ((now - _lastQoSWindowReset) >= ZT_PATH_QOS_ACK_CUTOFF_TIME) {
 			_lastQoSWindowReset = now;
@@ -470,7 +469,7 @@ public:
 	/**
 	 * Rate limit gate for trying externally defined or static path
 	 */
-	inline bool rateGateTryStaticPath(const int64_t now)
+	ZT_ALWAYS_INLINE bool rateGateTryStaticPath(const int64_t now)
 	{
 		if ((now - _lastTriedStaticPath) >= ZT_PEER_PING_PERIOD) {
 			_lastTriedStaticPath = now;

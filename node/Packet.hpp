@@ -53,7 +53,7 @@
  * 8  - 1.1.17 ... 1.2.0
  *    + Multipart network configurations for large network configs
  *    + Tags and Capabilities
- *    + Inline push of CertificateOfMembership deprecated
+ *    + ZT_ALWAYS_INLINE push of CertificateOfMembership deprecated
  * 9  - 1.2.0 ... 1.2.14
  * 10 - 1.4.0 ... 1.6.0
  *    + Multipath capability and load balancing
@@ -311,18 +311,18 @@ public:
 	class Fragment : public Buffer<ZT_PROTO_MAX_PACKET_LENGTH>
 	{
 	public:
-		inline Fragment() :
+		ZT_ALWAYS_INLINE Fragment() :
 			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>()
 		{
 		}
 
 		template<unsigned int C2>
-		inline Fragment(const Buffer<C2> &b) :
+		ZT_ALWAYS_INLINE Fragment(const Buffer<C2> &b) :
 			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
 		{
 		}
 
-		inline Fragment(const void *data,unsigned int len) :
+		ZT_ALWAYS_INLINE Fragment(const void *data,unsigned int len) :
 			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(data,len)
 		{
 		}
@@ -336,7 +336,7 @@ public:
 		 * @param fragNo Which fragment (>= 1, since 0 is Packet with end chopped off)
 		 * @param fragTotal Total number of fragments (including 0)
 		 */
-		inline Fragment(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
+		ZT_ALWAYS_INLINE Fragment(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
 		{
 			init(p,fragStart,fragLen,fragNo,fragTotal);
 		}
@@ -350,7 +350,7 @@ public:
 		 * @param fragNo Which fragment (>= 1, since 0 is Packet with end chopped off)
 		 * @param fragTotal Total number of fragments (including 0)
 		 */
-		inline void init(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
+		ZT_ALWAYS_INLINE void init(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
 		{
 			if ((fragStart + fragLen) > p.size())
 				throw ZT_EXCEPTION_OUT_OF_BOUNDS;
@@ -371,37 +371,37 @@ public:
 		 *
 		 * @return Destination ZT address
 		 */
-		inline Address destination() const { return Address(field(ZT_PACKET_FRAGMENT_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
+		ZT_ALWAYS_INLINE Address destination() const { return Address(field(ZT_PACKET_FRAGMENT_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 		/**
 		 * @return True if fragment is of a valid length
 		 */
-		inline bool lengthValid() const { return (size() >= ZT_PACKET_FRAGMENT_IDX_PAYLOAD); }
+		ZT_ALWAYS_INLINE bool lengthValid() const { return (size() >= ZT_PACKET_FRAGMENT_IDX_PAYLOAD); }
 
 		/**
 		 * @return ID of packet this is a fragment of
 		 */
-		inline uint64_t packetId() const { return at<uint64_t>(ZT_PACKET_FRAGMENT_IDX_PACKET_ID); }
+		ZT_ALWAYS_INLINE uint64_t packetId() const { return at<uint64_t>(ZT_PACKET_FRAGMENT_IDX_PACKET_ID); }
 
 		/**
 		 * @return Total number of fragments in packet
 		 */
-		inline unsigned int totalFragments() const { return (((unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO]) >> 4) & 0xf); }
+		ZT_ALWAYS_INLINE unsigned int totalFragments() const { return (((unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO]) >> 4) & 0xf); }
 
 		/**
 		 * @return Fragment number of this fragment
 		 */
-		inline unsigned int fragmentNumber() const { return ((unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO]) & 0xf); }
+		ZT_ALWAYS_INLINE unsigned int fragmentNumber() const { return ((unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO]) & 0xf); }
 
 		/**
 		 * @return Fragment ZT hop count
 		 */
-		inline unsigned int hops() const { return (unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_HOPS]); }
+		ZT_ALWAYS_INLINE unsigned int hops() const { return (unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_HOPS]); }
 
 		/**
 		 * Increment this packet's hop count
 		 */
-		inline void incrementHops()
+		ZT_ALWAYS_INLINE void incrementHops()
 		{
 			(*this)[ZT_PACKET_FRAGMENT_IDX_HOPS] = (((*this)[ZT_PACKET_FRAGMENT_IDX_HOPS]) + 1) & ZT_PROTO_MAX_HOPS;
 		}
@@ -409,12 +409,12 @@ public:
 		/**
 		 * @return Length of payload in bytes
 		 */
-		inline unsigned int payloadLength() const { return ((size() > ZT_PACKET_FRAGMENT_IDX_PAYLOAD) ? (size() - ZT_PACKET_FRAGMENT_IDX_PAYLOAD) : 0); }
+		ZT_ALWAYS_INLINE unsigned int payloadLength() const { return ((size() > ZT_PACKET_FRAGMENT_IDX_PAYLOAD) ? (size() - ZT_PACKET_FRAGMENT_IDX_PAYLOAD) : 0); }
 
 		/**
 		 * @return Raw packet payload
 		 */
-		inline const unsigned char *payload() const
+		ZT_ALWAYS_INLINE const unsigned char *payload() const
 		{
 			return field(ZT_PACKET_FRAGMENT_IDX_PAYLOAD,size() - ZT_PACKET_FRAGMENT_IDX_PAYLOAD);
 		}
@@ -980,12 +980,12 @@ public:
 	};
 
 	template<unsigned int C2>
-	inline Packet(const Buffer<C2> &b) :
+	ZT_ALWAYS_INLINE Packet(const Buffer<C2> &b) :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
 	{
 	}
 
-	inline Packet(const void *data,unsigned int len) :
+	ZT_ALWAYS_INLINE Packet(const void *data,unsigned int len) :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(data,len)
 	{
 	}
@@ -997,7 +997,7 @@ public:
 	 * Use the header access methods (setDestination() and friends) to fill out
 	 * the header. Payload should be appended; initial size is header size.
 	 */
-	inline Packet() :
+	ZT_ALWAYS_INLINE Packet() :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(ZT_PROTO_MIN_PACKET_LENGTH)
 	{
 		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
@@ -1013,7 +1013,7 @@ public:
 	 * @param prototype Prototype packet
 	 * @param dest Destination ZeroTier address for new packet
 	 */
-	inline Packet(const Packet &prototype,const Address &dest) :
+	ZT_ALWAYS_INLINE Packet(const Packet &prototype,const Address &dest) :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(prototype)
 	{
 		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
@@ -1027,7 +1027,7 @@ public:
 	 * @param source Source ZT address
 	 * @param v Verb
 	 */
-	inline Packet(const Address &dest,const Address &source,const Verb v) :
+	ZT_ALWAYS_INLINE Packet(const Address &dest,const Address &source,const Verb v) :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(ZT_PROTO_MIN_PACKET_LENGTH)
 	{
 		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
@@ -1044,7 +1044,7 @@ public:
 	 * @param source Source ZT address
 	 * @param v Verb
 	 */
-	inline void reset(const Address &dest,const Address &source,const Verb v)
+	ZT_ALWAYS_INLINE void reset(const Address &dest,const Address &source,const Verb v)
 	{
 		setSize(ZT_PROTO_MIN_PACKET_LENGTH);
 		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
@@ -1061,52 +1061,52 @@ public:
 	 * technically different but otherwise identical copies of the same
 	 * packet.
 	 */
-	inline void newInitializationVector() { Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8); }
+	ZT_ALWAYS_INLINE void newInitializationVector() { Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8); }
 
 	/**
 	 * Set this packet's destination
 	 *
 	 * @param dest ZeroTier address of destination
 	 */
-	inline void setDestination(const Address &dest) { dest.copyTo(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
+	ZT_ALWAYS_INLINE void setDestination(const Address &dest) { dest.copyTo(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * Set this packet's source
 	 *
 	 * @param source ZeroTier address of source
 	 */
-	inline void setSource(const Address &source) { source.copyTo(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
+	ZT_ALWAYS_INLINE void setSource(const Address &source) { source.copyTo(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * Get this packet's destination
 	 *
 	 * @return Destination ZT address
 	 */
-	inline Address destination() const { return Address(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
+	ZT_ALWAYS_INLINE Address destination() const { return Address(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * Get this packet's source
 	 *
 	 * @return Source ZT address
 	 */
-	inline Address source() const { return Address(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
+	ZT_ALWAYS_INLINE Address source() const { return Address(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * @return True if packet is of valid length
 	 */
-	inline bool lengthValid() const { return (size() >= ZT_PROTO_MIN_PACKET_LENGTH); }
+	ZT_ALWAYS_INLINE bool lengthValid() const { return (size() >= ZT_PROTO_MIN_PACKET_LENGTH); }
 
 	/**
 	 * @return True if packet is fragmented (expect fragments)
 	 */
-	inline bool fragmented() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED) != 0); }
+	ZT_ALWAYS_INLINE bool fragmented() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED) != 0); }
 
 	/**
 	 * Set this packet's fragmented flag
 	 *
 	 * @param f Fragmented flag value
 	 */
-	inline void setFragmented(bool f)
+	ZT_ALWAYS_INLINE void setFragmented(bool f)
 	{
 		if (f)
 			(*this)[ZT_PACKET_IDX_FLAGS] |= (char)ZT_PROTO_FLAG_FRAGMENTED;
@@ -1116,17 +1116,17 @@ public:
 	/**
 	 * @return True if compressed (result only valid if unencrypted)
 	 */
-	inline bool compressed() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_VERB] & ZT_PROTO_VERB_FLAG_COMPRESSED) != 0); }
+	ZT_ALWAYS_INLINE bool compressed() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_VERB] & ZT_PROTO_VERB_FLAG_COMPRESSED) != 0); }
 
 	/**
 	 * @return ZeroTier forwarding hops (0 to 7)
 	 */
-	inline unsigned int hops() const { return ((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x07); }
+	ZT_ALWAYS_INLINE unsigned int hops() const { return ((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x07); }
 
 	/**
 	 * Increment this packet's hop count
 	 */
-	inline void incrementHops()
+	ZT_ALWAYS_INLINE void incrementHops()
 	{
 		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
 		b = (b & 0xf8) | ((b + 1) & 0x07);
@@ -1135,7 +1135,7 @@ public:
 	/**
 	 * @return Cipher suite selector: 0 - 7 (see #defines)
 	 */
-	inline unsigned int cipher() const
+	ZT_ALWAYS_INLINE unsigned int cipher() const
 	{
 		return (((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x38) >> 3);
 	}
@@ -1143,7 +1143,7 @@ public:
 	/**
 	 * Set this packet's cipher suite
 	 */
-	inline void setCipher(unsigned int c)
+	ZT_ALWAYS_INLINE void setCipher(unsigned int c)
 	{
 		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
 		b = (b & 0xc7) | (unsigned char)((c << 3) & 0x38); // bits: FFCCCHHH
@@ -1154,14 +1154,14 @@ public:
 	 *
 	 * @return Trusted path ID (from MAC field)
 	 */
-	inline uint64_t trustedPathId() const { return at<uint64_t>(ZT_PACKET_IDX_MAC); }
+	ZT_ALWAYS_INLINE uint64_t trustedPathId() const { return at<uint64_t>(ZT_PACKET_IDX_MAC); }
 
 	/**
 	 * Set this packet's trusted path ID and set the cipher spec to trusted path
 	 *
 	 * @param tpid Trusted path ID
 	 */
-	inline void setTrusted(const uint64_t tpid)
+	ZT_ALWAYS_INLINE void setTrusted(const uint64_t tpid)
 	{
 		setCipher(ZT_PROTO_CIPHER_SUITE__NO_CRYPTO_TRUSTED_PATH);
 		setAt(ZT_PACKET_IDX_MAC,tpid);
@@ -1178,7 +1178,7 @@ public:
 	 *
 	 * @return Packet ID
 	 */
-	inline uint64_t packetId() const { return at<uint64_t>(ZT_PACKET_IDX_IV); }
+	ZT_ALWAYS_INLINE uint64_t packetId() const { return at<uint64_t>(ZT_PACKET_IDX_IV); }
 
 	/**
 	 * Set packet verb
@@ -1188,22 +1188,22 @@ public:
 	 *
 	 * @param v New packet verb
 	 */
-	inline void setVerb(Verb v) { (*this)[ZT_PACKET_IDX_VERB] = (char)v; }
+	ZT_ALWAYS_INLINE void setVerb(Verb v) { (*this)[ZT_PACKET_IDX_VERB] = (char)v; }
 
 	/**
 	 * @return Packet verb (not including flag bits)
 	 */
-	inline Verb verb() const { return (Verb)((*this)[ZT_PACKET_IDX_VERB] & 0x1f); }
+	ZT_ALWAYS_INLINE Verb verb() const { return (Verb)((*this)[ZT_PACKET_IDX_VERB] & 0x1f); }
 
 	/**
 	 * @return Length of packet payload
 	 */
-	inline unsigned int payloadLength() const { return ((size() < ZT_PROTO_MIN_PACKET_LENGTH) ? 0 : (size() - ZT_PROTO_MIN_PACKET_LENGTH)); }
+	ZT_ALWAYS_INLINE unsigned int payloadLength() const { return ((size() < ZT_PROTO_MIN_PACKET_LENGTH) ? 0 : (size() - ZT_PROTO_MIN_PACKET_LENGTH)); }
 
 	/**
 	 * @return Raw packet payload
 	 */
-	inline const unsigned char *payload() const { return field(ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD); }
+	ZT_ALWAYS_INLINE const unsigned char *payload() const { return field(ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD); }
 
 	/**
 	 * Armor packet for transport
@@ -1261,7 +1261,7 @@ private:
 	 * @param in Input key (32 bytes)
 	 * @param out Output buffer (32 bytes)
 	 */
-	inline void _salsa20MangleKey(const unsigned char *in,unsigned char *out) const
+	ZT_ALWAYS_INLINE void _salsa20MangleKey(const unsigned char *in,unsigned char *out) const
 	{
 		const unsigned char *d = (const unsigned char *)data();
 

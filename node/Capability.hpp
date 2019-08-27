@@ -94,27 +94,27 @@ public:
 	/**
 	 * @return Rules -- see ruleCount() for size of array
 	 */
-	inline const ZT_VirtualNetworkRule *rules() const { return _rules; }
+	ZT_ALWAYS_INLINE const ZT_VirtualNetworkRule *rules() const { return _rules; }
 
 	/**
 	 * @return Number of rules in rules()
 	 */
-	inline unsigned int ruleCount() const { return _ruleCount; }
+	ZT_ALWAYS_INLINE unsigned int ruleCount() const { return _ruleCount; }
 
 	/**
 	 * @return ID and evaluation order of this capability in network
 	 */
-	inline uint32_t id() const { return _id; }
+	ZT_ALWAYS_INLINE uint32_t id() const { return _id; }
 
 	/**
 	 * @return Network ID for which this capability was issued
 	 */
-	inline uint64_t networkId() const { return _nwid; }
+	ZT_ALWAYS_INLINE uint64_t networkId() const { return _nwid; }
 
 	/**
 	 * @return Timestamp
 	 */
-	inline int64_t timestamp() const { return _ts; }
+	ZT_ALWAYS_INLINE int64_t timestamp() const { return _ts; }
 
 	/**
 	 * @return Last 'to' address in chain of custody
@@ -159,7 +159,7 @@ public:
 		} catch ( ... ) {}
 		return false;
 	}
-	
+
 	/**
 	 * Verify this capability's chain of custody and signatures
 	 *
@@ -460,10 +460,10 @@ public:
 	}
 
 	// Provides natural sort order by ID
-	inline bool operator<(const Capability &c) const { return (_id < c._id); }
+	ZT_ALWAYS_INLINE bool operator<(const Capability &c) const { return (_id < c._id); }
 
-	inline bool operator==(const Capability &c) const { return (memcmp(this,&c,sizeof(Capability)) == 0); }
-	inline bool operator!=(const Capability &c) const { return (memcmp(this,&c,sizeof(Capability)) != 0); }
+	ZT_ALWAYS_INLINE bool operator==(const Capability &c) const { return (memcmp(this,&c,sizeof(Capability)) == 0); }
+	ZT_ALWAYS_INLINE bool operator!=(const Capability &c) const { return (memcmp(this,&c,sizeof(Capability)) != 0); }
 
 private:
 	uint64_t _nwid;

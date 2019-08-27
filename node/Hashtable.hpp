@@ -36,10 +36,10 @@ class Hashtable
 private:
 	struct _Bucket
 	{
-		inline _Bucket(const K &k,const V &v) : k(k),v(v) {}
-		inline _Bucket(const K &k) : k(k),v() {}
-		inline _Bucket(const _Bucket &b) : k(b.k),v(b.v) {}
-		inline _Bucket &operator=(const _Bucket &b) { k = b.k; v = b.v; return *this; }
+		ZT_ALWAYS_INLINE _Bucket(const K &k,const V &v) : k(k),v(v) {}
+		ZT_ALWAYS_INLINE _Bucket(const K &k) : k(k),v() {}
+		ZT_ALWAYS_INLINE _Bucket(const _Bucket &b) : k(b.k),v(b.v) {}
+		ZT_ALWAYS_INLINE _Bucket &operator=(const _Bucket &b) { k = b.k; v = b.v; return *this; }
 		K k;
 		V v;
 		_Bucket *next; // must be set manually for each _Bucket
@@ -59,7 +59,7 @@ public:
 		/**
 		 * @param ht Hash table to iterate over
 		 */
-		inline Iterator(Hashtable &ht) :
+		ZT_ALWAYS_INLINE Iterator(Hashtable &ht) :
 			_idx(0),
 			_ht(&ht),
 			_b(ht._t[0])
@@ -71,7 +71,7 @@ public:
 		 * @param vptr Pointer to set to point to next value
 		 * @return True if kptr and vptr are set, false if no more entries
 		 */
-		inline bool next(K *&kptr,V *&vptr)
+		ZT_ALWAYS_INLINE bool next(K *&kptr,V *&vptr)
 		{
 			for(;;) {
 				if (_b) {
@@ -230,7 +230,7 @@ public:
 	 * @param k Key
 	 * @return Pointer to value or NULL if not found
 	 */
-	inline V *get(const K &k)
+	ZT_ALWAYS_INLINE V *get(const K &k)
 	{
 		_Bucket *b = _t[_hc(k) % _bc];
 		while (b) {
@@ -247,7 +247,7 @@ public:
 	 * @param v Value to fill with result
 	 * @return True if value was found and set (if false, v is not modified)
 	 */
-	inline bool get(const K &k,V &v) const
+	ZT_ALWAYS_INLINE bool get(const K &k,V &v) const
 	{
 		_Bucket *b = _t[_hc(k) % _bc];
 		while (b) {
@@ -264,7 +264,7 @@ public:
 	 * @param k Key to check
 	 * @return True if key is present
 	 */
-	inline bool contains(const K &k) const
+	ZT_ALWAYS_INLINE bool contains(const K &k) const
 	{
 		_Bucket *b = _t[_hc(k) % _bc];
 		while (b) {
@@ -361,12 +361,12 @@ public:
 	/**
 	 * @return Number of entries
 	 */
-	inline unsigned long size() const { return _s; }
+	ZT_ALWAYS_INLINE unsigned long size() const { return _s; }
 
 	/**
 	 * @return True if table is empty
 	 */
-	inline bool empty() const { return (_s == 0); }
+	ZT_ALWAYS_INLINE bool empty() const { return (_s == 0); }
 
 private:
 	template<typename O>

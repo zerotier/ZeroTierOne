@@ -51,8 +51,8 @@ public:
 		P384 = ZT_CRYPTO_ALG_P384      // Type 1 -- NIST P-384 with linked Curve25519 and Ed25519 secondaries (2.x+)
 	};
 
-	inline Identity() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
-	inline Identity(const Identity &id) { memcpy(reinterpret_cast<void *>(this),&id,sizeof(Identity)); }
+	ZT_ALWAYS_INLINE Identity() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
+	ZT_ALWAYS_INLINE Identity(const Identity &id) { memcpy(reinterpret_cast<void *>(this),&id,sizeof(Identity)); }
 
 	inline Identity(const char *str)
 	{
@@ -63,14 +63,14 @@ public:
 	template<unsigned int C>
 	inline Identity(const Buffer<C> &b,unsigned int startAt = 0) { deserialize(b,startAt); }
 
-	inline ~Identity() { Utils::burn(reinterpret_cast<void *>(this),sizeof(Identity)); }
+	ZT_ALWAYS_INLINE ~Identity() { Utils::burn(reinterpret_cast<void *>(this),sizeof(Identity)); }
 
 	/**
 	 * Set identity to NIL value (all zero)
 	 */
-	inline void zero() { Utils::burn(reinterpret_cast<void *>(this),sizeof(Identity)); }
+	ZT_ALWAYS_INLINE void zero() { Utils::burn(reinterpret_cast<void *>(this),sizeof(Identity)); }
 
-	inline Identity &operator=(const Identity &id)
+	ZT_ALWAYS_INLINE Identity &operator=(const Identity &id)
 	{
 		memcpy(reinterpret_cast<void *>(this),&id,sizeof(Identity));
 		return *this;
@@ -79,7 +79,7 @@ public:
 	/**
 	 * @return Identity type
 	 */
-	inline Type type() const { return _type; }
+	ZT_ALWAYS_INLINE Type type() const { return _type; }
 
 	/**
 	 * Generate a new identity (address, key pair)
@@ -100,7 +100,7 @@ public:
 	/**
 	 * @return True if this identity contains a private key
 	 */
-	inline bool hasPrivate() const { return _hasPrivate; }
+	ZT_ALWAYS_INLINE bool hasPrivate() const { return _hasPrivate; }
 
 	/**
 	 * Compute the SHA512 hash of our private key (if we have one)
@@ -258,7 +258,7 @@ public:
 	/**
 	 * @return This identity's address
 	 */
-	inline const Address &address() const { return _address; }
+	ZT_ALWAYS_INLINE const Address &address() const { return _address; }
 
 	/**
 	 * Serialize this identity (binary)
@@ -389,7 +389,7 @@ public:
 	/**
 	 * @return True if this identity contains something
 	 */
-	inline operator bool() const { return (_address); }
+	ZT_ALWAYS_INLINE operator bool() const { return (_address); }
 
 	inline bool operator==(const Identity &id) const
 	{
@@ -423,12 +423,12 @@ public:
 		}
 		return false;
 	}
-	inline bool operator!=(const Identity &id) const { return !(*this == id); }
-	inline bool operator>(const Identity &id) const { return (id < *this); }
-	inline bool operator<=(const Identity &id) const { return !(id < *this); }
-	inline bool operator>=(const Identity &id) const { return !(*this < id); }
+	ZT_ALWAYS_INLINE bool operator!=(const Identity &id) const { return !(*this == id); }
+	ZT_ALWAYS_INLINE bool operator>(const Identity &id) const { return (id < *this); }
+	ZT_ALWAYS_INLINE bool operator<=(const Identity &id) const { return !(id < *this); }
+	ZT_ALWAYS_INLINE bool operator>=(const Identity &id) const { return !(*this < id); }
 
-	inline unsigned long hashCode() const { return (unsigned long)_address.toInt(); }
+	ZT_ALWAYS_INLINE unsigned long hashCode() const { return (unsigned long)_address.toInt(); }
 
 private:
 	Address _address;

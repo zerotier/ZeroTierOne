@@ -143,17 +143,17 @@ public:
 	/**
 	 * @return True if there's something here
 	 */
-	inline operator bool() const { return (_qualifierCount != 0); }
+	ZT_ALWAYS_INLINE operator bool() const { return (_qualifierCount != 0); }
 
 	/**
 	 * @return Credential ID, always 0 for COMs
 	 */
-	inline uint32_t id() const { return 0; }
+	ZT_ALWAYS_INLINE uint32_t id() const { return 0; }
 
 	/**
 	 * @return Timestamp for this cert and maximum delta for timestamp
 	 */
-	inline int64_t timestamp() const
+	ZT_ALWAYS_INLINE int64_t timestamp() const
 	{
 		for(unsigned int i=0;i<_qualifierCount;++i) {
 			if (_qualifiers[i].id == COM_RESERVED_ID_TIMESTAMP)
@@ -165,7 +165,7 @@ public:
 	/**
 	 * @return Address to which this cert was issued
 	 */
-	inline Address issuedTo() const
+	ZT_ALWAYS_INLINE Address issuedTo() const
 	{
 		for(unsigned int i=0;i<_qualifierCount;++i) {
 			if (_qualifiers[i].id == COM_RESERVED_ID_ISSUED_TO)
@@ -177,7 +177,7 @@ public:
 	/**
 	 * @return Network ID for which this cert was issued
 	 */
-	inline uint64_t networkId() const
+	ZT_ALWAYS_INLINE uint64_t networkId() const
 	{
 		for(unsigned int i=0;i<_qualifierCount;++i) {
 			if (_qualifiers[i].id == COM_RESERVED_ID_NETWORK_ID)
@@ -372,7 +372,7 @@ public:
 		return (p - startAt);
 	}
 
-	inline bool operator==(const CertificateOfMembership &c) const
+	ZT_ALWAYS_INLINE bool operator==(const CertificateOfMembership &c) const
 	{
 		if (_signedBy != c._signedBy)
 			return false;
@@ -388,7 +388,7 @@ public:
 		}
 		return (memcmp(_signature,c._signature,_signatureLength) == 0);
 	}
-	inline bool operator!=(const CertificateOfMembership &c) const { return (!(*this == c)); }
+	ZT_ALWAYS_INLINE bool operator!=(const CertificateOfMembership &c) const { return (!(*this == c)); }
 
 private:
 	struct _Qualifier

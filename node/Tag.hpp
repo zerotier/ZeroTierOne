@@ -81,14 +81,14 @@ public:
 	{
 	}
 
-	inline uint32_t id() const { return _id; }
-	inline const uint32_t &value() const { return _value; }
-	inline uint64_t networkId() const { return _networkId; }
-	inline int64_t timestamp() const { return _ts; }
-	inline const Address &issuedTo() const { return _issuedTo; }
-	inline const Address &signer() const { return _signedBy; }
-	inline const uint8_t *signature() const { return _signature; }
-	inline unsigned int signatureLength() const { return _signatureLength; }
+	ZT_ALWAYS_INLINE uint32_t id() const { return _id; }
+	ZT_ALWAYS_INLINE const uint32_t &value() const { return _value; }
+	ZT_ALWAYS_INLINE uint64_t networkId() const { return _networkId; }
+	ZT_ALWAYS_INLINE int64_t timestamp() const { return _ts; }
+	ZT_ALWAYS_INLINE const Address &issuedTo() const { return _issuedTo; }
+	ZT_ALWAYS_INLINE const Address &signer() const { return _signedBy; }
+	ZT_ALWAYS_INLINE const uint8_t *signature() const { return _signature; }
+	ZT_ALWAYS_INLINE unsigned int signatureLength() const { return _signatureLength; }
 
 	/**
 	 * Sign this tag
@@ -107,7 +107,7 @@ public:
 		}
 		return false;
 	}
-	
+
 	/**
 	 * Check this tag's signature
 	 *

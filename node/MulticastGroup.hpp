@@ -41,13 +41,13 @@ namespace ZeroTier {
 class MulticastGroup
 {
 public:
-	inline MulticastGroup() :
+	ZT_ALWAYS_INLINE MulticastGroup() :
 		_mac(),
 		_adi(0)
 	{
 	}
 
-	inline MulticastGroup(const MAC &m,uint32_t a) :
+	ZT_ALWAYS_INLINE MulticastGroup(const MAC &m,uint32_t a) :
 		_mac(m),
 		_adi(a)
 	{
@@ -59,7 +59,7 @@ public:
 	 * @param ip IP address (port field is ignored)
 	 * @return Multicast group for ARP/NDP
 	 */
-	static inline MulticastGroup deriveMulticastGroupForAddressResolution(const InetAddress &ip)
+	static ZT_ALWAYS_INLINE MulticastGroup deriveMulticastGroupForAddressResolution(const InetAddress &ip)
 	{
 		if (ip.isV4()) {
 			// IPv4 wants broadcast MACs, so we shove the V4 address itself into
@@ -78,14 +78,14 @@ public:
 		return MulticastGroup();
 	}
 
-	inline const MAC &mac() const { return _mac; }
-	inline uint32_t adi() const { return _adi; }
+	ZT_ALWAYS_INLINE const MAC &mac() const { return _mac; }
+	ZT_ALWAYS_INLINE uint32_t adi() const { return _adi; }
 
-	inline unsigned long hashCode() const { return (_mac.hashCode() + (unsigned long)_adi); }
+	ZT_ALWAYS_INLINE unsigned long hashCode() const { return (_mac.hashCode() + (unsigned long)_adi); }
 
-	inline bool operator==(const MulticastGroup &g) const { return ((_mac == g._mac)&&(_adi == g._adi)); }
-	inline bool operator!=(const MulticastGroup &g) const { return ((_mac != g._mac)||(_adi != g._adi)); }
-	inline bool operator<(const MulticastGroup &g) const
+	ZT_ALWAYS_INLINE bool operator==(const MulticastGroup &g) const { return ((_mac == g._mac)&&(_adi == g._adi)); }
+	ZT_ALWAYS_INLINE bool operator!=(const MulticastGroup &g) const { return ((_mac != g._mac)||(_adi != g._adi)); }
+	ZT_ALWAYS_INLINE bool operator<(const MulticastGroup &g) const
 	{
 		if (_mac < g._mac)
 			return true;
@@ -93,9 +93,9 @@ public:
 			return (_adi < g._adi);
 		return false;
 	}
-	inline bool operator>(const MulticastGroup &g) const { return (g < *this); }
-	inline bool operator<=(const MulticastGroup &g) const { return !(g < *this); }
-	inline bool operator>=(const MulticastGroup &g) const { return !(*this < g); }
+	ZT_ALWAYS_INLINE bool operator>(const MulticastGroup &g) const { return (g < *this); }
+	ZT_ALWAYS_INLINE bool operator<=(const MulticastGroup &g) const { return !(g < *this); }
+	ZT_ALWAYS_INLINE bool operator>=(const MulticastGroup &g) const { return !(*this < g); }
 
 private:
 	MAC _mac;

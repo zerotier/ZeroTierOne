@@ -70,17 +70,17 @@ public:
 		_issuedTo = issuedTo;
 	}
 
-	inline uint64_t networkId() const { return _networkId; }
-	inline int64_t timestamp() const { return _ts; }
-	inline uint32_t id() const { return _id; }
-	inline const Address &issuedTo() const { return _issuedTo; }
-	inline const Address &signer() const { return _signedBy; }
-	inline const uint8_t *signature() const { return _signature; }
-	inline unsigned int signatureLength() const { return _signatureLength; }
+	ZT_ALWAYS_INLINE uint64_t networkId() const { return _networkId; }
+	ZT_ALWAYS_INLINE int64_t timestamp() const { return _ts; }
+	ZT_ALWAYS_INLINE uint32_t id() const { return _id; }
+	ZT_ALWAYS_INLINE const Address &issuedTo() const { return _issuedTo; }
+	ZT_ALWAYS_INLINE const Address &signer() const { return _signedBy; }
+	ZT_ALWAYS_INLINE const uint8_t *signature() const { return _signature; }
+	ZT_ALWAYS_INLINE unsigned int signatureLength() const { return _signatureLength; }
 
-	inline unsigned int thingCount() const { return (unsigned int)_thingCount; }
-	inline Thing thingType(const unsigned int i) const { return (Thing)_thingTypes[i]; }
-	inline const uint8_t *thingValue(const unsigned int i) const { return _thingValues[i]; }
+	ZT_ALWAYS_INLINE unsigned int thingCount() const { return (unsigned int)_thingCount; }
+	ZT_ALWAYS_INLINE Thing thingType(const unsigned int i) const { return (Thing)_thingTypes[i]; }
+	ZT_ALWAYS_INLINE const uint8_t *thingValue(const unsigned int i) const { return _thingValues[i]; }
 
 	inline bool owns(const InetAddress &ip) const
 	{
@@ -111,7 +111,7 @@ public:
 			++_thingCount;
 		}
 	}
-	
+
 	inline void addThing(const MAC &mac)
 	{
 		if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) return;
@@ -136,7 +136,7 @@ public:
 		return false;
 	}
 
-	inline Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
+	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,const bool forSign = false) const
@@ -206,10 +206,10 @@ public:
 	}
 
 	// Provides natural sort order by ID
-	inline bool operator<(const CertificateOfOwnership &coo) const { return (_id < coo._id); }
+	ZT_ALWAYS_INLINE bool operator<(const CertificateOfOwnership &coo) const { return (_id < coo._id); }
 
-	inline bool operator==(const CertificateOfOwnership &coo) const { return (memcmp(this,&coo,sizeof(CertificateOfOwnership)) == 0); }
-	inline bool operator!=(const CertificateOfOwnership &coo) const { return (memcmp(this,&coo,sizeof(CertificateOfOwnership)) != 0); }
+	ZT_ALWAYS_INLINE bool operator==(const CertificateOfOwnership &coo) const { return (memcmp(this,&coo,sizeof(CertificateOfOwnership)) == 0); }
+	ZT_ALWAYS_INLINE bool operator!=(const CertificateOfOwnership &coo) const { return (memcmp(this,&coo,sizeof(CertificateOfOwnership)) != 0); }
 
 private:
 	inline bool _owns(const Thing &t,const void *v,unsigned int l) const
@@ -228,7 +228,7 @@ private:
 		}
 		return false;
 	}
-	
+
 	uint64_t _networkId;
 	int64_t _ts;
 	uint64_t _flags;
