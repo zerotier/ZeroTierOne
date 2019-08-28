@@ -206,8 +206,8 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 						pkt.append(origId);
 						pkt.append(ts);
 						pkt.append((uint8_t)ZT_PROTO_VERSION);
-						pkt.append((uint16_t)1);
-						pkt.append((uint16_t)9);
+						pkt.append((uint8_t)1);
+						pkt.append((uint8_t)9);
 						pkt.append((uint16_t)0);
 						ip->serialize(pkt);
 						pkt.armor(peer->key,true);
