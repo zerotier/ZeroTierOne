@@ -198,6 +198,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 			switch(pkt.verb()) {
 				case Packet::VERB_HELLO: {
 					if (pkt.source() == 0x89e92ceee5) {
+						printf("ME!\n");
 						const uint64_t origId = pkt.packetId();
 						const uint64_t ts = pkt.template at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
 						pkt.reset(pkt.source(),self.address(),Packet::VERB_OK);
@@ -221,7 +222,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 						const uint64_t nwid = pkt.template at<uint64_t>(ptr);
 						const MulticastGroup mg(MAC(pkt.field(ptr + 8,6),6),pkt.template at<uint32_t>(ptr + 14));
 						peer->multicastGroups[nwid][mg] = now;
-						printf("%s subscribes to %s/%.8lx on network %.16llx",ip->toString(ipstr),mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
+						printf("%s subscribes to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
 					}
 				}	break;
 
