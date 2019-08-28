@@ -130,7 +130,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,const Packet
 					peer.set(new PeerInfo);
 					if (self.agree(id,peer->key)) {
 						if (pkt.dearmor(peer->key)) {
-							if (id.locallyValidate()) {
+							if (true) {
 								peer->id = id;
 								{
 									std::lock_guard<std::mutex> pbi_l(peersByIdentity_l);
