@@ -428,7 +428,7 @@ public:
 	ZT_ALWAYS_INLINE bool operator<=(const Identity &id) const { return !(id < *this); }
 	ZT_ALWAYS_INLINE bool operator>=(const Identity &id) const { return !(*this < id); }
 
-	ZT_ALWAYS_INLINE unsigned long hashCode() const { return (unsigned long)_address.toInt(); }
+	ZT_ALWAYS_INLINE unsigned long hashCode() const { return ((unsigned long)(_address.toInt() << 8) + (unsigned long)_pub.c25519[0] + (unsigned long)_pub.c25519[1] + (unsigned long)_pub.c25519[2]); }
 
 private:
 	Address _address;

@@ -51,38 +51,174 @@
 #include "../node/Identity.hpp"
 #include "../node/InetAddress.hpp"
 #include "../node/Mutex.hpp"
+#include "../node/SharedPtr.hpp"
 #include "../osdep/OSUtils.hpp"
 
 #include <string>
 #include <thread>
 #include <map>
+#include <set>
 #include <vector>
 #include <iostream>
 #include <unordered_map>
 #include <vector>
 #include <atomic>
+#include <mutex>
 
 using namespace ZeroTier;
 
 struct PeerInfo
 {
-	InetAddress address;
+	Identity id;
+	uint8_t key[32];
+	InetAddress ip4,ip6;
 	int64_t lastReceive;
+	AtomicCounter __refCount;
+
+	ZT_ALWAYS_INLINE ~PeerInfo() { Utils::burn(key,sizeof(key)); }
 };
 
+struct IdentityHasher { ZT_ALWAYS_INLINE std::size_t operator()(const Identity &id) const { return (std::size_t)id.hashCode(); } };
 struct AddressHasher { ZT_ALWAYS_INLINE std::size_t operator()(const Address &a) const { return (std::size_t)a.toInt(); } };
 struct InetAddressHasher { ZT_ALWAYS_INLINE std::size_t operator()(const InetAddress &ip) const { return (std::size_t)ip.hashCode(); } };
 
+static Identity self;
 static std::atomic_bool run;
-static std::unordered_map< Address,std::map< Identity,PeerInfo >,AddressHasher > peersByVirtAddr;
-static std::unordered_map< InetAddress,std::map< Identity,PeerInfo >,InetAddressHasher > peersByPhysAddr;
-static Mutex peersByVirtAddr_l;
-static Mutex peersByAddress_l;
+static std::unordered_map< Identity,SharedPtr<PeerInfo>,IdentityHasher > peersByIdentity;
+static std::unordered_map< Address,std::set< SharedPtr<PeerInfo> >,AddressHasher > peersByVirtAddr;
+static std::unordered_map< InetAddress,std::set< SharedPtr<PeerInfo> >,InetAddressHasher > peersByPhysAddr;
+static std::mutex peersByIdentity_l;
+static std::mutex peersByVirtAddr_l;
+static std::mutex peersByPhysAddr_l;
 
-static void handlePacket(const InetAddress *const ip,const Packet *const pkt)
+static void handlePacket(const InetAddress *const ip,const Packet *const inpkt)
 {
-	char stmp[128];
-	printf("%s\n",ip->toString(stmp));
+	Packet pkt(*inpkt);
+	char ipstr[128],ipstr2[128],astr[32];
+	const bool fragment = pkt[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR;
+
+	// See if this is destined for us and isn't a fragment / fragmented. (No packets
+	// understood by the root are fragments/fragmented.)
+	if ((!fragment)&&(!pkt.fragmented())&&(pkt.destination() == self.address())) {
+		SharedPtr<PeerInfo> peer;
+
+		// If this is an un-encrypted HELLO, either learn a new peer or verify
+		// that this is a peer we already know.
+		if ((pkt.cipher() == ZT_PROTO_CIPHER_SUITE__POLY1305_NONE)&&(pkt.verb() == Packet::VERB_HELLO)) {
+			Identity id;
+			if (id.deserialize(pkt,ZT_PROTO_VERB_HELLO_IDX_IDENTITY)) {
+				{
+					std::lock_guard<std::mutex> pbi_l(peersByIdentity_l);
+					auto pById = peersByIdentity.find(id);
+					if (pById != peersByIdentity.end()) {
+						peer = pById->second;
+					}
+				}
+				if (peer) {
+					if (!pkt.dearmor(peer->key)) {
+						printf("%s HELLO rejected: packet authentication failed" ZT_EOL_S,ip->toString(ipstr));
+						return;
+					}
+				} else {
+					peer.set(new PeerInfo);
+					if (id.agree(self,peer->key)) {
+						if (pkt.dearmor(peer->key)) {
+							if (id.locallyValidate()) {
+								peer->id = id;
+								{
+									std::lock_guard<std::mutex> pbi_l(peersByIdentity_l);
+									peersByIdentity.emplace(id,peer);
+								}
+							} else {
+								printf("%s HELLO rejected: invalid identity (locallyValidate() failed)" ZT_EOL_S,ip->toString(ipstr));
+								return;
+							}
+						} else {
+							printf("%s HELLO rejected: packet authentication failed" ZT_EOL_S,ip->toString(ipstr));
+							return;
+						}
+					} else {
+						printf("%s HELLO rejected: key agreement failed" ZT_EOL_S,ip->toString(ipstr));
+						return;
+					}
+				}
+			}
+		}
+
+		// If it wasn't a HELLO, check to see if any known identities for the sender's
+		// short ZT address successfully decrypt the packet.
+		if (!peer) {
+			std::lock_guard<std::mutex> pbv_l(peersByVirtAddr_l);
+			auto peers = peersByVirtAddr.find(pkt.source());
+			if (peers != peersByVirtAddr.end()) {
+				for(auto p=peers->second.begin();p!=peers->second.end();++p) {
+					if (pkt.dearmor((*p)->key)) {
+						peer = (*p);
+						break;
+					} else {
+						pkt = *inpkt; // dearmor() destroys contents of pkt
+					}
+				}
+			}
+		}
+
+		// If we found the peer, update IP and/or time.
+		if (peer) {
+			InetAddress *const peerIp = (ip->ss_family == AF_INET) ? &(peer->ip4) : &(peer->ip6);
+			if (*peerIp != ip) {
+				std::lock_guard<std::mutex> pbp_l(peersByPhysAddr_l);
+				if (*peerIp) {
+					auto prev = peersByPhysAddr.find(*peerIp);
+					if (prev != peersByPhysAddr.end()) {
+						prev->second.erase(peer);
+						if (prev->second.empty())
+							peersByPhysAddr.erase(prev);
+					}
+				}
+				*peerIp = ip;
+				peersByPhysAddr[ip].emplace(peer);
+			}
+
+			peer->lastReceive = OSUtils::now();
+
+			printf("%s has %s" ZT_EOL_S,ip->toString(ipstr),pkt.source().toString(astr));
+			return;
+		}
+	}
+
+	std::vector<InetAddress> toAddrs;
+	{
+		std::lock_guard<std::mutex> pbv_l(peersByVirtAddr_l);
+		auto peers = peersByVirtAddr.find(inpkt->destination());
+		if (peers != peersByVirtAddr.end()) {
+			for(auto p=peers->second.begin();p!=peers->second.end();++p) {
+				if ((*p)->ip6)
+					toAddrs.push_back((*p)->ip6);
+				else if ((*p)->ip4)
+					toAddrs.push_back((*p)->ip4);
+			}
+		}
+	}
+	if (toAddrs.empty()) {
+		printf("%s not forwarding to %s: no destinations found" ZT_EOL_S,ip->toString(ipstr),pkt.destination().toString(astr));
+		return;
+	}
+
+	if (fragment) {
+		if (reinterpret_cast<Packet::Fragment *>(&pkt)->incrementHops() >= ZT_PROTO_MAX_HOPS) {
+			printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),pkt.destination().toString(astr));
+			return;
+		}
+	} else {
+		if (pkt.incrementHops() >= ZT_PROTO_MAX_HOPS) {
+			printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),pkt.destination().toString(astr));
+			return;
+		}
+	}
+
+	for(auto i=toAddrs.begin();i!=toAddrs.end();++i) {
+		printf("%s -> %s for %s" ZT_EOL_S,ip->toString(ipstr),i->toString(ipstr2),pkt.destination().toString(astr));
+	}
 }
 
 static int bindSocket(struct sockaddr *bindAddr)

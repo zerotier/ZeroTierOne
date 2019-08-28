@@ -60,7 +60,7 @@
  * 11 - 2.0.0 ... CURRENT
  *    + Peer-to-peer multicast replication (optional)
  *    + Old planet/moon stuff is DEAD!
- *    + AES256-GCM encryption is now the default
+ *    + AES-256-GMAC-CTR encryption is now the default
  *    + NIST P-384 (type 1) identities now supported
  *    + Minimum proto version is now 8 (1.1.17 and newer)
  *    + WILL_RELAY allows mesh-like operation
@@ -105,9 +105,9 @@
 #define ZT_PROTO_CIPHER_SUITE__NO_CRYPTO_TRUSTED_PATH 2
 
 /**
- * AES256/GCM
+ * AES-256-GMAC-CTR
  */
-#define ZT_PROTO_CIPHER_SUITE__AES256_GCM 3
+#define ZT_PROTO_CIPHER_SUITE__AES256_GMAC_CTR 3
 
 /**
  * Header flag indicating that a packet is fragmented
@@ -395,9 +395,9 @@ public:
 		/**
 		 * Increment this packet's hop count
 		 */
-		ZT_ALWAYS_INLINE void incrementHops()
+		ZT_ALWAYS_INLINE unsigned int incrementHops()
 		{
-			(*this)[ZT_PACKET_FRAGMENT_IDX_HOPS] = (((*this)[ZT_PACKET_FRAGMENT_IDX_HOPS]) + 1) & ZT_PROTO_MAX_HOPS;
+			return (unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_HOPS] = (((*this)[ZT_PACKET_FRAGMENT_IDX_HOPS]) + 1));
 		}
 
 		/**
@@ -1112,10 +1112,12 @@ public:
 	/**
 	 * Increment this packet's hop count
 	 */
-	ZT_ALWAYS_INLINE void incrementHops()
+	ZT_ALWAYS_INLINE unsigned char incrementHops()
 	{
 		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
-		b = (b & 0xf8) | ((b + 1) & 0x07);
+		const unsigned char h = (b + 1) & 0x07;
+		b = (b & 0xf8) | h;
+		return (unsigned int)h;
 	}
 
 	/**
