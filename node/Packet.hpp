@@ -312,20 +312,14 @@ public:
 	{
 	public:
 		ZT_ALWAYS_INLINE Fragment() :
-			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>()
-		{
-		}
+			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>() {}
 
 		template<unsigned int C2>
 		ZT_ALWAYS_INLINE Fragment(const Buffer<C2> &b) :
-			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
-		{
-		}
+			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b) {}
 
 		ZT_ALWAYS_INLINE Fragment(const void *data,unsigned int len) :
-			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(data,len)
-		{
-		}
+			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(data,len) {}
 
 		/**
 		 * Initialize from a packet
@@ -414,10 +408,7 @@ public:
 		/**
 		 * @return Raw packet payload
 		 */
-		ZT_ALWAYS_INLINE const unsigned char *payload() const
-		{
-			return field(ZT_PACKET_FRAGMENT_IDX_PAYLOAD,size() - ZT_PACKET_FRAGMENT_IDX_PAYLOAD);
-		}
+		ZT_ALWAYS_INLINE const unsigned char *payload() const { return field(ZT_PACKET_FRAGMENT_IDX_PAYLOAD,size() - ZT_PACKET_FRAGMENT_IDX_PAYLOAD); }
 	};
 
 	/**
