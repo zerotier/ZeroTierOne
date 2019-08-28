@@ -60,6 +60,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <vector>
+#include <atomic>
 
 using namespace ZeroTier;
 
@@ -72,6 +73,7 @@ struct PeerInfo
 struct AddressHasher { ZT_ALWAYS_INLINE std::size_t operator()(const Address &a) const { return (std::size_t)a.toInt(); } };
 struct InetAddressHasher { ZT_ALWAYS_INLINE std::size_t operator()(const InetAddress &ip) const { return (std::size_t)ip.hashCode(); } };
 
+static std::atomic_bool run;
 static std::unordered_map< Address,std::map< Identity,PeerInfo >,AddressHasher > peersByVirtAddr;
 static std::unordered_map< InetAddress,std::map< Identity,PeerInfo >,InetAddressHasher > peersByPhysAddr;
 static Mutex peersByVirtAddr_l;
@@ -132,6 +134,8 @@ int main(int argc,char **argv)
 {
 	unsigned int ncores = std::thread::hardware_concurrency();
 	if (ncores == 0) ncores = 1;
+
+	run = true;
 
 	std::vector<int> sockets;
 	std::vector<std::thread> threads;
@@ -196,6 +200,10 @@ int main(int argc,char **argv)
 				}
 			}
 		}));
+	}
+
+	while (run) {
+		sleep(1);
 	}
 
 	return 0;
