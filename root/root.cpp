@@ -102,9 +102,8 @@ static std::mutex peersByIdentity_l;
 static std::mutex peersByVirtAddr_l;
 static std::mutex peersByPhysAddr_l;
 
-static void handlePacket(const int sock,const InetAddress *const ip,const Packet *const inpkt)
+static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 {
-	Packet pkt(*inpkt);
 	char ipstr[128],ipstr2[128],astr[32],tmpstr[256];
 	const bool fragment = pkt[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR;
 
@@ -171,8 +170,6 @@ static void handlePacket(const int sock,const InetAddress *const ip,const Packet
 						peer = (*p);
 						//printf("%s has %s (known (2))" ZT_EOL_S,ip->toString(ipstr),pkt.source().toString(astr));
 						break;
-					} else {
-						pkt = *inpkt; // dearmor() destroys contents of pkt
 					}
 				}
 			}
@@ -239,7 +236,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,const Packet
 	std::vector<InetAddress> toAddrs;
 	{
 		std::lock_guard<std::mutex> pbv_l(peersByVirtAddr_l);
-		auto peers = peersByVirtAddr.find(inpkt->destination());
+		auto peers = peersByVirtAddr.find(pkt.destination());
 		if (peers != peersByVirtAddr.end()) {
 			for(auto p=peers->second.begin();p!=peers->second.end();++p) {
 				if ((*p)->ip6)
@@ -379,8 +376,9 @@ int main(int argc,char **argv)
 				if (pl > 0) {
 					try {
 						pkt.setSize((unsigned int)pl);
-						handlePacket(s6,reinterpret_cast<const InetAddress *>(&in6),&pkt);
+						handlePacket(s6,reinterpret_cast<const InetAddress *>(&in6),pkt);
 					} catch ( ... ) {
+						printf("* unexpected exception" ZT_EOL_S);
 					}
 				} else {
 					break;
@@ -398,8 +396,9 @@ int main(int argc,char **argv)
 				if (pl > 0) {
 					try {
 						pkt.setSize((unsigned int)pl);
-						handlePacket(s4,reinterpret_cast<const InetAddress *>(&in4),&pkt);
+						handlePacket(s4,reinterpret_cast<const InetAddress *>(&in4),pkt);
 					} catch ( ... ) {
+						printf("* unexpected exception" ZT_EOL_S);
 					}
 				} else {
 					break;
