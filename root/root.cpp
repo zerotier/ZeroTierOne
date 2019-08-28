@@ -90,9 +90,14 @@ struct PeerInfo
 
 static Identity self;
 static std::atomic_bool run;
+
+static std::vector< SharedPtr<PeerInfo> > newPeers;
+
 static std::unordered_map< Identity,SharedPtr<PeerInfo>,IdentityHasher > peersByIdentity;
 static std::unordered_map< Address,std::set< SharedPtr<PeerInfo> >,AddressHasher > peersByVirtAddr;
 static std::unordered_map< InetAddress,std::set< SharedPtr<PeerInfo> >,InetAddressHasher > peersByPhysAddr;
+
+static std::mutex newPeers_l;
 static std::mutex peersByIdentity_l;
 static std::mutex peersByVirtAddr_l;
 static std::mutex peersByPhysAddr_l;
@@ -130,20 +135,18 @@ static void handlePacket(const int sock,const InetAddress *const ip,const Packet
 					peer.set(new PeerInfo);
 					if (self.agree(id,peer->key)) {
 						if (pkt.dearmor(peer->key)) {
-							if (true) {
-								peer->id = id;
-								{
-									std::lock_guard<std::mutex> pbi_l(peersByIdentity_l);
-									peersByIdentity.emplace(id,peer);
-								}
-								{
-									std::lock_guard<std::mutex> pbv_l(peersByVirtAddr_l);
-									peersByVirtAddr[id.address()].emplace(peer);
-								}
-								//printf("%s has %s (new)" ZT_EOL_S,ip->toString(ipstr),pkt.source().toString(astr));
-							} else {
-								printf("%s HELLO rejected: invalid identity (locallyValidate() failed)" ZT_EOL_S,ip->toString(ipstr));
-								return;
+							peer->id = id;
+							{
+								std::lock_guard<std::mutex> np_l(newPeers_l);
+								newPeers.push_back(peer);
+							}
+							{
+								std::lock_guard<std::mutex> pbi_l(peersByIdentity_l);
+								peersByIdentity.emplace(id,peer);
+							}
+							{
+								std::lock_guard<std::mutex> pbv_l(peersByVirtAddr_l);
+								peersByVirtAddr[id.address()].emplace(peer);
 							}
 						} else {
 							printf("%s HELLO rejected: packet authentication failed" ZT_EOL_S,ip->toString(ipstr));
@@ -406,6 +409,9 @@ int main(int argc,char **argv)
 	}
 
 	while (run) {
+		peersByIdentity_l.lock();
+		printf("* have %lu peers" ZT_EOL_S,(unsigned long)peersByIdentity.size());
+		peersByIdentity_l.unlock();
 		sleep(1);
 	}
 
