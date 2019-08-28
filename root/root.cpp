@@ -268,6 +268,25 @@ static int bindSocket(struct sockaddr *bindAddr)
 
 int main(int argc,char **argv)
 {
+	if (argc != 2) {
+		printf("Usage: zerotier-root <identity.secret> [<port>]" ZT_EOL_S);
+		return 1;
+	}
+
+	std::string myIdStr;
+	if (!OSUtils::readFile(argv[1],myIdStr)) {
+		printf("FATAL: cannot read identity.secret at %s" ZT_EOL_S,argv[1]);
+		return 1;
+	}
+	if (!self.fromString(myIdStr.c_str())) {
+		printf("FATAL: cannot read identity.secret at %s (invalid identity)" ZT_EOL_S,argv[1]);
+		return 1;
+	}
+	if (!self.hasPrivate()) {
+		printf("FATAL: cannot read identity.secret at %s (missing secret key)" ZT_EOL_S,argv[1]);
+		return 1;
+	}
+
 	unsigned int ncores = std::thread::hardware_concurrency();
 	if (ncores == 0) ncores = 1;
 
