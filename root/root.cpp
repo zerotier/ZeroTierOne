@@ -195,69 +195,81 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 			peer->lastReceive = now;
 
 			switch(pkt.verb()) {
-				case Packet::VERB_HELLO: {
-					const uint64_t origId = pkt.packetId();
-					const uint64_t ts = pkt.template at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
-					pkt.reset(pkt.source(),self.address(),Packet::VERB_OK);
-					pkt.append((uint8_t)Packet::VERB_HELLO);
-					pkt.append(origId);
-					pkt.append(ts);
-					pkt.append((uint8_t)ZT_PROTO_VERSION);
-					pkt.append((uint8_t)0);
-					pkt.append((uint8_t)0);
-					pkt.append((uint16_t)0);
-					ip->serialize(pkt);
-					pkt.armor(peer->key,true);
-					sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
-					//printf("%s <- OK(HELLO)" ZT_EOL_S,ip->toString(ipstr));
-				}	break;
-
-				case Packet::VERB_MULTICAST_LIKE: {
-					std::lock_guard<std::mutex> l(multicastSubscriptions_l);
-					for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;(ptr+18)<=pkt.size();ptr+=18) {
-						const uint64_t nwid = pkt.template at<uint64_t>(ptr);
-						const MulticastGroup mg(MAC(pkt.field(ptr + 8,6),6),pkt.template at<uint32_t>(ptr + 14));
-						multicastSubscriptions[nwid][mg][peer->id.address()] = now;
-						//printf("%s subscribes to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
+				case Packet::VERB_HELLO:
+					try {
+						const uint64_t origId = pkt.packetId();
+						const uint64_t ts = pkt.template at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
+						pkt.reset(pkt.source(),self.address(),Packet::VERB_OK);
+						pkt.append((uint8_t)Packet::VERB_HELLO);
+						pkt.append(origId);
+						pkt.append(ts);
+						pkt.append((uint8_t)ZT_PROTO_VERSION);
+						pkt.append((uint8_t)0);
+						pkt.append((uint8_t)0);
+						pkt.append((uint16_t)0);
+						ip->serialize(pkt);
+						pkt.armor(peer->key,true);
+						sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+						//printf("%s <- OK(HELLO)" ZT_EOL_S,ip->toString(ipstr));
+					} catch ( ... ) {
+						printf("* unexpected exception handling HELLO from %s" ZT_EOL_S,ip->toString(ipstr));
 					}
-				}	break;
+					break;
 
-				case Packet::VERB_MULTICAST_GATHER: {
-					const uint64_t nwid = pkt.template at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_NETWORK_ID);
-					const unsigned int flags = pkt[ZT_PROTO_VERB_MULTICAST_GATHER_IDX_FLAGS];
-					const MulticastGroup mg(MAC(pkt.field(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC,6),6),pkt.template at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI));
-					unsigned int gatherLimit = pkt.template at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT);
-					if (gatherLimit > 255)
-						gatherLimit = 255;
-
-					const uint64_t origId = pkt.packetId();
-					pkt.reset(pkt.source(),self.address(),Packet::VERB_OK);
-					pkt.append((uint8_t)Packet::VERB_MULTICAST_GATHER);
-					pkt.append(origId);
-					pkt.append(nwid);
-					mg.mac().appendTo(pkt);
-					pkt.append((uint32_t)mg.adi());
-
-					{
+				case Packet::VERB_MULTICAST_LIKE:
+					try {
 						std::lock_guard<std::mutex> l(multicastSubscriptions_l);
-						auto forNet = multicastSubscriptions.find(nwid);
-						if (forNet != multicastSubscriptions.end()) {
-							auto forGroup = forNet->second.find(mg);
-							if (forGroup != forNet->second.end()) {
-								pkt.append((uint32_t)forGroup->second.size());
-								pkt.append((uint16_t)std::min(std::min((unsigned int)forGroup->second.size(),(unsigned int)65535),gatherLimit));
-								auto g = forGroup->second.begin();
-								unsigned int l = 0;
-								for(;((l<gatherLimit)&&(g!=forGroup->second.end()));++l,++g)
-									g->first.appendTo(pkt);
-								if (l > 0) {
-									sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
-									printf("%s gathered %u subscribers to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),l,mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
+						for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;(ptr+18)<=pkt.size();ptr+=18) {
+							const uint64_t nwid = pkt.template at<uint64_t>(ptr);
+							const MulticastGroup mg(MAC(pkt.field(ptr + 8,6),6),pkt.template at<uint32_t>(ptr + 14));
+							multicastSubscriptions[nwid][mg][peer->id.address()] = now;
+							//printf("%s subscribes to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
+						}
+					} catch ( ... ) {
+						printf("* unexpected exception handling MULTICAST_LIKE from %s" ZT_EOL_S,ip->toString(ipstr));
+					}
+					break;
+
+				case Packet::VERB_MULTICAST_GATHER:
+					try {
+						const uint64_t nwid = pkt.template at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_NETWORK_ID);
+						const unsigned int flags = pkt[ZT_PROTO_VERB_MULTICAST_GATHER_IDX_FLAGS];
+						const MulticastGroup mg(MAC(pkt.field(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC,6),6),pkt.template at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI));
+						unsigned int gatherLimit = pkt.template at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT);
+						if (gatherLimit > 255)
+							gatherLimit = 255;
+
+						const uint64_t origId = pkt.packetId();
+						pkt.reset(pkt.source(),self.address(),Packet::VERB_OK);
+						pkt.append((uint8_t)Packet::VERB_MULTICAST_GATHER);
+						pkt.append(origId);
+						pkt.append(nwid);
+						mg.mac().appendTo(pkt);
+						pkt.append((uint32_t)mg.adi());
+
+						{
+							std::lock_guard<std::mutex> l(multicastSubscriptions_l);
+							auto forNet = multicastSubscriptions.find(nwid);
+							if (forNet != multicastSubscriptions.end()) {
+								auto forGroup = forNet->second.find(mg);
+								if (forGroup != forNet->second.end()) {
+									pkt.append((uint32_t)forGroup->second.size());
+									pkt.append((uint16_t)std::min(std::min((unsigned int)forGroup->second.size(),(unsigned int)65535),gatherLimit));
+									auto g = forGroup->second.begin();
+									unsigned int l = 0;
+									for(;((l<gatherLimit)&&(g!=forGroup->second.end()));++l,++g)
+										g->first.appendTo(pkt);
+									if (l > 0) {
+										sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+										//printf("%s gathered %u subscribers to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),l,mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
+									}
 								}
 							}
 						}
+					} catch ( ... ) {
+						printf("* unexpected exception handling MULTICAST_GATHER from %s" ZT_EOL_S,ip->toString(ipstr));
 					}
-				}	break;
+					break;
 
 				default:
 					break;
