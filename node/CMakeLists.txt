@@ -80,7 +80,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 if(UNIX)
 	set_source_files_properties(
 		AES.cpp
-#		ECC384.cpp
+		ECC384.cpp
 		Salsa20.cpp
 		C25519.cpp
 		Poly1305.cpp
