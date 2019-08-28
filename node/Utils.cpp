@@ -37,6 +37,8 @@
 #include "Utils.hpp"
 #include "Mutex.hpp"
 #include "Salsa20.hpp"
+#include "AES.hpp"
+#include "SHA512.hpp"
 
 namespace ZeroTier {
 
@@ -140,14 +142,11 @@ unsigned int Utils::unhex(const char *h,unsigned int hlen,void *buf,unsigned int
 void Utils::getSecureRandom(void *buf,unsigned int bytes)
 {
 	static Mutex globalLock;
-	static Salsa20 s20;
 	static bool initialized = false;
 	static uint8_t randomBuf[131072];
-	static unsigned int randomPtr = sizeof(randomBuf);
+	static unsigned long randomPtr = sizeof(randomBuf);
 #ifdef __WINDOWS__
 	static HCRYPTPROV cryptProvider = NULL;
-#else
-	static int devURandomFd = -1;
 #endif
 
 	Mutex::Lock _l(globalLock);
@@ -160,63 +159,46 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	 * at almost no cost and with no real downside if the random source is
 	 * good. */
 	if (unlikely(!initialized)) {
-		initialized = true;
-
-		uint64_t s20Key[4];
-		s20Key[0] = (uint64_t)time(nullptr);
-#ifdef __WINDOWS__
-		s20Key[1] = (uint64_t)buf; // address of buf
-#else
-		s20Key[1] = (uint64_t)getpid();
-#endif
-		s20Key[2] = (uint64_t)s20Key; // address of s20Key[]
-		s20Key[3] = (uint64_t)&s20; // address of s20
-		s20.init(s20Key,s20Key);
-
 #ifdef __WINDOWS__
 		if (!CryptAcquireContextA(&cryptProvider,NULL,NULL,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT|CRYPT_SILENT)) {
 			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
 			exit(1);
 		}
+		if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomBuf),(BYTE *)randomBuf)) {
+			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
+			exit(1);
+		}
 #else
-		devURandomFd = ::open("/dev/urandom",O_RDONLY);
+		int devURandomFd = ::open("/dev/urandom",O_RDONLY);
 		if (devURandomFd < 0) {
 			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
 			exit(1);
 		}
+		if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
+			::close(devURandomFd);
+			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\n");
+			exit(1);
+		}
+		close(devURandomFd);
 #endif
+		initialized = true;
 	}
 
-#ifdef __WINDOWS__
-
 	for(unsigned int i=0;i<bytes;++i) {
-		if (unlikely(randomPtr >= sizeof(randomBuf))) {
-			randomPtr = 0;
-			if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomBuf),(BYTE *)randomBuf)) {
-				fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
-				exit(1);
+		if (randomPtr >= sizeof(randomBuf)) {
+			uint8_t h[64];
+			SHA512(h,randomBuf,sizeof(randomBuf));
+			if (AES::HW_ACCEL) {
+				AES c(h);
+				c.ctr(h + 32,randomBuf,sizeof(randomBuf),randomBuf);
+			} else {
+				Salsa20 c(h,h + 32);
+				c.crypt12(randomBuf,randomBuf,sizeof(randomBuf));
 			}
-			s20.crypt12(randomBuf,randomBuf,sizeof(randomBuf));
+			randomPtr = 0;
 		}
 		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
 	}
-
-#else // not __WINDOWS__
-
-	for(unsigned int i=0;i<bytes;++i) {
-		if (unlikely(randomPtr >= sizeof(randomBuf))) {
-			randomPtr = 0;
-			if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
-				::close(devURandomFd);
-				fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\n");
-				exit(1);
-			}
-			s20.crypt12(randomBuf,randomBuf,sizeof(randomBuf));
-		}
-		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
-	}
-
-#endif // __WINDOWS__ or not
 }
 
 int Utils::b32e(const uint8_t *data,int length,char *result,int bufSize)
