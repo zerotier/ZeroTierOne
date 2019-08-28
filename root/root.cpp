@@ -284,7 +284,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 		}
 	}
 	if (toAddrs.empty()) {
-		printf("%s not forwarding to %s: no destinations found" ZT_EOL_S,ip->toString(ipstr),pkt.destination().toString(astr));
+		//printf("%s not forwarding to %s: no destinations found" ZT_EOL_S,ip->toString(ipstr),pkt.destination().toString(astr));
 		return;
 	}
 
@@ -301,7 +301,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 	}
 
 	for(auto i=toAddrs.begin();i!=toAddrs.end();++i) {
-		printf("%s -> %s for %s" ZT_EOL_S,ip->toString(ipstr),i->toString(ipstr2),pkt.destination().toString(astr));
+		//printf("%s -> %s for %s" ZT_EOL_S,ip->toString(ipstr),i->toString(ipstr2),pkt.destination().toString(astr));
 		sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)&(*i),(socklen_t)((i->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
 	}
 }
