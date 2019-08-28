@@ -197,19 +197,21 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 
 			switch(pkt.verb()) {
 				case Packet::VERB_HELLO: {
-					const uint64_t origId = pkt.packetId();
-					const uint64_t ts = pkt.template at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
-					pkt.reset(pkt.source(),self.address(),Packet::VERB_OK);
-					pkt.append((uint8_t)Packet::VERB_HELLO);
-					pkt.append(origId);
-					pkt.append(ts);
-					pkt.append((uint8_t)ZT_PROTO_VERSION);
-					pkt.append((uint16_t)1);
-					pkt.append((uint16_t)9);
-					pkt.append((uint16_t)0);
-					ip->serialize(pkt);
-					pkt.armor(peer->key,true);
-					//sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+					if (pkt.source() == 0x89e92ceee5) {
+						const uint64_t origId = pkt.packetId();
+						const uint64_t ts = pkt.template at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
+						pkt.reset(pkt.source(),self.address(),Packet::VERB_OK);
+						pkt.append((uint8_t)Packet::VERB_HELLO);
+						pkt.append(origId);
+						pkt.append(ts);
+						pkt.append((uint8_t)ZT_PROTO_VERSION);
+						pkt.append((uint16_t)1);
+						pkt.append((uint16_t)9);
+						pkt.append((uint16_t)0);
+						ip->serialize(pkt);
+						pkt.armor(peer->key,true);
+						sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+					}
 				}	break;
 
 				case Packet::VERB_MULTICAST_LIKE: {
