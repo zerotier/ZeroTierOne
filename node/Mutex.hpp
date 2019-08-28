@@ -24,45 +24,6 @@
 
 namespace ZeroTier {
 
-#if defined(__GNUC__) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
-
-// Inline ticket lock with yield for x64 systems, provides much better performance when there is no contention.
-class Mutex
-{
-public:
-	ZT_ALWAYS_INLINE Mutex() : nextTicket(0),nowServing(0) {}
-
-	ZT_ALWAYS_INLINE void lock() const
-	{
-		const uint16_t myTicket = __sync_fetch_and_add(&(const_cast<Mutex *>(this)->nextTicket),1);
-		while (nowServing != myTicket) {
-			__asm__ __volatile__("rep;nop"::);
-			__asm__ __volatile__("":::"memory");
-		}
-	}
-
-	ZT_ALWAYS_INLINE void unlock() const { ++(const_cast<Mutex *>(this)->nowServing); }
-
-	class Lock
-	{
-	public:
-		ZT_ALWAYS_INLINE Lock(Mutex &m) : _m(&m) { m.lock(); }
-		ZT_ALWAYS_INLINE Lock(const Mutex &m) : _m(const_cast<Mutex *>(&m)) { _m->lock(); }
-		ZT_ALWAYS_INLINE ~Lock() { _m->unlock(); }
-	private:
-		Mutex *const _m;
-	};
-
-private:
-	inline Mutex(const Mutex &) {}
-	const Mutex &operator=(const Mutex &) { return *this; }
-
-	uint16_t nextTicket;
-	uint16_t nowServing;
-};
-
-#else
-
 // libpthread based mutex lock
 class Mutex
 {
@@ -89,11 +50,9 @@ private:
 	pthread_mutex_t _mh;
 };
 
-#endif
-
 } // namespace ZeroTier
 
-#endif // Apple / Linux
+#endif
 
 #ifdef __WINDOWS__
 
