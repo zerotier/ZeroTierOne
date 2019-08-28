@@ -426,5 +426,12 @@ int main(int argc,char **argv)
 		sleep(1);
 	}
 
+	for(auto s=sockets.begin();s!=sockets.end();++s) {
+		shutdown(*s,SHUT_RDWR);
+		close(*s);
+	}
+	for(auto t=threads.begin();t!=threads.end();++t)
+		t->join();
+
 	return 0;
 }
