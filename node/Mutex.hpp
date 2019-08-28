@@ -26,15 +26,11 @@ namespace ZeroTier {
 
 #if defined(__GNUC__) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 
-// Inline ticket lock on x64 systems with GCC and CLANG (Mac, Linux) -- this is really fast as long as locking durations are very short
+// Inline ticket lock on x64 systems with GCC and CLANG (Mac, Linux) -- this is really fast as long as contention is LOW
 class Mutex
 {
 public:
-	ZT_ALWAYS_INLINE Mutex() :
-		nextTicket(0),
-		nowServing(0)
-	{
-	}
+	ZT_ALWAYS_INLINE Mutex() : nextTicket(0),nowServing(0) {}
 
 	ZT_ALWAYS_INLINE void lock() const
 	{
@@ -47,9 +43,6 @@ public:
 
 	ZT_ALWAYS_INLINE void unlock() const { ++(const_cast<Mutex *>(this)->nowServing); }
 
-	/**
-	 * Uses C++ contexts and constructor/destructor to lock/unlock automatically
-	 */
 	class Lock
 	{
 	public:
@@ -74,46 +67,17 @@ private:
 class Mutex
 {
 public:
-	ZT_ALWAYS_INLINE Mutex()
-	{
-		pthread_mutex_init(&_mh,(const pthread_mutexattr_t *)0);
-	}
-
-	ZT_ALWAYS_INLINE ~Mutex()
-	{
-		pthread_mutex_destroy(&_mh);
-	}
-
-	ZT_ALWAYS_INLINE void lock() const
-	{
-		pthread_mutex_lock(&((const_cast <Mutex *> (this))->_mh));
-	}
-
-	ZT_ALWAYS_INLINE void unlock() const
-	{
-		pthread_mutex_unlock(&((const_cast <Mutex *> (this))->_mh));
-	}
+	ZT_ALWAYS_INLINE Mutex() { pthread_mutex_init(&_mh,(const pthread_mutexattr_t *)0); }
+	ZT_ALWAYS_INLINE ~Mutex() { pthread_mutex_destroy(&_mh); }
+	ZT_ALWAYS_INLINE void lock() const { pthread_mutex_lock(&((const_cast <Mutex *> (this))->_mh)); }
+	ZT_ALWAYS_INLINE void unlock() const { pthread_mutex_unlock(&((const_cast <Mutex *> (this))->_mh)); }
 
 	class Lock
 	{
 	public:
-		ZT_ALWAYS_INLINE Lock(Mutex &m) :
-			_m(&m)
-		{
-			m.lock();
-		}
-
-		ZT_ALWAYS_INLINE Lock(const Mutex &m) :
-			_m(const_cast<Mutex *>(&m))
-		{
-			_m->lock();
-		}
-
-		ZT_ALWAYS_INLINE ~Lock()
-		{
-			_m->unlock();
-		}
-
+		ZT_ALWAYS_INLINE Lock(Mutex &m) : _m(&m) { m.lock(); }
+		ZT_ALWAYS_INLINE Lock(const Mutex &m) : _m(const_cast<Mutex *>(&m)) { _m->lock(); }
+		ZT_ALWAYS_INLINE ~Lock() { _m->unlock(); }
 	private:
 		Mutex *const _m;
 	};
@@ -142,56 +106,19 @@ namespace ZeroTier {
 class Mutex
 {
 public:
-	inline Mutex()
-	{
-		InitializeCriticalSection(&_cs);
-	}
-
-	inline ~Mutex()
-	{
-		DeleteCriticalSection(&_cs);
-	}
-
-	inline void lock()
-	{
-		EnterCriticalSection(&_cs);
-	}
-
-	inline void unlock()
-	{
-		LeaveCriticalSection(&_cs);
-	}
-
-	inline void lock() const
-	{
-		(const_cast <Mutex *> (this))->lock();
-	}
-
-	inline void unlock() const
-	{
-		(const_cast <Mutex *> (this))->unlock();
-	}
+	ZT_ALWAYS_INLINE Mutex() { InitializeCriticalSection(&_cs); }
+	ZT_ALWAYS_INLINE ~Mutex() { DeleteCriticalSection(&_cs); }
+	ZT_ALWAYS_INLINE void lock() { EnterCriticalSection(&_cs); }
+	ZT_ALWAYS_INLINE void unlock() { LeaveCriticalSection(&_cs); }
+	ZT_ALWAYS_INLINE void lock() const { (const_cast <Mutex *> (this))->lock(); }
+	ZT_ALWAYS_INLINE void unlock() const { (const_cast <Mutex *> (this))->unlock(); }
 
 	class Lock
 	{
 	public:
-		inline Lock(Mutex &m) :
-			_m(&m)
-		{
-			m.lock();
-		}
-
-		inline Lock(const Mutex &m) :
-			_m(const_cast<Mutex *>(&m))
-		{
-			_m->lock();
-		}
-
-		inline ~Lock()
-		{
-			_m->unlock();
-		}
-
+		ZT_ALWAYS_INLINE Lock(Mutex &m) : _m(&m) { m.lock(); }
+		ZT_ALWAYS_INLINE Lock(const Mutex &m) : _m(const_cast<Mutex *>(&m)) { _m->lock(); }
+		ZT_ALWAYS_INLINE ~Lock() { _m->unlock(); }
 	private:
 		Mutex *const _m;
 	};

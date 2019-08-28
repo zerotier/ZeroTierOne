@@ -178,7 +178,7 @@ static int testCrypto()
 	}
 
 	{
-		std::cout << "[crypto] Testing and benchmarking AES-256 and GCM..." ZT_EOL_S << "  AES-256 (test vectors): "; std::cout.flush();
+		std::cout << "[crypto] Testing and benchmarking AES-256..." ZT_EOL_S << "  AES-256 (test vectors): "; std::cout.flush();
 		AES tv(AES_TEST_VECTOR_0_KEY);
 		tv.encrypt(AES_TEST_VECTOR_0_IN,(uint8_t *)buf1);
 		if (memcmp(buf1,AES_TEST_VECTOR_0_OUT,16) != 0) {
@@ -456,6 +456,60 @@ static int testCrypto()
 			return -1;
 		}
 		std::cout << "[crypto]   ECDSA Test Vector: PASS" ZT_EOL_S;
+	}
+
+	std::cout << "[crypto] Benchmarking asymmetric crypto..." ZT_EOL_S;
+	{
+		uint8_t pub[128],priv[128],hash[128],sig[128];
+		volatile uint8_t foo = 0;
+		Utils::getSecureRandom(hash,sizeof(hash));
+
+		C25519::generate(pub,priv);
+		int64_t start = OSUtils::now();
+		for(int k=0;k<1500;++k) {
+			++hash[0];
+			C25519::sign(priv,pub,hash,sizeof(hash),sig);
+			foo = sig[0];
+		}
+		int64_t end = OSUtils::now();
+		std::cout << "  Ed25519 sign: " << (1500.0 / ((double)(end - start) / 1000.0)) << " signatures/second" ZT_EOL_S;
+		start = OSUtils::now();
+		for(int k=0;k<1000;++k) {
+			++sig[0];
+			foo = (uint8_t)C25519::verify(pub,hash,sizeof(hash),sig,ZT_C25519_SIGNATURE_LEN);
+		}
+		end = OSUtils::now();
+		std::cout << "  Ed25519 verify: " << (1000.0 / ((double)(end - start) / 1000.0)) << " verifications/second" ZT_EOL_S;
+		start = OSUtils::now();
+		for(int k=0;k<1000;++k) {
+			C25519::agree(priv,pub,hash);
+			foo = hash[0];
+		}
+		end = OSUtils::now();
+		std::cout << "  C25519 ECDH: " << (1000.0 / ((double)(end - start) / 1000.0)) << " agreements/second" ZT_EOL_S;
+
+		ECC384GenerateKey(pub,priv);
+		start = OSUtils::now();
+		for(int k=0;k<1000;++k) {
+			++hash[0];
+			ECC384ECDSASign(priv,hash,sig);
+			foo = sig[0];
+		}
+		end = OSUtils::now();
+		std::cout << "  ECC P-384 sign: " << (1000.0 / ((double)(end - start) / 1000.0)) << " signatures/second" ZT_EOL_S;
+		start = OSUtils::now();
+		for(int k=0;k<1000;++k) {
+			foo = ECC384ECDSAVerify(pub,hash,sig);
+		}
+		end = OSUtils::now();
+		std::cout << "  ECC P-384 verify: " << (1000.0 / ((double)(end - start) / 1000.0)) << " verifications/second" ZT_EOL_S;
+		start = OSUtils::now();
+		for(int k=0;k<1000;++k) {
+			ECC384ECDH(pub,priv,hash);
+			foo = hash[0];
+		}
+		end = OSUtils::now();
+		std::cout << "  ECC P-384 ECDH: " << (1000.0 / ((double)(end - start) / 1000.0)) << " agreements/second" ZT_EOL_S;
 	}
 
 	return 0;
@@ -785,172 +839,6 @@ static int testOther()
 	std::cout << " " << InetAddress("0/9993").toString(buf);
 	std::cout << " " << InetAddress("").toString(buf);
 	std::cout << ZT_EOL_S;
-
-#if 0
-	std::cout << "[other] Testing Hashtable... "; std::cout.flush();
-	{
-		Hashtable<uint64_t,std::string> ht;
-		std::map<uint64_t,std::string> ref; // assume std::map works correctly :)
-		for(int x=0;x<2;++x) {
-			for(int i=0;i<77777;++i) {
-				uint64_t k = rand();
-				while ((k == 0)||(ref.count(k) > 0))
-					++k;
-				std::string v("!");
-				for(int j=0;j<(int)(k % 64);++j)
-					v.push_back("0123456789"[rand() % 10]);
-				ref[k] = v;
-				ht.set(0xffffffffffffffffULL,v);
-				std::string &vref = ht[k];
-				vref = v;
-				ht.erase(0xffffffffffffffffULL);
-			}
-			if (ht.size() != ref.size()) {
-				std::cout << "FAILED! (size mismatch, original)" ZT_EOL_S;
-				return -1;
-			}
-			{
-				Hashtable<uint64_t,std::string>::Iterator i(ht);
-				uint64_t *k = (uint64_t *)0;
-				std::string *v = (std::string *)0;
-				while(i.next(k,v)) {
-					if (ref.find(*k)->second != *v) {
-						std::cout << "FAILED! (data mismatch!)" ZT_EOL_S;
-						return -1;
-					}
-				}
-			}
-			for(std::map<uint64_t,std::string>::const_iterator i(ref.begin());i!=ref.end();++i) {
-				if (ht[i->first] != i->second) {
-					std::cout << "FAILED! (data mismatch!)" ZT_EOL_S;
-					return -1;
-				}
-			}
-
-			Hashtable<uint64_t,std::string> ht2;
-			ht2 = ht;
-			Hashtable<uint64_t,std::string> ht3(ht2);
-			if (ht2.size() != ref.size()) {
-				std::cout << "FAILED! (size mismatch, assigned)" ZT_EOL_S;
-				return -1;
-			}
-			if (ht3.size() != ref.size()) {
-				std::cout << "FAILED! (size mismatch, copied)" ZT_EOL_S;
-				return -1;
-			}
-
-			for(std::map<uint64_t,std::string>::iterator i(ref.begin());i!=ref.end();++i) {
-				std::string *v = ht.get(i->first);
-				if (!v) {
-					std::cout << "FAILED! (key " << i->first << " not found, original)" ZT_EOL_S;
-					return -1;
-				}
-				if (*v != i->second) {
-					std::cout << "FAILED! (key " << i->first << "  not equal, original)" ZT_EOL_S;
-					return -1;
-				}
-				v = ht2.get(i->first);
-				if (!v) {
-					std::cout << "FAILED! (key " << i->first << "  not found, assigned)" ZT_EOL_S;
-					return -1;
-				}
-				if (*v != i->second) {
-					std::cout << "FAILED! (key " << i->first << "  not equal, assigned)" ZT_EOL_S;
-					return -1;
-				}
-				v = ht3.get(i->first);
-				if (!v) {
-					std::cout << "FAILED! (key " << i->first << "  not found, copied)" ZT_EOL_S;
-					return -1;
-				}
-				if (*v != i->second) {
-					std::cout << "FAILED! (key " << i->first << "  not equal, copied)" ZT_EOL_S;
-					return -1;
-				}
-			}
-			{
-				uint64_t *k;
-				std::string *v;
-				Hashtable<uint64_t,std::string>::Iterator i(ht);
-				unsigned long ic = 0;
-				while (i.next(k,v)) {
-					if (ref[*k] != *v) {
-						std::cout << "FAILED! (iterate)" ZT_EOL_S;
-						return -1;
-					}
-					++ic;
-				}
-				if (ic != ht.size()) {
-					std::cout << "FAILED! (iterate coverage)" ZT_EOL_S;
-					return -1;
-				}
-			}
-			for(std::map<uint64_t,std::string>::iterator i(ref.begin());i!=ref.end();) {
-				if (!ht.get(i->first)) {
-					std::cout << "FAILED! (erase, check if exists)" ZT_EOL_S;
-					return -1;
-				}
-				ht.erase(i->first);
-				if (ht.get(i->first)) {
-					std::cout << "FAILED! (erase, check if erased)" ZT_EOL_S;
-					return -1;
-				}
-				ref.erase(i++);
-				if (ht.size() != ref.size()) {
-					std::cout << "FAILED! (erase, size)" ZT_EOL_S;
-					return -1;
-				}
-			}
-			if (!ht.empty()) {
-				std::cout << "FAILED! (erase, empty)" ZT_EOL_S;
-				return -1;
-			}
-			for(int i=0;i<10000;++i) {
-				uint64_t k = rand();
-				while ((k == 0)||(ref.count(k) > 0))
-					++k;
-				std::string v;
-				for(int j=0;j<(int)(k % 64);++j)
-					v.push_back("0123456789"[rand() % 10]);
-				ht.set(k,v);
-				ref[k] = v;
-			}
-			if (ht.size() != ref.size()) {
-				std::cout << "FAILED! (second populate)" ZT_EOL_S;
-				return -1;
-			}
-			ht.clear();
-			ref.clear();
-			if (ht.size() != ref.size()) {
-				std::cout << "FAILED! (clear)" ZT_EOL_S;
-				return -1;
-			}
-			for(int i=0;i<10000;++i) {
-				uint64_t k = rand();
-				while ((k == 0)||(ref.count(k) > 0))
-					++k;
-				std::string v;
-				for(int j=0;j<(int)(k % 64);++j)
-					v.push_back("0123456789"[rand() % 10]);
-				ht.set(k,v);
-				ref[k] = v;
-			}
-			{
-				Hashtable<uint64_t,std::string>::Iterator i(ht);
-				uint64_t *k;
-				std::string *v;
-				while (i.next(k,v))
-					ht.erase(*k);
-			}
-			ref.clear();
-			if (ht.size() != ref.size()) {
-				std::cout << "FAILED! (clear by iterate, " << ht.size() << ")" ZT_EOL_S;
-				return -1;
-			}
-		}
-	}
-	std::cout << "PASS" ZT_EOL_S;
-#endif
 
 	{
 		std::cout << "[other] Testing/fuzzing Dictionary... "; std::cout.flush();
