@@ -18,6 +18,7 @@
 #include <stdio.h>
 
 #include "Packet.hpp"
+#include "Mutex.hpp"
 
 #ifdef _MSC_VER
 #define FORCE_INLINE static __forceinline
@@ -930,6 +931,18 @@ bool Packet::uncompress()
 	}
 
 	return true;
+}
+
+uint64_t Packet::nextPacketId()
+{
+	static uint64_t ctr = 0;
+	static Mutex lock;
+	lock.lock();
+	if (unlikely(ctr == 0))
+		Utils::getSecureRandom(&ctr,sizeof(ctr));
+	const uint64_t i = ctr++;
+	lock.unlock();
+	return i;
 }
 
 } // namespace ZeroTier

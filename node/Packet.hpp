@@ -986,7 +986,7 @@ public:
 	ZT_ALWAYS_INLINE Packet() :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(ZT_PROTO_MIN_PACKET_LENGTH)
 	{
-		setAt<uint64_t>(ZT_PACKET_IDX_IV,Utils::random());
+		setAt<uint64_t>(ZT_PACKET_IDX_IV,Packet::nextPacketId());
 		(*this)[ZT_PACKET_IDX_FLAGS] = 0; // zero flags, cipher ID, and hops
 	}
 
@@ -1002,7 +1002,7 @@ public:
 	ZT_ALWAYS_INLINE Packet(const Packet &prototype,const Address &dest) :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(prototype)
 	{
-		setAt<uint64_t>(ZT_PACKET_IDX_IV,Utils::random());
+		setAt<uint64_t>(ZT_PACKET_IDX_IV,Packet::nextPacketId());
 		setDestination(dest);
 	}
 
@@ -1016,7 +1016,7 @@ public:
 	ZT_ALWAYS_INLINE Packet(const Address &dest,const Address &source,const Verb v) :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(ZT_PROTO_MIN_PACKET_LENGTH)
 	{
-		setAt<uint64_t>(ZT_PACKET_IDX_IV,Utils::random());
+		setAt<uint64_t>(ZT_PACKET_IDX_IV,Packet::nextPacketId());
 		setDestination(dest);
 		setSource(source);
 		(*this)[ZT_PACKET_IDX_FLAGS] = 0; // zero flags and hops
@@ -1033,7 +1033,7 @@ public:
 	ZT_ALWAYS_INLINE void reset(const Address &dest,const Address &source,const Verb v)
 	{
 		setSize(ZT_PROTO_MIN_PACKET_LENGTH);
-		setAt<uint64_t>(ZT_PACKET_IDX_IV,Utils::random());
+		setAt<uint64_t>(ZT_PACKET_IDX_IV,Packet::nextPacketId());
 		setDestination(dest);
 		setSource(source);
 		(*this)[ZT_PACKET_IDX_FLAGS] = 0; // zero flags, cipher ID, and hops
@@ -1047,7 +1047,7 @@ public:
 	 * technically different but otherwise identical copies of the same
 	 * packet.
 	 */
-	ZT_ALWAYS_INLINE void newInitializationVector() { setAt<uint64_t>(ZT_PACKET_IDX_IV,Utils::random()); }
+	ZT_ALWAYS_INLINE void newInitializationVector() { setAt<uint64_t>(ZT_PACKET_IDX_IV,Packet::nextPacketId()); }
 
 	/**
 	 * Set this packet's destination
@@ -1237,6 +1237,8 @@ public:
 
 private:
 	static const unsigned char ZERO_KEY[32];
+
+	static uint64_t nextPacketId();
 
 	/**
 	 * Deterministically mangle a 256-bit crypto key based on packet
