@@ -118,7 +118,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,const Packet
 					auto pById = peersByIdentity.find(id);
 					if (pById != peersByIdentity.end()) {
 						peer = pById->second;
-						printf("%s has %s (known (1))" ZT_EOL_S,ip->toString(ipstr),pkt.source().toString(astr));
+						//printf("%s has %s (known (1))" ZT_EOL_S,ip->toString(ipstr),pkt.source().toString(astr));
 					}
 				}
 				if (peer) {
@@ -140,7 +140,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,const Packet
 									std::lock_guard<std::mutex> pbv_l(peersByVirtAddr_l);
 									peersByVirtAddr[id.address()].emplace(peer);
 								}
-								printf("%s has %s (new)" ZT_EOL_S,ip->toString(ipstr),pkt.source().toString(astr));
+								//printf("%s has %s (new)" ZT_EOL_S,ip->toString(ipstr),pkt.source().toString(astr));
 							} else {
 								printf("%s HELLO rejected: invalid identity (locallyValidate() failed)" ZT_EOL_S,ip->toString(ipstr));
 								return;
@@ -166,7 +166,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,const Packet
 				for(auto p=peers->second.begin();p!=peers->second.end();++p) {
 					if (pkt.dearmor((*p)->key)) {
 						peer = (*p);
-						printf("%s has %s (known (2))" ZT_EOL_S,ip->toString(ipstr),pkt.source().toString(astr));
+						//printf("%s has %s (known (2))" ZT_EOL_S,ip->toString(ipstr),pkt.source().toString(astr));
 						break;
 					} else {
 						pkt = *inpkt; // dearmor() destroys contents of pkt
