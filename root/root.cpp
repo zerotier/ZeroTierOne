@@ -24,7 +24,7 @@
  * of your own application.
  */
 
-#include "node/Constants.hpp"
+#include "../node/Constants.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,13 +45,43 @@
 #include <netinet/ip6.h>
 #include <netinet/tcp.h>
 
+#include "../node/Packet.hpp"
+#include "../node/Utils.hpp"
+#include "../node/Address.hpp"
+#include "../node/Identity.hpp"
+#include "../node/InetAddress.hpp"
+#include "../node/Mutex.hpp"
+#include "../osdep/OSUtils.hpp"
+
 #include <string>
 #include <thread>
 #include <map>
 #include <vector>
 #include <iostream>
+#include <unordered_map>
+#include <vector>
 
-#include "include/ZeroTierOne.h"
+using namespace ZeroTier;
+
+struct PeerInfo
+{
+	InetAddress address;
+	int64_t lastReceive;
+};
+
+struct AddressHasher { ZT_ALWAYS_INLINE std::size_t operator()(const Address &a) const { return (std::size_t)a.toInt(); } };
+struct InetAddressHasher { ZT_ALWAYS_INLINE std::size_t operator()(const InetAddress &ip) const { return (std::size_t)ip.hashCode(); } };
+
+static std::unordered_map< Address,std::map< Identity,PeerInfo >,AddressHasher > peersByVirtAddr;
+static std::unordered_map< InetAddress,std::map< Identity,PeerInfo >,InetAddressHasher > peersByPhysAddr;
+static Mutex peersByVirtAddr_l;
+static Mutex peersByAddress_l;
+
+static void handlePacket(const InetAddress *const ip,const Packet *const pkt)
+{
+	char stmp[128];
+	printf("%s\n",ip->toString(stmp));
+}
 
 static int bindSocket(struct sockaddr *bindAddr)
 {
@@ -131,25 +161,39 @@ int main(int argc,char **argv)
 
 		threads.push_back(std::thread([s6]() {
 			struct sockaddr_in6 in6;
-			char buf[10000];
+			Packet pkt;
 			memset(&in6,0,sizeof(in6));
 			for(;;) {
 				socklen_t sl = sizeof(in6);
-				const int pl = (int)recvfrom(s6,buf,sizeof(buf),0,(struct sockaddr *)&in6,&sl);
+				const int pl = (int)recvfrom(s6,pkt.unsafeData(),pkt.capacity(),0,(struct sockaddr *)&in6,&sl);
 				if (pl > 0) {
-				} else break;
+					try {
+						pkt.setSize((unsigned int)pl);
+						handlePacket(reinterpret_cast<const InetAddress *>(&in6),&pkt);
+					} catch ( ... ) {
+					}
+				} else {
+					break;
+				}
 			}
 		}));
 
 		threads.push_back(std::thread([s4]() {
 			struct sockaddr_in in4;
-			char buf[10000];
+			Packet pkt;
 			memset(&in4,0,sizeof(in4));
 			for(;;) {
 				socklen_t sl = sizeof(in4);
-				const int pl = (int)recvfrom(s4,buf,sizeof(buf),0,(struct sockaddr *)&in4,&sl);
+				const int pl = (int)recvfrom(s4,pkt.unsafeData(),pkt.capacity(),0,(struct sockaddr *)&in4,&sl);
 				if (pl > 0) {
-				} else break;
+					try {
+						pkt.setSize((unsigned int)pl);
+						handlePacket(reinterpret_cast<const InetAddress *>(&in4),&pkt);
+					} catch ( ... ) {
+					}
+				} else {
+					break;
+				}
 			}
 		}));
 	}
