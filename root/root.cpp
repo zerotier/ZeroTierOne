@@ -436,11 +436,14 @@ int main(int argc,char **argv)
 				socklen_t sl = sizeof(in6);
 				const int pl = (int)recvfrom(s6,pkt.unsafeData(),pkt.capacity(),0,(struct sockaddr *)&in6,&sl);
 				if (pl > 0) {
-					try {
-						pkt.setSize((unsigned int)pl);
-						handlePacket(s6,reinterpret_cast<const InetAddress *>(&in6),pkt);
-					} catch ( ... ) {
-						printf("* unexpected exception" ZT_EOL_S);
+					if (pl >= ZT_PROTO_MIN_FRAGMENT_LENGTH) {
+						try {
+							pkt.setSize((unsigned int)pl);
+							handlePacket(s6,reinterpret_cast<const InetAddress *>(&in6),pkt);
+						} catch ( ... ) {
+							char ipstr[128];
+							printf("* unexpected exception handling packet from %s" ZT_EOL_S,reinterpret_cast<const InetAddress *>(&in6)->toString(ipstr));
+						}
 					}
 				} else {
 					break;
@@ -456,11 +459,14 @@ int main(int argc,char **argv)
 				socklen_t sl = sizeof(in4);
 				const int pl = (int)recvfrom(s4,pkt.unsafeData(),pkt.capacity(),0,(struct sockaddr *)&in4,&sl);
 				if (pl > 0) {
-					try {
-						pkt.setSize((unsigned int)pl);
-						handlePacket(s4,reinterpret_cast<const InetAddress *>(&in4),pkt);
-					} catch ( ... ) {
-						printf("* unexpected exception" ZT_EOL_S);
+					if (pl >= ZT_PROTO_MIN_FRAGMENT_LENGTH) {
+						try {
+							pkt.setSize((unsigned int)pl);
+							handlePacket(s4,reinterpret_cast<const InetAddress *>(&in4),pkt);
+						} catch ( ... ) {
+							char ipstr[128];
+							printf("* unexpected exception handling packet from %s" ZT_EOL_S,reinterpret_cast<const InetAddress *>(&in4)->toString(ipstr));
+						}
 					}
 				} else {
 					break;
