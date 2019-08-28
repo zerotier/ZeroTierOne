@@ -121,7 +121,7 @@ static void handlePacket(const InetAddress *const ip,const Packet *const inpkt)
 					}
 				} else {
 					peer.set(new PeerInfo);
-					if (id.agree(self,peer->key)) {
+					if (self.agree(id,peer->key)) {
 						if (pkt.dearmor(peer->key)) {
 							if (id.locallyValidate()) {
 								peer->id = id;
@@ -268,7 +268,7 @@ static int bindSocket(struct sockaddr *bindAddr)
 
 int main(int argc,char **argv)
 {
-	if (argc != 2) {
+	if (argc < 2) {
 		printf("Usage: zerotier-root <identity.secret> [<port>]" ZT_EOL_S);
 		return 1;
 	}
