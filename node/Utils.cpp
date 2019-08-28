@@ -143,7 +143,8 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 {
 	static Mutex globalLock;
 	static bool initialized = false;
-	static uint8_t randomBuf[131072];
+	static uint64_t randomState[1024];
+	static uint8_t randomBuf[65536];
 	static unsigned long randomPtr = sizeof(randomBuf);
 #ifdef __WINDOWS__
 	static HCRYPTPROV cryptProvider = NULL;
@@ -164,6 +165,10 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
 			exit(1);
 		}
+		if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomState),(BYTE *)randomState)) {
+			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
+			exit(1);
+		}
 		if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomBuf),(BYTE *)randomBuf)) {
 			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
 			exit(1);
@@ -172,6 +177,11 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 		int devURandomFd = ::open("/dev/urandom",O_RDONLY);
 		if (devURandomFd < 0) {
 			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
+			exit(1);
+		}
+		if ((int)::read(devURandomFd,randomState,sizeof(randomState)) != (int)sizeof(randomState)) {
+			::close(devURandomFd);
+			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\n");
 			exit(1);
 		}
 		if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
@@ -186,8 +196,14 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 
 	for(unsigned int i=0;i<bytes;++i) {
 		if (randomPtr >= sizeof(randomBuf)) {
+			for(unsigned int k=0;k<1024;++k) {
+				if (++randomState[k])
+					break;
+			}
+
 			uint8_t h[64];
-			SHA512(h,randomBuf,sizeof(randomBuf));
+			SHA512(h,randomState,sizeof(randomState));
+
 			if (AES::HW_ACCEL) {
 				AES c(h);
 				c.ctr(h + 32,randomBuf,sizeof(randomBuf),randomBuf);
@@ -195,6 +211,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 				Salsa20 c(h,h + 32);
 				c.crypt12(randomBuf,randomBuf,sizeof(randomBuf));
 			}
+
 			randomPtr = 0;
 		}
 		((uint8_t *)buf)[i] = randomBuf[randomPtr++];

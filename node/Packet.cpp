@@ -938,7 +938,7 @@ uint64_t Packet::nextPacketId()
 	static uint64_t ctr = 0;
 	static Mutex lock;
 	lock.lock();
-	while (unlikely(ctr == 0))
+	while (ctr == 0)
 		Utils::getSecureRandom(&ctr,sizeof(ctr));
 	const uint64_t i = ctr++;
 	lock.unlock();

@@ -213,6 +213,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 				}	break;
 
 				case Packet::VERB_MULTICAST_LIKE: {
+					printf("LIKE\n");
 					Mutex::Lock l(peer->multicastGroups_l);
 					for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<pkt.size();ptr+=18) {
 						const uint64_t nwid = pkt.template at<uint64_t>(ptr);
