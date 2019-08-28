@@ -261,10 +261,9 @@ static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
 	return true;
 }
 
-#ifdef __SYNOLOGY__
-bool LinuxEthernetTap::addIpSyn(std::vector<InetAddress> ips)
+bool LinuxEthernetTap::addIps(std::vector<InetAddress> ips)
 {
-	// Here we fill out interface config (ifcfg-dev) to prevent it from being killed
+#ifdef __SYNOLOGY__
 	std::string filepath = "/etc/sysconfig/network-scripts/ifcfg-"+_dev;
 	std::string cfg_contents = "DEVICE="+_dev+"\nBOOTPROTO=static";
 	int ip4=0,ip6=0,ip4_tot=0,ip6_tot=0;
@@ -292,13 +291,14 @@ bool LinuxEthernetTap::addIpSyn(std::vector<InetAddress> ips)
 		}
 	}
 	OSUtils::writeFile(filepath.c_str(), cfg_contents.c_str(), cfg_contents.length());
-	// Finaly, add IPs
+	// Finally, add IPs
 	for(int i=0; i<(int)ips.size(); i++){
 		LinuxNetLink::getInstance().addAddress(ips[i], _dev.c_str());
 	}
 	return true;
-}
 #endif // __SYNOLOGY__
+	return false;
+}
 
 bool LinuxEthernetTap::addIp(const InetAddress &ip)
 {
