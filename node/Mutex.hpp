@@ -26,7 +26,7 @@ namespace ZeroTier {
 
 #if defined(__GNUC__) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 
-// Inline ticket lock on x64 systems with GCC and CLANG (Mac, Linux) -- this is really fast as long as contention is LOW
+// Inline ticket lock with yield for x64 systems, provides much better performance when there is no contention.
 class Mutex
 {
 public:
@@ -36,6 +36,7 @@ public:
 	{
 		const uint16_t myTicket = __sync_fetch_and_add(&(const_cast<Mutex *>(this)->nextTicket),1);
 		while (nowServing != myTicket) {
+			pthread_yield_np();
 			__asm__ __volatile__("rep;nop"::);
 			__asm__ __volatile__("":::"memory");
 		}
