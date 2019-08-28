@@ -314,8 +314,20 @@ static int bindSocket(struct sockaddr *bindAddr)
 	return s;
 }
 
+void shutdownSigHandler(int sig)
+{
+	run = false;
+}
+
 int main(int argc,char **argv)
 {
+	signal(SIGTERM,shutdownSigHandler);
+	signal(SIGINT,shutdownSigHandler);
+	signal(SIGQUIT,shutdownSigHandler);
+	signal(SIGPIPE,SIG_IGN);
+	signal(SIGUSR1,SIG_IGN);
+	signal(SIGUSR2,SIG_IGN);
+
 	if (argc < 2) {
 		printf("Usage: zerotier-root <identity.secret> [<port>]" ZT_EOL_S);
 		return 1;
