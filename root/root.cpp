@@ -212,13 +212,14 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 						ip->serialize(pkt);
 						pkt.armor(peer->key,true);
 						sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+						printf("%s <- OK(HELLO)" ZT_EOL_S,ip->toString(ipstr));
 					}
 				}	break;
 
 				case Packet::VERB_MULTICAST_LIKE: {
 					printf("LIKE\n");
 					Mutex::Lock l(peer->multicastGroups_l);
-					for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<pkt.size();ptr+=18) {
+					for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;(ptr+18)<=pkt.size();ptr+=18) {
 						const uint64_t nwid = pkt.template at<uint64_t>(ptr);
 						const MulticastGroup mg(MAC(pkt.field(ptr + 8,6),6),pkt.template at<uint32_t>(ptr + 14));
 						peer->multicastGroups[nwid][mg] = now;

@@ -655,7 +655,7 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,void *tPtr,c
 	uint64_t lastNwid = 0;
 
 	// Packet contains a series of 18-byte network,MAC,ADI tuples
-	for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18) {
+	for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;(ptr+18)<=size();ptr+=18) {
 		const uint64_t nwid = at<uint64_t>(ptr);
 		if (nwid != lastNwid) {
 			lastNwid = nwid;
