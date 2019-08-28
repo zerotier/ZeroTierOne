@@ -31,6 +31,7 @@
 #include "Node.hpp"
 #include "Peer.hpp"
 #include "Trace.hpp"
+#include "ScopedPtr.hpp"
 
 #include <set>
 
@@ -561,22 +562,20 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 		tmp[0] = nwid; tmp[1] = 0;
 
 		bool got = false;
-		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dict = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+		ScopedPtr< Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> > dict(new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>());
 		try {
 			int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp,dict->unsafeData(),ZT_NETWORKCONFIG_DICT_CAPACITY - 1);
 			if (n > 1) {
-				NetworkConfig *nconf = new NetworkConfig();
 				try {
+					ScopedPtr<NetworkConfig> nconf(new NetworkConfig());
 					if (nconf->fromDictionary(*dict)) {
 						this->setConfiguration(tPtr,*nconf,false);
 						_lastConfigUpdate = 0; // still want to re-request an update since it's likely outdated
 						got = true;
 					}
 				} catch ( ... ) {}
-				delete nconf;
 			}
 		} catch ( ... ) {}
-		delete dict;
 
 		if (!got)
 			RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp,"\n",1);
@@ -856,7 +855,6 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 	const unsigned int chunkLen = chunk.at<uint16_t>(ptr); ptr += 2;
 	const void *chunkData = chunk.field(ptr,chunkLen); ptr += chunkLen;
 
-	NetworkConfig *nc = (NetworkConfig *)0;
 	uint64_t configUpdateId;
 	{
 		Mutex::Lock l1(_config_l);
@@ -953,25 +951,14 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 		if (c->haveBytes == totalLength) {
 			c->data.unsafeData()[c->haveBytes] = (char)0; // ensure null terminated
 
-			nc = new NetworkConfig();
+			ScopedPtr<NetworkConfig> nc(new NetworkConfig());
 			try {
-				if (!nc->fromDictionary(c->data)) {
-					delete nc;
-					nc = (NetworkConfig *)0;
+				if (nc->fromDictionary(c->data)) {
+					this->setConfiguration(tPtr,*nc,true);
+					return configUpdateId;
 				}
-			} catch ( ... ) {
-				delete nc;
-				nc = (NetworkConfig *)0;
-			}
+			} catch ( ... ) {}
 		}
-	}
-
-	if (nc) {
-		this->setConfiguration(tPtr,*nc,true);
-		delete nc;
-		return configUpdateId;
-	} else {
-		return 0;
 	}
 
 	return 0;
@@ -1007,15 +994,14 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 		_portError = RR->node->configureVirtualNetworkPort(tPtr,_id,&_uPtr,(oldPortInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 
 		if (saveToDisk) {
-			Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *const d = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
 			try {
+				ScopedPtr< Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> > d(new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>());
 				if (nconf.toDictionary(*d,false)) {
 					uint64_t tmp[2];
 					tmp[0] = _id; tmp[1] = 0;
 					RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp,d->data(),d->sizeBytes());
 				}
 			} catch ( ... ) {}
-			delete d;
 		}
 
 		return 2; // OK and configuration has changed
@@ -1120,7 +1106,7 @@ void Network::_requestConfiguration(void *tPtr)
 			const uint16_t startPortRange = (uint16_t)((_id >> 40) & 0xffff);
 			const uint16_t endPortRange = (uint16_t)((_id >> 24) & 0xffff);
 			if (endPortRange >= startPortRange) {
-				NetworkConfig *const nconf = new NetworkConfig();
+				ScopedPtr<NetworkConfig> nconf(new NetworkConfig());
 
 				nconf->networkId = _id;
 				nconf->timestamp = RR->node->now();
@@ -1182,7 +1168,6 @@ void Network::_requestConfiguration(void *tPtr)
 				nconf->name[15] = (char)0;
 
 				this->setConfiguration(tPtr,*nconf,false);
-				delete nconf;
 			} else {
 				this->setNotFound();
 			}
@@ -1200,7 +1185,7 @@ void Network::_requestConfiguration(void *tPtr)
 			char v4ascii[24];
 			Utils::decimal(ipv4[0],v4ascii);
 
-			NetworkConfig *const nconf = new NetworkConfig();
+			ScopedPtr<NetworkConfig> nconf(new NetworkConfig());
 
 			nconf->networkId = _id;
 			nconf->timestamp = RR->node->now();
@@ -1241,32 +1226,31 @@ void Network::_requestConfiguration(void *tPtr)
 			nconf->name[nn++] = (char)0;
 
 			this->setConfiguration(tPtr,*nconf,false);
-			delete nconf;
 		}
 		return;
 	}
 
 	const Address ctrl(controller());
 
-	Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> rmd;
-	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION);
-	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_VENDOR,(uint64_t)ZT_VENDOR_ZEROTIER);
-	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION,(uint64_t)ZT_PROTO_VERSION);
-	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,(uint64_t)ZEROTIER_ONE_VERSION_MAJOR);
-	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,(uint64_t)ZEROTIER_ONE_VERSION_MINOR);
-	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,(uint64_t)ZEROTIER_ONE_VERSION_REVISION);
-	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_RULES,(uint64_t)ZT_MAX_NETWORK_RULES);
-	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_CAPABILITIES,(uint64_t)ZT_MAX_NETWORK_CAPABILITIES);
-	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_CAPABILITY_RULES,(uint64_t)ZT_MAX_CAPABILITY_RULES);
-	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_TAGS,(uint64_t)ZT_MAX_NETWORK_TAGS);
-	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS,(uint64_t)0);
-	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,(uint64_t)ZT_RULES_ENGINE_REVISION);
+	ScopedPtr< Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> > rmd(new Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY>());
+	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION);
+	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_VENDOR,(uint64_t)ZT_VENDOR_ZEROTIER);
+	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION,(uint64_t)ZT_PROTO_VERSION);
+	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,(uint64_t)ZEROTIER_ONE_VERSION_MAJOR);
+	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,(uint64_t)ZEROTIER_ONE_VERSION_MINOR);
+	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,(uint64_t)ZEROTIER_ONE_VERSION_REVISION);
+	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_RULES,(uint64_t)ZT_MAX_NETWORK_RULES);
+	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_CAPABILITIES,(uint64_t)ZT_MAX_NETWORK_CAPABILITIES);
+	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_CAPABILITY_RULES,(uint64_t)ZT_MAX_CAPABILITY_RULES);
+	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_TAGS,(uint64_t)ZT_MAX_NETWORK_TAGS);
+	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS,(uint64_t)0);
+	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,(uint64_t)ZT_RULES_ENGINE_REVISION);
 
 	RR->t->networkConfigRequestSent(tPtr,*this,ctrl);
 
 	if (ctrl == RR->identity.address()) {
 		if (RR->localNetworkController) {
-			RR->localNetworkController->request(_id,InetAddress(),0xffffffffffffffffULL,RR->identity,rmd);
+			RR->localNetworkController->request(_id,InetAddress(),0xffffffffffffffffULL,RR->identity,*rmd);
 		} else {
 			this->setNotFound();
 		}
@@ -1275,9 +1259,9 @@ void Network::_requestConfiguration(void *tPtr)
 
 	Packet outp(ctrl,RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
 	outp.append((uint64_t)_id);
-	const unsigned int rmdSize = rmd.sizeBytes();
+	const unsigned int rmdSize = rmd->sizeBytes();
 	outp.append((uint16_t)rmdSize);
-	outp.append((const void *)rmd.data(),rmdSize);
+	outp.append((const void *)rmd->data(),rmdSize);
 	if (_config) {
 		outp.append((uint64_t)_config.revision);
 		outp.append((uint64_t)_config.timestamp);
@@ -1373,7 +1357,7 @@ void Network::_announceMulticastGroups(void *tPtr,bool force)
 void Network::_announceMulticastGroupsTo(void *tPtr,const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups)
 {
 	// Assumes _myMulticastGroups_l and _memberships_l are locked
-	Packet *const outp = new Packet(peer,RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+	ScopedPtr<Packet> outp(new Packet(peer,RR->identity.address(),Packet::VERB_MULTICAST_LIKE));
 
 	for(std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {
 		if ((outp->size() + 24) >= ZT_PROTO_MAX_PACKET_LENGTH) {
@@ -1392,8 +1376,6 @@ void Network::_announceMulticastGroupsTo(void *tPtr,const Address &peer,const st
 		outp->compress();
 		RR->sw->send(tPtr,*outp,true);
 	}
-
-	delete outp;
 }
 
 std::vector<MulticastGroup> Network::_allMulticastGroups() const

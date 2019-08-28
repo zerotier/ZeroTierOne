@@ -86,7 +86,7 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_CAPACITY (1024 + (sizeof(ZT_VirtualNetworkRule) * ZT_MAX_NETWORK_RULES) + (sizeof(Capability) * ZT_MAX_NETWORK_CAPABILITIES) + (sizeof(Tag) * ZT_MAX_NETWORK_TAGS) + (sizeof(CertificateOfOwnership) * ZT_MAX_CERTIFICATES_OF_OWNERSHIP))
 
 // Dictionary capacity needed for max size network meta-data
-#define ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY 2048
+#define ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY 8192
 
 // Network config version
 #define ZT_NETWORKCONFIG_VERSION 7

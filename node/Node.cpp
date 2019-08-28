@@ -32,6 +32,7 @@
 #include "SelfAwareness.hpp"
 #include "Network.hpp"
 #include "Trace.hpp"
+#include "ScopedPtr.hpp"
 
 namespace ZeroTier {
 
@@ -558,47 +559,41 @@ void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &de
 		if (!n) return;
 		n->setConfiguration((void *)0,nc,true);
 	} else {
-		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dconf = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
-		try {
-			if (nc.toDictionary(*dconf,sendLegacyFormatConfig)) {
-				uint64_t configUpdateId = Utils::random();
-				if (!configUpdateId) ++configUpdateId;
+		ScopedPtr< Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> > dconf(new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>());
+		if (nc.toDictionary(*dconf,sendLegacyFormatConfig)) {
+			uint64_t configUpdateId = Utils::random();
+			if (!configUpdateId) ++configUpdateId;
 
-				const unsigned int totalSize = dconf->sizeBytes();
-				unsigned int chunkIndex = 0;
-				while (chunkIndex < totalSize) {
-					const unsigned int chunkLen = std::min(totalSize - chunkIndex,(unsigned int)(ZT_PROTO_MAX_PACKET_LENGTH - (ZT_PACKET_IDX_PAYLOAD + 256)));
-					Packet outp(destination,RR->identity.address(),(requestPacketId) ? Packet::VERB_OK : Packet::VERB_NETWORK_CONFIG);
-					if (requestPacketId) {
-						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-						outp.append(requestPacketId);
-					}
-
-					const unsigned int sigStart = outp.size();
-					outp.append(nwid);
-					outp.append((uint16_t)chunkLen);
-					outp.append((const void *)(dconf->data() + chunkIndex),chunkLen);
-
-					outp.append((uint8_t)0); // no flags
-					outp.append((uint64_t)configUpdateId);
-					outp.append((uint32_t)totalSize);
-					outp.append((uint32_t)chunkIndex);
-
-					uint8_t sig[256];
-					const unsigned int siglen = RR->identity.sign(reinterpret_cast<const uint8_t *>(outp.data()) + sigStart,outp.size() - sigStart,sig,sizeof(sig));
-					outp.append((uint8_t)1);
-					outp.append((uint16_t)siglen);
-					outp.append(sig,siglen);
-
-					outp.compress();
-					RR->sw->send((void *)0,outp,true);
-					chunkIndex += chunkLen;
+			const unsigned int totalSize = dconf->sizeBytes();
+			unsigned int chunkIndex = 0;
+			while (chunkIndex < totalSize) {
+				const unsigned int chunkLen = std::min(totalSize - chunkIndex,(unsigned int)(ZT_PROTO_MAX_PACKET_LENGTH - (ZT_PACKET_IDX_PAYLOAD + 256)));
+				Packet outp(destination,RR->identity.address(),(requestPacketId) ? Packet::VERB_OK : Packet::VERB_NETWORK_CONFIG);
+				if (requestPacketId) {
+					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+					outp.append(requestPacketId);
 				}
+
+				const unsigned int sigStart = outp.size();
+				outp.append(nwid);
+				outp.append((uint16_t)chunkLen);
+				outp.append((const void *)(dconf->data() + chunkIndex),chunkLen);
+
+				outp.append((uint8_t)0); // no flags
+				outp.append((uint64_t)configUpdateId);
+				outp.append((uint32_t)totalSize);
+				outp.append((uint32_t)chunkIndex);
+
+				uint8_t sig[256];
+				const unsigned int siglen = RR->identity.sign(reinterpret_cast<const uint8_t *>(outp.data()) + sigStart,outp.size() - sigStart,sig,sizeof(sig));
+				outp.append((uint8_t)1);
+				outp.append((uint16_t)siglen);
+				outp.append(sig,siglen);
+
+				outp.compress();
+				RR->sw->send((void *)0,outp,true);
+				chunkIndex += chunkLen;
 			}
-			delete dconf;
-		} catch ( ... ) {
-			delete dconf;
-			throw;
 		}
 	}
 }

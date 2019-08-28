@@ -38,6 +38,7 @@ set(core_headers
 	RingBuffer.hpp
 	RuntimeEnvironment.hpp
 	Salsa20.hpp
+	ScopedPtr.hpp
 	SelfAwareness.hpp
 	SHA512.hpp
 	SharedPtr.hpp

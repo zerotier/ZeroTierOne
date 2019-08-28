@@ -16,99 +16,93 @@
 #include <algorithm>
 
 #include "NetworkConfig.hpp"
+#include "ScopedPtr.hpp"
 
 namespace ZeroTier {
 
 bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,bool includeLegacy) const
 {
-	Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY> *tmp = new Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+	ScopedPtr< Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY> > tmp(new Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY>());
 	char tmp2[128];
 
-	try {
-		d.clear();
+	d.clear();
 
-		// Try to put the more human-readable fields first
+	// Try to put the more human-readable fields first
 
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID,this->networkId)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,this->timestamp)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA,this->credentialTimeMaxDelta)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REVISION,this->revision)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,this->issuedTo.toString(tmp2))) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_TARGET,this->remoteTraceTarget.toString(tmp2))) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_LEVEL,(uint64_t)this->remoteTraceLevel)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,this->flags)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,(uint64_t)this->multicastLimit)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint64_t)this->type)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MTU,(uint64_t)this->mtu)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID,this->networkId)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,this->timestamp)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA,this->credentialTimeMaxDelta)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REVISION,this->revision)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,this->issuedTo.toString(tmp2))) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_TARGET,this->remoteTraceTarget.toString(tmp2))) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_LEVEL,(uint64_t)this->remoteTraceLevel)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,this->flags)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,(uint64_t)this->multicastLimit)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint64_t)this->type)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name)) return false;
+	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MTU,(uint64_t)this->mtu)) return false;
 
-		// Then add binary blobs
+	// Then add binary blobs
 
-		if (this->com) {
-			tmp->clear();
-			this->com.serialize(*tmp);
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_COM,*tmp)) return false;
-		}
-
+	if (this->com) {
 		tmp->clear();
-		for(unsigned int i=0;i<this->capabilityCount;++i)
-			this->capabilities[i].serialize(*tmp);
-		if (tmp->size()) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES,*tmp)) return false;
-		}
+		this->com.serialize(*tmp);
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_COM,*tmp)) return false;
+	}
 
+	tmp->clear();
+	for(unsigned int i=0;i<this->capabilityCount;++i)
+		this->capabilities[i].serialize(*tmp);
+	if (tmp->size()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES,*tmp)) return false;
+	}
+
+	tmp->clear();
+	for(unsigned int i=0;i<this->tagCount;++i)
+		this->tags[i].serialize(*tmp);
+	if (tmp->size()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TAGS,*tmp)) return false;
+	}
+
+	tmp->clear();
+	for(unsigned int i=0;i<this->certificateOfOwnershipCount;++i)
+		this->certificatesOfOwnership[i].serialize(*tmp);
+	if (tmp->size()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP,*tmp)) return false;
+	}
+
+	tmp->clear();
+	for(unsigned int i=0;i<this->specialistCount;++i)
+		tmp->append((uint64_t)this->specialists[i]);
+	if (tmp->size()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_SPECIALISTS,*tmp)) return false;
+	}
+
+	tmp->clear();
+	for(unsigned int i=0;i<this->routeCount;++i) {
+		reinterpret_cast<const InetAddress *>(&(this->routes[i].target))->serialize(*tmp);
+		reinterpret_cast<const InetAddress *>(&(this->routes[i].via))->serialize(*tmp);
+		tmp->append((uint16_t)this->routes[i].flags);
+		tmp->append((uint16_t)this->routes[i].metric);
+	}
+	if (tmp->size()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ROUTES,*tmp)) return false;
+	}
+
+	tmp->clear();
+	for(unsigned int i=0;i<this->staticIpCount;++i)
+		this->staticIps[i].serialize(*tmp);
+	if (tmp->size()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS,*tmp)) return false;
+	}
+
+	if (this->ruleCount) {
 		tmp->clear();
-		for(unsigned int i=0;i<this->tagCount;++i)
-			this->tags[i].serialize(*tmp);
+		Capability::serializeRules(*tmp,rules,ruleCount);
 		if (tmp->size()) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TAGS,*tmp)) return false;
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_RULES,*tmp)) return false;
 		}
-
-		tmp->clear();
-		for(unsigned int i=0;i<this->certificateOfOwnershipCount;++i)
-			this->certificatesOfOwnership[i].serialize(*tmp);
-		if (tmp->size()) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP,*tmp)) return false;
-		}
-
-		tmp->clear();
-		for(unsigned int i=0;i<this->specialistCount;++i)
-			tmp->append((uint64_t)this->specialists[i]);
-		if (tmp->size()) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_SPECIALISTS,*tmp)) return false;
-		}
-
-		tmp->clear();
-		for(unsigned int i=0;i<this->routeCount;++i) {
-			reinterpret_cast<const InetAddress *>(&(this->routes[i].target))->serialize(*tmp);
-			reinterpret_cast<const InetAddress *>(&(this->routes[i].via))->serialize(*tmp);
-			tmp->append((uint16_t)this->routes[i].flags);
-			tmp->append((uint16_t)this->routes[i].metric);
-		}
-		if (tmp->size()) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ROUTES,*tmp)) return false;
-		}
-
-		tmp->clear();
-		for(unsigned int i=0;i<this->staticIpCount;++i)
-			this->staticIps[i].serialize(*tmp);
-		if (tmp->size()) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS,*tmp)) return false;
-		}
-
-		if (this->ruleCount) {
-			tmp->clear();
-			Capability::serializeRules(*tmp,rules,ruleCount);
-			if (tmp->size()) {
-				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_RULES,*tmp)) return false;
-			}
-		}
-
-		delete tmp;
-	} catch ( ... ) {
-		delete tmp;
-		throw;
 	}
 
 	return true;
@@ -117,25 +111,21 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d)
 {
 	static const NetworkConfig NIL_NC;
-	Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY> *const tmp = new Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY>();
+	ScopedPtr< Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY> > tmp(new Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY>());
 
 	try {
 		*this = NIL_NC;
 
 		// Fields that are always present, new or old
 		this->networkId = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID,0);
-		if (!this->networkId) {
-			delete tmp;
+		if (!this->networkId)
 			return false;
-		}
 		this->timestamp = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,0);
 		this->credentialTimeMaxDelta = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA,0);
 		this->revision = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_REVISION,0);
 		this->issuedTo = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,0);
-		if (!this->issuedTo) {
-			delete tmp;
+		if (!this->issuedTo)
 			return false;
-		}
 		this->remoteTraceTarget = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_TARGET);
 		this->remoteTraceLevel = (Trace::Level)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_LEVEL);
 		this->multicastLimit = (unsigned int)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,0);
@@ -148,7 +138,6 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 			this->mtu = ZT_MAX_MTU;
 
 		if (d.getUI(ZT_NETWORKCONFIG_DICT_KEY_VERSION,0) < 6) {
-			delete tmp;
 			return false;
 		} else {
 			// Otherwise we can use the new fields
@@ -228,10 +217,8 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 			}
 		}
 
-		delete tmp;
 		return true;
 	} catch ( ... ) {
-		delete tmp;
 		return false;
 	}
 }

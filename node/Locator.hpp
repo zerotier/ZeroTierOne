@@ -21,6 +21,7 @@
 #include "Buffer.hpp"
 #include "SHA512.hpp"
 #include "Str.hpp"
+#include "ScopedPtr.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -101,14 +102,12 @@ public:
 		} else {
 			_signedBy = signingId;
 		}
-		Buffer<65536> *tmp = new Buffer<65536>();
 		try {
+			ScopedPtr< Buffer<65536> > tmp(new Buffer<65536>());
 			serialize(*tmp,true);
 			_signatureLength = signingId.sign(tmp->data(),tmp->size(),_signature,ZT_SIGNATURE_BUFFER_SIZE);
-			delete tmp;
 			return (_signatureLength > 0);
 		} catch ( ... ) {
-			delete tmp;
 			return false;
 		}
 	}
@@ -120,15 +119,12 @@ public:
 	{
 		if ((_signatureLength == 0)||(_signatureLength > sizeof(_signature)))
 			return false;
-		Buffer<65536> *tmp = nullptr;
 		try {
-			tmp = new Buffer<65536>();
+			ScopedPtr< Buffer<65536> > tmp(new Buffer<65536>());
 			serialize(*tmp,true);
 			const bool ok = (_signedBy) ? _signedBy.verify(tmp->data(),tmp->size(),_signature,_signatureLength) : _id.verify(tmp->data(),tmp->size(),_signature,_signatureLength);
-			delete tmp;
 			return ok;
 		} catch ( ... ) {
-			if (tmp) delete tmp;
 			return false;
 		}
 	}
@@ -150,7 +146,7 @@ public:
 		uint8_t s384[48];
 		char enc[256];
 
-		Buffer<65536> *const tmp = new Buffer<65536>();
+		ScopedPtr< Buffer<65536> > tmp(new Buffer<65536>());
 		serialize(*tmp,false);
 		SHA384(s384,tmp->data(),tmp->size());
 		ECC384ECDSASign(p384SigningKeyPrivate,s384,((uint8_t *)tmp->unsafeData()) + tmp->size());
@@ -172,7 +168,6 @@ public:
 			++txtRecNo;
 		}
 
-		delete tmp;
 		return txtRecords;
 	}
 
@@ -192,7 +187,6 @@ public:
 	inline bool decodeTxtRecords(I start,I end,const uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE])
 	{
 		uint8_t dec[256],s384[48];
-		Buffer<65536> *tmp = nullptr;
 		try {
 			std::vector<Str> txtRecords;
 			while (start != end) {
@@ -206,26 +200,22 @@ public:
 				return false;
 			std::sort(txtRecords.begin(),txtRecords.end());
 
-			tmp = new Buffer<65536>();
+			ScopedPtr< Buffer<65536> > tmp(new Buffer<65536>());
 			for(std::vector<Str>::const_iterator i(txtRecords.begin());i!=txtRecords.end();++i)
 				tmp->append(dec,Utils::b64d(i->c_str() + 2,dec,sizeof(dec)));
 
 			if (tmp->size() <= ZT_ECC384_SIGNATURE_SIZE) {
-				delete tmp;
 				return false;
 			}
 			SHA384(s384,tmp->data(),tmp->size() - ZT_ECC384_SIGNATURE_SIZE);
 			if (!ECC384ECDSAVerify(p384SigningKeyPublic,s384,((const uint8_t *)tmp->data()) + (tmp->size() - ZT_ECC384_SIGNATURE_SIZE))) {
-				delete tmp;
 				return false;
 			}
 
 			deserialize(*tmp,0);
-			delete tmp;
 
 			return verify();
 		} catch ( ... ) {
-			if (tmp) delete tmp;
 			return false;
 		}
 	}

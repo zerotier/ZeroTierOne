@@ -22,6 +22,7 @@
 #include "InetAddress.hpp"
 #include "RingBuffer.hpp"
 #include "Utils.hpp"
+#include "ScopedPtr.hpp"
 
 namespace ZeroTier {
 
@@ -173,7 +174,7 @@ void Peer::received(
 		if (pathsToPush.size() > 0) {
 			std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
 			while (p != pathsToPush.end()) {
-				Packet *const outp = new Packet(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
+				ScopedPtr<Packet> outp(new Packet(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS));
 				outp->addSize(2); // leave room for count
 				unsigned int count = 0;
 				while ((p != pathsToPush.end())&&((outp->size() + 24) < 1200)) {
@@ -205,7 +206,6 @@ void Peer::received(
 					outp->armor(_key,true);
 					path->send(RR,tPtr,outp->data(),outp->size(),now);
 				}
-				delete outp;
 			}
 		}
 	}

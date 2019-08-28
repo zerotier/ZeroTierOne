@@ -21,6 +21,7 @@
 #include "Revocation.hpp"
 #include "Switch.hpp"
 #include "Network.hpp"
+#include "ScopedPtr.hpp"
 
 namespace ZeroTier {
 
@@ -37,10 +38,9 @@ static inline Credential::VerifyResult _credVerify(const RuntimeEnvironment *con
 		return Credential::VERIFY_NEED_IDENTITY;
 	}
 	try {
-		Buffer<(sizeof(CRED) + 64)> *const tmp = new Buffer<(sizeof(CRED) + 64)>();
+		ScopedPtr< Buffer<(sizeof(CRED) + 64)> > tmp(new Buffer<(sizeof(CRED) + 64)>());
 		credential.serialize(*tmp,true);
 		const Credential::VerifyResult result = (id.verify(tmp->data(),tmp->size(),credential.signature(),credential.signatureLength()) ? Credential::VERIFY_OK : Credential::VERIFY_BAD_SIGNATURE);
-		delete tmp;
 		return result;
 	} catch ( ... ) {}
 	return Credential::VERIFY_BAD_SIGNATURE;
