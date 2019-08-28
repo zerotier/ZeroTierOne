@@ -52,6 +52,7 @@
 #include "../node/InetAddress.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/SharedPtr.hpp"
+#include "../node/MulticastGroup.hpp"
 #include "../osdep/OSUtils.hpp"
 
 #include <string>
@@ -67,20 +68,25 @@
 
 using namespace ZeroTier;
 
+struct IdentityHasher { ZT_ALWAYS_INLINE std::size_t operator()(const Identity &id) const { return (std::size_t)id.hashCode(); } };
+struct AddressHasher { ZT_ALWAYS_INLINE std::size_t operator()(const Address &a) const { return (std::size_t)a.toInt(); } };
+struct InetAddressHasher { ZT_ALWAYS_INLINE std::size_t operator()(const InetAddress &ip) const { return (std::size_t)ip.hashCode(); } };
+struct MulticastGroupHasher { ZT_ALWAYS_INLINE std::size_t operator()(const MulticastGroup &mg) const { return (std::size_t)mg.hashCode(); } };
+
 struct PeerInfo
 {
 	Identity id;
 	uint8_t key[32];
 	InetAddress ip4,ip6;
 	int64_t lastReceive;
+
+	std::unordered_map< uint64_t,std::unordered_map< MulticastGroup,int64_t,MulticastGroupHasher > > multicastGroups;
+	Mutex multicastGroups_l;
+
 	AtomicCounter __refCount;
 
 	ZT_ALWAYS_INLINE ~PeerInfo() { Utils::burn(key,sizeof(key)); }
 };
-
-struct IdentityHasher { ZT_ALWAYS_INLINE std::size_t operator()(const Identity &id) const { return (std::size_t)id.hashCode(); } };
-struct AddressHasher { ZT_ALWAYS_INLINE std::size_t operator()(const Address &a) const { return (std::size_t)a.toInt(); } };
-struct InetAddressHasher { ZT_ALWAYS_INLINE std::size_t operator()(const InetAddress &ip) const { return (std::size_t)ip.hashCode(); } };
 
 static Identity self;
 static std::atomic_bool run;
@@ -91,10 +97,10 @@ static std::mutex peersByIdentity_l;
 static std::mutex peersByVirtAddr_l;
 static std::mutex peersByPhysAddr_l;
 
-static void handlePacket(const InetAddress *const ip,const Packet *const inpkt)
+static void handlePacket(const int sock,const InetAddress *const ip,const Packet *const inpkt)
 {
 	Packet pkt(*inpkt);
-	char ipstr[128],ipstr2[128],astr[32];
+	char ipstr[128],ipstr2[128],astr[32],tmpstr[256];
 	const bool fragment = pkt[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR;
 
 	// See if this is destined for us and isn't a fragment / fragmented. (No packets
@@ -112,6 +118,7 @@ static void handlePacket(const InetAddress *const ip,const Packet *const inpkt)
 					auto pById = peersByIdentity.find(id);
 					if (pById != peersByIdentity.end()) {
 						peer = pById->second;
+						printf("%s has %s (known (1))" ZT_EOL_S,ip->toString(ipstr),pkt.source().toString(astr));
 					}
 				}
 				if (peer) {
@@ -129,6 +136,11 @@ static void handlePacket(const InetAddress *const ip,const Packet *const inpkt)
 									std::lock_guard<std::mutex> pbi_l(peersByIdentity_l);
 									peersByIdentity.emplace(id,peer);
 								}
+								{
+									std::lock_guard<std::mutex> pbv_l(peersByVirtAddr_l);
+									peersByVirtAddr[id.address()].emplace(peer);
+								}
+								printf("%s has %s (new)" ZT_EOL_S,ip->toString(ipstr),pkt.source().toString(astr));
 							} else {
 								printf("%s HELLO rejected: invalid identity (locallyValidate() failed)" ZT_EOL_S,ip->toString(ipstr));
 								return;
@@ -154,6 +166,7 @@ static void handlePacket(const InetAddress *const ip,const Packet *const inpkt)
 				for(auto p=peers->second.begin();p!=peers->second.end();++p) {
 					if (pkt.dearmor((*p)->key)) {
 						peer = (*p);
+						printf("%s has %s (known (2))" ZT_EOL_S,ip->toString(ipstr),pkt.source().toString(astr));
 						break;
 					} else {
 						pkt = *inpkt; // dearmor() destroys contents of pkt
@@ -179,9 +192,43 @@ static void handlePacket(const InetAddress *const ip,const Packet *const inpkt)
 				peersByPhysAddr[ip].emplace(peer);
 			}
 
-			peer->lastReceive = OSUtils::now();
+			const int64_t now = OSUtils::now();
+			peer->lastReceive = now;
 
-			printf("%s has %s" ZT_EOL_S,ip->toString(ipstr),pkt.source().toString(astr));
+			switch(pkt.verb()) {
+				case Packet::VERB_HELLO: {
+					const uint64_t origId = pkt.packetId();
+					const uint64_t ts = pkt.template at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
+					pkt.reset(pkt.source(),self.address(),Packet::VERB_OK);
+					pkt.append((uint8_t)Packet::VERB_HELLO);
+					pkt.append(origId);
+					pkt.append(ts);
+					pkt.append((uint8_t)ZT_PROTO_VERSION);
+					pkt.append((uint16_t)1);
+					pkt.append((uint16_t)9);
+					pkt.append((uint16_t)0);
+					ip->serialize(pkt);
+					pkt.armor(peer->key,true);
+					//sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+				}	break;
+
+				case Packet::VERB_MULTICAST_LIKE: {
+					Mutex::Lock l(peer->multicastGroups_l);
+					for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<pkt.size();ptr+=18) {
+						const uint64_t nwid = pkt.template at<uint64_t>(ptr);
+						const MulticastGroup mg(MAC(pkt.field(ptr + 8,6),6),pkt.template at<uint32_t>(ptr + 14));
+						peer->multicastGroups[nwid][mg] = now;
+						printf("%s subscribes to %s/%.8lx on network %.16llx",ip->toString(ipstr),mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
+					}
+				}	break;
+
+				case Packet::VERB_MULTICAST_GATHER: {
+				}	break;
+
+				default:
+					break;
+			}
+
 			return;
 		}
 	}
@@ -218,6 +265,7 @@ static void handlePacket(const InetAddress *const ip,const Packet *const inpkt)
 
 	for(auto i=toAddrs.begin();i!=toAddrs.end();++i) {
 		printf("%s -> %s for %s" ZT_EOL_S,ip->toString(ipstr),i->toString(ipstr2),pkt.destination().toString(astr));
+		//sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)&(*i),(socklen_t)((i->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
 	}
 }
 
@@ -328,7 +376,7 @@ int main(int argc,char **argv)
 				if (pl > 0) {
 					try {
 						pkt.setSize((unsigned int)pl);
-						handlePacket(reinterpret_cast<const InetAddress *>(&in6),&pkt);
+						handlePacket(s6,reinterpret_cast<const InetAddress *>(&in6),&pkt);
 					} catch ( ... ) {
 					}
 				} else {
@@ -347,7 +395,7 @@ int main(int argc,char **argv)
 				if (pl > 0) {
 					try {
 						pkt.setSize((unsigned int)pl);
-						handlePacket(reinterpret_cast<const InetAddress *>(&in4),&pkt);
+						handlePacket(s4,reinterpret_cast<const InetAddress *>(&in4),&pkt);
 					} catch ( ... ) {
 					}
 				} else {
