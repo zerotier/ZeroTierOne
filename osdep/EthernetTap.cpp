@@ -119,4 +119,13 @@ std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 EthernetTap::EthernetTap() {}
 EthernetTap::~EthernetTap() {}
 
+bool EthernetTap::addIps(std::vector<InetAddress> ips)
+{
+	for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
+		if (!addIp(*i))
+			return false;
+	}
+	return true;
+}
+
 } // namespace ZeroTier
