@@ -77,12 +77,14 @@ else(WIN32)
 			$<$<CONFIG:DEBUG>:-O0>
 			$<$<CONFIG:RELEASE>:-Ofast>
 			$<$<CONFIG:RELEASE>:-fPIE>
+			$<$<CONFIG:RELEASE>:-flto>
 			$<$<CONFIG:RELWITHDEBINFO>:-Ofast>
 			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-g>
 		)
 		add_link_options(
 			-mmacosx-version-min=10.9
+			$<$<CONFIG:RELEASE>:-flto>
 		)
 
 	elseif (
