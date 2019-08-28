@@ -36,7 +36,6 @@ public:
 	{
 		const uint16_t myTicket = __sync_fetch_and_add(&(const_cast<Mutex *>(this)->nextTicket),1);
 		while (nowServing != myTicket) {
-			pthread_yield_np();
 			__asm__ __volatile__("rep;nop"::);
 			__asm__ __volatile__("":::"memory");
 		}
