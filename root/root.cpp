@@ -277,14 +277,19 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 								auto forGroup = forNet->second.find(mg);
 								if (forGroup != forNet->second.end()) {
 									pkt.append((uint32_t)forGroup->second.size());
-									pkt.append((uint16_t)std::min(std::min((unsigned int)forGroup->second.size(),(unsigned int)65535),gatherLimit));
-									auto g = forGroup->second.begin();
+									const unsigned int countAt = pkt.size();
+									pkt.addSize(2);
+
 									unsigned int l = 0;
-									for(;((l<gatherLimit)&&(g!=forGroup->second.end()));++l,++g)
-										g->first.appendTo(pkt);
+									for(auto g=forGroup->second.begin();((l<gatherLimit)&&(g!=forGroup->second.end()));++l,++g) {
+										if (g->first != source)
+											g->first.appendTo(pkt);
+									}
+
 									if (l > 0) {
+										pkt.setAt<uint16_t>(countAt,(uint16_t)l);
 										pkt.armor(peer->key,true);
-										sendto(ip->isV4() ? v4s : v6s,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+										sendto(ip->isV4() ? v4s : v6s,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)(ip->isV4() ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
 										//printf("%s %s gathered %u subscribers to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),l,mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
 									}
 								}

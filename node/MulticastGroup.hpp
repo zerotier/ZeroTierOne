@@ -77,7 +77,7 @@ public:
 	ZT_ALWAYS_INLINE const MAC &mac() const { return _mac; }
 	ZT_ALWAYS_INLINE uint32_t adi() const { return _adi; }
 
-	ZT_ALWAYS_INLINE unsigned long hashCode() const { return (_mac.hashCode() + (unsigned long)_adi); }
+	ZT_ALWAYS_INLINE unsigned long hashCode() const { return (_mac.hashCode() ^ (unsigned long)_adi); }
 
 	ZT_ALWAYS_INLINE bool operator==(const MulticastGroup &g) const { return ((_mac == g._mac)&&(_adi == g._adi)); }
 	ZT_ALWAYS_INLINE bool operator!=(const MulticastGroup &g) const { return ((_mac != g._mac)||(_adi != g._adi)); }
@@ -92,42 +92,6 @@ public:
 	ZT_ALWAYS_INLINE bool operator>(const MulticastGroup &g) const { return (g < *this); }
 	ZT_ALWAYS_INLINE bool operator<=(const MulticastGroup &g) const { return !(g < *this); }
 	ZT_ALWAYS_INLINE bool operator>=(const MulticastGroup &g) const { return !(*this < g); }
-
-	/**
-	 * Compute a 32-bit fnv1a hash of a multicast group and a network ID
-	 *
-	 * @param mg Multicast group
-	 * @param nwid Network ID
-	 * @return 32-bit relatively-unique ID
-	 */
-	static ZT_ALWAYS_INLINE uint32_t id(const MulticastGroup &mg,const uint64_t nwid)
-	{
-		const uint32_t fnv1aPrime = 0x01000193;
-		uint32_t i = 0x811c9dc5;
-		i = (((uint32_t)(nwid >> 56) & 0xff) ^ i) * fnv1aPrime;
-		i = (((uint32_t)(nwid >> 48) & 0xff) ^ i) * fnv1aPrime;
-		i = (((uint32_t)(nwid >> 40) & 0xff) ^ i) * fnv1aPrime;
-		i = (((uint32_t)(nwid >> 32) & 0xff) ^ i) * fnv1aPrime;
-		i = (((uint32_t)(nwid >> 24) & 0xff) ^ i) * fnv1aPrime;
-		i = (((uint32_t)(nwid >> 16) & 0xff) ^ i) * fnv1aPrime;
-		i = (((uint32_t)(nwid >> 8) & 0xff) ^ i) * fnv1aPrime;
-		i = (((uint32_t)nwid & 0xff) ^ i) * fnv1aPrime;
-		const uint64_t mac = mg._mac.toInt();
-		i = (((uint32_t)(mac >> 56) & 0xff) ^ i) * fnv1aPrime;
-		i = (((uint32_t)(mac >> 48) & 0xff) ^ i) * fnv1aPrime;
-		i = (((uint32_t)(mac >> 40) & 0xff) ^ i) * fnv1aPrime;
-		i = (((uint32_t)(mac >> 32) & 0xff) ^ i) * fnv1aPrime;
-		i = (((uint32_t)(mac >> 24) & 0xff) ^ i) * fnv1aPrime;
-		i = (((uint32_t)(mac >> 16) & 0xff) ^ i) * fnv1aPrime;
-		i = (((uint32_t)(mac >> 8) & 0xff) ^ i) * fnv1aPrime;
-		i = (((uint32_t)mac & 0xff) ^ i) * fnv1aPrime;
-		const uint32_t adi = mg._adi;
-		i = (((adi >> 24) & 0xff) ^ i) * fnv1aPrime;
-		i = (((adi >> 16) & 0xff) ^ i) * fnv1aPrime;
-		i = (((adi >> 8) & 0xff) ^ i) * fnv1aPrime;
-		i = ((adi & 0xff) ^ i) * fnv1aPrime;
-		return i;
-	}
 
 private:
 	MAC _mac;
