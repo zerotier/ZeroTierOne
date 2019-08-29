@@ -1,28 +1,15 @@
 /*
- * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (c)2019 ZeroTier, Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Change Date: 2023-01-01
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * You can be released from the requirements of the license by purchasing
- * a commercial license. Buying such a license is mandatory as soon as you
- * develop commercial closed-source software that incorporates or links
- * directly against ZeroTier software without disclosing the source code
- * of your own application.
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
  */
+/****/
 
 #include "../node/Constants.hpp"
 
@@ -44,6 +31,8 @@
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet/tcp.h>
+
+#include "../ext/json/json.hpp"
 
 #include "../node/Packet.hpp"
 #include "../node/Utils.hpp"
@@ -68,6 +57,10 @@
 #include <mutex>
 
 using namespace ZeroTier;
+using json = nlohmann::json;
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
 struct IdentityHasher { ZT_ALWAYS_INLINE std::size_t operator()(const Identity &id) const { return (std::size_t)id.hashCode(); } };
 struct AddressHasher { ZT_ALWAYS_INLINE std::size_t operator()(const Address &a) const { return (std::size_t)a.toInt(); } };
@@ -107,6 +100,7 @@ struct RootPeer
 
 static Identity self;
 static std::atomic_bool run;
+static json config;
 
 static std::unordered_map< uint64_t,std::unordered_map< MulticastGroup,std::unordered_map< Address,int64_t,AddressHasher >,MulticastGroupHasher > > multicastSubscriptions;
 static std::unordered_map< Identity,SharedPtr<RootPeer>,IdentityHasher > peersByIdentity;
@@ -121,8 +115,9 @@ static std::mutex peersByPhysAddr_l;
 static std::mutex lastRendezvous_l;
 
 //////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
-static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
+static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip,Packet &pkt)
 {
 	char ipstr[128],ipstr2[128],astr[32],astr2[32],tmpstr[256];
 	const bool fragment = pkt[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR;
@@ -191,9 +186,10 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 			}
 		}
 
-		// If we found the peer, update IP and/or time.
+		// If we found the peer, update IP and/or time and handle certain key packet types that the
+		// root must concern itself with.
 		if (peer) {
-			InetAddress *const peerIp = (ip->ss_family == AF_INET) ? &(peer->ip4) : &(peer->ip6);
+			InetAddress *const peerIp = ip->isV4() ? &(peer->ip4) : &(peer->ip6);
 			if (*peerIp != ip) {
 				std::lock_guard<std::mutex> pbp_l(peersByPhysAddr_l);
 				if (*peerIp) {
@@ -226,7 +222,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 						pkt.append((uint16_t)0);
 						ip->serialize(pkt);
 						pkt.armor(peer->key,true);
-						sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+						sendto(ip->isV4() ? v4s : v6s,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
 						//printf("%s <- OK(HELLO)" ZT_EOL_S,ip->toString(ipstr));
 					} catch ( ... ) {
 						printf("* unexpected exception handling HELLO from %s" ZT_EOL_S,ip->toString(ipstr));
@@ -277,7 +273,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 									for(;((l<gatherLimit)&&(g!=forGroup->second.end()));++l,++g)
 										g->first.appendTo(pkt);
 									if (l > 0) {
-										sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+										sendto(ip->isV4() ? v4s : v6s,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
 										//printf("%s gathered %u subscribers to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),l,mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
 									}
 								}
@@ -337,9 +333,10 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 		if (sources != peersByVirtAddr.end()) {
 			for(auto a=sources->second.begin();a!=sources->second.end();++a) {
 				for(auto b=toAddrs.begin();b!=toAddrs.end();++b) {
-					if (((*a)->ip6 == *ip)&&(b->second->ip6)) {
+					if (((*a)->ip6)&&(b->second->ip6)) {
 						//printf("* introducing %s(%s) to %s(%s)" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),b->second->ip6.toString(ipstr2),dest.toString(astr2));
 
+						// Introduce source to destination (V6)
 						Packet outp(source,self.address(),Packet::VERB_RENDEZVOUS);
 						outp.append((uint8_t)0);
 						dest.appendTo(outp);
@@ -347,8 +344,9 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 						outp.append((uint8_t)16);
 						outp.append((const uint8_t *)b->second->ip6.rawIpData(),16);
 						outp.armor((*a)->key,true);
-						sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)sizeof(struct sockaddr_in6));
+						sendto(v6s,pkt.data(),pkt.size(),0,(const struct sockaddr *)&((*a)->ip6),(socklen_t)sizeof(struct sockaddr_in6));
 
+						// Introduce destination to source (V6)
 						outp.reset(dest,self.address(),Packet::VERB_RENDEZVOUS);
 						outp.append((uint8_t)0);
 						source.appendTo(outp);
@@ -356,10 +354,11 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 						outp.append((uint8_t)16);
 						outp.append((const uint8_t *)ip->rawIpData(),16);
 						outp.armor(b->second->key,true);
-						sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)&(b->second->ip6),(socklen_t)sizeof(struct sockaddr_in6));
-					} else if (((*a)->ip4 == *ip)&&(b->second->ip4)) {
+						sendto(v6s,pkt.data(),pkt.size(),0,(const struct sockaddr *)&(b->second->ip6),(socklen_t)sizeof(struct sockaddr_in6));
+					} else if (((*a)->ip4)&&(b->second->ip4)) {
 						//printf("* introducing %s(%s) to %s(%s)" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),b->second->ip4.toString(ipstr2),dest.toString(astr2));
 
+						// Introduce source to destination (V4)
 						Packet outp(source,self.address(),Packet::VERB_RENDEZVOUS);
 						outp.append((uint8_t)0);
 						dest.appendTo(outp);
@@ -367,8 +366,9 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 						outp.append((uint8_t)4);
 						outp.append((const uint8_t *)b->second->ip4.rawIpData(),4);
 						outp.armor((*a)->key,true);
-						sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)sizeof(struct sockaddr_in));
+						sendto(v4s,pkt.data(),pkt.size(),0,(const struct sockaddr *)&((*a)->ip4),(socklen_t)sizeof(struct sockaddr_in));
 
+						// Introduce destination to source (V4)
 						outp.reset(dest,self.address(),Packet::VERB_RENDEZVOUS);
 						outp.append((uint8_t)0);
 						source.appendTo(outp);
@@ -376,7 +376,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 						outp.append((uint8_t)4);
 						outp.append((const uint8_t *)ip->rawIpData(),4);
 						outp.armor(b->second->key,true);
-						sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)&(b->second->ip4),(socklen_t)sizeof(struct sockaddr_in));
+						sendto(v4s,pkt.data(),pkt.size(),0,(const struct sockaddr *)&(b->second->ip4),(socklen_t)sizeof(struct sockaddr_in));
 					}
 				}
 			}
@@ -397,10 +397,11 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 
 	for(auto i=toAddrs.begin();i!=toAddrs.end();++i) {
 		//printf("%s -> %s for %s" ZT_EOL_S,ip->toString(ipstr),i->toString(ipstr2),dest().toString(astr));
-		sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)i->first,(socklen_t)((i->first->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+		sendto(i->first->isV4() ? v4s : v6s,pkt.data(),pkt.size(),0,(const struct sockaddr *)i->first,(socklen_t)((i->first->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
 static int bindSocket(struct sockaddr *bindAddr)
@@ -448,7 +449,7 @@ static int bindSocket(struct sockaddr *bindAddr)
 	return s;
 }
 
-void shutdownSigHandler(int sig) { run = false; }
+static void shutdownSigHandler(int sig) { run = false; }
 
 int main(int argc,char **argv)
 {
@@ -458,24 +459,58 @@ int main(int argc,char **argv)
 	signal(SIGPIPE,SIG_IGN);
 	signal(SIGUSR1,SIG_IGN);
 	signal(SIGUSR2,SIG_IGN);
+	signal(SIGCHLD,SIG_IGN);
 
-	if (argc < 2) {
-		printf("Usage: zerotier-root <identity.secret> [<port>]" ZT_EOL_S);
+	if (argc < 3) {
+		printf("Usage: zerotier-root <identity.secret> <config path>" ZT_EOL_S);
 		return 1;
 	}
 
-	std::string myIdStr;
-	if (!OSUtils::readFile(argv[1],myIdStr)) {
-		printf("FATAL: cannot read identity.secret at %s" ZT_EOL_S,argv[1]);
-		return 1;
+	{
+		std::string myIdStr;
+		if (!OSUtils::readFile(argv[1],myIdStr)) {
+			printf("FATAL: cannot read identity.secret at %s" ZT_EOL_S,argv[1]);
+			return 1;
+		}
+		if (!self.fromString(myIdStr.c_str())) {
+			printf("FATAL: cannot read identity.secret at %s (invalid identity)" ZT_EOL_S,argv[1]);
+			return 1;
+		}
+		if (!self.hasPrivate()) {
+			printf("FATAL: cannot read identity.secret at %s (missing secret key)" ZT_EOL_S,argv[1]);
+			return 1;
+		}
 	}
-	if (!self.fromString(myIdStr.c_str())) {
-		printf("FATAL: cannot read identity.secret at %s (invalid identity)" ZT_EOL_S,argv[1]);
-		return 1;
+	{
+		std::string configStr;
+		if (!OSUtils::readFile(argv[2],configStr)) {
+			printf("FATAL: cannot read config file at %s" ZT_EOL_S,argv[2]);
+			return 1;
+		}
+		try {
+			config = json::parse(configStr);
+		} catch (std::exception &exc) {
+			printf("FATAL: config file at %s invalid: %s" ZT_EOL_S,argv[2],exc.what());
+			return 1;
+		} catch ( ... ) {
+			printf("FATAL: config file at %s invalid: unknown exception" ZT_EOL_S,argv[2]);
+			return 1;
+		}
+		if (!config.is_object()) {
+			printf("FATAL: config file at %s invalid: does not contain a JSON object" ZT_EOL_S,argv[2]);
+			return 1;
+		}
 	}
-	if (!self.hasPrivate()) {
-		printf("FATAL: cannot read identity.secret at %s (missing secret key)" ZT_EOL_S,argv[1]);
-		return 1;
+
+	int port = ZT_DEFAULT_PORT;
+	try {
+		int port = config["port"];
+		if ((port <= 0)||(port > 65535)) {
+			printf("FATAL: invalid port in config file %d" ZT_EOL_S,port);
+			return 1;
+		}
+	} catch ( ... ) {
+		port = ZT_DEFAULT_PORT;
 	}
 
 	unsigned int ncores = std::thread::hardware_concurrency();
@@ -490,7 +525,7 @@ int main(int argc,char **argv)
 		struct sockaddr_in6 in6;
 		memset(&in6,0,sizeof(in6));
 		in6.sin6_family = AF_INET6;
-		in6.sin6_port = htons(ZT_DEFAULT_PORT);
+		in6.sin6_port = htons((uint16_t)port);
 		const int s6 = bindSocket((struct sockaddr *)&in6);
 		if (s6 < 0) {
 			std::cout << "ERROR: unable to bind to port " << ZT_DEFAULT_PORT << ZT_EOL_S;
@@ -500,7 +535,7 @@ int main(int argc,char **argv)
 		struct sockaddr_in in4;
 		memset(&in4,0,sizeof(in4));
 		in4.sin_family = AF_INET;
-		in4.sin_port = htons(ZT_DEFAULT_PORT);
+		in4.sin_port = htons((uint16_t)port);
 		const int s4 = bindSocket((struct sockaddr *)&in4);
 		if (s4 < 0) {
 			std::cout << "ERROR: unable to bind to port " << ZT_DEFAULT_PORT << ZT_EOL_S;
@@ -510,7 +545,7 @@ int main(int argc,char **argv)
 		sockets.push_back(s6);
 		sockets.push_back(s4);
 
-		threads.push_back(std::thread([s6]() {
+		threads.push_back(std::thread([s4,s6]() {
 			struct sockaddr_in6 in6;
 			Packet pkt;
 			memset(&in6,0,sizeof(in6));
@@ -521,7 +556,7 @@ int main(int argc,char **argv)
 					if (pl >= ZT_PROTO_MIN_FRAGMENT_LENGTH) {
 						try {
 							pkt.setSize((unsigned int)pl);
-							handlePacket(s6,reinterpret_cast<const InetAddress *>(&in6),pkt);
+							handlePacket(s4,s6,reinterpret_cast<const InetAddress *>(&in6),pkt);
 						} catch ( ... ) {
 							char ipstr[128];
 							printf("* unexpected exception handling packet from %s" ZT_EOL_S,reinterpret_cast<const InetAddress *>(&in6)->toString(ipstr));
@@ -533,7 +568,7 @@ int main(int argc,char **argv)
 			}
 		}));
 
-		threads.push_back(std::thread([s4]() {
+		threads.push_back(std::thread([s4,s6]() {
 			struct sockaddr_in in4;
 			Packet pkt;
 			memset(&in4,0,sizeof(in4));
@@ -544,7 +579,7 @@ int main(int argc,char **argv)
 					if (pl >= ZT_PROTO_MIN_FRAGMENT_LENGTH) {
 						try {
 							pkt.setSize((unsigned int)pl);
-							handlePacket(s4,reinterpret_cast<const InetAddress *>(&in4),pkt);
+							handlePacket(s4,s6,reinterpret_cast<const InetAddress *>(&in4),pkt);
 						} catch ( ... ) {
 							char ipstr[128];
 							printf("* unexpected exception handling packet from %s" ZT_EOL_S,reinterpret_cast<const InetAddress *>(&in4)->toString(ipstr));
