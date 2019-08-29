@@ -155,6 +155,10 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 					peer.set(new RootPeer);
 					if (self.agree(id,peer->key)) {
 						if (pkt.dearmor(peer->key)) {
+							if (!pkt.uncompress()) {
+								printf("%s HELLO rejected: decompression failed" ZT_EOL_S,ip->toString(ipstr));
+								return;
+							}
 							peer->id = id;
 							peer->lastReceive = now;
 							peer->lastSync = 0;
@@ -180,6 +184,10 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 			if (peers != peersByVirtAddr.end()) {
 				for(auto p=peers->second.begin();p!=peers->second.end();++p) {
 					if (pkt.dearmor((*p)->key)) {
+						if (!pkt.uncompress()) {
+							printf("%s packet rejected: decompression failed" ZT_EOL_S,ip->toString(ipstr));
+							return;
+						}
 						peer = (*p);
 						//printf("%s has %s (known (2))" ZT_EOL_S,ip->toString(ipstr),source().toString(astr));
 						break;
@@ -237,8 +245,8 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;(ptr+18)<=pkt.size();ptr+=18) {
 							const uint64_t nwid = pkt.template at<uint64_t>(ptr);
 							const MulticastGroup mg(MAC(pkt.field(ptr + 8,6),6),pkt.template at<uint32_t>(ptr + 14));
-							multicastSubscriptions[nwid][mg][peer->id.address()] = now;
-							//printf("%s subscribes to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
+							multicastSubscriptions[nwid][mg][source] = now;
+							//printf("%s %s subscribes to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
 						}
 					} catch ( ... ) {
 						printf("* unexpected exception handling MULTICAST_LIKE from %s" ZT_EOL_S,ip->toString(ipstr));
@@ -253,14 +261,6 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						unsigned int gatherLimit = pkt.template at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT);
 						if (gatherLimit > 255)
 							gatherLimit = 255;
-
-						if ((flags & 0x01) != 0) {
-							try {
-								// We don't care about this but we need to skip it if present
-								CertificateOfMembership com;
-								com.deserialize(pkt,ZT_PROTO_VERB_MULTICAST_GATHER_IDX_COM);
-							} catch ( ... ) {} // discard invalid COMs
-						}
 
 						const uint64_t origId = pkt.packetId();
 						pkt.reset(source,self.address(),Packet::VERB_OK);
@@ -283,8 +283,9 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 									for(;((l<gatherLimit)&&(g!=forGroup->second.end()));++l,++g)
 										g->first.appendTo(pkt);
 									if (l > 0) {
+										pkt.armor(peer->key,true);
 										sendto(ip->isV4() ? v4s : v6s,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
-										//printf("%s gathered %u subscribers to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),l,mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
+										//printf("%s %s gathered %u subscribers to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),l,mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
 									}
 								}
 							}
