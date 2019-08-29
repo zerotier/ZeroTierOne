@@ -336,48 +336,50 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 	if (introduce) {
 		std::lock_guard<std::mutex> l(peersByVirtAddr_l);
 		auto sources = peersByVirtAddr.find(source);
-		for(auto a=sources->second.begin();a!=sources->second.end();++a) {
-			for(auto b=toAddrs.begin();b!=toAddrs.end();++b) {
-				if (((*a)->ip6 == *ip)&&(b->second->ip6)) {
-					printf("* introducing %s(%s) to %s(%s)" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),b->second->ip6.toString(ipstr2),dest.toString(astr2));
+		if (sources != peersByVirtAddr.end()) {
+			for(auto a=sources->second.begin();a!=sources->second.end();++a) {
+				for(auto b=toAddrs.begin();b!=toAddrs.end();++b) {
+					if (((*a)->ip6 == *ip)&&(b->second->ip6)) {
+						printf("* introducing %s(%s) to %s(%s)" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),b->second->ip6.toString(ipstr2),dest.toString(astr2));
 
-					Packet outp(source,self.address(),Packet::VERB_RENDEZVOUS);
-					outp.append((uint8_t)0);
-					dest.appendTo(outp);
-					outp.append((uint16_t)b->second->ip6.port());
-					outp.append((uint8_t)16);
-					outp.append((const uint8_t *)b->second->ip6.rawIpData(),16);
-					outp.armor((*a)->key,true);
-					sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)sizeof(struct sockaddr_in6));
+						Packet outp(source,self.address(),Packet::VERB_RENDEZVOUS);
+						outp.append((uint8_t)0);
+						dest.appendTo(outp);
+						outp.append((uint16_t)b->second->ip6.port());
+						outp.append((uint8_t)16);
+						outp.append((const uint8_t *)b->second->ip6.rawIpData(),16);
+						outp.armor((*a)->key,true);
+						sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)sizeof(struct sockaddr_in6));
 
-					outp.reset(dest,self.address(),Packet::VERB_RENDEZVOUS);
-					outp.append((uint8_t)0);
-					source.appendTo(outp);
-					outp.append((uint16_t)ip->port());
-					outp.append((uint8_t)16);
-					outp.append((const uint8_t *)ip->rawIpData(),16);
-					outp.armor(b->second->key,true);
-					sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)&(b->second->ip6),(socklen_t)sizeof(struct sockaddr_in6));
-				} else if (((*a)->ip4 == *ip)&&(b->second->ip4)) {
-					printf("* introducing %s(%s) to %s(%s)" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),b->second->ip4.toString(ipstr2),dest.toString(astr2));
+						outp.reset(dest,self.address(),Packet::VERB_RENDEZVOUS);
+						outp.append((uint8_t)0);
+						source.appendTo(outp);
+						outp.append((uint16_t)ip->port());
+						outp.append((uint8_t)16);
+						outp.append((const uint8_t *)ip->rawIpData(),16);
+						outp.armor(b->second->key,true);
+						sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)&(b->second->ip6),(socklen_t)sizeof(struct sockaddr_in6));
+					} else if (((*a)->ip4 == *ip)&&(b->second->ip4)) {
+						printf("* introducing %s(%s) to %s(%s)" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),b->second->ip4.toString(ipstr2),dest.toString(astr2));
 
-					Packet outp(source,self.address(),Packet::VERB_RENDEZVOUS);
-					outp.append((uint8_t)0);
-					dest.appendTo(outp);
-					outp.append((uint16_t)b->second->ip4.port());
-					outp.append((uint8_t)4);
-					outp.append((const uint8_t *)b->second->ip4.rawIpData(),4);
-					outp.armor((*a)->key,true);
-					sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)sizeof(struct sockaddr_in));
+						Packet outp(source,self.address(),Packet::VERB_RENDEZVOUS);
+						outp.append((uint8_t)0);
+						dest.appendTo(outp);
+						outp.append((uint16_t)b->second->ip4.port());
+						outp.append((uint8_t)4);
+						outp.append((const uint8_t *)b->second->ip4.rawIpData(),4);
+						outp.armor((*a)->key,true);
+						sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)ip,(socklen_t)sizeof(struct sockaddr_in));
 
-					outp.reset(dest,self.address(),Packet::VERB_RENDEZVOUS);
-					outp.append((uint8_t)0);
-					source.appendTo(outp);
-					outp.append((uint16_t)ip->port());
-					outp.append((uint8_t)4);
-					outp.append((const uint8_t *)ip->rawIpData(),4);
-					outp.armor(b->second->key,true);
-					sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)&(b->second->ip4),(socklen_t)sizeof(struct sockaddr_in));
+						outp.reset(dest,self.address(),Packet::VERB_RENDEZVOUS);
+						outp.append((uint8_t)0);
+						source.appendTo(outp);
+						outp.append((uint16_t)ip->port());
+						outp.append((uint8_t)4);
+						outp.append((const uint8_t *)ip->rawIpData(),4);
+						outp.armor(b->second->key,true);
+						sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)&(b->second->ip4),(socklen_t)sizeof(struct sockaddr_in));
+					}
 				}
 			}
 		}
