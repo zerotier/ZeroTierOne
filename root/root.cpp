@@ -42,6 +42,7 @@
 #include "../node/Mutex.hpp"
 #include "../node/SharedPtr.hpp"
 #include "../node/MulticastGroup.hpp"
+#include "../node/CertificateOfMembership.hpp"
 #include "../osdep/OSUtils.hpp"
 
 #include <string>
@@ -155,6 +156,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 					if (self.agree(id,peer->key)) {
 						if (pkt.dearmor(peer->key)) {
 							peer->id = id;
+							peer->lastReceive = now;
 							peer->lastSync = 0;
 							peersByIdentity.emplace(id,peer);
 							peersByVirtAddr[id.address()].emplace(peer);
@@ -252,6 +254,14 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						if (gatherLimit > 255)
 							gatherLimit = 255;
 
+						if ((flags & 0x01) != 0) {
+							try {
+								// We don't care about this but we need to skip it if present
+								CertificateOfMembership com;
+								com.deserialize(pkt,ZT_PROTO_VERB_MULTICAST_GATHER_IDX_COM);
+							} catch ( ... ) {} // discard invalid COMs
+						}
+
 						const uint64_t origId = pkt.packetId();
 						pkt.reset(source,self.address(),Packet::VERB_OK);
 						pkt.append((uint8_t)Packet::VERB_MULTICAST_GATHER);
@@ -312,12 +322,10 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 		auto peers = peersByVirtAddr.find(dest);
 		if (peers != peersByVirtAddr.end()) {
 			for(auto p=peers->second.begin();p!=peers->second.end();++p) {
-				if ((now - (*p)->lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT) {
-					if ((*p)->ip6) {
-						toAddrs.push_back(std::pair< InetAddress *,SharedPtr<RootPeer> >(&((*p)->ip6),*p));
-					} else if ((*p)->ip4) {
-						toAddrs.push_back(std::pair< InetAddress *,SharedPtr<RootPeer> >(&((*p)->ip4),*p));
-					}
+				if ((*p)->ip6) {
+					toAddrs.push_back(std::pair< InetAddress *,SharedPtr<RootPeer> >(&((*p)->ip6),*p));
+				} else if ((*p)->ip4) {
+					toAddrs.push_back(std::pair< InetAddress *,SharedPtr<RootPeer> >(&((*p)->ip4),*p));
 				}
 			}
 		}
@@ -396,8 +404,8 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 	}
 
 	for(auto i=toAddrs.begin();i!=toAddrs.end();++i) {
-		//printf("%s -> %s for %s" ZT_EOL_S,ip->toString(ipstr),i->toString(ipstr2),dest().toString(astr));
-		sendto(i->first->isV4() ? v4s : v6s,pkt.data(),pkt.size(),0,(const struct sockaddr *)i->first,(socklen_t)((i->first->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+		//printf("%s -> %s for %s -> %s" ZT_EOL_S,ip->toString(ipstr),i->first->toString(ipstr2),source.toString(astr),dest.toString(astr2));
+		sendto(i->first->isV4() ? v4s : v6s,pkt.data(),pkt.size(),0,(const struct sockaddr *)i->first,(socklen_t)(i->first->isV4() ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
 	}
 }
 
@@ -412,10 +420,18 @@ static int bindSocket(struct sockaddr *bindAddr)
 		return -1;
 	}
 
-	int f = 131072;
-	setsockopt(s,SOL_SOCKET,SO_RCVBUF,(const char *)&f,sizeof(f));
-	f = 131072;
-	setsockopt(s,SOL_SOCKET,SO_SNDBUF,(const char *)&f,sizeof(f));
+	int f = 1048576;
+	while (f > 16384) {
+		if (setsockopt(s,SOL_SOCKET,SO_RCVBUF,(const char *)&f,sizeof(f)) == 0)
+			break;
+		f -= 16384;
+	}
+	f = 1048576;
+	while (f > 16384) {
+		if (setsockopt(s,SOL_SOCKET,SO_SNDBUF,(const char *)&f,sizeof(f)) == 0)
+			break;
+		f -= 16384;
+	}
 
 	if (bindAddr->sa_family == AF_INET6) {
 		f = 1; setsockopt(s,IPPROTO_IPV6,IPV6_V6ONLY,(void *)&f,sizeof(f));
