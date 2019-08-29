@@ -76,7 +76,7 @@ struct MulticastGroupHasher { ZT_ALWAYS_INLINE std::size_t operator()(const Mult
 
 struct RendezvousKey
 {
-	RendezvousKey(const Address aa,const Address bb)
+	RendezvousKey(const Address &aa,const Address &bb)
 	{
 		if (aa > bb) {
 			a = aa;
@@ -120,6 +120,8 @@ static std::mutex peersByVirtAddr_l;
 static std::mutex peersByPhysAddr_l;
 static std::mutex lastRendezvous_l;
 
+//////////////////////////////////////////////////////////////////////////////
+
 static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 {
 	char ipstr[128],ipstr2[128],astr[32],astr2[32],tmpstr[256];
@@ -136,10 +138,12 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 		// If this is an un-encrypted HELLO, either learn a new peer or verify
 		// that this is a peer we already know.
 		if ((pkt.cipher() == ZT_PROTO_CIPHER_SUITE__POLY1305_NONE)&&(pkt.verb() == Packet::VERB_HELLO)) {
+			std::lock_guard<std::mutex> pbi_l(peersByIdentity_l);
+			std::lock_guard<std::mutex> pbv_l(peersByVirtAddr_l);
+
 			Identity id;
 			if (id.deserialize(pkt,ZT_PROTO_VERB_HELLO_IDX_IDENTITY)) {
 				{
-					std::lock_guard<std::mutex> pbi_l(peersByIdentity_l);
 					auto pById = peersByIdentity.find(id);
 					if (pById != peersByIdentity.end()) {
 						peer = pById->second;
@@ -157,14 +161,8 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 						if (pkt.dearmor(peer->key)) {
 							peer->id = id;
 							peer->lastSync = 0;
-							{
-								std::lock_guard<std::mutex> pbi_l(peersByIdentity_l);
-								peersByIdentity.emplace(id,peer);
-							}
-							{
-								std::lock_guard<std::mutex> pbv_l(peersByVirtAddr_l);
-								peersByVirtAddr[id.address()].emplace(peer);
-							}
+							peersByIdentity.emplace(id,peer);
+							peersByVirtAddr[id.address()].emplace(peer);
 						} else {
 							printf("%s HELLO rejected: packet authentication failed" ZT_EOL_S,ip->toString(ipstr));
 							return;
@@ -340,7 +338,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 			for(auto a=sources->second.begin();a!=sources->second.end();++a) {
 				for(auto b=toAddrs.begin();b!=toAddrs.end();++b) {
 					if (((*a)->ip6 == *ip)&&(b->second->ip6)) {
-						printf("* introducing %s(%s) to %s(%s)" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),b->second->ip6.toString(ipstr2),dest.toString(astr2));
+						//printf("* introducing %s(%s) to %s(%s)" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),b->second->ip6.toString(ipstr2),dest.toString(astr2));
 
 						Packet outp(source,self.address(),Packet::VERB_RENDEZVOUS);
 						outp.append((uint8_t)0);
@@ -360,7 +358,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 						outp.armor(b->second->key,true);
 						sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)&(b->second->ip6),(socklen_t)sizeof(struct sockaddr_in6));
 					} else if (((*a)->ip4 == *ip)&&(b->second->ip4)) {
-						printf("* introducing %s(%s) to %s(%s)" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),b->second->ip4.toString(ipstr2),dest.toString(astr2));
+						//printf("* introducing %s(%s) to %s(%s)" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),b->second->ip4.toString(ipstr2),dest.toString(astr2));
 
 						Packet outp(source,self.address(),Packet::VERB_RENDEZVOUS);
 						outp.append((uint8_t)0);
@@ -402,6 +400,8 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 		sendto(sock,pkt.data(),pkt.size(),0,(const struct sockaddr *)i->first,(socklen_t)((i->first->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
 	}
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 static int bindSocket(struct sockaddr *bindAddr)
 {
@@ -448,10 +448,7 @@ static int bindSocket(struct sockaddr *bindAddr)
 	return s;
 }
 
-void shutdownSigHandler(int sig)
-{
-	run = false;
-}
+void shutdownSigHandler(int sig) { run = false; }
 
 int main(int argc,char **argv)
 {
