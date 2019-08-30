@@ -736,8 +736,13 @@ int main(int argc,char **argv)
 			std::ostringstream o;
 			o << '[';
 			{
+				bool first = true;
 				std::lock_guard<std::mutex> l(peersByIdentity_l);
 				for(auto p=peersByIdentity.begin();p!=peersByIdentity.end();++p) {
+					if (first) {
+						first = false;
+						o << ',';
+					}
 					o <<
 					"{\"address\":\"" << p->first.address().toString(tmp) << "\""
 					",\"latency\":-1"
@@ -753,6 +758,8 @@ int main(int argc,char **argv)
 						",\"trustedPathId\":0}";
 					}
 					if (p->second->ip6) {
+						if (p->second->ip4)
+							o << ',';
 						o <<
 						"{\"active\":true"
 						",\"address\":\"" << p->second->ip6.toIpString(tmp) << "\\/" << p->second->ip6.port() << "\""
