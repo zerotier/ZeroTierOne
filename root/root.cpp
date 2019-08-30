@@ -739,10 +739,9 @@ int main(int argc,char **argv)
 				bool first = true;
 				std::lock_guard<std::mutex> l(peersByIdentity_l);
 				for(auto p=peersByIdentity.begin();p!=peersByIdentity.end();++p) {
-					if (first) {
+					if (first)
 						first = false;
-						o << ',';
-					}
+					else o << ',';
 					o <<
 					"{\"address\":\"" << p->first.address().toString(tmp) << "\""
 					",\"latency\":-1"
