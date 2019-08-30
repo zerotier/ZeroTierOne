@@ -721,6 +721,16 @@ int main(int argc,char **argv)
 
 	httplib::Server apiServ;
 	threads.push_back(std::thread([&apiServ,httpPort]() {
+		apiServ.Get("/",[](const httplib::Request &req,httplib::Response &res) {
+			std::ostringstream o;
+			std::lock_guard<std::mutex> l0(peersByIdentity_l);
+			std::lock_guard<std::mutex> l1(peersByPhysAddr_l);
+			o << "ZeroTier Root Server " << ZEROTIER_ONE_VERSION_MAJOR << '.' << ZEROTIER_ONE_VERSION_MINOR << '.' << ZEROTIER_ONE_VERSION_REVISION << ZT_EOL_S;
+			o << "(c)2019 ZeroTier, Inc." ZT_EOL_S "Licensed under the ZeroTier BSL 1.1" ZT_EOL_S ZT_EOL_S;
+			o << "Peers Online:       " << peersByIdentity.size() << ZT_EOL_S;
+			o << "Physical Addresses: " << peersByPhysAddr.size() << ZT_EOL_S;
+			res.set_content(o.str(),"text/plain");
+		});
 		apiServ.Get("/peer",[](const httplib::Request &req,httplib::Response &res) {
 			char tmp[256];
 			std::ostringstream o;
