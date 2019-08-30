@@ -1,3 +1,10 @@
+zerotier-one (1.4.4-2) unstable; urgency=medium
+
+  * Re-build with new planet/world file and a flags and build process
+    update for armhf (32-bit ARM) targets.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Fri, 30 Aug 2019 01:00:00 -0700
+
 zerotier-one (1.4.4) unstable; urgency=medium
 
   * See https://github.com/zerotier/ZeroTierOne for release notes.
