@@ -22,7 +22,9 @@ Additional Use Grant: You may make use of the Licensed Work, provided you
                       generation components of the Licensed Work as a
                       for-profit service, regardless of whether the use of
                       these components is sold alone or is bundled with other
-                      services.
+                      services. Note that this does not apply to the use of
+                      ZeroTier behind the scenes to operate a service not
+                      related to ZeroTier network administration.
 
                       * Create Non-Open-Source Commercial Derviative Works
 

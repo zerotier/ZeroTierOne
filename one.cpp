@@ -82,12 +82,8 @@ using namespace ZeroTier;
 static OneService *volatile zt1Service = (OneService *)0;
 
 #define PROGRAM_NAME "ZeroTier One"
-#define COPYRIGHT_NOTICE "Copyright (c) 2011-2018 ZeroTier, Inc."
-#define LICENSE_GRANT \
-	"This is free software: you may copy, modify, and/or distribute this" ZT_EOL_S \
-	"work under the terms of the GNU General Public License, version 3 or" ZT_EOL_S \
-	"later as published by the Free Software Foundation." ZT_EOL_S \
-	"No warranty expressed or implied." ZT_EOL_S
+#define COPYRIGHT_NOTICE "Copyright (c) 2019 ZeroTier, Inc."
+#define LICENSE_GRANT "Licensed under the ZeroTier BSL 1.1 (see LICENSE.txt)"
 
 /****************************************************************************/
 /* zerotier-cli personality                                                 */
