@@ -11,7 +11,7 @@
  */
 /****/
 
-#include "../node/Constants.hpp"
+#include <Constants.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,19 +32,21 @@
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet/tcp.h>
+#include <netinet/udp.h>
 
-#include "../ext/json/json.hpp"
+#include <json.hpp>
+#include <httplib.h>
 
-#include "../node/Packet.hpp"
-#include "../node/Utils.hpp"
-#include "../node/Address.hpp"
-#include "../node/Identity.hpp"
-#include "../node/InetAddress.hpp"
-#include "../node/Mutex.hpp"
-#include "../node/SharedPtr.hpp"
-#include "../node/MulticastGroup.hpp"
-#include "../node/CertificateOfMembership.hpp"
-#include "../osdep/OSUtils.hpp"
+#include <Packet.hpp>
+#include <Utils.hpp>
+#include <Address.hpp>
+#include <Identity.hpp>
+#include <InetAddress.hpp>
+#include <Mutex.hpp>
+#include <SharedPtr.hpp>
+#include <MulticastGroup.hpp>
+#include <CertificateOfMembership.hpp>
+#include <OSUtils.hpp>
 
 #include <string>
 #include <thread>
@@ -57,6 +59,7 @@
 #include <vector>
 #include <atomic>
 #include <mutex>
+#include <sstream>
 
 using namespace ZeroTier;
 using json = nlohmann::json;
@@ -95,16 +98,18 @@ struct RendezvousKey
 
 struct RootPeer
 {
-	ZT_ALWAYS_INLINE RootPeer() : lastReceive(0),lastSync(0),lastEcho(0),lastHello(0) {}
+	ZT_ALWAYS_INLINE RootPeer() : lastSend(0),lastReceive(0),lastSync(0),lastEcho(0),lastHello(0),vMajor(-1),vMinor(-1),vRev(-1) {}
 	ZT_ALWAYS_INLINE ~RootPeer() { Utils::burn(key,sizeof(key)); }
 
 	Identity id;
 	uint8_t key[32];
 	InetAddress ip4,ip6;
+	int64_t lastSend;
 	int64_t lastReceive;
 	int64_t lastSync;
 	int64_t lastEcho;
 	int64_t lastHello;
+	int vMajor,vMinor,vRev;
 	std::mutex lock;
 
 	AtomicCounter __refCount;
@@ -233,8 +238,12 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 					try {
 						if ((now - peer->lastHello) > 1000) {
 							peer->lastHello = now;
+							peer->vMajor = (int)pkt[ZT_PROTO_VERB_HELLO_IDX_MAJOR_VERSION];
+							peer->vMinor = (int)pkt[ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION];
+							peer->vRev = (int)pkt.template at<uint16_t>(ZT_PROTO_VERB_HELLO_IDX_REVISION);
 							const uint64_t origId = pkt.packetId();
 							const uint64_t ts = pkt.template at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
+
 							pkt.reset(source,self.address(),Packet::VERB_OK);
 							pkt.append((uint8_t)Packet::VERB_HELLO);
 							pkt.append(origId);
@@ -246,6 +255,8 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 							ip->serialize(pkt);
 							pkt.armor(peer->key,true);
 							sendto(ip->isV4() ? v4s : v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+
+							peer->lastSend = now;
 						}
 					} catch ( ... ) {
 						printf("* unexpected exception handling HELLO from %s" ZT_EOL_S,ip->toString(ipstr));
@@ -263,6 +274,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 							outp.compress();
 							outp.armor(peer->key,true);
 							sendto(ip->isV4() ? v4s : v6s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+							peer->lastSend = now;
 						}
 					} catch ( ... ) {
 						printf("* unexpected exception handling ECHO from %s" ZT_EOL_S,ip->toString(ipstr));
@@ -291,6 +303,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 								(*p)->id.serialize(pkt,false);
 							pkt.armor(peer->key,true);
 							sendto(ip->isV4() ? v4s : v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+							peer->lastSend = now;
 						}
 					} catch ( ... ) {
 						printf("* unexpected exception handling ECHO from %s" ZT_EOL_S,ip->toString(ipstr));
@@ -347,6 +360,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 										pkt.setAt<uint16_t>(countAt,(uint16_t)l);
 										pkt.armor(peer->key,true);
 										sendto(ip->isV4() ? v4s : v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)ip,(socklen_t)(ip->isV4() ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+										peer->lastSend = now;
 										//printf("%s %s gathered %u subscribers to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),l,mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
 									}
 								}
@@ -416,6 +430,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						outp.append((const uint8_t *)b->second->ip6.rawIpData(),16);
 						outp.armor((*a)->key,true);
 						sendto(v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)&((*a)->ip6),(socklen_t)sizeof(struct sockaddr_in6));
+						(*a)->lastSend = now;
 
 						// Introduce destination to source (V6)
 						outp.reset(dest,self.address(),Packet::VERB_RENDEZVOUS);
@@ -426,6 +441,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						outp.append((const uint8_t *)ip->rawIpData(),16);
 						outp.armor(b->second->key,true);
 						sendto(v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)&(b->second->ip6),(socklen_t)sizeof(struct sockaddr_in6));
+						b->second->lastSend = now;
 					}
 					if (((*a)->ip4)&&(b->second->ip4)) {
 						//printf("* introducing %s(%s) to %s(%s)" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),b->second->ip4.toString(ipstr2),dest.toString(astr2));
@@ -439,6 +455,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						outp.append((const uint8_t *)b->second->ip4.rawIpData(),4);
 						outp.armor((*a)->key,true);
 						sendto(v4s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)&((*a)->ip4),(socklen_t)sizeof(struct sockaddr_in));
+						(*a)->lastSend = now;
 
 						// Introduce destination to source (V4)
 						outp.reset(dest,self.address(),Packet::VERB_RENDEZVOUS);
@@ -449,6 +466,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						outp.append((const uint8_t *)ip->rawIpData(),4);
 						outp.armor(b->second->key,true);
 						sendto(v4s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)&(b->second->ip4),(socklen_t)sizeof(struct sockaddr_in));
+						b->second->lastSend = now;
 					}
 				}
 			}
@@ -471,6 +489,8 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 		//printf("%s -> %s for %s -> %s (%u bytes)" ZT_EOL_S,ip->toString(ipstr),i->first->toString(ipstr2),source.toString(astr),dest.toString(astr2),pkt.size());
 		if (sendto(i->first->isV4() ? v4s : v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)i->first,(socklen_t)(i->first->isV4() ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6))) <= 0) {
 			printf("* write error forwarding packet to %s: %s" ZT_EOL_S,i->first->toString(ipstr),strerror(errno));
+		} else {
+			i->second->lastSend = now;
 		}
 	}
 }
@@ -478,9 +498,9 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-static int bindSocket(struct sockaddr *bindAddr)
+static int bindSocket(struct sockaddr *const bindAddr)
 {
-	int s = socket(bindAddr->sa_family,SOCK_DGRAM,0);
+	const int s = socket(bindAddr->sa_family,SOCK_DGRAM,0);
 	if (s < 0) {
 		close(s);
 		return -1;
@@ -508,26 +528,29 @@ static int bindSocket(struct sockaddr *bindAddr)
 		f = 0; setsockopt(s,IPPROTO_IPV6,IPV6_DONTFRAG,&f,sizeof(f));
 #endif
 	}
-#ifdef SO_REUSEPORT
-	f = 1; setsockopt(s,SOL_SOCKET,SO_REUSEPORT,(void *)&f,sizeof(f));
-#else
-	f = 1; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
-#endif
-	f = 1; setsockopt(s,SOL_SOCKET,SO_BROADCAST,(void *)&f,sizeof(f));
 #ifdef IP_DONTFRAG
 	f = 0; setsockopt(s,IPPROTO_IP,IP_DONTFRAG,&f,sizeof(f));
 #endif
 #ifdef IP_MTU_DISCOVER
 	f = IP_PMTUDISC_DONT; setsockopt(s,IPPROTO_IP,IP_MTU_DISCOVER,&f,sizeof(f));
 #endif
+
 #ifdef SO_NO_CHECK
 	if (bindAddr->sa_family == AF_INET) {
 		f = 1; setsockopt(s,SOL_SOCKET,SO_NO_CHECK,(void *)&f,sizeof(f));
 	}
 #endif
 
+#if defined(SO_REUSEPORT)
+	f = 1; setsockopt(s,SOL_SOCKET,SO_REUSEPORT,(void *)&f,sizeof(f));
+#endif
+#ifndef __LINUX__ // linux wants just SO_REUSEPORT
+	f = 1; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
+#endif
+
 	if (bind(s,bindAddr,(bindAddr->sa_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6))) {
 		close(s);
+		//printf("%s\n",strerror(errno));
 		return -1;
 	}
 
@@ -588,14 +611,24 @@ int main(int argc,char **argv)
 	}
 
 	int port = ZT_DEFAULT_PORT;
+	int httpPort = ZT_DEFAULT_PORT;
 	try {
-		int port = config["port"];
+		port = config["port"];
 		if ((port <= 0)||(port > 65535)) {
 			printf("FATAL: invalid port in config file %d" ZT_EOL_S,port);
 			return 1;
 		}
 	} catch ( ... ) {
 		port = ZT_DEFAULT_PORT;
+	}
+	try {
+		httpPort = config["httpPort"];
+		if ((httpPort <= 0)||(httpPort > 65535)) {
+			printf("FATAL: invalid HTTP port in config file %d" ZT_EOL_S,httpPort);
+			return 1;
+		}
+	} catch ( ... ) {
+		httpPort = ZT_DEFAULT_PORT;
 	}
 	try {
 		statsRoot = config["statsRoot"];
@@ -613,8 +646,8 @@ int main(int argc,char **argv)
 	run = true;
 
 	std::vector<std::thread> threads;
-
 	std::vector<int> sockets;
+
 	for(unsigned int tn=0;tn<ncores;++tn) {
 		struct sockaddr_in6 in6;
 		memset(&in6,0,sizeof(in6));
@@ -622,7 +655,7 @@ int main(int argc,char **argv)
 		in6.sin6_port = htons((uint16_t)port);
 		const int s6 = bindSocket((struct sockaddr *)&in6);
 		if (s6 < 0) {
-			std::cout << "ERROR: unable to bind to port " << ZT_DEFAULT_PORT << ZT_EOL_S;
+			std::cout << "ERROR: unable to bind to port " << port << ZT_EOL_S;
 			exit(1);
 		}
 
@@ -632,7 +665,7 @@ int main(int argc,char **argv)
 		in4.sin_port = htons((uint16_t)port);
 		const int s4 = bindSocket((struct sockaddr *)&in4);
 		if (s4 < 0) {
-			std::cout << "ERROR: unable to bind to port " << ZT_DEFAULT_PORT << ZT_EOL_S;
+			std::cout << "ERROR: unable to bind to port " << port << ZT_EOL_S;
 			exit(1);
 		}
 
@@ -685,6 +718,53 @@ int main(int argc,char **argv)
 			}
 		}));
 	}
+
+	httplib::Server apiServ;
+	threads.push_back(std::thread([&apiServ,httpPort]() {
+		apiServ.Get("/peer",[](const httplib::Request &req,httplib::Response &res) {
+			char tmp[256];
+			std::ostringstream o;
+			o << '[';
+			{
+				std::lock_guard<std::mutex> l(peersByIdentity_l);
+				for(auto p=peersByIdentity.begin();p!=peersByIdentity.end();++p) {
+					o <<
+					"{\"address\":\"" << p->first.address().toString(tmp) << "\""
+					",\"latency\":-1"
+					",\"paths\":[";
+					if (p->second->ip4) {
+						o <<
+						"{\"active\":true"
+						",\"address\":\"" << p->second->ip4.toIpString(tmp) << "\\/" << p->second->ip4.port() << "\""
+						",\"expired\":false"
+						",\"lastReceive\":" << p->second->lastReceive <<
+						",\"lastSend\":" << p->second->lastSend <<
+						",\"preferred\":true"
+						",\"trustedPathId\":0}";
+					}
+					if (p->second->ip6) {
+						o <<
+						"{\"active\":true"
+						",\"address\":\"" << p->second->ip6.toIpString(tmp) << "\\/" << p->second->ip6.port() << "\""
+						",\"expired\":false"
+						",\"lastReceive\":" << p->second->lastReceive <<
+						",\"lastSend\":" << p->second->lastSend <<
+						",\"preferred\":" << ((p->second->ip4) ? "false" : "true") <<
+						",\"trustedPathId\":0}";
+					}
+					o << "]"
+					",\"role\":\"LEAF\""
+					",\"version\":\"" << p->second->vMajor << '.' << p->second->vMinor << '.' << p->second->vRev << "\""
+					",\"versionMajor\":" << p->second->vMajor <<
+					",\"versionMinor\":" << p->second->vMinor <<
+					",\"versionRev\":" << p->second->vRev << "}";
+				}
+			}
+			o << ']';
+			res.set_content(o.str(),"application/json");
+		});
+		apiServ.listen("127.0.0.1",httpPort,0);
+	}));
 
 	int64_t lastCleanedMulticastSubscriptions = 0;
 	int64_t lastCleanedPeers = 0;
@@ -801,7 +881,7 @@ int main(int argc,char **argv)
 						ip6[0] = '-';
 						ip6[1] = 0;
 					}
-					fprintf(pf,"%.10llx %21s %45s %5.4f" ZT_EOL_S,(unsigned long long)(*p)->id.address().toInt(),ip4,ip6,fabs((double)(now - (*p)->lastReceive) / 1000.0));
+					fprintf(pf,"%.10llx %21s %45s %5.4f %d.%d.%d" ZT_EOL_S,(unsigned long long)(*p)->id.address().toInt(),ip4,ip6,fabs((double)(now - (*p)->lastReceive) / 1000.0),(*p)->vMajor,(*p)->vMinor,(*p)->vRev);
 				}
 				fclose(pf);
 
@@ -813,6 +893,7 @@ int main(int argc,char **argv)
 		}
 	}
 
+	apiServ.stop();
 	for(auto s=sockets.begin();s!=sockets.end();++s) {
 		shutdown(*s,SHUT_RDWR);
 		close(*s);

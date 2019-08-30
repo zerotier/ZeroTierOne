@@ -140,6 +140,7 @@ add_subdirectory(node)
 add_subdirectory(controller)
 add_subdirectory(osdep)
 add_subdirectory(service)
+add_subdirectory(root)
 
 if(WIN32)
 	add_subdirectory("windows/WinUI")
