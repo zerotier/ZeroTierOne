@@ -19,7 +19,7 @@
                     <Run Text="ZeroTier One"/>
                 </Paragraph>
                 <Paragraph TextAlignment="Center">
-                    <Run FontSize="14" Text="Version 1.4.4"/>
+                    <Run FontSize="14" Text="Version 1.4.6"/>
                     <LineBreak/>
                     <Run FontSize="14" Text="(c) 2011-2019 ZeroTier, Inc."/>
                     <LineBreak/>
