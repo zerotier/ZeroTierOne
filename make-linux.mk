@@ -267,8 +267,8 @@ ifeq ($(ZT_ARCHITECTURE),3)
 		override CXXFLAGS+=-march=armv5 -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
 	else
-		override CFLAGS+=-mcpu=arm1176jzf-s -mfpu=vfp -mno-unaligned-access
-		override CXXFLAGS+=-mcpu=arm1176jzf-s -mfpu=vfp -mno-unaligned-access
+		override CFLAGS+=-march=armv5 -mno-unaligned-access -marm
+		override CXXFLAGS+=-march=armv5 -mno-unaligned-access -marm
 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
 	endif
 endif
