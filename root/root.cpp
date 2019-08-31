@@ -351,9 +351,11 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 									pkt.addSize(2);
 
 									unsigned int l = 0;
-									for(auto g=forGroup->second.begin();((l<gatherLimit)&&(g!=forGroup->second.end()));++l,++g) {
-										if (g->first != source)
+									for(auto g=forGroup->second.begin();((l<gatherLimit)&&(g!=forGroup->second.end()));++g) {
+										if (g->first != source) {
+											++l;
 											g->first.appendTo(pkt);
+										}
 									}
 
 									if (l > 0) {
