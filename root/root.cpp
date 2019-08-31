@@ -431,7 +431,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						outp.append((uint8_t)16);
 						outp.append((const uint8_t *)b->second->ip6.rawIpData(),16);
 						outp.armor((*a)->key,true);
-						sendto(v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)&((*a)->ip6),(socklen_t)sizeof(struct sockaddr_in6));
+						sendto(v6s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&((*a)->ip6),(socklen_t)sizeof(struct sockaddr_in6));
 						(*a)->lastSend = now;
 
 						// Introduce destination to source (V6)
@@ -442,7 +442,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						outp.append((uint8_t)16);
 						outp.append((const uint8_t *)ip->rawIpData(),16);
 						outp.armor(b->second->key,true);
-						sendto(v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)&(b->second->ip6),(socklen_t)sizeof(struct sockaddr_in6));
+						sendto(v6s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&(b->second->ip6),(socklen_t)sizeof(struct sockaddr_in6));
 						b->second->lastSend = now;
 					}
 					if (((*a)->ip4)&&(b->second->ip4)) {
@@ -456,7 +456,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						outp.append((uint8_t)4);
 						outp.append((const uint8_t *)b->second->ip4.rawIpData(),4);
 						outp.armor((*a)->key,true);
-						sendto(v4s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)&((*a)->ip4),(socklen_t)sizeof(struct sockaddr_in));
+						sendto(v4s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&((*a)->ip4),(socklen_t)sizeof(struct sockaddr_in));
 						(*a)->lastSend = now;
 
 						// Introduce destination to source (V4)
@@ -467,7 +467,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						outp.append((uint8_t)4);
 						outp.append((const uint8_t *)ip->rawIpData(),4);
 						outp.armor(b->second->key,true);
-						sendto(v4s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)&(b->second->ip4),(socklen_t)sizeof(struct sockaddr_in));
+						sendto(v4s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&(b->second->ip4),(socklen_t)sizeof(struct sockaddr_in));
 						b->second->lastSend = now;
 					}
 				}
