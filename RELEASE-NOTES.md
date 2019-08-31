@@ -1,6 +1,12 @@
 ZeroTier Release Notes
 ======
 
+# 2019-08-30 -- Version 1.4.6
+
+ * Update default root list to new roots
+ * ARM32 platform fixes
+ * Fix license message in CLI
+
 # 2019-08-23 -- Version 1.4.4
 
  * Change license from GPL3 to BSL 1.1, see LICENSE.txt
