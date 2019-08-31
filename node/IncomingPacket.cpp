@@ -113,6 +113,9 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 			RR->sw->requestWhois(tPtr,RR->node->now(),sourceAddress);
 			return false;
 		}
+	} catch (int ztExcCode) {
+		RR->t->incomingPacketInvalid(tPtr,_path,packetId(),sourceAddress,hops(),verb(),"unexpected exception in tryDecode()");
+		return true;
 	} catch ( ... ) {
 		RR->t->incomingPacketInvalid(tPtr,_path,packetId(),sourceAddress,hops(),verb(),"unexpected exception in tryDecode()");
 		return true;
