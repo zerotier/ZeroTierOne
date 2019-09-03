@@ -1165,21 +1165,36 @@ int main(int argc,char **argv)
 				}
 				std::sort(sp.begin(),sp.end(),[](const SharedPtr<RootPeer> &a,const SharedPtr<RootPeer> &b) { return (a->id < b->id); });
 
-				char ip4[128],ip6[128];
-				for(auto p=sp.begin();p!=sp.end();++p) {
-					if ((*p)->ip4) {
-						(*p)->ip4.toString(ip4);
-					} else {
-						ip4[0] = '-';
-						ip4[1] = 0;
+				fprintf(pf,"Address    %21s %45s %10s %6s %10s" ZT_EOL_S,"IPv6","IPv4","Age(sec)","Vers","Fwd(KiB/s)");
+				{
+					std::lock_guard<std::mutex> lf_l(s_lastForwardedTo_l);
+					char ip4[128],ip6[128],ver[128];
+					for(auto p=sp.begin();p!=sp.end();++p) {
+						if ((*p)->ip4) {
+							(*p)->ip4.toString(ip4);
+						} else {
+							ip4[0] = '-';
+							ip4[1] = 0;
+						}
+						if ((*p)->ip6) {
+							(*p)->ip6.toString(ip6);
+						} else {
+							ip6[0] = '-';
+							ip6[1] = 0;
+						}
+						OSUtils::ztsnprintf(ver,sizeof(ver),"%d.%d.%d",(*p)->vMajor,(*p)->vMinor,(*p)->vRev);
+						double forwardingSpeed = 0.0;
+						auto lft = s_lastForwardedTo.find((*p)->id.address());
+						if (lft != s_lastForwardedTo.end())
+							forwardingSpeed = lft->second.bps.perSecond(now) / 1024.0;
+						fprintf(pf,"%.10llx %21s %45s %5.4f %6s %5.4f" ZT_EOL_S,
+							(unsigned long long)(*p)->id.address().toInt(),
+							ip4,
+							ip6,
+							fabs((double)(now - (*p)->lastReceive) / 1000.0),
+							ver,
+							forwardingSpeed);
 					}
-					if ((*p)->ip6) {
-						(*p)->ip6.toString(ip6);
-					} else {
-						ip6[0] = '-';
-						ip6[1] = 0;
-					}
-					fprintf(pf,"%.10llx %21s %45s %5.4f %d.%d.%d" ZT_EOL_S,(unsigned long long)(*p)->id.address().toInt(),ip4,ip6,fabs((double)(now - (*p)->lastReceive) / 1000.0),(*p)->vMajor,(*p)->vMinor,(*p)->vRev);
 				}
 
 				fclose(pf);
@@ -1206,7 +1221,7 @@ int main(int argc,char **argv)
 				s_lastSentRendezvous_l.lock();
 				uint64_t unsuccessfulp2p = 0;
 				for(auto lr=s_lastSentRendezvous.begin();lr!=s_lastSentRendezvous.end();++lr) {
-					if (lr->second.count > 3)
+					if (lr->second.count > 6) // 6 == two attempts per edge, one for each direction
 						++unsuccessfulp2p;
 				}
 				fprintf(sf,"Recent P2P Graph Edges     : %llu" ZT_EOL_S,(unsigned long long)s_lastSentRendezvous.size());
