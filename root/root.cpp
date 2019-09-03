@@ -23,6 +23,7 @@
  *   "name": Name of this root for documentation/UI purposes (string)
  *   "port": UDP port (int)
  *   "httpPort": Local HTTP port for basic stats (int)
+ *   "relayMaxHops": Max hops (up to 7)
  *   "statsRoot": If present, path to periodically save stats files (string)
  *   "siblings": [
  *     {
@@ -162,6 +163,7 @@ struct RootPeer
 
 static int64_t startTime;
 static std::vector<int> ports;
+static int relayMaxHops = 0;
 static Identity self;
 static std::atomic_bool run;
 static json config;
@@ -450,7 +452,19 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 	// sending a RENDEZVOUS message.
 
 	bool introduce = false;
-	if (!fragment) {
+	if (fragment) {
+		if ((int)reinterpret_cast<Packet::Fragment *>(&pkt)->incrementHops() > relayMaxHops) {
+			//printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),dest.toString(astr));
+			discardedForwardRate.log(now,pkt.size());
+			return;
+		}
+	} else {
+		if ((int)pkt.incrementHops() > relayMaxHops) {
+			//printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),dest.toString(astr));
+			discardedForwardRate.log(now,pkt.size());
+			return;
+		}
+
 		RendezvousKey rk(source,dest);
 		std::lock_guard<std::mutex> l(lastRendezvous_l);
 		int64_t &lr = lastRendezvous[rk];
@@ -557,20 +571,6 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 					}
 				}
 			}
-		}
-	}
-
-	if (fragment) {
-		if (reinterpret_cast<Packet::Fragment *>(&pkt)->incrementHops() >= ZT_RELAY_MAX_HOPS) {
-			//printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),dest.toString(astr));
-			discardedForwardRate.log(now,pkt.size());
-			return;
-		}
-	} else {
-		if (pkt.incrementHops() >= ZT_RELAY_MAX_HOPS) {
-			//printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),dest.toString(astr));
-			discardedForwardRate.log(now,pkt.size());
-			return;
 		}
 	}
 
@@ -747,6 +747,18 @@ int main(int argc,char **argv)
 	} catch ( ... ) {
 		statsRoot = "";
 	}
+
+	relayMaxHops = ZT_RELAY_MAX_HOPS;
+	try {
+		relayMaxHops = config["relayMaxHops"];
+		if (relayMaxHops > ZT_PROTO_MAX_HOPS)
+			relayMaxHops = ZT_PROTO_MAX_HOPS;
+		else if (relayMaxHops < 0)
+			relayMaxHops = 0;
+	} catch ( ... ) {
+		relayMaxHops = ZT_RELAY_MAX_HOPS;
+	}
+
 	try {
 		auto sibs = config["siblings"];
 		if (sibs.is_array()) {
