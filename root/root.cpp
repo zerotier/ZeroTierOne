@@ -1165,7 +1165,7 @@ int main(int argc,char **argv)
 				}
 				std::sort(sp.begin(),sp.end(),[](const SharedPtr<RootPeer> &a,const SharedPtr<RootPeer> &b) { return (a->id < b->id); });
 
-				fprintf(pf,"Address    %21s %45s %10s %6s %10s" ZT_EOL_S,"IPv6","IPv4","Age(sec)","Vers","Fwd(KiB/s)");
+				fprintf(pf,"Address    %21s %45s %10s %6s %10s" ZT_EOL_S,"IPv4","IPv6","Age(sec)","Vers","Fwd(KiB/s)");
 				{
 					std::lock_guard<std::mutex> lf_l(s_lastForwardedTo_l);
 					char ip4[128],ip6[128],ver[128];
