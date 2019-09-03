@@ -171,6 +171,7 @@ static Meter inputRate;
 static Meter outputRate;
 static Meter forwardRate;
 static Meter siblingForwardRate;
+static Meter discardedForwardRate;
 
 static std::vector< SharedPtr<RootPeer> > siblings;
 static std::unordered_map< uint64_t,std::unordered_map< MulticastGroup,std::unordered_map< Address,int64_t,AddressHasher >,MulticastGroupHasher > > multicastSubscriptions;
@@ -485,8 +486,10 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 			}
 		}
 	}
-	if (toAddrs.empty())
+	if (toAddrs.empty()) {
+		discardedForwardRate.log(now,pkt.size());
 		return;
+	}
 
 	if (introduce) {
 		std::lock_guard<std::mutex> l(peersByVirtAddr_l);
@@ -560,20 +563,20 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 	if (fragment) {
 		if (reinterpret_cast<Packet::Fragment *>(&pkt)->incrementHops() >= ZT_RELAY_MAX_HOPS) {
 			//printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),dest.toString(astr));
+			discardedForwardRate.log(now,pkt.size());
 			return;
 		}
 	} else {
-		if (pkt.incrementHops() >= ZT_PROTO_MAX_HOPS) {
+		if (pkt.incrementHops() >= ZT_RELAY_MAX_HOPS) {
 			//printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),dest.toString(astr));
+			discardedForwardRate.log(now,pkt.size());
 			return;
 		}
 	}
 
 	for(auto i=toAddrs.begin();i!=toAddrs.end();++i) {
 		//printf("%s -> %s for %s -> %s (%u bytes)" ZT_EOL_S,ip->toString(ipstr),i->first->toString(ipstr2),source.toString(astr),dest.toString(astr2),pkt.size());
-		if (sendto(i->first->isV4() ? v4s : v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)i->first,(socklen_t)(i->first->isV4() ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6))) <= 0) {
-			printf("* write error forwarding packet to %s: %s" ZT_EOL_S,i->first->toString(ipstr),strerror(errno));
-		} else {
+		if (sendto(i->first->isV4() ? v4s : v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)i->first,(socklen_t)(i->first->isV4() ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6))) > 0) {
 			outputRate.log(now,pkt.size());
 			forwardRate.log(now,pkt.size());
 			if (i->second->sibling)
@@ -1122,6 +1125,7 @@ int main(int argc,char **argv)
 				fprintf(sf,"Output BPS                 : %.4f" ZT_EOL_S,outputRate.perSecond(now));
 				fprintf(sf,"Forwarded BPS              : %.4f" ZT_EOL_S,forwardRate.perSecond(now));
 				fprintf(sf,"Sibling Forwarded BPS      : %.4f" ZT_EOL_S,siblingForwardRate.perSecond(now));
+				fprintf(sf,"Discarded Forward BPS      : %.4f" ZT_EOL_S,discardedForwardRate.perSecond(now));
 
 				fclose(sf);
 				std::string statsFilePath2(statsRoot);
