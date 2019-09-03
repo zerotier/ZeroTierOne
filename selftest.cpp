@@ -756,6 +756,24 @@ static int testOther()
 	char buf2[4096];
 	char buf3[1024];
 
+	std::cout << "[other] Testing Mutex and threads... "; std::cout.flush();
+	volatile unsigned long mcnt = 0;
+	Mutex mlock;
+	std::vector<std::thread> mthr;
+	for(int t=0;t<128;++t) {
+		mthr.emplace_back(std::thread([&mcnt,&mlock]() {
+			for(int i=0;i<10000;++i) {
+				mlock.lock();
+				++mcnt;
+				mlock.unlock();
+				usleep(1);
+			}
+		}));
+	}
+	for(std::vector<std::thread>::iterator t(mthr.begin());t!=mthr.end();++t)
+		t->join();
+	std::cout << "OK (" << mcnt << ")" ZT_EOL_S;
+
 	std::cout << "[other] Testing bit counting functions... "; std::cout.flush();
 	uint32_t i32 = 0;
 	uint64_t i64 = 0;

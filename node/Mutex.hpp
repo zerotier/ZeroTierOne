@@ -44,7 +44,7 @@ public:
 	};
 
 private:
-	inline Mutex(const Mutex &) {}
+	ZT_ALWAYS_INLINE Mutex(const Mutex &) {}
 	const Mutex &operator=(const Mutex &) { return *this; }
 
 	pthread_mutex_t _mh;
@@ -83,7 +83,7 @@ public:
 	};
 
 private:
-	inline Mutex(const Mutex &) {}
+	ZT_ALWAYS_INLINE Mutex(const Mutex &) {}
 	const Mutex &operator=(const Mutex &) { return *this; }
 
 	CRITICAL_SECTION _cs;
