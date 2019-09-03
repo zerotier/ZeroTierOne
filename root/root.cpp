@@ -1187,7 +1187,7 @@ int main(int argc,char **argv)
 						auto lft = s_lastForwardedTo.find((*p)->id.address());
 						if (lft != s_lastForwardedTo.end())
 							forwardingSpeed = lft->second.bps.perSecond(now) / 1024.0;
-						fprintf(pf,"%.10llx %21s %45s %5.4f %6s %5.4f" ZT_EOL_S,
+						fprintf(pf,"%.10llx %21s %45s %10.4f %6s %10.4f" ZT_EOL_S,
 							(unsigned long long)(*p)->id.address().toInt(),
 							ip4,
 							ip6,
