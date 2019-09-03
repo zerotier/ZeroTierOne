@@ -782,51 +782,53 @@ int main(int argc,char **argv)
 	}
 
 	try {
-		auto sibs = s_config["s_siblings"];
-		if (sibs.is_array()) {
-			for(long i=0;i<(long)sibs.size();++i) {
-				auto sib = sibs[i];
-				if (sib.is_object()) {
-					std::string idStr = sib["id"];
-					std::string ipStr = sib["ip"];
-					Identity id;
-					if (!id.fromString(idStr.c_str())) {
-						printf("FATAL: invalid JSON while parsing s_siblings section in config file: invalid identity in sibling entry" ZT_EOL_S);
-						return 1;
-					}
-					InetAddress ip;
-					if (!ip.fromString(ipStr.c_str())) {
-						printf("FATAL: invalid JSON while parsing s_siblings section in config file: invalid IP address in sibling entry" ZT_EOL_S);
-						return 1;
-					}
-					ip.setPort((unsigned int)sib["port"]);
-					SharedPtr<RootPeer> rp(new RootPeer);
-					rp->id = id;
-					if (!s_self.agree(id,rp->key)) {
-						printf("FATAL: invalid JSON while parsing s_siblings section in config file: invalid identity in sibling entry (unable to execute key agreement)" ZT_EOL_S);
-						return 1;
-					}
-					if (ip.isV4()) {
-						rp->ip4 = ip;
-					} else if (ip.isV6()) {
-						rp->ip6 = ip;
+		if (s_config.count("s_siblings") > 0) {
+			auto sibs = s_config["s_siblings"];
+			if (sibs.is_array()) {
+				for(long i=0;i<(long)sibs.size();++i) {
+					auto sib = sibs[i];
+					if (sib.is_object()) {
+						std::string idStr = sib["id"];
+						std::string ipStr = sib["ip"];
+						Identity id;
+						if (!id.fromString(idStr.c_str())) {
+							printf("FATAL: invalid JSON while parsing s_siblings section in config file: invalid identity in sibling entry" ZT_EOL_S);
+							return 1;
+						}
+						InetAddress ip;
+						if (!ip.fromString(ipStr.c_str())) {
+							printf("FATAL: invalid JSON while parsing s_siblings section in config file: invalid IP address in sibling entry" ZT_EOL_S);
+							return 1;
+						}
+						ip.setPort((unsigned int)sib["port"]);
+						SharedPtr<RootPeer> rp(new RootPeer);
+						rp->id = id;
+						if (!s_self.agree(id,rp->key)) {
+							printf("FATAL: invalid JSON while parsing s_siblings section in config file: invalid identity in sibling entry (unable to execute key agreement)" ZT_EOL_S);
+							return 1;
+						}
+						if (ip.isV4()) {
+							rp->ip4 = ip;
+						} else if (ip.isV6()) {
+							rp->ip6 = ip;
+						} else {
+							printf("FATAL: invalid JSON while parsing s_siblings section in config file: invalid IP address in sibling entry" ZT_EOL_S);
+							return 1;
+						}
+						rp->sibling = true;
+						s_siblings.push_back(rp);
+						s_peersByIdentity[id] = rp;
+						s_peersByVirtAddr[id.address()].insert(rp);
+						s_peersByPhysAddr[ip].insert(rp);
 					} else {
-						printf("FATAL: invalid JSON while parsing s_siblings section in config file: invalid IP address in sibling entry" ZT_EOL_S);
+						printf("FATAL: invalid JSON while parsing s_siblings section in config file: sibling entry is not a JSON object" ZT_EOL_S);
 						return 1;
 					}
-					rp->sibling = true;
-					s_siblings.push_back(rp);
-					s_peersByIdentity[id] = rp;
-					s_peersByVirtAddr[id.address()].insert(rp);
-					s_peersByPhysAddr[ip].insert(rp);
-				} else {
-					printf("FATAL: invalid JSON while parsing s_siblings section in config file: sibling entry is not a JSON object" ZT_EOL_S);
-					return 1;
 				}
+			} else {
+				printf("FATAL: invalid JSON while parsing s_siblings section in config file: s_siblings is not a JSON array" ZT_EOL_S);
+				return 1;
 			}
-		} else {
-			printf("FATAL: invalid JSON while parsing s_siblings section in config file: s_siblings is not a JSON array" ZT_EOL_S);
-			return 1;
 		}
 	} catch ( ... ) {
 		printf("FATAL: invalid JSON while parsing s_siblings section in config file: parse error" ZT_EOL_S);
