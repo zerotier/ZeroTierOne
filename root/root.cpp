@@ -558,13 +558,13 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 	}
 
 	if (fragment) {
-		if (reinterpret_cast<Packet::Fragment *>(&pkt)->incrementHops() >= ZT_PROTO_MAX_HOPS) {
-			printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),dest.toString(astr));
+		if (reinterpret_cast<Packet::Fragment *>(&pkt)->incrementHops() >= ZT_RELAY_MAX_HOPS) {
+			//printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),dest.toString(astr));
 			return;
 		}
 	} else {
 		if (pkt.incrementHops() >= ZT_PROTO_MAX_HOPS) {
-			printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),dest.toString(astr));
+			//printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),dest.toString(astr));
 			return;
 		}
 	}

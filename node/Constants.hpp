@@ -248,7 +248,7 @@
  *
  * The protocol allows up to 7, but we limit it to something smaller.
  */
-#define ZT_RELAY_MAX_HOPS 4
+#define ZT_RELAY_MAX_HOPS 3
 
 /**
  * Expire time for multicast 'likes' and indirect multicast memberships in ms
