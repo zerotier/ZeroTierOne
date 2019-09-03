@@ -458,6 +458,9 @@ public:
 		 *   <[8] in-re packet ID>
 		 *   <[1] error code>
 		 *   <[...] error-dependent payload>
+		 *
+		 * If this is not in response to a single packet then verb can be
+		 * NOP and packet ID can be zero.
 		 */
 		VERB_ERROR = 0x02,
 
@@ -962,7 +965,11 @@ public:
 		ERROR_NETWORK_ACCESS_DENIED_ = 0x07, /* extra _ at end to avoid Windows name conflict */
 
 		/* Multicasts to this group are not wanted */
-		ERROR_UNWANTED_MULTICAST = 0x08
+		ERROR_UNWANTED_MULTICAST = 0x08,
+
+		/* Cannot deliver a forwarded ZeroTier packet (e.g. hops exceeded, no routes) */
+		/* Payload: <packet ID>, <destination>, <... additional packet ID / destinations> */
+		ERROR_CANNOT_DELIVER = 0x09
 	};
 
 	template<unsigned int C2>
