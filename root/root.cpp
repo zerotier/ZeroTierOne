@@ -26,7 +26,7 @@
  *   "relayMaxHops": Max hops (up to 7)
  *   "planetFile": Location of planet file for pre-2.x peers (string)
  *   "statsRoot": If present, path to periodically save stats files (string)
- *   "siblings": [
+ *   "s_siblings": [
  *     {
  *       "name": Sibling name for UI/documentation purposes (string)
  *       "id": Full public identity of subling (string)
@@ -42,9 +42,9 @@
  * files are large and rewritten frequently and do not need to be
  * persisted.
  *
- * Siblings are other root servers that should receive packets to peers
+ * s_siblings are other root servers that should receive packets to peers
  * that we can't find. This can occur due to e.g. network topology
- * hiccups, IP blockages, etc. Siblings are used in the order in which
+ * hiccups, IP blockages, etc. s_siblings are used in the order in which
  * they appear with the first alive sibling being used.
  */
 
@@ -170,28 +170,28 @@ static Identity s_self;           // My identity (including secret)
 static std::atomic_bool s_run;    // Remains true until shutdown is ordered
 static json s_config;             // JSON config file contents
 static std::string s_statsRoot;   // Root to write stats, peers, etc.
-static std::string s_planet;      // Planet file contents to distribute with OK(HELLO) if any
 
-static Meter inputRate;
-static Meter outputRate;
-static Meter forwardRate;
-static Meter siblingForwardRate;
-static Meter discardedForwardRate;
+static Meter s_inputRate;
+static Meter s_outputRate;
+static Meter s_forwardRate;
+static Meter s_siblingForwardRate;
+static Meter s_discardedForwardRate;
 
-static std::vector< SharedPtr<RootPeer> > siblings;
-static std::unordered_map< uint64_t,std::unordered_map< MulticastGroup,std::unordered_map< Address,int64_t,AddressHasher >,MulticastGroupHasher > > multicastSubscriptions;
-static std::unordered_map< Identity,SharedPtr<RootPeer>,IdentityHasher > peersByIdentity;
-static std::unordered_map< Address,std::set< SharedPtr<RootPeer> >,AddressHasher > peersByVirtAddr;
-static std::unordered_map< InetAddress,std::set< SharedPtr<RootPeer> >,InetAddressHasher > peersByPhysAddr;
-static std::unordered_map< RendezvousKey,int64_t,RendezvousKey::Hasher > lastRendezvous;
+static std::string s_planet;
+static std::vector< SharedPtr<RootPeer> > s_siblings;
+static std::unordered_map< uint64_t,std::unordered_map< MulticastGroup,std::unordered_map< Address,int64_t,AddressHasher >,MulticastGroupHasher > > s_multicastSubscriptions;
+static std::unordered_map< Identity,SharedPtr<RootPeer>,IdentityHasher > s_peersByIdentity;
+static std::unordered_map< Address,std::set< SharedPtr<RootPeer> >,AddressHasher > s_peersByVirtAddr;
+static std::unordered_map< InetAddress,std::set< SharedPtr<RootPeer> >,InetAddressHasher > s_peersByPhysAddr;
+static std::unordered_map< RendezvousKey,int64_t,RendezvousKey::Hasher > s_lastSentRendezvous;
 
 static std::mutex s_planet_l;
-static std::mutex siblings_l;
-static std::mutex multicastSubscriptions_l;
-static std::mutex peersByIdentity_l;
-static std::mutex peersByVirtAddr_l;
-static std::mutex peersByPhysAddr_l;
-static std::mutex lastRendezvous_l;
+static std::mutex s_siblings_l;
+static std::mutex s_multicastSubscriptions_l;
+static std::mutex s_peersByIdentity_l;
+static std::mutex s_peersByVirtAddr_l;
+static std::mutex s_peersByPhysAddr_l;
+static std::mutex s_lastSentRendezvous_l;
 
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -204,7 +204,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 	const Address dest(pkt.destination());
 	const int64_t now = OSUtils::now();
 
-	inputRate.log(now,pkt.size());
+	s_inputRate.log(now,pkt.size());
 
 	if ((!fragment)&&(!pkt.fragmented())&&(dest == s_self.address())) {
 		SharedPtr<RootPeer> peer;
@@ -212,14 +212,14 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 		// If this is an un-encrypted HELLO, either learn a new peer or verify
 		// that this is a peer we already know.
 		if ((pkt.cipher() == ZT_PROTO_CIPHER_SUITE__POLY1305_NONE)&&(pkt.verb() == Packet::VERB_HELLO)) {
-			std::lock_guard<std::mutex> pbi_l(peersByIdentity_l);
-			std::lock_guard<std::mutex> pbv_l(peersByVirtAddr_l);
+			std::lock_guard<std::mutex> pbi_l(s_peersByIdentity_l);
+			std::lock_guard<std::mutex> pbv_l(s_peersByVirtAddr_l);
 
 			Identity id;
 			if (id.deserialize(pkt,ZT_PROTO_VERB_HELLO_IDX_IDENTITY)) {
 				{
-					auto pById = peersByIdentity.find(id);
-					if (pById != peersByIdentity.end()) {
+					auto pById = s_peersByIdentity.find(id);
+					if (pById != s_peersByIdentity.end()) {
 						peer = pById->second;
 						//printf("%s has %s (known (1))" ZT_EOL_S,ip->toString(ipstr),source().toString(astr));
 					}
@@ -239,8 +239,8 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 							}
 							peer->id = id;
 							peer->lastReceive = now;
-							peersByIdentity.emplace(id,peer);
-							peersByVirtAddr[id.address()].emplace(peer);
+							s_peersByIdentity.emplace(id,peer);
+							s_peersByVirtAddr[id.address()].emplace(peer);
 						} else {
 							printf("%s HELLO rejected: packet authentication failed" ZT_EOL_S,ip->toString(ipstr));
 							return;
@@ -256,9 +256,9 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 		// If it wasn't a HELLO, check to see if any known identities for the sender's
 		// short ZT address successfully decrypt the packet.
 		if (!peer) {
-			std::lock_guard<std::mutex> pbv_l(peersByVirtAddr_l);
-			auto peers = peersByVirtAddr.find(source);
-			if (peers != peersByVirtAddr.end()) {
+			std::lock_guard<std::mutex> pbv_l(s_peersByVirtAddr_l);
+			auto peers = s_peersByVirtAddr.find(source);
+			if (peers != s_peersByVirtAddr.end()) {
 				for(auto p=peers->second.begin();p!=peers->second.end();++p) {
 					if (pkt.dearmor((*p)->key)) {
 						if (!pkt.uncompress()) {
@@ -280,17 +280,17 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 
 			InetAddress *const peerIp = ip->isV4() ? &(peer->ip4) : &(peer->ip6);
 			if (*peerIp != ip) {
-				std::lock_guard<std::mutex> pbp_l(peersByPhysAddr_l);
+				std::lock_guard<std::mutex> pbp_l(s_peersByPhysAddr_l);
 				if (*peerIp) {
-					auto prev = peersByPhysAddr.find(*peerIp);
-					if (prev != peersByPhysAddr.end()) {
+					auto prev = s_peersByPhysAddr.find(*peerIp);
+					if (prev != s_peersByPhysAddr.end()) {
 						prev->second.erase(peer);
 						if (prev->second.empty())
-							peersByPhysAddr.erase(prev);
+							s_peersByPhysAddr.erase(prev);
 					}
 				}
 				*peerIp = ip;
-				peersByPhysAddr[ip].emplace(peer);
+				s_peersByPhysAddr[ip].emplace(peer);
 			}
 
 			const int64_t now = OSUtils::now();
@@ -327,7 +327,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 							pkt.armor(peer->key,true);
 							sendto(ip->isV4() ? v4s : v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
 
-							outputRate.log(now,pkt.size());
+							s_outputRate.log(now,pkt.size());
 							peer->lastSend = now;
 						}
 					} catch ( ... ) {
@@ -348,7 +348,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 							outp.armor(peer->key,true);
 							sendto(ip->isV4() ? v4s : v6s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
 
-							outputRate.log(now,outp.size());
+							s_outputRate.log(now,outp.size());
 							peer->lastSend = now;
 						}
 					} catch ( ... ) {
@@ -359,10 +359,10 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 					try {
 						std::vector< SharedPtr<RootPeer> > results;
 						{
-							std::lock_guard<std::mutex> l(peersByVirtAddr_l);
+							std::lock_guard<std::mutex> l(s_peersByVirtAddr_l);
 							for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;(ptr+ZT_ADDRESS_LENGTH)<=pkt.size();ptr+=ZT_ADDRESS_LENGTH) {
-								auto peers = peersByVirtAddr.find(Address(pkt.field(ptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH));
-								if (peers != peersByVirtAddr.end()) {
+								auto peers = s_peersByVirtAddr.find(Address(pkt.field(ptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH));
+								if (peers != s_peersByVirtAddr.end()) {
 									for(auto p=peers->second.begin();p!=peers->second.end();++p)
 										results.push_back(*p);
 								}
@@ -379,7 +379,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 							pkt.armor(peer->key,true);
 							sendto(ip->isV4() ? v4s : v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
 
-							outputRate.log(now,pkt.size());
+							s_outputRate.log(now,pkt.size());
 							peer->lastSend = now;
 						}
 					} catch ( ... ) {
@@ -388,11 +388,11 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 
 				case Packet::VERB_MULTICAST_LIKE:
 					try {
-						std::lock_guard<std::mutex> l(multicastSubscriptions_l);
+						std::lock_guard<std::mutex> l(s_multicastSubscriptions_l);
 						for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;(ptr+18)<=pkt.size();ptr+=18) {
 							const uint64_t nwid = pkt.template at<uint64_t>(ptr);
 							const MulticastGroup mg(MAC(pkt.field(ptr + 8,6),6),pkt.template at<uint32_t>(ptr + 14));
-							multicastSubscriptions[nwid][mg][source] = now;
+							s_multicastSubscriptions[nwid][mg][source] = now;
 							//printf("%s %s subscribes to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
 						}
 					} catch ( ... ) {
@@ -418,9 +418,9 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						pkt.append((uint32_t)mg.adi());
 
 						{
-							std::lock_guard<std::mutex> l(multicastSubscriptions_l);
-							auto forNet = multicastSubscriptions.find(nwid);
-							if (forNet != multicastSubscriptions.end()) {
+							std::lock_guard<std::mutex> l(s_multicastSubscriptions_l);
+							auto forNet = s_multicastSubscriptions.find(nwid);
+							if (forNet != s_multicastSubscriptions.end()) {
 								auto forGroup = forNet->second.find(mg);
 								if (forGroup != forNet->second.end()) {
 									pkt.append((uint32_t)forGroup->second.size());
@@ -440,7 +440,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 										pkt.armor(peer->key,true);
 										sendto(ip->isV4() ? v4s : v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)ip,(socklen_t)(ip->isV4() ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
 
-										outputRate.log(now,pkt.size());
+										s_outputRate.log(now,pkt.size());
 										peer->lastSend = now;
 										//printf("%s %s gathered %u subscribers to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),l,mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
 									}
@@ -468,20 +468,20 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 	if (fragment) {
 		if ((hops = (int)reinterpret_cast<Packet::Fragment *>(&pkt)->incrementHops()) > s_relayMaxHops) {
 			//printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),dest.toString(astr));
-			discardedForwardRate.log(now,pkt.size());
+			s_discardedForwardRate.log(now,pkt.size());
 			return;
 		}
 	} else {
 		if ((hops = (int)pkt.incrementHops()) > s_relayMaxHops) {
 			//printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),dest.toString(astr));
-			discardedForwardRate.log(now,pkt.size());
+			s_discardedForwardRate.log(now,pkt.size());
 			return;
 		}
 
 		if (hops == 1) {
 			RendezvousKey rk(source,dest);
-			std::lock_guard<std::mutex> l(lastRendezvous_l);
-			int64_t &lr = lastRendezvous[rk];
+			std::lock_guard<std::mutex> l(s_lastSentRendezvous_l);
+			int64_t &lr = s_lastSentRendezvous[rk];
 			if ((now - lr) >= 45000) {
 				lr = now;
 				introduce = true;
@@ -491,9 +491,9 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 
 	std::vector< std::pair< InetAddress *,SharedPtr<RootPeer> > > toAddrs;
 	{
-		std::lock_guard<std::mutex> pbv_l(peersByVirtAddr_l);
-		auto peers = peersByVirtAddr.find(dest);
-		if (peers != peersByVirtAddr.end()) {
+		std::lock_guard<std::mutex> pbv_l(s_peersByVirtAddr_l);
+		auto peers = s_peersByVirtAddr.find(dest);
+		if (peers != s_peersByVirtAddr.end()) {
 			for(auto p=peers->second.begin();p!=peers->second.end();++p) {
 				if ((*p)->ip4) {
 					toAddrs.push_back(std::pair< InetAddress *,SharedPtr<RootPeer> >(&((*p)->ip4),*p));
@@ -504,8 +504,8 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 		}
 	}
 	if (toAddrs.empty()) {
-		std::lock_guard<std::mutex> sib_l(siblings_l);
-		for(auto s=siblings.begin();s!=siblings.end();++s) {
+		std::lock_guard<std::mutex> sib_l(s_siblings_l);
+		for(auto s=s_siblings.begin();s!=s_siblings.end();++s) {
 			if (((now - (*s)->lastReceive) < (ZT_PEER_PING_PERIOD * 2))&&((*s)->sibling)) {
 				if ((*s)->ip4) {
 					toAddrs.push_back(std::pair< InetAddress *,SharedPtr<RootPeer> >(&((*s)->ip4),*s));
@@ -516,14 +516,14 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 		}
 	}
 	if (toAddrs.empty()) {
-		discardedForwardRate.log(now,pkt.size());
+		s_discardedForwardRate.log(now,pkt.size());
 		return;
 	}
 
 	if (introduce) {
-		std::lock_guard<std::mutex> l(peersByVirtAddr_l);
-		auto sources = peersByVirtAddr.find(source);
-		if (sources != peersByVirtAddr.end()) {
+		std::lock_guard<std::mutex> l(s_peersByVirtAddr_l);
+		auto sources = s_peersByVirtAddr.find(source);
+		if (sources != s_peersByVirtAddr.end()) {
 			for(auto a=sources->second.begin();a!=sources->second.end();++a) {
 				for(auto b=toAddrs.begin();b!=toAddrs.end();++b) {
 					if (((*a)->ip6)&&(b->second->ip6)) {
@@ -539,7 +539,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						outp.armor((*a)->key,true);
 						sendto(v6s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&((*a)->ip6),(socklen_t)sizeof(struct sockaddr_in6));
 
-						outputRate.log(now,outp.size());
+						s_outputRate.log(now,outp.size());
 						(*a)->lastSend = now;
 
 						// Introduce destination to source (V6)
@@ -552,7 +552,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						outp.armor(b->second->key,true);
 						sendto(v6s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&(b->second->ip6),(socklen_t)sizeof(struct sockaddr_in6));
 
-						outputRate.log(now,outp.size());
+						s_outputRate.log(now,outp.size());
 						b->second->lastSend = now;
 					}
 					if (((*a)->ip4)&&(b->second->ip4)) {
@@ -568,7 +568,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						outp.armor((*a)->key,true);
 						sendto(v4s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&((*a)->ip4),(socklen_t)sizeof(struct sockaddr_in));
 
-						outputRate.log(now,outp.size());
+						s_outputRate.log(now,outp.size());
 						(*a)->lastSend = now;
 
 						// Introduce destination to source (V4)
@@ -581,7 +581,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						outp.armor(b->second->key,true);
 						sendto(v4s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&(b->second->ip4),(socklen_t)sizeof(struct sockaddr_in));
 
-						outputRate.log(now,outp.size());
+						s_outputRate.log(now,outp.size());
 						b->second->lastSend = now;
 					}
 				}
@@ -592,10 +592,10 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 	for(auto i=toAddrs.begin();i!=toAddrs.end();++i) {
 		//printf("%s -> %s for %s -> %s (%u bytes)" ZT_EOL_S,ip->toString(ipstr),i->first->toString(ipstr2),source.toString(astr),dest.toString(astr2),pkt.size());
 		if (sendto(i->first->isV4() ? v4s : v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)i->first,(socklen_t)(i->first->isV4() ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6))) > 0) {
-			outputRate.log(now,pkt.size());
-			forwardRate.log(now,pkt.size());
+			s_outputRate.log(now,pkt.size());
+			s_forwardRate.log(now,pkt.size());
 			if (i->second->sibling)
-				siblingForwardRate.log(now,pkt.size());
+				s_siblingForwardRate.log(now,pkt.size());
 			i->second->lastSend = now;
 		}
 	}
@@ -782,7 +782,7 @@ int main(int argc,char **argv)
 	}
 
 	try {
-		auto sibs = s_config["siblings"];
+		auto sibs = s_config["s_siblings"];
 		if (sibs.is_array()) {
 			for(long i=0;i<(long)sibs.size();++i) {
 				auto sib = sibs[i];
@@ -791,19 +791,19 @@ int main(int argc,char **argv)
 					std::string ipStr = sib["ip"];
 					Identity id;
 					if (!id.fromString(idStr.c_str())) {
-						printf("FATAL: invalid JSON while parsing siblings section in config file: invalid identity in sibling entry" ZT_EOL_S);
+						printf("FATAL: invalid JSON while parsing s_siblings section in config file: invalid identity in sibling entry" ZT_EOL_S);
 						return 1;
 					}
 					InetAddress ip;
 					if (!ip.fromString(ipStr.c_str())) {
-						printf("FATAL: invalid JSON while parsing siblings section in config file: invalid IP address in sibling entry" ZT_EOL_S);
+						printf("FATAL: invalid JSON while parsing s_siblings section in config file: invalid IP address in sibling entry" ZT_EOL_S);
 						return 1;
 					}
 					ip.setPort((unsigned int)sib["port"]);
 					SharedPtr<RootPeer> rp(new RootPeer);
 					rp->id = id;
 					if (!s_self.agree(id,rp->key)) {
-						printf("FATAL: invalid JSON while parsing siblings section in config file: invalid identity in sibling entry (unable to execute key agreement)" ZT_EOL_S);
+						printf("FATAL: invalid JSON while parsing s_siblings section in config file: invalid identity in sibling entry (unable to execute key agreement)" ZT_EOL_S);
 						return 1;
 					}
 					if (ip.isV4()) {
@@ -811,25 +811,25 @@ int main(int argc,char **argv)
 					} else if (ip.isV6()) {
 						rp->ip6 = ip;
 					} else {
-						printf("FATAL: invalid JSON while parsing siblings section in config file: invalid IP address in sibling entry" ZT_EOL_S);
+						printf("FATAL: invalid JSON while parsing s_siblings section in config file: invalid IP address in sibling entry" ZT_EOL_S);
 						return 1;
 					}
 					rp->sibling = true;
-					siblings.push_back(rp);
-					peersByIdentity[id] = rp;
-					peersByVirtAddr[id.address()].insert(rp);
-					peersByPhysAddr[ip].insert(rp);
+					s_siblings.push_back(rp);
+					s_peersByIdentity[id] = rp;
+					s_peersByVirtAddr[id.address()].insert(rp);
+					s_peersByPhysAddr[ip].insert(rp);
 				} else {
-					printf("FATAL: invalid JSON while parsing siblings section in config file: sibling entry is not a JSON object" ZT_EOL_S);
+					printf("FATAL: invalid JSON while parsing s_siblings section in config file: sibling entry is not a JSON object" ZT_EOL_S);
 					return 1;
 				}
 			}
 		} else {
-			printf("FATAL: invalid JSON while parsing siblings section in config file: siblings is not a JSON array" ZT_EOL_S);
+			printf("FATAL: invalid JSON while parsing s_siblings section in config file: s_siblings is not a JSON array" ZT_EOL_S);
 			return 1;
 		}
 	} catch ( ... ) {
-		printf("FATAL: invalid JSON while parsing siblings section in config file: parse error" ZT_EOL_S);
+		printf("FATAL: invalid JSON while parsing s_siblings section in config file: parse error" ZT_EOL_S);
 		return 1;
 	}
 
@@ -922,12 +922,12 @@ int main(int argc,char **argv)
 	threads.push_back(std::thread([&apiServ,httpPort]() {
 		apiServ.Get("/",[](const httplib::Request &req,httplib::Response &res) {
 			std::ostringstream o;
-			std::lock_guard<std::mutex> l0(peersByIdentity_l);
-			std::lock_guard<std::mutex> l1(peersByPhysAddr_l);
+			std::lock_guard<std::mutex> l0(s_peersByIdentity_l);
+			std::lock_guard<std::mutex> l1(s_peersByPhysAddr_l);
 			o << "ZeroTier Root Server " << ZEROTIER_ONE_VERSION_MAJOR << '.' << ZEROTIER_ONE_VERSION_MINOR << '.' << ZEROTIER_ONE_VERSION_REVISION << ZT_EOL_S;
 			o << "(c)2019 ZeroTier, Inc." ZT_EOL_S "Licensed under the ZeroTier BSL 1.1" ZT_EOL_S ZT_EOL_S;
-			o << "Peers Online:       " << peersByIdentity.size() << ZT_EOL_S;
-			o << "Physical Addresses: " << peersByPhysAddr.size() << ZT_EOL_S;
+			o << "Peers Online:       " << s_peersByIdentity.size() << ZT_EOL_S;
+			o << "Physical Addresses: " << s_peersByPhysAddr.size() << ZT_EOL_S;
 			res.set_content(o.str(),"text/plain");
 		});
 		apiServ.Get("/peer",[](const httplib::Request &req,httplib::Response &res) {
@@ -936,8 +936,8 @@ int main(int argc,char **argv)
 			o << '[';
 			{
 				bool first = true;
-				std::lock_guard<std::mutex> l(peersByIdentity_l);
-				for(auto p=peersByIdentity.begin();p!=peersByIdentity.end();++p) {
+				std::lock_guard<std::mutex> l(s_peersByIdentity_l);
+				for(auto p=s_peersByIdentity.begin();p!=s_peersByIdentity.end();++p) {
 					if (first)
 						first = false;
 					else o << ',';
@@ -984,22 +984,22 @@ int main(int argc,char **argv)
 	// In the main thread periodically clean stuff up
 	int64_t lastCleaned = 0;
 	int64_t lastWroteStats = 0;
-	int64_t lastPingedSiblings = 0;
+	int64_t lastPingeds_siblings = 0;
 	while (s_run) {
-		//peersByIdentity_l.lock();
-		//peersByPhysAddr_l.lock();
-		//printf("*** have %lu peers at %lu physical endpoints" ZT_EOL_S,(unsigned long)peersByIdentity.size(),(unsigned long)peersByPhysAddr.size());
-		//peersByPhysAddr_l.unlock();
-		//peersByIdentity_l.unlock();
+		//s_peersByIdentity_l.lock();
+		//s_peersByPhysAddr_l.lock();
+		//printf("*** have %lu peers at %lu physical endpoints" ZT_EOL_S,(unsigned long)s_peersByIdentity.size(),(unsigned long)s_peersByPhysAddr.size());
+		//s_peersByPhysAddr_l.unlock();
+		//s_peersByIdentity_l.unlock();
 		sleep(1);
 
 		const int64_t now = OSUtils::now();
 
 		// Send HELLO to sibling roots
-		if ((now - lastPingedSiblings) >= ZT_PEER_PING_PERIOD) {
-			lastPingedSiblings = now;
-			std::lock_guard<std::mutex> l(siblings_l);
-			for(auto s=siblings.begin();s!=siblings.end();++s) {
+		if ((now - lastPingeds_siblings) >= ZT_PEER_PING_PERIOD) {
+			lastPingeds_siblings = now;
+			std::lock_guard<std::mutex> l(s_siblings_l);
+			for(auto s=s_siblings.begin();s!=s_siblings.end();++s) {
 				const InetAddress *ip = nullptr;
 				socklen_t sl = 0;
 				Packet outp((*s)->id.address(),s_self.address(),Packet::VERB_HELLO);
@@ -1030,8 +1030,8 @@ int main(int argc,char **argv)
 
 			// Old multicast subscription cleanup
 			{
-				std::lock_guard<std::mutex> l(multicastSubscriptions_l);
-				for(auto a=multicastSubscriptions.begin();a!=multicastSubscriptions.end();) {
+				std::lock_guard<std::mutex> l(s_multicastSubscriptions_l);
+				for(auto a=s_multicastSubscriptions.begin();a!=s_multicastSubscriptions.end();) {
 					for(auto b=a->second.begin();b!=a->second.end();) {
 						for(auto c=b->second.begin();c!=b->second.end();) {
 							if ((now - c->second) > ZT_MULTICAST_LIKE_EXPIRE)
@@ -1043,54 +1043,54 @@ int main(int argc,char **argv)
 						else ++b;
 					}
 					if (a->second.empty())
-						multicastSubscriptions.erase(a++);
+						s_multicastSubscriptions.erase(a++);
 					else ++a;
 				}
 			}
 
 			// Remove expired peers
 			{
-				std::lock_guard<std::mutex> pbi_l(peersByIdentity_l);
-				for(auto p=peersByIdentity.begin();p!=peersByIdentity.end();) {
+				std::lock_guard<std::mutex> pbi_l(s_peersByIdentity_l);
+				for(auto p=s_peersByIdentity.begin();p!=s_peersByIdentity.end();) {
 					if (((now - p->second->lastReceive) > ZT_PEER_ACTIVITY_TIMEOUT)&&(!p->second->sibling)) {
-						std::lock_guard<std::mutex> pbv_l(peersByVirtAddr_l);
-						std::lock_guard<std::mutex> pbp_l(peersByPhysAddr_l);
+						std::lock_guard<std::mutex> pbv_l(s_peersByVirtAddr_l);
+						std::lock_guard<std::mutex> pbp_l(s_peersByPhysAddr_l);
 
-						auto pbv = peersByVirtAddr.find(p->second->id.address());
-						if (pbv != peersByVirtAddr.end()) {
+						auto pbv = s_peersByVirtAddr.find(p->second->id.address());
+						if (pbv != s_peersByVirtAddr.end()) {
 							pbv->second.erase(p->second);
 							if (pbv->second.empty())
-								peersByVirtAddr.erase(pbv);
+								s_peersByVirtAddr.erase(pbv);
 						}
 
 						if (p->second->ip4) {
-							auto pbp = peersByPhysAddr.find(p->second->ip4);
-							if (pbp != peersByPhysAddr.end()) {
+							auto pbp = s_peersByPhysAddr.find(p->second->ip4);
+							if (pbp != s_peersByPhysAddr.end()) {
 								pbp->second.erase(p->second);
 								if (pbp->second.empty())
-									peersByPhysAddr.erase(pbp);
+									s_peersByPhysAddr.erase(pbp);
 							}
 						}
 						if (p->second->ip6) {
-							auto pbp = peersByPhysAddr.find(p->second->ip6);
-							if (pbp != peersByPhysAddr.end()) {
+							auto pbp = s_peersByPhysAddr.find(p->second->ip6);
+							if (pbp != s_peersByPhysAddr.end()) {
 								pbp->second.erase(p->second);
 								if (pbp->second.empty())
-									peersByPhysAddr.erase(pbp);
+									s_peersByPhysAddr.erase(pbp);
 							}
 						}
 
-						peersByIdentity.erase(p++);
+						s_peersByIdentity.erase(p++);
 					} else ++p;
 				}
 			}
 
 			// Remove old rendezvous tracking entries
 			{
-				std::lock_guard<std::mutex> l(lastRendezvous_l);
-				for(auto lr=lastRendezvous.begin();lr!=lastRendezvous.end();) {
+				std::lock_guard<std::mutex> l(s_lastSentRendezvous_l);
+				for(auto lr=s_lastSentRendezvous.begin();lr!=s_lastSentRendezvous.end();) {
 					if ((now - lr->second) > ZT_PEER_ACTIVITY_TIMEOUT)
-						lastRendezvous.erase(lr++);
+						s_lastSentRendezvous.erase(lr++);
 					else ++lr;
 				}
 			}
@@ -1119,9 +1119,9 @@ int main(int argc,char **argv)
 			if (pf) {
 				std::vector< SharedPtr<RootPeer> > sp;
 				{
-					std::lock_guard<std::mutex> pbi_l(peersByIdentity_l);
-					sp.reserve(peersByIdentity.size());
-					for(auto p=peersByIdentity.begin();p!=peersByIdentity.end();++p) {
+					std::lock_guard<std::mutex> pbi_l(s_peersByIdentity_l);
+					sp.reserve(s_peersByIdentity.size());
+					for(auto p=s_peersByIdentity.begin();p!=s_peersByIdentity.end();++p) {
 						sp.push_back(p->second);
 					}
 				}
@@ -1156,23 +1156,23 @@ int main(int argc,char **argv)
 			FILE *sf = fopen(statsFilePath.c_str(),"wb");
 			if (sf) {
 				fprintf(sf,"Uptime (seconds)           : %ld" ZT_EOL_S,(long)((now - s_startTime) / 1000));
-				peersByIdentity_l.lock();
-				fprintf(sf,"Peers                      : %llu" ZT_EOL_S,(unsigned long long)peersByIdentity.size());
-				peersByVirtAddr_l.lock();
-				fprintf(sf,"Virtual Address Collisions : %llu" ZT_EOL_S,(unsigned long long)(peersByIdentity.size() - peersByVirtAddr.size()));
-				peersByVirtAddr_l.unlock();
-				peersByIdentity_l.unlock();
-				peersByPhysAddr_l.lock();
-				fprintf(sf,"Physical Endpoints         : %llu" ZT_EOL_S,(unsigned long long)peersByPhysAddr.size());
-				peersByPhysAddr_l.unlock();
-				lastRendezvous_l.lock();
-				fprintf(sf,"Recent P2P Graph Edges     : %llu" ZT_EOL_S,(unsigned long long)lastRendezvous.size());
-				lastRendezvous_l.unlock();
-				fprintf(sf,"Input BPS                  : %.4f" ZT_EOL_S,inputRate.perSecond(now));
-				fprintf(sf,"Output BPS                 : %.4f" ZT_EOL_S,outputRate.perSecond(now));
-				fprintf(sf,"Forwarded BPS              : %.4f" ZT_EOL_S,forwardRate.perSecond(now));
-				fprintf(sf,"Sibling Forwarded BPS      : %.4f" ZT_EOL_S,siblingForwardRate.perSecond(now));
-				fprintf(sf,"Discarded Forward BPS      : %.4f" ZT_EOL_S,discardedForwardRate.perSecond(now));
+				s_peersByIdentity_l.lock();
+				fprintf(sf,"Peers                      : %llu" ZT_EOL_S,(unsigned long long)s_peersByIdentity.size());
+				s_peersByVirtAddr_l.lock();
+				fprintf(sf,"Virtual Address Collisions : %llu" ZT_EOL_S,(unsigned long long)(s_peersByIdentity.size() - s_peersByVirtAddr.size()));
+				s_peersByVirtAddr_l.unlock();
+				s_peersByIdentity_l.unlock();
+				s_peersByPhysAddr_l.lock();
+				fprintf(sf,"Physical Endpoints         : %llu" ZT_EOL_S,(unsigned long long)s_peersByPhysAddr.size());
+				s_peersByPhysAddr_l.unlock();
+				s_lastSentRendezvous_l.lock();
+				fprintf(sf,"Recent P2P Graph Edges     : %llu" ZT_EOL_S,(unsigned long long)s_lastSentRendezvous.size());
+				s_lastSentRendezvous_l.unlock();
+				fprintf(sf,"Input BPS                  : %.4f" ZT_EOL_S,s_inputRate.perSecond(now));
+				fprintf(sf,"Output BPS                 : %.4f" ZT_EOL_S,s_outputRate.perSecond(now));
+				fprintf(sf,"Forwarded BPS              : %.4f" ZT_EOL_S,s_forwardRate.perSecond(now));
+				fprintf(sf,"Sibling Forwarded BPS      : %.4f" ZT_EOL_S,s_siblingForwardRate.perSecond(now));
+				fprintf(sf,"Discarded Forward BPS      : %.4f" ZT_EOL_S,s_discardedForwardRate.perSecond(now));
 
 				fclose(sf);
 				std::string statsFilePath2(s_statsRoot);
