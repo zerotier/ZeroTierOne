@@ -142,7 +142,7 @@ struct RendezvousKey
  */
 struct RootPeer
 {
-	ZT_ALWAYS_INLINE RootPeer() : lastSend(0),lastReceive(0),lastSync(0),lastEcho(0),lastHello(0),vMajor(-1),vMinor(-1),vRev(-1) {}
+	ZT_ALWAYS_INLINE RootPeer() : lastSend(0),lastReceive(0),lastSync(0),lastEcho(0),lastHello(0),vMajor(-1),vMinor(-1),vRev(-1),sibling(false) {}
 	ZT_ALWAYS_INLINE ~RootPeer() { Utils::burn(key,sizeof(key)); }
 
 	Identity id;            // Identity
@@ -747,7 +747,7 @@ int main(int argc,char **argv)
 	try {
 		auto sibs = config["siblings"];
 		if (sibs.is_array()) {
-			for(long i=0;i<(long)siblings.size();++i) {
+			for(long i=0;i<(long)sibs.size();++i) {
 				auto sib = sibs[i];
 				if (sib.is_object()) {
 					std::string idStr = sib["id"];
