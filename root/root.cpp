@@ -163,6 +163,21 @@ struct RootPeer
 	AtomicCounter __refCount;
 };
 
+struct RendezvousStats
+{
+	RendezvousStats() : count(0),ts(0) {}
+	int64_t count;
+	int64_t ts;
+};
+
+struct ForwardingStats
+{
+	ForwardingStats() : bytes(0),ts(0),bps() {}
+	uint64_t bytes;
+	int64_t ts;
+	Meter bps;
+};
+
 static int64_t s_startTime;       // Time service was started
 static std::vector<int> s_ports;  // Ports to bind for UDP traffic
 static int s_relayMaxHops = 0;    // Max relay hops
@@ -183,7 +198,8 @@ static std::unordered_map< uint64_t,std::unordered_map< MulticastGroup,std::unor
 static std::unordered_map< Identity,SharedPtr<RootPeer>,IdentityHasher > s_peersByIdentity;
 static std::unordered_map< Address,std::set< SharedPtr<RootPeer> >,AddressHasher > s_peersByVirtAddr;
 static std::unordered_map< InetAddress,std::set< SharedPtr<RootPeer> >,InetAddressHasher > s_peersByPhysAddr;
-static std::unordered_map< RendezvousKey,int64_t,RendezvousKey::Hasher > s_lastSentRendezvous;
+static std::unordered_map< RendezvousKey,RendezvousStats,RendezvousKey::Hasher > s_lastSentRendezvous;
+static std::unordered_map< Address,ForwardingStats,AddressHasher > s_lastForwardedTo;
 
 static std::mutex s_planet_l;
 static std::mutex s_siblings_l;
@@ -192,6 +208,7 @@ static std::mutex s_peersByIdentity_l;
 static std::mutex s_peersByVirtAddr_l;
 static std::mutex s_peersByPhysAddr_l;
 static std::mutex s_lastSentRendezvous_l;
+static std::mutex s_lastForwardedTo_l;
 
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -481,9 +498,10 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 		if (hops == 1) {
 			RendezvousKey rk(source,dest);
 			std::lock_guard<std::mutex> l(s_lastSentRendezvous_l);
-			int64_t &lr = s_lastSentRendezvous[rk];
-			if ((now - lr) >= 45000) {
-				lr = now;
+			RendezvousStats &lr = s_lastSentRendezvous[rk];
+			if ((now - lr.ts) >= 30000) {
+				++lr.count;
+				lr.ts = now;
 				introduce = true;
 			}
 		}
@@ -518,6 +536,14 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 	if (toAddrs.empty()) {
 		s_discardedForwardRate.log(now,pkt.size());
 		return;
+	}
+
+	{
+		std::lock_guard<std::mutex> l(s_lastForwardedTo_l);
+		ForwardingStats &fs = s_lastForwardedTo[dest];
+		fs.bytes += (uint64_t)pkt.size();
+		fs.ts = now;
+		fs.bps.log(now,pkt.size());
 	}
 
 	if (introduce) {
@@ -1087,13 +1113,23 @@ int main(int argc,char **argv)
 				}
 			}
 
-			// Remove old rendezvous tracking entries
+			// Remove old rendezvous and last forwarded tracking entries
 			{
 				std::lock_guard<std::mutex> l(s_lastSentRendezvous_l);
 				for(auto lr=s_lastSentRendezvous.begin();lr!=s_lastSentRendezvous.end();) {
-					if ((now - lr->second) > ZT_PEER_ACTIVITY_TIMEOUT)
+					if ((now - lr->second.ts) > ZT_PEER_ACTIVITY_TIMEOUT)
 						s_lastSentRendezvous.erase(lr++);
 					else ++lr;
+				}
+			}
+
+			// Remove old last forwarded tracking entries
+			{
+				std::lock_guard<std::mutex> l(s_lastForwardedTo_l);
+				for(auto lf=s_lastForwardedTo.begin();lf!=s_lastForwardedTo.end();) {
+					if ((now - lf->second.ts) > ZT_PEER_ACTIVITY_TIMEOUT)
+						s_lastForwardedTo.erase(lf++);
+					else ++lf;
 				}
 			}
 		}
@@ -1168,13 +1204,23 @@ int main(int argc,char **argv)
 				fprintf(sf,"Physical Endpoints         : %llu" ZT_EOL_S,(unsigned long long)s_peersByPhysAddr.size());
 				s_peersByPhysAddr_l.unlock();
 				s_lastSentRendezvous_l.lock();
+				uint64_t unsuccessfulp2p = 0;
+				for(auto lr=s_lastSentRendezvous.begin();lr!=s_lastSentRendezvous.end();++lr) {
+					if (lr->second.count > 3)
+						++unsuccessfulp2p;
+				}
 				fprintf(sf,"Recent P2P Graph Edges     : %llu" ZT_EOL_S,(unsigned long long)s_lastSentRendezvous.size());
+				if (s_lastSentRendezvous.empty()) {
+					fprintf(sf,"Estimated P2P Success Rate : 100.0000%%" ZT_EOL_S);
+				} else {
+					fprintf(sf,"Estimated P2P Success Rate : %.4f%%" ZT_EOL_S,(1.0 - ((double)unsuccessfulp2p / (double)s_lastSentRendezvous.size())) * 100.0);
+				}
 				s_lastSentRendezvous_l.unlock();
-				fprintf(sf,"Input BPS                  : %.4f" ZT_EOL_S,s_inputRate.perSecond(now));
-				fprintf(sf,"Output BPS                 : %.4f" ZT_EOL_S,s_outputRate.perSecond(now));
-				fprintf(sf,"Forwarded BPS              : %.4f" ZT_EOL_S,s_forwardRate.perSecond(now));
-				fprintf(sf,"Sibling Forwarded BPS      : %.4f" ZT_EOL_S,s_siblingForwardRate.perSecond(now));
-				fprintf(sf,"Discarded Forward BPS      : %.4f" ZT_EOL_S,s_discardedForwardRate.perSecond(now));
+				fprintf(sf,"Input (MiB/s)              : %.4f" ZT_EOL_S,s_inputRate.perSecond(now) / 1048576.0);
+				fprintf(sf,"Output (MiB/s)             : %.4f" ZT_EOL_S,s_outputRate.perSecond(now) / 1048576.0);
+				fprintf(sf,"Forwarded (MiB/s)          : %.4f" ZT_EOL_S,s_forwardRate.perSecond(now) / 1048576.0);
+				fprintf(sf,"Sibling Forwarded (MiB/s)  : %.4f" ZT_EOL_S,s_siblingForwardRate.perSecond(now) / 1048576.0);
+				fprintf(sf,"Discarded Forward (MiB/s)  : %.4f" ZT_EOL_S,s_discardedForwardRate.perSecond(now) / 1048576.0);
 
 				fclose(sf);
 				std::string statsFilePath2(s_statsRoot);
