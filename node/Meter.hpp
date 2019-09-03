@@ -53,34 +53,40 @@ public:
 	{
 		_lock.lock();
 		const int64_t since = now - _ts;
-		if (since >= 1000) {
+		if (since >= ZT_METER_HISTORY_TICK_DURATION) {
 			_ts = now;
 			for(int i=1;i<ZT_METER_HISTORY_LENGTH;++i)
 				_history[i-1] = _history[i];
 			_history[ZT_METER_HISTORY_LENGTH-1] = (double)_count / ((double)since / 1000.0);
 			_count = 0;
 		}
-		_count += (unsigned long)count;
+		_count += (uint64_t)count;
 		_lock.unlock();
 	}
 
 	ZT_ALWAYS_INLINE double perSecond(const int64_t now) const
 	{
+		double r = 0.0,n = 0.0;
+
 		_lock.lock();
-		int64_t since = (now - _ts);
-		if (since <= 0) since = 1;
-		double r = (double)_count / ((double)since / 1000.0);
-		for(int i=0;i<ZT_METER_HISTORY_LENGTH;++i)
+		const int64_t since = (now - _ts);
+		if (since >= ZT_METER_HISTORY_TICK_DURATION) {
+			r += (double)_count / ((double)since / 1000.0);
+			n += 1.0;
+		}
+		for(int i=0;i<ZT_METER_HISTORY_LENGTH;++i) {
 			r += _history[i];
-		r /= (double)(ZT_METER_HISTORY_LENGTH + 1);
+			n += 1.0;
+		}
 		_lock.unlock();
-		return r;
+
+		return r / n;
 	}
 
 private:
 	double _history[ZT_METER_HISTORY_LENGTH];
 	int64_t _ts;
-	unsigned long _count;
+	uint64_t _count;
 	Mutex _lock;
 };
 

@@ -779,6 +779,9 @@ int main(int argc,char **argv)
 					}
 					rp->sibling = true;
 					siblings.push_back(rp);
+					peersByIdentity[id] = rp;
+					peersByVirtAddr[id.address()].insert(rp);
+					peersByPhysAddr[ip].insert(rp);
 				} else {
 					printf("FATAL: invalid JSON while parsing siblings section in config file: sibling entry is not a JSON object" ZT_EOL_S);
 					return 1;
