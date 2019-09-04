@@ -1013,7 +1013,7 @@ int main(int argc,char **argv)
 	// In the main thread periodically clean stuff up
 	int64_t lastCleaned = 0;
 	int64_t lastWroteStats = 0;
-	int64_t lastPingeds_siblings = 0;
+	int64_t lastPingedSiblings = 0;
 	while (s_run) {
 		//s_peersByIdentity_l.lock();
 		//s_peersByPhysAddr_l.lock();
@@ -1025,8 +1025,8 @@ int main(int argc,char **argv)
 		const int64_t now = OSUtils::now();
 
 		// Send HELLO to sibling roots
-		if ((now - lastPingeds_siblings) >= ZT_PEER_PING_PERIOD) {
-			lastPingeds_siblings = now;
+		if ((now - lastPingedSiblings) >= ZT_PEER_PING_PERIOD) {
+			lastPingedSiblings = now;
 			std::lock_guard<std::mutex> l(s_siblings_l);
 			for(auto s=s_siblings.begin();s!=s_siblings.end();++s) {
 				const InetAddress *ip = nullptr;
