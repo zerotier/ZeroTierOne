@@ -903,14 +903,14 @@ public:
 
 		/**
 		 * A push of one or more ephemeral key pairs:
-		 *   <[2] 8-bit length of random padding>
+		 *   <[1] 8-bit length of random padding>
 		 *   <[...] random padding>
 		 *   <[1] 8-bit number of keys in message>
+		 *   [... begin keys ...]
 		 *   <[1] 8-bit key type>
-		 *   <[4] 32-bit max key ttl in seconds or 0 for unspecified>
-		 *   <[4] 32-bit reserved field (currently always 0)>
 		 *   <[...] public key (length determined by type)>
-		 *  [<[...] additional keys as type, ttl, flags, key>]
+		 *  [<[...] additional keys ...>]
+		 *   [... end keys ...]
 		 *
 		 * This verb is used to push ephemeral keys. A node replies to each
 		 * ephemeral key push with an OK message containing its own current
