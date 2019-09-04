@@ -76,9 +76,7 @@ restart_node:
 			ZeroTier::Mutex::Lock _l(_lock);
 			delete _service;
 			_service = (ZeroTier::OneService *)0; // in case newInstance() fails
-			_service = ZeroTier::OneService::newInstance(
-				ZeroTier::OneService::platformDefaultHomePath().c_str(),
-				ZT_DEFAULT_PORT);
+			_service = ZeroTier::OneService::newInstance(_path.c_str(), ZT_DEFAULT_PORT);
 		}
 		switch(_service->run()) {
 			case ZeroTier::OneService::ONE_UNRECOVERABLE_ERROR: {
@@ -120,9 +118,15 @@ restart_node:
 	}
 }
 
-void ZeroTierOneService::OnStart(DWORD dwArgc, LPSTR *lpszArgv)
+void ZeroTierOneService::OnStart(DWORD dwArgc, PSTR *lpszArgv)
 {
 	ZT_SVCDBG("ZeroTierOneService::OnStart()\r\n");
+
+	if ((dwArgc > 1)&&(lpszArgv[1])&&(strlen(lpszArgv[1]) > 0)) {
+		this->_path = lpszArgv[1];
+	} else {
+		this->_path = ZeroTier::OneService::platformDefaultHomePath();
+	}
 
 	try {
 		_thread = ZeroTier::Thread::start(this);
