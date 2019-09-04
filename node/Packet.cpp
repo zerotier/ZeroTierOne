@@ -935,11 +935,19 @@ bool Packet::uncompress()
 
 uint64_t Packet::nextPacketId()
 {
+	// The packet ID which is also the packet's nonce/IV can be sequential but
+	// it should never repeat. This scheme minimizes the chance of nonce
+	// repetition if (as will usually be the case) the clock is relatively
+	// accurate.
+
 	static uint64_t ctr = 0;
 	static Mutex lock;
 	lock.lock();
-	while (ctr == 0)
+	while (ctr == 0) {
 		Utils::getSecureRandom(&ctr,sizeof(ctr));
+		ctr <<= 32;
+		ctr |= ((uint64_t)time(nullptr)) & 0x00000000ffffffffULL;
+	}
 	const uint64_t i = ctr++;
 	lock.unlock();
 	return i;

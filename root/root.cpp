@@ -316,8 +316,9 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 			switch(pkt.verb()) {
 				case Packet::VERB_HELLO:
 					try {
-						if ((now - peer->lastHello) > 1000) {
+						if ((now - peer->lastHello) > 500) {
 							peer->lastHello = now;
+
 							peer->vProto = (int)pkt[ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION];
 							peer->vMajor = (int)pkt[ZT_PROTO_VERB_HELLO_IDX_MAJOR_VERSION];
 							peer->vMinor = (int)pkt[ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION];
@@ -354,7 +355,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 
 				case Packet::VERB_ECHO:
 					try {
-						if ((now - peer->lastEcho) > 1000) {
+						if ((now - peer->lastEcho) > 500) {
 							peer->lastEcho = now;
 
 							Packet outp(source,s_self.address(),Packet::VERB_OK);

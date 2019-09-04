@@ -150,37 +150,56 @@ public:
 	}
 
 	/**
-	 * Perform AES-256-GMAC-CTR encryption
+	 * Perform AES-GMAC-CTR encryption
 	 *
-	 * This mode combines the two standard modes AES256-GMAC and AES256-CTR to
-	 * yield a mode similar to AES256-GCM-SIV that is resistant to accidental
-	 * message IV duplication. This is good because ZeroTier is stateless and
-	 * uses a small (64-bit) IV to reduce bandwidth overhead.
+	 * This is an AES mode built from GMAC and AES-CTR that is similar to the
+	 * various SIV (synthetic IV) modes for AES and is resistant to nonce
+	 * re-use. It's specifically tweaked for ZeroTier's packet structure with
+	 * a 64-bit IV (extended to 96 bits by including packet size and other info)
+	 * and a 64-bit auth tag.
 	 *
+	 * The use of separate keys for MAC and encrypt is precautionary. It
+	 * ensures that the CTR IV (and CTR output) are always secrets regardless
+	 * of what an attacker might do with accumulated IVs and auth tags.
+	 *
+	 * @param k1 MAC key
+	 * @param k2 Encryption key
 	 * @param iv 96-bit message IV
 	 * @param in Message plaintext
 	 * @param len Length of plaintext
 	 * @param out Output buffer to receive ciphertext
 	 * @param tag Output buffer to receive 64-bit authentication tag
 	 */
-	inline void ztGmacCtrEncrypt(const uint8_t iv[12],const void *in,unsigned int len,void *out,uint8_t tag[8]) const
+	static inline void ztGmacCtrEncrypt(const AES &k1,const AES &k2,const uint8_t iv[12],const void *in,unsigned int len,void *out,uint8_t tag[8])
 	{
 		uint8_t ctrIv[16];
 
-		gmac(iv,in,len,ctrIv);
-		encrypt(ctrIv,ctrIv);
+		// Compute AES[k1](GMAC[k1](iv,plaintext))
+		k1.gmac(iv,in,len,ctrIv);
+		k1.encrypt(ctrIv,ctrIv); // ECB mode encrypt step is because GMAC is not a PRF
 
+		// Auth tag for packet is first 64 bits of AES(GMAC) (rest is discarded)
+#ifdef ZT_NO_TYPE_PUNNING
 		for(unsigned int i=0;i<8;++i) tag[i] = ctrIv[i];
+#else
+		*((uint64_t *)tag) = *((uint64_t *)ctrIv);
+#endif
 
+		// Synthetic CTR IV is AES[k2](AES[k1]( tag[0..4] | tag[4..8]^iv[0..4] | iv[4..12] ))
 		for(unsigned int i=4;i<8;++i) ctrIv[i] ^= iv[i - 4];
 		for(unsigned int i=8;i<16;++i) ctrIv[i] = iv[i - 4];
-		encrypt(ctrIv,ctrIv);
-		ctr(ctrIv,in,len,out);
+		k1.encrypt(ctrIv,ctrIv);
+		k2.encrypt(ctrIv,ctrIv); // ECB mode encrypt here makes CTR IV itself a secret and mixes bits
+
+		// Encrypt with AES[k2]-CTR
+		k2.ctr(ctrIv,in,len,out);
 	}
 
 	/**
-	 * Decrypt a message encrypted with AES-256-GMAC-CTR and check its authenticity
+	 * Decrypt a message encrypted with AES-GMAC-CTR and check its authenticity
 	 *
+	 * @param k1 MAC key
+	 * @param k2 Encryption key
 	 * @param iv 96-bit message IV
 	 * @param in Message ciphertext
 	 * @param len Length of ciphertext
@@ -188,20 +207,25 @@ public:
 	 * @param tag Authentication tag supplied with message
 	 * @return True if authentication tags match and message appears authentic
 	 */
-	inline bool ztGmacCtrDecrypt(const uint8_t iv[12],const void *in,unsigned int len,void *out,const uint8_t tag[8]) const
+	static inline bool ztGmacCtrDecrypt(const AES &k1,const AES &k2,const uint8_t iv[12],const void *in,unsigned int len,void *out,const uint8_t tag[8])
 	{
 		uint8_t ctrIv[16],gmacOut[16];
 
-		for(unsigned int i=0;i<8;++i) ctrIv[i] = tag[i];
-
-		for(unsigned int i=4;i<8;++i) ctrIv[i] ^= iv[i - 4];
+		// Recover synthetic and secret CTR IV from auth tag and packet IV
+		for(unsigned int i=0;i<4;++i) ctrIv[i] = tag[i];
+		for(unsigned int i=4;i<8;++i) ctrIv[i] = tag[i] ^ iv[i - 4];
 		for(unsigned int i=8;i<16;++i) ctrIv[i] = iv[i - 4];
-		encrypt(ctrIv,ctrIv);
-		ctr(ctrIv,in,len,out);
+		k1.encrypt(ctrIv,ctrIv);
+		k2.encrypt(ctrIv,ctrIv);
 
-		gmac(iv,out,len,gmacOut);
-		encrypt(gmacOut,gmacOut);
+		// Decrypt with AES[k2]-CTR
+		k2.ctr(ctrIv,in,len,out);
 
+		// Compute AES[k1](GMAC[k1](iv,plaintext))
+		k1.gmac(iv,out,len,gmacOut);
+		k1.encrypt(gmacOut,gmacOut);
+
+		// Check that packet's auth tag matches first 64 bits of AES(GMAC)
 #ifdef ZT_NO_TYPE_PUNNING
 		return Utils::secureEq(gmacOut,tag,8);
 #else
