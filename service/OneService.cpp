@@ -2145,8 +2145,6 @@ public:
 #endif
 						_nets.erase(nwid);
 						return -999;
-					} catch (std::exception &exc) {
-						return -999;
 					} catch (int exc) {
 						return -999;
 					} catch ( ... ) {
