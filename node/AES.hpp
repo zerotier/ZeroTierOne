@@ -162,21 +162,23 @@ public:
 	 * ensures that the CTR IV (and CTR output) are always secrets regardless
 	 * of what an attacker might do with accumulated IVs and auth tags.
 	 *
-	 * @param k1 MAC key
-	 * @param k2 Encryption key
+	 * @param k1 GMAC key
+	 * @param k2 GMAC auth tag masking (ECB encryption) key
+	 * @param k3 CTR IV masking (ECB encryption) key
+	 * @param k4 AES-CTR key
 	 * @param iv 96-bit message IV
 	 * @param in Message plaintext
 	 * @param len Length of plaintext
 	 * @param out Output buffer to receive ciphertext
 	 * @param tag Output buffer to receive 64-bit authentication tag
 	 */
-	static inline void ztGmacCtrEncrypt(const AES &k1,const AES &k2,const uint8_t iv[12],const void *in,unsigned int len,void *out,uint8_t tag[8])
+	static inline void ztGmacCtrEncrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[12],const void *in,unsigned int len,void *out,uint8_t tag[8])
 	{
 		uint8_t ctrIv[16];
 
-		// Compute AES[k1](GMAC[k1](iv,plaintext))
+		// Compute AES[k2](GMAC[k1](iv,plaintext))
 		k1.gmac(iv,in,len,ctrIv);
-		k1.encrypt(ctrIv,ctrIv); // ECB mode encrypt step is because GMAC is not a PRF
+		k2.encrypt(ctrIv,ctrIv); // ECB mode encrypt step is because GMAC is not a PRF
 
 		// Auth tag for packet is first 64 bits of AES(GMAC) (rest is discarded)
 #ifdef ZT_NO_TYPE_PUNNING
@@ -185,21 +187,27 @@ public:
 		*((uint64_t *)tag) = *((uint64_t *)ctrIv);
 #endif
 
-		// Synthetic CTR IV is AES[k2](AES[k1]( tag[0..4] | tag[4..8]^iv[0..4] | iv[4..12] ))
-		for(unsigned int i=4;i<8;++i) ctrIv[i] ^= iv[i - 4];
-		for(unsigned int i=8;i<16;++i) ctrIv[i] = iv[i - 4];
-		k1.encrypt(ctrIv,ctrIv);
-		k2.encrypt(ctrIv,ctrIv); // ECB mode encrypt here makes CTR IV itself a secret and mixes bits
+		// Create synthetic CTR IV
+#ifdef ZT_NO_TYPE_PUNNING
+		for(unsigned int i=0;i<4;++i) ctrIv[i+8] = iv[i];
+		for(unsigned int i=4;i<8;++i) ctrIv[i+8] = iv[i] ^ iv[i+4];
+#else
+		((uint32_t *)ctrIv)[2] = ((const uint32_t *)iv)[0];
+		((uint32_t *)ctrIv)[3] = ((const uint32_t *)iv)[1] ^ ((const uint32_t *)iv)[2];
+#endif
+		k3.encrypt(ctrIv,ctrIv);
 
-		// Encrypt with AES[k2]-CTR
-		k2.ctr(ctrIv,in,len,out);
+		// Encrypt with AES[k4]-CTR
+		k4.ctr(ctrIv,in,len,out);
 	}
 
 	/**
 	 * Decrypt a message encrypted with AES-GMAC-CTR and check its authenticity
 	 *
-	 * @param k1 MAC key
-	 * @param k2 Encryption key
+	 * @param k1 GMAC key
+	 * @param k2 GMAC auth tag masking (ECB encryption) key
+	 * @param k3 CTR IV masking (ECB encryption) key
+	 * @param k4 AES-CTR key
 	 * @param iv 96-bit message IV
 	 * @param in Message ciphertext
 	 * @param len Length of ciphertext
@@ -207,23 +215,28 @@ public:
 	 * @param tag Authentication tag supplied with message
 	 * @return True if authentication tags match and message appears authentic
 	 */
-	static inline bool ztGmacCtrDecrypt(const AES &k1,const AES &k2,const uint8_t iv[12],const void *in,unsigned int len,void *out,const uint8_t tag[8])
+	static inline bool ztGmacCtrDecrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[12],const void *in,unsigned int len,void *out,const uint8_t tag[8])
 	{
 		uint8_t ctrIv[16],gmacOut[16];
 
 		// Recover synthetic and secret CTR IV from auth tag and packet IV
-		for(unsigned int i=0;i<4;++i) ctrIv[i] = tag[i];
-		for(unsigned int i=4;i<8;++i) ctrIv[i] = tag[i] ^ iv[i - 4];
-		for(unsigned int i=8;i<16;++i) ctrIv[i] = iv[i - 4];
-		k1.encrypt(ctrIv,ctrIv);
-		k2.encrypt(ctrIv,ctrIv);
+#ifdef ZT_NO_TYPE_PUNNING
+		for(unsigned int i=0;i<8;++i) ctrIv[i] = tag[i];
+		for(unsigned int i=0;i<4;++i) ctrIv[i+8] = iv[i];
+		for(unsigned int i=4;i<8;++i) ctrIv[i+8] = iv[i] ^ iv[i+4];
+#else
+		*((uint64_t *)ctrIv) = *((const uint64_t *)tag);
+		((uint32_t *)ctrIv)[2] = ((const uint32_t *)iv)[0];
+		((uint32_t *)ctrIv)[3] = ((const uint32_t *)iv)[1] ^ ((const uint32_t *)iv)[2];
+#endif
+		k3.encrypt(ctrIv,ctrIv);
 
-		// Decrypt with AES[k2]-CTR
-		k2.ctr(ctrIv,in,len,out);
+		// Decrypt with AES[k4]-CTR
+		k4.ctr(ctrIv,in,len,out);
 
-		// Compute AES[k1](GMAC[k1](iv,plaintext))
+		// Compute AES[k2](GMAC[k1](iv,plaintext))
 		k1.gmac(iv,out,len,gmacOut);
-		k1.encrypt(gmacOut,gmacOut);
+		k2.encrypt(gmacOut,gmacOut);
 
 		// Check that packet's auth tag matches first 64 bits of AES(GMAC)
 #ifdef ZT_NO_TYPE_PUNNING

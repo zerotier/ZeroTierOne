@@ -224,7 +224,7 @@ static int testCrypto()
 		std::cout << "  AES-256-GMAC-CTR (benchmark): "; std::cout.flush();
 		start = OSUtils::now();
 		for(unsigned long i=0;i<200000;++i) {
-			AES::ztGmacCtrEncrypt(tv,tv,(const uint8_t *)hexbuf,buf1,sizeof(buf1),buf2,(uint8_t *)(hexbuf + 8));
+			AES::ztGmacCtrEncrypt(tv,tv,tv,tv,(const uint8_t *)hexbuf,buf1,sizeof(buf1),buf2,(uint8_t *)(hexbuf + 8));
 			hexbuf[0] = buf2[0];
 		}
 		end = OSUtils::now();
