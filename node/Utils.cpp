@@ -143,8 +143,8 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 {
 	static Mutex globalLock;
 	static bool initialized = false;
-	static uint64_t randomState[1024];
-	static uint8_t randomBuf[65536];
+	static uint64_t randomState[4];
+	static uint8_t randomBuf[16384];
 	static unsigned long randomPtr = sizeof(randomBuf);
 #ifdef __WINDOWS__
 	static HCRYPTPROV cryptProvider = NULL;
@@ -196,23 +196,18 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 
 	for(unsigned int i=0;i<bytes;++i) {
 		if (randomPtr >= sizeof(randomBuf)) {
-			for(unsigned int k=0;k<1024;++k) {
+			randomPtr = 0;
+
+			for(unsigned int k=0;k<4;++k) {
 				if (++randomState[k])
 					break;
 			}
 
-			uint8_t h[64];
-			SHA512(h,randomState,sizeof(randomState));
+			uint8_t h[48];
+			HMACSHA384((const uint8_t *)randomState,randomBuf,sizeof(randomBuf),h);
 
-			if (AES::HW_ACCEL) {
-				AES c(h);
-				c.ctr(h + 32,randomBuf,sizeof(randomBuf),randomBuf);
-			} else {
-				Salsa20 c(h,h + 32);
-				c.crypt12(randomBuf,randomBuf,sizeof(randomBuf));
-			}
-
-			randomPtr = 0;
+			AES c(h);
+			c.ctr(h + 32,randomBuf,sizeof(randomBuf),randomBuf);
 		}
 		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
 	}

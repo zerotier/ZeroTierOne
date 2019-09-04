@@ -41,14 +41,14 @@ public:
 	 */
 	static const bool HW_ACCEL;
 
-	inline AES() {}
-	inline AES(const uint8_t key[32]) { this->init(key); }
-	inline ~AES() { Utils::burn(&_k,sizeof(_k)); }
+	ZT_ALWAYS_INLINE AES() {}
+	ZT_ALWAYS_INLINE AES(const uint8_t key[32]) { this->init(key); }
+	ZT_ALWAYS_INLINE ~AES() { Utils::burn(&_k,sizeof(_k)); }
 
 	/**
 	 * Set (or re-set) this AES256 cipher's key
 	 */
-	inline void init(const uint8_t key[32])
+	ZT_ALWAYS_INLINE void init(const uint8_t key[32])
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(HW_ACCEL)) {
@@ -66,7 +66,7 @@ public:
 	 * @param in Input block
 	 * @param out Output block (can be same as input)
 	 */
-	inline void encrypt(const uint8_t in[16],uint8_t out[16]) const
+	ZT_ALWAYS_INLINE void encrypt(const uint8_t in[16],uint8_t out[16]) const
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(HW_ACCEL)) {
@@ -86,7 +86,7 @@ public:
 	 * @param len Length of input
 	 * @param out 128-bit authorization tag from GMAC
 	 */
-	inline void gmac(const uint8_t iv[12],const void *in,const unsigned int len,uint8_t out[16]) const
+	ZT_ALWAYS_INLINE void gmac(const uint8_t iv[12],const void *in,const unsigned int len,uint8_t out[16]) const
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(HW_ACCEL)) {
@@ -110,7 +110,7 @@ public:
 	 * @param len Length of input
 	 * @param out Output plaintext or ciphertext
 	 */
-	inline void ctr(const uint8_t iv[16],const void *in,unsigned int len,void *out) const
+	ZT_ALWAYS_INLINE void ctr(const uint8_t iv[16],const void *in,unsigned int len,void *out) const
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(HW_ACCEL)) {
@@ -173,7 +173,7 @@ public:
 	 * @param out Output buffer to receive ciphertext
 	 * @param tag Output buffer to receive 64-bit authentication tag
 	 */
-	static inline void ztGmacCtrEncrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[12],const void *in,unsigned int len,void *out,uint8_t tag[8])
+	static ZT_ALWAYS_INLINE void ztGmacCtrEncrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[12],const void *in,const unsigned int len,void *out,uint8_t tag[8])
 	{
 		uint8_t ctrIv[16];
 
@@ -216,7 +216,7 @@ public:
 	 * @param tag Authentication tag supplied with message
 	 * @return True if authentication tags match and message appears authentic
 	 */
-	static inline bool ztGmacCtrDecrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[12],const void *in,unsigned int len,void *out,const uint8_t tag[8])
+	static ZT_ALWAYS_INLINE bool ztGmacCtrDecrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[12],const void *in,const unsigned int len,void *out,const uint8_t tag[8])
 	{
 		uint8_t ctrIv[16],gmacOut[16];
 
@@ -248,7 +248,9 @@ public:
 	}
 
 	/**
-	 * Use HMAC-SHA-384 as a PRF to generate four AES keys from one master
+	 * Use KBKDF with HMAC-SHA-384 to derive four sub-keys for AES-GMAC-CTR from a single master key
+	 *
+	 * See section 5.1 at https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-108.pdf
 	 *
 	 * @param masterKey Master 256-bit key
 	 * @param k1 GMAC key
@@ -256,12 +258,20 @@ public:
 	 * @param k3 CTR IV masking (ECB encryption) key
 	 * @param k4 AES-CTR key
 	 */
-	static inline void initGmacCtrKeys(const uint8_t masterKey[32],AES &k1,AES &k2,AES &k3,AES &k4)
+	static ZT_ALWAYS_INLINE void initGmacCtrKeys(const uint8_t masterKey[32],AES &k1,AES &k2,AES &k3,AES &k4)
 	{
-		uint64_t kbuf[6];
-		for(uint8_t kno=0;kno<4;++kno) {
-			HMACSHA384(masterKey,&kno,1,(uint8_t *)kbuf);
-			k1.init((const uint8_t *)kbuf);
+		uint8_t kbuf[48];
+		uint8_t kbkdfMsg[16];
+		kbkdfMsg[0] = 0;    // key iterator, incremented for each key
+		for(unsigned int i=0;i<12;++i)
+			kbkdfMsg[i+1] = (uint8_t)("AES-GMAC-CTR"[i]); // KBKDF "label" indicating the use for these keys
+		kbkdfMsg[13] = 0;   // 0x00
+		kbkdfMsg[14] = 0;   // KBKDF "context", just 0 as it's not used in this protocol
+		kbkdfMsg[15] = 32;  // bits used in resulting key
+		while (kbkdfMsg[0] < 4) {
+			HMACSHA384(masterKey,&kbkdfMsg,sizeof(kbkdfMsg),kbuf);
+			k1.init(kbuf);
+			++kbkdfMsg[0];
 		}
 	}
 
