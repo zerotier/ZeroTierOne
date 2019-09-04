@@ -1353,8 +1353,8 @@ public:
 							if (j.is_object()) {
 								seed = Utils::hexStrToU64(OSUtils::jsonString(j["seed"],"0").c_str());
 							}
+						} catch (std::exception &exc) {
 						} catch ( ... ) {
-							// discard invalid JSON
 						}
 
 						std::vector<World> moons(_node->moons());
@@ -1403,8 +1403,8 @@ public:
 											json &allowDefault = j["allowDefault"];
 											if (allowDefault.is_boolean()) localSettings.allowDefault = (bool)allowDefault;
 										}
+									} catch (std::exception &exc) {
 									} catch ( ... ) {
-										// discard invalid JSON
 									}
 
 									setNetworkSettings(nws->networks[i].nwid,localSettings);
@@ -2035,6 +2035,8 @@ public:
 					return;
 
 			}
+		} catch (std::exception &exc) {
+			_phy.close(sock);
 		} catch ( ... ) {
 			_phy.close(sock);
 		}
@@ -2142,6 +2144,10 @@ public:
 						fprintf(stderr,"ERROR: unable to configure virtual network port: %s" ZT_EOL_S,exc.what());
 #endif
 						_nets.erase(nwid);
+						return -999;
+					} catch (std::exception &exc) {
+						return -999;
+					} catch (int exc) {
 						return -999;
 					} catch ( ... ) {
 						return -999; // tap init failed
