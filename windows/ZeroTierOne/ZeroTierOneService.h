@@ -57,11 +57,12 @@ public:
 		throw();
 
 protected:
-    virtual void OnStart(DWORD dwArgc, PSTR *pszArgv);
-    virtual void OnStop();
+	virtual void OnStart(DWORD dwArgc, PSTR *pszArgv);
+	virtual void OnStop();
 	virtual void OnShutdown();
 
 private:
+	std::string _path;
 	ZeroTier::OneService *volatile _service;
 	ZeroTier::Mutex _lock;
 	ZeroTier::Thread _thread;
