@@ -16,6 +16,7 @@
 
 #include "Constants.hpp"
 #include "Utils.hpp"
+#include "SHA512.hpp"
 
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 #include <wmmintrin.h>
@@ -244,6 +245,24 @@ public:
 #else
 		return (*((const uint64_t *)gmacOut) == *((const uint64_t *)tag));
 #endif
+	}
+
+	/**
+	 * Use HMAC-SHA-384 as a PRF to generate four AES keys from one master
+	 *
+	 * @param masterKey Master 256-bit key
+	 * @param k1 GMAC key
+	 * @param k2 GMAC auth tag masking (ECB encryption) key
+	 * @param k3 CTR IV masking (ECB encryption) key
+	 * @param k4 AES-CTR key
+	 */
+	static inline void initGmacCtrKeys(const uint8_t masterKey[32],AES &k1,AES &k2,AES &k3,AES &k4)
+	{
+		uint64_t kbuf[6];
+		for(uint8_t kno=0;kno<4;++kno) {
+			HMACSHA384(masterKey,&kno,1,(uint8_t *)kbuf);
+			k1.init((const uint8_t *)kbuf);
+		}
 	}
 
 private:

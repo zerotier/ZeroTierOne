@@ -10,9 +10,9 @@
 #include <utility>
 #include <algorithm>
 
-#ifndef ZT_HAVE_NATIVE_SHA512
-
 namespace ZeroTier {
+
+#ifndef ZT_HAVE_NATIVE_SHA512
 
 namespace {
 
@@ -239,6 +239,39 @@ void SHA384(void *digest,const void *data0,unsigned int len0,const void *data1,u
 	memcpy(digest,tmp,48);
 }
 
-} // namespace ZeroTier
-
 #endif // !ZT_HAVE_NATIVE_SHA512
+
+void HMACSHA384(const uint8_t key[32],const void *msg,const unsigned int msglen,uint8_t mac[48])
+{
+	uint64_t kInPadded[16]; // input padded key
+	uint64_t outer[22]; // output padded key | H(input padded key | msg)
+
+#ifdef ZT_NO_TYPE_PUNNING
+	for(int i=0;i<32;++i) ((uint8_t *)kInPadded)[i] = key[i] ^ 0x36;
+	for(int i=4;i<16;++i) kInPadded[i] = 0x3636363636363636ULL;
+	for(int i=0;i<32;++i) ((uint8_t *)outer)[i] = key[i] ^ 0x5c;
+	for(int i=4;i<16;++i) outer[i] = 0x5c5c5c5c5c5c5c5cULL;
+#else
+	{
+		const uint64_t k0 = ((const uint64_t *)key)[0];
+		const uint64_t k1 = ((const uint64_t *)key)[1];
+		const uint64_t k2 = ((const uint64_t *)key)[2];
+		const uint64_t k3 = ((const uint64_t *)key)[3];
+		kInPadded[0] = k0 ^ 0x3636363636363636ULL;
+		kInPadded[1] = k1 ^ 0x3636363636363636ULL;
+		kInPadded[2] = k2 ^ 0x3636363636363636ULL;
+		kInPadded[3] = k3 ^ 0x3636363636363636ULL;
+		for(int i=4;i<16;++i) kInPadded[i] = 0x3636363636363636ULL;
+		outer[0] = k0 ^ 0x5c5c5c5c5c5c5c5cULL;
+		outer[1] = k1 ^ 0x5c5c5c5c5c5c5c5cULL;
+		outer[2] = k2 ^ 0x5c5c5c5c5c5c5c5cULL;
+		outer[3] = k3 ^ 0x5c5c5c5c5c5c5c5cULL;
+		for(int i=4;i<16;++i) outer[i] = 0x5c5c5c5c5c5c5c5cULL;
+	}
+#endif
+
+	SHA384(((uint8_t *)outer) + 128,kInPadded,128,msg,msglen); // H(input padded key | msg)
+	SHA384(mac,outer,176); // H(output padded key | H(input padded key | msg))
+}
+
+} // namespace ZeroTier
