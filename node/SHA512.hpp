@@ -32,6 +32,12 @@
 
 #define ZT_HMACSHA384_LEN 48
 
+#define ZT_PROTO_KBKDF_LABEL_KEY_USE_HMAC 'H'
+#define ZT_PROTO_KBKDF_LABEL_KEY_USE_AES_GMAC_SIV_K1 '1'
+#define ZT_PROTO_KBKDF_LABEL_KEY_USE_AES_GMAC_SIV_K2 '2'
+#define ZT_PROTO_KBKDF_LABEL_KEY_USE_AES_GMAC_SIV_K3 '3'
+#define ZT_PROTO_KBKDF_LABEL_KEY_USE_AES_GMAC_SIV_K4 '4'
+
 namespace ZeroTier {
 
 #ifdef __APPLE__
@@ -101,6 +107,17 @@ void SHA384(void *digest,const void *data0,unsigned int len0,const void *data1,u
  * @param mac Buffer to fill with result
  */
 void HMACSHA384(const uint8_t key[32],const void *msg,const unsigned int msglen,uint8_t mac[48]);
+
+/**
+ * Compute KBKDF (key-based key derivation function) using HMAC-SHA-384 as a PRF
+ *
+ * @param key Source master key
+ * @param label A label indicating the key's purpose in the ZeroTier system
+ * @param context An arbitrary "context" or zero if not applicable
+ * @param iter Key iteration for generation of multiple keys for the same label/context
+ * @param out Output to receive derived key
+ */
+void KBKDFHMACSHA384(const uint8_t key[32],const char label,const char context,const uint32_t iter,uint8_t out[32]);
 
 } // namespace ZeroTier
 

@@ -260,19 +260,15 @@ public:
 	 */
 	static ZT_ALWAYS_INLINE void initGmacCtrKeys(const uint8_t masterKey[32],AES &k1,AES &k2,AES &k3,AES &k4)
 	{
-		uint8_t kbuf[48];
-		uint8_t kbkdfMsg[16];
-		kbkdfMsg[0] = 0;    // key iterator, incremented for each key
-		for(unsigned int i=0;i<12;++i)
-			kbkdfMsg[i+1] = (uint8_t)("AES-GMAC-CTR"[i]); // KBKDF "label" indicating the use for these keys
-		kbkdfMsg[13] = 0;   // 0x00
-		kbkdfMsg[14] = 0;   // KBKDF "context", just 0 as it's not used in this protocol
-		kbkdfMsg[15] = 32;  // bits used in resulting key
-		while (kbkdfMsg[0] < 4) {
-			HMACSHA384(masterKey,&kbkdfMsg,sizeof(kbkdfMsg),kbuf);
-			k1.init(kbuf);
-			++kbkdfMsg[0];
-		}
+		uint8_t k[32];
+		KBKDFHMACSHA384(masterKey,ZT_PROTO_KBKDF_LABEL_KEY_USE_AES_GMAC_SIV_K1,0,0,k);
+		k1.init(k);
+		KBKDFHMACSHA384(masterKey,ZT_PROTO_KBKDF_LABEL_KEY_USE_AES_GMAC_SIV_K2,0,0,k);
+		k2.init(k);
+		KBKDFHMACSHA384(masterKey,ZT_PROTO_KBKDF_LABEL_KEY_USE_AES_GMAC_SIV_K3,0,0,k);
+		k3.init(k);
+		KBKDFHMACSHA384(masterKey,ZT_PROTO_KBKDF_LABEL_KEY_USE_AES_GMAC_SIV_K4,0,0,k);
+		k4.init(k);
 	}
 
 private:

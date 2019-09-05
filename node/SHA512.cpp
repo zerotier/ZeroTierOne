@@ -274,4 +274,25 @@ void HMACSHA384(const uint8_t key[32],const void *msg,const unsigned int msglen,
 	SHA384(mac,outer,176); // H(output padded key | H(input padded key | msg))
 }
 
+void KBKDFHMACSHA384(const uint8_t key[32],const char label,const char context,const uint32_t iter,uint8_t out[32])
+{
+	uint8_t kbkdfMsg[13];
+	uint8_t kbuf[48];
+	kbkdfMsg[0] = (uint8_t)(iter >> 24);
+	kbkdfMsg[1] = (uint8_t)(iter >> 16);
+	kbkdfMsg[2] = (uint8_t)(iter >> 8);
+	kbkdfMsg[3] = (uint8_t)iter;
+	kbkdfMsg[4] = (uint8_t)'Z';
+	kbkdfMsg[5] = (uint8_t)'T'; // preface our labels with something ZT-specific
+	kbkdfMsg[6] = (uint8_t)label;
+	kbkdfMsg[7] = 0;
+	kbkdfMsg[8] = (uint8_t)context;
+	kbkdfMsg[9] = 0;
+	kbkdfMsg[10] = 0;
+	kbkdfMsg[11] = 1;
+	kbkdfMsg[12] = 0; // key length: 256 bits as big-endian 32-bit value
+	HMACSHA384(key,&kbkdfMsg,sizeof(kbkdfMsg),kbuf);
+	memcpy(out,kbuf,32);
+}
+
 } // namespace ZeroTier
