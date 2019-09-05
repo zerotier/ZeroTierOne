@@ -146,69 +146,62 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	static uint64_t randomState[4];
 	static uint8_t randomBuf[16384];
 	static unsigned long randomPtr = sizeof(randomBuf);
-#ifdef __WINDOWS__
-	static HCRYPTPROV cryptProvider = NULL;
-#endif
 
-	Mutex::Lock _l(globalLock);
-
-	/* Just for posterity we Salsa20 encrypt the result of whatever system
-	 * CSPRNG we use. There have been several bugs at the OS or OS distribution
-	 * level in the past that resulted in systematically weak or predictable
-	 * keys due to random seeding problems. This mitigates that by grabbing
-	 * a bit of extra entropy and further randomizing the result,and comes
-	 * at almost no cost and with no real downside if the random source is
-	 * good. */
-	if (unlikely(!initialized)) {
-#ifdef __WINDOWS__
-		if (!CryptAcquireContextA(&cryptProvider,NULL,NULL,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT|CRYPT_SILENT)) {
-			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
-			exit(1);
-		}
-		if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomState),(BYTE *)randomState)) {
-			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
-			exit(1);
-		}
-		if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomBuf),(BYTE *)randomBuf)) {
-			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
-			exit(1);
-		}
-#else
-		int devURandomFd = ::open("/dev/urandom",O_RDONLY);
-		if (devURandomFd < 0) {
-			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
-			exit(1);
-		}
-		if ((int)::read(devURandomFd,randomState,sizeof(randomState)) != (int)sizeof(randomState)) {
-			::close(devURandomFd);
-			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\n");
-			exit(1);
-		}
-		if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
-			::close(devURandomFd);
-			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\n");
-			exit(1);
-		}
-		close(devURandomFd);
-#endif
-		initialized = true;
-	}
+	Mutex::Lock gl(globalLock);
 
 	for(unsigned int i=0;i<bytes;++i) {
 		if (randomPtr >= sizeof(randomBuf)) {
 			randomPtr = 0;
 
-			for(unsigned int k=0;k<4;++k) {
-				if (++randomState[k])
-					break;
+			if (unlikely(!initialized)) {
+				initialized = true;
+#ifdef __WINDOWS__
+				HCRYPTPROV cryptProvider = NULL;
+				if (!CryptAcquireContextA(&cryptProvider,NULL,NULL,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT|CRYPT_SILENT)) {
+					fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
+					exit(1);
+				}
+				if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomState),(BYTE *)randomState)) {
+					fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
+					exit(1);
+				}
+				if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomBuf),(BYTE *)randomBuf)) {
+					fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
+					exit(1);
+				}
+				CryptReleaseContext(cryptProvider,0);
+#else
+				int devURandomFd = ::open("/dev/urandom",O_RDONLY);
+				if (devURandomFd < 0) {
+					fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
+					exit(1);
+				}
+				if ((int)::read(devURandomFd,randomState,sizeof(randomState)) != (int)sizeof(randomState)) {
+					::close(devURandomFd);
+					fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\n");
+					exit(1);
+				}
+				if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
+					::close(devURandomFd);
+					fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\n");
+					exit(1);
+				}
+				close(devURandomFd);
+#endif
+				randomState[0] ^= (uint64_t)time(nullptr);
+				randomState[1] ^= (uint64_t)((uintptr_t)buf); // XOR in some other entropy just in case the system random source is wonky
 			}
 
 			uint8_t h[48];
+			for(unsigned int k=0;k<4;++k) {
+				if (++randomState[k] != 0)
+					break;
+			}
 			HMACSHA384((const uint8_t *)randomState,randomBuf,sizeof(randomBuf),h);
-
 			AES c(h);
 			c.ctr(h + 32,randomBuf,sizeof(randomBuf),randomBuf);
 		}
+
 		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
 	}
 }

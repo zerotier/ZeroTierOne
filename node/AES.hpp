@@ -153,11 +153,19 @@ public:
 	/**
 	 * Perform AES-GMAC-SIV encryption
 	 *
-	 * This is an AES mode built from GMAC and AES-CTR that is similar to the
-	 * various SIV (synthetic IV) modes for AES and is resistant to nonce
-	 * re-use. It's specifically tweaked for ZeroTier's packet structure with
-	 * a 64-bit IV (extended to 96 bits by including packet size and other info)
-	 * and a 64-bit auth tag.
+	 * This is basically AES-CMAC-SIV but with GMAC in place of CMAC after
+	 * GMAC is run through AES as a keyed hash to make it behave like a
+	 * proper PRF.
+	 *
+	 * See: https://github.com/miscreant/meta/wiki/AES-SIV
+	 *
+	 * The advantage is that this can be described in terms of FIPS and NSA
+	 * ceritifable primitives that are present in FIPS-compliant crypto
+	 * modules.
+	 *
+	 * The extra AES-ECB (keyed hash) encryption of the AES-CTR IV prior
+	 * to use makes the IV itself a secret. This is not strictly necessary
+	 * but comes at little cost.
 	 *
 	 * @param k1 GMAC key
 	 * @param k2 GMAC auth tag keyed hash key
@@ -180,7 +188,7 @@ public:
 		uint8_t ctrIv[16];
 #endif
 
-		// Extend packet IV to 96-bit message IV using direction byte and message length
+		// GMAC IV is 64-bit packet IV followed by other packet attributes to extend to 96 bits
 #ifndef __GNUC__
 		for(unsigned int i=0;i<8;++i) miv[i] = iv[i];
 #else
@@ -191,18 +199,16 @@ public:
 		miv[10] = (uint8_t)(len >> 8);
 		miv[11] = (uint8_t)len;
 
-		// Compute AES[k2](GMAC[k1](miv,plaintext))
+		// Compute auth TAG: AES-ECB[k2](GMAC[k1](miv,plaintext))[0:8]
 		k1.gmac(miv,in,len,ctrIv);
 		k2.encrypt(ctrIv,ctrIv); // ECB mode encrypt step is because GMAC is not a PRF
-
-		// Auth tag for packet is first 64 bits of AES(GMAC) (rest is discarded)
 #ifdef ZT_NO_TYPE_PUNNING
 		for(unsigned int i=0;i<8;++i) tag[i] = ctrIv[i];
 #else
 		*((uint64_t *)tag) = *((uint64_t *)ctrIv);
 #endif
 
-		// Create synthetic CTR IV from keyed hash of tag and message IV
+		// Create synthetic CTR IV: AES-ECB[k3](TAG | MIV[0:4] | (MIV[4:8] XOR MIV[8:12]))
 #ifndef __GNUC__
 		for(unsigned int i=0;i<4;++i) ctrIv[i+8] = miv[i];
 		for(unsigned int i=4;i<8;++i) ctrIv[i+8] = miv[i] ^ miv[i+4];
