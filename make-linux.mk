@@ -1,4 +1,4 @@
-# Automagically pick clang or gcc, with preference for clang
+# Automagically pick CLANG or RH/CentOS newer GCC if present
 # This is only done if we have not overridden these with an environment or CLI variable
 ifeq ($(origin CC),default)
         CC:=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
@@ -17,9 +17,6 @@ DESTDIR?=
 include objects.mk
 ONE_OBJS+=osdep/LinuxEthernetTap.o
 ONE_OBJS+=osdep/LinuxNetLink.o
-
-NLTEST_OBJS+=osdep/LinuxNetLink.o node/InetAddress.o node/Utils.o node/Salsa20.o
-NLTEST_OBJS+=nltest.o
 
 # for central controller builds
 TIMESTAMP=$(shell date +"%Y%m%d%H%M")
@@ -343,9 +340,6 @@ central-controller-docker:	central-controller
 debug:	FORCE
 	make ZT_DEBUG=1 one
 	make ZT_DEBUG=1 selftest
-
-nltest: $(NLTEST_OBJS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o nltest $(NLTEST_OBJS) $(LDLIBS)
 
 # Note: keep the symlinks in /var/lib/zerotier-one to the binaries since these
 # provide backward compatibility with old releases where the binaries actually
