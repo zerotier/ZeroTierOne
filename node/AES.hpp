@@ -151,7 +151,7 @@ public:
 	}
 
 	/**
-	 * Perform AES-GMAC-CTR encryption
+	 * Perform AES-GMAC-SIV encryption
 	 *
 	 * This is an AES mode built from GMAC and AES-CTR that is similar to the
 	 * various SIV (synthetic IV) modes for AES and is resistant to nonce
@@ -167,34 +167,52 @@ public:
 	 * @param k2 GMAC auth tag masking (ECB encryption) key
 	 * @param k3 CTR IV masking (ECB encryption) key
 	 * @param k4 AES-CTR key
-	 * @param iv 96-bit message IV
+	 * @param iv 64-bit packet IV
+	 * @param direction Direction byte
 	 * @param in Message plaintext
 	 * @param len Length of plaintext
 	 * @param out Output buffer to receive ciphertext
 	 * @param tag Output buffer to receive 64-bit authentication tag
 	 */
-	static ZT_ALWAYS_INLINE void ztGmacCtrEncrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[12],const void *in,const unsigned int len,void *out,uint8_t tag[8])
+	static ZT_ALWAYS_INLINE void gmacSivEncrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t direction,const void *in,const unsigned int len,void *out,uint8_t tag[8])
 	{
+#ifdef __GNUC__
+		uint8_t __attribute__ ((aligned (16))) miv[12];
+		uint8_t __attribute__ ((aligned (16))) ctrIv[16];
+#else
+		uint8_t miv[12];
 		uint8_t ctrIv[16];
+#endif
 
-		// Compute AES[k2](GMAC[k1](iv,plaintext))
-		k1.gmac(iv,in,len,ctrIv);
+		// Extend packet IV to 96-bit message IV using direction byte and message length
+#ifndef __GNUC__
+		for(unsigned int i=0;i<8;++i) miv[i] = iv[i];
+#else
+		*((uint64_t *)miv) = *((const uint64_t *)iv);
+#endif
+		miv[8] = direction;
+		miv[9] = (uint8_t)(len >> 16);
+		miv[10] = (uint8_t)(len >> 8);
+		miv[11] = (uint8_t)len;
+
+		// Compute AES[k2](GMAC[k1](miv,plaintext))
+		k1.gmac(miv,in,len,ctrIv);
 		k2.encrypt(ctrIv,ctrIv); // ECB mode encrypt step is because GMAC is not a PRF
 
 		// Auth tag for packet is first 64 bits of AES(GMAC) (rest is discarded)
-#ifdef ZT_NO_TYPE_PUNNING
+#ifndef __GNUC__
 		for(unsigned int i=0;i<8;++i) tag[i] = ctrIv[i];
 #else
 		*((uint64_t *)tag) = *((uint64_t *)ctrIv);
 #endif
 
-		// Create synthetic CTR IV
-#ifdef ZT_NO_TYPE_PUNNING
-		for(unsigned int i=0;i<4;++i) ctrIv[i+8] = iv[i];
-		for(unsigned int i=4;i<8;++i) ctrIv[i+8] = iv[i] ^ iv[i+4];
+		// Create synthetic CTR IV from keyed hash of tag and message IV
+#ifndef __GNUC__
+		for(unsigned int i=0;i<4;++i) ctrIv[i+8] = miv[i];
+		for(unsigned int i=4;i<8;++i) ctrIv[i+8] = miv[i] ^ miv[i+4];
 #else
-		((uint32_t *)ctrIv)[2] = ((const uint32_t *)iv)[0];
-		((uint32_t *)ctrIv)[3] = ((const uint32_t *)iv)[1] ^ ((const uint32_t *)iv)[2];
+		((uint32_t *)ctrIv)[2] = ((const uint32_t *)miv)[0];
+		((uint32_t *)ctrIv)[3] = ((const uint32_t *)miv)[1] ^ ((const uint32_t *)miv)[2];
 #endif
 		k3.encrypt(ctrIv,ctrIv);
 
@@ -203,32 +221,52 @@ public:
 	}
 
 	/**
-	 * Decrypt a message encrypted with AES-GMAC-CTR and check its authenticity
+	 * Decrypt a message encrypted with AES-GMAC-SIV and check its authenticity
 	 *
 	 * @param k1 GMAC key
 	 * @param k2 GMAC auth tag masking (ECB encryption) key
 	 * @param k3 CTR IV masking (ECB encryption) key
 	 * @param k4 AES-CTR key
-	 * @param iv 96-bit message IV
+	 * @param iv 64-bit message IV
+	 * @param direction Direction byte
 	 * @param in Message ciphertext
 	 * @param len Length of ciphertext
 	 * @param out Output buffer to receive plaintext
 	 * @param tag Authentication tag supplied with message
 	 * @return True if authentication tags match and message appears authentic
 	 */
-	static ZT_ALWAYS_INLINE bool ztGmacCtrDecrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[12],const void *in,const unsigned int len,void *out,const uint8_t tag[8])
+	static ZT_ALWAYS_INLINE bool gmacSivDecrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t direction,const void *in,const unsigned int len,void *out,const uint8_t tag[8])
 	{
-		uint8_t ctrIv[16],gmacOut[16];
+#ifdef __GNUC__
+		uint8_t __attribute__ ((aligned (16))) miv[12];
+		uint8_t __attribute__ ((aligned (16))) ctrIv[16];
+		uint8_t __attribute__ ((aligned (16))) gmacOut[16];
+#else
+		uint8_t miv[12];
+		uint8_t ctrIv[16];
+		uint8_t gmacOut[16];
+#endif
+
+		// Extend packet IV to 96-bit message IV using direction byte and message length
+#ifndef __GNUC__
+		for(unsigned int i=0;i<8;++i) miv[i] = iv[i];
+#else
+		*((uint64_t *)miv) = *((const uint64_t *)iv);
+#endif
+		miv[8] = direction;
+		miv[9] = (uint8_t)(len >> 16);
+		miv[10] = (uint8_t)(len >> 8);
+		miv[11] = (uint8_t)len;
 
 		// Recover synthetic and secret CTR IV from auth tag and packet IV
-#ifdef ZT_NO_TYPE_PUNNING
+#ifndef __GNUC__
 		for(unsigned int i=0;i<8;++i) ctrIv[i] = tag[i];
-		for(unsigned int i=0;i<4;++i) ctrIv[i+8] = iv[i];
-		for(unsigned int i=4;i<8;++i) ctrIv[i+8] = iv[i] ^ iv[i+4];
+		for(unsigned int i=0;i<4;++i) ctrIv[i+8] = miv[i];
+		for(unsigned int i=4;i<8;++i) ctrIv[i+8] = miv[i] ^ miv[i+4];
 #else
 		*((uint64_t *)ctrIv) = *((const uint64_t *)tag);
-		((uint32_t *)ctrIv)[2] = ((const uint32_t *)iv)[0];
-		((uint32_t *)ctrIv)[3] = ((const uint32_t *)iv)[1] ^ ((const uint32_t *)iv)[2];
+		((uint32_t *)ctrIv)[2] = ((const uint32_t *)miv)[0];
+		((uint32_t *)ctrIv)[3] = ((const uint32_t *)miv)[1] ^ ((const uint32_t *)miv)[2];
 #endif
 		k3.encrypt(ctrIv,ctrIv);
 
@@ -236,11 +274,11 @@ public:
 		k4.ctr(ctrIv,in,len,out);
 
 		// Compute AES[k2](GMAC[k1](iv,plaintext))
-		k1.gmac(iv,out,len,gmacOut);
+		k1.gmac(miv,out,len,gmacOut);
 		k2.encrypt(gmacOut,gmacOut);
 
 		// Check that packet's auth tag matches first 64 bits of AES(GMAC)
-#ifdef ZT_NO_TYPE_PUNNING
+#ifndef __GNUC__
 		return Utils::secureEq(gmacOut,tag,8);
 #else
 		return (*((const uint64_t *)gmacOut) == *((const uint64_t *)tag));
@@ -248,7 +286,7 @@ public:
 	}
 
 	/**
-	 * Use KBKDF with HMAC-SHA-384 to derive four sub-keys for AES-GMAC-CTR from a single master key
+	 * Use KBKDF with HMAC-SHA-384 to derive four sub-keys for AES-GMAC-SIV from a single master key
 	 *
 	 * See section 5.1 at https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-108.pdf
 	 *

@@ -167,8 +167,7 @@ static const uint8_t AES_GMAC_VECTOR_2_OUT[16] = { 0x67,0x39,0x4f,0x00,0x04,0x28
 
 static int testCrypto()
 {
-	static unsigned char buf1[16384];
-	static unsigned char buf2[sizeof(buf1)],buf3[sizeof(buf1)];
+	static uint8_t buf1[16384],buf2[16384],buf3[16384];
 	static char hexbuf[1024];
 	volatile unsigned char *dummy = (volatile unsigned char *)&(buf1[100]);
 
@@ -228,7 +227,7 @@ static int testCrypto()
 			AES::initGmacCtrKeys(AES_TEST_VECTOR_0_KEY,k1,k2,k3,k4);
 			int64_t start = OSUtils::now();
 			for(unsigned long i=0;i<500000;++i) {
-				AES::ztGmacCtrEncrypt(k1,k2,k3,k4,(const uint8_t *)hexbuf,buf1,ZT_DEFAULT_MTU,buf1,(uint8_t *)(hexbuf + 8));
+				AES::gmacSivEncrypt(k1,k2,k3,k4,(const uint8_t *)hexbuf,0,buf1,ZT_DEFAULT_MTU,buf1,(uint8_t *)(hexbuf + 8));
 				*dummy = buf1[0];
 			}
 			int64_t end = OSUtils::now();
