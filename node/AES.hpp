@@ -505,72 +505,53 @@ private:
 		const __m128i k13 = _k.ni.k[13];
 		const __m128i k14 = _k.ni.k[14];
 
-		while (len >= 64) {
+#define ZT_AES_CTR_AESNI_ROUND(k) \
+	c0 = _mm_aesenc_si128(c0,k); \
+	c1 = _mm_aesenc_si128(c1,k); \
+	c2 = _mm_aesenc_si128(c2,k); \
+	c3 = _mm_aesenc_si128(c3,k); \
+	c4 = _mm_aesenc_si128(c4,k); \
+	c5 = _mm_aesenc_si128(c5,k); \
+	c6 = _mm_aesenc_si128(c6,k); \
+	c7 = _mm_aesenc_si128(c7,k)
+
+		while (len >= 128) {
 			__m128i c0 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton(ctr),iv0),k0);
 			__m128i c1 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton((uint64_t)(ctr+1ULL)),iv0),k0);
 			__m128i c2 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton((uint64_t)(ctr+2ULL)),iv0),k0);
 			__m128i c3 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton((uint64_t)(ctr+3ULL)),iv0),k0);
-			ctr += 4;
-			c0 = _mm_aesenc_si128(c0,k1);
-			c1 = _mm_aesenc_si128(c1,k1);
-			c2 = _mm_aesenc_si128(c2,k1);
-			c3 = _mm_aesenc_si128(c3,k1);
-			c0 = _mm_aesenc_si128(c0,k2);
-			c1 = _mm_aesenc_si128(c1,k2);
-			c2 = _mm_aesenc_si128(c2,k2);
-			c3 = _mm_aesenc_si128(c3,k2);
-			c0 = _mm_aesenc_si128(c0,k3);
-			c1 = _mm_aesenc_si128(c1,k3);
-			c2 = _mm_aesenc_si128(c2,k3);
-			c3 = _mm_aesenc_si128(c3,k3);
-			c0 = _mm_aesenc_si128(c0,k4);
-			c1 = _mm_aesenc_si128(c1,k4);
-			c2 = _mm_aesenc_si128(c2,k4);
-			c3 = _mm_aesenc_si128(c3,k4);
-			c0 = _mm_aesenc_si128(c0,k5);
-			c1 = _mm_aesenc_si128(c1,k5);
-			c2 = _mm_aesenc_si128(c2,k5);
-			c3 = _mm_aesenc_si128(c3,k5);
-			c0 = _mm_aesenc_si128(c0,k6);
-			c1 = _mm_aesenc_si128(c1,k6);
-			c2 = _mm_aesenc_si128(c2,k6);
-			c3 = _mm_aesenc_si128(c3,k6);
-			c0 = _mm_aesenc_si128(c0,k7);
-			c1 = _mm_aesenc_si128(c1,k7);
-			c2 = _mm_aesenc_si128(c2,k7);
-			c3 = _mm_aesenc_si128(c3,k7);
-			c0 = _mm_aesenc_si128(c0,k8);
-			c1 = _mm_aesenc_si128(c1,k8);
-			c2 = _mm_aesenc_si128(c2,k8);
-			c3 = _mm_aesenc_si128(c3,k8);
-			c0 = _mm_aesenc_si128(c0,k9);
-			c1 = _mm_aesenc_si128(c1,k9);
-			c2 = _mm_aesenc_si128(c2,k9);
-			c3 = _mm_aesenc_si128(c3,k9);
-			c0 = _mm_aesenc_si128(c0,k10);
-			c1 = _mm_aesenc_si128(c1,k10);
-			c2 = _mm_aesenc_si128(c2,k10);
-			c3 = _mm_aesenc_si128(c3,k10);
-			c0 = _mm_aesenc_si128(c0,k11);
-			c1 = _mm_aesenc_si128(c1,k11);
-			c2 = _mm_aesenc_si128(c2,k11);
-			c3 = _mm_aesenc_si128(c3,k11);
-			c0 = _mm_aesenc_si128(c0,k12);
-			c1 = _mm_aesenc_si128(c1,k12);
-			c2 = _mm_aesenc_si128(c2,k12);
-			c3 = _mm_aesenc_si128(c3,k12);
-			c0 = _mm_aesenc_si128(c0,k13);
-			c1 = _mm_aesenc_si128(c1,k13);
-			c2 = _mm_aesenc_si128(c2,k13);
-			c3 = _mm_aesenc_si128(c3,k13);
+			__m128i c4 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton((uint64_t)(ctr+4ULL)),iv0),k0);
+			__m128i c5 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton((uint64_t)(ctr+5ULL)),iv0),k0);
+			__m128i c6 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton((uint64_t)(ctr+6ULL)),iv0),k0);
+			__m128i c7 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton((uint64_t)(ctr+7ULL)),iv0),k0);
+			ctr += 8;
+			ZT_AES_CTR_AESNI_ROUND(k1);
+			ZT_AES_CTR_AESNI_ROUND(k2);
+			ZT_AES_CTR_AESNI_ROUND(k3);
+			ZT_AES_CTR_AESNI_ROUND(k4);
+			ZT_AES_CTR_AESNI_ROUND(k5);
+			ZT_AES_CTR_AESNI_ROUND(k6);
+			ZT_AES_CTR_AESNI_ROUND(k7);
+			ZT_AES_CTR_AESNI_ROUND(k8);
+			ZT_AES_CTR_AESNI_ROUND(k9);
+			ZT_AES_CTR_AESNI_ROUND(k10);
+			ZT_AES_CTR_AESNI_ROUND(k11);
+			ZT_AES_CTR_AESNI_ROUND(k12);
+			ZT_AES_CTR_AESNI_ROUND(k13);
 			_mm_storeu_si128((__m128i *)out,_mm_xor_si128(_mm_loadu_si128((const __m128i *)in),_mm_aesenclast_si128(c0,k14)));
 			_mm_storeu_si128((__m128i *)(out + 16),_mm_xor_si128(_mm_loadu_si128((const __m128i *)(in + 16)),_mm_aesenclast_si128(c1,k14)));
 			_mm_storeu_si128((__m128i *)(out + 32),_mm_xor_si128(_mm_loadu_si128((const __m128i *)(in + 32)),_mm_aesenclast_si128(c2,k14)));
 			_mm_storeu_si128((__m128i *)(out + 48),_mm_xor_si128(_mm_loadu_si128((const __m128i *)(in + 48)),_mm_aesenclast_si128(c3,k14)));
-			in += 64;
-			out += 64;
-			len -= 64;
+			_mm_storeu_si128((__m128i *)(out + 64),_mm_xor_si128(_mm_loadu_si128((const __m128i *)(in + 64)),_mm_aesenclast_si128(c4,k14)));
+			_mm_storeu_si128((__m128i *)(out + 80),_mm_xor_si128(_mm_loadu_si128((const __m128i *)(in + 80)),_mm_aesenclast_si128(c5,k14)));
+			_mm_storeu_si128((__m128i *)(out + 96),_mm_xor_si128(_mm_loadu_si128((const __m128i *)(in + 96)),_mm_aesenclast_si128(c6,k14)));
+			_mm_storeu_si128((__m128i *)(out + 112),_mm_xor_si128(_mm_loadu_si128((const __m128i *)(in + 112)),_mm_aesenclast_si128(c7,k14)));
+			in += 128;
+			out += 128;
+			len -= 128;
 		}
+
+#undef ZT_AES_CTR_AESNI_ROUND
 
 		while (len >= 16) {
 			__m128i c0 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton(ctr++),(__m64)iv0),k0);

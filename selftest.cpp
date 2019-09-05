@@ -207,33 +207,32 @@ static int testCrypto()
 			}
 			std::cout << "OK" ZT_EOL_S << "  GMAC-AES-256 (benchmark): "; std::cout.flush();
 			int64_t start = OSUtils::now();
-			for(unsigned long i=0;i<200000;++i) {
-				tv.gmac((const uint8_t *)buf1,buf1,sizeof(buf1),(uint8_t *)buf1);
+			for(unsigned long i=0;i<500000;++i) {
+				tv.gmac((const uint8_t *)buf1,buf1,ZT_DEFAULT_MTU,(uint8_t *)buf1);
 			}
 			int64_t end = OSUtils::now();
 			*dummy = hexbuf[0];
-			std::cout << (((double)(200000 * sizeof(buf1)) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" ZT_EOL_S;
+			std::cout << (((double)(500000 * ZT_DEFAULT_MTU) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (dummy: " << (unsigned int)*dummy << ")" ZT_EOL_S;
 			std::cout << "  AES-256-CTR (benchmark): "; std::cout.flush();
 			start = OSUtils::now();
-			for(unsigned long i=0;i<200000;++i) {
-				tv.ctr((const uint8_t *)hexbuf,buf1,sizeof(buf1),buf2);
-				hexbuf[0] = buf2[0];
+			for(unsigned long i=0;i<500000;++i) {
+				tv.ctr((const uint8_t *)hexbuf,buf1,ZT_DEFAULT_MTU,buf1);
+				*dummy = buf1[0];
 			}
 			end = OSUtils::now();
-			*dummy = buf2[0];
-			std::cout << (((double)(200000 * sizeof(buf1)) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" ZT_EOL_S;
+			std::cout << (((double)(500000 * ZT_DEFAULT_MTU) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (dummy: " << (unsigned int)*dummy << ")" ZT_EOL_S;
 		}
 		{
 			std::cout << "  AES-256-GMAC-CTR (benchmark): "; std::cout.flush();
 			AES k1,k2,k3,k4;
 			AES::initGmacCtrKeys(AES_TEST_VECTOR_0_KEY,k1,k2,k3,k4);
 			int64_t start = OSUtils::now();
-			for(unsigned long i=0;i<200000;++i) {
-				AES::ztGmacCtrEncrypt(k1,k2,k3,k4,(const uint8_t *)hexbuf,buf1,sizeof(buf1),buf1,(uint8_t *)(hexbuf + 8));
+			for(unsigned long i=0;i<500000;++i) {
+				AES::ztGmacCtrEncrypt(k1,k2,k3,k4,(const uint8_t *)hexbuf,buf1,ZT_DEFAULT_MTU,buf1,(uint8_t *)(hexbuf + 8));
 				*dummy = buf1[0];
 			}
 			int64_t end = OSUtils::now();
-			std::cout << (((double)(200000 * sizeof(buf1)) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" ZT_EOL_S;
+			std::cout << (((double)(500000 * ZT_DEFAULT_MTU) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (dummy: " << (unsigned int)*dummy << ")" ZT_EOL_S;
 		}
 	}
 
