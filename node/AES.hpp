@@ -31,7 +31,7 @@
 namespace ZeroTier {
 
 /**
- * AES-256 and AES-GCM AEAD
+ * AES-256 and pals
  */
 class AES
 {
@@ -159,22 +159,18 @@ public:
 	 * a 64-bit IV (extended to 96 bits by including packet size and other info)
 	 * and a 64-bit auth tag.
 	 *
-	 * The use of separate keys for MAC and encrypt is precautionary. It
-	 * ensures that the CTR IV (and CTR output) are always secrets regardless
-	 * of what an attacker might do with accumulated IVs and auth tags.
-	 *
 	 * @param k1 GMAC key
-	 * @param k2 GMAC auth tag masking (ECB encryption) key
-	 * @param k3 CTR IV masking (ECB encryption) key
+	 * @param k2 GMAC auth tag keyed hash key
+	 * @param k3 CTR IV keyed hash key
 	 * @param k4 AES-CTR key
 	 * @param iv 64-bit packet IV
-	 * @param direction Direction byte
+	 * @param pc Packet characteristics byte
 	 * @param in Message plaintext
 	 * @param len Length of plaintext
 	 * @param out Output buffer to receive ciphertext
 	 * @param tag Output buffer to receive 64-bit authentication tag
 	 */
-	static ZT_ALWAYS_INLINE void gmacSivEncrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t direction,const void *in,const unsigned int len,void *out,uint8_t tag[8])
+	static ZT_ALWAYS_INLINE void gmacSivEncrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t pc,const void *in,const unsigned int len,void *out,uint8_t tag[8])
 	{
 #ifdef __GNUC__
 		uint8_t __attribute__ ((aligned (16))) miv[12];
@@ -190,7 +186,7 @@ public:
 #else
 		*((uint64_t *)miv) = *((const uint64_t *)iv);
 #endif
-		miv[8] = direction;
+		miv[8] = pc;
 		miv[9] = (uint8_t)(len >> 16);
 		miv[10] = (uint8_t)(len >> 8);
 		miv[11] = (uint8_t)len;
@@ -200,7 +196,7 @@ public:
 		k2.encrypt(ctrIv,ctrIv); // ECB mode encrypt step is because GMAC is not a PRF
 
 		// Auth tag for packet is first 64 bits of AES(GMAC) (rest is discarded)
-#ifndef __GNUC__
+#ifdef ZT_NO_TYPE_PUNNING
 		for(unsigned int i=0;i<8;++i) tag[i] = ctrIv[i];
 #else
 		*((uint64_t *)tag) = *((uint64_t *)ctrIv);
@@ -224,18 +220,18 @@ public:
 	 * Decrypt a message encrypted with AES-GMAC-SIV and check its authenticity
 	 *
 	 * @param k1 GMAC key
-	 * @param k2 GMAC auth tag masking (ECB encryption) key
-	 * @param k3 CTR IV masking (ECB encryption) key
+	 * @param k2 GMAC auth tag keyed hash key
+	 * @param k3 CTR IV keyed hash key
 	 * @param k4 AES-CTR key
 	 * @param iv 64-bit message IV
-	 * @param direction Direction byte
+	 * @param pc Packet characteristics byte
 	 * @param in Message ciphertext
 	 * @param len Length of ciphertext
 	 * @param out Output buffer to receive plaintext
 	 * @param tag Authentication tag supplied with message
 	 * @return True if authentication tags match and message appears authentic
 	 */
-	static ZT_ALWAYS_INLINE bool gmacSivDecrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t direction,const void *in,const unsigned int len,void *out,const uint8_t tag[8])
+	static ZT_ALWAYS_INLINE bool gmacSivDecrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t pc,const void *in,const unsigned int len,void *out,const uint8_t tag[8])
 	{
 #ifdef __GNUC__
 		uint8_t __attribute__ ((aligned (16))) miv[12];
@@ -248,12 +244,12 @@ public:
 #endif
 
 		// Extend packet IV to 96-bit message IV using direction byte and message length
-#ifndef __GNUC__
+#ifdef ZT_NO_TYPE_PUNNING
 		for(unsigned int i=0;i<8;++i) miv[i] = iv[i];
 #else
 		*((uint64_t *)miv) = *((const uint64_t *)iv);
 #endif
-		miv[8] = direction;
+		miv[8] = pc;
 		miv[9] = (uint8_t)(len >> 16);
 		miv[10] = (uint8_t)(len >> 8);
 		miv[11] = (uint8_t)len;
@@ -278,7 +274,7 @@ public:
 		k2.encrypt(gmacOut,gmacOut);
 
 		// Check that packet's auth tag matches first 64 bits of AES(GMAC)
-#ifndef __GNUC__
+#ifdef ZT_NO_TYPE_PUNNING
 		return Utils::secureEq(gmacOut,tag,8);
 #else
 		return (*((const uint64_t *)gmacOut) == *((const uint64_t *)tag));
@@ -292,8 +288,8 @@ public:
 	 *
 	 * @param masterKey Master 256-bit key
 	 * @param k1 GMAC key
-	 * @param k2 GMAC auth tag masking (ECB encryption) key
-	 * @param k3 CTR IV masking (ECB encryption) key
+	 * @param k2 GMAC auth tag keyed hash key
+	 * @param k3 CTR IV keyed hash key
 	 * @param k4 AES-CTR key
 	 */
 	static ZT_ALWAYS_INLINE void initGmacCtrKeys(const uint8_t masterKey[32],AES &k1,AES &k2,AES &k3,AES &k4)

@@ -248,7 +248,7 @@ namespace ZeroTier {
  * ZeroTier packet
  *
  * Packet format:
- *   <[8] 64-bit packet ID / crypto IV / packet counter>
+ *   <[8] 64-bit packet ID / crypto IV>
  *   <[5] destination ZT address>
  *   <[5] source ZT address>
  *   <[1] flags/cipher/hops>
