@@ -222,7 +222,7 @@ static int testCrypto()
 			std::cout << (((double)(500000 * ZT_DEFAULT_MTU) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (dummy: " << (unsigned int)*dummy << ")" ZT_EOL_S;
 		}
 		{
-			std::cout << "  AES-256-GMAC-CTR (benchmark): "; std::cout.flush();
+			std::cout << "  AES-256-GMAC-SIV (benchmark): "; std::cout.flush();
 			AES k1,k2,k3,k4;
 			AES::initGmacCtrKeys(AES_TEST_VECTOR_0_KEY,k1,k2,k3,k4);
 			int64_t start = OSUtils::now();

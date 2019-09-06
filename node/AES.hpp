@@ -539,11 +539,6 @@ private:
 	c7 = _mm_aesenc_si128(c7,k)
 
 		while (len >= 128) {
-			_mm_prefetch(in,_MM_HINT_T0);
-			_mm_prefetch(in + 32,_MM_HINT_T0);
-			_mm_prefetch(in + 64,_MM_HINT_T0);
-			_mm_prefetch(in + 96,_MM_HINT_T0);
-			_mm_prefetch(in + 128,_MM_HINT_T0);
 			__m128i c0 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton(ctr),iv0),_k.ni.k[0]);
 			__m128i c1 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton((uint64_t)(ctr+1ULL)),iv0),_k.ni.k[0]);
 			__m128i c2 = _mm_xor_si128(_mm_set_epi64((__m64)Utils::hton((uint64_t)(ctr+2ULL)),iv0),_k.ni.k[0]);
@@ -667,10 +662,10 @@ private:
 
 	ZT_ALWAYS_INLINE void _gmac_aesni(const uint8_t iv[12],const uint8_t *in,const unsigned int len,uint8_t out[16]) const
 	{
-		const __m128i *ab = (const __m128i *)in;
-		unsigned int blocks = len / 16;
-		unsigned int pblocks = blocks - (blocks % 4);
-		unsigned int rem = len % 16;
+		const __m128i *const ab = (const __m128i *)in;
+		const unsigned int blocks = len / 16;
+		const unsigned int pblocks = blocks - (blocks % 4);
+		const unsigned int rem = len % 16;
 
 		const __m128i shuf = _mm_set_epi8(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
 		__m128i y = _mm_setzero_si128();
@@ -681,7 +676,6 @@ private:
 			__m128i d3 = _mm_shuffle_epi8(_mm_loadu_si128(ab + i + 2),shuf);
 			__m128i d4 = _mm_shuffle_epi8(_mm_loadu_si128(ab + i + 3),shuf);
 			_mm_prefetch(ab + i + 4,_MM_HINT_T0);
-			_mm_prefetch(ab + i + 6,_MM_HINT_T0);
 			__m128i t0 = _mm_clmulepi64_si128(_k.ni.hhhh,d1,0x00);
 			__m128i t1 = _mm_clmulepi64_si128(_k.ni.hhh,d2,0x00);
 			__m128i t2 = _mm_clmulepi64_si128(_k.ni.hh,d3,0x00);
@@ -753,7 +747,7 @@ private:
 			t6 = _mm_xor_si128(t6,t3);
 			y = _mm_shuffle_epi8(t6,shuf);
 		}
-#undef h1
+
 		for (;i<blocks;++i)
 			y = _ghash_aesni(shuf,_k.ni.h,y,_mm_loadu_si128(ab + i));
 
