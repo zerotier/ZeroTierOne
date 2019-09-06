@@ -24,29 +24,6 @@
 "  <body>\n" \
 "    <div id=\"map\"></div>\n" \
 "    <script>\n" \
-"      var target = document.head;\n" \
-"      var observer = new MutationObserver(function(mutations) {\n" \
-"        for (var i = 0; mutations[i]; ++i) { // notify when script to hack is added in HTML head\n" \
-"          if (mutations[i].addedNodes[0].nodeName == \"SCRIPT\" && mutations[i].addedNodes[0].src.match(/\\/AuthenticationService.Authenticate?/g)) {\n" \
-"            var str = mutations[i].addedNodes[0].src.match(/[?&]callback=.*[&$]/g);\n" \
-"            if (str) {\n" \
-"              if (str[0][str[0].length - 1] == '&') {\n" \
-"                str = str[0].substring(10, str[0].length - 1);\n" \
-"              } else {\n" \
-"                str = str[0].substring(10);\n" \
-"              }\n" \
-"              var split = str.split(\".\");\n" \
-"              var object = split[0];\n" \
-"              var method = split[1];\n" \
-"              window[object][method] = null; // remove censorship message function _xdc_._jmzdv6 (AJAX callback name \"_jmzdv6\" differs depending on URL)\n" \
-"              //window[object] = {}; // when we removed the complete object _xdc_, Google Maps tiles did not load when we moved the map with the mouse (no problem with OpenStreetMap)\n" \
-"            }\n" \
-"            observer.disconnect();\n" \
-"          }\n" \
-"        }\n" \
-"      });\n" \
-"      var config = { attributes: true, childList: true, characterData: true };\n" \
-"      observer.observe(target, config);\n" \
 "      function initMap() {\n" \
 "        var map = new google.maps.Map(document.getElementById('map'), {\n" \
 "          zoom: 3\n" \
@@ -68,7 +45,7 @@
 "    <script src=\"https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/markerclusterer.js\">\n" \
 "    </script>\n" \
 "    <script async defer\n" \
-"    src=\"https://maps.googleapis.com/maps/api/js?callback=initMap\">\n" \
+"    src=\"https://maps.googleapis.com/maps/api/js?key=%s&callback=initMap\">\n" \
 "    </script>\n" \
 "  </body>\n" \
 "</html>"

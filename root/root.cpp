@@ -179,14 +179,15 @@ struct ForwardingStats
 	Meter bps;
 };
 
-static int64_t s_startTime;        // Time service was started
-static std::vector<int> s_ports;   // Ports to bind for UDP traffic
-static int s_relayMaxHops = 0;     // Max relay hops
-static Identity s_self;            // My identity (including secret)
-static std::atomic_bool s_run;     // Remains true until shutdown is ordered
-static json s_config;              // JSON config file contents
-static std::string s_statsRoot;    // Root to write stats, peers, etc.
-static std::atomic_bool s_geoInit; // True if geoIP data is initialized
+static int64_t s_startTime;            // Time service was started
+static std::vector<int> s_ports;       // Ports to bind for UDP traffic
+static int s_relayMaxHops = 0;         // Max relay hops
+static Identity s_self;                // My identity (including secret)
+static std::atomic_bool s_run;         // Remains true until shutdown is ordered
+static json s_config;                  // JSON config file contents
+static std::string s_statsRoot;        // Root to write stats, peers, etc.
+static std::atomic_bool s_geoInit;     // True if geoIP data is initialized
+static std::string s_googleMapsAPIKey; // Google maps API key for GeoIP /map feature
 
 static Meter s_inputRate;
 static Meter s_outputRate;
@@ -816,6 +817,7 @@ int main(int argc,char **argv)
 	}
 
 	try {
+		s_googleMapsAPIKey = s_config["googleMapsAPIKey"];
 		std::string geoIpPath = s_config["geoIp"];
 		if (geoIpPath.length() > 0) {
 			FILE *gf = fopen(geoIpPath.c_str(),"rb");
@@ -1004,7 +1006,7 @@ int main(int argc,char **argv)
 		});
 
 		apiServ.Get("/map",[](const httplib::Request &req,httplib::Response &res) {
-			char tmp[128];
+			char tmp[4096];
 			if (!s_geoInit) {
 				res.set_content("Not enabled or GeoIP CSV file not finished reading.","text/plain");
 				return;
@@ -1069,7 +1071,8 @@ int main(int argc,char **argv)
 					}
 				}
 			}
-			o << ZT_GEOIP_HTML_TAIL;
+			OSUtils::ztsnprintf(tmp,sizeof(tmp),ZT_GEOIP_HTML_TAIL,s_googleMapsAPIKey.c_str());
+			o << tmp;
 			res.set_content(o.str(),"text/html");
 		});
 
