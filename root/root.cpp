@@ -1021,7 +1021,7 @@ int main(int argc,char **argv)
 					if (!p->second.empty()) {
 						if (p->first.isV4()) {
 							k4.first = ip4ToH32(p->first);
-							auto geo = std::make_reverse_iterator(s_geoIp4.upper_bound(k4));
+							auto geo = std::map< std::pair< uint32_t,uint32_t >,std::pair< float,float > >::reverse_iterator(s_geoIp4.upper_bound(k4));
 							while (geo != s_geoIp4.rend()) {
 								if ((geo->first.first <= k4.first)&&(geo->first.second >= k4.first)) {
 									if (!firstCoord)
@@ -1044,7 +1044,7 @@ int main(int argc,char **argv)
 							}
 						} else if (p->first.isV6()) {
 							k6.first = ip6ToH128(p->first);
-							auto geo = std::make_reverse_iterator(s_geoIp6.upper_bound(k6));
+							auto geo = std::map< std::pair< std::array< uint64_t,2 >,std::array< uint64_t,2 > >,std::pair< float,float > >::reverse_iterator(s_geoIp6.upper_bound(k6));
 							while (geo != s_geoIp6.rend()) {
 								if ((geo->first.first <= k6.first)&&(geo->first.second >= k6.first)) {
 									if (!firstCoord)
