@@ -37,7 +37,7 @@
 "            label: lbl\n" \
 "          });\n" \
 "        });\n" \
-"        var markerCluster = new MarkerClusterer(map,markers,{imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m',maxZoom:7,minimumClusterSize:4,zoomOnClick:true});\n" \
+"        var markerCluster = new MarkerClusterer(map,markers,{imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m',maxZoom:8,minimumClusterSize:3,zoomOnClick:true});\n" \
 "      }\n" \
 "      var locations = ["
 
