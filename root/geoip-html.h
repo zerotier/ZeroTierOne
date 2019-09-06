@@ -26,15 +26,17 @@
 "    <script>\n" \
 "      function initMap() {\n" \
 "        var map = new google.maps.Map(document.getElementById('map'), {\n" \
+"          center: {lat: 0, lng: 0},\n" \
 "          zoom: 3\n" \
 "        });\n" \
 "        var markers = locations.map(function(location,i) {\n" \
+"          var lbl = location._l||\"\";\n" \
+"          delete location._l;\n" \
 "          return new google.maps.Marker({\n" \
 "            position: location,\n" \
-"            label: location._l\n" \
+"            label: lbl\n" \
 "          });\n" \
 "        });\n" \
-"\n" \
 "        var markerCluster = new MarkerClusterer(map,markers,{imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m'});\n" \
 "      }\n" \
 "      var locations = ["
