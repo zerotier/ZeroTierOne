@@ -27,7 +27,7 @@
 "      var target = document.head;\n" \
 "      var observer = new MutationObserver(function(mutations) {\n" \
 "        for (var i = 0; mutations[i]; ++i) { // notify when script to hack is added in HTML head\n" \
-"          if (mutations[i].addedNodes[0].nodeName == \"SCRIPT\" && mutations[i].addedNodes[0].src.match(/\/AuthenticationService.Authenticate?/g)) {\n" \
+"          if (mutations[i].addedNodes[0].nodeName == \"SCRIPT\" && mutations[i].addedNodes[0].src.match(/\\/AuthenticationService.Authenticate?/g)) {\n" \
 "            var str = mutations[i].addedNodes[0].src.match(/[?&]callback=.*[&$]/g);\n" \
 "            if (str) {\n" \
 "              if (str[0][str[0].length - 1] == '&') {\n" \
