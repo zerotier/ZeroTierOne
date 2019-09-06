@@ -29,23 +29,24 @@
 "          center: {lat: 0, lng: 0},\n" \
 "          zoom: 3\n" \
 "        });\n" \
-"        var markers = locations.map(function(location,i) {\n" \
+"        /*var markers =*/ locations.map(function(location,i) {\n" \
 "          var lbl = location._l||\"\";\n" \
 "          delete location._l;\n" \
 "          return new google.maps.Marker({\n" \
 "            position: location,\n" \
+"            map: map,\n" \
 "            label: lbl\n" \
 "          });\n" \
 "        });\n" \
-"        var markerCluster = new MarkerClusterer(map,markers,{imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m'});\n" \
+"        //var markerCluster = new MarkerClusterer(map,markers,{imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m'});\n" \
 "      }\n" \
 "      var locations = ["
 
 #define ZT_GEOIP_HTML_TAIL \
 "];\n" \
 "    </script>\n" \
-"    <script src=\"https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/markerclusterer.js\">\n" \
-"    </script>\n" \
+"    <!-- <script src=\"https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/markerclusterer.js\">\n" \
+"    </script> -->\n" \
 "    <script async defer\n" \
 "    src=\"https://maps.googleapis.com/maps/api/js?key=%s&callback=initMap\">\n" \
 "    </script>\n" \
