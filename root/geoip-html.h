@@ -44,9 +44,9 @@
 "    </script>\n" \
 "    <script src=\"https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/markerclusterer.js\">\n" \
 "    </script>\n" \
-"    <!-- <script async defer\n" \
+"    <script async defer\n" \
 "    src=\"https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false&callback=initMap\">\n" \
-"    </script> -->\n" \
+"    </script>\n" \
 "  </body>\n" \
 "</html>"
 
