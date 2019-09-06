@@ -823,9 +823,10 @@ int main(int argc,char **argv)
 				threads.emplace_back(std::thread([gf]() {
 					try {
 						char line[1024];
-						while (fgets(line,sizeof(line),gf)) {
+						line[1023] = 0;
+						while (fgets(line,sizeof(line)-1,gf)) {
 							InetAddress start,end;
-							float lat,lon;
+							float lat = 0.0F,lon = 0.0F;
 							int field = 0;
 							for(char *saveptr=nullptr,*f=Utils::stok(line,",\r\n",&saveptr);(f);f=Utils::stok(nullptr,",\r\n",&saveptr)) {
 								switch(field++) {
@@ -1012,29 +1013,57 @@ int main(int argc,char **argv)
 			o << ZT_GEOIP_HTML_HEAD;
 			{
 				bool firstCoord = true;
-				std::pair< uint32_t,uint32_t > k4(0,0);
+				std::pair< uint32_t,uint32_t > k4(0,0xffffffff);
 				std::pair< std::array< uint64_t,2 >,std::array< uint64_t,2 > > k6;
-				k6.second[0] = 0; k6.second[1] = 0;
+				k6.second[0] = 0xffffffffffffffffULL; k6.second[1] = 0xffffffffffffffffULL;
 				std::lock_guard<std::mutex> l(s_peersByPhysAddr_l);
 				for(auto p=s_peersByPhysAddr.begin();p!=s_peersByPhysAddr.end();++p) {
 					if (!p->second.empty()) {
-						k4.first = ip4ToH32(p->first);
-						auto geo = s_geoIp4.lower_bound(k4);
-						while ((geo != s_geoIp4.end())&&(geo->first.first == k4.first)) {
-							if (geo->first.second >= k4.first) {
-								if (!firstCoord)
-									o << ',';
-								firstCoord = false;
-								o << "{lat:" << geo->second.first << ",lng:" << geo->second.second << ",_l:\"";
-								bool firstAddr = true;
-								for(auto a=p->second.begin();a!=p->second.end();++a) {
-									if (!firstAddr)
+						if (p->first.isV4()) {
+							k4.first = ip4ToH32(p->first);
+							auto geo = std::make_reverse_iterator(s_geoIp4.upper_bound(k4));
+							while (geo != s_geoIp4.rend()) {
+								if ((geo->first.first <= k4.first)&&(geo->first.second >= k4.first)) {
+									if (!firstCoord)
 										o << ',';
-									o << (*a)->id.address().toString(tmp);
-									firstAddr = false;
+									firstCoord = false;
+									o << "{lat:" << geo->second.first << ",lng:" << geo->second.second << ",_l:\"";
+									bool firstAddr = true;
+									for(auto a=p->second.begin();a!=p->second.end();++a) {
+										if (!firstAddr)
+											o << ',';
+										o << (*a)->id.address().toString(tmp);
+										firstAddr = false;
+									}
+									o << "\"}";
+									break;
+								} else if ((geo->first.first < k4.first)&&(geo->first.second < k4.first)) {
+									break;
 								}
-								o << "\"}";
-								break;
+								++geo;
+							}
+						} else if (p->first.isV6()) {
+							k6.first = ip6ToH128(p->first);
+							auto geo = std::make_reverse_iterator(s_geoIp6.upper_bound(k6));
+							while (geo != s_geoIp6.rend()) {
+								if ((geo->first.first <= k6.first)&&(geo->first.second >= k6.first)) {
+									if (!firstCoord)
+										o << ',';
+									firstCoord = false;
+									o << "{lat:" << geo->second.first << ",lng:" << geo->second.second << ",_l:\"";
+									bool firstAddr = true;
+									for(auto a=p->second.begin();a!=p->second.end();++a) {
+										if (!firstAddr)
+											o << ',';
+										o << (*a)->id.address().toString(tmp);
+										firstAddr = false;
+									}
+									o << "\"}";
+									break;
+								} else if ((geo->first.first < k6.first)&&(geo->first.second < k6.first)) {
+									break;
+								}
+								++geo;
 							}
 						}
 					}
