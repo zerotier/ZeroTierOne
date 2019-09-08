@@ -43,7 +43,7 @@ public:
 	 *
 	 * It must be initialized with init().
 	 */
-	inline OutboundMulticast() {}
+	ZT_ALWAYS_INLINE OutboundMulticast() {}
 
 	/**
 	 * Initialize outbound multicast
@@ -53,7 +53,6 @@ public:
 	 * @param nwid Network ID
 	 * @param disableCompression Disable compression of frame payload
 	 * @param limit Multicast limit for desired number of packets to send
-	 * @param gatherLimit Number to lazily/implicitly gather with this frame or 0 for none
 	 * @param src Source MAC address of frame or NULL to imply compute from sender ZT address
 	 * @param dest Destination multicast group (MAC + ADI)
 	 * @param etherType 16-bit Ethernet type ID
@@ -66,8 +65,6 @@ public:
 		uint64_t timestamp,
 		uint64_t nwid,
 		bool disableCompression,
-		unsigned int limit,
-		unsigned int gatherLimit,
 		const MAC &src,
 		const MulticastGroup &dest,
 		unsigned int etherType,
@@ -77,18 +74,18 @@ public:
 	/**
 	 * @return Multicast creation time
 	 */
-	inline uint64_t timestamp() const { return _timestamp; }
+	ZT_ALWAYS_INLINE uint64_t timestamp() const { return _timestamp; }
 
 	/**
 	 * @param now Current time
 	 * @return True if this multicast is expired (has exceeded transmit timeout)
 	 */
-	inline bool expired(int64_t now) const { return ((now - _timestamp) >= ZT_MULTICAST_TRANSMIT_TIMEOUT); }
+	ZT_ALWAYS_INLINE bool expired(int64_t now) const { return ((now - _timestamp) >= ZT_MULTICAST_TRANSMIT_TIMEOUT); }
 
 	/**
 	 * @return True if this outbound multicast has been sent to enough peers
 	 */
-	inline bool atLimit() const { return (_alreadySentTo.size() >= _limit); }
+	ZT_ALWAYS_INLINE bool atLimit() const { return (_alreadySentTo.size() >= _limit); }
 
 	/**
 	 * Just send without checking log
@@ -106,9 +103,9 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param toAddr Destination address
 	 */
-	inline void sendAndLog(const RuntimeEnvironment *RR,void *tPtr,const Address &toAddr)
+	ZT_ALWAYS_INLINE void sendAndLog(const RuntimeEnvironment *RR,void *tPtr,const Address &toAddr)
 	{
-		_alreadySentTo.push_back(toAddr);
+		_alreadySentTo.insert(std::upper_bound(_alreadySentTo.begin(),_alreadySentTo.end(),toAddr),toAddr); // sorted insert
 		sendOnly(RR,tPtr,toAddr);
 	}
 
@@ -117,9 +114,9 @@ public:
 	 *
 	 * @param toAddr Address to log as sent
 	 */
-	inline void logAsSent(const Address &toAddr)
+	ZT_ALWAYS_INLINE void logAsSent(const Address &toAddr)
 	{
-		_alreadySentTo.push_back(toAddr);
+		_alreadySentTo.insert(std::upper_bound(_alreadySentTo.begin(),_alreadySentTo.end(),toAddr),toAddr); // sorted insert
 	}
 
 	/**
@@ -130,9 +127,9 @@ public:
 	 * @param toAddr Destination address
 	 * @return True if address is new and packet was sent to switch, false if duplicate
 	 */
-	inline bool sendIfNew(const RuntimeEnvironment *RR,void *tPtr,const Address &toAddr)
+	ZT_ALWAYS_INLINE bool sendIfNew(const RuntimeEnvironment *RR,void *tPtr,const Address &toAddr)
 	{
-		if (std::find(_alreadySentTo.begin(),_alreadySentTo.end(),toAddr) == _alreadySentTo.end()) {
+		if (!std::binary_search(_alreadySentTo.begin(),_alreadySentTo.end(),toAddr)) {
 			sendAndLog(RR,tPtr,toAddr);
 			return true;
 		} else {
@@ -145,7 +142,6 @@ private:
 	uint64_t _nwid;
 	MAC _macSrc;
 	MAC _macDest;
-	unsigned int _limit;
 	unsigned int _frameLen;
 	unsigned int _etherType;
 	Packet _packet,_tmp;

@@ -29,118 +29,37 @@ namespace ZeroTier {
 
 Multicaster::Multicaster(const RuntimeEnvironment *renv) :
 	RR(renv),
-	_groups(32)
+	_groups(32) {}
+
+Multicaster::~Multicaster() {}
+
+void Multicaster::add(const int64_t now,const uint64_t nwid,const MulticastGroup &mg,const Address &member)
 {
+	Mutex::Lock l(_groups_l);
+	_groups[Multicaster::Key(nwid,mg)].set(member,now);
 }
 
-Multicaster::~Multicaster()
+void Multicaster::addMultiple(const int64_t now,const uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,const unsigned int totalKnown)
 {
-}
-
-void Multicaster::addMultiple(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,unsigned int totalKnown)
-{
-	const unsigned char *p = (const unsigned char *)addresses;
-	const unsigned char *e = p + (5 * count);
-	Mutex::Lock _l(_groups_m);
-	MulticastGroupStatus &gs = _groups[Multicaster::Key(nwid,mg)];
-	while (p != e) {
-		_add(tPtr,now,nwid,mg,gs,Address(p,5));
-		p += 5;
+	Mutex::Lock l(_groups_l);
+	const uint8_t *a = (const uint8_t *)addresses;
+	Hashtable< Address,int64_t > &members = _groups[Multicaster::Key(nwid,mg)];
+	while (count--) {
+		members.set(Address(a,ZT_ADDRESS_LENGTH),now);
+		a += ZT_ADDRESS_LENGTH;
 	}
 }
 
-void Multicaster::remove(uint64_t nwid,const MulticastGroup &mg,const Address &member)
+void Multicaster::remove(const uint64_t nwid,const MulticastGroup &mg,const Address &member)
 {
-	Mutex::Lock _l(_groups_m);
-	MulticastGroupStatus *s = _groups.get(Multicaster::Key(nwid,mg));
-	if (s) {
-		for(std::vector<MulticastGroupMember>::iterator m(s->members.begin());m!=s->members.end();++m) {
-			if (m->address == member) {
-				s->members.erase(m);
-				break;
-			}
-		}
+	Mutex::Lock l(_groups_l);
+	const Multicaster::Key gk(nwid,mg);
+	Hashtable< Address,int64_t > *const members = _groups.get(gk);
+	if (members) {
+		members->erase(member);
+		if (members->empty())
+			_groups.erase(gk);
 	}
-}
-
-unsigned int Multicaster::gather(const Address &queryingPeer,uint64_t nwid,const MulticastGroup &mg,Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &appendTo,unsigned int limit) const
-{
-	unsigned char *p;
-	unsigned int added = 0,i,k,rptr,totalKnown = 0;
-	uint64_t a,picked[(ZT_PROTO_MAX_PACKET_LENGTH / 5) + 2];
-
-	if (!limit)
-		return 0;
-	else if (limit > 0xffff)
-		limit = 0xffff;
-
-	const unsigned int totalAt = appendTo.size();
-	appendTo.addSize(4); // sizeof(uint32_t)
-	const unsigned int addedAt = appendTo.size();
-	appendTo.addSize(2); // sizeof(uint16_t)
-
-	{ // Return myself if I am a member of this group
-		SharedPtr<Network> network(RR->node->network(nwid));
-		if ((network)&&(network->subscribedToMulticastGroup(mg,true))) {
-			RR->identity.address().appendTo(appendTo);
-			++totalKnown;
-			++added;
-		}
-	}
-
-	Mutex::Lock _l(_groups_m);
-
-	const MulticastGroupStatus *s = _groups.get(Multicaster::Key(nwid,mg));
-	if ((s)&&(!s->members.empty())) {
-		totalKnown += (unsigned int)s->members.size();
-
-		// Members are returned in random order so that repeated gather queries
-		// will return different subsets of a large multicast group.
-		k = 0;
-		while ((added < limit)&&(k < s->members.size())&&((appendTo.size() + ZT_ADDRESS_LENGTH) <= ZT_PROTO_MAX_PACKET_LENGTH)) {
-			rptr = (unsigned int)Utils::random();
-
-restart_member_scan:
-			a = s->members[rptr % (unsigned int)s->members.size()].address.toInt();
-			for(i=0;i<k;++i) {
-				if (picked[i] == a) {
-					++rptr;
-					goto restart_member_scan;
-				}
-			}
-			picked[k++] = a;
-
-			if (queryingPeer.toInt() != a) { // do not return the peer that is making the request as a result
-				p = (unsigned char *)appendTo.appendField(ZT_ADDRESS_LENGTH);
-				*(p++) = (unsigned char)((a >> 32) & 0xff);
-				*(p++) = (unsigned char)((a >> 24) & 0xff);
-				*(p++) = (unsigned char)((a >> 16) & 0xff);
-				*(p++) = (unsigned char)((a >> 8) & 0xff);
-				*p = (unsigned char)(a & 0xff);
-				++added;
-			}
-		}
-	}
-
-	appendTo.setAt(totalAt,(uint32_t)totalKnown);
-	appendTo.setAt(addedAt,(uint16_t)added);
-
-	return added;
-}
-
-std::vector<Address> Multicaster::getMembers(uint64_t nwid,const MulticastGroup &mg,unsigned int limit) const
-{
-	std::vector<Address> ls;
-	Mutex::Lock _l(_groups_m);
-	const MulticastGroupStatus *s = _groups.get(Multicaster::Key(nwid,mg));
-	if (!s)
-		return ls;
-	for(std::vector<MulticastGroupMember>::const_reverse_iterator m(s->members.rbegin());m!=s->members.rend();++m) {
-		ls.push_back(m->address);
-		if (ls.size() >= limit)
-			break;
-	}
-	return ls;
 }
 
 void Multicaster::send(
@@ -154,6 +73,7 @@ void Multicaster::send(
 	const void *data,
 	unsigned int len)
 {
+#if 0
 	unsigned long idxbuf[4096];
 	unsigned long *indexes = idxbuf;
 
@@ -322,10 +242,12 @@ void Multicaster::send(
 	// Free allocated memory buffer if any
 	if (indexes != idxbuf)
 		delete [] indexes;
+#endif
 }
 
 void Multicaster::clean(int64_t now)
 {
+#if 0
 	{
 		Mutex::Lock _l(_groups_m);
 		Multicaster::Key *k = (Multicaster::Key *)0;
@@ -361,37 +283,7 @@ void Multicaster::clean(int64_t now)
 			}
 		}
 	}
-}
-
-void Multicaster::_add(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &member)
-{
-	// assumes _groups_m is locked
-
-	// Do not add self -- even if someone else returns it
-	if (member == RR->identity.address())
-		return;
-
-	std::vector<MulticastGroupMember>::iterator m(std::lower_bound(gs.members.begin(),gs.members.end(),member));
-	if (m != gs.members.end()) {
-		if (m->address == member) {
-			m->timestamp = now;
-			return;
-		}
-		gs.members.insert(m,MulticastGroupMember(member,now));
-	} else {
-		gs.members.push_back(MulticastGroupMember(member,now));
-	}
-
-	for(std::list<OutboundMulticast>::iterator tx(gs.txQueue.begin());tx!=gs.txQueue.end();) {
-		if (tx->atLimit())
-			gs.txQueue.erase(tx++);
-		else {
-			tx->sendIfNew(RR,tPtr,member);
-			if (tx->atLimit())
-				gs.txQueue.erase(tx++);
-			else ++tx;
-		}
-	}
+#endif
 }
 
 } // namespace ZeroTier

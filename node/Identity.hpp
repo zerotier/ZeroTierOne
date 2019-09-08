@@ -261,6 +261,27 @@ public:
 	ZT_ALWAYS_INLINE const Address &address() const { return _address; }
 
 	/**
+	 * Attempt to generate an older type identity from a newer type
+	 *
+	 * If this identity has its private key this is not transferred to
+	 * the downgraded identity.
+	 *
+	 * @param dest Destination to fill with downgraded identity
+	 * @param toType Desired identity type
+	 */
+	inline bool downgrade(Identity &dest,const Type toType)
+	{
+		if ((_type == P384)&&(toType == C25519)) {
+			dest._address = _address;
+			dest._type = C25519;
+			dest._hasPrivate = false;
+			memcpy(dest._pub.c25519,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+			return true;
+		}
+		return false;
+	}
+
+	/**
 	 * Serialize this identity (binary)
 	 *
 	 * @param b Destination buffer to append to

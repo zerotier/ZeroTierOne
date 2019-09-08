@@ -62,7 +62,6 @@
  *    + Old planet/moon stuff is DEAD!
  *    + AES-256-GMAC-CTR encryption is now the default
  *    + NIST P-384 (type 1) identities now supported
- *    + Minimum proto version is now 8 (1.1.17 and newer)
  *    + WILL_RELAY allows mesh-like operation
  *    + Ephemeral keys are now negotiated opportunistically
  */
@@ -71,7 +70,7 @@
 /**
  * Minimum supported protocol version
  */
-#define ZT_PROTO_VERSION_MIN 8
+#define ZT_PROTO_VERSION_MIN 6
 
 /**
  * Maximum hop count allowed by packet structure (3 bits, 0-7)
@@ -93,21 +92,16 @@
 #define ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012 1
 
 /**
- * Cipher suite: NONE
+ * No encryption or authentication at all
  *
- * This differs from POLY1305/NONE in that *no* crypto is done, not even
- * authentication. This is for trusted local LAN interconnects for internal
- * SDN use within a data center.
- *
- * For this mode the MAC field becomes a trusted path ID and must match the
- * configured ID of a trusted path or the packet is discarded.
+ * For trusted paths the MAC field is the trusted path ID.
  */
-#define ZT_PROTO_CIPHER_SUITE__NO_CRYPTO_TRUSTED_PATH 2
+#define ZT_PROTO_CIPHER_SUITE__NONE 2
 
 /**
- * AES-256-GMAC-CTR
+ * AES-GMAC_SIV with AES-256
  */
-#define ZT_PROTO_CIPHER_SUITE__AES256_GMAC_CTR 3
+#define ZT_PROTO_CIPHER_SUITE__AES256_GMAC_SIV 3
 
 /**
  * Header flag indicating that a packet is fragmented
@@ -693,10 +687,6 @@ public:
 		 *   <[6] MAC address of multicast group being queried>
 		 *   <[4] 32-bit ADI for multicast group being queried>
 		 *   <[4] 32-bit requested max number of multicast peers>
-		 *   [<[...] network certificate of membership>]
-		 *
-		 * Flags:
-		 *   0x01 - COM is attached (DEPRECATED)
 		 *
 		 * More than one OK response can occur if the response is broken up across
 		 * multiple packets or if querying a clustered node.
@@ -718,10 +708,9 @@ public:
 		 * Multicast frame:
 		 *   <[8] 64-bit network ID>
 		 *   <[1] flags>
-		 *  [<[4] 32-bit implicit gather limit>]
+		 *  [<[...] network certificate of membership (DEPRECATED)>]
+		 *  [<[4] 32-bit implicit gather limit (DEPRECATED)>]
 		 *  [<[6] source MAC>]
-		 *  [<[2] number of explicitly specified recipients>]
-		 *  [<[...] series of 5-byte explicitly specified recipients>]
 		 *   <[6] destination MAC (multicast address)>
 		 *   <[4] 32-bit multicast ADI (multicast address extension)>
 		 *   <[2] 16-bit ethertype>
@@ -733,20 +722,9 @@ public:
 		 *   0x04 - Source MAC is specified -- otherwise it's computed from sender
 		 *   0x08 - Explicit recipient list included for P2P/HS replication
 		 *
-		 * Explicit recipient lists are used for peer to peer or hub and spoke
-		 * replication.
-		 *
-		 * OK response payload:
-		 *   <[8] 64-bit network ID>
-		 *   <[6] MAC address of multicast group>
-		 *   <[4] 32-bit ADI for multicast group>
-		 *   <[1] flags>
-		 *  [<[...] network certificate of membership (DEPRECATED)>]
-		 *  [<[...] implicit gather results if flag 0x01 is set>]
-		 *
-		 * OK flags (same bits as request flags):
-		 *   0x01 - OK includes certificate of network membership (DEPRECATED)
-		 *   0x02 - OK includes implicit gather results
+		 * ERROR_MULTICAST_STFU is generated if a recipient no longer wishes to
+		 * receive these multicasts. It's essentially a source quench. Its
+		 * payload is:
 		 *
 		 * ERROR response payload:
 		 *   <[8] 64-bit network ID>
@@ -965,7 +943,7 @@ public:
 		ERROR_NETWORK_ACCESS_DENIED_ = 0x07, /* extra _ at end to avoid Windows name conflict */
 
 		/* Multicasts to this group are not wanted */
-		ERROR_UNWANTED_MULTICAST = 0x08,
+		ERROR_MULTICAST_STFU = 0x08,
 
 		/* Cannot deliver a forwarded ZeroTier packet (e.g. hops exceeded, no routes) */
 		/* Payload: <packet ID>, <destination>, <... additional packet ID / destinations> */
@@ -1158,7 +1136,7 @@ public:
 	 */
 	ZT_ALWAYS_INLINE void setTrusted(const uint64_t tpid)
 	{
-		setCipher(ZT_PROTO_CIPHER_SUITE__NO_CRYPTO_TRUSTED_PATH);
+		setCipher(ZT_PROTO_CIPHER_SUITE__NONE);
 		setAt(ZT_PACKET_IDX_MAC,tpid);
 	}
 

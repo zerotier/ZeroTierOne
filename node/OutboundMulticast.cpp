@@ -27,8 +27,6 @@ void OutboundMulticast::init(
 	uint64_t timestamp,
 	uint64_t nwid,
 	bool disableCompression,
-	unsigned int limit,
-	unsigned int gatherLimit,
 	const MAC &src,
 	const MulticastGroup &dest,
 	unsigned int etherType,
@@ -46,17 +44,13 @@ void OutboundMulticast::init(
 		_macSrc.fromAddress(RR->identity.address(),nwid);
 	}
 	_macDest = dest.mac();
-	_limit = limit;
 	_frameLen = (len < ZT_MAX_MTU) ? len : ZT_MAX_MTU;
 	_etherType = etherType;
-
-	if (gatherLimit) flags |= 0x02;
 
 	_packet.setSource(RR->identity.address());
 	_packet.setVerb(Packet::VERB_MULTICAST_FRAME);
 	_packet.append((uint64_t)nwid);
 	_packet.append(flags);
-	if (gatherLimit) _packet.append((uint32_t)gatherLimit);
 	if (src) src.appendTo(_packet);
 	dest.mac().appendTo(_packet);
 	_packet.append((uint32_t)dest.adi());

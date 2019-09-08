@@ -19,7 +19,6 @@
 
 #include <map>
 #include <vector>
-#include <list>
 
 #include "Constants.hpp"
 #include "Hashtable.hpp"
@@ -39,7 +38,7 @@ class Packet;
 class Network;
 
 /**
- * Database of known multicast peers within a network
+ * Multicast database and outbound multicast handler
  */
 class Multicaster
 {
@@ -55,11 +54,7 @@ public:
 	 * @param mg Multicast group
 	 * @param member New member address
 	 */
-	inline void add(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &member)
-	{
-		Mutex::Lock _l(_groups_m);
-		_add(tPtr,now,nwid,mg,_groups[Multicaster::Key(nwid,mg)],member);
-	}
+	void add(const int64_t now,const uint64_t nwid,const MulticastGroup &mg,const Address &member);
 
 	/**
 	 * Add multiple addresses from a binary array of 5-byte address fields
@@ -74,7 +69,7 @@ public:
 	 * @param count Number of addresses
 	 * @param totalKnown Total number of known addresses as reported by peer
 	 */
-	void addMultiple(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,unsigned int totalKnown);
+	void addMultiple(const int64_t now,const uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,const unsigned int totalKnown);
 
 	/**
 	 * Remove a multicast group member (if present)
@@ -83,35 +78,46 @@ public:
 	 * @param mg Multicast group
 	 * @param member Member to unsubscribe
 	 */
-	void remove(uint64_t nwid,const MulticastGroup &mg,const Address &member);
+	void remove(const uint64_t nwid,const MulticastGroup &mg,const Address &member);
 
 	/**
-	 * Append gather results to a packet by choosing registered multicast recipients at random
+	 * Iterate over members of a multicast group until function returns false
 	 *
-	 * This appends the following fields to the packet:
-	 *   <[4] 32-bit total number of known members in this multicast group>
-	 *   <[2] 16-bit number of members enumerated in this packet>
-	 *   <[...] series of 5-byte ZeroTier addresses of enumerated members>
-	 *
-	 * If zero is returned, the first two fields will still have been appended.
-	 *
-	 * @param queryingPeer Peer asking for gather (to skip in results)
-	 * @param nwid Network ID
-	 * @param mg Multicast group
-	 * @param appendTo Packet to append to
-	 * @param limit Maximum number of 5-byte addresses to append
-	 * @return Number of addresses appended
-	 * @throws std::out_of_range Buffer overflow writing to packet
-	 */
-	unsigned int gather(const Address &queryingPeer,uint64_t nwid,const MulticastGroup &mg,Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &appendTo,unsigned int limit) const;
-
-	/**
-	 * Get subscribers to a multicast group
+	 * Iteration order is in inverse order of most recent receipt of a LIKE
+	 * for a given membership.
 	 *
 	 * @param nwid Network ID
 	 * @param mg Multicast group
+	 * @param func f(Address)
+	 * @return Total number of known members (regardless of when function aborted)
 	 */
-	std::vector<Address> getMembers(uint64_t nwid,const MulticastGroup &mg,unsigned int limit) const;
+	template<typename F>
+	inline unsigned long eachMember(const uint64_t nwid,const MulticastGroup &mg,F func) const
+	{
+		std::vector< std::pair<int64_t,Address> > sortedByTime;
+		{
+			Mutex::Lock l(_groups_l);
+			const Multicaster::Key gk(nwid,mg);
+			const Hashtable< Address,int64_t > *const members = _groups.get(gk);
+			if (members) {
+				totalKnown = members->size();
+				sortedByTime.reserve(totalKnown);
+				{
+					Hashtable< Address,int64_t >::Iterator mi(*const_cast<Hashtable< Address,int64_t > *>(members));
+					Address *mik = nullptr;
+					int64_t *miv = nullptr;
+					while (mi.next(mik,miv))
+						sortedByTime.push_back(std::pair<int64_t,Address>(*miv,*mik));
+				}
+				std::sort(sortedByTime.begin(),sortedByTime.end());
+			}
+		}
+		for(std::vector< std::pair<int64_t,Address> >::const_reverse_iterator i(sortedByTime.begin());i!=sortedByTime.end();++i) {
+			if (!func(i->second))
+				break;
+		}
+		return sortedByTime.size();
+	}
 
 	/**
 	 * Send a multicast
@@ -148,48 +154,26 @@ public:
 private:
 	struct Key
 	{
-		inline Key() : nwid(0),mg() {}
-		inline Key(uint64_t n,const MulticastGroup &g) : nwid(n),mg(g) {}
+		ZT_ALWAYS_INLINE Key() : nwid(0),mg() {}
+		ZT_ALWAYS_INLINE Key(const uint64_t n,const MulticastGroup &g) : nwid(n),mg(g) {}
 
 		uint64_t nwid;
 		MulticastGroup mg;
 
-		inline bool operator==(const Key &k) const { return ((nwid == k.nwid)&&(mg == k.mg)); }
-		inline bool operator!=(const Key &k) const { return ((nwid != k.nwid)||(mg != k.mg)); }
-		inline unsigned long hashCode() const { return (mg.hashCode() ^ (unsigned long)(nwid ^ (nwid >> 32))); }
+		ZT_ALWAYS_INLINE bool operator==(const Key &k) const { return ((nwid == k.nwid)&&(mg == k.mg)); }
+		ZT_ALWAYS_INLINE bool operator!=(const Key &k) const { return ((nwid != k.nwid)||(mg != k.mg)); }
+
+		ZT_ALWAYS_INLINE unsigned long hashCode() const { return (mg.hashCode() ^ (unsigned long)(nwid ^ (nwid >> 32))); }
 	};
-
-	struct MulticastGroupMember
-	{
-		inline MulticastGroupMember() {}
-		inline MulticastGroupMember(const Address &a,uint64_t ts) : address(a),timestamp(ts) {}
-
-		inline bool operator<(const MulticastGroupMember &a) const { return (address < a.address); }
-		inline bool operator==(const MulticastGroupMember &a) const { return (address == a.address); }
-		inline bool operator!=(const MulticastGroupMember &a) const { return (address != a.address); }
-		inline bool operator<(const Address &a) const { return (address < a); }
-		inline bool operator==(const Address &a) const { return (address == a); }
-		inline bool operator!=(const Address &a) const { return (address != a); }
-
-		Address address;
-		uint64_t timestamp; // time of last notification
-	};
-
-	struct MulticastGroupStatus
-	{
-		inline MulticastGroupStatus() : lastExplicitGather(0) {}
-
-		uint64_t lastExplicitGather;
-		std::list<OutboundMulticast> txQueue; // pending outbound multicasts
-		std::vector<MulticastGroupMember> members; // members of this group
-	};
-
-	void _add(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &member);
 
 	const RuntimeEnvironment *const RR;
 
-	Hashtable<Multicaster::Key,MulticastGroupStatus> _groups;
-	Mutex _groups_m;
+	OutboundMulticast _txQueue[ZT_TX_QUEUE_SIZE];
+	unsigned int _txQueuePtr;
+	Mutex _txQueue_l;
+
+	Hashtable< Multicaster::Key,Hashtable< Address,int64_t > > _groups;
+	Mutex _groups_l;
 };
 
 } // namespace ZeroTier
