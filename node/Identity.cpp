@@ -99,18 +99,29 @@ void Identity::generate(const Type t)
 	} while (_address.isReserved());
 	delete [] genmem;
 
-	if (t == P384)
+	if (t == P384) {
 		ECC384GenerateKey(_pub.p384,_priv.p384);
+		SHA384(digest,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+		ECC384ECDSASign(_priv.p384,digest,_pub.p384s);
+	}
 }
 
 bool Identity::locallyValidate() const
 {
+	uint8_t digest[64];
+
 	if (_address.isReserved())
 		return false;
 
+	if (_type == P384) {
+		// Check that the C25519 public key is blessed by the P-384 key.
+		SHA384(digest,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+		if (!ECC384ECDSAVerify(_pub.p384,digest,_pub.p384s))
+			return false;
+	}
+
 	char *genmem = nullptr;
 	try {
-		uint8_t digest[64];
 		genmem = new char[ZT_IDENTITY_GEN_MEMORY];
 		_computeMemoryHardHash(_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
 		delete [] genmem;
@@ -151,12 +162,12 @@ char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_
 			*(p++) = ':';
 			*(p++) = '1';
 			*(p++) = ':';
-			int el = Utils::b32e((const uint8_t *)(&_pub),ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE,p,(unsigned int)(ZT_IDENTITY_STRING_BUFFER_LENGTH - (uintptr_t)(p - buf)));
+			int el = Utils::b32e((const uint8_t *)(&_pub),sizeof(_pub),p,(unsigned int)(ZT_IDENTITY_STRING_BUFFER_LENGTH - (uintptr_t)(p - buf)));
 			if (el <= 0) return nullptr;
 			p += el;
 			if ((_hasPrivate)&&(includePrivate)) {
 				*(p++) = ':';
-				el = Utils::b32e((const uint8_t *)(&_pub),ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE,p,(unsigned int)(ZT_IDENTITY_STRING_BUFFER_LENGTH - (uintptr_t)(p - buf)));
+				el = Utils::b32e((const uint8_t *)(&_priv),sizeof(_priv),p,(unsigned int)(ZT_IDENTITY_STRING_BUFFER_LENGTH - (uintptr_t)(p - buf)));
 				if (el <= 0) return nullptr;
 				p += el;
 			}
@@ -218,7 +229,7 @@ bool Identity::fromString(const char *str)
 						break;
 
 					case P384:
-						if (Utils::b32d(f,(uint8_t *)(&_pub),ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE) != (ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE)) {
+						if (Utils::b32d(f,(uint8_t *)(&_pub),sizeof(_pub)) != sizeof(_pub)) {
 							_address.zero();
 							return false;
 						}
@@ -241,7 +252,7 @@ bool Identity::fromString(const char *str)
 							break;
 
 						case P384:
-							if (Utils::b32d(f,(uint8_t *)(&_priv),ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE) != (ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE)) {
+							if (Utils::b32d(f,(uint8_t *)(&_priv),sizeof(_priv)) != sizeof(_priv)) {
 								_address.zero();
 								return false;
 							} else {

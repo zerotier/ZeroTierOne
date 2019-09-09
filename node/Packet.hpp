@@ -710,17 +710,48 @@ public:
 		 *   <[1] flags>
 		 *  [<[...] network certificate of membership (DEPRECATED)>]
 		 *  [<[4] 32-bit implicit gather limit (DEPRECATED)>]
+		 *  [<[5] ZeroTier address of originating sender (including w/0x08)>]
+		 *  [<[2] 16-bit bloom filter multiplier>]
+		 *  [<[2] 16-bit length of propagation bloom filter in bytes]
+		 *  [<[...] propagation bloom filter>]
 		 *  [<[6] source MAC>]
 		 *   <[6] destination MAC (multicast address)>
 		 *   <[4] 32-bit multicast ADI (multicast address extension)>
 		 *   <[2] 16-bit ethertype>
 		 *   <[...] ethernet payload>
+		 *  [<[2] 16-bit length of signature>]
+		 *  [<[...] signature (algorithm depends on sender identity)>]
 		 *
 		 * Flags:
 		 *   0x01 - Network certificate of membership attached (DEPRECATED)
 		 *   0x02 - Implicit gather limit field is present (DEPRECATED)
 		 *   0x04 - Source MAC is specified -- otherwise it's computed from sender
-		 *   0x08 - Explicit recipient list included for P2P/HS replication
+		 *   0x08 - Propagation bloom filter is included
+		 *   0x10 - Signature by sending identity is included
+		 *
+		 * Version 1.x only supports sender-side replication. Version 2.x also
+		 * supports peer to peer and hub and spoke models. For that there is
+		 * a new field: a bloom filter that tracks recipients by ZeroTier address.
+		 *
+		 * Bits in the bloom filter are set by multiplying the address by the
+		 * indicated multiplier and then taking that modulo the number of bits
+		 * in the filter. Both the length of the filter and this multiplier are
+		 * variable and can be selected based on the sender's knowledge of
+		 * the total recipient set to minimize the chance of collision, as a
+		 * collision would result in a multicast not reaching one particular
+		 * recipient. The algorithm for selecting these is not defined by the
+		 * protocol.
+		 *
+		 * The ZeroTier address of the originating sender is also included
+		 * before the bloom filter if flag bit 0x08 is set.
+		 *
+		 * Version 2.x also supports an optional signature of the packet's
+		 * payload by the sending ZeroTier node. This can be used to validate
+		 * multicasts propagated cooperatively, since unlike sender side
+		 * replication the message MAC alone cannot be used for this. This
+		 * imposes a non-trivial CPU cost on the sender and so it's optional.
+		 *
+		 * OK is not sent.
 		 *
 		 * ERROR_MULTICAST_STFU is generated if a recipient no longer wishes to
 		 * receive these multicasts. It's essentially a source quench. Its
@@ -763,8 +794,6 @@ public:
 		 * OK and ERROR are not generated.
 		 */
 		VERB_PUSH_DIRECT_PATHS = 0x10,
-
-		// 0x11 -- deprecated
 
 		/**
 		 * An acknowledgment of receipt of a series of recent packets from another

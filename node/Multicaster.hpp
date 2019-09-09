@@ -38,7 +38,7 @@ class Packet;
 class Network;
 
 /**
- * Multicast database and outbound multicast handler
+ * Multicast database and outbound multicast logic
  */
 class Multicaster
 {
@@ -54,7 +54,11 @@ public:
 	 * @param mg Multicast group
 	 * @param member New member address
 	 */
-	void add(const int64_t now,const uint64_t nwid,const MulticastGroup &mg,const Address &member);
+	inline void add(const int64_t now,const uint64_t nwid,const MulticastGroup &mg,const Address &member)
+	{
+		Mutex::Lock l(_groups_l);
+		_groups[Multicaster::Key(nwid,mg)].set(member,now);
+	}
 
 	/**
 	 * Add multiple addresses from a binary array of 5-byte address fields
@@ -69,7 +73,16 @@ public:
 	 * @param count Number of addresses
 	 * @param totalKnown Total number of known addresses as reported by peer
 	 */
-	void addMultiple(const int64_t now,const uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,const unsigned int totalKnown);
+	inline void addMultiple(const int64_t now,const uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,const unsigned int totalKnown)
+	{
+		Mutex::Lock l(_groups_l);
+		const uint8_t *a = (const uint8_t *)addresses;
+		Hashtable< Address,int64_t > &members = _groups[Multicaster::Key(nwid,mg)];
+		while (count--) {
+			members.set(Address(a,ZT_ADDRESS_LENGTH),now);
+			a += ZT_ADDRESS_LENGTH;
+		}
+	}
 
 	/**
 	 * Remove a multicast group member (if present)
@@ -78,7 +91,17 @@ public:
 	 * @param mg Multicast group
 	 * @param member Member to unsubscribe
 	 */
-	void remove(const uint64_t nwid,const MulticastGroup &mg,const Address &member);
+	inline void remove(const uint64_t nwid,const MulticastGroup &mg,const Address &member)
+	{
+		Mutex::Lock l(_groups_l);
+		const Multicaster::Key gk(nwid,mg);
+		Hashtable< Address,int64_t > *const members = _groups.get(gk);
+		if (members) {
+			members->erase(member);
+			if (members->empty())
+				_groups.erase(gk);
+		}
+	}
 
 	/**
 	 * Iterate over members of a multicast group until function returns false
@@ -144,7 +167,7 @@ public:
 		unsigned int len);
 
 	/**
-	 * Clean up and resort database
+	 * Clean up database
 	 *
 	 * @param RR Runtime environment
 	 * @param now Current time

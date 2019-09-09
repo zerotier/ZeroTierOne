@@ -33,35 +33,6 @@ Multicaster::Multicaster(const RuntimeEnvironment *renv) :
 
 Multicaster::~Multicaster() {}
 
-void Multicaster::add(const int64_t now,const uint64_t nwid,const MulticastGroup &mg,const Address &member)
-{
-	Mutex::Lock l(_groups_l);
-	_groups[Multicaster::Key(nwid,mg)].set(member,now);
-}
-
-void Multicaster::addMultiple(const int64_t now,const uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,const unsigned int totalKnown)
-{
-	Mutex::Lock l(_groups_l);
-	const uint8_t *a = (const uint8_t *)addresses;
-	Hashtable< Address,int64_t > &members = _groups[Multicaster::Key(nwid,mg)];
-	while (count--) {
-		members.set(Address(a,ZT_ADDRESS_LENGTH),now);
-		a += ZT_ADDRESS_LENGTH;
-	}
-}
-
-void Multicaster::remove(const uint64_t nwid,const MulticastGroup &mg,const Address &member)
-{
-	Mutex::Lock l(_groups_l);
-	const Multicaster::Key gk(nwid,mg);
-	Hashtable< Address,int64_t > *const members = _groups.get(gk);
-	if (members) {
-		members->erase(member);
-		if (members->empty())
-			_groups.erase(gk);
-	}
-}
-
 void Multicaster::send(
 	void *tPtr,
 	int64_t now,
