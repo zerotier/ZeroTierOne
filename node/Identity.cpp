@@ -101,7 +101,7 @@ void Identity::generate(const Type t)
 
 	if (t == P384) {
 		ECC384GenerateKey(_pub.p384,_priv.p384);
-		SHA384(digest,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+		SHA384(digest,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,_pub.p384,ZT_ECC384_PUBLIC_KEY_SIZE);
 		ECC384ECDSASign(_priv.p384,digest,_pub.p384s);
 	}
 }
@@ -114,8 +114,7 @@ bool Identity::locallyValidate() const
 		return false;
 
 	if (_type == P384) {
-		// Check that the C25519 public key is blessed by the P-384 key.
-		SHA384(digest,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+		SHA384(digest,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,_pub.p384,ZT_ECC384_PUBLIC_KEY_SIZE);
 		if (!ECC384ECDSAVerify(_pub.p384,digest,_pub.p384s))
 			return false;
 	}
