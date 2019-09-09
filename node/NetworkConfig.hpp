@@ -39,6 +39,8 @@
 #include "Utils.hpp"
 #include "Trace.hpp"
 
+namespace ZeroTier {
+
 /**
  * Default maximum time delta for COMs, tags, and capabilities
  *
@@ -80,7 +82,10 @@
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE 0x0000020000000000ULL
 
-namespace ZeroTier {
+/**
+ * Device that replicates multicasts
+ */
+#define ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR 0x0000040000000000ULL
 
 // Dictionary capacity needed for max size network config
 #define ZT_NETWORKCONFIG_DICT_CAPACITY (1024 + (sizeof(ZT_VirtualNetworkRule) * ZT_MAX_NETWORK_RULES) + (sizeof(Capability) * ZT_MAX_NETWORK_CAPABILITIES) + (sizeof(Tag) * ZT_MAX_NETWORK_TAGS) + (sizeof(CertificateOfOwnership) * ZT_MAX_CERTIFICATES_OF_OWNERSHIP))
@@ -88,13 +93,8 @@ namespace ZeroTier {
 // Dictionary capacity needed for max size network meta-data
 #define ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY 8192
 
-// Network config version
-#define ZT_NETWORKCONFIG_VERSION 7
-
 // Fields for meta-data sent with network config requests
 
-// Network config version
-#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION "v"
 // Protocol version (see Packet.hpp)
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION "pv"
 // Software vendor
@@ -166,29 +166,6 @@ namespace ZeroTier {
 // tags (binary blobs)
 #define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP "COO"
 
-// Legacy fields -- these are obsoleted but are included when older clients query
-
-// boolean (now a flag)
-#define ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST_OLD "eb"
-// IP/bits[,IP/bits,...]
-// Note that IPs that end in all zeroes are routes with no assignment in them.
-#define ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC_OLD "v4s"
-// IP/bits[,IP/bits,...]
-// Note that IPs that end in all zeroes are routes with no assignment in them.
-#define ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC_OLD "v6s"
-// 0/1
-#define ZT_NETWORKCONFIG_DICT_KEY_PRIVATE_OLD "p"
-// integer(hex)[,integer(hex),...]
-#define ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES_OLD "et"
-// string-serialized CertificateOfMembership
-#define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP_OLD "com"
-// node[,node,...]
-#define ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES_OLD "ab"
-// node;IP/port[,node;IP/port]
-#define ZT_NETWORKCONFIG_DICT_KEY_RELAYS_OLD "rl"
-
-// End legacy fields
-
 /**
  * Network configuration received from network controller nodes
  *
@@ -197,7 +174,7 @@ namespace ZeroTier {
  */
 struct NetworkConfig
 {
-	inline NetworkConfig() :
+	ZT_ALWAYS_INLINE NetworkConfig() :
 		networkId(0),
 		timestamp(0),
 		credentialTimeMaxDelta(0),
@@ -240,17 +217,17 @@ struct NetworkConfig
 	/**
 	 * @return True if broadcast (ff:ff:ff:ff:ff:ff) address should work on this network
 	 */
-	inline bool enableBroadcast() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
+	ZT_ALWAYS_INLINE bool enableBroadcast() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
 
 	/**
 	 * @return True if IPv6 NDP emulation should be allowed for certain "magic" IPv6 address patterns
 	 */
-	inline bool ndpEmulation() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
+	ZT_ALWAYS_INLINE bool ndpEmulation() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
 
 	/**
 	 * @return True if frames should not be compressed
 	 */
-	inline bool disableCompression() const
+	ZT_ALWAYS_INLINE bool disableCompression() const
 	{
 #ifndef ZT_DISABLE_COMPRESSION
 		return ((this->flags & ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION) != 0);
@@ -266,50 +243,18 @@ struct NetworkConfig
 	/**
 	 * @return Network type is public (no access control)
 	 */
-	inline bool isPublic() const { return (this->type == ZT_NETWORK_TYPE_PUBLIC); }
+	ZT_ALWAYS_INLINE bool isPublic() const { return (this->type == ZT_NETWORK_TYPE_PUBLIC); }
 
 	/**
 	 * @return Network type is private (certificate access control)
 	 */
-	inline bool isPrivate() const { return (this->type == ZT_NETWORK_TYPE_PRIVATE); }
-
-	/**
-	 * @return ZeroTier addresses of devices on this network designated as active bridges
-	 */
-	inline std::vector<Address> activeBridges() const
-	{
-		std::vector<Address> r;
-		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)
-				r.push_back(Address(specialists[i]));
-		}
-		return r;
-	}
-
-	inline unsigned int activeBridges(Address ab[ZT_MAX_NETWORK_SPECIALISTS]) const
-	{
-		unsigned int c = 0;
-		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)
-				ab[c++] = specialists[i];
-		}
-		return c;
-	}
-
-	inline bool isActiveBridge(const Address &a) const
-	{
-		for(unsigned int i=0;i<specialistCount;++i) {
-			if (((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)&&(a == specialists[i]))
-				return true;
-		}
-		return false;
-	}
+	ZT_ALWAYS_INLINE bool isPrivate() const { return (this->type == ZT_NETWORK_TYPE_PRIVATE); }
 
 	/**
 	 * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
 	 * @return True if this network allows bridging
 	 */
-	inline bool permitsBridging(const Address &fromPeer) const
+	ZT_ALWAYS_INLINE bool permitsBridging(const Address &fromPeer) const
 	{
 		for(unsigned int i=0;i<specialistCount;++i) {
 			if ((fromPeer == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
@@ -318,9 +263,9 @@ struct NetworkConfig
 		return false;
 	}
 
-	inline operator bool() const { return (networkId != 0); }
-	inline bool operator==(const NetworkConfig &nc) const { return (memcmp(this,&nc,sizeof(NetworkConfig)) == 0); }
-	inline bool operator!=(const NetworkConfig &nc) const { return (!(*this == nc)); }
+	ZT_ALWAYS_INLINE operator bool() const { return (networkId != 0); }
+	ZT_ALWAYS_INLINE bool operator==(const NetworkConfig &nc) const { return (memcmp(this,&nc,sizeof(NetworkConfig)) == 0); }
+	ZT_ALWAYS_INLINE bool operator!=(const NetworkConfig &nc) const { return (!(*this == nc)); }
 
 	/**
 	 * Add a specialist or mask flags if already present
@@ -332,7 +277,7 @@ struct NetworkConfig
 	 * @param f Flags (OR of specialist role/type flags)
 	 * @return True if successfully masked or added
 	 */
-	inline bool addSpecialist(const Address &a,const uint64_t f)
+	ZT_ALWAYS_INLINE bool addSpecialist(const Address &a,const uint64_t f)
 	{
 		const uint64_t aint = a.toInt();
 		for(unsigned int i=0;i<specialistCount;++i) {
@@ -348,7 +293,7 @@ struct NetworkConfig
 		return false;
 	}
 
-	const Capability *capability(const uint32_t id) const
+	ZT_ALWAYS_INLINE Capability *capability(const uint32_t id) const
 	{
 		for(unsigned int i=0;i<capabilityCount;++i) {
 			if (capabilities[i].id() == id)
@@ -357,7 +302,7 @@ struct NetworkConfig
 		return (Capability *)0;
 	}
 
-	const Tag *tag(const uint32_t id) const
+	ZT_ALWAYS_INLINE Tag *tag(const uint32_t id) const
 	{
 		for(unsigned int i=0;i<tagCount;++i) {
 			if (tags[i].id() == id)

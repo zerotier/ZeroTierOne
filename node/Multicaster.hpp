@@ -25,10 +25,13 @@
 #include "Address.hpp"
 #include "MAC.hpp"
 #include "MulticastGroup.hpp"
-#include "OutboundMulticast.hpp"
 #include "Utils.hpp"
 #include "Mutex.hpp"
 #include "SharedPtr.hpp"
+#include "Packet.hpp"
+
+// Size in bits -- this is pretty close to the maximum allowed by the protocol
+#define ZT_MULTICAST_BLOOM_FILTER_SIZE_BITS 16384
 
 namespace ZeroTier {
 
@@ -54,10 +57,10 @@ public:
 	 * @param mg Multicast group
 	 * @param member New member address
 	 */
-	inline void add(const int64_t now,const uint64_t nwid,const MulticastGroup &mg,const Address &member)
+	ZT_ALWAYS_INLINE void add(const int64_t now,const uint64_t nwid,const MulticastGroup &mg,const Address &member)
 	{
 		Mutex::Lock l(_groups_l);
-		_groups[Multicaster::Key(nwid,mg)].set(member,now);
+		_groups[_K(nwid,mg)].set(member,now);
 	}
 
 	/**
@@ -73,11 +76,11 @@ public:
 	 * @param count Number of addresses
 	 * @param totalKnown Total number of known addresses as reported by peer
 	 */
-	inline void addMultiple(const int64_t now,const uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,const unsigned int totalKnown)
+	ZT_ALWAYS_INLINE void addMultiple(const int64_t now,const uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,const unsigned int totalKnown)
 	{
 		Mutex::Lock l(_groups_l);
 		const uint8_t *a = (const uint8_t *)addresses;
-		Hashtable< Address,int64_t > &members = _groups[Multicaster::Key(nwid,mg)];
+		Hashtable< Address,int64_t > &members = _groups[_K(nwid,mg)];
 		while (count--) {
 			members.set(Address(a,ZT_ADDRESS_LENGTH),now);
 			a += ZT_ADDRESS_LENGTH;
@@ -91,10 +94,10 @@ public:
 	 * @param mg Multicast group
 	 * @param member Member to unsubscribe
 	 */
-	inline void remove(const uint64_t nwid,const MulticastGroup &mg,const Address &member)
+	ZT_ALWAYS_INLINE void remove(const uint64_t nwid,const MulticastGroup &mg,const Address &member)
 	{
 		Mutex::Lock l(_groups_l);
-		const Multicaster::Key gk(nwid,mg);
+		const _K gk(nwid,mg);
 		Hashtable< Address,int64_t > *const members = _groups.get(gk);
 		if (members) {
 			members->erase(member);
@@ -115,26 +118,12 @@ public:
 	 * @return Total number of known members (regardless of when function aborted)
 	 */
 	template<typename F>
-	inline unsigned long eachMember(const uint64_t nwid,const MulticastGroup &mg,F func) const
+	ZT_ALWAYS_INLINE unsigned long eachMember(const uint64_t nwid,const MulticastGroup &mg,F func) const
 	{
 		std::vector< std::pair<int64_t,Address> > sortedByTime;
-		{
-			Mutex::Lock l(_groups_l);
-			const Multicaster::Key gk(nwid,mg);
-			const Hashtable< Address,int64_t > *const members = _groups.get(gk);
-			if (members) {
-				totalKnown = members->size();
-				sortedByTime.reserve(totalKnown);
-				{
-					Hashtable< Address,int64_t >::Iterator mi(*const_cast<Hashtable< Address,int64_t > *>(members));
-					Address *mik = nullptr;
-					int64_t *miv = nullptr;
-					while (mi.next(mik,miv))
-						sortedByTime.push_back(std::pair<int64_t,Address>(*miv,*mik));
-				}
-				std::sort(sortedByTime.begin(),sortedByTime.end());
-			}
-		}
+		Mutex::Lock l(_groups_l);
+		_getMembersByTime(nwid,mg,sortedByTime);
+		std::sort(sortedByTime.begin(),sortedByTime.end());
 		for(std::vector< std::pair<int64_t,Address> >::const_reverse_iterator i(sortedByTime.begin());i!=sortedByTime.end();++i) {
 			if (!func(i->second))
 				break;
@@ -148,10 +137,11 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 * @param network Network
-	 * @param origin Origin of multicast (to not return to sender) or NULL if none
 	 * @param mg Multicast group
 	 * @param src Source Ethernet MAC address or NULL to skip in packet and compute from ZT address (non-bridged mode)
 	 * @param etherType Ethernet frame type
+	 * @param existingBloomMultiplier Existing bloom filter multiplier or 0 if none
+	 * @param existingBloom Existing bloom filter or NULL if none
 	 * @param data Packet data
 	 * @param len Length of packet data
 	 */
@@ -159,11 +149,12 @@ public:
 		void *tPtr,
 		int64_t now,
 		const SharedPtr<Network> &network,
-		const Address &origin,
 		const MulticastGroup &mg,
 		const MAC &src,
 		unsigned int etherType,
-		const void *data,
+		const unsigned int existingBloomMultiplier,
+		const uint8_t existingBloom[ZT_MULTICAST_BLOOM_FILTER_SIZE_BITS / 8],
+		const void *const data,
 		unsigned int len);
 
 	/**
@@ -175,27 +166,74 @@ public:
 	void clean(int64_t now);
 
 private:
-	struct Key
+	ZT_ALWAYS_INLINE void _getMembersByTime(const uint64_t nwid,const MulticastGroup &mg,std::vector< std::pair<int64_t,Address> > &byTime)
 	{
-		ZT_ALWAYS_INLINE Key() : nwid(0),mg() {}
-		ZT_ALWAYS_INLINE Key(const uint64_t n,const MulticastGroup &g) : nwid(n),mg(g) {}
+		// assumes _groups_l is locked
+		const _K gk(nwid,mg);
+		const Hashtable< Address,int64_t > *const members = _groups.get(gk);
+		if (members) {
+			byTime.reserve(members->size());
+			{
+				Hashtable< Address,int64_t >::Iterator mi(*const_cast<Hashtable< Address,int64_t > *>(members));
+				Address *mik = nullptr;
+				int64_t *miv = nullptr;
+				while (mi.next(mik,miv))
+					byTime.push_back(std::pair<int64_t,Address>(*miv,*mik));
+			}
+		}
+	}
 
+	struct _K
+	{
 		uint64_t nwid;
 		MulticastGroup mg;
 
-		ZT_ALWAYS_INLINE bool operator==(const Key &k) const { return ((nwid == k.nwid)&&(mg == k.mg)); }
-		ZT_ALWAYS_INLINE bool operator!=(const Key &k) const { return ((nwid != k.nwid)||(mg != k.mg)); }
-
+		ZT_ALWAYS_INLINE _K() : nwid(0),mg() {}
+		ZT_ALWAYS_INLINE _K(const uint64_t n,const MulticastGroup &g) : nwid(n),mg(g) {}
+		ZT_ALWAYS_INLINE bool operator==(const _K &k) const { return ((nwid == k.nwid)&&(mg == k.mg)); }
+		ZT_ALWAYS_INLINE bool operator!=(const _K &k) const { return ((nwid != k.nwid)||(mg != k.mg)); }
 		ZT_ALWAYS_INLINE unsigned long hashCode() const { return (mg.hashCode() ^ (unsigned long)(nwid ^ (nwid >> 32))); }
+	};
+
+	/*
+		 * Multicast frame:
+		 *   <[8] 64-bit network ID>
+		 *   <[1] flags>
+		 *  [<[...] network certificate of membership (DEPRECATED)>]
+		 *  [<[4] 32-bit implicit gather limit (DEPRECATED)>]
+		 *  [<[5] ZeroTier address of originating sender (including w/0x08)>]
+		 *  [<[2] 16-bit bloom filter multiplier>]
+		 *  [<[2] 16-bit length of propagation bloom filter in bytes]
+		 *  [<[...] propagation bloom filter>]
+		 *  [<[6] source MAC>]
+		 *   <[6] destination MAC (multicast address)>
+		 *   <[4] 32-bit multicast ADI (multicast address extension)>
+		 *   <[2] 16-bit ethertype>
+		 *   <[...] ethernet payload>
+		 *  [<[2] 16-bit length of signature>]
+		 *  [<[...] signature (algorithm depends on sender identity)>]
+	 */
+
+	struct _OM
+	{
+		uint64_t nwid;
+		MAC src;
+		MulticastGroup mg;
+		unsigned int etherType;
+		unsigned int dataSize;
+		unsigned int bloomFilterMultiplier;
+		uint8_t bloomFilter[ZT_MULTICAST_BLOOM_FILTER_SIZE_BITS / 8];
+		uint8_t data[ZT_MAX_MTU];
+		Mutex lock;
 	};
 
 	const RuntimeEnvironment *const RR;
 
-	OutboundMulticast _txQueue[ZT_TX_QUEUE_SIZE];
+	_OM _txQueue[ZT_TX_QUEUE_SIZE];
 	unsigned int _txQueuePtr;
 	Mutex _txQueue_l;
 
-	Hashtable< Multicaster::Key,Hashtable< Address,int64_t > > _groups;
+	Hashtable< _K,Hashtable< Address,int64_t > > _groups;
 	Mutex _groups_l;
 };
 

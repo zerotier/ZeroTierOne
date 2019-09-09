@@ -481,7 +481,7 @@ public:
 	/**
 	 * @return Whether this peer is reachable via an aggregate link
 	 */
-	inline bool hasAggregateLink()
+	ZT_ALWAYS_INLINE bool hasAggregateLink() const
 	{
 		return _localMultipathSupported && _remoteMultipathSupported && _remotePeerMultipathEnabled;
 	}

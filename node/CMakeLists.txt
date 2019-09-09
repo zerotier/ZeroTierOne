@@ -30,7 +30,6 @@ set(core_headers
 	Network.hpp
 	NetworkConfig.hpp
 	Node.hpp
-	OutboundMulticast.hpp
 	Packet.hpp
 	Path.hpp
 	Peer.hpp
@@ -62,7 +61,6 @@ set(core_src
 	Network.cpp
 	NetworkConfig.cpp
 	Node.cpp
-	OutboundMulticast.cpp
 	Packet.cpp
 	Path.cpp
 	Peer.cpp

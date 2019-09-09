@@ -750,6 +750,8 @@ public:
 		 * multicasts propagated cooperatively, since unlike sender side
 		 * replication the message MAC alone cannot be used for this. This
 		 * imposes a non-trivial CPU cost on the sender and so it's optional.
+		 * Note that the bloom filter itself is not included in the signature
+		 * because it can be changed in transit.
 		 *
 		 * OK is not sent.
 		 *
