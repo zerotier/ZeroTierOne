@@ -258,12 +258,12 @@
 /**
  * Period for multicast LIKE re-announcements to connected nodes
  */
-#define ZT_MULTICAST_ANNOUNCE_PERIOD 120000
+#define ZT_MULTICAST_ANNOUNCE_PERIOD 60000
 
 /**
- * Delay between explicit MULTICAST_GATHER requests for a given multicast channel
+ * Period for multicast GATHER on multicast groups
  */
-#define ZT_MULTICAST_EXPLICIT_GATHER_DELAY (ZT_MULTICAST_LIKE_EXPIRE / 10)
+#define ZT_MULTICAST_GATHER_PERIOD ZT_MULTICAST_ANNOUNCE_PERIOD
 
 /**
  * Timeout for outgoing multicasts

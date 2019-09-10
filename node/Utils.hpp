@@ -280,6 +280,12 @@ public:
 		return true;
 	}
 
+#ifdef __GNUC__
+	static ZT_ALWAYS_INLINE unsigned int countBits(const uint8_t v) { return (unsigned int)__builtin_popcount((unsigned int)v); }
+	static ZT_ALWAYS_INLINE unsigned int countBits(const uint16_t v) { return (unsigned int)__builtin_popcount((unsigned int)v); }
+	static ZT_ALWAYS_INLINE unsigned int countBits(const uint32_t v) { return (unsigned int)__builtin_popcountl((unsigned long)v); }
+	static ZT_ALWAYS_INLINE unsigned int countBits(const uint64_t v) { return (unsigned int)__builtin_popcountll((unsigned long long)v); }
+#else
 	/**
 	 * Count the number of bits set in an integer
 	 *
@@ -287,15 +293,16 @@ public:
 	 * @return Number of bits set in this integer (0-bits in integer)
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE uint64_t countBits(T v)
+	static ZT_ALWAYS_INLINE unsigned int countBits(T v)
 	{
 		v = v - ((v >> 1) & (T)~(T)0/3);
 		v = (v & (T)~(T)0/15*3) + ((v >> 2) & (T)~(T)0/15*3);
 		v = (v + (v >> 4)) & (T)~(T)0/255*15;
-		return (T)(v * ((~((T)0))/((T)255))) >> ((sizeof(T) - 1) * 8);
+		return (unsigned int)((v * ((~((T)0))/((T)255))) >> ((sizeof(T) - 1) * 8));
 	}
+#endif
 
-	// Byte swappers for big/little endian conversion
+// Byte swappers for big/little endian conversion
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 	static ZT_ALWAYS_INLINE uint8_t hton(uint8_t n) { return n; }
 	static ZT_ALWAYS_INLINE int8_t hton(int8_t n) { return n; }

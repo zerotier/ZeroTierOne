@@ -1065,6 +1065,43 @@ void Network::doPeriodicTasks(void *tPtr,const int64_t now)
 	}
 }
 
+void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
+{
+	Mutex::Lock _l(_remoteBridgeRoutes_l);
+	_remoteBridgeRoutes[mac] = addr;
+
+	// Anti-DOS circuit breaker to prevent nodes from spamming us with absurd numbers of bridge routes
+	while (_remoteBridgeRoutes.size() > ZT_MAX_BRIDGE_ROUTES) {
+		Hashtable< Address,unsigned long > counts;
+		Address maxAddr;
+		unsigned long maxCount = 0;
+
+		MAC *m = (MAC *)0;
+		Address *a = (Address *)0;
+
+		// Find the address responsible for the most entries
+		{
+			Hashtable<MAC,Address>::Iterator i(_remoteBridgeRoutes);
+			while (i.next(m,a)) {
+				const unsigned long c = ++counts[*a];
+				if (c > maxCount) {
+					maxCount = c;
+					maxAddr = *a;
+				}
+			}
+		}
+
+		// Kill this address from our table, since it's most likely spamming us
+		{
+			Hashtable<MAC,Address>::Iterator i(_remoteBridgeRoutes);
+			while (i.next(m,a)) {
+				if (*a == maxAddr)
+					_remoteBridgeRoutes.erase(*m);
+			}
+		}
+	}
+}
+
 Membership::AddCredentialResult Network::addCredential(void *tPtr,const Address &sentFrom,const Revocation &rev)
 {
 	if (rev.networkId() != _id)
@@ -1300,7 +1337,11 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	ec->type = (_config) ? (_config.isPrivate() ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC) : ZT_NETWORK_TYPE_PRIVATE;
 	ec->mtu = (_config) ? _config.mtu : ZT_DEFAULT_MTU;
 	ec->dhcp = 0;
-	std::vector<Address> ab(_config.activeBridges());
+	std::vector<Address> ab;
+	for(unsigned int i=0;i<_config.specialistCount;++i) {
+		if ((_config.specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)
+			ab.push_back(Address(_config.specialists[i]));
+	}
 	ec->bridge = (std::find(ab.begin(),ab.end(),RR->identity.address()) != ab.end()) ? 1 : 0;
 	ec->broadcastEnabled = (_config) ? (_config.enableBroadcast() ? 1 : 0) : 0;
 	ec->portError = _portError;

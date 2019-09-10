@@ -683,7 +683,7 @@ public:
 		/**
 		 * Request endpoints for multicast distribution:
 		 *   <[8] 64-bit network ID>
-		 *   <[1] flags>
+		 *   <[1] flags (unused, must be 0)>
 		 *   <[6] MAC address of multicast group being queried>
 		 *   <[4] 32-bit ADI for multicast group being queried>
 		 *   <[4] 32-bit requested max number of multicast peers>
