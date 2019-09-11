@@ -25,7 +25,7 @@
 #include "SHA512.hpp"
 #include "ECC384.hpp"
 
-#define ZT_IDENTITY_STRING_BUFFER_LENGTH 512
+#define ZT_IDENTITY_STRING_BUFFER_LENGTH 1024
 
 namespace ZeroTier {
 

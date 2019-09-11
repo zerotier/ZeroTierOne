@@ -866,19 +866,19 @@ static int testOther()
 		for(int k=0;k<250;++k) {
 			Dictionary<8194> *test = new Dictionary<8194>();
 			char key[32][16];
-			char value[32][128];
+			char value[32][64];
 			memset(key, 0, sizeof(key));
 			memset(value, 0, sizeof(value));
 			for(unsigned int q=0;q<32;++q) {
-				Utils::hex((uint32_t)((rand() % 1000) + (q * 1000)),key[q]);
-				int r = rand() % 128;
+				Utils::hex((uint32_t)((Utils::random() % 1000) + (q * 1000)),key[q]);
+				int r = (int)(Utils::random() % 64);
 				for(int x=0;x<r;++x)
-					value[q][x] = ("0123456789\0\t\r\n= ")[rand() % 16];
+					value[q][x] = ("0123456789\0\t\r\n= ")[Utils::random() % 16];
 				value[q][r] = (char)0;
 				test->add(key[q],value[q],r);
 			}
 			for(unsigned int q=0;q<1024;++q) {
-				int r = rand() % 32;
+				int r = (int)(Utils::random() % 32);
 				char tmp[128];
 				if (test->get(key[r],tmp,sizeof(tmp)) >= 0) {
 					if (strcmp(value[r],tmp)) {

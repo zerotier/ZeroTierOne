@@ -76,14 +76,12 @@ public:
 	 * @return Pointer to s containing hex string with trailing zero byte
 	 */
 	template<typename I>
-	static ZT_ALWAYS_INLINE char *hex(I i,char *s)
+	static ZT_ALWAYS_INLINE char *hex(I x,char *s)
 	{
 		char *const r = s;
-		for(unsigned int i=0,b=(sizeof(i)*8);i<sizeof(i);++i) {
-			b -= 4;
-			*(s++) = HEXCHARS[(i >> b) & 0xf];
-			b -= 4;
-			*(s++) = HEXCHARS[(i >> b) & 0xf];
+		for(unsigned int i=0,b=(sizeof(x)*8);i<sizeof(x);++i) {
+			*(s++) = HEXCHARS[(x >> (b -= 4)) & 0xf];
+			*(s++) = HEXCHARS[(x >> (b -= 4)) & 0xf];
 		}
 		*s = (char)0;
 		return r;
