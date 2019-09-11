@@ -18,13 +18,9 @@
 #include "../node/MAC.hpp"
 #include "../node/InetAddress.hpp"
 
-
 #define ZT_ND_QUERY_INTERVAL 2000
-
 #define ZT_ND_QUERY_MAX_TTL 5000
-
 #define ZT_ND_EXPIRE 600000
-
 
 namespace ZeroTier {
 

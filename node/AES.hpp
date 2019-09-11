@@ -22,6 +22,7 @@
 #include <wmmintrin.h>
 #include <emmintrin.h>
 #include <smmintrin.h>
+#include <immintrin.h>
 #define ZT_AES_AESNI 1
 #endif
 

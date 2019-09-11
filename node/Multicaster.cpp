@@ -46,7 +46,7 @@ unsigned int Multicaster::send(
 	std::vector< std::pair<int64_t,Address> > recipients;
 
 	const NetworkConfig &config = network->config();
-	if (config.multicastLimit == 0) return; // multicast disabled
+	if (config.multicastLimit == 0) return 0; // multicast disabled
 
 	Address specialists[ZT_MAX_NETWORK_SPECIALISTS],multicastReplicators[ZT_MAX_NETWORK_SPECIALISTS];
 	unsigned int specialistCount = 0,multicastReplicatorCount = 0,bridgeCount = 0;

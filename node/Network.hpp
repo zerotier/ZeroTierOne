@@ -404,8 +404,8 @@ public:
 	{
 		Mutex::Lock ml(_memberships_l);
 		Hashtable<Address,Membership>::Iterator i(_memberships);
-		const Address *a = nullptr;
-		const Membership *m = nullptr;
+		Address *a = nullptr;
+		Membership *m = nullptr;
 		while (i.next(a,m)) {
 			if (!f(*a,*m))
 				break;

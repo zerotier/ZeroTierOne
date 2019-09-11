@@ -16,6 +16,8 @@
 
 #include "Constants.hpp"
 
+#include <vector>
+
 namespace ZeroTier {
 
 /**
@@ -68,8 +70,8 @@ public:
 		{
 			for(;;) {
 				if (_b) {
-					kptr = &(_b->k);
-					vptr = &(_b->v);
+					kptr = (K *)(&(_b->k));
+					vptr = (V *)(&(_b->v));
 					_b = _b->next;
 					return true;
 				}

@@ -17,6 +17,7 @@
 #include <stdint.h>
 
 #include <utility>
+#include <vector>
 
 #include "../node/Constants.hpp"
 #include "../node/Hashtable.hpp"

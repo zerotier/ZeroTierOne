@@ -1654,7 +1654,7 @@ void EmbeddedNetworkController::_request(
 
 	DB::cleanMember(member);
 	_db.save(member,true);
-	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),*(nc.get()),metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
+	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),*(nc.get()),false);
 }
 
 void EmbeddedNetworkController::_startThreads()

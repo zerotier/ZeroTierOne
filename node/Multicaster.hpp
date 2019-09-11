@@ -178,7 +178,7 @@ public:
 			}
 		}
 		std::sort(sortedByTime.begin(),sortedByTime.end());
-		for(std::vector< std::pair<int64_t,Address> >::const_reverse_iterator i(sortedByTime.begin());i!=sortedByTime.end();++i) {
+		for(std::vector< std::pair<int64_t,Address> >::const_reverse_iterator i(sortedByTime.rbegin());i!=sortedByTime.rend();++i) {
 			if (!func(i->second))
 				break;
 		}

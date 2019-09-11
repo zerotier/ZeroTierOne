@@ -293,7 +293,7 @@ struct NetworkConfig
 		return false;
 	}
 
-	ZT_ALWAYS_INLINE Capability *capability(const uint32_t id) const
+	ZT_ALWAYS_INLINE const Capability *capability(const uint32_t id) const
 	{
 		for(unsigned int i=0;i<capabilityCount;++i) {
 			if (capabilities[i].id() == id)
@@ -302,7 +302,7 @@ struct NetworkConfig
 		return (Capability *)0;
 	}
 
-	ZT_ALWAYS_INLINE Tag *tag(const uint32_t id) const
+	ZT_ALWAYS_INLINE const Tag *tag(const uint32_t id) const
 	{
 		for(unsigned int i=0;i<tagCount;++i) {
 			if (tags[i].id() == id)
