@@ -45,7 +45,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 		// Check for trusted paths or unencrypted HELLOs (HELLO is the only packet sent in the clear)
 		const unsigned int c = cipher();
 		bool trusted = false;
-		if (c == ZT_PROTO_CIPHER_SUITE__NO_CRYPTO_TRUSTED_PATH) {
+		if (c == ZT_PROTO_CIPHER_SUITE__NONE) {
 			// If this is marked as a packet via a trusted path, check source address and path ID.
 			// Obviously if no trusted paths are configured this always returns false and such
 			// packets are dropped on the floor.
@@ -174,15 +174,11 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 				network->setAccessDenied();
 		}	break;
 
-		case Packet::ERROR_UNWANTED_MULTICAST: {
+		case Packet::ERROR_MULTICAST_STFU: {
 			// Members of networks can use this error to indicate that they no longer
 			// want to receive multicasts on a given channel.
-			networkId = at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD);
-			const SharedPtr<Network> network(RR->node->network(networkId));
-			if ((network)&&(network->gate(tPtr,peer))) {
-				const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8,6),6),at<uint32_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 14));
-				RR->mc->remove(network->id(),mg,peer->address());
-			}
+			const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8,6),6),at<uint32_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 14));
+			RR->mc->remove(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD),mg,peer->address());
 		}	break;
 
 		default: break;
@@ -431,6 +427,8 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 		}	break;
 
 		case Packet::VERB_MULTICAST_GATHER: {
+			// TODO
+			/*
 			networkId = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_NETWORK_ID);
 			const SharedPtr<Network> network(RR->node->network(networkId));
 			if (network) {
@@ -439,32 +437,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 				if (((ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS + 6) + (count * 5)) <= size())
 					RR->mc->addMultiple(tPtr,RR->node->now(),networkId,mg,field(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS + 6,count * 5),count,at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS));
 			}
-		}	break;
-
-		case Packet::VERB_MULTICAST_FRAME: {
-			const unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_FLAGS];
-			networkId = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_NETWORK_ID);
-			const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI));
-
-			const SharedPtr<Network> network(RR->node->network(networkId));
-			if (network) {
-				unsigned int offset = 0;
-
-				if ((flags & 0x01) != 0) { // deprecated but still used by older peers
-					CertificateOfMembership com;
-					offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS);
-					if (com)
-						network->addCredential(tPtr,com);
-				}
-
-				if ((flags & 0x02) != 0) {
-					// OK(MULTICAST_FRAME) includes implicit gather results
-					offset += ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS;
-					unsigned int totalKnown = at<uint32_t>(offset); offset += 4;
-					unsigned int count = at<uint16_t>(offset); offset += 2;
-					RR->mc->addMultiple(tPtr,RR->node->now(),networkId,mg,field(offset,count * 5),count,totalKnown);
-				}
-			}
+			*/
 		}	break;
 
 		default: break;
@@ -660,6 +633,8 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,void *tPtr,c
 
 	// Packet contains a series of 18-byte network,MAC,ADI tuples
 	for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;(ptr+18)<=size();ptr+=18) {
+		// TODO
+		/*
 		const uint64_t nwid = at<uint64_t>(ptr);
 		if (nwid != lastNwid) {
 			lastNwid = nwid;
@@ -671,6 +646,7 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,void *tPtr,c
 		}
 		if (authorized)
 			RR->mc->add(tPtr,now,nwid,MulticastGroup(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14)),peer->address());
+		*/
 	}
 
 	peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP,0);
@@ -831,6 +807,8 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr
 
 	const int64_t now = RR->node->now();
 	if (gatherLimit) {
+		// TODO
+		/*
 		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 		outp.append((unsigned char)Packet::VERB_MULTICAST_GATHER);
 		outp.append(packetId());
@@ -842,6 +820,7 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr
 			outp.armor(peer->key(),true);
 			_path->send(RR,tPtr,outp.data(),outp.size(),now);
 		}
+		*/
 	}
 
 	peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_MULTICAST_GATHER,0,Packet::VERB_NOP,nwid);
@@ -956,6 +935,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 		}
 
 		if (gatherLimit) { // DEPRECATED but still supported
+			/*
 			Packet outp(source(),RR->identity.address(),Packet::VERB_OK);
 			outp.append((unsigned char)Packet::VERB_MULTICAST_FRAME);
 			outp.append(packetId());
@@ -967,6 +947,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 				outp.armor(peer->key(),true);
 				_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 			}
+			*/
 		}
 
 		peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,nwid);

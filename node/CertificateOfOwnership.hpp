@@ -46,7 +46,7 @@ class CertificateOfOwnership : public Credential
 	friend class Credential;
 
 public:
-	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_COO; }
+	static ZT_ALWAYS_INLINE Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_COO; }
 
 	enum Thing
 	{
@@ -56,12 +56,12 @@ public:
 		THING_IPV6_ADDRESS = 3
 	};
 
-	inline CertificateOfOwnership()
+	ZT_ALWAYS_INLINE CertificateOfOwnership()
 	{
 		memset(reinterpret_cast<void *>(this),0,sizeof(CertificateOfOwnership));
 	}
 
-	inline CertificateOfOwnership(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id)
+	ZT_ALWAYS_INLINE CertificateOfOwnership(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id)
 	{
 		memset(reinterpret_cast<void *>(this),0,sizeof(CertificateOfOwnership));
 		_networkId = nwid;
@@ -82,7 +82,7 @@ public:
 	ZT_ALWAYS_INLINE Thing thingType(const unsigned int i) const { return (Thing)_thingTypes[i]; }
 	ZT_ALWAYS_INLINE const uint8_t *thingValue(const unsigned int i) const { return _thingValues[i]; }
 
-	inline bool owns(const InetAddress &ip) const
+	ZT_ALWAYS_INLINE bool owns(const InetAddress &ip) const
 	{
 		if (ip.ss_family == AF_INET)
 			return this->_owns(THING_IPV4_ADDRESS,&(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),4);
@@ -91,7 +91,7 @@ public:
 		return false;
 	}
 
-	inline bool owns(const MAC &mac) const
+	ZT_ALWAYS_INLINE bool owns(const MAC &mac) const
 	{
 		uint8_t tmp[6];
 		mac.copyTo(tmp,6);

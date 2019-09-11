@@ -61,7 +61,7 @@ class Capability : public Credential
 public:
 	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_CAPABILITY; }
 
-	inline Capability() :
+	ZT_ALWAYS_INLINE Capability() :
 		_nwid(0),
 		_ts(0),
 		_id(0),
@@ -80,7 +80,7 @@ public:
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	inline Capability(uint32_t id,uint64_t nwid,int64_t ts,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount) :
+	ZT_ALWAYS_INLINE Capability(uint32_t id,uint64_t nwid,int64_t ts,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount) :
 		_nwid(nwid),
 		_ts(ts),
 		_id(id),
@@ -119,7 +119,7 @@ public:
 	/**
 	 * @return Last 'to' address in chain of custody
 	 */
-	inline Address issuedTo() const
+	ZT_ALWAYS_INLINE Address issuedTo() const
 	{
 		Address i2;
 		for(unsigned int i=0;i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH;++i) {
@@ -165,7 +165,7 @@ public:
 	 *
 	 * @param RR Runtime environment to provide for peer lookup, etc.
 	 */
-	inline Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
+	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
 	template<unsigned int C>
 	static inline void serializeRules(Buffer<C> &b,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)

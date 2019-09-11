@@ -217,7 +217,7 @@ public:
 	 * @tparam BC Buffer capacity (usually inferred)
 	 */
 	template<unsigned int BC>
-	inline bool get(const char *key,Buffer<BC> &dest) const
+	ZT_ALWAYS_INLINE bool get(const char *key,Buffer<BC> &dest) const
 	{
 		const int r = this->get(key,const_cast<char *>(reinterpret_cast<const char *>(dest.data())),BC);
 		if (r >= 0) {
@@ -236,7 +236,7 @@ public:
 	 * @param dfl Default value if not found in dictionary
 	 * @return Boolean value of key or 'dfl' if not found
 	 */
-	bool getB(const char *key,bool dfl = false) const
+	ZT_ALWAYS_INLINE bool getB(const char *key,bool dfl = false) const
 	{
 		char tmp[4];
 		if (this->get(key,tmp,sizeof(tmp)) >= 0)
@@ -251,7 +251,7 @@ public:
 	 * @param dfl Default value or 0 if unspecified
 	 * @return Decoded hex UInt value or 'dfl' if not found
 	 */
-	inline uint64_t getUI(const char *key,uint64_t dfl = 0) const
+	ZT_ALWAYS_INLINE uint64_t getUI(const char *key,uint64_t dfl = 0) const
 	{
 		char tmp[128];
 		if (this->get(key,tmp,sizeof(tmp)) >= 1)
@@ -266,7 +266,7 @@ public:
 	 * @param dfl Default value or 0 if unspecified
 	 * @return Decoded hex UInt value or 'dfl' if not found
 	 */
-	inline int64_t getI(const char *key,int64_t dfl = 0) const
+	ZT_ALWAYS_INLINE int64_t getI(const char *key,int64_t dfl = 0) const
 	{
 		char tmp[128];
 		if (this->get(key,tmp,sizeof(tmp)) >= 1)
@@ -366,7 +366,7 @@ public:
 	/**
 	 * Add a boolean as a '1' or a '0'
 	 */
-	inline bool add(const char *key,bool value)
+	ZT_ALWAYS_INLINE bool add(const char *key,bool value)
 	{
 		return this->add(key,(value) ? "1" : "0",1);
 	}
@@ -374,7 +374,7 @@ public:
 	/**
 	 * Add a 64-bit integer (unsigned) as a hex value
 	 */
-	inline bool add(const char *key,uint64_t value)
+	ZT_ALWAYS_INLINE bool add(const char *key,uint64_t value)
 	{
 		char tmp[32];
 		return this->add(key,Utils::hex(value,tmp),-1);
@@ -383,7 +383,7 @@ public:
 	/**
 	 * Add a 64-bit integer (unsigned) as a hex value
 	 */
-	inline bool add(const char *key,int64_t value)
+	ZT_ALWAYS_INLINE bool add(const char *key,int64_t value)
 	{
 		char tmp[32];
 		if (value >= 0) {
@@ -397,7 +397,7 @@ public:
 	/**
 	 * Add a 64-bit integer (unsigned) as a hex value
 	 */
-	inline bool add(const char *key,const Address &a)
+	ZT_ALWAYS_INLINE bool add(const char *key,const Address &a)
 	{
 		char tmp[32];
 		return this->add(key,Utils::hex(a.toInt(),tmp),-1);
@@ -409,7 +409,7 @@ public:
 	 * @tparam BC Buffer capacity (usually inferred)
 	 */
 	template<unsigned int BC>
-	inline bool add(const char *key,const Buffer<BC> &value)
+	ZT_ALWAYS_INLINE bool add(const char *key,const Buffer<BC> &value)
 	{
 		return this->add(key,(const char *)value.data(),(int)value.size());
 	}
@@ -418,7 +418,7 @@ public:
 	 * @param key Key to check
 	 * @return True if key is present
 	 */
-	inline bool contains(const char *key) const
+	ZT_ALWAYS_INLINE bool contains(const char *key) const
 	{
 		char tmp[2];
 		return (this->get(key,tmp,2) >= 0);

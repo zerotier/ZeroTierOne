@@ -49,28 +49,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 		const SharedPtr<Path> path(RR->topology->getPath(localSocket,fromAddr));
 		path->received(now);
 
-		if (len == 13) {
-			/* LEGACY: before VERB_PUSH_DIRECT_PATHS, peers used broadcast
-			 * announcements on the LAN to solve the 'same network problem.' We
-			 * no longer send these, but we'll listen for them for a while to
-			 * locate peers with versions <1.0.4. */
-
-			const Address beaconAddr(reinterpret_cast<const char *>(data) + 8,5);
-			if (beaconAddr == RR->identity.address())
-				return;
-			if (!RR->node->shouldUsePathForZeroTierTraffic(tPtr,beaconAddr,localSocket,fromAddr))
-				return;
-			const SharedPtr<Peer> peer(RR->topology->get(beaconAddr));
-			if (peer) { // we'll only respond to beacons from known peers
-				if ((now - _lastBeaconResponse) >= 2500) { // limit rate of responses
-					_lastBeaconResponse = now;
-					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
-					outp.armor(peer->key(),true);
-					path->send(RR,tPtr,outp.data(),outp.size(),now);
-				}
-			}
-
-		} else if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) { // SECURITY: min length check is important since we do some C-style stuff below!
+		if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) { // SECURITY: min length check is important since we do some C-style stuff below!
 			if (reinterpret_cast<const uint8_t *>(data)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR) {
 				// Handle fragment ----------------------------------------------------
 
@@ -372,6 +351,8 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			return;
 		}
 
+		// TODO
+		/*
 		RR->mc->send(
 			tPtr,
 			RR->node->now(),
@@ -382,6 +363,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			etherType,
 			data,
 			len);
+		*/
 	} else if (to == network->mac()) {
 		// Destination is this node, so just reinject it
 		RR->node->putFrame(tPtr,network->id(),network->userPtr(),from,to,etherType,vlanId,data,len);
@@ -434,7 +416,11 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 
 		/* Create an array of up to ZT_MAX_BRIDGE_SPAM recipients for this bridged frame. */
 		bridges[0] = network->findBridgeTo(to);
-		std::vector<Address> activeBridges(network->config().activeBridges());
+		std::vector<Address> activeBridges;
+		for(unsigned int i=0;i<network->config().specialistCount;++i) {
+			if ((network->config().specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)
+				activeBridges.push_back(network->config().specialists[i]);
+		}
 		if ((bridges[0])&&(bridges[0] != RR->identity.address())&&(network->config().permitsBridging(bridges[0]))) {
 			/* We have a known bridge route for this MAC, send it there. */
 			++numBridges;

@@ -68,29 +68,35 @@ public:
 	 */
 	static char *decimal(unsigned long n,char s[24]);
 
-	static inline char *hex(uint64_t i,char s[17])
+	/**
+	 * Convert an unsigned integer into hex
+	 *
+	 * @param i Any unsigned integer
+	 * @param s Buffer to receive hex, must be at least (2*sizeof(i))+1 in size or overflow will occur.
+	 * @return Pointer to s containing hex string with trailing zero byte
+	 */
+	template<typename I>
+	static ZT_ALWAYS_INLINE char *hex(I i,char *s)
 	{
-		s[0] = HEXCHARS[(i >> 60) & 0xf];
-		s[1] = HEXCHARS[(i >> 56) & 0xf];
-		s[2] = HEXCHARS[(i >> 52) & 0xf];
-		s[3] = HEXCHARS[(i >> 48) & 0xf];
-		s[4] = HEXCHARS[(i >> 44) & 0xf];
-		s[5] = HEXCHARS[(i >> 40) & 0xf];
-		s[6] = HEXCHARS[(i >> 36) & 0xf];
-		s[7] = HEXCHARS[(i >> 32) & 0xf];
-		s[8] = HEXCHARS[(i >> 28) & 0xf];
-		s[9] = HEXCHARS[(i >> 24) & 0xf];
-		s[10] = HEXCHARS[(i >> 20) & 0xf];
-		s[11] = HEXCHARS[(i >> 16) & 0xf];
-		s[12] = HEXCHARS[(i >> 12) & 0xf];
-		s[13] = HEXCHARS[(i >> 8) & 0xf];
-		s[14] = HEXCHARS[(i >> 4) & 0xf];
-		s[15] = HEXCHARS[i & 0xf];
-		s[16] = (char)0;
-		return s;
+		char *const r = s;
+		for(unsigned int i=0,b=(sizeof(i)*8);i<sizeof(i);++i) {
+			b -= 4;
+			*(s++) = HEXCHARS[(i >> b) & 0xf];
+			b -= 4;
+			*(s++) = HEXCHARS[(i >> b) & 0xf];
+		}
+		*s = (char)0;
+		return r;
 	}
 
-	static inline char *hex10(uint64_t i,char s[11])
+	/**
+	 * Convert the least significant 40 bits of a uint64_t to hex
+	 *
+	 * @param i Unsigned 64-bit int
+	 * @param s Buffer of size [11] to receive 10 hex characters
+	 * @return Pointer to buffer
+	 */
+	static ZT_ALWAYS_INLINE char *hex10(uint64_t i,char s[11])
 	{
 		s[0] = HEXCHARS[(i >> 36) & 0xf];
 		s[1] = HEXCHARS[(i >> 32) & 0xf];
@@ -106,39 +112,15 @@ public:
 		return s;
 	}
 
-	static inline char *hex(uint32_t i,char s[9])
-	{
-		s[0] = HEXCHARS[(i >> 28) & 0xf];
-		s[1] = HEXCHARS[(i >> 24) & 0xf];
-		s[2] = HEXCHARS[(i >> 20) & 0xf];
-		s[3] = HEXCHARS[(i >> 16) & 0xf];
-		s[4] = HEXCHARS[(i >> 12) & 0xf];
-		s[5] = HEXCHARS[(i >> 8) & 0xf];
-		s[6] = HEXCHARS[(i >> 4) & 0xf];
-		s[7] = HEXCHARS[i & 0xf];
-		s[8] = (char)0;
-		return s;
-	}
-
-	static inline char *hex(uint16_t i,char s[5])
-	{
-		s[0] = HEXCHARS[(i >> 12) & 0xf];
-		s[1] = HEXCHARS[(i >> 8) & 0xf];
-		s[2] = HEXCHARS[(i >> 4) & 0xf];
-		s[3] = HEXCHARS[i & 0xf];
-		s[4] = (char)0;
-		return s;
-	}
-
-	static inline char *hex(uint8_t i,char s[3])
-	{
-		s[0] = HEXCHARS[(i >> 4) & 0xf];
-		s[1] = HEXCHARS[i & 0xf];
-		s[2] = (char)0;
-		return s;
-	}
-
-	static inline char *hex(const void *d,unsigned int l,char *s)
+	/**
+	 * Convert a byte array into hex
+	 *
+	 * @param d Bytes
+	 * @param l Length of bytes
+	 * @param s String buffer, must be at least (l*2)+1 in size or overflow will occur
+	 * @return Pointer to filled string buffer
+	 */
+	static ZT_ALWAYS_INLINE char *hex(const void *d,unsigned int l,char *s)
 	{
 		char *const save = s;
 		for(unsigned int i=0;i<l;++i) {

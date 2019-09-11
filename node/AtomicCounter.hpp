@@ -58,8 +58,8 @@ public:
 	}
 
 private:
-	inline AtomicCounter(const AtomicCounter &) {}
-	inline const AtomicCounter &operator=(const AtomicCounter &) { return *this; }
+	ZT_ALWAYS_INLINE AtomicCounter(const AtomicCounter &) {}
+	ZT_ALWAYS_INLINE const AtomicCounter &operator=(const AtomicCounter &) { return *this; }
 
 #ifdef __GNUC__
 	int _v;

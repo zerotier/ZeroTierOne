@@ -69,7 +69,7 @@ class CertificateOfMembership : public Credential
 	friend class Credential;
 
 public:
-	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_COM; }
+	static ZT_ALWAYS_INLINE Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_COM; }
 
 	/**
 	 * Reserved qualifier IDs
@@ -101,7 +101,7 @@ public:
 	/**
 	 * Create an empty certificate of membership
 	 */
-	inline CertificateOfMembership() :
+	ZT_ALWAYS_INLINE CertificateOfMembership() :
 		_qualifierCount(0),
 		_signatureLength(0) {}
 
@@ -113,7 +113,7 @@ public:
 	 * @param nwid Network ID
 	 * @param issuedTo Certificate recipient
 	 */
-	inline CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Address &issuedTo)
+	ZT_ALWAYS_INLINE CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Address &issuedTo)
 	{
 		_qualifiers[0].id = COM_RESERVED_ID_TIMESTAMP;
 		_qualifiers[0].value = timestamp;
@@ -135,10 +135,7 @@ public:
 	 * @param startAt Position to start in buffer
 	 */
 	template<unsigned int C>
-	inline CertificateOfMembership(const Buffer<C> &b,unsigned int startAt = 0)
-	{
-		deserialize(b,startAt);
-	}
+	ZT_ALWAYS_INLINE CertificateOfMembership(const Buffer<C> &b,unsigned int startAt = 0) { deserialize(b,startAt); }
 
 	/**
 	 * @return True if there's something here
@@ -214,7 +211,7 @@ public:
 		}
 	}
 
-	inline void setQualifier(ReservedId id,uint64_t value,uint64_t maxDelta) { setQualifier((uint64_t)id,value,maxDelta); }
+	ZT_ALWAYS_INLINE void setQualifier(ReservedId id,uint64_t value,uint64_t maxDelta) { setQualifier((uint64_t)id,value,maxDelta); }
 
 	/**
 	 * Compare two certificates for parameter agreement
@@ -297,17 +294,17 @@ public:
 	 * @param RR Runtime environment for looking up peers
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
-	inline Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
+	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
 	/**
 	 * @return True if signed
 	 */
-	inline bool isSigned() const { return (_signedBy); }
+	ZT_ALWAYS_INLINE bool isSigned() const { return (_signedBy); }
 
 	/**
 	 * @return Address that signed this certificate or null address if none
 	 */
-	inline const Address &signedBy() const { return _signedBy; }
+	ZT_ALWAYS_INLINE const Address &signedBy() const { return _signedBy; }
 
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b) const

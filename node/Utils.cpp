@@ -193,13 +193,13 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 			}
 
 			uint8_t h[48];
-			for(unsigned int k=0;k<4;++k) {
+			for(unsigned int k=0;k<4;++k) { // treat random state like a 256-bit counter; endian-ness is irrelevant since we just want random
 				if (++randomState[k] != 0)
 					break;
 			}
-			HMACSHA384((const uint8_t *)randomState,randomBuf,sizeof(randomBuf),h);
+			HMACSHA384((const uint8_t *)randomState,randomBuf,sizeof(randomBuf),h); // compute HMAC on random buffer using state as secret key
 			AES c(h);
-			c.ctr(h + 32,randomBuf,sizeof(randomBuf),randomBuf);
+			c.ctr(h + 32,randomBuf,sizeof(randomBuf),randomBuf); // encrypt random buffer with AES-CTR using HMAC result as key
 		}
 
 		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
