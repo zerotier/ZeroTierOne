@@ -180,6 +180,7 @@ struct ForwardingStats
 	Meter bps;
 };
 
+// These fields are not locked as they're only initialized on startup
 static int64_t s_startTime;            // Time service was started
 static std::vector<int> s_ports;       // Ports to bind for UDP traffic
 static int s_relayMaxHops = 0;         // Max relay hops
@@ -190,11 +191,17 @@ static std::string s_statsRoot;        // Root to write stats, peers, etc.
 static std::atomic_bool s_geoInit;     // True if geoIP data is initialized
 static std::string s_googleMapsAPIKey; // Google maps API key for GeoIP /map feature
 
+// These are only modified during GeoIP database load (if enabled) and become static after s_geoInit is set to true.
+static std::map< std::pair< uint32_t,uint32_t >,std::pair< float,float > > s_geoIp4;
+static std::map< std::pair< std::array< uint64_t,2 >,std::array< uint64_t,2 > >,std::pair< float,float > > s_geoIp6;
+
+// Rate meters for statistical purposes
 static Meter s_inputRate;
 static Meter s_outputRate;
 static Meter s_forwardRate;
 static Meter s_discardedForwardRate;
 
+// These fields are locked using mutexes below as they're modified during runtime
 static std::string s_planet;
 static std::list< SharedPtr<RootPeer> > s_peers;
 static std::unordered_map< uint64_t,std::unordered_map< MulticastGroup,std::unordered_map< Address,int64_t,AddressHasher >,MulticastGroupHasher > > s_multicastSubscriptions;
@@ -202,8 +209,6 @@ static std::unordered_map< Identity,SharedPtr<RootPeer>,IdentityHasher > s_peers
 static std::unordered_map< Address,std::set< SharedPtr<RootPeer> >,AddressHasher > s_peersByVirtAddr;
 static std::unordered_map< RendezvousKey,RendezvousStats,RendezvousKey::Hasher > s_rendezvousTracking;
 static std::unordered_map< Address,ForwardingStats,AddressHasher > s_lastForwardedTo;
-static std::map< std::pair< uint32_t,uint32_t >,std::pair< float,float > > s_geoIp4;
-static std::map< std::pair< std::array< uint64_t,2 >,std::array< uint64_t,2 > >,std::pair< float,float > > s_geoIp6;
 
 static std::mutex s_planet_l;
 static std::mutex s_peers_l;
