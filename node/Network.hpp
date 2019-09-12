@@ -62,7 +62,7 @@ public:
 	/**
 	 * Compute primary controller device ID from network ID
 	 */
-	static inline Address controllerFor(uint64_t nwid) { return Address(nwid >> 24); }
+	static ZT_ALWAYS_INLINE Address controllerFor(uint64_t nwid) { return Address(nwid >> 24); }
 
 	/**
 	 * Construct a new network
@@ -441,7 +441,7 @@ private:
 
 	struct _IncomingConfigChunk
 	{
-		_IncomingConfigChunk() : ts(0),updateId(0),haveChunks(0),haveBytes(0),data() {}
+		ZT_ALWAYS_INLINE _IncomingConfigChunk() : ts(0),updateId(0),haveChunks(0),haveBytes(0),data() {}
 		uint64_t ts;
 		uint64_t updateId;
 		uint64_t haveChunkIds[ZT_NETWORK_MAX_UPDATE_CHUNKS];

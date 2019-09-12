@@ -75,34 +75,32 @@ public:
 	class RuleResultLog
 	{
 	public:
-		inline RuleResultLog() {}
+		ZT_ALWAYS_INLINE RuleResultLog() {}
 
-		inline void log(const unsigned int rn,const uint8_t thisRuleMatches,const uint8_t thisSetMatches)
+		ZT_ALWAYS_INLINE void log(const unsigned int rn,const uint8_t thisRuleMatches,const uint8_t thisSetMatches)
 		{
 			_l[rn >> 1] |= ( ((thisRuleMatches + 1) << 2) | (thisSetMatches + 1) ) << ((rn & 1) << 2);
 		}
-		inline void logSkipped(const unsigned int rn,const uint8_t thisSetMatches)
+		ZT_ALWAYS_INLINE void logSkipped(const unsigned int rn,const uint8_t thisSetMatches)
 		{
 			_l[rn >> 1] |= (thisSetMatches + 1) << ((rn & 1) << 2);
 		}
 
-		inline void clear()
+		ZT_ALWAYS_INLINE void clear()
 		{
 			memset(_l,0,sizeof(_l));
 		}
 
-		inline const uint8_t *data() const { return _l; }
-		inline unsigned int sizeBytes() const { return (ZT_MAX_NETWORK_RULES / 2); }
+		ZT_ALWAYS_INLINE const uint8_t *data() const { return _l; }
+		ZT_ALWAYS_INLINE unsigned int sizeBytes() const { return (ZT_MAX_NETWORK_RULES / 2); }
 
 	private:
 		uint8_t _l[ZT_MAX_NETWORK_RULES / 2];
 	};
 
-	inline Trace(const RuntimeEnvironment *renv) :
+	ZT_ALWAYS_INLINE Trace(const RuntimeEnvironment *renv) :
 		RR(renv),
-		_byNet(8)
-	{
-	}
+		_byNet(8) {}
 
 	void resettingPathsInScope(void *const tPtr,const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,const InetAddress::IpScope scope);
 	void peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &path,const uint64_t packetId,const Packet::Verb verb);

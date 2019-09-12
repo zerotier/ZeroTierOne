@@ -45,11 +45,11 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
-	inline Topology(const RuntimeEnvironment *renv,const Identity &myId) :
+	ZT_ALWAYS_INLINE Topology(const RuntimeEnvironment *renv,const Identity &myId) :
 		RR(renv),
 		_myIdentity(myId),
 		_numConfiguredPhysicalPaths(0) {}
-	inline ~Topology() {}
+	ZT_ALWAYS_INLINE ~Topology() {}
 
 	/**
 	 * Add a peer to database
@@ -61,7 +61,7 @@ public:
 	 * @param peer Peer to add
 	 * @return New or existing peer (should replace 'peer')
 	 */
-	inline SharedPtr<Peer> add(const SharedPtr<Peer> &peer)
+	ZT_ALWAYS_INLINE SharedPtr<Peer> add(const SharedPtr<Peer> &peer)
 	{
 		SharedPtr<Peer> np;
 		{
@@ -81,7 +81,7 @@ public:
 	 * @param zta ZeroTier address of peer
 	 * @return Peer or NULL if not found
 	 */
-	inline SharedPtr<Peer> get(const Address &zta)
+	ZT_ALWAYS_INLINE SharedPtr<Peer> get(const Address &zta)
 	{
 		if (zta == _myIdentity.address())
 			return SharedPtr<Peer>();
@@ -110,7 +110,7 @@ public:
 	 * @param zta ZeroTier address of peer
 	 * @return Identity or NULL identity if not found
 	 */
-	inline Identity getIdentity(void *tPtr,const Address &zta)
+	ZT_ALWAYS_INLINE Identity getIdentity(void *tPtr,const Address &zta)
 	{
 		if (zta == _myIdentity.address()) {
 			return _myIdentity;
@@ -130,7 +130,7 @@ public:
 	 * @param r Remote address
 	 * @return Pointer to canonicalized Path object
 	 */
-	inline SharedPtr<Path> getPath(const int64_t l,const InetAddress &r)
+	ZT_ALWAYS_INLINE SharedPtr<Path> getPath(const int64_t l,const InetAddress &r)
 	{
 		Mutex::Lock _l(_paths_m);
 		SharedPtr<Path> &p = _paths[Path::HashKey(l,r)];
@@ -143,7 +143,7 @@ public:
 	 * @param id Identity to check
 	 * @return True if this identity corresponds to a root
 	 */
-	inline bool isRoot(const Identity &id) const
+	ZT_ALWAYS_INLINE bool isRoot(const Identity &id) const
 	{
 		Mutex::Lock l(_roots_m);
 		for(std::vector<Root>::const_iterator r(_roots.begin());r!=_roots.end();++r) {
@@ -156,7 +156,7 @@ public:
 	/**
 	 * Do periodic tasks such as database cleanup
 	 */
-	inline void doPeriodicTasks(int64_t now)
+	ZT_ALWAYS_INLINE void doPeriodicTasks(int64_t now)
 	{
 		{
 			Mutex::Lock _l1(_peers_m);
@@ -185,7 +185,7 @@ public:
 	 * @param now Current time
 	 * @return Number of peers with active direct paths
 	 */
-	inline unsigned long countActive(int64_t now) const
+	ZT_ALWAYS_INLINE unsigned long countActive(int64_t now) const
 	{
 		unsigned long cnt = 0;
 		Mutex::Lock _l(_peers_m);
@@ -210,7 +210,7 @@ public:
 	 * @tparam F Function or function object type
 	 */
 	template<typename F>
-	inline void eachPeer(F f)
+	ZT_ALWAYS_INLINE void eachPeer(F f)
 	{
 		Mutex::Lock l(_peers_m);
 		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
@@ -231,7 +231,7 @@ public:
 	 * @tparam F function or function object type
 	 */
 	template<typename F>
-	inline void eachRoot(F f)
+	ZT_ALWAYS_INLINE void eachRoot(F f)
 	{
 		Mutex::Lock l(_roots_m);
 		SharedPtr<Peer> rp;
@@ -256,7 +256,7 @@ public:
 	 * @param now Current time
 	 * @return Best/fastest currently connected root or NULL if none
 	 */
-	inline SharedPtr<Peer> root(const int64_t now)
+	ZT_ALWAYS_INLINE SharedPtr<Peer> root(const int64_t now)
 	{
 		Mutex::Lock l(_bestRoot_m);
 		if ((!_bestRoot)||((now - _lastRankedBestRoot) >= ZT_FIND_BEST_ROOT_PERIOD)) {
@@ -295,7 +295,7 @@ public:
 	 * @param toAddr Destination address
 	 * @return Best current relay or NULL if none
 	 */
-	inline SharedPtr<Peer> findRelayTo(const int64_t now,const Address &toAddr)
+	ZT_ALWAYS_INLINE SharedPtr<Peer> findRelayTo(const int64_t now,const Address &toAddr)
 	{
 		// TODO: in the future this will check 'mesh-like' relays and if enabled consult LF for other roots (for if this is a root)
 		return root(now);
@@ -304,7 +304,7 @@ public:
 	/**
 	 * @param allPeers vector to fill with all current peers
 	 */
-	inline void getAllPeers(std::vector< SharedPtr<Peer> > &allPeers) const
+	ZT_ALWAYS_INLINE void getAllPeers(std::vector< SharedPtr<Peer> > &allPeers) const
 	{
 		Mutex::Lock l(_peers_m);
 		allPeers.clear();
@@ -326,7 +326,7 @@ public:
 	 * @param mtu Variable set to MTU
 	 * @param trustedPathId Variable set to trusted path ID
 	 */
-	inline void getOutboundPathInfo(const InetAddress &physicalAddress,unsigned int &mtu,uint64_t &trustedPathId)
+	ZT_ALWAYS_INLINE void getOutboundPathInfo(const InetAddress &physicalAddress,unsigned int &mtu,uint64_t &trustedPathId)
 	{
 		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
 			if (_physicalPathConfig[i].first.containsAddress(physicalAddress)) {
@@ -343,7 +343,7 @@ public:
 	 * @param physicalAddress Physical endpoint address
 	 * @return MTU
 	 */
-	inline unsigned int getOutboundPathMtu(const InetAddress &physicalAddress)
+	ZT_ALWAYS_INLINE unsigned int getOutboundPathMtu(const InetAddress &physicalAddress)
 	{
 		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
 			if (_physicalPathConfig[i].first.containsAddress(physicalAddress))
@@ -358,7 +358,7 @@ public:
 	 * @param physicalAddress Physical address to which we are sending the packet
 	 * @return Trusted path ID or 0 if none (0 is not a valid trusted path ID)
 	 */
-	inline uint64_t getOutboundPathTrust(const InetAddress &physicalAddress)
+	ZT_ALWAYS_INLINE uint64_t getOutboundPathTrust(const InetAddress &physicalAddress)
 	{
 		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
 			if (_physicalPathConfig[i].first.containsAddress(physicalAddress))
@@ -373,7 +373,7 @@ public:
 	 * @param physicalAddress Originating physical address
 	 * @param trustedPathId Trusted path ID from packet (from MAC field)
 	 */
-	inline bool shouldInboundPathBeTrusted(const InetAddress &physicalAddress,const uint64_t trustedPathId)
+	ZT_ALWAYS_INLINE bool shouldInboundPathBeTrusted(const InetAddress &physicalAddress,const uint64_t trustedPathId)
 	{
 		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
 			if ((_physicalPathConfig[i].second.trustedPathId == trustedPathId)&&(_physicalPathConfig[i].first.containsAddress(physicalAddress)))
@@ -385,7 +385,7 @@ public:
 	/**
 	 * Set or clear physical path configuration (called via Node::setPhysicalPathConfiguration)
 	 */
-	inline void setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig)
+	ZT_ALWAYS_INLINE void setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig)
 	{
 		if (!pathNetwork) {
 			_numConfiguredPhysicalPaths = 0;

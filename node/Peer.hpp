@@ -100,7 +100,7 @@ public:
 	 * @param addr Remote address
 	 * @return True if we have an active path to this destination
 	 */
-	inline bool hasActivePathTo(int64_t now,const InetAddress &addr) const
+	ZT_ALWAYS_INLINE bool hasActivePathTo(int64_t now,const InetAddress &addr) const
 	{
 		Mutex::Lock _l(_paths_m);
 		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
@@ -262,7 +262,7 @@ public:
 	 * @param now Current time
 	 * @return All known paths to this peer
 	 */
-	inline std::vector< SharedPtr<Path> > paths(const int64_t now) const
+	ZT_ALWAYS_INLINE std::vector< SharedPtr<Path> > paths(const int64_t now) const
 	{
 		std::vector< SharedPtr<Path> > pp;
 		Mutex::Lock _l(_paths_m);
@@ -360,23 +360,23 @@ public:
 	 * or a VERB_QOS_MEASUREMENT packet at some point in the past. Until this flag is set, the local client
 	 * shall assume that multipath is not enabled and should only use classical Protocol 9 logic.
 	 */
-	inline void inferRemoteMultipathEnabled() { _remotePeerMultipathEnabled = true; }
+	ZT_ALWAYS_INLINE void inferRemoteMultipathEnabled() { _remotePeerMultipathEnabled = true; }
 
 	/**
 	 * @return Whether the local client supports and is configured to use multipath
 	 */
-	inline bool localMultipathSupport() { return _localMultipathSupported; }
+	ZT_ALWAYS_INLINE bool localMultipathSupport() { return _localMultipathSupported; }
 
 	/**
 	 * @return Whether the remote peer supports and is configured to use multipath
 	 */
-	inline bool remoteMultipathSupport() { return _remoteMultipathSupported; }
+	ZT_ALWAYS_INLINE bool remoteMultipathSupport() { return _remoteMultipathSupported; }
 
 	/**
 	 * @return Whether this client can use multipath to communicate with this peer. True if both peers are using
 	 * the correct protocol and if both peers have multipath enabled. False if otherwise.
 	 */
-	inline bool canUseMultipath() { return _canUseMultipath; }
+	ZT_ALWAYS_INLINE bool canUseMultipath() { return _canUseMultipath; }
 
 	/**
 	 * Rate limit gate for VERB_PUSH_DIRECT_PATHS
@@ -544,10 +544,7 @@ private:
 // Add a swap() for shared ptr's to peers to speed up peer sorts
 namespace std {
 	template<>
-	inline void swap(ZeroTier::SharedPtr<ZeroTier::Peer> &a,ZeroTier::SharedPtr<ZeroTier::Peer> &b)
-	{
-		a.swap(b);
-	}
+	ZT_ALWAYS_INLINE void swap(ZeroTier::SharedPtr<ZeroTier::Peer> &a,ZeroTier::SharedPtr<ZeroTier::Peer> &b) { a.swap(b); }
 }
 
 #endif

@@ -46,19 +46,19 @@ namespace ZeroTier {
 class Locator
 {
 public:
-	inline Locator() : _ts(0),_signatureLength(0) {}
+	ZT_ALWAYS_INLINE Locator() : _ts(0),_signatureLength(0) {}
 
-	inline const Identity &id() const { return _id; }
-	inline const Identity &signer() const { return ((_signedBy) ? _signedBy : _id); }
-	inline int64_t timestamp() const { return _ts; }
+	ZT_ALWAYS_INLINE const Identity &id() const { return _id; }
+	ZT_ALWAYS_INLINE const Identity &signer() const { return ((_signedBy) ? _signedBy : _id); }
+	ZT_ALWAYS_INLINE int64_t timestamp() const { return _ts; }
 
-	inline const std::vector<InetAddress> &phy() const { return _physical; }
-	inline const std::vector<Identity> &virt() const { return _virtual; }
+	ZT_ALWAYS_INLINE const std::vector<InetAddress> &phy() const { return _physical; }
+	ZT_ALWAYS_INLINE const std::vector<Identity> &virt() const { return _virtual; }
 
 	/**
 	 * Add a physical address to this locator (call before finish() to build a new Locator)
 	 */
-	inline void add(const InetAddress &ip)
+	ZT_ALWAYS_INLINE void add(const InetAddress &ip)
 	{
 		if (_physical.size() < ZT_LOCATOR_MAX_PHYSICAL_ADDRESSES)
 			_physical.push_back(ip);
@@ -67,7 +67,7 @@ public:
 	/**
 	 * Add a forwarding ZeroTier node to this locator (call before finish() to build a new Locator)
 	 */
-	inline void add(const Identity &zt)
+	ZT_ALWAYS_INLINE void add(const Identity &zt)
 	{
 		if (_virtual.size() < ZT_LOCATOR_MAX_VIRTUAL_ADDRESSES)
 			_virtual.push_back(zt);
@@ -80,7 +80,7 @@ public:
 	 * lists but does not sign the locator. The sign() method should be used after
 	 * finish().
 	 */
-	inline void finish(const Identity &id,const int64_t ts)
+	ZT_ALWAYS_INLINE void finish(const Identity &id,const int64_t ts)
 	{
 		_ts = ts;
 		_id = id;
@@ -93,7 +93,7 @@ public:
 	/**
 	 * Sign this locator (must be called after finish())
 	 */
-	inline bool sign(const Identity &signingId)
+	ZT_ALWAYS_INLINE bool sign(const Identity &signingId)
 	{
 		if (!signingId.hasPrivate())
 			return false;
@@ -115,7 +115,7 @@ public:
 	/**
 	 * Verify this locator's signature against its embedded signing identity
 	 */
-	inline bool verify() const
+	ZT_ALWAYS_INLINE bool verify() const
 	{
 		if ((_signatureLength == 0)||(_signatureLength > sizeof(_signature)))
 			return false;
@@ -286,13 +286,13 @@ public:
 		return (p - startAt);
 	}
 
-	inline operator bool() const { return (_id); }
+	ZT_ALWAYS_INLINE operator bool() const { return (_id); }
 
-	inline bool addressesEqual(const Locator &l) const { return ((_physical == l._physical)&&(_virtual == l._virtual)); }
+	ZT_ALWAYS_INLINE bool addressesEqual(const Locator &l) const { return ((_physical == l._physical)&&(_virtual == l._virtual)); }
 
-	inline bool operator==(const Locator &l) const { return ((_ts == l._ts)&&(_id == l._id)&&(_signedBy == l._signedBy)&&(_physical == l._physical)&&(_virtual == l._virtual)&&(_signatureLength == l._signatureLength)&&(memcmp(_signature,l._signature,_signatureLength) == 0)); }
-	inline bool operator!=(const Locator &l) const { return (!(*this == l)); }
-	inline bool operator<(const Locator &l) const
+	ZT_ALWAYS_INLINE bool operator==(const Locator &l) const { return ((_ts == l._ts)&&(_id == l._id)&&(_signedBy == l._signedBy)&&(_physical == l._physical)&&(_virtual == l._virtual)&&(_signatureLength == l._signatureLength)&&(memcmp(_signature,l._signature,_signatureLength) == 0)); }
+	ZT_ALWAYS_INLINE bool operator!=(const Locator &l) const { return (!(*this == l)); }
+	ZT_ALWAYS_INLINE bool operator<(const Locator &l) const
 	{
 		if (_id < l._id) return true;
 		if (_ts < l._ts) return true;
@@ -301,11 +301,11 @@ public:
 		if (_virtual < l._virtual) return true;
 		return false;
 	}
-	inline bool operator>(const Locator &l) const { return (l < *this); }
-	inline bool operator<=(const Locator &l) const { return (!(l < *this)); }
-	inline bool operator>=(const Locator &l) const { return (!(*this < l)); }
+	ZT_ALWAYS_INLINE bool operator>(const Locator &l) const { return (l < *this); }
+	ZT_ALWAYS_INLINE bool operator<=(const Locator &l) const { return (!(l < *this)); }
+	ZT_ALWAYS_INLINE bool operator>=(const Locator &l) const { return (!(*this < l)); }
 
-	inline unsigned long hashCode() const { return (unsigned long)(_id.address().toInt() ^ (uint64_t)_ts); }
+	ZT_ALWAYS_INLINE unsigned long hashCode() const { return (unsigned long)(_id.address().toInt() ^ (uint64_t)_ts); }
 
 private:
 	int64_t _ts;

@@ -81,7 +81,7 @@ public:
 		uint64_t _k[3];
 	};
 
-	inline Path() :
+	ZT_ALWAYS_INLINE Path() :
 		_lastOut(0),
 		_lastIn(0),
 		_lastPathQualityComputeTime(0),
@@ -113,7 +113,7 @@ public:
 		memset(_addrString, 0, sizeof(_addrString));
 	}
 
-	inline Path(const int64_t localSocket,const InetAddress &addr) :
+	ZT_ALWAYS_INLINE Path(const int64_t localSocket,const InetAddress &addr) :
 		_lastOut(0),
 		_lastIn(0),
 		_lastPathQualityComputeTime(0),
@@ -225,7 +225,7 @@ public:
 	 * @param a Address to check
 	 * @return True if address is good for ZeroTier path use
 	 */
-	static inline bool isAddressValidForPath(const InetAddress &a)
+	static ZT_ALWAYS_INLINE bool isAddressValidForPath(const InetAddress &a)
 	{
 		if ((a.ss_family == AF_INET)||(a.ss_family == AF_INET6)) {
 			switch(a.ipScope()) {
