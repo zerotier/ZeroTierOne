@@ -200,7 +200,6 @@ static std::list< SharedPtr<RootPeer> > s_peers;
 static std::unordered_map< uint64_t,std::unordered_map< MulticastGroup,std::unordered_map< Address,int64_t,AddressHasher >,MulticastGroupHasher > > s_multicastSubscriptions;
 static std::unordered_map< Identity,SharedPtr<RootPeer>,IdentityHasher > s_peersByIdentity;
 static std::unordered_map< Address,std::set< SharedPtr<RootPeer> >,AddressHasher > s_peersByVirtAddr;
-static std::unordered_map< InetAddress,std::set< SharedPtr<RootPeer> >,InetAddressHasher > s_peersByPhysAddr;
 static std::unordered_map< RendezvousKey,RendezvousStats,RendezvousKey::Hasher > s_rendezvousTracking;
 static std::unordered_map< Address,ForwardingStats,AddressHasher > s_lastForwardedTo;
 static std::map< std::pair< uint32_t,uint32_t >,std::pair< float,float > > s_geoIp4;
@@ -211,7 +210,6 @@ static std::mutex s_peers_l;
 static std::mutex s_multicastSubscriptions_l;
 static std::mutex s_peersByIdentity_l;
 static std::mutex s_peersByVirtAddr_l;
-static std::mutex s_peersByPhysAddr_l;
 static std::mutex s_rendezvousTracking_l;
 static std::mutex s_lastForwardedTo_l;
 
@@ -318,20 +316,10 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 		if (peer) {
 			std::lock_guard<std::mutex> pl(peer->lock);
 
-			InetAddress *const peerIp = ip->isV4() ? &(peer->ip4) : &(peer->ip6);
-			if (*peerIp != ip) {
-				std::lock_guard<std::mutex> pbp_l(s_peersByPhysAddr_l);
-				if (*peerIp) {
-					auto prev = s_peersByPhysAddr.find(*peerIp);
-					if (prev != s_peersByPhysAddr.end()) {
-						prev->second.erase(peer);
-						if (prev->second.empty())
-							s_peersByPhysAddr.erase(prev);
-					}
-				}
-				*peerIp = ip;
-				s_peersByPhysAddr[ip].emplace(peer);
-			}
+			if (ip->isV4())
+				peer->ip4 = ip;
+			else if (ip->isV6())
+				peer->ip6 = ip;
 
 			const int64_t now = OSUtils::now();
 			peer->lastReceive = now;
@@ -954,11 +942,9 @@ int main(int argc,char **argv)
 		apiServ.Get("/",[](const httplib::Request &req,httplib::Response &res) {
 			std::ostringstream o;
 			std::lock_guard<std::mutex> l0(s_peersByIdentity_l);
-			std::lock_guard<std::mutex> l1(s_peersByPhysAddr_l);
 			o << "ZeroTier Root Server " << ZEROTIER_ONE_VERSION_MAJOR << '.' << ZEROTIER_ONE_VERSION_MINOR << '.' << ZEROTIER_ONE_VERSION_REVISION << ZT_EOL_S;
 			o << "(c)2019 ZeroTier, Inc." ZT_EOL_S "Licensed under the ZeroTier BSL 1.1" ZT_EOL_S ZT_EOL_S;
 			o << "Peers Online:       " << s_peersByIdentity.size() << ZT_EOL_S;
-			o << "Physical Addresses: " << s_peersByPhysAddr.size() << ZT_EOL_S;
 			res.set_content(o.str(),"text/plain");
 		});
 
@@ -1019,63 +1005,73 @@ int main(int argc,char **argv)
 			}
 			std::ostringstream o;
 			o << ZT_GEOIP_HTML_HEAD;
-			{
+			try {
 				bool firstCoord = true;
 				std::pair< uint32_t,uint32_t > k4(0,0xffffffff);
 				std::pair< std::array< uint64_t,2 >,std::array< uint64_t,2 > > k6;
 				k6.second[0] = 0xffffffffffffffffULL; k6.second[1] = 0xffffffffffffffffULL;
-				std::lock_guard<std::mutex> l(s_peersByPhysAddr_l);
-				for(auto p=s_peersByPhysAddr.begin();p!=s_peersByPhysAddr.end();++p) {
-					if (!p->second.empty()) {
-						if (p->first.isV4()) {
-							k4.first = ip4ToH32(p->first);
-							auto geo = std::map< std::pair< uint32_t,uint32_t >,std::pair< float,float > >::reverse_iterator(s_geoIp4.upper_bound(k4));
-							while (geo != s_geoIp4.rend()) {
-								if ((geo->first.first <= k4.first)&&(geo->first.second >= k4.first)) {
-									if (!firstCoord)
+				std::unordered_map< InetAddress,std::set<Address>,InetAddressHasher > ips;
+				{
+					std::lock_guard<std::mutex> l(s_peers_l);
+					for(auto p=s_peers.begin();p!=s_peers.end();++p) {
+						if ((*p)->ip4)
+							ips[(*p)->ip4].insert((*p)->id.address());
+						if ((*p)->ip6)
+							ips[(*p)->ip6].insert((*p)->id.address());
+					}
+				}
+				for(auto p=ips.begin();p!=ips.end();++p) {
+					if (p->first.isV4()) {
+						k4.first = ip4ToH32(p->first);
+						auto geo = std::map< std::pair< uint32_t,uint32_t >,std::pair< float,float > >::reverse_iterator(s_geoIp4.upper_bound(k4));
+						while (geo != s_geoIp4.rend()) {
+							if ((geo->first.first <= k4.first)&&(geo->first.second >= k4.first)) {
+								if (!firstCoord)
+									o << ',';
+								firstCoord = false;
+								o << "{lat:" << geo->second.first << ",lng:" << geo->second.second << ",_l:\"";
+								bool firstAddr = true;
+								for(auto a=p->second.begin();a!=p->second.end();++a) {
+									if (!firstAddr)
 										o << ',';
-									firstCoord = false;
-									o << "{lat:" << geo->second.first << ",lng:" << geo->second.second << ",_l:\"";
-									bool firstAddr = true;
-									for(auto a=p->second.begin();a!=p->second.end();++a) {
-										if (!firstAddr)
-											o << ',';
-										o << (*a)->id.address().toString(tmp);
-										firstAddr = false;
-									}
-									o << "\"}";
-									break;
-								} else if ((geo->first.first < k4.first)&&(geo->first.second < k4.first)) {
-									break;
+									o << a->toString(tmp);
+									firstAddr = false;
 								}
-								++geo;
+								o << "\"}";
+								break;
+							} else if ((geo->first.first < k4.first)&&(geo->first.second < k4.first)) {
+								break;
 							}
-						} else if (p->first.isV6()) {
-							k6.first = ip6ToH128(p->first);
-							auto geo = std::map< std::pair< std::array< uint64_t,2 >,std::array< uint64_t,2 > >,std::pair< float,float > >::reverse_iterator(s_geoIp6.upper_bound(k6));
-							while (geo != s_geoIp6.rend()) {
-								if ((geo->first.first <= k6.first)&&(geo->first.second >= k6.first)) {
-									if (!firstCoord)
+							++geo;
+						}
+					} else if (p->first.isV6()) {
+						k6.first = ip6ToH128(p->first);
+						auto geo = std::map< std::pair< std::array< uint64_t,2 >,std::array< uint64_t,2 > >,std::pair< float,float > >::reverse_iterator(s_geoIp6.upper_bound(k6));
+						while (geo != s_geoIp6.rend()) {
+							if ((geo->first.first <= k6.first)&&(geo->first.second >= k6.first)) {
+								if (!firstCoord)
+									o << ',';
+								firstCoord = false;
+								o << "{lat:" << geo->second.first << ",lng:" << geo->second.second << ",_l:\"";
+								bool firstAddr = true;
+								for(auto a=p->second.begin();a!=p->second.end();++a) {
+									if (!firstAddr)
 										o << ',';
-									firstCoord = false;
-									o << "{lat:" << geo->second.first << ",lng:" << geo->second.second << ",_l:\"";
-									bool firstAddr = true;
-									for(auto a=p->second.begin();a!=p->second.end();++a) {
-										if (!firstAddr)
-											o << ',';
-										o << (*a)->id.address().toString(tmp);
-										firstAddr = false;
-									}
-									o << "\"}";
-									break;
-								} else if ((geo->first.first < k6.first)&&(geo->first.second < k6.first)) {
-									break;
+									o << a->toString(tmp);
+									firstAddr = false;
 								}
-								++geo;
+								o << "\"}";
+								break;
+							} else if ((geo->first.first < k6.first)&&(geo->first.second < k6.first)) {
+								break;
 							}
+							++geo;
 						}
 					}
 				}
+			} catch ( ... ) {
+				res.set_content("Internal error: unexpected exception resolving GeoIP locations","text/plain");
+				return;
 			}
 			OSUtils::ztsnprintf(tmp,sizeof(tmp),ZT_GEOIP_HTML_TAIL,s_googleMapsAPIKey.c_str());
 			o << tmp;
@@ -1128,7 +1124,6 @@ int main(int argc,char **argv)
 					if ((now - (*p)->lastReceive) > ZT_PEER_ACTIVITY_TIMEOUT) {
 						std::lock_guard<std::mutex> pbi_l(s_peersByIdentity_l);
 						std::lock_guard<std::mutex> pbv_l(s_peersByVirtAddr_l);
-						std::lock_guard<std::mutex> pbp_l(s_peersByPhysAddr_l);
 
 						s_peersByIdentity.erase((*p)->id);
 
@@ -1137,24 +1132,6 @@ int main(int argc,char **argv)
 							pbv->second.erase((*p));
 							if (pbv->second.empty())
 								s_peersByVirtAddr.erase(pbv);
-						}
-
-						if ((*p)->ip4) {
-							auto pbp = s_peersByPhysAddr.find((*p)->ip4);
-							if (pbp != s_peersByPhysAddr.end()) {
-								pbp->second.erase((*p));
-								if (pbp->second.empty())
-									s_peersByPhysAddr.erase(pbp);
-							}
-						}
-
-						if ((*p)->ip6) {
-							auto pbp = s_peersByPhysAddr.find((*p)->ip6);
-							if (pbp != s_peersByPhysAddr.end()) {
-								pbp->second.erase((*p));
-								if (pbp->second.empty())
-									s_peersByPhysAddr.erase(pbp);
-							}
 						}
 
 						s_peers.erase(p++);
@@ -1264,9 +1241,6 @@ int main(int argc,char **argv)
 				fprintf(sf,"Virtual Address Collisions : %llu" ZT_EOL_S,(unsigned long long)(s_peersByIdentity.size() - s_peersByVirtAddr.size()));
 				s_peersByVirtAddr_l.unlock();
 				s_peersByIdentity_l.unlock();
-				s_peersByPhysAddr_l.lock();
-				fprintf(sf,"Physical Endpoints         : %llu" ZT_EOL_S,(unsigned long long)s_peersByPhysAddr.size());
-				s_peersByPhysAddr_l.unlock();
 				s_rendezvousTracking_l.lock();
 				uint64_t unsuccessfulp2p = 0;
 				for(auto lr=s_rendezvousTracking.begin();lr!=s_rendezvousTracking.end();++lr) {
