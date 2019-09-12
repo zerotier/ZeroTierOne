@@ -16,6 +16,8 @@
 
 #include "Constants.hpp"
 
+#include <stdlib.h>
+#include <stdio.h>
 #include <vector>
 
 namespace ZeroTier {
