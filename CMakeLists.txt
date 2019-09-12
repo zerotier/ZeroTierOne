@@ -121,6 +121,7 @@ if (
 	message("Adding SSE and AES-NI flags for processor ${CMAKE_SYSTEM_PROCESSOR}")
 	add_compile_options(
 		-maes
+		-mrdrnd
 		-mpclmul
 		-msse
 		-msse2

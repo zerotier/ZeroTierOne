@@ -42,6 +42,26 @@
 
 namespace ZeroTier {
 
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+static bool _zt_rdrand_supported()
+{
+#ifdef __WINDOWS__
+	int regs[4];
+	__cpuid(regs,1);
+	return (((regs[2] >> 30) & 1) != 0);
+#else
+	uint32_t eax,ebx,ecx,edx;
+	__asm__ __volatile__ (
+		"cpuid"
+		: "=a"(eax),"=b"(ebx),"=c"(ecx),"=d"(edx)
+		: "a"(1),"c"(0)
+	);
+	return ((ecx & (1 << 30)) != 0);
+#endif
+}
+static const bool _rdrandSupported = _zt_rdrand_supported();
+#endif
+
 const char Utils::HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
 
 // Crazy hack to force memory to be securely zeroed in spite of the best efforts of optimizing compilers.
@@ -188,8 +208,19 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 				}
 				close(devURandomFd);
 #endif
+
+				// Mix in additional entropy just in case the standard random source is wonky somehow
 				randomState[0] ^= (uint64_t)time(nullptr);
-				randomState[1] ^= (uint64_t)((uintptr_t)buf); // XOR in some other entropy just in case the system random source is wonky
+				randomState[1] ^= (uint64_t)((uintptr_t)buf);
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+				if (_rdrandSupported) {
+					uint64_t tmp = 0;
+					_rdrand64_step((unsigned long long *)&tmp);
+					randomState[2] ^= tmp;
+					_rdrand64_step((unsigned long long *)&tmp);
+					randomState[3] ^= tmp;
+				}
+#endif
 			}
 
 			uint8_t h[48];
