@@ -282,10 +282,6 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						printf("%s HELLO rejected: decompression failed" ZT_EOL_S,ip->toString(ipstr));
 						return;
 					}
-					if (!id.locallyValidate()) { // this is more time consuming so check others first
-						printf("%s HELLO rejected: identity local validation failed" ZT_EOL_S,ip->toString(ipstr));
-						return;
-					}
 
 					peer->id = id;
 					peer->lastReceive = now;
