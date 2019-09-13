@@ -178,32 +178,32 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 #ifdef __WINDOWS__
 				HCRYPTPROV cryptProvider = NULL;
 				if (!CryptAcquireContextA(&cryptProvider,NULL,NULL,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT|CRYPT_SILENT)) {
-					fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
+					fprintf(stderr,"FATAL: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
 					exit(1);
 				}
 				if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomState),(BYTE *)randomState)) {
-					fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
+					fprintf(stderr,"FATAL: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
 					exit(1);
 				}
 				if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomBuf),(BYTE *)randomBuf)) {
-					fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
+					fprintf(stderr,"FATAL: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
 					exit(1);
 				}
 				CryptReleaseContext(cryptProvider,0);
 #else
 				int devURandomFd = ::open("/dev/urandom",O_RDONLY);
 				if (devURandomFd < 0) {
-					fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
+					fprintf(stderr,"FATAL: Utils::getSecureRandom() unable to open /dev/urandom\n");
 					exit(1);
 				}
 				if ((int)::read(devURandomFd,randomState,sizeof(randomState)) != (int)sizeof(randomState)) {
 					::close(devURandomFd);
-					fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\n");
+					fprintf(stderr,"FATAL: Utils::getSecureRandom() unable to read from /dev/urandom\n");
 					exit(1);
 				}
 				if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
 					::close(devURandomFd);
-					fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\n");
+					fprintf(stderr,"FATAL: Utils::getSecureRandom() unable to read from /dev/urandom\n");
 					exit(1);
 				}
 				close(devURandomFd);
@@ -223,11 +223,11 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 #endif
 			}
 
-			uint8_t h[48];
 			for(unsigned int k=0;k<4;++k) { // treat random state like a 256-bit counter; endian-ness is irrelevant since we just want random
 				if (++randomState[k] != 0)
 					break;
 			}
+			uint8_t h[48];
 			HMACSHA384((const uint8_t *)randomState,randomBuf,sizeof(randomBuf),h); // compute HMAC on random buffer using state as secret key
 			AES c(h);
 			c.ctr(h + 32,randomBuf,sizeof(randomBuf),randomBuf); // encrypt random buffer with AES-CTR using HMAC result as key
