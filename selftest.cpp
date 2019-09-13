@@ -214,12 +214,12 @@ static int testCrypto()
 			std::cout << (((double)(500000 * ZT_DEFAULT_MTU) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (dummy: " << (unsigned int)*dummy << ")" ZT_EOL_S;
 			std::cout << "  AES-256-CTR (benchmark): "; std::cout.flush();
 			start = OSUtils::now();
-			for(unsigned long i=0;i<500000;++i) {
+			for(unsigned long i=0;i<1000000;++i) {
 				tv.ctr((const uint8_t *)hexbuf,buf1,ZT_DEFAULT_MTU,buf1);
 				*dummy = buf1[0];
 			}
 			end = OSUtils::now();
-			std::cout << (((double)(500000 * ZT_DEFAULT_MTU) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (dummy: " << (unsigned int)*dummy << ")" ZT_EOL_S;
+			std::cout << (((1000000.0 * (double)ZT_DEFAULT_MTU) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (dummy: " << (unsigned int)*dummy << ")" ZT_EOL_S;
 		}
 		{
 			std::cout << "  AES-256-GMAC-SIV (benchmark): "; std::cout.flush();

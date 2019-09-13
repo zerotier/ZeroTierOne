@@ -19,12 +19,18 @@
 #include "SHA512.hpp"
 
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+
 #include <wmmintrin.h>
 #include <emmintrin.h>
 #include <smmintrin.h>
 #include <immintrin.h>
+
 #define ZT_AES_AESNI 1
-#endif
+
+// AES-aesni.c
+extern "C" void zt_crypt_ctr_aesni(const __m128i key[14],const uint8_t iv[16],const uint8_t *in,unsigned int len,uint8_t *out);
+
+#endif // x64
 
 #define ZT_AES_KEY_SIZE 32
 #define ZT_AES_BLOCK_SIZE 16
@@ -115,7 +121,7 @@ public:
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(HW_ACCEL)) {
-			_crypt_ctr_aesni(iv,(const uint8_t *)in,len,(uint8_t *)out);
+			zt_crypt_ctr_aesni(_k.ni.k,iv,(const uint8_t *)in,len,(uint8_t *)out);
 			return;
 		}
 #endif
@@ -523,8 +529,6 @@ private:
 		tmp = _mm_aesenc_si128(tmp,_k.ni.k[13]);
 		_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(tmp,_k.ni.k[14]));
 	}
-
-	void _crypt_ctr_aesni(const uint8_t iv[16],const uint8_t *in,unsigned int len,uint8_t *out) const;
 
 	static ZT_ALWAYS_INLINE __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i y)
 	{

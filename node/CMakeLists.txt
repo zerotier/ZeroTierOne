@@ -48,8 +48,10 @@ set(core_headers
 	Trace.hpp
 	Utils.hpp
 )
+
 set(core_src
 	AES.cpp
+	AES-aesni.c
 	C25519.cpp
 	Credential.cpp
 	ECC384.cpp
@@ -72,18 +74,20 @@ set(core_src
 	Trace.cpp
 	Utils.cpp
 )
+
 add_library(${PROJECT_NAME} STATIC ${core_src} ${core_headers})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 
-if(UNIX)
-	set_source_files_properties(
-		AES.cpp
-		ECC384.cpp
-		Salsa20.cpp
-		C25519.cpp
-		Poly1305.cpp
-		PROPERTIES
-		COMPILE_FLAGS "-Wall -O3"
-	)
-endif(UNIX)
+#if(UNIX)
+#	set_source_files_properties(
+#		AES.cpp
+#		AES-aesni.c
+#		ECC384.cpp
+#		Salsa20.cpp
+#		C25519.cpp
+#		Poly1305.cpp
+#		PROPERTIES
+#		COMPILE_FLAGS "-Wall -O3"
+#	)
+#endif(UNIX)
