@@ -15,13 +15,12 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 
-#if (!defined(ZT_SALSA20_SSE)) && (defined(__SSE2__) || defined(__WINDOWS__))
+#ifndef ZT_SALSA20_SSE
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#include <emmintrin.h>
 #define ZT_SALSA20_SSE 1
 #endif
-
-#ifdef ZT_SALSA20_SSE
-#include <emmintrin.h>
-#endif // ZT_SALSA20_SSE
+#endif
 
 namespace ZeroTier {
 
@@ -31,14 +30,14 @@ namespace ZeroTier {
 class Salsa20
 {
 public:
-	inline Salsa20() {}
-	inline ~Salsa20() { Utils::burn(&_state,sizeof(_state)); }
+	ZT_ALWAYS_INLINE Salsa20() {}
+	ZT_ALWAYS_INLINE ~Salsa20() { Utils::burn(&_state,sizeof(_state)); }
 
 	/**
 	 * @param key 256-bit (32 byte) key
 	 * @param iv 64-bit initialization vector
 	 */
-	inline Salsa20(const void *key,const void *iv) { init(key,iv); }
+	ZT_ALWAYS_INLINE Salsa20(const void *key,const void *iv) { init(key,iv); }
 
 	/**
 	 * Initialize cipher
