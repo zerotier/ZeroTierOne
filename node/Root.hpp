@@ -42,7 +42,7 @@ namespace ZeroTier {
 class Root
 {
 public:
-	inline Root() : _dnsPublicKeySize(0) {}
+	ZT_ALWAYS_INLINE Root() : _dnsPublicKeySize(0) {}
 
 	/**
 	 * Create a new root entry
@@ -54,7 +54,7 @@ public:
 	 * @param dflAddrs Default IP addresses if DNS is not available
 	 */
 	template<typename S>
-	inline Root(S dn,const uint8_t *const dnspk,const unsigned int dnspksize,const Identity &dflId,const std::vector<InetAddress> &dflAddrs) :
+	ZT_ALWAYS_INLINE Root(S dn,const uint8_t *const dnspk,const unsigned int dnspksize,const Identity &dflId,const std::vector<InetAddress> &dflAddrs) :
 		_defaultIdentity(dflId),
 		_defaultAddresses(dflAddrs),
 		_dnsName(dn),
@@ -70,7 +70,7 @@ public:
 	/**
 	 * @return Current identity (either default or latest locator)
 	 */
-	inline const Identity id() const
+	ZT_ALWAYS_INLINE const Identity id() const
 	{
 		if (_lastFetchedLocator.id())
 			return _lastFetchedLocator.id();
@@ -81,7 +81,7 @@ public:
 	 * @param id Identity to check
 	 * @return True if identity equals this root's current identity
 	 */
-	inline bool is(const Identity &id) const
+	ZT_ALWAYS_INLINE bool is(const Identity &id) const
 	{
 		return ((_lastFetchedLocator.id()) ? (id == _lastFetchedLocator.id()) : (id == _defaultIdentity));
 	}
@@ -89,7 +89,7 @@ public:
 	/**
 	 * @return Current ZeroTier address (either default or latest locator)
 	 */
-	inline const Address address() const
+	ZT_ALWAYS_INLINE const Address address() const
 	{
 		if (_lastFetchedLocator.id())
 			return _lastFetchedLocator.id().address();
@@ -99,31 +99,22 @@ public:
 	/**
 	 * @return DNS name for this root or empty string if static entry with no DNS
 	 */
-	inline const Str dnsName() const
-	{
-		return _dnsName;
-	}
+	ZT_ALWAYS_INLINE const Str dnsName() const { return _dnsName; }
 
 	/**
 	 * @return Latest locator or NIL locator object if none
 	 */
-	inline Locator locator() const
-	{
-		return _lastFetchedLocator;
-	}
+	ZT_ALWAYS_INLINE Locator locator() const { return _lastFetchedLocator; }
 
 	/**
 	 * @return Timestamp of latest retrieved locator or 0 if none
 	 */
-	inline int64_t locatorTimestamp() const
-	{
-		return _lastFetchedLocator.timestamp();
-	}
+	ZT_ALWAYS_INLINE int64_t locatorTimestamp() const { return _lastFetchedLocator.timestamp(); }
 
 	/**
 	 * Update locator, returning true if new locator is valid and newer than existing
 	 */
-	inline bool updateLocator(const Locator &loc)
+	ZT_ALWAYS_INLINE bool updateLocator(const Locator &loc)
 	{
 		if (!loc.verify())
 			return false;
@@ -138,7 +129,7 @@ public:
 	 * Update this root's locator from a series of TXT records
 	 */
 	template<typename I>
-	inline bool updateLocatorFromTxt(I start,I end)
+	ZT_ALWAYS_INLINE bool updateLocatorFromTxt(I start,I end)
 	{
 		try {
 			if (_dnsPublicKeySize != ZT_ECC384_PUBLIC_KEY_SIZE)
@@ -161,7 +152,7 @@ public:
 	 * @param addressFamily AF_INET or AF_INET6
 	 * @return Address or InetAddress::NIL if no addresses exist for the given family
 	 */
-	inline const InetAddress &pickPhysical(const int addressFamily) const
+	ZT_ALWAYS_INLINE const InetAddress &pickPhysical(const int addressFamily) const
 	{
 		std::vector<const InetAddress *> pickList;
 		const std::vector<InetAddress> *const av = (_lastFetchedLocator) ? &(_lastFetchedLocator.phy()) : &_defaultAddresses;

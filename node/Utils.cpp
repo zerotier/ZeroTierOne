@@ -43,6 +43,7 @@
 namespace ZeroTier {
 
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#include <immintrin.h>
 static bool _zt_rdrand_supported()
 {
 #ifdef __WINDOWS__

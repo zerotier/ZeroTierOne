@@ -11,12 +11,6 @@
  */
 /****/
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-
-#include <list>
-
 #include "../include/ZeroTierOne.h"
 
 #include "Constants.hpp"
@@ -34,6 +28,12 @@
 #include "Tag.hpp"
 #include "Revocation.hpp"
 #include "Trace.hpp"
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include <list>
 
 namespace ZeroTier {
 

@@ -202,7 +202,6 @@ private:
 	bool _trySend(void *tPtr,Packet &packet,bool encrypt); // packet is modified if return is true
 
 	const RuntimeEnvironment *const RR;
-	int64_t _lastBeaconResponse;
 	volatile int64_t _lastCheckedQueues;
 
 	// Time we last sent a WHOIS request for each address

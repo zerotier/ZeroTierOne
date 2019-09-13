@@ -25,13 +25,6 @@
 #define ZEROTIER_ONE_VERSION_BUILD 255
 #endif
 
-#ifndef ZT_BUILD_ARCHITECTURE
-#define ZT_BUILD_ARCHITECTURE 0
-#endif
-#ifndef ZT_BUILD_PLATFORM
-#define ZT_BUILD_PLATFORM 0
-#endif
-
 //
 // This include file also auto-detects and canonicalizes some environment
 // information defines:
@@ -106,7 +99,7 @@
 
 #ifdef __NetBSD__
 #ifndef RTF_MULTICAST
-#define RTF_MULTICAST   0x20000000
+#define RTF_MULTICAST 0x20000000
 #endif
 #endif
 
@@ -126,6 +119,9 @@
 #define __LITTLE_ENDIAN 1234
 #define __BYTE_ORDER 1234
 #endif
+#ifndef __BYTE_ORDER
+#include <endian.h>
+#endif
 
 #ifdef __WINDOWS__
 #define ZT_PATH_SEPARATOR '\\'
@@ -135,10 +131,6 @@
 #define ZT_PATH_SEPARATOR '/'
 #define ZT_PATH_SEPARATOR_S "/"
 #define ZT_EOL_S "\n"
-#endif
-
-#ifndef __BYTE_ORDER
-#include <endian.h>
 #endif
 
 #if (defined(__GNUC__) && (__GNUC__ >= 3)) || (defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 800)) || defined(__clang__)
@@ -516,7 +508,7 @@
 #define ZT_MAX_BRIDGE_SPAM 32
 
 /**
- * Interval between direct path pushes in milliseconds
+ * Interval between direct path pushes in milliseconds if we don't have a path
  */
 #define ZT_DIRECT_PATH_PUSH_INTERVAL 15000
 
@@ -562,7 +554,7 @@
 /**
  * General rate limit for other kinds of rate-limited packets (HELLO, credential request, etc.) both inbound and outbound
  */
-#define ZT_PEER_GENERAL_RATE_LIMIT 1000
+#define ZT_PEER_GENERAL_RATE_LIMIT 500
 
 /**
  * Don't do expensive identity validation more often than this
@@ -583,11 +575,6 @@
 #define ZT_IDENTITY_VALIDATION_SOURCE_RATE_LIMIT 10000
 #endif
 #endif
-
-/**
- * How long is a path or peer considered to have a trust relationship with us (for e.g. relay policy) since last trusted established packet?
- */
-#define ZT_TRUST_EXPIRATION 600000
 
 /**
  * Size of a buffer to store either a C25519 or an ECC P-384 signature
