@@ -945,8 +945,8 @@ uint64_t Packet::nextPacketId()
 	lock.lock();
 	while (ctr == 0) {
 		Utils::getSecureRandom(&ctr,sizeof(ctr));
-		ctr <<= 32;
-		ctr |= ((uint64_t)time(nullptr)) & 0x00000000ffffffffULL;
+		ctr >>= 32;
+		ctr |= (((uint64_t)time(nullptr)) & 0xffffffffULL) << 32;
 	}
 	const uint64_t i = ctr++;
 	lock.unlock();
