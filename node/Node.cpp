@@ -33,6 +33,7 @@
 #include "Network.hpp"
 #include "Trace.hpp"
 #include "ScopedPtr.hpp"
+#include "Locator.hpp"
 
 namespace ZeroTier {
 
@@ -172,6 +173,7 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
+#if 0
 struct _processBackgroundTasks_ping_eachRoot
 {
 	Hashtable< void *,bool > roots;
@@ -179,7 +181,7 @@ struct _processBackgroundTasks_ping_eachRoot
 	void *tPtr;
 	bool online;
 
-	inline void operator()(const Root &root,const SharedPtr<Peer> &peer)
+	ZT_ALWAYS_INLINE void operator()(const Root &root,const SharedPtr<Peer> &peer)
 	{
 		unsigned int v4SendCount = 0,v6SendCount = 0;
 		peer->ping(tPtr,now,v4SendCount,v6SendCount);
@@ -204,6 +206,7 @@ struct _processBackgroundTasks_ping_eachRoot
 		roots.set((void *)peer.ptr(),true);
 	}
 };
+#endif
 
 struct _processBackgroundTasks_ping_eachPeer
 {
@@ -211,7 +214,7 @@ struct _processBackgroundTasks_ping_eachPeer
 	void *tPtr;
 	Hashtable< void *,bool > *roots;
 
-	inline void operator()(const SharedPtr<Peer> &peer)
+	ZT_ALWAYS_INLINE void operator()(const SharedPtr<Peer> &peer)
 	{
 		if (!roots->contains((void *)peer.ptr())) {
 			unsigned int v4SendCount = 0,v6SendCount = 0;
@@ -234,22 +237,24 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 	if ((now - _lastPing) >= ZT_PEER_PING_PERIOD) {
 		_lastPing = now;
 		try {
+#if 0
 			_processBackgroundTasks_ping_eachRoot rf;
 			rf.now = now;
 			rf.tPtr = tptr;
 			rf.online = false;
 			RR->topology->eachRoot(rf);
+#endif
 
 			_processBackgroundTasks_ping_eachPeer pf;
 			pf.now = now;
 			pf.tPtr = tptr;
-			pf.roots = &rf.roots;
+			//pf.roots = &rf.roots;
 			RR->topology->eachPeer(pf);
 
-			if (rf.online != _online) {
-				_online = rf.online;
-				postEvent(tptr,_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
-			}
+			//if (rf.online != _online) {
+			//	_online = rf.online;
+			//	postEvent(tptr,_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
+			//}
 		} catch ( ... ) {
 			return ZT_RESULT_FATAL_ERROR_INTERNAL;
 		}

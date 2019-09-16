@@ -94,10 +94,9 @@ static OneService *volatile zt1Service = (OneService *)0;
 static void cliPrintHelp(const char *pn,FILE *out)
 {
 	fprintf(out,
-		"%s version %d.%d.%d build %d (platform %d arch %d)" ZT_EOL_S,
+		"%s version %d.%d.%d build %d" ZT_EOL_S,
 		PROGRAM_NAME,
-		ZEROTIER_ONE_VERSION_MAJOR, ZEROTIER_ONE_VERSION_MINOR, ZEROTIER_ONE_VERSION_REVISION, ZEROTIER_ONE_VERSION_BUILD,
-		ZT_BUILD_PLATFORM, ZT_BUILD_ARCHITECTURE);
+		ZEROTIER_ONE_VERSION_MAJOR, ZEROTIER_ONE_VERSION_MINOR, ZEROTIER_ONE_VERSION_REVISION, ZEROTIER_ONE_VERSION_BUILD);
 	fprintf(out,
 		COPYRIGHT_NOTICE ZT_EOL_S
 		LICENSE_GRANT ZT_EOL_S);

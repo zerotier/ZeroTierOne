@@ -21,6 +21,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <utility>
+#include <set>
 
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"
@@ -32,8 +33,9 @@
 #include "Mutex.hpp"
 #include "InetAddress.hpp"
 #include "Hashtable.hpp"
-#include "Root.hpp"
+#include "Locator.hpp"
 #include "SharedPtr.hpp"
+#include "ScopedPtr.hpp"
 
 namespace ZeroTier {
 
@@ -65,7 +67,7 @@ public:
 	{
 		SharedPtr<Peer> np;
 		{
-			Mutex::Lock _l(_peers_m);
+			Mutex::Lock _l(_peers_l);
 			SharedPtr<Peer> &hp = _peers[peer->address()];
 			if (!hp)
 				hp = peer;
@@ -86,11 +88,12 @@ public:
 		if (zta == _myIdentity.address())
 			return SharedPtr<Peer>();
 
-		Mutex::Lock l1(_peers_m);
+		Mutex::Lock l1(_peers_l);
 		const SharedPtr<Peer> *const ap = _peers.get(zta);
 		if (ap)
 			return *ap;
 
+#if 0
 		Mutex::Lock l2(_roots_m);
 		for(std::vector<Root>::const_iterator r(_roots.begin());r!=_roots.end();++r) {
 			if (r->address() == zta) {
@@ -101,6 +104,7 @@ public:
 				} catch ( ... ) {}
 			}
 		}
+#endif
 
 		return SharedPtr<Peer>();
 	}
@@ -115,7 +119,7 @@ public:
 		if (zta == _myIdentity.address()) {
 			return _myIdentity;
 		} else {
-			Mutex::Lock _l(_peers_m);
+			Mutex::Lock _l(_peers_l);
 			const SharedPtr<Peer> *const ap = _peers.get(zta);
 			if (ap)
 				return (*ap)->identity();
@@ -132,7 +136,7 @@ public:
 	 */
 	ZT_ALWAYS_INLINE SharedPtr<Path> getPath(const int64_t l,const InetAddress &r)
 	{
-		Mutex::Lock _l(_paths_m);
+		Mutex::Lock _l(_paths_l);
 		SharedPtr<Path> &p = _paths[Path::HashKey(l,r)];
 		if (!p)
 			p.set(new Path(l,r));
@@ -145,11 +149,13 @@ public:
 	 */
 	ZT_ALWAYS_INLINE bool isRoot(const Identity &id) const
 	{
+#if 0
 		Mutex::Lock l(_roots_m);
 		for(std::vector<Root>::const_iterator r(_roots.begin());r!=_roots.end();++r) {
 			if (r->is(id))
 				return true;
 		}
+#endif
 		return false;
 	}
 
@@ -159,7 +165,7 @@ public:
 	ZT_ALWAYS_INLINE void doPeriodicTasks(int64_t now)
 	{
 		{
-			Mutex::Lock _l1(_peers_m);
+			Mutex::Lock _l1(_peers_l);
 			Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
 			Address *a = (Address *)0;
 			SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
@@ -170,7 +176,7 @@ public:
 			}
 		}
 		{
-			Mutex::Lock _l(_paths_m);
+			Mutex::Lock _l(_paths_l);
 			Hashtable< Path::HashKey,SharedPtr<Path> >::Iterator i(_paths);
 			Path::HashKey *k = (Path::HashKey *)0;
 			SharedPtr<Path> *p = (SharedPtr<Path> *)0;
@@ -188,7 +194,7 @@ public:
 	ZT_ALWAYS_INLINE unsigned long countActive(int64_t now) const
 	{
 		unsigned long cnt = 0;
-		Mutex::Lock _l(_peers_m);
+		Mutex::Lock _l(_peers_l);
 		Hashtable< Address,SharedPtr<Peer> >::Iterator i(const_cast<Topology *>(this)->_peers);
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
@@ -212,7 +218,7 @@ public:
 	template<typename F>
 	ZT_ALWAYS_INLINE void eachPeer(F f)
 	{
-		Mutex::Lock l(_peers_m);
+		Mutex::Lock l(_peers_l);
 		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
@@ -221,6 +227,7 @@ public:
 		}
 	}
 
+#if 0
 	/**
 	 * Apply a function or function object to all roots
 	 *
@@ -237,7 +244,7 @@ public:
 		SharedPtr<Peer> rp;
 		for(std::vector<Root>::const_iterator i(_roots.begin());i!=_roots.end();++i) {
 			{
-				Mutex::Lock l2(_peers_m);
+				Mutex::Lock l2(_peers_l);
 				const SharedPtr<Peer> *const ap = _peers.get(i->address());
 				if (ap) {
 					rp = *ap;
@@ -256,7 +263,7 @@ public:
 	 * @param now Current time
 	 * @return Best/fastest currently connected root or NULL if none
 	 */
-	ZT_ALWAYS_INLINE SharedPtr<Peer> root(const int64_t now)
+	inline SharedPtr<Peer> root(const int64_t now)
 	{
 		Mutex::Lock l(_bestRoot_m);
 		if ((!_bestRoot)||((now - _lastRankedBestRoot) >= ZT_FIND_BEST_ROOT_PERIOD)) {
@@ -266,7 +273,7 @@ public:
 			long bestQuality = 2147483647;
 			for(std::vector<Root>::const_iterator i(_roots.begin());i!=_roots.end();++i) {
 				{
-					Mutex::Lock l2(_peers_m);
+					Mutex::Lock l2(_peers_l);
 					const SharedPtr<Peer> *const ap = _peers.get(i->address());
 					if (ap) {
 						rp = *ap;
@@ -287,6 +294,54 @@ public:
 		}
 		return _bestRoot;
 	}
+#endif
+
+	ZT_ALWAYS_INLINE SharedPtr<Peer> root(const int64_t now)
+	{
+		return SharedPtr<Peer>();
+	}
+
+	/**
+	 * @return Names of dynamic roots currently known by the system
+	 */
+	ZT_ALWAYS_INLINE std::vector<Str> dynamicRootNames() const
+	{
+		Mutex::Lock l(_dynamicRoots_l);
+		return _dynamicRoots.keys();
+	}
+
+	/**
+	 * Set or update a static root entry
+	 *
+	 * @param id Static root's identity
+	 * @param addrs Static root's IP address(es)
+	 */
+	ZT_ALWAYS_INLINE void setStaticRoot(const Identity &id,const std::vector<InetAddress> &addrs)
+	{
+		Mutex::Lock l(_staticRoots_l);
+		_staticRoots[id] = addrs;
+	}
+
+	/**
+	 * Set or update dynamic root if new locator is newer and valid
+	 *
+	 * This checks internal validity of the new locator including its internal self-signature.
+	 * It does not check any DNS signatures.
+	 *
+	 * @param dnsName DNS name used to retrive root
+	 * @param latestLocator Latest locator
+	 * @return True if latest locator is internally valid and newer
+	 */
+	ZT_ALWAYS_INLINE bool setDynamicRoot(const Str &dnsName,const Locator &latestLocator)
+	{
+		Mutex::Lock l(_dynamicRoots_l);
+		Locator &ll = _dynamicRoots[dnsName];
+		if (ll.timestamp() < latestLocator.timestamp()) {
+			ll = latestLocator;
+			return true;
+		}
+		return false;
+	}
 
 	/**
 	 * Get the best relay to a given address, which may or may not be a root
@@ -298,15 +353,15 @@ public:
 	ZT_ALWAYS_INLINE SharedPtr<Peer> findRelayTo(const int64_t now,const Address &toAddr)
 	{
 		// TODO: in the future this will check 'mesh-like' relays and if enabled consult LF for other roots (for if this is a root)
-		return root(now);
+		//return root(now);
 	}
 
 	/**
 	 * @param allPeers vector to fill with all current peers
 	 */
-	ZT_ALWAYS_INLINE void getAllPeers(std::vector< SharedPtr<Peer> > &allPeers) const
+	inline void getAllPeers(std::vector< SharedPtr<Peer> > &allPeers) const
 	{
-		Mutex::Lock l(_peers_m);
+		Mutex::Lock l(_peers_l);
 		allPeers.clear();
 		allPeers.reserve(_peers.size());
 		Hashtable< Address,SharedPtr<Peer> >::Iterator i(*(const_cast<Hashtable< Address,SharedPtr<Peer> > *>(&_peers)));
@@ -385,7 +440,7 @@ public:
 	/**
 	 * Set or clear physical path configuration (called via Node::setPhysicalPathConfiguration)
 	 */
-	ZT_ALWAYS_INLINE void setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig)
+	inline void setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig)
 	{
 		if (!pathNetwork) {
 			_numConfiguredPhysicalPaths = 0;
@@ -422,17 +477,26 @@ public:
 private:
 	const RuntimeEnvironment *const RR;
 	const Identity _myIdentity;
+
 	std::pair<InetAddress,ZT_PhysicalPathConfiguration> _physicalPathConfig[ZT_MAX_CONFIGURABLE_PATHS];
 	unsigned int _numConfiguredPhysicalPaths;
-	std::vector<Root> _roots;
-	SharedPtr<Peer> _bestRoot;
-	int64_t _lastRankedBestRoot;
+
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
-	Mutex _roots_m;
-	Mutex _bestRoot_m;
-	Mutex _peers_m;
-	Mutex _paths_m;
+
+	Hashtable< Identity,std::vector<InetAddress> > _staticRoots;
+	Hashtable< Str,Locator > _dynamicRoots;
+
+	//std::vector<Root> _roots;
+	//SharedPtr<Peer> _bestRoot;
+	//int64_t _lastRankedBestRoot;
+	//Mutex _roots_m;
+	//Mutex _bestRoot_m;
+
+	Mutex _peers_l;
+	Mutex _paths_l;
+	Mutex _staticRoots_l;
+	Mutex _dynamicRoots_l;
 };
 
 } // namespace ZeroTier

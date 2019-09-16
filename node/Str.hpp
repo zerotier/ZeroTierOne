@@ -151,14 +151,35 @@ public:
 		return ((*this) << a.toString(tmp));
 	}
 
+	ZT_ALWAYS_INLINE Str &append(const char *s,const unsigned int max)
+	{
+		if (likely(s != (const char *)0)) {
+			unsigned long l = _l;
+			unsigned int c = 0;
+			while (*s) {
+				if (c++ >= max) break;
+				if (unlikely(l >= ZT_STR_CAPACITY)) {
+					_s[ZT_STR_CAPACITY] = 0;
+					_l = ZT_STR_CAPACITY;
+					throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+				}
+				_s[l++] = *s;
+				++s;
+			}
+			_s[l] = 0;
+			_l = (uint8_t)l;
+		}
+		return *this;
+	}
+
 	ZT_ALWAYS_INLINE operator bool() const { return (_l != 0); }
 
-	ZT_ALWAYS_INLINE bool operator==(const Str &s) const { return ((_l == s._l)&&(strcmp(_s,s._s) == 0)); }
-	ZT_ALWAYS_INLINE bool operator!=(const Str &s) const { return ((_l != s._l)||(strcmp(_s,s._s) != 0)); }
-	ZT_ALWAYS_INLINE bool operator<(const Str &s) const { return ((_l < s._l)&&(strcmp(_s,s._s) < 0)); }
-	ZT_ALWAYS_INLINE bool operator>(const Str &s) const { return ((_l > s._l)&&(strcmp(_s,s._s) > 0)); }
-	ZT_ALWAYS_INLINE bool operator<=(const Str &s) const { return ((_l <= s._l)&&(strcmp(_s,s._s) <= 0)); }
-	ZT_ALWAYS_INLINE bool operator>=(const Str &s) const { return ((_l >= s._l)&&(strcmp(_s,s._s) >= 0)); }
+	ZT_ALWAYS_INLINE bool operator==(const Str &s) const { return ((_l == s._l)&&(memcmp(_s,s._s,_l) == 0)); }
+	ZT_ALWAYS_INLINE bool operator!=(const Str &s) const { return ((_l != s._l)||(memcmp(_s,s._s,_l) != 0)); }
+	ZT_ALWAYS_INLINE bool operator<(const Str &s) const { return ( (_l < s._l) ? true : ((_l == s._l) ? (memcmp(_s,s._s,_l) < 0) : false) ); }
+	ZT_ALWAYS_INLINE bool operator>(const Str &s) const { return (s < *this); }
+	ZT_ALWAYS_INLINE bool operator<=(const Str &s) const { return !(s < *this); }
+	ZT_ALWAYS_INLINE bool operator>=(const Str &s) const { return !(*this < s); }
 
 	ZT_ALWAYS_INLINE bool operator==(const char *s) const { return (strcmp(_s,s) == 0); }
 	ZT_ALWAYS_INLINE bool operator!=(const char *s) const { return (strcmp(_s,s) != 0); }
@@ -166,6 +187,16 @@ public:
 	ZT_ALWAYS_INLINE bool operator>(const char *s) const { return (strcmp(_s,s) > 0); }
 	ZT_ALWAYS_INLINE bool operator<=(const char *s) const { return (strcmp(_s,s) <= 0); }
 	ZT_ALWAYS_INLINE bool operator>=(const char *s) const { return (strcmp(_s,s) >= 0); }
+
+	ZT_ALWAYS_INLINE unsigned long hashCode() const
+	{
+		const char *p = _s;
+		unsigned long h = 0;
+		char c;
+		while ((c = *(p++)))
+			h = (31 * h) + (unsigned long)c;
+		return h;
+	}
 
 private:
 	uint8_t _l;

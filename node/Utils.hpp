@@ -69,6 +69,11 @@ public:
 	static char *decimal(unsigned long n,char s[24]);
 
 	/**
+	 * Compute CRC16-CCITT
+	 */
+	static uint16_t crc16(const void *buf,unsigned int len);
+
+	/**
 	 * Convert an unsigned integer into hex
 	 *
 	 * @param i Any unsigned integer

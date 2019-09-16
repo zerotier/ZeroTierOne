@@ -130,6 +130,67 @@ public:
 	}
 
 	/**
+	 * Make a DNS name contiaining a public key that can sign DNS entries
+	 *
+	 * This generates the initial fields of a DNS name that contains an
+	 * encoded public key. Users may append any domain suffix to this name.
+	 *
+	 * @return First field(s) of DNS name
+	 */
+	static inline Str makeSecureDnsName(const uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE])
+	{
+		uint8_t tmp[ZT_ECC384_PUBLIC_KEY_SIZE+2];
+		memcpy(tmp,p384SigningKeyPublic,ZT_ECC384_PUBLIC_KEY_SIZE);
+		const uint16_t crc = Utils::crc16(tmp,ZT_ECC384_PUBLIC_KEY_SIZE);
+		tmp[ZT_ECC384_PUBLIC_KEY_SIZE-2] = (uint8_t)(crc >> 8);
+		tmp[ZT_ECC384_PUBLIC_KEY_SIZE-1] = (uint8_t)(crc);
+		Str name;
+		char b32[128];
+		Utils::b32e(tmp,35,b32,sizeof(b32));
+		name << b32;
+		Utils::b32e(tmp + 35,(ZT_ECC384_PUBLIC_KEY_SIZE+2) - 35,b32,sizeof(b32));
+		name << '.';
+		name << b32;
+		return name;
+	}
+
+	/**
+	 * @return True if a key was found and successfully decoded
+	 */
+	static inline bool decodeSecureDnsName(const char *name,uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE])
+	{
+		uint8_t b32[128];
+		unsigned int b32ptr = 0;
+		char tmp[1024];
+		Utils::scopy(tmp,sizeof(tmp),name);
+		bool ok = false;
+		for(char *saveptr=(char *)0,*p=Utils::stok(tmp,".",&saveptr);p;p=Utils::stok((char *)0,".",&saveptr)) {
+			if (b32ptr >= sizeof(b32))
+				break;
+			int s = Utils::b32d(p,b32 + b32ptr,sizeof(b32) - b32ptr);
+			if (s > 0) {
+				b32ptr += (unsigned int)s;
+				if (b32ptr > 2) {
+					const uint16_t crc = Utils::crc16(b32,b32ptr);
+					if ((b32[b32ptr-2] == (uint8_t)(crc >> 8))&&(b32[b32ptr-1] == (uint8_t)(crc & 0xff))) {
+						ok = true;
+						break;
+					}
+				}
+			} else break;
+		}
+
+		if (ok) {
+			if (b32ptr == (ZT_ECC384_PUBLIC_KEY_SIZE + 2)) {
+				memcpy(p384SigningKeyPublic,b32,ZT_ECC384_PUBLIC_KEY_SIZE);
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Make DNS TXT records for this locator
 	 *
 	 * DNS TXT records are signed by an entirely separate key that is added along
@@ -184,7 +245,7 @@ public:
 	 * now contains the contents of the supplied TXT records.
 	 */
 	template<typename I>
-	inline bool decodeTxtRecords(I start,I end,const uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE])
+	inline bool decodeTxtRecords(const Str &dnsName,I start,I end)
 	{
 		uint8_t dec[256],s384[48];
 		try {
@@ -204,12 +265,13 @@ public:
 			for(std::vector<Str>::const_iterator i(txtRecords.begin());i!=txtRecords.end();++i)
 				tmp->append(dec,Utils::b64d(i->c_str() + 2,dec,sizeof(dec)));
 
-			if (tmp->size() <= ZT_ECC384_SIGNATURE_SIZE) {
-				return false;
-			}
-			SHA384(s384,tmp->data(),tmp->size() - ZT_ECC384_SIGNATURE_SIZE);
-			if (!ECC384ECDSAVerify(p384SigningKeyPublic,s384,((const uint8_t *)tmp->data()) + (tmp->size() - ZT_ECC384_SIGNATURE_SIZE))) {
-				return false;
+			uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE];
+			if (decodeSecureDnsName(dnsName.c_str(),p384SigningKeyPublic)) {
+				if (tmp->size() <= ZT_ECC384_SIGNATURE_SIZE)
+					return false;
+				SHA384(s384,tmp->data(),tmp->size() - ZT_ECC384_SIGNATURE_SIZE);
+				if (!ECC384ECDSAVerify(p384SigningKeyPublic,s384,((const uint8_t *)tmp->data()) + (tmp->size() - ZT_ECC384_SIGNATURE_SIZE)))
+					return false;
 			}
 
 			deserialize(*tmp,0);
