@@ -69,7 +69,7 @@ private:
 	volatile double _history[ZT_METER_HISTORY_LENGTH];
 	volatile int64_t _ts;
 	volatile uint64_t _count;
-	volatile AtomicCounter _hptr;
+	AtomicCounter _hptr;
 };
 
 } // namespace ZeroTier
