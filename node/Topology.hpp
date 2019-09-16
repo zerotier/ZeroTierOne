@@ -47,7 +47,7 @@ class RuntimeEnvironment;
 class Topology
 {
 private:
-	static _RootRankingFunction
+	struct _RootRankingFunction
 	{
 		ZT_ALWAYS_INLINE _RootRankingFunction() : bestRoot(),bestRootLatency(0xffff) {}
 		ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Peer> &peer,const std::vector<InetAddress> &phy)
@@ -379,7 +379,7 @@ public:
 
 	inline SharedPtr<Peer> root(const int64_t now)
 	{
-		_RootRankingFunc rrf;
+		_RootRankingFunction rrf;
 		eachRoot(rrf);
 	}
 
