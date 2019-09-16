@@ -16,6 +16,7 @@
 
 #include "Constants.hpp"
 #include "Mutex.hpp"
+#include "AtomicCounter.hpp"
 
 #define ZT_METER_HISTORY_LENGTH 4
 #define ZT_METER_HISTORY_TICK_DURATION 1000
@@ -35,40 +36,23 @@ public:
 		_ts = 0;
 		_count = 0;
 	}
-	ZT_ALWAYS_INLINE Meter(const Meter &m) { *this = m; }
-
-	ZT_ALWAYS_INLINE Meter &operator=(const Meter &m)
-	{
-		m._lock.lock();
-		for(int i=0;i<ZT_METER_HISTORY_LENGTH;++i)
-			_history[i] = m._history[i];
-		_ts = m._ts;
-		_count = m._count;
-		m._lock.unlock();
-		return *this;
-	}
 
 	template<typename I>
 	ZT_ALWAYS_INLINE void log(const int64_t now,I count)
 	{
-		_lock.lock();
 		const int64_t since = now - _ts;
 		if (since >= ZT_METER_HISTORY_TICK_DURATION) {
 			_ts = now;
-			for(int i=1;i<ZT_METER_HISTORY_LENGTH;++i)
-				_history[i-1] = _history[i];
-			_history[ZT_METER_HISTORY_LENGTH-1] = (double)_count / ((double)since / 1000.0);
-			_count = 0;
+			_history[(unsigned int)(++_hptr) % ZT_METER_HISTORY_LENGTH] = (double)_count / ((double)since / 1000.0);
+			_count = (uint64_t)count;
+		} else {
+			_count += (uint64_t)count;
 		}
-		_count += (uint64_t)count;
-		_lock.unlock();
 	}
 
 	ZT_ALWAYS_INLINE double perSecond(const int64_t now) const
 	{
 		double r = 0.0,n = 0.0;
-
-		_lock.lock();
 		const int64_t since = (now - _ts);
 		if (since >= ZT_METER_HISTORY_TICK_DURATION) {
 			r += (double)_count / ((double)since / 1000.0);
@@ -78,16 +62,14 @@ public:
 			r += _history[i];
 			n += 1.0;
 		}
-		_lock.unlock();
-
 		return r / n;
 	}
 
 private:
-	double _history[ZT_METER_HISTORY_LENGTH];
-	int64_t _ts;
-	uint64_t _count;
-	Mutex _lock;
+	volatile double _history[ZT_METER_HISTORY_LENGTH];
+	volatile int64_t _ts;
+	volatile uint64_t _count;
+	volatile AtomicCounter _hptr;
 };
 
 } // namespace ZeroTier

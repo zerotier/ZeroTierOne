@@ -46,6 +46,17 @@ class RuntimeEnvironment;
  */
 class Topology
 {
+private:
+	static _RootRankingFunction
+	{
+		ZT_ALWAYS_INLINE _RootRankingFunction() : bestRoot(),bestRootLatency(0xffff) {}
+		ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Peer> &peer,const std::vector<InetAddress> &phy)
+		{
+		}
+		SharedPtr<Peer> bestRoot;
+		unsigned int bestRootLatency;
+	};
+
 public:
 	ZT_ALWAYS_INLINE Topology(const RuntimeEnvironment *renv,const Identity &myId) :
 		RR(renv),
@@ -296,9 +307,80 @@ public:
 	}
 #endif
 
-	ZT_ALWAYS_INLINE SharedPtr<Peer> root(const int64_t now)
+	/**
+	 * Apply a function or function object to all roots
+	 *
+	 * This locks the root list during execution but other operations
+	 * are fine.
+	 *
+	 * @param f Function to apply f(peer,IPs)
+	 * @tparam F function or function object type
+	 */
+	template<typename F>
+	inline void eachRoot(F f)
 	{
-		return SharedPtr<Peer>();
+		{
+			Mutex::Lock l(_staticRoots_l);
+			Hashtable< Identity,std::vector<InetAddress> >::Iterator i(_staticRoots);
+			Identity *k = (Identity *)0;
+			std::vector<InetAddress> *v = (std::vector<InetAddress> *)0;
+			while (i.next(k,v)) {
+				if (!v->empty()) {
+					const SharedPtr<Peer> *ap;
+					{
+						Mutex::Lock l2(_peers_l);
+						ap = _peers.get(k->address());
+					}
+					if (ap) {
+						if (!f(*ap,*v))
+							return;
+					} else {
+						SharedPtr<Peer> p(new Peer(RR,_myIdentity,*k));
+						{
+							Mutex::Lock l2(_peers_l);
+							_peers.set(k->address(),p);
+						}
+						if (!f(p,*v))
+							return;
+					}
+				}
+			}
+		}
+		{
+			Mutex::Lock l(_dynamicRoots_l);
+			Hashtable< Str,Locator >::Iterator i(_dynamicRoots);
+			Str *k = (Str *)0;
+			Locator *v = (Locator *)0;
+			while (i.next(k,v)) {
+				if (*v) {
+					for(std::vector<Identity>::const_iterator id(v->virt().begin());id!=v->virt().end();++id) {
+						const SharedPtr<Peer> *ap;
+						{
+							Mutex::Lock l2(_peers_l);
+							ap = _peers.get(id->address());
+						}
+						if (ap) {
+							if (!f(*ap,v->phy()))
+								return;
+						} else {
+							SharedPtr<Peer> p(new Peer(RR,_myIdentity,*id));
+							{
+								Mutex::Lock l2(_peers_l);
+								_peers.set(id->address(),p);
+							}
+							if (!f(p,v->phy()))
+								return;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	inline SharedPtr<Peer> root(const int64_t now)
+	{
+		_RootRankingFunc rrf;
+		eachRoot(rrf);
 	}
 
 	/**
@@ -486,12 +568,6 @@ private:
 
 	Hashtable< Identity,std::vector<InetAddress> > _staticRoots;
 	Hashtable< Str,Locator > _dynamicRoots;
-
-	//std::vector<Root> _roots;
-	//SharedPtr<Peer> _bestRoot;
-	//int64_t _lastRankedBestRoot;
-	//Mutex _roots_m;
-	//Mutex _bestRoot_m;
 
 	Mutex _peers_l;
 	Mutex _paths_l;

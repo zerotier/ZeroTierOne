@@ -173,14 +173,6 @@ struct RendezvousStats
 	int64_t ts;
 };
 
-struct ForwardingStats
-{
-	ForwardingStats() : bytes(0),ts(0),bps() {}
-	uint64_t bytes;
-	int64_t ts;
-	Meter bps;
-};
-
 // These fields are not locked as they're only initialized on startup or are atomic
 static int64_t s_startTime;            // Time service was started
 static std::vector<int> s_ports;       // Ports to bind for UDP traffic
@@ -209,7 +201,6 @@ static std::unordered_map< uint64_t,std::unordered_map< MulticastGroup,std::unor
 static std::unordered_map< Identity,SharedPtr<RootPeer>,IdentityHasher > s_peersByIdentity;
 static std::unordered_map< Address,std::set< SharedPtr<RootPeer> >,AddressHasher > s_peersByVirtAddr;
 static std::unordered_map< RendezvousKey,RendezvousStats,RendezvousKey::Hasher > s_rendezvousTracking;
-static std::unordered_map< Address,ForwardingStats,AddressHasher > s_lastForwardedTo;
 
 static std::mutex s_planet_l;
 static std::mutex s_peers_l;
@@ -217,7 +208,6 @@ static std::mutex s_multicastSubscriptions_l;
 static std::mutex s_peersByIdentity_l;
 static std::mutex s_peersByVirtAddr_l;
 static std::mutex s_rendezvousTracking_l;
-static std::mutex s_lastForwardedTo_l;
 
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -490,7 +480,6 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 
 										s_outputRate.log(now,pkt.size());
 										peer->lastSend = now;
-										//printf("%s %s gathered %u subscribers to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),l,mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
 									}
 								}
 							}
@@ -555,14 +544,6 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 	if (toAddrs.empty()) {
 		s_discardedForwardRate.log(now,pkt.size());
 		return;
-	}
-
-	{
-		std::lock_guard<std::mutex> l(s_lastForwardedTo_l);
-		ForwardingStats &fs = s_lastForwardedTo[dest];
-		fs.bytes += (uint64_t)pkt.size();
-		fs.ts = now;
-		fs.bps.log(now,pkt.size());
 	}
 
 	if (introduce) {
@@ -1186,16 +1167,6 @@ int main(int argc,char **argv)
 					else ++lr;
 				}
 			}
-
-			// Remove old last forwarded tracking entries
-			{
-				std::lock_guard<std::mutex> l(s_lastForwardedTo_l);
-				for(auto lf=s_lastForwardedTo.begin();lf!=s_lastForwardedTo.end();) {
-					if ((now - lf->second.ts) > ZT_PEER_ACTIVITY_TIMEOUT)
-						s_lastForwardedTo.erase(lf++);
-					else ++lf;
-				}
-			}
 		}
 
 		// Write stats if configured to do so, and periodically refresh planet file (if any)
@@ -1247,18 +1218,12 @@ int main(int argc,char **argv)
 						}
 						OSUtils::ztsnprintf(ver,sizeof(ver),"%d.%d.%d",(*p)->vMajor,(*p)->vMinor,(*p)->vRev);
 						double forwardingSpeed = 0.0;
-						s_lastForwardedTo_l.lock();
-						auto lft = s_lastForwardedTo.find((*p)->id.address());
-						if (lft != s_lastForwardedTo.end())
-							forwardingSpeed = lft->second.bps.perSecond(now) / 1024.0;
-						s_lastForwardedTo_l.unlock();
-						fprintf(pf,"%.10llx %21s %45s %10.4f %6s %10.4f" ZT_EOL_S,
+						fprintf(pf,"%.10llx %21s %45s %10.4f %6s" ZT_EOL_S,
 							(unsigned long long)(*p)->id.address().toInt(),
 							ip4,
 							ip6,
 							fabs((double)(now - (*p)->lastReceive) / 1000.0),
-							ver,
-							forwardingSpeed);
+							ver);
 					}
 				}
 

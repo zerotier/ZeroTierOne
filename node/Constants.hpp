@@ -157,6 +157,12 @@
 #define ZT_PACKED_STRUCT(D) D __attribute__((packed))
 #endif
 
+#if __cplusplus > 199711L
+#ifndef __CPP11__
+#define __CPP11__
+#endif
+#endif
+
 /**
  * Length of a ZeroTier address in bytes
  */
