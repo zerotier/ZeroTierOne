@@ -694,7 +694,10 @@ static int bindSocket(struct sockaddr *const bindAddr)
 	return s;
 }
 
-static void shutdownSigHandler(int sig) { s_run = false; }
+static void shutdownSigHandler(int sig)
+{
+	s_run = false;
+}
 
 int main(int argc,char **argv)
 {
@@ -918,7 +921,7 @@ int main(int argc,char **argv)
 								printf("WARNING: unexpected exception handling packet from %s: unknown exception" ZT_EOL_S,reinterpret_cast<const InetAddress *>(&in6)->toString(ipstr));
 							}
 						}
-					} else if ((errno != EAGAIN)&&(errno != EWOULDBLOCK)) {
+					} else if (!s_run) {
 						break;
 					}
 				}
@@ -947,7 +950,7 @@ int main(int argc,char **argv)
 								printf("WARNING: unexpected exception handling packet from %s: unknown exception" ZT_EOL_S,reinterpret_cast<const InetAddress *>(&in4)->toString(ipstr));
 							}
 						}
-					} else if ((errno != EAGAIN)&&(errno != EWOULDBLOCK)) {
+					} else if (!s_run) {
 						break;
 					}
 				}
@@ -1292,6 +1295,7 @@ int main(int argc,char **argv)
 
 	// If we received a kill signal, close everything and wait
 	// for threads to die before exiting.
+	s_run = false; // sanity check
 	apiServ.stop();
 	for(auto s=sockets.begin();s!=sockets.end();++s) {
 		shutdown(*s,SHUT_RDWR);
