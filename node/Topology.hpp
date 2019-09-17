@@ -52,7 +52,14 @@ private:
 		ZT_ALWAYS_INLINE _RootRankingFunction() : bestRoot(),bestRootLatency(0xffff) {}
 		ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Peer> &peer,const std::vector<InetAddress> &phy)
 		{
+			const unsigned int lat = peer->latency(now);
+			if ((!bestRoot)||((lat <= bestRootLatency)&&(peer->getAppropriatePath(now,false)))) {
+				bestRoot = peer;
+				bestRootLatency = lat;
+			}
+			return true;
 		}
+		int64_t now;
 		SharedPtr<Peer> bestRoot;
 		unsigned int bestRootLatency;
 	};
@@ -61,7 +68,8 @@ public:
 	ZT_ALWAYS_INLINE Topology(const RuntimeEnvironment *renv,const Identity &myId) :
 		RR(renv),
 		_myIdentity(myId),
-		_numConfiguredPhysicalPaths(0) {}
+		_numConfiguredPhysicalPaths(0),
+		_lastUpdatedBestRoot(0) {}
 	ZT_ALWAYS_INLINE ~Topology() {}
 
 	/**
@@ -98,25 +106,10 @@ public:
 	{
 		if (zta == _myIdentity.address())
 			return SharedPtr<Peer>();
-
 		Mutex::Lock l1(_peers_l);
 		const SharedPtr<Peer> *const ap = _peers.get(zta);
 		if (ap)
 			return *ap;
-
-#if 0
-		Mutex::Lock l2(_roots_m);
-		for(std::vector<Root>::const_iterator r(_roots.begin());r!=_roots.end();++r) {
-			if (r->address() == zta) {
-				try {
-					SharedPtr<Peer> rp(new Peer(RR,_myIdentity,r->id()));
-					_peers[zta] = rp;
-					return rp;
-				} catch ( ... ) {}
-			}
-		}
-#endif
-
 		return SharedPtr<Peer>();
 	}
 
@@ -160,13 +153,16 @@ public:
 	 */
 	ZT_ALWAYS_INLINE bool isRoot(const Identity &id) const
 	{
-#if 0
-		Mutex::Lock l(_roots_m);
-		for(std::vector<Root>::const_iterator r(_roots.begin());r!=_roots.end();++r) {
-			if (r->is(id))
+		{
+			Mutex::Lock l(_dynamicRoots_l);
+			if (_dynamicRootIdentities.contains(id))
 				return true;
 		}
-#endif
+		{
+			Mutex::Lock l(_staticRoots_l);
+			if (_staticRoots.contains(id))
+				return true;
+		}
 		return false;
 	}
 
@@ -238,75 +234,6 @@ public:
 		}
 	}
 
-#if 0
-	/**
-	 * Apply a function or function object to all roots
-	 *
-	 * This locks the root list during execution but other operations
-	 * are fine.
-	 *
-	 * @param f Function to apply
-	 * @tparam F function or function object type
-	 */
-	template<typename F>
-	ZT_ALWAYS_INLINE void eachRoot(F f)
-	{
-		Mutex::Lock l(_roots_m);
-		SharedPtr<Peer> rp;
-		for(std::vector<Root>::const_iterator i(_roots.begin());i!=_roots.end();++i) {
-			{
-				Mutex::Lock l2(_peers_l);
-				const SharedPtr<Peer> *const ap = _peers.get(i->address());
-				if (ap) {
-					rp = *ap;
-				} else {
-					rp.set(new Peer(RR,_myIdentity,i->id()));
-					_peers.set(rp->address(),rp);
-				}
-			}
-			f(*i,rp);
-		}
-	}
-
-	/**
-	 * Get the best root, rescanning and re-ranking roots periodically
-	 *
-	 * @param now Current time
-	 * @return Best/fastest currently connected root or NULL if none
-	 */
-	inline SharedPtr<Peer> root(const int64_t now)
-	{
-		Mutex::Lock l(_bestRoot_m);
-		if ((!_bestRoot)||((now - _lastRankedBestRoot) >= ZT_FIND_BEST_ROOT_PERIOD)) {
-			_bestRoot.zero();
-			Mutex::Lock l2(_roots_m);
-			SharedPtr<Peer> rp;
-			long bestQuality = 2147483647;
-			for(std::vector<Root>::const_iterator i(_roots.begin());i!=_roots.end();++i) {
-				{
-					Mutex::Lock l2(_peers_l);
-					const SharedPtr<Peer> *const ap = _peers.get(i->address());
-					if (ap) {
-						rp = *ap;
-					} else {
-						rp.set(new Peer(RR,_myIdentity,i->id()));
-						_peers.set(rp->address(),rp);
-					}
-				}
-				SharedPtr<Path> path(rp->getAppropriatePath(now,false));
-				if (path) {
-					const long pq = path->quality(now);
-					if (pq < bestQuality) {
-						bestQuality = pq;
-						_bestRoot = rp;
-					}
-				}
-			}
-		}
-		return _bestRoot;
-	}
-#endif
-
 	/**
 	 * Apply a function or function object to all roots
 	 *
@@ -319,33 +246,6 @@ public:
 	template<typename F>
 	inline void eachRoot(F f)
 	{
-		{
-			Mutex::Lock l(_staticRoots_l);
-			Hashtable< Identity,std::vector<InetAddress> >::Iterator i(_staticRoots);
-			Identity *k = (Identity *)0;
-			std::vector<InetAddress> *v = (std::vector<InetAddress> *)0;
-			while (i.next(k,v)) {
-				if (!v->empty()) {
-					const SharedPtr<Peer> *ap;
-					{
-						Mutex::Lock l2(_peers_l);
-						ap = _peers.get(k->address());
-					}
-					if (ap) {
-						if (!f(*ap,*v))
-							return;
-					} else {
-						SharedPtr<Peer> p(new Peer(RR,_myIdentity,*k));
-						{
-							Mutex::Lock l2(_peers_l);
-							_peers.set(k->address(),p);
-						}
-						if (!f(p,*v))
-							return;
-					}
-				}
-			}
-		}
 		{
 			Mutex::Lock l(_dynamicRoots_l);
 			Hashtable< Str,Locator >::Iterator i(_dynamicRoots);
@@ -375,21 +275,49 @@ public:
 				}
 			}
 		}
-	}
-
-	inline SharedPtr<Peer> root(const int64_t now)
-	{
-		_RootRankingFunction rrf;
-		eachRoot(rrf);
+		{
+			Mutex::Lock l(_staticRoots_l);
+			Hashtable< Identity,std::vector<InetAddress> >::Iterator i(_staticRoots);
+			Identity *k = (Identity *)0;
+			std::vector<InetAddress> *v = (std::vector<InetAddress> *)0;
+			while (i.next(k,v)) {
+				if (!v->empty()) {
+					const SharedPtr<Peer> *ap;
+					{
+						Mutex::Lock l2(_peers_l);
+						ap = _peers.get(k->address());
+					}
+					if (ap) {
+						if (!f(*ap,*v))
+							return;
+					} else {
+						SharedPtr<Peer> p(new Peer(RR,_myIdentity,*k));
+						{
+							Mutex::Lock l2(_peers_l);
+							_peers.set(k->address(),p);
+						}
+						if (!f(p,*v))
+							return;
+					}
+				}
+			}
+		}
 	}
 
 	/**
-	 * @return Names of dynamic roots currently known by the system
+	 * @return Current best root (updated automatically each second)
 	 */
-	ZT_ALWAYS_INLINE std::vector<Str> dynamicRootNames() const
+	inline SharedPtr<Peer> root(const int64_t now)
 	{
-		Mutex::Lock l(_dynamicRoots_l);
-		return _dynamicRoots.keys();
+		Mutex::Lock l(_bestRoot_l);
+		if ((!_bestRoot)||((now - _lastUpdatedBestRoot) > 1000)) {
+			_lastUpdatedBestRoot = now;
+			_RootRankingFunction rrf;
+			rrf.now = now;
+			eachRoot(rrf);
+			_bestRoot = rrf.bestRoot;
+		}
+		return _bestRoot;
 	}
 
 	/**
@@ -402,6 +330,26 @@ public:
 	{
 		Mutex::Lock l(_staticRoots_l);
 		_staticRoots[id] = addrs;
+	}
+
+	/**
+	 * Remove a static root
+	 *
+	 * @param id Identity to remove
+	 */
+	ZT_ALWAYS_INLINE void removeStaticRoot(const Identity &id)
+	{
+		Mutex::Lock l(_staticRoots_l);
+		_staticRoots.erase(id);
+	}
+
+	/**
+	 * @return Names of dynamic roots currently known by the system
+	 */
+	ZT_ALWAYS_INLINE std::vector<Str> dynamicRootNames() const
+	{
+		Mutex::Lock l(_dynamicRoots_l);
+		return _dynamicRoots.keys();
 	}
 
 	/**
@@ -420,9 +368,32 @@ public:
 		Locator &ll = _dynamicRoots[dnsName];
 		if (ll.timestamp() < latestLocator.timestamp()) {
 			ll = latestLocator;
+			_updateDynamicRootIdentities();
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Remove a dynamic root entry
+	 *
+	 * @param dnsName DNS name to remove
+	 */
+	ZT_ALWAYS_INLINE bool removeDynamicRoot(const Str &dnsName)
+	{
+		Mutex::Lock l(_dynamicRoots_l);
+		_dynamicRoots.erase(dnsName);
+		_updateDynamicRootIdentities();
+	}
+
+	/**
+	 * Remove all dynamic roots
+	 */
+	ZT_ALWAYS_INLINE bool clearDynamicRoots(const Str &dnsName)
+	{
+		Mutex::Lock l(_dynamicRoots_l);
+		_dynamicRoots.clear();
+		_dynamicRootIdentities.clear();
 	}
 
 	/**
@@ -557,6 +528,19 @@ public:
 	}
 
 private:
+	inline void _updateDynamicRootIdentities()
+	{
+		// assumes _dynamicRoots_l is locked
+		_dynamicRootIdentities.clear();
+		Hashtable< Str,Locator >::Iterator i(_dynamicRoots);
+		Str *k = (Str *)0;
+		Locator *v = (Locator *)0;
+		while (i.next(k,v)) {
+			if (v->id())
+				_dynamicRootIdentities.set(v->id(),true);
+		}
+	}
+
 	const RuntimeEnvironment *const RR;
 	const Identity _myIdentity;
 
@@ -566,13 +550,18 @@ private:
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
 
-	Hashtable< Identity,std::vector<InetAddress> > _staticRoots;
 	Hashtable< Str,Locator > _dynamicRoots;
+	Hashtable< Identity,bool > _dynamicRootIdentities;
+	Hashtable< Identity,std::vector<InetAddress> > _staticRoots;
+
+	int64_t _lastUpdatedBestRoot;
+	SharedPtr<Peer> _bestRoot;
 
 	Mutex _peers_l;
 	Mutex _paths_l;
-	Mutex _staticRoots_l;
 	Mutex _dynamicRoots_l;
+	Mutex _staticRoots_l;
+	Mutex _bestRoot_l;
 };
 
 } // namespace ZeroTier

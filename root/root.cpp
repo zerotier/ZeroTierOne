@@ -431,7 +431,6 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 							const uint64_t nwid = pkt.template at<uint64_t>(ptr);
 							const MulticastGroup mg(MAC(pkt.field(ptr + 8,6),6),pkt.template at<uint32_t>(ptr + 14));
 							s_multicastSubscriptions[nwid][mg][source] = now;
-							//printf("%s %s subscribes to %s/%.8lx on network %.16llx" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),mg.mac().toString(tmpstr),(unsigned long)mg.adi(),(unsigned long long)nwid);
 						}
 					} catch ( ... ) {
 						printf("* unexpected exception handling MULTICAST_LIKE from %s" ZT_EOL_S,ip->toString(ipstr));
@@ -561,7 +560,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						dest.appendTo(outp);
 						outp.append((uint16_t)b->second->ip6.port());
 						outp.append((uint8_t)16);
-						outp.append((const uint8_t *)b->second->ip6.rawIpData(),16);
+						outp.append((const uint8_t *)(b->second->ip6.rawIpData()),16);
 						outp.armor((*a)->key,true);
 						sendto(v6s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&((*a)->ip6),(socklen_t)sizeof(struct sockaddr_in6));
 
@@ -572,9 +571,9 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						outp.reset(dest,s_self.address(),Packet::VERB_RENDEZVOUS);
 						outp.append((uint8_t)0);
 						source.appendTo(outp);
-						outp.append((uint16_t)ip->port());
+						outp.append((uint16_t)(*a)->ip6.port());
 						outp.append((uint8_t)16);
-						outp.append((const uint8_t *)ip->rawIpData(),16);
+						outp.append((const uint8_t *)((*a)->ip6.rawIpData()),16);
 						outp.armor(b->second->key,true);
 						sendto(v6s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&(b->second->ip6),(socklen_t)sizeof(struct sockaddr_in6));
 
@@ -601,9 +600,9 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						outp.reset(dest,s_self.address(),Packet::VERB_RENDEZVOUS);
 						outp.append((uint8_t)0);
 						source.appendTo(outp);
-						outp.append((uint16_t)ip->port());
+						outp.append((uint16_t)(*a)->ip4.port());
 						outp.append((uint8_t)4);
-						outp.append((const uint8_t *)ip->rawIpData(),4);
+						outp.append((const uint8_t *)((*a)->ip4.rawIpData()),4);
 						outp.armor(b->second->key,true);
 						sendto(v4s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&(b->second->ip4),(socklen_t)sizeof(struct sockaddr_in));
 
@@ -616,7 +615,6 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 	}
 
 	for(auto i=toAddrs.begin();i!=toAddrs.end();++i) {
-		//printf("%s -> %s for %s -> %s (%u bytes)" ZT_EOL_S,ip->toString(ipstr),i->first->toString(ipstr2),source.toString(astr),dest.toString(astr2),pkt.size());
 		if (sendto(i->first->isV4() ? v4s : v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)i->first,(socklen_t)(i->first->isV4() ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6))) > 0) {
 			s_outputRate.log(now,pkt.size());
 			s_forwardRate.log(now,pkt.size());
@@ -636,13 +634,13 @@ static int bindSocket(struct sockaddr *const bindAddr)
 		return -1;
 	}
 
-	int f = 4194304;
+	int f = 16777216;
 	while (f > 131072) {
 		if (setsockopt(s,SOL_SOCKET,SO_RCVBUF,(const char *)&f,sizeof(f)) == 0)
 			break;
 		f -= 131072;
 	}
-	f = 4194304;
+	f = 16777216;
 	while (f > 131072) {
 		if (setsockopt(s,SOL_SOCKET,SO_SNDBUF,(const char *)&f,sizeof(f)) == 0)
 			break;
@@ -665,11 +663,13 @@ static int bindSocket(struct sockaddr *const bindAddr)
 	f = IP_PMTUDISC_DONT; setsockopt(s,IPPROTO_IP,IP_MTU_DISCOVER,&f,sizeof(f));
 #endif
 
+/*
 #ifdef SO_NO_CHECK
 	if (bindAddr->sa_family == AF_INET) {
 		f = 1; setsockopt(s,SOL_SOCKET,SO_NO_CHECK,(void *)&f,sizeof(f));
 	}
 #endif
+*/
 
 #if defined(SO_REUSEPORT)
 	f = 1; setsockopt(s,SOL_SOCKET,SO_REUSEPORT,(void *)&f,sizeof(f));
@@ -1026,6 +1026,7 @@ int main(int argc,char **argv)
 				std::pair< uint32_t,uint32_t > k4(0,0xffffffff);
 				std::pair< std::array< uint64_t,2 >,std::array< uint64_t,2 > > k6;
 				k6.second[0] = 0xffffffffffffffffULL; k6.second[1] = 0xffffffffffffffffULL;
+
 				std::unordered_map< InetAddress,std::set<Address>,InetAddressHasher > ips;
 				{
 					std::lock_guard<std::mutex> l(s_peers_l);
@@ -1036,29 +1037,38 @@ int main(int argc,char **argv)
 							ips[(*p)->ip6].insert((*p)->id.address());
 					}
 				}
+
 				for(auto p=ips.begin();p!=ips.end();++p) {
 					if (p->first.isV4()) {
 						k4.first = ip4ToH32(p->first);
 						auto geo = std::map< std::pair< uint32_t,uint32_t >,std::pair< float,float > >::reverse_iterator(s_geoIp4.upper_bound(k4));
+						uint32_t bestRangeSize = 0xffffffff;
+						std::pair< float,float > bestRangeLatLon;
 						while (geo != s_geoIp4.rend()) {
 							if ((geo->first.first <= k4.first)&&(geo->first.second >= k4.first)) {
-								if (!firstCoord)
-									o << ',';
-								firstCoord = false;
-								o << "{lat:" << geo->second.first << ",lng:" << geo->second.second << ",_l:\"";
-								bool firstAddr = true;
-								for(auto a=p->second.begin();a!=p->second.end();++a) {
-									if (!firstAddr)
-										o << ',';
-									o << a->toString(tmp);
-									firstAddr = false;
+								uint32_t range = geo->first.second - geo->first.first;
+								if (range <= bestRangeSize) {
+									bestRangeSize = range;
+									bestRangeLatLon = geo->second;
 								}
-								o << "\"}";
-								break;
 							} else if ((geo->first.first < k4.first)&&(geo->first.second < k4.first)) {
 								break;
 							}
 							++geo;
+						}
+						if (bestRangeSize != 0xffffffff) {
+							if (!firstCoord)
+								o << ',';
+							firstCoord = false;
+							o << "{lat:" << bestRangeLatLon.first << ",lng:" << bestRangeLatLon.second << ",_l:\"";
+							bool firstAddr = true;
+							for(auto a=p->second.begin();a!=p->second.end();++a) {
+								if (!firstAddr)
+									o << ',';
+								o << a->toString(tmp);
+								firstAddr = false;
+							}
+							o << "\"}";
 						}
 					} else if (p->first.isV6()) {
 						k6.first = ip6ToH128(p->first);
