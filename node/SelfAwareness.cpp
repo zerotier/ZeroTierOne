@@ -36,13 +36,17 @@ namespace ZeroTier {
 class _ResetWithinScope
 {
 public:
-	inline _ResetWithinScope(void *tPtr,int64_t now,int inetAddressFamily,InetAddress::IpScope scope) :
+	ZT_ALWAYS_INLINE _ResetWithinScope(void *tPtr,int64_t now,int inetAddressFamily,InetAddress::IpScope scope) :
 		_now(now),
 		_tPtr(tPtr),
 		_family(inetAddressFamily),
 		_scope(scope) {}
 
-	inline void operator()(const SharedPtr<Peer> &p) { p->resetWithinScope(_tPtr,_scope,_family,_now); }
+	ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Peer> &p)
+	{
+		p->resetWithinScope(_tPtr,_scope,_family,_now);
+		return true;
+	}
 
 private:
 	uint64_t _now;
@@ -53,9 +57,7 @@ private:
 
 SelfAwareness::SelfAwareness(const RuntimeEnvironment *renv) :
 	RR(renv),
-	_phy(128)
-{
-}
+	_phy(128) {}
 
 void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,int64_t now)
 {

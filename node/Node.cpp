@@ -201,12 +201,13 @@ struct _processBackgroundTasks_ping_eachPeer
 	void *tPtr;
 	Hashtable< void *,bool > *roots;
 
-	ZT_ALWAYS_INLINE void operator()(const SharedPtr<Peer> &peer)
+	ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Peer> &peer)
 	{
 		if (!roots->contains((void *)peer.ptr())) {
 			unsigned int v4SendCount = 0,v6SendCount = 0;
 			peer->ping(tPtr,now,v4SendCount,v6SendCount);
 		}
+		return true;
 	}
 };
 

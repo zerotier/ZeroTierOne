@@ -243,7 +243,8 @@ public:
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p)) {
-			f(*((const SharedPtr<Peer> *)p));
+			if (!f(*((const SharedPtr<Peer> *)p)))
+				break;
 		}
 	}
 
@@ -400,7 +401,7 @@ public:
 	 *
 	 * @param dnsName DNS name to remove
 	 */
-	ZT_ALWAYS_INLINE bool removeDynamicRoot(const Str &dnsName)
+	ZT_ALWAYS_INLINE void removeDynamicRoot(const Str &dnsName)
 	{
 		Mutex::Lock l(_dynamicRoots_l);
 		_dynamicRoots.erase(dnsName);
@@ -410,7 +411,7 @@ public:
 	/**
 	 * Remove all dynamic roots
 	 */
-	ZT_ALWAYS_INLINE bool clearDynamicRoots()
+	ZT_ALWAYS_INLINE void clearDynamicRoots()
 	{
 		Mutex::Lock l(_dynamicRoots_l);
 		_dynamicRoots.clear();
