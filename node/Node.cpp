@@ -173,7 +173,6 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
-#if 0
 struct _processBackgroundTasks_ping_eachRoot
 {
 	Hashtable< void *,bool > roots;
@@ -181,32 +180,19 @@ struct _processBackgroundTasks_ping_eachRoot
 	void *tPtr;
 	bool online;
 
-	ZT_ALWAYS_INLINE void operator()(const Root &root,const SharedPtr<Peer> &peer)
+	ZT_ALWAYS_INLINE void operator()(const SharedPtr<Peer> &peer,const std::vector<InetAddress> &addrs)
 	{
 		unsigned int v4SendCount = 0,v6SendCount = 0;
 		peer->ping(tPtr,now,v4SendCount,v6SendCount);
-
-		const InetAddress *contactAddrs[2];
-		unsigned int contactAddrCount = 0;
-		if (v4SendCount == 0) {
-			if (*(contactAddrs[contactAddrCount] = &(root.pickPhysical(AF_INET))))
-				++contactAddrCount;
+		for(std::vector<InetAddress>::const_iterator a(addrs.begin());a!=addrs.end();++a) {
+			if ( ((a->isV4())&&(v4SendCount == 0)) || ((a->isV6())&&(v6SendCount == 0)) )
+				peer->sendHELLO(tPtr,-1,*a,now);
 		}
-		if (v6SendCount == 0) {
-			if (*(contactAddrs[contactAddrCount] = &(root.pickPhysical(AF_INET6))))
-				++contactAddrCount;
-		}
-
-		for(unsigned int i=0;i<contactAddrCount;++i)
-			peer->sendHELLO(tPtr,-1,*contactAddrs[i],now);
-
 		if (!online)
 			online = ((now - peer->lastReceive()) <= ((ZT_PEER_PING_PERIOD * 2) + 5000));
-
 		roots.set((void *)peer.ptr(),true);
 	}
 };
-#endif
 
 struct _processBackgroundTasks_ping_eachPeer
 {
@@ -231,30 +217,30 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 	// Initialize these on first call so these things happen just a few seconds after
 	// startup, since right at startup things are likely to not be ready to communicate
 	// at all yet.
-	if (_lastNetworkHousekeepingRun <= 0) _lastNetworkHousekeepingRun = now - (ZT_NETWORK_HOUSEKEEPING_PERIOD / 3);
-	if (_lastHousekeepingRun <= 0) _lastHousekeepingRun = now;
+	if (_lastNetworkHousekeepingRun <= 0)
+		_lastNetworkHousekeepingRun = now - (ZT_NETWORK_HOUSEKEEPING_PERIOD / 3);
+	if (_lastHousekeepingRun <= 0)
+		_lastHousekeepingRun = now;
 
 	if ((now - _lastPing) >= ZT_PEER_PING_PERIOD) {
 		_lastPing = now;
 		try {
-#if 0
 			_processBackgroundTasks_ping_eachRoot rf;
 			rf.now = now;
 			rf.tPtr = tptr;
 			rf.online = false;
 			RR->topology->eachRoot(rf);
-#endif
 
 			_processBackgroundTasks_ping_eachPeer pf;
 			pf.now = now;
 			pf.tPtr = tptr;
-			//pf.roots = &rf.roots;
+			pf.roots = &rf.roots;
 			RR->topology->eachPeer(pf);
 
-			//if (rf.online != _online) {
-			//	_online = rf.online;
-			//	postEvent(tptr,_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
-			//}
+			if (rf.online != _online) {
+				_online = rf.online;
+				postEvent(tptr,_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
+			}
 		} catch ( ... ) {
 			return ZT_RESULT_FATAL_ERROR_INTERNAL;
 		}

@@ -671,11 +671,18 @@ static int bindSocket(struct sockaddr *const bindAddr)
 #endif
 */
 
-#if defined(SO_REUSEPORT)
+#ifdef SO_REUSEPORT
 	f = 1; setsockopt(s,SOL_SOCKET,SO_REUSEPORT,(void *)&f,sizeof(f));
 #endif
 #ifndef __LINUX__ // linux wants just SO_REUSEPORT
 	f = 1; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
+#endif
+
+#ifdef __LINUX__
+	struct timeval tv;
+	tv.tv_sec = 1;
+	tv.tv_usec = 0;
+	setsockopt(s,SOL_SOCKET,SO_RCVTIMEO,(const void *)&tv,sizeof(tv));
 #endif
 
 	if (bind(s,bindAddr,(bindAddr->sa_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6))) {
@@ -911,7 +918,7 @@ int main(int argc,char **argv)
 								printf("WARNING: unexpected exception handling packet from %s: unknown exception" ZT_EOL_S,reinterpret_cast<const InetAddress *>(&in6)->toString(ipstr));
 							}
 						}
-					} else {
+					} else if ((errno != EAGAIN)&&(errno != EWOULDBLOCK)) {
 						break;
 					}
 				}
@@ -940,7 +947,7 @@ int main(int argc,char **argv)
 								printf("WARNING: unexpected exception handling packet from %s: unknown exception" ZT_EOL_S,reinterpret_cast<const InetAddress *>(&in4)->toString(ipstr));
 							}
 						}
-					} else {
+					} else if ((errno != EAGAIN)&&(errno != EWOULDBLOCK)) {
 						break;
 					}
 				}

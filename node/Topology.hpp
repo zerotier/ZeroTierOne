@@ -64,6 +64,19 @@ private:
 		unsigned int bestRootLatency;
 	};
 
+	ZT_ALWAYS_INLINE void _updateDynamicRootIdentities()
+	{
+		// assumes _dynamicRoots_l is locked
+		_dynamicRootIdentities.clear();
+		Hashtable< Str,Locator >::Iterator i(_dynamicRoots);
+		Str *k = (Str *)0;
+		Locator *v = (Locator *)0;
+		while (i.next(k,v)) {
+			if (v->id())
+				_dynamicRootIdentities.set(v->id(),true);
+		}
+	}
+
 public:
 	ZT_ALWAYS_INLINE Topology(const RuntimeEnvironment *renv,const Identity &myId) :
 		RR(renv),
@@ -244,7 +257,7 @@ public:
 	 * @tparam F function or function object type
 	 */
 	template<typename F>
-	inline void eachRoot(F f)
+	ZT_ALWAYS_INLINE void eachRoot(F f)
 	{
 		{
 			Mutex::Lock l(_dynamicRoots_l);
@@ -344,6 +357,15 @@ public:
 	}
 
 	/**
+	 * Clear all static roots
+	 */
+	ZT_ALWAYS_INLINE void removeStaticRoot()
+	{
+		Mutex::Lock l(_staticRoots_l);
+		_staticRoots.clear();
+	}
+
+	/**
 	 * @return Names of dynamic roots currently known by the system
 	 */
 	ZT_ALWAYS_INLINE std::vector<Str> dynamicRootNames() const
@@ -353,14 +375,13 @@ public:
 	}
 
 	/**
-	 * Set or update dynamic root if new locator is newer and valid
+	 * Set or update dynamic root if new locator is newer
 	 *
-	 * This checks internal validity of the new locator including its internal self-signature.
-	 * It does not check any DNS signatures.
+	 * This does not check signatures or internal validity of the locator.
 	 *
 	 * @param dnsName DNS name used to retrive root
 	 * @param latestLocator Latest locator
-	 * @return True if latest locator is internally valid and newer
+	 * @return True if locator is newer
 	 */
 	ZT_ALWAYS_INLINE bool setDynamicRoot(const Str &dnsName,const Locator &latestLocator)
 	{
@@ -389,7 +410,7 @@ public:
 	/**
 	 * Remove all dynamic roots
 	 */
-	ZT_ALWAYS_INLINE bool clearDynamicRoots(const Str &dnsName)
+	ZT_ALWAYS_INLINE bool clearDynamicRoots()
 	{
 		Mutex::Lock l(_dynamicRoots_l);
 		_dynamicRoots.clear();
@@ -406,13 +427,13 @@ public:
 	ZT_ALWAYS_INLINE SharedPtr<Peer> findRelayTo(const int64_t now,const Address &toAddr)
 	{
 		// TODO: in the future this will check 'mesh-like' relays and if enabled consult LF for other roots (for if this is a root)
-		//return root(now);
+		return root(now);
 	}
 
 	/**
 	 * @param allPeers vector to fill with all current peers
 	 */
-	inline void getAllPeers(std::vector< SharedPtr<Peer> > &allPeers) const
+	ZT_ALWAYS_INLINE void getAllPeers(std::vector< SharedPtr<Peer> > &allPeers) const
 	{
 		Mutex::Lock l(_peers_l);
 		allPeers.clear();
@@ -528,19 +549,6 @@ public:
 	}
 
 private:
-	inline void _updateDynamicRootIdentities()
-	{
-		// assumes _dynamicRoots_l is locked
-		_dynamicRootIdentities.clear();
-		Hashtable< Str,Locator >::Iterator i(_dynamicRoots);
-		Str *k = (Str *)0;
-		Locator *v = (Locator *)0;
-		while (i.next(k,v)) {
-			if (v->id())
-				_dynamicRootIdentities.set(v->id(),true);
-		}
-	}
-
 	const RuntimeEnvironment *const RR;
 	const Identity _myIdentity;
 
