@@ -8,6 +8,8 @@ CODESIGN=echo
 PRODUCTSIGN=echo
 CODESIGN_APP_CERT=
 CODESIGN_INSTALLER_CERT=
+NOTARIZE=echo
+NOTARIZE_USER_ID=null
 
 ZT_BUILD_PLATFORM=3
 ZT_BUILD_ARCHITECTURE=2
@@ -34,6 +36,8 @@ ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	PRODUCTSIGN=productsign
 	CODESIGN_APP_CERT="Developer ID Application: ZeroTier, Inc (8ZD9JUCZ4V)"
 	CODESIGN_INSTALLER_CERT="Developer ID Installer: ZeroTier, Inc (8ZD9JUCZ4V)"
+	NOTARIZE=xcrun altool
+	NOTARIZE_USER_ID="adam.ierymenko@gmail.com"
 else
 	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="\"download\""
 endif
@@ -76,7 +80,7 @@ ifeq ($(ZT_VAULT_SUPPORT),1)
 	LIBS+=-lcurl
 endif
 
-CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++ 
+CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++
 
 all: one macui
 
@@ -131,6 +135,8 @@ mac-dist-pkg: FORCE
 	if [ -f "ZeroTier One Signed.pkg" ]; then mv -f "ZeroTier One Signed.pkg" "ZeroTier One.pkg"; fi
 	rm -f zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_*
 	cat ext/installfiles/mac-update/updater.tmpl.sh "ZeroTier One.pkg" >zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_$(ZT_VERSION_MAJOR).$(ZT_VERSION_MINOR).$(ZT_VERSION_REV)_$(ZT_VERSION_BUILD).exe
+	$(NOTARIZE) -t osx -f "ZeroTier One.pkg" --primary-bundle-id --output-format xml --notarize-app -u $(NOTARIZE_USER_ID)
+	echo '*** When Apple notifies that the app is notarized, run: xcrun stapler staple "ZeroTier One.pkg"'
 
 # For ZeroTier, Inc. to build official signed packages
 official: FORCE
