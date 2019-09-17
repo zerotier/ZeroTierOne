@@ -180,7 +180,7 @@ struct _processBackgroundTasks_ping_eachRoot
 	void *tPtr;
 	bool online;
 
-	ZT_ALWAYS_INLINE void operator()(const SharedPtr<Peer> &peer,const std::vector<InetAddress> &addrs)
+	ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Peer> &peer,const std::vector<InetAddress> &addrs)
 	{
 		unsigned int v4SendCount = 0,v6SendCount = 0;
 		peer->ping(tPtr,now,v4SendCount,v6SendCount);
@@ -191,6 +191,7 @@ struct _processBackgroundTasks_ping_eachRoot
 		if (!online)
 			online = ((now - peer->lastReceive()) <= ((ZT_PEER_PING_PERIOD * 2) + 5000));
 		roots.set((void *)peer.ptr(),true);
+		return true;
 	}
 };
 
