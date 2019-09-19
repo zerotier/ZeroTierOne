@@ -49,11 +49,11 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 	_now(now),
 	_lastPing(0),
 	_lastHousekeepingRun(0),
-	_lastNetworkHousekeepingRun(0)
+	_lastNetworkHousekeepingRun(0),
+	_lastDynamicRootUpdate(0),
+	_online(false)
 {
 	memcpy(&_cb,callbacks,sizeof(ZT_Node_Callbacks));
-
-	_online = false;
 
 	memset(_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
 	memset(_expectingRepliesTo,0,sizeof(_expectingRepliesTo));
@@ -173,6 +173,35 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
+// This is passed as the argument to the DNS request handler and
+// aggregates results.
+struct _processBackgroundTasks_dnsResultAccumulator
+{
+	_processBackgroundTasks_dnsResultAccumulator(const Str &n) : dnsName(n) {}
+	Str dnsName;
+	std::vector<Str> txtRecords;
+};
+
+static const ZT_DNSRecordType s_txtRecordType[1] = { ZT_DNS_RECORD_TXT };
+
+struct _processBackgroundTasks_check_dynamicRoots
+{
+	ZT_Node_Callbacks *cb;
+	Node *n;
+	void *uPtr;
+	void *tPtr;
+	bool updateAll;
+
+	ZT_ALWAYS_INLINE bool operator()(const Str &dnsName,const Locator &loc)
+	{
+		if ((updateAll)||(!loc)) {
+			_processBackgroundTasks_dnsResultAccumulator *dnsReq = new _processBackgroundTasks_dnsResultAccumulator(dnsName);
+			cb->dnsResolver(reinterpret_cast<ZT_Node *>(n),uPtr,tPtr,s_txtRecordType,1,dnsName.c_str(),(uintptr_t)dnsReq);
+		}
+		return true;
+	}
+};
+
 struct _processBackgroundTasks_ping_eachRoot
 {
 	Hashtable< void *,bool > roots;
@@ -227,18 +256,37 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 	if ((now - _lastPing) >= ZT_PEER_PING_PERIOD) {
 		_lastPing = now;
 		try {
+			// Periodically refresh locators for dynamic roots from their DNS names.
+			if (_cb.dnsResolver) {
+				_processBackgroundTasks_check_dynamicRoots cr;
+				cr.cb = &_cb;
+				cr.n = this;
+				cr.uPtr = _uPtr;
+				cr.tPtr = tptr;
+				if ((now - _lastDynamicRootUpdate) >= ZT_DYNAMIC_ROOT_UPDATE_PERIOD) {
+					_lastDynamicRootUpdate = now;
+					cr.updateAll = true;
+				} else {
+					cr.updateAll = false;
+				}
+				RR->topology->eachDynamicRoot(cr);
+			}
+
+			// Ping each root explicitly no matter what
 			_processBackgroundTasks_ping_eachRoot rf;
 			rf.now = now;
 			rf.tPtr = tptr;
 			rf.online = false;
 			RR->topology->eachRoot(rf);
 
+			// Ping peers that are active and we want to keep alive
 			_processBackgroundTasks_ping_eachPeer pf;
 			pf.now = now;
 			pf.tPtr = tptr;
 			pf.roots = &rf.roots;
 			RR->topology->eachPeer(pf);
 
+			// Update online status based on whether we can reach a root
 			if (rf.online != _online) {
 				_online = rf.online;
 				postEvent(tptr,_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
@@ -298,6 +346,30 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 	return ZT_RESULT_OK;
 }
 
+void Node::processDNSResult(
+	void *tptr,
+	uintptr_t dnsRequestID,
+	const char *name,
+	enum ZT_DNSRecordType recordType,
+	const void *result,
+	unsigned int resultLength,
+	int resultIsString)
+{
+	if (dnsRequestID) {
+		_processBackgroundTasks_dnsResultAccumulator *const acc = reinterpret_cast<_processBackgroundTasks_dnsResultAccumulator *>(dnsRequestID);
+		if (recordType == ZT_DNS_RECORD_TXT) {
+			if (result)
+				acc->txtRecords.emplace_back(reinterpret_cast<const char *>(result));
+		} else if (recordType == ZT_DNS_RECORD__END_OF_RESULTS) {
+			Locator loc;
+			if (loc.decodeTxtRecords(acc->dnsName,acc->txtRecords.begin(),acc->txtRecords.end())) {
+				RR->topology->setDynamicRoot(acc->dnsName,loc);
+				delete acc;
+			}
+		}
+	}
+}
+
 ZT_ResultCode Node::join(uint64_t nwid,void *uptr,void *tptr)
 {
 	Mutex::Lock _l(_networks_m);
@@ -355,6 +427,68 @@ ZT_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,u
 		nw->multicastUnsubscribe(MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
 		return ZT_RESULT_OK;
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
+}
+
+ZT_RootList *Node::listRoots(int64_t now)
+{
+	return RR->topology->apiRoots(now);
+}
+
+enum ZT_ResultCode Node::setStaticRoot(const char *identity,const struct sockaddr_storage *addresses,unsigned int addressCount)
+{
+	if (!identity)
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	Identity id;
+	if (id.fromString(identity)) {
+		if (id) {
+			std::vector<InetAddress> addrs;
+			for(unsigned int i=0;i<addressCount;++i)
+				addrs.push_back(InetAddress(addresses[i]));
+			RR->topology->setStaticRoot(identity,addrs);
+			return ZT_RESULT_OK;
+		}
+	}
+	return ZT_RESULT_ERROR_BAD_PARAMETER;
+}
+
+enum ZT_ResultCode Node::setDynamicRoot(const char *dnsName,const void *defaultLocator,unsigned int defaultLocatorSize)
+{
+	if (!dnsName)
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	if (strlen(dnsName) >= 256)
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	try {
+		Locator loc;
+		if ((defaultLocator)&&(defaultLocatorSize > 0)&&(defaultLocatorSize < 65535)) {
+			ScopedPtr< Buffer<65536> > locbuf(new Buffer<65536>());
+			locbuf->append(defaultLocator,defaultLocatorSize);
+			loc.deserialize(*locbuf,0);
+			if (!loc.verify())
+				loc = Locator();
+		}
+		return RR->topology->setDynamicRoot(Str(dnsName),loc) ? ZT_RESULT_OK : ZT_RESULT_OK_IGNORED;
+	} catch ( ... ) {
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	}
+}
+
+enum ZT_ResultCode Node::removeStaticRoot(const char *identity)
+{
+	if (identity) {
+		Identity id;
+		if (id.fromString(identity))
+			RR->topology->removeStaticRoot(id);
+	}
+	return ZT_RESULT_OK;
+}
+
+enum ZT_ResultCode Node::removeDynamicRoot(const char *dnsName)
+{
+	try {
+		if (dnsName)
+			RR->topology->removeDynamicRoot(Str(dnsName));
+	} catch ( ... ) {}
+	return ZT_RESULT_OK;
 }
 
 uint64_t Node::address() const
@@ -726,6 +860,21 @@ enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,void *tptr,int64
 	}
 }
 
+void ZT_Node_processDNSResult(
+	ZT_Node *node,
+	void *tptr,
+	uintptr_t dnsRequestID,
+	const char *name,
+	enum ZT_DNSRecordType recordType,
+	const void *result,
+	unsigned int resultLength,
+	int resultIsString)
+{
+	try {
+		reinterpret_cast<ZeroTier::Node *>(node)->processDNSResult(tptr,dnsRequestID,name,recordType,result,resultLength,resultIsString);
+	} catch ( ... ) {}
+}
+
 enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr,void *tptr)
 {
 	try {
@@ -763,6 +912,59 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->multicastUnsubscribe(nwid,multicastGroup,multicastAdi);
+	} catch (std::bad_alloc &exc) {
+		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
+	} catch ( ... ) {
+		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+	}
+}
+
+ZT_RootList *ZT_Node_listRoots(ZT_Node *node,int64_t now)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->listRoots(now);
+	} catch ( ... ) {
+		return nullptr;
+	}
+}
+
+enum ZT_ResultCode ZT_Node_setStaticRoot(ZT_Node *node,const char *identity,const struct sockaddr_storage *addresses,unsigned int addressCount)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->setStaticRoot(identity,addresses,addressCount);
+	} catch (std::bad_alloc &exc) {
+		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
+	} catch ( ... ) {
+		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+	}
+}
+
+enum ZT_ResultCode ZT_Node_setDynamicRoot(ZT_Node *node,const char *dnsName,const void *defaultLocator,unsigned int defaultLocatorSize)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->setDynamicRoot(dnsName,defaultLocator,defaultLocatorSize);
+	} catch (std::bad_alloc &exc) {
+		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
+	} catch ( ... ) {
+		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+	}
+}
+
+enum ZT_ResultCode ZT_Node_removeStaticRoot(ZT_Node *node,const char *identity)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->removeStaticRoot(identity);
+	} catch (std::bad_alloc &exc) {
+		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
+	} catch ( ... ) {
+		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+	}
+}
+
+enum ZT_ResultCode ZT_Node_removeDynamicRoot(ZT_Node *node,const char *dnsName)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->removeDynamicRoot(dnsName);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {

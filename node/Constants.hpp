@@ -14,7 +14,7 @@
 #ifndef ZT_CONSTANTS_HPP
 #define ZT_CONSTANTS_HPP
 
-#include "../include/ZeroTierOne.h"
+#include "../include/ZeroTierCore.h"
 
 #if __has_include("version.h")
 #include "version.h"
@@ -161,6 +161,17 @@
 #ifndef __CPP11__
 #define __CPP11__
 #endif
+#endif
+
+#ifdef SOCKET
+#define ZT_SOCKET SOCKET
+#else
+#define ZT_SOCKET int
+#endif
+#ifdef INVALID_SOCKET
+#define ZT_INVALID_SOCKET INVALID_SOCKET
+#else
+#define ZT_INVALID_SOCKET -1
 #endif
 
 /**
@@ -452,9 +463,14 @@
  * See https://conferences.sigcomm.org/imc/2010/papers/p260.pdf for
  * some real world data on NAT UDP timeouts. From the paper: "the
  * lowest measured timeout when a binding has seen bidirectional
- * traffic is 54 sec." We use 45 to be a bit under this.
+ * traffic is 54 sec." 30 seconds is faster than really necessary.
  */
-#define ZT_PEER_PING_PERIOD 45000
+#define ZT_PEER_PING_PERIOD 30000
+
+/**
+ * Delay between refreshes of locators via DNS or other methods
+ */
+#define ZT_DYNAMIC_ROOT_UPDATE_PERIOD 120000
 
 /**
  * Timeout for overall peer activity (measured from last receive)

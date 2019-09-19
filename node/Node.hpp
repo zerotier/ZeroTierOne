@@ -80,10 +80,23 @@ public:
 		unsigned int frameLength,
 		volatile int64_t *nextBackgroundTaskDeadline);
 	ZT_ResultCode processBackgroundTasks(void *tptr,int64_t now,volatile int64_t *nextBackgroundTaskDeadline);
+	void processDNSResult(
+		void *tptr,
+		uintptr_t dnsRequestID,
+		const char *name,
+		enum ZT_DNSRecordType recordType,
+		const void *result,
+		unsigned int resultLength,
+		int resultIsString);
 	ZT_ResultCode join(uint64_t nwid,void *uptr,void *tptr);
 	ZT_ResultCode leave(uint64_t nwid,void **uptr,void *tptr);
 	ZT_ResultCode multicastSubscribe(void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	ZT_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
+	ZT_RootList *listRoots(int64_t now);
+	enum ZT_ResultCode setStaticRoot(const char *identity,const struct sockaddr_storage *addresses,unsigned int addressCount);
+	enum ZT_ResultCode setDynamicRoot(const char *dnsName,const void *defaultLocator,unsigned int defaultLocatorSize);
+	enum ZT_ResultCode removeStaticRoot(const char *identity);
+	enum ZT_ResultCode removeDynamicRoot(const char *dnsName);
 	uint64_t address() const;
 	void status(ZT_NodeStatus *status) const;
 	ZT_PeerList *peers() const;
@@ -289,6 +302,7 @@ private:
 	int64_t _lastPing;
 	int64_t _lastHousekeepingRun;
 	int64_t _lastNetworkHousekeepingRun;
+	int64_t _lastDynamicRootUpdate;
 	bool _online;
 };
 

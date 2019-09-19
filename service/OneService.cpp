@@ -25,7 +25,7 @@
 #include <mutex>
 #include <condition_variable>
 
-#include "../include/ZeroTierOne.h"
+#include "../include/ZeroTierCore.h"
 
 #include "../node/Constants.hpp"
 #include "../node/Mutex.hpp"
@@ -1843,6 +1843,9 @@ public:
 			case ZT_STATE_OBJECT_PEER:
 				OSUtils::ztsnprintf(dirname,sizeof(dirname),"%s" ZT_PATH_SEPARATOR_S "peers.d",_homePath.c_str());
 				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.10llx.peer",dirname,(unsigned long long)id[0]);
+				break;
+			case ZT_STATE_OBJECT_ROOT_LIST:
+				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "roots",_homePath.c_str());
 				break;
 			default:
 				return;

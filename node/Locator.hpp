@@ -243,6 +243,8 @@ public:
 	 * record signing public key. False is returned if the TXT records are invalid,
 	 * incomplete, or fail signature check. If true is returned this Locator object
 	 * now contains the contents of the supplied TXT records.
+	 *
+	 * @return True if new Locator is valid
 	 */
 	template<typename I>
 	inline bool decodeTxtRecords(const Str &dnsName,I start,I end)
