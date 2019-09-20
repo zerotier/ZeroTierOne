@@ -41,8 +41,8 @@ public:
 		    ((((uint64_t)d) & 0xffULL) << 16) |
 		    ((((uint64_t)e) & 0xffULL) << 8) |
 		    (((uint64_t)f) & 0xffULL) ) {}
-				ZT_ALWAYS_INLINE MAC(const void *bits,unsigned int len) { setTo(bits,len); }
-				ZT_ALWAYS_INLINE MAC(const Address &ztaddr,uint64_t nwid) { fromAddress(ztaddr,nwid); }
+	ZT_ALWAYS_INLINE MAC(const void *bits,unsigned int len) { setTo(bits,len); }
+	ZT_ALWAYS_INLINE MAC(const Address &ztaddr,uint64_t nwid) { fromAddress(ztaddr,nwid); }
 	ZT_ALWAYS_INLINE MAC(const uint64_t m) : _m(m & 0xffffffffffffULL) {}
 
 	/**

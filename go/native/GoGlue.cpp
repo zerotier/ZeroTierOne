@@ -11,12 +11,14 @@
  */
 /****/
 
-#include "GoNode.h"
+#include "GoGlue.h"
 
 #include "../../node/Constants.hpp"
 #include "../../node/InetAddress.hpp"
 #include "../../node/Node.hpp"
 #include "../../node/Utils.hpp"
+#include "../../node/MAC.hpp"
+#include "../../node/Address.hpp"
 #include "../../osdep/OSUtils.hpp"
 #include "../../osdep/BlockingQueue.hpp"
 #include "../../osdep/EthernetTap.hpp"
@@ -55,6 +57,7 @@
 #include <vector>
 #include <array>
 #include <set>
+#include <memory>
 
 #ifdef __WINDOWS__
 #define SETSOCKOPT_FLAG_TYPE BOOL
@@ -90,10 +93,18 @@ struct ZT_GoNode_Impl
 	int (*goPathLookupFunc)(ZT_GoNode *,ZT_Node *,int desiredAddressFamily,void *);
 	int (*goStateObjectGetFunc)(ZT_GoNode *,ZT_Node *,int objType,const uint64_t id[2],void *buf,unsigned int bufSize);
 
+	std::string path;
+	std::atomic_bool run;
+
 	std::map< ZT_SOCKET,ZT_GoNodeThread > threads;
 	std::mutex threads_l;
 
+	std::map< uint64_t,std::shared_ptr<EthernetTap> > taps;
+	std::mutex taps_l;
+
 	BlockingQueue<ZT_GoNodeEvent> eq;
+
+	std::thread backgroundTaskThread;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -273,10 +284,10 @@ static void ZT_GoNode_DNSResolver(
 //////////////////////////////////////////////////////////////////////////////
 
 extern "C" ZT_GoNode *ZT_GoNode_new(
+	const char *workingPath,
 	int (*goPathCheckFunc)(ZT_GoNode *,ZT_Node *,uint64_t ztAddress,const void *),
 	int (*goPathLookupFunc)(ZT_GoNode *,ZT_Node *,int desiredAddressFamily,void *),
-	int (*goStateObjectGetFunc)(ZT_GoNode *,ZT_Node *,int objType,const uint64_t id[2],void *buf,unsigned int bufSize)
-)
+	int (*goStateObjectGetFunc)(ZT_GoNode *,ZT_Node *,int objType,const uint64_t id[2],void *buf,unsigned int bufSize))
 {
 	try {
 		struct ZT_Node_Callbacks cb;
@@ -296,6 +307,18 @@ extern "C" ZT_GoNode *ZT_GoNode_new(
 		gn->goPathCheckFunc = goPathCheckFunc;
 		gn->goPathLookupFunc = goPathLookupFunc;
 		gn->goStateObjectGetFunc = goStateObjectGetFunc;
+		gn->path = workingPath;
+		gn->run = true;
+
+		gn->backgroundTaskThread = std::thread([gn] {
+			while (gn->run) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(250));
+				const int64_t now = OSUtils::now();
+				if (now >= gn->nextBackgroundTaskDeadline)
+					gn->node->processBackgroundTasks(nullptr,now,&(gn->nextBackgroundTaskDeadline));
+			}
+		});
+
 		return gn;
 	} catch ( ... ) {
 		fprintf(stderr,"FATAL: unable to create new instance of Node (out of memory?)" ZT_EOL_S);
@@ -305,6 +328,8 @@ extern "C" ZT_GoNode *ZT_GoNode_new(
 
 extern "C" void ZT_GoNode_delete(ZT_GoNode *gn)
 {
+	gn->run = false;
+
 	ZT_GoNodeEvent sd;
 	sd.type = ZT_GONODE_EVENT_SHUTDOWN;
 	gn->eq.post(sd);
@@ -320,6 +345,14 @@ extern "C" void ZT_GoNode_delete(ZT_GoNode *gn)
 	gn->threads_l.unlock();
 	for(auto t=th.begin();t!=th.end();++t)
 		t->join();
+
+	gn->taps_l.lock();
+	for(auto t=gn->taps.begin();t!=gn->taps.end();++t)
+		gn->node->leave(t->first,nullptr,nullptr);
+	gn->taps.clear();
+	gn->taps_l.unlock();
+
+	gn->backgroundTaskThread.join();
 
 	delete gn->node;
 	delete gn;
@@ -490,4 +523,40 @@ extern "C" int ZT_GoNode_phyStopListen(ZT_GoNode *gn,const char *dev,const char 
 extern "C" int ZT_GoNode_waitForEvent(ZT_GoNode *gn,ZT_GoNodeEvent *ev)
 {
 	gn->eq.get(*ev);
+}
+
+static void tapFrameHandler(void *uptr,void *tptr,uint64_t nwid,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
+{
+	ZT_GoNode *const gn = reinterpret_cast<ZT_GoNode *>(uptr);
+	gn->node->processVirtualNetworkFrame(tptr,OSUtils::now(),nwid,from.toInt(),to.toInt(),etherType,vlanId,data,len,&(gn->nextBackgroundTaskDeadline));
+}
+
+extern "C" ZT_GoTap *ZT_GoNode_join(ZT_GoNode *gn,uint64_t nwid)
+{
+	try {
+		std::lock_guard<std::mutex> l(gn->taps_l);
+		auto existingTap = gn->taps.find(nwid);
+		if (existingTap != gn->taps.end())
+			return (ZT_GoTap *)existingTap->second.get();
+		char tmp[256];
+		OSUtils::ztsnprintf(tmp,sizeof(tmp),"ZeroTier Network %.16llx",(unsigned long long)nwid);
+		std::shared_ptr<EthernetTap> tap(EthernetTap::newInstance(nullptr,gn->path.c_str(),MAC(Address(gn->node->address()),nwid),ZT_DEFAULT_MTU,0,nwid,tmp,&tapFrameHandler,gn));
+		if (!tap)
+			return nullptr;
+		gn->taps[nwid] = tap;
+		gn->node->join(nwid,tap.get(),nullptr);
+		return (ZT_GoTap *)tap.get();
+	} catch ( ... ) {
+		return nullptr;
+	}
+}
+
+extern "C" void ZT_GoNode_leave(ZT_GoNode *gn,uint64_t nwid)
+{
+	std::lock_guard<std::mutex> l(gn->taps_l);
+	auto existingTap = gn->taps.find(nwid);
+	if (existingTap != gn->taps.end()) {
+		gn->node->leave(nwid,nullptr,nullptr);
+		gn->taps.erase(existingTap);
+	}
 }

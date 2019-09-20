@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 2.8)
 project(zt_go_native)
 
 set(src
-	GoNode.cpp
+	GoGlue.cpp
 )
 
 set(headers
-	GoNode.h
+	GoGlue.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${src} ${headers})

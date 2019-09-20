@@ -598,6 +598,14 @@ ZT_VirtualNetworkList *Node::networks() const
 	return nl;
 }
 
+void Node::setNetworkUserPtr(uint64_t nwid,void *ptr)
+{
+	Mutex::Lock _l(_networks_m);
+	const SharedPtr<Network> *const nw = _networks.get(nwid);
+	if (nw)
+		*((*nw)->userPtr()) = ptr;
+}
+
 void Node::freeQueryResult(void *qr)
 {
 	if (qr)
@@ -1009,6 +1017,13 @@ ZT_VirtualNetworkList *ZT_Node_networks(ZT_Node *node)
 	} catch ( ... ) {
 		return (ZT_VirtualNetworkList *)0;
 	}
+}
+
+void ZT_Node_setNetworkUserPtr(ZT_Node *node,uint64_t nwid,void *ptr)
+{
+	try {
+		reinterpret_cast<ZeroTier::Node *>(node)->setNetworkUserPtr(nwid,ptr);
+	} catch ( ... ) {}
 }
 
 void ZT_Node_freeQueryResult(ZT_Node *node,void *qr)

@@ -102,6 +102,7 @@ public:
 	ZT_PeerList *peers() const;
 	ZT_VirtualNetworkConfig *networkConfig(uint64_t nwid) const;
 	ZT_VirtualNetworkList *networks() const;
+	void setNetworkUserPtr(uint64_t nwid,void *ptr);
 	void freeQueryResult(void *qr);
 	int addLocalInterfaceAddress(const struct sockaddr_storage *addr);
 	void clearLocalInterfaceAddresses();

@@ -1851,6 +1851,7 @@ ZT_SDK_API void ZT_Node_processDNSResult(
  * @param node Node instance
  * @param nwid 64-bit ZeroTier network ID
  * @param uptr An arbitrary pointer to associate with this network (default: NULL)
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr,void *tptr);
@@ -1868,6 +1869,7 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *upt
  * @param node Node instance
  * @param nwid 64-bit network ID
  * @param uptr Target pointer is set to uptr (if not NULL)
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr,void *tptr);
@@ -2014,6 +2016,17 @@ ZT_SDK_API ZT_VirtualNetworkConfig *ZT_Node_networkConfig(ZT_Node *node,uint64_t
  * @return List of networks or NULL on failure
  */
 ZT_SDK_API ZT_VirtualNetworkList *ZT_Node_networks(ZT_Node *node);
+
+/**
+ * Set the network-associated user-defined pointer for a given network
+ *
+ * This will have no effect if the network ID is not recognized.
+ *
+ * @param node Node instance
+ * @param nwid Network ID
+ * @param ptr New network-associated pointer
+ */
+ZT_SDK_API void ZT_Node_setNetworkUserPtr(ZT_Node *node,uint64_t nwid,void *ptr);
 
 /**
  * Free a query result buffer
