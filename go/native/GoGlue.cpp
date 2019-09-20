@@ -124,6 +124,7 @@ static int ZT_GoNode_VirtualNetworkConfigFunction(
 	if (cfg)
 		ev.data.nconf.conf = *cfg;
 	reinterpret_cast<ZT_GoNode *>(uptr)->eq.post(ev);
+	return 0;
 }
 
 static void ZT_GoNode_VirtualNetworkFrameFunction(
@@ -218,7 +219,7 @@ static ZT_ALWAYS_INLINE void doUdpSend(ZT_SOCKET sock,const struct sockaddr_stor
 	}
 }
 
-static void ZT_GoNode_WirePacketSendFunction(
+static int ZT_GoNode_WirePacketSendFunction(
 	ZT_Node *node,
 	void *uptr,
 	void *tptr,
@@ -242,6 +243,7 @@ static void ZT_GoNode_WirePacketSendFunction(
 			}
 		}
 	}
+	return 0;
 }
 
 static int ZT_GoNode_PathCheckFunction(
@@ -291,14 +293,15 @@ extern "C" ZT_GoNode *ZT_GoNode_new(
 {
 	try {
 		struct ZT_Node_Callbacks cb;
-		cb.virtualNetworkConfigFunction = &ZT_GoNode_VirtualNetworkConfigFunction;
-		cb.virtualNetworkFrameFunction = &ZT_GoNode_VirtualNetworkFrameFunction;
-		cb.eventCallback = &ZT_GoNode_EventCallback;
 		cb.statePutFunction = &ZT_GoNode_StatePutFunction;
 		cb.stateGetFunction = &ZT_GoNode_StateGetFunction;
+		cb.wirePacketSendFunction = &ZT_GoNode_WirePacketSendFunction;
+		cb.virtualNetworkFrameFunction = &ZT_GoNode_VirtualNetworkFrameFunction;
+		cb.virtualNetworkConfigFunction = &ZT_GoNode_VirtualNetworkConfigFunction;
+		cb.eventCallback = &ZT_GoNode_EventCallback;
+		cb.dnsResolver = &ZT_GoNode_DNSResolver;
 		cb.pathCheckFunction = &ZT_GoNode_PathCheckFunction;
 		cb.pathLookupFunction = &ZT_GoNode_PathLookupFunction;
-		cb.dnsResolver = &ZT_GoNode_DNSResolver;
 
 		ZT_GoNode_Impl *gn = new ZT_GoNode_Impl;
 		const int64_t now = OSUtils::now();
@@ -334,17 +337,14 @@ extern "C" void ZT_GoNode_delete(ZT_GoNode *gn)
 	sd.type = ZT_GONODE_EVENT_SHUTDOWN;
 	gn->eq.post(sd);
 
-	std::vector<std::thread> th;
 	gn->threads_l.lock();
 	for(auto t=gn->threads.begin();t!=gn->threads.end();++t) {
 		t->second.run = false;
 		shutdown(t->first,SHUT_RDWR);
 		close(t->first);
-		th.emplace_back(t->second.thr);
+		t->second.thr.join();
 	}
 	gn->threads_l.unlock();
-	for(auto t=th.begin();t!=th.end();++t)
-		t->join();
 
 	gn->taps_l.lock();
 	for(auto t=gn->taps.begin();t!=gn->taps.end();++t)
@@ -518,9 +518,10 @@ extern "C" int ZT_GoNode_phyStopListen(ZT_GoNode *gn,const char *dev,const char 
 			} else ++t;
 		}
 	}
+	return 0;
 }
 
-extern "C" int ZT_GoNode_waitForEvent(ZT_GoNode *gn,ZT_GoNodeEvent *ev)
+extern "C" void ZT_GoNode_waitForEvent(ZT_GoNode *gn,ZT_GoNodeEvent *ev)
 {
 	gn->eq.get(*ev);
 }

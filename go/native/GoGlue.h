@@ -45,7 +45,7 @@ struct ZT_GoNodeEvent_Impl
 {
 #ifdef __cplusplus
 	inline ZT_GoNodeEvent_Impl() { memset(reinterpret_cast<void *>(this),0,sizeof(ZT_GoNodeEvent_Impl)); }
-	inline ZT_GoNodeEvent_Impl(const ZT_GoNodeEvent &ev) { memcpy(reinterpret_cast<void *>(this),reinterpret_cast<const void *>(&ev),sizeof(ZT_GoNodeEvent_Impl)); }
+	inline ZT_GoNodeEvent_Impl(const ZT_GoNodeEvent_Impl &ev) { memcpy(reinterpret_cast<void *>(this),reinterpret_cast<const void *>(&ev),sizeof(ZT_GoNodeEvent_Impl)); }
 	inline ZT_GoNodeEvent_Impl &operator=(const ZT_GoNodeEvent_Impl &ev) { memcpy(reinterpret_cast<void *>(this),reinterpret_cast<const void *>(&ev),sizeof(ZT_GoNodeEvent_Impl)); return *this; }
 #endif
 
@@ -106,7 +106,7 @@ int ZT_GoNode_phyStartListen(ZT_GoNode *gn,const char *dev,const char *ip,const 
 /* Close all listener threads for a given local IP and port */
 int ZT_GoNode_phyStopListen(ZT_GoNode *gn,const char *dev,const char *ip,const int port);
 
-int ZT_GoNode_waitForEvent(ZT_GoNode *gn,ZT_GoNodeEvent *ev);
+void ZT_GoNode_waitForEvent(ZT_GoNode *gn,ZT_GoNodeEvent *ev);
 
 ZT_GoTap *ZT_GoNode_join(ZT_GoNode *gn,uint64_t nwid);
 

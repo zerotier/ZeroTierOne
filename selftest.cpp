@@ -620,31 +620,6 @@ static int testIdentity()
 		}
 	}
 
-	/*
-	try {
-		std::cout << "[identity] Testing Locator and DNS TXT encoding... "; std::cout.flush();
-		uint8_t dnsPub[ZT_ECC384_PUBLIC_KEY_SIZE],dnsPriv[ZT_ECC384_PRIVATE_KEY_SIZE];
-		ECC384GenerateKey(dnsPub,dnsPriv);
-		std::unique_ptr<Locator> l(new Locator());
-		std::unique_ptr<Identity> ti(new Identity());
-		ti->generate(Identity::C25519);
-		l->add(InetAddress("127.0.0.1/9993"));
-		l->add(InetAddress("cafe:babe:face:dbad:deca:f::1/9993"));
-		l->finish(*ti,OSUtils::now());
-		l->sign(*ti);
-		auto tr = l->makeTxtRecords(dnsPub,dnsPriv);
-		std::unique_ptr<Locator> l2(new Locator());
-		if (!l2->decodeTxtRecords(tr.begin(),tr.end())) {
-			std::cout << "FAILED (decode TXT records returned false)" ZT_EOL_S;
-			return -1;
-		}
-		std::cout << "OK" ZT_EOL_S;
-	} catch (int e) {
-		std::cout << "FAILED (threw integer exception " << e << ")" ZT_EOL_S;
-		return -1;
-	}
-	*/
-
 	return 0;
 }
 

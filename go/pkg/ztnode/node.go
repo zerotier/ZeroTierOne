@@ -14,10 +14,10 @@
 package ztnode
 
 //#cgo CFLAGS: -O3
-//#cgo LDFLAGS: ${SRCDIR}/../../../build/node/libzt_core.a -lc++
+//#cgo LDFLAGS: ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/go/native/libzt_go_native.a -lc++
 //#define ZT_CGO 1
 //#include <stdint.h>
-//#include "../../../include/ZeroTierCore.h"
+//#include "../../native/GoGlue.h"
 //#if __has_include("../../../version.h")
 //#include "../../../version.h"
 //#else
@@ -27,6 +27,7 @@ package ztnode
 //#define ZEROTIER_ONE_VERSION_BUILD 255
 //#endif
 import "C"
+import "sync"
 
 const (
 	// CoreVersionMajor is the major version of the ZeroTier core
@@ -44,5 +45,11 @@ const (
 
 // Node is an instance of a ZeroTier node
 type Node struct {
-	node *C.ZT_Node
+	gn *C.ZT_GoNode
+	zn *C.ZT_Node
 }
+
+var (
+	nodesByUserPtr     map[uintptr]*Node
+	nodesByUserPtrLock sync.Mutex
+)

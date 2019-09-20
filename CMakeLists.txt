@@ -1,5 +1,3 @@
-# CMake build script for ZeroTier One
-
 cmake_minimum_required (VERSION 3.8)
 
 if(${CMAKE_VERSION} VERSION_LESS 3.15)
@@ -13,17 +11,11 @@ if(WIN32)
 	set(CMAKE_SYSTEM_VERSION "7" CACHE STRING INTERNAL FORCE)
 endif(WIN32)
 
-#
-# ZeroTier One Version Config
-#
-set(ZEROTIER_ONE_VERSION_MAJOR 1 CACHE INTERNAL "")
-set(ZEROTIER_ONE_VERSION_MINOR 9 CACHE INTERNAL "")
+set(ZEROTIER_ONE_VERSION_MAJOR 2 CACHE INTERNAL "")
+set(ZEROTIER_ONE_VERSION_MINOR 0 CACHE INTERNAL "")
 set(ZEROTIER_ONE_VERSION_REVISION 0 CACHE INTERNAL "")
 set(ZEROTIER_ONE_VERSION_BUILD 0 CACHE INTERNAL "")
 
-#
-# Set a default build type if none was specified
-#
 set(default_build_type "Release")
 if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
 	set(default_build_type "Debug")
@@ -59,8 +51,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	add_definitions(-DZT_TRACE)
 endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
-project(zerotier-one
-	DESCRIPTION "ZeroTier One"
+project(zerotier
+	DESCRIPTION "ZeroTier Network Hypervisor"
 	LANGUAGES CXX C)
 
 if(WIN32)
@@ -141,20 +133,20 @@ endif()
 add_subdirectory(node)
 add_subdirectory(controller)
 add_subdirectory(osdep)
-#add_subdirectory(service)
 add_subdirectory(root)
+add_subdirectory(go/native)
 
-if(WIN32)
-	add_subdirectory("windows/WinUI")
-	add_subdirectory("windows/copyutil")
-	add_definitions(-DNOMINMAX)
-endif(WIN32)
+#if(WIN32)
+#	add_subdirectory("windows/WinUI")
+#	add_subdirectory("windows/copyutil")
+#	add_definitions(-DNOMINMAX)
+#endif(WIN32)
 
-set(libs
-#	zt_service
+set(
 	zt_osdep
 	zt_core
 	zt_controller
+	zt_go_native
 )
 
 configure_file(
@@ -162,40 +154,47 @@ configure_file(
 	${CMAKE_BINARY_DIR}/version.h
 )
 
-set(src
-	one.cpp
-	"ext/http-parser/http_parser.c"
-)
-set(headers
-	"ext/http-parser/http_parser.h"
-)
+#set(src
+#	one.cpp
+#	"ext/http-parser/http_parser.c"
+#)
+#set(headers
+#	"ext/http-parser/http_parser.h"
+#)
 
 if(WIN32)
 	set(libs ${libs} wsock32 ws2_32 rpcrt4 iphlpapi)
-	set(src
-		${src}
-		"windows/ZeroTierOne/ServiceBase.cpp"
-		"windows/ZeroTierOne/ServiceInstaller.cpp"
-		"windows/ZeroTierOne/ZeroTierOneService.cpp"
-		"windows/ZeroTierOne/ZeroTierOne.rc"
-	)
-	set(headers
-		${headers}
-		"windows/ZeroTierOne/ServiceBase.h"
-		"windows/ZeroTierOne/ServiceInstaller.h"
-		"windows/ZeroTierOne/ZeroTierOneService.h"
-	)
 else(WIN32)
-	set(libs ${libs} pthread resolv)
+	set(libs ${libs} pthread)
 endif(WIN32)
 
-if(BUILD_CENTRAL_CONTROLLER)
-	set(libs ${libs} rabbitmq-static ${PostgreSQL_LIBRARIES})
-endif(BUILD_CENTRAL_CONTROLLER)
+#if(WIN32)
+#	set(libs ${libs} wsock32 ws2_32 rpcrt4 iphlpapi)
+#	set(src
+#		${src}
+#		"windows/ZeroTierOne/ServiceBase.cpp"
+#		"windows/ZeroTierOne/ServiceInstaller.cpp"
+#		"windows/ZeroTierOne/ZeroTierOneService.cpp"
+#		"windows/ZeroTierOne/ZeroTierOne.rc"
+#	)
+#	set(headers
+#		${headers}
+#		"windows/ZeroTierOne/ServiceBase.h"
+#		"windows/ZeroTierOne/ServiceInstaller.h"
+#		"windows/ZeroTierOne/ZeroTierOneService.h"
+#	)
+#else(WIN32)
+#	set(libs ${libs} pthread resolv)
+#endif(WIN32)
 
-add_executable(${PROJECT_NAME} ${src} ${headers})
-target_link_libraries(${PROJECT_NAME} ${libs})
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
+#if(BUILD_CENTRAL_CONTROLLER)
+#	set(libs ${libs} rabbitmq-static ${PostgreSQL_LIBRARIES})
+#endif(BUILD_CENTRAL_CONTROLLER)
+
+#add_executable(${PROJECT_NAME} ${src} ${headers})
+#target_link_libraries(${PROJECT_NAME} ${libs})
+#target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 
 add_executable(zerotier-selftest selftest.cpp)
-target_link_libraries(zerotier-selftest ${libs})
+target_link_libraries(zerotier-selftest ${libs} zt_core zt_osdep)
+target_compile_features(zerotier-selftest PUBLIC cxx_std_11)

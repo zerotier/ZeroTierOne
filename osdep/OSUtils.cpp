@@ -30,15 +30,6 @@
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <dirent.h>
-#include <netdb.h>
-#include <arpa/nameser.h>
-#include <resolv.h>
-#ifndef C_IN
-#define C_IN ns_c_in
-#endif
-#ifndef T_TXT
-#define T_TXT ns_t_txt
-#endif
 #endif
 
 #ifdef __WINDOWS__
@@ -298,54 +289,6 @@ int64_t OSUtils::getFileSize(const char *path)
 		return s.st_size;
 #endif
 	return -1;
-}
-
-std::vector<std::string> OSUtils::resolveTxt(const char *host)
-{
-	static std::atomic_bool libresolvInitialized(false);
-	if (!libresolvInitialized.exchange(true))
-		res_init();
-
-	std::vector<std::string> results;
-
-	uint8_t answer[32768];
-	char name[1024];
-	int alen = res_search(host,C_IN,T_TXT,answer,sizeof(answer));
-	if ((alen > 12)&&(alen < sizeof(answer))) {
-		uint8_t *pptr = answer + 12;
-		uint8_t *const end = answer + alen;
-		int explen = dn_expand(answer,end,pptr,name,sizeof(name));
-		if (explen > 0) {
-			pptr += explen;
-			if ((pptr + 2) >= end) return results;
-			unsigned int rtype = ((unsigned int)pptr[0] << 8) | (unsigned int)pptr[1];
-			if (rtype == T_TXT) {
-				pptr += 4;
-				if (pptr >= end) return results;
-				while (pptr < end) {
-					explen = dn_expand(answer,end,pptr,name,sizeof(name));
-					if (explen > 0) {
-						pptr += explen;
-						if ((pptr + 2) >= end) return results;
-						rtype = ((unsigned int)pptr[0] << 8) | (unsigned int)pptr[1];
-						pptr += 10;
-						if (pptr >= end) return results;
-						unsigned int elen = *(pptr++);
-						if (elen) {
-							if ((pptr + elen) > end) return results;
-							if (rtype == T_TXT)
-								results.push_back(std::string((const char *)pptr,elen));
-							pptr += elen;
-						}
-					} else {
-						return results;
-					}
-				}
-			}
-		}
-	}
-
-	return results;
 }
 
 bool OSUtils::readFile(const char *path,std::string &buf)

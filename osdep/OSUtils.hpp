@@ -186,14 +186,6 @@ public:
 	static int64_t getFileSize(const char *path);
 
 	/**
-	 * Get full DNS TXT results
-	 * 
-	 * @param name DNS FQDN
-	 * @return TXT record result(s) or empty on error or not found
-	 */
-	static std::vector<std::string> resolveTxt(const char *name);
-
-	/**
 	 * @return Current time in milliseconds since epoch
 	 */
 	static inline int64_t now()
