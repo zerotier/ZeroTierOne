@@ -18,8 +18,9 @@
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
+#include <atomic>
 
-#include "Thread.hpp"
+#include "../node/Constants.hpp"
 
 namespace ZeroTier {
 
@@ -32,16 +33,23 @@ template <class T>
 class BlockingQueue
 {
 public:
-	BlockingQueue(void) : r(true) {}
+	enum TimedWaitResult
+	{
+		OK,
+		TIMED_OUT,
+		STOP
+	};
 
-	inline void post(T t)
+	ZT_ALWAYS_INLINE BlockingQueue(void) : r(true) {}
+
+	ZT_ALWAYS_INLINE void post(T t)
 	{
 		std::lock_guard<std::mutex> lock(m);
 		q.push(t);
 		c.notify_one();
 	}
 
-	inline void postLimit(T t,const unsigned long limit)
+	ZT_ALWAYS_INLINE void postLimit(T t,const unsigned long limit)
 	{
 		std::unique_lock<std::mutex> lock(m);
 		for(;;) {
@@ -56,7 +64,7 @@ public:
 		}
 	}
 
-	inline void stop(void)
+	ZT_ALWAYS_INLINE void stop(void)
 	{
 		std::lock_guard<std::mutex> lock(m);
 		r = false;
@@ -64,7 +72,7 @@ public:
 		gc.notify_all();
 	}
 
-	inline bool get(T &value)
+	ZT_ALWAYS_INLINE bool get(T &value)
 	{
 		std::unique_lock<std::mutex> lock(m);
 		if (!r) return false;
@@ -81,14 +89,7 @@ public:
 		return true;
 	}
 
-	enum TimedWaitResult
-	{
-		OK,
-		TIMED_OUT,
-		STOP
-	};
-
-	inline TimedWaitResult get(T &value,const unsigned long ms)
+	ZT_ALWAYS_INLINE TimedWaitResult get(T &value,const unsigned long ms)
 	{
 		const std::chrono::milliseconds ms2{ms};
 		std::unique_lock<std::mutex> lock(m);
@@ -105,7 +106,7 @@ public:
 	}
 
 private:
-	volatile bool r;
+	std::atomic_bool r;
 	std::queue<T> q;
 	mutable std::mutex m;
 	mutable std::condition_variable c,gc;

@@ -141,7 +141,7 @@ endif()
 add_subdirectory(node)
 add_subdirectory(controller)
 add_subdirectory(osdep)
-add_subdirectory(service)
+#add_subdirectory(service)
 add_subdirectory(root)
 
 if(WIN32)
@@ -151,7 +151,7 @@ if(WIN32)
 endif(WIN32)
 
 set(libs
-	zt_service
+#	zt_service
 	zt_osdep
 	zt_core
 	zt_controller
