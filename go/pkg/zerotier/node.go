@@ -348,7 +348,7 @@ func goDNSResolverFunc(gn unsafe.Pointer, dnsRecordTypes unsafe.Pointer, numDNSR
 }
 
 //export goVirtualNetworkConfigFunc
-func goVirtualNetworkConfigFunc(gn, tapP unsafe.Pointer, nwid C.uint64_t, op C.int, conf unsafe.Pointer) C.int {
+func goVirtualNetworkConfigFunc(gn, tapP unsafe.Pointer, nwid C.uint64_t, op C.int, conf unsafe.Pointer) {
 	nodesByUserPtrLock.RLock()
 	node := nodesByUserPtr[uintptr(gn)]
 	nodesByUserPtrLock.RUnlock()

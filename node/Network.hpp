@@ -459,7 +459,6 @@ private:
 		NETCONF_FAILURE_NOT_FOUND,
 		NETCONF_FAILURE_INIT_FAILED
 	} _netconfFailure;
-	int _portError; // return value from port config callback
 
 	Hashtable<Address,Membership> _memberships;
 

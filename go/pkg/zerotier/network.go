@@ -19,7 +19,6 @@ import (
 	"net"
 	"strconv"
 	"sync"
-	"time"
 )
 
 // NetworkID is a network's 64-bit unique ID
@@ -70,9 +69,6 @@ type NetworkConfig struct {
 	// Status is a status code indicating this network's authorization status
 	Status int
 
-	// LastUpdated is the time this network's configuration was last updated from the controller
-	LastUpdated time.Time
-
 	// Type is this network's type
 	Type int
 
@@ -80,34 +76,19 @@ type NetworkConfig struct {
 	MTU int
 
 	// CanBridge is true if this network is allowed to bridge in other devices with different Ethernet addresses
-	CanBridge bool
+	Bridge bool
 
-	// AllowsBroadcast is true if the broadcast (ff:ff:ff:ff:ff:ff) address works (excluding IPv4 ARP which is handled via a special path)
-	AllowsBroadcast bool
+	// BroadcastEnabled is true if the broadcast (ff:ff:ff:ff:ff:ff) address works (excluding IPv4 ARP which is handled via a special path)
+	BroadcastEnabled bool
 
-	// IPs are static IPs assigned by the network controller to this device
-	IPs []net.IPNet
+	// Network configuration revision number according to network controller
+	NetconfRevision uint64
+
+	// AssignedAddresses are static IPs assigned by the network controller to this device
+	AssignedAddresses []net.IPNet
 
 	// Routes are static routes assigned by the network controller to this device
 	Routes []Route
-
-	// MulticastSubscriptions are this device's current multicast subscriptions
-	MulticastSubscriptions []MulticastGroup
-
-	// Enabled is true if this network's tap device is enabled
-	Enabled bool
-
-	// TapDeviceType is a human-readable description of this network's tap device type
-	TapDeviceType string
-
-	// TapDevicePort is the OS-specific virtual device name (if applicable)
-	TapDevicePort string
-
-	// TapErrorCode is an implementation-specific error code from the tap device (0 for no error)
-	TapErrorCode int
-
-	// TapError is a human-readable description of this tap device's error state or an empty string if there is no error
-	TapError string
 }
 
 // Network is a currently joined network
@@ -125,11 +106,7 @@ func (n *Network) ID() NetworkID { return n.id }
 // Config returns a copy of this network's current configuration
 func (n *Network) Config() NetworkConfig {
 	n.configLock.RLock()
-	n.tapLock.RLock()
-	defer n.tapLock.RUnlock()
 	defer n.configLock.RUnlock()
-	n.config.Enabled = n.tap.Enabled()
-	n.config.TapErrorCode, n.config.TapError = n.tap.Error()
 	return n.config
 }
 

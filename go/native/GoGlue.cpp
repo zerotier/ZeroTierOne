@@ -108,12 +108,12 @@ extern "C" int goPathLookupFunc(ZT_GoNode *,uint64_t,int,int *,uint8_t [16],int 
 extern "C" void goStateObjectPutFunc(ZT_GoNode *,int,const uint64_t [2],const void *,int);
 extern "C" int goStateObjectGetFunc(ZT_GoNode *,int,const uint64_t [2],void *,unsigned int);
 extern "C" void goDNSResolverFunc(ZT_GoNode *,const uint8_t *,int,const char *,uintptr_t);
-extern "C" int goVirtualNetworkConfigFunc(ZT_GoNode *,ZT_GoTap *,uint64_t,int,const ZT_VirtualNetworkConfig *);
+extern "C" void goVirtualNetworkConfigFunc(ZT_GoNode *,ZT_GoTap *,uint64_t,int,const ZT_VirtualNetworkConfig *);
 extern "C" void goZtEvent(ZT_GoNode *,int,const void *);
 extern "C" void goHandleTapAddedMulticastGroup(ZT_GoNode *,ZT_GoTap *,uint64_t,uint64_t,uint32_t);
 extern "C" void goHandleTapRemovedMulticastGroup(ZT_GoNode *,ZT_GoTap *,uint64_t,uint64_t,uint32_t);
 
-static int ZT_GoNode_VirtualNetworkConfigFunction(
+static void ZT_GoNode_VirtualNetworkConfigFunction(
 	ZT_Node *node,
 	void *uptr,
 	void *tptr,
@@ -122,7 +122,7 @@ static int ZT_GoNode_VirtualNetworkConfigFunction(
 	enum ZT_VirtualNetworkConfigOperation op,
 	const ZT_VirtualNetworkConfig *cfg)
 {
-	return goVirtualNetworkConfigFunc(reinterpret_cast<ZT_GoNode *>(uptr),reinterpret_cast<ZT_GoTap *>(*nptr),nwid,op,cfg);
+	goVirtualNetworkConfigFunc(reinterpret_cast<ZT_GoNode *>(uptr),reinterpret_cast<ZT_GoTap *>(*nptr),nwid,op,cfg);
 }
 
 static void ZT_GoNode_VirtualNetworkFrameFunction(

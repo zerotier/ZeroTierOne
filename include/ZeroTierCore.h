@@ -687,17 +687,7 @@ enum ZT_VirtualNetworkStatus
 	/**
 	 * Netconf master exists, but this virtual network does not
 	 */
-	ZT_NETWORK_STATUS_NOT_FOUND = 3,
-
-	/**
-	 * Initialization of network failed or other internal error
-	 */
-	ZT_NETWORK_STATUS_PORT_ERROR = 4,
-
-	/**
-	 * ZeroTier core version too old
-	 */
-	ZT_NETWORK_STATUS_CLIENT_TOO_OLD = 5
+	ZT_NETWORK_STATUS_NOT_FOUND = 3
 };
 
 /**
@@ -1099,15 +1089,6 @@ typedef struct
 	unsigned int mtu;
 
 	/**
-	 * If nonzero, the network this port belongs to indicates DHCP availability
-	 *
-	 * This is a suggestion. The underlying implementation is free to ignore it
-	 * for security or other reasons. This is simply a netconf parameter that
-	 * means 'DHCP is available on this network.'
-	 */
-	int dhcp;
-
-	/**
 	 * If nonzero, this port is allowed to bridge to other networks
 	 *
 	 * This is informational. If this is false (0), bridged packets will simply
@@ -1119,11 +1100,6 @@ typedef struct
 	 * If nonzero, this network supports and allows broadcast (ff:ff:ff:ff:ff:ff) traffic
 	 */
 	int broadcastEnabled;
-
-	/**
-	 * If the network is in PORT_ERROR state, this is the (negative) error code most recently reported
-	 */
-	int portError;
 
 	/**
 	 * Revision number as reported by controller or 0 if still waiting for config
@@ -1409,12 +1385,8 @@ typedef void ZT_Node;
  * This should not call multicastSubscribe() or other network-modifying
  * methods, as this could cause a deadlock in multithreaded or interrupt
  * driven environments.
- *
- * This must return 0 on success. It can return any OS-dependent error code
- * on failure, and this results in the network being placed into the
- * PORT_ERROR state.
  */
-typedef int (*ZT_VirtualNetworkConfigFunction)(
+typedef void (*ZT_VirtualNetworkConfigFunction)(
 	ZT_Node *,                             /* Node */
 	void *,                                /* User ptr */
 	void *,                                /* Thread ptr */

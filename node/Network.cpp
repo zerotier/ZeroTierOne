@@ -548,8 +548,7 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 	_portInitialized(false),
 	_lastConfigUpdate(0),
 	_destroyed(false),
-	_netconfFailure(NETCONF_FAILURE_NONE),
-	_portError(0)
+	_netconfFailure(NETCONF_FAILURE_NONE)
 {
 	for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i)
 		_incomingConfigChunks[i].ts = 0;
@@ -584,7 +583,7 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 	if (!_portInitialized) {
 		ZT_VirtualNetworkConfig ctmp;
 		_externalConfig(&ctmp);
-		_portError = RR->node->configureVirtualNetworkPort(tPtr,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
+		RR->node->configureVirtualNetworkPort(tPtr,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 		_portInitialized = true;
 	}
 }
@@ -991,7 +990,7 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 			_externalConfig(&ctmp);
 		}
 
-		_portError = RR->node->configureVirtualNetworkPort(tPtr,_id,&_uPtr,(oldPortInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
+		RR->node->configureVirtualNetworkPort(tPtr,_id,&_uPtr,(oldPortInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 
 		if (saveToDisk) {
 			try {
@@ -1311,8 +1310,6 @@ void Network::_requestConfiguration(void *tPtr)
 
 ZT_VirtualNetworkStatus Network::_status() const
 {
-	if (_portError)
-		return ZT_NETWORK_STATUS_PORT_ERROR;
 	switch(_netconfFailure) {
 		case NETCONF_FAILURE_ACCESS_DENIED:
 			return ZT_NETWORK_STATUS_ACCESS_DENIED;
@@ -1321,7 +1318,7 @@ ZT_VirtualNetworkStatus Network::_status() const
 		case NETCONF_FAILURE_NONE:
 			return ((_config) ? ZT_NETWORK_STATUS_OK : ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION);
 		default:
-			return ZT_NETWORK_STATUS_PORT_ERROR;
+			return ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION;
 	}
 }
 
@@ -1336,7 +1333,6 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	ec->status = _status();
 	ec->type = (_config) ? (_config.isPrivate() ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC) : ZT_NETWORK_TYPE_PRIVATE;
 	ec->mtu = (_config) ? _config.mtu : ZT_DEFAULT_MTU;
-	ec->dhcp = 0;
 	std::vector<Address> ab;
 	for(unsigned int i=0;i<_config.specialistCount;++i) {
 		if ((_config.specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)
@@ -1344,7 +1340,6 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	}
 	ec->bridge = (std::find(ab.begin(),ab.end(),RR->identity.address()) != ab.end()) ? 1 : 0;
 	ec->broadcastEnabled = (_config) ? (_config.enableBroadcast() ? 1 : 0) : 0;
-	ec->portError = _portError;
 	ec->netconfRevision = (_config) ? (unsigned long)_config.revision : 0;
 
 	ec->assignedAddressCount = 0;
