@@ -983,7 +983,7 @@ typedef struct
 	uint16_t flags;
 
 	/**
-	 * Route metric (not currently used)
+	 * Route metric
 	 */
 	uint16_t metric;
 } ZT_VirtualNetworkRoute;

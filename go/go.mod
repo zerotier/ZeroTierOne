@@ -1,3 +1,3 @@
-module zerotier-go
+module zerotier
 
 go 1.13

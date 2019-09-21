@@ -31,57 +31,6 @@ typedef void ZT_GoTap;
 struct ZT_GoNode_Impl;
 typedef struct ZT_GoNode_Impl ZT_GoNode;
 
-#define ZT_GONODE_EVENT_SHUTDOWN 0
-#define ZT_GONODE_EVENT_ZTEVENT 1
-#define ZT_GONODE_EVENT_DNS_GET_TXT 2
-#define ZT_GONODE_EVENT_STATE_PUT 3
-#define ZT_GONODE_EVENT_STATE_DELETE 4
-#define ZT_GONODE_EVENT_NETWORK_CONFIG_UPDATE 5
-
-/**
- * Variant type for async core generated events pulled via waitForEvent
- */
-struct ZT_GoNodeEvent_Impl
-{
-#ifdef __cplusplus
-	inline ZT_GoNodeEvent_Impl() { memset(reinterpret_cast<void *>(this),0,sizeof(ZT_GoNodeEvent_Impl)); }
-	inline ZT_GoNodeEvent_Impl(const ZT_GoNodeEvent_Impl &ev) { memcpy(reinterpret_cast<void *>(this),reinterpret_cast<const void *>(&ev),sizeof(ZT_GoNodeEvent_Impl)); }
-	inline ZT_GoNodeEvent_Impl &operator=(const ZT_GoNodeEvent_Impl &ev) { memcpy(reinterpret_cast<void *>(this),reinterpret_cast<const void *>(&ev),sizeof(ZT_GoNodeEvent_Impl)); return *this; }
-#endif
-
-	int type;
-
-	union {
-		/* ZeroTier event of ZT_Event type */
-		struct {
-			int type;
-		} zt;
-
-		/* DNS resolution request */
-		struct {
-			uintptr_t requestId;
-			char dnsName[256];
-		} dns;
-
-		/* State object put or delete request */
-		struct {
-			uint8_t data[ZT_MAX_STATE_OBJECT_SIZE];
-			unsigned int len;
-			int objType;
-			uint64_t id[2];
-		} sobj;
-
-		/* Network configuration update event */
-		struct {
-			ZT_GoTap *tap;
-			int op; /* ZT_VirtualNetworkConfigOperation */
-			ZT_VirtualNetworkConfig conf;
-		} nconf;
-	} data;
-};
-
-typedef struct ZT_GoNodeEvent_Impl ZT_GoNodeEvent;
-
 /****************************************************************************/
 
 #ifdef __cplusplus
@@ -90,11 +39,10 @@ extern "C" {
 
 /****************************************************************************/
 
-ZT_GoNode *ZT_GoNode_new(
-	const char *workingPath,
-	int (*goPathCheckFunc)(ZT_GoNode *,ZT_Node *,uint64_t ztAddress,const void *),
-	int (*goPathLookupFunc)(ZT_GoNode *,ZT_Node *,int desiredAddressFamily,void *),
-	int (*goStateObjectGetFunc)(ZT_GoNode *,ZT_Node *,int objType,const uint64_t id[2],void *buf,unsigned int bufSize));
+
+/****************************************************************************/
+
+ZT_GoNode *ZT_GoNode_new(const char *workingPath);
 
 void ZT_GoNode_delete(ZT_GoNode *gn);
 
@@ -105,8 +53,6 @@ int ZT_GoNode_phyStartListen(ZT_GoNode *gn,const char *dev,const char *ip,const 
 
 /* Close all listener threads for a given local IP and port */
 int ZT_GoNode_phyStopListen(ZT_GoNode *gn,const char *dev,const char *ip,const int port);
-
-void ZT_GoNode_waitForEvent(ZT_GoNode *gn,ZT_GoNodeEvent *ev);
 
 ZT_GoTap *ZT_GoNode_join(ZT_GoNode *gn,uint64_t nwid);
 
@@ -130,7 +76,7 @@ int ZT_GoTap_removeIp(ZT_GoTap *tap,int af,const void *ip,int port);
  */
 int ZT_GoTap_ips(ZT_GoTap *tap,void *buf,unsigned int bufSize);
 
-const char *ZT_GoTap_deviceName(ZT_GoTap *tap);
+void ZT_GoTap_deviceName(ZT_GoTap *tap,char nbuf[256]);
 
 void ZT_GoTap_setFriendlyName(ZT_GoTap *tap,const char *friendlyName);
 

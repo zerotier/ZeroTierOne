@@ -20,7 +20,6 @@
 #include "../../node/MAC.hpp"
 #include "../../node/Address.hpp"
 #include "../../osdep/OSUtils.hpp"
-#include "../../osdep/BlockingQueue.hpp"
 #include "../../osdep/EthernetTap.hpp"
 
 #include <string.h>
@@ -89,10 +88,6 @@ struct ZT_GoNode_Impl
 	Node *node;
 	volatile int64_t nextBackgroundTaskDeadline;
 
-	int (*goPathCheckFunc)(ZT_GoNode *,ZT_Node *,uint64_t ztAddress,const void *);
-	int (*goPathLookupFunc)(ZT_GoNode *,ZT_Node *,int desiredAddressFamily,void *);
-	int (*goStateObjectGetFunc)(ZT_GoNode *,ZT_Node *,int objType,const uint64_t id[2],void *buf,unsigned int bufSize);
-
 	std::string path;
 	std::atomic_bool run;
 
@@ -102,12 +97,19 @@ struct ZT_GoNode_Impl
 	std::map< uint64_t,std::shared_ptr<EthernetTap> > taps;
 	std::mutex taps_l;
 
-	BlockingQueue<ZT_GoNodeEvent> eq;
-
 	std::thread backgroundTaskThread;
 };
 
-//////////////////////////////////////////////////////////////////////////////
+/****************************************************************************/
+
+/* These functions are implemented in Go in pkg/ztnode/node-callbacks.go */
+extern "C" int goPathCheckFunc(ZT_GoNode *,uint64_t,int,const void *,int);
+extern "C" int goPathLookupFunc(ZT_GoNode *,uint64_t,int,int *,uint8_t [16],int *);
+extern "C" void goStateObjectPutFunc(ZT_GoNode *,int,const uint64_t [2],const void *,int);
+extern "C" int goStateObjectGetFunc(ZT_GoNode *,int,const uint64_t [2],void *,unsigned int);
+extern "C" void goDNSResolverFunc(ZT_GoNode *,const uint8_t *,int,const char *,uintptr_t);
+extern "C" int goVirtualNetworkConfigFunc(ZT_GoNode *,ZT_GoTap *,uint64_t,int,const ZT_VirtualNetworkConfig *);
+extern "C" void goZtEvent(ZT_GoNode *,int,const void *);
 
 static int ZT_GoNode_VirtualNetworkConfigFunction(
 	ZT_Node *node,
@@ -118,13 +120,7 @@ static int ZT_GoNode_VirtualNetworkConfigFunction(
 	enum ZT_VirtualNetworkConfigOperation op,
 	const ZT_VirtualNetworkConfig *cfg)
 {
-	ZT_GoNodeEvent ev;
-	ev.type = ZT_GONODE_EVENT_NETWORK_CONFIG_UPDATE;
-	ev.data.nconf.op = op;
-	if (cfg)
-		ev.data.nconf.conf = *cfg;
-	reinterpret_cast<ZT_GoNode *>(uptr)->eq.post(ev);
-	return 0;
+	return goVirtualNetworkConfigFunc(reinterpret_cast<ZT_GoNode *>(uptr),reinterpret_cast<ZT_GoTap *>(*nptr),nwid,op,cfg);
 }
 
 static void ZT_GoNode_VirtualNetworkFrameFunction(
@@ -151,10 +147,7 @@ static void ZT_GoNode_EventCallback(
 	enum ZT_Event et,
 	const void *data)
 {
-	ZT_GoNodeEvent ev;
-	ev.type = ZT_GONODE_EVENT_ZTEVENT;
-	ev.data.zt.type = et;
-	reinterpret_cast<ZT_GoNode *>(uptr)->eq.post(ev);
+	goZtEvent(reinterpret_cast<ZT_GoNode *>(uptr),et,data);
 }
 
 static void ZT_GoNode_StatePutFunction(
@@ -166,18 +159,7 @@ static void ZT_GoNode_StatePutFunction(
 	const void *data,
 	int len)
 {
-	if (len < ZT_MAX_STATE_OBJECT_SIZE) { // sanity check
-		ZT_GoNodeEvent ev;
-		ev.type = (len >= 0) ? ZT_GONODE_EVENT_STATE_PUT : ZT_GONODE_EVENT_STATE_DELETE;
-		if (len > 0) {
-			memcpy(ev.data.sobj.data,data,len);
-			ev.data.sobj.len = (unsigned int)len;
-		}
-		ev.data.sobj.objType = objType;
-		ev.data.sobj.id[0] = id[0];
-		ev.data.sobj.id[1] = id[1];
-		reinterpret_cast<ZT_GoNode *>(uptr)->eq.post(ev);
-	}
+	goStateObjectPutFunc(reinterpret_cast<ZT_GoNode *>(uptr),objType,id,data,len);
 }
 
 static int ZT_GoNode_StateGetFunction(
@@ -189,7 +171,12 @@ static int ZT_GoNode_StateGetFunction(
 	void *buf,
 	unsigned int buflen)
 {
-	return reinterpret_cast<ZT_GoNode *>(uptr)->goStateObjectGetFunc(reinterpret_cast<ZT_GoNode *>(uptr),reinterpret_cast<ZT_GoNode *>(uptr)->node,(int)objType,id,buf,buflen);
+	return goStateObjectGetFunc(
+		reinterpret_cast<ZT_GoNode *>(uptr),
+		(int)objType,
+		id,
+		buf,
+		buflen);
 }
 
 static ZT_ALWAYS_INLINE void doUdpSend(ZT_SOCKET sock,const struct sockaddr_storage *addr,const void *data,const unsigned int len,const unsigned int ipTTL)
@@ -254,7 +241,23 @@ static int ZT_GoNode_PathCheckFunction(
 	int64_t localSocket,
 	const struct sockaddr_storage *sa)
 {
-	return reinterpret_cast<ZT_GoNode *>(uptr)->goPathCheckFunc(reinterpret_cast<ZT_GoNode *>(uptr),reinterpret_cast<ZT_GoNode *>(uptr)->node,ztAddress,sa);
+	switch(sa->ss_family) {
+		case AF_INET:
+			return goPathCheckFunc(
+				reinterpret_cast<ZT_GoNode *>(uptr),
+				ztAddress,
+				AF_INET,
+				&(reinterpret_cast<const struct sockaddr_in *>(sa)->sin_addr.s_addr),
+				Utils::ntoh((uint16_t)reinterpret_cast<const struct sockaddr_in *>(sa)->sin_port));
+		case AF_INET6:
+			return goPathCheckFunc(
+				reinterpret_cast<ZT_GoNode *>(uptr),
+				ztAddress,
+				AF_INET6,
+				reinterpret_cast<const struct sockaddr_in6 *>(sa)->sin6_addr.s6_addr,
+				Utils::ntoh((uint16_t)reinterpret_cast<const struct sockaddr_in6 *>(sa)->sin6_port));
+	}
+	return 0;
 }
 
 static int ZT_GoNode_PathLookupFunction(
@@ -265,7 +268,32 @@ static int ZT_GoNode_PathLookupFunction(
 	int desiredAddressFamily,
 	struct sockaddr_storage *sa)
 {
-	return reinterpret_cast<ZT_GoNode *>(uptr)->goPathLookupFunc(reinterpret_cast<ZT_GoNode *>(uptr),reinterpret_cast<ZT_GoNode *>(uptr)->node,desiredAddressFamily,sa);
+	int family = 0;
+	uint8_t ip[16];
+	int port = 0;
+	const int result = goPathLookupFunc(
+		reinterpret_cast<ZT_GoNode *>(uptr),
+		ztAddress,
+		desiredAddressFamily,
+		&family,
+		ip,
+		&port
+	);
+	if (result != 0) {
+		switch(family) {
+			case AF_INET:
+				reinterpret_cast<struct sockaddr_in *>(sa)->sin_family = AF_INET;
+				memcpy(&(reinterpret_cast<struct sockaddr_in *>(sa)->sin_addr.s_addr),ip,4);
+				reinterpret_cast<struct sockaddr_in *>(sa)->sin_port = Utils::hton((uint16_t)port);
+				return 1;
+			case AF_INET6:
+				reinterpret_cast<struct sockaddr_in6 *>(sa)->sin6_family = AF_INET6;
+				memcpy(reinterpret_cast<struct sockaddr_in6 *>(sa)->sin6_addr.s6_addr,ip,16);
+				reinterpret_cast<struct sockaddr_in6 *>(sa)->sin6_port = Utils::hton((uint16_t)port);
+				return 1;
+		}
+	}
+	return 0;
 }
 
 static void ZT_GoNode_DNSResolver(
@@ -277,19 +305,14 @@ static void ZT_GoNode_DNSResolver(
 	const char *name,
 	uintptr_t requestId)
 {
-	ZT_GoNodeEvent ev;
-	ev.type = ZT_GONODE_EVENT_DNS_GET_TXT;
-	Utils::scopy(ev.data.dns.dnsName,sizeof(ev.data.dns.dnsName),name);
-	reinterpret_cast<ZT_GoNode *>(uptr)->eq.post(ev);
+	uint8_t t[256];
+	for(unsigned int i=0;(i<numTypes)&&(i<256);++i) t[i] = (uint8_t)types[i];
+	goDNSResolverFunc(reinterpret_cast<ZT_GoNode *>(uptr),t,(int)numTypes,name,requestId);
 }
 
-//////////////////////////////////////////////////////////////////////////////
+/****************************************************************************/
 
-extern "C" ZT_GoNode *ZT_GoNode_new(
-	const char *workingPath,
-	int (*goPathCheckFunc)(ZT_GoNode *,ZT_Node *,uint64_t ztAddress,const void *),
-	int (*goPathLookupFunc)(ZT_GoNode *,ZT_Node *,int desiredAddressFamily,void *),
-	int (*goStateObjectGetFunc)(ZT_GoNode *,ZT_Node *,int objType,const uint64_t id[2],void *buf,unsigned int bufSize))
+extern "C" ZT_GoNode *ZT_GoNode_new(const char *workingPath)
 {
 	try {
 		struct ZT_Node_Callbacks cb;
@@ -307,9 +330,6 @@ extern "C" ZT_GoNode *ZT_GoNode_new(
 		const int64_t now = OSUtils::now();
 		gn->node = new Node(reinterpret_cast<void *>(gn),nullptr,&cb,now);
 		gn->nextBackgroundTaskDeadline = now;
-		gn->goPathCheckFunc = goPathCheckFunc;
-		gn->goPathLookupFunc = goPathLookupFunc;
-		gn->goStateObjectGetFunc = goStateObjectGetFunc;
 		gn->path = workingPath;
 		gn->run = true;
 
@@ -333,10 +353,6 @@ extern "C" void ZT_GoNode_delete(ZT_GoNode *gn)
 {
 	gn->run = false;
 
-	ZT_GoNodeEvent sd;
-	sd.type = ZT_GONODE_EVENT_SHUTDOWN;
-	gn->eq.post(sd);
-
 	gn->threads_l.lock();
 	for(auto t=gn->threads.begin();t!=gn->threads.end();++t) {
 		t->second.run = false;
@@ -356,11 +372,6 @@ extern "C" void ZT_GoNode_delete(ZT_GoNode *gn)
 
 	delete gn->node;
 	delete gn;
-}
-
-extern "C" ZT_Node *ZT_GoNode_getNode(ZT_GoNode *gn)
-{
-	return gn->node;
 }
 
 // Sets flags and socket options common to both IPv4 and IPv6 UDP sockets
@@ -521,11 +532,6 @@ extern "C" int ZT_GoNode_phyStopListen(ZT_GoNode *gn,const char *dev,const char 
 	return 0;
 }
 
-extern "C" void ZT_GoNode_waitForEvent(ZT_GoNode *gn,ZT_GoNodeEvent *ev)
-{
-	gn->eq.get(*ev);
-}
-
 static void tapFrameHandler(void *uptr,void *tptr,uint64_t nwid,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 {
 	ZT_GoNode *const gn = reinterpret_cast<ZT_GoNode *>(uptr);
@@ -560,4 +566,79 @@ extern "C" void ZT_GoNode_leave(ZT_GoNode *gn,uint64_t nwid)
 		gn->node->leave(nwid,nullptr,nullptr);
 		gn->taps.erase(existingTap);
 	}
+}
+
+/****************************************************************************/
+
+extern "C" void ZT_GoTap_setEnabled(ZT_GoTap *tap,int enabled)
+{
+	reinterpret_cast<EthernetTap *>(tap)->setEnabled(enabled != 0);
+}
+
+extern "C" int ZT_GoTap_addIp(ZT_GoTap *tap,int af,const void *ip,int port)
+{
+	switch(af) {
+		case AF_INET:
+			return (reinterpret_cast<EthernetTap *>(tap)->addIp(InetAddress(ip,4,(unsigned int)port)) ? 1 : 0);
+		case AF_INET6:
+			return (reinterpret_cast<EthernetTap *>(tap)->addIp(InetAddress(ip,16,(unsigned int)port)) ? 1 : 0);
+	}
+	return 0;
+}
+
+extern "C" int ZT_GoTap_removeIp(ZT_GoTap *tap,int af,const void *ip,int port)
+{
+	switch(af) {
+		case AF_INET:
+			return (reinterpret_cast<EthernetTap *>(tap)->removeIp(InetAddress(ip,4,(unsigned int)port)) ? 1 : 0);
+		case AF_INET6:
+			return (reinterpret_cast<EthernetTap *>(tap)->removeIp(InetAddress(ip,16,(unsigned int)port)) ? 1 : 0);
+	}
+	return 0;
+}
+
+extern "C" int ZT_GoTap_ips(ZT_GoTap *tap,void *buf,unsigned int bufSize)
+{
+	auto ips = reinterpret_cast<EthernetTap *>(tap)->ips();
+	unsigned int p = 0;
+	uint8_t *const b = reinterpret_cast<uint8_t *>(buf);
+	for(auto ip=ips.begin();ip!=ips.end();++ip) {
+		if ((p + 7) > bufSize)
+			break;
+		const uint8_t *const ipd = reinterpret_cast<const uint8_t *>(ip->rawIpData());
+		const unsigned int port = ip->port();
+		if (ip->isV4()) {
+			b[p++] = AF_INET;
+			b[p++] = ipd[0];
+			b[p++] = ipd[1];
+			b[p++] = ipd[2];
+			b[p++] = ipd[3];
+			b[p++] = (uint8_t)((port >> 8) & 0xff);
+			b[p++] = (uint8_t)(port & 0xff);
+		} else if (ip->isV6()) {
+			if ((p + 19) <= bufSize) {
+				b[p++] = AF_INET6;
+				for(int j=0;j<16;++j)
+					b[p++] = ipd[j];
+				b[p++] = (uint8_t)((port >> 8) & 0xff);
+				b[p++] = (uint8_t)(port & 0xff);
+			}
+		}
+	}
+	return (int)p;
+}
+
+extern "C" void ZT_GoTap_deviceName(ZT_GoTap *tap,char nbuf[256])
+{
+	Utils::scopy(nbuf,256,reinterpret_cast<EthernetTap *>(tap)->deviceName().c_str());
+}
+
+extern "C" void ZT_GoTap_setFriendlyName(ZT_GoTap *tap,const char *friendlyName)
+{
+	reinterpret_cast<EthernetTap *>(tap)->setFriendlyName(friendlyName);
+}
+
+extern "C" void ZT_GoTap_setMtu(ZT_GoTap *tap,unsigned int mtu)
+{
+	reinterpret_cast<EthernetTap *>(tap)->setMtu(mtu);
 }

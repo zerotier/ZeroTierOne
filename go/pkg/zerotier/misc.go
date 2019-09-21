@@ -11,7 +11,7 @@
  */
 /****/
 
-package ztnode
+package zerotier
 
 import "time"
 
