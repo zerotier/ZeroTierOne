@@ -49,7 +49,7 @@ const (
 
 //////////////////////////////////////////////////////////////////////////////
 
-// Node is an instance of a ZeroTier node
+// Node represents an instance of the ZeroTier core node and related C++ I/O code
 type Node struct {
 	path         string
 	networks     map[uint64]*Network

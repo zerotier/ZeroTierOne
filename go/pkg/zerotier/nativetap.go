@@ -38,8 +38,6 @@ type nativeTap struct {
 	multicastGroupHandlersLock sync.Mutex
 }
 
-var _ Tap = &nativeTap{}
-
 // Type returns a human-readable description of this tap implementation
 func (t *nativeTap) Type() string {
 	return "native"

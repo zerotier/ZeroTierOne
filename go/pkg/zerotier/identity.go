@@ -14,22 +14,11 @@
 package zerotier
 
 import (
-	secrand "crypto/rand"
-	"crypto/sha512"
-	"encoding/binary"
+	"encoding/base32"
 	"encoding/hex"
 	"fmt"
 	"strings"
-
-	"golang.org/x/crypto/salsa20/salsa"
-
-	"golang.org/x/crypto/curve25519"
-
-	"golang.org/x/crypto/ed25519"
 )
-
-const ztIdentityGenMemory = 2097152
-const ztIdentityHashCashFirstByteLessThan = 17
 
 // IdentityTypeC25519 is a classic Curve25519/Ed25519 identity
 const IdentityTypeC25519 = 0
@@ -37,54 +26,13 @@ const IdentityTypeC25519 = 0
 // IdentityTypeP384 is an identity containing both NIST P-384 and Curve25519/Ed25519 key types and leveraging both when possible
 const IdentityTypeP384 = 1
 
-func computeZeroTierIdentityMemoryHardHash(publicKey []byte) []byte {
-	s512 := sha512.Sum512(publicKey)
-
-	var genmem [ztIdentityGenMemory]byte
-	var s20key [32]byte
-	var s20ctr [16]byte
-	var s20ctri uint64
-	copy(s20key[:], s512[0:32])
-	copy(s20ctr[0:8], s512[32:40])
-	salsa.XORKeyStream(genmem[0:64], genmem[0:64], &s20ctr, &s20key)
-	s20ctri++
-	for i := 64; i < ztIdentityGenMemory; i += 64 {
-		binary.LittleEndian.PutUint64(s20ctr[8:16], s20ctri)
-		salsa.XORKeyStream(genmem[i:i+64], genmem[i-64:i], &s20ctr, &s20key)
-		s20ctri++
-	}
-
-	var tmp [8]byte
-	for i := 0; i < ztIdentityGenMemory; {
-		idx1 := uint(binary.BigEndian.Uint64(genmem[i:])&7) * 8
-		i += 8
-		idx2 := (uint(binary.BigEndian.Uint64(genmem[i:])) % uint(ztIdentityGenMemory/8)) * 8
-		i += 8
-		gm := genmem[idx2 : idx2+8]
-		d := s512[idx1 : idx1+8]
-		copy(tmp[:], gm)
-		copy(gm, d)
-		copy(d, tmp[:])
-		binary.LittleEndian.PutUint64(s20ctr[8:16], s20ctri)
-		salsa.XORKeyStream(s512[:], s512[:], &s20ctr, &s20key)
-		s20ctri++
-	}
-
-	return s512[:]
-}
-
-// generateDualPair generates a key pair containing two pairs: one for curve25519 and one for ed25519.
-func generateDualPair() (pub [64]byte, priv [64]byte) {
-	k0pub, k0priv, _ := ed25519.GenerateKey(secrand.Reader)
-	var k1pub, k1priv [32]byte
-	secrand.Read(k1priv[:])
-	curve25519.ScalarBaseMult(&k1pub, &k1priv)
-	copy(pub[0:32], k1pub[:])
-	copy(pub[32:64], k0pub[0:32])
-	copy(priv[0:32], k1priv[:])
-	copy(priv[32:64], k0priv[0:32])
-	return
-}
+// Sizes of components of different identity types
+const (
+	IdentityTypeC25519PublicKeySize  = 64  // C25519/Ed25519 keys
+	IdentityTypeC25519PrivateKeySize = 64  // C25519/Ed25519 private keys
+	IdentityTypeP384PublicKeySize    = 209 // C25519/Ed25519, P-384 point-compressed public, P-384 self-signature
+	IdentityTypeP384PrivateKeySize   = 112 // C25519/Ed25519 and P-384 private keys
+)
 
 // Identity is precisely what it sounds like: the address and associated keys for a ZeroTier node
 type Identity struct {
@@ -98,33 +46,6 @@ type Identity struct {
 	PublicKey Blob
 
 	privateKey []byte
-}
-
-// NewIdentity generates a new ZeroTier Identity.
-// This can be a little bit time consuming due to one way proof of work requirements (usually a few hundred milliseconds).
-func NewIdentity() (id Identity) {
-	for {
-		pub, priv := generateDualPair()
-		dig := computeZeroTierIdentityMemoryHardHash(pub[:])
-		if dig[0] < ztIdentityHashCashFirstByteLessThan && dig[59] != 0xff {
-			addr := uint64(dig[59])
-			addr <<= 8
-			addr |= uint64(dig[60])
-			addr <<= 8
-			addr |= uint64(dig[61])
-			addr <<= 8
-			addr |= uint64(dig[62])
-			addr <<= 8
-			addr |= uint64(dig[63])
-			if addr != 0 {
-				id.Address = Address(addr)
-				id.PublicKey = pub[:]
-				id.privateKey = priv[:]
-				break
-			}
-		}
-	}
-	return
 }
 
 // NewIdentityFromString generates a new identity from its string representation.
@@ -151,6 +72,7 @@ func NewIdentityFromString(s string) (*Identity, error) {
 	}
 
 	switch id.Type {
+
 	case 0:
 		id.PublicKey, err = hex.DecodeString(ss[2])
 		if err != nil {
@@ -162,7 +84,24 @@ func NewIdentityFromString(s string) (*Identity, error) {
 				return nil, err
 			}
 		}
+
 	case 1:
+		id.PublicKey, err = base32.StdEncoding.DecodeString(ss[2])
+		if err != nil {
+			return nil, err
+		}
+		if len(id.PublicKey) != IdentityTypeP384PublicKeySize {
+			return nil, ErrInvalidKey
+		}
+		if len(ss) >= 4 {
+			id.privateKey, err = base32.StdEncoding.DecodeString(ss[3])
+			if err != nil {
+				return nil, err
+			}
+			if len(id.privateKey) != IdentityTypeP384PrivateKeySize {
+				return nil, ErrInvalidKey
+			}
+		}
 
 	}
 
