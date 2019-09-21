@@ -43,7 +43,7 @@ func NewMACFromString(s string) (MAC, error) {
 
 // String returns this MAC address in canonical human-readable form
 func (m MAC) String() string {
-	return fmt.Sprintf("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", (m>>40)&0xff, (m>>32)&0xff, (m>>24)&0xff, (m>>16)&0xff, (m>>8)&0xff, m&0xff)
+	return fmt.Sprintf("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", (uint64(m)>>40)&0xff, (uint64(m)>>32)&0xff, (uint64(m)>>24)&0xff, (uint64(m)>>16)&0xff, (uint64(m)>>8)&0xff, uint64(m)&0xff)
 }
 
 // MarshalJSON marshals this MAC as a string

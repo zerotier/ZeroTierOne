@@ -575,24 +575,24 @@ extern "C" void ZT_GoTap_setEnabled(ZT_GoTap *tap,int enabled)
 	reinterpret_cast<EthernetTap *>(tap)->setEnabled(enabled != 0);
 }
 
-extern "C" int ZT_GoTap_addIp(ZT_GoTap *tap,int af,const void *ip,int port)
+extern "C" int ZT_GoTap_addIp(ZT_GoTap *tap,int af,const void *ip,int netmaskBits)
 {
 	switch(af) {
 		case AF_INET:
-			return (reinterpret_cast<EthernetTap *>(tap)->addIp(InetAddress(ip,4,(unsigned int)port)) ? 1 : 0);
+			return (reinterpret_cast<EthernetTap *>(tap)->addIp(InetAddress(ip,4,(unsigned int)netmaskBits)) ? 1 : 0);
 		case AF_INET6:
-			return (reinterpret_cast<EthernetTap *>(tap)->addIp(InetAddress(ip,16,(unsigned int)port)) ? 1 : 0);
+			return (reinterpret_cast<EthernetTap *>(tap)->addIp(InetAddress(ip,16,(unsigned int)netmaskBits)) ? 1 : 0);
 	}
 	return 0;
 }
 
-extern "C" int ZT_GoTap_removeIp(ZT_GoTap *tap,int af,const void *ip,int port)
+extern "C" int ZT_GoTap_removeIp(ZT_GoTap *tap,int af,const void *ip,int netmaskBits)
 {
 	switch(af) {
 		case AF_INET:
-			return (reinterpret_cast<EthernetTap *>(tap)->removeIp(InetAddress(ip,4,(unsigned int)port)) ? 1 : 0);
+			return (reinterpret_cast<EthernetTap *>(tap)->removeIp(InetAddress(ip,4,(unsigned int)netmaskBits)) ? 1 : 0);
 		case AF_INET6:
-			return (reinterpret_cast<EthernetTap *>(tap)->removeIp(InetAddress(ip,16,(unsigned int)port)) ? 1 : 0);
+			return (reinterpret_cast<EthernetTap *>(tap)->removeIp(InetAddress(ip,16,(unsigned int)netmaskBits)) ? 1 : 0);
 	}
 	return 0;
 }
@@ -603,25 +603,22 @@ extern "C" int ZT_GoTap_ips(ZT_GoTap *tap,void *buf,unsigned int bufSize)
 	unsigned int p = 0;
 	uint8_t *const b = reinterpret_cast<uint8_t *>(buf);
 	for(auto ip=ips.begin();ip!=ips.end();++ip) {
-		if ((p + 7) > bufSize)
+		if ((p + 6) > bufSize)
 			break;
 		const uint8_t *const ipd = reinterpret_cast<const uint8_t *>(ip->rawIpData());
-		const unsigned int port = ip->port();
 		if (ip->isV4()) {
 			b[p++] = AF_INET;
 			b[p++] = ipd[0];
 			b[p++] = ipd[1];
 			b[p++] = ipd[2];
 			b[p++] = ipd[3];
-			b[p++] = (uint8_t)((port >> 8) & 0xff);
-			b[p++] = (uint8_t)(port & 0xff);
+			b[p++] = (uint8_t)ip->netmaskBits();
 		} else if (ip->isV6()) {
-			if ((p + 19) <= bufSize) {
+			if ((p + 18) <= bufSize) {
 				b[p++] = AF_INET6;
 				for(int j=0;j<16;++j)
 					b[p++] = ipd[j];
-				b[p++] = (uint8_t)((port >> 8) & 0xff);
-				b[p++] = (uint8_t)(port & 0xff);
+				b[p++] = (uint8_t)ip->netmaskBits();
 			}
 		}
 	}

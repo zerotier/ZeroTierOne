@@ -13,14 +13,14 @@
 
 package zerotier
 
-// Err is a basic string error type for ZeroTier
-type Err string
+import "net"
 
-func (e Err) Error() string { return (string)(e) }
-
-// Simple ZeroTier Errors
-const (
-	ErrInvalidMACAddress      Err = "invalid MAC address"
-	ErrInvalidZeroTierAddress Err = "invalid ZeroTier address"
-	ErrInvalidParameter       Err = "invalid parameter"
-)
+// Tap represents an Ethernet tap connecting a virtual network to a device or something else "real"
+type Tap interface {
+	SetEnabled(enabled bool)
+	Enabled() bool
+	AddIP(ip net.IPNet) error
+	RemoveIP(ip net.IPNet) error
+	IPs() ([]net.IPNet, error)
+	DeviceName() string
+}

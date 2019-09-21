@@ -14,15 +14,52 @@
 package zerotier
 
 import (
+	"encoding/json"
+	"fmt"
 	"net"
-	"sync/atomic"
+	"strconv"
+	"sync"
 	"time"
 )
+
+// NetworkID is a network's 64-bit unique ID
+type NetworkID uint64
+
+// NewNetworkIDFromString parses a network ID in string form
+func NewNetworkIDFromString(s string) (NetworkID, error) {
+	if len(s) != 16 {
+		return NetworkID(0), ErrInvalidZeroTierAddress
+	}
+	n, err := strconv.ParseUint(s, 16, 64)
+	return NetworkID(n), err
+}
+
+// String returns this network ID's 16-digit hex identifier
+func (n NetworkID) String() string {
+	return fmt.Sprintf("%.16x", uint64(n))
+}
+
+// MarshalJSON marshals this NetworkID as a string
+func (n NetworkID) MarshalJSON() ([]byte, error) {
+	return []byte(n.String()), nil
+}
+
+// UnmarshalJSON unmarshals this NetworkID from a string
+func (n *NetworkID) UnmarshalJSON(j []byte) error {
+	var s string
+	err := json.Unmarshal(j, &s)
+	if err != nil {
+		return err
+	}
+	tmp, err := NewNetworkIDFromString(s)
+	*n = tmp
+	return err
+}
 
 // NetworkConfig represents the network's current state
 type NetworkConfig struct {
 	// ID is this network's 64-bit globally unique identifier
-	ID uint64
+	ID NetworkID
 
 	// MAC is the Ethernet MAC address of this device on this network
 	MAC MAC
@@ -57,8 +94,8 @@ type NetworkConfig struct {
 	// MulticastSubscriptions are this device's current multicast subscriptions
 	MulticastSubscriptions []MulticastGroup
 
-	// PortType is a human-readable description of this port's implementation type or name
-	PortType string
+	// PortDeviceType is a human-readable description of this port's implementation type or name
+	PortDeviceType string
 
 	// PortDeviceName is the OS-specific device name (e.g. tun0 or feth1856) for this network's virtual port
 	PortDeviceName string
@@ -69,6 +106,15 @@ type NetworkConfig struct {
 
 // Network is a currently joined network
 type Network struct {
-	config atomic.Value
-	tap    atomic.Value
+	config     NetworkConfig
+	configLock sync.RWMutex
+	tap        *Tap
+	tapLock    sync.Mutex
+}
+
+// Config returns a copy of this network's current configuration
+func (n *Network) Config() NetworkConfig {
+	n.configLock.RLock()
+	defer n.configLock.RUnlock()
+	return n.config
 }

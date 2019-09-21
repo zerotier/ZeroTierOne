@@ -13,6 +13,14 @@
 
 package zerotier
 
+import (
+	"net"
+	"runtime"
+	"sync"
+	"sync/atomic"
+	"unsafe"
+)
+
 //#cgo CFLAGS: -O3
 //#cgo LDFLAGS: ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/go/native/libzt_go_native.a -lc++
 //#define ZT_CGO 1
@@ -27,13 +35,6 @@ package zerotier
 //#define ZEROTIER_ONE_VERSION_BUILD 255
 //#endif
 import "C"
-import (
-	"net"
-	"runtime"
-	"sync"
-	"sync/atomic"
-	"unsafe"
-)
 
 const (
 	// CoreVersionMajor is the major version of the ZeroTier core
@@ -49,19 +50,13 @@ const (
 	CoreVersionBuild int = C.ZEROTIER_ONE_VERSION_BUILD
 )
 
-// Tap is an instance of an EthernetTap object
-type Tap struct {
-	tap           *C.ZT_GoTap
-	networkStatus uint32
-}
-
 // Node is an instance of a ZeroTier node
 type Node struct {
 	gn *C.ZT_GoNode
 	zn *C.ZT_Node
 
-	taps     map[uint64]*Tap
-	tapsLock sync.RWMutex
+	networks     map[uint64]*Network
+	networksLock sync.RWMutex
 
 	online  uint32
 	running uint32
@@ -70,6 +65,7 @@ type Node struct {
 // NewNode creates and initializes a new instance of the ZeroTier node service
 func NewNode() *Node {
 	n := new(Node)
+	n.networks = make(map[uint64]*Network)
 
 	gnRawAddr := uintptr(unsafe.Pointer(n.gn))
 	nodesByUserPtrLock.Lock()
