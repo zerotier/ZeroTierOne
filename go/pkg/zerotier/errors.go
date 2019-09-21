@@ -20,7 +20,10 @@ func (e Err) Error() string { return (string)(e) }
 
 // Simple ZeroTier Errors
 const (
-	ErrInvalidMACAddress      Err = "invalid MAC address"
-	ErrInvalidZeroTierAddress Err = "invalid ZeroTier address"
-	ErrInvalidParameter       Err = "invalid parameter"
+	ErrNodeInitFailed            Err = "unable to initialize core Node instance"
+	ErrInvalidMACAddress         Err = "invalid MAC address"
+	ErrInvalidZeroTierAddress    Err = "invalid ZeroTier address"
+	ErrInvalidParameter          Err = "invalid parameter"
+	ErrTapInitFailed             Err = "unable to create native Tap instance"
+	ErrUncrecognizedIdentityType Err = "unrecognized identity type"
 )

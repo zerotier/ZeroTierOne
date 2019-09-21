@@ -64,6 +64,11 @@ type Node struct {
 
 // NewNode creates and initializes a new instance of the ZeroTier node service
 func NewNode(path string) (*Node, error) {
+	os.MkdirAll(path, 0755)
+	if _, err := os.Stat(path); err != nil {
+		return nil, err
+	}
+
 	n := new(Node)
 	n.path = path
 	n.networks = make(map[uint64]*Network)
@@ -72,7 +77,7 @@ func NewNode(path string) (*Node, error) {
 	n.gn = C.ZT_GoNode_new(cpath)
 	C.free(unsafe.Pointer(cpath))
 	if n.gn == nil {
-		return nil, errors.New("unable to create new Node instance")
+		return nil, ErrNodeInitFailed
 	}
 	n.zn = (*C.ZT_Node)(C.ZT_GoNode_getNode(n.gn))
 
@@ -107,11 +112,11 @@ func (n *Node) Join(nwid uint64, tap Tap) (*Network, error) {
 	n.networksLock.RUnlock()
 
 	if tap != nil {
-		return nil, errors.New("not implemented yet")
+		return nil, errors.New("non-native taps not implemented yet")
 	}
 	ntap := C.ZT_GoNode_join(n.gn, C.uint64_t(nwid))
 	if ntap == nil {
-		return nil, errors.New("unable to initialize native tap (check device driver or permissions)")
+		return nil, ErrTapInitFailed
 	}
 
 	nw := &Network{
@@ -133,6 +138,10 @@ func (n *Node) Join(nwid uint64, tap Tap) (*Network, error) {
 
 // Leave leaves a network
 func (n *Node) Leave(nwid uint64) error {
+	C.ZT_GoNode_leave(n.gn, C.uint64_t(nwid))
+	n.networksLock.Lock()
+	delete(n.networks, nwid)
+	n.networksLock.Unlock()
 	return nil
 }
 
@@ -157,7 +166,7 @@ func (n *Node) makeStateObjectPath(objType int, id [2]uint64) (string, bool) {
 		secret = true
 	case C.ZT_STATE_OBJECT_PEER:
 		fp = path.Join(n.path, "peers.d")
-		os.Mkdir(fp, 0755)
+		os.Mkdir(fp, 0700)
 		fp = path.Join(fp, fmt.Sprintf("%.10x.peer", id[0]))
 		secret = true
 	case C.ZT_STATE_OBJECT_NETWORK_CONFIG:
@@ -171,24 +180,28 @@ func (n *Node) makeStateObjectPath(objType int, id [2]uint64) (string, bool) {
 }
 
 func (n *Node) stateObjectPut(objType int, id [2]uint64, data []byte) {
-	fp, secret := n.makeStateObjectPath(objType, id)
-	if len(fp) > 0 {
-		fileMode := os.FileMode(0644)
-		if secret {
-			fileMode = os.FileMode(0600)
+	go func() {
+		fp, secret := n.makeStateObjectPath(objType, id)
+		if len(fp) > 0 {
+			fileMode := os.FileMode(0644)
+			if secret {
+				fileMode = os.FileMode(0600)
+			}
+			ioutil.WriteFile(fp, data, fileMode)
+			if secret {
+				acl.Chmod(fp, 0600) // this emulates Unix chmod on Windows and uses os.Chmod on Unix-type systems
+			}
 		}
-		ioutil.WriteFile(fp, data, fileMode)
-		if secret {
-			acl.Chmod(fp, 0600) // this emulates Unix chmod on Windows and uses os.Chmod on Unix-type systems
-		}
-	}
+	}()
 }
 
 func (n *Node) stateObjectDelete(objType int, id [2]uint64) {
-	fp, _ := n.makeStateObjectPath(objType, id)
-	if len(fp) > 0 {
-		os.Remove(fp)
-	}
+	go func() {
+		fp, _ := n.makeStateObjectPath(objType, id)
+		if len(fp) > 0 {
+			os.Remove(fp)
+		}
+	}()
 }
 
 func (n *Node) stateObjectGet(objType int, id [2]uint64) ([]byte, bool) {
