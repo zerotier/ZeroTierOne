@@ -391,6 +391,11 @@ extern "C" void ZT_GoNode_delete(ZT_GoNode *gn)
 	delete gn;
 }
 
+extern "C" ZT_Node *ZT_GoNode_getNode(ZT_GoNode *gn)
+{
+	return gn->node;
+}
+
 // Sets flags and socket options common to both IPv4 and IPv6 UDP sockets
 static void setCommonUdpSocketSettings(ZT_SOCKET udpSock,const char *dev)
 {

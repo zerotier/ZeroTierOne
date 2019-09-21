@@ -68,15 +68,19 @@ func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, desiredAddressFam
 	}
 
 	ip, port := node.pathLookup(uint64(ztAddress))
-	ip4 := ip.To4()
-	if len(ip4) == 4 {
-		*((*C.int)(familyP)) = C.int(afInet)
-		copy((*[4]byte)(ipP)[:], ip4)
-		*((*C.int)(portP)) = C.int(port)
-	} else if len(ip) == 16 {
-		*((*C.int)(familyP)) = C.int(afInet6)
-		copy((*[16]byte)(ipP)[:], ip)
-		*((*C.int)(portP)) = C.int(port)
+	if len(ip) > 0 && port > 0 && port <= 65535 {
+		ip4 := ip.To4()
+		if len(ip4) == 4 {
+			*((*C.int)(familyP)) = C.int(afInet)
+			copy((*[4]byte)(ipP)[:], ip4)
+			*((*C.int)(portP)) = C.int(port)
+			return 1
+		} else if len(ip) == 16 {
+			*((*C.int)(familyP)) = C.int(afInet6)
+			copy((*[16]byte)(ipP)[:], ip)
+			*((*C.int)(portP)) = C.int(port)
+			return 1
+		}
 	}
 	return 0
 }
@@ -154,7 +158,7 @@ func goVirtualNetworkConfigFunc(gn, tapP unsafe.Pointer, nwid C.uint64_t, op C.i
 	if node == nil {
 		return 255
 	}
-	return C.int(node.handleNetworkConfigUpdate(int(op), (*C.ZT_VirtualNetworkConfig)(conf)))
+	return C.int(node.handleNetworkConfigUpdate(uint64(nwid), int(op), (*C.ZT_VirtualNetworkConfig)(conf)))
 }
 
 //export goZtEvent
@@ -180,6 +184,8 @@ func goZtEvent(gn unsafe.Pointer, eventType C.int, data unsafe.Pointer) {
 		node.handleRemoteTrace(uint64(rt.origin), C.GoBytes(unsafe.Pointer(rt.data), C.int(rt.len)))
 	}
 }
+
+// These are really part of nativeTap
 
 func handleTapMulticastGroupChange(gn unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t, added bool) {
 	nodesByUserPtrLock.RLock()

@@ -14,74 +14,77 @@
 package zerotier
 
 import (
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"net"
-	"runtime"
+	"os"
+	"path"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
+
+	acl "github.com/hectane/go-acl"
 )
 
 //#cgo CFLAGS: -O3
-//#cgo LDFLAGS: ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/go/native/libzt_go_native.a -lc++ -lpthread
+//#cgo LDFLAGS: ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/osdep/libzt_osdep.a ${SRCDIR}/../../../build/go/native/libzt_go_native.a -lc++ -lpthread
 //#define ZT_CGO 1
 //#include <stdint.h>
+//#include <stdlib.h>
+//#include <string.h>
 //#include "../../native/GoGlue.h"
-//#if __has_include("../../../version.h")
-//#include "../../../version.h"
-//#else
-//#define ZEROTIER_ONE_VERSION_MAJOR 255
-//#define ZEROTIER_ONE_VERSION_MINOR 255
-//#define ZEROTIER_ONE_VERSION_REVISION 255
-//#define ZEROTIER_ONE_VERSION_BUILD 255
-//#endif
 import "C"
 
+// Network status states
 const (
-	// CoreVersionMajor is the major version of the ZeroTier core
-	CoreVersionMajor int = C.ZEROTIER_ONE_VERSION_MAJOR
-
-	// CoreVersionMinor is the minor version of the ZeroTier core
-	CoreVersionMinor int = C.ZEROTIER_ONE_VERSION_MINOR
-
-	// CoreVersionRevision is the revision of the ZeroTier core
-	CoreVersionRevision int = C.ZEROTIER_ONE_VERSION_REVISION
-
-	// CoreVersionBuild is the build version of the ZeroTier core
-	CoreVersionBuild int = C.ZEROTIER_ONE_VERSION_BUILD
+	NetworkStatusRequestConfiguration int = C.ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION
+	NetworkStatusOK                   int = C.ZT_NETWORK_STATUS_OK
+	NetworkStatusAccessDenied         int = C.ZT_NETWORK_STATUS_ACCESS_DENIED
+	NetworkStatusNotFound             int = C.ZT_NETWORK_STATUS_NOT_FOUND
+	NetworkStatusPortError            int = C.ZT_NETWORK_STATUS_PORT_ERROR
+	NetworkStatusClientTooOld         int = C.ZT_NETWORK_STATUS_CLIENT_TOO_OLD
 )
 
 //////////////////////////////////////////////////////////////////////////////
 
 // Node is an instance of a ZeroTier node
 type Node struct {
-	gn *C.ZT_GoNode
-	zn *C.ZT_Node
-
+	path         string
 	networks     map[uint64]*Network
 	networksLock sync.RWMutex
+
+	gn *C.ZT_GoNode
+	zn *C.ZT_Node
 
 	online  uint32
 	running uint32
 }
 
 // NewNode creates and initializes a new instance of the ZeroTier node service
-func NewNode() *Node {
+func NewNode(path string) (*Node, error) {
 	n := new(Node)
+	n.path = path
 	n.networks = make(map[uint64]*Network)
+
+	cpath := C.CString(path)
+	n.gn = C.ZT_GoNode_new(cpath)
+	C.free(unsafe.Pointer(cpath))
+	if n.gn == nil {
+		return nil, errors.New("unable to create new Node instance")
+	}
+	n.zn = (*C.ZT_Node)(C.ZT_GoNode_getNode(n.gn))
 
 	gnRawAddr := uintptr(unsafe.Pointer(n.gn))
 	nodesByUserPtrLock.Lock()
 	nodesByUserPtr[gnRawAddr] = n
 	nodesByUserPtrLock.Unlock()
-	runtime.SetFinalizer(n, func(obj interface{}) { // make sure this always happens
-		nodesByUserPtrLock.Lock()
-		delete(nodesByUserPtr, gnRawAddr)
-		nodesByUserPtrLock.Unlock()
-	})
 
+	n.online = 0
 	n.running = 1
 
-	return n
+	return n, nil
 }
 
 // Close closes this Node and frees its underlying C++ Node structures
@@ -97,7 +100,35 @@ func (n *Node) Close() {
 // Join joins a network
 // If tap is nil, the default system tap for this OS/platform is used (if available).
 func (n *Node) Join(nwid uint64, tap Tap) (*Network, error) {
-	return nil, nil
+	n.networksLock.RLock()
+	if nw, have := n.networks[nwid]; have {
+		return nw, nil
+	}
+	n.networksLock.RUnlock()
+
+	if tap != nil {
+		return nil, errors.New("not implemented yet")
+	}
+	ntap := C.ZT_GoNode_join(n.gn, C.uint64_t(nwid))
+	if ntap == nil {
+		return nil, errors.New("unable to initialize native tap (check device driver or permissions)")
+	}
+
+	nw := &Network{
+		id: NetworkID(nwid),
+		config: NetworkConfig{
+			ID:          NetworkID(nwid),
+			Status:      NetworkStatusRequestConfiguration,
+			LastUpdated: time.Now(),
+			Enabled:     true,
+		},
+		tap: &nativeTap{tap: unsafe.Pointer(ntap), enabled: 1},
+	}
+	n.networksLock.Lock()
+	n.networks[nwid] = nw
+	n.networksLock.Unlock()
+
+	return nw, nil
 }
 
 // Leave leaves a network
@@ -115,13 +146,60 @@ func (n *Node) pathLookup(ztAddress uint64) (net.IP, int) {
 	return nil, 0
 }
 
+func (n *Node) makeStateObjectPath(objType int, id [2]uint64) (string, bool) {
+	var fp string
+	secret := false
+	switch objType {
+	case C.ZT_STATE_OBJECT_IDENTITY_PUBLIC:
+		fp = path.Join(n.path, "identity.public")
+	case C.ZT_STATE_OBJECT_IDENTITY_SECRET:
+		fp = path.Join(n.path, "identity.secret")
+		secret = true
+	case C.ZT_STATE_OBJECT_PEER:
+		fp = path.Join(n.path, "peers.d")
+		os.Mkdir(fp, 0755)
+		fp = path.Join(fp, fmt.Sprintf("%.10x.peer", id[0]))
+		secret = true
+	case C.ZT_STATE_OBJECT_NETWORK_CONFIG:
+		fp = path.Join(n.path, "networks.d")
+		os.Mkdir(fp, 0755)
+		fp = path.Join(fp, fmt.Sprintf("%.16x.conf", id[0]))
+	case C.ZT_STATE_OBJECT_ROOT_LIST:
+		fp = path.Join(n.path, "roots")
+	}
+	return fp, secret
+}
+
 func (n *Node) stateObjectPut(objType int, id [2]uint64, data []byte) {
+	fp, secret := n.makeStateObjectPath(objType, id)
+	if len(fp) > 0 {
+		fileMode := os.FileMode(0644)
+		if secret {
+			fileMode = os.FileMode(0600)
+		}
+		ioutil.WriteFile(fp, data, fileMode)
+		if secret {
+			acl.Chmod(fp, 0600) // this emulates Unix chmod on Windows and uses os.Chmod on Unix-type systems
+		}
+	}
 }
 
 func (n *Node) stateObjectDelete(objType int, id [2]uint64) {
+	fp, _ := n.makeStateObjectPath(objType, id)
+	if len(fp) > 0 {
+		os.Remove(fp)
+	}
 }
 
 func (n *Node) stateObjectGet(objType int, id [2]uint64) ([]byte, bool) {
+	fp, _ := n.makeStateObjectPath(objType, id)
+	if len(fp) > 0 {
+		fd, err := ioutil.ReadFile(fp)
+		if err != nil {
+			return nil, false
+		}
+		return fd, true
+	}
 	return nil, false
 }
 
@@ -134,6 +212,6 @@ func (n *Node) handleUserMessage(originAddress, messageTypeID uint64, data []byt
 func (n *Node) handleRemoteTrace(originAddress uint64, dictData []byte) {
 }
 
-func (n *Node) handleNetworkConfigUpdate(op int, config *C.ZT_VirtualNetworkConfig) int {
+func (n *Node) handleNetworkConfigUpdate(nwid uint64, op int, config *C.ZT_VirtualNetworkConfig) int {
 	return 0
 }
