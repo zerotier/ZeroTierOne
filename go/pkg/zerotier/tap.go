@@ -23,4 +23,5 @@ type Tap interface {
 	RemoveIP(ip net.IPNet) error
 	IPs() ([]net.IPNet, error)
 	DeviceName() string
+	AddMulticastGroupChangeHandler(func(bool, *MulticastGroup))
 }

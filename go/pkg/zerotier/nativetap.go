@@ -16,6 +16,7 @@ package zerotier
 import (
 	"fmt"
 	"net"
+	"sync"
 	"sync/atomic"
 	"unsafe"
 )
@@ -30,9 +31,11 @@ import "C"
 
 // nativeTap is a Tap implementation that wraps a native C++ interface to a system tun/tap device
 type nativeTap struct {
-	tap           unsafe.Pointer
-	networkStatus uint32
-	enabled       uint32
+	tap                        unsafe.Pointer
+	networkStatus              uint32
+	enabled                    uint32
+	multicastGroupHandlers     []func(bool, *MulticastGroup)
+	multicastGroupHandlersLock sync.Mutex
 }
 
 // SetEnabled sets this tap's enabled state
@@ -56,12 +59,12 @@ func (t *nativeTap) AddIP(ip net.IPNet) error {
 		if bits > 128 || bits < 0 {
 			return ErrInvalidParameter
 		}
-		C.ZT_GoTap_addIp(t.tap, afInet6, unsafe.Pointer(&ip.IP[0]), C.int(bits))
+		C.ZT_GoTap_addIp(t.tap, C.int(afInet6), unsafe.Pointer(&ip.IP[0]), C.int(bits))
 	} else if len(ip.IP) == 4 {
 		if bits > 32 || bits < 0 {
 			return ErrInvalidParameter
 		}
-		C.ZT_GoTap_addIp(t.tap, afInet, unsafe.Pointer(&ip.IP[0]), C.int(bits))
+		C.ZT_GoTap_addIp(t.tap, C.int(afInet), unsafe.Pointer(&ip.IP[0]), C.int(bits))
 	}
 	return ErrInvalidParameter
 }
@@ -73,14 +76,14 @@ func (t *nativeTap) RemoveIP(ip net.IPNet) error {
 		if bits > 128 || bits < 0 {
 			return ErrInvalidParameter
 		}
-		C.ZT_GoTap_removeIp(t.tap, afInet6, unsafe.Pointer(&ip.IP[0]), C.int(bits))
+		C.ZT_GoTap_removeIp(t.tap, C.int(afInet6), unsafe.Pointer(&ip.IP[0]), C.int(bits))
 		return nil
 	}
 	if len(ip.IP) == 4 {
 		if bits > 32 || bits < 0 {
 			return ErrInvalidParameter
 		}
-		C.ZT_GoTap_removeIp(t.tap, afInet, unsafe.Pointer(&ip.IP[0]), C.int(bits))
+		C.ZT_GoTap_removeIp(t.tap, C.int(afInet), unsafe.Pointer(&ip.IP[0]), C.int(bits))
 		return nil
 	}
 	return ErrInvalidParameter
@@ -98,7 +101,7 @@ func (t *nativeTap) IPs() (ips []net.IPNet, err error) {
 	count := int(C.ZT_GoTap_ips(t.tap, unsafe.Pointer(&ipbuf[0]), 16384))
 	ipptr := 0
 	for i := 0; i < count; i++ {
-		af := ipbuf[ipptr]
+		af := int(ipbuf[ipptr])
 		ipptr++
 		switch af {
 		case afInet:
@@ -134,4 +137,11 @@ func (t *nativeTap) DeviceName() string {
 		}
 	}
 	return ""
+}
+
+// AddMulticastGroupChangeHandler adds a function to be called when the tap subscribes or unsubscribes to a multicast group.
+func (t *nativeTap) AddMulticastGroupChangeHandler(handler func(bool, *MulticastGroup)) {
+	t.multicastGroupHandlersLock.Lock()
+	t.multicastGroupHandlers = append(t.multicastGroupHandlers, handler)
+	t.multicastGroupHandlersLock.Unlock()
 }

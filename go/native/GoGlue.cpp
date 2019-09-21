@@ -110,6 +110,8 @@ extern "C" int goStateObjectGetFunc(ZT_GoNode *,int,const uint64_t [2],void *,un
 extern "C" void goDNSResolverFunc(ZT_GoNode *,const uint8_t *,int,const char *,uintptr_t);
 extern "C" int goVirtualNetworkConfigFunc(ZT_GoNode *,ZT_GoTap *,uint64_t,int,const ZT_VirtualNetworkConfig *);
 extern "C" void goZtEvent(ZT_GoNode *,int,const void *);
+extern "C" void goHandleTapAddedMulticastGroup(ZT_GoNode *,ZT_GoTap *,uint64_t,uint64_t,uint32_t);
+extern "C" void goHandleTapRemovedMulticastGroup(ZT_GoNode *,ZT_GoTap *,uint64_t,uint64_t,uint32_t);
 
 static int ZT_GoNode_VirtualNetworkConfigFunction(
 	ZT_Node *node,
@@ -334,11 +336,26 @@ extern "C" ZT_GoNode *ZT_GoNode_new(const char *workingPath)
 		gn->run = true;
 
 		gn->backgroundTaskThread = std::thread([gn] {
+			int64_t lastScannedMulticastGroups = 0;
 			while (gn->run) {
-				std::this_thread::sleep_for(std::chrono::milliseconds(250));
+				std::this_thread::sleep_for(std::chrono::milliseconds(500));
 				const int64_t now = OSUtils::now();
 				if (now >= gn->nextBackgroundTaskDeadline)
 					gn->node->processBackgroundTasks(nullptr,now,&(gn->nextBackgroundTaskDeadline));
+				if ((now - lastScannedMulticastGroups) > 5000) {
+					lastScannedMulticastGroups = now;
+					std::vector<MulticastGroup> added,removed;
+					std::lock_guard<std::mutex> tl(gn->taps_l);
+					for(auto t=gn->taps.begin();t!=gn->taps.end();++t) {
+						added.clear();
+						removed.clear();
+						t->second->scanMulticastGroups(added,removed);
+						for(auto g=added.begin();g!=added.end();++g)
+							goHandleTapAddedMulticastGroup(gn,(ZT_GoTap *)t->second.get(),t->first,g->mac().toInt(),g->adi());
+						for(auto g=removed.begin();g!=removed.end();++g)
+							goHandleTapRemovedMulticastGroup(gn,(ZT_GoTap *)t->second.get(),t->first,g->mac().toInt(),g->adi());
+					}
+				}
 			}
 		});
 

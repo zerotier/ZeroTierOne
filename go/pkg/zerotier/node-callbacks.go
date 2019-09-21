@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	afInet  = C.AF_INET
-	afInet6 = C.AF_INET6
+	afInet  int = C.AF_INET
+	afInet6 int = C.AF_INET6
 
 	networkStatusRequestingConfiguration = C.ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION
 	networkStatusOK                      = C.ZT_NETWORK_STATUS_OK
@@ -68,11 +68,11 @@ func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, desiredAddressFam
 	ip, port := node.pathLookup(uint64(ztAddress))
 	ip4 := ip.To4()
 	if len(ip4) == 4 {
-		*((*C.int)(familyP)) = afInet
+		*((*C.int)(familyP)) = C.int(afInet)
 		copy((*[4]byte)(ipP)[:], ip4)
 		*((*C.int)(portP)) = C.int(port)
 	} else if len(ip) == 16 {
-		*((*C.int)(familyP)) = afInet6
+		*((*C.int)(familyP)) = C.int(afInet6)
 		copy((*[16]byte)(ipP)[:], ip)
 		*((*C.int)(portP)) = C.int(port)
 	}
@@ -177,4 +177,40 @@ func goZtEvent(gn unsafe.Pointer, eventType C.int, data unsafe.Pointer) {
 		rt := (*C.ZT_RemoteTrace)(data)
 		node.handleRemoteTrace(uint64(rt.origin), C.GoBytes(unsafe.Pointer(rt.data), C.int(rt.len)))
 	}
+}
+
+func handleTapMulticastGroupChange(gn unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t, added bool) {
+	nodesByUserPtrLock.RLock()
+	node := nodesByUserPtr[uintptr(gn)]
+	nodesByUserPtrLock.RUnlock()
+	if node == nil {
+		return
+	}
+
+	node.networksLock.RLock()
+	network := node.networks[uint64(nwid)]
+	node.networksLock.RUnlock()
+
+	network.tapLock.Lock()
+	tap, _ := network.tap.(*nativeTap)
+	network.tapLock.Unlock()
+
+	if tap != nil {
+		mg := &MulticastGroup{MAC: MAC(mac), ADI: uint32(adi)}
+		tap.multicastGroupHandlersLock.Lock()
+		defer tap.multicastGroupHandlersLock.Unlock()
+		for _, h := range tap.multicastGroupHandlers {
+			h(added, mg)
+		}
+	}
+}
+
+//export goHandleTapAddedMulticastGroup
+func goHandleTapAddedMulticastGroup(gn, tapP unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t) {
+	handleTapMulticastGroupChange(gn, nwid, mac, adi, true)
+}
+
+//export goHandleTapRemovedMulticastGroup
+func goHandleTapRemovedMulticastGroup(gn, tapP unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t) {
+	handleTapMulticastGroupChange(gn, nwid, mac, adi, false)
 }

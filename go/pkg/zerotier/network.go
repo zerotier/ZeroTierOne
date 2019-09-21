@@ -106,15 +106,26 @@ type NetworkConfig struct {
 
 // Network is a currently joined network
 type Network struct {
+	id         NetworkID
 	config     NetworkConfig
 	configLock sync.RWMutex
-	tap        *Tap
+	tap        Tap
 	tapLock    sync.Mutex
 }
+
+// ID gets this network's unique ID
+func (n *Network) ID() NetworkID { return n.id }
 
 // Config returns a copy of this network's current configuration
 func (n *Network) Config() NetworkConfig {
 	n.configLock.RLock()
 	defer n.configLock.RUnlock()
 	return n.config
+}
+
+// Tap gets this network's tap device
+func (n *Network) Tap() Tap {
+	n.tapLock.Lock()
+	defer n.tapLock.Unlock()
+	return n.tap
 }
