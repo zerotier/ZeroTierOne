@@ -1366,12 +1366,6 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 			memset(&(ec->routes[i]),0,sizeof(ZT_VirtualNetworkRoute));
 		}
 	}
-
-	ec->multicastSubscriptionCount = (unsigned int)_myMulticastGroups.size();
-	for(unsigned long i=0;i<(unsigned long)_myMulticastGroups.size();++i) {
-		ec->multicastSubscriptions[i].mac = _myMulticastGroups[i].mac().toInt();
-		ec->multicastSubscriptions[i].adi = _myMulticastGroups[i].adi();
-	}
 }
 
 void Network::_announceMulticastGroups(void *tPtr,bool force)

@@ -13,6 +13,12 @@
 
 package zerotier
 
+//#cgo CFLAGS: -O3
+//#cgo LDFLAGS: ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/osdep/libzt_osdep.a ${SRCDIR}/../../../build/go/native/libzt_go_native.a -lc++ -lpthread
+//#define ZT_CGO 1
+//#include "../../native/GoGlue.h"
+import "C"
+
 import (
 	"errors"
 	"fmt"
@@ -28,15 +34,6 @@ import (
 	acl "github.com/hectane/go-acl"
 )
 
-//#cgo CFLAGS: -O3
-//#cgo LDFLAGS: ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/osdep/libzt_osdep.a ${SRCDIR}/../../../build/go/native/libzt_go_native.a -lc++ -lpthread
-//#define ZT_CGO 1
-//#include <stdint.h>
-//#include <stdlib.h>
-//#include <string.h>
-//#include "../../native/GoGlue.h"
-import "C"
-
 // Network status states
 const (
 	NetworkStatusRequestConfiguration int = C.ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION
@@ -45,6 +42,26 @@ const (
 	NetworkStatusNotFound             int = C.ZT_NETWORK_STATUS_NOT_FOUND
 	NetworkStatusPortError            int = C.ZT_NETWORK_STATUS_PORT_ERROR
 	NetworkStatusClientTooOld         int = C.ZT_NETWORK_STATUS_CLIENT_TOO_OLD
+
+	// CoreVersionMajor is the major version of the ZeroTier core
+	CoreVersionMajor int = C.ZEROTIER_ONE_VERSION_MAJOR
+
+	// CoreVersionMinor is the minor version of the ZeroTier core
+	CoreVersionMinor int = C.ZEROTIER_ONE_VERSION_MINOR
+
+	// CoreVersionRevision is the revision of the ZeroTier core
+	CoreVersionRevision int = C.ZEROTIER_ONE_VERSION_REVISION
+
+	// CoreVersionBuild is the build version of the ZeroTier core
+	CoreVersionBuild int = C.ZEROTIER_ONE_VERSION_BUILD
+
+	afInet  int = C.AF_INET
+	afInet6 int = C.AF_INET6
+)
+
+var (
+	nodesByUserPtr     map[uintptr]*Node
+	nodesByUserPtrLock sync.RWMutex
 )
 
 //////////////////////////////////////////////////////////////////////////////
@@ -225,6 +242,314 @@ func (n *Node) handleUserMessage(originAddress, messageTypeID uint64, data []byt
 func (n *Node) handleRemoteTrace(originAddress uint64, dictData []byte) {
 }
 
-func (n *Node) handleNetworkConfigUpdate(nwid uint64, op int, config *C.ZT_VirtualNetworkConfig) int {
+//////////////////////////////////////////////////////////////////////////////
+
+//export goPathCheckFunc
+func goPathCheckFunc(gn unsafe.Pointer, ztAddress C.uint64_t, af C.int, ip unsafe.Pointer, port C.int) C.int {
+	nodesByUserPtrLock.RLock()
+	node := nodesByUserPtr[uintptr(gn)]
+	nodesByUserPtrLock.RUnlock()
+	if node != nil && node.pathCheck(uint64(ztAddress), int(af), nil, int(port)) {
+		return 1
+	}
 	return 0
+}
+
+//export goPathLookupFunc
+func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, desiredAddressFamily int, familyP, ipP, portP unsafe.Pointer) C.int {
+	nodesByUserPtrLock.RLock()
+	node := nodesByUserPtr[uintptr(gn)]
+	nodesByUserPtrLock.RUnlock()
+	if node == nil {
+		return 0
+	}
+
+	ip, port := node.pathLookup(uint64(ztAddress))
+	if len(ip) > 0 && port > 0 && port <= 65535 {
+		ip4 := ip.To4()
+		if len(ip4) == 4 {
+			*((*C.int)(familyP)) = C.int(afInet)
+			copy((*[4]byte)(ipP)[:], ip4)
+			*((*C.int)(portP)) = C.int(port)
+			return 1
+		} else if len(ip) == 16 {
+			*((*C.int)(familyP)) = C.int(afInet6)
+			copy((*[16]byte)(ipP)[:], ip)
+			*((*C.int)(portP)) = C.int(port)
+			return 1
+		}
+	}
+	return 0
+}
+
+//export goStateObjectPutFunc
+func goStateObjectPutFunc(gn unsafe.Pointer, objType C.int, id, data unsafe.Pointer, len C.int) {
+	nodesByUserPtrLock.RLock()
+	node := nodesByUserPtr[uintptr(gn)]
+	nodesByUserPtrLock.RUnlock()
+	if node == nil {
+		return
+	}
+	if len < 0 {
+		node.stateObjectDelete(int(objType), *((*[2]uint64)(id)))
+	} else {
+		node.stateObjectPut(int(objType), *((*[2]uint64)(id)), C.GoBytes(data, len))
+	}
+}
+
+//export goStateObjectGetFunc
+func goStateObjectGetFunc(gn unsafe.Pointer, objType C.int, id, data unsafe.Pointer, bufSize C.uint) C.int {
+	nodesByUserPtrLock.RLock()
+	node := nodesByUserPtr[uintptr(gn)]
+	nodesByUserPtrLock.RUnlock()
+	if node == nil {
+		return -1
+	}
+	tmp, found := node.stateObjectGet(int(objType), *((*[2]uint64)(id)))
+	if found && len(tmp) < int(bufSize) {
+		if len(tmp) > 0 {
+			C.memcpy(data, unsafe.Pointer(&(tmp[0])), C.ulong(len(tmp)))
+		}
+		return C.int(len(tmp))
+	}
+	return -1
+}
+
+//export goDNSResolverFunc
+func goDNSResolverFunc(gn unsafe.Pointer, dnsRecordTypes unsafe.Pointer, numDNSRecordTypes C.int, name unsafe.Pointer, requestID C.uintptr_t) {
+	nodesByUserPtrLock.RLock()
+	node := nodesByUserPtr[uintptr(gn)]
+	nodesByUserPtrLock.RUnlock()
+	if node == nil {
+		return
+	}
+
+	recordTypes := C.GoBytes(dnsRecordTypes, numDNSRecordTypes)
+	recordName := C.GoString((*C.char)(name))
+
+	go func() {
+		recordNameCStrCopy := C.CString(recordName)
+		for _, rt := range recordTypes {
+			switch rt {
+			case C.ZT_DNS_RECORD_TXT:
+				recs, _ := net.LookupTXT(recordName)
+				for _, rec := range recs {
+					if len(rec) > 0 {
+						rnCS := C.CString(rec)
+						C.ZT_Node_processDNSResult(unsafe.Pointer(node.zn), nil, requestID, recordNameCStrCopy, C.ZT_DNS_RECORD_TXT, unsafe.Pointer(rnCS), C.uint(len(rec)), 0)
+						C.free(unsafe.Pointer(rnCS))
+					}
+				}
+			}
+		}
+		C.ZT_Node_processDNSResult(unsafe.Pointer(node.zn), nil, requestID, recordNameCStrCopy, C.ZT_DNS_RECORD__END_OF_RESULTS, nil, 0, 0)
+		C.free(unsafe.Pointer(recordNameCStrCopy))
+	}()
+}
+
+//export goVirtualNetworkConfigFunc
+func goVirtualNetworkConfigFunc(gn, tapP unsafe.Pointer, nwid C.uint64_t, op C.int, conf unsafe.Pointer) C.int {
+	nodesByUserPtrLock.RLock()
+	node := nodesByUserPtr[uintptr(gn)]
+	nodesByUserPtrLock.RUnlock()
+	if node == nil {
+		return 255
+	}
+	node.networksLock.RLock()
+	network := node.networks[uint64(nwid)]
+	node.networksLock.RUnlock()
+	if network != nil {
+	}
+	//return C.int(node.handleNetworkConfigUpdate(uint64(nwid), int(op), (*C.ZT_VirtualNetworkConfig)(conf)))
+}
+
+//export goZtEvent
+func goZtEvent(gn unsafe.Pointer, eventType C.int, data unsafe.Pointer) {
+	nodesByUserPtrLock.RLock()
+	node := nodesByUserPtr[uintptr(gn)]
+	nodesByUserPtrLock.RUnlock()
+	if node == nil {
+		return
+	}
+	switch eventType {
+	case C.ZT_EVENT_OFFLINE:
+		atomic.StoreUint32(&node.online, 0)
+	case C.ZT_EVENT_ONLINE:
+		atomic.StoreUint32(&node.online, 1)
+	case C.ZT_EVENT_TRACE:
+		node.handleTrace(C.GoString((*C.char)(data)))
+	case C.ZT_EVENT_USER_MESSAGE:
+		um := (*C.ZT_UserMessage)(data)
+		node.handleUserMessage(uint64(um.origin), uint64(um.typeId), C.GoBytes(um.data, C.int(um.length)))
+	case C.ZT_EVENT_REMOTE_TRACE:
+		rt := (*C.ZT_RemoteTrace)(data)
+		node.handleRemoteTrace(uint64(rt.origin), C.GoBytes(unsafe.Pointer(rt.data), C.int(rt.len)))
+	}
+}
+
+// These are really part of nativeTap
+
+func handleTapMulticastGroupChange(gn unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t, added bool) {
+	nodesByUserPtrLock.RLock()
+	node := nodesByUserPtr[uintptr(gn)]
+	nodesByUserPtrLock.RUnlock()
+	if node == nil {
+		return
+	}
+
+	node.networksLock.RLock()
+	network := node.networks[uint64(nwid)]
+	node.networksLock.RUnlock()
+
+	network.tapLock.Lock()
+	tap, _ := network.tap.(*nativeTap)
+	network.tapLock.Unlock()
+
+	if tap != nil {
+		mg := &MulticastGroup{MAC: MAC(mac), ADI: uint32(adi)}
+		tap.multicastGroupHandlersLock.Lock()
+		defer tap.multicastGroupHandlersLock.Unlock()
+		for _, h := range tap.multicastGroupHandlers {
+			h(added, mg)
+		}
+	}
+}
+
+//export goHandleTapAddedMulticastGroup
+func goHandleTapAddedMulticastGroup(gn, tapP unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t) {
+	handleTapMulticastGroupChange(gn, nwid, mac, adi, true)
+}
+
+//export goHandleTapRemovedMulticastGroup
+func goHandleTapRemovedMulticastGroup(gn, tapP unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t) {
+	handleTapMulticastGroupChange(gn, nwid, mac, adi, false)
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+// nativeTap is a Tap implementation that wraps a native C++ interface to a system tun/tap device
+type nativeTap struct {
+	tap                        unsafe.Pointer
+	networkStatus              uint32
+	enabled                    uint32
+	multicastGroupHandlers     []func(bool, *MulticastGroup)
+	multicastGroupHandlersLock sync.Mutex
+}
+
+// Type returns a human-readable description of this tap implementation
+func (t *nativeTap) Type() string {
+	return "native"
+}
+
+// Error gets this tap device's error status
+func (t *nativeTap) Error() (int, string) {
+	return 0, ""
+}
+
+// SetEnabled sets this tap's enabled state
+func (t *nativeTap) SetEnabled(enabled bool) {
+	if enabled && atomic.SwapUint32(&t.enabled, 1) == 0 {
+		C.ZT_GoTap_setEnabled(t.tap, 1)
+	} else if !enabled && atomic.SwapUint32(&t.enabled, 0) == 1 {
+		C.ZT_GoTap_setEnabled(t.tap, 0)
+	}
+}
+
+// Enabled returns true if this tap is currently processing packets
+func (t *nativeTap) Enabled() bool {
+	return atomic.LoadUint32(&t.enabled) != 0
+}
+
+// AddIP adds an IP address (with netmask) to this tap
+func (t *nativeTap) AddIP(ip net.IPNet) error {
+	bits, _ := ip.Mask.Size()
+	if len(ip.IP) == 16 {
+		if bits > 128 || bits < 0 {
+			return ErrInvalidParameter
+		}
+		C.ZT_GoTap_addIp(t.tap, C.int(afInet6), unsafe.Pointer(&ip.IP[0]), C.int(bits))
+	} else if len(ip.IP) == 4 {
+		if bits > 32 || bits < 0 {
+			return ErrInvalidParameter
+		}
+		C.ZT_GoTap_addIp(t.tap, C.int(afInet), unsafe.Pointer(&ip.IP[0]), C.int(bits))
+	}
+	return ErrInvalidParameter
+}
+
+// RemoveIP removes this IP address (with netmask) from this tap
+func (t *nativeTap) RemoveIP(ip net.IPNet) error {
+	bits, _ := ip.Mask.Size()
+	if len(ip.IP) == 16 {
+		if bits > 128 || bits < 0 {
+			return ErrInvalidParameter
+		}
+		C.ZT_GoTap_removeIp(t.tap, C.int(afInet6), unsafe.Pointer(&ip.IP[0]), C.int(bits))
+		return nil
+	}
+	if len(ip.IP) == 4 {
+		if bits > 32 || bits < 0 {
+			return ErrInvalidParameter
+		}
+		C.ZT_GoTap_removeIp(t.tap, C.int(afInet), unsafe.Pointer(&ip.IP[0]), C.int(bits))
+		return nil
+	}
+	return ErrInvalidParameter
+}
+
+// IPs returns IPs currently assigned to this tap (including externally or system-assigned IPs)
+func (t *nativeTap) IPs() (ips []net.IPNet, err error) {
+	defer func() {
+		e := recover()
+		if e != nil {
+			err = fmt.Errorf("%v", e)
+		}
+	}()
+	var ipbuf [16384]byte
+	count := int(C.ZT_GoTap_ips(t.tap, unsafe.Pointer(&ipbuf[0]), 16384))
+	ipptr := 0
+	for i := 0; i < count; i++ {
+		af := int(ipbuf[ipptr])
+		ipptr++
+		switch af {
+		case afInet:
+			var ip [4]byte
+			for j := 0; j < 4; j++ {
+				ip[j] = ipbuf[ipptr]
+				ipptr++
+			}
+			bits := ipbuf[ipptr]
+			ipptr++
+			ips = append(ips, net.IPNet{IP: net.IP(ip[:]), Mask: net.CIDRMask(int(bits), 32)})
+		case afInet6:
+			var ip [16]byte
+			for j := 0; j < 16; j++ {
+				ip[j] = ipbuf[ipptr]
+				ipptr++
+			}
+			bits := ipbuf[ipptr]
+			ipptr++
+			ips = append(ips, net.IPNet{IP: net.IP(ip[:]), Mask: net.CIDRMask(int(bits), 128)})
+		}
+	}
+	return
+}
+
+// DeviceName gets this tap's OS-specific device name
+func (t *nativeTap) DeviceName() string {
+	var dn [256]byte
+	C.ZT_GoTap_deviceName(t.tap, (*C.char)(unsafe.Pointer(&dn[0])))
+	for i, b := range dn {
+		if b == 0 {
+			return string(dn[0:i])
+		}
+	}
+	return ""
+}
+
+// AddMulticastGroupChangeHandler adds a function to be called when the tap subscribes or unsubscribes to a multicast group.
+func (t *nativeTap) AddMulticastGroupChangeHandler(handler func(bool, *MulticastGroup)) {
+	t.multicastGroupHandlersLock.Lock()
+	t.multicastGroupHandlers = append(t.multicastGroupHandlers, handler)
+	t.multicastGroupHandlersLock.Unlock()
 }

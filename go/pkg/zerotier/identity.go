@@ -14,8 +14,8 @@
 package zerotier
 
 import (
-	"encoding/base32"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -36,15 +36,9 @@ const (
 
 // Identity is precisely what it sounds like: the address and associated keys for a ZeroTier node
 type Identity struct {
-	// Address is this identity's 40-bit short address
-	Address Address
-
-	// Type is either IdentityTypeC25519 or IdentityTypeP384
-	Type int
-
-	// PublicKey is this identity's public key bytes
-	PublicKey Blob
-
+	address    Address
+	idtype     int
+	publicKey  []byte
 	privateKey []byte
 }
 
@@ -58,23 +52,23 @@ func NewIdentityFromString(s string) (*Identity, error) {
 
 	var err error
 	var id Identity
-	id.Address, err = NewAddressFromString(ss[0])
+	id.address, err = NewAddressFromString(ss[0])
 	if err != nil {
 		return nil, err
 	}
 
 	if ss[1] == "0" {
-		id.Type = 0
+		id.idtype = 0
 	} else if ss[1] == "1" {
-		id.Type = 1
+		id.idtype = 1
 	} else {
 		return nil, ErrUncrecognizedIdentityType
 	}
 
-	switch id.Type {
+	switch id.idtype {
 
 	case 0:
-		id.PublicKey, err = hex.DecodeString(ss[2])
+		id.publicKey, err = hex.DecodeString(ss[2])
 		if err != nil {
 			return nil, err
 		}
@@ -86,15 +80,15 @@ func NewIdentityFromString(s string) (*Identity, error) {
 		}
 
 	case 1:
-		id.PublicKey, err = base32.StdEncoding.DecodeString(ss[2])
+		id.publicKey, err = base32StdLowerCase.DecodeString(ss[2])
 		if err != nil {
 			return nil, err
 		}
-		if len(id.PublicKey) != IdentityTypeP384PublicKeySize {
+		if len(id.publicKey) != IdentityTypeP384PublicKeySize {
 			return nil, ErrInvalidKey
 		}
 		if len(ss) >= 4 {
-			id.privateKey, err = base32.StdEncoding.DecodeString(ss[3])
+			id.privateKey, err = base32StdLowerCase.DecodeString(ss[3])
 			if err != nil {
 				return nil, err
 			}
@@ -113,9 +107,15 @@ func (id *Identity) HasPrivate() bool { return len(id.privateKey) > 0 }
 
 // PrivateKeyString returns the full identity.secret if the private key is set, or an empty string if no private key is set.
 func (id *Identity) PrivateKeyString() string {
-	if len(id.privateKey) == 64 {
-		s := fmt.Sprintf("%.10x:0:%x:%x", id.Address, id.PublicKey, id.privateKey)
-		return s
+	switch id.idtype {
+	case IdentityTypeC25519:
+		if len(id.publicKey) == IdentityTypeC25519PublicKeySize && len(id.privateKey) == IdentityTypeC25519PrivateKeySize {
+			return fmt.Sprintf("%.10x:0:%x:%x", uint64(id.address), id.publicKey, id.privateKey)
+		}
+	case IdentityTypeP384:
+		if len(id.publicKey) == IdentityTypeP384PublicKeySize && len(id.privateKey) == IdentityTypeP384PrivateKeySize {
+			return fmt.Sprintf("%.10x:1:%s:%s", uint64(id.address), base32StdLowerCase.EncodeToString(id.publicKey), base32StdLowerCase.EncodeToString(id.privateKey))
+		}
 	}
 	return ""
 }
@@ -123,9 +123,26 @@ func (id *Identity) PrivateKeyString() string {
 // PublicKeyString returns the address and public key (identity.public contents).
 // An empty string is returned if this identity is invalid or not initialized.
 func (id *Identity) String() string {
-	if len(id.PublicKey) == 64 {
-		s := fmt.Sprintf("%.10x:0:%x", id.Address, id.PublicKey)
+	if len(id.publicKey) == IdentityTypeC25519PublicKeySize {
+		s := fmt.Sprintf("%.10x:0:%x", id.address, id.publicKey)
 		return s
 	}
 	return ""
+}
+
+// MarshalJSON marshals this Identity in its string format (private key is never included)
+func (id *Identity) MarshalJSON() ([]byte, error) {
+	return []byte("\"" + id.String() + "\""), nil
+}
+
+// UnmarshalJSON unmarshals this Identity from a string
+func (id *Identity) UnmarshalJSON(j []byte) error {
+	var s string
+	err := json.Unmarshal(j, &s)
+	if err != nil {
+		return err
+	}
+	nid, err := NewIdentityFromString(s)
+	*id = *nid
+	return err
 }

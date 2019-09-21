@@ -48,7 +48,7 @@ func (m MAC) String() string {
 
 // MarshalJSON marshals this MAC as a string
 func (m MAC) MarshalJSON() ([]byte, error) {
-	return []byte(m.String()), nil
+	return []byte("\"" + m.String() + "\""), nil
 }
 
 // UnmarshalJSON unmarshals this MAC from a string

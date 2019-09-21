@@ -306,7 +306,7 @@ int Utils::b32e(const uint8_t *data,int length,char *result,int bufSize)
       }
       int index = 0x1F & (buffer >> (bitsLeft - 5));
       bitsLeft -= 5;
-      result[count++] = "abcdefghijklmnopqrstuvwxyZ234567"[index];
+      result[count++] = "abcdefghijklmnopqrstuvwxyz234567"[index];
     }
   }
   if (count < bufSize) {

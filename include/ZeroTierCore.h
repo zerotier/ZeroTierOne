@@ -1156,19 +1156,6 @@ typedef struct
 	 * Routes (excluding those implied by assigned addresses and their masks)
 	 */
 	ZT_VirtualNetworkRoute routes[ZT_MAX_NETWORK_ROUTES];
-
-	/**
-	 * Number of multicast groups subscribed
-	 */
-	unsigned int multicastSubscriptionCount;
-
-	/**
-	 * Multicast groups to which this network's device is subscribed
-	 */
-	struct {
-		uint64_t mac; /* MAC in lower 48 bits */
-		uint32_t adi; /* Additional distinguishing information, usually zero except for IPv4 ARP groups */
-	} multicastSubscriptions[ZT_MAX_MULTICAST_SUBSCRIPTIONS];
 } ZT_VirtualNetworkConfig;
 
 /**

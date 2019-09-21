@@ -38,7 +38,7 @@ func (a Address) String() string {
 
 // MarshalJSON marshals this Address as a string
 func (a Address) MarshalJSON() ([]byte, error) {
-	return []byte(a.String()), nil
+	return []byte("\"" + a.String() + "\""), nil
 }
 
 // UnmarshalJSON unmarshals this Address from a string

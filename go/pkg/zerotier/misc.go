@@ -13,7 +13,12 @@
 
 package zerotier
 
-import "time"
+import (
+	"encoding/base32"
+	"time"
+)
+
+var base32StdLowerCase = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567")
 
 // TimeMs returns the time in milliseconds since epoch.
 func TimeMs() int64 { return int64(time.Now().UnixNano()) / int64(1000000) }
