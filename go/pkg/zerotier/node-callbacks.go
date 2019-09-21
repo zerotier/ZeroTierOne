@@ -13,6 +13,8 @@
 
 package zerotier
 
+// These are exported callbacks that are called from the C++ code in GoGlue.cpp
+
 //#cgo CFLAGS: -O3
 //#define ZT_CGO 1
 //#include <stdint.h>

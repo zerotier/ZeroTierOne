@@ -22,7 +22,7 @@ import (
 )
 
 //#cgo CFLAGS: -O3
-//#cgo LDFLAGS: ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/go/native/libzt_go_native.a -lc++
+//#cgo LDFLAGS: ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/go/native/libzt_go_native.a -lc++ -lpthread
 //#define ZT_CGO 1
 //#include <stdint.h>
 //#include "../../native/GoGlue.h"
@@ -49,6 +49,8 @@ const (
 	// CoreVersionBuild is the build version of the ZeroTier core
 	CoreVersionBuild int = C.ZEROTIER_ONE_VERSION_BUILD
 )
+
+//////////////////////////////////////////////////////////////////////////////
 
 // Node is an instance of a ZeroTier node
 type Node struct {
@@ -91,6 +93,19 @@ func (n *Node) Close() {
 		nodesByUserPtrLock.Unlock()
 	}
 }
+
+// Join joins a network
+// If tap is nil, the default system tap for this OS/platform is used (if available).
+func (n *Node) Join(nwid uint64, tap Tap) (*Network, error) {
+	return nil, nil
+}
+
+// Leave leaves a network
+func (n *Node) Leave(nwid uint64) error {
+	return nil
+}
+
+//////////////////////////////////////////////////////////////////////////////
 
 func (n *Node) pathCheck(ztAddress uint64, af int, ip net.IP, port int) bool {
 	return true

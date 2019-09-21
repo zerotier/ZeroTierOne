@@ -17,6 +17,8 @@ import "net"
 
 // Tap represents an Ethernet tap connecting a virtual network to a device or something else "real"
 type Tap interface {
+	Type() string
+	Error() (int, string)
 	SetEnabled(enabled bool)
 	Enabled() bool
 	AddIP(ip net.IPNet) error

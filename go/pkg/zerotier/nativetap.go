@@ -38,6 +38,18 @@ type nativeTap struct {
 	multicastGroupHandlersLock sync.Mutex
 }
 
+var _ Tap = &nativeTap{}
+
+// Type returns a human-readable description of this tap implementation
+func (t *nativeTap) Type() string {
+	return "native"
+}
+
+// Error gets this tap device's error status
+func (t *nativeTap) Error() (int, string) {
+	return 0, ""
+}
+
 // SetEnabled sets this tap's enabled state
 func (t *nativeTap) SetEnabled(enabled bool) {
 	if enabled && atomic.SwapUint32(&t.enabled, 1) == 0 {

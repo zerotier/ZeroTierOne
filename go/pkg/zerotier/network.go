@@ -94,23 +94,29 @@ type NetworkConfig struct {
 	// MulticastSubscriptions are this device's current multicast subscriptions
 	MulticastSubscriptions []MulticastGroup
 
-	// PortDeviceType is a human-readable description of this port's implementation type or name
-	PortDeviceType string
+	// Enabled is true if this network's tap device is enabled
+	Enabled bool
 
-	// PortDeviceName is the OS-specific device name (e.g. tun0 or feth1856) for this network's virtual port
-	PortDeviceName string
+	// TapDeviceType is a human-readable description of this network's tap device type
+	TapDeviceType string
 
-	// PortErrorCode is an OS-specific error code returned by the virtual NIC driver
-	PortErrorCode int
+	// TapDevicePort is the OS-specific virtual device name (if applicable)
+	TapDevicePort string
+
+	// TapErrorCode is an implementation-specific error code from the tap device (0 for no error)
+	TapErrorCode int
+
+	// TapError is a human-readable description of this tap device's error state or an empty string if there is no error
+	TapError string
 }
 
 // Network is a currently joined network
 type Network struct {
 	id         NetworkID
 	config     NetworkConfig
-	configLock sync.RWMutex
 	tap        Tap
-	tapLock    sync.Mutex
+	configLock sync.RWMutex
+	tapLock    sync.RWMutex
 }
 
 // ID gets this network's unique ID
@@ -119,13 +125,17 @@ func (n *Network) ID() NetworkID { return n.id }
 // Config returns a copy of this network's current configuration
 func (n *Network) Config() NetworkConfig {
 	n.configLock.RLock()
+	n.tapLock.RLock()
+	defer n.tapLock.RUnlock()
 	defer n.configLock.RUnlock()
+	n.config.Enabled = n.tap.Enabled()
+	n.config.TapErrorCode, n.config.TapError = n.tap.Error()
 	return n.config
 }
 
 // Tap gets this network's tap device
 func (n *Network) Tap() Tap {
-	n.tapLock.Lock()
-	defer n.tapLock.Unlock()
+	n.tapLock.RLock()
+	defer n.tapLock.RUnlock()
 	return n.tap
 }
