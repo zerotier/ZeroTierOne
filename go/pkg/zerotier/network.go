@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"sort"
 	"strconv"
 	"sync"
 )
@@ -111,18 +112,22 @@ type NetworkLocalSettings struct {
 
 // Network is a currently joined network
 type Network struct {
-	id         NetworkID
-	tap        Tap
-	config     NetworkConfig
-	settings   NetworkLocalSettings // locked by configLock
-	configLock sync.RWMutex
+	node                       *Node
+	id                         NetworkID
+	tap                        Tap
+	config                     NetworkConfig
+	settings                   NetworkLocalSettings // locked by configLock
+	multicastSubscriptions     map[[2]uint64]*MulticastGroup
+	configLock                 sync.RWMutex
+	multicastSubscriptionsLock sync.RWMutex
 }
 
-// NewNetwork creates a new network with default settings
-func NewNetwork(id NetworkID, t Tap) (*Network, error) {
-	return &Network{
-		id:  id,
-		tap: t,
+// newNetwork creates a new network with default settings
+func newNetwork(node *Node, id NetworkID, t Tap) (*Network, error) {
+	n := &Network{
+		node: node,
+		id:   id,
+		tap:  t,
 		config: NetworkConfig{
 			ID:     id,
 			Status: NetworkStatusRequestConfiguration,
@@ -134,7 +139,18 @@ func NewNetwork(id NetworkID, t Tap) (*Network, error) {
 			AllowGlobalRoutes:         false,
 			AllowDefaultRouteOverride: false,
 		},
-	}, nil
+		multicastSubscriptions: make(map[[2]uint64]*MulticastGroup),
+	}
+
+	t.AddMulticastGroupChangeHandler(func(added bool, mg *MulticastGroup) {
+		if added {
+			n.MulticastSubscribe(mg)
+		} else {
+			n.MulticastUnsubscribe(mg)
+		}
+	})
+
+	return n, nil
 }
 
 // ID gets this network's unique ID
@@ -152,6 +168,39 @@ func (n *Network) Tap() Tap { return n.tap }
 
 // SetLocalSettings modifies this network's local settings
 func (n *Network) SetLocalSettings(ls *NetworkLocalSettings) { n.updateConfig(nil, ls) }
+
+// MulticastSubscribe subscribes to a multicast group
+func (n *Network) MulticastSubscribe(mg *MulticastGroup) {
+	k := mg.key()
+	n.multicastSubscriptionsLock.Lock()
+	if _, have := n.multicastSubscriptions[k]; have {
+		n.multicastSubscriptionsLock.Unlock()
+		return
+	}
+	n.multicastSubscriptions[k] = mg
+	n.multicastSubscriptionsLock.Unlock()
+	n.node.multicastSubscribe(uint64(n.id), mg)
+}
+
+// MulticastUnsubscribe removes a subscription to a multicast group
+func (n *Network) MulticastUnsubscribe(mg *MulticastGroup) {
+	n.multicastSubscriptionsLock.Lock()
+	delete(n.multicastSubscriptions, mg.key())
+	n.multicastSubscriptionsLock.Unlock()
+	n.node.multicastUnsubscribe(uint64(n.id), mg)
+}
+
+// MulticastSubscriptions returns an array of all multicast subscriptions for this network
+func (n *Network) MulticastSubscriptions() []*MulticastGroup {
+	n.multicastSubscriptionsLock.RLock()
+	mgs := make([]*MulticastGroup, 0, len(n.multicastSubscriptions))
+	for _, mg := range n.multicastSubscriptions {
+		mgs = append(mgs, mg)
+	}
+	n.multicastSubscriptionsLock.RUnlock()
+	sort.Slice(mgs, func(a, b int) bool { return mgs[a].Less(mgs[b]) })
+	return mgs
+}
 
 func (n *Network) networkConfigRevision() uint64 {
 	n.configLock.RLock()
