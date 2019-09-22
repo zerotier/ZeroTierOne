@@ -23,6 +23,9 @@ type Route struct {
 	// Via is how to reach this target (null/empty if the target IP range is local to this virtual LAN)
 	Via net.IP
 
+	// Route flags (currently unused, always 0)
+	Flags uint16
+
 	// Metric is an interface metric that can affect route priority (behavior can be OS-specific)
-	Metric int
+	Metric uint16
 }

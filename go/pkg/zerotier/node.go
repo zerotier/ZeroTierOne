@@ -20,6 +20,7 @@ package zerotier
 import "C"
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -28,7 +29,6 @@ import (
 	"path"
 	"sync"
 	"sync/atomic"
-	"time"
 	"unsafe"
 
 	acl "github.com/hectane/go-acl"
@@ -139,10 +139,8 @@ func (n *Node) Join(nwid uint64, tap Tap) (*Network, error) {
 	nw := &Network{
 		id: NetworkID(nwid),
 		config: NetworkConfig{
-			ID:          NetworkID(nwid),
-			Status:      NetworkStatusRequestConfiguration,
-			LastUpdated: time.Now(),
-			Enabled:     true,
+			ID:     NetworkID(nwid),
+			Status: NetworkStatusRequestConfiguration,
 		},
 		tap: &nativeTap{tap: unsafe.Pointer(ntap), enabled: 1},
 	}
@@ -347,20 +345,74 @@ func goDNSResolverFunc(gn unsafe.Pointer, dnsRecordTypes unsafe.Pointer, numDNSR
 	}()
 }
 
+func sockaddrStorageToIPNet(ss *C.struct_sockaddr_storage) *net.IPNet {
+	var a net.IPNet
+	switch ss.ss_family {
+	case afInet:
+		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
+		var ip4 [4]byte
+		copy(ip4[:], (*[4]byte)(unsafe.Pointer(&sa4.sin_addr))[:])
+		a.IP = net.IP(ip4[:])
+		a.Mask = net.CIDRMask(int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:])), 32)
+		return &a
+	case afInet6:
+		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
+		var ip6 [16]byte
+		copy(ip6[:], (*[16]byte)(unsafe.Pointer(&sa6.sin6_addr))[:])
+		a.IP = net.IP(ip6[:])
+		a.Mask = net.CIDRMask(int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa6.sin6_port)))[:])), 128)
+		return &a
+	}
+	return nil
+}
+
 //export goVirtualNetworkConfigFunc
 func goVirtualNetworkConfigFunc(gn, tapP unsafe.Pointer, nwid C.uint64_t, op C.int, conf unsafe.Pointer) {
 	nodesByUserPtrLock.RLock()
 	node := nodesByUserPtr[uintptr(gn)]
 	nodesByUserPtrLock.RUnlock()
 	if node == nil {
-		return 255
+		return
 	}
 	node.networksLock.RLock()
 	network := node.networks[uint64(nwid)]
 	node.networksLock.RUnlock()
 	if network != nil {
+		ncc := (*C.ZT_VirtualNetworkConfig)(conf)
+		var nc NetworkConfig
+		nc.ID = uint64(ncc.nwid)
+		nc.MAC = MAC(ncc.mac)
+		nc.Name = C.GoString(ncc.name)
+		nc.Status = int(ncc.status)
+		nc.Type = int(ncc._type)
+		nc.MTU = int(ncc.mtu)
+		nc.Bridge = (ncc.bridge != 0)
+		nc.BroadcastEnabled = (ncc.broadcastEnabled != 0)
+		nc.NetconfRevision = uint64(ncc.netconfRevision)
+		for i := 0; i < int(ncc.assignedAddressCount); i++ {
+			a := sockaddrStorageToIPNet(&ncc.assignedAddresses[i])
+			if a != nil {
+				nc.AssignedAddresses = append(nc.AssignedAddresses, *a)
+			}
+		}
+		for i := 0; i < int(ncc.routeCount); i++ {
+			tgt := sockaddrStorageToIPNet(&ncc.routes[i].target)
+			viaN := sockaddrStorageToIPNet(&ncc.routes[i].via)
+			var via net.IP
+			if viaN != nil {
+				via = viaN.IP
+			}
+			if tgt != nil {
+				nc.Routes = append(nc.Routes, Route{
+					Target: *tgt,
+					Via:    via,
+					Flags:  uint16(ncc.routes[i].flags),
+					Metric: uint16(ncc.routes[i].metric),
+				})
+			}
+		}
+		network.handleNetworkConfigUpdate(&nc)
 	}
-	//return C.int(node.handleNetworkConfigUpdate(uint64(nwid), int(op), (*C.ZT_VirtualNetworkConfig)(conf)))
 }
 
 //export goZtEvent
@@ -461,7 +513,7 @@ func (t *nativeTap) Enabled() bool {
 }
 
 // AddIP adds an IP address (with netmask) to this tap
-func (t *nativeTap) AddIP(ip net.IPNet) error {
+func (t *nativeTap) AddIP(ip *net.IPNet) error {
 	bits, _ := ip.Mask.Size()
 	if len(ip.IP) == 16 {
 		if bits > 128 || bits < 0 {
@@ -478,7 +530,7 @@ func (t *nativeTap) AddIP(ip net.IPNet) error {
 }
 
 // RemoveIP removes this IP address (with netmask) from this tap
-func (t *nativeTap) RemoveIP(ip net.IPNet) error {
+func (t *nativeTap) RemoveIP(ip *net.IPNet) error {
 	bits, _ := ip.Mask.Size()
 	if len(ip.IP) == 16 {
 		if bits > 128 || bits < 0 {
@@ -552,4 +604,62 @@ func (t *nativeTap) AddMulticastGroupChangeHandler(handler func(bool, *Multicast
 	t.multicastGroupHandlersLock.Lock()
 	t.multicastGroupHandlers = append(t.multicastGroupHandlers, handler)
 	t.multicastGroupHandlersLock.Unlock()
+}
+
+// AddRoute adds or updates a managed route on this tap's interface
+func (t *nativeTap) AddRoute(r *Route) error {
+	rc := 0
+	if r != nil {
+		if len(r.Target.IP) == 4 {
+			mask, _ := r.Target.Mask.Size()
+			if len(r.Via) == 4 {
+				rc = int(C.ZT_GoTap_addRoute(t.tap, afInet, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), afInet, unsafe.Pointer(&r.Via[0]), C.int(r.Metric)))
+			} else {
+				rc = int(C.ZT_GoTap_addRoute(t.tap, afInet, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.int(r.Metric)))
+			}
+		} else if len(r.Target.IP) == 16 {
+			mask, _ := r.Target.Mask.Size()
+			if len(r.Via) == 4 {
+				rc = int(C.ZT_GoTap_addRoute(t.tap, afInet6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), afInet6, unsafe.Pointer(&r.Via[0]), C.int(r.Metric)))
+			} else {
+				rc = int(C.ZT_GoTap_addRoute(t.tap, afInet6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.int(r.Metric)))
+			}
+		}
+	}
+	if rc != 0 {
+		return fmt.Errorf("tap device error adding route: %d", rc)
+	}
+	return nil
+}
+
+// RemoveRoute removes a managed route on this tap's interface
+func (t *nativeTap) RemoveRoute(r *Route) error {
+	rc := 0
+	if r != nil {
+		if len(r.Target.IP) == 4 {
+			mask, _ := r.Target.Mask.Size()
+			if len(r.Via) == 4 {
+				rc = int(C.ZT_GoTap_removeRoute(t.tap, afInet, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), afInet, unsafe.Pointer(&r.Via[0]), C.int(r.Metric)))
+			} else {
+				rc = int(C.ZT_GoTap_removeRoute(t.tap, afInet, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.int(r.Metric)))
+			}
+		} else if len(r.Target.IP) == 16 {
+			mask, _ := r.Target.Mask.Size()
+			if len(r.Via) == 4 {
+				rc = int(C.ZT_GoTap_removeRoute(t.tap, afInet6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), afInet6, unsafe.Pointer(&r.Via[0]), C.int(r.Metric)))
+			} else {
+				rc = int(C.ZT_GoTap_removeRoute(t.tap, afInet6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.int(r.Metric)))
+			}
+		}
+	}
+	if rc != 0 {
+		return fmt.Errorf("tap device error removing route: %d", rc)
+	}
+	return nil
+}
+
+// SyncRoutes synchronizes managed routes
+func (t *nativeTap) SyncRoutes() error {
+	C.ZT_GoTap_syncRoutes(t.tap)
+	return nil
 }

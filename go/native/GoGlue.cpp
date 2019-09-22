@@ -661,3 +661,52 @@ extern "C" void ZT_GoTap_setMtu(ZT_GoTap *tap,unsigned int mtu)
 {
 	reinterpret_cast<EthernetTap *>(tap)->setMtu(mtu);
 }
+
+extern "C" int ZT_GoTap_addRoute(ZT_GoTap *tap,int targetAf,const void *targetIp,int targetNetmaskBits,int viaAf,const void *viaIp,unsigned int metric)
+{
+	InetAddress target,via;
+	switch(targetAf) {
+		case AF_INET:
+			target.set(targetIp,4,(unsigned int)targetNetmaskBits);
+			break;
+		case AF_INET6:
+			target.set(targetIp,16,(unsigned int)targetNetmaskBits);
+			break;
+	}
+	switch(viaAf) {
+		case AF_INET:
+			via.set(viaIp,4,0);
+			break;
+		case AF_INET6:
+			via.set(viaIp,16,0);
+			break;
+	}
+	return reinterpret_cast<EthernetTap *>(tap)->addRoute(target,via,metric);
+}
+
+extern "C" int ZT_GoTap_removeRoute(ZT_GoTap *tap,int targetAf,const void *targetIp,int targetNetmaskBits,int viaAf,const void *viaIp,unsigned int metric)
+{
+	InetAddress target,via;
+	switch(targetAf) {
+		case AF_INET:
+			target.set(targetIp,4,(unsigned int)targetNetmaskBits);
+			break;
+		case AF_INET6:
+			target.set(targetIp,16,(unsigned int)targetNetmaskBits);
+			break;
+	}
+	switch(viaAf) {
+		case AF_INET:
+			via.set(viaIp,4,0);
+			break;
+		case AF_INET6:
+			via.set(viaIp,16,0);
+			break;
+	}
+	return reinterpret_cast<EthernetTap *>(tap)->removeRoute(target,via,metric);
+}
+
+extern "C" int ZT_GoTap_syncRoutes(ZT_GoTap *tap)
+{
+	return reinterpret_cast<EthernetTap *>(tap)->syncRoutes();
+}

@@ -18,10 +18,13 @@
 #include "../node/MAC.hpp"
 #include "../node/InetAddress.hpp"
 #include "../node/MulticastGroup.hpp"
+#include "ManagedRoute.hpp"
 
 #include <string>
 #include <memory>
 #include <vector>
+#include <mutex>
+#include <map>
 
 namespace ZeroTier {
 
@@ -50,9 +53,37 @@ public:
 	virtual std::vector<InetAddress> ips() const = 0;
 	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len) = 0;
 	virtual std::string deviceName() const = 0;
+	virtual std::string routingDeviceName() const;
 	virtual void setFriendlyName(const char *friendlyName) = 0;
 	virtual void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed) = 0;
 	virtual void setMtu(unsigned int mtu) = 0;
+
+	ZT_ALWAYS_INLINE int addRoute(const InetAddress &target,const InetAddress &via,const unsigned int metric)
+	{
+		const std::string dn(this->routingDeviceName());
+		const char *const dnp = (dn.length() > 0) ? dn.c_str() : (const char *)0;
+		std::lock_guard<std::mutex> l(_managedRoutes_l);
+		_managedRoutes[std::pair<InetAddress,unsigned int>(target,metric)] = std::shared_ptr<ManagedRoute>(new ManagedRoute(target,via,dnp));
+	}
+
+	ZT_ALWAYS_INLINE int removeRoute(const InetAddress &target,const InetAddress &via,const unsigned int metric)
+	{
+		std::lock_guard<std::mutex> l(_managedRoutes_l);
+		_managedRoutes.erase(std::pair<InetAddress,unsigned int>(target,metric));
+	}
+
+	ZT_ALWAYS_INLINE int syncRoutes()
+	{
+		std::lock_guard<std::mutex> l(_managedRoutes_l);
+		for(auto r=_managedRoutes.begin();r!=_managedRoutes.end();++r) {
+			r->second->sync();
+		}
+		return 0;
+	}
+
+private:
+	std::map< std::pair<InetAddress,unsigned int>,std::shared_ptr<ManagedRoute> > _managedRoutes;
+	std::mutex _managedRoutes_l;
 };
 
 } // namespace ZeroTier

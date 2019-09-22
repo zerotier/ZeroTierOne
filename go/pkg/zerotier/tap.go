@@ -21,9 +21,12 @@ type Tap interface {
 	Error() (int, string)
 	SetEnabled(enabled bool)
 	Enabled() bool
-	AddIP(ip net.IPNet) error
-	RemoveIP(ip net.IPNet) error
+	AddIP(ip *net.IPNet) error
+	RemoveIP(ip *net.IPNet) error
 	IPs() ([]net.IPNet, error)
 	DeviceName() string
 	AddMulticastGroupChangeHandler(func(bool, *MulticastGroup))
+	AddRoute(r *Route) error
+	RemoveRoute(r *Route) error
+	SyncRoutes() error
 }

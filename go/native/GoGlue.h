@@ -91,6 +91,12 @@ void ZT_GoTap_setFriendlyName(ZT_GoTap *tap,const char *friendlyName);
 
 void ZT_GoTap_setMtu(ZT_GoTap *tap,unsigned int mtu);
 
+int ZT_GoTap_addRoute(ZT_GoTap *tap,int targetAf,const void *targetIp,int targetNetmaskBits,int viaAf,const void *viaIp,unsigned int metric);
+
+int ZT_GoTap_removeRoute(ZT_GoTap *tap,int targetAf,const void *targetIp,int targetNetmaskBits,int viaAf,const void *viaIp,unsigned int metric);
+
+int ZT_GoTap_syncRoutes(ZT_GoTap *tap);
+
 /****************************************************************************/
 
 #ifdef __cplusplus

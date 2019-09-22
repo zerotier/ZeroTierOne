@@ -128,4 +128,15 @@ bool EthernetTap::addIps(std::vector<InetAddress> ips)
 	return true;
 }
 
+std::string EthernetTap::routingDeviceName() const
+{
+#ifdef __WINDOWS__
+	char tapdev[64];
+	OSUtils::ztsnprintf(tapdev,sizeof(tapdev),"%.16llx",(unsigned long long)(((const WindowsEthernetTap *)(this))->luid().Value));
+	return std::string(tapdev);
+#else
+	return this->deviceName();
+#endif
+}
+
 } // namespace ZeroTier

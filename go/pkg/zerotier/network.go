@@ -116,3 +116,36 @@ func (n *Network) Tap() Tap {
 	defer n.tapLock.RUnlock()
 	return n.tap
 }
+
+func (n *Network) handleNetworkConfigUpdate(nc *NetworkConfig) {
+	n.tapLock.RLock()
+	n.configLock.Lock()
+	defer n.configLock.Unlock()
+	defer n.tapLock.RUnlock()
+
+	if n.tap == nil { // sanity check
+		return
+	}
+
+	// Add IPs to tap that are newly assigned in this config update,
+	// and remove any IPs from the tap that were assigned that are no
+	// longer wanted. IPs assigned to the tap externally (e.g. by an
+	// "ifconfig" command) are left alone.
+	haveAssignedIPs := make(map[[3]uint64]*net.IPNet)
+	for _, ip := range n.config.AssignedAddresses {
+		haveAssignedIPs[ipNetToKey(&ip)] = &ip
+	}
+	wantAssignedIPs := make(map[[3]uint64]bool)
+	for _, ip := range nc.AssignedAddresses {
+		k := ipNetToKey(&ip)
+		wantAssignedIPs[k] = true
+		if _, have := haveAssignedIPs[k]; !have {
+			n.tap.AddIP(&ip)
+		}
+	}
+	for k, ip := range haveAssignedIPs {
+		if _, want := wantAssignedIPs[k]; !want {
+			n.tap.RemoveIP(ip)
+		}
+	}
+}
