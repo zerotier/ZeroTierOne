@@ -58,14 +58,75 @@ const (
 	// CoreVersionBuild is the build version of the ZeroTier core
 	CoreVersionBuild int = C.ZEROTIER_ONE_VERSION_BUILD
 
-	afInet  int = C.AF_INET
-	afInet6 int = C.AF_INET6
+	afInet  = C.AF_INET
+	afInet6 = C.AF_INET6
 )
 
 var (
 	nodesByUserPtr     map[uintptr]*Node
 	nodesByUserPtrLock sync.RWMutex
 )
+
+func sockaddrStorageToIPNet(ss *C.struct_sockaddr_storage) *net.IPNet {
+	var a net.IPNet
+	switch ss.ss_family {
+	case afInet:
+		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
+		var ip4 [4]byte
+		copy(ip4[:], (*[4]byte)(unsafe.Pointer(&sa4.sin_addr))[:])
+		a.IP = net.IP(ip4[:])
+		a.Mask = net.CIDRMask(int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:])), 32)
+		return &a
+	case afInet6:
+		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
+		var ip6 [16]byte
+		copy(ip6[:], (*[16]byte)(unsafe.Pointer(&sa6.sin6_addr))[:])
+		a.IP = net.IP(ip6[:])
+		a.Mask = net.CIDRMask(int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa6.sin6_port)))[:])), 128)
+		return &a
+	}
+	return nil
+}
+
+func sockaddrStorageToUDPAddr(ss *C.struct_sockaddr_storage) *net.UDPAddr {
+	var a net.UDPAddr
+	switch ss.ss_family {
+	case afInet:
+		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
+		var ip4 [4]byte
+		copy(ip4[:], (*[4]byte)(unsafe.Pointer(&sa4.sin_addr))[:])
+		a.IP = net.IP(ip4[:])
+		a.Port = int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:]))
+		return &a
+	case afInet6:
+		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
+		var ip6 [16]byte
+		copy(ip6[:], (*[16]byte)(unsafe.Pointer(&sa6.sin6_addr))[:])
+		a.IP = net.IP(ip6[:])
+		a.Port = int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa6.sin6_port)))[:]))
+		return &a
+	}
+	return nil
+}
+
+func makeSockaddrStorage(ip net.IP, port int, ss *C.struct_sockaddr_storage) bool {
+	C.memset(unsafe.Pointer(ss), 0, C.sizeof_struct_sockaddr_storage)
+	if len(ip) == 4 {
+		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
+		sa4.sin_family = afInet
+		copy(((*[4]byte)(unsafe.Pointer(&sa4.sin_addr)))[:], ip)
+		binary.BigEndian.PutUint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:], uint16(port))
+		return true
+	}
+	if len(ip) == 16 {
+		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
+		sa6.sin6_family = afInet6
+		copy(((*[16]byte)(unsafe.Pointer(&sa6.sin6_addr)))[:], ip)
+		binary.BigEndian.PutUint16(((*[2]byte)(unsafe.Pointer(&sa6.sin6_port)))[:], uint16(port))
+		return true
+	}
+	return false
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -158,6 +219,82 @@ func (n *Node) Leave(nwid uint64) error {
 	delete(n.networks, nwid)
 	n.networksLock.Unlock()
 	return nil
+}
+
+// AddStaticRoot adds a statically defined root server to this node.
+// If a static root with the given identity already exists this will update its IP and port information.
+func (n *Node) AddStaticRoot(id *Identity, addrs []net.Addr) {
+	var saddrs []*C.struct_sockaddr_storage
+	for _, a := range addrs {
+		aa, _ := a.(*net.UDPAddr)
+		if aa != nil {
+			ss := new(C.struct_sockaddr_storage)
+			if makeSockaddrStorage(aa.IP, aa.Port, ss) {
+				saddrs = append(saddrs, ss)
+			}
+		}
+	}
+	if len(saddrs) > 0 {
+		ids := C.CString(id.String())
+		C.ZT_Node_setStaticRoot(n.zn, ids, &saddrs[0], C.uint(len(saddrs)))
+		C.free(unsafe.Pointer(ids))
+	}
+}
+
+// RemoveStaticRoot removes a statically defined root server from this node.
+func (n *Node) RemoveStaticRoot(id *Identity) {
+	ids := C.CString(id.String())
+	C.ZT_Node_removeStaticRoot(n.zn, ids)
+	C.free(unsafe.Pointer(ids))
+}
+
+// AddDynamicRoot adds a dynamic root to this node.
+// If the locator parameter is non-empty it can contain a binary serialized locator
+// to use if (or until) one can be fetched via DNS.
+func (n *Node) AddDynamicRoot(dnsName string, locator []byte) {
+	dn := C.CString(dnsName)
+	if len(locator) > 0 {
+		C.ZT_Node_setDynamicRoot(n.zn, dn, unsafe.Pointer(&locator[0]), C.uint(len(locator)))
+	} else {
+		C.ZT_Node_setDynamicRoot(n.zn, dn, nil, 0)
+	}
+	C.free(unsafe.Pointer(dn))
+}
+
+// RemoveDynamicRoot removes a dynamic root from this node.
+func (n *Node) RemoveDynamicRoot(dnsName string) {
+	dn := C.CString(dnsName)
+	C.ZT_Node_removeDynamicRoot(n.zn, dn)
+	C.free(unsafe.Pointer(dn))
+}
+
+// ListRoots retrieves a list of root servers on this node and their preferred and online status.
+func (n *Node) ListRoots() []Root {
+	var roots []Root
+	rl := C.ZT_Node_listRoots(n.zn, C.int64_t(TimeMs()))
+	if rl != nil {
+		for i := 0; i < int(rl.count); i++ {
+			id, err := NewIdentityFromString(C.GoString(rl.roots[i].identity))
+			if err == nil {
+				var addrs []net.Addr
+				for j := 0; j < int(rl.roots[i].addressCount); j++ {
+					a := sockaddrStorageToUDPAddr(&rl.roots[i].addresses[j])
+					if a != nil {
+						addrs = append(addrs, a)
+					}
+				}
+				roots = append(roots, Root{
+					DNSName:   C.GoString(rl.roots[i].dnsName),
+					Identity:  id,
+					Addresses: addrs,
+					Preferred: (rl.roots[i].preferred != 0),
+					Online:    (rl.roots[i].online != 0),
+				})
+			}
+		}
+		defer C.ZT_Node_freeQueryResult(n.zn, unsafe.Pointer(rl))
+	}
+	return roots
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -343,27 +480,6 @@ func goDNSResolverFunc(gn unsafe.Pointer, dnsRecordTypes unsafe.Pointer, numDNSR
 		C.ZT_Node_processDNSResult(unsafe.Pointer(node.zn), nil, requestID, recordNameCStrCopy, C.ZT_DNS_RECORD__END_OF_RESULTS, nil, 0, 0)
 		C.free(unsafe.Pointer(recordNameCStrCopy))
 	}()
-}
-
-func sockaddrStorageToIPNet(ss *C.struct_sockaddr_storage) *net.IPNet {
-	var a net.IPNet
-	switch ss.ss_family {
-	case afInet:
-		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
-		var ip4 [4]byte
-		copy(ip4[:], (*[4]byte)(unsafe.Pointer(&sa4.sin_addr))[:])
-		a.IP = net.IP(ip4[:])
-		a.Mask = net.CIDRMask(int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:])), 32)
-		return &a
-	case afInet6:
-		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
-		var ip6 [16]byte
-		copy(ip6[:], (*[16]byte)(unsafe.Pointer(&sa6.sin6_addr))[:])
-		a.IP = net.IP(ip6[:])
-		a.Mask = net.CIDRMask(int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa6.sin6_port)))[:])), 128)
-		return &a
-	}
-	return nil
 }
 
 //export goVirtualNetworkConfigFunc
