@@ -16,6 +16,10 @@ ifeq ($(OSTYPE),FreeBSD)
 	ZT_BUILD_PLATFORM=7
 	include make-bsd.mk
 endif
+ifeq ($(OSTYPE),DragonFly)
+	ZT_BUILD_PLATFORM=8
+	include make-bsd.mk
+endif
 ifeq ($(OSTYPE),OpenBSD)
 	CC=egcc
 	CXX=eg++

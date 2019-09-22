@@ -11,6 +11,9 @@ ONE_OBJS+=osdep/BSDEthernetTap.o ext/http-parser/http_parser.o
 ifeq ($(ZT_SANITIZE),1)
 	SANFLAGS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
 endif
+ifeq ($(ZT_DEBUG_TRACE),1)
+	DEFS+=-DZT_DEBUG_TRACE
+endif
 # "make debug" is a shortcut for this
 ifeq ($(ZT_DEBUG),1)
 	CFLAGS+=-Wall -Werror -g -pthread $(INCLUDES) $(DEFS)
@@ -160,7 +163,7 @@ clean:
 	rm -rf *.a *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o build-* zerotier-one zerotier-idtool zerotier-selftest zerotier-cli $(ONE_OBJS) $(CORE_OBJS)
 
 debug:	FORCE
-	$(MAKE) -j ZT_DEBUG=1
+	$(MAKE) -j ZT_DEBUG=1 ZT_DEBUG_TRACE=1
 
 install:	one
 	rm -f /usr/local/sbin/zerotier-one
