@@ -43,6 +43,9 @@ const (
 	NetworkStatusPortError            int = C.ZT_NETWORK_STATUS_PORT_ERROR
 	NetworkStatusClientTooOld         int = C.ZT_NETWORK_STATUS_CLIENT_TOO_OLD
 
+	NetworkTypePrivate int = C.ZT_NETWORK_TYPE_PRIVATE
+	NetworkTypePublic  int = C.ZT_NETWORK_TYPE_PUBLIC
+
 	// CoreVersionMajor is the major version of the ZeroTier core
 	CoreVersionMajor int = C.ZEROTIER_ONE_VERSION_MAJOR
 
@@ -136,13 +139,10 @@ func (n *Node) Join(nwid uint64, tap Tap) (*Network, error) {
 		return nil, ErrTapInitFailed
 	}
 
-	nw := &Network{
-		id: NetworkID(nwid),
-		config: NetworkConfig{
-			ID:     NetworkID(nwid),
-			Status: NetworkStatusRequestConfiguration,
-		},
-		tap: &nativeTap{tap: unsafe.Pointer(ntap), enabled: 1},
+	nw, err := NewNetwork(NetworkID(nwid), &nativeTap{tap: unsafe.Pointer(ntap), enabled: 1})
+	if err != nil {
+		C.ZT_GoNode_leave(n.gn, C.uint64_t(nwid))
+		return nil, err
 	}
 	n.networksLock.Lock()
 	n.networks[nwid] = nw
@@ -368,113 +368,82 @@ func sockaddrStorageToIPNet(ss *C.struct_sockaddr_storage) *net.IPNet {
 
 //export goVirtualNetworkConfigFunc
 func goVirtualNetworkConfigFunc(gn, tapP unsafe.Pointer, nwid C.uint64_t, op C.int, conf unsafe.Pointer) {
-	nodesByUserPtrLock.RLock()
-	node := nodesByUserPtr[uintptr(gn)]
-	nodesByUserPtrLock.RUnlock()
-	if node == nil {
-		return
-	}
-	node.networksLock.RLock()
-	network := node.networks[uint64(nwid)]
-	node.networksLock.RUnlock()
-	if network != nil {
-		ncc := (*C.ZT_VirtualNetworkConfig)(conf)
-		var nc NetworkConfig
-		nc.ID = uint64(ncc.nwid)
-		nc.MAC = MAC(ncc.mac)
-		nc.Name = C.GoString(ncc.name)
-		nc.Status = int(ncc.status)
-		nc.Type = int(ncc._type)
-		nc.MTU = int(ncc.mtu)
-		nc.Bridge = (ncc.bridge != 0)
-		nc.BroadcastEnabled = (ncc.broadcastEnabled != 0)
-		nc.NetconfRevision = uint64(ncc.netconfRevision)
-		for i := 0; i < int(ncc.assignedAddressCount); i++ {
-			a := sockaddrStorageToIPNet(&ncc.assignedAddresses[i])
-			if a != nil {
-				nc.AssignedAddresses = append(nc.AssignedAddresses, *a)
-			}
+	go func() {
+		nodesByUserPtrLock.RLock()
+		node := nodesByUserPtr[uintptr(gn)]
+		nodesByUserPtrLock.RUnlock()
+		if node == nil {
+			return
 		}
-		for i := 0; i < int(ncc.routeCount); i++ {
-			tgt := sockaddrStorageToIPNet(&ncc.routes[i].target)
-			viaN := sockaddrStorageToIPNet(&ncc.routes[i].via)
-			var via net.IP
-			if viaN != nil {
-				via = viaN.IP
+		node.networksLock.RLock()
+		network := node.networks[uint64(nwid)]
+		node.networksLock.RUnlock()
+		if network != nil {
+			ncc := (*C.ZT_VirtualNetworkConfig)(conf)
+			if network.networkConfigRevision() > uint64(ncc.netconfRevision) {
+				return
 			}
-			if tgt != nil {
-				nc.Routes = append(nc.Routes, Route{
-					Target: *tgt,
-					Via:    via,
-					Flags:  uint16(ncc.routes[i].flags),
-					Metric: uint16(ncc.routes[i].metric),
-				})
+			var nc NetworkConfig
+			nc.ID = uint64(ncc.nwid)
+			nc.MAC = MAC(ncc.mac)
+			nc.Name = C.GoString(ncc.name)
+			nc.Status = int(ncc.status)
+			nc.Type = int(ncc._type)
+			nc.MTU = int(ncc.mtu)
+			nc.Bridge = (ncc.bridge != 0)
+			nc.BroadcastEnabled = (ncc.broadcastEnabled != 0)
+			nc.NetconfRevision = uint64(ncc.netconfRevision)
+			for i := 0; i < int(ncc.assignedAddressCount); i++ {
+				a := sockaddrStorageToIPNet(&ncc.assignedAddresses[i])
+				if a != nil {
+					nc.AssignedAddresses = append(nc.AssignedAddresses, *a)
+				}
 			}
+			for i := 0; i < int(ncc.routeCount); i++ {
+				tgt := sockaddrStorageToIPNet(&ncc.routes[i].target)
+				viaN := sockaddrStorageToIPNet(&ncc.routes[i].via)
+				var via net.IP
+				if viaN != nil {
+					via = viaN.IP
+				}
+				if tgt != nil {
+					nc.Routes = append(nc.Routes, Route{
+						Target: *tgt,
+						Via:    via,
+						Flags:  uint16(ncc.routes[i].flags),
+						Metric: uint16(ncc.routes[i].metric),
+					})
+				}
+			}
+			network.updateConfig(&nc, nil)
 		}
-		network.handleNetworkConfigUpdate(&nc)
-	}
+	}()
 }
 
 //export goZtEvent
 func goZtEvent(gn unsafe.Pointer, eventType C.int, data unsafe.Pointer) {
-	nodesByUserPtrLock.RLock()
-	node := nodesByUserPtr[uintptr(gn)]
-	nodesByUserPtrLock.RUnlock()
-	if node == nil {
-		return
-	}
-	switch eventType {
-	case C.ZT_EVENT_OFFLINE:
-		atomic.StoreUint32(&node.online, 0)
-	case C.ZT_EVENT_ONLINE:
-		atomic.StoreUint32(&node.online, 1)
-	case C.ZT_EVENT_TRACE:
-		node.handleTrace(C.GoString((*C.char)(data)))
-	case C.ZT_EVENT_USER_MESSAGE:
-		um := (*C.ZT_UserMessage)(data)
-		node.handleUserMessage(uint64(um.origin), uint64(um.typeId), C.GoBytes(um.data, C.int(um.length)))
-	case C.ZT_EVENT_REMOTE_TRACE:
-		rt := (*C.ZT_RemoteTrace)(data)
-		node.handleRemoteTrace(uint64(rt.origin), C.GoBytes(unsafe.Pointer(rt.data), C.int(rt.len)))
-	}
-}
-
-// These are really part of nativeTap
-
-func handleTapMulticastGroupChange(gn unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t, added bool) {
-	nodesByUserPtrLock.RLock()
-	node := nodesByUserPtr[uintptr(gn)]
-	nodesByUserPtrLock.RUnlock()
-	if node == nil {
-		return
-	}
-
-	node.networksLock.RLock()
-	network := node.networks[uint64(nwid)]
-	node.networksLock.RUnlock()
-
-	network.tapLock.Lock()
-	tap, _ := network.tap.(*nativeTap)
-	network.tapLock.Unlock()
-
-	if tap != nil {
-		mg := &MulticastGroup{MAC: MAC(mac), ADI: uint32(adi)}
-		tap.multicastGroupHandlersLock.Lock()
-		defer tap.multicastGroupHandlersLock.Unlock()
-		for _, h := range tap.multicastGroupHandlers {
-			h(added, mg)
+	go func() {
+		nodesByUserPtrLock.RLock()
+		node := nodesByUserPtr[uintptr(gn)]
+		nodesByUserPtrLock.RUnlock()
+		if node == nil {
+			return
 		}
-	}
-}
-
-//export goHandleTapAddedMulticastGroup
-func goHandleTapAddedMulticastGroup(gn, tapP unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t) {
-	handleTapMulticastGroupChange(gn, nwid, mac, adi, true)
-}
-
-//export goHandleTapRemovedMulticastGroup
-func goHandleTapRemovedMulticastGroup(gn, tapP unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t) {
-	handleTapMulticastGroupChange(gn, nwid, mac, adi, false)
+		switch eventType {
+		case C.ZT_EVENT_OFFLINE:
+			atomic.StoreUint32(&node.online, 0)
+		case C.ZT_EVENT_ONLINE:
+			atomic.StoreUint32(&node.online, 1)
+		case C.ZT_EVENT_TRACE:
+			node.handleTrace(C.GoString((*C.char)(data)))
+		case C.ZT_EVENT_USER_MESSAGE:
+			um := (*C.ZT_UserMessage)(data)
+			node.handleUserMessage(uint64(um.origin), uint64(um.typeId), C.GoBytes(um.data, C.int(um.length)))
+		case C.ZT_EVENT_REMOTE_TRACE:
+			rt := (*C.ZT_RemoteTrace)(data)
+			node.handleRemoteTrace(uint64(rt.origin), C.GoBytes(unsafe.Pointer(rt.data), C.int(rt.len)))
+		}
+	}()
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -662,4 +631,41 @@ func (t *nativeTap) RemoveRoute(r *Route) error {
 func (t *nativeTap) SyncRoutes() error {
 	C.ZT_GoTap_syncRoutes(t.tap)
 	return nil
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+func handleTapMulticastGroupChange(gn unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t, added bool) {
+	go func() {
+		nodesByUserPtrLock.RLock()
+		node := nodesByUserPtr[uintptr(gn)]
+		nodesByUserPtrLock.RUnlock()
+		if node == nil {
+			return
+		}
+		node.networksLock.RLock()
+		network := node.networks[uint64(nwid)]
+		node.networksLock.RUnlock()
+		if network != nil {
+			tap, _ := network.tap.(*nativeTap)
+			if tap != nil {
+				mg := &MulticastGroup{MAC: MAC(mac), ADI: uint32(adi)}
+				tap.multicastGroupHandlersLock.Lock()
+				defer tap.multicastGroupHandlersLock.Unlock()
+				for _, h := range tap.multicastGroupHandlers {
+					h(added, mg)
+				}
+			}
+		}
+	}()
+}
+
+//export goHandleTapAddedMulticastGroup
+func goHandleTapAddedMulticastGroup(gn, tapP unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t) {
+	handleTapMulticastGroupChange(gn, nwid, mac, adi, true)
+}
+
+//export goHandleTapRemovedMulticastGroup
+func goHandleTapRemovedMulticastGroup(gn, tapP unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t) {
+	handleTapMulticastGroupChange(gn, nwid, mac, adi, false)
 }

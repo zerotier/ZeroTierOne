@@ -40,7 +40,7 @@ func (n NetworkID) String() string {
 
 // MarshalJSON marshals this NetworkID as a string
 func (n NetworkID) MarshalJSON() ([]byte, error) {
-	return []byte(n.String()), nil
+	return []byte("\"" + n.String() + "\""), nil
 }
 
 // UnmarshalJSON unmarshals this NetworkID from a string
@@ -75,13 +75,13 @@ type NetworkConfig struct {
 	// MTU is the Ethernet MTU for this network
 	MTU int
 
-	// CanBridge is true if this network is allowed to bridge in other devices with different Ethernet addresses
+	// Bridge is true if this network is allowed to bridge in other devices with different Ethernet addresses
 	Bridge bool
 
 	// BroadcastEnabled is true if the broadcast (ff:ff:ff:ff:ff:ff) address works (excluding IPv4 ARP which is handled via a special path)
 	BroadcastEnabled bool
 
-	// Network configuration revision number according to network controller
+	// NetconfRevision is the revision number reported by the controller
 	NetconfRevision uint64
 
 	// AssignedAddresses are static IPs assigned by the network controller to this device
@@ -91,13 +91,50 @@ type NetworkConfig struct {
 	Routes []Route
 }
 
+// NetworkLocalSettings is settings for this network that can be changed locally
+type NetworkLocalSettings struct {
+	// AllowManagedIPs determines whether managed IP assignment is allowed
+	AllowManagedIPs bool
+
+	// AllowGlobalIPs determines if managed IPs that overlap with public Internet addresses are allowed
+	AllowGlobalIPs bool
+
+	// AllowManagedRoutes determines whether managed routes can be set
+	AllowManagedRoutes bool
+
+	// AllowGlobalRoutes determines if managed routes can overlap with public Internet addresses
+	AllowGlobalRoutes bool
+
+	// AllowDefaultRouteOverride determines if the default (0.0.0.0 or ::0) route on the system can be overridden ("full tunnel" mode)
+	AllowDefaultRouteOverride bool
+}
+
 // Network is a currently joined network
 type Network struct {
 	id         NetworkID
-	config     NetworkConfig
 	tap        Tap
+	config     NetworkConfig
+	settings   NetworkLocalSettings // locked by configLock
 	configLock sync.RWMutex
-	tapLock    sync.RWMutex
+}
+
+// NewNetwork creates a new network with default settings
+func NewNetwork(id NetworkID, t Tap) (*Network, error) {
+	return &Network{
+		id:  id,
+		tap: t,
+		config: NetworkConfig{
+			ID:     id,
+			Status: NetworkStatusRequestConfiguration,
+		},
+		settings: NetworkLocalSettings{
+			AllowManagedIPs:           true,
+			AllowGlobalIPs:            false,
+			AllowManagedRoutes:        true,
+			AllowGlobalRoutes:         false,
+			AllowDefaultRouteOverride: false,
+		},
+	}, nil
 }
 
 // ID gets this network's unique ID
@@ -111,20 +148,60 @@ func (n *Network) Config() NetworkConfig {
 }
 
 // Tap gets this network's tap device
-func (n *Network) Tap() Tap {
-	n.tapLock.RLock()
-	defer n.tapLock.RUnlock()
-	return n.tap
+func (n *Network) Tap() Tap { return n.tap }
+
+// SetLocalSettings modifies this network's local settings
+func (n *Network) SetLocalSettings(ls *NetworkLocalSettings) { n.updateConfig(nil, ls) }
+
+func (n *Network) networkConfigRevision() uint64 {
+	n.configLock.RLock()
+	defer n.configLock.RUnlock()
+	return n.config.NetconfRevision
 }
 
-func (n *Network) handleNetworkConfigUpdate(nc *NetworkConfig) {
-	n.tapLock.RLock()
+func networkManagedIPAllowed(ip net.IP, ls *NetworkLocalSettings) bool {
+	if !ls.AllowManagedIPs {
+		return false
+	}
+	switch ipClassify(ip) {
+	case ipClassificationNone, ipClassificationLoopback, ipClassificationLinkLocal, ipClassificationMulticast:
+		return false
+	case ipClassificationGlobal:
+		return ls.AllowGlobalIPs
+	}
+	return true
+}
+
+func networkManagedRouteAllowed(r *Route, ls *NetworkLocalSettings) bool {
+	if !ls.AllowManagedRoutes {
+		return false
+	}
+	bits, _ := r.Target.Mask.Size()
+	if len(r.Target.IP) > 0 && allZero(r.Target.IP) && bits == 0 {
+		return ls.AllowDefaultRouteOverride
+	}
+	switch ipClassify(r.Target.IP) {
+	case ipClassificationNone, ipClassificationLoopback, ipClassificationLinkLocal, ipClassificationMulticast:
+		return false
+	case ipClassificationGlobal:
+		return ls.AllowGlobalRoutes
+	}
+	return true
+}
+
+func (n *Network) updateConfig(nc *NetworkConfig, ls *NetworkLocalSettings) {
 	n.configLock.Lock()
 	defer n.configLock.Unlock()
-	defer n.tapLock.RUnlock()
 
-	if n.tap == nil { // sanity check
+	if n.tap == nil { // sanity check, should never happen
 		return
+	}
+
+	if nc == nil {
+		nc = &n.config
+	}
+	if ls == nil {
+		ls = &n.settings
 	}
 
 	// Add IPs to tap that are newly assigned in this config update,
@@ -132,20 +209,62 @@ func (n *Network) handleNetworkConfigUpdate(nc *NetworkConfig) {
 	// longer wanted. IPs assigned to the tap externally (e.g. by an
 	// "ifconfig" command) are left alone.
 	haveAssignedIPs := make(map[[3]uint64]*net.IPNet)
-	for _, ip := range n.config.AssignedAddresses {
-		haveAssignedIPs[ipNetToKey(&ip)] = &ip
-	}
 	wantAssignedIPs := make(map[[3]uint64]bool)
-	for _, ip := range nc.AssignedAddresses {
-		k := ipNetToKey(&ip)
-		wantAssignedIPs[k] = true
-		if _, have := haveAssignedIPs[k]; !have {
-			n.tap.AddIP(&ip)
+	if n.settings.AllowManagedIPs {
+		for _, ip := range n.config.AssignedAddresses {
+			if networkManagedIPAllowed(ip.IP, &n.settings) { // was it allowed?
+				haveAssignedIPs[ipNetToKey(&ip)] = &ip
+			}
+		}
+	}
+	if ls.AllowManagedIPs {
+		for _, ip := range nc.AssignedAddresses {
+			if networkManagedIPAllowed(ip.IP, ls) { // should it be allowed now?
+				k := ipNetToKey(&ip)
+				wantAssignedIPs[k] = true
+				if _, have := haveAssignedIPs[k]; !have {
+					n.tap.AddIP(&ip)
+				}
+			}
 		}
 	}
 	for k, ip := range haveAssignedIPs {
 		if _, want := wantAssignedIPs[k]; !want {
 			n.tap.RemoveIP(ip)
 		}
+	}
+
+	// Do the same for managed routes
+	haveManagedRoutes := make(map[[6]uint64]*Route)
+	wantManagedRoutes := make(map[[6]uint64]bool)
+	if n.settings.AllowManagedRoutes {
+		for _, r := range n.config.Routes {
+			if networkManagedRouteAllowed(&r, &n.settings) { // was it allowed?
+				haveManagedRoutes[r.key()] = &r
+			}
+		}
+	}
+	if ls.AllowManagedRoutes {
+		for _, r := range nc.Routes {
+			if networkManagedRouteAllowed(&r, ls) { // should it be allowed now?
+				k := r.key()
+				wantManagedRoutes[k] = true
+				if _, have := haveManagedRoutes[k]; !have {
+					n.tap.AddRoute(&r)
+				}
+			}
+		}
+	}
+	for k, r := range haveManagedRoutes {
+		if _, want := wantManagedRoutes[k]; !want {
+			n.tap.RemoveRoute(r)
+		}
+	}
+
+	if nc != &n.config {
+		n.config = *nc
+	}
+	if ls != &n.settings {
+		n.settings = *ls
 	}
 }
