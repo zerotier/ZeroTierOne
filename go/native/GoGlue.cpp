@@ -57,6 +57,7 @@
 #include <array>
 #include <set>
 #include <memory>
+#include <atomic>
 
 #ifdef __WINDOWS__
 #define SETSOCKOPT_FLAG_TYPE BOOL
@@ -79,7 +80,7 @@ struct ZT_GoNodeThread
 	std::string ip;
 	int port;
 	int af;
-	std::atomic_bool run;
+	std::atomic<bool> run;
 	std::thread thr;
 };
 
@@ -89,7 +90,7 @@ struct ZT_GoNode_Impl
 	volatile int64_t nextBackgroundTaskDeadline;
 
 	std::string path;
-	std::atomic_bool run;
+	std::atomic<bool> run;
 
 	std::map< ZT_SOCKET,ZT_GoNodeThread > threads;
 	std::mutex threads_l;

@@ -1,3 +1,5 @@
+// +build !windows
+
 /*
  * Copyright (c)2019 ZeroTier, Inc.
  *
@@ -13,14 +15,14 @@
 
 package zerotier
 
-// Root describes a root server used to find and establish communication with other nodes.
-type Root struct {
-	DNSName   string
-	Identity  *Identity
-	Addresses []InetAddress
-	Preferred bool
-	Online    bool
-}
+import (
+	"net"
+	"os"
+	"path"
+)
 
-// Static returns true if this is a static root
-func (r *Root) Static() bool { return len(r.DNSName) == 0 }
+func createNamedSocketListener(basePath, name string) (net.Listener, error) {
+	apiSockPath := path.Join(basePath, name)
+	os.Remove(apiSockPath)
+	return net.Listen("unix", apiSockPath)
+}

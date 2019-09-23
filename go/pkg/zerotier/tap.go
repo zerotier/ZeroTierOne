@@ -28,5 +28,4 @@ type Tap interface {
 	AddMulticastGroupChangeHandler(func(bool, *MulticastGroup))
 	AddRoute(r *Route) error
 	RemoveRoute(r *Route) error
-	SyncRoutes() error
 }

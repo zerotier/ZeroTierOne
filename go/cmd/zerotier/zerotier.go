@@ -11,16 +11,22 @@
  */
 /****/
 
-package zerotier
+package main
 
-// Root describes a root server used to find and establish communication with other nodes.
-type Root struct {
-	DNSName   string
-	Identity  *Identity
-	Addresses []InetAddress
-	Preferred bool
-	Online    bool
+import (
+	"os"
+	"os/signal"
+	"syscall"
+)
+
+func nodeStart() {
+	osSignalChannel := make(chan os.Signal, 2)
+	signal.Notify(osSignalChannel, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGBUS)
+	signal.Ignore(syscall.SIGUSR1, syscall.SIGUSR2)
+	go func() {
+		<-osSignalChannel
+	}()
 }
 
-// Static returns true if this is a static root
-func (r *Root) Static() bool { return len(r.DNSName) == 0 }
+func main() {
+}
