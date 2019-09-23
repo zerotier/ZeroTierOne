@@ -56,6 +56,9 @@ const (
 	// CoreVersionBuild is the build version of the ZeroTier core
 	CoreVersionBuild int = C.ZEROTIER_ONE_VERSION_BUILD
 
+	// PlatformDefaultHomePath is the default location of ZeroTier's working path on this system
+	PlatformDefaultHomePath string = C.GoString(C.ZT_PLATFORM_DEFAULT_HOMEPATH)
+
 	afInet  = C.AF_INET
 	afInet6 = C.AF_INET6
 )

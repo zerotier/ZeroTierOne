@@ -100,6 +100,9 @@ struct ZT_GoNode_Impl
 	std::thread backgroundTaskThread;
 };
 
+static const std::string defaultHomePath(OSUtils::platformDefaultHomePath());
+extern "C" const char *ZT_PLATFORM_DEFAULT_HOMEPATH = defaultHomePath.c_str();
+
 /****************************************************************************/
 
 /* These functions are implemented in Go in pkg/ztnode/node-callbacks.go */

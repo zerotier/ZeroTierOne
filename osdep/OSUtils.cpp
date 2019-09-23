@@ -406,15 +406,15 @@ std::string OSUtils::platformDefaultHomePath()
 
 #ifdef __APPLE__
 	// /Library/... on Apple
-	return std::string("/Library/Application Support/ZeroTier/One");
+	return std::string("/Library/Application Support/ZeroTier");
 #else
 
 #ifdef __BSD__
 	// BSD likes /var/db instead of /var/lib
-	return std::string("/var/db/zerotier-one");
+	return std::string("/var/db/zerotier");
 #else
 	// Use /var/lib for Linux and other *nix
-	return std::string("/var/lib/zerotier-one");
+	return std::string("/var/lib/zerotier");
 #endif
 
 #endif
@@ -425,11 +425,11 @@ std::string OSUtils::platformDefaultHomePath()
 	// Look up app data folder on Windows, e.g. C:\ProgramData\...
 	char buf[16384];
 	if (SUCCEEDED(SHGetFolderPathA(NULL,CSIDL_COMMON_APPDATA,NULL,0,buf)))
-		return (std::string(buf) + "\\ZeroTier\\One");
-	else return std::string("C:\\ZeroTier\\One");
+		return (std::string(buf) + "\\ZeroTier");
+	else return std::string("C:\\ZeroTier");
 #else
 
-	return (std::string(ZT_PATH_SEPARATOR_S) + "ZeroTier" + ZT_PATH_SEPARATOR_S + "One"); // UNKNOWN PLATFORM
+	return (std::string(ZT_PATH_SEPARATOR_S) + "ZeroTier"); // UNKNOWN PLATFORM
 
 #endif
 
