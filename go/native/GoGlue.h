@@ -19,15 +19,7 @@
 #include <string.h>
 
 #include "../../include/ZeroTierCore.h"
-
-#if __has_include("../../version.h")
-#include "../../version.h"
-#else
-#define ZEROTIER_ONE_VERSION_MAJOR 255
-#define ZEROTIER_ONE_VERSION_MINOR 255
-#define ZEROTIER_ONE_VERSION_REVISION 255
-#define ZEROTIER_ONE_VERSION_BUILD 255
-#endif
+#include "../../node/Constants.hpp"
 
 /****************************************************************************/
 

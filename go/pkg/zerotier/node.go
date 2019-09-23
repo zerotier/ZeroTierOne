@@ -63,6 +63,8 @@ const (
 
 	afInet  = C.AF_INET
 	afInet6 = C.AF_INET6
+
+	defaultVirtualNetworkMTU = C.ZT_DEFAULT_MTU
 )
 
 var (

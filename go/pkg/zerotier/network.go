@@ -141,14 +141,18 @@ type Network struct {
 
 // newNetwork creates a new network with default settings
 func newNetwork(node *Node, id NetworkID, t Tap) (*Network, error) {
+	m := NewMACForNetworkMember(node.Identity().address, id)
 	n := &Network{
 		node: node,
 		id:   id,
-		mac:  NewMACForNetworkMember(node.Identity().address, id),
+		mac:  m,
 		tap:  t,
 		config: NetworkConfig{
 			ID:     id,
+			MAC:    m,
 			Status: NetworkStatusRequestConfiguration,
+			Type:   NetworkTypePrivate,
+			MTU:    int(defaultVirtualNetworkMTU),
 		},
 		settings: NetworkLocalSettings{
 			AllowManagedIPs:           true,
