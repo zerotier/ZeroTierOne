@@ -123,9 +123,15 @@ func (id *Identity) PrivateKeyString() string {
 // PublicKeyString returns the address and public key (identity.public contents).
 // An empty string is returned if this identity is invalid or not initialized.
 func (id *Identity) String() string {
-	if len(id.publicKey) == IdentityTypeC25519PublicKeySize {
-		s := fmt.Sprintf("%.10x:0:%x", id.address, id.publicKey)
-		return s
+	switch id.idtype {
+	case IdentityTypeC25519:
+		if len(id.publicKey) == IdentityTypeC25519PublicKeySize {
+			return fmt.Sprintf("%.10x:0:%x", id.address, id.publicKey)
+		}
+	case IdentityTypeP384:
+		if len(id.publicKey) == IdentityTypeP384PublicKeySize {
+			return fmt.Sprintf("%.10x:1:%s", uint64(id.address), base32StdLowerCase.EncodeToString(id.publicKey))
+		}
 	}
 	return ""
 }

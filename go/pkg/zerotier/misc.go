@@ -21,7 +21,7 @@ import (
 	"unsafe"
 )
 
-var base32StdLowerCase = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567")
+var base32StdLowerCase = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").WithPadding(base32.NoPadding)
 
 // TimeMs returns the time in milliseconds since epoch.
 func TimeMs() int64 { return int64(time.Now().UnixNano()) / int64(1000000) }

@@ -336,14 +336,16 @@ extern "C" ZT_GoNode *ZT_GoNode_new(const char *workingPath)
 		gn->run = true;
 
 		gn->backgroundTaskThread = std::thread([gn] {
-			int64_t lastScannedMulticastGroups = 0;
+			int64_t lastCheckedTaps = 0;
 			while (gn->run) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(500));
 				const int64_t now = OSUtils::now();
+
 				if (now >= gn->nextBackgroundTaskDeadline)
 					gn->node->processBackgroundTasks(nullptr,now,&(gn->nextBackgroundTaskDeadline));
-				if ((now - lastScannedMulticastGroups) > 5000) {
-					lastScannedMulticastGroups = now;
+
+				if ((now - lastCheckedTaps) > 10000) {
+					lastCheckedTaps = now;
 					std::vector<MulticastGroup> added,removed;
 					std::lock_guard<std::mutex> tl(gn->taps_l);
 					for(auto t=gn->taps.begin();t!=gn->taps.end();++t) {
@@ -354,6 +356,8 @@ extern "C" ZT_GoNode *ZT_GoNode_new(const char *workingPath)
 							goHandleTapAddedMulticastGroup(gn,(ZT_GoTap *)t->second.get(),t->first,g->mac().toInt(),g->adi());
 						for(auto g=removed.begin();g!=removed.end();++g)
 							goHandleTapRemovedMulticastGroup(gn,(ZT_GoTap *)t->second.get(),t->first,g->mac().toInt(),g->adi());
+
+						t->second->syncRoutes();
 					}
 				}
 			}
@@ -704,9 +708,4 @@ extern "C" int ZT_GoTap_removeRoute(ZT_GoTap *tap,int targetAf,const void *targe
 			break;
 	}
 	return reinterpret_cast<EthernetTap *>(tap)->removeRoute(target,via,metric);
-}
-
-extern "C" int ZT_GoTap_syncRoutes(ZT_GoTap *tap)
-{
-	return reinterpret_cast<EthernetTap *>(tap)->syncRoutes();
 }

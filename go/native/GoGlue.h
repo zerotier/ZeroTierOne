@@ -95,8 +95,6 @@ int ZT_GoTap_addRoute(ZT_GoTap *tap,int targetAf,const void *targetIp,int target
 
 int ZT_GoTap_removeRoute(ZT_GoTap *tap,int targetAf,const void *targetIp,int targetNetmaskBits,int viaAf,const void *viaIp,unsigned int metric);
 
-int ZT_GoTap_syncRoutes(ZT_GoTap *tap);
-
 /****************************************************************************/
 
 #ifdef __cplusplus

@@ -14,6 +14,7 @@
 package zerotier
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -28,15 +29,30 @@ type NetworkID uint64
 // NewNetworkIDFromString parses a network ID in string form
 func NewNetworkIDFromString(s string) (NetworkID, error) {
 	if len(s) != 16 {
-		return NetworkID(0), ErrInvalidZeroTierAddress
+		return NetworkID(0), ErrInvalidNetworkID
 	}
 	n, err := strconv.ParseUint(s, 16, 64)
 	return NetworkID(n), err
 }
 
+// NewNetworkIDFromBytes reads an 8-byte / 64-bit network ID.
+func NewNetworkIDFromBytes(b []byte) (NetworkID, error) {
+	if len(b) < 8 {
+		return NetworkID(0), ErrInvalidNetworkID
+	}
+	return NetworkID(binary.BigEndian.Uint64(b)), nil
+}
+
 // String returns this network ID's 16-digit hex identifier
 func (n NetworkID) String() string {
 	return fmt.Sprintf("%.16x", uint64(n))
+}
+
+// Bytes returns this network ID as an 8-byte / 64-bit big-endian value.
+func (n NetworkID) Bytes() []byte {
+	var b [8]byte
+	binary.BigEndian.PutUint64(b[:], uint64(n))
+	return b[:]
 }
 
 // MarshalJSON marshals this NetworkID as a string
@@ -56,7 +72,7 @@ func (n *NetworkID) UnmarshalJSON(j []byte) error {
 	return err
 }
 
-// NetworkConfig represents the network's current state
+// NetworkConfig represents the network's current configuration as distributed by its network controller.
 type NetworkConfig struct {
 	// ID is this network's 64-bit globally unique identifier
 	ID NetworkID

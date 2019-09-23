@@ -23,6 +23,7 @@ const (
 	ErrNodeInitFailed            Err = "unable to initialize core Node instance"
 	ErrInvalidMACAddress         Err = "invalid MAC address"
 	ErrInvalidZeroTierAddress    Err = "invalid ZeroTier address"
+	ErrInvalidNetworkID          Err = "invalid network ID"
 	ErrInvalidParameter          Err = "invalid parameter"
 	ErrTapInitFailed             Err = "unable to create native Tap instance"
 	ErrUncrecognizedIdentityType Err = "unrecognized identity type"

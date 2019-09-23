@@ -1171,12 +1171,12 @@ typedef struct
 	/**
 	 * Time of last send in milliseconds or 0 for never
 	 */
-	uint64_t lastSend;
+	int64_t lastSend;
 
 	/**
 	 * Time of last receive in milliseconds or 0 for never
 	 */
-	uint64_t lastReceive;
+	int64_t lastReceive;
 
 	/**
 	 * Is this a trusted path? If so this will be its nonzero ID.

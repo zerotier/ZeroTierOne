@@ -31,6 +31,17 @@ func NewAddressFromString(s string) (Address, error) {
 	return Address(a & 0xffffffffff), err
 }
 
+// NewAddressFromBytes reads a 5-byte 40-bit address.
+func NewAddressFromBytes(b []byte) (Address, error) {
+	if len(b) < 5 {
+		return Address(0), ErrInvalidZeroTierAddress
+	}
+	return Address((uint64(b[0]) << 32) | (uint64(b[1]) << 24) | (uint64(b[2]) << 16) | (uint64(b[3]) << 8) | uint64(b[4])), nil
+}
+
+// IsReserved returns true if this address is reserved and therefore is not valid for a real node.
+func (a Address) IsReserved() bool { return a == 0 || (a>>32) == 0xff }
+
 // String returns this address's 10-digit hex identifier
 func (a Address) String() string {
 	return fmt.Sprintf("%.10x", uint64(a))

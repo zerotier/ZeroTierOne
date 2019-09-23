@@ -266,9 +266,9 @@ func (n *Node) RemoveDynamicRoot(dnsName string) {
 	C.free(unsafe.Pointer(dn))
 }
 
-// ListRoots retrieves a list of root servers on this node and their preferred and online status.
-func (n *Node) ListRoots() []Root {
-	var roots []Root
+// Roots retrieves a list of root servers on this node and their preferred and online status.
+func (n *Node) Roots() []*Root {
+	var roots []*Root
 	rl := C.ZT_Node_listRoots(unsafe.Pointer(n.zn), C.int64_t(TimeMs()))
 	if rl != nil {
 		for i := 0; i < int(rl.count); i++ {
@@ -282,7 +282,7 @@ func (n *Node) ListRoots() []Root {
 						addrs = append(addrs, a)
 					}
 				}
-				roots = append(roots, Root{
+				roots = append(roots, &Root{
 					DNSName:   C.GoString(root.dnsName),
 					Identity:  id,
 					Addresses: addrs,
@@ -291,9 +291,51 @@ func (n *Node) ListRoots() []Root {
 				})
 			}
 		}
-		defer C.ZT_Node_freeQueryResult(unsafe.Pointer(n.zn), unsafe.Pointer(rl))
+		C.ZT_Node_freeQueryResult(unsafe.Pointer(n.zn), unsafe.Pointer(rl))
 	}
 	return roots
+}
+
+// Peers retrieves a list of current peers
+func (n *Node) Peers() []*Peer {
+	var peers []*Peer
+	pl := C.ZT_Node_peers(unsafe.Pointer(n.zn))
+	if pl != nil {
+		for i := uintptr(0); i < uintptr(pl.peerCount); i++ {
+			p := (*C.ZT_Peer)(unsafe.Pointer(uintptr(unsafe.Pointer(pl.peers)) + (i * C.sizeof_ZT_Peer)))
+			p2 := new(Peer)
+			p2.Address = Address(p.address)
+			p2.Version = [3]int{int(p.versionMajor), int(p.versionMinor), int(p.versionRev)}
+			p2.Latency = int(p.latency)
+			p2.Role = int(p.role)
+			p2.Paths = make([]Path, 0, int(p.pathCount))
+			for j := uintptr(0); j < uintptr(p.pathCount); j++ {
+				pt := &p.paths[j]
+				a := sockaddrStorageToUDPAddr(&pt.address)
+				if a != nil {
+					p2.Paths = append(p2.Paths, Path{
+						IP:                     a.IP,
+						Port:                   a.Port,
+						LastSend:               int64(pt.lastSend),
+						LastReceive:            int64(pt.lastReceive),
+						TrustedPathID:          uint64(pt.trustedPathId),
+						Latency:                float32(pt.latency),
+						PacketDelayVariance:    float32(pt.packetDelayVariance),
+						ThroughputDisturbCoeff: float32(pt.throughputDisturbCoeff),
+						PacketErrorRatio:       float32(pt.packetErrorRatio),
+						PacketLossRatio:        float32(pt.packetLossRatio),
+						Stability:              float32(pt.stability),
+						Throughput:             uint64(pt.throughput),
+						MaxThroughput:          uint64(pt.maxThroughput),
+						Allocation:             float32(pt.allocation),
+					})
+				}
+			}
+			peers = append(peers, p2)
+		}
+		C.ZT_Node_freeQueryResult(unsafe.Pointer(n.zn), unsafe.Pointer(pl))
+	}
+	return peers
 }
 
 //////////////////////////////////////////////////////////////////////////////
