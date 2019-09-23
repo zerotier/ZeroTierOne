@@ -40,7 +40,7 @@ extern "C" {
 
 /****************************************************************************/
 
-const char *ZT_PLATFORM_DEFAULT_HOMEPATH;
+extern const char *ZT_PLATFORM_DEFAULT_HOMEPATH;
 
 /****************************************************************************/
 
