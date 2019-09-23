@@ -147,12 +147,12 @@ func makeSockaddrStorage(ip net.IP, port int, ss *C.struct_sockaddr_storage) boo
 
 // Node is an instance of the ZeroTier core node and related C++ I/O code
 type Node struct {
-	basePath               string
-	localConfigPath        string
-	localConfig            LocalConfig
 	networks               map[NetworkID]*Network
 	networksByMAC          map[MAC]*Network  // locked by networksLock
 	interfaceAddresses     map[string]net.IP // physical external IPs on the machine
+	basePath               string
+	localConfigPath        string
+	localConfig            LocalConfig
 	localConfigLock        sync.RWMutex
 	networksLock           sync.RWMutex
 	interfaceAddressesLock sync.Mutex
@@ -173,15 +173,72 @@ func NewNode(basePath string) (*Node, error) {
 	}
 
 	n := new(Node)
+	n.networks = make(map[NetworkID]*Network)
+	n.networksByMAC = make(map[MAC]*Network)
+	n.interfaceAddresses = make(map[string]net.IP)
+
 	n.basePath = basePath
 	n.localConfigPath = path.Join(basePath, "local.conf")
 	err := n.localConfig.Read(n.localConfigPath, true)
 	if err != nil {
 		return nil, err
 	}
-	n.networks = make(map[NetworkID]*Network)
-	n.networksByMAC = make(map[MAC]*Network)
-	n.interfaceAddresses = make(map[string]net.IP)
+
+	if n.localConfig.Settings.PortAutoSearch {
+		portsChanged := false
+
+		portCheckCount := 0
+		for portCheckCount < 2048 {
+			portCheckCount++
+			if checkPort(n.localConfig.Settings.PrimaryPort) {
+				break
+			}
+			n.localConfig.Settings.PrimaryPort++
+			n.localConfig.Settings.PrimaryPort &= 0xffff
+			portsChanged = true
+		}
+		if portCheckCount == 2048 {
+			return nil, errors.New("unable to bind to primary port, tried 2048 later ports")
+		}
+
+		if n.localConfig.Settings.SecondaryPort > 0 {
+			portCheckCount = 0
+			for portCheckCount < 2048 {
+				portCheckCount++
+				if checkPort(n.localConfig.Settings.SecondaryPort) {
+					break
+				}
+				n.localConfig.Settings.SecondaryPort++
+				n.localConfig.Settings.SecondaryPort &= 0xffff
+				portsChanged = true
+			}
+			if portCheckCount == 2048 {
+				n.localConfig.Settings.SecondaryPort = 0
+			}
+		}
+
+		if n.localConfig.Settings.TertiaryPort > 0 {
+			portCheckCount = 0
+			for portCheckCount < 2048 {
+				portCheckCount++
+				if checkPort(n.localConfig.Settings.TertiaryPort) {
+					break
+				}
+				n.localConfig.Settings.TertiaryPort++
+				n.localConfig.Settings.TertiaryPort &= 0xffff
+				portsChanged = true
+			}
+			if portCheckCount == 2048 {
+				n.localConfig.Settings.TertiaryPort = 0
+			}
+		}
+
+		if portsChanged {
+			n.localConfig.Write(n.localConfigPath)
+		}
+	} else if !checkPort(n.localConfig.Settings.PrimaryPort) {
+		return nil, errors.New("unable to bind to primary port")
+	}
 
 	cpath := C.CString(basePath)
 	n.gn = C.ZT_GoNode_new(cpath)
