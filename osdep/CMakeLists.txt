@@ -11,7 +11,6 @@ set(src
 
 set(headers
 	Arp.hpp
-	Binder.hpp
 	BlockingQueue.hpp
 	EthernetTap.hpp
 	ManagedRoute.hpp
