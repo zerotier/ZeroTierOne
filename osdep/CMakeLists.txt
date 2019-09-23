@@ -3,14 +3,10 @@ project(zt_osdep)
 
 set(src
 	Arp.cpp
-	Http.cpp
 	EthernetTap.cpp
 	ManagedRoute.cpp
 	NeighborDiscovery.cpp
 	OSUtils.cpp
-	PortMapper.cpp
-	PortMapper-miniupnpc.c
-	PortMapper-libnatpmp.c
 )
 
 set(headers
@@ -18,11 +14,8 @@ set(headers
 	Binder.hpp
 	BlockingQueue.hpp
 	EthernetTap.hpp
-	Http.hpp
 	ManagedRoute.hpp
 	OSUtils.hpp
-	Phy.hpp
-	PortMapper.hpp
 	Thread.hpp
 )
 
