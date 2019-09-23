@@ -67,7 +67,10 @@ const (
 	// PlatformDefaultHomePath is the default location of ZeroTier's working path on this system
 	PlatformDefaultHomePath string = C.GoString(C.ZT_PLATFORM_DEFAULT_HOMEPATH)
 
-	AFInet  = C.AF_INET
+	// AFInet is the address family for IPv4
+	AFInet = C.AF_INET
+
+	// AFInet6 is the address family for IPv6
 	AFInet6 = C.AF_INET6
 
 	defaultVirtualNetworkMTU = C.ZT_DEFAULT_MTU
