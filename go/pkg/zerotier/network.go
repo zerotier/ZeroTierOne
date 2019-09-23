@@ -130,6 +130,7 @@ type NetworkLocalSettings struct {
 type Network struct {
 	node                       *Node
 	id                         NetworkID
+	mac                        MAC
 	tap                        Tap
 	config                     NetworkConfig
 	settings                   NetworkLocalSettings // locked by configLock
@@ -143,6 +144,7 @@ func newNetwork(node *Node, id NetworkID, t Tap) (*Network, error) {
 	n := &Network{
 		node: node,
 		id:   id,
+		mac:  NewMACForNetworkMember(node.Identity().address, id),
 		tap:  t,
 		config: NetworkConfig{
 			ID:     id,
@@ -172,15 +174,18 @@ func newNetwork(node *Node, id NetworkID, t Tap) (*Network, error) {
 // ID gets this network's unique ID
 func (n *Network) ID() NetworkID { return n.id }
 
+// MAC returns the assigned MAC address of this network
+func (n *Network) MAC() MAC { return n.mac }
+
+// Tap gets this network's tap device
+func (n *Network) Tap() Tap { return n.tap }
+
 // Config returns a copy of this network's current configuration
 func (n *Network) Config() NetworkConfig {
 	n.configLock.RLock()
 	defer n.configLock.RUnlock()
 	return n.config
 }
-
-// Tap gets this network's tap device
-func (n *Network) Tap() Tap { return n.tap }
 
 // SetLocalSettings modifies this network's local settings
 func (n *Network) SetLocalSettings(ls *NetworkLocalSettings) { n.updateConfig(nil, ls) }

@@ -41,6 +41,36 @@ func NewMACFromString(s string) (MAC, error) {
 	return MAC(m), nil
 }
 
+// NewMACFromBytes decodes a MAC from a 6-byte array
+func NewMACFromBytes(b []byte) (MAC, error) {
+	if len(b) < 6 {
+		return MAC(0), ErrInvalidMACAddress
+	}
+	var m uint64
+	for i := 0; i < 6; i++ {
+		m <<= 8
+		m |= uint64(b[i])
+	}
+	return MAC(m), nil
+}
+
+// NewMACForNetworkMember computes the static MAC for a given address and network ID
+func NewMACForNetworkMember(addr Address, nwid NetworkID) MAC {
+	// This is the same algorithm as found in MAC::fromAddress() in MAC.hpp
+	firstOctetForNetwork := byte((byte(nwid) & 0xfe) | 0x02)
+	if firstOctetForNetwork == 0x52 {
+		firstOctetForNetwork = 0x32
+	}
+	m := uint64(firstOctetForNetwork) << 40
+	m |= uint64(addr)
+	m ^= ((uint64(nwid) >> 8) & 0xff) << 32
+	m ^= ((uint64(nwid) >> 16) & 0xff) << 24
+	m ^= ((uint64(nwid) >> 24) & 0xff) << 16
+	m ^= ((uint64(nwid) >> 32) & 0xff) << 8
+	m ^= (uint64(nwid) >> 40) & 0xff
+	return MAC(m)
+}
+
 // String returns this MAC address in canonical human-readable form
 func (m MAC) String() string {
 	return fmt.Sprintf("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", (uint64(m)>>40)&0xff, (uint64(m)>>32)&0xff, (uint64(m)>>24)&0xff, (uint64(m)>>16)&0xff, (uint64(m)>>8)&0xff, uint64(m)&0xff)

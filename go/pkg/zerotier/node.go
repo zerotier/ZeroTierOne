@@ -24,11 +24,13 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	rand "math/rand"
 	"net"
 	"os"
 	"path"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 
 	acl "github.com/hectane/go-acl"
@@ -131,37 +133,54 @@ func makeSockaddrStorage(ip net.IP, port int, ss *C.struct_sockaddr_storage) boo
 
 //////////////////////////////////////////////////////////////////////////////
 
-// Node represents an instance of the ZeroTier core node and related C++ I/O code
+// Node is an instance of the ZeroTier core node and related C++ I/O code
 type Node struct {
-	path         string
-	networks     map[uint64]*Network
-	networksLock sync.RWMutex
-
-	gn *C.ZT_GoNode
-	zn *C.ZT_Node
-
-	online  uint32
-	running uint32
+	basePath              string
+	localConfig           LocalConfig
+	networks              map[NetworkID]*Network
+	networksByMAC         map[MAC]*Network // locked by networksLock
+	externalAddresses     map[string]*net.IPNet
+	localConfigLock       sync.RWMutex
+	networksLock          sync.RWMutex
+	externalAddressesLock sync.Mutex
+	gn                    *C.ZT_GoNode
+	zn                    *C.ZT_Node
+	id                    *Identity
+	online                uint32
+	running               uint32
+	runLock               sync.Mutex
 }
 
 // NewNode creates and initializes a new instance of the ZeroTier node service
-func NewNode(path string) (*Node, error) {
-	os.MkdirAll(path, 0755)
-	if _, err := os.Stat(path); err != nil {
+func NewNode(basePath string) (*Node, error) {
+	var err error
+
+	os.MkdirAll(basePath, 0755)
+	if _, err := os.Stat(basePath); err != nil {
 		return nil, err
 	}
 
 	n := new(Node)
-	n.path = path
-	n.networks = make(map[uint64]*Network)
+	n.basePath = basePath
+	n.networks = make(map[NetworkID]*Network)
+	n.networksByMAC = make(map[MAC]*Network)
+	n.externalAddresses = make(map[string]*net.IPNet)
 
-	cpath := C.CString(path)
+	cpath := C.CString(basePath)
 	n.gn = C.ZT_GoNode_new(cpath)
 	C.free(unsafe.Pointer(cpath))
 	if n.gn == nil {
 		return nil, ErrNodeInitFailed
 	}
 	n.zn = (*C.ZT_Node)(C.ZT_GoNode_getNode(n.gn))
+
+	var ns C.ZT_NodeStatus
+	C.ZT_Node_status(unsafe.Pointer(n.zn), &ns)
+	n.id, err = NewIdentityFromString(C.GoString(ns.secretIdentity))
+	if err != nil {
+		C.ZT_GoNode_delete(n.gn)
+		return nil, err
+	}
 
 	gnRawAddr := uintptr(unsafe.Pointer(n.gn))
 	nodesByUserPtrLock.Lock()
@@ -170,6 +189,77 @@ func NewNode(path string) (*Node, error) {
 
 	n.online = 0
 	n.running = 1
+
+	n.runLock.Lock()
+	go func() {
+		lastScannedInterfaces := int64(0)
+		for atomic.LoadUint32(&n.running) != 0 {
+			time.Sleep(1 * time.Second)
+
+			now := TimeMs()
+			if (now - lastScannedInterfaces) >= 30000 {
+				lastScannedInterfaces = now
+
+				externalAddresses := make(map[string]*net.IPNet)
+				ifs, _ := net.Interfaces()
+				if len(ifs) > 0 {
+					n.networksLock.RLock()
+					for _, i := range ifs {
+						m, _ := NewMACFromBytes(i.HardwareAddr)
+						if _, isZeroTier := n.networksByMAC[m]; !isZeroTier {
+							addrs, _ := i.Addrs()
+							if len(addrs) > 0 {
+								for _, a := range addrs {
+									ipn, _ := a.(*net.IPNet)
+									if ipn != nil {
+										externalAddresses[ipn.String()] = ipn
+									}
+								}
+							}
+						}
+					}
+					n.networksLock.RUnlock()
+				}
+
+				n.localConfigLock.RLock()
+				n.externalAddressesLock.Lock()
+				for astr, ipn := range externalAddresses {
+					if _, alreadyKnown := n.externalAddresses[astr]; !alreadyKnown {
+						ipCstr := C.CString(ipn.IP.String())
+						if n.localConfig.Settings.PrimaryPort > 0 && n.localConfig.Settings.PrimaryPort < 65536 {
+							C.ZT_GoNode_phyStartListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.PrimaryPort))
+						}
+						if n.localConfig.Settings.SecondaryPort > 0 && n.localConfig.Settings.SecondaryPort < 65536 {
+							C.ZT_GoNode_phyStartListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.SecondaryPort))
+						}
+						if n.localConfig.Settings.TertiaryPort > 0 && n.localConfig.Settings.TertiaryPort < 65536 {
+							C.ZT_GoNode_phyStartListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.TertiaryPort))
+						}
+						C.free(unsafe.Pointer(ipCstr))
+					}
+				}
+				for astr, ipn := range n.externalAddresses {
+					if _, stillPresent := externalAddresses[astr]; !stillPresent {
+						ipCstr := C.CString(ipn.IP.String())
+						if n.localConfig.Settings.PrimaryPort > 0 && n.localConfig.Settings.PrimaryPort < 65536 {
+							C.ZT_GoNode_phyStopListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.PrimaryPort))
+						}
+						if n.localConfig.Settings.SecondaryPort > 0 && n.localConfig.Settings.SecondaryPort < 65536 {
+							C.ZT_GoNode_phyStopListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.SecondaryPort))
+						}
+						if n.localConfig.Settings.TertiaryPort > 0 && n.localConfig.Settings.TertiaryPort < 65536 {
+							C.ZT_GoNode_phyStopListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.TertiaryPort))
+						}
+						C.free(unsafe.Pointer(ipCstr))
+					}
+				}
+				n.externalAddresses = externalAddresses
+				n.externalAddressesLock.Unlock()
+				n.localConfigLock.RUnlock()
+			}
+		}
+		n.runLock.Unlock()
+	}()
 
 	return n, nil
 }
@@ -181,14 +271,29 @@ func (n *Node) Close() {
 		nodesByUserPtrLock.Lock()
 		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n.gn)))
 		nodesByUserPtrLock.Unlock()
+		n.runLock.Lock() // wait for gorountine to die
+		n.runLock.Unlock()
 	}
+}
+
+// Address returns this node's address
+func (n *Node) Address() Address { return n.id.address }
+
+// Identity returns this node's identity (including secret portion)
+func (n *Node) Identity() *Identity { return n.id }
+
+// LocalConfig gets this node's local configuration
+func (n *Node) LocalConfig() LocalConfig {
+	n.localConfigLock.RLock()
+	defer n.localConfigLock.RUnlock()
+	return n.localConfig
 }
 
 // Join joins a network
 // If tap is nil, the default system tap for this OS/platform is used (if available).
 func (n *Node) Join(nwid uint64, tap Tap) (*Network, error) {
 	n.networksLock.RLock()
-	if nw, have := n.networks[nwid]; have {
+	if nw, have := n.networks[NetworkID(nwid)]; have {
 		return nw, nil
 	}
 	n.networksLock.RUnlock()
@@ -207,7 +312,7 @@ func (n *Node) Join(nwid uint64, tap Tap) (*Network, error) {
 		return nil, err
 	}
 	n.networksLock.Lock()
-	n.networks[nwid] = nw
+	n.networks[NetworkID(nwid)] = nw
 	n.networksLock.Unlock()
 
 	return nw, nil
@@ -217,9 +322,20 @@ func (n *Node) Join(nwid uint64, tap Tap) (*Network, error) {
 func (n *Node) Leave(nwid uint64) error {
 	C.ZT_GoNode_leave(n.gn, C.uint64_t(nwid))
 	n.networksLock.Lock()
-	delete(n.networks, nwid)
+	delete(n.networks, NetworkID(nwid))
 	n.networksLock.Unlock()
 	return nil
+}
+
+// Networks returns a list of networks that this node has joined
+func (n *Node) Networks() []*Network {
+	var nws []*Network
+	n.networksLock.RLock()
+	for _, nw := range n.networks {
+		nws = append(nws, nw)
+	}
+	n.networksLock.RUnlock()
+	return nws
 }
 
 // AddStaticRoot adds a statically defined root server to this node.
@@ -351,11 +467,30 @@ func (n *Node) multicastUnsubscribe(nwid uint64, mg *MulticastGroup) {
 	C.ZT_Node_multicastUnsubscribe(unsafe.Pointer(n.zn), C.uint64_t(nwid), C.uint64_t(mg.MAC), C.ulong(mg.ADI))
 }
 
-func (n *Node) pathCheck(ztAddress uint64, af int, ip net.IP, port int) bool {
+func (n *Node) pathCheck(ztAddress Address, af int, ip net.IP, port int) bool {
+	n.localConfigLock.RLock()
+	defer n.localConfigLock.RUnlock()
+	for cidr, phy := range n.localConfig.Physical {
+		if phy.Blacklist {
+			_, ipn, _ := net.ParseCIDR(cidr)
+			if ipn != nil && ipn.Contains(ip) {
+				return false
+			}
+		}
+	}
 	return true
 }
 
-func (n *Node) pathLookup(ztAddress uint64) (net.IP, int) {
+func (n *Node) pathLookup(ztAddress Address) (net.IP, int) {
+	n.localConfigLock.RLock()
+	defer n.localConfigLock.RUnlock()
+	virt := n.localConfig.Virtual[ztAddress]
+	if virt != nil && len(virt.Try) > 0 {
+		udpA, _ := virt.Try[rand.Int()%len(virt.Try)].(*net.UDPAddr)
+		if udpA != nil {
+			return udpA.IP, udpA.Port
+		}
+	}
 	return nil, 0
 }
 
@@ -364,21 +499,21 @@ func (n *Node) makeStateObjectPath(objType int, id [2]uint64) (string, bool) {
 	secret := false
 	switch objType {
 	case C.ZT_STATE_OBJECT_IDENTITY_PUBLIC:
-		fp = path.Join(n.path, "identity.public")
+		fp = path.Join(n.basePath, "identity.public")
 	case C.ZT_STATE_OBJECT_IDENTITY_SECRET:
-		fp = path.Join(n.path, "identity.secret")
+		fp = path.Join(n.basePath, "identity.secret")
 		secret = true
 	case C.ZT_STATE_OBJECT_PEER:
-		fp = path.Join(n.path, "peers.d")
+		fp = path.Join(n.basePath, "peers.d")
 		os.Mkdir(fp, 0700)
 		fp = path.Join(fp, fmt.Sprintf("%.10x.peer", id[0]))
 		secret = true
 	case C.ZT_STATE_OBJECT_NETWORK_CONFIG:
-		fp = path.Join(n.path, "networks.d")
+		fp = path.Join(n.basePath, "networks.d")
 		os.Mkdir(fp, 0755)
 		fp = path.Join(fp, fmt.Sprintf("%.16x.conf", id[0]))
 	case C.ZT_STATE_OBJECT_ROOT_LIST:
-		fp = path.Join(n.path, "roots")
+		fp = path.Join(n.basePath, "roots")
 	}
 	return fp, secret
 }
@@ -436,7 +571,7 @@ func goPathCheckFunc(gn unsafe.Pointer, ztAddress C.uint64_t, af C.int, ip unsaf
 	nodesByUserPtrLock.RLock()
 	node := nodesByUserPtr[uintptr(gn)]
 	nodesByUserPtrLock.RUnlock()
-	if node != nil && node.pathCheck(uint64(ztAddress), int(af), nil, int(port)) {
+	if node != nil && node.pathCheck(Address(ztAddress), int(af), nil, int(port)) {
 		return 1
 	}
 	return 0
@@ -451,7 +586,7 @@ func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, desiredAddressFam
 		return 0
 	}
 
-	ip, port := node.pathLookup(uint64(ztAddress))
+	ip, port := node.pathLookup(Address(ztAddress))
 	if len(ip) > 0 && port > 0 && port <= 65535 {
 		ip4 := ip.To4()
 		if len(ip4) == 4 {
@@ -466,6 +601,7 @@ func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, desiredAddressFam
 			return 1
 		}
 	}
+
 	return 0
 }
 
