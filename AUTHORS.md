@@ -36,12 +36,6 @@ ZeroTier includes the following third party code, either in ext/ or incorporated
    * Home page: http://code.google.com/p/lz4/
    * License grant: BSD 2-clause
 
- * http-parser by Joyent, Inc. (many authors)
-
-   * Files: ext/http-parser/*
-   * Home page: https://github.com/joyent/http-parser/
-   * License grant: MIT/Expat
-
  * C++11 json (nlohmann/json) by Niels Lohmann
 
    * Files: ext/json/*
@@ -61,12 +55,6 @@ ZeroTier includes the following third party code, either in ext/ or incorporated
    * Home page: http://cr.yp.to/
    * License grant: public domain
    * ZeroTier Modifications: slight cryptographically-irrelevant modifications for inclusion into ZeroTier core
-
- * MiniUPNPC and libnatpmp by Thomas Bernard
-
-   * Files: ext/libnatpmp/* ext/miniupnpc/*
-   * Home page: http://miniupnp.free.fr/
-   * License grant: BSD attribution no-endorsement
 
  * cpp-httplib by yhirose
 

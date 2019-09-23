@@ -46,16 +46,6 @@
 #include "node/IncomingPacket.hpp"
 
 #include "osdep/OSUtils.hpp"
-#include "osdep/Phy.hpp"
-#include "osdep/PortMapper.hpp"
-#include "osdep/Thread.hpp"
-
-#ifdef ZT_USE_X64_ASM_SALSA2012
-#include "ext/x64-salsa2012-asm/salsa2012.h"
-#endif
-#ifdef ZT_USE_ARM32_NEON_ASM_SALSA2012
-#include "ext/arm32-neon-salsa2012-asm/salsa2012.h"
-#endif
 
 #ifdef __WINDOWS__
 #include <tchar.h>
@@ -895,154 +885,6 @@ static int testOther()
 	return 0;
 }
 
-#define ZT_TEST_PHY_NUM_UDP_PACKETS 10000
-#define ZT_TEST_PHY_UDP_PACKET_SIZE 1000
-#define ZT_TEST_PHY_NUM_VALID_TCP_CONNECTS 10
-#define ZT_TEST_PHY_NUM_INVALID_TCP_CONNECTS 2
-#define ZT_TEST_PHY_TCP_MESSAGE_SIZE 1000000
-#define ZT_TEST_PHY_TIMEOUT_MS 20000
-static unsigned long phyTestUdpPacketCount = 0;
-static unsigned long phyTestTcpByteCount = 0;
-static unsigned long phyTestTcpConnectSuccessCount = 0;
-static unsigned long phyTestTcpConnectFailCount = 0;
-static unsigned long phyTestTcpAcceptCount = 0;
-struct TestPhyHandlers;
-static Phy<TestPhyHandlers *> *testPhyInstance = (Phy<TestPhyHandlers *> *)0;
-struct TestPhyHandlers
-{
-	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
-	{
-		++phyTestUdpPacketCount;
-	}
-
-	inline void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success)
-	{
-		if (success) {
-			++phyTestTcpConnectSuccessCount;
-		} else {
-			++phyTestTcpConnectFailCount;
-		}
-	}
-
-	inline void phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
-	{
-		++phyTestTcpAcceptCount;
-		*uptrN = new std::string(ZT_TEST_PHY_TCP_MESSAGE_SIZE,(char)0xff);
-		testPhyInstance->setNotifyWritable(sockN,true);
-	}
-
-	inline void phyOnTcpClose(PhySocket *sock,void **uptr)
-	{
-		delete (std::string *)*uptr; // delete testMessage if any
-	}
-
-	inline void phyOnTcpData(PhySocket *sock,void **uptr,void *data,unsigned long len)
-	{
-		phyTestTcpByteCount += len;
-	}
-
-	inline void phyOnTcpWritable(PhySocket *sock,void **uptr)
-	{
-		std::string *testMessage = (std::string *)*uptr;
-		if ((testMessage)&&(testMessage->length() > 0)) {
-			long sent = testPhyInstance->streamSend(sock,(const void *)testMessage->data(),(unsigned long)testMessage->length(),true);
-			if (sent > 0)
-				testMessage->erase(0,sent);
-		}
-		if ((!testMessage)||(!testMessage->length())) {
-			testPhyInstance->close(sock,true);
-		}
-	}
-
-#ifdef __UNIX_LIKE__
-	inline void phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN) {}
-	inline void phyOnUnixClose(PhySocket *sock,void **uptr) {}
-	inline void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
-	inline void phyOnUnixWritable(PhySocket *sock,void **uptr) {}
-#endif // __UNIX_LIKE__
-
-	inline void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable) {}
-};
-static int testPhy()
-{
-	char udpTestPayload[ZT_TEST_PHY_UDP_PACKET_SIZE];
-	memset(udpTestPayload,0xff,sizeof(udpTestPayload));
-
-	struct sockaddr_in bindaddr;
-	memset(&bindaddr,0,sizeof(bindaddr));
-	bindaddr.sin_family = AF_INET;
-	bindaddr.sin_port = Utils::hton((uint16_t)60002);
-	bindaddr.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001);
-	struct sockaddr_in invalidAddr;
-	memset(&bindaddr,0,sizeof(bindaddr));
-	bindaddr.sin_family = AF_INET;
-	bindaddr.sin_port = Utils::hton((uint16_t)60004);
-	bindaddr.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001);
-
-	std::cout << "[phy] Creating phy endpoint..." ZT_EOL_S;
-	TestPhyHandlers testPhyHandlers;
-	testPhyInstance = new Phy<TestPhyHandlers *>(&testPhyHandlers,false,true);
-
-	std::cout << "[phy] Binding UDP listen socket to 127.0.0.1/60002... ";
-	PhySocket *udpListenSock = testPhyInstance->udpBind((const struct sockaddr *)&bindaddr);
-	if (!udpListenSock) {
-		std::cout << "FAILED." ZT_EOL_S;
-		return -1;
-	}
-	std::cout << "OK" ZT_EOL_S;
-
-	std::cout << "[phy] Binding TCP listen socket to 127.0.0.1/60002... ";
-	PhySocket *tcpListenSock = testPhyInstance->tcpListen((const struct sockaddr *)&bindaddr);
-	if (!tcpListenSock) {
-		std::cout << "FAILED." ZT_EOL_S;
-		return -1;
-	}
-	std::cout << "OK" ZT_EOL_S;
-
-	unsigned long phyTestUdpPacketsSent = 0;
-	unsigned long phyTestTcpValidConnectionsAttempted = 0;
-	unsigned long phyTestTcpInvalidConnectionsAttempted = 0;
-
-	std::cout << "[phy] Testing UDP send/receive... "; std::cout.flush();
-	int64_t timeoutAt = OSUtils::now() + ZT_TEST_PHY_TIMEOUT_MS;
-	while ((OSUtils::now() < timeoutAt)&&(phyTestUdpPacketCount < ZT_TEST_PHY_NUM_UDP_PACKETS)) {
-		if (phyTestUdpPacketsSent < ZT_TEST_PHY_NUM_UDP_PACKETS) {
-			if (!testPhyInstance->udpSend(udpListenSock,(const struct sockaddr *)&bindaddr,udpTestPayload,sizeof(udpTestPayload))) {
-				std::cout << "FAILED." ZT_EOL_S;
-				return -1;
-			} else ++phyTestUdpPacketsSent;
-		}
-		testPhyInstance->poll(100);
-	}
-	std::cout << "got " << phyTestUdpPacketCount << " packets, OK" ZT_EOL_S;
-
-	std::cout << "[phy] Testing TCP... "; std::cout.flush();
-	timeoutAt = OSUtils::now() + ZT_TEST_PHY_TIMEOUT_MS;
-	while ((OSUtils::now() < timeoutAt)&&(phyTestTcpByteCount < (ZT_TEST_PHY_NUM_VALID_TCP_CONNECTS * ZT_TEST_PHY_TCP_MESSAGE_SIZE))) {
-		if (phyTestTcpValidConnectionsAttempted < ZT_TEST_PHY_NUM_VALID_TCP_CONNECTS) {
-			++phyTestTcpValidConnectionsAttempted;
-			bool connected = false;
-			if (!testPhyInstance->tcpConnect((const struct sockaddr *)&bindaddr,connected,(void *)0,true))
-				++phyTestTcpConnectFailCount;
-		}
-		if (phyTestTcpInvalidConnectionsAttempted < ZT_TEST_PHY_NUM_INVALID_TCP_CONNECTS) {
-			++phyTestTcpInvalidConnectionsAttempted;
-			bool connected = false;
-			if (!testPhyInstance->tcpConnect((const struct sockaddr *)&invalidAddr,connected,(void *)0,true))
-				++phyTestTcpConnectFailCount;
-		}
-		testPhyInstance->poll(100);
-	}
-	if (phyTestTcpByteCount < (ZT_TEST_PHY_NUM_VALID_TCP_CONNECTS * ZT_TEST_PHY_TCP_MESSAGE_SIZE)) {
-		std::cout << "got " << phyTestTcpConnectSuccessCount << " connect successes, " << phyTestTcpConnectFailCount << " failures, and " << phyTestTcpByteCount << " bytes, FAILED." ZT_EOL_S;
-		return -1;
-	} else {
-		std::cout << "got " << phyTestTcpConnectSuccessCount << " connect successes, " << phyTestTcpConnectFailCount << " failures, and " << phyTestTcpByteCount << " bytes, OK" ZT_EOL_S;
-	}
-
-	return 0;
-}
-
 #ifdef __WINDOWS__
 int __cdecl _tmain(int argc, _TCHAR* argv[])
 #else
@@ -1056,43 +898,6 @@ int main(int argc,char **argv)
 	WSAStartup(MAKEWORD(2,2),&wsaData);
 #endif
 
-	// Code to generate the C25519 test vectors -- did this once and then
-	// put these up top so that we can ensure that every platform produces
-	// the same result.
-	/*
-	for(int k=0;k<32;++k) {
-		C25519::Pair p1 = C25519::generate();
-		C25519::Pair p2 = C25519::generate();
-		unsigned char agg[64];
-		C25519::agree(p1,p2.pub,agg,64);
-		C25519::Signature sig1 = C25519::sign(p1,agg,64);
-		C25519::Signature sig2 = C25519::sign(p2,agg,64);
-		printf("{{");
-		for(int i=0;i<64;++i)
-			printf("%s0x%.2x",((i > 0) ? "," : ""),(unsigned int)p1.pub.data[i]);
-		printf("},{");
-		for(int i=0;i<64;++i)
-			printf("%s0x%.2x",((i > 0) ? "," : ""),(unsigned int)p1.priv.data[i]);
-		printf("},{");
-		for(int i=0;i<64;++i)
-			printf("%s0x%.2x",((i > 0) ? "," : ""),(unsigned int)p2.pub.data[i]);
-		printf("},{");
-		for(int i=0;i<64;++i)
-			printf("%s0x%.2x",((i > 0) ? "," : ""),(unsigned int)p2.priv.data[i]);
-		printf("},{");
-		for(int i=0;i<64;++i)
-			printf("%s0x%.2x",((i > 0) ? "," : ""),(unsigned int)agg[i]);
-		printf("},{");
-		for(int i=0;i<96;++i)
-			printf("%s0x%.2x",((i > 0) ? "," : ""),(unsigned int)sig1.data[i]);
-		printf("},{");
-		for(int i=0;i<96;++i)
-			printf("%s0x%.2x",((i > 0) ? "," : ""),(unsigned int)sig2.data[i]);
-		printf("}}\n");
-	}
-	exit(0);
-	*/
-
 	std::cout << "[info] sizeof(void *) == " << sizeof(void *) << ZT_EOL_S;
 	std::cout << "[info] OSUtils::now() == " << OSUtils::now() << ZT_EOL_S;
 	std::cout << "[info] hardware concurrency == " << std::thread::hardware_concurrency() << ZT_EOL_S;
@@ -1100,26 +905,14 @@ int main(int argc,char **argv)
 
 	srand((unsigned int)time(0));
 
-	///*
 	r |= testOther();
 	r |= testCrypto();
 	r |= testPacket();
 	r |= testIdentity();
 	r |= testCertificate();
-	r |= testPhy();
-	//*/
 
 	if (r)
 		std::cout << ZT_EOL_S << "SOMETHING FAILED!" ZT_EOL_S;
-
-	/*
-#ifdef ZT_USE_MINIUPNPC
-	std::cout << ZT_EOL_S;
-	std::cout << "[portmapper] Starting port mapper and waiting forever... use CTRL+C to exit. (enable ZT_PORTMAPPER_TRACE in PortMapper.cpp for output)" ZT_EOL_S;
-	PortMapper mapper(12345,"ZeroTier/__selftest");
-	Thread::sleep(0xffffffff);
-#endif
-	*/
 
 	return r;
 }
