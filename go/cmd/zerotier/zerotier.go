@@ -113,28 +113,33 @@ func main() {
 	case "help":
 		printHelp()
 		os.Exit(0)
-		return
-	default:
-		printHelp()
-		os.Exit(1)
-		return
-
 	case "version":
 		fmt.Printf("%d.%d.%d\n", zerotier.CoreVersionMajor, zerotier.CoreVersionMinor, zerotier.CoreVersionRevision)
 		os.Exit(0)
-
 	case "service":
 		cli.Service(cmdArgs)
 	case "status":
 		cli.Status(cmdArgs)
 	case "peers":
+		cli.Peers(cmdArgs)
 	case "roots":
+		cli.Roots(cmdArgs)
 	case "addroot":
+		cli.AddRoot(cmdArgs)
 	case "removeroot":
+		cli.RemoveRoot(cmdArgs)
 	case "networks":
+		cli.Networks(cmdArgs)
 	case "join":
+		cli.Join(cmdArgs)
 	case "leave":
+		cli.Leave(cmdArgs)
 	case "show":
+		cli.Show(cmdArgs)
 	case "set":
+		cli.Set(cmdArgs)
 	}
+
+	printHelp()
+	os.Exit(1)
 }
