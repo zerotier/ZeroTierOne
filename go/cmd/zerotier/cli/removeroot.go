@@ -14,5 +14,5 @@
 package cli
 
 // RemoveRoot CLI command
-func RemoveRoot(args []string) {
+func RemoveRoot(basePath, authToken string, args []string) {
 }

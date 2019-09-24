@@ -14,5 +14,5 @@
 package cli
 
 // Set CLI command
-func Set(args []string) {
+func Set(basePath, authToken string, args []string) {
 }

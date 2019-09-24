@@ -14,5 +14,5 @@
 package cli
 
 // Peers CLI command
-func Peers(args []string) {
+func Peers(basePath, authToken string, args []string) {
 }

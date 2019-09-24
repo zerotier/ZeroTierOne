@@ -14,6 +14,7 @@
 package zerotier
 
 import (
+	"bytes"
 	secrand "crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -27,7 +28,58 @@ import (
 	acl "github.com/hectane/go-acl"
 )
 
-type apiStatus struct {
+// APISocketName is the default socket name for accessing the API
+const APISocketName = "apisocket"
+
+// APIGet makes a query to the API via a Unix domain or windows pipe socket
+func APIGet(basePath, socketName, authToken, queryPath string, obj interface{}) (int, error) {
+	client, err := createNamedSocketHTTPClient(basePath, socketName)
+	if err != nil {
+		return http.StatusTeapot, err
+	}
+	req, err := http.NewRequest("GET", "http://socket"+queryPath, nil)
+	if err != nil {
+		return http.StatusTeapot, err
+	}
+	req.Header.Add("Authorization", "bearer "+authToken)
+	resp, err := client.Do(req)
+	if err != nil {
+		return http.StatusTeapot, err
+	}
+	err = json.NewDecoder(resp.Body).Decode(obj)
+	return resp.StatusCode, err
+}
+
+// APIPost posts a JSON object to the API via a Unix domain or windows pipe socket and reads a response
+func APIPost(basePath, socketName, authToken, queryPath string, post, result interface{}) (int, error) {
+	client, err := createNamedSocketHTTPClient(basePath, socketName)
+	if err != nil {
+		return http.StatusTeapot, err
+	}
+	var data []byte
+	if post != nil {
+		data, err = json.Marshal(post)
+		if err != nil {
+			return http.StatusTeapot, err
+		}
+	} else {
+		data = []byte("null")
+	}
+	req, err := http.NewRequest("POST", "http://socket"+queryPath, bytes.NewReader(data))
+	if err != nil {
+		return http.StatusTeapot, err
+	}
+	req.Header.Add("Authorization", "bearer "+authToken)
+	resp, err := client.Do(req)
+	if err != nil {
+		return http.StatusTeapot, err
+	}
+	err = json.NewDecoder(resp.Body).Decode(result)
+	return resp.StatusCode, err
+}
+
+// APIStatus is the object returned by API status inquiries
+type APIStatus struct {
 	Address                 Address
 	Clock                   int64
 	Config                  LocalConfig
@@ -42,7 +94,8 @@ type apiStatus struct {
 	VersionBuild            int
 }
 
-type apiNetwork struct {
+// APINetwork is the object returned by API network inquiries
+type APINetwork struct {
 	Config                 *NetworkConfig
 	Settings               *NetworkLocalSettings
 	MulticastSubscriptions []*MulticastGroup
@@ -89,12 +142,12 @@ func apiReadObj(out http.ResponseWriter, req *http.Request, dest interface{}) (e
 }
 
 func apiCheckAuth(out http.ResponseWriter, req *http.Request, token string) bool {
-	ah := req.Header.Get("X-ZT1-Auth")
-	if len(ah) > 0 && strings.TrimSpace(ah) == token {
+	ah := req.Header.Get("Authorization")
+	if len(ah) > 0 && strings.TrimSpace(ah) == ("bearer "+token) {
 		return true
 	}
-	ah = req.Header.Get("Authorization")
-	if len(ah) > 0 && strings.TrimSpace(ah) == ("bearer "+token) {
+	ah = req.Header.Get("X-ZT1-Auth")
+	if len(ah) > 0 && strings.TrimSpace(ah) == token {
 		return true
 	}
 	apiSendObj(out, req, http.StatusUnauthorized, nil)
@@ -134,7 +187,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 		}
 		apiSetStandardHeaders(out)
 		if req.Method == http.MethodGet || req.Method == http.MethodHead {
-			apiSendObj(out, req, http.StatusOK, &apiStatus{
+			apiSendObj(out, req, http.StatusOK, &APIStatus{
 				Address:                 node.Address(),
 				Clock:                   TimeMs(),
 				Config:                  node.LocalConfig(),
@@ -268,7 +321,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 		}
 	})
 
-	listener, err := createNamedSocketListener(basePath, "apisocket")
+	listener, err := createNamedSocketListener(basePath, APISocketName)
 	if err != nil {
 		return nil, err
 	}

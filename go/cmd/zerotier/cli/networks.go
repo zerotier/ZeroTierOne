@@ -14,5 +14,5 @@
 package cli
 
 // Networks CLI command
-func Networks(args []string) {
+func Networks(basePath, authToken string, args []string) {
 }

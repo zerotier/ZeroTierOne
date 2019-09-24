@@ -13,6 +13,37 @@
 
 package cli
 
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"os"
+	"zerotier/pkg/zerotier"
+)
+
 // Status shows service status info
-func Status(args []string) {
+func Status(basePath, authToken string, args []string, jsonOutput bool) {
+	var status zerotier.APIStatus
+	statusCode, err := zerotier.APIGet(basePath, zerotier.APISocketName, authToken, "/status", &status)
+	if err != nil {
+		fmt.Printf("FATAL: API response code %d: %s\n", statusCode, err.Error())
+		os.Exit(1)
+		return
+	}
+	if statusCode != http.StatusOK {
+		if statusCode == http.StatusUnauthorized {
+			fmt.Printf("FATAL: API response code %d: unauthorized (authorization token incorrect)\n", statusCode)
+		}
+		fmt.Printf("FATAL: API response code %d\n", statusCode)
+		os.Exit(1)
+		return
+	}
+
+	if jsonOutput {
+		j, _ := json.MarshalIndent(&status, "", "  ")
+		fmt.Println(string(j))
+	} else {
+	}
+
+	os.Exit(0)
 }

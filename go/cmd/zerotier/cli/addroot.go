@@ -14,5 +14,5 @@
 package cli
 
 // AddRoot CLI command
-func AddRoot(args []string) {
+func AddRoot(basePath, authToken string, args []string) {
 }

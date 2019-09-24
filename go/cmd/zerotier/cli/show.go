@@ -14,5 +14,5 @@
 package cli
 
 // Show CLI command
-func Show(args []string) {
+func Show(basePath, authToken string, args []string) {
 }

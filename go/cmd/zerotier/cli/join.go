@@ -14,5 +14,5 @@
 package cli
 
 // Join CLI command
-func Join(args []string) {
+func Join(basePath, authToken string, args []string) {
 }

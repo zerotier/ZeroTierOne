@@ -21,6 +21,9 @@ import (
 	"unsafe"
 )
 
+// ZeroTierLogoChar is the unicode character that is ZeroTier's logo
+const ZeroTierLogoChar = "⏁"
+
 var base32StdLowerCase = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").WithPadding(base32.NoPadding)
 
 // TimeMs returns the time in milliseconds since epoch.

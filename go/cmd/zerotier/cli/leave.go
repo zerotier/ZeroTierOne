@@ -14,5 +14,5 @@
 package cli
 
 // Leave CLI command
-func Leave(args []string) {
+func Leave(basePath, authToken string, args []string) {
 }

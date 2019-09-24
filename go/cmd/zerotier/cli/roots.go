@@ -14,5 +14,5 @@
 package cli
 
 // Roots CLI command
-func Roots(args []string) {
+func Roots(basePath, authToken string, args []string) {
 }
