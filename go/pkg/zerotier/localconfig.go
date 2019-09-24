@@ -47,11 +47,11 @@ type LocalConfigSettings struct {
 	// TertiaryPort is a third UDP port, set to 0 to disable (picked at random by default)
 	TertiaryPort int
 
-	// PortAutoSearch causes ZeroTier to try other ports automatically if it can't bind to configured ports
-	PortAutoSearch bool
+	// PortSearch causes ZeroTier to try other ports automatically if it can't bind to configured ports
+	PortSearch bool
 
-	// PortMappingEnabled enables uPnP and NAT-PMP support
-	PortMappingEnabled bool
+	// PortMapping enables uPnP and NAT-PMP support
+	PortMapping bool
 
 	// MultipathMode sets the multipath link aggregation mode
 	MuiltipathMode int
@@ -87,8 +87,8 @@ func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool) error {
 		lc.Settings.PrimaryPort = 9993
 		lc.Settings.SecondaryPort = 16384 + (rand.Int() % 16384)
 		lc.Settings.TertiaryPort = 32768 + (rand.Int() % 16384)
-		lc.Settings.PortAutoSearch = true
-		lc.Settings.PortMappingEnabled = true
+		lc.Settings.PortSearch = true
+		lc.Settings.PortMapping = true
 		lc.Settings.MuiltipathMode = 0
 		switch runtime.GOOS {
 		case "darwin":

@@ -187,7 +187,7 @@ func NewNode(basePath string) (*Node, error) {
 		return nil, err
 	}
 
-	if n.localConfig.Settings.PortAutoSearch {
+	if n.localConfig.Settings.PortSearch {
 		portsChanged := false
 
 		portCheckCount := 0
