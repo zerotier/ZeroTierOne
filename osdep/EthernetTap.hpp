@@ -64,12 +64,14 @@ public:
 		const char *const dnp = (dn.length() > 0) ? dn.c_str() : (const char *)0;
 		std::lock_guard<std::mutex> l(_managedRoutes_l);
 		_managedRoutes[std::pair<InetAddress,unsigned int>(target,metric)] = std::shared_ptr<ManagedRoute>(new ManagedRoute(target,via,dnp));
+		return 0;
 	}
 
 	ZT_ALWAYS_INLINE int removeRoute(const InetAddress &target,const InetAddress &via,const unsigned int metric)
 	{
 		std::lock_guard<std::mutex> l(_managedRoutes_l);
 		_managedRoutes.erase(std::pair<InetAddress,unsigned int>(target,metric));
+		return 0;
 	}
 
 	ZT_ALWAYS_INLINE int syncRoutes()

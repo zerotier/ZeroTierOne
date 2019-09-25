@@ -531,6 +531,7 @@ func (n *Node) AddStaticRoot(id *Identity, addrs []InetAddress) {
 		}
 	}
 	if len(saddrs) > 0 {
+		n.log.Printf("adding or updating static root %s at address(es) %s", id.String(), straddrs)
 		ids := C.CString(id.String())
 		C.ZT_Node_setStaticRoot(unsafe.Pointer(n.zn), ids, &saddrs[0], C.uint(len(saddrs)))
 		C.free(unsafe.Pointer(ids))

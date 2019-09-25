@@ -29,8 +29,6 @@
 #include "RingBuffer.hpp"
 #include "Packet.hpp"
 
-#include "../osdep/Phy.hpp"
-
 /**
  * Maximum return value of preferenceRank()
  */
@@ -46,7 +44,6 @@ class RuntimeEnvironment;
 class Path
 {
 	friend class SharedPtr<Path>;
-	Phy<Path *> *_phy;
 
 public:
 	/**
@@ -144,7 +141,8 @@ public:
 		memset(_ifname, 0, 16);
 		memset(_addrString, 0, sizeof(_addrString));
 		if (_localSocket != -1) {
-			_phy->getIfName((PhySocket *) ((uintptr_t) _localSocket), _ifname, 16);
+			// TODO: add localInterface alongside localSocket
+			//_phy->getIfName((PhySocket *) ((uintptr_t) _localSocket), _ifname, 16);
 		}
 	}
 
