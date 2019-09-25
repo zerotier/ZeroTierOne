@@ -109,7 +109,7 @@ func main() {
 	case "status":
 		authTokenRequired(authToken)
 		cli.Status(basePath, authToken, cmdArgs, *jflag)
-	case "peers":
+	case "peers", "listpeers":
 		authTokenRequired(authToken)
 		cli.Peers(basePath, authToken, cmdArgs)
 	case "roots":
@@ -121,7 +121,7 @@ func main() {
 	case "removeroot":
 		authTokenRequired(authToken)
 		cli.RemoveRoot(basePath, authToken, cmdArgs)
-	case "networks":
+	case "networks", "listnetworks":
 		authTokenRequired(authToken)
 		cli.Networks(basePath, authToken, cmdArgs)
 	case "join":

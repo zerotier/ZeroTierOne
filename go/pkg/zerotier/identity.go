@@ -126,7 +126,7 @@ func (id *Identity) String() string {
 	switch id.idtype {
 	case IdentityTypeC25519:
 		if len(id.publicKey) == IdentityTypeC25519PublicKeySize {
-			return fmt.Sprintf("%.10x:0:%x", id.address, id.publicKey)
+			return fmt.Sprintf("%.10x:0:%x", uint64(id.address), id.publicKey)
 		}
 	case IdentityTypeP384:
 		if len(id.publicKey) == IdentityTypeP384PublicKeySize {
@@ -148,7 +148,11 @@ func (id *Identity) UnmarshalJSON(j []byte) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println(s)
 	nid, err := NewIdentityFromString(s)
+	if err != nil {
+		return err
+	}
 	*id = *nid
-	return err
+	return nil
 }
