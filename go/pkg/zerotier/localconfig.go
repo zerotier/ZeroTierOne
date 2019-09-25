@@ -108,7 +108,7 @@ func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool) error {
 
 	data, err := ioutil.ReadFile(p)
 	if err != nil {
-		if err != os.ErrNotExist {
+		if !os.IsNotExist(err) {
 			return err
 		}
 		if saveDefaultsIfNotExist {

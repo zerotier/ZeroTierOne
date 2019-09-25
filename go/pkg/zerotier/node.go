@@ -17,8 +17,8 @@ package zerotier
 // and generally contains all the other CGO stuff.
 
 //#cgo CFLAGS: -O3
-//#cgo LDFLAGS: ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/osdep/libzt_osdep.a ${SRCDIR}/../../../build/go/native/libzt_go_native.a -lc++ -lpthread
-//#define ZT_CGO 1
+//#cgo darwin LDFLAGS: ${SRCDIR}/../../../build/go/native/libzt_go_native.a ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/osdep/libzt_osdep.a -lc++ -lpthread
+//#cgo linux android LDFLAGS: ${SRCDIR}/../../../build/go/native/libzt_go_native.a ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/osdep/libzt_osdep.a -lstdc++ -lpthread -lm
 //#include "../../native/GoGlue.h"
 import "C"
 
@@ -68,9 +68,6 @@ const (
 	// CoreVersionBuild is the build version of the ZeroTier core
 	CoreVersionBuild int = C.ZEROTIER_ONE_VERSION_BUILD
 
-	// PlatformDefaultHomePath is the default location of ZeroTier's working path on this system
-	PlatformDefaultHomePath string = C.GoString(C.ZT_PLATFORM_DEFAULT_HOMEPATH)
-
 	// AFInet is the address family for IPv4
 	AFInet = C.AF_INET
 
@@ -81,7 +78,10 @@ const (
 )
 
 var (
-	nodesByUserPtr     map[uintptr]*Node
+	// PlatformDefaultHomePath is the default location of ZeroTier's working path on this system
+	PlatformDefaultHomePath string = C.GoString(C.ZT_PLATFORM_DEFAULT_HOMEPATH)
+
+	nodesByUserPtr     = make(map[uintptr]*Node)
 	nodesByUserPtrLock sync.RWMutex
 )
 
@@ -862,7 +862,7 @@ func goVirtualNetworkConfigFunc(gn, tapP unsafe.Pointer, nwid C.uint64_t, op C.i
 			return
 		}
 		node.networksLock.RLock()
-		network := node.networks[uint64(nwid)]
+		network := node.networks[NetworkID(nwid)]
 		node.networksLock.RUnlock()
 		if network != nil {
 			ncc := (*C.ZT_VirtualNetworkConfig)(conf)
@@ -1124,7 +1124,7 @@ func handleTapMulticastGroupChange(gn unsafe.Pointer, nwid, mac C.uint64_t, adi 
 			return
 		}
 		node.networksLock.RLock()
-		network := node.networks[uint64(nwid)]
+		network := node.networks[NetworkID(nwid)]
 		node.networksLock.RUnlock()
 		if network != nil {
 			tap, _ := network.tap.(*nativeTap)

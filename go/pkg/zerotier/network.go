@@ -328,7 +328,7 @@ func (n *Network) updateConfig(nc *NetworkConfig, ls *NetworkLocalSettings) {
 				k := r.key()
 				wantManagedRoutes[k] = true
 				if _, have := haveManagedRoutes[k]; !have {
-					n.node.log.Printf("%.16x adding managed route %s", n.ID, r.Target.String())
+					n.node.log.Printf("%.16x adding managed route %s", n.ID, r.String())
 					n.tap.AddRoute(&r)
 				}
 			}
@@ -336,7 +336,7 @@ func (n *Network) updateConfig(nc *NetworkConfig, ls *NetworkLocalSettings) {
 	}
 	for k, r := range haveManagedRoutes {
 		if _, want := wantManagedRoutes[k]; !want {
-			n.node.log.Printf("%.16x removing managed route %s", n.ID, r.Target.String())
+			n.node.log.Printf("%.16x removing managed route %s", n.ID, r.String())
 			n.tap.RemoveRoute(r)
 		}
 	}

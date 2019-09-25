@@ -1,19 +1,56 @@
-# Main binaries created in *nix builds
-/zerotier-one
-/zerotier-idtool
-/zerotier-cli
-/zerotier-selftest
-/zerotier
-/nltest
-
-# OS-created garbage files from various platforms
+build/
+/version.h
 .DS_Store
+.Trashes
+*.swp
+._*
+*~
+*~.nib
 .Apple*
 Thumbs.db
 @eaDir
-._*
+DerivedData/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+!default.pbxuser
+!default.mode1v3
+!default.mode2v3
+!default.perspectivev3
+*.xccheckout
+xcuserdata/
+.vscode
+__pycache__
+attic/world/*.c25519
+attic/world/mkworld
+*.log
+*.opensdf
+*.user
+*.cache
+*.obj
+*.tlog
+*.pid
+*.pkg
+*.o
+*.o-*
+*.core
+*.deb
+*.rpm
+*.autosave
+*.tmp
+.depend
+node_modules
+debian/files
+debian/zerotier-one
+debian/zerotier-one*.debhelper
+debian/*.log
+debian/zerotier-one.substvars
+root/identity.*
+root/config.*
+/ext/installfiles/windows/chocolatey/zerotier-one/*.nupkg
+/go/zerotier
 
-# Windows build droppings
 /windows/ZeroTierOne.sdf
 /windows/ZeroTierOne.v11.suo
 /windows/x64
@@ -32,7 +69,7 @@ Thumbs.db
 /ext/installfiles/windows/ZeroTier One-SetupFiles
 /ext/installfiles/windows/Prerequisites
 /ext/installfiles/windows/*-cache
-/ZeroTier One.msi
+/*.msi
 /windows/.vs
 *.vcxproj.backup
 /windows/TapDriver6/Win7Debug
@@ -43,50 +80,6 @@ enc_temp_folder
 /windows/copyutil/bin
 /windows/copyutil/obj
 
-# *nix/Mac build droppings
-/build-*
-/ZeroTierOneInstaller-*
-/examples/docker/zerotier-one
-/examples/docker/test-*.env
-/world/mkworld
-/world/*.c25519
-zt1-src.tar.gz
-/MacEthernetTapAgent
-
-# Miscellaneous temporaries, build files, etc.
-*.log
-*.opensdf
-*.user
-*.cache
-*.obj
-*.tlog
-*.pid
-*.pkg
-*.o
-/*.a
-*.dylib
-*.so
-*.so.*
-*.o-*
-*.core
-*.deb
-*.rpm
-*.autosave
-*.tmp
-.depend
-node_modules
-zt1_update_*
-debian/files
-debian/zerotier-one
-debian/zerotier-one*.debhelper
-debian/*.log
-debian/zerotier-one.substvars
-root-watcher/config.json
-root/identity.*
-root/zerotier-root
-root/config.*
-
-# Java/Android/JNI build droppings
 java/obj/
 java/libs/
 java/bin/
@@ -98,29 +91,3 @@ java/build_win32/
 windows/WinUI/obj/
 windows/WinUI/bin/
 windows/ZeroTierOne/Debug/
-/ext/installfiles/windows/chocolatey/zerotier-one/*.nupkg
-
-# Miscellaneous mac/Xcode droppings
-.DS_Store
-.Trashes
-*.swp
-*~.nib
-DerivedData/
-build/
-*.pbxuser
-*.mode1v3
-*.mode2v3
-*.perspectivev3
-!default.pbxuser
-!default.mode1v3
-!default.mode2v3
-!default.perspectivev3
-*.xccheckout
-xcuserdata/
-ext/librethinkdbxx/build
-.vscode
-__pycache__
-*~
-attic/world/*.c25519
-attic/world/mkworld
-/version.h

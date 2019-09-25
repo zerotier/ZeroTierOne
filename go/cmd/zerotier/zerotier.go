@@ -54,6 +54,13 @@ func readAuthToken(basePath string) string {
 	return ""
 }
 
+func authTokenRequired(authToken string) {
+	if len(authToken) == 0 {
+		fmt.Println("FATAL: unable to read API authorization token from service path or user home ('sudo' may be needed)")
+		os.Exit(1)
+	}
+}
+
 func main() {
 	globalOpts := flag.NewFlagSet("global", flag.ContinueOnError)
 	hflag := globalOpts.Bool("h", false, "") // support -h to be canonical with other Unix utilities
@@ -81,15 +88,12 @@ func main() {
 	if len(*pflag) > 0 {
 		basePath = *pflag
 	}
+
 	var authToken string
 	if len(*tflag) > 0 {
 		authToken = *tflag
 	} else {
 		authToken = readAuthToken(basePath)
-	}
-	if len(authToken) == 0 {
-		fmt.Println("FATAL: unable to read API authorization token from service path or user home ('sudo' may be needed)")
-		os.Exit(1)
 	}
 	authToken = strings.TrimSpace(authToken)
 
@@ -103,24 +107,34 @@ func main() {
 	case "service":
 		cli.Service(basePath, authToken, cmdArgs)
 	case "status":
+		authTokenRequired(authToken)
 		cli.Status(basePath, authToken, cmdArgs, *jflag)
 	case "peers":
+		authTokenRequired(authToken)
 		cli.Peers(basePath, authToken, cmdArgs)
 	case "roots":
+		authTokenRequired(authToken)
 		cli.Roots(basePath, authToken, cmdArgs)
 	case "addroot":
+		authTokenRequired(authToken)
 		cli.AddRoot(basePath, authToken, cmdArgs)
 	case "removeroot":
+		authTokenRequired(authToken)
 		cli.RemoveRoot(basePath, authToken, cmdArgs)
 	case "networks":
+		authTokenRequired(authToken)
 		cli.Networks(basePath, authToken, cmdArgs)
 	case "join":
+		authTokenRequired(authToken)
 		cli.Join(basePath, authToken, cmdArgs)
 	case "leave":
+		authTokenRequired(authToken)
 		cli.Leave(basePath, authToken, cmdArgs)
 	case "show":
+		authTokenRequired(authToken)
 		cli.Show(basePath, authToken, cmdArgs)
 	case "set":
+		authTokenRequired(authToken)
 		cli.Set(basePath, authToken, cmdArgs)
 	}
 

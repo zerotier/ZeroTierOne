@@ -21,6 +21,7 @@
 #include "../../node/Address.hpp"
 #include "../../osdep/OSUtils.hpp"
 #include "../../osdep/EthernetTap.hpp"
+#include "../../osdep/ManagedRoute.hpp"
 
 #include <string.h>
 #include <stdlib.h>
@@ -102,7 +103,7 @@ struct ZT_GoNode_Impl
 };
 
 static const std::string defaultHomePath(OSUtils::platformDefaultHomePath());
-extern "C" const char *ZT_PLATFORM_DEFAULT_HOMEPATH = defaultHomePath.c_str();
+const char *ZT_PLATFORM_DEFAULT_HOMEPATH = defaultHomePath.c_str();
 
 /****************************************************************************/
 

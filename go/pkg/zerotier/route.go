@@ -33,6 +33,14 @@ type Route struct {
 	Metric uint16
 }
 
+// String returns a string representation of this route
+func (r *Route) String() string {
+	if len(r.Via) == 0 {
+		return r.Target.String() + "->LAN"
+	}
+	return r.Target.String() + "->" + r.Via.String()
+}
+
 // key generates a key suitable for a map[] from this route
 func (r *Route) key() (k [6]uint64) {
 	copy(((*[16]byte)(unsafe.Pointer(&k[0])))[:], r.Target.IP)
