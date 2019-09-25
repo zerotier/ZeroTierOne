@@ -13,10 +13,17 @@
 
 package zerotier
 
+import "fmt"
+
 // MulticastGroup represents a normal Ethernet multicast or broadcast address plus 32 additional ZeroTier-specific bits
 type MulticastGroup struct {
 	MAC MAC
 	ADI uint32
+}
+
+// String returns MAC#ADI
+func (mg *MulticastGroup) String() string {
+	return fmt.Sprintf("%s#%.8x", mg.MAC.String(), mg.ADI)
 }
 
 // Less returns true if this MulticastGroup is less than another.

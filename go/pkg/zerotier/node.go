@@ -540,6 +540,7 @@ func (n *Node) AddStaticRoot(id *Identity, addrs []InetAddress) {
 
 // RemoveStaticRoot removes a statically defined root server from this node.
 func (n *Node) RemoveStaticRoot(id *Identity) {
+	n.log.Printf("removing static root %s", id.String())
 	ids := C.CString(id.String())
 	C.ZT_Node_removeStaticRoot(unsafe.Pointer(n.zn), ids)
 	C.free(unsafe.Pointer(ids))
@@ -550,6 +551,7 @@ func (n *Node) RemoveStaticRoot(id *Identity) {
 // to use if (or until) one can be fetched via DNS.
 func (n *Node) AddDynamicRoot(dnsName string, locator []byte) {
 	dn := C.CString(dnsName)
+	n.log.Printf("adding dynamic root %s", dnsName)
 	if len(locator) > 0 {
 		C.ZT_Node_setDynamicRoot(unsafe.Pointer(n.zn), dn, unsafe.Pointer(&locator[0]), C.uint(len(locator)))
 	} else {
@@ -560,6 +562,7 @@ func (n *Node) AddDynamicRoot(dnsName string, locator []byte) {
 
 // RemoveDynamicRoot removes a dynamic root from this node.
 func (n *Node) RemoveDynamicRoot(dnsName string) {
+	n.log.Printf("removing dynamic root %s", dnsName)
 	dn := C.CString(dnsName)
 	C.ZT_Node_removeDynamicRoot(unsafe.Pointer(n.zn), dn)
 	C.free(unsafe.Pointer(dn))
@@ -730,6 +733,9 @@ func (n *Node) stateObjectGet(objType int, id [2]uint64) ([]byte, bool) {
 }
 
 func (n *Node) handleTrace(traceMessage string) {
+	if len(traceMessage) > 0 {
+		n.log.Print("TRACE: " + traceMessage)
+	}
 }
 
 func (n *Node) handleUserMessage(originAddress, messageTypeID uint64, data []byte) {
