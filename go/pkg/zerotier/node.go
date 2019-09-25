@@ -28,12 +28,14 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	rand "math/rand"
 	"net"
 	"net/http"
 	"os"
 	"path"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -41,6 +43,8 @@ import (
 
 	acl "github.com/hectane/go-acl"
 )
+
+var nullLogger = log.New(ioutil.Discard, "", 0)
 
 // Network status states
 const (
@@ -159,6 +163,8 @@ type Node struct {
 	localConfigLock        sync.RWMutex
 	networksLock           sync.RWMutex
 	interfaceAddressesLock sync.Mutex
+	logW                   *sizeLimitWriter
+	log                    *log.Logger
 	gn                     *C.ZT_GoNode
 	zn                     *C.ZT_Node
 	id                     *Identity
@@ -170,21 +176,34 @@ type Node struct {
 
 // NewNode creates and initializes a new instance of the ZeroTier node service
 func NewNode(basePath string) (*Node, error) {
+	var err error
+
 	os.MkdirAll(basePath, 0755)
 	if _, err := os.Stat(basePath); err != nil {
 		return nil, err
 	}
 
 	n := new(Node)
+
 	n.networks = make(map[NetworkID]*Network)
 	n.networksByMAC = make(map[MAC]*Network)
 	n.interfaceAddresses = make(map[string]net.IP)
 
 	n.basePath = basePath
 	n.localConfigPath = path.Join(basePath, "local.conf")
-	err := n.localConfig.Read(n.localConfigPath, true)
+	err = n.localConfig.Read(n.localConfigPath, true)
 	if err != nil {
 		return nil, err
+	}
+
+	if n.localConfig.Settings.LogSizeMax >= 0 {
+		n.logW, err = sizeLimitWriterOpen(path.Join(basePath, "service.log"))
+		if err != nil {
+			return nil, err
+		}
+		n.log = log.New(n.logW, "", log.LstdFlags)
+	} else {
+		n.log = nullLogger
 	}
 
 	if n.localConfig.Settings.PortSearch {
@@ -196,6 +215,7 @@ func NewNode(basePath string) (*Node, error) {
 			if checkPort(n.localConfig.Settings.PrimaryPort) {
 				break
 			}
+			n.log.Printf("primary port %d unavailable, trying next port (port search enabled)", n.localConfig.Settings.PrimaryPort)
 			n.localConfig.Settings.PrimaryPort++
 			n.localConfig.Settings.PrimaryPort &= 0xffff
 			portsChanged = true
@@ -211,6 +231,7 @@ func NewNode(basePath string) (*Node, error) {
 				if checkPort(n.localConfig.Settings.SecondaryPort) {
 					break
 				}
+				n.log.Printf("secondary port %d unavailable, trying next port (port search enabled)", n.localConfig.Settings.SecondaryPort)
 				n.localConfig.Settings.SecondaryPort++
 				n.localConfig.Settings.SecondaryPort &= 0xffff
 				portsChanged = true
@@ -227,6 +248,7 @@ func NewNode(basePath string) (*Node, error) {
 				if checkPort(n.localConfig.Settings.TertiaryPort) {
 					break
 				}
+				n.log.Printf("tertiary port %d unavailable, trying next port (port search enabled)", n.localConfig.Settings.TertiaryPort)
 				n.localConfig.Settings.TertiaryPort++
 				n.localConfig.Settings.TertiaryPort &= 0xffff
 				portsChanged = true
@@ -247,20 +269,24 @@ func NewNode(basePath string) (*Node, error) {
 	n.gn = C.ZT_GoNode_new(cpath)
 	C.free(unsafe.Pointer(cpath))
 	if n.gn == nil {
+		n.log.Println("FATAL: node initialization failed")
 		return nil, ErrNodeInitFailed
 	}
 	n.zn = (*C.ZT_Node)(C.ZT_GoNode_getNode(n.gn))
 
 	var ns C.ZT_NodeStatus
 	C.ZT_Node_status(unsafe.Pointer(n.zn), &ns)
-	n.id, err = NewIdentityFromString(C.GoString(ns.secretIdentity))
+	idstr := C.GoString(ns.secretIdentity)
+	n.id, err = NewIdentityFromString(idstr)
 	if err != nil {
+		n.log.Printf("FATAL: node's identity does not seem valid (%s)", idstr)
 		C.ZT_GoNode_delete(n.gn)
 		return nil, err
 	}
 
 	n.apiServer, err = createAPIServer(basePath, n)
 	if err != nil {
+		n.log.Printf("FATAL: unable to start API server: %s", err.Error())
 		C.ZT_GoNode_delete(n.gn)
 		return nil, err
 	}
@@ -275,13 +301,13 @@ func NewNode(basePath string) (*Node, error) {
 
 	n.runLock.Lock()
 	go func() {
-		lastScannedInterfaces := int64(0)
+		lastMaintenanceRun := int64(0)
 		for atomic.LoadUint32(&n.running) != 0 {
 			time.Sleep(1 * time.Second)
 
 			now := TimeMs()
-			if (now - lastScannedInterfaces) >= 30000 {
-				lastScannedInterfaces = now
+			if (now - lastMaintenanceRun) >= 30000 {
+				lastMaintenanceRun = now
 
 				interfaceAddresses := make(map[string]net.IP)
 				ifs, _ := net.Interfaces()
@@ -305,17 +331,21 @@ func NewNode(basePath string) (*Node, error) {
 				}
 
 				n.localConfigLock.RLock()
+
 				n.interfaceAddressesLock.Lock()
 				for astr, ipn := range interfaceAddresses {
 					if _, alreadyKnown := n.interfaceAddresses[astr]; !alreadyKnown {
 						ipCstr := C.CString(ipn.String())
 						if n.localConfig.Settings.PrimaryPort > 0 && n.localConfig.Settings.PrimaryPort < 65536 {
+							n.log.Printf("UDP binding to port %d on interface %s", n.localConfig.Settings.PrimaryPort, astr)
 							C.ZT_GoNode_phyStartListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.PrimaryPort))
 						}
 						if n.localConfig.Settings.SecondaryPort > 0 && n.localConfig.Settings.SecondaryPort < 65536 {
+							n.log.Printf("UDP binding to port %d on interface %s", n.localConfig.Settings.SecondaryPort, astr)
 							C.ZT_GoNode_phyStartListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.SecondaryPort))
 						}
 						if n.localConfig.Settings.TertiaryPort > 0 && n.localConfig.Settings.TertiaryPort < 65536 {
+							n.log.Printf("UDP binding to port %d on interface %s", n.localConfig.Settings.TertiaryPort, astr)
 							C.ZT_GoNode_phyStartListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.TertiaryPort))
 						}
 						C.free(unsafe.Pointer(ipCstr))
@@ -325,12 +355,15 @@ func NewNode(basePath string) (*Node, error) {
 					if _, stillPresent := interfaceAddresses[astr]; !stillPresent {
 						ipCstr := C.CString(ipn.String())
 						if n.localConfig.Settings.PrimaryPort > 0 && n.localConfig.Settings.PrimaryPort < 65536 {
+							n.log.Printf("UDP closing socket bound to port %d on interface %s", n.localConfig.Settings.PrimaryPort, astr)
 							C.ZT_GoNode_phyStopListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.PrimaryPort))
 						}
 						if n.localConfig.Settings.SecondaryPort > 0 && n.localConfig.Settings.SecondaryPort < 65536 {
+							n.log.Printf("UDP closing socket bound to port %d on interface %s", n.localConfig.Settings.SecondaryPort, astr)
 							C.ZT_GoNode_phyStopListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.SecondaryPort))
 						}
 						if n.localConfig.Settings.TertiaryPort > 0 && n.localConfig.Settings.TertiaryPort < 65536 {
+							n.log.Printf("UDP closing socket bound to port %d on interface %s", n.localConfig.Settings.TertiaryPort, astr)
 							C.ZT_GoNode_phyStopListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.TertiaryPort))
 						}
 						C.free(unsafe.Pointer(ipCstr))
@@ -338,6 +371,11 @@ func NewNode(basePath string) (*Node, error) {
 				}
 				n.interfaceAddresses = interfaceAddresses
 				n.interfaceAddressesLock.Unlock()
+
+				if n.localConfig.Settings.LogSizeMax > 0 && n.logW != nil {
+					n.logW.trim(n.localConfig.Settings.LogSizeMax*1024, 0.5, true)
+				}
+
 				n.localConfigLock.RUnlock()
 			}
 		}
@@ -388,25 +426,64 @@ func (n *Node) LocalConfig() LocalConfig {
 	return n.localConfig
 }
 
+// SetLocalConfig updates this node's local configuration
+func (n *Node) SetLocalConfig(lc *LocalConfig) (restartRequired bool, err error) {
+	n.networksLock.RLock()
+	n.localConfigLock.Lock()
+	defer n.localConfigLock.Unlock()
+	defer n.networksLock.RUnlock()
+
+	for nid, nc := range lc.Network {
+		nw := n.networks[nid]
+		if nw != nil {
+			nw.SetLocalSettings(nc)
+		}
+	}
+
+	if n.localConfig.Settings.PrimaryPort != lc.Settings.PrimaryPort || n.localConfig.Settings.SecondaryPort != lc.Settings.SecondaryPort || n.localConfig.Settings.TertiaryPort != lc.Settings.TertiaryPort {
+		restartRequired = true
+	}
+	if lc.Settings.LogSizeMax < 0 {
+		n.log = nullLogger
+		n.logW.Close()
+		n.logW = nil
+	} else if n.logW != nil {
+		n.logW, err = sizeLimitWriterOpen(path.Join(n.basePath, "service.log"))
+		if err == nil {
+			n.log = log.New(n.logW, "", log.LstdFlags)
+		} else {
+			n.log = nullLogger
+			n.logW = nil
+		}
+	}
+
+	n.localConfig = *lc
+
+	return
+}
+
 // Join joins a network
 // If tap is nil, the default system tap for this OS/platform is used (if available).
 func (n *Node) Join(nwid uint64, tap Tap) (*Network, error) {
 	n.networksLock.RLock()
 	if nw, have := n.networks[NetworkID(nwid)]; have {
+		n.log.Printf("join network %.16x ignored: already a member", nwid)
 		return nw, nil
 	}
 	n.networksLock.RUnlock()
 
 	if tap != nil {
-		return nil, errors.New("non-native taps not implemented yet")
+		panic("non-native taps not yet implemented")
 	}
 	ntap := C.ZT_GoNode_join(n.gn, C.uint64_t(nwid))
 	if ntap == nil {
+		n.log.Printf("join network %.16x failed: tap device failed to initialize (check drivers / kernel modules)")
 		return nil, ErrTapInitFailed
 	}
 
 	nw, err := newNetwork(n, NetworkID(nwid), &nativeTap{tap: unsafe.Pointer(ntap), enabled: 1})
 	if err != nil {
+		n.log.Printf("join network %.16x failed: network failed to initialize: %s", nwid, err.Error())
 		C.ZT_GoNode_leave(n.gn, C.uint64_t(nwid))
 		return nil, err
 	}
@@ -419,6 +496,7 @@ func (n *Node) Join(nwid uint64, tap Tap) (*Network, error) {
 
 // Leave leaves a network
 func (n *Node) Leave(nwid uint64) error {
+	n.log.Printf("leaving network %.16x", nwid)
 	C.ZT_GoNode_leave(n.gn, C.uint64_t(nwid))
 	n.networksLock.Lock()
 	delete(n.networks, NetworkID(nwid))
@@ -439,15 +517,17 @@ func (n *Node) Networks() []*Network {
 
 // AddStaticRoot adds a statically defined root server to this node.
 // If a static root with the given identity already exists this will update its IP and port information.
-func (n *Node) AddStaticRoot(id *Identity, addrs []net.Addr) {
+func (n *Node) AddStaticRoot(id *Identity, addrs []InetAddress) {
 	var saddrs []C.struct_sockaddr_storage
+	var straddrs strings.Builder
 	for _, a := range addrs {
-		aa, _ := a.(*net.UDPAddr)
-		if aa != nil {
-			ss := new(C.struct_sockaddr_storage)
-			if makeSockaddrStorage(aa.IP, aa.Port, ss) {
-				saddrs = append(saddrs, *ss)
+		ss := new(C.struct_sockaddr_storage)
+		if makeSockaddrStorage(a.IP, a.Port, ss) {
+			saddrs = append(saddrs, *ss)
+			if straddrs.Len() > 0 {
+				straddrs.WriteString(",")
 			}
+			straddrs.WriteString(a.String())
 		}
 	}
 	if len(saddrs) > 0 {

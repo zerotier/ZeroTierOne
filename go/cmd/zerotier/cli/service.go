@@ -13,17 +13,33 @@
 
 package cli
 
-/*
-func nodeStart() {
+import (
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"zerotier/pkg/zerotier"
+)
+
+// Service is "zerotier service ..."
+func Service(basePath, authToken string, args []string) {
+	if len(args) > 0 {
+		Help()
+		os.Exit(1)
+	}
+
+	node, err := zerotier.NewNode(basePath)
+	if err != nil {
+		fmt.Println("FATAL: error initializing node: " + err.Error())
+		os.Exit(1)
+	}
+
 	osSignalChannel := make(chan os.Signal, 2)
 	signal.Notify(osSignalChannel, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGBUS)
 	signal.Ignore(syscall.SIGUSR1, syscall.SIGUSR2)
 	go func() {
 		<-osSignalChannel
+		node.Close()
+		os.Exit(0)
 	}()
-}
-*/
-
-// Service is "zerotier service ..."
-func Service(basePath, authToken string, args []string) {
 }

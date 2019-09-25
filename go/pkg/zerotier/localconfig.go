@@ -53,6 +53,9 @@ type LocalConfigSettings struct {
 	// PortMapping enables uPnP and NAT-PMP support
 	PortMapping bool
 
+	// LogSizeMax is the maximum size of the log in kilobytes or 0 for no limit and -1 to disable logging
+	LogSizeMax int
+
 	// MultipathMode sets the multipath link aggregation mode
 	MuiltipathMode int
 
@@ -89,6 +92,7 @@ func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool) error {
 		lc.Settings.TertiaryPort = 32768 + (rand.Int() % 16384)
 		lc.Settings.PortSearch = true
 		lc.Settings.PortMapping = true
+		lc.Settings.LogSizeMax = 128
 		lc.Settings.MuiltipathMode = 0
 		switch runtime.GOOS {
 		case "darwin":
