@@ -537,6 +537,7 @@ ZT_PeerList *Node::peers() const
 			p->latency = -1;
 		p->role = RR->topology->isRoot((*pi)->identity()) ? ZT_PEER_ROLE_PLANET : ZT_PEER_ROLE_LEAF;
 
+		const int64_t now = _now;
 		std::vector< SharedPtr<Path> > paths((*pi)->paths(_now));
 		SharedPtr<Path> bestp((*pi)->getAppropriatePath(_now,false));
 		p->hadAggregateLink |= (*pi)->hasAggregateLink();
@@ -546,7 +547,7 @@ ZT_PeerList *Node::peers() const
 			p->paths[p->pathCount].lastSend = (*path)->lastOut();
 			p->paths[p->pathCount].lastReceive = (*path)->lastIn();
 			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
-			p->paths[p->pathCount].expired = 0;
+			p->paths[p->pathCount].alive = (*path)->alive(now) ? 1 : 0;
 			p->paths[p->pathCount].preferred = ((*path) == bestp) ? 1 : 0;
 			p->paths[p->pathCount].latency = (float)(*path)->latency();
 			p->paths[p->pathCount].packetDelayVariance = (*path)->packetDelayVariance();

@@ -1234,9 +1234,9 @@ typedef struct
 	char *ifname;
 
 	/**
-	 * Is path expired?
+	 * Is path alive?
 	 */
-	int expired;
+	int alive;
 
 	/**
 	 * Is path preferred?

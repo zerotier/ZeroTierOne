@@ -464,10 +464,13 @@ func (n *Node) SetLocalConfig(lc *LocalConfig) (restartRequired bool, err error)
 
 // Join joins a network
 // If tap is nil, the default system tap for this OS/platform is used (if available).
-func (n *Node) Join(nwid uint64, tap Tap) (*Network, error) {
+func (n *Node) Join(nwid NetworkID, settings *NetworkLocalSettings, tap Tap) (*Network, error) {
 	n.networksLock.RLock()
-	if nw, have := n.networks[NetworkID(nwid)]; have {
+	if nw, have := n.networks[nwid]; have {
 		n.log.Printf("join network %.16x ignored: already a member", nwid)
+		if settings != nil {
+			nw.SetLocalSettings(settings)
+		}
 		return nw, nil
 	}
 	n.networksLock.RUnlock()
@@ -488,8 +491,11 @@ func (n *Node) Join(nwid uint64, tap Tap) (*Network, error) {
 		return nil, err
 	}
 	n.networksLock.Lock()
-	n.networks[NetworkID(nwid)] = nw
+	n.networks[nwid] = nw
 	n.networksLock.Unlock()
+	if settings != nil {
+		nw.SetLocalSettings(settings)
+	}
 
 	return nw, nil
 }
@@ -502,6 +508,14 @@ func (n *Node) Leave(nwid uint64) error {
 	delete(n.networks, NetworkID(nwid))
 	n.networksLock.Unlock()
 	return nil
+}
+
+// GetNetwork looks up a network by ID or returns nil if not joined
+func (n *Node) GetNetwork(nwid NetworkID) *Network {
+	n.networksLock.RLock()
+	nw := n.networks[nwid]
+	n.networksLock.RUnlock()
+	return nw
 }
 
 // Networks returns a list of networks that this node has joined
@@ -613,30 +627,35 @@ func (n *Node) Peers() []*Peer {
 			p2.Paths = make([]Path, 0, int(p.pathCount))
 			for j := uintptr(0); j < uintptr(p.pathCount); j++ {
 				pt := &p.paths[j]
-				a := sockaddrStorageToUDPAddr(&pt.address)
-				if a != nil {
-					p2.Paths = append(p2.Paths, Path{
-						IP:                     a.IP,
-						Port:                   a.Port,
-						LastSend:               int64(pt.lastSend),
-						LastReceive:            int64(pt.lastReceive),
-						TrustedPathID:          uint64(pt.trustedPathId),
-						Latency:                float32(pt.latency),
-						PacketDelayVariance:    float32(pt.packetDelayVariance),
-						ThroughputDisturbCoeff: float32(pt.throughputDisturbCoeff),
-						PacketErrorRatio:       float32(pt.packetErrorRatio),
-						PacketLossRatio:        float32(pt.packetLossRatio),
-						Stability:              float32(pt.stability),
-						Throughput:             uint64(pt.throughput),
-						MaxThroughput:          uint64(pt.maxThroughput),
-						Allocation:             float32(pt.allocation),
-					})
+				if pt.alive != 0 {
+					a := sockaddrStorageToUDPAddr(&pt.address)
+					if a != nil {
+						p2.Paths = append(p2.Paths, Path{
+							IP:                     a.IP,
+							Port:                   a.Port,
+							LastSend:               int64(pt.lastSend),
+							LastReceive:            int64(pt.lastReceive),
+							TrustedPathID:          uint64(pt.trustedPathId),
+							Latency:                float32(pt.latency),
+							PacketDelayVariance:    float32(pt.packetDelayVariance),
+							ThroughputDisturbCoeff: float32(pt.throughputDisturbCoeff),
+							PacketErrorRatio:       float32(pt.packetErrorRatio),
+							PacketLossRatio:        float32(pt.packetLossRatio),
+							Stability:              float32(pt.stability),
+							Throughput:             uint64(pt.throughput),
+							MaxThroughput:          uint64(pt.maxThroughput),
+							Allocation:             float32(pt.allocation),
+						})
+					}
 				}
 			}
+			sort.Slice(p2.Paths, func(a, b int) bool { return p2.Paths[a].LastReceive < p2.Paths[b].LastReceive })
+			p2.Clock = TimeMs()
 			peers = append(peers, p2)
 		}
 		C.ZT_Node_freeQueryResult(unsafe.Pointer(n.zn), unsafe.Pointer(pl))
 	}
+	sort.Slice(peers, func(a, b int) bool { return peers[a].Address < peers[b].Address })
 	return peers
 }
 

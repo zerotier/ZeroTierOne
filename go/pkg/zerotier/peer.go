@@ -20,4 +20,5 @@ type Peer struct {
 	Latency int
 	Role    int
 	Paths   []Path
+	Clock   int64
 }

@@ -96,12 +96,27 @@ type APIStatus struct {
 
 // APINetwork is the object returned by API network inquiries
 type APINetwork struct {
+	ID                     NetworkID
 	Config                 *NetworkConfig
 	Settings               *NetworkLocalSettings
 	MulticastSubscriptions []*MulticastGroup
 	TapDeviceType          string
 	TapDeviceName          string
 	TapDeviceEnabled       bool
+}
+
+func apiNetworkFromNetwork(n *Network) *APINetwork {
+	var nn APINetwork
+	nn.ID = n.ID()
+	c := n.Config()
+	nn.Config = &c
+	ls := n.LocalSettings()
+	nn.Settings = &ls
+	nn.MulticastSubscriptions = n.MulticastSubscriptions()
+	nn.TapDeviceType = n.Tap().Type()
+	nn.TapDeviceName = n.Tap().DeviceName()
+	nn.TapDeviceEnabled = n.Tap().Enabled()
+	return &nn
 }
 
 func apiSetStandardHeaders(out http.ResponseWriter) {
@@ -215,6 +230,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 		if req.Method == http.MethodPost || req.Method == http.MethodPut {
 			var c LocalConfig
 			if apiReadObj(out, req, &c) == nil {
+				node.SetLocalConfig(&c)
 				apiSendObj(out, req, http.StatusOK, node.LocalConfig())
 			}
 		} else if req.Method == http.MethodGet || req.Method == http.MethodHead {
@@ -279,12 +295,40 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 		if req.Method == http.MethodPost || req.Method == http.MethodPut {
 			if queriedID == 0 {
 				apiSendObj(out, req, http.StatusBadRequest, nil)
+			} else {
+				var nw APINetwork
+				if apiReadObj(out, req, &nw) == nil {
+					n := node.GetNetwork(nw.ID)
+					if n == nil {
+						n, err := node.Join(nw.ID, nw.Settings, nil)
+						if err != nil {
+							apiSendObj(out, req, http.StatusBadRequest, nil)
+						} else {
+							apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(n))
+						}
+					} else {
+						if nw.Settings != nil {
+							n.SetLocalSettings(nw.Settings)
+						}
+						apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(n))
+					}
+				}
 			}
 		} else if req.Method == http.MethodGet || req.Method == http.MethodHead {
+			networks := node.Networks()
 			if queriedID == 0 { // no queried ID lists all networks
-				networks := node.Networks()
-				apiSendObj(out, req, http.StatusOK, networks)
+				nws := make([]*APINetwork, 0, len(networks))
+				for _, nw := range networks {
+					nws = append(nws, apiNetworkFromNetwork(nw))
+				}
+				apiSendObj(out, req, http.StatusOK, nws)
 			} else {
+				for _, nw := range networks {
+					if nw.ID() == queriedID {
+						apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(nw))
+						break
+					}
+				}
 			}
 		} else {
 			out.Header().Set("Allow", "GET, HEAD, PUT, POST")

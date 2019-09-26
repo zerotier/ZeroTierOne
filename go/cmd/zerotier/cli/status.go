@@ -16,7 +16,6 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"zerotier/pkg/zerotier"
 )
@@ -24,25 +23,50 @@ import (
 // Status shows service status info
 func Status(basePath, authToken string, args []string, jsonOutput bool) {
 	var status zerotier.APIStatus
-	statusCode, err := zerotier.APIGet(basePath, zerotier.APISocketName, authToken, "/status", &status)
-	if err != nil {
-		fmt.Printf("FATAL: API response code %d: %s\n", statusCode, err.Error())
-		os.Exit(1)
-		return
-	}
-	if statusCode != http.StatusOK {
-		if statusCode == http.StatusUnauthorized {
-			fmt.Printf("FATAL: API response code %d: unauthorized (authorization token incorrect)\n", statusCode)
-		}
-		fmt.Printf("FATAL: API response code %d\n", statusCode)
-		os.Exit(1)
-		return
-	}
+	apiGet(basePath, authToken, "/status", &status)
 
 	if jsonOutput {
 		j, _ := json.MarshalIndent(&status, "", "  ")
 		fmt.Println(string(j))
 	} else {
+		online := "ONLINE"
+		if !status.Online {
+			online = "OFFLINE"
+		}
+		fmt.Printf("%.10x: %s %s\n", uint64(status.Address), online, status.Version)
+		fmt.Printf("\tports: %d %d %d\n", status.Config.Settings.PrimaryPort, status.Config.Settings.SecondaryPort, status.Config.Settings.TertiaryPort)
+		fmt.Printf("\tport search: %s\n", enabledDisabled(status.Config.Settings.PortSearch))
+		fmt.Printf("\tport mapping (uPnP/NAT-PMP): %s\n", enabledDisabled(status.Config.Settings.PortMapping))
+		fmt.Printf("\tmultipath mode: %d\n", status.Config.Settings.MuiltipathMode)
+		fmt.Printf("\tblacklisted interface prefixes: ")
+		for i, bl := range status.Config.Settings.InterfacePrefixBlacklist {
+			if i > 0 {
+				fmt.Print(',')
+			}
+			fmt.Print(bl)
+		}
+		fmt.Printf("\n\texplicit external addresses: ")
+		for i, ea := range status.Config.Settings.ExplicitAddresses {
+			if i > 0 {
+				fmt.Print(',')
+			}
+			fmt.Print(ea.String())
+		}
+		fmt.Printf("\n\tsystem interface addresses: ")
+		for i, a := range status.InterfaceAddresses {
+			if i > 0 {
+				fmt.Print(',')
+			}
+			fmt.Print(a.String())
+		}
+		fmt.Printf("\n\tmapped external addresses: ")
+		for i, a := range status.MappedExternalAddresses {
+			if i > 0 {
+				fmt.Print(',')
+			}
+			fmt.Print(a.String())
+		}
+		fmt.Printf("\n\tidentity: %s\n", status.Identity.String())
 	}
 
 	os.Exit(0)

@@ -194,6 +194,13 @@ func (n *Network) Config() NetworkConfig {
 // SetLocalSettings modifies this network's local settings
 func (n *Network) SetLocalSettings(ls *NetworkLocalSettings) { n.updateConfig(nil, ls) }
 
+// LocalSettings gets this network's current local settings
+func (n *Network) LocalSettings() NetworkLocalSettings {
+	n.configLock.RLock()
+	defer n.configLock.RUnlock()
+	return n.settings
+}
+
 // MulticastSubscribe subscribes to a multicast group
 func (n *Network) MulticastSubscribe(mg *MulticastGroup) {
 	n.node.log.Printf("%.16x joined multicast group %s", mg.String())
