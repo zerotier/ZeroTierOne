@@ -170,7 +170,9 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	if (nw) {
 		RR->sw->onLocalEthernet(tptr,nw,MAC(sourceMac),MAC(destMac),etherType,vlanId,frameData,frameLength);
 		return ZT_RESULT_OK;
-	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
+	} else {
+		return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
+	}
 }
 
 // This is passed as the argument to the DNS request handler and
@@ -184,7 +186,7 @@ struct _processBackgroundTasks_dnsResultAccumulator
 
 static const ZT_DNSRecordType s_txtRecordType[1] = { ZT_DNS_RECORD_TXT };
 
-struct _processBackgroundTasks_check_dynamicRoots
+struct _processBackgroundTasks_eachRootName
 {
 	ZT_Node_Callbacks *cb;
 	Node *n;
@@ -194,7 +196,7 @@ struct _processBackgroundTasks_check_dynamicRoots
 
 	ZT_ALWAYS_INLINE bool operator()(const Str &dnsName,const Locator &loc)
 	{
-		if ((updateAll)||(!loc)) {
+		if ((strchr(dnsName.c_str(),'.'))&&((updateAll)||(!loc))) {
 			_processBackgroundTasks_dnsResultAccumulator *dnsReq = new _processBackgroundTasks_dnsResultAccumulator(dnsName);
 			cb->dnsResolver(reinterpret_cast<ZT_Node *>(n),uPtr,tPtr,s_txtRecordType,1,dnsName.c_str(),(uintptr_t)dnsReq);
 		}
@@ -258,7 +260,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 		try {
 			// Periodically refresh locators for dynamic roots from their DNS names.
 			if (_cb.dnsResolver) {
-				_processBackgroundTasks_check_dynamicRoots cr;
+				_processBackgroundTasks_eachRootName cr;
 				cr.cb = &_cb;
 				cr.n = this;
 				cr.uPtr = _uPtr;
@@ -269,7 +271,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 				} else {
 					cr.updateAll = false;
 				}
-				RR->topology->eachDynamicRoot(cr);
+				RR->topology->eachRootName(cr);
 			}
 
 			// Ping each root explicitly no matter what
@@ -363,7 +365,7 @@ void Node::processDNSResult(
 		} else if (recordType == ZT_DNS_RECORD__END_OF_RESULTS) {
 			Locator loc;
 			if (loc.decodeTxtRecords(acc->dnsName,acc->txtRecords.begin(),acc->txtRecords.end())) {
-				RR->topology->setDynamicRoot(acc->dnsName,loc);
+				RR->topology->setRoot(acc->dnsName,loc);
 				delete acc;
 			}
 		}
@@ -434,59 +436,38 @@ ZT_RootList *Node::listRoots(int64_t now)
 	return RR->topology->apiRoots(now);
 }
 
-enum ZT_ResultCode Node::setStaticRoot(const char *identity,const struct sockaddr_storage *addresses,unsigned int addressCount)
+enum ZT_ResultCode Node::setRoot(const char *name,const void *locator,unsigned int locatorSize)
 {
-	if (!identity)
-		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	Identity id;
-	if (id.fromString(identity)) {
-		if (id) {
-			std::vector<InetAddress> addrs;
-			for(unsigned int i=0;i<addressCount;++i)
-				addrs.push_back(InetAddress(addresses[i]));
-			RR->topology->setStaticRoot(identity,addrs);
-			return ZT_RESULT_OK;
-		}
-	}
-	return ZT_RESULT_ERROR_BAD_PARAMETER;
-}
-
-enum ZT_ResultCode Node::setDynamicRoot(const char *dnsName,const void *defaultLocator,unsigned int defaultLocatorSize)
-{
-	if (!dnsName)
-		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	if (strlen(dnsName) >= 256)
-		return ZT_RESULT_ERROR_BAD_PARAMETER;
 	try {
 		Locator loc;
-		if ((defaultLocator)&&(defaultLocatorSize > 0)&&(defaultLocatorSize < 65535)) {
+		if ((locator)&&(locatorSize > 0)&&(locatorSize < 65535)) {
 			ScopedPtr< Buffer<65536> > locbuf(new Buffer<65536>());
-			locbuf->append(defaultLocator,defaultLocatorSize);
+			locbuf->append(locator,locatorSize);
 			loc.deserialize(*locbuf,0);
 			if (!loc.verify())
-				loc = Locator();
+				return ZT_RESULT_ERROR_BAD_PARAMETER;
 		}
-		return RR->topology->setDynamicRoot(Str(dnsName),loc) ? ZT_RESULT_OK : ZT_RESULT_OK_IGNORED;
+		Str n;
+		if ((!name)||(strlen(name) == 0)) {
+			if (!loc)
+				return ZT_RESULT_ERROR_BAD_PARAMETER; /* no name and no locator */
+			char tmp[16];
+			loc.id().address().toString(tmp);
+			n = tmp;
+		} else {
+			n = name;
+		}
+		return RR->topology->setRoot(n,loc) ? ZT_RESULT_OK : ZT_RESULT_OK_IGNORED;
 	} catch ( ... ) {
 		return ZT_RESULT_ERROR_BAD_PARAMETER;
 	}
 }
 
-enum ZT_ResultCode Node::removeStaticRoot(const char *identity)
-{
-	if (identity) {
-		Identity id;
-		if (id.fromString(identity))
-			RR->topology->removeStaticRoot(id);
-	}
-	return ZT_RESULT_OK;
-}
-
-enum ZT_ResultCode Node::removeDynamicRoot(const char *dnsName)
+enum ZT_ResultCode Node::removeRoot(const char *name)
 {
 	try {
-		if (dnsName)
-			RR->topology->removeDynamicRoot(Str(dnsName));
+		if (name)
+			RR->topology->removeRoot(Str(name));
 	} catch ( ... ) {}
 	return ZT_RESULT_OK;
 }
@@ -937,10 +918,10 @@ ZT_RootList *ZT_Node_listRoots(ZT_Node *node,int64_t now)
 	}
 }
 
-enum ZT_ResultCode ZT_Node_setStaticRoot(ZT_Node *node,const char *identity,const struct sockaddr_storage *addresses,unsigned int addressCount)
+enum ZT_ResultCode ZT_Node_setRoot(ZT_Node *node,const char *name,const void *locator,unsigned int locatorSize)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->setStaticRoot(identity,addresses,addressCount);
+		return reinterpret_cast<ZeroTier::Node *>(node)->setRoot(name,locator,locatorSize);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
@@ -948,32 +929,10 @@ enum ZT_ResultCode ZT_Node_setStaticRoot(ZT_Node *node,const char *identity,cons
 	}
 }
 
-enum ZT_ResultCode ZT_Node_setDynamicRoot(ZT_Node *node,const char *dnsName,const void *defaultLocator,unsigned int defaultLocatorSize)
+enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,const char *name)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->setDynamicRoot(dnsName,defaultLocator,defaultLocatorSize);
-	} catch (std::bad_alloc &exc) {
-		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
-	} catch ( ... ) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
-	}
-}
-
-enum ZT_ResultCode ZT_Node_removeStaticRoot(ZT_Node *node,const char *identity)
-{
-	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->removeStaticRoot(identity);
-	} catch (std::bad_alloc &exc) {
-		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
-	} catch ( ... ) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
-	}
-}
-
-enum ZT_ResultCode ZT_Node_removeDynamicRoot(ZT_Node *node,const char *dnsName)
-{
-	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->removeDynamicRoot(dnsName);
+		return reinterpret_cast<ZeroTier::Node *>(node)->removeRoot(name);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {

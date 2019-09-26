@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <vector>
 
+// These are absolute maximums -- real locators are never this big
 #define ZT_LOCATOR_MAX_PHYSICAL_ADDRESSES 255
 #define ZT_LOCATOR_MAX_VIRTUAL_ADDRESSES 255
 
@@ -38,19 +39,15 @@ namespace ZeroTier {
  * may be found. It can contain static physical addresses or virtual ZeroTier
  * addresses of nodes that can forward to the target node. Locator records
  * can be stored in signed DNS TXT record sets, in LF by roots, in caches,
- * etc. Version 2.x nodes can sign their own locators. Roots can create
- * signed locators using their own signature for version 1.x nodes. Locators
- * signed by the node whose location they describe always take precedence
- * over locators signed by other nodes.
+ * etc.
  */
 class Locator
 {
 public:
 	ZT_ALWAYS_INLINE Locator() : _ts(0),_signatureLength(0) {}
 
-	ZT_ALWAYS_INLINE const Identity &id() const { return _id; }
-	ZT_ALWAYS_INLINE const Identity &signer() const { return ((_signedBy) ? _signedBy : _id); }
 	ZT_ALWAYS_INLINE int64_t timestamp() const { return _ts; }
+	ZT_ALWAYS_INLINE const Identity &id() const { return _id; }
 
 	ZT_ALWAYS_INLINE const std::vector<InetAddress> &phy() const { return _physical; }
 	ZT_ALWAYS_INLINE const std::vector<Identity> &virt() const { return _virtual; }
@@ -76,11 +73,11 @@ public:
 	/**
 	 * Method to be called after add() is called for each address or forwarding node
 	 *
-	 * This sets timestamp and ID information and sorts and deduplicates target
-	 * lists but does not sign the locator. The sign() method should be used after
-	 * finish().
+	 * @param id Identity that this locator describes (must contain private key)
+	 * @param ts Current time
+	 * @return True if completion and signature were successful
 	 */
-	ZT_ALWAYS_INLINE void finish(const Identity &id,const int64_t ts)
+	ZT_ALWAYS_INLINE bool finish(const Identity &id,const int64_t ts)
 	{
 		_ts = ts;
 		_id = id;
@@ -88,24 +85,10 @@ public:
 		_physical.erase(std::unique(_physical.begin(),_physical.end()),_physical.end());
 		std::sort(_virtual.begin(),_virtual.end());
 		_virtual.erase(std::unique(_virtual.begin(),_virtual.end()),_virtual.end());
-	}
-
-	/**
-	 * Sign this locator (must be called after finish())
-	 */
-	ZT_ALWAYS_INLINE bool sign(const Identity &signingId)
-	{
-		if (!signingId.hasPrivate())
-			return false;
-		if (signingId == _id) {
-			_signedBy.zero();
-		} else {
-			_signedBy = signingId;
-		}
 		try {
 			ScopedPtr< Buffer<65536> > tmp(new Buffer<65536>());
 			serialize(*tmp,true);
-			_signatureLength = signingId.sign(tmp->data(),tmp->size(),_signature,ZT_SIGNATURE_BUFFER_SIZE);
+			_signatureLength = id.sign(tmp->data(),tmp->size(),_signature,ZT_SIGNATURE_BUFFER_SIZE);
 			return (_signatureLength > 0);
 		} catch ( ... ) {
 			return false;
@@ -122,8 +105,7 @@ public:
 		try {
 			ScopedPtr< Buffer<65536> > tmp(new Buffer<65536>());
 			serialize(*tmp,true);
-			const bool ok = (_signedBy) ? _signedBy.verify(tmp->data(),tmp->size(),_signature,_signatureLength) : _id.verify(tmp->data(),tmp->size(),_signature,_signatureLength);
-			return ok;
+			return _id.verify(tmp->data(),tmp->size(),_signature,_signatureLength);
 		} catch ( ... ) {
 			return false;
 		}
@@ -155,6 +137,8 @@ public:
 	}
 
 	/**
+	 * This searches for an extracts a public key from a DNS name, if one is present.
+	 *
 	 * @return True if a key was found and successfully decoded
 	 */
 	static inline bool decodeSecureDnsName(const char *name,uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE])
@@ -210,8 +194,9 @@ public:
 		ScopedPtr< Buffer<65536> > tmp(new Buffer<65536>());
 		serialize(*tmp,false);
 		SHA384(s384,tmp->data(),tmp->size());
-		ECC384ECDSASign(p384SigningKeyPrivate,s384,((uint8_t *)tmp->unsafeData()) + tmp->size());
+		const unsigned int sigLocation = tmp->size();
 		tmp->addSize(ZT_ECC384_SIGNATURE_SIZE);
+		ECC384ECDSASign(p384SigningKeyPrivate,s384,((uint8_t *)tmp->unsafeData()) + sigLocation);
 
 		// Blob must be broken into multiple TXT records that must remain sortable so they are prefixed by a hex value.
 		// 186-byte chunks yield 248-byte base64 chunks which leaves some margin below the limit of 255.
@@ -292,12 +277,6 @@ public:
 		b.append((uint8_t)0); // version/flags, currently 0
 		b.append((uint64_t)_ts);
 		_id.serialize(b,false);
-		if (_signedBy) {
-			b.append((uint8_t)1); // number of signers, current max is 1
-			_signedBy.serialize(b,false); // be sure not to include private key!
-		} else {
-			b.append((uint8_t)0); // signer is _id
-		}
 		b.append((uint8_t)_physical.size());
 		for(std::vector<InetAddress>::const_iterator i(_physical.begin());i!=_physical.end();++i)
 			i->serialize(b);
@@ -354,16 +333,25 @@ public:
 
 	ZT_ALWAYS_INLINE bool addressesEqual(const Locator &l) const { return ((_physical == l._physical)&&(_virtual == l._virtual)); }
 
-	ZT_ALWAYS_INLINE bool operator==(const Locator &l) const { return ((_ts == l._ts)&&(_id == l._id)&&(_signedBy == l._signedBy)&&(_physical == l._physical)&&(_virtual == l._virtual)&&(_signatureLength == l._signatureLength)&&(memcmp(_signature,l._signature,_signatureLength) == 0)); }
+	ZT_ALWAYS_INLINE bool operator==(const Locator &l) const
+	{
+		return (
+			(_ts == l._ts)&&
+			(_id == l._id)&&
+			(_physical == l._physical)&&
+			(_virtual == l._virtual)&&
+			(_signatureLength == l._signatureLength)&&
+			(memcmp(_signature,l._signature,_signatureLength) == 0));
+	}
 	ZT_ALWAYS_INLINE bool operator!=(const Locator &l) const { return (!(*this == l)); }
 	ZT_ALWAYS_INLINE bool operator<(const Locator &l) const
 	{
-		if (_id < l._id) return true;
-		if (_ts < l._ts) return true;
-		if (_signedBy < l._signedBy) return true;
-		if (_physical < l._physical) return true;
-		if (_virtual < l._virtual) return true;
-		return false;
+		if (_ts < l._ts) return true; else if (_ts > l._ts) return false;
+		if (_id < l._id) return true; else if (_id > l._id) return false;
+		if (_physical < l._physical) return true; else if (_physical > l._physical) return false;
+		if (_virtual < l._virtual) return true; else if (_virtual > l._virtual) return false;
+		if (_signatureLength < l._signatureLength) return true;
+		return (_signatureLength == l._signatureLength) ? (memcmp(_signature,l._signature,_signatureLength) < 0) : false;
 	}
 	ZT_ALWAYS_INLINE bool operator>(const Locator &l) const { return (l < *this); }
 	ZT_ALWAYS_INLINE bool operator<=(const Locator &l) const { return (!(l < *this)); }
@@ -374,7 +362,6 @@ public:
 private:
 	int64_t _ts;
 	Identity _id;
-	Identity _signedBy; // signed by _id if nil/zero
 	std::vector<InetAddress> _physical;
 	std::vector<Identity> _virtual;
 	unsigned int _signatureLength;

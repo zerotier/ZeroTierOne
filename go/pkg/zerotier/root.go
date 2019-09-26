@@ -18,9 +18,13 @@ type Root struct {
 	DNSName   string
 	Identity  *Identity
 	Addresses []InetAddress
+	Locator   []byte
 	Preferred bool
 	Online    bool
 }
 
 // Static returns true if this is a static root
 func (r *Root) Static() bool { return len(r.DNSName) == 0 }
+
+// Dynamic returns true if this is a dynamic root
+func (r *Root) Dynamic() bool { return len(r.DNSName) > 0 }

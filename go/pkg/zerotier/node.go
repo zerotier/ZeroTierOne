@@ -624,12 +624,18 @@ func (n *Node) Peers() []*Peer {
 			p2.Version = [3]int{int(p.versionMajor), int(p.versionMinor), int(p.versionRev)}
 			p2.Latency = int(p.latency)
 			p2.Role = int(p.role)
+
 			p2.Paths = make([]Path, 0, int(p.pathCount))
+			usingAllocation := false
 			for j := uintptr(0); j < uintptr(p.pathCount); j++ {
 				pt := &p.paths[j]
 				if pt.alive != 0 {
 					a := sockaddrStorageToUDPAddr(&pt.address)
 					if a != nil {
+						alloc := float32(pt.allocation)
+						if alloc > 0.0 {
+							usingAllocation = true
+						}
 						p2.Paths = append(p2.Paths, Path{
 							IP:                     a.IP,
 							Port:                   a.Port,
@@ -644,18 +650,44 @@ func (n *Node) Peers() []*Peer {
 							Stability:              float32(pt.stability),
 							Throughput:             uint64(pt.throughput),
 							MaxThroughput:          uint64(pt.maxThroughput),
-							Allocation:             float32(pt.allocation),
+							Allocation:             alloc,
 						})
 					}
 				}
 			}
-			sort.Slice(p2.Paths, func(a, b int) bool { return p2.Paths[a].LastReceive < p2.Paths[b].LastReceive })
+			if !usingAllocation { // if all allocations are zero fall back to single path mode that uses the preferred flag
+				for i, j := 0, uintptr(0); j < uintptr(p.pathCount); j++ {
+					pt := &p.paths[j]
+					if pt.alive != 0 {
+						if pt.preferred == 0 {
+							p2.Paths[i].Allocation = 0.0
+						} else {
+							p2.Paths[i].Allocation = 1.0
+						}
+						i++
+					}
+				}
+			}
+			sort.Slice(p2.Paths, func(a, b int) bool {
+				pa := &p2.Paths[a]
+				pb := &p2.Paths[b]
+				if pb.Allocation < pa.Allocation { // invert order, put highest allocation paths first
+					return true
+				}
+				if pa.Allocation == pb.Allocation {
+					return pa.LastReceive < pb.LastReceive // then sort by most recent activity
+				}
+				return false
+			})
+
 			p2.Clock = TimeMs()
 			peers = append(peers, p2)
 		}
 		C.ZT_Node_freeQueryResult(unsafe.Pointer(n.zn), unsafe.Pointer(pl))
 	}
-	sort.Slice(peers, func(a, b int) bool { return peers[a].Address < peers[b].Address })
+	sort.Slice(peers, func(a, b int) bool {
+		return peers[a].Address < peers[b].Address
+	})
 	return peers
 }
 

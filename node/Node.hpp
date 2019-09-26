@@ -93,10 +93,8 @@ public:
 	ZT_ResultCode multicastSubscribe(void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	ZT_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	ZT_RootList *listRoots(int64_t now);
-	enum ZT_ResultCode setStaticRoot(const char *identity,const struct sockaddr_storage *addresses,unsigned int addressCount);
-	enum ZT_ResultCode setDynamicRoot(const char *dnsName,const void *defaultLocator,unsigned int defaultLocatorSize);
-	enum ZT_ResultCode removeStaticRoot(const char *identity);
-	enum ZT_ResultCode removeDynamicRoot(const char *dnsName);
+	enum ZT_ResultCode setRoot(const char *name,const void *locator,unsigned int locatorSize);
+	enum ZT_ResultCode removeRoot(const char *name);
 	uint64_t address() const;
 	void status(ZT_NodeStatus *status) const;
 	ZT_PeerList *peers() const;

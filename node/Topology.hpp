@@ -66,14 +66,14 @@ private:
 
 	ZT_ALWAYS_INLINE void _updateDynamicRootIdentities()
 	{
-		// assumes _dynamicRoots_l is locked
-		_dynamicRootIdentities.clear();
-		Hashtable< Str,Locator >::Iterator i(_dynamicRoots);
+		// assumes _roots_l is locked
+		_rootIdentities.clear();
+		Hashtable< Str,Locator >::Iterator i(_roots);
 		Str *k = (Str *)0;
 		Locator *v = (Locator *)0;
 		while (i.next(k,v)) {
 			if (*v)
-				_dynamicRootIdentities.set(v->id(),true);
+				_rootIdentities.set(v->id(),true);
 		}
 	}
 
@@ -81,6 +81,10 @@ public:
 	ZT_ALWAYS_INLINE Topology(const RuntimeEnvironment *renv,const Identity &myId) :
 		RR(renv),
 		_myIdentity(myId),
+		_peers(64),
+		_paths(128),
+		_roots(8),
+		_rootIdentities(8),
 		_numConfiguredPhysicalPaths(0),
 		_lastUpdatedBestRoot(0) {}
 	ZT_ALWAYS_INLINE ~Topology() {}
@@ -166,17 +170,8 @@ public:
 	 */
 	ZT_ALWAYS_INLINE bool isRoot(const Identity &id) const
 	{
-		{
-			Mutex::Lock l(_dynamicRoots_l);
-			if (_dynamicRootIdentities.contains(id))
-				return true;
-		}
-		{
-			Mutex::Lock l(_staticRoots_l);
-			if (_staticRoots.contains(id))
-				return true;
-		}
-		return false;
+		Mutex::Lock l(_roots_l);
+		return _rootIdentities.contains(id);
 	}
 
 	/**
@@ -260,57 +255,28 @@ public:
 	template<typename F>
 	ZT_ALWAYS_INLINE void eachRoot(F f)
 	{
-		{
-			Mutex::Lock l(_dynamicRoots_l);
-			Hashtable< Str,Locator >::Iterator i(_dynamicRoots);
-			Str *k = (Str *)0;
-			Locator *v = (Locator *)0;
-			while (i.next(k,v)) {
-				if (*v) {
-					for(std::vector<Identity>::const_iterator id(v->virt().begin());id!=v->virt().end();++id) {
-						const SharedPtr<Peer> *ap;
-						{
-							Mutex::Lock l2(_peers_l);
-							ap = _peers.get(id->address());
-						}
-						if (ap) {
-							if (!f(*ap,v->phy()))
-								return;
-						} else {
-							SharedPtr<Peer> p(new Peer(RR,_myIdentity,*id));
-							{
-								Mutex::Lock l2(_peers_l);
-								_peers.set(id->address(),p);
-							}
-							if (!f(p,v->phy()))
-								return;
-						}
-					}
-				}
-			}
-		}
-		{
-			Mutex::Lock l(_staticRoots_l);
-			Hashtable< Identity,std::vector<InetAddress> >::Iterator i(_staticRoots);
-			Identity *k = (Identity *)0;
-			std::vector<InetAddress> *v = (std::vector<InetAddress> *)0;
-			while (i.next(k,v)) {
-				if (!v->empty()) {
+		Mutex::Lock l(_roots_l);
+		Hashtable< Str,Locator >::Iterator i(_roots);
+		Str *k = (Str *)0;
+		Locator *v = (Locator *)0;
+		while (i.next(k,v)) {
+			if (*v) {
+				for(std::vector<Identity>::const_iterator id(v->virt().begin());id!=v->virt().end();++id) {
 					const SharedPtr<Peer> *ap;
 					{
 						Mutex::Lock l2(_peers_l);
-						ap = _peers.get(k->address());
+						ap = _peers.get(id->address());
 					}
 					if (ap) {
-						if (!f(*ap,*v))
+						if (!f(*ap,v->phy()))
 							return;
 					} else {
-						SharedPtr<Peer> p(new Peer(RR,_myIdentity,*k));
+						SharedPtr<Peer> p(new Peer(RR,_myIdentity,*id));
 						{
 							Mutex::Lock l2(_peers_l);
-							_peers.set(k->address(),p);
+							_peers.set(id->address(),p);
 						}
-						if (!f(p,*v))
+						if (!f(p,v->phy()))
 							return;
 					}
 				}
@@ -335,49 +301,17 @@ public:
 	}
 
 	/**
-	 * Set or update a static root entry
-	 *
-	 * @param id Static root's identity
-	 * @param addrs Static root's IP address(es)
-	 */
-	inline void setStaticRoot(const Identity &id,const std::vector<InetAddress> &addrs)
-	{
-		Mutex::Lock l(_staticRoots_l);
-		_staticRoots[id] = addrs;
-	}
-
-	/**
-	 * Remove a static root
-	 *
-	 * @param id Identity to remove
-	 */
-	inline void removeStaticRoot(const Identity &id)
-	{
-		Mutex::Lock l(_staticRoots_l);
-		_staticRoots.erase(id);
-	}
-
-	/**
-	 * Clear all static roots
-	 */
-	inline void removeStaticRoot()
-	{
-		Mutex::Lock l(_staticRoots_l);
-		_staticRoots.clear();
-	}
-
-	/**
-	 * Iterate through all dynamic roots
+	 * Iterate through all root names
 	 *
 	 * @param f Function of (Str,Locator)
 	 */
 	template<typename F>
-	ZT_ALWAYS_INLINE void eachDynamicRoot(F f) const
+	ZT_ALWAYS_INLINE void eachRootName(F f) const
 	{
-		Mutex::Lock l(_dynamicRoots_l);
+		Mutex::Lock l(_roots_l);
 		Str *k = (Str *)0;
 		Locator *v = (Locator *)0;
-		Hashtable< Str,Locator >::Iterator i(const_cast<Topology *>(this)->_dynamicRoots);
+		Hashtable< Str,Locator >::Iterator i(const_cast<Topology *>(this)->_roots);
 		while (i.next(k,v)) {
 			if (!f(*k,*v))
 				break;
@@ -389,22 +323,22 @@ public:
 	 *
 	 * This does not check signatures or internal validity of the locator.
 	 *
-	 * @param dnsName DNS name used to retrive root
+	 * @param name DNS name used to retrive root or simply the address for static roots
 	 * @param latestLocator Latest locator
 	 * @return True if locator is newer or if a new entry was created
 	 */
-	inline bool setDynamicRoot(const Str &dnsName,const Locator &latestLocator)
+	inline bool setRoot(const Str &name,const Locator &latestLocator)
 	{
-		Mutex::Lock l(_dynamicRoots_l);
+		Mutex::Lock l(_roots_l);
 		if (latestLocator) {
-			Locator &ll = _dynamicRoots[dnsName];
+			Locator &ll = _roots[name];
 			if (ll.timestamp() < latestLocator.timestamp()) {
 				ll = latestLocator;
 				_updateDynamicRootIdentities();
 				return true;
 			}
-		} else if (!_dynamicRoots.contains(dnsName)) {
-			_dynamicRoots[dnsName];
+		} else if (!_roots.contains(name)) {
+			_roots[name];
 			return true;
 		}
 		return false;
@@ -412,24 +346,12 @@ public:
 
 	/**
 	 * Remove a dynamic root entry
-	 *
-	 * @param dnsName DNS name to remove
 	 */
-	inline void removeDynamicRoot(const Str &dnsName)
+	inline void removeRoot(const Str &name)
 	{
-		Mutex::Lock l(_dynamicRoots_l);
-		_dynamicRoots.erase(dnsName);
+		Mutex::Lock l(_roots_l);
+		_roots.erase(name);
 		_updateDynamicRootIdentities();
-	}
-
-	/**
-	 * Remove all dynamic roots
-	 */
-	inline void clearDynamicRoots()
-	{
-		Mutex::Lock l(_dynamicRoots_l);
-		_dynamicRoots.clear();
-		_dynamicRootIdentities.clear();
 	}
 
 	/**
@@ -438,13 +360,12 @@ public:
 	 */
 	inline ZT_RootList *apiRoots(const int64_t now) const
 	{
-		Mutex::Lock l1(_staticRoots_l);
-		Mutex::Lock l2(_dynamicRoots_l);
+		Mutex::Lock l2(_roots_l);
 
 		// The memory allocated here has room for all roots plus the maximum size
 		// of their DNS names, identities, and up to 16 physical addresses. Most
 		// roots will have two: one V4 and one V6.
-		const unsigned int totalRoots = _staticRoots.size() + _dynamicRoots.size();
+		const unsigned int totalRoots = _roots.size();
 		ZT_RootList *rl = reinterpret_cast<ZT_RootList *>(malloc(sizeof(ZT_RootList) + (sizeof(ZT_Root) * totalRoots) + ((sizeof(struct sockaddr_storage) * ZT_MAX_PEER_NETWORK_PATHS) * totalRoots) + ((ZT_IDENTITY_STRING_BUFFER_LENGTH + 1024) * totalRoots)));
 		if (!rl) {
 			return nullptr;
@@ -462,7 +383,7 @@ public:
 		{
 			Str *k = (Str *)0;
 			Locator *v = (Locator *)0;
-			Hashtable< Str,Locator >::Iterator i(const_cast<Topology *>(this)->_dynamicRoots);
+			Hashtable< Str,Locator >::Iterator i(const_cast<Topology *>(this)->_roots);
 			while (i.next(k,v)) {
 				rl->roots[c].dnsName = nameBufPtr;
 				const char *p = k->c_str();
@@ -484,35 +405,6 @@ public:
 
 				_peers_l.lock();
 				const SharedPtr<Peer> *psptr = _peers.get(v->id().address());
-				if (psptr) {
-					rl->roots[c].preferred = (psptr->ptr() == bestRootPtr) ? 1 : 0;
-					rl->roots[c].online = (*psptr)->alive(now) ? 1 : 0;
-				}
-				_peers_l.unlock();
-
-				++c;
-			}
-		}
-
-		{
-			Hashtable< Identity,std::vector<InetAddress> >::Iterator i(const_cast<Topology *>(this)->_staticRoots);
-			Identity *k = (Identity *)0;
-			std::vector<InetAddress> *v = (std::vector<InetAddress> *)0;
-			while (i.next(k,v)) {
-				rl->roots[c].dnsName = nullptr;
-
-				rl->roots[c].identity = nameBufPtr;
-				k->toString(false,nameBufPtr);
-				nameBufPtr += strlen(nameBufPtr) + 1;
-
-				rl->roots[c].addresses = addrBuf;
-				unsigned int ac = 0;
-				for(unsigned int j=(unsigned int)v->size();(ac<j)&&(ac<16);++ac)
-					*(addrBuf++) = (*v)[ac];
-				rl->roots[c].addressCount = ac;
-
-				_peers_l.lock();
-				const SharedPtr<Peer> *psptr = _peers.get(k->address());
 				if (psptr) {
 					rl->roots[c].preferred = (psptr->ptr() == bestRootPtr) ? 1 : 0;
 					rl->roots[c].online = (*psptr)->alive(now) ? 1 : 0;
@@ -668,18 +560,15 @@ private:
 
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
-
-	Hashtable< Str,Locator > _dynamicRoots;
-	Hashtable< Identity,bool > _dynamicRootIdentities;
-	Hashtable< Identity,std::vector<InetAddress> > _staticRoots;
+	Hashtable< Str,Locator > _roots;
+	Hashtable< Identity,bool > _rootIdentities;
 
 	int64_t _lastUpdatedBestRoot;
 	SharedPtr<Peer> _bestRoot;
 
 	Mutex _peers_l;
 	Mutex _paths_l;
-	Mutex _dynamicRoots_l;
-	Mutex _staticRoots_l;
+	Mutex _roots_l;
 	Mutex _bestRoot_l;
 };
 

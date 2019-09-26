@@ -1887,47 +1887,27 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_
 ZT_SDK_API ZT_RootList *ZT_Node_listRoots(ZT_Node *node,int64_t now);
 
 /**
- * Set a static root
- *
- * @param node Node instance
- * @param identity Public identity of static root
- * @param addresses Physical address(es) of root
- * @param addressCount Number of physical addresses
- * @return OK (0) or error code
- */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_setStaticRoot(ZT_Node *node,const char *identity,const struct sockaddr_storage *addresses,unsigned int addressCount);
-
-/**
- * Set a dynamic root
+ * Add or update a root
  *
  * The node will begin trying to resolve the DNS TXT record for
  * this root and possibly obtain it from other peers.
  *
  * @param node Node instance
- * @param dnsName DNS name whose TXT record(s) contain the latest Locator for this root
- * @param defaultLocator Binary-serialized default locator of NULL if none (used if TXT records are not retrievable)
- * @param defaultLocatorSize Size of default locator or 0 if none
+ * @param name DNS name or simply the address in hex form for static roots
+ * @param locator Binary-serialized locator of NULL if none
+ * @param locatorSize Size of locator or 0 if none
  * @return OK (0) or error code
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_setDynamicRoot(ZT_Node *node,const char *dnsName,const void *defaultLocator,unsigned int defaultLocatorSize);
-
-/**
- * Remove a static root
- *
- * @param node Node instance
- * @param identity Public identity of this root
- * @return OK (0) or error code
- */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_removeStaticRoot(ZT_Node *node,const char *identity);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_setRoot(ZT_Node *node,const char *name,const void *locator,unsigned int locatorSize);
 
 /**
  * Remove a dynamic root
  *
  * @param node Node instance
- * @param dnsName DNS name of this dynamic root
+ * @param name DNS name of this dynamic root or the address in hex form for static roots
  * @return OK (0) or error code
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_removeDynamicRoot(ZT_Node *node,const char *dnsName);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,const char *name);
 
 /**
  * Get this node's 40-bit ZeroTier address
