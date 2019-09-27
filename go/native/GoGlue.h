@@ -90,6 +90,55 @@ int ZT_GoTap_removeRoute(ZT_GoTap *tap,int targetAf,const void *targetIp,int tar
 
 /****************************************************************************/
 
+struct ZT_GoLocator_Info {
+	char id[1024];
+	struct sockaddr_storage phy[256];
+	char virt[256][1024];
+	unsigned int phyCount;
+	unsigned int virtCount;
+}
+
+/* Returns length of private key stored in private key buffer on success, -1 on fail */
+int ZT_GoLocator_makeSecureDNSName(char name[256],unsigned int nameBufSize,uint8_t *privateKey,unsigned int privateKeyBufSize);
+
+/*
+ * The id is the full identity described by the locator. It must include
+ * its secret key to permit the locator to be signed.
+ *
+ * Physical addresses must be IPv4 or IPv6 IP/port pairs. Virtual addresses
+ * must be full ZeroTier identities in string format.
+ *
+ * On success this returns the actual number of bytes stored in the buffer.
+ * On failure -1 is returned.
+ */
+int ZT_GoLocator_makeLocator(
+	uint8_t *buf,
+	unsigned int bufSize,
+	const char *id,
+	const struct sockaddr_storage *physicalAddresses,
+	unsigned int physicalAddressCount,
+	const char **virtualAddresses,
+	unsigned int virtualAddressCount);
+
+/* Returns nonzero on success, fills info structure */
+int ZT_GoLocator_decodeLocator(const uint8_t *loc,unsigned int locSize,struct ZT_GoLocator_Info *info);
+
+/*
+ * The privateKey and privateKeySize are those created by makeSecureDNSName.
+ * Results is filled and the number of lines of TXT are returned. The value
+ * -1 is returned on error.
+ */
+int ZT_GoLocator_makeSignedTxtRecords(
+	const uint8_t *locator,
+	unsigned int locatorSize,
+	int64_t ts,
+	const char *name,
+	const uint8_t *privateKey,
+	unsigned int privateKeySize,
+	char results[256][256]);
+
+/****************************************************************************/
+
 #ifdef __cplusplus
 }
 #endif

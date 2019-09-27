@@ -129,9 +129,10 @@ public:
 		Str name;
 		char b32[128];
 		Utils::b32e(tmp,35,b32,sizeof(b32));
+		name << "ztl-";
 		name << b32;
 		Utils::b32e(tmp + 35,(ZT_ECC384_PUBLIC_KEY_SIZE+2) - 35,b32,sizeof(b32));
-		name << '.';
+		name << ".ztl-";
 		name << b32;
 		return name;
 	}
@@ -151,7 +152,9 @@ public:
 		for(char *saveptr=(char *)0,*p=Utils::stok(tmp,".",&saveptr);p;p=Utils::stok((char *)0,".",&saveptr)) {
 			if (b32ptr >= sizeof(b32))
 				break;
-			int s = Utils::b32d(p,b32 + b32ptr,sizeof(b32) - b32ptr);
+			if ((strlen(p) <= 4)||(memcmp(p,"ztl-",4) != 0))
+				continue;
+			int s = Utils::b32d(p + 4,b32 + b32ptr,sizeof(b32) - b32ptr);
 			if (s > 0) {
 				b32ptr += (unsigned int)s;
 				if (b32ptr > 2) {
@@ -186,7 +189,7 @@ public:
 	 * is used here so that FIPS-only nodes can always use DNS to locate roots as
 	 * FIPS-only nodes may be required to disable non-FIPS algorithms.
 	 */
-	inline std::vector<Str> makeTxtRecords(const uint8_t p384SigningKeyPublic[ZT_ECC384_PUBLIC_KEY_SIZE],const uint8_t p384SigningKeyPrivate[ZT_ECC384_PUBLIC_KEY_SIZE])
+	inline std::vector<Str> makeTxtRecords(const uint8_t p384SigningKeyPrivate[ZT_ECC384_PUBLIC_KEY_SIZE])
 	{
 		uint8_t s384[48];
 		char enc[256];
@@ -264,6 +267,18 @@ public:
 			deserialize(*tmp,0);
 
 			return verify();
+		} catch ( ... ) {
+			return false;
+		}
+	}
+
+	inline bool deserialize(const void *data,unsigned int len)
+	{
+		ScopedPtr< Buffer<65536> > tmp(new Buffer<65536>());
+		tmp->append(data,len);
+		try {
+			deserialize(*tmp,0);
+			return true;
 		} catch ( ... ) {
 			return false;
 		}

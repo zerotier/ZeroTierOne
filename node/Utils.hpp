@@ -255,7 +255,7 @@ public:
 			*dest = (char)0;
 			return true;
 		}
-		char *end = dest + len;
+		char *const end = dest + len;
 		while ((*dest++ = *src++)) {
 			if (dest == end) {
 				*(--dest) = (char)0;

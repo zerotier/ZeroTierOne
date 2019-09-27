@@ -95,14 +95,10 @@ func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool) error {
 		lc.Settings.LogSizeMax = 128
 		lc.Settings.MuiltipathMode = 0
 		switch runtime.GOOS {
-		case "darwin":
-			lc.Settings.InterfacePrefixBlacklist = []string{"utun", "tun", "tap", "feth", "lo", "zt"}
-		case "linux":
-			lc.Settings.InterfacePrefixBlacklist = []string{"tun", "tap", "lo", "zt"}
-		case "freebsd", "openbsd", "netbsd", "illumos", "solaris", "dragonfly":
-			lc.Settings.InterfacePrefixBlacklist = []string{"tun", "tap", "zt"}
-		case "android":
-			lc.Settings.InterfacePrefixBlacklist = []string{"tun", "tap"}
+		case "windows":
+			lc.Settings.InterfacePrefixBlacklist = []string{"loopback"}
+		default:
+			lc.Settings.InterfacePrefixBlacklist = []string{"lo"}
 		}
 	}
 

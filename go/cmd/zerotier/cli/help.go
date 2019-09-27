@@ -28,7 +28,7 @@ func Help() {
 
 Usage: zerotier [-options] <command> [-options] [command args]
 
-Global Options
+Global Options:
   -j                                   Output raw JSON where applicable
   -p <path>                            Use alternate base path
   -t <authtoken.secret path>           Use secret auth token from this file

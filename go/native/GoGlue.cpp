@@ -19,6 +19,7 @@
 #include "../../node/Utils.hpp"
 #include "../../node/MAC.hpp"
 #include "../../node/Address.hpp"
+#include "../../node/Locator.hpp"
 #include "../../osdep/OSUtils.hpp"
 #include "../../osdep/EthernetTap.hpp"
 #include "../../osdep/ManagedRoute.hpp"
@@ -497,6 +498,11 @@ extern "C" int ZT_GoNode_phyStartListen(ZT_GoNode *gn,const char *dev,const char
 					int s = (int)recvfrom(udpSock,buf,sizeof(buf),0,reinterpret_cast<struct sockaddr *>(&in6),&salen);
 					if (s > 0) {
 						gn->node->processWirePacket(&gnt,OSUtils::now(),(int64_t)udpSock,reinterpret_cast<const struct sockaddr_storage *>(&in6),buf,(unsigned int)s,&(gn->nextBackgroundTaskDeadline));
+					} else {
+						// If something goes bad with this socket such as its interface vanishing, it
+						// will eventually be closed by higher level (Go) code. Until then prevent the
+						// system from consuming too much CPU.
+						std::this_thread::sleep_for(std::chrono::milliseconds(10));
 					}
 				}
 			});
@@ -713,4 +719,85 @@ extern "C" int ZT_GoTap_removeRoute(ZT_GoTap *tap,int targetAf,const void *targe
 			break;
 	}
 	return reinterpret_cast<EthernetTap *>(tap)->removeRoute(target,via,metric);
+}
+
+/****************************************************************************/
+
+int ZT_GoLocator_makeSecureDNSName(char *name,unsigned int nameBufSize,uint8_t *privateKey,unsigned int privateKeyBufSize)
+{
+	if ((privateKeyBufSize < ZT_ECC384_PRIVATE_KEY_SIZE)||(nameBufSize < 256))
+		return -1;
+	uint8_t pub[ZT_ECC384_PUBLIC_KEY_SIZE];
+	ECC384GenerateKey(pub,privateKey);
+	const Str n(Locator::makeSecureDnsName(pub));
+	if (n.size() >= nameBufSize)
+		return -1;
+	Utils::scopy(name,sizeof(name),n.c_Str());
+	return ZT_ECC384_PRIVATE_KEY_SIZE;
+}
+
+int ZT_GoLocator_makeLocator(
+	uint8_t *buf,
+	unsigned int bufSize,
+	int64_t ts,
+	const char *id,
+	const struct sockaddr_storage *physicalAddresses,
+	unsigned int physicalAddressCount,
+	const char **virtualAddresses,
+	unsigned int virtualAddressCount)
+{
+	Locator loc;
+	for(unsigned int i=0;i<physicalAddressCount;++i) {
+		loc.add(*reinterpret_cast<const InetAddress *>(physicalAddresses + i));
+	}
+	for(unsigned int i=0;i<virtualAddressCount;++i) {
+		Identity id;
+		if (!id.fromString(virtualAddresses[i]))
+			return -1;
+		loc.add(id);
+	}
+	Identity signingId;
+	if (!signingId.fromString(id))
+		return -1;
+	if (!signingId.hasPrivate())
+		return -1;
+	if (!loc.finish(signingId,ts))
+		return -1;
+	Buffer<65536> *tmp = new Buffer<65536>();
+	loc.serialize(*tmp);
+	if (tmp->size() > bufSize) {
+		delete tmp;
+		return -1;
+	}
+	memcpy(buf,tmp->data(),tmp->size());
+	int s = (int)tmp->size();
+	delete tmp;
+	return s;
+}
+
+int ZT_GoLocator_decodeLocator(const uint8_t *loc,unsigned int locSize,struct ZT_GoLocator_Info *info)
+{
+	memset(info,0,sizeof(struct ZT_GoLocator_Info));
+	return 1;
+}
+
+int ZT_GoLocator_makeSignedTxtRecords(
+	const uint8_t *locator,
+	unsigned int locatorSize,
+	const char *name,
+	const uint8_t *privateKey,
+	unsigned int privateKeySize,
+	char results[256][256])
+{
+	if (privateKeySize != ZT_ECC384_PRIVATE_KEY_SIZE)
+		return -1;
+	Locator loc;
+	if (!loc.deserialize(locator,locatorSize))
+		return -1;
+	std::vector<Str> r(loc.makeTxtRecords(privateKey));
+	if (r.size() > 256)
+		return -1;
+	for(unsigned long i=0;i<r.size();++i)
+		Utils::scopy(results[i],256,r[i].c_str());
+	return (int)r.size();
 }

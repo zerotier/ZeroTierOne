@@ -28,4 +28,5 @@ const (
 	ErrTapInitFailed             Err = "unable to create native Tap instance"
 	ErrUncrecognizedIdentityType Err = "unrecognized identity type"
 	ErrInvalidKey                Err = "invalid key data"
+	ErrSecretKeyRequired         Err = "secret key required"
 )

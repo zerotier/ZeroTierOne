@@ -236,6 +236,11 @@ func (n *Network) MulticastSubscriptions() []*MulticastGroup {
 	return mgs
 }
 
+// leaving is called by Node when the network is being left
+func (n *Network) leaving() {
+	n.tap.Close()
+}
+
 func (n *Network) networkConfigRevision() uint64 {
 	n.configLock.RLock()
 	defer n.configLock.RUnlock()

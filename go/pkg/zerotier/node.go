@@ -13,9 +13,6 @@
 
 package zerotier
 
-// This wraps the C++ Node implementation, C++ EthernetTap implementations,
-// and generally contains all the other CGO stuff.
-
 //#cgo CFLAGS: -O3
 //#cgo darwin LDFLAGS: ${SRCDIR}/../../../build/go/native/libzt_go_native.a ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/osdep/libzt_osdep.a -lc++ -lpthread
 //#cgo linux android LDFLAGS: ${SRCDIR}/../../../build/go/native/libzt_go_native.a ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/osdep/libzt_osdep.a -lstdc++ -lpthread -lm
@@ -81,6 +78,7 @@ var (
 	// PlatformDefaultHomePath is the default location of ZeroTier's working path on this system
 	PlatformDefaultHomePath string = C.GoString(C.ZT_PLATFORM_DEFAULT_HOMEPATH)
 
+	// This map is used to get the Go Node object from a pointer passed back in via C callbacks
 	nodesByUserPtr     = make(map[uintptr]*Node)
 	nodesByUserPtrLock sync.RWMutex
 )
@@ -299,7 +297,7 @@ func NewNode(basePath string) (*Node, error) {
 	n.online = 0
 	n.running = 1
 
-	n.runLock.Lock()
+	n.runLock.Lock() // used to block Close() until below gorountine exits
 	go func() {
 		lastMaintenanceRun := int64(0)
 		for atomic.LoadUint32(&n.running) != 0 {
@@ -308,12 +306,20 @@ func NewNode(basePath string) (*Node, error) {
 			now := TimeMs()
 			if (now - lastMaintenanceRun) >= 30000 {
 				lastMaintenanceRun = now
+				n.localConfigLock.RLock()
 
+				// Get local physical interface addresses, excluding blacklisted and ZeroTier-created interfaces
 				interfaceAddresses := make(map[string]net.IP)
 				ifs, _ := net.Interfaces()
 				if len(ifs) > 0 {
 					n.networksLock.RLock()
+				scanInterfaces:
 					for _, i := range ifs {
+						for _, bl := range n.localConfig.Settings.InterfacePrefixBlacklist {
+							if strings.HasPrefix(strings.ToLower(i.Name), strings.ToLower(bl)) {
+								continue scanInterfaces
+							}
+						}
 						m, _ := NewMACFromBytes(i.HardwareAddr)
 						if _, isZeroTier := n.networksByMAC[m]; !isZeroTier {
 							addrs, _ := i.Addrs()
@@ -330,8 +336,9 @@ func NewNode(basePath string) (*Node, error) {
 					n.networksLock.RUnlock()
 				}
 
-				n.localConfigLock.RLock()
-
+				// Open or close locally bound UDP ports for each local interface address.
+				// This opens ports if they are not already open and then closes ports if
+				// they are open but no longer seem to exist.
 				n.interfaceAddressesLock.Lock()
 				for astr, ipn := range interfaceAddresses {
 					if _, alreadyKnown := n.interfaceAddresses[astr]; !alreadyKnown {
@@ -372,6 +379,7 @@ func NewNode(basePath string) (*Node, error) {
 				n.interfaceAddresses = interfaceAddresses
 				n.interfaceAddressesLock.Unlock()
 
+				// Trim log if it's gone over its size limit
 				if n.localConfig.Settings.LogSizeMax > 0 && n.logW != nil {
 					n.logW.trim(n.localConfig.Settings.LogSizeMax*1024, 0.5, true)
 				}
@@ -379,7 +387,7 @@ func NewNode(basePath string) (*Node, error) {
 				n.localConfigLock.RUnlock()
 			}
 		}
-		n.runLock.Unlock()
+		n.runLock.Unlock() // signal Close() that maintenance goroutine is done
 	}()
 
 	return n, nil
@@ -393,7 +401,7 @@ func (n *Node) Close() {
 		nodesByUserPtrLock.Lock()
 		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n.gn)))
 		nodesByUserPtrLock.Unlock()
-		n.runLock.Lock() // wait for gorountine to die
+		n.runLock.Lock() // wait for maintenance gorountine to die
 		n.runLock.Unlock()
 	}
 }
@@ -501,12 +509,16 @@ func (n *Node) Join(nwid NetworkID, settings *NetworkLocalSettings, tap Tap) (*N
 }
 
 // Leave leaves a network
-func (n *Node) Leave(nwid uint64) error {
+func (n *Node) Leave(nwid NetworkID) error {
 	n.log.Printf("leaving network %.16x", nwid)
-	C.ZT_GoNode_leave(n.gn, C.uint64_t(nwid))
 	n.networksLock.Lock()
-	delete(n.networks, NetworkID(nwid))
+	nw := n.networks[nwid]
+	delete(n.networks, nwid)
 	n.networksLock.Unlock()
+	if nw != nil {
+		nw.leaving()
+	}
+	C.ZT_GoNode_leave(n.gn, C.uint64_t(nwid))
 	return nil
 }
 
@@ -527,59 +539,6 @@ func (n *Node) Networks() []*Network {
 	}
 	n.networksLock.RUnlock()
 	return nws
-}
-
-// AddStaticRoot adds a statically defined root server to this node.
-// If a static root with the given identity already exists this will update its IP and port information.
-func (n *Node) AddStaticRoot(id *Identity, addrs []InetAddress) {
-	var saddrs []C.struct_sockaddr_storage
-	var straddrs strings.Builder
-	for _, a := range addrs {
-		ss := new(C.struct_sockaddr_storage)
-		if makeSockaddrStorage(a.IP, a.Port, ss) {
-			saddrs = append(saddrs, *ss)
-			if straddrs.Len() > 0 {
-				straddrs.WriteString(",")
-			}
-			straddrs.WriteString(a.String())
-		}
-	}
-	if len(saddrs) > 0 {
-		n.log.Printf("adding or updating static root %s at address(es) %s", id.String(), straddrs)
-		ids := C.CString(id.String())
-		C.ZT_Node_setStaticRoot(unsafe.Pointer(n.zn), ids, &saddrs[0], C.uint(len(saddrs)))
-		C.free(unsafe.Pointer(ids))
-	}
-}
-
-// RemoveStaticRoot removes a statically defined root server from this node.
-func (n *Node) RemoveStaticRoot(id *Identity) {
-	n.log.Printf("removing static root %s", id.String())
-	ids := C.CString(id.String())
-	C.ZT_Node_removeStaticRoot(unsafe.Pointer(n.zn), ids)
-	C.free(unsafe.Pointer(ids))
-}
-
-// AddDynamicRoot adds a dynamic root to this node.
-// If the locator parameter is non-empty it can contain a binary serialized locator
-// to use if (or until) one can be fetched via DNS.
-func (n *Node) AddDynamicRoot(dnsName string, locator []byte) {
-	dn := C.CString(dnsName)
-	n.log.Printf("adding dynamic root %s", dnsName)
-	if len(locator) > 0 {
-		C.ZT_Node_setDynamicRoot(unsafe.Pointer(n.zn), dn, unsafe.Pointer(&locator[0]), C.uint(len(locator)))
-	} else {
-		C.ZT_Node_setDynamicRoot(unsafe.Pointer(n.zn), dn, nil, 0)
-	}
-	C.free(unsafe.Pointer(dn))
-}
-
-// RemoveDynamicRoot removes a dynamic root from this node.
-func (n *Node) RemoveDynamicRoot(dnsName string) {
-	n.log.Printf("removing dynamic root %s", dnsName)
-	dn := C.CString(dnsName)
-	C.ZT_Node_removeDynamicRoot(unsafe.Pointer(n.zn), dn)
-	C.free(unsafe.Pointer(dn))
 }
 
 // Roots retrieves a list of root servers on this node and their preferred and online status.
@@ -797,6 +756,10 @@ func (n *Node) handleRemoteTrace(originAddress uint64, dictData []byte) {
 
 //////////////////////////////////////////////////////////////////////////////
 
+// These are callbacks called by the core and GoGlue stuff to talk to the
+// service. These launch gorountines to do their work where possible to
+// avoid blocking anything in the core.
+
 //export goPathCheckFunc
 func goPathCheckFunc(gn unsafe.Pointer, ztAddress C.uint64_t, af C.int, ip unsafe.Pointer, port C.int) C.int {
 	nodesByUserPtrLock.RLock()
@@ -981,222 +944,4 @@ func goZtEvent(gn unsafe.Pointer, eventType C.int, data unsafe.Pointer) {
 			node.handleRemoteTrace(uint64(rt.origin), C.GoBytes(unsafe.Pointer(rt.data), C.int(rt.len)))
 		}
 	}()
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-// nativeTap is a Tap implementation that wraps a native C++ interface to a system tun/tap device
-type nativeTap struct {
-	tap                        unsafe.Pointer
-	networkStatus              uint32
-	enabled                    uint32
-	multicastGroupHandlers     []func(bool, *MulticastGroup)
-	multicastGroupHandlersLock sync.Mutex
-}
-
-// Type returns a human-readable description of this tap implementation
-func (t *nativeTap) Type() string {
-	return "native"
-}
-
-// Error gets this tap device's error status
-func (t *nativeTap) Error() (int, string) {
-	return 0, ""
-}
-
-// SetEnabled sets this tap's enabled state
-func (t *nativeTap) SetEnabled(enabled bool) {
-	if enabled && atomic.SwapUint32(&t.enabled, 1) == 0 {
-		C.ZT_GoTap_setEnabled(t.tap, 1)
-	} else if !enabled && atomic.SwapUint32(&t.enabled, 0) == 1 {
-		C.ZT_GoTap_setEnabled(t.tap, 0)
-	}
-}
-
-// Enabled returns true if this tap is currently processing packets
-func (t *nativeTap) Enabled() bool {
-	return atomic.LoadUint32(&t.enabled) != 0
-}
-
-// AddIP adds an IP address (with netmask) to this tap
-func (t *nativeTap) AddIP(ip *net.IPNet) error {
-	bits, _ := ip.Mask.Size()
-	if len(ip.IP) == 16 {
-		if bits > 128 || bits < 0 {
-			return ErrInvalidParameter
-		}
-		C.ZT_GoTap_addIp(t.tap, C.int(AFInet6), unsafe.Pointer(&ip.IP[0]), C.int(bits))
-	} else if len(ip.IP) == 4 {
-		if bits > 32 || bits < 0 {
-			return ErrInvalidParameter
-		}
-		C.ZT_GoTap_addIp(t.tap, C.int(AFInet), unsafe.Pointer(&ip.IP[0]), C.int(bits))
-	}
-	return ErrInvalidParameter
-}
-
-// RemoveIP removes this IP address (with netmask) from this tap
-func (t *nativeTap) RemoveIP(ip *net.IPNet) error {
-	bits, _ := ip.Mask.Size()
-	if len(ip.IP) == 16 {
-		if bits > 128 || bits < 0 {
-			return ErrInvalidParameter
-		}
-		C.ZT_GoTap_removeIp(t.tap, C.int(AFInet6), unsafe.Pointer(&ip.IP[0]), C.int(bits))
-		return nil
-	}
-	if len(ip.IP) == 4 {
-		if bits > 32 || bits < 0 {
-			return ErrInvalidParameter
-		}
-		C.ZT_GoTap_removeIp(t.tap, C.int(AFInet), unsafe.Pointer(&ip.IP[0]), C.int(bits))
-		return nil
-	}
-	return ErrInvalidParameter
-}
-
-// IPs returns IPs currently assigned to this tap (including externally or system-assigned IPs)
-func (t *nativeTap) IPs() (ips []net.IPNet, err error) {
-	defer func() {
-		e := recover()
-		if e != nil {
-			err = fmt.Errorf("%v", e)
-		}
-	}()
-	var ipbuf [16384]byte
-	count := int(C.ZT_GoTap_ips(t.tap, unsafe.Pointer(&ipbuf[0]), 16384))
-	ipptr := 0
-	for i := 0; i < count; i++ {
-		af := int(ipbuf[ipptr])
-		ipptr++
-		switch af {
-		case AFInet:
-			var ip [4]byte
-			for j := 0; j < 4; j++ {
-				ip[j] = ipbuf[ipptr]
-				ipptr++
-			}
-			bits := ipbuf[ipptr]
-			ipptr++
-			ips = append(ips, net.IPNet{IP: net.IP(ip[:]), Mask: net.CIDRMask(int(bits), 32)})
-		case AFInet6:
-			var ip [16]byte
-			for j := 0; j < 16; j++ {
-				ip[j] = ipbuf[ipptr]
-				ipptr++
-			}
-			bits := ipbuf[ipptr]
-			ipptr++
-			ips = append(ips, net.IPNet{IP: net.IP(ip[:]), Mask: net.CIDRMask(int(bits), 128)})
-		}
-	}
-	return
-}
-
-// DeviceName gets this tap's OS-specific device name
-func (t *nativeTap) DeviceName() string {
-	var dn [256]byte
-	C.ZT_GoTap_deviceName(t.tap, (*C.char)(unsafe.Pointer(&dn[0])))
-	for i, b := range dn {
-		if b == 0 {
-			return string(dn[0:i])
-		}
-	}
-	return ""
-}
-
-// AddMulticastGroupChangeHandler adds a function to be called when the tap subscribes or unsubscribes to a multicast group.
-func (t *nativeTap) AddMulticastGroupChangeHandler(handler func(bool, *MulticastGroup)) {
-	t.multicastGroupHandlersLock.Lock()
-	t.multicastGroupHandlers = append(t.multicastGroupHandlers, handler)
-	t.multicastGroupHandlersLock.Unlock()
-}
-
-// AddRoute adds or updates a managed route on this tap's interface
-func (t *nativeTap) AddRoute(r *Route) error {
-	rc := 0
-	if r != nil {
-		if len(r.Target.IP) == 4 {
-			mask, _ := r.Target.Mask.Size()
-			if len(r.Via) == 4 {
-				rc = int(C.ZT_GoTap_addRoute(t.tap, AFInet, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), AFInet, unsafe.Pointer(&r.Via[0]), C.uint(r.Metric)))
-			} else {
-				rc = int(C.ZT_GoTap_addRoute(t.tap, AFInet, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.uint(r.Metric)))
-			}
-		} else if len(r.Target.IP) == 16 {
-			mask, _ := r.Target.Mask.Size()
-			if len(r.Via) == 4 {
-				rc = int(C.ZT_GoTap_addRoute(t.tap, AFInet6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), AFInet6, unsafe.Pointer(&r.Via[0]), C.uint(r.Metric)))
-			} else {
-				rc = int(C.ZT_GoTap_addRoute(t.tap, AFInet6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.uint(r.Metric)))
-			}
-		}
-	}
-	if rc != 0 {
-		return fmt.Errorf("tap device error adding route: %d", rc)
-	}
-	return nil
-}
-
-// RemoveRoute removes a managed route on this tap's interface
-func (t *nativeTap) RemoveRoute(r *Route) error {
-	rc := 0
-	if r != nil {
-		if len(r.Target.IP) == 4 {
-			mask, _ := r.Target.Mask.Size()
-			if len(r.Via) == 4 {
-				rc = int(C.ZT_GoTap_removeRoute(t.tap, AFInet, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), AFInet, unsafe.Pointer(&r.Via[0]), C.uint(r.Metric)))
-			} else {
-				rc = int(C.ZT_GoTap_removeRoute(t.tap, AFInet, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.uint(r.Metric)))
-			}
-		} else if len(r.Target.IP) == 16 {
-			mask, _ := r.Target.Mask.Size()
-			if len(r.Via) == 4 {
-				rc = int(C.ZT_GoTap_removeRoute(t.tap, AFInet6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), AFInet6, unsafe.Pointer(&r.Via[0]), C.uint(r.Metric)))
-			} else {
-				rc = int(C.ZT_GoTap_removeRoute(t.tap, AFInet6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.uint(r.Metric)))
-			}
-		}
-	}
-	if rc != 0 {
-		return fmt.Errorf("tap device error removing route: %d", rc)
-	}
-	return nil
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-func handleTapMulticastGroupChange(gn unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t, added bool) {
-	go func() {
-		nodesByUserPtrLock.RLock()
-		node := nodesByUserPtr[uintptr(gn)]
-		nodesByUserPtrLock.RUnlock()
-		if node == nil {
-			return
-		}
-		node.networksLock.RLock()
-		network := node.networks[NetworkID(nwid)]
-		node.networksLock.RUnlock()
-		if network != nil {
-			tap, _ := network.tap.(*nativeTap)
-			if tap != nil {
-				mg := &MulticastGroup{MAC: MAC(mac), ADI: uint32(adi)}
-				tap.multicastGroupHandlersLock.Lock()
-				defer tap.multicastGroupHandlersLock.Unlock()
-				for _, h := range tap.multicastGroupHandlers {
-					h(added, mg)
-				}
-			}
-		}
-	}()
-}
-
-//export goHandleTapAddedMulticastGroup
-func goHandleTapAddedMulticastGroup(gn, tapP unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t) {
-	handleTapMulticastGroupChange(gn, nwid, mac, adi, true)
-}
-
-//export goHandleTapRemovedMulticastGroup
-func goHandleTapRemovedMulticastGroup(gn, tapP unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t) {
-	handleTapMulticastGroupChange(gn, nwid, mac, adi, false)
 }

@@ -18,7 +18,7 @@ type Root struct {
 	DNSName   string
 	Identity  *Identity
 	Addresses []InetAddress
-	Locator   []byte
+	Locator   Locator
 	Preferred bool
 	Online    bool
 }
