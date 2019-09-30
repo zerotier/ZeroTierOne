@@ -17,12 +17,29 @@ package zerotier
 //#include "../../native/GoGlue.h"
 import "C"
 
-import "unsafe"
+import (
+	"encoding/json"
+	"unsafe"
+)
 
 // LocatorDNSSigningKey is the public (as a secure DNS name) and private keys for entering locators into DNS
 type LocatorDNSSigningKey struct {
 	SecureDNSName string
 	PrivateKey    []byte
+}
+
+// NewLocatorDNSSigningKey creates a new signing key and secure DNS name for storing locators in DNS
+func NewLocatorDNSSigningKey() (*LocatorDNSSigningKey, error) {
+	var nameBuf [256]C.char
+	var keyBuf [64]byte
+	keySize := int(C.ZT_GoLocator_makeSecureDNSName(&nameBuf[0], 256, (*C.uint8_t)(unsafe.Pointer(&keyBuf[0])), 128))
+	if keySize <= 0 {
+		return nil, ErrInternal
+	}
+	var sk LocatorDNSSigningKey
+	sk.SecureDNSName = C.GoString(&nameBuf[0])
+	sk.PrivateKey = keyBuf[0:keySize]
+	return &sk, nil
 }
 
 // Locator is a binary serialized record containing information about where a ZeroTier node is located on the network
@@ -95,5 +112,62 @@ func NewLocator(id *Identity, virtualAddresses []*Identity, physicalAddresses []
 	}, nil
 }
 
+// NewLocatorFromBytes decodes a locator from its serialized byte array form
+func NewLocatorFromBytes(b []byte) (*Locator, error) {
+	if len(b) == 0 {
+		return nil, ErrInvalidParameter
+	}
+	var info C.struct_ZT_GoLocator_Info
+	res := C.ZT_GoLocator_decodeLocator((*C.uint8_t)(unsafe.Pointer(&b[0])), C.uint(len(b)), &info)
+	if res == -2 {
+		return nil, ErrInvalidSignature
+	} else if res <= 0 {
+		return nil, ErrInvalidParameter
+	}
+
+	var loc Locator
+
+	var err error
+	loc.Identity, err = NewIdentityFromString(C.GoString(info.id))
+	if err != nil {
+		return nil, err
+	}
+	for i := 0; i < int(info.phyCount); i++ {
+		ua := sockaddrStorageToUDPAddr(&info.phy[i])
+		if ua != nil {
+			loc.Physical = append(loc.Physical, &InetAddress{IP: ua.IP, Port: ua.Port})
+		}
+	}
+	for i := 0; i < int(info.virtCount); i++ {
+		id, err := NewIdentityFromString(C.GoString(info.virt[i]))
+		if err == nil {
+			loc.Virtual = append(loc.Virtual, id)
+		}
+	}
+
+	return &loc, nil
+}
+
 // Bytes returns this locator in byte serialized format
 func (l *Locator) Bytes() []byte { return l.bytes }
+
+// MarshalJSON marshals this Locator as its byte encoding
+func (l *Locator) MarshalJSON() ([]byte, error) {
+	b := l.bytes
+	return json.Marshal(&b)
+}
+
+// UnmarshalJSON unmarshals this Locator from a byte array in JSON.
+func (l *Locator) UnmarshalJSON(j []byte) error {
+	var ba []byte
+	err := json.Unmarshal(j, &ba)
+	if err != nil {
+		return nil
+	}
+	tmp, err := NewLocatorFromBytes(ba)
+	if err != nil {
+		return err
+	}
+	*l = *tmp
+	return nil
+}

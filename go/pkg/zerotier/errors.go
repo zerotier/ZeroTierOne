@@ -20,6 +20,7 @@ func (e Err) Error() string { return (string)(e) }
 
 // Simple ZeroTier Errors
 const (
+	ErrInternal                  Err = "internal error"
 	ErrNodeInitFailed            Err = "unable to initialize core Node instance"
 	ErrInvalidMACAddress         Err = "invalid MAC address"
 	ErrInvalidZeroTierAddress    Err = "invalid ZeroTier address"
@@ -28,5 +29,6 @@ const (
 	ErrTapInitFailed             Err = "unable to create native Tap instance"
 	ErrUncrecognizedIdentityType Err = "unrecognized identity type"
 	ErrInvalidKey                Err = "invalid key data"
+	ErrInvalidSignature          Err = "invalid signature"
 	ErrSecretKeyRequired         Err = "secret key required"
 )

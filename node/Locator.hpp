@@ -316,14 +316,6 @@ public:
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 		_ts = (int64_t)b.template at<uint64_t>(p); p += 8;
 		p += _id.deserialize(b,p);
-		const unsigned int signerCount = b[p++];
-		if (signerCount > 1) /* only one third party signer is currently supported */
-			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
-		if (signerCount == 1) {
-			p += _signedBy.deserialize(b,p);
-		} else {
-			_signedBy.zero();
-		}
 		const unsigned int physicalCount = b[p++];
 		_physical.resize(physicalCount);
 		for(unsigned int i=0;i<physicalCount;++i)

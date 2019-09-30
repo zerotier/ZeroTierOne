@@ -523,13 +523,13 @@ enum ZT_Event
  */
 typedef struct {
 	/**
-	 * DNS name for dynamic roots or NULL for static roots
+	 * Name of root
 	 *
-	 * If this is a static root this will be NULL and identity
-	 * will never be NULL. For dynamic roots identity can be NULL
-	 * if the name of this root has never been properly resolved.
+	 * This will be a DNS name for dynamic roots. For static roots
+	 * it will be the ZeroTier address. The presence or absence
+	 * of a dot is used internally as a distinguisher.
 	 */
-	const char *dnsName;
+	const char *name;
 
 	/**
 	 * Current public identity or NULL if not known (only possible with dynamic roots)

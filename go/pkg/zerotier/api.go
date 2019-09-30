@@ -356,6 +356,9 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 			if queriedID == 0 {
 				apiSendObj(out, req, http.StatusBadRequest, nil)
 			} else {
+				var r Root
+				if apiReadObj(out, req, &r) == nil {
+				}
 			}
 		} else if req.Method == http.MethodGet || req.Method == http.MethodHead {
 			roots := node.Roots()

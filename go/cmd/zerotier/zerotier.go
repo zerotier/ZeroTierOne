@@ -121,6 +121,12 @@ func main() {
 	case "removeroot":
 		authTokenRequired(authToken)
 		cli.RemoveRoot(basePath, authToken, cmdArgs)
+	case "makelocator":
+		cli.MakeLocator(cmdArgs)
+	case "makelocatordnskey":
+		cli.MakeLocatorDNSKey(cmdArgs)
+	case "makelocatordns":
+		cli.MakeLocatorDNS(cmdArgs)
 	case "networks", "listnetworks":
 		authTokenRequired(authToken)
 		cli.Networks(basePath, authToken, cmdArgs)

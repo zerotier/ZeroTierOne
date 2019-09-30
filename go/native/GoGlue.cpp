@@ -730,9 +730,9 @@ int ZT_GoLocator_makeSecureDNSName(char *name,unsigned int nameBufSize,uint8_t *
 	uint8_t pub[ZT_ECC384_PUBLIC_KEY_SIZE];
 	ECC384GenerateKey(pub,privateKey);
 	const Str n(Locator::makeSecureDnsName(pub));
-	if (n.size() >= nameBufSize)
+	if (n.length() >= nameBufSize)
 		return -1;
-	Utils::scopy(name,sizeof(name),n.c_Str());
+	Utils::scopy(name,sizeof(name),n.c_str());
 	return ZT_ECC384_PRIVATE_KEY_SIZE;
 }
 
@@ -775,9 +775,20 @@ int ZT_GoLocator_makeLocator(
 	return s;
 }
 
-int ZT_GoLocator_decodeLocator(const uint8_t *loc,unsigned int locSize,struct ZT_GoLocator_Info *info)
+int ZT_GoLocator_decodeLocator(const uint8_t *locatorBytes,unsigned int locatorSize,struct ZT_GoLocator_Info *info)
 {
-	memset(info,0,sizeof(struct ZT_GoLocator_Info));
+	Locator loc;
+	if (!loc.deserialize(locatorBytes,locatorSize))
+		return -1;
+	if (!loc.verify())
+		return -2;
+	loc.id().toString(false,info->id);
+	info->phyCount = 0;
+	info->virtCount = 0;
+	for(auto p=loc.phy().begin();p!=loc.phy().end();++p)
+		memcpy(&(info->phy[info->phyCount++]),&(*p),sizeof(struct sockaddr_storage));
+	for(auto v=loc.virt().begin();v!=loc.virt().end();++v)
+		v->toString(false,info->virt[info->virtCount++]);
 	return 1;
 }
 

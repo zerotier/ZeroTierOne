@@ -92,11 +92,11 @@ int ZT_GoTap_removeRoute(ZT_GoTap *tap,int targetAf,const void *targetIp,int tar
 
 struct ZT_GoLocator_Info {
 	char id[1024];
-	struct sockaddr_storage phy[256];
-	char virt[256][1024];
 	unsigned int phyCount;
 	unsigned int virtCount;
-}
+	struct sockaddr_storage phy[256];
+	char virt[256][1024];
+};
 
 /* Returns length of private key stored in private key buffer on success, -1 on fail */
 int ZT_GoLocator_makeSecureDNSName(char name[256],unsigned int nameBufSize,uint8_t *privateKey,unsigned int privateKeyBufSize);
@@ -120,8 +120,8 @@ int ZT_GoLocator_makeLocator(
 	const char **virtualAddresses,
 	unsigned int virtualAddressCount);
 
-/* Returns nonzero on success, fills info structure */
-int ZT_GoLocator_decodeLocator(const uint8_t *loc,unsigned int locSize,struct ZT_GoLocator_Info *info);
+/* Returns >0 on success, fills info structure */
+int ZT_GoLocator_decodeLocator(const uint8_t *locatorBytes,unsigned int locatorSize,struct ZT_GoLocator_Info *info);
 
 /*
  * The privateKey and privateKeySize are those created by makeSecureDNSName.

@@ -558,7 +558,7 @@ func (n *Node) Roots() []*Root {
 					}
 				}
 				roots = append(roots, &Root{
-					DNSName:   C.GoString(root.dnsName),
+					Name:      C.GoString(root.dnsName),
 					Identity:  id,
 					Addresses: addrs,
 					Preferred: (root.preferred != 0),
@@ -569,6 +569,42 @@ func (n *Node) Roots() []*Root {
 		C.ZT_Node_freeQueryResult(unsafe.Pointer(n.zn), unsafe.Pointer(rl))
 	}
 	return roots
+}
+
+// SetRoot sets or updates a root.
+// Name can be a DNS name (preferably secure) for DNS fetched locators or can be
+// the empty string for static roots. If the name is empty then the locator must
+// be non-nil.
+func (n *Node) SetRoot(name string, locator *Locator) error {
+	if len(name) == 0 {
+		if locator == nil {
+			return ErrInvalidParameter
+		}
+		name = locator.Identity.address.String()
+	}
+	var lb []byte
+	if locator != nil {
+		lb = locator.Bytes()
+	}
+	var lbp unsafe.Pointer
+	if len(lb) > 0 {
+		lbp = unsafe.Pointer(&lb[0])
+	}
+	cn := C.CString(name)
+	defer C.free(unsafe.Pointer(cn))
+	if C.ZT_Node_setRoot(n.zn, cn, lbp, C.uint(len(lb))) != 0 {
+		return ErrInternal
+	}
+	return nil
+}
+
+// RemoveRoot removes a root.
+// For static roots the name should be the ZeroTier address.
+func (n *Node) RemoveRoot(name string) {
+	cn := C.CString(name)
+	defer C.free(unsafe.Pointer(cn))
+	C.ZT_Node_removeRoot(n.zn, cn)
+	return
 }
 
 // Peers retrieves a list of current peers

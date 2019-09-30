@@ -57,7 +57,7 @@ func (w *sizeLimitWriter) trim(maxSize int, trimFactor float64, trimAtCR bool) e
 
 	if flen > int64(maxSize) {
 		var buf [131072]byte
-		trimAt := int64(float64(flen) * trimFactor)
+		trimAt := int64(float64(maxSize) * trimFactor)
 		if trimAt >= flen { // sanity check
 			return nil
 		}

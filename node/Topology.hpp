@@ -81,11 +81,11 @@ public:
 	ZT_ALWAYS_INLINE Topology(const RuntimeEnvironment *renv,const Identity &myId) :
 		RR(renv),
 		_myIdentity(myId),
+		_numConfiguredPhysicalPaths(0),
 		_peers(64),
 		_paths(128),
 		_roots(8),
 		_rootIdentities(8),
-		_numConfiguredPhysicalPaths(0),
 		_lastUpdatedBestRoot(0) {}
 	ZT_ALWAYS_INLINE ~Topology() {}
 
@@ -385,7 +385,7 @@ public:
 			Locator *v = (Locator *)0;
 			Hashtable< Str,Locator >::Iterator i(const_cast<Topology *>(this)->_roots);
 			while (i.next(k,v)) {
-				rl->roots[c].dnsName = nameBufPtr;
+				rl->roots[c].name = nameBufPtr;
 				const char *p = k->c_str();
 				while (*p)
 					*(nameBufPtr++) = *(p++);

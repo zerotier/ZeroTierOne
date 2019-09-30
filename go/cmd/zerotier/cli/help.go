@@ -24,14 +24,14 @@ Licensed under the ZeroTier BSL (see LICENSE.txt)`, zerotier.CoreVersionMajor, z
 
 // Help dumps help to stdout
 func Help() {
-	fmt.Println(copyrightText + `
-
+	fmt.Println(copyrightText)
+	fmt.Println(`
 Usage: zerotier [-options] <command> [-options] [command args]
 
 Global Options:
   -j                                   Output raw JSON where applicable
   -p <path>                            Use alternate base path
-  -t <authtoken.secret path>           Use secret auth token from this file
+  -t <path>                            Use secret auth token from this file
 
 Commands:
   help                                 Show this help
@@ -40,12 +40,11 @@ Commands:
   status                               Show ZeroTier service status and config
   peers                                Show VL1 peers
   roots                                Show VL1 root servers
-  addroot <type> [options]             Add a VL1 root
-    static <identity> <ip/port> [...]  Add a root with a set identity and IPs
-    dynamic <name> [default locator]   Add a dynamic root fetched by name
-  removeroot <type> [options]          Remove a VL1 root
-    static <identity>                  Remove a root with a set identity
-    dynamic <name>                     Remove a dynamic root fetched by name
+  addroot <locator> [<name>]           Add a VL1 root
+  removeroot <name>                    Remove a VL1 root
+  makelocator <secret> <address> [...] Make and sign a locator
+  makelocatordnskey                    Create a new secure DNS name and key
+  makelocatordns <key> <locator>       Make DNS TXT records for a locator
   networks                             Show joined VL2 virtual networks
   join <network ID>                    Join a virtual network
   leave <network ID>                   Leave a virtual network
@@ -71,6 +70,6 @@ Most commands require a secret token to permit control of a running ZeroTier
 service. The CLI will automatically try to read this token from the
 authtoken.secret file in the service's working directory and then from a
 file called .zerotierauth in the user's home directory. The -t option can be
-used to explicitly specify a location.
-`)
+used to explicitly specify a location.`)
+	fmt.Println()
 }
