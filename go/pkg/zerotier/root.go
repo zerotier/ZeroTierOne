@@ -16,8 +16,6 @@ package zerotier
 // Root describes a root server used to find and establish communication with other nodes.
 type Root struct {
 	Name      string
-	Identity  *Identity
-	Addresses []InetAddress
 	Locator   *Locator
 	Preferred bool
 	Online    bool

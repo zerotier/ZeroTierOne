@@ -84,6 +84,8 @@ type APIStatus struct {
 	Clock                   int64
 	Config                  LocalConfig
 	Online                  bool
+	PeerCount               int
+	PathCount               int
 	Identity                *Identity
 	InterfaceAddresses      []net.IP
 	MappedExternalAddresses []*InetAddress
@@ -197,16 +199,31 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 	smux := http.NewServeMux()
 
 	smux.HandleFunc("/status", func(out http.ResponseWriter, req *http.Request) {
+		defer func() {
+			e := recover()
+			if e != nil {
+				_ = apiSendObj(out, req, http.StatusInternalServerError, nil)
+			}
+		}()
+
 		if !apiCheckAuth(out, req, authToken) {
 			return
 		}
+
 		apiSetStandardHeaders(out)
 		if req.Method == http.MethodGet || req.Method == http.MethodHead {
+			pathCount := 0
+			peers := node.Peers()
+			for _, p := range peers {
+				pathCount += len(p.Paths)
+			}
 			_ = apiSendObj(out, req, http.StatusOK, &APIStatus{
 				Address:                 node.Address(),
 				Clock:                   TimeMs(),
 				Config:                  node.LocalConfig(),
 				Online:                  node.Online(),
+				PeerCount:               len(peers),
+				PathCount:               pathCount,
 				Identity:                node.Identity(),
 				InterfaceAddresses:      node.InterfaceAddresses(),
 				MappedExternalAddresses: nil,
@@ -223,15 +240,27 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 	})
 
 	smux.HandleFunc("/config", func(out http.ResponseWriter, req *http.Request) {
+		defer func() {
+			e := recover()
+			if e != nil {
+				_ = apiSendObj(out, req, http.StatusInternalServerError, nil)
+			}
+		}()
+
 		if !apiCheckAuth(out, req, authToken) {
 			return
 		}
+
 		apiSetStandardHeaders(out)
 		if req.Method == http.MethodPost || req.Method == http.MethodPut {
 			var c LocalConfig
 			if apiReadObj(out, req, &c) == nil {
-				_, _ = node.SetLocalConfig(&c)
-				_ = apiSendObj(out, req, http.StatusOK, node.LocalConfig())
+				_, err := node.SetLocalConfig(&c)
+				if err != nil {
+					_ = apiSendObj(out, req, http.StatusBadRequest, nil)
+				} else {
+					_ = apiSendObj(out, req, http.StatusOK, node.LocalConfig())
+				}
 			}
 		} else if req.Method == http.MethodGet || req.Method == http.MethodHead {
 			_ = apiSendObj(out, req, http.StatusOK, node.LocalConfig())
@@ -242,9 +271,17 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 	})
 
 	smux.HandleFunc("/peer/", func(out http.ResponseWriter, req *http.Request) {
+		defer func() {
+			e := recover()
+			if e != nil {
+				_ = apiSendObj(out, req, http.StatusInternalServerError, nil)
+			}
+		}()
+
 		if !apiCheckAuth(out, req, authToken) {
 			return
 		}
+
 		apiSetStandardHeaders(out)
 
 		var queriedID Address
@@ -260,13 +297,13 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 		if req.Method == http.MethodGet || req.Method == http.MethodHead {
 			peers := node.Peers()
 			if queriedID != 0 {
-				p2 := make([]*Peer, 0, len(peers))
 				for _, p := range peers {
 					if p.Address == queriedID {
-						p2 = append(p2, p)
+						_ = apiSendObj(out, req, http.StatusOK, p)
+						return
 					}
 				}
-				_ = apiSendObj(out, req, http.StatusOK, p2)
+				_ = apiSendObj(out, req, http.StatusNotFound, nil)
 			} else {
 				_ = apiSendObj(out, req, http.StatusOK, peers)
 			}
@@ -277,9 +314,17 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 	})
 
 	smux.HandleFunc("/network/", func(out http.ResponseWriter, req *http.Request) {
+		defer func() {
+			e := recover()
+			if e != nil {
+				_ = apiSendObj(out, req, http.StatusInternalServerError, nil)
+			}
+		}()
+
 		if !apiCheckAuth(out, req, authToken) {
 			return
 		}
+
 		apiSetStandardHeaders(out)
 
 		var queriedID NetworkID
@@ -326,9 +371,10 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 				for _, nw := range networks {
 					if nw.ID() == queriedID {
 						_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(nw))
-						break
+						return
 					}
 				}
+				_ = apiSendObj(out, req, http.StatusNotFound, nil)
 			}
 		} else {
 			out.Header().Set("Allow", "GET, HEAD, PUT, POST")
@@ -337,32 +383,53 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 	})
 
 	smux.HandleFunc("/root/", func(out http.ResponseWriter, req *http.Request) {
+		defer func() {
+			e := recover()
+			if e != nil {
+				_ = apiSendObj(out, req, http.StatusInternalServerError, nil)
+			}
+		}()
+
 		if !apiCheckAuth(out, req, authToken) {
 			return
 		}
+
 		apiSetStandardHeaders(out)
 
-		var queriedID Address
+		var queriedName string
 		if len(req.URL.Path) > 6 {
-			var err error
-			queriedID, err = NewAddressFromString(req.URL.Path[6:])
-			if err != nil {
-				_ = apiSendObj(out, req, http.StatusNotFound, nil)
-				return
-			}
+			queriedName = req.URL.Path[6:]
 		}
 
 		if req.Method == http.MethodPost || req.Method == http.MethodPut {
-			if queriedID == 0 {
-				_ = apiSendObj(out, req, http.StatusBadRequest, nil)
-			} else {
-				var r Root
-				if apiReadObj(out, req, &r) == nil {
+			var r Root
+			if apiReadObj(out, req, &r) == nil {
+				if r.Name != queriedName && (r.Locator == nil || r.Locator.Identity == nil || r.Locator.Identity.address.String() != queriedName) {
+					_ = apiSendObj(out, req, http.StatusBadRequest, nil)
+				}
+				err := node.SetRoot(r.Name, r.Locator)
+				if err != nil {
+					_ = apiSendObj(out, req, http.StatusBadRequest, nil)
+				} else {
+					roots := node.Roots()
+					for _, r := range roots {
+						if r.Name == queriedName {
+							_ = apiSendObj(out, req, http.StatusOK, r)
+							return
+						}
+					}
+					_ = apiSendObj(out, req, http.StatusNotFound, nil)
 				}
 			}
 		} else if req.Method == http.MethodGet || req.Method == http.MethodHead {
 			roots := node.Roots()
-			_ = apiSendObj(out, req, http.StatusOK, roots)
+			for _, r := range roots {
+				if r.Name == queriedName {
+					_ = apiSendObj(out, req, http.StatusOK, r)
+					return
+				}
+			}
+			_ = apiSendObj(out, req, http.StatusNotFound, nil)
 		} else {
 			out.Header().Set("Allow", "GET, HEAD, PUT, POST")
 			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, nil)

@@ -42,7 +42,9 @@ func NewLocatorDNSSigningKey() (*LocatorDNSSigningKey, error) {
 	return &sk, nil
 }
 
-// Locator is a binary serialized record containing information about where a ZeroTier node is located on the network
+// Locator is a binary serialized record containing information about where a ZeroTier node is located on the network.
+// Note that for JSON objects only Bytes needs to be specified. When JSON is deserialized only this field is used
+// and the others are always reconstructed from it.
 type Locator struct {
 	// Identity is the full identity of the node being located
 	Identity *Identity
@@ -53,7 +55,8 @@ type Locator struct {
 	// Virtual is a list of ZeroTier nodes that can relay to this node
 	Virtual []*Identity
 
-	bytes []byte
+	// Bytes is the raw serialized Locator
+	Bytes []byte
 }
 
 // NewLocator creates a new locator with the given identity and addresses and the current time as timestamp.
@@ -108,7 +111,7 @@ func NewLocator(id *Identity, virtualAddresses []*Identity, physicalAddresses []
 		Identity: id,
 		Physical: physicalAddresses,
 		Virtual:  virtualAddresses,
-		bytes:    r,
+		Bytes:    r,
 	}, nil
 }
 
@@ -148,26 +151,23 @@ func NewLocatorFromBytes(b []byte) (*Locator, error) {
 	return &loc, nil
 }
 
-// Bytes returns this locator in byte serialized format
-func (l *Locator) Bytes() []byte { return l.bytes }
-
 // MarshalJSON marshals this Locator as its byte encoding
 func (l *Locator) MarshalJSON() ([]byte, error) {
-	b := l.bytes
-	return json.Marshal(&b)
+	return json.Marshal(l)
 }
 
 // UnmarshalJSON unmarshals this Locator from a byte array in JSON.
 func (l *Locator) UnmarshalJSON(j []byte) error {
-	var ba []byte
-	err := json.Unmarshal(j, &ba)
-	if err != nil {
-		return nil
-	}
-	tmp, err := NewLocatorFromBytes(ba)
+	err := json.Unmarshal(j, l)
 	if err != nil {
 		return err
 	}
-	*l = *tmp
+	tmp, err := NewLocatorFromBytes(l.Bytes)
+	if err != nil {
+		return err
+	}
+	l.Identity = tmp.Identity
+	l.Physical = tmp.Physical
+	l.Virtual = tmp.Virtual
 	return nil
 }
