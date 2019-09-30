@@ -26,7 +26,7 @@ import (
 
 func createNamedSocketListener(basePath, name string) (net.Listener, error) {
 	apiSockPath := path.Join(basePath, name)
-	os.Remove(apiSockPath)
+	_ = os.Remove(apiSockPath)
 	return net.Listen("unix", apiSockPath)
 }
 

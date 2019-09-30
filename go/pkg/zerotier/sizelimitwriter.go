@@ -14,6 +14,7 @@
 package zerotier
 
 import (
+	"io"
 	"os"
 	"sync"
 )
@@ -28,7 +29,7 @@ func sizeLimitWriterOpen(p string) (*sizeLimitWriter, error) {
 	if err != nil {
 		return nil, err
 	}
-	f.Seek(0, os.SEEK_END)
+	_, _ = f.Seek(0, io.SeekEnd)
 	return &sizeLimitWriter{f: f}, nil
 }
 
@@ -50,7 +51,7 @@ func (w *sizeLimitWriter) trim(maxSize int, trimFactor float64, trimAtCR bool) e
 	w.l.Lock()
 	defer w.l.Unlock()
 
-	flen, err := w.f.Seek(0, os.SEEK_END)
+	flen, err := w.f.Seek(0, io.SeekEnd)
 	if err != nil {
 		return err
 	}
@@ -100,7 +101,7 @@ func (w *sizeLimitWriter) trim(maxSize int, trimFactor float64, trimAtCR bool) e
 		if err != nil {
 			return err
 		}
-		_, err = w.f.Seek(0, os.SEEK_END)
+		_, err = w.f.Seek(0, io.SeekEnd)
 		return err
 	}
 

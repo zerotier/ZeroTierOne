@@ -28,7 +28,7 @@ func (mg *MulticastGroup) String() string {
 
 // Less returns true if this MulticastGroup is less than another.
 func (mg *MulticastGroup) Less(mg2 *MulticastGroup) bool {
-	return (mg.MAC < mg2.MAC || (mg.MAC == mg2.MAC && mg.ADI < mg2.ADI))
+	return mg.MAC < mg2.MAC || (mg.MAC == mg2.MAC && mg.ADI < mg2.ADI)
 }
 
 // key returns an array usable as a key for a map[]

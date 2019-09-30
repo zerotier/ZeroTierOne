@@ -53,7 +53,7 @@ func checkPort(port int) bool {
 	ua.Port = port
 	uc, err := net.ListenUDP("udp6", &ua)
 	if uc != nil {
-		uc.Close()
+		_ = uc.Close()
 	}
 	if err != nil {
 		return false
@@ -61,7 +61,7 @@ func checkPort(port int) bool {
 	ua.IP = net.IPv4zero
 	uc, err = net.ListenUDP("udp4", &ua)
 	if uc != nil {
-		uc.Close()
+		_ = uc.Close()
 	}
 	if err != nil {
 		return false
@@ -72,7 +72,7 @@ func checkPort(port int) bool {
 	ta.Port = port
 	tc, err := net.ListenTCP("tcp6", &ta)
 	if tc != nil {
-		tc.Close()
+		_ = tc.Close()
 	}
 	if err != nil {
 		return false
@@ -80,7 +80,7 @@ func checkPort(port int) bool {
 	ta.IP = net.IPv4zero
 	tc, err = net.ListenTCP("tcp4", &ta)
 	if tc != nil {
-		tc.Close()
+		_ = tc.Close()
 	}
 	if err != nil {
 		return false

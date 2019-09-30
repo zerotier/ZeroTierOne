@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	rand "math/rand"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -38,7 +38,7 @@ import (
 	"time"
 	"unsafe"
 
-	acl "github.com/hectane/go-acl"
+	"github.com/hectane/go-acl"
 )
 
 var nullLogger = log.New(ioutil.Discard, "", 0)
@@ -90,14 +90,14 @@ func sockaddrStorageToIPNet(ss *C.struct_sockaddr_storage) *net.IPNet {
 		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
 		var ip4 [4]byte
 		copy(ip4[:], (*[4]byte)(unsafe.Pointer(&sa4.sin_addr))[:])
-		a.IP = net.IP(ip4[:])
+		a.IP = ip4[:]
 		a.Mask = net.CIDRMask(int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:])), 32)
 		return &a
 	case AFInet6:
 		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
 		var ip6 [16]byte
 		copy(ip6[:], (*[16]byte)(unsafe.Pointer(&sa6.sin6_addr))[:])
-		a.IP = net.IP(ip6[:])
+		a.IP = ip6[:]
 		a.Mask = net.CIDRMask(int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa6.sin6_port)))[:])), 128)
 		return &a
 	}
@@ -111,14 +111,14 @@ func sockaddrStorageToUDPAddr(ss *C.struct_sockaddr_storage) *net.UDPAddr {
 		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
 		var ip4 [4]byte
 		copy(ip4[:], (*[4]byte)(unsafe.Pointer(&sa4.sin_addr))[:])
-		a.IP = net.IP(ip4[:])
+		a.IP = ip4[:]
 		a.Port = int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:]))
 		return &a
 	case AFInet6:
 		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
 		var ip6 [16]byte
 		copy(ip6[:], (*[16]byte)(unsafe.Pointer(&sa6.sin6_addr))[:])
-		a.IP = net.IP(ip6[:])
+		a.IP = ip6[:]
 		a.Port = int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa6.sin6_port)))[:]))
 		return &a
 	}
@@ -176,7 +176,7 @@ type Node struct {
 func NewNode(basePath string) (*Node, error) {
 	var err error
 
-	os.MkdirAll(basePath, 0755)
+	_ = os.MkdirAll(basePath, 0755)
 	if _, err := os.Stat(basePath); err != nil {
 		return nil, err
 	}
@@ -257,15 +257,15 @@ func NewNode(basePath string) (*Node, error) {
 		}
 
 		if portsChanged {
-			n.localConfig.Write(n.localConfigPath)
+			_ = n.localConfig.Write(n.localConfigPath)
 		}
 	} else if !checkPort(n.localConfig.Settings.PrimaryPort) {
 		return nil, errors.New("unable to bind to primary port")
 	}
 
-	cpath := C.CString(basePath)
-	n.gn = C.ZT_GoNode_new(cpath)
-	C.free(unsafe.Pointer(cpath))
+	cPath := C.CString(basePath)
+	n.gn = C.ZT_GoNode_new(cPath)
+	C.free(unsafe.Pointer(cPath))
 	if n.gn == nil {
 		n.log.Println("FATAL: node initialization failed")
 		return nil, ErrNodeInitFailed
@@ -274,10 +274,10 @@ func NewNode(basePath string) (*Node, error) {
 
 	var ns C.ZT_NodeStatus
 	C.ZT_Node_status(unsafe.Pointer(n.zn), &ns)
-	idstr := C.GoString(ns.secretIdentity)
-	n.id, err = NewIdentityFromString(idstr)
+	idString := C.GoString(ns.secretIdentity)
+	n.id, err = NewIdentityFromString(idString)
 	if err != nil {
-		n.log.Printf("FATAL: node's identity does not seem valid (%s)", idstr)
+		n.log.Printf("FATAL: node's identity does not seem valid (%s)", string(idString))
 		C.ZT_GoNode_delete(n.gn)
 		return nil, err
 	}
@@ -381,7 +381,7 @@ func NewNode(basePath string) (*Node, error) {
 
 				// Trim log if it's gone over its size limit
 				if n.localConfig.Settings.LogSizeMax > 0 && n.logW != nil {
-					n.logW.trim(n.localConfig.Settings.LogSizeMax*1024, 0.5, true)
+					_ = n.logW.trim(n.localConfig.Settings.LogSizeMax*1024, 0.5, true)
 				}
 
 				n.localConfigLock.RUnlock()
@@ -396,7 +396,7 @@ func NewNode(basePath string) (*Node, error) {
 // Close closes this Node and frees its underlying C++ Node structures
 func (n *Node) Close() {
 	if atomic.SwapUint32(&n.running, 0) != 0 {
-		n.apiServer.Close()
+		_ = n.apiServer.Close()
 		C.ZT_GoNode_delete(n.gn)
 		nodesByUserPtrLock.Lock()
 		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n.gn)))
@@ -453,7 +453,7 @@ func (n *Node) SetLocalConfig(lc *LocalConfig) (restartRequired bool, err error)
 	}
 	if lc.Settings.LogSizeMax < 0 {
 		n.log = nullLogger
-		n.logW.Close()
+		_ = n.logW.Close()
 		n.logW = nil
 	} else if n.logW != nil {
 		n.logW, err = sizeLimitWriterOpen(path.Join(n.basePath, "service.log"))
@@ -492,7 +492,7 @@ func (n *Node) Join(nwid NetworkID, settings *NetworkLocalSettings, tap Tap) (*N
 		return nil, ErrTapInitFailed
 	}
 
-	nw, err := newNetwork(n, NetworkID(nwid), &nativeTap{tap: unsafe.Pointer(ntap), enabled: 1})
+	nw, err := newNetwork(n, nwid, &nativeTap{tap: unsafe.Pointer(ntap), enabled: 1})
 	if err != nil {
 		n.log.Printf("join network %.16x failed: network failed to initialize: %s", nwid, err.Error())
 		C.ZT_GoNode_leave(n.gn, C.uint64_t(nwid))
@@ -561,8 +561,8 @@ func (n *Node) Roots() []*Root {
 					Name:      C.GoString(root.name),
 					Identity:  id,
 					Addresses: addrs,
-					Preferred: (root.preferred != 0),
-					Online:    (root.online != 0),
+					Preferred: root.preferred != 0,
+					Online:    root.online != 0,
 				})
 			}
 		}
@@ -588,7 +588,7 @@ func (n *Node) SetRoot(name string, locator *Locator) error {
 	}
 	var lbp unsafe.Pointer
 	if len(lb) > 0 {
-		lbp = unsafe.Pointer(&lb[0])
+		lbp = &lb[0]
 	}
 	cn := C.CString(name)
 	defer C.free(unsafe.Pointer(cn))
@@ -732,12 +732,12 @@ func (n *Node) makeStateObjectPath(objType int, id [2]uint64) (string, bool) {
 		secret = true
 	case C.ZT_STATE_OBJECT_PEER:
 		fp = path.Join(n.basePath, "peers.d")
-		os.Mkdir(fp, 0700)
+		_ = os.Mkdir(fp, 0700)
 		fp = path.Join(fp, fmt.Sprintf("%.10x.peer", id[0]))
 		secret = true
 	case C.ZT_STATE_OBJECT_NETWORK_CONFIG:
 		fp = path.Join(n.basePath, "networks.d")
-		os.Mkdir(fp, 0755)
+		_ = os.Mkdir(fp, 0755)
 		fp = path.Join(fp, fmt.Sprintf("%.16x.conf", id[0]))
 	case C.ZT_STATE_OBJECT_ROOT_LIST:
 		fp = path.Join(n.basePath, "roots")
@@ -752,9 +752,9 @@ func (n *Node) stateObjectPut(objType int, id [2]uint64, data []byte) {
 		if secret {
 			fileMode = os.FileMode(0600)
 		}
-		ioutil.WriteFile(fp, data, fileMode)
+		_ = ioutil.WriteFile(fp, data, fileMode)
 		if secret {
-			acl.Chmod(fp, 0600) // this emulates Unix chmod on Windows and uses os.Chmod on Unix-type systems
+			_ = acl.Chmod(fp, 0600) // this emulates Unix chmod on Windows and uses os.Chmod on Unix-type systems
 		}
 	}
 }
@@ -762,7 +762,7 @@ func (n *Node) stateObjectPut(objType int, id [2]uint64, data []byte) {
 func (n *Node) stateObjectDelete(objType int, id [2]uint64) {
 	fp, _ := n.makeStateObjectPath(objType, id)
 	if len(fp) > 0 {
-		os.Remove(fp)
+		_ = os.Remove(fp)
 	}
 }
 
@@ -801,14 +801,22 @@ func goPathCheckFunc(gn unsafe.Pointer, ztAddress C.uint64_t, af C.int, ip unsaf
 	nodesByUserPtrLock.RLock()
 	node := nodesByUserPtr[uintptr(gn)]
 	nodesByUserPtrLock.RUnlock()
-	if node != nil && node.pathCheck(Address(ztAddress), int(af), nil, int(port)) {
+	var nip net.IP
+	if af == AFInet {
+		nip = ((*[4]byte)(ip))[:]
+	} else if af == AFInet6 {
+		nip = ((*[16]byte)(ip))[:]
+	} else {
+		return 0
+	}
+	if node != nil && len(nip) > 0 && node.pathCheck(Address(ztAddress), int(af), nip, int(port)) {
 		return 1
 	}
 	return 0
 }
 
 //export goPathLookupFunc
-func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, desiredAddressFamily int, familyP, ipP, portP unsafe.Pointer) C.int {
+func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, _ int, familyP, ipP, portP unsafe.Pointer) C.int {
 	nodesByUserPtrLock.RLock()
 	node := nodesByUserPtr[uintptr(gn)]
 	nodesByUserPtrLock.RUnlock()
@@ -903,7 +911,7 @@ func goDNSResolverFunc(gn unsafe.Pointer, dnsRecordTypes unsafe.Pointer, numDNSR
 }
 
 //export goVirtualNetworkConfigFunc
-func goVirtualNetworkConfigFunc(gn, tapP unsafe.Pointer, nwid C.uint64_t, op C.int, conf unsafe.Pointer) {
+func goVirtualNetworkConfigFunc(gn, _ unsafe.Pointer, nwid C.uint64_t, op C.int, conf unsafe.Pointer) {
 	go func() {
 		nodesByUserPtrLock.RLock()
 		node := nodesByUserPtr[uintptr(gn)]
@@ -911,47 +919,52 @@ func goVirtualNetworkConfigFunc(gn, tapP unsafe.Pointer, nwid C.uint64_t, op C.i
 		if node == nil {
 			return
 		}
+
 		node.networksLock.RLock()
 		network := node.networks[NetworkID(nwid)]
 		node.networksLock.RUnlock()
+
 		if network != nil {
-			ncc := (*C.ZT_VirtualNetworkConfig)(conf)
-			if network.networkConfigRevision() > uint64(ncc.netconfRevision) {
-				return
-			}
-			var nc NetworkConfig
-			nc.ID = NetworkID(ncc.nwid)
-			nc.MAC = MAC(ncc.mac)
-			nc.Name = C.GoString(&ncc.name[0])
-			nc.Status = int(ncc.status)
-			nc.Type = int(ncc._type)
-			nc.MTU = int(ncc.mtu)
-			nc.Bridge = (ncc.bridge != 0)
-			nc.BroadcastEnabled = (ncc.broadcastEnabled != 0)
-			nc.NetconfRevision = uint64(ncc.netconfRevision)
-			for i := 0; i < int(ncc.assignedAddressCount); i++ {
-				a := sockaddrStorageToIPNet(&ncc.assignedAddresses[i])
-				if a != nil {
-					nc.AssignedAddresses = append(nc.AssignedAddresses, *a)
+			switch op {
+			case C.ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP, C.ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP:
+				ncc := (*C.ZT_VirtualNetworkConfig)(conf)
+				if network.networkConfigRevision() > uint64(ncc.netconfRevision) {
+					return
 				}
-			}
-			for i := 0; i < int(ncc.routeCount); i++ {
-				tgt := sockaddrStorageToIPNet(&ncc.routes[i].target)
-				viaN := sockaddrStorageToIPNet(&ncc.routes[i].via)
-				var via net.IP
-				if viaN != nil {
-					via = viaN.IP
+				var nc NetworkConfig
+				nc.ID = NetworkID(ncc.nwid)
+				nc.MAC = MAC(ncc.mac)
+				nc.Name = C.GoString(&ncc.name[0])
+				nc.Status = int(ncc.status)
+				nc.Type = int(ncc._type)
+				nc.MTU = int(ncc.mtu)
+				nc.Bridge = ncc.bridge != 0
+				nc.BroadcastEnabled = ncc.broadcastEnabled != 0
+				nc.NetconfRevision = uint64(ncc.netconfRevision)
+				for i := 0; i < int(ncc.assignedAddressCount); i++ {
+					a := sockaddrStorageToIPNet(&ncc.assignedAddresses[i])
+					if a != nil {
+						nc.AssignedAddresses = append(nc.AssignedAddresses, *a)
+					}
 				}
-				if tgt != nil {
-					nc.Routes = append(nc.Routes, Route{
-						Target: *tgt,
-						Via:    via,
-						Flags:  uint16(ncc.routes[i].flags),
-						Metric: uint16(ncc.routes[i].metric),
-					})
+				for i := 0; i < int(ncc.routeCount); i++ {
+					tgt := sockaddrStorageToIPNet(&ncc.routes[i].target)
+					viaN := sockaddrStorageToIPNet(&ncc.routes[i].via)
+					var via net.IP
+					if viaN != nil {
+						via = viaN.IP
+					}
+					if tgt != nil {
+						nc.Routes = append(nc.Routes, Route{
+							Target: *tgt,
+							Via:    via,
+							Flags:  uint16(ncc.routes[i].flags),
+							Metric: uint16(ncc.routes[i].metric),
+						})
+					}
 				}
+				network.updateConfig(&nc, nil)
 			}
-			network.updateConfig(&nc, nil)
 		}
 	}()
 }

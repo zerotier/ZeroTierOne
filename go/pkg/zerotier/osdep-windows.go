@@ -26,3 +26,8 @@ const windowsAPISocketPathPrefix = "\\\\.\\pipe\\zerotier_"
 func createNamedSocketListener(basePath, name string) (net.Listener, error) {
 	winio.ListenPipe(windowsAPISocketPathPrefix+name, nil)
 }
+
+func createNamedSocketHTTPClient(basePath, name string) (*http.Client, error) {
+	panic("needs implementation")
+	return nil, nil
+}

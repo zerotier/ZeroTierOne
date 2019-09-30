@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	acl "github.com/hectane/go-acl"
+	"github.com/hectane/go-acl"
 )
 
 // APISocketName is the default socket name for accessing the API
@@ -151,7 +151,7 @@ func apiSendObj(out http.ResponseWriter, req *http.Request, httpStatusCode int, 
 func apiReadObj(out http.ResponseWriter, req *http.Request, dest interface{}) (err error) {
 	err = json.NewDecoder(req.Body).Decode(&dest)
 	if err != nil {
-		apiSendObj(out, req, http.StatusBadRequest, nil)
+		_ = apiSendObj(out, req, http.StatusBadRequest, nil)
 	}
 	return
 }
@@ -165,7 +165,7 @@ func apiCheckAuth(out http.ResponseWriter, req *http.Request, token string) bool
 	if len(ah) > 0 && strings.TrimSpace(ah) == token {
 		return true
 	}
-	apiSendObj(out, req, http.StatusUnauthorized, nil)
+	_ = apiSendObj(out, req, http.StatusUnauthorized, nil)
 	return false
 }
 
@@ -182,13 +182,13 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 			return nil, err
 		}
 		for i := 0; i < 20; i++ {
-			atb[i] = byte("abcdefghijklmnopqrstuvwxyz0123456789"[atb[i]%36])
+			atb[i] = "abcdefghijklmnopqrstuvwxyz0123456789"[atb[i]%36]
 		}
 		err = ioutil.WriteFile(authTokenFile, atb[:], 0600)
 		if err != nil {
 			return nil, err
 		}
-		acl.Chmod(authTokenFile, 0600)
+		_ = acl.Chmod(authTokenFile, 0600)
 		authToken = string(atb[:])
 	} else {
 		authToken = strings.TrimSpace(string(authTokenB))
@@ -202,7 +202,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 		}
 		apiSetStandardHeaders(out)
 		if req.Method == http.MethodGet || req.Method == http.MethodHead {
-			apiSendObj(out, req, http.StatusOK, &APIStatus{
+			_ = apiSendObj(out, req, http.StatusOK, &APIStatus{
 				Address:                 node.Address(),
 				Clock:                   TimeMs(),
 				Config:                  node.LocalConfig(),
@@ -218,7 +218,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 			})
 		} else {
 			out.Header().Set("Allow", "GET, HEAD")
-			apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
+			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
 		}
 	})
 
@@ -230,14 +230,14 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 		if req.Method == http.MethodPost || req.Method == http.MethodPut {
 			var c LocalConfig
 			if apiReadObj(out, req, &c) == nil {
-				node.SetLocalConfig(&c)
-				apiSendObj(out, req, http.StatusOK, node.LocalConfig())
+				_, _ = node.SetLocalConfig(&c)
+				_ = apiSendObj(out, req, http.StatusOK, node.LocalConfig())
 			}
 		} else if req.Method == http.MethodGet || req.Method == http.MethodHead {
-			apiSendObj(out, req, http.StatusOK, node.LocalConfig())
+			_ = apiSendObj(out, req, http.StatusOK, node.LocalConfig())
 		} else {
 			out.Header().Set("Allow", "GET, HEAD, PUT, POST")
-			apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
+			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
 		}
 	})
 
@@ -252,7 +252,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 			var err error
 			queriedID, err = NewAddressFromString(req.URL.Path[6:])
 			if err != nil {
-				apiSendObj(out, req, http.StatusNotFound, nil)
+				_ = apiSendObj(out, req, http.StatusNotFound, nil)
 				return
 			}
 		}
@@ -266,13 +266,13 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 						p2 = append(p2, p)
 					}
 				}
-				apiSendObj(out, req, http.StatusOK, p2)
+				_ = apiSendObj(out, req, http.StatusOK, p2)
 			} else {
-				apiSendObj(out, req, http.StatusOK, peers)
+				_ = apiSendObj(out, req, http.StatusOK, peers)
 			}
 		} else {
 			out.Header().Set("Allow", "GET, HEAD")
-			apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
+			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
 		}
 	})
 
@@ -287,14 +287,14 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 			var err error
 			queriedID, err = NewNetworkIDFromString(req.URL.Path[9:])
 			if err != nil {
-				apiSendObj(out, req, http.StatusNotFound, nil)
+				_ = apiSendObj(out, req, http.StatusNotFound, nil)
 				return
 			}
 		}
 
 		if req.Method == http.MethodPost || req.Method == http.MethodPut {
 			if queriedID == 0 {
-				apiSendObj(out, req, http.StatusBadRequest, nil)
+				_ = apiSendObj(out, req, http.StatusBadRequest, nil)
 			} else {
 				var nw APINetwork
 				if apiReadObj(out, req, &nw) == nil {
@@ -302,15 +302,15 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 					if n == nil {
 						n, err := node.Join(nw.ID, nw.Settings, nil)
 						if err != nil {
-							apiSendObj(out, req, http.StatusBadRequest, nil)
+							_ = apiSendObj(out, req, http.StatusBadRequest, nil)
 						} else {
-							apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(n))
+							_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(n))
 						}
 					} else {
 						if nw.Settings != nil {
 							n.SetLocalSettings(nw.Settings)
 						}
-						apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(n))
+						_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(n))
 					}
 				}
 			}
@@ -321,18 +321,18 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 				for _, nw := range networks {
 					nws = append(nws, apiNetworkFromNetwork(nw))
 				}
-				apiSendObj(out, req, http.StatusOK, nws)
+				_ = apiSendObj(out, req, http.StatusOK, nws)
 			} else {
 				for _, nw := range networks {
 					if nw.ID() == queriedID {
-						apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(nw))
+						_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(nw))
 						break
 					}
 				}
 			}
 		} else {
 			out.Header().Set("Allow", "GET, HEAD, PUT, POST")
-			apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
+			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
 		}
 	})
 
@@ -347,14 +347,14 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 			var err error
 			queriedID, err = NewAddressFromString(req.URL.Path[6:])
 			if err != nil {
-				apiSendObj(out, req, http.StatusNotFound, nil)
+				_ = apiSendObj(out, req, http.StatusNotFound, nil)
 				return
 			}
 		}
 
 		if req.Method == http.MethodPost || req.Method == http.MethodPut {
 			if queriedID == 0 {
-				apiSendObj(out, req, http.StatusBadRequest, nil)
+				_ = apiSendObj(out, req, http.StatusBadRequest, nil)
 			} else {
 				var r Root
 				if apiReadObj(out, req, &r) == nil {
@@ -362,10 +362,10 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 			}
 		} else if req.Method == http.MethodGet || req.Method == http.MethodHead {
 			roots := node.Roots()
-			apiSendObj(out, req, http.StatusOK, roots)
+			_ = apiSendObj(out, req, http.StatusOK, roots)
 		} else {
 			out.Header().Set("Allow", "GET, HEAD, PUT, POST")
-			apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
+			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
 		}
 	})
 
@@ -382,8 +382,11 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 	}
 	httpServer.SetKeepAlivesEnabled(true)
 	go func() {
-		httpServer.Serve(listener)
-		listener.Close()
+		err := httpServer.Serve(listener)
+		if err != nil {
+			node.log.Printf("ERROR: unable to start API HTTP server: %s (continuing anyway but CLI will not work!)", err.Error())
+		}
+		_ = listener.Close()
 	}()
 
 	return httpServer, nil

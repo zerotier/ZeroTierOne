@@ -62,7 +62,7 @@ func NewIdentityFromString(s string) (*Identity, error) {
 	} else if ss[1] == "1" {
 		id.idtype = 1
 	} else {
-		return nil, ErrUncrecognizedIdentityType
+		return nil, ErrUnrecognizedIdentityType
 	}
 
 	switch id.idtype {

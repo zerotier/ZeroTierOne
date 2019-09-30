@@ -233,11 +233,11 @@ func handleTapMulticastGroupChange(gn unsafe.Pointer, nwid, mac C.uint64_t, adi 
 }
 
 //export goHandleTapAddedMulticastGroup
-func goHandleTapAddedMulticastGroup(gn, tapP unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t) {
+func goHandleTapAddedMulticastGroup(gn, _ unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t) {
 	handleTapMulticastGroupChange(gn, nwid, mac, adi, true)
 }
 
 //export goHandleTapRemovedMulticastGroup
-func goHandleTapRemovedMulticastGroup(gn, tapP unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t) {
+func goHandleTapRemovedMulticastGroup(gn, _ unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t) {
 	handleTapMulticastGroupChange(gn, nwid, mac, adi, false)
 }

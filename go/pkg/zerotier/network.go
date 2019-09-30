@@ -312,7 +312,7 @@ func (n *Network) updateConfig(nc *NetworkConfig, ls *NetworkLocalSettings) {
 				wantAssignedIPs[k] = true
 				if _, have := haveAssignedIPs[k]; !have {
 					n.node.log.Printf("%.16x adding managed IP %s", uint64(n.id), ip.String())
-					n.tap.AddIP(&ip)
+					_ = n.tap.AddIP(&ip)
 				}
 			}
 		}
@@ -320,7 +320,7 @@ func (n *Network) updateConfig(nc *NetworkConfig, ls *NetworkLocalSettings) {
 	for k, ip := range haveAssignedIPs {
 		if _, want := wantAssignedIPs[k]; !want {
 			n.node.log.Printf("%.16x removing managed IP %s", uint64(n.id), ip.String())
-			n.tap.RemoveIP(ip)
+			_ = n.tap.RemoveIP(ip)
 		}
 	}
 
@@ -341,7 +341,7 @@ func (n *Network) updateConfig(nc *NetworkConfig, ls *NetworkLocalSettings) {
 				wantManagedRoutes[k] = true
 				if _, have := haveManagedRoutes[k]; !have {
 					n.node.log.Printf("%.16x adding managed route %s", uint64(n.id), r.String())
-					n.tap.AddRoute(&r)
+					_ = n.tap.AddRoute(&r)
 				}
 			}
 		}
@@ -349,7 +349,7 @@ func (n *Network) updateConfig(nc *NetworkConfig, ls *NetworkLocalSettings) {
 	for k, r := range haveManagedRoutes {
 		if _, want := wantManagedRoutes[k]; !want {
 			n.node.log.Printf("%.16x removing managed route %s", uint64(n.id), r.String())
-			n.tap.RemoveRoute(r)
+			_ = n.tap.RemoveRoute(r)
 		}
 	}
 

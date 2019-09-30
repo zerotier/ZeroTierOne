@@ -36,7 +36,7 @@ func NewMACFromString(s string) (MAC, error) {
 		if c > 0xff {
 			return MAC(0), ErrInvalidMACAddress
 		}
-		m |= (c & 0xff)
+		m |= c & 0xff
 	}
 	return MAC(m), nil
 }
