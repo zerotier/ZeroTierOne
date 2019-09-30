@@ -488,7 +488,7 @@ func (n *Node) Join(nwid NetworkID, settings *NetworkLocalSettings, tap Tap) (*N
 	}
 	ntap := C.ZT_GoNode_join(n.gn, C.uint64_t(nwid))
 	if ntap == nil {
-		n.log.Printf("join network %.16x failed: tap device failed to initialize (check drivers / kernel modules)")
+		n.log.Printf("join network %.16x failed: tap device failed to initialize (check drivers / kernel modules)", uint64(nwid))
 		return nil, ErrTapInitFailed
 	}
 
@@ -558,7 +558,7 @@ func (n *Node) Roots() []*Root {
 					}
 				}
 				roots = append(roots, &Root{
-					Name:      C.GoString(root.dnsName),
+					Name:      C.GoString(root.name),
 					Identity:  id,
 					Addresses: addrs,
 					Preferred: (root.preferred != 0),
@@ -592,7 +592,7 @@ func (n *Node) SetRoot(name string, locator *Locator) error {
 	}
 	cn := C.CString(name)
 	defer C.free(unsafe.Pointer(cn))
-	if C.ZT_Node_setRoot(n.zn, cn, lbp, C.uint(len(lb))) != 0 {
+	if C.ZT_Node_setRoot(unsafe.Pointer(n.zn), cn, lbp, C.uint(len(lb))) != 0 {
 		return ErrInternal
 	}
 	return nil
@@ -603,7 +603,7 @@ func (n *Node) SetRoot(name string, locator *Locator) error {
 func (n *Node) RemoveRoot(name string) {
 	cn := C.CString(name)
 	defer C.free(unsafe.Pointer(cn))
-	C.ZT_Node_removeRoot(n.zn, cn)
+	C.ZT_Node_removeRoot(unsafe.Pointer(n.zn), cn)
 	return
 }
 

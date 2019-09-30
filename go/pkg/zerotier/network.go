@@ -203,7 +203,7 @@ func (n *Network) LocalSettings() NetworkLocalSettings {
 
 // MulticastSubscribe subscribes to a multicast group
 func (n *Network) MulticastSubscribe(mg *MulticastGroup) {
-	n.node.log.Printf("%.16x joined multicast group %s", mg.String())
+	n.node.log.Printf("%.16x joined multicast group %s", uint64(n.id), mg.String())
 	k := mg.key()
 	n.multicastSubscriptionsLock.Lock()
 	if _, have := n.multicastSubscriptions[k]; have {
@@ -217,7 +217,7 @@ func (n *Network) MulticastSubscribe(mg *MulticastGroup) {
 
 // MulticastUnsubscribe removes a subscription to a multicast group
 func (n *Network) MulticastUnsubscribe(mg *MulticastGroup) {
-	n.node.log.Printf("%.16x left multicast group %s", mg.String())
+	n.node.log.Printf("%.16x left multicast group %s", uint64(n.id), mg.String())
 	n.multicastSubscriptionsLock.Lock()
 	delete(n.multicastSubscriptions, mg.key())
 	n.multicastSubscriptionsLock.Unlock()
@@ -311,7 +311,7 @@ func (n *Network) updateConfig(nc *NetworkConfig, ls *NetworkLocalSettings) {
 				k := ipNetToKey(&ip)
 				wantAssignedIPs[k] = true
 				if _, have := haveAssignedIPs[k]; !have {
-					n.node.log.Printf("%.16x adding managed IP %s", n.ID, ip.String())
+					n.node.log.Printf("%.16x adding managed IP %s", uint64(n.id), ip.String())
 					n.tap.AddIP(&ip)
 				}
 			}
@@ -319,7 +319,7 @@ func (n *Network) updateConfig(nc *NetworkConfig, ls *NetworkLocalSettings) {
 	}
 	for k, ip := range haveAssignedIPs {
 		if _, want := wantAssignedIPs[k]; !want {
-			n.node.log.Printf("%.16x removing managed IP %s", n.ID, ip.String())
+			n.node.log.Printf("%.16x removing managed IP %s", uint64(n.id), ip.String())
 			n.tap.RemoveIP(ip)
 		}
 	}
@@ -340,7 +340,7 @@ func (n *Network) updateConfig(nc *NetworkConfig, ls *NetworkLocalSettings) {
 				k := r.key()
 				wantManagedRoutes[k] = true
 				if _, have := haveManagedRoutes[k]; !have {
-					n.node.log.Printf("%.16x adding managed route %s", n.ID, r.String())
+					n.node.log.Printf("%.16x adding managed route %s", uint64(n.id), r.String())
 					n.tap.AddRoute(&r)
 				}
 			}
@@ -348,7 +348,7 @@ func (n *Network) updateConfig(nc *NetworkConfig, ls *NetworkLocalSettings) {
 	}
 	for k, r := range haveManagedRoutes {
 		if _, want := wantManagedRoutes[k]; !want {
-			n.node.log.Printf("%.16x removing managed route %s", n.ID, r.String())
+			n.node.log.Printf("%.16x removing managed route %s", uint64(n.id), r.String())
 			n.tap.RemoveRoute(r)
 		}
 	}

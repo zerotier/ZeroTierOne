@@ -90,14 +90,14 @@ func NewLocator(id *Identity, virtualAddresses []*Identity, physicalAddresses []
 
 	var buf [65536]byte
 	var pPhy *C.struct_sockaddr_storage
-	var pVirt *C.char
+	var pVirt **C.char
 	if len(phy) > 0 {
 		pPhy = &phy[0]
 	}
 	if len(virt) > 0 {
 		pVirt = &virt[0]
 	}
-	locSize := C.ZT_GoLocator_makeLocator((*C.uint8_t)(unsafe.Pointer(&buf[0])), 65536, idCstr, pPhy, C.uint(len(phy)), pVirt, C.uint(len(virt)))
+	locSize := C.ZT_GoLocator_makeLocator((*C.uint8_t)(unsafe.Pointer(&buf[0])), 65536, C.int64_t(TimeMs()), idCstr, pPhy, C.uint(len(phy)), pVirt, C.uint(len(virt)))
 	if locSize <= 0 {
 		return nil, ErrInvalidParameter
 	}
@@ -128,7 +128,7 @@ func NewLocatorFromBytes(b []byte) (*Locator, error) {
 	var loc Locator
 
 	var err error
-	loc.Identity, err = NewIdentityFromString(C.GoString(info.id))
+	loc.Identity, err = NewIdentityFromString(C.GoString(&info.id[0]))
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func NewLocatorFromBytes(b []byte) (*Locator, error) {
 		}
 	}
 	for i := 0; i < int(info.virtCount); i++ {
-		id, err := NewIdentityFromString(C.GoString(info.virt[i]))
+		id, err := NewIdentityFromString(C.GoString(&info.virt[i][0]))
 		if err == nil {
 			loc.Virtual = append(loc.Virtual, id)
 		}

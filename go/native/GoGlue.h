@@ -114,6 +114,7 @@ int ZT_GoLocator_makeSecureDNSName(char name[256],unsigned int nameBufSize,uint8
 int ZT_GoLocator_makeLocator(
 	uint8_t *buf,
 	unsigned int bufSize,
+	int64_t ts,
 	const char *id,
 	const struct sockaddr_storage *physicalAddresses,
 	unsigned int physicalAddressCount,

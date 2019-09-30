@@ -723,7 +723,7 @@ extern "C" int ZT_GoTap_removeRoute(ZT_GoTap *tap,int targetAf,const void *targe
 
 /****************************************************************************/
 
-int ZT_GoLocator_makeSecureDNSName(char *name,unsigned int nameBufSize,uint8_t *privateKey,unsigned int privateKeyBufSize)
+extern "C" int ZT_GoLocator_makeSecureDNSName(char *name,unsigned int nameBufSize,uint8_t *privateKey,unsigned int privateKeyBufSize)
 {
 	if ((privateKeyBufSize < ZT_ECC384_PRIVATE_KEY_SIZE)||(nameBufSize < 256))
 		return -1;
@@ -736,7 +736,7 @@ int ZT_GoLocator_makeSecureDNSName(char *name,unsigned int nameBufSize,uint8_t *
 	return ZT_ECC384_PRIVATE_KEY_SIZE;
 }
 
-int ZT_GoLocator_makeLocator(
+extern "C" int ZT_GoLocator_makeLocator(
 	uint8_t *buf,
 	unsigned int bufSize,
 	int64_t ts,
@@ -775,7 +775,7 @@ int ZT_GoLocator_makeLocator(
 	return s;
 }
 
-int ZT_GoLocator_decodeLocator(const uint8_t *locatorBytes,unsigned int locatorSize,struct ZT_GoLocator_Info *info)
+extern "C" int ZT_GoLocator_decodeLocator(const uint8_t *locatorBytes,unsigned int locatorSize,struct ZT_GoLocator_Info *info)
 {
 	Locator loc;
 	if (!loc.deserialize(locatorBytes,locatorSize))
