@@ -45,7 +45,7 @@ type Identity struct {
 // NewIdentityFromString generates a new identity from its string representation.
 // The private key is imported as well if it is present.
 func NewIdentityFromString(s string) (*Identity, error) {
-	ss := strings.Split(s, ":")
+	ss := strings.Split(strings.TrimSpace(s), ":")
 	if len(ss) < 3 {
 		return nil, ErrInvalidParameter
 	}

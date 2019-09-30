@@ -15,6 +15,7 @@ package cli
 
 import (
 	"fmt"
+
 	"zerotier/pkg/zerotier"
 )
 
@@ -26,7 +27,7 @@ Licensed under the ZeroTier BSL (see LICENSE.txt)`, zerotier.CoreVersionMajor, z
 func Help() {
 	fmt.Println(copyrightText)
 	fmt.Println(`
-Usage: zerotier [-options] <command> [-options] [command args]
+Usage: zerotier [-options] <command> [command args]
 
 Global Options:
   -j                                   Output raw JSON where applicable
@@ -40,11 +41,18 @@ Commands:
   status                               Show ZeroTier service status and config
   peers                                Show VL1 peers
   roots                                Show VL1 root servers
-  addroot <locator> [<name>]           Add a VL1 root
+  addroot <locator> [name]             Add a VL1 root
   removeroot <name>                    Remove a VL1 root
-  makelocator <secret> <address> [...] Make and sign a locator
-  makelocatordnskey                    Create a new secure DNS name and key
-  makelocatordns <key> <locator>       Make DNS TXT records for a locator
+  locator <command> [args]             Locator management commands
+    new <identity> <address> [...]     Create and sign a locator
+    newdnskey                          Create a secure DNS name and secret
+    getdns <key> <locator>             Create secure DNS TXT records
+  identity <command> [args]            Identity management commands
+    new                                Create new identity (including secret)
+    getpublic <identity>               Extract only public part of identity
+    validate <identity>                Locally validate an identity
+    sign <identity> <file>             Sign a file with an identity's key
+    verify <identity> <file> <sig>     Verify a signature
   networks                             Show joined VL2 virtual networks
   join <network ID>                    Join a virtual network
   leave <network ID>                   Leave a virtual network

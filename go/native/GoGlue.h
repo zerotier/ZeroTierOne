@@ -132,7 +132,6 @@ int ZT_GoLocator_decodeLocator(const uint8_t *locatorBytes,unsigned int locatorS
 int ZT_GoLocator_makeSignedTxtRecords(
 	const uint8_t *locator,
 	unsigned int locatorSize,
-	int64_t ts,
 	const char *name,
 	const uint8_t *privateKey,
 	unsigned int privateKeySize,

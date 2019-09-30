@@ -71,6 +71,9 @@ const (
 	// AFInet6 is the address family for IPv6
 	AFInet6 = C.AF_INET6
 
+	networkConfigOpUp     int = C.ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP
+	networkConfigOpUpdate int = C.ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE
+
 	defaultVirtualNetworkMTU = C.ZT_DEFAULT_MTU
 )
 
@@ -548,21 +551,11 @@ func (n *Node) Roots() []*Root {
 	if rl != nil {
 		for i := 0; i < int(rl.count); i++ {
 			root := (*C.ZT_Root)(unsafe.Pointer(uintptr(unsafe.Pointer(rl)) + C.sizeof_ZT_RootList))
-			id, err := NewIdentityFromString(C.GoString(root.identity))
-			if err == nil {
-				var addrs []InetAddress
-				for j := uintptr(0); j < uintptr(root.addressCount); j++ {
-					a := NewInetAddressFromSockaddr(unsafe.Pointer(uintptr(unsafe.Pointer(root.addresses)) + (j * C.sizeof_struct_sockaddr_storage)))
-					if a != nil && a.Valid() {
-						addrs = append(addrs, *a)
-					}
-				}
+			loc, _ := NewLocatorFromBytes(C.GoBytes(root.locator, C.int(root.locatorSize)))
+			if loc != nil {
 				roots = append(roots, &Root{
-					Name:      C.GoString(root.name),
-					Identity:  id,
-					Addresses: addrs,
-					Preferred: root.preferred != 0,
-					Online:    root.online != 0,
+					Name:    C.GoString(root.name),
+					Locator: loc,
 				})
 			}
 		}
@@ -584,11 +577,11 @@ func (n *Node) SetRoot(name string, locator *Locator) error {
 	}
 	var lb []byte
 	if locator != nil {
-		lb = locator.Bytes()
+		lb = locator.Bytes
 	}
 	var lbp unsafe.Pointer
 	if len(lb) > 0 {
-		lbp = &lb[0]
+		lbp = unsafe.Pointer(&lb[0])
 	}
 	cn := C.CString(name)
 	defer C.free(unsafe.Pointer(cn))
@@ -925,8 +918,8 @@ func goVirtualNetworkConfigFunc(gn, _ unsafe.Pointer, nwid C.uint64_t, op C.int,
 		node.networksLock.RUnlock()
 
 		if network != nil {
-			switch op {
-			case C.ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP, C.ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP:
+			switch int(op) {
+			case networkConfigOpUp, networkConfigOpUpdate:
 				ncc := (*C.ZT_VirtualNetworkConfig)(conf)
 				if network.networkConfigRevision() > uint64(ncc.netconfRevision) {
 					return

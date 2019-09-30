@@ -21,6 +21,7 @@ import (
 	"path"
 	"runtime"
 	"strings"
+
 	"zerotier/cmd/zerotier/cli"
 	"zerotier/pkg/zerotier"
 )
@@ -112,7 +113,7 @@ func main() {
 	case "peers", "listpeers":
 		authTokenRequired(authToken)
 		cli.Peers(basePath, authToken, cmdArgs, *jflag)
-	case "roots":
+	case "roots", "listroots", "listmoons":
 		authTokenRequired(authToken)
 		cli.Roots(basePath, authToken, cmdArgs)
 	case "addroot":
@@ -121,12 +122,10 @@ func main() {
 	case "removeroot":
 		authTokenRequired(authToken)
 		cli.RemoveRoot(basePath, authToken, cmdArgs)
-	case "makelocator":
-		cli.MakeLocator(cmdArgs)
-	case "makelocatordnskey":
-		cli.MakeLocatorDNSKey(cmdArgs)
-	case "makelocatordns":
-		cli.MakeLocatorDNS(cmdArgs)
+	case "locator":
+		cli.Locator(cmdArgs)
+	case "identity":
+		cli.Identity(cmdArgs)
 	case "networks", "listnetworks":
 		authTokenRequired(authToken)
 		cli.Networks(basePath, authToken, cmdArgs)

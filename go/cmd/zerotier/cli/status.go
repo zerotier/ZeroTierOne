@@ -14,9 +14,9 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
+
 	"zerotier/pkg/zerotier"
 )
 
@@ -26,8 +26,7 @@ func Status(basePath, authToken string, args []string, jsonOutput bool) {
 	apiGet(basePath, authToken, "/status", &status)
 
 	if jsonOutput {
-		j, _ := json.MarshalIndent(&status, "", "  ")
-		fmt.Println(string(j))
+		fmt.Println(jsonDump(&status))
 	} else {
 		online := "ONLINE"
 		if !status.Online {

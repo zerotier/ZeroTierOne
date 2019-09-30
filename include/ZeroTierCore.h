@@ -532,29 +532,14 @@ typedef struct {
 	const char *name;
 
 	/**
-	 * Current public identity or NULL if not known (only possible with dynamic roots)
+	 * Serialized locator
 	 */
-	const char *identity;
+	const void *locator;
 
 	/**
-	 * Current physical address(es) of this root
+	 * The size of locator in bytes
 	 */
-	const struct sockaddr_storage *addresses;
-
-	/**
-	 * Number of physical addresses
-	 */
-	unsigned int addressCount;
-
-	/**
-	 * If true, this is the current preferred root
-	 */
-	int preferred;
-
-	/**
-	 * If true, this root server appears online
-	 */
-	int online;
+	unsigned int locatorSize;
 } ZT_Root;
 
 /**

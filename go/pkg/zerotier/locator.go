@@ -151,6 +151,25 @@ func NewLocatorFromBytes(b []byte) (*Locator, error) {
 	return &loc, nil
 }
 
+// MakeTXTRecords creates secure DNS TXT records for this locator
+func (l *Locator) MakeTXTRecords(key *LocatorDNSSigningKey) ([]string, error) {
+	if key == nil || len(l.Bytes) == 0 || len(key.PrivateKey) == 0 {
+		return nil, ErrInvalidParameter
+	}
+	var results [256][256]C.char
+	cName := C.CString(key.SecureDNSName)
+	defer C.free(unsafe.Pointer(cName))
+	count := int(C.ZT_GoLocator_makeSignedTxtRecords((*C.uint8_t)(&l.Bytes[0]), C.uint(len(l.Bytes)), cName, (*C.uint8_t)(&key.PrivateKey[0]), C.uint(len(key.PrivateKey)), &results[0]))
+	if count > 0 {
+		var t []string
+		for i := 0; i < int(count); i++ {
+			t = append(t, C.GoString(&results[i][0]))
+		}
+		return t, nil
+	}
+	return nil, ErrInternal
+}
+
 // MarshalJSON marshals this Locator as its byte encoding
 func (l *Locator) MarshalJSON() ([]byte, error) {
 	return json.Marshal(l)

@@ -14,6 +14,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -42,4 +43,9 @@ func enabledDisabled(f bool) string {
 		return "ENABLED"
 	}
 	return "DISABLED"
+}
+
+func jsonDump(obj interface{}) string {
+	j, _ := json.MarshalIndent(obj, "", "  ")
+	return string(j)
 }

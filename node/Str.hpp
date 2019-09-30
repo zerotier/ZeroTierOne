@@ -104,8 +104,7 @@ public:
 					_l = ZT_STR_CAPACITY;
 					throw ZT_EXCEPTION_OUT_OF_BOUNDS;
 				}
-				_s[l++] = *s;
-				++s;
+				_s[l++] = *(s++);
 			}
 			_s[l] = 0;
 			_l = (uint8_t)l;

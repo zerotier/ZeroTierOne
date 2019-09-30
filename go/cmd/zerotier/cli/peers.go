@@ -14,9 +14,9 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
+
 	"zerotier/pkg/zerotier"
 )
 
@@ -26,8 +26,7 @@ func Peers(basePath, authToken string, args []string, jsonOutput bool) {
 	apiGet(basePath, authToken, "/peer", &peers)
 
 	if jsonOutput {
-		j, _ := json.MarshalIndent(&peers, "", "  ")
-		fmt.Println(string(j))
+		fmt.Println(jsonDump(&peers))
 	} else {
 		fmt.Printf("<ztaddr>   <ver>   <role> <lat> <link> <lastTX> <lastRX> <path(s)>\n")
 		for _, peer := range peers {

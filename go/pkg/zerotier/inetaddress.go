@@ -43,7 +43,7 @@ func (i *InetAddress) Less(i2 *InetAddress) bool {
 // NewInetAddressFromString parses an IP[/port] format address
 func NewInetAddressFromString(s string) *InetAddress {
 	i := new(InetAddress)
-	ss := strings.Split(s, "/")
+	ss := strings.Split(strings.TrimSpace(s), "/")
 	if len(ss) > 0 {
 		i.IP = net.ParseIP(ss[0])
 		i4 := i.IP.To4()

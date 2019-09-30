@@ -13,6 +13,6 @@
 
 package cli
 
-// MakeLocatorDNSKey CLI command
-func MakeLocatorDNSKey(args []string) {
+// Identity command
+func Identity(args []string) {
 }

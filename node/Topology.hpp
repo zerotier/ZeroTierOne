@@ -360,63 +360,32 @@ public:
 	 */
 	inline ZT_RootList *apiRoots(const int64_t now) const
 	{
+		ScopedPtr< Buffer<65536> > lbuf(new Buffer<65536>());
 		Mutex::Lock l2(_roots_l);
-
-		// The memory allocated here has room for all roots plus the maximum size
-		// of their DNS names, identities, and up to 16 physical addresses. Most
-		// roots will have two: one V4 and one V6.
-		const unsigned int totalRoots = _roots.size();
-		ZT_RootList *rl = reinterpret_cast<ZT_RootList *>(malloc(sizeof(ZT_RootList) + (sizeof(ZT_Root) * totalRoots) + ((sizeof(struct sockaddr_storage) * ZT_MAX_PEER_NETWORK_PATHS) * totalRoots) + ((ZT_IDENTITY_STRING_BUFFER_LENGTH + 1024) * totalRoots)));
-		if (!rl) {
+		ZT_RootList *rl = (ZT_RootList *)malloc(sizeof(ZT_RootList) + (sizeof(ZT_Root) * _roots.size()) + (256 * _roots.size()) + (65536 * _roots.size()));
+		if (!rl)
 			return nullptr;
-		}
+		char *nptr = ((char *)rl) + sizeof(ZT_RootList) + (sizeof(ZT_Root) * _roots.size());
+		uint8_t *lptr = ((uint8_t *)nptr) + (256 * _roots.size());
 
 		unsigned int c = 0;
-		char *nameBufPtr = reinterpret_cast<char *>(rl) + sizeof(ZT_RootList) + (sizeof(ZT_Root) * totalRoots);
-		struct sockaddr_storage *addrBuf = reinterpret_cast<struct sockaddr_storage *>(nameBufPtr);
-		nameBufPtr += (sizeof(struct sockaddr_storage) * ZT_MAX_PEER_NETWORK_PATHS) * totalRoots;
-
-		_bestRoot_l.lock();
-		const Peer *const bestRootPtr = _bestRoot.ptr();
-		_bestRoot_l.unlock();
-
-		{
-			Str *k = (Str *)0;
-			Locator *v = (Locator *)0;
-			Hashtable< Str,Locator >::Iterator i(const_cast<Topology *>(this)->_roots);
-			while (i.next(k,v)) {
-				rl->roots[c].name = nameBufPtr;
-				const char *p = k->c_str();
-				while (*p)
-					*(nameBufPtr++) = *(p++);
-				*(nameBufPtr++) = (char)0;
-
-				if (v->id()) {
-					rl->roots[c].identity = nameBufPtr;
-					v->id().toString(false,nameBufPtr);
-					nameBufPtr += strlen(nameBufPtr) + 1;
-				}
-
-				rl->roots[c].addresses = addrBuf;
-				unsigned int ac = 0;
-				for(unsigned int j=(unsigned int)v->phy().size();(ac<j)&&(ac<16);++ac)
-					*(addrBuf++) = v->phy()[ac];
-				rl->roots[c].addressCount = ac;
-
-				_peers_l.lock();
-				const SharedPtr<Peer> *psptr = _peers.get(v->id().address());
-				if (psptr) {
-					rl->roots[c].preferred = (psptr->ptr() == bestRootPtr) ? 1 : 0;
-					rl->roots[c].online = (*psptr)->alive(now) ? 1 : 0;
-				}
-				_peers_l.unlock();
-
-				++c;
-			}
+		Str *k = (Str *)0;
+		Locator *v = (Locator *)0;
+		Hashtable< Str,Locator >::Iterator i(const_cast<Topology *>(this)->_roots);
+		while (i.next(k,v)) {
+			Utils::scopy(nptr,256,k->c_str());
+			rl->roots[c].name = nptr;
+			nptr += 256;
+			lbuf->clear();
+			v->serialize(*lbuf);
+			memcpy(lptr,lbuf->unsafeData(),lbuf->size());
+			rl->roots[c].locator = lptr;
+			rl->roots[c].locatorSize = lbuf->size();
+			lptr += 65536;
+			++c;
 		}
 
 		rl->count = c;
-
 		return rl;
 	}
 

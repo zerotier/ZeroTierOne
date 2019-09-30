@@ -732,7 +732,7 @@ extern "C" int ZT_GoLocator_makeSecureDNSName(char *name,unsigned int nameBufSiz
 	const Str n(Locator::makeSecureDnsName(pub));
 	if (n.length() >= nameBufSize)
 		return -1;
-	Utils::scopy(name,sizeof(name),n.c_str());
+	Utils::scopy(name,nameBufSize,n.c_str());
 	return ZT_ECC384_PRIVATE_KEY_SIZE;
 }
 
