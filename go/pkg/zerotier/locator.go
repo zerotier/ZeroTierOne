@@ -147,6 +147,7 @@ func NewLocatorFromBytes(b []byte) (*Locator, error) {
 			loc.Virtual = append(loc.Virtual, id)
 		}
 	}
+	loc.Bytes = b
 
 	return &loc, nil
 }
@@ -185,9 +186,6 @@ func (l *Locator) UnmarshalJSON(j []byte) error {
 	if err != nil {
 		return err
 	}
-	l.Identity = tmp.Identity
-	l.Physical = tmp.Physical
-	l.Virtual = tmp.Virtual
-	l.Bytes = bytes.Bytes
+	*l = *tmp
 	return nil
 }
