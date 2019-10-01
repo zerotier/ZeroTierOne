@@ -115,7 +115,7 @@ func main() {
 		cli.Peers(basePath, authToken, cmdArgs, *jflag)
 	case "roots", "listroots", "listmoons":
 		authTokenRequired(authToken)
-		cli.Roots(basePath, authToken, cmdArgs)
+		cli.Roots(basePath, authToken, cmdArgs, *jflag)
 	case "addroot":
 		authTokenRequired(authToken)
 		cli.AddRoot(basePath, authToken, cmdArgs)

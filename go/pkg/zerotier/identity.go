@@ -118,6 +118,9 @@ func NewIdentityFromString(s string) (*Identity, error) {
 	return &id, nil
 }
 
+// Address returns this identity's address
+func (id *Identity) Address() Address { return id.address }
+
 // HasPrivate returns true if this identity has its own private portion.
 func (id *Identity) HasPrivate() bool { return len(id.privateKey) > 0 }
 
