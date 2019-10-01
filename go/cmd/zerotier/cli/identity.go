@@ -23,15 +23,6 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-/*
-  identity <command> [args]            Identity management commands
-    new                                Create new identity (including secret)
-    getpublic <identity>               Extract only public part of identity
-    validate <identity>                Locally validate an identity
-    sign <identity> <file>             Sign a file with an identity's key
-    verify <identity> <file> <sig>     Verify a signature
-*/
-
 // Identity command
 func Identity(args []string) {
 	if len(args) > 0 {

@@ -170,23 +170,24 @@ func (l *Locator) MakeTXTRecords(key *LocatorDNSSigningKey) ([]string, error) {
 	return nil, ErrInternal
 }
 
-// MarshalJSON marshals this Locator as its byte encoding
-func (l *Locator) MarshalJSON() ([]byte, error) {
-	return json.Marshal(l)
+type locatorForUnmarshal struct {
+	Bytes []byte
 }
 
 // UnmarshalJSON unmarshals this Locator from a byte array in JSON.
 func (l *Locator) UnmarshalJSON(j []byte) error {
-	err := json.Unmarshal(j, l)
+	var bytes locatorForUnmarshal
+	err := json.Unmarshal(j, &bytes)
 	if err != nil {
 		return err
 	}
-	tmp, err := NewLocatorFromBytes(l.Bytes)
+	tmp, err := NewLocatorFromBytes(bytes.Bytes)
 	if err != nil {
 		return err
 	}
 	l.Identity = tmp.Identity
 	l.Physical = tmp.Physical
 	l.Virtual = tmp.Virtual
+	l.Bytes = bytes.Bytes
 	return nil
 }

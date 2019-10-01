@@ -51,7 +51,7 @@ func NewInetAddressFromString(s string) *InetAddress {
 			i.IP = i4
 		}
 		if len(ss) > 1 {
-			p64, _ := strconv.ParseUint(s, 10, 64)
+			p64, _ := strconv.ParseUint(ss[1], 10, 64)
 			i.Port = int(p64 & 0xffff)
 		}
 	}

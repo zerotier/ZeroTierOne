@@ -70,6 +70,7 @@ func locatorNew(args []string) {
 		os.Exit(1)
 	}
 	fmt.Println(jsonDump(loc))
+	os.Exit(0)
 }
 
 func locatorNewDNSKey(args []string) {
