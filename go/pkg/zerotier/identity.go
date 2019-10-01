@@ -13,11 +13,16 @@
 
 package zerotier
 
+//#cgo CFLAGS: -O3
+//#include "../../native/GoGlue.h"
+import "C"
+
 import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"unsafe"
 )
 
 // IdentityTypeC25519 is a classic Curve25519/Ed25519 identity
@@ -40,6 +45,17 @@ type Identity struct {
 	idtype     int
 	publicKey  []byte
 	privateKey []byte
+}
+
+// NewIdentity generates a new identity of the selected type
+func NewIdentity(identityType int) (*Identity, error) {
+	cIdStr := C.ZT_GoIdentity_generate(C.int(identityType))
+	if uintptr(unsafe.Pointer(cIdStr)) == 0 {
+		return nil, ErrInternal
+	}
+	id, err := NewIdentityFromString(C.GoString(cIdStr))
+	C.free(unsafe.Pointer(cIdStr))
+	return id, err
 }
 
 // NewIdentityFromString generates a new identity from its string representation.
@@ -80,7 +96,7 @@ func NewIdentityFromString(s string) (*Identity, error) {
 		}
 
 	case 1:
-		id.publicKey, err = base32StdLowerCase.DecodeString(ss[2])
+		id.publicKey, err = Base32StdLowerCase.DecodeString(ss[2])
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +104,7 @@ func NewIdentityFromString(s string) (*Identity, error) {
 			return nil, ErrInvalidKey
 		}
 		if len(ss) >= 4 {
-			id.privateKey, err = base32StdLowerCase.DecodeString(ss[3])
+			id.privateKey, err = Base32StdLowerCase.DecodeString(ss[3])
 			if err != nil {
 				return nil, err
 			}
@@ -114,7 +130,7 @@ func (id *Identity) PrivateKeyString() string {
 		}
 	case IdentityTypeP384:
 		if len(id.publicKey) == IdentityTypeP384PublicKeySize && len(id.privateKey) == IdentityTypeP384PrivateKeySize {
-			return fmt.Sprintf("%.10x:1:%s:%s", uint64(id.address), base32StdLowerCase.EncodeToString(id.publicKey), base32StdLowerCase.EncodeToString(id.privateKey))
+			return fmt.Sprintf("%.10x:1:%s:%s", uint64(id.address), Base32StdLowerCase.EncodeToString(id.publicKey), Base32StdLowerCase.EncodeToString(id.privateKey))
 		}
 	}
 	return ""
@@ -130,10 +146,47 @@ func (id *Identity) String() string {
 		}
 	case IdentityTypeP384:
 		if len(id.publicKey) == IdentityTypeP384PublicKeySize {
-			return fmt.Sprintf("%.10x:1:%s", uint64(id.address), base32StdLowerCase.EncodeToString(id.publicKey))
+			return fmt.Sprintf("%.10x:1:%s", uint64(id.address), Base32StdLowerCase.EncodeToString(id.publicKey))
 		}
 	}
 	return ""
+}
+
+// LocallyValidate performs local self-validation of this identity
+func (id *Identity) LocallyValidate() bool {
+	idCStr := C.CString(id.String())
+	defer C.free(unsafe.Pointer(idCStr))
+	return C.ZT_GoIdentity_validate(idCStr) != 0
+}
+
+// Sign signs a message with this identity
+func (id *Identity) Sign(msg []byte) ([]byte, error) {
+	idCStr := C.CString(id.PrivateKeyString())
+	var sigbuf [96]byte
+	var dataP unsafe.Pointer
+	if len(msg) > 0 {
+		dataP = unsafe.Pointer(&msg[0])
+	}
+	siglen := C.ZT_GoIdentity_sign(idCStr, dataP, C.uint(len(msg)), unsafe.Pointer(&sigbuf[0]), C.uint(len(sigbuf)))
+	C.free(unsafe.Pointer(idCStr))
+	if siglen <= 0 {
+		return nil, ErrInvalidKey
+	}
+	return sigbuf[0:int(siglen)], nil
+}
+
+// Verify verifies a signature
+func (id *Identity) Verify(msg, sig []byte) bool {
+	if len(sig) == 0 {
+		return false
+	}
+	idCStr := C.CString(id.String())
+	defer C.free(unsafe.Pointer(idCStr))
+	var dataP unsafe.Pointer
+	if len(msg) > 0 {
+		dataP = unsafe.Pointer(&msg[0])
+	}
+	return C.ZT_GoIdentity_verify(idCStr, dataP, C.uint(len(msg)), unsafe.Pointer(&sig[0]), C.uint(len(sig))) != 0
 }
 
 // MarshalJSON marshals this Identity in its string format (private key is never included)

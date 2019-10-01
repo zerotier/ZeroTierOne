@@ -48,7 +48,7 @@ Commands:
     newdnskey                          Create a secure DNS name and secret
     getdns <key> <locator>             Create secure DNS TXT records
   identity <command> [args]            Identity management commands
-    new                                Create new identity (including secret)
+    new [c25519|p384]                  Create new identity (including secret)
     getpublic <identity>               Extract only public part of identity
     validate <identity>                Locally validate an identity
     sign <identity> <file>             Sign a file with an identity's key

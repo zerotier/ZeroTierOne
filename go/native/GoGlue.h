@@ -90,6 +90,16 @@ int ZT_GoTap_removeRoute(ZT_GoTap *tap,int targetAf,const void *targetIp,int tar
 
 /****************************************************************************/
 
+const char *ZT_GoIdentity_generate(int type);
+
+int ZT_GoIdentity_validate(const char *idStr);
+
+int ZT_GoIdentity_sign(const char *idStr,const void *data,unsigned int len,void *sigbuf,unsigned int sigbuflen);
+
+int ZT_GoIdentity_verify(const char *idStr,const void *data,unsigned int len,const void *sig,unsigned int siglen);
+
+/****************************************************************************/
+
 struct ZT_GoLocator_Info {
 	char id[1024];
 	unsigned int phyCount;

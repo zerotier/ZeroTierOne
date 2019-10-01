@@ -24,7 +24,8 @@ import (
 // ZeroTierLogoChar is the unicode character that is ZeroTier's logo
 const ZeroTierLogoChar = "⏁"
 
-var base32StdLowerCase = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").WithPadding(base32.NoPadding)
+// Base32StdLowerCase is a base32 encoder/decoder using a lower-case standard alphabet and no padding.
+var Base32StdLowerCase = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").WithPadding(base32.NoPadding)
 
 // TimeMs returns the time in milliseconds since epoch.
 func TimeMs() int64 { return int64(time.Now().UnixNano()) / int64(1000000) }

@@ -116,6 +116,16 @@ func locatorGetDNS(args []string) {
 		fmt.Printf("FATAL: locator invalid: %s", err.Error())
 		os.Exit(1)
 	}
+
+	txt, err := loc.MakeTXTRecords(&sk)
+	if err != nil {
+		fmt.Printf("FATAL: error creating TXT records: %s\n", err.Error())
+		os.Exit(1)
+	}
+	for _, t := range txt {
+		fmt.Println(t)
+	}
+	os.Exit(0)
 }
 
 // Locator CLI command

@@ -723,6 +723,44 @@ extern "C" int ZT_GoTap_removeRoute(ZT_GoTap *tap,int targetAf,const void *targe
 
 /****************************************************************************/
 
+extern "C" const char *ZT_GoIdentity_generate(int type)
+{
+	Identity id;
+	id.generate((Identity::Type)type);
+	char *tmp = (char *)malloc(ZT_IDENTITY_STRING_BUFFER_LENGTH);
+	if (tmp)
+		id.toString(true,tmp);
+	return tmp;
+}
+
+extern "C" int ZT_GoIdentity_validate(const char *idStr)
+{
+	Identity id;
+	if (!id.fromString(idStr))
+		return 0;
+	if (!id.locallyValidate())
+		return 0;
+	return 1;
+}
+
+extern "C" int ZT_GoIdentity_sign(const char *idStr,const void *data,unsigned int len,void *sigbuf,unsigned int sigbuflen)
+{
+	Identity id;
+	if (!id.fromString(idStr))
+		return 0;
+	return (int)id.sign(data,len,sigbuf,sigbuflen);
+}
+
+extern "C" int ZT_GoIdentity_verify(const char *idStr,const void *data,unsigned int len,const void *sig,unsigned int siglen)
+{
+	Identity id;
+	if (!id.fromString(idStr))
+		return 0;
+	return id.verify(data,len,sig,siglen) ? 1 : 0;
+}
+
+/****************************************************************************/
+
 extern "C" int ZT_GoLocator_makeSecureDNSName(char *name,unsigned int nameBufSize,uint8_t *privateKey,unsigned int privateKeyBufSize)
 {
 	if ((privateKeyBufSize < ZT_ECC384_PRIVATE_KEY_SIZE)||(nameBufSize < 256))
