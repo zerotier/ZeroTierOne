@@ -40,13 +40,13 @@ Commands:
   service                              Start in system service mode
   status                               Show ZeroTier service status and config
   peers                                Show VL1 peers
-  roots                                Show VL1 root servers
+  roots                                Show configured VL1 root servers
   addroot <locator> [name]             Add a VL1 root
   removeroot <name>                    Remove a VL1 root
   locator <command> [args]             Locator management commands
     new <identity> <address> [...]     Create and sign a locator
     newdnskey                          Create a secure DNS name and secret
-    getdns <key> <locator>             Create secure DNS TXT records
+    getdns <dns key> <locator>         Create secure DNS TXT records
   identity <command> [args]            Identity management commands
     new [c25519|p384]                  Create new identity (including secret)
     getpublic <identity>               Extract only public part of identity

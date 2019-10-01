@@ -74,8 +74,11 @@ func APIPost(basePath, socketName, authToken, queryPath string, post, result int
 	if err != nil {
 		return http.StatusTeapot, err
 	}
-	err = json.NewDecoder(resp.Body).Decode(result)
-	return resp.StatusCode, err
+	if result != nil {
+		err = json.NewDecoder(resp.Body).Decode(result)
+		return resp.StatusCode, err
+	}
+	return resp.StatusCode, nil
 }
 
 // APIStatus is the object returned by API status inquiries
@@ -337,7 +340,21 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 			}
 		}
 
-		if req.Method == http.MethodPost || req.Method == http.MethodPut {
+		if req.Method == http.MethodDelete {
+			if queriedID == 0 {
+				_ = apiSendObj(out, req, http.StatusBadRequest, nil)
+			} else {
+				networks := node.Networks()
+				for _, nw := range networks {
+					if nw.id == queriedID {
+						_ = node.Leave(queriedID)
+						_ = apiSendObj(out, req, http.StatusOK, nw)
+						return
+					}
+				}
+				_ = apiSendObj(out, req, http.StatusNotFound, nil)
+			}
+		} else if req.Method == http.MethodPost || req.Method == http.MethodPut {
 			if queriedID == 0 {
 				_ = apiSendObj(out, req, http.StatusBadRequest, nil)
 			} else {
@@ -377,7 +394,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 				_ = apiSendObj(out, req, http.StatusNotFound, nil)
 			}
 		} else {
-			out.Header().Set("Allow", "GET, HEAD, PUT, POST")
+			out.Header().Set("Allow", "GET, HEAD, PUT, POST, DELETE")
 			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
 		}
 	})
@@ -401,11 +418,24 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 			queriedName = req.URL.Path[6:]
 		}
 
-		if req.Method == http.MethodPost || req.Method == http.MethodPut {
+		if req.Method == http.MethodDelete {
+			if len(queriedName) > 0 {
+				roots := node.Roots()
+				for _, r := range roots {
+					if r.Name == queriedName {
+						node.RemoveRoot(queriedName)
+						_ = apiSendObj(out, req, http.StatusOK, r)
+						return
+					}
+				}
+			}
+			_ = apiSendObj(out, req, http.StatusNotFound, nil)
+		} else if req.Method == http.MethodPost || req.Method == http.MethodPut {
 			var r Root
 			if apiReadObj(out, req, &r) == nil {
-				if r.Name != queriedName && (r.Locator == nil || r.Locator.Identity == nil || r.Locator.Identity.address.String() != queriedName) {
+				if r.Name != queriedName {
 					_ = apiSendObj(out, req, http.StatusBadRequest, nil)
+					return
 				}
 				err := node.SetRoot(r.Name, r.Locator)
 				if err != nil {
@@ -431,7 +461,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 			}
 			_ = apiSendObj(out, req, http.StatusNotFound, nil)
 		} else {
-			out.Header().Set("Allow", "GET, HEAD, PUT, POST")
+			out.Header().Set("Allow", "GET, HEAD, PUT, POST, DELETE")
 			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
 		}
 	})

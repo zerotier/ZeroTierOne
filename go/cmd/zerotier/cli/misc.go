@@ -38,6 +38,23 @@ func apiGet(basePath, authToken, urlPath string, result interface{}) {
 	}
 }
 
+func apiPost(basePath, authToken, urlPath string, post, result interface{}) {
+	statusCode, err := zerotier.APIPost(basePath, zerotier.APISocketName, authToken, urlPath, post, result)
+	if err != nil {
+		fmt.Printf("FATAL: API response code %d: %s\n", statusCode, err.Error())
+		os.Exit(1)
+		return
+	}
+	if statusCode != http.StatusOK {
+		if statusCode == http.StatusUnauthorized {
+			fmt.Printf("FATAL: API response code %d: unauthorized (authorization token incorrect)\n", statusCode)
+		}
+		fmt.Printf("FATAL: API response code %d\n", statusCode)
+		os.Exit(1)
+		return
+	}
+}
+
 func enabledDisabled(f bool) string {
 	if f {
 		return "ENABLED"
