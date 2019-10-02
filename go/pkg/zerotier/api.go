@@ -69,6 +69,29 @@ func APIPost(basePath, socketName, authToken, queryPath string, post, result int
 	if err != nil {
 		return http.StatusTeapot, err
 	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "bearer "+authToken)
+	resp, err := client.Do(req)
+	if err != nil {
+		return http.StatusTeapot, err
+	}
+	if result != nil {
+		err = json.NewDecoder(resp.Body).Decode(result)
+		return resp.StatusCode, err
+	}
+	return resp.StatusCode, nil
+}
+
+// APIDelete posts DELETE to a path and fills result with the outcome (if any) if result is non-nil
+func APIDelete(basePath, socketName, authToken, queryPath string, result interface{}) (int, error) {
+	client, err := createNamedSocketHTTPClient(basePath, socketName)
+	if err != nil {
+		return http.StatusTeapot, err
+	}
+	req, err := http.NewRequest("DELETE", "http://socket"+queryPath, nil)
+	if err != nil {
+		return http.StatusTeapot, err
+	}
 	req.Header.Add("Authorization", "bearer "+authToken)
 	resp, err := client.Do(req)
 	if err != nil {
@@ -90,8 +113,8 @@ type APIStatus struct {
 	PeerCount               int
 	PathCount               int
 	Identity                *Identity
-	InterfaceAddresses      []net.IP
-	MappedExternalAddresses []*InetAddress
+	InterfaceAddresses      []net.IP       `json:",omitempty"`
+	MappedExternalAddresses []*InetAddress `json:",omitempty"`
 	Version                 string
 	VersionMajor            int
 	VersionMinor            int
@@ -102,9 +125,9 @@ type APIStatus struct {
 // APINetwork is the object returned by API network inquiries
 type APINetwork struct {
 	ID                     NetworkID
-	Config                 *NetworkConfig
-	Settings               *NetworkLocalSettings
-	MulticastSubscriptions []*MulticastGroup
+	Config                 NetworkConfig
+	Settings               *NetworkLocalSettings `json:",omitempty"`
+	MulticastSubscriptions []*MulticastGroup     `json:",omitempty"`
 	TapDeviceType          string
 	TapDeviceName          string
 	TapDeviceEnabled       bool
@@ -113,8 +136,7 @@ type APINetwork struct {
 func apiNetworkFromNetwork(n *Network) *APINetwork {
 	var nn APINetwork
 	nn.ID = n.ID()
-	c := n.Config()
-	nn.Config = &c
+	nn.Config = n.Config()
 	ls := n.LocalSettings()
 	nn.Settings = &ls
 	nn.MulticastSubscriptions = n.MulticastSubscriptions()
@@ -175,7 +197,7 @@ func apiCheckAuth(out http.ResponseWriter, req *http.Request, token string) bool
 }
 
 // createAPIServer creates and starts an HTTP server for a given node
-func createAPIServer(basePath string, node *Node) (*http.Server, error) {
+func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, error) {
 	// Read authorization token, automatically generating one if it's missing
 	var authToken string
 	authTokenFile := path.Join(basePath, "authtoken.secret")
@@ -184,14 +206,14 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 		var atb [20]byte
 		_, err = secrand.Read(atb[:])
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for i := 0; i < 20; i++ {
 			atb[i] = "abcdefghijklmnopqrstuvwxyz0123456789"[atb[i]%36]
 		}
 		err = ioutil.WriteFile(authTokenFile, atb[:], 0600)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		_ = acl.Chmod(authTokenFile, 0600)
 		authToken = string(atb[:])
@@ -348,7 +370,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 				for _, nw := range networks {
 					if nw.id == queriedID {
 						_ = node.Leave(queriedID)
-						_ = apiSendObj(out, req, http.StatusOK, nw)
+						_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(nw))
 						return
 					}
 				}
@@ -468,7 +490,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 
 	listener, err := createNamedSocketListener(basePath, APISocketName)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	httpServer := &http.Server{
 		MaxHeaderBytes: 4096,
@@ -479,12 +501,34 @@ func createAPIServer(basePath string, node *Node) (*http.Server, error) {
 	}
 	httpServer.SetKeepAlivesEnabled(true)
 	go func() {
-		err := httpServer.Serve(listener)
-		if err != nil {
-			node.log.Printf("ERROR: unable to start API HTTP server: %s (continuing anyway but CLI will not work!)", err.Error())
-		}
+		_ = httpServer.Serve(listener)
 		_ = listener.Close()
 	}()
 
-	return httpServer, nil
+	var tcpHttpServer *http.Server
+	tcpBindAddr := node.LocalConfig().Settings.APITCPBindAddress
+	if tcpBindAddr != nil {
+		tcpListener, err := net.ListenTCP("tcp", &net.TCPAddr{
+			IP:   tcpBindAddr.IP,
+			Port: tcpBindAddr.Port,
+		})
+		if err != nil {
+			node.log.Printf("ERROR: unable to start API HTTP server at TCP bind address %s: %s (continuing anyway)", tcpBindAddr.String(), err.Error())
+		} else {
+			tcpHttpServer = &http.Server{
+				MaxHeaderBytes: 4096,
+				Handler:        smux,
+				IdleTimeout:    10 * time.Second,
+				ReadTimeout:    10 * time.Second,
+				WriteTimeout:   600 * time.Second,
+			}
+			tcpHttpServer.SetKeepAlivesEnabled(true)
+			go func() {
+				_ = tcpHttpServer.Serve(tcpListener)
+				_ = tcpListener.Close()
+			}()
+		}
+	}
+
+	return httpServer, tcpHttpServer, nil
 }

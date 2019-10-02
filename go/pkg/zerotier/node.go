@@ -170,6 +170,7 @@ type Node struct {
 	zn                     *C.ZT_Node
 	id                     *Identity
 	apiServer              *http.Server
+	tcpApiServer           *http.Server
 	online                 uint32
 	running                uint32
 	runLock                sync.Mutex
@@ -285,7 +286,7 @@ func NewNode(basePath string) (*Node, error) {
 		return nil, err
 	}
 
-	n.apiServer, err = createAPIServer(basePath, n)
+	n.apiServer, n.tcpApiServer, err = createAPIServer(basePath, n)
 	if err != nil {
 		n.log.Printf("FATAL: unable to start API server: %s", err.Error())
 		C.ZT_GoNode_delete(n.gn)
@@ -399,13 +400,21 @@ func NewNode(basePath string) (*Node, error) {
 // Close closes this Node and frees its underlying C++ Node structures
 func (n *Node) Close() {
 	if atomic.SwapUint32(&n.running, 0) != 0 {
-		_ = n.apiServer.Close()
+		if n.apiServer != nil {
+			_ = n.apiServer.Close()
+		}
+		if n.tcpApiServer != nil {
+			_ = n.tcpApiServer.Close()
+		}
+
 		C.ZT_GoNode_delete(n.gn)
+
+		n.runLock.Lock() // wait for maintenance gorountine to die
+		n.runLock.Unlock()
+
 		nodesByUserPtrLock.Lock()
 		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n.gn)))
 		nodesByUserPtrLock.Unlock()
-		n.runLock.Lock() // wait for maintenance gorountine to die
-		n.runLock.Unlock()
 	}
 }
 
@@ -943,9 +952,9 @@ func goVirtualNetworkConfigFunc(gn, _ unsafe.Pointer, nwid C.uint64_t, op C.int,
 				for i := 0; i < int(ncc.routeCount); i++ {
 					tgt := sockaddrStorageToIPNet(&ncc.routes[i].target)
 					viaN := sockaddrStorageToIPNet(&ncc.routes[i].via)
-					var via net.IP
-					if viaN != nil {
-						via = viaN.IP
+					var via *net.IP
+					if viaN != nil && len(viaN.IP) > 0 {
+						via = &viaN.IP
 					}
 					if tgt != nil {
 						nc.Routes = append(nc.Routes, Route{

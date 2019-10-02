@@ -44,7 +44,7 @@ Commands:
   addroot <locator> [name]             Add a VL1 root
   removeroot <name>                    Remove a VL1 root
   locator <command> [args]             Locator management commands
-    new <identity> <address> [...]     Create and sign a locator
+    new <identity> <address> [...]     Create and sign locator for identity
     newdnskey                          Create a secure DNS name and secret
     getdns <dns key> <locator>         Create secure DNS TXT records
   identity <command> [args]            Identity management commands
@@ -53,10 +53,10 @@ Commands:
     validate <identity>                Locally validate an identity
     sign <identity> <file>             Sign a file with an identity's key
     verify <identity> <file> <sig>     Verify a signature
-  networks                             Show joined VL2 virtual networks
+  networks                             List joined VL2 virtual networks
+  network <network ID>                 Show verbose network info
   join <network ID>                    Join a virtual network
   leave <network ID>                   Leave a virtual network
-  show <network ID>                    Show verbose network info
   set <network ID> <option> <value>    Set a network local config option
     manageips <boolean>                Is IP management allowed?
     manageroutes <boolean>             Is route management allowed?

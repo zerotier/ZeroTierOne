@@ -54,33 +54,13 @@ func Identity(args []string) {
 
 		case "getpublic":
 			if len(args) == 2 {
-				idData, err := ioutil.ReadFile(args[1])
-				if err != nil {
-					fmt.Printf("ERROR: unable to read identity: %s\n", err.Error())
-					os.Exit(1)
-				}
-				id, err := zerotier.NewIdentityFromString(string(idData))
-				if err != nil {
-					fmt.Printf("ERROR: identity in file '%s' invalid: %s\n", args[1], err.Error())
-					os.Exit(1)
-				}
-				fmt.Println(id.String())
+				fmt.Println(readIdentity(args[1]).String())
 				os.Exit(0)
 			}
 
 		case "validate":
 			if len(args) == 2 {
-				idData, err := ioutil.ReadFile(args[1])
-				if err != nil {
-					fmt.Printf("ERROR: unable to read identity: %s\n", err.Error())
-					os.Exit(1)
-				}
-				id, err := zerotier.NewIdentityFromString(string(idData))
-				if err != nil {
-					fmt.Printf("ERROR: identity in file '%s' invalid: %s\n", args[1], err.Error())
-					os.Exit(1)
-				}
-				if id.LocallyValidate() {
+				if readIdentity(args[1]).LocallyValidate() {
 					fmt.Println("OK")
 					os.Exit(0)
 				}
@@ -90,16 +70,7 @@ func Identity(args []string) {
 
 		case "sign", "verify":
 			if len(args) > 2 {
-				idData, err := ioutil.ReadFile(args[1])
-				if err != nil {
-					fmt.Printf("ERROR: unable to read identity: %s\n", err.Error())
-					os.Exit(1)
-				}
-				id, err := zerotier.NewIdentityFromString(string(idData))
-				if err != nil {
-					fmt.Printf("ERROR: identity in file '%s' invalid: %s\n", args[1], err.Error())
-					os.Exit(1)
-				}
+				id := readIdentity(args[1])
 				msg, err := ioutil.ReadFile(args[2])
 				if err != nil {
 					fmt.Printf("ERROR: unable to read input file: %s\n", err.Error())

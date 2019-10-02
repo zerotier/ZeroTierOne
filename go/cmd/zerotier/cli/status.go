@@ -33,39 +33,39 @@ func Status(basePath, authToken string, args []string, jsonOutput bool) {
 			online = "OFFLINE"
 		}
 		fmt.Printf("%.10x: %s %s\n", uint64(status.Address), online, status.Version)
-		fmt.Printf("\tports: %d %d %d\n", status.Config.Settings.PrimaryPort, status.Config.Settings.SecondaryPort, status.Config.Settings.TertiaryPort)
-		fmt.Printf("\tport search: %s\n", enabledDisabled(status.Config.Settings.PortSearch))
-		fmt.Printf("\tport mapping (uPnP/NAT-PMP): %s\n", enabledDisabled(status.Config.Settings.PortMapping))
-		fmt.Printf("\tmultipath mode: %d\n", status.Config.Settings.MuiltipathMode)
-		fmt.Printf("\tblacklisted interface prefixes: ")
+		fmt.Printf("\tports:\t%d %d %d\n", status.Config.Settings.PrimaryPort, status.Config.Settings.SecondaryPort, status.Config.Settings.TertiaryPort)
+		fmt.Printf("\tport search:\t%s\n", enabledDisabled(status.Config.Settings.PortSearch))
+		fmt.Printf("\tport mapping (uPnP/NAT-PMP):\t%s\n", enabledDisabled(status.Config.Settings.PortMapping))
+		fmt.Printf("\tmultipath mode:\t%d\n", status.Config.Settings.MuiltipathMode)
+		fmt.Printf("\tblacklisted interface prefixes:\t")
 		for i, bl := range status.Config.Settings.InterfacePrefixBlacklist {
 			if i > 0 {
-				fmt.Print(',')
+				fmt.Print(' ')
 			}
 			fmt.Print(bl)
 		}
 		fmt.Printf("\n\texplicit external addresses: ")
 		for i, ea := range status.Config.Settings.ExplicitAddresses {
 			if i > 0 {
-				fmt.Print(',')
+				fmt.Print(' ')
 			}
 			fmt.Print(ea.String())
 		}
 		fmt.Printf("\n\tsystem interface addresses: ")
 		for i, a := range status.InterfaceAddresses {
 			if i > 0 {
-				fmt.Print(',')
+				fmt.Print(' ')
 			}
 			fmt.Print(a.String())
 		}
 		fmt.Printf("\n\tmapped external addresses: ")
 		for i, a := range status.MappedExternalAddresses {
 			if i > 0 {
-				fmt.Print(',')
+				fmt.Print(' ')
 			}
 			fmt.Print(a.String())
 		}
-		fmt.Printf("\n\tidentity: %s\n", status.Identity.String())
+		fmt.Printf("\n\tidentity:\t%s\n", status.Identity.String())
 	}
 
 	os.Exit(0)

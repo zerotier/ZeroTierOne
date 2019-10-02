@@ -13,6 +13,31 @@
 
 package cli
 
+import (
+	"fmt"
+	"os"
+	"strconv"
+)
+
 // Leave CLI command
 func Leave(basePath, authToken string, args []string) {
+	if len(args) != 1 {
+		Help()
+		os.Exit(1)
+	}
+
+	if len(args[0]) != 16 {
+		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
+		os.Exit(1)
+	}
+	nwid, err := strconv.ParseUint(args[0], 16, 64)
+	if err != nil {
+		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
+		os.Exit(1)
+	}
+	nwids := fmt.Sprintf("%.16x", nwid)
+
+	apiDelete(basePath, authToken, "/network/"+nwids, nil)
+	fmt.Printf("OK %s", nwids)
+	os.Exit(0)
 }

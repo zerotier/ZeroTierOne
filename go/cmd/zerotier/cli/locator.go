@@ -29,18 +29,9 @@ func locatorNew(args []string) {
 		os.Exit(1)
 	}
 
-	identityData, err := ioutil.ReadFile(args[0])
-	if err != nil {
-		fmt.Printf("FATAL: unable to read identity: %s\n", err.Error())
-		os.Exit(1)
-	}
-	identity, err := zerotier.NewIdentityFromString(string(identityData))
-	if err != nil {
-		fmt.Printf("FATAL: invalid identity: %s\n", err.Error())
-		os.Exit(1)
-	}
+	identity := readIdentity(args[0])
 	if !identity.HasPrivate() {
-		fmt.Println("FATAL: identity does not contain secret key")
+		fmt.Println("FATAL: identity does not contain a secret key (required to sign locator)")
 		os.Exit(1)
 	}
 

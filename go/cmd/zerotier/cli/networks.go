@@ -13,6 +13,37 @@
 
 package cli
 
+import (
+	"fmt"
+	"os"
+
+	"zerotier/pkg/zerotier"
+)
+
 // Networks CLI command
-func Networks(basePath, authToken string, args []string) {
+func Networks(basePath, authToken string, args []string, jsonOutput bool) {
+	var networks []zerotier.APINetwork
+	apiGet(basePath, authToken, "/network", &networks)
+
+	if jsonOutput {
+		fmt.Println(jsonDump(networks))
+	} else {
+		fmt.Printf("%-16s %-24s %-17s %-8s <type>  <device>         <managed IP(s)>\n", "<id>", "<name>", "<mac>", "<status>")
+		for _, nw := range networks {
+			t := "PRIVATE"
+			if nw.Config.Type == zerotier.NetworkTypePublic {
+				t = "PUBLIC"
+			}
+			fmt.Printf("%.16x %-24s %-17s %-16s %-7s %-16s ", uint64(nw.ID), nw.Config.Name, nw.Config.MAC.String(), networkStatusStr(nw.Config.Status), t, nw.TapDeviceName)
+			for i, ip := range nw.Config.AssignedAddresses {
+				if i > 0 {
+					fmt.Print(',')
+				}
+				fmt.Print(ip.String())
+			}
+			fmt.Print("\n")
+		}
+	}
+
+	os.Exit(0)
 }

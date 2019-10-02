@@ -85,6 +85,11 @@ func main() {
 		cmdArgs = args[1:]
 	}
 
+	if *hflag {
+		cli.Help()
+		os.Exit(0)
+	}
+
 	basePath := zerotier.PlatformDefaultHomePath
 	if len(*pflag) > 0 {
 		basePath = *pflag
@@ -128,16 +133,16 @@ func main() {
 		cli.Identity(cmdArgs)
 	case "networks", "listnetworks":
 		authTokenRequired(authToken)
-		cli.Networks(basePath, authToken, cmdArgs)
+		cli.Networks(basePath, authToken, cmdArgs, *jflag)
+	case "network":
+		authTokenRequired(authToken)
+		cli.Network(basePath, authToken, cmdArgs, *jflag)
 	case "join":
 		authTokenRequired(authToken)
 		cli.Join(basePath, authToken, cmdArgs)
 	case "leave":
 		authTokenRequired(authToken)
 		cli.Leave(basePath, authToken, cmdArgs)
-	case "show":
-		authTokenRequired(authToken)
-		cli.Show(basePath, authToken, cmdArgs)
 	case "set":
 		authTokenRequired(authToken)
 		cli.Set(basePath, authToken, cmdArgs)

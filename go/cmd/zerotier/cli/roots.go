@@ -28,7 +28,7 @@ func Roots(basePath, authToken string, args []string, jsonOutput bool) {
 	if jsonOutput {
 		fmt.Println(jsonDump(roots))
 	} else {
-		fmt.Printf("%32s <ztaddr>   <address(es)>\n", "<name>")
+		fmt.Printf("%32s <address>  <physical/virtual>\n", "<name>")
 		for _, r := range roots {
 			rn := r.Name
 			if len(rn) > 32 {

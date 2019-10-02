@@ -28,7 +28,7 @@ func Peers(basePath, authToken string, args []string, jsonOutput bool) {
 	if jsonOutput {
 		fmt.Println(jsonDump(&peers))
 	} else {
-		fmt.Printf("<ztaddr>   <ver>   <role> <lat> <link> <lastTX> <lastRX> <path(s)>\n")
+		fmt.Printf("<address>  <ver>   <role> <lat> <link> <lastTX> <lastRX> <path(s)>\n")
 		for _, peer := range peers {
 			role := "LEAF"
 			link := "RELAY"

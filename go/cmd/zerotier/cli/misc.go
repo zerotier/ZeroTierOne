@@ -16,8 +16,11 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
+
 	"zerotier/pkg/zerotier"
 )
 
@@ -55,6 +58,23 @@ func apiPost(basePath, authToken, urlPath string, post, result interface{}) {
 	}
 }
 
+func apiDelete(basePath, authToken, urlPath string, result interface{}) {
+	statusCode, err := zerotier.APIDelete(basePath, zerotier.APISocketName, authToken, urlPath, result)
+	if err != nil {
+		fmt.Printf("FATAL: API response code %d: %s\n", statusCode, err.Error())
+		os.Exit(1)
+		return
+	}
+	if statusCode != http.StatusOK {
+		if statusCode == http.StatusUnauthorized {
+			fmt.Printf("FATAL: API response code %d: unauthorized (authorization token incorrect)\n", statusCode)
+		}
+		fmt.Printf("FATAL: API response code %d\n", statusCode)
+		os.Exit(1)
+		return
+	}
+}
+
 func enabledDisabled(f bool) string {
 	if f {
 		return "ENABLED"
@@ -65,4 +85,38 @@ func enabledDisabled(f bool) string {
 func jsonDump(obj interface{}) string {
 	j, _ := json.MarshalIndent(obj, "", "  ")
 	return string(j)
+}
+
+func readIdentity(s string) *zerotier.Identity {
+	if strings.ContainsRune(s, ':') {
+		id, _ := zerotier.NewIdentityFromString(s)
+		if id != nil {
+			return id
+		}
+	}
+	idData, err := ioutil.ReadFile(s)
+	if err != nil {
+		fmt.Printf("FATAL: identity '%s' cannot be resolved as file or literal identity: %s", s, err.Error())
+		os.Exit(1)
+	}
+	id, err := zerotier.NewIdentityFromString(string(idData))
+	if err != nil {
+		fmt.Printf("FATAL: identity '%s' cannot be resolved as file or literal identity: %s", s, err.Error())
+		os.Exit(1)
+	}
+	return id
+}
+
+func networkStatusStr(int status) string {
+	switch status {
+	case zerotier.NetworkStatusNotFound:
+		return "NOTFOUND"
+	case zerotier.NetworkStatusAccessDenied:
+		return "DENIED"
+	case zerotier.NetworkStatusRequestConfiguration:
+		return "UPDATING"
+	case zerotier.NetworkStatusOK:
+		return "OK"
+	}
+	return "???"
 }

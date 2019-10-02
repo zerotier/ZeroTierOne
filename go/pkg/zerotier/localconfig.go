@@ -33,7 +33,7 @@ type LocalConfigPhysicalPathConfiguration struct {
 // LocalConfigVirtualAddressConfiguration contains settings for virtual addresses
 type LocalConfigVirtualAddressConfiguration struct {
 	// Try is a list of IPs/ports to try for this peer in addition to anything learned from roots or direct path push
-	Try []*InetAddress
+	Try []*InetAddress `json:",omitempty"`
 }
 
 // LocalConfigSettings contains node settings
@@ -59,26 +59,29 @@ type LocalConfigSettings struct {
 	// MultipathMode sets the multipath link aggregation mode
 	MuiltipathMode int
 
+	// IP/port to bind for TCP access to control API (disabled if null)
+	APITCPBindAddress *InetAddress `json:",omitempty"`
+
 	// InterfacePrefixBlacklist are prefixes of physical network interface names that won't be used by ZeroTier (e.g. "lo" or "utun")
-	InterfacePrefixBlacklist []string
+	InterfacePrefixBlacklist []string `json:",omitempty"`
 
 	// ExplicitAddresses are explicit IP/port addresses to advertise to other nodes, such as externally mapped ports on a router
-	ExplicitAddresses []*InetAddress
+	ExplicitAddresses []*InetAddress `json:",omitempty"`
 }
 
 // LocalConfig is the local.conf file and stores local settings for the node.
 type LocalConfig struct {
 	// Physical path configurations by CIDR IP/bits
-	Physical map[string]*LocalConfigPhysicalPathConfiguration
+	Physical map[string]*LocalConfigPhysicalPathConfiguration `json:",omitempty"`
 
 	// Virtual node specific configurations by 10-digit hex ZeroTier address
-	Virtual map[Address]*LocalConfigVirtualAddressConfiguration
+	Virtual map[Address]*LocalConfigVirtualAddressConfiguration `json:",omitempty"`
 
 	// Network local configurations by 16-digit hex ZeroTier network ID
-	Network map[NetworkID]*NetworkLocalSettings
+	Network map[NetworkID]*NetworkLocalSettings `json:",omitempty"`
 
 	// LocalConfigSettings contains other local settings for this node
-	Settings LocalConfigSettings
+	Settings LocalConfigSettings `json:",omitempty"`
 }
 
 // Read this local config from a file, initializing to defaults if the file does not exist

@@ -24,7 +24,7 @@ type Route struct {
 	Target net.IPNet
 
 	// Via is how to reach this target (null/empty if the target IP range is local to this virtual LAN)
-	Via net.IP
+	Via *net.IP
 
 	// Route flags (currently unused, always 0)
 	Flags uint16
@@ -35,7 +35,7 @@ type Route struct {
 
 // String returns a string representation of this route
 func (r *Route) String() string {
-	if len(r.Via) == 0 {
+	if r.Via != nil {
 		return r.Target.String() + "->LAN"
 	}
 	return r.Target.String() + "->" + r.Via.String()
