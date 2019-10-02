@@ -1237,7 +1237,6 @@ int main(int argc,char **argv)
 							ip6[1] = 0;
 						}
 						OSUtils::ztsnprintf(ver,sizeof(ver),"%d.%d.%d",(*p)->vMajor,(*p)->vMinor,(*p)->vRev);
-						double forwardingSpeed = 0.0;
 						fprintf(pf,"%.10llx %21s %45s %10.4f %6s" ZT_EOL_S,
 							(unsigned long long)(*p)->id.address().toInt(),
 							ip4,

@@ -329,9 +329,7 @@ public:
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
 		memcpy(_signature,b.field(p,_signatureLength),_signatureLength);
 		p += _signatureLength;
-		p += b.template at<uint16_t>(p); p += 2;
-		if (p > b.size())
-			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
+		p += b.template at<uint16_t>(p) + 2;
 
 		return (p - startAt);
 	}

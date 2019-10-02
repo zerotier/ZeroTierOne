@@ -548,8 +548,6 @@ void EmbeddedNetworkController::request(
 
 unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 	const std::vector<std::string> &path,
-	const std::map<std::string,std::string> &urlArgs,
-	const std::map<std::string,std::string> &headers,
 	const std::string &body,
 	std::string &responseBody,
 	std::string &responseContentType)
@@ -645,8 +643,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 
 unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 	const std::vector<std::string> &path,
-	const std::map<std::string,std::string> &urlArgs,
-	const std::map<std::string,std::string> &headers,
 	const std::string &body,
 	std::string &responseBody,
 	std::string &responseContentType)
@@ -1055,8 +1051,6 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 unsigned int EmbeddedNetworkController::handleControlPlaneHttpDELETE(
 	const std::vector<std::string> &path,
-	const std::map<std::string,std::string> &urlArgs,
-	const std::map<std::string,std::string> &headers,
 	const std::string &body,
 	std::string &responseBody,
 	std::string &responseContentType)

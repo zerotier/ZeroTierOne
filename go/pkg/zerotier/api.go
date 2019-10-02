@@ -313,7 +313,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 			_ = apiSendObj(out, req, http.StatusOK, node.LocalConfig())
 		} else {
 			out.Header().Set("Allow", "GET, HEAD, PUT, POST")
-			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
+			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"unsupported method: " + req.Method})
 		}
 	})
 
@@ -388,38 +388,38 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 
 		if req.Method == http.MethodDelete {
 			if queriedID == 0 {
-				_ = apiSendObj(out, req, http.StatusBadRequest, nil)
-			} else {
-				networks := node.Networks()
-				for _, nw := range networks {
-					if nw.id == queriedID {
-						_ = node.Leave(queriedID)
-						_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(nw))
-						return
-					}
-				}
-				_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"network not found"})
+				_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"only specific networks can be deleted"})
+				return
 			}
+			networks := node.Networks()
+			for _, nw := range networks {
+				if nw.id == queriedID {
+					_ = node.Leave(queriedID)
+					_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(nw))
+					return
+				}
+			}
+			_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"network not found"})
 		} else if req.Method == http.MethodPost || req.Method == http.MethodPut {
 			if queriedID == 0 {
 				_ = apiSendObj(out, req, http.StatusBadRequest, nil)
-			} else {
-				var nw APINetwork
-				if apiReadObj(out, req, &nw) == nil {
-					n := node.GetNetwork(nw.ID)
-					if n == nil {
-						n, err := node.Join(nw.ID, nw.Settings, nil)
-						if err != nil {
-							_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"only individual networks can be added or modified with POST/PUT"})
-						} else {
-							_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(n))
-						}
+				return
+			}
+			var nw APINetwork
+			if apiReadObj(out, req, &nw) == nil {
+				n := node.GetNetwork(nw.ID)
+				if n == nil {
+					n, err := node.Join(nw.ID, nw.Settings, nil)
+					if err != nil {
+						_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"only individual networks can be added or modified with POST/PUT"})
 					} else {
-						if nw.Settings != nil {
-							n.SetLocalSettings(nw.Settings)
-						}
 						_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(n))
 					}
+				} else {
+					if nw.Settings != nil {
+						n.SetLocalSettings(nw.Settings)
+					}
+					_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(n))
 				}
 			}
 		} else if req.Method == http.MethodGet || req.Method == http.MethodHead {
@@ -430,15 +430,15 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 					nws = append(nws, apiNetworkFromNetwork(nw))
 				}
 				_ = apiSendObj(out, req, http.StatusOK, nws)
-			} else {
-				for _, nw := range networks {
-					if nw.ID() == queriedID {
-						_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(nw))
-						return
-					}
-				}
-				_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"network not found"})
+				return
 			}
+			for _, nw := range networks {
+				if nw.ID() == queriedID {
+					_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(nw))
+					return
+				}
+			}
+			_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"network not found"})
 		} else {
 			out.Header().Set("Allow", "GET, HEAD, PUT, POST, DELETE")
 			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"unsupported method " + req.Method})
@@ -476,7 +476,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 					}
 				}
 			}
-			_ = apiSendObj(out, req, http.StatusNotFound, nil)
+			_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"root not found"})
 		} else if req.Method == http.MethodPost || req.Method == http.MethodPut {
 			if len(queriedName) == 0 {
 				_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"only individual roots can be added or modified with POST/PUT"})

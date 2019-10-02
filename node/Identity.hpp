@@ -308,6 +308,7 @@ public:
 				} else {
 					b.append((uint8_t)0);
 				}
+				b.append((uint16_t)0); // size of additional fields
 				break;
 
 		}
@@ -371,6 +372,7 @@ public:
 				} else {
 					_hasPrivate = false;
 				}
+				p += b.template at<uint16_t>(p) + 2;
 				break;
 
 			default:
