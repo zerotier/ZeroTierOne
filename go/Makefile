@@ -1,2 +1,2 @@
 all:
-	go build -o zerotier cmd/zerotier/zerotier.go
+	go build -trimpath -ldflags -s -o ../build/zerotier cmd/zerotier/zerotier.go

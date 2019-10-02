@@ -14,6 +14,7 @@
 package cli
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -32,12 +33,15 @@ func AddRoot(basePath, authToken string, args []string) {
 
 	locData, err := ioutil.ReadFile(args[0])
 	if err != nil {
-		fmt.Printf("ERROR: unable to read locator: %s\n", err.Error())
-		os.Exit(1)
+		locData, err2 := base64.StdEncoding.DecodeString(strings.TrimSpace(args[0]))
+		if err2 != nil || len(locData) == 0 {
+			fmt.Printf("ERROR: unable to read locator: %s\n", err.Error())
+			os.Exit(1)
+		}
 	}
 	loc, err := zerotier.NewLocatorFromBytes(locData)
 	if err != nil {
-		fmt.Printf("ERROR: invalid locator in file '%s': %s\n", args[0], err.Error())
+		fmt.Printf("ERROR: invalid locator '%s' (tried as file and base64 literal): %s\n", args[0], err.Error())
 		os.Exit(1)
 	}
 

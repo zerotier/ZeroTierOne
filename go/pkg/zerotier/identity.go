@@ -204,7 +204,6 @@ func (id *Identity) UnmarshalJSON(j []byte) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(s)
 	nid, err := NewIdentityFromString(s)
 	if err != nil {
 		return err

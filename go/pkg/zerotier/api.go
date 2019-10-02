@@ -126,7 +126,7 @@ type APIStatus struct {
 	VersionBuild            int            `json:"versionBuild"`
 	OS                      string         `json:"os"`
 	Architecture            string         `json:"architecture"`
-	Concurrency             int            `json:"cpus"`
+	Concurrency             int            `json:"concurrency"`
 	Runtime                 string         `json:"runtimeVersion"`
 }
 

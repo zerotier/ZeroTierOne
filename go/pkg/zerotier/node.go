@@ -327,12 +327,10 @@ func NewNode(basePath string) (*Node, error) {
 						m, _ := NewMACFromBytes(i.HardwareAddr)
 						if _, isZeroTier := n.networksByMAC[m]; !isZeroTier {
 							addrs, _ := i.Addrs()
-							if len(addrs) > 0 {
-								for _, a := range addrs {
-									ipn, _ := a.(*net.IPNet)
-									if ipn != nil {
-										interfaceAddresses[ipn.IP.String()] = ipn.IP
-									}
+							for _, a := range addrs {
+								ipn, _ := a.(*net.IPNet)
+								if ipn != nil && len(ipn.IP) > 0 && !ipn.IP.IsLinkLocalUnicast() && !ipn.IP.IsMulticast() {
+									interfaceAddresses[ipn.IP.String()] = ipn.IP
 								}
 							}
 						}

@@ -107,7 +107,7 @@ func readIdentity(s string) *zerotier.Identity {
 	return id
 }
 
-func networkStatusStr(int status) string {
+func networkStatusStr(status int) string {
 	switch status {
 	case zerotier.NetworkStatusNotFound:
 		return "NOTFOUND"

@@ -63,14 +63,14 @@ func Network(basePath, authToken string, args []string, jsonOutput bool) {
 		fmt.Printf("\tmanaged addresses:\t")
 		for i, a := range network.Config.AssignedAddresses {
 			if i > 0 {
-				fmt.Print(' ')
+				fmt.Print(" ")
 			}
 			fmt.Print(a.String())
 		}
 		fmt.Printf("\n\tmanaged routes:\t")
 		for i, r := range network.Config.Routes {
 			if i > 0 {
-				fmt.Print(' ')
+				fmt.Print(" ")
 			}
 			fmt.Print(r.Target.String())
 			if r.Via == nil {

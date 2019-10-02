@@ -41,13 +41,13 @@ func Roots(basePath, authToken string, args []string, jsonOutput bool) {
 					fmt.Printf("%32s %.10x ", rn, uint64(r.Locator.Identity.Address()))
 					for i, a := range r.Locator.Physical {
 						if i > 0 {
-							fmt.Print(',')
+							fmt.Print(",")
 						}
 						fmt.Print(a.String())
 					}
 					for i, a := range r.Locator.Virtual {
 						if i > 0 || len(r.Locator.Physical) > 0 {
-							fmt.Print(',')
+							fmt.Print(",")
 						}
 						fmt.Print(a.String())
 					}
