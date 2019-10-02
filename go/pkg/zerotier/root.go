@@ -15,6 +15,6 @@ package zerotier
 
 // Root describes a root server used to find and establish communication with other nodes.
 type Root struct {
-	Name    string
-	Locator *Locator
+	Name    string   `json:"name"`
+	Locator *Locator `json:"locator,omitempty"`
 }

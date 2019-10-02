@@ -15,10 +15,10 @@ package zerotier
 
 // Peer is another ZeroTier node
 type Peer struct {
-	Address Address
-	Version [3]int
-	Latency int
-	Role    int
-	Paths   []Path
-	Clock   int64
+	Address Address `json:"address"`
+	Version [3]int  `json:"version"`
+	Latency int     `json:"latency"`
+	Role    int     `json:"role"`
+	Paths   []Path  `json:"paths,omitempty"`
+	Clock   int64   `json:"clock"`
 }

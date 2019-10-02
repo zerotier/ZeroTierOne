@@ -48,7 +48,7 @@ func Network(basePath, authToken string, args []string, jsonOutput bool) {
 		fmt.Printf("%s: %s\n", nwids, network.Config.Name)
 		fmt.Printf("\tstatus:\t%s\n", networkStatusStr(network.Config.Status))
 		enabled := "no"
-		if network.TapDeviceEnabled {
+		if network.PortEnabled {
 			enabled = "yes"
 		}
 		bridge := "no"
@@ -59,7 +59,7 @@ func Network(basePath, authToken string, args []string, jsonOutput bool) {
 		if network.Config.BroadcastEnabled {
 			broadcast = "on"
 		}
-		fmt.Printf("\tport:\t%s dev %s type %s mtu %d enabled %s bridge %s broadcast %s\n", network.Config.MAC.String(), network.TapDeviceName, network.TapDeviceType, network.Config.MTU, enabled, bridge, broadcast)
+		fmt.Printf("\tport:\t%s dev %s type %s mtu %d enabled %s bridge %s broadcast %s\n", network.Config.MAC.String(), network.PortName, network.PortType, network.Config.MTU, enabled, bridge, broadcast)
 		fmt.Printf("\tmanaged addresses:\t")
 		for i, a := range network.Config.AssignedAddresses {
 			if i > 0 {

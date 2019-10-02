@@ -17,8 +17,8 @@ import "fmt"
 
 // MulticastGroup represents a normal Ethernet multicast or broadcast address plus 32 additional ZeroTier-specific bits
 type MulticastGroup struct {
-	MAC MAC
-	ADI uint32
+	MAC MAC    `json:"mac"`
+	ADI uint32 `json:"adi"`
 }
 
 // String returns MAC#ADI

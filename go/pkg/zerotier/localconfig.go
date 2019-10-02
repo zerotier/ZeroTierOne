@@ -39,49 +39,49 @@ type LocalConfigVirtualAddressConfiguration struct {
 // LocalConfigSettings contains node settings
 type LocalConfigSettings struct {
 	// PrimaryPort is the main UDP port and must be set (defaults to 9993)
-	PrimaryPort int
+	PrimaryPort int `json:"primaryPort"`
 
 	// SecondaryPort is the secondary UDP port, set to 0 to disbale (picked at random by default)
-	SecondaryPort int
+	SecondaryPort int `json:"secondaryPort"`
 
 	// TertiaryPort is a third UDP port, set to 0 to disable (picked at random by default)
-	TertiaryPort int
+	TertiaryPort int `json:"tertiaryPort"`
 
 	// PortSearch causes ZeroTier to try other ports automatically if it can't bind to configured ports
-	PortSearch bool
+	PortSearch bool `json:"portSearch"`
 
 	// PortMapping enables uPnP and NAT-PMP support
-	PortMapping bool
+	PortMapping bool `json:"portMapping"`
 
 	// LogSizeMax is the maximum size of the log in kilobytes or 0 for no limit and -1 to disable logging
-	LogSizeMax int
+	LogSizeMax int `json:"logSizeMax"`
 
 	// MultipathMode sets the multipath link aggregation mode
-	MuiltipathMode int
+	MuiltipathMode int `json:"multipathMode"`
 
 	// IP/port to bind for TCP access to control API (disabled if null)
-	APITCPBindAddress *InetAddress `json:",omitempty"`
+	APITCPBindAddress *InetAddress `json:"apiTCPBindAddress,omitempty"`
 
 	// InterfacePrefixBlacklist are prefixes of physical network interface names that won't be used by ZeroTier (e.g. "lo" or "utun")
-	InterfacePrefixBlacklist []string `json:",omitempty"`
+	InterfacePrefixBlacklist []string `json:"interfacePrefixBlacklist,omitempty"`
 
 	// ExplicitAddresses are explicit IP/port addresses to advertise to other nodes, such as externally mapped ports on a router
-	ExplicitAddresses []*InetAddress `json:",omitempty"`
+	ExplicitAddresses []*InetAddress `json:"explicitAddresses,omitempty"`
 }
 
 // LocalConfig is the local.conf file and stores local settings for the node.
 type LocalConfig struct {
 	// Physical path configurations by CIDR IP/bits
-	Physical map[string]*LocalConfigPhysicalPathConfiguration `json:",omitempty"`
+	Physical map[string]*LocalConfigPhysicalPathConfiguration `json:"physical,omitempty"`
 
 	// Virtual node specific configurations by 10-digit hex ZeroTier address
-	Virtual map[Address]*LocalConfigVirtualAddressConfiguration `json:",omitempty"`
+	Virtual map[Address]*LocalConfigVirtualAddressConfiguration `json:"virtual,omitempty"`
 
 	// Network local configurations by 16-digit hex ZeroTier network ID
-	Network map[NetworkID]*NetworkLocalSettings `json:",omitempty"`
+	Network map[NetworkID]*NetworkLocalSettings `json:"network,omitempty"`
 
 	// LocalConfigSettings contains other local settings for this node
-	Settings LocalConfigSettings `json:",omitempty"`
+	Settings LocalConfigSettings `json:"settings,omitempty"`
 }
 
 // Read this local config from a file, initializing to defaults if the file does not exist

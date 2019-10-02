@@ -32,3 +32,10 @@ const (
 	ErrInvalidSignature         Err = "invalid signature"
 	ErrSecretKeyRequired        Err = "secret key required"
 )
+
+// APIErr is returned by the JSON API when a call fails
+type APIErr struct {
+	Reason string
+}
+
+func (e *APIErr) Error() string { return e.Reason }

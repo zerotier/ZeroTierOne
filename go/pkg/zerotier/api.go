@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 	"path"
+	"runtime"
 	"strings"
 	"time"
 
@@ -30,6 +31,8 @@ import (
 
 // APISocketName is the default socket name for accessing the API
 const APISocketName = "apisocket"
+
+var startTime = TimeMs()
 
 // APIGet makes a query to the API via a Unix domain or windows pipe socket
 func APIGet(basePath, socketName, authToken, queryPath string, obj interface{}) (int, error) {
@@ -106,31 +109,38 @@ func APIDelete(basePath, socketName, authToken, queryPath string, result interfa
 
 // APIStatus is the object returned by API status inquiries
 type APIStatus struct {
-	Address                 Address
-	Clock                   int64
-	Config                  LocalConfig
-	Online                  bool
-	PeerCount               int
-	PathCount               int
-	Identity                *Identity
-	InterfaceAddresses      []net.IP       `json:",omitempty"`
-	MappedExternalAddresses []*InetAddress `json:",omitempty"`
-	Version                 string
-	VersionMajor            int
-	VersionMinor            int
-	VersionRevision         int
-	VersionBuild            int
+	Address                 Address        `json:"address"`
+	Clock                   int64          `json:"clock"`
+	StartupTime             int64          `json:"startupTime"`
+	Config                  LocalConfig    `json:"config"`
+	Online                  bool           `json:"online"`
+	PeerCount               int            `json:"peerCount"`
+	PathCount               int            `json:"pathCount"`
+	Identity                *Identity      `json:"identity"`
+	InterfaceAddresses      []net.IP       `json:"interfaceAddresses,omitempty"`
+	MappedExternalAddresses []*InetAddress `json:"mappedExternalAddresses,omitempty"`
+	Version                 string         `json:"version"`
+	VersionMajor            int            `json:"versionMajor"`
+	VersionMinor            int            `json:"versionMinor"`
+	VersionRevision         int            `json:"versionRevision"`
+	VersionBuild            int            `json:"versionBuild"`
+	OS                      string         `json:"os"`
+	Architecture            string         `json:"architecture"`
+	Concurrency             int            `json:"cpus"`
+	Runtime                 string         `json:"runtimeVersion"`
 }
 
 // APINetwork is the object returned by API network inquiries
 type APINetwork struct {
-	ID                     NetworkID
-	Config                 NetworkConfig
-	Settings               *NetworkLocalSettings `json:",omitempty"`
-	MulticastSubscriptions []*MulticastGroup     `json:",omitempty"`
-	TapDeviceType          string
-	TapDeviceName          string
-	TapDeviceEnabled       bool
+	ID                     NetworkID             `json:"id"`
+	Config                 NetworkConfig         `json:"config"`
+	Settings               *NetworkLocalSettings `json:"settings,omitempty"`
+	MulticastSubscriptions []*MulticastGroup     `json:"multicastSubscriptions,omitempty"`
+	PortType               string                `json:"portType"`
+	PortName               string                `json:"portName"`
+	PortEnabled            bool                  `json:"portEnabled"`
+	PortErrorCode          int                   `json:"portErrorCode"`
+	PortError              string                `json:"portError"`
 }
 
 func apiNetworkFromNetwork(n *Network) *APINetwork {
@@ -140,19 +150,21 @@ func apiNetworkFromNetwork(n *Network) *APINetwork {
 	ls := n.LocalSettings()
 	nn.Settings = &ls
 	nn.MulticastSubscriptions = n.MulticastSubscriptions()
-	nn.TapDeviceType = n.Tap().Type()
-	nn.TapDeviceName = n.Tap().DeviceName()
-	nn.TapDeviceEnabled = n.Tap().Enabled()
+	nn.PortType = n.Tap().Type()
+	nn.PortName = n.Tap().DeviceName()
+	nn.PortEnabled = n.Tap().Enabled()
+	ec, errStr := n.Tap().Error()
+	nn.PortErrorCode = ec
+	nn.PortError = errStr
 	return &nn
 }
 
 func apiSetStandardHeaders(out http.ResponseWriter) {
-	now := time.Now().UTC()
 	h := out.Header()
 	h.Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	h.Set("Expires", "0")
 	h.Set("Pragma", "no-cache")
-	h.Set("Date", now.Format(time.RFC1123))
+	h.Set("Date", time.Now().UTC().Format(time.RFC1123))
 }
 
 func apiSendObj(out http.ResponseWriter, req *http.Request, httpStatusCode int, obj interface{}) error {
@@ -178,7 +190,7 @@ func apiSendObj(out http.ResponseWriter, req *http.Request, httpStatusCode int, 
 func apiReadObj(out http.ResponseWriter, req *http.Request, dest interface{}) (err error) {
 	err = json.NewDecoder(req.Body).Decode(&dest)
 	if err != nil {
-		_ = apiSendObj(out, req, http.StatusBadRequest, nil)
+		_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"invalid JSON: " + err.Error()})
 	}
 	return
 }
@@ -192,7 +204,7 @@ func apiCheckAuth(out http.ResponseWriter, req *http.Request, token string) bool
 	if len(ah) > 0 && strings.TrimSpace(ah) == token {
 		return true
 	}
-	_ = apiSendObj(out, req, http.StatusUnauthorized, nil)
+	_ = apiSendObj(out, req, http.StatusUnauthorized, &APIErr{"authorization token not found or incorrect (checked X-ZT1-Auth and Authorization headers)"})
 	return false
 }
 
@@ -223,6 +235,8 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 
 	smux := http.NewServeMux()
 
+	////////////////////////////////////////////////////////////////////////////
+
 	smux.HandleFunc("/status", func(out http.ResponseWriter, req *http.Request) {
 		defer func() {
 			e := recover()
@@ -234,8 +248,8 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 		if !apiCheckAuth(out, req, authToken) {
 			return
 		}
-
 		apiSetStandardHeaders(out)
+
 		if req.Method == http.MethodGet || req.Method == http.MethodHead {
 			pathCount := 0
 			peers := node.Peers()
@@ -245,6 +259,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 			_ = apiSendObj(out, req, http.StatusOK, &APIStatus{
 				Address:                 node.Address(),
 				Clock:                   TimeMs(),
+				StartupTime:             startTime,
 				Config:                  node.LocalConfig(),
 				Online:                  node.Online(),
 				PeerCount:               len(peers),
@@ -257,34 +272,41 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 				VersionMinor:            CoreVersionMinor,
 				VersionRevision:         CoreVersionRevision,
 				VersionBuild:            CoreVersionBuild,
+				OS:                      runtime.GOOS,
+				Architecture:            runtime.GOARCH,
+				Concurrency:             runtime.NumCPU(),
+				Runtime:                 runtime.Version(),
 			})
 		} else {
 			out.Header().Set("Allow", "GET, HEAD")
-			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
+			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"/status is read-only"})
 		}
 	})
+
+	////////////////////////////////////////////////////////////////////////////
 
 	smux.HandleFunc("/config", func(out http.ResponseWriter, req *http.Request) {
 		defer func() {
 			e := recover()
 			if e != nil {
-				_ = apiSendObj(out, req, http.StatusInternalServerError, nil)
+				_ = apiSendObj(out, req, http.StatusInternalServerError, &APIErr{"caught unexpected error in request handler"})
 			}
 		}()
 
 		if !apiCheckAuth(out, req, authToken) {
 			return
 		}
-
 		apiSetStandardHeaders(out)
+
 		if req.Method == http.MethodPost || req.Method == http.MethodPut {
 			var c LocalConfig
 			if apiReadObj(out, req, &c) == nil {
 				_, err := node.SetLocalConfig(&c)
 				if err != nil {
-					_ = apiSendObj(out, req, http.StatusBadRequest, nil)
+					_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"error applying local config: " + err.Error()})
 				} else {
-					_ = apiSendObj(out, req, http.StatusOK, node.LocalConfig())
+					lc := node.LocalConfig()
+					_ = apiSendObj(out, req, http.StatusOK, &lc)
 				}
 			}
 		} else if req.Method == http.MethodGet || req.Method == http.MethodHead {
@@ -295,18 +317,19 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 		}
 	})
 
+	////////////////////////////////////////////////////////////////////////////
+
 	smux.HandleFunc("/peer/", func(out http.ResponseWriter, req *http.Request) {
 		defer func() {
 			e := recover()
 			if e != nil {
-				_ = apiSendObj(out, req, http.StatusInternalServerError, nil)
+				_ = apiSendObj(out, req, http.StatusInternalServerError, &APIErr{"caught unexpected error in request handler"})
 			}
 		}()
 
 		if !apiCheckAuth(out, req, authToken) {
 			return
 		}
-
 		apiSetStandardHeaders(out)
 
 		var queriedID Address
@@ -314,7 +337,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 			var err error
 			queriedID, err = NewAddressFromString(req.URL.Path[6:])
 			if err != nil {
-				_ = apiSendObj(out, req, http.StatusNotFound, nil)
+				_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"peer not found"})
 				return
 			}
 		}
@@ -328,28 +351,29 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 						return
 					}
 				}
-				_ = apiSendObj(out, req, http.StatusNotFound, nil)
+				_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"peer not found"})
 			} else {
 				_ = apiSendObj(out, req, http.StatusOK, peers)
 			}
 		} else {
 			out.Header().Set("Allow", "GET, HEAD")
-			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
+			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"peers are read only"})
 		}
 	})
+
+	////////////////////////////////////////////////////////////////////////////
 
 	smux.HandleFunc("/network/", func(out http.ResponseWriter, req *http.Request) {
 		defer func() {
 			e := recover()
 			if e != nil {
-				_ = apiSendObj(out, req, http.StatusInternalServerError, nil)
+				_ = apiSendObj(out, req, http.StatusInternalServerError, &APIErr{"caught unexpected error in request handler"})
 			}
 		}()
 
 		if !apiCheckAuth(out, req, authToken) {
 			return
 		}
-
 		apiSetStandardHeaders(out)
 
 		var queriedID NetworkID
@@ -374,7 +398,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 						return
 					}
 				}
-				_ = apiSendObj(out, req, http.StatusNotFound, nil)
+				_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"network not found"})
 			}
 		} else if req.Method == http.MethodPost || req.Method == http.MethodPut {
 			if queriedID == 0 {
@@ -386,7 +410,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 					if n == nil {
 						n, err := node.Join(nw.ID, nw.Settings, nil)
 						if err != nil {
-							_ = apiSendObj(out, req, http.StatusBadRequest, nil)
+							_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"only individual networks can be added or modified with POST/PUT"})
 						} else {
 							_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(n))
 						}
@@ -413,26 +437,27 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 						return
 					}
 				}
-				_ = apiSendObj(out, req, http.StatusNotFound, nil)
+				_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"network not found"})
 			}
 		} else {
 			out.Header().Set("Allow", "GET, HEAD, PUT, POST, DELETE")
-			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
+			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"unsupported method " + req.Method})
 		}
 	})
+
+	////////////////////////////////////////////////////////////////////////////
 
 	smux.HandleFunc("/root/", func(out http.ResponseWriter, req *http.Request) {
 		defer func() {
 			e := recover()
 			if e != nil {
-				_ = apiSendObj(out, req, http.StatusInternalServerError, nil)
+				_ = apiSendObj(out, req, http.StatusInternalServerError, &APIErr{"caught unexpected error in request handler"})
 			}
 		}()
 
 		if !apiCheckAuth(out, req, authToken) {
 			return
 		}
-
 		apiSetStandardHeaders(out)
 
 		var queriedName string
@@ -453,15 +478,19 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 			}
 			_ = apiSendObj(out, req, http.StatusNotFound, nil)
 		} else if req.Method == http.MethodPost || req.Method == http.MethodPut {
+			if len(queriedName) == 0 {
+				_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"only individual roots can be added or modified with POST/PUT"})
+				return
+			}
 			var r Root
 			if apiReadObj(out, req, &r) == nil {
 				if r.Name != queriedName {
-					_ = apiSendObj(out, req, http.StatusBadRequest, nil)
+					_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"root name does not match name in path"})
 					return
 				}
 				err := node.SetRoot(r.Name, r.Locator)
 				if err != nil {
-					_ = apiSendObj(out, req, http.StatusBadRequest, nil)
+					_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"set/update root failed: " + err.Error()})
 				} else {
 					roots := node.Roots()
 					for _, r := range roots {
@@ -470,7 +499,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 							return
 						}
 					}
-					_ = apiSendObj(out, req, http.StatusNotFound, nil)
+					_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"set/update root failed: root set but not subsequently found in list"})
 				}
 			}
 		} else if req.Method == http.MethodGet || req.Method == http.MethodHead {
@@ -481,12 +510,14 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 					return
 				}
 			}
-			_ = apiSendObj(out, req, http.StatusNotFound, nil)
+			_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"root not found"})
 		} else {
 			out.Header().Set("Allow", "GET, HEAD, PUT, POST, DELETE")
-			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, nil)
+			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"unsupported method: " + req.Method})
 		}
 	})
+
+	////////////////////////////////////////////////////////////////////////////
 
 	listener, err := createNamedSocketListener(basePath, APISocketName)
 	if err != nil {

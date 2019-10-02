@@ -17,18 +17,18 @@ import "net"
 
 // Path is a path to another peer on the network
 type Path struct {
-	IP                     net.IP
-	Port                   int
-	LastSend               int64
-	LastReceive            int64
-	TrustedPathID          uint64
-	Latency                float32
-	PacketDelayVariance    float32
-	ThroughputDisturbCoeff float32
-	PacketErrorRatio       float32
-	PacketLossRatio        float32
-	Stability              float32
-	Throughput             uint64
-	MaxThroughput          uint64
-	Allocation             float32
+	IP                     net.IP  `json:"ip"`
+	Port                   int     `json:"port"`
+	LastSend               int64   `json:"lastSend"`
+	LastReceive            int64   `json:"lastReceive"`
+	TrustedPathID          uint64  `json:"trustedPathID"`
+	Latency                float32 `json:"latency"`
+	PacketDelayVariance    float32 `json:"packetDelayVariance"`
+	ThroughputDisturbCoeff float32 `json:"throughputDisturbCoeff"`
+	PacketErrorRatio       float32 `json:"packetErrorRatio"`
+	PacketLossRatio        float32 `json:"packetLossRatio"`
+	Stability              float32 `json:"stability"`
+	Throughput             uint64  `json:"throughput"`
+	MaxThroughput          uint64  `json:"maxThroughput"`
+	Allocation             float32 `json:"allocation"`
 }

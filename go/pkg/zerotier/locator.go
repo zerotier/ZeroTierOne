@@ -24,8 +24,8 @@ import (
 
 // LocatorDNSSigningKey is the public (as a secure DNS name) and private keys for entering locators into DNS
 type LocatorDNSSigningKey struct {
-	SecureDNSName string
-	PrivateKey    []byte
+	SecureDNSName string `json:"secureDNSName"`
+	PrivateKey    []byte `json:"privateKey"`
 }
 
 // NewLocatorDNSSigningKey creates a new signing key and secure DNS name for storing locators in DNS
@@ -47,16 +47,16 @@ func NewLocatorDNSSigningKey() (*LocatorDNSSigningKey, error) {
 // and the others are always reconstructed from it.
 type Locator struct {
 	// Identity is the full identity of the node being located
-	Identity *Identity
+	Identity *Identity `json:"identity"`
 
 	// Physical is a list of static physical network addresses for this node
-	Physical []*InetAddress
+	Physical []*InetAddress `json:"physical,omitempty"`
 
 	// Virtual is a list of ZeroTier nodes that can relay to this node
-	Virtual []*Identity
+	Virtual []*Identity `json:"virtual,omitempty"`
 
 	// Bytes is the raw serialized Locator
-	Bytes []byte
+	Bytes []byte `json:"bytes,omitempty"`
 }
 
 // NewLocator creates a new locator with the given identity and addresses and the current time as timestamp.
@@ -172,7 +172,7 @@ func (l *Locator) MakeTXTRecords(key *LocatorDNSSigningKey) ([]string, error) {
 }
 
 type locatorForUnmarshal struct {
-	Bytes []byte
+	Bytes []byte `json:"bytes,omitempty"`
 }
 
 // UnmarshalJSON unmarshals this Locator from a byte array in JSON.

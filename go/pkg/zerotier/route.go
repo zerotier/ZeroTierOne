@@ -21,16 +21,16 @@ import (
 // Route represents a route in a host's routing table
 type Route struct {
 	// Target for this route
-	Target net.IPNet
+	Target net.IPNet `json:"target"`
 
 	// Via is how to reach this target (null/empty if the target IP range is local to this virtual LAN)
-	Via *net.IP
+	Via *net.IP `json:"via,omitempty"`
 
 	// Route flags (currently unused, always 0)
-	Flags uint16
+	Flags uint16 `json:"flags"`
 
 	// Metric is an interface metric that can affect route priority (behavior can be OS-specific)
-	Metric uint16
+	Metric uint16 `json:"metric"`
 }
 
 // String returns a string representation of this route
@@ -46,7 +46,9 @@ func (r *Route) key() (k [6]uint64) {
 	copy(((*[16]byte)(unsafe.Pointer(&k[0])))[:], r.Target.IP)
 	ones, bits := r.Target.Mask.Size()
 	k[2] = (uint64(ones) << 32) | uint64(bits)
-	copy(((*[16]byte)(unsafe.Pointer(&k[3])))[:], r.Via)
+	if r.Via != nil {
+		copy(((*[16]byte)(unsafe.Pointer(&k[3])))[:], *r.Via)
+	}
 	k[5] = (uint64(r.Flags) << 32) | uint64(r.Metric)
 	return
 }

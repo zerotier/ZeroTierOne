@@ -34,7 +34,7 @@ func Networks(basePath, authToken string, args []string, jsonOutput bool) {
 			if nw.Config.Type == zerotier.NetworkTypePublic {
 				t = "PUBLIC"
 			}
-			fmt.Printf("%.16x %-24s %-17s %-16s %-7s %-16s ", uint64(nw.ID), nw.Config.Name, nw.Config.MAC.String(), networkStatusStr(nw.Config.Status), t, nw.TapDeviceName)
+			fmt.Printf("%.16x %-24s %-17s %-16s %-7s %-16s ", uint64(nw.ID), nw.Config.Name, nw.Config.MAC.String(), networkStatusStr(nw.Config.Status), t, nw.PortName)
 			for i, ip := range nw.Config.AssignedAddresses {
 				if i > 0 {
 					fmt.Print(',')
