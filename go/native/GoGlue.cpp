@@ -88,6 +88,7 @@ struct ZT_GoNodeThread
 
 struct ZT_GoNode_Impl
 {
+	void *goUserPtr;
 	Node *node;
 	volatile int64_t nextBackgroundTaskDeadline;
 
@@ -109,15 +110,15 @@ const char *ZT_PLATFORM_DEFAULT_HOMEPATH = defaultHomePath.c_str();
 /****************************************************************************/
 
 /* These functions are implemented in Go in pkg/ztnode/node-callbacks.go */
-extern "C" int goPathCheckFunc(ZT_GoNode *,uint64_t,int,const void *,int);
-extern "C" int goPathLookupFunc(ZT_GoNode *,uint64_t,int,int *,uint8_t [16],int *);
-extern "C" void goStateObjectPutFunc(ZT_GoNode *,int,const uint64_t [2],const void *,int);
-extern "C" int goStateObjectGetFunc(ZT_GoNode *,int,const uint64_t [2],void *,unsigned int);
-extern "C" void goDNSResolverFunc(ZT_GoNode *,const uint8_t *,int,const char *,uintptr_t);
-extern "C" void goVirtualNetworkConfigFunc(ZT_GoNode *,ZT_GoTap *,uint64_t,int,const ZT_VirtualNetworkConfig *);
-extern "C" void goZtEvent(ZT_GoNode *,int,const void *);
-extern "C" void goHandleTapAddedMulticastGroup(ZT_GoNode *,ZT_GoTap *,uint64_t,uint64_t,uint32_t);
-extern "C" void goHandleTapRemovedMulticastGroup(ZT_GoNode *,ZT_GoTap *,uint64_t,uint64_t,uint32_t);
+extern "C" int goPathCheckFunc(void *,uint64_t,int,const void *,int);
+extern "C" int goPathLookupFunc(void *,uint64_t,int,int *,uint8_t [16],int *);
+extern "C" void goStateObjectPutFunc(void *,int,const uint64_t [2],const void *,int);
+extern "C" int goStateObjectGetFunc(void *,int,const uint64_t [2],void *,unsigned int);
+extern "C" void goDNSResolverFunc(void *,const uint8_t *,int,const char *,uintptr_t);
+extern "C" void goVirtualNetworkConfigFunc(void *,ZT_GoTap *,uint64_t,int,const ZT_VirtualNetworkConfig *);
+extern "C" void goZtEvent(void *,int,const void *);
+extern "C" void goHandleTapAddedMulticastGroup(void *,ZT_GoTap *,uint64_t,uint64_t,uint32_t);
+extern "C" void goHandleTapRemovedMulticastGroup(void *,ZT_GoTap *,uint64_t,uint64_t,uint32_t);
 
 static void ZT_GoNode_VirtualNetworkConfigFunction(
 	ZT_Node *node,
@@ -128,7 +129,7 @@ static void ZT_GoNode_VirtualNetworkConfigFunction(
 	enum ZT_VirtualNetworkConfigOperation op,
 	const ZT_VirtualNetworkConfig *cfg)
 {
-	goVirtualNetworkConfigFunc(reinterpret_cast<ZT_GoNode *>(uptr),reinterpret_cast<ZT_GoTap *>(*nptr),nwid,op,cfg);
+	goVirtualNetworkConfigFunc(reinterpret_cast<ZT_GoNode *>(uptr)->goUserPtr,reinterpret_cast<ZT_GoTap *>(*nptr),nwid,op,cfg);
 }
 
 static void ZT_GoNode_VirtualNetworkFrameFunction(
@@ -155,7 +156,7 @@ static void ZT_GoNode_EventCallback(
 	enum ZT_Event et,
 	const void *data)
 {
-	goZtEvent(reinterpret_cast<ZT_GoNode *>(uptr),et,data);
+	goZtEvent(reinterpret_cast<ZT_GoNode *>(uptr)->goUserPtr,et,data);
 }
 
 static void ZT_GoNode_StatePutFunction(
@@ -167,7 +168,12 @@ static void ZT_GoNode_StatePutFunction(
 	const void *data,
 	int len)
 {
-	goStateObjectPutFunc(reinterpret_cast<ZT_GoNode *>(uptr),objType,id,data,len);
+	goStateObjectPutFunc(
+		reinterpret_cast<ZT_GoNode *>(uptr)->goUserPtr,
+		objType,
+		id,
+		data,
+		len);
 }
 
 static int ZT_GoNode_StateGetFunction(
@@ -180,7 +186,7 @@ static int ZT_GoNode_StateGetFunction(
 	unsigned int buflen)
 {
 	return goStateObjectGetFunc(
-		reinterpret_cast<ZT_GoNode *>(uptr),
+		reinterpret_cast<ZT_GoNode *>(uptr)->goUserPtr,
 		(int)objType,
 		id,
 		buf,
@@ -252,14 +258,14 @@ static int ZT_GoNode_PathCheckFunction(
 	switch(sa->ss_family) {
 		case AF_INET:
 			return goPathCheckFunc(
-				reinterpret_cast<ZT_GoNode *>(uptr),
+				reinterpret_cast<ZT_GoNode *>(uptr)->goUserPtr,
 				ztAddress,
 				AF_INET,
 				&(reinterpret_cast<const struct sockaddr_in *>(sa)->sin_addr.s_addr),
 				Utils::ntoh((uint16_t)reinterpret_cast<const struct sockaddr_in *>(sa)->sin_port));
 		case AF_INET6:
 			return goPathCheckFunc(
-				reinterpret_cast<ZT_GoNode *>(uptr),
+				reinterpret_cast<ZT_GoNode *>(uptr)->goUserPtr,
 				ztAddress,
 				AF_INET6,
 				reinterpret_cast<const struct sockaddr_in6 *>(sa)->sin6_addr.s6_addr,
@@ -280,7 +286,7 @@ static int ZT_GoNode_PathLookupFunction(
 	uint8_t ip[16];
 	int port = 0;
 	const int result = goPathLookupFunc(
-		reinterpret_cast<ZT_GoNode *>(uptr),
+		reinterpret_cast<ZT_GoNode *>(uptr)->goUserPtr,
 		ztAddress,
 		desiredAddressFamily,
 		&family,
@@ -315,12 +321,12 @@ static void ZT_GoNode_DNSResolver(
 {
 	uint8_t t[256];
 	for(unsigned int i=0;(i<numTypes)&&(i<256);++i) t[i] = (uint8_t)types[i];
-	goDNSResolverFunc(reinterpret_cast<ZT_GoNode *>(uptr),t,(int)numTypes,name,requestId);
+	goDNSResolverFunc(reinterpret_cast<ZT_GoNode *>(uptr)->goUserPtr,t,(int)numTypes,name,requestId);
 }
 
 /****************************************************************************/
 
-extern "C" ZT_GoNode *ZT_GoNode_new(const char *workingPath)
+extern "C" ZT_GoNode *ZT_GoNode_new(const char *workingPath,uintptr_t userPtr)
 {
 	try {
 		struct ZT_Node_Callbacks cb;
@@ -336,6 +342,7 @@ extern "C" ZT_GoNode *ZT_GoNode_new(const char *workingPath)
 
 		ZT_GoNode_Impl *gn = new ZT_GoNode_Impl;
 		const int64_t now = OSUtils::now();
+		gn->goUserPtr = reinterpret_cast<void *>(userPtr);
 		gn->node = new Node(reinterpret_cast<void *>(gn),nullptr,&cb,now);
 		gn->nextBackgroundTaskDeadline = now;
 		gn->path = workingPath;

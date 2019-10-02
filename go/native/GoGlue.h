@@ -44,7 +44,7 @@ extern const char *ZT_PLATFORM_DEFAULT_HOMEPATH;
 
 /****************************************************************************/
 
-ZT_GoNode *ZT_GoNode_new(const char *workingPath);
+ZT_GoNode *ZT_GoNode_new(const char *workingPath,uintptr_t userPtr);
 
 void ZT_GoNode_delete(ZT_GoNode *gn);
 

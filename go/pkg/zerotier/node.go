@@ -267,11 +267,18 @@ func NewNode(basePath string) (*Node, error) {
 		return nil, errors.New("unable to bind to primary port")
 	}
 
+	nodesByUserPtrLock.Lock()
+	nodesByUserPtr[uintptr(unsafe.Pointer(n))] = n
+	nodesByUserPtrLock.Unlock()
+
 	cPath := C.CString(basePath)
-	n.gn = C.ZT_GoNode_new(cPath)
+	n.gn = C.ZT_GoNode_new(cPath, C.uintptr_t(uintptr(unsafe.Pointer(n))))
 	C.free(unsafe.Pointer(cPath))
 	if n.gn == nil {
 		n.log.Println("FATAL: node initialization failed")
+		nodesByUserPtrLock.Lock()
+		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n)))
+		nodesByUserPtrLock.Unlock()
 		return nil, ErrNodeInitFailed
 	}
 	n.zn = (*C.ZT_Node)(C.ZT_GoNode_getNode(n.gn))
@@ -282,6 +289,9 @@ func NewNode(basePath string) (*Node, error) {
 	n.id, err = NewIdentityFromString(idString)
 	if err != nil {
 		n.log.Printf("FATAL: node's identity does not seem valid (%s)", string(idString))
+		nodesByUserPtrLock.Lock()
+		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n)))
+		nodesByUserPtrLock.Unlock()
 		C.ZT_GoNode_delete(n.gn)
 		return nil, err
 	}
@@ -289,14 +299,12 @@ func NewNode(basePath string) (*Node, error) {
 	n.apiServer, n.tcpApiServer, err = createAPIServer(basePath, n)
 	if err != nil {
 		n.log.Printf("FATAL: unable to start API server: %s", err.Error())
+		nodesByUserPtrLock.Lock()
+		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n)))
+		nodesByUserPtrLock.Unlock()
 		C.ZT_GoNode_delete(n.gn)
 		return nil, err
 	}
-
-	gnRawAddr := uintptr(unsafe.Pointer(n.gn))
-	nodesByUserPtrLock.Lock()
-	nodesByUserPtr[gnRawAddr] = n
-	nodesByUserPtrLock.Unlock()
 
 	n.online = 0
 	n.running = 1
@@ -411,7 +419,7 @@ func (n *Node) Close() {
 		n.runLock.Unlock()
 
 		nodesByUserPtrLock.Lock()
-		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n.gn)))
+		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n)))
 		nodesByUserPtrLock.Unlock()
 	}
 }
