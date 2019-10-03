@@ -27,8 +27,8 @@
 #include <vector>
 
 // These are absolute maximums -- real locators are never this big
-#define ZT_LOCATOR_MAX_PHYSICAL_ADDRESSES 255
-#define ZT_LOCATOR_MAX_VIRTUAL_ADDRESSES 255
+#define ZT_LOCATOR_MAX_PHYSICAL_ADDRESSES 64
+#define ZT_LOCATOR_MAX_VIRTUAL_ADDRESSES 64
 
 namespace ZeroTier {
 

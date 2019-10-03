@@ -167,11 +167,6 @@ extern "C" {
 #define ZT_MAX_MULTICAST_SUBSCRIPTIONS 1024
 
 /**
- * Maximum size for a state object (via state object put/get callbacks/API)
- */
-#define ZT_MAX_STATE_OBJECT_SIZE 4096
-
-/**
  * Maximum value for link quality (min is 0)
  */
 #define ZT_PATH_LINK_QUALITY_MAX 255
@@ -1342,7 +1337,7 @@ enum ZT_StateObjectType
 	 * Canonical path: <HOME>/roots
 	 * Persitence: required if root settings should persist
 	 */
-	ZT_STATE_OBJECT_ROOT_LIST = 7
+	ZT_STATE_OBJECT_ROOTS = 7
 };
 
 /**

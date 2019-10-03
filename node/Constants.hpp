@@ -190,6 +190,20 @@
 #define ZT_ADDRESS_RESERVED_PREFIX 0xff
 
 /**
+ * Secure DNS name for ZeroTier's default root
+ *
+ * This resolves via GeoDNS to the (probably) nearest actual root server's locator.
+ */
+#define ZT_DEFAULT_ROOT_NAME "ztl-aj4zes4l6zumq64na6borruuvd6diw2koxrjcaatolcekt2gj5rrhric.ztl-6lhxeo7n3z7kzkgcqzj3ndliaq.zerotier.network"
+
+/**
+ * Default locator for default root
+ *
+ * This is used before the root has been successfully fetched, or if DNS is unavailable.
+ */
+#define ZT_DEFAULT_ROOT_LOCATOR "AAAAAW2OuYyfOkbxvzAAduZvqzPihUmmLuIGTRhDJzwsMAukXD8gvvAtutIlcju1mpu0sTU1cwlhruz1oWOs5HfM6wcnAluZrBSlFmoJowAEBLm0DVInCQS5tA1SAbsGKgJuoMgVAAAAAAAAAAAAACcJBioCbqDIFQAAAAAAAAAAAAABuwAAYDvTNB2snbn7TYom4PBTh/ohRgCnI2/A/nfKakGCb+2hGJTtxTCiGTzKZdbjd0vyKAKQLJxhj7RaoCo3XjPn8w9nDEmhdNCgCM/IITCJIzc9tEKFsSQnJY4VmB3dopBAfQAA"
+
+/**
  * Default virtual network MTU (not physical)
  */
 #define ZT_DEFAULT_MTU 2800

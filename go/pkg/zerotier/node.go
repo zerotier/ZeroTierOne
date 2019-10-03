@@ -747,7 +747,7 @@ func (n *Node) makeStateObjectPath(objType int, id [2]uint64) (string, bool) {
 		fp = path.Join(n.basePath, "networks.d")
 		_ = os.Mkdir(fp, 0755)
 		fp = path.Join(fp, fmt.Sprintf("%.16x.conf", id[0]))
-	case C.ZT_STATE_OBJECT_ROOT_LIST:
+	case C.ZT_STATE_OBJECT_ROOTS:
 		fp = path.Join(n.basePath, "roots")
 	}
 	return fp, secret

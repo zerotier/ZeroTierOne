@@ -64,7 +64,7 @@ private:
 		unsigned int bestRootLatency;
 	};
 
-	ZT_ALWAYS_INLINE void _updateDynamicRootIdentities()
+	ZT_ALWAYS_INLINE void _updateRoots()
 	{
 		// assumes _roots_l is locked
 		_rootIdentities.clear();
@@ -334,11 +334,13 @@ public:
 			Locator &ll = _roots[name];
 			if (ll.timestamp() < latestLocator.timestamp()) {
 				ll = latestLocator;
-				_updateDynamicRootIdentities();
+				_updateRoots();
+				_rootsModified = true;
 				return true;
 			}
 		} else if (!_roots.contains(name)) {
-			_roots[name];
+			_roots.set(name,Locator()); // no locator known yet, but add name to name list to trigger DNS refreshing
+			_rootsModified = true;
 			return true;
 		}
 		return false;
@@ -350,8 +352,10 @@ public:
 	inline void removeRoot(const Str &name)
 	{
 		Mutex::Lock l(_roots_l);
-		_roots.erase(name);
-		_updateDynamicRootIdentities();
+		if (_roots.erase(name)) {
+			_updateRoots();
+			_rootsModified = true;
+		}
 	}
 
 	/**
@@ -529,8 +533,10 @@ private:
 
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
+
 	Hashtable< Str,Locator > _roots;
 	Hashtable< Identity,bool > _rootIdentities;
+	bool _rootsModified;
 
 	int64_t _lastUpdatedBestRoot;
 	SharedPtr<Peer> _bestRoot;

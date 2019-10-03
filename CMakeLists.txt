@@ -195,6 +195,14 @@ endif(WIN32)
 #target_link_libraries(${PROJECT_NAME} ${libs})
 #target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 
+add_custom_command(
+	OUTPUT zerotier
+	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/go
+	COMMAND go build -trimpath -ldflags -s -o ../build/zerotier cmd/zerotier/zerotier.go
+	DEPENDS zt_osdep zt_core zt_go_native
+)
+add_custom_target(build_zerotier ALL DEPENDS zerotier)
+
 add_executable(zerotier-selftest selftest.cpp)
 target_link_libraries(zerotier-selftest ${libs} zt_core zt_osdep)
 target_compile_features(zerotier-selftest PUBLIC cxx_std_11)
