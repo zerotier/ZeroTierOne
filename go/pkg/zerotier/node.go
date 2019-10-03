@@ -31,6 +31,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -312,6 +313,8 @@ func NewNode(basePath string) (*Node, error) {
 	n.runLock.Lock() // used to block Close() until below gorountine exits
 	go func() {
 		lastMaintenanceRun := int64(0)
+		var previousExplicitExternalAddresses []ExternalAddress
+		var portsA [3]int
 		for atomic.LoadUint32(&n.running) != 0 {
 			time.Sleep(1 * time.Second)
 
@@ -346,48 +349,81 @@ func NewNode(basePath string) (*Node, error) {
 					n.networksLock.RUnlock()
 				}
 
+				interfaceAddressesChanged := false
+				ports := portsA[:0]
+				if n.localConfig.Settings.PrimaryPort > 0 && n.localConfig.Settings.PrimaryPort < 65536 {
+					ports = append(ports, n.localConfig.Settings.PrimaryPort)
+				}
+				if n.localConfig.Settings.SecondaryPort > 0 && n.localConfig.Settings.SecondaryPort < 65536 {
+					ports = append(ports, n.localConfig.Settings.SecondaryPort)
+				}
+				if n.localConfig.Settings.TertiaryPort > 0 && n.localConfig.Settings.TertiaryPort < 65536 {
+					ports = append(ports, n.localConfig.Settings.TertiaryPort)
+				}
+
 				// Open or close locally bound UDP ports for each local interface address.
 				// This opens ports if they are not already open and then closes ports if
 				// they are open but no longer seem to exist.
 				n.interfaceAddressesLock.Lock()
 				for astr, ipn := range interfaceAddresses {
 					if _, alreadyKnown := n.interfaceAddresses[astr]; !alreadyKnown {
+						interfaceAddressesChanged = true
 						ipCstr := C.CString(ipn.String())
-						if n.localConfig.Settings.PrimaryPort > 0 && n.localConfig.Settings.PrimaryPort < 65536 {
-							n.log.Printf("UDP binding to port %d on interface %s", n.localConfig.Settings.PrimaryPort, astr)
-							C.ZT_GoNode_phyStartListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.PrimaryPort))
-						}
-						if n.localConfig.Settings.SecondaryPort > 0 && n.localConfig.Settings.SecondaryPort < 65536 {
-							n.log.Printf("UDP binding to port %d on interface %s", n.localConfig.Settings.SecondaryPort, astr)
-							C.ZT_GoNode_phyStartListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.SecondaryPort))
-						}
-						if n.localConfig.Settings.TertiaryPort > 0 && n.localConfig.Settings.TertiaryPort < 65536 {
-							n.log.Printf("UDP binding to port %d on interface %s", n.localConfig.Settings.TertiaryPort, astr)
-							C.ZT_GoNode_phyStartListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.TertiaryPort))
+						for _, p := range ports {
+							n.log.Printf("UDP binding to port %d on interface %s", p, astr)
+							C.ZT_GoNode_phyStartListen(n.gn, nil, ipCstr, C.int(p))
 						}
 						C.free(unsafe.Pointer(ipCstr))
 					}
 				}
 				for astr, ipn := range n.interfaceAddresses {
 					if _, stillPresent := interfaceAddresses[astr]; !stillPresent {
+						interfaceAddressesChanged = true
 						ipCstr := C.CString(ipn.String())
-						if n.localConfig.Settings.PrimaryPort > 0 && n.localConfig.Settings.PrimaryPort < 65536 {
-							n.log.Printf("UDP closing socket bound to port %d on interface %s", n.localConfig.Settings.PrimaryPort, astr)
-							C.ZT_GoNode_phyStopListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.PrimaryPort))
-						}
-						if n.localConfig.Settings.SecondaryPort > 0 && n.localConfig.Settings.SecondaryPort < 65536 {
-							n.log.Printf("UDP closing socket bound to port %d on interface %s", n.localConfig.Settings.SecondaryPort, astr)
-							C.ZT_GoNode_phyStopListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.SecondaryPort))
-						}
-						if n.localConfig.Settings.TertiaryPort > 0 && n.localConfig.Settings.TertiaryPort < 65536 {
-							n.log.Printf("UDP closing socket bound to port %d on interface %s", n.localConfig.Settings.TertiaryPort, astr)
-							C.ZT_GoNode_phyStopListen(n.gn, nil, ipCstr, C.int(n.localConfig.Settings.TertiaryPort))
+						for _, p := range ports {
+							n.log.Printf("UDP closing socket bound to port %d on interface %s", p, astr)
+							C.ZT_GoNode_phyStopListen(n.gn, nil, ipCstr, C.int(p))
 						}
 						C.free(unsafe.Pointer(ipCstr))
 					}
 				}
 				n.interfaceAddresses = interfaceAddresses
 				n.interfaceAddressesLock.Unlock()
+
+				// Update node's understanding of our interface addressaes if they've changed
+				if interfaceAddressesChanged || reflect.DeepEqual(n.localConfig.Settings.ExplicitAddresses, previousExplicitExternalAddresses) {
+					externalAddresses := make(map[[3]uint64]*ExternalAddress)
+					for _, ip := range interfaceAddresses {
+						for _, p := range ports {
+							a := &ExternalAddress{
+								InetAddress: InetAddress{
+									IP:   ip,
+									Port: p,
+								},
+								Permanent: false,
+							}
+							externalAddresses[a.key()] = a
+						}
+					}
+					for _, a := range n.localConfig.Settings.ExplicitAddresses {
+						externalAddresses[a.key()] = &a
+					}
+					if len(externalAddresses) > 0 {
+						cAddrs := make([]C.ZT_InterfaceAddress, len(externalAddresses))
+						cAddrCount := 0
+						for _, a := range externalAddresses {
+							makeSockaddrStorage(a.IP, a.Port, &(cAddrs[cAddrCount].address))
+							cAddrs[cAddrCount].permanent = 0
+							if a.Permanent {
+								cAddrs[cAddrCount].permanent = 1
+							}
+							cAddrCount++
+						}
+						C.ZT_Node_setInterfaceAddresses(unsafe.Pointer(n.zn), &cAddrs[0], C.uint(cAddrCount))
+					} else {
+						C.ZT_Node_setInterfaceAddresses(unsafe.Pointer(n.zn), nil, 0)
+					}
+				}
 
 				// Trim log if it's gone over its size limit
 				if n.localConfig.Settings.LogSizeMax > 0 && n.logW != nil {
@@ -462,7 +498,7 @@ func (n *Node) SetLocalConfig(lc *LocalConfig) (restartRequired bool, err error)
 	for nid, nc := range lc.Network {
 		nw := n.networks[nid]
 		if nw != nil {
-			nw.SetLocalSettings(nc)
+			nw.SetLocalSettings(&nc)
 		}
 	}
 
@@ -722,7 +758,7 @@ func (n *Node) pathLookup(ztAddress Address) (net.IP, int) {
 	n.localConfigLock.RLock()
 	defer n.localConfigLock.RUnlock()
 	virt := n.localConfig.Virtual[ztAddress]
-	if virt != nil && len(virt.Try) > 0 {
+	if len(virt.Try) > 0 {
 		idx := rand.Int() % len(virt.Try)
 		return virt.Try[idx].IP, virt.Try[idx].Port
 	}

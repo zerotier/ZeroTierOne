@@ -33,7 +33,15 @@ type LocalConfigPhysicalPathConfiguration struct {
 // LocalConfigVirtualAddressConfiguration contains settings for virtual addresses
 type LocalConfigVirtualAddressConfiguration struct {
 	// Try is a list of IPs/ports to try for this peer in addition to anything learned from roots or direct path push
-	Try []*InetAddress `json:",omitempty"`
+	Try []InetAddress `json:",omitempty"`
+}
+
+// ExternalAddress is an externally visible address
+type ExternalAddress struct {
+	InetAddress
+
+	// Permanent indicates that this address should be incorporated into this node's Locator
+	Permanent bool `json:"permanent"`
 }
 
 // LocalConfigSettings contains node settings
@@ -66,19 +74,19 @@ type LocalConfigSettings struct {
 	InterfacePrefixBlacklist []string `json:"interfacePrefixBlacklist,omitempty"`
 
 	// ExplicitAddresses are explicit IP/port addresses to advertise to other nodes, such as externally mapped ports on a router
-	ExplicitAddresses []*InetAddress `json:"explicitAddresses,omitempty"`
+	ExplicitAddresses []ExternalAddress `json:"explicitAddresses,omitempty"`
 }
 
 // LocalConfig is the local.conf file and stores local settings for the node.
 type LocalConfig struct {
 	// Physical path configurations by CIDR IP/bits
-	Physical map[string]*LocalConfigPhysicalPathConfiguration `json:"physical,omitempty"`
+	Physical map[string]LocalConfigPhysicalPathConfiguration `json:"physical,omitempty"`
 
 	// Virtual node specific configurations by 10-digit hex ZeroTier address
-	Virtual map[Address]*LocalConfigVirtualAddressConfiguration `json:"virtual,omitempty"`
+	Virtual map[Address]LocalConfigVirtualAddressConfiguration `json:"virtual,omitempty"`
 
 	// Network local configurations by 16-digit hex ZeroTier network ID
-	Network map[NetworkID]*NetworkLocalSettings `json:"network,omitempty"`
+	Network map[NetworkID]NetworkLocalSettings `json:"network,omitempty"`
 
 	// LocalConfigSettings contains other local settings for this node
 	Settings LocalConfigSettings `json:"settings,omitempty"`
@@ -87,9 +95,9 @@ type LocalConfig struct {
 // Read this local config from a file, initializing to defaults if the file does not exist
 func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool) error {
 	if lc.Physical == nil {
-		lc.Physical = make(map[string]*LocalConfigPhysicalPathConfiguration)
-		lc.Virtual = make(map[Address]*LocalConfigVirtualAddressConfiguration)
-		lc.Network = make(map[NetworkID]*NetworkLocalSettings)
+		lc.Physical = make(map[string]LocalConfigPhysicalPathConfiguration)
+		lc.Virtual = make(map[Address]LocalConfigVirtualAddressConfiguration)
+		lc.Network = make(map[NetworkID]NetworkLocalSettings)
 		lc.Settings.PrimaryPort = 9993
 		lc.Settings.SecondaryPort = 16384 + (rand.Int() % 16384)
 		lc.Settings.TertiaryPort = 32768 + (rand.Int() % 16384)

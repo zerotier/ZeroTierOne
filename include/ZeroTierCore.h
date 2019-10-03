@@ -1124,9 +1124,26 @@ typedef struct
 } ZT_VirtualNetworkList;
 
 /**
+ * Address where this node could be reached via an external interface
+ */
+typedef struct
+{
+	/**
+	 * IP and port as would be reachable by external nodes
+	 */
+	struct sockaddr_storage address;
+
+	/**
+	 * If nonzero this address is static and can be incorporated into this node's Locator
+	 */
+	int permanent;
+} ZT_InterfaceAddress;
+
+/**
  * Physical path configuration
  */
-typedef struct {
+typedef struct
+{
 	/**
 	 * If non-zero set this physical network path to be trusted to disable encryption and authentication
 	 */
@@ -1313,6 +1330,15 @@ enum ZT_StateObjectType
 	ZT_STATE_OBJECT_IDENTITY_SECRET = 2,
 
 	/**
+	 * This node's locator
+	 *
+	 * Object ID: 0
+	 * Canonical path: <HOME>/locator
+	 * Persistence: optional
+	 */
+	ZT_STATE_OBJECT_LOCATOR = 3,
+
+	/**
 	 * Peer and related state
 	 *
 	 * Object ID: peer address
@@ -1335,7 +1361,7 @@ enum ZT_StateObjectType
 	 *
 	 * Object ID: 0
 	 * Canonical path: <HOME>/roots
-	 * Persitence: required if root settings should persist
+	 * Persistence: required if root settings should persist
 	 */
 	ZT_STATE_OBJECT_ROOTS = 7
 };
@@ -1958,33 +1984,13 @@ ZT_SDK_API void ZT_Node_setNetworkUserPtr(ZT_Node *node,uint64_t nwid,void *ptr)
 ZT_SDK_API void ZT_Node_freeQueryResult(ZT_Node *node,void *qr);
 
 /**
- * Add a local interface address
+ * Set external interface addresses where this node could be reached
  *
- * This is used to make ZeroTier aware of those local interface addresses
- * that you wish to use for ZeroTier communication. This is optional, and if
- * it is not used ZeroTier will rely upon upstream peers (and roots) to
- * perform empirical address discovery and NAT traversal. But the use of this
- * method is recommended as it improves peer discovery when both peers are
- * on the same LAN.
- *
- * It is the responsibility of the caller to take care that these are never
- * ZeroTier interface addresses, whether these are assigned by ZeroTier or
- * are otherwise assigned to an interface managed by this ZeroTier instance.
- * This can cause recursion or other undesirable behavior.
- *
- * This returns a boolean indicating whether or not the address was
- * accepted. ZeroTier will only communicate over certain address types
- * and (for IP) address classes.
- *
- * @param addr Local interface address
- * @return Boolean: non-zero if address was accepted and added
+ * @param node Node instance
+ * @param addrs Addresses
+ * @param addrCount Number of items in addrs[]
  */
-ZT_SDK_API int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr);
-
-/**
- * Clear local interface addresses
- */
-ZT_SDK_API void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node);
+ZT_SDK_API void ZT_Node_setInterfaceAddresses(ZT_Node *node,const ZT_InterfaceAddress *addrs,unsigned int addrCount);
 
 /**
  * Send a VERB_USER_MESSAGE to another ZeroTier node

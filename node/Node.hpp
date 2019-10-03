@@ -167,11 +167,13 @@ public:
 		return nw;
 	}
 
-	ZT_ALWAYS_INLINE std::vector<InetAddress> directPaths() const
+	ZT_ALWAYS_INLINE std::vector<ZT_InterfaceAddress> directPaths() const
 	{
 		Mutex::Lock _l(_localInterfaceAddresses_m);
 		return _localInterfaceAddresses;
 	}
+
+	void setInterfaceAddresses(const ZT_InterfaceAddress *addrs,unsigned int addrCount);
 
 	ZT_ALWAYS_INLINE void postEvent(void *tPtr,ZT_Event ev,const void *md = (const void *)0) { _cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ev,md); }
 	ZT_ALWAYS_INLINE void configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { _cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,nwid,nuptr,op,nc); }
@@ -284,15 +286,12 @@ private:
 	Hashtable< _LocalControllerAuth,int64_t > _localControllerAuthorizations;
 	Mutex _localControllerAuthorizations_m;
 
-	// Curreently joined networks
 	Hashtable< uint64_t,SharedPtr<Network> > _networks;
 	Mutex _networks_m;
 
-	// Local interface addresses as reported by the code harnessing this Node
-	std::vector<InetAddress> _localInterfaceAddresses;
+	std::vector<ZT_InterfaceAddress> _localInterfaceAddresses;
 	Mutex _localInterfaceAddresses_m;
 
-	// Lock to ensure processBackgroundTasks never gets run concurrently
 	Mutex _backgroundTasksLock;
 
 	uint8_t _multipathMode;

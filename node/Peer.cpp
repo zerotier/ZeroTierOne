@@ -170,20 +170,30 @@ void Peer::received(
 	const int64_t sinceLastPush = now - _lastDirectPathPushSent;
 	if (sinceLastPush >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH : ZT_DIRECT_PATH_PUSH_INTERVAL)) {
 		_lastDirectPathPushSent = now;
-		std::vector<InetAddress> pathsToPush(RR->node->directPaths());
+		std::vector<ZT_InterfaceAddress> pathsToPush(RR->node->directPaths());
 		if (pathsToPush.size() > 0) {
-			std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
+			std::vector<ZT_InterfaceAddress>::const_iterator p(pathsToPush.begin());
 			while (p != pathsToPush.end()) {
 				ScopedPtr<Packet> outp(new Packet(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS));
 				outp->addSize(2); // leave room for count
 				unsigned int count = 0;
 				while ((p != pathsToPush.end())&&((outp->size() + 24) < 1200)) {
 					uint8_t addressType = 4;
-					switch(p->ss_family) {
+					uint8_t addressLength = 6;
+					unsigned int ipLength = 4;
+					const void *rawIpData;
+					const void *rawIpPort;
+					switch(p->address.ss_family) {
 						case AF_INET:
+							rawIpData = &(reinterpret_cast<const struct sockaddr_in *>(&(p->address))->sin_addr.s_addr);
+							rawIpPort = &(reinterpret_cast<const struct sockaddr_in *>(&(p->address))->sin_port);
 							break;
 						case AF_INET6:
+							rawIpData = reinterpret_cast<const struct sockaddr_in6 *>(&(p->address))->sin6_addr.s6_addr;
+							rawIpPort = &(reinterpret_cast<const struct sockaddr_in6 *>(&(p->address))->sin6_port);
 							addressType = 6;
+							addressLength = 18;
+							ipLength = 16;
 							break;
 						default: // we currently only push IP addresses
 							++p;
@@ -193,9 +203,9 @@ void Peer::received(
 					outp->append((uint8_t)0); // no flags
 					outp->append((uint16_t)0); // no extensions
 					outp->append(addressType);
-					outp->append((uint8_t)((addressType == 4) ? 6 : 18));
-					outp->append(p->rawIpData(),((addressType == 4) ? 4 : 16));
-					outp->append((uint16_t)p->port());
+					outp->append(addressLength);
+					outp->append(rawIpData,ipLength);
+					outp->append(rawIpPort,2);
 
 					++count;
 					++p;

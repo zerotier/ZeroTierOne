@@ -594,22 +594,23 @@ void Node::freeQueryResult(void *qr)
 		::free(qr);
 }
 
-int Node::addLocalInterfaceAddress(const struct sockaddr_storage *addr)
-{
-	if (Path::isAddressValidForPath(*(reinterpret_cast<const InetAddress *>(addr)))) {
-		Mutex::Lock _l(_localInterfaceAddresses_m);
-		if (std::find(_localInterfaceAddresses.begin(),_localInterfaceAddresses.end(),*(reinterpret_cast<const InetAddress *>(addr))) == _localInterfaceAddresses.end()) {
-			_localInterfaceAddresses.push_back(*(reinterpret_cast<const InetAddress *>(addr)));
-			return 1;
-		}
-	}
-	return 0;
-}
-
-void Node::clearLocalInterfaceAddresses()
+void Node::setInterfaceAddresses(const ZT_InterfaceAddress *addrs,unsigned int addrCount)
 {
 	Mutex::Lock _l(_localInterfaceAddresses_m);
 	_localInterfaceAddresses.clear();
+	for(unsigned int i=0;i<addrCount;++i) {
+		if (Path::isAddressValidForPath(*(reinterpret_cast<const InetAddress *>(&addrs[i].address)))) {
+			bool dupe = false;
+			for(unsigned int j=0;j<i;++j) {
+				if (*(reinterpret_cast<const InetAddress *>(&addrs[j].address)) == *(reinterpret_cast<const InetAddress *>(&addrs[i].address))) {
+					dupe = true;
+					break;
+				}
+			}
+			if (!dupe)
+				_localInterfaceAddresses.push_back(addrs[i]);
+		}
+	}
 }
 
 int Node::sendUserMessage(void *tptr,uint64_t dest,uint64_t typeId,const void *data,unsigned int len)
@@ -993,19 +994,10 @@ void ZT_Node_freeQueryResult(ZT_Node *node,void *qr)
 	} catch ( ... ) {}
 }
 
-int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr)
+void ZT_Node_setInterfaceAddresses(ZT_Node *node,const ZT_InterfaceAddress *addrs,unsigned int addrCount)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->addLocalInterfaceAddress(addr);
-	} catch ( ... ) {
-		return 0;
-	}
-}
-
-void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->clearLocalInterfaceAddresses();
+		reinterpret_cast<ZeroTier::Node *>(node)->setInterfaceAddresses(addrs,addrCount);
 	} catch ( ... ) {}
 }
 
