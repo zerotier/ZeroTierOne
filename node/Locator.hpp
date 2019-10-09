@@ -22,6 +22,7 @@
 #include "SHA512.hpp"
 #include "Str.hpp"
 #include "ScopedPtr.hpp"
+#include "SharedPtr.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -43,6 +44,8 @@ namespace ZeroTier {
  */
 class Locator
 {
+	friend class SharedPtr<Locator>;
+
 public:
 	ZT_ALWAYS_INLINE Locator() : _ts(0),_signatureLength(0) {}
 
@@ -371,6 +374,7 @@ private:
 	std::vector<Identity> _virtual;
 	unsigned int _signatureLength;
 	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
+	AtomicCounter __refCount;
 };
 
 } // namespace ZeroTier

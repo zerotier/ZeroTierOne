@@ -70,7 +70,7 @@ private:
 		_rootIdentities.clear();
 		Hashtable< Str,Locator >::Iterator i(_roots);
 		Str *k = (Str *)0;
-		Locator *v = (Locator *)0;
+		SharedPtr< const Locator > *v = (SharedPtr< const Locator > *)0;
 		while (i.next(k,v)) {
 			if (*v)
 				_rootIdentities.set(v->id(),true);
@@ -534,7 +534,7 @@ private:
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
 
-	Hashtable< Str,Locator > _roots;
+	Hashtable< Str,SharedPtr<const Locator> > _roots;
 	Hashtable< Identity,bool > _rootIdentities;
 	bool _rootsModified;
 

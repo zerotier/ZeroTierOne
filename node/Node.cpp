@@ -639,6 +639,33 @@ void Node::setController(void *networkControllerInstance)
 /* Node methods used only within node/                                      */
 /****************************************************************************/
 
+SharedPtr< const Locator > Node::locator()
+{
+	Mutex::Lock lck(_locator_m);
+	if (!_locator) {
+		Locator *l = new Locator();
+		try {
+			RR->topology->eachRoot([l](const SharedPtr<Peer> &p,const std::vector<InetAddress> &phyAddr) -> bool {
+				l->add(p->identity());
+				return true;
+			});
+			{
+				Mutex::Lock lck2(_localInterfaceAddresses_m);
+				for(std::vector< ZT_InterfaceAddress >::const_iterator a(_localInterfaceAddresses.begin());a!=_localInterfaceAddresses.end();++a) {
+					if (a->permanent != 0) {
+						l->add(*reinterpret_cast<const InetAddress *>(&(a->address)));
+					}
+				}
+			}
+		} catch ( ... ) {
+			delete l;
+			throw;
+		}
+		_locator.set(l);
+	}
+	return _locator;
+}
+
 bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,const int64_t localSocket,const InetAddress &remoteAddress)
 {
 	if (!Path::isAddressValidForPath(remoteAddress))

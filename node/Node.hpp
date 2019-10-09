@@ -41,6 +41,8 @@
 
 namespace ZeroTier {
 
+class Locator;
+
 /**
  * Implementation of Node object as defined in CAPI
  *
@@ -175,6 +177,7 @@ public:
 
 	void setInterfaceAddresses(const ZT_InterfaceAddress *addrs,unsigned int addrCount);
 
+	SharedPtr< const Locator > locator();
 	ZT_ALWAYS_INLINE void postEvent(void *tPtr,ZT_Event ev,const void *md = (const void *)0) { _cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ev,md); }
 	ZT_ALWAYS_INLINE void configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { _cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,nwid,nuptr,op,nc); }
 	ZT_ALWAYS_INLINE bool online() const { return _online; }
@@ -284,14 +287,14 @@ private:
 		ZT_ALWAYS_INLINE bool operator!=(const _LocalControllerAuth &a) const { return ((a.nwid != nwid)||(a.address != address)); }
 	};
 	Hashtable< _LocalControllerAuth,int64_t > _localControllerAuthorizations;
-	Mutex _localControllerAuthorizations_m;
-
 	Hashtable< uint64_t,SharedPtr<Network> > _networks;
+	SharedPtr< const Locator > _locator;
+	std::vector< ZT_InterfaceAddress > _localInterfaceAddresses;
+
+	Mutex _localControllerAuthorizations_m;
 	Mutex _networks_m;
-
-	std::vector<ZT_InterfaceAddress> _localInterfaceAddresses;
+	Mutex _locator_m;
 	Mutex _localInterfaceAddresses_m;
-
 	Mutex _backgroundTasksLock;
 
 	uint8_t _multipathMode;

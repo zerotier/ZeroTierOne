@@ -525,8 +525,6 @@ private:
 	unsigned int _QoSCutoffCount;
 	unsigned int _ACKCutoffCount;
 
-	AtomicCounter __refCount;
-
 	RingBuffer<int,ZT_MULTIPATH_PROPORTION_WIN_SZ> _pathChoiceHist;
 
 	bool _linkIsBalanced;
@@ -537,6 +535,8 @@ private:
 	int64_t _lastAggregateAllocation;
 
 	char _interfaceListStr[256]; // 16 characters * 16 paths in a link
+
+	AtomicCounter __refCount;
 };
 
 } // namespace ZeroTier
