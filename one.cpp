@@ -115,10 +115,10 @@ static void cliPrintHelp(const char *pn,FILE *out)
 	fprintf(out,"  listpeers               - List all peers" ZT_EOL_S);
 	fprintf(out,"  peers                   - List all peers (prettier)" ZT_EOL_S);
 	fprintf(out,"  listnetworks            - List all networks" ZT_EOL_S);
-	fprintf(out,"  join <network>          - Join a network" ZT_EOL_S);
-	fprintf(out,"  leave <network>         - Leave a network" ZT_EOL_S);
-	fprintf(out,"  set <network> <setting> - Set a network setting" ZT_EOL_S);
-	fprintf(out,"  get <network> <setting> - Get a network setting" ZT_EOL_S);
+	fprintf(out,"  join <network ID>          - Join a network" ZT_EOL_S);
+	fprintf(out,"  leave <network ID>         - Leave a network" ZT_EOL_S);
+	fprintf(out,"  set <network ID> <setting> - Set a network setting" ZT_EOL_S);
+	fprintf(out,"  get <network ID> <setting> - Get a network setting" ZT_EOL_S);
 	fprintf(out,"  listmoons               - List moons (federated root sets)" ZT_EOL_S);
 	fprintf(out,"  orbit <world ID> <seed> - Join a moon via any member root" ZT_EOL_S);
 	fprintf(out,"  deorbit <world ID>      - Leave a moon" ZT_EOL_S);
@@ -126,7 +126,7 @@ static void cliPrintHelp(const char *pn,FILE *out)
 	fprintf(out,"  Settings to use with [get/set] may include property names from " ZT_EOL_S);
 	fprintf(out,"  the JSON output of \"zerotier-cli -j listnetworks\". Additionally, " ZT_EOL_S);
 	fprintf(out,"  (ip, ip4, ip6, ip6plane, and ip6prefix can be used). For instance:" ZT_EOL_S);
-	fprintf(out,"  zerotier-cli get <nwid> ip6plane will return the 6PLANE address" ZT_EOL_S);
+	fprintf(out,"  zerotier-cli get <network ID> ip6plane will return the 6PLANE address" ZT_EOL_S);
 	fprintf(out,"  assigned to this node." ZT_EOL_S);
 }
 
