@@ -1310,20 +1310,6 @@ void EmbeddedNetworkController::_request(
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
 	nc->multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
 
-	std::string rtt(OSUtils::jsonString(member["remoteTraceTarget"],""));
-	if (rtt.length() == 10) {
-		nc->remoteTraceTarget = Address(Utils::hexStrToU64(rtt.c_str()));
-		nc->remoteTraceLevel = (Trace::Level)OSUtils::jsonInt(member["remoteTraceLevel"],0ULL);
-	} else {
-		rtt = OSUtils::jsonString(network["remoteTraceTarget"],"");
-		if (rtt.length() == 10) {
-			nc->remoteTraceTarget = Address(Utils::hexStrToU64(rtt.c_str()));
-		} else {
-			nc->remoteTraceTarget.zero();
-		}
-		nc->remoteTraceLevel = (Trace::Level)OSUtils::jsonInt(network["remoteTraceLevel"],0ULL);
-	}
-
 	for(std::vector<Address>::const_iterator ab(ns.activeBridges.begin());ab!=ns.activeBridges.end();++ab)
 		nc->addSpecialist(*ab,ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE);
 

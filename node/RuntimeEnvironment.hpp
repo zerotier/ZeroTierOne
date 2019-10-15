@@ -26,7 +26,6 @@ class NodeConfig;
 class Switch;
 class Topology;
 class Node;
-class Multicaster;
 class NetworkController;
 class SelfAwareness;
 class Trace;
@@ -42,7 +41,6 @@ public:
 		,localNetworkController((NetworkController *)0)
 		,rtmem((void *)0)
 		,sw((Switch *)0)
-		,mc((Multicaster *)0)
 		,topology((Topology *)0)
 		,sa((SelfAwareness *)0)
 	{
@@ -69,7 +67,6 @@ public:
 
 	Trace *t;
 	Switch *sw;
-	Multicaster *mc;
 	Topology *topology;
 	SelfAwareness *sa;
 

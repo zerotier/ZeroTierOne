@@ -410,23 +410,6 @@ void Trace::credentialRejected(void *const tPtr,const Revocation &c,const char *
 	}
 }
 
-void Trace::updateMemoizedSettings()
-{
-	const std::vector< SharedPtr<Network> > nws(RR->node->allNetworks());
-	{
-		Mutex::Lock l(_byNet_m);
-		_byNet.clear();
-		for(std::vector< SharedPtr<Network> >::const_iterator n(nws.begin());n!=nws.end();++n) {
-			const Address dest((*n)->config().remoteTraceTarget);
-			if (dest) {
-				std::pair<Address,Trace::Level> &m = _byNet[(*n)->id()];
-				m.first = dest;
-				m.second = (*n)->config().remoteTraceLevel;
-			}
-		}
-	}
-}
-
 void Trace::_send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d,const Address &dest)
 {
 	Packet outp(dest,RR->identity.address(),Packet::VERB_REMOTE_TRACE);

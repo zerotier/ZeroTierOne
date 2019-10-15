@@ -115,26 +115,19 @@ public:
 	}
 
 	/**
-	 * Compute a 128-bit short hash of this identity's public key
-	 *
-	 * This is the first 128 bits of a SHA384 hash and is the hash used
-	 * in VERB_WILL_RELAY to report reachability.
-	 *
-	 * @param h 128-bit buffer to receive hash (must be 16 bytes in size)
+	 * @param h Buffer to receive SHA384 of public key(s)
 	 */
-	ZT_ALWAYS_INLINE void publicKeyHash128(void *const h) const
+	ZT_ALWAYS_INLINE bool hash(uint8_t h[48]) const
 	{
-		uint8_t tmp[48];
 		switch(_type) {
 			case C25519:
-				SHA384(tmp,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-				break;
+				SHA384(h,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+				return true;
 			case P384:
-				SHA384(tmp,&_pub,sizeof(_pub));
-				break;
+				SHA384(h,&_pub,sizeof(_pub));
+				return true;
 		}
-		for(int i=0;i<16;++i)
-			((uint8_t *)h)[i] = tmp[i];
+		return false;
 	}
 
 	/**

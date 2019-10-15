@@ -138,8 +138,6 @@ public:
 	void credentialRejected(void *const tPtr,const Tag &c,const char *reason);
 	void credentialRejected(void *const tPtr,const Revocation &c,const char *reason);
 
-	void updateMemoizedSettings();
-
 private:
 	const RuntimeEnvironment *const RR;
 

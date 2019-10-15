@@ -41,13 +41,8 @@ namespace ZeroTier {
 class MulticastGroup
 {
 public:
-	ZT_ALWAYS_INLINE MulticastGroup() :
-		_mac(),
-		_adi(0) {}
-
-	ZT_ALWAYS_INLINE MulticastGroup(const MAC &m,uint32_t a) :
-		_mac(m),
-		_adi(a) {}
+	ZT_ALWAYS_INLINE MulticastGroup() : _mac(),_adi(0) {}
+	ZT_ALWAYS_INLINE MulticastGroup(const MAC &m,uint32_t a) : _mac(m),_adi(a) {}
 
 	/**
 	 * Derive the multicast group used for address resolution (ARP/NDP) for an IP
@@ -74,10 +69,36 @@ public:
 		return MulticastGroup();
 	}
 
+	/**
+	 * @return Ethernet MAC portion of multicast group
+	 */
 	ZT_ALWAYS_INLINE const MAC &mac() const { return _mac; }
+
+	/**
+	 * @return Additional distinguishing information, which is normally zero except for IPv4 ARP where it's the IPv4 address
+	 */
 	ZT_ALWAYS_INLINE uint32_t adi() const { return _adi; }
 
-	ZT_ALWAYS_INLINE unsigned long hashCode() const { return (_mac.hashCode() ^ (unsigned long)_adi); }
+	/**
+	 * @return 32-bit hash ID of this multicast group
+	 */
+	ZT_ALWAYS_INLINE uint32_t id() const
+	{
+		uint64_t m = _mac.toInt();
+		uint32_t x1 = _adi;
+		uint32_t x2 = (uint32_t)(m >> 32);
+		uint32_t x3 = (uint32_t)m;
+		x1 = ((x1 >> 16) ^ x1) * 0x45d9f3b;
+		x2 = ((x2 >> 16) ^ x2) * 0x45d9f3b;
+		x3 = ((x3 >> 16) ^ x3) * 0x45d9f3b;
+		x1 = ((x1 >> 16) ^ x1) * 0x45d9f3b;
+		x2 = ((x2 >> 16) ^ x2) * 0x45d9f3b;
+		x3 = ((x3 >> 16) ^ x3) * 0x45d9f3b;
+		x1 = (x1 >> 16) ^ x1;
+		x2 = (x2 >> 16) ^ x2;
+		x3 = (x3 >> 16) ^ x3;
+		return (x1 ^ x2 ^ x3);
+	}
 
 	ZT_ALWAYS_INLINE bool operator==(const MulticastGroup &g) const { return ((_mac == g._mac)&&(_adi == g._adi)); }
 	ZT_ALWAYS_INLINE bool operator!=(const MulticastGroup &g) const { return ((_mac != g._mac)||(_adi != g._adi)); }
@@ -92,6 +113,8 @@ public:
 	ZT_ALWAYS_INLINE bool operator>(const MulticastGroup &g) const { return (g < *this); }
 	ZT_ALWAYS_INLINE bool operator<=(const MulticastGroup &g) const { return !(g < *this); }
 	ZT_ALWAYS_INLINE bool operator>=(const MulticastGroup &g) const { return !(*this < g); }
+
+	ZT_ALWAYS_INLINE unsigned long hashCode() const { return (_mac.hashCode() ^ (unsigned long)_adi); }
 
 private:
 	MAC _mac;

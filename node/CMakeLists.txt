@@ -24,7 +24,6 @@ set(core_headers
 	Locator.hpp
 	MAC.hpp
 	Membership.hpp
-	Multicaster.hpp
 	MulticastGroup.hpp
 	Mutex.hpp
 	Network.hpp
@@ -59,7 +58,6 @@ set(core_src
 	IncomingPacket.cpp
 	InetAddress.cpp
 	Membership.cpp
-	Multicaster.cpp
 	Network.cpp
 	NetworkConfig.cpp
 	Node.cpp

@@ -33,7 +33,6 @@
 #include "MulticastGroup.hpp"
 #include "MAC.hpp"
 #include "Dictionary.hpp"
-#include "Multicaster.hpp"
 #include "Membership.hpp"
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"

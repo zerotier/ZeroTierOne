@@ -87,6 +87,11 @@ namespace ZeroTier {
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR 0x0000040000000000ULL
 
+/**
+ * Device that can probe and receive remote trace info about this network
+ */
+#define ZT_NETWORKCONFIG_SPECIALIST_TYPE_DIAGNOSTICIAN 0x0000080000000000ULL
+
 // Dictionary capacity needed for max size network config
 #define ZT_NETWORKCONFIG_DICT_CAPACITY (1024 + (sizeof(ZT_VirtualNetworkRule) * ZT_MAX_NETWORK_RULES) + (sizeof(Capability) * ZT_MAX_NETWORK_CAPABILITIES) + (sizeof(Tag) * ZT_MAX_NETWORK_TAGS) + (sizeof(CertificateOfOwnership) * ZT_MAX_CERTIFICATES_OF_OWNERSHIP))
 
@@ -133,14 +138,12 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_REVISION "r"
 // address of member
 #define ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO "id"
-// remote trace target
-#define ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_TARGET "tt"
-// remote trace level
-#define ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_LEVEL "tl"
 // flags(hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_FLAGS "f"
 // integer(hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT "ml"
+// integer(hex)
+#define ZT_NETWORKCONFIG_DICT_KEY_TOKEN "k"
 // network type (hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_TYPE "t"
 // text
@@ -180,9 +183,7 @@ struct NetworkConfig
 		credentialTimeMaxDelta(0),
 		revision(0),
 		issuedTo(),
-		remoteTraceTarget(),
 		flags(0),
-		remoteTraceLevel(Trace::LEVEL_NORMAL),
 		mtu(0),
 		multicastLimit(0),
 		specialistCount(0),
@@ -337,19 +338,14 @@ struct NetworkConfig
 	Address issuedTo;
 
 	/**
-	 * If non-NULL, remote traces related to this network are sent here
-	 */
-	Address remoteTraceTarget;
-
-	/**
 	 * Flags (64-bit)
 	 */
 	uint64_t flags;
 
 	/**
-	 * Remote trace level
+	 * Token (64-bit token known only to network members)
 	 */
-	Trace::Level remoteTraceLevel;
+	uint64_t token;
 
 	/**
 	 * Network MTU

@@ -545,13 +545,15 @@ public:
 		 *   0x7 - (reserved for future use)
 		 *
 		 * An extended frame carries full MAC addressing, making it a
-		 * superset of VERB_FRAME. It is used for bridged traffic,
-		 * redirected or observed traffic via rules, and can in theory
-		 * be used for multicast though MULTICAST_FRAME exists for that
-		 * purpose and has additional options and capabilities.
+		 * superset of VERB_FRAME. If 0x20 is set then p2p or hub and
+		 * spoke multicast propagation is requested.
 		 *
 		 * OK payload (if ACK flag is set):
 		 *   <[8] 64-bit network ID>
+		 *   <[1] flags>
+		 *   <[6] destination MAC or all zero for destination node>
+		 *   <[6] source MAC or all zero for node of origin>
+		 *   <[2] 16-bit ethertype>
 		 */
 		VERB_EXT_FRAME = 0x07,
 
@@ -566,7 +568,7 @@ public:
 		VERB_ECHO = 0x08,
 
 		/**
-		 * Announce interest in multicast group(s):
+		 * Announce interest in multicast group(s) (DEPRECATED):
 		 *   <[8] 64-bit network ID>
 		 *   <[6] multicast Ethernet address>
 		 *   <[4] multicast additional distinguishing information (ADI)>
@@ -681,106 +683,17 @@ public:
 		VERB_NETWORK_CONFIG = 0x0c,
 
 		/**
-		 * Request endpoints for multicast distribution:
-		 *   <[8] 64-bit network ID>
-		 *   <[1] flags (unused, must be 0)>
-		 *   <[6] MAC address of multicast group being queried>
-		 *   <[4] 32-bit ADI for multicast group being queried>
-		 *   <[4] 32-bit requested max number of multicast peers>
-		 *
-		 * More than one OK response can occur if the response is broken up across
-		 * multiple packets or if querying a clustered node.
-		 *
-		 * OK response payload:
-		 *   <[8] 64-bit network ID>
-		 *   <[6] MAC address of multicast group being queried>
-		 *   <[4] 32-bit ADI for multicast group being queried>
-		 *   [begin gather results -- these same fields can be in OK(MULTICAST_FRAME)]
-		 *   <[4] 32-bit total number of known members in this multicast group>
-		 *   <[2] 16-bit number of members enumerated in this packet>
-		 *   <[...] series of 5-byte ZeroTier addresses of enumerated members>
-		 *
-		 * ERROR is not generated; queries that return no response are dropped.
-		 */
-		VERB_MULTICAST_GATHER = 0x0d,
-
-		/**
-		 * Multicast frame:
-		 *   <[8] 64-bit network ID>
-		 *   <[1] flags>
-		 *  [<[...] network certificate of membership (DEPRECATED)>]
-		 *  [<[4] 32-bit implicit gather limit (DEPRECATED)>]
-		 *  [<[5] ZeroTier address of originating sender (including w/0x08)>]
-		 *  [<[2] 16-bit bloom filter multiplier>]
-		 *  [<[2] 16-bit length of propagation bloom filter in bytes]
-		 *  [<[...] propagation bloom filter>]
-		 *  [<[6] source MAC>]
-		 *   <[6] destination MAC (multicast address)>
-		 *   <[4] 32-bit multicast ADI (multicast address extension)>
-		 *   <[2] 16-bit ethertype>
-		 *   <[...] ethernet payload>
-		 *  [<[2] 16-bit length of signature>]
-		 *  [<[...] signature (algorithm depends on sender identity)>]
-		 *
-		 * Flags:
-		 *   0x01 - Network certificate of membership attached (DEPRECATED)
-		 *   0x02 - Implicit gather limit field is present (DEPRECATED)
-		 *   0x04 - Source MAC is specified -- otherwise it's computed from sender
-		 *   0x08 - Propagation bloom filter is included
-		 *   0x10 - Signature by sending identity is included
-		 *
-		 * Version 1.x only supports sender-side replication. Version 2.x also
-		 * supports peer to peer and hub and spoke models. For that there is
-		 * a new field: a bloom filter that tracks recipients by ZeroTier address.
-		 *
-		 * Bits in the bloom filter are set by multiplying the address by the
-		 * indicated multiplier and then taking that modulo the number of bits
-		 * in the filter. Both the length of the filter and this multiplier are
-		 * variable and can be selected based on the sender's knowledge of
-		 * the total recipient set to minimize the chance of collision, as a
-		 * collision would result in a multicast not reaching one particular
-		 * recipient. The algorithm for selecting these is not defined by the
-		 * protocol.
-		 *
-		 * The ZeroTier address of the originating sender is also included
-		 * before the bloom filter if flag bit 0x08 is set.
-		 *
-		 * Version 2.x also supports an optional signature of the packet's
-		 * payload by the sending ZeroTier node. This can be used to validate
-		 * multicasts propagated cooperatively, since unlike sender side
-		 * replication the message MAC alone cannot be used for this. This
-		 * imposes a non-trivial CPU cost on the sender and so it's optional.
-		 * Note that the bloom filter itself is not included in the signature
-		 * because it can be changed in transit.
-		 *
-		 * OK is not sent.
-		 *
-		 * ERROR_MULTICAST_STFU is generated if a recipient no longer wishes to
-		 * receive these multicasts. It's essentially a source quench. Its
-		 * payload is:
-		 *
-		 * ERROR response payload:
-		 *   <[8] 64-bit network ID>
-		 *   <[6] multicast group MAC>
-		 *   <[4] 32-bit multicast group ADI>
-		 */
-		VERB_MULTICAST_FRAME = 0x0e,
-
-		/**
 		 * Push of potential endpoints for direct communication:
 		 *   <[2] 16-bit number of paths>
 		 *   <[...] paths>
 		 *
 		 * Path record format:
-		 *   <[1] 8-bit path flags>
+		 *   <[1] 8-bit path flags (always 0, currently unused)>
 		 *   <[2] length of extended path characteristics or 0 for none>
 		 *   <[...] extended path characteristics>
 		 *   <[1] address type>
 		 *   <[1] address length in bytes>
 		 *   <[...] address>
-		 *
-		 * Path record flags:
-		 *   0x01 - Forget this path if currently known (not implemented yet)
 		 *
 		 * The receiver may, upon receiving a push, attempt to establish a
 		 * direct link to one or more of the indicated addresses. It is the
@@ -911,37 +824,40 @@ public:
   	VERB_WILL_RELAY = 0x17,
 
 		/**
-		 * A push of one or more ephemeral key pairs:
-		 *   <[1] 8-bit length of random padding>
-		 *   <[...] random padding>
-		 *   <[1] 8-bit number of keys in message>
-		 *   [... begin keys ...]
-		 *   <[1] 8-bit key type>
-		 *   <[...] public key (length determined by type)>
-		 *  [<[...] additional keys ...>]
-		 *   [... end keys ...]
-		 *
-		 * This verb is used to push ephemeral keys. A node replies to each
-		 * ephemeral key push with an OK message containing its own current
-		 * ephemeral keys that it wants to use for p2p communication.
-		 *
-		 * These are ephemeral public keys. Currently keys of type C25519
-		 * and P-384 are supported and both will be pushed.
-		 *
-		 * If more than one key is pushed, key agreement is performed using
-		 * all keys for which both peers pushed the same key type. The raw
-		 * results of these keys are then hashed together in order of key
-		 * type ID with SHA384 to yield a session key. If the desired session
-		 * key is shorter than 384 bits the first N bits are used.
-		 *
-		 * The random padding component can be used to ranomize the length
-		 * of these packets so adversaries can't easily selectively block
-		 * ephemeral key exchange by exploiting a fixed packet length.
-		 *
-		 * OK response payload:
-		 *   <[...] responder's keys, same format as verb payload>
+		 * Multicast frame (since 2.x, 0x0e is deprecated multicast frame):
+		 *   <[1] 8-bit propagation depth or 0xff to not propagate>
+		 *   <[1] 8-bit flags>
+		 *   <[8] 64-bit timestamp>
+		 *   <[5] 40-bit address of sending member>
+		 *   <[8] 64-bit network ID>
+		 *   <[6] MAC address of multicast group>
+		 *   <[4] 32-bit ADI of multicast group>
+		 *   <[6] 48-bit source MAC of packet or all 0 if from sender>
+		 *   <[2] 16-bit ethertype>
+		 *   <[2] 16-bit length of payload>
+		 *   <[...] ethernet payload>
+		 *   <[2] 16-bit length of signature or 0 if not present>
+		 *   <[...] signature of fields after propagation depth>
 		 */
-		VERB_EPHEMERAL_KEY = 0x18
+		VERB_MULTICAST = 0x18,
+
+		/**
+		 * Multicast subscription/unsubscription request:
+		 *   <[1] 8-bit propagation depth of 0xff to not propagate>
+		 *   <[1] 8-bit flags>
+		 *   <[8] 64-bit timestamp>
+		 *   <[5] 40-bit address of subscribing/unsubscribing member>
+		 *   <[8] 64-bit network ID>
+		 *   <[2] 16-bit number of multicast group IDs to subscribe>
+		 *   <[...] series of 32-bit multicast group IDs>
+		 *   <[2] 16-bit number of multicast group IDs to unsubscribe>
+		 *   <[...] series of 32-bit multicast group IDs>
+		 *   <[2] 16-bit length of signature or 0 if not present>
+		 *   <[...] signature of fields after propagation depth>
+		 */
+		VERB_MULTICAST_SUBSCRIBE = 0x19,
+
+		// protocol max: 0x1f
 	};
 
 	/**
@@ -972,9 +888,6 @@ public:
 
 		/* Tried to join network, but you're not a member */
 		ERROR_NETWORK_ACCESS_DENIED_ = 0x07, /* extra _ at end to avoid Windows name conflict */
-
-		/* Multicasts to this group are not wanted */
-		ERROR_MULTICAST_STFU = 0x08,
 
 		/* Cannot deliver a forwarded ZeroTier packet (e.g. hops exceeded, no routes) */
 		/* Payload: <packet ID>, <destination>, <... additional packet ID / destinations> */

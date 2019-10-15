@@ -237,7 +237,7 @@ public:
 	 * @param n Number of times to append
 	 * @throws std::out_of_range Attempt to append beyond capacity
 	 */
-	inline void append(unsigned char c,unsigned int n)
+	inline void append(uint8_t c,unsigned int n)
 	{
 		if (unlikely((_l + n) > C))
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;

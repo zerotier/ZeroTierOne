@@ -18,10 +18,10 @@
 
 #ifdef __APPLE__
 #include <CommonCrypto/CommonDigest.h>
-#endif
-
+#else
 #ifdef ZT_USE_LIBCRYPTO
 #include <openssl/sha.h>
+#endif
 #endif
 
 #define ZT_SHA512_DIGEST_LEN 64
@@ -66,6 +66,7 @@ static ZT_ALWAYS_INLINE void SHA384(void *digest,const void *data0,unsigned int 
 }
 #endif
 
+#ifndef ZT_HAVE_NATIVE_SHA512
 #ifdef ZT_USE_LIBCRYPTO
 #define ZT_HAVE_NATIVE_SHA512 1
 static ZT_ALWAYS_INLINE void SHA512(void *digest,const void *data,unsigned int len)
@@ -90,6 +91,7 @@ static ZT_ALWAYS_INLINE void SHA384(void *digest,const void *data0,unsigned int 
 	SHA384_Update(&ctx,data1,len1);
 	SHA384_Final(reinterpret_cast<unsigned char *>(digest),&ctx);
 }
+#endif
 #endif
 
 #ifndef ZT_HAVE_NATIVE_SHA512

@@ -23,7 +23,6 @@
 #include "RuntimeEnvironment.hpp"
 #include "NetworkController.hpp"
 #include "Switch.hpp"
-#include "Multicaster.hpp"
 #include "Topology.hpp"
 #include "Buffer.hpp"
 #include "Packet.hpp"
@@ -93,11 +92,10 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 	try {
 		const unsigned long ts = sizeof(Trace) + (((sizeof(Trace) & 0xf) != 0) ? (16 - (sizeof(Trace) & 0xf)) : 0);
 		const unsigned long sws = sizeof(Switch) + (((sizeof(Switch) & 0xf) != 0) ? (16 - (sizeof(Switch) & 0xf)) : 0);
-		const unsigned long mcs = sizeof(Multicaster) + (((sizeof(Multicaster) & 0xf) != 0) ? (16 - (sizeof(Multicaster) & 0xf)) : 0);
 		const unsigned long topologys = sizeof(Topology) + (((sizeof(Topology) & 0xf) != 0) ? (16 - (sizeof(Topology) & 0xf)) : 0);
 		const unsigned long sas = sizeof(SelfAwareness) + (((sizeof(SelfAwareness) & 0xf) != 0) ? (16 - (sizeof(SelfAwareness) & 0xf)) : 0);
 
-		m = reinterpret_cast<char *>(::malloc(16 + ts + sws + mcs + topologys + sas));
+		m = reinterpret_cast<char *>(::malloc(16 + ts + sws + topologys + sas));
 		if (!m)
 			throw std::bad_alloc();
 		RR->rtmem = m;
@@ -107,15 +105,12 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 		m += ts;
 		RR->sw = new (m) Switch(RR);
 		m += sws;
-		RR->mc = new (m) Multicaster(RR);
-		m += mcs;
 		RR->topology = new (m) Topology(RR,RR->identity);
 		m += topologys;
 		RR->sa = new (m) SelfAwareness(RR);
 	} catch ( ... ) {
 		if (RR->sa) RR->sa->~SelfAwareness();
 		if (RR->topology) RR->topology->~Topology();
-		if (RR->mc) RR->mc->~Multicaster();
 		if (RR->sw) RR->sw->~Switch();
 		if (RR->t) RR->t->~Trace();
 		::free(m);
@@ -133,7 +128,6 @@ Node::~Node()
 	}
 	if (RR->sa) RR->sa->~SelfAwareness();
 	if (RR->topology) RR->topology->~Topology();
-	if (RR->mc) RR->mc->~Multicaster();
 	if (RR->sw) RR->sw->~Switch();
 	if (RR->t) RR->t->~Trace();
 	::free(RR->rtmem);
@@ -309,7 +303,6 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 				(*network)->doPeriodicTasks(tptr,now);
 			}
 		}
-		RR->t->updateMemoizedSettings();
 	}
 
 	if ((now - _lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
@@ -333,7 +326,6 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 
 			RR->topology->doPeriodicTasks(now);
 			RR->sa->clean(now);
-			RR->mc->clean(now);
 		} catch ( ... ) {
 			return ZT_RESULT_FATAL_ERROR_INTERNAL;
 		}

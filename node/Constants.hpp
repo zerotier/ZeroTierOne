@@ -14,6 +14,10 @@
 #ifndef ZT_CONSTANTS_HPP
 #define ZT_CONSTANTS_HPP
 
+/****************************************************************************/
+/* Core includes and OS/platform setup stuff                                */
+/****************************************************************************/
+
 #include "../include/ZeroTierCore.h"
 
 #if __has_include("version.h")
@@ -174,6 +178,10 @@
 #define ZT_INVALID_SOCKET -1
 #endif
 
+/****************************************************************************/
+/* Internal ZeroTier constants                                              */
+/****************************************************************************/
+
 /**
  * Length of a ZeroTier address in bytes
  */
@@ -287,6 +295,11 @@
  * Period for multicast GATHER on multicast groups
  */
 #define ZT_MULTICAST_GATHER_PERIOD ZT_MULTICAST_ANNOUNCE_PERIOD
+
+/**
+ * Period for multicast GATHER if there are no known recipients
+ */
+#define ZT_MULTICAST_GATHER_PERIOD_WHEN_NO_RECIPIENTS 2500
 
 /**
  * Timeout for outgoing multicasts
