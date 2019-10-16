@@ -293,7 +293,7 @@ public:
 				b.append((uint8_t)P384);
 				b.append(_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
 				b.append(_pub.p384,ZT_ECC384_PUBLIC_KEY_SIZE);
-				b.append(_pub.p384s,ZT_ECC384_SIGNATURE_SIZE);
+				b.append(_pub.p384s,ZT_C25519_SIGNATURE_LEN);
 				if ((_hasPrivate)&&(includePrivate)) {
 					b.append((uint8_t)(ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE));
 					b.append(_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
@@ -351,7 +351,7 @@ public:
 				p += ZT_C25519_PUBLIC_KEY_LEN;
 				memcpy(_pub.p384,b.field(p,ZT_ECC384_PUBLIC_KEY_SIZE),ZT_ECC384_PUBLIC_KEY_SIZE);
 				p += ZT_ECC384_PUBLIC_KEY_SIZE;
-				memcpy(_pub.p384s,b.field(p,ZT_ECC384_SIGNATURE_SIZE),ZT_ECC384_SIGNATURE_SIZE);
+				memcpy(_pub.p384s,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
 				p += ZT_ECC384_SIGNATURE_SIZE;
 				pkl = (unsigned int)b[p++];
 				if (pkl) {
@@ -451,7 +451,7 @@ private:
 	ZT_PACKED_STRUCT(struct { // don't re-order these
 		uint8_t c25519[ZT_C25519_PUBLIC_KEY_LEN];
 		uint8_t p384[ZT_ECC384_PUBLIC_KEY_SIZE];
-		uint8_t p384s[ZT_ECC384_SIGNATURE_SIZE]; // signature of type 0 key with p384
+		uint8_t p384s[ZT_C25519_SIGNATURE_LEN]; // signature of both keys with ed25519 to confirm type 0 extension to type 1
 	}) _pub;
 };
 

@@ -824,38 +824,58 @@ public:
   	VERB_WILL_RELAY = 0x17,
 
 		/**
-		 * Multicast frame (since 2.x, 0x0e is deprecated multicast frame):
-		 *   <[1] 8-bit propagation depth or 0xff to not propagate>
-		 *   <[1] 8-bit flags>
+		 * Multipurpose VL2 network multicast:
+		 *   <[5] start of range of addresses for propagation>
+		 *   <[5] end of range of addresses for propagation>
+		 *   <[1] 8-bit propagation depth / hops>
+		 *   <[1] 8-bit length of bloom filter in 256-byte/2048-bit chunks>
+		 *   <[...] propagation bloom filter>
+		 *   [... start of signed portion ...]
 		 *   <[8] 64-bit timestamp>
-		 *   <[5] 40-bit address of sending member>
 		 *   <[8] 64-bit network ID>
+		 *   <[5] 40-bit address of sender>
+		 *   <[2] 16-bit length of multicast payload>
+		 *   [... start multicast payload ...]
+		 *   <[1] 8-bit payload type>
+		 *   [... end multicast payload and signed portion ...]
+		 *   <[2] 16-bit length of signature or 0 if not present>
+		 *   <[...] signature of signed portion>
+		 *
+		 * Payload type 0x00: multicast frame:
 		 *   <[6] MAC address of multicast group>
 		 *   <[4] 32-bit ADI of multicast group>
 		 *   <[6] 48-bit source MAC of packet or all 0 if from sender>
 		 *   <[2] 16-bit ethertype>
-		 *   <[2] 16-bit length of payload>
 		 *   <[...] ethernet payload>
-		 *   <[2] 16-bit length of signature or 0 if not present>
-		 *   <[...] signature of fields after propagation depth>
-		 */
-		VERB_MULTICAST = 0x18,
-
-		/**
-		 * Multicast subscription/unsubscription request:
-		 *   <[1] 8-bit propagation depth of 0xff to not propagate>
-		 *   <[1] 8-bit flags>
-		 *   <[8] 64-bit timestamp>
-		 *   <[5] 40-bit address of subscribing/unsubscribing member>
-		 *   <[8] 64-bit network ID>
+		 *
+		 * Payload type 0x01: multicast subscribe:
 		 *   <[2] 16-bit number of multicast group IDs to subscribe>
 		 *   <[...] series of 32-bit multicast group IDs>
+		 *
+		 * Payload type 0x02: multicast unsubscribe:
 		 *   <[2] 16-bit number of multicast group IDs to unsubscribe>
 		 *   <[...] series of 32-bit multicast group IDs>
-		 *   <[2] 16-bit length of signature or 0 if not present>
-		 *   <[...] signature of fields after propagation depth>
+		 *
+		 * This is the common packet structure for VL2 network-level multicasts
+		 * and is used for multicast frames, multicast group subscribe and
+		 * unsubscribe, and could be used in the future for other purposes such
+		 * as credential propagation or diagnostics.
+		 *
+		 * The header contains an address range, bloom filter, and depth/hop
+		 * counter. The bloom filter tracks which nodes have seen this multicast,
+		 * with bits being set prior to send. The range allows the total set of
+		 * subscribers to be partitioned in the case of huge networks that would
+		 * saturate the bloom filter or have collisions. The propagation depth
+		 * allows propagation to stop at some maximum value, and the value 0xff
+		 * can be used to indicate that further propagation is not desired.
+		 *
+		 * Logic connected to the parsing of the multicast payload will determine
+		 * whether or not and to whom this multicast is propagated. Subscribe and
+		 * unsubscribe messages are propagated to online nodes up to a maximum
+		 * depth, while frames have the added constraint of being propagated only
+		 * to nodes that subscribe to the target multicast group.
 		 */
-		VERB_MULTICAST_SUBSCRIBE = 0x19,
+		VERB_VL2_MULTICAST = 0x18,
 
 		// protocol max: 0x1f
 	};

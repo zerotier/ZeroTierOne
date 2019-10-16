@@ -101,8 +101,7 @@ void Identity::generate(const Type t)
 
 	if (t == P384) {
 		ECC384GenerateKey(_pub.p384,_priv.p384);
-		SHA384(digest,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,_pub.p384,ZT_ECC384_PUBLIC_KEY_SIZE);
-		ECC384ECDSASign(_priv.p384,digest,_pub.p384s);
+		C25519::sign(_priv.c25519,_pub.c25519,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE,_pub.p384s);
 	}
 }
 
@@ -113,9 +112,13 @@ bool Identity::locallyValidate() const
 	if (_address.isReserved())
 		return false;
 
-	if (_type == P384) {
-		SHA384(digest,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,_pub.p384,ZT_ECC384_PUBLIC_KEY_SIZE);
-		if (!ECC384ECDSAVerify(_pub.p384,digest,_pub.p384s))
+	switch(_type) {
+		case C25519:
+			break;
+		case P384:
+			if (!C25519::verify(_pub.c25519,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE,_pub.p384s,ZT_C25519_SIGNATURE_LEN))
+				return false;
+		default:
 			return false;
 	}
 

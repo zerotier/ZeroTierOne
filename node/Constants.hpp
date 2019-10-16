@@ -219,7 +219,7 @@
 /**
  * Maximum number of packet fragments we'll support (protocol limit: 16)
  */
-#define ZT_MAX_PACKET_FRAGMENTS 10
+#define ZT_MAX_PACKET_FRAGMENTS 12
 
 /**
  * Size of RX queue in packets
