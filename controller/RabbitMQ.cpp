@@ -51,13 +51,14 @@ void RabbitMQ::init()
 		throw std::runtime_error("Can't create socket for RabbitMQ");
 	}
 
-	_status = amqp_socket_open_noblock(_socket, _mqc->host, _mqc->port, &tval);
+	fprintf(stderr, "RabbitMQ: amqp://%s:%s@%s:%d\n", _mqc->username.c_str(), _mqc->password.c_str(), _mqc->host.c_str(), _mqc->port);
+	_status = amqp_socket_open_noblock(_socket, _mqc->host.c_str(), _mqc->port, &tval);
 	if (_status) {
 		throw std::runtime_error("Can't connect to RabbitMQ");
 	}
 
 	amqp_rpc_reply_t r = amqp_login(_conn, "/", 0, 131072, 0, AMQP_SASL_METHOD_PLAIN,
-		_mqc->username, _mqc->password);
+		_mqc->username.c_str(), _mqc->password.c_str());
 	if (r.reply_type != AMQP_RESPONSE_NORMAL) {
 		throw std::runtime_error("RabbitMQ Login Error");
 	}

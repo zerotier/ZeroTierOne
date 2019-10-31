@@ -990,9 +990,9 @@ public:
 				fprintf(stderr, "Reading RabbitMQ Config\n");
 				_mqc = new MQConfig;
 				_mqc->port = rmq["port"];
-				_mqc->host = OSUtils::jsonString(rmq["host"], "").c_str();
-				_mqc->username = OSUtils::jsonString(rmq["username"], "").c_str();
-				_mqc->password = OSUtils::jsonString(rmq["password"], "").c_str();
+				_mqc->host = OSUtils::jsonString(rmq["host"], "");
+				_mqc->username = OSUtils::jsonString(rmq["username"], "");
+				_mqc->password = OSUtils::jsonString(rmq["password"], "");
 			}
 
 			// Bind to wildcard instead of to specific interfaces (disables full tunnel capability)
