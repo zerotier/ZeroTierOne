@@ -22,8 +22,9 @@ include objects.mk
 ONE_OBJS+=osdep/MacEthernetTap.o osdep/MacKextEthernetTap.o ext/http-parser/http_parser.o
 
 ifeq ($(ZT_CONTROLLER),1)
-	LIBS+=-lpq -lrabbitmq
+	LIBS+=-L/usr/local/opt/libpq/lib -lpq -Lext/librabbitmq/macos/lib -lrabbitmq
 	DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER
+	INCLUDES+=-Iext/librabbitmq/macos/include -I/usr/local/opt/libpq/include
 endif
 
 # Official releases are signed with our Apple cert and apply software updates by default
