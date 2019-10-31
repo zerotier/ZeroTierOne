@@ -51,7 +51,6 @@ void RabbitMQ::init()
 		throw std::runtime_error("Can't create socket for RabbitMQ");
 	}
 
-	fprintf(stderr, "RabbitMQ: amqp://%s:%s@%s:%d\n", _mqc->username.c_str(), _mqc->password.c_str(), _mqc->host.c_str(), _mqc->port);
 	_status = amqp_socket_open_noblock(_socket, _mqc->host.c_str(), _mqc->port, &tval);
 	if (_status) {
 		throw std::runtime_error("Can't connect to RabbitMQ");
