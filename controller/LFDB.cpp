@@ -43,10 +43,10 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 
 		// LF record masking key is the first 32 bytes of SHA512(controller private key) in hex,
 		// hiding record values from anything but the controller or someone who has its key.
-		uint8_t sha512pk[64];
-		_myId.sha512PrivateKey(sha512pk);
+		uint8_t sha384pk[48];
+		_myId.hash(sha384pk,true);
 		char maskingKey [128];
-		Utils::hex(sha512pk,32,maskingKey);
+		Utils::hex(sha384pk,32,maskingKey);
 
 		httplib::Client htcli(_lfNodeHost.c_str(),_lfNodePort,600);
 		int64_t timeRangeStart = 0;

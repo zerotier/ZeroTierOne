@@ -44,6 +44,11 @@ namespace ZeroTier {
  */
 class Locator
 {
+	enum ObjectType
+	{
+		OBJECT_TYPE_ZEROTIER_NODE = 1
+	};
+
 	friend class SharedPtr<Locator>;
 
 public:

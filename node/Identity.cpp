@@ -100,8 +100,13 @@ void Identity::generate(const Type t)
 	delete [] genmem;
 
 	if (t == P384) {
+		// We sign with both because in pure FIPS environments we might have to say
+		// that we do not rely on any non-FIPS algorithms, or may even have to disable
+		// them.
 		ECC384GenerateKey(_pub.p384,_priv.p384);
-		C25519::sign(_priv.c25519,_pub.c25519,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE,_pub.p384s);
+		C25519::sign(_priv.c25519,_pub.c25519,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE,_pub.c25519s);
+		SHA384(digest,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE);
+		ECC384ECDSASign(_priv.p384,digest,_pub.p384s);
 	}
 }
 
@@ -116,7 +121,10 @@ bool Identity::locallyValidate() const
 		case C25519:
 			break;
 		case P384:
-			if (!C25519::verify(_pub.c25519,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE,_pub.p384s,ZT_C25519_SIGNATURE_LEN))
+			if (!C25519::verify(_pub.c25519,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE,_pub.c25519s,ZT_C25519_SIGNATURE_LEN))
+				return false;
+			SHA384(digest,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE);
+			if (!ECC384ECDSAVerify(_pub.p384,digest,_pub.p384s))
 				return false;
 		default:
 			return false;

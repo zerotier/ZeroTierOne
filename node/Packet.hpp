@@ -424,12 +424,22 @@ public:
 		 *   <[8] timestamp for determining latency>
 		 *   <[...] binary serialized identity (see Identity)>
 		 *   <[...] physical destination address of packet>
+		 *   [... begin encrypted section ...]
+		 *   <[2] 16-bit reserved field, always 0>
+		 *   <[2] 16-bit length of locator>
+		 *   <[...] locator for this node>
 		 *
 		 * HELLO is sent in the clear as it is how peers share their identity
 		 * public keys.
 		 *
 		 * Destination address is the actual wire address to which the packet
 		 * was sent. See InetAddress::serialize() for format.
+		 *
+		 * Starting at "begin encrypted section" the reset of the packet is
+		 * encrypted with Salsa20/12. This encryption is technically not
+		 * absolutely required for security as nothing in this packet is
+		 * very sensitive, but hiding the locator and other meta-data slightly
+		 * improves privacy.
 		 *
 		 * OK payload:
 		 *   <[8] HELLO timestamp field echo>
@@ -438,6 +448,7 @@ public:
 		 *   <[1] software minor version>
 		 *   <[2] software revision>
 		 *   <[...] physical destination address of packet>
+		 *   <[2] 16-bit reserved field, always 0>
 		 *
 		 * With the exception of the timestamp, the other fields pertain to the
 		 * respondent who is sending OK and are not echoes.
@@ -566,17 +577,6 @@ public:
 		 * ignored if a node detects a possible flood.
 		 */
 		VERB_ECHO = 0x08,
-
-		/**
-		 * Announce interest in multicast group(s) (DEPRECATED):
-		 *   <[8] 64-bit network ID>
-		 *   <[6] multicast Ethernet address>
-		 *   <[4] multicast additional distinguishing information (ADI)>
-		 *   [... additional tuples of network/address/adi ...]
-		 *
-		 * OK/ERROR are not generated.
-		 */
-		VERB_MULTICAST_LIKE = 0x09,
 
 		/**
 		 * Network credentials push:
@@ -784,50 +784,10 @@ public:
 		VERB_REMOTE_TRACE = 0x15,
 
 		/**
-		 * A signed locator for this node:
-		 *   <[8] 64-bit flags>
-		 *   <[2] 16-bit length of locator>
-		 *   <[...] serialized locator>
-		 *
-		 * This message is sent in response to OK(HELLO) and can be pushed
-		 * opportunitistically. Its payload is a signed Locator object that
-		 * attests to where and how this Node may be reached. A locator can
-		 * contain static IPs/ports or other ZeroTier nodes that can be used
-		 * to reach this one.
-		 *
-		 * These Locator objects can be stored e.g. by roots in LF to publish
-		 * node reachability. Since they're signed any node can verify that
-		 * the originating node approves of their content.
-		 */
-		VERB_SET_LOCATOR = 0x16,
-
-		/**
-		 * A list of peers this node will relay traffic to/from:
-		 *   <[2] 16-bit number of peers>
-		 *   <[16] 128-bit hash of node public key>
-		 *   <[2] 16-bit latency to node or 0 if unspecified>
-		 *   <[4] 32-bit max bandwidth in megabits or 0 if unspecified>
-		 *  [<[...] additional hash,latency,bandwidth tuples>]
-		 *
-		 * This messages can be pushed to indicate that this peer is willing
-		 * to relay traffic to other peers. It contains a list of 128-bit
-		 * hashes (the first 128 bits of a SHA512) of identity public keys
-		 * of currently reachable and willing-to-relay-for nodes.
-		 *
-		 * This can be used to initiate mesh-like behavior in ZeroTier. The
-		 * peers for which this node is willing to relay are reported as
-		 * hashes of their identity public keys. This prevents this message
-		 * from revealing explicit information about linked peers. The
-		 * receiving peer can only "see" a will-relay entry if it knows the
-		 * identity of the peer it is trying to reach.
-		 */
-  	VERB_WILL_RELAY = 0x17,
-
-		/**
 		 * Multipurpose VL2 network multicast:
 		 *   <[5] start of range of addresses for propagation>
 		 *   <[5] end of range of addresses for propagation>
-		 *   <[1] 8-bit propagation depth / hops>
+		 *   <[1] 8-bit propagation depth / hops or 0xff to not propagate>
 		 *   <[1] 8-bit length of bloom filter in 256-byte/2048-bit chunks>
 		 *   <[...] propagation bloom filter>
 		 *   [... start of signed portion ...]
@@ -875,7 +835,26 @@ public:
 		 * depth, while frames have the added constraint of being propagated only
 		 * to nodes that subscribe to the target multicast group.
 		 */
-		VERB_VL2_MULTICAST = 0x18,
+		VERB_VL2_MULTICAST = 0x16,
+
+		/**
+		 * Negotiate a new ephemeral key:
+		 *   <[8] first 64 bits of SHA-384 of currently known key for destination>
+		 *   <[...] ephemeral key for sender>
+		 *
+		 * If the 64-bit hash of the currently known key sent by the sender does
+		 * not match the key the destination is currently using, the destination
+		 * will send its own REKEY after sending OK to ensure that keys are up to
+		 * date on both sides. This causes either side sending REKEY to trigger
+		 * an automatic two-way handshake. Either side may therefore rekey at
+		 * any time, though a rate limit should be in effect to prevent flooding.
+		 *
+		 * OK payload:
+		 *   <[8] first 64 bits of SHA-384 of received ephemeral key>
+		 */
+		VERB_REKEY = 0x17
+
+		// TODO: legacy multicast message types must be supported
 
 		// protocol max: 0x1f
 	};

@@ -80,7 +80,7 @@ public:
 	ZT_ALWAYS_INLINE uint32_t adi() const { return _adi; }
 
 	/**
-	 * @return 32-bit hash ID of this multicast group
+	 * @return 32-bit non-cryptographic hash ID of this multicast group
 	 */
 	ZT_ALWAYS_INLINE uint32_t id() const
 	{

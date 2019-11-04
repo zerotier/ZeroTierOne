@@ -18,6 +18,7 @@ set(core_headers
 	Credential.hpp
 	Dictionary.hpp
 	ECC384.hpp
+	EphemeralKey.hpp
 	Hashtable.hpp
 	Identity.hpp
 	InetAddress.hpp

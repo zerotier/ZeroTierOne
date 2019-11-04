@@ -479,7 +479,16 @@ EmbeddedNetworkController::~EmbeddedNetworkController()
 void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 {
 	char tmp[64];
+
 	_signingId = signingId;
+
+	// Base the identity hash, which is used to generate network tokens, on
+	// only the type 0 public and private keys so that type 0 identities can
+	// upgrade without these tokens changing.
+	Identity downgraded;
+	_signingId.downgrade(downgraded,Identity::C25519);
+	downgraded.hash(_signingIdHash,true);
+
 	_sender = sender;
 	_signingIdAddressString = signingId.address().toString(tmp);
 
@@ -1445,6 +1454,7 @@ void EmbeddedNetworkController::_request(
 
 	const bool noAutoAssignIps = OSUtils::jsonBool(member["noAutoAssignIps"],false);
 
+	// Set IPv6 static IPs based on NDP emulated schemes if enabled.
 	if ((v6AssignMode.is_object())&&(!noAutoAssignIps)) {
 		if ((OSUtils::jsonBool(v6AssignMode["rfc4193"],false))&&(nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
 			nc->staticIps[nc->staticIpCount++] = InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt());
@@ -1455,6 +1465,17 @@ void EmbeddedNetworkController::_request(
 			nc->flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION;
 		}
 	}
+
+	// Generate a unique semi-secret token known only to members and former members
+	// of this network by hashing the hash of our signing identity (including its
+	// secret part) with the network ID. Deriving the token like this eliminates the
+	// need to store it somewhere.
+	uint64_t tokenHashIn[7];
+	memcpy(tokenHashIn,_signingIdHash,48);
+	tokenHashIn[6] = Utils::hton(nwid);
+	uint64_t tokenHash[6];
+	SHA384(tokenHash,tokenHashIn,sizeof(tokenHashIn));
+	nc->token = Utils::ntoh(tokenHash[0]);
 
 	bool haveManagedIpv4AutoAssignment = false;
 	bool haveManagedIpv6AutoAssignment = false; // "special" NDP-emulated address types do not count

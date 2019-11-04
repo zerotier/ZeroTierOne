@@ -94,38 +94,25 @@ public:
 	ZT_ALWAYS_INLINE bool hasPrivate() const { return _hasPrivate; }
 
 	/**
-	 * Compute the SHA512 hash of our private key (if we have one)
-	 *
-	 * @param sha Buffer to receive SHA512 (MUST be ZT_SHA512_DIGEST_LEN (64) bytes in length)
-	 * @return True on success, false if no private key
-	 */
-	ZT_ALWAYS_INLINE bool sha512PrivateKey(void *const sha) const
-	{
-		if (_hasPrivate) {
-			switch(_type) {
-				case C25519:
-					SHA512(sha,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
-					return true;
-				case P384:
-					SHA512(sha,&_priv,sizeof(_priv));
-					return true;
-			}
-		}
-		return false;
-	}
-
-	/**
 	 * @param h Buffer to receive SHA384 of public key(s)
+	 * @param includePrivate If true, hash private key(s) too
 	 */
-	ZT_ALWAYS_INLINE bool hash(uint8_t h[48]) const
+	ZT_ALWAYS_INLINE bool hash(uint8_t h[48],const bool includePrivate) const
 	{
 		switch(_type) {
+
 			case C25519:
-				SHA384(h,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+				if ((_hasPrivate)&&(includePrivate))
+					SHA384(h,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
+				else SHA384(h,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
 				return true;
+
 			case P384:
-				SHA384(h,&_pub,sizeof(_pub));
+				if ((_hasPrivate)&&(includePrivate))
+					SHA384(h,&_pub,sizeof(_pub),&_priv,sizeof(_priv));
+				else SHA384(h,&_pub,sizeof(_pub));
 				return true;
+
 		}
 		return false;
 	}
@@ -155,10 +142,8 @@ public:
 
 				case P384:
 					if (siglen >= ZT_ECC384_SIGNATURE_SIZE) {
-						// Signature hash includes the C25519/Ed25519 public key after the message.
-						// This is an added guard against divorcing these two bound keys.
 						uint8_t h[48];
-						SHA384(h,data,len,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+						SHA384(h,data,len);
 						ECC384ECDSASign(_priv.p384,h,(uint8_t *)sig);
 						return ZT_ECC384_SIGNATURE_SIZE;
 					}
@@ -185,7 +170,7 @@ public:
 			case P384:
 				if (siglen == ZT_ECC384_SIGNATURE_SIZE) {
 					uint8_t h[48];
-					SHA384(h,data,len,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+					SHA384(h,data,len);
 					return ECC384ECDSAVerify(_pub.p384,h,(const uint8_t *)sig);
 				}
 				break;
@@ -247,19 +232,20 @@ public:
 	/**
 	 * Attempt to generate an older type identity from a newer type
 	 *
-	 * If this identity has its private key this is not transferred to
-	 * the downgraded identity.
-	 *
 	 * @param dest Destination to fill with downgraded identity
 	 * @param toType Desired identity type
 	 */
 	ZT_ALWAYS_INLINE bool downgrade(Identity &dest,const Type toType)
 	{
-		if ((_type == P384)&&(toType == C25519)) {
+		if (_type == toType) {
+			return true;
+		} else if ((_type == P384)&&(toType == C25519)) {
 			dest._address = _address;
 			dest._type = C25519;
-			dest._hasPrivate = false;
+			dest._hasPrivate = _hasPrivate;
 			memcpy(dest._pub.c25519,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+			if (_hasPrivate)
+				memcpy(dest._priv.c25519,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
 			return true;
 		}
 		return false;
@@ -270,7 +256,6 @@ public:
 	 *
 	 * @param b Destination buffer to append to
 	 * @param includePrivate If true, include private key component (if present) (default: false)
-	 * @throws std::out_of_range Buffer too small
 	 */
 	template<unsigned int C>
 	ZT_ALWAYS_INLINE void serialize(Buffer<C> &b,bool includePrivate = false) const
@@ -291,9 +276,7 @@ public:
 
 			case P384:
 				b.append((uint8_t)P384);
-				b.append(_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-				b.append(_pub.p384,ZT_ECC384_PUBLIC_KEY_SIZE);
-				b.append(_pub.p384s,ZT_C25519_SIGNATURE_LEN);
+				b.append(&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_C25519_SIGNATURE_LEN + ZT_ECC384_SIGNATURE_SIZE);
 				if ((_hasPrivate)&&(includePrivate)) {
 					b.append((uint8_t)(ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE));
 					b.append(_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
@@ -316,8 +299,6 @@ public:
 	 * @param b Buffer containing serialized data
 	 * @param startAt Index within buffer of serialized data (default: 0)
 	 * @return Length of serialized data read from buffer
-	 * @throws std::out_of_range Serialized data invalid
-	 * @throws std::invalid_argument Serialized data invalid
 	 */
 	template<unsigned int C>
 	ZT_ALWAYS_INLINE unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
@@ -347,12 +328,8 @@ public:
 				break;
 
 			case P384:
-				memcpy(_pub.c25519,b.field(p,ZT_C25519_PUBLIC_KEY_LEN),ZT_C25519_PUBLIC_KEY_LEN);
-				p += ZT_C25519_PUBLIC_KEY_LEN;
-				memcpy(_pub.p384,b.field(p,ZT_ECC384_PUBLIC_KEY_SIZE),ZT_ECC384_PUBLIC_KEY_SIZE);
-				p += ZT_ECC384_PUBLIC_KEY_SIZE;
-				memcpy(_pub.p384s,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
-				p += ZT_ECC384_SIGNATURE_SIZE;
+				memcpy(&_pub,b.field(p,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_C25519_SIGNATURE_LEN + ZT_ECC384_SIGNATURE_SIZE),ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_C25519_SIGNATURE_LEN + ZT_ECC384_SIGNATURE_SIZE);
+				p += ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_C25519_SIGNATURE_LEN + ZT_ECC384_SIGNATURE_SIZE;
 				pkl = (unsigned int)b[p++];
 				if (pkl) {
 					if (pkl != (ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE))
@@ -442,16 +419,17 @@ public:
 
 private:
 	Address _address;
-	Type _type;
+	Type _type; // _type determines which fields in _priv and _pub are used
 	bool _hasPrivate;
 	ZT_PACKED_STRUCT(struct { // don't re-order these
 		uint8_t c25519[ZT_C25519_PRIVATE_KEY_LEN];
 		uint8_t p384[ZT_ECC384_PRIVATE_KEY_SIZE];
 	}) _priv;
 	ZT_PACKED_STRUCT(struct { // don't re-order these
-		uint8_t c25519[ZT_C25519_PUBLIC_KEY_LEN];
-		uint8_t p384[ZT_ECC384_PUBLIC_KEY_SIZE];
-		uint8_t p384s[ZT_C25519_SIGNATURE_LEN]; // signature of both keys with ed25519 to confirm type 0 extension to type 1
+		uint8_t c25519[ZT_C25519_PUBLIC_KEY_LEN]; // Curve25519 and Ed25519 public keys
+		uint8_t p384[ZT_ECC384_PUBLIC_KEY_SIZE];  // NIST P-384 public key
+		uint8_t c25519s[ZT_C25519_SIGNATURE_LEN]; // signature of both keys with ed25519
+		uint8_t p384s[ZT_ECC384_SIGNATURE_SIZE];  // signature of both keys with p384
 	}) _pub;
 };
 
