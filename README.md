@@ -44,7 +44,7 @@ The base path contains the ZeroTier One service main entry point (`one.cpp`), se
 
 ### Build and Platform Notes
 
-To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU make) is required and can be installed from packages or ports. For Windows there is a Visual Studio solution in `windows/'.
+To build on Mac and Linux just type `make`. On FreeBSD, DragonFly BSD, and OpenBSD `gmake` (GNU make) is required and can be installed from packages or ports. For Windows there is a Visual Studio solution in `windows/'.
 
  - **Mac**
    - Xcode command line tools for OSX 10.8 or newer are required.
@@ -55,6 +55,8 @@ To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU 
    - Windows 7 or newer is supported. This *may* work on Vista but isn't officially supported there. It will not work on Windows XP.
    - We build with Visual Studio 2017. Older versions may not work. Clang or MinGW will also probably work but may require some makefile hacking.
  - **FreeBSD**
+   - GNU make is required. Type `gmake` to build.
+ - **DragonFly BSD**
    - GNU make is required. Type `gmake` to build.
  - **OpenBSD**
    - There is a limit of four network memberships on OpenBSD as there are only four tap devices (`/dev/tap0` through `/dev/tap3`).
@@ -77,7 +79,7 @@ The service is controlled via the JSON API, which by default is available at 127
 Here's where home folders live (by default) on each OS:
 
  * **Linux**: `/var/lib/zerotier-one`
- * **FreeBSD** / **OpenBSD**: `/var/db/zerotier-one`
+ * **FreeBSD** / **DragonFly BSD** / **OpenBSD**: `/var/db/zerotier-one`
  * **Mac**: `/Library/Application Support/ZeroTier/One`
  * **Windows**: `\ProgramData\ZeroTier\One` (That's for Windows 7. The base 'shared app data' folder might be different on different Windows versions.)
 
