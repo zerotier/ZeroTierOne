@@ -722,7 +722,7 @@ public:
 					}
 				}
 			}
-
+#endif
 			// Delete legacy iddb.d if present (cleanup)
 			OSUtils::rmDashRf((_homePath + ZT_PATH_SEPARATOR_S "iddb.d").c_str());
 
