@@ -134,6 +134,26 @@ IPv6 ranges work just like IPv4 ranges and look like this:
 
 That defines a range within network `fd00:feed:feed:beef::/64` that contains up to 2^64 addresses. If an IPv6 range is large enough, the controller will assign addresses by placing each member's device ID into the address in a manner similar to the RFC4193 and 6PLANE modes. Otherwise it will assign addresses at random.
 
+**Managed Route object format:**
+
+| Field                 | Type          | Description                                       |
+| --------------------- | ------------- | ------------------------------------------------- |
+| target                | string        | Subnet in CIDR notation                           |
+| via                   | string/null   | Next hop router IP address                        |
+
+Managed Route objects look like this:
+
+      {
+        "target": "10.147.20.0/24"
+      }
+
+or 
+
+      {
+        "target": "192.168.168.0/24",
+        "via": "10.147.20.1"
+      }
+
 **Rule object format:**
 
 Each rule is actually a sequence of zero or more `MATCH_` entries in the rule array followed by an `ACTION_` entry that describes what to do if all the preceding entries match. An `ACTION_` without any preceding `MATCH_` entries is always taken, so setting a single `ACTION_ACCEPT` rule yields a network that allows all traffic. If no rules are present the default action is `ACTION_DROP`.
