@@ -105,7 +105,7 @@ public:
 	/**
 	 * @return Hash code for use with Hashtable
 	 */
-	ZT_ALWAYS_INLINE unsigned long hashCode() const { return reinterpret_cast<unsigned long>(_a); }
+	ZT_ALWAYS_INLINE unsigned long hashCode() const { return (unsigned long)_a; }
 
 	/**
 	 * @return Hexadecimal string
@@ -134,9 +134,9 @@ public:
 	 */
 	ZT_ALWAYS_INLINE uint8_t operator[](unsigned int i) const { return (uint8_t)(_a >> (32 - (i * 8))); }
 
-	ZT_ALWAYS_INLINE operator unsigned int() const { return reinterpret_cast<unsigned int>(_a); }
-	ZT_ALWAYS_INLINE operator unsigned long() const { return reinterpret_cast<unsigned long>(_a); }
-	ZT_ALWAYS_INLINE operator unsigned long long() const { return reinterpret_cast<unsigned long long>(_a); }
+	ZT_ALWAYS_INLINE operator unsigned int() const { return (unsigned int)_a; }
+	ZT_ALWAYS_INLINE operator unsigned long() const { return (unsigned long)_a; }
+	ZT_ALWAYS_INLINE operator unsigned long long() const { return (unsigned long long)_a; }
 
 	ZT_ALWAYS_INLINE void zero() { _a = 0; }
 
