@@ -68,12 +68,12 @@ private:
 	{
 		// assumes _roots_l is locked
 		_rootIdentities.clear();
-		Hashtable< Str,Locator >::Iterator i(_roots);
+		Hashtable< Str,SharedPtr<const Locator> >::Iterator i(_roots);
 		Str *k = (Str *)0;
 		SharedPtr< const Locator > *v = (SharedPtr< const Locator > *)0;
 		while (i.next(k,v)) {
 			if (*v)
-				_rootIdentities.set(v->id(),true);
+				_rootIdentities.set((*v)->id(),true);
 		}
 	}
 
@@ -327,19 +327,19 @@ public:
 	 * @param latestLocator Latest locator
 	 * @return True if locator is newer or if a new entry was created
 	 */
-	inline bool setRoot(const Str &name,const Locator &latestLocator)
+	inline bool setRoot(const Str &name,const SharedPtr<const Locator> &latestLocator)
 	{
 		Mutex::Lock l(_roots_l);
 		if (latestLocator) {
-			Locator &ll = _roots[name];
-			if (ll.timestamp() < latestLocator.timestamp()) {
+			SharedPtr<const Locator> &ll = _roots[name];
+			if ((ll)&&(ll->timestamp() < latestLocator->timestamp())) {
 				ll = latestLocator;
 				_updateRoots();
 				_rootsModified = true;
 				return true;
 			}
 		} else if (!_roots.contains(name)) {
-			_roots.set(name,Locator()); // no locator known yet, but add name to name list to trigger DNS refreshing
+			_roots.set(name,SharedPtr<const Locator>()); // no locator known yet, but add name to name list to trigger DNS refreshing
 			_rootsModified = true;
 			return true;
 		}
@@ -374,17 +374,22 @@ public:
 
 		unsigned int c = 0;
 		Str *k = (Str *)0;
-		Locator *v = (Locator *)0;
-		Hashtable< Str,Locator >::Iterator i(const_cast<Topology *>(this)->_roots);
+		SharedPtr<const Locator> *v = (SharedPtr<const Locator> *)0;
+		Hashtable< Str,SharedPtr<const Locator> >::Iterator i(const_cast<Topology *>(this)->_roots);
 		while (i.next(k,v)) {
 			Utils::scopy(nptr,256,k->c_str());
 			rl->roots[c].name = nptr;
 			nptr += 256;
-			lbuf->clear();
-			v->serialize(*lbuf);
-			memcpy(lptr,lbuf->unsafeData(),lbuf->size());
-			rl->roots[c].locator = lptr;
-			rl->roots[c].locatorSize = lbuf->size();
+			if (*v) {
+				lbuf->clear();
+				(*v)->serialize(*lbuf);
+				memcpy(lptr,lbuf->unsafeData(),lbuf->size());
+				rl->roots[c].locator = lptr;
+				rl->roots[c].locatorSize = lbuf->size();
+			} else {
+				rl->roots[c].locator = nullptr;
+				rl->roots[c].locatorSize = 0;
+			}
 			lptr += 65536;
 			++c;
 		}

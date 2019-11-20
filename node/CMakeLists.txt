@@ -7,7 +7,6 @@ endif(WIN32)
 
 set(core_headers
 	Address.hpp
-	AES.hpp
 	AtomicCounter.hpp
 	Buffer.hpp
 	C25519.hpp
@@ -50,8 +49,6 @@ set(core_headers
 )
 
 set(core_src
-	AES.cpp
-	AES-aesni.c
 	C25519.cpp
 	Credential.cpp
 	ECC384.cpp
