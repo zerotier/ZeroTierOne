@@ -40,26 +40,26 @@ parallel 'centos7': {
 //             throw err
 //         }
 //     }
-// }, 'macOS': {
-//     node('macOS') {
-//         try {
-//             checkout scm
+}, 'macOS': {
+    node('macOS') {
+        try {
+            checkout scm
 
-//             stage('Build macOS') {
-//                 sh 'make -f make-mac.mk'
-//             }
+            stage('Build macOS') {
+                sh 'make -f make-mac.mk'
+            }
 
-//             stage('Build macOS UI') {
-//                 sh 'cd macui && xcodebuild -target "ZeroTier One" -configuration Debug'
-//             }
-//         }
-//         catch (err) {
-//             currentBuild.result = "FAILURE"
-//             mattermostSend color: '#ff0000', message: "${env.JOB_NAME} broken on macOS (<${env.BUILD_URL}|Open>)"
+            stage('Build macOS UI') {
+                sh 'cd macui && xcodebuild -target "ZeroTier One" -configuration Debug'
+            }
+        }
+        catch (err) {
+            currentBuild.result = "FAILURE"
+            mattermostSend color: '#ff0000', message: "${env.JOB_NAME} broken on macOS (<${env.BUILD_URL}|Open>)"
 
-//             throw err
-//         }
-//     }
+            throw err
+        }
+    }
 // }, 'windows': {
 //     node('windows') {
 //         try {

@@ -18,14 +18,18 @@ ZT_VERSION_MINOR=$(shell cat version.h | grep -F VERSION_MINOR | cut -d ' ' -f 3
 ZT_VERSION_REV=$(shell cat version.h | grep -F VERSION_REVISION | cut -d ' ' -f 3)
 ZT_VERSION_BUILD=$(shell cat version.h | grep -F VERSION_BUILD | cut -d ' ' -f 3)
 
+# for central controller builds
+TIMESTAMP=$(shell date +"%Y%m%d%H%M")
+
 DEFS+=-DZT_BUILD_PLATFORM=$(ZT_BUILD_PLATFORM) -DZT_BUILD_ARCHITECTURE=$(ZT_BUILD_ARCHITECTURE)
 
 include objects.mk
 ONE_OBJS+=osdep/MacEthernetTap.o osdep/MacKextEthernetTap.o ext/http-parser/http_parser.o
 
 ifeq ($(ZT_CONTROLLER),1)
-	LIBS+=-lpq -lrabbitmq
+	LIBS+=-L/usr/local/opt/libpq/lib -lpq -Lext/librabbitmq/macos/lib -lrabbitmq
 	DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER
+	INCLUDES+=-Iext/librabbitmq/macos/include -I/usr/local/opt/libpq/include
 endif
 
 # Official releases are signed with our Apple cert and apply software updates by default
@@ -144,6 +148,9 @@ official: FORCE
 	make ZT_OFFICIAL_RELEASE=1 -j 8 one
 	make ZT_OFFICIAL_RELEASE=1 macui
 	make ZT_OFFICIAL_RELEASE=1 mac-dist-pkg
+
+central-controller-docker: FORCE
+	docker build -t docker.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=$(shell git name-rev --name-only HEAD) .
 
 clean:
 	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules macui/build zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_*
