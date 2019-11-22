@@ -60,25 +60,24 @@ parallel 'centos7': {
             throw err
         }
     }
-// }, 'windows': {
-//     node('windows') {
-//         try {
-//             checkout scm
+}, 'windows': {
+    node('windows') {
+        try {
+            checkout scm
             
-//             stage('Build Windows') {
-//                 bat '''CALL "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat" amd64
-// git clean -dfx
-// msbuild windows\\ZeroTierOne.sln
-// '''
-//             }
-//         }
-//         catch (err) {
-//             currentBuild.result = "FAILURE"
-//             mattermostSend color: '#ff0000', message: "${env.JOB_NAME} broken on Windows (<${env.BUILD_URL}|Open>)"
+            stage('Build Windows') {
+                bat '''CALL "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars32.bat" x64
+msbuild windows\\ZeroTierOne.sln
+'''
+            }
+        }
+        catch (err) {
+            currentBuild.result = "FAILURE"
+            mattermostSend color: '#ff0000', message: "${env.JOB_NAME} broken on Windows (<${env.BUILD_URL}|Open>)"
 
-//             throw err
-//         }
-//     }
+            throw err
+        }
+    }
 }
 
 mattermostSend color: "#00ff00", message: "${env.JOB_NAME} #${env.BUILD_NUMBER} Complete (<${env.BUILD_URL}|Show More...>)"
