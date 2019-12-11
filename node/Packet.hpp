@@ -424,10 +424,12 @@ public:
 		 *   <[8] timestamp for determining latency>
 		 *   <[...] binary serialized identity (see Identity)>
 		 *   <[...] physical destination address of packet>
-		 *   [... begin encrypted section ...]
+		 *   [... begin encrypted region ...]
 		 *   <[2] 16-bit reserved field, always 0>
 		 *   <[2] 16-bit length of locator>
 		 *   <[...] locator for this node>
+		 *   <[2] 16-bit length of meta-data dictionary>
+		 *   <[...] meta-data dictionary>
 		 *
 		 * HELLO is sent in the clear as it is how peers share their identity
 		 * public keys.
@@ -440,6 +442,9 @@ public:
 		 * absolutely required for security as nothing in this packet is
 		 * very sensitive, but hiding the locator and other meta-data slightly
 		 * improves privacy.
+		 *
+		 * The 16-bit zero after encryption starts is for backward compatibility
+		 * with pre-2.0 nodes.
 		 *
 		 * OK payload:
 		 *   <[8] HELLO timestamp field echo>
@@ -579,6 +584,20 @@ public:
 		VERB_ECHO = 0x08,
 
 		/**
+		 * Announce interest in multicast group(s):
+		 *   <[8] 64-bit network ID>
+		 *   <[6] multicast Ethernet address>
+		 *   <[4] multicast additional distinguishing information (ADI)>
+		 *   [... additional tuples of network/address/adi ...]
+		 *
+		 * LIKEs may be sent to any peer, though a good implementation should
+		 * restrict them to peers on the same network they're for and to network
+		 * controllers and root servers. In the current network, root servers
+		 * will provide the service of final multicast cache.
+		 */
+		VERB_MULTICAST_LIKE = 0x09,
+
+		/**
 		 * Network credentials push:
 		 *   [<[...] one or more certificates of membership>]
 		 *   <[1] 0x00, null byte marking end of COM array>
@@ -683,6 +702,73 @@ public:
 		VERB_NETWORK_CONFIG = 0x0c,
 
 		/**
+		 * Request endpoints for multicast distribution:
+		 *   <[8] 64-bit network ID>
+		 *   <[1] flags>
+		 *   <[6] MAC address of multicast group being queried>
+		 *   <[4] 32-bit ADI for multicast group being queried>
+		 *   <[4] 32-bit requested max number of multicast peers>
+		 *
+		 * This message asks a peer for additional known endpoints that have
+		 * LIKEd a given multicast group. It's sent when the sender wishes
+		 * to send multicast but does not have the desired number of recipient
+		 * peers.
+		 *
+		 * OK response payload: (multiple OKs can be generated)
+		 *   <[8] 64-bit network ID>
+		 *   <[6] MAC address of multicast group being queried>
+		 *   <[4] 32-bit ADI for multicast group being queried>
+		 *   <[4] 32-bit total number of known members in this multicast group>
+		 *   <[2] 16-bit number of members enumerated in this packet>
+		 *   <[...] series of 5-byte ZeroTier addresses of enumerated members>
+		 *
+		 * ERROR is not generated; queries that return no response are dropped.
+		 */
+		VERB_MULTICAST_GATHER = 0x0d,
+
+		/** *** DEPRECATED ***
+		 * Multicast frame:
+		 *   <[8] 64-bit network ID>
+		 *   <[1] flags>
+		 *  [<[4] 32-bit implicit gather limit>]
+		 *  [<[6] source MAC>]
+		 *   <[6] destination MAC (multicast address)>
+		 *   <[4] 32-bit multicast ADI (multicast address extension)>
+		 *   <[2] 16-bit ethertype>
+		 *   <[...] ethernet payload>
+		 *
+		 * Flags:
+		 *   0x01 - Network certificate of membership attached (DEPRECATED)
+		 *   0x02 - Implicit gather limit field is present
+		 *   0x04 - Source MAC is specified -- otherwise it's computed from sender
+		 *   0x08 - Please replicate (sent to multicast replicators)
+		 *
+		 * OK and ERROR responses are optional. OK may be generated if there are
+		 * implicit gather results or if the recipient wants to send its own
+		 * updated certificate of network membership to the sender. ERROR may be
+		 * generated if a certificate is needed or if multicasts to this group
+		 * are no longer wanted (multicast unsubscribe).
+		 *
+		 * OK response payload:
+		 *   <[8] 64-bit network ID>
+		 *   <[6] MAC address of multicast group>
+		 *   <[4] 32-bit ADI for multicast group>
+		 *   <[1] flags>
+		 *  [<[...] network certificate of membership (DEPRECATED)>]
+		 *  [<[...] implicit gather results if flag 0x01 is set>]
+		 *
+		 * OK flags (same bits as request flags):
+		 *   0x01 - OK includes certificate of network membership (DEPRECATED)
+		 *   0x02 - OK includes implicit gather results
+		 *
+		 * ERROR response payload:
+		 *   <[8] 64-bit network ID>
+		 *   <[6] multicast group MAC>
+		 *   <[4] 32-bit multicast group ADI>
+		 */
+		VERB_MULTICAST_FRAME = 0x0e,
+
+		/**
 		 * Push of potential endpoints for direct communication:
 		 *   <[2] 16-bit number of paths>
 		 *   <[...] paths>
@@ -784,77 +870,67 @@ public:
 		VERB_REMOTE_TRACE = 0x15,
 
 		/**
-		 * Multipurpose VL2 network multicast:
-		 *   <[5] start of range of addresses for propagation>
-		 *   <[5] end of range of addresses for propagation>
-		 *   <[1] 8-bit propagation depth / hops or 0xff to not propagate>
-		 *   <[1] 8-bit length of bloom filter in 256-byte/2048-bit chunks>
-		 *   <[...] propagation bloom filter>
-		 *   [... start of signed portion ...]
-		 *   <[8] 64-bit timestamp>
+		 * Peer-to-peer propagated multicast packet:
+		 *   <[128] 1024-bit bloom filter>
+		 *   <[2] 16-bit perturbation coefficient to minimize bloom collisions>
+		 *   <[5] 40-bit start of range of recipient addresses>
+		 *   <[5] 40-bit end of range of recipient addresses>
+		 *   [... begin signed portion ...]
+		 *   <[1] 8-bit flags>
+		 *   <[5] 40-bit ZeroTier address of sender>
 		 *   <[8] 64-bit network ID>
-		 *   <[5] 40-bit address of sender>
-		 *   <[2] 16-bit length of multicast payload>
-		 *   [... start multicast payload ...]
-		 *   <[1] 8-bit payload type>
-		 *   [... end multicast payload and signed portion ...]
-		 *   <[2] 16-bit length of signature or 0 if not present>
-		 *   <[...] signature of signed portion>
-		 *
-		 * Payload type 0x00: multicast frame:
 		 *   <[6] MAC address of multicast group>
-		 *   <[4] 32-bit ADI of multicast group>
-		 *   <[6] 48-bit source MAC of packet or all 0 if from sender>
+		 *   <[4] 32-bit ADI for multicast group>
+		 *   <[6] MAC address of sender>
 		 *   <[2] 16-bit ethertype>
+		 *   <[2] 16-bit length of ethernet payload>
 		 *   <[...] ethernet payload>
+		 *   [... end signed portion ...]
+		 *   <[2] 16-bit length of signature or 0 if unsigned>
+		 *  [<[...] optional signature of multicast>]
 		 *
-		 * Payload type 0x01: multicast subscribe:
-		 *   <[2] 16-bit number of multicast group IDs to subscribe>
-		 *   <[...] series of 32-bit multicast group IDs>
-		 *
-		 * Payload type 0x02: multicast unsubscribe:
-		 *   <[2] 16-bit number of multicast group IDs to unsubscribe>
-		 *   <[...] series of 32-bit multicast group IDs>
-		 *
-		 * This is the common packet structure for VL2 network-level multicasts
-		 * and is used for multicast frames, multicast group subscribe and
-		 * unsubscribe, and could be used in the future for other purposes such
-		 * as credential propagation or diagnostics.
-		 *
-		 * The header contains an address range, bloom filter, and depth/hop
-		 * counter. The bloom filter tracks which nodes have seen this multicast,
-		 * with bits being set prior to send. The range allows the total set of
-		 * subscribers to be partitioned in the case of huge networks that would
-		 * saturate the bloom filter or have collisions. The propagation depth
-		 * allows propagation to stop at some maximum value, and the value 0xff
-		 * can be used to indicate that further propagation is not desired.
-		 *
-		 * Logic connected to the parsing of the multicast payload will determine
-		 * whether or not and to whom this multicast is propagated. Subscribe and
-		 * unsubscribe messages are propagated to online nodes up to a maximum
-		 * depth, while frames have the added constraint of being propagated only
-		 * to nodes that subscribe to the target multicast group.
+		 * This packet contains a multicast that is to be peer-to-peer replicated.
+		 * The range of recipient addresses is a subset of the global list of
+		 * subscribers to this multicast group. As the packet is propagated bits
+		 * in the bloom filter will be set. The sender may attempt to select a
+		 * perturbation coefficient to prevent collisions within the selected
+		 * recipient range.
 		 */
-		VERB_VL2_MULTICAST = 0x16,
+		VERB_MULTICAST = 0x16,
 
 		/**
 		 * Negotiate a new ephemeral key:
-		 *   <[8] first 64 bits of SHA-384 of currently known key for destination>
-		 *   <[...] ephemeral key for sender>
+		 *   <[48] SHA384 of ephemeral key we currently have for recipient>
+		 *  [<[...] sender's ephemeral key>]
 		 *
-		 * If the 64-bit hash of the currently known key sent by the sender does
-		 * not match the key the destination is currently using, the destination
-		 * will send its own REKEY after sending OK to ensure that keys are up to
-		 * date on both sides. This causes either side sending REKEY to trigger
-		 * an automatic two-way handshake. Either side may therefore rekey at
-		 * any time, though a rate limit should be in effect to prevent flooding.
+		 * REKEY is used to negotiate ephemeral keys. The first byte is a step
+		 * number from 0 to 2. Here's a new session initiated by Alice:
 		 *
-		 * OK payload:
-		 *   <[8] first 64 bits of SHA-384 of received ephemeral key>
+		 * Alice: REKEY[0x000...,AliceKey]        -> Bob
+		 * Bob:   REKEY[SHA384(AliceKey),BobKey]  -> Alice
+		 * Alice: REKEY[SHA384(BobKey),(omitted)] -> Bob
+		 *
+		 * REKEY messages will continue until both sides have acknowledged each
+		 * others' keys. Either Alice or Bob can send REKEY to negotiate a new
+		 * ephemeral key pair at any time.
+		 *
+		 * OK isn't used because this is an ongoing handshake until both sides
+		 * agree on a key. REKEY triggers a REKEY in reply if the hash for the
+		 * recipient's ephemeral public key doesn't match the ephemeral key it
+		 * wants to use.
 		 */
-		VERB_REKEY = 0x17
+		VERB_REKEY = 0x17,
 
-		// TODO: legacy multicast message types must be supported
+		/**
+		 * Encapsulate a full ZeroTier packet in another:
+		 *   <[...] raw encapsulated packet>
+		 *
+		 * Encapsulation exists to enable secure relaying as opposed to the usual
+		 * "dumb" relaying. The latter is faster but secure relaying has roles
+		 * where endpoint privacy is desired. Multiply nested ENCAP packets
+		 * could allow ZeroTier to act as an onion router.
+		 */
+		VERB_ENCAP = 0x18
 
 		// protocol max: 0x1f
 	};
