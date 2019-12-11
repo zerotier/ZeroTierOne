@@ -43,17 +43,10 @@ namespace ZeroTier {
 class RuntimeEnvironment;
 class Network;
 
-/**
- * Subclass of packet that handles the decoding of it
- */
 class IncomingPacket : public Packet
 {
 public:
-	ZT_ALWAYS_INLINE IncomingPacket() :
-		Packet(),
-		_receiveTime(0)
-	{
-	}
+	ZT_ALWAYS_INLINE IncomingPacket() : Packet(),_receiveTime(0),_path() {}
 
 	/**
 	 * Create a new packet-in-decode
@@ -108,30 +101,6 @@ public:
 	ZT_ALWAYS_INLINE uint64_t receiveTime() const { return _receiveTime; }
 
 private:
-	// These are called internally to handle packet contents once it has
-	// been authenticated, decrypted, decompressed, and classified.
-	bool _doERROR(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool alreadyAuthenticated);
-	bool _doACK(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doQOS_MEASUREMENT(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doRENDEZVOUS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doFRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doECHO(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doMULTICAST_LIKE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doNETWORK_CONFIG(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doUSER_MESSAGE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doREMOTE_TRACE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-
-	void _sendErrorNeedCredentials(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer,const uint64_t nwid);
-
 	uint64_t _receiveTime;
 	SharedPtr<Path> _path;
 };
