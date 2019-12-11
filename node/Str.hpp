@@ -22,7 +22,7 @@
 
 #include <string>
 
-#define ZT_STR_CAPACITY 254
+#define ZT_STR_CAPACITY 1021
 
 namespace ZeroTier {
 
@@ -197,25 +197,8 @@ public:
 		return h;
 	}
 
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b,const bool forSign = false) const
-	{
-		b.append(_l);
-		b.append(_s,(unsigned int)_l);
-	}
-
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-	{
-		unsigned int p = startAt;
-		_l = (uint8_t)b[p++];
-		memcpy(_s,b.field(p,(unsigned int)_l),(unsigned long)_l);
-		p += (unsigned int)_l;
-		return (p - startAt);
-	}
-
 private:
-	uint8_t _l;
+	uint16_t _l;
 	char _s[ZT_STR_CAPACITY+1];
 };
 

@@ -40,8 +40,6 @@
 #include "AES.hpp"
 #include "SHA512.hpp"
 
-namespace ZeroTier {
-
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 #include <immintrin.h>
 static bool _zt_rdrand_supported()
@@ -63,7 +61,11 @@ static bool _zt_rdrand_supported()
 static const bool _rdrandSupported = _zt_rdrand_supported();
 #endif
 
-const char Utils::HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
+namespace ZeroTier {
+
+namespace Utils {
+
+const char HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
 
 // Crazy hack to force memory to be securely zeroed in spite of the best efforts of optimizing compilers.
 static void _Utils_doBurn(volatile uint8_t *ptr,unsigned int len)
@@ -72,7 +74,7 @@ static void _Utils_doBurn(volatile uint8_t *ptr,unsigned int len)
 	while (ptr != end) *(ptr++) = (uint8_t)0;
 }
 static void (*volatile _Utils_doBurn_ptr)(volatile uint8_t *,unsigned int) = _Utils_doBurn;
-void Utils::burn(void *ptr,unsigned int len) { (_Utils_doBurn_ptr)((volatile uint8_t *)ptr,len); }
+void burn(void *ptr,unsigned int len) { (_Utils_doBurn_ptr)((volatile uint8_t *)ptr,len); }
 
 static unsigned long _Utils_itoa(unsigned long n,char *s)
 {
@@ -84,7 +86,7 @@ static unsigned long _Utils_itoa(unsigned long n,char *s)
 	s[pos] = '0' + (char)(n % 10);
 	return pos + 1;
 }
-char *Utils::decimal(unsigned long n,char s[24])
+char *decimal(unsigned long n,char s[24])
 {
 	if (n == 0) {
 		s[0] = '0';
@@ -95,7 +97,7 @@ char *Utils::decimal(unsigned long n,char s[24])
 	return s;
 }
 
-unsigned short Utils::crc16(const void *buf,unsigned int len)
+unsigned short crc16(const void *buf,unsigned int len)
 {
 	static const uint16_t crc16tab[256]= {
 		0x0000,0x1021,0x2042,0x3063,0x4084,0x50a5,0x60c6,0x70e7,
@@ -138,7 +140,7 @@ unsigned short Utils::crc16(const void *buf,unsigned int len)
 	return crc;
 }
 
-unsigned int Utils::unhex(const char *h,void *buf,unsigned int buflen)
+unsigned int unhex(const char *h,void *buf,unsigned int buflen)
 {
 	unsigned int l = 0;
 	while (l < buflen) {
@@ -169,7 +171,7 @@ unsigned int Utils::unhex(const char *h,void *buf,unsigned int buflen)
 	return l;
 }
 
-unsigned int Utils::unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen)
+unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen)
 {
 	unsigned int l = 0;
 	const char *hend = h + hlen;
@@ -203,7 +205,7 @@ unsigned int Utils::unhex(const char *h,unsigned int hlen,void *buf,unsigned int
 	return l;
 }
 
-void Utils::getSecureRandom(void *buf,unsigned int bytes)
+void getSecureRandom(void *buf,unsigned int bytes)
 {
 	static Mutex globalLock;
 	static bool initialized = false;
@@ -281,7 +283,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	}
 }
 
-int Utils::b32e(const uint8_t *data,int length,char *result,int bufSize)
+int b32e(const uint8_t *data,int length,char *result,int bufSize)
 {
   if (length < 0 || length > (1 << 28)) {
 		result[0] = (char)0;
@@ -317,7 +319,7 @@ int Utils::b32e(const uint8_t *data,int length,char *result,int bufSize)
 	return -1;
 }
 
-int Utils::b32d(const char *encoded,uint8_t *result,int bufSize)
+int b32d(const char *encoded,uint8_t *result,int bufSize)
 {
   int buffer = 0;
   int bitsLeft = 0;
@@ -357,7 +359,7 @@ int Utils::b32d(const char *encoded,uint8_t *result,int bufSize)
   return count;
 }
 
-unsigned int Utils::b64e(const uint8_t *in,unsigned int inlen,char *out,unsigned int outlen)
+unsigned int b64e(const uint8_t *in,unsigned int inlen,char *out,unsigned int outlen)
 {
 	static const char base64en[64] = { 'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/' };
 	unsigned int i = 0,j = 0;
@@ -404,7 +406,7 @@ unsigned int Utils::b64e(const uint8_t *in,unsigned int inlen,char *out,unsigned
 	return j;
 }
 
-unsigned int Utils::b64d(const char *in,unsigned char *out,unsigned int outlen)
+unsigned int b64d(const char *in,unsigned char *out,unsigned int outlen)
 {
 	static const uint8_t base64de[256] = { 255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,62,255,255,255,63,52,53,54,55,56,57,58,59,60,61,255,255,255,255,255,255,255,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,255,255,255,255,255,255,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,255,255,255,255,255 };
 	unsigned int i = 0;
@@ -437,7 +439,7 @@ unsigned int Utils::b64d(const char *in,unsigned char *out,unsigned int outlen)
 }
 
 #define ROL64(x,k) (((x) << (k)) | ((x) >> (64 - (k))))
-uint64_t Utils::random()
+uint64_t random()
 {
 	// https://en.wikipedia.org/wiki/Xorshift#xoshiro256**
 	static Mutex l;
@@ -459,5 +461,7 @@ uint64_t Utils::random()
 
 	return result;
 }
+
+} // namespace Utils
 
 } // namespace ZeroTier
