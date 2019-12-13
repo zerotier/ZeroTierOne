@@ -138,16 +138,22 @@
 #endif
 
 #if (defined(__GNUC__) && (__GNUC__ >= 3)) || (defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 800)) || defined(__clang__)
-#define ZT_ALWAYS_INLINE inline __attribute__((always_inline))
+// #define inline __attribute__((always_inline))
+#ifndef restrict
+#define restrict __restrict__
+#endif
 #ifndef likely
 #define likely(x) __builtin_expect((x),1)
 #endif
 #ifndef unlikely
 #define unlikely(x) __builtin_expect((x),0)
 #endif
-#else
+#else /* not GCC-like */
+#ifndef restrict
+#define restrict
+#endif
 #ifndef likely
-#define ZT_ALWAYS_INLINE inline
+#define inline inline
 #define likely(x) (x)
 #endif
 #ifndef unlikely
@@ -196,6 +202,16 @@
  * Addresses beginning with this byte are reserved for the joy of in-band signaling
  */
 #define ZT_ADDRESS_RESERVED_PREFIX 0xff
+
+/**
+ * Maximum DNS or URL name size for an Endpoint
+ */
+#define ZT_ENDPOINT_MAX_NAME_SIZE 256
+
+/**
+ * Size of an identity hash (SHA384)
+ */
+#define ZT_IDENTITY_HASH_SIZE 48
 
 /**
  * Secure DNS name for ZeroTier's default root

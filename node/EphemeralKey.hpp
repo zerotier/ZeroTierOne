@@ -46,9 +46,9 @@ public:
 		C25519ECC384 = 1
 	};
 
-	ZT_ALWAYS_INLINE EphemeralKey() : _priv(nullptr),_type(NONE) {}
+	inline EphemeralKey() : _priv(nullptr),_type(NONE) {}
 
-	ZT_ALWAYS_INLINE ~EphemeralKey()
+	inline ~EphemeralKey()
 	{
 		if (_priv) {
 			Utils::burn(_priv,ZT_EPHEMERAL_KEY_TYPE_1_PRIVATE_SIZE);
@@ -56,10 +56,10 @@ public:
 		}
 	}
 
-	ZT_ALWAYS_INLINE Type type() const { return (Type)_type; }
-	ZT_ALWAYS_INLINE bool hasPrivate() const { return (_priv != nullptr); }
+	inline Type type() const { return (Type)_type; }
+	inline bool hasPrivate() const { return (_priv != nullptr); }
 
-	ZT_ALWAYS_INLINE void generate()
+	inline void generate()
 	{
 		if (!_priv)
 			_priv = new uint8_t[ZT_EPHEMERAL_KEY_TYPE_1_PRIVATE_SIZE];
@@ -68,7 +68,7 @@ public:
 		_type = C25519ECC384;
 	}
 
-	ZT_ALWAYS_INLINE bool agree(const EphemeralKey &theirs,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) const
+	inline bool agree(const EphemeralKey &theirs,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) const
 	{
 		if ((_priv)&&(_type == 1)) {
 			uint8_t rawkey[128],h[48];
@@ -82,7 +82,7 @@ public:
 	}
 
 	template<unsigned int C>
-	ZT_ALWAYS_INLINE void serialize(Buffer<C> &b) const
+	inline void serialize(Buffer<C> &b) const
 	{
 		b.append(_type);
 		if (_type == C25519ECC384)
@@ -90,7 +90,7 @@ public:
 	}
 
 	template<unsigned int C>
-	ZT_ALWAYS_INLINE unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
 	{
 		unsigned int p = startAt;
 		delete [] _priv;

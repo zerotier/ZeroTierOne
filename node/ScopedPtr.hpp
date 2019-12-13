@@ -27,21 +27,21 @@ template<typename T>
 class ScopedPtr
 {
 public:
-	ZT_ALWAYS_INLINE ScopedPtr(T *const p) : _p(p) {}
-	ZT_ALWAYS_INLINE ~ScopedPtr() { delete _p; }
+	inline ScopedPtr(T *const p) : _p(p) {}
+	inline ~ScopedPtr() { delete _p; }
 
-	ZT_ALWAYS_INLINE T *operator->() const { return _p; }
-	ZT_ALWAYS_INLINE T &operator*() const { return *_p; }
-	ZT_ALWAYS_INLINE operator bool() const { return (_p != (T *)0); }
-	ZT_ALWAYS_INLINE T *ptr() const { return _p; }
+	inline T *operator->() const { return _p; }
+	inline T &operator*() const { return *_p; }
+	inline operator bool() const { return (_p != (T *)0); }
+	inline T *ptr() const { return _p; }
 
-	ZT_ALWAYS_INLINE bool operator==(const ScopedPtr &p) const { return (_p == p._p); }
-	ZT_ALWAYS_INLINE bool operator!=(const ScopedPtr &p) const { return (_p != p._p); }
-	ZT_ALWAYS_INLINE bool operator==(T *const p) const { return (_p == p); }
-	ZT_ALWAYS_INLINE bool operator!=(T *const p) const { return (_p != p); }
+	inline bool operator==(const ScopedPtr &p) const { return (_p == p._p); }
+	inline bool operator!=(const ScopedPtr &p) const { return (_p != p._p); }
+	inline bool operator==(T *const p) const { return (_p == p); }
+	inline bool operator!=(T *const p) const { return (_p != p); }
 
 private:
-	ZT_ALWAYS_INLINE ScopedPtr() {}
+	inline ScopedPtr() {}
 	T *const _p;
 };
 

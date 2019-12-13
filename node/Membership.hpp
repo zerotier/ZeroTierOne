@@ -67,7 +67,7 @@ public:
 	/**
 	 * @return Time we last pushed credentials to this member
 	 */
-	ZT_ALWAYS_INLINE int64_t lastPushedCredentials() const { return _lastPushedCredentials; }
+	inline int64_t lastPushedCredentials() const { return _lastPushedCredentials; }
 
 	/**
 	 * Check whether we should push MULTICAST_LIKEs to this peer, and update last sent time if true
@@ -75,7 +75,7 @@ public:
 	 * @param now Current time
 	 * @return True if we should update multicasts
 	 */
-	ZT_ALWAYS_INLINE bool multicastLikeGate(const int64_t now)
+	inline bool multicastLikeGate(const int64_t now)
 	{
 		if ((now - _lastUpdatedMulticast) >= ZT_MULTICAST_ANNOUNCE_PERIOD) {
 			_lastUpdatedMulticast = now;
@@ -90,7 +90,7 @@ public:
 	 * @param nconf Our network config
 	 * @return True if this peer is allowed on this network at all
 	 */
-	ZT_ALWAYS_INLINE bool isAllowedOnNetwork(const NetworkConfig &nconf) const
+	inline bool isAllowedOnNetwork(const NetworkConfig &nconf) const
 	{
 		if (nconf.isPublic()) return true; // public network
 		if (_com.timestamp() <= _comRevocationThreshold) return false; // COM has been revoked
@@ -100,7 +100,7 @@ public:
 	/**
 	 * @return True if this peer has sent us a valid certificate within ZT_PEER_ACTIVITY_TIMEOUT
 	 */
-	ZT_ALWAYS_INLINE bool recentlyAssociated(const int64_t now) const { return ((_com)&&((now - _com.timestamp()) < ZT_PEER_ACTIVITY_TIMEOUT)); }
+	inline bool recentlyAssociated(const int64_t now) const { return ((_com)&&((now - _com.timestamp()) < ZT_PEER_ACTIVITY_TIMEOUT)); }
 
 	/**
 	 * Check whether the peer represented by this Membership owns a given address
@@ -160,22 +160,22 @@ public:
 	/**
 	 * @return Bytes received so far
 	 */
-	ZT_ALWAYS_INLINE uint64_t receivedBytes() const { return _received; }
+	inline uint64_t receivedBytes() const { return _received; }
 
 	/**
 	 * @return Bytes sent so far
 	 */
-	ZT_ALWAYS_INLINE uint64_t sentBytes() const { return _sent; }
+	inline uint64_t sentBytes() const { return _sent; }
 
 	/**
 	 * @param bytes Bytes received
 	 */
-	ZT_ALWAYS_INLINE void logReceivedBytes(const unsigned int bytes) { _received = (uint64_t)bytes; }
+	inline void logReceivedBytes(const unsigned int bytes) { _received = (uint64_t)bytes; }
 
 	/**
 	 * @param bytes Bytes sent
 	 */
-	ZT_ALWAYS_INLINE void logSentBytes(const unsigned int bytes) { _sent = (uint64_t)bytes; }
+	inline void logSentBytes(const unsigned int bytes) { _sent = (uint64_t)bytes; }
 
 private:
 	// This returns true if a resource is an IPv6 NDP-emulated address. These embed the ZT
@@ -275,7 +275,7 @@ public:
 	class CapabilityIterator
 	{
 	public:
-		ZT_ALWAYS_INLINE CapabilityIterator(Membership &m,const NetworkConfig &nconf) :
+		inline CapabilityIterator(Membership &m,const NetworkConfig &nconf) :
 			_hti(m._remoteCaps),
 			_k((uint32_t *)0),
 			_c((Capability *)0),
@@ -284,7 +284,7 @@ public:
 		{
 		}
 
-		ZT_ALWAYS_INLINE Capability *next()
+		inline Capability *next()
 		{
 			while (_hti.next(_k,_c)) {
 				if (_m._isCredentialTimestampValid(_nconf,*_c))

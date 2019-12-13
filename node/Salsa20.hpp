@@ -30,14 +30,14 @@ namespace ZeroTier {
 class Salsa20
 {
 public:
-	ZT_ALWAYS_INLINE Salsa20() {}
-	ZT_ALWAYS_INLINE ~Salsa20() { Utils::burn(&_state,sizeof(_state)); }
+	inline Salsa20() {}
+	inline ~Salsa20() { Utils::burn(&_state,sizeof(_state)); }
 
 	/**
 	 * @param key 256-bit (32 byte) key
 	 * @param iv 64-bit initialization vector
 	 */
-	ZT_ALWAYS_INLINE Salsa20(const void *key,const void *iv) { init(key,iv); }
+	inline Salsa20(const void *key,const void *iv) { init(key,iv); }
 
 	/**
 	 * Initialize cipher

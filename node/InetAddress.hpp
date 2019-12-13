@@ -79,55 +79,55 @@ struct InetAddress : public sockaddr_storage
 	// but this is safe to put here.
 	struct Hasher
 	{
-		ZT_ALWAYS_INLINE std::size_t operator()(const InetAddress &a) const { return (std::size_t)a.hashCode(); }
+		inline std::size_t operator()(const InetAddress &a) const { return (std::size_t)a.hashCode(); }
 	};
 
-	ZT_ALWAYS_INLINE InetAddress() { memset(this,0,sizeof(InetAddress)); }
-	ZT_ALWAYS_INLINE InetAddress(const InetAddress &a) { memcpy(this,&a,sizeof(InetAddress)); }
-	ZT_ALWAYS_INLINE InetAddress(const InetAddress *a) { memcpy(this,a,sizeof(InetAddress)); }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_storage &ss) { *this = ss; }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_storage *ss) { *this = ss; }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr &sa) { *this = sa; }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr *sa) { *this = sa; }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_in &sa) { *this = sa; }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_in *sa) { *this = sa; }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_in6 &sa) { *this = sa; }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_in6 *sa) { *this = sa; }
-	ZT_ALWAYS_INLINE InetAddress(const void *ipBytes,unsigned int ipLen,unsigned int port) { this->set(ipBytes,ipLen,port); }
-	ZT_ALWAYS_INLINE InetAddress(const uint32_t ipv4,unsigned int port) { this->set(&ipv4,4,port); }
-	ZT_ALWAYS_INLINE InetAddress(const char *ipSlashPort) { this->fromString(ipSlashPort); }
+	inline InetAddress() { memset(this,0,sizeof(InetAddress)); }
+	inline InetAddress(const InetAddress &a) { memcpy(this,&a,sizeof(InetAddress)); }
+	inline InetAddress(const InetAddress *a) { memcpy(this,a,sizeof(InetAddress)); }
+	inline InetAddress(const struct sockaddr_storage &ss) { *this = ss; }
+	inline InetAddress(const struct sockaddr_storage *ss) { *this = ss; }
+	inline InetAddress(const struct sockaddr &sa) { *this = sa; }
+	inline InetAddress(const struct sockaddr *sa) { *this = sa; }
+	inline InetAddress(const struct sockaddr_in &sa) { *this = sa; }
+	inline InetAddress(const struct sockaddr_in *sa) { *this = sa; }
+	inline InetAddress(const struct sockaddr_in6 &sa) { *this = sa; }
+	inline InetAddress(const struct sockaddr_in6 *sa) { *this = sa; }
+	inline InetAddress(const void *ipBytes,unsigned int ipLen,unsigned int port) { this->set(ipBytes,ipLen,port); }
+	inline InetAddress(const uint32_t ipv4,unsigned int port) { this->set(&ipv4,4,port); }
+	inline InetAddress(const char *ipSlashPort) { this->fromString(ipSlashPort); }
 
-	ZT_ALWAYS_INLINE void clear() { memset(this,0,sizeof(InetAddress)); }
+	inline void clear() { memset(this,0,sizeof(InetAddress)); }
 
-	ZT_ALWAYS_INLINE InetAddress &operator=(const InetAddress &a)
+	inline InetAddress &operator=(const InetAddress &a)
 	{
 		if (&a != this)
 			memcpy(this,&a,sizeof(InetAddress));
 		return *this;
 	}
 
-	ZT_ALWAYS_INLINE InetAddress &operator=(const InetAddress *a)
+	inline InetAddress &operator=(const InetAddress *a)
 	{
 		if (a != this)
 			memcpy(this,a,sizeof(InetAddress));
 		return *this;
 	}
 
-	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_storage &ss)
+	inline InetAddress &operator=(const struct sockaddr_storage &ss)
 	{
 		if (reinterpret_cast<const InetAddress *>(&ss) != this)
 			memcpy(this,&ss,sizeof(InetAddress));
 		return *this;
 	}
 
-	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_storage *ss)
+	inline InetAddress &operator=(const struct sockaddr_storage *ss)
 	{
 		if (reinterpret_cast<const InetAddress *>(ss) != this)
 			memcpy(this,ss,sizeof(InetAddress));
 		return *this;
 	}
 
-	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_in &sa)
+	inline InetAddress &operator=(const struct sockaddr_in &sa)
 	{
 		if (reinterpret_cast<const InetAddress *>(&sa) != this) {
 			memset(this,0,sizeof(InetAddress));
@@ -136,7 +136,7 @@ struct InetAddress : public sockaddr_storage
 		return *this;
 	}
 
-	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_in *sa)
+	inline InetAddress &operator=(const struct sockaddr_in *sa)
 	{
 		if (reinterpret_cast<const InetAddress *>(sa) != this) {
 			memset(this,0,sizeof(InetAddress));
@@ -145,7 +145,7 @@ struct InetAddress : public sockaddr_storage
 		return *this;
 	}
 
-	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_in6 &sa)
+	inline InetAddress &operator=(const struct sockaddr_in6 &sa)
 	{
 		if (reinterpret_cast<const InetAddress *>(&sa) != this) {
 			memset(this,0,sizeof(InetAddress));
@@ -154,7 +154,7 @@ struct InetAddress : public sockaddr_storage
 		return *this;
 	}
 
-	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_in6 *sa)
+	inline InetAddress &operator=(const struct sockaddr_in6 *sa)
 	{
 		if (reinterpret_cast<const InetAddress *>(sa) != this) {
 			memset(this,0,sizeof(InetAddress));
@@ -163,7 +163,7 @@ struct InetAddress : public sockaddr_storage
 		return *this;
 	}
 
-	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr &sa)
+	inline InetAddress &operator=(const struct sockaddr &sa)
 	{
 		if (reinterpret_cast<const InetAddress *>(&sa) != this) {
 			memset(this,0,sizeof(InetAddress));
@@ -179,7 +179,7 @@ struct InetAddress : public sockaddr_storage
 		return *this;
 	}
 
-	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr *sa)
+	inline InetAddress &operator=(const struct sockaddr *sa)
 	{
 		if (reinterpret_cast<const InetAddress *>(sa) != this) {
 			memset(this,0,sizeof(InetAddress));
@@ -214,7 +214,7 @@ struct InetAddress : public sockaddr_storage
 	 *
 	 * @param port Port, 0 to 65535
 	 */
-	ZT_ALWAYS_INLINE void setPort(unsigned int port)
+	inline void setPort(unsigned int port)
 	{
 		switch(ss_family) {
 			case AF_INET:
@@ -229,7 +229,7 @@ struct InetAddress : public sockaddr_storage
 	/**
 	 * @return True if this network/netmask route describes a default route (e.g. 0.0.0.0/0)
 	 */
-	ZT_ALWAYS_INLINE bool isDefaultRoute() const
+	inline bool isDefaultRoute() const
 	{
 		switch(ss_family) {
 			case AF_INET:
@@ -264,7 +264,7 @@ struct InetAddress : public sockaddr_storage
 	/**
 	 * @return Port or 0 if no port component defined
 	 */
-	ZT_ALWAYS_INLINE unsigned int port() const
+	inline unsigned int port() const
 	{
 		switch(ss_family) {
 			case AF_INET: return Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in *>(this)->sin_port));
@@ -282,12 +282,12 @@ struct InetAddress : public sockaddr_storage
 	 *
 	 * @return Netmask bits
 	 */
-	ZT_ALWAYS_INLINE unsigned int netmaskBits() const { return port(); }
+	inline unsigned int netmaskBits() const { return port(); }
 
 	/**
 	 * @return True if netmask bits is valid for the address type
 	 */
-	ZT_ALWAYS_INLINE bool netmaskBitsValid() const
+	inline bool netmaskBitsValid() const
 	{
 		const unsigned int n = port();
 		switch(ss_family) {
@@ -305,7 +305,7 @@ struct InetAddress : public sockaddr_storage
 	 *
 	 * @return Gateway metric
 	 */
-	ZT_ALWAYS_INLINE unsigned int metric() const { return port(); }
+	inline unsigned int metric() const { return port(); }
 
 	/**
 	 * Construct a full netmask as an InetAddress
@@ -350,17 +350,17 @@ struct InetAddress : public sockaddr_storage
 	/**
 	 * @return True if this is an IPv4 address
 	 */
-	ZT_ALWAYS_INLINE bool isV4() const { return (ss_family == AF_INET); }
+	inline bool isV4() const { return (ss_family == AF_INET); }
 
 	/**
 	 * @return True if this is an IPv6 address
 	 */
-	ZT_ALWAYS_INLINE bool isV6() const { return (ss_family == AF_INET6); }
+	inline bool isV6() const { return (ss_family == AF_INET6); }
 
 	/**
 	 * @return pointer to raw address bytes or NULL if not available
 	 */
-	ZT_ALWAYS_INLINE const void *rawIpData() const
+	inline const void *rawIpData() const
 	{
 		switch(ss_family) {
 			case AF_INET: return (const void *)&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr);
@@ -372,7 +372,7 @@ struct InetAddress : public sockaddr_storage
 	/**
 	 * @return InetAddress containing only the IP portion of this address and a zero port, or NULL if not IPv4 or IPv6
 	 */
-	ZT_ALWAYS_INLINE InetAddress ipOnly() const
+	inline InetAddress ipOnly() const
 	{
 		InetAddress r;
 		switch(ss_family) {
@@ -394,7 +394,7 @@ struct InetAddress : public sockaddr_storage
 	 * @param a InetAddress to compare again
 	 * @return True if only IP portions are equal (false for non-IP or null addresses)
 	 */
-	ZT_ALWAYS_INLINE bool ipsEqual(const InetAddress &a) const
+	inline bool ipsEqual(const InetAddress &a) const
 	{
 		if (ss_family == a.ss_family) {
 			if (ss_family == AF_INET)
@@ -414,7 +414,7 @@ struct InetAddress : public sockaddr_storage
 	 * @param a InetAddress to compare again
 	 * @return True if only IP portions are equal (false for non-IP or null addresses)
 	 */
-	ZT_ALWAYS_INLINE bool ipsEqual2(const InetAddress &a) const
+	inline bool ipsEqual2(const InetAddress &a) const
 	{
 		if (ss_family == a.ss_family) {
 			if (ss_family == AF_INET)
@@ -426,7 +426,7 @@ struct InetAddress : public sockaddr_storage
 		return false;
 	}
 
-	ZT_ALWAYS_INLINE unsigned long hashCode() const
+	inline unsigned long hashCode() const
 	{
 		if (ss_family == AF_INET) {
 			return ((unsigned long)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr + (unsigned long)reinterpret_cast<const struct sockaddr_in *>(this)->sin_port);
@@ -448,7 +448,7 @@ struct InetAddress : public sockaddr_storage
 	/**
 	 * Set to null/zero
 	 */
-	ZT_ALWAYS_INLINE void zero() { memset(this,0,sizeof(InetAddress)); }
+	inline void zero() { memset(this,0,sizeof(InetAddress)); }
 
 	/**
 	 * Check whether this is a network/route rather than an IP assignment
@@ -463,7 +463,7 @@ struct InetAddress : public sockaddr_storage
 	/**
 	 * @return 14-bit (0-16383) hash of this IP's first 24 or 48 bits (for V4 or V6) for rate limiting code, or 0 if non-IP
 	 */
-	ZT_ALWAYS_INLINE unsigned long rateGateHash() const
+	inline unsigned long rateGateHash() const
 	{
 		unsigned long h = 0;
 		switch(ss_family) {
@@ -487,10 +487,69 @@ struct InetAddress : public sockaddr_storage
 	/**
 	 * @return True if address family is non-zero
 	 */
-	ZT_ALWAYS_INLINE operator bool() const { return (ss_family != 0); }
+	inline operator bool() const { return (ss_family != 0); }
+
+	inline unsigned int marshal(uint8_t restrict data[20]) const
+	{
+		switch(ss_family) {
+			case AF_INET:
+				const unsigned int port = Utils::ntoh((uint16_t)reinterpret_cast<const sockaddr_in *>(this)->sin_port);
+				data[0] = 4;
+				data[1] = reinterpret_cast<const uint8_t *>(&(reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr))[0];
+				data[2] = reinterpret_cast<const uint8_t *>(&(reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr))[1];
+				data[3] = reinterpret_cast<const uint8_t *>(&(reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr))[2];
+				data[4] = reinterpret_cast<const uint8_t *>(&(reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr))[3];
+				data[5] = (uint8_t)((port >> 8) & 0xff);
+				data[6] = (uint8_t)(port & 0xff);
+				return 7;
+			case AF_INET6:
+				const unsigned int port = Utils::ntoh((uint16_t)reinterpret_cast<const sockaddr_in6 *>(this)->sin6_port);
+				data[0] = 6;
+				for(int i=0;i<16;++i)
+					data[i+1] = reinterpret_cast<const sockaddr_in6 *>(this)->sin6_addr.s6_addr[i];
+				data[17] = (uint8_t)((port >> 8) & 0xff);
+				data[18] = (uint8_t)(port & 0xff);
+				return 19;
+			default:
+				data[0] = 0;
+				return 1;
+		}
+	}
+
+	inline bool unmarshal(const uint8_t *restrict data,const unsigned int len)
+	{
+		if (len) {
+			memset(this,0,sizeof(InetAddress));
+			switch(data[0]) {
+				case 0:
+					return true;
+				case 4:
+					if (len != 7)
+						return false;
+					reinterpret_cast<sockaddr_in *>(this)->sin_family = AF_INET;
+					reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_addr.s_addr))[0] = data[1];
+					reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_addr.s_addr))[1] = data[2];
+					reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_addr.s_addr))[2] = data[3];
+					reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_addr.s_addr))[3] = data[4];
+					reinterpret_cast<sockaddr_in *>(this)->sin_port = Utils::hton((((uint16_t)data[5]) << 8) | (uint16_t)data[6]);
+					return true;
+				case 6:
+					if (len != 19)
+						return false;
+					reinterpret_cast<sockaddr_in6 *>(this)->sin6_family = AF_INET6;
+					for(int i=0;i<16;i++)
+						(reinterpret_cast<sockaddr_in6 *>(this)->sin6_addr.s6_addr)[i] = data[i+1];
+					reinterpret_cast<sockaddr_in6 *>(this)->sin6_port = Utils::hton((((uint16_t)data[17]) << 8) | (uint16_t)data[18]);
+					return true;
+				default:
+					return false;
+			}
+		}
+		return false;
+	}
 
 	template<unsigned int C>
-	ZT_ALWAYS_INLINE void serialize(Buffer<C> &b) const
+	inline void serialize(Buffer<C> &b) const
 	{
 		// This is used in the protocol and must be the same as describe in places
 		// like VERB_HELLO in Packet.hpp.
@@ -512,7 +571,7 @@ struct InetAddress : public sockaddr_storage
 	}
 
 	template<unsigned int C>
-	ZT_ALWAYS_INLINE unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
 	{
 		memset(this,0,sizeof(InetAddress));
 		unsigned int p = startAt;
@@ -547,10 +606,10 @@ struct InetAddress : public sockaddr_storage
 
 	bool operator==(const InetAddress &a) const;
 	bool operator<(const InetAddress &a) const;
-	ZT_ALWAYS_INLINE bool operator!=(const InetAddress &a) const { return !(*this == a); }
-	ZT_ALWAYS_INLINE bool operator>(const InetAddress &a) const { return (a < *this); }
-	ZT_ALWAYS_INLINE bool operator<=(const InetAddress &a) const { return !(a < *this); }
-	ZT_ALWAYS_INLINE bool operator>=(const InetAddress &a) const { return !(*this < a); }
+	inline bool operator!=(const InetAddress &a) const { return !(*this == a); }
+	inline bool operator>(const InetAddress &a) const { return (a < *this); }
+	inline bool operator<=(const InetAddress &a) const { return !(a < *this); }
+	inline bool operator>=(const InetAddress &a) const { return !(*this < a); }
 
 	/**
 	 * @param mac MAC address seed

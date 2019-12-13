@@ -52,9 +52,9 @@ class Tag : public Credential
 	friend class Credential;
 
 public:
-	static ZT_ALWAYS_INLINE Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_TAG; }
+	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_TAG; }
 
-	ZT_ALWAYS_INLINE Tag() :
+	inline Tag() :
 		_id(0),
 		_value(0),
 		_networkId(0),
@@ -70,7 +70,7 @@ public:
 	 * @param id Tag ID
 	 * @param value Tag value
 	 */
-	ZT_ALWAYS_INLINE Tag(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id,const uint32_t value) :
+	inline Tag(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id,const uint32_t value) :
 		_id(id),
 		_value(value),
 		_networkId(nwid),
@@ -81,14 +81,14 @@ public:
 	{
 	}
 
-	ZT_ALWAYS_INLINE uint32_t id() const { return _id; }
-	ZT_ALWAYS_INLINE const uint32_t &value() const { return _value; }
-	ZT_ALWAYS_INLINE uint64_t networkId() const { return _networkId; }
-	ZT_ALWAYS_INLINE int64_t timestamp() const { return _ts; }
-	ZT_ALWAYS_INLINE const Address &issuedTo() const { return _issuedTo; }
-	ZT_ALWAYS_INLINE const Address &signer() const { return _signedBy; }
-	ZT_ALWAYS_INLINE const uint8_t *signature() const { return _signature; }
-	ZT_ALWAYS_INLINE unsigned int signatureLength() const { return _signatureLength; }
+	inline uint32_t id() const { return _id; }
+	inline const uint32_t &value() const { return _value; }
+	inline uint64_t networkId() const { return _networkId; }
+	inline int64_t timestamp() const { return _ts; }
+	inline const Address &issuedTo() const { return _issuedTo; }
+	inline const Address &signer() const { return _signedBy; }
+	inline const uint8_t *signature() const { return _signature; }
+	inline unsigned int signatureLength() const { return _signatureLength; }
 
 	/**
 	 * Sign this tag
@@ -96,7 +96,7 @@ public:
 	 * @param signer Signing identity, must have private key
 	 * @return True if signature was successful
 	 */
-	ZT_ALWAYS_INLINE bool sign(const Identity &signer)
+	inline bool sign(const Identity &signer)
 	{
 		if (signer.hasPrivate()) {
 			Buffer<sizeof(Tag) + 64> tmp;
@@ -114,7 +114,7 @@ public:
 	 * @param RR Runtime environment to allow identity lookup for signedBy
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
-	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
+	inline Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,const bool forSign = false) const
@@ -172,23 +172,23 @@ public:
 	}
 
 	// Provides natural sort order by ID
-	ZT_ALWAYS_INLINE bool operator<(const Tag &t) const { return (_id < t._id); }
+	inline bool operator<(const Tag &t) const { return (_id < t._id); }
 
-	ZT_ALWAYS_INLINE bool operator==(const Tag &t) const { return (memcmp(this,&t,sizeof(Tag)) == 0); }
-	ZT_ALWAYS_INLINE bool operator!=(const Tag &t) const { return (memcmp(this,&t,sizeof(Tag)) != 0); }
+	inline bool operator==(const Tag &t) const { return (memcmp(this,&t,sizeof(Tag)) == 0); }
+	inline bool operator!=(const Tag &t) const { return (memcmp(this,&t,sizeof(Tag)) != 0); }
 
 	// For searching sorted arrays or lists of Tags by ID
 	struct IdComparePredicate
 	{
-		ZT_ALWAYS_INLINE bool operator()(const Tag &a,const Tag &b) const { return (a.id() < b.id()); }
-		ZT_ALWAYS_INLINE bool operator()(const uint32_t a,const Tag &b) const { return (a < b.id()); }
-		ZT_ALWAYS_INLINE bool operator()(const Tag &a,const uint32_t b) const { return (a.id() < b); }
-		ZT_ALWAYS_INLINE bool operator()(const Tag *a,const Tag *b) const { return (a->id() < b->id()); }
-		ZT_ALWAYS_INLINE bool operator()(const Tag *a,const Tag &b) const { return (a->id() < b.id()); }
-		ZT_ALWAYS_INLINE bool operator()(const Tag &a,const Tag *b) const { return (a.id() < b->id()); }
-		ZT_ALWAYS_INLINE bool operator()(const uint32_t a,const Tag *b) const { return (a < b->id()); }
-		ZT_ALWAYS_INLINE bool operator()(const Tag *a,const uint32_t b) const { return (a->id() < b); }
-		ZT_ALWAYS_INLINE bool operator()(const uint32_t a,const uint32_t b) const { return (a < b); }
+		inline bool operator()(const Tag &a,const Tag &b) const { return (a.id() < b.id()); }
+		inline bool operator()(const uint32_t a,const Tag &b) const { return (a < b.id()); }
+		inline bool operator()(const Tag &a,const uint32_t b) const { return (a.id() < b); }
+		inline bool operator()(const Tag *a,const Tag *b) const { return (a->id() < b->id()); }
+		inline bool operator()(const Tag *a,const Tag &b) const { return (a->id() < b.id()); }
+		inline bool operator()(const Tag &a,const Tag *b) const { return (a.id() < b->id()); }
+		inline bool operator()(const uint32_t a,const Tag *b) const { return (a < b->id()); }
+		inline bool operator()(const Tag *a,const uint32_t b) const { return (a->id() < b); }
+		inline bool operator()(const uint32_t a,const uint32_t b) const { return (a < b); }
 	};
 
 private:

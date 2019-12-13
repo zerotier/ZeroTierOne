@@ -111,9 +111,9 @@ public:
 
 	// Internal functions ------------------------------------------------------
 
-	ZT_ALWAYS_INLINE int64_t now() const { return _now; }
+	inline int64_t now() const { return _now; }
 
-	ZT_ALWAYS_INLINE bool putPacket(void *tPtr,const int64_t localSocket,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0)
+	inline bool putPacket(void *tPtr,const int64_t localSocket,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0)
 	{
 		return (_cb.wirePacketSendFunction(
 			reinterpret_cast<ZT_Node *>(this),
@@ -126,7 +126,7 @@ public:
 			ttl) == 0);
 	}
 
-	ZT_ALWAYS_INLINE void putFrame(void *tPtr,uint64_t nwid,void **nuptr,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
+	inline void putFrame(void *tPtr,uint64_t nwid,void **nuptr,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
 		_cb.virtualNetworkFrameFunction(
 			reinterpret_cast<ZT_Node *>(this),
@@ -142,7 +142,7 @@ public:
 			len);
 	}
 
-	ZT_ALWAYS_INLINE SharedPtr<Network> network(uint64_t nwid) const
+	inline SharedPtr<Network> network(uint64_t nwid) const
 	{
 		Mutex::Lock _l(_networks_m);
 		const SharedPtr<Network> *n = _networks.get(nwid);
@@ -151,13 +151,13 @@ public:
 		return SharedPtr<Network>();
 	}
 
-	ZT_ALWAYS_INLINE bool belongsToNetwork(uint64_t nwid) const
+	inline bool belongsToNetwork(uint64_t nwid) const
 	{
 		Mutex::Lock _l(_networks_m);
 		return _networks.contains(nwid);
 	}
 
-	ZT_ALWAYS_INLINE std::vector< SharedPtr<Network> > allNetworks() const
+	inline std::vector< SharedPtr<Network> > allNetworks() const
 	{
 		std::vector< SharedPtr<Network> > nw;
 		Mutex::Lock _l(_networks_m);
@@ -169,7 +169,7 @@ public:
 		return nw;
 	}
 
-	ZT_ALWAYS_INLINE std::vector<ZT_InterfaceAddress> directPaths() const
+	inline std::vector<ZT_InterfaceAddress> directPaths() const
 	{
 		Mutex::Lock _l(_localInterfaceAddresses_m);
 		return _localInterfaceAddresses;
@@ -178,16 +178,16 @@ public:
 	void setInterfaceAddresses(const ZT_InterfaceAddress *addrs,unsigned int addrCount);
 
 	SharedPtr< const Locator > locator();
-	ZT_ALWAYS_INLINE void postEvent(void *tPtr,ZT_Event ev,const void *md = (const void *)0) { _cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ev,md); }
-	ZT_ALWAYS_INLINE void configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { _cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,nwid,nuptr,op,nc); }
-	ZT_ALWAYS_INLINE bool online() const { return _online; }
-	ZT_ALWAYS_INLINE int stateObjectGet(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],void *const data,const unsigned int maxlen) { return _cb.stateGetFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,data,maxlen); }
-	ZT_ALWAYS_INLINE void stateObjectPut(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],const void *const data,const unsigned int len) { _cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,data,(int)len); }
-	ZT_ALWAYS_INLINE void stateObjectDelete(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2]) { _cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,(const void *)0,-1); }
+	inline void postEvent(void *tPtr,ZT_Event ev,const void *md = (const void *)0) { _cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ev,md); }
+	inline void configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { _cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,nwid,nuptr,op,nc); }
+	inline bool online() const { return _online; }
+	inline int stateObjectGet(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],void *const data,const unsigned int maxlen) { return _cb.stateGetFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,data,maxlen); }
+	inline void stateObjectPut(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],const void *const data,const unsigned int len) { _cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,data,(int)len); }
+	inline void stateObjectDelete(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2]) { _cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,(const void *)0,-1); }
 	bool shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,const int64_t localSocket,const InetAddress &remoteAddress);
-	ZT_ALWAYS_INLINE bool externalPathLookup(void *tPtr,const Address &ztaddr,int family,InetAddress &addr) { return ( (_cb.pathLookupFunction) ? (_cb.pathLookupFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ztaddr.toInt(),family,reinterpret_cast<struct sockaddr_storage *>(&addr)) != 0) : false ); }
+	inline bool externalPathLookup(void *tPtr,const Address &ztaddr,int family,InetAddress &addr) { return ( (_cb.pathLookupFunction) ? (_cb.pathLookupFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ztaddr.toInt(),family,reinterpret_cast<struct sockaddr_storage *>(&addr)) != 0) : false ); }
 	ZT_ResultCode setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig);
-	ZT_ALWAYS_INLINE const Identity &identity() const { return _RR.identity; }
+	inline const Identity &identity() const { return _RR.identity; }
 
 	/**
 	 * Register that we are expecting a reply to a packet ID
@@ -198,7 +198,7 @@ public:
 	 *
 	 * @param packetId Packet ID to expect reply to
 	 */
-	ZT_ALWAYS_INLINE void expectReplyTo(const uint64_t packetId)
+	inline void expectReplyTo(const uint64_t packetId)
 	{
 		const unsigned long pid2 = (unsigned long)(packetId >> 32);
 		const unsigned long bucket = (unsigned long)(pid2 & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
@@ -215,7 +215,7 @@ public:
 	 * @param packetId Packet ID to check
 	 * @return True if we're expecting a reply
 	 */
-	ZT_ALWAYS_INLINE bool expectingReplyTo(const uint64_t packetId) const
+	inline bool expectingReplyTo(const uint64_t packetId) const
 	{
 		const uint32_t pid2 = (uint32_t)(packetId >> 32);
 		const unsigned long bucket = (unsigned long)(pid2 & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
@@ -233,7 +233,7 @@ public:
 	 * @param from Source address of packet
 	 * @return True if within rate limits
 	 */
-	ZT_ALWAYS_INLINE bool rateGateIdentityVerification(const int64_t now,const InetAddress &from)
+	inline bool rateGateIdentityVerification(const int64_t now,const InetAddress &from)
 	{
 		unsigned long iph = from.rateGateHash();
 		if ((now - _lastIdentityVerification[iph]) >= ZT_IDENTITY_VALIDATION_SOURCE_RATE_LIMIT) {
@@ -247,10 +247,10 @@ public:
 	virtual void ncSendRevocation(const Address &destination,const Revocation &rev);
 	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode);
 
-	ZT_ALWAYS_INLINE void setMultipathMode(uint8_t mode) { _multipathMode = mode; }
-	ZT_ALWAYS_INLINE uint8_t getMultipathMode() { return _multipathMode; }
+	inline void setMultipathMode(uint8_t mode) { _multipathMode = mode; }
+	inline uint8_t getMultipathMode() { return _multipathMode; }
 
-	ZT_ALWAYS_INLINE bool localControllerHasAuthorized(const int64_t now,const uint64_t nwid,const Address &addr) const
+	inline bool localControllerHasAuthorized(const int64_t now,const uint64_t nwid,const Address &addr) const
 	{
 		_localControllerAuthorizations_m.lock();
 		const int64_t *const at = _localControllerAuthorizations.get(_LocalControllerAuth(nwid,addr));
@@ -281,10 +281,10 @@ private:
 	struct _LocalControllerAuth
 	{
 		uint64_t nwid,address;
-		ZT_ALWAYS_INLINE _LocalControllerAuth(const uint64_t nwid_,const Address &address_) : nwid(nwid_),address(address_.toInt()) {}
-		ZT_ALWAYS_INLINE unsigned long hashCode() const { return (unsigned long)(nwid ^ address); }
-		ZT_ALWAYS_INLINE bool operator==(const _LocalControllerAuth &a) const { return ((a.nwid == nwid)&&(a.address == address)); }
-		ZT_ALWAYS_INLINE bool operator!=(const _LocalControllerAuth &a) const { return ((a.nwid != nwid)||(a.address != address)); }
+		inline _LocalControllerAuth(const uint64_t nwid_,const Address &address_) : nwid(nwid_),address(address_.toInt()) {}
+		inline unsigned long hashCode() const { return (unsigned long)(nwid ^ address); }
+		inline bool operator==(const _LocalControllerAuth &a) const { return ((a.nwid == nwid)&&(a.address == address)); }
+		inline bool operator!=(const _LocalControllerAuth &a) const { return ((a.nwid != nwid)||(a.address != address)); }
 	};
 	Hashtable< _LocalControllerAuth,int64_t > _localControllerAuthorizations;
 	Hashtable< uint64_t,SharedPtr<Network> > _networks;

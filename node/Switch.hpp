@@ -225,7 +225,7 @@ private:
 	AtomicCounter _rxQueuePtr;
 
 	// Returns matching or next available RX queue entry
-	ZT_ALWAYS_INLINE RXQueueEntry *_findRXQueueEntry(uint64_t packetId)
+	inline RXQueueEntry *_findRXQueueEntry(uint64_t packetId)
 	{
 		const unsigned int current = static_cast<unsigned int>(_rxQueuePtr.load());
 		for(unsigned int k=1;k<=ZT_RX_QUEUE_SIZE;++k) {
@@ -238,7 +238,7 @@ private:
 	}
 
 	// Returns current entry in rx queue ring buffer and increments ring pointer
-	ZT_ALWAYS_INLINE RXQueueEntry *_nextRXQueueEntry()
+	inline RXQueueEntry *_nextRXQueueEntry()
 	{
 		return &(_rxQueue[static_cast<unsigned int>((++_rxQueuePtr) - 1) % ZT_RX_QUEUE_SIZE]);
 	}
@@ -276,9 +276,9 @@ private:
 				y = a2.toInt();
 			}
 		}
-		ZT_ALWAYS_INLINE unsigned long hashCode() const { return ((unsigned long)x ^ (unsigned long)y); }
-		ZT_ALWAYS_INLINE bool operator==(const _LastUniteKey &k) const { return ((x == k.x)&&(y == k.y)); }
-		ZT_ALWAYS_INLINE bool operator!=(const _LastUniteKey &k) const { return ((x != k.x)||(y != k.y)); }
+		inline unsigned long hashCode() const { return ((unsigned long)x ^ (unsigned long)y); }
+		inline bool operator==(const _LastUniteKey &k) const { return ((x == k.x)&&(y == k.y)); }
+		inline bool operator!=(const _LastUniteKey &k) const { return ((x != k.x)||(y != k.y)); }
 		uint64_t x,y;
 	};
 	Hashtable< _LastUniteKey,uint64_t > _lastUniteAttempt; // key is always sorted in ascending order, for set-like behavior

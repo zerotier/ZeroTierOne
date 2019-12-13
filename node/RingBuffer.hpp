@@ -43,7 +43,7 @@ private:
 	bool wrap;
 
 public:
-	ZT_ALWAYS_INLINE RingBuffer() :
+	inline RingBuffer() :
 		begin(0),
 		end(0),
 		wrap(false)
@@ -54,7 +54,7 @@ public:
 	/**
 	 * @return A pointer to the underlying buffer
 	 */
-	ZT_ALWAYS_INLINE T *get_buf()
+	inline T *get_buf()
 	{
 		return buf + begin;
 	}
@@ -64,7 +64,7 @@ public:
 	 * @param n Number of elements to copy in
 	 * @return Number of elements we copied in
 	 */
-	ZT_ALWAYS_INLINE size_t produce(size_t n)
+	inline size_t produce(size_t n)
 	{
 		n = std::min(n, getFree());
 		if (n == 0) {
@@ -86,14 +86,14 @@ public:
 	 * Fast erase, O(1).
 	 * Merely reset the buffer pointer, doesn't erase contents
 	 */
-	ZT_ALWAYS_INLINE void reset() { consume(count()); }
+	inline void reset() { consume(count()); }
 
 	/**
 	 * adjust buffer index pointer as if we copied data out
 	 * @param n Number of elements we copied from the buffer
 	 * @return Number of elements actually available from the buffer
 	 */
-	ZT_ALWAYS_INLINE size_t consume(size_t n)
+	inline size_t consume(size_t n)
 	{
 		n = std::min(n, count());
 		if (n == 0) {
@@ -115,7 +115,7 @@ public:
 	 * @param data Buffer that is to be written to the ring
 	 * @param n Number of elements to write to the buffer
 	 */
-	ZT_ALWAYS_INLINE size_t write(const T * data, size_t n)
+	inline size_t write(const T * data, size_t n)
 	{
 		n = std::min(n, getFree());
 		if (n == 0) {
@@ -140,7 +140,7 @@ public:
 	 *
 	 * @param value A single value to be placed in the buffer
 	 */
-	ZT_ALWAYS_INLINE void push(const T value)
+	inline void push(const T value)
 	{
 		if (count() == S) {
 			consume(1);
@@ -156,14 +156,14 @@ public:
 	/**
 	 * @return The most recently pushed element on the buffer
 	 */
-	ZT_ALWAYS_INLINE T get_most_recent() { return *(buf + end); }
+	inline T get_most_recent() { return *(buf + end); }
 
 	/**
 	 * @param dest Destination buffer
 	 * @param n Size (in terms of number of elements) of the destination buffer
 	 * @return Number of elements read from the buffer
 	 */
-	ZT_ALWAYS_INLINE size_t read(T *dest,size_t n)
+	inline size_t read(T *dest,size_t n)
 	{
 		n = std::min(n, count());
 		if (n == 0) {
@@ -188,7 +188,7 @@ public:
 	 *
 	 * @return The number of elements in the buffer
 	 */
-	ZT_ALWAYS_INLINE size_t count()
+	inline size_t count()
 	{
 		if (end == begin) {
 			return wrap ? S : 0;
@@ -204,12 +204,12 @@ public:
 	/**
 	 * @return The number of slots that are unused in the buffer
 	 */
-	ZT_ALWAYS_INLINE size_t getFree() { return S - count(); }
+	inline size_t getFree() { return S - count(); }
 
 	/**
 	 * @return The arithmetic mean of the contents of the buffer
 	 */
-	ZT_ALWAYS_INLINE float mean()
+	inline float mean()
 	{
 		size_t iterator = begin;
 		float subtotal = 0;
@@ -224,7 +224,7 @@ public:
 	/**
 	 * @return The arithmetic mean of the most recent 'n' elements of the buffer
 	 */
-	ZT_ALWAYS_INLINE float mean(size_t n)
+	inline float mean(size_t n)
 	{
 		n = n < S ? n : S;
 		size_t iterator = begin;
@@ -240,12 +240,12 @@ public:
 	/**
 	 * @return The sample standard deviation of element values
 	 */
-	ZT_ALWAYS_INLINE float stddev() { return sqrt(variance()); }
+	inline float stddev() { return sqrt(variance()); }
 
 	/**
 	 * @return The variance of element values
 	 */
-	ZT_ALWAYS_INLINE float variance()
+	inline float variance()
 	{
 		size_t iterator = begin;
 		float cached_mean = mean();
@@ -263,7 +263,7 @@ public:
 	/**
 	 * @return The number of elements of zero value
 	 */
-	ZT_ALWAYS_INLINE size_t zeroCount()
+	inline size_t zeroCount()
 	{
 		size_t iterator = begin;
 		size_t zeros = 0;
@@ -281,7 +281,7 @@ public:
 	 * @param value Value to match against in buffer
 	 * @return The number of values held in the ring buffer which match a given value
 	 */
-	ZT_ALWAYS_INLINE size_t countValue(T value)
+	inline size_t countValue(T value)
 	{
 		size_t iterator = begin;
 		size_t cnt = 0;

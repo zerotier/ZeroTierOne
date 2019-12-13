@@ -41,7 +41,7 @@ typedef uint8_t u8;
 typedef int32_t s32;
 typedef int64_t limb;
 
-static ZT_ALWAYS_INLINE void fsum(limb *output, const limb *in) {
+static inline void fsum(limb *output, const limb *in) {
   unsigned i;
   for (i = 0; i < 10; i += 2) {
     output[0+i] = output[0+i] + in[0+i];
@@ -49,21 +49,21 @@ static ZT_ALWAYS_INLINE void fsum(limb *output, const limb *in) {
   }
 }
 
-static ZT_ALWAYS_INLINE void fdifference(limb *output, const limb *in) {
+static inline void fdifference(limb *output, const limb *in) {
   unsigned i;
   for (i = 0; i < 10; ++i) {
     output[i] = in[i] - output[i];
   }
 }
 
-static ZT_ALWAYS_INLINE void fscalar_product(limb *output, const limb *in, const limb scalar) {
+static inline void fscalar_product(limb *output, const limb *in, const limb scalar) {
   unsigned i;
   for (i = 0; i < 10; ++i) {
     output[i] = in[i] * scalar;
   }
 }
 
-static ZT_ALWAYS_INLINE void fproduct(limb *output, const limb *in2, const limb *in) {
+static inline void fproduct(limb *output, const limb *in2, const limb *in) {
   output[0] =       ((limb) ((s32) in2[0])) * ((s32) in[0]);
   output[1] =       ((limb) ((s32) in2[0])) * ((s32) in[1]) +
                     ((limb) ((s32) in2[1])) * ((s32) in[0]);
@@ -166,7 +166,7 @@ static ZT_ALWAYS_INLINE void fproduct(limb *output, const limb *in2, const limb 
   output[18] = 2 *  ((limb) ((s32) in2[9])) * ((s32) in[9]);
 }
 
-static ZT_ALWAYS_INLINE void freduce_degree(limb *output) {
+static inline void freduce_degree(limb *output) {
   output[8] += output[18] << 4;
   output[8] += output[18] << 1;
   output[8] += output[18];
@@ -200,7 +200,7 @@ static ZT_ALWAYS_INLINE void freduce_degree(limb *output) {
 #error "This code only works on a two's complement system"
 #endif
 
-static ZT_ALWAYS_INLINE limb div_by_2_26(const limb v)
+static inline limb div_by_2_26(const limb v)
 {
   /* High word of v; no shift needed. */
   const uint32_t highword = (uint32_t) (((uint64_t) v) >> 32);
@@ -212,7 +212,7 @@ static ZT_ALWAYS_INLINE limb div_by_2_26(const limb v)
   return (v + roundoff) >> 26;
 }
 
-static ZT_ALWAYS_INLINE limb div_by_2_25(const limb v)
+static inline limb div_by_2_25(const limb v)
 {
   /* High word of v; no shift needed*/
   const uint32_t highword = (uint32_t) (((uint64_t) v) >> 32);
@@ -224,7 +224,7 @@ static ZT_ALWAYS_INLINE limb div_by_2_25(const limb v)
   return (v + roundoff) >> 25;
 }
 
-static ZT_ALWAYS_INLINE void freduce_coefficients(limb *output) {
+static inline void freduce_coefficients(limb *output) {
   unsigned i;
 
   output[10] = 0;
@@ -277,7 +277,7 @@ static inline void fmul(limb *output, const limb *in, const limb *in2) {
   memcpy(output, t, sizeof(limb) * 10);
 }
 
-static ZT_ALWAYS_INLINE void fsquare_inner(limb *output, const limb *in) {
+static inline void fsquare_inner(limb *output, const limb *in) {
   output[0] =       ((limb) ((s32) in[0])) * ((s32) in[0]);
   output[1] =  2 *  ((limb) ((s32) in[0])) * ((s32) in[1]);
   output[2] =  2 * (((limb) ((s32) in[1])) * ((s32) in[1]) +
@@ -347,7 +347,7 @@ static inline void fsquare(limb *output, const limb *in) {
   memcpy(output, t, sizeof(limb) * 10);
 }
 
-static ZT_ALWAYS_INLINE void fexpand(limb *output, const u8 *input) {
+static inline void fexpand(limb *output, const u8 *input) {
 #define F(n,start,shift,mask) \
   output[n] = ((((limb) input[start + 0]) | \
                 ((limb) input[start + 1]) << 8 | \
@@ -370,7 +370,7 @@ static ZT_ALWAYS_INLINE void fexpand(limb *output, const u8 *input) {
 #error "This code only works when >> does sign-extension on negative numbers"
 #endif
 
-static ZT_ALWAYS_INLINE s32 s32_eq(s32 a, s32 b) {
+static inline s32 s32_eq(s32 a, s32 b) {
   a = ~(a ^ b);
   a &= a << 16;
   a &= a << 8;
@@ -380,7 +380,7 @@ static ZT_ALWAYS_INLINE s32 s32_eq(s32 a, s32 b) {
   return a >> 31;
 }
 
-static ZT_ALWAYS_INLINE s32 s32_gte(s32 a, s32 b) {
+static inline s32 s32_gte(s32 a, s32 b) {
   a -= b;
   /* a >= 0 iff a >= b. */
   return ~(a >> 31);
@@ -560,7 +560,7 @@ static inline void fmonty(limb *x2, limb *z2,  /* output 2Q */
   /* |z2|i| < 2^26 */
 }
 
-static ZT_ALWAYS_INLINE void swap_conditional(limb a[19], limb b[19], limb iswap) {
+static inline void swap_conditional(limb a[19], limb b[19], limb iswap) {
   unsigned i;
   const s32 swap = (s32) -iswap;
 
@@ -701,7 +701,7 @@ static inline void crypto_scalarmult(u8 *mypublic, const u8 *secret, const u8 *b
 }
 
 static const unsigned char base[32] = {9};
-static ZT_ALWAYS_INLINE void crypto_scalarmult_base(unsigned char *q,const unsigned char *n) { crypto_scalarmult(q,n,base); }
+static inline void crypto_scalarmult_base(unsigned char *q,const unsigned char *n) { crypto_scalarmult(q,n,base); }
 
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -759,7 +759,7 @@ typedef struct
 
 static inline void fe25519_sub(fe25519 *r, const fe25519 *x, const fe25519 *y);
 
-static ZT_ALWAYS_INLINE crypto_uint32 equal(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
+static inline crypto_uint32 equal(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
 {
 	crypto_uint32 x = a ^ b; /* 0: yes; 1..65535: no */
 	x -= 1; /* 4294967295: yes; 0..65534: no */
@@ -767,7 +767,7 @@ static ZT_ALWAYS_INLINE crypto_uint32 equal(crypto_uint32 a,crypto_uint32 b) /* 
 	return x;
 }
 
-static ZT_ALWAYS_INLINE crypto_uint32 ge(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
+static inline crypto_uint32 ge(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
 {
 	unsigned int x = a;
 	x -= (unsigned int) b; /* 0..65535: yes; 4294901761..4294967295: no */
@@ -776,10 +776,10 @@ static ZT_ALWAYS_INLINE crypto_uint32 ge(crypto_uint32 a,crypto_uint32 b) /* 16-
 	return x;
 }
 
-static ZT_ALWAYS_INLINE crypto_uint32 times19(crypto_uint32 a) { return (a << 4) + (a << 1) + a; }
-static ZT_ALWAYS_INLINE crypto_uint32 times38(crypto_uint32 a) { return (a << 5) + (a << 2) + (a << 1); }
+static inline crypto_uint32 times19(crypto_uint32 a) { return (a << 4) + (a << 1) + a; }
+static inline crypto_uint32 times38(crypto_uint32 a) { return (a << 5) + (a << 2) + (a << 1); }
 
-static ZT_ALWAYS_INLINE void reduce_add_sub(fe25519 *r)
+static inline void reduce_add_sub(fe25519 *r)
 {
 	int i,rep;
 	for(rep=0;rep<4;rep++)
@@ -797,7 +797,7 @@ static ZT_ALWAYS_INLINE void reduce_add_sub(fe25519 *r)
 	}
 }
 
-static ZT_ALWAYS_INLINE void reduce_mul(fe25519 *r)
+static inline void reduce_mul(fe25519 *r)
 {
 	int i,rep;
 	for(rep=0;rep<2;rep++)
@@ -815,7 +815,7 @@ static ZT_ALWAYS_INLINE void reduce_mul(fe25519 *r)
 	}
 }
 
-static ZT_ALWAYS_INLINE void fe25519_freeze(fe25519 *r)
+static inline void fe25519_freeze(fe25519 *r)
 {
 	int i;
 	crypto_uint32 mm = equal(r->v[31],127);
@@ -831,14 +831,14 @@ static ZT_ALWAYS_INLINE void fe25519_freeze(fe25519 *r)
 	r->v[0] -= mm&237;
 }
 
-static ZT_ALWAYS_INLINE void fe25519_unpack(fe25519 *r, const unsigned char x[32])
+static inline void fe25519_unpack(fe25519 *r, const unsigned char x[32])
 {
 	int i;
 	for(i=0;i<32;i++) r->v[i] = x[i];
 	r->v[31] &= 127;
 }
 
-static ZT_ALWAYS_INLINE void fe25519_pack(unsigned char r[32], const fe25519 *x)
+static inline void fe25519_pack(unsigned char r[32], const fe25519 *x)
 {
 	int i;
 	fe25519 y = *x;
@@ -859,7 +859,7 @@ static inline int fe25519_iseq_vartime(const fe25519 *x, const fe25519 *y)
 	return 1;
 }
 
-static ZT_ALWAYS_INLINE void fe25519_cmov(fe25519 *r, const fe25519 *x, unsigned char b)
+static inline void fe25519_cmov(fe25519 *r, const fe25519 *x, unsigned char b)
 {
 	int i;
 	crypto_uint32 mask = b;
@@ -867,27 +867,27 @@ static ZT_ALWAYS_INLINE void fe25519_cmov(fe25519 *r, const fe25519 *x, unsigned
 	for(i=0;i<32;i++) r->v[i] ^= mask & (x->v[i] ^ r->v[i]);
 }
 
-static ZT_ALWAYS_INLINE unsigned char fe25519_getparity(const fe25519 *x)
+static inline unsigned char fe25519_getparity(const fe25519 *x)
 {
 	fe25519 t = *x;
 	fe25519_freeze(&t);
 	return t.v[0] & 1;
 }
 
-static ZT_ALWAYS_INLINE void fe25519_setone(fe25519 *r)
+static inline void fe25519_setone(fe25519 *r)
 {
 	int i;
 	r->v[0] = 1;
 	for(i=1;i<32;i++) r->v[i]=0;
 }
 
-static ZT_ALWAYS_INLINE void fe25519_setzero(fe25519 *r)
+static inline void fe25519_setzero(fe25519 *r)
 {
 	int i;
 	for(i=0;i<32;i++) r->v[i]=0;
 }
 
-static ZT_ALWAYS_INLINE void fe25519_neg(fe25519 *r, const fe25519 *x)
+static inline void fe25519_neg(fe25519 *r, const fe25519 *x)
 {
 	fe25519 t;
 	int i;
@@ -896,14 +896,14 @@ static ZT_ALWAYS_INLINE void fe25519_neg(fe25519 *r, const fe25519 *x)
 	fe25519_sub(r, r, &t);
 }
 
-static ZT_ALWAYS_INLINE void fe25519_add(fe25519 *r, const fe25519 *x, const fe25519 *y)
+static inline void fe25519_add(fe25519 *r, const fe25519 *x, const fe25519 *y)
 {
 	int i;
 	for(i=0;i<32;i++) r->v[i] = x->v[i] + y->v[i];
 	reduce_add_sub(r);
 }
 
-static ZT_ALWAYS_INLINE void fe25519_sub(fe25519 *r, const fe25519 *x, const fe25519 *y)
+static inline void fe25519_sub(fe25519 *r, const fe25519 *x, const fe25519 *y)
 {
 	int i;
 	crypto_uint32 t[32];
@@ -914,7 +914,7 @@ static ZT_ALWAYS_INLINE void fe25519_sub(fe25519 *r, const fe25519 *x, const fe2
 	reduce_add_sub(r);
 }
 
-static ZT_ALWAYS_INLINE void fe25519_mul(fe25519 *r, const fe25519 *x, const fe25519 *y)
+static inline void fe25519_mul(fe25519 *r, const fe25519 *x, const fe25519 *y)
 {
 	int i,j;
 	crypto_uint32 t[63];
@@ -931,7 +931,7 @@ static ZT_ALWAYS_INLINE void fe25519_mul(fe25519 *r, const fe25519 *x, const fe2
 	reduce_mul(r);
 }
 
-static ZT_ALWAYS_INLINE void fe25519_square(fe25519 *r, const fe25519 *x) { fe25519_mul(r, x, x); }
+static inline void fe25519_square(fe25519 *r, const fe25519 *x) { fe25519_mul(r, x, x); }
 
 static inline void fe25519_invert(fe25519 *r, const fe25519 *x)
 {
@@ -1057,7 +1057,7 @@ static inline void fe25519_pow2523(fe25519 *r, const fe25519 *x)
 static const crypto_uint32 m[32] = {0xED, 0xD3, 0xF5, 0x5C, 0x1A, 0x63, 0x12, 0x58, 0xD6, 0x9C, 0xF7, 0xA2, 0xDE, 0xF9, 0xDE, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10};
 static const crypto_uint32 mu[33] = {0x1B, 0x13, 0x2C, 0x0A, 0xA3, 0xE5, 0x9C, 0xED, 0xA7, 0x29, 0x63, 0x08, 0x5D, 0x21, 0x06, 0x21, 0xEB, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x0F};
 
-static ZT_ALWAYS_INLINE crypto_uint32 lt(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
+static inline crypto_uint32 lt(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
 {
 	unsigned int x = a;
 	x -= (unsigned int) b; /* 0..65535: no; 4294901761..4294967295: yes */
@@ -1065,7 +1065,7 @@ static ZT_ALWAYS_INLINE crypto_uint32 lt(crypto_uint32 a,crypto_uint32 b) /* 16-
 	return x;
 }
 
-static ZT_ALWAYS_INLINE void reduce_add_sub(sc25519 *r)
+static inline void reduce_add_sub(sc25519 *r)
 {
 	crypto_uint32 pb = 0;
 	crypto_uint32 b;
@@ -1144,7 +1144,7 @@ static inline void sc25519_from64bytes(sc25519 *r, const unsigned char x[64])
 	barrett_reduce(r, t);
 }
 
-static ZT_ALWAYS_INLINE void sc25519_to32bytes(unsigned char r[32], const sc25519 *x)
+static inline void sc25519_to32bytes(unsigned char r[32], const sc25519 *x)
 {
 	int i;
 	for(i=0;i<32;i++) r[i] = x->v[i];
@@ -1181,7 +1181,7 @@ static inline void sc25519_mul(sc25519 *r, const sc25519 *x, const sc25519 *y)
 	barrett_reduce(r, t);
 }
 
-static ZT_ALWAYS_INLINE void sc25519_window3(signed char r[85], const sc25519 *s)
+static inline void sc25519_window3(signed char r[85], const sc25519 *s)
 {
 	char carry;
 	int i;
@@ -1218,7 +1218,7 @@ static ZT_ALWAYS_INLINE void sc25519_window3(signed char r[85], const sc25519 *s
 	r[84] += carry;
 }
 
-static ZT_ALWAYS_INLINE void sc25519_2interleave2(unsigned char r[127], const sc25519 *s1, const sc25519 *s2)
+static inline void sc25519_2interleave2(unsigned char r[127], const sc25519 *s1, const sc25519 *s2)
 {
 	int i;
 	for(i=0;i<31;i++)
@@ -2107,21 +2107,21 @@ static const ge25519_aff ge25519_base_multiples_affine[425] = {
  {{0x69, 0x3e, 0x47, 0x97, 0x2c, 0xaf, 0x52, 0x7c, 0x78, 0x83, 0xad, 0x1b, 0x39, 0x82, 0x2f, 0x02, 0x6f, 0x47, 0xdb, 0x2a, 0xb0, 0xe1, 0x91, 0x99, 0x55, 0xb8, 0x99, 0x3a, 0xa0, 0x44, 0x11, 0x51}}}
 };
 
-static ZT_ALWAYS_INLINE void p1p1_to_p2(ge25519_p2 *r, const ge25519_p1p1 *p)
+static inline void p1p1_to_p2(ge25519_p2 *r, const ge25519_p1p1 *p)
 {
 	fe25519_mul(&r->x, &p->x, &p->t);
 	fe25519_mul(&r->y, &p->y, &p->z);
 	fe25519_mul(&r->z, &p->z, &p->t);
 }
 
-static ZT_ALWAYS_INLINE void p1p1_to_p2_2(ge25519_p3 *r, const ge25519_p1p1 *p)
+static inline void p1p1_to_p2_2(ge25519_p3 *r, const ge25519_p1p1 *p)
 {
 	fe25519_mul(&r->x, &p->x, &p->t);
 	fe25519_mul(&r->y, &p->y, &p->z);
 	fe25519_mul(&r->z, &p->z, &p->t);
 }
 
-static ZT_ALWAYS_INLINE void p1p1_to_p3(ge25519_p3 *r, const ge25519_p1p1 *p)
+static inline void p1p1_to_p3(ge25519_p3 *r, const ge25519_p1p1 *p)
 {
 	p1p1_to_p2_2(r, p);
 	fe25519_mul(&r->t, &p->x, &p->y);
@@ -2190,13 +2190,13 @@ static inline void dbl_p1p1(ge25519_p1p1 *r, const ge25519_p2 *p)
 }
 
 /* Constant-time version of: if(b) r = p */
-static ZT_ALWAYS_INLINE void cmov_aff(ge25519_aff *r, const ge25519_aff *p, unsigned char b)
+static inline void cmov_aff(ge25519_aff *r, const ge25519_aff *p, unsigned char b)
 {
 	fe25519_cmov(&r->x, &p->x, b);
 	fe25519_cmov(&r->y, &p->y, b);
 }
 
-static ZT_ALWAYS_INLINE unsigned char equal(signed char b,signed char c)
+static inline unsigned char equal(signed char b,signed char c)
 {
 	unsigned char ub = b;
 	unsigned char uc = c;
@@ -2207,7 +2207,7 @@ static ZT_ALWAYS_INLINE unsigned char equal(signed char b,signed char c)
 	return (unsigned char)y;
 }
 
-static ZT_ALWAYS_INLINE unsigned char negative(signed char b)
+static inline unsigned char negative(signed char b)
 {
 	unsigned long long x = b; /* 18446744073709551361..18446744073709551615: yes; 0..255: no */
 	x >>= 63; /* 1: yes; 0: no */
@@ -2356,7 +2356,7 @@ static inline void ge25519_scalarmult_base(ge25519_p3 *r, const sc25519 *s)
 	}
 }
 
-static ZT_ALWAYS_INLINE void get_hram(unsigned char *hram, const unsigned char *sm, const unsigned char *pk, unsigned char *playground, unsigned long long smlen)
+static inline void get_hram(unsigned char *hram, const unsigned char *sm, const unsigned char *pk, unsigned char *playground, unsigned long long smlen)
 {
 	unsigned long long i;
 

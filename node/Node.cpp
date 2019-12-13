@@ -188,7 +188,7 @@ struct _processBackgroundTasks_eachRootName
 	void *tPtr;
 	bool updateAll;
 
-	ZT_ALWAYS_INLINE bool operator()(const Str &dnsName,const Locator &loc)
+	inline bool operator()(const Str &dnsName,const Locator &loc)
 	{
 		if ((strchr(dnsName.c_str(),'.'))&&((updateAll)||(!loc))) {
 			_processBackgroundTasks_dnsResultAccumulator *dnsReq = new _processBackgroundTasks_dnsResultAccumulator(dnsName);
@@ -205,7 +205,7 @@ struct _processBackgroundTasks_ping_eachRoot
 	void *tPtr;
 	bool online;
 
-	ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Peer> &peer,const std::vector<InetAddress> &addrs)
+	inline bool operator()(const SharedPtr<Peer> &peer,const std::vector<InetAddress> &addrs)
 	{
 		unsigned int v4SendCount = 0,v6SendCount = 0;
 		peer->ping(tPtr,now,v4SendCount,v6SendCount);
@@ -226,7 +226,7 @@ struct _processBackgroundTasks_ping_eachPeer
 	void *tPtr;
 	Hashtable< void *,bool > *roots;
 
-	ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Peer> &peer)
+	inline bool operator()(const SharedPtr<Peer> &peer)
 	{
 		if (!roots->contains((void *)peer.ptr())) {
 			unsigned int v4SendCount = 0,v6SendCount = 0;

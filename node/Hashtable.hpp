@@ -33,10 +33,10 @@ class Hashtable
 private:
 	struct _Bucket
 	{
-		ZT_ALWAYS_INLINE _Bucket(const K &k,const V &v) : k(k),v(v) {}
-		ZT_ALWAYS_INLINE _Bucket(const K &k) : k(k),v() {}
-		ZT_ALWAYS_INLINE _Bucket(const _Bucket &b) : k(b.k),v(b.v) {}
-		ZT_ALWAYS_INLINE _Bucket &operator=(const _Bucket &b) { k = b.k; v = b.v; return *this; }
+		inline _Bucket(const K &k,const V &v) : k(k),v(v) {}
+		inline _Bucket(const K &k) : k(k),v() {}
+		inline _Bucket(const _Bucket &b) : k(b.k),v(b.v) {}
+		inline _Bucket &operator=(const _Bucket &b) { k = b.k; v = b.v; return *this; }
 		_Bucket *next; // must be set manually for each _Bucket
 		const K k;
 		V v;
@@ -56,7 +56,7 @@ public:
 		/**
 		 * @param ht Hash table to iterate over
 		 */
-		ZT_ALWAYS_INLINE Iterator(Hashtable &ht) :
+		inline Iterator(Hashtable &ht) :
 			_idx(0),
 			_ht(&ht),
 			_b(ht._t[0])
@@ -68,7 +68,7 @@ public:
 		 * @param vptr Pointer to set to point to next value
 		 * @return True if kptr and vptr are set, false if no more entries
 		 */
-		ZT_ALWAYS_INLINE bool next(K *&kptr,V *&vptr)
+		inline bool next(K *&kptr,V *&vptr)
 		{
 			for(;;) {
 				if (_b) {
@@ -94,7 +94,7 @@ public:
 	/**
 	 * @param bc Initial capacity in buckets (default: 32, must be nonzero)
 	 */
-	ZT_ALWAYS_INLINE Hashtable(unsigned long bc = 32) :
+	inline Hashtable(unsigned long bc = 32) :
 		_t(reinterpret_cast<_Bucket **>(::malloc(sizeof(_Bucket *) * bc))),
 		_bc(bc),
 		_s(0)
@@ -105,7 +105,7 @@ public:
 			_t[i] = (_Bucket *)0;
 	}
 
-	ZT_ALWAYS_INLINE Hashtable(const Hashtable<K,V> &ht) :
+	inline Hashtable(const Hashtable<K,V> &ht) :
 		_t(reinterpret_cast<_Bucket **>(::malloc(sizeof(_Bucket *) * ht._bc))),
 		_bc(ht._bc),
 		_s(ht._s)
@@ -125,13 +125,13 @@ public:
 		}
 	}
 
-	ZT_ALWAYS_INLINE ~Hashtable()
+	inline ~Hashtable()
 	{
 		this->clear();
 		::free(_t);
 	}
 
-	ZT_ALWAYS_INLINE Hashtable &operator=(const Hashtable<K,V> &ht)
+	inline Hashtable &operator=(const Hashtable<K,V> &ht)
 	{
 		this->clear();
 		if (ht._s) {
@@ -149,7 +149,7 @@ public:
 	/**
 	 * Erase all entries
 	 */
-	ZT_ALWAYS_INLINE void clear()
+	inline void clear()
 	{
 		if (_s) {
 			for(unsigned long i=0;i<_bc;++i) {
@@ -168,7 +168,7 @@ public:
 	/**
 	 * @return Vector of all keys
 	 */
-	ZT_ALWAYS_INLINE typename std::vector<K> keys() const
+	inline typename std::vector<K> keys() const
 	{
 		typename std::vector<K> k;
 		if (_s) {
@@ -191,7 +191,7 @@ public:
 	 * @tparam Type of V (generally inferred)
 	 */
 	template<typename C>
-	ZT_ALWAYS_INLINE void appendKeys(C &v) const
+	inline void appendKeys(C &v) const
 	{
 		if (_s) {
 			for(unsigned long i=0;i<_bc;++i) {
@@ -207,7 +207,7 @@ public:
 	/**
 	 * @return Vector of all entries (pairs of K,V)
 	 */
-	ZT_ALWAYS_INLINE typename std::vector< std::pair<K,V> > entries() const
+	inline typename std::vector< std::pair<K,V> > entries() const
 	{
 		typename std::vector< std::pair<K,V> > k;
 		if (_s) {
@@ -227,7 +227,7 @@ public:
 	 * @param k Key
 	 * @return Pointer to value or NULL if not found
 	 */
-	ZT_ALWAYS_INLINE V *get(const K k)
+	inline V *get(const K k)
 	{
 		_Bucket *b = _t[_hc(k) % _bc];
 		while (b) {
@@ -237,14 +237,14 @@ public:
 		}
 		return (V *)0;
 	}
-	ZT_ALWAYS_INLINE const V *get(const K k) const { return const_cast<Hashtable *>(this)->get(k); }
+	inline const V *get(const K k) const { return const_cast<Hashtable *>(this)->get(k); }
 
 	/**
 	 * @param k Key
 	 * @param v Value to fill with result
 	 * @return True if value was found and set (if false, v is not modified)
 	 */
-	ZT_ALWAYS_INLINE bool get(const K &k,V &v) const
+	inline bool get(const K &k,V &v) const
 	{
 		_Bucket *b = _t[_hc(k) % _bc];
 		while (b) {
@@ -261,7 +261,7 @@ public:
 	 * @param k Key to check
 	 * @return True if key is present
 	 */
-	ZT_ALWAYS_INLINE bool contains(const K &k) const
+	inline bool contains(const K &k) const
 	{
 		_Bucket *b = _t[_hc(k) % _bc];
 		while (b) {
@@ -276,7 +276,7 @@ public:
 	 * @param k Key
 	 * @return True if value was present
 	 */
-	ZT_ALWAYS_INLINE bool erase(const K &k)
+	inline bool erase(const K &k)
 	{
 		const unsigned long bidx = _hc(k) % _bc;
 		_Bucket *lastb = (_Bucket *)0;
@@ -301,7 +301,7 @@ public:
 	 * @param v Value
 	 * @return Reference to value in table
 	 */
-	ZT_ALWAYS_INLINE V &set(const K &k,const V &v)
+	inline V &set(const K &k,const V &v)
 	{
 		const unsigned long h = _hc(k);
 		unsigned long bidx = h % _bc;
@@ -331,7 +331,7 @@ public:
 	 * @param k Key
 	 * @return Value, possibly newly created
 	 */
-	ZT_ALWAYS_INLINE V &operator[](const K k)
+	inline V &operator[](const K k)
 	{
 		const unsigned long h = _hc(k);
 		unsigned long bidx = h % _bc;
@@ -358,25 +358,25 @@ public:
 	/**
 	 * @return Number of entries
 	 */
-	ZT_ALWAYS_INLINE unsigned long size() const { return _s; }
+	inline unsigned long size() const { return _s; }
 
 	/**
 	 * @return True if table is empty
 	 */
-	ZT_ALWAYS_INLINE bool empty() const { return (_s == 0); }
+	inline bool empty() const { return (_s == 0); }
 
 private:
 	template<typename O>
-	static ZT_ALWAYS_INLINE unsigned long _hc(const O &obj) { return (unsigned long)obj.hashCode(); }
+	static inline unsigned long _hc(const O &obj) { return (unsigned long)obj.hashCode(); }
 
-	static ZT_ALWAYS_INLINE unsigned long _hc(const uint64_t i) { return (unsigned long)(i ^ (i >> 32)); }
-	static ZT_ALWAYS_INLINE unsigned long _hc(const uint32_t i) { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
-	static ZT_ALWAYS_INLINE unsigned long _hc(const uint16_t i) { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
-	static ZT_ALWAYS_INLINE unsigned long _hc(const int i) { return ((unsigned long)i * (unsigned long)0x9e3379b1); }
-	static ZT_ALWAYS_INLINE unsigned long _hc(void *p) { return ((unsigned long)((uintptr_t)p) * (unsigned long)0x9e3779b1); }
-	static ZT_ALWAYS_INLINE unsigned long _hc(const void *p) { return ((unsigned long)((uintptr_t)p) * (unsigned long)0x9e3779b1); }
+	static inline unsigned long _hc(const uint64_t i) { return (unsigned long)(i ^ (i >> 32)); }
+	static inline unsigned long _hc(const uint32_t i) { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
+	static inline unsigned long _hc(const uint16_t i) { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
+	static inline unsigned long _hc(const int i) { return ((unsigned long)i * (unsigned long)0x9e3379b1); }
+	static inline unsigned long _hc(void *p) { return ((unsigned long)((uintptr_t)p) * (unsigned long)0x9e3779b1); }
+	static inline unsigned long _hc(const void *p) { return ((unsigned long)((uintptr_t)p) * (unsigned long)0x9e3779b1); }
 
-	ZT_ALWAYS_INLINE void _grow()
+	inline void _grow()
 	{
 		const unsigned long nc = _bc * 2;
 		_Bucket **nt = reinterpret_cast<_Bucket **>(::malloc(sizeof(_Bucket *) * nc));

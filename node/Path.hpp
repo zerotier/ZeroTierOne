@@ -52,9 +52,9 @@ public:
 	class HashKey
 	{
 	public:
-		ZT_ALWAYS_INLINE HashKey() {}
+		inline HashKey() {}
 
-		ZT_ALWAYS_INLINE HashKey(const int64_t l,const InetAddress &r)
+		inline HashKey(const int64_t l,const InetAddress &r)
 		{
 			if (r.ss_family == AF_INET) {
 				_k[0] = (uint64_t)reinterpret_cast<const struct sockaddr_in *>(&r)->sin_addr.s_addr;
@@ -69,16 +69,16 @@ public:
 			}
 		}
 
-		ZT_ALWAYS_INLINE unsigned long hashCode() const { return (unsigned long)(_k[0] + _k[1] + _k[2]); }
+		inline unsigned long hashCode() const { return (unsigned long)(_k[0] + _k[1] + _k[2]); }
 
-		ZT_ALWAYS_INLINE bool operator==(const HashKey &k) const { return ( (_k[0] == k._k[0]) && (_k[1] == k._k[1]) && (_k[2] == k._k[2]) ); }
-		ZT_ALWAYS_INLINE bool operator!=(const HashKey &k) const { return (!(*this == k)); }
+		inline bool operator==(const HashKey &k) const { return ( (_k[0] == k._k[0]) && (_k[1] == k._k[1]) && (_k[2] == k._k[2]) ); }
+		inline bool operator!=(const HashKey &k) const { return (!(*this == k)); }
 
 	private:
 		uint64_t _k[3];
 	};
 
-	ZT_ALWAYS_INLINE Path() :
+	inline Path() :
 		_lastOut(0),
 		_lastIn(0),
 		_lastPathQualityComputeTime(0),
@@ -110,7 +110,7 @@ public:
 		memset(_addrString, 0, sizeof(_addrString));
 	}
 
-	ZT_ALWAYS_INLINE Path(const int64_t localSocket,const InetAddress &addr) :
+	inline Path(const int64_t localSocket,const InetAddress &addr) :
 		_lastOut(0),
 		_lastIn(0),
 		_lastPathQualityComputeTime(0),
@@ -151,7 +151,7 @@ public:
 	 *
 	 * @param t Time of receive
 	 */
-	ZT_ALWAYS_INLINE void received(const uint64_t t) { _lastIn = t; }
+	inline void received(const uint64_t t) { _lastIn = t; }
 
 	/**
 	 * Send a packet via this path (last out time is also updated)
@@ -170,14 +170,14 @@ public:
 	 *
 	 * @param t Time of send
 	 */
-	ZT_ALWAYS_INLINE void sent(const int64_t t) { _lastOut = t; }
+	inline void sent(const int64_t t) { _lastOut = t; }
 
 	/**
 	 * Update path latency with a new measurement
 	 *
 	 * @param l Measured latency
 	 */
-	ZT_ALWAYS_INLINE void updateLatency(const unsigned int l, int64_t now)
+	inline void updateLatency(const unsigned int l, int64_t now)
 	{
 		unsigned int pl = _latency;
 		if (pl < 0xffff) {
@@ -192,22 +192,22 @@ public:
 	/**
 	 * @return Local socket as specified by external code
 	 */
-	ZT_ALWAYS_INLINE int64_t localSocket() const { return _localSocket; }
+	inline int64_t localSocket() const { return _localSocket; }
 
 	/**
 	 * @return Physical address
 	 */
-	ZT_ALWAYS_INLINE const InetAddress &address() const { return _addr; }
+	inline const InetAddress &address() const { return _addr; }
 
 	/**
 	 * @return IP scope -- faster shortcut for address().ipScope()
 	 */
-	ZT_ALWAYS_INLINE InetAddress::IpScope ipScope() const { return _ipScope; }
+	inline InetAddress::IpScope ipScope() const { return _ipScope; }
 
 	/**
 	 * @return Preference rank, higher == better
 	 */
-	ZT_ALWAYS_INLINE unsigned int preferenceRank() const
+	inline unsigned int preferenceRank() const
 	{
 		// This causes us to rank paths in order of IP scope rank (see InetAdddress.hpp) but
 		// within each IP scope class to prefer IPv6 over IPv4.
@@ -223,7 +223,7 @@ public:
 	 * @param a Address to check
 	 * @return True if address is good for ZeroTier path use
 	 */
-	static ZT_ALWAYS_INLINE bool isAddressValidForPath(const InetAddress &a)
+	static inline bool isAddressValidForPath(const InetAddress &a)
 	{
 		if ((a.ss_family == AF_INET)||(a.ss_family == AF_INET6)) {
 			switch(a.ipScope()) {
@@ -257,12 +257,12 @@ public:
 	/**
 	 * @return Latency or 0xffff if unknown
 	 */
-	ZT_ALWAYS_INLINE unsigned int latency() const { return _latency; }
+	inline unsigned int latency() const { return _latency; }
 
 	/**
 	 * @return Path quality -- lower is better
 	 */
-	ZT_ALWAYS_INLINE long quality(const int64_t now) const
+	inline long quality(const int64_t now) const
 	{
 		const long l = (long)_latency;
 		const long age = (long)std::min((long)(now - _lastIn),(long)(ZT_PEER_PING_PERIOD * 10)); // set an upper sanity limit to avoid overflow
@@ -277,7 +277,7 @@ public:
 	 * @param payloadLength Length of payload
 	 * @param verb Packet verb
 	 */
-	ZT_ALWAYS_INLINE void recordOutgoingPacket(int64_t now, int64_t packetId, uint16_t payloadLength, Packet::Verb verb)
+	inline void recordOutgoingPacket(int64_t now, int64_t packetId, uint16_t payloadLength, Packet::Verb verb)
 	{
 		Mutex::Lock _l(_statistics_m);
 		if (verb != Packet::VERB_ACK && verb != Packet::VERB_QOS_MEASUREMENT) {
@@ -300,7 +300,7 @@ public:
 	 * @param payloadLength Length of payload
 	 * @param verb Packet verb
 	 */
-	ZT_ALWAYS_INLINE void recordIncomingPacket(int64_t now, int64_t packetId, uint16_t payloadLength, Packet::Verb verb)
+	inline void recordIncomingPacket(int64_t now, int64_t packetId, uint16_t payloadLength, Packet::Verb verb)
 	{
 		Mutex::Lock _l(_statistics_m);
 		if (verb != Packet::VERB_ACK && verb != Packet::VERB_QOS_MEASUREMENT) {
@@ -320,7 +320,7 @@ public:
 	 * @param now Current time
 	 * @param ackedBytes Number of bytes acknowledged by other peer
 	 */
-	ZT_ALWAYS_INLINE void receivedAck(int64_t now, int32_t ackedBytes)
+	inline void receivedAck(int64_t now, int32_t ackedBytes)
 	{
 		_expectingAckAsOf = 0;
 		_unackedBytes = (ackedBytes > _unackedBytes) ? 0 : _unackedBytes - ackedBytes;
@@ -598,17 +598,17 @@ public:
 	/**
 	 * @return True if this path is alive (receiving data)
 	 */
-	ZT_ALWAYS_INLINE bool alive(const int64_t now) const { return ((now - _lastIn) < ((ZT_PEER_PING_PERIOD * 2) + 5000)); }
+	inline bool alive(const int64_t now) const { return ((now - _lastIn) < ((ZT_PEER_PING_PERIOD * 2) + 5000)); }
 
 	/**
 	 * @return Last time we sent something
 	 */
-	ZT_ALWAYS_INLINE int64_t lastOut() const { return _lastOut; }
+	inline int64_t lastOut() const { return _lastOut; }
 
 	/**
 	 * @return Last time we received anything
 	 */
-	ZT_ALWAYS_INLINE int64_t lastIn() const { return _lastIn; }
+	inline int64_t lastIn() const { return _lastIn; }
 
 private:
 	Mutex _statistics_m;

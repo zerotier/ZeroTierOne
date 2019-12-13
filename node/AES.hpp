@@ -47,14 +47,14 @@ public:
 	 */
 	static const bool HW_ACCEL;
 
-	ZT_ALWAYS_INLINE AES() {}
-	ZT_ALWAYS_INLINE AES(const uint8_t key[32]) { this->init(key); }
-	ZT_ALWAYS_INLINE ~AES() { Utils::burn(&_k,sizeof(_k)); }
+	inline AES() {}
+	inline AES(const uint8_t key[32]) { this->init(key); }
+	inline ~AES() { Utils::burn(&_k,sizeof(_k)); }
 
 	/**
 	 * Set (or re-set) this AES256 cipher's key
 	 */
-	ZT_ALWAYS_INLINE void init(const uint8_t key[32])
+	inline void init(const uint8_t key[32])
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(HW_ACCEL)) {
@@ -72,7 +72,7 @@ public:
 	 * @param in Input block
 	 * @param out Output block (can be same as input)
 	 */
-	ZT_ALWAYS_INLINE void encrypt(const uint8_t in[16],uint8_t out[16]) const
+	inline void encrypt(const uint8_t in[16],uint8_t out[16]) const
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(HW_ACCEL)) {
@@ -92,7 +92,7 @@ public:
 	 * @param len Length of input
 	 * @param out 128-bit authorization tag from GMAC
 	 */
-	ZT_ALWAYS_INLINE void gmac(const uint8_t iv[12],const void *in,const unsigned int len,uint8_t out[16]) const
+	inline void gmac(const uint8_t iv[12],const void *in,const unsigned int len,uint8_t out[16]) const
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(HW_ACCEL)) {
@@ -116,7 +116,7 @@ public:
 	 * @param len Length of input
 	 * @param out Output plaintext or ciphertext
 	 */
-	ZT_ALWAYS_INLINE void ctr(const uint8_t iv[16],const void *in,unsigned int len,void *out) const
+	inline void ctr(const uint8_t iv[16],const void *in,unsigned int len,void *out) const
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(HW_ACCEL)) {
@@ -187,7 +187,7 @@ public:
 	 * @param out Output buffer to receive ciphertext
 	 * @param tag Output buffer to receive 64-bit authentication tag
 	 */
-	static ZT_ALWAYS_INLINE void gmacSivEncrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t pc,const void *in,const unsigned int len,void *out,uint8_t tag[8])
+	static inline void gmacSivEncrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t pc,const void *in,const unsigned int len,void *out,uint8_t tag[8])
 	{
 #ifdef __GNUC__
 		uint8_t __attribute__ ((aligned (16))) miv[12];
@@ -246,7 +246,7 @@ public:
 	 * @param tag Authentication tag supplied with message
 	 * @return True if authentication tags match and message appears authentic
 	 */
-	static ZT_ALWAYS_INLINE bool gmacSivDecrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t pc,const void *in,const unsigned int len,void *out,const uint8_t tag[8])
+	static inline bool gmacSivDecrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t pc,const void *in,const unsigned int len,void *out,const uint8_t tag[8])
 	{
 #ifdef __GNUC__
 		uint8_t __attribute__ ((aligned (16))) miv[12];
@@ -307,7 +307,7 @@ public:
 	 * @param k3 CTR IV keyed hash key
 	 * @param k4 AES-CTR key
 	 */
-	static ZT_ALWAYS_INLINE void initGmacCtrKeys(const uint8_t masterKey[32],AES &k1,AES &k2,AES &k3,AES &k4)
+	static inline void initGmacCtrKeys(const uint8_t masterKey[32],AES &k1,AES &k2,AES &k3,AES &k4)
 	{
 		uint8_t k[32];
 		KBKDFHMACSHA384(masterKey,ZT_PROTO_KBKDF_LABEL_KEY_USE_AES_GMAC_SIV_K1,0,0,k);
@@ -435,7 +435,7 @@ private:
 #endif /*********************************************************************/
 
 #ifdef ZT_AES_AESNI /********************************************************/
-	static ZT_ALWAYS_INLINE __m128i _init256_1_aesni(__m128i a,__m128i b)
+	static inline __m128i _init256_1_aesni(__m128i a,__m128i b)
 	{
 		__m128i x,y;
 		b = _mm_shuffle_epi32(b,0xff);
@@ -448,7 +448,7 @@ private:
 		x = _mm_xor_si128(x,b);
 		return x;
 	}
-	static ZT_ALWAYS_INLINE __m128i _init256_2_aesni(__m128i a,__m128i b)
+	static inline __m128i _init256_2_aesni(__m128i a,__m128i b)
 	{
 		__m128i x,y,z;
 		y = _mm_aeskeygenassist_si128(a,0x00);
@@ -462,7 +462,7 @@ private:
 		x = _mm_xor_si128(x,z);
 		return x;
 	}
-	ZT_ALWAYS_INLINE void _init_aesni(const uint8_t key[32])
+	inline void _init_aesni(const uint8_t key[32])
 	{
 		__m128i t1,t2;
 		_k.ni.k[0] = t1 = _mm_loadu_si128((const __m128i *)key);
@@ -508,7 +508,7 @@ private:
 		_k.ni.hhhh = _mm_shuffle_epi8(hhhh,shuf);
 	}
 
-	ZT_ALWAYS_INLINE void _encrypt_aesni(const void *in,void *out) const
+	inline void _encrypt_aesni(const void *in,void *out) const
 	{
 		__m128i tmp;
 		tmp = _mm_loadu_si128((const __m128i *)in);
@@ -529,7 +529,7 @@ private:
 		_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(tmp,_k.ni.k[14]));
 	}
 
-	static ZT_ALWAYS_INLINE __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i y)
+	static inline __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i y)
 	{
 		y = _mm_shuffle_epi8(y,shuf);
 		__m128i t1 = _mm_clmulepi64_si128(h,y,0x00);
@@ -569,9 +569,9 @@ private:
 		t4 = _mm_xor_si128(t4,t5);
 		return _mm_shuffle_epi8(t4,shuf);
 	}
-	static ZT_ALWAYS_INLINE __m128i _ghash_aesni(__m128i shuf,__m128i h,__m128i y,__m128i x) { return _mult_block_aesni(shuf,h,_mm_xor_si128(y,x)); }
+	static inline __m128i _ghash_aesni(__m128i shuf,__m128i h,__m128i y,__m128i x) { return _mult_block_aesni(shuf,h,_mm_xor_si128(y,x)); }
 
-	ZT_ALWAYS_INLINE void _gmac_aesni(const uint8_t iv[12],const uint8_t *in,const unsigned int len,uint8_t out[16]) const
+	inline void _gmac_aesni(const uint8_t iv[12],const uint8_t *in,const unsigned int len,uint8_t out[16]) const
 	{
 		const __m128i *const ab = (const __m128i *)in;
 		const unsigned int blocks = len / 16;

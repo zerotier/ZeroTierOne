@@ -30,11 +30,11 @@ template<typename T>
 class SharedPtr
 {
 public:
-	ZT_ALWAYS_INLINE SharedPtr() : _ptr((T *)0) {}
-	ZT_ALWAYS_INLINE SharedPtr(T *obj) : _ptr(obj) { ++obj->__refCount; }
-	ZT_ALWAYS_INLINE SharedPtr(const SharedPtr &sp) : _ptr(sp._getAndInc()) {}
+	inline SharedPtr() : _ptr((T *)0) {}
+	inline SharedPtr(T *obj) : _ptr(obj) { ++obj->__refCount; }
+	inline SharedPtr(const SharedPtr &sp) : _ptr(sp._getAndInc()) {}
 
-	ZT_ALWAYS_INLINE ~SharedPtr()
+	inline ~SharedPtr()
 	{
 		if (_ptr) {
 			if (--_ptr->__refCount <= 0)
@@ -42,7 +42,7 @@ public:
 		}
 	}
 
-	ZT_ALWAYS_INLINE SharedPtr &operator=(const SharedPtr &sp)
+	inline SharedPtr &operator=(const SharedPtr &sp)
 	{
 		if (_ptr != sp._ptr) {
 			T *p = sp._getAndInc();
@@ -63,7 +63,7 @@ public:
 	 *
 	 * @param ptr Naked pointer to assign
 	 */
-	ZT_ALWAYS_INLINE void set(T *ptr)
+	inline void set(T *ptr)
 	{
 		zero();
 		++ptr->__refCount;
@@ -75,26 +75,26 @@ public:
 	 *
 	 * @param with Pointer to swap with
 	 */
-	ZT_ALWAYS_INLINE void swap(SharedPtr &with)
+	inline void swap(SharedPtr &with)
 	{
 		T *tmp = _ptr;
 		_ptr = with._ptr;
 		with._ptr = tmp;
 	}
 
-	ZT_ALWAYS_INLINE operator bool() const { return (_ptr != (T *)0); }
-	ZT_ALWAYS_INLINE T &operator*() const { return *_ptr; }
-	ZT_ALWAYS_INLINE T *operator->() const { return _ptr; }
+	inline operator bool() const { return (_ptr != (T *)0); }
+	inline T &operator*() const { return *_ptr; }
+	inline T *operator->() const { return _ptr; }
 
 	/**
 	 * @return Raw pointer to held object
 	 */
-	ZT_ALWAYS_INLINE T *ptr() const { return _ptr; }
+	inline T *ptr() const { return _ptr; }
 
 	/**
 	 * Set this pointer to NULL
 	 */
-	ZT_ALWAYS_INLINE void zero()
+	inline void zero()
 	{
 		if (_ptr) {
 			if (--_ptr->__refCount <= 0)
@@ -106,22 +106,22 @@ public:
 	/**
 	 * @return Number of references according to this object's ref count or 0 if NULL
 	 */
-	ZT_ALWAYS_INLINE int references()
+	inline int references()
 	{
 		if (_ptr)
 			return _ptr->__refCount.load();
 		return 0;
 	}
 
-	ZT_ALWAYS_INLINE bool operator==(const SharedPtr &sp) const { return (_ptr == sp._ptr); }
-	ZT_ALWAYS_INLINE bool operator!=(const SharedPtr &sp) const { return (_ptr != sp._ptr); }
-	ZT_ALWAYS_INLINE bool operator>(const SharedPtr &sp) const { return (_ptr > sp._ptr); }
-	ZT_ALWAYS_INLINE bool operator<(const SharedPtr &sp) const { return (_ptr < sp._ptr); }
-	ZT_ALWAYS_INLINE bool operator>=(const SharedPtr &sp) const { return (_ptr >= sp._ptr); }
-	ZT_ALWAYS_INLINE bool operator<=(const SharedPtr &sp) const { return (_ptr <= sp._ptr); }
+	inline bool operator==(const SharedPtr &sp) const { return (_ptr == sp._ptr); }
+	inline bool operator!=(const SharedPtr &sp) const { return (_ptr != sp._ptr); }
+	inline bool operator>(const SharedPtr &sp) const { return (_ptr > sp._ptr); }
+	inline bool operator<(const SharedPtr &sp) const { return (_ptr < sp._ptr); }
+	inline bool operator>=(const SharedPtr &sp) const { return (_ptr >= sp._ptr); }
+	inline bool operator<=(const SharedPtr &sp) const { return (_ptr <= sp._ptr); }
 
 private:
-	ZT_ALWAYS_INLINE T *_getAndInc() const
+	inline T *_getAndInc() const
 	{
 		if (_ptr)
 			++_ptr->__refCount;

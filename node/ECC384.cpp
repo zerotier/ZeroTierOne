@@ -61,13 +61,13 @@ static EccPoint curve_G = CONCAT(Curve_G_, ECC_CURVE);
 static uint64_t curve_n[NUM_ECC_DIGITS] = CONCAT(Curve_N_, ECC_CURVE);
 
 // Use ZeroTier's secure PRNG
-static ZT_ALWAYS_INLINE int getRandomNumber(uint64_t *p_vli)
+static inline int getRandomNumber(uint64_t *p_vli)
 {
 	Utils::getSecureRandom(p_vli,ECC_BYTES);
 	return 1;
 }
 
-static ZT_ALWAYS_INLINE void vli_clear(uint64_t *p_vli)
+static inline void vli_clear(uint64_t *p_vli)
 {
 	uint i;
 	for(i=0; i<NUM_ECC_DIGITS; ++i)
@@ -77,7 +77,7 @@ static ZT_ALWAYS_INLINE void vli_clear(uint64_t *p_vli)
 }
 
 /* Returns 1 if p_vli == 0, 0 otherwise. */
-static ZT_ALWAYS_INLINE int vli_isZero(uint64_t *p_vli)
+static inline int vli_isZero(uint64_t *p_vli)
 {
 	uint i;
 	for(i = 0; i < NUM_ECC_DIGITS; ++i)
@@ -91,13 +91,13 @@ static ZT_ALWAYS_INLINE int vli_isZero(uint64_t *p_vli)
 }
 
 /* Returns nonzero if bit p_bit of p_vli is set. */
-static ZT_ALWAYS_INLINE uint64_t vli_testBit(uint64_t *p_vli, uint p_bit)
+static inline uint64_t vli_testBit(uint64_t *p_vli, uint p_bit)
 {
 	return (p_vli[p_bit/64] & ((uint64_t)1 << (p_bit % 64)));
 }
 
 /* Counts the number of 64-bit "digits" in p_vli. */
-static ZT_ALWAYS_INLINE uint vli_numDigits(uint64_t *p_vli)
+static inline uint vli_numDigits(uint64_t *p_vli)
 {
 	int i;
 	/* Search from the end until we find a non-zero digit.
@@ -110,7 +110,7 @@ static ZT_ALWAYS_INLINE uint vli_numDigits(uint64_t *p_vli)
 }
 
 /* Counts the number of bits required for p_vli. */
-static ZT_ALWAYS_INLINE uint vli_numBits(uint64_t *p_vli)
+static inline uint vli_numBits(uint64_t *p_vli)
 {
 	uint i;
 	uint64_t l_digit;
@@ -131,7 +131,7 @@ static ZT_ALWAYS_INLINE uint vli_numBits(uint64_t *p_vli)
 }
 
 /* Sets p_dest = p_src. */
-static ZT_ALWAYS_INLINE void vli_set(uint64_t *p_dest, uint64_t *p_src)
+static inline void vli_set(uint64_t *p_dest, uint64_t *p_src)
 {
 	uint i;
 	for(i=0; i<NUM_ECC_DIGITS; ++i)
@@ -141,7 +141,7 @@ static ZT_ALWAYS_INLINE void vli_set(uint64_t *p_dest, uint64_t *p_src)
 }
 
 /* Returns sign of p_left - p_right. */
-static ZT_ALWAYS_INLINE int vli_cmp(uint64_t *p_left, uint64_t *p_right)
+static inline int vli_cmp(uint64_t *p_left, uint64_t *p_right)
 {
 	int i;
 	for(i = NUM_ECC_DIGITS-1; i >= 0; --i)
@@ -376,7 +376,7 @@ static inline void vli_square(uint64_t *p_result, uint64_t *p_left)
 
 /* Computes p_result = (p_left + p_right) % p_mod.
    Assumes that p_left < p_mod and p_right < p_mod, p_result != p_mod. */
-static ZT_ALWAYS_INLINE void vli_modAdd(uint64_t *p_result, uint64_t *p_left, uint64_t *p_right, uint64_t *p_mod)
+static inline void vli_modAdd(uint64_t *p_result, uint64_t *p_left, uint64_t *p_right, uint64_t *p_mod)
 {
 	uint64_t l_carry = vli_add(p_result, p_left, p_right);
 	if(l_carry || vli_cmp(p_result, p_mod) >= 0)
@@ -387,7 +387,7 @@ static ZT_ALWAYS_INLINE void vli_modAdd(uint64_t *p_result, uint64_t *p_left, ui
 
 /* Computes p_result = (p_left - p_right) % p_mod.
    Assumes that p_left < p_mod and p_right < p_mod, p_result != p_mod. */
-static ZT_ALWAYS_INLINE void vli_modSub(uint64_t *p_result, uint64_t *p_left, uint64_t *p_right, uint64_t *p_mod)
+static inline void vli_modSub(uint64_t *p_result, uint64_t *p_left, uint64_t *p_right, uint64_t *p_mod)
 {
 	uint64_t l_borrow = vli_sub(p_result, p_left, p_right);
 	if(l_borrow)
@@ -465,7 +465,7 @@ static inline void vli_mmod_fast(uint64_t *p_result, uint64_t *p_product)
 //#endif
 
 /* Computes p_result = (p_left * p_right) % curve_p. */
-static ZT_ALWAYS_INLINE void vli_modMult_fast(uint64_t *p_result, uint64_t *p_left, uint64_t *p_right)
+static inline void vli_modMult_fast(uint64_t *p_result, uint64_t *p_left, uint64_t *p_right)
 {
 	uint64_t l_product[2 * NUM_ECC_DIGITS];
 	vli_mult(l_product, p_left, p_right);
@@ -473,7 +473,7 @@ static ZT_ALWAYS_INLINE void vli_modMult_fast(uint64_t *p_result, uint64_t *p_le
 }
 
 /* Computes p_result = p_left^2 % curve_p. */
-static ZT_ALWAYS_INLINE void vli_modSquare_fast(uint64_t *p_result, uint64_t *p_left)
+static inline void vli_modSquare_fast(uint64_t *p_result, uint64_t *p_left)
 {
 	uint64_t l_product[2 * NUM_ECC_DIGITS];
 	vli_square(l_product, p_left);
@@ -577,7 +577,7 @@ static inline void vli_modInv(uint64_t *p_result, uint64_t *p_input, uint64_t *p
 /* ------ Point operations ------ */
 
 /* Returns 1 if p_point is the point at infinity, 0 otherwise. */
-static ZT_ALWAYS_INLINE int EccPoint_isZero(EccPoint *p_point)
+static inline int EccPoint_isZero(EccPoint *p_point)
 {
 	return (vli_isZero(p_point->x) && vli_isZero(p_point->y));
 }
@@ -636,7 +636,7 @@ static inline void EccPoint_double_jacobian(uint64_t *X1, uint64_t *Y1, uint64_t
 }
 
 /* Modify (x1, y1) => (x1 * z^2, y1 * z^3) */
-static ZT_ALWAYS_INLINE void apply_z(uint64_t *X1, uint64_t *Y1, uint64_t *Z)
+static inline void apply_z(uint64_t *X1, uint64_t *Y1, uint64_t *Z)
 {
 	uint64_t t1[NUM_ECC_DIGITS];
 
@@ -773,7 +773,7 @@ static inline void EccPoint_mult(EccPoint *p_result, EccPoint *p_point, uint64_t
 	vli_set(p_result->y, Ry[0]);
 }
 
-static ZT_ALWAYS_INLINE void ecc_bytes2native(uint64_t p_native[NUM_ECC_DIGITS], const uint8_t p_bytes[ECC_BYTES])
+static inline void ecc_bytes2native(uint64_t p_native[NUM_ECC_DIGITS], const uint8_t p_bytes[ECC_BYTES])
 {
 	unsigned i;
 	for(i=0; i<NUM_ECC_DIGITS; ++i)
@@ -784,7 +784,7 @@ static ZT_ALWAYS_INLINE void ecc_bytes2native(uint64_t p_native[NUM_ECC_DIGITS],
 	}
 }
 
-static ZT_ALWAYS_INLINE void ecc_native2bytes(uint8_t p_bytes[ECC_BYTES], const uint64_t p_native[NUM_ECC_DIGITS])
+static inline void ecc_native2bytes(uint8_t p_bytes[ECC_BYTES], const uint64_t p_native[NUM_ECC_DIGITS])
 {
 	unsigned i;
 	for(i=0; i<NUM_ECC_DIGITS; ++i)
@@ -962,7 +962,7 @@ static inline void vli_modMult(uint64_t *p_result, uint64_t *p_left, uint64_t *p
 	vli_set(p_result, l_product);
 }
 
-static ZT_ALWAYS_INLINE uint umax(uint a, uint b)
+static inline uint umax(uint a, uint b)
 {
 	return (a > b ? a : b);
 }

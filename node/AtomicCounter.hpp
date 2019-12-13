@@ -28,9 +28,9 @@ namespace ZeroTier {
 class AtomicCounter
 {
 public:
-	ZT_ALWAYS_INLINE AtomicCounter() { _v = 0; }
+	inline AtomicCounter() { _v = 0; }
 
-	ZT_ALWAYS_INLINE int load() const
+	inline int load() const
 	{
 #ifdef __GNUC__
 		return __sync_or_and_fetch(const_cast<int *>(&_v),0);
@@ -39,7 +39,7 @@ public:
 #endif
 	}
 
-	ZT_ALWAYS_INLINE int operator++()
+	inline int operator++()
 	{
 #ifdef __GNUC__
 		return __sync_add_and_fetch(&_v,1);
@@ -48,7 +48,7 @@ public:
 #endif
 	}
 
-	ZT_ALWAYS_INLINE int operator--()
+	inline int operator--()
 	{
 #ifdef __GNUC__
 		return __sync_sub_and_fetch(&_v,1);
@@ -58,8 +58,8 @@ public:
 	}
 
 private:
-	ZT_ALWAYS_INLINE AtomicCounter(const AtomicCounter &) {}
-	ZT_ALWAYS_INLINE const AtomicCounter &operator=(const AtomicCounter &) { return *this; }
+	inline AtomicCounter(const AtomicCounter &) {}
+	inline const AtomicCounter &operator=(const AtomicCounter &) { return *this; }
 
 #ifdef __GNUC__
 	int _v;

@@ -69,7 +69,7 @@ static const uint64_t K[80] = {
 #define Gamma0(x)       (S(x, 1) ^ S(x, 8) ^ R(x, 7))
 #define Gamma1(x)       (S(x, 19) ^ S(x, 61) ^ R(x, 6))
 
-static ZT_ALWAYS_INLINE void sha512_compress(sha512_state *const md,uint8_t *const buf)
+static inline void sha512_compress(sha512_state *const md,uint8_t *const buf)
 {
 	uint64_t S[8], W[80], t0, t1;
 	int i;
@@ -102,7 +102,7 @@ static ZT_ALWAYS_INLINE void sha512_compress(sha512_state *const md,uint8_t *con
 		md->state[i] = md->state[i] + S[i];
 }
 
-static ZT_ALWAYS_INLINE void sha384_init(sha512_state *const md)
+static inline void sha384_init(sha512_state *const md)
 {
 	md->curlen = 0;
 	md->length = 0;
@@ -116,7 +116,7 @@ static ZT_ALWAYS_INLINE void sha384_init(sha512_state *const md)
 	md->state[7] = 0x47b5481dbefa4fa4ULL;
 }
 
-static ZT_ALWAYS_INLINE void sha512_init(sha512_state *const md)
+static inline void sha512_init(sha512_state *const md)
 {
 	md->curlen = 0;
 	md->length = 0;
@@ -130,7 +130,7 @@ static ZT_ALWAYS_INLINE void sha512_init(sha512_state *const md)
 	md->state[7] = 0x5be0cd19137e2179ULL;
 }
 
-static ZT_ALWAYS_INLINE void sha512_process(sha512_state *const md,const uint8_t *in,unsigned long inlen)
+static inline void sha512_process(sha512_state *const md,const uint8_t *in,unsigned long inlen)
 {
 	while (inlen > 0) {
 		if (md->curlen == 0 && inlen >= 128) {
@@ -153,7 +153,7 @@ static ZT_ALWAYS_INLINE void sha512_process(sha512_state *const md,const uint8_t
 	}
 }
 
-static ZT_ALWAYS_INLINE void sha512_done(sha512_state *const md,uint8_t *out)
+static inline void sha512_done(sha512_state *const md,uint8_t *out)
 {
 	int i;
 

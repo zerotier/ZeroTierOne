@@ -46,7 +46,7 @@ class Network;
 class IncomingPacket : public Packet
 {
 public:
-	ZT_ALWAYS_INLINE IncomingPacket() : Packet(),_receiveTime(0),_path() {}
+	inline IncomingPacket() : Packet(),_receiveTime(0),_path() {}
 
 	/**
 	 * Create a new packet-in-decode
@@ -57,7 +57,7 @@ public:
 	 * @param now Current time
 	 * @throws std::out_of_range Range error processing packet
 	 */
-	ZT_ALWAYS_INLINE IncomingPacket(const void *data,unsigned int len,const SharedPtr<Path> &path,int64_t now) :
+	inline IncomingPacket(const void *data,unsigned int len,const SharedPtr<Path> &path,int64_t now) :
 		Packet(data,len),
 		_receiveTime(now),
 		_path(path)
@@ -73,7 +73,7 @@ public:
 	 * @param now Current time
 	 * @throws std::out_of_range Range error processing packet
 	 */
-	ZT_ALWAYS_INLINE void init(const void *data,unsigned int len,const SharedPtr<Path> &path,int64_t now)
+	inline void init(const void *data,unsigned int len,const SharedPtr<Path> &path,int64_t now)
 	{
 		copyFrom(data,len);
 		_receiveTime = now;
@@ -98,7 +98,7 @@ public:
 	/**
 	 * @return Time of packet receipt / start of decode
 	 */
-	ZT_ALWAYS_INLINE uint64_t receiveTime() const { return _receiveTime; }
+	inline uint64_t receiveTime() const { return _receiveTime; }
 
 private:
 	uint64_t _receiveTime;

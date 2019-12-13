@@ -25,7 +25,7 @@
 namespace ZeroTier {
 
 #ifdef ZT_NO_TYPE_PUNNING
-static ZT_ALWAYS_INLINE uint32_t readuint32_t(const void *in)
+static inline uint32_t readuint32_t(const void *in)
 {
 	uint32_t v = ((const uint8_t *)in)[0];
 	v <<= 8;
@@ -36,7 +36,7 @@ static ZT_ALWAYS_INLINE uint32_t readuint32_t(const void *in)
 	v |= ((const uint8_t *)in)[3];
 	return v;
 }
-static ZT_ALWAYS_INLINE void writeuint32_t(void *out,const uint32_t v)
+static inline void writeuint32_t(void *out,const uint32_t v)
 {
 	((uint8_t *)out)[0] = (uint8_t)(v >> 24);
 	((uint8_t *)out)[1] = (uint8_t)(v >> 16);
@@ -183,7 +183,7 @@ typedef unsigned __int128 uint128_t;
 typedef unsigned uint128_t __attribute__((mode(TI)));
 #endif
 
-static ZT_ALWAYS_INLINE void s_bmul64(const uint64_t x,const uint64_t y,uint64_t &r_high,uint64_t &r_low)
+static inline void s_bmul64(const uint64_t x,const uint64_t y,uint64_t &r_high,uint64_t &r_low)
 {
 	static uint128_t m1 = (uint128_t)0x2108421084210842ULL << 64 | 0x1084210842108421ULL;
 	static uint128_t m2 = (uint128_t)0x4210842108421084ULL << 64 | 0x2108421084210842ULL;
@@ -214,7 +214,7 @@ static ZT_ALWAYS_INLINE void s_bmul64(const uint64_t x,const uint64_t y,uint64_t
 	r_low = (uint64_t)r;
 }
 
-static ZT_ALWAYS_INLINE void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0, uint64_t &y1)
+static inline void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0, uint64_t &y1)
 {
 	uint64_t z2_low,z2_high,z0_low,z0_high,z1a_low,z1a_high;
 	uint64_t y_high = Utils::ntoh(y0);
@@ -236,7 +236,7 @@ static ZT_ALWAYS_INLINE void s_gfmul(const uint64_t h_high,const uint64_t h_low,
 
 #else
 
-static ZT_ALWAYS_INLINE void s_bmul32(uint32_t x,uint32_t y,uint32_t &r_high,uint32_t &r_low)
+static inline void s_bmul32(uint32_t x,uint32_t y,uint32_t &r_high,uint32_t &r_low)
 {
 	const uint32_t m1 = (uint32_t)0x11111111;
 	const uint32_t m2 = (uint32_t)0x22222222;
@@ -263,7 +263,7 @@ static ZT_ALWAYS_INLINE void s_bmul32(uint32_t x,uint32_t y,uint32_t &r_high,uin
 	r_low = (uint32_t)z;
 }
 
-static ZT_ALWAYS_INLINE void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0,uint64_t &y1)
+static inline void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0,uint64_t &y1)
 {
 	uint32_t h_high_h = (uint32_t)(h_high >> 32);
 	uint32_t h_high_l = (uint32_t)h_high;

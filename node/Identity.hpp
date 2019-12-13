@@ -51,8 +51,8 @@ public:
 		P384 = ZT_CRYPTO_ALG_P384      // Type 1 -- NIST P-384 with linked Curve25519/Ed25519 secondaries (2.x+)
 	};
 
-	ZT_ALWAYS_INLINE Identity() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
-	ZT_ALWAYS_INLINE ~Identity() { Utils::burn(reinterpret_cast<void *>(&this->_priv),sizeof(this->_priv)); }
+	inline Identity() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
+	inline ~Identity() { Utils::burn(reinterpret_cast<void *>(&this->_priv),sizeof(this->_priv)); }
 
 	/**
 	 * Construct identity from string
@@ -62,20 +62,20 @@ public:
 	 *
 	 * @param str Identity in canonical string format
 	 */
-	ZT_ALWAYS_INLINE Identity(const char *str) { fromString(str); }
+	inline Identity(const char *str) { fromString(str); }
 
 	template<unsigned int C>
-	ZT_ALWAYS_INLINE Identity(const Buffer<C> &b,unsigned int startAt = 0) { deserialize(b,startAt); }
+	inline Identity(const Buffer<C> &b,unsigned int startAt = 0) { deserialize(b,startAt); }
 
 	/**
 	 * Set identity to NIL value (all zero)
 	 */
-	ZT_ALWAYS_INLINE void zero() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
+	inline void zero() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
 
 	/**
 	 * @return Identity type (undefined if identity is null or invalid)
 	 */
-	ZT_ALWAYS_INLINE Type type() const { return _type; }
+	inline Type type() const { return _type; }
 
 	/**
 	 * Generate a new identity (address, key pair)
@@ -96,7 +96,7 @@ public:
 	/**
 	 * @return True if this identity contains a private key
 	 */
-	ZT_ALWAYS_INLINE bool hasPrivate() const { return _hasPrivate; }
+	inline bool hasPrivate() const { return _hasPrivate; }
 
 	/**
 	 * This generates a SHA384 hash of this identity's keys.
@@ -104,7 +104,7 @@ public:
 	 * @param h Buffer to receive SHA384 of public key(s)
 	 * @param includePrivate If true, hash private key(s) as well
 	 */
-	ZT_ALWAYS_INLINE bool hash(uint8_t h[48],const bool includePrivate = false) const
+	inline bool hash(uint8_t h[48],const bool includePrivate = false) const
 	{
 		switch(_type) {
 
@@ -136,7 +136,7 @@ public:
 	 * @param siglen Length of buffer
 	 * @return Number of bytes actually written to sig or 0 on error
 	 */
-	ZT_ALWAYS_INLINE unsigned int sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const
+	inline unsigned int sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const
 	{
 		if (_hasPrivate) {
 			switch(_type) {
@@ -171,7 +171,7 @@ public:
 	 * @param siglen Length of signature in bytes
 	 * @return True if signature validates and data integrity checks
 	 */
-	ZT_ALWAYS_INLINE bool verify(const void *data,unsigned int len,const void *sig,unsigned int siglen) const
+	inline bool verify(const void *data,unsigned int len,const void *sig,unsigned int siglen) const
 	{
 		switch(_type) {
 
@@ -199,7 +199,7 @@ public:
 	 * @param key Result parameter to fill with key bytes
 	 * @return Was agreement successful?
 	 */
-	ZT_ALWAYS_INLINE bool agree(const Identity &id,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) const
+	inline bool agree(const Identity &id,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) const
 	{
 		uint8_t rawkey[128];
 		uint8_t h[64];
@@ -239,7 +239,7 @@ public:
 	/**
 	 * @return This identity's address
 	 */
-	ZT_ALWAYS_INLINE const Address &address() const { return _address; }
+	inline const Address &address() const { return _address; }
 
 	/**
 	 * Serialize this identity (binary)
@@ -248,7 +248,7 @@ public:
 	 * @param includePrivate If true, include private key component (if present) (default: false)
 	 */
 	template<unsigned int C>
-	ZT_ALWAYS_INLINE void serialize(Buffer<C> &b,bool includePrivate = false) const
+	inline void serialize(Buffer<C> &b,bool includePrivate = false) const
 	{
 		_address.appendTo(b);
 		switch(_type) {
@@ -291,7 +291,7 @@ public:
 	 * @return Length of serialized data read from buffer
 	 */
 	template<unsigned int C>
-	ZT_ALWAYS_INLINE unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
 	{
 		_hasPrivate = false;
 		unsigned int p = startAt;
@@ -366,9 +366,9 @@ public:
 	/**
 	 * @return True if this identity contains something
 	 */
-	ZT_ALWAYS_INLINE operator bool() const { return (_address); }
+	inline operator bool() const { return (_address); }
 
-	ZT_ALWAYS_INLINE bool operator==(const Identity &id) const
+	inline bool operator==(const Identity &id) const
 	{
 		if ((_address == id._address)&&(_type == id._type)) {
 			switch(_type) {
@@ -379,7 +379,7 @@ public:
 		}
 		return false;
 	}
-	ZT_ALWAYS_INLINE bool operator<(const Identity &id) const
+	inline bool operator<(const Identity &id) const
 	{
 		if (_address < id._address)
 			return true;
@@ -396,12 +396,12 @@ public:
 		}
 		return false;
 	}
-	ZT_ALWAYS_INLINE bool operator!=(const Identity &id) const { return !(*this == id); }
-	ZT_ALWAYS_INLINE bool operator>(const Identity &id) const { return (id < *this); }
-	ZT_ALWAYS_INLINE bool operator<=(const Identity &id) const { return !(id < *this); }
-	ZT_ALWAYS_INLINE bool operator>=(const Identity &id) const { return !(*this < id); }
+	inline bool operator!=(const Identity &id) const { return !(*this == id); }
+	inline bool operator>(const Identity &id) const { return (id < *this); }
+	inline bool operator<=(const Identity &id) const { return !(id < *this); }
+	inline bool operator>=(const Identity &id) const { return !(*this < id); }
 
-	ZT_ALWAYS_INLINE unsigned long hashCode() const { return ((unsigned long)_address.toInt() + (unsigned long)_pub.c25519[0] + (unsigned long)_pub.c25519[1] + (unsigned long)_pub.c25519[2]); }
+	inline unsigned long hashCode() const { return ((unsigned long)_address.toInt() + (unsigned long)_pub.c25519[0] + (unsigned long)_pub.c25519[1] + (unsigned long)_pub.c25519[2]); }
 
 private:
 	Address _address;

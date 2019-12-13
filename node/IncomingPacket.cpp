@@ -39,6 +39,8 @@ namespace ZeroTier {
 
 namespace {
 //////////////////////////////////////////////////////////////////////////////
+// Implementation of each protocol verb                                     //
+//////////////////////////////////////////////////////////////////////////////
 
 static void _sendErrorNeedCredentials(IncomingPacket &pkt,const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer,const uint64_t nwid,const SharedPtr<Path> &path)
 {
@@ -51,7 +53,7 @@ static void _sendErrorNeedCredentials(IncomingPacket &pkt,const RuntimeEnvironme
 	path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 }
 
-static ZT_ALWAYS_INLINE bool _doHELLO(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const bool alreadyAuthenticated,const SharedPtr<Path> &path)
+static inline bool _doHELLO(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const bool alreadyAuthenticated,const SharedPtr<Path> &path)
 {
 	const int64_t now = RR->node->now();
 
@@ -180,15 +182,15 @@ static ZT_ALWAYS_INLINE bool _doHELLO(IncomingPacket &pkt,const RuntimeEnvironme
 	return true;
 }
 
-static ZT_ALWAYS_INLINE bool _doACK(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
+static inline bool _doACK(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 }
 
-static ZT_ALWAYS_INLINE bool _doQOS_MEASUREMENT(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
+static inline bool _doQOS_MEASUREMENT(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 }
 
-static ZT_ALWAYS_INLINE bool _doERROR(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
+static inline bool _doERROR(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	const Packet::Verb inReVerb = (Packet::Verb)pkt[ZT_PROTO_VERB_ERROR_IDX_IN_RE_VERB];
 	const uint64_t inRePacketId = pkt.at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_IN_RE_PACKET_ID);
@@ -250,7 +252,7 @@ static ZT_ALWAYS_INLINE bool _doERROR(IncomingPacket &pkt,const RuntimeEnvironme
 	return true;
 }
 
-static ZT_ALWAYS_INLINE bool _doOK(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
+static inline bool _doOK(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	const Packet::Verb inReVerb = (Packet::Verb)pkt[ZT_PROTO_VERB_OK_IDX_IN_RE_VERB];
 	const uint64_t inRePacketId = pkt.at<uint64_t>(ZT_PROTO_VERB_OK_IDX_IN_RE_PACKET_ID);
@@ -317,7 +319,7 @@ static ZT_ALWAYS_INLINE bool _doOK(IncomingPacket &pkt,const RuntimeEnvironment 
 	return true;
 }
 
-static ZT_ALWAYS_INLINE bool _doWHOIS(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
+static inline bool _doWHOIS(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	if (!peer->rateGateInboundWhoisRequest(RR->node->now()))
 		return true;
@@ -352,7 +354,7 @@ static ZT_ALWAYS_INLINE bool _doWHOIS(IncomingPacket &pkt,const RuntimeEnvironme
 	return true;
 }
 
-static ZT_ALWAYS_INLINE bool _doRENDEZVOUS(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
+static inline bool _doRENDEZVOUS(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	if (RR->topology->isRoot(peer->identity())) {
 		const Address with(pkt.field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
@@ -374,7 +376,7 @@ static ZT_ALWAYS_INLINE bool _doRENDEZVOUS(IncomingPacket &pkt,const RuntimeEnvi
 	return true;
 }
 
-static ZT_ALWAYS_INLINE bool _doFRAME(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
+static inline bool _doFRAME(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	const uint64_t nwid = pkt.at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID);
 	const SharedPtr<Network> network(RR->node->network(nwid));
@@ -397,7 +399,7 @@ static ZT_ALWAYS_INLINE bool _doFRAME(IncomingPacket &pkt,const RuntimeEnvironme
 	return true;
 }
 
-static ZT_ALWAYS_INLINE bool _doEXT_FRAME(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
+static inline bool _doEXT_FRAME(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	const uint64_t nwid = pkt.at<uint64_t>(ZT_PROTO_VERB_EXT_FRAME_IDX_NETWORK_ID);
 	const SharedPtr<Network> network(RR->node->network(nwid));
@@ -475,7 +477,7 @@ static ZT_ALWAYS_INLINE bool _doEXT_FRAME(IncomingPacket &pkt,const RuntimeEnvir
 	return true;
 }
 
-static ZT_ALWAYS_INLINE bool _doECHO(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
+static inline bool _doECHO(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	if (!peer->rateGateEchoRequest(RR->node->now()))
 		return true;
@@ -494,7 +496,7 @@ static ZT_ALWAYS_INLINE bool _doECHO(IncomingPacket &pkt,const RuntimeEnvironmen
 	return true;
 }
 
-static ZT_ALWAYS_INLINE bool _doNETWORK_CREDENTIALS(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
+static inline bool _doNETWORK_CREDENTIALS(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	if (!peer->rateGateCredentialsReceived(RR->node->now()))
 		return true;
@@ -576,7 +578,7 @@ static ZT_ALWAYS_INLINE bool _doNETWORK_CREDENTIALS(IncomingPacket &pkt,const Ru
 	return true;
 }
 
-static ZT_ALWAYS_INLINE bool _doNETWORK_CONFIG_REQUEST(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
+static inline bool _doNETWORK_CONFIG_REQUEST(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	const uint64_t nwid = pkt.at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
 	const unsigned int hopCount = pkt.hops();
@@ -602,7 +604,7 @@ static ZT_ALWAYS_INLINE bool _doNETWORK_CONFIG_REQUEST(IncomingPacket &pkt,const
 	return true;
 }
 
-static ZT_ALWAYS_INLINE bool _doNETWORK_CONFIG(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
+static inline bool _doNETWORK_CONFIG(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	const SharedPtr<Network> network(RR->node->network(pkt.at<uint64_t>(ZT_PACKET_IDX_PAYLOAD)));
 	if (network) {
@@ -621,7 +623,7 @@ static ZT_ALWAYS_INLINE bool _doNETWORK_CONFIG(IncomingPacket &pkt,const Runtime
 	return true;
 }
 
-static ZT_ALWAYS_INLINE bool _doMULTICAST_GATHER(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
+static inline bool _doMULTICAST_GATHER(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	const uint64_t nwid = pkt.at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_NETWORK_ID);
 	const unsigned int flags = pkt[ZT_PROTO_VERB_MULTICAST_GATHER_IDX_FLAGS];
@@ -669,7 +671,7 @@ static ZT_ALWAYS_INLINE bool _doMULTICAST_GATHER(IncomingPacket &pkt,const Runti
 	return true;
 }
 
-static ZT_ALWAYS_INLINE bool _doPUSH_DIRECT_PATHS(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
+static inline bool _doPUSH_DIRECT_PATHS(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	const int64_t now = RR->node->now();
 
@@ -719,7 +721,7 @@ static ZT_ALWAYS_INLINE bool _doPUSH_DIRECT_PATHS(IncomingPacket &pkt,const Runt
 	return true;
 }
 
-static ZT_ALWAYS_INLINE bool _doUSER_MESSAGE(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
+static inline bool _doUSER_MESSAGE(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	if (likely(pkt.size() >= (ZT_PACKET_IDX_PAYLOAD + 8))) {
 		ZT_UserMessage um;

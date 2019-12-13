@@ -177,7 +177,7 @@ namespace ZeroTier {
  */
 struct NetworkConfig
 {
-	ZT_ALWAYS_INLINE NetworkConfig() :
+	inline NetworkConfig() :
 		networkId(0),
 		timestamp(0),
 		credentialTimeMaxDelta(0),
@@ -218,17 +218,17 @@ struct NetworkConfig
 	/**
 	 * @return True if broadcast (ff:ff:ff:ff:ff:ff) address should work on this network
 	 */
-	ZT_ALWAYS_INLINE bool enableBroadcast() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
+	inline bool enableBroadcast() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
 
 	/**
 	 * @return True if IPv6 NDP emulation should be allowed for certain "magic" IPv6 address patterns
 	 */
-	ZT_ALWAYS_INLINE bool ndpEmulation() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
+	inline bool ndpEmulation() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
 
 	/**
 	 * @return True if frames should not be compressed
 	 */
-	ZT_ALWAYS_INLINE bool disableCompression() const
+	inline bool disableCompression() const
 	{
 #ifndef ZT_DISABLE_COMPRESSION
 		return ((this->flags & ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION) != 0);
@@ -244,18 +244,18 @@ struct NetworkConfig
 	/**
 	 * @return Network type is public (no access control)
 	 */
-	ZT_ALWAYS_INLINE bool isPublic() const { return (this->type == ZT_NETWORK_TYPE_PUBLIC); }
+	inline bool isPublic() const { return (this->type == ZT_NETWORK_TYPE_PUBLIC); }
 
 	/**
 	 * @return Network type is private (certificate access control)
 	 */
-	ZT_ALWAYS_INLINE bool isPrivate() const { return (this->type == ZT_NETWORK_TYPE_PRIVATE); }
+	inline bool isPrivate() const { return (this->type == ZT_NETWORK_TYPE_PRIVATE); }
 
 	/**
 	 * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
 	 * @return True if this network allows bridging
 	 */
-	ZT_ALWAYS_INLINE bool permitsBridging(const Address &fromPeer) const
+	inline bool permitsBridging(const Address &fromPeer) const
 	{
 		for(unsigned int i=0;i<specialistCount;++i) {
 			if ((fromPeer == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
@@ -264,9 +264,9 @@ struct NetworkConfig
 		return false;
 	}
 
-	ZT_ALWAYS_INLINE operator bool() const { return (networkId != 0); }
-	ZT_ALWAYS_INLINE bool operator==(const NetworkConfig &nc) const { return (memcmp(this,&nc,sizeof(NetworkConfig)) == 0); }
-	ZT_ALWAYS_INLINE bool operator!=(const NetworkConfig &nc) const { return (!(*this == nc)); }
+	inline operator bool() const { return (networkId != 0); }
+	inline bool operator==(const NetworkConfig &nc) const { return (memcmp(this,&nc,sizeof(NetworkConfig)) == 0); }
+	inline bool operator!=(const NetworkConfig &nc) const { return (!(*this == nc)); }
 
 	/**
 	 * Add a specialist or mask flags if already present
@@ -278,7 +278,7 @@ struct NetworkConfig
 	 * @param f Flags (OR of specialist role/type flags)
 	 * @return True if successfully masked or added
 	 */
-	ZT_ALWAYS_INLINE bool addSpecialist(const Address &a,const uint64_t f)
+	inline bool addSpecialist(const Address &a,const uint64_t f)
 	{
 		const uint64_t aint = a.toInt();
 		for(unsigned int i=0;i<specialistCount;++i) {
@@ -294,7 +294,7 @@ struct NetworkConfig
 		return false;
 	}
 
-	ZT_ALWAYS_INLINE const Capability *capability(const uint32_t id) const
+	inline const Capability *capability(const uint32_t id) const
 	{
 		for(unsigned int i=0;i<capabilityCount;++i) {
 			if (capabilities[i].id() == id)
@@ -303,7 +303,7 @@ struct NetworkConfig
 		return (Capability *)0;
 	}
 
-	ZT_ALWAYS_INLINE const Tag *tag(const uint32_t id) const
+	inline const Tag *tag(const uint32_t id) const
 	{
 		for(unsigned int i=0;i<tagCount;++i) {
 			if (tags[i].id() == id)

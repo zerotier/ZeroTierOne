@@ -75,30 +75,30 @@ public:
 	class RuleResultLog
 	{
 	public:
-		ZT_ALWAYS_INLINE RuleResultLog() {}
+		inline RuleResultLog() {}
 
-		ZT_ALWAYS_INLINE void log(const unsigned int rn,const uint8_t thisRuleMatches,const uint8_t thisSetMatches)
+		inline void log(const unsigned int rn,const uint8_t thisRuleMatches,const uint8_t thisSetMatches)
 		{
 			_l[rn >> 1] |= ( ((thisRuleMatches + 1) << 2) | (thisSetMatches + 1) ) << ((rn & 1) << 2);
 		}
-		ZT_ALWAYS_INLINE void logSkipped(const unsigned int rn,const uint8_t thisSetMatches)
+		inline void logSkipped(const unsigned int rn,const uint8_t thisSetMatches)
 		{
 			_l[rn >> 1] |= (thisSetMatches + 1) << ((rn & 1) << 2);
 		}
 
-		ZT_ALWAYS_INLINE void clear()
+		inline void clear()
 		{
 			memset(_l,0,sizeof(_l));
 		}
 
-		ZT_ALWAYS_INLINE const uint8_t *data() const { return _l; }
-		ZT_ALWAYS_INLINE unsigned int sizeBytes() const { return (ZT_MAX_NETWORK_RULES / 2); }
+		inline const uint8_t *data() const { return _l; }
+		inline unsigned int sizeBytes() const { return (ZT_MAX_NETWORK_RULES / 2); }
 
 	private:
 		uint8_t _l[ZT_MAX_NETWORK_RULES / 2];
 	};
 
-	ZT_ALWAYS_INLINE Trace(const RuntimeEnvironment *renv) :
+	inline Trace(const RuntimeEnvironment *renv) :
 		RR(renv),
 		_byNet(8) {}
 

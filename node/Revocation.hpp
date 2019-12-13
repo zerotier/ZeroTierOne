@@ -82,16 +82,16 @@ public:
 	{
 	}
 
-	ZT_ALWAYS_INLINE uint32_t id() const { return _id; }
-	ZT_ALWAYS_INLINE uint32_t credentialId() const { return _credentialId; }
-	ZT_ALWAYS_INLINE uint64_t networkId() const { return _networkId; }
-	ZT_ALWAYS_INLINE int64_t threshold() const { return _threshold; }
-	ZT_ALWAYS_INLINE const Address &target() const { return _target; }
-	ZT_ALWAYS_INLINE const Address &signer() const { return _signedBy; }
-	ZT_ALWAYS_INLINE Credential::Type type() const { return _type; }
-	ZT_ALWAYS_INLINE const uint8_t *signature() const { return _signature; }
-	ZT_ALWAYS_INLINE unsigned int signatureLength() const { return _signatureLength; }
-	ZT_ALWAYS_INLINE bool fastPropagate() const { return ((_flags & ZT_REVOCATION_FLAG_FAST_PROPAGATE) != 0); }
+	inline uint32_t id() const { return _id; }
+	inline uint32_t credentialId() const { return _credentialId; }
+	inline uint64_t networkId() const { return _networkId; }
+	inline int64_t threshold() const { return _threshold; }
+	inline const Address &target() const { return _target; }
+	inline const Address &signer() const { return _signedBy; }
+	inline Credential::Type type() const { return _type; }
+	inline const uint8_t *signature() const { return _signature; }
+	inline unsigned int signatureLength() const { return _signatureLength; }
+	inline bool fastPropagate() const { return ((_flags & ZT_REVOCATION_FLAG_FAST_PROPAGATE) != 0); }
 
 	/**
 	 * @param signer Signing identity, must have private key
