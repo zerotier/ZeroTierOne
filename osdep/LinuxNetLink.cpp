@@ -13,6 +13,8 @@
 
 #include "../node/Constants.hpp"
 
+#include <cerrno>
+
 //#define ZT_NETLINK_TRACE
 
 #ifdef __LINUX__
