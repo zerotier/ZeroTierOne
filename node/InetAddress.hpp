@@ -489,6 +489,7 @@ struct InetAddress : public sockaddr_storage
 	 */
 	inline operator bool() const { return (ss_family != 0); }
 
+	// Marshal interface ///////////////////////////////////////////////////////
 	static inline int marshalSizeMax() { return 19; }
 	inline int marshal(uint8_t restrict data[19]) const
 	{
@@ -547,6 +548,7 @@ struct InetAddress : public sockaddr_storage
 				return -1;
 		}
 	}
+	////////////////////////////////////////////////////////////////////////////
 
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b) const

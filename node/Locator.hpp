@@ -22,8 +22,7 @@
 #include "Identity.hpp"
 
 #define ZT_LOCATOR_MAX_ENDPOINTS 8
-
-#define ZT_LOCATOR_MARSHAL_SIZE_MAX ((ZT_ENDPOINT_MARSHAL_SIZE_MAX * ZT_LOCATOR_MAX_ENDPOINTS) + 8 + 256 + ZT_SIGNATURE_BUFFER_SIZE)
+#define ZT_LOCATOR_MARSHAL_SIZE_MAX (8 + 2 + (ZT_ENDPOINT_MARSHAL_SIZE_MAX * ZT_LOCATOR_MAX_ENDPOINTS) + 2 + ZT_SIGNATURE_BUFFER_SIZE)
 
 namespace ZeroTier {
 
@@ -36,37 +35,12 @@ namespace ZeroTier {
 class Locator
 {
 public:
-	inline Locator() : _ts(0),_at(nullptr),_signatureLength(0) {}
-	inline ~Locator() { delete [] _at; }
+	inline Locator() : _ts(0),_endpointCount(0),_signatureLength(0) {}
 
-	inline Locator(const Locator &l) :
-		_ts(l._ts),
-		_id(l._id),
-		_at((l._endpointCount > 0) ? new Endpoint[l._endpointCount] : nullptr),
-		_endpointCount(l._endpointCount),
-		_signatureLength(l._signatureLength)
-	{
-		for(unsigned int i=0;i<_endpointCount;++i)
-			_at[i] = l._at[i];
-		memcpy(_signature,l._signature,_signatureLength);
-	}
-
-	inline Locator &operator=(const Locator &l)
-	{
-		_ts = l._ts;
-		_id = l._id;
-		delete [] _at;
-		_at = (l._endpointCount > 0) ? new Endpoint[l._endpointCount] : nullptr;
-		for(unsigned int i=0;i<l._endpointCount;++i)
-			_at[i] = l._at[i];
-		_endpointCount = l._endpointCount;
-		_signatureLength = l._signatureLength;
-		memcpy(_signature,l._signature,_signatureLength);
-		return *this;
-	}
-
+	/**
+	 * @return Timestamp (a.k.a. revision number) set by Location signer
+	 */
 	inline int64_t timestamp() const { return _ts; }
-	inline const Identity &id() const { return _id; }
 
 	/**
 	 * Create and sign a Locator
@@ -82,10 +56,6 @@ public:
 		if ((endpointCount > ZT_LOCATOR_MAX_ENDPOINTS)||(!id.hasPrivate()))
 			return false;
 		_ts = ts;
-		_id = id;
-		if (_at)
-			delete [] _at;
-		_at = new Endpoint[endpointCount];
 		for(unsigned int i=0;i<endpointCount;++i)
 			_at[i] = at[i];
 		_endpointCount = endpointCount;
@@ -103,19 +73,21 @@ public:
 	/**
 	 * Verify this Locator's validity and signature
 	 *
+	 * @param id Identity corresponding to hash
 	 * @return True if valid and signature checks out
 	 */
-	inline bool verify() const
+	inline bool verify(const Identity &id) const
 	{
 		if ((_ts == 0)||(_endpointCount > ZT_LOCATOR_MAX_ENDPOINTS)||(_signatureLength > ZT_SIGNATURE_BUFFER_SIZE))
 			return false;
 		uint8_t signData[ZT_LOCATOR_MARSHAL_SIZE_MAX];
 		const unsigned int signLen = marshal(signData,true);
-		return _id.verify(signData,signLen,_signature,_signatureLength);
+		return id.verify(signData,signLen,_signature,_signatureLength);
 	}
 
 	inline operator bool() const { return (_ts != 0); }
 
+	// Marshal interface ///////////////////////////////////////////////////////
 	static inline int marshalSizeMax() { return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
 	inline int marshal(uint8_t restrict data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool excludeSignature = false) const
 	{
@@ -130,12 +102,9 @@ public:
 		data[5] = (uint8_t)((uint64_t)_ts >> 16);
 		data[6] = (uint8_t)((uint64_t)_ts >> 8);
 		data[7] = (uint8_t)((uint64_t)_ts);
+		int p = 8;
 
-		int p = _id.marshal(data + 8,false);
-		if (p <= 0)
-			return -1;
-		p += 8;
-
+		data[p++] = (uint8_t)(_endpointCount >> 8);
 		data[p++] = (uint8_t)_endpointCount;
 		for(unsigned int i=0;i<_endpointCount;++i) {
 			int tmp = _at[i].marshal(data + p);
@@ -155,7 +124,7 @@ public:
 	}
 	inline int unmarshal(const uint8_t *restrict data,const int len)
 	{
-		if (len <= 8)
+		if (len <= (8 + 48))
 			return -1;
 
 		uint64_t ts = ((uint64_t)data[0] << 56);
@@ -167,20 +136,16 @@ public:
 		ts |= ((uint64_t)data[6] << 8);
 		ts |= (uint64_t)data[7];
 		_ts = (int64_t)ts;
+		int p = 8;
 
-		int p = _id.unmarshal(data + 8,len - 8);
-		if (p <= 0)
-			return -1;
-		p += 8;
-
-		if (p >= len)
+		if ((p + 2) > len)
 			return -1;
 		unsigned int ec = (int)data[p++];
+		ec <<= 8;
+		ec |= data[p++];
 		if (ec > ZT_LOCATOR_MAX_ENDPOINTS)
 			return -1;
-		if (_at)
-			delete [] _at;
-		_at = new Endpoint[ec];
+		_endpointCount = ec;
 		for(int i=0;i<ec;++i) {
 			int tmp = _at[i].unmarshal(data + p,len - p);
 			if (tmp < 0)
@@ -203,13 +168,13 @@ public:
 
 		return p;
 	}
+	////////////////////////////////////////////////////////////////////////////
 
 private:
 	int64_t _ts;
-	Identity _id;
-	Endpoint *_at;
 	unsigned int _endpointCount;
 	unsigned int _signatureLength;
+	Endpoint _at[ZT_LOCATOR_MAX_ENDPOINTS];
 	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
 };
 

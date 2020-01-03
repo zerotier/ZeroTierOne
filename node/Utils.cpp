@@ -67,6 +67,14 @@ namespace Utils {
 
 const char HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
 
+bool secureEq(const void *a,const void *b,unsigned int len)
+{
+	uint8_t diff = 0;
+	for(unsigned int i=0;i<len;++i)
+		diff |= ( (reinterpret_cast<const uint8_t *>(a))[i] ^ (reinterpret_cast<const uint8_t *>(b))[i] );
+	return (diff == 0);
+}
+
 // Crazy hack to force memory to be securely zeroed in spite of the best efforts of optimizing compilers.
 static void _Utils_doBurn(volatile uint8_t *ptr,unsigned int len)
 {
@@ -460,6 +468,24 @@ uint64_t random()
 	l.unlock();
 
 	return result;
+}
+
+bool scopy(char *dest,unsigned int len,const char *src)
+{
+	if (!len)
+		return false; // sanity check
+	if (!src) {
+		*dest = (char)0;
+		return true;
+	}
+	char *const end = dest + len;
+	while ((*dest++ = *src++)) {
+		if (dest == end) {
+			*(--dest) = (char)0;
+			return false;
+		}
+	}
+	return true;
 }
 
 } // namespace Utils

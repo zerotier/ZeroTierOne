@@ -62,7 +62,7 @@ public:
 	inline Type type() const { return _t; }
 
 	static inline int marshalSizeMax() { return ZT_ENDPOINT_MARSHAL_SIZE_MAX; }
-	inline int marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX])
+	inline int marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const
 	{
 		int p;
 		switch(_t) {

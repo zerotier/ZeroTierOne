@@ -422,10 +422,10 @@ public:
 		 *   <[1] software minor version>
 		 *   <[2] software revision>
 		 *   <[8] timestamp for determining latency>
-		 *   <[...] binary serialized identity (see Identity)>
+		 *   <[...] binary serialized identity>
 		 *   <[...] physical destination address of packet>
 		 *   [... begin encrypted region ...]
-		 *   <[2] 16-bit reserved field, always 0>
+		 *   <[2] 16-bit reserved (legacy) field, always 0>
 		 *   <[2] 16-bit length of locator>
 		 *   <[...] locator for this node>
 		 *   <[2] 16-bit length of meta-data dictionary>
@@ -856,18 +856,6 @@ public:
 		 * implementations.
 		 */
 		VERB_USER_MESSAGE = 0x14,
-
-		/**
-		 * A trace for remote debugging or diagnostics:
-		 *   <[...] null-terminated dictionary containing trace information>
-		 *  [<[...] additional null-terminated dictionaries>]
-		 *
-		 * This message contains a remote trace event. Remote trace events can
-		 * be sent to observers configured at the network level for those that
-		 * pertain directly to activity on a network, or to global observers if
-		 * locally configured.
-		 */
-		VERB_REMOTE_TRACE = 0x15,
 
 		/**
 		 * Peer-to-peer propagated multicast packet:
