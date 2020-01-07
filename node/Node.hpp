@@ -14,9 +14,9 @@
 #ifndef ZT_NODE_HPP
 #define ZT_NODE_HPP
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include <map>
 #include <vector>

@@ -18,6 +18,8 @@
 #include "Utils.hpp"
 #include "SHA512.hpp"
 
+#include <cstdint>
+
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 
 #include <wmmintrin.h>
@@ -30,9 +32,6 @@
 extern "C" void zt_crypt_ctr_aesni(const __m128i key[14],const uint8_t iv[16],const uint8_t *in,unsigned int len,uint8_t *out);
 
 #endif // x64
-
-#define ZT_AES_KEY_SIZE 32
-#define ZT_AES_BLOCK_SIZE 16
 
 namespace ZeroTier {
 

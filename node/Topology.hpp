@@ -14,8 +14,8 @@
 #ifndef ZT_TOPOLOGY_HPP
 #define ZT_TOPOLOGY_HPP
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 
 #include <vector>
 #include <algorithm>

@@ -14,9 +14,9 @@
 #ifndef ZT_PATH_HPP
 #define ZT_PATH_HPP
 
-#include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cstdint>
+#include <cstring>
+#include <cstdlib>
 
 #include <stdexcept>
 #include <algorithm>

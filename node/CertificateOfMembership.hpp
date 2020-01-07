@@ -14,8 +14,8 @@
 #ifndef ZT_CERTIFICATEOFMEMBERSHIP_HPP
 #define ZT_CERTIFICATEOFMEMBERSHIP_HPP
 
-#include <stdint.h>
-#include <string.h>
+#include <cstdint>
+#include <cstring>
 
 #include <string>
 #include <stdexcept>

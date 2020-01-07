@@ -14,9 +14,9 @@
 #ifndef ZT_MAC_HPP
 #define ZT_MAC_HPP
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdint>
 
 #include "Constants.hpp"
 #include "Utils.hpp"

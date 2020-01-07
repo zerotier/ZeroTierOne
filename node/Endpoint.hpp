@@ -14,10 +14,10 @@
 #ifndef ZT_ENDPOINT_HPP
 #define ZT_ENDPOINT_HPP
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdint>
+#include <cstring>
 
 #include "Constants.hpp"
 #include "InetAddress.hpp"
@@ -53,7 +53,7 @@ public:
 
 	ZT_ALWAYS_INLINE const InetAddress *sockaddr() const { return (_t == INETADDR) ? reinterpret_cast<const InetAddress *>(&_v.sa) : nullptr; }
 	ZT_ALWAYS_INLINE const char *dnsName() const { return (_t == DNSNAME) ? _v.dns.name : nullptr; }
-	ZT_ALWAYS_INLINE const int dnsPort() const { return (_t == DNSNAME) ? _v.dns.port : -1; }
+	ZT_ALWAYS_INLINE int dnsPort() const { return (_t == DNSNAME) ? _v.dns.port : -1; }
 	ZT_ALWAYS_INLINE Address ztAddress() const { return (_t == ZEROTIER) ? Address(_v.zt.a) : Address(); }
 	ZT_ALWAYS_INLINE const uint8_t *ztIdentityHash() const { return (_t == ZEROTIER) ? _v.zt.idh : nullptr; }
 	ZT_ALWAYS_INLINE const char *url() const { return (_t == URL) ? _v.url : nullptr; }
@@ -140,7 +140,7 @@ public:
 					}
 					++p;
 					if ((p >= (ZT_ENDPOINT_MAX_NAME_SIZE+1))||(p >= (len-2)))
-						return;
+						return -1;
 				}
 				_v.dns.port = ((int)data[p++]) << 8;
 				_v.dns.port |= (int)data[p++];

@@ -14,9 +14,9 @@
 #ifndef ZT_N_PACKET_HPP
 #define ZT_N_PACKET_HPP
 
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstring>
+#include <cstdio>
 
 #include <string>
 #include <iostream>

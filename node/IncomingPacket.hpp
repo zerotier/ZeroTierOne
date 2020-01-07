@@ -14,8 +14,6 @@
 #ifndef ZT_INCOMINGPACKET_HPP
 #define ZT_INCOMINGPACKET_HPP
 
-#include <stdexcept>
-
 #include "Packet.hpp"
 #include "Path.hpp"
 #include "Utils.hpp"

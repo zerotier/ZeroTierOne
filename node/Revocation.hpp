@@ -14,10 +14,10 @@
 #ifndef ZT_REVOCATION_HPP
 #define ZT_REVOCATION_HPP
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cstdint>
 
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"

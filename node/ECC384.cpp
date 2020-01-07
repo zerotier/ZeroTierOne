@@ -4,10 +4,9 @@
 // This code is under the BSD 2-clause license, not ZeroTier's license
 //////////////////////////////////////////////////////////////////////////////
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdint>
 
 #include "Constants.hpp"
 #include "ECC384.hpp"

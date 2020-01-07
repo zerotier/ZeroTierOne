@@ -14,7 +14,7 @@
 #ifndef ZT_MULTICASTGROUP_HPP
 #define ZT_MULTICASTGROUP_HPP
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "Constants.hpp"
 #include "MAC.hpp"

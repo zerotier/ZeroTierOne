@@ -16,10 +16,9 @@
 
 #include <typeinfo>
 #include <cstdint>
-#include <stdlib.h>
-#include <memory.h>
+#include <cstdlib>
+#include <cmath>
 #include <algorithm>
-#include <math.h>
 
 namespace ZeroTier {
 

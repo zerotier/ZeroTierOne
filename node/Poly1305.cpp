@@ -7,10 +7,7 @@ Public domain.
 #include "Constants.hpp"
 #include "Poly1305.hpp"
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstring>
 
 #ifdef __WINDOWS__
 #pragma warning(disable: 4146)

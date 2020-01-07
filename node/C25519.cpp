@@ -7,16 +7,11 @@ Derived from public domain code by D. J. Bernstein.
 // Modified very slightly for ZeroTier One by Adam Ierymenko
 // This code remains in the public domain.
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdint>
+#include <cstring>
 
-#include "Constants.hpp"
 #include "C25519.hpp"
 #include "SHA512.hpp"
-#include "Buffer.hpp"
-#include "Hashtable.hpp"
-#include "Mutex.hpp"
 
 #ifdef __WINDOWS__
 #pragma warning(disable: 4146)
@@ -28,10 +23,7 @@ Derived from public domain code by D. J. Bernstein.
 
 namespace {
 
-#define crypto_int32 int32_t
 #define crypto_uint32 uint32_t
-#define crypto_int64 int64_t
-#define crypto_uint64 uint64_t
 #define crypto_hash_sha512_BYTES 64
 
 //////////////////////////////////////////////////////////////////////////////

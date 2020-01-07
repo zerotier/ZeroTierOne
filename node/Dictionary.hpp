@@ -19,7 +19,7 @@
 #include "Buffer.hpp"
 #include "Address.hpp"
 
-#include <stdint.h>
+#include <cstdint>
 
 namespace ZeroTier {
 

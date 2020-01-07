@@ -14,11 +14,11 @@
 #ifndef ZT_ADDRESS_HPP
 #define ZT_ADDRESS_HPP
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <math.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdint>
+#include <cstring>
+#include <cmath>
 
 #include <string>
 #include <vector>
@@ -37,8 +37,7 @@ class Address
 {
 public:
 	ZT_ALWAYS_INLINE Address() : _a(0) {}
-	ZT_ALWAYS_INLINE Address(const Address &a) : _a(a._a) {}
-	ZT_ALWAYS_INLINE Address(uint64_t a) : _a(a & 0xffffffffffULL) {}
+	explicit ZT_ALWAYS_INLINE Address(uint64_t a) : _a(a & 0xffffffffffULL) {}
 
 	/**
 	 * @param bits Raw address -- 5 bytes, big-endian byte order
@@ -46,7 +45,6 @@ public:
 	 */
 	ZT_ALWAYS_INLINE Address(const void *bits,unsigned int len) { setTo(bits,len); }
 
-	ZT_ALWAYS_INLINE Address &operator=(const Address &a) { _a = a._a; return *this; }
 	ZT_ALWAYS_INLINE Address &operator=(const uint64_t a) { _a = (a & 0xffffffffffULL); return *this; }
 
 	/**
@@ -137,9 +135,9 @@ public:
 	 */
 	ZT_ALWAYS_INLINE uint8_t operator[](unsigned int i) const { return (uint8_t)(_a >> (32 - (i * 8))); }
 
-	ZT_ALWAYS_INLINE operator unsigned int() const { return (unsigned int)_a; }
-	ZT_ALWAYS_INLINE operator unsigned long() const { return (unsigned long)_a; }
-	ZT_ALWAYS_INLINE operator unsigned long long() const { return (unsigned long long)_a; }
+	explicit ZT_ALWAYS_INLINE operator unsigned int() const { return (unsigned int)_a; }
+	explicit ZT_ALWAYS_INLINE operator unsigned long() const { return (unsigned long)_a; }
+	explicit ZT_ALWAYS_INLINE operator unsigned long long() const { return (unsigned long long)_a; }
 
 	ZT_ALWAYS_INLINE void zero() { _a = 0; }
 

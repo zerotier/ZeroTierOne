@@ -14,10 +14,10 @@
 #ifndef ZT_TRACE_HPP
 #define ZT_TRACE_HPP
 
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdint>
+#include <cstring>
+#include <cstdlib>
 
 #include "../include/ZeroTierOne.h"
 

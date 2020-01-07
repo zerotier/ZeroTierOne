@@ -14,11 +14,11 @@
 #ifndef ZT_UTILS_HPP
 #define ZT_UTILS_HPP
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <time.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdint>
+#include <cstring>
+#include <ctime>
 
 #include <string>
 #include <stdexcept>
@@ -34,7 +34,7 @@ namespace Utils {
 /**
  * Hexadecimal characters 0-f
  */
-const char HEXCHARS[16];
+extern const char HEXCHARS[16];
 
 /**
  * Perform a time-invariant binary comparison
@@ -57,11 +57,6 @@ void burn(void *ptr,unsigned int len);
  * @return String containing 'n' in base 10 form
  */
 char *decimal(unsigned long n,char s[24]);
-
-/**
- * Compute CRC16-CCITT
- */
-uint16_t crc16(const void *buf,unsigned int len);
 
 /**
  * Convert an unsigned integer into hex

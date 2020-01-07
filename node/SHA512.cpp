@@ -1,8 +1,8 @@
 // This code is public domain, taken from a PD crypto source file on GitHub.
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 
 #include "SHA512.hpp"
 #include "Utils.hpp"

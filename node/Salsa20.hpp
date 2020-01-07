@@ -7,10 +7,10 @@
 #ifndef ZT_SALSA20_HPP
 #define ZT_SALSA20_HPP
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 
 #include "Constants.hpp"
 #include "Utils.hpp"
@@ -30,14 +30,14 @@ namespace ZeroTier {
 class Salsa20
 {
 public:
-	inline Salsa20() {}
-	inline ~Salsa20() { Utils::burn(&_state,sizeof(_state)); }
+	ZT_ALWAYS_INLINE Salsa20() {}
+	ZT_ALWAYS_INLINE ~Salsa20() { Utils::burn(&_state,sizeof(_state)); }
 
 	/**
 	 * @param key 256-bit (32 byte) key
 	 * @param iv 64-bit initialization vector
 	 */
-	inline Salsa20(const void *key,const void *iv) { init(key,iv); }
+	ZT_ALWAYS_INLINE Salsa20(const void *key,const void *iv) { init(key,iv); }
 
 	/**
 	 * Initialize cipher

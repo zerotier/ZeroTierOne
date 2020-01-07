@@ -16,10 +16,11 @@
 
 #include "Constants.hpp"
 
+#include <cstdint>
+#include <cstdlib>
+
 #ifdef __UNIX_LIKE__
 
-#include <stdint.h>
-#include <stdlib.h>
 #include <pthread.h>
 
 namespace ZeroTier {
@@ -56,7 +57,6 @@ private:
 
 #ifdef __WINDOWS__
 
-#include <stdlib.h>
 #include <Windows.h>
 
 namespace ZeroTier {

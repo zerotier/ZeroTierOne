@@ -11,7 +11,7 @@
  */
 /****/
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <algorithm>
 

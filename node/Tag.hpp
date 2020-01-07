@@ -14,10 +14,10 @@
 #ifndef ZT_TAG_HPP
 #define ZT_TAG_HPP
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include "Constants.hpp"
 #include "Credential.hpp"

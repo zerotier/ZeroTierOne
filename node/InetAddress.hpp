@@ -14,9 +14,9 @@
 #ifndef ZT_INETADDRESS_HPP
 #define ZT_INETADDRESS_HPP
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
+#include <cstdlib>
+#include <cstring>
+#include <cstdint>
 
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"

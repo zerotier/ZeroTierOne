@@ -27,12 +27,12 @@ template<typename T>
 class ScopedPtr
 {
 public:
-	ZT_ALWAYS_INLINE ScopedPtr(T *const p) : _p(p) {}
+	explicit ZT_ALWAYS_INLINE ScopedPtr(T *const p) : _p(p) {}
 	ZT_ALWAYS_INLINE ~ScopedPtr() { delete _p; }
 
 	ZT_ALWAYS_INLINE T *operator->() const { return _p; }
 	ZT_ALWAYS_INLINE T &operator*() const { return *_p; }
-	ZT_ALWAYS_INLINE operator bool() const { return (_p != (T *)0); }
+	explicit ZT_ALWAYS_INLINE operator bool() const { return (_p != (T *)0); }
 	ZT_ALWAYS_INLINE T *ptr() const { return _p; }
 
 	ZT_ALWAYS_INLINE bool operator==(const ScopedPtr &p) const { return (_p == p._p); }

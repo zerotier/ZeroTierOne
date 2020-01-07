@@ -14,7 +14,7 @@
 #ifndef ZT_NETWORK_HPP
 #define ZT_NETWORK_HPP
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "../include/ZeroTierOne.h"
 

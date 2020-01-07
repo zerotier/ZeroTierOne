@@ -14,9 +14,9 @@
 #ifndef ZT_NETWORKCONFIG_HPP
 #define ZT_NETWORKCONFIG_HPP
 
-#include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cstdint>
+#include <cstring>
+#include <cstdlib>
 
 #include <vector>
 #include <stdexcept>

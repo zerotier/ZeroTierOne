@@ -29,9 +29,8 @@
 #include "Revocation.hpp"
 #include "Trace.hpp"
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cstring>
+#include <cstdlib>
 
 #include <list>
 

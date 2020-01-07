@@ -1,4 +1,2 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<module classpath="CMake" type="WEB_MODULE" version="4">
-  <component name="Go" enabled="true" />
-</module>
+<module classpath="CMake" type="CPP_MODULE" version="4" />

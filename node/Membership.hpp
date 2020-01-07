@@ -14,10 +14,11 @@
 #ifndef ZT_MEMBERSHIP_HPP
 #define ZT_MEMBERSHIP_HPP
 
-#include <stdint.h>
+#include <cstdint>
+
+#include "../include/ZeroTierOne.h"
 
 #include "Constants.hpp"
-#include "../include/ZeroTierOne.h"
 #include "Credential.hpp"
 #include "Hashtable.hpp"
 #include "CertificateOfMembership.hpp"
@@ -96,11 +97,6 @@ public:
 		if (_com.timestamp() <= _comRevocationThreshold) return false; // COM has been revoked
 		return nconf.com.agreesWith(_com); // check timestamp agreement window
 	}
-
-	/**
-	 * @return True if this peer has sent us a valid certificate within ZT_PEER_ACTIVITY_TIMEOUT
-	 */
-	inline bool recentlyAssociated(const int64_t now) const { return ((_com)&&((now - _com.timestamp()) < ZT_PEER_ACTIVITY_TIMEOUT)); }
 
 	/**
 	 * Check whether the peer represented by this Membership owns a given address
