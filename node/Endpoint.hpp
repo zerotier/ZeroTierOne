@@ -44,24 +44,24 @@ public:
 		ETHERNET = 5  // 48-bit LAN-local Ethernet address
 	};
 
-	inline Endpoint() { memset(reinterpret_cast<void *>(this),0,sizeof(Endpoint)); }
+	ZT_ALWAYS_INLINE Endpoint() { memset(reinterpret_cast<void *>(this),0,sizeof(Endpoint)); }
 
-	inline Endpoint(const InetAddress &sa) : _t(INETADDR) { _v.sa = sa; }
-	inline Endpoint(const Address &zt,const uint8_t identityHash[ZT_IDENTITY_HASH_SIZE]) : _t(ZEROTIER) { _v.zt.a = zt.toInt(); memcpy(_v.zt.idh,identityHash,ZT_IDENTITY_HASH_SIZE); }
-	inline Endpoint(const char *name,const int port) : _t(DNSNAME) { Utils::scopy(_v.dns.name,sizeof(_v.dns.name),name); _v.dns.port = port; }
-	inline Endpoint(const char *url) : _t(URL) { Utils::scopy(_v.url,sizeof(_v.url),url); }
+	ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa) : _t(INETADDR) { _v.sa = sa; }
+	ZT_ALWAYS_INLINE Endpoint(const Address &zt,const uint8_t identityHash[ZT_IDENTITY_HASH_SIZE]) : _t(ZEROTIER) { _v.zt.a = zt.toInt(); memcpy(_v.zt.idh,identityHash,ZT_IDENTITY_HASH_SIZE); }
+	ZT_ALWAYS_INLINE Endpoint(const char *name,const int port) : _t(DNSNAME) { Utils::scopy(_v.dns.name,sizeof(_v.dns.name),name); _v.dns.port = port; }
+	ZT_ALWAYS_INLINE Endpoint(const char *url) : _t(URL) { Utils::scopy(_v.url,sizeof(_v.url),url); }
 
-	inline const InetAddress *sockaddr() const { return (_t == INETADDR) ? reinterpret_cast<const InetAddress *>(&_v.sa) : nullptr; }
-	inline const char *dnsName() const { return (_t == DNSNAME) ? _v.dns.name : nullptr; }
-	inline const int dnsPort() const { return (_t == DNSNAME) ? _v.dns.port : -1; }
-	inline Address ztAddress() const { return (_t == ZEROTIER) ? Address(_v.zt.a) : Address(); }
-	inline const uint8_t *ztIdentityHash() const { return (_t == ZEROTIER) ? _v.zt.idh : nullptr; }
-	inline const char *url() const { return (_t == URL) ? _v.url : nullptr; }
-	inline MAC ethernet() const { return (_t == ETHERNET) ? MAC(_v.eth) : MAC(); }
+	ZT_ALWAYS_INLINE const InetAddress *sockaddr() const { return (_t == INETADDR) ? reinterpret_cast<const InetAddress *>(&_v.sa) : nullptr; }
+	ZT_ALWAYS_INLINE const char *dnsName() const { return (_t == DNSNAME) ? _v.dns.name : nullptr; }
+	ZT_ALWAYS_INLINE const int dnsPort() const { return (_t == DNSNAME) ? _v.dns.port : -1; }
+	ZT_ALWAYS_INLINE Address ztAddress() const { return (_t == ZEROTIER) ? Address(_v.zt.a) : Address(); }
+	ZT_ALWAYS_INLINE const uint8_t *ztIdentityHash() const { return (_t == ZEROTIER) ? _v.zt.idh : nullptr; }
+	ZT_ALWAYS_INLINE const char *url() const { return (_t == URL) ? _v.url : nullptr; }
+	ZT_ALWAYS_INLINE MAC ethernet() const { return (_t == ETHERNET) ? MAC(_v.eth) : MAC(); }
 
-	inline Type type() const { return _t; }
+	ZT_ALWAYS_INLINE Type type() const { return _t; }
 
-	static inline int marshalSizeMax() { return ZT_ENDPOINT_MARSHAL_SIZE_MAX; }
+	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_ENDPOINT_MARSHAL_SIZE_MAX; }
 	inline int marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const
 	{
 		int p;

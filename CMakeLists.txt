@@ -1,208 +1,144 @@
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required(VERSION 3.15)
+project(ZeroTierOne)
 
-if(${CMAKE_VERSION} VERSION_LESS 3.15)
-	cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
-else()
-	cmake_policy(VERSION 3.15)
-endif()
+set(CMAKE_CXX_STANDARD 14)
 
-if(WIN32)
-	# If building on Windows, set minimum target to Windows 7
-	set(CMAKE_SYSTEM_VERSION "7" CACHE STRING INTERNAL FORCE)
-endif(WIN32)
+include_directories(controller)
+include_directories(ext)
+include_directories(ext/json)
+include_directories(include)
+include_directories(node)
+include_directories(osdep)
+include_directories(root)
 
-set(ZEROTIER_ONE_VERSION_MAJOR 2 CACHE INTERNAL "")
-set(ZEROTIER_ONE_VERSION_MINOR 0 CACHE INTERNAL "")
-set(ZEROTIER_ONE_VERSION_REVISION 0 CACHE INTERNAL "")
-set(ZEROTIER_ONE_VERSION_BUILD 0 CACHE INTERNAL "")
-
-set(default_build_type "Release")
-if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
-	set(default_build_type "Debug")
-endif()
-
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-	message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
-	set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
-		STRING "Choose the type of build." FORCE)
-	# Set the possible values of build type for cmake-gui
-	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
-		"Debug" "Release" "MinSizeRel" "RelWithDebInfo")
-endif()
-
-option(BUILD_CENTRAL_CONTROLLER "Build ZeroTier Central Controller" OFF)
-option(ZT_TRACE "Trace Messages" OFF)
-option(ZT_DEBUG_TRACE "Debug Trace Messages" OFF)
-
-if (BUILD_CENTRAL_CONTROLLER)
-	find_package(PostgreSQL REQUIRED)
-	set(ENABLE_SSL_SUPPORT OFF)
-	set(BUILD_SHARED_LIBS OFF)
-	set(BUILD_EXAMPLES OFF)
-	set(BUILD_TOOLS OFF)
-	set(BUILD_TESTS OFF)
-	set(BUILD_API_DOCS OFF)
-	add_subdirectory("ext/librabbitmq")
-endif(BUILD_CENTRAL_CONTROLLER)
-
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X Deployment Version")
-
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-	add_definitions(-DZT_TRACE)
-endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
-
-project(zerotier
-	DESCRIPTION "ZeroTier Network Hypervisor"
-	LANGUAGES CXX C)
-
-if(WIN32)
-	add_definitions(-DNOMINMAX)
-else(WIN32)
-	if(APPLE)
-
-		message("Setting macOS Compiler Flags ${CMAKE_BUILD_TYPE}")
-		add_compile_options(
-			-Wall
-			-Wno-deprecated
-			-mmacosx-version-min=10.9
-			$<$<CONFIG:Debug>:-g>
-			$<$<CONFIG:DEBUG>:-O0>
-			$<$<CONFIG:RELEASE>:-Ofast>
-			$<$<CONFIG:RELEASE>:-fPIE>
-			$<$<CONFIG:RELEASE>:-flto>
-			$<$<CONFIG:RELWITHDEBINFO>:-Ofast>
-			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
-			$<$<CONFIG:RELWITHDEBINFO>:-g>
-		)
-		add_link_options(
-			-mmacosx-version-min=10.9
-			$<$<CONFIG:RELEASE>:-flto>
-		)
-
-	elseif (
-		CMAKE_SYSTEM_NAME MATCHES "Linux" OR
-		CMAKE_SYSTEM_NAME MATCHES "FreeBSD" OR
-		CMAKE_SYSTEM_NAME MATCHES "OpenBSD" OR
-		CMAKE_SYSTEM_NAME MATCHES "NetBSD"
-	)
-
-		message("Setting Linux/BSD Compiler Flags (${CMAKE_BUILD_TYPE})")
-		add_compile_options(
-			-Wall
-			-Wno-deprecated
-			$<$<CONFIG:Debug>:-g>
-			$<$<CONFIG:DEBUG>:-O0>
-			$<$<CONFIG:RELEASE>:-O3>
-			$<$<CONFIG:RELEASE>:-fPIE>
-			$<$<CONFIG:RELWITHDEBINFO>:-O3>
-			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
-			$<$<CONFIG:RELWITHDEBINFO>:-g>
-		)
-
-	endif(APPLE)
-endif(WIN32)
-
-if (
-	CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR
-	CMAKE_SYSTEM_PROCESSOR MATCHES "amd64" OR
-	CMAKE_SYSTEM_PROCESSOR MATCHES "i386" OR
-	CMAKE_SYSTEM_PROCESSOR MATCHES "i486" OR
-	CMAKE_SYSTEM_PROCESSOR MATCHES "i586" OR
-	CMAKE_SYSTEM_PROCESSOR MATCHES "i686"
-)
-	message("Adding SSE and AES-NI flags for processor ${CMAKE_SYSTEM_PROCESSOR}")
-	add_compile_options(
-		-maes
-		-mmmx
-		-mrdrnd
-		-mpclmul
-		-msse
-		-msse2
-		-msse3
-		-msse4.1
-	)
-endif()
-
-if(ZT_TRACE)
-	add_definitions(-DZT_TRACE)
-endif()
-if(ZT_DEBUG_TRACE)
-	add_definitions(-DZT_DEBUG_TRACE)
-endif()
-
-add_subdirectory(node)
-add_subdirectory(controller)
-add_subdirectory(osdep)
-add_subdirectory(root)
-add_subdirectory(go/native)
-
-#if(WIN32)
-#	add_subdirectory("windows/WinUI")
-#	add_subdirectory("windows/copyutil")
-#	add_definitions(-DNOMINMAX)
-#endif(WIN32)
-
-set(
-	zt_osdep
-	zt_core
-	zt_controller
-	zt_go_native
-)
-
-configure_file(
-	${CMAKE_SOURCE_DIR}/version.h.in
-	${CMAKE_BINARY_DIR}/version.h
-)
-
-#set(src
-#	one.cpp
-#	"ext/http-parser/http_parser.c"
-#)
-#set(headers
-#	"ext/http-parser/http_parser.h"
-#)
-
-if(WIN32)
-	set(libs ${libs} wsock32 ws2_32 rpcrt4 iphlpapi)
-else(WIN32)
-	set(libs ${libs} pthread)
-endif(WIN32)
-
-#if(WIN32)
-#	set(libs ${libs} wsock32 ws2_32 rpcrt4 iphlpapi)
-#	set(src
-#		${src}
-#		"windows/ZeroTierOne/ServiceBase.cpp"
-#		"windows/ZeroTierOne/ServiceInstaller.cpp"
-#		"windows/ZeroTierOne/ZeroTierOneService.cpp"
-#		"windows/ZeroTierOne/ZeroTierOne.rc"
-#	)
-#	set(headers
-#		${headers}
-#		"windows/ZeroTierOne/ServiceBase.h"
-#		"windows/ZeroTierOne/ServiceInstaller.h"
-#		"windows/ZeroTierOne/ZeroTierOneService.h"
-#	)
-#else(WIN32)
-#	set(libs ${libs} pthread resolv)
-#endif(WIN32)
-
-#if(BUILD_CENTRAL_CONTROLLER)
-#	set(libs ${libs} rabbitmq-static ${PostgreSQL_LIBRARIES})
-#endif(BUILD_CENTRAL_CONTROLLER)
-
-#add_executable(${PROJECT_NAME} ${src} ${headers})
-#target_link_libraries(${PROJECT_NAME} ${libs})
-#target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
-
-add_custom_command(
-	OUTPUT zerotier
-	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/go
-	COMMAND go build -trimpath -ldflags -s -o ../build/zerotier cmd/zerotier/zerotier.go
-	DEPENDS zt_osdep zt_core zt_go_native
-)
-add_custom_target(build_zerotier ALL DEPENDS zerotier)
-
-add_executable(zerotier-selftest selftest.cpp)
-target_link_libraries(zerotier-selftest ${libs} zt_core zt_osdep)
-target_compile_features(zerotier-selftest PUBLIC cxx_std_11)
+add_executable(ZeroTierOne
+        controller/CMakeLists.txt
+        controller/DB.cpp
+        controller/DB.hpp
+        controller/DBMirrorSet.cpp
+        controller/DBMirrorSet.hpp
+        controller/EmbeddedNetworkController.cpp
+        controller/EmbeddedNetworkController.hpp
+        controller/FileDB.cpp
+        controller/FileDB.hpp
+        controller/LFDB.cpp
+        controller/LFDB.hpp
+        controller/PostgreSQL.cpp
+        controller/PostgreSQL.hpp
+        controller/RabbitMQ.cpp
+        controller/RabbitMQ.hpp
+        ext/json/json.hpp
+        include/ZeroTierCore.h
+        include/ZeroTierDebug.h
+        node/Address.hpp
+        node/AES-aesni.c
+        node/AES.cpp
+        node/AES.hpp
+        node/AtomicCounter.hpp
+        node/Buffer.hpp
+        node/C25519.cpp
+        node/C25519.hpp
+        node/Capability.hpp
+        node/CertificateOfMembership.hpp
+        node/CertificateOfOwnership.hpp
+        node/CMakeLists.txt
+        node/Constants.hpp
+        node/Credential.cpp
+        node/Credential.hpp
+        node/Dictionary.hpp
+        node/ECC384.cpp
+        node/ECC384.hpp
+        node/Endpoint.hpp
+        node/Hashtable.hpp
+        node/Identity.cpp
+        node/Identity.hpp
+        node/IncomingPacket.cpp
+        node/IncomingPacket.hpp
+        node/InetAddress.cpp
+        node/InetAddress.hpp
+        node/Locator.hpp
+        node/MAC.hpp
+        node/Membership.cpp
+        node/Membership.hpp
+        node/Meter.hpp
+        node/MulticastGroup.hpp
+        node/Mutex.hpp
+        node/Network.cpp
+        node/Network.hpp
+        node/NetworkConfig.cpp
+        node/NetworkConfig.hpp
+        node/NetworkController.hpp
+        node/Node.cpp
+        node/Node.hpp
+        node/OS.hpp
+        node/Packet.cpp
+        node/Packet.hpp
+        node/Path.cpp
+        node/Path.hpp
+        node/Peer.cpp
+        node/Peer.hpp
+        node/Poly1305.cpp
+        node/Poly1305.hpp
+        node/README.md
+        node/Revocation.hpp
+        node/RingBuffer.hpp
+        node/RuntimeEnvironment.hpp
+        node/Salsa20.cpp
+        node/Salsa20.hpp
+        node/ScopedPtr.hpp
+        node/SelfAwareness.cpp
+        node/SelfAwareness.hpp
+        node/SHA512.cpp
+        node/SHA512.hpp
+        node/SharedPtr.hpp
+        node/Str.hpp
+        node/Switch.cpp
+        node/Switch.hpp
+        node/Tag.hpp
+        node/Topology.hpp
+        node/Trace.cpp
+        node/Trace.hpp
+        node/Utils.cpp
+        node/Utils.hpp
+        osdep/Arp.cpp
+        osdep/Arp.hpp
+        osdep/BlockingQueue.hpp
+        osdep/BSDEthernetTap.cpp
+        osdep/BSDEthernetTap.hpp
+        osdep/CMakeLists.txt
+        osdep/EthernetTap.cpp
+        osdep/EthernetTap.hpp
+        osdep/freebsd_getifmaddrs.c
+        osdep/freebsd_getifmaddrs.h
+        osdep/LinuxEthernetTap.cpp
+        osdep/LinuxEthernetTap.hpp
+        osdep/LinuxNetLink.cpp
+        osdep/LinuxNetLink.hpp
+        osdep/MacEthernetTap.cpp
+        osdep/MacEthernetTap.hpp
+        osdep/MacEthernetTapAgent.c
+        osdep/MacEthernetTapAgent.h
+        osdep/MacKextEthernetTap.cpp
+        osdep/MacKextEthernetTap.hpp
+        osdep/ManagedRoute.cpp
+        osdep/ManagedRoute.hpp
+        osdep/NeighborDiscovery.cpp
+        osdep/NeighborDiscovery.hpp
+        osdep/NetBSDEthernetTap.cpp
+        osdep/NetBSDEthernetTap.hpp
+        osdep/OSUtils.cpp
+        osdep/OSUtils.hpp
+        osdep/README.md
+        osdep/Thread.hpp
+        osdep/WindowsEthernetTap.cpp
+        osdep/WindowsEthernetTap.hpp
+        root/CMakeLists.txt
+        root/geoip-html.h
+        root/root.cpp
+        AUTHORS.md
+        CMakeLists.txt
+        LICENSE.txt
+        OFFICIAL-RELEASE-STEPS.md
+        README.md
+        RELEASE-NOTES.md
+        selftest.cpp)

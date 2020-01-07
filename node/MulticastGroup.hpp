@@ -41,8 +41,8 @@ namespace ZeroTier {
 class MulticastGroup
 {
 public:
-	inline MulticastGroup() : _mac(),_adi(0) {}
-	inline MulticastGroup(const MAC &m,uint32_t a) : _mac(m),_adi(a) {}
+	ZT_ALWAYS_INLINE MulticastGroup() : _mac(),_adi(0) {}
+	ZT_ALWAYS_INLINE MulticastGroup(const MAC &m,uint32_t a) : _mac(m),_adi(a) {}
 
 	/**
 	 * Derive the multicast group used for address resolution (ARP/NDP) for an IP
@@ -50,7 +50,7 @@ public:
 	 * @param ip IP address (port field is ignored)
 	 * @return Multicast group for ARP/NDP
 	 */
-	static inline MulticastGroup deriveMulticastGroupForAddressResolution(const InetAddress &ip)
+	static ZT_ALWAYS_INLINE MulticastGroup deriveMulticastGroupForAddressResolution(const InetAddress &ip)
 	{
 		if (ip.isV4()) {
 			// IPv4 wants broadcast MACs, so we shove the V4 address itself into
@@ -72,37 +72,16 @@ public:
 	/**
 	 * @return Ethernet MAC portion of multicast group
 	 */
-	inline const MAC &mac() const { return _mac; }
+	ZT_ALWAYS_INLINE const MAC &mac() const { return _mac; }
 
 	/**
 	 * @return Additional distinguishing information, which is normally zero except for IPv4 ARP where it's the IPv4 address
 	 */
-	inline uint32_t adi() const { return _adi; }
+	ZT_ALWAYS_INLINE uint32_t adi() const { return _adi; }
 
-	/**
-	 * @return 32-bit non-cryptographic hash ID of this multicast group
-	 */
-	inline uint32_t id() const
-	{
-		uint64_t m = _mac.toInt();
-		uint32_t x1 = _adi;
-		uint32_t x2 = (uint32_t)(m >> 32);
-		uint32_t x3 = (uint32_t)m;
-		x1 = ((x1 >> 16) ^ x1) * 0x45d9f3b;
-		x2 = ((x2 >> 16) ^ x2) * 0x45d9f3b;
-		x3 = ((x3 >> 16) ^ x3) * 0x45d9f3b;
-		x1 = ((x1 >> 16) ^ x1) * 0x45d9f3b;
-		x2 = ((x2 >> 16) ^ x2) * 0x45d9f3b;
-		x3 = ((x3 >> 16) ^ x3) * 0x45d9f3b;
-		x1 = (x1 >> 16) ^ x1;
-		x2 = (x2 >> 16) ^ x2;
-		x3 = (x3 >> 16) ^ x3;
-		return (x1 ^ x2 ^ x3);
-	}
-
-	inline bool operator==(const MulticastGroup &g) const { return ((_mac == g._mac)&&(_adi == g._adi)); }
-	inline bool operator!=(const MulticastGroup &g) const { return ((_mac != g._mac)||(_adi != g._adi)); }
-	inline bool operator<(const MulticastGroup &g) const
+	ZT_ALWAYS_INLINE bool operator==(const MulticastGroup &g) const { return ((_mac == g._mac)&&(_adi == g._adi)); }
+	ZT_ALWAYS_INLINE bool operator!=(const MulticastGroup &g) const { return ((_mac != g._mac)||(_adi != g._adi)); }
+	ZT_ALWAYS_INLINE bool operator<(const MulticastGroup &g) const
 	{
 		if (_mac < g._mac)
 			return true;
@@ -110,11 +89,11 @@ public:
 			return (_adi < g._adi);
 		return false;
 	}
-	inline bool operator>(const MulticastGroup &g) const { return (g < *this); }
-	inline bool operator<=(const MulticastGroup &g) const { return !(g < *this); }
-	inline bool operator>=(const MulticastGroup &g) const { return !(*this < g); }
+	ZT_ALWAYS_INLINE bool operator>(const MulticastGroup &g) const { return (g < *this); }
+	ZT_ALWAYS_INLINE bool operator<=(const MulticastGroup &g) const { return !(g < *this); }
+	ZT_ALWAYS_INLINE bool operator>=(const MulticastGroup &g) const { return !(*this < g); }
 
-	inline unsigned long hashCode() const { return (_mac.hashCode() ^ (unsigned long)_adi); }
+	ZT_ALWAYS_INLINE unsigned long hashCode() const { return (_mac.hashCode() ^ (unsigned long)_adi); }
 
 private:
 	MAC _mac;

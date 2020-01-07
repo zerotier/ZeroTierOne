@@ -29,7 +29,7 @@ namespace ZeroTier {
 class Meter
 {
 public:
-	inline Meter()
+	ZT_ALWAYS_INLINE Meter()
 	{
 		for(int i=0;i<ZT_METER_HISTORY_LENGTH;++i)
 			_history[i] = 0.0;
@@ -38,7 +38,7 @@ public:
 	}
 
 	template<typename I>
-	inline void log(const int64_t now,I count)
+	ZT_ALWAYS_INLINE void log(const int64_t now,I count)
 	{
 		const int64_t since = now - _ts;
 		if (since >= ZT_METER_HISTORY_TICK_DURATION) {
@@ -50,7 +50,7 @@ public:
 		}
 	}
 
-	inline double perSecond(const int64_t now) const
+	ZT_ALWAYS_INLINE double perSecond(const int64_t now) const
 	{
 		double r = 0.0,n = 0.0;
 		const int64_t since = (now - _ts);

@@ -187,7 +187,7 @@ public:
 
 	ZT_ALWAYS_INLINE unsigned long hashCode() const { return (unsigned long)_m; }
 
-	ZT_ALWAYS_INLINE char *toString(char buf[18]) const
+	inline char *toString(char buf[18]) const
 	{
 		buf[0] = Utils::HEXCHARS[(_m >> 44) & 0xf];
 		buf[1] = Utils::HEXCHARS[(_m >> 40) & 0xf];

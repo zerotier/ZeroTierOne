@@ -89,21 +89,7 @@ static inline char *hex(I x,char *s)
  * @param s Buffer of size [11] to receive 10 hex characters
  * @return Pointer to buffer
  */
-static inline char *hex10(uint64_t i,char s[11])
-{
-	s[0] = HEXCHARS[(i >> 36) & 0xf];
-	s[1] = HEXCHARS[(i >> 32) & 0xf];
-	s[2] = HEXCHARS[(i >> 28) & 0xf];
-	s[3] = HEXCHARS[(i >> 24) & 0xf];
-	s[4] = HEXCHARS[(i >> 20) & 0xf];
-	s[5] = HEXCHARS[(i >> 16) & 0xf];
-	s[6] = HEXCHARS[(i >> 12) & 0xf];
-	s[7] = HEXCHARS[(i >> 8) & 0xf];
-	s[8] = HEXCHARS[(i >> 4) & 0xf];
-	s[9] = HEXCHARS[i & 0xf];
-	s[10] = (char)0;
-	return s;
-}
+char *hex10(uint64_t i,char s[11]);
 
 /**
  * Convert a byte array into hex
@@ -113,19 +99,17 @@ static inline char *hex10(uint64_t i,char s[11])
  * @param s String buffer, must be at least (l*2)+1 in size or overflow will occur
  * @return Pointer to filled string buffer
  */
-static inline char *hex(const void *d,unsigned int l,char *s)
-{
-	char *const save = s;
-	for(unsigned int i=0;i<l;++i) {
-		const unsigned int b = reinterpret_cast<const uint8_t *>(d)[i];
-		*(s++) = HEXCHARS[b >> 4];
-		*(s++) = HEXCHARS[b & 0xf];
-	}
-	*s = (char)0;
-	return save;
-}
+char *hex(const void *d,unsigned int l,char *s);
 
-unsigned int unhex(const char *h,void *buf,unsigned int buflen);
+/**
+ * Decode a hex string
+ *
+ * @param h Hex C-string (non hex chars are ignored)
+ * @param hlen Maximum length of string (will stop at terminating zero)
+ * @param buf Output buffer
+ * @param buflen Length of output buffer
+ * @return Number of written bytes
+ */
 unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen);
 
 /**
@@ -164,6 +148,19 @@ int b32d(const char *encoded, uint8_t *result, int bufSize);
  * Get a non-cryptographic random integer
  */
 uint64_t random();
+
+/**
+ * Perform a safe C string copy, ALWAYS null-terminating the result
+ *
+ * This will never ever EVER result in dest[] not being null-terminated
+ * regardless of any input parameter (other than len==0 which is invalid).
+ *
+ * @param dest Destination buffer (must not be NULL)
+ * @param len Length of dest[] (if zero, false is returned and nothing happens)
+ * @param src Source string (if NULL, dest will receive a zero-length string and true is returned)
+ * @return True on success, false on overflow (buffer will still be 0-terminated)
+ */
+bool scopy(char *dest,unsigned int len,const char *src);
 
 static ZT_ALWAYS_INLINE float normalize(float value, int64_t bigMin, int64_t bigMax, int32_t targetMin, int32_t targetMax)
 {
@@ -231,19 +228,6 @@ static ZT_ALWAYS_INLINE long long hexStrTo64(const char *s)
 }
 
 /**
- * Perform a safe C string copy, ALWAYS null-terminating the result
- *
- * This will never ever EVER result in dest[] not being null-terminated
- * regardless of any input parameter (other than len==0 which is invalid).
- *
- * @param dest Destination buffer (must not be NULL)
- * @param len Length of dest[] (if zero, false is returned and nothing happens)
- * @param src Source string (if NULL, dest will receive a zero-length string and true is returned)
- * @return True on success, false on overflow (buffer will still be 0-terminated)
- */
-bool scopy(char *dest,unsigned int len,const char *src);
-
-/**
  * Calculate a non-cryptographic hash of a byte string
  *
  * @param key Key to hash
@@ -281,11 +265,21 @@ static ZT_ALWAYS_INLINE unsigned int countBits(T v)
 }
 #endif
 
-// Byte swappers for big/little endian conversion
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 static ZT_ALWAYS_INLINE uint8_t hton(uint8_t n) { return n; }
 static ZT_ALWAYS_INLINE int8_t hton(int8_t n) { return n; }
-static ZT_ALWAYS_INLINE uint16_t hton(uint16_t n) { return htons(n); }
+static ZT_ALWAYS_INLINE uint16_t hton(uint16_t n)
+{
+#if defined(__GNUC__)
+#if defined(__FreeBSD__)
+	return htons(n);
+#elif (!defined(__OpenBSD__))
+	return __builtin_bswap16(n);
+#endif
+#else
+	return htons(n);
+#endif
+}
 static ZT_ALWAYS_INLINE int16_t hton(int16_t n) { return (int16_t)Utils::hton((uint16_t)n); }
 static ZT_ALWAYS_INLINE uint32_t hton(uint32_t n)
 {
@@ -330,7 +324,18 @@ static ZT_ALWAYS_INLINE T hton(T n) { return n; }
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 static ZT_ALWAYS_INLINE uint8_t ntoh(uint8_t n) { return n; }
 static ZT_ALWAYS_INLINE int8_t ntoh(int8_t n) { return n; }
-static ZT_ALWAYS_INLINE uint16_t ntoh(uint16_t n) { return ntohs(n); }
+static ZT_ALWAYS_INLINE uint16_t ntoh(uint16_t n)
+{
+#if defined(__GNUC__)
+#if defined(__FreeBSD__)
+	return htons(n);
+#elif (!defined(__OpenBSD__))
+	return __builtin_bswap16(n);
+#endif
+#else
+	return htons(n);
+#endif
+}
 static ZT_ALWAYS_INLINE int16_t ntoh(int16_t n) { return (int16_t)Utils::ntoh((uint16_t)n); }
 static ZT_ALWAYS_INLINE uint32_t ntoh(uint32_t n)
 {

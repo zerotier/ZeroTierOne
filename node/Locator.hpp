@@ -35,12 +35,12 @@ namespace ZeroTier {
 class Locator
 {
 public:
-	inline Locator() : _ts(0),_endpointCount(0),_signatureLength(0) {}
+	ZT_ALWAYS_INLINE Locator() : _ts(0),_endpointCount(0),_signatureLength(0) {}
 
 	/**
 	 * @return Timestamp (a.k.a. revision number) set by Location signer
 	 */
-	inline int64_t timestamp() const { return _ts; }
+	ZT_ALWAYS_INLINE int64_t timestamp() const { return _ts; }
 
 	/**
 	 * Create and sign a Locator
@@ -85,10 +85,10 @@ public:
 		return id.verify(signData,signLen,_signature,_signatureLength);
 	}
 
-	inline operator bool() const { return (_ts != 0); }
+	ZT_ALWAYS_INLINE operator bool() const { return (_ts != 0); }
 
 	// Marshal interface ///////////////////////////////////////////////////////
-	static inline int marshalSizeMax() { return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
+	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
 	inline int marshal(uint8_t restrict data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool excludeSignature = false) const
 	{
 		if ((_endpointCount > ZT_LOCATOR_MAX_ENDPOINTS)||(_signatureLength > ZT_SIGNATURE_BUFFER_SIZE))

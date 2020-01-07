@@ -32,11 +32,6 @@
 #define ZT_ADDRESS_LENGTH 5
 
 /**
- * Length of a hexadecimal ZeroTier address
- */
-#define ZT_ADDRESS_LENGTH_HEX 10
-
-/**
  * Addresses beginning with this byte are reserved for the joy of in-band signaling
  */
 #define ZT_ADDRESS_RESERVED_PREFIX 0xff
@@ -130,30 +125,6 @@
  * Period for multicast LIKE re-announcements to connected nodes
  */
 #define ZT_MULTICAST_ANNOUNCE_PERIOD 60000
-
-/**
- * Period for multicast GATHER on multicast groups
- */
-#define ZT_MULTICAST_GATHER_PERIOD ZT_MULTICAST_ANNOUNCE_PERIOD
-
-/**
- * Period for multicast GATHER if there are no known recipients
- */
-#define ZT_MULTICAST_GATHER_PERIOD_WHEN_NO_RECIPIENTS 2500
-
-/**
- * Timeout for outgoing multicasts
- *
- * This is how long we wait for explicit or implicit gather results.
- */
-#define ZT_MULTICAST_TRANSMIT_TIMEOUT 5000
-
-/**
- * How frequently to check for changes to the system's network interfaces. When
- * the service decides to use this constant it's because we want to react more
- * quickly to new interfaces that pop up or go down.
- */
-#define ZT_MULTIPATH_BINDER_REFRESH_PERIOD 5000
 
 /**
  * Packets are only used for QoS/ACK statistical sampling if their packet ID is divisible by
@@ -320,11 +291,6 @@
 #define ZT_QOS_DEFAULT_BUCKET 0
 
 /**
- * Do not accept HELLOs over a given path more often than this
- */
-#define ZT_PATH_HELLO_RATE_LIMIT 1000
-
-/**
  * Delay between full-fledge pings of directly connected peers
  *
  * See https://conferences.sigcomm.org/imc/2010/papers/p260.pdf for
@@ -347,21 +313,6 @@
 #else
 #define ZT_PEER_ACTIVITY_TIMEOUT 30000
 #endif
-
-/**
- * Rescan for best/fastest root every N milliseconds
- */
-#define ZT_FIND_BEST_ROOT_PERIOD 2000
-
-/**
- * General rate limit timeout for multiple packet types (HELLO, etc.)
- */
-#define ZT_PEER_GENERAL_INBOUND_RATE_LIMIT 500
-
-/**
- * General limit for max RTT for requests over the network
- */
-#define ZT_GENERAL_RTT_LIMIT 5000
 
 /**
  * Delay between requests for updated network autoconf information
@@ -477,7 +428,7 @@
  */
 #define ZT_THREAD_MIN_STACK_SIZE 1048576
 
-// Internal cryptographic algorithm IDs
+// Internal cryptographic algorithm IDs (these match relevant identity types)
 #define ZT_CRYPTO_ALG_C25519 0
 #define ZT_CRYPTO_ALG_P384 1
 
@@ -490,5 +441,10 @@
 #define ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW 201
 #define ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN 202
 #define ZT_EXCEPTION_INVALID_SERIALIZED_DATA_BAD_ENCODING 203
+
+/* Ethernet frame types that might be relevant to us */
+#define ZT_ETHERTYPE_IPV4 0x0800
+#define ZT_ETHERTYPE_ARP 0x0806
+#define ZT_ETHERTYPE_IPV6 0x86dd
 
 #endif

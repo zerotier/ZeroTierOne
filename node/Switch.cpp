@@ -125,6 +125,8 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 					return;
 
 				if (destination != RR->identity.address()) {
+					// This packet is not for this node, so possibly relay it ----------
+
 					Packet packet(data,len);
 					if (packet.hops() < ZT_RELAY_MAX_HOPS) {
 						packet.incrementHops();
@@ -146,8 +148,9 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 							}
 						}
 					}
+
 				} else if ((reinterpret_cast<const uint8_t *>(data)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED) != 0) {
-					// Packet is the head of a fragmented packet series
+					// Packet is the head of a fragmented packet series ----------------
 
 					const uint64_t packetId = (
 						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[0]) << 56) |
@@ -172,10 +175,10 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 						rq->haveFragments = 1;
 						rq->complete = false;
 					} else if (!(rq->haveFragments & 1)) {
-						// If we have other fragments but no head, see if we are complete with the head
+						// Check if packet is complete -----------------------------------
 
 						if ((rq->totalFragments > 1)&&(Utils::countBits(rq->haveFragments |= 1) == rq->totalFragments)) {
-							// We have all fragments -- assemble and process full Packet
+							// We have all fragments -- assemble and process full Packet ---
 
 							rq->frag0.init(data,len,path,now);
 							for(unsigned int f=1;f<rq->totalFragments;++f)
@@ -186,13 +189,17 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 							} else {
 								rq->complete = true; // set complete flag but leave entry since it probably needs WHOIS or something
 							}
+
 						} else {
-							// Still waiting on more fragments, but keep the head
+							// Still waiting on more fragments, but keep the head ----------
+
 							rq->frag0.init(data,len,path,now);
+
 						}
 					} // else this is a duplicate head, ignore
 				} else {
-					// Packet is unfragmented, so just process it
+
+					// Packet is unfragmented, so just process it ----------------------
 					IncomingPacket packet(data,len,path,now);
 					if (!packet.tryDecode(RR,tPtr)) {
 						RXQueueEntry *const rq = _nextRXQueueEntry();
@@ -204,6 +211,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 						rq->haveFragments = 1;
 						rq->complete = true;
 					}
+
 				}
 
 				// --------------------------------------------------------------------
@@ -364,10 +372,12 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			len);
 		*/
 	} else if (to == network->mac()) {
-		// Destination is this node, so just reinject it
+		// Destination is this node, so just reinject it -------------------------
+
 		RR->node->putFrame(tPtr,network->id(),network->userPtr(),from,to,etherType,vlanId,data,len);
+
 	} else if (to[0] == MAC::firstOctetForNetwork(network->id())) {
-		// Destination is another ZeroTier peer on the same network
+		// Destination is another ZeroTier peer on the same network --------------
 
 		Address toZT(to.toAddress(network->id())); // since in-network MACs are derived from addresses and network IDs, we can reverse this
 		SharedPtr<Peer> toPeer(RR->topology->get(toZT));
@@ -400,7 +410,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			aqm_enqueue(tPtr,network,outp,true,qosBucket);
 		}
 	} else {
-		// Destination is bridged behind a remote peer
+		// Destination is bridged behind a remote peer ---------------------------
 
 		// We filter with a NULL destination ZeroTier address first. Filtrations
 		// for each ZT destination are also done below. This is the same rationale

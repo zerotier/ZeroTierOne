@@ -161,7 +161,7 @@ public:
 	 * @tparam F Function or function object type
 	 */
 	template<typename F>
-	inline void eachPeer(F f)
+	ZT_ALWAYS_INLINE void eachPeer(F f)
 	{
 		Mutex::Lock l(_peers_l);
 		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
@@ -191,7 +191,7 @@ public:
 	/**
 	 * @param allPeers vector to fill with all current peers
 	 */
-	inline void getAllPeers(std::vector< SharedPtr<Peer> > &allPeers) const
+	ZT_ALWAYS_INLINE void getAllPeers(std::vector< SharedPtr<Peer> > &allPeers) const
 	{
 		Mutex::Lock l(_peers_l);
 		allPeers.clear();
