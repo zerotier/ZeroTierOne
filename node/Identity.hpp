@@ -56,8 +56,8 @@ public:
 		P384 = ZT_CRYPTO_ALG_P384      // Type 1 -- NIST P-384 with linked Curve25519/Ed25519 secondaries (2.x+)
 	};
 
-	inline Identity() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
-	inline ~Identity() { Utils::burn(reinterpret_cast<void *>(&this->_priv),sizeof(this->_priv)); }
+	ZT_ALWAYS_INLINE Identity() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
+	ZT_ALWAYS_INLINE ~Identity() { Utils::burn(reinterpret_cast<void *>(&this->_priv),sizeof(this->_priv)); }
 
 	/**
 	 * Construct identity from string
@@ -67,20 +67,17 @@ public:
 	 *
 	 * @param str Identity in canonical string format
 	 */
-	inline Identity(const char *str) { fromString(str); }
-
-	template<unsigned int C>
-	inline Identity(const Buffer<C> &b,unsigned int startAt = 0) { deserialize(b,startAt); }
+	ZT_ALWAYS_INLINE Identity(const char *str) { fromString(str); }
 
 	/**
 	 * Set identity to NIL value (all zero)
 	 */
-	inline void zero() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
+	ZT_ALWAYS_INLINE void zero() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
 
 	/**
 	 * @return Identity type (undefined if identity is null or invalid)
 	 */
-	inline Type type() const { return _type; }
+	ZT_ALWAYS_INLINE Type type() const { return _type; }
 
 	/**
 	 * Generate a new identity (address, key pair)
@@ -101,7 +98,7 @@ public:
 	/**
 	 * @return True if this identity contains a private key
 	 */
-	inline bool hasPrivate() const { return _hasPrivate; }
+	ZT_ALWAYS_INLINE bool hasPrivate() const { return _hasPrivate; }
 
 	/**
 	 * This generates a SHA384 hash of this identity's keys.
@@ -244,7 +241,7 @@ public:
 	/**
 	 * @return This identity's address
 	 */
-	inline const Address &address() const { return _address; }
+	ZT_ALWAYS_INLINE const Address &address() const { return _address; }
 
 	/**
 	 * Serialize this identity (binary)
@@ -371,9 +368,9 @@ public:
 	/**
 	 * @return True if this identity contains something
 	 */
-	inline operator bool() const { return (_address); }
+	ZT_ALWAYS_INLINE operator bool() const { return (_address); }
 
-	inline bool operator==(const Identity &id) const
+	ZT_ALWAYS_INLINE bool operator==(const Identity &id) const
 	{
 		if ((_address == id._address)&&(_type == id._type)) {
 			switch(_type) {
@@ -384,7 +381,7 @@ public:
 		}
 		return false;
 	}
-	inline bool operator<(const Identity &id) const
+	ZT_ALWAYS_INLINE bool operator<(const Identity &id) const
 	{
 		if (_address < id._address)
 			return true;
@@ -401,15 +398,15 @@ public:
 		}
 		return false;
 	}
-	inline bool operator!=(const Identity &id) const { return !(*this == id); }
-	inline bool operator>(const Identity &id) const { return (id < *this); }
-	inline bool operator<=(const Identity &id) const { return !(id < *this); }
-	inline bool operator>=(const Identity &id) const { return !(*this < id); }
+	ZT_ALWAYS_INLINE bool operator!=(const Identity &id) const { return !(*this == id); }
+	ZT_ALWAYS_INLINE bool operator>(const Identity &id) const { return (id < *this); }
+	ZT_ALWAYS_INLINE bool operator<=(const Identity &id) const { return !(id < *this); }
+	ZT_ALWAYS_INLINE bool operator>=(const Identity &id) const { return !(*this < id); }
 
-	inline unsigned long hashCode() const { return ((unsigned long)_address.toInt() + (unsigned long)_pub.c25519[0] + (unsigned long)_pub.c25519[1] + (unsigned long)_pub.c25519[2]); }
+	ZT_ALWAYS_INLINE unsigned long hashCode() const { return ((unsigned long)_address.toInt() + (unsigned long)_pub.c25519[0] + (unsigned long)_pub.c25519[1] + (unsigned long)_pub.c25519[2]); }
 
 	// Marshal interface ///////////////////////////////////////////////////////
-	static inline int marshalSizeMax() { return ZT_IDENTITY_MARSHAL_SIZE_MAX; }
+	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_IDENTITY_MARSHAL_SIZE_MAX; }
 	inline int marshal(uint8_t restrict data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool includePrivate = false) const
 	{
 		_address.copyTo(data,ZT_ADDRESS_LENGTH);

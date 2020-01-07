@@ -140,21 +140,25 @@ unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen
 void getSecureRandom(void *buf,unsigned int bytes);
 
 /**
- * Get a 64-bit unsigned secure random number
+ * Encode string to base32
+ *
+ * @param data Binary data to encode
+ * @param length Length of data in bytes
+ * @param result Result buffer
+ * @param bufSize Size of result buffer
+ * @return Number of bytes written
  */
-static ZT_ALWAYS_INLINE uint64_t getSecureRandom64()
-{
-	uint64_t x;
-	getSecureRandom(&x,sizeof(x));
-	return x;
-}
-
 int b32e(const uint8_t *data,int length,char *result,int bufSize);
-int b32d(const char *encoded, uint8_t *result, int bufSize);
 
-static ZT_ALWAYS_INLINE unsigned int b64MaxEncodedSize(const unsigned int s) { return ((((s + 2) / 3) * 4) + 1); }
-unsigned int b64e(const uint8_t *in,unsigned int inlen,char *out,unsigned int outlen);
-unsigned int b64d(const char *in,uint8_t *out,unsigned int outlen);
+/**
+ * Decode base32 string
+ *
+ * @param encoded C-string in base32 format (non-base32 characters are ignored)
+ * @param result Result buffer
+ * @param bufSize Size of result buffer
+ * @return Number of bytes written or -1 on error
+ */
+int b32d(const char *encoded, uint8_t *result, int bufSize);
 
 /**
  * Get a non-cryptographic random integer
@@ -239,18 +243,34 @@ static ZT_ALWAYS_INLINE long long hexStrTo64(const char *s)
  */
 bool scopy(char *dest,unsigned int len,const char *src);
 
+/**
+ * Calculate a non-cryptographic hash of a byte string
+ *
+ * @param key Key to hash
+ * @param len Length in bytes
+ * @return Non-cryptographic hash suitable for use in a hash table
+ */
+static unsigned long ZT_ALWAYS_INLINE hashString(const void *restrict key,const unsigned int len)
+{
+	const uint8_t *p = reinterpret_cast<const uint8_t *>(key);
+	unsigned long h = 0;
+	for (unsigned int i=0;i<len;++i) {
+		h += p[i];
+		h += (h << 10);
+		h ^= (h >> 6);
+	}
+	h += (h << 3);
+	h ^= (h >> 11);
+	h += (h << 15);
+	return h;
+}
+
 #ifdef __GNUC__
 static ZT_ALWAYS_INLINE unsigned int countBits(const uint8_t v) { return (unsigned int)__builtin_popcount((unsigned int)v); }
 static ZT_ALWAYS_INLINE unsigned int countBits(const uint16_t v) { return (unsigned int)__builtin_popcount((unsigned int)v); }
 static ZT_ALWAYS_INLINE unsigned int countBits(const uint32_t v) { return (unsigned int)__builtin_popcountl((unsigned long)v); }
 static ZT_ALWAYS_INLINE unsigned int countBits(const uint64_t v) { return (unsigned int)__builtin_popcountll((unsigned long long)v); }
 #else
-/**
- * Count the number of bits set in an integer
- *
- * @param v Unsigned integer
- * @return Number of bits set in this integer (0-bits in integer)
- */
 template<typename T>
 static ZT_ALWAYS_INLINE unsigned int countBits(T v)
 {

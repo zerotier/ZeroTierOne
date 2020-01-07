@@ -367,83 +367,11 @@ int b32d(const char *encoded,uint8_t *result,int bufSize)
   return count;
 }
 
-unsigned int b64e(const uint8_t *in,unsigned int inlen,char *out,unsigned int outlen)
+static uint64_t _secureRandom64()
 {
-	static const char base64en[64] = { 'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/' };
-	unsigned int i = 0,j = 0;
-	uint8_t l = 0;
-	int s = 0;
-	for (;i<inlen;++i) {
-		uint8_t c = in[i];
-		switch (s) {
-		case 0:
-			s = 1;
-			if (j >= outlen) return 0;
-			out[j++] = base64en[(c >> 2) & 0x3f];
-			break;
-		case 1:
-			s = 2;
-			if (j >= outlen) return 0;
-			out[j++] = base64en[((l & 0x3) << 4) | ((c >> 4) & 0xf)];
-			break;
-		case 2:
-			s = 0;
-			if (j >= outlen) return 0;
-			out[j++] = base64en[((l & 0xf) << 2) | ((c >> 6) & 0x3)];
-			if (j >= outlen) return 0;
-			out[j++] = base64en[c & 0x3f];
-			break;
-		}
-		l = c;
-	}
-	switch (s) {
-	case 1:
-		if (j >= outlen) return 0;
-		out[j++] = base64en[(l & 0x3) << 4];
-		//out[j++] = '=';
-		//out[j++] = '=';
-		break;
-	case 2:
-		if (j >= outlen) return 0;
-		out[j++] = base64en[(l & 0xf) << 2];
-		//out[j++] = '=';
-		break;
-	}
-	if (j >= outlen) return 0;
-	out[j] = 0;
-	return j;
-}
-
-unsigned int b64d(const char *in,unsigned char *out,unsigned int outlen)
-{
-	static const uint8_t base64de[256] = { 255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,62,255,255,255,63,52,53,54,55,56,57,58,59,60,61,255,255,255,255,255,255,255,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,255,255,255,255,255,255,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,255,255,255,255,255 };
-	unsigned int i = 0;
-	unsigned int j = 0;
-	while ((in[i] != '=')&&(in[i] != 0)) {
-		if (j >= outlen)
-			break;
-		uint8_t c = base64de[(unsigned char)in[i]];
-		if (c != 255) {
-			switch (i & 0x3) {
-				case 0:
-					out[j] = (c << 2) & 0xff;
-					break;
-				case 1:
-					out[j++] |= (c >> 4) & 0x3;
-					out[j] = (c & 0xf) << 4;
-					break;
-				case 2:
-					out[j++] |= (c >> 2) & 0xf;
-					out[j] = (c & 0x3) << 6;
-					break;
-				case 3:
-					out[j++] |= c;
-					break;
-			}
-		}
-		++i;
-	}
-	return j;
+	uint64_t tmp = 0;
+	getSecureRandom(&tmp,sizeof(tmp));
+	return tmp;
 }
 
 #define ROL64(x,k) (((x) << (k)) | ((x) >> (64 - (k))))
@@ -451,10 +379,10 @@ uint64_t random()
 {
 	// https://en.wikipedia.org/wiki/Xorshift#xoshiro256**
 	static Mutex l;
-	static uint64_t s0 = Utils::getSecureRandom64();
-	static uint64_t s1 = Utils::getSecureRandom64();
-	static uint64_t s2 = Utils::getSecureRandom64();
-	static uint64_t s3 = Utils::getSecureRandom64();
+	static uint64_t s0 = _secureRandom64();
+	static uint64_t s1 = _secureRandom64();
+	static uint64_t s2 = _secureRandom64();
+	static uint64_t s3 = _secureRandom64();
 
 	l.lock();
 	const uint64_t result = ROL64(s1 * 5,7) * 9;

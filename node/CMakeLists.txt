@@ -29,6 +29,7 @@ set(core_headers
 	Network.hpp
 	NetworkConfig.hpp
 	Node.hpp
+	OS.hpp
 	Packet.hpp
 	Path.hpp
 	Peer.hpp

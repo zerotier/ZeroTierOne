@@ -426,25 +426,27 @@ public:
 		 *   <[...] physical destination address of packet>
 		 *   [... begin encrypted region ...]
 		 *   <[2] 16-bit reserved (legacy) field, always 0>
-		 *   <[2] 16-bit length of locator>
-		 *   <[...] locator for this node>
 		 *   <[2] 16-bit length of meta-data dictionary>
 		 *   <[...] meta-data dictionary>
+		 *   [... end encrypted region ...]
+		 *   <[48] HMAC-SHA384 of all fields to this point (as plaintext)>
 		 *
-		 * HELLO is sent in the clear as it is how peers share their identity
-		 * public keys.
+		 * HELLO is sent with authentication but without the usual encryption so
+		 * that peers can exchange identities.
 		 *
 		 * Destination address is the actual wire address to which the packet
 		 * was sent. See InetAddress::serialize() for format.
 		 *
 		 * Starting at "begin encrypted section" the reset of the packet is
-		 * encrypted with Salsa20/12. This encryption is technically not
-		 * absolutely required for security as nothing in this packet is
-		 * very sensitive, but hiding the locator and other meta-data slightly
-		 * improves privacy.
+		 * encrypted with Salsa20/12. This is not the normal packet encryption
+		 * and is technically not necessary as nothing in HELLO is secret. It
+		 * exists merely to shield meta-data info from passive listeners to
+		 * slightly improve privacy, and for backward compatibility with older
+		 * nodes that required it.
 		 *
-		 * The 16-bit zero after encryption starts is for backward compatibility
-		 * with pre-2.0 nodes.
+		 * HELLO (and its OK response) ends with a large 384-bit HMAC to allow
+		 * identity exchanges to be authenticated with additional strength beyond
+		 * ordinary packet authentication.
 		 *
 		 * OK payload:
 		 *   <[8] HELLO timestamp field echo>
@@ -453,7 +455,10 @@ public:
 		 *   <[1] software minor version>
 		 *   <[2] software revision>
 		 *   <[...] physical destination address of packet>
-		 *   <[2] 16-bit reserved field, always 0>
+		 *   <[2] 16-bit reserved (legacy) field, always 0>
+		 *   <[2] 16-bit length of meta-data dictionary>
+		 *   <[...] meta-data dictionary>
+		 *   <[48] HMAC-SHA384 of all fields to this point (as plaintext)>
 		 *
 		 * With the exception of the timestamp, the other fields pertain to the
 		 * respondent who is sending OK and are not echoes.
@@ -858,56 +863,19 @@ public:
 		VERB_USER_MESSAGE = 0x14,
 
 		/**
-		 * Peer-to-peer propagated multicast packet:
-		 *   <[128] 1024-bit bloom filter>
-		 *   <[2] 16-bit perturbation coefficient to minimize bloom collisions>
-		 *   <[5] 40-bit start of range of recipient addresses>
-		 *   <[5] 40-bit end of range of recipient addresses>
+		 * Encapsulate a ZeroTier packet for multicast distribution:
 		 *   [... begin signed portion ...]
 		 *   <[1] 8-bit flags>
 		 *   <[5] 40-bit ZeroTier address of sender>
-		 *   <[8] 64-bit network ID>
-		 *   <[6] MAC address of multicast group>
-		 *   <[4] 32-bit ADI for multicast group>
-		 *   <[6] MAC address of sender>
-		 *   <[2] 16-bit ethertype>
-		 *   <[2] 16-bit length of ethernet payload>
-		 *   <[...] ethernet payload>
+		 *   <[2] 16-bit length of inner payload>
+		 *   <[1] inner payload verb>
+		 *   <[...] inner payload data>
 		 *   [... end signed portion ...]
-		 *   <[2] 16-bit length of signature or 0 if unsigned>
+		 *   <[2] 16-bit length of signature or 0 if un-signed>
 		 *  [<[...] optional signature of multicast>]
-		 *
-		 * This packet contains a multicast that is to be peer-to-peer replicated.
-		 * The range of recipient addresses is a subset of the global list of
-		 * subscribers to this multicast group. As the packet is propagated bits
-		 * in the bloom filter will be set. The sender may attempt to select a
-		 * perturbation coefficient to prevent collisions within the selected
-		 * recipient range.
+		 *   <[...] address (min prefix) list>
 		 */
 		VERB_MULTICAST = 0x16,
-
-		/**
-		 * Negotiate a new ephemeral key:
-		 *   <[48] SHA384 of ephemeral key we currently have for recipient>
-		 *  [<[...] sender's ephemeral key>]
-		 *
-		 * REKEY is used to negotiate ephemeral keys. The first byte is a step
-		 * number from 0 to 2. Here's a new session initiated by Alice:
-		 *
-		 * Alice: REKEY[0x000...,AliceKey]        -> Bob
-		 * Bob:   REKEY[SHA384(AliceKey),BobKey]  -> Alice
-		 * Alice: REKEY[SHA384(BobKey),(omitted)] -> Bob
-		 *
-		 * REKEY messages will continue until both sides have acknowledged each
-		 * others' keys. Either Alice or Bob can send REKEY to negotiate a new
-		 * ephemeral key pair at any time.
-		 *
-		 * OK isn't used because this is an ongoing handshake until both sides
-		 * agree on a key. REKEY triggers a REKEY in reply if the hash for the
-		 * recipient's ephemeral public key doesn't match the ephemeral key it
-		 * wants to use.
-		 */
-		VERB_REKEY = 0x17,
 
 		/**
 		 * Encapsulate a full ZeroTier packet in another:
@@ -918,7 +886,7 @@ public:
 		 * where endpoint privacy is desired. Multiply nested ENCAP packets
 		 * could allow ZeroTier to act as an onion router.
 		 */
-		VERB_ENCAP = 0x18
+		VERB_ENCAP = 0x17
 
 		// protocol max: 0x1f
 	};
