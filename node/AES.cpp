@@ -11,8 +11,8 @@
  */
 /****/
 
-#include "AES.hpp"
 #include "Constants.hpp"
+#include "AES.hpp"
 
 // This file contains the software implementations of AES and GHASH. They're
 // only used if your CPU lacks hardware acceleration as the hardware

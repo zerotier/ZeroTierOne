@@ -49,6 +49,7 @@ set(core_headers
 )
 
 set(core_src
+	AES.cpp
 	C25519.cpp
 	Credential.cpp
 	ECC384.cpp

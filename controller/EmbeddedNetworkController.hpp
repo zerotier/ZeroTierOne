@@ -132,7 +132,6 @@ private:
 	std::string _ztPath;
 	std::string _path;
 	Identity _signingId;
-	uint8_t _signingIdHash[48];
 	std::string _signingIdAddressString;
 	NetworkController::Sender *_sender;
 

@@ -31,7 +31,6 @@ add_executable(ZeroTierOne
         include/ZeroTierCore.h
         include/ZeroTierDebug.h
         node/Address.hpp
-        node/AES-aesni.c
         node/AES.cpp
         node/AES.hpp
         node/AtomicCounter.hpp

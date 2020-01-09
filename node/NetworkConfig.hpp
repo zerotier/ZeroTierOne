@@ -142,8 +142,6 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_FLAGS "f"
 // integer(hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT "ml"
-// integer(hex)
-#define ZT_NETWORKCONFIG_DICT_KEY_TOKEN "k"
 // network type (hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_TYPE "t"
 // text
@@ -341,11 +339,6 @@ struct NetworkConfig
 	 * Flags (64-bit)
 	 */
 	uint64_t flags;
-
-	/**
-	 * Token (64-bit token known only to network members)
-	 */
-	uint64_t token;
 
 	/**
 	 * Network MTU

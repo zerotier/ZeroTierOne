@@ -232,8 +232,8 @@ public:
 private:
 	RuntimeEnvironment _RR;
 	RuntimeEnvironment *RR;
-	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P
 	ZT_Node_Callbacks _cb;
+	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P
 
 	// For tracking packet IDs to filter out OK/ERROR replies to packets we did not send
 	uint8_t _expectingRepliesToBucketPtr[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1];
@@ -257,7 +257,6 @@ private:
 	};
 	Hashtable< _LocalControllerAuth,int64_t > _localControllerAuthorizations;
 	Hashtable< uint64_t,SharedPtr<Network> > _networks;
-	SharedPtr< const Locator > _locator;
 	std::vector< ZT_InterfaceAddress > _localInterfaceAddresses;
 
 	Mutex _localControllerAuthorizations_m;

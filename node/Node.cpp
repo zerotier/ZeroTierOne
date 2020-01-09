@@ -11,16 +11,13 @@
  */
 /****/
 
-#include <cstdio>
 #include <cstdlib>
-#include <cstdarg>
 #include <cstring>
 #include <cstdint>
 
 #include "Constants.hpp"
 #include "SharedPtr.hpp"
 #include "Node.hpp"
-#include "RuntimeEnvironment.hpp"
 #include "NetworkController.hpp"
 #include "Switch.hpp"
 #include "Topology.hpp"
@@ -43,6 +40,7 @@ namespace ZeroTier {
 Node::Node(void *uPtr, void *tPtr, const struct ZT_Node_Callbacks *callbacks, int64_t now) :
 	_RR(this),
 	RR(&_RR),
+	_cb(*callbacks),
 	_uPtr(uPtr),
 	_networks(8),
 	_now(now),
@@ -52,8 +50,6 @@ Node::Node(void *uPtr, void *tPtr, const struct ZT_Node_Callbacks *callbacks, in
 	_lastDynamicRootUpdate(0),
 	_online(false)
 {
-	memcpy(&_cb,callbacks,sizeof(ZT_Node_Callbacks));
-
 	memset(_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
 	memset(_expectingRepliesTo,0,sizeof(_expectingRepliesTo));
 	memset(_lastIdentityVerification,0,sizeof(_lastIdentityVerification));
@@ -95,11 +91,11 @@ Node::Node(void *uPtr, void *tPtr, const struct ZT_Node_Callbacks *callbacks, in
 		const unsigned long topologys = sizeof(Topology) + (((sizeof(Topology) & 0xf) != 0) ? (16 - (sizeof(Topology) & 0xf)) : 0);
 		const unsigned long sas = sizeof(SelfAwareness) + (((sizeof(SelfAwareness) & 0xf) != 0) ? (16 - (sizeof(SelfAwareness) & 0xf)) : 0);
 
-		m = reinterpret_cast<char *>(::malloc(16 + ts + sws + topologys + sas));
+		m = reinterpret_cast<char *>(malloc(16 + ts + sws + topologys + sas));
 		if (!m)
 			throw std::bad_alloc();
 		RR->rtmem = m;
-		while (((uintptr_t)m & 0xf) != 0) ++m;
+		while (((uintptr_t)m & 0xfU) != 0) ++m;
 
 		RR->t = new (m) Trace(RR);
 		m += ts;
@@ -172,6 +168,10 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 // This function object is run past every peer every ZT_PEER_PING_PERIOD.
 struct _processBackgroundTasks_ping_eachPeer
 {
+	int64_t now;
+	Node *parent;
+	void *tPtr;
+	bool online;
 	ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Peer> &peer,const bool isRoot)
 	{
 		unsigned int v4SendCount = 0,v6SendCount = 0;
@@ -198,10 +198,6 @@ struct _processBackgroundTasks_ping_eachPeer
 
 		return true;
 	}
-	int64_t now;
-	Node *parent;
-	void *tPtr;
-	bool online;
 };
 
 ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int64_t *nextBackgroundTaskDeadline)

@@ -232,7 +232,7 @@ bool Identity::fromString(const char *str)
 				switch(_type) {
 
 					case C25519:
-						if (Utils::unhex(f,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN) != ZT_C25519_PUBLIC_KEY_LEN) {
+						if (Utils::unhex(f,strlen(f),_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN) != ZT_C25519_PUBLIC_KEY_LEN) {
 							_address.zero();
 							return false;
 						}
@@ -253,7 +253,7 @@ bool Identity::fromString(const char *str)
 					switch(_type) {
 
 						case C25519:
-							if (Utils::unhex(f,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN) != ZT_C25519_PRIVATE_KEY_LEN) {
+							if (Utils::unhex(f,strlen(f),_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN) != ZT_C25519_PRIVATE_KEY_LEN) {
 								_address.zero();
 								return false;
 							} else {

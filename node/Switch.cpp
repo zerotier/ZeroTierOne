@@ -428,7 +428,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 		std::vector<Address> activeBridges;
 		for(unsigned int i=0;i<network->config().specialistCount;++i) {
 			if ((network->config().specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)
-				activeBridges.push_back(network->config().specialists[i]);
+				activeBridges.push_back(Address(network->config().specialists[i]));
 		}
 		if ((bridges[0])&&(bridges[0] != RR->identity.address())&&(network->config().permitsBridging(bridges[0]))) {
 			/* We have a known bridge route for this MAC, send it there. */
@@ -893,11 +893,11 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 		if (!viaPath) {
 			if (peer->rateGateTryStaticPath(now)) {
 				InetAddress tryAddr;
-				bool gotPath = RR->node->externalPathLookup(tPtr,peer->address(),AF_INET6,tryAddr);
+				bool gotPath = RR->node->externalPathLookup(tPtr,peer->identity(),AF_INET6,tryAddr);
 				if ((gotPath)&&(tryAddr)) {
 					peer->sendHELLO(tPtr,-1,tryAddr,now);
 				} else {
-					gotPath = RR->node->externalPathLookup(tPtr,peer->address(),AF_INET,tryAddr);
+					gotPath = RR->node->externalPathLookup(tPtr,peer->identity(),AF_INET,tryAddr);
 					if ((gotPath)&&(tryAddr))
 						peer->sendHELLO(tPtr,-1,tryAddr,now);
 				}
