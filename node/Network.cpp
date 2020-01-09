@@ -384,14 +384,13 @@ static _doZtFilterResult _doZtFilter(
 					} else if ((etherType == ZT_ETHERTYPE_ARP)&&(frameLen >= 28)) {
 						src.set((const void *)(frameData + 14),4,0);
 					}
-					if (inbound) {
-						if (membership) {
-							if ((src)&&(membership->hasCertificateOfOwnershipFor<InetAddress>(nconf,src)))
-								ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_IP_AUTHENTICATED;
-							if (membership->hasCertificateOfOwnershipFor<MAC>(nconf,macSource))
-								ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_MAC_AUTHENTICATED;
-						}
-					} else {
+					if (membership) {
+						if ((src)&&(membership->hasCertificateOfOwnershipFor<InetAddress>(nconf,src)))
+							ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_IP_AUTHENTICATED;
+						if (membership->hasCertificateOfOwnershipFor<MAC>(nconf,macSource))
+							ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_MAC_AUTHENTICATED;
+					}
+					if (!inbound) {
 						for(unsigned int i=0;i<nconf.certificateOfOwnershipCount;++i) {
 							if ((src)&&(nconf.certificatesOfOwnership[i].owns(src)))
 								ownershipVerificationMask |= ZT_RULE_PACKET_CHARACTERISTICS_SENDER_IP_AUTHENTICATED;
