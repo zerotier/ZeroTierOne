@@ -31,8 +31,6 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 option(BUILD_CENTRAL_CONTROLLER "Build ZeroTier Central Controller" OFF)
-option(ZT_TRACE "Trace Messages" OFF)
-option(ZT_DEBUG_TRACE "Debug Trace Messages" OFF)
 
 if (BUILD_CENTRAL_CONTROLLER)
 	find_package(PostgreSQL REQUIRED)

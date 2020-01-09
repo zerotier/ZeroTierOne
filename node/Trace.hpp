@@ -57,15 +57,8 @@ public:
 	public:
 		ZT_ALWAYS_INLINE RuleResultLog() { this->clear(); }
 
-		ZT_ALWAYS_INLINE void log(const unsigned int rn,const uint8_t thisRuleMatches,const uint8_t thisSetMatches)
-		{
-			_l[rn >> 1U] |= ( ((thisRuleMatches + 1U) << 2U) | (thisSetMatches + 1U) ) << ((rn & 1U) << 2U);
-		}
-		ZT_ALWAYS_INLINE void logSkipped(const unsigned int rn,const uint8_t thisSetMatches)
-		{
-			_l[rn >> 1U] |= (thisSetMatches + 1U) << ((rn & 1U) << 2U);
-		}
-
+		ZT_ALWAYS_INLINE void log(const unsigned int rn,const uint8_t thisRuleMatches,const uint8_t thisSetMatches) { _l[rn >> 1U] |= ( ((thisRuleMatches + 1U) << 2U) | (thisSetMatches + 1U) ) << ((rn & 1U) << 2U); }
+		ZT_ALWAYS_INLINE void logSkipped(const unsigned int rn,const uint8_t thisSetMatches) { _l[rn >> 1U] |= (thisSetMatches + 1U) << ((rn & 1U) << 2U); }
 		ZT_ALWAYS_INLINE void clear() { memset(_l,0,sizeof(_l)); }
 
 		ZT_ALWAYS_INLINE const uint8_t *data() const { return _l; }
