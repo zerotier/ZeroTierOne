@@ -30,8 +30,6 @@
 #include "Hashtable.hpp"
 #include "Mutex.hpp"
 
-#define ZT_PEER_MAX_SERIALIZED_STATE_SIZE (sizeof(Peer) + 32 + (sizeof(Path) * 2))
-
 namespace ZeroTier {
 
 /**
@@ -45,7 +43,7 @@ private:
 	inline Peer() {} // disabled to prevent bugs -- should not be constructed uninitialized
 
 public:
-	inline ~Peer() { Utils::burn(_key,sizeof(_key)); }
+	ZT_ALWAYS_INLINE ~Peer() { Utils::burn(_key,sizeof(_key)); }
 
 	/**
 	 * Construct a new peer
@@ -60,12 +58,12 @@ public:
 	/**
 	 * @return This peer's ZT address (short for identity().address())
 	 */
-	inline const Address &address() const { return _id.address(); }
+	ZT_ALWAYS_INLINE const Address &address() const { return _id.address(); }
 
 	/**
 	 * @return This peer's identity
 	 */
-	inline const Identity &identity() const { return _id; }
+	ZT_ALWAYS_INLINE const Identity &identity() const { return _id; }
 
 	/**
 	 * Log receipt of an authenticated packet
@@ -85,13 +83,13 @@ public:
 	void received(
 		void *tPtr,
 		const SharedPtr<Path> &path,
-		const unsigned int hops,
-		const uint64_t packetId,
-		const unsigned int payloadLength,
-		const Packet::Verb verb,
-		const uint64_t inRePacketId,
-		const Packet::Verb inReVerb,
-		const uint64_t networkId);
+		unsigned int hops,
+		uint64_t packetId,
+		unsigned int payloadLength,
+		Packet::Verb verb,
+		uint64_t inRePacketId,
+		Packet::Verb inReVerb,
+		uint64_t networkId);
 
 	/**
 	 * Check whether we have an active path to this peer via the given address
@@ -122,7 +120,7 @@ public:
 	 * @param force If true, send even if path is not alive
 	 * @return True if we actually sent something
 	 */
-	inline bool sendDirect(void *tPtr,const void *data,unsigned int len,int64_t now,bool force)
+	ZT_ALWAYS_INLINE bool sendDirect(void *tPtr,const void *data,unsigned int len,int64_t now,bool force)
 	{
 		SharedPtr<Path> bp(getAppropriatePath(now,force));
 		if (bp)
@@ -139,7 +137,7 @@ public:
 	 * @param verb Packet verb
 	 * @param now Current time
 	 */
-	void recordOutgoingPacket(const SharedPtr<Path> &path, const uint64_t packetId, uint16_t payloadLength, const Packet::Verb verb, int64_t now);
+	void recordOutgoingPacket(const SharedPtr<Path> &path, uint64_t packetId, uint16_t payloadLength, const Packet::Verb verb, int64_t now);
 
 	/**
 	 * Record statistics on incoming packets
@@ -150,7 +148,7 @@ public:
 	 * @param verb Packet verb
 	 * @param now Current time
 	 */
-	void recordIncomingPacket(void *tPtr, const SharedPtr<Path> &path, const uint64_t packetId, uint16_t payloadLength, const Packet::Verb verb, int64_t now);
+	void recordIncomingPacket(void *tPtr, const SharedPtr<Path> &path, uint64_t packetId, uint16_t payloadLength, const Packet::Verb verb, int64_t now);
 
 	/**
 	 * Send an ACK to peer for the most recent packets received
@@ -160,7 +158,7 @@ public:
 	 * @param atAddress Destination for the ACK packet
 	 * @param now Current time
 	 */
-	void sendACK(void *tPtr, const SharedPtr<Path> &path, const int64_t localSocket,const InetAddress &atAddress,int64_t now);
+	void sendACK(void *tPtr, const SharedPtr<Path> &path, int64_t localSocket,const InetAddress &atAddress,int64_t now);
 
 	/**
 	 * Send a QoS packet to peer so that it can evaluate the quality of this link
@@ -170,7 +168,7 @@ public:
 	 * @param atAddress Destination for the QoS packet
 	 * @param now Current time
 	 */
-	void sendQOS_MEASUREMENT(void *tPtr, const SharedPtr<Path> &path, const int64_t localSocket,const InetAddress &atAddress,int64_t now);
+	void sendQOS_MEASUREMENT(void *tPtr, const SharedPtr<Path> &path, int64_t localSocket,const InetAddress &atAddress,int64_t now);
 
 	/**
 	 * Compute relative quality values and allocations for the components of the aggregate link
@@ -217,7 +215,7 @@ public:
 	/**
 	 * Send VERB_RENDEZVOUS to this and another peer via the best common IP scope and path
 	 */
-	void introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &other) const;
+	void introduce(void *tPtr,int64_t now,const SharedPtr<Peer> &other) const;
 
 	/**
 	 * Send a HELLO to this peer at a specified physical address
@@ -229,7 +227,7 @@ public:
 	 * @param atAddress Destination address
 	 * @param now Current time
 	 */
-	void sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now);
+	void sendHELLO(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
 
 	/**
 	 * Send pings to active paths
@@ -276,17 +274,17 @@ public:
 	/**
 	 * @return Time of last receive of anything, whether direct or relayed
 	 */
-	inline int64_t lastReceive() const { return _lastReceive; }
+	ZT_ALWAYS_INLINE int64_t lastReceive() const { return _lastReceive; }
 
 	/**
 	 * @return True if we've heard from this peer in less than ZT_PEER_ACTIVITY_TIMEOUT
 	 */
-	inline bool alive(const int64_t now) const { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
+	ZT_ALWAYS_INLINE bool alive(const int64_t now) const { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Latency in milliseconds of best/aggregate path or 0xffff if unknown / no paths
 	 */
-	inline unsigned int latency(const int64_t now)
+	ZT_ALWAYS_INLINE unsigned int latency(const int64_t now)
 	{
 		if (_canUseMultipath) {
 			return (int)computeAggregateLinkMeanLatency();
@@ -299,31 +297,9 @@ public:
 	}
 
 	/**
-	 * This computes a quality score for relays and root servers
-	 *
-	 * If we haven't heard anything from these in ZT_PEER_ACTIVITY_TIMEOUT, they
-	 * receive the worst possible quality (max unsigned int). Otherwise the
-	 * quality is a product of latency and the number of potential missed
-	 * pings. This causes roots and relays to switch over a bit faster if they
-	 * fail.
-	 *
-	 * @return Relay quality score computed from latency and other factors, lower is better
-	 */
-	inline unsigned int relayQuality(const int64_t now)
-	{
-		const uint64_t tsr = now - _lastReceive;
-		if (tsr >= ZT_PEER_ACTIVITY_TIMEOUT)
-			return (~(unsigned int)0);
-		unsigned int l = latency(now);
-		if (!l)
-			l = 0xffff;
-		return (l * (((unsigned int)tsr / (ZT_PEER_PING_PERIOD + 1000)) + 1));
-	}
-
-	/**
 	 * @return 256-bit secret symmetric encryption key
 	 */
-	inline const unsigned char *key() const { return _key; }
+	ZT_ALWAYS_INLINE const unsigned char *key() const { return _key; }
 
 	/**
 	 * Set the currently known remote version of this peer's client
@@ -333,7 +309,7 @@ public:
 	 * @param vmin Minor version
 	 * @param vrev Revision
 	 */
-	inline void setRemoteVersion(unsigned int vproto,unsigned int vmaj,unsigned int vmin,unsigned int vrev)
+	ZT_ALWAYS_INLINE void setRemoteVersion(unsigned int vproto,unsigned int vmaj,unsigned int vmin,unsigned int vrev)
 	{
 		_vProto = (uint16_t)vproto;
 		_vMajor = (uint16_t)vmaj;
@@ -341,11 +317,11 @@ public:
 		_vRevision = (uint16_t)vrev;
 	}
 
-	inline unsigned int remoteVersionProtocol() const { return _vProto; }
-	inline unsigned int remoteVersionMajor() const { return _vMajor; }
-	inline unsigned int remoteVersionMinor() const { return _vMinor; }
-	inline unsigned int remoteVersionRevision() const { return _vRevision; }
-	inline bool remoteVersionKnown() const { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
+	ZT_ALWAYS_INLINE unsigned int remoteVersionProtocol() const { return _vProto; }
+	ZT_ALWAYS_INLINE unsigned int remoteVersionMajor() const { return _vMajor; }
+	ZT_ALWAYS_INLINE unsigned int remoteVersionMinor() const { return _vMinor; }
+	ZT_ALWAYS_INLINE unsigned int remoteVersionRevision() const { return _vRevision; }
+	ZT_ALWAYS_INLINE bool remoteVersionKnown() const { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
 
 	/**
 	 * Periodically update known multipath activation constraints. This is done so that we know when and when

@@ -368,7 +368,7 @@ public:
 	/**
 	 * @return True if this identity contains something
 	 */
-	ZT_ALWAYS_INLINE operator bool() const { return (_address); }
+	explicit ZT_ALWAYS_INLINE operator bool() const { return (_address); }
 
 	ZT_ALWAYS_INLINE bool operator==(const Identity &id) const
 	{
@@ -407,7 +407,7 @@ public:
 
 	// Marshal interface ///////////////////////////////////////////////////////
 	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_IDENTITY_MARSHAL_SIZE_MAX; }
-	inline int marshal(uint8_t restrict data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool includePrivate = false) const
+	inline int marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool includePrivate = false) const
 	{
 		_address.copyTo(data,ZT_ADDRESS_LENGTH);
 		switch(_type) {

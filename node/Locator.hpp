@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <vector>
+#include <cstdint>
 
 #include "Constants.hpp"
 #include "Endpoint.hpp"
@@ -35,7 +36,12 @@ namespace ZeroTier {
 class Locator
 {
 public:
-	ZT_ALWAYS_INLINE Locator() : _ts(0),_endpointCount(0),_signatureLength(0) {}
+	ZT_ALWAYS_INLINE Locator() { this->clear(); }
+
+	/**
+	 * Zero the Locator data structure
+	 */
+	ZT_ALWAYS_INLINE void clear() { memset(reinterpret_cast<void *>(this),0,sizeof(Locator)); }
 
 	/**
 	 * @return Timestamp (a.k.a. revision number) set by Location signer
@@ -43,31 +49,42 @@ public:
 	ZT_ALWAYS_INLINE int64_t timestamp() const { return _ts; }
 
 	/**
-	 * Create and sign a Locator
-	 *
-	 * @param ts Timestamp
-	 * @param id Identity (must include secret to allow signing)
-	 * @param at Array of Endpoint objects specifying where this peer might be found
-	 * @param endpointCount Number of endpoints (max: ZT_LOCATOR_MAX_ENDPOINTS)
-	 * @return True if init and sign were successful
+	 * @return True if locator is signed
 	 */
-	inline bool create(const int64_t ts,const Identity &id,const Endpoint *restrict at,const unsigned int endpointCount)
+	ZT_ALWAYS_INLINE bool isSigned() const { return (_signatureLength > 0); }
+
+	/**
+	 * Add an endpoint to this locator if not already present
+	 *
+	 * @param ep Endpoint to add
+	 * @return True if endpoint was added (or already present), false if locator is full
+	 */
+	inline bool add(const Endpoint &ep)
 	{
-		if ((endpointCount > ZT_LOCATOR_MAX_ENDPOINTS)||(!id.hasPrivate()))
+		if (_endpointCount >= ZT_LOCATOR_MAX_ENDPOINTS)
+			return false;
+		if (!std::binary_search(_at,_at + _endpointCount,ep)) {
+			_at[_endpointCount++] = ep;
+			std::sort(_at,_at + _endpointCount);
+		}
+		return true;
+	}
+
+	/**
+	 * Sign this locator
+	 *
+	 * @param id Identity that includes private key
+	 * @return True if signature successful
+	 */
+	inline bool sign(const int64_t ts,const Identity &id)
+	{
+		uint8_t signData[ZT_LOCATOR_MARSHAL_SIZE_MAX];
+		if (!id.hasPrivate())
 			return false;
 		_ts = ts;
-		for(unsigned int i=0;i<endpointCount;++i)
-			_at[i] = at[i];
-		_endpointCount = endpointCount;
-
-		uint8_t signData[ZT_LOCATOR_MARSHAL_SIZE_MAX];
 		const unsigned int signLen = marshal(signData,true);
-		if (signLen == 0)
-			return false;
-		if ((_signatureLength = id.sign(signData,signLen,_signature,sizeof(_signature))) == 0)
-			return false;
-
-		return true;
+		_signatureLength = id.sign(signData, signLen, _signature, sizeof(_signature));
+		return (_signatureLength > 0);
 	}
 
 	/**
@@ -85,26 +102,19 @@ public:
 		return id.verify(signData,signLen,_signature,_signatureLength);
 	}
 
-	ZT_ALWAYS_INLINE operator bool() const { return (_ts != 0); }
+	explicit ZT_ALWAYS_INLINE operator bool() const { return (_ts != 0); }
 
 	// Marshal interface ///////////////////////////////////////////////////////
 	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
-	inline int marshal(uint8_t restrict data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool excludeSignature = false) const
+	inline int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool excludeSignature = false) const
 	{
 		if ((_endpointCount > ZT_LOCATOR_MAX_ENDPOINTS)||(_signatureLength > ZT_SIGNATURE_BUFFER_SIZE))
 			return -1;
 
-		data[0] = (uint8_t)((uint64_t)_ts >> 56);
-		data[1] = (uint8_t)((uint64_t)_ts >> 48);
-		data[2] = (uint8_t)((uint64_t)_ts >> 40);
-		data[3] = (uint8_t)((uint64_t)_ts >> 32);
-		data[4] = (uint8_t)((uint64_t)_ts >> 24);
-		data[5] = (uint8_t)((uint64_t)_ts >> 16);
-		data[6] = (uint8_t)((uint64_t)_ts >> 8);
-		data[7] = (uint8_t)((uint64_t)_ts);
+		Utils::putUInt64(data,(uint64_t)_ts);
 		int p = 8;
 
-		data[p++] = (uint8_t)(_endpointCount >> 8);
+		data[p++] = (uint8_t)(_endpointCount >> 8U);
 		data[p++] = (uint8_t)_endpointCount;
 		for(unsigned int i=0;i<_endpointCount;++i) {
 			int tmp = _at[i].marshal(data + p);
@@ -114,10 +124,10 @@ public:
 		}
 
 		if (!excludeSignature) {
-			data[p++] = (uint8_t)(_signatureLength >> 8);
+			data[p++] = (uint8_t)(_signatureLength >> 8U);
 			data[p++] = (uint8_t)_signatureLength;
 			memcpy(data + p,_signature,_signatureLength);
-			p += _signatureLength;
+			p += (int)_signatureLength;
 		}
 
 		return p;
@@ -127,21 +137,13 @@ public:
 		if (len <= (8 + 48))
 			return -1;
 
-		uint64_t ts = ((uint64_t)data[0] << 56);
-		ts |= ((uint64_t)data[1] << 48);
-		ts |= ((uint64_t)data[2] << 40);
-		ts |= ((uint64_t)data[3] << 32);
-		ts |= ((uint64_t)data[4] << 24);
-		ts |= ((uint64_t)data[5] << 16);
-		ts |= ((uint64_t)data[6] << 8);
-		ts |= (uint64_t)data[7];
-		_ts = (int64_t)ts;
+		_ts = (int64_t)Utils::readUInt64(data);
 		int p = 8;
 
 		if ((p + 2) > len)
 			return -1;
 		unsigned int ec = (int)data[p++];
-		ec <<= 8;
+		ec <<= 8U;
 		ec |= data[p++];
 		if (ec > ZT_LOCATOR_MAX_ENDPOINTS)
 			return -1;
@@ -156,7 +158,7 @@ public:
 		if ((p + 2) > len)
 			return -1;
 		unsigned int sl = data[p++];
-		sl <<= 8;
+		sl <<= 8U;
 		sl |= data[p++];
 		if (sl > ZT_SIGNATURE_BUFFER_SIZE)
 			return -1;

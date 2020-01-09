@@ -372,6 +372,41 @@ template<typename T>
 static ZT_ALWAYS_INLINE T ntoh(T n) { return n; }
 #endif
 
+static ZT_ALWAYS_INLINE uint64_t readUInt64(const void *const p)
+{
+#ifdef ZT_NO_TYPE_PUNNING
+	const uint8_t *const b = reinterpret_cast<const uint8_t *>(p);
+	return (
+		((uint64_t)b[0] << 56) |
+		((uint64_t)b[1] << 48) |
+		((uint64_t)b[2] << 40) |
+		((uint64_t)b[3] << 32) |
+		((uint64_t)b[4] << 24) |
+		((uint64_t)b[5] << 16) |
+		((uint64_t)b[6] << 8) |
+		(uint64_t)b[7]);
+#else
+	return ntoh(*reinterpret_cast<const uint64_t *>(p));
+#endif
+}
+
+static ZT_ALWAYS_INLINE void putUInt64(void *const p,const uint64_t i)
+{
+#ifdef ZT_NO_TYPE_PUNNING
+	uint8_t *const b = reinterpret_cast<uint8_t *>(p);
+	p[0] = (uint8_t)(i << 56);
+	p[1] = (uint8_t)(i << 48);
+	p[2] = (uint8_t)(i << 40);
+	p[3] = (uint8_t)(i << 32);
+	p[4] = (uint8_t)(i << 24);
+	p[5] = (uint8_t)(i << 16);
+	p[6] = (uint8_t)(i << 8);
+	p[7] = (uint8_t)i;
+#else
+	*reinterpret_cast<uint64_t *>(p) = Utils::hton(i);
+#endif
+}
+
 } // namespace Utils
 
 } // namespace ZeroTier

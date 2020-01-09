@@ -28,6 +28,7 @@
 #include "Utils.hpp"
 #include "RingBuffer.hpp"
 #include "Packet.hpp"
+#include "Mutex.hpp"
 
 /**
  * Maximum return value of preferenceRank()
@@ -52,9 +53,9 @@ public:
 	class HashKey
 	{
 	public:
-		inline HashKey() {}
+		ZT_ALWAYS_INLINE HashKey() {}
 
-		inline HashKey(const int64_t l,const InetAddress &r)
+		ZT_ALWAYS_INLINE HashKey(const int64_t l,const InetAddress &r)
 		{
 			if (r.ss_family == AF_INET) {
 				_k[0] = (uint64_t)reinterpret_cast<const struct sockaddr_in *>(&r)->sin_addr.s_addr;
@@ -69,10 +70,10 @@ public:
 			}
 		}
 
-		inline unsigned long hashCode() const { return (unsigned long)(_k[0] + _k[1] + _k[2]); }
+		ZT_ALWAYS_INLINE unsigned long hashCode() const { return (unsigned long)(_k[0] + _k[1] + _k[2]); }
 
-		inline bool operator==(const HashKey &k) const { return ( (_k[0] == k._k[0]) && (_k[1] == k._k[1]) && (_k[2] == k._k[2]) ); }
-		inline bool operator!=(const HashKey &k) const { return (!(*this == k)); }
+		ZT_ALWAYS_INLINE bool operator==(const HashKey &k) const { return ( (_k[0] == k._k[0]) && (_k[1] == k._k[1]) && (_k[2] == k._k[2]) ); }
+		ZT_ALWAYS_INLINE bool operator!=(const HashKey &k) const { return (!(*this == k)); }
 
 	private:
 		uint64_t _k[3];

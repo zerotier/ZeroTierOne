@@ -14,7 +14,6 @@
 #ifndef ZT_SHAREDPTR_HPP
 #define ZT_SHAREDPTR_HPP
 
-#include "Mutex.hpp"
 #include "AtomicCounter.hpp"
 
 namespace ZeroTier {

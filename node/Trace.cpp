@@ -13,8 +13,8 @@
 
 //#define ZT_TRACE
 
-#include <stdio.h>
-#include <stdarg.h>
+#include <cstdio>
+#include <cstdarg>
 
 #include "Trace.hpp"
 #include "RuntimeEnvironment.hpp"

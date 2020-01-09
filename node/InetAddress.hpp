@@ -18,8 +18,9 @@
 #include <cstring>
 #include <cstdint>
 
-#include "Constants.hpp"
 #include "../include/ZeroTierOne.h"
+
+#include "Constants.hpp"
 #include "Utils.hpp"
 #include "MAC.hpp"
 #include "Buffer.hpp"
@@ -464,16 +465,16 @@ struct InetAddress : public sockaddr_storage
 		unsigned long h = 0;
 		switch(ss_family) {
 			case AF_INET:
-				h = (Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr) & 0xffffff00) >> 8;
-				h ^= (h >> 14);
+				h = (Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr) & 0xffffff00U) >> 8U;
+				h ^= (h >> 14U);
 				break;
 			case AF_INET6: {
 				const uint8_t *ip = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
-				h = ((unsigned long)ip[0]); h <<= 1;
-				h += ((unsigned long)ip[1]); h <<= 1;
-				h += ((unsigned long)ip[2]); h <<= 1;
-				h += ((unsigned long)ip[3]); h <<= 1;
-				h += ((unsigned long)ip[4]); h <<= 1;
+				h = ((unsigned long)ip[0]); h <<= 1U;
+				h += ((unsigned long)ip[1]); h <<= 1U;
+				h += ((unsigned long)ip[2]); h <<= 1U;
+				h += ((unsigned long)ip[3]); h <<= 1U;
+				h += ((unsigned long)ip[4]); h <<= 1U;
 				h += ((unsigned long)ip[5]);
 			}	break;
 		}
@@ -483,30 +484,31 @@ struct InetAddress : public sockaddr_storage
 	/**
 	 * @return True if address family is non-zero
 	 */
-	ZT_ALWAYS_INLINE operator bool() const { return (ss_family != 0); }
+	explicit ZT_ALWAYS_INLINE operator bool() const { return (ss_family != 0); }
 
 	// Marshal interface ///////////////////////////////////////////////////////
 	static ZT_ALWAYS_INLINE int marshalSizeMax() { return 19; }
-	inline int marshal(uint8_t restrict data[19]) const
+	inline int marshal(uint8_t data[19]) const
 	{
+		unsigned int port;
 		switch(ss_family) {
 			case AF_INET:
-				const unsigned int port = Utils::ntoh((uint16_t)reinterpret_cast<const sockaddr_in *>(this)->sin_port);
+				port = Utils::ntoh((uint16_t)reinterpret_cast<const sockaddr_in *>(this)->sin_port);
 				data[0] = 4;
 				data[1] = reinterpret_cast<const uint8_t *>(&(reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr))[0];
 				data[2] = reinterpret_cast<const uint8_t *>(&(reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr))[1];
 				data[3] = reinterpret_cast<const uint8_t *>(&(reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr))[2];
 				data[4] = reinterpret_cast<const uint8_t *>(&(reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr))[3];
-				data[5] = (uint8_t)((port >> 8) & 0xff);
-				data[6] = (uint8_t)(port & 0xff);
+				data[5] = (uint8_t)(port >> 8U);
+				data[6] = (uint8_t)port;
 				return 7;
 			case AF_INET6:
-				const unsigned int port = Utils::ntoh((uint16_t)reinterpret_cast<const sockaddr_in6 *>(this)->sin6_port);
+				port = Utils::ntoh((uint16_t)reinterpret_cast<const sockaddr_in6 *>(this)->sin6_port);
 				data[0] = 6;
 				for(int i=0;i<16;++i)
 					data[i+1] = reinterpret_cast<const sockaddr_in6 *>(this)->sin6_addr.s6_addr[i];
-				data[17] = (uint8_t)((port >> 8) & 0xff);
-				data[18] = (uint8_t)(port & 0xff);
+				data[17] = (uint8_t)(port >> 8U);
+				data[18] = (uint8_t)port;
 				return 19;
 			default:
 				data[0] = 0;

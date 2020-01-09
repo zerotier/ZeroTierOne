@@ -24,7 +24,7 @@
 #include "Address.hpp"
 #include "Utils.hpp"
 
-#define ZT_ENDPOINT_MARSHAL_SIZE_MAX (ZT_ENDPOINT_MAX_NAME_SIZE+4)
+#define ZT_ENDPOINT_MARSHAL_SIZE_MAX (ZT_ENDPOINT_MAX_NAME_SIZE+3)
 
 namespace ZeroTier {
 
@@ -46,10 +46,10 @@ public:
 
 	ZT_ALWAYS_INLINE Endpoint() { memset(reinterpret_cast<void *>(this),0,sizeof(Endpoint)); }
 
-	ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa) : _t(INETADDR) { _v.sa = sa; }
+	explicit ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa) : _t(INETADDR) { _v.sa = sa; }
 	ZT_ALWAYS_INLINE Endpoint(const Address &zt,const uint8_t identityHash[ZT_IDENTITY_HASH_SIZE]) : _t(ZEROTIER) { _v.zt.a = zt.toInt(); memcpy(_v.zt.idh,identityHash,ZT_IDENTITY_HASH_SIZE); }
 	ZT_ALWAYS_INLINE Endpoint(const char *name,const int port) : _t(DNSNAME) { Utils::scopy(_v.dns.name,sizeof(_v.dns.name),name); _v.dns.port = port; }
-	ZT_ALWAYS_INLINE Endpoint(const char *url) : _t(URL) { Utils::scopy(_v.url,sizeof(_v.url),url); }
+	explicit ZT_ALWAYS_INLINE Endpoint(const char *url) : _t(URL) { Utils::scopy(_v.url,sizeof(_v.url),url); }
 
 	ZT_ALWAYS_INLINE const InetAddress *sockaddr() const { return (_t == INETADDR) ? reinterpret_cast<const InetAddress *>(&_v.sa) : nullptr; }
 	ZT_ALWAYS_INLINE const char *dnsName() const { return (_t == DNSNAME) ? _v.dns.name : nullptr; }
@@ -61,6 +61,45 @@ public:
 
 	ZT_ALWAYS_INLINE Type type() const { return _t; }
 
+	ZT_ALWAYS_INLINE bool operator==(const Endpoint &ep) const
+	{
+		if (_t == ep._t) {
+			switch(_t) {
+				case INETADDR: return (*sockaddr() == *ep.sockaddr());
+				case DNSNAME:  return ((_v.dns.port == ep._v.dns.port)&&(strcmp(_v.dns.name,ep._v.dns.name) == 0));
+				case ZEROTIER: return ((_v.zt.a == ep._v.zt.a)&&(memcmp(_v.zt.idh,ep._v.zt.idh,sizeof(_v.zt.idh)) == 0));
+				case URL:      return (strcmp(_v.url,ep._v.url) == 0);
+				case ETHERNET: return (_v.eth == ep._v.eth);
+				default:       return true;
+			}
+		}
+		return false;
+	}
+	ZT_ALWAYS_INLINE bool operator!=(const Endpoint &ep) const { return (!(*this == ep)); }
+	ZT_ALWAYS_INLINE bool operator<(const Endpoint &ep) const
+	{
+		if ((int)_t < (int)ep._t) {
+			return true;
+		} else if (_t == ep._t) {
+			int ncmp;
+			switch(_t) {
+				case INETADDR: return (*sockaddr() < *ep.sockaddr());
+				case DNSNAME:
+					ncmp = strcmp(_v.dns.name,ep._v.dns.name);
+					return ((ncmp < 0) ? true : (ncmp == 0)&&(_v.dns.port < ep._v.dns.port));
+				case ZEROTIER: return (_v.zt.a < ep._v.zt.a) ? true : ((_v.zt.a == ep._v.zt.a)&&(memcmp(_v.zt.idh,ep._v.zt.idh,sizeof(_v.zt.idh)) < 0));
+				case URL:      return (strcmp(_v.url,ep._v.url) < 0);
+				case ETHERNET: return (_v.eth < ep._v.eth);
+				default:       return false;
+			}
+		}
+		return false;
+	}
+	ZT_ALWAYS_INLINE bool operator>(const Endpoint &ep) const { return (ep < *this); }
+	ZT_ALWAYS_INLINE bool operator<=(const Endpoint &ep) const { return !(ep < *this); }
+	ZT_ALWAYS_INLINE bool operator>=(const Endpoint &ep) const { return !(*this < ep); }
+
+	// Marshal interface ///////////////////////////////////////////////////////
 	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_ENDPOINT_MARSHAL_SIZE_MAX; }
 	inline int marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const
 	{
@@ -79,16 +118,16 @@ public:
 					if (p == (ZT_ENDPOINT_MAX_NAME_SIZE+1))
 						return -1;
 				}
-				data[p++] = (uint8_t)((_v.dns.port >> 8) & 0xff);
-				data[p++] = (uint8_t)(_v.dns.port & 0xff);
+				data[p++] = (uint8_t)(_v.dns.port >> 8U);
+				data[p++] = (uint8_t)_v.dns.port;
 				return p;
 			case ZEROTIER:
 				data[0] = (uint8_t)ZEROTIER;
-				data[1] = (uint8_t)((_v.zt.a >> 32) & 0xff);
-				data[2] = (uint8_t)((_v.zt.a >> 24) & 0xff);
-				data[3] = (uint8_t)((_v.zt.a >> 16) & 0xff);
-				data[4] = (uint8_t)((_v.zt.a >> 8) & 0xff);
-				data[5] = (uint8_t)(_v.zt.a & 0xff);
+				data[1] = (uint8_t)(_v.zt.a >> 32U);
+				data[2] = (uint8_t)(_v.zt.a >> 24U);
+				data[3] = (uint8_t)(_v.zt.a >> 16U);
+				data[4] = (uint8_t)(_v.zt.a >> 8U);
+				data[5] = (uint8_t)_v.zt.a;
 				memcpy(data + 6,_v.zt.idh,ZT_IDENTITY_HASH_SIZE);
 				return (ZT_IDENTITY_HASH_SIZE + 6);
 			case URL:
@@ -104,12 +143,12 @@ public:
 				return p;
 			case ETHERNET:
 				data[0] = (uint8_t)ETHERNET;
-				data[1] = (uint8_t)((_v.eth >> 40) & 0xff);
-				data[2] = (uint8_t)((_v.eth >> 32) & 0xff);
-				data[3] = (uint8_t)((_v.eth >> 24) & 0xff);
-				data[4] = (uint8_t)((_v.eth >> 16) & 0xff);
-				data[5] = (uint8_t)((_v.eth >> 8) & 0xff);
-				data[6] = (uint8_t)(_v.eth & 0xff);
+				data[1] = (uint8_t)(_v.eth >> 40U);
+				data[2] = (uint8_t)(_v.eth >> 32U);
+				data[3] = (uint8_t)(_v.eth >> 24U);
+				data[4] = (uint8_t)(_v.eth >> 16U);
+				data[5] = (uint8_t)(_v.eth >> 8U);
+				data[6] = (uint8_t)_v.eth;
 				return 7;
 			default:
 				data[0] = (uint8_t)NIL;
@@ -142,17 +181,17 @@ public:
 					if ((p >= (ZT_ENDPOINT_MAX_NAME_SIZE+1))||(p >= (len-2)))
 						return -1;
 				}
-				_v.dns.port = ((int)data[p++]) << 8;
-				_v.dns.port |= (int)data[p++];
+				_v.dns.port = (uint16_t)(((unsigned int)data[p++]) << 8U);
+				_v.dns.port |= (uint16_t)data[p++];
 				return p;
 			case ZEROTIER:
 				if (len < (ZT_IDENTITY_HASH_SIZE + 6))
 					return -1;
 				_t = ZEROTIER;
-				_v.zt.a = ((uint64_t)data[1]) << 32;
-				_v.zt.a |= ((uint64_t)data[2]) << 24;
-				_v.zt.a |= ((uint64_t)data[3]) << 16;
-				_v.zt.a |= ((uint64_t)data[4]) << 8;
+				_v.zt.a = ((uint64_t)data[1]) << 32U;
+				_v.zt.a |= ((uint64_t)data[2]) << 24U;
+				_v.zt.a |= ((uint64_t)data[3]) << 16U;
+				_v.zt.a |= ((uint64_t)data[4]) << 8U;
 				_v.zt.a |= (uint64_t)data[5];
 				memcpy(_v.zt.idh,data + 6,ZT_IDENTITY_HASH_SIZE);
 				return (ZT_IDENTITY_HASH_SIZE + 6);
@@ -175,16 +214,17 @@ public:
 				if (len < 7)
 					return -1;
 				_t = ZEROTIER;
-				_v.eth = ((uint64_t)data[1]) << 40;
-				_v.eth |= ((uint64_t)data[2]) << 32;
-				_v.eth |= ((uint64_t)data[3]) << 24;
-				_v.eth |= ((uint64_t)data[4]) << 16;
-				_v.eth |= ((uint64_t)data[5]) << 8;
+				_v.eth = ((uint64_t)data[1]) << 40U;
+				_v.eth |= ((uint64_t)data[2]) << 32U;
+				_v.eth |= ((uint64_t)data[3]) << 24U;
+				_v.eth |= ((uint64_t)data[4]) << 16U;
+				_v.eth |= ((uint64_t)data[5]) << 8U;
 				_v.eth |= (uint64_t)data[6];
 				return 7;
 		}
 		return false;
 	}
+	////////////////////////////////////////////////////////////////////////////
 
 private:
 	Type _t;
@@ -192,7 +232,7 @@ private:
 		struct sockaddr_storage sa;
 		struct {
 			char name[ZT_ENDPOINT_MAX_NAME_SIZE];
-			int port;
+			uint16_t port;
 		} dns;
 		struct {
 			uint64_t a;

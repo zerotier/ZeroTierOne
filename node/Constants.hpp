@@ -37,9 +37,9 @@
 #define ZT_ADDRESS_RESERVED_PREFIX 0xff
 
 /**
- * Maximum DNS or URL name size for an Endpoint (set so that max marshaled endpoint size is 128 bytes)
+ * Maximum DNS or URL name size for an Endpoint (set so that max marshaled endpoint size is 64 bytes)
  */
-#define ZT_ENDPOINT_MAX_NAME_SIZE 124
+#define ZT_ENDPOINT_MAX_NAME_SIZE 61
 
 /**
  * Size of an identity hash (SHA384)

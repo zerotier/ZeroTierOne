@@ -19,7 +19,11 @@
 #ifndef ZT_ZEROTIER_API_H
 #define ZT_ZEROTIER_API_H
 
+#ifdef __cplusplus
+#include <cstdint>
+#else
 #include <stdint.h>
+#endif
 
 /* For struct sockaddr_storage, which is referenced here. */
 #if defined(_WIN32) || defined(_WIN64)
@@ -514,45 +518,6 @@ enum ZT_Event
 };
 
 /**
- * A root server
- */
-typedef struct {
-	/**
-	 * Name of root
-	 *
-	 * This will be a DNS name for dynamic roots. For static roots
-	 * it will be the ZeroTier address. The presence or absence
-	 * of a dot is used internally as a distinguisher.
-	 */
-	const char *name;
-
-	/**
-	 * Serialized locator
-	 */
-	const void *locator;
-
-	/**
-	 * The size of locator in bytes
-	 */
-	unsigned int locatorSize;
-} ZT_Root;
-
-/**
- * List of root servers
- */
-typedef struct {
-	/**
-	 * Number of root servers
-	 */
-	unsigned int count;
-
-	/**
-	 * Array of root servers
-	 */
-	ZT_Root roots[];
-} ZT_RootList;
-
-/**
  * Payload of REMOTE_TRACE event
  */
 typedef struct
@@ -1008,29 +973,6 @@ enum ZT_PeerRole
 	ZT_PEER_ROLE_LEAF = 0,       // ordinary node
 	ZT_PEER_ROLE_MOON = 1,       // moon root
 	ZT_PEER_ROLE_PLANET = 2      // planetary root
-};
-
-/**
- * DNS record types for reporting DNS results
- *
- * These integer IDs (other than end of results) are the same as the DNS protocol's
- * internal IDs. Not all of these are used by ZeroTier, and not all DNS record types
- * are listed here. These are just common ones that are used now or may be used in
- * the future for some purpose.
- */
-enum ZT_DNSRecordType
-{
-	ZT_DNS_RECORD__END_OF_RESULTS = 0,
-	ZT_DNS_RECORD_A = 1,
-	ZT_DNS_RECORD_NS = 2,
-	ZT_DNS_RECORD_CNAME = 5,
-	ZT_DNS_RECORD_PTR = 12,
-	ZT_DNS_RECORD_MX = 15,
-	ZT_DNS_RECORD_TXT = 16,
-	ZT_DNS_RECORD_AAAA = 28,
-	ZT_DNS_RECORD_LOC = 29,
-	ZT_DNS_RECORD_SRV = 33,
-	ZT_DNS_RECORD_DNAME = 39
 };
 
 /**
@@ -1541,8 +1483,9 @@ typedef int (*ZT_PathCheckFunction)(
  *  (1) Node
  *  (2) User pointer
  *  (3) ZeroTier address (least significant 40 bits)
- *  (4) Desired address family or -1 for any
- *  (5) Buffer to fill with result
+ *  (4) Identity in string form
+ *  (5) Desired address family or -1 for any
+ *  (6) Buffer to fill with result
  *
  * If provided this function will be occasionally called to get physical
  * addresses that might be tried to reach a ZeroTier address. It must
@@ -1554,52 +1497,9 @@ typedef int (*ZT_PathLookupFunction)(
 	void *,                           /* User ptr */
 	void *,                           /* Thread ptr */
 	uint64_t,                         /* ZeroTier address (40 bits) */
+	const char *,                     /* Identity in string form */
 	int,                              /* Desired ss_family or -1 for any */
 	struct sockaddr_storage *);       /* Result buffer */
-
-/**
- * Function to request an asynchronous DNS TXT lookup
- *
- * Parameters:
- *  (1) Node
- *  (2) User pointer
- *  (3) Thread pointer
- *  (4) Array of DNS record types we want
- *  (5) Number of DNS record types in array
- *  (6) DNS name to fetch
- *  (7) DNS request ID to supply to ZT_Node_processDNSResult()
- *
- * DNS is not handled in the core because every platform and runtime
- * typically has its own DNS functions or libraries and these may need
- * to interface with OS or network services in your local environment.
- * Instead this function and its result submission counterpart are
- * provided so you can provide a DNS implementation.
- *
- * If this callback is set in your callback struct to a NULL value,
- * DNS will not be available. The ZeroTier protocol is designed to
- * work in the absence of DNS but you may not get optimal results. For
- * example you may default to root servers that are not geographically
- * optimal or your node may cease to function if a root server's IP
- * changes and there's no way to signal this.
- *
- * This function requests resolution of a DNS record. The result
- * submission method ZT_Node_processDNSResult() must be called at
- * least once in response. See its documentation.
- *
- * Right now ZeroTier only requests resolution of TXT records, but
- * it's possible that this will change in the future.
- *
- * It's safe to call processDNSResult() from within your handler
- * for this function.
- */
-typedef void (*ZT_DNSResolver)(
-	ZT_Node *,                        /* Node */
-	void *,                           /* User ptr */
-	void *,                           /* Thread ptr */
-	const enum ZT_DNSRecordType *,    /* DNS record type(s) to fetch */
-	unsigned int,                     /* Number of DNS record type(s) */
-	const char *,                     /* DNS name to fetch */
-	uintptr_t);                       /* Request ID for returning results */
 
 /****************************************************************************/
 /* C Node API                                                               */
@@ -1639,11 +1539,6 @@ struct ZT_Node_Callbacks
 	 * REQUIRED: Function to be called to notify external code of important events
 	 */
 	ZT_EventCallback eventCallback;
-
-	/**
-	 * STRONGLY RECOMMENDED: Function to request a DNS lookup
-	 */
-	ZT_DNSResolver dnsResolver;
 
 	/**
 	 * OPTIONAL: Function to check whether a given physical path should be used
@@ -1751,60 +1646,6 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(
 	volatile int64_t *nextBackgroundTaskDeadline);
 
 /**
- * Submit the result(s) of a requested DNS query
- *
- * This MUST be called at least once after the node requsts DNS resolution.
- * If there are no results or DNS is not implemented or available, just
- * send one ZT_DNS_RECORD__END_OF_RESULTS to signal that no results were
- * obtained.
- *
- * If result is non-NULL but resultLength is zero then result is assumed to
- * be a C string terminated by a zero. Passing an unterminated string with a
- * zero resultLength will result in a crash.
- *
- * The results of A and AAAA records can be returned as either strings or
- * binary IP address bytes (network byte order). If the result is a string,
- * resultLength must be 0 to signal that result is a C string. Otherwise for
- * A resultLength must be 4 and for AAAA it must be 16 if the result is
- * in binary format.
- *
- * The Node implementation makes an effort to ignore obviously invalid
- * submissions like an AAAA record in bianry form with length 25, but this
- * is not guaranteed. It's possible to crash your program by calling this
- * with garbage inputs.
- *
- * Results may be submitted in any order and order should not be assumed
- * to have any meaning.
- *
- * The ZT_DNS_RECORD__END_OF_RESULTS pseudo-response must be sent after all
- * results have been submitted. The result and resultLength paramters are
- * ignored for this type ID.
- *
- * It is safe to call this function from inside the DNS request callback,
- * such as to return a locally cached result or a result from some kind
- * of local database. It's also safe to call this function from threads
- * other than the one that received the DNS request.
- *
- * @param node Node instance that requested DNS resolution
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param dnsRequestID Request ID supplied to DNS request callback
- * @param name DNS name
- * @param recordType Record type of this result
- * @param result Result (content depends on record type)
- * @param resultLength Length of result
- * @param resultIsString If non-zero, IP results for A and AAAA records are being given as C strings not binary IPs
- */
-ZT_SDK_API void ZT_Node_processDNSResult(
-	ZT_Node *node,
-	void *tptr,
-	uintptr_t dnsRequestID,
-	const char *name,
-	enum ZT_DNSRecordType recordType,
-	const void *result,
-	unsigned int resultLength,
-	int resultIsString);
-
-/**
  * Join a network
  *
  * This may generate calls to the port config callback before it returns,
@@ -1884,36 +1725,25 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node,void *tpt
 ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 
 /**
- * List roots for this node
+ * Add a root server (has no effect if already added)
  *
  * @param node Node instance
- * @param now Current time
- * @return List of roots, use ZT_Node_freeQueryResult to free this when done
+ * @param identity Identity of this root server in string format
+ * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API ZT_RootList *ZT_Node_listRoots(ZT_Node *node,int64_t now);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,const char *identity);
 
 /**
- * Add or update a root
+ * Remove a root server
  *
- * The node will begin trying to resolve the DNS TXT record for
- * this root and possibly obtain it from other peers.
- *
- * @param node Node instance
- * @param name DNS name or simply the address in hex form for static roots
- * @param locator Binary-serialized locator of NULL if none
- * @param locatorSize Size of locator or 0 if none
- * @return OK (0) or error code
- */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_setRoot(ZT_Node *node,const char *name,const void *locator,unsigned int locatorSize);
-
-/**
- * Remove a dynamic root
+ * This removes this node's root designation but does not prevent this node
+ * from communicating with it or close active paths to it.
  *
  * @param node Node instance
- * @param name DNS name of this dynamic root or the address in hex form for static roots
- * @return OK (0) or error code
+ * @param identity Identity in string format
+ * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,const char *name);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,const char *identity);
 
 /**
  * Get this node's 40-bit ZeroTier address

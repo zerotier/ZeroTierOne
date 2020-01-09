@@ -11,11 +11,11 @@
  */
 /****/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
-#include <stdint.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdarg>
+#include <cstring>
+#include <cstdint>
 
 #include "Constants.hpp"
 #include "SharedPtr.hpp"
@@ -40,10 +40,10 @@ namespace ZeroTier {
 /* Public Node interface (C++, exposed via CAPI bindings)                   */
 /****************************************************************************/
 
-Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64_t now) :
+Node::Node(void *uPtr, void *tPtr, const struct ZT_Node_Callbacks *callbacks, int64_t now) :
 	_RR(this),
 	RR(&_RR),
-	_uPtr(uptr),
+	_uPtr(uPtr),
 	_networks(8),
 	_now(now),
 	_lastPing(0),
@@ -61,7 +61,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 	uint64_t idtmp[2];
 	idtmp[0] = 0; idtmp[1] = 0;
 	char tmp[2048];
-	int n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,tmp,sizeof(tmp) - 1);
+	int n = stateObjectGet(tPtr, ZT_STATE_OBJECT_IDENTITY_SECRET, idtmp, tmp, sizeof(tmp) - 1);
 	if (n > 0) {
 		tmp[n] = (char)0;
 		if (RR->identity.fromString(tmp)) {
@@ -77,14 +77,14 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 		RR->identity.toString(false,RR->publicIdentityStr);
 		RR->identity.toString(true,RR->secretIdentityStr);
 		idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
-		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,RR->secretIdentityStr,(unsigned int)strlen(RR->secretIdentityStr));
-		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
+		stateObjectPut(tPtr, ZT_STATE_OBJECT_IDENTITY_SECRET, idtmp, RR->secretIdentityStr, (unsigned int)strlen(RR->secretIdentityStr));
+		stateObjectPut(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, idtmp, RR->publicIdentityStr, (unsigned int)strlen(RR->publicIdentityStr));
 	} else {
 		idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
-		n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,tmp,sizeof(tmp) - 1);
+		n = stateObjectGet(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, idtmp, tmp, sizeof(tmp) - 1);
 		if ((n > 0)&&(n < (int)sizeof(RR->publicIdentityStr))&&(n < (int)sizeof(tmp))) {
-			if (memcmp(tmp,RR->publicIdentityStr,n))
-				stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
+			if (memcmp(tmp,RR->publicIdentityStr,n) != 0)
+				stateObjectPut(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, idtmp, RR->publicIdentityStr, (unsigned int)strlen(RR->publicIdentityStr));
 		}
 	}
 
@@ -117,7 +117,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 		throw;
 	}
 
-	postEvent(tptr,ZT_EVENT_UP);
+	postEvent(tPtr, ZT_EVENT_UP);
 }
 
 Node::~Node()
@@ -130,7 +130,7 @@ Node::~Node()
 	if (RR->topology) RR->topology->~Topology();
 	if (RR->sw) RR->sw->~Switch();
 	if (RR->t) RR->t->~Trace();
-	::free(RR->rtmem);
+	free(RR->rtmem);
 }
 
 ZT_ResultCode Node::processWirePacket(
@@ -169,74 +169,42 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	}
 }
 
-// This is passed as the argument to the DNS request handler and
-// aggregates results.
-struct _processBackgroundTasks_dnsResultAccumulator
+// This function object is run past every peer every ZT_PEER_PING_PERIOD.
+struct _processBackgroundTasks_ping_eachPeer
 {
-	_processBackgroundTasks_dnsResultAccumulator(const Str &n) : dnsName(n) {}
-	Str dnsName;
-	std::vector<Str> txtRecords;
-};
-
-static const ZT_DNSRecordType s_txtRecordType[1] = { ZT_DNS_RECORD_TXT };
-
-struct _processBackgroundTasks_eachRootName
-{
-	ZT_Node_Callbacks *cb;
-	Node *n;
-	void *uPtr;
-	void *tPtr;
-	bool updateAll;
-
-	inline bool operator()(const Str &dnsName,const Locator &loc)
-	{
-		if ((strchr(dnsName.c_str(),'.'))&&((updateAll)||(!loc))) {
-			_processBackgroundTasks_dnsResultAccumulator *dnsReq = new _processBackgroundTasks_dnsResultAccumulator(dnsName);
-			cb->dnsResolver(reinterpret_cast<ZT_Node *>(n),uPtr,tPtr,s_txtRecordType,1,dnsName.c_str(),(uintptr_t)dnsReq);
-		}
-		return true;
-	}
-};
-
-struct _processBackgroundTasks_ping_eachRoot
-{
-	Hashtable< void *,bool > roots;
-	int64_t now;
-	void *tPtr;
-	bool online;
-
-	inline bool operator()(const SharedPtr<Peer> &peer,const std::vector<InetAddress> &addrs)
+	ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Peer> &peer,const bool isRoot)
 	{
 		unsigned int v4SendCount = 0,v6SendCount = 0;
 		peer->ping(tPtr,now,v4SendCount,v6SendCount);
-		for(std::vector<InetAddress>::const_iterator a(addrs.begin());a!=addrs.end();++a) {
-			if ( ((a->isV4())&&(v4SendCount == 0)) || ((a->isV6())&&(v6SendCount == 0)) )
-				peer->sendHELLO(tPtr,-1,*a,now);
+
+		if (isRoot) {
+			if ((now - peer->lastReceive()) <= ZT_PEER_PING_PERIOD)
+				online = true;
+
+			if (v4SendCount == 0) {
+				InetAddress try4;
+				parent->externalPathLookup(tPtr,peer->identity(),AF_INET,try4);
+				if (try4.ss_family == AF_INET)
+					peer->sendHELLO(tPtr,-1,try4,now);
+			}
+
+			if (v6SendCount == 0) {
+				InetAddress try6;
+				parent->externalPathLookup(tPtr,peer->identity(),AF_INET6,try6);
+				if (try6.ss_family == AF_INET6)
+					peer->sendHELLO(tPtr,-1,try6,now);
+			}
 		}
-		if (!online)
-			online = ((now - peer->lastReceive()) <= ((ZT_PEER_PING_PERIOD * 2) + 5000));
-		roots.set((void *)peer.ptr(),true);
+
 		return true;
 	}
-};
-
-struct _processBackgroundTasks_ping_eachPeer
-{
 	int64_t now;
+	Node *parent;
 	void *tPtr;
-	Hashtable< void *,bool > *roots;
-
-	inline bool operator()(const SharedPtr<Peer> &peer)
-	{
-		if (!roots->contains((void *)peer.ptr())) {
-			unsigned int v4SendCount = 0,v6SendCount = 0;
-			peer->ping(tPtr,now,v4SendCount,v6SendCount);
-		}
-		return true;
-	}
+	bool online;
 };
 
-ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64_t *nextBackgroundTaskDeadline)
+ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
 	Mutex::Lock bl(_backgroundTasksLock);
@@ -252,41 +220,19 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 	if ((now - _lastPing) >= ZT_PEER_PING_PERIOD) {
 		_lastPing = now;
 		try {
-			// Periodically refresh locators for dynamic roots from their DNS names.
-			if (_cb.dnsResolver) {
-				_processBackgroundTasks_eachRootName cr;
-				cr.cb = &_cb;
-				cr.n = this;
-				cr.uPtr = _uPtr;
-				cr.tPtr = tptr;
-				if ((now - _lastDynamicRootUpdate) >= ZT_DYNAMIC_ROOT_UPDATE_PERIOD) {
-					_lastDynamicRootUpdate = now;
-					cr.updateAll = true;
-				} else {
-					cr.updateAll = false;
-				}
-				RR->topology->eachRootName(cr);
-			}
-
-			// Ping each root explicitly no matter what
-			_processBackgroundTasks_ping_eachRoot rf;
-			rf.now = now;
-			rf.tPtr = tptr;
-			rf.online = false;
-			RR->topology->eachRoot(rf);
-
-			// Ping peers that are active and we want to keep alive
 			_processBackgroundTasks_ping_eachPeer pf;
 			pf.now = now;
-			pf.tPtr = tptr;
-			pf.roots = &rf.roots;
-			RR->topology->eachPeer(pf);
+			pf.parent = this;
+			pf.tPtr = tPtr;
+			pf.online = false;
+			RR->topology->eachPeerWithRoot<_processBackgroundTasks_ping_eachPeer &>(pf);
 
-			// Update online status based on whether we can reach a root
-			if (rf.online != _online) {
-				_online = rf.online;
-				postEvent(tptr,_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
+			if (pf.online != _online) {
+				_online = pf.online;
+				postEvent(tPtr, _online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
 			}
+
+			RR->topology->rankRoots(now);
 		} catch ( ... ) {
 			return ZT_RESULT_FATAL_ERROR_INTERNAL;
 		}
@@ -300,7 +246,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 			uint64_t *nwid = (uint64_t *)0;
 			SharedPtr<Network> *network = (SharedPtr<Network> *)0;
 			while (i.next(nwid,network)) {
-				(*network)->doPeriodicTasks(tptr,now);
+				(*network)->doPeriodicTasks(tPtr, now);
 			}
 		}
 	}
@@ -332,36 +278,12 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 	}
 
 	try {
-		*nextBackgroundTaskDeadline = now + (int64_t)std::max(std::min((unsigned long)ZT_MAX_TIMER_TASK_INTERVAL,RR->sw->doTimerTasks(tptr,now)),(unsigned long)ZT_MIN_TIMER_TASK_INTERVAL);
+		*nextBackgroundTaskDeadline = now + (int64_t)std::max(std::min((unsigned long)ZT_MAX_TIMER_TASK_INTERVAL,RR->sw->doTimerTasks(tPtr, now)), (unsigned long)ZT_MIN_TIMER_TASK_INTERVAL);
 	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}
 
 	return ZT_RESULT_OK;
-}
-
-void Node::processDNSResult(
-	void *tptr,
-	uintptr_t dnsRequestID,
-	const char *name,
-	enum ZT_DNSRecordType recordType,
-	const void *result,
-	unsigned int resultLength,
-	int resultIsString)
-{
-	if (dnsRequestID) {
-		_processBackgroundTasks_dnsResultAccumulator *const acc = reinterpret_cast<_processBackgroundTasks_dnsResultAccumulator *>(dnsRequestID);
-		if (recordType == ZT_DNS_RECORD_TXT) {
-			if (result)
-				acc->txtRecords.emplace_back(reinterpret_cast<const char *>(result));
-		} else if (recordType == ZT_DNS_RECORD__END_OF_RESULTS) {
-			Locator loc;
-			if (loc.decodeTxtRecords(acc->dnsName,acc->txtRecords.begin(),acc->txtRecords.end())) {
-				RR->topology->setRoot(acc->dnsName,loc);
-				delete acc;
-			}
-		}
-	}
 }
 
 ZT_ResultCode Node::join(uint64_t nwid,void *uptr,void *tptr)
@@ -423,44 +345,25 @@ ZT_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,u
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
-ZT_RootList *Node::listRoots(int64_t now)
+ZT_ResultCode Node::addRoot(const char *identity)
 {
-	return RR->topology->apiRoots(now);
-}
-
-enum ZT_ResultCode Node::setRoot(const char *name,const void *locator,unsigned int locatorSize)
-{
-	try {
-		Locator loc;
-		if ((locator)&&(locatorSize > 0)&&(locatorSize < 65535)) {
-			ScopedPtr< Buffer<65536> > locbuf(new Buffer<65536>());
-			locbuf->append(locator,locatorSize);
-			loc.deserialize(*locbuf,0);
-			if (!loc.verify())
-				return ZT_RESULT_ERROR_BAD_PARAMETER;
-		}
-		Str n;
-		if ((!name)||(strlen(name) == 0)) {
-			if (!loc)
-				return ZT_RESULT_ERROR_BAD_PARAMETER; /* no name and no locator */
-			char tmp[16];
-			loc.id().address().toString(tmp);
-			n = tmp;
-		} else {
-			n = name;
-		}
-		return RR->topology->setRoot(n,loc) ? ZT_RESULT_OK : ZT_RESULT_OK_IGNORED;
-	} catch ( ... ) {
+	if (!identity)
 		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	}
+	Identity id;
+	if (!id.fromString(identity))
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	RR->topology->addRoot(id);
+	return ZT_RESULT_OK;
 }
 
-enum ZT_ResultCode Node::removeRoot(const char *name)
+ZT_ResultCode Node::removeRoot(const char *identity)
 {
-	try {
-		if (name)
-			RR->topology->removeRoot(Str(name));
-	} catch ( ... ) {}
+	if (!identity)
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	Identity id;
+	if (!id.fromString(identity))
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	RR->topology->removeRoot(id);
 	return ZT_RESULT_OK;
 }
 
@@ -631,33 +534,6 @@ void Node::setController(void *networkControllerInstance)
 /* Node methods used only within node/                                      */
 /****************************************************************************/
 
-SharedPtr< const Locator > Node::locator()
-{
-	Mutex::Lock lck(_locator_m);
-	if (!_locator) {
-		Locator *l = new Locator();
-		try {
-			RR->topology->eachRoot([l](const SharedPtr<Peer> &p,const std::vector<InetAddress> &phyAddr) -> bool {
-				l->add(p->identity());
-				return true;
-			});
-			{
-				Mutex::Lock lck2(_localInterfaceAddresses_m);
-				for(std::vector< ZT_InterfaceAddress >::const_iterator a(_localInterfaceAddresses.begin());a!=_localInterfaceAddresses.end();++a) {
-					if (a->permanent != 0) {
-						l->add(*reinterpret_cast<const InetAddress *>(&(a->address)));
-					}
-				}
-			}
-		} catch ( ... ) {
-			delete l;
-			throw;
-		}
-		_locator.set(l);
-	}
-	return _locator;
-}
-
 bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,const int64_t localSocket,const InetAddress &remoteAddress)
 {
 	if (!Path::isAddressValidForPath(remoteAddress))
@@ -677,6 +553,13 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,cons
 		}
 	}
 	return ( (_cb.pathCheckFunction) ? (_cb.pathCheckFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ztaddr.toInt(),localSocket,reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0) : true);
+}
+
+bool Node::externalPathLookup(void *tPtr,const Identity &id,int family,InetAddress &addr)
+{
+	char idStr[ZT_IDENTITY_STRING_BUFFER_LENGTH];
+	id.toString(false,idStr);
+	return (_cb.pathLookupFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,id.address().toInt(),idStr,family,reinterpret_cast<sockaddr_storage *>(&addr)) == ZT_RESULT_OK);
 }
 
 ZT_ResultCode Node::setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork, const ZT_PhysicalPathConfiguration *pathConfig)
@@ -870,21 +753,6 @@ enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,void *tptr,int64
 	}
 }
 
-void ZT_Node_processDNSResult(
-	ZT_Node *node,
-	void *tptr,
-	uintptr_t dnsRequestID,
-	const char *name,
-	enum ZT_DNSRecordType recordType,
-	const void *result,
-	unsigned int resultLength,
-	int resultIsString)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->processDNSResult(tptr,dnsRequestID,name,recordType,result,resultLength,resultIsString);
-	} catch ( ... ) {}
-}
-
 enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr,void *tptr)
 {
 	try {
@@ -929,19 +797,10 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint
 	}
 }
 
-ZT_RootList *ZT_Node_listRoots(ZT_Node *node,int64_t now)
+enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,const char *identity)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->listRoots(now);
-	} catch ( ... ) {
-		return nullptr;
-	}
-}
-
-enum ZT_ResultCode ZT_Node_setRoot(ZT_Node *node,const char *name,const void *locator,unsigned int locatorSize)
-{
-	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->setRoot(name,locator,locatorSize);
+		return reinterpret_cast<ZeroTier::Node *>(node)->addRoot(identity);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
@@ -949,10 +808,10 @@ enum ZT_ResultCode ZT_Node_setRoot(ZT_Node *node,const char *name,const void *lo
 	}
 }
 
-enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,const char *name)
+enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,const char *identity)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->removeRoot(name);
+		return reinterpret_cast<ZeroTier::Node *>(node)->removeRoot(identity);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {

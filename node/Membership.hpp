@@ -68,7 +68,7 @@ public:
 	/**
 	 * @return Time we last pushed credentials to this member
 	 */
-	inline int64_t lastPushedCredentials() const { return _lastPushedCredentials; }
+	ZT_ALWAYS_INLINE int64_t lastPushedCredentials() const { return _lastPushedCredentials; }
 
 	/**
 	 * Check whether we should push MULTICAST_LIKEs to this peer, and update last sent time if true
@@ -76,7 +76,7 @@ public:
 	 * @param now Current time
 	 * @return True if we should update multicasts
 	 */
-	inline bool multicastLikeGate(const int64_t now)
+	ZT_ALWAYS_INLINE bool multicastLikeGate(const int64_t now)
 	{
 		if ((now - _lastUpdatedMulticast) >= ZT_MULTICAST_ANNOUNCE_PERIOD) {
 			_lastUpdatedMulticast = now;
@@ -91,7 +91,7 @@ public:
 	 * @param nconf Our network config
 	 * @return True if this peer is allowed on this network at all
 	 */
-	inline bool isAllowedOnNetwork(const NetworkConfig &nconf) const
+	ZT_ALWAYS_INLINE bool isAllowedOnNetwork(const NetworkConfig &nconf) const
 	{
 		if (nconf.isPublic()) return true; // public network
 		if (_com.timestamp() <= _comRevocationThreshold) return false; // COM has been revoked
@@ -107,7 +107,7 @@ public:
 	 * @return True if this peer has a certificate of ownership for the given resource
 	 */
 	template<typename T>
-	inline bool peerOwnsAddress(const NetworkConfig &nconf,const T &r) const
+	ZT_ALWAYS_INLINE bool peerOwnsAddress(const NetworkConfig &nconf,const T &r) const
 	{
 		if (_isUnspoofableAddress(nconf,r))
 			return true;
@@ -128,7 +128,7 @@ public:
 	 * @param id Tag ID
 	 * @return Pointer to tag or NULL if not found
 	 */
-	inline const Tag *getTag(const NetworkConfig &nconf,const uint32_t id) const
+	ZT_ALWAYS_INLINE const Tag *getTag(const NetworkConfig &nconf,const uint32_t id) const
 	{
 		const Tag *const t = _remoteTags.get(id);
 		return (((t)&&(_isCredentialTimestampValid(nconf,*t))) ? t : (Tag *)0);
@@ -146,7 +146,7 @@ public:
 	 * @param now Current time
 	 * @param nconf Current network configuration
 	 */
-	void clean(const int64_t now,const NetworkConfig &nconf);
+	void clean(int64_t now,const NetworkConfig &nconf);
 
 	/**
 	 * Generates a key for internal use in indexing credentials by type and credential ID
@@ -156,29 +156,29 @@ public:
 	/**
 	 * @return Bytes received so far
 	 */
-	inline uint64_t receivedBytes() const { return _received; }
+	ZT_ALWAYS_INLINE uint64_t receivedBytes() const { return _received; }
 
 	/**
 	 * @return Bytes sent so far
 	 */
-	inline uint64_t sentBytes() const { return _sent; }
+	ZT_ALWAYS_INLINE uint64_t sentBytes() const { return _sent; }
 
 	/**
 	 * @param bytes Bytes received
 	 */
-	inline void logReceivedBytes(const unsigned int bytes) { _received = (uint64_t)bytes; }
+	ZT_ALWAYS_INLINE void logReceivedBytes(const unsigned int bytes) { _received = (uint64_t)bytes; }
 
 	/**
 	 * @param bytes Bytes sent
 	 */
-	inline void logSentBytes(const unsigned int bytes) { _sent = (uint64_t)bytes; }
+	ZT_ALWAYS_INLINE void logSentBytes(const unsigned int bytes) { _sent = (uint64_t)bytes; }
 
 private:
 	// This returns true if a resource is an IPv6 NDP-emulated address. These embed the ZT
 	// address of the peer and therefore cannot be spoofed, causing peerOwnsAddress() to
 	// always return true for them. A certificate is not required for these.
-	inline bool _isUnspoofableAddress(const NetworkConfig &nconf,const MAC &m) const { return false; }
-	inline bool _isUnspoofableAddress(const NetworkConfig &nconf,const InetAddress &ip) const
+	ZT_ALWAYS_INLINE bool _isUnspoofableAddress(const NetworkConfig &nconf,const MAC &m) const { return false; }
+	ZT_ALWAYS_INLINE bool _isUnspoofableAddress(const NetworkConfig &nconf,const InetAddress &ip) const
 	{
 		if ((ip.isV6())&&(nconf.ndpEmulation())) {
 			const InetAddress sixpl(InetAddress::makeIpv66plane(nconf.networkId,nconf.issuedTo.toInt()));
@@ -219,7 +219,7 @@ private:
 	// This compares the remote credential's timestamp to the timestamp in our network config
 	// plus or minus the permitted maximum timestamp delta.
 	template<typename C>
-	inline bool _isCredentialTimestampValid(const NetworkConfig &nconf,const C &remoteCredential) const
+	ZT_ALWAYS_INLINE bool _isCredentialTimestampValid(const NetworkConfig &nconf,const C &remoteCredential) const
 	{
 		const int64_t ts = remoteCredential.timestamp();
 		if (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts)) <= nconf.credentialTimeMaxDelta) {
@@ -271,7 +271,7 @@ public:
 	class CapabilityIterator
 	{
 	public:
-		inline CapabilityIterator(Membership &m,const NetworkConfig &nconf) :
+		ZT_ALWAYS_INLINE CapabilityIterator(Membership &m,const NetworkConfig &nconf) :
 			_hti(m._remoteCaps),
 			_k((uint32_t *)0),
 			_c((Capability *)0),
@@ -280,7 +280,7 @@ public:
 		{
 		}
 
-		inline Capability *next()
+		ZT_ALWAYS_INLINE Capability *next()
 		{
 			while (_hti.next(_k,_c)) {
 				if (_m._isCredentialTimestampValid(_nconf,*_c))

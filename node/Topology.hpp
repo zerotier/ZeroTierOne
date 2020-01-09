@@ -55,8 +55,6 @@ public:
 	{
 	}
 
-	ZT_ALWAYS_INLINE ~Topology() {}
-
 	/**
 	 * Add a peer to database
 	 *
@@ -169,6 +167,34 @@ public:
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p)) {
 			if (!f(*((const SharedPtr<Peer> *)p)))
+				break;
+		}
+	}
+
+	/**
+	 * Apply a function or function object to all peers
+	 *
+	 * This locks the peer map during execution, so calls to get() etc. during
+	 * eachPeer() will deadlock.
+	 *
+	 * @param f Function to apply
+	 * @tparam F Function or function object type
+	 */
+	template<typename F>
+	ZT_ALWAYS_INLINE void eachPeerWithRoot(F f)
+	{
+		Mutex::Lock l(_peers_l);
+
+		std::vector<uintptr_t> rootPeerPtrs;
+		for(std::vector< SharedPtr<Peer> >::iterator i(_rootPeers.begin());i!=_rootPeers.end();++i)
+			rootPeerPtrs.push_back((uintptr_t)i->ptr());
+		std::sort(rootPeerPtrs.begin(),rootPeerPtrs.end());
+
+		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
+		Address *a = (Address *)0;
+		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+		while (i.next(a,p)) {
+			if (!f(*((const SharedPtr<Peer> *)p),std::binary_search(rootPeerPtrs.begin(),rootPeerPtrs.end(),(uintptr_t)p->ptr())))
 				break;
 		}
 	}
@@ -347,13 +373,23 @@ public:
 	}
 
 	/**
+	 * Sort roots in asecnding order of apparent latency
+	 *
+	 * @param now Current time
+	 */
+	ZT_ALWAYS_INLINE void rankRoots(const int64_t now)
+	{
+		Mutex::Lock l1(_peers_l);
+		std::sort(_rootPeers.begin(),_rootPeers.end(),_RootSortComparisonOperator(now));
+	}
+
+	/**
 	 * Do periodic tasks such as database cleanup
 	 */
-	inline void doPeriodicTasks(const int64_t now)
+	ZT_ALWAYS_INLINE void doPeriodicTasks(const int64_t now)
 	{
 		{
 			Mutex::Lock l1(_peers_l);
-			std::sort(_rootPeers.begin(),_rootPeers.end(),_RootSortComparisonOperator(now));
 			Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
 			Address *a = (Address *)0;
 			SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;

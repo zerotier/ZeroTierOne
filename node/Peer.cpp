@@ -691,12 +691,8 @@ void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atA
 
 void Peer::ping(void *tPtr,int64_t now,unsigned int &v4SendCount,unsigned int &v6SendCount)
 {
-	v4SendCount = 0;
-	v6SendCount = 0;
-
 	Mutex::Lock _l(_paths_m);
 
-	// Emit traces regarding aggregate link status
 	if (_canUseMultipath) {
 		int alivePathCount = aggregateLinkPhysicalPathCount();
 		if ((now - _lastAggregateStatsReport) > ZT_PATH_AGGREGATE_STATS_REPORT_INTERVAL) {
