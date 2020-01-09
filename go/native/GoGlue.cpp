@@ -13,29 +13,25 @@
 
 #include "GoGlue.h"
 
+#include <cstring>
+#include <cstdlib>
+#include <cerrno>
+#include <ctime>
+
 #include "../../node/Constants.hpp"
 #include "../../node/InetAddress.hpp"
 #include "../../node/Node.hpp"
 #include "../../node/Utils.hpp"
 #include "../../node/MAC.hpp"
 #include "../../node/Address.hpp"
-#include "../../node/Locator.hpp"
 #include "../../osdep/OSUtils.hpp"
 #include "../../osdep/EthernetTap.hpp"
-#include "../../osdep/ManagedRoute.hpp"
-
-#include <string.h>
-#include <stdlib.h>
-#include <errno.h>
 
 #ifndef __WINDOWS__
-#include <errno.h>
-#include <signal.h>
+extern "C" {
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/time.h>
 #include <sys/types.h>
-#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <arpa/inet.h>
@@ -45,6 +41,7 @@
 #ifdef __BSD__
 #include <net/if.h>
 #endif
+}
 #ifdef __LINUX__
 #ifndef IPV6_DONTFRAG
 #define IPV6_DONTFRAG 62
@@ -56,7 +53,6 @@
 #include <mutex>
 #include <map>
 #include <vector>
-#include <array>
 #include <set>
 #include <memory>
 #include <atomic>
@@ -114,7 +110,6 @@ extern "C" int goPathCheckFunc(void *,uint64_t,int,const void *,int);
 extern "C" int goPathLookupFunc(void *,uint64_t,int,int *,uint8_t [16],int *);
 extern "C" void goStateObjectPutFunc(void *,int,const uint64_t [2],const void *,int);
 extern "C" int goStateObjectGetFunc(void *,int,const uint64_t [2],void *,unsigned int);
-extern "C" void goDNSResolverFunc(void *,const uint8_t *,int,const char *,uintptr_t);
 extern "C" void goVirtualNetworkConfigFunc(void *,ZT_GoTap *,uint64_t,int,const ZT_VirtualNetworkConfig *);
 extern "C" void goZtEvent(void *,int,const void *);
 extern "C" void goHandleTapAddedMulticastGroup(void *,ZT_GoTap *,uint64_t,uint64_t,uint32_t);
@@ -279,6 +274,7 @@ static int ZT_GoNode_PathLookupFunction(
 	void *uptr,
 	void *tptr,
 	uint64_t ztAddress,
+	const ZT_Identity *id,
 	int desiredAddressFamily,
 	struct sockaddr_storage *sa)
 {
@@ -310,20 +306,6 @@ static int ZT_GoNode_PathLookupFunction(
 	return 0;
 }
 
-static void ZT_GoNode_DNSResolver(
-	ZT_Node *node,
-	void *uptr,
-	void *tptr,
-	const enum ZT_DNSRecordType *types,
-	unsigned int numTypes,
-	const char *name,
-	uintptr_t requestId)
-{
-	uint8_t t[256];
-	for(unsigned int i=0;(i<numTypes)&&(i<256);++i) t[i] = (uint8_t)types[i];
-	goDNSResolverFunc(reinterpret_cast<ZT_GoNode *>(uptr)->goUserPtr,t,(int)numTypes,name,requestId);
-}
-
 /****************************************************************************/
 
 extern "C" ZT_GoNode *ZT_GoNode_new(const char *workingPath,uintptr_t userPtr)
@@ -336,7 +318,6 @@ extern "C" ZT_GoNode *ZT_GoNode_new(const char *workingPath,uintptr_t userPtr)
 		cb.virtualNetworkFrameFunction = &ZT_GoNode_VirtualNetworkFrameFunction;
 		cb.virtualNetworkConfigFunction = &ZT_GoNode_VirtualNetworkConfigFunction;
 		cb.eventCallback = &ZT_GoNode_EventCallback;
-		cb.dnsResolver = &ZT_GoNode_DNSResolver;
 		cb.pathCheckFunction = &ZT_GoNode_PathCheckFunction;
 		cb.pathLookupFunction = &ZT_GoNode_PathLookupFunction;
 
@@ -726,134 +707,4 @@ extern "C" int ZT_GoTap_removeRoute(ZT_GoTap *tap,int targetAf,const void *targe
 			break;
 	}
 	return reinterpret_cast<EthernetTap *>(tap)->removeRoute(target,via,metric);
-}
-
-/****************************************************************************/
-
-extern "C" const char *ZT_GoIdentity_generate(int type)
-{
-	Identity id;
-	id.generate((Identity::Type)type);
-	char *tmp = (char *)malloc(ZT_IDENTITY_STRING_BUFFER_LENGTH);
-	if (tmp)
-		id.toString(true,tmp);
-	return tmp;
-}
-
-extern "C" int ZT_GoIdentity_validate(const char *idStr)
-{
-	Identity id;
-	if (!id.fromString(idStr))
-		return 0;
-	if (!id.locallyValidate())
-		return 0;
-	return 1;
-}
-
-extern "C" int ZT_GoIdentity_sign(const char *idStr,const void *data,unsigned int len,void *sigbuf,unsigned int sigbuflen)
-{
-	Identity id;
-	if (!id.fromString(idStr))
-		return 0;
-	return (int)id.sign(data,len,sigbuf,sigbuflen);
-}
-
-extern "C" int ZT_GoIdentity_verify(const char *idStr,const void *data,unsigned int len,const void *sig,unsigned int siglen)
-{
-	Identity id;
-	if (!id.fromString(idStr))
-		return 0;
-	return id.verify(data,len,sig,siglen) ? 1 : 0;
-}
-
-/****************************************************************************/
-
-extern "C" int ZT_GoLocator_makeSecureDNSName(char *name,unsigned int nameBufSize,uint8_t *privateKey,unsigned int privateKeyBufSize)
-{
-	if ((privateKeyBufSize < ZT_ECC384_PRIVATE_KEY_SIZE)||(nameBufSize < 256))
-		return -1;
-	uint8_t pub[ZT_ECC384_PUBLIC_KEY_SIZE];
-	ECC384GenerateKey(pub,privateKey);
-	const Str n(Locator::makeSecureDnsName(pub));
-	if (n.length() >= nameBufSize)
-		return -1;
-	Utils::scopy(name,nameBufSize,n.c_str());
-	return ZT_ECC384_PRIVATE_KEY_SIZE;
-}
-
-extern "C" int ZT_GoLocator_makeLocator(
-	uint8_t *buf,
-	unsigned int bufSize,
-	int64_t ts,
-	const char *id,
-	const struct sockaddr_storage *physicalAddresses,
-	unsigned int physicalAddressCount,
-	const char **virtualAddresses,
-	unsigned int virtualAddressCount)
-{
-	Locator loc;
-	for(unsigned int i=0;i<physicalAddressCount;++i) {
-		loc.add(*reinterpret_cast<const InetAddress *>(physicalAddresses + i));
-	}
-	for(unsigned int i=0;i<virtualAddressCount;++i) {
-		Identity id;
-		if (!id.fromString(virtualAddresses[i]))
-			return -1;
-		loc.add(id);
-	}
-	Identity signingId;
-	if (!signingId.fromString(id))
-		return -1;
-	if (!signingId.hasPrivate())
-		return -1;
-	if (!loc.finish(signingId,ts))
-		return -1;
-	Buffer<65536> *tmp = new Buffer<65536>();
-	loc.serialize(*tmp);
-	if (tmp->size() > bufSize) {
-		delete tmp;
-		return -1;
-	}
-	memcpy(buf,tmp->data(),tmp->size());
-	int s = (int)tmp->size();
-	delete tmp;
-	return s;
-}
-
-extern "C" int ZT_GoLocator_decodeLocator(const uint8_t *locatorBytes,unsigned int locatorSize,struct ZT_GoLocator_Info *info)
-{
-	Locator loc;
-	if (!loc.deserialize(locatorBytes,locatorSize))
-		return -1;
-	if (!loc.verify())
-		return -2;
-	loc.id().toString(false,info->id);
-	info->phyCount = 0;
-	info->virtCount = 0;
-	for(auto p=loc.phy().begin();p!=loc.phy().end();++p)
-		memcpy(&(info->phy[info->phyCount++]),&(*p),sizeof(struct sockaddr_storage));
-	for(auto v=loc.virt().begin();v!=loc.virt().end();++v)
-		v->toString(false,info->virt[info->virtCount++]);
-	return 1;
-}
-
-int ZT_GoLocator_makeSignedTxtRecords(
-	const uint8_t *locator,
-	unsigned int locatorSize,
-	const char *name,
-	const uint8_t *privateKey,
-	unsigned int privateKeySize,
-	char results[256][256])
-{
-	if (privateKeySize != ZT_ECC384_PRIVATE_KEY_SIZE)
-		return -1;
-	Locator loc;
-	if (!loc.deserialize(locator,locatorSize))
-		return -1;
-	std::vector<Str> r(loc.makeTxtRecords(privateKey));
-	if (r.size() > 256)
-		return -1;
-	for(unsigned long i=0;i<r.size();++i)
-		Utils::scopy(results[i],256,r[i].c_str());
-	return (int)r.size();
 }

@@ -371,6 +371,7 @@ uint64_t Node::address() const
 void Node::status(ZT_NodeStatus *status) const
 {
 	status->address = RR->identity.address().toInt();
+	status->identity = reinterpret_cast<const ZT_Identity *>(&RR->identity);
 	status->publicIdentity = RR->publicIdentityStr;
 	status->secretIdentity = RR->secretIdentityStr;
 	status->online = _online ? 1 : 0;
@@ -384,34 +385,38 @@ ZT_PeerList *Node::peers() const
 	RR->topology->getAllPeers(peers);
 	std::sort(peers.begin(),peers.end(),_sortPeerPtrsByAddress());
 
-	char *buf = (char *)::malloc(sizeof(ZT_PeerList) + (sizeof(ZT_Peer) * peers.size()));
+	char *buf = (char *)::malloc(sizeof(ZT_PeerList) + (sizeof(ZT_Peer) * peers.size()) + (sizeof(Identity) * peers.size()));
 	if (!buf)
 		return (ZT_PeerList *)0;
 	ZT_PeerList *pl = (ZT_PeerList *)buf;
 	pl->peers = (ZT_Peer *)(buf + sizeof(ZT_PeerList));
+	Identity *identities = (Identity *)(buf + sizeof(ZT_PeerList) + (sizeof(ZT_Peer) * peers.size()));
 
+	const int64_t now = _now;
 	pl->peerCount = 0;
 	for(std::vector< SharedPtr<Peer> >::iterator pi(peers.begin());pi!=peers.end();++pi) {
-		ZT_Peer *p = &(pl->peers[pl->peerCount++]);
+		ZT_Peer *p = &(pl->peers[pl->peerCount]);
+
 		p->address = (*pi)->address().toInt();
+		identities[pl->peerCount] = (*pi)->identity(); // need to make a copy in case peer gets deleted
+		p->identity = &identities[pl->peerCount];
 		p->hadAggregateLink = 0;
 		if ((*pi)->remoteVersionKnown()) {
-			p->versionMajor = (*pi)->remoteVersionMajor();
-			p->versionMinor = (*pi)->remoteVersionMinor();
-			p->versionRev = (*pi)->remoteVersionRevision();
+			p->versionMajor = (int)(*pi)->remoteVersionMajor();
+			p->versionMinor = (int)(*pi)->remoteVersionMinor();
+			p->versionRev = (int)(*pi)->remoteVersionRevision();
 		} else {
 			p->versionMajor = -1;
 			p->versionMinor = -1;
 			p->versionRev = -1;
 		}
-		p->latency = (*pi)->latency(_now);
+		p->latency = (int)(*pi)->latency(now);
 		if (p->latency >= 0xffff)
 			p->latency = -1;
-		p->role = RR->topology->isRoot((*pi)->identity()) ? ZT_PEER_ROLE_PLANET : ZT_PEER_ROLE_LEAF;
+		p->role = RR->topology->isRoot((*pi)->identity()) ? ZT_PEER_ROLE_ROOT : ZT_PEER_ROLE_LEAF;
 
-		const int64_t now = _now;
-		std::vector< SharedPtr<Path> > paths((*pi)->paths(_now));
-		SharedPtr<Path> bestp((*pi)->getAppropriatePath(_now,false));
+		std::vector< SharedPtr<Path> > paths((*pi)->paths(now));
+		SharedPtr<Path> bestp((*pi)->getAppropriatePath(now,false));
 		p->hadAggregateLink |= (*pi)->hasAggregateLink();
 		p->pathCount = 0;
 		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
@@ -434,6 +439,8 @@ ZT_PeerList *Node::peers() const
 
 			++p->pathCount;
 		}
+
+		++pl->peerCount;
 	}
 
 	return pl;
@@ -553,9 +560,17 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,cons
 
 bool Node::externalPathLookup(void *tPtr,const Identity &id,int family,InetAddress &addr)
 {
-	char idStr[ZT_IDENTITY_STRING_BUFFER_LENGTH];
-	id.toString(false,idStr);
-	return (_cb.pathLookupFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,id.address().toInt(),idStr,family,reinterpret_cast<sockaddr_storage *>(&addr)) == ZT_RESULT_OK);
+	if (_cb.pathLookupFunction) {
+		return (_cb.pathLookupFunction(
+			reinterpret_cast<ZT_Node *>(this),
+			_uPtr,
+			tPtr,
+			id.address().toInt(),
+			reinterpret_cast<const ZT_Identity *>(&id),
+			family,
+			reinterpret_cast<sockaddr_storage *>(&addr)) == ZT_RESULT_OK);
+	}
+	return false;
 }
 
 ZT_ResultCode Node::setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork, const ZT_PhysicalPathConfiguration *pathConfig)

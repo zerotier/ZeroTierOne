@@ -21,6 +21,7 @@
 
 #ifdef __cplusplus
 #include <cstdint>
+extern "C" {
 #else
 #include <stdint.h>
 #endif
@@ -41,10 +42,6 @@
  * header if you need to prepend something to function specifications. */
 #ifndef ZT_SDK_API
 #define ZT_SDK_API
-#endif
-
-#ifdef __cplusplus
-extern "C" {
 #endif
 
 /****************************************************************************/
@@ -94,11 +91,6 @@ extern "C" {
  * Maximum payload MTU for UDP packets
  */
 #define ZT_MAX_PHYSMTU (ZT_MAX_PHYSPAYLOAD + ZT_MAX_HEADROOM)
-
-/**
- * Maximum size of a remote trace message's serialized Dictionary
- */
-#define ZT_MAX_REMOTE_TRACE_SIZE 10000
 
 /**
  * Maximum length of network short name
@@ -261,78 +253,6 @@ extern "C" {
  * Packet characteristics flag: TCP FIN flag
  */
 #define ZT_RULE_PACKET_CHARACTERISTICS_TCP_FIN 0x0000000000000001ULL
-
-/****************************************************************************/
-
-// Fields in remote trace dictionaries
-#define ZT_REMOTE_TRACE_FIELD__EVENT "event"
-#define ZT_REMOTE_TRACE_FIELD__NODE_ID "nodeId"
-#define ZT_REMOTE_TRACE_FIELD__PACKET_ID "packetId"
-#define ZT_REMOTE_TRACE_FIELD__PACKET_VERB "packetVerb"
-#define ZT_REMOTE_TRACE_FIELD__PACKET_TRUSTED_PATH_ID "packetTrustedPathId"
-#define ZT_REMOTE_TRACE_FIELD__PACKET_TRUSTED_PATH_APPROVED "packetTrustedPathApproved"
-#define ZT_REMOTE_TRACE_FIELD__PACKET_HOPS "packetHops"
-#define ZT_REMOTE_TRACE_FIELD__REMOTE_ZTADDR "remoteZtAddr"
-#define ZT_REMOTE_TRACE_FIELD__REMOTE_PHYADDR "remotePhyAddr"
-#define ZT_REMOTE_TRACE_FIELD__LOCAL_ZTADDR "localZtAddr"
-#define ZT_REMOTE_TRACE_FIELD__LOCAL_PHYADDR "localPhyAddr"
-#define ZT_REMOTE_TRACE_FIELD__LOCAL_SOCKET "localSocket"
-#define ZT_REMOTE_TRACE_FIELD__IP_SCOPE "phyAddrIpScope"
-#define ZT_REMOTE_TRACE_FIELD__NETWORK_ID "networkId"
-#define ZT_REMOTE_TRACE_FIELD__SOURCE_ZTADDR "sourceZtAddr"
-#define ZT_REMOTE_TRACE_FIELD__DEST_ZTADDR "destZtAddr"
-#define ZT_REMOTE_TRACE_FIELD__SOURCE_MAC "sourceMac"
-#define ZT_REMOTE_TRACE_FIELD__DEST_MAC "destMac"
-#define ZT_REMOTE_TRACE_FIELD__ETHERTYPE "etherType"
-#define ZT_REMOTE_TRACE_FIELD__VLAN_ID "vlanId"
-#define ZT_REMOTE_TRACE_FIELD__FRAME_LENGTH "frameLength"
-#define ZT_REMOTE_TRACE_FIELD__FRAME_DATA "frameData"
-#define ZT_REMOTE_TRACE_FIELD__FILTER_FLAG_NOTEE "filterNoTee"
-#define ZT_REMOTE_TRACE_FIELD__FILTER_FLAG_INBOUND "filterInbound"
-#define ZT_REMOTE_TRACE_FIELD__FILTER_RESULT "filterResult"
-#define ZT_REMOTE_TRACE_FIELD__FILTER_BASE_RULE_LOG "filterBaseRuleLog"
-#define ZT_REMOTE_TRACE_FIELD__FILTER_CAP_RULE_LOG "filterCapRuleLog"
-#define ZT_REMOTE_TRACE_FIELD__FILTER_CAP_ID "filterMatchingCapId"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TYPE "credType"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ID "credId"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TIMESTAMP "credTs"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_INFO "credInfo"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO "credIssuedTo"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_REVOCATION_TARGET "credRevocationTarget"
-#define ZT_REMOTE_TRACE_FIELD__REASON "reason"
-#define ZT_REMOTE_TRACE_FIELD__NETWORK_CONTROLLER_ID "networkControllerId"
-
-// Event types in remote traces
-#define ZT_REMOTE_TRACE_EVENT__RESETTING_PATHS_IN_SCOPE 0x1000
-#define ZT_REMOTE_TRACE_EVENT__PEER_CONFIRMING_UNKNOWN_PATH 0x1001
-#define ZT_REMOTE_TRACE_EVENT__PEER_LEARNED_NEW_PATH 0x1002
-#define ZT_REMOTE_TRACE_EVENT__PEER_REDIRECTED 0x1003
-#define ZT_REMOTE_TRACE_EVENT__PACKET_MAC_FAILURE 0x1004
-#define ZT_REMOTE_TRACE_EVENT__PACKET_INVALID 0x1005
-#define ZT_REMOTE_TRACE_EVENT__DROPPED_HELLO 0x1006
-#define ZT_REMOTE_TRACE_EVENT__OUTGOING_NETWORK_FRAME_DROPPED 0x2000
-#define ZT_REMOTE_TRACE_EVENT__INCOMING_NETWORK_ACCESS_DENIED 0x2001
-#define ZT_REMOTE_TRACE_EVENT__INCOMING_NETWORK_FRAME_DROPPED 0x2002
-#define ZT_REMOTE_TRACE_EVENT__CREDENTIAL_REJECTED 0x2003
-#define ZT_REMOTE_TRACE_EVENT__CREDENTIAL_ACCEPTED 0x2004
-#define ZT_REMOTE_TRACE_EVENT__NETWORK_CONFIG_REQUEST_SENT 0x2005
-#define ZT_REMOTE_TRACE_EVENT__NETWORK_FILTER_TRACE 0x2006
-
-// Event types in remote traces in hex string form
-#define ZT_REMOTE_TRACE_EVENT__RESETTING_PATHS_IN_SCOPE_S "1000"
-#define ZT_REMOTE_TRACE_EVENT__PEER_CONFIRMING_UNKNOWN_PATH_S "1001"
-#define ZT_REMOTE_TRACE_EVENT__PEER_LEARNED_NEW_PATH_S "1002"
-#define ZT_REMOTE_TRACE_EVENT__PEER_REDIRECTED_S "1003"
-#define ZT_REMOTE_TRACE_EVENT__PACKET_MAC_FAILURE_S "1004"
-#define ZT_REMOTE_TRACE_EVENT__PACKET_INVALID_S "1005"
-#define ZT_REMOTE_TRACE_EVENT__DROPPED_HELLO_S "1006"
-#define ZT_REMOTE_TRACE_EVENT__OUTGOING_NETWORK_FRAME_DROPPED_S "2000"
-#define ZT_REMOTE_TRACE_EVENT__INCOMING_NETWORK_ACCESS_DENIED_S "2001"
-#define ZT_REMOTE_TRACE_EVENT__INCOMING_NETWORK_FRAME_DROPPED_S "2002"
-#define ZT_REMOTE_TRACE_EVENT__CREDENTIAL_REJECTED_S "2003"
-#define ZT_REMOTE_TRACE_EVENT__CREDENTIAL_ACCEPTED_S "2004"
-#define ZT_REMOTE_TRACE_EVENT__NETWORK_CONFIG_REQUEST_SENT_S "2005"
-#define ZT_REMOTE_TRACE_EVENT__NETWORK_FILTER_TRACE_S "2006"
 
 /****************************************************************************/
 /* Structures and other types                                               */
@@ -503,48 +423,23 @@ enum ZT_Event
 	 *
 	 * Meta-data: ZT_UserMessage structure
 	 */
-	ZT_EVENT_USER_MESSAGE = 6,
-
-	/**
-	 * Remote trace received
-	 *
-	 * NOTE: any node can fling a VERB_REMOTE_TRACE at you. It's up to you
-	 * to determine if you want to do anything with it or just silently
-	 * drop it on the floor. It's also up to you to handle these securely!
-	 *
-	 * Meta-data: ZT_RemoteTrace structure
-	 */
-	ZT_EVENT_REMOTE_TRACE = 7
+	ZT_EVENT_USER_MESSAGE = 6
 };
 
 /**
- * Payload of REMOTE_TRACE event
+ * Identity type codes
  */
-typedef struct
+enum ZT_Identity_Type
 {
-	/**
-	 * ZeroTier address of sender (in least significant 40 bits only)
-	 */
-	uint64_t origin;
+	/* These values must be the same as in Identity.hpp in the core. */
+	ZT_IDENTITY_TYPE_C25519 = 0,
+	ZT_IDENTITY_TYPE_P384 = 1
+};
 
-	/**
-	 * Null-terminated Dictionary containing key/value pairs sent by origin
-	 *
-	 * This *should* be a dictionary, but the implementation only checks
-	 * that it is a valid non-empty C-style null-terminated string. Be very
-	 * careful to use a well-tested parser to parse this as it represents
-	 * data received from a potentially un-trusted peer on the network.
-	 * Invalid payloads should be dropped.
-	 *
-	 * The contents of data[] may be modified.
-	 */
-	const char *data;
-
-	/**
-	 * Length of dict[] in bytes, INCLUDING terminating null
-	 */
-	unsigned int len;
-} ZT_RemoteTrace;
+/**
+ * A ZeroTier identity (opaque)
+ */
+typedef void ZT_Identity;
 
 /**
  * User message used with ZT_EVENT_USER_MESSAGE
@@ -588,6 +483,11 @@ typedef struct
 	 * 40-bit ZeroTier address of this node
 	 */
 	uint64_t address;
+
+	/**
+	 * Actual identity object for this node
+	 */
+	const ZT_Identity *identity;
 
 	/**
 	 * Public identity in string-serialized form (safe to send to others)
@@ -966,16 +866,6 @@ enum ZT_VirtualNetworkConfigOperation
 };
 
 /**
- * What trust hierarchy role does this peer have?
- */
-enum ZT_PeerRole
-{
-	ZT_PEER_ROLE_LEAF = 0,       // ordinary node
-	ZT_PEER_ROLE_MOON = 1,       // moon root
-	ZT_PEER_ROLE_PLANET = 2      // planetary root
-};
-
-/**
  * Virtual network configuration
  */
 typedef struct
@@ -1184,6 +1074,15 @@ typedef struct
 } ZT_PeerPhysicalPath;
 
 /**
+ * What trust hierarchy role does this peer have?
+ */
+enum ZT_PeerRole
+{
+	ZT_PEER_ROLE_LEAF = 0,       // ordinary node
+	ZT_PEER_ROLE_ROOT = 1        // root server
+};
+
+/**
  * Peer status result buffer
  */
 typedef struct
@@ -1192,6 +1091,11 @@ typedef struct
 	 * ZeroTier address (40 bits)
 	 */
 	uint64_t address;
+
+	/**
+	 * Peer identity
+	 */
+	const ZT_Identity *identity;
 
 	/**
 	 * Remote major version or -1 if not known
@@ -1497,7 +1401,7 @@ typedef int (*ZT_PathLookupFunction)(
 	void *,                           /* User ptr */
 	void *,                           /* Thread ptr */
 	uint64_t,                         /* ZeroTier address (40 bits) */
-	const char *,                     /* Identity in string form */
+	const ZT_Identity *,              /* Full identity of node */
 	int,                              /* Desired ss_family or -1 for any */
 	struct sockaddr_storage *);       /* Result buffer */
 
@@ -1541,12 +1445,12 @@ struct ZT_Node_Callbacks
 	ZT_EventCallback eventCallback;
 
 	/**
-	 * OPTIONAL: Function to check whether a given physical path should be used
+	 * OPTIONAL: Function to check whether a given physical path should be used for ZeroTier traffic
 	 */
 	ZT_PathCheckFunction pathCheckFunction;
 
 	/**
-	 * OPTIONAL: Function to get hints to physical paths to ZeroTier addresses
+	 * RECOMMENDED: Function to look up paths to ZeroTier nodes
 	 */
 	ZT_PathLookupFunction pathLookupFunction;
 };
@@ -1864,6 +1768,115 @@ ZT_SDK_API void ZT_Node_setController(ZT_Node *node,void *networkConfigMasterIns
  * @return OK or error code
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_setPhysicalPathConfiguration(ZT_Node *node,const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig);
+
+/**
+ * Generate a new identity
+ *
+ * Due to a small amount of proof of work this can be a time consuming and CPU
+ * intensive operation. It takes less than a second on most desktop-class systems
+ * but can take longer on e.g. phones.
+ *
+ * @param type Type of identity to generate
+ * @return New identity or NULL on error
+ */
+ZT_SDK_API ZT_Identity *ZT_Identity_new(enum ZT_Identity_Type type);
+
+/**
+ * Create a new identity object from a string-serialized identity
+ *
+ * @param idStr Identity in string format
+ * @return Identity object or NULL if the supplied identity string was not valid
+ */
+ZT_SDK_API ZT_Identity *ZT_Identity_fromString(const char *idStr);
+
+/**
+ * Validate this identity
+ *
+ * This can be slightly time consuming due to address derivation (work) checking.
+ *
+ * @return Non-zero if identity is valid
+ */
+ZT_SDK_API int ZT_Identity_validate(const ZT_Identity *id);
+
+/**
+ * Sign a data object with this identity
+ *
+ * The identity must have a private key or this will fail.
+ *
+ * @param id Identity to use to sign
+ * @param data Data to sign
+ * @param len Length of data
+ * @param signature Buffer to store signature
+ * @param signatureBufferLength Length of buffer (must be at least 96 bytes)
+ * @return Length of signature in bytes or 0 on failure.
+ */
+ZT_SDK_API unsigned int ZT_Identity_sign(const ZT_Identity *id,const void *data,unsigned int len,void *signature,unsigned int signatureBufferLength);
+
+/**
+ * Verify a signature
+ *
+ * @param id Identity to use to verify
+ * @param data Data to verify
+ * @param len Length of data
+ * @param signature Signature to check
+ * @param sigLen Length of signature in bytes
+ * @return Non-zero if signature is valid
+ */
+ZT_SDK_API int ZT_Identity_verify(const ZT_Identity *id,const void *data,unsigned int len,const void *signature,unsigned int sigLen);
+
+/**
+ * Get identity type
+ *
+ * @param id Identity to query
+ * @return Identity type code
+ */
+ZT_SDK_API enum ZT_Identity_Type ZT_Identity_type(const ZT_Identity *id);
+
+/**
+ * Convert an identity to its string representation
+ *
+ * @param id Identity to convert
+ * @param buf Buffer to store identity (should be at least about 1024 bytes in length)
+ * @param capacity Capacity of buffer
+ * @param includePrivate If true include the private key if present
+ * @return Pointer to buf or NULL on overflow or other error
+ */
+ZT_SDK_API char *ZT_Identity_toString(const ZT_Identity *id,char *buf,int capacity,int includePrivate);
+
+/**
+ * Check whether this identity object also holds a private key
+ *
+ * @param id Identity to query
+ * @return Non-zero if a private key is held
+ */
+ZT_SDK_API int ZT_Identity_hasPrivate(const ZT_Identity *id);
+
+/**
+ * Get the ZeroTier address associated with this identity
+ *
+ * @param id Identity to query
+ * @return ZeroTier address (only least significant 40 bits are meaningful, rest will be 0)
+ */
+ZT_SDK_API uint64_t ZT_Identity_address(const ZT_Identity *id);
+
+/**
+ * Compute a hash of this identity's public keys (or both public and private if includePrivate is true)
+ *
+ * @param id Identity to query
+ * @param h Buffer for 384-bit hash
+ * @param includePrivate If true include private keys if any
+ */
+ZT_SDK_API void ZT_Identity_hash(const ZT_Identity *id,uint8_t h[48],int includePrivate);
+
+/**
+ * Delete an identity and free associated memory
+ *
+ * This should only be used with identities created via Identity_new
+ * and Identity_fromString().
+ *
+ * @param id Identity to delete
+ */
+ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id);
 
 /**
  * Get ZeroTier One version

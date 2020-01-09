@@ -376,7 +376,7 @@ bool InetAddress::operator<(const InetAddress &a) const
 InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac)
 {
 	InetAddress r;
-	sockaddr_in6 *const sin6 = reinterpret_cast<struct sockaddr_in6 *>(&r);
+	sockaddr_in6 *const sin6 = reinterpret_cast<sockaddr_in6 *>(&r);
 	sin6->sin6_family = AF_INET6;
 	sin6->sin6_addr.s6_addr[0] = 0xfe;
 	sin6->sin6_addr.s6_addr[1] = 0x80;
@@ -401,7 +401,7 @@ InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac)
 InetAddress InetAddress::makeIpv6rfc4193(uint64_t nwid,uint64_t zeroTierAddress)
 {
 	InetAddress r;
-	sockaddr_in6 *const sin6 = reinterpret_cast<struct sockaddr_in6 *>(&r);
+	sockaddr_in6 *const sin6 = reinterpret_cast<sockaddr_in6 *>(&r);
 	sin6->sin6_family = AF_INET6;
 	sin6->sin6_addr.s6_addr[0] = 0xfd;
 	sin6->sin6_addr.s6_addr[1] = (uint8_t)(nwid >> 56U);
@@ -427,7 +427,7 @@ InetAddress InetAddress::makeIpv66plane(uint64_t nwid,uint64_t zeroTierAddress)
 {
 	nwid ^= (nwid >> 32U);
 	InetAddress r;
-	sockaddr_in6 *const sin6 = reinterpret_cast<struct sockaddr_in6 *>(&r);
+	sockaddr_in6 *const sin6 = reinterpret_cast<sockaddr_in6 *>(&r);
 	sin6->sin6_family = AF_INET6;
 	sin6->sin6_addr.s6_addr[0] = 0xfc;
 	sin6->sin6_addr.s6_addr[1] = (uint8_t)(nwid >> 24U);

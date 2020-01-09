@@ -67,7 +67,7 @@ public:
 	 *
 	 * @param str Identity in canonical string format
 	 */
-	ZT_ALWAYS_INLINE Identity(const char *str) { fromString(str); }
+	explicit ZT_ALWAYS_INLINE Identity(const char *str) { fromString(str); }
 
 	/**
 	 * Set identity to NIL value (all zero)
@@ -86,7 +86,7 @@ public:
 	 *
 	 * @param t Type of identity to generate
 	 */
-	void generate(const Type t);
+	void generate(Type t);
 
 	/**
 	 * Check the validity of this identity's pairing of key to address
@@ -106,25 +106,7 @@ public:
 	 * @param h Buffer to receive SHA384 of public key(s)
 	 * @param includePrivate If true, hash private key(s) as well
 	 */
-	inline bool hash(uint8_t h[48],const bool includePrivate = false) const
-	{
-		switch(_type) {
-
-			case C25519:
-				if ((_hasPrivate)&&(includePrivate))
-					SHA384(h,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
-				else SHA384(h,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-				return true;
-
-			case P384:
-				if ((_hasPrivate)&&(includePrivate))
-					SHA384(h,&_pub,sizeof(_pub),&_priv,sizeof(_priv));
-				else SHA384(h,&_pub,sizeof(_pub));
-				return true;
-
-		}
-		return false;
-	}
+	bool hash(uint8_t h[48],bool includePrivate = false) const;
 
 	/**
 	 * Sign a message with this identity (private key required)
@@ -138,31 +120,7 @@ public:
 	 * @param siglen Length of buffer
 	 * @return Number of bytes actually written to sig or 0 on error
 	 */
-	inline unsigned int sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const
-	{
-		if (_hasPrivate) {
-			switch(_type) {
-
-				case C25519:
-					if (siglen >= ZT_C25519_SIGNATURE_LEN) {
-						C25519::sign(_priv.c25519,_pub.c25519,data,len,sig);
-						return ZT_C25519_SIGNATURE_LEN;
-					}
-
-				case P384:
-					if (siglen >= ZT_ECC384_SIGNATURE_SIZE) {
-						// When signing with P384 we also hash the C25519 public key as an
-						// extra measure to ensure that only this identity can verify.
-						uint8_t h[48];
-						SHA384(h,data,len,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-						ECC384ECDSASign(_priv.p384,h,(uint8_t *)sig);
-						return ZT_ECC384_SIGNATURE_SIZE;
-					}
-
-			}
-		}
-		return 0;
-	}
+	unsigned int sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const;
 
 	/**
 	 * Verify a message signature against this identity
@@ -173,24 +131,7 @@ public:
 	 * @param siglen Length of signature in bytes
 	 * @return True if signature validates and data integrity checks
 	 */
-	inline bool verify(const void *data,unsigned int len,const void *sig,unsigned int siglen) const
-	{
-		switch(_type) {
-
-			case C25519:
-				return C25519::verify(_pub.c25519,data,len,sig,siglen);
-
-			case P384:
-				if (siglen == ZT_ECC384_SIGNATURE_SIZE) {
-					uint8_t h[48];
-					SHA384(h,data,len,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-					return ECC384ECDSAVerify(_pub.p384,h,(const uint8_t *)sig);
-				}
-				break;
-
-		}
-		return false;
-	}
+	bool verify(const void *data,unsigned int len,const void *sig,unsigned int siglen) const;
 
 	/**
 	 * Shortcut method to perform key agreement with another identity
@@ -201,42 +142,7 @@ public:
 	 * @param key Result parameter to fill with key bytes
 	 * @return Was agreement successful?
 	 */
-	inline bool agree(const Identity &id,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) const
-	{
-		uint8_t rawkey[128];
-		uint8_t h[64];
-		if (_hasPrivate) {
-			if (_type == C25519) {
-
-				if ((id._type == C25519)||(id._type == P384)) {
-					// If we are a C25519 key we can agree with another C25519 key or with only the
-					// C25519 portion of a type 1 P-384 key.
-					C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
-					SHA512(h,rawkey,ZT_C25519_SHARED_KEY_LEN);
-					memcpy(key,h,ZT_PEER_SECRET_KEY_LENGTH);
-					return true;
-				}
-
-			} else if (_type == P384) {
-
-				if (id._type == P384) {
-					C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
-					ECC384ECDH(id._pub.p384,_priv.p384,rawkey + ZT_C25519_SHARED_KEY_LEN);
-					SHA384(h,rawkey,ZT_C25519_SHARED_KEY_LEN + ZT_ECC384_SHARED_SECRET_SIZE);
-					memcpy(key,h,ZT_PEER_SECRET_KEY_LENGTH);
-					return true;
-				} else if (id._type == C25519) {
-					// If the other identity is a C25519 identity we can agree using only that type.
-					C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
-					SHA512(h,rawkey,ZT_C25519_SHARED_KEY_LEN);
-					memcpy(key,h,ZT_PEER_SECRET_KEY_LENGTH);
-					return true;
-				}
-
-			}
-		}
-		return false;
-	}
+	bool agree(const Identity &id,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) const;
 
 	/**
 	 * @return This identity's address
@@ -476,7 +382,7 @@ public:
 					privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE];
 					if (len < (privlen + (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE + 1)))
 						return -1;
-					return (privlen + (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE + 1));
+					return (int)(privlen + (unsigned int)(ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE + 1));
 				} else if (privlen == 0) {
 					_hasPrivate = false;
 					return (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 2);

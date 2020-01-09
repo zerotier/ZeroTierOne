@@ -14,9 +14,15 @@
 #ifndef ZT_GONODE_H
 #define ZT_GONODE_H
 
+#ifdef __cplusplus
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#else
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#endif
 
 #include "../../include/ZeroTierCore.h"
 #include "../../node/Constants.hpp"

@@ -42,6 +42,16 @@ namespace ZeroTier {
  */
 struct InetAddress : public sockaddr_storage
 {
+private:
+	template<typename SA>
+	ZT_ALWAYS_INLINE void copySockaddrToThis(const SA *sa)
+	{
+		memcpy(reinterpret_cast<void *>(this),sa,sizeof(SA));
+		if (sizeof(SA) < sizeof(InetAddress))
+			memset(reinterpret_cast<char *>(this) + sizeof(SA),0,sizeof(InetAddress) - sizeof(SA));
+	}
+
+public:
 	/**
 	 * Loopback IPv4 address (no port)
 	 */
@@ -79,116 +89,83 @@ struct InetAddress : public sockaddr_storage
 	// Hasher for unordered sets and maps in C++11
 	struct Hasher { ZT_ALWAYS_INLINE std::size_t operator()(const InetAddress &a) const { return (std::size_t)a.hashCode(); } };
 
-	ZT_ALWAYS_INLINE InetAddress() { memset(this,0,sizeof(InetAddress)); }
-	ZT_ALWAYS_INLINE InetAddress(const InetAddress &a) { memcpy(this,&a,sizeof(InetAddress)); }
-	ZT_ALWAYS_INLINE InetAddress(const InetAddress *a) { memcpy(this,a,sizeof(InetAddress)); }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_storage &ss) { *this = ss; }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_storage *ss) { *this = ss; }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr &sa) { *this = sa; }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr *sa) { *this = sa; }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_in &sa) { *this = sa; }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_in *sa) { *this = sa; }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_in6 &sa) { *this = sa; }
-	ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_in6 *sa) { *this = sa; }
+	ZT_ALWAYS_INLINE InetAddress() { memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress)); }
+	explicit ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_storage &ss) { *this = ss; }
+	explicit ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_storage *ss) { *this = ss; }
+	explicit ZT_ALWAYS_INLINE InetAddress(const struct sockaddr &sa) { *this = sa; }
+	explicit ZT_ALWAYS_INLINE InetAddress(const struct sockaddr *sa) { *this = sa; }
+	explicit ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_in &sa) { *this = sa; }
+	explicit ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_in *sa) { *this = sa; }
+	explicit ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_in6 &sa) { *this = sa; }
+	explicit ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_in6 *sa) { *this = sa; }
 	ZT_ALWAYS_INLINE InetAddress(const void *ipBytes,unsigned int ipLen,unsigned int port) { this->set(ipBytes,ipLen,port); }
 	ZT_ALWAYS_INLINE InetAddress(const uint32_t ipv4,unsigned int port) { this->set(&ipv4,4,port); }
-	ZT_ALWAYS_INLINE InetAddress(const char *ipSlashPort) { this->fromString(ipSlashPort); }
+	explicit ZT_ALWAYS_INLINE InetAddress(const char *ipSlashPort) { this->fromString(ipSlashPort); }
 
-	ZT_ALWAYS_INLINE void clear() { memset(this,0,sizeof(InetAddress)); }
-
-	ZT_ALWAYS_INLINE InetAddress &operator=(const InetAddress &a)
-	{
-		if (&a != this)
-			memcpy(this,&a,sizeof(InetAddress));
-		return *this;
-	}
-
-	ZT_ALWAYS_INLINE InetAddress &operator=(const InetAddress *a)
-	{
-		if (a != this)
-			memcpy(this,a,sizeof(InetAddress));
-		return *this;
-	}
+	ZT_ALWAYS_INLINE void clear() { memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress)); }
 
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_storage &ss)
 	{
-		if (reinterpret_cast<const InetAddress *>(&ss) != this)
-			memcpy(this,&ss,sizeof(InetAddress));
+		memcpy(reinterpret_cast<void *>(this),&ss,sizeof(InetAddress));
 		return *this;
 	}
 
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_storage *ss)
 	{
-		if (reinterpret_cast<const InetAddress *>(ss) != this)
-			memcpy(this,ss,sizeof(InetAddress));
+		if (ss)
+			memcpy(reinterpret_cast<void *>(this),ss,sizeof(InetAddress));
+		else memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
 		return *this;
 	}
 
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_in &sa)
 	{
-		if (reinterpret_cast<const InetAddress *>(&sa) != this) {
-			memset(this,0,sizeof(InetAddress));
-			memcpy(this,&sa,sizeof(struct sockaddr_in));
-		}
+		copySockaddrToThis(&sa);
 		return *this;
 	}
 
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_in *sa)
 	{
-		if (reinterpret_cast<const InetAddress *>(sa) != this) {
-			memset(this,0,sizeof(InetAddress));
-			memcpy(this,sa,sizeof(struct sockaddr_in));
-		}
+		if (sa)
+			copySockaddrToThis(sa);
+		else memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
 		return *this;
 	}
 
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_in6 &sa)
 	{
-		if (reinterpret_cast<const InetAddress *>(&sa) != this) {
-			memset(this,0,sizeof(InetAddress));
-			memcpy(this,&sa,sizeof(struct sockaddr_in6));
-		}
+		copySockaddrToThis(&sa);
 		return *this;
 	}
 
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_in6 *sa)
 	{
-		if (reinterpret_cast<const InetAddress *>(sa) != this) {
-			memset(this,0,sizeof(InetAddress));
-			memcpy(this,sa,sizeof(struct sockaddr_in6));
-		}
+		if (sa)
+			copySockaddrToThis(sa);
+		else memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
 		return *this;
 	}
 
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr &sa)
 	{
-		if (reinterpret_cast<const InetAddress *>(&sa) != this) {
-			memset(this,0,sizeof(InetAddress));
-			switch(sa.sa_family) {
-				case AF_INET:
-					memcpy(this,&sa,sizeof(struct sockaddr_in));
-					break;
-				case AF_INET6:
-					memcpy(this,&sa,sizeof(struct sockaddr_in6));
-					break;
-			}
-		}
+		if (sa.sa_family == AF_INET)
+			copySockaddrToThis(reinterpret_cast<const sockaddr_in *>(&sa));
+		else if (sa.sa_family == AF_INET6)
+			copySockaddrToThis(reinterpret_cast<const sockaddr_in6 *>(&sa));
+		else memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
 		return *this;
 	}
 
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr *sa)
 	{
-		if (reinterpret_cast<const InetAddress *>(sa) != this) {
-			memset(this,0,sizeof(InetAddress));
-			switch(sa->sa_family) {
-				case AF_INET:
-					memcpy(this,sa,sizeof(struct sockaddr_in));
-					break;
-				case AF_INET6:
-					memcpy(this,sa,sizeof(struct sockaddr_in6));
-					break;
-			}
+		if (sa) {
+			if (sa->sa_family == AF_INET)
+				copySockaddrToThis(reinterpret_cast<const sockaddr_in *>(sa));
+			else if (sa->sa_family == AF_INET6)
+				copySockaddrToThis(reinterpret_cast<const sockaddr_in6 *>(sa));
+			return *this;
 		}
+		memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
 		return *this;
 	}
 
@@ -517,6 +494,9 @@ struct InetAddress : public sockaddr_storage
 	}
 	inline int unmarshal(const uint8_t *restrict data,const int len)
 	{
+#ifdef ZT_NO_TYPE_PUNNING
+		uint16_t tmp;
+#endif
 		if (len <= 0)
 			return -1;
 		switch(data[0]) {
@@ -525,22 +505,32 @@ struct InetAddress : public sockaddr_storage
 			case 4:
 				if (len < 7)
 					return -1;
-				memset(this,0,sizeof(InetAddress));
+				memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
 				reinterpret_cast<sockaddr_in *>(this)->sin_family = AF_INET;
 				reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_addr.s_addr))[0] = data[1];
 				reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_addr.s_addr))[1] = data[2];
 				reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_addr.s_addr))[2] = data[3];
 				reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_addr.s_addr))[3] = data[4];
-				reinterpret_cast<sockaddr_in *>(this)->sin_port = Utils::hton((((uint16_t)data[5]) << 8) | (uint16_t)data[6]);
+#ifdef ZT_NO_TYPE_PUNNING
+				memcpy(&tmp,data + 5,2);
+				reinterpret_cast<sockaddr_in *>(this)->sin_port = tmp;
+#else
+				reinterpret_cast<sockaddr_in *>(this)->sin_port = *((const uint16_t *)(data + 5));
+#endif
 				return 7;
 			case 6:
 				if (len < 19)
 					return -1;
-				memset(this,0,sizeof(InetAddress));
+				memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
 				reinterpret_cast<sockaddr_in6 *>(this)->sin6_family = AF_INET6;
 				for(int i=0;i<16;i++)
 					(reinterpret_cast<sockaddr_in6 *>(this)->sin6_addr.s6_addr)[i] = data[i+1];
-				reinterpret_cast<sockaddr_in6 *>(this)->sin6_port = Utils::hton((((uint16_t)data[17]) << 8) | (uint16_t)data[18]);
+#ifdef ZT_NO_TYPE_PUNNING
+				memcpy(&tmp,data + 17,2);
+				reinterpret_cast<sockaddr_in *>(this)->sin_port = tmp;
+#else
+				reinterpret_cast<sockaddr_in *>(this)->sin_port = *((const uint16_t *)(data + 17));
+#endif
 				return 19;
 			default:
 				return -1;
@@ -665,6 +655,13 @@ struct InetAddress : public sockaddr_storage
 	 */
 	static InetAddress makeIpv66plane(uint64_t nwid,uint64_t zeroTierAddress);
 };
+
+InetAddress *asInetAddress(sockaddr_in *p) { return reinterpret_cast<InetAddress *>(p); }
+InetAddress *asInetAddress(sockaddr_in6 *p) { return reinterpret_cast<InetAddress *>(p); }
+InetAddress *asInetAddress(sockaddr *p) { return reinterpret_cast<InetAddress *>(p); }
+const InetAddress *asInetAddress(const sockaddr_in *p) { return reinterpret_cast<const InetAddress *>(p); }
+const InetAddress *asInetAddress(const sockaddr_in6 *p) { return reinterpret_cast<const InetAddress *>(p); }
+const InetAddress *asInetAddress(const sockaddr *p) { return reinterpret_cast<const InetAddress *>(p); }
 
 } // namespace ZeroTier
 
