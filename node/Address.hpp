@@ -114,11 +114,6 @@ public:
 	ZT_ALWAYS_INLINE char *toString(char buf[11]) const { return Utils::hex10(_a,buf); }
 
 	/**
-	 * @return True if this address is not zero
-	 */
-	ZT_ALWAYS_INLINE operator bool() const { return (_a != 0); }
-
-	/**
 	 * Check if this address is reserved
 	 *
 	 * The all-zero null address and any address beginning with 0xff are
@@ -127,7 +122,7 @@ public:
 	 *
 	 * @return True if address is reserved and may not be used
 	 */
-	ZT_ALWAYS_INLINE bool isReserved() const { return ((!_a)||((_a >> 32) == ZT_ADDRESS_RESERVED_PREFIX)); }
+	ZT_ALWAYS_INLINE bool isReserved() const { return ((!_a)||((_a >> 32U) == ZT_ADDRESS_RESERVED_PREFIX)); }
 
 	/**
 	 * @param i Value from 0 to 4 (inclusive)
@@ -135,6 +130,7 @@ public:
 	 */
 	ZT_ALWAYS_INLINE uint8_t operator[](unsigned int i) const { return (uint8_t)(_a >> (32 - (i * 8))); }
 
+	explicit ZT_ALWAYS_INLINE operator bool() const { return (_a != 0); }
 	explicit ZT_ALWAYS_INLINE operator unsigned int() const { return (unsigned int)_a; }
 	explicit ZT_ALWAYS_INLINE operator unsigned long() const { return (unsigned long)_a; }
 	explicit ZT_ALWAYS_INLINE operator unsigned long long() const { return (unsigned long long)_a; }

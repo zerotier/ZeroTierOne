@@ -20,6 +20,12 @@
 #include <cstring>
 #include <ctime>
 
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#include <emmintrin.h>
+#include <xmmintrin.h>
+#include <immintrin.h>
+#endif
+
 #include <string>
 #include <stdexcept>
 #include <vector>
@@ -30,6 +36,17 @@
 namespace ZeroTier {
 
 namespace Utils {
+
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+struct CPUIDRegisters
+{
+	uint32_t eax,ebx,ecx,edx;
+	bool rdrand;
+	bool aes;
+	CPUIDRegisters();
+};
+extern CPUIDRegisters CPUID;
+#endif
 
 /**
  * Hexadecimal characters 0-f

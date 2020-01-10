@@ -21,45 +21,36 @@
 #include <cstdint>
 
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
-
 #include <xmmintrin.h>
 #include <wmmintrin.h>
 #include <emmintrin.h>
 #include <smmintrin.h>
-
 #define ZT_AES_AESNI 1
-
-#endif // x64
+#endif
 
 namespace ZeroTier {
 
 /**
- * AES-256 and pals
+ * AES-256 and pals including GMAC, CTR, etc.
  */
 class AES
 {
 public:
-	/**
-	 * This will be true if your platform's type of AES acceleration is supported on this machine
-	 */
-	static const bool HW_ACCEL;
-
-	inline AES() {}
-	inline AES(const uint8_t key[32]) { this->init(key); }
-	inline ~AES() { Utils::burn(&_k,sizeof(_k)); }
+	ZT_ALWAYS_INLINE AES() {}
+	ZT_ALWAYS_INLINE AES(const uint8_t key[32]) { this->init(key); }
+	ZT_ALWAYS_INLINE ~AES() { Utils::burn(&_k,sizeof(_k)); }
 
 	/**
 	 * Set (or re-set) this AES256 cipher's key
 	 */
-	inline void init(const uint8_t key[32])
+	ZT_ALWAYS_INLINE void init(const uint8_t key[32])
 	{
 #ifdef ZT_AES_AESNI
-		if (likely(HW_ACCEL)) {
+		if (likely(Utils::CPUID.aes)) {
 			_init_aesni(key);
 			return;
 		}
 #endif
-
 		_initSW(key);
 	}
 
@@ -69,15 +60,14 @@ public:
 	 * @param in Input block
 	 * @param out Output block (can be same as input)
 	 */
-	inline void encrypt(const uint8_t in[16],uint8_t out[16]) const
+	ZT_ALWAYS_INLINE void encrypt(const uint8_t in[16],uint8_t out[16]) const
 	{
 #ifdef ZT_AES_AESNI
-		if (likely(HW_ACCEL)) {
+		if (likely(Utils::CPUID.aes)) {
 			_encrypt_aesni(in,out);
 			return;
 		}
 #endif
-
 		_encryptSW(in,out);
 	}
 
@@ -89,15 +79,14 @@ public:
 	 * @param len Length of input
 	 * @param out 128-bit authorization tag from GMAC
 	 */
-	inline void gmac(const uint8_t iv[12],const void *in,const unsigned int len,uint8_t out[16]) const
+	ZT_ALWAYS_INLINE void gmac(const uint8_t iv[12],const void *in,const unsigned int len,uint8_t out[16]) const
 	{
 #ifdef ZT_AES_AESNI
-		if (likely(HW_ACCEL)) {
+		if (likely(Utils::CPUID.aes)) {
 			_gmac_aesni(iv,(const uint8_t *)in,len,out);
 			return;
 		}
 #endif
-
 		_gmacSW(iv,(const uint8_t *)in,len,out);
 	}
 
@@ -113,44 +102,15 @@ public:
 	 * @param len Length of input
 	 * @param out Output plaintext or ciphertext
 	 */
-	inline void ctr(const uint8_t iv[16],const void *in,unsigned int len,void *out) const
+	ZT_ALWAYS_INLINE void ctr(const uint8_t iv[16],const void *in,unsigned int len,void *out) const
 	{
 #ifdef ZT_AES_AESNI
-		if (likely(HW_ACCEL)) {
+		if (likely(Utils::CPUID.aes)) {
 			_ctr_aesni(_k.ni.k,iv,(const uint8_t *)in,len,(uint8_t *)out);
 			return;
 		}
 #endif
-
-		uint64_t ctr[2],cenc[2];
-		memcpy(ctr,iv,16);
-		uint64_t bctr = Utils::ntoh(ctr[1]);
-
-		const uint8_t *i = (const uint8_t *)in;
-		uint8_t *o = (uint8_t *)out;
-
-		while (len >= 16) {
-			_encryptSW((const uint8_t *)ctr,(uint8_t *)cenc);
-			ctr[1] = Utils::hton(++bctr);
-#ifdef ZT_NO_TYPE_PUNNING
-			for(unsigned int k=0;k<16;++k)
-				*(o++) = *(i++) ^ ((uint8_t *)cenc)[k];
-#else
-			*((uint64_t *)o) = *((const uint64_t *)i) ^ cenc[0];
-			o += 8;
-			i += 8;
-			*((uint64_t *)o) = *((const uint64_t *)i) ^ cenc[1];
-			o += 8;
-			i += 8;
-#endif
-			len -= 16;
-		}
-
-		if (len) {
-			_encryptSW((const uint8_t *)ctr,(uint8_t *)cenc);
-			for(unsigned int k=0;k<len;++k)
-				*(o++) = *(i++) ^ ((uint8_t *)cenc)[k];
-		}
+		_ctrSW(iv,in,len,out);
 	}
 
 	/**
@@ -326,6 +286,7 @@ private:
 
 	void _initSW(const uint8_t key[32]);
 	void _encryptSW(const uint8_t in[16],uint8_t out[16]) const;
+	void _ctrSW(const uint8_t iv[16],const void *in,unsigned int len,void *out) const;
 	void _gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_t out[16]) const;
 
 	/**************************************************************************/
@@ -432,7 +393,7 @@ private:
 #endif /*********************************************************************/
 
 #ifdef ZT_AES_AESNI /********************************************************/
-	static inline __m128i _init256_1_aesni(__m128i a,__m128i b)
+	static ZT_ALWAYS_INLINE __m128i _init256_1_aesni(__m128i a,__m128i b)
 	{
 		__m128i x,y;
 		b = _mm_shuffle_epi32(b,0xff);
@@ -445,7 +406,7 @@ private:
 		x = _mm_xor_si128(x,b);
 		return x;
 	}
-	static inline __m128i _init256_2_aesni(__m128i a,__m128i b)
+	static ZT_ALWAYS_INLINE __m128i _init256_2_aesni(__m128i a,__m128i b)
 	{
 		__m128i x,y,z;
 		y = _mm_aeskeygenassist_si128(a,0x00);
@@ -459,7 +420,7 @@ private:
 		x = _mm_xor_si128(x,z);
 		return x;
 	}
-	inline void _init_aesni(const uint8_t key[32])
+	ZT_ALWAYS_INLINE void _init_aesni(const uint8_t key[32])
 	{
 		__m128i t1,t2;
 		_k.ni.k[0] = t1 = _mm_loadu_si128((const __m128i *)key);
@@ -505,7 +466,7 @@ private:
 		_k.ni.hhhh = _mm_shuffle_epi8(hhhh,shuf);
 	}
 
-	inline void _encrypt_aesni(const void *in,void *out) const
+	ZT_ALWAYS_INLINE void _encrypt_aesni(const void *in,void *out) const
 	{
 		__m128i tmp;
 		tmp = _mm_loadu_si128((const __m128i *)in);
@@ -526,7 +487,7 @@ private:
 		_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(tmp,_k.ni.k[14]));
 	}
 
-	static inline __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i y)
+	ZT_ALWAYS_INLINE inline __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i y)
 	{
 		y = _mm_shuffle_epi8(y,shuf);
 		__m128i t1 = _mm_clmulepi64_si128(h,y,0x00);
@@ -568,7 +529,7 @@ private:
 	}
 	static inline __m128i _ghash_aesni(__m128i shuf,__m128i h,__m128i y,__m128i x) { return _mult_block_aesni(shuf,h,_mm_xor_si128(y,x)); }
 
-	inline void _gmac_aesni(const uint8_t iv[12],const uint8_t *in,const unsigned int len,uint8_t out[16]) const
+	ZT_ALWAYS_INLINE void _gmac_aesni(const uint8_t iv[12],const uint8_t *in,const unsigned int len,uint8_t out[16]) const
 	{
 		const __m128i *const ab = (const __m128i *)in;
 		const unsigned int blocks = len / 16;
@@ -687,7 +648,7 @@ private:
 
 #define ZT_AES_CTR_AESNI_ROUND(kk) c0 = _mm_aesenc_si128(c0,kk); c1 = _mm_aesenc_si128(c1,kk); c2 = _mm_aesenc_si128(c2,kk); c3 = _mm_aesenc_si128(c3,kk);
 
-	static inline void _ctr_aesni(const __m128i key[14],const uint8_t iv[16],const uint8_t *in,unsigned int len,uint8_t *out)
+	static ZT_ALWAYS_INLINE void _ctr_aesni(const __m128i key[14],const uint8_t iv[16],const uint8_t *in,unsigned int len,uint8_t *out)
 	{
 		/* Because our CTR supports full 128-bit nonces, we must do a full 128-bit (big-endian)
 		 * increment to be compatible with canonical NIST-certified CTR implementations. That's

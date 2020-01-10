@@ -32,30 +32,32 @@
 #include "AES.hpp"
 #include "SHA512.hpp"
 
+namespace ZeroTier {
+
+namespace Utils {
+
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
-#include <immintrin.h>
-static bool _zt_rdrand_supported()
+CPUIDRegisters::CPUIDRegisters()
 {
 #ifdef __WINDOWS__
 	int regs[4];
 	__cpuid(regs,1);
-	return (((regs[2] >> 30) & 1) != 0);
+	eax = (uint32_t)regs[0];
+	ebx = (uint32_t)regs[1];
+	ecx = (uint32_t)regs[2];
+	edx = (uint32_t)regs[3];
 #else
-	uint32_t eax,ebx,ecx,edx;
 	__asm__ __volatile__ (
 		"cpuid"
 		: "=a"(eax),"=b"(ebx),"=c"(ecx),"=d"(edx)
 		: "a"(1),"c"(0)
 	);
-	return ((ecx & (1 << 30)) != 0);
 #endif
+	rdrand = ((ecx & (1U << 30U)) != 0);
+	aes = ( ((ecx & (1U << 25U)) != 0) && ((ecx & (1U << 19U)) != 0) && ((ecx & (1U << 1U)) != 0) ); // AES, PCLMUL, SSE4.1
 }
-static const bool _rdrandSupported = _zt_rdrand_supported();
+CPUIDRegisters CPUID;
 #endif
-
-namespace ZeroTier {
-
-namespace Utils {
 
 const char HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
 
@@ -213,7 +215,7 @@ void getSecureRandom(void *buf,unsigned int bytes)
 				randomState[0] ^= (uint64_t)time(nullptr);
 				randomState[1] ^= (uint64_t)((uintptr_t)buf);
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
-				if (_rdrandSupported) {
+				if (CPUID.rdrand) {
 					uint64_t tmp = 0;
 					_rdrand64_step((unsigned long long *)&tmp);
 					randomState[2] ^= tmp;
