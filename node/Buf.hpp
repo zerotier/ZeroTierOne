@@ -69,8 +69,11 @@ class Buf
 
 private:
 	// Direct construction isn't allowed; use get().
-	ZT_ALWAYS_INLINE Buf() {}
-	ZT_ALWAYS_INLINE Buf(const Buf &b) {}
+	ZT_ALWAYS_INLINE Buf()
+	{}
+
+	ZT_ALWAYS_INLINE Buf(const Buf &b)
+	{}
 
 public:
 	static void operator delete(void *ptr,std::size_t sz);
@@ -100,7 +103,8 @@ public:
 	 * @param ii Iterator to check
 	 * @return True if iterator has read past the size of the buffer
 	 */
-	static ZT_ALWAYS_INLINE bool writeOverflow(const int &ii) { return ((ii - ZT_BUF_MEM_SIZE) > 0); }
+	static ZT_ALWAYS_INLINE bool writeOverflow(const int &ii)
+	{ return ((ii - ZT_BUF_MEM_SIZE) > 0); }
 
 	/**
 	 * Check for overflow beyond the size of the data that should be in the buffer
@@ -112,7 +116,8 @@ public:
 	 * @param size Size of data that should be in buffer
 	 * @return True if iterator has read past the size of the data
 	 */
-	static ZT_ALWAYS_INLINE bool readOverflow(const int &ii,const unsigned int size) { return ((ii - (int)size) > 0); }
+	static ZT_ALWAYS_INLINE bool readOverflow(const int &ii,const unsigned int size)
+	{ return ((ii - (int)size) > 0); }
 
 	////////////////////////////////////////////////////////////////////////////
 	// Read methods
@@ -214,7 +219,7 @@ public:
 	ZT_ALWAYS_INLINE int rO(int &ii,T &obj) const
 	{
 		if (ii < ZT_BUF_MEM_SIZE) {
-			int ms = obj.unmarshal(data + ii, ZT_BUF_MEM_SIZE - ii);
+			int ms = obj.unmarshal(data + ii,ZT_BUF_MEM_SIZE - ii);
 			if (ms > 0)
 				ii += ms;
 			return ms;
@@ -284,7 +289,7 @@ public:
 	{
 		const void *const b = (const void *)(data + ii);
 		if ((ii += (int)len) <= ZT_BUF_MEM_SIZE) {
-			memcpy(bytes, b, len);
+			memcpy(bytes,b,len);
 			return bytes;
 		}
 		return nullptr;
@@ -437,7 +442,7 @@ public:
 	{
 		unsigned int s = (unsigned int)ii;
 		if ((ii += (int)len) <= ZT_BUF_MEM_SIZE)
-			memcpy(data + s, bytes, len);
+			memcpy(data + s,bytes,len);
 	}
 
 	////////////////////////////////////////////////////////////////////////////

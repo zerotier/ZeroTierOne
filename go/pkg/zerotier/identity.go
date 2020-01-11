@@ -13,7 +13,6 @@
 
 package zerotier
 
-//#cgo CFLAGS: -O3
 //#include "../../native/GoGlue.h"
 import "C"
 
@@ -165,17 +164,24 @@ func (id *Identity) LocallyValidate() bool {
 // Sign signs a message with this identity
 func (id *Identity) Sign(msg []byte) ([]byte, error) {
 	idCStr := C.CString(id.PrivateKeyString())
-	var sigbuf [96]byte
+	defer C.free(unsafe.Pointer(idCStr))
+	cid := C.ZT_Identity_fromString(idCStr)
+	if uintptr(cid) == 0 {
+		return nil, ErrInvalidKey
+	}
+	defer C.ZT_Identity_delete(cid)
+
 	var dataP unsafe.Pointer
 	if len(msg) > 0 {
 		dataP = unsafe.Pointer(&msg[0])
 	}
-	siglen := C.ZT_GoIdentity_sign(idCStr, dataP, C.uint(len(msg)), unsafe.Pointer(&sigbuf[0]), C.uint(len(sigbuf)))
-	C.free(unsafe.Pointer(idCStr))
-	if siglen <= 0 {
+	var sig [96]byte
+	sigLen := C.ZT_Identity_sign(cid,dataP,C.uint(len(msg)),unsafe.Pointer(&sig[0]),96)
+	if sigLen <= 0 {
 		return nil, ErrInvalidKey
 	}
-	return sigbuf[0:int(siglen)], nil
+
+	return sig[0:uint(sigLen)], nil
 }
 
 // Verify verifies a signature
@@ -183,13 +189,20 @@ func (id *Identity) Verify(msg, sig []byte) bool {
 	if len(sig) == 0 {
 		return false
 	}
+
 	idCStr := C.CString(id.String())
 	defer C.free(unsafe.Pointer(idCStr))
+	cid := C.ZT_Identity_fromString(idCStr)
+	if uintptr(cid) == 0 {
+		return false
+	}
+	defer C.ZT_Identity_delete(cid)
+
 	var dataP unsafe.Pointer
 	if len(msg) > 0 {
 		dataP = unsafe.Pointer(&msg[0])
 	}
-	return C.ZT_GoIdentity_verify(idCStr, dataP, C.uint(len(msg)), unsafe.Pointer(&sig[0]), C.uint(len(sig))) != 0
+	return C.ZT_Identity_verify(cid,dataP,C.uint(len(msg)),unsafe.Pointer(&sig[0]),C.uint(len(sig))) != 0
 }
 
 // MarshalJSON marshals this Identity in its string format (private key is never included)

@@ -3,6 +3,7 @@
 /cmake-build-release
 /version.h
 /.idea
+/go/.idea
 .DS_Store
 .Trashes
 *.swp

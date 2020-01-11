@@ -595,62 +595,6 @@ func (n *Node) Networks() []*Network {
 	return nws
 }
 
-// Roots retrieves a list of root servers on this node and their preferred and online status.
-func (n *Node) Roots() []*Root {
-	var roots []*Root
-	rl := C.ZT_Node_listRoots(unsafe.Pointer(n.zn), C.int64_t(TimeMs()))
-	if rl != nil {
-		for i := 0; i < int(rl.count); i++ {
-			root := (*C.ZT_Root)(unsafe.Pointer(uintptr(unsafe.Pointer(rl)) + C.sizeof_ZT_RootList))
-			loc, _ := NewLocatorFromBytes(C.GoBytes(root.locator, C.int(root.locatorSize)))
-			if loc != nil {
-				roots = append(roots, &Root{
-					Name:    C.GoString(root.name),
-					Locator: loc,
-				})
-			}
-		}
-		C.ZT_Node_freeQueryResult(unsafe.Pointer(n.zn), unsafe.Pointer(rl))
-	}
-	return roots
-}
-
-// SetRoot sets or updates a root.
-// Name can be a DNS name (preferably secure) for DNS fetched locators or can be
-// the empty string for static roots. If the name is empty then the locator must
-// be non-nil.
-func (n *Node) SetRoot(name string, locator *Locator) error {
-	if len(name) == 0 {
-		if locator == nil {
-			return ErrInvalidParameter
-		}
-		name = locator.Identity.address.String()
-	}
-	var lb []byte
-	if locator != nil {
-		lb = locator.Bytes
-	}
-	var lbp unsafe.Pointer
-	if len(lb) > 0 {
-		lbp = unsafe.Pointer(&lb[0])
-	}
-	cn := C.CString(name)
-	defer C.free(unsafe.Pointer(cn))
-	if C.ZT_Node_setRoot(unsafe.Pointer(n.zn), cn, lbp, C.uint(len(lb))) != 0 {
-		return ErrInternal
-	}
-	return nil
-}
-
-// RemoveRoot removes a root.
-// For static roots the name should be the ZeroTier address.
-func (n *Node) RemoveRoot(name string) {
-	cn := C.CString(name)
-	defer C.free(unsafe.Pointer(cn))
-	C.ZT_Node_removeRoot(unsafe.Pointer(n.zn), cn)
-	return
-}
-
 // Peers retrieves a list of current peers
 func (n *Node) Peers() []*Peer {
 	var peers []*Peer

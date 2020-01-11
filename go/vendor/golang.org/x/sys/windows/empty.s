@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build generate
+// +build !go1.12
 
-package windows
-
-//go:generate ./mkerrors.bash zerrors_windows.go
+// This file is here to allow bodyless functions with go:linkname for Go 1.11
+// and earlier (see https://golang.org/issue/23311).

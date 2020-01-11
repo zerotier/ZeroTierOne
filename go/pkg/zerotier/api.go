@@ -466,51 +466,8 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 		}
 
 		if req.Method == http.MethodDelete {
-			if len(queriedName) > 0 {
-				roots := node.Roots()
-				for _, r := range roots {
-					if r.Name == queriedName {
-						node.RemoveRoot(queriedName)
-						_ = apiSendObj(out, req, http.StatusOK, r)
-						return
-					}
-				}
-			}
-			_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"root not found"})
 		} else if req.Method == http.MethodPost || req.Method == http.MethodPut {
-			if len(queriedName) == 0 {
-				_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"only individual roots can be added or modified with POST/PUT"})
-				return
-			}
-			var r Root
-			if apiReadObj(out, req, &r) == nil {
-				if r.Name != queriedName {
-					_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"root name does not match name in path"})
-					return
-				}
-				err := node.SetRoot(r.Name, r.Locator)
-				if err != nil {
-					_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"set/update root failed: " + err.Error()})
-				} else {
-					roots := node.Roots()
-					for _, r := range roots {
-						if r.Name == queriedName {
-							_ = apiSendObj(out, req, http.StatusOK, r)
-							return
-						}
-					}
-					_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"set/update root failed: root set but not subsequently found in list"})
-				}
-			}
 		} else if req.Method == http.MethodGet || req.Method == http.MethodHead {
-			roots := node.Roots()
-			for _, r := range roots {
-				if r.Name == queriedName {
-					_ = apiSendObj(out, req, http.StatusOK, r)
-					return
-				}
-			}
-			_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"root not found"})
 		} else {
 			out.Header().Set("Allow", "GET, HEAD, PUT, POST, DELETE")
 			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"unsupported method: " + req.Method})

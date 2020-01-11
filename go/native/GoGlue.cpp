@@ -16,7 +16,6 @@
 #include <cstring>
 #include <cstdlib>
 #include <cerrno>
-#include <ctime>
 
 #include "../../node/Constants.hpp"
 #include "../../node/InetAddress.hpp"
@@ -28,7 +27,6 @@
 #include "../../osdep/EthernetTap.hpp"
 
 #ifndef __WINDOWS__
-extern "C" {
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -41,7 +39,6 @@ extern "C" {
 #ifdef __BSD__
 #include <net/if.h>
 #endif
-}
 #ifdef __LINUX__
 #ifndef IPV6_DONTFRAG
 #define IPV6_DONTFRAG 62
