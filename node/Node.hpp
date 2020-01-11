@@ -270,7 +270,6 @@ private:
 	int64_t _lastPing;
 	int64_t _lastHousekeepingRun;
 	int64_t _lastNetworkHousekeepingRun;
-	int64_t _lastDynamicRootUpdate;
 	bool _online;
 };
 

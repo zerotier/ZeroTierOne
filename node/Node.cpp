@@ -47,7 +47,6 @@ Node::Node(void *uPtr, void *tPtr, const struct ZT_Node_Callbacks *callbacks, in
 	_lastPing(0),
 	_lastHousekeepingRun(0),
 	_lastNetworkHousekeepingRun(0),
-	_lastDynamicRootUpdate(0),
 	_online(false)
 {
 	memset(_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
@@ -408,13 +407,13 @@ ZT_PeerList *Node::peers() const
 			p->versionMinor = -1;
 			p->versionRev = -1;
 		}
-		p->latency = (int)(*pi)->latency(now);
+		p->latency = (int)(*pi)->latency();
 		if (p->latency >= 0xffff)
 			p->latency = -1;
 		p->role = RR->topology->isRoot((*pi)->identity()) ? ZT_PEER_ROLE_ROOT : ZT_PEER_ROLE_LEAF;
 
-		std::vector< SharedPtr<Path> > paths((*pi)->paths(now));
-		SharedPtr<Path> bestp((*pi)->getAppropriatePath(now,false));
+		std::vector< SharedPtr<Path> > paths;
+		(*pi)->getAllPaths(paths);
 		p->pathCount = 0;
 		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
 			memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
@@ -422,8 +421,7 @@ ZT_PeerList *Node::peers() const
 			p->paths[p->pathCount].lastReceive = (*path)->lastIn();
 			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
 			p->paths[p->pathCount].alive = (*path)->alive(now) ? 1 : 0;
-			p->paths[p->pathCount].preferred = ((*path) == bestp) ? 1 : 0;
-
+			p->paths[p->pathCount].preferred = (p->pathCount == 0) ? 1 : 0;
 			++p->pathCount;
 		}
 

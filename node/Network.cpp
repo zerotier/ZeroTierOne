@@ -1018,10 +1018,6 @@ bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 			if ( (_config.isPublic()) || ((m)&&(m->isAllowedOnNetwork(_config))) ) {
 				if (!m)
 					m = &(_memberships[peer->address()]);
-				if (m->multicastLikeGate(now)) {
-					Mutex::Lock l2(_myMulticastGroups_l);
-					_announceMulticastGroupsTo(tPtr,peer->address(),_allMulticastGroups());
-				}
 				return true;
 			}
 		}
@@ -1051,6 +1047,8 @@ void Network::doPeriodicTasks(void *tPtr,const int64_t now)
 		{
 			Mutex::Lock l2(_myMulticastGroups_l);
 
+			// TODO
+			/*
 			Hashtable< MulticastGroup,uint64_t >::Iterator i(_multicastGroupsBehindMe);
 			MulticastGroup *mg = (MulticastGroup *)0;
 			uint64_t *ts = (uint64_t *)0;
@@ -1060,6 +1058,7 @@ void Network::doPeriodicTasks(void *tPtr,const int64_t now)
 			}
 
 			_announceMulticastGroups(tPtr,false);
+			*/
 		}
 	}
 }
@@ -1374,11 +1373,14 @@ void Network::_announceMulticastGroups(void *tPtr,bool force)
 		Membership *m = (Membership *)0;
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
+			// TODO
+			/*
 			bool announce = m->multicastLikeGate(now); // force this to be called even if 'force' is true since it updates last push time
 			if ((!announce)&&(force))
 				announce = true;
 			if ((announce)&&(m->isAllowedOnNetwork(_config)))
 				_announceMulticastGroupsTo(tPtr,*a,groups);
+			*/
 		}
 	}
 }

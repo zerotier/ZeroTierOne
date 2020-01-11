@@ -487,7 +487,7 @@ private:
 		_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(tmp,_k.ni.k[14]));
 	}
 
-	ZT_ALWAYS_INLINE inline __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i y)
+	static ZT_ALWAYS_INLINE inline __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i y)
 	{
 		y = _mm_shuffle_epi8(y,shuf);
 		__m128i t1 = _mm_clmulepi64_si128(h,y,0x00);

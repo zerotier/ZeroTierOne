@@ -230,7 +230,7 @@ static ZT_ALWAYS_INLINE std::array< uint64_t,2 > ip6ToH128(const InetAddress &ip
 
 static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip,Packet &pkt)
 {
-	char ipstr[128],ipstr2[128],astr[32],astr2[32],tmpstr[256];
+	char ipstr[128];
 	const bool fragment = pkt[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR;
 	const Address source(pkt.source());
 	const Address dest(pkt.destination());
@@ -249,10 +249,8 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 				{
 					std::lock_guard<std::mutex> pbi_l(s_peersByIdentity_l);
 					auto pById = s_peersByIdentity.find(id);
-					if (pById != s_peersByIdentity.end()) {
+					if (pById != s_peersByIdentity.end())
 						peer = pById->second;
-						//printf("%s has %s (known (1))" ZT_EOL_S,ip->toString(ipstr),source().toString(astr));
-					}
 				}
 				if (peer) {
 					if (!pkt.dearmor(peer->key)) {
@@ -503,13 +501,11 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 	bool introduce = false;
 	if (fragment) {
 		if ((hops = (int)reinterpret_cast<Packet::Fragment *>(&pkt)->incrementHops()) > s_relayMaxHops) {
-			//printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),dest.toString(astr));
 			s_discardedForwardRate.log(now,pkt.size());
 			return;
 		}
 	} else {
 		if ((hops = (int)pkt.incrementHops()) > s_relayMaxHops) {
-			//printf("%s refused to forward to %s: max hop count exceeded" ZT_EOL_S,ip->toString(ipstr),dest.toString(astr));
 			s_discardedForwardRate.log(now,pkt.size());
 			return;
 		}
@@ -552,7 +548,6 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 			for(auto a=sources->second.begin();a!=sources->second.end();++a) {
 				for(auto b=toAddrs.begin();b!=toAddrs.end();++b) {
 					if (((*a)->ip6)&&(b->second->ip6)) {
-						//printf("* introducing %s(%s) to %s(%s)" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),b->second->ip6.toString(ipstr2),dest.toString(astr2));
 
 						// Introduce source to destination (V6)
 						Packet outp(source,s_self.address(),Packet::VERB_RENDEZVOUS);
@@ -581,7 +576,6 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 						b->second->lastSend = now;
 					}
 					if (((*a)->ip4)&&(b->second->ip4)) {
-						//printf("* introducing %s(%s) to %s(%s)" ZT_EOL_S,ip->toString(ipstr),source.toString(astr),b->second->ip4.toString(ipstr2),dest.toString(astr2));
 
 						// Introduce source to destination (V4)
 						Packet outp(source,s_self.address(),Packet::VERB_RENDEZVOUS);
@@ -1134,7 +1128,7 @@ int main(int argc,char **argv)
 				for(auto a=s_multicastSubscriptions.begin();a!=s_multicastSubscriptions.end();) {
 					for(auto b=a->second.begin();b!=a->second.end();) {
 						for(auto c=b->second.begin();c!=b->second.end();) {
-							if ((now - c->second) > ZT_MULTICAST_LIKE_EXPIRE)
+							if ((now - c->second) > ZT_PEER_ACTIVITY_TIMEOUT)
 								b->second.erase(c++);
 							else ++c;
 						}

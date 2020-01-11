@@ -292,7 +292,6 @@ public:
 	static uint64_t jsonIntHex(const nlohmann::json &jv,const uint64_t dfl);
 	static bool jsonBool(const nlohmann::json &jv,const bool dfl);
 	static std::string jsonString(const nlohmann::json &jv,const char *dfl);
-	static std::string jsonBinFromHex(const nlohmann::json &jv);
 #endif // OMIT_JSON_SUPPORT
 
 private:

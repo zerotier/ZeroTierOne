@@ -71,21 +71,6 @@ public:
 	ZT_ALWAYS_INLINE int64_t lastPushedCredentials() const { return _lastPushedCredentials; }
 
 	/**
-	 * Check whether we should push MULTICAST_LIKEs to this peer, and update last sent time if true
-	 *
-	 * @param now Current time
-	 * @return True if we should update multicasts
-	 */
-	ZT_ALWAYS_INLINE bool multicastLikeGate(const int64_t now)
-	{
-		if ((now - _lastUpdatedMulticast) >= ZT_MULTICAST_ANNOUNCE_PERIOD) {
-			_lastUpdatedMulticast = now;
-			return true;
-		}
-		return false;
-	}
-
-	/**
 	 * Check whether the peer represented by this Membership should be allowed on this network at all
 	 *
 	 * @param nconf Our network config

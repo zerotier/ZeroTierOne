@@ -260,4 +260,11 @@ void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddres
 	*/
 }
 
+void Peer::getAllPaths(std::vector< SharedPtr<Path> > &paths)
+{
+	RWMutex::RLock l(_paths_l);
+	paths.clear();
+	paths.assign(_paths,_paths + _pathCount);
+}
+
 } // namespace ZeroTier

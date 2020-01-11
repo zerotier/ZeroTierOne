@@ -130,10 +130,10 @@ public:
 	 */
 	ZT_ALWAYS_INLINE uint8_t operator[](unsigned int i) const { return (uint8_t)(_a >> (32 - (i * 8))); }
 
-	explicit ZT_ALWAYS_INLINE operator bool() const { return (_a != 0); }
-	explicit ZT_ALWAYS_INLINE operator unsigned int() const { return (unsigned int)_a; }
-	explicit ZT_ALWAYS_INLINE operator unsigned long() const { return (unsigned long)_a; }
-	explicit ZT_ALWAYS_INLINE operator unsigned long long() const { return (unsigned long long)_a; }
+	ZT_ALWAYS_INLINE operator bool() const { return (_a != 0); }
+	ZT_ALWAYS_INLINE operator unsigned int() const { return (unsigned int)_a; }
+	ZT_ALWAYS_INLINE operator unsigned long() const { return (unsigned long)_a; }
+	ZT_ALWAYS_INLINE operator unsigned long long() const { return (unsigned long long)_a; }
 
 	ZT_ALWAYS_INLINE void zero() { _a = 0; }
 
@@ -151,6 +151,7 @@ public:
 	ZT_ALWAYS_INLINE bool operator>=(const Address &a) const { return (_a >= a._a); }
 	ZT_ALWAYS_INLINE bool operator<=(const Address &a) const { return (_a <= a._a); }
 
+#if 0
 	/**
 	 * Create a list of the first N bits of a list of unique addresses with N as the minimum unique size
 	 *
@@ -232,6 +233,7 @@ try_additional_bits: {
 
 		return l;
 	}
+#endif
 
 private:
 	uint64_t _a;

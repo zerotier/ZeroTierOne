@@ -37,7 +37,7 @@ bool Locator::verify(const Identity &id) const
 	return id.verify(signData,signLen,_signature,_signatureLength);
 }
 
-int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool excludeSignature = false) const
+int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool excludeSignature) const
 {
 	if ((_endpointCount > ZT_LOCATOR_MAX_ENDPOINTS)||(_signatureLength > ZT_SIGNATURE_BUFFER_SIZE))
 		return -1;

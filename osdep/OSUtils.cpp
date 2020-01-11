@@ -510,24 +510,6 @@ std::string OSUtils::jsonString(const nlohmann::json &jv,const char *dfl)
 	return std::string((dfl) ? dfl : "");
 }
 
-std::string OSUtils::jsonBinFromHex(const nlohmann::json &jv)
-{
-	std::string s(jsonString(jv,""));
-	if (s.length() > 0) {
-		unsigned int buflen = (unsigned int)((s.length() / 2) + 1);
-		char *buf = new char[buflen];
-		try {
-			unsigned int l = Utils::unhex(s.c_str(),buf,buflen);
-			std::string b(buf,l);
-			delete [] buf;
-			return b;
-		} catch ( ... ) {
-			delete [] buf;
-		}
-	}
-	return std::string();
-}
-
 #endif // OMIT_JSON_SUPPORT
 
 // Used to convert HTTP header names to ASCII lower case

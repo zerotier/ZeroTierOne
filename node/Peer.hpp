@@ -278,6 +278,13 @@ public:
 		return _paths[0];
 	}
 
+	/**
+	 * Get all paths
+	 *
+	 * @param paths Vector of paths with the first path being the current preferred path
+	 */
+	void getAllPaths(std::vector< SharedPtr<Path> > &paths);
+
 private:
 	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
 

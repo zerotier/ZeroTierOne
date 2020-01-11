@@ -1,4 +1,5 @@
 cmake_minimum_required (VERSION 3.8)
+project(zerotier DESCRIPTION "ZeroTier Network Hypervisor" LANGUAGES CXX C)
 
 if(${CMAKE_VERSION} VERSION_LESS 3.15)
 	cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
@@ -7,31 +8,32 @@ else()
 endif()
 
 if(WIN32)
-	# If building on Windows, set minimum target to Windows 7
 	set(CMAKE_SYSTEM_VERSION "7" CACHE STRING INTERNAL FORCE)
 endif(WIN32)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X Deployment Version")
 
 set(ZEROTIER_ONE_VERSION_MAJOR 2 CACHE INTERNAL "")
 set(ZEROTIER_ONE_VERSION_MINOR 0 CACHE INTERNAL "")
 set(ZEROTIER_ONE_VERSION_REVISION 0 CACHE INTERNAL "")
 set(ZEROTIER_ONE_VERSION_BUILD 0 CACHE INTERNAL "")
 
+configure_file(
+	${CMAKE_SOURCE_DIR}/version.h.in
+	${CMAKE_BINARY_DIR}/version.h
+)
+
 set(default_build_type "Release")
-if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
-	set(default_build_type "Debug")
-endif()
+#if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
+#	set(default_build_type "Debug")
+#endif()
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
-	set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
-		STRING "Choose the type of build." FORCE)
-	# Set the possible values of build type for cmake-gui
-	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
-		"Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+	set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
+	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
 option(BUILD_CENTRAL_CONTROLLER "Build ZeroTier Central Controller" OFF)
-
 if (BUILD_CENTRAL_CONTROLLER)
 	find_package(PostgreSQL REQUIRED)
 	set(ENABLE_SSL_SUPPORT OFF)
@@ -43,22 +45,17 @@ if (BUILD_CENTRAL_CONTROLLER)
 	add_subdirectory("ext/librabbitmq")
 endif(BUILD_CENTRAL_CONTROLLER)
 
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X Deployment Version")
-
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	add_definitions(-DZT_TRACE)
 endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
-project(zerotier
-	DESCRIPTION "ZeroTier Network Hypervisor"
-	LANGUAGES CXX C)
-
 if(WIN32)
+	message("++ Setting Windows Compiler Flags ${CMAKE_BUILD_TYPE}")
 	add_definitions(-DNOMINMAX)
 else(WIN32)
 	if(APPLE)
 
-		message("Setting macOS Compiler Flags ${CMAKE_BUILD_TYPE}")
+		message("++ Setting MacOS Compiler Flags ${CMAKE_BUILD_TYPE}")
 		add_compile_options(
 			-Wall
 			-Wno-deprecated
@@ -77,14 +74,9 @@ else(WIN32)
 			$<$<CONFIG:RELEASE>:-flto>
 		)
 
-	elseif (
-		CMAKE_SYSTEM_NAME MATCHES "Linux" OR
-		CMAKE_SYSTEM_NAME MATCHES "FreeBSD" OR
-		CMAKE_SYSTEM_NAME MATCHES "OpenBSD" OR
-		CMAKE_SYSTEM_NAME MATCHES "NetBSD"
-	)
+	else(APPLE)
 
-		message("Setting Linux/BSD Compiler Flags (${CMAKE_BUILD_TYPE})")
+		message("++ Setting Linux/BSD/Posix Compiler Flags (${CMAKE_BUILD_TYPE})")
 		add_compile_options(
 			-Wall
 			-Wno-deprecated
@@ -108,10 +100,9 @@ if (
 	CMAKE_SYSTEM_PROCESSOR MATCHES "i586" OR
 	CMAKE_SYSTEM_PROCESSOR MATCHES "i686"
 )
-	message("Adding SSE and AES-NI flags for processor ${CMAKE_SYSTEM_PROCESSOR}")
+	message("++ Adding SSE and AES-NI flags for processor ${CMAKE_SYSTEM_PROCESSOR}")
 	add_compile_options(
 		-maes
-		-mmmx
 		-mrdrnd
 		-mpclmul
 		-msse
@@ -124,21 +115,12 @@ endif()
 if(ZT_TRACE)
 	add_definitions(-DZT_TRACE)
 endif()
-if(ZT_DEBUG_TRACE)
-	add_definitions(-DZT_DEBUG_TRACE)
-endif()
 
 add_subdirectory(node)
 add_subdirectory(controller)
 add_subdirectory(osdep)
 add_subdirectory(root)
 add_subdirectory(go/native)
-
-#if(WIN32)
-#	add_subdirectory("windows/WinUI")
-#	add_subdirectory("windows/copyutil")
-#	add_definitions(-DNOMINMAX)
-#endif(WIN32)
 
 set(
 	zt_osdep
@@ -147,24 +129,17 @@ set(
 	zt_go_native
 )
 
-configure_file(
-	${CMAKE_SOURCE_DIR}/version.h.in
-	${CMAKE_BINARY_DIR}/version.h
-)
-
-#set(src
-#	one.cpp
-#	"ext/http-parser/http_parser.c"
-#)
-#set(headers
-#	"ext/http-parser/http_parser.h"
-#)
-
 if(WIN32)
 	set(libs ${libs} wsock32 ws2_32 rpcrt4 iphlpapi)
 else(WIN32)
 	set(libs ${libs} pthread)
 endif(WIN32)
+
+#if(WIN32)
+#	add_subdirectory("windows/WinUI")
+#	add_subdirectory("windows/copyutil")
+#	add_definitions(-DNOMINMAX)
+#endif(WIN32)
 
 #if(WIN32)
 #	set(libs ${libs} wsock32 ws2_32 rpcrt4 iphlpapi)
@@ -201,6 +176,6 @@ add_custom_command(
 )
 add_custom_target(build_zerotier ALL DEPENDS zerotier)
 
-add_executable(zerotier-selftest selftest.cpp)
-target_link_libraries(zerotier-selftest ${libs} zt_core zt_osdep)
-target_compile_features(zerotier-selftest PUBLIC cxx_std_11)
+#add_executable(zerotier-selftest selftest.cpp)
+#target_link_libraries(zerotier-selftest ${libs} zt_core zt_osdep)
+#target_compile_features(zerotier-selftest PUBLIC cxx_std_11)
