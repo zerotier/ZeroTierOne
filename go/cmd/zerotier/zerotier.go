@@ -127,8 +127,6 @@ func main() {
 	case "removeroot":
 		authTokenRequired(authToken)
 		cli.RemoveRoot(basePath, authToken, cmdArgs)
-	case "locator":
-		cli.Locator(cmdArgs)
 	case "identity":
 		cli.Identity(cmdArgs)
 	case "networks", "listnetworks":

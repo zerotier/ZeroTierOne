@@ -48,13 +48,17 @@ type Identity struct {
 
 // NewIdentity generates a new identity of the selected type
 func NewIdentity(identityType int) (*Identity, error) {
-	cIdStr := C.ZT_GoIdentity_generate(C.int(identityType))
-	if uintptr(unsafe.Pointer(cIdStr)) == 0 {
+	cid := C.ZT_Identity_new(C.enum_ZT_Identity_Type(identityType))
+	if uintptr(unsafe.Pointer(cid)) == 0 {
 		return nil, ErrInternal
 	}
-	id, err := NewIdentityFromString(C.GoString(cIdStr))
-	C.free(unsafe.Pointer(cIdStr))
-	return id, err
+	defer C.ZT_Identity_delete(cid)
+	var idStrBuf [4096]byte
+	idStr := C.ZT_Identity_toString(cid,(*C.char)(unsafe.Pointer(&idStrBuf[0])),4096,1)
+	if uintptr(unsafe.Pointer(idStr)) == 0 {
+		return nil, ErrInternal
+	}
+	return NewIdentityFromString(C.GoString(idStr))
 }
 
 // NewIdentityFromString generates a new identity from its string representation.
@@ -158,7 +162,12 @@ func (id *Identity) String() string {
 func (id *Identity) LocallyValidate() bool {
 	idCStr := C.CString(id.String())
 	defer C.free(unsafe.Pointer(idCStr))
-	return C.ZT_GoIdentity_validate(idCStr) != 0
+	cid := C.ZT_Identity_fromString(idCStr)
+	if uintptr(cid) == 0 {
+		return false
+	}
+	defer C.ZT_Identity_delete(cid)
+	return C.ZT_Identity_validate(cid) != 0
 }
 
 // Sign signs a message with this identity

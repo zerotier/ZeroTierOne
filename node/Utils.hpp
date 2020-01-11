@@ -174,14 +174,7 @@ uint64_t random();
  */
 bool scopy(char *dest,unsigned int len,const char *src);
 
-/**
- * Tokenize a string (alias for strtok_r or strtok_s depending on platform)
- *
- * @param str String to split
- * @param delim Delimiters
- * @param saveptr Pointer to a char * for temporary reentrant storage
- */
-ZT_ALWAYS_INLINE char *stok(char *str,const char *delim,char **saveptr)
+static ZT_ALWAYS_INLINE char *stok(char *str,const char *delim,char **saveptr)
 {
 #ifdef __WINDOWS__
 	return strtok_s(str,delim,saveptr);
@@ -190,19 +183,11 @@ ZT_ALWAYS_INLINE char *stok(char *str,const char *delim,char **saveptr)
 #endif
 }
 
-ZT_ALWAYS_INLINE unsigned int strToUInt(const char *s) { return (unsigned int)strtoul(s,(char **)0,10); }
-ZT_ALWAYS_INLINE int strToInt(const char *s) { return (int)strtol(s,(char **)0,10); }
-ZT_ALWAYS_INLINE unsigned long strToULong(const char *s) { return strtoul(s,(char **)0,10); }
-ZT_ALWAYS_INLINE long strToLong(const char *s) { return strtol(s,(char **)0,10); }
-ZT_ALWAYS_INLINE unsigned long long strToU64(const char *s)
-{
-#ifdef __WINDOWS__
-	return (unsigned long long)_strtoui64(s,(char **)0,10);
-#else
-	return strtoull(s,(char **)0,10);
-#endif
-}
-ZT_ALWAYS_INLINE long long strTo64(const char *s)
+#if 0
+static ZT_ALWAYS_INLINE int strToInt(const char *s) { return (int)strtol(s,(char **)0,10); }
+static ZT_ALWAYS_INLINE unsigned long strToULong(const char *s) { return strtoul(s,(char **)0,10); }
+static ZT_ALWAYS_INLINE long strToLong(const char *s) { return strtol(s,(char **)0,10); }
+static ZT_ALWAYS_INLINE long long strTo64(const char *s)
 {
 #ifdef __WINDOWS__
 	return (long long)_strtoi64(s,(char **)0,10);
@@ -210,24 +195,38 @@ ZT_ALWAYS_INLINE long long strTo64(const char *s)
 	return strtoll(s,(char **)0,10);
 #endif
 }
-ZT_ALWAYS_INLINE unsigned int hexStrToUInt(const char *s) { return (unsigned int)strtoul(s,(char **)0,16); }
-ZT_ALWAYS_INLINE int hexStrToInt(const char *s) { return (int)strtol(s,(char **)0,16); }
-ZT_ALWAYS_INLINE unsigned long hexStrToULong(const char *s) { return strtoul(s,(char **)0,16); }
-ZT_ALWAYS_INLINE long hexStrToLong(const char *s) { return strtol(s,(char **)0,16); }
-ZT_ALWAYS_INLINE unsigned long long hexStrToU64(const char *s)
+static ZT_ALWAYS_INLINE unsigned int hexStrToUInt(const char *s) { return (unsigned int)strtoul(s,(char **)0,16); }
+static ZT_ALWAYS_INLINE int hexStrToInt(const char *s) { return (int)strtol(s,(char **)0,16); }
+static ZT_ALWAYS_INLINE unsigned long hexStrToULong(const char *s) { return strtoul(s,(char **)0,16); }
+static ZT_ALWAYS_INLINE long hexStrToLong(const char *s) { return strtol(s,(char **)0,16); }
+#endif
+
+static ZT_ALWAYS_INLINE unsigned int strToUInt(const char *s) { return (unsigned int)strtoul(s,(char **)0,10); }
+
+static ZT_ALWAYS_INLINE unsigned long long strToU64(const char *s)
 {
 #ifdef __WINDOWS__
-	return (unsigned long long)_strtoui64(s,(char **)0,16);
+	return (unsigned long long)_strtoui64(s,(char **)0,10);
 #else
-	return strtoull(s,(char **)0,16);
+	return strtoull(s,(char **)0,10);
 #endif
 }
-ZT_ALWAYS_INLINE long long hexStrTo64(const char *s)
+
+static ZT_ALWAYS_INLINE long long hexStrTo64(const char *s)
 {
 #ifdef __WINDOWS__
 	return (long long)_strtoi64(s,(char **)0,16);
 #else
 	return strtoll(s,(char **)0,16);
+#endif
+}
+
+static ZT_ALWAYS_INLINE unsigned long long hexStrToU64(const char *s)
+{
+#ifdef __WINDOWS__
+	return (unsigned long long)_strtoui64(s,(char **)0,16);
+#else
+	return strtoull(s,(char **)0,16);
 #endif
 }
 
@@ -238,29 +237,29 @@ ZT_ALWAYS_INLINE long long hexStrTo64(const char *s)
  * @param len Length in bytes
  * @return Non-cryptographic hash suitable for use in a hash table
  */
-ZT_ALWAYS_INLINE unsigned long hashString(const void *restrict key,const unsigned int len)
+static ZT_ALWAYS_INLINE unsigned long hashString(const void *restrict key,const unsigned int len)
 {
 	const uint8_t *p = reinterpret_cast<const uint8_t *>(key);
 	unsigned long h = 0;
 	for (unsigned int i=0;i<len;++i) {
 		h += p[i];
-		h += (h << 10);
-		h ^= (h >> 6);
+		h += (h << 10U);
+		h ^= (h >> 6U);
 	}
-	h += (h << 3);
-	h ^= (h >> 11);
-	h += (h << 15);
+	h += (h << 3U);
+	h ^= (h >> 11U);
+	h += (h << 15U);
 	return h;
 }
 
 #ifdef __GNUC__
-ZT_ALWAYS_INLINE unsigned int countBits(const uint8_t v) { return (unsigned int)__builtin_popcount((unsigned int)v); }
-ZT_ALWAYS_INLINE unsigned int countBits(const uint16_t v) { return (unsigned int)__builtin_popcount((unsigned int)v); }
-ZT_ALWAYS_INLINE unsigned int countBits(const uint32_t v) { return (unsigned int)__builtin_popcountl((unsigned long)v); }
-ZT_ALWAYS_INLINE unsigned int countBits(const uint64_t v) { return (unsigned int)__builtin_popcountll((unsigned long long)v); }
+static ZT_ALWAYS_INLINE unsigned int countBits(const uint8_t v) { return (unsigned int)__builtin_popcount((unsigned int)v); }
+static ZT_ALWAYS_INLINE unsigned int countBits(const uint16_t v) { return (unsigned int)__builtin_popcount((unsigned int)v); }
+static ZT_ALWAYS_INLINE unsigned int countBits(const uint32_t v) { return (unsigned int)__builtin_popcountl((unsigned long)v); }
+static ZT_ALWAYS_INLINE unsigned int countBits(const uint64_t v) { return (unsigned int)__builtin_popcountll((unsigned long long)v); }
 #else
 template<typename T>
-ZT_ALWAYS_INLINE unsigned int countBits(T v)
+static ZT_ALWAYS_INLINE unsigned int countBits(T v)
 {
 	v = v - ((v >> 1) & (T)~(T)0/3);
 	v = (v & (T)~(T)0/15*3) + ((v >> 2) & (T)~(T)0/15*3);
@@ -270,9 +269,9 @@ ZT_ALWAYS_INLINE unsigned int countBits(T v)
 #endif
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-ZT_ALWAYS_INLINE uint8_t hton(uint8_t n) { return n; }
-ZT_ALWAYS_INLINE int8_t hton(int8_t n) { return n; }
-ZT_ALWAYS_INLINE uint16_t hton(uint16_t n)
+static ZT_ALWAYS_INLINE uint8_t hton(uint8_t n) { return n; }
+static ZT_ALWAYS_INLINE int8_t hton(int8_t n) { return n; }
+static ZT_ALWAYS_INLINE uint16_t hton(uint16_t n)
 {
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
@@ -284,8 +283,8 @@ ZT_ALWAYS_INLINE uint16_t hton(uint16_t n)
 	return htons(n);
 #endif
 }
-ZT_ALWAYS_INLINE int16_t hton(int16_t n) { return (int16_t)Utils::hton((uint16_t)n); }
-ZT_ALWAYS_INLINE uint32_t hton(uint32_t n)
+static ZT_ALWAYS_INLINE int16_t hton(int16_t n) { return (int16_t)Utils::hton((uint16_t)n); }
+static ZT_ALWAYS_INLINE uint32_t hton(uint32_t n)
 {
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
@@ -297,8 +296,8 @@ ZT_ALWAYS_INLINE uint32_t hton(uint32_t n)
 	return htonl(n);
 #endif
 }
-ZT_ALWAYS_INLINE int32_t hton(int32_t n) { return (int32_t)Utils::hton((uint32_t)n); }
-ZT_ALWAYS_INLINE uint64_t hton(uint64_t n)
+static ZT_ALWAYS_INLINE int32_t hton(int32_t n) { return (int32_t)Utils::hton((uint32_t)n); }
+static ZT_ALWAYS_INLINE uint64_t hton(uint64_t n)
 {
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
@@ -319,16 +318,16 @@ ZT_ALWAYS_INLINE uint64_t hton(uint64_t n)
 	);
 #endif
 }
-ZT_ALWAYS_INLINE int64_t hton(int64_t n) { return (int64_t)hton((uint64_t)n); }
+static ZT_ALWAYS_INLINE int64_t hton(int64_t n) { return (int64_t)hton((uint64_t)n); }
 #else
 template<typename T>
 static ZT_ALWAYS_INLINE T hton(T n) { return n; }
 #endif
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-ZT_ALWAYS_INLINE uint8_t ntoh(uint8_t n) { return n; }
-ZT_ALWAYS_INLINE int8_t ntoh(int8_t n) { return n; }
-ZT_ALWAYS_INLINE uint16_t ntoh(uint16_t n)
+static ZT_ALWAYS_INLINE uint8_t ntoh(uint8_t n) { return n; }
+static ZT_ALWAYS_INLINE int8_t ntoh(int8_t n) { return n; }
+static ZT_ALWAYS_INLINE uint16_t ntoh(uint16_t n)
 {
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
@@ -340,8 +339,8 @@ ZT_ALWAYS_INLINE uint16_t ntoh(uint16_t n)
 	return htons(n);
 #endif
 }
-ZT_ALWAYS_INLINE int16_t ntoh(int16_t n) { return (int16_t)Utils::ntoh((uint16_t)n); }
-ZT_ALWAYS_INLINE uint32_t ntoh(uint32_t n)
+static ZT_ALWAYS_INLINE int16_t ntoh(int16_t n) { return (int16_t)Utils::ntoh((uint16_t)n); }
+static ZT_ALWAYS_INLINE uint32_t ntoh(uint32_t n)
 {
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
@@ -353,8 +352,8 @@ ZT_ALWAYS_INLINE uint32_t ntoh(uint32_t n)
 	return ntohl(n);
 #endif
 }
-ZT_ALWAYS_INLINE int32_t ntoh(int32_t n) { return (int32_t)Utils::ntoh((uint32_t)n); }
-ZT_ALWAYS_INLINE uint64_t ntoh(uint64_t n)
+static ZT_ALWAYS_INLINE int32_t ntoh(int32_t n) { return (int32_t)Utils::ntoh((uint32_t)n); }
+static ZT_ALWAYS_INLINE uint64_t ntoh(uint64_t n)
 {
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
@@ -375,13 +374,13 @@ ZT_ALWAYS_INLINE uint64_t ntoh(uint64_t n)
 	);
 #endif
 }
-ZT_ALWAYS_INLINE int64_t ntoh(int64_t n) { return (int64_t)ntoh((uint64_t)n); }
+static ZT_ALWAYS_INLINE int64_t ntoh(int64_t n) { return (int64_t)ntoh((uint64_t)n); }
 #else
 template<typename T>
-ZT_ALWAYS_INLINE T ntoh(T n) { return n; }
+static ZT_ALWAYS_INLINE T ntoh(T n) { return n; }
 #endif
 
-ZT_ALWAYS_INLINE uint64_t readUInt64(const void *const p)
+static ZT_ALWAYS_INLINE uint64_t readUInt64(const void *const p)
 {
 #ifdef ZT_NO_TYPE_PUNNING
 	const uint8_t *const b = reinterpret_cast<const uint8_t *>(p);
@@ -399,7 +398,7 @@ ZT_ALWAYS_INLINE uint64_t readUInt64(const void *const p)
 #endif
 }
 
-ZT_ALWAYS_INLINE void putUInt64(void *const p,const uint64_t i)
+static ZT_ALWAYS_INLINE void putUInt64(void *const p,const uint64_t i)
 {
 #ifdef ZT_NO_TYPE_PUNNING
 	uint8_t *const b = reinterpret_cast<uint8_t *>(p);

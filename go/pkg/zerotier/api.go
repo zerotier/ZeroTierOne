@@ -460,10 +460,10 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 		}
 		apiSetStandardHeaders(out)
 
-		var queriedName string
-		if len(req.URL.Path) > 6 {
-			queriedName = req.URL.Path[6:]
-		}
+		//var queriedName string
+		//if len(req.URL.Path) > 6 {
+		//	queriedName = req.URL.Path[6:]
+		//}
 
 		if req.Method == http.MethodDelete {
 		} else if req.Method == http.MethodPost || req.Method == http.MethodPut {

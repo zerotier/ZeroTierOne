@@ -59,6 +59,7 @@ else(WIN32)
 		add_compile_options(
 			-Wall
 			-Wno-deprecated
+			-Wno-unused-function
 			-mmacosx-version-min=10.9
 			$<$<CONFIG:Debug>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
@@ -80,6 +81,7 @@ else(WIN32)
 		add_compile_options(
 			-Wall
 			-Wno-deprecated
+			-Wno-unused-function
 			$<$<CONFIG:Debug>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
 			$<$<CONFIG:RELEASE>:-O3>

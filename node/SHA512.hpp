@@ -42,21 +42,21 @@ namespace ZeroTier {
 
 #ifdef __APPLE__
 #define ZT_HAVE_NATIVE_SHA512 1
-ZT_ALWAYS_INLINE void SHA512(void *digest,const void *data,unsigned int len)
+static ZT_ALWAYS_INLINE void SHA512(void *digest,const void *data,unsigned int len)
 {
 	CC_SHA512_CTX ctx;
 	CC_SHA512_Init(&ctx);
 	CC_SHA512_Update(&ctx,data,len);
 	CC_SHA512_Final(reinterpret_cast<unsigned char *>(digest),&ctx);
 }
-ZT_ALWAYS_INLINE void SHA384(void *digest,const void *data,unsigned int len)
+static ZT_ALWAYS_INLINE void SHA384(void *digest,const void *data,unsigned int len)
 {
 	CC_SHA512_CTX ctx;
 	CC_SHA384_Init(&ctx);
 	CC_SHA384_Update(&ctx,data,len);
 	CC_SHA384_Final(reinterpret_cast<unsigned char *>(digest),&ctx);
 }
-ZT_ALWAYS_INLINE void SHA384(void *digest,const void *data0,unsigned int len0,const void *data1,unsigned int len1)
+static ZT_ALWAYS_INLINE void SHA384(void *digest,const void *data0,unsigned int len0,const void *data1,unsigned int len1)
 {
 	CC_SHA512_CTX ctx;
 	CC_SHA384_Init(&ctx);
@@ -69,21 +69,21 @@ ZT_ALWAYS_INLINE void SHA384(void *digest,const void *data0,unsigned int len0,co
 #ifndef ZT_HAVE_NATIVE_SHA512
 #ifdef ZT_USE_LIBCRYPTO
 #define ZT_HAVE_NATIVE_SHA512 1
-ZT_ALWAYS_INLINE void SHA512(void *digest,const void *data,unsigned int len)
+static ZT_ALWAYS_INLINE void SHA512(void *digest,const void *data,unsigned int len)
 {
 	SHA512_CTX ctx;
 	SHA512_Init(&ctx);
 	SHA512_Update(&ctx,data,len);
 	SHA512_Final(reinterpret_cast<unsigned char *>(digest),&ctx);
 }
-ZT_ALWAYS_INLINE void SHA384(void *digest,const void *data,unsigned int len)
+static ZT_ALWAYS_INLINE void SHA384(void *digest,const void *data,unsigned int len)
 {
 	SHA512_CTX ctx;
 	SHA384_Init(&ctx);
 	SHA384_Update(&ctx,data,len);
 	SHA384_Final(reinterpret_cast<unsigned char *>(digest),&ctx);
 }
-ZT_ALWAYS_INLINE void SHA384(void *digest,const void *data0,unsigned int len0,const void *data1,unsigned int len1)
+static ZT_ALWAYS_INLINE void SHA384(void *digest,const void *data0,unsigned int len0,const void *data1,unsigned int len1)
 {
 	SHA512_CTX ctx;
 	SHA384_Init(&ctx);

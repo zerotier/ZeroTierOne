@@ -656,12 +656,12 @@ public:
 	static InetAddress makeIpv66plane(uint64_t nwid,uint64_t zeroTierAddress);
 };
 
-InetAddress *asInetAddress(sockaddr_in *p) { return reinterpret_cast<InetAddress *>(p); }
-InetAddress *asInetAddress(sockaddr_in6 *p) { return reinterpret_cast<InetAddress *>(p); }
-InetAddress *asInetAddress(sockaddr *p) { return reinterpret_cast<InetAddress *>(p); }
-const InetAddress *asInetAddress(const sockaddr_in *p) { return reinterpret_cast<const InetAddress *>(p); }
-const InetAddress *asInetAddress(const sockaddr_in6 *p) { return reinterpret_cast<const InetAddress *>(p); }
-const InetAddress *asInetAddress(const sockaddr *p) { return reinterpret_cast<const InetAddress *>(p); }
+static ZT_ALWAYS_INLINE InetAddress *asInetAddress(sockaddr_in *p) { return reinterpret_cast<InetAddress *>(p); }
+static ZT_ALWAYS_INLINE InetAddress *asInetAddress(sockaddr_in6 *p) { return reinterpret_cast<InetAddress *>(p); }
+static ZT_ALWAYS_INLINE InetAddress *asInetAddress(sockaddr *p) { return reinterpret_cast<InetAddress *>(p); }
+static ZT_ALWAYS_INLINE const InetAddress *asInetAddress(const sockaddr_in *p) { return reinterpret_cast<const InetAddress *>(p); }
+static ZT_ALWAYS_INLINE const InetAddress *asInetAddress(const sockaddr_in6 *p) { return reinterpret_cast<const InetAddress *>(p); }
+static ZT_ALWAYS_INLINE const InetAddress *asInetAddress(const sockaddr *p) { return reinterpret_cast<const InetAddress *>(p); }
 
 } // namespace ZeroTier
 

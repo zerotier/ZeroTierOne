@@ -609,59 +609,21 @@ func (n *Node) Peers() []*Peer {
 			p2.Role = int(p.role)
 
 			p2.Paths = make([]Path, 0, int(p.pathCount))
-			usingAllocation := false
 			for j := uintptr(0); j < uintptr(p.pathCount); j++ {
 				pt := &p.paths[j]
 				if pt.alive != 0 {
 					a := sockaddrStorageToUDPAddr(&pt.address)
 					if a != nil {
-						alloc := float32(pt.allocation)
-						if alloc > 0.0 {
-							usingAllocation = true
-						}
 						p2.Paths = append(p2.Paths, Path{
 							IP:                     a.IP,
 							Port:                   a.Port,
 							LastSend:               int64(pt.lastSend),
 							LastReceive:            int64(pt.lastReceive),
 							TrustedPathID:          uint64(pt.trustedPathId),
-							Latency:                float32(pt.latency),
-							PacketDelayVariance:    float32(pt.packetDelayVariance),
-							ThroughputDisturbCoeff: float32(pt.throughputDisturbCoeff),
-							PacketErrorRatio:       float32(pt.packetErrorRatio),
-							PacketLossRatio:        float32(pt.packetLossRatio),
-							Stability:              float32(pt.stability),
-							Throughput:             uint64(pt.throughput),
-							MaxThroughput:          uint64(pt.maxThroughput),
-							Allocation:             alloc,
 						})
 					}
 				}
 			}
-			if !usingAllocation { // if all allocations are zero fall back to single path mode that uses the preferred flag
-				for i, j := 0, uintptr(0); j < uintptr(p.pathCount); j++ {
-					pt := &p.paths[j]
-					if pt.alive != 0 {
-						if pt.preferred == 0 {
-							p2.Paths[i].Allocation = 0.0
-						} else {
-							p2.Paths[i].Allocation = 1.0
-						}
-						i++
-					}
-				}
-			}
-			sort.Slice(p2.Paths, func(a, b int) bool {
-				pa := &p2.Paths[a]
-				pb := &p2.Paths[b]
-				if pb.Allocation < pa.Allocation { // invert order, put highest allocation paths first
-					return true
-				}
-				if pa.Allocation == pb.Allocation {
-					return pa.LastReceive < pb.LastReceive // then sort by most recent activity
-				}
-				return false
-			})
 
 			p2.Clock = TimeMs()
 			peers = append(peers, p2)
@@ -775,9 +737,6 @@ func (n *Node) handleTrace(traceMessage string) {
 func (n *Node) handleUserMessage(originAddress, messageTypeID uint64, data []byte) {
 }
 
-func (n *Node) handleRemoteTrace(originAddress uint64, dictData []byte) {
-}
-
 //////////////////////////////////////////////////////////////////////////////
 
 // These are callbacks called by the core and GoGlue stuff to talk to the
@@ -866,38 +825,6 @@ func goStateObjectGetFunc(gn unsafe.Pointer, objType C.int, id, data unsafe.Poin
 	return -1
 }
 
-//export goDNSResolverFunc
-func goDNSResolverFunc(gn unsafe.Pointer, dnsRecordTypes unsafe.Pointer, numDNSRecordTypes C.int, name unsafe.Pointer, requestID C.uintptr_t) {
-	go func() {
-		nodesByUserPtrLock.RLock()
-		node := nodesByUserPtr[uintptr(gn)]
-		nodesByUserPtrLock.RUnlock()
-		if node == nil {
-			return
-		}
-
-		recordTypes := C.GoBytes(dnsRecordTypes, numDNSRecordTypes)
-		recordName := C.GoString((*C.char)(name))
-
-		recordNameCStrCopy := C.CString(recordName)
-		for _, rt := range recordTypes {
-			switch rt {
-			case C.ZT_DNS_RECORD_TXT:
-				recs, _ := net.LookupTXT(recordName)
-				for _, rec := range recs {
-					if len(rec) > 0 {
-						rnCS := C.CString(rec)
-						C.ZT_Node_processDNSResult(unsafe.Pointer(node.zn), nil, requestID, recordNameCStrCopy, C.ZT_DNS_RECORD_TXT, unsafe.Pointer(rnCS), C.uint(len(rec)), 0)
-						C.free(unsafe.Pointer(rnCS))
-					}
-				}
-			}
-		}
-		C.ZT_Node_processDNSResult(unsafe.Pointer(node.zn), nil, requestID, recordNameCStrCopy, C.ZT_DNS_RECORD__END_OF_RESULTS, nil, 0, 0)
-		C.free(unsafe.Pointer(recordNameCStrCopy))
-	}()
-}
-
 //export goVirtualNetworkConfigFunc
 func goVirtualNetworkConfigFunc(gn, _ unsafe.Pointer, nwid C.uint64_t, op C.int, conf unsafe.Pointer) {
 	go func() {
@@ -976,9 +903,6 @@ func goZtEvent(gn unsafe.Pointer, eventType C.int, data unsafe.Pointer) {
 		case C.ZT_EVENT_USER_MESSAGE:
 			um := (*C.ZT_UserMessage)(data)
 			node.handleUserMessage(uint64(um.origin), uint64(um.typeId), C.GoBytes(um.data, C.int(um.length)))
-		case C.ZT_EVENT_REMOTE_TRACE:
-			rt := (*C.ZT_RemoteTrace)(data)
-			node.handleRemoteTrace(uint64(rt.origin), C.GoBytes(unsafe.Pointer(rt.data), C.int(rt.len)))
 		}
 	}()
 }
