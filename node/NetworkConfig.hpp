@@ -73,11 +73,6 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_FLAG_RULES_RESULT_OF_UNSUPPORTED_MATCH 0x0000000000000008ULL
 
 /**
- * Flag: disable frame compression
- */
-#define ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION 0x0000000000000010ULL
-
-/**
  * Device can bridge to other Ethernet networks and gets unknown recipient multicasts
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE 0x0000020000000000ULL
@@ -88,7 +83,7 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR 0x0000040000000000ULL
 
 /**
- * Device that can probe and receive remote trace info about this network
+ * Device that is allowed to remotely debug connectivity on this network
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_DIAGNOSTICIAN 0x0000080000000000ULL
 
@@ -222,22 +217,6 @@ struct NetworkConfig
 	 * @return True if IPv6 NDP emulation should be allowed for certain "magic" IPv6 address patterns
 	 */
 	inline bool ndpEmulation() const { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
-
-	/**
-	 * @return True if frames should not be compressed
-	 */
-	inline bool disableCompression() const
-	{
-#ifndef ZT_DISABLE_COMPRESSION
-		return ((this->flags & ZT_NETWORKCONFIG_FLAG_DISABLE_COMPRESSION) != 0);
-#else
-		/* Compression is disabled for libzt builds since it causes non-obvious chaotic
-		interference with lwIP's TCP congestion algorithm. Compression is also disabled
-		for some NAS builds due to the usage of low-performance processors in certain
-		older and budget models. */
-		return true;
-#endif
-	}
 
 	/**
 	 * @return Network type is public (no access control)

@@ -71,6 +71,7 @@ set(core_src
 	SelfAwareness.cpp
 	SHA512.cpp
 	Switch.cpp
+	Topology.cpp
 	Utils.cpp
 )
 

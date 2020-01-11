@@ -35,6 +35,13 @@ public:
 	explicit ZT_ALWAYS_INLINE operator bool() const { return (_p != (T *)0); }
 	ZT_ALWAYS_INLINE T *ptr() const { return _p; }
 
+	ZT_ALWAYS_INLINE void swap(const ScopedPtr &p)
+	{
+		T *const tmp = _p;
+		_p = p._p;
+		p._p = tmp;
+	}
+
 	ZT_ALWAYS_INLINE bool operator==(const ScopedPtr &p) const { return (_p == p._p); }
 	ZT_ALWAYS_INLINE bool operator!=(const ScopedPtr &p) const { return (_p != p._p); }
 	ZT_ALWAYS_INLINE bool operator==(T *const p) const { return (_p == p); }
@@ -48,5 +55,10 @@ private:
 };
 
 } // namespace ZeroTier
+
+namespace std {
+template<typename T>
+ZT_ALWAYS_INLINE void swap(ZeroTier::ScopedPtr<T> &a,ZeroTier::ScopedPtr<T> &b) { a.swap(b); }
+}
 
 #endif

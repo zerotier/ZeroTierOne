@@ -25,12 +25,12 @@
 
 namespace ZeroTier {
 
-// libpthread based mutex lock
 class Mutex
 {
 public:
-	ZT_ALWAYS_INLINE Mutex() { pthread_mutex_init(&_mh,(const pthread_mutexattr_t *)0); }
+	ZT_ALWAYS_INLINE Mutex() { pthread_mutex_init(&_mh,0); }
 	ZT_ALWAYS_INLINE ~Mutex() { pthread_mutex_destroy(&_mh); }
+
 	ZT_ALWAYS_INLINE void lock() const { pthread_mutex_lock(&((const_cast <Mutex *> (this))->_mh)); }
 	ZT_ALWAYS_INLINE void unlock() const { pthread_mutex_unlock(&((const_cast <Mutex *> (this))->_mh)); }
 
@@ -51,6 +51,43 @@ private:
 	pthread_mutex_t _mh;
 };
 
+class RWMutex
+{
+public:
+	ZT_ALWAYS_INLINE RWMutex() { pthread_rwlock_init(&_mh,0); }
+	ZT_ALWAYS_INLINE ~RWMutex() { pthread_rwlock_destroy(&_mh); }
+
+	ZT_ALWAYS_INLINE void lock() const { pthread_rwlock_wrlock(&((const_cast <RWMutex *> (this))->_mh)); }
+	ZT_ALWAYS_INLINE void rlock() const { pthread_rwlock_rdlock(&((const_cast <RWMutex *> (this))->_mh)); }
+	ZT_ALWAYS_INLINE void unlock() const { pthread_rwlock_unlock(&((const_cast <RWMutex *> (this))->_mh)); }
+
+	class RLock
+	{
+	public:
+		ZT_ALWAYS_INLINE RLock(RWMutex &m) : _m(&m) { m.rlock(); }
+		ZT_ALWAYS_INLINE RLock(const RWMutex &m) : _m(const_cast<RWMutex *>(&m)) { _m->rlock(); }
+		ZT_ALWAYS_INLINE ~RLock() { _m->unlock(); }
+	private:
+		RWMutex *const _m;
+	};
+
+	class Lock
+	{
+	public:
+		ZT_ALWAYS_INLINE Lock(RWMutex &m) : _m(&m) { m.lock(); }
+		ZT_ALWAYS_INLINE Lock(const RWMutex &m) : _m(const_cast<RWMutex *>(&m)) { _m->lock(); }
+		ZT_ALWAYS_INLINE ~Lock() { _m->unlock(); }
+	private:
+		RWMutex *const _m;
+	};
+
+private:
+	ZT_ALWAYS_INLINE RWMutex(const RWMutex &) {}
+	ZT_ALWAYS_INLINE const RWMutex &operator=(const RWMutex &) { return *this; }
+
+	pthread_rwlock_t _mh;
+};
+
 } // namespace ZeroTier
 
 #endif
@@ -61,7 +98,6 @@ private:
 
 namespace ZeroTier {
 
-// Windows critical section based lock
 class Mutex
 {
 public:

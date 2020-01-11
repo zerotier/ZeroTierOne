@@ -117,202 +117,29 @@
 #define ZT_RELAY_MAX_HOPS 4
 
 /**
- * Expire time for multicast 'likes' and indirect multicast memberships in ms
- */
-#define ZT_MULTICAST_LIKE_EXPIRE 600000
-
-/**
- * Period for multicast LIKE re-announcements to connected nodes
- */
-#define ZT_MULTICAST_ANNOUNCE_PERIOD 60000
-
-/**
- * Packets are only used for QoS/ACK statistical sampling if their packet ID is divisible by
- * this integer. This is to provide a mechanism for both peers to agree on which packets need
- * special treatment without having to exchange information. Changing this value would be
- * a breaking change and would necessitate a protocol version upgrade. Since each incoming and
- * outgoing packet ID is checked against this value its evaluation is of the form:
- * (id & (divisor - 1)) == 0, thus the divisor must be a power of 2.
- *
- * This value is set at (16) so that given a normally-distributed RNG output we will sample
- * 1/16th (or ~6.25%) of packets.
- */
-#define ZT_PATH_QOS_ACK_PROTOCOL_DIVISOR 0x10
-
-/**
- * Time horizon for VERB_QOS_MEASUREMENT and VERB_ACK packet processing cutoff
- */
-#define ZT_PATH_QOS_ACK_CUTOFF_TIME 30000
-
-/**
- * Maximum number of VERB_QOS_MEASUREMENT and VERB_ACK packets allowed to be
- * processed within cutoff time. Separate totals are kept for each type but
- * the limit is the same for both.
- *
- * This limits how often this peer will compute statistical estimates
- * of various QoS measures from a VERB_QOS_MEASUREMENT or VERB_ACK packets to
- * CUTOFF_LIMIT times per CUTOFF_TIME milliseconds per peer to prevent
- * this from being useful for DOS amplification attacks.
- */
-#define ZT_PATH_QOS_ACK_CUTOFF_LIMIT 128
-
-/**
- * Path choice history window size. This is used to keep track of which paths were
- * previously selected so that we can maintain a target allocation over time.
- */
-#define ZT_MULTIPATH_PROPORTION_WIN_SZ 128
-
-/**
- * Interval used for rate-limiting the computation of path quality estimates.
- */
-#define ZT_PATH_QUALITY_COMPUTE_INTERVAL 1000
-
-/**
- * Number of samples to consider when computing real-time path statistics
- */
-#define ZT_PATH_QUALITY_METRIC_REALTIME_CONSIDERATION_WIN_SZ 128
-
-/**
- * Number of samples to consider when computing performing long-term path quality analysis.
- * By default this value is set to ZT_PATH_QUALITY_METRIC_REALTIME_CONSIDERATION_WIN_SZ but can
- * be set to any value greater than that to observe longer-term path quality behavior.
- */
-#define ZT_PATH_QUALITY_METRIC_WIN_SZ ZT_PATH_QUALITY_METRIC_REALTIME_CONSIDERATION_WIN_SZ
-
-/**
- * Maximum acceptable Packet Delay Variance (PDV) over a path
- */
-#define ZT_PATH_MAX_PDV 1000
-
-/**
- * Maximum acceptable time interval between expectation and receipt of at least one ACK over a path
- */
-#define ZT_PATH_MAX_AGE 30000
-
-/**
- * Maximum acceptable mean latency over a path
- */
-#define ZT_PATH_MAX_MEAN_LATENCY 1000
-
-/**
- * How much each factor contributes to the "stability" score of a path
- */
-#define ZT_PATH_CONTRIB_PDV                    (1.0 / 3.0)
-#define ZT_PATH_CONTRIB_LATENCY                (1.0 / 3.0)
-#define ZT_PATH_CONTRIB_THROUGHPUT_DISTURBANCE (1.0 / 3.0)
-
-/**
- * How much each factor contributes to the "quality" score of a path
- */
-#define ZT_PATH_CONTRIB_STABILITY  (0.75 / 3.0)
-#define ZT_PATH_CONTRIB_THROUGHPUT (1.50 / 3.0)
-#define ZT_PATH_CONTRIB_SCOPE      (0.75 / 3.0)
-
-/**
- * How often a QoS packet is sent
- */
-#define ZT_PATH_QOS_INTERVAL 3000
-
-/**
- * Min and max acceptable sizes for a VERB_QOS_MEASUREMENT packet
- */
-#define ZT_PATH_MIN_QOS_PACKET_SZ 8 + 1
-#define ZT_PATH_MAX_QOS_PACKET_SZ 1400
-
-/**
- * How many ID:sojourn time pairs in a single QoS packet
- */
-#define ZT_PATH_QOS_TABLE_SIZE ((ZT_PATH_MAX_QOS_PACKET_SZ * 8) / (64 + 16))
-
-/**
- * Maximum number of outgoing packets we monitor for QoS information
- */
-#define ZT_PATH_MAX_OUTSTANDING_QOS_RECORDS 128
-
-/**
- * Timeout for QoS records
- */
-#define ZT_PATH_QOS_TIMEOUT (ZT_PATH_QOS_INTERVAL * 2)
-
-/**
- * How often the service tests the path throughput
- */
-#define ZT_PATH_THROUGHPUT_MEASUREMENT_INTERVAL (ZT_PATH_ACK_INTERVAL * 8)
-
-/**
- * Minimum amount of time between each ACK packet
- */
-#define ZT_PATH_ACK_INTERVAL 1000
-
-/**
- * How often an aggregate link statistics report is emitted into this tracing system
- */
-#define ZT_PATH_AGGREGATE_STATS_REPORT_INTERVAL 60000
-
-/**
- * How much an aggregate link's component paths can vary from their target allocation
- * before the link is considered to be in a state of imbalance.
- */
-#define ZT_PATH_IMBALANCE_THRESHOLD 0.20
-
-/**
- * Max allowable time spent in any queue
- */
-#define ZT_QOS_TARGET 5 // ms
-
-/**
- * Time period where the time spent in the queue by a packet should fall below
- * target at least once
- */
-#define ZT_QOS_INTERVAL 100 // ms
-
-/**
- * The number of bytes that each queue is allowed to send during each DRR cycle.
- * This approximates a single-byte-based fairness queuing scheme
- */
-#define ZT_QOS_QUANTUM ZT_DEFAULT_MTU
-
-/**
- * The maximum total number of packets that can be queued among all
- * active/inactive, old/new queues
- */
-#define ZT_QOS_MAX_ENQUEUED_PACKETS 1024
-
-/**
- * Number of QoS queues (buckets)
- */
-#define ZT_QOS_NUM_BUCKETS 9
-
-/**
- * All unspecified traffic is put in this bucket. Anything in a bucket with a smaller
- * value is de-prioritized. Anything in a bucket with a higher value is prioritized over
- * other traffic.
- */
-#define ZT_QOS_DEFAULT_BUCKET 0
-
-/**
- * Delay between full-fledge pings of directly connected peers
+ * Period between keepalives sent to paths if no other traffic has been sent
  *
  * See https://conferences.sigcomm.org/imc/2010/papers/p260.pdf for
  * some real world data on NAT UDP timeouts. From the paper: "the
  * lowest measured timeout when a binding has seen bidirectional
  * traffic is 54 sec." 30 seconds is faster than really necessary.
  */
-#define ZT_PEER_PING_PERIOD 30000
+#define ZT_PATH_KEEPALIVE_PERIOD 30000
 
 /**
- * Delay between refreshes of locators via DNS or other methods
+ * Timeout for path aliveness (measured from last receive)
  */
-#define ZT_DYNAMIC_ROOT_UPDATE_PERIOD 120000
+#define ZT_PATH_ACTIVITY_TIMEOUT ((ZT_PATH_KEEPALIVE_PERIOD * 2) + 5000)
+
+/**
+ * Delay between full HELLO messages between peers
+ */
+#define ZT_PEER_PING_PERIOD 60000
 
 /**
  * Timeout for overall peer activity (measured from last receive)
  */
-#ifndef ZT_SDK
-#define ZT_PEER_ACTIVITY_TIMEOUT 500000
-#else
-#define ZT_PEER_ACTIVITY_TIMEOUT 30000
-#endif
+#define ZT_PEER_ACTIVITY_TIMEOUT ((ZT_PEER_PING_PERIOD * 2) + 5000)
 
 /**
  * Delay between requests for updated network autoconf information
@@ -321,15 +148,6 @@
  * via ZeroTier Central. This is the heartbeat, basically.
  */
 #define ZT_NETWORK_AUTOCONF_DELAY 60000
-
-/**
- * Minimum interval between attempts by relays to unite peers
- *
- * When a relay gets a packet destined for another peer, it sends both peers
- * a RENDEZVOUS message no more than this often. This instructs the peers
- * to attempt NAT-t and gives each the other's corresponding IP:port pair.
- */
-#define ZT_MIN_UNITE_INTERVAL 30000
 
 /**
  * Sanity limit on maximum bridge routes
@@ -358,33 +176,9 @@
 #define ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH 120000
 
 /**
- * Time horizon for push direct paths cutoff
- */
-#define ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME 30000
-
-/**
- * Maximum number of direct path pushes within cutoff time
- *
- * This limits response to PUSH_DIRECT_PATHS to CUTOFF_LIMIT responses
- * per CUTOFF_TIME milliseconds per peer to prevent this from being
- * useful for DOS amplification attacks.
- */
-#define ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT 8
-
-/**
  * Maximum number of paths per IP scope (e.g. global, link-local) and family (e.g. v4/v6)
  */
-#define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 8
-
-/**
- * Time horizon for VERB_NETWORK_CREDENTIALS cutoff
- */
-#define ZT_PEER_CREDENTIALS_CUTOFF_TIME 60000
-
-/**
- * Maximum number of VERB_NETWORK_CREDENTIALS within cutoff time
- */
-#define ZT_PEER_CREDEITIALS_CUTOFF_LIMIT 15
+#define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 4
 
 /**
  * WHOIS rate limit (we allow these to be pretty fast)
@@ -422,11 +216,6 @@
  * This must be large enough to hold all signature types.
  */
 #define ZT_SIGNATURE_BUFFER_SIZE 96
-
-/**
- * Desired / recommended min stack size for threads (used on some platforms to reset thread stack size)
- */
-#define ZT_THREAD_MIN_STACK_SIZE 1048576
 
 // Internal cryptographic algorithm IDs (these match relevant identity types)
 #define ZT_CRYPTO_ALG_C25519 0

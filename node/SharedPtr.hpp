@@ -131,4 +131,9 @@ private:
 
 } // namespace ZeroTier
 
+namespace std {
+template<typename T>
+ZT_ALWAYS_INLINE void swap(ZeroTier::SharedPtr<T> &a,ZeroTier::SharedPtr<T> &b) { a.swap(b); }
+}
+
 #endif

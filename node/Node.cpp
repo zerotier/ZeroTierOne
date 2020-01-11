@@ -298,7 +298,6 @@ ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 	{
 		Mutex::Lock _l(_networks_m);
 		SharedPtr<Network> *nw = _networks.get(nwid);
-		RR->sw->removeNetworkQoSControlBlock(nwid);
 		if (!nw)
 			return ZT_RESULT_OK;
 		if (uptr)
@@ -400,7 +399,6 @@ ZT_PeerList *Node::peers() const
 		p->address = (*pi)->address().toInt();
 		identities[pl->peerCount] = (*pi)->identity(); // need to make a copy in case peer gets deleted
 		p->identity = &identities[pl->peerCount];
-		p->hadAggregateLink = 0;
 		if ((*pi)->remoteVersionKnown()) {
 			p->versionMajor = (int)(*pi)->remoteVersionMajor();
 			p->versionMinor = (int)(*pi)->remoteVersionMinor();
@@ -417,7 +415,6 @@ ZT_PeerList *Node::peers() const
 
 		std::vector< SharedPtr<Path> > paths((*pi)->paths(now));
 		SharedPtr<Path> bestp((*pi)->getAppropriatePath(now,false));
-		p->hadAggregateLink |= (*pi)->hasAggregateLink();
 		p->pathCount = 0;
 		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
 			memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
@@ -426,16 +423,6 @@ ZT_PeerList *Node::peers() const
 			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
 			p->paths[p->pathCount].alive = (*path)->alive(now) ? 1 : 0;
 			p->paths[p->pathCount].preferred = ((*path) == bestp) ? 1 : 0;
-			p->paths[p->pathCount].latency = (float)(*path)->latency();
-			p->paths[p->pathCount].packetDelayVariance = (*path)->packetDelayVariance();
-			p->paths[p->pathCount].throughputDisturbCoeff = (*path)->throughputDisturbanceCoefficient();
-			p->paths[p->pathCount].packetErrorRatio = (*path)->packetErrorRatio();
-			p->paths[p->pathCount].packetLossRatio = (*path)->packetLossRatio();
-			p->paths[p->pathCount].stability = (*path)->lastComputedStability();
-			p->paths[p->pathCount].throughput = (*path)->meanThroughput();
-			p->paths[p->pathCount].maxThroughput = (*path)->maxLifetimeThroughput();
-			p->paths[p->pathCount].allocation = (float)(*path)->allocation() / (float)255;
-			p->paths[p->pathCount].ifname = (*path)->getName();
 
 			++p->pathCount;
 		}

@@ -181,14 +181,6 @@ ZT_ALWAYS_INLINE bool _doHELLO(IncomingPacket &pkt,const RuntimeEnvironment *con
 	return true;
 }
 
-ZT_ALWAYS_INLINE bool _doACK(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
-{
-}
-
-ZT_ALWAYS_INLINE bool _doQOS_MEASUREMENT(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
-{
-}
-
 ZT_ALWAYS_INLINE bool _doERROR(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	const Packet::Verb inReVerb = (Packet::Verb)pkt[ZT_PROTO_VERB_ERROR_IDX_IN_RE_VERB];
@@ -272,7 +264,6 @@ ZT_ALWAYS_INLINE bool _doOK(IncomingPacket &pkt,const RuntimeEnvironment *const 
 				return true;
 
 			if (pkt.hops() == 0) {
-				path->updateLatency((unsigned int)latency,RR->node->now());
 				if ((ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2) < pkt.size()) {
 					InetAddress externalSurfaceAddress;
 					externalSurfaceAddress.deserialize(pkt,ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2);
@@ -281,6 +272,7 @@ ZT_ALWAYS_INLINE bool _doOK(IncomingPacket &pkt,const RuntimeEnvironment *const 
 				}
 			}
 
+			peer->updateLatency((unsigned int)latency);
 			peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
 		}	break;
 
@@ -461,7 +453,7 @@ ZT_ALWAYS_INLINE bool _doEXT_FRAME(IncomingPacket &pkt,const RuntimeEnvironment 
 			}
 		}
 
-		if ((flags & 0x10) != 0) { // ACK requested
+		if ((flags & 0x10U) != 0) { // ACK requested
 			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 			outp.append((uint8_t)Packet::VERB_EXT_FRAME);
 			outp.append((uint64_t)pkt.packetId());
@@ -497,9 +489,6 @@ ZT_ALWAYS_INLINE bool _doECHO(IncomingPacket &pkt,const RuntimeEnvironment *cons
 
 ZT_ALWAYS_INLINE bool _doNETWORK_CREDENTIALS(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
-	if (!peer->rateGateCredentialsReceived(RR->node->now()))
-		return true;
-
 	CertificateOfMembership com;
 	Capability cap;
 	Tag tag;
@@ -674,7 +663,7 @@ ZT_ALWAYS_INLINE bool _doPUSH_DIRECT_PATHS(IncomingPacket &pkt,const RuntimeEnvi
 {
 	const int64_t now = RR->node->now();
 
-	if (peer->rateGatePushDirectPaths(now)) {
+	if (peer->rateGateInboundPushDirectPaths(now)) {
 		uint8_t countPerScope[ZT_INETADDRESS_MAX_SCOPE+1][2]; // [][0] is v4, [][1] is v6
 		memset(countPerScope,0,sizeof(countPerScope));
 
@@ -689,7 +678,6 @@ ZT_ALWAYS_INLINE bool _doPUSH_DIRECT_PATHS(IncomingPacket &pkt,const RuntimeEnvi
 			unsigned int addrLen = pkt[ptr++];
 
 			switch(addrType) {
-
 				case 4: {
 					const InetAddress a(pkt.field(ptr,4),4,pkt.at<uint16_t>(ptr + 4));
 					if ((!peer->hasActivePathTo(now,a)) && // not already known
@@ -699,7 +687,6 @@ ZT_ALWAYS_INLINE bool _doPUSH_DIRECT_PATHS(IncomingPacket &pkt,const RuntimeEnvi
 							peer->sendHELLO(tPtr,-1,a,now);
 					}
 				}	break;
-
 				case 6: {
 					const InetAddress a(pkt.field(ptr,16),16,pkt.at<uint16_t>(ptr + 16));
 					if ((!peer->hasActivePathTo(now,a)) && // not already known
@@ -709,8 +696,8 @@ ZT_ALWAYS_INLINE bool _doPUSH_DIRECT_PATHS(IncomingPacket &pkt,const RuntimeEnvi
 							peer->sendHELLO(tPtr,-1,a,now);
 					}
 				}	break;
-
 			}
+
 			ptr += addrLen;
 		}
 	}
@@ -766,7 +753,6 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 			if (!trusted) {
 				if (!dearmor(peer->key())) {
 					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,packetId(),sourceAddress,hops(),"invalid MAC");
-					_path->recordInvalidPacket();
 					return true;
 				}
 			}
@@ -784,8 +770,6 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 					peer->received(tPtr,_path,hops(),packetId(),payloadLength(),v,0,Packet::VERB_NOP,0);
 					break;
 				case Packet::VERB_HELLO:                      r = _doHELLO(*this,RR,tPtr,true,_path);                  break;
-				case Packet::VERB_ACK:                        r = _doACK(*this,RR,tPtr,peer,_path);                    break;
-				case Packet::VERB_QOS_MEASUREMENT:            r = _doQOS_MEASUREMENT(*this,RR,tPtr,peer,_path);        break;
 				case Packet::VERB_ERROR:                      r = _doERROR(*this,RR,tPtr,peer,_path);                  break;
 				case Packet::VERB_OK:                         r = _doOK(*this,RR,tPtr,peer,_path);                     break;
 				case Packet::VERB_WHOIS:                      r = _doWHOIS(*this,RR,tPtr,peer,_path);                  break;
@@ -813,191 +797,5 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 		return true;
 	}
 }
-
-#if 0
-
-bool IncomingPacket::_doACK(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
-{
-	if (!peer->rateGateACK(RR->node->now()))
-		return true;
-	/* Dissect incoming ACK packet. From this we can estimate current throughput of the path, establish known
-	 * maximums and detect packet loss. */
-	if (peer->localMultipathSupport()) {
-		int32_t ackedBytes;
-		if (payloadLength() != sizeof(ackedBytes)) {
-			return true; // ignore
-		}
-		memcpy(&ackedBytes, payload(), sizeof(ackedBytes));
-		_path->receivedAck(RR->node->now(), Utils::ntoh(ackedBytes));
-		peer->inferRemoteMultipathEnabled();
-	}
-
-	return true;
-}
-
-bool IncomingPacket::_doQOS_MEASUREMENT(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
-{
-	if (!peer->rateGateQoS(RR->node->now()))
-		return true;
-
-	/* Dissect incoming QoS packet. From this we can compute latency values and their variance.
-	 * The latency variance is used as a measure of "jitter". */
-	if (peer->localMultipathSupport()) {
-		if (payloadLength() > ZT_PATH_MAX_QOS_PACKET_SZ || payloadLength() < ZT_PATH_MIN_QOS_PACKET_SZ) {
-			return true; // ignore
-		}
-		const int64_t now = RR->node->now();
-		uint64_t rx_id[ZT_PATH_QOS_TABLE_SIZE];
-		uint16_t rx_ts[ZT_PATH_QOS_TABLE_SIZE];
-		char *begin = (char *)payload();
-		char *ptr = begin;
-		int count = 0;
-		int len = payloadLength();
-		// Read packet IDs and latency compensation intervals for each packet tracked by this QoS packet
-		while (ptr < (begin + len) && (count < ZT_PATH_QOS_TABLE_SIZE)) {
-			memcpy((void*)&rx_id[count], ptr, sizeof(uint64_t));
-			ptr+=sizeof(uint64_t);
-			memcpy((void*)&rx_ts[count], ptr, sizeof(uint16_t));
-			ptr+=sizeof(uint16_t);
-			count++;
-		}
-		_path->receivedQoS(now, count, rx_id, rx_ts);
-		peer->inferRemoteMultipathEnabled();
-	}
-
-	return true;
-}
-
-bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
-{
-	unsigned int offset = ZT_PACKET_IDX_PAYLOAD;
-	const uint64_t nwid = at<uint64_t>(offset); offset += 8;
-	const unsigned int flags = (*this)[offset]; ++offset;
-
-	const SharedPtr<Network> network(RR->node->network(nwid));
-	if (network) {
-		if ((flags & 0x01) != 0) {
-			// This is deprecated but may still be sent by old peers
-			CertificateOfMembership com;
-			offset += com.deserialize(*this,offset);
-			if (com)
-				network->addCredential(tPtr,com);
-		}
-
-		if (!network->gate(tPtr,peer)) {
-			_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
-			return false;
-		}
-
-		unsigned int gatherLimit = 0;
-		if ((flags & 0x02) != 0) {
-			gatherLimit = at<uint32_t>(offset); offset += 4;
-		}
-
-		MAC from;
-		if ((flags & 0x04) != 0) {
-			from.setTo(field(offset,6),6); offset += 6;
-		} else {
-			from.fromAddress(peer->address(),nwid);
-		}
-
-		const unsigned int recipientsOffset = offset;
-		std::list<Address> recipients;
-		if ((flags & 0x08) != 0) {
-			const unsigned int rc = at<uint16_t>(offset); offset += 2;
-			for(unsigned int i=0;i<rc;++i) {
-				const Address a(field(offset,5),5);
-				if ((a != peer->address())&&(a != RR->identity.address())) {
-					recipients.push_back(a);
-				}
-				offset += 5;
-			}
-		}
-		const unsigned int afterRecipientsOffset = offset;
-
-		const MulticastGroup to(MAC(field(offset,6),6),at<uint32_t>(offset + 6)); offset += 10;
-		const unsigned int etherType = at<uint16_t>(offset); offset += 2;
-		const unsigned int frameLen = size() - offset;
-
-		if (network->config().multicastLimit == 0) {
-			RR->t->incomingNetworkFrameDropped(tPtr,network,_path,packetId(),size(),peer->address(),Packet::VERB_MULTICAST_FRAME,from,to.mac(),"multicast disabled");
-			peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,nwid);
-			return true;
-		}
-		if (!to.mac().isMulticast()) {
-			RR->t->incomingPacketInvalid(tPtr,_path,packetId(),source(),hops(),Packet::VERB_MULTICAST_FRAME,"destination not multicast");
-			peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,nwid);
-			return true;
-		}
-		if ((!from)||(from.isMulticast())||(from == network->mac())) {
-			RR->t->incomingPacketInvalid(tPtr,_path,packetId(),source(),hops(),Packet::VERB_MULTICAST_FRAME,"invalid source MAC");
-			peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,nwid);
-			return true;
-		}
-
-		if ((frameLen > 0)&&(frameLen <= ZT_MAX_MTU)) {
-			const uint8_t *const frameData = ((const uint8_t *)unsafeData()) + offset;
-			if (network->filterIncomingPacket(tPtr,peer,RR->identity.address(),from,to.mac(),frameData,frameLen,etherType,0) > 0) {
-				RR->node->putFrame(tPtr,nwid,network->userPtr(),from,to.mac(),etherType,0,(const void *)frameData,frameLen);
-			}
-		}
-
-		if (!recipients.empty()) {
-			// TODO
-			/*
-			const std::vector<Address> anchors = network->config().anchors();
-			const bool amAnchor = (std::find(anchors.begin(),anchors.end(),RR->identity.address()) != anchors.end());
-
-			for(std::list<Address>::iterator ra(recipients.begin());ra!=recipients.end();) {
-				SharedPtr<Peer> recipient(RR->topology->get(*ra));
-				if ((recipient)&&((recipient->remoteVersionProtocol() < 10)||(amAnchor))) {
-					Packet outp(*ra,RR->identity.address(),Packet::VERB_MULTICAST_FRAME);
-					outp.append(field(ZT_PACKET_IDX_PAYLOAD,recipientsOffset - ZT_PACKET_IDX_PAYLOAD),recipientsOffset - ZT_PACKET_IDX_PAYLOAD);
-					outp.append(field(afterRecipientsOffset,size() - afterRecipientsOffset),size() - afterRecipientsOffset);
-					RR->sw->send(tPtr,outp,true);
-					recipients.erase(ra++);
-				} else ++ra;
-			}
-
-			if (!recipients.empty()) {
-				Packet outp(recipients.front(),RR->identity.address(),Packet::VERB_MULTICAST_FRAME);
-				recipients.pop_front();
-				outp.append(field(ZT_PACKET_IDX_PAYLOAD,recipientsOffset - ZT_PACKET_IDX_PAYLOAD),recipientsOffset - ZT_PACKET_IDX_PAYLOAD);
-				if (!recipients.empty()) {
-					outp.append((uint16_t)recipients.size());
-					for(std::list<Address>::iterator ra(recipients.begin());ra!=recipients.end();++ra)
-						ra->appendTo(outp);
-				}
-				outp.append(field(afterRecipientsOffset,size() - afterRecipientsOffset),size() - afterRecipientsOffset);
-				RR->sw->send(tPtr,outp,true);
-			}
-			*/
-		}
-
-		if (gatherLimit) { // DEPRECATED but still supported
-			/*
-			Packet outp(source(),RR->identity.address(),Packet::VERB_OK);
-			outp.append((unsigned char)Packet::VERB_MULTICAST_FRAME);
-			outp.append(packetId());
-			outp.append(nwid);
-			to.mac().appendTo(outp);
-			outp.append((uint32_t)to.adi());
-			outp.append((unsigned char)0x02); // flag 0x02 = contains gather results
-			if (RR->mc->gather(peer->address(),nwid,to,outp,gatherLimit)) {
-				outp.armor(peer->key(),true);
-				_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
-			}
-			*/
-		}
-
-		peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,nwid);
-		return true;
-	} else {
-		_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
-		return false;
-	}
-}
-
-#endif
 
 } // namespace ZeroTier

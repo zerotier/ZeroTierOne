@@ -35,8 +35,7 @@ namespace ZeroTier {
 
 Switch::Switch(const RuntimeEnvironment *renv) :
 	RR(renv),
-	_lastCheckedQueues(0),
-	_lastUniteAttempt(8) // only really used on root servers and upstreams, and it'll grow there just fine
+	_lastCheckedQueues(0)
 {
 }
 
@@ -58,15 +57,11 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 				if (destination != RR->identity.address()) {
 					if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
 						fragment.incrementHops();
-
-						// Note: we don't bother initiating NAT-t for fragments, since heads will set that off.
-						// It wouldn't hurt anything, just redundant and unnecessary.
 						SharedPtr<Peer> relayTo = RR->topology->get(destination);
-						if ((!relayTo)||(!relayTo->sendDirect(tPtr,fragment.data(),fragment.size(),now,false))) {
-							// Don't know peer or no direct path -- so relay via someone upstream
+						if ((!relayTo)||(!relayTo->sendDirect(tPtr,fragment.data(),fragment.size(),now))) {
 							relayTo = RR->topology->findRelayTo(now,destination);
 							if (relayTo)
-								relayTo->sendDirect(tPtr,fragment.data(),fragment.size(),now,true);
+								relayTo->sendDirect(tPtr,fragment.data(),fragment.size(),now);
 						}
 					}
 				} else {
@@ -131,21 +126,10 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 					if (packet.hops() < ZT_RELAY_MAX_HOPS) {
 						packet.incrementHops();
 						SharedPtr<Peer> relayTo = RR->topology->get(destination);
-						if ((relayTo)&&(relayTo->sendDirect(tPtr,packet.data(),packet.size(),now,false))) {
-							if ((source != RR->identity.address())&&(_shouldUnite(now,source,destination))) {
-								const SharedPtr<Peer> sourcePeer(RR->topology->get(source));
-								if (sourcePeer)
-									relayTo->introduce(tPtr,now,sourcePeer);
-							}
-						} else {
+						if ((!relayTo)||(!relayTo->sendDirect(tPtr,packet.data(),packet.size(),now))) {
 							relayTo = RR->topology->findRelayTo(now,destination);
-							if ((relayTo)&&(relayTo->address() != source)) {
-								if (relayTo->sendDirect(tPtr,packet.data(),packet.size(),now,true)) {
-									const SharedPtr<Peer> sourcePeer(RR->topology->get(source));
-									if (sourcePeer)
-										relayTo->introduce(tPtr,now,sourcePeer);
-								}
-							}
+							if ((relayTo)&&(relayTo->address() != source))
+								relayTo->sendDirect(tPtr,packet.data(),packet.size(),now);
 						}
 					}
 
@@ -153,13 +137,13 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 					// Packet is the head of a fragmented packet series ----------------
 
 					const uint64_t packetId = (
-						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[0]) << 56) |
-						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[1]) << 48) |
-						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[2]) << 40) |
-						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[3]) << 32) |
-						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[4]) << 24) |
-						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[5]) << 16) |
-						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[6]) << 8) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[0]) << 56U) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[1]) << 48U) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[2]) << 40U) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[3]) << 32U) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[4]) << 24U) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[5]) << 16U) |
+						(((uint64_t)reinterpret_cast<const uint8_t *>(data)[6]) << 8U) |
 						((uint64_t)reinterpret_cast<const uint8_t *>(data)[7])
 					);
 
@@ -234,7 +218,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 		}
 	}
 
-	uint8_t qosBucket = ZT_QOS_DEFAULT_BUCKET;
+	uint8_t qosBucket = 0;
 
 	if (to.isMulticast()) {
 		MulticastGroup multicastGroup(to,0);
@@ -287,8 +271,8 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 								break;
 							}
 						} else if (sipNetmaskBits == 40) { // ZT-6PLANE /40 ???
-							const uint32_t nwid32 = (uint32_t)((network->id() ^ (network->id() >> 32)) & 0xffffffff);
-							if ( (my6[0] == 0xfc) && (my6[1] == (uint8_t)((nwid32 >> 24) & 0xff)) && (my6[2] == (uint8_t)((nwid32 >> 16) & 0xff)) && (my6[3] == (uint8_t)((nwid32 >> 8) & 0xff)) && (my6[4] == (uint8_t)(nwid32 & 0xff))) {
+							const uint32_t nwid32 = (uint32_t)((network->id() ^ (network->id() >> 32U)) & 0xffffffffU);
+							if ( (my6[0] == 0xfc) && (my6[1] == (uint8_t)((nwid32 >> 24U) & 0xffU)) && (my6[2] == (uint8_t)((nwid32 >> 16U) & 0xffU)) && (my6[3] == (uint8_t)((nwid32 >> 8U) & 0xffU)) && (my6[4] == (uint8_t)(nwid32 & 0xffU))) {
 								unsigned int ptr = 0;
 								while (ptr != 5) {
 									if (pkt6[ptr] != my6[ptr])
@@ -328,10 +312,10 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 					for(int i=0;i<32;++i) pseudo[40 + i] = adv[40 + i];
 					uint32_t checksum = 0;
 					for(int i=0;i<36;++i) checksum += Utils::hton(pseudo_[i]);
-					while ((checksum >> 16)) checksum = (checksum & 0xffff) + (checksum >> 16);
+					while ((checksum >> 16U)) checksum = (checksum & 0xffffU) + (checksum >> 16U);
 					checksum = ~checksum;
-					adv[42] = (checksum >> 8) & 0xff;
-					adv[43] = checksum & 0xff;
+					adv[42] = (checksum >> 8U) & 0xffU;
+					adv[43] = checksum & 0xffU;
 
 					RR->node->putFrame(tPtr,network->id(),network->userPtr(),peerMac,from,ZT_ETHERTYPE_IPV6,0,adv,72);
 					return; // NDP emulation done. We have forged a "fake" reply, so no need to send actual NDP query.
@@ -397,17 +381,11 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			from.appendTo(outp);
 			outp.append((uint16_t)etherType);
 			outp.append(data,len);
-			if (!network->config().disableCompression())
-				outp.compress();
-			aqm_enqueue(tPtr,network,outp,true,qosBucket);
 		} else {
 			Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
 			outp.append(network->id());
 			outp.append((uint16_t)etherType);
 			outp.append(data,len);
-			if (!network->config().disableCompression())
-				outp.compress();
-			aqm_enqueue(tPtr,network,outp,true,qosBucket);
 		}
 	} else {
 		// Destination is bridged behind a remote peer ---------------------------
@@ -465,270 +443,10 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 				from.appendTo(outp);
 				outp.append((uint16_t)etherType);
 				outp.append(data,len);
-				if (!network->config().disableCompression())
-					outp.compress();
-				aqm_enqueue(tPtr,network,outp,true,qosBucket);
 			} else {
 				RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,"filter blocked (bridge replication)");
 			}
 		}
-	}
-}
-
-void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &packet,bool encrypt,int qosBucket)
-{
-	if(!network->qosEnabled()) {
-		send(tPtr, packet, encrypt);
-		return;
-	}
-	NetworkQoSControlBlock *nqcb = _netQueueControlBlock[network->id()];
-	if (!nqcb) {
-		// DEBUG_INFO("creating network QoS control block (NQCB) for network %llx", network->id());
-		nqcb = new NetworkQoSControlBlock();
-		_netQueueControlBlock[network->id()] = nqcb;
-		// Initialize ZT_QOS_NUM_BUCKETS queues and place them in the INACTIVE list
-		// These queues will be shuffled between the new/old/inactive lists by the enqueue/dequeue algorithm
-		for (int i=0; i<ZT_QOS_NUM_BUCKETS; i++) {
-			nqcb->inactiveQueues.push_back(new ManagedQueue(i));
-		}
-	}
-
-	if (packet.verb() != Packet::VERB_FRAME && packet.verb() != Packet::VERB_EXT_FRAME) {
-		// DEBUG_INFO("skipping, no QoS for this packet, verb=%x", packet.verb());
-		// just send packet normally, no QoS for ZT protocol traffic
-		send(tPtr, packet, encrypt);
-	}
-
-	_aqm_m.lock();
-
-	// Enqueue packet and move queue to appropriate list
-
-	const Address dest(packet.destination());
-	TXQueueEntry *txEntry = new TXQueueEntry(dest,RR->node->now(),packet,encrypt);
-
-	ManagedQueue *selectedQueue = nullptr;
-	for (size_t i=0; i<ZT_QOS_NUM_BUCKETS; i++) {
-		if (i < nqcb->oldQueues.size()) { // search old queues first (I think this is best since old would imply most recent usage of the queue)
-			if (nqcb->oldQueues[i]->id == qosBucket) {
-				selectedQueue = nqcb->oldQueues[i];
-			}
-		} if (i < nqcb->newQueues.size()) { // search new queues (this would imply not often-used queues)
-			if (nqcb->newQueues[i]->id == qosBucket) {
-				selectedQueue = nqcb->newQueues[i];
-			}
-		} if (i < nqcb->inactiveQueues.size()) { // search inactive queues
-			if (nqcb->inactiveQueues[i]->id == qosBucket) {
-				selectedQueue = nqcb->inactiveQueues[i];
-				// move queue to end of NEW queue list
-				selectedQueue->byteCredit = ZT_QOS_QUANTUM;
-				// DEBUG_INFO("moving q=%p from INACTIVE to NEW list", selectedQueue);
-				nqcb->newQueues.push_back(selectedQueue);
-				nqcb->inactiveQueues.erase(nqcb->inactiveQueues.begin() + i);
-			}
-		}
-	}
-	if (!selectedQueue) {
-		return;
-	}
-
-	selectedQueue->q.push_back(txEntry);
-	selectedQueue->byteLength+=txEntry->packet.payloadLength();
-	nqcb->_currEnqueuedPackets++;
-
-	// DEBUG_INFO("nq=%2lu, oq=%2lu, iq=%2lu, nqcb.size()=%3d, bucket=%2d, q=%p", nqcb->newQueues.size(), nqcb->oldQueues.size(), nqcb->inactiveQueues.size(), nqcb->_currEnqueuedPackets, qosBucket, selectedQueue);
-
-	// Drop a packet if necessary
-	ManagedQueue *selectedQueueToDropFrom = nullptr;
-	if (nqcb->_currEnqueuedPackets > ZT_QOS_MAX_ENQUEUED_PACKETS)
-	{
-		// DEBUG_INFO("too many enqueued packets (%d), finding packet to drop", nqcb->_currEnqueuedPackets);
-		int maxQueueLength = 0;
-		for (size_t i=0; i<ZT_QOS_NUM_BUCKETS; i++) {
-			if (i < nqcb->oldQueues.size()) {
-				if (nqcb->oldQueues[i]->byteLength > maxQueueLength) {
-					maxQueueLength = nqcb->oldQueues[i]->byteLength;
-					selectedQueueToDropFrom = nqcb->oldQueues[i];
-				}
-			} if (i < nqcb->newQueues.size()) {
-				if (nqcb->newQueues[i]->byteLength > maxQueueLength) {
-					maxQueueLength = nqcb->newQueues[i]->byteLength;
-					selectedQueueToDropFrom = nqcb->newQueues[i];
-				}
-			} if (i < nqcb->inactiveQueues.size()) {
-				if (nqcb->inactiveQueues[i]->byteLength > maxQueueLength) {
-					maxQueueLength = nqcb->inactiveQueues[i]->byteLength;
-					selectedQueueToDropFrom = nqcb->inactiveQueues[i];
-				}
-			}
-		}
-		if (selectedQueueToDropFrom) {
-			// DEBUG_INFO("dropping packet from head of largest queue (%d payload bytes)", maxQueueLength);
-			int sizeOfDroppedPacket = selectedQueueToDropFrom->q.front()->packet.payloadLength();
-			delete selectedQueueToDropFrom->q.front();
-			selectedQueueToDropFrom->q.pop_front();
-			selectedQueueToDropFrom->byteLength-=sizeOfDroppedPacket;
-			nqcb->_currEnqueuedPackets--;
-		}
-	}
-	_aqm_m.unlock();
-	aqm_dequeue(tPtr);
-}
-
-uint64_t Switch::control_law(uint64_t t, int count)
-{
-	return (uint64_t)(t + ZT_QOS_INTERVAL / sqrt(count));
-}
-
-Switch::dqr Switch::dodequeue(ManagedQueue *q, uint64_t now)
-{
-	dqr r;
-	r.ok_to_drop = false;
-	r.p = q->q.front();
-
-	if (r.p == NULL) {
-		q->first_above_time = 0;
-		return r;
-	}
-	uint64_t sojourn_time = now - r.p->creationTime;
-	if (sojourn_time < ZT_QOS_TARGET || q->byteLength <= ZT_DEFAULT_MTU) {
-		// went below - stay below for at least interval
-		q->first_above_time = 0;
-	} else {
-		if (q->first_above_time == 0) {
-			// just went above from below. if still above at
-			// first_above_time, will say it's ok to drop.
-			q->first_above_time = now + ZT_QOS_INTERVAL;
-		} else if (now >= q->first_above_time) {
-			r.ok_to_drop = true;
-		}
-	}
-	return r;
-}
-
-Switch::TXQueueEntry * Switch::CoDelDequeue(ManagedQueue *q, bool isNew, uint64_t now)
-{
-	dqr r = dodequeue(q, now);
-
-	if (q->dropping) {
-		if (!r.ok_to_drop) {
-			q->dropping = false;
-		}
-		while (now >= q->drop_next && q->dropping) {
-			q->q.pop_front(); // drop
-			r = dodequeue(q, now);
-			if (!r.ok_to_drop) {
-				// leave dropping state
-				q->dropping = false;
-			} else {
-				++(q->count);
-				// schedule the next drop.
-				q->drop_next = control_law(q->drop_next, q->count);
-			}
-		}
-	} else if (r.ok_to_drop) {
-		q->q.pop_front(); // drop
-		r = dodequeue(q, now);
-		q->dropping = true;
-		q->count = (q->count > 2 && now - q->drop_next < 8*ZT_QOS_INTERVAL)?
-		q->count - 2 : 1;
-		q->drop_next = control_law(now, q->count);
-	}
-	return r.p;
-}
-
-void Switch::aqm_dequeue(void *tPtr)
-{
-	// Cycle through network-specific QoS control blocks
-	for(std::map<uint64_t,NetworkQoSControlBlock*>::iterator nqcb(_netQueueControlBlock.begin());nqcb!=_netQueueControlBlock.end();) {
-		if (!(*nqcb).second->_currEnqueuedPackets) {
-			return;
-		}
-
-		uint64_t now = RR->node->now();
-		TXQueueEntry *entryToEmit = nullptr;
-		std::vector<ManagedQueue*> *currQueues = &((*nqcb).second->newQueues);
-		std::vector<ManagedQueue*> *oldQueues = &((*nqcb).second->oldQueues);
-		std::vector<ManagedQueue*> *inactiveQueues = &((*nqcb).second->inactiveQueues);
-
-		_aqm_m.lock();
-
-		// Attempt dequeue from queues in NEW list
-		bool examiningNewQueues = true;
-		while (currQueues->size()) {
-			ManagedQueue *queueAtFrontOfList = currQueues->front();
-			if (queueAtFrontOfList->byteCredit < 0) {
-				queueAtFrontOfList->byteCredit += ZT_QOS_QUANTUM;
-				// Move to list of OLD queues
-				// DEBUG_INFO("moving q=%p from NEW to OLD list", queueAtFrontOfList);
-				oldQueues->push_back(queueAtFrontOfList);
-				currQueues->erase(currQueues->begin());
-			} else {
-				entryToEmit = CoDelDequeue(queueAtFrontOfList, examiningNewQueues, now);
-				if (!entryToEmit) {
-					// Move to end of list of OLD queues
-					// DEBUG_INFO("moving q=%p from NEW to OLD list", queueAtFrontOfList);
-					oldQueues->push_back(queueAtFrontOfList);
-					currQueues->erase(currQueues->begin());
-				}
-				else {
-					int len = entryToEmit->packet.payloadLength();
-					queueAtFrontOfList->byteLength -= len;
-					queueAtFrontOfList->byteCredit -= len;
-					// Send the packet!
-					queueAtFrontOfList->q.pop_front();
-					send(tPtr, entryToEmit->packet, entryToEmit->encrypt);
-					(*nqcb).second->_currEnqueuedPackets--;
-				}
-				if (queueAtFrontOfList) {
-					//DEBUG_INFO("dequeuing from q=%p, len=%lu in NEW list (byteCredit=%d)", queueAtFrontOfList, queueAtFrontOfList->q.size(), queueAtFrontOfList->byteCredit);
-				}
-				break;
-			}
-		}
-
-		// Attempt dequeue from queues in OLD list
-		examiningNewQueues = false;
-		currQueues = &((*nqcb).second->oldQueues);
-		while (currQueues->size()) {
-			ManagedQueue *queueAtFrontOfList = currQueues->front();
-			if (queueAtFrontOfList->byteCredit < 0) {
-				queueAtFrontOfList->byteCredit += ZT_QOS_QUANTUM;
-				oldQueues->push_back(queueAtFrontOfList);
-				currQueues->erase(currQueues->begin());
-			} else {
-				entryToEmit = CoDelDequeue(queueAtFrontOfList, examiningNewQueues, now);
-				if (!entryToEmit) {
-					//DEBUG_INFO("moving q=%p from OLD to INACTIVE list", queueAtFrontOfList);
-					// Move to inactive list of queues
-					inactiveQueues->push_back(queueAtFrontOfList);
-					currQueues->erase(currQueues->begin());
-				}
-				else {
-					int len = entryToEmit->packet.payloadLength();
-					queueAtFrontOfList->byteLength -= len;
-					queueAtFrontOfList->byteCredit -= len;
-					queueAtFrontOfList->q.pop_front();
-					send(tPtr, entryToEmit->packet, entryToEmit->encrypt);
-					(*nqcb).second->_currEnqueuedPackets--;
-				}
-				if (queueAtFrontOfList) {
-					//DEBUG_INFO("dequeuing from q=%p, len=%lu in OLD list (byteCredit=%d)", queueAtFrontOfList, queueAtFrontOfList->q.size(), queueAtFrontOfList->byteCredit);
-				}
-				break;
-			}
-		}
-		nqcb++;
-		_aqm_m.unlock();
-	}
-}
-
-void Switch::removeNetworkQoSControlBlock(uint64_t nwid)
-{
-	NetworkQoSControlBlock *nq = _netQueueControlBlock[nwid];
-	if (nq) {
-		_netQueueControlBlock.erase(nwid);
-		delete nq;
-		nq = NULL;
 	}
 }
 
@@ -763,12 +481,12 @@ void Switch::requestWhois(void *tPtr,const int64_t now,const Address &addr)
 		else last = now;
 	}
 
-	const SharedPtr<Peer> root(RR->topology->root(now));
+	const SharedPtr<Peer> root(RR->topology->root());
 	if (root) {
 		Packet outp(root->address(),RR->identity.address(),Packet::VERB_WHOIS);
 		addr.appendTo(outp);
 		RR->node->expectReplyTo(outp.packetId());
-		root->sendDirect(tPtr,outp.data(),outp.size(),now,true);
+		root->sendDirect(tPtr,outp.data(),outp.size(),now);
 	}
 }
 
@@ -846,17 +564,6 @@ unsigned long Switch::doTimerTasks(void *tPtr,int64_t now)
 	}
 
 	{
-		Mutex::Lock _l(_lastUniteAttempt_m);
-		Hashtable< _LastUniteKey,uint64_t >::Iterator i(_lastUniteAttempt);
-		_LastUniteKey *k = (_LastUniteKey *)0;
-		uint64_t *v = (uint64_t *)0;
-		while (i.next(k,v)) {
-			if ((now - *v) >= (ZT_MIN_UNITE_INTERVAL * 8))
-				_lastUniteAttempt.erase(*k);
-		}
-	}
-
-	{
 		Mutex::Lock _l(_lastSentWhoisRequest_m);
 		Hashtable< Address,int64_t >::Iterator i(_lastSentWhoisRequest);
 		Address *a = (Address *)0;
@@ -870,17 +577,6 @@ unsigned long Switch::doTimerTasks(void *tPtr,int64_t now)
 	return ZT_WHOIS_RETRY_DELAY;
 }
 
-bool Switch::_shouldUnite(const int64_t now,const Address &source,const Address &destination)
-{
-	Mutex::Lock _l(_lastUniteAttempt_m);
-	uint64_t &ts = _lastUniteAttempt[_LastUniteKey(source,destination)];
-	if ((now - ts) >= ZT_MIN_UNITE_INTERVAL) {
-		ts = now;
-		return true;
-	}
-	return false;
-}
-
 bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 {
 	SharedPtr<Path> viaPath;
@@ -889,7 +585,7 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 
 	const SharedPtr<Peer> peer(RR->topology->get(destination));
 	if (peer) {
-		viaPath = peer->getAppropriatePath(now,false);
+		viaPath = peer->path();
 		if (!viaPath) {
 			if (peer->rateGateTryStaticPath(now)) {
 				InetAddress tryAddr;
@@ -905,7 +601,7 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 
 			const SharedPtr<Peer> relay(RR->topology->findRelayTo(now,destination));
 			if (relay) {
-				viaPath = relay->getAppropriatePath(now,true);
+				viaPath = relay->path();
 				if (!viaPath)
 					return false;
 			}
@@ -922,8 +618,6 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 
 	unsigned int chunkSize = std::min(packet.size(),mtu);
 	packet.setFragmented(chunkSize < packet.size());
-
-	peer->recordOutgoingPacket(viaPath, packet.packetId(), packet.payloadLength(), packet.verb(), now);
 
 	if (trustedPathId) {
 		packet.setTrusted(trustedPathId);
