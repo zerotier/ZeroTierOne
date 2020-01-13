@@ -11,10 +11,10 @@
  */
 /****/
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <math.h>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <cmath>
 
 #include "../include/ZeroTierDebug.h"
 
@@ -566,9 +566,9 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 			int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp,dict->unsafeData(),ZT_NETWORKCONFIG_DICT_CAPACITY - 1);
 			if (n > 1) {
 				try {
-					ScopedPtr<NetworkConfig> nconf(new NetworkConfig());
-					if (nconf->fromDictionary(*dict)) {
-						this->setConfiguration(tPtr,*nconf,false);
+					ScopedPtr<NetworkConfig> nconf2(new NetworkConfig());
+					if (nconf2->fromDictionary(*dict)) {
+						this->setConfiguration(tPtr,*nconf2,false);
 						_lastConfigUpdate = 0; // still want to re-request an update since it's likely outdated
 						got = true;
 					}
@@ -671,8 +671,8 @@ bool Network::filterOutgoingPacket(
 		}	break;
 
 		case DOZTFILTER_DROP:
-			if (_config.remoteTraceTarget)
-				RR->t->networkFilter(tPtr,*this,rrl,(Trace::RuleResultLog *)0,(Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
+			//if (_config.remoteTraceTarget)
+			//	RR->t->networkFilter(tPtr,*this,rrl,(Trace::RuleResultLog *)0,(Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
 			return false;
 
 		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztFinalDest will have been changed in _doZtFilter()
@@ -712,17 +712,17 @@ bool Network::filterOutgoingPacket(
 			outp.compress();
 			RR->sw->send(tPtr,outp,true);
 
-			if (_config.remoteTraceTarget)
-				RR->t->networkFilter(tPtr,*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
+			//if (_config.remoteTraceTarget)
+			//	RR->t->networkFilter(tPtr,*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
 			return false; // DROP locally, since we redirected
 		} else {
-			if (_config.remoteTraceTarget)
-				RR->t->networkFilter(tPtr,*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,1);
+			//if (_config.remoteTraceTarget)
+			//	RR->t->networkFilter(tPtr,*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,1);
 			return true;
 		}
 	} else {
-		if (_config.remoteTraceTarget)
-			RR->t->networkFilter(tPtr,*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
+		//if (_config.remoteTraceTarget)
+		//	RR->t->networkFilter(tPtr,*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
 		return false;
 	}
 }
@@ -793,8 +793,8 @@ int Network::filterIncomingPacket(
 		}	break;
 
 		case DOZTFILTER_DROP:
-			if (_config.remoteTraceTarget)
-				RR->t->networkFilter(tPtr,*this,rrl,(Trace::RuleResultLog *)0,(Capability *)0,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,false,true,0);
+			//if (_config.remoteTraceTarget)
+			//	RR->t->networkFilter(tPtr,*this,rrl,(Trace::RuleResultLog *)0,(Capability *)0,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,false,true,0);
 			return 0; // DROP
 
 		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztFinalDest will have been changed in _doZtFilter()
@@ -832,14 +832,14 @@ int Network::filterIncomingPacket(
 			outp.compress();
 			RR->sw->send(tPtr,outp,true);
 
-			if (_config.remoteTraceTarget)
-				RR->t->networkFilter(tPtr,*this,rrl,(c) ? &crrl : (Trace::RuleResultLog *)0,c,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,false,true,0);
+			//if (_config.remoteTraceTarget)
+			//	RR->t->networkFilter(tPtr,*this,rrl,(c) ? &crrl : (Trace::RuleResultLog *)0,c,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,false,true,0);
 			return 0; // DROP locally, since we redirected
 		}
 	}
 
-	if (_config.remoteTraceTarget)
-		RR->t->networkFilter(tPtr,*this,rrl,(c) ? &crrl : (Trace::RuleResultLog *)0,c,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,false,true,accept);
+	//if (_config.remoteTraceTarget)
+	//	RR->t->networkFilter(tPtr,*this,rrl,(c) ? &crrl : (Trace::RuleResultLog *)0,c,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,false,true,accept);
 	return accept;
 }
 
@@ -1018,10 +1018,6 @@ bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 			if ( (_config.isPublic()) || ((m)&&(m->isAllowedOnNetwork(_config))) ) {
 				if (!m)
 					m = &(_memberships[peer->address()]);
-				if (m->multicastLikeGate(now)) {
-					Mutex::Lock l2(_myMulticastGroups_l);
-					_announceMulticastGroupsTo(tPtr,peer->address(),_allMulticastGroups());
-				}
 				return true;
 			}
 		}
@@ -1051,6 +1047,8 @@ void Network::doPeriodicTasks(void *tPtr,const int64_t now)
 		{
 			Mutex::Lock l2(_myMulticastGroups_l);
 
+			// TODO
+			/*
 			Hashtable< MulticastGroup,uint64_t >::Iterator i(_multicastGroupsBehindMe);
 			MulticastGroup *mg = (MulticastGroup *)0;
 			uint64_t *ts = (uint64_t *)0;
@@ -1060,6 +1058,7 @@ void Network::doPeriodicTasks(void *tPtr,const int64_t now)
 			}
 
 			_announceMulticastGroups(tPtr,false);
+			*/
 		}
 	}
 }
@@ -1374,11 +1373,14 @@ void Network::_announceMulticastGroups(void *tPtr,bool force)
 		Membership *m = (Membership *)0;
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
+			// TODO
+			/*
 			bool announce = m->multicastLikeGate(now); // force this to be called even if 'force' is true since it updates last push time
 			if ((!announce)&&(force))
 				announce = true;
 			if ((announce)&&(m->isAllowedOnNetwork(_config)))
 				_announceMulticastGroupsTo(tPtr,*a,groups);
+			*/
 		}
 	}
 }

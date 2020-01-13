@@ -14,7 +14,7 @@
 #ifndef ZT_MULTICASTGROUP_HPP
 #define ZT_MULTICASTGROUP_HPP
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "Constants.hpp"
 #include "MAC.hpp"
@@ -78,27 +78,6 @@ public:
 	 * @return Additional distinguishing information, which is normally zero except for IPv4 ARP where it's the IPv4 address
 	 */
 	ZT_ALWAYS_INLINE uint32_t adi() const { return _adi; }
-
-	/**
-	 * @return 32-bit hash ID of this multicast group
-	 */
-	ZT_ALWAYS_INLINE uint32_t id() const
-	{
-		uint64_t m = _mac.toInt();
-		uint32_t x1 = _adi;
-		uint32_t x2 = (uint32_t)(m >> 32);
-		uint32_t x3 = (uint32_t)m;
-		x1 = ((x1 >> 16) ^ x1) * 0x45d9f3b;
-		x2 = ((x2 >> 16) ^ x2) * 0x45d9f3b;
-		x3 = ((x3 >> 16) ^ x3) * 0x45d9f3b;
-		x1 = ((x1 >> 16) ^ x1) * 0x45d9f3b;
-		x2 = ((x2 >> 16) ^ x2) * 0x45d9f3b;
-		x3 = ((x3 >> 16) ^ x3) * 0x45d9f3b;
-		x1 = (x1 >> 16) ^ x1;
-		x2 = (x2 >> 16) ^ x2;
-		x3 = (x3 >> 16) ^ x3;
-		return (x1 ^ x2 ^ x3);
-	}
 
 	ZT_ALWAYS_INLINE bool operator==(const MulticastGroup &g) const { return ((_mac == g._mac)&&(_adi == g._adi)); }
 	ZT_ALWAYS_INLINE bool operator!=(const MulticastGroup &g) const { return ((_mac != g._mac)||(_adi != g._adi)); }

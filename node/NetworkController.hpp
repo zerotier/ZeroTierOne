@@ -14,7 +14,7 @@
 #ifndef ZT_NETWORKCONFIGMASTER_HPP
 #define ZT_NETWORKCONFIGMASTER_HPP
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "Constants.hpp"
 #include "Dictionary.hpp"

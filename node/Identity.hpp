@@ -14,8 +14,8 @@
 #ifndef ZT_IDENTITY_HPP
 #define ZT_IDENTITY_HPP
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 
 #include "Constants.hpp"
 #include "Utils.hpp"
@@ -26,6 +26,11 @@
 #include "ECC384.hpp"
 
 #define ZT_IDENTITY_STRING_BUFFER_LENGTH 1024
+
+#define ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE (ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_C25519_SIGNATURE_LEN + ZT_ECC384_SIGNATURE_SIZE)
+#define ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE (ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE)
+
+#define ZT_IDENTITY_MARSHAL_SIZE_MAX (ZT_ADDRESS_LENGTH + 4 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE)
 
 namespace ZeroTier {
 
@@ -52,15 +57,17 @@ public:
 	};
 
 	ZT_ALWAYS_INLINE Identity() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
-	ZT_ALWAYS_INLINE Identity(const char *str)
-	{
-		if (!fromString(str))
-			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
-	}
-	template<unsigned int C>
-	ZT_ALWAYS_INLINE Identity(const Buffer<C> &b,unsigned int startAt = 0) { deserialize(b,startAt); }
+	ZT_ALWAYS_INLINE ~Identity() { Utils::burn(reinterpret_cast<void *>(&this->_priv),sizeof(this->_priv)); }
 
-	ZT_ALWAYS_INLINE ~Identity() { Utils::burn(reinterpret_cast<void *>(this),sizeof(Identity)); }
+	/**
+	 * Construct identity from string
+	 *
+	 * If the identity is not basically valid (no deep checking is done) the result will
+	 * be a null identity.
+	 *
+	 * @param str Identity in canonical string format
+	 */
+	explicit ZT_ALWAYS_INLINE Identity(const char *str) { fromString(str); }
 
 	/**
 	 * Set identity to NIL value (all zero)
@@ -68,18 +75,18 @@ public:
 	ZT_ALWAYS_INLINE void zero() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
 
 	/**
-	 * @return Identity type
+	 * @return Identity type (undefined if identity is null or invalid)
 	 */
 	ZT_ALWAYS_INLINE Type type() const { return _type; }
 
 	/**
 	 * Generate a new identity (address, key pair)
 	 *
-	 * This is a time consuming operation.
+	 * This is a time consuming operation taking up to 5-10 seconds on some slower systems.
 	 *
 	 * @param t Type of identity to generate
 	 */
-	void generate(const Type t);
+	void generate(Type t);
 
 	/**
 	 * Check the validity of this identity's pairing of key to address
@@ -94,41 +101,12 @@ public:
 	ZT_ALWAYS_INLINE bool hasPrivate() const { return _hasPrivate; }
 
 	/**
-	 * Compute the SHA512 hash of our private key (if we have one)
+	 * This generates a SHA384 hash of this identity's keys.
 	 *
-	 * @param sha Buffer to receive SHA512 (MUST be ZT_SHA512_DIGEST_LEN (64) bytes in length)
-	 * @return True on success, false if no private key
-	 */
-	ZT_ALWAYS_INLINE bool sha512PrivateKey(void *const sha) const
-	{
-		if (_hasPrivate) {
-			switch(_type) {
-				case C25519:
-					SHA512(sha,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
-					return true;
-				case P384:
-					SHA512(sha,&_priv,sizeof(_priv));
-					return true;
-			}
-		}
-		return false;
-	}
-
-	/**
 	 * @param h Buffer to receive SHA384 of public key(s)
+	 * @param includePrivate If true, hash private key(s) as well
 	 */
-	ZT_ALWAYS_INLINE bool hash(uint8_t h[48]) const
-	{
-		switch(_type) {
-			case C25519:
-				SHA384(h,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-				return true;
-			case P384:
-				SHA384(h,&_pub,sizeof(_pub));
-				return true;
-		}
-		return false;
-	}
+	bool hash(uint8_t h[48],bool includePrivate = false) const;
 
 	/**
 	 * Sign a message with this identity (private key required)
@@ -142,31 +120,7 @@ public:
 	 * @param siglen Length of buffer
 	 * @return Number of bytes actually written to sig or 0 on error
 	 */
-	ZT_ALWAYS_INLINE unsigned int sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const
-	{
-		if (_hasPrivate) {
-			switch(_type) {
-
-				case C25519:
-					if (siglen >= ZT_C25519_SIGNATURE_LEN) {
-						C25519::sign(_priv.c25519,_pub.c25519,data,len,sig);
-						return ZT_C25519_SIGNATURE_LEN;
-					}
-
-				case P384:
-					if (siglen >= ZT_ECC384_SIGNATURE_SIZE) {
-						// Signature hash includes the C25519/Ed25519 public key after the message.
-						// This is an added guard against divorcing these two bound keys.
-						uint8_t h[48];
-						SHA384(h,data,len,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-						ECC384ECDSASign(_priv.p384,h,(uint8_t *)sig);
-						return ZT_ECC384_SIGNATURE_SIZE;
-					}
-
-			}
-		}
-		return 0;
-	}
+	unsigned int sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const;
 
 	/**
 	 * Verify a message signature against this identity
@@ -177,21 +131,7 @@ public:
 	 * @param siglen Length of signature in bytes
 	 * @return True if signature validates and data integrity checks
 	 */
-	ZT_ALWAYS_INLINE bool verify(const void *data,unsigned int len,const void *sig,unsigned int siglen) const
-	{
-		switch(_type) {
-			case C25519:
-				return C25519::verify(_pub.c25519,data,len,sig,siglen);
-			case P384:
-				if (siglen == ZT_ECC384_SIGNATURE_SIZE) {
-					uint8_t h[48];
-					SHA384(h,data,len,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-					return ECC384ECDSAVerify(_pub.p384,h,(const uint8_t *)sig);
-				}
-				break;
-		}
-		return false;
-	}
+	bool verify(const void *data,unsigned int len,const void *sig,unsigned int siglen) const;
 
 	/**
 	 * Shortcut method to perform key agreement with another identity
@@ -202,42 +142,7 @@ public:
 	 * @param key Result parameter to fill with key bytes
 	 * @return Was agreement successful?
 	 */
-	ZT_ALWAYS_INLINE bool agree(const Identity &id,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) const
-	{
-		uint8_t rawkey[128];
-		uint8_t h[64];
-		if (_hasPrivate) {
-			if (_type == C25519) {
-				if ((id._type == C25519)||(id._type == P384)) {
-					// If we are a C25519 key we can agree with another C25519 key or with only the
-					// C25519 portion of a type 1 P-384 key.
-					C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
-					SHA512(h,rawkey,ZT_C25519_SHARED_KEY_LEN);
-					memcpy(key,h,ZT_PEER_SECRET_KEY_LENGTH);
-					return true;
-				}
-			} else if (_type == P384) {
-				if (id._type == P384) {
-					// Perform key agreement over both curves for the same reason that C25519 public
-					// keys are included in P-384 signature inputs: to bind the keys together so
-					// that a type 1 identity with the same C25519 public key (and therefore address)
-					// but a different P-384 key will not work.
-					C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
-					ECC384ECDH(id._pub.p384,_priv.p384,rawkey + ZT_C25519_SHARED_KEY_LEN);
-					SHA384(h,rawkey,ZT_C25519_SHARED_KEY_LEN + ZT_ECC384_SHARED_SECRET_SIZE);
-					memcpy(key,h,ZT_PEER_SECRET_KEY_LENGTH);
-					return true;
-				} else if (id._type == C25519) {
-					// If the other identity is a C25519 identity we can agree using only that type.
-					C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
-					SHA512(h,rawkey,ZT_C25519_SHARED_KEY_LEN);
-					memcpy(key,h,ZT_PEER_SECRET_KEY_LENGTH);
-					return true;
-				}
-			}
-		}
-		return false;
-	}
+	bool agree(const Identity &id,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) const;
 
 	/**
 	 * @return This identity's address
@@ -245,35 +150,13 @@ public:
 	ZT_ALWAYS_INLINE const Address &address() const { return _address; }
 
 	/**
-	 * Attempt to generate an older type identity from a newer type
-	 *
-	 * If this identity has its private key this is not transferred to
-	 * the downgraded identity.
-	 *
-	 * @param dest Destination to fill with downgraded identity
-	 * @param toType Desired identity type
-	 */
-	ZT_ALWAYS_INLINE bool downgrade(Identity &dest,const Type toType)
-	{
-		if ((_type == P384)&&(toType == C25519)) {
-			dest._address = _address;
-			dest._type = C25519;
-			dest._hasPrivate = false;
-			memcpy(dest._pub.c25519,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-			return true;
-		}
-		return false;
-	}
-
-	/**
 	 * Serialize this identity (binary)
 	 *
 	 * @param b Destination buffer to append to
 	 * @param includePrivate If true, include private key component (if present) (default: false)
-	 * @throws std::out_of_range Buffer too small
 	 */
 	template<unsigned int C>
-	ZT_ALWAYS_INLINE void serialize(Buffer<C> &b,bool includePrivate = false) const
+	inline void serialize(Buffer<C> &b,bool includePrivate = false) const
 	{
 		_address.appendTo(b);
 		switch(_type) {
@@ -291,9 +174,7 @@ public:
 
 			case P384:
 				b.append((uint8_t)P384);
-				b.append(_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-				b.append(_pub.p384,ZT_ECC384_PUBLIC_KEY_SIZE);
-				b.append(_pub.p384s,ZT_C25519_SIGNATURE_LEN);
+				b.append(&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_C25519_SIGNATURE_LEN + ZT_ECC384_SIGNATURE_SIZE);
 				if ((_hasPrivate)&&(includePrivate)) {
 					b.append((uint8_t)(ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE));
 					b.append(_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
@@ -301,7 +182,7 @@ public:
 				} else {
 					b.append((uint8_t)0);
 				}
-				b.append((uint16_t)0); // size of additional fields
+				b.append((uint8_t)0); // size of additional fields (should have included such a thing in v0!)
 				break;
 
 		}
@@ -316,11 +197,9 @@ public:
 	 * @param b Buffer containing serialized data
 	 * @param startAt Index within buffer of serialized data (default: 0)
 	 * @return Length of serialized data read from buffer
-	 * @throws std::out_of_range Serialized data invalid
-	 * @throws std::invalid_argument Serialized data invalid
 	 */
 	template<unsigned int C>
-	ZT_ALWAYS_INLINE unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
 	{
 		_hasPrivate = false;
 		unsigned int p = startAt;
@@ -347,12 +226,8 @@ public:
 				break;
 
 			case P384:
-				memcpy(_pub.c25519,b.field(p,ZT_C25519_PUBLIC_KEY_LEN),ZT_C25519_PUBLIC_KEY_LEN);
-				p += ZT_C25519_PUBLIC_KEY_LEN;
-				memcpy(_pub.p384,b.field(p,ZT_ECC384_PUBLIC_KEY_SIZE),ZT_ECC384_PUBLIC_KEY_SIZE);
-				p += ZT_ECC384_PUBLIC_KEY_SIZE;
-				memcpy(_pub.p384s,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
-				p += ZT_ECC384_SIGNATURE_SIZE;
+				memcpy(&_pub,b.field(p,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_C25519_SIGNATURE_LEN + ZT_ECC384_SIGNATURE_SIZE),ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_C25519_SIGNATURE_LEN + ZT_ECC384_SIGNATURE_SIZE);
+				p += ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_C25519_SIGNATURE_LEN + ZT_ECC384_SIGNATURE_SIZE;
 				pkl = (unsigned int)b[p++];
 				if (pkl) {
 					if (pkl != (ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE))
@@ -365,7 +240,7 @@ public:
 				} else {
 					_hasPrivate = false;
 				}
-				p += b.template at<uint16_t>(p) + 2;
+				p += b.template at<uint8_t>(p) + 2;
 				break;
 
 			default:
@@ -381,7 +256,7 @@ public:
 	 *
 	 * @param includePrivate If true, include private key (if it exists)
 	 * @param buf Buffer to store string
-	 * @return ASCII string representation of identity
+	 * @return ASCII string representation of identity (pointer to buf)
 	 */
 	char *toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const;
 
@@ -399,18 +274,15 @@ public:
 	/**
 	 * @return True if this identity contains something
 	 */
-	ZT_ALWAYS_INLINE operator bool() const { return (_address); }
+	explicit ZT_ALWAYS_INLINE operator bool() const { return (_address); }
 
 	ZT_ALWAYS_INLINE bool operator==(const Identity &id) const
 	{
 		if ((_address == id._address)&&(_type == id._type)) {
 			switch(_type) {
-				case C25519:
-					return (memcmp(_pub.c25519,id._pub.c25519,ZT_C25519_PUBLIC_KEY_LEN) == 0);
-				case P384:
-					return (memcmp(&_pub,&id._pub,sizeof(_pub)) == 0);
-				default:
-					return false;
+				case C25519: return (memcmp(_pub.c25519,id._pub.c25519,ZT_C25519_PUBLIC_KEY_LEN) == 0);
+				// case P384:
+				default: return (memcmp(&_pub,&id._pub,sizeof(_pub)) == 0);
 			}
 		}
 		return false;
@@ -424,10 +296,9 @@ public:
 				return true;
 			if (_type == id._type) {
 				switch(_type) {
-					case C25519:
-						return (memcmp(_pub.c25519,id._pub.c25519,ZT_C25519_PUBLIC_KEY_LEN) < 0);
-					case P384:
-						return (memcmp(&_pub,&id._pub,sizeof(_pub)) < 0);
+					case C25519: return (memcmp(_pub.c25519,id._pub.c25519,ZT_C25519_PUBLIC_KEY_LEN) < 0);
+					// case P384:
+					default: return (memcmp(&_pub,&id._pub,sizeof(_pub)) < 0);
 				}
 			}
 		}
@@ -440,18 +311,102 @@ public:
 
 	ZT_ALWAYS_INLINE unsigned long hashCode() const { return ((unsigned long)_address.toInt() + (unsigned long)_pub.c25519[0] + (unsigned long)_pub.c25519[1] + (unsigned long)_pub.c25519[2]); }
 
+	// Marshal interface ///////////////////////////////////////////////////////
+	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_IDENTITY_MARSHAL_SIZE_MAX; }
+	inline int marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool includePrivate = false) const
+	{
+		_address.copyTo(data,ZT_ADDRESS_LENGTH);
+		switch(_type) {
+
+			case C25519:
+				data[ZT_ADDRESS_LENGTH] = (uint8_t)C25519;
+				memcpy(data + ZT_ADDRESS_LENGTH + 1,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+				if ((includePrivate)&&(_hasPrivate)) {
+					data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN] = ZT_C25519_PRIVATE_KEY_LEN;
+					memcpy(data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
+					return (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN);
+				}
+				data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN] = 0;
+				return (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1);
+
+			case P384:
+				data[ZT_ADDRESS_LENGTH] = (uint8_t)P384;
+				memcpy(data + ZT_ADDRESS_LENGTH + 1,&_pub,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
+				if ((includePrivate)&&(_hasPrivate)) {
+					data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE;
+					memcpy(data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1,&_priv,ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE);
+					data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE] = 0;
+					return (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE + 1);
+				}
+				data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = 0;
+				data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1] = 0;
+				return (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 2);
+
+		}
+		return -1;
+	}
+	inline int unmarshal(const uint8_t *restrict data,const int len)
+	{
+		if (len < (ZT_ADDRESS_LENGTH + 1))
+			return -1;
+		unsigned int privlen;
+		switch((_type = (Type)data[ZT_ADDRESS_LENGTH])) {
+
+			case C25519:
+				if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1))
+					return -1;
+				memcpy(_pub.c25519,data + ZT_ADDRESS_LENGTH + 1,ZT_C25519_PUBLIC_KEY_LEN);
+				privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN];
+				if (privlen == ZT_C25519_PRIVATE_KEY_LEN) {
+					if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN))
+						return -1;
+					_hasPrivate = true;
+					memcpy(_priv.c25519,data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1,ZT_C25519_PRIVATE_KEY_LEN);
+					return (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN);
+				} else if (privlen == 0) {
+					_hasPrivate = false;
+					return (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1);
+				}
+				break;
+
+			case P384:
+				if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 2))
+					return -1;
+				memcpy(&_pub,data + ZT_ADDRESS_LENGTH + 1,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
+				privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE];
+				if (privlen == ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE) {
+					if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE + 1))
+						return -1;
+					_hasPrivate = true;
+					memcpy(&_priv,data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1,ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE);
+					privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE];
+					if (len < (privlen + (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE + 1)))
+						return -1;
+					return (int)(privlen + (unsigned int)(ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE + 1));
+				} else if (privlen == 0) {
+					_hasPrivate = false;
+					return (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 2);
+				}
+				break;
+
+		}
+		return -1;
+	}
+	////////////////////////////////////////////////////////////////////////////
+
 private:
 	Address _address;
-	Type _type;
+	Type _type; // _type determines which fields in _priv and _pub are used
 	bool _hasPrivate;
 	ZT_PACKED_STRUCT(struct { // don't re-order these
 		uint8_t c25519[ZT_C25519_PRIVATE_KEY_LEN];
 		uint8_t p384[ZT_ECC384_PRIVATE_KEY_SIZE];
 	}) _priv;
 	ZT_PACKED_STRUCT(struct { // don't re-order these
-		uint8_t c25519[ZT_C25519_PUBLIC_KEY_LEN];
-		uint8_t p384[ZT_ECC384_PUBLIC_KEY_SIZE];
-		uint8_t p384s[ZT_C25519_SIGNATURE_LEN]; // signature of both keys with ed25519 to confirm type 0 extension to type 1
+		uint8_t c25519[ZT_C25519_PUBLIC_KEY_LEN]; // Curve25519 and Ed25519 public keys
+		uint8_t p384[ZT_ECC384_PUBLIC_KEY_SIZE];  // NIST P-384 public key
+		uint8_t c25519s[ZT_C25519_SIGNATURE_LEN]; // signature of both keys with ed25519
+		uint8_t p384s[ZT_ECC384_SIGNATURE_SIZE];  // signature of both keys with p384
 	}) _pub;
 };
 

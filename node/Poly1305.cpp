@@ -7,10 +7,7 @@ Public domain.
 #include "Constants.hpp"
 #include "Poly1305.hpp"
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstring>
 
 #ifdef __WINDOWS__
 #pragma warning(disable: 4146)
@@ -74,7 +71,7 @@ typedef struct poly1305_state_internal_t {
 } poly1305_state_internal_t;
 
 #if defined(ZT_NO_TYPE_PUNNING) || (__BYTE_ORDER != __LITTLE_ENDIAN)
-static ZT_ALWAYS_INLINE unsigned long long U8TO64(const unsigned char *p)
+static inline unsigned long long U8TO64(const unsigned char *p)
 {
   return
     (((unsigned long long)(p[0] & 0xff)      ) |
@@ -91,7 +88,7 @@ static ZT_ALWAYS_INLINE unsigned long long U8TO64(const unsigned char *p)
 #endif
 
 #if defined(ZT_NO_TYPE_PUNNING) || (__BYTE_ORDER != __LITTLE_ENDIAN)
-static ZT_ALWAYS_INLINE void U64TO8(unsigned char *p, unsigned long long v)
+static inline void U64TO8(unsigned char *p, unsigned long long v)
 {
   p[0] = (v      ) & 0xff;
   p[1] = (v >>  8) & 0xff;
@@ -106,7 +103,7 @@ static ZT_ALWAYS_INLINE void U64TO8(unsigned char *p, unsigned long long v)
 #define U64TO8(p,v) ((*reinterpret_cast<unsigned long long *>(p)) = (v))
 #endif
 
-static ZT_ALWAYS_INLINE void poly1305_init(poly1305_context *ctx, const unsigned char key[32])
+static inline void poly1305_init(poly1305_context *ctx, const unsigned char key[32])
 {
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
   unsigned long long t0,t1;
@@ -132,7 +129,7 @@ static ZT_ALWAYS_INLINE void poly1305_init(poly1305_context *ctx, const unsigned
   st->final = 0;
 }
 
-static ZT_ALWAYS_INLINE void poly1305_blocks(poly1305_state_internal_t *st, const unsigned char *m, size_t bytes)
+static inline void poly1305_blocks(poly1305_state_internal_t *st, const unsigned char *m, size_t bytes)
 {
   const unsigned long long hibit = (st->final) ? 0 : ((unsigned long long)1 << 40); /* 1 << 128 */
   unsigned long long r0,r1,r2;
@@ -183,7 +180,7 @@ static ZT_ALWAYS_INLINE void poly1305_blocks(poly1305_state_internal_t *st, cons
   st->h[2] = h2;
 }
 
-static ZT_ALWAYS_INLINE void poly1305_finish(poly1305_context *ctx, unsigned char mac[16])
+static inline void poly1305_finish(poly1305_context *ctx, unsigned char mac[16])
 {
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
   unsigned long long h0,h1,h2,c;
@@ -274,7 +271,7 @@ typedef struct poly1305_state_internal_t {
 } poly1305_state_internal_t;
 
 /* interpret four 8 bit unsigned integers as a 32 bit unsigned integer in little endian */
-static ZT_ALWAYS_INLINE unsigned long
+static inline unsigned long
 U8TO32(const unsigned char *p) {
   return
     (((unsigned long)(p[0] & 0xff)      ) |
@@ -284,7 +281,7 @@ U8TO32(const unsigned char *p) {
 }
 
 /* store a 32 bit unsigned integer as four 8 bit unsigned integers in little endian */
-static ZT_ALWAYS_INLINE void
+static inline void
 U32TO8(unsigned char *p, unsigned long v) {
   p[0] = (v      ) & 0xff;
   p[1] = (v >>  8) & 0xff;
@@ -292,7 +289,7 @@ U32TO8(unsigned char *p, unsigned long v) {
   p[3] = (v >> 24) & 0xff;
 }
 
-static ZT_ALWAYS_INLINE void
+static inline void
 poly1305_init(poly1305_context *ctx, const unsigned char key[32]) {
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
 
@@ -320,7 +317,7 @@ poly1305_init(poly1305_context *ctx, const unsigned char key[32]) {
   st->final = 0;
 }
 
-static ZT_ALWAYS_INLINE void
+static inline void
 poly1305_blocks(poly1305_state_internal_t *st, const unsigned char *m, size_t bytes) {
   const unsigned long hibit = (st->final) ? 0 : (1 << 24); /* 1 << 128 */
   unsigned long r0,r1,r2,r3,r4;
@@ -379,7 +376,7 @@ poly1305_blocks(poly1305_state_internal_t *st, const unsigned char *m, size_t by
   st->h[4] = h4;
 }
 
-static ZT_ALWAYS_INLINE void
+static inline void
 poly1305_finish(poly1305_context *ctx, unsigned char mac[16]) {
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
   unsigned long h0,h1,h2,h3,h4,c;
@@ -470,7 +467,7 @@ poly1305_finish(poly1305_context *ctx, unsigned char mac[16]) {
 
 #endif // MSC/GCC or not
 
-static ZT_ALWAYS_INLINE void poly1305_update(poly1305_context *ctx, const unsigned char *m, size_t bytes) {
+static inline void poly1305_update(poly1305_context *ctx, const unsigned char *m, size_t bytes) {
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
   size_t i;
 

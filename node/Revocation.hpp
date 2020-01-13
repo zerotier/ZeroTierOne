@@ -14,10 +14,10 @@
 #ifndef ZT_REVOCATION_HPP
 #define ZT_REVOCATION_HPP
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cstdint>
 
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"
@@ -45,9 +45,9 @@ class Revocation : public Credential
 	friend class Credential;
 
 public:
-	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_REVOCATION; }
+	static ZT_ALWAYS_INLINE Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_REVOCATION; }
 
-	inline Revocation() :
+	ZT_ALWAYS_INLINE Revocation() :
 		_id(0),
 		_credentialId(0),
 		_networkId(0),
@@ -69,7 +69,7 @@ public:
 	 * @param tgt Target node whose credential(s) are being revoked
 	 * @param ct Credential type being revoked
 	 */
-	inline Revocation(const uint32_t i,const uint64_t nwid,const uint32_t cid,const uint64_t thr,const uint64_t fl,const Address &tgt,const Credential::Type ct) :
+	ZT_ALWAYS_INLINE Revocation(const uint32_t i,const uint64_t nwid,const uint32_t cid,const uint64_t thr,const uint64_t fl,const Address &tgt,const Credential::Type ct) :
 		_id(i),
 		_credentialId(cid),
 		_networkId(nwid),
@@ -115,7 +115,7 @@ public:
 	 * @param RR Runtime environment to provide for peer lookup, etc.
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
-	inline Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
+	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,const bool forSign = false) const

@@ -19,7 +19,7 @@
 #include "Buffer.hpp"
 #include "Address.hpp"
 
-#include <stdint.h>
+#include <cstdint>
 
 namespace ZeroTier {
 
@@ -49,9 +49,9 @@ template<unsigned int C>
 class Dictionary
 {
 public:
-	ZT_ALWAYS_INLINE Dictionary() { memset(_d,0,sizeof(_d)); }
-	ZT_ALWAYS_INLINE Dictionary(const char *s) { this->load(s); }
-	ZT_ALWAYS_INLINE Dictionary(const char *s,unsigned int len)
+	inline Dictionary() { memset(_d,0,sizeof(_d)); }
+	inline Dictionary(const char *s) { this->load(s); }
+	inline Dictionary(const char *s,unsigned int len)
 	{
 		for(unsigned int i=0;i<C;++i) {
 			if ((s)&&(i < len)) {
@@ -62,15 +62,15 @@ public:
 		}
 		_d[C - 1] = (char)0;
 	}
-	ZT_ALWAYS_INLINE Dictionary(const Dictionary &d) { memcpy(_d,d._d,C); }
+	inline Dictionary(const Dictionary &d) { memcpy(_d,d._d,C); }
 
-	ZT_ALWAYS_INLINE Dictionary &operator=(const Dictionary &d)
+	inline Dictionary &operator=(const Dictionary &d)
 	{
 		memcpy(_d,d._d,C);
 		return *this;
 	}
 
-	ZT_ALWAYS_INLINE operator bool() const { return (_d[0] != 0); }
+	inline operator bool() const { return (_d[0] != 0); }
 
 	/**
 	 * Load a dictionary from a C-string
@@ -78,7 +78,7 @@ public:
 	 * @param s Dictionary in string form
 	 * @return False if 's' was longer than our capacity
 	 */
-	ZT_ALWAYS_INLINE bool load(const char *s)
+	inline bool load(const char *s)
 	{
 		for(unsigned int i=0;i<C;++i) {
 			if (s) {
@@ -94,12 +94,12 @@ public:
 	/**
 	 * Delete all entries
 	 */
-	ZT_ALWAYS_INLINE void clear() { memset(_d,0,sizeof(_d)); }
+	inline void clear() { memset(_d,0,sizeof(_d)); }
 
 	/**
 	 * @return Size of dictionary in bytes not including terminating NULL
 	 */
-	ZT_ALWAYS_INLINE unsigned int sizeBytes() const
+	inline unsigned int sizeBytes() const
 	{
 		for(unsigned int i=0;i<C;++i) {
 			if (!_d[i])
@@ -217,7 +217,7 @@ public:
 	 * @tparam BC Buffer capacity (usually inferred)
 	 */
 	template<unsigned int BC>
-	ZT_ALWAYS_INLINE bool get(const char *key,Buffer<BC> &dest) const
+	inline bool get(const char *key,Buffer<BC> &dest) const
 	{
 		const int r = this->get(key,const_cast<char *>(reinterpret_cast<const char *>(dest.data())),BC);
 		if (r >= 0) {
@@ -236,7 +236,7 @@ public:
 	 * @param dfl Default value if not found in dictionary
 	 * @return Boolean value of key or 'dfl' if not found
 	 */
-	ZT_ALWAYS_INLINE bool getB(const char *key,bool dfl = false) const
+	inline bool getB(const char *key,bool dfl = false) const
 	{
 		char tmp[4];
 		if (this->get(key,tmp,sizeof(tmp)) >= 0)
@@ -251,7 +251,7 @@ public:
 	 * @param dfl Default value or 0 if unspecified
 	 * @return Decoded hex UInt value or 'dfl' if not found
 	 */
-	ZT_ALWAYS_INLINE uint64_t getUI(const char *key,uint64_t dfl = 0) const
+	inline uint64_t getUI(const char *key,uint64_t dfl = 0) const
 	{
 		char tmp[128];
 		if (this->get(key,tmp,sizeof(tmp)) >= 1)
@@ -266,7 +266,7 @@ public:
 	 * @param dfl Default value or 0 if unspecified
 	 * @return Decoded hex UInt value or 'dfl' if not found
 	 */
-	ZT_ALWAYS_INLINE int64_t getI(const char *key,int64_t dfl = 0) const
+	inline int64_t getI(const char *key,int64_t dfl = 0) const
 	{
 		char tmp[128];
 		if (this->get(key,tmp,sizeof(tmp)) >= 1)
@@ -366,7 +366,7 @@ public:
 	/**
 	 * Add a boolean as a '1' or a '0'
 	 */
-	ZT_ALWAYS_INLINE bool add(const char *key,bool value)
+	inline bool add(const char *key,bool value)
 	{
 		return this->add(key,(value) ? "1" : "0",1);
 	}
@@ -374,7 +374,7 @@ public:
 	/**
 	 * Add a 64-bit integer (unsigned) as a hex value
 	 */
-	ZT_ALWAYS_INLINE bool add(const char *key,uint64_t value)
+	inline bool add(const char *key,uint64_t value)
 	{
 		char tmp[32];
 		return this->add(key,Utils::hex(value,tmp),-1);
@@ -383,7 +383,7 @@ public:
 	/**
 	 * Add a 64-bit integer (unsigned) as a hex value
 	 */
-	ZT_ALWAYS_INLINE bool add(const char *key,int64_t value)
+	inline bool add(const char *key,int64_t value)
 	{
 		char tmp[32];
 		if (value >= 0) {
@@ -397,7 +397,7 @@ public:
 	/**
 	 * Add a 64-bit integer (unsigned) as a hex value
 	 */
-	ZT_ALWAYS_INLINE bool add(const char *key,const Address &a)
+	inline bool add(const char *key,const Address &a)
 	{
 		char tmp[32];
 		return this->add(key,Utils::hex(a.toInt(),tmp),-1);
@@ -409,7 +409,7 @@ public:
 	 * @tparam BC Buffer capacity (usually inferred)
 	 */
 	template<unsigned int BC>
-	ZT_ALWAYS_INLINE bool add(const char *key,const Buffer<BC> &value)
+	inline bool add(const char *key,const Buffer<BC> &value)
 	{
 		return this->add(key,(const char *)value.data(),(int)value.size());
 	}
@@ -418,7 +418,7 @@ public:
 	 * @param key Key to check
 	 * @return True if key is present
 	 */
-	ZT_ALWAYS_INLINE bool contains(const char *key) const
+	inline bool contains(const char *key) const
 	{
 		char tmp[2];
 		return (this->get(key,tmp,2) >= 0);
@@ -427,10 +427,10 @@ public:
 	/**
 	 * @return Value of C template parameter
 	 */
-	ZT_ALWAYS_INLINE unsigned int capacity() const { return C; }
+	inline unsigned int capacity() const { return C; }
 
-	ZT_ALWAYS_INLINE const char *data() const { return _d; }
-	ZT_ALWAYS_INLINE char *unsafeData() { return _d; }
+	inline const char *data() const { return _d; }
+	inline char *unsafeData() { return _d; }
 
 private:
 	char _d[C];

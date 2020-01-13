@@ -7,10 +7,10 @@
 #ifndef ZT_SALSA20_HPP
 #define ZT_SALSA20_HPP
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 
 #include "Constants.hpp"
 #include "Utils.hpp"

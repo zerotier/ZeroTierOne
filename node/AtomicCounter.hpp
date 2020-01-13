@@ -24,25 +24,30 @@ namespace ZeroTier {
 
 /**
  * Simple atomic counter supporting increment and decrement
+ *
+ * This is used as the reference counter in reference counted objects that
+ * work with SharedPtr<>.
  */
 class AtomicCounter
 {
 public:
-	ZT_ALWAYS_INLINE AtomicCounter() { _v = 0; }
+	ZT_ALWAYS_INLINE AtomicCounter() : _v(0) {}
 
 	ZT_ALWAYS_INLINE int load() const
 	{
 #ifdef __GNUC__
-		return __sync_or_and_fetch(const_cast<int *>(&_v),0);
+		return _v;
 #else
 		return _v.load();
 #endif
 	}
 
+	ZT_ALWAYS_INLINE void zero() { _v = 0; }
+
 	ZT_ALWAYS_INLINE int operator++()
 	{
 #ifdef __GNUC__
-		return __sync_add_and_fetch(&_v,1);
+		return __sync_add_and_fetch((int *)&_v,1);
 #else
 		return ++_v;
 #endif
@@ -51,7 +56,7 @@ public:
 	ZT_ALWAYS_INLINE int operator--()
 	{
 #ifdef __GNUC__
-		return __sync_sub_and_fetch(&_v,1);
+		return __sync_sub_and_fetch((int *)&_v,1);
 #else
 		return --_v;
 #endif
@@ -62,7 +67,7 @@ private:
 	ZT_ALWAYS_INLINE const AtomicCounter &operator=(const AtomicCounter &) { return *this; }
 
 #ifdef __GNUC__
-	int _v;
+	volatile int _v;
 #else
 	std::atomic_int _v;
 #endif

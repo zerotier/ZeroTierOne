@@ -595,62 +595,6 @@ func (n *Node) Networks() []*Network {
 	return nws
 }
 
-// Roots retrieves a list of root servers on this node and their preferred and online status.
-func (n *Node) Roots() []*Root {
-	var roots []*Root
-	rl := C.ZT_Node_listRoots(unsafe.Pointer(n.zn), C.int64_t(TimeMs()))
-	if rl != nil {
-		for i := 0; i < int(rl.count); i++ {
-			root := (*C.ZT_Root)(unsafe.Pointer(uintptr(unsafe.Pointer(rl)) + C.sizeof_ZT_RootList))
-			loc, _ := NewLocatorFromBytes(C.GoBytes(root.locator, C.int(root.locatorSize)))
-			if loc != nil {
-				roots = append(roots, &Root{
-					Name:    C.GoString(root.name),
-					Locator: loc,
-				})
-			}
-		}
-		C.ZT_Node_freeQueryResult(unsafe.Pointer(n.zn), unsafe.Pointer(rl))
-	}
-	return roots
-}
-
-// SetRoot sets or updates a root.
-// Name can be a DNS name (preferably secure) for DNS fetched locators or can be
-// the empty string for static roots. If the name is empty then the locator must
-// be non-nil.
-func (n *Node) SetRoot(name string, locator *Locator) error {
-	if len(name) == 0 {
-		if locator == nil {
-			return ErrInvalidParameter
-		}
-		name = locator.Identity.address.String()
-	}
-	var lb []byte
-	if locator != nil {
-		lb = locator.Bytes
-	}
-	var lbp unsafe.Pointer
-	if len(lb) > 0 {
-		lbp = unsafe.Pointer(&lb[0])
-	}
-	cn := C.CString(name)
-	defer C.free(unsafe.Pointer(cn))
-	if C.ZT_Node_setRoot(unsafe.Pointer(n.zn), cn, lbp, C.uint(len(lb))) != 0 {
-		return ErrInternal
-	}
-	return nil
-}
-
-// RemoveRoot removes a root.
-// For static roots the name should be the ZeroTier address.
-func (n *Node) RemoveRoot(name string) {
-	cn := C.CString(name)
-	defer C.free(unsafe.Pointer(cn))
-	C.ZT_Node_removeRoot(unsafe.Pointer(n.zn), cn)
-	return
-}
-
 // Peers retrieves a list of current peers
 func (n *Node) Peers() []*Peer {
 	var peers []*Peer
@@ -665,59 +609,21 @@ func (n *Node) Peers() []*Peer {
 			p2.Role = int(p.role)
 
 			p2.Paths = make([]Path, 0, int(p.pathCount))
-			usingAllocation := false
 			for j := uintptr(0); j < uintptr(p.pathCount); j++ {
 				pt := &p.paths[j]
 				if pt.alive != 0 {
 					a := sockaddrStorageToUDPAddr(&pt.address)
 					if a != nil {
-						alloc := float32(pt.allocation)
-						if alloc > 0.0 {
-							usingAllocation = true
-						}
 						p2.Paths = append(p2.Paths, Path{
 							IP:                     a.IP,
 							Port:                   a.Port,
 							LastSend:               int64(pt.lastSend),
 							LastReceive:            int64(pt.lastReceive),
 							TrustedPathID:          uint64(pt.trustedPathId),
-							Latency:                float32(pt.latency),
-							PacketDelayVariance:    float32(pt.packetDelayVariance),
-							ThroughputDisturbCoeff: float32(pt.throughputDisturbCoeff),
-							PacketErrorRatio:       float32(pt.packetErrorRatio),
-							PacketLossRatio:        float32(pt.packetLossRatio),
-							Stability:              float32(pt.stability),
-							Throughput:             uint64(pt.throughput),
-							MaxThroughput:          uint64(pt.maxThroughput),
-							Allocation:             alloc,
 						})
 					}
 				}
 			}
-			if !usingAllocation { // if all allocations are zero fall back to single path mode that uses the preferred flag
-				for i, j := 0, uintptr(0); j < uintptr(p.pathCount); j++ {
-					pt := &p.paths[j]
-					if pt.alive != 0 {
-						if pt.preferred == 0 {
-							p2.Paths[i].Allocation = 0.0
-						} else {
-							p2.Paths[i].Allocation = 1.0
-						}
-						i++
-					}
-				}
-			}
-			sort.Slice(p2.Paths, func(a, b int) bool {
-				pa := &p2.Paths[a]
-				pb := &p2.Paths[b]
-				if pb.Allocation < pa.Allocation { // invert order, put highest allocation paths first
-					return true
-				}
-				if pa.Allocation == pb.Allocation {
-					return pa.LastReceive < pb.LastReceive // then sort by most recent activity
-				}
-				return false
-			})
 
 			p2.Clock = TimeMs()
 			peers = append(peers, p2)
@@ -754,10 +660,10 @@ func (n *Node) pathCheck(ztAddress Address, af int, ip net.IP, port int) bool {
 	return true
 }
 
-func (n *Node) pathLookup(ztAddress Address) (net.IP, int) {
+func (n *Node) pathLookup(id *Identity) (net.IP, int) {
 	n.localConfigLock.RLock()
 	defer n.localConfigLock.RUnlock()
-	virt := n.localConfig.Virtual[ztAddress]
+	virt := n.localConfig.Virtual[id.address]
 	if len(virt.Try) > 0 {
 		idx := rand.Int() % len(virt.Try)
 		return virt.Try[idx].IP, virt.Try[idx].Port
@@ -831,9 +737,6 @@ func (n *Node) handleTrace(traceMessage string) {
 func (n *Node) handleUserMessage(originAddress, messageTypeID uint64, data []byte) {
 }
 
-func (n *Node) handleRemoteTrace(originAddress uint64, dictData []byte) {
-}
-
 //////////////////////////////////////////////////////////////////////////////
 
 // These are callbacks called by the core and GoGlue stuff to talk to the
@@ -860,7 +763,7 @@ func goPathCheckFunc(gn unsafe.Pointer, ztAddress C.uint64_t, af C.int, ip unsaf
 }
 
 //export goPathLookupFunc
-func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, _ int, familyP, ipP, portP unsafe.Pointer) C.int {
+func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, desiredFamily int, identity, familyP, ipP, portP unsafe.Pointer) C.int {
 	nodesByUserPtrLock.RLock()
 	node := nodesByUserPtr[uintptr(gn)]
 	nodesByUserPtrLock.RUnlock()
@@ -868,7 +771,11 @@ func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, _ int, familyP, i
 		return 0
 	}
 
-	ip, port := node.pathLookup(Address(ztAddress))
+	id, err := newIdentityFromCIdentity(identity)
+	if err != nil {
+		return 0
+	}
+	ip, port := node.pathLookup(id)
 	if len(ip) > 0 && port > 0 && port <= 65535 {
 		ip4 := ip.To4()
 		if len(ip4) == 4 {
@@ -920,38 +827,6 @@ func goStateObjectGetFunc(gn unsafe.Pointer, objType C.int, id, data unsafe.Poin
 		return C.int(len(tmp))
 	}
 	return -1
-}
-
-//export goDNSResolverFunc
-func goDNSResolverFunc(gn unsafe.Pointer, dnsRecordTypes unsafe.Pointer, numDNSRecordTypes C.int, name unsafe.Pointer, requestID C.uintptr_t) {
-	go func() {
-		nodesByUserPtrLock.RLock()
-		node := nodesByUserPtr[uintptr(gn)]
-		nodesByUserPtrLock.RUnlock()
-		if node == nil {
-			return
-		}
-
-		recordTypes := C.GoBytes(dnsRecordTypes, numDNSRecordTypes)
-		recordName := C.GoString((*C.char)(name))
-
-		recordNameCStrCopy := C.CString(recordName)
-		for _, rt := range recordTypes {
-			switch rt {
-			case C.ZT_DNS_RECORD_TXT:
-				recs, _ := net.LookupTXT(recordName)
-				for _, rec := range recs {
-					if len(rec) > 0 {
-						rnCS := C.CString(rec)
-						C.ZT_Node_processDNSResult(unsafe.Pointer(node.zn), nil, requestID, recordNameCStrCopy, C.ZT_DNS_RECORD_TXT, unsafe.Pointer(rnCS), C.uint(len(rec)), 0)
-						C.free(unsafe.Pointer(rnCS))
-					}
-				}
-			}
-		}
-		C.ZT_Node_processDNSResult(unsafe.Pointer(node.zn), nil, requestID, recordNameCStrCopy, C.ZT_DNS_RECORD__END_OF_RESULTS, nil, 0, 0)
-		C.free(unsafe.Pointer(recordNameCStrCopy))
-	}()
 }
 
 //export goVirtualNetworkConfigFunc
@@ -1032,9 +907,6 @@ func goZtEvent(gn unsafe.Pointer, eventType C.int, data unsafe.Pointer) {
 		case C.ZT_EVENT_USER_MESSAGE:
 			um := (*C.ZT_UserMessage)(data)
 			node.handleUserMessage(uint64(um.origin), uint64(um.typeId), C.GoBytes(um.data, C.int(um.length)))
-		case C.ZT_EVENT_REMOTE_TRACE:
-			rt := (*C.ZT_RemoteTrace)(data)
-			node.handleRemoteTrace(uint64(rt.origin), C.GoBytes(unsafe.Pointer(rt.data), C.int(rt.len)))
 		}
 	}()
 }

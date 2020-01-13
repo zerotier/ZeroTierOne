@@ -33,7 +33,7 @@ type LocalConfigPhysicalPathConfiguration struct {
 // LocalConfigVirtualAddressConfiguration contains settings for virtual addresses
 type LocalConfigVirtualAddressConfiguration struct {
 	// Try is a list of IPs/ports to try for this peer in addition to anything learned from roots or direct path push
-	Try []InetAddress `json:",omitempty"`
+	Try []InetAddress `json:"try,omitempty"`
 }
 
 // ExternalAddress is an externally visible address

@@ -149,7 +149,7 @@ public:
 		pthread_attr_init(&tattr);
 		// This corrects for systems with abnormally small defaults (musl) and also
 		// shrinks the stack on systems with large defaults to save a bit of memory.
-		pthread_attr_setstacksize(&tattr,ZT_THREAD_MIN_STACK_SIZE);
+		pthread_attr_setstacksize(&tattr,1048576);
 		if (pthread_create(&t._tid,&tattr,&___zt_threadMain<C>,instance)) {
 			pthread_attr_destroy(&tattr);
 			throw std::runtime_error("pthread_create() failed, unable to create thread");

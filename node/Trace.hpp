@@ -14,10 +14,10 @@
 #ifndef ZT_TRACE_HPP
 #define ZT_TRACE_HPP
 
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdint>
+#include <cstring>
+#include <cstdlib>
 
 #include "../include/ZeroTierOne.h"
 
@@ -52,44 +52,14 @@ struct NetworkConfig;
 class Trace
 {
 public:
-	/**
-	 * Trace verbosity level
-	 */
-	enum Level
-	{
-		LEVEL_NORMAL = 0,
-		LEVEL_VERBOSE = 10,
-		LEVEL_RULES = 15,
-		LEVEL_DEBUG = 20
-	};
-
-	/**
-	 * Filter rule evaluation result log
-	 *
-	 * Each rule in a rule set gets a four-bit log entry. A log entry
-	 * of zero means not evaluated. Otherwise each four-bit log entry
-	 * contains two two-bit values of 01 for 'false' and 10 for 'true'.
-	 * As with four-bit rules an 00 value here means this was not
-	 * evaluated or was not relevant.
-	 */
 	class RuleResultLog
 	{
 	public:
-		ZT_ALWAYS_INLINE RuleResultLog() {}
+		ZT_ALWAYS_INLINE RuleResultLog() { this->clear(); }
 
-		ZT_ALWAYS_INLINE void log(const unsigned int rn,const uint8_t thisRuleMatches,const uint8_t thisSetMatches)
-		{
-			_l[rn >> 1] |= ( ((thisRuleMatches + 1) << 2) | (thisSetMatches + 1) ) << ((rn & 1) << 2);
-		}
-		ZT_ALWAYS_INLINE void logSkipped(const unsigned int rn,const uint8_t thisSetMatches)
-		{
-			_l[rn >> 1] |= (thisSetMatches + 1) << ((rn & 1) << 2);
-		}
-
-		ZT_ALWAYS_INLINE void clear()
-		{
-			memset(_l,0,sizeof(_l));
-		}
+		ZT_ALWAYS_INLINE void log(const unsigned int rn,const uint8_t thisRuleMatches,const uint8_t thisSetMatches) { _l[rn >> 1U] |= ( ((thisRuleMatches + 1U) << 2U) | (thisSetMatches + 1U) ) << ((rn & 1U) << 2U); }
+		ZT_ALWAYS_INLINE void logSkipped(const unsigned int rn,const uint8_t thisSetMatches) { _l[rn >> 1U] |= (thisSetMatches + 1U) << ((rn & 1U) << 2U); }
+		ZT_ALWAYS_INLINE void clear() { memset(_l,0,sizeof(_l)); }
 
 		ZT_ALWAYS_INLINE const uint8_t *data() const { return _l; }
 		ZT_ALWAYS_INLINE unsigned int sizeBytes() const { return (ZT_MAX_NETWORK_RULES / 2); }
@@ -98,24 +68,63 @@ public:
 		uint8_t _l[ZT_MAX_NETWORK_RULES / 2];
 	};
 
-	ZT_ALWAYS_INLINE Trace(const RuntimeEnvironment *renv) :
-		RR(renv),
-		_byNet(8) {}
+	inline Trace(const RuntimeEnvironment *renv)
+	{
+	}
 
-	void resettingPathsInScope(void *const tPtr,const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,const InetAddress::IpScope scope);
-	void peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &path,const uint64_t packetId,const Packet::Verb verb);
-	void peerLinkNowRedundant(void *const tPtr,Peer &peer);
-	void peerLinkNoLongerRedundant(void *const tPtr,Peer &peer);
-	void peerLinkAggregateStatistics(void *const tPtr,Peer &peer);
-	void peerLearnedNewPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath,const uint64_t packetId);
-	void incomingPacketMessageAuthenticationFailure(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const unsigned int hops,const char *reason);
-	void incomingPacketInvalid(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const unsigned int hops,const Packet::Verb verb,const char *reason);
-	void incomingPacketDroppedHELLO(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const char *reason);
-	void outgoingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network> &network,const MAC &sourceMac,const MAC &destMac,const unsigned int etherType,const unsigned int vlanId,const unsigned int frameLen,const char *reason);
-	void incomingNetworkAccessDenied(void *const tPtr,const SharedPtr<Network> &network,const SharedPtr<Path> &path,const uint64_t packetId,const unsigned int packetLength,const Address &source,const Packet::Verb verb,bool credentialsRequested);
-	void incomingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network> &network,const SharedPtr<Path> &path,const uint64_t packetId,const unsigned int packetLength,const Address &source,const Packet::Verb verb,const MAC &sourceMac,const MAC &destMac,const char *reason);
-	void networkConfigRequestSent(void *const tPtr,const Network &network,const Address &controller);
-	void networkFilter(
+	inline void resettingPathsInScope(void *const tPtr,const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,const InetAddress::IpScope scope)
+	{
+	}
+
+	inline void peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &path,const uint64_t packetId,const Packet::Verb verb)
+	{
+	}
+
+	inline void peerLinkNowRedundant(void *const tPtr,Peer &peer)
+	{
+	}
+
+	inline void peerLinkNoLongerRedundant(void *const tPtr,Peer &peer)
+	{
+	}
+
+	inline void peerLinkAggregateStatistics(void *const tPtr,Peer &peer)
+	{
+	}
+
+	inline void peerLearnedNewPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath,const uint64_t packetId)
+	{
+	}
+
+	inline void incomingPacketMessageAuthenticationFailure(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const unsigned int hops,const char *reason)
+	{
+	}
+
+	inline void incomingPacketInvalid(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const unsigned int hops,const Packet::Verb verb,const char *reason)
+	{
+	}
+
+	inline void incomingPacketDroppedHELLO(void *const tPtr,const SharedPtr<Path> &path,const uint64_t packetId,const Address &source,const char *reason)
+	{
+	}
+
+	inline void outgoingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network> &network,const MAC &sourceMac,const MAC &destMac,const unsigned int etherType,const unsigned int vlanId,const unsigned int frameLen,const char *reason)
+	{
+	}
+
+	inline void incomingNetworkAccessDenied(void *const tPtr,const SharedPtr<Network> &network,const SharedPtr<Path> &path,const uint64_t packetId,const unsigned int packetLength,const Address &source,const Packet::Verb verb,bool credentialsRequested)
+	{
+	}
+
+	inline void incomingNetworkFrameDropped(void *const tPtr,const SharedPtr<Network> &network,const SharedPtr<Path> &path,const uint64_t packetId,const unsigned int packetLength,const Address &source,const Packet::Verb verb,const MAC &sourceMac,const MAC &destMac,const char *reason)
+	{
+	}
+
+	inline void networkConfigRequestSent(void *const tPtr,const Network &network,const Address &controller)
+	{
+	}
+
+	inline void networkFilter(
 		void *const tPtr,
 		const Network &network,
 		const RuleResultLog &primaryRuleSetLog,
@@ -131,21 +140,29 @@ public:
 		const unsigned int vlanId,
 		const bool noTee,
 		const bool inbound,
-		const int accept);
-	void credentialRejected(void *const tPtr,const CertificateOfMembership &c,const char *reason);
-	void credentialRejected(void *const tPtr,const CertificateOfOwnership &c,const char *reason);
-	void credentialRejected(void *const tPtr,const Capability &c,const char *reason);
-	void credentialRejected(void *const tPtr,const Tag &c,const char *reason);
-	void credentialRejected(void *const tPtr,const Revocation &c,const char *reason);
+		const int accept)
+	{
+	}
 
-private:
-	const RuntimeEnvironment *const RR;
+	inline void credentialRejected(void *const tPtr,const CertificateOfMembership &c,const char *reason)
+	{
+	}
 
-	void _send(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d,const Address &dest);
-	void _spamToAllNetworks(void *const tPtr,const Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> &d,const Level level);
+	inline void credentialRejected(void *const tPtr,const CertificateOfOwnership &c,const char *reason)
+	{
+	}
 
-	Hashtable< uint64_t,std::pair< Address,Trace::Level > > _byNet;
-	Mutex _byNet_m;
+	inline void credentialRejected(void *const tPtr,const Capability &c,const char *reason)
+	{
+	}
+
+	inline void credentialRejected(void *const tPtr,const Tag &c,const char *reason)
+	{
+	}
+
+	inline void credentialRejected(void *const tPtr,const Revocation &c,const char *reason)
+	{
+	}
 };
 
 } // namespace ZeroTier

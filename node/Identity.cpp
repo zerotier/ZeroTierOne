@@ -11,10 +11,8 @@
  */
 /****/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
+#include <cstring>
+#include <cstdint>
 
 #include "Constants.hpp"
 #include "Identity.hpp"
@@ -100,8 +98,13 @@ void Identity::generate(const Type t)
 	delete [] genmem;
 
 	if (t == P384) {
+		// We sign with both because in pure FIPS environments we might have to say
+		// that we do not rely on any non-FIPS algorithms, or may even have to disable
+		// them.
 		ECC384GenerateKey(_pub.p384,_priv.p384);
-		C25519::sign(_priv.c25519,_pub.c25519,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE,_pub.p384s);
+		C25519::sign(_priv.c25519,_pub.c25519,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE,_pub.c25519s);
+		SHA384(digest,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE);
+		ECC384ECDSASign(_priv.p384,digest,_pub.p384s);
 	}
 }
 
@@ -116,7 +119,10 @@ bool Identity::locallyValidate() const
 		case C25519:
 			break;
 		case P384:
-			if (!C25519::verify(_pub.c25519,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE,_pub.p384s,ZT_C25519_SIGNATURE_LEN))
+			if (!C25519::verify(_pub.c25519,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE,_pub.c25519s,ZT_C25519_SIGNATURE_LEN))
+				return false;
+			SHA384(digest,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE);
+			if (!ECC384ECDSAVerify(_pub.p384,digest,_pub.p384s))
 				return false;
 		default:
 			return false;
@@ -132,6 +138,108 @@ bool Identity::locallyValidate() const
 		if (genmem) delete [] genmem;
 	}
 
+	return false;
+}
+
+bool Identity::hash(uint8_t h[48],const bool includePrivate) const
+{
+	switch(_type) {
+
+	case C25519:
+		if ((_hasPrivate)&&(includePrivate))
+			SHA384(h,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
+		else SHA384(h,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+		return true;
+
+	case P384:
+		if ((_hasPrivate)&&(includePrivate))
+			SHA384(h,&_pub,sizeof(_pub),&_priv,sizeof(_priv));
+		else SHA384(h,&_pub,sizeof(_pub));
+		return true;
+
+	}
+	return false;
+}
+
+unsigned int Identity::sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const
+{
+	if (_hasPrivate) {
+		switch(_type) {
+
+			case C25519:
+				if (siglen >= ZT_C25519_SIGNATURE_LEN) {
+					C25519::sign(_priv.c25519,_pub.c25519,data,len,sig);
+					return ZT_C25519_SIGNATURE_LEN;
+				}
+
+			case P384:
+				if (siglen >= ZT_ECC384_SIGNATURE_SIZE) {
+					// When signing with P384 we also hash the C25519 public key as an
+					// extra measure to ensure that only this identity can verify.
+					uint8_t h[48];
+					SHA384(h,data,len,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+					ECC384ECDSASign(_priv.p384,h,(uint8_t *)sig);
+					return ZT_ECC384_SIGNATURE_SIZE;
+				}
+
+		}
+	}
+	return 0;
+}
+
+bool Identity::verify(const void *data,unsigned int len,const void *sig,unsigned int siglen) const
+{
+	switch(_type) {
+
+		case C25519:
+			return C25519::verify(_pub.c25519,data,len,sig,siglen);
+
+		case P384:
+			if (siglen == ZT_ECC384_SIGNATURE_SIZE) {
+				uint8_t h[48];
+				SHA384(h,data,len,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+				return ECC384ECDSAVerify(_pub.p384,h,(const uint8_t *)sig);
+			}
+			break;
+
+	}
+	return false;
+}
+
+bool Identity::agree(const Identity &id,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) const
+{
+	uint8_t rawkey[128];
+	uint8_t h[64];
+	if (_hasPrivate) {
+		if (_type == C25519) {
+
+			if ((id._type == C25519)||(id._type == P384)) {
+				// If we are a C25519 key we can agree with another C25519 key or with only the
+				// C25519 portion of a type 1 P-384 key.
+				C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
+				SHA512(h,rawkey,ZT_C25519_SHARED_KEY_LEN);
+				memcpy(key,h,ZT_PEER_SECRET_KEY_LENGTH);
+				return true;
+			}
+
+		} else if (_type == P384) {
+
+			if (id._type == P384) {
+				C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
+				ECC384ECDH(id._pub.p384,_priv.p384,rawkey + ZT_C25519_SHARED_KEY_LEN);
+				SHA384(h,rawkey,ZT_C25519_SHARED_KEY_LEN + ZT_ECC384_SHARED_SECRET_SIZE);
+				memcpy(key,h,ZT_PEER_SECRET_KEY_LENGTH);
+				return true;
+			} else if (id._type == C25519) {
+				// If the other identity is a C25519 identity we can agree using only that type.
+				C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
+				SHA512(h,rawkey,ZT_C25519_SHARED_KEY_LEN);
+				memcpy(key,h,ZT_PEER_SECRET_KEY_LENGTH);
+				return true;
+			}
+
+		}
+	}
 	return false;
 }
 
@@ -224,7 +332,7 @@ bool Identity::fromString(const char *str)
 				switch(_type) {
 
 					case C25519:
-						if (Utils::unhex(f,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN) != ZT_C25519_PUBLIC_KEY_LEN) {
+						if (Utils::unhex(f,strlen(f),_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN) != ZT_C25519_PUBLIC_KEY_LEN) {
 							_address.zero();
 							return false;
 						}
@@ -245,7 +353,7 @@ bool Identity::fromString(const char *str)
 					switch(_type) {
 
 						case C25519:
-							if (Utils::unhex(f,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN) != ZT_C25519_PRIVATE_KEY_LEN) {
+							if (Utils::unhex(f,strlen(f),_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN) != ZT_C25519_PRIVATE_KEY_LEN) {
 								_address.zero();
 								return false;
 							} else {
@@ -278,3 +386,99 @@ bool Identity::fromString(const char *str)
 }
 
 } // namespace ZeroTier
+
+extern "C" {
+
+ZT_Identity *ZT_Identity_new(enum ZT_Identity_Type type)
+{
+	if ((type != ZT_IDENTITY_TYPE_C25519)&&(type != ZT_IDENTITY_TYPE_P384))
+		return nullptr;
+	try {
+		ZeroTier::Identity *id = new ZeroTier::Identity();
+		id->generate((ZeroTier::Identity::Type)type);
+		return reinterpret_cast<ZT_Identity *>(id);
+	} catch ( ... ) {
+		return nullptr;
+	}
+}
+
+ZT_Identity *ZT_Identity_fromString(const char *idStr)
+{
+	if (!idStr)
+		return nullptr;
+	try {
+		ZeroTier::Identity *id = new ZeroTier::Identity();
+		if (!id->fromString(idStr)) {
+			delete id;
+			return nullptr;
+		}
+		return reinterpret_cast<ZT_Identity *>(id);
+	} catch ( ... ) {
+		return nullptr;
+	}
+}
+
+int ZT_Identity_validate(const ZT_Identity *id)
+{
+	if (!id)
+		return 0;
+	return reinterpret_cast<const ZeroTier::Identity *>(id)->locallyValidate() ? 1 : 0;
+}
+
+unsigned int ZT_Identity_sign(const ZT_Identity *id,const void *data,unsigned int len,void *signature,unsigned int signatureBufferLength)
+{
+	if (!id)
+		return 0;
+	if (signatureBufferLength < ZT_SIGNATURE_BUFFER_SIZE)
+		return 0;
+	return reinterpret_cast<const ZeroTier::Identity *>(id)->sign(data,len,signature,signatureBufferLength);
+}
+
+int ZT_Identity_verify(const ZT_Identity *id,const void *data,unsigned int len,const void *signature,unsigned int sigLen)
+{
+	if ((!id)||(!signature)||(!sigLen))
+		return 0;
+	return reinterpret_cast<const ZeroTier::Identity *>(id)->verify(data,len,signature,sigLen) ? 1 : 0;
+}
+
+enum ZT_Identity_Type ZT_Identity_type(const ZT_Identity *id)
+{
+	if (!id)
+		return (ZT_Identity_Type)0;
+	return (enum ZT_Identity_Type)reinterpret_cast<const ZeroTier::Identity *>(id)->type();
+}
+
+char *ZT_Identity_toString(const ZT_Identity *id,char *buf,int capacity,int includePrivate)
+{
+	if ((!id)||(!buf)||(capacity < ZT_IDENTITY_STRING_BUFFER_LENGTH))
+		return nullptr;
+	reinterpret_cast<const ZeroTier::Identity *>(id)->toString(includePrivate != 0,buf);
+	return buf;
+}
+
+int ZT_Identity_hasPrivate(const ZT_Identity *id)
+{
+	if (!id)
+		return 0;
+	return reinterpret_cast<const ZeroTier::Identity *>(id)->hasPrivate() ? 1 : 0;
+}
+
+uint64_t ZT_Identity_address(const ZT_Identity *id)
+{
+	if (!id)
+		return 0;
+	return reinterpret_cast<const ZeroTier::Identity *>(id)->address().toInt();
+}
+
+void ZT_Identity_hash(const ZT_Identity *id,uint8_t h[48],int includePrivate)
+{
+	reinterpret_cast<const ZeroTier::Identity *>(id)->hash(h,includePrivate != 0);
+}
+
+ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id)
+{
+	if (id)
+		delete reinterpret_cast<ZeroTier::Identity *>(id);
+}
+
+}

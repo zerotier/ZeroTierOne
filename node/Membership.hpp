@@ -14,10 +14,11 @@
 #ifndef ZT_MEMBERSHIP_HPP
 #define ZT_MEMBERSHIP_HPP
 
-#include <stdint.h>
+#include <cstdint>
+
+#include "../include/ZeroTierOne.h"
 
 #include "Constants.hpp"
-#include "../include/ZeroTierOne.h"
 #include "Credential.hpp"
 #include "Hashtable.hpp"
 #include "CertificateOfMembership.hpp"
@@ -70,21 +71,6 @@ public:
 	ZT_ALWAYS_INLINE int64_t lastPushedCredentials() const { return _lastPushedCredentials; }
 
 	/**
-	 * Check whether we should push MULTICAST_LIKEs to this peer, and update last sent time if true
-	 *
-	 * @param now Current time
-	 * @return True if we should update multicasts
-	 */
-	ZT_ALWAYS_INLINE bool multicastLikeGate(const int64_t now)
-	{
-		if ((now - _lastUpdatedMulticast) >= ZT_MULTICAST_ANNOUNCE_PERIOD) {
-			_lastUpdatedMulticast = now;
-			return true;
-		}
-		return false;
-	}
-
-	/**
 	 * Check whether the peer represented by this Membership should be allowed on this network at all
 	 *
 	 * @param nconf Our network config
@@ -98,11 +84,6 @@ public:
 	}
 
 	/**
-	 * @return True if this peer has sent us a valid certificate within ZT_PEER_ACTIVITY_TIMEOUT
-	 */
-	ZT_ALWAYS_INLINE bool recentlyAssociated(const int64_t now) const { return ((_com)&&((now - _com.timestamp()) < ZT_PEER_ACTIVITY_TIMEOUT)); }
-
-	/**
 	 * Check whether the peer represented by this Membership owns a given address
 	 *
 	 * @tparam Type of resource: InetAddress or MAC
@@ -111,7 +92,7 @@ public:
 	 * @return True if this peer has a certificate of ownership for the given resource
 	 */
 	template<typename T>
-	inline bool peerOwnsAddress(const NetworkConfig &nconf,const T &r) const
+	ZT_ALWAYS_INLINE bool peerOwnsAddress(const NetworkConfig &nconf,const T &r) const
 	{
 		if (_isUnspoofableAddress(nconf,r))
 			return true;
@@ -132,7 +113,7 @@ public:
 	 * @param id Tag ID
 	 * @return Pointer to tag or NULL if not found
 	 */
-	inline const Tag *getTag(const NetworkConfig &nconf,const uint32_t id) const
+	ZT_ALWAYS_INLINE const Tag *getTag(const NetworkConfig &nconf,const uint32_t id) const
 	{
 		const Tag *const t = _remoteTags.get(id);
 		return (((t)&&(_isCredentialTimestampValid(nconf,*t))) ? t : (Tag *)0);
@@ -150,7 +131,7 @@ public:
 	 * @param now Current time
 	 * @param nconf Current network configuration
 	 */
-	void clean(const int64_t now,const NetworkConfig &nconf);
+	void clean(int64_t now,const NetworkConfig &nconf);
 
 	/**
 	 * Generates a key for internal use in indexing credentials by type and credential ID
@@ -181,8 +162,8 @@ private:
 	// This returns true if a resource is an IPv6 NDP-emulated address. These embed the ZT
 	// address of the peer and therefore cannot be spoofed, causing peerOwnsAddress() to
 	// always return true for them. A certificate is not required for these.
-	inline bool _isUnspoofableAddress(const NetworkConfig &nconf,const MAC &m) const { return false; }
-	inline bool _isUnspoofableAddress(const NetworkConfig &nconf,const InetAddress &ip) const
+	ZT_ALWAYS_INLINE bool _isUnspoofableAddress(const NetworkConfig &nconf,const MAC &m) const { return false; }
+	ZT_ALWAYS_INLINE bool _isUnspoofableAddress(const NetworkConfig &nconf,const InetAddress &ip) const
 	{
 		if ((ip.isV6())&&(nconf.ndpEmulation())) {
 			const InetAddress sixpl(InetAddress::makeIpv66plane(nconf.networkId,nconf.issuedTo.toInt()));
@@ -223,7 +204,7 @@ private:
 	// This compares the remote credential's timestamp to the timestamp in our network config
 	// plus or minus the permitted maximum timestamp delta.
 	template<typename C>
-	inline bool _isCredentialTimestampValid(const NetworkConfig &nconf,const C &remoteCredential) const
+	ZT_ALWAYS_INLINE bool _isCredentialTimestampValid(const NetworkConfig &nconf,const C &remoteCredential) const
 	{
 		const int64_t ts = remoteCredential.timestamp();
 		if (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts)) <= nconf.credentialTimeMaxDelta) {

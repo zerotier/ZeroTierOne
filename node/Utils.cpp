@@ -11,23 +11,16 @@
  */
 /****/
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <time.h>
-#include <sys/stat.h>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
 
 #include "Constants.hpp"
 
 #ifdef __UNIX_LIKE__
 #include <unistd.h>
-#include <errno.h>
 #include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/uio.h>
-#include <dirent.h>
 #endif
 
 #ifdef __WINDOWS__
@@ -36,34 +29,45 @@
 
 #include "Utils.hpp"
 #include "Mutex.hpp"
-#include "Salsa20.hpp"
 #include "AES.hpp"
 #include "SHA512.hpp"
 
 namespace ZeroTier {
 
+namespace Utils {
+
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
-#include <immintrin.h>
-static bool _zt_rdrand_supported()
+CPUIDRegisters::CPUIDRegisters()
 {
 #ifdef __WINDOWS__
 	int regs[4];
 	__cpuid(regs,1);
-	return (((regs[2] >> 30) & 1) != 0);
+	eax = (uint32_t)regs[0];
+	ebx = (uint32_t)regs[1];
+	ecx = (uint32_t)regs[2];
+	edx = (uint32_t)regs[3];
 #else
-	uint32_t eax,ebx,ecx,edx;
 	__asm__ __volatile__ (
 		"cpuid"
 		: "=a"(eax),"=b"(ebx),"=c"(ecx),"=d"(edx)
 		: "a"(1),"c"(0)
 	);
-	return ((ecx & (1 << 30)) != 0);
 #endif
+	rdrand = ((ecx & (1U << 30U)) != 0);
+	aes = ( ((ecx & (1U << 25U)) != 0) && ((ecx & (1U << 19U)) != 0) && ((ecx & (1U << 1U)) != 0) ); // AES, PCLMUL, SSE4.1
 }
-static const bool _rdrandSupported = _zt_rdrand_supported();
+CPUIDRegisters CPUID;
 #endif
 
-const char Utils::HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
+const char HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
+
+bool secureEq(const void *a,const void *b,unsigned int len)
+{
+	uint8_t diff = 0;
+	for(unsigned int i=0;i<len;++i)
+		diff |= ( (reinterpret_cast<const uint8_t *>(a))[i] ^ (reinterpret_cast<const uint8_t *>(b))[i] );
+	return (diff == 0);
+}
 
 // Crazy hack to force memory to be securely zeroed in spite of the best efforts of optimizing compilers.
 static void _Utils_doBurn(volatile uint8_t *ptr,unsigned int len)
@@ -72,7 +76,7 @@ static void _Utils_doBurn(volatile uint8_t *ptr,unsigned int len)
 	while (ptr != end) *(ptr++) = (uint8_t)0;
 }
 static void (*volatile _Utils_doBurn_ptr)(volatile uint8_t *,unsigned int) = _Utils_doBurn;
-void Utils::burn(void *ptr,unsigned int len) { (_Utils_doBurn_ptr)((volatile uint8_t *)ptr,len); }
+void burn(void *ptr,unsigned int len) { (_Utils_doBurn_ptr)((volatile uint8_t *)ptr,len); }
 
 static unsigned long _Utils_itoa(unsigned long n,char *s)
 {
@@ -84,7 +88,7 @@ static unsigned long _Utils_itoa(unsigned long n,char *s)
 	s[pos] = '0' + (char)(n % 10);
 	return pos + 1;
 }
-char *Utils::decimal(unsigned long n,char s[24])
+char *decimal(unsigned long n,char s[24])
 {
 	if (n == 0) {
 		s[0] = '0';
@@ -95,81 +99,35 @@ char *Utils::decimal(unsigned long n,char s[24])
 	return s;
 }
 
-unsigned short Utils::crc16(const void *buf,unsigned int len)
+char *hex10(uint64_t i,char s[11])
 {
-	static const uint16_t crc16tab[256]= {
-		0x0000,0x1021,0x2042,0x3063,0x4084,0x50a5,0x60c6,0x70e7,
-		0x8108,0x9129,0xa14a,0xb16b,0xc18c,0xd1ad,0xe1ce,0xf1ef,
-		0x1231,0x0210,0x3273,0x2252,0x52b5,0x4294,0x72f7,0x62d6,
-		0x9339,0x8318,0xb37b,0xa35a,0xd3bd,0xc39c,0xf3ff,0xe3de,
-		0x2462,0x3443,0x0420,0x1401,0x64e6,0x74c7,0x44a4,0x5485,
-		0xa56a,0xb54b,0x8528,0x9509,0xe5ee,0xf5cf,0xc5ac,0xd58d,
-		0x3653,0x2672,0x1611,0x0630,0x76d7,0x66f6,0x5695,0x46b4,
-		0xb75b,0xa77a,0x9719,0x8738,0xf7df,0xe7fe,0xd79d,0xc7bc,
-		0x48c4,0x58e5,0x6886,0x78a7,0x0840,0x1861,0x2802,0x3823,
-		0xc9cc,0xd9ed,0xe98e,0xf9af,0x8948,0x9969,0xa90a,0xb92b,
-		0x5af5,0x4ad4,0x7ab7,0x6a96,0x1a71,0x0a50,0x3a33,0x2a12,
-		0xdbfd,0xcbdc,0xfbbf,0xeb9e,0x9b79,0x8b58,0xbb3b,0xab1a,
-		0x6ca6,0x7c87,0x4ce4,0x5cc5,0x2c22,0x3c03,0x0c60,0x1c41,
-		0xedae,0xfd8f,0xcdec,0xddcd,0xad2a,0xbd0b,0x8d68,0x9d49,
-		0x7e97,0x6eb6,0x5ed5,0x4ef4,0x3e13,0x2e32,0x1e51,0x0e70,
-		0xff9f,0xefbe,0xdfdd,0xcffc,0xbf1b,0xaf3a,0x9f59,0x8f78,
-		0x9188,0x81a9,0xb1ca,0xa1eb,0xd10c,0xc12d,0xf14e,0xe16f,
-		0x1080,0x00a1,0x30c2,0x20e3,0x5004,0x4025,0x7046,0x6067,
-		0x83b9,0x9398,0xa3fb,0xb3da,0xc33d,0xd31c,0xe37f,0xf35e,
-		0x02b1,0x1290,0x22f3,0x32d2,0x4235,0x5214,0x6277,0x7256,
-		0xb5ea,0xa5cb,0x95a8,0x8589,0xf56e,0xe54f,0xd52c,0xc50d,
-		0x34e2,0x24c3,0x14a0,0x0481,0x7466,0x6447,0x5424,0x4405,
-		0xa7db,0xb7fa,0x8799,0x97b8,0xe75f,0xf77e,0xc71d,0xd73c,
-		0x26d3,0x36f2,0x0691,0x16b0,0x6657,0x7676,0x4615,0x5634,
-		0xd94c,0xc96d,0xf90e,0xe92f,0x99c8,0x89e9,0xb98a,0xa9ab,
-		0x5844,0x4865,0x7806,0x6827,0x18c0,0x08e1,0x3882,0x28a3,
-		0xcb7d,0xdb5c,0xeb3f,0xfb1e,0x8bf9,0x9bd8,0xabbb,0xbb9a,
-		0x4a75,0x5a54,0x6a37,0x7a16,0x0af1,0x1ad0,0x2ab3,0x3a92,
-		0xfd2e,0xed0f,0xdd6c,0xcd4d,0xbdaa,0xad8b,0x9de8,0x8dc9,
-		0x7c26,0x6c07,0x5c64,0x4c45,0x3ca2,0x2c83,0x1ce0,0x0cc1,
-		0xef1f,0xff3e,0xcf5d,0xdf7c,0xaf9b,0xbfba,0x8fd9,0x9ff8,
-		0x6e17,0x7e36,0x4e55,0x5e74,0x2e93,0x3eb2,0x0ed1,0x1ef0
-	};
-	uint16_t crc = 0;
-	const uint8_t *p = (const uint8_t *)buf;
-	for(unsigned int i=0;i<len;++i)
-		crc = (crc << 8) ^ crc16tab[((crc >> 8) ^ *(p++)) & 0x00ff];
-	return crc;
+	s[0] = HEXCHARS[(i >> 36) & 0xf];
+	s[1] = HEXCHARS[(i >> 32) & 0xf];
+	s[2] = HEXCHARS[(i >> 28) & 0xf];
+	s[3] = HEXCHARS[(i >> 24) & 0xf];
+	s[4] = HEXCHARS[(i >> 20) & 0xf];
+	s[5] = HEXCHARS[(i >> 16) & 0xf];
+	s[6] = HEXCHARS[(i >> 12) & 0xf];
+	s[7] = HEXCHARS[(i >> 8) & 0xf];
+	s[8] = HEXCHARS[(i >> 4) & 0xf];
+	s[9] = HEXCHARS[i & 0xf];
+	s[10] = (char)0;
+	return s;
 }
 
-unsigned int Utils::unhex(const char *h,void *buf,unsigned int buflen)
+char *hex(const void *d,unsigned int l,char *s)
 {
-	unsigned int l = 0;
-	while (l < buflen) {
-		uint8_t hc = *(reinterpret_cast<const uint8_t *>(h++));
-		if (!hc) break;
-
-		uint8_t c = 0;
-		if ((hc >= 48)&&(hc <= 57)) // 0..9
-			c = hc - 48;
-		else if ((hc >= 97)&&(hc <= 102)) // a..f
-			c = hc - 87;
-		else if ((hc >= 65)&&(hc <= 70)) // A..F
-			c = hc - 55;
-
-		hc = *(reinterpret_cast<const uint8_t *>(h++));
-		if (!hc) break;
-
-		c <<= 4;
-		if ((hc >= 48)&&(hc <= 57))
-			c |= hc - 48;
-		else if ((hc >= 97)&&(hc <= 102))
-			c |= hc - 87;
-		else if ((hc >= 65)&&(hc <= 70))
-			c |= hc - 55;
-
-		reinterpret_cast<uint8_t *>(buf)[l++] = c;
+	char *const save = s;
+	for(unsigned int i=0;i<l;++i) {
+		const unsigned int b = reinterpret_cast<const uint8_t *>(d)[i];
+		*(s++) = HEXCHARS[b >> 4];
+		*(s++) = HEXCHARS[b & 0xf];
 	}
-	return l;
+	*s = (char)0;
+	return save;
 }
 
-unsigned int Utils::unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen)
+unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen)
 {
 	unsigned int l = 0;
 	const char *hend = h + hlen;
@@ -203,7 +161,7 @@ unsigned int Utils::unhex(const char *h,unsigned int hlen,void *buf,unsigned int
 	return l;
 }
 
-void Utils::getSecureRandom(void *buf,unsigned int bytes)
+void getSecureRandom(void *buf,unsigned int bytes)
 {
 	static Mutex globalLock;
 	static bool initialized = false;
@@ -257,7 +215,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 				randomState[0] ^= (uint64_t)time(nullptr);
 				randomState[1] ^= (uint64_t)((uintptr_t)buf);
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
-				if (_rdrandSupported) {
+				if (CPUID.rdrand) {
 					uint64_t tmp = 0;
 					_rdrand64_step((unsigned long long *)&tmp);
 					randomState[2] ^= tmp;
@@ -281,7 +239,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	}
 }
 
-int Utils::b32e(const uint8_t *data,int length,char *result,int bufSize)
+int b32e(const uint8_t *data,int length,char *result,int bufSize)
 {
   if (length < 0 || length > (1 << 28)) {
 		result[0] = (char)0;
@@ -317,7 +275,7 @@ int Utils::b32e(const uint8_t *data,int length,char *result,int bufSize)
 	return -1;
 }
 
-int Utils::b32d(const char *encoded,uint8_t *result,int bufSize)
+int b32d(const char *encoded,uint8_t *result,int bufSize)
 {
   int buffer = 0;
   int bitsLeft = 0;
@@ -357,94 +315,22 @@ int Utils::b32d(const char *encoded,uint8_t *result,int bufSize)
   return count;
 }
 
-unsigned int Utils::b64e(const uint8_t *in,unsigned int inlen,char *out,unsigned int outlen)
+static uint64_t _secureRandom64()
 {
-	static const char base64en[64] = { 'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/' };
-	unsigned int i = 0,j = 0;
-	uint8_t l = 0;
-	int s = 0;
-	for (;i<inlen;++i) {
-		uint8_t c = in[i];
-		switch (s) {
-		case 0:
-			s = 1;
-			if (j >= outlen) return 0;
-			out[j++] = base64en[(c >> 2) & 0x3f];
-			break;
-		case 1:
-			s = 2;
-			if (j >= outlen) return 0;
-			out[j++] = base64en[((l & 0x3) << 4) | ((c >> 4) & 0xf)];
-			break;
-		case 2:
-			s = 0;
-			if (j >= outlen) return 0;
-			out[j++] = base64en[((l & 0xf) << 2) | ((c >> 6) & 0x3)];
-			if (j >= outlen) return 0;
-			out[j++] = base64en[c & 0x3f];
-			break;
-		}
-		l = c;
-	}
-	switch (s) {
-	case 1:
-		if (j >= outlen) return 0;
-		out[j++] = base64en[(l & 0x3) << 4];
-		//out[j++] = '=';
-		//out[j++] = '=';
-		break;
-	case 2:
-		if (j >= outlen) return 0;
-		out[j++] = base64en[(l & 0xf) << 2];
-		//out[j++] = '=';
-		break;
-	}
-	if (j >= outlen) return 0;
-	out[j] = 0;
-	return j;
-}
-
-unsigned int Utils::b64d(const char *in,unsigned char *out,unsigned int outlen)
-{
-	static const uint8_t base64de[256] = { 255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,62,255,255,255,63,52,53,54,55,56,57,58,59,60,61,255,255,255,255,255,255,255,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,255,255,255,255,255,255,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,255,255,255,255,255 };
-	unsigned int i = 0;
-	unsigned int j = 0;
-	while ((in[i] != '=')&&(in[i] != 0)) {
-		if (j >= outlen)
-			break;
-		uint8_t c = base64de[(unsigned char)in[i]];
-		if (c != 255) {
-			switch (i & 0x3) {
-				case 0:
-					out[j] = (c << 2) & 0xff;
-					break;
-				case 1:
-					out[j++] |= (c >> 4) & 0x3;
-					out[j] = (c & 0xf) << 4;
-					break;
-				case 2:
-					out[j++] |= (c >> 2) & 0xf;
-					out[j] = (c & 0x3) << 6;
-					break;
-				case 3:
-					out[j++] |= c;
-					break;
-			}
-		}
-		++i;
-	}
-	return j;
+	uint64_t tmp = 0;
+	getSecureRandom(&tmp,sizeof(tmp));
+	return tmp;
 }
 
 #define ROL64(x,k) (((x) << (k)) | ((x) >> (64 - (k))))
-uint64_t Utils::random()
+uint64_t random()
 {
 	// https://en.wikipedia.org/wiki/Xorshift#xoshiro256**
 	static Mutex l;
-	static uint64_t s0 = Utils::getSecureRandom64();
-	static uint64_t s1 = Utils::getSecureRandom64();
-	static uint64_t s2 = Utils::getSecureRandom64();
-	static uint64_t s3 = Utils::getSecureRandom64();
+	static uint64_t s0 = _secureRandom64();
+	static uint64_t s1 = _secureRandom64();
+	static uint64_t s2 = _secureRandom64();
+	static uint64_t s3 = _secureRandom64();
 
 	l.lock();
 	const uint64_t result = ROL64(s1 * 5,7) * 9;
@@ -459,5 +345,25 @@ uint64_t Utils::random()
 
 	return result;
 }
+
+bool scopy(char *dest,unsigned int len,const char *src)
+{
+	if (!len)
+		return false; // sanity check
+	if (!src) {
+		*dest = (char)0;
+		return true;
+	}
+	char *const end = dest + len;
+	while ((*dest++ = *src++)) {
+		if (dest == end) {
+			*(--dest) = (char)0;
+			return false;
+		}
+	}
+	return true;
+}
+
+} // namespace Utils
 
 } // namespace ZeroTier

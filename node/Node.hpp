@@ -14,9 +14,9 @@
 #ifndef ZT_NODE_HPP
 #define ZT_NODE_HPP
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include <map>
 #include <vector>
@@ -51,7 +51,7 @@ class Locator;
 class Node : public NetworkController::Sender
 {
 public:
-	Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64_t now);
+	Node(void *uPtr, void *tPtr, const struct ZT_Node_Callbacks *callbacks, int64_t now);
 	virtual ~Node();
 
 	// Get rid of alignment warnings on 32-bit Windows and possibly improve performance
@@ -81,22 +81,13 @@ public:
 		const void *frameData,
 		unsigned int frameLength,
 		volatile int64_t *nextBackgroundTaskDeadline);
-	ZT_ResultCode processBackgroundTasks(void *tptr,int64_t now,volatile int64_t *nextBackgroundTaskDeadline);
-	void processDNSResult(
-		void *tptr,
-		uintptr_t dnsRequestID,
-		const char *name,
-		enum ZT_DNSRecordType recordType,
-		const void *result,
-		unsigned int resultLength,
-		int resultIsString);
+	ZT_ResultCode processBackgroundTasks(void *tPtr, int64_t now, volatile int64_t *nextBackgroundTaskDeadline);
 	ZT_ResultCode join(uint64_t nwid,void *uptr,void *tptr);
 	ZT_ResultCode leave(uint64_t nwid,void **uptr,void *tptr);
 	ZT_ResultCode multicastSubscribe(void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	ZT_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
-	ZT_RootList *listRoots(int64_t now);
-	enum ZT_ResultCode setRoot(const char *name,const void *locator,unsigned int locatorSize);
-	enum ZT_ResultCode removeRoot(const char *name);
+	ZT_ResultCode addRoot(const char *identity);
+	ZT_ResultCode removeRoot(const char *identity);
 	uint64_t address() const;
 	void status(ZT_NodeStatus *status) const;
 	ZT_PeerList *peers() const;
@@ -104,8 +95,7 @@ public:
 	ZT_VirtualNetworkList *networks() const;
 	void setNetworkUserPtr(uint64_t nwid,void *ptr);
 	void freeQueryResult(void *qr);
-	int addLocalInterfaceAddress(const struct sockaddr_storage *addr);
-	void clearLocalInterfaceAddresses();
+	void setInterfaceAddresses(const ZT_InterfaceAddress *addrs,unsigned int addrCount);
 	int sendUserMessage(void *tptr,uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
 	void setController(void *networkControllerInstance);
 
@@ -151,33 +141,12 @@ public:
 		return SharedPtr<Network>();
 	}
 
-	ZT_ALWAYS_INLINE bool belongsToNetwork(uint64_t nwid) const
-	{
-		Mutex::Lock _l(_networks_m);
-		return _networks.contains(nwid);
-	}
-
-	ZT_ALWAYS_INLINE std::vector< SharedPtr<Network> > allNetworks() const
-	{
-		std::vector< SharedPtr<Network> > nw;
-		Mutex::Lock _l(_networks_m);
-		Hashtable< uint64_t,SharedPtr<Network> >::Iterator i(*const_cast< Hashtable< uint64_t,SharedPtr<Network> > * >(&_networks));
-		uint64_t *k = (uint64_t *)0;
-		SharedPtr<Network> *v = (SharedPtr<Network> *)0;
-		while (i.next(k,v))
-			nw.push_back(*v);
-		return nw;
-	}
-
 	ZT_ALWAYS_INLINE std::vector<ZT_InterfaceAddress> directPaths() const
 	{
 		Mutex::Lock _l(_localInterfaceAddresses_m);
 		return _localInterfaceAddresses;
 	}
 
-	void setInterfaceAddresses(const ZT_InterfaceAddress *addrs,unsigned int addrCount);
-
-	SharedPtr< const Locator > locator();
 	ZT_ALWAYS_INLINE void postEvent(void *tPtr,ZT_Event ev,const void *md = (const void *)0) { _cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ev,md); }
 	ZT_ALWAYS_INLINE void configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { _cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,nwid,nuptr,op,nc); }
 	ZT_ALWAYS_INLINE bool online() const { return _online; }
@@ -185,7 +154,7 @@ public:
 	ZT_ALWAYS_INLINE void stateObjectPut(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],const void *const data,const unsigned int len) { _cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,data,(int)len); }
 	ZT_ALWAYS_INLINE void stateObjectDelete(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2]) { _cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,(const void *)0,-1); }
 	bool shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,const int64_t localSocket,const InetAddress &remoteAddress);
-	ZT_ALWAYS_INLINE bool externalPathLookup(void *tPtr,const Address &ztaddr,int family,InetAddress &addr) { return ( (_cb.pathLookupFunction) ? (_cb.pathLookupFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ztaddr.toInt(),family,reinterpret_cast<struct sockaddr_storage *>(&addr)) != 0) : false ); }
+	bool externalPathLookup(void *tPtr,const Identity &id,int family,InetAddress &addr);
 	ZT_ResultCode setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig);
 	ZT_ALWAYS_INLINE const Identity &identity() const { return _RR.identity; }
 
@@ -200,7 +169,7 @@ public:
 	 */
 	ZT_ALWAYS_INLINE void expectReplyTo(const uint64_t packetId)
 	{
-		const unsigned long pid2 = (unsigned long)(packetId >> 32);
+		const unsigned long pid2 = (unsigned long)(packetId >> 32U);
 		const unsigned long bucket = (unsigned long)(pid2 & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
 		_expectingRepliesTo[bucket][_expectingRepliesToBucketPtr[bucket]++ & ZT_EXPECTING_REPLIES_BUCKET_MASK2] = (uint32_t)pid2;
 	}
@@ -247,10 +216,7 @@ public:
 	virtual void ncSendRevocation(const Address &destination,const Revocation &rev);
 	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode);
 
-	ZT_ALWAYS_INLINE void setMultipathMode(uint8_t mode) { _multipathMode = mode; }
-	ZT_ALWAYS_INLINE uint8_t getMultipathMode() { return _multipathMode; }
-
-	ZT_ALWAYS_INLINE bool localControllerHasAuthorized(const int64_t now,const uint64_t nwid,const Address &addr) const
+	inline bool localControllerHasAuthorized(const int64_t now,const uint64_t nwid,const Address &addr) const
 	{
 		_localControllerAuthorizations_m.lock();
 		const int64_t *const at = _localControllerAuthorizations.get(_LocalControllerAuth(nwid,addr));
@@ -260,11 +226,14 @@ public:
 		return false;
 	}
 
+	inline void setMultipathMode(uint8_t mode) { _multipathMode = mode; }
+	inline uint8_t getMultipathMode() { return _multipathMode; }
+
 private:
 	RuntimeEnvironment _RR;
 	RuntimeEnvironment *RR;
-	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P
 	ZT_Node_Callbacks _cb;
+	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P
 
 	// For tracking packet IDs to filter out OK/ERROR replies to packets we did not send
 	uint8_t _expectingRepliesToBucketPtr[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1];
@@ -288,12 +257,10 @@ private:
 	};
 	Hashtable< _LocalControllerAuth,int64_t > _localControllerAuthorizations;
 	Hashtable< uint64_t,SharedPtr<Network> > _networks;
-	SharedPtr< const Locator > _locator;
 	std::vector< ZT_InterfaceAddress > _localInterfaceAddresses;
 
 	Mutex _localControllerAuthorizations_m;
 	Mutex _networks_m;
-	Mutex _locator_m;
 	Mutex _localInterfaceAddresses_m;
 	Mutex _backgroundTasksLock;
 
@@ -303,7 +270,6 @@ private:
 	int64_t _lastPing;
 	int64_t _lastHousekeepingRun;
 	int64_t _lastNetworkHousekeepingRun;
-	int64_t _lastDynamicRootUpdate;
 	bool _online;
 };
 

@@ -7,8 +7,8 @@ endif(WIN32)
 
 set(core_headers
 	Address.hpp
-	AES.hpp
 	AtomicCounter.hpp
+	Buf.hpp
 	Buffer.hpp
 	C25519.hpp
 	Capability.hpp
@@ -29,6 +29,7 @@ set(core_headers
 	Network.hpp
 	NetworkConfig.hpp
 	Node.hpp
+	OS.hpp
 	Packet.hpp
 	Path.hpp
 	Peer.hpp
@@ -50,13 +51,14 @@ set(core_headers
 
 set(core_src
 	AES.cpp
-	AES-aesni.c
+	Buf.cpp
 	C25519.cpp
 	Credential.cpp
 	ECC384.cpp
 	Identity.cpp
 	IncomingPacket.cpp
 	InetAddress.cpp
+	Locator.cpp
 	Membership.cpp
 	Network.cpp
 	NetworkConfig.cpp
@@ -69,23 +71,10 @@ set(core_src
 	SelfAwareness.cpp
 	SHA512.cpp
 	Switch.cpp
-	Trace.cpp
+	Topology.cpp
 	Utils.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${core_src} ${core_headers})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
-
-#if(UNIX)
-#	set_source_files_properties(
-#		AES.cpp
-#		AES-aesni.c
-#		ECC384.cpp
-#		Salsa20.cpp
-#		C25519.cpp
-#		Poly1305.cpp
-#		PROPERTIES
-#		COMPILE_FLAGS "-Wall -O3"
-#	)
-#endif(UNIX)

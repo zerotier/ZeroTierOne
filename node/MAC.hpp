@@ -14,9 +14,9 @@
 #ifndef ZT_MAC_HPP
 #define ZT_MAC_HPP
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdint>
 
 #include "Constants.hpp"
 #include "Utils.hpp"
@@ -187,7 +187,7 @@ public:
 
 	ZT_ALWAYS_INLINE unsigned long hashCode() const { return (unsigned long)_m; }
 
-	ZT_ALWAYS_INLINE char *toString(char buf[18]) const
+	inline char *toString(char buf[18]) const
 	{
 		buf[0] = Utils::HEXCHARS[(_m >> 44) & 0xf];
 		buf[1] = Utils::HEXCHARS[(_m >> 40) & 0xf];

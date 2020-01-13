@@ -26,7 +26,7 @@
 namespace ZeroTier {
 
 template<typename CRED>
-static ZT_ALWAYS_INLINE Credential::VerifyResult _credVerify(const RuntimeEnvironment *const RR,void *tPtr,CRED credential)
+static inline Credential::VerifyResult _credVerify(const RuntimeEnvironment *const RR,void *tPtr,CRED credential)
 {
 	const Address signedBy(credential.signer());
 	const uint64_t networkId = credential.networkId();

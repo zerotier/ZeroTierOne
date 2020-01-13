@@ -14,9 +14,9 @@
 #ifndef ZT_N_PACKET_HPP
 #define ZT_N_PACKET_HPP
 
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstring>
+#include <cstdio>
 
 #include <string>
 #include <iostream>
@@ -53,7 +53,7 @@
  * 8  - 1.1.17 ... 1.2.0
  *    + Multipart network configurations for large network configs
  *    + Tags and Capabilities
- *    + ZT_ALWAYS_INLINE push of CertificateOfMembership deprecated
+ *    + inline push of CertificateOfMembership deprecated
  * 9  - 1.2.0 ... 1.2.14
  * 10 - 1.4.0 ... 1.6.0
  *    + Multipath capability and load balancing
@@ -305,14 +305,14 @@ public:
 	class Fragment : public Buffer<ZT_PROTO_MAX_PACKET_LENGTH>
 	{
 	public:
-		ZT_ALWAYS_INLINE Fragment() :
+		inline Fragment() :
 			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>() {}
 
 		template<unsigned int C2>
-		ZT_ALWAYS_INLINE Fragment(const Buffer<C2> &b) :
+		inline Fragment(const Buffer<C2> &b) :
 			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b) {}
 
-		ZT_ALWAYS_INLINE Fragment(const void *data,unsigned int len) :
+		inline Fragment(const void *data,unsigned int len) :
 			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(data,len) {}
 
 		/**
@@ -324,7 +324,7 @@ public:
 		 * @param fragNo Which fragment (>= 1, since 0 is Packet with end chopped off)
 		 * @param fragTotal Total number of fragments (including 0)
 		 */
-		ZT_ALWAYS_INLINE Fragment(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
+		inline Fragment(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
 		{
 			init(p,fragStart,fragLen,fragNo,fragTotal);
 		}
@@ -338,7 +338,7 @@ public:
 		 * @param fragNo Which fragment (>= 1, since 0 is Packet with end chopped off)
 		 * @param fragTotal Total number of fragments (including 0)
 		 */
-		ZT_ALWAYS_INLINE void init(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
+		inline void init(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
 		{
 			if ((fragStart + fragLen) > p.size())
 				throw ZT_EXCEPTION_OUT_OF_BOUNDS;
@@ -359,37 +359,37 @@ public:
 		 *
 		 * @return Destination ZT address
 		 */
-		ZT_ALWAYS_INLINE Address destination() const { return Address(field(ZT_PACKET_FRAGMENT_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
+		inline Address destination() const { return Address(field(ZT_PACKET_FRAGMENT_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 		/**
 		 * @return True if fragment is of a valid length
 		 */
-		ZT_ALWAYS_INLINE bool lengthValid() const { return (size() >= ZT_PACKET_FRAGMENT_IDX_PAYLOAD); }
+		inline bool lengthValid() const { return (size() >= ZT_PACKET_FRAGMENT_IDX_PAYLOAD); }
 
 		/**
 		 * @return ID of packet this is a fragment of
 		 */
-		ZT_ALWAYS_INLINE uint64_t packetId() const { return at<uint64_t>(ZT_PACKET_FRAGMENT_IDX_PACKET_ID); }
+		inline uint64_t packetId() const { return at<uint64_t>(ZT_PACKET_FRAGMENT_IDX_PACKET_ID); }
 
 		/**
 		 * @return Total number of fragments in packet
 		 */
-		ZT_ALWAYS_INLINE unsigned int totalFragments() const { return (((unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO]) >> 4) & 0xf); }
+		inline unsigned int totalFragments() const { return (((unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO]) >> 4) & 0xf); }
 
 		/**
 		 * @return Fragment number of this fragment
 		 */
-		ZT_ALWAYS_INLINE unsigned int fragmentNumber() const { return ((unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO]) & 0xf); }
+		inline unsigned int fragmentNumber() const { return ((unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO]) & 0xf); }
 
 		/**
 		 * @return Fragment ZT hop count
 		 */
-		ZT_ALWAYS_INLINE unsigned int hops() const { return (unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_HOPS]); }
+		inline unsigned int hops() const { return (unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_HOPS]); }
 
 		/**
 		 * Increment this packet's hop count
 		 */
-		ZT_ALWAYS_INLINE unsigned int incrementHops()
+		inline unsigned int incrementHops()
 		{
 			return (unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_HOPS] = (((*this)[ZT_PACKET_FRAGMENT_IDX_HOPS]) + 1));
 		}
@@ -397,12 +397,12 @@ public:
 		/**
 		 * @return Length of payload in bytes
 		 */
-		ZT_ALWAYS_INLINE unsigned int payloadLength() const { return ((size() > ZT_PACKET_FRAGMENT_IDX_PAYLOAD) ? (size() - ZT_PACKET_FRAGMENT_IDX_PAYLOAD) : 0); }
+		inline unsigned int payloadLength() const { return ((size() > ZT_PACKET_FRAGMENT_IDX_PAYLOAD) ? (size() - ZT_PACKET_FRAGMENT_IDX_PAYLOAD) : 0); }
 
 		/**
 		 * @return Raw packet payload
 		 */
-		ZT_ALWAYS_INLINE const unsigned char *payload() const { return field(ZT_PACKET_FRAGMENT_IDX_PAYLOAD,size() - ZT_PACKET_FRAGMENT_IDX_PAYLOAD); }
+		inline const unsigned char *payload() const { return field(ZT_PACKET_FRAGMENT_IDX_PAYLOAD,size() - ZT_PACKET_FRAGMENT_IDX_PAYLOAD); }
 	};
 
 	/**
@@ -422,14 +422,31 @@ public:
 		 *   <[1] software minor version>
 		 *   <[2] software revision>
 		 *   <[8] timestamp for determining latency>
-		 *   <[...] binary serialized identity (see Identity)>
+		 *   <[...] binary serialized identity>
 		 *   <[...] physical destination address of packet>
+		 *   [... begin encrypted region ...]
+		 *   <[2] 16-bit reserved (legacy) field, always 0>
+		 *   <[2] 16-bit length of meta-data dictionary>
+		 *   <[...] meta-data dictionary>
+		 *   [... end encrypted region ...]
+		 *   <[48] HMAC-SHA384 of all fields to this point (as plaintext)>
 		 *
-		 * HELLO is sent in the clear as it is how peers share their identity
-		 * public keys.
+		 * HELLO is sent with authentication but without the usual encryption so
+		 * that peers can exchange identities.
 		 *
 		 * Destination address is the actual wire address to which the packet
 		 * was sent. See InetAddress::serialize() for format.
+		 *
+		 * Starting at "begin encrypted section" the reset of the packet is
+		 * encrypted with Salsa20/12. This is not the normal packet encryption
+		 * and is technically not necessary as nothing in HELLO is secret. It
+		 * exists merely to shield meta-data info from passive listeners to
+		 * slightly improve privacy, and for backward compatibility with older
+		 * nodes that required it.
+		 *
+		 * HELLO (and its OK response) ends with a large 384-bit HMAC to allow
+		 * identity exchanges to be authenticated with additional strength beyond
+		 * ordinary packet authentication.
 		 *
 		 * OK payload:
 		 *   <[8] HELLO timestamp field echo>
@@ -438,6 +455,10 @@ public:
 		 *   <[1] software minor version>
 		 *   <[2] software revision>
 		 *   <[...] physical destination address of packet>
+		 *   <[2] 16-bit reserved (legacy) field, always 0>
+		 *   <[2] 16-bit length of meta-data dictionary>
+		 *   <[...] meta-data dictionary>
+		 *   <[48] HMAC-SHA384 of all fields to this point (as plaintext)>
 		 *
 		 * With the exception of the timestamp, the other fields pertain to the
 		 * respondent who is sending OK and are not echoes.
@@ -568,13 +589,16 @@ public:
 		VERB_ECHO = 0x08,
 
 		/**
-		 * Announce interest in multicast group(s) (DEPRECATED):
+		 * Announce interest in multicast group(s):
 		 *   <[8] 64-bit network ID>
 		 *   <[6] multicast Ethernet address>
 		 *   <[4] multicast additional distinguishing information (ADI)>
 		 *   [... additional tuples of network/address/adi ...]
 		 *
-		 * OK/ERROR are not generated.
+		 * LIKEs may be sent to any peer, though a good implementation should
+		 * restrict them to peers on the same network they're for and to network
+		 * controllers and root servers. In the current network, root servers
+		 * will provide the service of final multicast cache.
 		 */
 		VERB_MULTICAST_LIKE = 0x09,
 
@@ -683,6 +707,73 @@ public:
 		VERB_NETWORK_CONFIG = 0x0c,
 
 		/**
+		 * Request endpoints for multicast distribution:
+		 *   <[8] 64-bit network ID>
+		 *   <[1] flags>
+		 *   <[6] MAC address of multicast group being queried>
+		 *   <[4] 32-bit ADI for multicast group being queried>
+		 *   <[4] 32-bit requested max number of multicast peers>
+		 *
+		 * This message asks a peer for additional known endpoints that have
+		 * LIKEd a given multicast group. It's sent when the sender wishes
+		 * to send multicast but does not have the desired number of recipient
+		 * peers.
+		 *
+		 * OK response payload: (multiple OKs can be generated)
+		 *   <[8] 64-bit network ID>
+		 *   <[6] MAC address of multicast group being queried>
+		 *   <[4] 32-bit ADI for multicast group being queried>
+		 *   <[4] 32-bit total number of known members in this multicast group>
+		 *   <[2] 16-bit number of members enumerated in this packet>
+		 *   <[...] series of 5-byte ZeroTier addresses of enumerated members>
+		 *
+		 * ERROR is not generated; queries that return no response are dropped.
+		 */
+		VERB_MULTICAST_GATHER = 0x0d,
+
+		/** *** DEPRECATED ***
+		 * Multicast frame:
+		 *   <[8] 64-bit network ID>
+		 *   <[1] flags>
+		 *  [<[4] 32-bit implicit gather limit>]
+		 *  [<[6] source MAC>]
+		 *   <[6] destination MAC (multicast address)>
+		 *   <[4] 32-bit multicast ADI (multicast address extension)>
+		 *   <[2] 16-bit ethertype>
+		 *   <[...] ethernet payload>
+		 *
+		 * Flags:
+		 *   0x01 - Network certificate of membership attached (DEPRECATED)
+		 *   0x02 - Implicit gather limit field is present
+		 *   0x04 - Source MAC is specified -- otherwise it's computed from sender
+		 *   0x08 - Please replicate (sent to multicast replicators)
+		 *
+		 * OK and ERROR responses are optional. OK may be generated if there are
+		 * implicit gather results or if the recipient wants to send its own
+		 * updated certificate of network membership to the sender. ERROR may be
+		 * generated if a certificate is needed or if multicasts to this group
+		 * are no longer wanted (multicast unsubscribe).
+		 *
+		 * OK response payload:
+		 *   <[8] 64-bit network ID>
+		 *   <[6] MAC address of multicast group>
+		 *   <[4] 32-bit ADI for multicast group>
+		 *   <[1] flags>
+		 *  [<[...] network certificate of membership (DEPRECATED)>]
+		 *  [<[...] implicit gather results if flag 0x01 is set>]
+		 *
+		 * OK flags (same bits as request flags):
+		 *   0x01 - OK includes certificate of network membership (DEPRECATED)
+		 *   0x02 - OK includes implicit gather results
+		 *
+		 * ERROR response payload:
+		 *   <[8] 64-bit network ID>
+		 *   <[6] multicast group MAC>
+		 *   <[4] 32-bit multicast group ADI>
+		 */
+		VERB_MULTICAST_FRAME = 0x0e,
+
+		/**
 		 * Push of potential endpoints for direct communication:
 		 *   <[2] 16-bit number of paths>
 		 *   <[...] paths>
@@ -772,110 +863,30 @@ public:
 		VERB_USER_MESSAGE = 0x14,
 
 		/**
-		 * A trace for remote debugging or diagnostics:
-		 *   <[...] null-terminated dictionary containing trace information>
-		 *  [<[...] additional null-terminated dictionaries>]
-		 *
-		 * This message contains a remote trace event. Remote trace events can
-		 * be sent to observers configured at the network level for those that
-		 * pertain directly to activity on a network, or to global observers if
-		 * locally configured.
+		 * Encapsulate a ZeroTier packet for multicast distribution:
+		 *   [... begin signed portion ...]
+		 *   <[1] 8-bit flags>
+		 *   <[5] 40-bit ZeroTier address of sender>
+		 *   <[2] 16-bit length of inner payload>
+		 *   <[1] inner payload verb>
+		 *   <[...] inner payload data>
+		 *   [... end signed portion ...]
+		 *   <[2] 16-bit length of signature or 0 if un-signed>
+		 *  [<[...] optional signature of multicast>]
+		 *   <[...] address (min prefix) list>
 		 */
-		VERB_REMOTE_TRACE = 0x15,
+		VERB_MULTICAST = 0x16,
 
 		/**
-		 * A signed locator for this node:
-		 *   <[8] 64-bit flags>
-		 *   <[2] 16-bit length of locator>
-		 *   <[...] serialized locator>
+		 * Encapsulate a full ZeroTier packet in another:
+		 *   <[...] raw encapsulated packet>
 		 *
-		 * This message is sent in response to OK(HELLO) and can be pushed
-		 * opportunitistically. Its payload is a signed Locator object that
-		 * attests to where and how this Node may be reached. A locator can
-		 * contain static IPs/ports or other ZeroTier nodes that can be used
-		 * to reach this one.
-		 *
-		 * These Locator objects can be stored e.g. by roots in LF to publish
-		 * node reachability. Since they're signed any node can verify that
-		 * the originating node approves of their content.
+		 * Encapsulation exists to enable secure relaying as opposed to the usual
+		 * "dumb" relaying. The latter is faster but secure relaying has roles
+		 * where endpoint privacy is desired. Multiply nested ENCAP packets
+		 * could allow ZeroTier to act as an onion router.
 		 */
-		VERB_SET_LOCATOR = 0x16,
-
-		/**
-		 * A list of peers this node will relay traffic to/from:
-		 *   <[2] 16-bit number of peers>
-		 *   <[16] 128-bit hash of node public key>
-		 *   <[2] 16-bit latency to node or 0 if unspecified>
-		 *   <[4] 32-bit max bandwidth in megabits or 0 if unspecified>
-		 *  [<[...] additional hash,latency,bandwidth tuples>]
-		 *
-		 * This messages can be pushed to indicate that this peer is willing
-		 * to relay traffic to other peers. It contains a list of 128-bit
-		 * hashes (the first 128 bits of a SHA512) of identity public keys
-		 * of currently reachable and willing-to-relay-for nodes.
-		 *
-		 * This can be used to initiate mesh-like behavior in ZeroTier. The
-		 * peers for which this node is willing to relay are reported as
-		 * hashes of their identity public keys. This prevents this message
-		 * from revealing explicit information about linked peers. The
-		 * receiving peer can only "see" a will-relay entry if it knows the
-		 * identity of the peer it is trying to reach.
-		 */
-  	VERB_WILL_RELAY = 0x17,
-
-		/**
-		 * Multipurpose VL2 network multicast:
-		 *   <[5] start of range of addresses for propagation>
-		 *   <[5] end of range of addresses for propagation>
-		 *   <[1] 8-bit propagation depth / hops>
-		 *   <[1] 8-bit length of bloom filter in 256-byte/2048-bit chunks>
-		 *   <[...] propagation bloom filter>
-		 *   [... start of signed portion ...]
-		 *   <[8] 64-bit timestamp>
-		 *   <[8] 64-bit network ID>
-		 *   <[5] 40-bit address of sender>
-		 *   <[2] 16-bit length of multicast payload>
-		 *   [... start multicast payload ...]
-		 *   <[1] 8-bit payload type>
-		 *   [... end multicast payload and signed portion ...]
-		 *   <[2] 16-bit length of signature or 0 if not present>
-		 *   <[...] signature of signed portion>
-		 *
-		 * Payload type 0x00: multicast frame:
-		 *   <[6] MAC address of multicast group>
-		 *   <[4] 32-bit ADI of multicast group>
-		 *   <[6] 48-bit source MAC of packet or all 0 if from sender>
-		 *   <[2] 16-bit ethertype>
-		 *   <[...] ethernet payload>
-		 *
-		 * Payload type 0x01: multicast subscribe:
-		 *   <[2] 16-bit number of multicast group IDs to subscribe>
-		 *   <[...] series of 32-bit multicast group IDs>
-		 *
-		 * Payload type 0x02: multicast unsubscribe:
-		 *   <[2] 16-bit number of multicast group IDs to unsubscribe>
-		 *   <[...] series of 32-bit multicast group IDs>
-		 *
-		 * This is the common packet structure for VL2 network-level multicasts
-		 * and is used for multicast frames, multicast group subscribe and
-		 * unsubscribe, and could be used in the future for other purposes such
-		 * as credential propagation or diagnostics.
-		 *
-		 * The header contains an address range, bloom filter, and depth/hop
-		 * counter. The bloom filter tracks which nodes have seen this multicast,
-		 * with bits being set prior to send. The range allows the total set of
-		 * subscribers to be partitioned in the case of huge networks that would
-		 * saturate the bloom filter or have collisions. The propagation depth
-		 * allows propagation to stop at some maximum value, and the value 0xff
-		 * can be used to indicate that further propagation is not desired.
-		 *
-		 * Logic connected to the parsing of the multicast payload will determine
-		 * whether or not and to whom this multicast is propagated. Subscribe and
-		 * unsubscribe messages are propagated to online nodes up to a maximum
-		 * depth, while frames have the added constraint of being propagated only
-		 * to nodes that subscribe to the target multicast group.
-		 */
-		VERB_VL2_MULTICAST = 0x18,
+		VERB_ENCAP = 0x17
 
 		// protocol max: 0x1f
 	};
@@ -915,12 +926,12 @@ public:
 	};
 
 	template<unsigned int C2>
-	ZT_ALWAYS_INLINE Packet(const Buffer<C2> &b) :
+	inline Packet(const Buffer<C2> &b) :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
 	{
 	}
 
-	ZT_ALWAYS_INLINE Packet(const void *data,unsigned int len) :
+	inline Packet(const void *data,unsigned int len) :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(data,len)
 	{
 	}
@@ -932,7 +943,7 @@ public:
 	 * Use the header access methods (setDestination() and friends) to fill out
 	 * the header. Payload should be appended; initial size is header size.
 	 */
-	ZT_ALWAYS_INLINE Packet() :
+	inline Packet() :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(ZT_PROTO_MIN_PACKET_LENGTH)
 	{
 		setAt<uint64_t>(ZT_PACKET_IDX_IV,Packet::nextPacketId());
@@ -948,7 +959,7 @@ public:
 	 * @param prototype Prototype packet
 	 * @param dest Destination ZeroTier address for new packet
 	 */
-	ZT_ALWAYS_INLINE Packet(const Packet &prototype,const Address &dest) :
+	inline Packet(const Packet &prototype,const Address &dest) :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(prototype)
 	{
 		setAt<uint64_t>(ZT_PACKET_IDX_IV,Packet::nextPacketId());
@@ -962,7 +973,7 @@ public:
 	 * @param source Source ZT address
 	 * @param v Verb
 	 */
-	ZT_ALWAYS_INLINE Packet(const Address &dest,const Address &source,const Verb v) :
+	inline Packet(const Address &dest,const Address &source,const Verb v) :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(ZT_PROTO_MIN_PACKET_LENGTH)
 	{
 		setAt<uint64_t>(ZT_PACKET_IDX_IV,Packet::nextPacketId());
@@ -979,7 +990,7 @@ public:
 	 * @param source Source ZT address
 	 * @param v Verb
 	 */
-	ZT_ALWAYS_INLINE void reset(const Address &dest,const Address &source,const Verb v)
+	inline void reset(const Address &dest,const Address &source,const Verb v)
 	{
 		setSize(ZT_PROTO_MIN_PACKET_LENGTH);
 		setAt<uint64_t>(ZT_PACKET_IDX_IV,Packet::nextPacketId());
@@ -996,52 +1007,52 @@ public:
 	 * technically different but otherwise identical copies of the same
 	 * packet.
 	 */
-	ZT_ALWAYS_INLINE void newInitializationVector() { setAt<uint64_t>(ZT_PACKET_IDX_IV,Packet::nextPacketId()); }
+	inline void newInitializationVector() { setAt<uint64_t>(ZT_PACKET_IDX_IV,Packet::nextPacketId()); }
 
 	/**
 	 * Set this packet's destination
 	 *
 	 * @param dest ZeroTier address of destination
 	 */
-	ZT_ALWAYS_INLINE void setDestination(const Address &dest) { dest.copyTo(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
+	inline void setDestination(const Address &dest) { dest.copyTo(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * Set this packet's source
 	 *
 	 * @param source ZeroTier address of source
 	 */
-	ZT_ALWAYS_INLINE void setSource(const Address &source) { source.copyTo(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
+	inline void setSource(const Address &source) { source.copyTo(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * Get this packet's destination
 	 *
 	 * @return Destination ZT address
 	 */
-	ZT_ALWAYS_INLINE Address destination() const { return Address(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
+	inline Address destination() const { return Address(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * Get this packet's source
 	 *
 	 * @return Source ZT address
 	 */
-	ZT_ALWAYS_INLINE Address source() const { return Address(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
+	inline Address source() const { return Address(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * @return True if packet is of valid length
 	 */
-	ZT_ALWAYS_INLINE bool lengthValid() const { return (size() >= ZT_PROTO_MIN_PACKET_LENGTH); }
+	inline bool lengthValid() const { return (size() >= ZT_PROTO_MIN_PACKET_LENGTH); }
 
 	/**
 	 * @return True if packet is fragmented (expect fragments)
 	 */
-	ZT_ALWAYS_INLINE bool fragmented() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED) != 0); }
+	inline bool fragmented() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED) != 0); }
 
 	/**
 	 * Set this packet's fragmented flag
 	 *
 	 * @param f Fragmented flag value
 	 */
-	ZT_ALWAYS_INLINE void setFragmented(bool f)
+	inline void setFragmented(bool f)
 	{
 		if (f)
 			(*this)[ZT_PACKET_IDX_FLAGS] |= (char)ZT_PROTO_FLAG_FRAGMENTED;
@@ -1051,17 +1062,17 @@ public:
 	/**
 	 * @return True if compressed (result only valid if unencrypted)
 	 */
-	ZT_ALWAYS_INLINE bool compressed() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_VERB] & ZT_PROTO_VERB_FLAG_COMPRESSED) != 0); }
+	inline bool compressed() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_VERB] & ZT_PROTO_VERB_FLAG_COMPRESSED) != 0); }
 
 	/**
 	 * @return ZeroTier forwarding hops (0 to 7)
 	 */
-	ZT_ALWAYS_INLINE unsigned int hops() const { return ((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x07); }
+	inline unsigned int hops() const { return ((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x07); }
 
 	/**
 	 * Increment this packet's hop count
 	 */
-	ZT_ALWAYS_INLINE unsigned char incrementHops()
+	inline unsigned char incrementHops()
 	{
 		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
 		const unsigned char h = (b + 1) & 0x07;
@@ -1072,7 +1083,7 @@ public:
 	/**
 	 * @return Cipher suite selector: 0 - 7 (see #defines)
 	 */
-	ZT_ALWAYS_INLINE unsigned int cipher() const
+	inline unsigned int cipher() const
 	{
 		return (((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x38) >> 3);
 	}
@@ -1080,7 +1091,7 @@ public:
 	/**
 	 * Set this packet's cipher suite
 	 */
-	ZT_ALWAYS_INLINE void setCipher(unsigned int c)
+	inline void setCipher(unsigned int c)
 	{
 		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
 		b = (b & 0xc7) | (unsigned char)((c << 3) & 0x38); // bits: FFCCCHHH
@@ -1091,14 +1102,14 @@ public:
 	 *
 	 * @return Trusted path ID (from MAC field)
 	 */
-	ZT_ALWAYS_INLINE uint64_t trustedPathId() const { return at<uint64_t>(ZT_PACKET_IDX_MAC); }
+	inline uint64_t trustedPathId() const { return at<uint64_t>(ZT_PACKET_IDX_MAC); }
 
 	/**
 	 * Set this packet's trusted path ID and set the cipher spec to trusted path
 	 *
 	 * @param tpid Trusted path ID
 	 */
-	ZT_ALWAYS_INLINE void setTrusted(const uint64_t tpid)
+	inline void setTrusted(const uint64_t tpid)
 	{
 		setCipher(ZT_PROTO_CIPHER_SUITE__NONE);
 		setAt(ZT_PACKET_IDX_MAC,tpid);
@@ -1115,7 +1126,7 @@ public:
 	 *
 	 * @return Packet ID
 	 */
-	ZT_ALWAYS_INLINE uint64_t packetId() const { return at<uint64_t>(ZT_PACKET_IDX_IV); }
+	inline uint64_t packetId() const { return at<uint64_t>(ZT_PACKET_IDX_IV); }
 
 	/**
 	 * Set packet verb
@@ -1125,22 +1136,22 @@ public:
 	 *
 	 * @param v New packet verb
 	 */
-	ZT_ALWAYS_INLINE void setVerb(Verb v) { (*this)[ZT_PACKET_IDX_VERB] = (char)v; }
+	inline void setVerb(Verb v) { (*this)[ZT_PACKET_IDX_VERB] = (char)v; }
 
 	/**
 	 * @return Packet verb (not including flag bits)
 	 */
-	ZT_ALWAYS_INLINE Verb verb() const { return (Verb)((*this)[ZT_PACKET_IDX_VERB] & 0x1f); }
+	inline Verb verb() const { return (Verb)((*this)[ZT_PACKET_IDX_VERB] & 0x1f); }
 
 	/**
 	 * @return Length of packet payload
 	 */
-	ZT_ALWAYS_INLINE unsigned int payloadLength() const { return ((size() < ZT_PROTO_MIN_PACKET_LENGTH) ? 0 : (size() - ZT_PROTO_MIN_PACKET_LENGTH)); }
+	inline unsigned int payloadLength() const { return ((size() < ZT_PROTO_MIN_PACKET_LENGTH) ? 0 : (size() - ZT_PROTO_MIN_PACKET_LENGTH)); }
 
 	/**
 	 * @return Raw packet payload
 	 */
-	ZT_ALWAYS_INLINE const unsigned char *payload() const { return field(ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD); }
+	inline const unsigned char *payload() const { return field(ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD); }
 
 	/**
 	 * Armor packet for transport
@@ -1200,7 +1211,7 @@ private:
 	 * @param in Input key (32 bytes)
 	 * @param out Output buffer (32 bytes)
 	 */
-	ZT_ALWAYS_INLINE void _salsa20MangleKey(const unsigned char *in,unsigned char *out) const
+	inline void _salsa20MangleKey(const unsigned char *in,unsigned char *out) const
 	{
 		const unsigned char *d = (const unsigned char *)data();
 

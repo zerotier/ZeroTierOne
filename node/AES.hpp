@@ -18,35 +18,24 @@
 #include "Utils.hpp"
 #include "SHA512.hpp"
 
-#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#include <cstdint>
 
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#include <xmmintrin.h>
 #include <wmmintrin.h>
 #include <emmintrin.h>
 #include <smmintrin.h>
-
 #define ZT_AES_AESNI 1
-
-// AES-aesni.c
-extern "C" void zt_crypt_ctr_aesni(const __m128i key[14],const uint8_t iv[16],const uint8_t *in,unsigned int len,uint8_t *out);
-
-#endif // x64
-
-#define ZT_AES_KEY_SIZE 32
-#define ZT_AES_BLOCK_SIZE 16
+#endif
 
 namespace ZeroTier {
 
 /**
- * AES-256 and pals
+ * AES-256 and pals including GMAC, CTR, etc.
  */
 class AES
 {
 public:
-	/**
-	 * This will be true if your platform's type of AES acceleration is supported on this machine
-	 */
-	static const bool HW_ACCEL;
-
 	ZT_ALWAYS_INLINE AES() {}
 	ZT_ALWAYS_INLINE AES(const uint8_t key[32]) { this->init(key); }
 	ZT_ALWAYS_INLINE ~AES() { Utils::burn(&_k,sizeof(_k)); }
@@ -57,12 +46,11 @@ public:
 	ZT_ALWAYS_INLINE void init(const uint8_t key[32])
 	{
 #ifdef ZT_AES_AESNI
-		if (likely(HW_ACCEL)) {
+		if (likely(Utils::CPUID.aes)) {
 			_init_aesni(key);
 			return;
 		}
 #endif
-
 		_initSW(key);
 	}
 
@@ -75,12 +63,11 @@ public:
 	ZT_ALWAYS_INLINE void encrypt(const uint8_t in[16],uint8_t out[16]) const
 	{
 #ifdef ZT_AES_AESNI
-		if (likely(HW_ACCEL)) {
+		if (likely(Utils::CPUID.aes)) {
 			_encrypt_aesni(in,out);
 			return;
 		}
 #endif
-
 		_encryptSW(in,out);
 	}
 
@@ -95,12 +82,11 @@ public:
 	ZT_ALWAYS_INLINE void gmac(const uint8_t iv[12],const void *in,const unsigned int len,uint8_t out[16]) const
 	{
 #ifdef ZT_AES_AESNI
-		if (likely(HW_ACCEL)) {
+		if (likely(Utils::CPUID.aes)) {
 			_gmac_aesni(iv,(const uint8_t *)in,len,out);
 			return;
 		}
 #endif
-
 		_gmacSW(iv,(const uint8_t *)in,len,out);
 	}
 
@@ -119,41 +105,12 @@ public:
 	ZT_ALWAYS_INLINE void ctr(const uint8_t iv[16],const void *in,unsigned int len,void *out) const
 	{
 #ifdef ZT_AES_AESNI
-		if (likely(HW_ACCEL)) {
-			zt_crypt_ctr_aesni(_k.ni.k,iv,(const uint8_t *)in,len,(uint8_t *)out);
+		if (likely(Utils::CPUID.aes)) {
+			_ctr_aesni(_k.ni.k,iv,(const uint8_t *)in,len,(uint8_t *)out);
 			return;
 		}
 #endif
-
-		uint64_t ctr[2],cenc[2];
-		memcpy(ctr,iv,16);
-		uint64_t bctr = Utils::ntoh(ctr[1]);
-
-		const uint8_t *i = (const uint8_t *)in;
-		uint8_t *o = (uint8_t *)out;
-
-		while (len >= 16) {
-			_encryptSW((const uint8_t *)ctr,(uint8_t *)cenc);
-			ctr[1] = Utils::hton(++bctr);
-#ifdef ZT_NO_TYPE_PUNNING
-			for(unsigned int k=0;k<16;++k)
-				*(o++) = *(i++) ^ ((uint8_t *)cenc)[k];
-#else
-			*((uint64_t *)o) = *((const uint64_t *)i) ^ cenc[0];
-			o += 8;
-			i += 8;
-			*((uint64_t *)o) = *((const uint64_t *)i) ^ cenc[1];
-			o += 8;
-			i += 8;
-#endif
-			len -= 16;
-		}
-
-		if (len) {
-			_encryptSW((const uint8_t *)ctr,(uint8_t *)cenc);
-			for(unsigned int k=0;k<len;++k)
-				*(o++) = *(i++) ^ ((uint8_t *)cenc)[k];
-		}
+		_ctrSW(iv,in,len,out);
 	}
 
 	/**
@@ -187,7 +144,7 @@ public:
 	 * @param out Output buffer to receive ciphertext
 	 * @param tag Output buffer to receive 64-bit authentication tag
 	 */
-	static ZT_ALWAYS_INLINE void gmacSivEncrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t pc,const void *in,const unsigned int len,void *out,uint8_t tag[8])
+	static inline void gmacSivEncrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t pc,const void *in,const unsigned int len,void *out,uint8_t tag[8])
 	{
 #ifdef __GNUC__
 		uint8_t __attribute__ ((aligned (16))) miv[12];
@@ -246,7 +203,7 @@ public:
 	 * @param tag Authentication tag supplied with message
 	 * @return True if authentication tags match and message appears authentic
 	 */
-	static ZT_ALWAYS_INLINE bool gmacSivDecrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t pc,const void *in,const unsigned int len,void *out,const uint8_t tag[8])
+	static inline bool gmacSivDecrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t pc,const void *in,const unsigned int len,void *out,const uint8_t tag[8])
 	{
 #ifdef __GNUC__
 		uint8_t __attribute__ ((aligned (16))) miv[12];
@@ -307,7 +264,7 @@ public:
 	 * @param k3 CTR IV keyed hash key
 	 * @param k4 AES-CTR key
 	 */
-	static ZT_ALWAYS_INLINE void initGmacCtrKeys(const uint8_t masterKey[32],AES &k1,AES &k2,AES &k3,AES &k4)
+	static inline void initGmacCtrKeys(const uint8_t masterKey[32],AES &k1,AES &k2,AES &k3,AES &k4)
 	{
 		uint8_t k[32];
 		KBKDFHMACSHA384(masterKey,ZT_PROTO_KBKDF_LABEL_KEY_USE_AES_GMAC_SIV_K1,0,0,k);
@@ -329,6 +286,7 @@ private:
 
 	void _initSW(const uint8_t key[32]);
 	void _encryptSW(const uint8_t in[16],uint8_t out[16]) const;
+	void _ctrSW(const uint8_t iv[16],const void *in,unsigned int len,void *out) const;
 	void _gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_t out[16]) const;
 
 	/**************************************************************************/
@@ -529,7 +487,7 @@ private:
 		_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(tmp,_k.ni.k[14]));
 	}
 
-	static ZT_ALWAYS_INLINE __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i y)
+	static ZT_ALWAYS_INLINE inline __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i y)
 	{
 		y = _mm_shuffle_epi8(y,shuf);
 		__m128i t1 = _mm_clmulepi64_si128(h,y,0x00);
@@ -569,7 +527,7 @@ private:
 		t4 = _mm_xor_si128(t4,t5);
 		return _mm_shuffle_epi8(t4,shuf);
 	}
-	static ZT_ALWAYS_INLINE __m128i _ghash_aesni(__m128i shuf,__m128i h,__m128i y,__m128i x) { return _mult_block_aesni(shuf,h,_mm_xor_si128(y,x)); }
+	static inline __m128i _ghash_aesni(__m128i shuf,__m128i h,__m128i y,__m128i x) { return _mult_block_aesni(shuf,h,_mm_xor_si128(y,x)); }
 
 	ZT_ALWAYS_INLINE void _gmac_aesni(const uint8_t iv[12],const uint8_t *in,const unsigned int len,uint8_t out[16]) const
 	{
@@ -686,6 +644,148 @@ private:
 		t = _mm_aesenc_si128(t,_k.ni.k[13]);
 		t = _mm_aesenclast_si128(t,_k.ni.k[14]);
 		_mm_storeu_si128((__m128i *)out,_mm_xor_si128(y,t));
+	}
+
+#define ZT_AES_CTR_AESNI_ROUND(kk) c0 = _mm_aesenc_si128(c0,kk); c1 = _mm_aesenc_si128(c1,kk); c2 = _mm_aesenc_si128(c2,kk); c3 = _mm_aesenc_si128(c3,kk);
+
+	static ZT_ALWAYS_INLINE void _ctr_aesni(const __m128i key[14],const uint8_t iv[16],const uint8_t *in,unsigned int len,uint8_t *out)
+	{
+		/* Because our CTR supports full 128-bit nonces, we must do a full 128-bit (big-endian)
+		 * increment to be compatible with canonical NIST-certified CTR implementations. That's
+		 * because it's possible to have a lot of bit saturation in the least significant 64
+		 * bits, which could on rare occasions actually cause a 64-bit wrap. If this happened
+		 * without carry it would result in incompatibility and quietly dropped packets. The
+		 * probability is low, so this would be a one in billions packet loss bug that would
+		 * probably never be found.
+		 *
+		 * This crazy code does a branch-free 128-bit increment by adding a one or a zero to
+		 * the most significant 64 bits of the 128-bit vector based on whether the add we want
+		 * to do to the least significant 64 bits would overflow. This can be computed by
+		 * NOTing those bits and comparing with what we want to add, since NOT is the same
+		 * as subtracting from uint64_max. This generates branch-free ASM on x64 with most
+		 * good compilers. */
+		__m128i swap128 = _mm_set_epi8(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
+		__m128i ctr0 = _mm_shuffle_epi8(_mm_loadu_si128((__m128i *)iv),swap128);
+		uint64_t notctr0msq = ~((uint64_t)_mm_extract_epi64(ctr0,0));
+		__m128i ctr1 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 1ULL),1LL)),swap128);
+		__m128i ctr2 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 2ULL),2LL)),swap128);
+		__m128i ctr3 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 3ULL),3LL)),swap128);
+		ctr0 = _mm_shuffle_epi8(ctr0,swap128);
+
+		__m128i k0 = key[0];
+		__m128i k1 = key[1];
+
+		while (len >= 64) {
+			__m128i ka = key[2];
+			__m128i c0 = _mm_xor_si128(ctr0,k0);
+			__m128i c1 = _mm_xor_si128(ctr1,k0);
+			__m128i c2 = _mm_xor_si128(ctr2,k0);
+			__m128i c3 = _mm_xor_si128(ctr3,k0);
+			ctr0 = _mm_shuffle_epi8(ctr0,swap128);
+			notctr0msq = ~((uint64_t)_mm_extract_epi64(ctr0,0));
+			ctr1 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 5ULL),5LL)),swap128);
+			ctr2 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 6ULL),6LL)),swap128);
+			ctr3 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 7ULL),7LL)),swap128);
+			ctr0 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 4ULL),4LL)),swap128);
+			__m128i kb = key[3];
+			ZT_AES_CTR_AESNI_ROUND(k1);
+			__m128i kc = key[4];
+			ZT_AES_CTR_AESNI_ROUND(ka);
+			__m128i kd = key[5];
+			ZT_AES_CTR_AESNI_ROUND(kb);
+			ka = key[6];
+			ZT_AES_CTR_AESNI_ROUND(kc);
+			kb = key[7];
+			ZT_AES_CTR_AESNI_ROUND(kd);
+			kc = key[8];
+			ZT_AES_CTR_AESNI_ROUND(ka);
+			kd = key[9];
+			ZT_AES_CTR_AESNI_ROUND(kb);
+			ka = key[10];
+			ZT_AES_CTR_AESNI_ROUND(kc);
+			kb = key[11];
+			ZT_AES_CTR_AESNI_ROUND(kd);
+			kc = key[12];
+			ZT_AES_CTR_AESNI_ROUND(ka);
+			kd = key[13];
+			ZT_AES_CTR_AESNI_ROUND(kb);
+			ka = key[14];
+			ZT_AES_CTR_AESNI_ROUND(kc);
+			ZT_AES_CTR_AESNI_ROUND(kd);
+			_mm_storeu_si128((__m128i *)out,_mm_xor_si128(_mm_loadu_si128((const __m128i *)in),_mm_aesenclast_si128(c0,ka)));
+			_mm_storeu_si128((__m128i *)(out + 16),_mm_xor_si128(_mm_loadu_si128((const __m128i *)(in + 16)),_mm_aesenclast_si128(c1,ka)));
+			_mm_storeu_si128((__m128i *)(out + 32),_mm_xor_si128(_mm_loadu_si128((const __m128i *)(in + 32)),_mm_aesenclast_si128(c2,ka)));
+			_mm_storeu_si128((__m128i *)(out + 48),_mm_xor_si128(_mm_loadu_si128((const __m128i *)(in + 48)),_mm_aesenclast_si128(c3,ka)));
+			in += 64;
+			out += 64;
+			len -= 64;
+		}
+
+		__m128i k2 = key[2];
+		__m128i k3 = key[3];
+		__m128i k4 = key[4];
+		__m128i k5 = key[5];
+		__m128i k6 = key[6];
+		__m128i k7 = key[7];
+
+		while (len >= 16) {
+			__m128i c0 = _mm_xor_si128(ctr0,k0);
+			ctr0 = _mm_shuffle_epi8(ctr0,swap128);
+			ctr0 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)((~((uint64_t)_mm_extract_epi64(ctr0,0))) < 1ULL),1LL)),swap128);
+			c0 = _mm_aesenc_si128(c0,k1);
+			c0 = _mm_aesenc_si128(c0,k2);
+			c0 = _mm_aesenc_si128(c0,k3);
+			c0 = _mm_aesenc_si128(c0,k4);
+			c0 = _mm_aesenc_si128(c0,k5);
+			c0 = _mm_aesenc_si128(c0,k6);
+			__m128i ka = key[8];
+			c0 = _mm_aesenc_si128(c0,k7);
+			__m128i kb = key[9];
+			c0 = _mm_aesenc_si128(c0,ka);
+			ka = key[10];
+			c0 = _mm_aesenc_si128(c0,kb);
+			kb = key[11];
+			c0 = _mm_aesenc_si128(c0,ka);
+			ka = key[12];
+			c0 = _mm_aesenc_si128(c0,kb);
+			kb = key[13];
+			c0 = _mm_aesenc_si128(c0,ka);
+			ka = key[14];
+			c0 = _mm_aesenc_si128(c0,kb);
+			_mm_storeu_si128((__m128i *)out,_mm_xor_si128(_mm_loadu_si128((const __m128i *)in),_mm_aesenclast_si128(c0,ka)));
+			in += 16;
+			out += 16;
+			len -= 16;
+		}
+
+		if (len) {
+			__m128i c0 = _mm_xor_si128(ctr0,k0);
+			k0 = key[8];
+			c0 = _mm_aesenc_si128(c0,k1);
+			c0 = _mm_aesenc_si128(c0,k2);
+			k1 = key[9];
+			c0 = _mm_aesenc_si128(c0,k3);
+			c0 = _mm_aesenc_si128(c0,k4);
+			k2 = key[10];
+			c0 = _mm_aesenc_si128(c0,k5);
+			c0 = _mm_aesenc_si128(c0,k6);
+			k3 = key[11];
+			c0 = _mm_aesenc_si128(c0,k7);
+			c0 = _mm_aesenc_si128(c0,k0);
+			k0 = key[12];
+			c0 = _mm_aesenc_si128(c0,k1);
+			c0 = _mm_aesenc_si128(c0,k2);
+			k1 = key[13];
+			c0 = _mm_aesenc_si128(c0,k3);
+			c0 = _mm_aesenc_si128(c0,k0);
+			k2 = key[14];
+			c0 = _mm_aesenc_si128(c0,k1);
+			c0 = _mm_aesenclast_si128(c0,k2);
+			uint8_t tmp[16];
+			_mm_storeu_si128((__m128i *)tmp,c0);
+			for(unsigned int i=0;i<len;++i)
+				out[i] = in[i] ^ tmp[i];
+		}
 	}
 #endif /* ZT_AES_AESNI ******************************************************/
 };

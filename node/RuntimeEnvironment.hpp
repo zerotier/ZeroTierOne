@@ -36,7 +36,7 @@ class Trace;
 class RuntimeEnvironment
 {
 public:
-	ZT_ALWAYS_INLINE RuntimeEnvironment(Node *n) :
+	inline RuntimeEnvironment(Node *n) :
 		node(n)
 		,localNetworkController((NetworkController *)0)
 		,rtmem((void *)0)
@@ -48,7 +48,7 @@ public:
 		secretIdentityStr[0] = (char)0;
 	}
 
-	ZT_ALWAYS_INLINE ~RuntimeEnvironment() { Utils::burn(secretIdentityStr,sizeof(secretIdentityStr)); }
+	inline ~RuntimeEnvironment() { Utils::burn(secretIdentityStr,sizeof(secretIdentityStr)); }
 
 	// Node instance that owns this RuntimeEnvironment
 	Node *const node;

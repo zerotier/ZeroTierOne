@@ -32,7 +32,7 @@ public:
 	/**
 	 * Generate a C25519 elliptic curve key pair
 	 */
-	static ZT_ALWAYS_INLINE void generate(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
+	static inline void generate(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
 	{
 		Utils::getSecureRandom(priv,ZT_C25519_PRIVATE_KEY_LEN);
 		_calcPubDH(pub,priv);
@@ -53,7 +53,7 @@ public:
 	 * @tparam F Type of 'cond'
 	 */
 	template<typename F>
-	static ZT_ALWAYS_INLINE void generateSatisfying(F cond,uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
+	static inline void generateSatisfying(F cond,uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
 	{
 		Utils::getSecureRandom(priv,ZT_C25519_PRIVATE_KEY_LEN);
 		_calcPubED(pub,priv); // do Ed25519 key -- bytes 32-63 of pub and priv

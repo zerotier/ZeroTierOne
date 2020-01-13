@@ -19,7 +19,12 @@
 #ifndef ZT_ZEROTIER_API_H
 #define ZT_ZEROTIER_API_H
 
+#ifdef __cplusplus
+#include <cstdint>
+extern "C" {
+#else
 #include <stdint.h>
+#endif
 
 /* For struct sockaddr_storage, which is referenced here. */
 #if defined(_WIN32) || defined(_WIN64)
@@ -37,10 +42,6 @@
  * header if you need to prepend something to function specifications. */
 #ifndef ZT_SDK_API
 #define ZT_SDK_API
-#endif
-
-#ifdef __cplusplus
-extern "C" {
 #endif
 
 /****************************************************************************/
@@ -90,11 +91,6 @@ extern "C" {
  * Maximum payload MTU for UDP packets
  */
 #define ZT_MAX_PHYSMTU (ZT_MAX_PHYSPAYLOAD + ZT_MAX_HEADROOM)
-
-/**
- * Maximum size of a remote trace message's serialized Dictionary
- */
-#define ZT_MAX_REMOTE_TRACE_SIZE 10000
 
 /**
  * Maximum length of network short name
@@ -259,78 +255,6 @@ extern "C" {
 #define ZT_RULE_PACKET_CHARACTERISTICS_TCP_FIN 0x0000000000000001ULL
 
 /****************************************************************************/
-
-// Fields in remote trace dictionaries
-#define ZT_REMOTE_TRACE_FIELD__EVENT "event"
-#define ZT_REMOTE_TRACE_FIELD__NODE_ID "nodeId"
-#define ZT_REMOTE_TRACE_FIELD__PACKET_ID "packetId"
-#define ZT_REMOTE_TRACE_FIELD__PACKET_VERB "packetVerb"
-#define ZT_REMOTE_TRACE_FIELD__PACKET_TRUSTED_PATH_ID "packetTrustedPathId"
-#define ZT_REMOTE_TRACE_FIELD__PACKET_TRUSTED_PATH_APPROVED "packetTrustedPathApproved"
-#define ZT_REMOTE_TRACE_FIELD__PACKET_HOPS "packetHops"
-#define ZT_REMOTE_TRACE_FIELD__REMOTE_ZTADDR "remoteZtAddr"
-#define ZT_REMOTE_TRACE_FIELD__REMOTE_PHYADDR "remotePhyAddr"
-#define ZT_REMOTE_TRACE_FIELD__LOCAL_ZTADDR "localZtAddr"
-#define ZT_REMOTE_TRACE_FIELD__LOCAL_PHYADDR "localPhyAddr"
-#define ZT_REMOTE_TRACE_FIELD__LOCAL_SOCKET "localSocket"
-#define ZT_REMOTE_TRACE_FIELD__IP_SCOPE "phyAddrIpScope"
-#define ZT_REMOTE_TRACE_FIELD__NETWORK_ID "networkId"
-#define ZT_REMOTE_TRACE_FIELD__SOURCE_ZTADDR "sourceZtAddr"
-#define ZT_REMOTE_TRACE_FIELD__DEST_ZTADDR "destZtAddr"
-#define ZT_REMOTE_TRACE_FIELD__SOURCE_MAC "sourceMac"
-#define ZT_REMOTE_TRACE_FIELD__DEST_MAC "destMac"
-#define ZT_REMOTE_TRACE_FIELD__ETHERTYPE "etherType"
-#define ZT_REMOTE_TRACE_FIELD__VLAN_ID "vlanId"
-#define ZT_REMOTE_TRACE_FIELD__FRAME_LENGTH "frameLength"
-#define ZT_REMOTE_TRACE_FIELD__FRAME_DATA "frameData"
-#define ZT_REMOTE_TRACE_FIELD__FILTER_FLAG_NOTEE "filterNoTee"
-#define ZT_REMOTE_TRACE_FIELD__FILTER_FLAG_INBOUND "filterInbound"
-#define ZT_REMOTE_TRACE_FIELD__FILTER_RESULT "filterResult"
-#define ZT_REMOTE_TRACE_FIELD__FILTER_BASE_RULE_LOG "filterBaseRuleLog"
-#define ZT_REMOTE_TRACE_FIELD__FILTER_CAP_RULE_LOG "filterCapRuleLog"
-#define ZT_REMOTE_TRACE_FIELD__FILTER_CAP_ID "filterMatchingCapId"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TYPE "credType"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ID "credId"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_TIMESTAMP "credTs"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_INFO "credInfo"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_ISSUED_TO "credIssuedTo"
-#define ZT_REMOTE_TRACE_FIELD__CREDENTIAL_REVOCATION_TARGET "credRevocationTarget"
-#define ZT_REMOTE_TRACE_FIELD__REASON "reason"
-#define ZT_REMOTE_TRACE_FIELD__NETWORK_CONTROLLER_ID "networkControllerId"
-
-// Event types in remote traces
-#define ZT_REMOTE_TRACE_EVENT__RESETTING_PATHS_IN_SCOPE 0x1000
-#define ZT_REMOTE_TRACE_EVENT__PEER_CONFIRMING_UNKNOWN_PATH 0x1001
-#define ZT_REMOTE_TRACE_EVENT__PEER_LEARNED_NEW_PATH 0x1002
-#define ZT_REMOTE_TRACE_EVENT__PEER_REDIRECTED 0x1003
-#define ZT_REMOTE_TRACE_EVENT__PACKET_MAC_FAILURE 0x1004
-#define ZT_REMOTE_TRACE_EVENT__PACKET_INVALID 0x1005
-#define ZT_REMOTE_TRACE_EVENT__DROPPED_HELLO 0x1006
-#define ZT_REMOTE_TRACE_EVENT__OUTGOING_NETWORK_FRAME_DROPPED 0x2000
-#define ZT_REMOTE_TRACE_EVENT__INCOMING_NETWORK_ACCESS_DENIED 0x2001
-#define ZT_REMOTE_TRACE_EVENT__INCOMING_NETWORK_FRAME_DROPPED 0x2002
-#define ZT_REMOTE_TRACE_EVENT__CREDENTIAL_REJECTED 0x2003
-#define ZT_REMOTE_TRACE_EVENT__CREDENTIAL_ACCEPTED 0x2004
-#define ZT_REMOTE_TRACE_EVENT__NETWORK_CONFIG_REQUEST_SENT 0x2005
-#define ZT_REMOTE_TRACE_EVENT__NETWORK_FILTER_TRACE 0x2006
-
-// Event types in remote traces in hex string form
-#define ZT_REMOTE_TRACE_EVENT__RESETTING_PATHS_IN_SCOPE_S "1000"
-#define ZT_REMOTE_TRACE_EVENT__PEER_CONFIRMING_UNKNOWN_PATH_S "1001"
-#define ZT_REMOTE_TRACE_EVENT__PEER_LEARNED_NEW_PATH_S "1002"
-#define ZT_REMOTE_TRACE_EVENT__PEER_REDIRECTED_S "1003"
-#define ZT_REMOTE_TRACE_EVENT__PACKET_MAC_FAILURE_S "1004"
-#define ZT_REMOTE_TRACE_EVENT__PACKET_INVALID_S "1005"
-#define ZT_REMOTE_TRACE_EVENT__DROPPED_HELLO_S "1006"
-#define ZT_REMOTE_TRACE_EVENT__OUTGOING_NETWORK_FRAME_DROPPED_S "2000"
-#define ZT_REMOTE_TRACE_EVENT__INCOMING_NETWORK_ACCESS_DENIED_S "2001"
-#define ZT_REMOTE_TRACE_EVENT__INCOMING_NETWORK_FRAME_DROPPED_S "2002"
-#define ZT_REMOTE_TRACE_EVENT__CREDENTIAL_REJECTED_S "2003"
-#define ZT_REMOTE_TRACE_EVENT__CREDENTIAL_ACCEPTED_S "2004"
-#define ZT_REMOTE_TRACE_EVENT__NETWORK_CONFIG_REQUEST_SENT_S "2005"
-#define ZT_REMOTE_TRACE_EVENT__NETWORK_FILTER_TRACE_S "2006"
-
-/****************************************************************************/
 /* Structures and other types                                               */
 /****************************************************************************/
 
@@ -396,35 +320,6 @@ enum ZT_ResultCode
  * @return True if result code indicates a fatal error
  */
 #define ZT_ResultCode_isFatal(x) ((((int)(x)) >= 100)&&(((int)(x)) < 1000))
-
-/**
- * The multipath algorithm in use by this node.
- */
-enum ZT_MultipathMode
-{
-	/**
-	 * No active multipath.
-	 *
-	 * Traffic is merely sent over the strongest path. That being
-	 * said, this mode will automatically failover in the event that a link goes down.
-	 */
-	ZT_MULTIPATH_NONE = 0,
-
-	/**
-	 * Traffic is randomly distributed among all active paths.
-	 *
-	 * Will cease sending traffic over links that appear to be stale.
-	 */
-	ZT_MULTIPATH_RANDOM = 1,
-
-	/**
-	 * Traffic is allocated across all active paths in proportion to their strength and
-	 * reliability.
-	 *
-	 * Will cease sending traffic over links that appear to be stale.
-	 */
-	ZT_MULTIPATH_PROPORTIONALLY_BALANCED = 2,
-};
 
 /**
  * Status codes sent to status update callback when things happen
@@ -499,87 +394,23 @@ enum ZT_Event
 	 *
 	 * Meta-data: ZT_UserMessage structure
 	 */
-	ZT_EVENT_USER_MESSAGE = 6,
-
-	/**
-	 * Remote trace received
-	 *
-	 * NOTE: any node can fling a VERB_REMOTE_TRACE at you. It's up to you
-	 * to determine if you want to do anything with it or just silently
-	 * drop it on the floor. It's also up to you to handle these securely!
-	 *
-	 * Meta-data: ZT_RemoteTrace structure
-	 */
-	ZT_EVENT_REMOTE_TRACE = 7
+	ZT_EVENT_USER_MESSAGE = 6
 };
 
 /**
- * A root server
+ * Identity type codes
  */
-typedef struct {
-	/**
-	 * Name of root
-	 *
-	 * This will be a DNS name for dynamic roots. For static roots
-	 * it will be the ZeroTier address. The presence or absence
-	 * of a dot is used internally as a distinguisher.
-	 */
-	const char *name;
-
-	/**
-	 * Serialized locator
-	 */
-	const void *locator;
-
-	/**
-	 * The size of locator in bytes
-	 */
-	unsigned int locatorSize;
-} ZT_Root;
-
-/**
- * List of root servers
- */
-typedef struct {
-	/**
-	 * Number of root servers
-	 */
-	unsigned int count;
-
-	/**
-	 * Array of root servers
-	 */
-	ZT_Root roots[];
-} ZT_RootList;
-
-/**
- * Payload of REMOTE_TRACE event
- */
-typedef struct
+enum ZT_Identity_Type
 {
-	/**
-	 * ZeroTier address of sender (in least significant 40 bits only)
-	 */
-	uint64_t origin;
+	/* These values must be the same as in Identity.hpp in the core. */
+	ZT_IDENTITY_TYPE_C25519 = 0,
+	ZT_IDENTITY_TYPE_P384 = 1
+};
 
-	/**
-	 * Null-terminated Dictionary containing key/value pairs sent by origin
-	 *
-	 * This *should* be a dictionary, but the implementation only checks
-	 * that it is a valid non-empty C-style null-terminated string. Be very
-	 * careful to use a well-tested parser to parse this as it represents
-	 * data received from a potentially un-trusted peer on the network.
-	 * Invalid payloads should be dropped.
-	 *
-	 * The contents of data[] may be modified.
-	 */
-	const char *data;
-
-	/**
-	 * Length of dict[] in bytes, INCLUDING terminating null
-	 */
-	unsigned int len;
-} ZT_RemoteTrace;
+/**
+ * A ZeroTier identity (opaque)
+ */
+typedef void ZT_Identity;
 
 /**
  * User message used with ZT_EVENT_USER_MESSAGE
@@ -623,6 +454,11 @@ typedef struct
 	 * 40-bit ZeroTier address of this node
 	 */
 	uint64_t address;
+
+	/**
+	 * Actual identity object for this node
+	 */
+	const ZT_Identity *identity;
 
 	/**
 	 * Public identity in string-serialized form (safe to send to others)
@@ -1001,39 +837,6 @@ enum ZT_VirtualNetworkConfigOperation
 };
 
 /**
- * What trust hierarchy role does this peer have?
- */
-enum ZT_PeerRole
-{
-	ZT_PEER_ROLE_LEAF = 0,       // ordinary node
-	ZT_PEER_ROLE_MOON = 1,       // moon root
-	ZT_PEER_ROLE_PLANET = 2      // planetary root
-};
-
-/**
- * DNS record types for reporting DNS results
- *
- * These integer IDs (other than end of results) are the same as the DNS protocol's
- * internal IDs. Not all of these are used by ZeroTier, and not all DNS record types
- * are listed here. These are just common ones that are used now or may be used in
- * the future for some purpose.
- */
-enum ZT_DNSRecordType
-{
-	ZT_DNS_RECORD__END_OF_RESULTS = 0,
-	ZT_DNS_RECORD_A = 1,
-	ZT_DNS_RECORD_NS = 2,
-	ZT_DNS_RECORD_CNAME = 5,
-	ZT_DNS_RECORD_PTR = 12,
-	ZT_DNS_RECORD_MX = 15,
-	ZT_DNS_RECORD_TXT = 16,
-	ZT_DNS_RECORD_AAAA = 28,
-	ZT_DNS_RECORD_LOC = 29,
-	ZT_DNS_RECORD_SRV = 33,
-	ZT_DNS_RECORD_DNAME = 39
-};
-
-/**
  * Virtual network configuration
  */
 typedef struct
@@ -1181,56 +984,6 @@ typedef struct
 	uint64_t trustedPathId;
 
 	/**
-	 * One-way latency
-	 */
-	float latency;
-
-	/**
-	 * How much latency varies over time
-	 */
-	float packetDelayVariance;
-
-	/**
-	 * How much observed throughput varies over time
-	 */
-	float throughputDisturbCoeff;
-
-	/**
-	 * Packet Error Ratio (PER)
-	 */
-	float packetErrorRatio;
-
-	/**
-	 * Packet Loss Ratio (PLR)
-	 */
-	float packetLossRatio;
-
-	/**
-	 * Stability of the path
-	 */
-	float stability;
-
-	/**
-	 * Current throughput (moving average)
-	 */
-	uint64_t throughput;
-
-	/**
-	 * Maximum observed throughput for this path
-	 */
-	uint64_t maxThroughput;
-
-	/**
-	 * Percentage of traffic allocated to this path
-	 */
-	float allocation;
-
-	/**
-	 * Name of physical interface (for monitoring)
-	 */
-	char *ifname;
-
-	/**
 	 * Is path alive?
 	 */
 	int alive;
@@ -1242,6 +995,15 @@ typedef struct
 } ZT_PeerPhysicalPath;
 
 /**
+ * What trust hierarchy role does this peer have?
+ */
+enum ZT_PeerRole
+{
+	ZT_PEER_ROLE_LEAF = 0,       // ordinary node
+	ZT_PEER_ROLE_ROOT = 1        // root server
+};
+
+/**
  * Peer status result buffer
  */
 typedef struct
@@ -1250,6 +1012,11 @@ typedef struct
 	 * ZeroTier address (40 bits)
 	 */
 	uint64_t address;
+
+	/**
+	 * Peer identity
+	 */
+	const ZT_Identity *identity;
 
 	/**
 	 * Remote major version or -1 if not known
@@ -1280,11 +1047,6 @@ typedef struct
 	 * Number of paths (size of paths[])
 	 */
 	unsigned int pathCount;
-
-	/**
-	 * Whether this peer was ever reachable via an aggregate link
-	 */
-	int hadAggregateLink;
 
 	/**
 	 * Known network paths to peer
@@ -1541,8 +1303,9 @@ typedef int (*ZT_PathCheckFunction)(
  *  (1) Node
  *  (2) User pointer
  *  (3) ZeroTier address (least significant 40 bits)
- *  (4) Desired address family or -1 for any
- *  (5) Buffer to fill with result
+ *  (4) Identity in string form
+ *  (5) Desired address family or -1 for any
+ *  (6) Buffer to fill with result
  *
  * If provided this function will be occasionally called to get physical
  * addresses that might be tried to reach a ZeroTier address. It must
@@ -1554,52 +1317,9 @@ typedef int (*ZT_PathLookupFunction)(
 	void *,                           /* User ptr */
 	void *,                           /* Thread ptr */
 	uint64_t,                         /* ZeroTier address (40 bits) */
+	const ZT_Identity *,              /* Full identity of node */
 	int,                              /* Desired ss_family or -1 for any */
 	struct sockaddr_storage *);       /* Result buffer */
-
-/**
- * Function to request an asynchronous DNS TXT lookup
- *
- * Parameters:
- *  (1) Node
- *  (2) User pointer
- *  (3) Thread pointer
- *  (4) Array of DNS record types we want
- *  (5) Number of DNS record types in array
- *  (6) DNS name to fetch
- *  (7) DNS request ID to supply to ZT_Node_processDNSResult()
- *
- * DNS is not handled in the core because every platform and runtime
- * typically has its own DNS functions or libraries and these may need
- * to interface with OS or network services in your local environment.
- * Instead this function and its result submission counterpart are
- * provided so you can provide a DNS implementation.
- *
- * If this callback is set in your callback struct to a NULL value,
- * DNS will not be available. The ZeroTier protocol is designed to
- * work in the absence of DNS but you may not get optimal results. For
- * example you may default to root servers that are not geographically
- * optimal or your node may cease to function if a root server's IP
- * changes and there's no way to signal this.
- *
- * This function requests resolution of a DNS record. The result
- * submission method ZT_Node_processDNSResult() must be called at
- * least once in response. See its documentation.
- *
- * Right now ZeroTier only requests resolution of TXT records, but
- * it's possible that this will change in the future.
- *
- * It's safe to call processDNSResult() from within your handler
- * for this function.
- */
-typedef void (*ZT_DNSResolver)(
-	ZT_Node *,                        /* Node */
-	void *,                           /* User ptr */
-	void *,                           /* Thread ptr */
-	const enum ZT_DNSRecordType *,    /* DNS record type(s) to fetch */
-	unsigned int,                     /* Number of DNS record type(s) */
-	const char *,                     /* DNS name to fetch */
-	uintptr_t);                       /* Request ID for returning results */
 
 /****************************************************************************/
 /* C Node API                                                               */
@@ -1641,17 +1361,12 @@ struct ZT_Node_Callbacks
 	ZT_EventCallback eventCallback;
 
 	/**
-	 * STRONGLY RECOMMENDED: Function to request a DNS lookup
-	 */
-	ZT_DNSResolver dnsResolver;
-
-	/**
-	 * OPTIONAL: Function to check whether a given physical path should be used
+	 * OPTIONAL: Function to check whether a given physical path should be used for ZeroTier traffic
 	 */
 	ZT_PathCheckFunction pathCheckFunction;
 
 	/**
-	 * OPTIONAL: Function to get hints to physical paths to ZeroTier addresses
+	 * RECOMMENDED: Function to look up paths to ZeroTier nodes
 	 */
 	ZT_PathLookupFunction pathLookupFunction;
 };
@@ -1751,60 +1466,6 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(
 	volatile int64_t *nextBackgroundTaskDeadline);
 
 /**
- * Submit the result(s) of a requested DNS query
- *
- * This MUST be called at least once after the node requsts DNS resolution.
- * If there are no results or DNS is not implemented or available, just
- * send one ZT_DNS_RECORD__END_OF_RESULTS to signal that no results were
- * obtained.
- *
- * If result is non-NULL but resultLength is zero then result is assumed to
- * be a C string terminated by a zero. Passing an unterminated string with a
- * zero resultLength will result in a crash.
- *
- * The results of A and AAAA records can be returned as either strings or
- * binary IP address bytes (network byte order). If the result is a string,
- * resultLength must be 0 to signal that result is a C string. Otherwise for
- * A resultLength must be 4 and for AAAA it must be 16 if the result is
- * in binary format.
- *
- * The Node implementation makes an effort to ignore obviously invalid
- * submissions like an AAAA record in bianry form with length 25, but this
- * is not guaranteed. It's possible to crash your program by calling this
- * with garbage inputs.
- *
- * Results may be submitted in any order and order should not be assumed
- * to have any meaning.
- *
- * The ZT_DNS_RECORD__END_OF_RESULTS pseudo-response must be sent after all
- * results have been submitted. The result and resultLength paramters are
- * ignored for this type ID.
- *
- * It is safe to call this function from inside the DNS request callback,
- * such as to return a locally cached result or a result from some kind
- * of local database. It's also safe to call this function from threads
- * other than the one that received the DNS request.
- *
- * @param node Node instance that requested DNS resolution
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param dnsRequestID Request ID supplied to DNS request callback
- * @param name DNS name
- * @param recordType Record type of this result
- * @param result Result (content depends on record type)
- * @param resultLength Length of result
- * @param resultIsString If non-zero, IP results for A and AAAA records are being given as C strings not binary IPs
- */
-ZT_SDK_API void ZT_Node_processDNSResult(
-	ZT_Node *node,
-	void *tptr,
-	uintptr_t dnsRequestID,
-	const char *name,
-	enum ZT_DNSRecordType recordType,
-	const void *result,
-	unsigned int resultLength,
-	int resultIsString);
-
-/**
  * Join a network
  *
  * This may generate calls to the port config callback before it returns,
@@ -1884,36 +1545,25 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node,void *tpt
 ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 
 /**
- * List roots for this node
+ * Add a root server (has no effect if already added)
  *
  * @param node Node instance
- * @param now Current time
- * @return List of roots, use ZT_Node_freeQueryResult to free this when done
+ * @param identity Identity of this root server in string format
+ * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API ZT_RootList *ZT_Node_listRoots(ZT_Node *node,int64_t now);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,const char *identity);
 
 /**
- * Add or update a root
+ * Remove a root server
  *
- * The node will begin trying to resolve the DNS TXT record for
- * this root and possibly obtain it from other peers.
- *
- * @param node Node instance
- * @param name DNS name or simply the address in hex form for static roots
- * @param locator Binary-serialized locator of NULL if none
- * @param locatorSize Size of locator or 0 if none
- * @return OK (0) or error code
- */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_setRoot(ZT_Node *node,const char *name,const void *locator,unsigned int locatorSize);
-
-/**
- * Remove a dynamic root
+ * This removes this node's root designation but does not prevent this node
+ * from communicating with it or close active paths to it.
  *
  * @param node Node instance
- * @param name DNS name of this dynamic root or the address in hex form for static roots
- * @return OK (0) or error code
+ * @param identity Identity in string format
+ * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,const char *name);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,const char *identity);
 
 /**
  * Get this node's 40-bit ZeroTier address
@@ -2034,6 +1684,115 @@ ZT_SDK_API void ZT_Node_setController(ZT_Node *node,void *networkConfigMasterIns
  * @return OK or error code
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_setPhysicalPathConfiguration(ZT_Node *node,const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig);
+
+/**
+ * Generate a new identity
+ *
+ * Due to a small amount of proof of work this can be a time consuming and CPU
+ * intensive operation. It takes less than a second on most desktop-class systems
+ * but can take longer on e.g. phones.
+ *
+ * @param type Type of identity to generate
+ * @return New identity or NULL on error
+ */
+ZT_SDK_API ZT_Identity *ZT_Identity_new(enum ZT_Identity_Type type);
+
+/**
+ * Create a new identity object from a string-serialized identity
+ *
+ * @param idStr Identity in string format
+ * @return Identity object or NULL if the supplied identity string was not valid
+ */
+ZT_SDK_API ZT_Identity *ZT_Identity_fromString(const char *idStr);
+
+/**
+ * Validate this identity
+ *
+ * This can be slightly time consuming due to address derivation (work) checking.
+ *
+ * @return Non-zero if identity is valid
+ */
+ZT_SDK_API int ZT_Identity_validate(const ZT_Identity *id);
+
+/**
+ * Sign a data object with this identity
+ *
+ * The identity must have a private key or this will fail.
+ *
+ * @param id Identity to use to sign
+ * @param data Data to sign
+ * @param len Length of data
+ * @param signature Buffer to store signature
+ * @param signatureBufferLength Length of buffer (must be at least 96 bytes)
+ * @return Length of signature in bytes or 0 on failure.
+ */
+ZT_SDK_API unsigned int ZT_Identity_sign(const ZT_Identity *id,const void *data,unsigned int len,void *signature,unsigned int signatureBufferLength);
+
+/**
+ * Verify a signature
+ *
+ * @param id Identity to use to verify
+ * @param data Data to verify
+ * @param len Length of data
+ * @param signature Signature to check
+ * @param sigLen Length of signature in bytes
+ * @return Non-zero if signature is valid
+ */
+ZT_SDK_API int ZT_Identity_verify(const ZT_Identity *id,const void *data,unsigned int len,const void *signature,unsigned int sigLen);
+
+/**
+ * Get identity type
+ *
+ * @param id Identity to query
+ * @return Identity type code
+ */
+ZT_SDK_API enum ZT_Identity_Type ZT_Identity_type(const ZT_Identity *id);
+
+/**
+ * Convert an identity to its string representation
+ *
+ * @param id Identity to convert
+ * @param buf Buffer to store identity (should be at least about 1024 bytes in length)
+ * @param capacity Capacity of buffer
+ * @param includePrivate If true include the private key if present
+ * @return Pointer to buf or NULL on overflow or other error
+ */
+ZT_SDK_API char *ZT_Identity_toString(const ZT_Identity *id,char *buf,int capacity,int includePrivate);
+
+/**
+ * Check whether this identity object also holds a private key
+ *
+ * @param id Identity to query
+ * @return Non-zero if a private key is held
+ */
+ZT_SDK_API int ZT_Identity_hasPrivate(const ZT_Identity *id);
+
+/**
+ * Get the ZeroTier address associated with this identity
+ *
+ * @param id Identity to query
+ * @return ZeroTier address (only least significant 40 bits are meaningful, rest will be 0)
+ */
+ZT_SDK_API uint64_t ZT_Identity_address(const ZT_Identity *id);
+
+/**
+ * Compute a hash of this identity's public keys (or both public and private if includePrivate is true)
+ *
+ * @param id Identity to query
+ * @param h Buffer for 384-bit hash
+ * @param includePrivate If true include private keys if any
+ */
+ZT_SDK_API void ZT_Identity_hash(const ZT_Identity *id,uint8_t h[48],int includePrivate);
+
+/**
+ * Delete an identity and free associated memory
+ *
+ * This should only be used with identities created via Identity_new
+ * and Identity_fromString().
+ *
+ * @param id Identity to delete
+ */
+ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id);
 
 /**
  * Get ZeroTier One version

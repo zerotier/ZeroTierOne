@@ -479,6 +479,7 @@ EmbeddedNetworkController::~EmbeddedNetworkController()
 void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 {
 	char tmp[64];
+
 	_signingId = signingId;
 	_sender = sender;
 	_signingIdAddressString = signingId.address().toString(tmp);
@@ -1445,6 +1446,7 @@ void EmbeddedNetworkController::_request(
 
 	const bool noAutoAssignIps = OSUtils::jsonBool(member["noAutoAssignIps"],false);
 
+	// Set IPv6 static IPs based on NDP emulated schemes if enabled.
 	if ((v6AssignMode.is_object())&&(!noAutoAssignIps)) {
 		if ((OSUtils::jsonBool(v6AssignMode["rfc4193"],false))&&(nc->staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
 			nc->staticIps[nc->staticIpCount++] = InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt());

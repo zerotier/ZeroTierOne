@@ -14,10 +14,10 @@
 #ifndef ZT_TAG_HPP
 #define ZT_TAG_HPP
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include "Constants.hpp"
 #include "Credential.hpp"
@@ -96,7 +96,7 @@ public:
 	 * @param signer Signing identity, must have private key
 	 * @return True if signature was successful
 	 */
-	ZT_ALWAYS_INLINE bool sign(const Identity &signer)
+	inline bool sign(const Identity &signer)
 	{
 		if (signer.hasPrivate()) {
 			Buffer<sizeof(Tag) + 64> tmp;

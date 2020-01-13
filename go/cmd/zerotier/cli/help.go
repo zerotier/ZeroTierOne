@@ -41,12 +41,8 @@ Commands:
   status                               Show ZeroTier service status and config
   peers                                Show VL1 peers
   roots                                Show configured VL1 root servers
-  addroot <locator> [name]             Add a VL1 root
-  removeroot <name>                    Remove a VL1 root
-  locator <command> [args]             Locator management commands
-    new <identity> <address> [...]     Create and sign locator for identity
-    newdnskey                          Create a secure DNS name and secret
-    getdns <dns key> <locator>         Create secure DNS TXT records
+  addroot <identity>                   Add VL1 root server
+  removeroot <identity|address>        Remove VL1 root server
   identity <command> [args]            Identity management commands
     new [c25519|p384]                  Create new identity (including secret)
     getpublic <identity>               Extract only public part of identity

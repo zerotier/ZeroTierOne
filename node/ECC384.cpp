@@ -4,10 +4,9 @@
 // This code is under the BSD 2-clause license, not ZeroTier's license
 //////////////////////////////////////////////////////////////////////////////
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdint>
 
 #include "Constants.hpp"
 #include "ECC384.hpp"
@@ -141,7 +140,7 @@ static ZT_ALWAYS_INLINE void vli_set(uint64_t *p_dest, uint64_t *p_src)
 }
 
 /* Returns sign of p_left - p_right. */
-static ZT_ALWAYS_INLINE int vli_cmp(uint64_t *p_left, uint64_t *p_right)
+static inline int vli_cmp(uint64_t *p_left, uint64_t *p_right)
 {
 	int i;
 	for(i = NUM_ECC_DIGITS-1; i >= 0; --i)
@@ -376,7 +375,7 @@ static inline void vli_square(uint64_t *p_result, uint64_t *p_left)
 
 /* Computes p_result = (p_left + p_right) % p_mod.
    Assumes that p_left < p_mod and p_right < p_mod, p_result != p_mod. */
-static ZT_ALWAYS_INLINE void vli_modAdd(uint64_t *p_result, uint64_t *p_left, uint64_t *p_right, uint64_t *p_mod)
+static inline void vli_modAdd(uint64_t *p_result, uint64_t *p_left, uint64_t *p_right, uint64_t *p_mod)
 {
 	uint64_t l_carry = vli_add(p_result, p_left, p_right);
 	if(l_carry || vli_cmp(p_result, p_mod) >= 0)
@@ -387,7 +386,7 @@ static ZT_ALWAYS_INLINE void vli_modAdd(uint64_t *p_result, uint64_t *p_left, ui
 
 /* Computes p_result = (p_left - p_right) % p_mod.
    Assumes that p_left < p_mod and p_right < p_mod, p_result != p_mod. */
-static ZT_ALWAYS_INLINE void vli_modSub(uint64_t *p_result, uint64_t *p_left, uint64_t *p_right, uint64_t *p_mod)
+static inline void vli_modSub(uint64_t *p_result, uint64_t *p_left, uint64_t *p_right, uint64_t *p_mod)
 {
 	uint64_t l_borrow = vli_sub(p_result, p_left, p_right);
 	if(l_borrow)
