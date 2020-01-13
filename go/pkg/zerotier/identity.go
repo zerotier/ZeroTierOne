@@ -46,6 +46,18 @@ type Identity struct {
 	privateKey []byte
 }
 
+func newIdentityFromCIdentity(cid unsafe.Pointer) (*Identity, error) {
+	if uintptr(cid) == 0 {
+		return nil, ErrInvalidParameter
+	}
+	var idStrBuf [4096]byte
+	idStr := C.ZT_Identity_toString(cid,(*C.char)(unsafe.Pointer(&idStrBuf[0])),4096,1)
+	if uintptr(unsafe.Pointer(idStr)) == 0 {
+		return nil, ErrInternal
+	}
+	return NewIdentityFromString(C.GoString(idStr))
+}
+
 // NewIdentity generates a new identity of the selected type
 func NewIdentity(identityType int) (*Identity, error) {
 	cid := C.ZT_Identity_new(C.enum_ZT_Identity_Type(identityType))
@@ -53,12 +65,7 @@ func NewIdentity(identityType int) (*Identity, error) {
 		return nil, ErrInternal
 	}
 	defer C.ZT_Identity_delete(cid)
-	var idStrBuf [4096]byte
-	idStr := C.ZT_Identity_toString(cid,(*C.char)(unsafe.Pointer(&idStrBuf[0])),4096,1)
-	if uintptr(unsafe.Pointer(idStr)) == 0 {
-		return nil, ErrInternal
-	}
-	return NewIdentityFromString(C.GoString(idStr))
+	return newIdentityFromCIdentity(cid)
 }
 
 // NewIdentityFromString generates a new identity from its string representation.

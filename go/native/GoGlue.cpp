@@ -28,14 +28,10 @@
 
 #ifndef __WINDOWS__
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <netinet/ip6.h>
-#include <netinet/tcp.h>
 #ifdef __BSD__
 #include <net/if.h>
 #endif
@@ -104,7 +100,7 @@ const char *ZT_PLATFORM_DEFAULT_HOMEPATH = defaultHomePath.c_str();
 
 /* These functions are implemented in Go in pkg/ztnode/node-callbacks.go */
 extern "C" int goPathCheckFunc(void *,uint64_t,int,const void *,int);
-extern "C" int goPathLookupFunc(void *,uint64_t,int,int *,uint8_t [16],int *);
+extern "C" int goPathLookupFunc(void *,uint64_t,int,const ZT_Identity *,int *,uint8_t [16],int *);
 extern "C" void goStateObjectPutFunc(void *,int,const uint64_t [2],const void *,int);
 extern "C" int goStateObjectGetFunc(void *,int,const uint64_t [2],void *,unsigned int);
 extern "C" void goVirtualNetworkConfigFunc(void *,ZT_GoTap *,uint64_t,int,const ZT_VirtualNetworkConfig *);
@@ -282,6 +278,7 @@ static int ZT_GoNode_PathLookupFunction(
 		reinterpret_cast<ZT_GoNode *>(uptr)->goUserPtr,
 		ztAddress,
 		desiredAddressFamily,
+		id,
 		&family,
 		ip,
 		&port

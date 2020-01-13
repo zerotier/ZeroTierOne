@@ -93,6 +93,13 @@ public:
 	bool send(const RuntimeEnvironment *RR,void *tPtr,const void *data,unsigned int len,int64_t now);
 
 	/**
+	 * Explicitly update last sent time
+	 *
+	 * @param t Time of send
+	 */
+	ZT_ALWAYS_INLINE void sent(const uint64_t t) { _lastOut = t; }
+
+	/**
 	 * Called when a packet is received from this remote path, regardless of content
 	 *
 	 * @param t Time of receive

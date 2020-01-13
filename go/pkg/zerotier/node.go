@@ -660,10 +660,10 @@ func (n *Node) pathCheck(ztAddress Address, af int, ip net.IP, port int) bool {
 	return true
 }
 
-func (n *Node) pathLookup(ztAddress Address) (net.IP, int) {
+func (n *Node) pathLookup(id *Identity) (net.IP, int) {
 	n.localConfigLock.RLock()
 	defer n.localConfigLock.RUnlock()
-	virt := n.localConfig.Virtual[ztAddress]
+	virt := n.localConfig.Virtual[id.address]
 	if len(virt.Try) > 0 {
 		idx := rand.Int() % len(virt.Try)
 		return virt.Try[idx].IP, virt.Try[idx].Port
@@ -763,7 +763,7 @@ func goPathCheckFunc(gn unsafe.Pointer, ztAddress C.uint64_t, af C.int, ip unsaf
 }
 
 //export goPathLookupFunc
-func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, _ int, familyP, ipP, portP unsafe.Pointer) C.int {
+func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, desiredFamily int, identity, familyP, ipP, portP unsafe.Pointer) C.int {
 	nodesByUserPtrLock.RLock()
 	node := nodesByUserPtr[uintptr(gn)]
 	nodesByUserPtrLock.RUnlock()
@@ -771,7 +771,11 @@ func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, _ int, familyP, i
 		return 0
 	}
 
-	ip, port := node.pathLookup(Address(ztAddress))
+	id, err := newIdentityFromCIdentity(identity)
+	if err != nil {
+		return 0
+	}
+	ip, port := node.pathLookup(id)
 	if len(ip) > 0 && port > 0 && port <= 65535 {
 		ip4 := ip.To4()
 		if len(ip4) == 4 {

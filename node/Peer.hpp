@@ -40,7 +40,7 @@ class Peer
 	friend class SharedPtr<Peer>;
 
 private:
-	inline Peer() {}
+	ZT_ALWAYS_INLINE Peer() {}
 
 public:
 	ZT_ALWAYS_INLINE ~Peer() { Utils::burn(_key,sizeof(_key)); }
@@ -92,13 +92,14 @@ public:
 		uint64_t networkId);
 
 	/**
-	 * Check whether we have an active path to this peer via the given address
+	 * Check whether a path to this peer should be tried if received via e.g. RENDEZVOUS OR PUSH_DIRECT_PATHS
 	 *
 	 * @param now Current time
+	 * @param suggestingPeer Peer suggesting path (may be this peer)
 	 * @param addr Remote address
 	 * @return True if we have an active path to this destination
 	 */
-	bool hasActivePathTo(int64_t now,const InetAddress &addr) const;
+	bool shouldTryPath(void *tPtr,int64_t now,const SharedPtr<Peer> &suggestedBy,const InetAddress &addr) const;
 
 	/**
 	 * Send a HELLO to this peer at a specified physical address
@@ -113,16 +114,15 @@ public:
 	void sendHELLO(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
 
 	/**
-	 * Send pings to active paths
-	 *
-	 * This also cleans up some internal data structures. It's called periodically from Node.
+	 * Send ping to this peer
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 * @param v4SendCount Number of IPv4 packets sent (result parameter)
 	 * @param v6SendCount Number of IPv6 packets sent (result parameter)
+	 * @param pingAllAddressTypes If true, try to keep a link up for each address type/family
 	 */
-	void ping(void *tPtr,int64_t now,unsigned int &v4SendCount,unsigned int &v6SendCount);
+	void ping(void *tPtr,int64_t now,unsigned int &v4SendCount,unsigned int &v6SendCount,bool pingAllAddressTypes);
 
 	/**
 	 * Reset paths within a given IP scope and address family
@@ -161,15 +161,7 @@ public:
 	 *
 	 * @param l New latency measurment (in milliseconds)
 	 */
-	ZT_ALWAYS_INLINE void updateLatency(const unsigned int l)
-	{
-		if ((l > 0)&&(l < 0xffff)) {
-			unsigned int lat = _latency;
-			if (lat < 0xffff)
-				_latency = (l + lat) / 2;
-			else _latency = l;
-		}
-	}
+	void updateLatency(const unsigned int l);
 
 	/**
 	 * @return 256-bit secret symmetric encryption key
@@ -255,28 +247,12 @@ public:
 	 * @param now Current time
 	 * @return True if packet appears to have been sent, false if no path or send failed
 	 */
-	ZT_ALWAYS_INLINE bool sendDirect(void *tPtr,const void *data,const unsigned int len,const int64_t now)
-	{
-		_paths_l.rlock();
-		if (_pathCount == 0) {
-			_paths_l.unlock();
-			return false;
-		}
-		const bool r = _paths[0]->send(RR,tPtr,data,len,now);
-		_paths_l.unlock();
-		return r;
-	}
+	bool sendDirect(void *tPtr,const void *data,unsigned int len,const int64_t now);
 
 	/**
 	 * @return Current best path
 	 */
-	ZT_ALWAYS_INLINE SharedPtr<Path> path()
-	{
-		RWMutex::RLock l(_paths_l);
-		if (_pathCount == 0)
-			return SharedPtr<Path>();
-		return _paths[0];
-	}
+	SharedPtr<Path> path(int64_t now);
 
 	/**
 	 * Get all paths
@@ -286,20 +262,24 @@ public:
 	void getAllPaths(std::vector< SharedPtr<Path> > &paths);
 
 private:
+	void _prioritizePaths(int64_t now);
+
 	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
 
 	const RuntimeEnvironment *RR;
 
-	int64_t _lastReceive;
-	int64_t _lastWhoisRequestReceived;
-	int64_t _lastEchoRequestReceived;
-	int64_t _lastPushDirectPathsReceived;
-	int64_t _lastTriedStaticPath;
-	unsigned int _latency;
+	volatile int64_t _lastReceive;
+	volatile int64_t _lastWhoisRequestReceived;
+	volatile int64_t _lastEchoRequestReceived;
+	volatile int64_t _lastPushDirectPathsReceived;
+	volatile int64_t _lastPushDirectPathsSent;
+	volatile int64_t _lastTriedStaticPath;
+	volatile int64_t _lastPrioritizedPaths;
+	volatile unsigned int _latency;
 
 	AtomicCounter __refCount;
 
-	unsigned int _pathCount;
+	unsigned int _alivePathCount;
 	SharedPtr<Path> _paths[ZT_MAX_PEER_NETWORK_PATHS];
 	RWMutex _paths_l;
 

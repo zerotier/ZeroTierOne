@@ -111,7 +111,7 @@ public:
 
 		_paths_l.rlock();
 		SharedPtr<Path> p(_paths[k]);
-		_paths_l.unlock();
+		_paths_l.runlock();
 		if (p)
 			return p;
 
@@ -202,21 +202,6 @@ public:
 			if (!f(*((const SharedPtr<Peer> *)p),std::binary_search(rootPeerPtrs.begin(),rootPeerPtrs.end(),(uintptr_t)p->ptr())))
 				break;
 		}
-	}
-
-	/**
-	 * Get the best relay to a given address, which may or may not be a root
-	 *
-	 * @param now Current time
-	 * @param toAddr Destination address
-	 * @return Best current relay or NULL if none
-	 */
-	ZT_ALWAYS_INLINE SharedPtr<Peer> findRelayTo(const int64_t now,const Address &toAddr)
-	{
-		RWMutex::RLock l(_peers_l);
-		if (_rootPeers.empty())
-			return SharedPtr<Peer>();
-		return _rootPeers[0];
 	}
 
 	/**

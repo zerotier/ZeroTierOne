@@ -142,6 +142,11 @@
 #define ZT_PEER_ACTIVITY_TIMEOUT ((ZT_PEER_PING_PERIOD * 2) + 5000)
 
 /**
+ * Maximum interval between sort/prioritize of paths for a peer
+ */
+#define ZT_PEER_PRIORITIZE_PATHS_INTERVAL 5000
+
+/**
  * Delay between requests for updated network autoconf information
  *
  * Don't lengthen this as it affects things like QoS / uptime monitoring

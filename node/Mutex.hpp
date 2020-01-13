@@ -60,13 +60,14 @@ public:
 	ZT_ALWAYS_INLINE void lock() const { pthread_rwlock_wrlock(&((const_cast <RWMutex *> (this))->_mh)); }
 	ZT_ALWAYS_INLINE void rlock() const { pthread_rwlock_rdlock(&((const_cast <RWMutex *> (this))->_mh)); }
 	ZT_ALWAYS_INLINE void unlock() const { pthread_rwlock_unlock(&((const_cast <RWMutex *> (this))->_mh)); }
+	ZT_ALWAYS_INLINE void runlock() const { pthread_rwlock_unlock(&((const_cast <RWMutex *> (this))->_mh)); }
 
 	class RLock
 	{
 	public:
 		ZT_ALWAYS_INLINE RLock(RWMutex &m) : _m(&m) { m.rlock(); }
 		ZT_ALWAYS_INLINE RLock(const RWMutex &m) : _m(const_cast<RWMutex *>(&m)) { _m->rlock(); }
-		ZT_ALWAYS_INLINE ~RLock() { _m->unlock(); }
+		ZT_ALWAYS_INLINE ~RLock() { _m->runlock(); }
 	private:
 		RWMutex *const _m;
 	};

@@ -174,10 +174,10 @@ struct _processBackgroundTasks_ping_eachPeer
 	ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Peer> &peer,const bool isRoot)
 	{
 		unsigned int v4SendCount = 0,v6SendCount = 0;
-		peer->ping(tPtr,now,v4SendCount,v6SendCount);
+		peer->ping(tPtr,now,v4SendCount,v6SendCount,isRoot);
 
 		if (isRoot) {
-			if ((now - peer->lastReceive()) <= ZT_PEER_PING_PERIOD)
+			if ((now - peer->lastReceive()) <= (ZT_PEER_PING_PERIOD + 5000))
 				online = true;
 
 			if (v4SendCount == 0) {

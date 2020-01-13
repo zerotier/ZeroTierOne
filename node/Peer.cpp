@@ -23,15 +23,25 @@
 
 namespace ZeroTier {
 
+struct _PathPriorityComparisonOperator
+{
+	ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Path> &a,const SharedPtr<Path> &b) const
+	{
+		return ( ((a)&&(a->lastIn() > 0)) && ((!b)||(b->lastIn() <= 0)||(a->lastIn() < b->lastIn())) );
+	}
+};
+
 Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
 	RR(renv),
 	_lastReceive(0),
 	_lastWhoisRequestReceived(0),
 	_lastEchoRequestReceived(0),
 	_lastPushDirectPathsReceived(0),
+	_lastPushDirectPathsSent(0),
 	_lastTriedStaticPath(0),
+	_lastPrioritizedPaths(0),
 	_latency(0xffff),
-	_pathCount(0),
+	_alivePathCount(0),
 	_id(peerIdentity),
 	_vProto(0),
 	_vMajor(0),
@@ -54,85 +64,64 @@ void Peer::received(
 	const uint64_t networkId)
 {
 	const int64_t now = RR->node->now();
-
 	_lastReceive = now;
 
-	/*
 	if (hops == 0) {
-		// If this is a direct packet (no hops), update existing paths or learn new ones
-		bool havePath = false;
-		{
-			Mutex::Lock _l(_paths_m);
-			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-				if (_paths[i]) {
-					if (_paths[i] == path) {
-						havePath = true;
-						break;
-					}
-				} else break;
+		_paths_l.rlock();
+		for(int i=0;i<(int)_alivePathCount; ++i) {
+			if (_paths[i] == path) {
+				_paths_l.runlock();
+				goto path_check_done;
 			}
 		}
+		_paths_l.runlock();
 
-		bool attemptToContact = false;
-		if ((!havePath)&&(RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),path->localSocket(),path->address()))) {
-			Mutex::Lock _l(_paths_m);
+		if (verb == Packet::VERB_OK) {
+			RWMutex::Lock l(_paths_l);
 
-			// Paths are redundant if they duplicate an alive path to the same IP or
-			// with the same local socket and address family.
-			bool redundant = false;
-			unsigned int replacePath = ZT_MAX_PEER_NETWORK_PATHS;
-			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-				if (_paths[i]) {
-					if ( (_paths[i]->alive(now)) && ( ((_paths[i]->localSocket() == path->localSocket())&&(_paths[i]->address().ss_family == path->address().ss_family)) || (_paths[i]->address().ipsEqual2(path->address())) ) ) {
-						redundant = true;
-						break;
-					}
-					// If the path is the same address and port, simply assume this is a replacement
-					if ( (_paths[i]->address().ipsEqual2(path->address()))) {
-						replacePath = i;
-						break;
-					}
-				} else break;
-			}
-
-			// If the path isn't a duplicate of the same localSocket AND we haven't already determined a replacePath,
-			// then find the worst path and replace it.
-			if (!redundant && replacePath == ZT_MAX_PEER_NETWORK_PATHS) {
-				int replacePathQuality = 0;
-				for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+			int64_t lastReceiveTimeMax = 0;
+			int lastReceiveTimeMaxAt = 0;
+			for(int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+				if ((_paths[i]->address().ss_family == path->address().ss_family) &&
+				    (_paths[i]->localSocket() == path->localSocket()) && // TODO: should be localInterface when multipath is integrated
+				    (_paths[i]->address().ipsEqual2(path->address()))) {
+					// If this is another path to the same place, swap it out as the
+					// one we just received from may replace an old one but don't
+					// learn it as a new path.
+					_paths[i] = path;
+					goto path_check_done;
+				} else {
 					if (_paths[i]) {
-						const int q = _paths[i]->quality(now);
-						if (q > replacePathQuality) {
-							replacePathQuality = q;
-							replacePath = i;
+						if (_paths[i]->lastIn() > lastReceiveTimeMax) {
+							lastReceiveTimeMax = _paths[i]->lastIn();
+							lastReceiveTimeMaxAt = i;
 						}
 					} else {
-						replacePath = i;
-						break;
+						lastReceiveTimeMax = 0x7fffffffffffffffLL;
+						lastReceiveTimeMaxAt = i;
 					}
 				}
 			}
 
-			if (replacePath != ZT_MAX_PEER_NETWORK_PATHS) {
-				if (verb == Packet::VERB_OK) {
-					RR->t->peerLearnedNewPath(tPtr,networkId,*this,path,packetId);
-					_paths[replacePath] = path;
-				} else {
-					attemptToContact = true;
-				}
+			_lastPrioritizedPaths = now;
+			_paths[lastReceiveTimeMaxAt] = path;
+			_prioritizePaths(now);
+			RR->t->peerLearnedNewPath(tPtr,networkId,*this,path,packetId);
+		} else {
+			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),path->localSocket(),path->address())) {
+				sendHELLO(tPtr,path->localSocket(),path->address(),now);
+				path->sent(now);
+				RR->t->peerConfirmingUnknownPath(tPtr,networkId,*this,path,packetId,verb);
 			}
 		}
-
-		if (attemptToContact) {
-			sendHELLO(tPtr,path->localSocket(),path->address(),now);
-			path->sent(now);
-			RR->t->peerConfirmingUnknownPath(tPtr,networkId,*this,path,packetId,verb);
-		}
 	}
-	*/
 
-	// Periodically push direct paths to the peer, doing so more often if we do not
-	// currently have a direct path.
+path_check_done:
+	const int64_t sinceLastPush = now - _lastPushDirectPathsSent;
+	if (sinceLastPush >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH : ZT_DIRECT_PATH_PUSH_INTERVAL)) {
+		_lastPushDirectPathsReceived = now;
+	}
+
 	/*
 	const int64_t sinceLastPush = now - _lastDirectPathPushSent;
 	if (sinceLastPush >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH : ZT_DIRECT_PATH_PUSH_INTERVAL)) {
@@ -189,10 +178,23 @@ void Peer::received(
 	*/
 }
 
-bool Peer::hasActivePathTo(int64_t now,const InetAddress &addr) const
+bool Peer::shouldTryPath(void *tPtr,int64_t now,const SharedPtr<Peer> &suggestedBy,const InetAddress &addr) const
 {
-	// TODO
-	return false;
+	int maxHaveScope = -1;
+	{
+		RWMutex::RLock l(_paths_l);
+		for (unsigned int i = 0; i < _alivePathCount; ++i) {
+			if (_paths[i]) {
+				if (_paths[i]->address().ipsEqual2(addr))
+					return false;
+
+				int s = (int)_paths[i]->address().ipScope();
+				if (s > maxHaveScope)
+					maxHaveScope = s;
+			}
+		}
+	}
+	return ( ((int)addr.ipScope() > maxHaveScope) && RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),-1,addr) );
 }
 
 void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now)
@@ -217,54 +219,125 @@ void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atA
 	}
 }
 
-void Peer::ping(void *tPtr,int64_t now,unsigned int &v4SendCount,unsigned int &v6SendCount)
+void Peer::ping(void *tPtr,int64_t now,unsigned int &v4SendCount,unsigned int &v6SendCount,const bool pingAllAddressTypes)
 {
-	/*
-	Mutex::Lock _l(_paths_m);
+	RWMutex::RLock l(_paths_l);
 
-	unsigned int j = 0;
-	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if ((_paths[i])&&(_paths[i]->alive(now))) {
+	_lastPrioritizedPaths = now;
+	_prioritizePaths(now);
+
+	if (_alivePathCount > 0) {
+		for (unsigned int i = 0; i < _alivePathCount; ++i) {
 			sendHELLO(tPtr,_paths[i]->localSocket(),_paths[i]->address(),now);
-
 			_paths[i]->sent(now);
+
 			if (_paths[i]->address().isV4())
 				++v4SendCount;
 			else if (_paths[i]->address().isV6())
 				++v6SendCount;
 
-			if (i != j)
-				_paths[j] = _paths[i];
-			++j;
+			if (!pingAllAddressTypes)
+				break;
+		}
+	} else {
+		SharedPtr<Peer> r(RR->topology->root());
+		if (r) {
+			SharedPtr<Path> rp(r->path(now));
+			if (rp) {
+				sendHELLO(tPtr,rp->localSocket(),rp->address(),now);
+				rp->sent(now);
+			}
 		}
 	}
-	while(j < ZT_MAX_PEER_NETWORK_PATHS) {
-		_paths[j].zero();
-		++j;
-	}
-	*/
 }
 
 void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,int64_t now)
 {
-	/*
-	Mutex::Lock _l(_paths_m);
-	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i]) {
-			if ((_paths[i]->address().ss_family == inetAddressFamily)&&(_paths[i]->ipScope() == scope)) {
-				sendHELLO(tPtr,_paths[i]->localSocket(),_paths[i]->address(),now);
-				_paths[i]->sent(now);
-			}
-		} else break;
+	RWMutex::RLock l(_paths_l);
+	for(unsigned int i=0; i < _alivePathCount; ++i) {
+		if ((_paths[i])&&((_paths[i]->address().ss_family == inetAddressFamily)&&(_paths[i]->address().ipScope() == scope))) {
+			sendHELLO(tPtr,_paths[i]->localSocket(),_paths[i]->address(),now);
+			_paths[i]->sent(now);
+		}
 	}
-	*/
+}
+
+void Peer::updateLatency(const unsigned int l)
+{
+	if ((l > 0)&&(l < 0xffff)) {
+		unsigned int lat = _latency;
+		if (lat < 0xffff) {
+			_latency = (l + l + lat) / 3;
+		} else {
+			_latency = l;
+		}
+	}
+}
+
+bool Peer::sendDirect(void *tPtr,const void *data,const unsigned int len,const int64_t now)
+{
+	if ((now - _lastPrioritizedPaths) > ZT_PEER_PRIORITIZE_PATHS_INTERVAL) {
+		_lastPrioritizedPaths = now;
+		_paths_l.lock();
+		_prioritizePaths(now);
+		if (_alivePathCount == 0) {
+			_paths_l.unlock();
+			return false;
+		}
+		const bool r = _paths[0]->send(RR,tPtr,data,len,now);
+		_paths_l.unlock();
+		return r;
+	} else {
+		_paths_l.rlock();
+		if (_alivePathCount == 0) {
+			_paths_l.runlock();
+			return false;
+		}
+		const bool r = _paths[0]->send(RR,tPtr,data,len,now);
+		_paths_l.runlock();
+		return r;
+	}
+}
+
+SharedPtr<Path> Peer::path(const int64_t now)
+{
+	if ((now - _lastPrioritizedPaths) > ZT_PEER_PRIORITIZE_PATHS_INTERVAL) {
+		_lastPrioritizedPaths = now;
+		RWMutex::Lock l(_paths_l);
+		_prioritizePaths(now);
+		if (_alivePathCount == 0)
+			return SharedPtr<Path>();
+		return _paths[0];
+	} else {
+		RWMutex::RLock l(_paths_l);
+		if (_alivePathCount == 0)
+			return SharedPtr<Path>();
+		return _paths[0];
+	}
 }
 
 void Peer::getAllPaths(std::vector< SharedPtr<Path> > &paths)
 {
 	RWMutex::RLock l(_paths_l);
 	paths.clear();
-	paths.assign(_paths,_paths + _pathCount);
+	paths.assign(_paths,_paths + _alivePathCount);
+}
+
+void Peer::_prioritizePaths(const int64_t now)
+{
+	// assumes _paths_l is locked for writing
+	std::sort(_paths,_paths + ZT_MAX_PEER_NETWORK_PATHS,_PathPriorityComparisonOperator());
+
+	for(int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+		if ((!_paths[i]) || (!_paths[i]->alive(now))) {
+			_alivePathCount = i;
+
+			for(;i<ZT_MAX_PEER_NETWORK_PATHS;++i)
+				_paths[i].zero();
+
+			return;
+		}
+	}
 }
 
 } // namespace ZeroTier

@@ -59,7 +59,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 						fragment.incrementHops();
 						SharedPtr<Peer> relayTo = RR->topology->get(destination);
 						if ((!relayTo)||(!relayTo->sendDirect(tPtr,fragment.data(),fragment.size(),now))) {
-							relayTo = RR->topology->findRelayTo(now,destination);
+							relayTo = RR->topology->root();
 							if (relayTo)
 								relayTo->sendDirect(tPtr,fragment.data(),fragment.size(),now);
 						}
@@ -127,7 +127,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 						packet.incrementHops();
 						SharedPtr<Peer> relayTo = RR->topology->get(destination);
 						if ((!relayTo)||(!relayTo->sendDirect(tPtr,packet.data(),packet.size(),now))) {
-							relayTo = RR->topology->findRelayTo(now,destination);
+							relayTo = RR->topology->root();
 							if ((relayTo)&&(relayTo->address() != source))
 								relayTo->sendDirect(tPtr,packet.data(),packet.size(),now);
 						}
@@ -585,7 +585,7 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 
 	const SharedPtr<Peer> peer(RR->topology->get(destination));
 	if (peer) {
-		viaPath = peer->path();
+		viaPath = peer->path(now);
 		if (!viaPath) {
 			if (peer->rateGateTryStaticPath(now)) {
 				InetAddress tryAddr;
@@ -599,9 +599,9 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 				}
 			}
 
-			const SharedPtr<Peer> relay(RR->topology->findRelayTo(now,destination));
+			const SharedPtr<Peer> relay(RR->topology->root());
 			if (relay) {
-				viaPath = relay->path();
+				viaPath = relay->path(now);
 				if (!viaPath)
 					return false;
 			}

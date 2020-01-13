@@ -348,6 +348,7 @@ ZT_ALWAYS_INLINE bool _doWHOIS(IncomingPacket &pkt,const RuntimeEnvironment *con
 ZT_ALWAYS_INLINE bool _doRENDEZVOUS(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	if (RR->topology->isRoot(peer->identity())) {
+		uint16_t junk = (uint16_t)Utils::random();
 		const Address with(pkt.field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 		const SharedPtr<Peer> rendezvousWith(RR->topology->get(with));
 		if (rendezvousWith) {
@@ -355,9 +356,9 @@ ZT_ALWAYS_INLINE bool _doRENDEZVOUS(IncomingPacket &pkt,const RuntimeEnvironment
 			const unsigned int addrlen = pkt[ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN];
 			if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
 				InetAddress atAddr(pkt.field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
-				if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,with,path->localSocket(),atAddr)) {
-					const uint64_t junk = Utils::random();
-					RR->node->putPacket(tPtr,path->localSocket(),atAddr,&junk,4,2); // send low-TTL junk packet to 'open' local NAT(s) and stateful firewalls
+				if (rendezvousWith->shouldTryPath(tPtr,RR->node->now(),peer,atAddr)) {
+					if (atAddr.isV4())
+						RR->node->putPacket(tPtr,path->localSocket(),atAddr,&junk,2,2); // IPv4 "firewall opener"
 					rendezvousWith->sendHELLO(tPtr,path->localSocket(),atAddr,RR->node->now());
 				}
 			}
@@ -669,6 +670,7 @@ ZT_ALWAYS_INLINE bool _doPUSH_DIRECT_PATHS(IncomingPacket &pkt,const RuntimeEnvi
 
 		unsigned int count = pkt.at<uint16_t>(ZT_PACKET_IDX_PAYLOAD);
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
+		uint16_t junk = (uint16_t)Utils::random();
 
 		while (count--) {
 			/* unsigned int flags = (*this)[ptr++]; */ ++ptr;
@@ -680,18 +682,17 @@ ZT_ALWAYS_INLINE bool _doPUSH_DIRECT_PATHS(IncomingPacket &pkt,const RuntimeEnvi
 			switch(addrType) {
 				case 4: {
 					const InetAddress a(pkt.field(ptr,4),4,pkt.at<uint16_t>(ptr + 4));
-					if ((!peer->hasActivePathTo(now,a)) && // not already known
-							(RR->node->shouldUsePathForZeroTierTraffic(tPtr,peer->address(),-1,a)) ) // should use path
-					{
-						if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY)
+					if (peer->shouldTryPath(tPtr,now,peer,a)) {
+						if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
+							RR->node->putPacket(tPtr,path->localSocket(),a,&junk,2,2); // IPv4 "firewall opener"
+							++junk;
 							peer->sendHELLO(tPtr,-1,a,now);
+						}
 					}
 				}	break;
 				case 6: {
 					const InetAddress a(pkt.field(ptr,16),16,pkt.at<uint16_t>(ptr + 16));
-					if ((!peer->hasActivePathTo(now,a)) && // not already known
-							(RR->node->shouldUsePathForZeroTierTraffic(tPtr,peer->address(),-1,a)) ) // should use path
-					{
+					if (peer->shouldTryPath(tPtr,now,peer,a)) {
 						if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY)
 							peer->sendHELLO(tPtr,-1,a,now);
 					}
