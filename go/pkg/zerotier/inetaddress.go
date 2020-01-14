@@ -13,14 +13,86 @@
 
 package zerotier
 
+//#include "../../native/GoGlue.h"
+import "C"
+
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"net"
 	"strconv"
 	"strings"
 	"unsafe"
 )
+
+func sockaddrStorageToIPNet(ss *C.struct_sockaddr_storage) *net.IPNet {
+	var a net.IPNet
+	switch ss.ss_family {
+	case AFInet:
+		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
+		var ip4 [4]byte
+		copy(ip4[:], (*[4]byte)(unsafe.Pointer(&sa4.sin_addr))[:])
+		a.IP = ip4[:]
+		a.Mask = net.CIDRMask(int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:])), 32)
+		return &a
+	case AFInet6:
+		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
+		var ip6 [16]byte
+		copy(ip6[:], (*[16]byte)(unsafe.Pointer(&sa6.sin6_addr))[:])
+		a.IP = ip6[:]
+		a.Mask = net.CIDRMask(int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa6.sin6_port)))[:])), 128)
+		return &a
+	}
+	return nil
+}
+
+func sockaddrStorageToUDPAddr(ss *C.struct_sockaddr_storage) *net.UDPAddr {
+	var a net.UDPAddr
+	switch ss.ss_family {
+	case AFInet:
+		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
+		var ip4 [4]byte
+		copy(ip4[:], (*[4]byte)(unsafe.Pointer(&sa4.sin_addr))[:])
+		a.IP = ip4[:]
+		a.Port = int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:]))
+		return &a
+	case AFInet6:
+		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
+		var ip6 [16]byte
+		copy(ip6[:], (*[16]byte)(unsafe.Pointer(&sa6.sin6_addr))[:])
+		a.IP = ip6[:]
+		a.Port = int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa6.sin6_port)))[:]))
+		return &a
+	}
+	return nil
+}
+
+func sockaddrStorageToUDPAddr2(ss unsafe.Pointer) *net.UDPAddr {
+	return sockaddrStorageToUDPAddr((*C.struct_sockaddr_storage)(ss))
+}
+
+func makeSockaddrStorage(ip net.IP, port int, ss *C.struct_sockaddr_storage) bool {
+	C.memset(unsafe.Pointer(ss), 0, C.sizeof_struct_sockaddr_storage)
+	if len(ip) == 4 {
+		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
+		sa4.sin_family = AFInet
+		copy(((*[4]byte)(unsafe.Pointer(&sa4.sin_addr)))[:], ip)
+		binary.BigEndian.PutUint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:], uint16(port))
+		return true
+	}
+	if len(ip) == 16 {
+		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
+		sa6.sin6_family = AFInet6
+		copy(((*[16]byte)(unsafe.Pointer(&sa6.sin6_addr)))[:], ip)
+		binary.BigEndian.PutUint16(((*[2]byte)(unsafe.Pointer(&sa6.sin6_port)))[:], uint16(port))
+		return true
+	}
+	return false
+}
+
+var ErrInvalidInetAddress = errors.New("invalid marshaled InetAddress object")
 
 // InetAddress implements net.Addr but has a ZeroTier-like string representation
 type InetAddress struct {
@@ -29,13 +101,13 @@ type InetAddress struct {
 }
 
 // Less returns true if this IP/port is lexicographically less than another
-func (i *InetAddress) Less(i2 *InetAddress) bool {
-	c := bytes.Compare(i.IP, i2.IP)
+func (ina *InetAddress) Less(i2 *InetAddress) bool {
+	c := bytes.Compare(ina.IP, i2.IP)
 	if c < 0 {
 		return true
 	}
 	if c == 0 {
-		return i.Port < i2.Port
+		return ina.Port < i2.Port
 	}
 	return false
 }
@@ -73,18 +145,18 @@ func NewInetAddressFromSockaddr(sa unsafe.Pointer) *InetAddress {
 }
 
 // Network returns "udp" to implement net.Addr
-func (i *InetAddress) Network() string {
+func (ina *InetAddress) Network() string {
 	return "udp"
 }
 
 // String returns this address in ZeroTier-canonical IP/port format
-func (i *InetAddress) String() string {
-	return i.IP.String() + "/" + strconv.FormatInt(int64(i.Port), 10)
+func (ina *InetAddress) String() string {
+	return ina.IP.String() + "/" + strconv.FormatInt(int64(ina.Port), 10)
 }
 
 // Family returns the address family (AFInet etc.) or 0 if none
-func (i *InetAddress) Family() int {
-	switch len(i.IP) {
+func (ina *InetAddress) Family() int {
+	switch len(ina.IP) {
 	case 4:
 		return AFInet
 	case 16:
@@ -94,30 +166,58 @@ func (i *InetAddress) Family() int {
 }
 
 // Valid returns true if both the IP and port have valid values
-func (i *InetAddress) Valid() bool {
-	return (len(i.IP) == 4 || len(i.IP) == 16) && (i.Port > 0 && i.Port < 65536)
+func (ina *InetAddress) Valid() bool {
+	return (len(ina.IP) == 4 || len(ina.IP) == 16) && (ina.Port > 0 && ina.Port < 65536)
 }
 
 // MarshalJSON marshals this MAC as a string
-func (i *InetAddress) MarshalJSON() ([]byte, error) {
-	s := i.String()
+func (ina *InetAddress) MarshalJSON() ([]byte, error) {
+	s := ina.String()
 	return json.Marshal(&s)
 }
 
 // UnmarshalJSON unmarshals this MAC from a string
-func (i *InetAddress) UnmarshalJSON(j []byte) error {
+func (ina *InetAddress) UnmarshalJSON(j []byte) error {
 	var s string
 	err := json.Unmarshal(j, &s)
 	if err != nil {
 		return err
 	}
-	*i = *NewInetAddressFromString(s)
+	*ina = *NewInetAddressFromString(s)
 	return nil
 }
 
+func (ina *InetAddress) unmarshalZT(b []byte) (int, error) {
+	if len(b) <= 0 {
+		return 0, ErrInvalidInetAddress
+	}
+	switch b[0] {
+	case 0:
+		ina.IP = nil
+		ina.Port = 0
+		return 1, nil
+	case 4:
+		if len(b) != 7 {
+			return 0, ErrInvalidInetAddress
+		}
+		ina.IP = []byte{b[1], b[2], b[3], b[4]}
+		ina.Port = int(binary.BigEndian.Uint16(b[5:7]))
+		return 7, nil
+	case 6:
+		if len(b) != 19 {
+			return 0, ErrInvalidInetAddress
+		}
+		ina.IP = append(make([]byte, 0, 16), b[1:17]...)
+		ina.Port = int(binary.BigEndian.Uint16(b[17:19]))
+		return 19, nil
+	default:
+		return 0, ErrInvalidInetAddress
+	}
+}
+
 // key returns a short array suitable for use as a map[] key for this IP
-func (i *InetAddress) key() (k [3]uint64) {
-	copy(((*[16]byte)(unsafe.Pointer(&k[0])))[:], i.IP)
-	k[2] = uint64(i.Port)
+func (ina *InetAddress) key() (k [3]uint64) {
+	copy(((*[16]byte)(unsafe.Pointer(&k[0])))[:], ina.IP)
+	k[2] = uint64(ina.Port)
 	return
 }

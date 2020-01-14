@@ -27,11 +27,31 @@
 // Also makes sure __BYTE_ORDER is defined reasonably.
 //
 
-// Hack: make sure __GCC__ is defined on old GCC compilers
 #ifndef __GCC__
 #if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)
 #define __GCC__
 #endif
+#endif
+
+#if defined(_WIN32) || defined(_WIN64)
+#ifndef __WINDOWS__
+#define __WINDOWS__
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#undef __UNIX_LIKE__
+#undef __BSD__
+#if !defined(__GNUC__) && !defined (__clang__) && !defined(__INTEL_COMPILER)
+#define ZT_PACKED_STRUCT(D) __pragma(pack(push,1)) D __pragma(pack(pop))
+#pragma warning(disable : 4290)
+#pragma warning(disable : 4996)
+#pragma warning(disable : 4101)
+#else
+#define ZT_PACKED_STRUCT(D) D __attribute__((packed))
+#endif
+#include <WinSock2.h>
+#include <Windows.h>
 #endif
 
 #if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
@@ -69,30 +89,13 @@
 #define __BIG_ENDIAN _BIG_ENDIAN
 #endif
 #endif
-
-#if defined(_WIN32) || defined(_WIN64)
-#ifndef __WINDOWS__
-#define __WINDOWS__
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#pragma warning(disable : 4290)
-#pragma warning(disable : 4996)
-#pragma warning(disable : 4101)
-#undef __UNIX_LIKE__
-#undef __BSD__
-#include <WinSock2.h>
-#include <Windows.h>
-#endif
-
 #ifdef __NetBSD__
 #ifndef RTF_MULTICAST
 #define RTF_MULTICAST 0x20000000
 #endif
 #endif
 
-// Define ZT_NO_TYPE_PUNNING to disable reckless casts on anything other than x86 and x86_64.
+// Avoid unaligned type casts on all but x86/x64 architecture.
 #if (!(defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_AMD64) || defined(_M_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || defined(_X86_) || defined(__I86__) || defined(__INTEL__) || defined(__386)))
 #ifndef ZT_NO_TYPE_PUNNING
 #define ZT_NO_TYPE_PUNNING
@@ -110,16 +113,6 @@
 #endif
 #ifndef __BYTE_ORDER
 #include <endian.h>
-#endif
-
-#ifdef __WINDOWS__
-#define ZT_PATH_SEPARATOR '\\'
-#define ZT_PATH_SEPARATOR_S "\\"
-#define ZT_EOL_S "\r\n"
-#else
-#define ZT_PATH_SEPARATOR '/'
-#define ZT_PATH_SEPARATOR_S "/"
-#define ZT_EOL_S "\n"
 #endif
 
 #if (defined(__GNUC__) && (__GNUC__ >= 3)) || (defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 800)) || defined(__clang__)
@@ -146,12 +139,6 @@
 #endif
 #endif
 
-#if defined(__WINDOWS__) && !defined(__GNUC__) && !defined (__clang__) && !defined(__INTEL_COMPILER)
-#define ZT_PACKED_STRUCT(D) __pragma(pack(push,1)) D __pragma(pack(pop))
-#else
-#define ZT_PACKED_STRUCT(D) D __attribute__((packed))
-#endif
-
 #if __cplusplus > 199711L
 #ifndef __CPP11__
 #define __CPP11__
@@ -167,6 +154,16 @@
 #define ZT_INVALID_SOCKET INVALID_SOCKET
 #else
 #define ZT_INVALID_SOCKET -1
+#endif
+
+#ifdef __WINDOWS__
+#define ZT_PATH_SEPARATOR '\\'
+#define ZT_PATH_SEPARATOR_S "\\"
+#define ZT_EOL_S "\r\n"
+#else
+#define ZT_PATH_SEPARATOR '/'
+#define ZT_PATH_SEPARATOR_S "/"
+#define ZT_EOL_S "\n"
 #endif
 
 #ifndef ZT_ALWAYS_INLINE

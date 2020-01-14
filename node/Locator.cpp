@@ -66,14 +66,12 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool exclud
 
 int Locator::unmarshal(const uint8_t *restrict data,const int len)
 {
-	if (len <= (8 + 48))
+	if (len <= (8 + 2 + 48))
 		return -1;
 
 	_ts = (int64_t)Utils::readUInt64(data);
 	int p = 8;
 
-	if ((p + 2) > len)
-		return -1;
 	unsigned int ec = (int)data[p++];
 	ec <<= 8U;
 	ec |= data[p++];

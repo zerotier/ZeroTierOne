@@ -3,6 +3,7 @@ project(zt_go_native)
 
 set(src
 	GoGlue.cpp
+	CoreTests.cpp
 )
 
 set(headers

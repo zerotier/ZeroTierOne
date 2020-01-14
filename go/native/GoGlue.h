@@ -49,10 +49,10 @@ void ZT_GoNode_delete(ZT_GoNode *gn);
 ZT_Node *ZT_GoNode_getNode(ZT_GoNode *gn);
 
 /* This can be called more than once to start multiple listener threads */
-int ZT_GoNode_phyStartListen(ZT_GoNode *gn,const char *dev,const char *ip,const int port);
+int ZT_GoNode_phyStartListen(ZT_GoNode *gn,const char *dev,const char *ip,int port);
 
 /* Close all listener threads for a given local IP and port */
-int ZT_GoNode_phyStopListen(ZT_GoNode *gn,const char *dev,const char *ip,const int port);
+int ZT_GoNode_phyStopListen(ZT_GoNode *gn,const char *dev,const char *ip,int port);
 
 ZT_GoTap *ZT_GoNode_join(ZT_GoNode *gn,uint64_t nwid);
 
@@ -83,6 +83,11 @@ void ZT_GoTap_setMtu(ZT_GoTap *tap,unsigned int mtu);
 int ZT_GoTap_addRoute(ZT_GoTap *tap,int targetAf,const void *targetIp,int targetNetmaskBits,int viaAf,const void *viaIp,unsigned int metric);
 
 int ZT_GoTap_removeRoute(ZT_GoTap *tap,int targetAf,const void *targetIp,int targetNetmaskBits,int viaAf,const void *viaIp,unsigned int metric);
+
+/* Core self-tests that output results to stdout and return non-zero on failure. */
+int ZT_TestCrypto();
+int ZT_TestIdentity();
+int ZT_TestOther();
 
 #ifdef __cplusplus
 }

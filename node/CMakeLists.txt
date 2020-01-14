@@ -1,10 +1,6 @@
 cmake_minimum_required (VERSION 2.8)
 project(zt_core)
 
-if(WIN32)
-	add_definitions(-DNOMINMAX)
-endif(WIN32)
-
 set(core_headers
 	Address.hpp
 	AtomicCounter.hpp
@@ -55,6 +51,7 @@ set(core_src
 	C25519.cpp
 	Credential.cpp
 	ECC384.cpp
+	Endpoint.cpp
 	Identity.cpp
 	IncomingPacket.cpp
 	InetAddress.cpp
