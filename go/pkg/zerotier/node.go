@@ -86,28 +86,14 @@ var (
 	nodesByUserPtrLock sync.RWMutex
 )
 
-// CSelfTest runs self-test functions from the core, sending results to stdout and returning true on success.
-func CSelfTest() bool {
-	if C.ZT_TestOther() != 0 {
-		return false
-	}
-	fmt.Println()
-	if C.ZT_TestCrypto() != 0 {
-		return false
-	}
-	fmt.Println()
-	if C.ZT_TestIdentity() != 0 {
-		return false
-	}
-	return true
-}
-
 // Node is an instance of the ZeroTier core node and related C++ I/O code
 type Node struct {
 	networks               map[NetworkID]*Network
 	networksByMAC          map[MAC]*Network  // locked by networksLock
 	interfaceAddresses     map[string]net.IP // physical external IPs on the machine
 	basePath               string
+	peersPath              string
+	networksPath           string
 	localConfigPath        string
 	localConfig            LocalConfig
 	localConfigLock        sync.RWMutex
@@ -126,22 +112,30 @@ type Node struct {
 }
 
 // NewNode creates and initializes a new instance of the ZeroTier node service
-func NewNode(basePath string) (*Node, error) {
-	var err error
-
-	_ = os.MkdirAll(basePath, 0755)
-	if _, err := os.Stat(basePath); err != nil {
-		return nil, err
-	}
-
-	n := new(Node)
-
+func NewNode(basePath string) (n *Node, err error) {
+	n = new(Node)
 	n.networks = make(map[NetworkID]*Network)
 	n.networksByMAC = make(map[MAC]*Network)
 	n.interfaceAddresses = make(map[string]net.IP)
 
+	_ = os.MkdirAll(basePath, 0755)
+	if _, err = os.Stat(basePath); err != nil {
+		return
+	}
 	n.basePath = basePath
+	n.peersPath = path.Join(basePath, "peers.d")
+	_ = os.MkdirAll(n.peersPath, 0700)
+	_ = acl.Chmod(n.peersPath, 0700)
+	if _, err = os.Stat(n.peersPath); err != nil {
+		return
+	}
+	n.networksPath = path.Join(basePath, "networks.d")
+	_ = os.MkdirAll(n.networksPath, 0755)
+	if _, err = os.Stat(n.networksPath); err != nil {
+		return
+	}
 	n.localConfigPath = path.Join(basePath, "local.conf")
+
 	err = n.localConfig.Read(n.localConfigPath, true)
 	if err != nil {
 		return nil, err

@@ -21,9 +21,8 @@ import (
 )
 
 func SelfTest() {
-	fmt.Print("Running ZeroTier core tests...\n\n")
-	if !zerotier.CSelfTest() {
-		fmt.Println("FAILED: at least one ZeroTier core test reported failure.")
+	if !zerotier.SelfTest() {
+		fmt.Println("FAILED: at least one ZeroTier self-test reported failure.")
 		os.Exit(1)
 	}
 	os.Exit(0)

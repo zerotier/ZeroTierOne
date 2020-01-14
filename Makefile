@@ -14,7 +14,7 @@ debug:
 	mkdir -p ${BUILDDIR} && cd ${BUILDDIR} && cmake .. -DCMAKE_BUILD_TYPE=Debug && $(MAKE)
 
 clean:
-	rm -rf ${BUILDDIR}
+	rm -rf ${BUILDDIR} cmake-build-*
 
 distclean:
 	rm -rf ${BUILDDIR}

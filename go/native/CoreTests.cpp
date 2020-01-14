@@ -230,23 +230,25 @@ extern "C" int ZT_TestCrypto()
 				return -1;
 			}
 		}
-		Salsa20 s20(s20TV0Key,s20TV0Iv);
-		memset(buf1,0,sizeof(buf1));
-		memset(buf2,0,sizeof(buf2));
-		s20.crypt20(buf1,buf2,64);
-		if (memcmp(buf2,s20TV0Ks,64)) {
-			std::cout << "FAIL (test vector 0)" ZT_EOL_S;
-			return -1;
+		{
+			Salsa20 s20(s20TV0Key,s20TV0Iv);
+			memset(buf1,0,sizeof(buf1));
+			memset(buf2,0,sizeof(buf2));
+			s20.crypt20(buf1,buf2,64);
+			if (memcmp(buf2,s20TV0Ks,64)) {
+				std::cout << "FAIL (test vector 0)" ZT_EOL_S;
+				return -1;
+			}
+			s20.init(s2012TV0Key,s2012TV0Iv);
+			memset(buf1,0,sizeof(buf1));
+			memset(buf2,0,sizeof(buf2));
+			s20.crypt12(buf1,buf2,64);
+			if (memcmp(buf2,s2012TV0Ks,64)) {
+				std::cout << "FAIL (test vector 1)" ZT_EOL_S;
+				return -1;
+			}
+			std::cout << "PASS" ZT_EOL_S;
 		}
-		s20.init(s2012TV0Key,s2012TV0Iv);
-		memset(buf1,0,sizeof(buf1));
-		memset(buf2,0,sizeof(buf2));
-		s20.crypt12(buf1,buf2,64);
-		if (memcmp(buf2,s2012TV0Ks,64)) {
-			std::cout << "FAIL (test vector 1)" ZT_EOL_S;
-			return -1;
-		}
-		std::cout << "PASS" ZT_EOL_S;
 
 	#ifdef ZT_SALSA20_SSE
 		std::cout << "[crypto] Salsa20 SSE: ENABLED" ZT_EOL_S;
@@ -493,6 +495,7 @@ extern "C" int ZT_TestCrypto()
 		std::cout << "  ECC P-384 ECDH: " << (1000.0 / ((double)(end - start) / 1000.0)) << " agreements/second" ZT_EOL_S;
 	}
 
+	std::cout.flush();
 	return 0;
 }
 
@@ -598,6 +601,7 @@ extern "C" int ZT_TestIdentity()
 		}
 	}
 
+	std::cout.flush();
 	return 0;
 }
 
@@ -743,5 +747,6 @@ extern "C" int ZT_TestOther()
 		std::cout << "PASS (junk value to prevent optimization-out of test: " << foo << ")" ZT_EOL_S;
 	}
 
+	std::cout.flush();
 	return 0;
 }
