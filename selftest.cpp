@@ -434,16 +434,16 @@ static int testCrypto()
 		}
 		std::cout << "[crypto]   ECDH Agree: " << Utils::hex(p384sec,sizeof(p384sec),p384hex) << ZT_EOL_S;
 
-		Utils::unhex(ECC384_TEST_PUBLIC,p384pub,sizeof(p384pub));
-		Utils::unhex(ECC384_TEST_PRIVATE,p384priv,sizeof(p384priv));
+		Utils::unhex(ECC384_TEST_PUBLIC,strlen(ECC384_TEST_PUBLIC),p384pub,sizeof(p384pub));
+		Utils::unhex(ECC384_TEST_PRIVATE,strlen(ECC384_TEST_PRIVATE),p384priv,sizeof(p384priv));
 		ECC384ECDH(p384pub,p384priv,p384sec);
-		Utils::unhex(ECC384_TEST_DH_SELF_AGREE,p384sec2,sizeof(p384sec2));
+		Utils::unhex(ECC384_TEST_DH_SELF_AGREE,strlen(ECC384_TEST_DH_SELF_AGREE),p384sec2,sizeof(p384sec2));
 		if (memcmp(p384sec,p384sec2,ZT_ECC384_SHARED_SECRET_SIZE)) {
 			std::cout << "[crypto]   ECDH Test Vector: FAILED (secrets do not match)" ZT_EOL_S;
 			return -1;
 		}
 		std::cout << "[crypto]   ECDH Test Vector: PASS" ZT_EOL_S;
-		Utils::unhex(ECC384_TEST_SIG,p384sig,sizeof(p384sig));
+		Utils::unhex(ECC384_TEST_SIG,strlen(ECC384_TEST_SIG),p384sig,sizeof(p384sig));
 		if (!ECC384ECDSAVerify(p384pub,p384pub,p384sig)) {
 			std::cout << "[crypto]   ECDSA Test Vector: FAILED (verify failed)" ZT_EOL_S;
 			return -1;
@@ -768,7 +768,7 @@ static int testOther()
 	std::cout << "[other] Testing hex/unhex... "; std::cout.flush();
 	Utils::getSecureRandom(buf,(unsigned int)sizeof(buf));
 	Utils::hex(buf,(unsigned int)sizeof(buf),buf2);
-	Utils::unhex(buf2,buf3,(unsigned int)sizeof(buf3));
+	Utils::unhex(buf2,sizeof(buf2),buf3,(unsigned int)sizeof(buf3));
 	if (memcmp(buf,buf3,sizeof(buf)) == 0) {
 		std::cout << "PASS" ZT_EOL_S;
 	} else {
@@ -791,26 +791,6 @@ static int testOther()
 		}
 		int l2 = Utils::b32d(buf2,(uint8_t *)buf3,sizeof(buf3));
 		if (l2 != (int)i) {
-			std::cout << "FAIL (decode returned wrong count)" ZT_EOL_S;
-			return -1;
-		}
-		if (memcmp(buf,buf3,i) != 0) {
-			std::cout << "FAIL (decode result incorrect)" ZT_EOL_S;
-			return -1;
-		}
-	}
-	std::cout << "PASS" ZT_EOL_S;
-
-	std::cout << "[other] Testing base64... "; std::cout.flush();
-	for(unsigned int i=1;i<1024;++i) {
-		Utils::getSecureRandom(buf,(unsigned int)sizeof(buf));
-		unsigned int l = Utils::b64e((const uint8_t *)buf,i,buf2,sizeof(buf2));
-		if (l == 0) {
-			std::cout << "FAIL (encode returned 0)" ZT_EOL_S;
-			return -1;
-		}
-		unsigned int l2 = Utils::b64d(buf2,(uint8_t *)buf3,sizeof(buf3));
-		if (l2 != i) {
 			std::cout << "FAIL (decode returned wrong count)" ZT_EOL_S;
 			return -1;
 		}

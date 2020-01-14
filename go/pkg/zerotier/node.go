@@ -615,11 +615,11 @@ func (n *Node) Peers() []*Peer {
 					a := sockaddrStorageToUDPAddr(&pt.address)
 					if a != nil {
 						p2.Paths = append(p2.Paths, Path{
-							IP:                     a.IP,
-							Port:                   a.Port,
-							LastSend:               int64(pt.lastSend),
-							LastReceive:            int64(pt.lastReceive),
-							TrustedPathID:          uint64(pt.trustedPathId),
+							IP:            a.IP,
+							Port:          a.Port,
+							LastSend:      int64(pt.lastSend),
+							LastReceive:   int64(pt.lastReceive),
+							TrustedPathID: uint64(pt.trustedPathId),
 						})
 					}
 				}

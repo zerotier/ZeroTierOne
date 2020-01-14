@@ -17,9 +17,9 @@ import "net"
 
 // Path is a path to another peer on the network
 type Path struct {
-	IP                     net.IP  `json:"ip"`
-	Port                   int     `json:"port"`
-	LastSend               int64   `json:"lastSend"`
-	LastReceive            int64   `json:"lastReceive"`
-	TrustedPathID          uint64  `json:"trustedPathID"`
+	IP            net.IP `json:"ip"`
+	Port          int    `json:"port"`
+	LastSend      int64  `json:"lastSend"`
+	LastReceive   int64  `json:"lastReceive"`
+	TrustedPathID uint64 `json:"trustedPathID"`
 }

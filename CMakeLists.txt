@@ -178,6 +178,6 @@ add_custom_command(
 )
 add_custom_target(build_zerotier ALL DEPENDS zerotier)
 
-#add_executable(zerotier-selftest selftest.cpp)
-#target_link_libraries(zerotier-selftest ${libs} zt_core zt_osdep)
-#target_compile_features(zerotier-selftest PUBLIC cxx_std_11)
+add_executable(zerotier-selftest selftest.cpp)
+target_link_libraries(zerotier-selftest ${libs} zt_core zt_osdep)
+target_compile_features(zerotier-selftest PUBLIC cxx_std_11)

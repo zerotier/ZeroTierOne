@@ -54,6 +54,26 @@ public:
 	ZT_ALWAYS_INLINE bool isSigned() const { return (_signatureLength > 0); }
 
 	/**
+	 * @return Length of signature in bytes or 0 if none
+	 */
+	ZT_ALWAYS_INLINE unsigned int signatureLength() const { return _signatureLength; }
+
+	/**
+	 * @return Pointer to signature bytes
+	 */
+	ZT_ALWAYS_INLINE const uint8_t *signature() const { return _signature; }
+
+	/**
+	 * @return Number of endpoints in this locator
+	 */
+	ZT_ALWAYS_INLINE unsigned int endpointCount() const { return _endpointCount; }
+
+	/**
+	 * @return Pointer to array of endpoints
+	 */
+	ZT_ALWAYS_INLINE const Endpoint *endpoints() const { return _at; }
+
+	/**
 	 * Add an endpoint to this locator
 	 *
 	 * This doesn't check for the presence of the endpoint, so take
@@ -92,8 +112,8 @@ public:
 	explicit ZT_ALWAYS_INLINE operator bool() const { return (_ts != 0); }
 
 	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
-	int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool excludeSignature = false) const;
-	int unmarshal(const uint8_t *restrict data,const int len);
+	int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],bool excludeSignature = false) const;
+	int unmarshal(const uint8_t *restrict data,int len);
 
 private:
 	int64_t _ts;
